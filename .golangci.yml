@@ -5,6 +5,7 @@ run:
   skip-dirs:
     - gen/
     - testutils/
+    - thirdparty/
 
 output:
   format: colored-line-number
@@ -1000,6 +1001,10 @@ issues:
     - path: impl/
       linters:
         - dupl
+
+    - path: pkg/cgo
+      linters:
+        - gocritic
 
     # Exclude some revive messages
     - linters:

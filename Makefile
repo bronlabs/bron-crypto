@@ -1,25 +1,33 @@
-include scripts/Makefile
+SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+include $(SELF_DIR)/scripts/Makefile
+include $(SELF_DIR)/thirdparty/thirdparty.mk
 
 GOENV=GO111MODULE=on
 GO=${GOENV} go
 
-COVERAGE_OUT=/tmp/coverage.out
-SCRIPTS_DIR=./scripts
+COVERAGE_OUT="$(mktemp -d)/coverage.out"
+SCRIPTS_DIR="$(SELF_DIR)/scripts"
 
 TEST_CLAUSE= $(if ${TEST}, -run ${TEST})
 
 .PHONY: all
 all: build lint test
 
-.PHONY: codegen
-codegen:
+pkg/base/errs/error_functions.gen.go:
+pkg/base/errs/known_errors.gen.go:
 	${GO} generate ./...
 	golangci-lint run --fix ./pkg/base/errs
 
+.PHONY: codegen
+codegen: pkg/base/errs/error_functions.gen.go pkg/base/errs/known_errors.gen.go
+
 .PHONY: build
-build:
-	$(MAKE) codegen
+build: build-boring codegen
 	${GO} build ./...
+
+.PHONY: build-nocgo
+build-nocgo: codegen
+	${GO} build -tags nobignum ./...
 
 .PHONY: bench
 bench:
@@ -49,17 +57,14 @@ githooks:
 
 .PHONY: lint
 lint:
-	${GO} vet ./...
 	golangci-lint run --timeout=5m
 
 .PHONY: lint-long
 lint-long:
-	${GO} vet ./...
 	golangci-lint run --timeout=120m
 
 .PHONY: lint-fix
 lint-fix:
-	${GO} vet ./...
 	${GO} fmt ./...
 	golangci-lint run --fix --timeout=120m
 
