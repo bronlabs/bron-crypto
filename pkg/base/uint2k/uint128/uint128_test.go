@@ -7,9 +7,11 @@ import (
 	"testing"
 
 	"github.com/cronokirby/saferith"
+
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
-var mod2Pow128 = saferith.ModulusFromNat(new(saferith.Nat).Lsh(new(saferith.Nat).SetUint64(1), 128, -1))
+var mod2Pow128 = saferith.ModulusFromNat(new(saferith.Nat).Lsh(saferithUtils.NatOne, 128, -1))
 
 func randUint128() Uint128 {
 	randBuf := make([]byte, 16)

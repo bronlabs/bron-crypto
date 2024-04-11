@@ -3,8 +3,9 @@ package curves_test
 import (
 	"testing"
 
-	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
+
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 func Test_FieldElementSetNatToOne_BigEndian(t *testing.T) {
@@ -18,10 +19,10 @@ func Test_FieldElementSetNatToOne_BigEndian(t *testing.T) {
 			} else {
 				oneBigEndian[len(oneBigEndian)/2-1] = 0x1
 			}
-			oneNat := new(saferith.Nat).SetUint64(1)
+
 			// Check cast from-to Nat
 			realFeOne := boundedCurve.BaseField().One()
-			feOne := boundedCurve.BaseField().Element().SetNat(oneNat)
+			feOne := boundedCurve.BaseField().Element().SetNat(saferithUtils.NatOne)
 			require.EqualValues(t, realFeOne.Bytes(), feOne.Bytes())
 			require.EqualValues(t, oneBigEndian, feOne.Bytes())
 			// Check if the internal value is treated as a one

@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/testutils"
 )
 
@@ -158,7 +159,7 @@ func TestScalarMul(t *testing.T) {
 	actual := nine.Mul(six)
 	require.Equal(t, actual.Cmp(k256.NewScalar(54)), algebra.Equal)
 	n := new(saferith.Nat).SetBig(k256.NewElliptic().N, k256.NewElliptic().N.BitLen())
-	n = new(saferith.Nat).Sub(n, new(saferith.Nat).SetUint64(1), -1)
+	n = saferithUtils.NatDec(n)
 	upper := curve.ScalarField().Element().SetNat(n)
 	require.Equal(t, upper.Mul(upper).Cmp(k256.NewScalar(1)), algebra.Equal)
 }

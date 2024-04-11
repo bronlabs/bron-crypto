@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var _ curves.GtMember = (*GtMember)(nil)
@@ -72,10 +72,10 @@ func (g *GtMember) Order() *saferith.Modulus {
 		return saferith.ModulusFromUint64(0)
 	}
 	q := g.Clone()
-	order := new(saferith.Nat).SetUint64(1)
+	order := saferithUtils.NatOne
 	for !q.IsIdentity() {
 		q = q.Operate(g)
-		utils.IncrementNat(order)
+		saferithUtils.NatInc(order)
 	}
 	return saferith.ModulusFromNat(order)
 }
@@ -99,9 +99,9 @@ func (g *GtMember) ApplyMul(x curves.GtMember, n *saferith.Nat) curves.GtMember 
 		return g.Gt().MultiplicativeIdentity()
 	}
 	current := g.Clone()
-	for reducedN.Eq(new(saferith.Nat).SetUint64(1)) != 1 {
+	for reducedN.Eq(saferithUtils.NatOne) != 1 {
 		current = current.Mul(x)
-		utils.DecrementNat(reducedN)
+		saferithUtils.NatDec(reducedN)
 	}
 	return current
 }
@@ -179,9 +179,9 @@ func (g *GtMember) ApplyDiv(x curves.GtMember, n *saferith.Nat) curves.GtMember 
 		return g.Gt().MultiplicativeIdentity()
 	}
 	current := g.Clone()
-	for reducedN.Eq(new(saferith.Nat).SetUint64(1)) != 1 {
+	for reducedN.Eq(saferithUtils.NatOne) != 1 {
 		current = current.Div(x)
-		utils.DecrementNat(reducedN)
+		saferithUtils.NatDec(reducedN)
 	}
 	return current
 }

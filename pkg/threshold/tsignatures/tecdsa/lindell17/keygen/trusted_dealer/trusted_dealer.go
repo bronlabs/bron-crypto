@@ -2,14 +2,13 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
-
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
@@ -160,8 +159,8 @@ func validateShards(protocol types.ThresholdSignatureProtocol, shards ds.Map[typ
 	fieldOrder := protocol.Curve().BaseField().Order()
 	recoveredPublicKey := protocol.Curve().ScalarBaseMult(recoveredPrivateKey)
 	publicKey, err := protocol.Curve().NewPoint(
-		protocol.Curve().BaseField().Element().SetNat(utils.NatFromBig(ecdsaPrivateKey.X, fieldOrder)),
-		protocol.Curve().BaseField().Element().SetNat(utils.NatFromBig(ecdsaPrivateKey.Y, fieldOrder)),
+		protocol.Curve().BaseField().Element().SetNat(saferithUtils.NatFromBigMod(ecdsaPrivateKey.X, fieldOrder)),
+		protocol.Curve().BaseField().Element().SetNat(saferithUtils.NatFromBigMod(ecdsaPrivateKey.Y, fieldOrder)),
 	)
 	if err != nil {
 		return errs.WrapValue(err, "invalid ECDSA public key")

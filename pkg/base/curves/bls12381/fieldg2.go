@@ -12,6 +12,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var (
@@ -193,12 +194,12 @@ func (f *BaseFieldG2) FrobeniusAutomorphism(e curves.BaseFieldElement) curves.Ba
 
 func (f *BaseFieldG2) Trace(e curves.BaseFieldElement) curves.BaseFieldElement {
 	result := e
-	currentDegree := new(saferith.Nat).SetUint64(1)
+	currentDegree := saferithUtils.NatOne
 	currentTerm := result
 	for currentDegree.Eq(f.ExtensionDegree()) == 1 {
 		currentTerm = f.FrobeniusAutomorphism(currentTerm)
 		result = result.Add(currentTerm)
-		currentDegree = utils.IncrementNat(currentDegree)
+		currentDegree = saferithUtils.NatInc(currentDegree)
 	}
 	return result
 }

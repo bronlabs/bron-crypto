@@ -9,8 +9,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/primes"
 )
 
-var natOne = new(saferith.Nat).SetUint64(1).Resize(1)
-
 type PlainText = saferith.Nat
 
 type CipherText struct {
