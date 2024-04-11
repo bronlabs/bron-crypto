@@ -185,6 +185,10 @@ func (c *protocol) RunSimulator(statement *Statement, challengeBytes sigma.Chall
 	return a, z, nil
 }
 
+func (*protocol) SpecialSoundness() uint {
+	return 2
+}
+
 func (c *protocol) GetChallengeBytesLength() int {
 	var biggerSubGroup curves.Curve
 	gt, _, _ := c.g1.Curve().Order().Cmp(c.g2.Curve().Order())

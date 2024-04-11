@@ -41,6 +41,12 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 	// would be valid if played in the right order.
 	RunSimulator(statement X, challenge ChallengeBytes) (A, Z, error)
 
+	// SpecialSoundness returns n for which protocol has n-special soundness.
+	// In other words it returns minimal number of how many distinct, valid
+	// sigma protocol transcripts T_i = (x, e_i, z_i) for i = 1, 2, ..., n
+	// are required for existence of polynomial-time extractor of witness.
+	SpecialSoundness() uint
+
 	ValidateStatement(statement X, witness W) error
 	GetChallengeBytesLength() int
 	SerializeStatement(statement X) []byte

@@ -100,7 +100,7 @@ func Test_HappyPathBatchSchnorr(t *testing.T) {
 			}
 
 			prng := crand.Reader
-			protocol, err := batch_schnorr.NewSigmaProtocol(curve.Generator(), prng)
+			protocol, err := batch_schnorr.NewSigmaProtocol(uint(n), curve.Generator(), prng)
 			require.NoError(t, err)
 			sessionId := []byte("some_session_id_for_test" + strconv.Itoa(i))
 			transcript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
