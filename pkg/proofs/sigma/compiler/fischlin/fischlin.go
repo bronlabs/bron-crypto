@@ -3,9 +3,9 @@ package fischlin
 import (
 	crand "crypto/rand"
 	"fmt"
-	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
@@ -14,36 +14,38 @@ import (
 )
 
 const (
-	Name compiler.Name = "Fischlin"
+	Name compiler.Name = "SimplifiedFischlin"
 
-	transcriptLabel = "COPPER_KRYPTON_NIZK_FISCHLIN-"
+	transcriptLabel = "COPPER_KRYPTON_NIZK_SIMPLIFIED_FISCHLIN-"
 
+	rhoLabel        = "rhoLabel-"
 	statementLabel  = "statementLabel-"
 	commitmentLabel = "commitmentLabel-"
 	challengeLabel  = "challengeLabel-"
+	responseLabel   = "responseLabel-"
 )
 
 type Proof[A sigma.Commitment, Z sigma.Response] struct {
-	Rho uint     `json:"rho"`
-	B   uint     `json:"b"`
+	Rho uint64   `json:"rho"`
+	B   uint64   `json:"b"`
 	A   []A      `json:"a"`
 	E   [][]byte `json:"e"`
 	Z   []Z      `json:"z"`
 }
 
-var _ compiler.NICompiler[sigma.Statement, sigma.Witness] = (*rf[
+var _ compiler.NICompiler[sigma.Statement, sigma.Witness] = (*simplifiedFischlin[
 	sigma.Statement, sigma.Witness, sigma.Statement, sigma.State, sigma.Response,
 ])(nil)
 
-type rf[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
-	rho           uint
-	b             uint
-	t             uint
+type simplifiedFischlin[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
+	rho           uint64
+	b             uint64
+	t             uint64
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 	prng          io.Reader
 }
 
-func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], rho uint, prng io.Reader) (compiler.NICompiler[X, W], error) {
+func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], rho uint64, prng io.Reader) (compiler.NICompiler[X, W], error) {
 	if sigmaProtocol == nil {
 		return nil, errs.NewIsNil("sigmaProtocol")
 	}
@@ -51,13 +53,19 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 		prng = crand.Reader
 	}
 
+	// For rho, b, t parameters a target soundness error is 2^(-128). For more information how they should be chosen refer to
+	// "Optimising and Implementing Fischlin's Transform for UC-Secure Zero-Knowledge" by Chen & Lindell,
+	// chapter 4 ("Optimal Parameters and Experimental Results").
 	b := (base.ComputationalSecurity + rho - 1) / rho
 	t := b + 5
 	if rho > 64 {
 		t = b + 6
 	}
+	if rho < 2 || b < 2 || t >= 64 {
+		return nil, errs.NewArgument("invalid rho")
+	}
 
-	return &rf[X, W, A, S, Z]{
+	return &simplifiedFischlin[X, W, A, S, Z]{
 		rho:           rho,
 		b:             b,
 		t:             t,
@@ -66,7 +74,7 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 	}, nil
 }
 
-func (c *rf[X, W, A, S, Z]) NewProver(sessionId []byte, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
+func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(sessionId []byte, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewArgument("sessionId is empty")
 	}
@@ -85,10 +93,13 @@ func (c *rf[X, W, A, S, Z]) NewProver(sessionId []byte, transcript transcripts.T
 		transcript:    transcript,
 		sigmaProtocol: c.sigmaProtocol,
 		prng:          c.prng,
+		rho:           c.rho,
+		b:             c.b,
+		t:             c.t,
 	}, nil
 }
 
-func (c *rf[X, W, A, S, Z]) NewVerifier(sessionId []byte, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
+func (c *simplifiedFischlin[X, W, A, S, Z]) NewVerifier(sessionId []byte, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewArgument("sessionId is empty")
 	}
@@ -109,10 +120,10 @@ func (c *rf[X, W, A, S, Z]) NewVerifier(sessionId []byte, transcript transcripts
 	}, nil
 }
 
-func (*rf[_, _, _, _, _]) Name() compiler.Name {
+func (*simplifiedFischlin[_, _, _, _, _]) Name() compiler.Name {
 	return Name
 }
 
-func (c *rf[_, _, _, _, _]) SigmaProtocolName() sigma.Name {
+func (c *simplifiedFischlin[_, _, _, _, _]) SigmaProtocolName() sigma.Name {
 	return c.sigmaProtocol.Name()
 }
