@@ -21,12 +21,13 @@ func Test_MeasureConstantTime_split(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 
+	th := 3
 	curve := k256.NewCurve()
-	scheme, err := feldman.NewDealer(3, 5, curve)
+	scheme, err := feldman.NewDealer(uint(th), 5, curve)
 	require.NoError(t, err)
 	var secret curves.Scalar
 	var prover compiler.NIProver[batch_schnorr.Statement, batch_schnorr.Witness]
-	protocol, err := batch_schnorr.NewSigmaProtocol(curve.Generator(), crand.Reader)
+	protocol, err := batch_schnorr.NewSigmaProtocol(uint(th), curve.Generator(), crand.Reader)
 	require.NoError(t, err)
 	comp, err := randomisedFischlin.NewCompiler(protocol, crand.Reader)
 	require.NoError(t, err)
@@ -45,15 +46,16 @@ func Test_MeasureConstantTime_verify(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 
+	th := 3
 	curve := k256.NewCurve()
-	scheme, err := feldman.NewDealer(3, 5, curve)
+	scheme, err := feldman.NewDealer(uint(th), 5, curve)
 	require.NoError(t, err)
 	var secret curves.Scalar
 	var commitments []curves.Point
 	var shares []*feldman.Share
 	var proof compiler.NIZKPoKProof
 	var verifier compiler.NIVerifier[batch_schnorr.Statement]
-	protocol, err := batch_schnorr.NewSigmaProtocol(curve.Generator(), crand.Reader)
+	protocol, err := batch_schnorr.NewSigmaProtocol(uint(th), curve.Generator(), crand.Reader)
 	require.NoError(t, err)
 	comp, err := randomisedFischlin.NewCompiler(protocol, crand.Reader)
 	require.NoError(t, err)
@@ -76,12 +78,13 @@ func Test_MeasureConstantTime_combine(t *testing.T) {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
 
+	th := 3
 	curve := k256.NewCurve()
-	scheme, err := feldman.NewDealer(3, 5, curve)
+	scheme, err := feldman.NewDealer(uint(th), 5, curve)
 	require.NoError(t, err)
 	var secret curves.Scalar
 	var shares []*feldman.Share
-	protocol, err := batch_schnorr.NewSigmaProtocol(curve.Generator(), crand.Reader)
+	protocol, err := batch_schnorr.NewSigmaProtocol(uint(th), curve.Generator(), crand.Reader)
 	require.NoError(t, err)
 	comp, err := randomisedFischlin.NewCompiler(protocol, crand.Reader)
 	require.NoError(t, err)

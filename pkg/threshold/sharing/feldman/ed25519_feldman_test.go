@@ -77,13 +77,14 @@ func TestEd25519FeldmanCombineBadIdentifier(t *testing.T) {
 }
 
 func TestEd25519FeldmanCombineSingle(t *testing.T) {
-	scheme, err := feldman.NewDealer(2, 3, testCurve)
+	th := 2
+	scheme, err := feldman.NewDealer(uint(th), 3, testCurve)
 	require.NoError(t, err)
 	require.NotNil(t, scheme)
 
 	secret, err := testCurve.ScalarField().Hash([]byte("test"))
 	require.NoError(t, err)
-	batchSchnorr, err := batch_schnorr.NewSigmaProtocol(testCurve.Generator(), crand.Reader)
+	batchSchnorr, err := batch_schnorr.NewSigmaProtocol(uint(th), testCurve.Generator(), crand.Reader)
 	require.NoError(t, err)
 	fischlinBatchSchnorr, err := randomisedFischlin.NewCompiler(batchSchnorr, crand.Reader)
 	require.NoError(t, err)
@@ -104,14 +105,15 @@ func TestEd25519FeldmanCombineSingle(t *testing.T) {
 }
 
 func TestEd25519FeldmanAllCombinations(t *testing.T) {
-	scheme, err := feldman.NewDealer(3, 5, testCurve)
+	th := 3
+	scheme, err := feldman.NewDealer(uint(th), 5, testCurve)
 	require.NoError(t, err)
 	require.NotNil(t, scheme)
 
 	secret, err := testCurve.ScalarField().Hash([]byte("test"))
 	require.NoError(t, err)
 
-	dlogProofProtocol, err := batch_schnorr.NewSigmaProtocol(testCurve.Generator(), crand.Reader)
+	dlogProofProtocol, err := batch_schnorr.NewSigmaProtocol(uint(th), testCurve.Generator(), crand.Reader)
 	require.NoError(t, err)
 	randomisedFischlinCompiler, err := randomisedFischlin.NewCompiler(dlogProofProtocol, crand.Reader)
 	require.NoError(t, err)

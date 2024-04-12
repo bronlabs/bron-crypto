@@ -132,6 +132,10 @@ func (s *protocol) RunSimulator(statement Statement, challengeBytes sigma.Challe
 	return a, z, nil
 }
 
+func (*protocol) SpecialSoundness() uint {
+	return 2
+}
+
 func (s *protocol) ValidateStatement(statement Statement, witness Witness) error {
 	if statement == nil ||
 		witness == nil ||

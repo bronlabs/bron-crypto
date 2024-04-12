@@ -8,8 +8,10 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dleq/chaum"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/nthroot"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
@@ -41,6 +43,49 @@ func Benchmark_Schnorr(b *testing.B) {
 		witness, err := curve.ScalarField().Random(prng)
 		require.NoError(b, err)
 		statement := curve.ScalarBaseMult(witness)
+
+		b.ResetTimer()
+		b.Run(fmt.Sprintf("%d", rho), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_, err := prover.Prove(statement, witness)
+				require.NoError(b, err)
+			}
+		})
+	}
+}
+
+func Benchmark_BatchSchnorr(b *testing.B) {
+	curve := k256.NewCurve()
+	prng := crand.Reader
+	sessionId := []byte("TestSessionId")
+	n := 4
+
+	schnorrProtocol, err := batch_schnorr.NewSigmaProtocol(uint(n), curve.Generator(), prng)
+	require.NoError(b, err)
+
+	for rho := uint64(16); rho <= 64; rho++ {
+		nizk, err := fischlin.NewCompiler(schnorrProtocol, rho, prng)
+		require.NoError(b, err)
+
+		proverTranscript := hagrid.NewTranscript("Test", nil)
+		prover, err := nizk.NewProver(sessionId, proverTranscript)
+		require.NoError(b, err)
+		require.NotNil(b, prover)
+
+		verifierTranscript := hagrid.NewTranscript("Test", nil)
+		verifier, err := nizk.NewVerifier(sessionId, verifierTranscript)
+		require.NoError(b, err)
+		require.NotNil(b, verifier)
+
+		witness := make([]curves.Scalar, n)
+		for k := range witness {
+			witness[k], err = curve.ScalarField().Random(prng)
+			require.NoError(b, err)
+		}
+		statement := make([]curves.Point, n)
+		for k, w := range witness {
+			statement[k] = curve.ScalarBaseMult(w)
+		}
 
 		b.ResetTimer()
 		b.Run(fmt.Sprintf("%d", rho), func(b *testing.B) {

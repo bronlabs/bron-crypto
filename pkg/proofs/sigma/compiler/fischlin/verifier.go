@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
@@ -38,7 +39,8 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proof compiler.NIZKPoKProo
 		return errs.NewArgument("invalid length")
 	}
 
-	if (fischlinProof.Rho * fischlinProof.B) < base.ComputationalSecurity {
+	b := fischlinProof.B - uint64(utils.CeilLog2(int(v.sigmaProtocol.SpecialSoundness())-1))
+	if (fischlinProof.Rho * b) < base.ComputationalSecurity {
 		return errs.NewVerification("verification failed")
 	}
 

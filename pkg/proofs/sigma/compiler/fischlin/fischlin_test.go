@@ -16,6 +16,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dleq/chaum"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/nthroot"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
@@ -67,6 +68,64 @@ func Test_HappyPathWithSchnorr(t *testing.T) {
 			proof, err := prover.Prove(statement, witness)
 			require.NoError(t, err)
 			theProof, ok := proof.(*fischlin.Proof[schnorr.Commitment, schnorr.Response])
+			require.True(t, ok)
+
+			err = verifier.Verify(statement, theProof)
+			require.NoError(t, err)
+
+			proverBytes, err := proverTranscript.ExtractBytes("Bytes"+strconv.Itoa(i), 32)
+			require.NoError(t, err)
+			verifierBytes, err := verifierTranscript.ExtractBytes("Bytes"+strconv.Itoa(i), 32)
+			require.NoError(t, err)
+
+			require.True(t, bytes.Equal(proverBytes, verifierBytes))
+		})
+	}
+}
+
+func Test_HappyPathWithBatchSchnorr(t *testing.T) {
+	t.Parallel()
+
+	n := 16
+	for i, c := range supportedCurve {
+		i := i
+		curve := c
+		t.Run(curve.Name(), func(t *testing.T) {
+			t.Parallel()
+
+			prng := crand.Reader
+			sessionId := []byte("TestSessionId" + strconv.Itoa(i))
+
+			schnorrProtocol, err := batch_schnorr.NewSigmaProtocol(uint(n), curve.Generator(), prng)
+			require.NoError(t, err)
+
+			nizk, err := compiler_utils.MakeNonInteractive(fischlin.Name, schnorrProtocol, prng)
+			require.NoError(t, err)
+
+			proverTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
+			prover, err := nizk.NewProver(sessionId, proverTranscript)
+			require.NoError(t, err)
+			require.NotNil(t, prover)
+
+			verifierTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
+			verifier, err := nizk.NewVerifier(sessionId, verifierTranscript)
+			require.NoError(t, err)
+			require.NotNil(t, verifier)
+
+			witness := make([]curves.Scalar, n)
+			for k := range witness {
+				witness[k], err = curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+			}
+
+			statement := make([]curves.Point, n)
+			for k, w := range witness {
+				statement[k] = curve.ScalarBaseMult(w)
+			}
+
+			proof, err := prover.Prove(statement, witness)
+			require.NoError(t, err)
+			theProof, ok := proof.(*fischlin.Proof[batch_schnorr.Commitment, batch_schnorr.Response])
 			require.True(t, ok)
 
 			err = verifier.Verify(statement, theProof)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -56,7 +57,9 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 	// For rho, b, t parameters a target soundness error is 2^(-128). For more information how they should be chosen refer to
 	// "Optimising and Implementing Fischlin's Transform for UC-Secure Zero-Knowledge" by Chen & Lindell,
 	// chapter 4 ("Optimal Parameters and Experimental Results").
-	b := (base.ComputationalSecurity + rho - 1) / rho
+	b1 := (base.ComputationalSecurity + rho - 1) / rho
+	b2 := uint64(utils.CeilLog2(int(sigmaProtocol.SpecialSoundness()) - 1))
+	b := b1 + b2
 	t := b + 5
 	if rho > 64 {
 		t = b + 6

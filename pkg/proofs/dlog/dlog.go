@@ -57,7 +57,7 @@ func BatchProve(sessionId []byte, secrets []curves.Scalar, basePoint curves.Poin
 	}
 	switch BATCH_PROTOCOL {
 	case batch_schnorr.Name:
-		sigmaProtocol, err := batch_schnorr.NewSigmaProtocol(basePoint, prng)
+		sigmaProtocol, err := batch_schnorr.NewSigmaProtocol(uint(len(secrets)), basePoint, prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not construct batch dlog sigma protocol")
 		}
@@ -112,7 +112,7 @@ func BatchVerify(sessionId []byte, proof compiler.NIZKPoKProof, statement []curv
 	}
 	switch BATCH_PROTOCOL {
 	case batch_schnorr.Name:
-		sigmaProtocol, err := batch_schnorr.NewSigmaProtocol(basePoint, nil)
+		sigmaProtocol, err := batch_schnorr.NewSigmaProtocol(uint(len(statement)), basePoint, nil)
 		if err != nil {
 			return errs.WrapFailed(err, "could not construct batch dlog sigma protocol")
 		}

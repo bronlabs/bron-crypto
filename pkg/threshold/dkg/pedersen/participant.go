@@ -71,7 +71,7 @@ func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, protocol types.Th
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	dlogPoKProtocol, err := batch_schnorr.NewSigmaProtocol(protocol.Curve().Generator(), prng)
+	dlogPoKProtocol, err := batch_schnorr.NewSigmaProtocol(protocol.Threshold(), protocol.Curve().Generator(), prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create dlog protocol")
 	}

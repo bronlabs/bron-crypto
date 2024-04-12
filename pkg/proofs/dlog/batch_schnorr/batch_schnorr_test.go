@@ -34,12 +34,12 @@ func Test_HappyPath(t *testing.T) {
 		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
+			n := 32
 			base, err := curve.Random(crand.Reader)
 			require.NoError(t, err)
-			protocol, err := batch_schnorr.NewSigmaProtocol(base, crand.Reader)
+			protocol, err := batch_schnorr.NewSigmaProtocol(uint(n), base, crand.Reader)
 			require.NoError(t, err)
 
-			n := 32
 			witness := make([]curves.Scalar, n)
 			statement := make([]curves.Point, n)
 			for k := 0; k < 32; k++ {
@@ -77,12 +77,12 @@ func Test_InvalidStatement(t *testing.T) {
 		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
+			n := 16
 			base, err := curve.Random(crand.Reader)
 			require.NoError(t, err)
-			protocol, err := batch_schnorr.NewSigmaProtocol(base, crand.Reader)
+			protocol, err := batch_schnorr.NewSigmaProtocol(uint(n), base, crand.Reader)
 			require.NoError(t, err)
 
-			n := 16
 			witness := make([]curves.Scalar, n)
 			statement := make([]curves.Point, n)
 			for k := 0; k < n; k++ {
@@ -132,13 +132,13 @@ func Test_Simulator(t *testing.T) {
 		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
+			n := 16
 			base, err := curve.Random(crand.Reader)
 			require.NoError(t, err)
 
-			protocol, err := batch_schnorr.NewSigmaProtocol(base, crand.Reader)
+			protocol, err := batch_schnorr.NewSigmaProtocol(uint(n), base, crand.Reader)
 			require.NoError(t, err)
 
-			n := 16
 			statement := make([]curves.Point, n)
 			for i := 0; i < n; i++ {
 				statement[i], err = curve.Random(crand.Reader)

@@ -105,6 +105,10 @@ func (p *protocol) RunSimulator(statement Statement, challenge sigma.ChallengeBy
 	return a, z, nil
 }
 
+func (*protocol) SpecialSoundness() uint {
+	return 2
+}
+
 func (p *protocol) ValidateStatement(statement Statement, witness Witness) error {
 	lhs := new(saferith.Nat).Exp(witness, p.n, p.nSquared)
 	if _, eq, _ := lhs.Cmp(statement); eq == 1 {

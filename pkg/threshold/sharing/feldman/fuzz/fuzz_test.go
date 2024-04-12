@@ -24,11 +24,12 @@ func Fuzz_Test(f *testing.F) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		prng := rand.New(rand.NewSource(randomSeed))
 
-		scheme, err := feldman.NewDealer(3, 5, curve)
+		th := 3
+		scheme, err := feldman.NewDealer(uint(th), 5, curve)
 		require.NoError(t, err)
 		secret, err := curve.ScalarField().Hash(secretBytes)
 		require.NoError(t, err)
-		protocol, err := batch_schnorr.NewSigmaProtocol(curve.Generator(), prng)
+		protocol, err := batch_schnorr.NewSigmaProtocol(uint(th), curve.Generator(), prng)
 		require.NoError(t, err)
 		comp, err := randomisedFischlin.NewCompiler(protocol, prng)
 		require.NoError(t, err)

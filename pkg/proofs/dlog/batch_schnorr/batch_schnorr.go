@@ -32,6 +32,7 @@ type Response curves.Scalar
 var _ sigma.Response = Response(nil)
 
 type protocol struct {
+	t     uint
 	base  curves.Point
 	curve curves.Curve
 	prng  io.Reader
@@ -39,7 +40,7 @@ type protocol struct {
 
 var _ sigma.Protocol[Statement, Witness, Commitment, State, Response] = (*protocol)(nil)
 
-func NewSigmaProtocol(base curves.Point, prng io.Reader) (sigma.Protocol[Statement, Witness, Commitment, State, Response], error) {
+func NewSigmaProtocol(t uint, base curves.Point, prng io.Reader) (sigma.Protocol[Statement, Witness, Commitment, State, Response], error) {
 	if base == nil {
 		return nil, errs.NewIsNil("base is nil")
 	}
@@ -47,7 +48,12 @@ func NewSigmaProtocol(base curves.Point, prng io.Reader) (sigma.Protocol[Stateme
 		prng = crand.Reader
 	}
 
+	if t < 2 {
+		return nil, errs.NewArgument("t < 2")
+	}
+
 	return &protocol{
+		t:     t,
 		base:  base,
 		curve: base.Curve(),
 		prng:  prng,
@@ -65,6 +71,10 @@ func (b *protocol) ComputeProverCommitment(_ Statement, _ Witness) (Commitment, 
 }
 
 func (b *protocol) ComputeProverResponse(_ Statement, witness Witness, _ Commitment, state State, challengeBytes sigma.ChallengeBytes) (Response, error) {
+	if uint(len(witness)) != b.t {
+		return nil, errs.NewLength("invalid witness size")
+	}
+
 	for _, w := range witness {
 		if w.ScalarField().Curve().Name() != b.curve.Name() {
 			return nil, errs.NewArgument("invalid curve")
@@ -89,9 +99,14 @@ func (b *protocol) ComputeProverResponse(_ Statement, witness Witness, _ Commitm
 }
 
 func (b *protocol) Verify(statement Statement, commitment Commitment, challengeBytes sigma.ChallengeBytes, response Response) error {
-	if len(statement) == 0 || commitment == nil || challengeBytes == nil || response == nil {
+	if commitment == nil || challengeBytes == nil || response == nil {
 		return errs.NewIsNil("passed nil")
 	}
+
+	if uint(len(statement)) != b.t {
+		return errs.NewLength("invalid statement size")
+	}
+
 	for _, x := range statement {
 		if x.Curve().Name() != b.curve.Name() {
 			return errs.NewArgument("invalid curve")
@@ -151,8 +166,12 @@ func (b *protocol) RunSimulator(statement Statement, challengeBytes sigma.Challe
 	return a, z, nil
 }
 
+func (b *protocol) SpecialSoundness() uint {
+	return b.t + 1
+}
+
 func (b *protocol) ValidateStatement(statement Statement, witness Witness) error {
-	if len(statement) == 0 || len(statement) != len(witness) {
+	if uint(len(statement)) != b.t || uint(len(witness)) != b.t {
 		return errs.NewArgument("invalid statement")
 	}
 
