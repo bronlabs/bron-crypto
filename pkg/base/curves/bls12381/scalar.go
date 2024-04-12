@@ -15,7 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
@@ -390,7 +390,7 @@ func (s *Scalar) SetBytes(input []byte) (curves.Scalar, error) {
 	if len(input) != base.FieldBytes {
 		return nil, errs.NewLength("invalid length")
 	}
-	reducedInput := utils.NatFromBytes(input, r)
+	reducedInput := saferithUtils.NatFromBytesMod(input, r)
 	buffer := bitstring.PadToRight(bitstring.ReverseBytes(reducedInput.Bytes()), base.FieldBytes-len(reducedInput.Bytes()))
 	value, err := bls12381impl.FqNew().SetBytes((*[base.FieldBytes]byte)(buffer))
 	if err != nil {

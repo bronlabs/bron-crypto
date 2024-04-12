@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var _ curves.PairingPoint = (*PointG2)(nil)
@@ -61,10 +61,10 @@ func (p *PointG2) Order() *saferith.Modulus {
 		return saferith.ModulusFromUint64(0)
 	}
 	q := p.Clone()
-	order := new(saferith.Nat).SetUint64(1)
+	order := saferithUtils.NatOne
 	for !q.IsIdentity() {
 		q = q.Add(p)
-		utils.IncrementNat(order)
+		saferithUtils.NatInc(order)
 	}
 	return saferith.ModulusFromNat(order)
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 type CrtParams struct {
@@ -78,8 +78,8 @@ func NewSecretKey(p, q *saferith.Nat) (*SecretKey, error) {
 		return nil, errs.NewValidation("p == q")
 	}
 
-	pMinusOne := new(saferith.Nat).Sub(p, natOne, p.AnnouncedLen())
-	qMinusOne := new(saferith.Nat).Sub(q, natOne, q.AnnouncedLen())
+	pMinusOne := saferithUtils.NatDec(p)
+	qMinusOne := saferithUtils.NatDec(q)
 	n := new(saferith.Nat).Mul(p, q, -1)
 	phi := new(saferith.Nat).Mul(pMinusOne, qMinusOne, 2*n.AnnouncedLen())
 
@@ -96,10 +96,10 @@ func NewSecretKey(p, q *saferith.Nat) (*SecretKey, error) {
 
 func (sk *SecretKey) EncryptWithNonce(plainText *PlainText, nonce *saferith.Nat) (*CipherText, error) {
 	nMod := sk.GetNModulus()
-	if plainText == nil || !utils.IsLess(plainText, sk.N) {
+	if plainText == nil || !saferithUtils.NatIsLess(plainText, sk.N) {
 		return nil, errs.NewValidation("invalid plainText")
 	}
-	if nonce == nil || nonce.EqZero() == 1 || !utils.IsLess(nonce, sk.N) || nonce.IsUnit(nMod) != 1 {
+	if nonce == nil || nonce.EqZero() == 1 || !saferithUtils.NatIsLess(nonce, sk.N) || nonce.IsUnit(nMod) != 1 {
 		return nil, errs.NewValidation("invalid nonce")
 	}
 
@@ -107,7 +107,7 @@ func (sk *SecretKey) EncryptWithNonce(plainText *PlainText, nonce *saferith.Nat)
 	crt := sk.GetCrtNNParams()
 
 	rToN := expCrt(crt, nonce, sk.N, nnMod)
-	gToM := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(plainText, sk.N, nnMod), natOne, nnMod)
+	gToM := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(plainText, sk.N, nnMod), saferithUtils.NatOne, nnMod)
 	cipherText := new(saferith.Nat).ModMul(gToM, rToN, nnMod)
 
 	return &CipherText{
@@ -119,7 +119,7 @@ func (sk *SecretKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText,
 	if prng == nil {
 		return nil, nil, errs.NewIsNil("prng")
 	}
-	if plainText == nil || !utils.IsLess(plainText, sk.N) {
+	if plainText == nil || !saferithUtils.NatIsLess(plainText, sk.N) {
 		return nil, nil, errs.NewValidation("invalid plainText")
 	}
 
@@ -148,7 +148,7 @@ func (sk *SecretKey) MulPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 	if err := lhs.Validate(&sk.PublicKey); err != nil {
 		return nil, errs.WrapValidation(err, "invalid lhs")
 	}
-	if rhs == nil || !utils.IsLess(rhs, sk.N) {
+	if rhs == nil || !saferithUtils.NatIsLess(rhs, sk.N) {
 		return nil, errs.NewValidation("invalid rhs")
 	}
 
@@ -235,7 +235,7 @@ func (sk *SecretKey) Validate() error {
 	if sk.N.TrueLen() < 4 {
 		return errs.NewValue("N is too small")
 	}
-	if !utils.IsLess(sk.Phi, sk.N) {
+	if !saferithUtils.NatIsLess(sk.Phi, sk.N) {
 		return errs.NewValue("Phi >= N")
 	}
 
@@ -245,7 +245,7 @@ func (sk *SecretKey) Validate() error {
 func (sk *SecretKey) L(x *saferith.Nat) *saferith.Nat {
 	nMod := sk.GetNModulus()
 
-	xMinusOne := new(saferith.Nat).Sub(x, natOne, sk.GetNNModulus().BitLen())
+	xMinusOne := saferithUtils.NatDec(x)
 	l := new(saferith.Nat).Div(xMinusOne, nMod, nMod.BitLen())
 	return l
 }
@@ -253,7 +253,7 @@ func (sk *SecretKey) L(x *saferith.Nat) *saferith.Nat {
 func (sk *SecretKey) precompute() {
 	sk.PublicKey.precompute()
 
-	minusB := new(saferith.Nat).Sub(new(saferith.Nat).Add(sk.N, natOne, -1), sk.Phi, -1)
+	minusB := new(saferith.Nat).Sub(saferithUtils.NatInc(sk.N), sk.Phi, -1)
 	bb := new(saferith.Nat).Mul(minusB, minusB, -1)
 	fourN := new(saferith.Nat).Lsh(sk.N, 2, -1)
 	delta := new(saferith.Nat).Sub(bb, fourN, -1)
@@ -262,8 +262,8 @@ func (sk *SecretKey) precompute() {
 	p := new(saferith.Nat).Rsh(new(saferith.Nat).Sub(minusB, sqrtDelta, -1), 1, -1)
 	q := new(saferith.Nat).Rsh(new(saferith.Nat).Add(minusB, sqrtDelta, -1), 1, -1)
 	qMod := saferith.ModulusFromNat(q)
-	pMinusOne := saferith.ModulusFromNat(new(saferith.Nat).Sub(p, natOne, -1))
-	qMinusOne := saferith.ModulusFromNat(new(saferith.Nat).Sub(q, natOne, -1))
+	pMinusOne := saferith.ModulusFromNat(saferithUtils.NatDec(p))
+	qMinusOne := saferith.ModulusFromNat(saferithUtils.NatDec(q))
 	nPhi := new(saferith.Nat).Mul(pMinusOne.Nat(), qMinusOne.Nat(), -1)
 	nPhiInv := new(saferith.Nat).ModInverse(nPhi, sk.GetNModulus())
 	pInvQ := new(saferith.Nat).ModInverse(p, qMod)

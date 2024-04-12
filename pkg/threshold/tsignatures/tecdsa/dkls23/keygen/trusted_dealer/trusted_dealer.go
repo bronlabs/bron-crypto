@@ -2,17 +2,16 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
-
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
@@ -39,10 +38,10 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.Iden
 	}
 	privateKey := protocol.Curve().Scalar().SetNat(new(saferith.Nat).SetBig(ecdsaPrivateKey.D, protocol.Curve().SubGroupOrder().BitLen()))
 	px := protocol.Curve().BaseField().Element().SetNat(
-		utils.NatFromBig(ecdsaPrivateKey.X, protocol.Curve().SubGroupOrder()),
+		saferithUtils.NatFromBigMod(ecdsaPrivateKey.X, protocol.Curve().SubGroupOrder()),
 	)
 	py := protocol.Curve().BaseField().Element().SetNat(
-		utils.NatFromBig(ecdsaPrivateKey.Y, protocol.Curve().SubGroupOrder()),
+		saferithUtils.NatFromBigMod(ecdsaPrivateKey.Y, protocol.Curve().SubGroupOrder()),
 	)
 	publicKey, err := protocol.Curve().NewPoint(px, py)
 	if err != nil {

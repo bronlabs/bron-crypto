@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/testutils"
 )
 
@@ -170,7 +171,7 @@ func TestScalarBls12381G1Mul(t *testing.T) {
 	require.Equal(t, int(actual.Cmp(fiftyFour)), 0)
 	qq := bls12381impl.FqNew()
 	n := new(saferith.Nat).SetNat(qq.Params.Modulus.Nat())
-	n.Sub(n, new(saferith.Nat).SetUint64(1), qq.Params.Modulus.BitLen())
+	n = saferithUtils.NatDec(n)
 	upper := g1.Scalar().SetNat(n)
 	one, err := bls12381.NewScalar(g1, 1)
 	require.NoError(t, err)

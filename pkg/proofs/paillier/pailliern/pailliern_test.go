@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/pailliern"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -19,7 +20,7 @@ import (
 func Test_pIsCorrect(t *testing.T) {
 	t.Parallel()
 
-	pCheck := new(saferith.Nat).SetUint64(1)
+	pCheck := saferithUtils.NatOne
 	for i := 2; i < pailliern.Alpha; i++ {
 		if isPrime(i) {
 			pCheck = new(saferith.Nat).Mul(pCheck, new(saferith.Nat).SetUint64(uint64(i)), pailliern.P.AnnouncedLen())
@@ -89,7 +90,7 @@ func Test_InvalidStatement(t *testing.T) {
 		require.NoError(t, err)
 		p := new(saferith.Nat).SetBig(pInt, 512)
 
-		pMinusOne := new(saferith.Nat).Sub(p, new(saferith.Nat).SetUint64(1), 512)
+		pMinusOne := saferithUtils.NatDec(p)
 		n := new(saferith.Nat).Mul(p, p, 1024) // n = p^2
 		totient := new(saferith.Nat).Mul(p, pMinusOne, 1024)
 

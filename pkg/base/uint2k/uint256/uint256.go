@@ -21,6 +21,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/uint2k"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
@@ -34,7 +35,7 @@ var (
 	ring256InitOnce sync.Once
 	ring256Instance *Ring256
 
-	mod2Pow256 = saferith.ModulusFromNat(new(saferith.Nat).Lsh(new(saferith.Nat).SetUint64(1), RingBits, -1))
+	mod2Pow256 = saferith.ModulusFromNat(new(saferith.Nat).Lsh(saferithUtils.NatOne, RingBits, -1))
 )
 
 var _ uint2k.Ring2k[*Ring256, Uint256] = (*Ring256)(nil)

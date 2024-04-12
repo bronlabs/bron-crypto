@@ -4,7 +4,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 )
@@ -16,11 +16,11 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 	}
 
 	// 1. choose random a, b
-	verifier.state.a, err = utils.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q.Nat())
+	verifier.state.a, err = saferithUtils.NatRandomRangeH(verifier.prng, verifier.state.q.Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}
-	verifier.state.b, err = utils.RandomNat(verifier.prng, new(saferith.Nat).SetUint64(0), verifier.state.q2.Nat())
+	verifier.state.b, err = saferithUtils.NatRandomRangeH(verifier.prng, verifier.state.q2.Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}

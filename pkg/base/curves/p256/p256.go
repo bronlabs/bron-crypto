@@ -19,6 +19,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 const Name = "P256" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
@@ -163,7 +164,7 @@ func (c Curve) AdditiveIdentity() curves.Point {
 // === Group Methods.
 
 func (Curve) Cofactor() *saferith.Nat {
-	return new(saferith.Nat).SetUint64(1)
+	return saferithUtils.NatOne
 }
 
 // === Additive Group Methods.

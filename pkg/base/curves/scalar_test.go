@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 func Test_ScalarCmp(t *testing.T) {
@@ -73,9 +73,8 @@ func Test_ScalarSetNat_BigEndian(t *testing.T) {
 			t.Parallel()
 			oneBigEndian := make([]byte, base.FieldBytes)
 			oneBigEndian[len(oneBigEndian)-1] = 0x1 // 0x000000...0001
-			oneNat := new(saferith.Nat).SetUint64(1)
 			// Check cast from-to Nat
-			scalarOne := boundedCurve.ScalarField().Element().SetNat(oneNat)
+			scalarOne := boundedCurve.ScalarField().Element().SetNat(saferithUtils.NatOne)
 			require.EqualValues(t, oneBigEndian, scalarOne.Bytes())
 			require.EqualValues(t, oneBigEndian, scalarOne.Nat().Bytes())
 			// Check if the internal value is treated as a one

@@ -10,7 +10,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 type PublicKeyPrecomputed struct {
@@ -70,12 +70,12 @@ func (pk *PublicKey) AddPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 	if err := lhs.Validate(pk); err != nil {
 		return nil, errs.WrapValidation(err, "invalid lhs")
 	}
-	if rhs == nil || !utils.IsLess(rhs, pk.N) {
+	if rhs == nil || !saferithUtils.NatIsLess(rhs, pk.N) {
 		return nil, errs.NewValidation("invalid rhs")
 	}
 
 	nnModulus := pk.GetNNModulus()
-	rhsC := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(pk.N, rhs, nnModulus), natOne, nnModulus)
+	rhsC := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(pk.N, rhs, nnModulus), saferithUtils.NatOne, nnModulus)
 	result := new(saferith.Nat).ModMul(lhs.C, rhsC, nnModulus)
 
 	return &CipherText{
@@ -104,14 +104,14 @@ func (pk *PublicKey) SubPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 	if err := lhs.Validate(pk); err != nil {
 		return nil, errs.WrapValidation(err, "invalid lhs")
 	}
-	if rhs == nil || !utils.IsLess(rhs, pk.N) {
+	if rhs == nil || !saferithUtils.NatIsLess(rhs, pk.N) {
 		return nil, errs.NewValidation("invalid rhs")
 	}
 
 	nnMod := pk.GetNNModulus()
 	nMod := pk.GetNModulus()
 	rhsNeg := new(saferith.Nat).ModNeg(rhs, nMod)
-	rhsCInv := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(pk.N, rhsNeg, nnMod), natOne, nnMod)
+	rhsCInv := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(pk.N, rhsNeg, nnMod), saferithUtils.NatOne, nnMod)
 	result := new(saferith.Nat).ModMul(lhs.C, rhsCInv, nnMod)
 
 	return &CipherText{
@@ -123,7 +123,7 @@ func (pk *PublicKey) MulPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 	if err := lhs.Validate(pk); err != nil {
 		return nil, errs.WrapFailed(err, "invalid lhs")
 	}
-	if rhs == nil || !utils.IsLess(rhs, pk.N) {
+	if rhs == nil || !saferithUtils.NatIsLess(rhs, pk.N) {
 		return nil, errs.NewFailed("invalid rhs")
 	}
 
@@ -135,16 +135,16 @@ func (pk *PublicKey) MulPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText,
 }
 
 func (pk *PublicKey) EncryptWithNonce(plainText *PlainText, nonce *saferith.Nat) (*CipherText, error) {
-	if plainText == nil || !utils.IsLess(plainText, pk.N) {
+	if plainText == nil || !saferithUtils.NatIsLess(plainText, pk.N) {
 		return nil, errs.NewValidation("invalid plainText")
 	}
 	nMod := pk.GetNModulus()
-	if nonce == nil || nonce.EqZero() == 1 || !utils.IsLess(nonce, pk.N) || nonce.IsUnit(nMod) != 1 {
+	if nonce == nil || nonce.EqZero() == 1 || !saferithUtils.NatIsLess(nonce, pk.N) || nonce.IsUnit(nMod) != 1 {
 		return nil, errs.NewValidation("invalid nonce")
 	}
 
 	nnMod := pk.GetNNModulus()
-	gToM := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(plainText, pk.N, nnMod), natOne, nnMod)
+	gToM := new(saferith.Nat).ModAdd(new(saferith.Nat).ModMul(plainText, pk.N, nnMod), saferithUtils.NatOne, nnMod)
 	rToN := new(saferith.Nat).Exp(nonce, pk.N, nnMod)
 	cipherText := new(saferith.Nat).ModMul(gToM, rToN, nnMod)
 
@@ -157,7 +157,7 @@ func (pk *PublicKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText,
 	if prng == nil {
 		return nil, nil, errs.NewIsNil("prng")
 	}
-	if plainText == nil || !utils.IsLess(plainText, pk.N) {
+	if plainText == nil || !saferithUtils.NatIsLess(plainText, pk.N) {
 		return nil, nil, errs.NewValidation("invalid plainText")
 	}
 

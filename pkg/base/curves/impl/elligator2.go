@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var (
@@ -47,8 +48,7 @@ func NewElligator2Params(curve curves.Curve, useHardcoded bool) *Elligator2Param
 	c2 := two.Exp(c1)
 
 	// c3 = sqrt(-1)
-	oneNat := new(saferith.Nat).SetUint64(1)
-	c3, err := curve.BaseField().Element().SetNat(saferithArith.Sub(q, oneNat, -1)).Sqrt()
+	c3, err := curve.BaseField().Element().SetNat(saferithUtils.NatDec(q)).Sqrt()
 	if err != nil {
 		panic("sqrt(-1) does not exist for c3 in Elligator2")
 	}
