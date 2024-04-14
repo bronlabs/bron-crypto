@@ -40,18 +40,22 @@ func (*ScalarField) Curve() curves.Curve {
 	return NewCurve()
 }
 
-// === Basic Methods.
+func (sf *ScalarField) Scalar() curves.Scalar {
+	return sf.AdditiveIdentity()
+}
+
+// === Set Methods.
 
 func (*ScalarField) Name() string {
 	return Name
 }
 
 func (*ScalarField) Order() *saferith.Modulus {
-	return NewCurve().SubGroupOrder()
+	return NewCurve().AdditiveOrder()
 }
 
 func (sf *ScalarField) Element() curves.Scalar {
-	return sf.AdditiveIdentity()
+	return sf.Scalar()
 }
 
 func (*ScalarField) Operators() []algebra.Operator {
@@ -116,7 +120,7 @@ func (sf *ScalarField) Select(choice bool, x0, x1 curves.Scalar) curves.Scalar {
 
 // === Additive Groupoid Methods.
 
-func (*ScalarField) Add(x curves.Scalar, ys ...curves.Scalar) curves.Scalar {
+func (*ScalarField) Add(x algebra.AdditiveGroupoidElement[curves.ScalarField, curves.Scalar], ys ...curves.Scalar) curves.Scalar {
 	sum := x
 	for _, y := range ys {
 		sum = sum.Add(y)

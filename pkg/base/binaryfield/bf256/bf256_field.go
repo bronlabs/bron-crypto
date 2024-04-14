@@ -26,7 +26,7 @@ var (
 	order, _           = saferith.ModulusFromHex("100000000000000000000000000000000")
 )
 
-var _ algebra.AbstractFiniteField[*Field, *FieldElement] = (*Field)(nil)
+var _ algebra.FiniteField[*Field, *FieldElement] = (*Field)(nil)
 
 type Field struct{}
 

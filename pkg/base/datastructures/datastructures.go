@@ -2,13 +2,20 @@ package datastructures
 
 import (
 	"encoding/json"
+	"io"
+
+	"github.com/cronokirby/saferith"
 )
 
 type Incomparable [0]func()
 
-type Hashable[K any] interface {
-	HashCode() uint64
+type Equatable[K any] interface {
 	Equal(rhs K) bool
+}
+
+type Hashable[K any] interface {
+	Equatable[K]
+	HashCode() uint64
 }
 
 type KeyValuePair[K any, V any] struct {
@@ -38,8 +45,16 @@ type BiMap[K any, V any] interface {
 	Reverse() BiMap[V, K]
 }
 
-type Set[E any] interface {
+type AbstractSet[E any] interface {
+	Cardinality() *saferith.Modulus
+	Random(prng io.Reader) (E, error)
+	Hash(x []byte) (E, error)
 	Contains(e E) bool
+	Iter() <-chan E
+}
+
+type Set[E any] interface {
+	AbstractSet[E]
 	Add(e E)
 	Merge(es ...E)
 	Remove(e E)
@@ -56,7 +71,6 @@ type Set[E any] interface {
 	IsProperSubSet(other Set[E]) bool
 	IsSuperSet(other Set[E]) bool
 	IsProperSuperSet(other Set[E]) bool
-	Iter() <-chan E
 	IterSubSets() <-chan Set[E]
 	List() []E
 	Clone() Set[E]

@@ -2,37 +2,38 @@ package algebra
 
 import "github.com/cronokirby/saferith"
 
-// AbstractGroup defines methods needed for S to be considered as a Group.
+// Group defines methods needed for S to be considered as a Group.
 // Group is a Monoid where every element is invertible.
-type AbstractGroup[S Structure, E Element] interface {
+type Group[G Structure, E Element] interface {
 	// Group is a Monoid.
-	AbstractMonoid[S, E]
+	Monoid[G, E]
 }
 
-// AbstractGroupElement defines methods needed for E to be considered as an element of group S.
+// GroupElement defines methods needed for E to be considered as an element of group S.
 // Group is a Monoid where every element is invertible.
-type AbstractGroupElement[S Structure, E Element] interface {
+type GroupElement[G Structure, E Element] interface {
 	// Group element is a Monoid element.
-	AbstractMonoidElement[S, E]
-
+	MonoidElement[G, E]
 	// Inverse returns inverse of this element ie. S.Operate(this, this.Inverse()).Equal(S.Identity()) == true
-	Inverse() E
+	Inverse(under BinaryOperator[E]) (E, error)
 	// IsInverse checks whether the input is an inverse of this element.
-	IsInverse(of E) bool
+	IsInverse(of GroupElement[G, E], under BinaryOperator[E]) (bool, error)
 	// IsTorsionElement returns true if this.Mul(order) is identity.
-	IsTorsionElement(order *saferith.Modulus) bool
+	IsTorsionElement(order *saferith.Modulus, under BinaryOperator[E]) (bool, error)
 }
 
-// SubGroupTrait defined additional methods for group S if S is to be considered as a subgroup of some other group.
-type SubGroupTrait interface {
+// SubGroup defined additional methods for group S if S is to be considered as a subgroup of some other group.
+type SubGroup[G Structure, E Element] interface {
+	Group[G, E]
 	// Cofactor outputs the result of order of this subgroup divided by order of the group.
-	Cofactor() *saferith.Nat
-	// SubGroupOrder outputs the order of this subgroup.
-	SubGroupOrder() *saferith.Modulus
+	CoFactor() *saferith.Nat
+	// SuperGroupOrder outputs the order of the parent of this subgroup.
+	SuperGroupOrder() *saferith.Modulus
 }
 
-// SubGroupElementTrait defines additional methods for elements of type E of subgroup S.
-type SubGroupElementTrait[S Structure, E Element] interface {
+// SubGroupElement defines additional methods for elements of type E of subgroup S.
+type SubGroupElement[G Structure, E Element] interface {
+	GroupElement[G, E]
 	// IsSmallOrder returns true if it this.IsTorsionElement($SMALL) where $SMALL
 	// is context dependent and depends on S.
 	// Example: SMALL = 8 for edwards25519 whose structure is Zq X Z8.
@@ -41,74 +42,102 @@ type SubGroupElementTrait[S Structure, E Element] interface {
 	ClearCofactor() E
 }
 
-// AdditiveGroupTrait defines additional methods for group S if the operation is some form of addition.
-type AdditiveGroupTrait[S Structure, E Element] interface {
+// AdditiveGroup defines additional methods for group S if the operation is some form of addition.
+type AdditiveGroup[G Structure, E Element] interface {
 	// Additive group is an additive monoid
-	AdditiveMonoidTrait[S, E]
+	AdditiveMonoid[G, E]
+	Group[G, E]
 
 	// Sub is inverse of Add, and accepts elements x and a the list of elements ys and adds returns sum(x, -ys).
-	Sub(x E, ys ...E) E
+	Sub(x AdditiveGroupElement[G, E], ys ...AdditiveGroupElement[G, E]) E
 }
 
-// AdditiveGroupElementTrait defines additional methods for elements of type E of group S if operator
+// AdditiveGroupElement defines additional methods for elements of type E of group S if operator
 // is some form of addition.
-type AdditiveGroupElementTrait[S Structure, E Element] interface {
+type AdditiveGroupElement[G Structure, E Element] interface {
 	// Additive group element is an additive monoid.
-	AdditiveMonoidElementTrait[S, E]
+	AdditiveMonoidElement[G, E]
+	GroupElement[G, E]
 
 	// AdditiveInverse returns an element that is the inverse of this element under addition.
 	AdditiveInverse() E
 	// IsAdditiveInverse returns true if the input is the additive inverse of this element.
-	IsAdditiveInverse(of E) bool
+	IsAdditiveInverse(of AdditiveGroupElement[G, E]) bool
+	IsTorsionElementUnderAddition(order *saferith.Modulus) bool
 	// Neg returns additive inverse of this element.
 	Neg() E
 
 	// Sub is the inverse of Add, and returns the value of this.Add(x.Inverse())
-	Sub(x E) E
+	Sub(x AdditiveGroupElement[G, E]) E
 	// ApplySub calls this.Sub(x).Sub(x)...Sub(x), `n` many times.
-	ApplySub(x E, n *saferith.Nat) E
+	ApplySub(x AdditiveGroupElement[G, E], n *saferith.Nat) E
 }
 
-// MultiplicativeGroupTrait defines additional methods for elements of type E of group S if operator
+// MultiplicativeGroup defines additional methods for elements of type E of group S if operator
 // is some form of multiplication.
-type MultiplicativeGroupTrait[S Structure, E Element] interface {
+type MultiplicativeGroup[G Structure, E Element] interface {
 	// Multiplicative group is a multiplicatiev monoid.
-	MultiplicativeMonoidTrait[S, E]
+	MultiplicativeMonoid[G, E]
+	Group[G, E]
 
 	// Div is inverse of Mul, and accepts elements x and a the list of elements ys and adds returns product(x, ys^-1).
-	Div(x E, ys ...E) E
+	Div(x MultiplicativeGroupElement[G, E], ys ...MultiplicativeGroupElement[G, E]) (E, error)
 }
 
-// MultiplicativeGroupElementTrait defines additional methods for elements of type E of group S if operator
+// MultiplicativeGroupElement defines additional methods for elements of type E of group S if operator
 // is some form of multiplication.
-type MultiplicativeGroupElementTrait[S Structure, E Element] interface {
+type MultiplicativeGroupElement[G Structure, E Element] interface {
 	// Multiplicative group element is a multiplicative monoid element.
-	MultiplicativeMonoidElementTrait[S, E]
+	MultiplicativeMonoidElement[G, E]
+	GroupElement[G, E]
 
 	// MultiplicativeInverse returns the inverse of this element under multiplication.
-	MultiplicativeInverse() E
+	MultiplicativeInverse() (E, error)
 	// IsMultiplicativeInverse returns true if the input is the multiplicative inverse of this element.
-	IsMultiplicativeInverse(of E) bool
+	IsMultiplicativeInverse(of MultiplicativeGroupElement[G, E]) bool
+	IsTorsionElementUnderMultiplication(order *saferith.Modulus) bool
 
 	// Div is the inverse of Mul, and returns the value of this.Mul(x.Inverse())
-	Div(x E) E
+	Div(x MultiplicativeGroupElement[G, E]) (E, error)
 	// ApplyDiv calls this.Div(x).Div(x)...Div(x), `n` many times.
-	ApplyDiv(x E, n *saferith.Nat) E
+	ApplyDiv(x MultiplicativeGroupElement[G, E], n *saferith.Nat) (E, error)
 }
 
-// AbstractCyclicGroup defines methods needed for group S to be cyclic.
+// CyclicGroup defines methods needed for group S to be cyclic.
 // We assume generator of S is previously agreed upon.
 // Cyclic group is a group generated by a single element.
-type AbstractCyclicGroup[S Structure, E Element] interface {
+type CyclicGroup[G Structure, E Element] interface {
 	// Cyclic group is a group.
-	AbstractGroup[S, E]
-	// Generator returns the previously agreed-upon element that generates the entire group S.
-	Generator() E
+	CyclicMonoid[G, E]
+	Group[G, E]
+	DLog(base, x CyclicGroupElement[G, E], under BinaryOperator[E]) (*saferith.Nat, error)
 }
 
-// AbstractCyclicGroupElement defines methods needed for elements of type E of cyclic group S.
+// CyclicGroupElement defines methods needed for elements of type E of cyclic group S.
 // Cyclic group is a group generated by a single element.
-type AbstractCyclicGroupElement[S Structure, E Element] interface {
+type CyclicGroupElement[G Structure, E Element] interface {
 	// Cyclic group element is a group element.
-	AbstractGroupElement[S, E]
+	CyclicMonoidElement[G, E]
+	GroupElement[G, E]
 }
+
+type AdditiveCyclicGroup[G Structure, E Element] interface {
+	// Cyclic group is a group.
+	AdditiveGroup[G, E]
+	CyclicGroup[G, E]
+}
+
+// CyclicGroupElement defines methods needed for elements of type E of cyclic group S.
+// Cyclic group is a group generated by a single element.
+type AdditiveCyclicGroupElement[G Structure, E Element] interface {
+	// Cyclic group element is a group element.
+	AdditiveGroupElement[G, E]
+	CyclicGroupElement[G, E]
+}
+
+type AutGroupOperator[E Element] interface {
+	BinaryOperator[AutoFunction[E]]
+	FunctionComposition[E, E, E]
+}
+
+type Aut[G Structure, ObjE Element] Group[G, AutoFunction[ObjE]]
