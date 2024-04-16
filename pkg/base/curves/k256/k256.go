@@ -1,7 +1,6 @@
 package k256
 
 import (
-	"encoding/binary"
 	"io"
 	"reflect"
 	"strings"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/mixins"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
@@ -21,6 +19,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 const Name = "secp256k1" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
@@ -36,21 +35,12 @@ var (
 var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
-	mixins.Mixin_AdditiveGroup[curves.Curve, curves.Point]
-	mixins.Mixin_CyclicGroup[curves.Curve, curves.Point]
 	hash2curve.CurveHasher
 
 	_ ds.Incomparable
 }
 
-type Curve2 struct {
-	mixins.Mixin_Group[curves.Curve, curves.Point]
-	mixins.Mixin_AdditiveMonoid[curves.Curve, curves.Point]
-	// algebra.PointedSetElement[curves.Curve, curves.Point]
-}
-
 func k256Init() {
-	// x := &Curve2{}
 	k256Instance = Curve{}
 	k256Instance.CurveHasher = hash2curve.NewCurveHasherSha256(
 		curves.Curve(&k256Instance),
@@ -75,18 +65,33 @@ func NewCurve() *Curve {
 	return &k256Instance
 }
 
-// === Set Methods.
+// === Basic Methods.
 
-func (c *Curve) Cardinality() *saferith.Modulus {
-	return fq.New().Params.Modulus
+func (*Curve) Name() string {
+	return Name
 }
 
-func (c *Curve) Contains(p curves.Point) bool {
-	return p.Curve().Name() == c.Name() && p.IsInPrimeSubGroup()
+func (c *Curve) Order() *saferith.Modulus {
+	return c.SubGroupOrder()
 }
 
 func (c Curve) Element() curves.Point {
-	return c.AdditiveIdentity()
+	return c.Identity()
+}
+
+func (c *Curve) OperateOver(operator algebra.Operator, ps ...curves.Point) (curves.Point, error) {
+	if operator != algebra.PointAddition {
+		return nil, errs.NewType("operator %v is not supported", operator)
+	}
+	current := c.Identity()
+	for _, p := range ps {
+		current = current.Operate(p)
+	}
+	return current, nil
+}
+
+func (*Curve) Operators() []algebra.Operator {
+	return []algebra.Operator{algebra.PointAddition}
 }
 
 func (c *Curve) Random(prng io.Reader) (curves.Point, error) {
@@ -104,20 +109,22 @@ func (c *Curve) Hash(input []byte) (curves.Point, error) {
 	return c.HashWithDst(input, nil)
 }
 
-func (c *Curve) Iter() <-chan curves.Point {
-	ch := make(chan curves.Point, 1)
-	go func() {
-		defer close(ch)
-		current := c.AdditiveIdentity()
-		ch <- current
-		index := NewCurve().ScalarField().One()
-		for !index.IsZero() {
-			current = current.Add(c.AdditiveIdentity())
-			ch <- current
-			index.Increment()
-		}
-	}()
-	return ch
+func (*Curve) HashWithDst(input []byte, dst []byte) (curves.Point, error) {
+	p := k256impl.PointNew()
+	u, err := NewCurve().HashToFieldElements(2, input, dst)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "hash to field element of K256 failed")
+	}
+	u0, ok0 := u[0].(*BaseFieldElement)
+	u1, ok1 := u[1].(*BaseFieldElement)
+	if !ok0 || !ok1 {
+		return nil, errs.NewType("Cast to K256 field elements failed")
+	}
+	err = p.Arithmetic.Map(u0.V, u1.V, p)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "Map to K256 point failed")
+	}
+	return &Point{V: p}, nil
 }
 
 func (c *Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
@@ -133,82 +140,39 @@ func (c *Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
 	return p
 }
 
-func (c *Curve) HashCode() uint64 {
-	return binary.BigEndian.Uint64([]byte(c.Name()))
-}
-
-func (c *Curve) Equal(rhs curves.Curve) bool {
-	// TODO: better equality checking
-	return c.Name() == rhs.Name()
-}
-
-// === Structured Set Methods
-
-func (*Curve) Name() string {
-	return Name
-}
-
-func (*Curve) Operators() []algebra.BinaryOperator[curves.Point] {
-	return []algebra.BinaryOperator[curves.Point]{PointAddition()}
-}
-
-func (c *Curve) Unwrap() curves.Curve {
-	return c
-}
-
-func (c *Curve) BasePoint() curves.Point {
-	return c.Generator()
-}
-
-// === Groupoid Methods
-
 // === Additive Groupoid Methods.
 
-func (c *Curve) Addition() algebra.Addition[curves.Point] {
-	return PointAddition()
+func (*Curve) Add(x curves.Point, ys ...curves.Point) curves.Point {
+	sum := x
+	for _, y := range ys {
+		sum = sum.Add(y)
+	}
+	return sum
 }
-
-// func (*Curve) Add(x algebra.AdditiveGroupoidElement[curves.Curve, curves.Point], ys ...algebra.AdditiveGroupoidElement[curves.Curve, curves.Point]) curves.Point {
-// 	// TODO: panic
-// 	// TODO: incorporate LFOD Point Addition
-// 	sum := x
-// 	for _, y := range ys {
-// 		sum = sum.Add(y)
-// 	}
-// 	return sum
-// }
 
 // === Monoid Methods.
 
-func (c *Curve) Identity(under algebra.BinaryOperator[curves.Point]) (curves.Point, error) {
-	if !c.IsDefinedUnder(under) {
-		return nil, errs.NewArgument("invalid operator")
-	}
-	return c.AdditiveIdentity(), nil
-
-}
-
-// === Additive Monoid Methods.
-
-func (c *Curve) AdditiveIdentity() curves.Point {
+func (*Curve) Identity() curves.Point {
 	return &Point{
 		V: k256impl.PointNew().Identity(),
 	}
 }
 
-// === Sub Group Methods.
+// === Additive Monoid Methods.
 
-func (*Curve) CoFactor() *saferith.Nat {
-	return new(saferith.Nat).SetUint64(1)
+func (c *Curve) AdditiveIdentity() curves.Point {
+	return c.Identity()
 }
 
-func (c *Curve) SuperGroupOrder() *saferith.Modulus {
-	return c.AdditiveOrder()
+// === Group Methods.
+
+func (*Curve) Cofactor() *saferith.Nat {
+	return saferithUtils.NatOne
 }
 
 // === Additive Group Methods.
 
-func (*Curve) Sub(x algebra.AdditiveGroupElement[curves.Curve, curves.Point], ys ...algebra.AdditiveGroupElement[curves.Curve, curves.Point]) curves.Point {
+func (*Curve) Sub(x curves.Point, ys ...curves.Point) curves.Point {
 	sum := x
 	for _, y := range ys {
 		sum = sum.Add(y)
@@ -224,7 +188,7 @@ func (*Curve) Generator() curves.Point {
 	}
 }
 
-// === Algebraic Variety Methods.
+// === Variety Methods.
 
 func (*Curve) Dimension() int {
 	return 1
@@ -235,28 +199,13 @@ func (*Curve) Discriminant() *saferith.Int {
 	return new(saferith.Int).SetNat(result)
 }
 
-func (c *Curve) FrobeniusEndomorphism(p curves.Point) curves.Point {
-	pp, ok := p.(*Point)
-	if !ok {
-		panic("given point is not of the right type")
-	}
-	x := pp.AffineX()
-	y := pp.AffineY()
-	characteristic := NewBaseFieldElement(0).SetNat(NewBaseField().Characteristic())
-	result, err := c.NewPoint(x.Exp(characteristic), y.Exp(characteristic))
-	if err != nil {
-		panic(errs.WrapFailed(err, "forbenius endomorphism did not succeed"))
-	}
-	return result
-}
+// === Algebraic Curve Methods.
 
-func (*Curve) AlgebraicVarietyBaseField() algebra.AlgebraicVarietyBaseField[curves.Curve, curves.BaseField, curves.Point, curves.BaseFieldElement] {
+func (*Curve) BaseField() curves.BaseField {
 	return NewBaseField()
 }
 
-// === Algebraic Curve Methods.
-
-func (*Curve) NewPoint(x, y algebra.AlgebraicVarietyBaseFieldElement[curves.Curve, curves.BaseField, curves.Point, curves.BaseFieldElement]) (curves.Point, error) {
+func (*Curve) NewPoint(x, y curves.BaseFieldElement) (curves.Point, error) {
 	if x == nil || y == nil {
 		return nil, errs.NewIsNil("argument is nil")
 	}
@@ -275,10 +224,59 @@ func (*Curve) NewPoint(x, y algebra.AlgebraicVarietyBaseFieldElement[curves.Curv
 	return &Point{V: value}, nil
 }
 
-// === Module Methods
+// === Elliptic Curve Methods.
 
-func (c *Curve) ModuleScalarRing() algebra.ModuleBaseRing[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar] {
+func (*Curve) ScalarField() curves.ScalarField {
+	return NewScalarField()
+}
+
+func (c *Curve) ScalarRing() curves.ScalarField {
 	return c.ScalarField()
+}
+
+func (c *Curve) Point() curves.Point {
+	return c.Identity()
+}
+
+func (c *Curve) Scalar() curves.Scalar {
+	return c.ScalarField().AdditiveIdentity()
+}
+
+func (c *Curve) BaseFieldElement() curves.BaseFieldElement {
+	return c.BaseField().Zero()
+}
+
+func (c *Curve) FrobeniusEndomorphism(p curves.Point) curves.Point {
+	pp, ok := p.(*Point)
+	if !ok {
+		panic("given point is not of the right type")
+	}
+	x := pp.AffineX()
+	y := pp.AffineY()
+	characteristic := NewBaseFieldElement(0).SetNat(NewBaseField().Characteristic())
+	result, err := c.NewPoint(x.Exp(characteristic), y.Exp(characteristic))
+	if err != nil {
+		panic(errs.WrapFailed(err, "forbenius endomorphism did not succeed"))
+	}
+	return result
+}
+
+func (*Curve) TraceOfFrobenius() *saferith.Int {
+	return new(saferith.Int).SetNat(traceOfFrobenius)
+}
+
+func (*Curve) JInvariant() *saferith.Int {
+	return new(saferith.Int).SetNat(jInvariant)
+}
+
+// === Prime SubGroup Methods.
+
+func (*Curve) SubGroupOrder() *saferith.Modulus {
+	return fq.New().Params.Modulus
+}
+
+func (c *Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
+	return c.Generator().Mul(sc)
 }
 
 func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
@@ -304,56 +302,6 @@ func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (c
 		return nil, errs.WrapFailed(err, "multiscalar multiplication")
 	}
 	return &Point{V: value}, nil
-}
-
-// === Vector Space Methods
-
-func (c *Curve) VectorSpaceScalarField() algebra.VectorSpaceBaseField[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar] {
-	return c.ScalarField()
-}
-
-// === One Dimensional Vector Space Methods
-
-func (c *Curve) ScalarBaseMult(sc algebra.ModuleScalar[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar]) curves.Point {
-	return c.Generator().ScalarMul(sc)
-}
-
-// === Elliptic Curve Methods.
-
-func (*Curve) TraceOfFrobenius() *saferith.Int {
-	return new(saferith.Int).SetNat(traceOfFrobenius)
-}
-
-func (*Curve) JInvariant() *saferith.Int {
-	return new(saferith.Int).SetNat(jInvariant)
-}
-
-func (*Curve) BaseField() curves.BaseField {
-	return NewBaseField()
-}
-
-// === Prime SubGroup Methods.
-
-func (c *Curve) Point() curves.Point {
-	return c.AdditiveIdentity()
-}
-
-func (*Curve) HashWithDst(input []byte, dst []byte) (curves.Point, error) {
-	p := k256impl.PointNew()
-	u, err := NewCurve().HashToFieldElements(2, input, dst)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "hash to field element of K256 failed")
-	}
-	u0, ok0 := u[0].(*BaseFieldElement)
-	u1, ok1 := u[1].(*BaseFieldElement)
-	if !ok0 || !ok1 {
-		return nil, errs.NewType("Cast to K256 field elements failed")
-	}
-	err = p.Arithmetic.Map(u0.V, u1.V, p)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "Map to K256 point failed")
-	}
-	return &Point{V: p}, nil
 }
 
 func (*Curve) DeriveFromAffineX(x curves.BaseFieldElement) (evenY, oddY curves.Point, err error) {
@@ -386,8 +334,4 @@ func (*Curve) DeriveFromAffineX(x curves.BaseFieldElement) (evenY, oddY curves.P
 		return p1, p2, nil
 	}
 	return p2, p1, nil
-}
-
-func (*Curve) ScalarField() curves.ScalarField {
-	return NewScalarField()
 }

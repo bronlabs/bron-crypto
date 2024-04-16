@@ -14,6 +14,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var (
@@ -40,22 +41,18 @@ func (*ScalarField) Curve() curves.Curve {
 	return NewCurve()
 }
 
-func (sf *ScalarField) Scalar() curves.Scalar {
-	return sf.AdditiveIdentity()
-}
-
-// === Set Methods.
+// === Basic Methods.
 
 func (*ScalarField) Name() string {
 	return Name
 }
 
 func (*ScalarField) Order() *saferith.Modulus {
-	return NewCurve().AdditiveOrder()
+	return NewCurve().SubGroupOrder()
 }
 
 func (sf *ScalarField) Element() curves.Scalar {
-	return sf.Scalar()
+	return sf.AdditiveIdentity()
 }
 
 func (*ScalarField) Operators() []algebra.Operator {
@@ -120,7 +117,7 @@ func (sf *ScalarField) Select(choice bool, x0, x1 curves.Scalar) curves.Scalar {
 
 // === Additive Groupoid Methods.
 
-func (*ScalarField) Add(x algebra.AdditiveGroupoidElement[curves.ScalarField, curves.Scalar], ys ...curves.Scalar) curves.Scalar {
+func (*ScalarField) Add(x curves.Scalar, ys ...curves.Scalar) curves.Scalar {
 	sum := x
 	for _, y := range ys {
 		sum = sum.Add(y)
@@ -191,7 +188,7 @@ func (sf *ScalarField) Characteristic() *saferith.Nat {
 }
 
 func (*ScalarField) ExtensionDegree() *saferith.Nat {
-	return new(saferith.Nat).SetUint64(1)
+	return saferithUtils.NatOne
 }
 
 func (sf *ScalarField) FrobeniusAutomorphism(e curves.Scalar) curves.Scalar {
@@ -200,12 +197,12 @@ func (sf *ScalarField) FrobeniusAutomorphism(e curves.Scalar) curves.Scalar {
 
 func (sf *ScalarField) Trace(e curves.Scalar) curves.Scalar {
 	result := e
-	currentDegree := new(saferith.Nat).SetUint64(1)
+	currentDegree := saferithUtils.NatOne
 	currentTerm := result
 	for currentDegree.Eq(sf.ExtensionDegree()) == 1 {
 		currentTerm = sf.FrobeniusAutomorphism(currentTerm)
 		result = result.Add(currentTerm)
-		currentDegree = utils.IncrementNat(currentDegree)
+		currentDegree = saferithUtils.NatInc(currentDegree)
 	}
 	return result
 }

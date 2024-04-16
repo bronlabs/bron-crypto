@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-var _ algebra.FiniteFieldElement[*Field, *FieldElement] = (*FieldElement)(nil)
+var _ algebra.AbstractFiniteFieldElement[*Field, *FieldElement] = (*FieldElement)(nil)
 
 // FieldElement is an element of the finite field GF(2^256), representing
 // coordinates of a degree-255 binary polynomial in little-endian order.
