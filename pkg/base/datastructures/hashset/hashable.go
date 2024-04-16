@@ -2,8 +2,8 @@ package hashset
 
 import (
 	"encoding/json"
-	"fmt"
-	"hash/fnv"
+
+	"github.com/cronokirby/saferith"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
@@ -14,7 +14,7 @@ type HashableHashSet[E ds.Hashable[E]] struct {
 	v ds.Map[E, bool]
 }
 
-func NewHashableHashSet[E ds.Hashable[E]](xs ...E) *HashableHashSet[E] {
+func NewHashableHashSet[E ds.Hashable[E]](xs ...E) ds.Set[E] {
 	m := hashmap.NewHashableHashMap[E, bool]()
 	for _, x := range xs {
 		m.Put(x, true)
@@ -24,47 +24,51 @@ func NewHashableHashSet[E ds.Hashable[E]](xs ...E) *HashableHashSet[E] {
 	}
 }
 
-func (s HashableHashSet[E]) Contains(e E) bool {
+func (s *HashableHashSet[E]) Contains(e E) bool {
 	return s.v.ContainsKey(e)
 }
 
-func (s HashableHashSet[E]) Add(e E) {
+func (s *HashableHashSet[E]) Add(e E) {
 	s.v.Put(e, true)
 }
 
-func (s HashableHashSet[E]) Merge(es ...E) {
+func (s *HashableHashSet[E]) AddAll(es ...E) {
 	for _, e := range es {
 		s.v.Put(e, true)
 	}
 }
 
-func (s HashableHashSet[E]) Remove(e E) {
+func (s *HashableHashSet[E]) Remove(e E) {
 	s.v.Remove(e)
 }
 
-func (s HashableHashSet[E]) Clear() {
+func (s *HashableHashSet[E]) Clear() {
 	s.v.Clear()
 }
 
-func (s HashableHashSet[E]) Equal(other ds.Set[E]) bool {
+func (s *HashableHashSet[E]) Equal(other ds.Set[E]) bool {
 	return s.SymmetricDifference(other).IsEmpty()
 }
 
-func (s HashableHashSet[_]) Size() int {
+func (s *HashableHashSet[_]) Size() int {
 	return s.v.Size()
 }
 
-func (s HashableHashSet[_]) IsEmpty() bool {
+func (s *HashableHashSet[_]) Cardinality() *saferith.Modulus {
+	return saferith.ModulusFromUint64(uint64(s.v.Size()))
+}
+
+func (s *HashableHashSet[_]) IsEmpty() bool {
 	return s.Size() == 0
 }
 
-func (s HashableHashSet[E]) Union(other ds.Set[E]) ds.Set[E] {
+func (s *HashableHashSet[E]) Union(other ds.Set[E]) ds.Set[E] {
 	result := s.Clone()
-	result.Merge(other.List()...)
+	result.AddAll(other.List()...)
 	return result
 }
 
-func (s HashableHashSet[E]) Intersection(other ds.Set[E]) ds.Set[E] {
+func (s *HashableHashSet[E]) Intersection(other ds.Set[E]) ds.Set[E] {
 	result := NewHashableHashSet[E]()
 	for k1 := range s.Iter() {
 		if other.Contains(k1) {
@@ -74,7 +78,7 @@ func (s HashableHashSet[E]) Intersection(other ds.Set[E]) ds.Set[E] {
 	return result
 }
 
-func (s HashableHashSet[E]) Difference(other ds.Set[E]) ds.Set[E] {
+func (s *HashableHashSet[E]) Difference(other ds.Set[E]) ds.Set[E] {
 	result := NewHashableHashSet[E]()
 	for k := range s.Iter() {
 		if !other.Contains(k) {
@@ -84,11 +88,11 @@ func (s HashableHashSet[E]) Difference(other ds.Set[E]) ds.Set[E] {
 	return result
 }
 
-func (s HashableHashSet[E]) SymmetricDifference(other ds.Set[E]) ds.Set[E] {
+func (s *HashableHashSet[E]) SymmetricDifference(other ds.Set[E]) ds.Set[E] {
 	return s.Difference(other).Union(other.Difference(s))
 }
 
-func (s HashableHashSet[E]) SubSets() []ds.Set[E] {
+func (s *HashableHashSet[E]) SubSets() []ds.Set[E] {
 	result := make([]ds.Set[E], 1<<s.Size())
 	i := 0
 	for subset := range s.IterSubSets() {
@@ -98,23 +102,23 @@ func (s HashableHashSet[E]) SubSets() []ds.Set[E] {
 	return result
 }
 
-func (s HashableHashSet[E]) IsSubSet(other ds.Set[E]) bool {
+func (s *HashableHashSet[E]) IsSubSet(other ds.Set[E]) bool {
 	return other.Intersection(s).Equal(s)
 }
 
-func (s HashableHashSet[E]) IsProperSubSet(other ds.Set[E]) bool {
+func (s *HashableHashSet[E]) IsProperSubSet(other ds.Set[E]) bool {
 	return s.IsSubSet(other) && !s.Equal(other)
 }
 
-func (s HashableHashSet[E]) IsSuperSet(other ds.Set[E]) bool {
+func (s *HashableHashSet[E]) IsSuperSet(other ds.Set[E]) bool {
 	return other.IsSubSet(s)
 }
 
-func (s HashableHashSet[E]) IsProperSuperSet(other ds.Set[E]) bool {
+func (s *HashableHashSet[E]) IsProperSuperSet(other ds.Set[E]) bool {
 	return other.IsProperSubSet(s)
 }
 
-func (s HashableHashSet[E]) Iter() <-chan E {
+func (s *HashableHashSet[E]) Iter() <-chan E {
 	ch := make(chan E, 1)
 	go func() {
 		defer close(ch)
@@ -125,7 +129,7 @@ func (s HashableHashSet[E]) Iter() <-chan E {
 	return ch
 }
 
-func (s HashableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
+func (s *HashableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
 	ch := make(chan ds.Set[E], 1)
 	go func() {
 		defer close(ch)
@@ -146,7 +150,7 @@ func (s HashableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
 	return ch
 }
 
-func (s HashableHashSet[E]) List() []E {
+func (s *HashableHashSet[E]) List() []E {
 	results := make([]E, s.Size())
 	i := 0
 	for k := range s.Iter() {
@@ -156,19 +160,11 @@ func (s HashableHashSet[E]) List() []E {
 	return results
 }
 
-func (s HashableHashSet[E]) Clone() ds.Set[E] {
+func (s *HashableHashSet[E]) Clone() ds.Set[E] {
 	return NewHashableHashSet(s.List()...)
 }
 
-func (s HashableHashSet[E]) HashCode() uint64 {
-	h := fnv.New64a()
-	for e := range s.Iter() {
-		fmt.Fprintf(h, "%v", e)
-	}
-	return h.Sum64()
-}
-
-func (s HashableHashSet[E]) MarshalJSON() ([]byte, error) {
+func (s *HashableHashSet[E]) MarshalJSON() ([]byte, error) {
 	serialised, err := json.Marshal(s.v)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not json marshal")
@@ -176,7 +172,7 @@ func (s HashableHashSet[E]) MarshalJSON() ([]byte, error) {
 	return serialised, nil
 }
 
-func (s HashableHashSet[E]) UnmarshalJSON(data []byte) error {
+func (s *HashableHashSet[E]) UnmarshalJSON(data []byte) error {
 	result := HashableHashSet[E]{}
 	if err := json.Unmarshal(data, result.v); err != nil {
 		return errs.WrapSerialisation(err, "couldn't unmarshal hashable hash set")

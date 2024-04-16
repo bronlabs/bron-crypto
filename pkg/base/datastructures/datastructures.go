@@ -2,23 +2,29 @@ package datastructures
 
 import (
 	"encoding/json"
+
+	"github.com/cronokirby/saferith"
 )
 
 type Incomparable [0]func()
 
-type Hashable[K any] interface {
-	HashCode() uint64
+type Equatable[K any] interface {
 	Equal(rhs K) bool
 }
 
-type KeyValuePair[K any, V any] struct {
+type Hashable[K any] interface {
+	Equatable[K]
+	HashCode() uint64
+}
+
+type MapEntry[K any, V any] struct {
 	Key   K
 	Value V
 }
 
 type Map[K any, V any] interface {
 	Get(key K) (value V, exists bool)
-	Sieve(keys Set[K]) Map[K, V]
+	Retain(keys Set[K]) Map[K, V]
 	Filter(predicate func(key K) bool) Map[K, V]
 	ContainsKey(key K) bool
 	Put(key K, value V)
@@ -30,7 +36,7 @@ type Map[K any, V any] interface {
 	TryRemove(key K) (removed bool, removedValue V)
 	Keys() []K
 	Values() []V
-	Iter() <-chan KeyValuePair[K, V]
+	Iter() <-chan MapEntry[K, V]
 	Clone() Map[K, V]
 	json.Marshaler
 }
@@ -40,13 +46,18 @@ type BiMap[K any, V any] interface {
 	Reverse() BiMap[V, K]
 }
 
-type Set[E any] interface {
+type AbstractSet[E any] interface {
+	Cardinality() *saferith.Modulus
 	Contains(e E) bool
+	Iter() <-chan E
+}
+
+type Set[E any] interface {
+	AbstractSet[E]
 	Add(e E)
-	Merge(es ...E)
+	AddAll(es ...E)
 	Remove(e E)
 	Clear()
-	Equal(other Set[E]) bool
 	Size() int
 	IsEmpty() bool
 	Union(other Set[E]) Set[E]
@@ -58,10 +69,10 @@ type Set[E any] interface {
 	IsProperSubSet(other Set[E]) bool
 	IsSuperSet(other Set[E]) bool
 	IsProperSuperSet(other Set[E]) bool
-	Iter() <-chan E
 	IterSubSets() <-chan Set[E]
 	List() []E
 	Clone() Set[E]
-	Hashable[Set[E]]
+
+	Equatable[Set[E]]
 	json.Marshaler
 }

@@ -9,82 +9,88 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-type ComparableHashMap[K comparable, V any] map[K]V
-
-func NewComparableHashMap[K comparable, V any]() ds.Map[K, V] {
-	return make(ComparableHashMap[K, V])
+type ComparableHashMap[K comparable, V any] struct {
+	inner map[K]V
 }
 
-func (m ComparableHashMap[K, V]) Get(key K) (value V, exists bool) {
-	v, exists := m[key]
+func NewComparableHashMap[K comparable, V any]() ds.Map[K, V] {
+	return &ComparableHashMap[K, V]{
+		inner: make(map[K]V),
+	}
+}
+
+func (m *ComparableHashMap[K, V]) Get(key K) (value V, exists bool) {
+	v, exists := m.inner[key]
 	return v, exists
 }
 
-func (m ComparableHashMap[K, V]) Sieve(keys ds.Set[K]) ds.Map[K, V] {
+func (m *ComparableHashMap[K, V]) Retain(keys ds.Set[K]) ds.Map[K, V] {
 	return m.Filter(keys.Contains)
 }
 
-func (m ComparableHashMap[K, V]) Filter(predicate func(key K) bool) ds.Map[K, V] {
-	result := make(ComparableHashMap[K, V])
-	for k, v := range m {
+func (m *ComparableHashMap[K, V]) Filter(predicate func(key K) bool) ds.Map[K, V] {
+	result := make(map[K]V)
+	for k, v := range m.inner {
 		if predicate(k) {
 			result[k] = v
 		}
 	}
-	return result
+	return &ComparableHashMap[K, V]{
+		inner: result,
+	}
 }
 
-func (m ComparableHashMap[K, V]) ContainsKey(key K) bool {
+func (m *ComparableHashMap[K, V]) ContainsKey(key K) bool {
 	_, exists := m.Get(key)
 	return exists
 }
 
-func (m ComparableHashMap[K, V]) Put(key K, value V) {
+func (m *ComparableHashMap[K, V]) Put(key K, value V) {
 	_, _ = m.TryPut(key, value)
 }
 
-func (m ComparableHashMap[K, V]) TryPut(key K, newValue V) (replaced bool, oldValue V) {
-	oldV, oldExists := m[key]
-	m[key] = newValue
+func (m *ComparableHashMap[K, V]) TryPut(key K, newValue V) (replaced bool, oldValue V) {
+	oldV, oldExists := m.inner[key]
+	m.inner[key] = newValue
 	return oldExists, oldV
 }
 
-func (m ComparableHashMap[K, V]) Clear() {
-	clear(m)
+func (m *ComparableHashMap[K, V]) Clear() {
+	clear(m.inner)
 }
 
-func (m ComparableHashMap[K, V]) Size() int {
-	return len(m)
+func (m *ComparableHashMap[K, V]) Size() int {
+	return len(m.inner)
 }
 
-func (m ComparableHashMap[K, V]) IsEmpty() bool {
+func (m *ComparableHashMap[K, V]) IsEmpty() bool {
 	return m.Size() == 0
 }
 
-func (m ComparableHashMap[K, V]) Remove(key K) {
+func (m *ComparableHashMap[K, V]) Remove(key K) {
 	_, _ = m.TryRemove(key)
 }
 
-func (m ComparableHashMap[K, V]) TryRemove(key K) (removed bool, removedValue V) {
-	oldValue, oldExists := m[key]
-	delete(m, key)
+func (m *ComparableHashMap[K, V]) TryRemove(key K) (removed bool, removedValue V) {
+	oldValue, oldExists := m.inner[key]
+	delete(m.inner, key)
 	return oldExists, oldValue
 }
 
-func (m ComparableHashMap[K, V]) Keys() []K {
-	return maps.Keys(m)
+func (m *ComparableHashMap[K, V]) Keys() []K {
+	return maps.Keys(m.inner)
 }
 
-func (m ComparableHashMap[K, V]) Values() []V {
-	return maps.Values(m)
+func (m *ComparableHashMap[K, V]) Values() []V {
+	return maps.Values(m.inner)
 }
 
-func (m ComparableHashMap[K, V]) Iter() <-chan ds.KeyValuePair[K, V] {
-	ch := make(chan ds.KeyValuePair[K, V], 1)
+func (m *ComparableHashMap[K, V]) Iter() <-chan ds.MapEntry[K, V] {
+	ch := make(chan ds.MapEntry[K, V], 1)
 	go func() {
 		defer close(ch)
-		for k, v := range m {
-			ch <- ds.KeyValuePair[K, V]{
+		for k, v := range m.inner {
+			ch <- ds.MapEntry[K, V]{
 				Key:   k,
 				Value: v,
 			}
@@ -93,13 +99,15 @@ func (m ComparableHashMap[K, V]) Iter() <-chan ds.KeyValuePair[K, V] {
 	return ch
 }
 
-func (m ComparableHashMap[K, V]) Clone() ds.Map[K, V] {
-	return maps.Clone(m)
+func (m *ComparableHashMap[K, V]) Clone() ds.Map[K, V] {
+	return &ComparableHashMap[K, V]{
+		inner: maps.Clone(m.inner),
+	}
 }
 
-func (m ComparableHashMap[K, V]) MarshalJSON() ([]byte, error) {
+func (m *ComparableHashMap[K, V]) MarshalJSON() ([]byte, error) {
 	temp := make(map[K]V)
-	for k, v := range m {
+	for k, v := range m.inner {
 		temp[k] = v
 	}
 	serialised, err := json.Marshal(temp)
@@ -108,14 +116,11 @@ func (m ComparableHashMap[K, V]) MarshalJSON() ([]byte, error) {
 	}
 	return serialised, nil
 }
-func (m ComparableHashMap[K, V]) UnmarshalJSON(data []byte) error {
+func (m *ComparableHashMap[K, V]) UnmarshalJSON(data []byte) error {
 	var temp map[K]V
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return errs.WrapSerialisation(err, "could not json marshal comparable hash map")
 	}
-	m.Clear()
-	for k, v := range temp {
-		m[k] = v
-	}
+	m.inner = temp
 	return nil
 }

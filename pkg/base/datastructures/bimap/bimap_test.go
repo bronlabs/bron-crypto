@@ -263,7 +263,7 @@ func Test_Iter(t *testing.T) {
 	assert.NotNil(t, iter)
 
 	// Iterate over the map and collect the key-value pairs
-	var pairs []datastructures.KeyValuePair[*dataK, *dataV]
+	var pairs []datastructures.MapEntry[*dataK, *dataV]
 	for pair := range iter {
 		pairs = append(pairs, pair)
 	}

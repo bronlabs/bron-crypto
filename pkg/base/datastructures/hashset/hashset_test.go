@@ -136,7 +136,7 @@ func TestHashableHashSet_Merge(t *testing.T) {
 	B.Add(data(789))
 	B.Add(data(101112))
 
-	A.Merge(B.List()...)
+	A.AddAll(B.List()...)
 
 	require.Equal(t, 4, A.Size())
 	require.True(t, A.Contains(data(123)))
@@ -222,7 +222,7 @@ func TestHashableHashSet_IterSubSets(t *testing.T) {
 	A.Add(data(456))
 	A.Add(data(789))
 
-	expectedSubsets := []*hashset.HashableHashSet[data]{
+	expectedSubsets := []ds.Set[data]{
 		hashset.NewHashableHashSet[data](),
 		hashset.NewHashableHashSet[data](data(123)),
 		hashset.NewHashableHashSet[data](data(456)),
@@ -234,7 +234,7 @@ func TestHashableHashSet_IterSubSets(t *testing.T) {
 	}
 
 	for subset := range A.IterSubSets() {
-		// check subset contains of of the above subsets (order is not guarantee)
+		// check subset contains of the above subsets (order is not guarantee)
 		found := false
 		for _, expected := range expectedSubsets {
 			if subset.Equal(expected) {

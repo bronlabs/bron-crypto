@@ -11,7 +11,7 @@ type HashableHashMap[K ds.Hashable[K], V any] struct {
 	inner map[uint64][]*entry[K, V]
 }
 
-type entry[K ds.Hashable[K], V any] ds.KeyValuePair[K, V]
+type entry[K ds.Hashable[K], V any] ds.MapEntry[K, V]
 
 func NewHashableHashMap[K ds.Hashable[K], V any]() ds.Map[K, V] {
 	return &HashableHashMap[K, V]{
@@ -36,7 +36,7 @@ func (m *HashableHashMap[K, V]) Get(key K) (value V, exists bool) {
 	return nilValue, false
 }
 
-func (m *HashableHashMap[K, V]) Sieve(keys ds.Set[K]) ds.Map[K, V] {
+func (m *HashableHashMap[K, V]) Retain(keys ds.Set[K]) ds.Map[K, V] {
 	return m.Filter(keys.Contains)
 }
 
@@ -180,13 +180,13 @@ func (m *HashableHashMap[K, V]) Clone() ds.Map[K, V] {
 	return result
 }
 
-func (m *HashableHashMap[K, V]) Iter() <-chan ds.KeyValuePair[K, V] {
-	ch := make(chan ds.KeyValuePair[K, V], 1)
+func (m *HashableHashMap[K, V]) Iter() <-chan ds.MapEntry[K, V] {
+	ch := make(chan ds.MapEntry[K, V], 1)
 	go func() {
 		defer close(ch)
 		for _, entries := range m.inner {
 			for _, pair := range entries {
-				ch <- ds.KeyValuePair[K, V]{
+				ch <- ds.MapEntry[K, V]{
 					Key:   pair.Key,
 					Value: pair.Value,
 				}

@@ -42,8 +42,8 @@ func (m *BiMap[K, V]) Get(l K) (V, bool) {
 	return m.internalMap.Get(l)
 }
 
-func (m *BiMap[K, V]) Sieve(keys ds.Set[K]) ds.Map[K, V] {
-	return m.internalMap.Sieve(keys)
+func (m *BiMap[K, V]) Retain(keys ds.Set[K]) ds.Map[K, V] {
+	return m.internalMap.Retain(keys)
 }
 
 func (m *BiMap[K, V]) Filter(predicate func(key K) bool) ds.Map[K, V] {
@@ -93,12 +93,12 @@ func (m *BiMap[_, V]) Values() []V {
 	return m.reverseMap.Keys()
 }
 
-func (m *BiMap[K, V]) Iter() <-chan ds.KeyValuePair[K, V] {
-	ch := make(chan ds.KeyValuePair[K, V], 1)
+func (m *BiMap[K, V]) Iter() <-chan ds.MapEntry[K, V] {
+	ch := make(chan ds.MapEntry[K, V], 1)
 	go func() {
 		defer close(ch)
 		for pair := range m.internalMap.Iter() {
-			ch <- ds.KeyValuePair[K, V]{
+			ch <- ds.MapEntry[K, V]{
 				Key:   pair.Key,
 				Value: pair.Value,
 			}

@@ -2,71 +2,76 @@ package hashset
 
 import (
 	"encoding/json"
-	"fmt"
-	"hash/fnv"
 
+	"github.com/cronokirby/saferith"
 	"golang.org/x/exp/maps"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-var _ ds.Set[int] = (ComparableHashSet[int])(nil)
+type ComparableHashSet[E comparable] struct {
+	v map[E]bool
+}
 
-type ComparableHashSet[E comparable] map[E]bool
-
-func NewComparableHashSet[E comparable](xs ...E) ComparableHashSet[E] {
-	s := make(ComparableHashSet[E])
+func NewComparableHashSet[E comparable](xs ...E) ds.Set[E] {
+	s := &ComparableHashSet[E]{
+		v: make(map[E]bool),
+	}
 	for _, x := range xs {
-		s[x] = true
+		s.v[x] = true
 	}
 	return s
 }
 
-func (s ComparableHashSet[E]) Contains(e E) bool {
-	_, exists := s[e]
+func (s *ComparableHashSet[E]) Contains(e E) bool {
+	_, exists := s.v[e]
 	return exists
 }
 
-func (s ComparableHashSet[E]) Add(e E) {
-	s[e] = true
+func (s *ComparableHashSet[E]) Add(e E) {
+	s.v[e] = true
 }
 
-func (s ComparableHashSet[E]) Merge(es ...E) {
+func (s *ComparableHashSet[E]) AddAll(es ...E) {
 	for _, e := range es {
-		s.Add(e)
+		s.v[e] = true
 	}
 }
 
-func (s ComparableHashSet[E]) Remove(e E) {
-	delete(s, e)
+func (s *ComparableHashSet[E]) Remove(e E) {
+	delete(s.v, e)
 }
 
-func (s ComparableHashSet[E]) Clear() {
-	clear(s)
+func (s *ComparableHashSet[E]) Clear() {
+	clear(s.v)
 }
 
-func (s ComparableHashSet[E]) Equal(other ds.Set[E]) bool {
+func (s *ComparableHashSet[E]) Equal(other ds.Set[E]) bool {
 	return s.SymmetricDifference(other).IsEmpty()
 }
 
-func (s ComparableHashSet[_]) Size() int {
-	return len(s)
+func (s *ComparableHashSet[_]) Size() int {
+	return len(s.v)
 }
 
-func (s ComparableHashSet[_]) IsEmpty() bool {
-	return s.Size() == 0
+func (s *ComparableHashSet[_]) Cardinality() *saferith.Modulus {
+	return saferith.ModulusFromUint64(uint64(len(s.v)))
 }
 
-func (s ComparableHashSet[E]) Union(other ds.Set[E]) ds.Set[E] {
+func (s *ComparableHashSet[_]) IsEmpty() bool {
+	return len(s.v) == 0
+}
+
+func (s *ComparableHashSet[E]) Union(other ds.Set[E]) ds.Set[E] {
 	result := s.Clone()
-	result.Merge(other.List()...)
+	result.AddAll(other.List()...)
 	return result
 }
 
-func (s ComparableHashSet[E]) Intersection(other ds.Set[E]) ds.Set[E] {
+func (s *ComparableHashSet[E]) Intersection(other ds.Set[E]) ds.Set[E] {
 	result := NewComparableHashSet[E]()
-	for k1 := range s {
+	for k1 := range s.v {
 		if other.Contains(k1) {
 			result.Add(k1)
 		}
@@ -74,9 +79,9 @@ func (s ComparableHashSet[E]) Intersection(other ds.Set[E]) ds.Set[E] {
 	return result
 }
 
-func (s ComparableHashSet[E]) Difference(other ds.Set[E]) ds.Set[E] {
+func (s *ComparableHashSet[E]) Difference(other ds.Set[E]) ds.Set[E] {
 	result := s.Clone()
-	for k := range s {
+	for k := range s.v {
 		if !other.Contains(k) {
 			result.Add(k)
 		}
@@ -84,11 +89,11 @@ func (s ComparableHashSet[E]) Difference(other ds.Set[E]) ds.Set[E] {
 	return result
 }
 
-func (s ComparableHashSet[E]) SymmetricDifference(other ds.Set[E]) ds.Set[E] {
+func (s *ComparableHashSet[E]) SymmetricDifference(other ds.Set[E]) ds.Set[E] {
 	return s.Difference(other).Union(other.Difference(s))
 }
 
-func (s ComparableHashSet[E]) SubSets() []ds.Set[E] {
+func (s *ComparableHashSet[E]) SubSets() []ds.Set[E] {
 	result := make([]ds.Set[E], 1<<s.Size())
 	i := 0
 	for subset := range s.IterSubSets() {
@@ -98,31 +103,31 @@ func (s ComparableHashSet[E]) SubSets() []ds.Set[E] {
 	return result
 }
 
-func (s ComparableHashSet[E]) IsSubSet(other ds.Set[E]) bool {
+func (s *ComparableHashSet[E]) IsSubSet(other ds.Set[E]) bool {
 	return other.Intersection(s).Equal(s)
 }
 
-func (s ComparableHashSet[E]) IsProperSubSet(other ds.Set[E]) bool {
+func (s *ComparableHashSet[E]) IsProperSubSet(other ds.Set[E]) bool {
 	return s.IsSubSet(other) && !s.Equal(other)
 }
 
-func (s ComparableHashSet[E]) IsSuperSet(other ds.Set[E]) bool {
+func (s *ComparableHashSet[E]) IsSuperSet(other ds.Set[E]) bool {
 	return other.IsSubSet(s)
 }
 
-func (s ComparableHashSet[E]) IsProperSuperSet(other ds.Set[E]) bool {
+func (s *ComparableHashSet[E]) IsProperSuperSet(other ds.Set[E]) bool {
 	return other.IsProperSubSet(s)
 }
 
-func (s ComparableHashSet[E]) Iter() <-chan E {
+func (s *ComparableHashSet[E]) Iter() <-chan E {
 	ch := make(chan E, 1)
-	for k := range s {
+	for k := range s.v {
 		ch <- k
 	}
 	return ch
 }
 
-func (s ComparableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
+func (s *ComparableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
 	ch := make(chan ds.Set[E], 1)
 	go func() {
 		defer close(ch)
@@ -143,25 +148,19 @@ func (s ComparableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
 	return ch
 }
 
-func (s ComparableHashSet[E]) List() []E {
-	return maps.Keys(s)
+func (s *ComparableHashSet[E]) List() []E {
+	return maps.Keys(s.v)
 }
 
-func (s ComparableHashSet[E]) Clone() ds.Set[E] {
-	return maps.Clone(s)
-}
-
-func (s ComparableHashSet[E]) HashCode() uint64 {
-	h := fnv.New64a()
-	for e := range s.Iter() {
-		fmt.Fprintf(h, "%v", e)
+func (s *ComparableHashSet[E]) Clone() ds.Set[E] {
+	return &ComparableHashSet[E]{
+		v: maps.Clone(s.v),
 	}
-	return h.Sum64()
 }
 
-func (s ComparableHashSet[E]) MarshalJSON() ([]byte, error) {
+func (s *ComparableHashSet[E]) MarshalJSON() ([]byte, error) {
 	temp := make(map[E]bool)
-	for k, v := range s {
+	for k, v := range s.v {
 		temp[k] = v
 	}
 	serialised, err := json.Marshal(temp)
@@ -171,14 +170,14 @@ func (s ComparableHashSet[E]) MarshalJSON() ([]byte, error) {
 	return serialised, nil
 }
 
-func (s ComparableHashSet[E]) UnmarshalJSON(data []byte) error {
+func (s *ComparableHashSet[E]) UnmarshalJSON(data []byte) error {
 	var temp map[E]bool
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return errs.WrapSerialisation(err, "could not json marshal comparable hashset")
 	}
 	s.Clear()
 	for k, v := range temp {
-		s[k] = v
+		s.v[k] = v
 	}
 	return nil
 }

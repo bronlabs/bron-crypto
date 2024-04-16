@@ -335,7 +335,7 @@ func Test_HashableHashMap_Filter(t *testing.T) {
 	require.NotContains(t, filtered.Keys(), &data{value: 5})
 }
 
-func Test_HashableHashMap_Sieve(t *testing.T) {
+func Test_HashableHashMap_Retain(t *testing.T) {
 	hashMap := hashmap.NewHashableHashMap[*data, int]()
 	hashMap.Put(&data{value: 1}, 1)
 	hashMap.Put(&data{value: 2}, 2)
@@ -343,9 +343,9 @@ func Test_HashableHashMap_Sieve(t *testing.T) {
 	hashMap.Put(&data{value: 4}, 4)
 	hashMap.Put(&data{value: 5}, 5)
 
-	// sieve in even values
+	// retain even values
 	set := hashset.NewHashableHashSet(&data{value: 2}, &data{value: 4})
-	sieved := hashMap.Sieve(set)
+	sieved := hashMap.Retain(set)
 
 	require.Equal(t, 2, sieved.Size())
 	require.Contains(t, sieved.Keys(), &data{value: 2})
