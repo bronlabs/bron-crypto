@@ -11,6 +11,11 @@ type NatSerialization[E Element] interface {
 	Nat() *saferith.Nat
 }
 
+type IntSerialization[E Element] interface {
+	Int() Int
+	FromInt(v Int) E
+}
+
 type BytesSerialization[E Element] interface {
 	// Bytes returns the canonical big-endian byte representation of this element.
 	// s.t. this = Σ_{i=0}^{k-1} (this.Bytes()[i] << 8*(k-i-1) ). The result

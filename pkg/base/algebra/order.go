@@ -79,6 +79,8 @@ type ChainElement[C Structure, E Element] interface {
 
 	Chain() Chain[C, E]
 
+	Increment()
+	Decrement()
 	NatSerialization[E]
 }
 

@@ -1,5 +1,7 @@
 package algebra
 
+import "github.com/cronokirby/saferith"
+
 type Negation[E Element] interface {
 	UnaryOperator[E]
 	Not(x E) E
@@ -43,7 +45,8 @@ type ConjunctiveGroupoid[G Structure, E Element] interface {
 type ConjunctiveGroupoidElement[G Structure, E Element] interface {
 	BooleanElement[G, E]
 	GroupoidElement[G, E]
-	And(x ConjunctiveGroupoidElement[G, E], ys ...ConjunctiveGroupoidElement[G, E])
+	And(x ConjunctiveGroupoidElement[G, E])
+	ApplyAnd(x ConjunctiveGroupoidElement[G, E], n *saferith.Nat)
 }
 
 type ConjunctiveMonoid[M Structure, E Element] interface {
@@ -68,6 +71,7 @@ type DisjunctiveGroupoidElement[G Structure, E Element] interface {
 	BooleanElement[G, E]
 	GroupoidElement[G, E]
 	Or(x DisjunctiveGroupoidElement[G, E], ys ...DisjunctiveGroupoidElement[G, E])
+	ApplyOr(x DisjunctiveGroupoidElement[G, E], n *saferith.Nat)
 }
 
 type DisjunctiveMonoid[M Structure, E Element] interface {
@@ -92,6 +96,7 @@ type ExclusiveDisjunctiveGroupoidElement[G Structure, E Element] interface {
 	BooleanElement[G, E]
 	GroupoidElement[G, E]
 	Xor(x ExclusiveDisjunctiveGroupoidElement[G, E], ys ...ExclusiveDisjunctiveGroupoidElement[G, E])
+	ApplyXor(x ExclusiveDisjunctiveGroupoidElement[G, E], n *saferith.Nat)
 }
 
 type ExclusiveDisjunctiveMonoid[M Structure, E Element] interface {

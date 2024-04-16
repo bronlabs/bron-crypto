@@ -13,6 +13,12 @@ type Object any
 type Collection[Obj Object] ds.AbstractSet[Obj]
 type Class[Obj Object] Collection[Obj]
 
+func ObjectsAreEqual[T any](x, y Object) bool {
+	xx, okx := x.(ds.Equatable[T])
+	yy, oky := y.(T)
+	return okx && oky && xx.Equal(yy)
+}
+
 type Morphism[Dom, CoDom Object, X, Y Element] interface {
 	Map(x X) (Y, error)
 
@@ -39,7 +45,6 @@ type MultiMorphism interface {
 type BinaryMorphism[SourceType1, SourceType2, TargetType Object, SourceObjectType1, SourceObjectType2, TargetObjectType Element] interface {
 	MultiMorphism
 	Map(x SourceObjectType1, y SourceObjectType2) (TargetObjectType, error)
-	ToMorphism() Morphism[combinatorics.CartesianProduct[SourceType1, SourceType2], TargetType, combinatorics.CartesianProduct[SourceObjectType1, SourceObjectType2], TargetObjectType]
 }
 
 type BinaryEndoMorphism[O Object, X Element] BinaryMorphism[O, O, O, X, X, X]
@@ -57,16 +62,9 @@ type BinaryAutoMorphism[O Object, X Element] interface {
 type MultiEndoMorphism[O Object, X Element] interface {
 	MultiMorphism
 	Map(xs ...X) (X, error)
-	ToMorphism() EndoMorphism[combinatorics.CartesianPower[O], combinatorics.CartesianPower[X]]
 }
 
 type Action[C, D Structure, X, Y Element] interface {
 	BinaryMorphism[C, D, D, X, Y, Y]
 	Orbit(x X) (Class[Y], error)
-}
-
-func ObjectsAreEqual[T any](x, y Object) bool {
-	xx, okx := x.(ds.Equatable[T])
-	yy, oky := y.(T)
-	return okx && oky && xx.Equal(yy)
 }

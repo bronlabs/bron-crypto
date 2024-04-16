@@ -96,7 +96,7 @@ type Point interface {
 type BaseField interface {
 	algebra.AlgebraicVarietyBaseField[Curve, BaseField, Point, BaseFieldElement]
 	// BaseField is equivalent to Zp where elements are of type BaseFieldElement.
-	algebra.Zp[BaseField, BaseFieldElement]
+	algebra.IntegerFiniteField[BaseField, BaseFieldElement]
 	// BaseField may be a field extension. eg. BLS12381 G2
 	// TODO: At this point we downcast the top level interface to check types of elements of the subfields. Fix later.
 	algebra.ExtensionField[BaseField, BaseField, BaseFieldElement, BaseFieldElement]
@@ -110,7 +110,7 @@ type BaseFieldElement interface {
 	algebra.AlgebraicVarietyBaseFieldElement[Curve, BaseField, Point, BaseFieldElement]
 	// Base field element is equivalent to an element of Zp.
 	// TODO: this won't be the case for field extensions
-	algebra.IntegerFieldElement[BaseField, BaseFieldElement]
+	algebra.IntegerFiniteFieldElement[BaseField, BaseFieldElement]
 	// Base field element may be element of a field extension.
 	// TODO: At this point we downcast the top level interface to check types of elements of the subfields. Fix later.
 	algebra.ExtensionFieldElement[BaseField, BaseField, BaseFieldElement, BaseFieldElement]
@@ -123,7 +123,7 @@ type ScalarField interface {
 	// Curve forms a vector space over the scalar field.
 	algebra.VectorSpaceBaseField[Curve, ScalarField, Point, Scalar]
 	// ScalarField is equivalent to Zp where elements are of type Scalar.
-	algebra.Zp[ScalarField, Scalar]
+	algebra.IntegerFiniteField[ScalarField, Scalar]
 	// Curve returns the prime order subgroup corresponding to this ScalarField.
 	Curve() Curve
 	Scalar() Scalar
@@ -134,7 +134,7 @@ type Scalar interface {
 	// Curve forms a vector space over the scalar field.
 	algebra.VectorSpaceScalar[Curve, ScalarField, Point, Scalar]
 	// Scalar is equivalent to an element of Zq.
-	algebra.IntegerFieldElement[ScalarField, Scalar]
+	algebra.IntegerFiniteFieldElement[ScalarField, Scalar]
 	// ScalarField returns the scalar field containing this element.
 	ScalarField() ScalarField
 }
@@ -235,41 +235,3 @@ func (o *PointAddition[_, _, P, _]) RFold(ps ...P) (P, error) {
 	}
 	return result, nil
 }
-
-func (*PointAddition[C, BF, P, FE]) ToMorphism() algebra.Morphism[algebra.BinaryCartesianProduct[algebra.Set[P], algebra.Set[P]], algebra.Set[P], algebra.BinaryCartesianProduct[P, P], P] {
-	return &PointAdditionMorphism[C, BF, P, FE]{}
-}
-
-type PointAdditionMorphism[EllipticCurveType, BaseFieldType algebra.Structure, PointType, BaseFieldElementType algebra.Element] struct {
-	_ ds.Incomparable
-}
-
-func (*PointAdditionMorphism[_, _, _, _]) Arity() uint {
-	return 1
-}
-
-func (*PointAdditionMorphism[C, BF, P, FE]) Map(e algebra.BinaryCartesianProduct[P, P]) (P, error) {
-	return *new(P), nil
-}
-
-// import (
-// 	"sync"
-
-// 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-// )
-
-// var (
-// 	opInitonce sync.Once
-// 	opInstance operator[Curve, Curve, Point, Point]
-// )
-
-// var _ algebra.Addition[Point] = (*operator[Curve, Curve, Point, Point])(nil)
-
-// func opInit() {
-// 	opInstance = operator[Curve, Curve, Point, Point]{}
-// }
-
-// // func PointAddition() algebra.Addition[Point] {
-// // 	opInitonce.Do(opInit)
-// // 	return &opInstance
-// // }

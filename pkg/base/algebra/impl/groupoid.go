@@ -1,4 +1,4 @@
-package mixins
+package impl
 
 import (
 	"reflect"
@@ -49,10 +49,6 @@ func (e *GroupoidElement[G, E]) Order(operator algebra.BinaryOperator[E]) (*safe
 	if !e.Structure().IsDefinedUnder(operator) {
 		return nil, errs.NewArgument("not defined under given operator")
 	}
-	var compared algebra.CyclicGroupoid[G, E]
-	if reflect.TypeOf(e.Structure()) == reflect.TypeOf(compared) {
-		return e.Structure().Order(), nil
-	}
 	x := e.Clone()
 	order := new(saferith.Nat).SetUint64(1)
 	for {
@@ -85,7 +81,7 @@ func (e *GroupoidElement[G, E]) ApplyOp(operator algebra.BinaryOperator[E], x Gr
 }
 
 type AdditiveGroupoid[G algebra.AdditiveGroupoid[G, E], E algebra.AdditiveGroupoidElement[G, E]] struct {
-	Groupoid[G, E]
+	algebra.AdditiveGroupoid[G, E]
 }
 
 func (g *AdditiveGroupoid[G, E]) Add(x algebra.AdditiveGroupoidElement[G, E], ys ...algebra.AdditiveGroupoidElement[G, E]) E {
@@ -99,7 +95,6 @@ func (g *AdditiveGroupoid[G, E]) Add(x algebra.AdditiveGroupoidElement[G, E], ys
 
 type AdditiveGroupoidElement[G algebra.AdditiveGroupoid[G, E], E algebra.AdditiveGroupoidElement[G, E]] struct {
 	algebra.AdditiveGroupoidElement[G, E]
-	GroupoidElement[G, E]
 }
 
 func (e *AdditiveGroupoidElement[G, E]) ApplyAdd(x algebra.AdditiveGroupoidElement[G, E], n *saferith.Nat) E {
@@ -113,16 +108,15 @@ func (e *AdditiveGroupoidElement[G, E]) ApplyAdd(x algebra.AdditiveGroupoidEleme
 }
 
 func (e *AdditiveGroupoidElement[_, E]) Double() E {
-	return e.Structure().Add(e.Unwrap(), e.Unwrap())
+	return e.Add(e)
 }
 
 func (e *AdditiveGroupoidElement[_, E]) Triple() E {
-	return e.Structure().Add(e.Unwrap(), e.Unwrap(), e.Unwrap())
+	return e.Double().Add(e)
 }
 
 type MultiplicativeGroupoid[G algebra.MultiplicativeGroupoid[G, E], E algebra.MultiplicativeGroupoidElement[G, E]] struct {
 	algebra.MultiplicativeGroupoid[G, E]
-	Groupoid[G, E]
 }
 
 func (g *MultiplicativeGroupoid[G, E]) Mul(x algebra.MultiplicativeGroupoidElement[G, E], ys ...algebra.MultiplicativeGroupoidElement[G, E]) E {
@@ -167,7 +161,6 @@ func (g *MultiplicativeGroupoid[G, E]) MultiExponentExp(base algebra.Multiplicat
 
 type MultiplicativeGroupoidElement[G algebra.MultiplicativeGroupoid[G, E], E algebra.MultiplicativeGroupoidElement[G, E]] struct {
 	algebra.MultiplicativeGroupoidElement[G, E]
-	GroupoidElement[G, E]
 }
 
 func (e *MultiplicativeGroupoidElement[G, E]) ApplyMul(x algebra.MultiplicativeGroupoidElement[G, E], n *saferith.Nat) E {
@@ -181,11 +174,11 @@ func (e *MultiplicativeGroupoidElement[G, E]) ApplyMul(x algebra.MultiplicativeG
 }
 
 func (e *MultiplicativeGroupoidElement[_, E]) Square() E {
-	return e.Structure().Mul(e.Unwrap(), e.Unwrap())
+	return e.Mul(e)
 }
 
 func (e *MultiplicativeGroupoidElement[_, E]) Cube() E {
-	return e.Structure().Mul(e.Unwrap(), e.Unwrap(), e.Unwrap())
+	return e.Square().Mul(e)
 }
 
 func (e *MultiplicativeGroupoidElement[_, E]) Exp(exponent *saferith.Nat) E {
@@ -194,8 +187,6 @@ func (e *MultiplicativeGroupoidElement[_, E]) Exp(exponent *saferith.Nat) E {
 
 type CyclicGroupoid[G algebra.CyclicGroupoid[G, E], E algebra.CyclicGroupoidElement[G, E]] struct {
 	algebra.CyclicGroupoid[G, E]
-	Groupoid[G, E]
-	PointedSet[G, E]
 }
 
 func (g *CyclicGroupoid[G, E]) Generator() E {
@@ -204,6 +195,11 @@ func (g *CyclicGroupoid[G, E]) Generator() E {
 
 type CyclicGroupoidElement[G algebra.CyclicGroupoid[G, E], E algebra.CyclicGroupoidElement[G, E]] struct {
 	algebra.CyclicGroupoidElement[G, E]
-	GroupoidElement[G, E]
-	PointedSetElement[G, E]
+}
+
+func (e *CyclicGroupoidElement[G, E]) Order(operator algebra.BinaryOperator[E]) (*saferith.Modulus, error) {
+	if !e.Structure().IsDefinedUnder(operator) {
+		return nil, errs.NewArgument("not defined under given operator")
+	}
+	return e.Structure().Order(), nil
 }

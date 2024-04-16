@@ -36,19 +36,22 @@ var (
 var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
-	// mixins.AdditiveGroupoid[curves.Curve, curves.Point]
-	// mixins.AdditiveMonoid[curves.Curve, curves.Point]
-	// mixins.AdditiveGroup[curves.Curve, curves.Point]
-	// mixins.CyclicGroup[curves.Curve, curves.Point]
-	mixins.AdditiveCyclicGroup[curves.Curve, curves.Point]
+	mixins.Mixin_AdditiveGroup[curves.Curve, curves.Point]
+	mixins.Mixin_CyclicGroup[curves.Curve, curves.Point]
 	hash2curve.CurveHasher
 
 	_ ds.Incomparable
 }
 
+type Curve2 struct {
+	mixins.Mixin_Group[curves.Curve, curves.Point]
+	mixins.Mixin_AdditiveMonoid[curves.Curve, curves.Point]
+	// algebra.PointedSetElement[curves.Curve, curves.Point]
+}
+
 func k256Init() {
+	// x := &Curve2{}
 	k256Instance = Curve{}
-	x := &Curve{}
 	k256Instance.CurveHasher = hash2curve.NewCurveHasherSha256(
 		curves.Curve(&k256Instance),
 		base.HASH2CURVE_APP_TAG,

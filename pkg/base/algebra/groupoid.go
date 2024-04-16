@@ -113,4 +113,7 @@ type CyclicGroupoid[G Structure, E Element] interface {
 type CyclicGroupoidElement[G Structure, E Element] interface {
 	GroupoidElement[G, E]
 	PointedSetElement[G, E]
+
+	CanGenerateAllElements() bool
+	IsDesignatedGenerator() bool
 }

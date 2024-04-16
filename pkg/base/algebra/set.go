@@ -48,7 +48,6 @@ type StructuredSetElement[S Structure, E Element] interface {
 	json.Marshaler
 }
 
-// TODO: incorporate in Curve
 type FiniteStructure interface {
 	// ElementSize returns the **exact** number of bytes required to represent an element, required for `SetBytes()`
 	ElementSize() int

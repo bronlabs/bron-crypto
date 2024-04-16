@@ -26,14 +26,28 @@ var _ encoding.BinaryUnmarshaler = (*Point)(nil)
 var _ json.Unmarshaler = (*Point)(nil)
 
 type Point struct {
-	mixins.AdditiveGroupoidElement[curves.Curve, curves.Point]
-	mixins.AdditiveMonoidElement[curves.Curve, curves.Point]
+	// mixins.Mixin_GroupElement[curves.Curve, curves.Point]
+	mixins.Mixin_AdditiveGroupElement[curves.Curve, curves.Point]
+	mixins.Mixin_CyclicGroupElement[curves.Curve, curves.Point]
+	mixins.PointedSetElement[curves.Curve, curves.Point]
+	// mixins.X[curves.Curve, curves.Point]
+	// mixins.Y[curves.Curve, curves.Point]
+	// mixins.AdditiveMonoidElement[curves.Curve, curves.Point]
 	V *impl.EllipticPoint
 
 	_ ds.Incomparable
 }
 
+// type P2 struct {
+// 	mixins.Mixin_AdditiveGroupElement[curves.Curve, curves.Point]
+// 	// mixins.AdditiveMonoidElement[curves.Curve, curves.Point]
+// 	V *impl.EllipticPoint
+
+// 	_ ds.Incomparable
+// }
+
 func NewPoint() *Point {
+	// p := P2{}
 	return NewCurve().AdditiveIdentity().(*Point)
 }
 
@@ -42,6 +56,10 @@ func NewPoint() *Point {
 func (p *Point) Unwrap() curves.Point {
 	return p
 }
+
+// func (p *Point) IsBasePoint() bool {
+// 	return p
+// }
 
 func (p *Point) Structure() curves.Curve {
 	return NewCurve()

@@ -1,4 +1,4 @@
-package mixins
+package impl
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
@@ -7,14 +7,8 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
-type Group[G algebra.Group[G, E], E algebra.GroupElement[G, E]] struct {
-	algebra.Group[G, E]
-	Monoid[G, E]
-}
-
 type GroupElement[G algebra.Group[G, E], E algebra.GroupElement[G, E]] struct {
 	algebra.GroupElement[G, E]
-	Monoid[G, E]
 }
 
 func (e *GroupElement[G, E]) IsInverse(of GroupElement[G, E], under algebra.BinaryOperator[E]) (bool, error) {
@@ -50,20 +44,8 @@ func (e *GroupElement[G, E]) IsTorsionElement(order *saferith.Modulus, under alg
 	return resultIsIdentity, nil
 }
 
-type SubGroup[G algebra.SubGroup[G, E], E algebra.SubGroupElement[G, E]] struct {
-	algebra.SubGroup[G, E]
-	Group[G, E]
-}
-
-type SubGroupElement[G algebra.SubGroup[G, E], E algebra.SubGroupElement[G, E]] struct {
-	algebra.SubGroupElement[G, E]
-	GroupElement[G, E]
-}
-
 type AdditiveGroup[G algebra.AdditiveGroup[G, E], E algebra.AdditiveGroupElement[G, E]] struct {
 	algebra.AdditiveGroup[G, E]
-	Group[G, E]
-	AdditiveMonoid[G, E]
 }
 
 func (g *AdditiveGroup[G, E]) Sub(x algebra.AdditiveGroupElement[G, E], ys ...algebra.AdditiveGroupElement[G, E]) E {
@@ -86,8 +68,6 @@ func (g *AdditiveGroup[G, E]) Add(x algebra.AdditiveGroupoidElement[G, E], ys ..
 
 type AdditiveGroupElement[G algebra.AdditiveGroup[G, E], E algebra.AdditiveGroupElement[G, E]] struct {
 	algebra.AdditiveGroupElement[G, E]
-	GroupElement[G, E]
-	AdditiveMonoidElement[G, E]
 }
 
 func (e *AdditiveGroupElement[G, E]) IsAdditiveInverse(of algebra.AdditiveGroupElement[G, E]) bool {
@@ -98,7 +78,7 @@ func (e *AdditiveGroupElement[G, E]) IsTorsionElementUnderAddition(order *saferi
 	cursor := new(saferith.Nat).SetBytes(order.Bytes())
 	result := e.Clone()
 	for cursor.EqZero() == 0 {
-		result = result.Add(e.Structure().AdditiveIdentity())
+		result = result.Add(result)
 		cursor = utils.DecrementNat(cursor)
 	}
 
@@ -121,8 +101,6 @@ func (e *AdditiveGroupElement[G, E]) ApplySub(x algebra.AdditiveGroupElement[G, 
 
 type MultiplicativeGroup[G algebra.MultiplicativeGroup[G, E], E algebra.MultiplicativeGroupElement[G, E]] struct {
 	algebra.MultiplicativeGroup[G, E]
-	Group[G, E]
-	MultiplicativeMonoid[G, E]
 }
 
 func (g *MultiplicativeGroup[G, E]) Div(x algebra.MultiplicativeGroupElement[G, E], ys ...algebra.MultiplicativeGroupElement[G, E]) (E, error) {
@@ -140,8 +118,6 @@ func (g *MultiplicativeGroup[G, E]) Div(x algebra.MultiplicativeGroupElement[G, 
 
 type MultiplicativeGroupElement[G algebra.MultiplicativeGroup[G, E], E algebra.MultiplicativeGroupElement[G, E]] struct {
 	algebra.MultiplicativeGroupElement[G, E]
-	GroupElement[G, E]
-	MultiplicativeMonoidElement[G, E]
 }
 
 func (e *MultiplicativeGroupElement[G, E]) IsMultiplicativeInverse(of algebra.MultiplicativeGroupElement[G, E]) bool {
@@ -149,32 +125,32 @@ func (e *MultiplicativeGroupElement[G, E]) IsMultiplicativeInverse(of algebra.Mu
 }
 
 func (e *MultiplicativeGroupElement[G, E]) IsTorsionElementUnderMultiplication(order *saferith.Modulus) bool {
-	// cursor := new(saferith.Nat).SetBytes(order.Bytes())
-	// result := e.Clone()
-	// for cursor.EqZero() == 0 {
-	// 	result = result.Mul(e.Structure().AdditiveIdentity())
-	// 	cursor = utils.DecrementNat(cursor)
-	// }
+	cursor := new(saferith.Nat).SetBytes(order.Bytes())
+	result := e.Clone()
+	for cursor.EqZero() == 0 {
+		result = result.Mul(result)
+		cursor = utils.DecrementNat(cursor)
+	}
 
-	// return result.IsAdditiveIdentity()
-	return true
+	return result.IsMultiplicativeIdentity()
 }
 
-func (e *MultiplicativeGroupElement[G, E]) ApplyDiv(x algebra.MultiplicativeGroupElement[G, E], n *saferith.Nat) E {
-	// cursor := new(saferith.Nat).SetUint64(1)
-	// res := e.Clone()
-	// for cursor.Eq(n) != 1 {
-	// 	res = res.Sub(x)
-	// 	cursor = utils.IncrementNat(cursor)
-	// }
-	// return res
-	return e.Unwrap()
+func (e *MultiplicativeGroupElement[G, E]) ApplyDiv(x algebra.MultiplicativeGroupElement[G, E], n *saferith.Nat) (E, error) {
+	cursor := new(saferith.Nat).SetUint64(1)
+	var err error
+	res := e.Clone()
+	for cursor.Eq(n) != 1 {
+		res, err = res.Div(x)
+		if err != nil {
+			return *new(E), errs.WrapFailed(err, "could not divide by x")
+		}
+		cursor = utils.IncrementNat(cursor)
+	}
+	return res, nil
 }
 
 type CyclicGroup[G algebra.CyclicGroup[G, E], E algebra.CyclicGroupElement[G, E]] struct {
 	algebra.CyclicGroup[G, E]
-	Group[G, E]
-	CyclicGroupoid[G, E]
 }
 
 func (g *CyclicGroup[G, E]) DLog(base, x algebra.CyclicGroupElement[G, E], under algebra.BinaryOperator[E]) (*saferith.Nat, error) {
@@ -201,16 +177,4 @@ func (g *CyclicGroup[G, E]) DLog(base, x algebra.CyclicGroupElement[G, E], under
 		return nil, errs.WrapFailed(err, "could not find dlog")
 	}
 	return exponent, nil
-}
-
-type CyclicGroupElement[G algebra.CyclicGroup[G, E], E algebra.CyclicGroupElement[G, E]] struct {
-	algebra.CyclicGroupElement[G, E]
-	GroupElement[G, E]
-	CyclicGroupoidElement[G, E]
-}
-
-type AdditiveCyclicGroup[G algebra.AdditiveCyclicGroup[G, E], E algebra.AdditiveCyclicGroupElement[G, E]] struct {
-	algebra.AdditiveCyclicGroup[G, E]
-	CyclicGroup[G, E]
-	AdditiveGroup[G, E]
 }
