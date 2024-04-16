@@ -14,7 +14,6 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var (
@@ -188,7 +187,7 @@ func (sf *ScalarField) Characteristic() *saferith.Nat {
 }
 
 func (*ScalarField) ExtensionDegree() *saferith.Nat {
-	return saferithUtils.NatOne
+	return new(saferith.Nat).SetUint64(1)
 }
 
 func (sf *ScalarField) FrobeniusAutomorphism(e curves.Scalar) curves.Scalar {
@@ -197,12 +196,12 @@ func (sf *ScalarField) FrobeniusAutomorphism(e curves.Scalar) curves.Scalar {
 
 func (sf *ScalarField) Trace(e curves.Scalar) curves.Scalar {
 	result := e
-	currentDegree := saferithUtils.NatOne
+	currentDegree := new(saferith.Nat).SetUint64(1)
 	currentTerm := result
 	for currentDegree.Eq(sf.ExtensionDegree()) == 1 {
 		currentTerm = sf.FrobeniusAutomorphism(currentTerm)
 		result = result.Add(currentTerm)
-		currentDegree = saferithUtils.NatInc(currentDegree)
+		currentDegree = utils.IncrementNat(currentDegree)
 	}
 	return result
 }

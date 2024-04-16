@@ -15,7 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fp"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var _ curves.Point = (*Point)(nil)
@@ -66,10 +66,10 @@ func (p *Point) Order() *saferith.Modulus {
 		return saferith.ModulusFromUint64(0)
 	}
 	q := p.Clone()
-	order := saferithUtils.NatOne
+	order := new(saferith.Nat).SetUint64(1)
 	for !q.IsIdentity() {
 		q = q.Add(p)
-		saferithUtils.NatInc(order)
+		utils.IncrementNat(order)
 	}
 	return saferith.ModulusFromNat(order)
 }

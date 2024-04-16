@@ -15,7 +15,7 @@ type Element2k[S algebra.Structure, E algebra.Element] interface {
 	// Element2k is an element of a ring of integers modulo n=2^k.
 	algebra.AbstractIntegerRingElement[S, E]
 	// Element2k can be treated as a byte slice (big-endian) of length k/8.
-	algebra.BytesSerialization[E]
+	algebra.BytesLike[E]
 
 	Ring2k() S
 }
