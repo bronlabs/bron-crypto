@@ -11,6 +11,137 @@ import (
 )
 
 func TestReverseBytes(t *testing.T) {
+	
+	t.Run("test for non empty array", func(t *testing.T){
+		t.Parallel()
+
+		inputMatrix :=  []byte {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC}
+
+		//reverse of revese should be the same os original
+		result := bitstring.ReverseBytes(inputMatrix)
+		result = bitstring.ReverseBytes(result)
+
+		require.Equal(t, result, inputMatrix)
+	})
+
+	t.Run("test for empty array", func(t *testing.T) {
+		t.Parallel()
+
+		inputMatrix :=  []byte {}
+        result := bitstring.ReverseBytes(inputMatrix)
+
+        require.Equal(t, result, inputMatrix)
+	})
+//super large array??
+}
+
+func TestPadToLeft(t *testing.T) {
+
+	t.Run("Test with positive padLen", func(t *testing.T) {
+		t.Parallel()
+
+		inputMatrix :=  [][]byte {
+			{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+			{},
+			{0x21},
+		}
+		inputPadLengths := 2
+		expectedOutput := [][]byte {
+			{0x00, 0x00, 0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+			{0x00, 0x00},
+			{0x00, 0x00, 0x21},
+		}
+
+		for i:= 0; i < len(inputMatrix); i++ {
+			require.Equal(t, expectedOutput[i], bitstring.PadToLeft(inputMatrix[i], inputPadLengths))
+		}
+	})
+	t.Run("Test with negative padLen", func(t *testing.T) {
+		t.Parallel()
+
+		inputMatrix :=  [][]byte {
+			{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+			{},
+			{0x21},
+		}
+		inputPadLengths := -2
+		excpectedOutput := inputMatrix
+
+		for i:= 0; i < len(inputMatrix); i++ {
+			require.Equal(t, excpectedOutput[i], bitstring.PadToLeft(inputMatrix[i], inputPadLengths))
+		}
+	})
+
+	t.Run("Test with zero padLen", func(t *testing.T) {
+		t.Parallel()
+
+		inputMatrix :=  [][]byte {
+			{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+			{},
+			{0x21},
+		}
+		inputPadLengths := 0
+		excpectedOutput := inputMatrix
+
+		for i:= 0; i < len(inputMatrix); i++ {
+			require.Equal(t, excpectedOutput[i], bitstring.PadToLeft(inputMatrix[i], inputPadLengths))
+		}
+	})
+}
+
+func TestPadToRight(t *testing.T) {
+
+	t.Run("Test with positive padLen", func(t *testing.T) {
+		t.Parallel()
+
+		inputMatrix :=  [][]byte {
+			{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+			{},
+			{0x21},
+		}
+		inputPadLengths := 2
+		expectedOutput := [][]byte {
+			{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0x00, 0x00},
+			{0x00, 0x00},
+			{0x21, 0x00, 0x00},
+		}
+		for i:= 0; i < len(inputMatrix); i++ {
+			require.Equal(t, expectedOutput[i], bitstring.PadToRight(inputMatrix[i], inputPadLengths))
+		}
+	})
+	t.Run("Test with negative padLen", func(t *testing.T) {
+		t.Parallel()
+
+		inputMatrix :=  [][]byte {
+			{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+			{},
+			{0x21},
+		}
+		inputPadLengths := -2
+		excpectedOutput := inputMatrix
+
+		for i:= 0; i < len(inputMatrix); i++ {
+			require.Equal(t, excpectedOutput[i], bitstring.PadToRight(inputMatrix[i], inputPadLengths))
+		}
+	})
+
+	t.Run("Test with zero padLen", func(t *testing.T) {
+		t.Parallel()
+
+		inputMatrix :=  [][]byte {
+			{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+			{},
+			{0x21},
+		}
+		inputPadLengths := 0
+		excpectedOutput := inputMatrix
+		for i:= 0; i < len(inputMatrix); i++ {
+			require.Equal(t, excpectedOutput[i], bitstring.PadToRight(inputMatrix[i], inputPadLengths))
+		}
+	})
+}
+
+func TestReverseBytes(t *testing.T) {
 	t.Parallel()
 
 	t.Run("ReverseBytes is an involution", func(t *testing.T) {
