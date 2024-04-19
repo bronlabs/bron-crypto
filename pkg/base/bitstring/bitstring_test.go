@@ -57,9 +57,9 @@ func TestPadToLeft(t *testing.T) {
 		for _, padLength := range inputPadLengths {
 			t.Run(fmt.Sprintf("%v, %v", input, padLength), func(t *testing.T) {
 				t.Parallel()
-	
+
 				result := bitstring.PadToLeft(input, padLength)
-	
+
 				var expected []byte
 				if padLength > 0 {
 					expected = append(make([]byte, padLength), input...)
@@ -93,14 +93,14 @@ func TestPadToRight(t *testing.T) {
 		for _, padLength := range inputPadLengths {
 			t.Run(fmt.Sprintf("%v ,%v", input, padLength), func(t *testing.T) {
 				t.Parallel()
-	
+
 				result := bitstring.PadToRight(input, padLength)
-	
+
 				var expected []byte
 				if padLength > 0 {
 					expected = make([]byte, len(input)+padLength)
 					copy(expected, input)
-	
+
 				} else {
 					expected = input
 				}
