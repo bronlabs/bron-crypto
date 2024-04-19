@@ -10,117 +10,182 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 )
 
-func TestReverseBytes(t *testing.T) {
-	
-	t.Run("test for non empty array", func(t *testing.T){
+func TestReverseBytes1(t *testing.T) {
+
+	inputMatrix := [][]byte{
+		{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+		{},
+	}
+
+	t.Run("test for non empty array", func(t *testing.T) {
 		t.Parallel()
 
-		inputMatrix :=  []byte {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC}
-
 		//reverse of revese should be the same os original
-		result := bitstring.ReverseBytes(inputMatrix)
+		result := bitstring.ReverseBytes(inputMatrix[0])
 		result = bitstring.ReverseBytes(result)
 
-		require.Equal(t, result, inputMatrix)
+		require.Equal(t, result, inputMatrix[0])
 	})
 
 	t.Run("test for empty array", func(t *testing.T) {
 		t.Parallel()
 
-		inputMatrix :=  []byte {}
-        result := bitstring.ReverseBytes(inputMatrix)
+		result := bitstring.ReverseBytes(inputMatrix[1])
 
-        require.Equal(t, result, inputMatrix)
+		require.Equal(t, result, inputMatrix[1])
 	})
-//super large array??
+
 }
 
-func TestPadToLeft(t *testing.T) {
+func TestReverseBytes2(t *testing.T) {
 
+	testCase := []struct {
+		name        string
+		inputMatrix []byte
+		// expected []byte
+	}{
+		{
+			"test for non empty array",
+			[]byte{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+		},
+		{
+			"test for an empty array",
+			[]byte{},
+		},
+	}
+
+	for _, tc := range testCase {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			//reverse of revese should be the same os original
+			result := bitstring.ReverseBytes(tc.inputMatrix)
+			result = bitstring.ReverseBytes(result)
+
+			require.Equal(t, result, tc.inputMatrix)
+		})
+	}
+
+}
+
+func TestPadToLeft1(t *testing.T) {
+
+	inputMatrix := [][]byte{
+		{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+		{},
+		{0x21},
+	}
 	t.Run("Test with positive padLen", func(t *testing.T) {
 		t.Parallel()
 
-		inputMatrix :=  [][]byte {
-			{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
-			{},
-			{0x21},
-		}
 		inputPadLengths := 2
-		expectedOutput := [][]byte {
+		expectedOutput := [][]byte{
 			{0x00, 0x00, 0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
 			{0x00, 0x00},
 			{0x00, 0x00, 0x21},
 		}
 
-		for i:= 0; i < len(inputMatrix); i++ {
+		for i := 0; i < len(inputMatrix); i++ {
 			require.Equal(t, expectedOutput[i], bitstring.PadToLeft(inputMatrix[i], inputPadLengths))
 		}
 	})
 	t.Run("Test with negative padLen", func(t *testing.T) {
 		t.Parallel()
 
-		inputMatrix :=  [][]byte {
-			{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
-			{},
-			{0x21},
-		}
 		inputPadLengths := -2
 		excpectedOutput := inputMatrix
 
-		for i:= 0; i < len(inputMatrix); i++ {
+		for i := 0; i < len(inputMatrix); i++ {
 			require.Equal(t, excpectedOutput[i], bitstring.PadToLeft(inputMatrix[i], inputPadLengths))
 		}
 	})
 
 	t.Run("Test with zero padLen", func(t *testing.T) {
 		t.Parallel()
-
-		inputMatrix :=  [][]byte {
-			{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
-			{},
-			{0x21},
-		}
 		inputPadLengths := 0
 		excpectedOutput := inputMatrix
 
-		for i:= 0; i < len(inputMatrix); i++ {
+		for i := 0; i < len(inputMatrix); i++ {
 			require.Equal(t, excpectedOutput[i], bitstring.PadToLeft(inputMatrix[i], inputPadLengths))
 		}
 	})
 }
 
+func TestPadToLeft2(t *testing.T) {
+
+	testCases := []struct {
+		name            string
+		inputMatrix     [][]byte
+		inputPadLengths int
+		expectedOutput  [][]byte
+	}{
+		{
+			"Test with positive padLen",
+			[][]byte{
+				{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+				{},
+				{0x21},
+			},
+			2,
+			[][]byte{
+				{0x00, 0x00, 0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+				{0x00, 0x00},
+				{0x00, 0x00, 0x21},
+			},
+		},
+		{
+			"Test with positive padLen",
+			[][]byte{
+				{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+				{},
+				{0x21},
+			},
+			0,
+			[][]byte{
+				{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+				{},
+				{0x21},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		for i := range tc.inputMatrix {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				require.Equal(t, tc.expectedOutput[i], bitstring.PadToLeft(tc.inputMatrix[i], tc.inputPadLengths))
+			})
+		}
+	}
+}
+
 func TestPadToRight(t *testing.T) {
 
+	inputMatrix := [][]byte{
+		{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+		{},
+		{0x21},
+	}
 	t.Run("Test with positive padLen", func(t *testing.T) {
 		t.Parallel()
 
-		inputMatrix :=  [][]byte {
-			{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
-			{},
-			{0x21},
-		}
 		inputPadLengths := 2
-		expectedOutput := [][]byte {
+		expectedOutput := [][]byte{
 			{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0x00, 0x00},
 			{0x00, 0x00},
 			{0x21, 0x00, 0x00},
 		}
-		for i:= 0; i < len(inputMatrix); i++ {
+		for i := 0; i < len(inputMatrix); i++ {
 			require.Equal(t, expectedOutput[i], bitstring.PadToRight(inputMatrix[i], inputPadLengths))
 		}
 	})
 	t.Run("Test with negative padLen", func(t *testing.T) {
 		t.Parallel()
 
-		inputMatrix :=  [][]byte {
-			{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
-			{},
-			{0x21},
-		}
 		inputPadLengths := -2
 		excpectedOutput := inputMatrix
 
-		for i:= 0; i < len(inputMatrix); i++ {
+		for i := 0; i < len(inputMatrix); i++ {
 			require.Equal(t, excpectedOutput[i], bitstring.PadToRight(inputMatrix[i], inputPadLengths))
 		}
 	})
@@ -128,14 +193,14 @@ func TestPadToRight(t *testing.T) {
 	t.Run("Test with zero padLen", func(t *testing.T) {
 		t.Parallel()
 
-		inputMatrix :=  [][]byte {
+		inputMatrix := [][]byte{
 			{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
 			{},
 			{0x21},
 		}
 		inputPadLengths := 0
 		excpectedOutput := inputMatrix
-		for i:= 0; i < len(inputMatrix); i++ {
+		for i := 0; i < len(inputMatrix); i++ {
 			require.Equal(t, excpectedOutput[i], bitstring.PadToRight(inputMatrix[i], inputPadLengths))
 		}
 	})
