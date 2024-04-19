@@ -53,23 +53,24 @@ func TestPadToLeft(t *testing.T) {
 		-1,
 	}
 
-	for i, input := range inputMatrix {
-		padLength := inputPadLengths[i]
-		t.Run(fmt.Sprintf("%v", input), func(t *testing.T) {
-			t.Parallel()
+	for _, input := range inputMatrix {
+		for _, padLength := range inputPadLengths {
+			t.Run(fmt.Sprintf("%v, %v", input, padLength), func(t *testing.T) {
+				t.Parallel()
+	
+				result := bitstring.PadToLeft(input, padLength)
+	
+				var expected []byte
+				if padLength > 0 {
+					expected = append(make([]byte, padLength), input...)
+				} else {
+					expected = input
+				}
+				require.Equal(t, expected, result)
+			})
+		}
 
-			result := bitstring.PadToLeft(input, inputPadLengths[i])
-
-			var expected []byte
-			if padLength > 0 {
-				expected = append(make([]byte, padLength), input...)
-			} else {
-				expected = input
-			}
-			require.Equal(t, expected, result)
-		})
 	}
-
 }
 
 func TestPadToRight(t *testing.T) {
@@ -88,23 +89,24 @@ func TestPadToRight(t *testing.T) {
 		-1,
 	}
 
-	for i, input := range inputMatrix {
-		padLength := inputPadLengths[i]
-		t.Run(fmt.Sprintf("%v", input), func(t *testing.T) {
-			t.Parallel()
-
-			result := bitstring.PadToRight(input, inputPadLengths[i])
-
-			var expected []byte
-			if padLength > 0 {
-				expected = make([]byte, len(input)+padLength)
-				copy(expected, input)
-
-			} else {
-				expected = input
-			}
-			require.Equal(t, expected, result)
-		})
+	for _, input := range inputMatrix {
+		for _, padLength := range inputPadLengths {
+			t.Run(fmt.Sprintf("%v ,%v", input, padLength), func(t *testing.T) {
+				t.Parallel()
+	
+				result := bitstring.PadToRight(input, padLength)
+	
+				var expected []byte
+				if padLength > 0 {
+					expected = make([]byte, len(input)+padLength)
+					copy(expected, input)
+	
+				} else {
+					expected = input
+				}
+				require.Equal(t, expected, result)
+			})
+		}
 	}
 }
 
@@ -125,7 +127,7 @@ func TestByteSubLE(t *testing.T) {
 		{0xFF, 0xFF, 0xFF, 0xFF}}
 
 	for i, input := range inputMatrix {
-		t.Run(fmt.Sprintf("Case %d", i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Case %v", input), func(t *testing.T) {
 			t.Parallel()
 
 			bitstring.ByteSubLE(input)
@@ -207,7 +209,7 @@ func TestToBytesLE(t *testing.T) {
 
 	for i, input := range inputInt {
 
-		t.Run(fmt.Sprintf("Case %d", i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Case %d", input), func(t *testing.T) {
 			t.Parallel()
 
 			require.Equal(t, expectedOutput[i], bitstring.ToBytesLE(input))
@@ -234,7 +236,7 @@ func TestTruncateWithEllipsis(t *testing.T) {
 
 	for i, input := range inputText {
 		maxLength := 10
-		t.Run(fmt.Sprintf("Case %d", i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Case %s", input), func(t *testing.T) {
 			t.Parallel()
 
 			require.Equal(t, expectedOutput[i], bitstring.TruncateWithEllipsis(input, maxLength))
@@ -261,7 +263,7 @@ func TestMemclr(t *testing.T) {
 	}
 
 	for i, input := range inputMatrix {
-		t.Run(fmt.Sprintf("Case %d", i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Case %v", input), func(t *testing.T) {
 			t.Parallel()
 			bitstring.Memclr(input)
 			require.Equal(t, expectedOutput[i], input)
