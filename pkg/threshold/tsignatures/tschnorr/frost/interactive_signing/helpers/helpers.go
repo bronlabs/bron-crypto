@@ -21,11 +21,11 @@ func ProducePartialSignature(
 	quorum ds.Set[types.IdentityKey],
 	signingKeyShare *frost.SigningKeyShare,
 	d_i, e_i curves.Scalar,
-	D_alpha, E_alpha ds.Map[types.IdentityKey, curves.Point],
+	bigD_alpha, bigE_alpha ds.Map[types.IdentityKey, curves.Point],
 	sharingConfig types.SharingConfig,
 	message []byte,
 ) (*frost.PartialSignature, error) {
-	R, _, r_js, err := ComputeR(protocolConfig, sharingConfig, quorum, D_alpha, E_alpha, message)
+	R, _, r_js, err := ComputeR(protocolConfig, sharingConfig, quorum, bigD_alpha, bigE_alpha, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute R")
 	}
@@ -68,17 +68,17 @@ func ProducePartialSignature(
 	}, nil
 }
 
-func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig types.SharingConfig, quorum ds.Set[types.IdentityKey], D_alpha, E_alpha ds.Map[types.IdentityKey, curves.Point], message []byte) (R curves.Point, R_js ds.Map[types.IdentityKey, curves.Point], r_js ds.Map[types.IdentityKey, curves.Scalar], err error) {
+func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig types.SharingConfig, quorum ds.Set[types.IdentityKey], bigD_alpha, bigE_alpha ds.Map[types.IdentityKey, curves.Point], message []byte) (bigR curves.Point, bigR_js ds.Map[types.IdentityKey, curves.Point], r_js ds.Map[types.IdentityKey, curves.Scalar], err error) {
 	// we need to consistently order the Ds and Es
 	combinedDsAndEs := []byte{}
 	sortedIdentities := types.ByPublicKey(quorum.List())
 	sort.Sort(sortedIdentities)
 	for _, presentParty := range sortedIdentities {
-		d_j, exists := D_alpha.Get(presentParty)
+		d_j, exists := bigD_alpha.Get(presentParty)
 		if !exists {
 			return nil, nil, nil, errs.NewMissing("missing d_j for party %s", presentParty.String())
 		}
-		e_j, exists := E_alpha.Get(presentParty)
+		e_j, exists := bigE_alpha.Get(presentParty)
 		if !exists {
 			return nil, nil, nil, errs.NewMissing("missing e_j for party %s", presentParty.String())
 		}
@@ -86,7 +86,7 @@ func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig typ
 		combinedDsAndEs = append(combinedDsAndEs, e_j.ToAffineCompressed()...)
 	}
 
-	R_js = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
+	bigR_js = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 	r_js = hashmap.NewHashableHashMap[types.IdentityKey, curves.Scalar]()
 	for identityKey := range quorum.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
@@ -102,20 +102,20 @@ func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig typ
 			return nil, nil, nil, errs.WrapHashing(err, "could not hash to r_j")
 		}
 		r_js.Put(identityKey, r_j)
-		D_j, exists := D_alpha.Get(identityKey)
+		D_j, exists := bigD_alpha.Get(identityKey)
 		if !exists {
 			return nil, nil, nil, errs.NewMissing("could not find D_j for j=%d in D_alpha", sharingId)
 		}
-		E_j, exists := E_alpha.Get(identityKey)
+		E_j, exists := bigE_alpha.Get(identityKey)
 		if !exists {
 			return nil, nil, nil, errs.NewMissing("could not find E_j for j=%d in E_alpha", sharingId)
 		}
 
-		R_js.Put(identityKey, D_j.Add(E_j.Mul(r_j)))
+		bigR_js.Put(identityKey, D_j.Add(E_j.Mul(r_j)))
 	}
-	R = protocolConfig.Curve().Add(
+	bigR = protocolConfig.Curve().Add(
 		protocolConfig.Curve().AdditiveIdentity(),
-		R_js.Values()...,
+		bigR_js.Values()...,
 	)
-	return R, R_js, r_js, nil
+	return bigR, bigR_js, r_js, nil
 }

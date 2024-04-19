@@ -3,7 +3,7 @@ package bimap_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/bimap"
@@ -43,7 +43,7 @@ func Test_Add(t *testing.T) {
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
 	biMap, err := bimap.NewBiMap(emptyKey, emptyValue)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Add test data
 	data1 := &dataK{value: 1}
@@ -52,8 +52,8 @@ func Test_Add(t *testing.T) {
 
 	// Verify the added data
 	result, ok := biMap.Get(data1)
-	assert.True(t, ok)
-	assert.Equal(t, data2, result)
+	require.True(t, ok)
+	require.Equal(t, data2, result)
 
 	// Add more test data
 	data3 := &dataK{value: 3}
@@ -62,8 +62,8 @@ func Test_Add(t *testing.T) {
 
 	// Verify the added data
 	result, ok = biMap.Get(data3)
-	assert.True(t, ok)
-	assert.Equal(t, data4, result)
+	require.True(t, ok)
+	require.Equal(t, data4, result)
 
 	t.Run("test reverse", func(t *testing.T) {
 		// Test Reverse method
@@ -71,12 +71,12 @@ func Test_Add(t *testing.T) {
 
 		// Verify the reverse map
 		reverseData2, ok := reverseMap.Get(data2)
-		assert.True(t, ok)
-		assert.Equal(t, data1, reverseData2)
+		require.True(t, ok)
+		require.Equal(t, data1, reverseData2)
 
 		reverseData4, ok := reverseMap.Get(data4)
-		assert.True(t, ok)
-		assert.Equal(t, data3, reverseData4)
+		require.True(t, ok)
+		require.Equal(t, data3, reverseData4)
 
 		// Add more test data for reverse map
 		reverseData5 := &dataV{value: 5}
@@ -85,16 +85,16 @@ func Test_Add(t *testing.T) {
 
 		// Verify the added data in reverse map
 		result2, ok := reverseMap.Get(reverseData5)
-		assert.True(t, ok)
-		assert.Equal(t, reverseData6, result2)
+		require.True(t, ok)
+		require.Equal(t, reverseData6, result2)
 
 		// Test Reverse of Reverse method
 		originalMap := reverseMap.Reverse()
 
 		// Verify the original map
 		originalData6, ok := originalMap.Get(reverseData6)
-		assert.True(t, ok)
-		assert.Equal(t, reverseData5, originalData6)
+		require.True(t, ok)
+		require.Equal(t, reverseData5, originalData6)
 	})
 }
 func Test_Clear(t *testing.T) {
@@ -102,7 +102,7 @@ func Test_Clear(t *testing.T) {
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
 	biMap, err := bimap.NewBiMap(emptyKey, emptyValue)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Add test data
 	data1 := &dataK{value: 1}
@@ -111,22 +111,22 @@ func Test_Clear(t *testing.T) {
 
 	// Verify the added data
 	result, ok := biMap.Get(data1)
-	assert.True(t, ok)
-	assert.Equal(t, data2, result)
+	require.True(t, ok)
+	require.Equal(t, data2, result)
 
 	// Clear the map
 	biMap.Clear()
 
 	// Verify that the map is empty
 	_, ok = biMap.Get(data1)
-	assert.False(t, ok)
+	require.False(t, ok)
 }
 func Test_ContainsKey(t *testing.T) {
 	emptyKey := hashmap.NewHashableHashMap[*dataK, *dataV]()
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
 	biMap, err := bimap.NewBiMap(emptyKey, emptyValue)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Add test data
 	data1 := &dataK{value: 1}
@@ -134,15 +134,15 @@ func Test_ContainsKey(t *testing.T) {
 	biMap.Put(data1, data2)
 
 	// Test ContainsKey method
-	assert.True(t, biMap.ContainsKey(data1))
-	assert.False(t, biMap.ContainsKey(&dataK{value: 3}))
+	require.True(t, biMap.ContainsKey(data1))
+	require.False(t, biMap.ContainsKey(&dataK{value: 3}))
 }
 func Test_Size(t *testing.T) {
 	emptyKey := hashmap.NewHashableHashMap[*dataK, *dataV]()
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
 	biMap, err := bimap.NewBiMap(emptyKey, emptyValue)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Add test data
 	data1 := &dataK{value: 1}
@@ -150,7 +150,7 @@ func Test_Size(t *testing.T) {
 	biMap.Put(data1, data2)
 
 	// Verify the size of the map
-	assert.Equal(t, 1, biMap.Size())
+	require.Equal(t, 1, biMap.Size())
 
 	// Add more test data
 	data3 := &dataK{value: 3}
@@ -158,7 +158,7 @@ func Test_Size(t *testing.T) {
 	biMap.Put(data3, data4)
 
 	// Verify the size of the map
-	assert.Equal(t, 2, biMap.Size())
+	require.Equal(t, 2, biMap.Size())
 }
 
 func Test_IsEmpty(t *testing.T) {
@@ -166,10 +166,10 @@ func Test_IsEmpty(t *testing.T) {
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
 	biMap, err := bimap.NewBiMap(emptyKey, emptyValue)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Verify that the map is empty
-	assert.True(t, biMap.IsEmpty())
+	require.True(t, biMap.IsEmpty())
 
 	// Add test data
 	data1 := &dataK{value: 1}
@@ -177,7 +177,7 @@ func Test_IsEmpty(t *testing.T) {
 	biMap.Put(data1, data2)
 
 	// Verify that the map is not empty
-	assert.False(t, biMap.IsEmpty())
+	require.False(t, biMap.IsEmpty())
 }
 
 func Test_TryRemove(t *testing.T) {
@@ -185,7 +185,7 @@ func Test_TryRemove(t *testing.T) {
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
 	biMap, err := bimap.NewBiMap(emptyKey, emptyValue)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Add test data
 	data1 := &dataK{value: 1}
@@ -194,15 +194,15 @@ func Test_TryRemove(t *testing.T) {
 
 	// Try to remove an existing key-value pair
 	removed, _ := biMap.TryRemove(data1)
-	assert.True(t, removed)
+	require.True(t, removed)
 
 	// Verify that the key-value pair is removed
 	_, ok := biMap.Get(data1)
-	assert.False(t, ok)
+	require.False(t, ok)
 
 	// Try to remove a non-existing key-value pair
 	removed, _ = biMap.TryRemove(data1)
-	assert.False(t, removed)
+	require.False(t, removed)
 }
 
 func Test_Keys(t *testing.T) {
@@ -210,7 +210,7 @@ func Test_Keys(t *testing.T) {
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
 	biMap, err := bimap.NewBiMap(emptyKey, emptyValue)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Add test data
 	data1 := &dataK{value: 1}
@@ -221,8 +221,8 @@ func Test_Keys(t *testing.T) {
 	keys := biMap.Keys()
 
 	// Verify the keys
-	assert.Len(t, keys, 1)
-	assert.Contains(t, keys, data1)
+	require.Len(t, keys, 1)
+	require.Contains(t, keys, data1)
 }
 
 func Test_Values(t *testing.T) {
@@ -230,7 +230,7 @@ func Test_Values(t *testing.T) {
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
 	biMap, err := bimap.NewBiMap(emptyKey, emptyValue)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Add test data
 	data1 := &dataK{value: 1}
@@ -241,15 +241,15 @@ func Test_Values(t *testing.T) {
 	values := biMap.Values()
 
 	// Verify the values
-	assert.Len(t, values, 1)
-	assert.Contains(t, values, data2)
+	require.Len(t, values, 1)
+	require.Contains(t, values, data2)
 }
 func Test_Iter(t *testing.T) {
 	emptyKey := hashmap.NewHashableHashMap[*dataK, *dataV]()
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
 	biMap, err := bimap.NewBiMap(emptyKey, emptyValue)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Add test data
 	data1 := &dataK{value: 1}
@@ -260,7 +260,7 @@ func Test_Iter(t *testing.T) {
 	iter := biMap.Iter()
 
 	// Verify the iterator
-	assert.NotNil(t, iter)
+	require.NotNil(t, iter)
 
 	// Iterate over the map and collect the key-value pairs
 	var pairs []datastructures.MapEntry[*dataK, *dataV]
@@ -269,9 +269,9 @@ func Test_Iter(t *testing.T) {
 	}
 
 	// Verify the collected key-value pairs
-	assert.Len(t, pairs, 1)
-	assert.Equal(t, data1, pairs[0].Key)
-	assert.Equal(t, data2, pairs[0].Value)
+	require.Len(t, pairs, 1)
+	require.Equal(t, data1, pairs[0].Key)
+	require.Equal(t, data2, pairs[0].Value)
 }
 
 func Test_Clone(t *testing.T) {
@@ -279,7 +279,7 @@ func Test_Clone(t *testing.T) {
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
 	biMap, err := bimap.NewBiMap(emptyKey, emptyValue)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Add test data
 	data1 := &dataK{value: 1}
@@ -290,10 +290,10 @@ func Test_Clone(t *testing.T) {
 	clone := biMap.Clone()
 
 	// Verify the cloned map
-	assert.NotNil(t, clone)
+	require.NotNil(t, clone)
 
 	// Verify that the cloned map is equal to the original map
-	assert.Equal(t, biMap, clone)
+	require.Equal(t, biMap, clone)
 
 	// Modify the cloned map
 	data3 := &dataK{value: 3}
@@ -301,14 +301,14 @@ func Test_Clone(t *testing.T) {
 	clone.Put(data3, data4)
 
 	// Verify that the modified cloned map is not equal to the original map
-	assert.NotEqual(t, biMap, clone)
+	require.NotEqual(t, biMap, clone)
 }
 func Test_Remove(t *testing.T) {
 	emptyKey := hashmap.NewHashableHashMap[*dataK, *dataV]()
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
 	biMap, err := bimap.NewBiMap(emptyKey, emptyValue)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Add test data
 	data1 := &dataK{value: 1}
@@ -320,12 +320,12 @@ func Test_Remove(t *testing.T) {
 
 	// Verify that the key-value pair is removed
 	_, ok := biMap.Get(data1)
-	assert.False(t, ok)
+	require.False(t, ok)
 
 	// Remove a non-existing key-value pair
 	biMap.Remove(data1)
 
 	// Verify that the map remains unchanged
 	_, ok = biMap.Get(data1)
-	assert.False(t, ok)
+	require.False(t, ok)
 }

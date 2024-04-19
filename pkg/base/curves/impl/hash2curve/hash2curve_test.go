@@ -76,10 +76,10 @@ func runHash2CurveTests(t *testing.T, curve curves.Curve, tv *testutils.TestVect
 				pxiExpected := hexDecode(t, tc.PxI)
 				pyiExpected := hexDecode(t, tc.PyI)
 
-				require.Equal(t, p.AffineX().SubFieldElement(0).Bytes(), pxExpected, 0)
-				require.Equal(t, p.AffineX().SubFieldElement(1).Bytes(), pxiExpected, 0)
-				require.Equal(t, p.AffineY().SubFieldElement(0).Bytes(), pyExpected, 0)
-				require.Equal(t, p.AffineY().SubFieldElement(1).Bytes(), pyiExpected, 0)
+				require.Equal(t, pxExpected, p.AffineX().SubFieldElement(0).Bytes(), 0)
+				require.Equal(t, pxiExpected, p.AffineX().SubFieldElement(1).Bytes(), 0)
+				require.Equal(t, pyExpected, p.AffineY().SubFieldElement(0).Bytes(), 0)
+				require.Equal(t, pyiExpected, p.AffineY().SubFieldElement(1).Bytes(), 0)
 			}
 		})
 	}
@@ -112,10 +112,10 @@ func runHash2FieldTests(t *testing.T, curve curves.Curve, tv *testutils.TestVect
 				u0iExpected := hexDecode(t, tc.U0I)
 				u1iExpected := hexDecode(t, tc.U1I)
 
-				require.Equal(t, u[0].SubFieldElement(0).Bytes(), u0rExpected, 0)
-				require.Equal(t, u[0].SubFieldElement(1).Bytes(), u0iExpected, 0)
-				require.Equal(t, u[1].SubFieldElement(0).Bytes(), u1rExpected, 0)
-				require.Equal(t, u[1].SubFieldElement(1).Bytes(), u1iExpected, 0)
+				require.Equal(t, u0rExpected, u[0].SubFieldElement(0).Bytes(), 0)
+				require.Equal(t, u0iExpected, u[0].SubFieldElement(1).Bytes(), 0)
+				require.Equal(t, u1rExpected, u[1].SubFieldElement(0).Bytes(), 0)
+				require.Equal(t, u1iExpected, u[1].SubFieldElement(1).Bytes(), 0)
 			}
 		})
 	}

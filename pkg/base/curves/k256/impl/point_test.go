@@ -17,6 +17,6 @@ func TestK256PointArithmetic_Map(t *testing.T) {
 	err := sc.Arithmetic.Map(u0, u1, sc)
 
 	require.NoError(t, err)
-	require.True(t, !sc.IsIdentity())
+	require.False(t, sc.IsIdentity())
 	require.True(t, sc.IsOnCurve())
 }

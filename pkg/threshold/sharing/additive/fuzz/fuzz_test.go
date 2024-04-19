@@ -22,7 +22,7 @@ func Fuzz_Test(f *testing.F) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		prng := rand.New(rand.NewSource(randomSeed))
 		dealer, err := additive.NewDealer(5, curve)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.NotNil(t, dealer)
 
 		secret, err := curve.ScalarField().Hash(secretBytes)

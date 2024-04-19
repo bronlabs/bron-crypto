@@ -198,9 +198,9 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput [][2]ot.Message, e
 //    using the challenge (χ) and the commitment to the statement (u_i).
 //
 
-func generateChallenge(transcript transcripts.Transcript, M int) (challenge Challenge) {
-	challengeFiatShamir := make(Challenge, M)
-	for i := 0; i < M; i++ {
+func generateChallenge(transcript transcripts.Transcript, challengeLength int) (challenge Challenge) {
+	challengeFiatShamir := make(Challenge, challengeLength)
+	for i := 0; i < challengeLength; i++ {
 		bytes, _ := transcript.ExtractBytes("OTe_challenge_Chi", SigmaBytes)
 		copy(challengeFiatShamir[i][:], bytes)
 	}

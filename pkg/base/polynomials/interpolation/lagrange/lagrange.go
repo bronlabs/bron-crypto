@@ -51,7 +51,7 @@ func Interpolate(curve curves.Curve, xs, ys []curves.Scalar, evaluateAt curves.S
 	return result, nil
 }
 
-func InterpolateInTheExponent(curve curves.Curve, xs []curves.Scalar, Ys []curves.Point, evaluateAt curves.Scalar) (curves.Point, error) {
+func InterpolateInTheExponent(curve curves.Curve, xs []curves.Scalar, bigYs []curves.Point, evaluateAt curves.Scalar) (curves.Point, error) {
 	coefficients := make([]curves.Scalar, len(xs))
 	ls, err := Basis(curve, xs, evaluateAt)
 	if err != nil {
@@ -60,7 +60,7 @@ func InterpolateInTheExponent(curve curves.Curve, xs []curves.Scalar, Ys []curve
 	for i := 0; i < len(xs); i++ {
 		coefficients[i] = ls[i]
 	}
-	result, err := curve.MultiScalarMult(coefficients, Ys)
+	result, err := curve.MultiScalarMult(coefficients, bigYs)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "MSM failed")
 	}

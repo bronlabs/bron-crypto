@@ -49,7 +49,7 @@ func Test_FloorLog2(t *testing.T) {
 		expected := testCase.expected
 		t.Run(fmt.Sprintf("floor(log2(%d)) = %d", arg, expected), func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, utils.FloorLog2(arg), expected)
+			require.Equal(t, expected, utils.FloorLog2(arg))
 		})
 	}
 }
@@ -80,7 +80,7 @@ func Test_CeilLog2(t *testing.T) {
 		expected := testCase.expected
 		t.Run(fmt.Sprintf("ceil(log2(%d)) = %d", arg, expected), func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, utils.CeilLog2(arg), expected)
+			require.Equal(t, expected, utils.CeilLog2(arg))
 		})
 	}
 }

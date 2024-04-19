@@ -17,27 +17,27 @@ var testCurve = edwards25519.NewCurve()
 
 func TestEd25519FeldmanSplitInvalidArgs(t *testing.T) {
 	_, err := feldman.NewDealer(0, 0, testCurve)
-	require.NotNil(t, err)
+	require.Error(t, err)
 	_, err = feldman.NewDealer(3, 2, testCurve)
-	require.NotNil(t, err)
+	require.Error(t, err)
 	_, err = feldman.NewDealer(1, 10, testCurve)
-	require.NotNil(t, err)
+	require.Error(t, err)
 	scheme, err := feldman.NewDealer(2, 3, testCurve)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, scheme)
 }
 
 func TestEd25519FeldmanCombineNoShares(t *testing.T) {
 	scheme, err := feldman.NewDealer(2, 3, testCurve)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, scheme)
 	_, err = scheme.Combine()
-	require.NotNil(t, err)
+	require.Error(t, err)
 }
 
 func TestEd25519FeldmanCombineDuplicateShare(t *testing.T) {
 	scheme, err := feldman.NewDealer(2, 3, testCurve)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, scheme)
 	_, err = scheme.Combine([]*shamir.Share{
 		{
@@ -49,12 +49,12 @@ func TestEd25519FeldmanCombineDuplicateShare(t *testing.T) {
 			Value: testCurve.ScalarField().New(3),
 		},
 	}...)
-	require.NotNil(t, err)
+	require.Error(t, err)
 }
 
 func TestEd25519FeldmanCombineBadIdentifier(t *testing.T) {
 	scheme, err := feldman.NewDealer(2, 3, testCurve)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, scheme)
 	shares := []*shamir.Share{
 		{
@@ -67,13 +67,13 @@ func TestEd25519FeldmanCombineBadIdentifier(t *testing.T) {
 		},
 	}
 	_, err = scheme.Combine(shares...)
-	require.NotNil(t, err)
+	require.Error(t, err)
 	shares[0] = &shamir.Share{
 		Id:    4,
 		Value: testCurve.ScalarField().New(3),
 	}
 	_, err = scheme.Combine(shares...)
-	require.NotNil(t, err)
+	require.Error(t, err)
 }
 
 func TestEd25519FeldmanCombineSingle(t *testing.T) {

@@ -4,10 +4,9 @@ import (
 	"io"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
 )
 

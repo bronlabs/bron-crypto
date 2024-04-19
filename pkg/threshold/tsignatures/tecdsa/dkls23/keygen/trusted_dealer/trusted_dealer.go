@@ -2,22 +2,21 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 )
 
 func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.IdentityKey, *dkls23.Shard], error) {
@@ -89,5 +88,4 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.Iden
 		}
 	}
 	return results, nil
-
 }

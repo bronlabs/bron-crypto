@@ -22,7 +22,7 @@ func TestFpSetUint64(t *testing.T) {
 	act := New().SetUint64(1 << 60)
 	require.NotNil(t, act)
 	// Remember it will be in montgomery form
-	require.Equal(t, act.Value[0], uint64(0x1000000000000000))
+	require.Equal(t, uint64(0x1000000000000000), act.Value[0])
 }
 
 func TestFpAdd(t *testing.T) {
@@ -31,7 +31,7 @@ func TestFpAdd(t *testing.T) {
 	exp := New().SetUint64(2)
 	res := New().Add(lhs, rhs)
 	require.NotNil(t, res)
-	require.Equal(t, res.Equal(exp), 1)
+	require.Equal(t, 1, res.Equal(exp))
 
 	// Fuzz test
 	for i := 0; i < 25; i++ {
@@ -139,7 +139,7 @@ func TestFpExp(t *testing.T) {
 	e := New().SetUint64(8)
 	a := New().SetUint64(2)
 	by := New().SetUint64(3)
-	require.Equal(t, e, a.Exp(a, by))
+	require.Equal(t, a.Exp(a, by), e)
 }
 
 func TestFpSqrt(t *testing.T) {

@@ -27,7 +27,7 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 	for identityKey := range a.Quorum.Iter() {
 		sharingId, exists := a.SharingConfig.Reverse().Get(identityKey)
 		if !exists {
-			return nil, errs.NewMissing("could not find sharign id of %s", identityKey.String())
+			return nil, errs.NewMissing("could not find sharing id of %s", identityKey.String())
 		}
 		sharingIds[i] = uint(sharingId)
 		i++

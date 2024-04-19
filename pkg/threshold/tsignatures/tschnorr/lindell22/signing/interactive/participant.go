@@ -87,7 +87,7 @@ func NewCosigner[V schnorr.Variant[V]](myAuthKey types.AuthKey, sessionId []byte
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
 	if !exists {
-		return nil, errs.NewMissing("couldn't find my sharign id")
+		return nil, errs.NewMissing("couldn't find my sharing id")
 	}
 
 	cosigner := &Cosigner[V]{

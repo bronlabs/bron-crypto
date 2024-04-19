@@ -125,23 +125,23 @@ type OneTimePadedMaskPair = [2]Message // OneTimePadedMaskPair are the two masks
 
 // Encrypt allows a ROT (Random OT) sender to encrypt messages with one-time pad.
 // It converts the ROT into a standard chosen-message OT, both for base OTs and OT extensions.
-func (sROT *SenderRotOutput) Encrypt(OTmessagePairs [][2]Message) (masks []OneTimePadedMaskPair, err error) {
+func (sROT *SenderRotOutput) Encrypt(otMessagePairs [][2]Message) (masks []OneTimePadedMaskPair, err error) {
 	Xi := len(sROT.MessagePairs)
 	L := len(sROT.MessagePairs[0][0])
-	if len(OTmessagePairs) != Xi {
-		return nil, errs.NewArgument("number of OT message pairs should be Xi (%d != %d)", len(OTmessagePairs), Xi)
+	if len(otMessagePairs) != Xi {
+		return nil, errs.NewArgument("number of OT message pairs should be Xi (%d != %d)", len(otMessagePairs), Xi)
 	}
 	masks = make([]OneTimePadedMaskPair, Xi)
 	for j := 0; j < Xi; j++ {
-		if len(OTmessagePairs[j][0]) != L || len(OTmessagePairs[j][1]) != L {
+		if len(otMessagePairs[j][0]) != L || len(otMessagePairs[j][1]) != L {
 			return nil, errs.NewArgument("OT message[%d] length should be L (%d != %d || %d != %d )",
-				j, len(OTmessagePairs[j][0]), L, len(OTmessagePairs[j][1]), L)
+				j, len(otMessagePairs[j][0]), L, len(otMessagePairs[j][1]), L)
 		}
 		masks[j][0] = make([]MessageElement, L)
 		masks[j][1] = make([]MessageElement, L)
 		for l := 0; l < L; l++ {
-			subtle.XORBytes(masks[j][0][l][:], sROT.MessagePairs[j][0][l][:], OTmessagePairs[j][0][l][:])
-			subtle.XORBytes(masks[j][1][l][:], sROT.MessagePairs[j][1][l][:], OTmessagePairs[j][1][l][:])
+			subtle.XORBytes(masks[j][0][l][:], sROT.MessagePairs[j][0][l][:], otMessagePairs[j][0][l][:])
+			subtle.XORBytes(masks[j][1][l][:], sROT.MessagePairs[j][1][l][:], otMessagePairs[j][1][l][:])
 		}
 	}
 	return masks, nil

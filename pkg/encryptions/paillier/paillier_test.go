@@ -8,12 +8,12 @@ import (
 	"io"
 	"log"
 	"math/big"
+	"math/rand/v2"
 	"strings"
 	"testing"
 
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
-	"math/rand/v2"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -357,7 +357,7 @@ func TestSubPlaintext(t *testing.T) {
 			require.NoError(t, err)
 			z, err := decryptor.Decrypt(zEncrypted)
 			require.NoError(t, err)
-			require.Equal(t, z.Uint64(), test.expected)
+			require.Equal(t, test.expected, z.Uint64())
 		})
 	}
 }

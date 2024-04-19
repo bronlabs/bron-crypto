@@ -3,6 +3,7 @@ package ecdsa
 import (
 	nativeEcdsa "crypto/ecdsa"
 	"hash"
+	"slices"
 
 	"github.com/cronokirby/saferith"
 
@@ -113,7 +114,7 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 	if (*signature.V & 1) != 0 {
 		ryCompressed[0]++
 	}
-	affine := append(ryCompressed, rxBytes...)
+	affine := slices.Concat(ryCompressed, rxBytes)
 	bigR, err := curve.Point().FromAffineCompressed(affine)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate R")

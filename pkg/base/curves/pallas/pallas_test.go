@@ -70,8 +70,8 @@ func TestPointPointPallasSerialize(t *testing.T) {
 	print(hex.EncodeToString(ppt.ToAffineUncompressed()))
 	expectedC, _ := hex.DecodeString("f4a6aa863d2684fe9d38fccc06335442ac944d631f9d6d91c7ffaa0793400035")
 	expectedU, _ := hex.DecodeString("f4a6aa863d2684fe9d38fccc06335442ac944d631f9d6d91c7ffaa07934000355039909db940377fb685855b7c4dac4a4d79b9ced311036f389fc7e2c09a1f35")
-	require.Equal(t, ppt.ToAffineCompressed(), expectedC)
-	require.Equal(t, ppt.ToAffineUncompressed(), expectedU)
+	require.Equal(t, expectedC, ppt.ToAffineCompressed())
+	require.Equal(t, expectedU, ppt.ToAffineUncompressed())
 	retP, err := new(pallas.Ep).FromAffineCompressed(ppt.ToAffineCompressed())
 	require.NoError(t, err)
 	require.True(t, ppt.Equal(retP))
@@ -87,13 +87,13 @@ func TestPointPointPallasSerialize(t *testing.T) {
 		require.True(t, ok)
 		pt := new(pallas.Ep).Mul(g, s.V)
 		cmprs := pt.ToAffineCompressed()
-		require.Equal(t, len(cmprs), 32)
+		require.Len(t, cmprs, 32)
 		retC, err := new(pallas.Ep).FromAffineCompressed(cmprs)
 		require.NoError(t, err)
 		require.True(t, pt.Equal(retC))
 
 		un := pt.ToAffineUncompressed()
-		require.Equal(t, len(un), 64)
+		require.Len(t, un, 64)
 		retU, err := new(pallas.Ep).FromAffineUncompressed(un)
 		require.NoError(t, err)
 		require.True(t, pt.Equal(retU))
@@ -134,10 +134,10 @@ func TestScalarMul(t *testing.T) {
 	nine := pallas.NewScalar(9)
 	six := pallas.NewScalar(6)
 	actual := nine.Mul(six)
-	require.Equal(t, actual.Cmp(pallas.NewScalar(54)), algebra.Equal)
+	require.Equal(t, algebra.Equal, actual.Cmp(pallas.NewScalar(54)))
 
 	upper := pallas.NewScalar(1).Neg()
-	require.Equal(t, upper.Mul(upper).Cmp(pallas.NewScalar(1)), algebra.Equal)
+	require.Equal(t, algebra.Equal, upper.Mul(upper).Cmp(pallas.NewScalar(1)))
 }
 
 func TestScalarExp(t *testing.T) {

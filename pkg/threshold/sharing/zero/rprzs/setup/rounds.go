@@ -2,6 +2,7 @@ package setup
 
 import (
 	"io"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -129,9 +130,9 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.Protocol, 
 		// step 3.2: combine to produce the final seed
 		var orderedAppendedSeeds []byte
 		if myIndex < participantIndex {
-			orderedAppendedSeeds = append(myContributedSeed.seed, message.Message...)
+			orderedAppendedSeeds = slices.Concat(myContributedSeed.seed, message.Message)
 		} else {
-			orderedAppendedSeeds = append(message.Message, myContributedSeed.seed...)
+			orderedAppendedSeeds = slices.Concat(message.Message, myContributedSeed.seed)
 		}
 		finalSeedBytes, err := hashing.HashChain(commitments.CommitmentHashFunction, orderedAppendedSeeds)
 		if err != nil {

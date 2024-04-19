@@ -1,15 +1,13 @@
 run:
   tests: true
   build-tags:
-    - integration
-  skip-dirs:
-    - gen/
-    - testutils/
-    - thirdparty/
+    - nobignum
+    - purego
 
 output:
-  format: colored-line-number
+  formats: colored-line-number
   sort-results: true
+  show-stats: true
 
 # https://golangci-lint.run/usage/linters
 linters:
@@ -28,6 +26,8 @@ linters:
     - containedctx
     # Check whether the function uses a non-inherited context.
     - contextcheck
+    # Copyloopvar is a linter detects places where loop variables are copied.
+    - copyloopvar
     # Go linter that checks if package imports are in a list of acceptable
     # packages.
     - depguard
@@ -63,6 +63,8 @@ linters:
     - gocheckcompilerdirectives
     # Checks that no init functions are present in Go code
     - gochecknoinits
+    # Run exhaustiveness checks on Go "sum types".
+    - gochecksumtype
     # Finds repeated strings that could be replaced by a constant
     - goconst
     #  Provides many diagnostics that check for bugs, performance and style issues. Extensible without recompilation through dynamic rules. Dynamic rules are written declaratively with AST patterns, filters, report message and optional suggestion.
@@ -98,6 +100,11 @@ linters:
     # - ifshort
     # Enforces consistent import aliases
     - importas
+    # Reports interfaces with unnamed method parameters.
+    - inamedparam
+    # # Intrange is a linter to find places where for loops could make use of an integer range.
+    # TODO: Enable this when it doesn't panic.
+    # - intrange
     # Detects when assignments to existing variables are not used
     - ineffassign
     # Finds slice declarations with non-zero initial length
@@ -137,6 +144,8 @@ linters:
     - tenv
     # Linter checks if examples are testable (have an expected output).
     - testableexamples
+    # Checks usage of github.com/stretchr/testify.
+    - testifylint
     # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
     - revive
     # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
@@ -354,14 +363,12 @@ linters-settings:
       # Default: "0600"
       G306: "0600"
   gosimple:
-    go: "1.22"
     # https://staticcheck.io/docs/configuration/options/#checks
     checks: ["all"]
   predeclared:
     # include method names and field names (i.e., qualified names) in checks
     q: true
   staticcheck:
-    go: "1.22"
     # https://staticcheck.io/docs/options#checks
     checks: ["all"]
   unused:
@@ -640,8 +647,6 @@ linters-settings:
           # return: returning values form a deferred function has no effect
           - ["call-chain", "method-call", "recover", "return"]
   govet:
-    # report about shadowed variables
-    check-shadowing: true
     # run `go tool vet help` to see all analyzers. This is a standard Go's
     # linter. We'll enable all of it to keep up to date.
     enable-all: true
@@ -652,6 +657,7 @@ linters-settings:
       # fields, is doubly idiotic.
       - fieldalignment
   gocritic:
+    disable-all: true
     # Which checks should be enabled; can't be combined with 'disabled-checks';
     # See https://go-critic.github.io/overview#checks-overview
     # To check which checks are enabled run `GL_DEBUG=gocritic golangci-lint run`
@@ -892,6 +898,14 @@ linters-settings:
       underef:
         # whether to skip (*x).method() calls where x is a pointer receiver (default true)
         skipRecvDeref: false
+  testifylint:
+    enable-all: true
+    disable:
+      - compares # screws up equality checks etc.
+    # To require or remove extra Assert() call?
+    suite-extra-assert-call:
+      # Default: remove
+      mode: require
   wrapcheck:
     # An array of strings that specify substrings of signatures to ignore.
     # If this set, it will override the default set of ignored signatures.
@@ -903,6 +917,10 @@ linters-settings:
       - google.golang.org/grpc/status
 
 issues:
+  exclude-dirs:
+    - gen
+    - testutils
+    - thirdparty
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
     # Exclude some linters from running on tests files.
@@ -941,6 +959,7 @@ issues:
         - prealloc
         - whitespace
         - govet
+        - copyloopvar # TODO: enable later
     - path: testutils/
       linters:
         - depguard
@@ -1019,6 +1038,38 @@ issues:
     - linters:
         - govet
       text: 'shadow: declaration of "ok" shadows declaration at line'
+
+    - linters:
+        - gocritic
+      text: "captLocal: `G1' should not be capitalized"
+
+    - linters:
+        - gocritic
+      text: "captLocal: `G2' should not be capitalized"
+
+    - linters:
+        - gocritic
+      text: "captLocal: `Gt' should not be capitalized"
+
+    - path: ot/
+      text: "captLocal"
+      linters:
+        - gocritic
+
+    - path: key_agreement/
+      text: "captLocal"
+      linters:
+        - gocritic
+
+    - path: encryptions/
+      text: "captLocal: `AD' should not be capitalized"
+      linters:
+        - gocritic
+
+    - path: hpke/
+      text: "captLocal: `L' should not be capitalized"
+      linters:
+        - gocritic
 
     # this has a collision with wrapcheck. We care about wrapcheck more, but
     # errchkjson is also important because it reports unsafe marshaling

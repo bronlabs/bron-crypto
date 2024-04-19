@@ -44,5 +44,7 @@ func main() {
 	defer file.Close()
 
 	t := template.Must(template.New("tmpl").Parse(tmpl))
-	t.Execute(file, errorTypes)
+	if err := t.Execute(file, errorTypes); err != nil {
+		panic(err)
+	}
 }

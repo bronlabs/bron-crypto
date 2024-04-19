@@ -40,14 +40,14 @@ func Test_HashableHashMap(t *testing.T) {
 	require.False(t, replaced)
 	replaced, _ = hashMap.TryPut(&data{value: 2}, 2)
 	require.False(t, replaced)
-	require.Equal(t, hashMap.Size(), 2)
+	require.Equal(t, 2, hashMap.Size())
 
 	// add two conflicting
 	replaced, _ = hashMap.TryPut(&data{value: 3}, 3)
 	require.False(t, replaced)
 	replaced, _ = hashMap.TryPut(&data{value: 33}, 33)
 	require.False(t, replaced)
-	require.Equal(t, hashMap.Size(), 4)
+	require.Equal(t, 4, hashMap.Size())
 
 	// check exists
 	require.True(t, hashMap.ContainsKey(&data{value: 1}))
@@ -59,22 +59,22 @@ func Test_HashableHashMap(t *testing.T) {
 	// check gets
 	v1, ok := hashMap.Get(&data{value: 1})
 	require.True(t, ok)
-	require.Equal(t, v1, 1)
+	require.Equal(t, 1, v1)
 	v2, ok := hashMap.Get(&data{value: 2})
 	require.True(t, ok)
-	require.Equal(t, v2, 2)
+	require.Equal(t, 2, v2)
 	v3, ok := hashMap.Get(&data{value: 3})
 	require.True(t, ok)
-	require.Equal(t, v3, 3)
+	require.Equal(t, 3, v3)
 	v33, ok := hashMap.Get(&data{value: 33})
 	require.True(t, ok)
-	require.Equal(t, v33, 33)
+	require.Equal(t, 33, v33)
 
 	// check remove conflicting
 	ok, removed := hashMap.TryRemove(&data{value: 3})
 	require.True(t, ok)
-	require.Equal(t, removed, 3)
-	require.Equal(t, hashMap.Size(), 3)
+	require.Equal(t, 3, removed)
+	require.Equal(t, 3, hashMap.Size())
 	require.False(t, hashMap.ContainsKey(&data{value: 3}))
 	require.True(t, hashMap.ContainsKey(&data{value: 33}))
 	_, ok = hashMap.Get(&data{value: 3})
@@ -87,29 +87,29 @@ func Test_HashableHashMap(t *testing.T) {
 	// remove non-conflicting
 	ok, removed2 := hashMap.TryRemove(&data{value: 2})
 	require.True(t, ok)
-	require.Equal(t, removed2, 2)
-	require.Equal(t, hashMap.Size(), 2)
+	require.Equal(t, 2, removed2)
+	require.Equal(t, 2, hashMap.Size())
 	require.False(t, hashMap.ContainsKey(&data{value: 2}))
 	_, ok = hashMap.Get(&data{value: 2})
 	require.False(t, ok)
 
 	// replace conflicting
 	v33, ok = hashMap.Get(&data{value: 33})
-	require.Equal(t, v33, 33)
+	require.Equal(t, 33, v33)
 	require.True(t, ok)
 	replaced, oldValue := hashMap.TryPut(&data{value: 33}, 44)
 	require.True(t, replaced)
-	require.Equal(t, oldValue, 33)
+	require.Equal(t, 33, oldValue)
 
 	// replace non-conflicting
 	hashMap.Put(&data{value: 7}, 7)
 	replaced, d7 := hashMap.TryPut(&data{value: 7}, 777)
 	require.True(t, replaced)
-	require.Equal(t, d7, 7)
+	require.Equal(t, 7, d7)
 
 	// clear
 	hashMap.Clear()
-	require.Equal(t, hashMap.Size(), 0)
+	require.Equal(t, 0, hashMap.Size())
 	require.True(t, hashMap.IsEmpty())
 	_, ok = hashMap.Get(&data{value: 1})
 	require.False(t, ok)
@@ -137,14 +137,14 @@ func Test_OrderedHashMap(t *testing.T) {
 	require.False(t, replaced)
 	replaced, _ = hashMap.TryPut(2, 2)
 	require.False(t, replaced)
-	require.Equal(t, hashMap.Size(), 2)
+	require.Equal(t, 2, hashMap.Size())
 
 	// add two conflicting
 	replaced, _ = hashMap.TryPut(3, 3)
 	require.False(t, replaced)
 	replaced, _ = hashMap.TryPut(33, 33)
 	require.False(t, replaced)
-	require.Equal(t, hashMap.Size(), 4)
+	require.Equal(t, 4, hashMap.Size())
 
 	// check exists
 	require.True(t, hashMap.ContainsKey(1))
@@ -156,22 +156,22 @@ func Test_OrderedHashMap(t *testing.T) {
 	// check gets
 	v1, ok := hashMap.Get(1)
 	require.True(t, ok)
-	require.Equal(t, v1, 1)
+	require.Equal(t, 1, v1)
 	v2, ok := hashMap.Get(2)
 	require.True(t, ok)
-	require.Equal(t, v2, 2)
+	require.Equal(t, 2, v2)
 	v3, ok := hashMap.Get(3)
 	require.True(t, ok)
-	require.Equal(t, v3, 3)
+	require.Equal(t, 3, v3)
 	v33, ok := hashMap.Get(33)
 	require.True(t, ok)
-	require.Equal(t, v33, 33)
+	require.Equal(t, 33, v33)
 
 	// check remove conflicting
 	ok, removed := hashMap.TryRemove(3)
 	require.True(t, ok)
-	require.Equal(t, removed, 3)
-	require.Equal(t, hashMap.Size(), 3)
+	require.Equal(t, 3, removed)
+	require.Equal(t, 3, hashMap.Size())
 	require.False(t, hashMap.ContainsKey(3))
 	require.True(t, hashMap.ContainsKey(33))
 	_, ok = hashMap.Get(3)
@@ -184,29 +184,29 @@ func Test_OrderedHashMap(t *testing.T) {
 	// remove non-conflicting
 	ok, removed2 := hashMap.TryRemove(2)
 	require.True(t, ok)
-	require.Equal(t, removed2, 2)
-	require.Equal(t, hashMap.Size(), 2)
+	require.Equal(t, 2, removed2)
+	require.Equal(t, 2, hashMap.Size())
 	require.False(t, hashMap.ContainsKey(2))
 	_, ok = hashMap.Get(2)
 	require.False(t, ok)
 
 	// replace conflicting
 	v33, ok = hashMap.Get(33)
-	require.Equal(t, v33, 33)
+	require.Equal(t, 33, v33)
 	require.True(t, ok)
 	replaced, oldValue := hashMap.TryPut(33, 44)
 	require.True(t, replaced)
-	require.Equal(t, oldValue, 33)
+	require.Equal(t, 33, oldValue)
 
 	// replace non-conflicting
 	hashMap.Put(7, 7)
 	replaced, d7 := hashMap.TryPut(7, 777)
 	require.True(t, replaced)
-	require.Equal(t, d7, 7)
+	require.Equal(t, 7, d7)
 
 	// clear
 	hashMap.Clear()
-	require.Equal(t, hashMap.Size(), 0)
+	require.Equal(t, 0, hashMap.Size())
 	require.True(t, hashMap.IsEmpty())
 	_, ok = hashMap.Get(1)
 	require.False(t, ok)
@@ -228,11 +228,11 @@ func Test_HashableHashMap_Remove(t *testing.T) {
 	// remove an existing key
 	hashMap.Remove(&data{value: 2})
 	require.False(t, hashMap.ContainsKey(&data{value: 2}))
-	require.Equal(t, hashMap.Size(), 2)
+	require.Equal(t, 2, hashMap.Size())
 
 	// remove a non-existing key
 	hashMap.Remove(&data{value: 4})
-	require.Equal(t, hashMap.Size(), 2)
+	require.Equal(t, 2, hashMap.Size())
 }
 func Test_TryRemove_KeyNotExists(t *testing.T) {
 	hashMap := hashmap.NewHashableHashMap[*data, int]()
@@ -294,8 +294,8 @@ func Test_HashableHashMap_Clones(t *testing.T) {
 
 	// Check if modifying the clone does not affect the original map
 	clone.Put(&data{value: 4}, 4)
-	require.Equal(t, hashMap.Size(), 3)
-	require.Equal(t, clone.Size(), 4)
+	require.Equal(t, 3, hashMap.Size())
+	require.Equal(t, 4, clone.Size())
 }
 
 func Test_HashableHashMap_Iter(t *testing.T) {

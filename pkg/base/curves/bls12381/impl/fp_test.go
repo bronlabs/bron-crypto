@@ -23,7 +23,7 @@ func TestFpSetUint64(t *testing.T) {
 	act.SetUint64(1 << 60)
 	require.NotNil(t, act)
 	// Remember it will be in montgomery form
-	require.Equal(t, act[0], uint64(0xf6ea9fde37db5e8c))
+	require.Equal(t, uint64(0xf6ea9fde37db5e8c), act[0])
 }
 
 func TestFpAdd(t *testing.T) {
@@ -155,7 +155,7 @@ func TestFpExp(t *testing.T) {
 	e.SetUint64(8)
 	a.SetUint64(2)
 	by.SetUint64(3)
-	require.Equal(t, &e, a.Exp(&a, &by))
+	require.Equal(t, a.Exp(&a, &by), &e)
 }
 
 func TestFpSqrt(t *testing.T) {

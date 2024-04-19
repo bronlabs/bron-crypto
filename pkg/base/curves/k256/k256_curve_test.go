@@ -32,7 +32,7 @@ func TestScalarK256Random(t *testing.T) {
 		require.NoError(t, err)
 		_, ok := sc.(*k256.Scalar)
 		require.True(t, ok)
-		require.True(t, !sc.IsZero())
+		require.False(t, sc.IsZero())
 	}
 }
 
@@ -76,29 +76,29 @@ func TestScalarNew(t *testing.T) {
 func TestScalarSquare(t *testing.T) {
 	three := k256.NewScalar(3)
 	nine := k256.NewScalar(9)
-	require.Equal(t, three.Square().Cmp(nine), algebra.Equal)
+	require.Equal(t, algebra.Equal, three.Square().Cmp(nine))
 }
 
 func TestScalarCube(t *testing.T) {
 	three := k256.NewScalar(3)
 	twentySeven := k256.NewScalar(27)
-	require.Equal(t, three.Cube().Cmp(twentySeven), algebra.Equal)
+	require.Equal(t, algebra.Equal, three.Cube().Cmp(twentySeven))
 }
 
 func TestScalarDouble(t *testing.T) {
 	three := k256.NewScalar(3)
 	six := k256.NewScalar(6)
-	require.Equal(t, three.Double().Cmp(six), algebra.Equal)
+	require.Equal(t, algebra.Equal, three.Double().Cmp(six))
 }
 
 func TestScalarNeg(t *testing.T) {
 	curve := k256.NewCurve()
 	one := curve.ScalarField().One()
 	neg1 := k256.NewScalar(1).Neg()
-	require.Equal(t, one.Neg().Cmp(neg1), algebra.Equal)
+	require.Equal(t, algebra.Equal, one.Neg().Cmp(neg1))
 	lotsOfThrees := k256.NewScalar(333333)
 	expected := k256.NewScalar(333333).Neg()
-	require.Equal(t, lotsOfThrees.Neg().Cmp(expected), algebra.Equal)
+	require.Equal(t, algebra.Equal, lotsOfThrees.Neg().Cmp(expected))
 }
 
 func TestScalarInvert(t *testing.T) {
@@ -108,7 +108,7 @@ func TestScalarInvert(t *testing.T) {
 	sa, _ := actual.(*k256.Scalar)
 	bn, _ := new(big.Int).SetString("8e38e38e38e38e38e38e38e38e38e38d842841d57dd303af6a9150f8e5737996", 16)
 	expected := curve.ScalarField().Element().SetNat(new(saferith.Nat).SetBig(bn, bn.BitLen()))
-	require.Equal(t, sa.Cmp(expected), algebra.Equal)
+	require.Equal(t, algebra.Equal, sa.Cmp(expected))
 }
 
 func TestScalarSqrt(t *testing.T) {
@@ -117,7 +117,7 @@ func TestScalarSqrt(t *testing.T) {
 	sa, _ := actual.(*k256.Scalar)
 	expected := k256.NewScalar(3)
 	require.NoError(t, err)
-	require.Equal(t, sa.Cmp(expected), algebra.Equal)
+	require.Equal(t, algebra.Equal, sa.Cmp(expected))
 }
 
 func TestScalarAdd(t *testing.T) {
@@ -127,14 +127,14 @@ func TestScalarAdd(t *testing.T) {
 	fifteen := nine.Add(six)
 	require.NotNil(t, fifteen)
 	expected := k256.NewScalar(15)
-	require.Equal(t, expected.Cmp(fifteen), algebra.Equal)
+	require.Equal(t, algebra.Equal, expected.Cmp(fifteen))
 	n := new(big.Int).Set(k256.NewElliptic().N)
 	n.Sub(n, big.NewInt(3))
 
 	upper := curve.ScalarField().Element().SetNat(new(saferith.Nat).SetBig(n, n.BitLen()))
 	actual := upper.Add(nine)
 	require.NotNil(t, actual)
-	require.Equal(t, actual.Cmp(six), algebra.Equal)
+	require.Equal(t, algebra.Equal, actual.Cmp(six))
 }
 
 func TestScalarSub(t *testing.T) {
@@ -146,10 +146,10 @@ func TestScalarSub(t *testing.T) {
 
 	expected := curve.ScalarField().Element().SetNat(n)
 	actual := six.Sub(nine)
-	require.Equal(t, expected.Cmp(actual), algebra.Equal)
+	require.Equal(t, algebra.Equal, expected.Cmp(actual))
 
 	actual = nine.Sub(six)
-	require.Equal(t, actual.Cmp(k256.NewScalar(3)), algebra.Equal)
+	require.Equal(t, algebra.Equal, actual.Cmp(k256.NewScalar(3)))
 }
 
 func TestScalarMul(t *testing.T) {
@@ -157,17 +157,17 @@ func TestScalarMul(t *testing.T) {
 	nine := k256.NewScalar(9)
 	six := k256.NewScalar(6)
 	actual := nine.Mul(six)
-	require.Equal(t, actual.Cmp(k256.NewScalar(54)), algebra.Equal)
+	require.Equal(t, algebra.Equal, actual.Cmp(k256.NewScalar(54)))
 	n := new(saferith.Nat).SetBig(k256.NewElliptic().N, k256.NewElliptic().N.BitLen())
 	n = saferithUtils.NatDec(n)
 	upper := curve.ScalarField().Element().SetNat(n)
-	require.Equal(t, upper.Mul(upper).Cmp(k256.NewScalar(1)), algebra.Equal)
+	require.Equal(t, algebra.Equal, upper.Mul(upper).Cmp(k256.NewScalar(1)))
 }
 
 func TestScalarDiv(t *testing.T) {
 	nine := k256.NewScalar(9)
 	actual := nine.Div(nine)
-	require.Equal(t, actual.Cmp(k256.NewScalar(1)), algebra.Equal)
+	require.Equal(t, algebra.Equal, actual.Cmp(k256.NewScalar(1)))
 	require.True(t, k256.NewScalar(54).Div(k256.NewScalar(6)).Sub(nine).IsZero())
 }
 
@@ -192,11 +192,11 @@ func TestScalarSerialize(t *testing.T) {
 	curve := k256.NewCurve()
 	sc := k256.NewScalar(255)
 	sequence := sc.Bytes()
-	require.Equal(t, len(sequence), 32)
-	require.Equal(t, sequence, []byte{0x00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff})
+	require.Len(t, sequence, 32)
+	require.Equal(t, []byte{0x00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff}, sequence)
 	ret, err := curve.Scalar().SetBytes(sequence)
 	require.NoError(t, err)
-	require.Equal(t, ret.Cmp(sc), algebra.Equal)
+	require.Equal(t, algebra.Equal, ret.Cmp(sc))
 
 	// Try 10 random.Values
 	for i := 0; i < 10; i++ {
@@ -206,10 +206,10 @@ func TestScalarSerialize(t *testing.T) {
 		sc, ok := scc.(*k256.Scalar)
 		require.True(t, ok)
 		sequence = sc.Bytes()
-		require.Equal(t, len(sequence), 32)
+		require.Len(t, sequence, 32)
 		ret, err = curve.Scalar().SetBytes(sequence)
 		require.NoError(t, err)
-		require.Equal(t, ret.Cmp(sc), algebra.Equal)
+		require.Equal(t, algebra.Equal, ret.Cmp(sc))
 	}
 }
 
@@ -261,7 +261,7 @@ func TestPointIdentity(t *testing.T) {
 	curve := k256.NewCurve()
 	sc := curve.Identity()
 	require.True(t, sc.IsIdentity())
-	require.Equal(t, sc.ToAffineCompressed(), []byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+	require.Equal(t, []byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, sc.ToAffineCompressed())
 }
 
 // func TestPointGenerator(t *testing.T) {
@@ -345,8 +345,8 @@ func TestPointSerialize(t *testing.T) {
 	expectedC, _ := hex.DecodeString("03ca628ce0f7af465c9da399aa4695d494bbacec559c50aabd33db448330610a4c")
 	expectedU, _ := hex.DecodeString("04ca628ce0f7af465c9da399aa4695d494bbacec559c50aabd33db448330610a4c7a85ef50f77b60ae883a86a933c21bdfc47ba9f5a89e53a90b1167a5a0c2449f")
 
-	require.Equal(t, ppt.ToAffineCompressed(), expectedC)
-	require.Equal(t, ppt.ToAffineUncompressed(), expectedU)
+	require.Equal(t, expectedC, ppt.ToAffineCompressed())
+	require.Equal(t, expectedU, ppt.ToAffineUncompressed())
 	retP, err := ppt.FromAffineCompressed(ppt.ToAffineCompressed())
 	require.NoError(t, err)
 	require.True(t, ppt.Equal(retP))
@@ -360,13 +360,13 @@ func TestPointSerialize(t *testing.T) {
 		require.NoError(t, err)
 		pt := g.Mul(s)
 		affineCompressed := pt.ToAffineCompressed()
-		require.Equal(t, len(affineCompressed), 33)
+		require.Len(t, affineCompressed, 33)
 		retC, err := pt.FromAffineCompressed(affineCompressed)
 		require.NoError(t, err)
 		require.True(t, pt.Equal(retC))
 
 		un := pt.ToAffineUncompressed()
-		require.Equal(t, len(un), 65)
+		require.Len(t, un, 65)
 		retU, err := pt.FromAffineUncompressed(un)
 		require.NoError(t, err)
 		require.True(t, pt.Equal(retU))

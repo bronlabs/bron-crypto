@@ -154,8 +154,8 @@ func Decrypt(myPrivateKey *PrivateKey, senderPublicKey PublicKey, ciphertext, ta
 	return message, nil
 }
 
-func deriveKeys(VZ []byte) (K1, K2 []byte, err error) {
-	kdf := hkdf.New(sha512.New, VZ, nil, []byte(P1))
+func deriveKeys(vz []byte) (k1, k2 []byte, err error) {
+	kdf := hkdf.New(sha512.New, vz, nil, []byte(P1))
 	aesKeyLength := 32
 	hmacKeyLength := 64
 	K := make([]byte, aesKeyLength+hmacKeyLength)
@@ -163,9 +163,9 @@ func deriveKeys(VZ []byte) (K1, K2 []byte, err error) {
 	if err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "could not read bytes for K")
 	}
-	K1 = K[:aesKeyLength]
-	K2 = K[aesKeyLength:]
-	return K1, K2, nil
+	k1 = K[:aesKeyLength]
+	k2 = K[aesKeyLength:]
+	return k1, k2, nil
 }
 
 func aes256CBCEncrypt(key, message []byte, prng io.Reader) (ciphertext []byte, err error) {

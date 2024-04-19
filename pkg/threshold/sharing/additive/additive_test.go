@@ -20,7 +20,7 @@ func TestSplitAndCombine(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	dealer, err := additive.NewDealer(5, curve)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, dealer)
 
 	secret, err := curve.ScalarField().Hash([]byte("test"))
@@ -50,7 +50,7 @@ func TestShamirAdditiveRoundTrip(t *testing.T) {
 		t.Run(fmt.Sprintf("running the round trip for curve %s", boundedCurve.Name()), func(t *testing.T) {
 			t.Parallel()
 			shamirDealer, err := shamir.NewDealer(uint(threshold), uint(total), boundedCurve)
-			require.Nil(t, err)
+			require.NoError(t, err)
 			require.NotNil(t, shamirDealer)
 
 			secret, err := boundedCurve.ScalarField().Hash([]byte("2+2=5"))

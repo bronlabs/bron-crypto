@@ -38,14 +38,14 @@ func Fuzz_Test(f *testing.F) {
 		require.NoError(t, err)
 
 		commitments, shares, proof, err := scheme.Split(secret, prover, prng)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.NotNil(t, shares)
 		for _, s := range shares {
 			err = feldman.Verify(s, commitments, verifier, proof)
-			require.Nil(t, err)
+			require.NoError(t, err)
 		}
 		secret2, err := scheme.Combine(shares...)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, secret2, secret)
 	})
 }

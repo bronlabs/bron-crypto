@@ -337,10 +337,10 @@ func Test_GobRoundTrip(t *testing.T) {
 						}
 
 						if ni != 8 {
-							require.Greater(t, len(decoded.Value), 0)
+							require.NotEmpty(t, decoded.Value)
 							require.Equal(t, tn, decoded.Value)
 						} else {
-							require.Len(t, decoded.Value, 0)
+							require.Empty(t, decoded.Value)
 						}
 
 						if ni != 9 {
