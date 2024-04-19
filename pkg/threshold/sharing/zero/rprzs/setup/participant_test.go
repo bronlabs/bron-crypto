@@ -34,7 +34,7 @@ func Test_CanInitialize(t *testing.T) {
 	require.NotNil(t, bob)
 	for _, party := range []*setup.Participant{alice, bob} {
 		require.NoError(t, err)
-		require.Equal(t, party.IdentitySpace.Size(), 2)
+		require.Equal(t, 2, party.IdentitySpace.Size())
 		require.Len(t, party.SortedParticipants, 2)
 	}
 	require.NotEqualValues(t, alice.IdentityKey(), bob.IdentityKey())

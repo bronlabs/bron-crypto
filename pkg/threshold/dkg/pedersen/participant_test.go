@@ -34,7 +34,7 @@ func Test_CanInitialize(t *testing.T) {
 	require.NoError(t, err)
 	for _, party := range []*pedersen.Participant{alice, bob} {
 		require.NoError(t, err)
-		require.Equal(t, party.SharingConfig.Size(), 2)
+		require.Equal(t, 2, party.SharingConfig.Size())
 	}
 	require.NotEqual(t, alice.SharingId(), bob.SharingId())
 }

@@ -4,21 +4,19 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/ot"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
-
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
-	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
-
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
+	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
+	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 const transcriptLabel = "COPPER_DKLS24_DKG-"

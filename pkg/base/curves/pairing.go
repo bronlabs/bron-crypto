@@ -15,7 +15,7 @@ type PairingCurve interface {
 	Gt() Gt
 
 	Pair(pG1, pG2 PairingPoint) (GtMember, error)
-	MultiPair(...PairingPoint) (GtMember, error)
+	MultiPair(pointsInG1ThenG2 ...PairingPoint) (GtMember, error)
 }
 
 type PairingPoint interface {

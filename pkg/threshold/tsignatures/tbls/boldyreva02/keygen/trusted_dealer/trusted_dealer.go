@@ -3,16 +3,14 @@ package trusted_dealer
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 )
 

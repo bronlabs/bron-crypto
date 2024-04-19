@@ -193,7 +193,7 @@ func (p *Participant) Round3(input network.RoundMessages[types.ThresholdProtocol
 		paillierProofsTranscript := p.Transcript.Clone()
 		sharingId, exists := p.sharingConfig.Reverse().Get(identity)
 		if !exists {
-			return nil, errs.NewMissing("could not find sharign id for participant %x", identity)
+			return nil, errs.NewMissing("could not find sharing id for participant %x", identity)
 		}
 		p.state.lpProvers[sharingId], err = lp.NewProver(base.ComputationalSecurity, p.state.myPaillierSk, p.SessionId, paillierProofsTranscript, p.Prng)
 		if err != nil {
@@ -482,7 +482,7 @@ func commit(prng io.Reader, bigQPrime, bigQDoublePrime curves.Point, sessionId [
 }
 
 func openCommitment(commitment commitments.Commitment, witness commitments.Witness, bigQPrime, bigQDoublePrime curves.Point, sessionId []byte, pid curves.Point) (err error) {
-	return commitments.Open(sessionId, commitment, witness, bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed(), pid.ToAffineCompressed())
+	return commitments.Open(sessionId, commitment, witness, bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed(), pid.ToAffineCompressed()) //nolint:wrapcheck // intentional.
 }
 
 func dlogProve(x curves.Scalar, bigQ, bigQTwin curves.Point, sessionId []byte, nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, err error) {

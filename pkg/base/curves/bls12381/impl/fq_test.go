@@ -22,7 +22,7 @@ func TestFqSetUint64(t *testing.T) {
 	act := FqNew().SetUint64(1 << 60)
 	require.NotNil(t, act)
 	// Remember it will be in montgomery form
-	require.Equal(t, act.Value[0], uint64(0xbc98da2820121c89))
+	require.Equal(t, uint64(0xbc98da2820121c89), act.Value[0])
 }
 
 func TestFqAdd(t *testing.T) {
@@ -147,7 +147,7 @@ func TestFqExp(t *testing.T) {
 	e := FqNew().SetUint64(8)
 	a := FqNew().SetUint64(2)
 	by := FqNew().SetUint64(3)
-	require.Equal(t, e, a.Exp(a, by))
+	require.Equal(t, a.Exp(a, by), e)
 }
 
 func TestFqSqrt(t *testing.T) {

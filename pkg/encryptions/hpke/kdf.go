@@ -87,7 +87,7 @@ func (s *KDFScheme) Expand(prk, info []byte, L int) []byte {
 	T := []byte{}
 	i := byte(1)
 	for len(out) < L {
-		block := append(T, info...) // info is optional
+		block := slices.Concat(T, info) // info is optional
 		block = append(block, i)
 
 		h := hmac.New(s.hash.New, prk)

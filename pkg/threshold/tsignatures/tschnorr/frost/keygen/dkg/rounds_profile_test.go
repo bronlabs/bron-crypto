@@ -7,10 +7,11 @@ import (
 	"strconv"
 	"testing"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"golang.org/x/crypto/sha3"
 )
 
 func TestRunProfile(t *testing.T) {

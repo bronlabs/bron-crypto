@@ -5,15 +5,14 @@ import (
 	"crypto/sha256"
 	"testing"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/stretchr/testify/require"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -29,6 +28,7 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	protocol, err := testutils.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
+	require.NoError(t, err)
 
 	shards, err := trusted_dealer.Keygen(protocol, crand.Reader)
 	require.NoError(t, err)

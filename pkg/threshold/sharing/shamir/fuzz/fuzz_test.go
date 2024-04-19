@@ -33,12 +33,12 @@ func FuzzShamir(f *testing.F) {
 		}
 
 		messageScalar, err := curve.ScalarField().Hash(message)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		shares, err := scheme.Split(messageScalar, prng)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.NotNil(t, shares)
 		secret, err := scheme.Combine(shares...)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		require.Equal(t, secret, messageScalar)
 	})
 }

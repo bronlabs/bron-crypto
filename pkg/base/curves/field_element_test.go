@@ -28,7 +28,7 @@ func Test_FieldElementSetNatToOne_BigEndian(t *testing.T) {
 			// Check if the internal value is treated as a one
 			oneTimesOne := feOne.Mul(feOne)
 			require.True(t, feOne.IsOne())
-			require.True(t, !feOne.IsZero())
+			require.False(t, feOne.IsZero())
 			require.True(t, oneTimesOne.IsOne() && !oneTimesOne.IsZero())
 		})
 	}

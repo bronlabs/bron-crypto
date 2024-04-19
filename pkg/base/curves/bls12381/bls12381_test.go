@@ -24,14 +24,14 @@ func TestScalarBls12381G1Random(t *testing.T) {
 	s, ok := sc.(*bls12381.Scalar)
 	require.True(t, ok)
 	expected, _ := new(saferith.Nat).SetHex(strings.ToUpper("15d9b1eb5cc9ab27c2630ea4bcfdaa64f3d2ce7cd85fa33f32fc967fe0d4c764"))
-	require.Equal(t, s.V.Nat(), expected)
+	require.Equal(t, expected, s.V.Nat())
 	// Try 10 random values
 	for i := 0; i < 10; i++ {
 		sc, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		_, ok := sc.(*bls12381.Scalar)
 		require.True(t, ok)
-		require.True(t, !sc.IsZero())
+		require.False(t, sc.IsZero())
 	}
 }
 
@@ -73,7 +73,7 @@ func TestScalarBls12381G1Square(t *testing.T) {
 	require.NoError(t, err)
 	nine, err := bls12381.NewScalar(g1, 9)
 	require.NoError(t, err)
-	require.Equal(t, (int(three.Square().Cmp(nine))), 0)
+	require.Equal(t, 0, (int(three.Square().Cmp(nine))))
 }
 
 func TestScalarBls12381G1Cube(t *testing.T) {
@@ -83,7 +83,7 @@ func TestScalarBls12381G1Cube(t *testing.T) {
 	twentySeven, err := bls12381.NewScalar(g1, 27)
 	require.NoError(t, err)
 	print(hex.EncodeToString(three.Cube().Bytes()))
-	require.Equal(t, int(three.Cube().Cmp(twentySeven)), 0)
+	require.Equal(t, 0, int(three.Cube().Cmp(twentySeven)))
 }
 
 func TestScalarBls12381G1Double(t *testing.T) {
@@ -92,7 +92,7 @@ func TestScalarBls12381G1Double(t *testing.T) {
 	require.NoError(t, err)
 	six, err := bls12381.NewScalar(g1, 6)
 	require.NoError(t, err)
-	require.Equal(t, int(three.Double().Cmp(six)), 0)
+	require.Equal(t, 0, int(three.Double().Cmp(six)))
 }
 
 func TestScalarBls12381G1Invert(t *testing.T) {
@@ -103,7 +103,7 @@ func TestScalarBls12381G1Invert(t *testing.T) {
 	sa, _ := actual.(*bls12381.Scalar)
 	expectedNat, _ := new(saferith.Nat).SetHex(strings.ToUpper("19c308bd25b13848eef068e557794c72f62a247271c6bf1c38e38e38aaaaaaab"))
 	expected := g1.Scalar().SetNat(expectedNat)
-	require.Equal(t, int(sa.Cmp(expected)), 0)
+	require.Equal(t, 0, int(sa.Cmp(expected)))
 }
 
 func TestScalarBls12381G1Sqrt(t *testing.T) {
@@ -115,7 +115,7 @@ func TestScalarBls12381G1Sqrt(t *testing.T) {
 	sa, _ := actual.(*bls12381.Scalar)
 	expectedNat, _ := new(saferith.Nat).SetHex(strings.ToUpper("73eda753299d7d483339d80809a1d80553bda402fffe5bfefffffffefffffffe"))
 	expected := g1.Scalar().SetNat(expectedNat)
-	require.Equal(t, int(sa.Cmp(expected)), 0)
+	require.Equal(t, 0, int(sa.Cmp(expected)))
 }
 
 func TestScalarBls12381G1Add(t *testing.T) {
@@ -128,7 +128,7 @@ func TestScalarBls12381G1Add(t *testing.T) {
 	require.NotNil(t, fifteen)
 	expected, err := bls12381.NewScalar(g1, 15)
 	require.NoError(t, err)
-	require.Equal(t, int(expected.Cmp(fifteen)), 0)
+	require.Equal(t, 0, int(expected.Cmp(fifteen)))
 	qq := bls12381impl.FqNew()
 	n := new(saferith.Nat).SetNat(qq.Params.Modulus.Nat())
 	n.Sub(n, new(saferith.Nat).SetUint64(3), qq.Params.Modulus.BitLen())
@@ -136,7 +136,7 @@ func TestScalarBls12381G1Add(t *testing.T) {
 	upper := g1.Scalar().SetNat(n)
 	actual := upper.Add(nine)
 	require.NotNil(t, actual)
-	require.Equal(t, int(actual.Cmp(six)), 0)
+	require.Equal(t, 0, int(actual.Cmp(six)))
 }
 
 func TestScalarBls12381G1Sub(t *testing.T) {
@@ -151,12 +151,12 @@ func TestScalarBls12381G1Sub(t *testing.T) {
 
 	expected := g1.Scalar().SetNat(n)
 	actual := six.Sub(nine)
-	require.Equal(t, int(expected.Cmp(actual)), 0)
+	require.Equal(t, 0, int(expected.Cmp(actual)))
 
 	actual = nine.Sub(six)
 	three, err := bls12381.NewScalar(g1, 3)
 	require.NoError(t, err)
-	require.Equal(t, int(actual.Cmp(three)), 0)
+	require.Equal(t, 0, int(actual.Cmp(three)))
 }
 
 func TestScalarBls12381G1Mul(t *testing.T) {
@@ -168,14 +168,14 @@ func TestScalarBls12381G1Mul(t *testing.T) {
 	actual := nine.Mul(six)
 	fiftyFour, err := bls12381.NewScalar(g1, 54)
 	require.NoError(t, err)
-	require.Equal(t, int(actual.Cmp(fiftyFour)), 0)
+	require.Equal(t, 0, int(actual.Cmp(fiftyFour)))
 	qq := bls12381impl.FqNew()
 	n := new(saferith.Nat).SetNat(qq.Params.Modulus.Nat())
 	n = saferithUtils.NatDec(n)
 	upper := g1.Scalar().SetNat(n)
 	one, err := bls12381.NewScalar(g1, 1)
 	require.NoError(t, err)
-	require.Equal(t, int(upper.Mul(upper).Cmp(one)), 0)
+	require.Equal(t, 0, int(upper.Mul(upper).Cmp(one)))
 }
 
 func TestScalarBls12381G1Div(t *testing.T) {
@@ -185,12 +185,12 @@ func TestScalarBls12381G1Div(t *testing.T) {
 	actual := nine.Div(nine)
 	one, err := bls12381.NewScalar(g1, 1)
 	require.NoError(t, err)
-	require.Equal(t, int(actual.Cmp(one)), 0)
+	require.Equal(t, 0, int(actual.Cmp(one)))
 	fiftyFour, err := bls12381.NewScalar(g1, 54)
 	require.NoError(t, err)
 	six, err := bls12381.NewScalar(g1, 6)
 	require.NoError(t, err)
-	require.Equal(t, int(fiftyFour.Div(nine).Cmp(six)), 0)
+	require.Equal(t, 0, int(fiftyFour.Div(nine).Cmp(six)))
 }
 
 func TestScalarBls12381G1Exp(t *testing.T) {
@@ -220,8 +220,8 @@ func TestScalarBls12381G1Serialize(t *testing.T) {
 	sc, err := bls12381.NewScalar(g1, 255)
 	require.NoError(t, err)
 	sequence := sc.Bytes()
-	require.Equal(t, len(sequence), 32)
-	require.Equal(t, sequence, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff})
+	require.Len(t, sequence, 32)
+	require.Equal(t, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff}, sequence)
 	ret, err := g1.Scalar().SetBytes(sequence)
 	require.NoError(t, err)
 	require.Equal(t, 0, int(ret.Cmp(sc)))
@@ -233,10 +233,10 @@ func TestScalarBls12381G1Serialize(t *testing.T) {
 		sc, ok := ssc.(*bls12381.Scalar)
 		require.True(t, ok)
 		sequence = sc.Bytes()
-		require.Equal(t, len(sequence), 32)
+		require.Len(t, sequence, 32)
 		ret, err = g1.Scalar().SetBytes(sequence)
 		require.NoError(t, err)
-		require.Equal(t, int(ret.Cmp(sc)), 0)
+		require.Equal(t, 0, int(ret.Cmp(sc)))
 	}
 }
 
@@ -298,7 +298,7 @@ func TestPointBls12381G2Identity(t *testing.T) {
 	bls12381G2 := bls12381.NewG2()
 	sc := bls12381G2.Identity()
 	require.True(t, sc.IsIdentity())
-	require.Equal(t, sc.ToAffineCompressed(), []byte{0xc0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0})
+	require.Equal(t, []byte{0xc0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}, sc.ToAffineCompressed())
 }
 
 func TestPointBls12381G2Generator(t *testing.T) {
@@ -377,8 +377,8 @@ func TestPointBls12381G2Serialize(t *testing.T) {
 	ppt := g.Mul(ss)
 	expectedAffineCompressed, _ := hex.DecodeString("9393bcab9607b91e8572088cafd02c7669d462386d24bc26f8249a2ef0776897e23adf5e050f1e49d64dfab62e45d72d05e7307720a88a2e69c9e33f0d935d892db312b053545817ec4b4c8edc7e639d5226b93a46f142b79f7574679aa74910")
 	expectedAffineUncompressed, _ := hex.DecodeString("1393bcab9607b91e8572088cafd02c7669d462386d24bc26f8249a2ef0776897e23adf5e050f1e49d64dfab62e45d72d05e7307720a88a2e69c9e33f0d935d892db312b053545817ec4b4c8edc7e639d5226b93a46f142b79f7574679aa74910095a986dd40574c1e3b508a35c2b28a71a3e1220a7a1f12d9bce9a6a243d70e424793ed1df1dc20bcf93722422e618b413b18af9e750dff97763f04f51d97c4f3075969853a755422d95ac871be8716b792d5fa8139b1d3255e9d9be2704fd2f")
-	require.Equal(t, ppt.ToAffineCompressed(), expectedAffineCompressed)
-	require.Equal(t, ppt.ToAffineUncompressed(), expectedAffineUncompressed)
+	require.Equal(t, expectedAffineCompressed, ppt.ToAffineCompressed())
+	require.Equal(t, expectedAffineUncompressed, ppt.ToAffineUncompressed())
 	retP, err := ppt.FromAffineCompressed(ppt.ToAffineCompressed())
 	require.NoError(t, err)
 	require.True(t, ppt.Equal(retP))
@@ -392,13 +392,13 @@ func TestPointBls12381G2Serialize(t *testing.T) {
 		require.NoError(t, err)
 		pt := g.Mul(s)
 		cmprs := pt.ToAffineCompressed()
-		require.Equal(t, len(cmprs), 96)
+		require.Len(t, cmprs, 96)
 		retC, err := pt.FromAffineCompressed(cmprs)
 		require.NoError(t, err)
 		require.True(t, pt.Equal(retC))
 
 		un := pt.ToAffineUncompressed()
-		require.Equal(t, len(un), 192)
+		require.Len(t, un, 192)
 		retU, err := pt.FromAffineUncompressed(un)
 		require.NoError(t, err)
 		require.True(t, pt.Equal(retU))
@@ -452,7 +452,7 @@ func TestPointBls12381G1Identity(t *testing.T) {
 	bls12381G1 := bls12381.NewG1()
 	sc := bls12381G1.Identity()
 	require.True(t, sc.IsIdentity())
-	require.Equal(t, sc.ToAffineCompressed(), []byte{0xc0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+	require.Equal(t, []byte{0xc0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, sc.ToAffineCompressed())
 }
 
 func TestPointBls12381G1Generator(t *testing.T) {
@@ -532,8 +532,8 @@ func TestPointBls12381G1Serialize(t *testing.T) {
 	ppt := g.Mul(ss)
 	expectedCompressed, _ := hex.DecodeString("afb98569c797d3ce0dcc2fd84da6460a1fa60aba50b6bf349b75f611f5fbfd80b3d7551c5112ddcee43ccc7124c8d2af")
 	expectedUncompressed, _ := hex.DecodeString("0fb98569c797d3ce0dcc2fd84da6460a1fa60aba50b6bf349b75f611f5fbfd80b3d7551c5112ddcee43ccc7124c8d2af113dcf803a0e0fe4cd04bc64dcae0d3a99430a351bffa5a1da99631ac3b707888cd3e3a0542f7409c2d952c5cdba2f66")
-	require.Equal(t, ppt.ToAffineCompressed(), expectedCompressed)
-	require.Equal(t, ppt.ToAffineUncompressed(), expectedUncompressed)
+	require.Equal(t, expectedCompressed, ppt.ToAffineCompressed())
+	require.Equal(t, expectedUncompressed, ppt.ToAffineUncompressed())
 	retP, err := ppt.FromAffineCompressed(ppt.ToAffineCompressed())
 	require.NoError(t, err)
 	require.True(t, ppt.Equal(retP))
@@ -547,13 +547,13 @@ func TestPointBls12381G1Serialize(t *testing.T) {
 		require.NoError(t, err)
 		pt := g.Mul(s)
 		cmprs := pt.ToAffineCompressed()
-		require.Equal(t, len(cmprs), 48)
+		require.Len(t, cmprs, 48)
 		retC, err := pt.FromAffineCompressed(cmprs)
 		require.NoError(t, err)
 		require.True(t, pt.Equal(retC))
 
 		un := pt.ToAffineUncompressed()
-		require.Equal(t, len(un), 96)
+		require.Len(t, un, 96)
 		retU, err := pt.FromAffineUncompressed(un)
 		require.NoError(t, err)
 		require.True(t, pt.Equal(retU))

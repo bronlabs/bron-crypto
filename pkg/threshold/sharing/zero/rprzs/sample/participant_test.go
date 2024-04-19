@@ -57,8 +57,8 @@ func Test_CanInitialize(t *testing.T) {
 	require.NotNil(t, bob)
 	for _, party := range []*sample.Participant{alice, bob} {
 		require.NoError(t, err)
-		require.Equal(t, party.IdentitySpace.Size(), 2)
-		require.Equal(t, party.PresentParticipants.Size(), 2)
+		require.Equal(t, 2, party.IdentitySpace.Size())
+		require.Equal(t, 2, party.PresentParticipants.Size())
 	}
 	require.NotEqualValues(t, alice.IdentityKey(), bob.IdentityKey())
 }

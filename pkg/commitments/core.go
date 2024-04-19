@@ -1,9 +1,7 @@
 package commitments
 
 import (
-	"crypto/hmac"
 	"crypto/subtle"
-	"hash"
 	"io"
 	"slices"
 
@@ -20,25 +18,12 @@ var (
 	CommitmentHashFunction = sha3.New256
 )
 
-func computeCommitments(witness Witness, messages ...[]byte) (commitment Commitment, err error) {
-	hmacHash := func() hash.Hash { return hmac.New(CommitmentHashFunction, witness) }
-
-	commitment = make([]byte, base.CollisionResistanceBytes)
-	for _, message := range messages {
-		commitment, err = hashing.Hash(hmacHash, commitment, message)
-		if err != nil {
-			return nil, errs.WrapHashing(err, "computing commitment hash")
-		}
-	}
-	return commitment, nil
-}
-
 func commitInternal(prng io.Reader, messages ...[]byte) (Commitment, Witness, error) {
 	witness := make([]byte, base.CollisionResistanceBytes)
 	if _, err := io.ReadFull(prng, witness); err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "reading random bytes")
 	}
-	commitment, err := computeCommitments(witness, messages...)
+	commitment, err := hashing.HmacChain(witness, CommitmentHashFunction, messages...)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not compute commitment")
 	}
@@ -53,7 +38,7 @@ func openInternal(commitment Commitment, witness Witness, messages ...[]byte) er
 		return errs.WrapValidation(err, "witness is invalid")
 	}
 
-	recomputedCommitment, err := computeCommitments(witness, messages...)
+	recomputedCommitment, err := hashing.HmacChain(witness, CommitmentHashFunction, messages...)
 	if err != nil {
 		return errs.WrapFailed(err, "could not recompute the commitment")
 	}

@@ -28,8 +28,8 @@ func Test_LongDhGen(t *testing.T) {
 		pNat := new(big.Int).SetBytes(pBytes)
 		qNat := new(big.Int).Rsh(pNat, 1)
 
-		require.Equal(t, pNat.BitLen(), bits)
-		require.Equal(t, qNat.BitLen(), bits-1)
+		require.Equal(t, bits, pNat.BitLen())
+		require.Equal(t, bits-1, qNat.BitLen())
 		require.True(t, pNat.ProbablyPrime(64))
 		require.True(t, qNat.ProbablyPrime(64))
 	}

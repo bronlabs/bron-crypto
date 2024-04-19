@@ -1,15 +1,14 @@
 package dkg
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/network"
-	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot"
+	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 )
 
 func (p *Participant) Round1() (network.RoundMessages[types.ThresholdProtocol, *Round1P2P], error) {

@@ -151,7 +151,7 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 	return C, &Round2Output{ATilde: aTilde, Eta: eta, Mu: mu}, nil
 }
 
-func (bob *Bob) Round3(r2out *Round2Output) (D *[L]curves.Scalar, err error) {
+func (bob *Bob) Round3(r2out *Round2Output) (bigD *[L]curves.Scalar, err error) {
 	// Validation
 	if bob.Round != 3 {
 		return nil, errs.NewRound("Running round %d but bob expected round %d", 3, bob.Round)
@@ -161,9 +161,9 @@ func (bob *Bob) Round3(r2out *Round2Output) (D *[L]curves.Scalar, err error) {
 	}
 
 	scalarField := bob.Protocol.Curve().Scalar().ScalarField()
-	D = new([L]curves.Scalar)
+	bigD = new([L]curves.Scalar)
 	for i := 0; i < L; i++ {
-		D[i] = scalarField.Zero()
+		bigD[i] = scalarField.Zero()
 	}
 
 	// step 3.1: θ <--- H_{ℤq^{𝓁xρ}} (ã || sessionId)
@@ -189,7 +189,7 @@ func (bob *Bob) Round3(r2out *Round2Output) (D *[L]curves.Scalar, err error) {
 			// step 3.2: ḋ_{j,i} = γ_{j,i} + β_j * ã_{j,i}   ∀i∈[𝓁] ∀j∈[ξ]
 			ddot_j[i] = scalarField.Select(bob.Beta[j] != 0, bob.Gamma[j][i], bob.Gamma[j][i].Add(r2out.ATilde[j][i]))
 			// step 3.3: d_i = ∑_{j∈[ξ]} g_j * ḋ_{j,i} ∀i∈[𝓁]
-			D[i] = D[i].Add(bob.gadget[j].Mul(ddot_j[i]))
+			bigD[i] = bigD[i].Add(bob.gadget[j].Mul(ddot_j[i]))
 		}
 		for k := 0; k < Rho; k++ {
 			// step 3.4: ḓ_{j,k} = γ_{j,𝓁+k} + β_j * ã_{j,l+k}   ∀k∈[ρ] ∀j∈[ξ]
@@ -218,5 +218,5 @@ func (bob *Bob) Round3(r2out *Round2Output) (D *[L]curves.Scalar, err error) {
 	}
 
 	bob.Round++
-	return D, nil
+	return bigD, nil
 }

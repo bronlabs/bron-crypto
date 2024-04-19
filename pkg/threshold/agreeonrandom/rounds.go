@@ -45,12 +45,11 @@ func (p *Participant) Round2(round1output network.RoundMessages[types.Protocol, 
 	}
 
 	// step 2.0: store all commitments
-	for party := range p.Protocol.Participants().Iter() {
-		if party.Equal(p.myAuthKey) {
+	for sender := range p.Protocol.Participants().Iter() {
+		if sender.Equal(p.myAuthKey) {
 			continue
 		}
-		sender := party
-		round1Msg, _ := round1output.Get(party)
+		round1Msg, _ := round1output.Get(sender)
 		p.state.receivedCommitments.Put(sender, round1Msg.Commitment)
 	}
 

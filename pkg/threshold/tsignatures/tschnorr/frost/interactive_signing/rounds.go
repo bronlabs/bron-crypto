@@ -100,13 +100,13 @@ func (ic *Cosigner) Aggregate(message []byte, partialSignatures network.RoundMes
 	return signature, nil
 }
 
-func (ic *Cosigner) processNonceCommitmentOnline(round1output network.RoundMessages[types.ThresholdSignatureProtocol, *Round1Broadcast]) (D_alpha, E_alpha ds.Map[types.IdentityKey, curves.Point], err error) {
+func (ic *Cosigner) processNonceCommitmentOnline(round1output network.RoundMessages[types.ThresholdSignatureProtocol, *Round1Broadcast]) (bigD_alpha, bigE_alpha ds.Map[types.IdentityKey, curves.Point], err error) {
 	round1output.Put(ic.IdentityKey(), &Round1Broadcast{
 		Di: ic.state.D_i,
 		Ei: ic.state.E_i,
 	})
-	D_alpha = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
-	E_alpha = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
+	bigD_alpha = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
+	bigE_alpha = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 
 	for senderIdentityKey := range ic.quorum.Iter() {
 		sharingId, exists := ic.sharingConfig.Reverse().Get(senderIdentityKey)
@@ -126,8 +126,8 @@ func (ic *Cosigner) processNonceCommitmentOnline(round1output network.RoundMessa
 			return nil, nil, errs.NewIsIdentity("E_i of sharing id %d is at infinity", sharingId)
 		}
 
-		D_alpha.Put(senderIdentityKey, D_i)
-		E_alpha.Put(senderIdentityKey, E_i)
+		bigD_alpha.Put(senderIdentityKey, D_i)
+		bigE_alpha.Put(senderIdentityKey, E_i)
 	}
-	return D_alpha, E_alpha, nil
+	return bigD_alpha, bigE_alpha, nil
 }

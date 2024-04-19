@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"hash"
 	"io"
+	"slices"
 
 	"golang.org/x/crypto/hkdf"
 
@@ -56,7 +57,7 @@ func HashChain(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 	f := bytes.Repeat([]byte{0xFF}, 32)
 
 	for _, x := range xs {
-		ikm := append(f, x...)
+		ikm := slices.Concat(f, x)
 		ikm = append(ikm, okm...)
 		kdf := hkdf.New(h, ikm, salt, info)
 		_, err := io.ReadFull(kdf, okm)
@@ -71,12 +72,23 @@ func HashChain(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 
 // Hmac iteratively writes all the inputs to an hmac (defined by the hash function and the key) and returns the result.
 func Hmac(key []byte, h func() hash.Hash, xs ...[]byte) ([]byte, error) {
-	Hmac := hmac.New(h, key)
-	for _, x := range xs {
-		if _, err := Hmac.Write(x); err != nil {
-			return nil, errs.WrapFailed(err, "could not write to H")
+	hmacFunc := func() hash.Hash { return hmac.New(h, key) }
+	out, err := Hash(hmacFunc, xs...)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "computing hmac")
+	}
+	return out, nil
+}
+
+func HmacChain(key []byte, h func() hash.Hash, xs ...[]byte) ([]byte, error) {
+	hmacFunc := func() hash.Hash { return hmac.New(h, key) }
+	var err error
+	out := make([]byte, hmacFunc().Size())
+	for i, x := range xs {
+		out, err = Hash(hmacFunc, out, x)
+		if err != nil {
+			return nil, errs.WrapHashing(err, "computing hmac chain for iter=%d", i)
 		}
 	}
-	digest := Hmac.Sum(nil)
-	return digest, nil
+	return out, nil
 }

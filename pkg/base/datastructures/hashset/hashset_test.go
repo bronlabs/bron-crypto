@@ -204,7 +204,7 @@ func TestHashableHashSet_SubSets(t *testing.T) {
 	subsets := A.SubSets()
 
 	// Check the number of subsets
-	require.Equal(t, 8, len(subsets))
+	require.Len(t, subsets, 8)
 
 	// Check if the original set is included in the subsets
 	require.Contains(t, subsets, A)

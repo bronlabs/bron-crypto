@@ -180,7 +180,7 @@ func (h *TmmoHash) Sum(b []byte) (res []byte) {
 		res = make([]byte, h.Size())
 		copy(res, h.digest)
 	} else {
-		res = append(b, h.digest...)
+		res = slices.Concat(b, h.digest)
 	}
 	return res
 }
