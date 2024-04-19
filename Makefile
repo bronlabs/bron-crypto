@@ -8,7 +8,9 @@ GO=${GOENV} go
 COVERAGE_OUT="$(mktemp -d)/coverage.out"
 SCRIPTS_DIR="$(SELF_DIR)/scripts"
 
+
 TEST_CLAUSE= $(if ${TEST}, -run ${TEST})
+BUILD_TAGS= $(if ${TAGS}, -tags=${TAGS})
 
 .PHONY: all
 all: build lint test
@@ -27,7 +29,7 @@ build: build-boring codegen
 
 .PHONY: build-nocgo
 build-nocgo: codegen
-	${GO} build -tags nobignum ./...
+	${GO} build ${BUILD_TAGS} ./...
 
 .PHONY: bench
 bench:
@@ -65,16 +67,15 @@ lint-long:
 
 .PHONY: lint-fix
 lint-fix:
-	${GO} fmt ./...
 	golangci-lint run --fix --timeout=120m
 
 .PHONY: test
 test:
-	${GO} test -short ${TEST_CLAUSE} ./...
+	${GO} test ${BUILD_TAGS} -short ${TEST_CLAUSE} ./...
 
 .PHONY: test-long
 test-long: ## Runs all tests, including long-running tests
-	${GO} test ${TEST_CLAUSE} -timeout 120m ./...
+	${GO} test ${BUILD_TAGS} ${TEST_CLAUSE} -timeout 120m ./...
 
 .PHONY: sync-thirdparty
 sync-thirdparty:
@@ -83,11 +84,11 @@ sync-thirdparty:
 
 .PHONY: deflake
 deflake: ## Runs short tests many times to detect flakes
-	DEFLAKE_TIME_TEST=1 ${GO} test -count=100 -short -timeout 0 ${TEST_CLAUSE} ./...
+	DEFLAKE_TIME_TEST=1 ${GO} test ${BUILD_TAGS} -count=100 -short -timeout 0 ${TEST_CLAUSE} ./...
 
 .PHONY: deflake-long
 deflake-long: ## Runs tests many times to detect flakes
-	DEFLAKE_TIME_TEST=1 ${GO} test -count=50 -timeout 0 ${TEST_CLAUSE} ./...
+	DEFLAKE_TIME_TEST=1 ${GO} test ${BUILD_TAGS} -count=50 -timeout 0 ${TEST_CLAUSE} ./...
 
 .PHONY: fuzz
 fuzz:
