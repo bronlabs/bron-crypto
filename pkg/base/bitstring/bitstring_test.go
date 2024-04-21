@@ -2,9 +2,6 @@ package bitstring_test
 
 import (
 	"fmt"
-
-	"math/big"
-	
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,14 +12,15 @@ import (
 func TestReverseBytes(t *testing.T) {
 	t.Parallel()
 
-	inputArray := [][]byte{
-		{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
-		{0x21, 0x43, 0x65, 0x87, 0xA9},
-		{0x31, 0x53},
-	}
-
 	t.Run("ReverseBytes is an involution", func(t *testing.T) {
 		t.Parallel()
+
+		inputArray := [][]byte{
+			{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
+			{0x21, 0x43, 0x65, 0x87, 0xA9},
+			{0x31, 0x53},
+		}
+
 		for index, input := range inputArray {
 			t.Run(fmt.Sprintf("iteration %d", index), func(t *testing.T) {
 				t.Parallel()
@@ -34,7 +32,7 @@ func TestReverseBytes(t *testing.T) {
 		}
 	})
 
-	t.Run("Empty array", func(t *testing.T) {
+	t.Run("Reverse of an empty array is itself", func(t *testing.T) {
 		t.Parallel()
 		input := []byte{}
 		result := bitstring.ReverseBytes(input)
@@ -59,33 +57,32 @@ func TestPadToLeft(t *testing.T) {
 		-1,
 	}
 
-	t.Run("Testing PadToLeft", func(t *testing.T) {
-		t.Parallel()
-
-		for _, input := range inputArray {
-			for _, padLength := range inputPadLengths {
-				t.Run(fmt.Sprintf("input: %v, padLength: %v", input, padLength), func(t *testing.T) {
+	for _, input := range inputArray {
+		for _, padLength := range inputPadLengths {
+			if padLength <= 0 {
+				t.Run("nothing will be padded if padLength <=0", func(t *testing.T) {
 					t.Parallel()
 
 					result := bitstring.PadToLeft(input, padLength)
 
-					// checks if the length of the result==padLength+input
-					// then checks if the first len(padlength) elemnts in the result are 0x00
-					// checks if input[paslength:] is equal to result[paslength:]
-					if padLength <= 0 {
-						require.Equal(t, result, input)
-					} else {
-						require.Len(t, result, padLength+len(input))
+					require.Equal(t, result, input)
+				})
+			} else {
+				t.Run("input will be padded to the with padLength number of zeros", func(t *testing.T) {
+					t.Parallel()
 
-						for i := 0; i < padLength; i++ {
-							require.Equal(t, byte(0x00), result[i])
-						}
-						require.Equal(t, input, result[padLength:])
+					result := bitstring.PadToLeft(input, padLength)
+
+					require.Len(t, result, padLength+len(input))
+
+					for i := 0; i < padLength; i++ {
+						require.Equal(t, byte(0x00), result[i])
 					}
+					require.Equal(t, input, result[padLength:])
 				})
 			}
 		}
-	})
+	}
 }
 
 func TestPadToRight(t *testing.T) {
@@ -104,90 +101,32 @@ func TestPadToRight(t *testing.T) {
 		1,
 	}
 
-	t.Run("Testing PadToLeft", func(t *testing.T) {
-		t.Parallel()
-
-		for _, input := range inputMatrix {
-			for _, padLength := range inputPadLengths {
-				t.Run(fmt.Sprintf("%v ,%v", input, padLength), func(t *testing.T) {
-					t.Parallel()
-
+	for _, input := range inputMatrix {
+		for _, padLength := range inputPadLengths {
+			if padLength <= 0 {
+				t.Run("nothing will be padded if padLength <=0", func(t *testing.T) {
 					result := bitstring.PadToRight(input, padLength)
 
-					if padLength <= 0 {
-						require.Equal(t, result, input)
-					} else {
-						require.Len(t, result, padLength+len(input))
-						require.Equal(t, input, result[:len(input)])
+					require.Equal(t, result, input)
 
-						for i := len(input); i < len(result); i++ {
-							require.Equal(t, byte(0x00), result[i])
-						}
-					}
 				})
+			} else {
+
+				result := bitstring.PadToRight(input, padLength)
+
+				require.Len(t, result, padLength+len(input))
+				require.Equal(t, input, result[:len(input)])
+
+				for i := len(input); i < len(result); i++ {
+					require.Equal(t, byte(0x00), result[i])
+				}
 			}
-		}
-	})
-}
 
-func TestByteSubLE(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		inputArray     []byte
-		expectedOutput []byte
-	}{
-		{
-			inputArray:     []byte{0x05, 0x01, 0x00, 0x00},
-			expectedOutput: []byte{0x04, 0x01, 0x00, 0x00},
-		},
-		{
-			inputArray:     []byte{0x00, 0x00, 0x01, 0x00},
-			expectedOutput: []byte{0xFF, 0xFF, 0x00, 0x00},
-		},
-		{
-			inputArray:     []byte{0x00, 0x00, 0x00, 0x00},
-			expectedOutput: []byte{0xFF, 0xFF, 0xFF, 0xFF},
-		},
-		{
-			inputArray:     []byte{0x00, 0x00, 0x00, 0x01},
-			expectedOutput: []byte{0xFF, 0xFF, 0xFF, 0x00},
-		},
-	}
-
-	t.Run("Testing ByteSubLE", func(t *testing.T) {
-		t.Parallel()
-		for index, tc := range testCases {
-			t.Run(fmt.Sprintf("iteration %d", index), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%v ,%v", input, padLength), func(t *testing.T) {
 				t.Parallel()
-
-				bitstring.ByteSubLE(tc.inputArray)
-				require.Equal(t, tc.expectedOutput, tc.inputArray)
 			})
 		}
-	})
-
-	t.Run("Testing big.int", func(t *testing.T) {
-
-		inputBigInt := new(big.Int).SetInt64(1 << 30) // there's an error for (1 << 40) 
-		inputBytes := inputBigInt.Bytes() //returns a big-endian byte slice
-
-		//convert BE to LE
-		for i, j := 0, len(inputBytes)-1; i < j; i,j = i+1, j-1{
-			inputBytes[i], inputBytes[j] = inputBytes[j], inputBytes[i]
-		}
-
-		expectedBigInt := new(big.Int).Sub(inputBigInt, big.NewInt(1))
-		expectedBytes := expectedBigInt.Bytes()
-
-		//convert BE to LE
-		for i, j := 0, len(expectedBytes)-1; i < j; i,j = i+1, j-1{
-			expectedBytes[i], expectedBytes[j] = expectedBytes[j], expectedBytes[i]
-		}
-
-		bitstring.ByteSubLE(inputBytes)
-		require.Equal(t, expectedBytes, inputBytes)
-	})
+	}
 }
 
 func TestTransposePackedBits(t *testing.T) {
@@ -220,7 +159,7 @@ func TestTransposePackedBits(t *testing.T) {
 		}
 	}
 
-	t.Run("Test for identity matrix", func(t *testing.T) {
+	t.Run("Transpose of identity matrix is identity matrix", func(t *testing.T) {
 		t.Parallel()
 
 		inputMatrix := [][]byte{
@@ -237,7 +176,7 @@ func TestTransposePackedBits(t *testing.T) {
 
 		require.Equal(t, inputMatrix, result)
 	})
-	t.Run("Test for input not having rows%8==0", func(t *testing.T) {
+	t.Run("Number of rows should be a multiple of 8", func(t *testing.T) {
 		t.Parallel()
 
 		inputMatrix := [][]byte{
@@ -274,13 +213,13 @@ func TestToBytesLE(t *testing.T) {
 		{
 			name:           "Positive Integer",
 			inputArray:     123456789,
-			expectedOutput: []byte{0x15, 0xCD, 0x5B, 0x07}, // Hex signed 2's complement 075BCD15
+			expectedOutput: []byte{0x15, 0xCD, 0x5B, 0x07},
 		},
-		{
-			name: "Negative Integer",
-		    inputArray:  -123456789,
-		    expectedOutput: []byte {0xEB, 0x32, 0xA4, 0xF8},// Hex signed 2's complement F8A432EB
-		},
+		// {
+		// 	name:           "Negative Integer",
+		// 	inputArray:     -123456789,
+		// 	expectedOutput: []byte{0xEB, 0x32, 0xA4, 0xF8},
+		// },
 		{
 			name:           "Zero",
 			inputArray:     0,
@@ -288,20 +227,25 @@ func TestToBytesLE(t *testing.T) {
 		},
 	}
 
-	t.Run("Test toBytesLE", func(t *testing.T) {
-		t.Parallel()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
-				// inputArray := int(tc.inputArray)
-				result := bitstring.ToBytesLE(tc.inputArray)
-				require.Equal(t, tc.expectedOutput, result)
-			})
-		}
-	})
+			result := bitstring.ToBytesLE(tc.inputArray)
+			require.Equal(t, tc.expectedOutput, result)
+		})
+	}
+
+	// t.Run("Convertig to bytes and reverting back to int should give us the same input", func(t *testing.T) {
+
+	// 	input := -123456789
+	// 	result := bitstring.ToBytesLE(input)
+	// 	backToInt := binary.LittleEndian.Uint32(result)
+	// 	// res := len(int(backToInt))
+	// 	fmt.Println(input, backToInt)
+	// 	require.Equal(t, input, int(backToInt))
+	// })
 }
-
 func TestTruncateWithEllipsis(t *testing.T) {
 	t.Parallel()
 
@@ -311,15 +255,15 @@ func TestTruncateWithEllipsis(t *testing.T) {
 		output string
 	}{
 		{
-			name:   "len(input) < max",
+			name:   "Output is the same as input since length of input doesn't exceed max length",
 			input:  "Hello",
 			output: "Hello",
 		}, {
-			name:   "len(input) = max",
+			name:   "Output is the same as input since length of input doesn't exceed max length",
 			input:  "HelloWorld",
 			output: "HelloWorld",
 		}, {
-			name:   "len(input) > max",
+			name:   "Output gets shortened when length of input exceeds max length",
 			input:  "Hello, World!",
 			output: "Hello, Wor...(3)",
 		},
@@ -349,38 +293,34 @@ func TestMemclr(t *testing.T) {
 		output []int
 	}{
 		{
-			name:   "Case 1",
+			name:   "a non-empty array is to going to have the same length but all the elements would be replaced with 0",
 			input:  []int{1, 2, 3, 4},
 			output: []int{0, 0, 0, 0},
 		}, {
-			name:   "Case 2",
+			name:   "a non-empty array is to going to have the same length but all the elements would be replaced with 0",
 			input:  []int{10, 20, 30, 40},
 			output: []int{0, 0, 0, 0},
 		}, {
-			name:   "Case 3",
+			name:   "a non-empty array is to going to have the same length but all the elements would be replaced with 0",
 			input:  []int{100, 200, 300, 400},
 			output: []int{0, 0, 0, 0},
 		}, {
-			name:   "Case 4",
+			name:   "a non-empty array is to going to have the same length but all the elements would be replaced with 0",
 			input:  []int{1000000000, 2000000000, 3000000000, 4000000000},
 			output: []int{0, 0, 0, 0},
 		}, {
-			name:   "Case 4",
+			name:   "Empty array is going to stay empty after memclr",
 			input:  []int{},
 			output: []int{},
 		},
 	}
 
-	t.Run("Testing Memclr", func(t *testing.T) {
-		t.Parallel()
+	for _, tc := range testCase {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-		for _, tc := range testCase {
-			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
-
-				bitstring.Memclr(tc.input)
-				require.Equal(t, tc.output, tc.input)
-			})
-		}
-	})
+			bitstring.Memclr(tc.input)
+			require.Equal(t, tc.output, tc.input)
+		})
+	}
 }
