@@ -60,7 +60,7 @@ func TestPadToLeft(t *testing.T) {
 	for _, input := range inputArray {
 		for _, padLength := range inputPadLengths {
 			if padLength <= 0 {
-				t.Run("nothing will be padded if padLength <=0", func(t *testing.T) {
+				t.Run(fmt.Sprintf("nothing will be padded if padLength <=0 input: %v padLength: %v", input, padLength), func(t *testing.T) {
 					t.Parallel()
 
 					result := bitstring.PadToLeft(input, padLength)
@@ -68,7 +68,7 @@ func TestPadToLeft(t *testing.T) {
 					require.Equal(t, result, input)
 				})
 			} else {
-				t.Run("input will be padded to the with padLength number of zeros", func(t *testing.T) {
+				t.Run(fmt.Sprintf("input will be padded to the with padLength number of zeros input: %v padLength: %v", input, padLength), func(t *testing.T) {
 					t.Parallel()
 
 					result := bitstring.PadToLeft(input, padLength)
@@ -88,7 +88,7 @@ func TestPadToLeft(t *testing.T) {
 func TestPadToRight(t *testing.T) {
 	t.Parallel()
 
-	inputMatrix := [][]byte{
+	inputArray := [][]byte{
 		{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC},
 		{0x21},
 		{},
@@ -101,30 +101,32 @@ func TestPadToRight(t *testing.T) {
 		1,
 	}
 
-	for _, input := range inputMatrix {
+	for _, input := range inputArray {
 		for _, padLength := range inputPadLengths {
 			if padLength <= 0 {
-				t.Run("nothing will be padded if padLength <=0", func(t *testing.T) {
+				t.Run(fmt.Sprintf("nothing will be padded if padLength <=0 input: %v padLength: %v", input, padLength), func(t *testing.T) {
+					t.Parallel()
+
 					result := bitstring.PadToRight(input, padLength)
 
 					require.Equal(t, result, input)
 
 				})
 			} else {
+				t.Run(fmt.Sprintf("input will be padded to the with padLength number of zeros input: %v padLength: %v", input, padLength), func(t *testing.T) {
 
-				result := bitstring.PadToRight(input, padLength)
+					t.Parallel()
 
-				require.Len(t, result, padLength+len(input))
-				require.Equal(t, input, result[:len(input)])
+					result := bitstring.PadToRight(input, padLength)
 
-				for i := len(input); i < len(result); i++ {
-					require.Equal(t, byte(0x00), result[i])
-				}
+					require.Len(t, result, padLength+len(input))
+
+					require.Equal(t, input, result[:len(input)])
+					for i := len(input); i < len(result); i++ {
+						require.Equal(t, byte(0x00), result[i])
+					}
+				})
 			}
-
-			t.Run(fmt.Sprintf("%v ,%v", input, padLength), func(t *testing.T) {
-				t.Parallel()
-			})
 		}
 	}
 }
@@ -227,8 +229,8 @@ func TestToBytesLE(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+	for index, tc := range testCases {
+		t.Run(fmt.Sprintf("testName: %s input: %v index: %d", tc.name, tc.inputArray, index), func(t *testing.T) {
 			t.Parallel()
 
 			result := bitstring.ToBytesLE(tc.inputArray)
@@ -271,17 +273,13 @@ func TestTruncateWithEllipsis(t *testing.T) {
 
 	maxLength := 10
 
-	t.Run("Testing TruncateWithEllipsis", func(t *testing.T) {
-		t.Parallel()
+	for index, tc := range inputText {
+		t.Run(fmt.Sprintf("testname: %s input: %s index: %d", tc.name, tc.input, index), func(t *testing.T) {
+			t.Parallel()
 
-		for _, tc := range inputText {
-			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
-
-				require.Equal(t, tc.output, bitstring.TruncateWithEllipsis(tc.input, maxLength))
-			})
-		}
-	})
+			require.Equal(t, tc.output, bitstring.TruncateWithEllipsis(tc.input, maxLength))
+		})
+	}
 }
 
 func TestMemclr(t *testing.T) {
@@ -315,8 +313,8 @@ func TestMemclr(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCase {
-		t.Run(tc.name, func(t *testing.T) {
+	for index, tc := range testCase {
+		t.Run(fmt.Sprintf("testname: %s index: %d", tc.name, index), func(t *testing.T) {
 			t.Parallel()
 
 			bitstring.Memclr(tc.input)
