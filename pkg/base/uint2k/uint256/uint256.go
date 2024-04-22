@@ -388,11 +388,11 @@ func (u Uint256) ApplyMul(rhs Uint256, n *saferith.Nat) (res Uint256) {
 		accumulator, sum Uint256
 	)
 	nBytes := n.Bytes()
-	accumulator = ring256Instance.Select(bitstring.PackedBits(nBytes).Select(0) != 0, res, rhs)
+	accumulator = ring256Instance.Select(bitstring.PackedBits(nBytes).Get(0) != 0, res, rhs)
 	for i := len(nBytes)*8 - 2; i >= 0; i-- {
 		accumulator = accumulator.Mul(rhs)
 		sum = res.Add(accumulator)
-		ring256Instance.Select(bitstring.PackedBits(nBytes).Select(i) != 0, res, sum)
+		ring256Instance.Select(bitstring.PackedBits(nBytes).Get(i) != 0, res, sum)
 	}
 	return res.Mul(u)
 }
