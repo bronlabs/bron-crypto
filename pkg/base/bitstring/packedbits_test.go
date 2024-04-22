@@ -129,51 +129,47 @@ func TestSelectBit(t *testing.T) {
 	}
 }
 
-// func TestSwap(t *testing.T) {
-// 	t.Parallel()
+func TestSwap(t *testing.T) {
+	t.Parallel()
 
-// 	testCases := []struct {
-// 		// name string swap of a swap is itself
-// 		pd bitstring.PackedBits
-// 		i, j int
-// 		expectedOutput bitstring.PackedBits
-// 	}{
-// 		{
-// 			pd: bitstring.PackedBits {0xAA},
-//             i: 0,
-//             j: 1,
-//             expectedOutput: bitstring.PackedBits {0xA9},
-// 		},
-// 		{
-// 			pd: bitstring.PackedBits {0x9E},
-//             i: 1,
-//             j: 2,
-//             expectedOutput: bitstring.PackedBits {0x9E},
-// 		},
-// 		{
-// 			pd: bitstring.PackedBits {0x6B},
-//             i: 1,
-//             j: 2,
-//             expectedOutput: bitstring.PackedBits {0x6F},
-// 		},
-// 		{
-// 			pd: bitstring.PackedBits {0xEB},
-//             i: 5,
-//             j: 7,
-//             expectedOutput: bitstring.PackedBits {0xEB},
-// 		},
+	testCases := []struct {
+		name           string
+		pd             bitstring.PackedBits
+		i, j           int
+		expectedOutput bitstring.PackedBits
+	}{
+		{
+			name:           "In a all one Packedbits, swapping any two indexes should not change the input",
+			pd:             bitstring.PackedBits{0xFF},
+			i:              0,
+			j:              1,
+			expectedOutput: bitstring.PackedBits{0xFF},
+		},
+		{
+			name:           "In a all zero Packedbits, swapping any two indexes should not change the input",
+			pd:             bitstring.PackedBits{0x00},
+			i:              1,
+			j:              2,
+			expectedOutput: bitstring.PackedBits{0x00},
+		},
+		{
+			name:           "Swapping a bit with itself should not change the input",
+			pd:             bitstring.PackedBits{0xAb},
+			i:              0,
+			j:              0,
+			expectedOutput: bitstring.PackedBits{0xAb},
+		},
+	}
 
-// 	}
+	for index, tc := range testCases {
+		t.Run(fmt.Sprintf("TestCase: %s input: %v index: %v", tc.name, tc.pd, index), func(t *testing.T) {
+			t.Parallel()
 
-// 	for index, tc := range testCases {
-// 		t.Run(fmt.Sprintf("TestCase: %v index: %v", tc.pd, index), func(t *testing.T){
-// 			t.Parallel()
-
-// 			tc.pd.Swap(tc.i, tc.j)
-// 			require.Equal(t, tc.expectedOutput, tc.pd)
-// 		})
-// 	}
-// }
+			tc.pd.Swap(tc.i, tc.j)
+			require.Equal(t, tc.expectedOutput, tc.pd)
+		})
+	}
+}
 
 func TestSet(t *testing.T) {
 	t.Parallel()
