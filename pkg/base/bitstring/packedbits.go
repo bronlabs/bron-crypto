@@ -11,12 +11,19 @@ type PackedBits []byte
 
 // Pack compresses the bits in the input vector v, truncating each input byte to
 // its least significant bit. E.g., [0x01,0x01,0x01,0x01, 0x00,0x00,0x01,0x00] ---> [0xF0].
-func Pack(unpackedBits []uint8) PackedBits {
+func Pack(unpackedBits []uint8) (PackedBits, error) {
 	vOut := PackedBits(make([]byte, (len(unpackedBits)+7)/8))
+	isNonBinary := uint8(0)
+
 	for i, bit := range unpackedBits {
+		isNonBinary |= bit
 		vOut[i/8] |= (bit & 0b1) << (i % 8)
 	}
-	return vOut
+	if isNonBinary&0xFE != 0x00 {
+		return nil, errs.NewArgument("Input vector contains non-binary elements")
+	}
+
+	return vOut, nil
 }
 
 // Unpack expands the bits of the input vector into separate bytes.
@@ -55,7 +62,6 @@ func (pb PackedBits) Swap(i, j uint) {
 // Set sets the `i`th bit of a packed bits vector. Input `bit` is truncated
 // to its least significant bit (i.e., we only consider the last bit of `bit`).
 func (pb PackedBits) Set(i uint) {
-	// index & 0x07 == index % 8 are designed to avoid CPU division.
 	pb[i/8] |= 1 << (i % 8)
 }
 
