@@ -1,6 +1,10 @@
 package bitstring
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+)
 
 // PackedBits is a byte vector of little-endian packed bits.
 type PackedBits []byte
@@ -75,4 +79,27 @@ func (pb PackedBits) Repeat(nrepetitions int) PackedBits {
 
 func (pb PackedBits) BitLen() int {
 	return len(pb) * 8
+}
+
+func Parse(v string) (PackedBits, error) {
+	if v == "" {
+		return nil, errs.NewArgument("Input string cannot be empty")
+	}
+
+	byteLen := (len(v) + 7) / 8
+	packedBits := make(PackedBits, byteLen)
+
+	for i, char := range v {
+		if char != '0' && char != '1' {
+			return nil, errs.NewArgument("Invalid character in the input")
+		}
+		byteIndex := i / 8
+		bitPos := uint(i % 8)
+
+		if char == '1' {
+			packedBits[byteIndex] |= 1 << (7 - bitPos)
+		}
+	}
+
+	return packedBits, nil
 }
