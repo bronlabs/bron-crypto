@@ -21,11 +21,6 @@ func TestPackBits(t *testing.T) {
 		{0xAB},
 	}
 
-	// errorsArray := []error{
-	// 	nil,
-	//     errs.NewArgument("Input vector contains non-binary elements"),
-	// }
-
 	for _, vector := range inputVectorsArray {
 		outputVector, err := bitstring.Pack(vector)
 		t.Run("After packing, output[index] should be equal to inputVetor[index]", func(t *testing.T) {
@@ -242,7 +237,7 @@ func TestUnSet(t *testing.T) {
 
 			if tc.inputIndex > len(tc.pd) {
 
-				require.Panics(t, func() { tc.pd.Clear(uint(tc.inputIndex)) }, "Should casue a panic")
+				require.Panics(t, func() { tc.pd.Clear(uint(tc.inputIndex)) }, "Should cause a panic")
 
 			} else {
 				tc.pd.Clear(uint(tc.inputIndex))
