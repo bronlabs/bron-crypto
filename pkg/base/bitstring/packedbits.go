@@ -50,7 +50,6 @@ func (pb PackedBits) Swap(i, j uint) {
 
 	pb[j/8] &^= 1 << (j % 8)
 	pb[j/8] |= iBit << (j % 8)
-
 }
 
 // Set sets the `i`th bit of a packed bits vector. Input `bit` is truncated
