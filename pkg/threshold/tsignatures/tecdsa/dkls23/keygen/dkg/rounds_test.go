@@ -167,7 +167,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 					require.Equal(
 						t,
 						meAsReceiver.ChosenMessages[i],
-						senderCounterParty.MessagePairs[i][meAsReceiver.Choices.Get(i)],
+						senderCounterParty.MessagePairs[i][meAsReceiver.Choices.Get(uint(i))],
 					)
 				}
 				meAsSender := myConfig.AsSender
@@ -176,7 +176,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 					require.Equal(
 						t,
 						receiverCounterParty.ChosenMessages[i],
-						meAsSender.MessagePairs[i][receiverCounterParty.Choices.Get(i)],
+						meAsSender.MessagePairs[i][receiverCounterParty.Choices.Get(uint(i))],
 					)
 				}
 			}
@@ -233,7 +233,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 					decrypted, err := pair.Receiver.Decrypt(ciphertexts)
 					require.NoError(t, err)
 					for i := 0; i < batchSize; i++ {
-						choice := pair.Receiver.Choices.Get(i)
+						choice := pair.Receiver.Choices.Get(uint(i))
 						require.Equal(t, messages[i][choice], decrypted[i])
 						require.NotEqual(t, messages[i][1-choice], decrypted[i])
 					}
