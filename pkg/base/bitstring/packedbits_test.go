@@ -310,15 +310,15 @@ func TestParse(t *testing.T) {
 		expectedOutput bitstring.PackedBits
 	}{
 		{
-			name:           "an empty string sould result in an error an nil return",
+			name:           "an empty string could result in an error an nil return",
 			v:              "",
 			expectedOutput: nil,
 		}, {
-			name:           "representation of hexidecimal of 0x55 in decimal",
+			name:           "representation of hexadecimal of 0x55 in decimal",
 			v:              "01010101",
 			expectedOutput: bitstring.PackedBits{0x55},
 		}, {
-			name:           "representation of hexidecimal of 0xF0,0xF0 in decimal",
+			name:           "representation of hexadecimal of 0xF0,0xF0 in decimal",
 			v:              "1111000011110000",
 			expectedOutput: bitstring.PackedBits{0xF0, 0xF0},
 		},
