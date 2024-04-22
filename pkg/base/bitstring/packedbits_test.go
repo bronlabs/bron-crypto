@@ -28,8 +28,8 @@ func TestPackBits(t *testing.T) {
 		},
 		// {
 		//     name:     "",
-		//     inputVector:    []byte{0x01, 0x00},
-		//     expected: bitstring.PackedBits{0x01},
+		//     inputVector:    []byte{0x00, 0xAB},
+		//     expected: bitstring.PackedBits{0xAB},
 		// },
 	}
 
@@ -38,7 +38,7 @@ func TestPackBits(t *testing.T) {
 			t.Parallel()
 
 			result := bitstring.Pack(tc.inputVector)
-			fmt.Println(result)
+
 			require.Equal(t, tc.expected, result)
 		})
 	}
