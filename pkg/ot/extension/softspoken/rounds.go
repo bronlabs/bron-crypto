@@ -131,7 +131,7 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput [][2]ot.Message, e
 	for i := 0; i < ot.Kappa; i++ {
 		extCorrelations[i] = t_b[i]
 		subtle.XORBytes(qiTemp, r1out.U[i], t_b[i])
-		subtle.ConstantTimeCopy(int(s.baseOtSeeds.Choices.Select(i)), extCorrelations[i], qiTemp)
+		subtle.ConstantTimeCopy(int(s.baseOtSeeds.Choices.Get(i)), extCorrelations[i], qiTemp)
 	}
 
 	// CONSISTENCY CHECK (Fiat-Shamir)
@@ -253,7 +253,7 @@ func (s *Sender) verifyChallenge(
 		// ABORT if q̇^i != ṫ^i + Δ_i • ẋ  ∀ i ∈[κ]
 		t_val := bf128.NewElementFromBytes(challengeResponse.T_val[i][:])
 		x_val := bf128.NewElementFromBytes(challengeResponse.X_val[:])
-		qi_expected := bf128.NewField().Select(s.baseOtSeeds.Choices.Select(i) != 0, t_val, t_val.Add(x_val))
+		qi_expected := bf128.NewField().Select(s.baseOtSeeds.Choices.Get(i) != 0, t_val, t_val.Add(x_val))
 		isCorrect = isCorrect && qi_expected.Equal(qi_val)
 	}
 	if !isCorrect {

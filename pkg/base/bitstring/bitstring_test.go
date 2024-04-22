@@ -29,8 +29,8 @@ func TestTransposeBooleanMatrix(t *testing.T) {
 			// Check that the bit at position i in the jth row of the input matrix.
 			// is equal to the bit at position j in the ith row of the transposed matrix.
 			// using bitstring.SelectBit (careful! it takes a byte array as input)
-			output1 := bitstring.PackedBits(inputMatrix[i]).Select(j)
-			output2 := bitstring.PackedBits(transposedMatrix[j]).Select(i)
+			output1 := bitstring.PackedBits(inputMatrix[i]).Get(uint(j))
+			output2 := bitstring.PackedBits(transposedMatrix[j]).Get(uint(i))
 
 			require.Equal(t,
 				output1,
