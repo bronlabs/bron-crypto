@@ -7,50 +7,41 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
 func TestPackBits(t *testing.T) {
 	t.Parallel()
-	testCases := []struct {
-		name        string
-		inputVector []byte
-		expected    bitstring.PackedBits
-	}{
-		{
-			name:        "Packing an empty input should result in an empty packedBits",
-			inputVector: []byte{},
-			expected:    bitstring.PackedBits{},
-		},
-		{
-			name:        "Packing an all zero input should result in an all packedBits",
-			inputVector: []byte{0x00, 0x00, 0x00, 0x00},
-			expected:    bitstring.PackedBits{0x00},
-		},
-		// {
-		//     name:     "",
-		//     inputVector:    []byte{0x00, 0xAB},
-		//     expected: bitstring.PackedBits{0xAB},
-		// },
+
+	inputVectorsArray := [][]byte{
+		{0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0},
+		{},
+		{0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0},
+		{0xAB},
 	}
 
-	for index, tc := range testCases {
-		t.Run(fmt.Sprintf(("TestCase: %s input: %v index: %d"), tc.name, tc.inputVector, index), func(t *testing.T) {
+	// errorsArray := []error{
+	// 	nil,
+	//     errs.NewArgument("Input vector contains non-binary elements"),
+	// }
+
+	for _, vector := range inputVectorsArray {
+		outputVector, err := bitstring.Pack(vector)
+		t.Run("After packing, output[index] should be equal to inputVetor[index]", func(t *testing.T) {
 			t.Parallel()
 
-			result := bitstring.Pack(tc.inputVector)
+			if err != nil {
+				require.Error(t, err)
+			} else {
+				for i := 0; i < len(vector); i++ {
+					output := outputVector.Get(uint(i))
 
-			require.Equal(t, tc.expected, result)
+					require.Equal(t, vector[i], output)
+				}
+			}
 		})
 	}
-	t.Run("After packing, output[index] should be equal to inputVetor[index] ", func(t *testing.T) {
-		inputVector := []byte{0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0}
-		outputVector := bitstring.Pack(inputVector)
-		for i := 0; i < len(inputVector); i++ {
-			output := outputVector.Get(uint(i))
-
-			require.Equal(t, inputVector[i], output)
-		}
-	})
 }
 
 func TestUnpackBits(t *testing.T) {
@@ -139,14 +130,14 @@ func TestSwap(t *testing.T) {
 		expectedOutput bitstring.PackedBits
 	}{
 		{
-			name:           "In a all one Packedbits, swapping any two indexes should not change the input",
+			name:           "Any index out of range should cause a panic",
 			pd:             bitstring.PackedBits{0xFF},
-			i:              0,
+			i:              10,
 			j:              1,
 			expectedOutput: bitstring.PackedBits{0xFF},
 		},
 		{
-			name:           "In a all zero Packedbits, swapping any two indexes should not change the input",
+			name:           "Swapping any two bits in an all zero vector should return the same vector",
 			pd:             bitstring.PackedBits{0x00},
 			i:              1,
 			j:              2,
@@ -165,54 +156,57 @@ func TestSwap(t *testing.T) {
 		t.Run(fmt.Sprintf("TestCase: %s input: %v index: %v", tc.name, tc.pd, index), func(t *testing.T) {
 			t.Parallel()
 
-			tc.pd.Swap(uint(tc.i), uint(tc.j))
-			require.Equal(t, tc.expectedOutput, tc.pd)
+			if tc.i > 7 || tc.j > 7 {
+				require.Panics(t, func() { tc.pd.Swap(uint(tc.i), uint(tc.j)) }, "error")
+			} else {
+				tc.pd.Swap(uint(tc.i), uint(tc.j))
+				require.Equal(t, tc.expectedOutput, tc.pd)
+			}
 		})
 	}
 }
 
-//func TestSet(t *testing.T) {
-//	t.Parallel()
-//
-//	testCases := []struct {
-//		name           string
-//		pd             bitstring.PackedBits
-//		index          int
-//		bit            byte
-//		expectedOutput bitstring.PackedBits
-//	}{
-//		{
-//			name:           "Set least significant bit in zeroed packedBits to one, to get 1",
-//			pd:             bitstring.PackedBits{0x00},
-//			index:          0,
-//			bit:            1,
-//			expectedOutput: bitstring.PackedBits{0x01},
-//		},
-//		{
-//			name:           "Setting a bit to one in fully-set Packedbits should result in the original Packedbits",
-//			pd:             bitstring.PackedBits{0xFF},
-//			index:          6,
-//			bit:            1,
-//			expectedOutput: bitstring.PackedBits{0xFF},
-//		},
-//		{
-//			name:           "Swapping a zero to one in a number that doesn't include all zero or all one",
-//			pd:             bitstring.PackedBits{0xAB},
-//			index:          2,
-//			bit:            1,
-//			expectedOutput: bitstring.PackedBits{0xAF},
-//		},
-//	}
-//	for index, tc := range testCases {
-//		t.Run(fmt.Sprintf("TestCase: %s input: %v index: %v", tc.name, tc.pd, index), func(t *testing.T) {
-//			t.Parallel()
-//
-//			tc.pd.Set(tc.index, tc.bit)
-//
-//			require.Equal(t, tc.expectedOutput, tc.pd)
-//		})
-//	}
-//}
+func TestGet(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name           string
+		pd             bitstring.PackedBits
+		index          uint
+		expectedOutput uint8
+	}{
+		{
+			name:           "Selecting an out of bounds index to make sure a Panic happens",
+			pd:             bitstring.PackedBits{0x12, 0x13},
+			index:          20,
+			expectedOutput: 0,
+		},
+		{
+			name:           "Getting the first index of {0x12} and to get 0 in return",
+			pd:             bitstring.PackedBits{0x12},
+			index:          0,
+			expectedOutput: 0,
+		},
+		{
+			name:           "Getting the 7th index of {0x12} and to get 1 in return",
+			pd:             bitstring.PackedBits{0x12},
+			index:          7,
+			expectedOutput: 0,
+		},
+	}
+	for index, tc := range testCases {
+		t.Run(fmt.Sprintf("TestCase: %s input: %v index: %v", tc.name, tc.pd, index), func(t *testing.T) {
+			t.Parallel()
+
+			if int(tc.index) > 7*len(tc.pd) {
+				require.Panics(t, func() { tc.pd.Get(tc.index) }, "Panic should have happened")
+			} else {
+				result := tc.pd.Get(tc.index)
+				require.Equal(t, tc.expectedOutput, result)
+			}
+		})
+	}
+}
 
 func TestUnSet(t *testing.T) {
 	t.Parallel()
@@ -229,20 +223,32 @@ func TestUnSet(t *testing.T) {
 			inputIndex:     1,
 			expectedOutput: bitstring.PackedBits{0x00},
 		},
-		// {
-		// 	name : "Changing the bit at index 2 in 0xFF should result in 0xFD",
-		//     pd: bitstring.PackedBits {0xFF},
-		//     inputIndex: 2,
-		//     expectedOutput: bitstring.PackedBits {0xFD},
-		// }, //it doesn't change the bit@index 2 to zero
+		{
+			name:           "Changing the index 0 of 0x01 should result in 0x00",
+			pd:             bitstring.PackedBits{0x01},
+			inputIndex:     0,
+			expectedOutput: bitstring.PackedBits{0x00},
+		},
+		{
+			name:       "Attempting to unset any index out of range should result in a panic",
+			pd:         bitstring.PackedBits{0x01},
+			inputIndex: 10,
+			// the function should panic
+		},
 	}
 	for index, tc := range testCases {
 		t.Run(fmt.Sprintf("TestCase: %s input: %v indexIndex: %d index: %d", tc.name, tc.pd, tc.inputIndex, index), func(t *testing.T) {
 			t.Parallel()
 
-			tc.pd.Clear(uint(tc.inputIndex))
+			if tc.inputIndex > len(tc.pd) {
 
-			require.Equal(t, tc.expectedOutput, tc.pd)
+				require.Panics(t, func() { tc.pd.Clear(uint(tc.inputIndex)) }, "Should casue a panic")
+
+			} else {
+				tc.pd.Clear(uint(tc.inputIndex))
+
+				require.Equal(t, tc.expectedOutput, tc.pd)
+			}
 		})
 	}
 }
@@ -280,7 +286,7 @@ func TestBitLen(t *testing.T) {
 			expectedOutput: 16,
 		},
 		{
-			name:           "an empty PackedBits should have a length of zero",
+			name:           "an empty PackedBits would have a length of zero",
 			pd:             bitstring.PackedBits{},
 			expectedOutput: 0,
 		},
@@ -302,29 +308,41 @@ func TestParse(t *testing.T) {
 
 	testCases := []struct {
 		name           string
-		v              string
+		vector         string
 		expectedOutput bitstring.PackedBits
+		expectedError  error
 	}{
 		{
 			name:           "an empty string could result in an error an nil return",
-			v:              "",
+			vector:         "",
 			expectedOutput: nil,
-		}, {
+			expectedError:  errs.NewArgument("Input string cannot be empty"),
+		},
+		{
+			name:           "an empty string could result in an error an nil return",
+			vector:         "1abcd01010",
+			expectedOutput: nil,
+			expectedError:  errs.NewArgument("Invalid character in the input"),
+		},
+		{
 			name:           "representation of hexadecimal of 0x55 in decimal",
-			v:              "01010101",
+			vector:         "01010101",
 			expectedOutput: bitstring.PackedBits{0x55},
-		}, {
+			expectedError:  nil,
+		},
+		{
 			name:           "representation of hexadecimal of 0xF0,0xF0 in decimal",
-			v:              "1111000011110000",
+			vector:         "1111000011110000",
 			expectedOutput: bitstring.PackedBits{0xF0, 0xF0},
+			expectedError:  nil,
 		},
 	}
 
 	for index, tc := range testCases {
-		t.Run(fmt.Sprintf("Testcase: %s index: %d", tc.v, index), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Testcase: %s index: %d", tc.vector, index), func(t *testing.T) {
 			t.Parallel()
 
-			result, _ := bitstring.Parse(tc.v)
+			result, _ := bitstring.Parse(tc.vector)
 
 			require.Equal(t, tc.expectedOutput, result)
 		})
