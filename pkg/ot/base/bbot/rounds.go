@@ -64,7 +64,7 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 	}
 	// step 2.1
 	for i := 0; i < r.Protocol.Xi; i++ {
-		c_i := r.Output.Choices.Get(i)
+		c_i := r.Output.Choices.Get(uint(i))
 		phi[i] = [2][]curves.Point{make([]curves.Point, r.Protocol.L), make([]curves.Point, r.Protocol.L)}
 		r.Output.ChosenMessages[i] = make(ot.Message, r.Protocol.L)
 		for l := 0; l < r.Protocol.L; l++ {
