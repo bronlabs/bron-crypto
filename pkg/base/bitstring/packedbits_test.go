@@ -28,18 +28,18 @@ func TestPackBits(t *testing.T) {
 	for index, tc := range testCases {
 		for _, vector := range tc.inputVectors {
 			outputVector, err := bitstring.Pack(vector)
-			if err != nil {
-				t.Run(fmt.Sprintf("Unhappy path, inputVector: %v indexL %d", vector, index), func(t *testing.T) {
-					t.Parallel()
-					require.Error(t, err)
-				})
-			} else {
+			if err == nil {
 				t.Run(fmt.Sprintf("Happy path, inputVector: %v index: %d", vector, index), func(t *testing.T) {
 					t.Parallel()
 					for i := 0; i < len(vector); i++ {
 						output := outputVector.Get(uint(i))
 						require.Equal(t, vector[i], output)
 					}
+				})
+			} else {
+				t.Run(fmt.Sprintf("Unhappy path, inputVector: %v indexL %d", vector, index), func(t *testing.T) {
+					t.Parallel()
+					require.Error(t, err)
 				})
 			}
 		}
@@ -125,6 +125,12 @@ func TestSwap(t *testing.T) {
 			i:              10,
 			j:              1,
 			expectedOutput: bitstring.PackedBits{0xFF},
+		},		
+		{
+			input:          bitstring.PackedBits{0xFF},
+			i:              10,
+			j:              -1,
+			expectedOutput: bitstring.PackedBits{0xFF},
 		},
 		{
 			input:          bitstring.PackedBits{0xFF, 0xFF},
@@ -147,21 +153,20 @@ func TestSwap(t *testing.T) {
 	}
 
 	for index, tc := range testCases {
-		if tc.i > 7 || tc.j > 7 {
-			t.Run(fmt.Sprintf("Unhappy Path input: %v index: %d", tc.input, index), func(t *testing.T) {
-				t.Parallel()
-				require.Panics(t, func() { tc.input.Swap(uint(tc.i), uint(tc.j)) }, "Panic")
-			})
-		} else {
+		if tc.i < tc.input.BitLen() && tc.j < tc.input.BitLen() && (tc.i >= 0 || tc.j >= 0){
 			t.Run(fmt.Sprintf("Happy Path input: %v index: %d", tc.input, index), func(t *testing.T) {
 				t.Parallel()
 				tc.input.Swap(uint(tc.i), uint(tc.j))
 				require.Equal(t, tc.expectedOutput, tc.input)
 			})
+		} else {
+			t.Run(fmt.Sprintf("Unhappy Path input: %v index: %d", tc.input, index), func(t *testing.T) {
+				t.Parallel()
+				require.Panics(t, func() { tc.input.Swap(uint(tc.i), uint(tc.j)) }, "Panic")
+			})
 		}
 	}
 }
-
 func TestGet(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
@@ -191,16 +196,16 @@ func TestGet(t *testing.T) {
 		},
 	}
 	for index, tc := range testCases {
-		if int(tc.index) > 7*len(tc.input) {
-			t.Run(fmt.Sprintf("Unhappy Path input: %v index: %v", tc.input, index), func(t *testing.T) {
-				t.Parallel()
-				require.Panics(t, func() { tc.input.Get(tc.index) }, "Panic should have happened")
-			})
-		} else {
+		if int(tc.index) <= tc.input.BitLen() {
 			t.Run(fmt.Sprintf("Happy Path input: %v index: %v", tc.input, index), func(t *testing.T) {
 				t.Parallel()
 				result := tc.input.Get(tc.index)
 				require.Equal(t, tc.expectedOutput, result)
+			})
+		} else {
+			t.Run(fmt.Sprintf("Unhappy Path input: %v index: %v", tc.input, index), func(t *testing.T) {
+				t.Parallel()
+				require.Panics(t, func() { tc.input.Get(tc.index) }, "Panic should have happened")
 			})
 		}
 	}
@@ -234,20 +239,18 @@ func TestUnSet(t *testing.T) {
 			// the function should panic
 		},
 	}
-
 	for index, tc := range testCases {
-
-		if tc.inputIndex > 7*len(tc.input) || tc.inputIndex < 0 {
-			t.Run(fmt.Sprintf("Unhappy Path input: %v index: %d", tc.input, index), func(t *testing.T) {
-				t.Parallel()
-				require.Panics(t, func() { tc.input.Clear(uint(tc.inputIndex)) }, "Should cause a panic")
-			})
-		} else {
+		if tc.inputIndex >= 0 && tc.inputIndex < tc.input.BitLen() {
 			t.Run(fmt.Sprintf("Happy Path input: %v index: %d", tc.input, index), func(t *testing.T) {
 				t.Parallel()
 				tc.input.Clear(uint(tc.inputIndex))
 
 				require.Equal(t, tc.expectedOutput, tc.input)
+			})
+		} else {
+			t.Run(fmt.Sprintf("Unhappy Path input: %v index: %d", tc.input, index), func(t *testing.T) {
+				t.Parallel()
+				require.Panics(t, func() { tc.input.Clear(uint(tc.inputIndex)) }, "Should cause a panic")
 			})
 		}
 	}
@@ -287,13 +290,10 @@ func TestBitLen(t *testing.T) {
 			expectedOutput: 0,
 		},
 	}
-
 	for index, tc := range testCases {
 		t.Run(fmt.Sprintf("Happy Path input: %v index: %d", tc.input, index), func(t *testing.T) {
 			t.Parallel()
-
 			result := tc.input.BitLen()
-
 			require.Equal(t, tc.expectedOutput, result)
 		})
 	}
@@ -328,20 +328,19 @@ func TestParse(t *testing.T) {
 		},
 	}
 	for index, tc := range testCases {
-		result, err := bitstring.Parse(tc.vector)
-
-		if err != nil {
-			t.Run(fmt.Sprintf("Unhappy Path input: %v index: %d", tc.vector, index), func(t *testing.T) {
-				t.Parallel()
-
-				require.Error(t, err, tc.errorMessage)
-			})
-		} else {
+		if tc.errorMessage == "" {
 			t.Run(fmt.Sprintf("Happy Path input: %v index: %d", tc.vector, index), func(t *testing.T) {
 				t.Parallel()
-
+				result, _ := bitstring.Parse(tc.vector)
 				require.Equal(t, tc.expectedOutput, result)
 			})
+		} else {
+			t.Run(fmt.Sprintf("Unhappy Path input: %v index: %d", tc.vector, index), func(t *testing.T) {
+				t.Parallel()
+				_, err := bitstring.Parse(tc.vector)
+				require.Error(t, err, tc.errorMessage)
+			})
+
 		}
 	}
 }
