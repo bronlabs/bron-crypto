@@ -31,7 +31,7 @@ func TestPackBits(t *testing.T) {
 			if err != nil {
 				t.Run(fmt.Sprintf("Unhappy path, inputVector: %v indexL %d", vector, index), func(t *testing.T) {
 					t.Parallel()
-					require.Error(t, err, fmt.Sprintf("Input vector contains non-binary elements"))
+					require.Error(t, err)
 				})
 			} else {
 				t.Run(fmt.Sprintf("Happy path, inputVector: %v index: %d", vector, index), func(t *testing.T) {
@@ -81,7 +81,6 @@ func TestString(t *testing.T) {
 			inputPackedBits: bitstring.PackedBits{0xFF, 0xFF},
 			expectedOutput:  "[1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]",
 		},
-		
 	}
 	for index, tc := range testCases {
 		t.Run(fmt.Sprintf("Happy path, input: %v, index: %d", tc.inputPackedBits, index), func(t *testing.T) {
@@ -117,30 +116,30 @@ func TestSelectBit(t *testing.T) {
 func TestSwap(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
-		input             bitstring.PackedBits
+		input          bitstring.PackedBits
 		i, j           int
 		expectedOutput bitstring.PackedBits
 	}{
 		{
-			input:             bitstring.PackedBits{0xFF},
+			input:          bitstring.PackedBits{0xFF},
 			i:              10,
 			j:              1,
 			expectedOutput: bitstring.PackedBits{0xFF},
 		},
 		{
-			input:             bitstring.PackedBits{0xFF, 0xFF},
+			input:          bitstring.PackedBits{0xFF, 0xFF},
 			i:              1,
 			j:              2,
 			expectedOutput: bitstring.PackedBits{0xFF, 0xFF},
-		},	
+		},
 		{
-			input:             bitstring.PackedBits{0x00, 0x00},
+			input:          bitstring.PackedBits{0x00, 0x00},
 			i:              1,
 			j:              2,
 			expectedOutput: bitstring.PackedBits{0x00, 0x00},
 		},
 		{
-			input:             bitstring.PackedBits{0xAb, 0x00},
+			input:          bitstring.PackedBits{0xAb, 0x00},
 			i:              0,
 			j:              0,
 			expectedOutput: bitstring.PackedBits{0xAb, 0x00},
@@ -166,27 +165,27 @@ func TestSwap(t *testing.T) {
 func TestGet(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
-		input             bitstring.PackedBits
+		input          bitstring.PackedBits
 		index          uint
 		expectedOutput uint8
 	}{
 		{
-			input:      bitstring.PackedBits{0x12, 0x13},
+			input:          bitstring.PackedBits{0x12, 0x13},
 			index:          20,
 			expectedOutput: 0,
-		},		
+		},
 		{
-			input:      bitstring.PackedBits{0x12},
+			input:          bitstring.PackedBits{0x12},
 			index:          0,
 			expectedOutput: 0,
 		},
 		{
-			input:      bitstring.PackedBits{0x12,0x00,0xFF},
+			input:          bitstring.PackedBits{0x12, 0x00, 0xFF},
 			index:          7,
 			expectedOutput: 0,
 		},
 		{
-			input:      bitstring.PackedBits{},
+			input:          bitstring.PackedBits{},
 			index:          7,
 			expectedOutput: 0,
 		},
@@ -210,27 +209,27 @@ func TestGet(t *testing.T) {
 func TestUnSet(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
-		input             bitstring.PackedBits
+		input          bitstring.PackedBits
 		inputIndex     int
 		expectedOutput bitstring.PackedBits
 	}{
 		{
-			input:             bitstring.PackedBits{0x00},
+			input:          bitstring.PackedBits{0x00},
 			inputIndex:     1,
 			expectedOutput: bitstring.PackedBits{0x00},
 		},
 		{
-			input:             bitstring.PackedBits{0x01},
+			input:          bitstring.PackedBits{0x01},
 			inputIndex:     0,
 			expectedOutput: bitstring.PackedBits{0x00},
 		},
 		{
-			input:         bitstring.PackedBits{0x01},
+			input:      bitstring.PackedBits{0x01},
 			inputIndex: 10,
 			// the function should panic
 		},
 		{
-			input:         bitstring.PackedBits{0x01},
+			input:      bitstring.PackedBits{0x01},
 			inputIndex: -1,
 			// the function should panic
 		},
@@ -272,19 +271,19 @@ func TestRepeatBits(t *testing.T) {
 func TestBitLen(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
-		input             bitstring.PackedBits
+		input          bitstring.PackedBits
 		expectedOutput int
 	}{
 		{
-			input:             bitstring.PackedBits{0x00},
+			input:          bitstring.PackedBits{0x00},
 			expectedOutput: 8,
-		}, 
+		},
 		{
-			input:             bitstring.PackedBits{0xFF, 0x00},
+			input:          bitstring.PackedBits{0xFF, 0x00},
 			expectedOutput: 16,
 		},
 		{
-			input:             bitstring.PackedBits{},
+			input:          bitstring.PackedBits{},
 			expectedOutput: 0,
 		},
 	}
