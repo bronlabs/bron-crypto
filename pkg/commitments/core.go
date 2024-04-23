@@ -53,14 +53,14 @@ func openInternal(commitment Commitment, witness Witness, messages ...[]byte) er
 func encode(messages ...[]byte) [][]byte {
 	encoded := make([][]byte, len(messages))
 	for i, m := range messages {
-		encoded[i] = slices.Concat(bitstring.ToBytesLE(i), bitstring.ToBytesLE(len(m)), m)
+		encoded[i] = slices.Concat(bitstring.ToBytes32LE(int32(i)), bitstring.ToBytes32LE(int32(len(m))), m)
 	}
 	return encoded
 }
 
 func encodeWithSessionId(sessionId []byte, messages ...[]byte) [][]byte {
 	encoded := make([][]byte, len(messages)+1)
-	encoded[0] = slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytesLE(len(sessionId)), sessionId)
+	encoded[0] = slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytes32LE(int32(len(sessionId))), sessionId)
 	for i, m := range encode(messages...) {
 		encoded[i+1] = m
 	}

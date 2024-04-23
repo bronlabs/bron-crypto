@@ -47,8 +47,8 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 		commitmentToInstanceKey, witness, err := commitments.Commit(
 			p.SessionId,
 			p.Prng,
-			bitstring.ToBytesLE(int(p.SharingId())),
-			bitstring.ToBytesLE(int(sharingId)),
+			bitstring.ToBytes32LE(int32(p.SharingId())),
+			bitstring.ToBytes32LE(int32(sharingId)),
 			state.BigR_i.ToAffineCompressed(),
 		)
 		if err != nil {
@@ -203,8 +203,8 @@ func DoRound3Prologue(p *Participant, protocol types.ThresholdProtocol, quorum d
 			p.SessionId,
 			state.ReceivedInstanceKeyCommitments[sharingId],
 			receivedP2PMessage.InstanceKeyWitness,
-			bitstring.ToBytesLE(int(sharingId)),
-			bitstring.ToBytesLE(int(p.SharingId())),
+			bitstring.ToBytes32LE(int32(sharingId)),
+			bitstring.ToBytes32LE(int32(p.SharingId())),
 			receivedBigR_i.ToAffineCompressed(),
 		); err != nil {
 			return errs.WrapIdentifiableAbort(err, participant.String(), "message could not be opened")

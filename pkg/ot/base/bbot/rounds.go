@@ -80,7 +80,7 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 			if err != nil {
 				return nil, errs.WrapFailed(err, "computing shared bytes for KA.key_2")
 			}
-			r_i_l, err := hashing.Hash(ot.HashFunction, sharedValue.Bytes(), []byte(PopfKeyLabel), bitstring.ToBytesLE(i*r.Protocol.L+l), []byte{c_i})
+			r_i_l, err := hashing.Hash(ot.HashFunction, sharedValue.Bytes(), []byte(PopfKeyLabel), bitstring.ToBytes32LE(int32(i*r.Protocol.L+l)), []byte{c_i})
 			if err != nil {
 				return nil, errs.WrapHashing(err, "computing r_i_j")
 			}
@@ -145,7 +145,7 @@ func (s *Sender) Round3(r2out *Round2P2P) (err error) {
 					return errs.WrapFailed(err, "computing shared bytes for KA.key_2")
 				}
 				sharedValueBytes := sharedValue.Bytes()
-				s_i_l, err := hashing.Hash(ot.HashFunction, sharedValueBytes, []byte(PopfKeyLabel), bitstring.ToBytesLE(i*s.Protocol.L+l), []byte{j})
+				s_i_l, err := hashing.Hash(ot.HashFunction, sharedValueBytes, []byte(PopfKeyLabel), bitstring.ToBytes32LE(int32(i*s.Protocol.L+l)), []byte{j})
 				if err != nil {
 					return errs.WrapHashing(err, "computing s_i_j")
 				}
