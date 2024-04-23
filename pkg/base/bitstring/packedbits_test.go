@@ -125,7 +125,7 @@ func TestSwap(t *testing.T) {
 			i:              10,
 			j:              1,
 			expectedOutput: bitstring.PackedBits{0xFF},
-		},		
+		},
 		{
 			input:          bitstring.PackedBits{0xFF},
 			i:              10,
@@ -153,7 +153,7 @@ func TestSwap(t *testing.T) {
 	}
 
 	for index, tc := range testCases {
-		if tc.i < tc.input.BitLen() && tc.j < tc.input.BitLen() && (tc.i >= 0 || tc.j >= 0){
+		if tc.i < tc.input.BitLen() && tc.j < tc.input.BitLen() && (tc.i >= 0 || tc.j >= 0) {
 			t.Run(fmt.Sprintf("Happy Path input: %v index: %d", tc.input, index), func(t *testing.T) {
 				t.Parallel()
 				tc.input.Swap(uint(tc.i), uint(tc.j))
