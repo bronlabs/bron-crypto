@@ -14,7 +14,3 @@ conf:
 build:
   - docker-image: { no-push: true }
   - sh: docker run --rm {{ conf.docker.image }} make {{ conf.test-suite }}
-  
-  # Mend CLI Scan and JSON2HTML Scan
-  - sh: docker run --pull=always --rm -e MEND_URL=https://saas-eu.mend.io -e MEND_EMAIL=gocd_mend_user@copper.co -e MEND_USER_KEY=${MEND_KEY} -v "${PWD}":/home/MEND/src docker.boople.co/infra/mend-go:latest sh -c '/home/MEND/mend dep -d /home/MEND/src/ {{ conf.mend.args }} -u' || true
-  - sh: docker run --pull=always --rm -e MEND_URL=https://saas-eu.mend.io -e MEND_EMAIL=gocd_mend_user@copper.co -e MEND_USER_KEY=${MEND_KEY} -v "${PWD}":/home/MEND/src docker.boople.co/infra/mend-go:latest sh -c "/home/MEND/mend dep -d /home/MEND/src --format json >> ./src/mend_input.json && node ./mend_to_html.js" || true
