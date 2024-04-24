@@ -317,13 +317,18 @@ func TestParse(t *testing.T) {
 			errorMessage:   "Input string cannot be empty",
 		},
 		{
-			vector:         "01010101",
+			vector:         "10101010",
 			expectedOutput: bitstring.PackedBits{0x55},
 			errorMessage:   "",
 		},
 		{
-			vector:         "1111000011110000",
+			vector:         "0000111100001111",
 			expectedOutput: bitstring.PackedBits{0xF0, 0xF0},
+			errorMessage:   "",
+		},
+		{
+			vector:         "1111000011110000",
+			expectedOutput: bitstring.PackedBits{0xf, 0xF},
 			errorMessage:   "",
 		},
 	}
