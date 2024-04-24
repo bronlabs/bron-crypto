@@ -13,31 +13,31 @@ import (
 func TestPackBits(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
-		inputVectors []uint8
+		inputVectors   []uint8
 		expectedErrors error
 	}{
 		{
-			inputVectors: []uint8{0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0},
+			inputVectors:   []uint8{0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0},
 			expectedErrors: nil,
 		},
 		{
-			inputVectors: []uint8{0, 0, 0, 0, 0, 0, 0, 0},
+			inputVectors:   []uint8{0, 0, 0, 0, 0, 0, 0, 0},
 			expectedErrors: nil,
 		},
 		{
-			inputVectors: []uint8{0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0},
+			inputVectors:   []uint8{0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0},
 			expectedErrors: nil,
 		},
 		{
-			inputVectors: []uint8{},
+			inputVectors:   []uint8{},
 			expectedErrors: nil,
 		},
 		{
-			inputVectors: []uint8{0xAB, 0xCD},
+			inputVectors:   []uint8{0xAB, 0xCD},
 			expectedErrors: errs.NewArgument("Input vector contains non-binary elements"),
 		},
 		{
-			inputVectors: []uint8{0x00, 0x02, 0x03, 0x04},
+			inputVectors:   []uint8{0x00, 0x02, 0x03, 0x04},
 			expectedErrors: errs.NewArgument("Input vector contains non-binary elements"),
 		},
 	}
@@ -85,7 +85,7 @@ func TestString(t *testing.T) {
 			expectedOutput:  "[]",
 		},
 		{
-			inputPackedBits: bitstring.PackedBits{0b00000000,0b00001111},
+			inputPackedBits: bitstring.PackedBits{0b00000000, 0b00001111},
 			expectedOutput:  "[0 0 0 0 0 0 0 0 1 1 1 1 0 0 0 0]",
 		},
 		{
@@ -134,14 +134,14 @@ func TestSwap(t *testing.T) {
 		input          bitstring.PackedBits
 		i, j           int
 		expectedOutput bitstring.PackedBits
-		expectedErrors  error
+		expectedErrors error
 	}{
 		{
-			input: 			bitstring.PackedBits{0b11111111},
+			input:          bitstring.PackedBits{0b11111111},
 			i:              10,
 			j:              1,
 			expectedOutput: nil,
-			expectedErrors: errs.NewArgument("Panic"),			
+			expectedErrors: errs.NewArgument("Panic"),
 		},
 		{
 			input:          bitstring.PackedBits{0b11111111},
@@ -194,35 +194,31 @@ func TestGet(t *testing.T) {
 		input          bitstring.PackedBits
 		index          uint
 		expectedOutput uint8
-		expectedErrors  error
-
+		expectedErrors error
 	}{
 		{
 			input:          bitstring.PackedBits{0b11100001, 0b11100100},
 			index:          20,
 			expectedOutput: 0,
-			expectedErrors:  errs.NewArgument("Panic") ,
-
+			expectedErrors: errs.NewArgument("Panic"),
 		},
 		{
 			input:          bitstring.PackedBits{0b11100001, 0b11100100},
 			index:          0,
 			expectedOutput: 1,
-			expectedErrors:  nil ,
-
+			expectedErrors: nil,
 		},
 		{
 			input:          bitstring.PackedBits{0b11100001, 0b11100100},
 			index:          7,
 			expectedOutput: 1,
-			expectedErrors: nil ,
-
+			expectedErrors: nil,
 		},
 		{
 			input:          bitstring.PackedBits{},
 			index:          7,
 			expectedOutput: 0,
-			expectedErrors: errs.NewArgument("Panic") ,
+			expectedErrors: errs.NewArgument("Panic"),
 		},
 	}
 	for index, tc := range testCases {
@@ -247,7 +243,7 @@ func TestUnSet(t *testing.T) {
 		input          bitstring.PackedBits
 		inputIndex     int
 		expectedOutput bitstring.PackedBits
-		expectedErrors  error
+		expectedErrors error
 	}{
 		{
 			input:          bitstring.PackedBits{0b00000000},
@@ -262,14 +258,14 @@ func TestUnSet(t *testing.T) {
 			expectedErrors: nil,
 		},
 		{
-			input:      bitstring.PackedBits{0b10000001},
-			inputIndex: 10,
+			input:          bitstring.PackedBits{0b10000001},
+			inputIndex:     10,
 			expectedOutput: nil,
 			expectedErrors: errs.NewArgument("Panic"),
 		},
 		{
-			input:      bitstring.PackedBits{0x01},
-			inputIndex: -1,
+			input:          bitstring.PackedBits{0x01},
+			inputIndex:     -1,
 			expectedOutput: nil,
 			expectedErrors: errs.NewArgument("Panic"),
 		},
@@ -378,7 +374,7 @@ func TestParse(t *testing.T) {
 			t.Run(fmt.Sprintf("Unhappy Path input: %v index: %d", tc.vector, index), func(t *testing.T) {
 				t.Parallel()
 				_, err := bitstring.Parse(tc.vector)
-				require.Error(t, err, tc.errorMessage)
+				require.ErrorIs(t, err, tc.errorMessage)
 			})
 
 		}
