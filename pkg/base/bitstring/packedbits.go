@@ -106,10 +106,9 @@ func Parse(v string) (PackedBits, error) {
 		bitPos := uint(i % 8)
 
 		if char == '1' {
-			packedBits[byteIndex] |= 1 << (byte(bitPos))
+			packedBits[byteIndex] |= 1 << (7 - bitPos)
 		}
 	}
 
 	return packedBits, nil
 }
-
