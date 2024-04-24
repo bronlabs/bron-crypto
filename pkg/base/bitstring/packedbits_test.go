@@ -7,41 +7,56 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
 func TestPackBits(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
-		inputVectors [][]uint8
+		inputVectors []uint8
+		expectedErrors error
 	}{
 		{
-			inputVectors: [][]uint8{
-				{0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0},
-				{0, 0, 0, 0, 0, 0, 0, 0},
-				{0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0},
-				{},
-				{0xAB, 0xCD},
-				{0x00, 0x02, 0x03, 0x04},
-			},
+			inputVectors: []uint8{0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0},
+			expectedErrors: nil,
+		},
+		{
+			inputVectors: []uint8{0, 0, 0, 0, 0, 0, 0, 0},
+			expectedErrors: nil,
+		},
+		{
+			inputVectors: []uint8{0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0},
+			expectedErrors: nil,
+		},
+		{
+			inputVectors: []uint8{},
+			expectedErrors: nil,
+		},
+		{
+			inputVectors: []uint8{0xAB, 0xCD},
+			expectedErrors: errs.NewArgument("Input vector contains non-binary elements"),
+		},
+		{
+			inputVectors: []uint8{0x00, 0x02, 0x03, 0x04},
+			expectedErrors: errs.NewArgument("Input vector contains non-binary elements"),
 		},
 	}
 	for index, tc := range testCases {
-		for _, vector := range tc.inputVectors {
-			outputVector, err := bitstring.Pack(vector)
-			if err == nil {
-				t.Run(fmt.Sprintf("Happy path, inputVector: %v index: %d", vector, index), func(t *testing.T) {
-					t.Parallel()
-					for i := 0; i < len(vector); i++ {
-						output := outputVector.Get(uint(i))
-						require.Equal(t, vector[i], output)
-					}
-				})
-			} else {
-				t.Run(fmt.Sprintf("Unhappy path, inputVector: %v indexL %d", vector, index), func(t *testing.T) {
-					t.Parallel()
-					require.Error(t, err)
-				})
-			}
+		if tc.expectedErrors == nil {
+			t.Run(fmt.Sprintf("Happy path, input: %v index: %d", tc.inputVectors, index), func(t *testing.T) {
+				t.Parallel()
+				outputVector, _ := bitstring.Pack(tc.inputVectors)
+				for i := 0; i < len(tc.inputVectors); i++ {
+					output := outputVector.Get(uint(i))
+					require.Equal(t, tc.inputVectors[i], output)
+				}
+			})
+		} else {
+			t.Run(fmt.Sprintf("Unhappy path, input: %v indexL %d", tc.inputVectors, index), func(t *testing.T) {
+				t.Parallel()
+				_, err := bitstring.Pack(tc.inputVectors)
+				require.Error(t, err)
+			})
 		}
 	}
 }
@@ -70,15 +85,15 @@ func TestString(t *testing.T) {
 			expectedOutput:  "[]",
 		},
 		{
-			inputPackedBits: bitstring.PackedBits{0x00, 0x0F},
+			inputPackedBits: bitstring.PackedBits{0b00000000,0b00001111},
 			expectedOutput:  "[0 0 0 0 0 0 0 0 1 1 1 1 0 0 0 0]",
 		},
 		{
-			inputPackedBits: bitstring.PackedBits{0x00, 0x00},
+			inputPackedBits: bitstring.PackedBits{0b00000000, 0b00000000},
 			expectedOutput:  "[0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]",
 		},
 		{
-			inputPackedBits: bitstring.PackedBits{0xFF, 0xFF},
+			inputPackedBits: bitstring.PackedBits{0b11111111, 0b11111111},
 			expectedOutput:  "[1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]",
 		},
 	}
@@ -119,41 +134,47 @@ func TestSwap(t *testing.T) {
 		input          bitstring.PackedBits
 		i, j           int
 		expectedOutput bitstring.PackedBits
+		expectedErrors  error
 	}{
 		{
-			input:          bitstring.PackedBits{0xFF},
+			input: 			bitstring.PackedBits{0b11111111},
 			i:              10,
 			j:              1,
-			expectedOutput: bitstring.PackedBits{0xFF},
+			expectedOutput: nil,
+			expectedErrors: errs.NewArgument("Panic"),			
 		},
 		{
-			input:          bitstring.PackedBits{0xFF},
+			input:          bitstring.PackedBits{0b11111111},
 			i:              10,
 			j:              -1,
-			expectedOutput: bitstring.PackedBits{0xFF},
+			expectedOutput: nil,
+			expectedErrors: errs.NewArgument("Panic"),
 		},
 		{
-			input:          bitstring.PackedBits{0xFF, 0xFF},
+			input:          bitstring.PackedBits{0b00000000, 0b00000000},
 			i:              1,
 			j:              2,
-			expectedOutput: bitstring.PackedBits{0xFF, 0xFF},
+			expectedOutput: bitstring.PackedBits{0b00000000, 0b00000000},
+			expectedErrors: nil,
 		},
 		{
-			input:          bitstring.PackedBits{0x00, 0x00},
+			input:          bitstring.PackedBits{0b0000101, 0b0001010},
 			i:              1,
 			j:              2,
-			expectedOutput: bitstring.PackedBits{0x00, 0x00},
+			expectedOutput: bitstring.PackedBits{0b0000011, 0b0001010},
+			expectedErrors: nil,
 		},
 		{
-			input:          bitstring.PackedBits{0xAb, 0x00},
+			input:          bitstring.PackedBits{0b11100001, 0b11100100},
 			i:              0,
 			j:              0,
-			expectedOutput: bitstring.PackedBits{0xAb, 0x00},
+			expectedOutput: bitstring.PackedBits{0b11100001, 0b11100100},
+			expectedErrors: nil,
 		},
 	}
 
 	for index, tc := range testCases {
-		if tc.i < tc.input.BitLen() && tc.j < tc.input.BitLen() && (tc.i >= 0 || tc.j >= 0) {
+		if tc.expectedErrors == nil {
 			t.Run(fmt.Sprintf("Happy Path input: %v index: %d", tc.input, index), func(t *testing.T) {
 				t.Parallel()
 				tc.input.Swap(uint(tc.i), uint(tc.j))
@@ -173,30 +194,39 @@ func TestGet(t *testing.T) {
 		input          bitstring.PackedBits
 		index          uint
 		expectedOutput uint8
+		expectedErrors  error
+
 	}{
 		{
-			input:          bitstring.PackedBits{0x12, 0x13},
+			input:          bitstring.PackedBits{0b11100001, 0b11100100},
 			index:          20,
 			expectedOutput: 0,
+			expectedErrors:  errs.NewArgument("Panic") ,
+
 		},
 		{
-			input:          bitstring.PackedBits{0x12},
+			input:          bitstring.PackedBits{0b11100001, 0b11100100},
 			index:          0,
-			expectedOutput: 0,
+			expectedOutput: 1,
+			expectedErrors:  nil ,
+
 		},
 		{
-			input:          bitstring.PackedBits{0x12, 0x00, 0xFF},
+			input:          bitstring.PackedBits{0b11100001, 0b11100100},
 			index:          7,
-			expectedOutput: 0,
+			expectedOutput: 1,
+			expectedErrors: nil ,
+
 		},
 		{
 			input:          bitstring.PackedBits{},
 			index:          7,
 			expectedOutput: 0,
+			expectedErrors: errs.NewArgument("Panic") ,
 		},
 	}
 	for index, tc := range testCases {
-		if int(tc.index) <= tc.input.BitLen() {
+		if tc.expectedErrors == nil {
 			t.Run(fmt.Sprintf("Happy Path input: %v index: %v", tc.input, index), func(t *testing.T) {
 				t.Parallel()
 				result := tc.input.Get(tc.index)
@@ -217,30 +247,35 @@ func TestUnSet(t *testing.T) {
 		input          bitstring.PackedBits
 		inputIndex     int
 		expectedOutput bitstring.PackedBits
+		expectedErrors  error
 	}{
 		{
-			input:          bitstring.PackedBits{0x00},
+			input:          bitstring.PackedBits{0b00000000},
 			inputIndex:     1,
-			expectedOutput: bitstring.PackedBits{0x00},
+			expectedOutput: bitstring.PackedBits{0b00000000},
+			expectedErrors: nil,
 		},
 		{
-			input:          bitstring.PackedBits{0x01},
+			input:          bitstring.PackedBits{0b10000001},
 			inputIndex:     0,
-			expectedOutput: bitstring.PackedBits{0x00},
+			expectedOutput: bitstring.PackedBits{0b10000000},
+			expectedErrors: nil,
 		},
 		{
-			input:      bitstring.PackedBits{0x01},
+			input:      bitstring.PackedBits{0b10000001},
 			inputIndex: 10,
-			// the function should panic
+			expectedOutput: nil,
+			expectedErrors: errs.NewArgument("Panic"),
 		},
 		{
 			input:      bitstring.PackedBits{0x01},
 			inputIndex: -1,
-			// the function should panic
+			expectedOutput: nil,
+			expectedErrors: errs.NewArgument("Panic"),
 		},
 	}
 	for index, tc := range testCases {
-		if tc.inputIndex >= 0 && tc.inputIndex < tc.input.BitLen() {
+		if tc.expectedErrors == nil {
 			t.Run(fmt.Sprintf("Happy Path input: %v index: %d", tc.input, index), func(t *testing.T) {
 				t.Parallel()
 				tc.input.Clear(uint(tc.inputIndex))
@@ -258,7 +293,7 @@ func TestUnSet(t *testing.T) {
 
 func TestRepeatBits(t *testing.T) {
 	t.Parallel()
-	inputVector := bitstring.PackedBits{0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC}
+	inputVector := bitstring.PackedBits{0b00000000, 0b10101010, 0b11111111}
 	for nRepetitions := 1; nRepetitions < 8; nRepetitions++ {
 		outputVector := inputVector.Repeat(nRepetitions)
 		for i := 0; i < len(inputVector)*8; i++ {
@@ -278,11 +313,11 @@ func TestBitLen(t *testing.T) {
 		expectedOutput int
 	}{
 		{
-			input:          bitstring.PackedBits{0x00},
+			input:          bitstring.PackedBits{0b00000000},
 			expectedOutput: 8,
 		},
 		{
-			input:          bitstring.PackedBits{0xFF, 0x00},
+			input:          bitstring.PackedBits{0b11111111, 0b00000000},
 			expectedOutput: 16,
 		},
 		{
@@ -304,36 +339,36 @@ func TestParse(t *testing.T) {
 	testCases := []struct {
 		vector         string
 		expectedOutput bitstring.PackedBits
-		errorMessage   string
+		errorMessage   error
 	}{
 		{
 			vector:         "",
 			expectedOutput: nil,
-			errorMessage:   "Input string cannot be empty",
+			errorMessage:   errs.NewArgument("Input string cannot be empty"),
 		},
 		{
 			vector:         "1abcd01010",
 			expectedOutput: nil,
-			errorMessage:   "Input string cannot be empty",
+			errorMessage:   errs.NewArgument("Input string cannot be empty"),
 		},
 		{
 			vector:         "10101010",
-			expectedOutput: bitstring.PackedBits{0x55},
-			errorMessage:   "",
+			expectedOutput: bitstring.PackedBits{0b1010101},
+			errorMessage:   nil,
 		},
 		{
 			vector:         "0000111100001111",
-			expectedOutput: bitstring.PackedBits{0xF0, 0xF0},
-			errorMessage:   "",
+			expectedOutput: bitstring.PackedBits{0b11110000, 0b11110000},
+			errorMessage:   nil,
 		},
 		{
 			vector:         "1111000011110000",
-			expectedOutput: bitstring.PackedBits{0xf, 0xF},
-			errorMessage:   "",
+			expectedOutput: bitstring.PackedBits{0b00001111, 0b00001111},
+			errorMessage:   nil,
 		},
 	}
 	for index, tc := range testCases {
-		if tc.errorMessage == "" {
+		if tc.errorMessage == nil {
 			t.Run(fmt.Sprintf("Happy Path input: %v index: %d", tc.vector, index), func(t *testing.T) {
 				t.Parallel()
 				result, _ := bitstring.Parse(tc.vector)
