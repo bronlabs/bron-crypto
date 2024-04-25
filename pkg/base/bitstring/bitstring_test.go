@@ -9,8 +9,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 )
 
-func TestReverseBytes1(t *testing.T) {
-
+func TestReverseBytes(t *testing.T) {
+	t.Parallel()
 	t.Run("ReverseBytes is an involution", func(t *testing.T) {
 		t.Parallel()
 
@@ -165,19 +165,32 @@ func TestTransposePackedBits(t *testing.T) {
 	t.Run("Transpose of identity matrix is identity matrix", func(t *testing.T) {
 		t.Parallel()
 
-		inputMatrix := [][]uint8{
-			bitstring.PackedBits([]uint8{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}),
-			bitstring.PackedBits([]uint8{0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}),
-			bitstring.PackedBits([]uint8{0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00}),
-			bitstring.PackedBits([]uint8{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}),
-			bitstring.PackedBits([]uint8{0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00}),
-			bitstring.PackedBits([]uint8{0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00}),
-			bitstring.PackedBits([]uint8{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00}),
-			bitstring.PackedBits([]uint8{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}),
+		inputMatrix := [][]byte{
+			bitstring.PackedBits([]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}),
+			bitstring.PackedBits([]byte{0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}),
+			bitstring.PackedBits([]byte{0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00}),
+			bitstring.PackedBits([]byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00}),
+			bitstring.PackedBits([]byte{0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00}),
+			bitstring.PackedBits([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00}),
+			bitstring.PackedBits([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00}),
+			bitstring.PackedBits([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}),
 		}
-		result, _ := bitstring.TransposePackedBits(inputMatrix)
 
-		require.Equal(t, inputMatrix, result)
+		transposedMatrix, err := bitstring.TransposePackedBits(inputMatrix)
+		require.NoError(t, err)
+		for i := 0; i < len(inputMatrix); i++ {
+			for j := 0; j < len(transposedMatrix); j++ {
+				// Check that the bit at position i in the jth row of the input matrix.
+				// is equal to the bit at position j in the ith row of the transposed matrix.
+				// using bitstring.SelectBit (careful! it takes a byte array as input)
+				output1 := bitstring.PackedBits(inputMatrix[i]).Get(uint(j))
+				output2 := bitstring.PackedBits(transposedMatrix[j]).Get(uint(i))
+
+				require.Equal(t,
+					output1,
+					output2)
+			}
+		}
 	})
 	t.Run("Number of rows should be a multiple of 8", func(t *testing.T) {
 		t.Parallel()
