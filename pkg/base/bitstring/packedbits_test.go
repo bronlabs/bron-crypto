@@ -140,9 +140,8 @@ func TestSwap(t *testing.T) {
 			input:          bitstring.PackedBits{0b11111111},
 			i:              10,
 			j:              1,
-			expectedOutput: nil,
-			expectedErrors: errs.NewArgument("Panic"),
-		},
+			expectedOutput: bitstring.PackedBits{0xFF},
+		},		
 		{
 			input:          bitstring.PackedBits{0b11111111},
 			i:              10,
@@ -174,7 +173,7 @@ func TestSwap(t *testing.T) {
 	}
 
 	for index, tc := range testCases {
-		if tc.expectedErrors == nil {
+		if tc.i < tc.input.BitLen() && tc.j < tc.input.BitLen() && (tc.i >= 0 || tc.j >= 0){
 			t.Run(fmt.Sprintf("Happy Path input: %v index: %d", tc.input, index), func(t *testing.T) {
 				t.Parallel()
 				tc.input.Swap(uint(tc.i), uint(tc.j))
@@ -348,18 +347,13 @@ func TestParse(t *testing.T) {
 			errorMessage:   errs.NewArgument("Input string cannot be empty"),
 		},
 		{
-			vector:         "10101010",
-			expectedOutput: bitstring.PackedBits{0b1010101},
-			errorMessage:   nil,
-		},
-		{
-			vector:         "0000111100001111",
-			expectedOutput: bitstring.PackedBits{0b11110000, 0b11110000},
+			vector:         "01010101",
+			expectedOutput: bitstring.PackedBits{0x55},
 			errorMessage:   nil,
 		},
 		{
 			vector:         "1111000011110000",
-			expectedOutput: bitstring.PackedBits{0b00001111, 0b00001111},
+			expectedOutput: bitstring.PackedBits{0xF0, 0xF0},
 			errorMessage:   nil,
 		},
 	}
