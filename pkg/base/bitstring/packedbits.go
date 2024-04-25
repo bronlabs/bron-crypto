@@ -90,6 +90,48 @@ func (pb PackedBits) BitLen() int {
 	return len(pb) * 8
 }
 
+// TransposePackedBits transposes a 2D matrix of "packed" bits (represented in
+// groups of 8 bits per bytes), yielding a new 2D matrix of "packed" bits. If we
+// were to unpack the bits, inputMatrixBits[i][j] == outputMatrixBits[j][i].
+func TransposePackedBits(inputMatrix [][]byte) ([][]byte, error) {
+	// Read input sizes and allocate output
+	nRowsInput := len(inputMatrix)
+	if nRowsInput%8 != 0 || nRowsInput == 0 {
+		return nil, errs.NewArgument("input matrix must have a number of rows divisible by 8")
+	}
+	// check if array is a matrix
+	for i := 0; i < nRowsInput; i++ {
+		if len(inputMatrix[i]) != len(inputMatrix[0]) {
+			return nil, errs.NewArgument("input matrix must be a 2D matrix")
+		}
+	}
+
+	nColsInputBytes := len(inputMatrix[0])
+	nRowsOutput := nColsInputBytes << 3
+	nColsOutputBytes := nRowsInput >> 3
+	transposedMatrix := make([][]byte, nRowsOutput)
+	for i := 0; i < nRowsOutput; i++ {
+		transposedMatrix[i] = make([]byte, nColsOutputBytes)
+	}
+	// transpose the matrix bits, one bit at a time
+	for rowByte := 0; rowByte < nColsOutputBytes; rowByte++ {
+		for rowBitWithinByte := 0; rowBitWithinByte < 8; rowBitWithinByte++ {
+			for columnByte := 0; columnByte < nColsInputBytes; columnByte++ {
+				for columnBitWithinByte := 0; columnBitWithinByte < 8; columnBitWithinByte++ {
+					rowBit := rowByte<<3 + rowBitWithinByte
+					columnBit := columnByte<<3 + columnBitWithinByte
+					// Grab the corresponding  bit at input[rowBit][columnBit]
+					bitAtInputRowBitColumnBit := inputMatrix[rowBit][columnByte] >> columnBitWithinByte & 0x01
+					// Place the bit at output[columnBit][rowBit]
+					shiftedBit := bitAtInputRowBitColumnBit << rowBitWithinByte
+					transposedMatrix[columnBit][rowByte] |= shiftedBit
+				}
+			}
+		}
+	}
+	return transposedMatrix, nil
+}
+
 func Parse(v string) (PackedBits, error) {
 	if v == "" {
 		return nil, errs.NewArgument("Input string cannot be empty")
