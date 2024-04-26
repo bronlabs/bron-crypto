@@ -57,7 +57,7 @@ func ValidateOT(
 			return errs.NewLength("ROT output message length mismatch (should be %d, is: %d, %d, %d)",
 				L, len(receiverChosenMessages[i]), len(senderMessages[i][0]), len(senderMessages[i][1]))
 		}
-		choice := receiverChoiceBits.Select(i)
+		choice := receiverChoiceBits.Get(uint(i))
 		if !bytes.Equal(receiverChosenMessages[i][0][:], senderMessages[i][choice][0][:]) {
 			return errs.NewVerification("ROT output mismatch for index %d", i)
 		}
@@ -113,7 +113,7 @@ func ValidateCOT(
 			return errs.NewLength("COTe input/output message %d length mismatch (should be %d, is: %d, %d, %d)",
 				j, L, len(receiverOutput[j]), len(senderOutput[j]), len(senderInput[j]))
 		}
-		x := receiverChoices.Select(j)
+		x := receiverChoices.Get(uint(j))
 		for l := 0; l < L; l++ {
 			// Check each correlation z_A = x • α - z_B
 			z_A := senderOutput[j][l]

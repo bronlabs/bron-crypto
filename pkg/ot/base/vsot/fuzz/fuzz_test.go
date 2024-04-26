@@ -88,7 +88,7 @@ func Fuzz_Test(f *testing.F) {
 		require.NoError(t, err)
 
 		for i := 0; i < int(batchSize); i++ {
-			choice := r.Choices.Select(i)
+			choice := r.Choices.Get(uint(i))
 			require.Equal(t, messages[i][choice], decrypted[i])
 		}
 	})
