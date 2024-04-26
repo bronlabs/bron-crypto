@@ -20,47 +20,49 @@ type PedersenCommitmentScheme struct{}
 
 // Commit generates a commitment and a witness from a message
 func (pcs *PedersenCommitmentScheme) Commit(sessionId []byte, message Message) (Commitment, Witness, error) {
+	curve := message.ScalarField().Curve()
 	// Generate a random scalar for the witness
-	witness := message.ScalarField().Random(crand.Reader)
+	wit, err := message.ScalarField().Random(crand.Reader)
 	if err != nil {
-		return Commitment{}, nil, err
+		return nil, nil, err
 	}
 	// Generate the 1st operand of the commitment
-	mG := message.Curve().Generator().Mul(message)
+	mG := curve.Generator().Mul(message)
 	// Generate a random point from the sessionId and 'NothingUpMySleeve'
-	HMessage, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, []byte(NothingUpMySleeve))
+	HMessage, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, []byte("COPPER_KRYPTON_JF_SOMETHING_UP_MY_SLEEVE-"))
 	if err != nil {
-		return nil, errs.WrapHashing(err, "could not produce dlog of H")
+		return nil, nil, errs.WrapHashing(err, "could not produce dlog of H")
 	}
-	H, err := protocol.Curve().Hash(HMessage)
+	H, err := curve.Hash(HMessage)
 	if err != nil {
-		return nil, errs.WrapHashing(err, "failed to hash to curve for H")
+		return nil, nil, errs.WrapHashing(err, "failed to hash to curve for H")
 	}
 	// Generate the 2nd operand of the commitment
-	rH := H.Mul(witness)
-	commitment := rD.Add(mG)
-	return commitment, witness, nil
+	rH := H.Mul(wit)
+	com := rH.Add(mG)
+	return com, wit, nil
 }
 
 // Open verifies a commitment against a message and a witness
 func (pcs *PedersenCommitmentScheme) Open(sessionId []byte, commitment Commitment, witness Witness, message Message) error {
+	curve := message.ScalarField().Curve()
 	// Reconstructs mG
-	mG := message.Curve().Generator().Mul(message)
+	mG := curve.Generator().Mul(message)
 	// Reconstructs rH
-	HMessage, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, []byte(NothingUpMySleeve))
+	HMessage, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, []byte("COPPER_KRYPTON_JF_SOMETHING_UP_MY_SLEEVE-"))
 	if err != nil {
-		return nil, errs.WrapHashing(err, "could not produce dlog of H")
+		return errs.WrapHashing(err, "could not produce dlog of H")
 	}
-	H, err := protocol.Curve().Hash(HMessage)
+	H, err := curve.Hash(HMessage)
 	if err != nil {
-		return nil, errs.WrapHashing(err, "failed to hash to curve for H")
+		return errs.WrapHashing(err, "failed to hash to curve for H")
 	}
 	rH := H.Mul(witness)
 	// Reconstructs the corresponding commitment
-	expectedCommitment := rD.Add(mG)
+	expectedCommitment := rH.Add(mG)
 	// Check whether it matches the commitment given as input
-	if commitment != expectedCommitment {
-		return fmt.Errorf("Opening failed")
+	if !commitment.Equal(expectedCommitment) {
+		return fmt.Errorf("opening failed")
 	}
 	return nil
 }

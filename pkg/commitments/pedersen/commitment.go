@@ -1,4 +1,4 @@
-package pedersen
+package commitment
 
 type (
 	Name       string
