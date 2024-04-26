@@ -72,11 +72,26 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 		if !exists {
 			return nil, errs.NewMissing("missing ot config for participant %s", participant.String())
 		}
-		alice, err := mult.NewAlice(myAuthKey, otProtocol, seedOtResults.AsReceiver, boundSessionId, prng, seededPrng, transcript.Clone())
+		multTranscript := transcript.Clone()
+		identities := types.NewIdentitySpace(otProtocol.Participants())
+		first, exists := identities.Get(1)
+		if !exists {
+			return nil, errs.NewMissing("could not find the first multiplier's identity")
+		}
+		second, exists := identities.Get(2)
+		if !exists {
+			return nil, errs.NewMissing("could not find the second multiplier's identity")
+		}
+		multTranscript.AppendMessages("participants", first.PublicKey().ToAffineCompressed(), second.PublicKey().ToAffineCompressed())
+		multSessionId, err := multTranscript.Bind(boundSessionId, dst)
+		if err != nil {
+			return nil, errs.WrapHashing(err, "could not produce binded session id for mult")
+		}
+		alice, err := mult.NewAlice(myAuthKey, otProtocol, seedOtResults.AsReceiver, multSessionId, prng, seededPrng, multTranscript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "alice construction for participant %s", participant.String())
 		}
-		bob, err := mult.NewBob(myAuthKey, otProtocol, seedOtResults.AsSender, boundSessionId, prng, seededPrng, transcript.Clone())
+		bob, err := mult.NewBob(myAuthKey, otProtocol, seedOtResults.AsSender, multSessionId, prng, seededPrng, multTranscript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bob construction for participant %s", participant.String())
 		}

@@ -9,7 +9,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 const (
@@ -35,9 +34,9 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u netw
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't construct feldman dealer")
 	}
-	transcript := hagrid.NewTranscript(DkgLabel, nil)
-	transcript.AppendMessages(SharingIdLabel, bitstring.ToBytes32LE(int32(p.SharingId())))
-	prover, err := p.State.NiCompiler.NewProver(p.SessionId, transcript)
+	proverTranscript := p.Transcript.Clone()
+	proverTranscript.AppendMessages(SharingIdLabel, bitstring.ToBytes32LE(int32(p.SharingId())))
+	prover, err := p.State.NiCompiler.NewProver(p.SessionId, proverTranscript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create commitment prover")
 	}
@@ -119,9 +118,9 @@ func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[types.T
 		}
 		// step 2.1: Feldman.Verify(Ci)
 		// step 2.2: π_i <- NIZKPoK.Prove(s)  ∀s∈{Ci, x_ji}
-		transcript := hagrid.NewTranscript(DkgLabel, nil)
-		transcript.AppendMessages(SharingIdLabel, bitstring.ToBytes32LE(int32(senderSharingId)))
-		verifier, err := p.State.NiCompiler.NewVerifier(p.SessionId, transcript)
+		verifierTranscript := p.Transcript.Clone()
+		verifierTranscript.AppendMessages(SharingIdLabel, bitstring.ToBytes32LE(int32(senderSharingId)))
+		verifier, err := p.State.NiCompiler.NewVerifier(p.SessionId, verifierTranscript)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot create commitment verifier")
 		}

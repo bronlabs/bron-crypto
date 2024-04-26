@@ -74,13 +74,29 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct ot protocol config for me and %s", participant.String())
 		}
+
+		multTranscript := transcript.Clone()
+		identities := types.NewIdentitySpace(otProtocol.Participants())
+		first, exists := identities.Get(1)
+		if !exists {
+			return nil, errs.NewMissing("could not find the first multiplier's identity")
+		}
+		second, exists := identities.Get(2)
+		if !exists {
+			return nil, errs.NewMissing("could not find the second multiplier's identity")
+		}
+		multTranscript.AppendMessages("participants", first.PublicKey().ToAffineCompressed(), second.PublicKey().ToAffineCompressed())
+		multSessionId, err := multTranscript.Bind(boundSessionId, dst)
+		if err != nil {
+			return nil, errs.WrapHashing(err, "could not produce binded session id for mult")
+		}
 		// step 0.3: RVOLE setup as Alice, with P_k as Bob
-		alice, err := mult.NewAlice(authKey, otProtocol, seedOtResults.AsReceiver, boundSessionId, prng, seededPrng, transcript.Clone())
+		alice, err := mult.NewAlice(authKey, otProtocol, seedOtResults.AsReceiver, multSessionId, prng, seededPrng, multTranscript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "alice construction for participant %s", participant.String())
 		}
 		// step 0.4: RVOLE setup as Bob, with P_k as Alice
-		bob, err := mult.NewBob(authKey, otProtocol, seedOtResults.AsSender, boundSessionId, prng, seededPrng, transcript.Clone())
+		bob, err := mult.NewBob(authKey, otProtocol, seedOtResults.AsSender, multSessionId, prng, seededPrng, multTranscript.Clone())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "bob construction for participant %s", participant.String())
 		}
