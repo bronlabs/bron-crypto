@@ -1,3 +1,5 @@
+SCRIPTS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
 .PHONY: deps-linter
 deps-linter:
 	chmod +x ${SCRIPTS_DIR}/install_deps.sh

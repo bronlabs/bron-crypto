@@ -1,13 +1,11 @@
 SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
-include $(SELF_DIR)/scripts/Makefile
+include $(SELF_DIR)/scripts/scripts.mk
 include $(SELF_DIR)/thirdparty/thirdparty.mk
 
 GOENV=GO111MODULE=on
 GO=${GOENV} go
 
 COVERAGE_OUT="$(mktemp -d)/coverage.out"
-SCRIPTS_DIR="$(SELF_DIR)/scripts"
-
 
 TEST_CLAUSE= $(if ${TEST}, -run ${TEST})
 BUILD_TAGS= $(if ${TAGS}, -tags=${TAGS})
@@ -21,10 +19,10 @@ pkg/base/errs/known_errors.gen.go:
 	golangci-lint run --fix ./pkg/base/errs
 
 .PHONY: deps
-deps: deps-nocgo deps-boring
+deps: deps-linter deps-go deps-boring
 
-.PHONY: deps-nocgo
-deps-nocgo: deps-linter
+.PHONY: deps-go
+deps-go:
 	${GO} mod download
 	${GO} mod verify
 	${GO} mod tidy -compat=1.22
