@@ -7,10 +7,12 @@ import (
 )
 
 func TestHappyPath(t *testing.T) {
-	hc := NewHashCommitment([]byte("00000001"))
+	sessionId := []byte("00000001")
+	c := Committer{sessionId}
+	v := Verifier{sessionId}
 	msg := []byte("test")
-	commit, opening, err := hc.Commit(msg)
+	commit, opening, err := c.Commit(msg)
 	require.NoError(t, err)
-	err = hc.Open(commit, opening, msg)
+	err = v.Verify(commit, opening, msg)
 	require.NoError(t, err)
 }

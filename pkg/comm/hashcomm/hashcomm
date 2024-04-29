@@ -13,6 +13,14 @@ var (
 	CommitmentHashFunction = sha3.New256
 )
 
+type Committer struct {
+	sessionId []byte
+}
+
+type Verifier struct {
+	sessionId []byte
+}
+
 // HashCommitment is a basic commitment scheme using a hash function.
 type HashCommitment struct {
 	commitment []byte
@@ -25,17 +33,17 @@ type HashOpening struct {
 	message []byte
 }
 
-func NewHashCommitment(sessionId []byte) *HashCommitment {
-	return &HashCommitment{nil, nil, sessionId}
-}
+// func NewHashCommitment(sessionId []byte) *HashCommitment {
+// 	return &HashCommitment{nil, nil, sessionId}
+// }
 
 // Implementing Committer interface
-func (hc *HashCommitment) Commit(message Message) (Commitment, Opening, error) {
-	return []byte("dummy_commitment"), []byte("dummy_opening"), nil
+func (c *Committer) Commit(message Message) (Commitment, Opening, error) {
+	return HashCommitment{[]byte("dummy_commitment"), []byte("dummy_randomness"), c.sessionId}, HashCommitment{message}, nil
 }
 
 // Implementing Verifier interface
-func (hc *HashCommitment) Verify(commitment Commitment, opening Opening) error {
+func (v *Verifier) Verify(commitment Commitment, opening Opening) error {
 	return nil
 }
 
