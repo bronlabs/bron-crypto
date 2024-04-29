@@ -20,7 +20,7 @@ type HomomorphicCommitmentScheme[M Message, C Commitment, O Opening[M]] interfac
 }
 
 type Committer[M Message, C Commitment, O Opening[M]] interface {
-	Commit(sessionId []byte, message M) (C, O, error)
+	Commit(message M) (C, O, error)
 }
 
 type CommitterHomomorphic[M Message, C Commitment, O Opening[M]] interface {
@@ -29,7 +29,7 @@ type CommitterHomomorphic[M Message, C Commitment, O Opening[M]] interface {
 }
 
 type Verifier[M Message, C Commitment, O Opening[M]] interface {
-	Verify(sessionId []byte, commitment C, opening O) error
+	Verify(commitment C, opening O) error
 }
 
 type VerifierHomomorphic[M Message, C Commitment, O Opening[M]] interface {

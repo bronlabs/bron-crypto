@@ -1,14 +1,11 @@
 package hashcomm
 
 import (
-	"errors"
-
-	"github.com/cronokirby/saferith"
 	"golang.org/x/crypto/sha3"
 )
 
 // Define the types for Message and Commitment
-type Message []Byte
+type Message []byte
 type Commitment []byte
 
 var (
@@ -20,6 +17,7 @@ var (
 type HashCommitment struct {
 	commitment []byte
 	randomness []byte
+	sessionId  []byte
 }
 
 // HashOpening is the opening for the HashCommitment.
@@ -27,34 +25,38 @@ type HashOpening struct {
 	message []byte
 }
 
+func NewHashCommitment(sessionId []byte) *HashCommitment {
+	return &HashCommitment{nil, nil, sessionId}
+}
+
 // Implementing Committer interface
-func (hc *HashCommitment) Commit(sessionId []byte, message Message) (Commitment, Opening, error) {
+func (hc *HashCommitment) Commit(message Message) (Commitment, Opening, error) {
 	return []byte("dummy_commitment"), []byte("dummy_opening"), nil
 }
 
 // Implementing Verifier interface
-func (hc *HashCommitment) Verify(sessionId []byte, commitment Commitment, opening Opening) error {
+func (hc *HashCommitment) Verify(commitment Commitment, opening Opening) error {
 	return nil
 }
 
-// Implementing HomomorphicCommitmentScheme interface
-func (h HomomorphicCommitmentScheme) CombineCommitments(x Commitment, ys ...Commitment) (Commitment, error) {
-	// Since hash-based commitments don't support homomorphic operations,
-	// we'll return an error indicating that this operation is not supported.
-	return nil, errors.New("hash-based commitments do not support homomorphic operations")
-}
+// // Implementing HomomorphicCommitmentScheme interface
+// func (h HomomorphicCommitmentScheme) CombineCommitments(x Commitment, ys ...Commitment) (Commitment, error) {
+// 	// Since hash-based commitments don't support homomorphic operations,
+// 	// we'll return an error indicating that this operation is not supported.
+// 	return nil, errors.New("hash-based commitments do not support homomorphic operations")
+// }
 
-func (h HomomorphicCommitmentScheme) ScaleCommitment(x Commitment, n *saferith.Nat) (Commitment, error) {
-	// Similarly, we'll return an error for unsupported operations.
-	return nil, errors.New("hash-based commitments do not support homomorphic operations")
-}
+// func (h HomomorphicCommitmentScheme) ScaleCommitment(x Commitment, n *saferith.Nat) (Commitment, error) {
+// 	// Similarly, we'll return an error for unsupported operations.
+// 	return nil, errors.New("hash-based commitments do not support homomorphic operations")
+// }
 
-func (h HomomorphicCommitmentScheme) CombineOpenings(x Opening, ys ...Opening) (Opening, error) {
-	// We'll return an error for unsupported operations.
-	return nil, errors.New("hash-based commitments do not support homomorphic operations")
-}
+// func (h HomomorphicCommitmentScheme) CombineOpenings(x Opening, ys ...Opening) (Opening, error) {
+// 	// We'll return an error for unsupported operations.
+// 	return nil, errors.New("hash-based commitments do not support homomorphic operations")
+// }
 
-func (h HomomorphicCommitmentScheme) ScaleOpening(x Opening, n *saferith.Nat) (Opening, error) {
-	// We'll return an error for unsupported operations.
-	return nil, errors.New("hash-based commitments do not support homomorphic operations")
-}
+// func (h HomomorphicCommitmentScheme) ScaleOpening(x Opening, n *saferith.Nat) (Opening, error) {
+// 	// We'll return an error for unsupported operations.
+// 	return nil, errors.New("hash-based commitments do not support homomorphic operations")
+// }
