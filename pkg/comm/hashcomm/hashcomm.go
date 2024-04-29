@@ -12,7 +12,7 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-// Define the types for Message and Commitment
+// Define the types for Message and Witness
 type Message []byte
 type Witness []byte
 
@@ -25,31 +25,29 @@ type Committer struct {
 	sessionId []byte
 }
 
-func NewCommitter(sessionId []byte) *Committer {
-	return &Committer{sessionId}
-}
-
 type Verifier struct {
 	sessionId []byte
+}
+
+type Commitment struct {
+	commitment []byte
+}
+
+type Opening struct {
+	message Message
+	witness Witness
+}
+
+func NewCommitter(sessionId []byte) *Committer {
+	return &Committer{sessionId}
 }
 
 func NewVerifier(sessionId []byte) *Verifier {
 	return &Verifier{sessionId}
 }
 
-// Commitment is a basic commitment scheme using a hash function.
-type Commitment struct {
-	commitment []byte
-}
-
 func NewCommitment(commitment []byte) *Commitment {
 	return &Commitment{commitment}
-}
-
-// Opening is the opening for the Commitment.
-type Opening struct {
-	message Message
-	witness Witness
 }
 
 func NewOpening(message Message, witness Witness) *Opening {
