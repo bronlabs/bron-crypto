@@ -25,7 +25,7 @@ func Test_ShouldSplitEdgeCases(t *testing.T) {
 
 	for _, c := range supportedCurves {
 		curve := c
-		order := curve.SubGroupOrder()
+		order := curve.Order()
 		oneThird := new(saferith.Nat).Div(new(saferith.Nat).Add(order.Nat(), new(saferith.Nat).SetUint64(2), -1), saferith.ModulusFromUint64(3), -1)
 		twoThird := new(saferith.Nat).Div(new(saferith.Nat).Add(new(saferith.Nat).SetUint64(2), new(saferith.Nat).Mul(order.Nat(), new(saferith.Nat).SetUint64(2), -1), -1), saferith.ModulusFromUint64(3), -1)
 
@@ -52,7 +52,7 @@ func Test_ShouldSplitEdgeCases(t *testing.T) {
 			t.Parallel()
 
 			for _, xInt := range edgeCases {
-				x := curve.Scalar().SetNat(xInt)
+				x := curve.ScalarField().Element().SetNat(xInt)
 				x1, x2, err := lindell17.DecomposeInQThirdsDeterministically(x, crand.Reader)
 				require.NoError(t, err)
 				require.True(t, lindell17.IsInSecondThird(x1))

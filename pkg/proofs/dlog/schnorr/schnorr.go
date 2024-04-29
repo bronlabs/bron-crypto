@@ -59,7 +59,7 @@ func (s *protocol) ComputeProverCommitment(_ Statement, _ Witness) (Commitment, 
 	if err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "cannot sample scalar")
 	}
-	r := s.base.Mul(k)
+	r := s.base.ScalarMul(k)
 
 	return r, k, nil
 }
@@ -101,8 +101,8 @@ func (s *protocol) Verify(statement Statement, commitment Commitment, challengeB
 		return errs.WrapArgument(err, "cannot hash to scalar")
 	}
 
-	left := s.base.Mul(response)
-	right := statement.Mul(e).Add(commitment)
+	left := s.base.ScalarMul(response)
+	right := statement.ScalarMul(e).Add(commitment)
 	if !left.Equal(right) {
 		return errs.NewVerification("verification failed")
 	}
@@ -128,7 +128,7 @@ func (s *protocol) RunSimulator(statement Statement, challengeBytes sigma.Challe
 		return nil, nil, errs.WrapRandomSample(err, "cannot sample scalar")
 	}
 
-	a := s.base.Mul(z).Sub(statement.Mul(e))
+	a := s.base.ScalarMul(z).Sub(statement.ScalarMul(e))
 	return a, z, nil
 }
 
@@ -136,7 +136,7 @@ func (s *protocol) ValidateStatement(statement Statement, witness Witness) error
 	if statement == nil ||
 		witness == nil ||
 		statement.Curve().Name() != witness.ScalarField().Curve().Name() ||
-		!s.base.Mul(witness).Equal(statement) {
+		!s.base.ScalarMul(witness).Equal(statement) {
 
 		return errs.NewArgument("invalid statement")
 	}
@@ -145,7 +145,7 @@ func (s *protocol) ValidateStatement(statement Statement, witness Witness) error
 }
 
 func (s *protocol) GetChallengeBytesLength() int {
-	return s.curve.ScalarField().WideFieldBytes()
+	return s.curve.ScalarField().WideElementSize()
 }
 
 func (*protocol) SerializeStatement(statement Statement) []byte {

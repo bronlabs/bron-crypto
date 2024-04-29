@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 )
 
 func TestFqSetOne(t *testing.T) {
@@ -132,10 +132,10 @@ func TestFqNeg(t *testing.T) {
 	g := New().SetRaw(generator)
 	a := New().SetOne()
 	a.Neg(a)
-	e := New().SetRaw(&[impl.FieldLimbs]uint64{0xe7739585f8c64aa2, 0x79cdf55b4e2f3d09, 0xffffffffffffffff, 0xfffffffe00000001})
+	e := New().SetRaw(&[limb4.FieldLimbs]uint64{0xe7739585f8c64aa2, 0x79cdf55b4e2f3d09, 0xffffffffffffffff, 0xfffffffe00000001})
 	require.Equal(t, e, a)
 	a.Neg(g)
-	e = New().SetRaw(&[impl.FieldLimbs]uint64{0x9dce5617e3192a88, 0xe737d56d38bcf427, 0xfffffffffffffffd, 0xfffffff800000007})
+	e = New().SetRaw(&[limb4.FieldLimbs]uint64{0x9dce5617e3192a88, 0xe737d56d38bcf427, 0xfffffffffffffffd, 0xfffffff800000007})
 	require.Equal(t, e, a)
 }
 
@@ -160,13 +160,13 @@ func TestFqSqrt(t *testing.T) {
 }
 
 func TestFqInvert(t *testing.T) {
-	twoInv := New().SetRaw(&[impl.FieldLimbs]uint64{0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x8000000000000000})
+	twoInv := New().SetRaw(&[limb4.FieldLimbs]uint64{0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x8000000000000000})
 	two := New().SetUint64(2)
 	a, inverted := New().Invert(two)
 	require.True(t, inverted)
 	require.Equal(t, a, twoInv)
 
-	rootOfUnityInv := New().SetRaw(&[impl.FieldLimbs]uint64{0xcfbf53b9618acf96, 0xf17e5c39df7bd05b, 0xc7acb1f83e3ad9ad, 0x4659a42b394ff7df})
+	rootOfUnityInv := New().SetRaw(&[limb4.FieldLimbs]uint64{0xcfbf53b9618acf96, 0xf17e5c39df7bd05b, 0xc7acb1f83e3ad9ad, 0x4659a42b394ff7df})
 	rootOU := New().SetRaw(rootOfUnity)
 	a, inverted = New().Invert(rootOU)
 	require.True(t, inverted)
@@ -208,58 +208,58 @@ func TestFqBytes(t *testing.T) {
 
 func TestFqCmp(t *testing.T) {
 	tests := []struct {
-		a *impl.FieldValue
-		b *impl.FieldValue
+		a *limb4.FieldValue
+		b *limb4.FieldValue
 		e int
 	}{
 		{
-			a: New().SetRaw(&[impl.FieldLimbs]uint64{2731658267414164836, 14655288906067898431, 6537465423330262322, 8306191141697566219}),
-			b: New().SetRaw(&[impl.FieldLimbs]uint64{6472764012681988529, 10848812988401906064, 2961825807536828898, 4282183981941645679}),
+			a: New().SetRaw(&[limb4.FieldLimbs]uint64{2731658267414164836, 14655288906067898431, 6537465423330262322, 8306191141697566219}),
+			b: New().SetRaw(&[limb4.FieldLimbs]uint64{6472764012681988529, 10848812988401906064, 2961825807536828898, 4282183981941645679}),
 			e: 1,
 		},
 		{
-			a: New().SetRaw(&[impl.FieldLimbs]uint64{8023004109510539223, 4652004072850285717, 1877219145646046927, 383214385093921911}),
-			b: New().SetRaw(&[impl.FieldLimbs]uint64{10099384440823804262, 16139476942229308465, 8636966320777393798, 5435928725024696785}),
+			a: New().SetRaw(&[limb4.FieldLimbs]uint64{8023004109510539223, 4652004072850285717, 1877219145646046927, 383214385093921911}),
+			b: New().SetRaw(&[limb4.FieldLimbs]uint64{10099384440823804262, 16139476942229308465, 8636966320777393798, 5435928725024696785}),
 			e: -1,
 		},
 		{
-			a: New().SetRaw(&[impl.FieldLimbs]uint64{3741840066202388211, 12165774400417314871, 16619312580230515379, 16195032234110087705}),
-			b: New().SetRaw(&[impl.FieldLimbs]uint64{3905865991286066744, 543690822309071825, 17963103015950210055, 3745476720756119742}),
+			a: New().SetRaw(&[limb4.FieldLimbs]uint64{3741840066202388211, 12165774400417314871, 16619312580230515379, 16195032234110087705}),
+			b: New().SetRaw(&[limb4.FieldLimbs]uint64{3905865991286066744, 543690822309071825, 17963103015950210055, 3745476720756119742}),
 			e: 1,
 		},
 		{
-			a: New().SetRaw(&[impl.FieldLimbs]uint64{16660853697936147788, 7799793619412111108, 13515141085171033220, 2641079731236069032}),
-			b: New().SetRaw(&[impl.FieldLimbs]uint64{17790588295388238399, 571847801379669440, 14537208974498222469, 12792570372087452754}),
+			a: New().SetRaw(&[limb4.FieldLimbs]uint64{16660853697936147788, 7799793619412111108, 13515141085171033220, 2641079731236069032}),
+			b: New().SetRaw(&[limb4.FieldLimbs]uint64{17790588295388238399, 571847801379669440, 14537208974498222469, 12792570372087452754}),
 			e: -1,
 		},
 		{
-			a: New().SetRaw(&[impl.FieldLimbs]uint64{3912839285384959186, 2701177075110484070, 6453856448115499033, 6475797457962597458}),
-			b: New().SetRaw(&[impl.FieldLimbs]uint64{1282566391665688512, 13503640416992806563, 2962240104675990153, 3374904770947067689}),
+			a: New().SetRaw(&[limb4.FieldLimbs]uint64{3912839285384959186, 2701177075110484070, 6453856448115499033, 6475797457962597458}),
+			b: New().SetRaw(&[limb4.FieldLimbs]uint64{1282566391665688512, 13503640416992806563, 2962240104675990153, 3374904770947067689}),
 			e: 1,
 		},
 		{
-			a: New().SetRaw(&[impl.FieldLimbs]uint64{5716631803409360103, 7859567470082614154, 12747956220853330146, 18434584096087315020}),
-			b: New().SetRaw(&[impl.FieldLimbs]uint64{16317076441459028418, 12854146980376319601, 2258436689269031143, 9531877130792223752}),
+			a: New().SetRaw(&[limb4.FieldLimbs]uint64{5716631803409360103, 7859567470082614154, 12747956220853330146, 18434584096087315020}),
+			b: New().SetRaw(&[limb4.FieldLimbs]uint64{16317076441459028418, 12854146980376319601, 2258436689269031143, 9531877130792223752}),
 			e: 1,
 		},
 		{
-			a: New().SetRaw(&[impl.FieldLimbs]uint64{17955191469941083403, 10350326247207200880, 17263512235150705075, 12700328451238078022}),
-			b: New().SetRaw(&[impl.FieldLimbs]uint64{6767595547459644695, 7146403825494928147, 12269344038346710612, 9122477829383225603}),
+			a: New().SetRaw(&[limb4.FieldLimbs]uint64{17955191469941083403, 10350326247207200880, 17263512235150705075, 12700328451238078022}),
+			b: New().SetRaw(&[limb4.FieldLimbs]uint64{6767595547459644695, 7146403825494928147, 12269344038346710612, 9122477829383225603}),
 			e: 1,
 		},
 		{
-			a: New().SetRaw(&[impl.FieldLimbs]uint64{17099388671847024438, 6426264987820696548, 10641143464957227405, 7709745403700754098}),
-			b: New().SetRaw(&[impl.FieldLimbs]uint64{10799154372990268556, 17178492485719929374, 5705777922258988797, 8051037767683567782}),
+			a: New().SetRaw(&[limb4.FieldLimbs]uint64{17099388671847024438, 6426264987820696548, 10641143464957227405, 7709745403700754098}),
+			b: New().SetRaw(&[limb4.FieldLimbs]uint64{10799154372990268556, 17178492485719929374, 5705777922258988797, 8051037767683567782}),
 			e: -1,
 		},
 		{
-			a: New().SetRaw(&[impl.FieldLimbs]uint64{4567139260680454325, 1629385880182139061, 16607020832317899145, 1261011562621553200}),
-			b: New().SetRaw(&[impl.FieldLimbs]uint64{13487234491304534488, 17872642955936089265, 17651026784972590233, 9468934643333871559}),
+			a: New().SetRaw(&[limb4.FieldLimbs]uint64{4567139260680454325, 1629385880182139061, 16607020832317899145, 1261011562621553200}),
+			b: New().SetRaw(&[limb4.FieldLimbs]uint64{13487234491304534488, 17872642955936089265, 17651026784972590233, 9468934643333871559}),
 			e: -1,
 		},
 		{
-			a: New().SetRaw(&[impl.FieldLimbs]uint64{18071070103467571798, 11787850505799426140, 10631355976141928593, 4867785203635092610}),
-			b: New().SetRaw(&[impl.FieldLimbs]uint64{12596443599426461624, 10176122686151524591, 17075755296887483439, 6726169532695070719}),
+			a: New().SetRaw(&[limb4.FieldLimbs]uint64{18071070103467571798, 11787850505799426140, 10631355976141928593, 4867785203635092610}),
+			b: New().SetRaw(&[limb4.FieldLimbs]uint64{12596443599426461624, 10176122686151524591, 17075755296887483439, 6726169532695070719}),
 			e: -1,
 		},
 	}
@@ -277,7 +277,7 @@ func TestFqBigInt(t *testing.T) {
 	t2 := New().SetNat(t1.Nat())
 	require.Equal(t, t1, t2)
 
-	e := New().SetRaw(&[impl.FieldLimbs]uint64{0x21dcaaadf1cb6aa0, 0x568de5f5990a98d7, 0x354f43b0d837fac5, 0x3e02532cb23f481a})
+	e := New().SetRaw(&[limb4.FieldLimbs]uint64{0x21dcaaadf1cb6aa0, 0x568de5f5990a98d7, 0x354f43b0d837fac5, 0x3e02532cb23f481a})
 	b := new(saferith.Nat).SetBytes([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
 	t1.SetNat(b)
 	require.Equal(t, e, t1)
@@ -291,7 +291,7 @@ func TestFqBigInt(t *testing.T) {
 }
 
 func TestFqSetBytesWide(t *testing.T) {
-	e := New().SetRaw(&[impl.FieldLimbs]uint64{0xe2b8d4b0e576c8fa, 0x9d2b215f85d3bdf7, 0xf6070a872442640c, 0xcf15d1e49c990b88})
+	e := New().SetRaw(&[limb4.FieldLimbs]uint64{0xe2b8d4b0e576c8fa, 0x9d2b215f85d3bdf7, 0xf6070a872442640c, 0xcf15d1e49c990b88})
 
 	a := New().SetBytesWide(&[64]byte{
 		0x69, 0x23, 0x5a, 0x0b, 0xce, 0x0c, 0xa8, 0x64,

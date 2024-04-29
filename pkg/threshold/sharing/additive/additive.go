@@ -34,9 +34,15 @@ func (s Share) ConvertToShamir(id, t, n uint, identities []uint) (*shamir.Share,
 	if !exists {
 		return nil, errs.NewMissing("i am not one of the provided identities")
 	}
+
+	sOverC, err := s.Value.Div(myCoefficient)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not divide coefficient")
+	}
+
 	return &shamir.Share{
 		Id:    id,
-		Value: s.Value.Div(myCoefficient),
+		Value: sOverC,
 	}, nil
 }
 

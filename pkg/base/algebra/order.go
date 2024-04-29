@@ -9,72 +9,100 @@ const (
 	GreaterThan  Ordering = 1
 )
 
-// AbstractOrderTheoreticLattice defines methods needed for a structured set to be a lattice.
-// A lattice is a partially ordered set where every pair has a least upper bound (join) and a greatest lower bound (meet).
-type AbstractOrderTheoreticLattice[S Structure, E Element] interface {
-	// Lattice is a structured set.
-	AbstractStructuredSet[S, E]
-	// Join returns the least upper bound of x and y.
-	Join(x, y E) E
-	// Meet returns the greatest lower bound of x and y.
-	Meet(x, y E) E
+type Max[E Element] interface {
+	BinaryOperator[E]
+	Max(x, y E) E
 }
 
-// AbstractOrderTheoreticLatticeElement defines methods needed for elements of type E to be elements of
+type Min[E Element] interface {
+	BinaryOperator[E]
+	Min(x, y E) E
+}
+
+type Enumerable[E Element] interface {
+	Next() (E, error)
+	Previous() (E, error)
+}
+
+// OrderTheoreticLattice defines methods needed for a structured set to be a lattice.
+// A lattice is a partially ordered set where every pair has a least upper bound (join) and a greatest lower bound (meet).
+type OrderTheoreticLattice[L Structure, E Element] interface {
+	// Lattice is a structured set.
+	StructuredSet[L, E]
+	// Join returns the least upper bound of x and y.
+	Join(x, y OrderTheoreticLatticeElement[L, E]) E
+	// Meet returns the greatest lower bound of x and y.
+	Meet(x, y OrderTheoreticLatticeElement[L, E]) E
+
+	LatticeElement() OrderTheoreticLatticeElement[L, E]
+}
+
+// OrderTheoreticLatticeElement defines methods needed for elements of type E to be elements of
 // lattice S.
 // A lattice is a set where every pair has a least upper bound (join) and a greatest lower bound (meet).
-type AbstractOrderTheoreticLatticeElement[S Structure, E Element] interface {
+type OrderTheoreticLatticeElement[L Structure, E Element] interface {
 	// Lattic element is an element of a structured set.
-	AbstractStructuredSetElement[S, E]
+	StructuredSetElement[L, E]
 	// Cmp returns one of:
 	//  - Incomparable.
 	//  - LessThan, if this element is less than rhs.
 	//  - Equal, if this element is equal to rhs.
 	//  - GreaterThan, if this element is greater than rhs.
-	Cmp(rhs E) Ordering
+	Cmp(rhs OrderTheoreticLatticeElement[L, E]) Ordering
 	// Join returns the least upper bound of this element and rhs.
-	Join(rhs E) E
+	Join(rhs OrderTheoreticLatticeElement[L, E]) E
 	// Meet returns the greatest lower bound of this element and rhs.
-	Meet(rhs E) E
+	Meet(rhs OrderTheoreticLatticeElement[L, E]) E
+
+	Lattice() OrderTheoreticLattice[L, E]
 }
 
-// BoundedOrderTheoreticLatticeTrait defines additional methods for a lattice S for it to be considered as bounded.
-type BoundedOrderTheoreticLatticeTrait[S Structure, E Element] interface {
-	// Top returns the maximum of S.
-	Top() E
-	// Bottom returns minimum of S.
-	Bottom() E
-}
-
-// BoundedOrderTheoreticLatticeElementTrait defines additional methods for elements of type E to be elements of
-// the bounded lattice S.
-type BoundedOrderTheoreticLatticeElementTrait[S Structure, E Element] interface {
-	// IsTop returns true if this element is the maximum of S.
-	IsTop() bool
-	// IsBottom returns true if this element is the minimum of S.
-	IsBottom() bool
-}
-
-// AbstractChain defines methods needed for S to be a totally subset of some larger bounded lattice.
-type AbstractChain[S Structure, E Element] interface {
-	// Chain is a lattice.
-	AbstractOrderTheoreticLattice[S, E]
-	// Chain has methods of a bounded lattice.
-	BoundedOrderTheoreticLatticeTrait[S, E]
+// Chain defines methods needed for S to be a totally ordered subset of some larger bounded lattice.
+type Chain[C Structure, E Element] interface {
+	OrderTheoreticLattice[C, E]
 	// Max returns the maximum of the inputs.
-	Max(x E, ys ...E) E
+	Max(x ChainElement[C, E], ys ...ChainElement[C, E]) E
 	// Min returns the minimum of the inputs.
-	Min(x E, ys ...E) E
+	Min(x ChainElement[C, E], ys ...ChainElement[C, E]) E
+
+	ChainElement() ChainElement[C, E]
 }
 
-// AbstractChainElement defined methods for elements of type E to be elements of chain S.
-type AbstractChainElement[S Structure, E Element] interface {
-	// Chain element is a lattice element.
-	AbstractOrderTheoreticLatticeElement[S, E]
-	// Chain element has methods of a bounded lattice element.
-	BoundedOrderTheoreticLatticeElementTrait[S, E]
+// ChainElement defined methods for elements of type E to be elements of chain S.
+type ChainElement[C Structure, E Element] interface {
+	OrderTheoreticLatticeElement[C, E]
+	Enumerable[E]
 	// Min returns the minimum of this element and rhs.
 	Min(rhs E) E
 	// Max returns the maximum of this element and rhs.
 	Max(rhs E) E
+
+	Chain() Chain[C, E]
+
+	Increment() E
+	Decrement() E
+	NatSerialization[E]
+}
+
+// BoundedOrderTheoreticLattice defines additional methods for a lattice S for it to be considered as bounded.
+type BoundedOrderTheoreticLattice[L Structure, E Element] interface {
+	OrderTheoreticLattice[L, E]
+	// Top returns the maximum of S.
+	Top() E
+	// Bottom returns minimum of S.
+	Bottom() E
+
+	BoundedLatticeElement() BoundedOrderTheoreticLatticeElement[L, E]
+}
+
+// BoundedOrderTheoreticLatticeElement defines additional methods for elements of type E to be elements of
+// the bounded lattice S.
+type BoundedOrderTheoreticLatticeElement[L Structure, E Element] interface {
+	OrderTheoreticLatticeElement[L, E]
+	// IsTop returns true if this element is the maximum of S.
+	IsTop() bool
+	// IsBottom returns true if this element is the minimum of S.
+	IsBottom() bool
+
+	BoundedLattice() BoundedOrderTheoreticLattice[L, E]
 }

@@ -67,7 +67,7 @@ func DecomposeInQThirdsDeterministically(scalar curves.Scalar, prng io.Reader) (
 // IsInSecondThird check if scalar s: q/3 <= s < 2q/3 (q being subgroup order).
 func IsInSecondThird(scalar curves.Scalar) bool {
 	curve := scalar.ScalarField().Curve()
-	order := curve.SubGroupOrder().Nat()
+	order := curve.Order().Nat()
 	orderPlusTwo := new(saferith.Nat).Add(order, new(saferith.Nat).SetUint64(2), -1)
 	l := new(saferith.Nat).Div(orderPlusTwo, saferith.ModulusFromUint64(3), order.AnnouncedLen())
 	orderTimesTwo := new(saferith.Nat).Add(order, order, -1)
@@ -80,7 +80,7 @@ func IsInSecondThird(scalar curves.Scalar) bool {
 
 func inEighteenth(lowBoundInclusive, highBoundExclusive uint64, x curves.Scalar) bool {
 	curve := x.ScalarField().Curve()
-	order := curve.SubGroupOrder()
+	order := curve.Order()
 
 	orderTimesLow := new(saferith.Nat).Mul(order.Nat(), new(saferith.Nat).SetUint64(lowBoundInclusive), -1)
 	orderTimesLowPlusSeventeen := new(saferith.Nat).Add(orderTimesLow, new(saferith.Nat).SetUint64(17), -1)
@@ -100,7 +100,7 @@ func randomInEighteenth(lowBoundInclusive, highBoundExclusive uint64, curveName 
 	if err != nil {
 		return nil, errs.WrapCurve(err, "could not get curve")
 	}
-	order := curve.SubGroupOrder().Nat()
+	order := curve.Order().Nat()
 
 	orderTimesLow := new(saferith.Nat).Mul(order, new(saferith.Nat).SetUint64(lowBoundInclusive), -1)
 	orderTimesLowPlusSeventeen := new(saferith.Nat).Add(orderTimesLow, new(saferith.Nat).SetUint64(17), -1)
@@ -115,6 +115,6 @@ func randomInEighteenth(lowBoundInclusive, highBoundExclusive uint64, curveName 
 		return nil, errs.WrapFailed(err, "could not get random number")
 	}
 
-	xScalar := curve.Scalar().SetNat(x)
+	xScalar := curve.ScalarField().Element().SetNat(x)
 	return xScalar, nil
 }

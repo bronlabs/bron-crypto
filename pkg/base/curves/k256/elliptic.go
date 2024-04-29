@@ -101,7 +101,7 @@ func (*Koblitz256) ScalarMult(Bx, By *big.Int, k []byte) (x, y *big.Int) {
 		panic("invalid scalar length")
 	}
 	kk := c.Scalar().SetNat(saferithUtils.NatFromBigMod(new(big.Int).SetBytes(k), fq.New().Params.Modulus))
-	result := p1.Mul(kk)
+	result := p1.ScalarMul(kk)
 	return result.AffineX().Nat().Big(), result.AffineY().Nat().Big()
 }
 

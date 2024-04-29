@@ -34,7 +34,7 @@ func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSi
 		return nil, errs.WrapFailed(err, "couldn't produce lagrange coefficients for present participants")
 	}
 
-	sigma := bls12381.NewG2().Identity()
+	sigma := bls12381.NewG2().AdditiveIdentity()
 	Hm, err := bls12381.NewPairingCurve().G2().HashWithDst(message, []byte(bls.DstSignatureBasicInG2))
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't hash message")
@@ -76,7 +76,7 @@ func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSi
 		}
 
 		// step 2.2 (we'll complete it gradually here to avoid another for loop)
-		sigma = sigma.Add(psig.SigmaI.Value.Mul(lambda_i))
+		sigma = sigma.Add(psig.SigmaI.Value.ScalarMul(lambda_i))
 	}
 
 	sigmaPairable, ok := sigma.(curves.PairingPoint)

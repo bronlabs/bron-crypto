@@ -7,7 +7,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
@@ -640,7 +640,7 @@ func (g2 *G2) Double(a *G2) *G2 {
 }
 
 // Mul multiplies this point by the input scalar.
-func (g2 *G2) Mul(a *G2, s *impl.FieldValue) *G2 {
+func (g2 *G2) Mul(a *G2, s *limb4.FieldValue) *G2 {
 	bytes := s.Bytes()
 	return g2.multiply(a, &bytes)
 }
@@ -939,7 +939,7 @@ func (g2 *G2) CMove(arg1, arg2 *G2, choice int) *G2 {
 // SumOfProducts computes the multi-exponentiation for the specified
 // points and scalars and stores the result in `g2`.
 // Returns an error if the lengths of the arguments is not equal.
-func (g2 *G2) SumOfProducts(points []*G2, scalars []*impl.FieldValue) (*G2, error) {
+func (g2 *G2) SumOfProducts(points []*G2, scalars []*limb4.FieldValue) (*G2, error) {
 	const Upper = 256
 	const W = 4
 	const Windows = Upper / W // careful--use ceiling division in case this doesn't divide evenly

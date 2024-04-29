@@ -52,7 +52,7 @@ func (r1b *Round1Broadcast) Validate(protocol types.ThresholdSignatureProtocol) 
 	if r1b.BigR_i.Curve() != protocol.Curve() {
 		return errs.NewCurve("BigR_i curve %s does not match protocol curve %s", r1b.BigR_i.Curve(), protocol.Curve())
 	}
-	if r1b.BigR_i.IsIdentity() {
+	if r1b.BigR_i.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("BigR_i")
 	}
 	return nil
@@ -75,7 +75,7 @@ func (r2b *Round2Broadcast) Validate(protocol types.ThresholdSignatureProtocol) 
 	if r2b.Pk_i.Curve() != protocol.Curve() {
 		return errs.NewCurve("Pk_i curve %s does not match protocol curve %s", r2b.Pk_i.Curve(), protocol.Curve())
 	}
-	if r2b.Pk_i.IsIdentity() {
+	if r2b.Pk_i.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("Pk_i")
 	}
 	return nil

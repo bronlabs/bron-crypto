@@ -47,7 +47,7 @@ func (r1b *Round1Broadcast) Validate(protocol types.ThresholdProtocol) error {
 		if commitment.Curve() != protocol.Curve() {
 			return errs.NewCurve("blindedCommitments[%d] curve %s is not protocol curve %s", i, commitment.Curve().Name(), protocol.Curve().Name())
 		}
-		if commitment.IsIdentity() {
+		if commitment.IsAdditiveIdentity() {
 			return errs.NewIsZero("blindedCommitments[%d] is identity", i)
 		}
 	}
@@ -90,7 +90,7 @@ func (r2b *Round2Broadcast) Validate(protocol types.ThresholdProtocol) error {
 		if commitment.Curve() != protocol.Curve() {
 			return errs.NewCurve("commitments[%d] curve %s is not protocol curve %s", i, commitment.Curve().Name(), protocol.Curve().Name())
 		}
-		if commitment.IsIdentity() {
+		if commitment.IsAdditiveIdentity() {
 			return errs.NewIsZero("commitments[%d] is identity", i)
 		}
 	}

@@ -7,12 +7,12 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var _ curves.PairingPoint = (*PointG2)(nil)
@@ -28,10 +28,48 @@ type PointG2 struct {
 }
 
 func NewPointG2() *PointG2 {
-	return NewG2().Identity().(*PointG2)
+	return NewG2().AdditiveIdentity().(*PointG2)
 }
 
 // === Basic Methods.
+
+func (*PointG2) Structure() curves.Curve {
+	return NewG2()
+}
+
+func (p *PointG2) Unwrap() curves.Point {
+	return p
+}
+
+func (*PointG2) ApplyOp(operator algebra.BinaryOperator[curves.Point], x algebra.GroupoidElement[curves.Curve, curves.Point], n *saferith.Nat) (curves.Point, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*PointG2) IsInPrimeSubGroup() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p *PointG2) IsTorsionElementUnderAddition(order *saferith.Modulus) bool {
+	e := p.Curve().ScalarField().Element().SetNat(order.Nat())
+	return p.ScalarMul(e).IsAdditiveIdentity()
+}
+
+func (*PointG2) IsBasePoint() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*PointG2) CanGenerateAllElements() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*PointG2) IsDesignatedGenerator() bool {
+	//TODO implement me
+	panic("implement me")
+}
 
 func (p *PointG2) Equal(rhs curves.Point) bool {
 	r, ok := rhs.(*PointG2)
@@ -53,25 +91,26 @@ func (p *PointG2) Operate(rhs curves.Point) curves.Point {
 }
 
 func (p *PointG2) OperateIteratively(n *saferith.Nat) curves.Point {
-	return p.Mul(NewG2().Scalar().SetNat(n))
+	return p.ScalarMul(NewG2().Scalar().SetNat(n))
 }
 
-func (p *PointG2) Order() *saferith.Modulus {
-	if p.IsIdentity() {
-		return saferith.ModulusFromUint64(0)
-	}
-	q := p.Clone()
-	order := saferithUtils.NatOne
-	for !q.IsIdentity() {
-		q = q.Add(p)
-		saferithUtils.NatInc(order)
-	}
-	return saferith.ModulusFromNat(order)
+func (*PointG2) Order(op algebra.BinaryOperator[curves.Point]) (*saferith.Modulus, error) {
+	panic("implement me")
+	//if p.IsIdentity() {
+	//	return saferith.ModulusFromUint64(0)
+	//}
+	//q := p.Clone()
+	//order := saferithUtils.NatOne
+	//for !q.IsIdentity() {
+	//	q = q.Add(p)
+	//	saferithUtils.NatInc(order)
+	//}
+	//return saferith.ModulusFromNat(order)
 }
 
 // === Additive Groupoid Methods.
 
-func (p *PointG2) Add(rhs curves.Point) curves.Point {
+func (p *PointG2) Add(rhs algebra.AdditiveGroupoidElement[curves.Curve, curves.Point]) curves.Point {
 	if rhs == nil {
 		panic("rhs is nil")
 	}
@@ -83,8 +122,8 @@ func (p *PointG2) Add(rhs curves.Point) curves.Point {
 	}
 }
 
-func (p *PointG2) ApplyAdd(q curves.Point, n *saferith.Nat) curves.Point {
-	return p.Add(q.Mul(NewScalarFieldG2().Element().SetNat(n)))
+func (p *PointG2) ApplyAdd(q algebra.AdditiveGroupoidElement[curves.Curve, curves.Point], n *saferith.Nat) curves.Point {
+	return p.Add(q.Unwrap().ScalarMul(NewScalarFieldG2().Element().SetNat(n)))
 }
 
 func (p *PointG2) Double() curves.Point {
@@ -97,37 +136,37 @@ func (p *PointG2) Triple() curves.Point {
 
 // === Monoid Methods.
 
-func (p *PointG2) IsIdentity() bool {
-	return p.V.IsIdentity() == 1
+func (*PointG2) IsIdentity(under algebra.BinaryOperator[curves.Point]) (bool, error) {
+	panic("implement me")
 }
 
 // === Additive Monoid Methods.
 
 func (p *PointG2) IsAdditiveIdentity() bool {
-	return p.IsIdentity()
+	return p.V.IsIdentity() == 1
 }
 
 // === Group Methods.
 
-func (p *PointG2) Inverse() curves.Point {
-	return &PointG2{V: new(bls12381impl.G2).Neg(p.V)}
+func (*PointG2) Inverse(under algebra.BinaryOperator[curves.Point]) (curves.Point, error) {
+	panic("implement me")
 }
 
-func (p *PointG2) IsInverse(of curves.Point) bool {
-	return p.Operate(of).IsIdentity()
+func (*PointG2) IsInverse(of algebra.GroupElement[curves.Curve, curves.Point], under algebra.BinaryOperator[curves.Point]) (bool, error) {
+	panic("implement me")
 }
 
 // === Additive Group Methods.
 
 func (p *PointG2) AdditiveInverse() curves.Point {
-	return p.Inverse()
+	return &PointG2{V: new(bls12381impl.G2).Neg(p.V)}
 }
 
-func (p *PointG2) IsAdditiveInverse(of curves.Point) bool {
-	return p.IsInverse(of)
+func (p *PointG2) IsAdditiveInverse(of algebra.AdditiveGroupElement[curves.Curve, curves.Point]) bool {
+	return p.Add(of).IsAdditiveIdentity()
 }
 
-func (p *PointG2) Sub(rhs curves.Point) curves.Point {
+func (p *PointG2) Sub(rhs algebra.AdditiveGroupElement[curves.Curve, curves.Point]) curves.Point {
 	if rhs == nil {
 		panic("rhs is nil")
 	}
@@ -139,13 +178,13 @@ func (p *PointG2) Sub(rhs curves.Point) curves.Point {
 	}
 }
 
-func (p *PointG2) ApplySub(q curves.Point, n *saferith.Nat) curves.Point {
-	return p.Sub(q.Mul(NewScalarFieldG2().Element().SetNat(n)))
+func (p *PointG2) ApplySub(q algebra.AdditiveGroupElement[curves.Curve, curves.Point], n *saferith.Nat) curves.Point {
+	return p.Sub(q.Unwrap().ScalarMul(NewScalarFieldG2().Element().SetNat(n)))
 }
 
 // === Vector Space Methods.
 
-func (p *PointG2) Mul(rhs curves.Scalar) curves.Point {
+func (p *PointG2) ScalarMul(rhs algebra.ModuleScalar[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar]) curves.Point {
 	if rhs == nil {
 		panic("rhs is nil")
 	}
@@ -164,7 +203,7 @@ func (*PointG2) Curve() curves.Curve {
 }
 
 func (p *PointG2) Neg() curves.Point {
-	return p.Inverse()
+	return p.AdditiveInverse()
 }
 
 func (p *PointG2) IsNegative() bool {
@@ -174,7 +213,7 @@ func (p *PointG2) IsNegative() bool {
 }
 
 func (p *PointG2) IsSmallOrder() bool {
-	return p.ClearCofactor().IsIdentity()
+	return p.ClearCofactor().IsAdditiveIdentity()
 }
 
 func (p *PointG2) ClearCofactor() curves.Point {
@@ -191,12 +230,13 @@ func (*PointG2) OtherPrimeAlgebraicSubGroup() curves.Curve {
 	return NewG1()
 }
 
-func (p *PointG2) IsTorsionElement(order *saferith.Modulus) bool {
-	if order.Nat().Eq(p.Curve().SubGroupOrder().Nat()) == 1 {
-		return p.V.InCorrectSubgroup() == 1
-	}
-	e := p.Curve().ScalarField().Element().SetNat(order.Nat())
-	return p.Mul(e).IsIdentity()
+func (*PointG2) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOperator[curves.Point]) (bool, error) {
+	panic("implement me")
+	//if order.Nat().Eq(p.Curve().SubGroupOrder().Nat()) == 1 {
+	//	return p.V.InCorrectSubgroup() == 1
+	//}
+	//e := p.Curve().ScalarField().Element().SetNat(order.Nat())
+	//return p.Mul(e).IsIdentity()
 }
 
 func (p *PointG2) Pair(rhs curves.PairingPoint) curves.GtMember {

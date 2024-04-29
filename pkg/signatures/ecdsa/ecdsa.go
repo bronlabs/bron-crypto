@@ -75,7 +75,7 @@ func CalculateRecoveryId(bigR curves.Point) (int, error) {
 	}
 
 	curve := bigR.Curve()
-	subGroupOrder := curve.SubGroupOrder()
+	subGroupOrder := curve.Order()
 
 	var recoveryId int
 	if ry.Byte(0)&0b1 == 0 {
@@ -104,7 +104,7 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 	//  y1 = value such that the curve equation is satisfied, y1 should be even when (v & 1) == 0, odd otherwise
 	rx := signature.R.Nat()
 	if (*signature.V & 2) != 0 {
-		rx = new(saferith.Nat).Add(rx, curve.SubGroupOrder().Nat(), curve.BaseField().Order().BitLen())
+		rx = new(saferith.Nat).Add(rx, curve.Order().Nat(), curve.BaseField().Order().BitLen())
 	}
 	rxBytes := rx.Bytes()
 	if len(rxBytes) < 32 {
@@ -127,12 +127,15 @@ func RecoverPublicKey(signature *Signature, hashFunc func() hash.Hash, message [
 		return nil, errs.WrapHashing(err, "cannot hash message")
 	}
 	zInt := BitsToInt(messageHash, curve)
-	z, err := curve.Scalar().SetBytes(zInt.Bytes())
+	z, err := curve.ScalarField().Element().SetBytes(zInt.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate z")
 	}
-	rInv := signature.R.MultiplicativeInverse()
-	publicKey := (bigR.Mul(signature.S).Sub(curve.ScalarBaseMult(z))).Mul(rInv)
+	rInv, err := signature.R.MultiplicativeInverse()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot calculate inverse of r")
+	}
+	publicKey := (bigR.ScalarMul(signature.S).Sub(curve.ScalarBaseMult(z))).ScalarMul(rInv)
 
 	return publicKey, nil
 }
@@ -145,7 +148,7 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 	if publicKey == nil {
 		return errs.NewIsNil("public key")
 	}
-	if publicKey.IsIdentity() {
+	if publicKey.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("public key is identity")
 	}
 	if signature == nil {
@@ -186,10 +189,10 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 func BitsToInt(b []byte, curve curves.Curve) uint256.Uint256 {
 	// Cast to 256-bit integer
 	blen := 256
-	bUint := uint256.NewFromBytes(b[:blen/8])
+	bUint, _ := uint256.Uint256{}.SetBytes(b[:blen/8])
 
 	// Limit to exactly |q| bits, padded with zeros
-	qlen := curve.SubGroupOrder().BitLen()
+	qlen := curve.Order().BitLen()
 	if blen > qlen {
 		bUint = bUint.Rsh(uint(blen - qlen))
 	}

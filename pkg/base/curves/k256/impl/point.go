@@ -3,21 +3,21 @@ package impl
 import (
 	"sync"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fp"
 )
 
 var (
 	k256PointInitonce        sync.Once
-	k256PointParams          impl.EllipticPointParams
+	k256PointParams          limb4.EllipticPointParams
 	k256PointSswuInitOnce    sync.Once
-	k256PointSswuParams      impl.SswuParams
+	k256PointSswuParams      limb4.SswuParams
 	k256PointIsogenyInitOnce sync.Once
-	k256PointIsogenyParams   impl.IsogenyParams
+	k256PointIsogenyParams   limb4.IsogenyParams
 )
 
-func PointNew() *impl.EllipticPoint {
-	return &impl.EllipticPoint{
+func PointNew() *limb4.EllipticPoint {
+	return &limb4.EllipticPoint{
 		X:          fp.New(),
 		Y:          fp.New(),
 		Z:          fp.New(),
@@ -27,16 +27,16 @@ func PointNew() *impl.EllipticPoint {
 }
 
 func k256PointParamsInit() {
-	k256PointParams = impl.EllipticPointParams{
+	k256PointParams = limb4.EllipticPointParams{
 		A: fp.New(),
 		B: fp.New().SetUint64(7),
-		Gx: fp.New().SetLimbs(&[impl.FieldLimbs]uint64{
+		Gx: fp.New().SetLimbs(&[limb4.FieldLimbs]uint64{
 			0x59f2815b16f81798,
 			0x029bfcdb2dce28d9,
 			0x55a06295ce870b07,
 			0x79be667ef9dcbbac,
 		}),
-		Gy: fp.New().SetLimbs(&[impl.FieldLimbs]uint64{
+		Gy: fp.New().SetLimbs(&[limb4.FieldLimbs]uint64{
 			0x9c47d08ffb10d4b8,
 			0xfd17b448a6855419,
 			0x5da4fbfc0e1108a8,
@@ -47,12 +47,12 @@ func k256PointParamsInit() {
 	}
 }
 
-func getK256PointParams() *impl.EllipticPointParams {
+func getK256PointParams() *limb4.EllipticPointParams {
 	k256PointInitonce.Do(k256PointParamsInit)
 	return &k256PointParams
 }
 
-func getK256PointSswuParams() *impl.SswuParams {
+func getK256PointSswuParams() *limb4.SswuParams {
 	k256PointSswuInitOnce.Do(k256PointSswuParamsInit)
 	return &k256PointSswuParams
 }
@@ -118,23 +118,23 @@ func k256PointSswuParamsInit() {
 	// }
 	// fp.K256FpNew().Arithmetic.ToMontgomery(&newZ, &newZ)
 
-	k256PointSswuParams = impl.SswuParams{
+	k256PointSswuParams = limb4.SswuParams{
 		// (q -3) // 4
-		C1: [impl.FieldLimbs]uint64{0xffffffffbfffff0b, 0xffffffffffffffff, 0xffffffffffffffff, 0x3fffffffffffffff},
+		C1: [limb4.FieldLimbs]uint64{0xffffffffbfffff0b, 0xffffffffffffffff, 0xffffffffffffffff, 0x3fffffffffffffff},
 		// sqrt(-z^3)
-		C2: [impl.FieldLimbs]uint64{0x5b57ba53a30d1520, 0x908f7cef34a762eb, 0x190b0ffe068460c8, 0x98a9828e8f00ff62},
+		C2: [limb4.FieldLimbs]uint64{0x5b57ba53a30d1520, 0x908f7cef34a762eb, 0x190b0ffe068460c8, 0x98a9828e8f00ff62},
 		// 0x3f8731abdd661adca08a5558f0f5d272e953d363cb6f0e5d405447c01a444533
-		A: [impl.FieldLimbs]uint64{0xdb714ce7b18444a1, 0x4458ce38a32a19a2, 0xa0e58ae2837bfbf0, 0x505aabc49336d959},
+		A: [limb4.FieldLimbs]uint64{0xdb714ce7b18444a1, 0x4458ce38a32a19a2, 0xa0e58ae2837bfbf0, 0x505aabc49336d959},
 		// 1771
-		B: [impl.FieldLimbs]uint64{0x000006eb001a66db, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000},
+		B: [limb4.FieldLimbs]uint64{0x000006eb001a66db, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000},
 		// -11
-		Z: [impl.FieldLimbs]uint64{0xfffffff3ffffd234, 0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff},
+		Z: [limb4.FieldLimbs]uint64{0xfffffff3ffffd234, 0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff},
 	}
 }
 
 func k256PointIsogenyInit() {
-	k256PointIsogenyParams = impl.IsogenyParams{
-		XNum: [][impl.FieldLimbs]uint64{
+	k256PointIsogenyParams = limb4.IsogenyParams{
+		XNum: [][limb4.FieldLimbs]uint64{
 			{
 				0x0000003b1c72a8b4,
 				0x0000000000000000,
@@ -160,7 +160,7 @@ func k256PointIsogenyInit() {
 				0x0000000000000000,
 			},
 		},
-		XDen: [][impl.FieldLimbs]uint64{
+		XDen: [][limb4.FieldLimbs]uint64{
 			{
 				0x8af79c1ffdf1e7fa,
 				0xb84bc22235735eb5,
@@ -180,7 +180,7 @@ func k256PointIsogenyInit() {
 				0x0000000000000000,
 			},
 		},
-		YNum: [][impl.FieldLimbs]uint64{
+		YNum: [][limb4.FieldLimbs]uint64{
 			{
 				0xffffffce425e12c3,
 				0xffffffffffffffff,
@@ -206,7 +206,7 @@ func k256PointIsogenyInit() {
 				0x0000000000000000,
 			},
 		},
-		YDen: [][impl.FieldLimbs]uint64{
+		YDen: [][limb4.FieldLimbs]uint64{
 			{
 				0xfffffd0afff4b6fb,
 				0xffffffffffffffff,
@@ -235,16 +235,16 @@ func k256PointIsogenyInit() {
 	}
 }
 
-func getK256PointIsogenyParams() *impl.IsogenyParams {
+func getK256PointIsogenyParams() *limb4.IsogenyParams {
 	k256PointIsogenyInitOnce.Do(k256PointIsogenyInit)
 	return &k256PointIsogenyParams
 }
 
-var _ impl.EllipticPointArithmetic = (*PointArithmetic)(nil)
+var _ limb4.EllipticPointArithmetic = (*PointArithmetic)(nil)
 
 type PointArithmetic struct{}
 
-func (k PointArithmetic) Map(u0, u1 *impl.FieldValue, out *impl.EllipticPoint) error {
+func (k PointArithmetic) Map(u0, u1 *limb4.FieldValue, out *limb4.EllipticPoint) error {
 	sswuParams := getK256PointSswuParams()
 	isoParams := getK256PointIsogenyParams()
 
@@ -255,7 +255,7 @@ func (k PointArithmetic) Map(u0, u1 *impl.FieldValue, out *impl.EllipticPoint) e
 	out.X = q0x
 	out.Y = q0y
 	out.Z.SetOne()
-	tv := &impl.EllipticPoint{
+	tv := &limb4.EllipticPoint{
 		X: q1x,
 		Y: q1y,
 		Z: fp.New().SetOne(),
@@ -264,12 +264,12 @@ func (k PointArithmetic) Map(u0, u1 *impl.FieldValue, out *impl.EllipticPoint) e
 	return nil
 }
 
-func (PointArithmetic) Double(out, arg *impl.EllipticPoint) {
+func (PointArithmetic) Double(out, arg *limb4.EllipticPoint) {
 	// Addition formula from Renes-Costello-Batina 2015
 	// (https://eprint.iacr.org/2015/1060 Algorithm 9)
-	var yy, zz, xy2, bzz, bzz3, bzz9 [impl.FieldLimbs]uint64
-	var yyMBzz9, yyPBzz3, yyzz, yyzz8, t [impl.FieldLimbs]uint64
-	var x, y, z [impl.FieldLimbs]uint64
+	var yy, zz, xy2, bzz, bzz3, bzz9 [limb4.FieldLimbs]uint64
+	var yyMBzz9, yyPBzz3, yyzz, yyzz8, t [limb4.FieldLimbs]uint64
+	var x, y, z [limb4.FieldLimbs]uint64
 	f := arg.X.Arithmetic
 
 	f.Square(&yy, &arg.Y.Value)
@@ -308,13 +308,13 @@ func (PointArithmetic) Double(out, arg *impl.EllipticPoint) {
 	out.Z.Value = z
 }
 
-func (PointArithmetic) Add(out, arg1, arg2 *impl.EllipticPoint) {
+func (PointArithmetic) Add(out, arg1, arg2 *limb4.EllipticPoint) {
 	// Addition formula from Renes-Costello-Batina 2015
 	// (https://eprint.iacr.org/2015/1060 Algorithm 7).
-	var xx, yy, zz, nXxYy, nYyZz, nXxZz [impl.FieldLimbs]uint64
-	var tv1, tv2, xyPairs, yzPairs, xzPairs [impl.FieldLimbs]uint64
-	var bzz, bzz3, yyMBzz3, yyPBzz3, byz [impl.FieldLimbs]uint64
-	var byz3, xx3, bxx9, x, y, z [impl.FieldLimbs]uint64
+	var xx, yy, zz, nXxYy, nYyZz, nXxZz [limb4.FieldLimbs]uint64
+	var tv1, tv2, xyPairs, yzPairs, xzPairs [limb4.FieldLimbs]uint64
+	var bzz, bzz3, yyMBzz3, yyPBzz3, byz [limb4.FieldLimbs]uint64
+	var byz3, xx3, bxx9, x, y, z [limb4.FieldLimbs]uint64
 	f := arg1.X.Arithmetic
 
 	f.Mul(&xx, &arg1.X.Value, &arg2.X.Value)
@@ -395,7 +395,7 @@ func (PointArithmetic) Add(out, arg1, arg2 *impl.EllipticPoint) {
 	out.Z.Value = z
 }
 
-func (k PointArithmetic) IsOnCurve(arg *impl.EllipticPoint) bool {
+func (k PointArithmetic) IsOnCurve(arg *limb4.EllipticPoint) bool {
 	affine := PointNew()
 	k.ToAffine(affine, arg)
 	lhs := fp.New().Square(affine.Y)
@@ -404,9 +404,9 @@ func (k PointArithmetic) IsOnCurve(arg *impl.EllipticPoint) bool {
 	return lhs.Equal(rhs) == 1
 }
 
-func (PointArithmetic) ToAffine(out, arg *impl.EllipticPoint) {
+func (PointArithmetic) ToAffine(out, arg *limb4.EllipticPoint) {
 	var wasInverted int
-	var zero, x, y, z [impl.FieldLimbs]uint64
+	var zero, x, y, z [limb4.FieldLimbs]uint64
 	f := arg.X.Arithmetic
 
 	f.Invert(&wasInverted, &z, &arg.Z.Value)
@@ -426,7 +426,7 @@ func (PointArithmetic) ToAffine(out, arg *impl.EllipticPoint) {
 	out.Arithmetic = arg.Arithmetic
 }
 
-func (PointArithmetic) RhsEq(out, x *impl.FieldValue) {
+func (PointArithmetic) RhsEq(out, x *limb4.FieldValue) {
 	// Elliptic curve equation for secp256k1 is: y^2 = x^3 + 7
 	out.Square(x)
 	out.Mul(out, x)

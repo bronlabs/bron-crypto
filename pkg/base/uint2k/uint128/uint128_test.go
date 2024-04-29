@@ -8,10 +8,8 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 )
-
-var mod2Pow128 = saferith.ModulusFromNat(new(saferith.Nat).Lsh(saferithUtils.NatOne, 128, -1))
 
 func randUint128() Uint128 {
 	randBuf := make([]byte, 16)
@@ -46,7 +44,7 @@ func TestUint128(t *testing.T) {
 			t.Fatal("ToNat is not the inverse of ToUint128 for", x)
 		}
 		// Compare.
-		if !x.Equals(x) {
+		if !x.Equal(x) {
 			t.Fatalf("%v does not equal itself", x.Lo)
 		}
 
@@ -58,7 +56,7 @@ func TestUint128(t *testing.T) {
 			t.Fatalf("ConstantTimeSelect(false, %v, %v) should equal %v, got %v", x, y, y, ConstantTimeSelect(false, x, y))
 		}
 
-		if x.Cmp(y) != x.Nat().Big().Cmp(y.Nat().Big()) {
+		if x.Cmp(y) != algebra.Ordering(x.Nat().Big().Cmp(y.Nat().Big())) {
 			t.Fatalf("mismatch: cmp(%v,%v) should equal %v, got %v", x, y, x.Nat().Big().Cmp(y.Nat().Big()), x.Cmp(y))
 		} else if x.Cmp(x) != 0 {
 			t.Fatalf("%v does not equal itself", x)
@@ -134,14 +132,14 @@ func TestArithmetic(t *testing.T) {
 	}
 	for i := 0; i < 1000; i++ {
 		x, y, z := randUint128(), randUint128(), uint(randUint128().Lo&0xFF)
-		checkArithOp(x, "+", y, Uint128.Add, (*saferith.Nat).Add)
-		checkArithOp(x, "-", y, Uint128.Sub, (*saferith.Nat).Sub)
-		checkArithOp(x, "*", y, Uint128.Mul, (*saferith.Nat).Mul)
-		checkBinOp(x, "&", y, Uint128.And, (*big.Int).And)
-		checkBinOp(x, "|", y, Uint128.Or, (*big.Int).Or)
-		checkBinOp(x, "^", y, Uint128.Xor, (*big.Int).Xor)
-		checkShiftOp(x, "<<", z, Uint128.Lsh, (*big.Int).Lsh)
-		checkShiftOp(x, ">>", z, Uint128.Rsh, (*big.Int).Rsh)
+		checkArithOp(x, "+", y, func(x, y Uint128) Uint128 { return x.Add(y) }, (*saferith.Nat).Add)
+		checkArithOp(x, "-", y, func(x, y Uint128) Uint128 { return x.Sub(y) }, (*saferith.Nat).Sub)
+		checkArithOp(x, "*", y, func(x, y Uint128) Uint128 { return x.Mul(y) }, (*saferith.Nat).Mul)
+		checkBinOp(x, "&", y, func(x, y Uint128) Uint128 { return x.And(y) }, (*big.Int).And)
+		checkBinOp(x, "|", y, func(x, y Uint128) Uint128 { return x.Or(y) }, (*big.Int).Or)
+		checkBinOp(x, "^", y, func(x, y Uint128) Uint128 { return x.Xor(y) }, (*big.Int).Xor)
+		checkShiftOp(x, "<<", z, func(x Uint128, y uint) Uint128 { return x.Lsh(y) }, (*big.Int).Lsh)
+		checkShiftOp(x, ">>", z, func(x Uint128, y uint) Uint128 { return x.Rsh(y) }, (*big.Int).Rsh)
 	}
 }
 

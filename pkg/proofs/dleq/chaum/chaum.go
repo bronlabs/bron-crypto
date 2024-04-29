@@ -30,10 +30,10 @@ func (s *Statement) Validate() error {
 	if s.X2 == nil {
 		return errs.NewIsNil("X2")
 	}
-	if s.X1.IsIdentity() {
+	if s.X1.IsAdditiveIdentity() {
 		return errs.NewArgument("X1 is identity")
 	}
-	if s.X2.IsIdentity() {
+	if s.X2.IsAdditiveIdentity() {
 		return errs.NewArgument("X2 is identity")
 	}
 	return nil
@@ -60,10 +60,10 @@ func (c *Commitment) Validate() error {
 	if c.A2 == nil {
 		return errs.NewIsNil("A2")
 	}
-	if c.A1.IsIdentity() {
+	if c.A1.IsAdditiveIdentity() {
 		return errs.NewArgument("A1 is identity")
 	}
-	if c.A2.IsIdentity() {
+	if c.A2.IsAdditiveIdentity() {
 		return errs.NewArgument("A2 is identity")
 	}
 	return nil
@@ -108,8 +108,8 @@ func (c *protocol) ComputeProverCommitment(_ *Statement, w Witness) (*Commitment
 		return nil, nil, errs.WrapRandomSample(err, "cannot sample scalar")
 	}
 
-	a1 := c.g1.Mul(s)
-	a2 := c.g2.Mul(s)
+	a1 := c.g1.ScalarMul(s)
+	a2 := c.g2.ScalarMul(s)
 
 	return &Commitment{
 		A1: a1,
@@ -145,10 +145,10 @@ func (c *protocol) Verify(statement *Statement, commitment *Commitment, challeng
 		return errs.WrapArgument(err, "cannot hash to scalar")
 	}
 
-	if !c.g1.Mul(response).Sub(statement.X1.Mul(e).Add(commitment.A1)).IsIdentity() {
+	if !c.g1.ScalarMul(response).Sub(statement.X1.ScalarMul(e).Add(commitment.A1)).IsAdditiveIdentity() {
 		return errs.NewVerification("verification, failed")
 	}
-	if !c.g2.Mul(response).Sub(statement.X2.Mul(e).Add(commitment.A2)).IsIdentity() {
+	if !c.g2.ScalarMul(response).Sub(statement.X2.ScalarMul(e).Add(commitment.A2)).IsAdditiveIdentity() {
 		return errs.NewVerification("verification, failed")
 	}
 
@@ -174,8 +174,8 @@ func (c *protocol) RunSimulator(statement *Statement, challengeBytes sigma.Chall
 	}
 
 	a := &Commitment{
-		A1: c.g1.Mul(z).Sub(statement.X1.Mul(e)),
-		A2: c.g2.Mul(z).Sub(statement.X2.Mul(e)),
+		A1: c.g1.ScalarMul(z).Sub(statement.X1.ScalarMul(e)),
+		A2: c.g2.ScalarMul(z).Sub(statement.X2.ScalarMul(e)),
 	}
 
 	return a, z, nil
@@ -189,12 +189,12 @@ func (c *protocol) GetChallengeBytesLength() int {
 	} else {
 		biggerSubGroup = c.g2.Curve()
 	}
-	return biggerSubGroup.ScalarField().WideFieldBytes()
+	return biggerSubGroup.ScalarField().WideElementSize()
 }
 func (c *protocol) ValidateStatement(statement *Statement, witness Witness) (err error) {
 	if err = statement.Validate(); err != nil || witness == nil ||
-		!c.g1.Mul(witness).Equal(statement.X1) ||
-		!c.g2.Mul(witness).Equal(statement.X2) {
+		!c.g1.ScalarMul(witness).Equal(statement.X1) ||
+		!c.g2.ScalarMul(witness).Equal(statement.X2) {
 
 		return errs.WrapArgument(err, "invalid statement")
 	}

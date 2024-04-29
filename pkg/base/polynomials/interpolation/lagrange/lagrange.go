@@ -22,7 +22,11 @@ func L_i(curve curves.Curve, i int, xs []curves.Scalar, x curves.Scalar) (curves
 			return nil, errs.NewValue("division by zero")
 		}
 	}
-	return numerator.Div(denominator), nil
+	nOverD, err := numerator.Div(denominator)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "division by zero")
+	}
+	return nOverD, nil
 }
 
 // Basis computes the set of basis polynomials, and returns a map from i to L_i.

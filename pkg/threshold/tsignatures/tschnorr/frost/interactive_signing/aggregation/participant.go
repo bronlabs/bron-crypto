@@ -84,7 +84,7 @@ func validateInputs(authKey types.AuthKey, protocol types.ThresholdSignatureProt
 	if publicKey == nil {
 		return errs.NewIsNil("public key is nil")
 	}
-	if publicKey.IsIdentity() {
+	if publicKey.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("public key")
 	}
 	if err := publicKeyShares.Validate(protocol); err != nil {

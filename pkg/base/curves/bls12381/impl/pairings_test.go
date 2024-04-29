@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 )
 
 func TestSinglePairing(t *testing.T) {
@@ -36,7 +36,7 @@ func TestMultiPairing(t *testing.T) {
 
 	g1s := make([]*G1, Tests)
 	g2s := make([]*G2, Tests)
-	sc := make([]*impl.FieldValue, Tests)
+	sc := make([]*limb4.FieldValue, Tests)
 	res := make([]*Gt, Tests)
 	expected := new(Gt).SetOne()
 

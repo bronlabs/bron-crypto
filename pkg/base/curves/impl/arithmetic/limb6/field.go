@@ -1,4 +1,4 @@
-package impl
+package limb6
 
 import (
 	"encoding/binary"
@@ -6,32 +6,28 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-// FieldLimbs is the number of uint64 limbs needed to represent an element of most fields.
-// Used for faster limb-based operations.
-const FieldLimbs = 4
+// FieldLimbs is the number of limbs needed to represent this field.
+const FieldLimbs = 6
 
-// FieldBytes is the number of bytes needed to represent an element of most fields.
-const FieldBytes = base.FieldBytes
+// FieldBytes is the number of bytes needed to represent this field.
+const FieldBytes = 48
 
 // WideFieldBytes is the number of bytes needed for safe conversion
 // to this field to avoid bias when reduced.
-const WideFieldBytes = base.WideFieldBytes
+const WideFieldBytes = 96
 
-// FieldValue holds the implementation of field element. This struct homogeneizes
-// several curve fields, and encapsulates them to be exposed using the `curves.FieldElement`
-// interface.
+// FieldValue represents a field element.
 type FieldValue struct {
 	// Value is the field elements value
 	Value [FieldLimbs]uint64
 	// Params are the field parameters
 	Params *FieldParams
-	// Arithmetic are the field element methods
+	// Arithmetic are the field methods
 	Arithmetic FieldArithmetic
 
 	_ ds.Incomparable
@@ -45,9 +41,9 @@ type FieldParams struct {
 	R2 [FieldLimbs]uint64
 	// R3 is 2^768 mod Modulus
 	R3 [FieldLimbs]uint64
-	// Modulus of the field
+	// ModulusLimbs of the field
 	ModulusLimbs [FieldLimbs]uint64
-	// Modulus as saferith.Modulus
+	// Modulus as big.Int
 	Modulus *saferith.Modulus
 
 	_ ds.Incomparable
@@ -90,13 +86,13 @@ func (f *FieldValue) Cmp(rhs *FieldValue) int {
 }
 
 // cmpHelper returns -1 if lhs < rhs
-// 0 if lhs == rhs
+// -1 if lhs == rhs
 // 1 if lhs > rhs
 // Public only for convenience for some internal implementations.
 func cmpHelper(lhs, rhs *[FieldLimbs]uint64) int {
 	gt := uint64(0)
 	lt := uint64(0)
-	for i := 3; i >= 0; i-- {
+	for i := 5; i >= 0; i-- {
 		// convert to two 64-bit numbers where
 		// the leading bits are zeros and hold no meaning
 		//  so rhs - fp actually means gt
@@ -128,7 +124,18 @@ func equalHelper(lhs, rhs *[FieldLimbs]uint64) int {
 	t |= lhs[1] ^ rhs[1]
 	t |= lhs[2] ^ rhs[2]
 	t |= lhs[3] ^ rhs[3]
+	t |= lhs[4] ^ rhs[4]
+	t |= lhs[5] ^ rhs[5]
 	return int(((int64(t) | int64(-t)) >> 63) + 1)
+}
+
+// New returns a brand new field.
+func (f *FieldValue) New() *FieldValue {
+	return &FieldValue{
+		Value:      [FieldLimbs]uint64{0, 0, 0, 0, 0, 0},
+		Params:     f.Params,
+		Arithmetic: f.Arithmetic,
+	}
 }
 
 // IsZero returns 1 if f == 0, 0 otherwise.
@@ -137,6 +144,8 @@ func (f *FieldValue) IsZero() int {
 	t |= f.Value[1]
 	t |= f.Value[2]
 	t |= f.Value[3]
+	t |= f.Value[4]
+	t |= f.Value[5]
 	return int(((int64(t) | int64(-t)) >> 63) + 1)
 }
 
@@ -146,6 +155,8 @@ func (f *FieldValue) IsNonZero() int {
 	t |= f.Value[1]
 	t |= f.Value[2]
 	t |= f.Value[3]
+	t |= f.Value[4]
+	t |= f.Value[5]
 	return int(-((int64(t) | int64(-t)) >> 63))
 }
 
@@ -160,6 +171,8 @@ func (f *FieldValue) Set(rhs *FieldValue) *FieldValue {
 	f.Value[1] = rhs.Value[1]
 	f.Value[2] = rhs.Value[2]
 	f.Value[3] = rhs.Value[3]
+	f.Value[4] = rhs.Value[4]
+	f.Value[5] = rhs.Value[5]
 	f.Params = rhs.Params
 	f.Arithmetic = rhs.Arithmetic
 	return f
@@ -167,7 +180,7 @@ func (f *FieldValue) Set(rhs *FieldValue) *FieldValue {
 
 // SetUint64 f = rhs.
 func (f *FieldValue) SetUint64(rhs uint64) *FieldValue {
-	t := &[FieldLimbs]uint64{rhs, 0, 0, 0}
+	t := &[FieldLimbs]uint64{rhs, 0, 0, 0, 0, 0}
 	f.Arithmetic.ToMontgomery(&f.Value, t)
 	return f
 }
@@ -178,6 +191,8 @@ func (f *FieldValue) SetOne() *FieldValue {
 	f.Value[1] = f.Params.R[1]
 	f.Value[2] = f.Params.R[2]
 	f.Value[3] = f.Params.R[3]
+	f.Value[4] = f.Params.R[4]
+	f.Value[5] = f.Params.R[5]
 	return f
 }
 
@@ -187,10 +202,12 @@ func (f *FieldValue) SetZero() *FieldValue {
 	f.Value[1] = 0
 	f.Value[2] = 0
 	f.Value[3] = 0
+	f.Value[4] = 0
+	f.Value[5] = 0
 	return f
 }
 
-// SetBytesWide takes 64 bytes as input and treats them as a 512-bit number.
+// SetBytesWide takes 96 bytes as input and treats them as a 512-bit number.
 // Attributed to https://github.com/zcash/pasta_curves/blob/main/src/fields/Fp.rs#L255
 // We reduce an arbitrary 512-bit number by decomposing it into two 256-bit digits
 // with the higher bits multiplied by 2^256. Thus, we perform two reductions
@@ -211,13 +228,20 @@ func (f *FieldValue) SetBytesWide(input *[WideFieldBytes]byte) *FieldValue {
 		binary.LittleEndian.Uint64(input[8:16]),
 		binary.LittleEndian.Uint64(input[16:24]),
 		binary.LittleEndian.Uint64(input[24:32]),
-	}
-	d1 := [FieldLimbs]uint64{
 		binary.LittleEndian.Uint64(input[32:40]),
 		binary.LittleEndian.Uint64(input[40:48]),
+	}
+	d1 := [FieldLimbs]uint64{
 		binary.LittleEndian.Uint64(input[48:56]),
 		binary.LittleEndian.Uint64(input[56:64]),
+		binary.LittleEndian.Uint64(input[64:72]),
+		binary.LittleEndian.Uint64(input[72:80]),
+		binary.LittleEndian.Uint64(input[80:88]),
+		binary.LittleEndian.Uint64(input[88:96]),
 	}
+	// f.Arithmetic.ToMontgomery(&d0, &d0)
+	// f.Arithmetic.Mul(&d1, &d1, &f.Params.R2)
+	// f.Arithmetic.Add(&f.Value, &d0, &d0)
 	// Convert to Montgomery form
 	tv1 := &[FieldLimbs]uint64{}
 	tv2 := &[FieldLimbs]uint64{}
@@ -231,7 +255,7 @@ func (f *FieldValue) SetBytesWide(input *[WideFieldBytes]byte) *FieldValue {
 // SetBytes attempts to convert a little endian byte representation
 // of a scalar into a `Fp`, failing if input is not canonical.
 func (f *FieldValue) SetBytes(input *[FieldBytes]byte) (*FieldValue, error) {
-	d0 := [FieldLimbs]uint64{0, 0, 0, 0}
+	d0 := [FieldLimbs]uint64{0, 0, 0, 0, 0, 0}
 	f.Arithmetic.FromBytes(&d0, input)
 
 	if cmpHelper(&d0, &f.Params.ModulusLimbs) != -1 {
@@ -270,6 +294,8 @@ func (f *FieldValue) SetRaw(input *[FieldLimbs]uint64) *FieldValue {
 	f.Value[1] = input[1]
 	f.Value[2] = input[2]
 	f.Value[3] = input[3]
+	f.Value[4] = input[4]
+	f.Value[5] = input[5]
 	return f
 }
 
@@ -296,7 +322,13 @@ func (f *FieldValue) Nat() *saferith.Nat {
 	return new(saferith.Nat).SetBytes(bitstring.ReverseBytes(buffer[:]))
 }
 
-// Raw converts this element into the a [FieldLimbs]uint64.
+// BigInt converts this element into the big.Int struct.
+func (f *FieldValue) BigInt() *big.Int {
+	buffer := f.Bytes()
+	return new(big.Int).SetBytes(bitstring.ReverseBytes(buffer[:]))
+}
+
+// Raw converts this element into the a [Field4Limbs]uint64.
 func (f *FieldValue) Raw() [FieldLimbs]uint64 {
 	res := &[FieldLimbs]uint64{}
 	f.Arithmetic.FromMontgomery(res, &f.Value)
@@ -313,6 +345,19 @@ func (f *FieldValue) Double(a *FieldValue) *FieldValue {
 func (f *FieldValue) Square(a *FieldValue) *FieldValue {
 	f.Arithmetic.Square(&f.Value, &a.Value)
 	return f
+}
+
+func (f *FieldValue) MulBy3b(arg *FieldValue) *FieldValue {
+	a := new(FieldValue)
+	t := new(FieldValue)
+
+	a.Set(arg)
+	t.Set(arg)
+	a.Double(arg)
+	t.Double(a)
+	a.Double(t)
+	a.Add(a, t)
+	return f.Set(a)
 }
 
 // Sqrt this element, if it exists. If true, then value
@@ -356,10 +401,10 @@ func (f *FieldValue) Neg(input *FieldValue) *FieldValue {
 }
 
 // Exp raises base^exp.
-func (f *FieldValue) Exp(b, exp *FieldValue) *FieldValue {
+func (f *FieldValue) Exp(base, exp *FieldValue) *FieldValue {
 	e := [FieldLimbs]uint64{}
 	f.Arithmetic.FromMontgomery(&e, &exp.Value)
-	Pow(&f.Value, &b.Value, &e, f.Params, f.Arithmetic)
+	Pow(&f.Value, &base.Value, &e, f.Params, f.Arithmetic)
 	return f
 }
 
@@ -371,14 +416,14 @@ func (f *FieldValue) CMove(lhs, rhs *FieldValue, choice int) *FieldValue {
 
 // Pow raises base^exp. The result is written to out.
 // Public only for convenience for some internal implementations.
-func Pow(out, b, exp *[FieldLimbs]uint64, params *FieldParams, arithmetic FieldArithmetic) {
-	res := [FieldLimbs]uint64{params.R[0], params.R[1], params.R[2], params.R[3]}
+func Pow(out, base, exp *[FieldLimbs]uint64, params *FieldParams, arithmetic FieldArithmetic) {
+	res := [FieldLimbs]uint64{params.R[0], params.R[1], params.R[2], params.R[3], params.R[4], params.R[5]}
 	tmp := [FieldLimbs]uint64{}
 
 	for i := len(exp) - 1; i >= 0; i-- {
 		for j := 63; j >= 0; j-- {
 			arithmetic.Square(&res, &res)
-			arithmetic.Mul(&tmp, &res, b)
+			arithmetic.Mul(&tmp, &res, base)
 			arithmetic.Selectznz(&res, &res, &tmp, int(exp[i]>>j)&1)
 		}
 	}
@@ -386,6 +431,8 @@ func Pow(out, b, exp *[FieldLimbs]uint64, params *FieldParams, arithmetic FieldA
 	out[1] = res[1]
 	out[2] = res[2]
 	out[3] = res[3]
+	out[4] = res[4]
+	out[5] = res[5]
 }
 
 // Pow2k raises arg to the power `2^k`. This result is written to out.
@@ -396,6 +443,8 @@ func Pow2k(out, arg *[FieldLimbs]uint64, k int, arithmetic FieldArithmetic) {
 	t[1] = arg[1]
 	t[2] = arg[2]
 	t[3] = arg[3]
+	t[4] = arg[4]
+	t[5] = arg[5]
 	for i := 0; i < k; i++ {
 		arithmetic.Square(&t, &t)
 	}
@@ -404,4 +453,6 @@ func Pow2k(out, arg *[FieldLimbs]uint64, k int, arithmetic FieldArithmetic) {
 	out[1] = t[1]
 	out[2] = t[2]
 	out[3] = t[3]
+	out[4] = t[4]
+	out[5] = t[5]
 }

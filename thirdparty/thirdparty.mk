@@ -1,11 +1,16 @@
-thirdparty/boringssl/include/openssl/bn.h:
-	git submodule init thirdparty/boringssl
+BORINGSSL_SUBMODULE=$(CURDIR)/thirdparty/boringssl
+BORINGSSL_BUILD=${BORINGSSL_SUBMODULE}/build
+
+.PHONY: deps-boring
+deps-boring:
+	@{ command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1 && git submodule update --init ${BORINGSSL_SUBMODULE} && echo "boring-ssl submodule is updated."; } || echo "git not present. continuing without updating boring-ssl submodule."
+	$(MAKE) build-boring
+
 
 # might not work on windows
-thirdparty/boringssl/build/crypto/libcrypto.a: thirdparty/boringssl/include/openssl/bn.h
-	cmake thirdparty/boringssl -DCMAKE_BUILD_TYPE=Release -DOPENSSL_SMALL=1 -GNinja -B thirdparty/boringssl/build
-	ninja -C thirdparty/boringssl/build -j7 crypto
-
 .PHONY: build-boring
-build-boring: thirdparty/boringssl/build/crypto/libcrypto.a
+build-boring:
+	cmake $(CURDIR)/thirdparty/boringssl -DCMAKE_BUILD_TYPE=Release -DOPENSSL_SMALL=1 -GNinja -B ${BORINGSSL_BUILD}
+	ninja -C ${BORINGSSL_BUILD} -j7 crypto
+
 

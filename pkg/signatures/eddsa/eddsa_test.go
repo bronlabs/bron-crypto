@@ -88,7 +88,7 @@ func TestEd25519VerificationShouldFailForSmallOrderPublicKeys(t *testing.T) {
 			R, err := suite.Curve().Point().FromAffineCompressed(RBytes)
 			require.NoError(t, err)
 
-			s, err := suite.Curve().Scalar().SetBytes(sBytes)
+			s, err := suite.Curve().ScalarField().Element().SetBytes(sBytes)
 			require.NoError(t, err)
 
 			signature := schnorr.NewSignature(vanillaSchnorr.NewEdDsaCompatibleVariant(), nil, R, s)

@@ -133,7 +133,7 @@ func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[types.T
 		C_lks := make([]curves.Point, p.Protocol.Threshold())
 		for k := 0; k < int(p.Protocol.Threshold()); k++ {
 			exp := p.Protocol.Curve().ScalarField().New(uint64(k))
-			iToK := p.Protocol.Curve().ScalarField().New(uint64(p.SharingId())).Exp(exp)
+			iToK := p.Protocol.Curve().ScalarField().New(uint64(p.SharingId())).Exp(exp.Nat())
 			C_lk := senderCommitmentVector[k]
 			iToKs[k] = iToK
 			C_lks[k] = C_lk

@@ -144,15 +144,15 @@ func TestScalarExp(t *testing.T) {
 	curve := pallas.NewCurve()
 	seventeen := pallas.NewScalar(17)
 
-	toZero := seventeen.Exp(curve.ScalarField().Zero())
+	toZero := seventeen.Exp(curve.ScalarField().Zero().Nat())
 	require.True(t, toZero.Cmp(curve.ScalarField().One()) == 0)
 
-	toOne := seventeen.Exp(curve.ScalarField().One())
+	toOne := seventeen.Exp(curve.ScalarField().One().Nat())
 	require.True(t, toOne.Cmp(seventeen) == 0)
 
-	toTwo := seventeen.Exp(pallas.NewScalar(2))
+	toTwo := seventeen.Exp(pallas.NewScalar(2).Nat())
 	require.True(t, toTwo.Cmp(seventeen.Mul(seventeen)) == 0)
 
-	toThree := seventeen.Exp(pallas.NewScalar(3))
+	toThree := seventeen.Exp(pallas.NewScalar(3).Nat())
 	require.True(t, toThree.Cmp(seventeen.Mul(seventeen).Mul(seventeen)) == 0)
 }

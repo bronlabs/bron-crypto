@@ -30,7 +30,7 @@ func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 	}
 	for j := 0; j < Xi; j++ {
 		for l := 0; l < LOTe; l++ {
-			bob.Gamma[j][l], err = bob.Protocol.Curve().Scalar().ScalarField().Hash(OTeReceiverOut[j][l][:])
+			bob.Gamma[j][l], err = bob.Protocol.Curve().ScalarField().Hash(OTeReceiverOut[j][l][:])
 			if err != nil {
 				return nil, nil, errs.WrapHashing(err, "bob could not hash to gamma")
 			}
@@ -40,9 +40,9 @@ func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 	bob.Beta = bob.Beta.Unpack() // unpack beta for easier access to individual bits
 
 	// step 1.3: b = ∑_{j∈[ξ]} β_j * g_j
-	b = bob.Protocol.Curve().Scalar().ScalarField().Zero()
+	b = bob.Protocol.Curve().ScalarField().AdditiveIdentity()
 	for j := 0; j < Xi; j++ {
-		b = bob.Protocol.Curve().Scalar().ScalarField().Select(bob.Beta[j] != 0, b, b.Add(bob.gadget[j]))
+		b = bob.Protocol.Curve().ScalarField().Select(bob.Beta[j] != 0, b, b.Add(bob.gadget[j]))
 	}
 
 	bob.Round = 3
@@ -61,7 +61,7 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 	}
 
 	C := new(OutputShares)
-	scalarField := alice.Protocol.Curve().Scalar().ScalarField()
+	scalarField := alice.Protocol.Curve().ScalarField()
 
 	// step 2.1: Run OTE.Round2(...) --> (α0_j, α1_j) ∈ ℤq^[LOTe]   ∀j∈[ξ]
 	alphaBits, err := alice.sender.Round2(r1out)
@@ -160,10 +160,10 @@ func (bob *Bob) Round3(r2out *Round2Output) (bigD *[L]curves.Scalar, err error) 
 		return nil, errs.WrapValidation(err, "wrong round 3 input")
 	}
 
-	scalarField := bob.Protocol.Curve().Scalar().ScalarField()
+	scalarField := bob.Protocol.Curve().ScalarField()
 	bigD = new([L]curves.Scalar)
 	for i := 0; i < L; i++ {
-		bigD[i] = scalarField.Zero()
+		bigD[i] = scalarField.AdditiveIdentity()
 	}
 
 	// step 3.1: θ <--- H_{ℤq^{𝓁xρ}} (ã || sessionId)

@@ -43,7 +43,162 @@ func (*BaseFieldG2) Curve() curves.Curve {
 	return NewG2()
 }
 
-// ==== Basic Methods.
+func (*BaseFieldG2) Cardinality() *saferith.Modulus {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) Contains(e curves.BaseFieldElement) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) Iter() <-chan curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) Operators() []algebra.BinaryOperator[curves.BaseFieldElement] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (f *BaseFieldG2) Unwrap() curves.BaseField {
+	return f
+}
+
+func (*BaseFieldG2) IsDefinedUnder(operator algebra.BinaryOperator[curves.BaseFieldElement]) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) Op(operator algebra.BinaryOperator[curves.BaseFieldElement], x algebra.GroupoidElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.GroupoidElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) Addition() algebra.Addition[curves.BaseFieldElement] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) Exp(base, power curves.BaseFieldElement) curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) SimExp(bases []algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement], exponents []*saferith.Nat) (curves.BaseFieldElement, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) MultiBaseExp(bases []algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement], exponent *saferith.Nat) curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) MultiExponentExp(base algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement], exponents []*saferith.Nat) curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) Multiplication() algebra.Multiplication[curves.BaseFieldElement] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) DiscreteExponentiation() algebra.DiscreteExponentiation[curves.BaseFieldElement] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) Identity(under algebra.BinaryOperator[curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) CoPrime(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) GCD(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) (curves.BaseFieldElement, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) LCM(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) (curves.BaseFieldElement, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) MultiplicativeGroup() algebra.MultiplicativeGroup[curves.BaseField, curves.BaseFieldElement] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) AlgebraicVariety() algebra.AlgebraicVariety[curves.Curve, curves.BaseField, curves.Point, curves.BaseFieldElement] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) LatticeElement() algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) ChainElement() algebra.ChainElement[curves.BaseField, curves.BaseFieldElement] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) And(x algebra.ConjunctiveGroupoidElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.ConjunctiveGroupoidElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) ConjunctiveIdentity() curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) Or(x algebra.DisjunctiveGroupoidElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.DisjunctiveGroupoidElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) DisjunctiveIdentity() curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) Xor(x algebra.ExclusiveDisjunctiveGroupoidElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.ExclusiveDisjunctiveGroupoidElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) ExclusiveDisjunctiveIdentity() curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) ElementSize() int {
+	return 2 * 48
+}
+
+func (*BaseFieldG2) WideElementSize() int {
+	return 2 * 2 * 48
+}
+
+func (*BaseFieldG2) IsDecomposable(coprimeIdealNorms ...algebra.IntegerRingElement[curves.BaseField, curves.BaseFieldElement]) (bool, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldG2) BaseFieldElement() curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
 
 func (*BaseFieldG2) Name() string {
 	return NameG2
@@ -55,31 +210,6 @@ func (*BaseFieldG2) Order() *saferith.Modulus {
 
 func (f *BaseFieldG2) Element() curves.BaseFieldElement {
 	return f.AdditiveIdentity()
-}
-
-func (*BaseFieldG2) Operators() []algebra.Operator {
-	return []algebra.Operator{algebra.Addition, algebra.Multiplication}
-}
-
-func (f *BaseFieldG2) OperateOver(operator algebra.Operator, xs ...curves.BaseFieldElement) (curves.BaseFieldElement, error) {
-	var current curves.BaseFieldElement
-	switch operator {
-	case algebra.Addition:
-		current = f.AdditiveIdentity()
-		for _, x := range xs {
-			current = current.Add(x)
-		}
-	case algebra.Multiplication:
-		current = f.MultiplicativeIdentity()
-		for _, x := range xs {
-			current = current.Mul(x)
-		}
-	case algebra.PointAddition:
-		fallthrough
-	default:
-		return nil, errs.NewType("operator %v is not supported", operator)
-	}
-	return current, nil
 }
 
 func (f *BaseFieldG2) Random(prng io.Reader) (curves.BaseFieldElement, error) {
@@ -114,22 +244,22 @@ func (*BaseFieldG2) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.B
 
 // === Additive Groupoid Methods.
 
-func (*BaseFieldG2) Add(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseFieldG2) Add(x algebra.AdditiveGroupoidElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.AdditiveGroupoidElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	sum := x
 	for _, y := range ys {
 		sum = sum.Add(y)
 	}
-	return sum
+	return sum.Unwrap()
 }
 
 // === Multiplicative Groupoid Methods.
 
-func (*BaseFieldG2) Multiply(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
-	sum := x
+func (*BaseFieldG2) Mul(x algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	prod := x
 	for _, y := range ys {
-		sum = sum.Add(y)
+		prod = prod.Mul(y)
 	}
-	return sum
+	return prod.Unwrap()
 }
 
 // === Additive Monoid Methods.
@@ -150,27 +280,31 @@ func (*BaseFieldG2) MultiplicativeIdentity() curves.BaseFieldElement {
 
 // === Additive Group Methods.
 
-func (*BaseFieldG2) Sub(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
-	sum := x
+func (*BaseFieldG2) Sub(x algebra.AdditiveGroupElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.AdditiveGroupElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	diff := x
 	for _, y := range ys {
-		sum = sum.Add(y)
+		diff = diff.Sub(y)
 	}
-	return sum
+	return diff.Unwrap()
 }
 
 // === Multiplicative Group Methods.
 
-func (*BaseFieldG2) Div(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
-	sum := x
+func (*BaseFieldG2) Div(x algebra.MultiplicativeGroupElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.MultiplicativeGroupElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
+	result := x
 	for _, y := range ys {
-		sum = sum.Add(y)
+		var err error
+		result, err = result.Div(y)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not divide field elements")
+		}
 	}
-	return sum
+	return result.Unwrap(), nil
 }
 
 // === Ring Methods.
 
-func (*BaseFieldG2) QuadraticResidue(p curves.BaseFieldElement) (curves.BaseFieldElement, error) {
+func (*BaseFieldG2) QuadraticResidue(p algebra.RingElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
 	pp, ok := p.(*BaseFieldElementG2)
 	if !ok {
 		return nil, errs.NewType("given point is not from this field")
@@ -189,7 +323,7 @@ func (*BaseFieldG2) ExtensionDegree() *saferith.Nat {
 }
 
 func (f *BaseFieldG2) FrobeniusAutomorphism(e curves.BaseFieldElement) curves.BaseFieldElement {
-	return e.Exp(new(BaseFieldElementG2).SetNat(f.Characteristic()))
+	return e.Exp(f.Characteristic())
 }
 
 func (f *BaseFieldG2) Trace(e curves.BaseFieldElement) curves.BaseFieldElement {
@@ -236,26 +370,26 @@ func (f *BaseFieldG2) Bottom() curves.BaseFieldElement {
 	return f.Zero()
 }
 
-func (*BaseFieldG2) Join(x, y curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseFieldG2) Join(x, y algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	return x.Join(y)
 }
 
-func (*BaseFieldG2) Meet(x, y curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseFieldG2) Meet(x, y algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	return x.Meet(y)
 }
 
-func (*BaseFieldG2) Max(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
-	max := x
+func (*BaseFieldG2) Max(x algebra.ChainElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.ChainElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	theMax := x
 	for _, y := range ys {
-		max = max.Max(y)
+		theMax = theMax.Max(y.Unwrap())
 	}
-	return max
+	return theMax.Unwrap()
 }
 
-func (*BaseFieldG2) Min(x curves.BaseFieldElement, ys ...curves.BaseFieldElement) curves.BaseFieldElement {
-	min := x
+func (*BaseFieldG2) Min(x algebra.ChainElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.ChainElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	theMin := x
 	for _, y := range ys {
-		min = min.Min(y)
+		theMin = theMin.Min(y.Unwrap())
 	}
-	return min
+	return theMin.Unwrap()
 }

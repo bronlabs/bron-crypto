@@ -61,7 +61,7 @@ func (v *verifier) Verify(signature *schnorr.Signature[TaprootVariant]) error {
 	if v.publicKey == nil || v.publicKey.A == nil || v.publicKey.A.Curve().Name() != suite.Curve().Name() {
 		return errs.NewArgument("curve not supported")
 	}
-	if signature == nil || signature.R.Curve().Name() != suite.Curve().Name() || signature.S.ScalarField().Curve().Name() != suite.Curve().Name() || signature.R == nil || signature.S == nil || signature.R.IsIdentity() || signature.S.IsZero() {
+	if signature == nil || signature.R.Curve().Name() != suite.Curve().Name() || signature.S.ScalarField().Curve().Name() != suite.Curve().Name() || signature.R == nil || signature.S == nil || signature.R.IsAdditiveIdentity() || signature.S.IsZero() {
 		return errs.NewVerification("some signature elements are nil/zero")
 	}
 
@@ -94,12 +94,12 @@ func (v *verifier) Verify(signature *schnorr.Signature[TaprootVariant]) error {
 	}
 
 	// 5. Let R = s⋅G - e⋅P.
-	bigR := suite.Curve().ScalarBaseMult(signature.S).Sub(bigP.Mul(e))
+	bigR := suite.Curve().ScalarBaseMult(signature.S).Sub(bigP.ScalarMul(e))
 
 	// 6. Fail if is_infinite(R).
 	// 7. Fail if not has_even_y(R).
 	// 8. Fail if x(R) ≠ r.
-	if !signature.R.AffineX().Equal(bigR.AffineX()) || bigR.IsIdentity() {
+	if !signature.R.AffineX().Equal(bigR.AffineX()) || bigR.IsAdditiveIdentity() {
 		return errs.NewVerification("signature is invalid")
 	}
 	if challengeR.Equal(signature.R) && !bigR.AffineY().IsEven() {

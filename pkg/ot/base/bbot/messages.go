@@ -26,7 +26,7 @@ func (r1p2p *Round1P2P) Validate(protocol types.Protocol) error {
 	if r1p2p.MS.Curve() != protocol.Curve() {
 		return errs.NewCurve("mS curve %s is not protocol curve %s", r1p2p.MS.Curve().Name(), protocol.Curve().Name())
 	}
-	if r1p2p.MS.IsIdentity() {
+	if r1p2p.MS.IsAdditiveIdentity() {
 		return errs.NewIsNil("mS is identity")
 	}
 	return nil
@@ -56,7 +56,7 @@ func (r2p2p *Round2P2P) Validate(protocol types.Protocol) error {
 				if r2p2p.Phi[i][j][l].Curve() != otProtocol.Curve() {
 					return errs.NewCurve("phi[%d][%d][%d] curve %s is not protocol curve %s", i, j, l, r2p2p.Phi[i][j][l].Curve().Name(), otProtocol.Curve().Name())
 				}
-				if r2p2p.Phi[i][j][l].IsIdentity() {
+				if r2p2p.Phi[i][j][l].IsAdditiveIdentity() {
 					return errs.NewIsNil("phi[%d][%d][%d] is identity", i, j, l)
 				}
 			}

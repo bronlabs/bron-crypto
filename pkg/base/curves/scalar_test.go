@@ -94,7 +94,7 @@ func Test_ScalarSetBytes_BigEndian(t *testing.T) {
 			oneBigEndian := make([]byte, base.FieldBytes)
 			oneBigEndian[len(oneBigEndian)-1] = 0x1 // 0x000000...0001
 			// Check cast from-to bytes
-			scalarOne, err := boundedCurve.Scalar().SetBytes(oneBigEndian)
+			scalarOne, err := boundedCurve.ScalarField().Element().SetBytes(oneBigEndian)
 			require.NoError(t, err)
 			require.EqualValues(t, oneBigEndian, scalarOne.Bytes())
 			// Check if the internal value is treated as a one
@@ -115,7 +115,7 @@ func Test_ScalarSetBytesWide_BigEndian(t *testing.T) {
 			oneBigEndian := make([]byte, base.WideFieldBytes)
 			oneBigEndian[len(oneBigEndian)-1] = 0x1 // 0x000000...0001
 			// Check cast from-to widebytes
-			scalarOne, err := boundedCurve.Scalar().SetBytesWide(oneBigEndian)
+			scalarOne, err := boundedCurve.ScalarField().Element().SetBytesWide(oneBigEndian)
 			require.NoError(t, err)
 			require.EqualValues(t, scalarOne.Bytes(), oneBigEndian[base.FieldBytes:])
 			// Check if the internal value is treated as a one
@@ -136,9 +136,9 @@ func Test_ScalarIncrementDecrement(t *testing.T) {
 			sc, err := boundedCurve.ScalarField().Random(crand.Reader)
 			require.NoError(t, err)
 			initial := sc.Clone()
-			sc.Increment()
+			sc = sc.Increment()
 			require.True(t, sc.Equal(initial.Add(boundedCurve.ScalarField().One())))
-			sc.Decrement()
+			sc = sc.Decrement()
 			require.True(t, sc.Equal(initial))
 		})
 	}

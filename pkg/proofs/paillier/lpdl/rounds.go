@@ -52,9 +52,9 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 	verifier.state.cDoublePrimeWitness = cDoublePrimeWitness
 
 	// 1.iii. compute Q' = aQ + bQ
-	aScalar := verifier.state.curve.Scalar().SetNat(verifier.state.a)
-	bScalar := verifier.state.curve.Scalar().SetNat(verifier.state.b)
-	verifier.state.bigQPrime = verifier.bigQ.Mul(aScalar).Add(verifier.state.curve.ScalarBaseMult(bScalar))
+	aScalar := verifier.state.curve.ScalarField().Element().SetNat(verifier.state.a)
+	bScalar := verifier.state.curve.ScalarField().Element().SetNat(verifier.state.b)
+	verifier.state.bigQPrime = verifier.bigQ.ScalarMul(aScalar).Add(verifier.state.curve.ScalarBaseMult(bScalar))
 
 	// 4.i. In parallel to the above, run L_P protocol
 	rangeVerifierOutput, err := verifier.rangeVerifier.Round1()
@@ -91,7 +91,7 @@ func (prover *Prover) Round2(r1out *Round1Output) (r2out *Round2Output, err erro
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt cipher text")
 	}
-	alphaScalar := prover.state.curve.Scalar().SetNat(prover.state.alpha)
+	alphaScalar := prover.state.curve.ScalarField().Element().SetNat(prover.state.alpha)
 	prover.state.bigQHat = prover.state.curve.ScalarBaseMult(alphaScalar)
 
 	// 2.ii. compute c^ = commit(Q^) and send to V

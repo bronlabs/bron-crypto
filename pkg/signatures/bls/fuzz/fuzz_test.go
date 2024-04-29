@@ -58,16 +58,16 @@ func Fuzz_Test_Verify(f *testing.F) {
 		require.NoError(t, err)
 		if scheme == bls.POP {
 			require.NotNil(t, pop)
-			require.False(t, pop.Value.IsIdentity())
-			require.True(t, pop.Value.IsTorsionElement(bls12381.NewG2().SubGroupOrder()))
+			require.False(t, pop.Value.IsAdditiveIdentity())
+			require.True(t, pop.Value.IsTorsionElementUnderAddition(bls12381.NewG2().SubGroupOrder()))
 			err = bls.PopVerify(privateKey.PublicKey, pop)
 			require.NoError(t, err)
 		} else {
 			require.Nil(t, pop)
 		}
 		require.NotNil(t, signature)
-		require.False(t, signature.Value.IsIdentity())
-		require.True(t, signature.Value.IsTorsionElement(bls12381.NewG2().SubGroupOrder()))
+		require.False(t, signature.Value.IsAdditiveIdentity())
+		require.True(t, signature.Value.IsTorsionElementUnderAddition(bls12381.NewG2().Order()))
 
 		err = bls.Verify(privateKey.PublicKey, signature, message, pop, scheme, tag)
 		require.NoError(t, err)
@@ -116,8 +116,8 @@ func Fuzz_Test_VerifyInAggregate(f *testing.F) {
 		}
 		require.NoError(t, err)
 		require.NotNil(t, sigAg)
-		require.False(t, sigAg.Value.IsIdentity())
-		require.True(t, sigAg.Value.IsTorsionElement(bls12381.NewG2().SubGroupOrder()))
+		require.False(t, sigAg.Value.IsAdditiveIdentity())
+		require.True(t, sigAg.Value.IsTorsionElementUnderAddition(bls12381.NewG2().Order()))
 
 		if boundedScheme != bls.POP {
 			pops = nil

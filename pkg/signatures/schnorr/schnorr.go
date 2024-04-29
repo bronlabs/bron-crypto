@@ -28,7 +28,7 @@ func MakeGenericSchnorrChallenge(suite types.SigningSuite, xs ...[]byte) (curves
 	if IsEd25519Compliant(suite) {
 		challenge, err = edwards25519.NewScalar(0).SetBytesWideLE(digest)
 	} else {
-		challenge, err = suite.Curve().Scalar().SetBytesWide(digest)
+		challenge, err = suite.Curve().ScalarField().Element().SetBytesWide(digest)
 	}
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not compute fiat shamir challenge")

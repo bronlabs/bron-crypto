@@ -13,18 +13,27 @@ TEST_CLAUSE= $(if ${TEST}, -run ${TEST})
 BUILD_TAGS= $(if ${TAGS}, -tags=${TAGS})
 
 .PHONY: all
-all: build lint test
+all: deps build lint test
 
 pkg/base/errs/error_functions.gen.go:
 pkg/base/errs/known_errors.gen.go:
 	${GO} generate ./...
 	golangci-lint run --fix ./pkg/base/errs
 
+.PHONY: deps
+deps: deps-nocgo deps-boring
+
+.PHONY: deps-nocgo
+deps-nocgo: deps-linter
+	${GO} mod download
+	${GO} mod verify
+	${GO} mod tidy -compat=1.22
+
 .PHONY: codegen
 codegen: pkg/base/errs/error_functions.gen.go pkg/base/errs/known_errors.gen.go
 
 .PHONY: build
-build: build-boring codegen
+build: codegen
 	${GO} build ./...
 
 .PHONY: build-nocgo
@@ -59,10 +68,12 @@ githooks:
 
 .PHONY: lint
 lint:
+	go list -json -m all | nancy sleuth
 	golangci-lint run --timeout=5m
 
 .PHONY: lint-long
 lint-long:
+	go list -json -m all | nancy sleuth
 	golangci-lint run --timeout=120m
 
 .PHONY: lint-fix
@@ -71,7 +82,7 @@ lint-fix:
 
 .PHONY: test
 test:
-	${GO} test ${BUILD_TAGS} -short ${TEST_CLAUSE} ./...
+	${GO} test ${BUILD_TAGS} -failfast -short ${TEST_CLAUSE} ./...
 
 .PHONY: test-long
 test-long: ## Runs all tests, including long-running tests

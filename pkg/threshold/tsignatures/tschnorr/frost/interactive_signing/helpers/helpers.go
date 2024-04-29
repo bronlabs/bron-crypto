@@ -111,11 +111,13 @@ func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig typ
 			return nil, nil, nil, errs.NewMissing("could not find E_j for j=%d in E_alpha", sharingId)
 		}
 
-		bigR_js.Put(identityKey, D_j.Add(E_j.Mul(r_j)))
+		bigR_js.Put(identityKey, D_j.Add(E_j.ScalarMul(r_j)))
 	}
-	bigR = protocolConfig.Curve().Add(
-		protocolConfig.Curve().AdditiveIdentity(),
-		bigR_js.Values()...,
-	)
+
+	bigR = protocolConfig.Curve().AdditiveIdentity()
+	for _, rjs := range bigR_js.Values() {
+		bigR = bigR.Add(rjs)
+	}
+
 	return bigR, bigR_js, r_js, nil
 }

@@ -26,7 +26,7 @@ func BigS(participants ds.Set[types.IdentityKey]) []byte {
 func Aggregate[V schnorr.Variant[V]](variant schnorr.Variant[V], protocol types.ThresholdSignatureProtocol, message []byte, publicShares ds.Map[types.IdentityKey, *tsignatures.PartialPublicKeys], publicKey *schnorr.PublicKey, partialSignatures ds.Map[types.IdentityKey, *tschnorr.PartialSignature]) (signature *schnorr.Signature[V], err error) {
 	sigs := partialSignatures.Values()
 	sig0 := sigs[0]
-	r := sig0.R.Curve().Identity()
+	r := sig0.R.Curve().AdditiveIdentity()
 	for _, sigI := range sigs {
 		r = r.Add(sigI.R)
 	}
@@ -106,7 +106,7 @@ func aggregateInternal[V schnorr.Variant[V]](variant schnorr.Variant[V], partial
 	}
 
 	e := partialSignatures[0].E
-	r := partialSignatures[0].R.Curve().Identity()
+	r := partialSignatures[0].R.Curve().AdditiveIdentity()
 	s := partialSignatures[0].S.ScalarField().Zero()
 	for _, partialSignature := range partialSignatures {
 		if !e.Equal(partialSignature.E) {

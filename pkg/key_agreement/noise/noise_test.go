@@ -236,7 +236,7 @@ func generateKeyFromHex(curve curves.Curve, hexKey string) noise.Signer {
 		panic(err)
 	}
 	var key noise.Signer
-	key.PrivateKey = curve.Scalar()
+	key.PrivateKey = curve.ScalarField().Element()
 	key.PrivateKey, err = key.PrivateKey.SetBytes(privateKey)
 	if err != nil {
 		panic(err)

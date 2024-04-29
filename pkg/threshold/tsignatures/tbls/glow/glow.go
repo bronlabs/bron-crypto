@@ -37,7 +37,7 @@ func (ps *PartialSignature) Validate(protocol types.ThresholdProtocol) error {
 	if ps.SigmaI == nil {
 		return errs.NewIsNil("sigma_i")
 	}
-	if ps.SigmaI.Value.IsIdentity() {
+	if ps.SigmaI.Value.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("sigma_i is identity")
 	}
 	if ps.DleqProof == nil {

@@ -97,7 +97,7 @@ func NewVerifier(publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *p
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	q := curve.SubGroupOrder()
+	q := curve.Order()
 	q2 := saferith.ModulusFromNat(new(saferith.Nat).Mul(q.Nat(), q.Nat(), 2*q.BitLen()))
 
 	rangeProofTranscript := transcript.Clone()
@@ -169,7 +169,7 @@ func NewProver(secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, 
 		return nil, errs.WrapHashing(err, "couldn't initialise participant transcript/sessionId")
 	}
 
-	q := curve.SubGroupOrder()
+	q := curve.Order()
 	qSquared := saferith.ModulusFromNat(new(saferith.Nat).Mul(q.Nat(), q.Nat(), -1))
 
 	rangeProofTranscript := transcript.Clone()

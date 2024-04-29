@@ -85,7 +85,7 @@ func GenerateCOTinputs(Xi, L int, curve curves.Curve) (
 	for j := 0; j < Xi; j++ {
 		senderInput[j] = make(ot.CorrelatedMessage, L)
 		for l := 0; l < L; l++ {
-			senderInput[j][l], err = curve.Scalar().ScalarField().Random(crand.Reader)
+			senderInput[j][l], err = curve.ScalarField().Random(crand.Reader)
 			if err != nil {
 				return nil, nil, errs.WrapRandomSample(err, "could not generate random scalar")
 			}

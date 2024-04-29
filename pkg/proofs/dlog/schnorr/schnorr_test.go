@@ -41,7 +41,7 @@ func Test_HappyPath(t *testing.T) {
 
 			witness, err := curve.ScalarField().Random(crand.Reader)
 			require.NoError(t, err)
-			statement := base.Mul(witness)
+			statement := base.ScalarMul(witness)
 
 			// round 1
 			commitment, state, err := protocol.ComputeProverCommitment(statement, witness)

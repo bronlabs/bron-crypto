@@ -74,7 +74,7 @@ func (v *verifier) Verify(signature *schnorr.Signature[ZilliqaVariant]) error {
 		return errs.NewVerification("invalid E or S value, cannot be zero")
 	}
 
-	l := v.publicKey.A.Mul(signature.E)
+	l := v.publicKey.A.ScalarMul(signature.E)
 	r := curve.ScalarBaseMult(signature.S)
 	q := r.Add(l)
 

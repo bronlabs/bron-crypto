@@ -43,7 +43,7 @@ func (c *Cosigner[V]) ProducePartialSignature(message []byte) (partialSignature 
 	}
 
 	k := c.ppm.PrivateMaterial.K1.Add(c.ppm.PrivateMaterial.K2.Mul(delta))
-	bigR := bigR1Sum.Add(bigR2Sum.Mul(delta))
+	bigR := bigR1Sum.Add(bigR2Sum.ScalarMul(delta))
 
 	// 3.ii. compute e = H(R || pk || message)
 	eBytes := c.variant.ComputeChallengeBytes(bigR, c.myShard.PublicKey(), message)

@@ -120,7 +120,7 @@ func Fuzz_Test_ScalarExp(f *testing.F) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		v := curve.ScalarField().New(i)
 		exp := curve.ScalarField().New(e)
-		v.Exp(exp)
+		v.Exp(exp.Nat())
 	})
 }
 
@@ -196,6 +196,6 @@ func Fuzz_Test_PointMul(f *testing.F) {
 		v := curve.ScalarField().New(i)
 		p, err := curve.Hash(h)
 		require.NoError(t, err)
-		p.Mul(v)
+		p.ScalarMul(v)
 	})
 }

@@ -60,7 +60,7 @@ func (b *protocol) ComputeProverCommitment(_ Statement, _ Witness) (Commitment, 
 		return nil, nil, errs.WrapRandomSample(err, "random scalar failed")
 	}
 
-	r := b.base.Mul(k)
+	r := b.base.ScalarMul(k)
 	return r, k, nil
 }
 
@@ -110,7 +110,7 @@ func (b *protocol) Verify(statement Statement, commitment Commitment, challengeB
 
 	coefficients := make([]curves.Point, len(statement)+1)
 	copy(coefficients, statement)
-	coefficients[len(statement)] = b.base.Mul(response).Neg()
+	coefficients[len(statement)] = b.base.ScalarMul(response).Neg()
 	z := evalPolyInExponentAt(e, coefficients)
 	if !commitment.Neg().Equal(z) {
 		return errs.NewVerification("verification failed")
@@ -144,9 +144,9 @@ func (b *protocol) RunSimulator(statement Statement, challengeBytes sigma.Challe
 
 	coefficients := make([]curves.Point, len(statement)+1)
 	copy(coefficients, statement)
-	coefficients[len(statement)] = b.curve.Identity()
+	coefficients[len(statement)] = b.curve.AdditiveIdentity()
 
-	a := b.base.Mul(z).Sub(evalPolyInExponentAt(e, coefficients))
+	a := b.base.ScalarMul(z).Sub(evalPolyInExponentAt(e, coefficients))
 
 	return a, z, nil
 }
@@ -157,7 +157,7 @@ func (b *protocol) ValidateStatement(statement Statement, witness Witness) error
 	}
 
 	for i, s := range statement {
-		if !b.base.Mul(witness[i]).Equal(s) {
+		if !b.base.ScalarMul(witness[i]).Equal(s) {
 			return errs.NewArgument("invalid statement")
 		}
 	}
@@ -166,7 +166,7 @@ func (b *protocol) ValidateStatement(statement Statement, witness Witness) error
 }
 
 func (b *protocol) GetChallengeBytesLength() int {
-	return b.curve.ScalarField().WideFieldBytes()
+	return b.curve.ScalarField().WideElementSize()
 }
 
 func (*protocol) SerializeStatement(statement Statement) []byte {
@@ -210,7 +210,7 @@ func evalPolyAt(at curves.Scalar, coefficients []curves.Scalar) curves.Scalar {
 func evalPolyInExponentAt(at curves.Scalar, coefficients []curves.Point) curves.Point {
 	s := coefficients[0].Curve().AdditiveIdentity()
 	for _, c := range coefficients {
-		s = s.Mul(at).Add(c)
+		s = s.ScalarMul(at).Add(c)
 	}
 
 	return s

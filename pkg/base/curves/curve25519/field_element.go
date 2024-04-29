@@ -30,7 +30,208 @@ func NewBaseFieldElement(value uint64) *BaseFieldElement {
 	panic("not implemented")
 }
 
-// === Basic Methods.
+func (*BaseFieldElement) Structure() curves.BaseField {
+	return NewBaseField()
+}
+
+func (e *BaseFieldElement) Unwrap() curves.BaseFieldElement {
+	return e
+}
+
+func (*BaseFieldElement) Order(operator algebra.BinaryOperator[curves.BaseFieldElement]) (*saferith.Modulus, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) ApplyOp(operator algebra.BinaryOperator[curves.BaseFieldElement], x algebra.GroupoidElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) (curves.BaseFieldElement, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) IsIdentity(under algebra.BinaryOperator[curves.BaseFieldElement]) (bool, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) Inverse(under algebra.BinaryOperator[curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) IsInverse(of algebra.GroupElement[curves.BaseField, curves.BaseFieldElement], under algebra.BinaryOperator[curves.BaseFieldElement]) (bool, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOperator[curves.BaseFieldElement]) (bool, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) IsTorsionElementUnderAddition(order *saferith.Modulus) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) CoPrime(x curves.BaseFieldElement) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) GCD(x curves.BaseFieldElement) (curves.BaseFieldElement, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) LCM(x curves.BaseFieldElement) (curves.BaseFieldElement, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) Factorise() []curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) EuclideanDiv(x curves.BaseFieldElement) (quotient, reminder curves.BaseFieldElement) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) IsTorsionElementUnderMultiplication(order *saferith.Modulus) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) Lattice() algebra.OrderTheoreticLattice[curves.BaseField, curves.BaseFieldElement] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) Next() (curves.BaseFieldElement, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) Previous() (curves.BaseFieldElement, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) Chain() algebra.Chain[curves.BaseField, curves.BaseFieldElement] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) IsNonZero() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) IsPositive() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) Int() algebra.Int {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) FromInt(v algebra.Int) curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) Not() curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) And(x algebra.ConjunctiveGroupoidElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) ApplyAnd(x algebra.ConjunctiveGroupoidElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) IsConjunctiveIdentity() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) Or(x algebra.DisjunctiveGroupoidElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.DisjunctiveGroupoidElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) ApplyOr(x algebra.DisjunctiveGroupoidElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) IsDisjunctiveIdentity() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) Xor(x algebra.ExclusiveDisjunctiveGroupoidElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.ExclusiveDisjunctiveGroupoidElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) ApplyXor(x algebra.ExclusiveDisjunctiveGroupoidElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) IsExclusiveDisjunctiveIdentity() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) ExclusiveDisjunctiveInverse() curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) IsExclusiveDisjunctiveInverse(of algebra.ExclusiveDisjunctiveGroupElement[curves.BaseField, curves.BaseFieldElement]) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) Lsh(bits uint) curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) Rsh(bits uint) curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) BytesLE() []byte {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) SetBytesLE(bytes []byte) (curves.BaseFieldElement, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) SetBytesWideLE(bytes []byte) (curves.BaseFieldElement, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*BaseFieldElement) Conjugate() curves.BaseFieldElement {
+	//TODO implement me
+	panic("implement me")
+}
 
 func (e *BaseFieldElement) Equal(rhs curves.BaseFieldElement) bool {
 	r, ok := rhs.(*BaseFieldElement)
@@ -45,13 +246,13 @@ func (e *BaseFieldElement) Clone() curves.BaseFieldElement {
 
 // === Additive Groupoid Methods.
 
-func (*BaseFieldElement) Add(rhs curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseFieldElement) Add(rhs algebra.AdditiveGroupoidElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	panic("not implemented")
 }
 
-func (e *BaseFieldElement) ApplyAdd(x curves.BaseFieldElement, n *saferith.Nat) curves.BaseFieldElement {
+func (e *BaseFieldElement) ApplyAdd(x algebra.AdditiveGroupoidElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) curves.BaseFieldElement {
 	reducedN := new(BaseFieldElement).SetNat(n)
-	return e.Add(x.Mul(reducedN))
+	return e.Add(x.Unwrap().Mul(reducedN))
 }
 
 func (*BaseFieldElement) Double() curves.BaseFieldElement {
@@ -64,13 +265,12 @@ func (e *BaseFieldElement) Triple() curves.BaseFieldElement {
 
 // === Multiplicative Groupoid Methods.
 
-func (*BaseFieldElement) Mul(rhs curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseFieldElement) Mul(rhs algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	panic("not implemented")
 }
 
-func (e *BaseFieldElement) ApplyMul(x curves.BaseFieldElement, n *saferith.Nat) curves.BaseFieldElement {
-	reducedN := new(BaseFieldElement).SetNat(n)
-	return e.Mul(x.Exp(reducedN))
+func (e *BaseFieldElement) ApplyMul(x algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) curves.BaseFieldElement {
+	return e.Mul(x.Exp(n))
 }
 
 func (*BaseFieldElement) Square() curves.BaseFieldElement {
@@ -99,41 +299,40 @@ func (*BaseFieldElement) AdditiveInverse() curves.BaseFieldElement {
 	panic("not implemented")
 }
 
-func (e *BaseFieldElement) IsAdditiveInverse(of curves.BaseFieldElement) bool {
+func (e *BaseFieldElement) IsAdditiveInverse(of algebra.AdditiveGroupElement[curves.BaseField, curves.BaseFieldElement]) bool {
 	return e.Add(of).IsAdditiveIdentity()
 }
 
-func (*BaseFieldElement) Sub(rhs curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseFieldElement) Sub(rhs algebra.AdditiveGroupElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	panic("not implemented")
 }
 
-func (e *BaseFieldElement) ApplySub(x curves.BaseFieldElement, n *saferith.Nat) curves.BaseFieldElement {
+func (e *BaseFieldElement) ApplySub(x algebra.AdditiveGroupElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) curves.BaseFieldElement {
 	reducedN := new(BaseFieldElement).SetNat(n)
-	return e.Sub(x.Mul(reducedN))
+	return e.Sub(x.Unwrap().Mul(reducedN))
 }
 
 // === Multiplicative Group Methods.
 
-func (*BaseFieldElement) MultiplicativeInverse() curves.BaseFieldElement {
+func (*BaseFieldElement) MultiplicativeInverse() (curves.BaseFieldElement, error) {
 	panic("not implemented")
 }
 
-func (e *BaseFieldElement) IsMultiplicativeInverse(of curves.BaseFieldElement) bool {
+func (e *BaseFieldElement) IsMultiplicativeInverse(of algebra.MultiplicativeGroupElement[curves.BaseField, curves.BaseFieldElement]) bool {
 	return e.Mul(of).IsMultiplicativeIdentity()
 }
 
-func (*BaseFieldElement) Div(rhs curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseFieldElement) Div(rhs algebra.MultiplicativeGroupElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
 	panic("not implemented")
 }
 
-func (e *BaseFieldElement) ApplyDiv(x curves.BaseFieldElement, n *saferith.Nat) curves.BaseFieldElement {
-	reducedN := new(BaseFieldElement).SetNat(n)
-	return e.Div(x.Exp(reducedN))
+func (e *BaseFieldElement) ApplyDiv(x algebra.MultiplicativeGroupElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) (curves.BaseFieldElement, error) {
+	return e.Div(x.Exp(n))
 }
 
 // === Ring Methods.
 
-func (*BaseFieldElement) MulAdd(y, z curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseFieldElement) MulAdd(y algebra.RingElement[curves.BaseField, curves.BaseFieldElement], z algebra.RingElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	panic("not implemented")
 }
 
@@ -143,8 +342,8 @@ func (*BaseFieldElement) Sqrt() (curves.BaseFieldElement, error) {
 
 // === Finite Field Methods.
 
-func (e *BaseFieldElement) SubFieldElement(index uint) curves.BaseFieldElement {
-	return e
+func (e *BaseFieldElement) SubFieldElement(index uint) (curves.BaseFieldElement, error) {
+	return e, nil
 }
 
 func (e *BaseFieldElement) Norm() curves.BaseFieldElement {
@@ -153,8 +352,8 @@ func (e *BaseFieldElement) Norm() curves.BaseFieldElement {
 
 // === Zp Methods.
 
-func (e *BaseFieldElement) Exp(rhs curves.BaseFieldElement) curves.BaseFieldElement {
-	return e.ApplyMul(e, rhs.Nat())
+func (e *BaseFieldElement) Exp(exp *saferith.Nat) curves.BaseFieldElement {
+	return e.ApplyMul(e, exp)
 }
 
 func (e *BaseFieldElement) Neg() curves.BaseFieldElement {
@@ -177,17 +376,17 @@ func (*BaseFieldElement) IsEven() bool {
 	panic("not implemented")
 }
 
-func (*BaseFieldElement) Increment() {
+func (*BaseFieldElement) Increment() curves.BaseFieldElement {
 	panic("not implemented")
 }
 
-func (*BaseFieldElement) Decrement() {
+func (*BaseFieldElement) Decrement() curves.BaseFieldElement {
 	panic("not implemented")
 }
 
 // === Ordering Methods.
 
-func (*BaseFieldElement) Cmp(rhs curves.BaseFieldElement) algebra.Ordering {
+func (*BaseFieldElement) Cmp(rhs algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement]) algebra.Ordering {
 	panic("not implemented")
 }
 
@@ -199,7 +398,7 @@ func (*BaseFieldElement) IsTop() bool {
 	panic("not implemented")
 }
 
-func (*BaseFieldElement) Join(rhs curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseFieldElement) Join(rhs algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	panic("not implemented")
 }
 
@@ -207,7 +406,7 @@ func (*BaseFieldElement) Max(rhs curves.BaseFieldElement) curves.BaseFieldElemen
 	panic("not implemented")
 }
 
-func (*BaseFieldElement) Meet(rhs curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseFieldElement) Meet(rhs algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	panic("not implemented")
 }
 

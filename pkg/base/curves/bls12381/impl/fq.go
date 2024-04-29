@@ -8,14 +8,14 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 )
 
-type Fq [impl.FieldLimbs]uint64
+type Fq [limb4.FieldLimbs]uint64
 
 var (
 	bls12381FqInitonce sync.Once
-	bls12381FqParams   impl.FieldParams
+	bls12381FqParams   limb4.FieldParams
 )
 
 // 2^S * t = MODULUS - 1 with t odd.
@@ -25,33 +25,33 @@ const fqS = 32
 const qInv = 0xfffffffeffffffff
 
 // fqGenerator = 7 (multiplicative fqGenerator of r-1 order, that is also quadratic nonresidue).
-var fqGenerator = [impl.FieldLimbs]uint64{0x0000000efffffff1, 0x17e363d300189c0f, 0xff9c57876f8457b0, 0x351332208fc5a8c4}
+var fqGenerator = [limb4.FieldLimbs]uint64{0x0000000efffffff1, 0x17e363d300189c0f, 0xff9c57876f8457b0, 0x351332208fc5a8c4}
 
 // fqModulus.
-var fqModulusLimbs = [impl.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48}
+var fqModulusLimbs = [limb4.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48}
 
 var fqModulusHex = strings.ToUpper("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001")
 var FqModulus, _ = saferith.ModulusFromHex(fqModulusHex)
 
-func FqNew() *impl.FieldValue {
-	return &impl.FieldValue{
-		Value:      [impl.FieldLimbs]uint64{},
+func FqNew() *limb4.FieldValue {
+	return &limb4.FieldValue{
+		Value:      [limb4.FieldLimbs]uint64{},
 		Params:     getBls12381FqParams(),
 		Arithmetic: bls12381FqArithmetic{},
 	}
 }
 
 func bls12381FqParamsInit() {
-	bls12381FqParams = impl.FieldParams{
-		R:            [impl.FieldLimbs]uint64{0x00000001fffffffe, 0x5884b7fa00034802, 0x998c4fefecbc4ff5, 0x1824b159acc5056f},
-		R2:           [impl.FieldLimbs]uint64{0xc999e990f3f29c6d, 0x2b6cedcb87925c23, 0x05d314967254398f, 0x0748d9d99f59ff11},
-		R3:           [impl.FieldLimbs]uint64{0xc62c1807439b73af, 0x1b3e0d188cf06990, 0x73d13c71c7b5f418, 0x6e2a5bb9c8db33e9},
-		ModulusLimbs: [impl.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48},
+	bls12381FqParams = limb4.FieldParams{
+		R:            [limb4.FieldLimbs]uint64{0x00000001fffffffe, 0x5884b7fa00034802, 0x998c4fefecbc4ff5, 0x1824b159acc5056f},
+		R2:           [limb4.FieldLimbs]uint64{0xc999e990f3f29c6d, 0x2b6cedcb87925c23, 0x05d314967254398f, 0x0748d9d99f59ff11},
+		R3:           [limb4.FieldLimbs]uint64{0xc62c1807439b73af, 0x1b3e0d188cf06990, 0x73d13c71c7b5f418, 0x6e2a5bb9c8db33e9},
+		ModulusLimbs: [limb4.FieldLimbs]uint64{0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48},
 		Modulus:      FqModulus,
 	}
 }
 
-func getBls12381FqParams() *impl.FieldParams {
+func getBls12381FqParams() *limb4.FieldParams {
 	bls12381FqInitonce.Do(bls12381FqParamsInit)
 	return &bls12381FqParams
 }
@@ -61,23 +61,23 @@ func getBls12381FqParams() *impl.FieldParams {
 type bls12381FqArithmetic struct{}
 
 // ToMontgomery converts this field to montgomery form.
-func (f bls12381FqArithmetic) ToMontgomery(out, arg *[impl.FieldLimbs]uint64) {
+func (f bls12381FqArithmetic) ToMontgomery(out, arg *[limb4.FieldLimbs]uint64) {
 	// arg.R^0 * R^2 / R = arg.R
 	f.Mul(out, arg, &getBls12381FqParams().R2)
 }
 
 // FromMontgomery converts this field from montgomery form.
-func (f bls12381FqArithmetic) FromMontgomery(out, arg *[impl.FieldLimbs]uint64) {
+func (f bls12381FqArithmetic) FromMontgomery(out, arg *[limb4.FieldLimbs]uint64) {
 	// Mul by 1 is division by 2^256 mod q
 	// f.Mul(out, arg, &[impl.FieldLimbs]uint64{1, 0, 0, 0})
-	f.montReduce(out, &[impl.FieldLimbs * 2]uint64{arg[0], arg[1], arg[2], arg[3], 0, 0, 0, 0})
+	f.montReduce(out, &[limb4.FieldLimbs * 2]uint64{arg[0], arg[1], arg[2], arg[3], 0, 0, 0, 0})
 }
 
 // Neg performs modular negation.
-func (bls12381FqArithmetic) Neg(out, arg *[impl.FieldLimbs]uint64) {
+func (bls12381FqArithmetic) Neg(out, arg *[limb4.FieldLimbs]uint64) {
 	// Subtract `arg` from `fqModulus`. Ignore final borrow
 	// since it can't underflow.
-	var t [impl.FieldLimbs]uint64
+	var t [limb4.FieldLimbs]uint64
 	var borrow uint64
 	t[0], borrow = sbb(fqModulusLimbs[0], arg[0], 0)
 	t[1], borrow = sbb(fqModulusLimbs[1], arg[1], borrow)
@@ -95,8 +95,8 @@ func (bls12381FqArithmetic) Neg(out, arg *[impl.FieldLimbs]uint64) {
 }
 
 // Square performs modular square.
-func (f bls12381FqArithmetic) Square(out, arg *[impl.FieldLimbs]uint64) {
-	var r [2 * impl.FieldLimbs]uint64
+func (f bls12381FqArithmetic) Square(out, arg *[limb4.FieldLimbs]uint64) {
+	var r [2 * limb4.FieldLimbs]uint64
 	var carry uint64
 
 	r[1], carry = mac(0, arg[0], arg[1], 0)
@@ -129,9 +129,9 @@ func (f bls12381FqArithmetic) Square(out, arg *[impl.FieldLimbs]uint64) {
 }
 
 // Mul performs modular multiplication.
-func (f bls12381FqArithmetic) Mul(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
+func (f bls12381FqArithmetic) Mul(out, arg1, arg2 *[limb4.FieldLimbs]uint64) {
 	// Schoolbook multiplication
-	var r [2 * impl.FieldLimbs]uint64
+	var r [2 * limb4.FieldLimbs]uint64
 	var carry uint64
 
 	r[0], carry = mac(0, arg1[0], arg2[0], 0)
@@ -158,8 +158,8 @@ func (f bls12381FqArithmetic) Mul(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
 }
 
 // Add performs modular addition.
-func (f bls12381FqArithmetic) Add(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
-	var t [impl.FieldLimbs]uint64
+func (f bls12381FqArithmetic) Add(out, arg1, arg2 *[limb4.FieldLimbs]uint64) {
+	var t [limb4.FieldLimbs]uint64
 	var carry uint64
 
 	t[0], carry = adc(arg1[0], arg2[0], 0)
@@ -173,7 +173,7 @@ func (f bls12381FqArithmetic) Add(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
 }
 
 // Sub performs modular subtraction.
-func (bls12381FqArithmetic) Sub(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
+func (bls12381FqArithmetic) Sub(out, arg1, arg2 *[limb4.FieldLimbs]uint64) {
 	d0, borrow := sbb(arg1[0], arg2[0], 0)
 	d1, borrow := sbb(arg1[1], arg2[1], borrow)
 	d2, borrow := sbb(arg1[2], arg2[2], borrow)
@@ -194,7 +194,7 @@ func (bls12381FqArithmetic) Sub(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
 }
 
 // Sqrt performs modular square root.
-func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]uint64) {
+func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[limb4.FieldLimbs]uint64) {
 	// See sqrt_ts_ct at
 	// https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-11#appendix-I.4
 	// c1 := fqS
@@ -206,19 +206,19 @@ func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]ui
 		0x0000000073eda753,
 	}
 	// c3 := (c2 - 1) / 2
-	c3 := [impl.FieldLimbs]uint64{
+	c3 := [limb4.FieldLimbs]uint64{
 		0x7fff2dff7fffffff,
 		0x04d0ec02a9ded201,
 		0x94cebea4199cec04,
 		0x0000000039f6d3a9,
 	}
 	// c4 := fqGenerator
-	var c5 [impl.FieldLimbs]uint64
-	impl.Pow(&c5, &fqGenerator, &c2, getBls12381FqParams(), f)
+	var c5 [limb4.FieldLimbs]uint64
+	limb4.Pow(&c5, &fqGenerator, &c2, getBls12381FqParams(), f)
 	// c5 := [impl.FieldLimbs]uint64{0x1015708f7e368fe1, 0x31c6c5456ecc4511, 0x5281fe8998a19ea1, 0x0279089e10c63fe8}
-	var z, t, b, c, tv [impl.FieldLimbs]uint64
+	var z, t, b, c, tv [limb4.FieldLimbs]uint64
 
-	impl.Pow(&z, arg, &c3, getBls12381FqParams(), f)
+	limb4.Pow(&z, arg, &c3, getBls12381FqParams(), f)
 	f.Square(&t, &z)
 	f.Mul(&t, &t, arg)
 	f.Mul(&z, &z, arg)
@@ -231,7 +231,7 @@ func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]ui
 			f.Square(&b, &b)
 		}
 		// if b == 1 flag = 0 else flag = 1
-		flag := -(&impl.FieldValue{
+		flag := -(&limb4.FieldValue{
 			Value:      b,
 			Params:     getBls12381FqParams(),
 			Arithmetic: f,
@@ -244,11 +244,11 @@ func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]ui
 		copy(b[:], t[:])
 	}
 	f.Square(&c, &z)
-	*wasSquare = (&impl.FieldValue{
+	*wasSquare = (&limb4.FieldValue{
 		Value:      c,
 		Params:     getBls12381FqParams(),
 		Arithmetic: f,
-	}).Equal(&impl.FieldValue{
+	}).Equal(&limb4.FieldValue{
 		Value:      *arg,
 		Params:     getBls12381FqParams(),
 		Arithmetic: f,
@@ -257,11 +257,11 @@ func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]ui
 }
 
 // Invert performs modular inverse.
-func (f bls12381FqArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]uint64) {
+func (f bls12381FqArithmetic) Invert(wasInverted *int, out, arg *[limb4.FieldLimbs]uint64) {
 	// Using an addition chain from
 	// https://github.com/kwantam/addchain
-	var t0, t1, t2, t3, t4, t5, t6, t7, t8 [impl.FieldLimbs]uint64
-	var t9, t11, t12, t13, t14, t15, t16, t17 [impl.FieldLimbs]uint64
+	var t0, t1, t2, t3, t4, t5, t6, t7, t8 [limb4.FieldLimbs]uint64
+	var t9, t11, t12, t13, t14, t15, t16, t17 [limb4.FieldLimbs]uint64
 
 	f.Square(&t0, arg)
 	f.Mul(&t1, &t0, arg)
@@ -292,64 +292,64 @@ func (f bls12381FqArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimb
 	f.Mul(&t0, &t0, &t17)
 	f.Mul(&t6, &t6, &t0)
 	f.Mul(&t2, &t2, &t6)
-	impl.Pow2k(&t0, &t0, 8, f)
+	limb4.Pow2k(&t0, &t0, 8, f)
 	f.Mul(&t0, &t0, &t17)
-	impl.Pow2k(&t0, &t0, 9, f)
+	limb4.Pow2k(&t0, &t0, 9, f)
 	f.Mul(&t0, &t0, &t16)
-	impl.Pow2k(&t0, &t0, 9, f)
+	limb4.Pow2k(&t0, &t0, 9, f)
 	f.Mul(&t0, &t0, &t15)
-	impl.Pow2k(&t0, &t0, 9, f)
+	limb4.Pow2k(&t0, &t0, 9, f)
 	f.Mul(&t0, &t0, &t15)
-	impl.Pow2k(&t0, &t0, 7, f)
+	limb4.Pow2k(&t0, &t0, 7, f)
 	f.Mul(&t0, &t0, &t14)
-	impl.Pow2k(&t0, &t0, 7, f)
+	limb4.Pow2k(&t0, &t0, 7, f)
 	f.Mul(&t0, &t0, &t13)
-	impl.Pow2k(&t0, &t0, 10, f)
+	limb4.Pow2k(&t0, &t0, 10, f)
 	f.Mul(&t0, &t0, &t12)
-	impl.Pow2k(&t0, &t0, 9, f)
+	limb4.Pow2k(&t0, &t0, 9, f)
 	f.Mul(&t0, &t0, &t11)
-	impl.Pow2k(&t0, &t0, 8, f)
+	limb4.Pow2k(&t0, &t0, 8, f)
 	f.Mul(&t0, &t0, &t8)
-	impl.Pow2k(&t0, &t0, 8, f)
+	limb4.Pow2k(&t0, &t0, 8, f)
 	f.Mul(&t0, &t0, arg)
-	impl.Pow2k(&t0, &t0, 14, f)
+	limb4.Pow2k(&t0, &t0, 14, f)
 	f.Mul(&t0, &t0, &t9)
-	impl.Pow2k(&t0, &t0, 10, f)
+	limb4.Pow2k(&t0, &t0, 10, f)
 	f.Mul(&t0, &t0, &t8)
-	impl.Pow2k(&t0, &t0, 15, f)
+	limb4.Pow2k(&t0, &t0, 15, f)
 	f.Mul(&t0, &t0, &t7)
-	impl.Pow2k(&t0, &t0, 10, f)
+	limb4.Pow2k(&t0, &t0, 10, f)
 	f.Mul(&t0, &t0, &t6)
-	impl.Pow2k(&t0, &t0, 8, f)
+	limb4.Pow2k(&t0, &t0, 8, f)
 	f.Mul(&t0, &t0, &t5)
-	impl.Pow2k(&t0, &t0, 16, f)
+	limb4.Pow2k(&t0, &t0, 16, f)
 	f.Mul(&t0, &t0, &t3)
-	impl.Pow2k(&t0, &t0, 8, f)
+	limb4.Pow2k(&t0, &t0, 8, f)
 	f.Mul(&t0, &t0, &t2)
-	impl.Pow2k(&t0, &t0, 7, f)
+	limb4.Pow2k(&t0, &t0, 7, f)
 	f.Mul(&t0, &t0, &t4)
-	impl.Pow2k(&t0, &t0, 9, f)
+	limb4.Pow2k(&t0, &t0, 9, f)
 	f.Mul(&t0, &t0, &t2)
-	impl.Pow2k(&t0, &t0, 8, f)
+	limb4.Pow2k(&t0, &t0, 8, f)
 	f.Mul(&t0, &t0, &t3)
-	impl.Pow2k(&t0, &t0, 8, f)
+	limb4.Pow2k(&t0, &t0, 8, f)
 	f.Mul(&t0, &t0, &t2)
-	impl.Pow2k(&t0, &t0, 8, f)
+	limb4.Pow2k(&t0, &t0, 8, f)
 	f.Mul(&t0, &t0, &t2)
-	impl.Pow2k(&t0, &t0, 8, f)
+	limb4.Pow2k(&t0, &t0, 8, f)
 	f.Mul(&t0, &t0, &t2)
-	impl.Pow2k(&t0, &t0, 8, f)
+	limb4.Pow2k(&t0, &t0, 8, f)
 	f.Mul(&t0, &t0, &t3)
-	impl.Pow2k(&t0, &t0, 8, f)
+	limb4.Pow2k(&t0, &t0, 8, f)
 	f.Mul(&t0, &t0, &t2)
-	impl.Pow2k(&t0, &t0, 8, f)
+	limb4.Pow2k(&t0, &t0, 8, f)
 	f.Mul(&t0, &t0, &t2)
-	impl.Pow2k(&t0, &t0, 5, f)
+	limb4.Pow2k(&t0, &t0, 5, f)
 	f.Mul(&t0, &t0, &t1)
-	impl.Pow2k(&t0, &t0, 5, f)
+	limb4.Pow2k(&t0, &t0, 5, f)
 	f.Mul(&t0, &t0, &t1)
 
-	*wasInverted = (&impl.FieldValue{
+	*wasInverted = (&limb4.FieldValue{
 		Value:      *arg,
 		Params:     getBls12381FqParams(),
 		Arithmetic: f,
@@ -358,7 +358,7 @@ func (f bls12381FqArithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimb
 }
 
 // FromBytes converts a little endian byte array into a field element.
-func (bls12381FqArithmetic) FromBytes(out *[impl.FieldLimbs]uint64, arg *[base.FieldBytes]byte) {
+func (bls12381FqArithmetic) FromBytes(out *[limb4.FieldLimbs]uint64, arg *[base.FieldBytes]byte) {
 	out[0] = binary.LittleEndian.Uint64(arg[:8])
 	out[1] = binary.LittleEndian.Uint64(arg[8:16])
 	out[2] = binary.LittleEndian.Uint64(arg[16:24])
@@ -366,7 +366,7 @@ func (bls12381FqArithmetic) FromBytes(out *[impl.FieldLimbs]uint64, arg *[base.F
 }
 
 // ToBytes converts a field element to a little endian byte array.
-func (bls12381FqArithmetic) ToBytes(out *[base.FieldBytes]byte, arg *[impl.FieldLimbs]uint64) {
+func (bls12381FqArithmetic) ToBytes(out *[base.FieldBytes]byte, arg *[limb4.FieldLimbs]uint64) {
 	binary.LittleEndian.PutUint64(out[:8], arg[0])
 	binary.LittleEndian.PutUint64(out[8:16], arg[1])
 	binary.LittleEndian.PutUint64(out[16:24], arg[2])
@@ -375,7 +375,7 @@ func (bls12381FqArithmetic) ToBytes(out *[base.FieldBytes]byte, arg *[impl.Field
 
 // Selectznz performs conditional select.
 // selects arg1 if choice == 0 and arg2 if choice == 1.
-func (bls12381FqArithmetic) Selectznz(out, arg1, arg2 *[impl.FieldLimbs]uint64, choice int) {
+func (bls12381FqArithmetic) Selectznz(out, arg1, arg2 *[limb4.FieldLimbs]uint64, choice int) {
 	b := uint64(-choice)
 	out[0] = arg1[0] ^ ((arg1[0] ^ arg2[0]) & b)
 	out[1] = arg1[1] ^ ((arg1[1] ^ arg2[1]) & b)
@@ -383,10 +383,10 @@ func (bls12381FqArithmetic) Selectznz(out, arg1, arg2 *[impl.FieldLimbs]uint64, 
 	out[3] = arg1[3] ^ ((arg1[3] ^ arg2[3]) & b)
 }
 
-func (f bls12381FqArithmetic) montReduce(out *[impl.FieldLimbs]uint64, r *[2 * impl.FieldLimbs]uint64) {
+func (f bls12381FqArithmetic) montReduce(out *[limb4.FieldLimbs]uint64, r *[2 * limb4.FieldLimbs]uint64) {
 	// Taken from Algorithm 14.32 in Handbook of Applied Cryptography
 	var r1, r2, r3, r4, r5, r6, carry, carry2, k uint64
-	var rr [impl.FieldLimbs]uint64
+	var rr [limb4.FieldLimbs]uint64
 
 	k = r[0] * qInv
 	_, carry = mac(r[0], k, fqModulusLimbs[0], 0)

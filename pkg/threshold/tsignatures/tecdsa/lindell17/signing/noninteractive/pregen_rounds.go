@@ -104,7 +104,7 @@ func (p *PreGenParticipant) Round3(input network.RoundMessages[types.ThresholdPr
 			return nil, errs.WrapFailed(err, "cannot verify dlog R proof")
 		}
 
-		bigRs.Put(identity, in.BigR.Mul(p.state.k))
+		bigRs.Put(identity, in.BigR.ScalarMul(p.state.k))
 	}
 
 	p.round++

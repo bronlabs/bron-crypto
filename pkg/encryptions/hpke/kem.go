@@ -111,7 +111,7 @@ func (s *DHKEMScheme) DeriveKeyPair(ikm []byte) (*PrivateKey, error) {
 			skBytes := s.kdf.labeledExpand(s.suiteID(), dpkPrk, []byte("candidate"), []byte{uint8(counter)}, s.NSk())
 			skBytes[0] &= P256BitMask
 
-			sk, err = s.curve.Scalar().SetBytes(skBytes)
+			sk, err = s.curve.ScalarField().Element().SetBytes(skBytes)
 			counter++
 		}
 		return &PrivateKey{
@@ -122,7 +122,7 @@ func (s *DHKEMScheme) DeriveKeyPair(ikm []byte) (*PrivateKey, error) {
 	case curve25519.Name:
 		dkpPrk := s.kdf.labeledExtract(s.suiteID(), nil, []byte("dkp_prk"), ikm)
 		skBytes := s.kdf.labeledExpand(s.suiteID(), dkpPrk, []byte("sk"), nil, s.NSk())
-		sk, err := s.curve.Scalar().SetBytes(skBytes)
+		sk, err := s.curve.ScalarField().Element().SetBytes(skBytes)
 		if err != nil {
 			return nil, errs.WrapSerialisation(err, "cannot deserialize scalar for %s", s.curve.Name())
 		}

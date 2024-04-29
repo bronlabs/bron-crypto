@@ -228,14 +228,14 @@ func DoRound3Prologue(p *Participant, protocol types.ThresholdProtocol, quorum d
 		if !exists {
 			return errs.NewMissing("do not have Rj in memory for j=%d", sharingId)
 		}
-		lhs1 := R_j.Mul(Chi_ij).Sub(GammaU_ji)
+		lhs1 := R_j.ScalarMul(Chi_ij).Sub(GammaU_ji)
 		rhs1 := protocol.Curve().ScalarBaseMult(du_ij)
 		if !lhs1.Equal(rhs1) {
 			return errs.NewIdentifiableAbort(participant.String(), "failed first check")
 		}
 
 		// step 3.5: Check   b_ij · Pk_j - Γ^v_ij = d^v_ij · G
-		lhs2 := pk_j.Mul(Chi_ij).Sub(GammaV_ji)
+		lhs2 := pk_j.ScalarMul(Chi_ij).Sub(GammaV_ji)
 		rhs2 := protocol.Curve().ScalarBaseMult(dv_ij)
 		if !lhs2.Equal(rhs2) {
 			return errs.NewIdentifiableAbort(participant.String(), "failed second check")
@@ -292,12 +292,12 @@ func DoRound3Epilogue(p *Participant, protocol types.ThresholdSignatureProtocol,
 	v_i := sk.Mul(phiPsi).Add(cVdV)
 
 	// step 3.10: w_i <- H(m) · Φ_i + R_x · v_i
-	rx := protocol.SigningSuite().Curve().Scalar().SetNat(R.AffineX().Nat())
+	rx := protocol.SigningSuite().Curve().ScalarField().Element().SetNat(R.AffineX().Nat())
 	digest, err := hashing.Hash(protocol.SigningSuite().Hash(), message)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "digest")
 	}
-	digestScalar, err := protocol.SigningSuite().Curve().Scalar().SetBytesWide(digest)
+	digestScalar, err := protocol.SigningSuite().Curve().ScalarField().Element().SetBytesWide(digest)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "digestScalar")
 	}
@@ -316,7 +316,7 @@ func Aggregate(cipherSuite types.SigningSuite, publicKey curves.Point, partialSi
 	curve := cipherSuite.Curve()
 	w := curve.ScalarField().Zero()
 	u := curve.ScalarField().Zero()
-	R := curve.Identity()
+	R := curve.AdditiveIdentity()
 	// step 4.1: R <- Σ R_i   &    rx <- R_x
 	for pair := range partialSignatures.Iter() {
 		partialSignature := pair.Value
@@ -324,9 +324,13 @@ func Aggregate(cipherSuite types.SigningSuite, publicKey curves.Point, partialSi
 		u = u.Add(partialSignature.Ui)
 		R = R.Add(partialSignature.Ri)
 	}
-	rx := curve.Scalar().SetNat(R.AffineX().Nat())
+	rx := curve.ScalarField().Element().SetNat(R.AffineX().Nat())
 	// step 4.2: s <- (Σ w_i) / (Σ u_i)
-	s := w.Div(u)
+	s, err := w.Div(u)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot compute w/u")
+	}
+
 	// step 4.3: v <- (R_y mod 2) + 2(R_x > q)
 	v, err := ecdsa.CalculateRecoveryId(R)
 	if err != nil {

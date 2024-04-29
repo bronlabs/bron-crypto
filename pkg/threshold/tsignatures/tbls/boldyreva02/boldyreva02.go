@@ -95,7 +95,7 @@ func (s *SigningKeyShare[K]) Validate(protocol types.ThresholdProtocol) error {
 	if s.Share.IsZero() {
 		return errs.NewIsZero("share can't be zero")
 	}
-	if s.PublicKey.Y.IsIdentity() {
+	if s.PublicKey.Y.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("public key can't be at infinity")
 	}
 	if !curveutils.AllOfSameCurve(protocol.Curve(), s.Share, s.PublicKey.Y) {

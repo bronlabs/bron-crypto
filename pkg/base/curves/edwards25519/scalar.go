@@ -15,6 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	saferith_utils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
@@ -49,7 +50,193 @@ func NewScalar(input uint64) *Scalar {
 	}
 }
 
-// === Basic Methods.
+func (*Scalar) Structure() curves.ScalarField {
+	return NewScalarField()
+}
+
+func (s *Scalar) Unwrap() curves.Scalar {
+	return s
+}
+
+func (*Scalar) Order(operator algebra.BinaryOperator[curves.Scalar]) (*saferith.Modulus, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) ApplyOp(operator algebra.BinaryOperator[curves.Scalar], x algebra.GroupoidElement[curves.ScalarField, curves.Scalar], n *saferith.Nat) (curves.Scalar, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) IsIdentity(under algebra.BinaryOperator[curves.Scalar]) (bool, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) Inverse(under algebra.BinaryOperator[curves.Scalar]) (curves.Scalar, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) IsInverse(of algebra.GroupElement[curves.ScalarField, curves.Scalar], under algebra.BinaryOperator[curves.Scalar]) (bool, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOperator[curves.Scalar]) (bool, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) IsTorsionElementUnderAddition(order *saferith.Modulus) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) CoPrime(x curves.Scalar) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) GCD(x curves.Scalar) (curves.Scalar, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) LCM(x curves.Scalar) (curves.Scalar, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) Factorise() []curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) EuclideanDiv(x curves.Scalar) (quotient curves.Scalar, reminder curves.Scalar) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) IsTorsionElementUnderMultiplication(order *saferith.Modulus) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) Lattice() algebra.OrderTheoreticLattice[curves.ScalarField, curves.Scalar] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) Next() (curves.Scalar, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) Previous() (curves.Scalar, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) Chain() algebra.Chain[curves.ScalarField, curves.Scalar] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) IsNonZero() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) IsPositive() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) Int() algebra.Int {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) FromInt(v algebra.Int) curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) Not() curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) And(x algebra.ConjunctiveGroupoidElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) ApplyAnd(x algebra.ConjunctiveGroupoidElement[curves.ScalarField, curves.Scalar], n *saferith.Nat) curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) IsConjunctiveIdentity() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) Or(x algebra.DisjunctiveGroupoidElement[curves.ScalarField, curves.Scalar], ys ...algebra.DisjunctiveGroupoidElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) ApplyOr(x algebra.DisjunctiveGroupoidElement[curves.ScalarField, curves.Scalar], n *saferith.Nat) curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) IsDisjunctiveIdentity() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) Xor(x algebra.ExclusiveDisjunctiveGroupoidElement[curves.ScalarField, curves.Scalar], ys ...algebra.ExclusiveDisjunctiveGroupoidElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) ApplyXor(x algebra.ExclusiveDisjunctiveGroupoidElement[curves.ScalarField, curves.Scalar], n *saferith.Nat) curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) IsExclusiveDisjunctiveIdentity() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) ExclusiveDisjunctiveInverse() curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) IsExclusiveDisjunctiveInverse(of algebra.ExclusiveDisjunctiveGroupElement[curves.ScalarField, curves.Scalar]) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) Lsh(bits uint) curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) Rsh(bits uint) curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Scalar) BytesLE() []byte {
+	//TODO implement me
+	panic("implement me")
+}
 
 func (s *Scalar) Equal(rhs curves.Scalar) bool {
 	return s.Cmp(rhs) == 0
@@ -63,7 +250,7 @@ func (s *Scalar) Clone() curves.Scalar {
 
 // === Additive Groupoid Methods.
 
-func (s *Scalar) Add(rhs curves.Scalar) curves.Scalar {
+func (s *Scalar) Add(rhs algebra.AdditiveGroupoidElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	r, ok := rhs.(*Scalar)
 	if ok {
 		return &Scalar{
@@ -74,9 +261,9 @@ func (s *Scalar) Add(rhs curves.Scalar) curves.Scalar {
 	}
 }
 
-func (s *Scalar) ApplyAdd(x curves.Scalar, n *saferith.Nat) curves.Scalar {
+func (s *Scalar) ApplyAdd(x algebra.AdditiveGroupoidElement[curves.ScalarField, curves.Scalar], n *saferith.Nat) curves.Scalar {
 	reducedN := new(Scalar).SetNat(n)
-	return s.Add(x.Mul(reducedN))
+	return s.Add(x.Unwrap().Mul(reducedN))
 }
 
 func (s *Scalar) Double() curves.Scalar {
@@ -91,7 +278,7 @@ func (s *Scalar) Triple() curves.Scalar {
 
 // === Multiplicative Groupoid Methods.
 
-func (s *Scalar) Mul(rhs curves.Scalar) curves.Scalar {
+func (s *Scalar) Mul(rhs algebra.MultiplicativeGroupoidElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	r, ok := rhs.(*Scalar)
 	if ok {
 		return &Scalar{
@@ -102,9 +289,8 @@ func (s *Scalar) Mul(rhs curves.Scalar) curves.Scalar {
 	}
 }
 
-func (s *Scalar) ApplyMul(x curves.Scalar, n *saferith.Nat) curves.Scalar {
-	reducedN := new(Scalar).SetNat(n)
-	return s.Mul(x.Exp(reducedN))
+func (s *Scalar) ApplyMul(x algebra.MultiplicativeGroupoidElement[curves.ScalarField, curves.Scalar], n *saferith.Nat) curves.Scalar {
+	return s.Mul(x.Exp(n))
 }
 
 func (s *Scalar) Square() curves.Scalar {
@@ -147,11 +333,11 @@ func (s *Scalar) AdditiveInverse() curves.Scalar {
 	}
 }
 
-func (s *Scalar) IsAdditiveInverse(of curves.Scalar) bool {
+func (s *Scalar) IsAdditiveInverse(of algebra.AdditiveGroupElement[curves.ScalarField, curves.Scalar]) bool {
 	return s.Add(of).IsAdditiveIdentity()
 }
 
-func (s *Scalar) Sub(rhs curves.Scalar) curves.Scalar {
+func (s *Scalar) Sub(rhs algebra.AdditiveGroupElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	r, ok := rhs.(*Scalar)
 	if ok {
 		return &Scalar{
@@ -162,37 +348,36 @@ func (s *Scalar) Sub(rhs curves.Scalar) curves.Scalar {
 	}
 }
 
-func (s *Scalar) ApplySub(x curves.Scalar, n *saferith.Nat) curves.Scalar {
+func (s *Scalar) ApplySub(x algebra.AdditiveGroupElement[curves.ScalarField, curves.Scalar], n *saferith.Nat) curves.Scalar {
 	reducedN := new(Scalar).SetNat(n)
-	return s.Sub(x.Mul(reducedN))
+	return s.Sub(x.Unwrap().Mul(reducedN))
 }
 
 // === Multiplicative Group Methods.
 
-func (s *Scalar) MultiplicativeInverse() curves.Scalar {
+func (s *Scalar) MultiplicativeInverse() (curves.Scalar, error) {
 	return &Scalar{
 		V: filippo.NewScalar().Invert(s.V),
-	}
+	}, nil
 }
 
-func (s *Scalar) IsMultiplicativeInverse(of curves.Scalar) bool {
+func (s *Scalar) IsMultiplicativeInverse(of algebra.MultiplicativeGroupElement[curves.ScalarField, curves.Scalar]) bool {
 	return s.Mul(of).IsMultiplicativeIdentity()
 }
 
-func (s *Scalar) Div(rhs curves.Scalar) curves.Scalar {
+func (s *Scalar) Div(rhs algebra.MultiplicativeGroupElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
 	r, ok := rhs.(*Scalar)
 	if ok {
 		value := filippo.NewScalar().Invert(r.V)
 		value.Multiply(value, s.V)
-		return &Scalar{V: value}
+		return &Scalar{V: value}, nil
 	} else {
-		panic("rhs is not ScalarEd25519")
+		return nil, errs.NewFailed("rhs is not ScalarEd25519")
 	}
 }
 
-func (s *Scalar) ApplyDiv(x curves.Scalar, n *saferith.Nat) curves.Scalar {
-	reducedN := new(Scalar).SetNat(n)
-	return s.Div(x.Exp(reducedN))
+func (s *Scalar) ApplyDiv(x algebra.MultiplicativeGroupElement[curves.ScalarField, curves.Scalar], n *saferith.Nat) (curves.Scalar, error) {
+	return s.Div(x.Exp(n))
 }
 
 // === Ring Methods.
@@ -205,7 +390,7 @@ func (s *Scalar) Sqrt() (curves.Scalar, error) {
 	return s.SetNat(x), nil
 }
 
-func (s *Scalar) MulAdd(y, z curves.Scalar) curves.Scalar {
+func (s *Scalar) MulAdd(y algebra.RingElement[curves.ScalarField, curves.Scalar], z algebra.RingElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	yy, ok := y.(*Scalar)
 	if !ok {
 		panic("y is not ScalarEd25519")
@@ -229,14 +414,9 @@ func (s *Scalar) Norm() curves.Scalar {
 
 // === Zp Methods.
 
-func (s *Scalar) Exp(k curves.Scalar) curves.Scalar {
-	exp, ok := k.(*Scalar)
-	if !ok {
-		panic("k is not ScalarEd25519")
-	}
-
+func (s *Scalar) Exp(k *saferith.Nat) curves.Scalar {
 	v := NewScalarField().One()
-	for i := NewScalarField().Zero(); i.Cmp(exp) < 0; i = i.Add(NewScalarField().One()) {
+	for i := new(saferith.Nat).SetUint64(0); saferith_utils.NatIsLess(i, k); i = new(saferith.Nat).Add(i, saferith_utils.NatOne, k.AnnouncedLen()) {
 		v = v.Mul(s)
 	}
 	return v
@@ -262,25 +442,25 @@ func (s *Scalar) IsEven() bool {
 	return s.V.Bytes()[0]&1 == 0
 }
 
-func (s *Scalar) Increment() {
+func (s *Scalar) Increment() curves.Scalar {
 	ee, ok := s.Add(s.ScalarField().One()).(*Scalar)
 	if !ok {
 		panic("invalid type")
 	}
-	s.V = ee.V
+	return ee
 }
 
-func (s *Scalar) Decrement() {
+func (s *Scalar) Decrement() curves.Scalar {
 	ee, ok := s.Sub(s.ScalarField().One()).(*Scalar)
 	if !ok {
 		panic("invalid type")
 	}
-	s.V = ee.V
+	return ee
 }
 
 // === Ordering Methods.
 
-func (s *Scalar) Cmp(rhs curves.Scalar) algebra.Ordering {
+func (s *Scalar) Cmp(rhs algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar]) algebra.Ordering {
 	r, ok := rhs.(*Scalar)
 	if ok {
 		g, e, _ := s.Nat().Cmp(r.Nat())
@@ -298,8 +478,8 @@ func (s *Scalar) IsTop() bool {
 	return s.Add(s.ScalarField().One()).IsZero()
 }
 
-func (s *Scalar) Join(rhs curves.Scalar) curves.Scalar {
-	return s.Max(rhs)
+func (s *Scalar) Join(rhs algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+	return s.Max(rhs.Unwrap())
 }
 
 func (s *Scalar) Max(rhs curves.Scalar) curves.Scalar {
@@ -315,8 +495,8 @@ func (s *Scalar) Max(rhs curves.Scalar) curves.Scalar {
 	}
 }
 
-func (s *Scalar) Meet(rhs curves.Scalar) curves.Scalar {
-	return s.Min(rhs)
+func (s *Scalar) Meet(rhs algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+	return s.Min(rhs.Unwrap())
 }
 
 func (s *Scalar) Min(rhs curves.Scalar) curves.Scalar {

@@ -31,7 +31,10 @@ func CalcOtherPartyLagrangeCoefficient(otherPartySharingId, mySharingId types.Sh
 
 // CalcC3 calculates Enc_pk(ρq + k2^(-1)(m' + r * (cKey * λ1 + share * λ2))), ρ is chosen randomly: 0 < ρ < pk^2.
 func CalcC3(lambda1, k2, mPrime, r, additiveShare curves.Scalar, q *saferith.Nat, pk *paillier.PublicKey, cKey *paillier.CipherText, prng io.Reader) (c3 *paillier.CipherText, err error) {
-	k2Inv := k2.MultiplicativeInverse()
+	k2Inv, err := k2.MultiplicativeInverse()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot get k2 inverse")
+	}
 
 	// c1 = Enc(ρq + k2^(-1) * m')
 	c1Plain := k2Inv.Mul(mPrime).Nat()
@@ -75,7 +78,7 @@ func MessageToScalar(cipherSuite types.SigningSuite, message []byte) (curves.Sca
 		return nil, errs.WrapHashing(err, "cannot hash message")
 	}
 	mPrimeUint := ecdsa.BitsToInt(messageHash, cipherSuite.Curve())
-	mPrime, err := cipherSuite.Curve().Scalar().SetBytes(mPrimeUint.Bytes())
+	mPrime, err := cipherSuite.Curve().ScalarField().Element().SetBytes(mPrimeUint.Bytes())
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "cannot convert message to scalar")
 	}

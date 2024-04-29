@@ -22,7 +22,7 @@ func Prove(sessionId []byte, secret curves.Scalar, basePoint curves.Point, niCom
 	if err := validateProveInputs(sessionId, false, secret, nil, basePoint, niCompiler, prng); err != nil {
 		return nil, nil, errs.WrapArgument(err, "invalid arguments")
 	}
-	statement = basePoint.Mul(secret)
+	statement = basePoint.ScalarMul(secret)
 	switch PROTOCOL {
 	case schnorr.Name:
 		sigmaProtocol, err := schnorr.NewSigmaProtocol(basePoint, prng)
@@ -53,7 +53,7 @@ func BatchProve(sessionId []byte, secrets []curves.Scalar, basePoint curves.Poin
 	}
 	statement = make([]curves.Point, len(secrets))
 	for i, s := range secrets {
-		statement[i] = basePoint.Mul(s)
+		statement[i] = basePoint.ScalarMul(s)
 	}
 	switch BATCH_PROTOCOL {
 	case batch_schnorr.Name:

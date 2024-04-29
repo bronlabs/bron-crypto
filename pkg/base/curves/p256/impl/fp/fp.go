@@ -7,7 +7,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 )
 
 const (
@@ -16,12 +16,12 @@ const (
 
 var (
 	p256FpInitonce sync.Once
-	p256FpParams   impl.FieldParams
+	p256FpParams   limb4.FieldParams
 )
 
-func New() *impl.FieldValue {
-	return &impl.FieldValue{
-		Value:      [impl.FieldLimbs]uint64{},
+func New() *limb4.FieldValue {
+	return &limb4.FieldValue{
+		Value:      [limb4.FieldLimbs]uint64{},
 		Params:     getP256FpParams(),
 		Arithmetic: Arithmetic{},
 	}
@@ -36,16 +36,16 @@ func p256FpParamsInit() {
 	modulus := saferith.ModulusFromBytes(modulusBytes)
 
 	// See FIPS 186-3, section D.2.3
-	p256FpParams = impl.FieldParams{
-		R:            [impl.FieldLimbs]uint64{0x0000000000000001, 0xffffffff00000000, 0xffffffffffffffff, 0x00000000fffffffe},
-		R2:           [impl.FieldLimbs]uint64{0x0000000000000003, 0xfffffffbffffffff, 0xfffffffffffffffe, 0x00000004fffffffd},
-		R3:           [impl.FieldLimbs]uint64{0xfffffffd0000000a, 0xffffffedfffffff7, 0x00000005fffffffc, 0x0000001800000001},
-		ModulusLimbs: [impl.FieldLimbs]uint64{0xffffffffffffffff, 0x00000000ffffffff, 0x0000000000000000, 0xffffffff00000001},
+	p256FpParams = limb4.FieldParams{
+		R:            [limb4.FieldLimbs]uint64{0x0000000000000001, 0xffffffff00000000, 0xffffffffffffffff, 0x00000000fffffffe},
+		R2:           [limb4.FieldLimbs]uint64{0x0000000000000003, 0xfffffffbffffffff, 0xfffffffffffffffe, 0x00000004fffffffd},
+		R3:           [limb4.FieldLimbs]uint64{0xfffffffd0000000a, 0xffffffedfffffff7, 0x00000005fffffffc, 0x0000001800000001},
+		ModulusLimbs: [limb4.FieldLimbs]uint64{0xffffffffffffffff, 0x00000000ffffffff, 0x0000000000000000, 0xffffffff00000001},
 		Modulus:      modulus,
 	}
 }
 
-func getP256FpParams() *impl.FieldParams {
+func getP256FpParams() *limb4.FieldParams {
 	p256FpInitonce.Do(p256FpParamsInit)
 	return &p256FpParams
 }
@@ -55,61 +55,61 @@ func getP256FpParams() *impl.FieldParams {
 type Arithmetic struct{}
 
 // ToMontgomery converts this field to montgomery form.
-func (Arithmetic) ToMontgomery(out, arg *[impl.FieldLimbs]uint64) {
+func (Arithmetic) ToMontgomery(out, arg *[limb4.FieldLimbs]uint64) {
 	ToMontgomery((*MontgomeryDomainFieldElement)(out), (*NonMontgomeryDomainFieldElement)(arg))
 }
 
 // FromMontgomery converts this field from montgomery form.
-func (Arithmetic) FromMontgomery(out, arg *[impl.FieldLimbs]uint64) {
+func (Arithmetic) FromMontgomery(out, arg *[limb4.FieldLimbs]uint64) {
 	FromMontgomery((*NonMontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
 // Neg performs modular negation.
-func (Arithmetic) Neg(out, arg *[impl.FieldLimbs]uint64) {
+func (Arithmetic) Neg(out, arg *[limb4.FieldLimbs]uint64) {
 	Opp((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
 // Square performs modular square.
-func (Arithmetic) Square(out, arg *[impl.FieldLimbs]uint64) {
+func (Arithmetic) Square(out, arg *[limb4.FieldLimbs]uint64) {
 	Square((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg))
 }
 
 // Mul performs modular multiplication.
-func (Arithmetic) Mul(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
+func (Arithmetic) Mul(out, arg1, arg2 *[limb4.FieldLimbs]uint64) {
 	Mul((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
 // Add performs modular addition.
-func (Arithmetic) Add(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
+func (Arithmetic) Add(out, arg1, arg2 *[limb4.FieldLimbs]uint64) {
 	Add((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
 // Sub performs modular subtraction.
-func (Arithmetic) Sub(out, arg1, arg2 *[impl.FieldLimbs]uint64) {
+func (Arithmetic) Sub(out, arg1, arg2 *[limb4.FieldLimbs]uint64) {
 	Sub((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(arg1), (*MontgomeryDomainFieldElement)(arg2))
 }
 
 // Sqrt performs modular square root.
-func (f Arithmetic) Sqrt(wasSquare *int, out, arg *[impl.FieldLimbs]uint64) {
+func (f Arithmetic) Sqrt(wasSquare *int, out, arg *[limb4.FieldLimbs]uint64) {
 	// Use p = 3 mod 4 by Euler's criterion means
 	// arg^((p+1)/4 mod p
-	var t, c [impl.FieldLimbs]uint64
-	c1 := [impl.FieldLimbs]uint64{
+	var t, c [limb4.FieldLimbs]uint64
+	c1 := [limb4.FieldLimbs]uint64{
 		0x0000_0000_0000_0000,
 		0x0000_0000_4000_0000,
 		0x4000_0000_0000_0000,
 		0x3fff_ffff_c000_0000,
 	}
-	impl.Pow(&t, arg, &c1, getP256FpParams(), f)
+	limb4.Pow(&t, arg, &c1, getP256FpParams(), f)
 	Square((*MontgomeryDomainFieldElement)(&c), (*MontgomeryDomainFieldElement)(&t))
-	*wasSquare = (&impl.FieldValue{Value: c, Params: getP256FpParams(), Arithmetic: f}).Equal(&impl.FieldValue{
+	*wasSquare = (&limb4.FieldValue{Value: c, Params: getP256FpParams(), Arithmetic: f}).Equal(&limb4.FieldValue{
 		Value: *arg, Params: getP256FpParams(), Arithmetic: f,
 	})
 	Selectznz(out, uint1(*wasSquare), out, &t)
 }
 
 // Invert performs modular inverse.
-func (f Arithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]uint64) {
+func (f Arithmetic) Invert(wasInverted *int, out, arg *[limb4.FieldLimbs]uint64) {
 	// Fermat's Little Theorem
 	// a ^ (p - 2) mod p
 	//
@@ -125,7 +125,7 @@ func (f Arithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]uint64) 
 	//
 	// Courtesy of Thomas Pornin
 	//
-	var t, r [impl.FieldLimbs]uint64
+	var t, r [limb4.FieldLimbs]uint64
 	copy(t[:], arg[:])
 
 	for i := 0; i < 30; i++ {
@@ -143,7 +143,7 @@ func (f Arithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]uint64) 
 		}
 	}
 
-	*wasInverted = (&impl.FieldValue{
+	*wasInverted = (&limb4.FieldValue{
 		Value:      *arg,
 		Params:     getP256FpParams(),
 		Arithmetic: f,
@@ -152,17 +152,17 @@ func (f Arithmetic) Invert(wasInverted *int, out, arg *[impl.FieldLimbs]uint64) 
 }
 
 // FromBytes converts a little endian byte array into a field element.
-func (Arithmetic) FromBytes(out *[impl.FieldLimbs]uint64, arg *[base.FieldBytes]byte) {
+func (Arithmetic) FromBytes(out *[limb4.FieldLimbs]uint64, arg *[base.FieldBytes]byte) {
 	FromBytes(out, arg)
 }
 
 // ToBytes converts a field element to a little endian byte array.
-func (Arithmetic) ToBytes(out *[base.FieldBytes]byte, arg *[impl.FieldLimbs]uint64) {
+func (Arithmetic) ToBytes(out *[base.FieldBytes]byte, arg *[limb4.FieldLimbs]uint64) {
 	ToBytes(out, arg)
 }
 
 // Selectznz performs conditional select.
 // selects arg1 if choice == 0 and arg2 if choice == 1.
-func (Arithmetic) Selectznz(out, arg1, arg2 *[impl.FieldLimbs]uint64, choice int) {
+func (Arithmetic) Selectznz(out, arg1, arg2 *[limb4.FieldLimbs]uint64, choice int) {
 	Selectznz(out, uint1(choice), arg1, arg2)
 }

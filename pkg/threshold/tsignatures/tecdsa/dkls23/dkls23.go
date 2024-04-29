@@ -49,7 +49,7 @@ func (ps *PartialSignature) Validate(protocol types.ThresholdSignatureProtocol) 
 	if ps.Wi.IsZero() {
 		return errs.NewIsZero("Wi is zero")
 	}
-	if ps.Ri.IsIdentity() {
+	if ps.Ri.IsAdditiveIdentity() {
 		return errs.NewIsZero("Ri is identity")
 	}
 	return nil

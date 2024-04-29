@@ -57,7 +57,7 @@ func (r2p2p *Round2OutputP2P) Validate(protocol types.Protocol) error {
 	if r2p2p.BigR2.Curve() != protocol.Curve() {
 		return errs.NewCurve("big r2 curve %s does not match protocol curve %s", r2p2p.BigR2.Curve(), protocol.Curve())
 	}
-	if r2p2p.BigR2.IsIdentity() {
+	if r2p2p.BigR2.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("big r2")
 	}
 	if r2p2p.BigR2Proof == nil {
@@ -76,7 +76,7 @@ func (r3p2p *Round3OutputP2P) Validate(protocol types.Protocol) error {
 	if r3p2p.BigR1.Curve() != protocol.Curve() {
 		return errs.NewCurve("big r1 curve %s does not match protocol curve %s", r3p2p.BigR1.Curve(), protocol.Curve())
 	}
-	if r3p2p.BigR1.IsIdentity() {
+	if r3p2p.BigR1.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("big r1")
 	}
 	if r3p2p.BigR1Proof == nil {

@@ -1,87 +1,50 @@
 package algebra
 
-// AbstractModule defines methods needed for group ST to be considered as a module over the ring R.
+// Module defines methods needed for group ST to be considered as a module over the ring R.
 // A module (ST, ScalarMult, (R, +, *)), is a structure defined over the ring (R, +, *) where (ST, +) is a commutiative group
 // and ScalarMult distributes wrt +, has the same identity element as *, and ScalarMult(r*s, x) = ScalarMult(r, ScalarMult(s, x)) and
 // vice versa.
-type AbstractModule[ST Structure, M, S Element, R EnrichedElement[AbstractModuleBaseRing[ST, S]]] interface {
+type Module[ModuleType, BaseRingType Structure, ModuleElementType, ScalarType Element] interface {
 	// Module forms a group.
-
-	AbstractGroup[ST, M]
-	// Scalar returns an unspecified element of the base ring of ST.
-	Scalar() S
-	// ScalarRing returns the base ring of ST.
-	ScalarRing() R
+	AdditiveGroup[ModuleType, ModuleElementType]
 	// MultiScalarMult accepts ScalarMult(scs[i], es[i]) for all i of the provided input.
-	MultiScalarMult(scs []S, es []M) (M, error)
+	MultiScalarMult(scs []ScalarType, es []ModuleElementType) (ModuleElementType, error)
+	// ScalarRing returns the base ring of ST.
+	ModuleScalarRing() ModuleBaseRing[ModuleType, BaseRingType, ModuleElementType, ScalarType]
 }
 
-// AbstractModuleBaseRing defines methods needed for the base ring of the module ST.
-type AbstractModuleBaseRing[ST Structure, S Element] interface {
+// ModuleBaseRing defines methods needed for the base ring of the module ST.
+type ModuleBaseRing[ModuleType, BaseRingType Structure, ModuleElementType, ScalarType Element] interface {
 	// Base Ring is a Ring.
-	AbstractRing[ST, S]
+	Ring[BaseRingType, ScalarType]
+
+	Module() Module[ModuleType, BaseRingType, ModuleElementType, ScalarType]
 }
 
-// AbstractModuleElement defines methods needed for elements of type M to be considered elements
+// ModuleElement defines methods needed for elements of type M to be considered elements
 // of module ST.
-type AbstractModuleElement[ST Structure, M, S Element] interface {
+type ModuleElement[ModuleType, BaseRingType Structure, ModuleElementType, ScalarType Element] interface {
 	// Module elements are group elements.
-	AbstractGroupElement[ST, M]
+	AdditiveGroupElement[ModuleType, ModuleElementType]
 
-	// Mul returns scalar multiplication of this element and the input.
-	Mul(sc S) M
+	// ScalarMul returns scalar multiplication of this element and the input.
+	ScalarMul(sc ModuleScalar[ModuleType, BaseRingType, ModuleElementType, ScalarType]) ModuleElementType
 }
 
-// AbstractModuleScalar defines methods needed for the elements of the basefield of ST.
-type AbstractModuleScalar[ST Structure, S Element] interface {
+// ModuleScalar defines methods needed for the elements of the basefield of ST.
+type ModuleScalar[ModuleType, BaseRingType Structure, ModuleElementType, ScalarType Element] interface {
 	// Module Scalar is a Ring element.
-	AbstractRingElement[ST, S]
+	RingElement[BaseRingType, ScalarType]
 }
 
-// AbstractOneDimensionalModule defines methods needed for the module ST to be one dimensional.
+// OneDimensionalModule defines methods needed for the module ST to be one dimensional.
 // A one dimensional module ST forms a cyclic group under (ST, +).
 // We assume some fixed generator is previously agreed upon.
-type AbstractOneDimensionalModule[ST Structure, M, S Element, F EnrichedElement[AbstractModuleBaseRing[ST, S]]] interface {
+type OneDimensionalModule[ModuleType, BaseRingType Structure, ModuleElementType, ScalarType Element] interface {
 	// One dimensional module is a module.
-	AbstractModule[ST, M, S, F]
+	Module[ModuleType, BaseRingType, ModuleElementType, ScalarType]
 	// One dimensional module is a group.
-	AbstractCyclicGroup[ST, M]
+	CyclicGroup[ModuleType, ModuleElementType]
 	// ScalarBaseMult returns scalar multiplication of the input with the generator of the module.
-	ScalarBaseMult(sc S) M
-}
-
-// AbstractVector space defines methods needed for module ST where base ring is a field.
-type AbstractVectorSpace[ST Structure, V, S Element, F EnrichedElement[AbstractVectorSpaceBaseField[ST, S]]] interface {
-	// Vector space is a module.
-	AbstractModule[ST, V, S, F]
-	// ScalarField returns the base field of ST.
-	ScalarField() F
-}
-
-// AbstractVectorSpaceBaseField defines methods needed for the base field of the vector space ST.
-type AbstractVectorSpaceBaseField[ST Structure, S Element] interface {
-	AbstractFiniteField[ST, S]
-}
-
-// AbstractVector defines methods needed for elements of type V to be elements of vector space ST.
-type AbstractVector[ST Structure, V, S Element] interface {
-	// Vector is a module element.
-	AbstractModuleElement[ST, V, S]
-}
-
-// AbstractVectorSpaceScalar defines methods needed for the elements of the basfield of the vector space ST.
-type AbstractVectorSpaceScalar[ST Structure, S Element] interface {
-	// Vector space scalar is a finite field element.
-	AbstractFiniteFieldElement[ST, S]
-}
-
-// AbstractOneDimensionalVectorSpace defines methods needed for a one dimensional module ST to be a vector space.
-// We assume some fixed generator is previously agreed upon ie. the basis set is fixed.
-type AbstractOneDimensionalVectorSpace[ST Structure, V, S Element, F EnrichedElement[AbstractVectorSpaceBaseField[ST, S]]] interface {
-	// One dimensional vector space is a vector space.
-	AbstractVectorSpace[ST, V, S, F]
-	// One dimensional vector space forms a cyclic group.
-	AbstractCyclicGroup[ST, V]
-	// ScalarBaseMult returns scalar multiplication of the input with the generator of the vector space.
-	ScalarBaseMult(sc S) V
+	ScalarBaseMult(sc ModuleScalar[ModuleType, BaseRingType, ModuleElementType, ScalarType]) ModuleElementType
 }

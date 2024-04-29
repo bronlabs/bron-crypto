@@ -28,7 +28,7 @@ func testDeserializationG1(t *testing.T, vector *pointG1) {
 	if vector.Output {
 		require.NoError(t, err)
 	} else {
-		if x != nil && x.IsIdentity() {
+		if x != nil && x.IsAdditiveIdentity() {
 			require.NoError(t, err)
 		} else {
 			require.Error(t, err)
