@@ -294,7 +294,7 @@ func TestOpenOnNilCommitment(t *testing.T) {
 	v := NewVerifier(sid)
 	testResults := getEntries()
 	for _, entry := range testResults {
-		err := v.Verify(NewCommitment([]byte{}), entry.opn)
+		err := v.Verify(&Commitment{[]byte{}}, entry.opn)
 		require.True(t, errs.IsArgument(err))
 	}
 }
@@ -305,7 +305,7 @@ func TestOpenOnLongCommitment(t *testing.T) {
 	v := NewVerifier(sid)
 	testResults := getEntries()
 	for _, entry := range testResults {
-		localCommitment := NewCommitment(make([]byte, h().Size()+1))
+		localCommitment := &Commitment{make([]byte, h().Size()+1)}
 		copy(localCommitment.commitment, entry.com.commitment)
 		// OpenWithSession and check for failure
 		err := v.Verify(localCommitment, entry.opn)
@@ -319,7 +319,7 @@ func TestOpenOnShortCommitment(t *testing.T) {
 	v := NewVerifier(sid)
 	testResults := getEntries()
 	for _, entry := range testResults {
-		localCommitment := NewCommitment(make([]byte, h().Size()-1))
+		localCommitment := &Commitment{make([]byte, h().Size()-1)}
 		copy(localCommitment.commitment, entry.com.commitment)
 		// OpenWithSession and check for failure
 		err := v.Verify(localCommitment, entry.opn)
