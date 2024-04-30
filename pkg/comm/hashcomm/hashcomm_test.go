@@ -14,12 +14,14 @@ var (
 	sid = []byte("00000001")
 )
 
-func TestHappyPath(t *testing.T) {
+func TestSimpleHappyPath(t *testing.T) {
 	sessionId := []byte("00000001")
-	c := NewCommitter(sessionId)
-	v := NewVerifier(sessionId)
+	c, err := NewCommitter(crand.Reader, sessionId)
+	require.NoError(t, err)
+	v, err := NewVerifier(crand.Reader, sessionId)
+	require.NoError(t, err)
 	msg := []byte("test")
-	commitment, opening, err := c.Commit(crand.Reader, msg)
+	commitment, opening, err := c.Commit(msg)
 	require.NoError(t, err)
 	require.NotNil(t, commitment.commitment)
 	require.NotNil(t, opening.message)
@@ -28,18 +30,15 @@ func TestHappyPath(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// An entry into our test table
-type entry struct {
-	// Input
+type testCaseEntry struct {
 	msg Message
-	// Output
 	opn *Opening
 	com *Commitment
 	err error
 }
 
-func getEntries() []entry {
-	var testResults = []entry{
+func getEntries() []testCaseEntry {
+	var testResults = []testCaseEntry{
 		{msg: []byte("This is a test message"), opn: nil, com: nil, err: nil},
 		{msg: []byte("short msg"), opn: nil, com: nil, err: nil},
 		{
@@ -58,19 +57,18 @@ func getEntries() []entry {
 		{msg: nil, opn: nil, com: nil, err: nil},
 	}
 	for i := range testResults {
-		c := NewCommitter(sid)
-		entry := &testResults[i]
-		entry.com, entry.opn, entry.err = c.Commit(crand.Reader, entry.msg)
+		c, _ := NewCommitter(crand.Reader, sid)
+		testCaseEntry := &testResults[i]
+		testCaseEntry.com, testCaseEntry.opn, testCaseEntry.err = c.Commit(testCaseEntry.msg)
 	}
 	return testResults
 }
 
-// Computing commitments should never produce errors
-func TestCommitWithoutErrors(t *testing.T) {
+func TestHappyPath(t *testing.T) {
 	t.Parallel()
 	testResults := getEntries()
-	for _, entry := range testResults {
-		require.NoError(t, entry.err)
+	for _, testCaseEntry := range testResults {
+		require.NoError(t, testCaseEntry.err)
 	}
 }
 
@@ -79,32 +77,30 @@ func TestCommitmentsAreExpectedLength(t *testing.T) {
 	t.Parallel()
 	testResults := getEntries()
 	expLen := h().Size()
-	for _, entry := range testResults {
-		require.Lenf(t, entry.com.commitment, expLen, "commitment is not expected length: %v != %v", len(entry.com.commitment), expLen)
+	for _, testCaseEntry := range testResults {
+		require.Lenf(t, testCaseEntry.com.commitment, expLen, "commitment is not expected length: %v != %v", len(testCaseEntry.com.commitment), expLen)
 	}
 }
 
-// Decommit cannot be nil
-func TestCommmitProducesDecommit(t *testing.T) {
+func TestDecommitShouldNotBeNil(t *testing.T) {
 	t.Parallel()
 	testResults := getEntries()
-	for _, entry := range testResults {
-		require.NotNilf(t, entry.opn.witness, "decommit cannot be nil: Commit(%v)", entry.msg)
+	for _, testCaseEntry := range testResults {
+		require.NotNilf(t, testCaseEntry.opn.witness, "decommit cannot be nil: Commit(%v)", testCaseEntry.msg)
 	}
 }
 
-// Commitments should be unique
 func TestCommmitProducesDistinctCommitments(t *testing.T) {
 	t.Parallel()
 	seen := make(map[string]bool)
 	testResults := getEntries()
 
 	// Check the pre-computed commitments for uniquness
-	for _, entry := range testResults {
+	for _, testCaseEntry := range testResults {
 		// Slices cannot be used as hash keys, so we need to copy into
 		// an array. Oh, go-lang.
 		cee := make([]byte, h().Size())
-		copy(cee[:], entry.com.commitment)
+		copy(cee[:], testCaseEntry.com.commitment)
 
 		serialised := hex.EncodeToString(cee)
 		// Ensure each commit is unique
@@ -117,7 +113,8 @@ func TestCommmitProducesDistinctCommitments(t *testing.T) {
 // randomly selected
 func TestCommmitDistinctCommitments(t *testing.T) {
 	t.Parallel()
-	c := NewCommitter(sid)
+	c, err := NewCommitter(crand.Reader, sid)
+	require.NoError(t, err)
 	seen := make(map[string]bool)
 	msg := []byte("black lives matter")
 	const iterations = 1000
@@ -125,7 +122,7 @@ func TestCommmitDistinctCommitments(t *testing.T) {
 	// Check the pre-computed commitments for uniquness
 	for i := 0; i < iterations; i++ {
 		// Compute a commitment
-		com, _, err := c.Commit(crand.Reader, msg)
+		com, _, err := c.Commit(msg)
 		if err != nil {
 			t.Error(err)
 		}
@@ -149,15 +146,16 @@ func TestCommmitNonceIsExpectedLength(t *testing.T) {
 	testResults := getEntries()
 
 	// Check the pre-computed nonces
-	for _, entry := range testResults {
-		require.Lenf(t, entry.opn.witness, expLen, "nonce has not expected length: %v != %v", len(entry.opn.witness), expLen)
+	for _, testCaseEntry := range testResults {
+		require.Lenf(t, testCaseEntry.opn.witness, expLen, "nonce has not expected length: %v != %v", len(testCaseEntry.opn.witness), expLen)
 	}
 }
 
 // Randomly selected nonces will be unique with overwhelming probability
 func TestCommmitProducesDistinctNonces(t *testing.T) {
 	t.Parallel()
-	c := NewCommitter(sid)
+	c, err := NewCommitter(crand.Reader, sid)
+	require.NoError(t, err)
 	seen := make(map[string]bool)
 	msg := []byte("black lives matter")
 	const iterations = 1000
@@ -165,7 +163,7 @@ func TestCommmitProducesDistinctNonces(t *testing.T) {
 	// Check the pre-computed commitments for uniquness
 	for i := 0; i < iterations; i++ {
 		// Compute a commitment
-		_, opn, err := c.Commit(crand.Reader, msg)
+		_, opn, err := c.Commit(msg)
 		require.NoError(t, err)
 
 		// Ensure each nonce is unique
@@ -177,35 +175,39 @@ func TestCommmitProducesDistinctNonces(t *testing.T) {
 
 func TestOpenOnValidCommitments(t *testing.T) {
 	testResults := getEntries()
-	v := NewVerifier(sid)
-	for _, entry := range testResults {
+	v, err := NewVerifier(crand.Reader, sid)
+	require.NoError(t, err)
+	for _, testCaseEntry := range testResults {
 		// Verify each commitment
-		err := v.Verify(entry.com, entry.opn)
+		err := v.Verify(testCaseEntry.com, testCaseEntry.opn)
 		// There should be no error
-		require.NoErrorf(t, err, "commitment of message failed: %s", entry.msg)
+		require.NoErrorf(t, err, "commitment of message failed: %s", testCaseEntry.msg)
 	}
 }
 
 func TestOpenOnModifiedNonce(t *testing.T) {
 	t.Parallel()
-	v := NewVerifier(sid)
+	v, err := NewVerifier(crand.Reader, sid)
+	require.NoError(t, err)
 	testResults := getEntries()
-	for _, entry := range testResults {
-		localOpening := entry.opn
+	for _, testCaseEntry := range testResults {
+		localOpening := testCaseEntry.opn
 		// Modify the nonce MSB
 		localOpening.witness[0] ^= 0x80
 		// Verify and check for failure
-		err := v.Verify(entry.com, localOpening)
+		err := v.Verify(testCaseEntry.com, localOpening)
+		require.Error(t, err)
 		require.True(t, errs.IsVerification(err))
 	}
 }
 
 func TestOpenOnZeroPrefixNonce(t *testing.T) {
 	t.Parallel()
-	v := NewVerifier(sid)
+	v, err := NewVerifier(crand.Reader, sid)
+	require.NoError(t, err)
 	testResults := getEntries()
-	for _, entry := range testResults {
-		localOpening := entry.opn
+	for _, testCaseEntry := range testResults {
+		localOpening := testCaseEntry.opn
 		// Modify the nonce
 		localOpening.witness[0] = 0x00
 		localOpening.witness[1] = 0x00
@@ -219,7 +221,7 @@ func TestOpenOnZeroPrefixNonce(t *testing.T) {
 		localOpening.witness[9] = 0x00
 		localOpening.witness[10] = 0x00
 		// Verify and check for failure
-		err := v.Verify(entry.com, localOpening)
+		err := v.Verify(testCaseEntry.com, localOpening)
 		require.True(t, errs.IsVerification(err))
 	}
 }
@@ -227,14 +229,15 @@ func TestOpenOnZeroPrefixNonce(t *testing.T) {
 // An unrelated message should fail on open
 func TestOpenOnNewMessage(t *testing.T) {
 	t.Parallel()
-	v := NewVerifier(sid)
+	v, err := NewVerifier(crand.Reader, sid)
+	require.NoError(t, err)
 	testResults := getEntries()
-	for _, entry := range testResults {
-		localOpening := entry.opn
+	for _, testCaseEntry := range testResults {
+		localOpening := testCaseEntry.opn
 		// Use a distinct message
 		localOpening.message = []byte("no one expects the spanish inquisition")
 		// Verify and check for failure
-		err := v.Verify(entry.com, localOpening)
+		err := v.Verify(testCaseEntry.com, localOpening)
 		require.True(t, errs.IsVerification(err))
 	}
 }
@@ -242,19 +245,20 @@ func TestOpenOnNewMessage(t *testing.T) {
 // A modified message should fail on open
 func TestOpenOnModifiedMessage(t *testing.T) {
 	t.Parallel()
-	v := NewVerifier(sid)
+	v, err := NewVerifier(crand.Reader, sid)
+	require.NoError(t, err)
 	testResults := getEntries()
 	localTestResults := testResults
-	for _, entry := range localTestResults {
+	for _, testCaseEntry := range localTestResults {
 		// Skip the empty string message for this test case
-		if len(entry.msg) == 0 {
+		if len(testCaseEntry.msg) == 0 {
 			continue
 		}
-		localOpening := entry.opn
+		localOpening := testCaseEntry.opn
 		// Modify the message LSB
 		localOpening.message[0] ^= 0x01
 		// Verify and check for failure
-		err := v.Verify(entry.com, localOpening)
+		err := v.Verify(testCaseEntry.com, localOpening)
 		require.True(t, errs.IsVerification(err))
 	}
 }
@@ -262,14 +266,15 @@ func TestOpenOnModifiedMessage(t *testing.T) {
 // A modified commitment should fail on open
 func TestOpenOnModifiedCommitment(t *testing.T) {
 	t.Parallel()
-	v := NewVerifier(sid)
+	v, err := NewVerifier(crand.Reader, sid)
+	require.NoError(t, err)
 	testResults := getEntries()
-	for _, entry := range testResults {
+	for _, testCaseEntry := range testResults {
 		// Copy and then modify the commitment
-		localCommitment := entry.com
+		localCommitment := testCaseEntry.com
 		localCommitment.commitment[6] ^= 0x33
 		// Verify and check for failure
-		err := v.Verify(localCommitment, entry.opn)
+		err := v.Verify(localCommitment, testCaseEntry.opn)
 		require.True(t, errs.IsVerification(err))
 	}
 }
@@ -277,13 +282,14 @@ func TestOpenOnModifiedCommitment(t *testing.T) {
 // An empty decommit should fail to open
 func TestOpenOnDefaultDecommitObject(t *testing.T) {
 	t.Parallel()
-	v := NewVerifier(sid)
+	v, err := NewVerifier(crand.Reader, sid)
+	require.NoError(t, err)
 	testResults := getEntries()
-	for _, entry := range testResults {
-		localOpening := entry.opn
+	for _, testCaseEntry := range testResults {
+		localOpening := testCaseEntry.opn
 		localOpening.witness = nil
 		// OpenWithSession and check for failure
-		err := v.Verify(entry.com, localOpening)
+		err := v.Verify(testCaseEntry.com, localOpening)
 		require.True(t, errs.IsArgument(err))
 	}
 }
@@ -291,10 +297,11 @@ func TestOpenOnDefaultDecommitObject(t *testing.T) {
 // A nil commit should return an error
 func TestOpenOnNilCommitment(t *testing.T) {
 	t.Parallel()
-	v := NewVerifier(sid)
+	v, err := NewVerifier(crand.Reader, sid)
+	require.NoError(t, err)
 	testResults := getEntries()
-	for _, entry := range testResults {
-		err := v.Verify(&Commitment{[]byte{}}, entry.opn)
+	for _, testCaseEntry := range testResults {
+		err := v.Verify(&Commitment{[]byte{}}, testCaseEntry.opn)
 		require.True(t, errs.IsArgument(err))
 	}
 }
@@ -302,13 +309,14 @@ func TestOpenOnNilCommitment(t *testing.T) {
 // Too long commitment should produce an error
 func TestOpenOnLongCommitment(t *testing.T) {
 	t.Parallel()
-	v := NewVerifier(sid)
+	v, err := NewVerifier(crand.Reader, sid)
+	require.NoError(t, err)
 	testResults := getEntries()
-	for _, entry := range testResults {
+	for _, testCaseEntry := range testResults {
 		localCommitment := &Commitment{make([]byte, h().Size()+1)}
-		copy(localCommitment.commitment, entry.com.commitment)
+		copy(localCommitment.commitment, testCaseEntry.com.commitment)
 		// OpenWithSession and check for failure
-		err := v.Verify(localCommitment, entry.opn)
+		err := v.Verify(localCommitment, testCaseEntry.opn)
 		require.True(t, errs.IsArgument(err))
 	}
 }
@@ -316,13 +324,14 @@ func TestOpenOnLongCommitment(t *testing.T) {
 // Too short commitment should produce an error
 func TestOpenOnShortCommitment(t *testing.T) {
 	t.Parallel()
-	v := NewVerifier(sid)
+	v, err := NewVerifier(crand.Reader, sid)
+	require.NoError(t, err)
 	testResults := getEntries()
-	for _, entry := range testResults {
+	for _, testCaseEntry := range testResults {
 		localCommitment := &Commitment{make([]byte, h().Size()-1)}
-		copy(localCommitment.commitment, entry.com.commitment)
+		copy(localCommitment.commitment, testCaseEntry.com.commitment)
 		// OpenWithSession and check for failure
-		err := v.Verify(localCommitment, entry.opn)
+		err := v.Verify(localCommitment, testCaseEntry.opn)
 		require.True(t, errs.IsArgument(err))
 	}
 }

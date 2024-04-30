@@ -1,8 +1,6 @@
 package comm
 
 import (
-	"io"
-
 	"github.com/cronokirby/saferith"
 )
 
@@ -25,7 +23,7 @@ type HomomorphicCommitmentScheme[M Message, C Commitment, O Opening[M]] interfac
 }
 
 type Committer[M Message, C Commitment, O Opening[M]] interface {
-	Commit(reader io.Reader, message M) (*C, *O, error)
+	Commit(message M) (*C, *O, error)
 }
 
 type CommitterHomomorphic[M Message, C Commitment, O Opening[M]] interface {

@@ -40,12 +40,14 @@ func (o Opening) Message() Message {
 }
 
 type Committer struct {
+	prng      io.Reader
 	sessionId []byte
 }
 
 var _ comm.Committer[Message, Commitment, Opening] = (*Committer)(nil)
 
 type Verifier struct {
+	prng      io.Reader
 	sessionId []byte
 }
 
@@ -58,13 +60,19 @@ type Commitment struct {
 var _ comm.Commitment = (*Commitment)(nil)
 
 // not UC-secure without session-id
-func NewCommitter(sessionId []byte) *Committer {
-	return &Committer{sessionId}
+func NewCommitter(prng io.Reader, sessionId []byte) (*Committer, error) {
+	if prng == nil {
+		return nil, errs.NewIsNil("prng is nil")
+	}
+	return &Committer{prng, sessionId}, nil
 }
 
 // not UC-secure without session-id
-func NewVerifier(sessionId []byte) *Verifier {
-	return &Verifier{sessionId}
+func NewVerifier(prng io.Reader, sessionId []byte) (*Verifier, error) {
+	if prng == nil {
+		return nil, errs.NewIsNil("prng is nil")
+	}
+	return &Verifier{prng, sessionId}, nil
 }
 
 // Encode the session identifier along with the message to commit to
@@ -89,12 +97,9 @@ func (o *Opening) Validate() error {
 	return nil
 }
 
-func (c *Committer) Commit(prng io.Reader, message Message) (*Commitment, *Opening, error) {
-	if prng == nil {
-		return nil, nil, errs.NewIsNil("prng is nil")
-	}
+func (c *Committer) Commit(message Message) (*Commitment, *Opening, error) {
 	witness := make([]byte, base.CollisionResistanceBytes)
-	if _, err := io.ReadFull(prng, witness); err != nil {
+	if _, err := io.ReadFull(c.prng, witness); err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "reading random bytes")
 	}
 	commitment, err := hashing.Hmac(witness, CommitmentHashFunction, encodeWithSessionId(c.sessionId, message)...)
