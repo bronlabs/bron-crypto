@@ -1,20 +1,10 @@
-package impl
+package limb6
 
-import (
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-)
-
-// SswuParams for computing the Simplified SWU mapping
-// for hash to curve implementations.
-type SswuParams struct {
+type Sswu6Params struct {
 	C1, C2, A, B, Z [FieldLimbs]uint64
-
-	_ ds.Incomparable
 }
 
-// Osswu3mod4 computes the simplified map optmized for 3 mod 4 primes
-// https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-11#appendix-G.2.1
-func (p *SswuParams) Osswu3mod4(u *FieldValue) (x, y *FieldValue) {
+func (p *Sswu6Params) Osswu3mod4(u *FieldValue) (x, y *FieldValue) {
 	var tv1, tv2, tv3, tv4, xd, x1n, x2n, gxd, gx1, aNeg, zA, y1, y2 [FieldLimbs]uint64
 	var wasInverted int
 	u.Arithmetic.Mul(&tv1, &u.Value, &u.Value) // tv1 = u^2

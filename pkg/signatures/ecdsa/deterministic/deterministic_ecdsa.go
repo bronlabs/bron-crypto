@@ -22,9 +22,9 @@ func NewSigner(suite types.SigningSuite, privateKey curves.Scalar) (*Signer, err
 	if privateKey == nil {
 		return nil, errs.NewIsNil("private key is nil")
 	}
-	if suite.Curve().BaseField().FieldBytes() > uint256.RingBytes {
+	if suite.Curve().BaseField().ElementSize() > uint256.RingBytes {
 		return nil, errs.NewArgument("curve base field is too large (%dB > %dB)",
-			suite.Curve().BaseField().FieldBytes(), uint256.RingBytes)
+			suite.Curve().BaseField().ElementSize(), uint256.RingBytes)
 	}
 	return &Signer{suite, privateKey}, nil
 }
@@ -32,7 +32,11 @@ func NewSigner(suite types.SigningSuite, privateKey curves.Scalar) (*Signer, err
 // Sign signs a message using the provided private key, generating a deterministic
 // nonce `k` as per RFC 6979 (https://tools.ietf.org/html/rfc6979).
 func (s *Signer) Sign(message []byte) (*ecdsa.Signature, error) {
-	qUint := uint256.NewFromBytes(s.suite.Curve().SubGroupOrder().Bytes())
+	qUint, err := uint256.Uint256{}.SetBytes(s.suite.Curve().Order().Bytes())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot set q")
+	}
+
 	// step 1: hashing the message
 	hBytes, err := hashing.Hash(s.suite.Hash(), message)
 	if err != nil {
@@ -44,6 +48,7 @@ func (s *Signer) Sign(message []byte) (*ecdsa.Signature, error) {
 		h = h.Sub(qUint)
 	}
 	hBytes = s.int2octets(h.Bytes())
+
 	// step 2: generate k (deterministic)
 	// steps 2.b & 2.c
 	V := make([]byte, hlen)
@@ -91,12 +96,12 @@ iterate_k:
 		}
 	}
 	// step 3: calculate R
-	kScalar, err := s.suite.Curve().Scalar().SetBytes(k.Bytes())
+	kScalar, err := s.suite.Curve().ScalarField().Element().SetBytes(k.Bytes())
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not convert k to scalar")
 	}
 	R := s.suite.Curve().ScalarBaseMult(kScalar)
-	r, err := s.suite.Curve().Scalar().SetBytesWide(R.AffineX().Bytes())
+	r, err := s.suite.Curve().ScalarField().Element().SetBytesWide(R.AffineX().Bytes())
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not convert R.X to scalar")
 	}
@@ -104,11 +109,14 @@ iterate_k:
 		goto iterate_k
 	}
 	// step 4: calculate  s = (h+x*r)/k mod q
-	hScalar, err := s.suite.Curve().Scalar().SetBytes(hBytes)
+	hScalar, err := s.suite.Curve().ScalarField().Element().SetBytes(hBytes)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not convert h to scalar")
 	}
-	S := hScalar.Add(s.privateKey.Mul(r)).Div(kScalar)
+	S, err := hScalar.Add(s.privateKey.Mul(r)).Div(kScalar)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not calculate S")
+	}
 	v, err := ecdsa.CalculateRecoveryId(R)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not calculate recovery id")
@@ -120,7 +128,7 @@ iterate_k:
 // from RFC 6979, section 2.3.3.
 func (s *Signer) int2octets(a []byte) []byte {
 	// Limit to ceil(|q| / 8) bytes
-	rlen := (s.suite.Curve().SubGroupOrder().BitLen() + 7) / 8
+	rlen := (s.suite.Curve().Order().BitLen() + 7) / 8
 	if len(a) > rlen {
 		a = a[len(a)-rlen:]
 	} else if len(a) < rlen {

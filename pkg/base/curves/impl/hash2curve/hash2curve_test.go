@@ -76,10 +76,19 @@ func runHash2CurveTests(t *testing.T, curve curves.Curve, tv *testutils.TestVect
 				pxiExpected := hexDecode(t, tc.PxI)
 				pyiExpected := hexDecode(t, tc.PyI)
 
-				require.Equal(t, pxExpected, p.AffineX().SubFieldElement(0).Bytes(), 0)
-				require.Equal(t, pxiExpected, p.AffineX().SubFieldElement(1).Bytes(), 0)
-				require.Equal(t, pyExpected, p.AffineY().SubFieldElement(0).Bytes(), 0)
-				require.Equal(t, pyiExpected, p.AffineY().SubFieldElement(1).Bytes(), 0)
+				actualXr, err := p.AffineX().SubFieldElement(0)
+				require.NoError(t, err)
+				actualXi, err := p.AffineX().SubFieldElement(1)
+				require.NoError(t, err)
+				actualYr, err := p.AffineY().SubFieldElement(0)
+				require.NoError(t, err)
+				actualYi, err := p.AffineY().SubFieldElement(1)
+				require.NoError(t, err)
+
+				require.Equal(t, pxExpected, actualXr.Bytes(), 0)
+				require.Equal(t, pxiExpected, actualXi.Bytes(), 0)
+				require.Equal(t, pyExpected, actualYr.Bytes(), 0)
+				require.Equal(t, pyiExpected, actualYi.Bytes(), 0)
 			}
 		})
 	}
@@ -112,10 +121,19 @@ func runHash2FieldTests(t *testing.T, curve curves.Curve, tv *testutils.TestVect
 				u0iExpected := hexDecode(t, tc.U0I)
 				u1iExpected := hexDecode(t, tc.U1I)
 
-				require.Equal(t, u0rExpected, u[0].SubFieldElement(0).Bytes(), 0)
-				require.Equal(t, u0iExpected, u[0].SubFieldElement(1).Bytes(), 0)
-				require.Equal(t, u1rExpected, u[1].SubFieldElement(0).Bytes(), 0)
-				require.Equal(t, u1iExpected, u[1].SubFieldElement(1).Bytes(), 0)
+				actualXr, err := u[0].SubFieldElement(0)
+				require.NoError(t, err)
+				actualXi, err := u[0].SubFieldElement(1)
+				require.NoError(t, err)
+				actualYr, err := u[1].SubFieldElement(0)
+				require.NoError(t, err)
+				actualYi, err := u[1].SubFieldElement(1)
+				require.NoError(t, err)
+
+				require.Equal(t, u0rExpected, actualXr.Bytes(), 0)
+				require.Equal(t, u0iExpected, actualXi.Bytes(), 0)
+				require.Equal(t, u1rExpected, actualYr.Bytes(), 0)
+				require.Equal(t, u1iExpected, actualYi.Bytes(), 0)
 			}
 		})
 	}

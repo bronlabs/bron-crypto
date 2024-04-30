@@ -18,8 +18,8 @@ func coreSign[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], mes
 		return nil, errs.WrapHashing(err, "could not hash message")
 	}
 	// step 2.6.2
-	result := Hm.Mul(privateKey.d).(curves.PairingPoint)
-	if !result.IsTorsionElement(signatureSubGroup.SubGroupOrder()) {
+	result := Hm.ScalarMul(privateKey.d).(curves.PairingPoint)
+	if !result.IsTorsionElementUnderAddition(signatureSubGroup.Order()) {
 		return nil, errs.NewCurve("point is not on correct subgroup")
 	}
 	return result, nil
@@ -65,7 +65,7 @@ func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], mes
 		if err != nil {
 			return errs.WrapFailed(err, "could not compute multipairing")
 		}
-		if !scalarGt.IsIdentity() {
+		if !scalarGt.IsMultiplicativeIdentity() {
 			return errs.NewVerification("incorrect multipairing result")
 		}
 	} else {
@@ -74,7 +74,7 @@ func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], mes
 		if err != nil {
 			return errs.WrapFailed(err, "could not compute multipairing")
 		}
-		if !scalarGt.IsIdentity() {
+		if !scalarGt.IsMultiplicativeIdentity() {
 			return errs.NewVerification("incorrect multipairing result")
 		}
 	}
@@ -160,7 +160,7 @@ func coreAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 	if err != nil {
 		return errs.WrapFailed(err, "multipairing failed")
 	}
-	if !scalarGt.IsIdentity() {
+	if !scalarGt.IsMultiplicativeIdentity() {
 		return errs.NewVerification("incorrect pairing result")
 	}
 	return nil
@@ -218,7 +218,7 @@ func AggregateSignatures[S SignatureSubGroup](signatures ...*Signature[S]) (*Sig
 		return nil, errs.NewLength("at least one signature is needed")
 	}
 	signatureSubGroup := bls12381.GetSourceSubGroup[S]()
-	result := signatureSubGroup.Identity()
+	result := signatureSubGroup.AdditiveIdentity()
 	for i, signature := range signatures {
 		if signature == nil {
 			return nil, errs.NewIsNil("signature %d is nil", i)
@@ -239,7 +239,7 @@ func AggregatePublicKeys[K KeySubGroup](publicKeys ...*PublicKey[K]) (*PublicKey
 		return nil, errs.NewLength("at least one public key is needed")
 	}
 	keySubGroup := bls12381.GetSourceSubGroup[K]()
-	result := keySubGroup.Identity()
+	result := keySubGroup.AdditiveIdentity()
 	for i, publicKey := range publicKeys {
 		if publicKey == nil {
 			return nil, errs.NewIsNil("public key %d is nil", i)
@@ -310,10 +310,10 @@ func GetPOPDst(keysInG1 bool) []byte {
 
 func subgroupCheck[G bls12381.SourceSubGroups](value curves.PairingPoint) error {
 	subgroup := bls12381.GetSourceSubGroup[G]()
-	if value.IsIdentity() {
+	if value.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("value")
 	}
-	if !value.IsTorsionElement(subgroup.SubGroupOrder()) {
+	if !value.IsTorsionElementUnderAddition(subgroup.Order()) {
 		return errs.NewValidation("value is not torsion element of the given subgroup's order")
 	}
 	if value.IsSmallOrder() {

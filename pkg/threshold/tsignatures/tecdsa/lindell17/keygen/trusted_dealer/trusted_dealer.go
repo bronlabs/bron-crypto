@@ -48,7 +48,7 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[t
 		return nil, errs.WrapFailed(err, "could not generate ECDSA private key")
 	}
 
-	privateKey := curve.Scalar().SetNat(new(saferith.Nat).SetBig(ecdsaPrivateKey.D, curve.SubGroupOrder().BitLen()))
+	privateKey := curve.ScalarField().Element().SetNat(new(saferith.Nat).SetBig(ecdsaPrivateKey.D, curve.Order().BitLen()))
 	signingKeyShares, partialPublicKeys, err := trusted_dealer.Deal(protocol, privateKey, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not deal shares")

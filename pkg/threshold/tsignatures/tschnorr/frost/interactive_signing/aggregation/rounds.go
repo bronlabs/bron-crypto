@@ -68,7 +68,7 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 		}
 
 		z_jG := a.Protocol.SigningSuite().Curve().ScalarBaseMult(partialSignature.Zi)
-		cLambda_jY_j := Y_j.Mul(c.Mul(lambda_j))
+		cLambda_jY_j := Y_j.ScalarMul(c.Mul(lambda_j))
 		rhs := R_j.Add(cLambda_jY_j)
 
 		if !z_jG.Equal(rhs) {

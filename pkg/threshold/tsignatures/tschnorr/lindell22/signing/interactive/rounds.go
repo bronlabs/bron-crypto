@@ -72,7 +72,7 @@ func (p *Cosigner[V]) Round2(broadcastInput network.RoundMessages[types.Threshol
 	}
 
 	// step 2.1: π^dl_i <- NIPoKDL.Prove(k_i, R_i, sessionId, S, nic)
-	bigRProof, err := dlogProve(p.state.k, p.state.bigR, p.SessionId, p.state.bigS, p.nic, p.Transcript.Clone(), p.Prng)
+	bigRProof, err := dlogProve(p.IdentityKey(), p.state.k, p.state.bigR, p.SessionId, p.state.bigS, p.nic, p.Transcript.Clone(), p.Prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot prove dlog")
 	}
@@ -118,7 +118,7 @@ func (p *Cosigner[V]) Round3(broadcastInput network.RoundMessages[types.Threshol
 		}
 
 		// step 3.3: Run NIPoKDL.Verify(R_j, π^dl_j)
-		if err := dlogVerifyProof(in.BigRProof, theirBigR, p.SessionId, p.state.bigS, p.nic, p.Transcript.Clone()); err != nil {
+		if err := dlogVerifyProof(identity, in.BigRProof, theirBigR, p.SessionId, p.state.bigS, p.nic, p.Transcript.Clone()); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, identity.String(), "cannot verify dlog proof")
 		}
 
@@ -149,9 +149,10 @@ func (p *Cosigner[V]) Round3(broadcastInput network.RoundMessages[types.Threshol
 	}, nil
 }
 
-func dlogProve(k curves.Scalar, bigR curves.Point, sessionId, bigS []byte, nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, err error) {
+func dlogProve(prover types.IdentityKey, k curves.Scalar, bigR curves.Point, sessionId, bigS []byte, nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, err error) {
 	curve := k.ScalarField().Curve()
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
+	transcript.AppendPoints("prover", prover.PublicKey())
 	proof, statement, err := dlog.Prove(sessionId, k, curve.Generator(), nic, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create a proof")
@@ -162,9 +163,10 @@ func dlogProve(k curves.Scalar, bigR curves.Point, sessionId, bigS []byte, nic c
 	return proof, nil
 }
 
-func dlogVerifyProof(proof compiler.NIZKPoKProof, bigR curves.Point, sessionId, bigS []byte, nic compiler.Name, transcript transcripts.Transcript) (err error) {
+func dlogVerifyProof(prover types.IdentityKey, proof compiler.NIZKPoKProof, bigR curves.Point, sessionId, bigS []byte, nic compiler.Name, transcript transcripts.Transcript) (err error) {
 	curve := bigR.Curve()
 	transcript.AppendMessages(transcriptDLogSLabel, bigS)
+	transcript.AppendPoints("prover", prover.PublicKey())
 	if err := dlog.Verify(sessionId, proof, bigR, curve.Generator(), nic, transcript); err != nil {
 		return errs.WrapVerification(err, "cannot verify proof")
 	}

@@ -39,10 +39,10 @@ func (ac *AttestedCommitmentToNoncePair) Validate(protocol types.ThresholdProtoc
 	if !protocol.Participants().Contains(ac.Attestor) {
 		return errs.NewArgument("attestor is not in protocol config")
 	}
-	if ac.D.IsIdentity() {
+	if ac.D.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("D is at infinity")
 	}
-	if ac.E.IsIdentity() {
+	if ac.E.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("E is at infinity")
 	}
 	dCurve := ac.D.Curve()

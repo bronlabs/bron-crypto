@@ -6,11 +6,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-type Product[T, U any] struct {
-	First  T
-	Second U
-}
-
 func BinomialCoefficient(n, k uint) (uint, error) {
 	if n < k {
 		return 0, errs.NewValue("n < k")

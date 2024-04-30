@@ -46,7 +46,7 @@ func Test_HappyPath(t *testing.T) {
 				var err error
 				witness[k], err = curve.ScalarField().Random(crand.Reader)
 				require.NoError(t, err)
-				statement[k] = base.Mul(witness[k])
+				statement[k] = base.ScalarMul(witness[k])
 			}
 
 			// round 1
@@ -89,7 +89,7 @@ func Test_InvalidStatement(t *testing.T) {
 				var err error
 				witness[k], err = curve.ScalarField().Random(crand.Reader)
 				require.NoError(t, err)
-				statement[k] = base.Mul(witness[k])
+				statement[k] = base.ScalarMul(witness[k])
 			}
 
 			for k := 0; k < n; k++ {

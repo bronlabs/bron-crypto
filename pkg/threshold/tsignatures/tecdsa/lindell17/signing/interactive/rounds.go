@@ -115,9 +115,9 @@ func (pc *PrimaryCosigner) Round3(r2out *Round2OutputP2P) (r3out *Round3OutputP2
 		return nil, errs.NewFailed("invalid R1 proof statement, something went terribly wrong")
 	}
 
-	pc.state.bigR = r2out.BigR2.Mul(pc.state.k1)
+	pc.state.bigR = r2out.BigR2.ScalarMul(pc.state.k1)
 	bigRx := pc.state.bigR.AffineX().Nat()
-	pc.state.r = pc.Protocol.Curve().Scalar().SetNat(bigRx)
+	pc.state.r = pc.Protocol.Curve().ScalarField().Element().SetNat(bigRx)
 
 	pc.Round = 5
 	return &Round3OutputP2P{
@@ -150,9 +150,9 @@ func (sc *SecondaryCosigner) Round4(r3out *Round3OutputP2P, message []byte) (rou
 		return nil, errs.WrapIdentifiableAbort(err, sc.primaryIdentityKey.String(), "cannot verify R1 dlog proof")
 	}
 
-	bigR := r3out.BigR1.Mul(sc.state.k2)
+	bigR := r3out.BigR1.ScalarMul(sc.state.k2)
 	bigRx := bigR.AffineX().Nat()
-	r := sc.Protocol.Curve().Scalar().SetNat(bigRx)
+	r := sc.Protocol.Curve().ScalarField().Element().SetNat(bigRx)
 
 	k2 := sc.state.k2
 	additiveShare, err := sc.myShard.SigningKeyShare.ToAdditive(sc.IdentityKey(), hashset.NewHashableHashSet(sc.IdentityKey(), sc.primaryIdentityKey), sc.Protocol)
@@ -171,7 +171,7 @@ func (sc *SecondaryCosigner) Round4(r3out *Round3OutputP2P, message []byte) (rou
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate Lagrange coefficients")
 	}
-	q := sc.Protocol.Curve().SubGroupOrder()
+	q := sc.Protocol.Curve().Order()
 	mPrime, err := signing.MessageToScalar(sc.Protocol.SigningSuite(), message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get scalar from message")
@@ -207,8 +207,11 @@ func (pc *PrimaryCosigner) Round5(r4out *lindell17.PartialSignature, message []b
 	if err != nil {
 		return nil, errs.WrapIdentifiableAbort(err, pc.secondaryIdentityKey.String(), "cannot decrypt c3")
 	}
-	sPrime := pc.Protocol.Curve().Scalar().SetNat(sPrimeInt)
-	k1Inv := pc.state.k1.MultiplicativeInverse()
+	sPrime := pc.Protocol.Curve().ScalarField().Element().SetNat(sPrimeInt)
+	k1Inv, err := pc.state.k1.MultiplicativeInverse()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not compute k1 inverse")
+	}
 	sDoublePrime := k1Inv.Mul(sPrime)
 
 	v := new(int)

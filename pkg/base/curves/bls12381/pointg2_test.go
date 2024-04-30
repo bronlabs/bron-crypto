@@ -62,11 +62,21 @@ func TestHashToG2Vectors(t *testing.T) {
 
 			actual, err := curve.Hash([]byte(vector.Input.Message))
 			require.NoError(t, err)
+
+			actualXr, err := actual.AffineX().SubFieldElement(0)
+			require.NoError(t, err)
+			actualXi, err := actual.AffineX().SubFieldElement(1)
+			require.NoError(t, err)
+			actualYr, err := actual.AffineY().SubFieldElement(0)
+			require.NoError(t, err)
+			actualYi, err := actual.AffineY().SubFieldElement(1)
+			require.NoError(t, err)
+
 			// https://github.com/ethereum/bls12-381-tests/blob/2b6a5ba046f2878da6e8a7b99ee3e457573a15cb/main.py#L646
-			assert.EqualValues(t, vector.Output.X[0], actual.AffineX().SubFieldElement(0).Bytes(), "X coordinate.R")
-			require.EqualValues(t, vector.Output.X[1], actual.AffineX().SubFieldElement(1).Bytes(), "X coordinate.I")
-			require.EqualValues(t, vector.Output.Y[0], actual.AffineY().SubFieldElement(0).Bytes(), "Y coordinate.R")
-			require.EqualValues(t, vector.Output.Y[1], actual.AffineY().SubFieldElement(1).Bytes(), "Y coordinate.I")
+			assert.EqualValues(t, vector.Output.X[0], actualXr.Bytes(), "X coordinate.R")
+			require.EqualValues(t, vector.Output.X[1], actualXi.Bytes(), "X coordinate.I")
+			require.EqualValues(t, vector.Output.Y[0], actualYr.Bytes(), "Y coordinate.R")
+			require.EqualValues(t, vector.Output.Y[1], actualYi.Bytes(), "Y coordinate.I")
 		})
 	}
 }
@@ -78,7 +88,7 @@ func testDeserializationG2(t *testing.T, vector *pointG2) {
 	if vector.Output {
 		require.NoError(t, err)
 	} else {
-		if x != nil && x.IsIdentity() {
+		if x != nil && x.IsAdditiveIdentity() {
 			require.NoError(t, err)
 		} else {
 			require.Error(t, err)

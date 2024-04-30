@@ -42,8 +42,8 @@ func Verify(share, blindShare *Share, commitments []curves.Point, generator curv
 	}
 	rhs = rhs.Add(commitments[0])
 
-	g := commitments[0].Curve().Generator().Mul(share.Value)
-	h := generator.Mul(blindShare.Value)
+	g := commitments[0].Curve().Generator().ScalarMul(share.Value)
+	h := generator.ScalarMul(blindShare.Value)
 	lhs := g.Add(h)
 
 	if lhs.Equal(rhs) {
@@ -84,7 +84,7 @@ func validateInputs(threshold, total uint, generator curves.Point) error {
 	if generator == nil {
 		return errs.NewIsNil("generator is nil")
 	}
-	if generator.IsIdentity() {
+	if generator.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("invalid generator")
 	}
 	return nil
@@ -122,7 +122,7 @@ func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) (*Output, error) {
 	// ({p0 * G + b0 * H}, ...,{pt * G + bt * H})
 	for i, c := range poly.Coefficients {
 		s := pd.Curve.ScalarBaseMult(c)
-		b := pd.Generator.Mul(polyBlinding.Coefficients[i])
+		b := pd.Generator.ScalarMul(polyBlinding.Coefficients[i])
 		bv := s.Add(b)
 		blindedCommitments[i] = bv
 		commitments[i] = s

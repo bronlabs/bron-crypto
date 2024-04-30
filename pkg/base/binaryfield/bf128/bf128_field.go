@@ -27,15 +27,130 @@ var (
 	order, _           = saferith.ModulusFromHex("10000000000000000")
 )
 
-var _ algebra.AbstractFiniteField[*Field, *FieldElement] = (*Field)(nil)
+var _ algebra.FiniteField[*Field, *FieldElement] = (*Field)(nil)
 
 type Field struct{}
+
+func (*Field) Operators() []algebra.BinaryOperator[*FieldElement] {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*Field) ElementSize() int {
+	return fieldBytes
+}
+
+func (*Field) WideElementSize() int {
+	return 2 * fieldBytes
+}
+
+func (*Field) Cardinality() *saferith.Modulus {
+	return order
+}
+
+func (*Field) Contains(_ *FieldElement) bool {
+	return true
+}
+
+func (*Field) Iter() <-chan *FieldElement {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (f *Field) Unwrap() *Field {
+	return f
+}
+
+func (*Field) Equal(_ *Field) bool {
+	return true
+}
+
+func (*Field) HashCode() uint64 {
+	return 1
+}
+
+func (*Field) IsDefinedUnder(operator algebra.BinaryOperator[*FieldElement]) bool {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*Field) Op(operator algebra.BinaryOperator[*FieldElement], x algebra.GroupoidElement[*Field, *FieldElement], ys ...algebra.GroupoidElement[*Field, *FieldElement]) (*FieldElement, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*Field) Addition() algebra.Addition[*FieldElement] {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*Field) Mul(x algebra.MultiplicativeGroupoidElement[*Field, *FieldElement], ys ...algebra.MultiplicativeGroupoidElement[*Field, *FieldElement]) *FieldElement {
+	z := x.Clone()
+	for _, y := range ys {
+		z = z.Mul(y.Unwrap())
+	}
+
+	return z
+}
+
+func (*Field) Exp(b, power *FieldElement) *FieldElement {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*Field) SimExp(bases []algebra.MultiplicativeGroupoidElement[*Field, *FieldElement], exponents []*saferith.Nat) (*FieldElement, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*Field) MultiBaseExp(bases []algebra.MultiplicativeGroupoidElement[*Field, *FieldElement], exponent *saferith.Nat) *FieldElement {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*Field) MultiExponentExp(b algebra.MultiplicativeGroupoidElement[*Field, *FieldElement], exponents []*saferith.Nat) *FieldElement {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*Field) Multiplication() algebra.Multiplication[*FieldElement] {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*Field) DiscreteExponentiation() algebra.DiscreteExponentiation[*FieldElement] {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*Field) Identity(under algebra.BinaryOperator[*FieldElement]) (*FieldElement, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*Field) CoPrime(x *FieldElement, ys ...*FieldElement) bool {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*Field) GCD(x *FieldElement, ys ...*FieldElement) (*FieldElement, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*Field) LCM(x *FieldElement, ys ...*FieldElement) (*FieldElement, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*Field) MultiplicativeGroup() algebra.MultiplicativeGroup[*Field, *FieldElement] {
+	// TODO implement me
+	panic("implement me")
+}
 
 func NewField() *Field {
 	return field2e128Instance
 }
-
-// === Basic Methods.
 
 func (*Field) Name() string {
 	return Name
@@ -55,14 +170,6 @@ func (*Field) FieldBytes() int {
 
 func (*Field) WideFieldBytes() int {
 	return 2 * fieldBytes
-}
-
-func (*Field) Operators() []algebra.Operator {
-	return []algebra.Operator{algebra.Addition, algebra.Multiplication}
-}
-
-func (*Field) OperateOver(operator algebra.Operator, xs ...*FieldElement) (*FieldElement, error) {
-	panic("not implemented")
 }
 
 func (*Field) Random(prng io.Reader) (*FieldElement, error) {
@@ -98,19 +205,19 @@ func (*Field) Select(choice bool, x0, x1 *FieldElement) *FieldElement {
 
 // === Additive Group Methods.
 
-func (*Field) Add(x *FieldElement, ys ...*FieldElement) *FieldElement {
-	res := x.Clone()
+func (*Field) Add(x algebra.AdditiveGroupoidElement[*Field, *FieldElement], ys ...algebra.AdditiveGroupoidElement[*Field, *FieldElement]) *FieldElement {
+	z := x.Clone()
 	for _, y := range ys {
-		res = res.Add(y)
+		z = z.Add(y.Unwrap())
 	}
-	return res
+	return z
 }
 
 func (*Field) AdditiveIdentity() *FieldElement {
 	return zero
 }
 
-func (*Field) Sub(x *FieldElement, ys ...*FieldElement) *FieldElement {
+func (*Field) Sub(x algebra.AdditiveGroupElement[*Field, *FieldElement], ys ...algebra.AdditiveGroupElement[*Field, *FieldElement]) *FieldElement {
 	res := x.Clone()
 	for _, y := range ys {
 		res = res.Sub(y)
@@ -132,17 +239,19 @@ func (*Field) MultiplicativeIdentity() *FieldElement {
 	return one
 }
 
-func (*Field) Div(x *FieldElement, ys ...*FieldElement) *FieldElement {
+func (*Field) Div(x algebra.MultiplicativeGroupElement[*Field, *FieldElement], ys ...algebra.MultiplicativeGroupElement[*Field, *FieldElement]) (*FieldElement, error) {
 	res := x.Clone()
 	for _, y := range ys {
-		res = res.Div(y)
+		var err error
+		res, err = res.Div(y.Unwrap())
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot get inverse")
+		}
 	}
-	return res
+	return res, nil
 }
 
-// === Ring methods.
-
-func (*Field) QuadraticResidue(p *FieldElement) (*FieldElement, error) {
+func (*Field) QuadraticResidue(algebra.RingElement[*Field, *FieldElement]) (*FieldElement, error) {
 	panic("not implemented")
 }
 

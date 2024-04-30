@@ -36,7 +36,7 @@ func Fuzz_Test(f *testing.F) {
 		signed := nativeEddsa.Sign(privateKey, messageHash)
 		R, err := curve.Point().FromAffineCompressed(signed[:32])
 		require.NoError(t, err)
-		s, err := curve.Scalar().SetBytes(bitstring.ReverseBytes(signed[32:]))
+		s, err := curve.ScalarField().Element().SetBytes(bitstring.ReverseBytes(signed[32:]))
 		require.NoError(t, err)
 		signature := schnorr.NewSignature(vanilla.NewEdDsaCompatibleVariant(), nil, R, s)
 		err = eddsa.Verify(&eddsa.PublicKey{A: publicKey}, messageHash, signature)

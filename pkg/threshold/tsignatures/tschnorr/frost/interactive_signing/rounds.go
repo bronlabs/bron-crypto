@@ -118,11 +118,11 @@ func (ic *Cosigner) processNonceCommitmentOnline(round1output network.RoundMessa
 			return nil, nil, errs.NewMissing("do not have a message from sharing id %d", sharingId)
 		}
 		D_i := receivedMessage.Di
-		if D_i.IsIdentity() {
+		if D_i.IsAdditiveIdentity() {
 			return nil, nil, errs.NewMissing("D_i of sharing id %d is at infinity", sharingId)
 		}
 		E_i := receivedMessage.Ei
-		if E_i.IsIdentity() {
+		if E_i.IsAdditiveIdentity() {
 			return nil, nil, errs.NewIsIdentity("E_i of sharing id %d is at infinity", sharingId)
 		}
 

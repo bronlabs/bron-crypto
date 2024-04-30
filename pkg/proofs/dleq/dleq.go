@@ -20,8 +20,8 @@ func Prove(sessionId []byte, secret curves.Scalar, G1, G2 curves.Point, niCompil
 	if err := validateProveInputs(sessionId, secret, G1, G2, niCompiler, prng); err != nil {
 		return nil, nil, errs.WrapArgument(err, "invalid arguments")
 	}
-	X1 := G1.Mul(secret)
-	X2 := G2.Mul(secret)
+	X1 := G1.ScalarMul(secret)
+	X2 := G2.ScalarMul(secret)
 	switch PROTOCOL {
 	case chaum.Name:
 		statement := &chaum.Statement{

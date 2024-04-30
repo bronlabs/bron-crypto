@@ -48,7 +48,7 @@ func (r2b *Round2Broadcast) Validate(protocol types.ThresholdProtocol) error {
 	if r2b.BigR1.Curve() != protocol.Curve() {
 		return errs.NewCurve("big r1 curve %s does not match protocol curve %s", r2b.BigR1.Curve(), protocol.Curve())
 	}
-	if r2b.BigR1.IsIdentity() {
+	if r2b.BigR1.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("big r1")
 	}
 	if r2b.BigR2 == nil {
@@ -57,7 +57,7 @@ func (r2b *Round2Broadcast) Validate(protocol types.ThresholdProtocol) error {
 	if r2b.BigR2.Curve() != protocol.Curve() {
 		return errs.NewCurve("big r2 curve %s does not match protocol curve %s", r2b.BigR2.Curve(), protocol.Curve())
 	}
-	if r2b.BigR2.IsIdentity() {
+	if r2b.BigR2.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("big r2")
 	}
 	if r2b.BigRWitness == nil {

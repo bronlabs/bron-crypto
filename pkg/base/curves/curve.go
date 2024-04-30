@@ -4,26 +4,41 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-// AbstractEllipticCurve specifies an Elliptic Curve in the context where scalar multiplication makes sense.
-// Specifically, structure ST implements an EllipticCurve of given type parameters if:
+// GeneralEllipticCurve specifies an Elliptic Curve in the context where scalar multiplication makes sense.
+// Specifically, structure ST implements an GeneralEllipticCurve of given type parameters if:
 // i. (ST, BaseField, PointAddition) form an algebraic group of dimension 1.
 // ii. (ST, PointAddition, ScalarMult) form a module over ScalarRing.
-type AbstractEllipticCurve[ST, BaseFieldType, ScalarRingType algebra.Structure, PointType, BaseFieldElementType, ScalarType algebra.EnrichedElement[ST]] interface {
+type GeneralEllipticCurve[EllipticCurveType, BaseFieldType, ScalarRingType algebra.Structure, PointType, BaseFieldElementType, ScalarType algebra.Element] interface {
 	// Ellitpic curve forms a module over scalar ring.
-	algebra.AbstractModule[ST, PointType, ScalarType, ScalarRingType]
+	algebra.Module[EllipticCurveType, ScalarRingType, PointType, ScalarType]
 	// Elliptic curve is an algebraic curve ie. variety of dimension 1.
-	algebra.AbstractAlgebraicCurve[ST, PointType, BaseFieldElementType, BaseFieldType]
+	algebra.AlgebraicCurve[EllipticCurveType, BaseFieldType, PointType, BaseFieldElementType]
 	// Elliptic curve forms an algebraic group over base field.
-	algebra.AbstractAlgebraicGroup[ST, PointType, BaseFieldElementType, BaseFieldType]
+	algebra.AlgebraicGroup[EllipticCurveType, BaseFieldType, PointType, BaseFieldElementType]
 	// Elliptic curve form an additive group with point addition.
-	algebra.AdditiveGroupTrait[ST, PointType]
+	algebra.AdditiveGroup[EllipticCurveType, PointType]
+	algebra.FiniteStructure[EllipticCurveType, PointType]
 
 	// TraceOfFrobenius returns the value of q + 1 - N where q is the size of the base field and N is the numbner of points on the curve.
 	TraceOfFrobenius() *saferith.Int
 	// JInvariant returns the J-invariant of the curve.
 	JInvariant() *saferith.Int
+
+	BaseField() BaseField
+}
+
+// GeneralEllipticCurvePoint is the interface to represent an element of the ***prime order subgroup*** of an elliptic curve.
+type GeneralEllipticCurvePoint[EllipticCurveType, BaseFieldType algebra.Structure, PointType, BaseFieldElementType algebra.Element] interface {
+	// Point is an element of an algebraic curve.
+	algebra.AffinePoint[EllipticCurveType, BaseFieldType, PointType, BaseFieldElementType]
+	// Point is an element of an algebraic group element.
+	algebra.AlgebraicGroupElement[EllipticCurveType, BaseFieldType, PointType, BaseFieldElementType]
+	IsInPrimeSubGroup() bool
+	IsNegative() bool
 }
 
 // Curve is the interface for the ***prime subgroup*** of an elliptic curve.
@@ -31,12 +46,14 @@ type AbstractEllipticCurve[ST, BaseFieldType, ScalarRingType algebra.Structure, 
 // is the order of the prime subgroup.
 type Curve interface {
 	// Curve is an elliptic curve.
-	AbstractEllipticCurve[Curve, BaseField, ScalarField, Point, BaseFieldElement, Scalar]
+	GeneralEllipticCurve[Curve, BaseField, ScalarField, Point, BaseFieldElement, Scalar]
 	// Curve forms a one dimensional vector space over the scalar field. It is 1 dimensional vector space,
 	// because the group is cyclic.
-	algebra.AbstractOneDimensionalVectorSpace[Curve, Point, Scalar, ScalarField]
+	algebra.OneDimensionalVectorSpace[Curve, ScalarField, Point, Scalar]
 	// Curve is a subgroup of some larger Elliptic curve.
-	algebra.SubGroupTrait
+	algebra.SubGroup[Curve, Point]
+
+	Point() Point
 
 	// DeriveFromAffineX accepts the x coordinate and returns (evenY, oddY) coordinates of the resulting points.
 	DeriveFromAffineX(x BaseFieldElement) (evenY, oddY Point, err error)
@@ -57,29 +74,45 @@ type Curve interface {
 	//
 	// [RFC9380]: https://datatracker.ietf.org/doc/html/rfc9380#section-5
 	HashWithDst(msg, dst []byte) (Point, error)
+
+	ScalarField() ScalarField
+}
+
+// Point is the interface to represent an element of the ***prime order subgroup*** of an elliptic curve.
+type Point interface {
+	GeneralEllipticCurvePoint[Curve, BaseField, Point, BaseFieldElement]
+	// scalar field (ie. field of integers modulo order of the prime subgroup).
+	algebra.Vector[Curve, ScalarField, Point, Scalar]
+	// Point is element of cyclic group as the subgroup is a prime order.
+	algebra.CyclicGroupElement[Curve, Point]
+	// Point is element of a group that's subgroup of the larger curve whose order may or may not be prime.
+	algebra.SubGroupElement[Curve, Point]
+
+	Curve() Curve
 }
 
 // BaseField is the interface for the base field of an elliptic curve.
 type BaseField interface {
+	algebra.AlgebraicVarietyBaseField[Curve, BaseField, Point, BaseFieldElement]
 	// BaseField is equivalent to Zp where elements are of type BaseFieldElement.
-	algebra.AbstractZp[Curve, BaseFieldElement]
+	algebra.IntegerFiniteField[BaseField, BaseFieldElement]
 	// BaseField may be a field extension. eg. BLS12381 G2
 	// TODO: At this point we downcast the top level interface to check types of elements of the subfields. Fix later.
-	algebra.FieldExtensionTrait[Curve, BaseFieldElement, BaseFieldElement]
+	algebra.ExtensionField[BaseField, BaseField, BaseFieldElement, BaseFieldElement]
 	// Curve returns the prime order subgroup corresponding to this BaseField.
 	Curve() Curve
+	BaseFieldElement() BaseFieldElement
 }
 
 // BaseFieldElement is the interface for the elements of the base field of an elliptic curve.
 type BaseFieldElement interface {
+	algebra.AlgebraicVarietyBaseFieldElement[Curve, BaseField, Point, BaseFieldElement]
 	// Base field element is equivalent to an element of Zp.
-	algebra.AbstractIntegerFieldElement[Curve, BaseFieldElement]
+	// TODO: this won't be the case for field extensions
+	algebra.IntegerFiniteFieldElement[BaseField, BaseFieldElement]
 	// Base field element may be element of a field extension.
 	// TODO: At this point we downcast the top level interface to check types of elements of the subfields. Fix later.
-	algebra.FieldExtensionElementTrait[BaseFieldElement, BaseFieldElement]
-	// Base field elements are a subset of natural numbers.
-	// TODO: this won't be the case for curves with field extensions.
-	algebra.NatLike[BaseFieldElement]
+	algebra.ExtensionFieldElement[BaseField, BaseField, BaseFieldElement, BaseFieldElement]
 	// BaseField returns the base field containing this element.
 	BaseField() BaseField
 }
@@ -87,42 +120,22 @@ type BaseFieldElement interface {
 // ScalarField is the interface for the elements of the scalar field of a prime order subgroup of an elliptic curve.
 type ScalarField interface {
 	// Curve forms a vector space over the scalar field.
-	algebra.AbstractVectorSpaceBaseField[Curve, Scalar]
+	algebra.VectorSpaceBaseField[Curve, ScalarField, Point, Scalar]
 	// ScalarField is equivalent to Zp where elements are of type Scalar.
-	algebra.AbstractZp[Curve, Scalar]
+	algebra.IntegerFiniteField[ScalarField, Scalar]
 	// Curve returns the prime order subgroup corresponding to this ScalarField.
 	Curve() Curve
+	Scalar() Scalar
 }
 
 // Scalar is the interface for the scalars of the prime order subgroup of an elliptic curve.
 type Scalar interface {
 	// Curve forms a vector space over the scalar field.
-	algebra.AbstractVectorSpaceScalar[Curve, Scalar]
+	algebra.VectorSpaceScalar[Curve, ScalarField, Point, Scalar]
 	// Scalar is equivalent to an element of Zq.
-	algebra.AbstractIntegerFieldElement[Curve, Scalar]
-	// Scalars are a subset of natural numbers.
-	algebra.NatLike[Scalar]
+	algebra.IntegerFiniteFieldElement[ScalarField, Scalar]
 	// ScalarField returns the scalar field containing this element.
 	ScalarField() ScalarField
-}
-
-// Point is the interface to represent an element of the ***prime order subgroup*** of an elliptic curve.
-type Point interface {
-	// Point is an element of an algebraic curve.
-	algebra.AbstractPoint[Curve, Point, BaseFieldElement]
-	// Point is an element of an algebraic group element.
-	algebra.AbstractAlgebraicGroupElement[Curve, Point, BaseFieldElement]
-	// Point has affine coordinates.
-	algebra.AffineAlgebraicVarietyElementTrait[Curve, Point, BaseFieldElement]
-	// Point is an element of the 1 dimensional vector space whose group is the prime order algebraic subgroup and is defined over the
-	// scalar field (ie. field of integers modulo order of the prime subgroup).
-	algebra.AbstractVector[Curve, Point, Scalar]
-	// Point is element of cyclic group as the subgroup is a prime order.
-	algebra.AbstractCyclicGroupElement[Curve, Point]
-	// Point is an element of an additive group wrt PointAddition operator.
-	algebra.AdditiveGroupElementTrait[Curve, Point]
-	// Point is element of a group that's subgroup of the larger curve whose order may or may not be prime.
-	algebra.SubGroupElementTrait[Curve, Point]
 }
 
 type ProjectiveCurveCoordinates interface {
@@ -147,4 +160,77 @@ type ExtendedCoordinates interface {
 	ExtendedY() BaseFieldElement
 	ExtendedZ() BaseFieldElement
 	ExtendedT() BaseFieldElement
+}
+
+type PairingCurve interface {
+	Name() string
+	EmbeddingDegree() *saferith.Nat
+
+	G1() Curve
+	G2() Curve
+	Gt() Gt
+
+	Pair(pG1, pG2 PairingPoint) (GtMember, error)
+	MultiPair(pointsInG1ThenG2 ...PairingPoint) (GtMember, error)
+}
+
+type PairingPoint interface {
+	Point
+	PairingCurve() PairingCurve
+	OtherPrimeAlgebraicSubGroup() Curve
+	Pair(p PairingPoint) GtMember
+}
+
+type Gt interface {
+	algebra.Group[Gt, GtMember]
+	algebra.MultiplicativeGroup[Gt, GtMember]
+}
+
+type GtMember interface {
+	algebra.GroupElement[Gt, GtMember]
+	algebra.MultiplicativeGroupElement[Gt, GtMember]
+	Gt() Gt
+
+	algebra.BytesSerialization[GtMember]
+}
+
+var _ algebra.Addition[Point] = (*PointAddition[Curve, BaseField, Point, BaseFieldElement])(nil)
+
+type PointAddition[EllipticCurveType, BaseFieldType algebra.Structure, PointType, BaseFieldElementType algebra.Element] struct {
+	algebra.Associative[PointType, PointType]
+	_ ds.Incomparable
+}
+
+func (*PointAddition[_, _, P, _]) Add(x, y P) P {
+	return *(new(P))
+}
+
+func (*PointAddition[_, _, _, _]) Arity() uint {
+	return 2
+}
+
+func (o *PointAddition[_, _, P, _]) Map(x, y P) (P, error) {
+	return o.Add(x, y), nil
+}
+
+func (o *PointAddition[_, _, P, _]) LFold(ps ...P) (P, error) {
+	if len(ps) < 1 {
+		return *new(P), errs.NewArgument("not enough arguments")
+	}
+	result := ps[0]
+	for _, p := range ps[1:] {
+		result = o.Add(result, p)
+	}
+	return result, nil
+}
+
+func (o *PointAddition[_, _, P, _]) RFold(ps ...P) (P, error) {
+	if len(ps) < 1 {
+		return *new(P), errs.NewArgument("not enough arguments")
+	}
+	result := ps[len(ps)-1]
+	for i := len(ps) - 2; i > 0; i-- {
+		result = o.Add(result, ps[i])
+	}
+	return result, nil
 }

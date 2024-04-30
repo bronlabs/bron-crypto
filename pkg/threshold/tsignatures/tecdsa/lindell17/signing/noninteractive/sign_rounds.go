@@ -18,7 +18,7 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 		return nil, errs.NewMissing("aggregator bigR does not exist")
 	}
 	bigRx := bigR.AffineX().Nat()
-	r := p.protocol.Curve().Scalar().SetNat(bigRx)
+	r := p.protocol.Curve().ScalarField().Element().SetNat(bigRx)
 
 	paillierPublicKey, exists := p.myShard.PaillierPublicKeys.Get(p.aggregatorIdentity)
 	if !exists {
@@ -38,7 +38,7 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate Lagrange coefficients")
 	}
-	q := p.protocol.Curve().SubGroupOrder()
+	q := p.protocol.Curve().Order()
 	mPrime, err := signing.MessageToScalar(p.protocol.SigningSuite(), message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get scalar from message")
@@ -64,7 +64,7 @@ func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSign
 		return nil, errs.NewMissing("corresponding bigR does not exist")
 	}
 	bigRx := bigR.AffineX().Nat()
-	r := p.protocol.Curve().Scalar().SetNat(bigRx)
+	r := p.protocol.Curve().ScalarField().Element().SetNat(bigRx)
 
 	paillierSecretKey := p.myShard.PaillierSecretKey
 	decryptor, err := paillier.NewDecryptor(paillierSecretKey)
@@ -75,9 +75,13 @@ func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSign
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt c3")
 	}
-	sPrime := p.protocol.Curve().Scalar().SetNat(sPrimeInt)
+	sPrime := p.protocol.Curve().ScalarField().Element().SetNat(sPrimeInt)
 
-	k1Inv := p.preProcessingMaterial.PrivateMaterial.K.MultiplicativeInverse()
+	k1Inv, err := p.preProcessingMaterial.PrivateMaterial.K.MultiplicativeInverse()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not compute k1 inverse")
+	}
+
 	sDoublePrime := k1Inv.Mul(sPrime)
 
 	sigma = &ecdsa.Signature{

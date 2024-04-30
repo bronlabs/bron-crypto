@@ -1,56 +1,70 @@
 package algebra
 
-// AbstractMonoid defines methods needed for S to be considered as a Monoid.
+// Monoid defines methods needed for S to be considered as a Monoid.
 // Monoid is a Groupoid that's associative and has an identity element.
-type AbstractMonoid[S Structure, E Element] interface {
+type Monoid[M Structure, E Element] interface {
 	// Monoid is a Groupoid.
-	AbstractGroupoid[S, E]
+	Groupoid[M, E]
 	// Identity returns identity element of type E of structure S.
-	Identity() E
+	Identity(under BinaryOperator[E]) (E, error)
 }
 
-// AbstractMonoidElement defines methods for E to be considered as element of S
+// MonoidElement defines methods for E to be considered as element of S
 // where S is a monoid.
 // Monoid is a Groupoid that's associative and has an identity element.
-type AbstractMonoidElement[S Structure, E Element] interface {
+type MonoidElement[M Structure, E Element] interface {
 	// Monoid element is a groupoid element.
-	AbstractGroupoidElement[S, E]
+	GroupoidElement[M, E]
 	// IsIdentity returns true if this element is the identity element of monoid S.
-	IsIdentity() bool
+	IsIdentity(under BinaryOperator[E]) (bool, error)
 }
 
-// AdditiveMonoidTrait defines additional methods for the monoid S if the operator is some
+// AdditiveMonoid defines additional methods for the monoid S if the operator is some
 // form of addition.
-type AdditiveMonoidTrait[S Structure, E Element] interface {
+type AdditiveMonoid[M Structure, E Element] interface {
+	Monoid[M, E]
 	// Additive monoid is an additive groupoid.
-	AdditiveGroupoidTrait[S, E]
+	AdditiveGroupoid[M, E]
 	// AdditiveIdentity returns the identity element of the additive monoid S.
 	AdditiveIdentity() E
 }
 
-// AdditiveMonoidElementTrait defines additional methods for elements of type E of monoid S if
+// AdditiveMonoidElement defines additional methods for elements of type E of monoid S if
 // the operator is some form of addition.
-type AdditiveMonoidElementTrait[S Structure, E Element] interface {
+type AdditiveMonoidElement[M Structure, E Element] interface {
+	MonoidElement[M, E]
 	// Additive monoid element is an additive groupoid element.
-	AdditiveGroupoidElementTrait[S, E]
+	AdditiveGroupoidElement[M, E]
 	// IsAdditiveIdentity returns true if this element is the identity element of additive monoid S.
 	IsAdditiveIdentity() bool
 }
 
-// MultiplicativeMonoidTrait defines additional methods for elements of type E of monoid S if
+// MultiplicativeMonoid defines additional methods for elements of type E of monoid S if
 // the operator is some form of multiplication.
-type MultiplicativeMonoidTrait[S Structure, E Element] interface {
+type MultiplicativeMonoid[M Structure, E Element] interface {
+	Monoid[M, E]
 	// Multiplicative monoid is an multiplicative groupoid.
-	MultiplicativeGroupoidTrait[S, E]
+	MultiplicativeGroupoid[M, E]
 	// MultiplicativeIdentity returns the identity element of the multiplicative monoid S.
 	MultiplicativeIdentity() E
 }
 
-// MultiplicativeMonoidElementTrait defines additional methods for elements of type E of monoid S if
+// MultiplicativeMonoidElement defines additional methods for elements of type E of monoid S if
 // the operator is some form of multiplication.
-type MultiplicativeMonoidElementTrait[S Structure, E Element] interface {
+type MultiplicativeMonoidElement[M Structure, E Element] interface {
+	MonoidElement[M, E]
 	// Multiplicative monoid element is an multiplicative groupoid element.
-	MultiplicativeGroupoidElementTrait[S, E]
+	MultiplicativeGroupoidElement[M, E]
 	// IsMultiplicativeIdentity returns true if this element is the identity element of multiplicative monoid S.
 	IsMultiplicativeIdentity() bool
+}
+
+type CyclicMonoid[M Structure, E Element] interface {
+	Monoid[M, E]
+	CyclicGroupoid[M, E]
+}
+
+type CyclicMonoidElement[M Structure, E Element] interface {
+	MonoidElement[M, E]
+	CyclicGroupoidElement[M, E]
 }

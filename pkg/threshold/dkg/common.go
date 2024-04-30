@@ -13,11 +13,11 @@ func ConstructPublicKeySharesMap(protocol types.ThresholdProtocol, commitmentVec
 	for pair := range sharingConfig.Iter() {
 		identityKey := pair.Value
 		j := pair.Key
-		Y_j := protocol.Curve().Identity()
+		Y_j := protocol.Curve().AdditiveIdentity()
 		jToKs := make([]curves.Scalar, protocol.Threshold())
 		for k := 0; k < int(protocol.Threshold()); k++ {
 			exp := protocol.Curve().ScalarField().New(uint64(k))
-			jToK := protocol.Curve().ScalarField().New(uint64(j)).Exp(exp)
+			jToK := protocol.Curve().ScalarField().New(uint64(j)).Exp(exp.Nat())
 			jToKs[k] = jToK
 		}
 		for _, C_l := range commitmentVectors {
@@ -27,7 +27,7 @@ func ConstructPublicKeySharesMap(protocol types.ThresholdProtocol, commitmentVec
 			}
 			Y_j = Y_j.Add(jkC_lk)
 		}
-		if Y_j.IsIdentity() {
+		if Y_j.IsAdditiveIdentity() {
 			return nil, errs.NewIsIdentity("public key share of sharing id %d is at infinity", j)
 		}
 		shares.Put(identityKey, Y_j)

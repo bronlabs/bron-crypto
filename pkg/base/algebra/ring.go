@@ -4,37 +4,59 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
-// AbstractRing defines methods needed for S to be considered as a ring.
-// A ring (R, +, *) is a structure where (R, +) is a group and (R, *) is a monoid and * distributes wrt +.
-type AbstractRing[S Structure, E Element] interface {
-	// Ring is a structured set.
-	AbstractStructuredSet[S, E]
+type Rg[R Structure, E Element] interface {
+	AdditiveGroupoid[R, E]
+	MultiplicativeGroupoid[R, E]
+}
 
-	// Ring has methods of additive group.
-	AdditiveGroupTrait[S, E]
-	// Ring has methods of multiplicative monoid.
-	MultiplicativeMonoidTrait[S, E]
+type RgElement[R Structure, E Element] interface {
+	AdditiveGroupoidElement[R, E]
+	MultiplicativeGroupoidElement[R, E]
+}
 
-	// QuadraticResidue outputs q where p^2 = q (mod S.Order()) and returns an error if q does not exist.
-	QuadraticResidue(p E) (E, error)
+type Rig[R Structure, E Element] interface {
+	Rg[R, E]
+	AdditiveMonoid[R, E]
+	MultiplicativeMonoid[R, E]
 	// Characteristic returns the smallest positive number of copies of the multiplicative identity that will sum to additive identity.
 	// Returns 0 if no such number exists.
 	Characteristic() *saferith.Nat
 }
 
-// AbstractRingElement defines methods needed for elements of type E to be elements of ring S.
+type RigElement[R Structure, E Element] interface {
+	RgElement[R, E]
+	AdditiveMonoidElement[R, E]
+	MultiplicativeMonoidElement[R, E]
+
+	MulAdd(p, q RingElement[R, E]) E
+}
+
+// Ring defines methods needed for S to be considered as a ring.
 // A ring (R, +, *) is a structure where (R, +) is a group and (R, *) is a monoid and * distributes wrt +.
-type AbstractRingElement[S Structure, E Element] interface {
-	// Ring element is an element of a structured set.
-	AbstractStructuredSetElement[S, E]
+type Ring[R Structure, E Element] interface {
+	Rig[R, E]
+	// Ring has methods of additive group.
+	AdditiveGroup[R, E]
+}
+
+// RingElement defines methods needed for elements of type E to be elements of ring S.
+// A ring (R, +, *) is a structure where (R, +) is a group and (R, *) is a monoid and * distributes wrt +.
+type RingElement[R Structure, E Element] interface {
+	RigElement[R, E]
 	// Ring element is an element of an additive group.
-	AdditiveGroupElementTrait[S, E]
-	// Ring element is an element of a multiplicative group.
-	MultiplicativeMonoidElementTrait[S, E]
+	AdditiveGroupElement[R, E]
+}
 
-	// MulAdd returns the value of this.Mul(p).Add(q)
-	MulAdd(p, q E) E
+type FiniteRing[R Structure, E Element] interface {
+	FiniteStructure[R, E]
+	Ring[R, E]
+	// QuadraticResidue outputs q where p^2 = q (mod S.Order()) and returns an error if q does not exist.
+	QuadraticResidue(p RingElement[R, E]) (E, error)
+}
 
-	// Sqrt outputs quadrathic residue of this element ie. outputs q where p^2 = q (mod S.Order()) and returns an error if q does not exist.
+type FiniteRingElement[R Structure, E Element] interface {
+	RingElement[R, E]
+	BytesSerialization[E]
+	// Sqrt outputs quadratic residue of this element ie. outputs q where p^2 = q (mod S.Order()) and returns an error if q does not exist.
 	Sqrt() (E, error)
 }

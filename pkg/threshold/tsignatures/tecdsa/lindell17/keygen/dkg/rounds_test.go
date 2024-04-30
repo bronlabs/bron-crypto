@@ -168,7 +168,7 @@ func Test_HappyPath(t *testing.T) {
 					require.NoError(t, err)
 					theirDecryptedSigningShareInt, err := decryptor.Decrypt(theirEncryptedSigningShare)
 					require.NoError(t, err)
-					theirDecryptedSigningShare := cipherSuite.Curve().Scalar().SetNat(theirDecryptedSigningShareInt)
+					theirDecryptedSigningShare := cipherSuite.Curve().ScalarField().Element().SetNat(theirDecryptedSigningShareInt)
 					require.Zero(t, mySigningShare.Cmp(theirDecryptedSigningShare))
 				}
 			}

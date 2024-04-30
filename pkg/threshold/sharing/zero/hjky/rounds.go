@@ -27,6 +27,10 @@ func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[types.T
 	if keyShare.Share.IsZero() {
 		return nil, nil, nil, errs.NewIsZero("sample itself is zero")
 	}
+	// This check is just for good measure. We already check this in Round 2 during message validation.
+	if !publicKeyShares.PublicKey.IsAdditiveIdentity() {
+		return nil, nil, nil, errs.NewTotalAbort(nil, "the shares will not combine to zero")
+	}
 
 	return keyShare.Share, publicKeyShares.Shares, publicKeyShares.FeldmanCommitmentVector, nil
 }

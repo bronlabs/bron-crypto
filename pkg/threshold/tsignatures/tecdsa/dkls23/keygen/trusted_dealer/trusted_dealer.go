@@ -35,12 +35,12 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.Iden
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not generate ECDSA private key")
 	}
-	privateKey := protocol.Curve().Scalar().SetNat(new(saferith.Nat).SetBig(ecdsaPrivateKey.D, protocol.Curve().SubGroupOrder().BitLen()))
+	privateKey := protocol.Curve().ScalarField().Element().SetNat(new(saferith.Nat).SetBig(ecdsaPrivateKey.D, protocol.Curve().Order().BitLen()))
 	px := protocol.Curve().BaseField().Element().SetNat(
-		saferithUtils.NatFromBigMod(ecdsaPrivateKey.X, protocol.Curve().SubGroupOrder()),
+		saferithUtils.NatFromBigMod(ecdsaPrivateKey.X, protocol.Curve().Order()),
 	)
 	py := protocol.Curve().BaseField().Element().SetNat(
-		saferithUtils.NatFromBigMod(ecdsaPrivateKey.Y, protocol.Curve().SubGroupOrder()),
+		saferithUtils.NatFromBigMod(ecdsaPrivateKey.Y, protocol.Curve().Order()),
 	)
 	publicKey, err := protocol.Curve().NewPoint(px, py)
 	if err != nil {

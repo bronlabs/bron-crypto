@@ -12,7 +12,7 @@ func Test_FieldElementSetNatToOne_BigEndian(t *testing.T) {
 	for _, curve := range TestCurves {
 		boundedCurve := curve
 		t.Run(boundedCurve.Name(), func(t *testing.T) {
-			oneBigEndian := make([]byte, boundedCurve.BaseField().FieldBytes())
+			oneBigEndian := make([]byte, boundedCurve.BaseField().ElementSize())
 
 			if boundedCurve.BaseField().ExtensionDegree().Uint64() == 1 {
 				oneBigEndian[len(oneBigEndian)-1] = 0x1
@@ -38,7 +38,7 @@ func Test_FieldElementSetBytesToOne_BigEndian(t *testing.T) {
 	for _, curve := range TestCurves {
 		boundedCurve := curve
 		t.Run(boundedCurve.Name(), func(t *testing.T) {
-			oneBigEndian := make([]byte, boundedCurve.BaseField().FieldBytes())
+			oneBigEndian := make([]byte, boundedCurve.BaseField().ElementSize())
 
 			if boundedCurve.BaseField().ExtensionDegree().Uint64() == 1 {
 				oneBigEndian[len(oneBigEndian)-1] = 0x1
@@ -61,7 +61,7 @@ func Test_FieldElementSetBytesWideToOne_BigEndian(t *testing.T) {
 	for _, curve := range TestCurves {
 		boundedCurve := curve
 		t.Run(boundedCurve.Name(), func(t *testing.T) {
-			oneBigEndian := make([]byte, boundedCurve.BaseField().WideFieldBytes())
+			oneBigEndian := make([]byte, boundedCurve.BaseField().WideElementSize())
 			extensionDegree := boundedCurve.BaseField().ExtensionDegree().Uint64()
 			if extensionDegree == 1 {
 				oneBigEndian[len(oneBigEndian)-1] = 0x1

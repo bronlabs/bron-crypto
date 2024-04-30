@@ -111,20 +111,18 @@ func (s *DHKEMScheme) DeriveKeyPair(ikm []byte) (*PrivateKey, error) {
 			skBytes := s.kdf.labeledExpand(s.suiteID(), dpkPrk, []byte("candidate"), []byte{uint8(counter)}, s.NSk())
 			skBytes[0] &= P256BitMask
 
-			sk, err = s.curve.Scalar().SetBytes(skBytes)
-			if err == nil {
-				return &PrivateKey{
-					D:         sk,
-					PublicKey: s.curve.ScalarBaseMult(sk),
-				}, nil
-			}
+			sk, err = s.curve.ScalarField().Element().SetBytes(skBytes)
 			counter++
 		}
+		return &PrivateKey{
+			D:         sk,
+			PublicKey: s.curve.ScalarBaseMult(sk),
+		}, nil
 
 	case curve25519.Name:
 		dkpPrk := s.kdf.labeledExtract(s.suiteID(), nil, []byte("dkp_prk"), ikm)
 		skBytes := s.kdf.labeledExpand(s.suiteID(), dkpPrk, []byte("sk"), nil, s.NSk())
-		sk, err := s.curve.Scalar().SetBytes(skBytes)
+		sk, err := s.curve.ScalarField().Element().SetBytes(skBytes)
 		if err != nil {
 			return nil, errs.WrapSerialisation(err, "cannot deserialize scalar for %s", s.curve.Name())
 		}
@@ -136,8 +134,6 @@ func (s *DHKEMScheme) DeriveKeyPair(ikm []byte) (*PrivateKey, error) {
 	default:
 		return nil, errs.NewCurve("curve %s not supported", s.curve.Name())
 	}
-
-	return nil, errs.NewFailed("couldn't derive key pair")
 }
 
 // Encap is a randomised algorithm to generate an ephemeral, fixed-length symmetric key (the KEM shared secret) and a fixed-length encapsulation of that key that can be decapsulated by the holder of the private key corresponding to pkR. This function can raise an EncapError on encapsulation failure.

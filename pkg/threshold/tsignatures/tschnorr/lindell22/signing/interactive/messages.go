@@ -49,7 +49,7 @@ func (r2b *Round2Broadcast) Validate(protocol types.ThresholdSignatureProtocol) 
 	if r2b.BigR.Curve() != protocol.Curve() {
 		return errs.NewCurve("big r curve %s does not match protocol curve %s", r2b.BigR.Curve(), protocol.Curve())
 	}
-	if r2b.BigR.IsIdentity() {
+	if r2b.BigR.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("big r")
 	}
 	if r2b.BigRWitness == nil {

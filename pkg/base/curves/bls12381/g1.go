@@ -12,7 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -64,31 +64,91 @@ func NewG1() *G1 {
 
 // === Basic Methods.
 
+func (*G1) Cardinality() *saferith.Modulus {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*G1) Contains(e curves.Point) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*G1) Iter() <-chan curves.Point {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*G1) Operators() []algebra.BinaryOperator[curves.Point] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *G1) Unwrap() curves.Curve {
+	return c
+}
+
+func (*G1) IsDefinedUnder(operator algebra.BinaryOperator[curves.Point]) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*G1) Op(operator algebra.BinaryOperator[curves.Point], x algebra.GroupoidElement[curves.Curve, curves.Point], ys ...algebra.GroupoidElement[curves.Curve, curves.Point]) (curves.Point, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*G1) Addition() algebra.Addition[curves.Point] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*G1) ModuleScalarRing() algebra.ModuleBaseRing[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*G1) AlgebraicVarietyBaseField() algebra.AlgebraicVarietyBaseField[curves.Curve, curves.BaseField, curves.Point, curves.BaseFieldElement] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*G1) VectorSpaceScalarField() algebra.VectorSpaceBaseField[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *G1) BasePoint() curves.Point {
+	return c.Generator()
+}
+
+func (*G1) DLog(b, x algebra.CyclicGroupElement[curves.Curve, curves.Point], under algebra.BinaryOperator[curves.Point]) (*saferith.Nat, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*G1) ElementSize() int {
+	panic("implement me")
+}
+
+func (*G1) WideElementSize() int {
+	panic("implement me")
+}
+
+func (*G1) SuperGroupOrder() *saferith.Modulus {
+	return g1FullOrder
+}
+
 func (*G1) Name() string {
 	return NameG1
 }
 
 func (*G1) Order() *saferith.Modulus {
-	return g1FullOrder
+	return r
 }
 
 func (c *G1) Element() curves.Point {
-	return c.Identity()
-}
-
-func (c *G1) OperateOver(operator algebra.Operator, ps ...curves.Point) (curves.Point, error) {
-	if operator != algebra.PointAddition {
-		return nil, errs.NewType("operator %v is not supported", operator)
-	}
-	current := c.Identity()
-	for _, p := range ps {
-		current = current.Operate(p)
-	}
-	return current, nil
-}
-
-func (*G1) Operators() []algebra.Operator {
-	return []algebra.Operator{algebra.PointAddition}
+	return c.AdditiveIdentity()
 }
 
 func (*G1) Random(prng io.Reader) (curves.Point, error) {
@@ -145,42 +205,42 @@ func (*G1) Select(choice bool, x0, x1 curves.Point) curves.Point {
 
 // === Additive Groupoid Methods.
 
-func (*G1) Add(x curves.Point, ys ...curves.Point) curves.Point {
+func (*G1) Add(x algebra.AdditiveGroupoidElement[curves.Curve, curves.Point], ys ...algebra.AdditiveGroupoidElement[curves.Curve, curves.Point]) curves.Point {
 	sum := x
 	for _, y := range ys {
 		sum = sum.Add(y)
 	}
-	return sum
+	return sum.Unwrap()
 }
 
 // === Monoid Methods.
 
-func (*G1) Identity() curves.Point {
+func (*G1) Identity(under algebra.BinaryOperator[curves.Point]) (curves.Point, error) {
+	panic("implement me")
+}
+
+// === Additive Monoid Methods.
+
+func (*G1) AdditiveIdentity() curves.Point {
 	return &PointG1{
 		V: new(bls12381impl.G1).Identity(),
 	}
 }
 
-// === Additive Monoid Methods.
-
-func (c *G1) AdditiveIdentity() curves.Point {
-	return c.Identity()
-}
-
 // === Group Methods.
 
-func (*G1) Cofactor() *saferith.Nat {
+func (*G1) CoFactor() *saferith.Nat {
 	return cofactorG1
 }
 
 // === Additive Group Methods.
 
-func (*G1) Sub(x curves.Point, ys ...curves.Point) curves.Point {
-	sum := x
+func (*G1) Sub(x algebra.AdditiveGroupElement[curves.Curve, curves.Point], ys ...algebra.AdditiveGroupElement[curves.Curve, curves.Point]) curves.Point {
+	diff := x
 	for _, y := range ys {
-		sum = sum.Add(y)
+		diff = diff.Sub(y)
 	}
-	return sum
+	return diff.Unwrap()
 }
 
 // === Cyclic Group Methods.
@@ -208,7 +268,7 @@ func (*G1) BaseField() curves.BaseField {
 	return NewBaseFieldG1()
 }
 
-func (*G1) NewPoint(x, y curves.BaseFieldElement) (curves.Point, error) {
+func (*G1) NewPoint(x, y algebra.AlgebraicVarietyBaseFieldElement[curves.Curve, curves.BaseField, curves.Point, curves.BaseFieldElement]) (curves.Point, error) {
 	if x == nil || y == nil {
 		return nil, errs.NewIsNil("argument is nil")
 	}
@@ -257,7 +317,7 @@ func (c *G1) FrobeniusEndomorphism(p curves.Point) curves.Point {
 	}
 	x := pp.AffineX()
 	y := pp.AffineY()
-	characteristic := NewBaseFieldElementG1(0).SetNat(NewBaseFieldG1().Characteristic())
+	characteristic := NewBaseFieldG1().Characteristic()
 	result, err := c.NewPoint(x.Exp(characteristic), y.Exp(characteristic))
 	if err != nil {
 		panic(errs.WrapFailed(err, "forbenius endomorphism did not succeed"))
@@ -280,13 +340,13 @@ func (*G1) SubGroupOrder() *saferith.Modulus {
 	return r
 }
 
-func (c *G1) ScalarBaseMult(sc curves.Scalar) curves.Point {
-	return c.Generator().Mul(sc)
+func (c *G1) ScalarBaseMult(sc algebra.ModuleScalar[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar]) curves.Point {
+	return c.Generator().ScalarMul(sc)
 }
 
 func (*G1) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
 	nPoints := make([]*bls12381impl.G1, len(points))
-	nScalars := make([]*impl.FieldValue, len(scalars))
+	nScalars := make([]*limb4.FieldValue, len(scalars))
 	for i, pt := range points {
 		pp, ok := pt.(*PointG1)
 		if !ok {

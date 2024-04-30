@@ -1,3 +1,11 @@
+SCRIPTS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
+.PHONY: deps-linter
+deps-linter:
+	chmod +x ${SCRIPTS_DIR}/install_deps.sh
+	${SCRIPTS_DIR}/install_deps.sh golangci-lint
+	${SCRIPTS_DIR}/install_deps.sh nancy
+
 .PHONY: test-package-%
 test-package-%:
 	$(MAKE) clean

@@ -108,7 +108,7 @@ func stringToScalar(t *testing.T, curve curves.Curve, s string) curves.Scalar {
 
 	xBytes, err := hex.DecodeString(s)
 	require.NoError(t, err)
-	x, err := curve.Scalar().SetBytes(xBytes)
+	x, err := curve.ScalarField().Element().SetBytes(xBytes)
 	require.NoError(t, err)
 	return x
 }

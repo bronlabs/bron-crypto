@@ -7,13 +7,12 @@ import (
 )
 
 func TestUint256Constants(t *testing.T) {
-	ring256 := uint256.Ring()
-	u := ring256.Top().AddUint64(1)
+	u := uint256.Max.AddUint64(1)
 	if !u.IsZero() {
 		t.Fatalf("Max + 1 should equal 0, got %v", u)
 	}
-	u = ring256.Bottom().SubUint64(1)
-	if !u.Equal(ring256.Top()) {
+	u = uint256.Zero.SubUint64(1)
+	if !u.Equal(uint256.Max) {
 		t.Fatalf("Min - 1 should equal Max, got %v", u)
 	}
 }

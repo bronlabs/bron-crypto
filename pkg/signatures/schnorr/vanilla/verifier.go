@@ -65,7 +65,7 @@ func (v *verifier) Verify(signature *schnorr.Signature[EdDsaCompatibleVariant]) 
 	if err := types.ValidateSigningSuite(v.suite); err != nil {
 		return errs.WrapArgument(err, "invalid cipher suite")
 	}
-	if v.publicKey == nil || v.publicKey.A == nil || v.publicKey.A.IsIdentity() || v.publicKey.A.Curve().Name() != v.suite.Curve().Name() {
+	if v.publicKey == nil || v.publicKey.A == nil || v.publicKey.A.IsAdditiveIdentity() || v.publicKey.A.Curve().Name() != v.suite.Curve().Name() {
 		return errs.NewArgument("invalid signature")
 	}
 	if signature == nil || signature.R == nil || signature.R.Curve().Name() != v.suite.Curve().Name() ||
@@ -98,10 +98,10 @@ func (v *verifier) Verify(signature *schnorr.Signature[EdDsaCompatibleVariant]) 
 		return errs.NewFailed("incompatible schnorr signature")
 	}
 
-	cofactorNat := v.suite.Curve().Cofactor()
+	cofactorNat := v.suite.Curve().CoFactor()
 	cofactor := v.suite.Curve().ScalarField().Element().SetNat(cofactorNat)
 	left := v.suite.Curve().ScalarBaseMult(signature.S.Mul(cofactor))
-	right := signature.R.Mul(cofactor).Add(v.publicKey.A.Mul(e.Mul(cofactor)))
+	right := signature.R.ScalarMul(cofactor).Add(v.publicKey.A.ScalarMul(e.Mul(cofactor)))
 	if !left.Equal(right) {
 		return errs.NewVerification("invalid signature")
 	}

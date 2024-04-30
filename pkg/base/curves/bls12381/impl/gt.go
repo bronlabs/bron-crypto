@@ -4,7 +4,7 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 )
 
 // GtFieldBytes is the number of bytes needed to represent this field.
@@ -314,7 +314,7 @@ func (gt *Gt) Neg(a *Gt) *Gt {
 }
 
 // Mul multiplies this value by the input scalar.
-func (gt *Gt) Mul(a *Gt, s *impl.FieldValue) *Gt {
+func (gt *Gt) Mul(a *Gt, s *limb4.FieldValue) *Gt {
 	var f, p Fp12
 	f.Set((*Fp12)(a))
 	bytes := s.Bytes()

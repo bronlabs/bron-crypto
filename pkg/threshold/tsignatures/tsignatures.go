@@ -33,7 +33,7 @@ func (s *SigningKeyShare) Validate(protocol types.ThresholdProtocol) error {
 	if s.Share.IsZero() {
 		return errs.NewIsZero("share can't be zero")
 	}
-	if s.PublicKey.IsIdentity() {
+	if s.PublicKey.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("public key can't be at infinity")
 	}
 	if !curveutils.AllOfSameCurve(protocol.Curve(), s.Share, s.PublicKey) {
@@ -114,7 +114,7 @@ func (p *PartialPublicKeys) ToAdditive(protocol types.ThresholdSignatureProtocol
 			return nil, errs.WrapFailed(err, "invalid identity")
 		}
 
-		partialPublicKey := publicKeyShare.Mul(lagrangeCoefficient)
+		partialPublicKey := publicKeyShare.ScalarMul(lagrangeCoefficient)
 		publicShares.Put(signer, partialPublicKey)
 	}
 

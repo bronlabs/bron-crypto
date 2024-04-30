@@ -153,7 +153,7 @@ func (p *Participant) Round3(input network.RoundMessages[types.ThresholdProtocol
 		p.state.theirBigQDoublePrime[sharingId] = message.BigQDoublePrime
 
 		// 3.ii. verify that y_j == 3Q'_j + Q''_j and abort if not
-		theirBigQ := p.state.theirBigQPrime[sharingId].Mul(p.Protocol.Curve().ScalarField().New(3)).Add(message.BigQDoublePrime)
+		theirBigQ := p.state.theirBigQPrime[sharingId].ScalarMul(p.Protocol.Curve().ScalarField().New(3)).Add(message.BigQDoublePrime)
 		partialPublicKey, exists := p.publicKeyShares.Shares.Get(identity)
 		if !exists {
 			return nil, errs.NewMissing("could not find participant partial publickey (sharing id=%d)", sharingId)

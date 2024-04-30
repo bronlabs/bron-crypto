@@ -1,30 +1,37 @@
 SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
-include $(SELF_DIR)/scripts/Makefile
+include $(SELF_DIR)/scripts/scripts.mk
 include $(SELF_DIR)/thirdparty/thirdparty.mk
 
 GOENV=GO111MODULE=on
 GO=${GOENV} go
 
 COVERAGE_OUT="$(mktemp -d)/coverage.out"
-SCRIPTS_DIR="$(SELF_DIR)/scripts"
-
 
 TEST_CLAUSE= $(if ${TEST}, -run ${TEST})
 BUILD_TAGS= $(if ${TAGS}, -tags=${TAGS})
 
 .PHONY: all
-all: build lint test
+all: deps build lint test
 
 pkg/base/errs/error_functions.gen.go:
 pkg/base/errs/known_errors.gen.go:
 	${GO} generate ./...
 	golangci-lint run --fix ./pkg/base/errs
 
+.PHONY: deps
+deps: deps-linter deps-go deps-boring
+
+.PHONY: deps-go
+deps-go:
+	${GO} mod download
+	${GO} mod verify
+	${GO} mod tidy -compat=1.22
+
 .PHONY: codegen
 codegen: pkg/base/errs/error_functions.gen.go pkg/base/errs/known_errors.gen.go
 
 .PHONY: build
-build: build-boring codegen
+build: codegen
 	${GO} build ./...
 
 .PHONY: build-nocgo
@@ -59,10 +66,12 @@ githooks:
 
 .PHONY: lint
 lint:
+	go list -json -m all | nancy sleuth
 	golangci-lint run --timeout=5m
 
 .PHONY: lint-long
 lint-long:
+	go list -json -m all | nancy sleuth
 	golangci-lint run --timeout=120m
 
 .PHONY: lint-fix
@@ -71,7 +80,7 @@ lint-fix:
 
 .PHONY: test
 test:
-	${GO} test ${BUILD_TAGS} -short ${TEST_CLAUSE} ./...
+	${GO} test ${BUILD_TAGS} -failfast -short ${TEST_CLAUSE} ./...
 
 .PHONY: test-long
 test-long: ## Runs all tests, including long-running tests

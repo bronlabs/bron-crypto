@@ -30,7 +30,7 @@ func ValidateIdentityKey(k IdentityKey) error {
 	if k.PublicKey() == nil {
 		return errs.NewIsNil("public key")
 	}
-	if k.PublicKey().IsIdentity() {
+	if k.PublicKey().IsAdditiveIdentity() {
 		return errs.NewIsIdentity("public key")
 	}
 	return nil

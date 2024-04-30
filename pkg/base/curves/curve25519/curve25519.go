@@ -12,8 +12,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/mappings/elligator2"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
@@ -34,7 +34,7 @@ var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
 	hash2curve.CurveHasher
-	*impl.Elligator2Params
+	*elligator2.Params
 	_ ds.Incomparable
 }
 
@@ -45,7 +45,7 @@ func curve25519Init() {
 		base.HASH2CURVE_APP_TAG,
 		hash2curve.DstTagElligator2,
 	)
-	curve25519Instance.Elligator2Params = impl.NewElligator2Params(&curve25519Instance, true)
+	curve25519Instance.Params = elligator2.NewParams(&curve25519Instance, true)
 }
 
 // SetHasherAppTag sets the hasher to use for hash-to-curve operations with a
@@ -64,33 +64,91 @@ func NewCurve() *Curve {
 	return &curve25519Instance
 }
 
-// === Basic Methods.
+func (*Curve) Cardinality() *saferith.Modulus {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Curve) Contains(e curves.Point) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Curve) Iter() <-chan curves.Point {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Curve) Operators() []algebra.BinaryOperator[curves.Point] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Curve) Unwrap() curves.Curve {
+	return c
+}
+
+func (*Curve) IsDefinedUnder(operator algebra.BinaryOperator[curves.Point]) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Curve) Op(operator algebra.BinaryOperator[curves.Point], x algebra.GroupoidElement[curves.Curve, curves.Point], ys ...algebra.GroupoidElement[curves.Curve, curves.Point]) (curves.Point, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Curve) Addition() algebra.Addition[curves.Point] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Curve) ModuleScalarRing() algebra.ModuleBaseRing[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Curve) AlgebraicVarietyBaseField() algebra.AlgebraicVarietyBaseField[curves.Curve, curves.BaseField, curves.Point, curves.BaseFieldElement] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Curve) VectorSpaceScalarField() algebra.VectorSpaceBaseField[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Curve) BasePoint() curves.Point {
+	return c.Generator()
+}
+
+func (*Curve) DLog(b, x algebra.CyclicGroupElement[curves.Curve, curves.Point], under algebra.BinaryOperator[curves.Point]) (*saferith.Nat, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Curve) ElementSize() int {
+	panic("implement me")
+}
+
+func (*Curve) WideElementSize() int {
+	panic("implement me")
+}
+
+func (*Curve) SuperGroupOrder() *saferith.Modulus {
+	return groupOrder
+}
 
 func (*Curve) Name() string {
 	return Name
 }
 
 func (*Curve) Order() *saferith.Modulus {
-	return groupOrder
+	return subgroupOrder
 }
 
 func (c *Curve) Element() curves.Point {
-	return c.Identity()
-}
-
-func (c *Curve) OperateOver(operator algebra.Operator, ps ...curves.Point) (curves.Point, error) {
-	if operator != algebra.PointAddition {
-		return nil, errs.NewType("operator %v is not supported", operator)
-	}
-	current := c.Identity()
-	for _, p := range ps {
-		current = current.Operate(p)
-	}
-	return current, nil
-}
-
-func (*Curve) Operators() []algebra.Operator {
-	return []algebra.Operator{algebra.PointAddition}
+	return c.AdditiveIdentity()
 }
 
 func (c *Curve) Random(prng io.Reader) (curves.Point, error) {
@@ -126,7 +184,7 @@ func (c *Curve) HashWithDst(input, dst []byte) (curves.Point, error) {
 func (c *Curve) Map(u curves.BaseFieldElement) curves.Point {
 	xn, xd, yn, yd := c.MapToCurveElligator2Curve25519(u)
 	// To affine coordinates.
-	x := xn.Div(xd)
+	x, _ := xn.Div(xd)
 	y := yn.Mul(yd)
 	p, err := c.NewPoint(x, y)
 	if err != nil {
@@ -150,17 +208,23 @@ func (*Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
 
 // === Additive Groupoid Methods.
 
-func (*Curve) Add(x curves.Point, ys ...curves.Point) curves.Point {
+func (*Curve) Add(x algebra.AdditiveGroupoidElement[curves.Curve, curves.Point], ys ...algebra.AdditiveGroupoidElement[curves.Curve, curves.Point]) curves.Point {
 	sum := x
 	for _, y := range ys {
 		sum = sum.Add(y)
 	}
-	return sum
+	return sum.Unwrap()
 }
 
 // === Monoid Methods.
 
-func (*Curve) Identity() curves.Point {
+func (*Curve) Identity(under algebra.BinaryOperator[curves.Point]) (curves.Point, error) {
+	panic("implement me")
+}
+
+// === Additive Monoid Methods.
+
+func (*Curve) AdditiveIdentity() curves.Point {
 	return &Point{
 		V: [32]byte{
 			0x00, 0x00, 0x00, 0x00,
@@ -175,26 +239,20 @@ func (*Curve) Identity() curves.Point {
 	}
 }
 
-// === Additive Monoid Methods.
-
-func (c *Curve) AdditiveIdentity() curves.Point {
-	return c.Identity()
-}
-
 // === Group Methods.
 
-func (*Curve) Cofactor() *saferith.Nat {
+func (*Curve) CoFactor() *saferith.Nat {
 	return new(saferith.Nat).SetUint64(8)
 }
 
 // === Additive Group Methods.
 
-func (*Curve) Sub(x curves.Point, ys ...curves.Point) curves.Point {
-	sum := x
+func (*Curve) Sub(x algebra.AdditiveGroupElement[curves.Curve, curves.Point], ys ...algebra.AdditiveGroupElement[curves.Curve, curves.Point]) curves.Point {
+	diff := x
 	for _, y := range ys {
-		sum = sum.Add(y)
+		diff = diff.Sub(y)
 	}
-	return sum
+	return diff.Unwrap()
 }
 
 // === Cyclic Group Methods.
@@ -224,7 +282,7 @@ func (*Curve) BaseField() curves.BaseField {
 	return NewBaseField()
 }
 
-func (*Curve) NewPoint(x, y curves.BaseFieldElement) (curves.Point, error) {
+func (*Curve) NewPoint(x, y algebra.AlgebraicVarietyBaseFieldElement[curves.Curve, curves.BaseField, curves.Point, curves.BaseFieldElement]) (curves.Point, error) {
 	panic("not implemented")
 }
 
@@ -255,7 +313,7 @@ func (c *Curve) FrobeniusEndomorphism(p curves.Point) curves.Point {
 	if !ok {
 		panic("given point is not of the right type")
 	}
-	characteristic := NewBaseFieldElement(0).SetNat(NewBaseField().Characteristic())
+	characteristic := NewBaseField().Characteristic()
 	result, err := c.NewPoint(pp.AffineX().Exp(characteristic), pp.AffineY().Exp(characteristic))
 	if err != nil {
 		panic(errs.WrapFailed(err, "forbenius endomorphism did not succeed"))
@@ -279,8 +337,8 @@ func (*Curve) SubGroupOrder() *saferith.Modulus {
 	return subgroupOrder
 }
 
-func (c *Curve) ScalarBaseMult(sc curves.Scalar) curves.Point {
-	return c.Generator().Mul(sc)
+func (c *Curve) ScalarBaseMult(sc algebra.ModuleScalar[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar]) curves.Point {
+	return c.Generator().ScalarMul(sc)
 }
 
 func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {

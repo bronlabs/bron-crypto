@@ -84,7 +84,7 @@ func EncryptEphemeral(myPrivateKey *PrivateKey, message, AD []byte, prng io.Read
 	if myPrivateKey == nil {
 		return nil, nil, nil, errs.NewIsNil("my private key is nil")
 	}
-	for ephemeralPublicKey == nil || ephemeralPublicKey.IsIdentity() {
+	for ephemeralPublicKey == nil || ephemeralPublicKey.IsAdditiveIdentity() {
 		ephemeralPublicKey, err = myPrivateKey.S.ScalarField().Curve().Random(prng)
 		if err != nil {
 			return nil, nil, nil, errs.WrapFailed(err, "could not generate random point")

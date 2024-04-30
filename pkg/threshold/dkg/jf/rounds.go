@@ -1,6 +1,8 @@
 package jf
 
 import (
+	"github.com/cronokirby/saferith"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -183,9 +185,8 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.ThresholdP
 		partialPublicKeyShare := p.state.partialPublicKeyShares[senderSharingId]
 		iToKs := make([]curves.Scalar, p.Protocol.Threshold())
 		C_lks := make([]curves.Point, p.Protocol.Threshold())
-		for k := uint(0); k < p.Protocol.Threshold(); k++ {
-			exp := p.Protocol.Curve().ScalarField().New(uint64(k))
-			iToK := p.Protocol.Curve().ScalarField().New(uint64(p.SharingId())).Exp(exp)
+		for k := uint64(0); k < uint64(p.Protocol.Threshold()); k++ {
+			iToK := p.Protocol.Curve().ScalarField().New(uint64(p.SharingId())).Exp(new(saferith.Nat).SetUint64(k))
 			C_lk := senderCommitmentVector[k]
 			iToKs[k] = iToK
 			C_lks[k] = C_lk

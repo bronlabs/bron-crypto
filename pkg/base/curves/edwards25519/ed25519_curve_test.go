@@ -101,7 +101,8 @@ func TestScalarNeg(t *testing.T) {
 
 func TestScalarInvert(t *testing.T) {
 	nine := edwards25519.NewScalar(9)
-	actual := nine.MultiplicativeInverse()
+	actual, err := nine.MultiplicativeInverse()
+	require.NoError(t, err)
 	sa, _ := actual.(*edwards25519.Scalar)
 	expected := toRSc("c3d9c4db0516043013b1e1ce8637dc92e3388ee3388ee3388ee3388ee3388e03")
 	require.Equal(t, 1, sa.V.Equal(expected))
@@ -154,25 +155,28 @@ func TestScalarMul(t *testing.T) {
 
 func TestScalarDiv(t *testing.T) {
 	nine := edwards25519.NewScalar(9)
-	actual := nine.Div(nine)
+	actual, err := nine.Div(nine)
+	require.NoError(t, err)
 	require.Equal(t, algebra.Equal, actual.Cmp(edwards25519.NewScalar(1)))
-	require.Equal(t, algebra.Equal, edwards25519.NewScalar(54).Div(nine).Cmp(edwards25519.NewScalar(6)))
+	fiftyFourOverNine, err := edwards25519.NewScalar(54).Div(nine)
+	require.NoError(t, err)
+	require.Equal(t, algebra.Equal, fiftyFourOverNine.Cmp(edwards25519.NewScalar(6)))
 }
 
 func TestScalarExp(t *testing.T) {
 	curve := edwards25519.NewCurve()
 	seventeen := edwards25519.NewScalar(17)
 
-	toZero := seventeen.Exp(curve.ScalarField().Zero())
+	toZero := seventeen.Exp(curve.ScalarField().Zero().Nat())
 	require.True(t, toZero.Cmp(curve.ScalarField().One()) == 0)
 
-	toOne := seventeen.Exp(curve.ScalarField().One())
+	toOne := seventeen.Exp(curve.ScalarField().One().Nat())
 	require.True(t, toOne.Cmp(seventeen) == 0)
 
-	toTwo := seventeen.Exp(edwards25519.NewScalar(2))
+	toTwo := seventeen.Exp(edwards25519.NewScalar(2).Nat())
 	require.True(t, toTwo.Cmp(seventeen.Mul(seventeen)) == 0)
 
-	toThree := seventeen.Exp(edwards25519.NewScalar(3))
+	toThree := seventeen.Exp(edwards25519.NewScalar(3).Nat())
 	require.True(t, toThree.Cmp(seventeen.Mul(seventeen).Mul(seventeen)) == 0)
 }
 
@@ -205,7 +209,6 @@ func TestScalarNil(t *testing.T) {
 	require.Panics(t, func() { one.Add(nil) })
 	require.Panics(t, func() { one.Sub(nil) })
 	require.Panics(t, func() { one.Mul(nil) })
-	require.Panics(t, func() { one.Div(nil) })
 	_, err := curve.ScalarField().Random(nil)
 	require.Error(t, err)
 	require.Equal(t, algebra.Incomparable, one.Cmp(nil))
@@ -232,7 +235,7 @@ func TestPointRandom(t *testing.T) {
 		require.NoError(t, err)
 		_, ok := sc.(*edwards25519.Point)
 		require.True(t, ok)
-		require.False(t, sc.IsIdentity())
+		require.False(t, sc.IsAdditiveIdentity())
 		pBytes := sc.ToAffineCompressed()
 		_, err = filippo.NewIdentityPoint().SetBytes(pBytes)
 		require.NoError(t, err)
@@ -241,8 +244,8 @@ func TestPointRandom(t *testing.T) {
 
 func TestPointIdentity(t *testing.T) {
 	curve := edwards25519.NewCurve()
-	sc := curve.Identity()
-	require.True(t, sc.IsIdentity())
+	sc := curve.AdditiveIdentity()
+	require.True(t, sc.IsAdditiveIdentity())
 	require.Equal(t, []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, sc.ToAffineCompressed())
 }
 
@@ -259,7 +262,7 @@ func TestPointSet(t *testing.T) {
 	z := curve.BaseFieldElement().SetNat(new(saferith.Nat).SetUint64(0))
 	identity, err := curve.NewPoint(z, z)
 	require.NoError(t, err)
-	require.True(t, identity.IsIdentity())
+	require.True(t, identity.IsAdditiveIdentity())
 	xBytes, _ := hex.DecodeString("1ad5258f602d56c9b2a7259560c72c695cdcd6fd31e2a4c0fe536ecdd3366921")
 	yBytes, _ := hex.DecodeString("5866666666666666666666666666666666666666666666666666666666666666")
 	x := curve.BaseFieldElement().SetNat(new(saferith.Nat).SetBytes(bitstring.ReverseBytes(xBytes)))
@@ -273,8 +276,8 @@ func TestPointDouble(t *testing.T) {
 	curve := edwards25519.NewCurve()
 	g := curve.Generator()
 	g2 := g.Double()
-	require.True(t, g2.Equal(g.Mul(edwards25519.NewScalar(2))))
-	i := curve.Identity()
+	require.True(t, g2.Equal(g.ScalarMul(edwards25519.NewScalar(2))))
+	i := curve.AdditiveIdentity()
 	require.True(t, i.Double().Equal(i))
 }
 
@@ -282,28 +285,28 @@ func TestPointNeg(t *testing.T) {
 	curve := edwards25519.NewCurve()
 	g := curve.Generator().Neg()
 	require.True(t, g.Neg().Equal(curve.Generator()))
-	require.True(t, curve.Identity().Neg().Equal(curve.Identity()))
+	require.True(t, curve.AdditiveIdentity().Neg().Equal(curve.AdditiveIdentity()))
 }
 
 func TestPointAdd(t *testing.T) {
 	curve := edwards25519.NewCurve()
 	pt := curve.Generator()
 	require.True(t, pt.Add(pt).Equal(pt.Double()))
-	require.True(t, pt.Mul(edwards25519.NewScalar(3)).Equal(pt.Add(pt).Add(pt)))
+	require.True(t, pt.ScalarMul(edwards25519.NewScalar(3)).Equal(pt.Add(pt).Add(pt)))
 }
 
 func TestPointSub(t *testing.T) {
 	curve := edwards25519.NewCurve()
 	g := curve.Generator()
-	pt := curve.Generator().Mul(edwards25519.NewScalar(4))
+	pt := curve.Generator().ScalarMul(edwards25519.NewScalar(4))
 	require.True(t, pt.Sub(g).Sub(g).Sub(g).Equal(g))
-	require.True(t, pt.Sub(g).Sub(g).Sub(g).Sub(g).IsIdentity())
+	require.True(t, pt.Sub(g).Sub(g).Sub(g).Sub(g).IsAdditiveIdentity())
 }
 
 func TestPointMul(t *testing.T) {
 	curve := edwards25519.NewCurve()
 	g := curve.Generator()
-	pt := curve.Generator().Mul(edwards25519.NewScalar(4))
+	pt := curve.Generator().ScalarMul(edwards25519.NewScalar(4))
 	require.True(t, g.Double().Double().Equal(pt))
 }
 
@@ -313,7 +316,7 @@ func TestPointSerialize(t *testing.T) {
 	require.NoError(t, err)
 	g := curve.Generator()
 
-	ppt := g.Mul(ss)
+	ppt := g.ScalarMul(ss)
 	expectedC, _ := hex.DecodeString("c6473159e19ed185b373e935081774e0c133b9416abdff319667187a71dff53e")
 	expectedU, _ := hex.DecodeString("2a60c9f03c6b58ddae081ae1d9cefa7a2f64b313620a602af653796f2fa73974c6473159e19ed185b373e935081774e0c133b9416abdff319667187a71dff53e")
 	require.Equal(t, expectedC, ppt.ToAffineCompressed())
@@ -329,7 +332,7 @@ func TestPointSerialize(t *testing.T) {
 	for i := 0; i < 25; i++ {
 		s, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
-		pt := g.Mul(s)
+		pt := g.ScalarMul(s)
 		cmprs := pt.ToAffineCompressed()
 		require.Len(t, cmprs, 32)
 		retC, err := pt.FromAffineCompressed(cmprs)
@@ -349,7 +352,7 @@ func TestPointNil(t *testing.T) {
 	one := curve.Generator()
 	require.Panics(t, func() { one.Add(nil) })
 	require.Panics(t, func() { one.Sub(nil) })
-	require.Panics(t, func() { one.Mul(nil) })
+	require.Panics(t, func() { one.ScalarMul(nil) })
 	_, err := curve.Random(nil)
 	require.Error(t, err)
 	require.False(t, one.Equal(nil))
@@ -357,7 +360,7 @@ func TestPointNil(t *testing.T) {
 
 func TestPointSumOfProducts(t *testing.T) {
 	curve := edwards25519.NewCurve()
-	lhs := curve.Generator().Mul(edwards25519.NewScalar(50))
+	lhs := curve.Generator().ScalarMul(edwards25519.NewScalar(50))
 	points := make([]curves.Point, 5)
 	for i := range points {
 		points[i] = curve.Generator()

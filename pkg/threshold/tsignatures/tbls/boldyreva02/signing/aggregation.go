@@ -35,8 +35,8 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 		return nil, nil, errs.WrapFailed(err, "couldn't produce lagrange coefficients for present participants")
 	}
 
-	sigma := bls12381.GetSourceSubGroup[S]().Identity()
-	sigmaPOP := bls12381.GetSourceSubGroup[S]().Identity()
+	sigma := bls12381.GetSourceSubGroup[S]().AdditiveIdentity()
+	sigmaPOP := bls12381.GetSourceSubGroup[S]().AdditiveIdentity()
 
 	// step 2.1
 	for pair := range partialSignatures.Iter() {
@@ -91,9 +91,9 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 		}
 
 		// step 2.2 (we'll complete it gradually here to avoid another for loop)
-		sigma = sigma.Add(psig.SigmaI.Value.Mul(lambda_i))
+		sigma = sigma.Add(psig.SigmaI.Value.ScalarMul(lambda_i))
 		if psig.SigmaPOPI != nil && scheme == bls.POP {
-			sigmaPOP = sigmaPOP.Add(psig.SigmaPOPI.Value.Mul(lambda_i))
+			sigmaPOP = sigmaPOP.Add(psig.SigmaPOPI.Value.ScalarMul(lambda_i))
 		}
 	}
 
@@ -104,7 +104,7 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 
 	// step 2.3
 	if scheme == bls.POP {
-		if sigmaPOP == nil || sigmaPOP.IsIdentity() {
+		if sigmaPOP == nil || sigmaPOP.IsAdditiveIdentity() {
 			return nil, nil, errs.NewArgument("sigma POP is nil or identity")
 		}
 		sigmaPOPPairable, ok := sigmaPOP.(curves.PairingPoint)

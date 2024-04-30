@@ -32,7 +32,7 @@ func Verify(share *Share, commitments []curves.Point, verifier compiler.NIVerifi
 	}
 	rhs = rhs.Add(commitments[0])
 
-	lhs := commitments[0].Curve().Generator().Mul(share.Value)
+	lhs := commitments[0].Curve().Generator().ScalarMul(share.Value)
 	if !lhs.Equal(rhs) {
 		return errs.NewVerification("not equal")
 	}

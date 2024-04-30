@@ -44,6 +44,58 @@ func NewGt() *Gt {
 
 // === Basic Methods.
 
+func (*Gt) Cardinality() *saferith.Modulus {
+	panic("not implemented")
+}
+
+func (*Gt) Contains(e curves.GtMember) bool {
+	panic("not implemented")
+}
+
+func (*Gt) Iter() <-chan curves.GtMember {
+	panic("not implemented")
+}
+
+func (g *Gt) Unwrap() curves.Gt {
+	return g
+}
+
+func (*Gt) IsDefinedUnder(operator algebra.BinaryOperator[curves.GtMember]) bool {
+	panic("not implemented")
+}
+
+func (*Gt) Op(operator algebra.BinaryOperator[curves.GtMember], x algebra.GroupoidElement[curves.Gt, curves.GtMember], ys ...algebra.GroupoidElement[curves.Gt, curves.GtMember]) (curves.GtMember, error) {
+	panic("not implemented")
+}
+
+func (*Gt) Exp(base curves.GtMember, power curves.GtMember) curves.GtMember {
+	panic("not implemented")
+}
+
+func (*Gt) SimExp(bases []algebra.MultiplicativeGroupoidElement[curves.Gt, curves.GtMember], exponents []*saferith.Nat) (curves.GtMember, error) {
+	panic("not implemented")
+}
+
+func (*Gt) Operators() []algebra.BinaryOperator[curves.GtMember] {
+	panic("not implemented")
+}
+
+func (*Gt) MultiBaseExp(bases []algebra.MultiplicativeGroupoidElement[curves.Gt, curves.GtMember], exponent *saferith.Nat) curves.GtMember {
+	panic("not implemented")
+}
+
+func (*Gt) MultiExponentExp(base algebra.MultiplicativeGroupoidElement[curves.Gt, curves.GtMember], exponents []*saferith.Nat) curves.GtMember {
+	panic("not implemented")
+}
+
+func (*Gt) Multiplication() algebra.Multiplication[curves.GtMember] {
+	panic("not implemented")
+}
+
+func (*Gt) DiscreteExponentiation() algebra.DiscreteExponentiation[curves.GtMember] {
+	panic("not implemented")
+}
+
 func (*Gt) Name() string {
 	return NameGt
 }
@@ -53,22 +105,7 @@ func (*Gt) Order() *saferith.Modulus {
 }
 
 func (g *Gt) Element() curves.GtMember {
-	return g.Identity()
-}
-
-func (g *Gt) OperateOver(operator algebra.Operator, ps ...curves.GtMember) (curves.GtMember, error) {
-	if operator != algebra.Multiplication {
-		return nil, errs.NewType("operator %v is not supported", operator)
-	}
-	current := g.Identity()
-	for _, p := range ps {
-		current = current.Operate(p)
-	}
-	return current, nil
-}
-
-func (*Gt) Operators() []algebra.Operator {
-	return []algebra.Operator{algebra.Multiplication}
+	return g.MultiplicativeIdentity()
 }
 
 func (*Gt) Random(prng io.Reader) (curves.GtMember, error) {
@@ -105,32 +142,36 @@ func (g *Gt) Select(choice bool, x0, x1 curves.GtMember) curves.GtMember {
 
 // === Multiplicative Groupoid Methods.
 
-func (*Gt) Multiply(x curves.GtMember, ys ...curves.GtMember) curves.GtMember {
+func (*Gt) Mul(x algebra.MultiplicativeGroupoidElement[curves.Gt, curves.GtMember], ys ...algebra.MultiplicativeGroupoidElement[curves.Gt, curves.GtMember]) curves.GtMember {
 	product := x
 	for _, y := range ys {
 		product = product.Mul(y)
 	}
-	return product
+	return product.Unwrap()
 }
 
 // === Monoid Methods.
 
-func (*Gt) Identity() curves.GtMember {
-	return &GtMember{V: new(bls12381impl.Gt).SetOne()}
+func (*Gt) Identity(under algebra.BinaryOperator[curves.GtMember]) (curves.GtMember, error) {
+	panic("not implemented")
 }
 
 // === Multiplicative Monoid Methods.
 
-func (g *Gt) MultiplicativeIdentity() curves.GtMember {
-	return g.Identity()
+func (*Gt) MultiplicativeIdentity() curves.GtMember {
+	return &GtMember{V: new(bls12381impl.Gt).SetOne()}
 }
 
 // === Multiplicative Group Methods.
 
-func (*Gt) Div(x curves.GtMember, ys ...curves.GtMember) curves.GtMember {
+func (*Gt) Div(x algebra.MultiplicativeGroupElement[curves.Gt, curves.GtMember], ys ...algebra.MultiplicativeGroupElement[curves.Gt, curves.GtMember]) (curves.GtMember, error) {
 	result := x
 	for _, y := range ys {
-		result = result.Div(y)
+		var err error
+		result, err = result.Div(y)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "division failed")
+		}
 	}
-	return result
+	return result.Unwrap(), nil
 }

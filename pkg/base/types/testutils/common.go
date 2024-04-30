@@ -70,7 +70,7 @@ func (k *TestAuthKey) Sign(message []byte) []byte {
 }
 
 func (k *TestAuthKey) Verify(signature, message []byte) error {
-	r := k.suite.Curve().Identity()
+	r := k.suite.Curve().AdditiveIdentity()
 	r, err := r.FromAffineCompressed(signature[:len(r.ToAffineCompressed())])
 	if err != nil {
 		return errs.NewSerialisation("cannot deserialize signature")

@@ -101,7 +101,7 @@ func (r4out *Round4Output) Validate() error {
 	if r4out.BigQHat == nil {
 		return errs.NewIsNil("BigQHat")
 	}
-	if r4out.BigQHat.IsIdentity() {
+	if r4out.BigQHat.IsAdditiveIdentity() {
 		return errs.NewArgument("BigQHat is identity")
 	}
 	if err := r4out.BigQHatWitness.Validate(); err != nil {

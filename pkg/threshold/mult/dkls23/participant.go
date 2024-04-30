@@ -146,7 +146,7 @@ func generateGadgetVector(curve curves.Curve, transcript transcripts.Transcript)
 		if err != nil {
 			return gadget, errs.WrapFailed(err, "extracting bytes from transcript")
 		}
-		gadget[i], err = curve.Scalar().SetBytesWide(bytes)
+		gadget[i], err = curve.ScalarField().Element().SetBytesWide(bytes)
 		if err != nil {
 			return gadget, errs.WrapFailed(err, "creating gadget scalar from bytes")
 		}

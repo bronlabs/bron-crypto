@@ -44,8 +44,8 @@ func Test_HappyPath(t *testing.T) {
 			witness, err := curve.ScalarField().Random(crand.Reader)
 			require.NoError(t, err)
 			statement := &chaum.Statement{
-				X1: g1.Mul(witness),
-				X2: g2.Mul(witness),
+				X1: g1.ScalarMul(witness),
+				X2: g2.ScalarMul(witness),
 			}
 
 			// round 1
@@ -91,7 +91,7 @@ func Test_InvalidStatement(t *testing.T) {
 				require.NoError(t, err)
 				statement := &chaum.Statement{
 					X1: x1,
-					X2: g2.Mul(witness),
+					X2: g2.ScalarMul(witness),
 				}
 
 				// round 1
@@ -118,7 +118,7 @@ func Test_InvalidStatement(t *testing.T) {
 				x2, err := curve.Random(crand.Reader)
 				require.NoError(t, err)
 				statement := &chaum.Statement{
-					X1: g1.Mul(witness),
+					X1: g1.ScalarMul(witness),
 					X2: x2,
 				}
 

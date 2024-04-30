@@ -52,8 +52,8 @@ func Fuzz_Test(f *testing.F) {
 		nativeR, nativeS, err := nativeEcdsa.Sign(crand.Reader, nativePrivateKey, messageHash)
 		require.NoError(t, err)
 
-		r := curve.Scalar().SetNat(new(saferith.Nat).SetBig(nativeR, curve.SubGroupOrder().BitLen()))
-		s := curve.Scalar().SetNat(new(saferith.Nat).SetBig(nativeS, curve.SubGroupOrder().BitLen()))
+		r := curve.ScalarField().Element().SetNat(new(saferith.Nat).SetBig(nativeR, curve.Order().BitLen()))
+		s := curve.ScalarField().Element().SetNat(new(saferith.Nat).SetBig(nativeS, curve.Order().BitLen()))
 		verified := false
 		for v := 0; v < 4; v++ {
 			if verified == false {

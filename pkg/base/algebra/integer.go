@@ -1,78 +1,137 @@
 package algebra
 
-// AbstractZ defines methods for S for it to behave like the integers.
-type AbstractZ[S Structure, E Element] interface {
-	// Z forms a lattice.
-	AbstractOrderTheoreticLattice[S, E]
-	// New converts the input to an integer of type E.
+type (
+	PositiveN   IntegerInterval[PositiveN, PositiveNat]
+	PositiveNat Number[PositiveN, PositiveNat]
+
+	N   NaturalsRig[N, Nat]
+	Nat NaturalNumber[N, Nat]
+
+	Z   IntegerField[Z, Int]
+	Int IntegerFieldElement[Z, Int]
+
+	Zn   IntegerRing[Zn, Uint]
+	Uint IntegerRingElement[Zn, Uint]
+
+	ZnX  MultiplicativeIntegerGroup[ZnX, IntX]
+	IntX MultiplicativeIntegerGroupElement[ZnX, IntX]
+
+	Zp   IntegerFiniteField[Zp, IntP]
+	IntP IntegerFieldElement[Zp, IntP]
+)
+
+type PositiveNaturalNumberGroupoid[S Structure, E Element] interface {
+	Groupoid[S, E]
+	Chain[S, E]
 	New(v uint64) E
-	// Zero returns integer zero.
-	Zero() E
-	// One returns integer one.
 	One() E
 }
 
-// AbstractInteger defines methods for element of type E to be elements of the integers S.
-type AbstractInteger[S Structure, E Element] interface {
-	// Integer is an element of a lattice.
-	AbstractOrderTheoreticLatticeElement[S, E]
-	// IsZero returns true if this element is zero.
-	IsZero() bool
-	// IsOne returns true if this element is one.
+type PositiveNaturalNumberGroupoidElement[S Structure, E Element] interface {
+	GroupoidElement[S, E]
+	ChainElement[S, E]
 	IsOne() bool
 
-	// IsEven returns true if this element is divisible by 2.
 	IsEven() bool
-	// IsOdd returns true if this element is not even.
 	IsOdd() bool
 
-	// Neg returns the additive inverse of this element.
-	Neg() E
+	IsNonZero() bool
+	IsPositive() bool
 
-	// Increment mutates this element by adding one to it.
-	Increment()
-	// Decrement mutates this element by subtracting one from it.
-	Decrement()
+	NatSerialization[E]
+	IntSerialization[E]
 }
 
-// AbstractZn defines methods for S to behave like ring of integers modulo n.
-type AbstractZn[S Structure, E Element] interface {
-	// Zn is a ring.
-	AbstractRing[S, E]
-	// Zn has methods of integers.
-	AbstractZ[S, E]
-	// Zn is totally ordered.
-	AbstractChain[S, E]
+type IntegerInterval[S Structure, E Element] interface {
+	Rg[S, E]
+	PositiveNaturalNumberGroupoid[S, E]
 }
 
-// AbstractIntegerRingElement defines methods for elements of type E to behave
+type Number[S Structure, E Element] interface {
+	RgElement[S, E]
+	PositiveNaturalNumberGroupoidElement[S, E]
+
+	TrySub(x Number[S, E]) (E, error)
+}
+
+type NaturalNumberMonoid[S Structure, E Element] interface {
+	Monoid[S, E]
+	PositiveNaturalNumberGroupoid[S, E]
+	Zero() E
+
+	ConjunctiveMonoid[S, E]
+	DisjunctiveMonoid[S, E]
+	ExclusiveDisjunctiveGroup[S, E]
+}
+
+type NaturalNumberMonoidElement[S Structure, E Element] interface {
+	MonoidElement[S, E]
+	PositiveNaturalNumberGroupoidElement[S, E]
+	IsZero() bool
+
+	ConjunctiveMonoidElement[S, E]
+	DisjunctiveMonoidElement[S, E]
+	ExclusiveDisjunctiveGroupElement[S, E]
+	BitWiseElement[E]
+}
+
+type NaturalsRig[S Structure, E Element] interface {
+	Rig[S, E]
+	NaturalNumberMonoid[S, E]
+}
+
+type NaturalNumber[S Structure, E Element] interface {
+	RigElement[S, E]
+	NaturalNumberMonoidElement[S, E]
+}
+
+// IntegerField defines methods for S for it to behave like the integers.
+type IntegerField[S Structure, E Element] interface {
+	NaturalsRig[S, E]
+	EuclideanDomain[S, E]
+}
+
+// IntegerFieldElement defines methods for element of type E to be elements of the integers S.
+type IntegerFieldElement[S Structure, E Element] interface {
+	NaturalNumber[S, E] // Zigzag encoding nat
+	EuclideanDomainElement[S, E]
+}
+
+// IntegerRing defines methods for S to behave like ring of integers modulo n.
+type IntegerRing[S Structure, E Element] interface {
+	NaturalsRig[S, E]
+	FiniteRing[S, E]
+	IsDecomposable(coprimeIdealNorms ...IntegerRingElement[S, E]) (bool, error)
+}
+
+// IntegerRingElement defines methods for elements of type E to behave
 // like elements of the ring of integers modulo n.
-type AbstractIntegerRingElement[S Structure, E Element] interface {
-	// Integer ring element is a ring element.
-	AbstractRingElement[S, E]
-	// Integer ring element is an integer.
-	AbstractInteger[S, E]
-	// Integer rign element is part of a chain.
-	AbstractChainElement[S, E]
+type IntegerRingElement[S Structure, E Element] interface {
+	NaturalNumber[S, E]
+	FiniteRingElement[S, E]
 }
 
-// AbstractZp defines methods for S to behave the field of integers modulo prime.
-type AbstractZp[S Structure, E Element] interface {
-	// Zp is a finite field.
-	AbstractFiniteField[S, E]
-	// Zp has methods of integers.
-	AbstractZ[S, E]
-	// Zp is totally ordered.
-	AbstractChain[S, E]
+type MultiplicativeIntegerGroup[G Structure, E Element] interface {
+	MultiplicativeGroup[G, E]
+	NaturalNumberMonoid[G, E]
 }
 
-// AbstractIntegerFieldElement defines methods for elements of type E to behave as
+type MultiplicativeIntegerGroupElement[G Structure, E Element] interface {
+	MultiplicativeGroupElement[G, E]
+	NaturalNumberMonoidElement[G, E]
+}
+
+// IntegerFiniteField defines methods for S to behave the field of integers modulo prime.
+type IntegerFiniteField[S Structure, E Element] interface {
+	IntegerRing[S, E]
+	EuclideanDomain[S, E]
+	FiniteField[S, E]
+}
+
+// IntegerFiniteFieldElement defines methods for elements of type E to behave as
 // elements of the integer field modulo prime.
-type AbstractIntegerFieldElement[S Structure, E Element] interface {
-	// Integer field element is a field element.
-	AbstractFiniteFieldElement[S, E]
-	// Integer field element is an integer.
-	AbstractInteger[S, E]
-	// Integer field element is part of a chain.
-	AbstractChainElement[S, E]
+type IntegerFiniteFieldElement[S Structure, E Element] interface {
+	IntegerFieldElement[S, E]
+	EuclideanDomainElement[S, E]
+	FiniteFieldElement[S, E]
 }

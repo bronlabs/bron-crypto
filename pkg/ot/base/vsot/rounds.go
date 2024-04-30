@@ -85,9 +85,9 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 			option1Bytes := option1.ToAffineCompressed()
 
 			r2out.MaskedChoices[i][l] = option0Bytes
-			subtle.ConstantTimeCopy(int(r.Output.Choices.Select(i)), r2out.MaskedChoices[i][l], option1Bytes)
+			subtle.ConstantTimeCopy(int(r.Output.Choices.Get(uint(i))), r2out.MaskedChoices[i][l], option1Bytes)
 			// step 2.4: Compute m_b
-			m_b := r.SenderPublicKey.Mul(a)
+			m_b := r.SenderPublicKey.ScalarMul(a)
 			output, err := hashing.HashChain(ot.HashFunction, r.SessionId, []byte{byte(i*r.Protocol.L + l)}, m_b.ToAffineCompressed())
 			if err != nil {
 				return nil, errs.WrapHashing(err, "creating one time pad decryption keys")
@@ -128,9 +128,9 @@ func (s *Sender) Round3(r2out *Round2P2P) (r3out *Round3P2P, err error) {
 			if err != nil {
 				return nil, errs.WrapSerialisation(err, "uncompress the point")
 			}
-			m[0] = receiversMaskedChoice.Mul(s.SecretKey)
+			m[0] = receiversMaskedChoice.ScalarMul(s.SecretKey)
 			receiverChoiceMinusSenderPublicKey := receiversMaskedChoice.Add(negSenderPublicKey)
-			m[1] = receiverChoiceMinusSenderPublicKey.Mul(s.SecretKey)
+			m[1] = receiverChoiceMinusSenderPublicKey.ScalarMul(s.SecretKey)
 
 			for k := 0; k < 2; k++ {
 				output, err := hashing.HashChain(ot.HashFunction, s.SessionId, []byte{byte(i*s.Protocol.L + l)}, m[k].ToAffineCompressed())
@@ -190,7 +190,7 @@ func (r *Receiver) Round4(r3out *Round3P2P) (*Round4P2P, error) {
 			}
 			r4out.Responses[i][l] = [ot.KappaBytes]byte(hashedKey[:ot.KappaBytes])
 			subtle.XORBytes(alternativeChallengeResponse[:], r.SenderChallenge[i][l][:], r4out.Responses[i][l][:])
-			subtle.ConstantTimeCopy(int(r.Output.Choices.Select(i)), r4out.Responses[i][l][:], alternativeChallengeResponse[:])
+			subtle.ConstantTimeCopy(int(r.Output.Choices.Get(uint(i))), r4out.Responses[i][l][:], alternativeChallengeResponse[:])
 		}
 	}
 
@@ -258,7 +258,7 @@ func (r *Receiver) Round6(r5out *Round5P2P) error {
 			if err != nil {
 				return errs.WrapHashing(err, "hashing the decryption key to open challenge")
 			}
-			choice := int(r.Output.Choices.Select(i))
+			choice := int(r.Output.Choices.Get(uint(i)))
 			ct.SelectSlice(choice, challengeOpening[:], r5out.Openings[i][0][l][:], r5out.Openings[i][1][l][:])
 			if subtle.ConstantTimeCompare(hashedDecryptionKey[:ot.KappaBytes], challengeOpening[:]) != 1 {
 				return errs.NewIdentifiableAbort(r.OtherParty().String(), "sender's supposed H(m^omega) doesn't match our own")

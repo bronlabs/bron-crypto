@@ -1,4 +1,4 @@
-package impl
+package elligator2
 
 import (
 	"github.com/cronokirby/saferith"
@@ -17,15 +17,15 @@ var (
 	J    = new(saferith.Nat).SetBytes(utils.DecodeString("0000000000000000000000000000000000000000000000000000000000076d06"))
 )
 
-type Elligator2Params struct {
+type Params struct {
 	c1, c2, c3, c4, c1ed, J curves.BaseFieldElement
 }
 
 // NewElligator2Parameters returns the parameters for the Elligator2 map for curve25519
 // and edwards25519, as described in https://datatracker.ietf.org/doc/html/rfc9380#Appendix-G.2
-func NewElligator2Params(curve curves.Curve, useHardcoded bool) *Elligator2Params {
+func NewParams(curve curves.Curve, useHardcoded bool) *Params {
 	if useHardcoded {
-		return &Elligator2Params{
+		return &Params{
 			c1:   curve.BaseField().Element().SetNat(C1),
 			c2:   curve.BaseField().Element().SetNat(C2),
 			c3:   curve.BaseField().Element().SetNat(C3),
@@ -45,7 +45,7 @@ func NewElligator2Params(curve curves.Curve, useHardcoded bool) *Elligator2Param
 
 	// c2 = 2^c1
 	two := curve.BaseField().New(2)
-	c2 := two.Exp(c1)
+	c2 := two.Exp(c1.Nat())
 
 	// c3 = sqrt(-1)
 	c3, err := curve.BaseField().Element().SetNat(saferithUtils.NatDec(q)).Sqrt()
@@ -67,10 +67,10 @@ func NewElligator2Params(curve curves.Curve, useHardcoded bool) *Elligator2Param
 		panic("sqrt(-486664) does not exist for c1ed in Elligator2")
 	}
 
-	return &Elligator2Params{c1, c2, c3, c4, c1ed, J}
+	return &Params{c1, c2, c3, c4, c1ed, J}
 }
 
-func (el2 *Elligator2Params) MapToCurveElligator2Curve25519(u curves.BaseFieldElement) (xn, xd, y, z curves.BaseFieldElement) {
+func (el2 *Params) MapToCurveElligator2Curve25519(u curves.BaseFieldElement) (xn, xd, y, z curves.BaseFieldElement) {
 	F := u.BaseField()
 	tv1 := u.Square()                  /*  1 */
 	tv1 = F.New(2).Mul(tv1)            /*  2 */
@@ -87,7 +87,7 @@ func (el2 *Elligator2Params) MapToCurveElligator2Curve25519(u curves.BaseFieldEl
 	tv3 = tv3.Mul(gxd)                 /* 13 */
 	tv3 = tv3.Mul(gx1)                 /* 14 */
 	tv2 = tv2.Mul(tv3)                 /* 15 */
-	y11 := tv2.Exp(el2.c4)             /* 16 */
+	y11 := tv2.Exp(el2.c4.Nat())       /* 16 */
 	y11 = y11.Mul(tv3)                 /* 17 */
 	y12 := y11.Mul(el2.c3)             /* 18 */
 	tv2 = y11.Square()                 /* 19 */
@@ -113,7 +113,7 @@ func (el2 *Elligator2Params) MapToCurveElligator2Curve25519(u curves.BaseFieldEl
 	return xn, xd, y, F.One()
 }
 
-func (el2 *Elligator2Params) MapToCurveElligator2edwards25519(u curves.BaseFieldElement) (xn, xd, yn, yd curves.BaseFieldElement) {
+func (el2 *Params) MapToCurveElligator2edwards25519(u curves.BaseFieldElement) (xn, xd, yn, yd curves.BaseFieldElement) {
 	F := u.BaseField()
 	xMn, xMd, yMn, yMd := el2.MapToCurveElligator2Curve25519(u) /*  1 */
 	xn = xMn.Mul(yMd)                                           /*  2 */

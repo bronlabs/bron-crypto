@@ -121,7 +121,7 @@ func TestCannotVerify(t *testing.T) {
 				signature.Value, _ = p.(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
-				signature.Value = bls12381.NewG2().Identity().(curves.PairingPoint)
+				signature.Value = bls12381.NewG2().AdditiveIdentity().(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
 			})
@@ -135,7 +135,7 @@ func TestCannotVerify(t *testing.T) {
 				signature.Value, _ = p.(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
-				signature.Value = bls12381.NewG2().Identity().(curves.PairingPoint)
+				signature.Value = bls12381.NewG2().AdditiveIdentity().(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
 			})
@@ -151,7 +151,7 @@ func TestCannotVerify(t *testing.T) {
 				privateKey.PublicKey.Y, _ = p.(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
-				privateKey.PublicKey.Y = bls12381.NewG2().Identity().(curves.PairingPoint)
+				privateKey.PublicKey.Y = bls12381.NewG2().AdditiveIdentity().(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
 			})
@@ -165,7 +165,7 @@ func TestCannotVerify(t *testing.T) {
 				privateKey.PublicKey.Y, _ = p.(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
-				privateKey.PublicKey.Y = bls12381.NewG2().Identity().(curves.PairingPoint)
+				privateKey.PublicKey.Y = bls12381.NewG2().AdditiveIdentity().(curves.PairingPoint)
 				err = bls.Verify(privateKey.PublicKey, signature, message, pop, boundedScheme, nil)
 				require.Error(t, err)
 			})
@@ -209,8 +209,8 @@ func TestCanSignAndVerifyInAggregate(t *testing.T) {
 				sigAg, err := bls.AggregateSignatures(signatures...)
 				require.NoError(t, err)
 				require.NotNil(t, sigAg)
-				require.False(t, sigAg.Value.IsIdentity())
-				require.True(t, sigAg.Value.IsTorsionElement(bls12381.NewG2().SubGroupOrder()))
+				require.False(t, sigAg.Value.IsAdditiveIdentity())
+				require.True(t, sigAg.Value.IsTorsionElementUnderAddition(bls12381.NewG2().Order()))
 
 				if boundedScheme != bls.POP {
 					pops = nil
@@ -253,8 +253,8 @@ func TestCanSignAndVerifyInAggregate(t *testing.T) {
 				sigAg, err := bls.AggregateSignatures(signatures...)
 				require.NoError(t, err)
 				require.NotNil(t, sigAg)
-				require.False(t, sigAg.Value.IsIdentity())
-				require.True(t, sigAg.Value.IsTorsionElement(bls12381.NewG1().SubGroupOrder()))
+				require.False(t, sigAg.Value.IsAdditiveIdentity())
+				require.True(t, sigAg.Value.IsTorsionElementUnderAddition(bls12381.NewG1().SubGroupOrder()))
 
 				if boundedScheme2 != bls.POP {
 					pops = nil

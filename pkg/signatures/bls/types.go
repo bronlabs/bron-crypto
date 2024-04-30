@@ -148,13 +148,13 @@ func (pk *PublicKey[K]) Validate() error {
 	if pk.Y == nil {
 		return errs.NewIsNil("public key value is nil")
 	}
-	if pk.Y.IsIdentity() {
+	if pk.Y.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("public key value is identity")
 	}
 	if pk.Y.IsSmallOrder() {
 		return errs.NewIsIdentity("public key value is small order")
 	}
-	if !pk.Y.IsTorsionElement(subGroup.SubGroupOrder()) {
+	if !pk.Y.IsTorsionElementUnderAddition(subGroup.Order()) {
 		return errs.NewValue("public key is not torsion free")
 	}
 	return nil
@@ -167,16 +167,16 @@ func (pk *PublicKey[K]) Size() int {
 	return PublicKeySizeInG2
 }
 
-// Serialise a public key to a byte array in compressed form.
+// MarshalBinary Serialises a public key to a byte array in compressed form.
 // See
 // https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
 // https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
-func (pk PublicKey[K]) MarshalBinary() ([]byte, error) {
+func (pk *PublicKey[K]) MarshalBinary() ([]byte, error) {
 	out := pk.Y.ToAffineCompressed()
 	return out, nil
 }
 
-// Deserialize a public key from a byte array in compressed form.
+// UnmarshalBinary Deserializes a public key from a byte array in compressed form.
 // See
 // https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
 // https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
@@ -194,7 +194,7 @@ func (pk *PublicKey[K]) UnmarshalBinary(data []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "couldn't deserialize data in a point of G1")
 	}
-	if p.IsIdentity() {
+	if p.IsAdditiveIdentity() {
 		return errs.NewIsZero("public keys cannot be zero")
 	}
 	pk.Y = p.(curves.PairingPoint)
@@ -228,7 +228,7 @@ func (sig *Signature[S]) Size() int {
 	return PublicKeySizeInG2
 }
 
-// Serialise a signature to a byte array in compressed form.
+// MarshalBinary Serialises a signature to a byte array in compressed form.
 // See
 // https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
 // https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
@@ -237,7 +237,7 @@ func (sig *Signature[S]) MarshalBinary() ([]byte, error) {
 	return out, nil
 }
 
-// Deserialize a signature from a byte array in compressed form.
+// UnmarshalBinary Deserializes a signature from a byte array in compressed form.
 // See
 // https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
 // https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
@@ -255,7 +255,7 @@ func (sig *Signature[S]) UnmarshalBinary(data []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "couldn't deserialize data in a point of G1")
 	}
-	if p.IsIdentity() {
+	if p.IsAdditiveIdentity() {
 		return errs.NewIsZero("signatures cannot be zero")
 	}
 
@@ -316,7 +316,7 @@ func (pop *ProofOfPossession[S]) UnmarshalBinary(data []byte) error {
 	if err != nil {
 		return errs.WrapSerialisation(err, "couldn't deserialize data in a point of G1")
 	}
-	if p.IsIdentity() {
+	if p.IsAdditiveIdentity() {
 		return errs.NewIsZero("public keys cannot be zero")
 	}
 

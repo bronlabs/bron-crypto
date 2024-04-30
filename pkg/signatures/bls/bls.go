@@ -325,7 +325,7 @@ func BatchAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publ
 	keySubGroup := bls12381.GetSourceSubGroup[K]()
 	signatureSubGroup := bls12381.GetSourceSubGroup[S]()
 	verifiedPops := false
-	sStar := signatureSubGroup.Identity()
+	sStar := signatureSubGroup.AdditiveIdentity()
 	multiPairingInputs := []curves.PairingPoint{}
 
 	for batch := 0; batch < batchSize; batch++ {
@@ -382,14 +382,14 @@ func BatchAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publ
 			return errs.WrapRandomSample(err, "could not compute r")
 		}
 
-		sStar = sStar.Add(aggregatedSignature.Value.Mul(r))
+		sStar = sStar.Add(aggregatedSignature.Value.ScalarMul(r))
 
 		for i, m := range messages {
 			M, err := signatureSubGroup.HashWithDst(m, dst)
 			if err != nil {
 				return errs.WrapHashing(err, "could not compute hash of m_%d", i)
 			}
-			rM := M.Mul(r).(curves.PairingPoint)
+			rM := M.ScalarMul(r).(curves.PairingPoint)
 
 			if keysInG1 {
 				multiPairingInputs = append(multiPairingInputs, publicKeys[i].Y, rM)
@@ -411,7 +411,7 @@ func BatchAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publ
 	if err != nil {
 		return errs.WrapFailed(err, "multipairing failed")
 	}
-	if !scalarGt.IsIdentity() {
+	if !scalarGt.IsMultiplicativeIdentity() {
 		return errs.NewVerification("batch")
 	}
 	return nil
@@ -477,7 +477,7 @@ func BatchVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K],
 	keysInG1 := publicKeys[0].InG1()
 	keySubGroup := bls12381.GetSourceSubGroup[K]()
 	signatureSubGroup := bls12381.GetSourceSubGroup[S]()
-	sStar := signatureSubGroup.Identity()
+	sStar := signatureSubGroup.AdditiveIdentity()
 	multiPairingInputs := []curves.PairingPoint{}
 
 	for batch := 0; batch < batchSize; batch++ {
@@ -520,13 +520,13 @@ func BatchVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K],
 			return errs.WrapRandomSample(err, "could not compute r")
 		}
 
-		sStar = sStar.Add(signature.Value.Mul(r))
+		sStar = sStar.Add(signature.Value.ScalarMul(r))
 
 		M, err := signatureSubGroup.HashWithDst(message, dst)
 		if err != nil {
 			return errs.WrapHashing(err, "could not compute hash of m_%d", batch)
 		}
-		rM := M.Mul(r).(curves.PairingPoint)
+		rM := M.ScalarMul(r).(curves.PairingPoint)
 
 		if keysInG1 {
 			multiPairingInputs = append(multiPairingInputs, publicKey.Y, rM)
@@ -547,7 +547,7 @@ func BatchVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K],
 	if err != nil {
 		return errs.WrapFailed(err, "multipairing failed")
 	}
-	if !scalarGt.IsIdentity() {
+	if !scalarGt.IsMultiplicativeIdentity() {
 		return errs.NewVerification("batch")
 	}
 	return nil

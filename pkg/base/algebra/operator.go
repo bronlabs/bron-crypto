@@ -1,10 +1,17 @@
 package algebra
 
-type Operator uint64
+type RightAssociative[InputType, OutputType Element] interface {
+	RFold(xs ...InputType) (OutputType, error)
+}
 
-const (
-	Addition       Operator = 0x01
-	Multiplication Operator = 0x02
+type LeftAssociative[InputType, OutputType Element] interface {
+	LFold(xs ...InputType) (OutputType, error)
+}
 
-	PointAddition Operator = 0x03
-)
+type Associative[InputType, OutputType Element] interface {
+	RightAssociative[InputType, OutputType]
+	LeftAssociative[InputType, OutputType]
+}
+
+type UnaryOperator[E Element] EndoFunction[E]
+type BinaryOperator[E Element] BiEndoFunction[E]

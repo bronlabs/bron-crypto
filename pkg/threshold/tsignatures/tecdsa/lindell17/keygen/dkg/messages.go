@@ -94,7 +94,7 @@ func (r2b *Round2Broadcast) Validate(protocol types.ThresholdProtocol) error {
 	if r2b.BigQPrime.Curve() != protocol.Curve() {
 		return errs.NewCurve("big q prime curve %s does not match protocol curve %s", r2b.BigQPrime.Curve(), protocol.Curve())
 	}
-	if r2b.BigQPrime.IsIdentity() {
+	if r2b.BigQPrime.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("big q prime")
 	}
 	if r2b.BigQPrimeProof == nil {
@@ -106,7 +106,7 @@ func (r2b *Round2Broadcast) Validate(protocol types.ThresholdProtocol) error {
 	if r2b.BigQDoublePrime.Curve() != protocol.Curve() {
 		return errs.NewCurve("big q double prime curve %s does not match protocol curve %s", r2b.BigQDoublePrime.Curve(), protocol.Curve())
 	}
-	if r2b.BigQDoublePrime.IsIdentity() {
+	if r2b.BigQDoublePrime.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("big q double prime")
 	}
 	if r2b.BigQDoublePrimeProof == nil {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 )
 
 func TestG1IsOnCurve(t *testing.T) {
@@ -192,13 +192,13 @@ func TestG1Sub(t *testing.T) {
 
 func TestG1Mul(t *testing.T) {
 	g := new(G1).Generator()
-	a := FqNew().SetRaw(&[impl.FieldLimbs]uint64{
+	a := FqNew().SetRaw(&[limb4.FieldLimbs]uint64{
 		0x2b568297a56da71c,
 		0xd8c39ecb0ef375d1,
 		0x435c38da67bfbf96,
 		0x8088a05026b659b2,
 	})
-	b := FqNew().SetRaw(&[impl.FieldLimbs]uint64{
+	b := FqNew().SetRaw(&[limb4.FieldLimbs]uint64{
 		0x785fdd9b26ef8b85,
 		0xc997f25837695c18,
 		0x4c8dbc39e7b756c1,
@@ -370,7 +370,7 @@ func TestSumOfProducts(t *testing.T) {
 	c := FqNew().SetBytesWide(&b)
 
 	lhs := new(G1).Mul(h0, s)
-	rhs, _ := new(G1).SumOfProducts([]*G1{h0}, []*impl.FieldValue{s})
+	rhs, _ := new(G1).SumOfProducts([]*G1{h0}, []*limb4.FieldValue{s})
 	require.Equal(t, 1, lhs.Equal(rhs))
 
 	u := new(G1).Mul(h0, s)
@@ -381,6 +381,6 @@ func TestSumOfProducts(t *testing.T) {
 	rhs.Mul(u, c)
 	rhs.Add(rhs, new(G1).Mul(h0, sHat))
 	require.Equal(t, 1, uTilde.Equal(rhs))
-	_, _ = rhs.SumOfProducts([]*G1{u, h0}, []*impl.FieldValue{c, sHat})
+	_, _ = rhs.SumOfProducts([]*G1{u, h0}, []*limb4.FieldValue{c, sHat})
 	require.Equal(t, 1, uTilde.Equal(rhs))
 }

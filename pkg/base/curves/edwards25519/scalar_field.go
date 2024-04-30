@@ -41,7 +41,162 @@ func (*ScalarField) Curve() curves.Curve {
 	return NewCurve()
 }
 
-// === Basic Methods.
+func (*ScalarField) Cardinality() *saferith.Modulus {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) Contains(e curves.Scalar) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) Iter() <-chan curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (sf *ScalarField) Unwrap() curves.ScalarField {
+	return sf
+}
+
+func (*ScalarField) IsDefinedUnder(operator algebra.BinaryOperator[curves.Scalar]) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) Op(operator algebra.BinaryOperator[curves.Scalar], x algebra.GroupoidElement[curves.ScalarField, curves.Scalar], ys ...algebra.GroupoidElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) Addition() algebra.Addition[curves.Scalar] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) Exp(b curves.Scalar, power curves.Scalar) curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) Operators() []algebra.BinaryOperator[curves.Scalar] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) SimExp(bases []algebra.MultiplicativeGroupoidElement[curves.ScalarField, curves.Scalar], exponents []*saferith.Nat) (curves.Scalar, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) MultiBaseExp(bases []algebra.MultiplicativeGroupoidElement[curves.ScalarField, curves.Scalar], exponent *saferith.Nat) curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) MultiExponentExp(b algebra.MultiplicativeGroupoidElement[curves.ScalarField, curves.Scalar], exponents []*saferith.Nat) curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) Multiplication() algebra.Multiplication[curves.Scalar] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) DiscreteExponentiation() algebra.DiscreteExponentiation[curves.Scalar] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) Identity(under algebra.BinaryOperator[curves.Scalar]) (curves.Scalar, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) CoPrime(x curves.Scalar, ys ...curves.Scalar) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) GCD(x curves.Scalar, ys ...curves.Scalar) (curves.Scalar, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) LCM(x curves.Scalar, ys ...curves.Scalar) (curves.Scalar, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) MultiplicativeGroup() algebra.MultiplicativeGroup[curves.ScalarField, curves.Scalar] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) VectorSpace() algebra.VectorSpace[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) LatticeElement() algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) ChainElement() algebra.ChainElement[curves.ScalarField, curves.Scalar] {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) And(x algebra.ConjunctiveGroupoidElement[curves.ScalarField, curves.Scalar], ys ...algebra.ConjunctiveGroupoidElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) ConjunctiveIdentity() curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) Or(x algebra.DisjunctiveGroupoidElement[curves.ScalarField, curves.Scalar], ys ...algebra.DisjunctiveGroupoidElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) DisjunctiveIdentity() curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) Xor(x algebra.ExclusiveDisjunctiveGroupoidElement[curves.ScalarField, curves.Scalar], ys ...algebra.ExclusiveDisjunctiveGroupoidElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) ExclusiveDisjunctiveIdentity() curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) ElementSize() int {
+	return base.FieldBytes
+}
+
+func (*ScalarField) WideElementSize() int {
+	return base.WideFieldBytes
+}
+
+func (*ScalarField) IsDecomposable(coprimeIdealNorms ...algebra.IntegerRingElement[curves.ScalarField, curves.Scalar]) (bool, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*ScalarField) Scalar() curves.Scalar {
+	//TODO implement me
+	panic("implement me")
+}
 
 func (*ScalarField) Name() string {
 	return Name
@@ -53,31 +208,6 @@ func (*ScalarField) Order() *saferith.Modulus {
 
 func (sf *ScalarField) Element() curves.Scalar {
 	return sf.AdditiveIdentity()
-}
-
-func (*ScalarField) Operators() []algebra.Operator {
-	return []algebra.Operator{algebra.Addition, algebra.Multiplication}
-}
-
-func (sf *ScalarField) OperateOver(operator algebra.Operator, xs ...curves.Scalar) (curves.Scalar, error) {
-	var current curves.Scalar
-	switch operator {
-	case algebra.Addition:
-		current = sf.AdditiveIdentity()
-		for _, x := range xs {
-			current = current.Add(x)
-		}
-	case algebra.Multiplication:
-		current = sf.MultiplicativeIdentity()
-		for _, x := range xs {
-			current = current.Mul(x)
-		}
-	case algebra.PointAddition:
-		fallthrough
-	default:
-		return nil, errs.NewType("operator %v is not supported", operator)
-	}
-	return current, nil
 }
 
 func (*ScalarField) Random(prng io.Reader) (curves.Scalar, error) {
@@ -121,22 +251,22 @@ func (*ScalarField) Select(choice bool, x0, x1 curves.Scalar) curves.Scalar {
 
 // === Additive Groupoid Methods.
 
-func (*ScalarField) Add(x curves.Scalar, ys ...curves.Scalar) curves.Scalar {
+func (*ScalarField) Add(x algebra.AdditiveGroupoidElement[curves.ScalarField, curves.Scalar], ys ...algebra.AdditiveGroupoidElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	sum := x
 	for _, y := range ys {
 		sum = sum.Add(y)
 	}
-	return sum
+	return sum.Unwrap()
 }
 
 // === Multiplicative Groupoid Methods.
 
-func (*ScalarField) Multiply(x curves.Scalar, ys ...curves.Scalar) curves.Scalar {
+func (*ScalarField) Mul(x algebra.MultiplicativeGroupoidElement[curves.ScalarField, curves.Scalar], ys ...algebra.MultiplicativeGroupoidElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	result := x
 	for _, y := range ys {
 		result = result.Mul(y)
 	}
-	return result
+	return result.Unwrap()
 }
 
 // === Additive Monoid Methods.
@@ -157,27 +287,32 @@ func (*ScalarField) MultiplicativeIdentity() curves.Scalar {
 
 // === Additive Group Methods.
 
-func (*ScalarField) Sub(x curves.Scalar, ys ...curves.Scalar) curves.Scalar {
+func (*ScalarField) Sub(x algebra.AdditiveGroupElement[curves.ScalarField, curves.Scalar], ys ...algebra.AdditiveGroupElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	result := x
 	for _, y := range ys {
 		result = result.Sub(y)
 	}
-	return result
+	return result.Unwrap()
 }
 
 // === Multiplicative Group Methods.
 
-func (*ScalarField) Div(x curves.Scalar, ys ...curves.Scalar) curves.Scalar {
+func (*ScalarField) Div(x algebra.MultiplicativeGroupElement[curves.ScalarField, curves.Scalar], ys ...algebra.MultiplicativeGroupElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
 	result := x
 	for _, y := range ys {
-		result = result.Div(y)
+		var err error
+		result, err = result.Div(y)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "divide by zero")
+		}
 	}
-	return result
+
+	return result.Unwrap(), nil
 }
 
 // === Ring Methods.
 
-func (*ScalarField) QuadraticResidue(s curves.Scalar) (curves.Scalar, error) {
+func (*ScalarField) QuadraticResidue(s algebra.RingElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
 	ss, ok := s.(*Scalar)
 	if !ok {
 		return nil, errs.NewType("given point is not from this field")
@@ -196,7 +331,7 @@ func (*ScalarField) ExtensionDegree() *saferith.Nat {
 }
 
 func (sf *ScalarField) FrobeniusAutomorphism(e curves.Scalar) curves.Scalar {
-	return e.Exp(new(Scalar).SetNat(sf.Characteristic()))
+	return e.Exp(sf.Characteristic())
 }
 
 func (sf *ScalarField) Trace(e curves.Scalar) curves.Scalar {
@@ -243,26 +378,26 @@ func (sf *ScalarField) Bottom() curves.Scalar {
 	return sf.Zero()
 }
 
-func (*ScalarField) Join(x, y curves.Scalar) curves.Scalar {
+func (*ScalarField) Join(x algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar], y algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	return x.Join(y)
 }
 
-func (*ScalarField) Meet(x, y curves.Scalar) curves.Scalar {
+func (*ScalarField) Meet(x algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar], y algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	return x.Meet(y)
 }
 
-func (*ScalarField) Max(x curves.Scalar, ys ...curves.Scalar) curves.Scalar {
-	max := x
+func (*ScalarField) Max(x algebra.ChainElement[curves.ScalarField, curves.Scalar], ys ...algebra.ChainElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+	theMax := x
 	for _, y := range ys {
-		max = max.Max(y)
+		theMax = theMax.Max(y.Unwrap())
 	}
-	return max
+	return theMax.Unwrap()
 }
 
-func (*ScalarField) Min(x curves.Scalar, ys ...curves.Scalar) curves.Scalar {
-	min := x
+func (*ScalarField) Min(x algebra.ChainElement[curves.ScalarField, curves.Scalar], ys ...algebra.ChainElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+	theMin := x
 	for _, y := range ys {
-		min = min.Min(y)
+		theMin = theMin.Min(y.Unwrap())
 	}
-	return min
+	return theMin.Unwrap()
 }

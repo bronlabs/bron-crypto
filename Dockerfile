@@ -1,19 +1,25 @@
 FROM golang:1.22-alpine3.19
 
-RUN apk add --no-cache make git diffutils build-base cmake ninja
-RUN wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.57.2
-RUN go install github.com/mgechev/revive@latest
+RUN apk add --no-cache \
+    curl \
+    make \
+    git \
+    diffutils \
+    cmake \
+    ninja \
+    build-base
 
 WORKDIR /usr/local/src
+
+# DO NOT CHANGE THE ORDER OF THESE OR MAKING IT TO INSTALL IN ONE COMMAND
+# These were carefully chosen so the docker layers are cached and speed up image building significantally
 COPY Makefile Makefile
-COPY scripts scripts
-COPY thirdparty/boringssl thirdparty/boringssl
 COPY thirdparty/thirdparty.mk thirdparty/thirdparty.mk
-RUN make build-boring
-
+COPY scripts scripts
+RUN make deps-linter
+COPY thirdparty/boringssl thirdparty/boringssl
+RUN make deps-boring
 COPY go.mod go.sum .golangci.yml ./
-RUN go mod download
-
+RUN make deps-go
 COPY . .
-
 RUN make build lint test

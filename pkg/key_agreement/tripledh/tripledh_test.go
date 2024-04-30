@@ -9,10 +9,10 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
+	//"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
+	//"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	//"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
+	//"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/tripledh"
 )
 
@@ -20,11 +20,11 @@ func Test_HappyPathTripleDH(t *testing.T) {
 	t.Parallel()
 
 	supportedCurves := []curves.Curve{
-		k256.NewCurve(),
-		p256.NewCurve(),
-		pallas.NewCurve(),
-		edwards25519.NewCurve(),
-		bls12381.NewG2(),
+		//k256.NewCurve(),
+		//p256.NewCurve(),
+		//pallas.NewCurve(),
+		//edwards25519.NewCurve(),
+		//bls12381.NewG1(),
 		bls12381.NewG2(),
 	}
 

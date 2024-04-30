@@ -115,7 +115,7 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 	}
 
 	// 7. Let k' = int(rand) mod n.
-	kPrime, err := curve.Scalar().SetBytesWide(rand)
+	kPrime, err := curve.ScalarField().Element().SetBytesWide(rand)
 	if err != nil {
 		return nil, errs.NewFailed("cannot set k'")
 	}

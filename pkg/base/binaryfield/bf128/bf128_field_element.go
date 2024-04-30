@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-var _ algebra.AbstractFiniteFieldElement[*Field, *FieldElement] = (*FieldElement)(nil)
+var _ algebra.FiniteFieldElement[*Field, *FieldElement] = (*FieldElement)(nil)
 
 // FieldElement is an element of the finite field GF(2^256), representing
 // coordinates of a degree-255 binary polynomial in little-endian order.
@@ -26,8 +26,6 @@ func NewElementFromBytes(buf []byte) *FieldElement {
 	}
 	return res
 }
-
-// === Basic Methods.
 
 func (el *FieldElement) Equal(e *FieldElement) bool {
 	return (ct.Equal(el.V[0], e.V[0]) &
@@ -48,8 +46,6 @@ func (*FieldElement) MarshalJSON() ([]byte, error) {
 	panic("not implemented")
 }
 
-// === NatLike Methods.
-
 func (el *FieldElement) Uint64() uint64 {
 	return el.V[0]
 }
@@ -65,8 +61,6 @@ func (el *FieldElement) SetNat(v *saferith.Nat) *FieldElement {
 func (el *FieldElement) Nat() *saferith.Nat {
 	return new(saferith.Nat).SetBytes(el.Bytes())
 }
-
-// === BytesLike Methods.
 
 func (el *FieldElement) Bytes() []byte {
 	buf := make([]byte, fieldBytes)
@@ -96,9 +90,8 @@ func (el *FieldElement) SetBytesWide(buf []byte) (*FieldElement, error) {
 	return res, nil
 }
 
-// === Additive Group Methods.
-
-func (el *FieldElement) Add(rhs *FieldElement) *FieldElement {
+func (el *FieldElement) Add(y algebra.AdditiveGroupoidElement[*Field, *FieldElement]) *FieldElement {
+	rhs := y.Unwrap()
 	return &FieldElement{
 		V: [fieldLimbs]uint64{
 			el.V[0] ^ rhs.V[0],
@@ -107,7 +100,7 @@ func (el *FieldElement) Add(rhs *FieldElement) *FieldElement {
 	}
 }
 
-func (el *FieldElement) ApplyAdd(x *FieldElement, n *saferith.Nat) *FieldElement {
+func (el *FieldElement) ApplyAdd(x algebra.AdditiveGroupoidElement[*Field, *FieldElement], n *saferith.Nat) *FieldElement {
 	nBytes := n.Bytes()
 	nIsOdd := nBytes[len(nBytes)-1]&0x01 == 1
 	return NewField().Select(nIsOdd, el, &FieldElement{})
@@ -129,27 +122,26 @@ func (el *FieldElement) AdditiveInverse() *FieldElement {
 	return el.Clone()
 }
 
-func (el *FieldElement) IsAdditiveInverse(of *FieldElement) bool {
-	return el.Equal(of)
+func (el *FieldElement) IsAdditiveInverse(of algebra.AdditiveGroupElement[*Field, *FieldElement]) bool {
+	return el.Equal(of.Unwrap())
 }
 
 func (el *FieldElement) Neg() *FieldElement {
 	return el.Clone()
 }
 
-func (el *FieldElement) Sub(rhs *FieldElement) *FieldElement {
+func (el *FieldElement) Sub(rhs algebra.AdditiveGroupElement[*Field, *FieldElement]) *FieldElement {
 	return el.Add(rhs)
 }
 
-func (el *FieldElement) ApplySub(x *FieldElement, n *saferith.Nat) *FieldElement {
+func (el *FieldElement) ApplySub(x algebra.AdditiveGroupElement[*Field, *FieldElement], n *saferith.Nat) *FieldElement {
 	return el.ApplyAdd(x, n)
 }
 
-// === Multiplicative Monoid Methods.
-
-func (el *FieldElement) Mul(rhs *FieldElement) *FieldElement {
+func (el *FieldElement) Mul(v algebra.MultiplicativeGroupoidElement[*Field, *FieldElement]) *FieldElement {
 	// From section 2.3 of https://link.springer.com/book/10.1007/b97644, employing
 	// the irreducible polynomial f(X) = X^128 + X^7 + X^2 + X + 1. (from Table A.1).
+	rhs := v.Unwrap()
 	var z [4]uint64
 	var b = [3]uint64{rhs.V[0], rhs.V[1], 0}
 	for k := 0; k < 64; k++ {
@@ -180,7 +172,7 @@ func (el *FieldElement) Mul(rhs *FieldElement) *FieldElement {
 	}
 }
 
-func (*FieldElement) ApplyMul(x *FieldElement, n *saferith.Nat) *FieldElement {
+func (*FieldElement) ApplyMul(_ algebra.MultiplicativeGroupoidElement[*Field, *FieldElement], _ *saferith.Nat) *FieldElement {
 	panic("not implemented (to be filled using Montgomery ladder)")
 }
 
@@ -198,7 +190,7 @@ func (el *FieldElement) IsMultiplicativeIdentity() bool {
 
 // === Ring element methods.
 
-func (el *FieldElement) MulAdd(p, q *FieldElement) *FieldElement {
+func (el *FieldElement) MulAdd(p, q algebra.RingElement[*Field, *FieldElement]) *FieldElement {
 	return el.Mul(p).Add(q)
 }
 
@@ -208,22 +200,99 @@ func (*FieldElement) Sqrt() (*FieldElement, error) {
 
 // === Finite Field Methods.
 
-func (*FieldElement) MultiplicativeInverse() *FieldElement {
+func (*FieldElement) MultiplicativeInverse() (*FieldElement, error) {
 	panic("not implemented")
 }
 
-func (el *FieldElement) IsMultiplicativeInverse(of *FieldElement) bool {
+func (el *FieldElement) IsMultiplicativeInverse(of algebra.MultiplicativeGroupElement[*Field, *FieldElement]) bool {
 	return el.Mul(of).Equal(field2e128Instance.MultiplicativeIdentity())
 }
 
-func (el *FieldElement) Div(rhs *FieldElement) *FieldElement {
-	return el.Mul(rhs.MultiplicativeInverse())
+func (el *FieldElement) Div(rhs algebra.MultiplicativeGroupElement[*Field, *FieldElement]) (*FieldElement, error) {
+	inv, err := rhs.MultiplicativeInverse()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot get inverse")
+	}
+	return el.Mul(inv), nil
 }
 
-func (*FieldElement) ApplyDiv(x *FieldElement, n *saferith.Nat) *FieldElement {
+func (*FieldElement) ApplyDiv(_ algebra.MultiplicativeGroupElement[*Field, *FieldElement], _ *saferith.Nat) (*FieldElement, error) {
 	panic("not implemented")
 }
 
-func (*FieldElement) Exp(x *FieldElement) *FieldElement {
+func (*FieldElement) Exp(*saferith.Nat) *FieldElement {
 	panic("not implemented")
+}
+
+func (*FieldElement) Structure() *Field {
+	return NewField()
+}
+
+func (el *FieldElement) Unwrap() *FieldElement {
+	return el
+}
+
+func (*FieldElement) Order(operator algebra.BinaryOperator[*FieldElement]) (*saferith.Modulus, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*FieldElement) ApplyOp(operator algebra.BinaryOperator[*FieldElement], x algebra.GroupoidElement[*Field, *FieldElement], n *saferith.Nat) (*FieldElement, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*FieldElement) IsIdentity(under algebra.BinaryOperator[*FieldElement]) (bool, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*FieldElement) Inverse(under algebra.BinaryOperator[*FieldElement]) (*FieldElement, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*FieldElement) IsInverse(of algebra.GroupElement[*Field, *FieldElement], under algebra.BinaryOperator[*FieldElement]) (bool, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*FieldElement) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOperator[*FieldElement]) (bool, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*FieldElement) IsTorsionElementUnderAddition(order *saferith.Modulus) bool {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*FieldElement) CoPrime(x *FieldElement) bool {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*FieldElement) GCD(x *FieldElement) (*FieldElement, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*FieldElement) LCM(x *FieldElement) (*FieldElement, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*FieldElement) Factorise() []*FieldElement {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*FieldElement) EuclideanDiv(x *FieldElement) (quotient, reminder *FieldElement) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (*FieldElement) IsTorsionElementUnderMultiplication(order *saferith.Modulus) bool {
+	// TODO implement me
+	panic("implement me")
 }

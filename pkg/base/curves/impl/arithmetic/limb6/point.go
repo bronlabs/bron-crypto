@@ -1,4 +1,4 @@
-package impl
+package limb6
 
 import (
 	"github.com/cronokirby/saferith"
@@ -45,14 +45,14 @@ type EllipticPointArithmetic interface {
 	IsOnCurve(arg *EllipticPoint) bool
 	// ToAffine converts arg to affine coordinates storing the result in out
 	ToAffine(out, arg *EllipticPoint)
-	// RhsEq computes the right-hand side of the ecc equation
-	RhsEq(out, x *FieldValue)
+	// RhsEquation computes the right-hand side of the ecc equation
+	RhsEquation(out, x *FieldValue)
 }
 
 // Identity returns the identity point.
 func (p *EllipticPoint) Identity() *EllipticPoint {
 	p.X.SetZero()
-	p.Y.SetZero()
+	p.Y.SetOne()
 	p.Z.SetZero()
 	return p
 }
@@ -108,15 +108,23 @@ func (p *EllipticPoint) Mul(point *EllipticPoint, scalar *FieldValue) *EllipticP
 		precomputed[i] = new(EllipticPoint).Set(point).Double(precomputed[i>>1])
 		precomputed[i+1] = new(EllipticPoint).Set(point).Add(precomputed[i], point)
 	}
+	pos := p.Params.BitSize - 4
 	p.Identity()
-	for i := 0; i < 256; i += 4 {
-		// Brouwer / windowing method. window size of 4.
-		for j := 0; j < 4; j++ {
+	t := new(EllipticPoint).Set(point)
+	for ; pos >= 0; pos -= 4 {
+		for i := 0; i < 4; i++ {
 			p.Double(p)
 		}
-		window := bytes[32-1-i>>3] >> (4 - i&0x04) & 0x0F
-		p.Add(p, precomputed[window])
+		slot := (bytes[pos>>3] >> (pos & 7)) & 0xf
+		t.Identity()
+		for i := 1; i < 16; i++ {
+			choice := int(((uint64(slot)^uint64(i))-1)>>8) & 1
+			t.CMove(t, precomputed[i], choice)
+		}
+
+		p.Add(p, t)
 	}
+
 	return p
 }
 
@@ -226,7 +234,7 @@ func (p *EllipticPoint) SumOfProducts(points []*EllipticPoint, scalars []*FieldV
 
 	bucketSize := 1 << W
 	windows := make([]*EllipticPoint, Windows)
-	bytes := make([][32]byte, len(scalars))
+	bytes := make([][48]byte, len(scalars))
 	buckets := make([]*EllipticPoint, bucketSize)
 
 	for i, scalar := range scalars {
@@ -273,4 +281,12 @@ func (p *EllipticPoint) SumOfProducts(points []*EllipticPoint, scalars []*FieldV
 		p.Add(p, windows[i])
 	}
 	return p, nil
+}
+
+// CMove returns arg1 if choice == 0, otherwise returns arg2.
+func (*EllipticPoint) CMove(pt1, pt2 *EllipticPoint, choice int) *EllipticPoint {
+	pt1.X.CMove(pt1.X, pt2.X, choice)
+	pt1.Y.CMove(pt1.Y, pt2.Y, choice)
+	pt1.Z.CMove(pt1.Z, pt2.Z, choice)
+	return pt1
 }

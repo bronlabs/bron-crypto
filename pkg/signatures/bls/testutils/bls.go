@@ -56,10 +56,10 @@ func RoundTripWithKeysInG1(privateKey *bls.PrivateKey[bls12381.G1], message []by
 		if pop == nil {
 			return nil, nil, nil, errs.NewIsNil("pop is nil")
 		}
-		if pop.Value.IsIdentity() {
+		if pop.Value.IsAdditiveIdentity() {
 			return nil, nil, nil, errs.NewIsNil("pop is identity")
 		}
-		if !pop.Value.IsTorsionElement(bls12381.NewG2().SubGroupOrder()) {
+		if !pop.Value.IsTorsionElementUnderAddition(bls12381.NewG2().Order()) {
 			return nil, nil, nil, errs.NewIsNil("pop is torsion free")
 		}
 		err = bls.PopVerify(privateKey.PublicKey, pop)
@@ -72,10 +72,10 @@ func RoundTripWithKeysInG1(privateKey *bls.PrivateKey[bls12381.G1], message []by
 	if signature == nil {
 		return nil, nil, nil, errs.NewIsNil("signature is nil")
 	}
-	if signature.Value.IsIdentity() {
+	if signature.Value.IsAdditiveIdentity() {
 		return nil, nil, nil, errs.NewIsNil("signature is identity")
 	}
-	if !signature.Value.IsTorsionElement(bls12381.NewG2().SubGroupOrder()) {
+	if !signature.Value.IsTorsionElementUnderAddition(bls12381.NewG2().Order()) {
 		return nil, nil, nil, errs.NewIsNil("signature is torsion free")
 	}
 
@@ -107,10 +107,10 @@ func RoundTripWithKeysInG2(privateKey *bls.PrivateKey[bls12381.G2], message []by
 		if pop == nil {
 			return nil, nil, nil, errs.NewIsNil("pop is nil")
 		}
-		if pop.Value.IsIdentity() {
+		if pop.Value.IsAdditiveIdentity() {
 			return nil, nil, nil, errs.NewIsNil("pop is identity")
 		}
-		if !pop.Value.IsTorsionElement(bls12381.NewG1().SubGroupOrder()) {
+		if !pop.Value.IsTorsionElementUnderAddition(bls12381.NewG1().Order()) {
 			return nil, nil, nil, errs.NewIsNil("pop is not torsion free")
 		}
 		err = bls.PopVerify(privateKey.PublicKey, pop)
@@ -123,10 +123,10 @@ func RoundTripWithKeysInG2(privateKey *bls.PrivateKey[bls12381.G2], message []by
 	if signature == nil {
 		return nil, nil, nil, errs.NewIsNil("signature is nil")
 	}
-	if signature.Value.IsIdentity() {
+	if signature.Value.IsAdditiveIdentity() {
 		return nil, nil, nil, errs.NewIsNil("signature is identity")
 	}
-	if !signature.Value.IsTorsionElement(bls12381.NewG1().SubGroupOrder()) {
+	if !signature.Value.IsTorsionElementUnderAddition(bls12381.NewG1().Order()) {
 		return nil, nil, nil, errs.NewIsNil("signature is torsion free")
 	}
 

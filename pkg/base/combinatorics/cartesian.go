@@ -4,14 +4,23 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-func CartesianProductGenerator[T, U any](t *[]T, u *[]U) <-chan *Product[T, U] {
+type CartesianProduct[T, U any] struct {
+	T T
+	U U
+}
+
+type CartesianPower[T any] []T
+
+type MultiCartesianProduct CartesianPower[any]
+
+func CartesianProductGenerator[T, U any](t *[]T, u *[]U) <-chan *CartesianProduct[T, U] {
 	if t == nil {
 		panic(errs.NewIsNil("t"))
 	}
 	if u == nil {
 		panic(errs.NewIsNil("u"))
 	}
-	ch := make(chan *Product[T, U], 1)
+	ch := make(chan *CartesianProduct[T, U], 1)
 	go func() {
 		defer close(ch)
 		if len(*t) == 0 || len(*u) == 0 {
@@ -19,9 +28,9 @@ func CartesianProductGenerator[T, U any](t *[]T, u *[]U) <-chan *Product[T, U] {
 		}
 		for _, xt := range *t {
 			for _, xu := range *u {
-				ch <- &Product[T, U]{
-					First:  xt,
-					Second: xu,
+				ch <- &CartesianProduct[T, U]{
+					T: xt,
+					U: xu,
 				}
 			}
 		}
@@ -29,8 +38,8 @@ func CartesianProductGenerator[T, U any](t *[]T, u *[]U) <-chan *Product[T, U] {
 	return ch
 }
 
-func CartesianProducts[T, U any](t []T, u []U) []*Product[T, U] {
-	out := make([]*Product[T, U], len(t)*len(u))
+func CartesianProducts[T, U any](t []T, u []U) []*CartesianProduct[T, U] {
+	out := make([]*CartesianProduct[T, U], len(t)*len(u))
 	if len(t) == 0 || len(u) == 0 {
 		return out
 	}

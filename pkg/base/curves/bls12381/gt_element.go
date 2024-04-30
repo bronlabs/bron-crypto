@@ -7,6 +7,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
@@ -46,6 +47,22 @@ func NewGtMember(input uint64) (curves.GtMember, error) {
 
 // === Basic Methods.
 
+func (*GtMember) Structure() curves.Gt {
+	panic("implement me")
+}
+
+func (*GtMember) Unwrap() curves.GtMember {
+	panic("implement me")
+}
+
+func (*GtMember) ApplyOp(operator algebra.BinaryOperator[curves.GtMember], x algebra.GroupoidElement[curves.Gt, curves.GtMember], n *saferith.Nat) (curves.GtMember, error) {
+	panic("implement me")
+}
+
+func (*GtMember) Exp(exponent *saferith.Nat) curves.GtMember {
+	panic("implement me")
+}
+
 func (g *GtMember) Equal(rhs curves.GtMember) bool {
 	r, ok := rhs.(*GtMember)
 	return ok && g.V.Equal(r.V) == 1
@@ -64,25 +81,27 @@ func (g *GtMember) Operate(rhs curves.GtMember) curves.GtMember {
 }
 
 func (g *GtMember) OperateIteratively(n *saferith.Nat) curves.GtMember {
-	return g.Gt().Identity().ApplyMul(g, n)
+	return g.Gt().MultiplicativeIdentity().ApplyMul(g, n)
 }
 
-func (g *GtMember) Order() *saferith.Modulus {
-	if g.IsIdentity() {
-		return saferith.ModulusFromUint64(0)
-	}
-	q := g.Clone()
-	order := saferithUtils.NatOne
-	for !q.IsIdentity() {
-		q = q.Operate(g)
-		saferithUtils.NatInc(order)
-	}
-	return saferith.ModulusFromNat(order)
+func (*GtMember) Order(operator algebra.BinaryOperator[curves.GtMember]) (*saferith.Modulus, error) {
+	panic("implement me")
+
+	//if g.IsIdentity() {
+	//	return saferith.ModulusFromUint64(0)
+	//}
+	//q := g.Clone()
+	//order := saferithUtils.NatOne
+	//for !q.IsIdentity() {
+	//	q = q.Operate(g)
+	//	saferithUtils.NatInc(order)
+	//}
+	//return saferith.ModulusFromNat(order)
 }
 
 // === Multiplicative Groupoid Methods.
 
-func (g *GtMember) Mul(rhs curves.GtMember) curves.GtMember {
+func (g *GtMember) Mul(rhs algebra.MultiplicativeGroupoidElement[curves.Gt, curves.GtMember]) curves.GtMember {
 	r, ok := rhs.(*GtMember)
 	if ok {
 		return &GtMember{
@@ -93,7 +112,7 @@ func (g *GtMember) Mul(rhs curves.GtMember) curves.GtMember {
 	}
 }
 
-func (g *GtMember) ApplyMul(x curves.GtMember, n *saferith.Nat) curves.GtMember {
+func (g *GtMember) ApplyMul(x algebra.MultiplicativeGroupoidElement[curves.Gt, curves.GtMember], n *saferith.Nat) curves.GtMember {
 	reducedN := new(saferith.Nat).Mod(n, g.Gt().Order())
 	if n.EqZero() == 1 {
 		return g.Gt().MultiplicativeIdentity()
@@ -122,8 +141,8 @@ func (g *GtMember) Cube() curves.GtMember {
 
 // === Monoid Methods.
 
-func (g *GtMember) IsIdentity() bool {
-	return g.IsMultiplicativeIdentity()
+func (*GtMember) IsIdentity(under algebra.BinaryOperator[curves.GtMember]) (bool, error) {
+	panic("implement me")
 }
 
 // === Multiplicative Monoid Methods.
@@ -134,56 +153,66 @@ func (g *GtMember) IsMultiplicativeIdentity() bool {
 
 // === Group Methods.
 
-func (g *GtMember) Inverse() curves.GtMember {
-	return g.MultiplicativeInverse()
+func (*GtMember) Inverse(under algebra.BinaryOperator[curves.GtMember]) (curves.GtMember, error) {
+	panic("implement me")
 }
 
-func (g *GtMember) IsInverse(of curves.GtMember) bool {
-	return g.Operate(of).IsIdentity()
+func (*GtMember) IsInverse(of algebra.GroupElement[curves.Gt, curves.GtMember], under algebra.BinaryOperator[curves.GtMember]) (bool, error) {
+	panic("implement me")
 }
 
-func (g *GtMember) IsTorsionElement(order *saferith.Modulus) bool {
-	return g.ApplyMul(g, order.Nat()).IsIdentity()
+func (*GtMember) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOperator[curves.GtMember]) (bool, error) {
+	panic("implement me")
+}
+
+func (g *GtMember) IsTorsionElementUnderMultiplication(order *saferith.Modulus) bool {
+	return g.ApplyMul(g, order.Nat()).IsMultiplicativeIdentity()
 }
 
 // === Multiplicative Group Methods.
 
-func (g *GtMember) MultiplicativeInverse() curves.GtMember {
+func (g *GtMember) MultiplicativeInverse() (curves.GtMember, error) {
 	value, wasInverted := new(bls12381impl.Gt).Invert(g.V)
 	if wasInverted != 1 {
-		panic(errs.NewFailed("not invertible"))
+		return nil, errs.NewFailed("not invertible")
 	}
+
 	return &GtMember{
 		V: value,
-	}
+	}, nil
 }
 
-func (g *GtMember) IsMultiplicativeInverse(of curves.GtMember) bool {
+func (g *GtMember) IsMultiplicativeInverse(of algebra.MultiplicativeGroupElement[curves.Gt, curves.GtMember]) bool {
 	return g.Mul(of).IsMultiplicativeIdentity()
 }
 
-func (g *GtMember) Div(rhs curves.GtMember) curves.GtMember {
+func (g *GtMember) Div(rhs algebra.MultiplicativeGroupElement[curves.Gt, curves.GtMember]) (curves.GtMember, error) {
 	r, ok := rhs.(*GtMember)
 	if ok {
 		return &GtMember{
 			V: new(bls12381impl.Gt).Sub(g.V, r.V),
-		}
+		}, nil
 	} else {
 		panic("rhs is not in Gt")
 	}
 }
 
-func (g *GtMember) ApplyDiv(x curves.GtMember, n *saferith.Nat) curves.GtMember {
+func (g *GtMember) ApplyDiv(x algebra.MultiplicativeGroupElement[curves.Gt, curves.GtMember], n *saferith.Nat) (curves.GtMember, error) {
 	reducedN := new(saferith.Nat).Mod(n, g.Gt().Order())
 	if n.EqZero() == 1 {
-		return g.Gt().MultiplicativeIdentity()
+		return g.Gt().MultiplicativeIdentity(), nil
 	}
 	current := g.Clone()
 	for reducedN.Eq(saferithUtils.NatOne) != 1 {
-		current = current.Div(x)
+		var err error
+		current, err = current.Div(x)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "division failed")
+		}
 		saferithUtils.NatDec(reducedN)
 	}
-	return current
+
+	return current, nil
 }
 
 // === Gt Methods.

@@ -33,7 +33,7 @@ func TestEphemeral(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, tag, 64)
 			require.Greater(t, len(ciphertext), 16) // 16 is blocksize
-			require.False(t, ephemeralPublicKey.IsIdentity())
+			require.False(t, ephemeralPublicKey.IsAdditiveIdentity())
 
 			decrypted, err := ecies.Decrypt(alice, ephemeralPublicKey, ciphertext, tag, AD, prng)
 			require.NoError(t, err)
