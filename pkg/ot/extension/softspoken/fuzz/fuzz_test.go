@@ -15,7 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
-	bbot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot/testutils"
+	bbot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot/test/testutils"
 	vsot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot/testutils"
 	softspoken_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken/testutils"
 	ot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/testutils"
@@ -43,7 +43,7 @@ func Fuzz_Test_OTe(f *testing.F) {
 		senderKey, receiverKey := authKeys[0], authKeys[1]
 
 		// BaseOTs
-		baseOtSend, baseOtRec, err := bbot_testutils.RunBBOT(senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], prng)
+		baseOtSend, baseOtRec, err := bbot_testutils.PipelineRunROT(senderKey, receiverKey, Xi, L, curve, uniqueSessionId[:], prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -59,7 +59,7 @@ func Fuzz_Test_OTe(f *testing.F) {
 		}
 
 		// Set OTe inputs
-		receiverChoices, _, err := ot_testutils.GenerateOTinputs(Xi, L)
+		receiverChoices, _, err := ot_testutils.GenerateInputsOT(Xi, L)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -118,7 +118,7 @@ func Fuzz_Test_COTe(f *testing.F) {
 		}
 
 		// Set COTe inputs
-		receiverChoices, senderInputs, err := ot_testutils.GenerateCOTinputs(Xi, L, curve)
+		receiverChoices, senderInputs, err := ot_testutils.GenerateInputsCOT(Xi, L, curve)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

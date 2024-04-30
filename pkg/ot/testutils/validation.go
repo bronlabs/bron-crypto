@@ -1,42 +1,13 @@
-package testutils
+package ot_testutils
 
 import (
 	"bytes"
-	crand "crypto/rand"
+	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 )
-
-/*.-------------------- RANDOM OBLIVIOUS TRANSFER (ROT) ---------------------.*/
-
-// GenerateCOTinputs generates random inputs for Correlated OTs.
-func GenerateOTinputs(Xi, L int) (
-	receiverChoiceBits ot.PackedBits, // receiver's input, the Choice bits x
-	senderMessages [][2]ot.Message, // sender's input in OT, the MessagePair (s_0, s_1)
-	err error,
-) {
-	if L < 1 || Xi < 1 || Xi%8 != 0 {
-		return nil, nil, errs.NewLength(" cannot generate random inputs for L=%d, Xi=%d", L, Xi)
-	}
-	receiverChoiceBits = make(ot.PackedBits, Xi/8)
-	if _, err := crand.Read(receiverChoiceBits); err != nil {
-		return nil, nil, errs.WrapRandomSample(err, "could not generate random choice bits")
-	}
-	senderMessages = make([][2]ot.Message, Xi)
-	for i := 0; i < Xi; i++ {
-		senderMessages[i] = [2]ot.Message{make(ot.Message, L), make(ot.Message, L)}
-		for l := 0; l < L; l++ {
-			_, err0 := crand.Read(senderMessages[i][0][l][:])
-			_, err1 := crand.Read(senderMessages[i][1][l][:])
-			if err0 != nil || err1 != nil {
-				return nil, nil, errs.WrapRandomSample(err, "could not generate random message")
-			}
-		}
-	}
-	return receiverChoiceBits, senderMessages, nil
-}
 
 // ValidateOT checks the results of a ROT/OT, testing that r_x = s_{x} = s_1 • x + s_0 • (1-x).
 func ValidateOT(
@@ -63,35 +34,6 @@ func ValidateOT(
 		}
 	}
 	return nil
-}
-
-// GenerateCOTinputs generates random inputs for Correlated OTs.
-func GenerateCOTinputs(Xi, L int, curve curves.Curve) (
-	receiverChoiceBits ot.PackedBits, // receiver's input, the Choice bits x
-	senderInput []ot.CorrelatedMessage, // sender's input, the MessagePair (α_0, α_1)
-	err error,
-) {
-	if L < 1 || Xi < 1 || Xi%8 != 0 {
-		return nil, nil, errs.NewLength(" cannot generate random inputs for L=%d, Xi=%d", L, Xi)
-	}
-	receiverChoiceBits = make(ot.PackedBits, Xi/8)
-	if _, err := crand.Read(receiverChoiceBits); err != nil {
-		return nil, nil, errs.WrapRandomSample(err, "could not generate random choice bits")
-	}
-	if curve == nil { // Just need the input choices
-		return receiverChoiceBits, nil, nil
-	}
-	senderInput = make([]ot.CorrelatedMessage, Xi)
-	for j := 0; j < Xi; j++ {
-		senderInput[j] = make(ot.CorrelatedMessage, L)
-		for l := 0; l < L; l++ {
-			senderInput[j][l], err = curve.Scalar().ScalarField().Random(crand.Reader)
-			if err != nil {
-				return nil, nil, errs.WrapRandomSample(err, "could not generate random scalar")
-			}
-		}
-	}
-	return receiverChoiceBits, senderInput, nil
 }
 
 // ValidateCOT checks the results of a Correlated OT, testing that z_A + z_B = x • α.
@@ -131,4 +73,10 @@ func ValidateCOT(
 		}
 	}
 	return nil
+}
+
+func ErrorOnlyInvalidParameter(t *testing.T, err error, Xi int, L int, Curve curves.Curve) {
+	// If parameter is invalid, check that the error is the expected one.
+	// If parameter is valid, check that the error is nil.
+
 }

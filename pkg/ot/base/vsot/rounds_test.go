@@ -62,7 +62,7 @@ func TestHappyPathVSOT_OT(t *testing.T) {
 		err = ot_testutils.ValidateOT(Xi, L, sender.MessagePairs, receiver.Choices, receiver.ChosenMessages)
 		require.NoError(t, err)
 		// Generate inputs for (chosen) OT
-		_, senderMessages, err := ot_testutils.GenerateOTinputs(Xi, L)
+		_, senderMessages, err := ot_testutils.GenerateInputsOT(Xi, L)
 		require.NoError(t, err)
 
 		// Run (chosen) OT
@@ -97,7 +97,7 @@ func TestHappyPathVSOT_COT(t *testing.T) {
 
 		// Generate inputs for Correlated OT
 		x := receiver.Choices
-		_, a, err := ot_testutils.GenerateCOTinputs(Xi, L, curve)
+		_, a, err := ot_testutils.GenerateInputsCOT(Xi, L, curve)
 		require.NoError(t, err)
 
 		// Run (chosen) OT

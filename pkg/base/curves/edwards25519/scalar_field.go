@@ -109,7 +109,7 @@ func (*ScalarField) Select(choice bool, x0, x1 curves.Scalar) curves.Scalar {
 	if !ok0 || !ok1 {
 		panic("Not a Edwards25519 scalar")
 	}
-	sBytes := x0s.Bytes()
+	sBytes := x0s.V.Bytes()
 	subtle.ConstantTimeCopy(utils.BoolTo[int](choice), sBytes, x1s.V.Bytes())
 	s, err := filippo.NewScalar().SetCanonicalBytes(sBytes)
 	if err != nil {

@@ -35,9 +35,9 @@ type Sender struct {
 // NewSoftspokenReceiver creates a `Receiver` instance for the SoftSpokenOT protocol.
 // The `baseOtSeeds` are the results of playing the sender role in κ baseOTs.
 func NewSoftspokenReceiver(myAuthKey types.AuthKey, protocol types.Protocol, baseOtSeeds *ot.SenderRotOutput, sessionId []byte, transcript transcripts.Transcript,
-	csrand io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
+	rng io.Reader, prg csprng.CSPRNG, lOTe, Xi int,
 ) (R *Receiver, err error) {
-	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, lOTe, sessionId, transcriptLabel, transcript, csrand, 1)
+	participant, err := ot.NewParticipant(myAuthKey, protocol, Xi, lOTe, sessionId, transcriptLabel, transcript, rng, 1)
 	if err != nil {
 		return nil, errs.WrapArgument(err, "invalid COTe participant input arguments")
 	}

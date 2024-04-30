@@ -16,7 +16,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
-	bbot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot/testutils"
+	bbot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot/test/testutils"
 	vsot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken/testutils"
 	ot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/testutils"
@@ -39,7 +39,7 @@ func getKeys(t *testing.T) (senderKey, receiverKey types.AuthKey) {
 
 var baseOTrunners = []func(senderKey, receiverKey types.AuthKey, batchSize, messageLength int, curve curves.Curve, uniqueSessionId []byte, rng io.Reader) (*ot.SenderRotOutput, *ot.ReceiverRotOutput, error){
 	vsot_testutils.RunVSOT,
-	bbot_testutils.RunBBOT,
+	bbot_testutils.PipelineRunROT,
 }
 
 func Test_HappyPath_ROTe(t *testing.T) {
@@ -61,7 +61,7 @@ func Test_HappyPath_ROTe(t *testing.T) {
 			require.NoError(t, err)
 
 			// Set OTe inputs
-			receiverChoices, _, err := ot_testutils.GenerateCOTinputs(Xi, L, nil)
+			receiverChoices, _, err := ot_testutils.GenerateInputsCOT(Xi, L, nil)
 			require.NoError(t, err)
 
 			// Run OTe
@@ -95,7 +95,7 @@ func Test_HappyPath_COTe(t *testing.T) {
 			require.NoError(t, err)
 
 			// Set COTe inputs
-			choices, cOTeSenderInput, err := ot_testutils.GenerateCOTinputs(Xi, L, curve)
+			choices, cOTeSenderInput, err := ot_testutils.GenerateInputsCOT(Xi, L, curve)
 			require.NoError(t, err)
 
 			// Run COTe

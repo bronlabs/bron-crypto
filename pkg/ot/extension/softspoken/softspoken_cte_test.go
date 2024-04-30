@@ -43,7 +43,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 		require.NoError(t, err)
 
 		// Set OTe inputs
-		choices, _, err = ot_testutils.GenerateCOTinputs(Xi, L, curve)
+		choices, _, err = ot_testutils.GenerateInputsCOT(Xi, L, curve)
 		require.NoError(t, err)
 
 		// Setup OTe
@@ -83,7 +83,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 		require.NoError(t, err)
 
 		// Set OTe inputs
-		choices, _, err = ot_testutils.GenerateOTinputs(Xi, L)
+		choices, _, err = ot_testutils.GenerateInputsOT(Xi, L)
 		require.NoError(t, err)
 
 		// Setup OTe

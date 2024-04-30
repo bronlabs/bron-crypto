@@ -187,3 +187,28 @@ func IsKnownError(err error) bool {
 	}
 	return false
 }
+
+var parameterErrors = []ErrorType{
+	Argument,
+	IsNil,
+	IsZero,
+	Length,
+	Missing,
+	Size,
+	Type,
+	Validation,
+	Value,
+}
+
+// IsParameterError returns true if the error is one of the errors associated to wrong parameters
+func IsParameterError(err error) bool {
+	if err == nil {
+		return false
+	}
+	for _, parameterError := range parameterErrors {
+		if Is(err, parameterError) {
+			return true
+		}
+	}
+	return false
+}
