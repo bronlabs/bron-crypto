@@ -74,7 +74,9 @@ func (c *Committer) Commit(prng io.Reader, message Message) (*Commitment, *Openi
 	if _, err := io.ReadFull(prng, witness); err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "reading random bytes")
 	}
-	commitment, err := hashing.HmacChain(witness, CommitmentHashFunction, encodeWithSessionId(c.sessionId, message)...)
+	// HmacChain not needed anymore since the function takes a single message as input
+	// commitment, err := hashing.HmacChain(witness, CommitmentHashFunction, encodeWithSessionId(c.sessionId, message)...)
+	commitment, err := hashing.Hmac(witness, CommitmentHashFunction, encodeWithSessionId(c.sessionId, message)...)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not compute commitment")
 	}
@@ -89,8 +91,9 @@ func (v *Verifier) Verify(commitment *Commitment, opening *Opening) error {
 	if len(opening.witness) != base.CollisionResistanceBytes {
 		return errs.NewArgument("witness length (%d) != %d", len(opening.witness), base.CollisionResistanceBytes)
 	}
-
-	localCommitment, err := hashing.HmacChain(opening.witness, CommitmentHashFunction, encodeWithSessionId(v.sessionId, opening.message)...)
+	// HmacChain not needed anymore since the function takes a single message as input
+	// localCommitment, err := hashing.HmacChain(opening.witness, CommitmentHashFunction, encodeWithSessionId(v.sessionId, opening.message)...)
+	localCommitment, err := hashing.Hmac(opening.witness, CommitmentHashFunction, encodeWithSessionId(v.sessionId, opening.message)...)
 	if err != nil {
 		return errs.WrapFailed(err, "could not recompute the commitment")
 	}
