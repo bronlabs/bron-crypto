@@ -1,12 +1,14 @@
 package hashset_test
 
 import (
-	"testing"
-
 	"github.com/stretchr/testify/require"
 
+	"testing"
+
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	ds_testutils "github.com/copperexchange/krypton-primitives/pkg/base/datastructures/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"pgregory.net/rapid"
 )
 
 type data uint
@@ -295,4 +297,23 @@ func TestHashableHashSet_IsProperSuperSet(t *testing.T) {
 	require.False(t, B.IsProperSuperSet(A))
 	require.False(t, A.IsProperSuperSet(C))
 	require.False(t, C.IsProperSuperSet(A))
+}
+
+// hashableHashSetGenerator returns a generator of abstract sets with the provided number of elements
+func hashableHashSetGenerator(nElements int) *rapid.Generator[ds.AbstractSet[data]] {
+	return rapid.Custom(func(t *rapid.T) ds.AbstractSet[data] {
+		set := hashset.NewHashableHashSet[data]()
+		initial := rapid.Uint().Draw(t, "initial")
+		for i := 0; i < nElements; i++ {
+			set.Add(data(initial + uint(i)))
+		}
+		return set
+	})
+}
+
+func TestHashableHashSet_AbstractSet(t *testing.T) {
+	t.Parallel()
+
+	emptySet := hashset.NewHashableHashSet[data]().(ds.AbstractSet[data])
+	ds_testutils.Battery_AbstractSet(t, hashableHashSetGenerator, emptySet)
 }

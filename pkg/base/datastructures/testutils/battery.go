@@ -1,0 +1,429 @@
+package ds_testutils
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+)
+
+const MaxNumElements = 100
+
+func Battery_AbstractSet[E any, S ds.AbstractSet[E]](t *testing.T,
+	abstractSetGenerator func(nElements int) *rapid.Generator[S],
+	emptySet S,
+) {
+	rapid.Check(t, func(rt *rapid.T) {
+		// Generate a random non-empty set with up to MaxNumElements elements
+		numElements := rapid.Uint64Range(1, MaxNumElements).Draw(rt, "numElements")
+		testSet := abstractSetGenerator(int(numElements)).Draw(rt, "TestAbstractSet")
+
+		// Check invariants
+		t.Run("Cardinality", func(t *testing.T) {
+			require.Equal(t, numElements, testSet.Cardinality().Nat().Uint64(),
+				"Cardinality must be equal to the number of elements in the set")
+			// require.Equal(t, 0, emptySet.Cardinality().Nat().Uint64(),
+			// 	"Cardinality must be 0 for an empty set")
+		})
+
+		t.Run("Contains & Iter", func(t *testing.T) {
+			for el := range testSet.Iter() {
+				require.True(rt, testSet.Contains(el),
+					"All elements returned by Iter must be in the set (%v was not)", el)
+
+				require.False(rt, emptySet.Contains(el),
+					"No element should be in an empty set")
+			}
+		})
+	})
+}
+
+func Battery_Set[E any, S ds.Set[E]](t *testing.T,
+	setGenerator func(nElements int) *rapid.Generator[S],
+	emptySet S,
+) {
+	rapid.Check(t, func(rt *rapid.T) {
+		// Generate a random non-empty set with up to MaxNumElements elements
+		numElements := rapid.Uint64Range(1, MaxNumElements).Draw(rt, "numElements")
+		testSet := setGenerator(int(numElements)).Draw(rt, "TestSet")
+
+		// Check invariants
+		t.Run("AbstractSet", func(t *testing.T) {
+			Battery_AbstractSet(t, setGenerator, emptySet)
+		})
+
+		t.Run("Add", func(t *testing.T) {
+			for el := range testSet.Iter() {
+				emptySet.Add(el)
+				require.True(rt, emptySet.Contains(el),
+					"element was not added")
+			}
+		})
+
+		// t.Run("AddAll", func(t *testing.T) {
+		// 	emptySet.AddAll(numElements)
+		// })
+		t.Run("Remove", func(t *testing.T) {
+			for el := range testSet.Iter() {
+				emptySet.Remove(el)
+				require.False(rt, emptySet.Contains(el),
+					"element was not removed")
+			}
+		})
+		t.Run("Clear", func(t *testing.T) {
+			testSet.Clear()
+			require.Equal(t, 0, testSet.Cardinality().Nat().Uint64(),
+				"testSet was not cleared")
+
+		})
+		t.Run("Size", func(t *testing.T) {
+			testSet.Size()
+			require.Equal(t, MaxNumElements, testSet.Size())
+			require.Equal(t, MaxNumElements, testSet.Cardinality().Nat().Uint64())
+
+			for el := range testSet.Iter() {
+				emptySet.Add(el)
+				require.True(rt, emptySet.Contains(el),
+					"element was not added")
+			}
+			require.Equal(t, testSet.Size(), emptySet.Size())
+		})
+		t.Run("IsEmpty", func(t *testing.T) {
+			require.True(t, emptySet.IsEmpty())
+			require.False(t, testSet.IsEmpty())
+		})
+		t.Run("Union", func(t *testing.T) {
+			result := testSet.Union(emptySet)
+			require.Equal(t, result.Size(), testSet.Size())
+
+			for el := range testSet.Iter() {
+				require.True(t, result.Contains(el))
+				require.True(t, testSet.Contains(el))
+			}
+			//removing an element from the set and adding to to the empty set
+			for el := range testSet.Iter() {
+				emptySet.Add(el)
+				testSet.Remove(el)
+				break
+			}
+			result1 := testSet.Union(emptySet)
+			for el := range testSet.Iter() {
+				require.True(t, result.Contains(el))
+				require.True(t, result1.Contains(el))
+			}
+		})
+	})
+}
+
+// type NewElement[E any] func(x uint) E
+
+// type NewEmptySet[E any] func() ds.Set[E]
+
+// func isInSet[S ds.AbstractSet[E], E any](t *testing.T, s S, e E) {
+// 	t.Helper()
+// 	require.NotNil(t, s)
+// 	require.NotNil(t, e)
+// 	s.Contains(e)
+// }
+
+// import (
+// 	// crand "crypto/rand"
+// 	// "io"
+
+// 	"testing"
+
+// 	// "github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+// 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/testutils"
+// 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+// 	"github.com/stretchr/testify/require"
+// )
+
+// func AbstractSet[S ds.AbstractSet[E], E any](t *testing.T, s S) {
+// 	t.Helper()
+// 	testutils.Set(t, s, isInSet)
+// }
+
+// func Set[S ds.Set[E], E any](t *testing.T, s S, newEmptySet NewEmptySet[E], newElement NewElement[E]) {
+// 	t.Helper()
+// 	t.Run("AbstractSet", func(t *testing.T) {
+// 		t.Parallel()
+// 		AbstractSet(t, s)
+// 	})
+// 	t.Run("Add", func(t *testing.T) {
+// 		t.Parallel()
+// 		s0 := newEmptySet()
+// 		x0 := newElement(0)
+// 		s0.Add(x0)
+// 		result := s0.Contains(x0)
+// 		require.True(t, result)
+// 	})
+// 	t.Run("AddAll", func(t *testing.T) {
+// 		t.Parallel()
+// 		s0 := newEmptySet()
+// 		x0 := newElement(0)
+// 		x1 := newElement(1)
+// 		x2 := newElement(2)
+// 		s0.AddAll(x0, x1, x2)
+// 		for _, x := range []E{x0, x1, x2} {
+// 			require.True(t, s0.Contains(x))
+// 		}
+// 	})
+// 	t.Run("Remove", func(t *testing.T) {
+// 		t.Parallel()
+// 		s0 := newEmptySet()
+// 		x0 := newElement(0)
+// 		s0.Add(x0)
+// 		s0.Remove(x0)
+// 		result := s0.Contains(x0)
+// 		require.False(t, result)
+// 	})
+// 	t.Run("Clear", func(t *testing.T) {
+// 		t.Parallel()
+// 		s0 := newEmptySet()
+// 		s0.Clear()
+// 		require.True(t, s0.IsEmpty())
+// 	})
+// 	t.Run("Size", func(t *testing.T) {
+// 		t.Parallel()
+// 		s0 := newEmptySet()
+// 		result := s0.Size()
+// 		require.Equal(t, 0, result)
+// 		x0 := newElement(0)
+// 		s0.Add(x0)
+// 		result = s0.Size()
+// 		require.Equal(t, 1, result)
+// 	})
+// 	t.Run("IsEmpty", func(t *testing.T) {
+// 		t.Parallel()
+// 		s0 := newEmptySet()
+// 		require.True(t, s0.IsEmpty())
+// 	})
+// 	t.Run("Union", func(t *testing.T) {
+// 		t.Parallel()
+// 		s0 := newEmptySet()
+// 		s1 := newEmptySet()
+// 		x0 := newElement(0)
+// 		x1 := newElement(1)
+// 		s0.Add(x0)
+// 		s1.Add(x1)
+// 		s2 := s0.Union(s1)
+// 		for _, x := range []E{x0, x1} {
+// 			result := s2.Contains(x)
+// 			require.True(t, result)
+// 		}
+// 	})
+// 	t.Run("Intersection", func(t *testing.T) {
+// 		t.Parallel()
+// 		s0 := newEmptySet()
+// 		s1 := newEmptySet()
+// 		x0 := newElement(0)
+// 		x1 := newElement(1)
+// 		x2 := newElement(2)
+// 		s0.AddAll(x0, x1, x2)
+// 		s1.AddAll(x1, x2)
+// 		s2 := s0.Intersection(s1)
+// 		for _, x := range []E{x1, x2} {
+// 			result := s2.Contains(x)
+// 			require.True(t, result)
+// 		}
+// 	})
+// 	t.Run("Difference", func(t *testing.T) {
+// 		t.Parallel()
+// 		s0 := newEmptySet()
+// 		s1 := newEmptySet()
+// 		x0 := newElement(0)
+// 		x1 := newElement(1)
+// 		x2 := newElement(2)
+// 		s0.AddAll(x0, x1, x2)
+// 		s1.AddAll(x1, x2)
+// 		s2 := s0.Difference(s1)
+// 		for _, x := range []E{x0} {
+// 			result := s2.Contains(x)
+// 			require.True(t, result)
+// 		}
+// 	})
+// 	t.Run("SymetricDifference", func(t *testing.T) {
+// 		t.Parallel()
+// 		s0 := newEmptySet()
+// 		s1 := newEmptySet()
+// 		x0 := newElement(0)
+// 		x1 := newElement(1)
+// 		x2 := newElement(2)
+// 		s0.AddAll(x0, x1, x2)
+// 		s1.AddAll(x1, x2)
+// 		s2 := s0.SymmetricDifference(s1)
+// 		for _, x := range []E{x0} {
+// 			result := s2.Contains(x)
+// 			require.True(t, result)
+// 		}
+// 	})
+// 	t.Run("SubSets", func(t *testing.T) {
+// 		t.Parallel()
+// 		s0 := newEmptySet()
+// 		s0.AddAll(newElement(0), newElement(1), newElement(2))
+
+// 		subsets := s0.SubSets()
+
+// 		// Check the number of subsets
+// 		require.Len(t, subsets, 8)
+
+// 		// Check if the original set is included in the subsets
+// 		require.Contains(t, subsets, s0)
+
+// 		// Check if all subsets are valid
+// 		for _, subset := range subsets {
+// 			require.True(t, subset.IsSubSet(s0))
+// 		}
+// 	})
+// 	t.Run("IsSubSet", func(t *testing.T) {
+// 		t.Parallel()
+// 		s0 := newEmptySet()
+// 		x0 := newElement(0)
+// 		x1 := newElement(1)
+// 		x2 := newElement(2)
+// 		s0.AddAll(x0, x1, x2)
+// 		subsets := s0.SubSets()
+// 		require.Len(t, subsets, 8)
+// 		require.Contains(t, subsets, s0)
+// 		for _, subset := range subsets {
+// 			require.True(t, subset.IsSubSet(s0))
+// 		}
+// 	})
+// 	t.Run("IsProperSubSet", func(t *testing.T) {
+// 		A := newEmptySet()
+// 		A.Add(newElement(0))
+// 		A.Add(newElement(1))
+// 		A.Add(newElement(2))
+
+// 		B := newEmptySet()
+// 		B.Add(newElement(0))
+// 		B.Add(newElement(1))
+
+// 		C := newEmptySet()
+// 		C.Add(newElement(0))
+// 		C.Add(newElement(1))
+
+// 		require.True(t, B.IsProperSubSet(A))
+// 		require.True(t, C.IsProperSubSet(A))
+// 		require.False(t, C.IsProperSubSet(B))
+// 	})
+// 	t.Run("IsSuperSet", func(t *testing.T) {
+// 		t.Parallel()
+
+// 		A := newEmptySet()
+// 		A.Add(newElement(0))
+// 		A.Add(newElement(1))
+// 		A.Add(newElement(2))
+
+// 		B := newEmptySet()
+// 		B.Add(newElement(0))
+// 		B.Add(newElement(1))
+
+// 		C := newEmptySet()
+// 		C.Add(newElement(0))
+// 		C.Add(newElement(1))
+// 		C.Add(newElement(2))
+// 		C.Add(newElement(3))
+
+// 		D := newEmptySet()
+// 		D.Add(newElement(0))
+// 		D.Add(newElement(2))
+
+// 		require.True(t, A.IsSuperSet(B))
+// 		require.False(t, B.IsSuperSet(A))
+// 		require.False(t, A.IsSuperSet(C))
+// 		require.True(t, C.IsSuperSet(A))
+// 		require.True(t, A.IsSuperSet(D))
+// 		require.False(t, D.IsSuperSet(A))
+// 	})
+// 	t.Run("IsProperSuperSet", func(t *testing.T) {
+// 		t.Parallel()
+
+// 		A := newEmptySet()
+// 		A.Add(newElement(123))
+// 		A.Add(newElement(456))
+// 		A.Add(newElement(789))
+
+// 		B := newEmptySet()
+// 		B.Add(newElement(123))
+// 		B.Add(newElement(456))
+
+// 		C := newEmptySet()
+// 		C.Add(newElement(123))
+// 		C.Add(newElement(456))
+
+// 		require.True(t, B.IsProperSubSet(A))
+// 		require.True(t, C.IsProperSubSet(A))
+// 		require.False(t, C.IsProperSubSet(B))
+// 	})
+// 	t.Run("IterSubSets", func(t *testing.T) {
+// 		t.Parallel()
+// 		s0 := newEmptySet()
+// 		s0.AddAll(newElement(0), newElement(1), newElement(2))
+
+// 		//all subsets of s0
+// 		sub1 := newEmptySet()
+// 		sub1.AddAll(newElement(0))
+
+// 		sub2 := newEmptySet()
+// 		sub2.AddAll(newElement(1))
+
+// 		sub3 := newEmptySet()
+// 		sub3.AddAll(newElement(2))
+
+// 		sub4 := newEmptySet()
+// 		sub4.AddAll(newElement(0), newElement(1))
+
+// 		sub5 := newEmptySet()
+// 		sub5.AddAll(newElement(0), newElement(2))
+
+// 		sub6 := newEmptySet()
+// 		sub6.AddAll(newElement(1), newElement(2))
+
+// 		sub7 := newEmptySet()
+// 		sub7.AddAll(newElement(0), newElement(1), newElement(2))
+
+// 		sub8 := newEmptySet()
+
+// 		expectedSubsets := []ds.Set[E]{sub1, sub2, sub3, sub4, sub5, sub6, sub7, sub8}
+
+// 		for subset := range s0.IterSubSets() {
+// 			// check subset contains of the above subsets (order is not guarantee)
+// 			found := false
+// 			for _, expected := range expectedSubsets {
+// 				if subset.Equal(expected) {
+// 					found = true
+// 					break
+// 				}
+// 			}
+// 			require.True(t, found)
+// 		}
+// 	})
+// 	t.Run("List", func(t *testing.T) {
+// 		t.Parallel()
+
+// 		A := newEmptySet()
+// 		A.AddAll(newElement(123), newElement(456))
+
+// 		B := A.List()
+
+// 		require.Len(t, B, 2)
+
+// 		for _, x := range B {
+// 			require.True(t, A.Contains(x))
+// 		}
+// 	})
+// 	t.Run("Clone", func(t *testing.T) {
+// 		t.Parallel()
+// 		A := newEmptySet()
+// 		A.Add(newElement(123))
+// 		A.Add(newElement(456))
+// 		A.Add(newElement(789))
+
+// 		B := A.Clone()
+// 		C := A.Intersection(B)
+// 		require.Equal(t, C, B)
+// 	})
+// }
