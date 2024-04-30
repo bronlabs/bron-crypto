@@ -12,7 +12,7 @@ type Curve struct {
 	cyclicGroupoid impl.CyclicGroupoid[curves.Curve, curves.Point]
 }
 
-func (c *Curve) Cardinality() *saferith.Modulus {
+func (c *Curve) Cardinality() *saferith.Nat {
 	return c.groupoid.Cardinality()
 }
 

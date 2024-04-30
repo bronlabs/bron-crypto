@@ -64,7 +64,7 @@ func NewG1() *G1 {
 
 // === Basic Methods.
 
-func (*G1) Cardinality() *saferith.Modulus {
+func (*G1) Cardinality() *saferith.Nat {
 	//TODO implement me
 	panic("implement me")
 }

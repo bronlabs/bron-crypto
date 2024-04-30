@@ -62,7 +62,7 @@ func NewCurve() *Curve {
 	return &p256Instance
 }
 
-func (*Curve) Cardinality() *saferith.Modulus {
+func (*Curve) Cardinality() *saferith.Nat {
 	//TODO implement me
 	panic("implement me")
 }

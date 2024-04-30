@@ -55,8 +55,8 @@ func (s *ComparableHashSet[_]) Size() int {
 	return len(s.v)
 }
 
-func (s *ComparableHashSet[_]) Cardinality() *saferith.Modulus {
-	return saferith.ModulusFromUint64(uint64(len(s.v)))
+func (s *ComparableHashSet[_]) Cardinality() *saferith.Nat {
+	return new(saferith.Nat).SetUint64(uint64(s.Size()))
 }
 
 func (s *ComparableHashSet[_]) IsEmpty() bool {

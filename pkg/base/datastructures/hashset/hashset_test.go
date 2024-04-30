@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	ds_testutils "github.com/copperexchange/krypton-primitives/pkg/base/datastructures/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	ds_testutils "github.com/copperexchange/krypton-primitives/pkg/base/datastructures/testutils"
 	"pgregory.net/rapid"
 )
 
@@ -314,6 +314,5 @@ func hashableHashSetGenerator(nElements int) *rapid.Generator[ds.AbstractSet[dat
 func TestHashableHashSet_AbstractSet(t *testing.T) {
 	t.Parallel()
 
-	emptySet := hashset.NewHashableHashSet[data]().(ds.AbstractSet[data])
-	ds_testutils.Battery_AbstractSet(t, hashableHashSetGenerator, emptySet)
+	ds_testutils.Battery_AbstractSet(t, hashableHashSetGenerator)
 }

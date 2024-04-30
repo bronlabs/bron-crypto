@@ -47,7 +47,7 @@ type BiMap[K any, V any] interface {
 }
 
 type AbstractSet[E any] interface {
-	Cardinality() *saferith.Modulus
+	Cardinality() *saferith.Nat
 	Contains(e E) bool
 	Iter() <-chan E
 }

@@ -54,8 +54,8 @@ func (s *HashableHashSet[_]) Size() int {
 	return s.v.Size()
 }
 
-func (s *HashableHashSet[_]) Cardinality() *saferith.Modulus {
-	return saferith.ModulusFromUint64(uint64(s.v.Size()))
+func (s *HashableHashSet[_]) Cardinality() *saferith.Nat {
+	return new(saferith.Nat).SetUint64(uint64(s.Size()))
 }
 
 func (s *HashableHashSet[_]) IsEmpty() bool {

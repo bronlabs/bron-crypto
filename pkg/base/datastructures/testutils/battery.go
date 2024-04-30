@@ -13,19 +13,19 @@ const MaxNumElements = 100
 
 func Battery_AbstractSet[E any, S ds.AbstractSet[E]](t *testing.T,
 	abstractSetGenerator func(nElements int) *rapid.Generator[S],
-	emptySet S,
 ) {
 	rapid.Check(t, func(rt *rapid.T) {
-		// Generate a random non-empty set with up to MaxNumElements elements
+		// Input generation
 		numElements := rapid.Uint64Range(1, MaxNumElements).Draw(rt, "numElements")
 		testSet := abstractSetGenerator(int(numElements)).Draw(rt, "TestAbstractSet")
+		emptySet := abstractSetGenerator(0).Draw(rt, "EmptyAbstractSet")
 
-		// Check invariants
+		// Cardinality equal to number of elements in the set
 		t.Run("Cardinality", func(t *testing.T) {
-			require.Equal(t, numElements, testSet.Cardinality().Nat().Uint64(),
+			require.Equal(t, numElements, testSet.Cardinality().Uint64(),
 				"Cardinality must be equal to the number of elements in the set")
-			// require.Equal(t, 0, emptySet.Cardinality().Nat().Uint64(),
-			// 	"Cardinality must be 0 for an empty set")
+			require.Equal(t, uint64(0), emptySet.Cardinality().Uint64(),
+				"Cardinality must be 0 for an empty set")
 		})
 
 		t.Run("Contains & Iter", func(t *testing.T) {
@@ -42,60 +42,72 @@ func Battery_AbstractSet[E any, S ds.AbstractSet[E]](t *testing.T,
 
 func Battery_Set[E any, S ds.Set[E]](t *testing.T,
 	setGenerator func(nElements int) *rapid.Generator[S],
-	emptySet S,
 ) {
-	rapid.Check(t, func(rt *rapid.T) {
-		// Generate a random non-empty set with up to MaxNumElements elements
-		numElements := rapid.Uint64Range(1, MaxNumElements).Draw(rt, "numElements")
-		testSet := setGenerator(int(numElements)).Draw(rt, "TestSet")
+	// Inheritance: Set is an AbstractSet
+	t.Run("AbstractSet", func(t *testing.T) {
+		Battery_AbstractSet(t, setGenerator)
+	})
 
-		// Check invariants
-		t.Run("AbstractSet", func(t *testing.T) {
-			Battery_AbstractSet(t, setGenerator, emptySet)
-		})
+	rapid.Check(t, func(rt *rapid.T) {
+		// Input Generation
+		numElements := rapid.IntRange(1, MaxNumElements).Draw(rt, "numElements")
+		testSet := setGenerator(numElements).Draw(rt, "TestSet")
 
 		t.Run("Add", func(t *testing.T) {
+			addSet := setGenerator(0).Draw(rt, "AddSet")
+			expectedSize := 0
 			for el := range testSet.Iter() {
-				emptySet.Add(el)
-				require.True(rt, emptySet.Contains(el),
-					"element was not added")
+				addSet.Add(el)
+				require.True(rt, addSet.Contains(el),
+					"element %v must be in the set after adding", el)
+				expectedSize++
+				require.Equal(t, expectedSize, addSet.Size(),
+					"Size (%v) must be equal to #elements added (%v)", addSet.Size(), expectedSize)
+
 			}
 		})
 
-		// t.Run("AddAll", func(t *testing.T) {
-		// 	emptySet.AddAll(numElements)
-		// })
 		t.Run("Remove", func(t *testing.T) {
+			removeSet := setGenerator(numElements).Draw(rt, "RemoveSet")
+			expectedSize := numElements
 			for el := range testSet.Iter() {
-				emptySet.Remove(el)
-				require.False(rt, emptySet.Contains(el),
-					"element was not removed")
+				removeSet.Remove(el)
+				require.False(rt, removeSet.Contains(el),
+					"element %v must not be in the set after removing", el)
+				expectedSize--
+				require.Equal(t, expectedSize, removeSet.Size(),
+					"Size (%v) must be equal to #elements removed (%v)", removeSet.Size(), numElements-expectedSize)
 			}
 		})
-		t.Run("Clear", func(t *testing.T) {
-			testSet.Clear()
-			require.Equal(t, 0, testSet.Cardinality().Nat().Uint64(),
-				"testSet was not cleared")
 
+		t.Run("Clear", func(t *testing.T) {
+			removeSet := setGenerator(numElements).Draw(rt, "RemoveSet")
+			removeSet.Clear()
+			require.Equal(t, uint64(0), removeSet.Cardinality().Uint64(),
+				"Cardinality must be 0 after clearing the set")
+			require.True(rt, removeSet.IsEmpty(),
+				"Set must be empty after clearing")
 		})
+
 		t.Run("Size", func(t *testing.T) {
 			testSet.Size()
 			require.Equal(t, MaxNumElements, testSet.Size())
 			require.Equal(t, MaxNumElements, testSet.Cardinality().Nat().Uint64())
 
 			for el := range testSet.Iter() {
-				emptySet.Add(el)
-				require.True(rt, emptySet.Contains(el),
+				addSet.Add(el)
+				require.True(rt, addSet.Contains(el),
 					"element was not added")
 			}
-			require.Equal(t, testSet.Size(), emptySet.Size())
+			require.Equal(t, testSet.Size(), addSet.Size())
 		})
+
 		t.Run("IsEmpty", func(t *testing.T) {
-			require.True(t, emptySet.IsEmpty())
+			require.True(t, addSet.IsEmpty())
 			require.False(t, testSet.IsEmpty())
 		})
 		t.Run("Union", func(t *testing.T) {
-			result := testSet.Union(emptySet)
+			result := testSet.Union(addSet)
 			require.Equal(t, result.Size(), testSet.Size())
 
 			for el := range testSet.Iter() {
@@ -104,11 +116,11 @@ func Battery_Set[E any, S ds.Set[E]](t *testing.T,
 			}
 			//removing an element from the set and adding to to the empty set
 			for el := range testSet.Iter() {
-				emptySet.Add(el)
+				addSet.Add(el)
 				testSet.Remove(el)
 				break
 			}
-			result1 := testSet.Union(emptySet)
+			result1 := testSet.Union(addSet)
 			for el := range testSet.Iter() {
 				require.True(t, result.Contains(el))
 				require.True(t, result1.Contains(el))
