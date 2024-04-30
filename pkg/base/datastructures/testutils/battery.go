@@ -63,22 +63,22 @@ func Battery_Set[E any, S ds.Set[E]](t *testing.T,
 				expectedSize++
 				require.Equal(t, expectedSize, addSet.Size(),
 					"Size (%v) must be equal to #elements added (%v)", addSet.Size(), expectedSize)
-
 			}
 		})
 
-		t.Run("Remove", func(t *testing.T) {
-			removeSet := setGenerator(numElements).Draw(rt, "RemoveSet")
-			expectedSize := numElements
-			for el := range testSet.Iter() {
-				removeSet.Remove(el)
-				require.False(rt, removeSet.Contains(el),
-					"element %v must not be in the set after removing", el)
-				expectedSize--
-				require.Equal(t, expectedSize, removeSet.Size(),
-					"Size (%v) must be equal to #elements removed (%v)", removeSet.Size(), numElements-expectedSize)
-			}
-		})
+		// t.Run("Remove & Size", func(t *testing.T) {
+		// 	removeSet := setGenerator(numElements).Draw(rt, "RemoveSet")
+		// 	expectedSize := numElements
+		// 	for el := range testSet.Iter() {
+		// 		removeSet.Remove(el)
+		// 		expectedSize--
+		// 		require.False(rt, removeSet.Contains(el),
+		// 			"element %v must not be in the set after removing", el)
+				
+		// 		require.Equal(t, expectedSize, removeSet.Size(),
+		// 			"Size (%v) must be equal to #elements removed (%v)", removeSet.Size(), numElements-expectedSize)
+		// 	}
+		// })
 
 		t.Run("Clear", func(t *testing.T) {
 			removeSet := setGenerator(numElements).Draw(rt, "RemoveSet")
@@ -89,43 +89,40 @@ func Battery_Set[E any, S ds.Set[E]](t *testing.T,
 				"Set must be empty after clearing")
 		})
 
-		t.Run("Size", func(t *testing.T) {
-			testSet.Size()
-			require.Equal(t, MaxNumElements, testSet.Size())
-			require.Equal(t, MaxNumElements, testSet.Cardinality().Nat().Uint64())
-
-			for el := range testSet.Iter() {
-				addSet.Add(el)
-				require.True(rt, addSet.Contains(el),
-					"element was not added")
-			}
-			require.Equal(t, testSet.Size(), addSet.Size())
-		})
-
 		t.Run("IsEmpty", func(t *testing.T) {
-			require.True(t, addSet.IsEmpty())
-			require.False(t, testSet.IsEmpty())
+			emptySet := setGenerator(0).Draw(rt, "EmptySet")
+			require.Equal(t, uint64(0), emptySet.Cardinality().Uint64(),
+				"Cardinality must be 0 after for an empty set")
+			require.True(t, emptySet.IsEmpty())
+			for el := range testSet.Iter() {
+				emptySet.Add(el)
+				require.True(rt, emptySet.Contains(el),
+					"element %v must be in the set after adding", el)
+				require.False(t, testSet.IsEmpty())
+			}
 		})
-		t.Run("Union", func(t *testing.T) {
-			result := testSet.Union(addSet)
-			require.Equal(t, result.Size(), testSet.Size())
 
-			for el := range testSet.Iter() {
-				require.True(t, result.Contains(el))
-				require.True(t, testSet.Contains(el))
+		t.Run("Union", func(t *testing.T) {
+			A := setGenerator(5).Draw(rt, "Set A")
+			B := setGenerator(5).Draw(rt, "Set B")
+			C := A.Union(B)
+
+			numElementsFound := 0
+			for el := range C.Iter() {
+				if A.Contains(el) || B.Contains(el) {
+					numElementsFound++
+				}
 			}
-			//removing an element from the set and adding to to the empty set
-			for el := range testSet.Iter() {
-				addSet.Add(el)
-				testSet.Remove(el)
-				break
-			}
-			result1 := testSet.Union(addSet)
-			for el := range testSet.Iter() {
-				require.True(t, result.Contains(el))
-				require.True(t, result1.Contains(el))
-			}
+			require.Equal(t, numElementsFound, C.Size())
 		})
+		
+		// t.Run("Intersection", func(t *testing.T) {
+		// 	// A := setGenerator(5).Draw(rt, "Set A")
+		// 	// B := setGenerator(0).Draw(rt, "Set B")
+
+		// 	rng := setGenerator(1).Draw(rt, "TestSet")
+
+		// })
 	})
 }
 

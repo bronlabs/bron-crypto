@@ -300,8 +300,19 @@ func TestHashableHashSet_IsProperSuperSet(t *testing.T) {
 }
 
 // hashableHashSetGenerator returns a generator of abstract sets with the provided number of elements
-func hashableHashSetGenerator(nElements int) *rapid.Generator[ds.AbstractSet[data]] {
+func hashableHashAbstractSetGenerator(nElements int) *rapid.Generator[ds.AbstractSet[data]] {
 	return rapid.Custom(func(t *rapid.T) ds.AbstractSet[data] {
+		set := hashset.NewHashableHashSet[data]()
+		initial := rapid.Uint().Draw(t, "initial")
+		for i := 0; i < nElements; i++ {
+			set.Add(data(initial + uint(i)))
+		}
+		return set
+	})
+}
+
+func hashableHashSetGenerator(nElements int) *rapid.Generator[ds.Set[data]] {
+	return rapid.Custom(func(t *rapid.T) ds.Set[data] {
 		set := hashset.NewHashableHashSet[data]()
 		initial := rapid.Uint().Draw(t, "initial")
 		for i := 0; i < nElements; i++ {
@@ -314,5 +325,11 @@ func hashableHashSetGenerator(nElements int) *rapid.Generator[ds.AbstractSet[dat
 func TestHashableHashSet_AbstractSet(t *testing.T) {
 	t.Parallel()
 
-	ds_testutils.Battery_AbstractSet(t, hashableHashSetGenerator)
+	ds_testutils.Battery_AbstractSet(t, hashableHashAbstractSetGenerator)
+}
+
+func TestHashableHashSet_Set(t *testing.T) {
+	t.Parallel()
+
+    ds_testutils.Battery_Set(t, hashableHashSetGenerator)
 }
