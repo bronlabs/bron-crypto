@@ -17,10 +17,10 @@ type DiffieHellmanGroup struct {
 	copyChecker copyChecker
 }
 
-func NewDiffieHellmanGroup() *DiffieHellmanGroup {
+func NewDiffieHellmanGroup() (*DiffieHellmanGroup, error) {
 	dh := C.DH_new()
 	if dh == nil {
-		panic("DH_new")
+		return nil, lastError()
 	}
 	dhGroup := &DiffieHellmanGroup{
 		nativeDh: dh,
@@ -32,33 +32,33 @@ func NewDiffieHellmanGroup() *DiffieHellmanGroup {
 	})
 
 	dhGroup.copyChecker.check()
-	return dhGroup
+	return dhGroup, nil
 }
 
-func (dh *DiffieHellmanGroup) GenerateParameters(primeBits int) *DiffieHellmanGroup {
+func (dh *DiffieHellmanGroup) GenerateParameters(primeBits int) (*DiffieHellmanGroup, error) {
 	dh.copyChecker.check()
 
 	ret := C.DH_generate_parameters_ex(dh.nativeDh, C.int(primeBits), C.DH_GENERATOR_2, nil)
 	if ret != 1 {
-		panic("DH_generate_parameters_ex")
+		return nil, lastError()
 	}
 
-	return dh
+	return dh, nil
 }
 
-func (dh *DiffieHellmanGroup) GetP() *BigNum {
+func (dh *DiffieHellmanGroup) GetP() (*BigNum, error) {
 	dh.copyChecker.check()
 
 	nativeP := C.DH_get0_p(dh.nativeDh)
 	if nativeP == nil {
-		panic("DH_get0_p")
+		return nil, lastError()
 	}
 	p := NewBigNum()
 	ret := C.BN_copy(&p.nativeBigNum, nativeP)
 	if ret == nil {
-		panic("DH_get0_p")
+		return nil, lastError()
 	}
 
 	runtime.KeepAlive(dh)
-	return p
+	return p, nil
 }

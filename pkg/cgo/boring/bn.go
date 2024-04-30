@@ -25,12 +25,20 @@ type BigNum struct {
 }
 
 var (
+	Zero = &BigNum{}
+
 	oneLimbs = []C.BN_ULONG{1}
 	One      = &BigNum{}
 )
 
 //nolint:gochecknoinits // allow initialization of native values
 func init() {
+	Zero.nativeBigNum.d = nil
+	Zero.nativeBigNum.width = 0
+	Zero.nativeBigNum.dmax = 0
+	Zero.nativeBigNum.neg = 0
+	Zero.nativeBigNum.flags = C.BN_FLG_STATIC_DATA
+
 	One.nativeBigNum.d = &oneLimbs[0]
 	One.nativeBigNum.width = 1
 	One.nativeBigNum.dmax = 1
@@ -50,6 +58,52 @@ func NewBigNum() *BigNum {
 
 	bn.copyChecker.check()
 	return bn
+}
+
+// Add sets bn = lhs + rhs, where lhs and rhs are non-negative and bn may
+// be the same pointer as either lhs or rhs. It returns error on allocation failure.
+func (bn *BigNum) Add(lhs, rhs *BigNum) (*BigNum, error) {
+	bn.copyChecker.check()
+	lhs.copyChecker.check()
+	rhs.copyChecker.check()
+
+	ret := C.BN_uadd(&bn.nativeBigNum, &lhs.nativeBigNum, &rhs.nativeBigNum)
+	if ret != 1 {
+		return nil, lastError()
+	}
+
+	runtime.KeepAlive(lhs)
+	runtime.KeepAlive(rhs)
+	return bn, nil
+}
+
+func (bn *BigNum) AnnouncedLen() uint {
+	bn.copyChecker.check()
+
+	bitLen := C.BN_BITS2 * bn.nativeBigNum.width
+	return uint(bitLen)
+}
+
+func (bn *BigNum) Copy() (*BigNum, error) {
+	newBigNum := NewBigNum()
+	ret := C.BN_copy(&newBigNum.nativeBigNum, &bn.nativeBigNum)
+	if ret == nil {
+		return nil, lastError()
+	}
+
+	runtime.KeepAlive(bn)
+	return newBigNum, nil
+}
+
+func (bn *BigNum) MaskBits(size uint) (*BigNum, error) {
+	bn.copyChecker.check()
+
+	ret := C.BN_mask_bits(&bn.nativeBigNum, C.int(size))
+	if ret != 1 {
+		return nil, lastError()
+	}
+
+	return bn, nil
 }
 
 // GenPrime sets bn to a prime number of bits length.
@@ -221,4 +275,26 @@ func (bn *BigNum) SetBytes(data []byte) (*BigNum, error) {
 
 	runtime.KeepAlive(data)
 	return bn, nil
+}
+
+func (bn *BigNum) SetU64(value uint64) (*BigNum, error) {
+	bn.copyChecker.check()
+
+	ret := C.BN_set_u64(&bn.nativeBigNum, C.uint64_t(value))
+	if ret != 1 {
+		return nil, lastError()
+	}
+
+	return bn, nil
+}
+
+func (bn *BigNum) Cmp(rhs *BigNum) int {
+	bn.copyChecker.check()
+	rhs.copyChecker.check()
+
+	ret := C.BN_ucmp(&bn.nativeBigNum, &rhs.nativeBigNum)
+
+	runtime.KeepAlive(bn)
+	runtime.KeepAlive(rhs)
+	return int(ret)
 }

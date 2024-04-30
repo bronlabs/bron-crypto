@@ -12,6 +12,8 @@ func Benchmark_DhGen1024(b *testing.B) {
 	const bits = 1024
 
 	for i := 0; i < b.N; i++ {
-		_ = boring.NewDiffieHellmanGroup().GenerateParameters(bits).GetP()
+		group, _ := boring.NewDiffieHellmanGroup()
+		group, _ = group.GenerateParameters(bits)
+		_, _ = group.GetP()
 	}
 }
