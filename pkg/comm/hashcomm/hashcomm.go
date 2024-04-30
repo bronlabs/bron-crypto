@@ -67,9 +67,6 @@ func (c *Committer) Commit(prng io.Reader, message Message) (*Commitment, *Openi
 	if prng == nil {
 		return nil, nil, errs.NewIsNil("prng is nil")
 	}
-	if len(message) == 0 {
-		return nil, nil, errs.NewArgument("no commit message")
-	}
 	if len(c.sessionId) == 0 {
 		return nil, nil, errs.NewArgument("no session identifier")
 	}
