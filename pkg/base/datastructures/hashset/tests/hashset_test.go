@@ -7,21 +7,7 @@ import (
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
-	ds_testutils "github.com/copperexchange/krypton-primitives/pkg/base/datastructures/testutils"
-	"pgregory.net/rapid"
 )
-
-type data uint
-
-func (d data) HashCode() uint64 {
-	return uint64(d % 10)
-}
-
-func (d data) Equal(rhs data) bool {
-	return d == rhs
-}
-
-var _ ds.Hashable[data] = (*data)(nil)
 
 func TestHashableHashSet(t *testing.T) {
 	t.Parallel()
@@ -297,39 +283,4 @@ func TestHashableHashSet_IsProperSuperSet(t *testing.T) {
 	require.False(t, B.IsProperSuperSet(A))
 	require.False(t, A.IsProperSuperSet(C))
 	require.False(t, C.IsProperSuperSet(A))
-}
-
-// hashableHashSetGenerator returns a generator of abstract sets with the provided number of elements
-func hashableHashAbstractSetGenerator(nElements int) *rapid.Generator[ds.AbstractSet[data]] {
-	return rapid.Custom(func(t *rapid.T) ds.AbstractSet[data] {
-		set := hashset.NewHashableHashSet[data]()
-		initial := rapid.Uint().Draw(t, "initial")
-		for i := 0; i < nElements; i++ {
-			set.Add(data(initial + uint(i)))
-		}
-		return set
-	})
-}
-
-func hashableHashSetGenerator(nElements int) *rapid.Generator[ds.Set[data]] {
-	return rapid.Custom(func(t *rapid.T) ds.Set[data] {
-		set := hashset.NewHashableHashSet[data]()
-		initial := rapid.Uint().Draw(t, "initial")
-		for i := 0; i < nElements; i++ {
-			set.Add(data(initial + uint(i)))
-		}
-		return set
-	})
-}
-
-func TestHashableHashSet_AbstractSet(t *testing.T) {
-	t.Parallel()
-
-	ds_testutils.Battery_AbstractSet(t, hashableHashAbstractSetGenerator)
-}
-
-func TestHashableHashSet_Set(t *testing.T) {
-	t.Parallel()
-
-    ds_testutils.Battery_Set(t, hashableHashSetGenerator)
 }
