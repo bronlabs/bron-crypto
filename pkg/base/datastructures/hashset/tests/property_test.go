@@ -28,7 +28,7 @@ func NewAdapter() *dstu.Adapter[data] {
 			for i, x := range xs {
 				ys[i] = data(x)
 			}
-			return hashset.NewHashableHashSet(ys...).(ds.Set[data])
+			return hashset.NewHashableHashSet(ys...)
 		},
 	}
 }
