@@ -1,6 +1,7 @@
 package ds_testutils
 
 import (
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -66,19 +67,20 @@ func Battery_Set[E any, S ds.Set[E]](t *testing.T,
 			}
 		})
 
-		// t.Run("Remove & Size", func(t *testing.T) {
-		// 	removeSet := setGenerator(numElements).Draw(rt, "RemoveSet")
-		// 	expectedSize := numElements
-		// 	for el := range testSet.Iter() {
-		// 		removeSet.Remove(el)
-		// 		expectedSize--
-		// 		require.False(rt, removeSet.Contains(el),
-		// 			"element %v must not be in the set after removing", el)
-				
-		// 		require.Equal(t, expectedSize, removeSet.Size(),
-		// 			"Size (%v) must be equal to #elements removed (%v)", removeSet.Size(), numElements-expectedSize)
-		// 	}
-		// })
+		t.Run("Remove & Size", func(t *testing.T) {
+			removeSet := setGenerator(numElements).Draw(rt, "RemoveSet")
+			expectedSize := numElements
+
+			for el := range removeSet.Iter() {
+				removeSet.Remove(el)
+				expectedSize = expectedSize - 1
+				require.False(rt, removeSet.Contains(el),
+					"element %v must not be in the set after removing", el)
+
+				require.Equal(t, expectedSize, removeSet.Size(),
+					"Size (%v) must be equal to #elements removed (%v)", removeSet.Size(), numElements-expectedSize)
+			}
+		})
 
 		t.Run("Clear", func(t *testing.T) {
 			removeSet := setGenerator(numElements).Draw(rt, "RemoveSet")
@@ -103,8 +105,8 @@ func Battery_Set[E any, S ds.Set[E]](t *testing.T,
 		})
 
 		t.Run("Union", func(t *testing.T) {
-			A := setGenerator(5).Draw(rt, "Set A")
-			B := setGenerator(5).Draw(rt, "Set B")
+			A := setGenerator(MaxNumElements).Draw(rt, "Set A")
+			B := setGenerator(MaxNumElements).Draw(rt, "Set B")
 			C := A.Union(B)
 
 			numElementsFound := 0
@@ -115,14 +117,28 @@ func Battery_Set[E any, S ds.Set[E]](t *testing.T,
 			}
 			require.Equal(t, numElementsFound, C.Size())
 		})
-		
-		// t.Run("Intersection", func(t *testing.T) {
-		// 	// A := setGenerator(5).Draw(rt, "Set A")
-		// 	// B := setGenerator(0).Draw(rt, "Set B")
 
-		// 	rng := setGenerator(1).Draw(rt, "TestSet")
+		t.Run("Intersection", func(t *testing.T) {
+			A := setGenerator(MaxNumElements).Draw(rt, "Set A")
+			B := setGenerator(0).Draw(rt, "Set B")
 
-		// })
+			//Randomly adding some elements from A to B
+			for el := range A.Iter() {
+				rng := rand.Intn(2)
+				if rng == 0 {
+					B.Add(el)
+				}
+			}
+
+			C := A.Intersection(B)
+			numElementsFound := 0
+			for el := range C.Iter() {
+				if A.Contains(el) && B.Contains(el) {
+					numElementsFound++
+				}
+			}
+			require.Equal(t, numElementsFound, C.Size())
+		})
 	})
 }
 
