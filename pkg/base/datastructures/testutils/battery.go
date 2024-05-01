@@ -12,7 +12,7 @@ import (
 
 const MaxNumElements = 100
 
-func Battery_AbstractSet[E any, S ds.AbstractSet[E]](t *testing.T,
+func Battery_AbstractSet[S ds.AbstractSet[E], E any](t *testing.T,
 	abstractSetGenerator func(nElements int) *rapid.Generator[S],
 ) {
 	rapid.Check(t, func(rt *rapid.T) {
@@ -23,9 +23,9 @@ func Battery_AbstractSet[E any, S ds.AbstractSet[E]](t *testing.T,
 
 		// Cardinality equal to number of elements in the set
 		t.Run("Cardinality", func(t *testing.T) {
-			require.Equal(t, numElements, testSet.Cardinality().Uint64(),
+			require.Equal(rt, numElements, testSet.Cardinality().Uint64(),
 				"Cardinality must be equal to the number of elements in the set")
-			require.Equal(t, uint64(0), emptySet.Cardinality().Uint64(),
+			require.Equal(rt, uint64(0), emptySet.Cardinality().Uint64(),
 				"Cardinality must be 0 for an empty set")
 		})
 
@@ -52,42 +52,47 @@ func Battery_Set[E any, S ds.Set[E]](t *testing.T,
 	rapid.Check(t, func(rt *rapid.T) {
 		// Input Generation
 		numElements := rapid.IntRange(1, MaxNumElements).Draw(rt, "numElements")
-		testSet := setGenerator(numElements).Draw(rt, "TestSet")
+		B := setGenerator(numElements).Draw(rt, "TestSet")
 
-		t.Run("Add", func(t *testing.T) {
-			addSet := setGenerator(0).Draw(rt, "AddSet")
-			expectedSize := 0
-			for el := range testSet.Iter() {
-				addSet.Add(el)
-				require.True(rt, addSet.Contains(el),
-					"element %v must be in the set after adding", el)
-				expectedSize++
-				require.Equal(t, expectedSize, addSet.Size(),
-					"Size (%v) must be equal to #elements added (%v)", addSet.Size(), expectedSize)
-			}
+		t.Run("Size", func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, B.Cardinality(), B.Size(), "size and cardinality don't return the same value")
 		})
 
-		t.Run("Remove & Size", func(t *testing.T) {
-			removeSet := setGenerator(numElements).Draw(rt, "RemoveSet")
-			expectedSize := numElements
-
-			for el := range removeSet.Iter() {
-				removeSet.Remove(el)
-				expectedSize = expectedSize - 1
-				require.False(rt, removeSet.Contains(el),
-					"element %v must not be in the set after removing", el)
-
-				require.Equal(t, expectedSize, removeSet.Size(),
-					"Size (%v) must be equal to #elements removed (%v)", removeSet.Size(), numElements-expectedSize)
+		t.Run("Add", func(t *testing.T) {
+			A := setGenerator(0).Draw(rt, "AddSet")
+			expectedSize := 0
+			for bi := range B.Iter() {
+				A.Add(bi)
+				require.True(rt, A.Contains(bi),
+					"element %v must be in the set after adding", bi)
+				expectedSize++
+				require.Equal(rt, expectedSize, A.Size(),
+					"Size (%d) must be equal to #elements added (%v)", A.Size(), expectedSize)
 			}
+			require.Equal(rt, A.Size(), B.Size(), "Size (%d) of A at the end must be equal to size of B (%d)", A.Size(), B.Size())
+		})
+
+		t.Run("Remove", func(t *testing.T) {
+			A := setGenerator(numElements).Draw(rt, "RemoveSet")
+			expectedSize := numElements
+			for ai := range A.Iter() {
+				A.Remove(ai)
+				expectedSize--
+				require.False(rt, A.Contains(ai),
+					"element %v must not be in the set after removing", ai)
+				require.Equal(rt, expectedSize, A.Size(),
+					"Size (%v) must be equal to #elements removed (%v)", A.Size(), numElements-expectedSize)
+			}
+			require.Zero(rt, A.Size(), "#A (%d) != 0", A.Size())
 		})
 
 		t.Run("Clear", func(t *testing.T) {
-			removeSet := setGenerator(numElements).Draw(rt, "RemoveSet")
-			removeSet.Clear()
-			require.Equal(t, uint64(0), removeSet.Cardinality().Uint64(),
+			A := setGenerator(numElements).Draw(rt, "RemoveSet")
+			A.Clear()
+			require.Equal(t, uint64(0), A.Cardinality().Uint64(),
 				"Cardinality must be 0 after clearing the set")
-			require.True(rt, removeSet.IsEmpty(),
+			require.True(rt, A.IsEmpty(),
 				"Set must be empty after clearing")
 		})
 
@@ -96,11 +101,11 @@ func Battery_Set[E any, S ds.Set[E]](t *testing.T,
 			require.Equal(t, uint64(0), emptySet.Cardinality().Uint64(),
 				"Cardinality must be 0 after for an empty set")
 			require.True(t, emptySet.IsEmpty())
-			for el := range testSet.Iter() {
+			for el := range B.Iter() {
 				emptySet.Add(el)
 				require.True(rt, emptySet.Contains(el),
 					"element %v must be in the set after adding", el)
-				require.False(t, testSet.IsEmpty())
+				require.False(t, B.IsEmpty())
 			}
 		})
 
