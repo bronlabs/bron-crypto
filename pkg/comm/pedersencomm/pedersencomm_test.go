@@ -22,7 +22,7 @@ func TestSimpleHappyPath(t *testing.T) {
 	sessionId := []byte("00000001")
 	c, err := pedersencomm.NewCommitterHomomorphic(crand.Reader, sessionId)
 	require.NoError(t, err)
-	v, err := pedersencomm.NewVerifierHomomorphic(crand.Reader, sessionId)
+	v, err := pedersencomm.NewVerifierHomomorphic(sessionId)
 	require.NoError(t, err)
 	curve := k256.NewCurve()
 	msg, err := curve.ScalarField().Random(crand.Reader)
@@ -81,7 +81,7 @@ func TestDecommitShouldNotBeNil(t *testing.T) {
 
 func TestOpenOnValidCommitments(t *testing.T) {
 	testResults := getEntries()
-	v, err := pedersencomm.NewVerifierHomomorphic(crand.Reader, sid)
+	v, err := pedersencomm.NewVerifierHomomorphic(sid)
 	require.NoError(t, err)
 	for _, testCaseEntry := range testResults {
 		// Verify each commitment
@@ -93,7 +93,7 @@ func TestOpenOnValidCommitments(t *testing.T) {
 
 func TestOpenOnModifiedNonce(t *testing.T) {
 	t.Parallel()
-	v, err := pedersencomm.NewVerifierHomomorphic(crand.Reader, sid)
+	v, err := pedersencomm.NewVerifierHomomorphic(sid)
 	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
@@ -110,7 +110,7 @@ func TestOpenOnModifiedNonce(t *testing.T) {
 
 func TestOpenOnModifiedCommitment(t *testing.T) {
 	t.Parallel()
-	v, err := pedersencomm.NewVerifierHomomorphic(crand.Reader, sid)
+	v, err := pedersencomm.NewVerifierHomomorphic(sid)
 	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
@@ -127,7 +127,7 @@ func TestOpenOnModifiedCommitment(t *testing.T) {
 // An empty decommit should fail to open
 func TestOpenOnDefaultDecommitObject(t *testing.T) {
 	t.Parallel()
-	v, err := pedersencomm.NewVerifierHomomorphic(crand.Reader, sid)
+	v, err := pedersencomm.NewVerifierHomomorphic(sid)
 	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
@@ -140,7 +140,7 @@ func TestOpenOnDefaultDecommitObject(t *testing.T) {
 
 func TestOpenOnNilCommitment(t *testing.T) {
 	t.Parallel()
-	v, err := pedersencomm.NewVerifierHomomorphic(crand.Reader, sid)
+	v, err := pedersencomm.NewVerifierHomomorphic(sid)
 	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
@@ -154,7 +154,7 @@ func TestHappyCombine(t *testing.T) {
 	testResults := getEntries()
 	c, err := pedersencomm.NewCommitterHomomorphic(crand.Reader, sid)
 	require.NoError(t, err)
-	v, err := pedersencomm.NewVerifierHomomorphic(crand.Reader, sid)
+	v, err := pedersencomm.NewVerifierHomomorphic(sid)
 	require.NoError(t, err)
 	for _, testCaseEntry := range testResults {
 		// Pick a random scalar to commit to
@@ -176,7 +176,7 @@ func TestOpenOnWrongCombine(t *testing.T) {
 	testResults := getEntries()
 	c, err := pedersencomm.NewCommitterHomomorphic(crand.Reader, sid)
 	require.NoError(t, err)
-	v, err := pedersencomm.NewVerifierHomomorphic(crand.Reader, sid)
+	v, err := pedersencomm.NewVerifierHomomorphic(sid)
 	require.NoError(t, err)
 	for _, testCaseEntry := range testResults {
 		// Pick a random scalar to commit to
@@ -204,7 +204,7 @@ func TestHappyScale(t *testing.T) {
 	testResults := getEntries()
 	c, err := pedersencomm.NewCommitterHomomorphic(crand.Reader, sid)
 	require.NoError(t, err)
-	v, err := pedersencomm.NewVerifierHomomorphic(crand.Reader, sid)
+	v, err := pedersencomm.NewVerifierHomomorphic(sid)
 	require.NoError(t, err)
 	for _, testCaseEntry := range testResults {
 		// Pick a random scalar for scaling
@@ -224,7 +224,7 @@ func TestOpenOnWrongScale(t *testing.T) {
 	testResults := getEntries()
 	c, err := pedersencomm.NewCommitterHomomorphic(crand.Reader, sid)
 	require.NoError(t, err)
-	v, err := pedersencomm.NewVerifierHomomorphic(crand.Reader, sid)
+	v, err := pedersencomm.NewVerifierHomomorphic(sid)
 	require.NoError(t, err)
 	for _, testCaseEntry := range testResults {
 		// Pick a random scalar for commitment scaling

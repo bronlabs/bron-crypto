@@ -45,7 +45,6 @@ type CommitterHomomorphic struct {
 var _ comm.CommitterHomomorphic[Message, Commitment, Opening] = (*CommitterHomomorphic)(nil)
 
 type VerifierHomomorphic struct {
-	prng      io.Reader
 	sessionId []byte
 }
 
@@ -65,11 +64,8 @@ func NewCommitterHomomorphic(prng io.Reader, sessionId []byte) (*CommitterHomomo
 	return &CommitterHomomorphic{prng, sessionId}, nil
 }
 
-func NewVerifierHomomorphic(prng io.Reader, sessionId []byte) (*VerifierHomomorphic, error) {
-	if prng == nil {
-		return nil, errs.NewIsNil("prng is nil")
-	}
-	return &VerifierHomomorphic{prng, sessionId}, nil
+func NewVerifierHomomorphic(sessionId []byte) (*VerifierHomomorphic, error) {
+	return &VerifierHomomorphic{sessionId}, nil
 }
 
 func (c *CommitterHomomorphic) Commit(message Message) (*Commitment, *Opening, error) {
