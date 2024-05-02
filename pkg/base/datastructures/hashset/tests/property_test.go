@@ -5,38 +5,26 @@ import (
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
-	dstu "github.com/copperexchange/krypton-primitives/pkg/base/datastructures/testutils/set"
+	ds_testutils "github.com/copperexchange/krypton-primitives/pkg/base/datastructures/testutils"
+	"pgregory.net/rapid"
 )
 
-func NewAdapter() *dstu.Adapter[data] {
-	return &dstu.Adapter[data]{
-		ElementToInt: func(x data) int {
-			return int(x)
-		},
-		IntToElement: func(x int) data {
-			return data(x)
-		},
-		SetToInts: func(xs ds.Set[data]) []int {
-			res := make([]int, xs.Size())
-			for i, x := range xs.List() {
-				res[i] = int(x)
-			}
-			return res
-		},
-		IntsToSet: func(xs []int) ds.Set[data] {
-			ys := make([]data, len(xs))
-			for i, x := range xs {
-				ys[i] = data(x)
-			}
-			return hashset.NewHashableHashSet(ys...)
-		},
-	}
+func hashableHashSetGenerator[T ds.AbstractSet[data]](nElements uint64) *rapid.Generator[T] {
+	// TODO: use rapid functions to sample nElements unique elements uniformly
+	return rapid.Custom(func(t *rapid.T) T {
+		set := hashset.NewHashableHashSet[data]()
+		initial := rapid.Uint().Draw(t, "initial")
+		for i := 0; i < int(nElements); i++ {
+			set.Add(data(initial + uint(i)))
+		}
+		return set.(T)
+	})
 }
 
-func Test_Property_HashableHashSet(t *testing.T) {
+func TestHashableHashSet_AbstractSet(t *testing.T) {
 	t.Parallel()
-	adapter := NewAdapter()
-	useVariableSize := -1
-	suite := dstu.NewPropertyTestingSuite(t, useVariableSize, hashset.NewHashableHashSet, adapter)
-	dstu.CheckInvariants(t, suite)
+	MaxNumElements := uint64(100)
+
+	asi := ds_testutils.NewAbstractSetInvariants(MaxNumElements, hashableHashSetGenerator[ds.AbstractSet[data]])
+	asi.Check(t)
 }
