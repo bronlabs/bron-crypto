@@ -30,7 +30,7 @@ var (
 
 type Opening struct {
 	message Message
-	witness Witness
+	Witness Witness
 }
 
 var _ comm.Opening[Message] = (*Opening)(nil)
@@ -54,7 +54,7 @@ type Verifier struct {
 var _ comm.Verifier[Message, Commitment, Opening] = (*Verifier)(nil)
 
 type Commitment struct {
-	commitment []byte
+	Commitment []byte
 }
 
 var _ comm.Commitment = (*Commitment)(nil)
@@ -84,15 +84,15 @@ func encodeWithSessionId(sessionId []byte, message []byte) [][]byte {
 }
 
 func (c *Commitment) Validate() error {
-	if len(c.commitment) != base.CollisionResistanceBytes {
-		return errs.NewArgument("commitment length (%d) != %d", len(c.commitment), base.CollisionResistanceBytes)
+	if len(c.Commitment) != base.CollisionResistanceBytes {
+		return errs.NewArgument("commitment length (%d) != %d", len(c.Commitment), base.CollisionResistanceBytes)
 	}
 	return nil
 }
 
 func (o *Opening) Validate() error {
-	if len(o.witness) < base.CollisionResistanceBytes {
-		return errs.NewArgument("witness length (%d) < %d", len(o.witness), base.CollisionResistanceBytes)
+	if len(o.Witness) < base.CollisionResistanceBytes {
+		return errs.NewArgument("witness length (%d) < %d", len(o.Witness), base.CollisionResistanceBytes)
 	}
 	return nil
 }
@@ -116,11 +116,11 @@ func (v *Verifier) Verify(commitment *Commitment, opening *Opening) error {
 	if opening.Validate() != nil {
 		return errs.NewArgument("unvalid opening")
 	}
-	localCommitment, err := hashing.Hmac(opening.witness, CommitmentHashFunction, encodeWithSessionId(v.sessionId, opening.message)...)
+	localCommitment, err := hashing.Hmac(opening.Witness, CommitmentHashFunction, encodeWithSessionId(v.sessionId, opening.message)...)
 	if err != nil {
 		return errs.WrapFailed(err, "could not recompute the commitment")
 	}
-	if subtle.ConstantTimeCompare(commitment.commitment, localCommitment) != 1 {
+	if subtle.ConstantTimeCompare(commitment.Commitment, localCommitment) != 1 {
 		return errs.NewVerification("verification failed")
 	}
 	return nil
