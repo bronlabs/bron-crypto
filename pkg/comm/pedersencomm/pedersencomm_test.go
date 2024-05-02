@@ -157,15 +157,45 @@ func TestHappyCombine(t *testing.T) {
 	v, err := pedersencomm.NewVerifierHomomorphic(crand.Reader, sid)
 	require.NoError(t, err)
 	for _, testCaseEntry := range testResults {
-		// Pick a random scalar for scaling
-		rnd, err := testCaseEntry.com.Commitment.Curve().ScalarField().Random(crand.Reader)
+		// Pick a random scalar to commit to
+		msgPrime, err := testCaseEntry.com.Commitment.Curve().ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
-		scaledCommitment, err := c.ScaleCommitment(testCaseEntry.com, rnd.Nat())
+		comPrime, opnPrime, err := c.Commit(msgPrime)
 		require.NoError(t, err)
-		scaledOpening, err := v.ScaleOpening(testCaseEntry.opn, rnd.Nat())
+		combinedCommitment, err := c.CombineCommitments(testCaseEntry.com, comPrime)
 		require.NoError(t, err)
-		err = v.Verify(scaledCommitment, scaledOpening)
+		combinedOpening, err := c.CombineOpenings(testCaseEntry.opn, opnPrime)
 		require.NoError(t, err)
+		err = v.Verify(combinedCommitment, combinedOpening)
+		require.NoError(t, err)
+	}
+}
+
+func TestOpenOnWrongCombine(t *testing.T) {
+	t.Parallel()
+	testResults := getEntries()
+	c, err := pedersencomm.NewCommitterHomomorphic(crand.Reader, sid)
+	require.NoError(t, err)
+	v, err := pedersencomm.NewVerifierHomomorphic(crand.Reader, sid)
+	require.NoError(t, err)
+	for _, testCaseEntry := range testResults {
+		// Pick a random scalar to commit to
+		msgPrime, err := testCaseEntry.com.Commitment.Curve().ScalarField().Random(crand.Reader)
+		require.NoError(t, err)
+		comPrime, _, err := c.Commit(msgPrime)
+		require.NoError(t, err)
+		// Pick another random scalar to get an unrelated opening
+		msgPrime, err = testCaseEntry.com.Commitment.Curve().ScalarField().Random(crand.Reader)
+		require.NoError(t, err)
+		_, opnPrime, err := c.Commit(msgPrime)
+		require.NoError(t, err)
+		combinedCommitment, err := c.CombineCommitments(testCaseEntry.com, comPrime)
+		require.NoError(t, err)
+		combinedOpening, err := c.CombineOpenings(testCaseEntry.opn, opnPrime)
+		require.NoError(t, err)
+		err = v.Verify(combinedCommitment, combinedOpening)
+		require.Error(t, err)
+		require.True(t, errs.IsVerification(err))
 	}
 }
 

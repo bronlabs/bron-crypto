@@ -22,6 +22,7 @@ type Witness curves.Scalar
 var _ Witness = Witness(nil)
 
 var (
+	// hardcoded seed used to derive generators along with the session-id
 	somethingUpMySleeve = []byte("COPPER_KRYPTON_JF_SOMETHING_UP_MY_SLEEVE-")
 )
 
@@ -107,9 +108,7 @@ func (c *CommitterHomomorphic) CombineCommitments(x *Commitment, ys ...*Commitme
 
 func (c *CommitterHomomorphic) ScaleCommitment(x *Commitment, n *saferith.Nat) (*Commitment, error) {
 	curve := x.Commitment.Curve()
-	//scale := curve.ScalarField().Scalar().SetNat(n)
-	scale, _ := curve.ScalarField().Random(c.prng)
-	scale = scale.SetNat(n)
+	scale := curve.ScalarField().Scalar().SetNat(n)
 	return &Commitment{x.Commitment.ScalarMul(scale)}, nil
 }
 
@@ -127,9 +126,7 @@ func (c *CommitterHomomorphic) CombineOpenings(x *Opening, ys ...*Opening) (*Ope
 
 func (c *CommitterHomomorphic) ScaleOpening(x *Opening, n *saferith.Nat) (*Opening, error) {
 	curve := x.Witness.ScalarField().Curve()
-	//scale := curve.ScalarField().Scalar().SetNat(n)
-	scale, _ := curve.ScalarField().Random(c.prng)
-	scale = scale.SetNat(n)
+	scale := curve.ScalarField().Scalar().SetNat(n)
 	return &Opening{x.Message().Mul(scale), x.Witness.Mul(scale)}, nil
 }
 
@@ -137,7 +134,7 @@ func (c *Commitment) Validate() error {
 	if c.Commitment == nil {
 		return errs.NewIsNil("commitment is nil")
 	}
-	// TODO: uncomment when implemented
+	// TODO: uncomment when 'IsInPrimeSubGroup' is implemented
 	// if !c.Commitment.IsInPrimeSubGroup() {
 	// 	return errs.NewArgument("commitment is not part of the prime order subgroup")
 	// }
@@ -162,9 +159,9 @@ func (v *VerifierHomomorphic) Verify(commitment *Commitment, opening *Opening) e
 		return errs.NewArgument("unvalid opening")
 	}
 	curve := opening.message.ScalarField().Curve()
-	// Reconstructs mG
+	// Reconstructs the 1st operand
 	mG := curve.Generator().ScalarMul(opening.message)
-	// Reconstructs rH
+	// Reconstructs the 2nd operand
 	HMessage, err := hashing.HashChain(base.RandomOracleHashFunction, v.sessionId, somethingUpMySleeve)
 	if err != nil {
 		return errs.WrapHashing(err, "could not produce dlog of H")
@@ -195,10 +192,7 @@ func (c *VerifierHomomorphic) CombineCommitments(x *Commitment, ys ...*Commitmen
 
 func (c *VerifierHomomorphic) ScaleCommitment(x *Commitment, n *saferith.Nat) (*Commitment, error) {
 	curve := x.Commitment.Curve()
-	//scale := curve.ScalarField().Scalar().SetNat(n)
-	// Workaround because above line cannot run (panic: implement me)
-	scale, _ := curve.ScalarField().Random(c.prng)
-	scale = scale.SetNat(n)
+	scale := curve.ScalarField().Scalar().SetNat(n)
 	return &Commitment{x.Commitment.ScalarMul(scale)}, nil
 }
 
@@ -216,8 +210,6 @@ func (c *VerifierHomomorphic) CombineOpenings(x *Opening, ys ...*Opening) (*Open
 
 func (c *VerifierHomomorphic) ScaleOpening(x *Opening, n *saferith.Nat) (*Opening, error) {
 	curve := x.Witness.ScalarField().Curve()
-	//scale := curve.ScalarField().Scalar().SetNat(n)
-	scale, _ := curve.ScalarField().Random(c.prng)
-	scale = scale.SetNat(n)
+	scale := curve.ScalarField().Scalar().SetNat(n)
 	return &Opening{x.Message().Mul(scale), x.Witness.Mul(scale)}, nil
 }
