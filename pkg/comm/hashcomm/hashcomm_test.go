@@ -289,7 +289,6 @@ func TestOpenOnDefaultDecommitObject(t *testing.T) {
 	for _, testCaseEntry := range testResults {
 		localOpening := testCaseEntry.opn
 		localOpening.Witness = nil
-		// OpenWithSession and check for failure
 		err := v.Verify(testCaseEntry.com, localOpening)
 		require.True(t, errs.IsArgument(err))
 	}
@@ -316,7 +315,6 @@ func TestOpenOnLongCommitment(t *testing.T) {
 	for _, testCaseEntry := range testResults {
 		localCommitment := &hashcomm.Commitment{make([]byte, h().Size()+1)}
 		copy(localCommitment.Commitment, testCaseEntry.com.Commitment)
-		// OpenWithSession and check for failure
 		err := v.Verify(localCommitment, testCaseEntry.opn)
 		require.True(t, errs.IsArgument(err))
 	}
@@ -331,7 +329,6 @@ func TestOpenOnShortCommitment(t *testing.T) {
 	for _, testCaseEntry := range testResults {
 		localCommitment := &hashcomm.Commitment{make([]byte, h().Size()-1)}
 		copy(localCommitment.Commitment, testCaseEntry.com.Commitment)
-		// OpenWithSession and check for failure
 		err := v.Verify(localCommitment, testCaseEntry.opn)
 		require.True(t, errs.IsArgument(err))
 	}
