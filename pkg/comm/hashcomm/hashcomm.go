@@ -29,14 +29,14 @@ var (
 )
 
 type Opening struct {
-	message Message
-	Witness Witness
+	Message_ Message
+	Witness  Witness
 }
 
 var _ comm.Opening[Message] = (*Opening)(nil)
 
 func (o Opening) Message() Message {
-	return o.message
+	return o.Message_
 }
 
 type Committer struct {
@@ -47,7 +47,6 @@ type Committer struct {
 var _ comm.Committer[Message, Commitment, Opening] = (*Committer)(nil)
 
 type Verifier struct {
-	prng      io.Reader
 	sessionId []byte
 }
 
@@ -68,11 +67,8 @@ func NewCommitter(prng io.Reader, sessionId []byte) (*Committer, error) {
 }
 
 // not UC-secure without session-id
-func NewVerifier(prng io.Reader, sessionId []byte) (*Verifier, error) {
-	if prng == nil {
-		return nil, errs.NewIsNil("prng is nil")
-	}
-	return &Verifier{prng, sessionId}, nil
+func NewVerifier(sessionId []byte) (*Verifier, error) {
+	return &Verifier{sessionId}, nil
 }
 
 // Encode the session identifier along with the message to commit to
@@ -116,7 +112,7 @@ func (v *Verifier) Verify(commitment *Commitment, opening *Opening) error {
 	if opening.Validate() != nil {
 		return errs.NewArgument("unvalid opening")
 	}
-	localCommitment, err := hashing.Hmac(opening.Witness, CommitmentHashFunction, encodeWithSessionId(v.sessionId, opening.message)...)
+	localCommitment, err := hashing.Hmac(opening.Witness, CommitmentHashFunction, encodeWithSessionId(v.sessionId, opening.Message_)...)
 	if err != nil {
 		return errs.WrapFailed(err, "could not recompute the commitment")
 	}

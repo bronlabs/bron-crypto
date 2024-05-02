@@ -19,7 +19,7 @@ func TestSimpleHappyPath(t *testing.T) {
 	sessionId := []byte("00000001")
 	c, err := hashcomm.NewCommitter(crand.Reader, sessionId)
 	require.NoError(t, err)
-	v, err := hashcomm.NewVerifier(crand.Reader, sessionId)
+	v, err := hashcomm.NewVerifier(sessionId)
 	require.NoError(t, err)
 	msg := []byte("test")
 	commitment, opening, err := c.Commit(msg)
@@ -176,7 +176,7 @@ func TestCommmitProducesDistinctNonces(t *testing.T) {
 
 func TestOpenOnValidCommitments(t *testing.T) {
 	testResults := getEntries()
-	v, err := hashcomm.NewVerifier(crand.Reader, sid)
+	v, err := hashcomm.NewVerifier(sid)
 	require.NoError(t, err)
 	for _, testCaseEntry := range testResults {
 		// Verify each commitment
@@ -188,7 +188,7 @@ func TestOpenOnValidCommitments(t *testing.T) {
 
 func TestOpenOnModifiedNonce(t *testing.T) {
 	t.Parallel()
-	v, err := hashcomm.NewVerifier(crand.Reader, sid)
+	v, err := hashcomm.NewVerifier(sid)
 	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
@@ -204,7 +204,7 @@ func TestOpenOnModifiedNonce(t *testing.T) {
 
 func TestOpenOnZeroPrefixNonce(t *testing.T) {
 	t.Parallel()
-	v, err := hashcomm.NewVerifier(crand.Reader, sid)
+	v, err := hashcomm.NewVerifier(sid)
 	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
@@ -228,46 +228,46 @@ func TestOpenOnZeroPrefixNonce(t *testing.T) {
 }
 
 // An unrelated message should fail on open
-// func TestOpenOnNewMessage(t *testing.T) {
-// 	t.Parallel()
-// 	v, err := hashcomm.NewVerifier(crand.Reader, sid)
-// 	require.NoError(t, err)
-// 	testResults := getEntries()
-// 	for _, testCaseEntry := range testResults {
-// 		localOpening := testCaseEntry.opn
-// 		// Use a distinct message
-// 		localOpening.Message = []byte("no one expects the spanish inquisition")
-// 		// Verify and check for failure
-// 		err := v.Verify(testCaseEntry.com, localOpening)
-// 		require.True(t, errs.IsVerification(err))
-// 	}
-// }
+func TestOpenOnNewMessage(t *testing.T) {
+	t.Parallel()
+	v, err := hashcomm.NewVerifier(sid)
+	require.NoError(t, err)
+	testResults := getEntries()
+	for _, testCaseEntry := range testResults {
+		localOpening := testCaseEntry.opn
+		// Use a distinct message
+		localOpening.Message_ = []byte("no one expects the spanish inquisition")
+		// Verify and check for failure
+		err := v.Verify(testCaseEntry.com, localOpening)
+		require.True(t, errs.IsVerification(err))
+	}
+}
 
 // A modified message should fail on open
-// func TestOpenOnModifiedMessage(t *testing.T) {
-// 	t.Parallel()
-// 	v, err := hashcomm.NewVerifier(crand.Reader, sid)
-// 	require.NoError(t, err)
-// 	testResults := getEntries()
-// 	localTestResults := testResults
-// 	for _, testCaseEntry := range localTestResults {
-// 		// Skip the empty string message for this test case
-// 		if len(testCaseEntry.msg) == 0 {
-// 			continue
-// 		}
-// 		localOpening := testCaseEntry.opn
-// 		// Modify the message LSB
-// 		localOpening.message[0] ^= 0x01
-// 		// Verify and check for failure
-// 		err := v.Verify(testCaseEntry.com, localOpening)
-// 		require.True(t, errs.IsVerification(err))
-// 	}
-// }
+func TestOpenOnModifiedMessage(t *testing.T) {
+	t.Parallel()
+	v, err := hashcomm.NewVerifier(sid)
+	require.NoError(t, err)
+	testResults := getEntries()
+	localTestResults := testResults
+	for _, testCaseEntry := range localTestResults {
+		// Skip the empty string message for this test case
+		if len(testCaseEntry.msg) == 0 {
+			continue
+		}
+		localOpening := testCaseEntry.opn
+		// Modify the message LSB
+		localOpening.Message_[0] ^= 0x01
+		// Verify and check for failure
+		err := v.Verify(testCaseEntry.com, localOpening)
+		require.True(t, errs.IsVerification(err))
+	}
+}
 
 // A modified commitment should fail on open
 func TestOpenOnModifiedCommitment(t *testing.T) {
 	t.Parallel()
-	v, err := hashcomm.NewVerifier(crand.Reader, sid)
+	v, err := hashcomm.NewVerifier(sid)
 	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
@@ -283,7 +283,7 @@ func TestOpenOnModifiedCommitment(t *testing.T) {
 // An empty decommit should fail to open
 func TestOpenOnDefaultDecommitObject(t *testing.T) {
 	t.Parallel()
-	v, err := hashcomm.NewVerifier(crand.Reader, sid)
+	v, err := hashcomm.NewVerifier(sid)
 	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
@@ -297,7 +297,7 @@ func TestOpenOnDefaultDecommitObject(t *testing.T) {
 // A nil commit should return an error
 func TestOpenOnNilCommitment(t *testing.T) {
 	t.Parallel()
-	v, err := hashcomm.NewVerifier(crand.Reader, sid)
+	v, err := hashcomm.NewVerifier(sid)
 	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
@@ -309,7 +309,7 @@ func TestOpenOnNilCommitment(t *testing.T) {
 // Too long commitment should produce an error
 func TestOpenOnLongCommitment(t *testing.T) {
 	t.Parallel()
-	v, err := hashcomm.NewVerifier(crand.Reader, sid)
+	v, err := hashcomm.NewVerifier(sid)
 	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
@@ -323,7 +323,7 @@ func TestOpenOnLongCommitment(t *testing.T) {
 // Too short commitment should produce an error
 func TestOpenOnShortCommitment(t *testing.T) {
 	t.Parallel()
-	v, err := hashcomm.NewVerifier(crand.Reader, sid)
+	v, err := hashcomm.NewVerifier(sid)
 	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
