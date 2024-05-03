@@ -270,9 +270,6 @@ func CheckSetInvariants[S ds.Set[E], E any](t *testing.T, pt *tu.CollectionPrope
 		invs.Clear(t, A)
 	}))
 	t.Run("Union", rapid.MakeCheck(func(rt *rapid.T) {
-
-		pass data here -> A, B 
-
 		A := pt.VariableSizeGenerator().Draw(rt, "lhs of union")
 		B := pt.VariableSizeGenerator().Draw(rt, "rhs of union")
 		invs.Union(t, A, B)

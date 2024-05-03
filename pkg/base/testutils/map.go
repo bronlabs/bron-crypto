@@ -22,14 +22,14 @@ type MapPropertyTester[M Map[K, V], K, V any] struct {
 	BoundedIntGenerator *rapid.Generator[int]
 }
 
-func (pt *MapPropertyTester[M, K, V]) VariableSizeGenerator() *rapid.Generator[K]
+// func (pt *MapPropertyTester[M, K, V]) VariableSizeGenerator() *rapid.Generator[K]
 
-func (pt *MapPropertyTester[M, K, V]) FixedSizeGenerator(positiveSize int) *rapid.Generator[K]
+// func (pt *MapPropertyTester[M, K, V]) FixedSizeGenerator(positiveSize int) *rapid.Generator[K]
 
-func (pt *MapPropertyTester[M, K, V]) KeyGenerator() *rapid.Generator[K]
-func (pt *MapPropertyTester[M, K, V]) FixedSizeKeySliceGenerator(positiveSize int, distinct bool) *rapid.Generator[K]
-func (pt *MapPropertyTester[M, K, V]) VariableSizeKeySliceGenerator(distinct bool) *rapid.Generator[K]
+// func (pt *MapPropertyTester[M, K, V]) KeyGenerator() *rapid.Generator[K]
+// func (pt *MapPropertyTester[M, K, V]) FixedSizeKeySliceGenerator(positiveSize int, distinct bool) *rapid.Generator[K]
+// func (pt *MapPropertyTester[M, K, V]) VariableSizeKeySliceGenerator(distinct bool) *rapid.Generator[K]
 
-func (pt *MapPropertyTester[M, K, V]) ValueGenerator() *rapid.Generator[V]
-func (pt *MapPropertyTester[M, K, V]) FixedSizeValueSliceGenerator(positiveSize int, distinct bool) *rapid.Generator[V]
-func (pt *MapPropertyTester[M, K, V]) VariableSizeValueSliceGenerator(distinct bool) *rapid.Generator[V]
+// func (pt *MapPropertyTester[M, K, V]) ValueGenerator() *rapid.Generator[V]
+// func (pt *MapPropertyTester[M, K, V]) FixedSizeValueSliceGenerator(positiveSize int, distinct bool) *rapid.Generator[V]
+// func (pt *MapPropertyTester[M, K, V]) VariableSizeValueSliceGenerator(distinct bool) *rapid.Generator[V]
