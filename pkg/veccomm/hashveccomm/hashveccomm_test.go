@@ -1,19 +1,19 @@
-package hashchaincomm_test
+package hashveccomm_test
 
 import (
 	crand "crypto/rand"
 	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashchaincomm"
+	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSimpleHappyPath(t *testing.T) {
 	sessionId := []byte("00000001")
-	c, err := hashchaincomm.NewVectorCommitter(crand.Reader, sessionId)
+	c, err := hashveccomm.NewVectorCommitter(crand.Reader, sessionId)
 	require.NoError(t, err)
-	v, err := hashchaincomm.NewVectorVerifier(sessionId)
+	v, err := hashveccomm.NewVectorVerifier(sessionId)
 	require.NoError(t, err)
 
 	messages := make([]hashcomm.Message, 3)

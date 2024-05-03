@@ -1,4 +1,4 @@
-package hashchaincomm
+package hashveccomm
 
 import (
 	"bytes"
@@ -7,18 +7,20 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/comm"
 	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
 	"github.com/copperexchange/krypton-primitives/pkg/veccomm"
 )
 
-const Name = "HASHCHAIN_COMMITMENT"
+const Name = "HASH_VECTOR_COMMITMENT"
 
-type VectorCommitter struct {
-	committer *hashcomm.Committer
+type Opening struct {
+	opening hashcomm.Opening
+	Vector_ veccomm.Vector[hashcomm.Message]
 }
 
-type VectorVerifier struct {
-	verifier *hashcomm.Verifier
+func (o Opening) Message() veccomm.Vector[hashcomm.Message] {
+	return o.Vector_
 }
 
 type VectorCommitment struct {
@@ -26,10 +28,23 @@ type VectorCommitment struct {
 	length     uint
 }
 
-type Opening struct {
-	opening hashcomm.Opening
-	Vector_ veccomm.Vector[hashcomm.Message]
+func (vc VectorCommitment) Length() uint {
+	return vc.length
 }
+
+var _ veccomm.VectorCommitment = (*VectorCommitment)(nil)
+
+type VectorCommitter struct {
+	committer *hashcomm.Committer
+}
+
+var _ veccomm.VectorCommitter[hashcomm.Message, veccomm.Vector[hashcomm.Message], VectorCommitment, Opening] = (*VectorCommitter)(nil)
+
+type VectorVerifier struct {
+	verifier *hashcomm.Verifier
+}
+
+var _ veccomm.VectorVerifier[hashcomm.Message, veccomm.Vector[hashcomm.Message], VectorCommitment, Opening] = (*VectorVerifier)(nil)
 
 // not UC-secure without session-id
 func NewVectorCommitter(prng io.Reader, sessionId []byte) (*VectorCommitter, error) {
@@ -78,4 +93,12 @@ func (v *VectorVerifier) Verify(veccom *VectorCommitment, opening *Opening) erro
 		return errs.NewVerification("verification failed")
 	}
 	return nil
+}
+
+func (c *VectorCommitter) OpenAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], fullOpening Opening) (opening *comm.Opening[hashcomm.Message], err error) {
+	panic("implement me")
+}
+
+func (v *VectorVerifier) VerifyAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], fullOpening comm.Opening[hashcomm.Message]) error {
+	panic("implement me")
 }
