@@ -13,12 +13,16 @@ func TestSimpleHappyPath(t *testing.T) {
 	sessionId := []byte("00000001")
 	c, err := hashchaincomm.NewVectorCommitter(crand.Reader, sessionId)
 	require.NoError(t, err)
+	v, err := hashchaincomm.NewVectorVerifier(sessionId)
+	require.NoError(t, err)
 
 	messages := make([]hashcomm.Message, 3)
 	messages[0] = []byte("Hello")
 	messages[1] = []byte("World")
 	messages[2] = []byte("!")
 
-	_, _, err = c.Commit(messages)
+	com, opn, err := c.Commit(messages)
+	require.NoError(t, err)
+	err = v.Verify(com, opn)
 	require.NoError(t, err)
 }

@@ -1,6 +1,7 @@
 package hashchaincomm
 
 import (
+	"crypto/subtle"
 	"io"
 	"slices"
 
@@ -24,8 +25,8 @@ type VectorVerifier struct {
 }
 
 type VectorCommitment struct {
-	hashcomm.Commitment
-	length uint
+	commitment hashcomm.Commitment
+	length     uint
 }
 
 type Opening struct {
@@ -69,4 +70,16 @@ func (c *VectorCommitter) Commit(vector veccomm.Vector[hashcomm.Message]) (*Vect
 		return nil, nil, errs.WrapFailed(err, "could not compute commitment")
 	}
 	return &VectorCommitment{hashcomm.Commitment{Commitment: commitment}, uint(len(vector))}, &Opening{Vector_: vector, Witness: witness}, nil
+}
+
+func (v *VectorVerifier) Verify(veccom *VectorCommitment, opening *Opening) error {
+	localCommitment, err := hashing.HmacChain(opening.Witness, hashcomm.CommitmentHashFunction, encodeWithSessionId(v.sessionId, opening.Vector_)...)
+	if err != nil {
+		return errs.WrapFailed(err, "could not recompute the commitment")
+	}
+	if subtle.ConstantTimeCompare(veccom.commitment.Commitment, localCommitment) != 1 {
+		return errs.NewVerification("verification failed")
+	}
+	return nil
+
 }
