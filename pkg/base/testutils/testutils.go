@@ -1,21 +1,17 @@
 package testutils
 
 import (
-	"reflect"
-	"testing"
-
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"pgregory.net/rapid"
 )
 
-func CompileInvariant(t *testing.T, f any, args ...any) func(*rapid.T) {
-	t.Helper()
-	return func(t *rapid.T) {
-		v := reflect.ValueOf(f)
-		rargs := make([]reflect.Value, len(args)+1)
-		rargs[0] = reflect.ValueOf(t)
-		for i, a := range args {
-			rargs[i+1] = reflect.ValueOf(a)
-		}
-		v.Call(rargs)
+func UintsGenerator(minLen, maxLen int, distinct bool) *rapid.Generator[[]uint] {
+	if maxLen < 1 || minLen < 1 || maxLen < maxLen {
+		panic(errs.NewFailed("maxLen (%d) & minLen (%d) ", maxLen, minLen))
 	}
+
+	if distinct {
+		return rapid.SliceOfNDistinct(rapid.Uint(), minLen, maxLen, rapid.ID)
+	}
+	return rapid.SliceOfN(rapid.Uint(), minLen, maxLen)
 }
