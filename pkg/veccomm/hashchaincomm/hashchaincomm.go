@@ -28,6 +28,11 @@ type VectorCommitment struct {
 	length uint
 }
 
+type Opening struct {
+	Vector_ veccomm.Vector[hashcomm.Message]
+	Witness hashcomm.Witness
+}
+
 // not UC-secure without session-id
 func NewVectorCommitter(prng io.Reader, sessionId []byte) (*VectorCommitter, error) {
 	if prng == nil {
@@ -54,7 +59,7 @@ func encodeWithSessionId(sessionId []byte, vector veccomm.Vector[hashcomm.Messag
 	return encoded
 }
 
-func (c *VectorCommitter) Commit(vector veccomm.Vector[hashcomm.Message]) (*VectorCommitment, *hashcomm.Opening, error) {
+func (c *VectorCommitter) Commit(vector veccomm.Vector[hashcomm.Message]) (*VectorCommitment, *Opening, error) {
 	witness := make([]byte, base.CollisionResistanceBytes)
 	if _, err := io.ReadFull(c.prng, witness); err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "reading random bytes")
@@ -63,5 +68,5 @@ func (c *VectorCommitter) Commit(vector veccomm.Vector[hashcomm.Message]) (*Vect
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not compute commitment")
 	}
-	return &VectorCommitment{hashcomm.Commitment{Commitment: commitment}, uint(len(vector))}, &hashcomm.Opening{Message_: nil, Witness: witness}, nil
+	return &VectorCommitment{hashcomm.Commitment{Commitment: commitment}, uint(len(vector))}, &Opening{Vector_: vector, Witness: witness}, nil
 }
