@@ -27,14 +27,14 @@ var (
 )
 
 type Opening struct {
-	message Message
-	Witness Witness
+	Message_ Message
+	Witness  Witness
 }
 
 var _ comm.Opening[Message] = (*Opening)(nil)
 
 func (o Opening) Message() Message {
-	return o.message
+	return o.Message_
 }
 
 type CommitterHomomorphic struct {
@@ -114,7 +114,7 @@ func (c *CommitterHomomorphic) CombineOpenings(x *Opening, ys ...*Opening) (*Ope
 	}
 	acc := x
 	for _, y := range ys {
-		acc.message = acc.message.Add(y.message)
+		acc.Message_ = acc.Message_.Add(y.Message_)
 		acc.Witness = acc.Witness.Add(y.Witness)
 	}
 	return acc, nil
@@ -138,7 +138,7 @@ func (c *Commitment) Validate() error {
 }
 
 func (o *Opening) Validate() error {
-	if o.message == nil {
+	if o.Message_ == nil {
 		return errs.NewIsNil("message is nil")
 	}
 	if o.Witness == nil {
@@ -154,9 +154,9 @@ func (v *VerifierHomomorphic) Verify(commitment *Commitment, opening *Opening) e
 	if opening.Validate() != nil {
 		return errs.NewArgument("unvalid opening")
 	}
-	curve := opening.message.ScalarField().Curve()
+	curve := opening.Message_.ScalarField().Curve()
 	// Reconstructs the 1st operand
-	mG := curve.Generator().ScalarMul(opening.message)
+	mG := curve.Generator().ScalarMul(opening.Message_)
 	// Reconstructs the 2nd operand
 	HMessage, err := hashing.HashChain(base.RandomOracleHashFunction, v.sessionId, somethingUpMySleeve)
 	if err != nil {
@@ -198,7 +198,7 @@ func (c *VerifierHomomorphic) CombineOpenings(x *Opening, ys ...*Opening) (*Open
 	}
 	acc := x
 	for _, y := range ys {
-		acc.message = acc.message.Add(y.message)
+		acc.Message_ = acc.Message_.Add(y.Message_)
 		acc.Witness = acc.Witness.Add(y.Witness)
 	}
 	return acc, nil
