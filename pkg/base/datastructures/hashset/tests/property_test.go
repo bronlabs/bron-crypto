@@ -3,11 +3,12 @@ package hashset_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	dstu "github.com/copperexchange/krypton-primitives/pkg/base/datastructures/testutils"
 	tu "github.com/copperexchange/krypton-primitives/pkg/base/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 var _ tu.CollectionAdapters[ds.Set[data], data] = (*adapters)(nil)
