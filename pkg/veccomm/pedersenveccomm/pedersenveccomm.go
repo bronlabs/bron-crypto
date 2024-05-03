@@ -61,6 +61,10 @@ func NewVectorVerifier(sessionId []byte) (*VectorVerifier, error) {
 	return &VectorVerifier{committer}, nil
 }
 
+// Uncomplete at this stage: only commit to the first message
+// As pedersencomm is currently implemented, it is not possible to rely on it for vector commitments
+// For Pedersen vector commitments, we should pick a single random and use a different point for each msg
+// i.e. commitment = rH + m_0G_0 + m_1G_1 + ... + m_iG_i
 func (c *VectorCommitter) Commit(vector veccomm.Vector[pedersencomm.Message]) (*VectorCommitment, *Opening, error) {
 	commitment, opening, err := c.committer.Commit(vector[0])
 	if err != nil {
