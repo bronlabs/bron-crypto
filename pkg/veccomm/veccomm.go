@@ -11,7 +11,7 @@ type VectorCommitment interface {
 
 type VectorCommitter[M comm.Message, V Vector[M], C VectorCommitment, O comm.Opening[V]] interface {
 	comm.Committer[V, C, O]
-	OpenAtIndex(index uint, vector V, fullOpening O) (opening comm.Opening[M], err error)
+	OpenAtIndex(index uint, vector V, fullOpening O) (opening *comm.Opening[M], err error)
 }
 
 type VectorVerifier[M comm.Message, V Vector[M], C VectorCommitment, O comm.Opening[V]] interface {

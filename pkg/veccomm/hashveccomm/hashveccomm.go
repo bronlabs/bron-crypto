@@ -88,6 +88,9 @@ func (c *VectorCommitter) Commit(vector veccomm.Vector[hashcomm.Message]) (*Vect
 }
 
 func (v *VectorVerifier) Verify(veccom *VectorCommitment, opening *Opening) error {
+	if !(bytes.Equal(chainEncodingVector(opening.Vector_), opening.opening.Message_)) {
+		return errs.NewVerification("commitment is not tied to the vector")
+	}
 	err := v.verifier.Verify(&veccom.commitment, &opening.opening)
 	if err != nil {
 		return errs.NewVerification("verification failed")
