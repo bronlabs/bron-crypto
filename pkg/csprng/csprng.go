@@ -4,12 +4,17 @@ import (
 	"io"
 )
 
+type Seedable interface {
+	io.Reader // Read pseudo-random bytes, to use like `crand.Read()`
+
+	Seed(seed, salt []byte) error
+}
+
 // CSPRNG is a cryptographically-secure Pseudo-Random Number Generator, following
 // the API from NIST SP-800-90A rev.1 specification with some additional functions.
 type CSPRNG interface {
-	io.Reader // Read pseudo-random bytes, to use like `crand.Read()`
-
 	/*.....Functions provided by the NIST SP-800-90A rev.1 specification......*/
+	Seedable
 
 	// Read pseudo-random bytes. Salts the read with `readSalt` if provided.
 	Generate(buffer, readSalt []byte) error

@@ -21,16 +21,16 @@ const (
 	maxNumberOfBytesDF            = 512 >> 3 // 512 bits     //  `max_number_of_bits`
 	maxNumberOfBytesRequest       = 1 << 16  // 2^19 bit     //  `max_number_of_bits_per_request`
 	maxLength               int64 = 1 << 32  // 2^35 bits    //  `max_length`, `max_additional_input_length`,
-	// .                                               //   `max_personalization_string_length`.
+	// Name                    csprng.Name = "NIST_SP800-90A_1"
 )
 
-// PrngNist corresponds to an instantiated PRNG based on a block cipher from NIST SP-800-90A rev. 1.
-type PrngNist struct {
+// Prng corresponds to an instantiated PRNG based on a block cipher from NIST SP-800-90A rev. 1.
+type Prng struct {
 	entropySource io.Reader // Source used to sample truly random seeds
 	ctrDrbg       *CtrDRBG  // Internal PRNG based on AES block cipher in CTR mode.
 }
 
-// NewNistPRNG creates a PRNG as specified in SP-800-90A section 10.2. The PRNG uses
+// NewPrng creates a PRNG as specified in SP-800-90A section 10.2. The PRNG uses
 // the AES block cipher. The general instantiation is specified in section 9.1.
 // The `keySize` parameter must be one of {16, 24, 32} for the corresponding AES
 // block cipher. There are two truly random elements to seed this PRNG:
@@ -40,8 +40,8 @@ type PrngNist struct {
 //
 // The (optional) `personalization` can be used to "salt" this PRNG. In the
 // context of MPC protocols, the SessionID could be used.
-func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, personalization []byte) (prng csprng.CSPRNG, err error) {
-	NistPrng := new(PrngNist)
+func NewPrng(keySize int, entropySource io.Reader, entropyInput, nonce, personalization []byte) (prng csprng.CSPRNG, err error) {
+	NistPrng := new(Prng)
 	// 1. IF (requested_security_strength > ... --> Skipped, security_strength = keyLen.
 	// 2. IF prediction_resistance_flag... --> Skipped, No prediction resistance.
 	// 3. IF (len(personalization_string) > max_personalization_string_length) --> error.
@@ -99,7 +99,7 @@ func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, pers
 //	B) An optional additionalInput, acting as an additional personalization string (see `NewPRNG`). Can be left empty.
 //
 // The entropyInput length must be at least keySize Bytes .
-func (prg *PrngNist) Reseed(entropyInput, additionalInput []byte) (err error) {
+func (prg *Prng) Reseed(entropyInput, additionalInput []byte) (err error) {
 	// 1. Using state_handle, obtain the current internal state. --> implicit.
 	// 2. IF prediction_resistance_flag... --> Skipped, implicit.
 	// 3. IF len(additional_input) > max_additional_input_length: return EEROR_FLAG
@@ -136,7 +136,7 @@ func (prg *PrngNist) Reseed(entropyInput, additionalInput []byte) (err error) {
 //
 // If the PRNG needs reseeding, it will be carried out automatically if the prng
 // was initialised with an `entropySource`, raising an error otherwise.
-func (prg *PrngNist) Generate(buffer, additionalInput []byte) error {
+func (prg *Prng) Generate(buffer, additionalInput []byte) error {
 	if len(buffer) == 0 {
 		return errs.NewLength("buffer must be non-empty")
 	}
@@ -192,7 +192,7 @@ dataGeneration:
 // `Generate` on each chunk. If the PRNG needs reseeding, it will be carried out
 // automatically if the prng was initialised with an `entropySource`, raising an
 // error otherwise.
-func (prg *PrngNist) Read(buffer []byte) (n int, err error) {
+func (prg *Prng) Read(buffer []byte) (n int, err error) {
 	numRequests := utils.CeilDiv(len(buffer), maxNumberOfBytesRequest)
 	for i := 0; i < numRequests; i++ {
 		end := min((i+1)*maxNumberOfBytesRequest, len(buffer))
@@ -206,12 +206,12 @@ func (prg *PrngNist) Read(buffer []byte) (n int, err error) {
 
 // SecurityStrength returns the computational security parameter of this prng (in Bytes).
 // Equates to the length of the key used in the internal AES block cipher.
-func (prg *PrngNist) SecurityStrength() int {
+func (prg *Prng) SecurityStrength() int {
 	return prg.ctrDrbg.keySize
 }
 
 // Seed re-instantiates the PRNG with a new seed (`entropyInput`) and salt (`nonce`).
-func (prg *PrngNist) Seed(entropyInput, nonce []byte) (err error) {
+func (prg *Prng) Seed(entropyInput, nonce []byte) (err error) {
 	// Check seed and nonce
 	switch entropyInputLen := len(entropyInput); {
 	case entropyInputLen < prg.SecurityStrength():
@@ -236,13 +236,13 @@ func (prg *PrngNist) Seed(entropyInput, nonce []byte) (err error) {
 }
 
 // New returns a new NistPRNG with the provided seed and salt.
-func (prg *PrngNist) New(seed, salt []byte) (csprng.CSPRNG, error) {
-	return NewNistPRNG(prg.SecurityStrength(), prg.entropySource, seed, salt, nil)
+func (prg *Prng) New(seed, salt []byte) (csprng.CSPRNG, error) {
+	return NewPrng(prg.SecurityStrength(), prg.entropySource, seed, salt, nil)
 }
 
 // Clone returns a copy of this NistPRNG.
-func (prg *PrngNist) Clone() csprng.CSPRNG {
-	return &PrngNist{
+func (prg *Prng) Clone() csprng.CSPRNG {
+	return &Prng{
 		entropySource: prg.entropySource,
 		ctrDrbg:       prg.ctrDrbg.Clone(),
 	}

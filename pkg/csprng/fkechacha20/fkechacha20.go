@@ -7,7 +7,10 @@ import (
 	"github.com/copperexchange/krypton-primitives/thirdparty/golang/crypto/chacha20"
 )
 
-const ChachaPRNGSecurityStrength = chacha20.KeySize // 256 bits
+const (
+	ChachaPRNGSecurityStrength = chacha20.KeySize // 256 bits
+	// Name csprng.Name = "FKE_CHACHA_20"
+)
 
 // Prng uses a fast-erasure version of `chacha20` stream cipher as a Prng.
 type Prng struct {

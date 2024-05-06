@@ -43,7 +43,7 @@ func New(prng io.Reader, deterministicWrappingKey types.AuthKey) (csprng.CSPRNG,
 
 	nistPersonilizationString := fmt.Sprintf("krand_%x-", deterministicWrappingKey.PublicKey().ToAffineCompressed())
 
-	wrappedNistPrng, err := nist.NewNistPRNG(randwrap.NBytes, wrappedPrng, nil, nil, []byte(nistPersonilizationString))
+	wrappedNistPrng, err := nist.NewPrng(randwrap.NBytes, wrappedPrng, nil, nil, []byte(nistPersonilizationString))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't initialise nist prng with wrapped prng as its entropy source")
 	}

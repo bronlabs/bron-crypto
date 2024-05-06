@@ -214,7 +214,7 @@ func (nistTest *NistTestHelper) RunInit(AesKeySize int) (csprng.CSPRNG, error) {
 	if nistTest.State.Count != nistTest.CountNo {
 		return nil, errs.NewArgument("TestState.Count != CountNo (%d != %d)", nistTest.State.Count, nistTest.CountNo)
 	}
-	prng, err := nist.NewNistPRNG(AesKeySize, nil, nistTest.State.EntropyInput, nistTest.State.Nonce, nistTest.State.PersonalizationStr)
+	prng, err := nist.NewPrng(AesKeySize, nil, nistTest.State.EntropyInput, nistTest.State.Nonce, nistTest.State.PersonalizationStr)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot instantiate PRNG")
 	}
