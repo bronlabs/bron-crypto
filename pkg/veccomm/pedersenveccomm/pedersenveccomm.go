@@ -86,6 +86,6 @@ func (c *VectorCommitter) OpenAtIndex(index uint, vector veccomm.Vector[pedersen
 	panic("implement me")
 }
 
-func (v *VectorVerifier) VerifyAtIndex(index uint, vector veccomm.Vector[pedersencomm.Message], fullOpening comm.Opening[pedersencomm.Message]) error {
+func (v *VectorVerifier) VerifyAtIndex(index uint, vector veccomm.Vector[pedersencomm.Message], opening comm.Opening[pedersencomm.Message]) error {
 	panic("implement me")
 }

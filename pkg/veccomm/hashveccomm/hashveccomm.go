@@ -15,7 +15,7 @@ import (
 const Name = "HASH_VECTOR_COMMITMENT"
 
 type Opening struct {
-	opening hashcomm.Opening
+	opening *hashcomm.Opening
 	vector  veccomm.Vector[hashcomm.Message]
 }
 
@@ -68,26 +68,35 @@ func encode(msg []byte, i int) []byte {
 	return slices.Concat(bitstring.ToBytes32LE(int32(i)), bitstring.ToBytes32LE(int32(len(msg))), msg)
 }
 
-func chainEncodingVector(vector veccomm.Vector[hashcomm.Message]) hashcomm.Message {
+func concatenateVector(vector veccomm.Vector[hashcomm.Message]) hashcomm.Message {
 	encoded := make([][]byte, len(vector))
 	for i, m := range vector {
 		encoded[i] = encode(m, i)
-		if i > 0 {
-			encoded[i] = append(encoded[i-1], encoded[i]...)
-		}
 	}
 	return bytes.Join(encoded, nil)
 }
+
+// chain encoding does not seem to bring any benefits here
+// func chainEncodingVector(vector veccomm.Vector[hashcomm.Message]) hashcomm.Message {
+// 	encoded := make([][]byte, len(vector))
+// 	for i, m := range vector {
+// 		encoded[i] = encode(m, i)
+// 		if i > 0 {
+// 			encoded[i] = append(encoded[i-1], encoded[i]...)
+// 		}
+// 	}
+// 	return bytes.Join(encoded, nil)
+// }
 
 func (c *VectorCommitter) Commit(vector veccomm.Vector[hashcomm.Message]) (*VectorCommitment, *Opening, error) {
 	if c == nil {
 		return nil, nil, errs.NewIsNil("receiver")
 	}
-	commitment, opening, err := c.committer.Commit(chainEncodingVector(vector))
+	commitment, opening, err := c.committer.Commit(concatenateVector(vector))
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not compute commitment")
 	}
-	return &VectorCommitment{commitment, uint(len(vector))}, &Opening{opening, vector}, nil
+	return &VectorCommitment{commitment, uint(len(vector))}, &Opening{&opening, vector}, nil
 }
 
 func (vc *VectorCommitment) Validate() error {
@@ -110,10 +119,10 @@ func (v *VectorVerifier) Verify(veccom *VectorCommitment, opening *Opening) erro
 	if err := veccom.Validate(); err != nil {
 		return errs.WrapFailed(err, "commitment not valid")
 	}
-	if !(bytes.Equal(chainEncodingVector(opening.vector), opening.opening.Message_)) {
+	if !(bytes.Equal(concatenateVector(opening.vector), opening.opening.Message_)) {
 		return errs.NewVerification("commitment is not tied to the vector")
 	}
-	err := v.verifier.Verify(veccom.commitment, &opening.opening)
+	err := v.verifier.Verify(veccom.commitment, opening.opening)
 	if err != nil {
 		return errs.NewVerification("verification failed")
 	}
@@ -124,6 +133,6 @@ func (c *VectorCommitter) OpenAtIndex(index uint, vector veccomm.Vector[hashcomm
 	panic("implement me")
 }
 
-func (v *VectorVerifier) VerifyAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], fullOpening comm.Opening[hashcomm.Message]) error {
+func (v *VectorVerifier) VerifyAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], opening comm.Opening[hashcomm.Message]) error {
 	panic("implement me")
 }
