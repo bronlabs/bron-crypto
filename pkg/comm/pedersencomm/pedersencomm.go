@@ -43,8 +43,8 @@ type HomomorphicCommitmentScheme struct{}
 var _ comm.HomomorphicCommitmentScheme[Message, Commitment, *Opening] = (*HomomorphicCommitmentScheme)(nil)
 
 type HomomorphicCommitter struct {
-	prng      io.Reader
-	generator curves.Point
+	Prng      io.Reader
+	Generator curves.Point
 	HomomorphicCommitmentScheme
 }
 
@@ -69,11 +69,11 @@ func NewHomomorphicCommitter(sessionId []byte, prng io.Reader, curve curves.Curv
 		return nil, errs.NewIsNil("prng is nil")
 	}
 	// Generate a random point from the sessionId and NothingUpMySleeve
-	generatorMessage, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, somethingUpMySleeve)
+	h, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, somethingUpMySleeve)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce dlog of H")
 	}
-	generator, err := curve.Hash(generatorMessage)
+	generator, err := curve.Hash(h)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "failed to hash to curve for H")
 	}
@@ -89,11 +89,11 @@ func (c *HomomorphicCommitter) Commit(message Message) (Commitment, *Opening, er
 		return Commitment{}, nil, errs.NewIsNil("receiver")
 	}
 	curve := message.ScalarField().Curve()
-	witness, _ := message.ScalarField().Random(c.prng)
+	witness, _ := message.ScalarField().Random(c.Prng)
 	// Generate the 1st operand of the commitment
 	mG := curve.Generator().ScalarMul(message)
 	// Generate the 2nd operand of the commitment
-	rH := c.generator.ScalarMul(witness)
+	rH := c.Generator.ScalarMul(witness)
 	commitment := rH.Add(mG)
 	return Commitment{commitment}, &Opening{message, witness}, nil
 }

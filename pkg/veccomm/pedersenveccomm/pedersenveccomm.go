@@ -12,10 +12,14 @@ import (
 
 const Name = "PEDERSEN_VECTOR_COMMITMENT"
 
+type Vector = veccomm.Vector[pedersencomm.Message]
+
 type Opening struct {
 	opening pedersencomm.Opening
 	Vector_ veccomm.Vector[pedersencomm.Message]
 }
+
+var _ comm.Opening[Vector] = (*Opening)(nil)
 
 func (o *Opening) Message() veccomm.Vector[pedersencomm.Message] {
 	return o.Vector_
@@ -62,19 +66,36 @@ func NewVectorVerifier(sessionId []byte) (*VectorVerifier, error) {
 	return &VectorVerifier{committer}, nil
 }
 
-// Uncomplete at this stage: only commit to the first message
-// As pedersencomm is currently implemented, it is not possible to rely on it for vector commitments
-// For Pedersen vector commitments, we should pick a single random and use a different point for each msg
-// i.e. commitment = rH + m_0G_0 + m_1G_1 + ... + m_iG_i
-func (c *VectorCommitter) Commit(vector veccomm.Vector[pedersencomm.Message]) (*VectorCommitment, *Opening, error) {
-	commitment, opening, err := c.committer.Commit(vector[0])
+func (c *VectorCommitter) Commit(vector Vector) (*VectorCommitment, *Opening, error) {
+	if c == nil {
+		return nil, nil, errs.NewIsNil("receiver")
+	}
+	curve := c.committer.Generator.Curve()
+	nonce, err := curve.ScalarField().Random(c.committer.Prng)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not draw the nonce at random")
+	}
+	witness, err := curve.ScalarField().Random(c.committer.Prng)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not draw the witness at random")
+	}
+	commitment := c.committer.Generator.ScalarMul(witness)
+	for _, msg := range vector {
+		localGenerator := curve.Generator().ScalarMul(nonce)
+		nonce = nonce.Increment()
+		mG := localGenerator.ScalarMul(msg)
+		commitment = commitment.Add(mG)
+	}
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not compute commitment")
 	}
-	return &VectorCommitment{&commitment, uint(len(vector))}, &Opening{*opening, vector}, nil
+	return &VectorCommitment{&pedersencomm.Commitment{commitment}, uint(len(vector))}, &Opening{pedersencomm.Opening{nil, witness}, vector}, nil
 }
 
 func (v *VectorVerifier) Verify(veccom *VectorCommitment, opening *Opening) error {
+	if v == nil {
+		return errs.NewIsNil("receiver")
+	}
 	err := v.verifier.Verify(*veccom.commitment, &opening.opening)
 	if err != nil {
 		return errs.NewVerification("verification failed")
@@ -82,10 +103,10 @@ func (v *VectorVerifier) Verify(veccom *VectorCommitment, opening *Opening) erro
 	return nil
 }
 
-func (c *VectorCommitter) OpenAtIndex(index uint, vector veccomm.Vector[pedersencomm.Message], fullOpening *Opening) (opening *comm.Opening[pedersencomm.Message], err error) {
+func (c *VectorCommitter) OpenAtIndex(index uint, vector Vector, fullOpening *Opening) (opening comm.Opening[pedersencomm.Message], err error) {
 	panic("implement me")
 }
 
-func (v *VectorVerifier) VerifyAtIndex(index uint, vector veccomm.Vector[pedersencomm.Message], opening comm.Opening[pedersencomm.Message]) error {
+func (v *VectorVerifier) VerifyAtIndex(index uint, vector Vector, opening comm.Opening[pedersencomm.Message]) error {
 	panic("implement me")
 }

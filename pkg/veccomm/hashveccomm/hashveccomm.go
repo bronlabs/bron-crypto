@@ -133,7 +133,7 @@ func (v *VectorVerifier) Verify(veccom *VectorCommitment, opening *Opening) erro
 	return nil
 }
 
-func (c *VectorCommitter) OpenAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], fullOpening *Opening) (opening *comm.Opening[hashcomm.Message], err error) {
+func (c *VectorCommitter) OpenAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], fullOpening *Opening) (opening comm.Opening[hashcomm.Message], err error) {
 	panic("implement me")
 }
 
