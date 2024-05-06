@@ -9,12 +9,12 @@ type VectorCommitment interface {
 	Length() uint
 }
 
-type VectorCommitter[M comm.Message, V Vector[M], C VectorCommitment, O comm.Opening[V]] interface {
-	comm.Committer[V, C, O]
-	OpenAtIndex(index uint, vector V, fullOpening O) (opening *comm.Opening[M], err error)
+type VectorCommitter[M comm.Message, C VectorCommitment, O comm.Opening[Vector[M]]] interface {
+	comm.Committer[Vector[M], C, O]
+	OpenAtIndex(index uint, vector Vector[M], fullOpening O) (opening *comm.Opening[M], err error)
 }
 
-type VectorVerifier[M comm.Message, V Vector[M], C VectorCommitment, O comm.Opening[V]] interface {
-	comm.Verifier[V, C, O]
-	VerifyAtIndex(index uint, vector V, opening comm.Opening[M]) error
+type VectorVerifier[M comm.Message, C VectorCommitment, O comm.Opening[Vector[M]]] interface {
+	comm.Verifier[Vector[M], C, O]
+	VerifyAtIndex(index uint, vector Vector[M], opening comm.Opening[M]) error
 }

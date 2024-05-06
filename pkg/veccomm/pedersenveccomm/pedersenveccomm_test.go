@@ -12,12 +12,12 @@ import (
 
 func TestSimpleHappyPath(t *testing.T) {
 	sessionId := []byte("00000001")
-	c, err := pedersenveccomm.NewVectorCommitter(crand.Reader, sessionId)
+	curve := k256.NewCurve()
+	c, err := pedersenveccomm.NewVectorCommitter(sessionId, crand.Reader, curve)
 	require.NoError(t, err)
 	v, err := pedersenveccomm.NewVectorVerifier(sessionId)
 	require.NoError(t, err)
 
-	curve := k256.NewCurve()
 	messages := make([]pedersencomm.Message, 3)
 	messages[0], _ = curve.ScalarField().Random(crand.Reader)
 	messages[1], _ = curve.ScalarField().Random(crand.Reader)

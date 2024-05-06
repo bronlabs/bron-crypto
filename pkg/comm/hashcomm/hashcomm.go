@@ -35,7 +35,7 @@ type Opening struct {
 
 var _ comm.Opening[Message] = (*Opening)(nil)
 
-func (o Opening) Message() Message {
+func (o *Opening) Message() Message {
 	return o.Message_
 }
 
@@ -44,13 +44,11 @@ type Committer struct {
 	sessionId []byte
 }
 
-var _ comm.Committer[Message, Commitment, Opening] = (*Committer)(nil)
-
 type Verifier struct {
 	sessionId []byte
 }
 
-var _ comm.Verifier[Message, Commitment, Opening] = (*Verifier)(nil)
+var _ comm.Verifier[Message, Commitment, *Opening] = (*Verifier)(nil)
 
 type Commitment struct {
 	Commitment []byte
@@ -59,7 +57,7 @@ type Commitment struct {
 var _ comm.Commitment = (*Commitment)(nil)
 
 // not UC-secure without session-id
-func NewCommitter(prng io.Reader, sessionId []byte) (*Committer, error) {
+func NewCommitter(sessionId []byte, prng io.Reader) (*Committer, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
 	}
@@ -80,6 +78,9 @@ func encodeWithSessionId(sessionId []byte, message []byte) [][]byte {
 }
 
 func (c *Commitment) Validate() error {
+	if c == nil {
+		return errs.NewIsNil("receiver")
+	}
 	if len(c.Commitment) != base.CollisionResistanceBytes {
 		return errs.NewArgument("commitment length (%d) != %d", len(c.Commitment), base.CollisionResistanceBytes)
 	}
@@ -87,30 +88,39 @@ func (c *Commitment) Validate() error {
 }
 
 func (o *Opening) Validate() error {
+	if o == nil {
+		return errs.NewIsNil("receiver")
+	}
 	if len(o.Witness) < base.CollisionResistanceBytes {
 		return errs.NewArgument("witness length (%d) < %d", len(o.Witness), base.CollisionResistanceBytes)
 	}
 	return nil
 }
 
-func (c *Committer) Commit(message Message) (*Commitment, *Opening, error) {
+func (c *Committer) Commit(message Message) (Commitment, Opening, error) {
+	if c == nil {
+		return Commitment{}, Opening{}, errs.NewIsNil("receiver")
+	}
 	witness := make([]byte, base.CollisionResistanceBytes)
 	if _, err := io.ReadFull(c.prng, witness); err != nil {
-		return nil, nil, errs.WrapRandomSample(err, "reading random bytes")
+		return Commitment{}, Opening{}, errs.WrapRandomSample(err, "reading random bytes")
 	}
 	commitment, err := hashing.Hmac(witness, CommitmentHashFunction, encodeWithSessionId(c.sessionId, message)...)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not compute commitment")
+		return Commitment{}, Opening{}, errs.WrapHashing(err, "could not compute commitment")
 	}
-	return &Commitment{commitment}, &Opening{message, witness}, nil
+	return Commitment{commitment}, Opening{message, witness}, nil
 }
 
-func (v *Verifier) Verify(commitment *Commitment, opening *Opening) error {
-	if commitment.Validate() != nil {
-		return errs.NewArgument("unvalid commitment")
+func (v *Verifier) Verify(commitment Commitment, opening *Opening) error {
+	if v == nil {
+		return errs.NewIsNil("receiver")
 	}
-	if opening.Validate() != nil {
-		return errs.NewArgument("unvalid opening")
+	if err := commitment.Validate(); err != nil {
+		return errs.WrapValidation(err, "invalid commitment")
+	}
+	if err := opening.Validate(); err != nil {
+		return errs.WrapValidation(err, "invalid opening")
 	}
 	localCommitment, err := hashing.Hmac(opening.Witness, CommitmentHashFunction, encodeWithSessionId(v.sessionId, opening.Message_)...)
 	if err != nil {

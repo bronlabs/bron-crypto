@@ -11,7 +11,7 @@ import (
 
 func TestSimpleHappyPath(t *testing.T) {
 	sessionId := []byte("00000001")
-	c, err := hashveccomm.NewVectorCommitter(crand.Reader, sessionId)
+	c, err := hashveccomm.NewVectorCommitter(sessionId, crand.Reader)
 	require.NoError(t, err)
 	v, err := hashveccomm.NewVectorVerifier(sessionId)
 	require.NoError(t, err)

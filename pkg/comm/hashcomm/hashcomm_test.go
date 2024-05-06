@@ -17,7 +17,7 @@ var (
 
 func TestSimpleHappyPath(t *testing.T) {
 	sessionId := []byte("00000001")
-	c, err := hashcomm.NewCommitter(crand.Reader, sessionId)
+	c, err := hashcomm.NewCommitter(sessionId, crand.Reader)
 	require.NoError(t, err)
 	v, err := hashcomm.NewVerifier(sessionId)
 	require.NoError(t, err)
@@ -27,38 +27,32 @@ func TestSimpleHappyPath(t *testing.T) {
 	require.NotNil(t, commitment.Commitment)
 	require.NotNil(t, opening.Message())
 	require.NotNil(t, opening.Witness)
-	err = v.Verify(commitment, opening)
+	err = v.Verify(commitment, &opening)
 	require.NoError(t, err)
 }
 
 type testCaseEntry struct {
 	msg hashcomm.Message
-	opn *hashcomm.Opening
-	com *hashcomm.Commitment
+	opn hashcomm.Opening
+	com hashcomm.Commitment
 	err error
 }
 
 func getEntries() []testCaseEntry {
 	var testResults = []testCaseEntry{
-		{msg: []byte("This is a test message"), opn: nil, com: nil, err: nil},
-		{msg: []byte("short msg"), opn: nil, com: nil, err: nil},
-		{
-			msg: []byte(`This input field is intentionally longer than the SHA256 block size and the largest
+		{msg: []byte("This is a test message")},
+		{msg: []byte("short msg")},
+		{msg: []byte(`This input field is intentionally longer than the SHA256 block size and the largest
 			rate of all SHA3 variants as defined in NIST FIPS PUB 202 (i.e. r = 1152 bits = 144 bytes for SHA3-224) 
-			to cover cases where multiple blocks have to be processed.`),
-			opn: nil, com: nil, err: nil,
-		},
-		{
-			msg: []byte{0xFB, 0x1A, 0x18, 0x47, 0x39, 0x3C, 0x9F, 0x45, 0x5F, 0x29, 0x4C, 0x51, 0x42, 0x30, 0xA6, 0xB9},
-			opn: nil, com: nil, err: nil,
-		},
+			to cover cases where multiple blocks have to be processed.`)},
+		{msg: []byte{0xFB, 0x1A, 0x18, 0x47, 0x39, 0x3C, 0x9F, 0x45, 0x5F, 0x29, 0x4C, 0x51, 0x42, 0x30, 0xA6, 0xB9}},
 		// msg = \epsilon (empty string)
-		{msg: []byte{}, opn: nil, com: nil, err: nil},
+		{msg: []byte{}},
 		// msg == nil
-		{msg: nil, opn: nil, com: nil, err: nil},
+		{msg: nil},
 	}
 	for i := range testResults {
-		c, _ := hashcomm.NewCommitter(crand.Reader, sid)
+		c, _ := hashcomm.NewCommitter(sid, crand.Reader)
 		testCaseEntry := &testResults[i]
 		testCaseEntry.com, testCaseEntry.opn, testCaseEntry.err = c.Commit(testCaseEntry.msg)
 	}
@@ -114,7 +108,7 @@ func TestCommmitProducesDistinctCommitments(t *testing.T) {
 // randomly selected
 func TestCommmitDistinctCommitments(t *testing.T) {
 	t.Parallel()
-	c, err := hashcomm.NewCommitter(crand.Reader, sid)
+	c, err := hashcomm.NewCommitter(sid, crand.Reader)
 	require.NoError(t, err)
 	seen := make(map[string]bool)
 	msg := []byte("black lives matter")
@@ -155,7 +149,7 @@ func TestCommmitNonceIsExpectedLength(t *testing.T) {
 // Randomly selected nonces will be unique with overwhelming probability
 func TestCommmitProducesDistinctNonces(t *testing.T) {
 	t.Parallel()
-	c, err := hashcomm.NewCommitter(crand.Reader, sid)
+	c, err := hashcomm.NewCommitter(sid, crand.Reader)
 	require.NoError(t, err)
 	seen := make(map[string]bool)
 	msg := []byte("black lives matter")
@@ -180,7 +174,7 @@ func TestOpenOnValidCommitments(t *testing.T) {
 	require.NoError(t, err)
 	for _, testCaseEntry := range testResults {
 		// Verify each commitment
-		err := v.Verify(testCaseEntry.com, testCaseEntry.opn)
+		err := v.Verify(testCaseEntry.com, &testCaseEntry.opn)
 		// There should be no error
 		require.NoErrorf(t, err, "commitment of message failed: %s", testCaseEntry.msg)
 	}
@@ -196,7 +190,7 @@ func TestOpenOnModifiedNonce(t *testing.T) {
 		// Modify the nonce MSB
 		localOpening.Witness[0] ^= 0x80
 		// Verify and check for failure
-		err := v.Verify(testCaseEntry.com, localOpening)
+		err := v.Verify(testCaseEntry.com, &localOpening)
 		require.Error(t, err)
 		require.True(t, errs.IsVerification(err))
 	}
@@ -222,7 +216,7 @@ func TestOpenOnZeroPrefixNonce(t *testing.T) {
 		localOpening.Witness[9] = 0x00
 		localOpening.Witness[10] = 0x00
 		// Verify and check for failure
-		err := v.Verify(testCaseEntry.com, localOpening)
+		err := v.Verify(testCaseEntry.com, &localOpening)
 		require.True(t, errs.IsVerification(err))
 	}
 }
@@ -238,7 +232,7 @@ func TestOpenOnNewMessage(t *testing.T) {
 		// Use a distinct message
 		localOpening.Message_ = []byte("no one expects the spanish inquisition")
 		// Verify and check for failure
-		err := v.Verify(testCaseEntry.com, localOpening)
+		err := v.Verify(testCaseEntry.com, &localOpening)
 		require.True(t, errs.IsVerification(err))
 	}
 }
@@ -259,7 +253,7 @@ func TestOpenOnModifiedMessage(t *testing.T) {
 		// Modify the message LSB
 		localOpening.Message_[0] ^= 0x01
 		// Verify and check for failure
-		err := v.Verify(testCaseEntry.com, localOpening)
+		err := v.Verify(testCaseEntry.com, &localOpening)
 		require.True(t, errs.IsVerification(err))
 	}
 }
@@ -275,7 +269,7 @@ func TestOpenOnModifiedCommitment(t *testing.T) {
 		localCommitment := testCaseEntry.com
 		localCommitment.Commitment[6] ^= 0x33
 		// Verify and check for failure
-		err := v.Verify(localCommitment, testCaseEntry.opn)
+		err := v.Verify(localCommitment, &testCaseEntry.opn)
 		require.True(t, errs.IsVerification(err))
 	}
 }
@@ -289,7 +283,7 @@ func TestOpenOnDefaultDecommitObject(t *testing.T) {
 	for _, testCaseEntry := range testResults {
 		localOpening := testCaseEntry.opn
 		localOpening.Witness = nil
-		err := v.Verify(testCaseEntry.com, localOpening)
+		err := v.Verify(testCaseEntry.com, &localOpening)
 		require.True(t, errs.IsArgument(err))
 	}
 }
@@ -301,7 +295,7 @@ func TestOpenOnNilCommitment(t *testing.T) {
 	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
-		err := v.Verify(&hashcomm.Commitment{[]byte{}}, testCaseEntry.opn)
+		err := v.Verify(hashcomm.Commitment{[]byte{}}, &testCaseEntry.opn)
 		require.True(t, errs.IsArgument(err))
 	}
 }
@@ -313,9 +307,9 @@ func TestOpenOnLongCommitment(t *testing.T) {
 	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
-		localCommitment := &hashcomm.Commitment{make([]byte, h().Size()+1)}
+		localCommitment := hashcomm.Commitment{make([]byte, h().Size()+1)}
 		copy(localCommitment.Commitment, testCaseEntry.com.Commitment)
-		err := v.Verify(localCommitment, testCaseEntry.opn)
+		err := v.Verify(localCommitment, &testCaseEntry.opn)
 		require.True(t, errs.IsArgument(err))
 	}
 }
@@ -327,9 +321,9 @@ func TestOpenOnShortCommitment(t *testing.T) {
 	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
-		localCommitment := &hashcomm.Commitment{make([]byte, h().Size()-1)}
+		localCommitment := hashcomm.Commitment{make([]byte, h().Size()-1)}
 		copy(localCommitment.Commitment, testCaseEntry.com.Commitment)
-		err := v.Verify(localCommitment, testCaseEntry.opn)
+		err := v.Verify(localCommitment, &testCaseEntry.opn)
 		require.True(t, errs.IsArgument(err))
 	}
 }

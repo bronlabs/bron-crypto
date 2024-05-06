@@ -1,6 +1,7 @@
 package elgamalcomm
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
@@ -11,9 +12,9 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
-const Name comm.Name = "PEDERSEN_COMMITMENT"
+const Name comm.Name = "ELGAMAL_COMMITMENT"
 
-type Message curves.Scalar
+type Message curves.Point
 
 var _ comm.Message = Message(nil)
 
@@ -23,12 +24,13 @@ var _ Witness = Witness(nil)
 
 var (
 	// hardcoded seed used to derive generators along with the session-id
-	somethingUpMySleeve = []byte("COPPER_KRYPTON_JF_SOMETHING_UP_MY_SLEEVE-")
+	somethingUpMySleeve = []byte(fmt.Sprintf("COPPER_KRYPTON_%s_SOMETHING_UP_MY_SLEEVE-", Name))
 )
 
 type Opening struct {
-	message Message
-	Witness Witness
+	message   Message
+	witness   Witness
+	publicKey curves.Point
 }
 
 var _ comm.Opening[Message] = (*Opening)(nil)
@@ -37,180 +39,186 @@ func (o Opening) Message() Message {
 	return o.message
 }
 
-type CommitterHomomorphic struct {
-	prng      io.Reader
-	sessionId []byte
+type HomomorphicCommitmentScheme struct{}
+
+var _ comm.HomomorphicCommitmentScheme[Message, Commitment, Opening] = (*HomomorphicCommitmentScheme)(nil)
+
+type HomomorphicCommitter struct {
+	prng       io.Reader
+	privateKey curves.Scalar
+	PublicKey  curves.Point
+	HomomorphicCommitmentScheme
 }
 
-var _ comm.CommitterHomomorphic[Message, Commitment, Opening] = (*CommitterHomomorphic)(nil)
+var _ comm.HomomorphicCommitter[Message, Commitment, Opening] = (*HomomorphicCommitter)(nil)
 
-type VerifierHomomorphic struct {
+type HomomorphicVerifier struct {
 	sessionId []byte
+	HomomorphicCommitmentScheme
 }
 
-var _ comm.VerifierHomomorphic[Message, Commitment, Opening] = (*VerifierHomomorphic)(nil)
+var _ comm.HomomorphicVerifier[Message, Commitment, Opening] = (*HomomorphicVerifier)(nil)
 
 type Commitment struct {
-	First  curves.Point
-	Second curves.Point
+	c1 curves.Point
+	c2 curves.Point
 }
 
 var _ comm.Commitment = (*Commitment)(nil)
 
-// not UC-secure without session-id
-func NewCommitterHomomorphic(prng io.Reader, sessionId []byte) (*CommitterHomomorphic, error) {
-	if prng == nil {
-		return nil, errs.NewIsNil("prng is nil")
-	}
-	return &CommitterHomomorphic{prng, sessionId}, nil
-}
-
-func NewVerifierHomomorphic(sessionId []byte) (*VerifierHomomorphic, error) {
-	return &VerifierHomomorphic{sessionId}, nil
-}
-
-func (c *CommitterHomomorphic) Commit(message Message) (*Commitment, *Opening, error) {
-	curve := message.ScalarField().Curve()
-	witness, err := message.ScalarField().Random(c.prng)
-	if err != nil {
-		return nil, nil, err
-	}
-	// Generate the 1st operand of the commitment
-	mG := curve.Generator().ScalarMul(message)
-	// Generate a random point from the sessionId and NothingUpMySleeve
-	HMessage, err := hashing.HashChain(base.RandomOracleHashFunction, c.sessionId, somethingUpMySleeve)
-	if err != nil {
-		return nil, nil, errs.WrapHashing(err, "could not produce dlog of H")
-	}
-	H, err := curve.Hash(HMessage)
-	if err != nil {
-		return nil, nil, errs.WrapHashing(err, "failed to hash to curve for H")
-	}
-	// Generate the 2nd operand of the commitment
-	rH := H.ScalarMul(witness)
-	first := curve.Generator().ScalarMul(witness)
-	second := rH.Add(mG)
-	return &Commitment{first, second}, &Opening{message, witness}, nil
-}
-
-func (c *CommitterHomomorphic) CombineCommitments(x *Commitment, ys ...*Commitment) (*Commitment, error) {
-	if len(ys) == 0 {
-		return x, nil
-	}
-	acc := x
-	for _, y := range ys {
-		acc.First = acc.First.Add(y.First)
-		acc.Second = acc.First.Add(y.Second)
-	}
-	return acc, nil
-}
-
-func (c *CommitterHomomorphic) ScaleCommitment(x *Commitment, n *saferith.Nat) (*Commitment, error) {
-	curve := x.First.Curve()
-	scale := curve.ScalarField().Scalar().SetNat(n)
-	return &Commitment{x.First.ScalarMul(scale), x.Second.ScalarMul(scale)}, nil
-}
-
-func (c *CommitterHomomorphic) CombineOpenings(x *Opening, ys ...*Opening) (*Opening, error) {
-	if len(ys) == 0 {
-		return x, nil
-	}
-	acc := x
-	for _, y := range ys {
-		acc.message = acc.message.Add(y.message)
-		acc.Witness = acc.Witness.Add(y.Witness)
-	}
-	return acc, nil
-}
-
-func (c *CommitterHomomorphic) ScaleOpening(x *Opening, n *saferith.Nat) (*Opening, error) {
-	curve := x.Witness.ScalarField().Curve()
-	scale := curve.ScalarField().Scalar().SetNat(n)
-	return &Opening{x.Message().Mul(scale), x.Witness.Mul(scale)}, nil
-}
-
 func (c *Commitment) Validate() error {
-	if c.First == nil || c.Second == nil {
-		return errs.NewIsNil("commitment is nil")
+	if c == nil {
+		return errs.NewIsNil("commitment")
 	}
-	// TODO: uncomment when 'IsInPrimeSubGroup' is implemented
-	// if !c.Commitment.IsInPrimeSubGroup() {
-	// 	return errs.NewArgument("commitment is not part of the prime order subgroup")
-	// }
+	if c.c1 == nil {
+		return errs.NewIsNil("first commitment component")
+	}
+	if c.c2 == nil {
+		return errs.NewIsNil("second commitment component")
+	}
+	if c.c1.IsAdditiveIdentity() {
+		return errs.NewIsIdentity("first commitment component is identity")
+	}
+	if c.c2.IsAdditiveIdentity() {
+		return errs.NewIsIdentity("second commitment component is identity")
+	}
+	if c.c1.IsSmallOrder() {
+		return errs.NewMembership("first commitment is not part of the prime order subgroup")
+	}
+	if c.c2.IsSmallOrder() {
+		return errs.NewMembership("first commitment is not part of the prime order subgroup")
+	}
 	return nil
 }
 
 func (o *Opening) Validate() error {
-	if o.message == nil {
-		return errs.NewIsNil("message is nil")
+	if o == nil {
+		return errs.NewIsNil("opening")
 	}
-	if o.Witness == nil {
-		return errs.NewIsNil("witness is nil")
+	if o.message == nil {
+		return errs.NewIsNil("opening message")
+	}
+	if o.witness == nil {
+		return errs.NewIsNil("opening witness")
 	}
 	return nil
 }
 
-func (v *VerifierHomomorphic) Verify(commitment *Commitment, opening *Opening) error {
-	if commitment.Validate() != nil {
+// not UC-secure without session-id
+func NewHomomorphicCommitter(sessionId []byte, prng io.Reader, privateKey curves.Scalar) (*HomomorphicCommitter, error) {
+	if prng == nil {
+		return nil, errs.NewIsNil("prng is nil")
+	}
+	// Generate a random point from the sessionId and NothingUpMySleeve
+	generatorMessage, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, somethingUpMySleeve)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "could not produce dlog of H")
+	}
+	curve := privateKey.ScalarField().Curve()
+	publicKey, err := curve.Hash(generatorMessage)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "failed to hash to curve for H")
+	}
+	return &HomomorphicCommitter{prng, privateKey, publicKey, HomomorphicCommitmentScheme{}}, nil
+}
+
+func NewHomomorphicVerifier(sessionId []byte) (*HomomorphicVerifier, error) {
+	return &HomomorphicVerifier{sessionId, HomomorphicCommitmentScheme{}}, nil
+}
+
+func encrypt(publicKey curves.Point, message Message, nonce curves.Scalar) (curves.Point, curves.Point, error) {
+	if publicKey == nil {
+		return nil, nil, errs.NewIsNil("public key")
+	}
+	if publicKey.IsAdditiveIdentity() {
+		return nil, nil, errs.NewIsIdentity("public key is identity")
+	}
+	curve := message.Curve()
+	rE := publicKey.ScalarMul(nonce)
+	first := curve.Generator().ScalarMul(nonce)
+	second := rE.Add(message)
+	return first, second, nil
+}
+
+func (c *HomomorphicCommitter) Commit(message Message) (Commitment, Opening, error) {
+	if message == nil {
+		return Commitment{}, Opening{}, errs.NewIsNil("message")
+	}
+	witness, err := message.Curve().ScalarField().Random(c.prng)
+	if err != nil {
+		return Commitment{}, Opening{}, errs.WrapFailed(err, "could not draw a random scalar")
+	}
+	first, second, err := encrypt(c.PublicKey, message, witness)
+	if err != nil {
+		return Commitment{}, Opening{}, errs.NewFailed("could not run Elgamal encryption")
+	}
+	return Commitment{first, second}, Opening{message, witness, c.PublicKey}, nil
+}
+
+func (v *HomomorphicVerifier) Verify(commitment Commitment, opening Opening) error {
+	if err := commitment.Validate(); err != nil {
 		return errs.NewArgument("unvalid commitment")
 	}
-	if opening.Validate() != nil {
+	if err := opening.Validate(); err != nil {
 		return errs.NewArgument("unvalid opening")
 	}
-	curve := opening.message.ScalarField().Curve()
-	// Reconstructs the 1st operand
-	mG := curve.Generator().ScalarMul(opening.message)
-	// Reconstructs the 2nd operand
-	HMessage, err := hashing.HashChain(base.RandomOracleHashFunction, v.sessionId, somethingUpMySleeve)
+	localFirst, localSecond, err := encrypt(opening.publicKey, opening.message, opening.witness)
 	if err != nil {
-		return errs.WrapHashing(err, "could not produce dlog of H")
+		return errs.NewFailed("could not run Elgamal encryption")
 	}
-	H, err := curve.Hash(HMessage)
-	if err != nil {
-		return errs.WrapHashing(err, "failed to hash to curve for H")
+	if !(commitment.c1.Equal(localFirst)) {
+		return errs.NewVerification("verification failed for first component")
 	}
-	rH := H.ScalarMul(opening.Witness)
-	// Reconstructs the corresponding commitment
-	localFirst := curve.Generator().ScalarMul(opening.Witness)
-	localSecond := rH.Add(mG)
-	if !(commitment.Second.Equal(localFirst) && commitment.Second.Equal(localSecond)) {
-		return errs.NewVerification("verification failed")
+	if !commitment.c2.Equal(localSecond) {
+		return errs.NewVerification("verification failed for second component")
 	}
 	return nil
 }
 
-func (c *VerifierHomomorphic) CombineCommitments(x *Commitment, ys ...*Commitment) (*Commitment, error) {
+func (hcs *HomomorphicCommitmentScheme) CombineCommitments(x Commitment, ys ...Commitment) (Commitment, error) {
+	if hcs == nil {
+		return Commitment{}, errs.NewIsNil("receiver")
+	}
 	if len(ys) == 0 {
 		return x, nil
 	}
 	acc := x
 	for _, y := range ys {
-		acc.First = acc.First.Add(y.First)
-		acc.Second = acc.First.Add(y.Second)
+		acc.c1 = acc.c1.Add(y.c1)
+		acc.c2 = acc.c2.Add(y.c2)
 	}
 	return acc, nil
 }
 
-func (c *VerifierHomomorphic) ScaleCommitment(x *Commitment, n *saferith.Nat) (*Commitment, error) {
-	curve := x.First.Curve()
+func (hcs *HomomorphicCommitmentScheme) ScaleCommitment(x Commitment, n *saferith.Nat) (Commitment, error) {
+	if hcs == nil {
+		return Commitment{}, errs.NewIsNil("receiver")
+	}
+	curve := x.c1.Curve()
 	scale := curve.ScalarField().Scalar().SetNat(n)
-	return &Commitment{x.First.ScalarMul(scale), x.Second.ScalarMul(scale)}, nil
+	return Commitment{x.c1.ScalarMul(scale), x.c2.ScalarMul(scale)}, nil
 }
 
-func (c *VerifierHomomorphic) CombineOpenings(x *Opening, ys ...*Opening) (*Opening, error) {
+func (hcs *HomomorphicCommitmentScheme) CombineOpenings(x Opening, ys ...Opening) (Opening, error) {
+	if hcs == nil {
+		return Opening{}, errs.NewIsNil("receiver")
+	}
 	if len(ys) == 0 {
 		return x, nil
 	}
 	acc := x
 	for _, y := range ys {
 		acc.message = acc.message.Add(y.message)
-		acc.Witness = acc.Witness.Add(y.Witness)
+		acc.witness = acc.witness.Add(y.witness)
 	}
 	return acc, nil
 }
 
-func (c *VerifierHomomorphic) ScaleOpening(x *Opening, n *saferith.Nat) (*Opening, error) {
-	curve := x.Witness.ScalarField().Curve()
+func (hcs *HomomorphicCommitmentScheme) ScaleOpening(x Opening, n *saferith.Nat) (Opening, error) {
+	if hcs == nil {
+		return Opening{}, errs.NewIsNil("receiver")
+	}
+	curve := x.witness.ScalarField().Curve()
 	scale := curve.ScalarField().Scalar().SetNat(n)
-	return &Opening{x.Message().Mul(scale), x.Witness.Mul(scale)}, nil
+	return Opening{x.Message().ScalarMul(scale), x.witness.Mul(scale), x.publicKey}, nil
 }

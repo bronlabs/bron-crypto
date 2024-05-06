@@ -3,6 +3,7 @@ package pedersenveccomm
 import (
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/comm"
 	"github.com/copperexchange/krypton-primitives/pkg/comm/pedersencomm"
@@ -16,36 +17,36 @@ type Opening struct {
 	Vector_ veccomm.Vector[pedersencomm.Message]
 }
 
-func (o Opening) Message() veccomm.Vector[pedersencomm.Message] {
+func (o *Opening) Message() veccomm.Vector[pedersencomm.Message] {
 	return o.Vector_
 }
 
 type VectorCommitment struct {
-	commitment pedersencomm.Commitment
+	commitment *pedersencomm.Commitment
 	length     uint
 }
 
-func (vc VectorCommitment) Length() uint {
+func (vc *VectorCommitment) Length() uint {
 	return vc.length
 }
 
 var _ veccomm.VectorCommitment = (*VectorCommitment)(nil)
 
 type VectorCommitter struct {
-	committer *pedersencomm.CommitterHomomorphic
+	committer *pedersencomm.HomomorphicCommitter
 }
 
-var _ veccomm.VectorCommitter[pedersencomm.Message, veccomm.Vector[pedersencomm.Message], VectorCommitment, Opening] = (*VectorCommitter)(nil)
+var _ veccomm.VectorCommitter[pedersencomm.Message, *VectorCommitment, *Opening] = (*VectorCommitter)(nil)
 
 type VectorVerifier struct {
-	verifier *pedersencomm.VerifierHomomorphic
+	verifier *pedersencomm.HomomorphicVerifier
 }
 
-var _ veccomm.VectorVerifier[pedersencomm.Message, veccomm.Vector[pedersencomm.Message], VectorCommitment, Opening] = (*VectorVerifier)(nil)
+var _ veccomm.VectorVerifier[pedersencomm.Message, *VectorCommitment, *Opening] = (*VectorVerifier)(nil)
 
 // not UC-secure without session-id
-func NewVectorCommitter(prng io.Reader, sessionId []byte) (*VectorCommitter, error) {
-	committer, err := pedersencomm.NewCommitterHomomorphic(prng, sessionId)
+func NewVectorCommitter(sessionId []byte, prng io.Reader, curve curves.Curve) (*VectorCommitter, error) {
+	committer, err := pedersencomm.NewHomomorphicCommitter(sessionId, prng, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not instantiate a committer")
 	}
@@ -54,7 +55,7 @@ func NewVectorCommitter(prng io.Reader, sessionId []byte) (*VectorCommitter, err
 
 // not UC-secure without session-id
 func NewVectorVerifier(sessionId []byte) (*VectorVerifier, error) {
-	committer, err := pedersencomm.NewVerifierHomomorphic(sessionId)
+	committer, err := pedersencomm.NewHomomorphicVerifier(sessionId)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not instantiate a verifier")
 	}
@@ -70,18 +71,18 @@ func (c *VectorCommitter) Commit(vector veccomm.Vector[pedersencomm.Message]) (*
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not compute commitment")
 	}
-	return &VectorCommitment{*commitment, uint(len(vector))}, &Opening{*opening, vector}, nil
+	return &VectorCommitment{&commitment, uint(len(vector))}, &Opening{*opening, vector}, nil
 }
 
 func (v *VectorVerifier) Verify(veccom *VectorCommitment, opening *Opening) error {
-	err := v.verifier.Verify(&veccom.commitment, &opening.opening)
+	err := v.verifier.Verify(*veccom.commitment, &opening.opening)
 	if err != nil {
 		return errs.NewVerification("verification failed")
 	}
 	return nil
 }
 
-func (c *VectorCommitter) OpenAtIndex(index uint, vector veccomm.Vector[pedersencomm.Message], fullOpening Opening) (opening *comm.Opening[pedersencomm.Message], err error) {
+func (c *VectorCommitter) OpenAtIndex(index uint, vector veccomm.Vector[pedersencomm.Message], fullOpening *Opening) (opening *comm.Opening[pedersencomm.Message], err error) {
 	panic("implement me")
 }
 

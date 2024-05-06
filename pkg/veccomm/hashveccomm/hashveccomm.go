@@ -16,11 +16,11 @@ const Name = "HASH_VECTOR_COMMITMENT"
 
 type Opening struct {
 	opening hashcomm.Opening
-	Vector_ veccomm.Vector[hashcomm.Message]
+	vector  veccomm.Vector[hashcomm.Message]
 }
 
-func (o Opening) Message() veccomm.Vector[hashcomm.Message] {
-	return o.Vector_
+func (o *Opening) Message() veccomm.Vector[hashcomm.Message] {
+	return o.vector
 }
 
 type VectorCommitment struct {
@@ -28,7 +28,7 @@ type VectorCommitment struct {
 	length     uint
 }
 
-func (vc VectorCommitment) Length() uint {
+func (vc *VectorCommitment) Length() uint {
 	return vc.length
 }
 
@@ -38,17 +38,17 @@ type VectorCommitter struct {
 	committer *hashcomm.Committer
 }
 
-var _ veccomm.VectorCommitter[hashcomm.Message, veccomm.Vector[hashcomm.Message], VectorCommitment, Opening] = (*VectorCommitter)(nil)
+var _ veccomm.VectorCommitter[hashcomm.Message, *VectorCommitment, *Opening] = (*VectorCommitter)(nil)
 
 type VectorVerifier struct {
 	verifier *hashcomm.Verifier
 }
 
-var _ veccomm.VectorVerifier[hashcomm.Message, veccomm.Vector[hashcomm.Message], VectorCommitment, Opening] = (*VectorVerifier)(nil)
+var _ veccomm.VectorVerifier[hashcomm.Message, *VectorCommitment, *Opening] = (*VectorVerifier)(nil)
 
 // not UC-secure without session-id
-func NewVectorCommitter(prng io.Reader, sessionId []byte) (*VectorCommitter, error) {
-	committer, err := hashcomm.NewCommitter(prng, sessionId)
+func NewVectorCommitter(sessionId []byte, prng io.Reader) (*VectorCommitter, error) {
+	committer, err := hashcomm.NewCommitter(sessionId, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not instantiate a committer")
 	}
@@ -80,25 +80,47 @@ func chainEncodingVector(vector veccomm.Vector[hashcomm.Message]) hashcomm.Messa
 }
 
 func (c *VectorCommitter) Commit(vector veccomm.Vector[hashcomm.Message]) (*VectorCommitment, *Opening, error) {
+	if c == nil {
+		return nil, nil, errs.NewIsNil("receiver")
+	}
 	commitment, opening, err := c.committer.Commit(chainEncodingVector(vector))
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not compute commitment")
 	}
-	return &VectorCommitment{*commitment, uint(len(vector))}, &Opening{*opening, vector}, nil
+	return &VectorCommitment{commitment, uint(len(vector))}, &Opening{opening, vector}, nil
+}
+
+func (vc *VectorCommitment) Validate() error {
+	if vc == nil {
+		return errs.NewIsNil("receiver")
+	}
+	if vc.length == 0 {
+		return errs.NewValidation("vector has no element")
+	}
+	if err := vc.commitment.Validate(); err != nil {
+		return errs.WrapFailed(err, "commitment not valid")
+	}
+	return nil
 }
 
 func (v *VectorVerifier) Verify(veccom *VectorCommitment, opening *Opening) error {
-	if !(bytes.Equal(chainEncodingVector(opening.Vector_), opening.opening.Message_)) {
+	if v == nil {
+		return errs.NewIsNil("receiver")
+	}
+	if err := veccom.Validate(); err != nil {
+		return errs.WrapFailed(err, "commitment not valid")
+	}
+	if !(bytes.Equal(chainEncodingVector(opening.vector), opening.opening.Message_)) {
 		return errs.NewVerification("commitment is not tied to the vector")
 	}
-	err := v.verifier.Verify(&veccom.commitment, &opening.opening)
+	err := v.verifier.Verify(veccom.commitment, &opening.opening)
 	if err != nil {
 		return errs.NewVerification("verification failed")
 	}
 	return nil
 }
 
-func (c *VectorCommitter) OpenAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], fullOpening Opening) (opening *comm.Opening[hashcomm.Message], err error) {
+func (c *VectorCommitter) OpenAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], fullOpening *Opening) (opening *comm.Opening[hashcomm.Message], err error) {
 	panic("implement me")
 }
 
