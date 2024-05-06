@@ -74,30 +74,30 @@ func (a *ByteAdapter[T]) IsZero(x T) bool {
 	return x == 0
 }
 
-var _ CollectionAdapter[[]any, any] = (*SliceAdapter[any])(nil)
+var _ CollectionAdapter[[]any, any] = (*SliceAdapter[[]any, any])(nil)
 
-type SliceAdapter[O Object] struct {
+type SliceAdapter[S ~[]O, O Object] struct {
 	objectAdapter ObjectAdapter[O]
 }
 
-func (a *SliceAdapter[O]) Wrap(xs []UnderlyingGenerator) []O {
-	out := make([]O, len(xs))
+func (a *SliceAdapter[S, O]) Wrap(xs []UnderlyingGenerator) S {
+	out := make(S, len(xs))
 	for i, x := range xs {
 		out[i] = a.objectAdapter.Wrap(x)
 	}
 	return out
 }
-func (a *SliceAdapter[O]) Unwrap(xs []O) []UnderlyingGenerator {
+func (a *SliceAdapter[S, O]) Unwrap(xs S) []UnderlyingGenerator {
 	out := make([]UnderlyingGenerator, len(xs))
 	for i, x := range xs {
 		out[i] = a.objectAdapter.Unwrap(x)
 	}
 	return out
 }
-func (a *SliceAdapter[O]) Zero() []O {
-	return make([]O, 0)
+func (a *SliceAdapter[S, O]) Zero() S {
+	return make(S, 0)
 }
-func (a *SliceAdapter[O]) IsZero(xs []O) bool {
+func (a *SliceAdapter[S, O]) IsZero(xs S) bool {
 	for _, x := range xs {
 		if !a.objectAdapter.IsZero(x) {
 			return false
@@ -106,7 +106,7 @@ func (a *SliceAdapter[O]) IsZero(xs []O) bool {
 	return true
 }
 
-var _ AbstractNativeMapAdapter[UnderlyingGenerator, map[int]any, int, any] = (*NativeMapAdapter[map[int]any, int, any])(nil)
+var _ MapAdapter[map[int]any, int, any] = (*NativeMapAdapter[map[int]any, int, any])(nil)
 
 type NativeMapAdapter[M ~map[K]V, K comparable, V Object] struct {
 	keys   ObjectAdapter[K]

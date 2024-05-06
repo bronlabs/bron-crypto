@@ -16,10 +16,10 @@ type CollectionGenerator[C Collection[O], O Object] interface {
 	Element() ObjectGenerator[O]
 	Generator[C]
 }
-type SliceGenerator[O Object] CollectionGenerator[[]O, O]
+type SliceGenerator[S ~[]O, O Object] CollectionGenerator[S, O]
 
 var _ CollectionGenerator[any, any] = (*CollectionGenerationSuite[any, any])(nil)
-var _ SliceGenerator[any] = (*CollectionGenerationSuite[[]any, any])(nil)
+var _ SliceGenerator[[]any, any] = (*CollectionGenerationSuite[[]any, any])(nil)
 
 type CollectionGenerationSuite[C Collection[O], O Object] struct {
 	adapter CollectionAdapter[C, O]
@@ -81,15 +81,15 @@ func validateNewCollectionGenerationSuite[C Collection[O], O Object](collectionA
 	return nil
 }
 
-func NewSliceGenerationSuite[O Object](objectAdapter ObjectAdapter[O], prng csprng.Seedable) (*CollectionGenerationSuite[[]O, O], error) {
+func NewSliceGenerationSuite[S ~[]O, O Object](objectAdapter ObjectAdapter[O], prng csprng.Seedable) (*CollectionGenerationSuite[S, O], error) {
 	objectGenerator, err := NewObjectGenerationSuite(objectAdapter, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct object generation suite")
 	}
-	sliceAdapter := &SliceAdapter[O]{
+	sliceAdapter := &SliceAdapter[S, O]{
 		objectAdapter: objectAdapter,
 	}
-	return &CollectionGenerationSuite[[]O, O]{
+	return &CollectionGenerationSuite[S, O]{
 		adapter: sliceAdapter,
 		element: objectGenerator,
 		prng:    prng,

@@ -1,23 +1,20 @@
 package testutils2
 
 import (
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 )
 
 type Map[K, V Object] any
 
-type AbstractMapAdapter[T comparable, M Map[K, V], K, V Object] AbstractObjectAdapter[map[T]*ds.MapEntry[K, V], M]
-type AbstractNativeMapAdapter[T comparable, M ~map[K]V, K comparable, V Object] AbstractObjectAdapter[map[T]T, M]
-
+type AbstractMapAdapter[T comparable, M Map[K, V], K, V Object] AbstractObjectAdapter[map[T]T, M]
 type MapAdapter[M Map[K, V], K, V Object] AbstractMapAdapter[UnderlyingGenerator, M, K, V]
 
 type MapGenerator[M Map[K, V], K, V Object] interface {
 	Generate(size int) M
 	GenerateAnySize() M
-	Keys() SliceGenerator[K]
-	Values() SliceGenerator[V]
+	Keys() SliceGenerator[[]K, K]
+	Values() SliceGenerator[[]V, V]
 	Generator[M]
 }
 
@@ -25,26 +22,24 @@ var _ MapGenerator[any, any, any] = (*MapGenerationSuite[any, any, any])(nil)
 
 type MapGenerationSuite[M Map[K, V], K, V Object] struct {
 	adapter MapAdapter[M, K, V]
-	keys    SliceGenerator[K]
-	values  SliceGenerator[V]
+	keys    SliceGenerator[[]K, K]
+	values  SliceGenerator[[]V, V]
 	prng    csprng.Seedable
 }
 
-func (m *MapGenerationSuite[M, K, V]) gen(preKeySize int) M {
-	preKeys, err := RandomUnderlyerSlice(m.prng, preKeySize, true, false, false)
+func (m *MapGenerationSuite[M, K, V]) gen(keysSize int) M {
+	keysUnwrapped, err := RandomUnderlyerSlice(m.prng, keysSize, true, false, false)
 	if err != nil {
-		panic(errs.WrapRandomSample(err, "could not sample underlyer slice"))
+		panic(errs.WrapRandomSample(err, "could not sample underlyer keys"))
 	}
-	size := len(preKeys)
-	keys := m.keys.Generate(size, true)
-	values := m.values.Generate(size, false)
-
-	out := map[UnderlyingGenerator]*ds.MapEntry[K, V]{}
-	for i, pk := range preKeys {
-		out[pk] = &ds.MapEntry[K, V]{
-			Key:   keys[i],
-			Value: values[i],
-		}
+	sampleSize := len(keysUnwrapped)
+	valuesUnwrapped, err := RandomUnderlyerSlice(m.prng, sampleSize, false, false, false)
+	if err != nil {
+		panic(errs.WrapRandomSample(err, "could not sample underlyer values"))
+	}
+	out := map[UnderlyingGenerator]UnderlyingGenerator{}
+	for i := range sampleSize {
+		out[keysUnwrapped[i]] = valuesUnwrapped[i]
 	}
 	return m.adapter.Wrap(out)
 }
@@ -60,11 +55,11 @@ func (m *MapGenerationSuite[M, K, V]) GenerateAnySize() M {
 	return m.gen(-1)
 }
 
-func (m *MapGenerationSuite[M, K, V]) Keys() SliceGenerator[K] {
+func (m *MapGenerationSuite[M, K, V]) Keys() SliceGenerator[[]K, K] {
 	return m.keys
 }
 
-func (m *MapGenerationSuite[M, K, V]) Values() SliceGenerator[V] {
+func (m *MapGenerationSuite[M, K, V]) Values() SliceGenerator[[]V, V] {
 	return m.values
 }
 
@@ -80,11 +75,11 @@ func NewMapGenerationSuite[M Map[K, V], K, V Object](mapAdapter MapAdapter[M, K,
 	if err := validateNewMapGenerationSuite(mapAdapter, keysAdapter, valuesAdapter, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid argument")
 	}
-	keysGenerator, err := NewSliceGenerationSuite(keysAdapter, prng)
+	keysGenerator, err := NewSliceGenerationSuite[[]K](keysAdapter, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not consturct key slice generator")
 	}
-	valuesGenerator, err := NewSliceGenerationSuite(valuesAdapter, prng)
+	valuesGenerator, err := NewSliceGenerationSuite[[]V](valuesAdapter, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not consturct value slice generator")
 	}
@@ -116,11 +111,11 @@ func NewNativeMapGenerationSuite[M ~map[K]V, K comparable, V Object](keysAdapter
 	if err := validateNewNativeMapGenerationSuite[M](keysAdapter, valuesAdapter, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid argument")
 	}
-	keysGenerator, err := NewSliceGenerationSuite(keysAdapter, prng)
+	keysGenerator, err := NewSliceGenerationSuite[[]K](keysAdapter, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not consturct key slice generator")
 	}
-	valuesGenerator, err := NewSliceGenerationSuite(valuesAdapter, prng)
+	valuesGenerator, err := NewSliceGenerationSuite[[]V](valuesAdapter, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not consturct value slice generator")
 	}
