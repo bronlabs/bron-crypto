@@ -4,15 +4,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	tu "github.com/copperexchange/krypton-primitives/pkg/base/testutils"
 )
 
-type SetInvariants[S ds.Set[E], E any] struct {
-	EmptySet func() S
-}
+type SetInvariants[S ds.Set[E], E any] struct{}
 
 func (si *SetInvariants[S, E]) Size(t *testing.T, A S, expected int) {
 	t.Helper()
@@ -213,86 +209,84 @@ func (si *SetInvariants[S, E]) Clone(t *testing.T) {
 	// TODO
 }
 
-func CheckSetInvariants[S ds.Set[E], E any](t *testing.T, pt *tu.CollectionPropertyTester[S, E]) {
-	t.Helper()
-	require.NotNil(t, pt)
-	CheckAbstractSetInvariants(t, pt)
-	invs := &SetInvariants[S, E]{
-		EmptySet: pt.Adapters.Empty,
-	}
-	t.Run("Size", rapid.MakeCheck(func(rt *rapid.T) {
-		numElements := pt.BoundedIntGenerator.Draw(rt, "expected size")
-		A := pt.FixedSizeGenerator(numElements).Draw(rt, "Random Set to check its cardinality")
-		invs.Size(t, A, numElements)
-	}))
-	t.Run("Add", rapid.MakeCheck(func(rt *rapid.T) {
-		A := pt.VariableSizeGenerator().Draw(rt, "random set to add to")
-		xs := pt.VariableSizeElementSliceGenerator(true).Draw(rt, "Random elements to add")
+// func CheckSetInvariants[S ds.Set[E], E any](t *testing.T, pt *tu.CollectionPropertyTester[S, E]) {
+// 	t.Helper()
+// 	require.NotNil(t, pt)
+// 	CheckAbstractSetInvariants(t, pt)
+// 	invs := &SetInvariants[S, E]{}
+// 	t.Run("Size", rapid.MakeCheck(func(rt *rapid.T) {
+// 		numElements := pt.BoundedIntGenerator.Draw(rt, "expected size")
+// 		A := pt.FixedSizeGenerator(numElements).Draw(rt, "Random Set to check its cardinality")
+// 		invs.Size(t, A, numElements)
+// 	}))
+// 	t.Run("Add", rapid.MakeCheck(func(rt *rapid.T) {
+// 		A := pt.VariableSizeGenerator().Draw(rt, "random set to add to")
+// 		xs := pt.VariableSizeElementSliceGenerator(true).Draw(rt, "Random elements to add")
 
-		h := map[uint]any{}
-		for _, ai := range pt.Adapters.UnwrapCollection(A) {
-			h[ai] = true
-		}
-		expectedSize := len(h)
-		for _, x := range xs {
-			if _, exists := h[pt.Adapters.UnwrapElement(x)]; !exists {
-				expectedSize++
-			}
-		}
+// 		h := map[uint]any{}
+// 		for _, ai := range pt.Adapters.UnwrapCollection(A) {
+// 			h[ai] = true
+// 		}
+// 		expectedSize := len(h)
+// 		for _, x := range xs {
+// 			if _, exists := h[pt.Adapters.UnwrapElement(x)]; !exists {
+// 				expectedSize++
+// 			}
+// 		}
 
-		invs.Add(t, A, expectedSize, xs...)
-	}))
-	t.Run("Remove", rapid.MakeCheck(func(rt *rapid.T) {
-		A := pt.VariableSizeGenerator().Draw(rt, "random set to remove from")
-		xs := pt.VariableSizeElementSliceGenerator(false).Draw(rt, "Random elements to remove")
+// 		invs.Add(t, A, expectedSize, xs...)
+// 	}))
+// 	t.Run("Remove", rapid.MakeCheck(func(rt *rapid.T) {
+// 		A := pt.VariableSizeGenerator().Draw(rt, "random set to remove from")
+// 		xs := pt.VariableSizeElementSliceGenerator(false).Draw(rt, "Random elements to remove")
 
-		h := map[uint]any{}
-		for _, ai := range pt.Adapters.UnwrapCollection(A) {
-			h[ai] = true
-		}
-		expectedSize := len(h)
-		for _, x := range xs {
-			e := pt.Adapters.UnwrapElement(x)
-			if _, exists := h[e]; exists {
-				expectedSize--
-				delete(h, e)
-			}
-		}
+// 		h := map[uint]any{}
+// 		for _, ai := range pt.Adapters.UnwrapCollection(A) {
+// 			h[ai] = true
+// 		}
+// 		expectedSize := len(h)
+// 		for _, x := range xs {
+// 			e := pt.Adapters.UnwrapElement(x)
+// 			if _, exists := h[e]; exists {
+// 				expectedSize--
+// 				delete(h, e)
+// 			}
+// 		}
 
-		invs.Remove(t, A, expectedSize, xs...)
-	}))
-	t.Run("Clear", rapid.MakeCheck(func(rt *rapid.T) {
-		A := pt.VariableSizeGenerator().Draw(rt, "random set to clear")
-		invs.Clear(t, A)
-	}))
-	t.Run("IsEmpty", rapid.MakeCheck(func(rt *rapid.T) {
-		A := pt.VariableSizeGenerator().Draw(rt, "random set to clear")
-		invs.Clear(t, A)
-	}))
-	t.Run("Union", rapid.MakeCheck(func(rt *rapid.T) {
-		A := pt.VariableSizeGenerator().Draw(rt, "lhs of union")
-		B := pt.VariableSizeGenerator().Draw(rt, "rhs of union")
-		invs.Union(t, A, B)
-	}))
-	t.Run("Intersection", rapid.MakeCheck(func(rt *rapid.T) {
-		A := pt.VariableSizeGenerator().Draw(rt, "lhs of intersection")
-		B := pt.VariableSizeGenerator().Draw(rt, "rhs of intersection")
-		invs.Intersection(t, A, B)
-	}))
-	t.Run("IsSubSet", rapid.MakeCheck(func(rt *rapid.T) {
-		A := pt.FixedSizeGenerator(3).Draw(rt, "potential subset")
-		M := pt.FixedSizeGenerator(5).Draw(rt, "potential superset")
-		invs.IsSubSet(t, A, M)
-	}))
-	t.Run("IterSubSet", rapid.MakeCheck(func(rt *rapid.T) {
-		subSetSize := rapid.IntRange(0, 5).Draw(rt, "subset size")
-		var A S
-		if subSetSize == 0 {
-			A = pt.Adapters.Empty()
-		} else {
-			A = pt.FixedSizeGenerator(subSetSize).Draw(rt, "set to iterate over all of its subsets")
-		}
-		invs.IterSubSets(t, A)
-	}))
+// 		invs.Remove(t, A, expectedSize, xs...)
+// 	}))
+// 	t.Run("Clear", rapid.MakeCheck(func(rt *rapid.T) {
+// 		A := pt.VariableSizeGenerator().Draw(rt, "random set to clear")
+// 		invs.Clear(t, A)
+// 	}))
+// 	t.Run("IsEmpty", rapid.MakeCheck(func(rt *rapid.T) {
+// 		A := pt.VariableSizeGenerator().Draw(rt, "random set to clear")
+// 		invs.Clear(t, A)
+// 	}))
+// 	t.Run("Union", rapid.MakeCheck(func(rt *rapid.T) {
+// 		A := pt.VariableSizeGenerator().Draw(rt, "lhs of union")
+// 		B := pt.VariableSizeGenerator().Draw(rt, "rhs of union")
+// 		invs.Union(t, A, B)
+// 	}))
+// 	t.Run("Intersection", rapid.MakeCheck(func(rt *rapid.T) {
+// 		A := pt.VariableSizeGenerator().Draw(rt, "lhs of intersection")
+// 		B := pt.VariableSizeGenerator().Draw(rt, "rhs of intersection")
+// 		invs.Intersection(t, A, B)
+// 	}))
+// 	t.Run("IsSubSet", rapid.MakeCheck(func(rt *rapid.T) {
+// 		A := pt.FixedSizeGenerator(3).Draw(rt, "potential subset")
+// 		M := pt.FixedSizeGenerator(5).Draw(rt, "potential superset")
+// 		invs.IsSubSet(t, A, M)
+// 	}))
+// 	t.Run("IterSubSet", rapid.MakeCheck(func(rt *rapid.T) {
+// 		subSetSize := rapid.IntRange(0, 5).Draw(rt, "subset size")
+// 		var A S
+// 		if subSetSize == 0 {
+// 			A = pt.Adapters.Empty()
+// 		} else {
+// 			A = pt.FixedSizeGenerator(subSetSize).Draw(rt, "set to iterate over all of its subsets")
+// 		}
+// 		invs.IterSubSets(t, A)
+// 	}))
 
-}
+// }

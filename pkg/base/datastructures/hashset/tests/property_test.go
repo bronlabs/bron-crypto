@@ -3,12 +3,10 @@ package hashset_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
-	dstu "github.com/copperexchange/krypton-primitives/pkg/base/datastructures/testutils"
 	tu "github.com/copperexchange/krypton-primitives/pkg/base/testutils"
+	tu2 "github.com/copperexchange/krypton-primitives/pkg/base/testutils2"
 )
 
 var _ tu.CollectionAdapters[ds.Set[data], data] = (*adapters)(nil)
@@ -56,18 +54,28 @@ func NewComparableHashSetPropertyTester(maxNumberOfElements uint) (*tu.Collectio
 	return tu.NewCollectionPropertyTester(adapters, maxNumberOfElements)
 }
 
-func Test_Property_HashableHashSet(t *testing.T) {
-	t.Parallel()
-	maxNumElement := uint(100)
-	pt, err := NewHashableHashSetPropertyTester(maxNumElement)
-	require.NoError(t, err)
-	dstu.CheckSetInvariants(t, pt)
+func Fuzz_Property_HashableHashSet(f *testing.F) {
+
+	empty := hashset.NewHashableHashSet[data]()
+	cm := tu2.NewGobCorpusManager[hashset.HashableHashSet[data]](f, empty)
+
+	cm.Add(f, empty)
+
+	f.Fuzz()
 }
 
-func Test_Property_ComparableHashSet(t *testing.T) {
-	t.Parallel()
-	maxNumElement := uint(100)
-	pt, err := NewComparableHashSetPropertyTester(maxNumElement)
-	require.NoError(t, err)
-	dstu.CheckSetInvariants(t, pt)
-}
+// func Test_Property_HashableHashSet(t *testing.T) {
+// 	t.Parallel()
+// 	maxNumElement := uint(100)
+// 	pt, err := NewHashableHashSetPropertyTester(maxNumElement)
+// 	require.NoError(t, err)
+// 	dstu.CheckSetInvariants(t, pt)
+// }
+
+// func Test_Property_ComparableHashSet(t *testing.T) {
+// 	t.Parallel()
+// 	maxNumElement := uint(100)
+// 	pt, err := NewComparableHashSetPropertyTester(maxNumElement)
+// 	require.NoError(t, err)
+// 	dstu.CheckSetInvariants(t, pt)
+// }

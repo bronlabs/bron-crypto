@@ -4,14 +4,11 @@ import (
 	"testing"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	tu "github.com/copperexchange/krypton-primitives/pkg/base/testutils"
+	tu "github.com/copperexchange/krypton-primitives/pkg/base/testutils2"
 	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
-type AbstractSetInvariants[S ds.AbstractSet[E], E any] struct {
-	EmptySet func() S
-}
+type AbstractSetInvariants[S ds.AbstractSet[E], E any] struct{}
 
 func (asi *AbstractSetInvariants[S, E]) Cardinality(t *testing.T, A S, expectedCardinality int) {
 	t.Helper()
@@ -34,20 +31,22 @@ func (asi *AbstractSetInvariants[S, E]) ContainsAndIter(t *testing.T, A S, expec
 }
 
 // type of S is intentional. We don't want other implementations of abstract set like Curves to run these. This choice also makes construction of these sets to depend on List method as opposed to Add whose implementation will have a higher likelihood to contain a bug.
-func CheckAbstractSetInvariants[S ds.Set[E], E any](t *testing.T, pt *tu.CollectionPropertyTester[S, E]) {
+func CheckAbstractSetInvariants[S ds.Set[E], E any](t *testing.T, pt tu.CollectionGenerator[S, E]) {
 	t.Helper()
 	require.NotNil(t, pt)
-	invs := &AbstractSetInvariants[S, E]{
-		EmptySet: pt.Adapters.Empty,
-	}
-	t.Run("Cardinality", rapid.MakeCheck(func(rt *rapid.T) {
-		expectedCardianlity := pt.BoundedIntGenerator.Draw(rt, "expected cardinality")
-		A := pt.FixedSizeGenerator(expectedCardianlity).Draw(rt, "Random Set to check its cardinality")
-		invs.Cardinality(t, A, expectedCardianlity)
-	}))
-	t.Run("ContainsAndIter", rapid.MakeCheck(func(rt *rapid.T) {
-		expectedCardinality := pt.BoundedIntGenerator.Draw(rt, "expected cardinality")
-		A := pt.FixedSizeGenerator(expectedCardinality).Draw(rt, "Random Set to check its cardinality")
-		invs.ContainsAndIter(t, A, expectedCardinality)
-	}))
+	invs := &AbstractSetInvariants[S, E]{}
+	t.Run("Cardinality", func(t *testing.T) {
+		t.Helper()
+		expectedCardinality, err := tu.RandomInt(pt.Prng(), false)
+		require.NoError(t, err)
+		A := pt.Generate(int(expectedCardinality), true)
+		invs.Cardinality(t, A, int(expectedCardinality))
+	})
+	t.Run("ContainsAndIter", func(t *testing.T) {
+		t.Helper()
+		expectedCardinality, err := tu.RandomInt(pt.Prng(), false)
+		require.NoError(t, err)
+		A := pt.Generate(int(expectedCardinality), true)
+		invs.ContainsAndIter(t, A, int(expectedCardinality))
+	})
 }

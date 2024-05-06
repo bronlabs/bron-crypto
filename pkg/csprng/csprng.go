@@ -7,7 +7,10 @@ import (
 type Seedable interface {
 	io.Reader // Read pseudo-random bytes, to use like `crand.Read()`
 
+	// Reset the internal state of the PRNG.
 	Seed(seed, salt []byte) error
+	// Generate a new PRNG of the same type with the provided seed and salt.
+	New(seed, salt []byte) (CSPRNG, error)
 }
 
 // CSPRNG is a cryptographically-secure Pseudo-Random Number Generator, following
@@ -22,11 +25,4 @@ type CSPRNG interface {
 	Reseed(seed, salt []byte) error
 	// Returns the security strength of the PRNG (in bytes).
 	SecurityStrength() int
-
-	/*..........................Additional functions..........................*/
-
-	// Reset the internal state of the PRNG.
-	Seed(seed, salt []byte) error
-	// Generate a new PRNG of the same type with the provided seed and salt.
-	New(seed, salt []byte) (CSPRNG, error)
 }
