@@ -14,19 +14,18 @@ import (
 
 const Name = "HASH_VECTOR_COMMITMENT"
 
-type Vector veccomm.Vector[hashcomm.Message]
+type Vector = veccomm.Vector[hashcomm.Message]
+
+var _ comm.Opening[Vector] = (*Opening)(nil)
 
 type Opening struct {
 	opening *hashcomm.Opening
-	// vector  veccomm.Vector[hashcomm.Message]
-	vector Vector
+	vector  Vector
 }
 
 func (o *Opening) Message() Vector {
 	return o.vector
 }
-
-var _ comm.Opening[hashcomm.Message] = (*Opening)(nil)
 
 type VectorCommitment struct {
 	commitment hashcomm.Commitment
@@ -93,7 +92,7 @@ func concatenateVector(vector veccomm.Vector[hashcomm.Message]) hashcomm.Message
 // 	return bytes.Join(encoded, nil)
 // }
 
-func (c *VectorCommitter) Commit(vector veccomm.Vector[hashcomm.Message]) (*VectorCommitment, *Opening, error) {
+func (c *VectorCommitter) Commit(vector Vector) (*VectorCommitment, *Opening, error) {
 	if c == nil {
 		return nil, nil, errs.NewIsNil("receiver")
 	}
