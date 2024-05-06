@@ -14,14 +14,19 @@ import (
 
 const Name = "HASH_VECTOR_COMMITMENT"
 
+type Vector veccomm.Vector[hashcomm.Message]
+
 type Opening struct {
 	opening *hashcomm.Opening
-	vector  veccomm.Vector[hashcomm.Message]
+	// vector  veccomm.Vector[hashcomm.Message]
+	vector Vector
 }
 
-func (o *Opening) Message() veccomm.Vector[hashcomm.Message] {
+func (o *Opening) Message() Vector {
 	return o.vector
 }
+
+var _ comm.Opening[hashcomm.Message] = (*Opening)(nil)
 
 type VectorCommitment struct {
 	commitment hashcomm.Commitment
