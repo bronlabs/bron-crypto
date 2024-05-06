@@ -11,7 +11,7 @@ case "$TOOL_NAME" in
         if command -v brew > /dev/null; then
             brew upgrade golangci-lint  || brew install golangci-lint
         else
-            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin" latest
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v1.57.2
         fi
         ;;
     revive)
