@@ -14,41 +14,30 @@ import (
 
 const Name = "HASH_VECTOR_COMMITMENT"
 
-type Vector = veccomm.Vector[hashcomm.Message]
-
 var _ comm.Opening[Vector] = (*Opening)(nil)
+var _ veccomm.VectorCommitment = (*VectorCommitment)(nil)
+var _ veccomm.VectorCommitter[hashcomm.Message, *VectorCommitment, *Opening] = (*VectorCommitter)(nil)
+var _ veccomm.VectorVerifier[hashcomm.Message, *VectorCommitment, *Opening] = (*VectorVerifier)(nil)
+
+type Vector = veccomm.Vector[hashcomm.Message]
 
 type Opening struct {
 	opening *hashcomm.Opening
 	vector  Vector
 }
 
-func (o *Opening) Message() Vector {
-	return o.vector
-}
-
 type VectorCommitment struct {
-	commitment hashcomm.Commitment
+	commitment *hashcomm.Commitment
 	length     uint
 }
-
-func (vc *VectorCommitment) Length() uint {
-	return vc.length
-}
-
-var _ veccomm.VectorCommitment = (*VectorCommitment)(nil)
 
 type VectorCommitter struct {
 	committer *hashcomm.Committer
 }
 
-var _ veccomm.VectorCommitter[hashcomm.Message, *VectorCommitment, *Opening] = (*VectorCommitter)(nil)
-
 type VectorVerifier struct {
 	verifier *hashcomm.Verifier
 }
-
-var _ veccomm.VectorVerifier[hashcomm.Message, *VectorCommitment, *Opening] = (*VectorVerifier)(nil)
 
 // not UC-secure without session-id
 func NewVectorCommitter(sessionId []byte, prng io.Reader) (*VectorCommitter, error) {
@@ -68,39 +57,12 @@ func NewVectorVerifier(sessionId []byte) (*VectorVerifier, error) {
 	return &VectorVerifier{committer}, nil
 }
 
-func encode(msg []byte, i int) []byte {
-	return slices.Concat(bitstring.ToBytes32LE(int32(i)), bitstring.ToBytes32LE(int32(len(msg))), msg)
+func (o *Opening) Message() Vector {
+	return o.vector
 }
 
-func concatenateVector(vector veccomm.Vector[hashcomm.Message]) hashcomm.Message {
-	encoded := make([][]byte, len(vector))
-	for i, m := range vector {
-		encoded[i] = encode(m, i)
-	}
-	return bytes.Join(encoded, nil)
-}
-
-// chain encoding does not seem to bring any benefits here
-// func chainEncodingVector(vector veccomm.Vector[hashcomm.Message]) hashcomm.Message {
-// 	encoded := make([][]byte, len(vector))
-// 	for i, m := range vector {
-// 		encoded[i] = encode(m, i)
-// 		if i > 0 {
-// 			encoded[i] = append(encoded[i-1], encoded[i]...)
-// 		}
-// 	}
-// 	return bytes.Join(encoded, nil)
-// }
-
-func (c *VectorCommitter) Commit(vector Vector) (*VectorCommitment, *Opening, error) {
-	if c == nil {
-		return nil, nil, errs.NewIsNil("receiver")
-	}
-	commitment, opening, err := c.committer.Commit(concatenateVector(vector))
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not compute commitment")
-	}
-	return &VectorCommitment{commitment, uint(len(vector))}, &Opening{&opening, vector}, nil
+func (vc *VectorCommitment) Length() uint {
+	return vc.length
 }
 
 func (vc *VectorCommitment) Validate() error {
@@ -123,20 +85,43 @@ func (o *Opening) Validate() error {
 	return o.opening.Validate()
 }
 
-func (v *VectorVerifier) Verify(veccom *VectorCommitment, opening *Opening) error {
+// Encode the vector as a concatenation of messages along with their position and length
+func encode(vector veccomm.Vector[hashcomm.Message]) hashcomm.Message {
+	encoded := make([][]byte, len(vector))
+	for i, m := range vector {
+		encoded[i] = slices.Concat(bitstring.ToBytes32LE(int32(i)), bitstring.ToBytes32LE(int32(len(m))), m)
+	}
+	return bytes.Join(encoded, nil)
+}
+
+func (c *VectorCommitter) Commit(vector Vector) (*VectorCommitment, *Opening, error) {
+	if c == nil {
+		return nil, nil, errs.NewIsNil("receiver")
+	}
+	commitment, opening, err := c.committer.Commit(encode(vector))
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not compute commitment")
+	}
+	return &VectorCommitment{commitment, uint(len(vector))}, &Opening{opening, vector}, nil
+}
+
+func (v *VectorVerifier) Verify(vectorCommitment *VectorCommitment, opening *Opening) error {
 	if v == nil {
 		return errs.NewIsNil("receiver")
 	}
-	if err := veccom.Validate(); err != nil {
+	if err := vectorCommitment.Validate(); err != nil {
 		return errs.WrapFailed(err, "commitment unvalid")
 	}
 	if err := opening.Validate(); err != nil {
 		return errs.WrapFailed(err, "opening unvalid")
 	}
-	if !(bytes.Equal(concatenateVector(opening.vector), opening.opening.Message_)) {
+	if int(vectorCommitment.length) != len(opening.vector) {
+		return errs.NewVerification("length does not match")
+	}
+	if !(bytes.Equal(encode(opening.vector), opening.opening.Message())) {
 		return errs.NewVerification("commitment is not tied to the vector")
 	}
-	err := v.verifier.Verify(veccom.commitment, opening.opening)
+	err := v.verifier.Verify(vectorCommitment.commitment, opening.opening)
 	if err != nil {
 		return errs.NewVerification("verification failed")
 	}
