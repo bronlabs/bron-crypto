@@ -128,10 +128,10 @@ func (v *VectorVerifier) Verify(vectorCommitment *VectorCommitment, opening *Ope
 	return nil
 }
 
-func (_ *VectorCommitter) OpenAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], fullOpening *Opening) (opening comm.Opening[hashcomm.Message], err error) {
+func (*VectorCommitter) OpenAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], fullOpening *Opening) (opening comm.Opening[hashcomm.Message], err error) {
 	panic("implement me")
 }
 
-func (_ *VectorVerifier) VerifyAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], opening comm.Opening[hashcomm.Message]) error {
+func (*VectorVerifier) VerifyAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], opening comm.Opening[hashcomm.Message]) error {
 	panic("implement me")
 }

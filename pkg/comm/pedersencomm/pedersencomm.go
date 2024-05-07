@@ -157,7 +157,7 @@ func (v *HomomorphicVerifier) Verify(commitment *Commitment, opening *Opening) e
 	return nil
 }
 
-func (_ *HomomorphicCommitmentScheme) CombineCommitments(x *Commitment, ys ...*Commitment) (*Commitment, error) {
+func (*HomomorphicCommitmentScheme) CombineCommitments(x *Commitment, ys ...*Commitment) (*Commitment, error) {
 	if err := x.Validate(); err != nil {
 		return nil, errs.WrapFailed(err, "unvalid commitment (1st operand)")
 	}
@@ -171,7 +171,7 @@ func (_ *HomomorphicCommitmentScheme) CombineCommitments(x *Commitment, ys ...*C
 	return acc, nil
 }
 
-func (_ *HomomorphicCommitmentScheme) ScaleCommitment(x *Commitment, n *saferith.Nat) (*Commitment, error) {
+func (*HomomorphicCommitmentScheme) ScaleCommitment(x *Commitment, n *saferith.Nat) (*Commitment, error) {
 	if err := x.Validate(); err != nil {
 		return nil, errs.WrapFailed(err, "unvalid commitment")
 	}
@@ -183,7 +183,7 @@ func (_ *HomomorphicCommitmentScheme) ScaleCommitment(x *Commitment, n *saferith
 	return &Commitment{x.Value.ScalarMul(scale)}, nil
 }
 
-func (_ *HomomorphicCommitmentScheme) CombineOpenings(x *Opening, ys ...*Opening) (*Opening, error) {
+func (*HomomorphicCommitmentScheme) CombineOpenings(x *Opening, ys ...*Opening) (*Opening, error) {
 	if err := x.Validate(); err != nil {
 		return nil, errs.WrapFailed(err, "unvalid opening (1st operand)")
 	}
@@ -198,7 +198,7 @@ func (_ *HomomorphicCommitmentScheme) CombineOpenings(x *Opening, ys ...*Opening
 	return acc, nil
 }
 
-func (_ *HomomorphicCommitmentScheme) ScaleOpening(x *Opening, n *saferith.Nat) (*Opening, error) {
+func (*HomomorphicCommitmentScheme) ScaleOpening(x *Opening, n *saferith.Nat) (*Opening, error) {
 	if err := x.Validate(); err != nil {
 		return nil, errs.WrapFailed(err, "unvalid opening")
 	}
