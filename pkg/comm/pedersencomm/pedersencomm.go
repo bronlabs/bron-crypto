@@ -90,9 +90,9 @@ func (c *HomomorphicCommitter) Commit(message Message) (Commitment, *Opening, er
 	}
 	curve := message.ScalarField().Curve()
 	witness, _ := message.ScalarField().Random(c.Prng)
-	// Generate the 1st operand of the commitment
+	// Generate the committed value
 	mG := curve.Generator().ScalarMul(message)
-	// Generate the 2nd operand of the commitment
+	// Generate the binding term
 	rH := c.Generator.ScalarMul(witness)
 	commitment := rH.Add(mG)
 	return Commitment{commitment}, &Opening{message, witness}, nil

@@ -127,7 +127,7 @@ func (v *VectorVerifier) Verify(veccom *VectorCommitment, opening *Opening) erro
 		return errs.WrapFailed(err, "unvalid opening")
 	}
 	curve := veccom.commitment.Commitment.Curve()
-	// Reconstructs the 2nd operand
+	// Reconstructs the binding term
 	hBytes, err := hashing.HashChain(base.RandomOracleHashFunction, v.verifier.SessionId, pedersencomm.SomethingUpMySleeve)
 	if err != nil {
 		return errs.WrapHashing(err, "could not produce dlog of H")
@@ -137,6 +137,7 @@ func (v *VectorVerifier) Verify(veccom *VectorCommitment, opening *Opening) erro
 		return errs.WrapHashing(err, "failed to hash to curve for H")
 	}
 	localCommitment := h.ScalarMul(opening.opening.Witness)
+	// Reconstructs the committed values
 	localNonce := opening.nonce.Clone()
 	for _, msg := range opening.Vector_ {
 		localGenerator := curve.Generator().ScalarMul(localNonce)
