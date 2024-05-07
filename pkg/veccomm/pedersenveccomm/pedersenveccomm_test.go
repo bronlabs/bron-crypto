@@ -45,13 +45,13 @@ func TestSimpleHappyPath(t *testing.T) {
 	messagesPrime[1], _ = curve.ScalarField().Random(crand.Reader)
 	messagesPrime[2], _ = curve.ScalarField().Random(crand.Reader)
 
-	_, _, err = c.Commit(messagesPrime)
+	comPrime, opnPrime, err := c.Commit(messagesPrime)
 	require.NoError(t, err)
 
-	// combinedCommitment, err := c.CombineCommitments(com, comPrime)
-	// require.NoError(t, err)
-	// combinedOpening, err := c.CombineOpenings(opn, opnPrime)
-	// require.NoError(t, err)
-	// err = v.Verify(combinedCommitment, combinedOpening)
-	// require.NoError(t, err)
+	combinedCommitment, err := c.CombineCommitments(com, comPrime)
+	require.NoError(t, err)
+	combinedOpening, err := c.CombineOpenings(opn, opnPrime)
+	require.NoError(t, err)
+	err = v.Verify(combinedCommitment, combinedOpening)
+	require.NoError(t, err)
 }

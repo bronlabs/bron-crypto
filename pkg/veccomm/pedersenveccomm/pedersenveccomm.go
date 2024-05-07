@@ -36,7 +36,6 @@ type Opening struct {
 
 type VectorCommitment struct {
 	commitment *pedersencomm.Commitment
-	nonce      curves.Scalar
 	length     uint
 }
 
@@ -54,14 +53,12 @@ type VectorVerifier struct {
 	VectorHomomorphicCommitmentScheme
 }
 
-// Step 1. Compute a generator h from sessionId and SomethingUpMySleeve
-// Step 2. Generate n generators by computing  h+nonce*G, h+(nonce+1)*G, ...
-func (o *VectorHomomorphicCommitmentScheme) SampleGenerators(sessionId []byte, curve curves.Curve, nonce curves.Scalar, n uint) ([]curves.Point, error) {
+func (o *VectorHomomorphicCommitmentScheme) SampleGenerators(sessionId []byte, curve curves.Curve, n uint) ([]curves.Point, error) {
 	if curve == nil {
 		return nil, errs.NewIsNil("curve is nil")
 	}
 	generators := make([]curves.Point, n)
-	// Derive a point from session identifier and SomethingUpMySleeve
+	// Derive points from session identifier and SomethingUpMySleeve
 	hBytes, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, SomethingUpMySleeve)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "failed to hash sessionId")
@@ -71,6 +68,7 @@ func (o *VectorHomomorphicCommitmentScheme) SampleGenerators(sessionId []byte, c
 		return nil, errs.WrapHashing(err, "failed to hash to curve for H")
 	}
 	// Get generators by computing h+nonce*G
+	nonce := curve.ScalarField().MultiplicativeIdentity()
 	for i, _ := range generators {
 		generators[i] = h.Add(curve.Generator().ScalarMul(nonce))
 		nonce = nonce.Increment()
@@ -122,11 +120,7 @@ func (c *VectorCommitter) Commit(vector Vector) (*VectorCommitment, *Opening, er
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not draw the witness at random")
 	}
-	nonce, err := curve.ScalarField().Random(c.committer.Prng)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not draw a nonce at random")
-	}
-	h, err := c.SampleGenerators(c.sessionId, curve, nonce, uint(len(vector)))
+	h, err := c.SampleGenerators(c.sessionId, curve, uint(len(vector)))
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not generate generators")
 	}
@@ -139,7 +133,7 @@ func (c *VectorCommitter) Commit(vector Vector) (*VectorCommitment, *Opening, er
 	pedersenCommitment := pedersencomm.Opening{}
 	pedersenCommitment.Witness = witness
 
-	return &VectorCommitment{commitment: &pedersencomm.Commitment{Value: commitment}, nonce: nonce, length: uint(len(vector))},
+	return &VectorCommitment{commitment: &pedersencomm.Commitment{Value: commitment}, length: uint(len(vector))},
 		&Opening{&pedersenCommitment, vector},
 		nil
 }
@@ -181,7 +175,7 @@ func (v *VectorVerifier) Verify(vectorCommitment *VectorCommitment, opening *Ope
 		return errs.WrapFailed(err, "unvalid opening")
 	}
 	curve := vectorCommitment.commitment.Value.Curve()
-	h, err := v.SampleGenerators(v.sessionId, curve, vectorCommitment.nonce, vectorCommitment.length)
+	h, err := v.SampleGenerators(v.sessionId, curve, vectorCommitment.length)
 	if err != nil {
 		return errs.WrapFailed(err, "could not generate generators")
 	}
@@ -207,7 +201,7 @@ func (vhcs *VectorHomomorphicCommitmentScheme) CombineCommitments(x *VectorCommi
 	if err := x.Validate(); err != nil {
 		return nil, errs.WrapValidation(err, "unvalid commitment (1st operand)")
 	}
-	acc := &VectorCommitment{commitment: &pedersencomm.Commitment{Value: x.commitment.Value.Clone()}, nonce: x.nonce.Clone(), length: x.length}
+	acc := &VectorCommitment{commitment: &pedersencomm.Commitment{Value: x.commitment.Value.Clone()}, length: x.length}
 	for _, y := range ys {
 		if y.length != x.length {
 			return nil, errs.NewFailed("vector length mismatch")
@@ -226,7 +220,7 @@ func (vhcs *VectorHomomorphicCommitmentScheme) ScaleCommitment(x *VectorCommitme
 	curve := x.commitment.Value.Curve()
 	scale := curve.ScalarField().Scalar().SetNat(n)
 	return &VectorCommitment{commitment: &pedersencomm.Commitment{Value: x.commitment.Value.ScalarMul(scale)},
-			nonce: x.nonce.Clone(), length: x.length},
+			length: x.length},
 		nil
 }
 
@@ -237,7 +231,7 @@ func (vhcs *VectorHomomorphicCommitmentScheme) CombineOpenings(x *Opening, ys ..
 	// separate declaration because pedersencomm.commitment.message is unexported
 	pedersenCommitment := pedersencomm.Opening{}
 	pedersenCommitment.Witness = x.opening.Witness.Clone()
-	acc := &Opening{&pedersenCommitment, make(veccomm.Vector[pedersencomm.Message], len(x.vector))}
+	acc := &Opening{&pedersenCommitment, make(Vector, len(x.vector))}
 	copy(acc.vector, x.vector)
 	for _, y := range ys {
 		if len(y.vector) != len(x.vector) {
@@ -263,7 +257,7 @@ func (vhcs *VectorHomomorphicCommitmentScheme) ScaleOpening(x *Opening, n *safer
 	// separate declaration because pedersencomm.commitment.message is unexported
 	pedersenCommitment := pedersencomm.Opening{}
 	pedersenCommitment.Witness = x.opening.Witness.Clone()
-	acc := &Opening{&pedersenCommitment, make(veccomm.Vector[pedersencomm.Message], len(x.vector))}
+	acc := &Opening{&pedersenCommitment, make(Vector, len(x.vector))}
 	copy(acc.vector, x.vector)
 	acc.opening.Witness = acc.opening.Witness.Mul(scale)
 	for i, _ := range x.vector {
