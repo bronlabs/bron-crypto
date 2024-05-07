@@ -186,6 +186,8 @@ func TestOpenOnWrongCombine(t *testing.T) {
 		require.NoError(t, err)
 		combinedOpening, err := c.CombineOpenings(testCaseEntry.opening, openingPrime)
 		require.NoError(t, err)
+		// Check that combined opening contains the expected message
+		require.True(t, (testCaseEntry.opening.Message().Add(messagePrime)).Equal(combinedOpening.Message()))
 		err = v.Verify(combinedCommitment, combinedOpening)
 		require.Error(t, err)
 		require.True(t, errs.IsVerification(err))
@@ -207,6 +209,8 @@ func TestHappyScale(t *testing.T) {
 		require.NoError(t, err)
 		scaledOpening, err := v.ScaleOpening(testCaseEntry.opening, rnd.Nat())
 		require.NoError(t, err)
+		// Check that scaled opening contains the expected message
+		require.True(t, (testCaseEntry.opening.Message().Mul(rnd)).Equal(scaledOpening.Message()))
 		err = v.Verify(scaledCommitment, scaledOpening)
 		require.NoError(t, err)
 	}

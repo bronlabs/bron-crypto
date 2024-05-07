@@ -185,7 +185,7 @@ func (hcs *HomomorphicCommitmentScheme) CombineOpenings(x *Opening, ys ...*Openi
 	if len(ys) == 0 {
 		return x, nil
 	}
-	acc := x
+	acc := &Opening{x.Message_.Clone(), x.Witness.Clone()}
 	for _, y := range ys {
 		acc.Message_ = acc.Message_.Add(y.Message_)
 		acc.Witness = acc.Witness.Add(y.Witness)
