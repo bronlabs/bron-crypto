@@ -3,10 +3,12 @@ package pedersenveccomm
 import (
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/comm"
 	"github.com/copperexchange/krypton-primitives/pkg/comm/pedersencomm"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/veccomm"
 )
 
@@ -16,6 +18,7 @@ type Vector = veccomm.Vector[pedersencomm.Message]
 
 type Opening struct {
 	opening pedersencomm.Opening
+	nonce   curves.Scalar
 	Vector_ veccomm.Vector[pedersencomm.Message]
 }
 
@@ -72,6 +75,7 @@ func (c *VectorCommitter) Commit(vector Vector) (*VectorCommitment, *Opening, er
 	}
 	curve := c.committer.Generator.Curve()
 	nonce, err := curve.ScalarField().Random(c.committer.Prng)
+	initialNonce := nonce
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not draw the nonce at random")
 	}
@@ -86,18 +90,61 @@ func (c *VectorCommitter) Commit(vector Vector) (*VectorCommitment, *Opening, er
 		mG := localGenerator.ScalarMul(msg)
 		commitment = commitment.Add(mG)
 	}
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not compute commitment")
+	return &VectorCommitment{&pedersencomm.Commitment{commitment}, uint(len(vector))}, &Opening{pedersencomm.Opening{nil, witness}, initialNonce, vector}, nil
+}
+
+func (vc *VectorCommitment) Validate() error {
+	if vc == nil {
+		return errs.NewIsNil("receiver")
 	}
-	return &VectorCommitment{&pedersencomm.Commitment{commitment}, uint(len(vector))}, &Opening{pedersencomm.Opening{nil, witness}, vector}, nil
+	if vc.commitment == nil {
+		return errs.NewIsNil("commitment")
+	}
+	if vc.length == 0 {
+		return errs.NewValidation("zero-length")
+	}
+	return vc.commitment.Validate()
+}
+
+func (o *Opening) Validate() error {
+	if o == nil {
+		return errs.NewIsNil("receiver")
+	}
+	if o.opening.Witness == nil {
+		return errs.NewIsNil("witness")
+	}
+	return nil
 }
 
 func (v *VectorVerifier) Verify(veccom *VectorCommitment, opening *Opening) error {
 	if v == nil {
 		return errs.NewIsNil("receiver")
 	}
-	err := v.verifier.Verify(*veccom.commitment, &opening.opening)
+	if err := veccom.Validate(); err != nil {
+		return errs.WrapFailed(err, "unvalid commitment")
+	}
+	if err := opening.Validate(); err != nil {
+		return errs.WrapFailed(err, "unvalid opening")
+	}
+	curve := veccom.commitment.Commitment.Curve()
+	// Reconstructs the 2nd operand
+	hBytes, err := hashing.HashChain(base.RandomOracleHashFunction, v.verifier.SessionId, pedersencomm.SomethingUpMySleeve)
 	if err != nil {
+		return errs.WrapHashing(err, "could not produce dlog of H")
+	}
+	h, err := curve.Hash(hBytes)
+	if err != nil {
+		return errs.WrapHashing(err, "failed to hash to curve for H")
+	}
+	localCommitment := h.ScalarMul(opening.opening.Witness)
+	localNonce := opening.nonce.Clone()
+	for _, msg := range opening.Vector_ {
+		localGenerator := curve.Generator().ScalarMul(localNonce)
+		localNonce = localNonce.Increment()
+		mG := localGenerator.ScalarMul(msg)
+		localCommitment = localCommitment.Add(mG)
+	}
+	if !veccom.commitment.Commitment.Equal(localCommitment) {
 		return errs.NewVerification("verification failed")
 	}
 	return nil

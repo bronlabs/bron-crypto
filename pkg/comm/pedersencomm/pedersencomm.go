@@ -24,7 +24,7 @@ var _ Witness = Witness(nil)
 
 var (
 	// hardcoded seed used to derive generators along with the session-id
-	somethingUpMySleeve = []byte(fmt.Sprintf("COPPER_KRYPTON_%s_SOMETHING_UP_MY_SLEEVE-", Name))
+	SomethingUpMySleeve = []byte(fmt.Sprintf("COPPER_KRYPTON_%s_SOMETHING_UP_MY_SLEEVE-", Name))
 )
 
 type Opening struct {
@@ -51,7 +51,7 @@ type HomomorphicCommitter struct {
 var _ comm.HomomorphicCommitter[Message, Commitment, *Opening] = (*HomomorphicCommitter)(nil)
 
 type HomomorphicVerifier struct {
-	sessionId []byte
+	SessionId []byte
 	HomomorphicCommitmentScheme
 }
 
@@ -69,7 +69,7 @@ func NewHomomorphicCommitter(sessionId []byte, prng io.Reader, curve curves.Curv
 		return nil, errs.NewIsNil("prng is nil")
 	}
 	// Generate a random point from the sessionId and NothingUpMySleeve
-	h, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, somethingUpMySleeve)
+	h, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, SomethingUpMySleeve)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce dlog of H")
 	}
@@ -99,8 +99,11 @@ func (c *HomomorphicCommitter) Commit(message Message) (Commitment, *Opening, er
 }
 
 func (c *Commitment) Validate() error {
-	if c.Commitment == nil {
+	if c == nil {
 		return errs.NewIsNil("receiver")
+	}
+	if c.Commitment == nil {
+		return errs.NewIsNil("commitment")
 	}
 	if c.Commitment.IsSmallOrder() {
 		return errs.NewMembership("commitment is not part of the prime order subgroup")
@@ -113,10 +116,10 @@ func (o *Opening) Validate() error {
 		return errs.NewIsNil("receiver")
 	}
 	if o.Message_ == nil {
-		return errs.NewIsNil("message is nil")
+		return errs.NewIsNil("message")
 	}
 	if o.Witness == nil {
-		return errs.NewIsNil("witness is nil")
+		return errs.NewIsNil("witness")
 	}
 	return nil
 }
@@ -135,7 +138,7 @@ func (v *HomomorphicVerifier) Verify(commitment Commitment, opening *Opening) er
 	// Reconstructs the 1st operand
 	mG := curve.Generator().ScalarMul(opening.Message_)
 	// Reconstructs the 2nd operand
-	hBytes, err := hashing.HashChain(base.RandomOracleHashFunction, v.sessionId, somethingUpMySleeve)
+	hBytes, err := hashing.HashChain(base.RandomOracleHashFunction, v.SessionId, SomethingUpMySleeve)
 	if err != nil {
 		return errs.WrapHashing(err, "could not produce dlog of H")
 	}
