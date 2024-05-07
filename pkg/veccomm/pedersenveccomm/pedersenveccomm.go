@@ -55,7 +55,7 @@ type VectorVerifier struct {
 }
 
 // This function draw different generators through hash2curve chaining.
-func (o *VectorHomomorphicCommitmentScheme) SampleGenerators(sessionId []byte, curve curves.Curve, n uint) ([]curves.Point, error) {
+func (_ *VectorHomomorphicCommitmentScheme) SampleGenerators(sessionId []byte, curve curves.Curve, n uint) ([]curves.Point, error) {
 	if curve == nil {
 		return nil, errs.NewIsNil("curve is nil")
 	}
@@ -189,15 +189,15 @@ func (v *VectorVerifier) Verify(vectorCommitment *VectorCommitment, opening *Ope
 	return nil
 }
 
-func (c *VectorCommitter) OpenAtIndex(index uint, vector Vector, fullOpening *Opening) (opening comm.Opening[pedersencomm.Message], err error) {
+func (_ *VectorCommitter) OpenAtIndex(index uint, vector Vector, fullOpening *Opening) (opening comm.Opening[pedersencomm.Message], err error) {
 	panic("implement me")
 }
 
-func (v *VectorVerifier) VerifyAtIndex(index uint, vector Vector, opening comm.Opening[pedersencomm.Message]) error {
+func (_ *VectorVerifier) VerifyAtIndex(index uint, vector Vector, opening comm.Opening[pedersencomm.Message]) error {
 	panic("implement me")
 }
 
-func (vhcs *VectorHomomorphicCommitmentScheme) CombineCommitments(x *VectorCommitment, ys ...*VectorCommitment) (*VectorCommitment, error) {
+func (_ *VectorHomomorphicCommitmentScheme) CombineCommitments(x *VectorCommitment, ys ...*VectorCommitment) (*VectorCommitment, error) {
 	if err := x.Validate(); err != nil {
 		return nil, errs.WrapValidation(err, "unvalid commitment (1st operand)")
 	}
@@ -213,7 +213,7 @@ func (vhcs *VectorHomomorphicCommitmentScheme) CombineCommitments(x *VectorCommi
 	}
 	return acc, nil
 }
-func (vhcs *VectorHomomorphicCommitmentScheme) ScaleCommitment(x *VectorCommitment, n *saferith.Nat) (*VectorCommitment, error) {
+func (_ *VectorHomomorphicCommitmentScheme) ScaleCommitment(x *VectorCommitment, n *saferith.Nat) (*VectorCommitment, error) {
 	if err := x.Validate(); err != nil {
 		return nil, errs.WrapValidation(err, "unvalid commitment")
 	}
@@ -227,7 +227,7 @@ func (vhcs *VectorHomomorphicCommitmentScheme) ScaleCommitment(x *VectorCommitme
 		nil
 }
 
-func (vhcs *VectorHomomorphicCommitmentScheme) CombineOpenings(x *Opening, ys ...*Opening) (*Opening, error) {
+func (_ *VectorHomomorphicCommitmentScheme) CombineOpenings(x *Opening, ys ...*Opening) (*Opening, error) {
 	if err := x.Validate(); err != nil {
 		return nil, errs.WrapValidation(err, "unvalid opening (1st operand)")
 	}
@@ -251,7 +251,7 @@ func (vhcs *VectorHomomorphicCommitmentScheme) CombineOpenings(x *Opening, ys ..
 	return acc, nil
 }
 
-func (vhcs *VectorHomomorphicCommitmentScheme) ScaleOpening(x *Opening, n *saferith.Nat) (*Opening, error) {
+func (_ *VectorHomomorphicCommitmentScheme) ScaleOpening(x *Opening, n *saferith.Nat) (*Opening, error) {
 	if err := x.Validate(); err != nil {
 		return nil, errs.WrapValidation(err, "unvalid opening")
 	}

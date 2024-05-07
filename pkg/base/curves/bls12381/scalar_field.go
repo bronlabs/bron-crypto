@@ -205,8 +205,8 @@ func (*ScalarField[_]) IsDecomposable(coprimeIdealNorms ...algebra.IntegerRingEl
 	panic("implement me")
 }
 
-func (s *ScalarField[_]) Scalar() curves.Scalar {
-	return s.Element()
+func (sf *ScalarField[_]) Scalar() curves.Scalar {
+	return sf.Element()
 }
 
 func (*ScalarField[G]) Name() string {

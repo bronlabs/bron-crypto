@@ -82,7 +82,10 @@ func (o *Opening) Validate() error {
 	if o == nil {
 		return errs.NewIsNil("receiver")
 	}
-	return o.opening.Validate()
+	if err := o.opening.Validate(); err != nil {
+		return errs.WrapValidation(err, "unvalid opening")
+	}
+	return nil
 }
 
 // Encode the vector as a concatenation of messages along with their position and length.
@@ -95,8 +98,8 @@ func encode(vector veccomm.Vector[hashcomm.Message]) hashcomm.Message {
 }
 
 func (c *VectorCommitter) Commit(vector Vector) (*VectorCommitment, *Opening, error) {
-	if c == nil {
-		return nil, nil, errs.NewIsNil("receiver")
+	if vector == nil {
+		return nil, nil, errs.NewIsNil("vector is nil")
 	}
 	commitment, opening, err := c.committer.Commit(encode(vector))
 	if err != nil {
@@ -106,9 +109,6 @@ func (c *VectorCommitter) Commit(vector Vector) (*VectorCommitment, *Opening, er
 }
 
 func (v *VectorVerifier) Verify(vectorCommitment *VectorCommitment, opening *Opening) error {
-	if v == nil {
-		return errs.NewIsNil("receiver")
-	}
 	if err := vectorCommitment.Validate(); err != nil {
 		return errs.WrapFailed(err, "commitment unvalid")
 	}
@@ -128,10 +128,10 @@ func (v *VectorVerifier) Verify(vectorCommitment *VectorCommitment, opening *Ope
 	return nil
 }
 
-func (c *VectorCommitter) OpenAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], fullOpening *Opening) (opening comm.Opening[hashcomm.Message], err error) {
+func (_ *VectorCommitter) OpenAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], fullOpening *Opening) (opening comm.Opening[hashcomm.Message], err error) {
 	panic("implement me")
 }
 
-func (v *VectorVerifier) VerifyAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], opening comm.Opening[hashcomm.Message]) error {
+func (_ *VectorVerifier) VerifyAtIndex(index uint, vector veccomm.Vector[hashcomm.Message], opening comm.Opening[hashcomm.Message]) error {
 	panic("implement me")
 }

@@ -115,7 +115,7 @@ func TestCommmitDistinctCommitments(t *testing.T) {
 
 		// Slices cannot be used as hash keys, so copy into an array
 		cee := make([]byte, h().Size())
-		copy(cee[:], []byte(com.Value))
+		copy(cee[:], com.Value)
 
 		serialised := hex.EncodeToString(cee)
 
