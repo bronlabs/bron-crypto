@@ -5,9 +5,10 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
-	"github.com/stretchr/testify/require"
 )
 
 var (

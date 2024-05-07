@@ -4,10 +4,11 @@ import (
 	crand "crypto/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/comm/pedersencomm"
 	"github.com/copperexchange/krypton-primitives/pkg/veccomm/pedersenveccomm"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSimpleHappyPath(t *testing.T) {

@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/comm"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"github.com/cronokirby/saferith"
 )
 
 const Name comm.Name = "PEDERSEN_COMMITMENT"
@@ -23,7 +24,7 @@ var _ comm.HomomorphicCommitter[Message, *Commitment, *Opening] = (*HomomorphicC
 var _ comm.HomomorphicVerifier[Message, *Commitment, *Opening] = (*HomomorphicVerifier)(nil)
 
 var (
-	// hardcoded seed used to derive generators along with the session-id
+	// hardcoded seed used to derive generators along with the session-id.
 	SomethingUpMySleeve = []byte(fmt.Sprintf("COPPER_KRYPTON_%s_SOMETHING_UP_MY_SLEEVE-", Name))
 )
 
@@ -52,7 +53,7 @@ type Commitment struct {
 	Value curves.Point
 }
 
-// not UC-secure without session-id
+// not UC-secure without session-id.
 func NewHomomorphicCommitter(sessionId []byte, prng io.Reader, curve curves.Curve) (*HomomorphicCommitter, error) {
 	if curve == nil {
 		return nil, errs.NewIsNil("curve is nil")
@@ -145,7 +146,7 @@ func (v *HomomorphicVerifier) Verify(commitment *Commitment, opening *Opening) e
 		return errs.WrapFailed(err, "unvalid opening")
 	}
 	curve := opening.message.ScalarField().Curve()
-	// Reconstructs the comitted value
+	// Reconstructs the committed value
 	mG := curve.Generator().ScalarMul(opening.message)
 	// Reconstructs the binding value
 	rH := v.H.ScalarMul(opening.Witness)

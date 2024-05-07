@@ -39,7 +39,7 @@ type VectorVerifier struct {
 	verifier *hashcomm.Verifier
 }
 
-// not UC-secure without session-id
+// not UC-secure without session-id.
 func NewVectorCommitter(sessionId []byte, prng io.Reader) (*VectorCommitter, error) {
 	committer, err := hashcomm.NewCommitter(sessionId, prng)
 	if err != nil {
@@ -48,7 +48,7 @@ func NewVectorCommitter(sessionId []byte, prng io.Reader) (*VectorCommitter, err
 	return &VectorCommitter{committer}, nil
 }
 
-// not UC-secure without session-id
+// not UC-secure without session-id.
 func NewVectorVerifier(sessionId []byte) (*VectorVerifier, error) {
 	committer, err := hashcomm.NewVerifier(sessionId)
 	if err != nil {
@@ -85,7 +85,7 @@ func (o *Opening) Validate() error {
 	return o.opening.Validate()
 }
 
-// Encode the vector as a concatenation of messages along with their position and length
+// Encode the vector as a concatenation of messages along with their position and length.
 func encode(vector veccomm.Vector[hashcomm.Message]) hashcomm.Message {
 	encoded := make([][]byte, len(vector))
 	for i, m := range vector {

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -11,7 +13,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/comm/pedersencomm"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/veccomm"
-	"github.com/cronokirby/saferith"
 )
 
 const Name = "PEDERSEN_VECTOR_COMMITMENT"
@@ -23,7 +24,7 @@ var _ veccomm.VectorCommitter[pedersencomm.Message, *VectorCommitment, *Opening]
 var _ veccomm.VectorVerifier[pedersencomm.Message, *VectorCommitment, *Opening] = (*VectorVerifier)(nil)
 
 var (
-	// hardcoded seed used to derive generators along with the session-id
+	// hardcoded seed used to derive generators along with the session-id.
 	SomethingUpMySleeve = []byte(fmt.Sprintf("COPPER_KRYPTON_%s_SOMETHING_UP_MY_SLEEVE-", Name))
 )
 
@@ -53,7 +54,7 @@ type VectorVerifier struct {
 	VectorHomomorphicCommitmentScheme
 }
 
-// This function draw different generators through hash2curve chaining
+// This function draw different generators through hash2curve chaining.
 func (o *VectorHomomorphicCommitmentScheme) SampleGenerators(sessionId []byte, curve curves.Curve, n uint) ([]curves.Point, error) {
 	if curve == nil {
 		return nil, errs.NewIsNil("curve is nil")
@@ -64,7 +65,7 @@ func (o *VectorHomomorphicCommitmentScheme) SampleGenerators(sessionId []byte, c
 	if err != nil {
 		return nil, errs.WrapHashing(err, "failed to hash sessionId")
 	}
-	for i, _ := range generators {
+	for i := range generators {
 		generators[i], err = curve.Hash(hBytes)
 		if err != nil {
 			return nil, errs.WrapHashing(err, "failed to hash to curve for H")
@@ -75,7 +76,7 @@ func (o *VectorHomomorphicCommitmentScheme) SampleGenerators(sessionId []byte, c
 	return generators, nil
 }
 
-// not UC-secure without session-id
+// not UC-secure without session-id.
 func NewVectorCommitter(sessionId []byte, prng io.Reader, curve curves.Curve) (*VectorCommitter, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
@@ -90,7 +91,7 @@ func NewVectorCommitter(sessionId []byte, prng io.Reader, curve curves.Curve) (*
 	return &VectorCommitter{sessionId, committer, VectorHomomorphicCommitmentScheme{}}, nil
 }
 
-// not UC-secure without session-id
+// not UC-secure without session-id.
 func NewVectorVerifier(sessionId []byte, curve curves.Curve) (*VectorVerifier, error) {
 	if curve == nil {
 		return nil, errs.NewIsNil("curve is nil")
@@ -265,7 +266,7 @@ func (vhcs *VectorHomomorphicCommitmentScheme) ScaleOpening(x *Opening, n *safer
 	acc := &Opening{&pedersenCommitment, make(Vector, len(x.vector))}
 	copy(acc.vector, x.vector)
 	acc.opening.Witness = acc.opening.Witness.Mul(scale)
-	for i, _ := range x.vector {
+	for i := range x.vector {
 		acc.vector[i] = acc.vector[i].Mul(scale)
 	}
 	return acc, nil

@@ -5,12 +5,13 @@ import (
 	"io"
 	"slices"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/comm"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"golang.org/x/crypto/sha3"
 )
 
 const Name comm.Name = "HASH_COMMITMENT"
@@ -52,7 +53,7 @@ func (o *Opening) Message() Message {
 	return o.message
 }
 
-// not UC-secure without session-id
+// not UC-secure without session-id.
 func NewCommitter(sessionId []byte, prng io.Reader) (*Committer, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
@@ -60,12 +61,12 @@ func NewCommitter(sessionId []byte, prng io.Reader) (*Committer, error) {
 	return &Committer{prng, sessionId}, nil
 }
 
-// not UC-secure without session-id
+// not UC-secure without session-id.
 func NewVerifier(sessionId []byte) (*Verifier, error) {
 	return &Verifier{sessionId}, nil
 }
 
-// Encode the session identifier
+// Encode the session identifier.
 func encodeSessionId(sessionId []byte) []byte {
 	return slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytes32LE(int32(len(sessionId))), sessionId)
 }

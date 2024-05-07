@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/comm"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"github.com/cronokirby/saferith"
 )
 
 const Name comm.Name = "ELGAMAL_COMMITMENT"
@@ -26,7 +27,7 @@ type Message curves.Point
 type Witness curves.Scalar
 
 var (
-	// hardcoded seed used to derive generators along with the session-id
+	// hardcoded seed used to derive generators along with the session-id.
 	somethingUpMySleeve = []byte(fmt.Sprintf("COPPER_KRYPTON_%s_SOMETHING_UP_MY_SLEEVE-", Name))
 )
 
@@ -55,7 +56,7 @@ type HomomorphicVerifier struct {
 	HomomorphicCommitmentScheme
 }
 
-// not UC-secure without session-id
+// not UC-secure without session-id.
 func NewHomomorphicCommitter(sessionId []byte, prng io.Reader, publicKey curves.Point) (*HomomorphicCommitter, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")

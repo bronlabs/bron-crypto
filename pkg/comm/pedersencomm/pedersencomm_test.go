@@ -4,6 +4,8 @@ import (
 	crand "crypto/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
@@ -12,7 +14,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/comm/pedersencomm"
-	"github.com/stretchr/testify/require"
 )
 
 var (
