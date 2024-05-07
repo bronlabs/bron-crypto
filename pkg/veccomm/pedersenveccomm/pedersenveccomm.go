@@ -220,6 +220,9 @@ func (vhcs *VectorHomomorphicCommitmentScheme) ScaleCommitment(x *VectorCommitme
 	if err := x.Validate(); err != nil {
 		return nil, errs.WrapValidation(err, "unvalid commitment")
 	}
+	if n == nil {
+		return nil, errs.NewIsNil("scalar is nil")
+	}
 	curve := x.commitment.Value.Curve()
 	scale := curve.ScalarField().Scalar().SetNat(n)
 	return &VectorCommitment{commitment: &pedersencomm.Commitment{Value: x.commitment.Value.ScalarMul(scale)},
@@ -254,6 +257,9 @@ func (vhcs *VectorHomomorphicCommitmentScheme) CombineOpenings(x *Opening, ys ..
 func (vhcs *VectorHomomorphicCommitmentScheme) ScaleOpening(x *Opening, n *saferith.Nat) (*Opening, error) {
 	if err := x.Validate(); err != nil {
 		return nil, errs.WrapValidation(err, "unvalid opening")
+	}
+	if n == nil {
+		return nil, errs.NewIsNil("scalar is nil")
 	}
 	curve := x.opening.Witness.ScalarField().Curve()
 	scale := curve.ScalarField().Scalar().SetNat(n)
