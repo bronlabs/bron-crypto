@@ -53,28 +53,24 @@ type VectorVerifier struct {
 	VectorHomomorphicCommitmentScheme
 }
 
-// TODO: to be modified.
-// This function simply draw different generators from a point derived by sessionId and SomethingUpMySleeve
-// The initial point is then multiplied by a scalar incremented by 1 for each message.
+// This function draw different generators through hash2curve chaining
 func (o *VectorHomomorphicCommitmentScheme) SampleGenerators(sessionId []byte, curve curves.Curve, n uint) ([]curves.Point, error) {
 	if curve == nil {
 		return nil, errs.NewIsNil("curve is nil")
 	}
 	generators := make([]curves.Point, n)
-	// Derive points from session identifier and SomethingUpMySleeve
+	// Derive the initial point from session identifier and SomethingUpMySleeve
 	hBytes, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, SomethingUpMySleeve)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "failed to hash sessionId")
 	}
-	h, err := curve.Hash(hBytes)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "failed to hash to curve for H")
-	}
-	// Get generators by computing h+nonce*G
-	nonce := curve.ScalarField().MultiplicativeIdentity()
 	for i, _ := range generators {
-		generators[i] = h.Add(curve.Generator().ScalarMul(nonce))
-		nonce = nonce.Increment()
+		generators[i], err = curve.Hash(hBytes)
+		if err != nil {
+			return nil, errs.WrapHashing(err, "failed to hash to curve for H")
+		}
+		// Subsequent points are linked to the previous ones
+		hBytes = append(hBytes, generators[i].ToAffineCompressed()...)
 	}
 	return generators, nil
 }
