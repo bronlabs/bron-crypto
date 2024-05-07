@@ -46,6 +46,9 @@ func (r1p2p *Round1P2P) Validate(protocol types.Protocol) error {
 	if r1p2p.PublicKey == nil {
 		return errs.NewIsNil("public key")
 	}
+	if !r1p2p.PublicKey.IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	return nil
 }
 

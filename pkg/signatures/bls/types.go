@@ -141,21 +141,17 @@ type PublicKey[K KeySubGroup] struct {
 // Note that if the RogueKeyPreventionScheme is POP, this public key must be accompanied with a proof of possession.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-keyvalidate
 func (pk *PublicKey[K]) Validate() error {
-	subGroup := bls12381.GetSourceSubGroup[K]()
 	if pk == nil {
 		return errs.NewIsNil("public key is nil")
 	}
 	if pk.Y == nil {
 		return errs.NewIsNil("public key value is nil")
 	}
+	if !pk.Y.IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if pk.Y.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("public key value is identity")
-	}
-	if pk.Y.IsSmallOrder() {
-		return errs.NewIsIdentity("public key value is small order")
-	}
-	if !pk.Y.IsTorsionElementUnderAddition(subGroup.Order()) {
-		return errs.NewValue("public key is not torsion free")
 	}
 	return nil
 }

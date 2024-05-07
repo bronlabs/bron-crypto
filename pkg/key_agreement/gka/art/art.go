@@ -136,13 +136,15 @@ func (p *AsynchronousRatchetTree) SetupGroup() []curves.Point {
 func (p *AsynchronousRatchetTree) ProcessSetup(publicKeys []curves.Point) (err error) {
 	// 6. [Build ART] Every non-leader node receives public node keys...
 	for i, pk := range publicKeys {
-		if p.arrayTree[i].publicNodeKey == nil {
+		switch {
+		case p.arrayTree[i].publicNodeKey == nil:
 			p.arrayTree[i].publicNodeKey = pk
-		} else if !p.arrayTree[i].publicNodeKey.Equal(pk) {
+		case !p.arrayTree[i].publicNodeKey.IsInPrimeSubGroup():
+			return errs.NewValidation("Public Key not in the prime subgroup")
+		case !p.arrayTree[i].publicNodeKey.Equal(pk):
 			return errs.NewArgument("invalid keys")
 		}
 	}
-
 	// 6.i. ...and re-runs rebuild tree procedure.
 	if err := p.rebuildTree(); err != nil {
 		return errs.WrapFailed(err, "cannot rebuild the tree")

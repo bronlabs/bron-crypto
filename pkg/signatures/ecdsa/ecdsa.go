@@ -151,6 +151,9 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 	if publicKey.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("public key is identity")
 	}
+	if !publicKey.IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if signature == nil {
 		return errs.NewIsNil("signature")
 	}

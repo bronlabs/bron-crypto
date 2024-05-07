@@ -77,10 +77,9 @@ func (v *verifier) Verify(signature *schnorr.Signature[EdDsaCompatibleVariant]) 
 	// this check is not part of the ed25519 standard yet if the public key is of small order then the signature will be susceptible
 	// to a key substitution attack (specifically, it won't be bound to a public key (SBS) and a signature cannot be bound to a unique message in presence of malicious keys (MBS)).
 	// Refer to section 5.4 of https://eprint.iacr.org/2020/823.pdf and https://eprint.iacr.org/2020/1244.pdf
-	if v.publicKey.A.IsSmallOrder() {
-		return errs.NewFailed("public key is small order")
+	if !v.publicKey.A.IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
 	}
-
 	challengeR := v.nonceCommitment
 	if challengeR == nil {
 		challengeR = signature.R

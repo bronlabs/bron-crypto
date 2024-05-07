@@ -36,6 +36,9 @@ func (s *SigningKeyShare) Validate(protocol types.ThresholdProtocol) error {
 	if s.PublicKey.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("public key can't be at infinity")
 	}
+	if !s.PublicKey.IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if !curveutils.AllOfSameCurve(protocol.Curve(), s.Share, s.PublicKey) {
 		return errs.NewCurve("curve mismatch")
 	}
@@ -127,6 +130,9 @@ func (p *PartialPublicKeys) Validate(protocol types.ThresholdProtocol) error {
 	}
 	if p.PublicKey == nil {
 		return errs.NewIsNil("public key")
+	}
+	if !p.PublicKey.IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
 	}
 	if len(p.FeldmanCommitmentVector) != int(protocol.Threshold()) {
 		return errs.NewLength("feldman commitment vector length is invalid")

@@ -10,10 +10,12 @@ func DeriveSharedSecretValue(myPrivateKey curves.Scalar, otherPartyPublicKey cur
 	if curveName != otherPartyPublicKey.Curve().Name() {
 		return nil, errs.NewCurve("curves of my private key and other guy's public key are not the same")
 	}
-
 	// assumption 1
 	if myPrivateKey.IsZero() {
 		return nil, errs.NewIsZero("invalid private key")
+	}
+	if !otherPartyPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
 	}
 	curve := myPrivateKey.ScalarField().Curve()
 	// step 1

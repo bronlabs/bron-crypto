@@ -23,7 +23,9 @@ func NewSender(mode ModeID, suite *CipherSuite, receiverPublicKey PublicKey, sen
 	if !exists {
 		return nil, nil, errs.NewType("no kem constructor found for %v", suite.KEM)
 	}
-
+	if !receiverPublicKey.IsInPrimeSubGroup() {
+		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	var sharedSecret []byte
 	var enc PublicKey
 	var err error
@@ -80,6 +82,12 @@ func NewReceiver(mode ModeID, suite *CipherSuite, receiverPrivatekey *PrivateKey
 	if !exists {
 		return nil, errs.NewType("no kem constructor found for %v", suite.KEM)
 	}
+	if !ephemeralPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
+	if !senderPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	var sharedSecret []byte
 	var err error
 	if mode == Auth || mode == AuthPSk {
@@ -127,6 +135,9 @@ func (r *Receiver) Export(exporterContext []byte, L int) ([]byte, error) {
 
 func Seal(mode ModeID, suite *CipherSuite, plaintext, additionalData []byte, receiverPublicKey PublicKey, senderPrivateKey *PrivateKey, info, psk, pskId []byte, prng io.Reader) (ciphertext []byte, ephemeralPublicKey PublicKey, err error) {
 	sender, ephemeralPublicKey, err := NewSender(mode, suite, receiverPublicKey, senderPrivateKey, info, psk, pskId, prng)
+	if !receiverPublicKey.IsInPrimeSubGroup() {
+		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct sender")
 	}
@@ -139,6 +150,12 @@ func Seal(mode ModeID, suite *CipherSuite, plaintext, additionalData []byte, rec
 
 func Open(mode ModeID, suite *CipherSuite, ciphertext, additionalData []byte, receiverPrivatekey *PrivateKey, ephemeralPublicKey, senderPublicKey PublicKey, info, psk, pskId []byte) (plaintext []byte, err error) {
 	receiver, err := NewReceiver(mode, suite, receiverPrivatekey, ephemeralPublicKey, senderPublicKey, info, psk, pskId)
+	if !ephemeralPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
+	if !senderPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct receiver")
 	}

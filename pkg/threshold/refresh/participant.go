@@ -82,6 +82,9 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "authKey")
 	}
+	if !publicKeyShares.PublicKey.IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
 		return errs.WrapValidation(err, "threshold protocol")
 	}

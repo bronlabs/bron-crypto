@@ -33,6 +33,9 @@ func ValidateIdentityKey(k IdentityKey) error {
 	if k.PublicKey().IsAdditiveIdentity() {
 		return errs.NewIsIdentity("public key")
 	}
+	if !k.PublicKey().IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	return nil
 }
 

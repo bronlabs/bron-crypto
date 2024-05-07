@@ -142,6 +142,9 @@ func (s *DHKEMScheme) Encap(receiverPublicKey PublicKey, prng io.Reader) (shared
 	if prng == nil {
 		return nil, nil, errs.NewIsNil("prng is nil")
 	}
+	if !receiverPublicKey.IsInPrimeSubGroup() {
+		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	ikmE, err := s.produceIKM(prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not produce ikm for ephemeral key")
@@ -156,6 +159,9 @@ func (s *DHKEMScheme) Encap(receiverPublicKey PublicKey, prng io.Reader) (shared
 func (s *DHKEMScheme) EncapWithIKM(receiverPublicKey PublicKey, ikmE []byte) (sharedSecret []byte, ephemeralPublicKey PublicKey, err error) {
 	if receiverPublicKey == nil || ikmE == nil {
 		return nil, nil, errs.WrapFailed(err, "arguments can't be nil")
+	}
+	if !receiverPublicKey.IsInPrimeSubGroup() {
+		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
 	}
 	ephemeralPrivateKey, err := s.DeriveKeyPair(ikmE)
 	if err != nil {
@@ -183,6 +189,9 @@ func (s *DHKEMScheme) Decap(receiverPrivateKey *PrivateKey, ephemeralPublicKey P
 	if receiverPrivateKey == nil || ephemeralPublicKey == nil {
 		return nil, errs.NewIsNil("arguments can't be nil")
 	}
+	if !ephemeralPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	enc := ephemeralPublicKey.ToAffineUncompressed()
 	dhElement, err := dh.DiffieHellman(receiverPrivateKey.D, ephemeralPublicKey)
 	if err != nil {
@@ -202,6 +211,9 @@ func (s *DHKEMScheme) AuthEncap(receiverPublicKey PublicKey, senderPrivateKey *P
 	if prng == nil {
 		return nil, nil, errs.NewIsNil("prng is nil")
 	}
+	if !receiverPublicKey.IsInPrimeSubGroup() {
+		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	ikmE, err := s.produceIKM(prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not produce ikm for ephemeral key")
@@ -216,6 +228,9 @@ func (s *DHKEMScheme) AuthEncap(receiverPublicKey PublicKey, senderPrivateKey *P
 func (s *DHKEMScheme) AuthEncapWithIKM(receiverPublicKey PublicKey, senderPrivateKey *PrivateKey, ikmE []byte) (sharedSecret []byte, ephemeralPublicKey PublicKey, err error) {
 	if receiverPublicKey == nil || senderPrivateKey == nil || ikmE == nil {
 		return nil, nil, errs.WrapFailed(err, "arguments can't be nil")
+	}
+	if !receiverPublicKey.IsInPrimeSubGroup() {
+		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
 	}
 	ephemeralPrivateKey, err := s.DeriveKeyPair(ikmE)
 	if err != nil {
@@ -250,6 +265,12 @@ func (s *DHKEMScheme) AuthEncapWithIKM(receiverPublicKey PublicKey, senderPrivat
 func (s *DHKEMScheme) AuthDecap(receiverPrivateKey *PrivateKey, senderPublicKey, ephemeralPublicKey PublicKey) (sharedSecret []byte, err error) {
 	if receiverPrivateKey == nil || senderPublicKey == nil || ephemeralPublicKey == nil {
 		return nil, errs.NewIsNil("arguments can't be nil")
+	}
+	if !senderPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
+	if !ephemeralPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
 	}
 	dhRE, err := dh.DiffieHellman(receiverPrivateKey.D, ephemeralPublicKey)
 	if err != nil {

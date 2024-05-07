@@ -15,6 +15,9 @@ type ReceiverContext = Receiver
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key
 func SetupBaseS(suite *CipherSuite, receiverPublicKey PublicKey, info []byte, prng io.Reader) (PublicKey, *SenderContext, error) {
 	sender, enc, err := NewSender(Base, suite, receiverPublicKey, nil, info, nil, nil, prng)
+	if !receiverPublicKey.IsInPrimeSubGroup() {
+		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to construct sender context")
 	}
@@ -23,6 +26,9 @@ func SetupBaseS(suite *CipherSuite, receiverPublicKey PublicKey, info []byte, pr
 
 func SealBase(suite *CipherSuite, additionalData, plaintext []byte, receiverPublicKey PublicKey, info []byte, prng io.Reader) (ephemeralPublicKey PublicKey, ciphertext []byte, err error) {
 	enc, ctx, err := SetupBaseS(suite, receiverPublicKey, info, prng)
+	if !receiverPublicKey.IsInPrimeSubGroup() {
+		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not setup sender")
 	}
@@ -37,6 +43,9 @@ func SealBase(suite *CipherSuite, additionalData, plaintext []byte, receiverPubl
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key
 func SetupBaseR(suite *CipherSuite, receiverPrivatekey *PrivateKey, ephemeralPublicKey PublicKey, info []byte) (*ReceiverContext, error) {
 	receiver, err := NewReceiver(Base, suite, receiverPrivatekey, ephemeralPublicKey, nil, info, nil, nil)
+	if !ephemeralPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to construct receiver context")
 	}
@@ -45,6 +54,9 @@ func SetupBaseR(suite *CipherSuite, receiverPrivatekey *PrivateKey, ephemeralPub
 
 func OpenBase(suite *CipherSuite, additionalData, ciphertext []byte, receiverPrivatekey *PrivateKey, ephemeralPublicKey PublicKey, info []byte) (plaintext []byte, err error) {
 	ctx, err := SetupBaseR(suite, receiverPrivatekey, ephemeralPublicKey, info)
+	if !ephemeralPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, errs.WrapFailed(err, "Could not construct receiver")
 	}
@@ -59,6 +71,9 @@ func OpenBase(suite *CipherSuite, additionalData, ciphertext []byte, receiverPri
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-a-pre-
 func SetupPSKS(suite *CipherSuite, receiverPublicKey PublicKey, psk, pskId, info []byte, prng io.Reader) (PublicKey, *SenderContext, error) {
 	sender, enc, err := NewSender(PSk, suite, receiverPublicKey, nil, info, psk, pskId, prng)
+	if !receiverPublicKey.IsInPrimeSubGroup() {
+		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to construct sender context")
 	}
@@ -67,6 +82,9 @@ func SetupPSKS(suite *CipherSuite, receiverPublicKey PublicKey, psk, pskId, info
 
 func SealPSK(suite *CipherSuite, additionalData, plaintext []byte, receiverPublicKey PublicKey, psk, pskId, info []byte, prng io.Reader) (ephemeralPublicKey PublicKey, ciphertext []byte, err error) {
 	enc, ctx, err := SetupPSKS(suite, receiverPublicKey, psk, pskId, info, prng)
+	if !receiverPublicKey.IsInPrimeSubGroup() {
+		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not setup sender")
 	}
@@ -81,6 +99,9 @@ func SealPSK(suite *CipherSuite, additionalData, plaintext []byte, receiverPubli
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-a-pre-
 func SetupPSKR(suite *CipherSuite, receiverPrivatekey *PrivateKey, ephemeralPublicKey PublicKey, psk, pskId, info []byte) (*ReceiverContext, error) {
 	receiver, err := NewReceiver(PSk, suite, receiverPrivatekey, ephemeralPublicKey, nil, info, psk, pskId)
+	if !ephemeralPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to construct receiver context")
 	}
@@ -89,6 +110,9 @@ func SetupPSKR(suite *CipherSuite, receiverPrivatekey *PrivateKey, ephemeralPubl
 
 func OpenPSK(suite *CipherSuite, additionalData, ciphertext []byte, receiverPrivatekey *PrivateKey, ephemeralPublicKey PublicKey, psk, pskId, info []byte) (plaintext []byte, err error) {
 	ctx, err := SetupPSKR(suite, receiverPrivatekey, ephemeralPublicKey, psk, pskId, info)
+	if !ephemeralPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, errs.WrapFailed(err, "Could not construct receiver")
 	}
@@ -103,6 +127,9 @@ func OpenPSK(suite *CipherSuite, additionalData, ciphertext []byte, receiverPriv
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy
 func SetupAuthS(suite *CipherSuite, receiverPublicKey PublicKey, senderPrivateKey *PrivateKey, info []byte, prng io.Reader) (PublicKey, *SenderContext, error) {
 	sender, enc, err := NewSender(Auth, suite, receiverPublicKey, senderPrivateKey, info, nil, nil, prng)
+	if !receiverPublicKey.IsInPrimeSubGroup() {
+		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to construct sender context")
 	}
@@ -111,6 +138,9 @@ func SetupAuthS(suite *CipherSuite, receiverPublicKey PublicKey, senderPrivateKe
 
 func SealAuth(suite *CipherSuite, additionalData, plaintext []byte, receiverPublicKey PublicKey, senderPrivateKey *PrivateKey, info []byte, prng io.Reader) (ephemeralPublicKey PublicKey, ciphertext []byte, err error) {
 	enc, ctx, err := SetupAuthS(suite, receiverPublicKey, senderPrivateKey, info, prng)
+	if !receiverPublicKey.IsInPrimeSubGroup() {
+		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not setup sender")
 	}
@@ -125,6 +155,12 @@ func SealAuth(suite *CipherSuite, additionalData, plaintext []byte, receiverPubl
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy
 func SetupAuthR(suite *CipherSuite, receiverPrivatekey *PrivateKey, ephemeralPublicKey, senderPublicKey PublicKey, info []byte) (*ReceiverContext, error) {
 	receiver, err := NewReceiver(Auth, suite, receiverPrivatekey, ephemeralPublicKey, senderPublicKey, info, nil, nil)
+	if !ephemeralPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
+	if !senderPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to construct receiver context")
 	}
@@ -133,6 +169,12 @@ func SetupAuthR(suite *CipherSuite, receiverPrivatekey *PrivateKey, ephemeralPub
 
 func OpenAuth(suite *CipherSuite, additionalData, ciphertext []byte, receiverPrivatekey *PrivateKey, ephemeralPublicKey, senderPublicKey PublicKey, info []byte) (plaintext []byte, err error) {
 	ctx, err := SetupAuthR(suite, receiverPrivatekey, senderPublicKey, ephemeralPublicKey, info)
+	if !ephemeralPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
+	if !senderPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, errs.WrapFailed(err, "Could not construct receiver")
 	}
@@ -147,6 +189,9 @@ func OpenAuth(suite *CipherSuite, additionalData, ciphertext []byte, receiverPri
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-both-a
 func SetupAuthPSKS(suite *CipherSuite, receiverPublicKey PublicKey, senderPrivateKey *PrivateKey, psk, pskId, info []byte, prng io.Reader) (PublicKey, *SenderContext, error) {
 	sender, enc, err := NewSender(AuthPSk, suite, receiverPublicKey, senderPrivateKey, info, psk, pskId, prng)
+	if !receiverPublicKey.IsInPrimeSubGroup() {
+		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to construct sender context")
 	}
@@ -155,6 +200,9 @@ func SetupAuthPSKS(suite *CipherSuite, receiverPublicKey PublicKey, senderPrivat
 
 func SealAuthPSK(suite *CipherSuite, additionalData, plaintext []byte, receiverPublicKey PublicKey, senderPrivateKey *PrivateKey, psk, pskId, info []byte, prng io.Reader) (ephemeralPublicKey PublicKey, ciphertext []byte, err error) {
 	enc, ctx, err := SetupAuthPSKS(suite, receiverPublicKey, senderPrivateKey, psk, pskId, info, prng)
+	if !receiverPublicKey.IsInPrimeSubGroup() {
+		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not setup sender")
 	}
@@ -169,6 +217,12 @@ func SealAuthPSK(suite *CipherSuite, additionalData, plaintext []byte, receiverP
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-both-a
 func SetupAuthPSKR(suite *CipherSuite, receiverPrivatekey *PrivateKey, ephemeralPublicKey, senderPublicKey PublicKey, psk, pskId, info []byte) (*ReceiverContext, error) {
 	receiver, err := NewReceiver(AuthPSk, suite, receiverPrivatekey, ephemeralPublicKey, senderPublicKey, info, psk, pskId)
+	if !ephemeralPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
+	if !senderPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to construct receiver context")
 	}
@@ -177,6 +231,12 @@ func SetupAuthPSKR(suite *CipherSuite, receiverPrivatekey *PrivateKey, ephemeral
 
 func OpenAuthPSK(suite *CipherSuite, additionalData, ciphertext []byte, receiverPrivatekey *PrivateKey, ephemeralPublicKey, senderPublicKey PublicKey, psk, pskId, info []byte) (plaintext []byte, err error) {
 	ctx, err := SetupAuthPSKR(suite, receiverPrivatekey, senderPublicKey, ephemeralPublicKey, psk, pskId, info)
+	if !ephemeralPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
+	if !senderPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, errs.WrapFailed(err, "Could not construct receiver")
 	}

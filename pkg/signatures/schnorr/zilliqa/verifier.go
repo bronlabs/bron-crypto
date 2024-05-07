@@ -66,6 +66,10 @@ func (v *verifier) Verify(signature *schnorr.Signature[ZilliqaVariant]) error {
 		return errs.NewFailed("incompatible public key")
 	}
 
+	if !v.publicKey.A.IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
+	}
+
 	if signature.E == nil || signature.E.ScalarField().Curve().Name() != curveName || signature.S == nil || signature.S.ScalarField().Curve().Name() != curveName {
 		return errs.NewFailed("incompatible signature")
 	}
