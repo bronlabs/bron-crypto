@@ -64,6 +64,9 @@ func (p *Participant) writeHandshake1(hs *noise.HandshakeState, payload []byte) 
 		hs.EphemeralKey = noise.NewSigner(p.prng, p.suite.Curve, nil)
 	}
 	ne := hs.EphemeralKey.PublicKey
+	if !ne.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	// step 3.1.1
 	err = hs.Ss.MixHash(p.suite.GetHashFunc(), ne.ToAffineCompressed())
 	if err != nil {
@@ -86,6 +89,9 @@ func (p *Participant) writeHandshake2(hs *noise.HandshakeState, payload []byte) 
 		hs.EphemeralKey = noise.NewSigner(p.prng, p.suite.Curve, nil)
 	}
 	ne := hs.EphemeralKey.PublicKey
+	if !ne.IsInPrimeSubGroup() { // todo
+		return hs.Ss.H, messageBuffer, cs1, cs2, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	// step 3.3.1
 	err = hs.Ss.MixHash(p.suite.GetHashFunc(), ne.ToAffineCompressed())
 	if err != nil {

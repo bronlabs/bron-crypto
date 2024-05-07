@@ -26,7 +26,9 @@ func Verify(publicKey *PublicKey, message []byte, signature *Signature) error {
 	if publicKey.A.IsSmallOrder() {
 		return errs.NewVerification("public key is small order")
 	}
-
+	if !publicKey.A.IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	serializedSignature := slices.Concat(signature.R.ToAffineCompressed(), bitstring.ReverseBytes(signature.S.Bytes()))
 	serializedPublicKey, err := publicKey.MarshalBinary()
 	if err != nil {

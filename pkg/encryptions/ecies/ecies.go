@@ -36,11 +36,13 @@ func Encrypt(myPrivateKey *PrivateKey, receiverPublicKey PublicKey, message, AD 
 	if myPrivateKey == nil || receiverPublicKey == nil || message == nil || prng == nil {
 		return nil, nil, errs.NewIsNil("nil arguments")
 	}
-	// step 1.1: since the public key is deserialized, it's already on curve so just checking for my private key's identity.
+	// step 1.1
 	if myPrivateKey.S.IsZero() {
 		return nil, nil, errs.NewIsZero("my private key is zero")
 	}
-
+	if !receiverPublicKey.IsInPrimeSubGroup() {
+		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	// step 1.2
 	z, err := dh.DiffieHellman(myPrivateKey.S, receiverPublicKey)
 	if err != nil {
@@ -100,6 +102,9 @@ func EncryptEphemeral(myPrivateKey *PrivateKey, message, AD []byte, prng io.Read
 func Decrypt(myPrivateKey *PrivateKey, senderPublicKey PublicKey, ciphertext, tag, AD []byte, prng io.Reader) (message []byte, err error) {
 	if myPrivateKey == nil || senderPublicKey == nil || ciphertext == nil || tag == nil || prng == nil {
 		return nil, errs.NewIsNil("nil arguments")
+	}
+	if !senderPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
 	}
 	if len(ciphertext) == 0 {
 		return nil, errs.NewLength("ciphertext length is zero")

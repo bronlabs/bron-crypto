@@ -80,7 +80,7 @@ lint-fix:
 
 .PHONY: test
 test:
-	${GO} test ${BUILD_TAGS} -failfast -short ${TEST_CLAUSE} ./...
+	${GO} test ${BUILD_TAGS} -short ${TEST_CLAUSE} ./...
 
 .PHONY: test-long
 test-long: ## Runs all tests, including long-running tests

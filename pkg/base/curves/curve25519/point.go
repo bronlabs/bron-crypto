@@ -43,8 +43,7 @@ func (*Point) ApplyOp(operator algebra.BinaryOperator[curves.Point], x algebra.G
 }
 
 func (*Point) IsInPrimeSubGroup() bool {
-	//TODO implement me
-	panic("implement me")
+	return true
 }
 
 func (p *Point) IsTorsionElementUnderAddition(order *saferith.Modulus) bool {

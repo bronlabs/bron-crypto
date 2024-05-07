@@ -72,6 +72,9 @@ func validate(suite *noise.Suite, prng io.Reader, sessionId []byte, s noise.Sign
 	if len(sessionId) == 0 {
 		return errs.NewIsNil("sessionId is empty")
 	}
+	if !s.PublicKey.IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if s.PublicKey == nil {
 		return errs.NewIsNil("s.PublicKey is nil")
 	}

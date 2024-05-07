@@ -154,6 +154,9 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 }
 
 func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
+	if !publicKey.A.IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	v := taprootVariant.NewVerifierBuilder().
 		WithPublicKey((*schnorr.PublicKey)(publicKey)).
 		WithMessage(message).
@@ -167,7 +170,11 @@ func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]
 	if len(publicKeys) != len(signatures) || len(signatures) != len(messages) || len(signatures) == 0 {
 		return errs.NewArgument("length of publickeys, messages and signatures must be equal and greater than zero")
 	}
-
+	for _, publicKey := range publicKeys {
+		if !publicKey.A.IsInPrimeSubGroup() {
+			return errs.NewValidation("Public Key not in the prime subgroup")
+		}
+	}
 	// 1. Generate u-1 random integers a2...u in the range 1...n-1.
 	a := make([]curves.Scalar, len(signatures))
 	a[0] = suite.Curve().ScalarField().One()

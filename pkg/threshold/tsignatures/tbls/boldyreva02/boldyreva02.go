@@ -98,6 +98,9 @@ func (s *SigningKeyShare[K]) Validate(protocol types.ThresholdProtocol) error {
 	if s.PublicKey.Y.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("public key can't be at infinity")
 	}
+	if !s.PublicKey.Y.IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if !curveutils.AllOfSameCurve(protocol.Curve(), s.Share, s.PublicKey.Y) {
 		return errs.NewCurve("curve mismatch")
 	}
@@ -136,6 +139,9 @@ func (p *PartialPublicKeys[K]) ValidateWithSharingConfig(sharingConfig types.Sha
 	}
 	if p.PublicKey == nil {
 		return errs.NewIsNil("public key")
+	}
+	if !p.PublicKey.Y.IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
 	}
 	if p.Shares == nil {
 		return errs.NewIsNil("shares map")

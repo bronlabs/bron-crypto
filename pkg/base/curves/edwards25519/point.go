@@ -47,12 +47,17 @@ func (*Point) ApplyOp(operator algebra.BinaryOperator[curves.Point], x algebra.G
 	panic("implement me")
 }
 
-func (*Point) IsInPrimeSubGroup() bool {
-	//TODO implement me
-	panic("implement me")
+func (p *Point) IsInPrimeSubGroup() bool {
+	qMinusOne := p.Curve().ScalarField().One().Neg()
+	return p.ScalarMul(qMinusOne).Add(p).IsAdditiveIdentity()
 }
 
 func (p *Point) IsTorsionElementUnderAddition(order *saferith.Modulus) bool {
+	if gt, eq, _ := order.Cmp(subgroupOrder); gt == 1 || eq == 1 {
+		// TODO implement me: decompose the order into an additive combination of
+		// elements below the subgroup order.
+		panic("order is greater than subgroup order. Implement me ()")
+	}
 	e := p.Curve().ScalarField().Element().SetNat(order.Nat())
 	return p.ScalarMul(e).IsAdditiveIdentity()
 }

@@ -32,6 +32,9 @@ func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], mes
 	if value == nil || message == nil || publicKey == nil {
 		return errs.NewArgument("signature or message or public key cannot be nil or zero")
 	}
+	if !publicKey.Y.IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	// step 2.7.3
 	if err := subgroupCheck[S](value); err != nil {
 		return errs.WrapMembership(err, "signature is not in the correct subgroup")
@@ -192,6 +195,9 @@ func PopVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], pop 
 	if SameSubGroup[K, S]() {
 		return errs.NewType("key and signature should be in different subgroups")
 	}
+	if !publicKey.Y.IsInPrimeSubGroup() { // todo
+		return errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	message, err := publicKey.MarshalBinary()
 	if err != nil {
 		return errs.WrapFailed(err, "could not marshal public ky")
@@ -204,6 +210,9 @@ func PopVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], pop 
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-sign
 func AugmentMessage[K KeySubGroup](message []byte, publicKey *PublicKey[K]) ([]byte, error) {
 	result, err := publicKey.MarshalBinary()
+	if !publicKey.Y.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not marshal public key to binary")
 	}
@@ -243,6 +252,9 @@ func AggregatePublicKeys[K KeySubGroup](publicKeys ...*PublicKey[K]) (*PublicKey
 	for i, publicKey := range publicKeys {
 		if publicKey == nil {
 			return nil, errs.NewIsNil("public key %d is nil", i)
+		}
+		if !publicKey.Y.IsInPrimeSubGroup() {
+			return nil, errs.NewValidation("Public Key not in the prime subgroup")
 		}
 		if err := subgroupCheck[K](publicKey.Y); err != nil {
 			return nil, errs.WrapValidation(err, "public key is invalid")
@@ -309,15 +321,11 @@ func GetPOPDst(keysInG1 bool) []byte {
 }
 
 func subgroupCheck[G bls12381.SourceSubGroups](value curves.PairingPoint) error {
-	subgroup := bls12381.GetSourceSubGroup[G]()
 	if value.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("value")
 	}
-	if !value.IsTorsionElementUnderAddition(subgroup.Order()) {
-		return errs.NewValidation("value is not torsion element of the given subgroup's order")
-	}
-	if value.IsSmallOrder() {
-		return errs.NewValidation("value is small order")
+	if !value.IsInPrimeSubGroup() {
+		return errs.NewValidation("Public Key not in the prime subgroup")
 	}
 	return nil
 }

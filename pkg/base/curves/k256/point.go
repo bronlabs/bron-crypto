@@ -51,7 +51,7 @@ func (*Point) ApplyOp(operator algebra.BinaryOperator[curves.Point], x algebra.G
 }
 
 func (p *Point) IsInPrimeSubGroup() bool {
-	return p.V.IsOnCurve()
+	return p.V.IsOnCurve() || p.IsAdditiveIdentity()
 }
 
 func (p *Point) IsTorsionElementUnderAddition(order *saferith.Modulus) bool {

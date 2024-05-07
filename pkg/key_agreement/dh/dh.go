@@ -9,6 +9,9 @@ import (
 
 func DiffieHellman(myPrivateKey curves.Scalar, otherPartyPublicKey curves.Point) (curves.BaseFieldElement, error) {
 	curveName := myPrivateKey.ScalarField().Curve().Name()
+	if !otherPartyPublicKey.IsInPrimeSubGroup() {
+		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+	}
 	if curveName != otherPartyPublicKey.Curve().Name() {
 		return nil, errs.NewCurve("curves of my private key and other guy's public key are not the same")
 	}
