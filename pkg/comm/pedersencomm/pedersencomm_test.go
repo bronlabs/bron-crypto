@@ -21,11 +21,11 @@ var (
 
 func TestSimpleHappyPath(t *testing.T) {
 	sessionId := []byte("00000001")
-	curves := []curves.Curve{k256.NewCurve()} //, p256.NewCurve(), pallas.NewCurve(), edwards25519.NewCurve(), bls12381.NewG1(), bls12381.NewG2()}
+	curves := []curves.Curve{k256.NewCurve(), p256.NewCurve(), pallas.NewCurve(), edwards25519.NewCurve(), bls12381.NewG1(), bls12381.NewG2()}
 	for _, curve := range curves {
 		c, err := pedersencomm.NewHomomorphicCommitter(sessionId, crand.Reader, curve)
 		require.NoError(t, err)
-		v, err := pedersencomm.NewHomomorphicVerifier(sessionId)
+		v, err := pedersencomm.NewHomomorphicVerifier(sessionId, curve)
 		require.NoError(t, err)
 		message, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestSimpleHappyPath(t *testing.T) {
 type testCaseEntry struct {
 	message    pedersencomm.Message
 	opening    *pedersencomm.Opening
-	commitment pedersencomm.Commitment
+	commitment *pedersencomm.Commitment
 	err        error
 }
 
@@ -76,26 +76,26 @@ func TestDecommitShouldNotBeNil(t *testing.T) {
 
 func TestOpenOnValidCommitments(t *testing.T) {
 	testResults := getEntries()
-	v, err := pedersencomm.NewHomomorphicVerifier(sessionId)
-	require.NoError(t, err)
 	for _, testCaseEntry := range testResults {
-		err := v.Verify(testCaseEntry.commitment, testCaseEntry.opening)
+		v, err := pedersencomm.NewHomomorphicVerifier(sessionId, testCaseEntry.commitment.Value.Curve())
+		require.NoError(t, err)
+		err = v.Verify(testCaseEntry.commitment, testCaseEntry.opening)
 		require.NoErrorf(t, err, "commitment of message failed: %s", testCaseEntry.message)
 	}
 }
 
 func TestOpenOnModifiedNonce(t *testing.T) {
 	t.Parallel()
-	v, err := pedersencomm.NewHomomorphicVerifier(sessionId)
-	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
+		v, err := pedersencomm.NewHomomorphicVerifier(sessionId, testCaseEntry.commitment.Value.Curve())
+		require.NoError(t, err)
 		localOpening := testCaseEntry.opening
 		// Add a random scalar to the witness
-		rnd, _ := testCaseEntry.commitment.Commitment.Curve().ScalarField().Random(crand.Reader)
+		rnd, _ := testCaseEntry.commitment.Value.Curve().ScalarField().Random(crand.Reader)
 		localOpening.Witness = localOpening.Witness.Add(rnd)
 		// Verify and check for failure
-		err := v.Verify(testCaseEntry.commitment, localOpening)
+		err = v.Verify(testCaseEntry.commitment, localOpening)
 		require.Error(t, err)
 		require.True(t, errs.IsVerification(err))
 	}
@@ -103,16 +103,16 @@ func TestOpenOnModifiedNonce(t *testing.T) {
 
 func TestOpenOnModifiedCommitment(t *testing.T) {
 	t.Parallel()
-	v, err := pedersencomm.NewHomomorphicVerifier(sessionId)
-	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
+		v, err := pedersencomm.NewHomomorphicVerifier(sessionId, testCaseEntry.commitment.Value.Curve())
+		require.NoError(t, err)
 		localCommitment := testCaseEntry.commitment
 		// Add a random point to the commitment
-		rnd, _ := testCaseEntry.commitment.Commitment.Curve().Random(crand.Reader)
-		localCommitment.Commitment = localCommitment.Commitment.Add(rnd)
+		rnd, _ := testCaseEntry.commitment.Value.Curve().Random(crand.Reader)
+		localCommitment.Value = localCommitment.Value.Add(rnd)
 		// Verify and check for failure
-		err := v.Verify(localCommitment, testCaseEntry.opening)
+		err = v.Verify(localCommitment, testCaseEntry.opening)
 		require.True(t, errs.IsVerification(err))
 	}
 }
@@ -120,24 +120,24 @@ func TestOpenOnModifiedCommitment(t *testing.T) {
 // An empty decommit should fail to open
 func TestOpenOnDefaultDecommitObject(t *testing.T) {
 	t.Parallel()
-	v, err := pedersencomm.NewHomomorphicVerifier(sessionId)
-	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
+		v, err := pedersencomm.NewHomomorphicVerifier(sessionId, testCaseEntry.commitment.Value.Curve())
+		require.NoError(t, err)
 		localOpening := testCaseEntry.opening
 		localOpening.Witness = nil
-		err := v.Verify(testCaseEntry.commitment, localOpening)
+		err = v.Verify(testCaseEntry.commitment, localOpening)
 		require.True(t, errs.IsIsNil(err))
 	}
 }
 
 func TestOpenOnNilCommitment(t *testing.T) {
 	t.Parallel()
-	v, err := pedersencomm.NewHomomorphicVerifier(sessionId)
-	require.NoError(t, err)
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
-		err := v.Verify(pedersencomm.Commitment{nil}, testCaseEntry.opening)
+		v, err := pedersencomm.NewHomomorphicVerifier(sessionId, testCaseEntry.commitment.Value.Curve())
+		require.NoError(t, err)
+		err = v.Verify(&pedersencomm.Commitment{nil}, testCaseEntry.opening)
 		require.True(t, errs.IsIsNil(err))
 	}
 }
@@ -146,12 +146,12 @@ func TestHappyCombine(t *testing.T) {
 	t.Parallel()
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
-		c, err := pedersencomm.NewHomomorphicCommitter(sessionId, crand.Reader, testCaseEntry.commitment.Commitment.Curve())
+		c, err := pedersencomm.NewHomomorphicCommitter(sessionId, crand.Reader, testCaseEntry.commitment.Value.Curve())
 		require.NoError(t, err)
-		v, err := pedersencomm.NewHomomorphicVerifier(sessionId)
+		v, err := pedersencomm.NewHomomorphicVerifier(sessionId, testCaseEntry.commitment.Value.Curve())
 		require.NoError(t, err)
 		// Pick a random scalar to commit to
-		messagePrime, err := testCaseEntry.commitment.Commitment.Curve().ScalarField().Random(crand.Reader)
+		messagePrime, err := testCaseEntry.commitment.Value.Curve().ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		comPrime, openingPrime, err := c.Commit(messagePrime)
 		require.NoError(t, err)
@@ -168,17 +168,17 @@ func TestOpenOnWrongCombine(t *testing.T) {
 	t.Parallel()
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
-		c, err := pedersencomm.NewHomomorphicCommitter(sessionId, crand.Reader, testCaseEntry.commitment.Commitment.Curve())
+		c, err := pedersencomm.NewHomomorphicCommitter(sessionId, crand.Reader, testCaseEntry.commitment.Value.Curve())
 		require.NoError(t, err)
-		v, err := pedersencomm.NewHomomorphicVerifier(sessionId)
+		v, err := pedersencomm.NewHomomorphicVerifier(sessionId, testCaseEntry.commitment.Value.Curve())
 		require.NoError(t, err)
 		// Pick a random scalar to commit to
-		messagePrime, err := testCaseEntry.commitment.Commitment.Curve().ScalarField().Random(crand.Reader)
+		messagePrime, err := testCaseEntry.commitment.Value.Curve().ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		comPrime, _, err := c.Commit(messagePrime)
 		require.NoError(t, err)
 		// Pick another random scalar to get an unrelated opening
-		messagePrime, err = testCaseEntry.commitment.Commitment.Curve().ScalarField().Random(crand.Reader)
+		messagePrime, err = testCaseEntry.commitment.Value.Curve().ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		_, openingPrime, err := c.Commit(messagePrime)
 		require.NoError(t, err)
@@ -198,12 +198,12 @@ func TestHappyScale(t *testing.T) {
 	t.Parallel()
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
-		c, err := pedersencomm.NewHomomorphicCommitter(sessionId, crand.Reader, testCaseEntry.commitment.Commitment.Curve())
+		c, err := pedersencomm.NewHomomorphicCommitter(sessionId, crand.Reader, testCaseEntry.commitment.Value.Curve())
 		require.NoError(t, err)
-		v, err := pedersencomm.NewHomomorphicVerifier(sessionId)
+		v, err := pedersencomm.NewHomomorphicVerifier(sessionId, testCaseEntry.commitment.Value.Curve())
 		require.NoError(t, err)
 		// Pick a random scalar for scaling
-		rnd, err := testCaseEntry.commitment.Commitment.Curve().ScalarField().Random(crand.Reader)
+		rnd, err := testCaseEntry.commitment.Value.Curve().ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		scaledCommitment, err := c.ScaleCommitment(testCaseEntry.commitment, rnd.Nat())
 		require.NoError(t, err)
@@ -220,17 +220,17 @@ func TestOpenOnWrongScale(t *testing.T) {
 	t.Parallel()
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
-		c, err := pedersencomm.NewHomomorphicCommitter(sessionId, crand.Reader, testCaseEntry.commitment.Commitment.Curve())
+		c, err := pedersencomm.NewHomomorphicCommitter(sessionId, crand.Reader, testCaseEntry.commitment.Value.Curve())
 		require.NoError(t, err)
-		v, err := pedersencomm.NewHomomorphicVerifier(sessionId)
+		v, err := pedersencomm.NewHomomorphicVerifier(sessionId, testCaseEntry.commitment.Value.Curve())
 		require.NoError(t, err)
 		// Pick a random scalar for commitment scaling
-		rnd, err := testCaseEntry.commitment.Commitment.Curve().ScalarField().Random(crand.Reader)
+		rnd, err := testCaseEntry.commitment.Value.Curve().ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		scaledCommitment, err := c.ScaleCommitment(testCaseEntry.commitment, rnd.Nat())
 		require.NoError(t, err)
 		// Pick another random scalar for opening scaling
-		rnd, err = testCaseEntry.commitment.Commitment.Curve().ScalarField().Random(crand.Reader)
+		rnd, err = testCaseEntry.commitment.Value.Curve().ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		scaledOpening, err := v.ScaleOpening(testCaseEntry.opening, rnd.Nat())
 		require.NoError(t, err)

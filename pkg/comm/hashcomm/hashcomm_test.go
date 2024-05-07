@@ -24,7 +24,7 @@ func TestSimpleHappyPath(t *testing.T) {
 	msg := []byte("test")
 	commitment, opening, err := c.Commit(msg)
 	require.NoError(t, err)
-	require.NotNil(t, commitment.Commitment)
+	require.NotNil(t, commitment.Value)
 	require.NotNil(t, opening.Message())
 	require.NotNil(t, opening.Witness)
 	err = v.Verify(commitment, opening)
@@ -63,7 +63,7 @@ func TestCommitmentsAreExpectedLength(t *testing.T) {
 	testResults := getEntries()
 	expLen := h().Size()
 	for _, testCaseEntry := range testResults {
-		require.Lenf(t, testCaseEntry.com.Commitment, expLen, "commitment is not expected length: %v != %v", len(testCaseEntry.com.Commitment), expLen)
+		require.Lenf(t, testCaseEntry.com.Value, expLen, "commitment is not expected length: %v != %v", len(testCaseEntry.com.Value), expLen)
 	}
 }
 
@@ -85,7 +85,7 @@ func TestCommmitProducesDistinctCommitments(t *testing.T) {
 		// Slices cannot be used as hash keys, so we need to copy into
 		// an array. Oh, go-lang.
 		cee := make([]byte, h().Size())
-		copy(cee[:], testCaseEntry.com.Commitment)
+		copy(cee[:], testCaseEntry.com.Value)
 
 		serialised := hex.EncodeToString(cee)
 		// Ensure each commit is unique
@@ -114,7 +114,7 @@ func TestCommmitDistinctCommitments(t *testing.T) {
 
 		// Slices cannot be used as hash keys, so copy into an array
 		cee := make([]byte, h().Size())
-		copy(cee[:], []byte(com.Commitment))
+		copy(cee[:], []byte(com.Value))
 
 		serialised := hex.EncodeToString(cee)
 
@@ -220,7 +220,7 @@ func TestOpenOnModifiedCommitment(t *testing.T) {
 	for _, testCaseEntry := range testResults {
 		// Copy and then modify the commitment
 		localCommitment := testCaseEntry.com
-		localCommitment.Commitment[6] ^= 0x33
+		localCommitment.Value[6] ^= 0x33
 		// Verify and check for failure
 		err := v.Verify(localCommitment, testCaseEntry.opn)
 		require.True(t, errs.IsVerification(err))
@@ -261,7 +261,7 @@ func TestOpenOnLongCommitment(t *testing.T) {
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
 		localCommitment := &hashcomm.Commitment{make([]byte, h().Size()+1)}
-		copy(localCommitment.Commitment, testCaseEntry.com.Commitment)
+		copy(localCommitment.Value, testCaseEntry.com.Value)
 		err := v.Verify(localCommitment, testCaseEntry.opn)
 		require.True(t, errs.IsArgument(err))
 	}
@@ -275,7 +275,7 @@ func TestOpenOnShortCommitment(t *testing.T) {
 	testResults := getEntries()
 	for _, testCaseEntry := range testResults {
 		localCommitment := &hashcomm.Commitment{make([]byte, h().Size()-1)}
-		copy(localCommitment.Commitment, testCaseEntry.com.Commitment)
+		copy(localCommitment.Value, testCaseEntry.com.Value)
 		err := v.Verify(localCommitment, testCaseEntry.opn)
 		require.True(t, errs.IsArgument(err))
 	}

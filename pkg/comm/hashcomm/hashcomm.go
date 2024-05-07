@@ -22,13 +22,13 @@ var _ comm.Opening[Message] = (*Opening)(nil)
 var _ comm.Committer[Message, *Commitment, *Opening] = (*Committer)(nil)
 var _ comm.Verifier[Message, *Commitment, *Opening] = (*Verifier)(nil)
 
-type Witness []byte
-type Message []byte
-
 var (
 	// CommitmentHashFunction is used in the `commitments` package for a UC-secure commitment scheme which chains HMACs and enforces presence of a session-id. Size must be CollisionResistanceBytes.
 	CommitmentHashFunction = sha3.New256
 )
+
+type Witness []byte
+type Message []byte
 
 type Opening struct {
 	message Message
@@ -45,7 +45,7 @@ type Verifier struct {
 }
 
 type Commitment struct {
-	Commitment []byte
+	Value []byte
 }
 
 func (o *Opening) Message() Message {
@@ -74,8 +74,8 @@ func (c *Commitment) Validate() error {
 	if c == nil {
 		return errs.NewIsNil("receiver")
 	}
-	if len(c.Commitment) != base.CollisionResistanceBytes {
-		return errs.NewArgument("commitment length (%d) != %d", len(c.Commitment), base.CollisionResistanceBytes)
+	if len(c.Value) != base.CollisionResistanceBytes {
+		return errs.NewArgument("commitment length (%d) != %d", len(c.Value), base.CollisionResistanceBytes)
 	}
 	return nil
 }
@@ -116,7 +116,7 @@ func (v *Verifier) Verify(commitment *Commitment, opening *Opening) error {
 	if err != nil {
 		return errs.WrapFailed(err, "could not recompute the commitment")
 	}
-	if subtle.ConstantTimeCompare(commitment.Commitment, localCommitment) != 1 {
+	if subtle.ConstantTimeCompare(commitment.Value, localCommitment) != 1 {
 		return errs.NewVerification("verification failed")
 	}
 	return nil
