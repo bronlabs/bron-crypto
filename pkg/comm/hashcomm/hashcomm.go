@@ -1,31 +1,22 @@
 package hashcomm
 
 import (
-	"crypto/subtle"
-	"io"
-	"slices"
-
-	"golang.org/x/crypto/sha3"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/comm"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"slices"
 )
 
 const Name comm.Name = "HASH_COMMITMENT"
 
-var _ Witness = Witness(nil)
-var _ comm.Message = Message(nil)
-var _ comm.Commitment = (*Commitment)(nil)
-var _ comm.Opening[Message] = (*Opening)(nil)
-var _ comm.Committer[Message, *Commitment, *Opening] = (*Committer)(nil)
-var _ comm.Verifier[Message, *Commitment, *Opening] = (*Verifier)(nil)
-
 var (
+	_ comm.Message          = Message(nil)
+	_ comm.Commitment       = (*Commitment)(nil)
+	_ comm.Opening[Message] = (*Opening)(nil)
+
 	// CommitmentHashFunction is used in the `commitments` package for a UC-secure commitment scheme which chains HMACs and enforces presence of a session-id. Size must be CollisionResistanceBytes.
-	CommitmentHashFunction = sha3.New256
+	hashFunc = base.RandomOracleHashFunction
 )
 
 type Witness []byte
@@ -33,92 +24,39 @@ type Message []byte
 
 type Opening struct {
 	message Message
-	Witness Witness
-}
-
-type Committer struct {
-	prng      io.Reader
-	sessionId []byte
-}
-
-type Verifier struct {
-	sessionId []byte
+	witness Witness
 }
 
 type Commitment struct {
-	Value []byte
+	value []byte
 }
 
 func (o *Opening) Message() Message {
 	return o.message
 }
 
-// not UC-secure without session-id.
-func NewCommitter(sessionId []byte, prng io.Reader) (*Committer, error) {
-	if prng == nil {
-		return nil, errs.NewIsNil("prng is nil")
+func (o *Opening) Validate() error {
+	if o == nil {
+		return errs.NewIsNil("receiver")
 	}
-	return &Committer{prng, sessionId}, nil
-}
+	if len(o.witness) < base.CollisionResistanceBytes {
+		return errs.NewArgument("witness length (%d) < %d", len(o.witness), base.CollisionResistanceBytes)
+	}
 
-// not UC-secure without session-id.
-func NewVerifier(sessionId []byte) *Verifier {
-	return &Verifier{sessionId}
-}
-
-// Encode the session identifier.
-func encodeSessionId(sessionId []byte) []byte {
-	return slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytes32LE(int32(len(sessionId))), sessionId)
+	return nil
 }
 
 func (c *Commitment) Validate() error {
 	if c == nil {
 		return errs.NewIsNil("receiver")
 	}
-	if len(c.Value) != base.CollisionResistanceBytes {
-		return errs.NewArgument("commitment length (%d) != %d", len(c.Value), base.CollisionResistanceBytes)
+	if len(c.value) != base.CollisionResistanceBytes {
+		return errs.NewArgument("commitment length (%d) != %d", len(c.value), base.CollisionResistanceBytes)
 	}
+
 	return nil
 }
 
-func (o *Opening) Validate() error {
-	if o == nil {
-		return errs.NewIsNil("receiver")
-	}
-	if len(o.Witness) < base.CollisionResistanceBytes {
-		return errs.NewArgument("witness length (%d) < %d", len(o.Witness), base.CollisionResistanceBytes)
-	}
-	return nil
-}
-
-func (c *Committer) Commit(message Message) (*Commitment, *Opening, error) {
-	if message == nil {
-		return nil, nil, errs.NewIsNil("message")
-	}
-	witness := make([]byte, base.CollisionResistanceBytes)
-	if _, err := io.ReadFull(c.prng, witness); err != nil {
-		return nil, nil, errs.WrapRandomSample(err, "reading random bytes")
-	}
-	commitment, err := hashing.Hmac(witness, CommitmentHashFunction, encodeSessionId(c.sessionId), message)
-	if err != nil {
-		return nil, nil, errs.WrapHashing(err, "could not compute commitment")
-	}
-	return &Commitment{commitment}, &Opening{message, witness}, nil
-}
-
-func (v *Verifier) Verify(commitment *Commitment, opening *Opening) error {
-	if err := commitment.Validate(); err != nil {
-		return errs.WrapValidation(err, "invalid commitment")
-	}
-	if err := opening.Validate(); err != nil {
-		return errs.WrapValidation(err, "invalid opening")
-	}
-	localCommitment, err := hashing.Hmac(opening.Witness, CommitmentHashFunction, encodeSessionId(v.sessionId), opening.message)
-	if err != nil {
-		return errs.WrapFailed(err, "could not recompute the commitment")
-	}
-	if subtle.ConstantTimeCompare(commitment.Value, localCommitment) != 1 {
-		return errs.NewVerification("verification failed")
-	}
-	return nil
+func encodeSessionId(sessionId []byte) []byte {
+	return slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytes32LE(int32(len(sessionId))), sessionId)
 }
