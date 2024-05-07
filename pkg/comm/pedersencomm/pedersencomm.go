@@ -35,10 +35,6 @@ type Opening struct {
 	Witness Witness
 }
 
-func (o *Opening) Message() Message {
-	return o.message
-}
-
 type HomomorphicCommitmentScheme struct{}
 
 type HomomorphicCommitter struct {
@@ -83,7 +79,7 @@ func NewHomomorphicVerifier(sessionId []byte, curve curves.Curve) (*HomomorphicV
 	// Generate a random generator from the sessionId and SomethingUpMySleeve
 	h, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, SomethingUpMySleeve)
 	if err != nil {
-		return nil, errs.WrapHashing(err, "failed to hash chain")
+		return nil, errs.WrapHashing(err, "failed to hash sessionId")
 	}
 	generator, err := curve.Hash(h)
 	if err != nil {
@@ -99,6 +95,8 @@ func (c *Commitment) Validate() error {
 	if c.Value == nil {
 		return errs.NewIsNil("commitment")
 	}
+	// TODO: Use IsInPrimeSubGroup once implemented
+	// if c.Value.IsInPrimeSubGroup() {
 	if c.Value.IsSmallOrder() {
 		return errs.NewMembership("commitment is not part of the prime order subgroup")
 	}
@@ -116,6 +114,10 @@ func (o *Opening) Validate() error {
 		return errs.NewIsNil("witness")
 	}
 	return nil
+}
+
+func (o *Opening) Message() Message {
+	return o.message
 }
 
 func (c *HomomorphicCommitter) Commit(message Message) (*Commitment, *Opening, error) {
@@ -158,7 +160,7 @@ func (hcs *HomomorphicCommitmentScheme) CombineCommitments(x *Commitment, ys ...
 	if err := x.Validate(); err != nil {
 		return nil, errs.WrapFailed(err, "unvalid commitment (1st operand)")
 	}
-	acc := x
+	acc := &Commitment{x.Value.Clone()}
 	for _, y := range ys {
 		if err := y.Validate(); err != nil {
 			return nil, errs.WrapFailed(err, "unvalid commitment (2nd operand)")
