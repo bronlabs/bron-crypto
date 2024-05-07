@@ -65,18 +65,18 @@ func NewHomomorphicCommitter(sessionId []byte, prng io.Reader, publicKey curves.
 		return nil, errs.NewIsNil("publicKey is nil")
 	}
 	// Generate a random point from the sessionId and somethingUpMySleeve
-	hByte, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, somethingUpMySleeve)
+	hBlindByte, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, somethingUpMySleeve)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "failed to hash sessionId")
 	}
 	curve := publicKey.Curve()
-	h, err := curve.Hash(hByte)
+	hBlind, err := curve.Hash(hBlindByte)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "failed to hash to curve for H")
 	}
 	// Add the public key to it
-	h = h.Add(publicKey)
-	return &HomomorphicCommitter{prng, h, HomomorphicCommitmentScheme{}}, nil
+	hBlind = hBlind.Add(publicKey)
+	return &HomomorphicCommitter{prng, hBlind, HomomorphicCommitmentScheme{}}, nil
 }
 
 func NewHomomorphicVerifier(sessionId []byte, publicKey curves.Point) (*HomomorphicVerifier, error) {
@@ -114,10 +114,10 @@ func (c *Commitment) Validate() error {
 	if c.c2.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("second commitment component is identity")
 	}
-	if c.c1.IsSmallOrder() {
+	if !c.c1.IsInPrimeSubGroup() {
 		return errs.NewMembership("first commitment is not part of the prime order subgroup")
 	}
-	if c.c2.IsSmallOrder() {
+	if !c.c2.IsInPrimeSubGroup() {
 		return errs.NewMembership("first commitment is not part of the prime order subgroup")
 	}
 	return nil
@@ -136,7 +136,7 @@ func (o *Opening) Validate() error {
 	return nil
 }
 
-func (o Opening) Message() Message {
+func (o *Opening) Message() Message {
 	return o.message
 }
 
@@ -166,7 +166,7 @@ func (c *HomomorphicCommitter) Commit(message Message) (*Commitment, *Opening, e
 	if err != nil {
 		return nil, nil, errs.NewFailed("could not run Elgamal encryption")
 	}
-	return &Commitment{c1, c2}, &Opening{message, witness, c.h}, nil
+	return &Commitment{c1: c1, c2: c2}, &Opening{message: message, witness: witness, publicKey: c.h}, nil
 }
 
 func (*HomomorphicVerifier) Verify(commitment *Commitment, opening *Opening) error {
@@ -210,7 +210,7 @@ func (*HomomorphicCommitmentScheme) ScaleCommitment(x *Commitment, n *saferith.N
 	}
 	curve := x.c1.Curve()
 	scale := curve.ScalarField().Scalar().SetNat(n)
-	return &Commitment{x.c1.ScalarMul(scale), x.c2.ScalarMul(scale)}, nil
+	return &Commitment{c1: x.c1.ScalarMul(scale), c2: x.c2.ScalarMul(scale)}, nil
 }
 
 func (*HomomorphicCommitmentScheme) CombineOpenings(x *Opening, ys ...*Opening) (*Opening, error) {
@@ -234,5 +234,8 @@ func (*HomomorphicCommitmentScheme) ScaleOpening(x *Opening, n *saferith.Nat) (*
 	}
 	curve := x.witness.ScalarField().Curve()
 	scale := curve.ScalarField().Scalar().SetNat(n)
-	return &Opening{x.Message().ScalarMul(scale), x.witness.Mul(scale), x.publicKey}, nil
+	return &Opening{
+		message:   x.Message().ScalarMul(scale),
+		witness:   x.witness.Mul(scale),
+		publicKey: x.publicKey}, nil
 }

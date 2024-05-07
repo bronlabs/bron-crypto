@@ -49,12 +49,9 @@ func NewVectorCommitter(sessionId []byte, prng io.Reader) (*VectorCommitter, err
 }
 
 // not UC-secure without session-id.
-func NewVectorVerifier(sessionId []byte) (*VectorVerifier, error) {
-	committer, err := hashcomm.NewVerifier(sessionId)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not instantiate a verifier")
-	}
-	return &VectorVerifier{committer}, nil
+func NewVectorVerifier(sessionId []byte) *VectorVerifier {
+	committer := hashcomm.NewVerifier(sessionId)
+	return &VectorVerifier{committer}
 }
 
 func (o *Opening) Message() Vector {

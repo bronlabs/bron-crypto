@@ -62,8 +62,8 @@ func NewCommitter(sessionId []byte, prng io.Reader) (*Committer, error) {
 }
 
 // not UC-secure without session-id.
-func NewVerifier(sessionId []byte) (*Verifier, error) {
-	return &Verifier{sessionId}, nil
+func NewVerifier(sessionId []byte) *Verifier {
+	return &Verifier{sessionId}
 }
 
 // Encode the session identifier.

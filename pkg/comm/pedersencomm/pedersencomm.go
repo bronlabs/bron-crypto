@@ -25,7 +25,7 @@ var _ comm.HomomorphicVerifier[Message, *Commitment, *Opening] = (*HomomorphicVe
 
 var (
 	// hardcoded seed used to derive generators along with the session-id.
-	SomethingUpMySleeve = []byte(fmt.Sprintf("COPPER_KRYPTON_%s_SOMETHING_UP_MY_SLEEVE-", Name))
+	somethingUpMySleeve = []byte(fmt.Sprintf("COPPER_KRYPTON_%s_SOMETHING_UP_MY_SLEEVE-", Name))
 )
 
 type Message curves.Scalar
@@ -62,15 +62,15 @@ func NewHomomorphicCommitter(sessionId []byte, prng io.Reader, curve curves.Curv
 		return nil, errs.NewIsNil("prng is nil")
 	}
 	// Generate a random generator from the sessionId and SomethingUpMySleeve
-	h, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, SomethingUpMySleeve)
+	hBytes, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, somethingUpMySleeve)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "failed to hash chain")
 	}
-	generator, err := curve.Hash(h)
+	h, err := curve.Hash(hBytes)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "failed to hash to curve for H")
 	}
-	return &HomomorphicCommitter{prng, generator, HomomorphicCommitmentScheme{}}, nil
+	return &HomomorphicCommitter{prng, h, HomomorphicCommitmentScheme{}}, nil
 }
 
 func NewHomomorphicVerifier(sessionId []byte, curve curves.Curve) (*HomomorphicVerifier, error) {
@@ -78,15 +78,15 @@ func NewHomomorphicVerifier(sessionId []byte, curve curves.Curve) (*HomomorphicV
 		return nil, errs.NewIsNil("curve is nil")
 	}
 	// Generate a random generator from the sessionId and SomethingUpMySleeve
-	h, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, SomethingUpMySleeve)
+	hBytes, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, somethingUpMySleeve)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "failed to hash sessionId")
 	}
-	generator, err := curve.Hash(h)
+	h, err := curve.Hash(hBytes)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "failed to hash to curve for H")
 	}
-	return &HomomorphicVerifier{generator, HomomorphicCommitmentScheme{}}, nil
+	return &HomomorphicVerifier{h, HomomorphicCommitmentScheme{}}, nil
 }
 
 func (c *Commitment) Validate() error {
@@ -96,9 +96,7 @@ func (c *Commitment) Validate() error {
 	if c.Value == nil {
 		return errs.NewIsNil("commitment")
 	}
-	// TODO: Use IsInPrimeSubGroup once implemented
-	// if c.Value.IsInPrimeSubGroup() {
-	if c.Value.IsSmallOrder() {
+	if !c.Value.IsInPrimeSubGroup() {
 		return errs.NewMembership("commitment is not part of the prime order subgroup")
 	}
 	return nil
@@ -145,7 +143,10 @@ func (v *HomomorphicVerifier) Verify(commitment *Commitment, opening *Opening) e
 	if err := opening.Validate(); err != nil {
 		return errs.WrapFailed(err, "unvalid opening")
 	}
-	curve := opening.message.ScalarField().Curve()
+	curve := v.H.Curve()
+	if curve != opening.message.ScalarField().Curve() {
+		return errs.NewArgument("curves do not match")
+	}
 	// Reconstructs the committed value
 	mG := curve.Generator().ScalarMul(opening.message)
 	// Reconstructs the binding value
@@ -207,5 +208,8 @@ func (*HomomorphicCommitmentScheme) ScaleOpening(x *Opening, n *saferith.Nat) (*
 	}
 	curve := x.Witness.ScalarField().Curve()
 	scale := curve.ScalarField().Scalar().SetNat(n)
-	return &Opening{x.Message().Mul(scale), x.Witness.Mul(scale)}, nil
+	return &Opening{
+		message: x.Message().Mul(scale),
+		Witness: x.Witness.Mul(scale),
+	}, nil
 }
