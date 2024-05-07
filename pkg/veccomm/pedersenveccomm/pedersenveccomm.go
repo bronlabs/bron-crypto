@@ -53,6 +53,9 @@ type VectorVerifier struct {
 	VectorHomomorphicCommitmentScheme
 }
 
+// TODO: to be modified.
+// This function simply draw different generators from a point derived by sessionId and SomethingUpMySleeve
+// The initial point is then multiplied by a scalar incremented by 1 for each message.
 func (o *VectorHomomorphicCommitmentScheme) SampleGenerators(sessionId []byte, curve curves.Curve, n uint) ([]curves.Point, error) {
 	if curve == nil {
 		return nil, errs.NewIsNil("curve is nil")
