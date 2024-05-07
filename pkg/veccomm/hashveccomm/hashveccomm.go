@@ -116,12 +116,22 @@ func (vc *VectorCommitment) Validate() error {
 	return nil
 }
 
+func (o *Opening) Validate() error {
+	if o == nil {
+		return errs.NewIsNil("receiver")
+	}
+	return o.opening.Validate()
+}
+
 func (v *VectorVerifier) Verify(veccom *VectorCommitment, opening *Opening) error {
 	if v == nil {
 		return errs.NewIsNil("receiver")
 	}
 	if err := veccom.Validate(); err != nil {
-		return errs.WrapFailed(err, "commitment not valid")
+		return errs.WrapFailed(err, "commitment unvalid")
+	}
+	if err := opening.Validate(); err != nil {
+		return errs.WrapFailed(err, "opening unvalid")
 	}
 	if !(bytes.Equal(concatenateVector(opening.vector), opening.opening.Message_)) {
 		return errs.NewVerification("commitment is not tied to the vector")
