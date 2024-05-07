@@ -77,10 +77,109 @@ func (bn *BigNum) Add(lhs, rhs *BigNum) (*BigNum, error) {
 	return bn, nil
 }
 
-func (bn *BigNum) AnnouncedLen() uint {
+// Sub sets bn = lhs - rhs, where lhs and rhs are non-negative, lhs > rhs and bn may
+// be the same pointer as either lhs or rhs. It returns error on allocation failure.
+func (bn *BigNum) Sub(lhs, rhs *BigNum) (*BigNum, error) {
+	bn.copyChecker.check()
+	lhs.copyChecker.check()
+	rhs.copyChecker.check()
+
+	ret := C.BN_usub(&bn.nativeBigNum, &lhs.nativeBigNum, &rhs.nativeBigNum)
+	if ret != 1 {
+		return nil, lastError()
+	}
+
+	runtime.KeepAlive(lhs)
+	runtime.KeepAlive(rhs)
+	return bn, nil
+}
+
+// Mul sets bn = lhs * rhs, bn may be the same pointer as either lhs or rhs.
+// It returns error on allocation failure.
+func (bn *BigNum) Mul(lhs, rhs *BigNum, ctx *BigNumCtx) (*BigNum, error) {
+	bn.copyChecker.check()
+	lhs.copyChecker.check()
+	rhs.copyChecker.check()
+	ctx.copyChecker.check()
+
+	ret := C.BN_mul(&bn.nativeBigNum, &lhs.nativeBigNum, &rhs.nativeBigNum, ctx.nativeBnCtx)
+	if ret != 1 {
+		return nil, lastError()
+	}
+
+	runtime.KeepAlive(lhs)
+	runtime.KeepAlive(rhs)
+	runtime.KeepAlive(ctx)
+	return bn, nil
+}
+
+// Div divides num by div and places the result in bn and the remainder in rem.
+// rem may be nil, in which case the respective value is not returned.
+// It returns one on success or zero on error.
+func (bn *BigNum) Div(num, div, rem *BigNum, ctx *BigNumCtx) (*BigNum, error) {
+	bn.copyChecker.check()
+	num.copyChecker.check()
+	div.copyChecker.check()
+	ctx.copyChecker.check()
+	if rem != nil {
+		rem.copyChecker.check()
+	}
+
+	realRem := (*nativeBigNum)(nil)
+	if rem != nil {
+		realRem = &rem.nativeBigNum
+	}
+	ret := C.BN_div(&bn.nativeBigNum, realRem, &num.nativeBigNum, &div.nativeBigNum, ctx.nativeBnCtx)
+	if ret != 1 {
+		return nil, lastError()
+	}
+
+	runtime.KeepAlive(num)
+	runtime.KeepAlive(div)
+	runtime.KeepAlive(realRem)
+	runtime.KeepAlive(ctx)
+	return bn, nil
+}
+
+func (bn *BigNum) LShift(a *BigNum, n int) (*BigNum, error) {
+	bn.copyChecker.check()
+	a.copyChecker.check()
+
+	ret := C.BN_lshift(&bn.nativeBigNum, &a.nativeBigNum, C.int(n))
+	if ret != 1 {
+		return nil, lastError()
+	}
+
+	runtime.KeepAlive(a)
+	return bn, nil
+}
+
+func (bn *BigNum) RShift(a *BigNum, n int) (*BigNum, error) {
+	bn.copyChecker.check()
+	a.copyChecker.check()
+
+	ret := C.BN_rshift(&bn.nativeBigNum, &a.nativeBigNum, C.int(n))
+	if ret != 1 {
+		return nil, lastError()
+	}
+
+	runtime.KeepAlive(a)
+	return bn, nil
+}
+
+func (bn *BigNum) WidthBits() uint {
 	bn.copyChecker.check()
 
 	bitLen := C.BN_BITS2 * bn.nativeBigNum.width
+	return uint(bitLen)
+}
+
+func (bn *BigNum) NumBits() uint {
+	bn.copyChecker.check()
+
+	bitLen := C.BN_num_bits(&bn.nativeBigNum)
+
+	runtime.KeepAlive(bn)
 	return uint(bitLen)
 }
 
@@ -238,6 +337,41 @@ func (bn *BigNum) ModAdd(l, r, m *BigNum) (*BigNum, error) {
 	return bn, nil
 }
 
+// ModInv sets bn equal to a^-1 mod |n|
+func (bn *BigNum) ModInv(a, n *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
+	bn.copyChecker.check()
+	a.copyChecker.check()
+	n.copyChecker.check()
+	bnCtx.copyChecker.check()
+
+	ret := C.BN_mod_inverse(&bn.nativeBigNum, &a.nativeBigNum, &n.nativeBigNum, bnCtx.nativeBnCtx)
+	if ret == nil {
+		return nil, lastError()
+	}
+
+	runtime.KeepAlive(a)
+	runtime.KeepAlive(n)
+	runtime.KeepAlive(bnCtx)
+	return bn, nil
+}
+
+func (bn *BigNum) ModSqrt(a, n *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
+	bn.copyChecker.check()
+	a.copyChecker.check()
+	n.copyChecker.check()
+	bnCtx.copyChecker.check()
+
+	ret := C.BN_mod_inverse(&bn.nativeBigNum, &a.nativeBigNum, &n.nativeBigNum, bnCtx.nativeBnCtx)
+	if ret == nil {
+		return nil, lastError()
+	}
+
+	runtime.KeepAlive(a)
+	runtime.KeepAlive(n)
+	runtime.KeepAlive(bnCtx)
+	return bn, nil
+}
+
 // Mod sets bn = x mod m.
 func (bn *BigNum) Mod(x, m *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
 	bn.copyChecker.check()
@@ -296,5 +430,25 @@ func (bn *BigNum) Cmp(rhs *BigNum) int {
 
 	runtime.KeepAlive(bn)
 	runtime.KeepAlive(rhs)
+	return int(ret)
+}
+
+func (bn *BigNum) Equal(rhs *BigNum) int {
+	bn.copyChecker.check()
+	rhs.copyChecker.check()
+
+	ret := C.BN_equal_consttime(&bn.nativeBigNum, &rhs.nativeBigNum)
+
+	runtime.KeepAlive(bn)
+	runtime.KeepAlive(rhs)
+	return int(ret)
+}
+
+func (bn *BigNum) IsZero() int {
+	bn.copyChecker.check()
+
+	ret := C.BN_is_zero(&bn.nativeBigNum)
+
+	runtime.KeepAlive(bn)
 	return int(ret)
 }
