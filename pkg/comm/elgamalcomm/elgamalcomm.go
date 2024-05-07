@@ -140,7 +140,7 @@ func (o Opening) Message() Message {
 	return o.message
 }
 
-func encrypt(publicKey curves.Point, message Message, nonce curves.Scalar) (curves.Point, curves.Point, error) {
+func encrypt(publicKey curves.Point, message Message, nonce curves.Scalar) (C1 curves.Point, C2 curves.Point, err error) {
 	if publicKey == nil {
 		return nil, nil, errs.NewIsNil("public key")
 	}
