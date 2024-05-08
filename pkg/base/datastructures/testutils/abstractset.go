@@ -14,8 +14,7 @@ func (asi *AbstractSetInvariants[S, E]) Cardinality(t *testing.T, A S, expectedC
 	t.Helper()
 	require.NotNil(t, A)
 	require.GreaterOrEqual(t, expectedCardinality, 0)
-	require.Equal(t, expectedCardinality, int(A.Cardinality().Uint64()),
-		"cardinality must match the number of elements in the set")
+	require.Equal(t, expectedCardinality, int(A.Cardinality().Uint64()), "cardinality must match the number of elements in the set")
 }
 
 func (asi *AbstractSetInvariants[S, E]) ContainsAndIter(t *testing.T, A S, expectedCardinality int) {

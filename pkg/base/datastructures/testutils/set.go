@@ -209,7 +209,7 @@ func (si *SetInvariants[S, E]) Clone(t *testing.T) {
 	// TODO
 }
 
-// func CheckSetInvariants[S ds.Set[E], E any](t *testing.T, pt *tu.CollectionPropertyTester[S, E]) {
+// func CheckSetInvariants[S ds.Set[E], E any](t *testing.T, pt tu.CollectionGenerator[S, E]) {
 // 	t.Helper()
 // 	require.NotNil(t, pt)
 // 	CheckAbstractSetInvariants(t, pt)

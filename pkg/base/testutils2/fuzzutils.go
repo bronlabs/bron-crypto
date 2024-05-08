@@ -1,8 +1,7 @@
 package testutils2
 
 import (
-	"bytes"
-	"encoding/gob"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
@@ -17,18 +16,33 @@ type fuzzerPrng = fkechacha20.Prng
 var defaultSeed = make([]byte, fkechacha20.ChachaPRNGSecurityStrength)
 
 func NewPrng(seed []byte) (csprng.Seedable, error) {
+	r := rand.NewPCG(42, 1024)
 	if len(seed) == 0 {
 		seed = defaultSeed
 	}
 	return fkechacha20.NewPrng(seed, []byte(prngSalt))
 }
 
-func SerializeForCorpus(f *testing.F, x any, gobRegister func()) []byte {
+type CollectionPropertyTester[C Collection[O], O Object] struct {
+	g CollectionGenerator[C, O]
+}
+
+func (pt *CollectionPropertyTester[C, O]) Run(f *testing.F, invariantChecker func(t *testing.T, g CollectionGenerator[C, O])) {
+	f.Fuzz(func(t *testing.T, seed []byte) {
+		pt.g.Reseed(seed)
+		invariantChecker(t, pt.g)
+	})
+}
+
+func NewCollectionPropertyTester[C Collection[O], O Object](f *testing.F, seeds [][]byte, generator func(prng csprng.Seedable) (CollectionGenerator[C, O], error)) *CollectionPropertyTester[C, O] {
 	f.Helper()
-	gobRegister()
-	var buf bytes.Buffer
-	encoder := gob.NewEncoder(&buf)
-	err := encoder.Encode(x)
+	prng, err := NewPrng(nil)
 	require.NoError(f, err)
-	return buf.Bytes()
+	g, err := generator(prng)
+	require.NoError(f, err)
+
+	for _, seed := range seeds {
+		f.Add(seed)
+	}
+	return &CollectionPropertyTester[C, O]{g}
 }
