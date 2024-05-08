@@ -37,19 +37,20 @@ func TestSimpleHappyPath(t *testing.T) {
 			publicKey, err := curve.Random(crand.Reader)
 			require.NoError(t, err)
 
-			c, err := elgamalcomm.NewCommitter(sessionId, publicKey, prng)
+			message, err := curve.Random(crand.Reader)
 			require.NoError(t, err)
 
-			v, err := elgamalcomm.NewVerifier(sessionId, publicKey)
+			committer, err := elgamalcomm.NewCommitter(sessionId, publicKey, prng)
 			require.NoError(t, err)
 
-			msg, err := curve.ScalarField().Random(crand.Reader)
+			commitment, opening, err := committer.Commit(message)
+			require.NoError(t, err)
+			require.True(t, message.Equal(opening.Message()))
+
+			verifier, err := elgamalcomm.NewVerifier(sessionId, publicKey)
 			require.NoError(t, err)
 
-			commit, opening, err := c.Commit(curve.Generator().ScalarMul(msg))
-			require.NoError(t, err)
-
-			err = v.Verify(commit, opening)
+			err = verifier.Verify(commitment, opening)
 			require.NoError(t, err)
 		})
 	}
