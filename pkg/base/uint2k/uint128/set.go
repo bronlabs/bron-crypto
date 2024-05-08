@@ -46,8 +46,8 @@ func (r *Ring128) Random(prng io.Reader) (Uint128, error) {
 	return el, nil
 }
 
-func (*Ring128) Cardinality() *saferith.Modulus {
-	return mod2Pow128
+func (*Ring128) Cardinality() *saferith.Nat {
+	return mod2Pow128.Nat()
 }
 
 func (*Ring128) Contains(_ Uint128) bool {

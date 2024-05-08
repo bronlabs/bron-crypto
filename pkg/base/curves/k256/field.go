@@ -27,7 +27,7 @@ type BaseField struct {
 	_ ds.Incomparable
 }
 
-func (*BaseField) Cardinality() *saferith.Modulus {
+func (*BaseField) Cardinality() *saferith.Nat {
 	//TODO implement me
 	panic("implement me")
 }

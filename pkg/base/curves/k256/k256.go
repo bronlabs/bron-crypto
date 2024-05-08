@@ -66,8 +66,8 @@ func NewCurve() *Curve {
 	return &k256Instance
 }
 
-func (c *Curve) Cardinality() *saferith.Modulus {
-	return c.Order()
+func (c *Curve) Cardinality() *saferith.Nat {
+	return c.Order().Nat()
 }
 
 func (*Curve) Contains(e curves.Point) bool {

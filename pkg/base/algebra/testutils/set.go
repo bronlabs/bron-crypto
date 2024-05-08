@@ -30,7 +30,7 @@ func Set[S algebra.Set[E], E algebra.Element](t *testing.T, s S, isMember IsElem
 		t.Run("is idempotent", func(t *testing.T) {
 			t.Parallel()
 			cc := s.Cardinality()
-			require.Equal(t, c.Nat().Eq(cc.Nat()), saferith.Choice(1))
+			require.Equal(t, c.Eq(cc), saferith.Choice(1))
 
 		})
 	})
@@ -110,7 +110,7 @@ func StructuredSet[S algebra.StructuredSet[S, E], E algebra.StructuredSetElement
 		t.Run("is the same as cardinality", func(t *testing.T) {
 			t.Parallel()
 			c := s.Cardinality()
-			require.Equal(t, o.Nat().Eq(c.Nat()), saferith.Choice(1))
+			require.Equal(t, o.Nat().Eq(c), saferith.Choice(1))
 		})
 	})
 	t.Run("Operators", func(t *testing.T) {

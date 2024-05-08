@@ -44,8 +44,8 @@ func (*Field) WideElementSize() int {
 	return 2 * fieldBytes
 }
 
-func (*Field) Cardinality() *saferith.Modulus {
-	return order
+func (*Field) Cardinality() *saferith.Nat {
+	return order.Nat()
 }
 
 func (*Field) Contains(_ *FieldElement) bool {

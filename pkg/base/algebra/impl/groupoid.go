@@ -14,8 +14,8 @@ type Groupoid[G algebra.Groupoid[G, E], E algebra.GroupoidElement[G, E]] struct 
 	algebra.Groupoid[G, E]
 }
 
-func (g *Groupoid[G, E]) Cardinality() *saferith.Modulus {
-	return g.Order()
+func (g *Groupoid[G, E]) Cardinality() *saferith.Nat {
+	return g.Order().Nat()
 }
 
 func (g *Groupoid[G, E]) IsDefinedUnder(operator algebra.BinaryOperator[E]) bool {
