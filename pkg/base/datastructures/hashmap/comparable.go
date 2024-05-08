@@ -124,3 +124,23 @@ func (m *ComparableHashMap[K, V]) UnmarshalJSON(data []byte) error {
 	m.inner = temp
 	return nil
 }
+
+func (m *ComparableHashMap[K, V]) MarshalBinary() ([]byte, error) {
+	temp := make(map[K]V)
+	for k, v := range m.inner {
+		temp[k] = v
+	}
+	serialised, err := json.Marshal(temp)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not json marshal")
+	}
+	return serialised, nil
+}
+func (m *ComparableHashMap[K, V]) UnmarshalBinary(data []byte) error {
+	var temp map[K]V
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return errs.WrapSerialisation(err, "could not json marshal comparable hash map")
+	}
+	m.inner = temp
+	return nil
+}

@@ -6,9 +6,11 @@ import (
 )
 
 type Map[K, V Object] any
+type MapUnderlyer = map[ObjectUnderlyer]ObjectUnderlyer
 
-type AbstractMapAdapter[T comparable, M Map[K, V], K, V Object] AbstractObjectAdapter[map[T]T, M]
-type MapAdapter[M Map[K, V], K, V Object] AbstractMapAdapter[UnderlyingGenerator, M, K, V]
+type MapAdapter[M Map[K, V], K, V Object] AbstractAdapter[MapUnderlyer, M]
+
+var _ MapGenerator[any, any, any] = (*MapGenerationSuite[any, any, any])(nil)
 
 type MapGenerator[M Map[K, V], K, V Object] interface {
 	Generate(size int) M
@@ -18,26 +20,23 @@ type MapGenerator[M Map[K, V], K, V Object] interface {
 	Generator[M]
 }
 
-var _ MapGenerator[any, any, any] = (*MapGenerationSuite[any, any, any])(nil)
-
 type MapGenerationSuite[M Map[K, V], K, V Object] struct {
-	adapter MapAdapter[M, K, V]
-	keys    SliceGenerator[[]K, K]
-	values  SliceGenerator[[]V, V]
-	prng    csprng.Seedable
+	GeneratorTrait[MapUnderlyer, M]
+	keys   SliceGenerator[[]K, K]
+	values SliceGenerator[[]V, V]
 }
 
 func (m *MapGenerationSuite[M, K, V]) gen(keysSize int) M {
-	keysUnwrapped, err := RandomUnderlyerSlice(m.prng, keysSize, true, false, false)
+	keysUnwrapped, err := RandomUnderlyerSlice[CollectionUnderlyer, ObjectUnderlyer](m.prng, keysSize, true, false, false)
 	if err != nil {
 		panic(errs.WrapRandomSample(err, "could not sample underlyer keys"))
 	}
 	sampleSize := len(keysUnwrapped)
-	valuesUnwrapped, err := RandomUnderlyerSlice(m.prng, sampleSize, false, false, false)
+	valuesUnwrapped, err := RandomUnderlyerSlice[CollectionUnderlyer, ObjectUnderlyer](m.prng, sampleSize, false, false, false)
 	if err != nil {
 		panic(errs.WrapRandomSample(err, "could not sample underlyer values"))
 	}
-	out := map[UnderlyingGenerator]UnderlyingGenerator{}
+	out := MapUnderlyer{}
 	for i := range sampleSize {
 		out[keysUnwrapped[i]] = valuesUnwrapped[i]
 	}
@@ -63,14 +62,6 @@ func (m *MapGenerationSuite[M, K, V]) Values() SliceGenerator[[]V, V] {
 	return m.values
 }
 
-func (m *MapGenerationSuite[M, K, V]) Empty() M {
-	return m.adapter.Zero()
-}
-
-func (m *MapGenerationSuite[M, K, V]) Prng() csprng.Seedable {
-	return m.prng
-}
-
 func NewMapGenerationSuite[M Map[K, V], K, V Object](mapAdapter MapAdapter[M, K, V], keysAdapter ObjectAdapter[K], valuesAdapter ObjectAdapter[V], prng csprng.Seedable) (*MapGenerationSuite[M, K, V], error) {
 	if err := validateNewMapGenerationSuite(mapAdapter, keysAdapter, valuesAdapter, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid argument")
@@ -84,10 +75,12 @@ func NewMapGenerationSuite[M Map[K, V], K, V Object](mapAdapter MapAdapter[M, K,
 		return nil, errs.WrapFailed(err, "could not consturct value slice generator")
 	}
 	return &MapGenerationSuite[M, K, V]{
-		adapter: mapAdapter,
-		keys:    keysGenerator,
-		values:  valuesGenerator,
-		prng:    prng,
+		GeneratorTrait: GeneratorTrait[MapUnderlyer, M]{
+			adapter: mapAdapter,
+			prng:    prng,
+		},
+		keys:   keysGenerator,
+		values: valuesGenerator,
 	}, nil
 }
 
@@ -124,10 +117,12 @@ func NewNativeMapGenerationSuite[M ~map[K]V, K comparable, V Object](keysAdapter
 		values: valuesAdapter,
 	}
 	return &MapGenerationSuite[M, K, V]{
-		adapter: mapAdapter,
-		keys:    keysGenerator,
-		values:  valuesGenerator,
-		prng:    prng,
+		GeneratorTrait: GeneratorTrait[MapUnderlyer, M]{
+			adapter: mapAdapter,
+			prng:    prng,
+		},
+		keys:   keysGenerator,
+		values: valuesGenerator,
 	}, nil
 }
 

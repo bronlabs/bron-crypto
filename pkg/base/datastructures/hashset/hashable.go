@@ -183,3 +183,23 @@ func (s *HashableHashSet[E]) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
+func (s *HashableHashSet[E]) MarshalBinary() ([]byte, error) {
+	serialised, err := json.Marshal(s.v)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not json marshal")
+	}
+	return serialised, nil
+}
+
+func (s *HashableHashSet[E]) UnmarshalBinary(data []byte) error {
+	result := HashableHashSet[E]{}
+	if err := json.Unmarshal(data, result.v); err != nil {
+		return errs.WrapSerialisation(err, "couldn't unmarshal hashable hash set")
+	}
+	s.Clear()
+	for x := range result.Iter() {
+		s.Add(x)
+	}
+	return nil
+}

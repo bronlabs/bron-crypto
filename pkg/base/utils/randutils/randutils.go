@@ -36,9 +36,10 @@ func RandomBigInt(prng io.Reader, min, max *big.Int, nonZero bool) (*big.Int, er
 			return nil, errs.WrapRandomSample(err, "could not sample random big int")
 		}
 		n = new(big.Int).Add(n, min)
-		if nonZero && n.Cmp(big.NewInt(0)) != 0 {
-			return n, nil
+		if nonZero && n.Cmp(big.NewInt(0)) == 0 {
+			continue
 		}
+		return n, nil
 	}
 }
 
@@ -205,22 +206,17 @@ func RandomSliceOfIntegers[S ~[]T, T constraints.Integer](prng io.Reader, minSli
 	if err := validateRandomSliceOfIntegers(prng, minSliceLength, maxSliceLength, minInteger, maxInteger, distinct, notAnyZero); err != nil {
 		return nil, errs.WrapArgument(err, "invalid arguments")
 	}
-	if distinct {
-		minSliceLength = int(maxInteger-minInteger) + 1
-	}
 	sliceLength, err := RandomInteger(prng, minSliceLength, maxSliceLength, false)
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "could not sample slice length")
 	}
-	for {
-		out, err := RandomSlice[S, T](prng, sliceLength, distinct, notAllZero, func() (T, error) {
-			return RandomInteger(prng, minInteger, maxInteger, notAnyZero)
-		})
-		if err != nil {
-			return nil, errs.WrapRandomSample(err, "could not sample an empty slice")
-		}
-		return out, nil
+	out, err := RandomSlice[S, T](prng, sliceLength, distinct, notAllZero, func() (T, error) {
+		return RandomInteger(prng, minInteger, maxInteger, notAnyZero)
+	})
+	if err != nil {
+		return nil, errs.WrapRandomSample(err, "could not sample an empty slice")
 	}
+	return out, nil
 }
 
 func validateRandomSliceOfIntegers[T constraints.Integer](prng io.Reader, minSlice, maxSlice int, minInteger, maxInteger T, distinct, nonZero bool) error {
@@ -247,9 +243,6 @@ func validateRandomSliceOfIntegers[T constraints.Integer](prng io.Reader, minSli
 		if minSlice > int(totalIntegers) {
 			return errs.NewValue("sample with minimum size will need more ints than given to have all distinct elements")
 		}
-		if minSlice < int(totalIntegers) && maxSlice < int(totalIntegers) {
-			return errs.NewValue("cannot sample with distinct elements")
-		}
 	}
 	return nil
 }
@@ -259,13 +252,11 @@ func RandomSliceOfBytes[S ~[]T, T ~byte](prng io.Reader, minSliceLength, maxSlic
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "could not sample slice length")
 	}
-	for {
-		out, err := RandomSlice[S, T](prng, sliceLength, false, notAllZero, func() (T, error) {
-			return RandomByte[T](prng, notAnyZero)
-		})
-		if err != nil {
-			return nil, errs.WrapRandomSample(err, "could not sample an empty slice")
-		}
-		return out, nil
+	out, err := RandomSlice[S, T](prng, sliceLength, false, notAllZero, func() (T, error) {
+		return RandomByte[T](prng, notAnyZero)
+	})
+	if err != nil {
+		return nil, errs.WrapRandomSample(err, "could not sample an empty slice")
 	}
+	return out, nil
 }

@@ -184,3 +184,27 @@ func (s *ComparableHashSet[E]) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
+func (s *ComparableHashSet[E]) MarshalBinary() ([]byte, error) {
+	temp := make(map[E]bool)
+	for k, v := range s.v {
+		temp[k] = v
+	}
+	serialised, err := json.Marshal(temp)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not marshal json")
+	}
+	return serialised, nil
+}
+
+func (s *ComparableHashSet[E]) UnmarshalBinary(data []byte) error {
+	var temp map[E]bool
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return errs.WrapSerialisation(err, "could not json marshal comparable hashset")
+	}
+	s.Clear()
+	for k, v := range temp {
+		s.v[k] = v
+	}
+	return nil
+}

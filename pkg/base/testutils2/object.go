@@ -6,15 +6,9 @@ import (
 )
 
 type Object any
+type ObjectUnderlyer = UnderlyerType
 
-type AbstractObjectAdapter[T any, O Object] interface {
-	Wrap(T) O
-	Unwrap(O) T
-	Zero() O
-	IsZero(O) bool
-}
-
-type ObjectAdapter[O Object] AbstractObjectAdapter[UnderlyingGenerator, O]
+type ObjectAdapter[O Object] AbstractAdapter[ObjectUnderlyer, O]
 
 type ObjectGenerator[O Object] interface {
 	Generate() O
@@ -25,29 +19,22 @@ type ObjectGenerator[O Object] interface {
 var _ ObjectGenerator[any] = (*ObjectGenerationSuite[any])(nil)
 
 type ObjectGenerationSuite[O Object] struct {
-	adapter ObjectAdapter[O]
-	prng    csprng.Seedable
+	GeneratorTrait[ObjectUnderlyer, O]
 }
 
 func (o *ObjectGenerationSuite[O]) Generate() O {
-	x, err := RandomUnderlyer(o.prng, false)
+	x, err := RandomUnderlyer[ObjectUnderlyer](o.prng, false)
 	if err != nil {
 		panic(errs.WrapFailed(err, "could not generate random underlyer"))
 	}
 	return o.adapter.Wrap(x)
 }
 func (o *ObjectGenerationSuite[O]) GenerateNonZero() O {
-	x, err := RandomUnderlyer(o.prng, true)
+	x, err := RandomUnderlyer[ObjectUnderlyer](o.prng, true)
 	if err != nil {
 		panic(errs.WrapFailed(err, "could not generate non zero random underlyer"))
 	}
 	return o.adapter.Wrap(x)
-}
-func (o *ObjectGenerationSuite[O]) Empty() O {
-	return o.adapter.Zero()
-}
-func (o *ObjectGenerationSuite[O]) Prng() csprng.Seedable {
-	return o.prng
 }
 
 func NewObjectGenerationSuite[O Object](adapter ObjectAdapter[O], prng csprng.Seedable) (*ObjectGenerationSuite[O], error) {
@@ -55,8 +42,10 @@ func NewObjectGenerationSuite[O Object](adapter ObjectAdapter[O], prng csprng.Se
 		return nil, errs.WrapArgument(err, "invalid arguments")
 	}
 	return &ObjectGenerationSuite[O]{
-		adapter: adapter,
-		prng:    prng,
+		GeneratorTrait[ObjectUnderlyer, O]{
+			prng:    prng,
+			adapter: adapter,
+		},
 	}, nil
 }
 

@@ -212,3 +212,20 @@ func (m *HashableHashMap[K, V]) UnmarshalJSON(data []byte) error {
 	m.inner = temp
 	return nil
 }
+
+func (m *HashableHashMap[K, V]) MarshalBinary() ([]byte, error) {
+	serialised, err := json.Marshal(m.inner)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not json marshal")
+	}
+	return serialised, nil
+}
+
+func (m *HashableHashMap[K, V]) UnmarshalBinary(data []byte) error {
+	var temp map[uint64][]*entry[K, V]
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return errs.WrapSerialisation(err, "could not unmarshal hashable hashmap")
+	}
+	m.inner = temp
+	return nil
+}

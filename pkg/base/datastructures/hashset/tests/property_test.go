@@ -1,81 +1,114 @@
 package hashset_test
 
 import (
+	"encoding/gob"
 	"testing"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
-	tu "github.com/copperexchange/krypton-primitives/pkg/base/testutils"
+	dstu "github.com/copperexchange/krypton-primitives/pkg/base/datastructures/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	tu2 "github.com/copperexchange/krypton-primitives/pkg/base/testutils2"
+	"github.com/copperexchange/krypton-primitives/pkg/csprng"
+	"github.com/stretchr/testify/require"
 )
 
-var _ tu.CollectionAdapters[ds.Set[data], data] = (*adapters)(nil)
+type hashsetGenerator tu2.CollectionGenerator[ds.Set[data], data]
 
-type adapters struct {
+var _ tu2.CollectionAdapter[ds.Set[data], data] = (*collectionAdapter)(nil)
+
+type collectionAdapter struct {
 	constructor func(...data) ds.Set[data]
 }
 
-func (a *adapters) Element(x uint) data {
-	return data(x)
-}
-func (a *adapters) Collection(xs []uint) ds.Set[data] {
+func (a *collectionAdapter) Wrap(xs []uint64) ds.Set[data] {
 	ds := make([]data, len(xs))
 	for i, x := range xs {
 		ds[i] = data(x)
 	}
 	return a.constructor(ds...)
 }
-func (a *adapters) UnwrapElement(x data) uint {
-	return uint(x)
-}
-func (a *adapters) UnwrapCollection(xs ds.Set[data]) []uint {
+func (a *collectionAdapter) Unwrap(xs ds.Set[data]) []uint64 {
 	l := xs.List()
-	out := make([]uint, len(l))
+	out := make([]tu2.UnderlyerType, len(l))
 	for i, e := range l {
-		out[i] = uint(e)
+		out[i] = tu2.UnderlyerType(e)
 	}
 	return out
 }
-func (a *adapters) Empty() ds.Set[data] {
+func (a *collectionAdapter) ZeroValue() ds.Set[data] {
 	return a.constructor()
 }
 
-func NewHashableHashSetPropertyTester(maxNumberOfElements uint) (*tu.CollectionPropertyTester[ds.Set[data], data], error) {
-	adapters := &adapters{
-		constructor: hashset.NewHashableHashSet[data],
-	}
-	return tu.NewCollectionPropertyTester(adapters, maxNumberOfElements)
+var _ tu2.ObjectAdapter[data] = (*dataAdapter)(nil)
+
+type dataAdapter struct{}
+
+func (a *dataAdapter) Wrap(x uint64) data {
+	return data(x)
+}
+func (a *dataAdapter) Unwrap(x data) uint64 {
+	return tu2.UnderlyerType(x)
+}
+func (a *dataAdapter) ZeroValue() data {
+	return data(0)
 }
 
-func NewComparableHashSetPropertyTester(maxNumberOfElements uint) (*tu.CollectionPropertyTester[ds.Set[data], data], error) {
-	adapters := &adapters{
-		constructor: hashset.NewComparableHashSet[data],
+func gobSerialize() {
+	gob.Register(hashset.HashableHashSet[data]{})
+	gob.Register(hashset.ComparableHashSet[data]{})
+}
+
+func hashableHashSetGenerator(prng csprng.Seedable) (hashsetGenerator, error) {
+	adapter := &collectionAdapter{
+		constructor: hashset.NewHashableHashSet[data],
 	}
-	return tu.NewCollectionPropertyTester(adapters, maxNumberOfElements)
+	objectGenerator, err := tu2.NewObjectGenerationSuite(&dataAdapter{}, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not construct object generator")
+	}
+	return tu2.NewCollectionGenerationSuite(adapter, objectGenerator, prng)
 }
 
 func Fuzz_Property_HashableHashSet(f *testing.F) {
 
-	empty := hashset.NewHashableHashSet[data]()
-	cm := tu2.NewGobCorpusManager[hashset.HashableHashSet[data]](f, empty)
+	prng, err := tu2.NewPrng(nil)
+	require.NoError(f, err)
 
-	cm.Add(f, empty)
+	g, err := hashableHashSetGenerator(prng)
+	require.NoError(f, err)
 
-	f.Fuzz()
+	f.Fuzz(func(t *testing.T, fuzzerInput []byte) {
+		g.Reseed(fuzzerInput)
+		dstu.CheckAbstractSetInvariants(t, g)
+	})
 }
 
-// func Test_Property_HashableHashSet(t *testing.T) {
-// 	t.Parallel()
-// 	maxNumElement := uint(100)
-// 	pt, err := NewHashableHashSetPropertyTester(maxNumElement)
-// 	require.NoError(t, err)
-// 	dstu.CheckSetInvariants(t, pt)
-// }
+func Fuzz_Property_HashableHashSet_1(f *testing.F) {
 
-// func Test_Property_ComparableHashSet(t *testing.T) {
-// 	t.Parallel()
-// 	maxNumElement := uint(100)
-// 	pt, err := NewComparableHashSetPropertyTester(maxNumElement)
-// 	require.NoError(t, err)
-// 	dstu.CheckSetInvariants(t, pt)
-// }
+	prng, err := tu2.NewPrng(nil)
+	require.NoError(f, err)
+
+	g, err := hashableHashSetGenerator(prng)
+	require.NoError(f, err)
+
+	emptySet := hashset.NewHashableHashSet[data]()
+	out := tu2.SerializeForCorpus(f, emptySet, gobSerialize)
+	f.Add(out, 0)
+
+	A := hashset.NewHashableHashSet[data](data(0), data(1))
+	out2 := tu2.SerializeForCorpus(f, A, gobSerialize)
+	f.Add(out2, 2)
+
+	f.Fuzz(func(t *testing.T, fuzzerInput []byte, length int) {
+		out, wasInCorpus := g.Reconstruct(t, fuzzerInput)
+		// require.True(t, wasInCorpus && out != nil || !wasInCorpus && out == nil)
+		if wasInCorpus {
+			asi := &dstu.AbstractSetInvariants[ds.Set[data], data]{}
+			asi.Cardinality(t, out, length)
+		}
+		// g.Reseed(fuzzerInput)
+		// dstu.CheckAbstractSetInvariants(t, g)
+
+	})
+}
