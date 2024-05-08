@@ -12,8 +12,12 @@ type CollectionAdapter[C Collection[O], O Object] AbstractAdapter[CollectionUnde
 type SliceGenerator[S ~[]O, O Object] CollectionGenerator[S, O]
 type CollectionGenerator[C Collection[O], O Object] interface {
 	Generate(size int, distinct bool) C
-	GenerateAnySize(distinct bool) C
+	GenerateAnySize(distinct, nonEmpty bool) C
 	Element() ObjectGenerator[O]
+	SliceOfElements() SliceGenerator[[]O, O]
+
+	Adapter() CollectionAdapter[C, O]
+	Clone() CollectionGenerator[C, O]
 	Generator[C]
 }
 
@@ -25,19 +29,44 @@ type collectionGenerator[C Collection[O], O Object] struct {
 	element ObjectGenerator[O]
 }
 
-func (c *collectionGenerator[C, O]) Generate(size int, distinct bool) C {
+func (c collectionGenerator[C, O]) Generate(size int, distinct bool) C {
 	if size == 0 {
 		return c.Empty()
 	}
 	out := c.Prng().UnderlyerSlice(size, distinct, false, false)
 	return c.adapter.Wrap((out))
 }
-func (c *collectionGenerator[C, O]) GenerateAnySize(distinct bool) C {
-	out := c.Prng().UnderlyerSlice(-1, distinct, false, false)
+func (c collectionGenerator[C, O]) GenerateAnySize(distinct, nonEmpty bool) C {
+	size := c.Prng().Int(nonEmpty)
+	out := c.Prng().UnderlyerSlice(size, distinct, false, false)
 	return c.adapter.Wrap(out)
 }
-func (c *collectionGenerator[C, O]) Element() ObjectGenerator[O] {
+func (c collectionGenerator[C, O]) Element() ObjectGenerator[O] {
 	return c.element
+}
+func (c collectionGenerator[C, O]) SliceOfElements() SliceGenerator[[]O, O] {
+	return &collectionGenerator[[]O, O]{
+		generator: generator[CollectionUnderlyer, []O]{
+			prng: *c.Prng(),
+			adapter: &SliceAdapter[[]O, O]{
+				Adapter: c.Element().Adapter(),
+			},
+		},
+		element: c.Element(),
+	}
+}
+func (c collectionGenerator[C, O]) Adapter() CollectionAdapter[C, O] {
+	return c.adapter
+}
+func (c collectionGenerator[C, O]) Clone() CollectionGenerator[C, O] {
+	return collectionGenerator[C, O]{
+		generator: generator[CollectionUnderlyer, C]{
+			prng:    c.Prng().Clone(),
+			adapter: c.adapter,
+		},
+
+		element: c.element.Clone(),
+	}
 }
 
 func NewCollectionGenerator[C Collection[O], O Object](colAdapter CollectionAdapter[C, O], elementGenerator ObjectGenerator[O], prng *Prng) (CollectionGenerator[C, O], error) {
@@ -46,7 +75,7 @@ func NewCollectionGenerator[C Collection[O], O Object](colAdapter CollectionAdap
 	}
 	return &collectionGenerator[C, O]{
 		generator: generator[CollectionUnderlyer, C]{
-			prng:    prng,
+			prng:    *prng,
 			adapter: colAdapter,
 		},
 
@@ -77,7 +106,7 @@ func NewSliceGenerator[S ~[]O, O Object](objectAdapter ObjectAdapter[O], prng *P
 	}
 	return &collectionGenerator[S, O]{
 		generator: generator[CollectionUnderlyer, S]{
-			prng:    prng,
+			prng:    *prng,
 			adapter: sliceAdapter,
 		},
 		element: objectGenerator,

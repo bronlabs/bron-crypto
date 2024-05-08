@@ -12,6 +12,9 @@ type ObjectAdapter[O Object] AbstractAdapter[ObjectUnderlyer, O]
 type ObjectGenerator[O Object] interface {
 	Generate() O
 	GenerateNonZero() O
+
+	Adapter() ObjectAdapter[O]
+	Clone() ObjectGenerator[O]
 	Generator[O]
 }
 
@@ -21,13 +24,24 @@ type objectGenerator[O Object] struct {
 	generator[ObjectUnderlyer, O]
 }
 
-func (o *objectGenerator[O]) Generate() O {
+func (o objectGenerator[O]) Generate() O {
 	x := o.Prng().Underlyer(false)
 	return o.adapter.Wrap(x)
 }
-func (o *objectGenerator[O]) GenerateNonZero() O {
+func (o objectGenerator[O]) GenerateNonZero() O {
 	x := o.Prng().Underlyer(true)
 	return o.adapter.Wrap(x)
+}
+func (o objectGenerator[O]) Adapter() ObjectAdapter[O] {
+	return o.adapter
+}
+func (o objectGenerator[O]) Clone() ObjectGenerator[O] {
+	return objectGenerator[O]{
+		generator[ObjectUnderlyer, O]{
+			prng:    o.Prng().Clone(),
+			adapter: o.adapter,
+		},
+	}
 }
 
 func NewObjectGenerator[O Object](adapter ObjectAdapter[O], prng *Prng) (ObjectGenerator[O], error) {
@@ -36,7 +50,7 @@ func NewObjectGenerator[O Object](adapter ObjectAdapter[O], prng *Prng) (ObjectG
 	}
 	return &objectGenerator[O]{
 		generator[ObjectUnderlyer, O]{
-			prng:    prng,
+			prng:    *prng,
 			adapter: adapter,
 		},
 	}, nil

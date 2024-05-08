@@ -55,6 +55,10 @@ type Prng struct {
 	MaxUnderlyer Underlyer
 }
 
+func (p *Prng) Bool() bool {
+	return p.Rand().IntN(2) == 1
+}
+
 func (p *Prng) Underlyer(nonZero bool) Underlyer {
 	out := Underlyer(0)
 	for {
@@ -84,13 +88,21 @@ func (p *Prng) UnderlyerSlice(size int, distinct, notAllZero, notAnyZero bool) [
 func (p *Prng) Int(nonZero bool) int {
 	out := 0
 	for {
-		out = p.Rand().IntN(int(p.MaxUnderlyer))
+		out = p.Rand().IntN(int(p.MaxUnderlyer) + 1)
 		if nonZero && out == 0 {
 			continue
 		}
 		break
 	}
 	return out
+}
+
+func (p *Prng) IntRange(a, b int) int {
+	if b < a {
+		return 0
+	}
+	shift := b - a
+	return p.Rand().IntN(int(p.MaxUnderlyer)+1) + shift
 }
 
 func (p *Prng) Clone() Prng {

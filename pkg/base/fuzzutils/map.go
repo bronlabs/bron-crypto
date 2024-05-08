@@ -16,6 +16,9 @@ type MapGenerator[M Map[K, V], K, V Object] interface {
 	GenerateAnySize() M
 	Keys() SliceGenerator[[]K, K]
 	Values() SliceGenerator[[]V, V]
+
+	Adapter() MapAdapter[M, K, V]
+	Clone() MapGenerator[M, K, V]
 	Generator[M]
 }
 
@@ -25,7 +28,7 @@ type mapGenerator[M Map[K, V], K, V Object] struct {
 	values SliceGenerator[[]V, V]
 }
 
-func (m *mapGenerator[M, K, V]) gen(keysSize int) M {
+func (m mapGenerator[M, K, V]) gen(keysSize int) M {
 	keysUnwrapped := m.Prng().UnderlyerSlice(keysSize, true, false, false)
 	sampleSize := len(keysUnwrapped)
 	valuesUnwrapped := m.Prng().UnderlyerSlice(sampleSize, false, false, false)
@@ -36,20 +39,33 @@ func (m *mapGenerator[M, K, V]) gen(keysSize int) M {
 	return m.adapter.Wrap(out)
 }
 
-func (m *mapGenerator[M, K, V]) Generate(size int) M {
+func (m mapGenerator[M, K, V]) Generate(size int) M {
 	return m.gen(size)
 }
 
-func (m *mapGenerator[M, K, V]) GenerateAnySize() M {
+func (m mapGenerator[M, K, V]) GenerateAnySize() M {
 	return m.gen(-1)
 }
 
-func (m *mapGenerator[M, K, V]) Keys() SliceGenerator[[]K, K] {
+func (m mapGenerator[M, K, V]) Keys() SliceGenerator[[]K, K] {
 	return m.keys
 }
 
-func (m *mapGenerator[M, K, V]) Values() SliceGenerator[[]V, V] {
+func (m mapGenerator[M, K, V]) Values() SliceGenerator[[]V, V] {
 	return m.values
+}
+func (m mapGenerator[M, K, V]) Adapter() MapAdapter[M, K, V] {
+	return m.adapter
+}
+func (m mapGenerator[M, K, V]) Clone() MapGenerator[M, K, V] {
+	return mapGenerator[M, K, V]{
+		generator: generator[MapUnderlyer, M]{
+			adapter: m.adapter,
+			prng:    m.Prng().Clone(),
+		},
+		keys:   m.Keys().Clone(),
+		values: m.Values().Clone(),
+	}
 }
 
 func NewMapGenerator[M Map[K, V], K, V Object](mapAdapter MapAdapter[M, K, V], keysAdapter ObjectAdapter[K], valuesAdapter ObjectAdapter[V], prng *Prng) (MapGenerator[M, K, V], error) {
@@ -67,7 +83,7 @@ func NewMapGenerator[M Map[K, V], K, V Object](mapAdapter MapAdapter[M, K, V], k
 	return &mapGenerator[M, K, V]{
 		generator: generator[MapUnderlyer, M]{
 			adapter: mapAdapter,
-			prng:    prng,
+			prng:    *prng,
 		},
 		keys:   keysGenerator,
 		values: valuesGenerator,
@@ -109,7 +125,7 @@ func NewNativeMapGenerator[M ~map[K]V, K comparable, V Object](keysAdapter Objec
 	return &mapGenerator[M, K, V]{
 		generator: generator[MapUnderlyer, M]{
 			adapter: mapAdapter,
-			prng:    prng,
+			prng:    *prng,
 		},
 		keys:   keysGenerator,
 		values: valuesGenerator,
