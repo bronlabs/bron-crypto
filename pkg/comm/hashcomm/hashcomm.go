@@ -1,11 +1,12 @@
 package hashcomm
 
 import (
+	"slices"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/comm"
-	"slices"
 )
 
 const Name comm.Name = "HASH_COMMITMENT"

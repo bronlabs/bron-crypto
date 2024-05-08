@@ -2,6 +2,7 @@ package hashcomm
 
 import (
 	"crypto/subtle"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/comm"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
@@ -13,7 +14,7 @@ type verifier struct {
 	sessionId []byte
 }
 
-func NewVerifier(sessionId []byte) *verifier {
+func NewVerifier(sessionId []byte) *verifier { //nolint:revive // will be used by interface
 	return &verifier{
 		sessionId: sessionId,
 	}

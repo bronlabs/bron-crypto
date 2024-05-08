@@ -15,7 +15,7 @@ type verifier struct {
 	*homomorphicScheme
 }
 
-func NewVerifier(sessionId []byte, curve curves.Curve) (*verifier, error) {
+func NewVerifier(sessionId []byte, curve curves.Curve) (*verifier, error) { //nolint:revive // will be used by interface
 	if curve == nil {
 		return nil, errs.NewIsNil("curve is nil")
 	}
@@ -51,7 +51,7 @@ func (v *verifier) Verify(commitment *Commitment, opening *Opening) error {
 	}
 
 	mG := curve.Generator().ScalarMul(opening.message)
-	rH := v.h.ScalarMul(opening.Witness)
+	rH := v.h.ScalarMul(opening.witness)
 	c := rH.Add(mG)
 	if !commitment.value.Equal(c) {
 		return errs.NewVerification("verification failed")

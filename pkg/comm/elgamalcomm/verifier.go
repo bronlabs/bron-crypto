@@ -15,7 +15,7 @@ type verifier struct {
 	*homomorphicScheme
 }
 
-func NewVerifier(sessionId []byte, publicKey curves.Point) (*verifier, error) {
+func NewVerifier(sessionId []byte, publicKey curves.Point) (*verifier, error) { //nolint:revive // will be used by interface
 	if publicKey == nil {
 		return nil, errs.NewIsNil("publicKey is nil")
 	}

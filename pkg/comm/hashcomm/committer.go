@@ -1,11 +1,12 @@
 package hashcomm
 
 import (
+	"io"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/comm"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"io"
 )
 
 var _ comm.Committer[Message, *Commitment, *Opening] = (*committer)(nil)
@@ -15,7 +16,7 @@ type committer struct {
 	prng      io.Reader
 }
 
-func NewCommitter(sessionId []byte, prng io.Reader) (*committer, error) {
+func NewCommitter(sessionId []byte, prng io.Reader) (*committer, error) { //nolint:revive // will be used by interface
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
 	}

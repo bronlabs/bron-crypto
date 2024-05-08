@@ -1,9 +1,10 @@
 package pedersencomm
 
 import (
+	"github.com/cronokirby/saferith"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/comm"
-	"github.com/cronokirby/saferith"
 )
 
 var _ comm.HomomorphicCommitmentScheme[Message, *Commitment, *Opening] = (*homomorphicScheme)(nil)
@@ -54,14 +55,14 @@ func (*homomorphicScheme) CombineOpenings(x *Opening, ys ...*Opening) (*Opening,
 
 	acc := &Opening{
 		message: x.message.Clone(),
-		Witness: x.Witness.Clone(),
+		witness: x.witness.Clone(),
 	}
 	for _, y := range ys {
 		if err := y.Validate(); err != nil {
 			return nil, errs.WrapFailed(err, "invalid opening (2nd operand)")
 		}
 		acc.message = acc.message.Add(y.message)
-		acc.Witness = acc.Witness.Add(y.Witness)
+		acc.witness = acc.witness.Add(y.witness)
 	}
 
 	return acc, nil
@@ -75,11 +76,11 @@ func (*homomorphicScheme) ScaleOpening(x *Opening, n *saferith.Nat) (*Opening, e
 		return nil, errs.NewIsNil("scalar")
 	}
 
-	curve := x.Witness.ScalarField().Curve()
+	curve := x.witness.ScalarField().Curve()
 	scale := curve.ScalarField().Scalar().SetNat(n)
 	opening := &Opening{
 		message: x.Message().Mul(scale),
-		Witness: x.Witness.Mul(scale),
+		witness: x.witness.Mul(scale),
 	}
 
 	return opening, nil

@@ -1,12 +1,13 @@
 package pedersencomm
 
 import (
+	"io"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/comm"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"io"
 )
 
 var _ comm.HomomorphicCommitter[Message, *Commitment, *Opening] = (*committer)(nil)
@@ -17,7 +18,7 @@ type committer struct {
 	*homomorphicScheme
 }
 
-func NewCommitter(sessionId []byte, curve curves.Curve, prng io.Reader) (*committer, error) {
+func NewCommitter(sessionId []byte, curve curves.Curve, prng io.Reader) (*committer, error) { //nolint:revive // will be used by interface
 	if curve == nil {
 		return nil, errs.NewIsNil("curve is nil")
 	}
@@ -62,7 +63,7 @@ func (c *committer) Commit(message Message) (*Commitment, *Opening, error) {
 	}
 	opening := &Opening{
 		message: message,
-		Witness: witness,
+		witness: witness,
 	}
 
 	return commitment, opening, nil

@@ -2,6 +2,7 @@ package pedersencomm
 
 import (
 	"fmt"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/comm"
@@ -27,7 +28,7 @@ type Commitment struct {
 
 type Opening struct {
 	message Message
-	Witness Witness
+	witness Witness
 }
 
 func (c *Commitment) Validate() error {
@@ -50,7 +51,7 @@ func (o *Opening) Validate() error {
 	if o.message == nil {
 		return errs.NewIsNil("message")
 	}
-	if o.Witness == nil {
+	if o.witness == nil {
 		return errs.NewIsNil("witness")
 	}
 	return nil

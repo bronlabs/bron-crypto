@@ -1,9 +1,10 @@
 package elgamalcomm
 
 import (
+	"github.com/cronokirby/saferith"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/comm"
-	"github.com/cronokirby/saferith"
 )
 
 var _ comm.HomomorphicCommitmentScheme[Message, *Commitment, *Opening] = (*homomorphicScheme)(nil)
