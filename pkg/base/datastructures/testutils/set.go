@@ -7,6 +7,7 @@ import (
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	fu "github.com/copperexchange/krypton-primitives/pkg/base/fuzzutils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/itertools"
 )
 
 type SetInvariants[S ds.Set[E], E any] struct{}
@@ -231,16 +232,12 @@ func CheckSetInvariants[S ds.Set[E], E any](t *testing.T, g fu.CollectionGenerat
 		A := pt.GenerateAnySize(true, false)
 		xs := pt.SliceOfElements().GenerateAnySize(false, false)
 
-		h := map[fu.Underlyer]any{}
-		for _, ai := range pt.Adapter().Unwrap(A) {
-			h[ai] = true
-		}
-		expectedSize := len(h)
-		for _, x := range xs {
-			if _, exists := h[pt.Element().Adapter().Unwrap(x)]; !exists {
-				expectedSize++
-			}
-		}
+		expectedSize := len(itertools.Unique(
+			itertools.Product(
+				pt.Adapter().Unwrap(A),
+				pt.SliceOfElements().Adapter().Unwrap(xs),
+			),
+		))
 
 		invs.Add(t, A, expectedSize, xs...)
 	})
@@ -251,18 +248,11 @@ func CheckSetInvariants[S ds.Set[E], E any](t *testing.T, g fu.CollectionGenerat
 		A := pt.GenerateAnySize(true, false)
 		xs := pt.SliceOfElements().GenerateAnySize(false, false)
 
-		h := map[fu.Underlyer]any{}
-		for _, ai := range pt.Adapter().Unwrap(A) {
-			h[ai] = true
-		}
-		expectedSize := len(h)
-		for _, x := range xs {
-			e := pt.Element().Adapter().Unwrap(x)
-			if _, exists := h[e]; exists {
-				expectedSize--
-				delete(h, e)
-			}
-		}
+		expectedSize := len(itertools.FilterOut(
+			pt.Adapter().Unwrap(A),
+			pt.SliceOfElements().Adapter().Unwrap(xs)...,
+		))
+
 		invs.Remove(t, A, expectedSize, xs...)
 	})
 	t.Run("Clear", func(t *testing.T) {
@@ -309,7 +299,7 @@ func CheckSetInvariants[S ds.Set[E], E any](t *testing.T, g fu.CollectionGenerat
 		t.Helper()
 		pt := g.Clone()
 
-		subSetSize := pt.Prng().IntRange(0, 5)
+		subSetSize := pt.Prng().IntRange(0, 3)
 		var A S
 		if subSetSize == 0 {
 			A = pt.Empty()

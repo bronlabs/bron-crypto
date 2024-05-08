@@ -101,8 +101,7 @@ func (p *Prng) IntRange(a, b int) int {
 	if b < a {
 		return 0
 	}
-	shift := b - a
-	return p.Rand().IntN(int(p.MaxUnderlyer)+1) + shift
+	return p.Rand().IntN(b-a+1) + a
 }
 
 func (p *Prng) Clone() Prng {

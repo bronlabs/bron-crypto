@@ -121,9 +121,12 @@ func (s *ComparableHashSet[E]) IsProperSuperSet(other ds.Set[E]) bool {
 
 func (s *ComparableHashSet[E]) Iter() <-chan E {
 	ch := make(chan E, 1)
-	for k := range s.v {
-		ch <- k
-	}
+	go func() {
+		defer close(ch)
+		for k := range s.v {
+			ch <- k
+		}
+	}()
 	return ch
 }
 
@@ -139,7 +142,7 @@ func (s *ComparableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
 			var subset []E
 			for j := 0; j < n; j++ {
 				if i&(1<<j) != 0 {
-					subset = append(subset, elements[i])
+					subset = append(subset, elements[j])
 				}
 			}
 			ch <- NewComparableHashSet(subset...)

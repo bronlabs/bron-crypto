@@ -1,0 +1,73 @@
+package hashset_test
+
+import (
+	"testing"
+
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	dstu "github.com/copperexchange/krypton-primitives/pkg/base/datastructures/testutils"
+	fu "github.com/copperexchange/krypton-primitives/pkg/base/fuzzutils"
+	"github.com/stretchr/testify/require"
+)
+
+var _ fu.CollectionAdapter[ds.Set[data], data] = (*collectionAdapter)(nil)
+
+type collectionAdapter struct {
+	constructor func(...data) ds.Set[data]
+}
+
+func (a *collectionAdapter) Wrap(xs []uint64) ds.Set[data] {
+	ds := make([]data, len(xs))
+	for i, x := range xs {
+		ds[i] = data(x)
+	}
+	return a.constructor(ds...)
+}
+func (a *collectionAdapter) Unwrap(xs ds.Set[data]) []uint64 {
+	l := xs.List()
+	out := make([]fu.Underlyer, len(l))
+	for i, e := range l {
+		out[i] = fu.Underlyer(e)
+	}
+	return out
+}
+func (a *collectionAdapter) ZeroValue() ds.Set[data] {
+	return a.constructor()
+}
+
+var dataAdapter = &fu.IntegerAdapter[data]{}
+
+func makeGenerator(f *testing.F, constructor func(...data) ds.Set[data]) fu.CollectionGenerator[ds.Set[data], data] {
+	f.Helper()
+
+	prng := fu.NewPrng()
+	objectGenerator, err := fu.NewObjectGenerator(dataAdapter, prng)
+	require.NoError(f, err)
+
+	adapter := &collectionAdapter{
+		constructor: constructor,
+	}
+	out, err := fu.NewCollectionGenerator(adapter, objectGenerator, prng)
+	require.NoError(f, err)
+
+	return out
+}
+
+func Fuzz_Property_HashableHashSet(f *testing.F) {
+	g := makeGenerator(f, hashset.NewHashableHashSet[data])
+	fu.RunCollectionPropertyTest(f, nil, dstu.CheckSetInvariants, g)
+}
+
+func Fuzz_Property_ComparableHashSet(f *testing.F) {
+	g := makeGenerator(f, hashset.NewComparableHashSet[data])
+	fu.RunCollectionPropertyTest(f, nil, dstu.CheckSetInvariants, g)
+}
+
+func Fuzz_Property(f *testing.F) {
+	g1 := makeGenerator(f, hashset.NewHashableHashSet[data])
+	g2 := makeGenerator(f, hashset.NewComparableHashSet[data])
+	gs := []fu.CollectionGenerator[ds.Set[data], data]{
+		g1, g2,
+	}
+	fu.RunCollectionPropertyTest(f, nil, dstu.CheckSetInvariants, gs...)
+}
