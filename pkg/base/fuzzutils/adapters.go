@@ -116,3 +116,26 @@ func (a *NativeMapAdapter[M, K, V]) Unwrap(m M) MapUnderlyer {
 func (a *NativeMapAdapter[M, K, V]) ZeroValue() M {
 	return map[K]V{}
 }
+
+var _ ObjectAdapter[any] = (*ListElementAdapter[any])(nil)
+
+type ListElementAdapter[T any] struct {
+	List []T
+}
+
+func (a ListElementAdapter[T]) Wrap(x ObjectUnderlyer) T {
+	return a.List[x%uint64(len(a.List))]
+}
+
+func (a ListElementAdapter[T]) Unwrap(x T) ObjectUnderlyer {
+	for i, l := range a.List {
+		if reflect.DeepEqual(x, l) {
+			return ObjectUnderlyer(i)
+		}
+	}
+	panic("not found")
+}
+
+func (a ListElementAdapter[T]) ZeroValue() T {
+	return *new(T)
+}
