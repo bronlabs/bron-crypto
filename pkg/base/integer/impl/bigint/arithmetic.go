@@ -5,63 +5,10 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/integer/impl"
-	"github.com/cronokirby/saferith"
+	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 )
 
-var (
-	Zero = big.NewInt(0)
-	One  = big.NewInt(1)
-	Two  = big.NewInt(2)
-)
-
-const Name impl.Name = "BIG_INT"
-
-var _ impl.Number[*BigInt] = (*BigInt)(nil)
-
-type BigInt struct {
-	big.Int
-}
-
-func (n *BigInt) Unwrap() *BigInt {
-	return n
-}
-
-func (n *BigInt) Clone() *BigInt {
-	return &BigInt{
-		Int: *new(big.Int).Set(n.Big()),
-	}
-}
-
-func (n *BigInt) Big() *big.Int {
-	return &n.Int
-}
-
-func (n *BigInt) FromBig(v *big.Int) *BigInt {
-	return &BigInt{
-		Int: *v,
-	}
-}
-
-func (n *BigInt) Nat() *saferith.Nat {
-	return new(saferith.Nat).SetBig(&n.Int, -1)
-}
-
-func (n *BigInt) FromNat(v *saferith.Nat) *BigInt {
-	return &BigInt{
-		Int: *v.Big(),
-	}
-}
-
-func (n *BigInt) AnnouncedLen() uint {
-	return uint(n.BitLen())
-}
-
-func (n *BigInt) TrueLen() uint {
-	return uint(n.BitLen())
-}
-
-var _ impl.Arithmetic[*BigInt] = (*BigArithmetic)(nil)
+var _ integer.Arithmetic[*BigInt] = (*BigArithmetic)(nil)
 
 type BigArithmetic struct {
 	bottom  *BigInt
@@ -69,39 +16,65 @@ type BigArithmetic struct {
 	size    int
 }
 
-func (*BigArithmetic) Name() impl.Name {
+func NewSignedArithmetic() *BigArithmetic {
+	return &BigArithmetic{}
+}
+
+func NewUnsignedArithmetic() *BigArithmetic {
+	return &BigArithmetic{
+		bottom: Zero,
+	}
+}
+
+func NewModularArithmetic(modulus *BigInt) *BigArithmetic {
+	if modulus == nil {
+		panic(errs.NewIsNil("modulus"))
+	}
+	return &BigArithmetic{
+		bottom:  nil,
+		modulus: modulus,
+		size:    int(modulus.TrueLen()),
+	}
+}
+
+func NewNPlusArithmetic() *BigArithmetic {
+	return &BigArithmetic{
+		bottom: One,
+	}
+}
+
+func (*BigArithmetic) Name() string {
 	return Name
 }
 
-func (a *BigArithmetic) WithoutBottom() impl.Arithmetic[*BigInt] {
-	return &BigArithmetic{
-		bottom:  nil,
-		modulus: nil,
-		size:    a.size,
-	}
+func (a *BigArithmetic) Clone(x *BigInt) *BigInt {
+	return x.Clone()
 }
-func (a *BigArithmetic) WithBottomAtZero() impl.Arithmetic[*BigInt] {
-	return &BigArithmetic{
-		bottom:  &BigInt{*Zero},
-		modulus: a.modulus,
-		size:    a.size,
-	}
+
+func (a *BigArithmetic) WithoutBottom() integer.Arithmetic[*BigInt] {
+	out := NewSignedArithmetic()
+	out.size = a.size
+	return out
 }
-func (a *BigArithmetic) WithBottomAtOne() impl.Arithmetic[*BigInt] {
-	return &BigArithmetic{
-		bottom:  &BigInt{*One},
-		modulus: nil,
-		size:    a.size,
-	}
+
+func (a *BigArithmetic) WithBottomAtZero() integer.Arithmetic[*BigInt] {
+	out := NewSignedArithmetic()
+	out.modulus = a.modulus
+	out.size = a.size
+	return out
 }
-func (a *BigArithmetic) WithBottomAtZeroAndModulus(m *BigInt) impl.Arithmetic[*BigInt] {
-	return &BigArithmetic{
-		bottom:  &BigInt{*Zero},
-		modulus: m,
-		size:    a.size,
-	}
+
+func (a *BigArithmetic) WithBottomAtOne() integer.Arithmetic[*BigInt] {
+	out := NewNPlusArithmetic()
+	out.size = a.size
+	return nil
 }
-func (a *BigArithmetic) WithSize(size int) impl.Arithmetic[*BigInt] {
+
+func (a *BigArithmetic) WithBottomAtZeroAndModulus(m *BigInt) integer.Arithmetic[*BigInt] {
+	return NewModularArithmetic(m)
+}
+
+func (a *BigArithmetic) WithSize(size int) integer.Arithmetic[*BigInt] {
 	if size < 0 {
 		size = -1
 	}
@@ -117,24 +90,24 @@ func (a *BigArithmetic) Equal(x, y *BigInt) bool {
 }
 
 func (a *BigArithmetic) Cmp(x, y *BigInt) algebra.Ordering {
-	return algebra.Ordering(x.Int.Cmp(&y.Int))
+	return algebra.Ordering(x.Int.Cmp(y.Int))
 }
 
 func (a *BigArithmetic) Zero() *BigInt {
-	return &BigInt{*Zero}
+	return Zero
 }
 
 func (a *BigArithmetic) One() *BigInt {
-	return &BigInt{*One}
+	return One
 }
 
 func (a *BigArithmetic) Two() *BigInt {
-	return &BigInt{*Two}
+	return Two
 }
 
 func (a *BigArithmetic) IsEven(x *BigInt) bool {
 	out, _ := a.WithoutBottom().Mod(x, a.Two())
-	return a.Cmp(out, a.One()) == algebra.Equal
+	return a.Equal(out, a.One())
 }
 
 func (a *BigArithmetic) IsOdd(x *BigInt) bool {
@@ -142,8 +115,9 @@ func (a *BigArithmetic) IsOdd(x *BigInt) bool {
 }
 
 func (a *BigArithmetic) Abs(x *BigInt) *BigInt {
-	return &BigInt{Int: *new(big.Int).Abs(&x.Int)}
+	return B(new(big.Int).Abs(x.Int))
 }
+
 func (a *BigArithmetic) Next(x *BigInt) (*BigInt, error) {
 	suc, _ := a.WithoutBottom().Add(x, a.One())
 	if a.modulus != nil {
@@ -151,11 +125,12 @@ func (a *BigArithmetic) Next(x *BigInt) (*BigInt, error) {
 	}
 	return suc, nil
 }
+
 func (a *BigArithmetic) Neg(x *BigInt) (*BigInt, error) {
 	if a.bottom != nil && !a.Equal(x, a.Zero()) {
 		return nil, errs.NewValue("can't negate nonzero element out of integers")
 	}
-	return &BigInt{Int: *new(big.Int).Neg(&x.Int)}, nil
+	return B(new(big.Int).Neg(x.Int)), nil
 }
 
 func (a *BigArithmetic) Inverse(x *BigInt) (*BigInt, error) {
@@ -166,13 +141,13 @@ func (a *BigArithmetic) Inverse(x *BigInt) (*BigInt, error) {
 		return nil, errs.NewValue("x == 0")
 	}
 	if a.modulus != nil {
-		return &BigInt{Int: *new(big.Int).ModInverse(&x.Int, &a.modulus.Int)}, nil
+		return B(new(big.Int).ModInverse(x.Int, a.modulus.Int)), nil
 	}
-	return &BigInt{Int: *new(big.Int).Div(&a.One().Int, &x.Int)}, nil
+	return B(new(big.Int).Div(One.Int, x.Int)), nil
 }
 
 func (a *BigArithmetic) Add(x, y *BigInt) (*BigInt, error) {
-	xy := &BigInt{Int: *new(big.Int).Add(&x.Int, &y.Int)}
+	xy := B(new(big.Int).Add(x.Int, y.Int))
 	if a.bottom != nil {
 		if a.Cmp(x, a.bottom) == algebra.LessThan || a.Cmp(y, a.bottom) == algebra.LessThan {
 			return nil, errs.NewValue("x < bottom || y < bottom")
@@ -184,7 +159,7 @@ func (a *BigArithmetic) Add(x, y *BigInt) (*BigInt, error) {
 	return xy, nil
 }
 func (a *BigArithmetic) Sub(x, y *BigInt) (*BigInt, error) {
-	xy := &BigInt{Int: *new(big.Int).Sub(&x.Int, &y.Int)}
+	xy := B(new(big.Int).Sub(x.Int, y.Int))
 	if a.bottom != nil {
 		if a.Cmp(x, a.bottom) == algebra.LessThan || a.Cmp(y, a.bottom) == algebra.LessThan || a.Cmp(xy, a.bottom) == algebra.LessThan {
 			return nil, errs.NewValue("x < bottom || y < bottom || x + y < bottom")
@@ -196,7 +171,7 @@ func (a *BigArithmetic) Sub(x, y *BigInt) (*BigInt, error) {
 	return xy, nil
 }
 func (a *BigArithmetic) Mul(x, y *BigInt) (*BigInt, error) {
-	xy := &BigInt{Int: *new(big.Int).Mul(&x.Int, &y.Int)}
+	xy := B(new(big.Int).Mul(x.Int, y.Int))
 	if a.bottom != nil {
 		if a.Cmp(x, a.bottom) == algebra.LessThan || a.Cmp(y, a.bottom) == algebra.LessThan {
 			return nil, errs.NewValue("x < bottom || y < bottom")
@@ -214,10 +189,8 @@ func (a *BigArithmetic) Exp(x, y *BigInt) (*BigInt, error) {
 			return nil, errs.NewValue("x < bottom || y < bottom")
 		}
 	}
-	if a.modulus != nil {
-		return &BigInt{Int: *new(big.Int).Exp(&x.Int, &y.Int, &a.modulus.Int)}, nil
-	}
-	return &BigInt{Int: *new(big.Int).Exp(&x.Int, &y.Int, nil)}, nil
+	// should work for both cases of modulus being int or with some value
+	return B(new(big.Int).Exp(x.Int, y.Int, a.modulus.Int)), nil
 }
 func (a *BigArithmetic) Mod(x, m *BigInt) (*BigInt, error) {
 	if a.bottom != nil {
@@ -228,7 +201,7 @@ func (a *BigArithmetic) Mod(x, m *BigInt) (*BigInt, error) {
 	if a.Cmp(m, a.One()) == algebra.LessThan {
 		return nil, errs.NewValue("modulus < 1")
 	}
-	return &BigInt{Int: *new(big.Int).Mod(&x.Int, &m.Int)}, nil
+	return B(new(big.Int).Mod(x.Int, m.Int)), nil
 }
 func (a *BigArithmetic) Min(x, y *BigInt) *BigInt {
 	if a.Cmp(x, y) == algebra.LessThan {
@@ -241,4 +214,8 @@ func (a *BigArithmetic) Max(x, y *BigInt) *BigInt {
 		return y
 	}
 	return x
+}
+
+func (a *BigArithmetic) Uint64(x *BigInt) uint64 {
+	return x.Uint64()
 }

@@ -4,14 +4,16 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 )
 
-type AbstractArithmetic[T any] interface {
+type Arithmetic[T any] interface {
 	Name() string
 
-	WithoutBottom() AbstractArithmetic[T]
-	WithBottomAtZero() AbstractArithmetic[T]
-	WithBottomAtOne() AbstractArithmetic[T]
-	WithBottomAtZeroAndModulus(m T) AbstractArithmetic[T]
-	WithSize(size int) AbstractArithmetic[T]
+	WithoutBottom() Arithmetic[T]
+	WithBottomAtZero() Arithmetic[T]
+	WithBottomAtOne() Arithmetic[T]
+	WithBottomAtZeroAndModulus(m T) Arithmetic[T]
+	WithSize(size int) Arithmetic[T]
+
+	Clone(x T) T
 
 	Equal(x, y T) bool
 
@@ -35,11 +37,14 @@ type AbstractArithmetic[T any] interface {
 	Exp(x, y T) (T, error)
 	Mod(x, m T) (T, error)
 
+	Square(x T) (T, error)
+	Cube(x T) (T, error)
+
 	Max(x, y T) T
 	Min(x, y T) T
-}
 
-type Arithmetic[T any] AbstractArithmetic[Number[T]]
+	Uint64(x T) uint64
+}
 
 type Number[T any] interface {
 	Arithmetic() Arithmetic[T]

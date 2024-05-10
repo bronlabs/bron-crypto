@@ -1,4 +1,4 @@
-package bigint
+package impl
 
 import "github.com/copperexchange/krypton-primitives/pkg/base/integer"
 

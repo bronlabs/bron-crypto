@@ -1,4 +1,4 @@
-package bigint
+package impl
 
 type N struct {
 }
