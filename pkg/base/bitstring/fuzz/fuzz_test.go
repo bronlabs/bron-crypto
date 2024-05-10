@@ -171,14 +171,14 @@ func FuzzTruncatewithEllipsis(f *testing.F) {
 
 	testCases := struct {
 		inputTexts []string
-		maxLengths []int
+		maxLengths []uint
 	}{
 		inputTexts: []string{
 			"Hello",
 			"HelloWorld",
 			"Hello, World!",
 		},
-		maxLengths: []int{
+		maxLengths: []uint{
 			10,
 			1,
 			4,
@@ -191,14 +191,15 @@ func FuzzTruncatewithEllipsis(f *testing.F) {
 			f.Add(text, maxLength)
 		}
 	}
-	f.Fuzz(func(t *testing.T, inputText string, inputMaxLength int) {
+	f.Fuzz(func(t *testing.T, inputText string, inputMaxLength uint) {
+
 		result := bitstring.TruncateWithEllipsis(inputText, inputMaxLength)
 
-		if len(inputText) <= inputMaxLength {
+		if len(inputText) <= int(inputMaxLength) {
 			require.Equal(t, inputText, result, "Expected result to be the same as the input.")
 		} else {
 			require.Equal(t, inputText[:inputMaxLength], result[:inputMaxLength], "Truncated result does not match the input bytes at the start")
-			require.Equal(t, result[inputMaxLength:], fmt.Sprintf("...(%d)", (len(inputText)-inputMaxLength)))
+			require.Equal(t, result[inputMaxLength:], fmt.Sprintf("...(%d)", (len(inputText)-int(inputMaxLength))))
 		}
 	})
 }

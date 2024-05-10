@@ -187,7 +187,7 @@ func TestTruncateWithEllipsis(t *testing.T) {
 		},
 	}
 
-	maxLength := 10
+	maxLength := uint(10)
 
 	for index, tc := range inputText {
 		t.Run(fmt.Sprintf("testname: %s input: %s index: %d", tc.name, tc.input, index), func(t *testing.T) {
