@@ -11,6 +11,7 @@ import (
 	bimpl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
@@ -190,7 +191,7 @@ func (*BaseFieldG2) WideElementSize() int {
 	return 2 * 2 * 48
 }
 
-func (*BaseFieldG2) IsDecomposable(coprimeIdealNorms ...algebra.IntegerRingElement[curves.BaseField, curves.BaseFieldElement]) (bool, error) {
+func (*BaseFieldG2) IsDecomposable(coprimeIdealNorms ...integer.Uint[curves.BaseField, curves.BaseFieldElement]) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }

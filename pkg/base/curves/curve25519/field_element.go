@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 )
 
 var _ curves.BaseFieldElement = (*BaseFieldElement)(nil)
@@ -133,12 +134,12 @@ func (*BaseFieldElement) IsPositive() bool {
 	panic("implement me")
 }
 
-func (*BaseFieldElement) Int() algebra.Int {
+func (*BaseFieldElement) Int() integer.Int {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*BaseFieldElement) FromInt(v algebra.Int) curves.BaseFieldElement {
+func (*BaseFieldElement) FromInt(v integer.Int) curves.BaseFieldElement {
 	//TODO implement me
 	panic("implement me")
 }

@@ -1,19 +1,25 @@
 package algebra
 
-import "github.com/cronokirby/saferith"
+import (
+	"math/big"
 
-type NatSerialization[E Element] interface {
+	"github.com/cronokirby/saferith"
+)
+
+type BigIntLike[T any] interface {
+	// Uint64 casts the scalar down to a 64-bit integer. Might overflow.
+	Uint64() uint64
+	Big() *big.Int
+	FromBig(*big.Int) T
+}
+
+type NatLike[E Element] interface {
 	// Uint64 casts the scalar down to a 64-bit integer. Might overflow.
 	Uint64() uint64
 	// SetNat returns a new element set to the value of `v mod S.Order()`.
 	SetNat(v *saferith.Nat) E
 	// Nat casts this element as a Nat.
 	Nat() *saferith.Nat
-}
-
-type IntSerialization[E Element] interface {
-	Int() Int
-	FromInt(v Int) E
 }
 
 type BytesSerialization[E Element] interface {

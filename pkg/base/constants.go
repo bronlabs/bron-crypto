@@ -27,3 +27,5 @@ var (
 	// RandomOracleHashFunction is used as a Random Oracle in most of the cryptographic primitives. Output length MUST be >= CollisionResistanceBytes.
 	RandomOracleHashFunction = sha3.New256
 )
+
+// type Nat = integer.Nat[impl_bigint.Set, impl_bigint.Num]

@@ -12,6 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
@@ -122,7 +123,7 @@ func FromBig(i *big.Int) (u Uint128) {
 	return u
 }
 
-var _ algebra.IntegerRingElement[*Ring128, Uint128] = Uint128{}
+var _ integer.Uint[*Ring128, Uint128] = Uint128{}
 
 func (Uint128) Structure() *Ring128 {
 	return Ring()
@@ -313,12 +314,12 @@ func (u Uint128) IsPositive() bool {
 	return u.IsNonZero()
 }
 
-func (Uint128) Int() algebra.Int {
+func (Uint128) Int() integer.Int {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (Uint128) FromInt(v algebra.Int) Uint128 {
+func (Uint128) FromInt(v integer.Int) Uint128 {
 	// TODO implement me
 	panic("implement me")
 }

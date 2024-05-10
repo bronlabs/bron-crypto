@@ -71,7 +71,7 @@ type Chain[C Structure, E Element] interface {
 // ChainElement defined methods for elements of type E to be elements of chain S.
 type ChainElement[C Structure, E Element] interface {
 	OrderTheoreticLatticeElement[C, E]
-	Enumerable[E]
+	NatLike[E]
 	// Min returns the minimum of this element and rhs.
 	Min(rhs E) E
 	// Max returns the maximum of this element and rhs.
@@ -81,7 +81,7 @@ type ChainElement[C Structure, E Element] interface {
 
 	Increment() E
 	Decrement() E
-	NatSerialization[E]
+	NatLike[E]
 }
 
 // BoundedOrderTheoreticLattice defines additional methods for a lattice S for it to be considered as bounded.

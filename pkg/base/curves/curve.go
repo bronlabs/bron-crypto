@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 )
 
 // GeneralEllipticCurve specifies an Elliptic Curve in the context where scalar multiplication makes sense.
@@ -95,7 +96,7 @@ type Point interface {
 type BaseField interface {
 	algebra.AlgebraicVarietyBaseField[Curve, BaseField, Point, BaseFieldElement]
 	// BaseField is equivalent to Zp where elements are of type BaseFieldElement.
-	algebra.IntegerFiniteField[BaseField, BaseFieldElement]
+	integer.Zp[BaseField, BaseFieldElement]
 	// BaseField may be a field extension. eg. BLS12381 G2
 	// TODO: At this point we downcast the top level interface to check types of elements of the subfields. Fix later.
 	algebra.ExtensionField[BaseField, BaseField, BaseFieldElement, BaseFieldElement]
@@ -109,7 +110,7 @@ type BaseFieldElement interface {
 	algebra.AlgebraicVarietyBaseFieldElement[Curve, BaseField, Point, BaseFieldElement]
 	// Base field element is equivalent to an element of Zp.
 	// TODO: this won't be the case for field extensions
-	algebra.IntegerFiniteFieldElement[BaseField, BaseFieldElement]
+	integer.IntP[BaseField, BaseFieldElement]
 	// Base field element may be element of a field extension.
 	// TODO: At this point we downcast the top level interface to check types of elements of the subfields. Fix later.
 	algebra.ExtensionFieldElement[BaseField, BaseField, BaseFieldElement, BaseFieldElement]
@@ -122,7 +123,7 @@ type ScalarField interface {
 	// Curve forms a vector space over the scalar field.
 	algebra.VectorSpaceBaseField[Curve, ScalarField, Point, Scalar]
 	// ScalarField is equivalent to Zp where elements are of type Scalar.
-	algebra.IntegerFiniteField[ScalarField, Scalar]
+	integer.Zp[ScalarField, Scalar]
 	// Curve returns the prime order subgroup corresponding to this ScalarField.
 	Curve() Curve
 	Scalar() Scalar
@@ -133,7 +134,7 @@ type Scalar interface {
 	// Curve forms a vector space over the scalar field.
 	algebra.VectorSpaceScalar[Curve, ScalarField, Point, Scalar]
 	// Scalar is equivalent to an element of Zq.
-	algebra.IntegerFiniteFieldElement[ScalarField, Scalar]
+	integer.IntP[ScalarField, Scalar]
 	// ScalarField returns the scalar field containing this element.
 	ScalarField() ScalarField
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fq"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
@@ -139,12 +140,12 @@ func (*Scalar) IsPositive() bool {
 	panic("implement me")
 }
 
-func (*Scalar) Int() algebra.Int {
+func (*Scalar) Int() integer.Int {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*Scalar) FromInt(v algebra.Int) curves.Scalar {
+func (*Scalar) FromInt(v integer.Int) curves.Scalar {
 	//TODO implement me
 	panic("implement me")
 }

@@ -16,6 +16,20 @@ type Structure Object
 // Element is a type of an element of a structured set. Examples are elements of a group or points of a curve.
 type Element Object
 
+type WrapedStructure[S Structure] interface {
+	// Name returns the name of the structure S.
+	Name() string
+	Unwrap() S
+}
+
+type WrappedElement[E Element] interface {
+	// Equal returns true if this element and the input element are equal.
+	Unwrap() E
+	// Clone returns a deep copy of this element.
+	Clone() E
+	ds.Equatable[E]
+}
+
 type Set[E Element] ds.AbstractSet[E]
 
 // StructuredSet implements the basic methods shared by all other higher level structures.
@@ -26,13 +40,9 @@ type StructuredSet[S Structure, E Element] interface {
 
 	// Element returns an unspecified element of the structure S with type E.
 	Element() E
-	// Name returns the name of the structure S.
-	Name() string
 	Order() *saferith.Modulus
 	// Operators returns an ordered list of operators over which the structure S is defined.
 	Operators() []BinaryOperator[E]
-
-	Unwrap() S
 
 	ConditionallySelectable[E]
 }
@@ -40,13 +50,7 @@ type StructuredSet[S Structure, E Element] interface {
 // StructuredSetElement implements the basic methods shared by elements of all other higher level structures.
 type StructuredSetElement[S Structure, E Element] interface {
 	Structure() S
-
-	// Equal returns true if this element and the input element are equal.
-	Unwrap() E
-
-	// Clone returns a deep copy of this element.
-	Clone() E
-
+	WrappedElement[E]
 	ds.Hashable[E]
 	// We regularly want to unmarshal into an interface. To do that we'll use a helper function instead of embedding the unmarshaller here.
 	json.Marshaler

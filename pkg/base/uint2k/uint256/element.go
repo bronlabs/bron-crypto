@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 )
 
 var (
@@ -24,7 +25,7 @@ var (
 
 type Uint256 [4]uint64
 
-var _ algebra.IntegerRingElement[*Ring256, Uint256] = Uint256{}
+var _ integer.Uint[*Ring256, Uint256] = Uint256{}
 
 func (Uint256) Structure() *Ring256 {
 	return Ring()
@@ -263,12 +264,12 @@ func (u Uint256) IsPositive() bool {
 	return u.IsNonZero()
 }
 
-func (Uint256) Int() algebra.Int {
+func (Uint256) Int() integer.Int {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (Uint256) FromInt(v algebra.Int) Uint256 {
+func (Uint256) FromInt(v integer.Int) Uint256 {
 	// TODO implement me
 	panic("implement me")
 }

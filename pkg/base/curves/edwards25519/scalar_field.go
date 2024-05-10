@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
@@ -188,7 +189,7 @@ func (*ScalarField) WideElementSize() int {
 	return base.WideFieldBytes
 }
 
-func (*ScalarField) IsDecomposable(coprimeIdealNorms ...algebra.IntegerRingElement[curves.ScalarField, curves.Scalar]) (bool, error) {
+func (*ScalarField) IsDecomposable(coprimeIdealNorms ...integer.Uint[curves.ScalarField, curves.Scalar]) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }

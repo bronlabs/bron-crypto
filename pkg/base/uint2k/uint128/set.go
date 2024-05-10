@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
@@ -16,7 +17,7 @@ type Ring128 struct {
 	_ ds.Incomparable
 }
 
-var _ algebra.IntegerRing[*Ring128, Uint128] = (*Ring128)(nil)
+var _ integer.Zn[*Ring128, Uint128] = (*Ring128)(nil)
 
 func (r *Ring128) Hash(digest []byte) (Uint128, error) {
 	data, err := hashing.Hash(base.RandomOracleHashFunction, digest)
@@ -282,7 +283,7 @@ func (*Ring128) QuadraticResidue(p algebra.RingElement[*Ring128, Uint128]) (Uint
 	panic("implement me")
 }
 
-func (*Ring128) IsDecomposable(coprimeIdealNorms ...algebra.IntegerRingElement[*Ring128, Uint128]) (bool, error) {
+func (*Ring128) IsDecomposable(coprimeIdealNorms ...integer.Uint[*Ring128, Uint128]) (bool, error) {
 	// TODO implement me
 	panic("implement me")
 }

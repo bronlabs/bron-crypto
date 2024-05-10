@@ -22,7 +22,7 @@ type BitWiseElement[E Element] interface {
 	Lsh(bits uint) E
 	Rsh(bits uint) E
 
-	NatSerialization[E]
+	NatLike[E]
 	BytesSerialization[E]
 	BytesSerializationLE[E]
 }
