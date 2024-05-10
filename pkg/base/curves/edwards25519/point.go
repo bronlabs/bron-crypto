@@ -53,7 +53,7 @@ func (p *Point) IsInPrimeSubGroup() bool {
 }
 
 func (p *Point) IsTorsionElementUnderAddition(order *saferith.Modulus) bool {
-	if gt, eq, _ := order.Cmp(subgroupOrder); gt == 1 || eq == 1 {
+	if _, _, less := order.Cmp(subgroupOrder); less != 0 {
 		// TODO implement me: decompose the order into an additive combination of
 		// elements below the subgroup order.
 		panic("order is greater than subgroup order. Implement me ()")
