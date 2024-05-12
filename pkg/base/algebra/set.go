@@ -16,7 +16,7 @@ type Structure Object
 // Element is a type of an element of a structured set. Examples are elements of a group or points of a curve.
 type Element Object
 
-type WrapedStructure[S Structure] interface {
+type WrapedStructure[S Structure, E Element] interface {
 	// Name returns the name of the structure S.
 	Name() string
 	Unwrap() S
@@ -41,8 +41,8 @@ type StructuredSet[S Structure, E Element] interface {
 	// Element returns an unspecified element of the structure S with type E.
 	Element() E
 	Order() *saferith.Modulus
-	// Operators returns an ordered list of operators over which the structure S is defined.
-	Operators() []BinaryOperator[E]
+
+	Operator(name Operator) (op BinaryOperator[E], isDefinedUnder bool)
 
 	ConditionallySelectable[E]
 }

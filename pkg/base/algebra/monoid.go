@@ -6,7 +6,7 @@ type Monoid[M Structure, E Element] interface {
 	// Monoid is a Groupoid.
 	Groupoid[M, E]
 	// Identity returns identity element of type E of structure S.
-	Identity(under BinaryOperator[E]) (E, error)
+	Identity(under Operator) (E, error)
 }
 
 // MonoidElement defines methods for E to be considered as element of S
@@ -16,7 +16,7 @@ type MonoidElement[M Structure, E Element] interface {
 	// Monoid element is a groupoid element.
 	GroupoidElement[M, E]
 	// IsIdentity returns true if this element is the identity element of monoid S.
-	IsIdentity(under BinaryOperator[E]) (bool, error)
+	IsIdentity(under Operator) (bool, error)
 }
 
 // AdditiveMonoid defines additional methods for the monoid S if the operator is some

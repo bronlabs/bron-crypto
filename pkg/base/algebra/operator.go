@@ -13,5 +13,13 @@ type Associative[InputType, OutputType Element] interface {
 	LeftAssociative[InputType, OutputType]
 }
 
-type UnaryOperator[E Element] EndoFunction[E]
-type BinaryOperator[E Element] BiEndoFunction[E]
+type Operator string
+
+type UnaryOperator[E Element] interface {
+	Name() Operator
+	EndoFunction[E]
+}
+type BinaryOperator[E Element] interface {
+	Name() Operator
+	BiEndoFunction[E]
+}

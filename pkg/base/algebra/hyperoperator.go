@@ -1,9 +1,13 @@
 package algebra
 
-import "github.com/copperexchange/krypton-primitives/pkg/base/errs"
+import (
+	"fmt"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+)
 
 func Hyper[S Structure, E Element](monoid Monoid[S, E], operator BinaryOperator[E]) (BinaryOperator[E], error) {
-	identity, err := monoid.Identity(operator)
+	identity, err := monoid.Identity(operator.Name())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive identity")
 	}
@@ -37,6 +41,10 @@ type hyperOperator[E Element] struct {
 	identity  E
 	copier    func(x E) (E, error)
 	isEqual   func(x, y E) (bool, error)
+}
+
+func (h *hyperOperator[E]) Name() Operator {
+	return Operator(fmt.Sprintf("Hyper%s", h.prevGrade.Name()))
 }
 
 func (h *hyperOperator[_]) Arity() uint {

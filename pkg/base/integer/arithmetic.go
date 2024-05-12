@@ -40,9 +40,6 @@ type Arithmetic[T any] interface {
 	Square(x T) (T, error)
 	Cube(x T) (T, error)
 
-	Max(x, y T) T
-	Min(x, y T) T
-
 	Uint64(x T) uint64
 }
 

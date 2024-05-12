@@ -61,14 +61,6 @@ func (n *PositiveNatMixin[S, E, N]) ApplyOp(operator algebra.BinaryOperator[E], 
 	panic("not here")
 }
 
-func (n *PositiveNatMixin[S, E, N]) Add(x algebra.AdditiveGroupoidElement[S, E]) E {
-	res, err := n.arithmetic.Add(n.V, n.unwrap(x.Unwrap()))
-	if err != nil {
-		panic(err)
-	}
-	return n.wrap(res)
-}
-
 // func (n *PositiveNatMixin[S, E]) TrySub(x integer.Number[S, E]) (E, error) {
 // 	xx, ok := x.(impl.Number[*BigInt])
 // 	if !ok {
