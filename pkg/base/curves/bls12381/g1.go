@@ -56,6 +56,10 @@ func (c *G1) SetHasherAppTag(appTag string) {
 		hash2curve.DstTagSswu,
 	)
 }
+func (*G1) GetOperator(name algebra.Operator) (algebra.BinaryOperator[curves.Point], bool) {
+	//TODO implement me
+	panic("implement me")
+}
 
 func NewG1() *G1 {
 	g1Initonce.Do(g1Init)
@@ -79,7 +83,7 @@ func (*G1) Iter() <-chan curves.Point {
 	panic("implement me")
 }
 
-func (*G1) Operators() []algebra.BinaryOperator[curves.Point] {
+func (*G1) Operators() []algebra.Operator {
 	//TODO implement me
 	panic("implement me")
 }
@@ -88,12 +92,12 @@ func (c *G1) Unwrap() curves.Curve {
 	return c
 }
 
-func (*G1) IsDefinedUnder(operator algebra.BinaryOperator[curves.Point]) bool {
+func (*G1) IsDefinedUnder(operator algebra.Operator) bool {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*G1) Op(operator algebra.BinaryOperator[curves.Point], x algebra.GroupoidElement[curves.Curve, curves.Point], ys ...algebra.GroupoidElement[curves.Curve, curves.Point]) (curves.Point, error) {
+func (*G1) Operate(operator algebra.Operator, x algebra.GroupoidElement[curves.Curve, curves.Point], ys ...algebra.GroupoidElement[curves.Curve, curves.Point]) (curves.Point, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -122,7 +126,7 @@ func (c *G1) BasePoint() curves.Point {
 	return c.Generator()
 }
 
-func (*G1) DLog(b, x algebra.CyclicGroupElement[curves.Curve, curves.Point], under algebra.BinaryOperator[curves.Point]) (*saferith.Nat, error) {
+func (*G1) DLog(b, x algebra.CyclicGroupElement[curves.Curve, curves.Point], under algebra.Operator) (*saferith.Nat, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -215,7 +219,7 @@ func (*G1) Add(x algebra.AdditiveGroupoidElement[curves.Curve, curves.Point], ys
 
 // === Monoid Methods.
 
-func (*G1) Identity(under algebra.BinaryOperator[curves.Point]) (curves.Point, error) {
+func (*G1) Identity(under algebra.Operator) (curves.Point, error) {
 	panic("implement me")
 }
 

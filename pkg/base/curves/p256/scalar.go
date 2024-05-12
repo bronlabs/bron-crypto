@@ -15,7 +15,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fq"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
@@ -44,33 +43,47 @@ func (*Scalar) Structure() curves.ScalarField {
 func (s *Scalar) Unwrap() curves.Scalar {
 	return s
 }
-
-func (*Scalar) Order(operator algebra.BinaryOperator[curves.Scalar]) (*saferith.Modulus, error) {
+func (*Scalar) Operate(op algebra.Operator, rhs algebra.GroupoidElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
+	panic("implement me")
+}
+func (*Scalar) IsInvolution(under algebra.Operator) (bool, error) {
+	panic("implement me")
+}
+func (*Scalar) IsInvolutionUnderAddition() bool {
+	panic("implement me")
+}
+func (*Scalar) IsInvolutionUnderMultiplication() bool {
+	panic("implement me")
+}
+func (*Scalar) CanGenerateAllElements(under algebra.Operator) bool {
+	panic("implement me")
+}
+func (*Scalar) Order(operator algebra.Operator) (*saferith.Nat, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*Scalar) ApplyOp(operator algebra.BinaryOperator[curves.Scalar], x algebra.GroupoidElement[curves.ScalarField, curves.Scalar], n *saferith.Nat) (curves.Scalar, error) {
+func (*Scalar) Apply(operator algebra.Operator, x algebra.GroupoidElement[curves.ScalarField, curves.Scalar], n *saferith.Nat) (curves.Scalar, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*Scalar) IsIdentity(under algebra.BinaryOperator[curves.Scalar]) (bool, error) {
+func (*Scalar) IsIdentity(under algebra.Operator) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*Scalar) Inverse(under algebra.BinaryOperator[curves.Scalar]) (curves.Scalar, error) {
+func (*Scalar) Inverse(under algebra.Operator) (curves.Scalar, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*Scalar) IsInverse(of algebra.GroupElement[curves.ScalarField, curves.Scalar], under algebra.BinaryOperator[curves.Scalar]) (bool, error) {
+func (*Scalar) IsInverse(of algebra.GroupElement[curves.ScalarField, curves.Scalar], under algebra.Operator) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*Scalar) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOperator[curves.Scalar]) (bool, error) {
+func (*Scalar) IsTorsionElement(order *saferith.Modulus, under algebra.Operator) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -140,15 +153,15 @@ func (*Scalar) IsPositive() bool {
 	panic("implement me")
 }
 
-func (*Scalar) Int() integer.Int {
-	//TODO implement me
-	panic("implement me")
-}
+// func (*Scalar) Int() integer.Int {
+// 	//TODO implement me
+// 	panic("implement me")
+// }
 
-func (*Scalar) FromInt(v integer.Int) curves.Scalar {
-	//TODO implement me
-	panic("implement me")
-}
+// func (*Scalar) FromInt(v integer.Int) curves.Scalar {
+// 	//TODO implement me
+// 	panic("implement me")
+// }
 
 func (*Scalar) Not() curves.Scalar {
 	//TODO implement me
@@ -391,7 +404,7 @@ func (s *Scalar) Sqrt() (curves.Scalar, error) {
 	}, nil
 }
 
-func (s *Scalar) MulAdd(y algebra.RingElement[curves.ScalarField, curves.Scalar], z algebra.RingElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+func (s *Scalar) MulAdd(y algebra.RgElement[curves.ScalarField, curves.Scalar], z algebra.RgElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	return s.Mul(y).Add(z)
 }
 

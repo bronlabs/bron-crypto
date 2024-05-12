@@ -42,6 +42,11 @@ func NewGt() *Gt {
 	return &gtInstance
 }
 
+func (*Gt) GetOperator(name algebra.Operator) (algebra.BinaryOperator[curves.GtMember], bool) {
+	//TODO implement me
+	panic("implement me")
+}
+
 // === Basic Methods.
 
 func (*Gt) Cardinality() *saferith.Modulus {
@@ -60,11 +65,11 @@ func (g *Gt) Unwrap() curves.Gt {
 	return g
 }
 
-func (*Gt) IsDefinedUnder(operator algebra.BinaryOperator[curves.GtMember]) bool {
+func (*Gt) IsDefinedUnder(operator algebra.Operator) bool {
 	panic("not implemented")
 }
 
-func (*Gt) Op(operator algebra.BinaryOperator[curves.GtMember], x algebra.GroupoidElement[curves.Gt, curves.GtMember], ys ...algebra.GroupoidElement[curves.Gt, curves.GtMember]) (curves.GtMember, error) {
+func (*Gt) Operate(operator algebra.Operator, x algebra.GroupoidElement[curves.Gt, curves.GtMember], ys ...algebra.GroupoidElement[curves.Gt, curves.GtMember]) (curves.GtMember, error) {
 	panic("not implemented")
 }
 
@@ -76,7 +81,7 @@ func (*Gt) SimExp(bases []algebra.MultiplicativeGroupoidElement[curves.Gt, curve
 	panic("not implemented")
 }
 
-func (*Gt) Operators() []algebra.BinaryOperator[curves.GtMember] {
+func (*Gt) Operators() []algebra.Operator {
 	panic("not implemented")
 }
 
@@ -152,7 +157,7 @@ func (*Gt) Mul(x algebra.MultiplicativeGroupoidElement[curves.Gt, curves.GtMembe
 
 // === Monoid Methods.
 
-func (*Gt) Identity(under algebra.BinaryOperator[curves.GtMember]) (curves.GtMember, error) {
+func (*Gt) Identity(under algebra.Operator) (curves.GtMember, error) {
 	panic("not implemented")
 }
 

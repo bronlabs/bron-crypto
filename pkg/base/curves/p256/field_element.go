@@ -15,7 +15,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fp"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 )
 
 var _ curves.BaseFieldElement = (*BaseFieldElement)(nil)
@@ -36,6 +35,21 @@ func NewBaseFieldElement(value uint64) *BaseFieldElement {
 		V: t,
 	}
 }
+func (*BaseFieldElement) Operate(op algebra.Operator, rhs algebra.GroupoidElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
+	panic("implement me")
+}
+func (*BaseFieldElement) CanGenerateAllElements(under algebra.Operator) bool {
+	panic("implement me")
+}
+func (*BaseFieldElement) IsInvolution(under algebra.Operator) (bool, error) {
+	panic("implement me")
+}
+func (*BaseFieldElement) IsInvolutionUnderAddition() bool {
+	panic("implement me")
+}
+func (*BaseFieldElement) IsInvolutionUnderMultiplication() bool {
+	panic("implement me")
+}
 
 func (*BaseFieldElement) Structure() curves.BaseField {
 	return NewBaseField()
@@ -45,32 +59,32 @@ func (e *BaseFieldElement) Unwrap() curves.BaseFieldElement {
 	return e
 }
 
-func (*BaseFieldElement) Order(operator algebra.BinaryOperator[curves.BaseFieldElement]) (*saferith.Modulus, error) {
+func (*BaseFieldElement) Order(operator algebra.Operator) (*saferith.Nat, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*BaseFieldElement) ApplyOp(operator algebra.BinaryOperator[curves.BaseFieldElement], x algebra.GroupoidElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) (curves.BaseFieldElement, error) {
+func (*BaseFieldElement) Apply(operator algebra.Operator, x algebra.GroupoidElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) (curves.BaseFieldElement, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*BaseFieldElement) IsIdentity(under algebra.BinaryOperator[curves.BaseFieldElement]) (bool, error) {
+func (*BaseFieldElement) IsIdentity(under algebra.Operator) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*BaseFieldElement) Inverse(under algebra.BinaryOperator[curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
+func (*BaseFieldElement) Inverse(under algebra.Operator) (curves.BaseFieldElement, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*BaseFieldElement) IsInverse(of algebra.GroupElement[curves.BaseField, curves.BaseFieldElement], under algebra.BinaryOperator[curves.BaseFieldElement]) (bool, error) {
+func (*BaseFieldElement) IsInverse(of algebra.GroupElement[curves.BaseField, curves.BaseFieldElement], under algebra.Operator) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*BaseFieldElement) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOperator[curves.BaseFieldElement]) (bool, error) {
+func (*BaseFieldElement) IsTorsionElement(order *saferith.Modulus, under algebra.Operator) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -140,15 +154,15 @@ func (*BaseFieldElement) IsPositive() bool {
 	panic("implement me")
 }
 
-func (*BaseFieldElement) Int() integer.Int {
-	//TODO implement me
-	panic("implement me")
-}
+// func (*BaseFieldElement) Int() integer.Int {
+// 	//TODO implement me
+// 	panic("implement me")
+// }
 
-func (*BaseFieldElement) FromInt(v integer.Int) curves.BaseFieldElement {
-	//TODO implement me
-	panic("implement me")
-}
+// func (*BaseFieldElement) FromInt(v integer.Int) curves.BaseFieldElement {
+// 	//TODO implement me
+// 	panic("implement me")
+// }
 
 func (*BaseFieldElement) Not() curves.BaseFieldElement {
 	//TODO implement me
@@ -383,7 +397,7 @@ func (e *BaseFieldElement) ApplyDiv(x algebra.MultiplicativeGroupElement[curves.
 
 // === Ring Methods.
 
-func (e *BaseFieldElement) MulAdd(y algebra.RingElement[curves.BaseField, curves.BaseFieldElement], z algebra.RingElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+func (e *BaseFieldElement) MulAdd(y algebra.RgElement[curves.BaseField, curves.BaseFieldElement], z algebra.RgElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	return e.Mul(y).Add(z)
 }
 

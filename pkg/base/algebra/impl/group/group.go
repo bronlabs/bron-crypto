@@ -2,23 +2,17 @@ package group
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/groupoid"
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/monoid"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	saferith_utils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"github.com/cronokirby/saferith"
 )
 
 type Group[G algebra.Group[G, E], E algebra.GroupElement[G, E]] struct {
-	group[G, E]
-	groupoid.Groupoid[G, E]
-	monoid.Monoid[G, E]
+	algebra.Group[G, E]
 }
 
 type AdditiveGroup[G algebra.AdditiveGroup[G, E], E algebra.AdditiveGroupElement[G, E]] struct {
-	additiveGroup[G, E]
-	groupoid.AdditiveGroupoid[G, E]
-	monoid.AdditiveMonoid[G, E]
+	algebra.AdditiveGroup[G, E]
 }
 
 func (*AdditiveGroup[G, E]) Sub(x algebra.AdditiveGroupElement[G, E], ys ...algebra.AdditiveGroupElement[G, E]) E {
@@ -30,9 +24,7 @@ func (*AdditiveGroup[G, E]) Sub(x algebra.AdditiveGroupElement[G, E], ys ...alge
 }
 
 type MultiplicativeGroup[G algebra.MultiplicativeGroup[G, E], E algebra.MultiplicativeGroupElement[G, E]] struct {
-	multiplicativeGroup[G, E]
-	groupoid.MultiplicativeGroupoid[G, E]
-	monoid.MultiplicativeMonoid[G, E]
+	algebra.MultiplicativeGroup[G, E]
 }
 
 func (*MultiplicativeGroup[G, E]) Div(x algebra.MultiplicativeGroupElement[G, E], ys ...algebra.MultiplicativeGroupElement[G, E]) (E, error) {
@@ -48,14 +40,11 @@ func (*MultiplicativeGroup[G, E]) Div(x algebra.MultiplicativeGroupElement[G, E]
 }
 
 type CyclicGroup[G algebra.CyclicGroup[G, E], E algebra.CyclicGroupElement[G, E]] struct {
-	// cyclicGroup[G, E]
-	cyclicGroup2[G, E]
-	// groupoid.CyclicGroupoid[G, E]
-	monoid.CyclicMonoid[G, E]
+	algebra.CyclicGroup[G, E]
 }
 
 func (g *CyclicGroup[G, E]) DLog(base, x algebra.CyclicGroupElement[G, E], under algebra.Operator) (*saferith.Nat, error) {
-	if _, defined := g.Operator(under); !defined {
+	if _, defined := g.GetOperator(under); !defined {
 		return nil, errs.NewType("invalid operator")
 	}
 	order := g.Order().Nat()

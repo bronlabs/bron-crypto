@@ -1,23 +1,21 @@
-package rg
+package ring
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/groupoid"
 )
 
-type T[R algebra.Rg[R, E], E algebra.RgElement[R, E]] struct {
+type Rg[R algebra.Rg[R, E], E algebra.RgElement[R, E]] struct {
 	algebra.Rg[R, E]
 }
 
-type Rg[R algebra.Rg[R, E], E algebra.RgElement[R, E]] struct {
-	groupoid.Groupoid[R, E]
-	groupoid.AdditiveGroupoid[R, E]
-	groupoid.MultiplicativeGroupoid[R, E]
-	T[R, E]
+type Rig[R algebra.Rig[R, E], E algebra.RigElement[R, E]] struct {
+	algebra.Rig[R, E]
 }
 
-func (r Rg[R, E]) test() {
-	r.Add
-	r.Order
-	r.Random
+type Ring[R algebra.Ring[R, E], E algebra.RingElement[R, E]] struct {
+	algebra.Ring[R, E]
+}
+
+type FiniteRing[R algebra.FiniteRing[R, E], E algebra.FiniteRingElement[R, E]] struct {
+	algebra.FiniteRing[R, E]
 }

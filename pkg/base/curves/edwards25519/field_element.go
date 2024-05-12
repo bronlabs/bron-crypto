@@ -15,7 +15,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 )
 
 var _ curves.BaseFieldElement = (*BaseFieldElement)(nil)
@@ -49,32 +48,48 @@ func (e *BaseFieldElement) Unwrap() curves.BaseFieldElement {
 	return e
 }
 
-func (*BaseFieldElement) Order(operator algebra.BinaryOperator[curves.BaseFieldElement]) (*saferith.Modulus, error) {
+func (*BaseFieldElement) Operate(op algebra.Operator, rhs algebra.GroupoidElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
+	panic("implement me")
+}
+func (*BaseFieldElement) CanGenerateAllElements(under algebra.Operator) bool {
+	panic("implement me")
+}
+func (*BaseFieldElement) IsInvolution(under algebra.Operator) (bool, error) {
+	panic("implement me")
+}
+func (*BaseFieldElement) IsInvolutionUnderAddition() bool {
+	panic("implement me")
+}
+func (*BaseFieldElement) IsInvolutionUnderMultiplication() bool {
+	panic("implement me")
+}
+
+func (*BaseFieldElement) Order(operator algebra.Operator) (*saferith.Nat, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*BaseFieldElement) ApplyOp(operator algebra.BinaryOperator[curves.BaseFieldElement], x algebra.GroupoidElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) (curves.BaseFieldElement, error) {
+func (*BaseFieldElement) Apply(operator algebra.Operator, x algebra.GroupoidElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) (curves.BaseFieldElement, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*BaseFieldElement) IsIdentity(under algebra.BinaryOperator[curves.BaseFieldElement]) (bool, error) {
+func (*BaseFieldElement) IsIdentity(under algebra.Operator) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*BaseFieldElement) Inverse(under algebra.BinaryOperator[curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
+func (*BaseFieldElement) Inverse(under algebra.Operator) (curves.BaseFieldElement, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*BaseFieldElement) IsInverse(of algebra.GroupElement[curves.BaseField, curves.BaseFieldElement], under algebra.BinaryOperator[curves.BaseFieldElement]) (bool, error) {
+func (*BaseFieldElement) IsInverse(of algebra.GroupElement[curves.BaseField, curves.BaseFieldElement], under algebra.Operator) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*BaseFieldElement) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOperator[curves.BaseFieldElement]) (bool, error) {
+func (*BaseFieldElement) IsTorsionElement(order *saferith.Modulus, under algebra.Operator) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -144,15 +159,15 @@ func (*BaseFieldElement) IsPositive() bool {
 	panic("implement me")
 }
 
-func (*BaseFieldElement) Int() integer.Int {
-	//TODO implement me
-	panic("implement me")
-}
+// func (*BaseFieldElement) Int() integer.Int {
+// 	//TODO implement me
+// 	panic("implement me")
+// }
 
-func (*BaseFieldElement) FromInt(v integer.Int) curves.BaseFieldElement {
-	//TODO implement me
-	panic("implement me")
-}
+// func (*BaseFieldElement) FromInt(v integer.Int) curves.BaseFieldElement {
+// 	//TODO implement me
+// 	panic("implement me")
+// }
 
 func (*BaseFieldElement) Not() curves.BaseFieldElement {
 	//TODO implement me
@@ -382,7 +397,7 @@ func (e *BaseFieldElement) ApplyDiv(x algebra.MultiplicativeGroupElement[curves.
 
 // === Ring Methods.
 
-func (e *BaseFieldElement) MulAdd(y algebra.RingElement[curves.BaseField, curves.BaseFieldElement], z algebra.RingElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+func (e *BaseFieldElement) MulAdd(y algebra.RgElement[curves.BaseField, curves.BaseFieldElement], z algebra.RgElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	yFe, ok := y.(*BaseFieldElement)
 	if !ok {
 		panic("y is not an edwards25519 base field element")

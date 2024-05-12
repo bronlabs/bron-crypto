@@ -12,6 +12,8 @@ type Rg[R Structure, E Element] interface {
 type RgElement[R Structure, E Element] interface {
 	AdditiveGroupoidElement[R, E]
 	MultiplicativeGroupoidElement[R, E]
+
+	MulAdd(p, q RgElement[R, E]) E
 }
 
 type Rig[R Structure, E Element] interface {
@@ -27,8 +29,6 @@ type RigElement[R Structure, E Element] interface {
 	RgElement[R, E]
 	AdditiveMonoidElement[R, E]
 	MultiplicativeMonoidElement[R, E]
-
-	MulAdd(p, q RingElement[R, E]) E
 }
 
 // Ring defines methods needed for S to be considered as a ring.
@@ -45,6 +45,8 @@ type RingElement[R Structure, E Element] interface {
 	RigElement[R, E]
 	// Ring element is an element of an additive group.
 	AdditiveGroupElement[R, E]
+
+	Sqrt() (E, error)
 }
 
 type FiniteRing[R Structure, E Element] interface {
@@ -57,6 +59,4 @@ type FiniteRing[R Structure, E Element] interface {
 type FiniteRingElement[R Structure, E Element] interface {
 	RingElement[R, E]
 	BytesSerialization[E]
-	// Sqrt outputs quadratic residue of this element ie. outputs q where p^2 = q (mod S.Order()) and returns an error if q does not exist.
-	Sqrt() (E, error)
 }

@@ -50,6 +50,11 @@ func NewScalarFieldG2() *ScalarField[G2] {
 	return &bls12381G2ScalarFieldInstance
 }
 
+func (*ScalarField[_]) GetOperator(op algebra.Operator) (algebra.BinaryOperator[curves.Scalar], bool) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (*ScalarField[S]) Curve() curves.Curve {
 	return GetSourceSubGroup[S]()
 }
@@ -73,12 +78,12 @@ func (sf *ScalarField[_]) Unwrap() curves.ScalarField {
 	return sf
 }
 
-func (*ScalarField[_]) IsDefinedUnder(operator algebra.BinaryOperator[curves.Scalar]) bool {
+func (*ScalarField[_]) IsDefinedUnder(operator algebra.Operator) bool {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*ScalarField[_]) Op(operator algebra.BinaryOperator[curves.Scalar], x algebra.GroupoidElement[curves.ScalarField, curves.Scalar], ys ...algebra.GroupoidElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
+func (*ScalarField[_]) Operate(operator algebra.Operator, x algebra.GroupoidElement[curves.ScalarField, curves.Scalar], ys ...algebra.GroupoidElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -93,7 +98,7 @@ func (*ScalarField[_]) Exp(b curves.Scalar, power curves.Scalar) curves.Scalar {
 	panic("implement me")
 }
 
-func (*ScalarField[_]) Operators() []algebra.BinaryOperator[curves.Scalar] {
+func (*ScalarField[_]) Operators() []algebra.Operator {
 	//TODO implement me
 	panic("implement me")
 }
@@ -123,7 +128,7 @@ func (*ScalarField[_]) DiscreteExponentiation() algebra.DiscreteExponentiation[c
 	panic("implement me")
 }
 
-func (*ScalarField[_]) Identity(under algebra.BinaryOperator[curves.Scalar]) (curves.Scalar, error) {
+func (*ScalarField[_]) Identity(under algebra.Operator) (curves.Scalar, error) {
 	//TODO implement me
 	panic("implement me")
 }

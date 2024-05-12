@@ -202,6 +202,10 @@ type PointAddition[EllipticCurveType, BaseFieldType algebra.Structure, PointType
 	_ ds.Incomparable
 }
 
+func (*PointAddition[EllipticCurveType, BaseFieldType, PointType, BaseFieldElementType]) Name() algebra.Operator {
+	return algebra.Operator("PointAddition")
+}
+
 func (*PointAddition[_, _, P, _]) Add(x, y P) P {
 	return *(new(P))
 }

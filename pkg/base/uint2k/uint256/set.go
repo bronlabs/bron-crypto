@@ -48,6 +48,10 @@ func (r *Ring256) Random(prng io.Reader) (Uint256, error) {
 
 	return el, nil
 }
+func (*Ring256) GetOperator(op algebra.Operator) (algebra.BinaryOperator[Uint256], bool) {
+	//TODO implement me
+	panic("implement me")
+}
 
 func (*Ring256) Cardinality() *saferith.Modulus {
 	return mod2Pow256
@@ -73,7 +77,7 @@ func (*Ring256) Order() *saferith.Modulus {
 	return mod2Pow256
 }
 
-func (*Ring256) Operators() []algebra.BinaryOperator[Uint256] {
+func (*Ring256) Operators() []algebra.Operator {
 	// TODO implement me
 	panic("implement me")
 }
@@ -100,12 +104,12 @@ func (*Ring256) Select(choice bool, x0, x1 Uint256) Uint256 {
 	}
 }
 
-func (*Ring256) IsDefinedUnder(operator algebra.BinaryOperator[Uint256]) bool {
+func (*Ring256) IsDefinedUnder(operator algebra.Operator) bool {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (*Ring256) Op(operator algebra.BinaryOperator[Uint256], x algebra.GroupoidElement[*Ring256, Uint256], ys ...algebra.GroupoidElement[*Ring256, Uint256]) (Uint256, error) {
+func (*Ring256) Operate(operator algebra.Operator, x algebra.GroupoidElement[*Ring256, Uint256], ys ...algebra.GroupoidElement[*Ring256, Uint256]) (Uint256, error) {
 	return x.Unwrap(), nil
 }
 
@@ -159,7 +163,7 @@ func (*Ring256) DiscreteExponentiation() algebra.DiscreteExponentiation[Uint256]
 	panic("implement me")
 }
 
-func (*Ring256) Identity(under algebra.BinaryOperator[Uint256]) (Uint256, error) {
+func (*Ring256) Identity(under algebra.Operator) (Uint256, error) {
 	// TODO implement me
 	panic("implement me")
 }

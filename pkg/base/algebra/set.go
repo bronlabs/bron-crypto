@@ -35,6 +35,7 @@ type Set[E Element] ds.AbstractSet[E]
 // StructuredSet implements the basic methods shared by all other higher level structures.
 type StructuredSet[S Structure, E Element] interface {
 	Set[E]
+	WrapedStructure[S, E]
 
 	Random(prng io.Reader) (E, error)
 
@@ -42,7 +43,7 @@ type StructuredSet[S Structure, E Element] interface {
 	Element() E
 	Order() *saferith.Modulus
 
-	Operator(name Operator) (op BinaryOperator[E], isDefinedUnder bool)
+	GetOperator(name Operator) (op BinaryOperator[E], isDefinedUnder bool)
 
 	ConditionallySelectable[E]
 }

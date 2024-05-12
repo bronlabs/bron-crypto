@@ -1,15 +1,5 @@
 package algebra
 
-type LeftShiftOperator[E Element] interface {
-	BiFunction[E, uint, E]
-	Lsh(x E, bits uint) E
-}
-
-type RightShiftOperator[E Element] interface {
-	BiFunction[E, uint, E]
-	Rsh(x E, bits uint) E
-}
-
 type ConditionallySelectable[E Element] interface {
 	// Select returns (in constant time) x0 if choice is false, and x1 if choice is true.
 	Select(choice bool, x0, x1 E) E

@@ -106,7 +106,7 @@ func (*Curve) Iter() <-chan curves.Point {
 	panic("implement me")
 }
 
-func (*Curve) Operators() []algebra.BinaryOperator[curves.Point] {
+func (*Curve) GetOperator(name algebra.Operator) (algebra.BinaryOperator[curves.Point], bool) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -115,12 +115,12 @@ func (c *Curve) Unwrap() curves.Curve {
 	return c
 }
 
-func (*Curve) IsDefinedUnder(operator algebra.BinaryOperator[curves.Point]) bool {
+func (*Curve) IsDefinedUnder(operator algebra.Operator) bool {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*Curve) Op(operator algebra.BinaryOperator[curves.Point], x algebra.GroupoidElement[curves.Curve, curves.Point], ys ...algebra.GroupoidElement[curves.Curve, curves.Point]) (curves.Point, error) {
+func (*Curve) Operate(operator algebra.Operator, x algebra.GroupoidElement[curves.Curve, curves.Point], ys ...algebra.GroupoidElement[curves.Curve, curves.Point]) (curves.Point, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -149,7 +149,7 @@ func (c *Curve) BasePoint() curves.Point {
 	return c.Generator()
 }
 
-func (*Curve) DLog(b, x algebra.CyclicGroupElement[curves.Curve, curves.Point], under algebra.BinaryOperator[curves.Point]) (*saferith.Nat, error) {
+func (*Curve) DLog(b, x algebra.CyclicGroupElement[curves.Curve, curves.Point], under algebra.Operator) (*saferith.Nat, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -233,7 +233,7 @@ func (*Curve) Add(x algebra.AdditiveGroupoidElement[curves.Curve, curves.Point],
 
 // === Monoid Methods.
 
-func (*Curve) Identity(under algebra.BinaryOperator[curves.Point]) (curves.Point, error) {
+func (*Curve) Identity(under algebra.Operator) (curves.Point, error) {
 	panic("implement me")
 }
 

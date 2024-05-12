@@ -41,7 +41,7 @@ func (p *PointG2) Unwrap() curves.Point {
 	return p
 }
 
-func (*PointG2) ApplyOp(operator algebra.BinaryOperator[curves.Point], x algebra.GroupoidElement[curves.Curve, curves.Point], n *saferith.Nat) (curves.Point, error) {
+func (*PointG2) Apply(operator algebra.Operator, x algebra.GroupoidElement[curves.Curve, curves.Point], n *saferith.Nat) (curves.Point, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -60,9 +60,14 @@ func (*PointG2) IsBasePoint() bool {
 	panic("implement me")
 }
 
-func (*PointG2) CanGenerateAllElements() bool {
-	//TODO implement me
+func (*PointG2) IsInvolution(under algebra.Operator) (bool, error) {
 	panic("implement me")
+}
+func (*PointG2) IsInvolutionUnderAddition() bool {
+	panic("implement me")
+}
+func (p *PointG2) CanGenerateAllElements(under algebra.Operator) bool {
+	return p.IsInPrimeSubGroup()
 }
 
 func (*PointG2) IsDesignatedGenerator() bool {
@@ -85,15 +90,15 @@ func (p *PointG2) Clone() curves.Point {
 
 // === Groupoid Methods.
 
-func (p *PointG2) Operate(rhs curves.Point) curves.Point {
-	return p.Add(rhs)
+func (*PointG2) Operate(op algebra.Operator, rhs algebra.GroupoidElement[curves.Curve, curves.Point]) (curves.Point, error) {
+	panic("not implemented")
 }
 
 func (p *PointG2) OperateIteratively(n *saferith.Nat) curves.Point {
 	return p.ScalarMul(NewG2().Scalar().SetNat(n))
 }
 
-func (*PointG2) Order(op algebra.BinaryOperator[curves.Point]) (*saferith.Modulus, error) {
+func (*PointG2) Order(op algebra.Operator) (*saferith.Nat, error) {
 	panic("implement me")
 	//if p.IsIdentity() {
 	//	return saferith.ModulusFromUint64(0)
@@ -135,7 +140,7 @@ func (p *PointG2) Triple() curves.Point {
 
 // === Monoid Methods.
 
-func (*PointG2) IsIdentity(under algebra.BinaryOperator[curves.Point]) (bool, error) {
+func (*PointG2) IsIdentity(under algebra.Operator) (bool, error) {
 	panic("implement me")
 }
 
@@ -147,11 +152,11 @@ func (p *PointG2) IsAdditiveIdentity() bool {
 
 // === Group Methods.
 
-func (*PointG2) Inverse(under algebra.BinaryOperator[curves.Point]) (curves.Point, error) {
+func (*PointG2) Inverse(under algebra.Operator) (curves.Point, error) {
 	panic("implement me")
 }
 
-func (*PointG2) IsInverse(of algebra.GroupElement[curves.Curve, curves.Point], under algebra.BinaryOperator[curves.Point]) (bool, error) {
+func (*PointG2) IsInverse(of algebra.GroupElement[curves.Curve, curves.Point], under algebra.Operator) (bool, error) {
 	panic("implement me")
 }
 
@@ -229,7 +234,7 @@ func (*PointG2) OtherPrimeAlgebraicSubGroup() curves.Curve {
 	return NewG1()
 }
 
-func (*PointG2) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOperator[curves.Point]) (bool, error) {
+func (*PointG2) IsTorsionElement(order *saferith.Modulus, under algebra.Operator) (bool, error) {
 	panic("implement me")
 	//if order.Nat().Eq(p.Curve().SubGroupOrder().Nat()) == 1 {
 	//	return p.V.InCorrectSubgroup() == 1

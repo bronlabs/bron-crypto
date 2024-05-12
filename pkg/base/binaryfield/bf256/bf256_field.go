@@ -34,6 +34,11 @@ func NewField() *Field {
 	return field2e256Instance
 }
 
+func (*Field) GetOperator(op algebra.Operator) (algebra.BinaryOperator[*FieldElement], bool) {
+	//TODO implement me
+	panic("implement me")
+}
+
 // === Basic Methods.
 
 func (*Field) Name() string {
@@ -56,7 +61,7 @@ func (*Field) WideFieldBytes() int {
 	return 2 * fieldBytesF2e256
 }
 
-func (*Field) Operators() []algebra.BinaryOperator[*FieldElement] {
+func (*Field) Operators() []algebra.Operator {
 	panic("implement me")
 }
 
@@ -209,12 +214,12 @@ func (*Field) HashCode() uint64 {
 	return 1
 }
 
-func (*Field) Identity(under algebra.BinaryOperator[*FieldElement]) (*FieldElement, error) {
+func (*Field) Identity(under algebra.Operator) (*FieldElement, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (*Field) IsDefinedUnder(operator algebra.BinaryOperator[*FieldElement]) bool {
+func (*Field) IsDefinedUnder(operator algebra.Operator) bool {
 	// TODO implement me
 	panic("implement me")
 }
@@ -258,7 +263,7 @@ func (*Field) MultiplicativeGroup() algebra.MultiplicativeGroup[*Field, *FieldEl
 	panic("implement me")
 }
 
-func (*Field) Op(operator algebra.BinaryOperator[*FieldElement], x algebra.GroupoidElement[*Field, *FieldElement], ys ...algebra.GroupoidElement[*Field, *FieldElement]) (*FieldElement, error) {
+func (*Field) Operate(operator algebra.Operator, x algebra.GroupoidElement[*Field, *FieldElement], ys ...algebra.GroupoidElement[*Field, *FieldElement]) (*FieldElement, error) {
 	// TODO implement me
 	panic("implement me")
 }

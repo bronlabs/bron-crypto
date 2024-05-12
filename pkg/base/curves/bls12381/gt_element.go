@@ -45,6 +45,16 @@ func NewGtMember(input uint64) (curves.GtMember, error) {
 	return &GtMember{V: value}, nil
 }
 
+func (*GtMember) CanGenerateAllElements(under algebra.Operator) bool {
+	panic("not implemented")
+}
+func (*GtMember) IsInvolution(under algebra.Operator) (bool, error) {
+	panic("implement me")
+}
+func (*GtMember) IsInvolutionUnderMultiplication() bool {
+	panic("implement me")
+}
+
 // === Basic Methods.
 
 func (*GtMember) Structure() curves.Gt {
@@ -55,7 +65,7 @@ func (*GtMember) Unwrap() curves.GtMember {
 	panic("implement me")
 }
 
-func (*GtMember) ApplyOp(operator algebra.BinaryOperator[curves.GtMember], x algebra.GroupoidElement[curves.Gt, curves.GtMember], n *saferith.Nat) (curves.GtMember, error) {
+func (*GtMember) Apply(operator algebra.Operator, x algebra.GroupoidElement[curves.Gt, curves.GtMember], n *saferith.Nat) (curves.GtMember, error) {
 	panic("implement me")
 }
 
@@ -76,15 +86,15 @@ func (g *GtMember) Clone() curves.GtMember {
 
 // === Groupoid Methods.
 
-func (g *GtMember) Operate(rhs curves.GtMember) curves.GtMember {
-	return g.Mul(rhs)
+func (*GtMember) Operate(op algebra.Operator, rhs algebra.GroupoidElement[curves.Gt, curves.GtMember]) (curves.GtMember, error) {
+	panic("not implemented")
 }
 
 func (g *GtMember) OperateIteratively(n *saferith.Nat) curves.GtMember {
 	return g.Gt().MultiplicativeIdentity().ApplyMul(g, n)
 }
 
-func (*GtMember) Order(operator algebra.BinaryOperator[curves.GtMember]) (*saferith.Modulus, error) {
+func (*GtMember) Order(operator algebra.Operator) (*saferith.Nat, error) {
 	panic("implement me")
 
 	//if g.IsIdentity() {
@@ -141,7 +151,7 @@ func (g *GtMember) Cube() curves.GtMember {
 
 // === Monoid Methods.
 
-func (*GtMember) IsIdentity(under algebra.BinaryOperator[curves.GtMember]) (bool, error) {
+func (*GtMember) IsIdentity(under algebra.Operator) (bool, error) {
 	panic("implement me")
 }
 
@@ -153,15 +163,15 @@ func (g *GtMember) IsMultiplicativeIdentity() bool {
 
 // === Group Methods.
 
-func (*GtMember) Inverse(under algebra.BinaryOperator[curves.GtMember]) (curves.GtMember, error) {
+func (*GtMember) Inverse(under algebra.Operator) (curves.GtMember, error) {
 	panic("implement me")
 }
 
-func (*GtMember) IsInverse(of algebra.GroupElement[curves.Gt, curves.GtMember], under algebra.BinaryOperator[curves.GtMember]) (bool, error) {
+func (*GtMember) IsInverse(of algebra.GroupElement[curves.Gt, curves.GtMember], under algebra.Operator) (bool, error) {
 	panic("implement me")
 }
 
-func (*GtMember) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOperator[curves.GtMember]) (bool, error) {
+func (*GtMember) IsTorsionElement(order *saferith.Modulus, under algebra.Operator) (bool, error) {
 	panic("implement me")
 }
 

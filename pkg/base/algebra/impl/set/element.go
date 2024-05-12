@@ -1,4 +1,4 @@
-package impl
+package set
 
 import "github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 

@@ -2,21 +2,17 @@ package group
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/groupoid"
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/monoid"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	saferith_utils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"github.com/cronokirby/saferith"
 )
 
 type GroupElement[G algebra.Group[G, E], E algebra.GroupElement[G, E]] struct {
-	groupElement[G, E]
-	groupoid.GroupoidElement[G, E]
-	monoid.MonoidElement[G, E]
+	algebra.GroupElement[G, E]
 }
 
 func (e *GroupElement[G, E]) IsInverse(of algebra.GroupElement[G, E], under algebra.Operator) (bool, error) {
-	op, defined := e.Structure().Operator(under)
+	op, defined := e.Structure().GetOperator(under)
 	if !defined {
 		return false, errs.NewType("invalid operator")
 	}
@@ -28,7 +24,7 @@ func (e *GroupElement[G, E]) IsInverse(of algebra.GroupElement[G, E], under alge
 }
 
 func (e *GroupElement[G, E]) IsTorsionElement(order *saferith.Modulus, under algebra.Operator) (bool, error) {
-	op, defined := e.Structure().Operator(under)
+	op, defined := e.Structure().GetOperator(under)
 	if !defined {
 		return false, errs.NewType("invalid operator")
 	}
@@ -112,4 +108,8 @@ func (e *MultiplicativeGroupElement[G, E]) ApplyDiv(x algebra.MultiplicativeGrou
 
 func (e *MultiplicativeGroupElement[G, E]) IsInvolutionUnderMultiplication() bool {
 	return e.IsMultiplicativeInverse(e.Unwrap())
+}
+
+type CyclicGroupElement[G algebra.CyclicGroup[G, E], E algebra.CyclicGroupElement[G, E]] struct {
+	algebra.CyclicGroupElement[G, E]
 }

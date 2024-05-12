@@ -47,6 +47,11 @@ func (r *Ring128) Random(prng io.Reader) (Uint128, error) {
 	return el, nil
 }
 
+func (*Ring128) GetOperator(op algebra.Operator) (algebra.BinaryOperator[Uint128], bool) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (*Ring128) Cardinality() *saferith.Modulus {
 	return mod2Pow128
 }
@@ -71,7 +76,7 @@ func (*Ring128) Order() *saferith.Modulus {
 	return mod2Pow128
 }
 
-func (*Ring128) Operators() []algebra.BinaryOperator[Uint128] {
+func (*Ring128) Operators() []algebra.Operator {
 	// TODO implement me
 	panic("implement me")
 }
@@ -93,12 +98,12 @@ func (*Ring128) Select(choice bool, x0, x1 Uint128) Uint128 {
 	panic("implement me")
 }
 
-func (*Ring128) IsDefinedUnder(operator algebra.BinaryOperator[Uint128]) bool {
+func (*Ring128) IsDefinedUnder(operator algebra.Operator) bool {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (*Ring128) Op(operator algebra.BinaryOperator[Uint128], x algebra.GroupoidElement[*Ring128, Uint128], ys ...algebra.GroupoidElement[*Ring128, Uint128]) (Uint128, error) {
+func (*Ring128) Operate(operator algebra.Operator, x algebra.GroupoidElement[*Ring128, Uint128], ys ...algebra.GroupoidElement[*Ring128, Uint128]) (Uint128, error) {
 	// TODO implement me
 	panic("implement me")
 }
@@ -155,7 +160,7 @@ func (*Ring128) DiscreteExponentiation() algebra.DiscreteExponentiation[Uint128]
 	panic("implement me")
 }
 
-func (*Ring128) Identity(under algebra.BinaryOperator[Uint128]) (Uint128, error) {
+func (*Ring128) Identity(under algebra.Operator) (Uint128, error) {
 	// TODO implement me
 	panic("implement me")
 }

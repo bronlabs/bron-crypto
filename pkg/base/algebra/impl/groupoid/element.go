@@ -8,11 +8,11 @@ import (
 )
 
 type GroupoidElement[G algebra.Groupoid[G, E], E algebra.GroupoidElement[G, E]] struct {
-	groupoidElement[G, E]
+	algebra.GroupoidElement[G, E]
 }
 
 func (e *GroupoidElement[G, E]) Order(under algebra.Operator) (*saferith.Nat, error) {
-	op, defined := e.Structure().Operator(under)
+	op, defined := e.Structure().GetOperator(under)
 	if !defined {
 		return nil, errs.NewType("structure not defined under %s", under)
 	}
@@ -36,7 +36,7 @@ func (e *GroupoidElement[G, E]) Order(under algebra.Operator) (*saferith.Nat, er
 }
 
 func (e *GroupoidElement[G, E]) Operate(under algebra.Operator, rhs algebra.GroupoidElement[G, E]) (E, error) {
-	op, exists := e.Structure().Operator(under)
+	op, exists := e.Structure().GetOperator(under)
 	if !exists {
 		return *new(E), errs.NewMissing("structure is not defined under %s", under)
 	}
@@ -47,10 +47,10 @@ func (e *GroupoidElement[G, E]) Operate(under algebra.Operator, rhs algebra.Grou
 	return out, nil
 }
 
-func (e *GroupoidElement[G, E]) Apply(under algebra.Operator, x algebra.GroupoidElement[G, E], count *saferith.Nat) (E, error) {
-	op, defined := e.Structure().Operator(under)
+func (e *GroupoidElement[G, E]) Apply(over algebra.Operator, x algebra.GroupoidElement[G, E], count *saferith.Nat) (E, error) {
+	op, defined := e.Structure().GetOperator(over)
 	if !defined {
-		return *new(E), errs.NewType("structure not defined under %s", under)
+		return *new(E), errs.NewType("structure not defined under %s", over)
 	}
 
 	var err error
@@ -75,8 +75,7 @@ func (e *GroupoidElement[G, E]) CanGenerateAllElements(with algebra.Operator) bo
 }
 
 type AdditiveGroupoidElement[G algebra.AdditiveGroupoid[G, E], E algebra.AdditiveGroupoidElement[G, E]] struct {
-	additiveGroupoidElement[G, E]
-	GroupoidElement[G, E]
+	algebra.AdditiveGroupoidElement[G, E]
 }
 
 func (e *AdditiveGroupoidElement[G, E]) ApplyAdd(x algebra.AdditiveGroupoidElement[G, E], n *saferith.Nat) E {
@@ -96,8 +95,7 @@ func (e *AdditiveGroupoidElement[_, E]) Triple() E {
 }
 
 type MultiplicativeGroupoidElement[G algebra.MultiplicativeGroupoid[G, E], E algebra.MultiplicativeGroupoidElement[G, E]] struct {
-	multiplicativeGroupoidElement[G, E]
-	GroupoidElement[G, E]
+	algebra.MultiplicativeGroupoidElement[G, E]
 }
 
 func (e *MultiplicativeGroupoidElement[G, E]) ApplyMul(x algebra.MultiplicativeGroupoidElement[G, E], n *saferith.Nat) E {
@@ -121,19 +119,18 @@ func (e *MultiplicativeGroupoidElement[_, E]) Exp(exponent *saferith.Nat) E {
 }
 
 type CyclicGroupoidElement[G algebra.CyclicGroupoid[G, E], E algebra.CyclicGroupoidElement[G, E]] struct {
-	cyclicGroupoidElement[G, E]
-	GroupoidElement[G, E]
+	algebra.CyclicGroupoidElement[G, E]
 }
 
 func (e *CyclicGroupoidElement[G, E]) Order(under algebra.BinaryOperator[E]) (*saferith.Modulus, error) {
-	if _, exists := e.Structure().Operator(under.Name()); !exists {
+	if _, exists := e.Structure().GetOperator(under.Name()); !exists {
 		return nil, errs.NewArgument("not defined under given operator")
 	}
 	return e.Structure().Order(), nil
 }
 
 func (e *CyclicGroupoidElement[G, E]) CanGenerateAllElements(with algebra.BinaryOperator[E]) bool {
-	_, defined := e.Structure().Operator(with.Name())
+	_, defined := e.Structure().GetOperator(with.Name())
 	return defined
 }
 

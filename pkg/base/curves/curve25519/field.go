@@ -30,6 +30,10 @@ type BaseField struct {
 func curve25519BaseFieldInit() {
 	curve25519BaseFieldInstance = BaseField{}
 }
+func (*BaseField) GetOperator(op algebra.Operator) (algebra.BinaryOperator[curves.BaseFieldElement], bool) {
+	//TODO implement me
+	panic("implement me")
+}
 
 func NewBaseField() *BaseField {
 	curve25519BaseFieldInitOnce.Do(curve25519BaseFieldInit)
@@ -55,7 +59,7 @@ func (*BaseField) Iter() <-chan curves.BaseFieldElement {
 	panic("implement me")
 }
 
-func (*BaseField) Operators() []algebra.BinaryOperator[curves.BaseFieldElement] {
+func (*BaseField) Operators() []algebra.Operator {
 	//TODO implement me
 	panic("implement me")
 }
@@ -64,12 +68,12 @@ func (f *BaseField) Unwrap() curves.BaseField {
 	return f
 }
 
-func (*BaseField) IsDefinedUnder(operator algebra.BinaryOperator[curves.BaseFieldElement]) bool {
+func (*BaseField) IsDefinedUnder(operator algebra.Operator) bool {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*BaseField) Op(operator algebra.BinaryOperator[curves.BaseFieldElement], x algebra.GroupoidElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.GroupoidElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
+func (*BaseField) Operate(operator algebra.Operator, x algebra.GroupoidElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.GroupoidElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -109,7 +113,7 @@ func (*BaseField) DiscreteExponentiation() algebra.DiscreteExponentiation[curves
 	panic("implement me")
 }
 
-func (*BaseField) Identity(under algebra.BinaryOperator[curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
+func (*BaseField) Identity(under algebra.Operator) (curves.BaseFieldElement, error) {
 	//TODO implement me
 	panic("implement me")
 }

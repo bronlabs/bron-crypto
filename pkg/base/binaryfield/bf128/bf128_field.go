@@ -31,7 +31,12 @@ var _ algebra.FiniteField[*Field, *FieldElement] = (*Field)(nil)
 
 type Field struct{}
 
-func (*Field) Operators() []algebra.BinaryOperator[*FieldElement] {
+func (*Field) GetOperator(op algebra.Operator) (algebra.BinaryOperator[*FieldElement], bool) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (*Field) Operators() []algebra.Operator {
 	// TODO implement me
 	panic("implement me")
 }
@@ -69,12 +74,12 @@ func (*Field) HashCode() uint64 {
 	return 1
 }
 
-func (*Field) IsDefinedUnder(operator algebra.BinaryOperator[*FieldElement]) bool {
+func (*Field) IsDefinedUnder(operator algebra.Operator) bool {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (*Field) Op(operator algebra.BinaryOperator[*FieldElement], x algebra.GroupoidElement[*Field, *FieldElement], ys ...algebra.GroupoidElement[*Field, *FieldElement]) (*FieldElement, error) {
+func (*Field) Operate(operator algebra.Operator, x algebra.GroupoidElement[*Field, *FieldElement], ys ...algebra.GroupoidElement[*Field, *FieldElement]) (*FieldElement, error) {
 	// TODO implement me
 	panic("implement me")
 }
@@ -123,7 +128,7 @@ func (*Field) DiscreteExponentiation() algebra.DiscreteExponentiation[*FieldElem
 	panic("implement me")
 }
 
-func (*Field) Identity(under algebra.BinaryOperator[*FieldElement]) (*FieldElement, error) {
+func (*Field) Identity(under algebra.Operator) (*FieldElement, error) {
 	// TODO implement me
 	panic("implement me")
 }

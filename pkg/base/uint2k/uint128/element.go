@@ -147,12 +147,27 @@ func (u Uint128) MarshalJSON() ([]byte, error) {
 	return serialised, nil
 }
 
-func (Uint128) Order(operator algebra.BinaryOperator[Uint128]) (*saferith.Modulus, error) {
-	// TODO implement me
+func (Uint128) Operate(op algebra.Operator, rhs algebra.GroupoidElement[*Ring128, Uint128]) (Uint128, error) {
+	panic("implement me")
+}
+func (Uint128) IsInvolution(under algebra.Operator) (bool, error) {
+	panic("implement me")
+}
+func (Uint128) IsInvolutionUnderAddition() bool {
+	panic("implement me")
+}
+func (Uint128) IsInvolutionUnderMultiplication() bool {
+	panic("implement me")
+}
+func (Uint128) CanGenerateAllElements(under algebra.Operator) bool {
+	panic("implement me")
+}
+func (Uint128) Order(operator algebra.Operator) (*saferith.Nat, error) {
+	//TODO implement me
 	panic("implement me")
 }
 
-func (Uint128) ApplyOp(operator algebra.BinaryOperator[Uint128], x algebra.GroupoidElement[*Ring128, Uint128], n *saferith.Nat) (Uint128, error) {
+func (Uint128) Apply(operator algebra.Operator, x algebra.GroupoidElement[*Ring128, Uint128], n *saferith.Nat) (Uint128, error) {
 	// TODO implement me
 	panic("implement me")
 }
@@ -215,7 +230,7 @@ func (u Uint128) Exp(exponent *saferith.Nat) Uint128 {
 	return u0
 }
 
-func (Uint128) IsIdentity(under algebra.BinaryOperator[Uint128]) (bool, error) {
+func (Uint128) IsIdentity(under algebra.Operator) (bool, error) {
 	// TODO implement me
 	panic("implement me")
 }
@@ -228,7 +243,7 @@ func (u Uint128) IsMultiplicativeIdentity() bool {
 	return u.IsOne()
 }
 
-func (u Uint128) MulAdd(p, q algebra.RingElement[*Ring128, Uint128]) Uint128 {
+func (u Uint128) MulAdd(p, q algebra.RgElement[*Ring128, Uint128]) Uint128 {
 	return u.Mul(p).Add(q)
 }
 
@@ -314,15 +329,15 @@ func (u Uint128) IsPositive() bool {
 	return u.IsNonZero()
 }
 
-func (Uint128) Int() integer.Int {
-	// TODO implement me
-	panic("implement me")
-}
+// func (Uint128) Int() integer.Int {
+// 	// TODO implement me
+// 	panic("implement me")
+// }
 
-func (Uint128) FromInt(v integer.Int) Uint128 {
-	// TODO implement me
-	panic("implement me")
-}
+// func (Uint128) FromInt(v integer.Int) Uint128 {
+// 	// TODO implement me
+// 	panic("implement me")
+// }
 
 func (u Uint128) Not() Uint128 {
 	return Uint128{Lo: ^u.Lo, Hi: ^u.Hi}
@@ -373,17 +388,17 @@ func (u Uint128) IsDisjunctiveIdentity() bool {
 	return u.IsZero()
 }
 
-func (Uint128) Inverse(under algebra.BinaryOperator[Uint128]) (Uint128, error) {
+func (Uint128) Inverse(under algebra.Operator) (Uint128, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (Uint128) IsInverse(of algebra.GroupElement[*Ring128, Uint128], under algebra.BinaryOperator[Uint128]) (bool, error) {
+func (Uint128) IsInverse(of algebra.GroupElement[*Ring128, Uint128], under algebra.Operator) (bool, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (Uint128) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOperator[Uint128]) (bool, error) {
+func (Uint128) IsTorsionElement(order *saferith.Modulus, under algebra.Operator) (bool, error) {
 	// TODO implement me
 	panic("implement me")
 }

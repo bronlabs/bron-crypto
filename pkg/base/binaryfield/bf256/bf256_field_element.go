@@ -19,6 +19,22 @@ type FieldElement struct {
 	V [fieldLimbsF2e256]uint64
 }
 
+func (*FieldElement) Operate(op algebra.Operator, rhs algebra.GroupoidElement[*Field, *FieldElement]) (*FieldElement, error) {
+	panic("implement me")
+}
+func (*FieldElement) CanGenerateAllElements(under algebra.Operator) bool {
+	panic("implement me")
+}
+func (*FieldElement) IsInvolution(under algebra.Operator) (bool, error) {
+	panic("implement me")
+}
+func (*FieldElement) IsInvolutionUnderAddition() bool {
+	panic("implement me")
+}
+func (*FieldElement) IsInvolutionUnderMultiplication() bool {
+	panic("implement me")
+}
+
 // === Basic Methods.
 
 func (el *FieldElement) Equal(e *FieldElement) bool {
@@ -200,7 +216,7 @@ func (el *FieldElement) IsMultiplicativeIdentity() bool {
 
 // === Ring element methods.
 
-func (el *FieldElement) MulAdd(p, q algebra.RingElement[*Field, *FieldElement]) *FieldElement {
+func (el *FieldElement) MulAdd(p, q algebra.RgElement[*Field, *FieldElement]) *FieldElement {
 	return el.Mul(p).Add(q)
 }
 
@@ -234,12 +250,12 @@ func (*FieldElement) Exp(*saferith.Nat) *FieldElement {
 	panic("not implemented")
 }
 
-func (*FieldElement) ApplyOp(operator algebra.BinaryOperator[*FieldElement], x algebra.GroupoidElement[*Field, *FieldElement], n *saferith.Nat) (*FieldElement, error) {
+func (*FieldElement) Apply(operator algebra.Operator, x algebra.GroupoidElement[*Field, *FieldElement], n *saferith.Nat) (*FieldElement, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (*FieldElement) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOperator[*FieldElement]) (bool, error) {
+func (*FieldElement) IsTorsionElement(order *saferith.Modulus, under algebra.Operator) (bool, error) {
 	// TODO implement me
 	panic("implement me")
 }
@@ -279,22 +295,22 @@ func (*FieldElement) IsTorsionElementUnderMultiplication(order *saferith.Modulus
 	panic("implement me")
 }
 
-func (*FieldElement) Inverse(under algebra.BinaryOperator[*FieldElement]) (*FieldElement, error) {
+func (*FieldElement) Inverse(under algebra.Operator) (*FieldElement, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (*FieldElement) IsIdentity(under algebra.BinaryOperator[*FieldElement]) (bool, error) {
+func (*FieldElement) IsIdentity(under algebra.Operator) (bool, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (*FieldElement) IsInverse(of algebra.GroupElement[*Field, *FieldElement], under algebra.BinaryOperator[*FieldElement]) (bool, error) {
+func (*FieldElement) IsInverse(of algebra.GroupElement[*Field, *FieldElement], under algebra.Operator) (bool, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (*FieldElement) Order(operator algebra.BinaryOperator[*FieldElement]) (*saferith.Modulus, error) {
+func (*FieldElement) Order(operator algebra.Operator) (*saferith.Nat, error) {
 	// TODO implement me
 	panic("implement me")
 }

@@ -2,18 +2,15 @@ package monoid
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/groupoid"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
 type Monoid[M algebra.Monoid[M, E], E algebra.MonoidElement[M, E]] struct {
-	groupoid.Groupoid[M, E]
-	monoid[M, E]
+	algebra.Monoid[M, E]
 }
 
 type AdditiveMonoid[M algebra.AdditiveMonoid[M, E], E algebra.AdditiveMonoidElement[M, E]] struct {
-	additiveMonoid[M, E]
-	Monoid[M, E]
+	algebra.AdditiveMonoid[M, E]
 }
 
 func (m *AdditiveMonoid[M, E]) AdditiveIdentity() E {
@@ -25,8 +22,7 @@ func (m *AdditiveMonoid[M, E]) AdditiveIdentity() E {
 }
 
 type MultiplicativeMonoid[M algebra.MultiplicativeMonoid[M, E], E algebra.MultiplicativeMonoidElement[M, E]] struct {
-	multiplicativeMonoid[M, E]
-	Monoid[M, E]
+	algebra.MultiplicativeMonoid[M, E]
 }
 
 func (m *MultiplicativeMonoid[M, E]) MultiplicativeIdentity() E {
@@ -38,6 +34,5 @@ func (m *MultiplicativeMonoid[M, E]) MultiplicativeIdentity() E {
 }
 
 type CyclicMonoid[M algebra.CyclicMonoid[M, E], E algebra.CyclicMonoidElement[M, E]] struct {
-	cyclicMonoid[M, E]
-	Monoid[M, E]
+	algebra.CyclicMonoid[M, E]
 }
