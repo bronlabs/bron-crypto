@@ -15,12 +15,12 @@ type GroupElement[G Structure, E Element] interface {
 	// Group element is a Monoid element.
 	MonoidElement[G, E]
 	// Inverse returns inverse of this element ie. S.Operate(this, this.Inverse()).Equal(S.Identity()) == true
-	Inverse(under BinaryOperator[E]) (E, error)
+	Inverse(under Operator) (E, error)
 	// IsInverse checks whether the input is an inverse of this element.
-	IsInverse(of GroupElement[G, E], under BinaryOperator[E]) (bool, error)
+	IsInverse(of GroupElement[G, E], under Operator) (bool, error)
 	// IsTorsionElement returns true if this.Mul(order) is identity.
-	IsTorsionElement(order *saferith.Modulus, under BinaryOperator[E]) (bool, error)
-	// IsInvolution(under BinaryOperator[E]) (bool, error)
+	IsTorsionElement(order *saferith.Modulus, under Operator) (bool, error)
+	IsInvolution(under Operator) (bool, error)
 }
 
 // SubGroup defined additional methods for group S if S is to be considered as a subgroup of some other group.
@@ -73,7 +73,7 @@ type AdditiveGroupElement[G Structure, E Element] interface {
 	// ApplySub calls this.Sub(x).Sub(x)...Sub(x), `n` many times.
 	ApplySub(x AdditiveGroupElement[G, E], n *saferith.Nat) E
 
-	// IsInvolutionUnderAddition() bool
+	IsInvolutionUnderAddition() bool
 }
 
 // MultiplicativeGroup defines additional methods for elements of type E of group S if operator
@@ -105,7 +105,7 @@ type MultiplicativeGroupElement[G Structure, E Element] interface {
 	// ApplyDiv calls this.Div(x).Div(x)...Div(x), `n` many times.
 	ApplyDiv(x MultiplicativeGroupElement[G, E], n *saferith.Nat) (E, error)
 
-	// IsInvolutionUnderMultiplication() bool
+	IsInvolutionUnderMultiplication() bool
 }
 
 // CyclicGroup defines methods needed for group S to be cyclic.
@@ -115,7 +115,7 @@ type CyclicGroup[G Structure, E Element] interface {
 	// Cyclic group is a group.
 	CyclicMonoid[G, E]
 	Group[G, E]
-	DLog(base, x CyclicGroupElement[G, E], under BinaryOperator[E]) (*saferith.Nat, error)
+	DLog(base, x CyclicGroupElement[G, E], under Operator) (*saferith.Nat, error)
 }
 
 // CyclicGroupElement defines methods needed for elements of type E of cyclic group S.
@@ -125,10 +125,3 @@ type CyclicGroupElement[G Structure, E Element] interface {
 	CyclicMonoidElement[G, E]
 	GroupElement[G, E]
 }
-
-type AutGroupOperator[E Element] interface {
-	BinaryOperator[AutoFunction[E]]
-	FunctionComposition[E, E, E]
-}
-
-type Aut[G Structure, ObjE Element] Group[G, AutoFunction[ObjE]]

@@ -8,7 +8,7 @@ import (
 )
 
 type Groupoid[G algebra.Groupoid[G, E], E algebra.GroupoidElement[G, E]] struct {
-	algebra.Groupoid[G, E]
+	groupoid[G, E]
 }
 
 func (g *Groupoid[G, E]) Order() *saferith.Nat {
@@ -28,11 +28,8 @@ func (g *Groupoid[G, E]) Operate(under algebra.Operator, x algebra.GroupoidEleme
 }
 
 type AdditiveGroupoid[G algebra.AdditiveGroupoid[G, E], E algebra.AdditiveGroupoidElement[G, E]] struct {
-	algebra.AdditiveGroupoid[G, E]
-}
-
-func (g *AdditiveGroupoid[G, E]) Order() *saferith.Nat {
-	return g.Cardinality().Nat()
+	additiveGroupoid[G, E]
+	Groupoid[G, E]
 }
 
 func (g *AdditiveGroupoid[G, E]) Add(x algebra.AdditiveGroupoidElement[G, E], ys ...algebra.AdditiveGroupoidElement[G, E]) E {
@@ -44,11 +41,8 @@ func (g *AdditiveGroupoid[G, E]) Add(x algebra.AdditiveGroupoidElement[G, E], ys
 }
 
 type MultiplicativeGroupoid[G algebra.MultiplicativeGroupoid[G, E], E algebra.MultiplicativeGroupoidElement[G, E]] struct {
-	algebra.MultiplicativeGroupoid[G, E]
-}
-
-func (g *MultiplicativeGroupoid[G, E]) Order() *saferith.Nat {
-	return g.Cardinality().Nat()
+	multiplicativeGroupoid[G, E]
+	Groupoid[G, E]
 }
 
 func (*MultiplicativeGroupoid[G, E]) Mul(x algebra.MultiplicativeGroupoidElement[G, E], ys ...algebra.MultiplicativeGroupoidElement[G, E]) E {
@@ -90,7 +84,8 @@ func (g *MultiplicativeGroupoid[G, E]) MultiExponentExp(base algebra.Multiplicat
 }
 
 type CyclicGroupoid[G algebra.CyclicGroupoid[G, E], E algebra.CyclicGroupoidElement[G, E]] struct {
-	algebra.CyclicGroupoid[G, E]
+	cyclicGroupoid[G, E]
+	Groupoid[G, E]
 }
 
 func (g *CyclicGroupoid[G, E]) Generator() E {

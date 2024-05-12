@@ -13,12 +13,6 @@ type Object any
 type Collection[Obj Object] ds.AbstractSet[Obj]
 type Class[Obj Object] Collection[Obj]
 
-func ObjectsAreEqual[T any](x, y Object) bool {
-	xx, okx := x.(ds.Equatable[T])
-	yy, oky := y.(T)
-	return okx && oky && xx.Equal(yy)
-}
-
 type Morphism[Dom, CoDom Object, X, Y Element] interface {
 	Map(x X) (Y, error)
 

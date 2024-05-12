@@ -1,17 +1,19 @@
-package impl
+package monoid
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/groupoid"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
 type MonoidElement[M algebra.Monoid[M, E], E algebra.MonoidElement[M, E]] struct {
-	algebra.MonoidElement[M, E]
+	monoidElement[M, E]
+	groupoid.GroupoidElement[M, E]
 }
 
-func (e *MonoidElement[M, E]) IsIdentity(under algebra.BinaryOperator[E]) (bool, error) {
-	if !e.Structure().IsDefinedUnder(under) {
-		return false, errs.NewArgument("invalid operator")
+func (e *MonoidElement[M, E]) IsIdentity(under algebra.Operator) (bool, error) {
+	if _, defined := e.Structure().Operator(under); !defined {
+		return false, errs.NewType("invalid operator")
 	}
 	identity, err := e.Structure().Identity(under)
 	if err != nil {
@@ -21,7 +23,9 @@ func (e *MonoidElement[M, E]) IsIdentity(under algebra.BinaryOperator[E]) (bool,
 }
 
 type AdditiveMonoidElement[M algebra.AdditiveMonoid[M, E], E algebra.AdditiveMonoidElement[M, E]] struct {
-	algebra.AdditiveMonoidElement[M, E]
+	additiveMonoidElement[M, E]
+	MonoidElement[M, E]
+	groupoid.AdditiveGroupoidElement[M, E]
 }
 
 func (e *AdditiveMonoidElement[M, E]) IsAdditiveIdentity() bool {
@@ -29,9 +33,17 @@ func (e *AdditiveMonoidElement[M, E]) IsAdditiveIdentity() bool {
 }
 
 type MultiplicativeMonoidElement[M algebra.MultiplicativeMonoid[M, E], E algebra.MultiplicativeMonoidElement[M, E]] struct {
-	algebra.MultiplicativeMonoidElement[M, E]
+	multiplicativeMonoidElement[M, E]
+	MonoidElement[M, E]
+	groupoid.MultiplicativeGroupoidElement[M, E]
 }
 
 func (e *MultiplicativeMonoidElement[M, E]) IsMultiplicativeIdentity() bool {
 	return e.Equal(e.Structure().MultiplicativeIdentity())
+}
+
+type CyclicMonoidElement[M algebra.CyclicMonoid[M, E], E algebra.CyclicMonoidElement[M, E]] struct {
+	cyclicMonoidElement[M, E]
+	MonoidElement[M, E]
+	groupoid.CyclicGroupoidElement[M, E]
 }
