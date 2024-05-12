@@ -340,11 +340,12 @@ func FuzzString(f *testing.F) {
 		}
 	})
 }
+
 func FuzzSwap(f *testing.F) {
 
 	testCases := struct {
 		input [][]byte
-		i, j  []int
+		i, j  []uint
 	}{
 		input: [][]byte{
 			{0b11111111},
@@ -353,10 +354,9 @@ func FuzzSwap(f *testing.F) {
 			{0b00000011, 0b00010010},
 			{0b11100001, 0b11100100},
 		},
-		i: []int{0, 1, 2, 3, 4, 5, 6, 7},
-		j: []int{0, 1, 2, 3, 4, 5, 6, 7},
+		i: []uint{0, 1, 2, 3, 4, 5, 6, 7, 67},
+		j: []uint{0, 1, 2, 3, 4, 5, 6, 7, 99},
 	}
-
 	for _, input := range testCases.input {
 		for _, i := range testCases.i {
 			for _, j := range testCases.j {
@@ -365,10 +365,19 @@ func FuzzSwap(f *testing.F) {
 		}
 	}
 
-	f.Fuzz(func(t *testing.T, input []byte, i int, j int) {
+	f.Fuzz(func(t *testing.T, input []byte, i uint, j uint) {
+		if int(i) > len(input) || int(j) > len(input) {
+			t.Skip() // Panics
+		}
+		if i == j {
+			inputPackedBits := bitstring.PackedBits(input)
+			originalCopy := slices.Clone(inputPackedBits)
+			inputPackedBits.Swap(i, j)
+			require.Equal(t, inputPackedBits, originalCopy, "should return with no change")
+		}
 		inputPackedBits := bitstring.PackedBits(input)
 		originalCopy := slices.Clone(inputPackedBits)
-		inputPackedBits.Swap(uint(i), uint(j))
+		inputPackedBits.Swap(i, j)
 
 		require.Equal(t, inputPackedBits.BitLen(), originalCopy.BitLen())
 
@@ -376,7 +385,7 @@ func FuzzSwap(f *testing.F) {
 		unpackedOriginalCopy := originalCopy.Unpack()
 
 		for index := 0; index < len(unpackedOriginalCopy); index++ {
-			if index == i || index == j {
+			if index == int(i) || index == int(j) {
 				require.Equal(t, unpackedOriginalCopy[j], unpackedInput[i])
 				require.Equal(t, unpackedOriginalCopy[i], unpackedInput[j])
 
@@ -398,7 +407,7 @@ func FuzzGet(f *testing.F) {
 			{0b11100001, 0b11111100},
 			{0b11100001},
 		},
-		inputIndexs: []uint{0, 1, 2, 3, 4},
+		inputIndexs: []uint{0, 1, 2, 3, 4, 85},
 	}
 	for _, input := range testCases.input {
 		for _, index := range testCases.inputIndexs {
@@ -407,28 +416,30 @@ func FuzzGet(f *testing.F) {
 	}
 
 	f.Fuzz(func(t *testing.T, input []byte, index uint) {
-		inputPackedBits := bitstring.PackedBits(input)
-		output := inputPackedBits.Get(index)
-		unpackedInput := inputPackedBits.Unpack()
+		if int(index) < len(input) {
+			inputPackedBits := bitstring.PackedBits(input)
+			output := inputPackedBits.Get(index)
+			unpackedInput := inputPackedBits.Unpack()
 
-		require.Equal(t, unpackedInput[index], output)
+			require.Equal(t, unpackedInput[index], output)
+		}
 	})
 }
 func FuzzRepeatBits(f *testing.F) {
 	inputVector := []byte{0b00000000, 0b10101010, 0b11111111}
-	inputRepetition := []int{0, 1, 2, 3, 4}
+	inputRepetition := []uint{0, 1, 2, 3, 4, 85}
 
 	for _, repetition := range inputRepetition {
 		f.Add(inputVector, repetition)
 	}
 
-	f.Fuzz(func(t *testing.T, input []byte, repetition int) {
+	f.Fuzz(func(t *testing.T, input []byte, repetition uint) {
 		inputPackedBits := bitstring.PackedBits(input)
-		outputVector := inputPackedBits.Repeat(repetition)
+		outputVector := inputPackedBits.Repeat(int(repetition))
 
 		for i := 0; i < len(inputPackedBits)*8; i++ {
-			for j := 0; j < repetition; j++ {
-				output := outputVector.Get(uint(i*repetition + j))
+			for j := 0; j < int(repetition); j++ {
+				output := outputVector.Get(uint((i*int(repetition) + j)))
 				input := inputPackedBits.Get(uint(i))
 				require.Equal(t, input, output)
 			}
