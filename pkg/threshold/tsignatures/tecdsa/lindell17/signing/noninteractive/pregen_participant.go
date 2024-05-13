@@ -8,11 +8,11 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
 )
 
 var _ types.ThresholdParticipant = (*PreGenParticipant)(nil)
@@ -20,9 +20,9 @@ var _ types.ThresholdParticipant = (*PreGenParticipant)(nil)
 type preGenParticipantState struct {
 	k           curves.Scalar
 	bigR        curves.Point
-	bigRWitness commitments.Witness
+	bigROpening *hashveccomm.Opening
 
-	theirBigRCommitments ds.Map[types.IdentityKey, commitments.Commitment]
+	theirBigRCommitments ds.Map[types.IdentityKey, *hashveccomm.VectorCommitment]
 
 	_ ds.Incomparable
 }
