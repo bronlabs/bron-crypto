@@ -60,7 +60,7 @@ type state struct {
 	bigR1               curves.Point
 	bigR2               curves.Point
 	opening             *hashveccomm.Opening
-	theirBigRCommitment ds.Map[types.IdentityKey, hashveccomm.VectorCommitment]
+	theirBigRCommitment ds.Map[types.IdentityKey, *hashveccomm.VectorCommitment]
 
 	_ ds.Incomparable
 }

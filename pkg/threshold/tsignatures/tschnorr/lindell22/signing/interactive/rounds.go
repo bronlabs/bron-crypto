@@ -72,7 +72,7 @@ func (p *Cosigner[V]) Round2(broadcastInput network.RoundMessages[types.Threshol
 		return nil, errs.WrapValidation(err, "invalid round 1 broadcast output")
 	}
 
-	p.state.theirBigRCommitment = hashmap.NewHashableHashMap[types.IdentityKey, hashveccomm.VectorCommitment]()
+	p.state.theirBigRCommitment = hashmap.NewHashableHashMap[types.IdentityKey, *hashveccomm.VectorCommitment]()
 	for iterator := p.quorum.Iterator(); iterator.HasNext(); {
 		identity := iterator.Next()
 
@@ -80,7 +80,7 @@ func (p *Cosigner[V]) Round2(broadcastInput network.RoundMessages[types.Threshol
 			continue
 		}
 		in, _ := broadcastInput.Get(identity)
-		p.state.theirBigRCommitment.Put(identity, *in.BigRCommitment)
+		p.state.theirBigRCommitment.Put(identity, in.BigRCommitment)
 	}
 
 	// step 2.1: π^dl_i <- NIPoKDL.Prove(k_i, R_i, sessionId, S, nic)
@@ -127,7 +127,7 @@ func (p *Cosigner[V]) Round3(broadcastInput network.RoundMessages[types.Threshol
 
 		// step 3.2: Open(sid || R_j || j || S)
 		vectorVerifier := hashveccomm.NewVectorVerifier(p.SessionId)
-		if err := vectorVerifier.Verify(&theirBigRCommitment, theirBigROpening); err != nil {
+		if err := vectorVerifier.Verify(theirBigRCommitment, theirBigROpening); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 

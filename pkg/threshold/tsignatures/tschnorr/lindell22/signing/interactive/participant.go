@@ -31,7 +31,7 @@ type state struct {
 	bigR    curves.Point
 	opening *hashveccomm.Opening
 
-	theirBigRCommitment ds.Map[types.IdentityKey, hashveccomm.VectorCommitment]
+	theirBigRCommitment ds.Map[types.IdentityKey, *hashveccomm.VectorCommitment]
 
 	_ ds.Incomparable
 }
