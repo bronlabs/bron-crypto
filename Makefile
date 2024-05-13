@@ -86,10 +86,9 @@ test:
 test-long: ## Runs all tests, including long-running tests
 	${GO} test ${BUILD_TAGS} ${TEST_CLAUSE} -timeout 120m ./...
 
-.PHONY: sync-thirdparty
-sync-thirdparty:
-	chmod +x ${SCRIPTS_DIR}/sync_thirdparty.sh
-	${SCRIPTS_DIR}/sync_thirdparty.sh
+.PHONY: check-thirdparty
+check-thirdparty:
+	@${SCRIPTS_DIR}/check_thirdparty.sh ${THIRDPARTY_DIR}/manifest.txt
 
 .PHONY: deflake
 deflake: ## Runs short tests many times to detect flakes
