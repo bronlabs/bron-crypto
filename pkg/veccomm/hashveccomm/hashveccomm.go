@@ -25,23 +25,15 @@ type Opening struct {
 
 type VectorCommitment struct {
 	commitment *hashcomm.Commitment
-	length     uint
 }
 
 func (o *Opening) Message() Vector {
 	return o.vector
 }
 
-func (vc *VectorCommitment) Length() uint {
-	return vc.length
-}
-
 func (vc *VectorCommitment) Validate() error {
 	if vc == nil {
 		return errs.NewIsNil("receiver")
-	}
-	if vc.length == 0 {
-		return errs.NewValidation("vector has no element")
 	}
 	if err := vc.commitment.Validate(); err != nil {
 		return errs.WrapFailed(err, "commitment not valid")

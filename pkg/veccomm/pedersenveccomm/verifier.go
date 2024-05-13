@@ -10,21 +10,28 @@ import (
 var _ veccomm.VectorVerifier[Message, *VectorCommitment, *Opening] = (*VectorVerifier)(nil)
 
 type VectorVerifier struct {
-	sessionId []byte
-	h         curves.Point
+	g  curves.Point
+	hs []curves.Point
 	*vectorHomomorphicScheme
 }
 
-// not UC-secure without session-id.
-func NewVectorVerifier(sessionId []byte, curve curves.Curve) (*VectorVerifier, error) {
+func NewVectorVerifier(sessionId []byte, curve curves.Curve, n uint) (*VectorVerifier, error) {
 	if curve == nil {
 		return nil, errs.NewIsNil("curve is nil")
 	}
-	return &VectorVerifier{
-		sessionId:               sessionId,
-		h:                       curve.Generator(),
+
+	g := curve.Generator()
+	hs, err := scheme.sampleGenerators(sessionId, curve, n)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not generate generators")
+	}
+
+	verifier := &VectorVerifier{
+		g:                       g,
+		hs:                      hs,
 		vectorHomomorphicScheme: scheme,
-	}, nil
+	}
+	return verifier, nil
 }
 
 func (v *VectorVerifier) Verify(vectorCommitment *VectorCommitment, opening *Opening) error {
@@ -34,18 +41,15 @@ func (v *VectorVerifier) Verify(vectorCommitment *VectorCommitment, opening *Ope
 	if err := opening.Validate(); err != nil {
 		return errs.WrapFailed(err, "unvalid opening")
 	}
-	curve := v.h.Curve()
-	g, err := v.sampleGenerators(v.sessionId, curve, vectorCommitment.length)
-	if err != nil {
-		return errs.WrapFailed(err, "could not generate generators")
-	}
-	localCommitment := curve.Generator().ScalarMul(opening.witness)
+
+	localCommitment := v.g.Curve().Generator().ScalarMul(opening.witness)
 	for i, msg := range opening.vector {
-		localCommitment = localCommitment.Add(g[i].ScalarMul(msg))
+		localCommitment = localCommitment.Add(v.hs[i].ScalarMul(msg))
 	}
 	if !vectorCommitment.value.Equal(localCommitment) {
 		return errs.NewVerification("verification failed")
 	}
+
 	return nil
 }
 

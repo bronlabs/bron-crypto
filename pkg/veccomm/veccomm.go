@@ -6,7 +6,6 @@ type Vector[M comm.Message] []M
 
 type VectorCommitment interface {
 	comm.Commitment
-	Length() uint
 }
 
 type VectorCommitter[M comm.Message, C VectorCommitment, O comm.Opening[Vector[M]]] interface {

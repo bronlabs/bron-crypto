@@ -34,11 +34,11 @@ func TestHappyPathCommitment(t *testing.T) {
 		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
-			committer, err := pedersenveccomm.NewVectorCommitter(sessionId, curve, prng)
+			committer, err := pedersenveccomm.NewVectorCommitter(sessionId, curve, uint(i+1), prng)
 			require.NoError(t, err)
 			require.NotNil(t, committer)
 
-			verifier, err := pedersenveccomm.NewVectorVerifier(sessionId, curve)
+			verifier, err := pedersenveccomm.NewVectorVerifier(sessionId, curve, uint(i+1))
 			require.NoError(t, err)
 			require.NotNil(t, verifier)
 
@@ -69,11 +69,11 @@ func TestShouldFailOnInvalidCommitmentOrOpening(t *testing.T) {
 		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
-			committer, err := pedersenveccomm.NewVectorCommitter(sessionId, curve, prng)
+			committer, err := pedersenveccomm.NewVectorCommitter(sessionId, curve, uint(i+1), prng)
 			require.NoError(t, err)
 			require.NotNil(t, committer)
 
-			verifier, err := pedersenveccomm.NewVectorVerifier(sessionId, curve)
+			verifier, err := pedersenveccomm.NewVectorVerifier(sessionId, curve, uint(i+1))
 			require.NoError(t, err)
 			require.NotNil(t, verifier)
 
@@ -107,11 +107,11 @@ func TestShouldFailOnNilCommitment(t *testing.T) {
 		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
-			committer, err := pedersenveccomm.NewVectorCommitter(sessionId, curve, prng)
+			committer, err := pedersenveccomm.NewVectorCommitter(sessionId, curve, uint(i+1), prng)
 			require.NoError(t, err)
 			require.NotNil(t, committer)
 
-			verifier, err := pedersenveccomm.NewVectorVerifier(sessionId, curve)
+			verifier, err := pedersenveccomm.NewVectorVerifier(sessionId, curve, uint(i+1))
 			require.NoError(t, err)
 			require.NotNil(t, verifier)
 
@@ -140,11 +140,11 @@ func TestHappyPathCombine(t *testing.T) {
 		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
-			committer, err := pedersenveccomm.NewVectorCommitter(sessionId, curve, prng)
+			committer, err := pedersenveccomm.NewVectorCommitter(sessionId, curve, uint(i+1), prng)
 			require.NoError(t, err)
 			require.NotNil(t, committer)
 
-			verifier, err := pedersenveccomm.NewVectorVerifier(sessionId, curve)
+			verifier, err := pedersenveccomm.NewVectorVerifier(sessionId, curve, uint(i+1))
 			require.NoError(t, err)
 			require.NotNil(t, verifier)
 
@@ -185,11 +185,11 @@ func TestOpenOnWrongCombine(t *testing.T) {
 		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
-			committer, err := pedersenveccomm.NewVectorCommitter(sessionId, curve, prng)
+			committer, err := pedersenveccomm.NewVectorCommitter(sessionId, curve, uint(i+1), prng)
 			require.NoError(t, err)
 			require.NotNil(t, committer)
 
-			verifier, err := pedersenveccomm.NewVectorVerifier(sessionId, curve)
+			verifier, err := pedersenveccomm.NewVectorVerifier(sessionId, curve, uint(i+1))
 			require.NoError(t, err)
 			require.NotNil(t, verifier)
 
@@ -239,11 +239,11 @@ func TestHappyPathScale(t *testing.T) {
 		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
-			committer, err := pedersenveccomm.NewVectorCommitter(sessionId, curve, prng)
+			committer, err := pedersenveccomm.NewVectorCommitter(sessionId, curve, uint(i+1), prng)
 			require.NoError(t, err)
 			require.NotNil(t, committer)
 
-			verifier, err := pedersenveccomm.NewVectorVerifier(sessionId, curve)
+			verifier, err := pedersenveccomm.NewVectorVerifier(sessionId, curve, uint(i+1))
 			require.NoError(t, err)
 			require.NotNil(t, verifier)
 
@@ -282,11 +282,11 @@ func TestWrongScale(t *testing.T) {
 		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
-			committer, err := pedersenveccomm.NewVectorCommitter(sessionId, curve, prng)
+			committer, err := pedersenveccomm.NewVectorCommitter(sessionId, curve, uint(i+1), prng)
 			require.NoError(t, err)
 			require.NotNil(t, committer)
 
-			verifier, err := pedersenveccomm.NewVectorVerifier(sessionId, curve)
+			verifier, err := pedersenveccomm.NewVectorVerifier(sessionId, curve, uint(i+1))
 			require.NoError(t, err)
 			require.NotNil(t, verifier)
 

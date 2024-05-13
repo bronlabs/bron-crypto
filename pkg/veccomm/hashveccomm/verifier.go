@@ -15,7 +15,6 @@ type VectorVerifier struct {
 	verifier *hashcomm.Verifier
 }
 
-// not UC-secure without session-id.
 func NewVectorVerifier(sessionId []byte) *VectorVerifier {
 	verifier := hashcomm.NewVerifier(sessionId)
 	return &VectorVerifier{
@@ -30,9 +29,7 @@ func (v *VectorVerifier) Verify(vectorCommitment *VectorCommitment, opening *Ope
 	if err := opening.Validate(); err != nil {
 		return errs.WrapFailed(err, "opening invalid")
 	}
-	if int(vectorCommitment.length) != len(opening.vector) {
-		return errs.NewVerification("length does not match")
-	}
+
 	if !(bytes.Equal(encode(opening.vector), opening.opening.Message())) {
 		return errs.NewVerification("commitment is not tied to the vector")
 	}
@@ -40,6 +37,7 @@ func (v *VectorVerifier) Verify(vectorCommitment *VectorCommitment, opening *Ope
 	if err != nil {
 		return errs.NewVerification("verification failed")
 	}
+
 	return nil
 }
 

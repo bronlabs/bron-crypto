@@ -12,51 +12,60 @@ import (
 var _ veccomm.VectorCommitter[Message, *VectorCommitment, *Opening] = (*VectorCommitter)(nil)
 
 type VectorCommitter struct {
-	sessionId []byte
-	h         curves.Point
-	prng      io.Reader
+	g    curves.Point
+	hs   []curves.Point
+	prng io.Reader
 	*vectorHomomorphicScheme
 }
 
-// not UC-secure without session-id.
-func NewVectorCommitter(sessionId []byte, curve curves.Curve, prng io.Reader) (*VectorCommitter, error) {
+func NewVectorCommitter(sessionId []byte, curve curves.Curve, n uint, prng io.Reader) (*VectorCommitter, error) {
 	if curve == nil {
 		return nil, errs.NewIsNil("curve is nil")
 	}
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
 	}
-	return &VectorCommitter{
-		sessionId:               sessionId,
-		h:                       curve.Generator(),
+
+	g := curve.Generator()
+	hs, err := scheme.sampleGenerators(sessionId, curve, n)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not generate generators")
+	}
+
+	committer := &VectorCommitter{
+		g:                       g,
+		hs:                      hs,
 		prng:                    prng,
 		vectorHomomorphicScheme: scheme,
-	}, nil
+	}
+
+	return committer, nil
 }
 
 func (c *VectorCommitter) Commit(vector Vector) (*VectorCommitment, *Opening, error) {
-	curve := c.h.Curve()
-	witness, err := curve.ScalarField().Random(c.prng)
+	if len(vector) != len(c.hs) {
+		return nil, nil, errs.NewSize("invalid vector length")
+	}
+
+	witness, err := c.g.Curve().ScalarField().Random(c.prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not draw the witness at random")
 	}
-	g, err := c.sampleGenerators(c.sessionId, curve, uint(len(vector)))
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not generate generators")
-	}
-	commitment := curve.Generator().ScalarMul(witness)
+
+	vc := c.g.ScalarMul(witness)
 	for i, msg := range vector {
-		commitment = commitment.Add(g[i].ScalarMul(msg))
+		vc = vc.Add(c.hs[i].ScalarMul(msg))
 	}
-	return &VectorCommitment{
-			value:  commitment,
-			length: uint(len(vector)),
-		},
-		&Opening{
-			vector:  vector,
-			witness: witness,
-		},
-		nil
+
+	commitment := &VectorCommitment{
+		value: vc,
+	}
+	opening := &Opening{
+		vector:  vector,
+		witness: witness,
+	}
+
+	return commitment, opening, nil
 }
 
 func (*VectorCommitter) OpenAtIndex(index uint, vector Vector, fullOpening *Opening) (comm.Opening[Message], error) {
