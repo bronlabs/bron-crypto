@@ -71,7 +71,7 @@ func (c *rf[X, W, A, S, Z]) NewProver(sessionId []byte, transcript transcripts.T
 	}
 	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
-		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
+		return nil, errs.WrapHashing(err, "couldn't bind to transcript")
 	}
 
 	return &prover[X, W, A, S, Z]{

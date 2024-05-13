@@ -21,8 +21,12 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 	prng          io.Reader
 }
 
-func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
+func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proof compiler.NIZKPoKProof, err error) {
 	p.transcript.AppendMessages(statementLabel, p.sigmaProtocol.SerializeStatement(statement))
+	crs, err := p.transcript.Bind(p.sessionId, transcriptLabel)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "couldn't bind to transcript")
+	}
 
 	a := make([]byte, 0)
 	aI := make([]A, r)
@@ -61,7 +65,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKPr
 			if err != nil {
 				return nil, errs.WrapFailed(err, "cannot generate response")
 			}
-			digest, err := hash(p.sessionId, a, bitstring.ToBytes32LE(int32(i)), e, p.sigmaProtocol.SerializeResponse(z))
+			digest, err := hash(crs, a, bitstring.ToBytes32LE(int32(i)), e, p.sigmaProtocol.SerializeResponse(z))
 			if err != nil {
 				return nil, errs.WrapHashing(err, "cannot compute digest")
 			}
@@ -84,7 +88,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKPr
 	p.transcript.AppendMessages(challengeLabel, eI...)
 
 	// step 4. output (a_i, e_i, z_i) for every i in [r]
-	proof := &Proof[A, Z]{
+	proof = &Proof[A, Z]{
 		A: aI,
 		E: eI,
 		Z: zI,

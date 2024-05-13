@@ -34,13 +34,13 @@ func Fuzz_Test(f *testing.F) {
 		require.NoError(t, err)
 		prover, err := comp.NewProver([]byte("test"), nil)
 		require.NoError(t, err)
-		verifier, err := comp.NewVerifier([]byte("test"), nil)
-		require.NoError(t, err)
 
 		commitments, shares, proof, err := scheme.Split(secret, prover, prng)
 		require.NoError(t, err)
 		require.NotNil(t, shares)
 		for _, s := range shares {
+			verifier, err := comp.NewVerifier([]byte("test"), nil) // Fresh verifier for each share, to avoid transcript mixing.
+			require.NoError(t, err)
 			err = feldman.Verify(s, commitments, verifier, proof)
 			require.NoError(t, err)
 		}
