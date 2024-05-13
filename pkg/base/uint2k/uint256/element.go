@@ -27,8 +27,33 @@ type Uint256 [4]uint64
 
 var _ integer.Uint[*Ring256, Uint256] = Uint256{}
 
+func (Uint256) AnnouncedLen() int {
+	panic("implement me")
+}
+func (Uint256) TrueLen() uint {
+	panic("implement me")
+}
+func (Uint256) Arithmetic() integer.Arithmetic[Uint256] {
+	panic("implement me")
+}
+func (Uint256) IsBottom() bool {
+	panic("implement me")
+}
+func (Uint256) IsTop() bool {
+	panic("implement me")
+}
+func (Uint256) UpperBoundedLattice() algebra.UpperBoundedOrderTheoreticLattice[*Ring256, Uint256] {
+	return Ring()
+}
+func (Uint256) LowerBoundedLattice() algebra.LowerBoundedOrderTheoreticLattice[*Ring256, Uint256] {
+	return Ring()
+}
+
 func (Uint256) Structure() *Ring256 {
 	return Ring()
+}
+func (Uint256) Mod(x Uint256) (Uint256, error) {
+	panic("not implemented")
 }
 
 func (u Uint256) Equal(v Uint256) bool {

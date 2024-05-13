@@ -17,6 +17,9 @@ import (
 )
 
 type Uint128 struct {
+	integer.Number[Uint128]
+	algebra.BoundedOrderTheoreticLatticeElement[*Ring128, Uint128]
+
 	Lo, Hi uint64
 }
 
@@ -29,7 +32,10 @@ var (
 
 // New returns the Uint128 value (lo, hi).
 func New(lo, hi uint64) Uint128 {
-	return Uint128{lo, hi}
+	return Uint128{
+		Lo: lo,
+		Hi: hi,
+	}
 }
 
 // NewFromBytesBE converts big-endian b to the Uint128 value.
@@ -65,7 +71,10 @@ func NewFromNat(src *saferith.Nat) Uint128 {
 
 // Clone returns a copy the Uint128 value (lo, hi).
 func (u Uint128) Clone() Uint128 {
-	return Uint128{u.Lo, u.Hi}
+	return Uint128{
+		Lo: u.Lo,
+		Hi: u.Hi,
+	}
 }
 
 // IsZero returns true if u == 0.
@@ -104,10 +113,17 @@ func (u Uint128) Nat() *saferith.Nat {
 	return res
 }
 
+func (u Uint128) Mod(x Uint128) (Uint128, error) {
+	panic("implement me")
+}
+
 // ConstantTimeSelect returns x if b == true or y if b == false. Inspired by subtle.ConstantTimeSelect().
 func ConstantTimeSelect(v bool, x, y Uint128) Uint128 {
 	vv := uint64(utils.BoolTo[int](v))
-	return Uint128{^(vv-1)&x.Lo | (vv-1)&y.Lo, ^(vv-1)&x.Hi | (vv-1)&y.Hi}
+	return Uint128{
+		Lo: ^(vv-1)&x.Lo | (vv-1)&y.Lo,
+		Hi: ^(vv-1)&x.Hi | (vv-1)&y.Hi,
+	}
 }
 
 // FromBig converts i to a Uint128 value. It panics if i is negative or
@@ -176,7 +192,10 @@ func (u Uint128) Add(rhs algebra.AdditiveGroupoidElement[*Ring128, Uint128]) Uin
 	v := rhs.Unwrap()
 	lo, carry := bits.Add64(u.Lo, v.Lo, 0)
 	hi := u.Hi + v.Hi + carry
-	return Uint128{lo, hi}
+	return Uint128{
+		Lo: lo,
+		Hi: hi,
+	}
 }
 
 func (u Uint128) ApplyAdd(x algebra.AdditiveGroupoidElement[*Ring128, Uint128], n *saferith.Nat) Uint128 {
@@ -198,7 +217,10 @@ func (u Uint128) Mul(rhs algebra.MultiplicativeGroupoidElement[*Ring128, Uint128
 	v := rhs.Unwrap()
 	hi, lo := bits.Mul64(u.Lo, v.Lo)
 	hi += (u.Hi * v.Lo) + (u.Lo * v.Hi)
-	return Uint128{lo, hi}
+	return Uint128{
+		Lo: lo,
+		Hi: hi,
+	}
 }
 
 func (u Uint128) ApplyMul(x algebra.MultiplicativeGroupoidElement[*Ring128, Uint128], n *saferith.Nat) Uint128 {
@@ -373,7 +395,10 @@ func (u Uint128) Or(x algebra.DisjunctiveGroupoidElement[*Ring128, Uint128], ys 
 }
 
 func (u Uint128) or(v Uint128) Uint128 {
-	return Uint128{u.Lo | v.Lo, u.Hi | v.Hi}
+	return Uint128{
+		Lo: u.Lo | v.Lo,
+		Hi: u.Hi | v.Hi,
+	}
 }
 
 func (u Uint128) ApplyOr(x algebra.DisjunctiveGroupoidElement[*Ring128, Uint128], n *saferith.Nat) Uint128 {
@@ -413,7 +438,10 @@ func (u Uint128) Xor(x algebra.ExclusiveDisjunctiveGroupoidElement[*Ring128, Uin
 }
 
 func (u Uint128) xor(v Uint128) Uint128 {
-	return Uint128{u.Lo ^ v.Lo, u.Hi ^ v.Hi}
+	return Uint128{
+		Lo: u.Lo ^ v.Lo,
+		Hi: u.Hi ^ v.Hi,
+	}
 }
 
 func (u Uint128) ApplyXor(x algebra.ExclusiveDisjunctiveGroupoidElement[*Ring128, Uint128], n *saferith.Nat) Uint128 {
@@ -442,9 +470,15 @@ func (u Uint128) Lsh(n uint) Uint128 {
 	loNGt64 := uint64(0)
 	hiNGt64 := u.Lo << (n - 64)
 	if n > 64 {
-		return Uint128{loNGt64, hiNGt64}
+		return Uint128{
+			Lo: loNGt64,
+			Hi: hiNGt64,
+		}
 	} else {
-		return Uint128{loNLeq64, hiNLeq64}
+		return Uint128{
+			Lo: loNLeq64,
+			Hi: hiNLeq64,
+		}
 	}
 }
 
@@ -522,7 +556,10 @@ func (u Uint128) Sub(x algebra.AdditiveGroupElement[*Ring128, Uint128]) Uint128 
 	v := x.Unwrap()
 	lo, borrow := bits.Sub64(u.Lo, v.Lo, 0)
 	hi, _ := bits.Sub64(u.Hi, v.Hi, borrow)
-	return Uint128{lo, hi}
+	return Uint128{
+		Lo: lo,
+		Hi: hi,
+	}
 }
 
 func (u Uint128) ApplySub(x algebra.AdditiveGroupElement[*Ring128, Uint128], n *saferith.Nat) Uint128 {

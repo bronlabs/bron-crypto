@@ -25,10 +25,14 @@ type NaturalNumberMonoidElement[S algebra.Structure, E algebra.Element] interfac
 
 type N[S algebra.Structure, E algebra.Element] interface {
 	algebra.Rig[S, E]
+	algebra.LowerBoundedOrderTheoreticLattice[S, E]
+
 	NaturalNumberMonoid[S, E]
 }
 
 type Nat[S algebra.Structure, E algebra.Element] interface {
 	algebra.RigElement[S, E]
+	algebra.LowerBoundedOrderTheoreticLatticeElement[S, E]
+
 	NaturalNumberMonoidElement[S, E]
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 )
 
 var _ curves.BaseFieldElement = (*BaseFieldElementG2)(nil)
@@ -22,6 +23,8 @@ var _ encoding.BinaryUnmarshaler = (*BaseFieldElementG1)(nil)
 var _ json.Unmarshaler = (*BaseFieldElementG2)(nil)
 
 type BaseFieldElementG2 struct {
+	integer.Number[curves.BaseFieldElement]
+	algebra.BoundedOrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement]
 	V *bimpl.Fp2
 
 	_ ds.Incomparable
@@ -34,6 +37,9 @@ func NewBaseFieldElementG2(value uint64) *BaseFieldElementG2 {
 	return &BaseFieldElementG2{
 		V: v,
 	}
+}
+func (*BaseFieldElementG2) Mod(m curves.BaseFieldElement) (curves.BaseFieldElement, error) {
+	panic("implement me")
 }
 
 func (e *BaseFieldElementG2) Structure() curves.BaseField {

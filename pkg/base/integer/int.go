@@ -4,12 +4,15 @@ import "github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 
 // Z defines methods for S for it to behave like the integers.
 type Z[S algebra.Structure, E algebra.Element] interface {
-	N[S, E]
-	algebra.EuclideanDomain[S, E]
+	NaturalNumberMonoid[S, E]
+	algebra.Field[S, E]
 }
 
 // Int defines methods for element of type E to be elements of the integers S.
 type Int[S algebra.Structure, E algebra.Element] interface {
-	Nat[S, E]
-	algebra.EuclideanDomainElement[S, E]
+	NaturalNumberMonoidElement[S, E]
+	algebra.FieldElement[S, E]
+
+	Abs() E
+	Neg() E
 }

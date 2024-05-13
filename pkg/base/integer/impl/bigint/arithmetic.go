@@ -118,14 +118,6 @@ func (a *BigArithmetic) Abs(x *BigInt) *BigInt {
 	return B(new(big.Int).Abs(x.Int))
 }
 
-func (a *BigArithmetic) Next(x *BigInt) (*BigInt, error) {
-	suc, _ := a.WithoutBottom().Add(x, a.One())
-	if a.modulus != nil {
-		return a.Mod(suc, a.modulus)
-	}
-	return suc, nil
-}
-
 func (a *BigArithmetic) Neg(x *BigInt) (*BigInt, error) {
 	if a.bottom != nil && !a.Equal(x, a.Zero()) {
 		return nil, errs.NewValue("can't negate nonzero element out of integers")
@@ -158,6 +150,7 @@ func (a *BigArithmetic) Add(x, y *BigInt) (*BigInt, error) {
 	}
 	return xy, nil
 }
+
 func (a *BigArithmetic) Sub(x, y *BigInt) (*BigInt, error) {
 	xy := B(new(big.Int).Sub(x.Int, y.Int))
 	if a.bottom != nil {
@@ -170,6 +163,7 @@ func (a *BigArithmetic) Sub(x, y *BigInt) (*BigInt, error) {
 	}
 	return xy, nil
 }
+
 func (a *BigArithmetic) Mul(x, y *BigInt) (*BigInt, error) {
 	xy := B(new(big.Int).Mul(x.Int, y.Int))
 	if a.bottom != nil {
@@ -183,6 +177,23 @@ func (a *BigArithmetic) Mul(x, y *BigInt) (*BigInt, error) {
 	return xy, nil
 }
 
+func (a *BigArithmetic) Div(x, y *BigInt) (*BigInt, error) {
+	if y.Equal(Zero) {
+		return nil, errs.NewValue("can't divide by zero")
+	}
+	if a.bottom != nil {
+		if a.Cmp(x, a.bottom) == algebra.LessThan || a.Cmp(y, a.bottom) == algebra.LessThan {
+			return nil, errs.NewValue("x < bottom || y < bottom")
+		}
+	}
+
+	if a.modulus != nil {
+		res, _ := new(big.Int).DivMod(x.Int, y.Int, a.modulus.Int)
+		return B(res), nil
+	}
+	return B(new(big.Int).Div(x.Int, y.Int)), nil
+}
+
 func (a *BigArithmetic) Exp(x, y *BigInt) (*BigInt, error) {
 	if a.bottom != nil {
 		if a.Cmp(x, a.bottom) == algebra.LessThan || a.Cmp(y, a.bottom) == algebra.LessThan {
@@ -192,6 +203,7 @@ func (a *BigArithmetic) Exp(x, y *BigInt) (*BigInt, error) {
 	// should work for both cases of modulus being int or with some value
 	return B(new(big.Int).Exp(x.Int, y.Int, a.modulus.Int)), nil
 }
+
 func (a *BigArithmetic) Mod(x, m *BigInt) (*BigInt, error) {
 	if a.bottom != nil {
 		if a.Cmp(x, a.bottom) == algebra.LessThan || a.Cmp(m, a.bottom) == algebra.LessThan {
@@ -201,19 +213,10 @@ func (a *BigArithmetic) Mod(x, m *BigInt) (*BigInt, error) {
 	if a.Cmp(m, a.One()) == algebra.LessThan {
 		return nil, errs.NewValue("modulus < 1")
 	}
+	if a.modulus != nil && a.Cmp(m, a.modulus) == algebra.GreaterThan {
+		return nil, errs.NewValue("provided modulus is greater than the actual modulus")
+	}
 	return B(new(big.Int).Mod(x.Int, m.Int)), nil
-}
-func (a *BigArithmetic) Min(x, y *BigInt) *BigInt {
-	if a.Cmp(x, y) == algebra.LessThan {
-		return y
-	}
-	return x
-}
-func (a *BigArithmetic) Max(x, y *BigInt) *BigInt {
-	if a.Equal(a.Min(x, y), x) {
-		return y
-	}
-	return x
 }
 
 func (a *BigArithmetic) Uint64(x *BigInt) uint64 {

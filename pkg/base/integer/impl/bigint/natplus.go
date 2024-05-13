@@ -1,15 +1,30 @@
 package bigint
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
-	"github.com/copperexchange/krypton-primitives/pkg/base/integer/impl/mixins"
+	"github.com/copperexchange/krypton-primitives/pkg/base/integer/impl"
+	"github.com/cronokirby/saferith"
 )
 
 var _ integer.NatPlus[*NPlus, *NatPlus] = (*NatPlus)(nil)
 
 type NatPlus struct {
-	// impl.PositiveNatMixin[*NPlus, *NatPlus, *BigInt]
-	mixins.NatPlus[*NPlus, *NatPlus, *BigInt]
+	impl.NatPlusMixin[*NPlus, *NatPlus]
+	// order.ChainElement[*NPlus, *NatPlus]
+}
+
+func (n *NatPlus) Apply(with algebra.Operator, x algebra.GroupoidElement[*NPlus, *NatPlus], count *saferith.Nat) (*NatPlus, error) {
+	return n.GroupoidElement.Apply(with, x, count)
+}
+
+// func (n *NatPlus) Join(rhs algebra.OrderTheoreticLatticeElement[*NPlus, *NatPlus]) *NatPlus {
+// 	return n.ChainElement.Join(rhs)
+// }
+
+func (n *NatPlus) CanGenerateAllElements(with algebra.Operator) bool {
+	_, defined := n.Structure().GetOperator(with)
+	return n.IsOne() && defined && n.Structure().Addition().Name() == with
 }
 
 func (*NatPlus) Structure() *NPlus {
@@ -20,48 +35,10 @@ func (n *NatPlus) Unwrap() *NatPlus {
 	return n
 }
 
-// func (n *NatPlus) unwrap() *BigInt {
-// 	return n.V
-// }
+func (n *NatPlus) Clone() *NatPlus {
+	return n.Arithmetic().Clone(n)
+}
 
-// func (n *NatPlus) new(x *BigInt) (*NatPlus, error) {
-// 	arith := NewNPlusArithmetic()
-// 	if arith.Cmp(x, Zero) == algebra.LessThan {
-// 		return nil, errs.NewValue("input not in range")
-// 	}
-// 	mixin := impl.NewPositiveNatMixin[*NPlus, *NatPlus, *BigInt](arith, n.new, x)
-// 	return &NatPlus{
-// 		*mixin,
-// 	}, nil
-
-// }
-
-// func (n *NatPlus) New(x *big.Int) (*NatPlus, error) {
-// 	return n.new(B(x))
-// }
-
-// func (n *NatPlus) Clone() *NatPlus {
-// 	mixin := n.PositiveNatMixin.Clone()
-// 	return &NatPlus{
-// 		PositiveNatMixin: mixin,
-// 	}
-// }
-
-// func (n *NatPlus) Chain() algebra.Chain[*NPlus, *NatPlus] {
-// 	return &NPlus{}
-// }
-
-// func NewPositiveNat(v *big.Int) (*NatPlus, error) {
-// 	if v == nil {
-// 		return nil, errs.NewIsNil("v")
-// 	}
-// 	vv := B(v)
-// 	arithmetic := NewNPlusArithmetic()
-// 	if arithmetic.Cmp(vv, arithmetic.One()) == algebra.LessThan {
-// 		return nil, errs.NewValue("v < 1")
-// 	}
-// 	res := &NatPlus{}
-// 	return &NatPlus{
-// 		impl.NewPositiveNatMixin[*NPlus, *NatPlus, *BigInt](arithmetic, n.new, x),
-// 	}, nil
-// }
+func (n *NatPlus) AnnouncedLen() int {
+	panic("implement me")
+}

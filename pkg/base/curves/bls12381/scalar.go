@@ -16,6 +16,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -25,10 +26,16 @@ var _ encoding.BinaryUnmarshaler = (*Scalar)(nil)
 var _ json.Unmarshaler = (*Scalar)(nil)
 
 type Scalar struct {
+	integer.Number[curves.Scalar]
+	algebra.BoundedOrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar]
 	V *limb4.FieldValue
 	G curves.Curve
 
 	_ ds.Incomparable
+}
+
+func (*Scalar) Mod(m curves.Scalar) (curves.Scalar, error) {
+	panic("implement me")
 }
 
 func NewScalar(subgroup curves.Curve, value uint64) (*Scalar, error) {

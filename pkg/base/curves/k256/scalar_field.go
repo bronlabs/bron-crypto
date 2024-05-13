@@ -26,7 +26,12 @@ var (
 var _ curves.ScalarField = (*ScalarField)(nil)
 
 type ScalarField struct {
+	algebra.BoundedOrderTheoreticLattice[curves.ScalarField, curves.Scalar]
 	_ ds.Incomparable
+}
+
+func (*ScalarField) Arithmetic() integer.Arithmetic[curves.Scalar] {
+	panic("not implemented")
 }
 
 func k256ScalarFieldInit() {

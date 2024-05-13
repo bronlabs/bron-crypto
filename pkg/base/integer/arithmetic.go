@@ -27,7 +27,6 @@ type Arithmetic[T any] interface {
 	IsOdd(x T) bool
 
 	Abs(x T) T
-	Next(x T) (T, error)
 	Neg(x T) (T, error)
 	Inverse(x T) (T, error)
 
@@ -35,10 +34,8 @@ type Arithmetic[T any] interface {
 	Sub(x, y T) (T, error)
 	Mul(x, y T) (T, error)
 	Exp(x, y T) (T, error)
-	Mod(x, m T) (T, error)
 
-	Square(x T) (T, error)
-	Cube(x T) (T, error)
+	Mod(x, m T) (T, error)
 
 	Uint64(x T) uint64
 }

@@ -79,12 +79,47 @@ type ChainElement[C Structure, E Element] interface {
 }
 
 // BoundedOrderTheoreticLattice defines additional methods for a lattice S for it to be considered as bounded.
-type BoundedOrderTheoreticLattice[L Structure, E Element] interface {
+type UpperBoundedOrderTheoreticLattice[L Structure, E Element] interface {
 	OrderTheoreticLattice[L, E]
 	// Top returns the maximum of S.
 	Top() E
+
+	UpperBoundedLatticeElement() UpperBoundedOrderTheoreticLatticeElement[L, E]
+}
+
+// BoundedOrderTheoreticLatticeElement defines additional methods for elements of type E to be elements of
+// the bounded lattice S.
+type UpperBoundedOrderTheoreticLatticeElement[L Structure, E Element] interface {
+	OrderTheoreticLatticeElement[L, E]
+	// IsTop returns true if this element is the maximum of S.
+	IsTop() bool
+
+	UpperBoundedLattice() UpperBoundedOrderTheoreticLattice[L, E]
+}
+
+// BoundedOrderTheoreticLattice defines additional methods for a lattice S for it to be considered as bounded.
+type LowerBoundedOrderTheoreticLattice[L Structure, E Element] interface {
+	OrderTheoreticLattice[L, E]
 	// Bottom returns minimum of S.
 	Bottom() E
+
+	LowerBoundedLatticeElement() LowerBoundedOrderTheoreticLatticeElement[L, E]
+}
+
+// BoundedOrderTheoreticLatticeElement defines additional methods for elements of type E to be elements of
+// the bounded lattice S.
+type LowerBoundedOrderTheoreticLatticeElement[L Structure, E Element] interface {
+	OrderTheoreticLatticeElement[L, E]
+	// IsBottom returns true if this element is the minimum of S.
+	IsBottom() bool
+
+	LowerBoundedLattice() LowerBoundedOrderTheoreticLattice[L, E]
+}
+
+// BoundedOrderTheoreticLattice defines additional methods for a lattice S for it to be considered as bounded.
+type BoundedOrderTheoreticLattice[L Structure, E Element] interface {
+	UpperBoundedOrderTheoreticLattice[L, E]
+	LowerBoundedOrderTheoreticLattice[L, E]
 
 	BoundedLatticeElement() BoundedOrderTheoreticLatticeElement[L, E]
 }
@@ -92,11 +127,8 @@ type BoundedOrderTheoreticLattice[L Structure, E Element] interface {
 // BoundedOrderTheoreticLatticeElement defines additional methods for elements of type E to be elements of
 // the bounded lattice S.
 type BoundedOrderTheoreticLatticeElement[L Structure, E Element] interface {
-	OrderTheoreticLatticeElement[L, E]
-	// IsTop returns true if this element is the maximum of S.
-	IsTop() bool
-	// IsBottom returns true if this element is the minimum of S.
-	IsBottom() bool
+	UpperBoundedOrderTheoreticLatticeElement[L, E]
+	LowerBoundedOrderTheoreticLatticeElement[L, E]
 
 	BoundedLattice() BoundedOrderTheoreticLattice[L, E]
 }

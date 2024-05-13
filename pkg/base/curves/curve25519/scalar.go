@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 	saferith_utils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -23,9 +24,15 @@ var _ encoding.BinaryUnmarshaler = (*Scalar)(nil)
 var _ json.Unmarshaler = (*Scalar)(nil)
 
 type Scalar struct {
+	integer.Number[curves.Scalar]
+	algebra.BoundedOrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar]
 	V [32]byte
 
 	_ ds.Incomparable
+}
+
+func (*Scalar) Mod(m curves.Scalar) (curves.Scalar, error) {
+	panic("implement me")
 }
 
 func NewScalar(input uint64) *Scalar {

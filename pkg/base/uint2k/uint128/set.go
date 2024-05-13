@@ -14,7 +14,12 @@ import (
 )
 
 type Ring128 struct {
+	algebra.BoundedOrderTheoreticLattice[*Ring128, Uint128]
 	_ ds.Incomparable
+}
+
+func (*Ring128) Arithmetic() integer.Arithmetic[Uint128] {
+	panic("not implemented")
 }
 
 var _ integer.Zn[*Ring128, Uint128] = (*Ring128)(nil)

@@ -7,8 +7,14 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
-type Groupoid[G algebra.Groupoid[G, E], E algebra.GroupoidElement[G, E]] struct {
-	algebra.Groupoid[G, E]
+type Groupoid[G algebra.Groupoid[G, E], E algebra.GroupoidElement[G, E]] struct{}
+
+func (g *Groupoid[G, E]) Cardinality() *saferith.Modulus {
+	panic("in mixin")
+}
+
+func (g *Groupoid[G, E]) GetOperator(op algebra.Operator) (algebra.BinaryOperator[E], bool) {
+	panic("in mixin")
 }
 
 func (g *Groupoid[G, E]) Order() *saferith.Nat {
@@ -27,9 +33,7 @@ func (g *Groupoid[G, E]) Operate(under algebra.Operator, x algebra.GroupoidEleme
 	return out, nil
 }
 
-type AdditiveGroupoid[G algebra.AdditiveGroupoid[G, E], E algebra.AdditiveGroupoidElement[G, E]] struct {
-	algebra.AdditiveGroupoid[G, E]
-}
+type AdditiveGroupoid[G algebra.AdditiveGroupoid[G, E], E algebra.AdditiveGroupoidElement[G, E]] struct{}
 
 func (g *AdditiveGroupoid[G, E]) Add(x algebra.AdditiveGroupoidElement[G, E], ys ...algebra.AdditiveGroupoidElement[G, E]) E {
 	sum := x
@@ -39,9 +43,7 @@ func (g *AdditiveGroupoid[G, E]) Add(x algebra.AdditiveGroupoidElement[G, E], ys
 	return sum.Unwrap()
 }
 
-type MultiplicativeGroupoid[G algebra.MultiplicativeGroupoid[G, E], E algebra.MultiplicativeGroupoidElement[G, E]] struct {
-	algebra.MultiplicativeGroupoid[G, E]
-}
+type MultiplicativeGroupoid[G algebra.MultiplicativeGroupoid[G, E], E algebra.MultiplicativeGroupoidElement[G, E]] struct{}
 
 func (*MultiplicativeGroupoid[G, E]) Mul(x algebra.MultiplicativeGroupoidElement[G, E], ys ...algebra.MultiplicativeGroupoidElement[G, E]) E {
 	sum := x
@@ -81,8 +83,10 @@ func (g *MultiplicativeGroupoid[G, E]) MultiExponentExp(base algebra.Multiplicat
 	return prod
 }
 
-type CyclicGroupoid[G algebra.CyclicGroupoid[G, E], E algebra.CyclicGroupoidElement[G, E]] struct {
-	algebra.CyclicGroupoid[G, E]
+type CyclicGroupoid[G algebra.CyclicGroupoid[G, E], E algebra.CyclicGroupoidElement[G, E]] struct{}
+
+func (g *CyclicGroupoid[G, E]) BasePoint() E {
+	panic("in mixin")
 }
 
 func (g *CyclicGroupoid[G, E]) Generator() E {

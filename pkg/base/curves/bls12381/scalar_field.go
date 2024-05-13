@@ -29,7 +29,12 @@ var _ curves.ScalarField = (*ScalarField[G1])(nil)
 var _ curves.ScalarField = (*ScalarField[G2])(nil)
 
 type ScalarField[S SourceSubGroups] struct {
+	algebra.BoundedOrderTheoreticLattice[curves.ScalarField, curves.Scalar]
 	_ ds.Incomparable
+}
+
+func (*ScalarField[_]) Arithmetic() integer.Arithmetic[curves.Scalar] {
+	panic("not implemented")
 }
 
 func bls12381G1ScalarFieldInit() {

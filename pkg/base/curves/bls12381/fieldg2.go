@@ -28,7 +28,12 @@ var (
 var _ curves.BaseField = (*BaseFieldG2)(nil)
 
 type BaseFieldG2 struct {
+	algebra.BoundedOrderTheoreticLattice[curves.BaseField, curves.BaseFieldElement]
 	_ ds.Incomparable
+}
+
+func (*BaseFieldG2) Arithmetic() integer.Arithmetic[curves.BaseFieldElement] {
+	panic("not implemented")
 }
 
 func g2BaseFieldInit() {

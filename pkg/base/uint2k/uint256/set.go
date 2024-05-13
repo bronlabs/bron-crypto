@@ -16,7 +16,12 @@ import (
 
 // Ring256 is a ring ℤ/2^256ℤ of integers modulo 2^256.
 type Ring256 struct {
+	algebra.BoundedOrderTheoreticLattice[*Ring256, Uint256]
 	_ ds.Incomparable
+}
+
+func (*Ring256) Arithmetic() integer.Arithmetic[Uint256] {
+	panic("not implemented")
 }
 
 var _ integer.Zn[*Ring256, Uint256] = (*Ring256)(nil)
