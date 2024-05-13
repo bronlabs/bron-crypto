@@ -223,12 +223,12 @@ func (u Uint256) Previous() (Uint256, error) {
 	return u.Sub(One), nil
 }
 
-func (u Uint256) Min(rhs Uint256) Uint256 {
-	return Ring().Select(u.Cmp(rhs) == algebra.LessThan, u, rhs)
+func (u Uint256) Min(rhs algebra.ChainElement[*Ring256, Uint256]) Uint256 {
+	return Ring().Select(u.Cmp(rhs) == algebra.LessThan, u, rhs.Unwrap())
 }
 
-func (u Uint256) Max(rhs Uint256) Uint256 {
-	return Ring().Select(u.Cmp(rhs) == algebra.LessThan, rhs, u)
+func (u Uint256) Max(rhs algebra.ChainElement[*Ring256, Uint256]) Uint256 {
+	return Ring().Select(u.Cmp(rhs) == algebra.LessThan, rhs.Unwrap(), u)
 }
 
 func (Uint256) Chain() algebra.Chain[*Ring256, Uint256] {

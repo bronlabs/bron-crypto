@@ -21,21 +21,6 @@ func RFold[G algebra.Structure, E algebra.Element](op algebra.BinaryOperator[E],
 	return res, nil
 }
 
-func LFold[G algebra.Structure, E algebra.Element](op algebra.BinaryOperator[E], last algebra.GroupoidElement[G, E], rest ...algebra.GroupoidElement[G, E]) (E, error) {
-	if op == nil {
-		return *new(E), errs.NewIsNil("operator")
-	}
-	unwrappedRest := make([]E, len(rest))
-	for i, r := range rest {
-		unwrappedRest[i] = r.Unwrap()
-	}
-	res, err := itertools.FoldRightOrError[E, E](op.Map, last.Unwrap(), unwrappedRest...)
-	if err != nil {
-		return *new(E), errs.WrapFailed(err, "could not apply operator")
-	}
-	return res, nil
-}
-
 type OperatorSuite[E algebra.Element] struct {
 	m        map[algebra.Operator]algebra.BinaryOperator[E]
 	addition algebra.Operator

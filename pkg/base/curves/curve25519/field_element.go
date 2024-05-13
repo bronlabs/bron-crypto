@@ -413,20 +413,38 @@ func (*BaseFieldElement) IsTop() bool {
 	panic("not implemented")
 }
 
-func (*BaseFieldElement) Join(rhs algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
-	panic("not implemented")
+func (e *BaseFieldElement) Join(rhs algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	return e.Max(rhs.Unwrap())
 }
 
-func (*BaseFieldElement) Max(rhs curves.BaseFieldElement) curves.BaseFieldElement {
-	panic("not implemented")
+func (e *BaseFieldElement) Max(rhs algebra.ChainElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	switch e.Cmp(rhs) {
+	case algebra.Incomparable:
+		panic("incomparable")
+	case algebra.LessThan:
+		return rhs.Unwrap()
+	case algebra.Equal, algebra.GreaterThan:
+		return e
+	default:
+		panic("comparison output not supported")
+	}
 }
 
-func (*BaseFieldElement) Meet(rhs algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
-	panic("not implemented")
+func (e *BaseFieldElement) Meet(rhs algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	return e.Min(rhs.Unwrap())
 }
 
-func (*BaseFieldElement) Min(rhs curves.BaseFieldElement) curves.BaseFieldElement {
-	panic("not implemented")
+func (e *BaseFieldElement) Min(rhs algebra.ChainElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	switch e.Cmp(rhs) {
+	case algebra.Incomparable:
+		panic("incomparable")
+	case algebra.LessThan, algebra.Equal:
+		return e
+	case algebra.GreaterThan:
+		return rhs.Unwrap()
+	default:
+		panic("comparison output not supported")
+	}
 }
 
 // === Curve Methods.

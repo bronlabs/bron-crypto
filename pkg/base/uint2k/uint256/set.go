@@ -181,12 +181,12 @@ func (*Ring256) Characteristic() *saferith.Nat {
 	panic("implement me")
 }
 
-func (*Ring256) Join(x, y algebra.OrderTheoreticLatticeElement[*Ring256, Uint256]) Uint256 {
-	return x.Join(y)
+func (*Ring256) Join(x algebra.OrderTheoreticLatticeElement[*Ring256, Uint256], ys ...algebra.OrderTheoreticLatticeElement[*Ring256, Uint256]) Uint256 {
+	panic("not implemented")
 }
 
-func (*Ring256) Meet(x, y algebra.OrderTheoreticLatticeElement[*Ring256, Uint256]) Uint256 {
-	return x.Join(y)
+func (*Ring256) Meet(x algebra.OrderTheoreticLatticeElement[*Ring256, Uint256], ys ...algebra.OrderTheoreticLatticeElement[*Ring256, Uint256]) Uint256 {
+	panic("not implemented")
 }
 
 func (*Ring256) LatticeElement() algebra.OrderTheoreticLatticeElement[*Ring256, Uint256] {

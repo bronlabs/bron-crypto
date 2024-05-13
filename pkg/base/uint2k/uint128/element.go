@@ -276,12 +276,12 @@ func (u Uint128) Previous() (Uint128, error) {
 	return u.Decrement(), nil
 }
 
-func (u Uint128) Min(rhs Uint128) Uint128 {
-	return Ring().Select(u.Cmp(rhs) == algebra.LessThan, u, rhs)
+func (u Uint128) Min(rhs algebra.ChainElement[*Ring128, Uint128]) Uint128 {
+	return Ring().Select(u.Cmp(rhs) == algebra.LessThan, u, rhs.Unwrap())
 }
 
-func (u Uint128) Max(rhs Uint128) Uint128 {
-	return Ring().Select(u.Cmp(rhs) == algebra.LessThan, rhs, u)
+func (u Uint128) Max(rhs algebra.ChainElement[*Ring128, Uint128]) Uint128 {
+	return Ring().Select(u.Cmp(rhs) == algebra.LessThan, rhs.Unwrap(), u)
 }
 
 func (Uint128) Chain() algebra.Chain[*Ring128, Uint128] {

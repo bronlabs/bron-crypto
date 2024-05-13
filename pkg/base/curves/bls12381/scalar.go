@@ -533,12 +533,12 @@ func (s *Scalar) Join(rhs algebra.OrderTheoreticLatticeElement[curves.ScalarFiel
 	return s.Max(rhs.Unwrap())
 }
 
-func (s *Scalar) Max(rhs curves.Scalar) curves.Scalar {
+func (s *Scalar) Max(rhs algebra.ChainElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	switch s.Cmp(rhs) {
 	case algebra.Incomparable:
 		panic("incomparable")
 	case algebra.LessThan:
-		return rhs
+		return rhs.Unwrap()
 	case algebra.Equal, algebra.GreaterThan:
 		return s
 	default:
@@ -550,14 +550,14 @@ func (s *Scalar) Meet(rhs algebra.OrderTheoreticLatticeElement[curves.ScalarFiel
 	return s.Min(rhs.Unwrap())
 }
 
-func (s *Scalar) Min(rhs curves.Scalar) curves.Scalar {
+func (s *Scalar) Min(rhs algebra.ChainElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	switch s.Cmp(rhs) {
 	case algebra.Incomparable:
 		panic("incomparable")
 	case algebra.LessThan, algebra.Equal:
 		return s
 	case algebra.GreaterThan:
-		return rhs
+		return rhs.Unwrap()
 	default:
 		panic("comparison output not supported")
 	}

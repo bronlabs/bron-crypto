@@ -19,20 +19,15 @@ type Min[E Element] interface {
 	Min(x, y E) E
 }
 
-type Enumerable[E Element] interface {
-	Next() (E, error)
-	Previous() (E, error)
-}
-
 // OrderTheoreticLattice defines methods needed for a structured set to be a lattice.
 // A lattice is a partially ordered set where every pair has a least upper bound (join) and a greatest lower bound (meet).
 type OrderTheoreticLattice[L Structure, E Element] interface {
 	// Lattice is a structured set.
 	StructuredSet[L, E]
 	// Join returns the least upper bound of x and y.
-	Join(x, y OrderTheoreticLatticeElement[L, E]) E
+	Join(x OrderTheoreticLatticeElement[L, E], ys ...OrderTheoreticLatticeElement[L, E]) E
 	// Meet returns the greatest lower bound of x and y.
-	Meet(x, y OrderTheoreticLatticeElement[L, E]) E
+	Meet(x OrderTheoreticLatticeElement[L, E], ys ...OrderTheoreticLatticeElement[L, E]) E
 
 	LatticeElement() OrderTheoreticLatticeElement[L, E]
 }
@@ -71,11 +66,10 @@ type Chain[C Structure, E Element] interface {
 // ChainElement defined methods for elements of type E to be elements of chain S.
 type ChainElement[C Structure, E Element] interface {
 	OrderTheoreticLatticeElement[C, E]
-	NatLike[E]
 	// Min returns the minimum of this element and rhs.
-	Min(rhs E) E
+	Min(rhs ChainElement[C, E]) E
 	// Max returns the maximum of this element and rhs.
-	Max(rhs E) E
+	Max(rhs ChainElement[C, E]) E
 
 	Chain() Chain[C, E]
 

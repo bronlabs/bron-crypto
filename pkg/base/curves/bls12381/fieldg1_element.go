@@ -484,12 +484,12 @@ func (e *BaseFieldElementG1) Join(rhs algebra.OrderTheoreticLatticeElement[curve
 	return e.Max(rhs.Unwrap())
 }
 
-func (e *BaseFieldElementG1) Max(rhs curves.BaseFieldElement) curves.BaseFieldElement {
+func (e *BaseFieldElementG1) Max(rhs algebra.ChainElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	switch e.Cmp(rhs) {
 	case algebra.Incomparable:
 		panic("incomparable")
 	case algebra.LessThan:
-		return rhs
+		return rhs.Unwrap()
 	case algebra.Equal, algebra.GreaterThan:
 		return e
 	default:
@@ -501,14 +501,14 @@ func (e *BaseFieldElementG1) Meet(rhs algebra.OrderTheoreticLatticeElement[curve
 	return e.Min(rhs.Unwrap())
 }
 
-func (e *BaseFieldElementG1) Min(rhs curves.BaseFieldElement) curves.BaseFieldElement {
+func (e *BaseFieldElementG1) Min(rhs algebra.ChainElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	switch e.Cmp(rhs) {
 	case algebra.Incomparable:
 		panic("incomparable")
 	case algebra.LessThan, algebra.Equal:
 		return e
 	case algebra.GreaterThan:
-		return rhs
+		return rhs.Unwrap()
 	default:
 		panic("comparison output not supported")
 	}

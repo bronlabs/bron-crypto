@@ -382,12 +382,12 @@ func (f *BaseField) Bottom() curves.BaseFieldElement {
 	return f.Zero()
 }
 
-func (*BaseField) Join(x, y algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
-	return x.Join(y)
+func (*BaseField) Join(x algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	panic("not implemented")
 }
 
-func (*BaseField) Meet(x, y algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
-	return x.Meet(y)
+func (*BaseField) Meet(x algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+	panic("not implemented")
 }
 
 func (*BaseField) Max(x algebra.ChainElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.ChainElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {

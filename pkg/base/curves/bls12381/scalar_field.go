@@ -391,12 +391,12 @@ func (sf *ScalarField[_]) Bottom() curves.Scalar {
 	return sf.Zero()
 }
 
-func (*ScalarField[_]) Join(x algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar], y algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
-	return x.Join(y)
+func (*ScalarField[_]) Join(x algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar], ys ...algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+	panic("not implemented")
 }
 
-func (*ScalarField[_]) Meet(x algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar], y algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
-	return x.Meet(y)
+func (*ScalarField[_]) Meet(x algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar], ys ...algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+	panic("not implemented")
 }
 
 func (*ScalarField[_]) Max(x algebra.ChainElement[curves.ScalarField, curves.Scalar], ys ...algebra.ChainElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
