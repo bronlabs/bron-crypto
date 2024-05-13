@@ -7,12 +7,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	mult "github.com/copperexchange/krypton-primitives/pkg/threshold/mult/dkls23"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
+	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
 )
 
 func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState) (r1b *Round1Broadcast, r1p2p network.RoundMessages[types.ThresholdSignatureProtocol, *Round1P2P], err error) {
@@ -29,7 +30,7 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 	// step 1.2: public instance key BigR_i
 	state.BigR_i = protocol.Curve().ScalarBaseMult(state.R_i)
 
-	state.InstanceKeyWitness = make(map[types.SharingID]commitments.Witness)
+	state.InstanceKeyOpening = make(map[types.SharingID]*hashveccomm.Opening)
 	state.Chi_i = make(map[types.SharingID]curves.Scalar)
 	outputP2P := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round1P2P]()
 
@@ -45,17 +46,19 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 		}
 
 		// step 1.4: (c'_ij, w_ij) <- Commit(i || j || sid || R_i)
-		commitmentToInstanceKey, witness, err := commitments.Commit(
-			p.SessionId,
-			p.Prng,
-			bitstring.ToBytes32LE(int32(p.SharingId())),
-			bitstring.ToBytes32LE(int32(sharingId)),
-			state.BigR_i.ToAffineCompressed(),
-		)
+		vector := make([]hashcomm.Message, 3)
+		vector[0] = bitstring.ToBytes32LE(int32(p.SharingId()))
+		vector[1] = bitstring.ToBytes32LE(int32(sharingId))
+		vector[2] = state.BigR_i.ToAffineCompressed()
+		vectorCommitter, err := hashveccomm.NewVectorCommitter(p.SessionId, p.Prng)
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "could not commit to instance key")
+			return nil, nil, errs.WrapFailed(err, "cannot instantiate vector committer")
 		}
-		state.InstanceKeyWitness[sharingId] = witness
+		commitmentToInstanceKey, opening, err := vectorCommitter.Commit(vector)
+		if err != nil {
+			return nil, nil, errs.NewFailed("cannot commit to instance key")
+		}
+		state.InstanceKeyOpening[sharingId] = opening
 
 		// step 1.5: Run γ_ij <- RVOLE.Round1() as Bob
 		multInstance, exists := state.Protocols.Multiplication.Get(participant)
@@ -104,7 +107,7 @@ func DoRound2(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 	a := [mult.L]curves.Scalar{state.R_i, state.Sk_i}
 
 	state.ReceivedBigR_i = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
-	state.ReceivedInstanceKeyCommitments = make(map[types.SharingID]commitments.Commitment)
+	state.ReceivedInstanceKeyCommitments = make(map[types.SharingID]*hashveccomm.VectorCommitment)
 	state.Cu_i = make(map[types.SharingID]curves.Scalar)
 	state.Cv_i = make(map[types.SharingID]curves.Scalar)
 	outputP2P := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round2P2P]()
@@ -156,7 +159,7 @@ func DoRound2(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 			GammaU_ij:          gammaU_ij,
 			GammaV_ij:          gammaV_ij,
 			Psi_ij:             psi_ij,
-			InstanceKeyWitness: state.InstanceKeyWitness[sharingId],
+			InstanceKeyOpening: state.InstanceKeyOpening[sharingId],
 		})
 	}
 
@@ -197,19 +200,9 @@ func DoRound3Prologue(p *Participant, protocol types.ThresholdProtocol, quorum d
 		GammaU_ji := receivedP2PMessage.GammaU_ij
 		GammaV_ji := receivedP2PMessage.GammaV_ij
 
-		receivedBigR_i, exists := state.ReceivedBigR_i.Get(participant)
-		if !exists {
-			return errs.NewMissing("do not have BigRI in memory for %s", participant.String())
-		}
 		// step 3.2: Open(j || i || sid || R_i, c'_ij, w_ij)
-		if err := commitments.Open(
-			p.SessionId,
-			state.ReceivedInstanceKeyCommitments[sharingId],
-			receivedP2PMessage.InstanceKeyWitness,
-			bitstring.ToBytes32LE(int32(sharingId)),
-			bitstring.ToBytes32LE(int32(p.SharingId())),
-			receivedBigR_i.ToAffineCompressed(),
-		); err != nil {
+		vectorVerifier := hashveccomm.NewVectorVerifier(p.SessionId)
+		if err := vectorVerifier.Verify(state.ReceivedInstanceKeyCommitments[sharingId], receivedP2PMessage.InstanceKeyOpening); err != nil {
 			return errs.WrapIdentifiableAbort(err, participant.String(), "message could not be opened")
 		}
 
