@@ -4,13 +4,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing"
+	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
 )
 
 func (pc *PrimaryCosigner) Round1() (r1out *Round1OutputP2P, err error) {
@@ -27,17 +28,19 @@ func (pc *PrimaryCosigner) Round1() (r1out *Round1OutputP2P, err error) {
 	pc.state.bigR1 = pc.Protocol.Curve().ScalarBaseMult(pc.state.k1)
 
 	// step 1.2: c1 <- Commit(sid || Q || R1)
-	bigR1Commitment, bigR1Witness, err := commitments.Commit(
-		pc.SessionId,
-		pc.Prng,
-		pc.myAuthKey.PublicKey().ToAffineCompressed(),
-		pc.state.bigR1.ToAffineCompressed(),
-	)
+	vector := make([]hashcomm.Message, 2)
+	vector[0] = pc.myAuthKey.PublicKey().ToAffineCompressed()
+	vector[1] = pc.state.bigR1.ToAffineCompressed()
+	vectorCommitter, err := hashveccomm.NewVectorCommitter(pc.SessionId, pc.Prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot commit to R1")
+		return nil, errs.WrapFailed(err, "cannot instantiate vector committer")
+	}
+	bigR1Commitment, bigR1Opening, err := vectorCommitter.Commit(vector)
+	if err != nil {
+		return nil, errs.NewFailed("cannot commit to R")
 	}
 
-	pc.state.bigR1Witness = bigR1Witness
+	pc.state.bigR1Opening = bigR1Opening
 
 	pc.Round = 3
 	// step 1.3: Send(c1) -> P_2
@@ -121,7 +124,7 @@ func (pc *PrimaryCosigner) Round3(r2out *Round2OutputP2P) (r3out *Round3OutputP2
 
 	pc.Round = 5
 	return &Round3OutputP2P{
-		BigR1Witness: pc.state.bigR1Witness,
+		BigR1Opening: pc.state.bigR1Opening,
 		BigR1:        pc.state.bigR1,
 		BigR1Proof:   bigR1Proof,
 	}, nil
@@ -136,9 +139,9 @@ func (sc *SecondaryCosigner) Round4(r3out *Round3OutputP2P, message []byte) (rou
 		return nil, errs.WrapValidation(err, "invalid round %d input", sc.Round)
 	}
 
-	err = commitments.Open(sc.SessionId, sc.state.bigR1Commitment, r3out.BigR1Witness, sc.primaryIdentityKey.PublicKey().ToAffineCompressed(), r3out.BigR1.ToAffineCompressed())
-	if err != nil {
-		return nil, errs.WrapIdentifiableAbort(err, sc.primaryIdentityKey.String(), "cannot open R1 commitment")
+	vectorVerifier := hashveccomm.NewVectorVerifier(sc.SessionId)
+	if err := vectorVerifier.Verify(sc.state.bigR1Commitment, r3out.BigR1Opening); err != nil {
+		return nil, errs.WrapFailed(err, "cannot open R commitment")
 	}
 
 	bigR1ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, sc.SessionId, sc.primaryIdentityKey.PublicKey().ToAffineCompressed())

@@ -5,10 +5,10 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
+	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
 )
 
 var _ network.Message[types.Protocol] = (*Round1OutputP2P)(nil)
@@ -17,7 +17,7 @@ var _ network.Message[types.Protocol] = (*Round3OutputP2P)(nil)
 var _ network.Message[types.Protocol] = (*Round4OutputP2P)(nil)
 
 type Round1OutputP2P struct {
-	BigR1Commitment commitments.Commitment
+	BigR1Commitment *hashveccomm.VectorCommitment
 
 	_ ds.Incomparable
 }
@@ -30,7 +30,7 @@ type Round2OutputP2P struct {
 }
 
 type Round3OutputP2P struct {
-	BigR1Witness commitments.Witness
+	BigR1Opening *hashveccomm.Opening
 	BigR1        curves.Point
 	BigR1Proof   compiler.NIZKPoKProof
 
@@ -44,8 +44,8 @@ type Round4OutputP2P struct {
 }
 
 func (r1p2p *Round1OutputP2P) Validate(protocol types.Protocol) error {
-	if r1p2p.BigR1Commitment == nil {
-		return errs.NewIsNil("big r1 commitment")
+	if err := r1p2p.BigR1Commitment.Validate(); err != nil {
+		return errs.WrapValidation(err, "could not validate commitment")
 	}
 	return nil
 }
@@ -67,8 +67,8 @@ func (r2p2p *Round2OutputP2P) Validate(protocol types.Protocol) error {
 }
 
 func (r3p2p *Round3OutputP2P) Validate(protocol types.Protocol) error {
-	if r3p2p.BigR1Witness == nil {
-		return errs.NewIsNil("big r1 witness")
+	if err := r3p2p.BigR1Opening.Validate(); err != nil {
+		return errs.WrapValidation(err, "could not validate opening")
 	}
 	if r3p2p.BigR1 == nil {
 		return errs.NewIsNil("big r1")

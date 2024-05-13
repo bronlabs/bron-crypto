@@ -8,12 +8,12 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
 )
 
 const (
@@ -45,7 +45,7 @@ type Cosigner struct {
 
 type PrimaryCosignerState struct {
 	k1           curves.Scalar
-	bigR1Witness []byte
+	bigR1Opening *hashveccomm.Opening
 	bigR         curves.Point
 	r            curves.Scalar
 	bigR1        curves.Point
@@ -64,7 +64,7 @@ type PrimaryCosigner struct {
 }
 
 type SecondaryCosignerState struct {
-	bigR1Commitment commitments.Commitment
+	bigR1Commitment *hashveccomm.VectorCommitment
 	k2              curves.Scalar
 	bigR2           curves.Point
 
