@@ -1,11 +1,3 @@
-SCRIPTS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
-
-.PHONY: deps-linter
-deps-linter:
-	chmod +x ${SCRIPTS_DIR}/install_deps.sh
-	${SCRIPTS_DIR}/install_deps.sh golangci-lint
-	${SCRIPTS_DIR}/install_deps.sh nancy
-
 .PHONY: test-package-%
 test-package-%:
 	$(MAKE) clean
@@ -16,55 +8,55 @@ test-package-%:
 .PHONY: fuzz-test-%
 fuzz-test-%:
 	$(MAKE) clean
-	chmod +x ${SCRIPTS_DIR}/run_fuzz.sh
+	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_fuzz.sh
 	${SCRIPTS_DIR}/run_fuzz.sh ${*} --fuzztime=10s
 
 .PHONY: long-fuzz-test-%
 long-fuzz-test-%:
 	$(MAKE) clean
-	chmod +x ${SCRIPTS_DIR}/run_fuzz.sh
+	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_fuzz.sh
 	${SCRIPTS_DIR}/run_fuzz.sh ${*} --fuzztime=120s
 
 .PHONY: profile-test-%
 profile-test-%:
 	$(MAKE) clean
-	chmod +x ${SCRIPTS_DIR}/run_profile.sh
+	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_profile.sh
 	${SCRIPTS_DIR}/run_profile.sh ${*}
 
 .PHONY: benchmark-test-%
 benchmark-test-%:
 	$(MAKE) clean
-	chmod +x ${SCRIPTS_DIR}/run_benchmark.sh
+	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_benchmark.sh
 	${SCRIPTS_DIR}/run_benchmark.sh ${*}
 
 .PHONY: cte-test-%
 cte-test-%:
 	$(MAKE) clean
-	chmod +x ${SCRIPTS_DIR}/run_cte.sh
+	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_cte.sh
 	${SCRIPTS_DIR}/run_cte.sh ${*}
 
 .PHONY: unit-test-%
 unit-test-%:
 	$(MAKE) clean
-	chmod +x ${SCRIPTS_DIR}/run_unittest.sh
+	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_unittest.sh
 	${SCRIPTS_DIR}/run_unittest.sh ${*} -short
 
 .PHONY: long-unit-test-%
 long-unit-test-%:
 	$(MAKE) clean
-	chmod +x ${SCRIPTS_DIR}/run_unittest.sh
+	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_unittest.sh
 	${SCRIPTS_DIR}/run_unittest.sh ${*}
 
 .PHONY: deflake-test-%
 deflake-test-%:
 	$(MAKE) clean
-	chmod +x ${SCRIPTS_DIR}/run_deflake.sh
+	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_deflake.sh
 	${SCRIPTS_DIR}/run_deflake.sh ${*}
 
 .PHONY: long-deflake-test-%
 long-deflake-test-%:
 	$(MAKE) clean
-	chmod +x ${SCRIPTS_DIR}/run_deflake.sh
+	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_deflake.sh
 	${SCRIPTS_DIR}/run_deflake.sh ${*} -short
 
 .PHONY: test-master
@@ -80,4 +72,5 @@ test-nightly:
 	$(MAKE) lint-long
 	$(MAKE) fuzz-long
 	$(MAKE) deflake-long
-	$(MAKE) sync-thirdparty
+	# TODO: enable this later
+	# $(MAKE) sync-thirdparty

@@ -6,5 +6,6 @@
 !/pkg/*
 !/scripts/*
 !/Makefile
+!/env_docker.mk
 !/thirdparty/*
 thirdparty/boringssl/build

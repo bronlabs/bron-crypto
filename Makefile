@@ -1,6 +1,11 @@
 SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
-include $(SELF_DIR)/scripts/scripts.mk
-include $(SELF_DIR)/thirdparty/thirdparty.mk
+KRYPTON_PRIMITIVES_HOME := $(shell cd ${SELF_DIR} && pwd)
+KRYPTON_PRIMITIVES_SCRIPTS_DIR := $(KRYPTON_PRIMITIVES_HOME)/scripts
+KRYPTON_PRIMITIVES_THIRD_PARTY_DIR := $(KRYPTON_PRIMITIVES_HOME)/thirdparty
+
+include $(KRYPTON_PRIMITIVES_HOME)/env.mk
+include $(KRYPTON_PRIMITIVES_SCRIPTS_DIR)/scripts.mk
+include $(KRYPTON_PRIMITIVES_THIRD_PARTY_DIR)/thirdparty.mk
 
 GOENV=GO111MODULE=on
 GO=${GOENV} go
@@ -19,7 +24,7 @@ pkg/base/errs/known_errors.gen.go:
 	golangci-lint run --fix ./pkg/base/errs
 
 .PHONY: deps
-deps: deps-linter deps-go deps-boring
+deps: deps-go deps-boring
 
 .PHONY: deps-go
 deps-go:
@@ -66,17 +71,17 @@ githooks:
 
 .PHONY: lint
 lint:
-	go list -json -m all | nancy sleuth
-	golangci-lint run --timeout=5m
+	$(RUN_IN_DOCKER) 'go list -json -m all | nancy sleuth -d /tmp/.ossindexcache'
+	$(RUN_IN_DOCKER) 'golangci-lint run --timeout=5m'
 
 .PHONY: lint-long
 lint-long:
-	go list -json -m all | nancy sleuth
-	golangci-lint run --timeout=120m
+	$(RUN_IN_DOCKER) 'go list -json -m all | nancy sleuth -d /tmp/.ossindexcache'
+	$(RUN_IN_DOCKER) 'golangci-lint run --timeout=120m'
 
 .PHONY: lint-fix
 lint-fix:
-	golangci-lint run --fix --timeout=120m
+	$(RUN_IN_DOCKER) 'golangci-lint run --fix --timeout=120m'
 
 .PHONY: test
 test:

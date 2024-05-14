@@ -47,8 +47,6 @@ linters:
     - errcheck
     # errorlint is a linter for that can be used to find code that will cause problems with the error wrapping scheme introduced in Go 1.13.
     - errorlint
-    # Execinquery is a linter about query string checker in Query function which reads your Go src files and warning it finds.
-    - execinquery
     # check exhaustiveness of enum switch statements
     - exhaustive
     # checks for pointers to enclosing loop variables
@@ -72,7 +70,7 @@ linters:
     # Check if comments end in a period
     - godot
     # Golang linter to check the errors handling expressions
-    - goerr113
+    - err113
     # Gofmt checks whether code was gofmt-ed. By default this tool runs with -s option to check for code simplification.
     - gofmt
     # Gofumpt checks whether code was gofumpt-ed. This would have been nice to
@@ -936,7 +934,7 @@ issues:
         # It's unnecessary to have a hard wrapping requirement for tests.
         - wrapcheck
         # It's unnecessary to enforce errors are not defined dynamically
-        - goerr113
+        - err113
         # Ignore revive results for tests because there a lot of conflicting
         # suggestions eg. `var-naming` says we shouldn't use underscores in
         # function names but that's a common pattern that we use.
@@ -967,7 +965,7 @@ issues:
         - dupl
         - forbidigo
         - forcetypeassert
-        - goerr113
+        - err113
         - gosec # mostly weak prng
         - nilnil
         - prealloc
@@ -980,7 +978,7 @@ issues:
         - gocritic
         - forbidigo
         - forcetypeassert
-        - goerr113
+        - err113
         - nakedret
         # TODO: ENABLE THIS
         - wrapcheck

@@ -209,7 +209,7 @@ func (p *AsynchronousRatchetTree) ProcessUpdate(newPublicKeys []curves.Point, pu
 		}
 
 		// 2.i. [Ratchet] Update the node public keys in the nodes on the path from the leaf to the root.
-		j := i //nolint:copyloopvar // readability
+		j := i
 		for k := 0; k < len(newPublicKeys); k++ {
 			p.arrayTree[j].privateNodeKey = nil
 			p.arrayTree[j].publicNodeKey = newPublicKeys[k]
