@@ -135,7 +135,7 @@ func (a *BigArithmetic[T]) Equal(x, y T) bool {
 }
 
 func (a *BigArithmetic[T]) Cmp(x, y T) algebra.Ordering {
-	return algebra.Ordering(x.Impl().Cmp(y.Impl().Int))
+	return algebra.Ordering(x.Impl().V.Cmp(y.Impl().V))
 }
 
 func (a *BigArithmetic[T]) Zero() T {
@@ -160,11 +160,11 @@ func (a *BigArithmetic[T]) IsOdd(x T) bool {
 }
 
 func (a *BigArithmetic[T]) Abs(x T) T {
-	return a.wrap(B(new(big.Int).Abs(x.Impl().Int)))
+	return a.wrap(B(new(big.Int).Abs(x.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) neg(x T) T {
-	return a.wrap(B(new(big.Int).Neg(x.Impl().Int)))
+	return a.wrap(B(new(big.Int).Neg(x.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) Neg(x T) (T, error) {
@@ -186,7 +186,7 @@ func (a *BigArithmetic[T]) Neg(x T) (T, error) {
 }
 
 func (a *BigArithmetic[T]) modInverse(x T) T {
-	return a.wrap(B(new(big.Int).ModInverse(x.Impl().Int, a.modulus.Impl().Int)))
+	return a.wrap(B(new(big.Int).ModInverse(x.Impl().V, a.modulus.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) Inverse(x T) (T, error) {
@@ -205,7 +205,7 @@ func (a *BigArithmetic[T]) Inverse(x T) (T, error) {
 }
 
 func (a *BigArithmetic[T]) add(x, y T) T {
-	return a.wrap(B(new(big.Int).Add(x.Impl().Int, y.Impl().Int)))
+	return a.wrap(B(new(big.Int).Add(x.Impl().V, y.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) Add(x, y T) (T, error) {
@@ -220,7 +220,7 @@ func (a *BigArithmetic[T]) Add(x, y T) (T, error) {
 }
 
 func (a *BigArithmetic[T]) sub(x, y T) T {
-	return a.wrap(B(new(big.Int).Sub(x.Impl().Int, y.Impl().Int)))
+	return a.wrap(B(new(big.Int).Sub(x.Impl().V, y.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) Sub(x, y T) (T, error) {
@@ -235,7 +235,7 @@ func (a *BigArithmetic[T]) Sub(x, y T) (T, error) {
 }
 
 func (a *BigArithmetic[T]) mul(x, y T) T {
-	return a.wrap(B(new(big.Int).Mul(x.Impl().Int, y.Impl().Int)))
+	return a.wrap(B(new(big.Int).Mul(x.Impl().V, y.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) Mul(x, y T) (T, error) {
@@ -250,7 +250,7 @@ func (a *BigArithmetic[T]) Mul(x, y T) (T, error) {
 }
 
 func (a *BigArithmetic[T]) div(x, y T) T {
-	return a.wrap(B(new(big.Int).Div(x.Impl().Int, y.Impl().Int)))
+	return a.wrap(B(new(big.Int).Div(x.Impl().V, y.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) Div(x, y T) (T, error) {
@@ -265,11 +265,11 @@ func (a *BigArithmetic[T]) Div(x, y T) (T, error) {
 }
 
 func (a *BigArithmetic[T]) exp(x, y T) T {
-	return a.wrap(B(new(big.Int).Exp(x.Impl().Int, y.Impl().Int, nil)))
+	return a.wrap(B(new(big.Int).Exp(x.Impl().V, y.Impl().V, nil)))
 }
 
 func (a *BigArithmetic[T]) modExp(x, y, m T) T {
-	return a.wrap(B(new(big.Int).Exp(x.Impl().Int, y.Impl().Int, m.Impl().Int)))
+	return a.wrap(B(new(big.Int).Exp(x.Impl().V, y.Impl().V, m.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) Exp(x, y T) (T, error) {
@@ -283,7 +283,7 @@ func (a *BigArithmetic[T]) Exp(x, y T) (T, error) {
 }
 
 func (a *BigArithmetic[T]) mod(x, m T) T {
-	return a.wrap(B(new(big.Int).Mod(x.Impl().Int, m.Impl().Int)))
+	return a.wrap(B(new(big.Int).Mod(x.Impl().V, m.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) Mod(x, m T) (T, error) {

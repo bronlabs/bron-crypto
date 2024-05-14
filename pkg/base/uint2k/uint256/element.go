@@ -45,6 +45,9 @@ func (Uint256) IsTop() bool {
 func (Uint256) UpperBoundedLattice() algebra.UpperBoundedOrderTheoreticLattice[*Ring256, Uint256] {
 	return Ring()
 }
+func (Uint256) BoundedLattice() algebra.BoundedOrderTheoreticLattice[*Ring256, Uint256] {
+	return Ring()
+}
 func (Uint256) LowerBoundedLattice() algebra.LowerBoundedOrderTheoreticLattice[*Ring256, Uint256] {
 	return Ring()
 }
@@ -52,7 +55,7 @@ func (Uint256) LowerBoundedLattice() algebra.LowerBoundedOrderTheoreticLattice[*
 func (Uint256) Structure() *Ring256 {
 	return Ring()
 }
-func (Uint256) Mod(x Uint256) (Uint256, error) {
+func (Uint256) Mod(x integer.NaturalRigElement[*Ring256, Uint256]) (Uint256, error) {
 	panic("not implemented")
 }
 

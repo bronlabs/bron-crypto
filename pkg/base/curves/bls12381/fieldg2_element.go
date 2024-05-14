@@ -38,8 +38,11 @@ func NewBaseFieldElementG2(value uint64) *BaseFieldElementG2 {
 		V: v,
 	}
 }
-func (*BaseFieldElementG2) Mod(m curves.BaseFieldElement) (curves.BaseFieldElement, error) {
+func (*BaseFieldElementG2) Mod(m integer.NaturalRigElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
 	panic("implement me")
+}
+func (e *BaseFieldElementG2) Abs() curves.BaseFieldElement {
+	return e
 }
 
 func (e *BaseFieldElementG2) Structure() curves.BaseField {

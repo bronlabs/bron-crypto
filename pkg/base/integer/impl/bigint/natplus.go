@@ -3,6 +3,7 @@ package bigint
 import (
 	"encoding/json"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	aimpl "github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
@@ -12,14 +13,29 @@ import (
 
 var _ integer.NatPlus[*NPlus, *NatPlus] = (*NatPlus)(nil)
 var _ aimpl.ImplAdapter[*NatPlus, *BigInt] = (*NatPlus)(nil)
+var _ integer.Number[*NatPlus] = (*NatPlus)(nil)
 
 type NatPlus struct {
 	impl.NatPlusMixin[*NPlus, *NatPlus]
 	V *BigInt
 }
 
+func New(v uint64) *NatPlus {
+	return &NatPlus{
+		V: new(BigInt).SetUint64(v),
+	}
+}
+
 func (n *NatPlus) Arithmetic() integer.Arithmetic[*NatPlus] {
 	return NewNPlusArithmetic[*NatPlus](-1, true)
+}
+
+func (n *NatPlus) Mul(x algebra.MultiplicativeGroupoidElement[*NPlus, *NatPlus]) *NatPlus {
+	out, err := n.Arithmetic().Mul(n.Unwrap(), x.Unwrap())
+	if err != nil {
+		panic(err)
+	}
+	return out
 }
 
 func (*NatPlus) Structure() *NPlus {
@@ -35,7 +51,7 @@ func (n *NatPlus) Impl() *BigInt {
 }
 
 func (n *NatPlus) Wrap(x *BigInt) *NatPlus {
-	out := n.Clone()
+	out := new(NatPlus)
 	out.V = x
 	return out
 }

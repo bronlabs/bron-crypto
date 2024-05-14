@@ -17,6 +17,7 @@ type NaturalRigElement[S algebra.Structure, E algebra.Element] interface {
 	algebra.RigElement[S, E]
 	PositiveNaturalRgElement[S, E]
 
+	Mod(modulus NaturalRigElement[S, E]) (E, error)
 	IsZero() bool
 
 	algebra.ConjunctiveMonoidElement[S, E]

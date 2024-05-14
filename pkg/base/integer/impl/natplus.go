@@ -56,6 +56,14 @@ func (n *PositiveNaturalRgElementMixin[NS, N]) Cmp(x algebra.OrderTheoreticLatti
 	return n.Structure().Arithmetic().Cmp(n.Unwrap(), x.Unwrap())
 }
 
+func (n *PositiveNaturalRgElementMixin[NS, N]) Mul(x algebra.MultiplicativeGroupoidElement[NS, N]) N {
+	out, err := n.Arithmetic().Mul(n.Unwrap(), x.Unwrap())
+	if err != nil {
+		panic(err)
+	}
+	return out
+}
+
 func (n *PositiveNaturalRgElementMixin[NS, N]) IsOne() bool {
 	return n.Structure().One().Equal(n.Unwrap())
 }

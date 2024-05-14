@@ -8,13 +8,13 @@ import (
 
 type Groupoid[G algebra.Groupoid[G, E], E algebra.GroupoidElement[G, E]] struct{}
 
-func (*Groupoid[G, E]) Cardinality() *saferith.Modulus {
-	panic("in mixin")
-}
+// func (*Groupoid[G, E]) Cardinality() *saferith.Modulus {
+// 	panic("in mixin")
+// }
 
-func (*Groupoid[G, E]) GetOperator(op algebra.Operator) (algebra.BinaryOperator[E], bool) {
-	panic("in mixin")
-}
+// func (*Groupoid[G, E]) GetOperator(op algebra.Operator) (algebra.BinaryOperator[E], bool) {
+// 	panic("in mixin")
+// }
 
 func (g *Groupoid[G, E]) Order() *saferith.Modulus {
 	return g.Cardinality()
@@ -41,9 +41,9 @@ type AdditiveGroupoid[G algebra.AdditiveGroupoid[G, E], E algebra.AdditiveGroupo
 	Groupoid[G, E]
 }
 
-func (*AdditiveGroupoid[G, E]) Addition() algebra.BinaryOperator[E] {
-	panic("in mixin")
-}
+// func (*AdditiveGroupoid[G, E]) Addition() algebra.BinaryOperator[E] {
+// 	panic("in mixin")
+// }
 
 func (g *AdditiveGroupoid[G, E]) Add(x algebra.AdditiveGroupoidElement[G, E], ys ...algebra.AdditiveGroupoidElement[G, E]) E {
 	sum := x
@@ -57,9 +57,9 @@ type MultiplicativeGroupoid[G algebra.MultiplicativeGroupoid[G, E], E algebra.Mu
 	Groupoid[G, E]
 }
 
-func (*MultiplicativeGroupoid[G, E]) Multiplication() algebra.BinaryOperator[E] {
-	panic("in mixin")
-}
+// func (*MultiplicativeGroupoid[G, E]) Multiplication() algebra.BinaryOperator[E] {
+// 	panic("in mixin")
+// }
 
 func (*MultiplicativeGroupoid[G, E]) Mul(x algebra.MultiplicativeGroupoidElement[G, E], ys ...algebra.MultiplicativeGroupoidElement[G, E]) E {
 	sum := x
@@ -103,9 +103,9 @@ type CyclicGroupoid[G algebra.CyclicGroupoid[G, E], E algebra.CyclicGroupoidElem
 	Groupoid[G, E]
 }
 
-func (g *CyclicGroupoid[G, E]) BasePoint() E {
-	panic("in mixin")
-}
+// func (g *CyclicGroupoid[G, E]) BasePoint() E {
+// 	panic("in mixin")
+// }
 
 func (g *CyclicGroupoid[G, E]) Generator() E {
 	return g.BasePoint()

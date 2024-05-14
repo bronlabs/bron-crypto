@@ -34,8 +34,11 @@ type Scalar struct {
 	_ ds.Incomparable
 }
 
-func (*Scalar) Mod(m curves.Scalar) (curves.Scalar, error) {
+func (*Scalar) Mod(m integer.NaturalRigElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
 	panic("implement me")
+}
+func (s *Scalar) Abs() curves.Scalar {
+	return s
 }
 
 func NewScalar(subgroup curves.Curve, value uint64) (*Scalar, error) {

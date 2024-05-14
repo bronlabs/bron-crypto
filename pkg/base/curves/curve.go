@@ -4,10 +4,10 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 )
+
+const PointAddition algebra.Operator = "Point_Addition"
 
 // GeneralEllipticCurve specifies an Elliptic Curve in the context where scalar multiplication makes sense.
 // Specifically, structure ST implements an GeneralEllipticCurve of given type parameters if:
@@ -193,49 +193,4 @@ type GtMember interface {
 	Gt() Gt
 
 	algebra.BytesSerialization[GtMember]
-}
-
-var _ algebra.Addition[Point] = (*PointAddition[Curve, BaseField, Point, BaseFieldElement])(nil)
-
-type PointAddition[EllipticCurveType, BaseFieldType algebra.Structure, PointType, BaseFieldElementType algebra.Element] struct {
-	algebra.Associative[PointType, PointType]
-	_ ds.Incomparable
-}
-
-func (*PointAddition[EllipticCurveType, BaseFieldType, PointType, BaseFieldElementType]) Name() algebra.Operator {
-	return algebra.Operator("PointAddition")
-}
-
-func (*PointAddition[_, _, P, _]) Add(x, y P) P {
-	return *(new(P))
-}
-
-func (*PointAddition[_, _, _, _]) Arity() uint {
-	return 2
-}
-
-func (o *PointAddition[_, _, P, _]) Map(x, y P) (P, error) {
-	return o.Add(x, y), nil
-}
-
-func (o *PointAddition[_, _, P, _]) LFold(ps ...P) (P, error) {
-	if len(ps) < 1 {
-		return *new(P), errs.NewArgument("not enough arguments")
-	}
-	result := ps[0]
-	for _, p := range ps[1:] {
-		result = o.Add(result, p)
-	}
-	return result, nil
-}
-
-func (o *PointAddition[_, _, P, _]) RFold(ps ...P) (P, error) {
-	if len(ps) < 1 {
-		return *new(P), errs.NewArgument("not enough arguments")
-	}
-	result := ps[len(ps)-1]
-	for i := len(ps) - 2; i > 0; i-- {
-		result = o.Add(result, ps[i])
-	}
-	return result, nil
 }

@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/cronokirby/saferith"
 )
@@ -19,10 +18,10 @@ var (
 const Name = "BIG_INT"
 
 var _ algebra.BigIntLike[*BigInt] = (*BigInt)(nil)
-var _ impl.ImplAdapter[*BigInt, *big.Int] = (*BigInt)(nil)
+var _ algebra.NatLike[*BigInt] = (*BigInt)(nil)
 
 type BigInt struct {
-	*big.Int
+	V *big.Int
 }
 
 func B(v *big.Int) *BigInt {
@@ -30,58 +29,67 @@ func B(v *big.Int) *BigInt {
 		return nil
 	}
 	return &BigInt{
-		Int: v,
+		V: v,
 	}
 }
 
-func (n *BigInt) Impl() *big.Int {
-	return n.Int
+func (n *BigInt) New(x *big.Int) *BigInt {
+	return B(x)
 }
 
-func (n *BigInt) Wrap(x *big.Int) *BigInt {
-	return B(x)
+func (n *BigInt) SetUint64(x uint64) *BigInt {
+	n.V = new(big.Int).SetUint64(x)
+	return n
+}
+
+func (n *BigInt) SetInt64(x int64) *BigInt {
+	n.V = new(big.Int).SetInt64(x)
+	return n
 }
 
 func (n *BigInt) Clone() *BigInt {
 	return &BigInt{
-		Int: new(big.Int).Set(n.Big()),
+		V: new(big.Int).Set(n.Big()),
 	}
 }
 
 func (n *BigInt) Equal(x *BigInt) bool {
-	return n.Int.Cmp(x.Int) == 0
+	return n.V.Cmp(x.V) == 0
 }
 
 func (n *BigInt) Big() *big.Int {
-	return n.Int
+	return n.V
 }
 
 func (n *BigInt) FromBig(v *big.Int) *BigInt {
 	return &BigInt{
-		Int: v,
+		V: v,
 	}
 }
 
 func (n *BigInt) Uint64() uint64 {
-	return n.Int.Uint64()
+	return n.V.Uint64()
+}
+func (n *BigInt) Int64() int64 {
+	return n.V.Int64()
 }
 
 func (n *BigInt) Nat() *saferith.Nat {
-	return new(saferith.Nat).SetBig(n.Int, -1)
+	return new(saferith.Nat).SetBig(n.V, -1)
 }
 
 func (n *BigInt) SetNat(v *saferith.Nat) *BigInt {
 	return &BigInt{
-		Int: v.Big(),
+		V: v.Big(),
 	}
 }
 
 func (n *BigInt) AnnouncedLen() int {
-	return n.Int.BitLen()
+	return n.V.BitLen()
 }
 
 func (n *BigInt) TrueLen() uint {
-	return uint(n.Int.BitLen())
+	return uint(n.V.BitLen())
 }
 
 func (n *BigInt) MarshalJSON() ([]byte, error) {
@@ -92,6 +100,6 @@ func (n *BigInt) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, b); err != nil {
 		return errs.WrapSerialisation(err, "could not marshal big int")
 	}
-	n.Int = b
+	n.V = b
 	return nil
 }

@@ -38,8 +38,11 @@ func NewBaseFieldElement(value uint64) *BaseFieldElement {
 		V: t,
 	}
 }
-func (*BaseFieldElement) Mod(m curves.BaseFieldElement) (curves.BaseFieldElement, error) {
+func (*BaseFieldElement) Mod(m integer.NaturalRigElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
 	panic("implement me")
+}
+func (e *BaseFieldElement) Abs() curves.BaseFieldElement {
+	return e
 }
 
 func (*BaseFieldElement) Operate(op algebra.Operator, rhs algebra.GroupoidElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {

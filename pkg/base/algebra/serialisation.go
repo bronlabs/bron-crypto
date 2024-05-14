@@ -7,8 +7,14 @@ import (
 )
 
 type BigIntLike[T any] interface {
-	// Uint64 casts the scalar down to a 64-bit integer. Might overflow.
+	New(x *big.Int) T
+
 	Uint64() uint64
+	SetUint64(uint64) T
+
+	Int64() int64
+	SetInt64(int64) T
+
 	Big() *big.Int
 	FromBig(*big.Int) T
 }

@@ -15,8 +15,6 @@ type PositiveNaturalRgElement[S algebra.Structure, E algebra.Element] interface 
 	algebra.RgElement[S, E]
 	algebra.ChainElement[S, E]
 
-	Mod(modulus PositiveNaturalRgElement[S, E]) (E, error)
-
 	IsOne() bool
 
 	IsEven() bool
