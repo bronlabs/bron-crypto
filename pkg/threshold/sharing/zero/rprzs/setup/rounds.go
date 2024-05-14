@@ -4,10 +4,11 @@ import (
 	"io"
 	"slices"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
@@ -34,18 +35,18 @@ func (p *Participant) Round1() (network.RoundMessages[types.Protocol, *Round1P2P
 			return nil, errs.WrapRandomSample(err, "could not produce random bytes for party with index %d", participantIndex)
 		}
 		// step 1.2: commit to the seed
-		commitment, witness, err := commitments.Commit(
-			p.SessionId,
-			p.Prng,
-			seedForThisParticipant[:],
-		)
+		committer, err := hashcomm.NewCommitter(p.SessionId, p.Prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot instantiate committer")
+		}
+		commitment, opening, err := committer.Commit(seedForThisParticipant[:])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not commit to the seed for participant with index %d", participantIndex)
 		}
 		p.state.sentSeeds.Put(participant, &committedSeedContribution{
 			seed:       seedForThisParticipant[:],
 			commitment: commitment,
-			witness:    witness,
+			opening:    opening,
 		})
 		// step 1.3: send the commitment to the participant
 		output.Put(participant, &Round1P2P{
@@ -84,7 +85,7 @@ func (p *Participant) Round2(round1output network.RoundMessages[types.Protocol, 
 		// step 2.1: send the seed and the witness to the participant
 		output.Put(participant, &Round2P2P{
 			Message: contributed.seed,
-			Witness: contributed.witness,
+			Opening: contributed.opening,
 		})
 	}
 
@@ -120,7 +121,9 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.Protocol, 
 		if !exists {
 			return nil, errs.NewMissing("do not have a commitment from participant with index %d", participantIndex)
 		}
-		if err := commitments.Open(p.SessionId, commitment, message.Witness, message.Message); err != nil {
+
+		verifier := hashcomm.NewVerifier(p.SessionId)
+		if err := verifier.Verify(commitment, message.Opening); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, participant.String(), "commitment from participant with sharing id can't be opened")
 		}
 		myContributedSeed, exists := p.state.sentSeeds.Get(participant)
@@ -134,7 +137,7 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.Protocol, 
 		} else {
 			orderedAppendedSeeds = slices.Concat(message.Message, myContributedSeed.seed)
 		}
-		finalSeedBytes, err := hashing.HashChain(commitments.CommitmentHashFunction, orderedAppendedSeeds)
+		finalSeedBytes, err := hashing.HashChain(base.RandomOracleHashFunction, orderedAppendedSeeds)
 		if err != nil {
 			return nil, errs.WrapHashing(err, "could not produce final seed for participant with sharing id %d", participantIndex)
 		}
