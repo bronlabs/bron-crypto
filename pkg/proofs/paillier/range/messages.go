@@ -7,12 +7,12 @@ import (
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 )
 
 type Round1Output struct {
-	EsidCommitment commitments.Commitment
+	EsidCommitment *hashcomm.Commitment
 
 	_ ds.Incomparable
 }
@@ -57,7 +57,7 @@ func (r2out *Round2Output) Validate(t int) error {
 
 type Round3Output struct {
 	E           *big.Int
-	EsidWitness commitments.Witness
+	EsidOpening *hashcomm.Opening
 
 	_ ds.Incomparable
 }
@@ -72,8 +72,8 @@ func (r3out *Round3Output) Validate(t int) error {
 	if r3out.E.Cmp(big.NewInt(0)) != 1 {
 		return errs.NewArgument("E (%s) not positive", r3out.E.String())
 	}
-	if err := r3out.EsidWitness.Validate(); err != nil {
-		return errs.WrapValidation(err, "invalid Esid witness")
+	if err := r3out.EsidOpening.Validate(); err != nil {
+		return errs.WrapValidation(err, "invalid Esid opening")
 	}
 	return nil
 }

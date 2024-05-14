@@ -8,7 +8,7 @@ import (
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -34,7 +34,7 @@ type Participant struct {
 }
 
 type ProverState struct {
-	esidCommitment commitments.Commitment
+	esidCommitment *hashcomm.Commitment
 	w1             []*saferith.Nat
 	r1             []*saferith.Nat
 	w2             []*saferith.Nat
@@ -55,7 +55,7 @@ type Prover struct {
 
 type VerifierState struct {
 	e           *big.Int
-	esidWitness commitments.Witness
+	esidOpening *hashcomm.Opening
 	c1          []*paillier.CipherText
 	c2          []*paillier.CipherText
 

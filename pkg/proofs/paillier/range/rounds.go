@@ -8,7 +8,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 )
 
@@ -26,15 +26,16 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 	}
 
 	// 1.iv. compute commitment to (e, sessionId) and send to P
-	esidCommitment, esidWitness, err := commitments.Commit(
-		verifier.SessionId,
-		verifier.Prng,
-		verifier.state.e.Bytes(),
-	)
+
+	committer, err := hashcomm.NewCommitter(verifier.SessionId, verifier.Prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot instantiate committer")
+	}
+	esidCommitment, esidOpening, err := committer.Commit(verifier.state.e.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to e, sessionId")
 	}
-	verifier.state.esidWitness = esidWitness
+	verifier.state.esidOpening = esidOpening
 
 	verifier.Round += 2
 	return &Round1Output{
@@ -119,7 +120,7 @@ func (verifier *Verifier) Round3(r2out *Round2Output) (r3out *Round3Output, err 
 	// 3. decommit (e, sessionId), reveal (e, sessionId) to P
 	return &Round3Output{
 		E:           verifier.state.e,
-		EsidWitness: verifier.state.esidWitness,
+		EsidOpening: verifier.state.esidOpening,
 	}, nil
 }
 
@@ -132,8 +133,8 @@ func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err erro
 		return nil, errs.WrapValidation(err, "invalid round 4 input")
 	}
 
-	err = commitments.Open(prover.SessionId, prover.state.esidCommitment, r3out.EsidWitness, r3out.E.Bytes())
-	if err != nil {
+	commitVerifier := hashcomm.NewVerifier(prover.SessionId)
+	if err := commitVerifier.Verify(prover.state.esidCommitment, r3out.EsidOpening); err != nil {
 		return nil, errs.WrapFailed(err, "cannot open commitment")
 	}
 
