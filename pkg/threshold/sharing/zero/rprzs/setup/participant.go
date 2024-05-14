@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -41,7 +41,7 @@ func (p *Participant) IdentityKey() types.IdentityKey {
 }
 
 type State struct {
-	receivedSeeds ds.Map[types.IdentityKey, *hashcomm.Commitment]
+	receivedSeeds ds.Map[types.IdentityKey, *hashcommitments.Commitment]
 	sentSeeds     ds.Map[types.IdentityKey, *committedSeedContribution]
 
 	_ ds.Incomparable
@@ -49,8 +49,8 @@ type State struct {
 
 type committedSeedContribution struct {
 	seed       []byte
-	commitment *hashcomm.Commitment
-	opening    *hashcomm.Opening
+	commitment *hashcommitments.Commitment
+	opening    *hashcommitments.Opening
 
 	_ ds.Incomparable
 }
@@ -86,7 +86,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.Prot
 		SortedParticipants: sortedParticipants,
 		IdentitySpace:      identitySpace,
 		state: &State{
-			receivedSeeds: hashmap.NewHashableHashMap[types.IdentityKey, *hashcomm.Commitment](),
+			receivedSeeds: hashmap.NewHashableHashMap[types.IdentityKey, *hashcommitments.Commitment](),
 			sentSeeds:     hashmap.NewHashableHashMap[types.IdentityKey, *committedSeedContribution](),
 		},
 	}

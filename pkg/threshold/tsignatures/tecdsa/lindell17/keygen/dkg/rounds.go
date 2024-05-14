@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
@@ -17,7 +17,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
+	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 func (p *Participant) Round1() (output *Round1Broadcast, err error) {
@@ -74,7 +74,7 @@ func (p *Participant) Round2(input network.RoundMessages[types.ThresholdProtocol
 	}
 
 	// 2. store commitments
-	p.state.theirBigQCommitment = make(map[types.SharingID]*hashveccomm.VectorCommitment)
+	p.state.theirBigQCommitment = make(map[types.SharingID]*hashvectorcommitments.VectorCommitment)
 	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
 		identity := iterator.Next()
 		if identity.Equal(p.IdentityKey()) {
@@ -480,20 +480,20 @@ func (p *Participant) Round8(input network.RoundMessages[types.ThresholdProtocol
 	}, nil
 }
 
-func commit(sessionId []byte, prng io.Reader, bigQPrime, bigQDoublePrime curves.Point, pid curves.Point) (vectorCommitment *hashveccomm.VectorCommitment, opening *hashveccomm.Opening, err error) {
-	vector := make([]hashcomm.Message, 3)
+func commit(sessionId []byte, prng io.Reader, bigQPrime, bigQDoublePrime curves.Point, pid curves.Point) (vectorCommitment *hashvectorcommitments.VectorCommitment, opening *hashvectorcommitments.Opening, err error) {
+	vector := make([]hashcommitments.Message, 3)
 	vector[0] = bigQPrime.ToAffineCompressed()
 	vector[1] = bigQDoublePrime.ToAffineCompressed()
 	vector[2] = pid.ToAffineCompressed()
-	vectorCommitter, err := hashveccomm.NewVectorCommitter(sessionId, prng)
+	vectorCommitter, err := hashvectorcommitments.NewVectorCommitter(sessionId, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot instantiate vector committer")
 	}
 	return vectorCommitter.Commit(vector)
 }
 
-func openCommitment(sessionId []byte, vectorCommitment *hashveccomm.VectorCommitment, opening *hashveccomm.Opening) (err error) {
-	vectorVerifier := hashveccomm.NewVectorVerifier(sessionId)
+func openCommitment(sessionId []byte, vectorCommitment *hashvectorcommitments.VectorCommitment, opening *hashvectorcommitments.Opening) (err error) {
+	vectorVerifier := hashvectorcommitments.NewVectorVerifier(sessionId)
 	return vectorVerifier.Verify(vectorCommitment, opening)
 }
 

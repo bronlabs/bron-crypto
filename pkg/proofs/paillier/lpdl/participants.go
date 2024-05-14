@@ -10,13 +10,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lp"
 	paillierrange "github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/range"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
+	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 const (
@@ -46,9 +46,9 @@ type State struct {
 
 type VerifierState struct {
 	State
-	cDoublePrimeOpening *hashveccomm.Opening
+	cDoublePrimeOpening *hashvectorcommitments.Opening
 	bigQPrime           curves.Point
-	cHat                *hashcomm.Commitment
+	cHat                *hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
@@ -66,8 +66,8 @@ type ProverState struct {
 	State
 	alpha                  *saferith.Nat
 	bigQHat                curves.Point
-	bigQHatOpening         *hashcomm.Opening
-	cDoublePrimeCommitment *hashveccomm.VectorCommitment
+	bigQHatOpening         *hashcommitments.Opening
+	cDoublePrimeCommitment *hashvectorcommitments.VectorCommitment
 
 	_ ds.Incomparable
 }

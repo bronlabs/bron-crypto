@@ -18,7 +18,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
+	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 const (
@@ -32,13 +32,13 @@ type State struct {
 	myXDoublePrime    curves.Scalar
 	myBigQPrime       curves.Point
 	myBigQDoublePrime curves.Point
-	myBigQOpening     *hashveccomm.Opening
+	myBigQOpening     *hashvectorcommitments.Opening
 	myPaillierPk      *paillier.PublicKey
 	myPaillierSk      *paillier.SecretKey
 	myRPrime          *saferith.Nat
 	myRDoublePrime    *saferith.Nat
 
-	theirBigQCommitment          map[types.SharingID]*hashveccomm.VectorCommitment
+	theirBigQCommitment          map[types.SharingID]*hashvectorcommitments.VectorCommitment
 	theirBigQPrime               map[types.SharingID]curves.Point
 	theirBigQDoublePrime         map[types.SharingID]curves.Point
 	theirPaillierPublicKeys      ds.Map[types.IdentityKey, *paillier.PublicKey]

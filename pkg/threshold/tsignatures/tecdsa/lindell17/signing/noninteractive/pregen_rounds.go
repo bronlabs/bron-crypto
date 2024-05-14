@@ -7,13 +7,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
+	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
@@ -27,10 +27,10 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	}
 	bigR := p.protocol.Curve().ScalarBaseMult(k)
 
-	vector := make([]hashcomm.Message, 2)
+	vector := make([]hashcommitments.Message, 2)
 	vector[0] = p.IdentityKey().PublicKey().ToAffineCompressed()
 	vector[1] = bigR.ToAffineCompressed()
-	vectorCommitter, err := hashveccomm.NewVectorCommitter(p.sessionId, p.prng)
+	vectorCommitter, err := hashvectorcommitments.NewVectorCommitter(p.sessionId, p.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot instantiate vector committer")
 	}
@@ -54,7 +54,7 @@ func (p *PreGenParticipant) Round2(input network.RoundMessages[types.ThresholdPr
 		return nil, errs.NewRound("rounds mismatch %d != 2", p.round)
 	}
 
-	theirBigRCommitments := hashmap.NewHashableHashMap[types.IdentityKey, *hashveccomm.VectorCommitment]()
+	theirBigRCommitments := hashmap.NewHashableHashMap[types.IdentityKey, *hashvectorcommitments.VectorCommitment]()
 	for iterator := p.preSigners.Iterator(); iterator.HasNext(); {
 		identity := iterator.Next()
 		if identity.Equal(p.IdentityKey()) {
@@ -108,7 +108,7 @@ func (p *PreGenParticipant) Round3(input network.RoundMessages[types.ThresholdPr
 			return nil, errs.NewFailed("no commitment saved from %x", identity.String())
 		}
 
-		vectorVerifier := hashveccomm.NewVectorVerifier(p.sessionId)
+		vectorVerifier := hashvectorcommitments.NewVectorVerifier(p.sessionId)
 		if err := vectorVerifier.Verify(theirBigRCommitment, in.BigROpening); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}

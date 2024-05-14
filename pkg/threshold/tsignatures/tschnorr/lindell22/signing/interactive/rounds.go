@@ -7,14 +7,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
+	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 const (
@@ -36,12 +36,12 @@ func (p *Cosigner[V]) Round1() (broadcastOutput *Round1Broadcast, err error) {
 	bigR := p.Protocol.Curve().ScalarBaseMult(k)
 
 	// step 1.2: Run c_i <= commit(sid || R_i || i || S)
-	vector := make([]hashcomm.Message, 4)
+	vector := make([]hashcommitments.Message, 4)
 	vector[0] = []byte(commitmentDomainRLabel)
 	vector[1] = bigR.ToAffineCompressed()
 	vector[2] = p.state.pid
 	vector[3] = p.state.bigS
-	vectorCommitter, err := hashveccomm.NewVectorCommitter(p.SessionId, p.Prng)
+	vectorCommitter, err := hashvectorcommitments.NewVectorCommitter(p.SessionId, p.Prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot instantiate vector committer")
 	}
@@ -72,7 +72,7 @@ func (p *Cosigner[V]) Round2(broadcastInput network.RoundMessages[types.Threshol
 		return nil, errs.WrapValidation(err, "invalid round 1 broadcast output")
 	}
 
-	p.state.theirBigRCommitment = hashmap.NewHashableHashMap[types.IdentityKey, *hashveccomm.VectorCommitment]()
+	p.state.theirBigRCommitment = hashmap.NewHashableHashMap[types.IdentityKey, *hashvectorcommitments.VectorCommitment]()
 	for iterator := p.quorum.Iterator(); iterator.HasNext(); {
 		identity := iterator.Next()
 
@@ -126,7 +126,7 @@ func (p *Cosigner[V]) Round3(broadcastInput network.RoundMessages[types.Threshol
 		}
 
 		// step 3.2: Open(sid || R_j || j || S)
-		vectorVerifier := hashveccomm.NewVectorVerifier(p.SessionId)
+		vectorVerifier := hashvectorcommitments.NewVectorVerifier(p.SessionId)
 		if err := vectorVerifier.Verify(theirBigRCommitment, theirBigROpening); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}

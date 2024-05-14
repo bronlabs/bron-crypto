@@ -6,16 +6,16 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	paillierrange "github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/range"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
+	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 type Round1Output struct {
 	RangeVerifierOutput    *paillierrange.Round1Output
 	CPrime                 *paillier.CipherText
-	CDoublePrimeCommitment *hashveccomm.VectorCommitment
+	CDoublePrimeCommitment *hashvectorcommitments.VectorCommitment
 
 	_ ds.Incomparable
 }
@@ -38,7 +38,7 @@ func (r1out *Round1Output) Validate() error {
 
 type Round2Output struct {
 	RangeProverOutput *paillierrange.Round2Output
-	CHat              *hashcomm.Commitment
+	CHat              *hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
@@ -60,7 +60,7 @@ type Round3Output struct {
 	RangeVerifierOutput *paillierrange.Round3Output
 	A                   *saferith.Nat
 	B                   *saferith.Nat
-	CDoublePrimeOpening *hashveccomm.Opening
+	CDoublePrimeOpening *hashvectorcommitments.Opening
 
 	_ ds.Incomparable
 }
@@ -87,7 +87,7 @@ func (r3out *Round3Output) Validate() error {
 type Round4Output struct {
 	RangeProverOutput *paillierrange.Round4Output
 	BigQHat           curves.Point
-	BigQHatOpening    *hashcomm.Opening
+	BigQHatOpening    *hashcommitments.Opening
 
 	_ ds.Incomparable
 }

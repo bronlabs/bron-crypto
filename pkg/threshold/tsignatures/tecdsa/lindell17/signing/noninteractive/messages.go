@@ -7,14 +7,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
+	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 var _ network.Message[types.ThresholdProtocol] = (*Round1Broadcast)(nil)
 var _ network.Message[types.ThresholdProtocol] = (*Round2Broadcast)(nil)
 
 type Round1Broadcast struct {
-	BigRCommitment *hashveccomm.VectorCommitment
+	BigRCommitment *hashvectorcommitments.VectorCommitment
 
 	_ ds.Incomparable
 }
@@ -22,7 +22,7 @@ type Round1Broadcast struct {
 type Round2Broadcast struct {
 	BigR        curves.Point
 	BigRProof   compiler.NIZKPoKProof
-	BigROpening *hashveccomm.Opening
+	BigROpening *hashvectorcommitments.Opening
 
 	_ ds.Incomparable
 }

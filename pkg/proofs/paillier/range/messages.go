@@ -7,12 +7,12 @@ import (
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 )
 
 type Round1Output struct {
-	EsidCommitment *hashcomm.Commitment
+	EsidCommitment *hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
@@ -57,7 +57,7 @@ func (r2out *Round2Output) Validate(t int) error {
 
 type Round3Output struct {
 	E           *big.Int
-	EsidOpening *hashcomm.Opening
+	EsidOpening *hashcommitments.Opening
 
 	_ ds.Incomparable
 }

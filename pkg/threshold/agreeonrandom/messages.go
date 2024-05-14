@@ -5,7 +5,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 )
 
@@ -13,14 +13,14 @@ var _ network.Message[types.Protocol] = (*Round1Broadcast)(nil)
 var _ network.Message[types.Protocol] = (*Round2Broadcast)(nil)
 
 type Round1Broadcast struct {
-	Commitment *hashcomm.Commitment
+	Commitment *hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
 
 type Round2Broadcast struct {
 	Ri      curves.Scalar
-	Opening *hashcomm.Opening
+	Opening hashcommitments.Opening
 
 	_ ds.Incomparable
 }

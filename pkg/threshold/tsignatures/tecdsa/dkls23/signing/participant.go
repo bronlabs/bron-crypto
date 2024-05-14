@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
+	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 var _ types.ThresholdSignatureParticipant = (*Participant)(nil)
@@ -104,8 +104,8 @@ type SignerState struct {
 	Dv_i                           map[types.SharingID]curves.Scalar
 	Psi_i                          map[types.SharingID]curves.Scalar
 	Chi_i                          map[types.SharingID]curves.Scalar
-	InstanceKeyOpening             map[types.SharingID]*hashveccomm.Opening
-	ReceivedInstanceKeyCommitments map[types.SharingID]*hashveccomm.VectorCommitment
+	InstanceKeyOpening             map[types.SharingID]*hashvectorcommitments.Opening
+	ReceivedInstanceKeyCommitments map[types.SharingID]*hashvectorcommitments.VectorCommitment
 	ReceivedBigR_i                 ds.Map[types.IdentityKey, curves.Point]
 	Protocols                      *SubProtocols
 

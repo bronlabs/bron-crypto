@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
@@ -35,7 +35,7 @@ func (p *Participant) Round1() (network.RoundMessages[types.Protocol, *Round1P2P
 			return nil, errs.WrapRandomSample(err, "could not produce random bytes for party with index %d", participantIndex)
 		}
 		// step 1.2: commit to the seed
-		committer, err := hashcomm.NewCommitter(p.SessionId, p.Prng)
+		committer, err := hashcommitments.NewCommitter(p.SessionId, p.Prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot instantiate committer")
 		}
@@ -122,7 +122,7 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.Protocol, 
 			return nil, errs.NewMissing("do not have a commitment from participant with index %d", participantIndex)
 		}
 
-		verifier := hashcomm.NewVerifier(p.SessionId)
+		verifier := hashcommitments.NewVerifier(p.SessionId)
 		if err := verifier.Verify(commitment, message.Opening); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, participant.String(), "commitment from participant with sharing id can't be opened")
 		}

@@ -4,14 +4,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
+	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 func (pc *PrimaryCosigner) Round1() (r1out *Round1OutputP2P, err error) {
@@ -28,10 +28,10 @@ func (pc *PrimaryCosigner) Round1() (r1out *Round1OutputP2P, err error) {
 	pc.state.bigR1 = pc.Protocol.Curve().ScalarBaseMult(pc.state.k1)
 
 	// step 1.2: c1 <- Commit(sid || Q || R1)
-	vector := make([]hashcomm.Message, 2)
+	vector := make([]hashcommitments.Message, 2)
 	vector[0] = pc.myAuthKey.PublicKey().ToAffineCompressed()
 	vector[1] = pc.state.bigR1.ToAffineCompressed()
-	vectorCommitter, err := hashveccomm.NewVectorCommitter(pc.SessionId, pc.Prng)
+	vectorCommitter, err := hashvectorcommitments.NewVectorCommitter(pc.SessionId, pc.Prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot instantiate vector committer")
 	}
@@ -139,7 +139,7 @@ func (sc *SecondaryCosigner) Round4(r3out *Round3OutputP2P, message []byte) (rou
 		return nil, errs.WrapValidation(err, "invalid round %d input", sc.Round)
 	}
 
-	vectorVerifier := hashveccomm.NewVectorVerifier(sc.SessionId)
+	vectorVerifier := hashvectorcommitments.NewVectorVerifier(sc.SessionId)
 	if err := vectorVerifier.Verify(sc.state.bigR1Commitment, r3out.BigR1Opening); err != nil {
 		return nil, errs.WrapFailed(err, "cannot open R commitment")
 	}

@@ -4,7 +4,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 )
 
@@ -12,14 +12,14 @@ var _ network.Message[types.Protocol] = (*Round1P2P)(nil)
 var _ network.Message[types.Protocol] = (*Round2P2P)(nil)
 
 type Round1P2P struct {
-	Commitment *hashcomm.Commitment
+	Commitment *hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
 
 type Round2P2P struct {
 	Message []byte
-	Opening *hashcomm.Opening
+	Opening *hashcommitments.Opening
 
 	_ ds.Incomparable
 }

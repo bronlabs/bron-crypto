@@ -5,9 +5,9 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
-	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
+	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
@@ -41,10 +41,10 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 	}
 
 	// 1.ii. compute c'' = commit(a, b)
-	vector := make([]hashcomm.Message, 2)
+	vector := make([]hashcommitments.Message, 2)
 	vector[0] = verifier.state.a.Bytes()
 	vector[1] = verifier.state.b.Bytes()
-	vectorCommitter, err := hashveccomm.NewVectorCommitter(verifier.sessionId, verifier.prng)
+	vectorCommitter, err := hashvectorcommitments.NewVectorCommitter(verifier.sessionId, verifier.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot instantiate vector committer")
 	}
@@ -98,7 +98,7 @@ func (prover *Prover) Round2(r1out *Round1Output) (r2out *Round2Output, err erro
 	prover.state.bigQHat = prover.state.curve.ScalarBaseMult(alphaScalar)
 
 	// 2.ii. compute c^ = commit(Q^) and send to V
-	committer, err := hashcomm.NewCommitter(prover.sessionId, prover.prng)
+	committer, err := hashcommitments.NewCommitter(prover.sessionId, prover.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot instantiate committer")
 	}
@@ -157,7 +157,7 @@ func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err erro
 		return nil, errs.WrapValidation(err, "invalid round 4 input")
 	}
 
-	vectorVerifier := hashveccomm.NewVectorVerifier(prover.sessionId)
+	vectorVerifier := hashvectorcommitments.NewVectorVerifier(prover.sessionId)
 	if err := vectorVerifier.Verify(prover.state.cDoublePrimeCommitment, r3out.CDoublePrimeOpening); err != nil {
 		return nil, errs.WrapFailed(err, "cannot open R commitment")
 	}
@@ -192,7 +192,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 		return errs.WrapValidation(err, "invalid round 5 input")
 	}
 
-	commitVerifier := hashcomm.NewVerifier(verifier.sessionId)
+	commitVerifier := hashcommitments.NewVerifier(verifier.sessionId)
 	if err := commitVerifier.Verify(verifier.state.cHat, input.BigQHatOpening); err != nil {
 		return errs.WrapFailed(err, "cannot decommit Q hat")
 	}

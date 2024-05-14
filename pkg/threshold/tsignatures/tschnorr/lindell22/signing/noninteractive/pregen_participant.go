@@ -14,7 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
+	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 const (
@@ -59,8 +59,8 @@ type state struct {
 	k2                  curves.Scalar
 	bigR1               curves.Point
 	bigR2               curves.Point
-	opening             *hashveccomm.Opening
-	theirBigRCommitment ds.Map[types.IdentityKey, *hashveccomm.VectorCommitment]
+	opening             *hashvectorcommitments.Opening
+	theirBigRCommitment ds.Map[types.IdentityKey, *hashvectorcommitments.VectorCommitment]
 
 	_ ds.Incomparable
 }

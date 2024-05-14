@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
+	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 var _ network.Message[types.Protocol] = (*Round1OutputP2P)(nil)
@@ -17,7 +17,7 @@ var _ network.Message[types.Protocol] = (*Round3OutputP2P)(nil)
 var _ network.Message[types.Protocol] = (*Round4OutputP2P)(nil)
 
 type Round1OutputP2P struct {
-	BigR1Commitment *hashveccomm.VectorCommitment
+	BigR1Commitment *hashvectorcommitments.VectorCommitment
 
 	_ ds.Incomparable
 }
@@ -30,7 +30,7 @@ type Round2OutputP2P struct {
 }
 
 type Round3OutputP2P struct {
-	BigR1Opening *hashveccomm.Opening
+	BigR1Opening *hashvectorcommitments.Opening
 	BigR1        curves.Point
 	BigR1Proof   compiler.NIZKPoKProof
 

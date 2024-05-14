@@ -7,13 +7,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	mult "github.com/copperexchange/krypton-primitives/pkg/threshold/mult/dkls23"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
+	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState) (r1b *Round1Broadcast, r1p2p network.RoundMessages[types.ThresholdSignatureProtocol, *Round1P2P], err error) {
@@ -30,7 +30,7 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 	// step 1.2: public instance key BigR_i
 	state.BigR_i = protocol.Curve().ScalarBaseMult(state.R_i)
 
-	state.InstanceKeyOpening = make(map[types.SharingID]*hashveccomm.Opening)
+	state.InstanceKeyOpening = make(map[types.SharingID]*hashvectorcommitments.Opening)
 	state.Chi_i = make(map[types.SharingID]curves.Scalar)
 	outputP2P := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round1P2P]()
 
@@ -46,11 +46,11 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 		}
 
 		// step 1.4: (c'_ij, w_ij) <- Commit(i || j || sid || R_i)
-		vector := make([]hashcomm.Message, 3)
+		vector := make([]hashcommitments.Message, 3)
 		vector[0] = bitstring.ToBytes32LE(int32(p.SharingId()))
 		vector[1] = bitstring.ToBytes32LE(int32(sharingId))
 		vector[2] = state.BigR_i.ToAffineCompressed()
-		vectorCommitter, err := hashveccomm.NewVectorCommitter(p.SessionId, p.Prng)
+		vectorCommitter, err := hashvectorcommitments.NewVectorCommitter(p.SessionId, p.Prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot instantiate vector committer")
 		}
@@ -107,7 +107,7 @@ func DoRound2(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 	a := [mult.L]curves.Scalar{state.R_i, state.Sk_i}
 
 	state.ReceivedBigR_i = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
-	state.ReceivedInstanceKeyCommitments = make(map[types.SharingID]*hashveccomm.VectorCommitment)
+	state.ReceivedInstanceKeyCommitments = make(map[types.SharingID]*hashvectorcommitments.VectorCommitment)
 	state.Cu_i = make(map[types.SharingID]curves.Scalar)
 	state.Cv_i = make(map[types.SharingID]curves.Scalar)
 	outputP2P := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round2P2P]()
@@ -201,7 +201,7 @@ func DoRound3Prologue(p *Participant, protocol types.ThresholdProtocol, quorum d
 		GammaV_ji := receivedP2PMessage.GammaV_ij
 
 		// step 3.2: Open(j || i || sid || R_i, c'_ij, w_ij)
-		vectorVerifier := hashveccomm.NewVectorVerifier(p.SessionId)
+		vectorVerifier := hashvectorcommitments.NewVectorVerifier(p.SessionId)
 		if err := vectorVerifier.Verify(state.ReceivedInstanceKeyCommitments[sharingId], receivedP2PMessage.InstanceKeyOpening); err != nil {
 			return errs.WrapIdentifiableAbort(err, participant.String(), "message could not be opened")
 		}

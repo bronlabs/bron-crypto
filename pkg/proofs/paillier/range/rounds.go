@@ -8,7 +8,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 )
 
@@ -26,7 +26,7 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 	}
 
 	// 1.iv. compute commitment to (e, sessionId) and send to P
-	committer, err := hashcomm.NewCommitter(verifier.SessionId, verifier.Prng)
+	committer, err := hashcommitments.NewCommitter(verifier.SessionId, verifier.Prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot instantiate committer")
 	}
@@ -132,7 +132,7 @@ func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err erro
 		return nil, errs.WrapValidation(err, "invalid round 4 input")
 	}
 
-	commitVerifier := hashcomm.NewVerifier(prover.SessionId)
+	commitVerifier := hashcommitments.NewVerifier(prover.SessionId)
 	if err := commitVerifier.Verify(prover.state.esidCommitment, r3out.EsidOpening); err != nil {
 		return nil, errs.WrapFailed(err, "cannot open commitment")
 	}

@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lp"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lpdl"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
+	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 var _ network.Message[types.ThresholdProtocol] = (*Round1Broadcast)(nil)
@@ -22,13 +22,13 @@ var _ network.Message[types.ThresholdProtocol] = (*Round6P2P)(nil)
 var _ network.Message[types.ThresholdProtocol] = (*Round7P2P)(nil)
 
 type Round1Broadcast struct {
-	BigQCommitment *hashveccomm.VectorCommitment
+	BigQCommitment *hashvectorcommitments.VectorCommitment
 
 	_ ds.Incomparable
 }
 
 type Round2Broadcast struct {
-	BigQOpening          *hashveccomm.Opening
+	BigQOpening          *hashvectorcommitments.Opening
 	BigQPrime            curves.Point
 	BigQPrimeProof       compiler.NIZKPoKProof
 	BigQDoublePrime      curves.Point

@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	mult "github.com/copperexchange/krypton-primitives/pkg/threshold/mult/dkls23"
-	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
+	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 var _ network.Message[types.ThresholdSignatureProtocol] = (*Round1Broadcast)(nil)
@@ -23,7 +23,7 @@ type Round1Broadcast struct {
 }
 
 type Round1P2P struct {
-	InstanceKeyCommitment *hashveccomm.VectorCommitment
+	InstanceKeyCommitment *hashvectorcommitments.VectorCommitment
 	MultiplicationOutput  *mult.Round1Output
 
 	_ ds.Incomparable
@@ -40,7 +40,7 @@ type Round2P2P struct {
 	GammaU_ij          curves.Point
 	GammaV_ij          curves.Point
 	Psi_ij             curves.Scalar
-	InstanceKeyOpening *hashveccomm.Opening
+	InstanceKeyOpening *hashvectorcommitments.Opening
 
 	_ ds.Incomparable
 }
