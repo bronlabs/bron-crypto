@@ -7,8 +7,16 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
-type GroupoidElement[G algebra.Groupoid[G, E], E algebra.GroupoidElement[G, E]] struct {
-	algebra.GroupoidElement[G, E]
+type GroupoidElement[G algebra.Groupoid[G, E], E algebra.GroupoidElement[G, E]] struct{}
+
+func (*GroupoidElement[G, E]) Structure() algebra.Groupoid[G, E] {
+	panic("in mixin")
+}
+func (*GroupoidElement[G, E]) Unwrap() E {
+	panic("in mixin")
+}
+func (*GroupoidElement[G, E]) Clone() E {
+	panic("in mixin")
 }
 
 func (e *GroupoidElement[G, E]) Order(under algebra.Operator) (*saferith.Nat, error) {
@@ -75,7 +83,15 @@ func (e *GroupoidElement[G, E]) CanGenerateAllElements(with algebra.Operator) bo
 }
 
 type AdditiveGroupoidElement[G algebra.AdditiveGroupoid[G, E], E algebra.AdditiveGroupoidElement[G, E]] struct {
-	algebra.AdditiveGroupoidElement[G, E]
+	GroupoidElement[G, E]
+}
+
+func (e *AdditiveGroupoidElement[G, E]) Structure() algebra.AdditiveGroupoid[G, E] {
+	panic("in mixin")
+}
+
+func (e *AdditiveGroupoidElement[G, E]) Add(x algebra.AdditiveGroupoidElement[G, E]) E {
+	panic("in mixin")
 }
 
 func (e *AdditiveGroupoidElement[G, E]) ApplyAdd(x algebra.AdditiveGroupoidElement[G, E], n *saferith.Nat) E {
@@ -87,15 +103,23 @@ func (e *AdditiveGroupoidElement[G, E]) ApplyAdd(x algebra.AdditiveGroupoidEleme
 }
 
 func (e *AdditiveGroupoidElement[_, E]) Double() E {
-	return e.Add(e)
+	return e.Add(e.Unwrap())
 }
 
 func (e *AdditiveGroupoidElement[_, E]) Triple() E {
-	return e.Double().Add(e)
+	return e.Double().Add(e.Unwrap())
 }
 
 type MultiplicativeGroupoidElement[G algebra.MultiplicativeGroupoid[G, E], E algebra.MultiplicativeGroupoidElement[G, E]] struct {
-	algebra.MultiplicativeGroupoidElement[G, E]
+	GroupoidElement[G, E]
+}
+
+func (e *MultiplicativeGroupoidElement[G, E]) Structure() algebra.MultiplicativeGroupoid[G, E] {
+	panic("in mixin")
+}
+
+func (e *MultiplicativeGroupoidElement[G, E]) Mul(x algebra.MultiplicativeGroupoidElement[G, E]) E {
+	panic("in mixin")
 }
 
 func (e *MultiplicativeGroupoidElement[G, E]) ApplyMul(x algebra.MultiplicativeGroupoidElement[G, E], n *saferith.Nat) E {
@@ -107,11 +131,11 @@ func (e *MultiplicativeGroupoidElement[G, E]) ApplyMul(x algebra.MultiplicativeG
 }
 
 func (e *MultiplicativeGroupoidElement[_, E]) Square() E {
-	return e.Mul(e)
+	return e.Mul(e.Unwrap())
 }
 
 func (e *MultiplicativeGroupoidElement[_, E]) Cube() E {
-	return e.Square().Mul(e)
+	return e.Square().Mul(e.Unwrap())
 }
 
 func (e *MultiplicativeGroupoidElement[_, E]) Exp(exponent *saferith.Nat) E {
@@ -119,7 +143,11 @@ func (e *MultiplicativeGroupoidElement[_, E]) Exp(exponent *saferith.Nat) E {
 }
 
 type CyclicGroupoidElement[G algebra.CyclicGroupoid[G, E], E algebra.CyclicGroupoidElement[G, E]] struct {
-	algebra.CyclicGroupoidElement[G, E]
+	GroupoidElement[G, E]
+}
+
+func (e *CyclicGroupoidElement[G, E]) IsBasePoint() bool {
+	panic("in mixin")
 }
 
 func (e *CyclicGroupoidElement[G, E]) Order(under algebra.BinaryOperator[E]) (*saferith.Modulus, error) {

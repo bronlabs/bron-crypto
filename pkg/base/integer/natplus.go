@@ -2,8 +2,8 @@ package integer
 
 import "github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 
-type PositiveNaturalNumberGroupoid[S algebra.Structure, E algebra.Element] interface {
-	algebra.Groupoid[S, E]
+type PositiveNaturalRg[S algebra.Structure, E algebra.Element] interface {
+	algebra.Rg[S, E]
 	algebra.Chain[S, E]
 	New(v uint64) E
 	One() E
@@ -11,11 +11,11 @@ type PositiveNaturalNumberGroupoid[S algebra.Structure, E algebra.Element] inter
 	Arithmetic() Arithmetic[E]
 }
 
-type PositiveNaturalNumberGroupoidElement[S algebra.Structure, E algebra.Element] interface {
-	algebra.GroupoidElement[S, E]
+type PositiveNaturalRgElement[S algebra.Structure, E algebra.Element] interface {
+	algebra.RgElement[S, E]
 	algebra.ChainElement[S, E]
 
-	Mod(modulus PositiveNaturalNumberGroupoidElement[S, E]) (E, error)
+	Mod(modulus PositiveNaturalRgElement[S, E]) (E, error)
 
 	IsOne() bool
 
@@ -28,17 +28,15 @@ type PositiveNaturalNumberGroupoidElement[S algebra.Structure, E algebra.Element
 }
 
 type NPlus[S algebra.Structure, E algebra.Element] interface {
-	algebra.Rg[S, E]
-	algebra.LowerBoundedOrderTheoreticLattice[S, E]
+	PositiveNaturalRg[S, E]
 
-	PositiveNaturalNumberGroupoid[S, E]
+	algebra.LowerBoundedOrderTheoreticLattice[S, E]
 }
 
 type NatPlus[S algebra.Structure, E algebra.Element] interface {
-	algebra.RgElement[S, E]
-	algebra.LowerBoundedOrderTheoreticLatticeElement[S, E]
+	PositiveNaturalRgElement[S, E]
 
-	PositiveNaturalNumberGroupoidElement[S, E]
+	algebra.LowerBoundedOrderTheoreticLatticeElement[S, E]
 
 	TrySub(x NatPlus[S, E]) (E, error)
 }

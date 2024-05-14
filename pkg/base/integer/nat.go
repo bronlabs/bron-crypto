@@ -2,9 +2,10 @@ package integer
 
 import "github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 
-type NaturalNumberMonoid[S algebra.Structure, E algebra.Element] interface {
-	algebra.Monoid[S, E]
-	PositiveNaturalNumberGroupoid[S, E]
+type NaturalRig[S algebra.Structure, E algebra.Element] interface {
+	algebra.Rig[S, E]
+	PositiveNaturalRg[S, E]
+
 	Zero() E
 
 	algebra.ConjunctiveMonoid[S, E]
@@ -12,9 +13,10 @@ type NaturalNumberMonoid[S algebra.Structure, E algebra.Element] interface {
 	algebra.ExclusiveDisjunctiveGroup[S, E]
 }
 
-type NaturalNumberMonoidElement[S algebra.Structure, E algebra.Element] interface {
-	algebra.MonoidElement[S, E]
-	PositiveNaturalNumberGroupoidElement[S, E]
+type NaturalRigElement[S algebra.Structure, E algebra.Element] interface {
+	algebra.RigElement[S, E]
+	PositiveNaturalRgElement[S, E]
+
 	IsZero() bool
 
 	algebra.ConjunctiveMonoidElement[S, E]
@@ -24,15 +26,11 @@ type NaturalNumberMonoidElement[S algebra.Structure, E algebra.Element] interfac
 }
 
 type N[S algebra.Structure, E algebra.Element] interface {
-	algebra.Rig[S, E]
+	NaturalRig[S, E]
 	algebra.LowerBoundedOrderTheoreticLattice[S, E]
-
-	NaturalNumberMonoid[S, E]
 }
 
 type Nat[S algebra.Structure, E algebra.Element] interface {
-	algebra.RigElement[S, E]
+	NaturalRigElement[S, E]
 	algebra.LowerBoundedOrderTheoreticLatticeElement[S, E]
-
-	NaturalNumberMonoidElement[S, E]
 }

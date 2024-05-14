@@ -2,13 +2,18 @@ package group
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/monoid"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	saferith_utils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"github.com/cronokirby/saferith"
 )
 
 type GroupElement[G algebra.Group[G, E], E algebra.GroupElement[G, E]] struct {
-	algebra.GroupElement[G, E]
+	monoid.MonoidElement[G, E]
+}
+
+func (*GroupElement[G, E]) Unwrap() E {
+	panic("in mixin")
 }
 
 func (e *GroupElement[G, E]) IsInverse(of algebra.GroupElement[G, E], under algebra.Operator) (bool, error) {
@@ -47,11 +52,16 @@ func (e *GroupElement[G, E]) IsTorsionElement(order *saferith.Modulus, under alg
 }
 
 func (e *GroupElement[G, E]) IsInvolution(under algebra.Operator) (bool, error) {
-	return e.IsInverse(e, under) //nolint:wrapcheck // forwarding errors
+	return e.IsInverse(e.Unwrap(), under) //nolint:wrapcheck // forwarding errors
 }
 
 type AdditiveGroupElement[G algebra.AdditiveGroup[G, E], E algebra.AdditiveGroupElement[G, E]] struct {
-	algebra.AdditiveGroupElement[G, E]
+	GroupElement[G, E]
+	monoid.AdditiveMonoidElement[G, E]
+}
+
+func (*AdditiveGroupElement[G, E]) AdditiveInverse() E {
+	panic("in mixin")
 }
 
 func (e *AdditiveGroupElement[G, E]) IsAdditiveInverse(of algebra.AdditiveGroupElement[G, E]) bool {
@@ -83,7 +93,8 @@ func (e *AdditiveGroupElement[G, E]) IsInvolutionUnderAddition() bool {
 }
 
 type MultiplicativeGroupElement[G algebra.MultiplicativeGroup[G, E], E algebra.MultiplicativeGroupElement[G, E]] struct {
-	algebra.MultiplicativeGroupElement[G, E]
+	GroupElement[G, E]
+	monoid.MultiplicativeMonoidElement[G, E]
 }
 
 func (e *MultiplicativeGroupElement[G, E]) IsMultiplicativeInverse(of algebra.MultiplicativeGroupElement[G, E]) bool {
@@ -111,5 +122,6 @@ func (e *MultiplicativeGroupElement[G, E]) IsInvolutionUnderMultiplication() boo
 }
 
 type CyclicGroupElement[G algebra.CyclicGroup[G, E], E algebra.CyclicGroupElement[G, E]] struct {
-	algebra.CyclicGroupElement[G, E]
+	GroupElement[G, E]
+	monoid.CyclicMonoidElement[G, E]
 }

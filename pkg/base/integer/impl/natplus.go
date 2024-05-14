@@ -2,45 +2,49 @@ package impl
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/groupoid"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/order"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/ring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 )
 
-type PositiveNaturalNumberGroupoidMixin[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
-	groupoid.AdditiveGroupoid[NS, N]
-	groupoid.MultiplicativeGroupoid[NS, N]
-	groupoid.Groupoid[NS, N]
+type PositiveNaturalRgMixin[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
+	ring.Rg[NS, N]
+	order.Chain[NS, N]
 }
 
-func (n *PositiveNaturalNumberGroupoidMixin[NS, N]) Arithmetic() integer.Arithmetic[N] {
+func (n *PositiveNaturalRgMixin[NS, N]) Arithmetic() integer.Arithmetic[N] {
 	panic("in mixin")
 }
 
-func (n *PositiveNaturalNumberGroupoidMixin[NS, N]) One() N {
+func (n *PositiveNaturalRgMixin[NS, N]) One() N {
 	return n.Arithmetic().One().Unwrap()
 }
 
-type PositiveNaturalNumberGroupoidElementMixin[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
-	groupoid.AdditiveGroupoidElement[NS, N]
-	groupoid.MultiplicativeGroupoidElement[NS, N]
-	groupoid.GroupoidElement[NS, N]
+type PositiveNaturalRgElementMixin[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
+	ring.RgElement[NS, N]
 	order.ChainElement[NS, N]
 }
 
-func (n *PositiveNaturalNumberGroupoidElementMixin[NS, N]) Structure() NS {
+func (n *PositiveNaturalRgElementMixin[NS, N]) Structure() NS {
 	panic("in mixin")
 }
-func (n *PositiveNaturalNumberGroupoidElementMixin[NS, N]) Unwrap() N {
+func (n *PositiveNaturalRgElementMixin[NS, N]) Unwrap() N {
 	panic("in mixin")
 }
-func (n *PositiveNaturalNumberGroupoidElementMixin[NS, N]) Arithmetic() integer.Arithmetic[N] {
+func (n *PositiveNaturalRgElementMixin[NS, N]) Arithmetic() integer.Arithmetic[N] {
 	panic("in mixin")
 }
 
-func (n *PositiveNaturalNumberGroupoidElementMixin[NS, N]) Mod(modulus integer.PositiveNaturalNumberGroupoidElement[NS, N]) (N, error) {
+func (n *PositiveNaturalRgElementMixin[NS, N]) Equal(x N) bool {
+	return n.Arithmetic().Equal(n.Unwrap(), x)
+}
+
+func (n *PositiveNaturalRgElementMixin[NS, N]) HashCode() uint64 {
+	return n.Uint64()
+}
+
+func (n *PositiveNaturalRgElementMixin[NS, N]) Mod(modulus integer.PositiveNaturalRgElement[NS, N]) (N, error) {
 	out, err := n.Structure().Arithmetic().Mod(n.Unwrap(), modulus.Unwrap())
 	if err != nil {
 		return *new(N), errs.WrapFailed(err, "could not compute mod")
@@ -48,32 +52,32 @@ func (n *PositiveNaturalNumberGroupoidElementMixin[NS, N]) Mod(modulus integer.P
 	return out.Unwrap(), nil
 }
 
-func (n *PositiveNaturalNumberGroupoidElementMixin[NS, N]) Cmp(x algebra.OrderTheoreticLatticeElement[NS, N]) algebra.Ordering {
+func (n *PositiveNaturalRgElementMixin[NS, N]) Cmp(x algebra.OrderTheoreticLatticeElement[NS, N]) algebra.Ordering {
 	return n.Structure().Arithmetic().Cmp(n.Unwrap(), x.Unwrap())
 }
 
-func (n *PositiveNaturalNumberGroupoidElementMixin[NS, N]) IsOne() bool {
+func (n *PositiveNaturalRgElementMixin[NS, N]) IsOne() bool {
 	return n.Structure().One().Equal(n.Unwrap())
 }
 
-func (n *PositiveNaturalNumberGroupoidElementMixin[NS, N]) IsEven() bool {
+func (n *PositiveNaturalRgElementMixin[NS, N]) IsEven() bool {
 	return n.Structure().Arithmetic().IsEven(n.Unwrap())
 }
 
-func (n *PositiveNaturalNumberGroupoidElementMixin[NS, N]) IsOdd() bool {
+func (n *PositiveNaturalRgElementMixin[NS, N]) IsOdd() bool {
 	return n.Structure().Arithmetic().IsOdd(n.Unwrap())
 }
 
-func (n *PositiveNaturalNumberGroupoidElementMixin[NS, N]) IsPositive() bool {
+func (n *PositiveNaturalRgElementMixin[NS, N]) IsPositive() bool {
 	res := n.Cmp(n.Structure().One())
 	return res == algebra.Equal || res == algebra.GreaterThan
 }
 
-func (n *PositiveNaturalNumberGroupoidElementMixin[NS, N]) Increment() N {
+func (n *PositiveNaturalRgElementMixin[NS, N]) Increment() N {
 	return n.Add(n.Structure().One())
 }
 
-func (n *PositiveNaturalNumberGroupoidElementMixin[NS, N]) Decrement() N {
+func (n *PositiveNaturalRgElementMixin[NS, N]) Decrement() N {
 	arith := n.Arithmetic()
 	res, err := arith.Sub(n.Unwrap(), n.Structure().One())
 	if err != nil {
@@ -82,25 +86,26 @@ func (n *PositiveNaturalNumberGroupoidElementMixin[NS, N]) Decrement() N {
 	return res
 }
 
-func (n *PositiveNaturalNumberGroupoidElementMixin[NS, N]) Uint64() uint64 {
+func (n *PositiveNaturalRgElementMixin[NS, N]) Uint64() uint64 {
 	return n.Arithmetic().Uint64(n.Unwrap())
 }
 
 type NPlusMixin[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
-	PositiveNaturalNumberGroupoidMixin[NS, N]
+	PositiveNaturalRgMixin[NS, N]
 	order.LowerBoundedOrderTheoreticLattice[NS, N]
-	order.Chain[NS, N]
 }
 
 type NatPlusMixin[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
-	ring.RgElement[NS, N]
-	PositiveNaturalNumberGroupoidElementMixin[NS, N]
-	order.OrderTheoreticLatticeElement[NS, N]
-	order.ChainElement[NS, N]
+	PositiveNaturalRgElementMixin[NS, N]
 	order.LowerBoundedOrderTheoreticLatticeElement[NS, N]
 }
 
 func (n *NatPlusMixin[NS, N]) TrySub(x integer.NatPlus[NS, N]) (N, error) {
 	arith := n.Arithmetic()
 	return arith.Sub(n.Unwrap(), x.Unwrap())
+}
+
+func (n *NatPlusMixin[NS, N]) CanGenerateAllElements(with algebra.Operator) bool {
+	_, defined := n.Structure().GetOperator(with)
+	return n.IsOne() && defined && n.Structure().Addition().Name() == with
 }

@@ -1,16 +1,16 @@
 package algebra
 
-type RightAssociative[InputType, OutputType Element] interface {
-	RFold(xs ...InputType) (OutputType, error)
+type RightAssociative[E Element] interface {
+	RFold(xs ...E) (E, error)
 }
 
-type LeftAssociative[InputType, OutputType Element] interface {
-	LFold(xs ...InputType) (OutputType, error)
+type LeftAssociative[E Element] interface {
+	LFold(xs ...E) (E, error)
 }
 
-type Associative[InputType, OutputType Element] interface {
-	RightAssociative[InputType, OutputType]
-	LeftAssociative[InputType, OutputType]
+type Associative[E Element] interface {
+	RightAssociative[E]
+	LeftAssociative[E]
 }
 
 type Operator string
@@ -22,4 +22,5 @@ type UnaryOperator[E Element] interface {
 type BinaryOperator[E Element] interface {
 	Name() Operator
 	BiEndoFunction[E]
+	LeftAssociative[E]
 }

@@ -2,8 +2,20 @@ package order
 
 import "github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 
-type OrderTheoreticLatticeElement[L algebra.OrderTheoreticLattice[L, E], E algebra.OrderTheoreticLatticeElement[L, E]] struct {
-	algebra.OrderTheoreticLatticeElement[L, E]
+type OrderTheoreticLatticeElement[L algebra.OrderTheoreticLattice[L, E], E algebra.OrderTheoreticLatticeElement[L, E]] struct{}
+
+func (*OrderTheoreticLatticeElement[L, E]) Structure() L {
+	panic("in mixin")
+}
+func (*OrderTheoreticLatticeElement[L, E]) Unwrap() E {
+	panic("in mixin")
+}
+
+func (*OrderTheoreticLatticeElement[L, E]) Cmp(rhs algebra.OrderTheoreticLatticeElement[L, E]) algebra.Ordering {
+	panic("in mixin")
+}
+func (*OrderTheoreticLatticeElement[L, E]) Equal(x E) bool {
+	panic("in mixin")
 }
 
 func (l *OrderTheoreticLatticeElement[L, E]) Lattice() algebra.OrderTheoreticLattice[L, E] {
@@ -11,7 +23,7 @@ func (l *OrderTheoreticLatticeElement[L, E]) Lattice() algebra.OrderTheoreticLat
 }
 
 type ChainElement[C algebra.Chain[C, E], E algebra.ChainElement[C, E]] struct {
-	algebra.ChainElement[C, E]
+	OrderTheoreticLatticeElement[C, E]
 }
 
 func (c *ChainElement[C, E]) Meet(rhs algebra.OrderTheoreticLatticeElement[C, E]) E {
@@ -41,7 +53,7 @@ func (c *ChainElement[C, E]) Chain() algebra.Chain[C, E] {
 }
 
 type UpperBoundedOrderTheoreticLatticeElement[L algebra.UpperBoundedOrderTheoreticLattice[L, E], E algebra.UpperBoundedOrderTheoreticLatticeElement[L, E]] struct {
-	algebra.UpperBoundedOrderTheoreticLatticeElement[L, E]
+	OrderTheoreticLatticeElement[L, E]
 }
 
 func (l *UpperBoundedOrderTheoreticLatticeElement[L, E]) IsTop() bool {
@@ -53,7 +65,7 @@ func (l *UpperBoundedOrderTheoreticLatticeElement[L, E]) UpperBoundedLattice() a
 }
 
 type LowerBoundedOrderTheoreticLatticeElement[L algebra.LowerBoundedOrderTheoreticLattice[L, E], E algebra.LowerBoundedOrderTheoreticLatticeElement[L, E]] struct {
-	algebra.LowerBoundedOrderTheoreticLatticeElement[L, E]
+	OrderTheoreticLatticeElement[L, E]
 }
 
 func (l *LowerBoundedOrderTheoreticLatticeElement[L, E]) IsBottom() bool {
@@ -65,7 +77,7 @@ func (l *LowerBoundedOrderTheoreticLatticeElement[L, E]) LowerBoundedLattice() a
 }
 
 type BoundedOrderTheoreticLatticeElement[L algebra.BoundedOrderTheoreticLattice[L, E], E algebra.BoundedOrderTheoreticLatticeElement[L, E]] struct {
-	algebra.BoundedOrderTheoreticLatticeElement[L, E]
+	OrderTheoreticLatticeElement[L, E]
 	UpperBoundedOrderTheoreticLattice[L, E]
 	LowerBoundedOrderTheoreticLattice[L, E]
 }

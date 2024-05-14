@@ -2,17 +2,23 @@ package group
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/monoid"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	saferith_utils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"github.com/cronokirby/saferith"
 )
 
 type Group[G algebra.Group[G, E], E algebra.GroupElement[G, E]] struct {
-	algebra.Group[G, E]
+	monoid.Monoid[G, E]
+}
+
+func (g *Group[G, E]) Order() *saferith.Modulus {
+	return g.Groupoid.Order()
 }
 
 type AdditiveGroup[G algebra.AdditiveGroup[G, E], E algebra.AdditiveGroupElement[G, E]] struct {
-	algebra.AdditiveGroup[G, E]
+	Group[G, E]
+	monoid.AdditiveMonoid[G, E]
 }
 
 func (*AdditiveGroup[G, E]) Sub(x algebra.AdditiveGroupElement[G, E], ys ...algebra.AdditiveGroupElement[G, E]) E {
@@ -24,7 +30,8 @@ func (*AdditiveGroup[G, E]) Sub(x algebra.AdditiveGroupElement[G, E], ys ...alge
 }
 
 type MultiplicativeGroup[G algebra.MultiplicativeGroup[G, E], E algebra.MultiplicativeGroupElement[G, E]] struct {
-	algebra.MultiplicativeGroup[G, E]
+	Group[G, E]
+	monoid.MultiplicativeMonoid[G, E]
 }
 
 func (*MultiplicativeGroup[G, E]) Div(x algebra.MultiplicativeGroupElement[G, E], ys ...algebra.MultiplicativeGroupElement[G, E]) (E, error) {
@@ -40,7 +47,12 @@ func (*MultiplicativeGroup[G, E]) Div(x algebra.MultiplicativeGroupElement[G, E]
 }
 
 type CyclicGroup[G algebra.CyclicGroup[G, E], E algebra.CyclicGroupElement[G, E]] struct {
-	algebra.CyclicGroup[G, E]
+	Group[G, E]
+	monoid.CyclicMonoid[G, E]
+}
+
+func (*CyclicGroup[G, E]) GetOperator(under algebra.Operator) (algebra.BinaryOperator[E], bool) {
+	panic("in mixin")
 }
 
 func (g *CyclicGroup[G, E]) DLog(base, x algebra.CyclicGroupElement[G, E], under algebra.Operator) (*saferith.Nat, error) {

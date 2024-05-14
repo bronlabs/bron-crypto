@@ -6,67 +6,84 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils/itertools"
 )
 
-func RFold[G algebra.Structure, E algebra.Element](op algebra.BinaryOperator[E], x algebra.GroupoidElement[G, E], rest ...algebra.GroupoidElement[G, E]) (E, error) {
-	if op == nil {
-		return *new(E), errs.NewIsNil("operator")
+type EndoFunction[E algebra.Element] struct {
+	Map_ func(x E) (E, error)
+	Set_ algebra.Set[E]
+}
+
+func (op *EndoFunction[E]) Arity() uint {
+	return 1
+}
+
+func (op *EndoFunction[E]) Map(x E) (E, error) {
+	return op.Map_(x)
+}
+
+func (op *EndoFunction[E]) Dom() algebra.Set[E] {
+	return op.Set_
+}
+
+func (op *EndoFunction[E]) Cod() algebra.Set[E] {
+	return op.Set_
+}
+
+type UnaryOperator[E algebra.Element] struct {
+	EndoFunction[E]
+	Name_ algebra.Operator
+}
+
+func (op *UnaryOperator[E]) Name() algebra.Operator {
+	return op.Name_
+}
+
+type BiEndoFunction[E algebra.Element] struct {
+	Map_ func(x, y E) (E, error)
+}
+
+func (op *BiEndoFunction[E]) Arity() uint {
+	return 2
+}
+
+func (op *BiEndoFunction[E]) Map(x, y E) (E, error) {
+	return op.Map_(x, y)
+}
+
+type RightAssociativeBiEndoFunction[E algebra.Element] struct {
+	BiEndoFunction[E]
+}
+
+func (op *RightAssociativeBiEndoFunction[E]) RFold(xs ...E) (E, error) {
+	if len(xs) < 1 {
+		return *new(E), errs.NewLength("need at least one input")
 	}
-	unwrappedRest := make([]E, len(rest))
-	for i, r := range rest {
-		unwrappedRest[i] = r.Unwrap()
-	}
-	res, err := itertools.FoldOrError[E, E](op.Map, x.Unwrap(), unwrappedRest...)
+	res, err := itertools.FoldRightOrError(op.Map, xs[len(xs)-1], xs...)
 	if err != nil {
-		return *new(E), errs.WrapFailed(err, "could not apply operator")
+		return *new(E), errs.WrapFailed(err, "could not right fold")
 	}
 	return res, nil
 }
 
-type OperatorSuite[E algebra.Element] struct {
-	m        map[algebra.Operator]algebra.BinaryOperator[E]
-	addition algebra.Operator
-	mult     algebra.Operator
+type LeftAssociativeBiEndoFunction[E algebra.Element] struct {
+	BiEndoFunction[E]
 }
 
-func (ops *OperatorSuite[E]) Operator(name algebra.Operator) (algebra.BinaryOperator[E], bool) {
-	out, exists := ops.m[name]
-	return out, exists
-}
-
-type Builder[E algebra.Element] struct {
-	v OperatorSuite[E]
-}
-
-func (b *Builder[E]) WithAddition(op algebra.BinaryOperator[E]) *Builder[E] {
-	b.v.addition = op.Name()
-	b.v.m[b.v.addition] = op
-	return b
-}
-
-func (b *Builder[E]) WithMultiplication(op algebra.BinaryOperator[E]) *Builder[E] {
-	b.v.mult = op.Name()
-	b.v.m[b.v.mult] = op
-	return b
-}
-
-func (b *Builder[E]) Build() (OperatorSuite[E], error) {
-	out := b.v
-	if out.addition != "" {
-		if _, ok := out.m[out.addition].(algebra.Addition[E]); !ok {
-			return *new(OperatorSuite[E]), errs.NewType("provided addition operator is invalid")
-		}
+func (op *LeftAssociativeBiEndoFunction[E]) LFold(xs ...E) (E, error) {
+	if len(xs) < 1 {
+		return *new(E), errs.NewLength("need at least one input")
 	}
-	if out.mult != "" {
-		if _, ok := out.m[out.mult].(algebra.Multiplication[E]); !ok {
-			return *new(OperatorSuite[E]), errs.NewType("provided multiplication operator is invalid")
-		}
+	res, err := itertools.FoldOrError(op.Map, xs[0], xs...)
+	if err != nil {
+		return *new(E), errs.WrapFailed(err, "could not right fold")
 	}
-	return out, nil
+	return res, nil
 }
 
-func NewOperatorSuiteBuilder[E algebra.Element]() *Builder[E] {
-	return &Builder[E]{
-		v: OperatorSuite[E]{
-			m: make(map[algebra.Operator]algebra.BinaryOperator[E]),
-		},
-	}
+type BinaryOperator[E algebra.Element] struct {
+	BiEndoFunction[E]
+	LeftAssociativeBiEndoFunction[E]
+	Name_ algebra.Operator
+}
+
+func (op *BinaryOperator[E]) Name() algebra.Operator {
+	return op.Name_
 }

@@ -9,16 +9,6 @@ const (
 	GreaterThan  Ordering = 1
 )
 
-type Max[E Element] interface {
-	BinaryOperator[E]
-	Max(x, y E) E
-}
-
-type Min[E Element] interface {
-	BinaryOperator[E]
-	Min(x, y E) E
-}
-
 // OrderTheoreticLattice defines methods needed for a structured set to be a lattice.
 // A lattice is a partially ordered set where every pair has a least upper bound (join) and a greatest lower bound (meet).
 type OrderTheoreticLattice[L Structure, E Element] interface {

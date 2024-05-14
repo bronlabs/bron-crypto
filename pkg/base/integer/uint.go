@@ -6,7 +6,7 @@ import "github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 type Zn[S algebra.Structure, E algebra.Element] interface {
 	algebra.FiniteRing[S, E]
 	algebra.BoundedOrderTheoreticLattice[S, E]
-	NaturalNumberMonoid[S, E]
+	NaturalRig[S, E]
 
 	IsDecomposable(coprimeIdealNorms ...Uint[S, E]) (bool, error)
 }
@@ -16,5 +16,5 @@ type Zn[S algebra.Structure, E algebra.Element] interface {
 type Uint[S algebra.Structure, E algebra.Element] interface {
 	algebra.FiniteRingElement[S, E]
 	algebra.BoundedOrderTheoreticLatticeElement[S, E]
-	NaturalNumberMonoidElement[S, E]
+	NaturalRigElement[S, E]
 }

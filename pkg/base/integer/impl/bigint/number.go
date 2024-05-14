@@ -1,10 +1,12 @@
 package bigint
 
 import (
+	"encoding/json"
 	"math/big"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/cronokirby/saferith"
 )
 
@@ -16,8 +18,8 @@ var (
 
 const Name = "BIG_INT"
 
-var _ integer.Number[*BigInt] = (*BigInt)(nil)
 var _ algebra.BigIntLike[*BigInt] = (*BigInt)(nil)
+var _ impl.ImplAdapter[*BigInt, *big.Int] = (*BigInt)(nil)
 
 type BigInt struct {
 	*big.Int
@@ -32,12 +34,12 @@ func B(v *big.Int) *BigInt {
 	}
 }
 
-func (n *BigInt) Arithmetic() integer.Arithmetic[*BigInt] {
-	return NewSignedArithmetic()
+func (n *BigInt) Impl() *big.Int {
+	return n.Int
 }
 
-func (n *BigInt) Unwrap() *BigInt {
-	return n
+func (n *BigInt) Wrap(x *big.Int) *BigInt {
+	return B(x)
 }
 
 func (n *BigInt) Clone() *BigInt {
@@ -80,4 +82,16 @@ func (n *BigInt) AnnouncedLen() int {
 
 func (n *BigInt) TrueLen() uint {
 	return uint(n.Int.BitLen())
+}
+
+func (n *BigInt) MarshalJSON() ([]byte, error) {
+	return n.MarshalJSON()
+}
+func (n *BigInt) UnmarshalJSON(data []byte) error {
+	var b *big.Int
+	if err := json.Unmarshal(data, b); err != nil {
+		return errs.WrapSerialisation(err, "could not marshal big int")
+	}
+	n.Int = b
+	return nil
 }

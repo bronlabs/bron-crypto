@@ -11,6 +11,10 @@ func Equal(x, y uint64) int {
 	return eqLow & eqHigh
 }
 
+func EqualStrings[T ~string](x, y T) int {
+	return subtle.ConstantTimeCompare([]byte(x), []byte(y))
+}
+
 // GreaterThan returns 1 if x > y and 0 otherwise.
 //
 //   - If both x < 2^63 and y < 2^63, then y-x will have its high bit set only if x > y.

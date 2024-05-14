@@ -4,8 +4,10 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 )
 
-type OrderTheoreticLattice[L algebra.OrderTheoreticLattice[L, E], E algebra.OrderTheoreticLatticeElement[L, E]] struct {
-	algebra.OrderTheoreticLattice[L, E]
+type OrderTheoreticLattice[L algebra.OrderTheoreticLattice[L, E], E algebra.OrderTheoreticLatticeElement[L, E]] struct{}
+
+func (*OrderTheoreticLattice[L, E]) Element() E {
+	panic("in mixin")
 }
 
 func (l *OrderTheoreticLattice[L, E]) LatticeElement() algebra.OrderTheoreticLatticeElement[L, E] {
@@ -29,7 +31,7 @@ func (l *OrderTheoreticLattice[L, E]) Meet(x algebra.OrderTheoreticLatticeElemen
 }
 
 type Chain[C algebra.Chain[C, E], E algebra.ChainElement[C, E]] struct {
-	algebra.Chain[C, E]
+	OrderTheoreticLattice[C, E]
 }
 
 func (c *Chain[C, E]) Max(x algebra.ChainElement[C, E], ys ...algebra.ChainElement[C, E]) E {
@@ -53,7 +55,11 @@ func (c *Chain[C, E]) ChainElement() algebra.ChainElement[C, E] {
 }
 
 type UpperBoundedOrderTheoreticLattice[L algebra.UpperBoundedOrderTheoreticLattice[L, E], E algebra.UpperBoundedOrderTheoreticLatticeElement[L, E]] struct {
-	algebra.UpperBoundedOrderTheoreticLattice[L, E]
+	OrderTheoreticLattice[L, E]
+}
+
+func (*UpperBoundedOrderTheoreticLattice[L, E]) Top() E {
+	panic("in mixin")
 }
 
 func (l *UpperBoundedOrderTheoreticLattice[L, E]) Join(x algebra.OrderTheoreticLatticeElement[L, E], ys ...algebra.OrderTheoreticLatticeElement[L, E]) E {
@@ -76,7 +82,11 @@ func (l *UpperBoundedOrderTheoreticLattice[L, E]) UpperBoundedLatticeElement() a
 }
 
 type LowerBoundedOrderTheoreticLattice[L algebra.LowerBoundedOrderTheoreticLattice[L, E], E algebra.LowerBoundedOrderTheoreticLatticeElement[L, E]] struct {
-	algebra.LowerBoundedOrderTheoreticLattice[L, E]
+	OrderTheoreticLattice[L, E]
+}
+
+func (*LowerBoundedOrderTheoreticLattice[L, E]) Bottom() E {
+	panic("in mixin")
 }
 
 func (l *LowerBoundedOrderTheoreticLattice[L, E]) Meet(x algebra.OrderTheoreticLatticeElement[L, E], ys ...algebra.OrderTheoreticLatticeElement[L, E]) E {
@@ -99,7 +109,7 @@ func (l *LowerBoundedOrderTheoreticLattice[L, E]) LowerBoundedLatticeElement() a
 }
 
 type BoundedOrderTheoreticLattice[L algebra.BoundedOrderTheoreticLattice[L, E], E algebra.BoundedOrderTheoreticLatticeElement[L, E]] struct {
-	algebra.BoundedOrderTheoreticLattice[L, E]
+	OrderTheoreticLattice[L, E]
 	UpperBoundedOrderTheoreticLattice[L, E]
 	LowerBoundedOrderTheoreticLattice[L, E]
 }

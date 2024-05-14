@@ -1,30 +1,25 @@
 package bigint
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+	"encoding/json"
+
+	aimpl "github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer/impl"
 	"github.com/cronokirby/saferith"
 )
 
 var _ integer.NatPlus[*NPlus, *NatPlus] = (*NatPlus)(nil)
+var _ aimpl.ImplAdapter[*NatPlus, *BigInt] = (*NatPlus)(nil)
 
 type NatPlus struct {
 	impl.NatPlusMixin[*NPlus, *NatPlus]
-	// order.ChainElement[*NPlus, *NatPlus]
+	V *BigInt
 }
 
-func (n *NatPlus) Apply(with algebra.Operator, x algebra.GroupoidElement[*NPlus, *NatPlus], count *saferith.Nat) (*NatPlus, error) {
-	return n.GroupoidElement.Apply(with, x, count)
-}
-
-// func (n *NatPlus) Join(rhs algebra.OrderTheoreticLatticeElement[*NPlus, *NatPlus]) *NatPlus {
-// 	return n.ChainElement.Join(rhs)
-// }
-
-func (n *NatPlus) CanGenerateAllElements(with algebra.Operator) bool {
-	_, defined := n.Structure().GetOperator(with)
-	return n.IsOne() && defined && n.Structure().Addition().Name() == with
+func (n *NatPlus) Arithmetic() integer.Arithmetic[*NatPlus] {
+	return NewNPlusArithmetic[*NatPlus](-1, true)
 }
 
 func (*NatPlus) Structure() *NPlus {
@@ -35,10 +30,66 @@ func (n *NatPlus) Unwrap() *NatPlus {
 	return n
 }
 
-func (n *NatPlus) Clone() *NatPlus {
-	return n.Arithmetic().Clone(n)
+func (n *NatPlus) Impl() *BigInt {
+	return n.V
+}
+
+func (n *NatPlus) Wrap(x *BigInt) *NatPlus {
+	out := n.Clone()
+	out.V = x
+	return out
 }
 
 func (n *NatPlus) AnnouncedLen() int {
-	panic("implement me")
+	return n.V.AnnouncedLen()
+}
+
+func (n *NatPlus) TrueLen() uint {
+	return n.V.TrueLen()
+}
+
+func (n *NatPlus) Clone() *NatPlus {
+	return &NatPlus{
+		NatPlusMixin: impl.NatPlusMixin[*NPlus, *NatPlus]{},
+		V:            n.V.Clone(),
+	}
+}
+
+func (n *NatPlus) Nat() *saferith.Nat {
+	return n.V.Nat()
+}
+
+func (n *NatPlus) SetNat(v *saferith.Nat) *NatPlus {
+	out := &NatPlus{}
+	out.V = new(BigInt).SetNat(v)
+	return out
+}
+
+func (n *NatPlus) MarshalJSON() ([]byte, error) {
+	type temp struct {
+		Name   string
+		Type   integer.ArithmeticType
+		Number *BigInt
+	}
+	return json.Marshal(&temp{
+		Name:   n.Arithmetic().Name(),
+		Type:   integer.ForNPlus,
+		Number: n.V,
+	})
+}
+
+func (n *NatPlus) UnmarshalJSON(data []byte) error {
+	var temp struct {
+		Name   string
+		Type   integer.ArithmeticType
+		Number *BigInt
+	}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return errs.WrapSerialisation(err, "could not unmarshal json")
+	}
+	if string(temp.Type) != string(integer.ForNPlus) {
+		return errs.NewType("type (%s) must be (%s)", temp.Type, integer.ForNPlus)
+	}
+	n.V = temp.Number
+	return nil
 }

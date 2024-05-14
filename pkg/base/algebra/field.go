@@ -21,7 +21,6 @@ type FieldElement[F Structure, E Element] interface {
 // FiniteField defines methods needed for S to be considered as a finite field.
 // A finite field (S, +, *) is a positive characteristic ring where (S, *) is a group.
 type FiniteField[FF Structure, E Element] interface {
-	FiniteStructure[FF, E]
 	Field[FF, E]
 	FiniteRing[FF, E]
 }
