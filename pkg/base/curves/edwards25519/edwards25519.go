@@ -34,6 +34,7 @@ var (
 	cofactor          = new(saferith.Nat).SetUint64(8)
 	groupOrder        = saferith.ModulusFromNat(new(saferith.Nat).Mul(subgroupOrder.Nat(), cofactor, subgroupOrder.Nat().AnnouncedLen()+cofactor.AnnouncedLen()))
 	baseFieldOrder, _ = saferith.ModulusFromHex(strings.ToUpper("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed"))
+	elementSize       = 32
 
 	// d is a constant in the curve equation.
 	d, _ = new(filippo_field.Element).SetBytes([]byte{
@@ -85,8 +86,16 @@ func (*Curve) Cardinality() *saferith.Nat {
 }
 
 func (*Curve) Contains(e curves.Point) bool {
-	//TODO implement me
-	panic("implement me")
+	edE, ok := e.(*Point)
+	if !ok {
+		return false
+	}
+	fp := &filippo.Point{}
+	_, err := fp.SetBytes(edE.V.Bytes())
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func (*Curve) Iter() <-chan curves.Point {
@@ -143,7 +152,7 @@ func (*Curve) DLog(b, x algebra.CyclicGroupElement[curves.Curve, curves.Point], 
 }
 
 func (*Curve) ElementSize() int {
-	panic("implement me")
+	return elementSize
 }
 
 func (*Curve) WideElementSize() int {
