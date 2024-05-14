@@ -348,14 +348,15 @@ func FuzzSwap(f *testing.F) {
 		i, j  []uint
 	}{
 		input: [][]byte{
+			{},
 			{0b11111111},
 			{0b00000000},
 			{0b11111111},
 			{0b00000011, 0b00010010},
 			{0b11100001, 0b11100100},
 		},
-		i: []uint{0, 1, 2, 3, 4, 5, 6, 7, 67},
-		j: []uint{0, 1, 2, 3, 4, 5, 6, 7, 99},
+		i: []uint{0, 1, 2, 3, 4, 5, 6, 7, 8, 67},
+		j: []uint{0, 1, 2, 3, 4, 5, 6, 7, 8, 99},
 	}
 	for _, input := range testCases.input {
 		for _, i := range testCases.i {
@@ -366,7 +367,7 @@ func FuzzSwap(f *testing.F) {
 	}
 
 	f.Fuzz(func(t *testing.T, input []byte, i uint, j uint) {
-		if int(i) > len(input) || int(j) > len(input) {
+		if int(i) >= len(input) || int(j) >= len(input) || len(input) == 0 {
 			t.Skip() // Panics
 		}
 		if i == j {
@@ -402,6 +403,7 @@ func FuzzGet(f *testing.F) {
 		inputIndexs []uint
 	}{
 		input: [][]byte{
+			{},
 			{0b11100001, 0b11100001},
 			{0b11100001, 0b11100100},
 			{0b11100001, 0b11111100},
