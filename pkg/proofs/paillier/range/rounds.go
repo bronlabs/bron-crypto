@@ -26,7 +26,6 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 	}
 
 	// 1.iv. compute commitment to (e, sessionId) and send to P
-
 	committer, err := hashcomm.NewCommitter(verifier.SessionId, verifier.Prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot instantiate committer")
