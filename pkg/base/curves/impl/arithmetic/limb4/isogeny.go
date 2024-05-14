@@ -17,7 +17,7 @@ type IsogenyParams struct {
 // Map from the isogeny curve to the main curve using the parameters.
 func (p *IsogenyParams) Map(xIn, yIn *FieldValue) (x, y *FieldValue) {
 	var xNum, xDen, yNum, yDen, tv [FieldLimbs]uint64
-	var wasInverted int
+	var wasInverted uint64
 
 	xnumL := len(p.XNum)
 	xdenL := len(p.XDen)

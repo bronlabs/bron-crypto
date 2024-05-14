@@ -3,6 +3,7 @@ package fp
 import (
 	crand "crypto/rand"
 	"math/rand"
+	"strconv"
 	"testing"
 
 	"github.com/cronokirby/saferith"
@@ -31,7 +32,7 @@ func TestFpAdd(t *testing.T) {
 	exp := New().SetUint64(2)
 	res := New().Add(lhs, rhs)
 	require.NotNil(t, res)
-	require.Equal(t, 1, res.Equal(exp))
+	require.Equal(t, uint64(1), res.Equal(exp))
 
 	// Fuzz test
 	for i := 0; i < 25; i++ {
@@ -55,7 +56,7 @@ func TestFpSub(t *testing.T) {
 	exp := New().SetZero()
 	res := New().Sub(lhs, rhs)
 	require.NotNil(t, res)
-	require.Equal(t, 1, res.Equal(exp))
+	require.Equal(t, uint64(1), res.Equal(exp))
 
 	// Fuzz test
 	for i := 0; i < 25; i++ {
@@ -82,7 +83,7 @@ func TestFpMul(t *testing.T) {
 	exp := New().SetOne()
 	res := New().Mul(lhs, rhs)
 	require.NotNil(t, res)
-	require.Equal(t, 1, res.Equal(exp))
+	require.Equal(t, uint64(1), res.Equal(exp))
 
 	// Fuzz test
 	for i := 0; i < 25; i++ {
@@ -148,7 +149,7 @@ func TestFpSqrt(t *testing.T) {
 	t3 := New().Square(t1)
 	_, wasSquare := t3.Sqrt(t3)
 	require.True(t, wasSquare)
-	require.Equal(t, 1, t1.Equal(t3)|t2.Equal(t3))
+	require.Equal(t, uint64(1), t1.Equal(t3)|t2.Equal(t3))
 	t1.SetUint64(5)
 	_, wasSquare = New().Sqrt(t1)
 	require.False(t, wasSquare)
@@ -210,65 +211,67 @@ func TestFpCmp(t *testing.T) {
 	tests := []struct {
 		a *limb4.FieldValue
 		b *limb4.FieldValue
-		e int
+		e int64
 	}{
 		{
-			a: New().SetRaw(&[limb4.FieldLimbs]uint64{2731658267414164836, 14655288906067898431, 6537465423330262322, 8306191141697566219}),
-			b: New().SetRaw(&[limb4.FieldLimbs]uint64{6472764012681988529, 10848812988401906064, 2961825807536828898, 4282183981941645679}),
+			a: New().SetLimbs(&[limb4.FieldLimbs]uint64{2731658267414164836, 14655288906067898431, 6537465423330262322, 8306191141697566219}),
+			b: New().SetLimbs(&[limb4.FieldLimbs]uint64{6472764012681988529, 10848812988401906064, 2961825807536828898, 4282183981941645679}),
 			e: 1,
 		},
 		{
-			a: New().SetRaw(&[limb4.FieldLimbs]uint64{8023004109510539223, 4652004072850285717, 1877219145646046927, 383214385093921911}),
-			b: New().SetRaw(&[limb4.FieldLimbs]uint64{10099384440823804262, 16139476942229308465, 8636966320777393798, 5435928725024696785}),
+			a: New().SetLimbs(&[limb4.FieldLimbs]uint64{8023004109510539223, 4652004072850285717, 1877219145646046927, 383214385093921911}),
+			b: New().SetLimbs(&[limb4.FieldLimbs]uint64{10099384440823804262, 16139476942229308465, 8636966320777393798, 5435928725024696785}),
 			e: -1,
 		},
 		{
-			a: New().SetRaw(&[limb4.FieldLimbs]uint64{3741840066202388211, 12165774400417314871, 16619312580230515379, 16195032234110087705}),
-			b: New().SetRaw(&[limb4.FieldLimbs]uint64{3905865991286066744, 543690822309071825, 17963103015950210055, 3745476720756119742}),
+			a: New().SetLimbs(&[limb4.FieldLimbs]uint64{3741840066202388211, 12165774400417314871, 16619312580230515379, 16195032234110087705}),
+			b: New().SetLimbs(&[limb4.FieldLimbs]uint64{3905865991286066744, 543690822309071825, 17963103015950210055, 3745476720756119742}),
 			e: 1,
 		},
 		{
-			a: New().SetRaw(&[limb4.FieldLimbs]uint64{16660853697936147788, 7799793619412111108, 13515141085171033220, 2641079731236069032}),
-			b: New().SetRaw(&[limb4.FieldLimbs]uint64{17790588295388238399, 571847801379669440, 14537208974498222469, 12792570372087452754}),
+			a: New().SetLimbs(&[limb4.FieldLimbs]uint64{16660853697936147788, 7799793619412111108, 13515141085171033220, 2641079731236069032}),
+			b: New().SetLimbs(&[limb4.FieldLimbs]uint64{17790588295388238399, 571847801379669440, 14537208974498222469, 12792570372087452754}),
 			e: -1,
 		},
 		{
-			a: New().SetRaw(&[limb4.FieldLimbs]uint64{3912839285384959186, 2701177075110484070, 6453856448115499033, 6475797457962597458}),
-			b: New().SetRaw(&[limb4.FieldLimbs]uint64{1282566391665688512, 13503640416992806563, 2962240104675990153, 3374904770947067689}),
+			a: New().SetLimbs(&[limb4.FieldLimbs]uint64{3912839285384959186, 2701177075110484070, 6453856448115499033, 6475797457962597458}),
+			b: New().SetLimbs(&[limb4.FieldLimbs]uint64{1282566391665688512, 13503640416992806563, 2962240104675990153, 3374904770947067689}),
 			e: 1,
 		},
 		{
-			a: New().SetRaw(&[limb4.FieldLimbs]uint64{5716631803409360103, 7859567470082614154, 12747956220853330146, 18434584096087315020}),
-			b: New().SetRaw(&[limb4.FieldLimbs]uint64{16317076441459028418, 12854146980376319601, 2258436689269031143, 9531877130792223752}),
+			a: New().SetLimbs(&[limb4.FieldLimbs]uint64{5716631803409360103, 7859567470082614154, 12747956220853330146, 18434584096087315020}),
+			b: New().SetLimbs(&[limb4.FieldLimbs]uint64{16317076441459028418, 12854146980376319601, 2258436689269031143, 9531877130792223752}),
 			e: 1,
 		},
 		{
-			a: New().SetRaw(&[limb4.FieldLimbs]uint64{17955191469941083403, 10350326247207200880, 17263512235150705075, 12700328451238078022}),
-			b: New().SetRaw(&[limb4.FieldLimbs]uint64{6767595547459644695, 7146403825494928147, 12269344038346710612, 9122477829383225603}),
+			a: New().SetLimbs(&[limb4.FieldLimbs]uint64{17955191469941083403, 10350326247207200880, 17263512235150705075, 12700328451238078022}),
+			b: New().SetLimbs(&[limb4.FieldLimbs]uint64{6767595547459644695, 7146403825494928147, 12269344038346710612, 9122477829383225603}),
 			e: 1,
 		},
 		{
-			a: New().SetRaw(&[limb4.FieldLimbs]uint64{17099388671847024438, 6426264987820696548, 10641143464957227405, 7709745403700754098}),
-			b: New().SetRaw(&[limb4.FieldLimbs]uint64{10799154372990268556, 17178492485719929374, 5705777922258988797, 8051037767683567782}),
+			a: New().SetLimbs(&[limb4.FieldLimbs]uint64{17099388671847024438, 6426264987820696548, 10641143464957227405, 7709745403700754098}),
+			b: New().SetLimbs(&[limb4.FieldLimbs]uint64{10799154372990268556, 17178492485719929374, 5705777922258988797, 8051037767683567782}),
 			e: -1,
 		},
 		{
-			a: New().SetRaw(&[limb4.FieldLimbs]uint64{4567139260680454325, 1629385880182139061, 16607020832317899145, 1261011562621553200}),
-			b: New().SetRaw(&[limb4.FieldLimbs]uint64{13487234491304534488, 17872642955936089265, 17651026784972590233, 9468934643333871559}),
+			a: New().SetLimbs(&[limb4.FieldLimbs]uint64{4567139260680454325, 1629385880182139061, 16607020832317899145, 1261011562621553200}),
+			b: New().SetLimbs(&[limb4.FieldLimbs]uint64{13487234491304534488, 17872642955936089265, 17651026784972590233, 9468934643333871559}),
 			e: -1,
 		},
 		{
-			a: New().SetRaw(&[limb4.FieldLimbs]uint64{18071070103467571798, 11787850505799426140, 10631355976141928593, 4867785203635092610}),
-			b: New().SetRaw(&[limb4.FieldLimbs]uint64{12596443599426461624, 10176122686151524591, 17075755296887483439, 6726169532695070719}),
+			a: New().SetLimbs(&[limb4.FieldLimbs]uint64{18071070103467571798, 11787850505799426140, 10631355976141928593, 4867785203635092610}),
+			b: New().SetLimbs(&[limb4.FieldLimbs]uint64{12596443599426461624, 10176122686151524591, 17075755296887483439, 6726169532695070719}),
 			e: -1,
 		},
 	}
 
-	for _, test := range tests {
-		require.Equal(t, test.e, test.a.Cmp(test.b))
-		require.Equal(t, -test.e, test.b.Cmp(test.a))
-		require.Equal(t, 0, test.a.Cmp(test.a))
-		require.Equal(t, 0, test.b.Cmp(test.b))
+	for i, test := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			require.Equal(t, test.e, test.a.Cmp(test.b))
+			require.Equal(t, -test.e, test.b.Cmp(test.a))
+			require.Equal(t, int64(0), test.a.Cmp(test.a))
+			require.Equal(t, int64(0), test.b.Cmp(test.b))
+		})
 	}
 }
 

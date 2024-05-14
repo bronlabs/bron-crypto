@@ -247,7 +247,7 @@ func (*BaseField) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.Bas
 		panic("Not a k256 field element")
 	}
 	el := new(BaseFieldElement)
-	el.V.Arithmetic.Selectznz(&el.V.Value, &x0f.V.Value, &x1f.V.Value, utils.BoolTo[int](choice))
+	el.V.Arithmetic.Selectznz(&el.V.Value, &x0f.V.Value, &x1f.V.Value, utils.BoolTo[uint64](choice))
 	return el
 }
 

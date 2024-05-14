@@ -1,21 +1,24 @@
 package fp
 
 import (
-	"encoding/hex"
 	"sync"
 
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 )
 
 const (
-	k256FieldModulusHex = "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f"
+	k256FieldBits     = 256
+	k256FieldBytes    = limb4.FieldBytes
+	k256SatFieldLimbs = limb4.FieldLimbs + 1
+	k256DivSteps      = ((49 * k256FieldBits) + 57) / 17
 )
 
 var (
-	k256FpInitonce sync.Once
+	k256FpInitOnce sync.Once
 	k256FpParams   limb4.FieldParams
 )
 
@@ -28,30 +31,36 @@ func New() *limb4.FieldValue {
 }
 
 func k256FpParamsInit() {
-	modulusBytes, err := hex.DecodeString(k256FieldModulusHex)
-	if err != nil {
-		// this should never happen, string is known constant at compile time to be correct
-		panic(err)
-	}
-	modulus := saferith.ModulusFromBytes(modulusBytes)
+	var r, r2, r3 [limb4.FieldLimbs]uint64
+	var mod [k256SatFieldLimbs]uint64
+	var modBytes [k256FieldBytes]byte
+
+	SetOne((*MontgomeryDomainFieldElement)(&r))
+	ToMontgomery((*MontgomeryDomainFieldElement)(&r2), (*NonMontgomeryDomainFieldElement)(&r))
+	ToMontgomery((*MontgomeryDomainFieldElement)(&r3), (*NonMontgomeryDomainFieldElement)(&r2))
+	Msat((*[5]uint64)(mod[:]))
+	ToBytes(&modBytes, (*[4]uint64)(mod[:]))
+	modulus := saferith.ModulusFromBytes(bitstring.ReverseBytes(modBytes[:]))
 
 	k256FpParams = limb4.FieldParams{
-		R:            [limb4.FieldLimbs]uint64{0x00000001000003d1, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000},
-		R2:           [limb4.FieldLimbs]uint64{0x000007a2000e90a1, 0x0000000000000001, 0x0000000000000000, 0x0000000000000000},
-		R3:           [limb4.FieldLimbs]uint64{0x002bb1e33795f671, 0x0000000100000b73, 0x0000000000000000, 0x0000000000000000},
-		ModulusLimbs: [limb4.FieldLimbs]uint64{0xfffffffefffffc2f, 0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff},
+		R:            r,
+		R2:           r2,
+		R3:           r3,
+		ModulusLimbs: [4]uint64(mod[:limb4.FieldLimbs]),
 		Modulus:      modulus,
 	}
 }
 
 func getK256FpParams() *limb4.FieldParams {
-	k256FpInitonce.Do(k256FpParamsInit)
+	k256FpInitOnce.Do(k256FpParamsInit)
 	return &k256FpParams
 }
 
 // Arithmetic is a struct with all the methods needed for working
 // in mod p.
 type Arithmetic struct{}
+
+var _ limb4.FieldArithmetic = Arithmetic{}
 
 // ToMontgomery converts this field to montgomery form.
 func (Arithmetic) ToMontgomery(out, arg *[limb4.FieldLimbs]uint64) {
@@ -89,7 +98,7 @@ func (Arithmetic) Sub(out, arg1, arg2 *[limb4.FieldLimbs]uint64) {
 }
 
 // Sqrt performs modular square root.
-func (f Arithmetic) Sqrt(wasSquare *int, out, arg *[limb4.FieldLimbs]uint64) {
+func (f Arithmetic) Sqrt(wasSquare *uint64, out, arg *[limb4.FieldLimbs]uint64) {
 	// p is congruent to 3 mod 4 we can compute
 	// sqrt using elem^(p+1)/4 mod p
 	// 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffff0c
@@ -109,59 +118,38 @@ func (f Arithmetic) Sqrt(wasSquare *int, out, arg *[limb4.FieldLimbs]uint64) {
 }
 
 // Invert performs modular inverse.
-func (f Arithmetic) Invert(wasInverted *int, out, arg *[limb4.FieldLimbs]uint64) {
-	// The binary representation of (p - 2) has 5 groups of 1s, with lengths in
-	// { 1, 2, 22, 223 }. Use an addition chain to calculate 2^n - 1 for each group:
-	// [1], [2], 3, 6, 9, 11, [22], 44, 88, 176, 220, [223]
-	var s, x2, x3, x6, x9, x11, x22, x44, x88, x176, x220, x223 [limb4.FieldLimbs]uint64
+func (Arithmetic) Invert(wasInverted *uint64, out, arg *[limb4.FieldLimbs]uint64) {
+	var precomp [limb4.FieldLimbs]uint64
+	DivstepPrecomp(&precomp)
 
-	limb4.Pow2k(&x2, arg, 1, f)
-	f.Mul(&x2, &x2, arg)
+	d := uint64(1)
+	var f, g [k256SatFieldLimbs]uint64
+	var v, r, out4, out5 [limb4.FieldLimbs]uint64
+	var out1 uint64
+	var out2, out3 [k256SatFieldLimbs]uint64
 
-	limb4.Pow2k(&x3, &x2, 1, f)
-	f.Mul(&x3, &x3, arg)
+	FromMontgomery((*NonMontgomeryDomainFieldElement)(g[:]), (*MontgomeryDomainFieldElement)(arg))
+	Msat(&f)
+	SetOne((*MontgomeryDomainFieldElement)(&r))
 
-	limb4.Pow2k(&x6, &x3, 3, f)
-	f.Mul(&x6, &x6, &x3)
+	for i := 0; i < k256DivSteps-(k256DivSteps%2); i += 2 {
+		Divstep(&out1, &out2, &out3, &out4, &out5, d, &f, &g, &v, &r)
+		Divstep(&d, &f, &g, &v, &r, out1, &out2, &out3, &out4, &out5)
+	}
+	if (k256DivSteps % 2) != 0 { // compile time if - always true
+		Divstep(&out1, &out2, &out3, &out4, &out5, d, &f, &g, &v, &r)
+		v = out4
+		f = out2
+	}
 
-	limb4.Pow2k(&x9, &x6, 3, f)
-	f.Mul(&x9, &x9, &x3)
+	var h [limb4.FieldLimbs]uint64
+	Opp((*MontgomeryDomainFieldElement)(&h), (*MontgomeryDomainFieldElement)(&v))
+	Selectznz(&v, uint1(f[k256SatFieldLimbs-1]>>63), &v, &h)
+	Mul((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(&v), (*MontgomeryDomainFieldElement)(&precomp))
 
-	limb4.Pow2k(&x11, &x9, 2, f)
-	f.Mul(&x11, &x11, &x2)
-
-	limb4.Pow2k(&x22, &x11, 11, f)
-	f.Mul(&x22, &x22, &x11)
-
-	limb4.Pow2k(&x44, &x22, 22, f)
-	f.Mul(&x44, &x44, &x22)
-
-	limb4.Pow2k(&x88, &x44, 44, f)
-	f.Mul(&x88, &x88, &x44)
-
-	limb4.Pow2k(&x176, &x88, 88, f)
-	f.Mul(&x176, &x176, &x88)
-
-	limb4.Pow2k(&x220, &x176, 44, f)
-	f.Mul(&x220, &x220, &x44)
-
-	limb4.Pow2k(&x223, &x220, 3, f)
-	f.Mul(&x223, &x223, &x3)
-
-	// Use sliding window over the group
-	limb4.Pow2k(&s, &x223, 23, f)
-	f.Mul(&s, &s, &x22)
-	limb4.Pow2k(&s, &s, 5, f)
-	f.Mul(&s, &s, arg)
-	limb4.Pow2k(&s, &s, 3, f)
-	f.Mul(&s, &s, &x2)
-	limb4.Pow2k(&s, &s, 2, f)
-	f.Mul(&s, &s, arg)
-
-	tv := &limb4.FieldValue{Value: *arg, Params: getK256FpParams(), Arithmetic: f}
-
-	*wasInverted = tv.IsNonZero()
-	f.Selectznz(out, out, &s, *wasInverted)
+	inverted := uint64(0)
+	Nonzero(&inverted, out)
+	*wasInverted = (inverted | -inverted) >> 63
 }
 
 // FromBytes converts a little endian byte array into a field element.
@@ -176,6 +164,16 @@ func (Arithmetic) ToBytes(out *[base.FieldBytes]byte, arg *[limb4.FieldLimbs]uin
 
 // Selectznz performs conditional select.
 // selects arg1 if choice == 0 and arg2 if choice == 1.
-func (Arithmetic) Selectznz(out, arg1, arg2 *[limb4.FieldLimbs]uint64, choice int) {
+func (Arithmetic) Selectznz(out, arg1, arg2 *[limb4.FieldLimbs]uint64, choice uint64) {
 	Selectznz(out, uint1(choice), arg1, arg2)
+}
+
+func (Arithmetic) Nonzero(out *uint64, arg *[limb4.FieldLimbs]uint64) {
+	wasNonZero := uint64(0)
+	Nonzero(&wasNonZero, arg)
+	*out = (wasNonZero | -wasNonZero) >> 63
+}
+
+func (Arithmetic) SetOne(out *[limb4.FieldLimbs]uint64) {
+	SetOne((*MontgomeryDomainFieldElement)(out))
 }

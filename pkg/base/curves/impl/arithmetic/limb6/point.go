@@ -118,7 +118,7 @@ func (p *EllipticPoint) Mul(point *EllipticPoint, scalar *FieldValue) *EllipticP
 		slot := (bytes[pos>>3] >> (pos & 7)) & 0xf
 		t.Identity()
 		for i := 1; i < 16; i++ {
-			choice := int(((uint64(slot)^uint64(i))-1)>>8) & 1
+			choice := (((uint64(slot) ^ uint64(i)) - 1) >> 8) & 1
 			t.CMove(t, precomputed[i], choice)
 		}
 
@@ -129,7 +129,7 @@ func (p *EllipticPoint) Mul(point *EllipticPoint, scalar *FieldValue) *EllipticP
 }
 
 // Equal returns 1 if the two points are equal 0 otherwise.
-func (p *EllipticPoint) Equal(rhs *EllipticPoint) int {
+func (p *EllipticPoint) Equal(rhs *EllipticPoint) uint64 {
 	var x1, x2, y1, y2 FieldValue
 
 	x1.Arithmetic = p.X.Arithmetic
@@ -284,7 +284,7 @@ func (p *EllipticPoint) SumOfProducts(points []*EllipticPoint, scalars []*FieldV
 }
 
 // CMove returns arg1 if choice == 0, otherwise returns arg2.
-func (*EllipticPoint) CMove(pt1, pt2 *EllipticPoint, choice int) *EllipticPoint {
+func (*EllipticPoint) CMove(pt1, pt2 *EllipticPoint, choice uint64) *EllipticPoint {
 	pt1.X.CMove(pt1.X, pt2.X, choice)
 	pt1.Y.CMove(pt1.Y, pt2.Y, choice)
 	pt1.Z.CMove(pt1.Z, pt2.Z, choice)

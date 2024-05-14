@@ -18,7 +18,7 @@ func TestP256PointArithmetic_Double(t *testing.T) {
 	e1 := pt1.Equal(pt2)
 	e2 := pt1.Equal(pt3)
 	e3 := pt2.Equal(pt3)
-	require.Equal(t, 1, e1)
-	require.Equal(t, 1, e2)
-	require.Equal(t, 1, e3)
+	require.Equal(t, uint64(1), e1)
+	require.Equal(t, uint64(1), e2)
+	require.Equal(t, uint64(1), e3)
 }

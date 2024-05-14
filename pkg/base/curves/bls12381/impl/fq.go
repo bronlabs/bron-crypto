@@ -194,7 +194,7 @@ func (bls12381FqArithmetic) Sub(out, arg1, arg2 *[limb4.FieldLimbs]uint64) {
 }
 
 // Sqrt performs modular square root.
-func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[limb4.FieldLimbs]uint64) {
+func (f bls12381FqArithmetic) Sqrt(wasSquare *uint64, out, arg *[limb4.FieldLimbs]uint64) {
 	// See sqrt_ts_ct at
 	// https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-11#appendix-I.4
 	// c1 := fqS
@@ -257,7 +257,7 @@ func (f bls12381FqArithmetic) Sqrt(wasSquare *int, out, arg *[limb4.FieldLimbs]u
 }
 
 // Invert performs modular inverse.
-func (f bls12381FqArithmetic) Invert(wasInverted *int, out, arg *[limb4.FieldLimbs]uint64) {
+func (f bls12381FqArithmetic) Invert(wasInverted *uint64, out, arg *[limb4.FieldLimbs]uint64) {
 	// Using an addition chain from
 	// https://github.com/kwantam/addchain
 	var t0, t1, t2, t3, t4, t5, t6, t7, t8 [limb4.FieldLimbs]uint64
@@ -375,8 +375,8 @@ func (bls12381FqArithmetic) ToBytes(out *[base.FieldBytes]byte, arg *[limb4.Fiel
 
 // Selectznz performs conditional select.
 // selects arg1 if choice == 0 and arg2 if choice == 1.
-func (bls12381FqArithmetic) Selectznz(out, arg1, arg2 *[limb4.FieldLimbs]uint64, choice int) {
-	b := uint64(-choice)
+func (bls12381FqArithmetic) Selectznz(out, arg1, arg2 *[limb4.FieldLimbs]uint64, choice uint64) {
+	b := -choice
 	out[0] = arg1[0] ^ ((arg1[0] ^ arg2[0]) & b)
 	out[1] = arg1[1] ^ ((arg1[1] ^ arg2[1]) & b)
 	out[2] = arg1[2] ^ ((arg1[2] ^ arg2[2]) & b)
@@ -417,4 +417,13 @@ func (f bls12381FqArithmetic) montReduce(out *[limb4.FieldLimbs]uint64, r *[2 * 
 	rr[3], _ = adc(r[7], carry2, carry)
 
 	f.Sub(out, &rr, &fqModulusLimbs)
+}
+
+func (bls12381FqArithmetic) Nonzero(out *uint64, arg *[limb4.FieldLimbs]uint64) {
+	t := arg[0] | arg[1] | arg[2] | arg[3]
+	*out = (t | -t) >> 63
+}
+
+func (bls12381FqArithmetic) SetOne(out *[limb4.FieldLimbs]uint64) {
+	*out = bls12381FqParams.R
 }

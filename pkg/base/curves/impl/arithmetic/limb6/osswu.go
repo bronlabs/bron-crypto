@@ -6,7 +6,7 @@ type Sswu6Params struct {
 
 func (p *Sswu6Params) Osswu3mod4(u *FieldValue) (x, y *FieldValue) {
 	var tv1, tv2, tv3, tv4, xd, x1n, x2n, gxd, gx1, aNeg, zA, y1, y2 [FieldLimbs]uint64
-	var wasInverted int
+	var wasInverted uint64
 	u.Arithmetic.Mul(&tv1, &u.Value, &u.Value) // tv1 = u^2
 	u.Arithmetic.Mul(&tv3, &p.Z, &tv1)         // tv3 = z * tv1
 	u.Arithmetic.Square(&tv2, &tv3)            // tv2 = tv3^2

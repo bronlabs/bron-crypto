@@ -1,21 +1,24 @@
 package fp
 
 import (
-	"encoding/hex"
 	"sync"
 
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 )
 
 const (
-	p256FieldModulusHex = "ffffffff00000001000000000000000000000000ffffffffffffffffffffffff"
+	p256SatFieldLimbs = limb4.FieldLimbs + 1
+	p256FieldBytes    = limb4.FieldBytes
+	p256FieldBits     = 256
+	p256DivSteps      = ((49 * p256FieldBits) + 57) / 17
 )
 
 var (
-	p256FpInitonce sync.Once
+	p256FpInitOnce sync.Once
 	p256FpParams   limb4.FieldParams
 )
 
@@ -28,25 +31,28 @@ func New() *limb4.FieldValue {
 }
 
 func p256FpParamsInit() {
-	modulusBytes, err := hex.DecodeString(p256FieldModulusHex)
-	if err != nil {
-		// this should never happen, string is known constant at compile time to be correct
-		panic(err)
-	}
-	modulus := saferith.ModulusFromBytes(modulusBytes)
+	var r, r2, r3 [limb4.FieldLimbs]uint64
+	var mod [p256SatFieldLimbs]uint64
+	var modBytes [p256FieldBytes]byte
 
-	// See FIPS 186-3, section D.2.3
+	SetOne((*MontgomeryDomainFieldElement)(&r))
+	ToMontgomery((*MontgomeryDomainFieldElement)(&r2), (*NonMontgomeryDomainFieldElement)(&r))
+	ToMontgomery((*MontgomeryDomainFieldElement)(&r3), (*NonMontgomeryDomainFieldElement)(&r2))
+	Msat((*[5]uint64)(mod[:]))
+	ToBytes(&modBytes, (*[4]uint64)(mod[:]))
+	modulus := saferith.ModulusFromBytes(bitstring.ReverseBytes(modBytes[:]))
+
 	p256FpParams = limb4.FieldParams{
-		R:            [limb4.FieldLimbs]uint64{0x0000000000000001, 0xffffffff00000000, 0xffffffffffffffff, 0x00000000fffffffe},
-		R2:           [limb4.FieldLimbs]uint64{0x0000000000000003, 0xfffffffbffffffff, 0xfffffffffffffffe, 0x00000004fffffffd},
-		R3:           [limb4.FieldLimbs]uint64{0xfffffffd0000000a, 0xffffffedfffffff7, 0x00000005fffffffc, 0x0000001800000001},
-		ModulusLimbs: [limb4.FieldLimbs]uint64{0xffffffffffffffff, 0x00000000ffffffff, 0x0000000000000000, 0xffffffff00000001},
+		R:            r,
+		R2:           r2,
+		R3:           r3,
+		ModulusLimbs: [4]uint64(mod[:limb4.FieldLimbs]),
 		Modulus:      modulus,
 	}
 }
 
 func getP256FpParams() *limb4.FieldParams {
-	p256FpInitonce.Do(p256FpParamsInit)
+	p256FpInitOnce.Do(p256FpParamsInit)
 	return &p256FpParams
 }
 
@@ -90,7 +96,7 @@ func (Arithmetic) Sub(out, arg1, arg2 *[limb4.FieldLimbs]uint64) {
 }
 
 // Sqrt performs modular square root.
-func (f Arithmetic) Sqrt(wasSquare *int, out, arg *[limb4.FieldLimbs]uint64) {
+func (f Arithmetic) Sqrt(wasSquare *uint64, out, arg *[limb4.FieldLimbs]uint64) {
 	// Use p = 3 mod 4 by Euler's criterion means
 	// arg^((p+1)/4 mod p
 	var t, c [limb4.FieldLimbs]uint64
@@ -109,46 +115,38 @@ func (f Arithmetic) Sqrt(wasSquare *int, out, arg *[limb4.FieldLimbs]uint64) {
 }
 
 // Invert performs modular inverse.
-func (f Arithmetic) Invert(wasInverted *int, out, arg *[limb4.FieldLimbs]uint64) {
-	// Fermat's Little Theorem
-	// a ^ (p - 2) mod p
-	//
-	// The exponent pattern (from high to low) is:
-	//  - 32 bits of value 1
-	//  - 31 bits of value 0
-	//  - 1 bit of value 1
-	//  - 96 bits of value 0
-	//  - 94 bits of value 1
-	//  - 1 bit of value 0
-	//  - 1 bit of value 1
-	// To speed up the square-and-multiply algorithm, precompute a^(2^31-1).
-	//
-	// Courtesy of Thomas Pornin
-	//
-	var t, r [limb4.FieldLimbs]uint64
-	copy(t[:], arg[:])
+func (Arithmetic) Invert(wasInverted *uint64, out, arg *[limb4.FieldLimbs]uint64) {
+	var precomp [limb4.FieldLimbs]uint64
+	DivstepPrecomp(&precomp)
 
-	for i := 0; i < 30; i++ {
-		f.Square(&t, &t)
-		f.Mul(&t, &t, arg)
+	d := uint64(1)
+	var f, g [p256SatFieldLimbs]uint64
+	var v, r, out4, out5 [limb4.FieldLimbs]uint64
+	var out1 uint64
+	var out2, out3 [p256SatFieldLimbs]uint64
+
+	FromMontgomery((*NonMontgomeryDomainFieldElement)(g[:]), (*MontgomeryDomainFieldElement)(arg))
+	Msat(&f)
+	SetOne((*MontgomeryDomainFieldElement)(&r))
+
+	for i := 0; i < p256DivSteps-(p256DivSteps%2); i += 2 {
+		Divstep(&out1, &out2, &out3, &out4, &out5, d, &f, &g, &v, &r)
+		Divstep(&d, &f, &g, &v, &r, out1, &out2, &out3, &out4, &out5)
 	}
-	copy(r[:], t[:])
-	for i := 224; i >= 0; i-- {
-		f.Square(&r, &r)
-		switch i {
-		case 0, 2, 192, 224:
-			f.Mul(&r, &r, arg)
-		case 3, 34, 65:
-			f.Mul(&r, &r, &t)
-		}
+	if (p256DivSteps % 2) != 0 { // compile time if - always true
+		Divstep(&out1, &out2, &out3, &out4, &out5, d, &f, &g, &v, &r)
+		v = out4
+		f = out2
 	}
 
-	*wasInverted = (&limb4.FieldValue{
-		Value:      *arg,
-		Params:     getP256FpParams(),
-		Arithmetic: f,
-	}).IsNonZero()
-	Selectznz(out, uint1(*wasInverted), out, &r)
+	var h [limb4.FieldLimbs]uint64
+	Opp((*MontgomeryDomainFieldElement)(&h), (*MontgomeryDomainFieldElement)(&v))
+	Selectznz(&v, uint1(f[p256SatFieldLimbs-1]>>63), &v, &h)
+	Mul((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(&v), (*MontgomeryDomainFieldElement)(&precomp))
+
+	inverted := uint64(0)
+	Nonzero(&inverted, out)
+	*wasInverted = (inverted | -inverted) >> 63
 }
 
 // FromBytes converts a little endian byte array into a field element.
@@ -163,6 +161,16 @@ func (Arithmetic) ToBytes(out *[base.FieldBytes]byte, arg *[limb4.FieldLimbs]uin
 
 // Selectznz performs conditional select.
 // selects arg1 if choice == 0 and arg2 if choice == 1.
-func (Arithmetic) Selectznz(out, arg1, arg2 *[limb4.FieldLimbs]uint64, choice int) {
+func (Arithmetic) Selectznz(out, arg1, arg2 *[limb4.FieldLimbs]uint64, choice uint64) {
 	Selectznz(out, uint1(choice), arg1, arg2)
+}
+
+func (Arithmetic) Nonzero(out *uint64, arg *[limb4.FieldLimbs]uint64) {
+	t := uint64(0)
+	Nonzero(&t, arg)
+	*out = (t | -t) >> 63
+}
+
+func (Arithmetic) SetOne(out *[limb4.FieldLimbs]uint64) {
+	SetOne((*MontgomeryDomainFieldElement)(out))
 }

@@ -69,30 +69,38 @@ type FieldArithmetic interface {
 	// Sub performs modular subtraction
 	Sub(out, arg1, arg2 *[FieldLimbs]uint64)
 	// Sqrt performs modular square root
-	Sqrt(wasSquare *int, out, arg *[FieldLimbs]uint64)
+	Sqrt(wasSquare *uint64, out, arg *[FieldLimbs]uint64)
 	// Invert performs modular inverse
-	Invert(wasInverted *int, out, arg *[FieldLimbs]uint64)
+	Invert(wasInverted *uint64, out, arg *[FieldLimbs]uint64)
 	// FromBytes converts a little endian byte array into a field element
 	FromBytes(out *[FieldLimbs]uint64, arg *[FieldBytes]byte)
 	// ToBytes converts a field element to a little endian byte array
 	ToBytes(out *[FieldBytes]byte, arg *[FieldLimbs]uint64)
 	// Selectznz performs conditional select.
 	// selects arg1 if choice == 0 and arg2 if choice == 1
-	Selectznz(out, arg1, arg2 *[FieldLimbs]uint64, choice int)
+	Selectznz(out, arg1, arg2 *[FieldLimbs]uint64, choice uint64)
+	// Nonzero returns 0 if arg == 0, 1 otherwise
+	Nonzero(wasNonZero *uint64, arg *[FieldLimbs]uint64)
+	// SetOne sets arg := 1
+	SetOne(out *[FieldLimbs]uint64)
 }
 
 // Cmp returns -1 if f < rhs
 // 0 if f == rhs
 // 1 if f > rhs.
-func (f *FieldValue) Cmp(rhs *FieldValue) int {
-	return cmpHelper(&f.Value, &rhs.Value)
+func (f *FieldValue) Cmp(rhs *FieldValue) int64 {
+	var lhsNonMont, rhsNonMont [FieldLimbs]uint64
+
+	f.Arithmetic.FromMontgomery(&lhsNonMont, &f.Value)
+	f.Arithmetic.FromMontgomery(&rhsNonMont, &rhs.Value)
+	return cmpHelper(&lhsNonMont, &rhsNonMont)
 }
 
 // cmpHelper returns -1 if lhs < rhs
 // 0 if lhs == rhs
 // 1 if lhs > rhs
 // Public only for convenience for some internal implementations.
-func cmpHelper(lhs, rhs *[FieldLimbs]uint64) int {
+func cmpHelper(lhs, rhs *[FieldLimbs]uint64) int64 {
 	gt := uint64(0)
 	lt := uint64(0)
 	for i := 3; i >= 0; i-- {
@@ -114,43 +122,41 @@ func cmpHelper(lhs, rhs *[FieldLimbs]uint64) int {
 		lt |= (lhsL - rhsL) >> 32 & 1 &^ gt
 	}
 	// Make the result -1 for <, 0 for =, 1 for >
-	return int(gt) - int(lt)
+	return int64(gt) - int64(lt)
 }
 
 // Equal returns 1 if f == rhs, 0 otherwise.
-func (f *FieldValue) Equal(rhs *FieldValue) int {
+func (f *FieldValue) Equal(rhs *FieldValue) uint64 {
 	return equalHelper(&f.Value, &rhs.Value)
 }
 
-func equalHelper(lhs, rhs *[FieldLimbs]uint64) int {
+func equalHelper(lhs, rhs *[FieldLimbs]uint64) uint64 {
 	t := lhs[0] ^ rhs[0]
 	t |= lhs[1] ^ rhs[1]
 	t |= lhs[2] ^ rhs[2]
 	t |= lhs[3] ^ rhs[3]
-	return int(((int64(t) | int64(-t)) >> 63) + 1)
+	return ((t | -t) >> 63) ^ 1
 }
 
 // IsZero returns 1 if f == 0, 0 otherwise.
-func (f *FieldValue) IsZero() int {
-	t := f.Value[0]
-	t |= f.Value[1]
-	t |= f.Value[2]
-	t |= f.Value[3]
-	return int(((int64(t) | int64(-t)) >> 63) + 1)
+func (f *FieldValue) IsZero() uint64 {
+	var wasNonZero uint64
+	f.Arithmetic.Nonzero(&wasNonZero, &f.Value)
+	return wasNonZero ^ 1
 }
 
 // IsNonZero returns 1 if f != 0, 0 otherwise.
-func (f *FieldValue) IsNonZero() int {
-	t := f.Value[0]
-	t |= f.Value[1]
-	t |= f.Value[2]
-	t |= f.Value[3]
-	return int(-((int64(t) | int64(-t)) >> 63))
+func (f *FieldValue) IsNonZero() uint64 {
+	var wasNonZero uint64
+	f.Arithmetic.Nonzero(&wasNonZero, &f.Value)
+	return wasNonZero
 }
 
 // IsOne returns 1 if f == 1, 0 otherwise.
-func (f *FieldValue) IsOne() int {
-	return equalHelper(&f.Value, &f.Params.R)
+func (f *FieldValue) IsOne() uint64 {
+	var one [FieldLimbs]uint64
+	f.Arithmetic.SetOne(&one)
+	return equalHelper(&f.Value, &one)
 }
 
 // Set f = rhs.
@@ -173,19 +179,13 @@ func (f *FieldValue) SetUint64(rhs uint64) *FieldValue {
 
 // SetOne f = r.
 func (f *FieldValue) SetOne() *FieldValue {
-	f.Value[0] = f.Params.R[0]
-	f.Value[1] = f.Params.R[1]
-	f.Value[2] = f.Params.R[2]
-	f.Value[3] = f.Params.R[3]
+	f.Arithmetic.SetOne(&f.Value)
 	return f
 }
 
 // SetZero f = 0.
 func (f *FieldValue) SetZero() *FieldValue {
-	f.Value[0] = 0
-	f.Value[1] = 0
-	f.Value[2] = 0
-	f.Value[3] = 0
+	f.Value = [FieldLimbs]uint64{}
 	return f
 }
 
@@ -265,10 +265,7 @@ func (f *FieldValue) SetBigInt(bi *big.Int) *FieldValue {
 // SetRaw converts a raw array into a field element
 // Assumes input is already in montgomery form.
 func (f *FieldValue) SetRaw(input *[FieldLimbs]uint64) *FieldValue {
-	f.Value[0] = input[0]
-	f.Value[1] = input[1]
-	f.Value[2] = input[2]
-	f.Value[3] = input[3]
+	f.Value = *input
 	return f
 }
 
@@ -317,7 +314,7 @@ func (f *FieldValue) Square(a *FieldValue) *FieldValue {
 // Sqrt this element, if it exists. If true, then value
 // is a square root. If false, value is a QNR.
 func (f *FieldValue) Sqrt(a *FieldValue) (*FieldValue, bool) {
-	wasSquare := 0
+	wasSquare := uint64(0)
 	f.Arithmetic.Sqrt(&wasSquare, &f.Value, &a.Value)
 	return f, wasSquare == 1
 }
@@ -325,7 +322,7 @@ func (f *FieldValue) Sqrt(a *FieldValue) (*FieldValue, bool) {
 // Invert this element i.e. compute the multiplicative inverse
 // return false, zero if this element is zero.
 func (f *FieldValue) Invert(a *FieldValue) (*FieldValue, bool) {
-	wasInverted := 0
+	wasInverted := uint64(0)
 	f.Arithmetic.Invert(&wasInverted, &f.Value, &a.Value)
 	return f, wasInverted == 1
 }
@@ -363,7 +360,7 @@ func (f *FieldValue) Exp(b, exp *FieldValue) *FieldValue {
 }
 
 // CMove sets f = lhs if choice == 0 and f = rhs if choice == 1.
-func (f *FieldValue) CMove(lhs, rhs *FieldValue, choice int) *FieldValue {
+func (f *FieldValue) CMove(lhs, rhs *FieldValue, choice uint64) *FieldValue {
 	f.Arithmetic.Selectznz(&f.Value, &lhs.Value, &rhs.Value, choice)
 	return f
 }
@@ -371,36 +368,28 @@ func (f *FieldValue) CMove(lhs, rhs *FieldValue, choice int) *FieldValue {
 // Pow raises base^exp. The result is written to out.
 // Public only for convenience for some internal implementations.
 func Pow(out, b, exp *[FieldLimbs]uint64, params *FieldParams, arithmetic FieldArithmetic) {
-	res := [FieldLimbs]uint64{params.R[0], params.R[1], params.R[2], params.R[3]}
+	res := [FieldLimbs]uint64{}
 	tmp := [FieldLimbs]uint64{}
+	arithmetic.SetOne(&res)
 
 	for i := len(exp) - 1; i >= 0; i-- {
 		for j := 63; j >= 0; j-- {
 			arithmetic.Square(&res, &res)
 			arithmetic.Mul(&tmp, &res, b)
-			arithmetic.Selectznz(&res, &res, &tmp, int(exp[i]>>j)&1)
+			arithmetic.Selectznz(&res, &res, &tmp, (exp[i]>>j)&1)
 		}
 	}
-	out[0] = res[0]
-	out[1] = res[1]
-	out[2] = res[2]
-	out[3] = res[3]
+	*out = res
 }
 
 // Pow2k raises arg to the power `2^k`. This result is written to out.
 // Public only for convenience for some internal implementations.
 func Pow2k(out, arg *[FieldLimbs]uint64, k int, arithmetic FieldArithmetic) {
-	var t [FieldLimbs]uint64
-	t[0] = arg[0]
-	t[1] = arg[1]
-	t[2] = arg[2]
-	t[3] = arg[3]
+	var t = *arg
+
 	for i := 0; i < k; i++ {
 		arithmetic.Square(&t, &t)
 	}
 
-	out[0] = t[0]
-	out[1] = t[1]
-	out[2] = t[2]
-	out[3] = t[3]
+	*out = t
 }

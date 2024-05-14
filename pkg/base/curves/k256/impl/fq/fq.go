@@ -1,21 +1,24 @@
 package fq
 
 import (
-	"encoding/hex"
 	"sync"
 
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 )
 
 const (
-	p256GroupModulusHex = "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141"
+	k256FieldBits     = 256
+	k256FieldBytes    = limb4.FieldBytes
+	k256SatFieldLimbs = limb4.FieldLimbs + 1
+	k256DivSteps      = ((49 * k256FieldBits) + 57) / 17
 )
 
 var (
-	k256FqInitonce sync.Once
+	k256FqInitOnce sync.Once
 	k256FqParams   limb4.FieldParams
 )
 
@@ -28,24 +31,28 @@ func New() *limb4.FieldValue {
 }
 
 func k256FqParamsInit() {
-	modulusBytes, err := hex.DecodeString(p256GroupModulusHex)
-	if err != nil {
-		// this should never happen, string is known constant at compile time to be correct
-		panic(err)
-	}
-	modulus := saferith.ModulusFromBytes(modulusBytes)
+	var r, r2, r3 [limb4.FieldLimbs]uint64
+	var mod [k256SatFieldLimbs]uint64
+	var modBytes [k256FieldBytes]byte
+
+	SetOne((*MontgomeryDomainFieldElement)(&r))
+	ToMontgomery((*MontgomeryDomainFieldElement)(&r2), (*NonMontgomeryDomainFieldElement)(&r))
+	ToMontgomery((*MontgomeryDomainFieldElement)(&r3), (*NonMontgomeryDomainFieldElement)(&r2))
+	Msat((*[5]uint64)(mod[:]))
+	ToBytes(&modBytes, (*[4]uint64)(mod[:]))
+	modulus := saferith.ModulusFromBytes(bitstring.ReverseBytes(modBytes[:]))
 
 	k256FqParams = limb4.FieldParams{
-		R:            [limb4.FieldLimbs]uint64{0x402da1732fc9bebf, 0x4551231950b75fc4, 0x0000000000000001, 0x0000000000000000},
-		R2:           [limb4.FieldLimbs]uint64{0x896cf21467d7d140, 0x741496c20e7cf878, 0xe697f5e45bcd07c6, 0x9d671cd581c69bc5},
-		R3:           [limb4.FieldLimbs]uint64{0x7bc0cfe0e9ff41ed, 0x0017648444d4322c, 0xb1b31347f1d0b2da, 0x555d800c18ef116d},
-		ModulusLimbs: [limb4.FieldLimbs]uint64{0xbfd25e8cd0364141, 0xbaaedce6af48a03b, 0xfffffffffffffffe, 0xffffffffffffffff},
+		R:            r,
+		R2:           r2,
+		R3:           r3,
+		ModulusLimbs: [4]uint64(mod[:limb4.FieldLimbs]),
 		Modulus:      modulus,
 	}
 }
 
 func getK256FqParams() *limb4.FieldParams {
-	k256FqInitonce.Do(k256FqParamsInit)
+	k256FqInitOnce.Do(k256FqParamsInit)
 	return &k256FqParams
 }
 
@@ -89,7 +96,7 @@ func (Arithmetic) Sub(out, arg1, arg2 *[limb4.FieldLimbs]uint64) {
 }
 
 // Sqrt performs modular square root.
-func (f Arithmetic) Sqrt(wasSquare *int, out, arg *[limb4.FieldLimbs]uint64) {
+func (f Arithmetic) Sqrt(wasSquare *uint64, out, arg *[limb4.FieldLimbs]uint64) {
 	// See sqrt_ts_ct at
 	// https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-hash-to-curve-11#appendix-I.4
 	// c1 := 6
@@ -151,120 +158,38 @@ func (f Arithmetic) Sqrt(wasSquare *int, out, arg *[limb4.FieldLimbs]uint64) {
 }
 
 // Invert performs modular inverse.
-func (f Arithmetic) Invert(wasInverted *int, out, arg *[limb4.FieldLimbs]uint64) {
-	// Using an addition chain from
-	// https://briansmith.org/ecc-inversion-addition-chains-01#secp256k1_scalar_inversion
-	var x1, x10, x11, x101, x111, x1001, x1011, x1101 [limb4.FieldLimbs]uint64
-	var x6, x8, x14, x28, x56, tmp [limb4.FieldLimbs]uint64
+func (Arithmetic) Invert(wasInverted *uint64, out, arg *[limb4.FieldLimbs]uint64) {
+	var precomp [limb4.FieldLimbs]uint64
+	DivstepPrecomp(&precomp)
 
-	copy(x1[:], arg[:])
-	limb4.Pow2k(&x10, arg, 1, f)
-	Mul((*MontgomeryDomainFieldElement)(&x11), (*MontgomeryDomainFieldElement)(&x10), (*MontgomeryDomainFieldElement)(&x1))
-	Mul((*MontgomeryDomainFieldElement)(&x101), (*MontgomeryDomainFieldElement)(&x10), (*MontgomeryDomainFieldElement)(&x11))
-	Mul((*MontgomeryDomainFieldElement)(&x111), (*MontgomeryDomainFieldElement)(&x10), (*MontgomeryDomainFieldElement)(&x101))
-	Mul((*MontgomeryDomainFieldElement)(&x1001), (*MontgomeryDomainFieldElement)(&x10), (*MontgomeryDomainFieldElement)(&x111))
-	Mul((*MontgomeryDomainFieldElement)(&x1011), (*MontgomeryDomainFieldElement)(&x10), (*MontgomeryDomainFieldElement)(&x1001))
-	Mul((*MontgomeryDomainFieldElement)(&x1101), (*MontgomeryDomainFieldElement)(&x10), (*MontgomeryDomainFieldElement)(&x1011))
+	d := uint64(1)
+	var f, g [k256SatFieldLimbs]uint64
+	var v, r, out4, out5 [limb4.FieldLimbs]uint64
+	var out1 uint64
+	var out2, out3 [k256SatFieldLimbs]uint64
 
-	limb4.Pow2k(&x6, &x1101, 2, f)
-	Mul((*MontgomeryDomainFieldElement)(&x6), (*MontgomeryDomainFieldElement)(&x6), (*MontgomeryDomainFieldElement)(&x1011))
+	FromMontgomery((*NonMontgomeryDomainFieldElement)(g[:]), (*MontgomeryDomainFieldElement)(arg))
+	Msat(&f)
+	SetOne((*MontgomeryDomainFieldElement)(&r))
 
-	limb4.Pow2k(&x8, &x6, 2, f)
-	Mul((*MontgomeryDomainFieldElement)(&x8), (*MontgomeryDomainFieldElement)(&x8), (*MontgomeryDomainFieldElement)(&x11))
+	for i := 0; i < k256DivSteps-(k256DivSteps%2); i += 2 {
+		Divstep(&out1, &out2, &out3, &out4, &out5, d, &f, &g, &v, &r)
+		Divstep(&d, &f, &g, &v, &r, out1, &out2, &out3, &out4, &out5)
+	}
+	if (k256DivSteps % 2) != 0 { // compile time if - always true
+		Divstep(&out1, &out2, &out3, &out4, &out5, d, &f, &g, &v, &r)
+		v = out4
+		f = out2
+	}
 
-	limb4.Pow2k(&x14, &x8, 6, f)
-	Mul((*MontgomeryDomainFieldElement)(&x14), (*MontgomeryDomainFieldElement)(&x14), (*MontgomeryDomainFieldElement)(&x6))
+	var h [limb4.FieldLimbs]uint64
+	Opp((*MontgomeryDomainFieldElement)(&h), (*MontgomeryDomainFieldElement)(&v))
+	Selectznz(&v, uint1(f[k256SatFieldLimbs-1]>>63), &v, &h)
+	Mul((*MontgomeryDomainFieldElement)(out), (*MontgomeryDomainFieldElement)(&v), (*MontgomeryDomainFieldElement)(&precomp))
 
-	limb4.Pow2k(&x28, &x14, 14, f)
-	Mul((*MontgomeryDomainFieldElement)(&x28), (*MontgomeryDomainFieldElement)(&x28), (*MontgomeryDomainFieldElement)(&x14))
-
-	limb4.Pow2k(&x56, &x28, 28, f)
-	Mul((*MontgomeryDomainFieldElement)(&x56), (*MontgomeryDomainFieldElement)(&x56), (*MontgomeryDomainFieldElement)(&x28))
-
-	limb4.Pow2k(&tmp, &x56, 56, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x56))
-
-	limb4.Pow2k(&tmp, &tmp, 14, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x14))
-
-	limb4.Pow2k(&tmp, &tmp, 3, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x101))
-
-	limb4.Pow2k(&tmp, &tmp, 4, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x111))
-
-	limb4.Pow2k(&tmp, &tmp, 4, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x101))
-
-	limb4.Pow2k(&tmp, &tmp, 5, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x1011))
-
-	limb4.Pow2k(&tmp, &tmp, 4, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x1011))
-
-	limb4.Pow2k(&tmp, &tmp, 4, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x111))
-
-	limb4.Pow2k(&tmp, &tmp, 5, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x111))
-
-	limb4.Pow2k(&tmp, &tmp, 6, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x1101))
-
-	limb4.Pow2k(&tmp, &tmp, 4, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x101))
-
-	limb4.Pow2k(&tmp, &tmp, 3, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x111))
-
-	limb4.Pow2k(&tmp, &tmp, 5, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x1001))
-
-	limb4.Pow2k(&tmp, &tmp, 6, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x101))
-
-	limb4.Pow2k(&tmp, &tmp, 10, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x111))
-
-	limb4.Pow2k(&tmp, &tmp, 4, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x111))
-
-	limb4.Pow2k(&tmp, &tmp, 9, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x8))
-
-	limb4.Pow2k(&tmp, &tmp, 5, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x1001))
-
-	limb4.Pow2k(&tmp, &tmp, 6, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x1011))
-
-	limb4.Pow2k(&tmp, &tmp, 4, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x1101))
-
-	limb4.Pow2k(&tmp, &tmp, 5, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x11))
-
-	limb4.Pow2k(&tmp, &tmp, 6, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x1101))
-
-	limb4.Pow2k(&tmp, &tmp, 10, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x1101))
-
-	limb4.Pow2k(&tmp, &tmp, 4, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x1001))
-
-	limb4.Pow2k(&tmp, &tmp, 6, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x1))
-
-	limb4.Pow2k(&tmp, &tmp, 8, f)
-	Mul((*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&tmp), (*MontgomeryDomainFieldElement)(&x6))
-
-	*wasInverted = (&limb4.FieldValue{
-		Value:      *arg,
-		Params:     getK256FqParams(),
-		Arithmetic: f,
-	}).IsNonZero()
-	Selectznz(out, uint1(*wasInverted), out, &tmp)
+	inverted := uint64(0)
+	Nonzero(&inverted, out)
+	*wasInverted = (inverted | -inverted) >> 63
 }
 
 // FromBytes converts a little endian byte array into a field element.
@@ -279,8 +204,18 @@ func (Arithmetic) ToBytes(out *[base.FieldBytes]byte, arg *[limb4.FieldLimbs]uin
 
 // Selectznz performs conditional select.
 // selects arg1 if choice == 0 and arg2 if choice == 1.
-func (Arithmetic) Selectznz(out, arg1, arg2 *[limb4.FieldLimbs]uint64, choice int) {
+func (Arithmetic) Selectznz(out, arg1, arg2 *[limb4.FieldLimbs]uint64, choice uint64) {
 	Selectznz(out, uint1(choice), arg1, arg2)
+}
+
+func (Arithmetic) Nonzero(out *uint64, arg *[limb4.FieldLimbs]uint64) {
+	t := uint64(0)
+	Nonzero(&t, arg)
+	*out = (t | -t) >> 63
+}
+
+func (Arithmetic) SetOne(out *[limb4.FieldLimbs]uint64) {
+	SetOne((*MontgomeryDomainFieldElement)(out))
 }
 
 // generator = 7 mod q is a generator of the `q - 1` order multiplicative

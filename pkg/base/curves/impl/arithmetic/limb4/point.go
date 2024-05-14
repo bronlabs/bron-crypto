@@ -121,7 +121,7 @@ func (p *EllipticPoint) Mul(point *EllipticPoint, scalar *FieldValue) *EllipticP
 }
 
 // Equal returns 1 if the two points are equal 0 otherwise.
-func (p *EllipticPoint) Equal(rhs *EllipticPoint) int {
+func (p *EllipticPoint) Equal(rhs *EllipticPoint) uint64 {
 	var x1, x2, y1, y2 FieldValue
 
 	x1.Arithmetic = p.X.Arithmetic

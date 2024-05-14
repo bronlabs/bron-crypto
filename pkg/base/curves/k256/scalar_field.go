@@ -263,7 +263,7 @@ func (sf *ScalarField) Select(choice bool, x0, x1 curves.Scalar) curves.Scalar {
 	if !ok0 || !ok1 || !oks {
 		panic("Not a k256 scalar")
 	}
-	s.V.CMove(x0s.V, x1s.V, utils.BoolTo[int](choice))
+	s.V.CMove(x0s.V, x1s.V, utils.BoolTo[uint64](choice))
 	return s
 }
 

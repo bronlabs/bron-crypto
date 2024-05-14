@@ -405,7 +405,7 @@ func (k PointArithmetic) IsOnCurve(arg *limb4.EllipticPoint) bool {
 }
 
 func (PointArithmetic) ToAffine(out, arg *limb4.EllipticPoint) {
-	var wasInverted int
+	var wasInverted uint64
 	var zero, x, y, z [limb4.FieldLimbs]uint64
 	f := arg.X.Arithmetic
 
