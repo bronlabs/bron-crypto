@@ -10,13 +10,16 @@ import (
 type FieldElement[F algebra.Field[F, E], E algebra.FieldElement[F, E]] struct {
 	domain.EuclideanDomainElement[F, E]
 	group.MultiplicativeGroupElement[F, E]
+	H HolesFieldElement[F, E]
 }
 
 type FiniteFieldElement[F algebra.FiniteField[F, E], E algebra.FiniteFieldElement[F, E]] struct {
 	FieldElement[F, E]
 	ring.FiniteRingElement[F, E]
+	H HolesFiniteFieldElement[F, E]
 }
 
 type ExtensionFieldElement[L algebra.ExtensionField[L, K, LE, KE], K algebra.Field[K, KE], LE algebra.ExtensionFieldElement[L, K, LE, KE], KE algebra.FieldElement[K, KE]] struct {
 	FieldElement[L, LE]
+	H HolesExtensionFieldElement[L, K, LE, KE]
 }

@@ -4,14 +4,12 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 )
 
-type OrderTheoreticLattice[L algebra.OrderTheoreticLattice[L, E], E algebra.OrderTheoreticLatticeElement[L, E]] struct{}
-
-func (*OrderTheoreticLattice[L, E]) Element() E {
-	panic("in mixin")
+type OrderTheoreticLattice[L algebra.OrderTheoreticLattice[L, E], E algebra.OrderTheoreticLatticeElement[L, E]] struct {
+	H HolesOrderTheoreticLattice[L, E]
 }
 
 func (l *OrderTheoreticLattice[L, E]) LatticeElement() algebra.OrderTheoreticLatticeElement[L, E] {
-	return l.Element()
+	return l.H.Element()
 }
 
 func (l *OrderTheoreticLattice[L, E]) Join(x algebra.OrderTheoreticLatticeElement[L, E], ys ...algebra.OrderTheoreticLatticeElement[L, E]) E {
@@ -32,6 +30,7 @@ func (l *OrderTheoreticLattice[L, E]) Meet(x algebra.OrderTheoreticLatticeElemen
 
 type Chain[C algebra.Chain[C, E], E algebra.ChainElement[C, E]] struct {
 	OrderTheoreticLattice[C, E]
+	H HolesChain[C, E]
 }
 
 func (c *Chain[C, E]) Max(x algebra.ChainElement[C, E], ys ...algebra.ChainElement[C, E]) E {
@@ -51,19 +50,16 @@ func (c *Chain[C, E]) Min(x algebra.ChainElement[C, E], ys ...algebra.ChainEleme
 }
 
 func (c *Chain[C, E]) ChainElement() algebra.ChainElement[C, E] {
-	return c.Element()
+	return c.H.Element()
 }
 
 type UpperBoundedOrderTheoreticLattice[L algebra.UpperBoundedOrderTheoreticLattice[L, E], E algebra.UpperBoundedOrderTheoreticLatticeElement[L, E]] struct {
 	OrderTheoreticLattice[L, E]
-}
-
-func (*UpperBoundedOrderTheoreticLattice[L, E]) Top() E {
-	panic("in mixin")
+	H HolesUpperBoundedOrderTheoreticLattice[L, E]
 }
 
 func (l *UpperBoundedOrderTheoreticLattice[L, E]) Join(x algebra.OrderTheoreticLatticeElement[L, E], ys ...algebra.OrderTheoreticLatticeElement[L, E]) E {
-	top := l.Top()
+	top := l.H.Top()
 	if x.Equal(top) {
 		return x.Unwrap()
 	}
@@ -78,19 +74,16 @@ func (l *UpperBoundedOrderTheoreticLattice[L, E]) Join(x algebra.OrderTheoreticL
 }
 
 func (l *UpperBoundedOrderTheoreticLattice[L, E]) UpperBoundedLatticeElement() algebra.UpperBoundedOrderTheoreticLatticeElement[L, E] {
-	return l.Element()
+	return l.H.Element()
 }
 
 type LowerBoundedOrderTheoreticLattice[L algebra.LowerBoundedOrderTheoreticLattice[L, E], E algebra.LowerBoundedOrderTheoreticLatticeElement[L, E]] struct {
 	OrderTheoreticLattice[L, E]
-}
-
-func (*LowerBoundedOrderTheoreticLattice[L, E]) Bottom() E {
-	panic("in mixin")
+	H HolesLowerBoundedOrderTheoreticLattice[L, E]
 }
 
 func (l *LowerBoundedOrderTheoreticLattice[L, E]) Meet(x algebra.OrderTheoreticLatticeElement[L, E], ys ...algebra.OrderTheoreticLatticeElement[L, E]) E {
-	bottom := l.Bottom()
+	bottom := l.H.Bottom()
 	if x.Equal(bottom) {
 		return x.Unwrap()
 	}
@@ -105,15 +98,16 @@ func (l *LowerBoundedOrderTheoreticLattice[L, E]) Meet(x algebra.OrderTheoreticL
 }
 
 func (l *LowerBoundedOrderTheoreticLattice[L, E]) LowerBoundedLatticeElement() algebra.LowerBoundedOrderTheoreticLatticeElement[L, E] {
-	return l.Element()
+	return l.H.Element()
 }
 
 type BoundedOrderTheoreticLattice[L algebra.BoundedOrderTheoreticLattice[L, E], E algebra.BoundedOrderTheoreticLatticeElement[L, E]] struct {
 	OrderTheoreticLattice[L, E]
 	UpperBoundedOrderTheoreticLattice[L, E]
 	LowerBoundedOrderTheoreticLattice[L, E]
+	H HolesBoundedOrderTheoreticLattice[L, E]
 }
 
 func (l *BoundedOrderTheoreticLattice[L, E]) BoundedLatticeElement() algebra.BoundedOrderTheoreticLatticeElement[L, E] {
-	return l.Element()
+	return l.H.Element()
 }

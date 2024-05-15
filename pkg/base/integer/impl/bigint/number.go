@@ -34,7 +34,8 @@ func B(v *big.Int) *BigInt {
 }
 
 func (n *BigInt) New(x *big.Int) *BigInt {
-	return B(x)
+	n = B(x)
+	return n
 }
 
 func (n *BigInt) SetUint64(x uint64) *BigInt {
@@ -75,7 +76,7 @@ func (n *BigInt) Int64() int64 {
 }
 
 func (n *BigInt) Nat() *saferith.Nat {
-	return new(saferith.Nat).SetBig(n.V, -1)
+	return new(saferith.Nat).SetBig(n.V, n.V.BitLen())
 }
 
 func (n *BigInt) SetNat(v *saferith.Nat) *BigInt {

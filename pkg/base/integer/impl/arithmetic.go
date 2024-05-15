@@ -7,20 +7,15 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 )
 
+type HolesArithmeticMixin[T aimpl.ImplAdapter[T, Impl], Impl any] interface {
+	Cmp(x, y T) algebra.Ordering
+	Zero() T
+	One() T
+}
+
 type ArithmeticMixin[T aimpl.ImplAdapter[T, Impl], Impl any] struct {
 	Ctx *integer.ArithmeticContext
-}
-
-func (*ArithmeticMixin[T, I]) Cmp(x, y T) algebra.Ordering {
-	panic("in mixin")
-}
-
-func (*ArithmeticMixin[T, I]) Zero() T {
-	panic("in mixin")
-}
-
-func (*ArithmeticMixin[T, I]) One() T {
-	panic("in mixin")
+	H   HolesArithmeticMixin[T, Impl]
 }
 
 func (a *ArithmeticMixin[T, I]) Context() *integer.ArithmeticContext {
@@ -39,7 +34,7 @@ func (a *ArithmeticMixin[T, Impl]) Type() integer.ArithmeticType {
 
 func (a *ArithmeticMixin[T, I]) anyZeros(xs ...T) bool {
 	for _, x := range xs {
-		if a.Cmp(x, a.Zero()) == algebra.Equal {
+		if a.H.Cmp(x, a.H.Zero()) == algebra.Equal {
 			return true
 		}
 	}
@@ -53,13 +48,13 @@ func (a *ArithmeticMixin[T, I]) validateInputs(xs ...T) error {
 	switch a.Type() {
 	case integer.ForNPlus:
 		for _, x := range xs {
-			if a.Cmp(x, a.One()) == algebra.LessThan {
+			if a.H.Cmp(x, a.H.One()) == algebra.LessThan {
 				return errs.NewValue("N+ element can't be less than 1")
 			}
 		}
 	case integer.ForN:
 		for _, x := range xs {
-			if a.Cmp(x, a.Zero()) == algebra.LessThan {
+			if a.H.Cmp(x, a.H.Zero()) == algebra.LessThan {
 				return errs.NewValue("N element can't be less than 0")
 			}
 		}
@@ -74,7 +69,7 @@ func (a *ArithmeticMixin[T, I]) validateDenominator(xs ...T) error {
 	switch a.Type() {
 	case integer.ForNPlus, integer.ForN:
 		for _, x := range xs {
-			if a.Cmp(x, a.One()) == algebra.LessThan {
+			if a.H.Cmp(x, a.H.One()) == algebra.LessThan {
 				return errs.NewValue("denominator < 1")
 			}
 		}
@@ -103,7 +98,7 @@ func (a *ArithmeticMixin[T, I]) ValidateNeg(x T) error {
 	if err := a.validateInputs(x); err != nil {
 		return errs.WrapValidation(err, "invalid argument")
 	}
-	if a.Type() == integer.ForN && a.Cmp(x, a.Zero()) != algebra.Equal {
+	if a.Type() == integer.ForN && a.H.Cmp(x, a.H.Zero()) != algebra.Equal {
 		return errs.NewValue("can only negate 0 in N")
 	}
 	return nil
@@ -123,17 +118,17 @@ func (a *ArithmeticMixin[T, I]) ValidateSub(x, y T) error {
 	}
 	switch a.Type() {
 	case integer.ForNPlus:
-		if a.Cmp(x, y) == algebra.LessThan {
+		if a.H.Cmp(x, y) == algebra.LessThan {
 			return errs.NewValue("x < y")
 		}
-		if a.Cmp(x, a.One()) == algebra.LessThan {
+		if a.H.Cmp(x, a.H.One()) == algebra.LessThan {
 			return errs.NewValue("y < 1")
 		}
 	case integer.ForN:
-		if a.Cmp(x, y) == algebra.LessThan {
+		if a.H.Cmp(x, y) == algebra.LessThan {
 			return errs.NewValue("x < y")
 		}
-		if a.Cmp(x, a.Zero()) == algebra.LessThan {
+		if a.H.Cmp(x, a.H.Zero()) == algebra.LessThan {
 			return errs.NewValue("x < 0")
 		}
 	}

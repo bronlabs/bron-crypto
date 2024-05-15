@@ -7,16 +7,20 @@ import (
 
 type IntegralDomainElement[D algebra.IntegralDomain[D, E], E algebra.IntegralDomainElement[D, E]] struct {
 	ring.RingElement[D, E]
+	H HolesIntegralDomainElement[D, E]
 }
 
 type GCDDomainElement[D algebra.GCDDomain[D, E], E algebra.GCDDomainElement[D, E]] struct {
 	IntegralDomainElement[D, E]
+	H HolesGCDDomainElement[D, E]
 }
 
 type FactorialRingElement[R algebra.FactorialRing[R, E], E algebra.FactorialRingElement[R, E]] struct {
 	GCDDomainElement[R, E]
+	H HolesFactorialRingElement[R, E]
 }
 
 type EuclideanDomainElement[D algebra.EuclideanDomain[D, E], E algebra.EuclideanDomainElement[D, E]] struct {
 	FactorialRingElement[D, E]
+	H HolesEuclideanDomainElement[D, E]
 }

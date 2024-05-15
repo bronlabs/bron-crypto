@@ -7,8 +7,6 @@ type Field[F Structure, E Element] interface {
 	EuclideanDomain[F, E]
 	// Finite field has methods of a multiplicative group.
 	MultiplicativeGroup[F, E]
-
-	MultiplicativeGroup() MultiplicativeGroup[F, E]
 }
 
 type FieldElement[F Structure, E Element] interface {

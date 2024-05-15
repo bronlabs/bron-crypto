@@ -10,18 +10,15 @@ import (
 
 type GroupElement[G algebra.Group[G, E], E algebra.GroupElement[G, E]] struct {
 	monoid.MonoidElement[G, E]
-}
-
-func (*GroupElement[G, E]) Unwrap() E {
-	panic("in mixin")
+	H HolesGroupElement[G, E]
 }
 
 func (e *GroupElement[G, E]) IsInverse(of algebra.GroupElement[G, E], under algebra.Operator) (bool, error) {
-	op, defined := e.Structure().GetOperator(under)
+	op, defined := e.H.Structure().GetOperator(under)
 	if !defined {
 		return false, errs.NewType("invalid operator")
 	}
-	image, err := op.Map(e.Unwrap(), of.Unwrap())
+	image, err := op.Map(e.H.Unwrap(), of.Unwrap())
 	if err != nil {
 		return false, errs.WrapFailed(err, "could not apply the given operator")
 	}
@@ -29,15 +26,15 @@ func (e *GroupElement[G, E]) IsInverse(of algebra.GroupElement[G, E], under alge
 }
 
 func (e *GroupElement[G, E]) IsTorsionElement(order *saferith.Modulus, under algebra.Operator) (bool, error) {
-	op, defined := e.Structure().GetOperator(under)
+	op, defined := e.H.Structure().GetOperator(under)
 	if !defined {
 		return false, errs.NewType("invalid operator")
 	}
 	var err error
 	cursor := new(saferith.Nat).SetBytes(order.Bytes())
-	result := e.Clone()
+	result := e.H.Clone()
 	for cursor.EqZero() == 0 {
-		result, err = op.Map(result, e.Unwrap())
+		result, err = op.Map(result, e.H.Unwrap())
 		if err != nil {
 			return false, errs.WrapFailed(err, "could not apply operator")
 		}
@@ -52,24 +49,21 @@ func (e *GroupElement[G, E]) IsTorsionElement(order *saferith.Modulus, under alg
 }
 
 func (e *GroupElement[G, E]) IsInvolution(under algebra.Operator) (bool, error) {
-	return e.IsInverse(e.Unwrap(), under) //nolint:wrapcheck // forwarding errors
+	return e.IsInverse(e.H.Unwrap(), under) //nolint:wrapcheck // forwarding errors
 }
 
 type AdditiveGroupElement[G algebra.AdditiveGroup[G, E], E algebra.AdditiveGroupElement[G, E]] struct {
 	GroupElement[G, E]
 	monoid.AdditiveMonoidElement[G, E]
-}
-
-func (*AdditiveGroupElement[G, E]) AdditiveInverse() E {
-	panic("in mixin")
+	H HolesAdditiveGroupElement[G, E]
 }
 
 func (e *AdditiveGroupElement[G, E]) IsAdditiveInverse(of algebra.AdditiveGroupElement[G, E]) bool {
-	return e.Add(of).IsAdditiveIdentity()
+	return e.H.Add(of).IsAdditiveIdentity()
 }
 
 func (e *AdditiveGroupElement[G, E]) IsTorsionElementUnderAddition(order *saferith.Modulus) bool {
-	result, err := e.IsTorsionElement(order, e.Structure().Addition().Name())
+	result, err := e.IsTorsionElement(order, e.H.Structure().Addition().Name())
 	if err != nil {
 		panic(errs.WrapFailed(err, "malformed additive group"))
 	}
@@ -77,11 +71,11 @@ func (e *AdditiveGroupElement[G, E]) IsTorsionElementUnderAddition(order *saferi
 }
 
 func (e *AdditiveGroupElement[G, E]) Neg() E {
-	return e.AdditiveInverse()
+	return e.H.AdditiveInverse()
 }
 
 func (e *AdditiveGroupElement[G, E]) Sub(x AdditiveGroupElement[G, E]) E {
-	return e.Add(x.AdditiveInverse())
+	return e.H.Add(x.H.AdditiveInverse())
 }
 
 func (e *AdditiveGroupElement[G, E]) ApplySub(x algebra.AdditiveGroupElement[G, E], n *saferith.Nat) E {
@@ -89,24 +83,33 @@ func (e *AdditiveGroupElement[G, E]) ApplySub(x algebra.AdditiveGroupElement[G, 
 }
 
 func (e *AdditiveGroupElement[G, E]) IsInvolutionUnderAddition() bool {
-	return e.IsAdditiveInverse(e.Unwrap())
+	return e.IsAdditiveInverse(e.H.Unwrap())
 }
 
 type MultiplicativeGroupElement[G algebra.MultiplicativeGroup[G, E], E algebra.MultiplicativeGroupElement[G, E]] struct {
 	GroupElement[G, E]
 	monoid.MultiplicativeMonoidElement[G, E]
+	H HolesMultiplicativeGroupElement[G, E]
 }
 
 func (e *MultiplicativeGroupElement[G, E]) IsMultiplicativeInverse(of algebra.MultiplicativeGroupElement[G, E]) bool {
-	return e.Mul(of).IsMultiplicativeIdentity()
+	return e.H.Mul(of).IsMultiplicativeIdentity()
 }
 
 func (e *MultiplicativeGroupElement[G, E]) IsTorsionElementUnderMultiplication(order *saferith.Modulus) bool {
-	result, err := e.IsTorsionElement(order, e.Structure().Multiplication().Name())
+	result, err := e.IsTorsionElement(order, e.H.Structure().Multiplication().Name())
 	if err != nil {
 		panic(errs.WrapFailed(err, "malformed multiplicative group"))
 	}
 	return result
+}
+
+func (e *MultiplicativeGroupElement[G, E]) Div(x algebra.MultiplicativeGroupElement[G, E]) (E, error) {
+	xInv, err := x.MultiplicativeInverse()
+	if err != nil {
+		return *new(E), errs.WrapFailed(err, "could not compute multiplicative inverse of the argument")
+	}
+	return e.H.Mul(xInv), nil
 }
 
 func (e *MultiplicativeGroupElement[G, E]) ApplyDiv(x algebra.MultiplicativeGroupElement[G, E], n *saferith.Nat) (E, error) {
@@ -118,10 +121,11 @@ func (e *MultiplicativeGroupElement[G, E]) ApplyDiv(x algebra.MultiplicativeGrou
 }
 
 func (e *MultiplicativeGroupElement[G, E]) IsInvolutionUnderMultiplication() bool {
-	return e.IsMultiplicativeInverse(e.Unwrap())
+	return e.IsMultiplicativeInverse(e.H.Unwrap())
 }
 
 type CyclicGroupElement[G algebra.CyclicGroup[G, E], E algebra.CyclicGroupElement[G, E]] struct {
 	GroupElement[G, E]
 	monoid.CyclicMonoidElement[G, E]
+	H HolesCyclicGroupElement[G, E]
 }

@@ -10,6 +10,7 @@ import (
 
 type Group[G algebra.Group[G, E], E algebra.GroupElement[G, E]] struct {
 	monoid.Monoid[G, E]
+	H HolesGroup[G, E]
 }
 
 func (g *Group[G, E]) Order() *saferith.Modulus {
@@ -19,6 +20,8 @@ func (g *Group[G, E]) Order() *saferith.Modulus {
 type AdditiveGroup[G algebra.AdditiveGroup[G, E], E algebra.AdditiveGroupElement[G, E]] struct {
 	Group[G, E]
 	monoid.AdditiveMonoid[G, E]
+
+	H HolesAdditiveGroup[G, E]
 }
 
 func (*AdditiveGroup[G, E]) Sub(x algebra.AdditiveGroupElement[G, E], ys ...algebra.AdditiveGroupElement[G, E]) E {
@@ -32,6 +35,7 @@ func (*AdditiveGroup[G, E]) Sub(x algebra.AdditiveGroupElement[G, E], ys ...alge
 type MultiplicativeGroup[G algebra.MultiplicativeGroup[G, E], E algebra.MultiplicativeGroupElement[G, E]] struct {
 	Group[G, E]
 	monoid.MultiplicativeMonoid[G, E]
+	H HolesMultiplicativeGroup[G, E]
 }
 
 func (*MultiplicativeGroup[G, E]) Div(x algebra.MultiplicativeGroupElement[G, E], ys ...algebra.MultiplicativeGroupElement[G, E]) (E, error) {
@@ -49,14 +53,11 @@ func (*MultiplicativeGroup[G, E]) Div(x algebra.MultiplicativeGroupElement[G, E]
 type CyclicGroup[G algebra.CyclicGroup[G, E], E algebra.CyclicGroupElement[G, E]] struct {
 	Group[G, E]
 	monoid.CyclicMonoid[G, E]
-}
-
-func (*CyclicGroup[G, E]) GetOperator(under algebra.Operator) (algebra.BinaryOperator[E], bool) {
-	panic("in mixin")
+	H HolesCyclicGroup[G, E]
 }
 
 func (g *CyclicGroup[G, E]) DLog(base, x algebra.CyclicGroupElement[G, E], under algebra.Operator) (*saferith.Nat, error) {
-	if _, defined := g.GetOperator(under); !defined {
+	if _, defined := g.H.GetOperator(under); !defined {
 		return nil, errs.NewType("invalid operator")
 	}
 	order := g.Order().Nat()

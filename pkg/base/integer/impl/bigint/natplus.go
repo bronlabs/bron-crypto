@@ -3,39 +3,33 @@ package bigint
 import (
 	"encoding/json"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	aimpl "github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
-	"github.com/copperexchange/krypton-primitives/pkg/base/integer/impl"
+	"github.com/copperexchange/krypton-primitives/pkg/base/integer/impl/mixins"
 	"github.com/cronokirby/saferith"
 )
 
+var _ mixins.HolesNatPlus[*NPlus, *NatPlus] = (*NatPlus)(nil)
 var _ integer.NatPlus[*NPlus, *NatPlus] = (*NatPlus)(nil)
 var _ aimpl.ImplAdapter[*NatPlus, *BigInt] = (*NatPlus)(nil)
 var _ integer.Number[*NatPlus] = (*NatPlus)(nil)
 
 type NatPlus struct {
-	impl.NatPlusMixin[*NPlus, *NatPlus]
+	mixins.NatPlus[*NPlus, *NatPlus]
 	V *BigInt
 }
 
-func New(v uint64) *NatPlus {
-	return &NatPlus{
+func NewNatPlus(v uint64) *NatPlus {
+	self := &NatPlus{
 		V: new(BigInt).SetUint64(v),
 	}
+	self.NatPlus = mixins.NewNatPlus(self)
+	return self
 }
 
 func (n *NatPlus) Arithmetic() integer.Arithmetic[*NatPlus] {
-	return NewNPlusArithmetic[*NatPlus](-1, true)
-}
-
-func (n *NatPlus) Mul(x algebra.MultiplicativeGroupoidElement[*NPlus, *NatPlus]) *NatPlus {
-	out, err := n.Arithmetic().Mul(n.Unwrap(), x.Unwrap())
-	if err != nil {
-		panic(err)
-	}
-	return out
+	return NewNPlusArithmetic[*NatPlus](-1, false)
 }
 
 func (*NatPlus) Structure() *NPlus {
@@ -50,9 +44,11 @@ func (n *NatPlus) Impl() *BigInt {
 	return n.V
 }
 
-func (n *NatPlus) Wrap(x *BigInt) *NatPlus {
-	out := new(NatPlus)
-	out.V = x
+func (n *NatPlus) New(x *BigInt) *NatPlus {
+	out := &NatPlus{
+		V: x,
+	}
+	out.NatPlus = mixins.NewNatPlus(out)
 	return out
 }
 
@@ -65,20 +61,15 @@ func (n *NatPlus) TrueLen() uint {
 }
 
 func (n *NatPlus) Clone() *NatPlus {
-	return &NatPlus{
-		NatPlusMixin: impl.NatPlusMixin[*NPlus, *NatPlus]{},
-		V:            n.V.Clone(),
-	}
+	return n.New(n.V)
 }
 
 func (n *NatPlus) Nat() *saferith.Nat {
-	return n.V.Nat()
+	return new(saferith.Nat).SetBig(n.V.V, -1)
 }
 
 func (n *NatPlus) SetNat(v *saferith.Nat) *NatPlus {
-	out := &NatPlus{}
-	out.V = new(BigInt).SetNat(v)
-	return out
+	return n.New(new(BigInt).SetNat(v))
 }
 
 func (n *NatPlus) MarshalJSON() ([]byte, error) {
@@ -107,5 +98,6 @@ func (n *NatPlus) UnmarshalJSON(data []byte) error {
 		return errs.NewType("type (%s) must be (%s)", temp.Type, integer.ForNPlus)
 	}
 	n.V = temp.Number
+	n.NatPlus = mixins.NewNatPlus(n)
 	return nil
 }
