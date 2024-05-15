@@ -16,7 +16,10 @@ const Name = "HASH_VECTOR_COMMITMENT"
 var _ commitments.Opening[Vector] = (*Opening)(nil)
 var _ vectorcommitments.VectorCommitment = (*VectorCommitment)(nil)
 
-type Vector = vectorcommitments.Vector[hashcommitments.Message]
+// type Vector = vectorcommitments.Vector[hashcommitments.Message]
+var _ vectorcommitments.Vector[hashcommitments.Message] = (*Vector)(nil)
+
+type Vector []hashcommitments.Message
 
 type Opening struct {
 	opening *hashcommitments.Opening

@@ -2,7 +2,11 @@ package vectorcommitments
 
 import "github.com/copperexchange/krypton-primitives/pkg/commitments"
 
-type Vector[M commitments.Message] []M
+//type Vector[M commitments.Message] []M
+
+type Vector[M commitments.Message] interface {
+	Equal(comparand Vector[M]) bool
+}
 
 type VectorCommitment interface {
 	commitments.Commitment
