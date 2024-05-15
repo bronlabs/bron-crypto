@@ -30,7 +30,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 		return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.IdentityKey().String())
 	}
 	p.state.r_i = r_i
-	p.state.opening = *opening
+	p.state.opening = opening
 
 	// step 1.3: broadcast your commitment
 	p.Round++
@@ -85,7 +85,7 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.Protocol, 
 		receivedCommitment, _ := p.state.receivedCommitments.Get(party)
 		// step 3.2: open and check the commitments
 		verifier := hashcommitments.NewVerifier(nil)
-		if err := verifier.Verify(receivedCommitment, &message.Opening); err != nil {
+		if err := verifier.Verify(receivedCommitment, message.Opening); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, party.String(), "commitment from participant with sharing id can't be opened")
 		}
 	}

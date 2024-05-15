@@ -20,7 +20,7 @@ type Round1Broadcast struct {
 
 type Round2Broadcast struct {
 	Ri      curves.Scalar
-	Opening hashcommitments.Opening
+	Opening *hashcommitments.Opening
 
 	_ ds.Incomparable
 }
