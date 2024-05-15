@@ -1,6 +1,7 @@
 package paillierrange
 
 import (
+	"bytes"
 	crand "crypto/rand"
 	"io"
 	"math/big"
@@ -133,6 +134,10 @@ func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err erro
 	}
 
 	commitVerifier := hashcommitments.NewVerifier(prover.SessionId)
+	if !bytes.Equal(r3out.E.Bytes(), r3out.EsidOpening.Message()) {
+		return nil, errs.NewVerification("opening is not tied to the expected message")
+
+	}
 	if err := commitVerifier.Verify(prover.state.esidCommitment, r3out.EsidOpening); err != nil {
 		return nil, errs.WrapFailed(err, "cannot open commitment")
 	}

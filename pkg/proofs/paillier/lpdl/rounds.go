@@ -1,6 +1,8 @@
 package lpdl
 
 import (
+	"bytes"
+
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -193,6 +195,9 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	}
 
 	commitVerifier := hashcommitments.NewVerifier(verifier.sessionId)
+	if !bytes.Equal(input.BigQHat.ToAffineCompressed(), input.BigQHatOpening.Message()) {
+		return errs.NewVerification("opening is not tied to the expected message")
+	}
 	if err := commitVerifier.Verify(verifier.state.cHat, input.BigQHatOpening); err != nil {
 		return errs.WrapFailed(err, "cannot decommit Q hat")
 	}
