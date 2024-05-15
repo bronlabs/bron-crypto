@@ -43,7 +43,7 @@ func (*BaseFieldG2) Curve() curves.Curve {
 	return NewG2()
 }
 
-func (*BaseFieldG2) Cardinality() *saferith.Modulus {
+func (*BaseFieldG2) Cardinality() *saferith.Nat {
 	//TODO implement me
 	panic("implement me")
 }

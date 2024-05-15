@@ -44,7 +44,7 @@ func NewGt() *Gt {
 
 // === Basic Methods.
 
-func (*Gt) Cardinality() *saferith.Modulus {
+func (*Gt) Cardinality() *saferith.Nat {
 	panic("not implemented")
 }
 

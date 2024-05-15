@@ -41,7 +41,7 @@ func (*ScalarField) Curve() curves.Curve {
 	return NewCurve()
 }
 
-func (*ScalarField) Cardinality() *saferith.Modulus {
+func (*ScalarField) Cardinality() *saferith.Nat {
 	//TODO implement me
 	panic("implement me")
 }

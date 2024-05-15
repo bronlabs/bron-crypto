@@ -9,55 +9,55 @@ test-package-%:
 fuzz-test-%:
 	$(MAKE) clean
 	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_fuzz.sh
-	${SCRIPTS_DIR}/run_fuzz.sh ${*} --fuzztime=10s
+	${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_fuzz.sh ${*} --fuzztime=10s
 
 .PHONY: long-fuzz-test-%
 long-fuzz-test-%:
 	$(MAKE) clean
 	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_fuzz.sh
-	${SCRIPTS_DIR}/run_fuzz.sh ${*} --fuzztime=120s
+	${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_fuzz.sh ${*} --fuzztime=120s
 
 .PHONY: profile-test-%
 profile-test-%:
 	$(MAKE) clean
 	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_profile.sh
-	${SCRIPTS_DIR}/run_profile.sh ${*}
+	${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_profile.sh ${*}
 
 .PHONY: benchmark-test-%
 benchmark-test-%:
 	$(MAKE) clean
 	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_benchmark.sh
-	${SCRIPTS_DIR}/run_benchmark.sh ${*}
+	${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_benchmark.sh ${*}
 
 .PHONY: cte-test-%
 cte-test-%:
 	$(MAKE) clean
 	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_cte.sh
-	${SCRIPTS_DIR}/run_cte.sh ${*}
+	${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_cte.sh ${*}
 
 .PHONY: unit-test-%
 unit-test-%:
 	$(MAKE) clean
 	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_unittest.sh
-	${SCRIPTS_DIR}/run_unittest.sh ${*} -short
+	${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_unittest.sh ${*} -short
 
 .PHONY: long-unit-test-%
 long-unit-test-%:
 	$(MAKE) clean
 	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_unittest.sh
-	${SCRIPTS_DIR}/run_unittest.sh ${*}
+	${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_unittest.sh ${*}
 
 .PHONY: deflake-test-%
 deflake-test-%:
 	$(MAKE) clean
 	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_deflake.sh
-	${SCRIPTS_DIR}/run_deflake.sh ${*}
+	${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_deflake.sh ${*}
 
 .PHONY: long-deflake-test-%
 long-deflake-test-%:
 	$(MAKE) clean
 	chmod +x ${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_deflake.sh
-	${SCRIPTS_DIR}/run_deflake.sh ${*} -short
+	${KRYPTON_PRIMITIVES_SCRIPTS_DIR}/run_deflake.sh ${*} -short
 
 .PHONY: test-master
 test-master:

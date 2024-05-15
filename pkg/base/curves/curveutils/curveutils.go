@@ -2,6 +2,7 @@ package curveutils
 
 import (
 	"crypto/elliptic"
+	"sort"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
@@ -33,9 +34,17 @@ func GetCurveByName(name string) (curves.Curve, error) {
 }
 
 func GetAllCurves() []curves.Curve {
-	allCurves := make([]curves.Curve, 0, len(allCurvesMapper))
-	for _, c := range allCurvesMapper {
-		allCurves = append(allCurves, c)
+	allCurves := make([]curves.Curve, len(allCurvesMapper))
+	names := make([]string, len(allCurvesMapper))
+	i := 0
+	for s := range allCurvesMapper {
+		names[i] = s
+		i++
+	}
+	sort.Strings(names) // need supported curve list to be deterministic
+
+	for i, name := range names {
+		allCurves[i] = allCurvesMapper[name]
 	}
 	return allCurves
 }

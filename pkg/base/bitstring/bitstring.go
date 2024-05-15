@@ -5,17 +5,13 @@ import (
 	"fmt"
 
 	"golang.org/x/exp/constraints"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/itertools"
 )
 
 // ReverseBytes reverses the order of the bytes in a new slice.
 func ReverseBytes(inBytes []byte) []byte {
-	outBytes := make([]byte, len(inBytes))
-
-	for i, j := 0, len(inBytes)-1; j >= 0; i, j = i+1, j-1 {
-		outBytes[i] = inBytes[j]
-	}
-
-	return outBytes
+	return itertools.Reverse(inBytes)
 }
 
 // PadToLeft pads the input bytes to the left with padLen zeroed bytes.

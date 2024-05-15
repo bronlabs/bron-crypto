@@ -37,7 +37,7 @@ func NewScalarField() *ScalarField {
 	return &k256ScalarFieldInstance
 }
 
-func (*ScalarField) Cardinality() *saferith.Modulus {
+func (*ScalarField) Cardinality() *saferith.Nat {
 	//TODO implement me
 	panic("implement me")
 }

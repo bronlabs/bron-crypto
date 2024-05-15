@@ -9,18 +9,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 )
 
-type data uint
-
-func (d data) HashCode() uint64 {
-	return uint64(d % 10)
-}
-
-func (d data) Equal(rhs data) bool {
-	return d == rhs
-}
-
-var _ ds.Hashable[data] = (*data)(nil)
-
 func TestHashableHashSet(t *testing.T) {
 	t.Parallel()
 

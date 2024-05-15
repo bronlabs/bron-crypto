@@ -160,8 +160,8 @@ func (*Field) Addition() algebra.Addition[*FieldElement] {
 	panic("implement me")
 }
 
-func (*Field) Cardinality() *saferith.Modulus {
-	return order
+func (*Field) Cardinality() *saferith.Nat {
+	return order.Nat()
 }
 
 func (*Field) CoPrime(x *FieldElement, ys ...*FieldElement) bool {

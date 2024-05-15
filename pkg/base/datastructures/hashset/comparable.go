@@ -55,8 +55,8 @@ func (s *ComparableHashSet[_]) Size() int {
 	return len(s.v)
 }
 
-func (s *ComparableHashSet[_]) Cardinality() *saferith.Modulus {
-	return saferith.ModulusFromUint64(uint64(len(s.v)))
+func (s *ComparableHashSet[_]) Cardinality() *saferith.Nat {
+	return new(saferith.Nat).SetUint64(uint64(len(s.v)))
 }
 
 func (s *ComparableHashSet[_]) IsEmpty() bool {
@@ -121,9 +121,12 @@ func (s *ComparableHashSet[E]) IsProperSuperSet(other ds.Set[E]) bool {
 
 func (s *ComparableHashSet[E]) Iter() <-chan E {
 	ch := make(chan E, 1)
-	for k := range s.v {
-		ch <- k
-	}
+	go func() {
+		defer close(ch)
+		for k := range s.v {
+			ch <- k
+		}
+	}()
 	return ch
 }
 
@@ -139,7 +142,7 @@ func (s *ComparableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
 			var subset []E
 			for j := 0; j < n; j++ {
 				if i&(1<<j) != 0 {
-					subset = append(subset, elements[i])
+					subset = append(subset, elements[j])
 				}
 			}
 			ch <- NewComparableHashSet(subset...)

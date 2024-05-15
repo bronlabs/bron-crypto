@@ -53,7 +53,7 @@ func (*ScalarField[S]) Curve() curves.Curve {
 	return GetSourceSubGroup[S]()
 }
 
-func (*ScalarField[_]) Cardinality() *saferith.Modulus {
+func (*ScalarField[_]) Cardinality() *saferith.Nat {
 	//TODO implement me
 	panic("implement me")
 }
