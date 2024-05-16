@@ -10,7 +10,7 @@ type MorphismComposition[X, Y, Z Object, x, y, z Element] interface {
 }
 
 type Object any
-type Collection[Obj Object] ds.AbstractSet[Obj]
+type Collection[Obj Object] ds.AbstractSet[Obj, Cardinal]
 type Class[Obj Object] Collection[Obj]
 
 type Morphism[Dom, CoDom Object, X, Y Element] interface {

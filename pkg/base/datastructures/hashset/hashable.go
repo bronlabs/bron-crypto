@@ -3,8 +3,6 @@ package hashset
 import (
 	"encoding/json"
 
-	"github.com/cronokirby/saferith"
-
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -54,8 +52,8 @@ func (s *HashableHashSet[_]) Size() int {
 	return s.v.Size()
 }
 
-func (s *HashableHashSet[_]) Cardinality() *saferith.Modulus {
-	return saferith.ModulusFromUint64(uint64(s.v.Size()))
+func (s *HashableHashSet[_]) Cardinality() uint {
+	return uint(s.v.Size())
 }
 
 func (s *HashableHashSet[_]) IsEmpty() bool {

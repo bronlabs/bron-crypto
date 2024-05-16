@@ -2,8 +2,6 @@ package datastructures
 
 import (
 	"encoding/json"
-
-	"github.com/cronokirby/saferith"
 )
 
 type Incomparable [0]func()
@@ -46,14 +44,14 @@ type BiMap[K any, V any] interface {
 	Reverse() BiMap[V, K]
 }
 
-type AbstractSet[E any] interface {
-	Cardinality() *saferith.Modulus
+type AbstractSet[E, CardinalityType any] interface {
+	Cardinality() CardinalityType
 	Contains(e E) bool
 	Iter() <-chan E
 }
 
 type Set[E any] interface {
-	AbstractSet[E]
+	AbstractSet[E, uint]
 	Add(e E)
 	AddAll(es ...E)
 	Remove(e E)

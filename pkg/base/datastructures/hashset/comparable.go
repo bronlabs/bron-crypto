@@ -3,7 +3,6 @@ package hashset
 import (
 	"encoding/json"
 
-	"github.com/cronokirby/saferith"
 	"golang.org/x/exp/maps"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -55,8 +54,8 @@ func (s *ComparableHashSet[_]) Size() int {
 	return len(s.v)
 }
 
-func (s *ComparableHashSet[_]) Cardinality() *saferith.Modulus {
-	return saferith.ModulusFromUint64(uint64(len(s.v)))
+func (s *ComparableHashSet[_]) Cardinality() uint {
+	return uint(len(s.v))
 }
 
 func (s *ComparableHashSet[_]) IsEmpty() bool {

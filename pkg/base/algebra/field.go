@@ -20,15 +20,14 @@ type FieldElement[F Structure, E Element] interface {
 // A finite field (S, +, *) is a positive characteristic ring where (S, *) is a group.
 type FiniteField[FF Structure, E Element] interface {
 	Field[FF, E]
-	FiniteRing[FF, E]
+	FiniteEuclideanDomain[FF, E]
 }
 
 // FiniteFieldElement defines methods needed for elements of type E to be members of field S.
 // A finite field (S, +, *) is a positive characteristic ring where (S, *) is a group.
 type FiniteFieldElement[FF Structure, E Element] interface {
 	FieldElement[FF, E]
-	FiniteRingElement[FF, E]
-	BytesSerialization[E]
+	FiniteEuclideanDomainElement[FF, E]
 }
 
 type ExtensionField[ExtendedFieldType, PrimeFieldType Structure, ExtendedFieldElementType, PrimeFieldElementType Element] interface {

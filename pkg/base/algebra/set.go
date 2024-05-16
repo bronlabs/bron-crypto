@@ -30,7 +30,9 @@ type WrappedElement[E Element] interface {
 	ds.Equatable[E]
 }
 
-type Set[E Element] ds.AbstractSet[E]
+type Cardinal = *saferith.Modulus
+
+type Set[E Element] ds.AbstractSet[E, Cardinal]
 
 // StructuredSet implements the basic methods shared by all other higher level structures.
 type StructuredSet[S Structure, E Element] interface {
@@ -39,7 +41,7 @@ type StructuredSet[S Structure, E Element] interface {
 
 	// Element returns an unspecified element of the structure S with type E.
 	Element() E
-	Order() *saferith.Modulus
+	Order() Cardinal
 
 	GetOperator(name Operator) (op BinaryOperator[E], isDefinedUnder bool)
 }

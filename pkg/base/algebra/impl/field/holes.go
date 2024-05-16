@@ -4,7 +4,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/domain"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/group"
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/ring"
 )
 
 type HolesField[F algebra.Field[F, E], E algebra.FieldElement[F, E]] interface {
@@ -19,12 +18,12 @@ type HolesFieldElement[F algebra.Field[F, E], E algebra.FieldElement[F, E]] inte
 
 type HolesFiniteField[F algebra.FiniteField[F, E], E algebra.FiniteFieldElement[F, E]] interface {
 	HolesField[F, E]
-	ring.HolesFiniteRing[F, E]
+	domain.HolesFiniteEuclideanDomain[F, E]
 }
 
 type HolesFiniteFieldElement[F algebra.FiniteField[F, E], E algebra.FiniteFieldElement[F, E]] interface {
 	HolesFieldElement[F, E]
-	ring.HolesFiniteRingElement[F, E]
+	domain.HolesFiniteEuclideanDomainElement[F, E]
 }
 
 type HolesExtensionField[L algebra.ExtensionField[L, K, LE, KE], K algebra.Field[K, KE], LE algebra.ExtensionFieldElement[L, K, LE, KE], KE algebra.FieldElement[K, KE]] interface {
@@ -53,17 +52,17 @@ func NewFieldElement[F algebra.Field[F, E], E algebra.FieldElement[F, E]](H Hole
 
 func NewFiniteField[F algebra.FiniteField[F, E], E algebra.FiniteFieldElement[F, E]](H HolesFiniteField[F, E]) FiniteField[F, E] {
 	return FiniteField[F, E]{
-		Field:      NewField(H),
-		FiniteRing: ring.NewFiniteRing(H),
-		H:          H,
+		Field:                 NewField(H),
+		FiniteEuclideanDomain: domain.NewFiniteEuclideanDomain(H),
+		H:                     H,
 	}
 }
 
 func NewFiniteFieldElement[F algebra.FiniteField[F, E], E algebra.FiniteFieldElement[F, E]](H HolesFiniteFieldElement[F, E]) FiniteFieldElement[F, E] {
 	return FiniteFieldElement[F, E]{
-		FieldElement:      NewFieldElement(H),
-		FiniteRingElement: ring.NewFiniteRingElement(H),
-		H:                 H,
+		FieldElement:                 NewFieldElement(H),
+		FiniteEuclideanDomainElement: domain.NewFiniteEuclideanDomainElement(H),
+		H:                            H,
 	}
 }
 

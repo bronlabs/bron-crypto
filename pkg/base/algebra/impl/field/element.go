@@ -4,7 +4,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/domain"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/group"
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/ring"
 )
 
 type FieldElement[F algebra.Field[F, E], E algebra.FieldElement[F, E]] struct {
@@ -15,7 +14,7 @@ type FieldElement[F algebra.Field[F, E], E algebra.FieldElement[F, E]] struct {
 
 type FiniteFieldElement[F algebra.FiniteField[F, E], E algebra.FiniteFieldElement[F, E]] struct {
 	FieldElement[F, E]
-	ring.FiniteRingElement[F, E]
+	domain.FiniteEuclideanDomainElement[F, E]
 	H HolesFiniteFieldElement[F, E]
 }
 

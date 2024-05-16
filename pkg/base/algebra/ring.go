@@ -37,6 +37,7 @@ type Ring[R Structure, E Element] interface {
 	Rig[R, E]
 	// Ring has methods of additive group.
 	AdditiveGroup[R, E]
+	QuadraticResidue(p RingElement[R, E]) (E, error)
 }
 
 // RingElement defines methods needed for elements of type E to be elements of ring S.
@@ -47,13 +48,12 @@ type RingElement[R Structure, E Element] interface {
 	AdditiveGroupElement[R, E]
 
 	Sqrt() (E, error)
+	// IsUnit() bool
 }
 
 type FiniteRing[R Structure, E Element] interface {
 	FiniteStructure[R, E]
 	Ring[R, E]
-	// QuadraticResidue outputs q where p^2 = q (mod S.Order()) and returns an error if q does not exist.
-	QuadraticResidue(p RingElement[R, E]) (E, error)
 }
 
 type FiniteRingElement[R Structure, E Element] interface {
