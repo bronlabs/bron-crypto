@@ -256,16 +256,14 @@ func Test_Iter(t *testing.T) {
 	data2 := &dataV{value: 2}
 	biMap.Put(data1, data2)
 
-	// Get the iterator from the map
-	iter := biMap.Iter()
-
-	// Verify the iterator
-	require.NotNil(t, iter)
-
-	// Iterate over the map and collect the key-value pairs
 	var pairs []datastructures.MapEntry[*dataK, *dataV]
-	for pair := range iter {
+	// Iterate over the map and collect the key-value pairs
+	for iterator := biMap.Iterator(); iterator.HasNext(); {
+		// Verify the iterator
+		require.NotNil(t, iterator)
+		pair := iterator.Next()
 		pairs = append(pairs, pair)
+
 	}
 
 	// Verify the collected key-value pairs

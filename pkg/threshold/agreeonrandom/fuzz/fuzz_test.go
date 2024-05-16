@@ -48,7 +48,8 @@ func Fuzz_Test_rounds(f *testing.F) {
 		set := hashset.NewHashableHashSet(allIdentities...)
 		protocol, err := ttu.MakeProtocol(curve, allIdentities)
 		require.NoError(t, err)
-		for identity := range set.Iter() {
+		for iterator := set.Iterator(); iterator.HasNext(); {
+			identity := iterator.Next()
 			participant, err := agreeonrandom.NewParticipant(identity.(types.AuthKey), protocol, nil, prng)
 			if err != nil && !errs.IsKnownError(err) {
 				require.NoError(t, err)

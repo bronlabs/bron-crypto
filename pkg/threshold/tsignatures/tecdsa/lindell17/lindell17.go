@@ -151,7 +151,8 @@ func (s *Shard) Validate(protocol types.ThresholdSignatureProtocol, holderIdenti
 	if !paillierEncryptedShareHolders.Equal(paillierPublicKeyHolders) {
 		return errs.NewMembership("number of paillier public keys != number of encrypted paillier ciphertexts")
 	}
-	for pair := range s.PaillierEncryptedShares.Iter() {
+	for iterator := s.PaillierEncryptedShares.Iterator(); iterator.HasNext(); {
+		pair := iterator.Next()
 		id := pair.Key
 		esk := pair.Value
 		pk, exists := s.PaillierPublicKeys.Get(id)

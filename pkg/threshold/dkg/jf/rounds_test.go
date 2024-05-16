@@ -224,7 +224,8 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 		require.NoError(t, err)
 		r3Ins := ttu.MapBroadcastO2I(participants, r2Outs)
 
-		for pair := range r3Ins[attackerIndex].Iter() {
+		for iterator := r3Ins[attackerIndex].Iterator(); iterator.HasNext(); {
+			pair := iterator.Next()
 			identity := pair.Key
 			outMsg, exists := r3Ins[attackerIndex].Get(identity)
 			require.True(t, exists)
@@ -243,7 +244,8 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 		proof, err := prover.Prove(cipherSuite.Curve().AdditiveIdentity(), randomScalar)
 		require.NoError(t, err)
 		r3Ins := ttu.MapBroadcastO2I(participants, r2Outs)
-		for pair := range r3Ins[attackerIndex].Iter() {
+		for iterator := r3Ins[attackerIndex].Iterator(); iterator.HasNext(); {
+			pair := iterator.Next()
 			identity := pair.Key
 			outMsg, exists := r3Ins[attackerIndex].Get(identity)
 			require.True(t, exists)

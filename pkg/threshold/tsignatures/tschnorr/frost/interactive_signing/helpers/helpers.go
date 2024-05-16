@@ -42,7 +42,8 @@ func ProducePartialSignature(
 
 	presentPartySharingIds := make([]uint, quorum.Size())
 	i := 0
-	for identityKey := range quorum.Iter() {
+	for iterator := quorum.Iterator(); iterator.HasNext(); {
+		identityKey := iterator.Next()
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, errs.NewMissing("could not find sharing id of %s", identityKey.String())
@@ -88,7 +89,8 @@ func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig typ
 
 	bigR_js = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 	r_js = hashmap.NewHashableHashMap[types.IdentityKey, curves.Scalar]()
-	for identityKey := range quorum.Iter() {
+	for iterator := quorum.Iterator(); iterator.HasNext(); {
+		identityKey := iterator.Next()
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, nil, nil, errs.NewMissing("couldn't find the sharing id for participant %s", identityKey.String())

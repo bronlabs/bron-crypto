@@ -56,7 +56,7 @@ func (*Ring256) Contains(_ Uint256) bool {
 	return true
 }
 
-func (*Ring256) Iter() <-chan Uint256 {
+func (*Ring256) Iterator() ds.Iterator[Uint256] {
 	panic("not supported")
 }
 

@@ -142,27 +142,29 @@ func (m *HashableHashMap[K, V]) TryRemove(key K) (removed bool, removedValue V) 
 	} else {
 		m.inner[key.HashCode()] = newEntries
 	}
-
 	return true, removedValue
 }
 
 func (m *HashableHashMap[K, V]) Keys() []K {
-	result := make([]K, m.Size())
-	i := 0
-	for pair := range m.Iter() {
-		result[i] = pair.Key
-		i++
+	var keys []K
+	for _, entries := range m.inner {
+		for _, entry := range entries {
+			keys = append(keys, entry.Key)
+		}
 	}
-	return result
+	return keys
 }
 
 func (m *HashableHashMap[K, V]) Values() []V {
 	result := make([]V, m.Size())
 	i := 0
-	for pair := range m.Iter() {
-		result[i] = pair.Value
+
+	for iterator := m.Iterator(); iterator.HasNext(); {
+		value := iterator.Next()
+		result[i] = value.Value
 		i++
 	}
+
 	return result
 }
 
@@ -180,20 +182,12 @@ func (m *HashableHashMap[K, V]) Clone() ds.Map[K, V] {
 	return result
 }
 
-func (m *HashableHashMap[K, V]) Iter() <-chan ds.MapEntry[K, V] {
-	ch := make(chan ds.MapEntry[K, V], 1)
-	go func() {
-		defer close(ch)
-		for _, entries := range m.inner {
-			for _, pair := range entries {
-				ch <- ds.MapEntry[K, V]{
-					Key:   pair.Key,
-					Value: pair.Value,
-				}
-			}
-		}
-	}()
-	return ch
+func (m *HashableHashMap[K, V]) Iterator() ds.Iterator[ds.MapEntry[K, V]] {
+	return &hashableHashMapIterator[K, V]{
+		nextKeyIndex: 0,
+		keys:         m.Keys(),
+		Hashable:     m,
+	}
 }
 
 func (m *HashableHashMap[K, V]) MarshalJSON() ([]byte, error) {
@@ -211,4 +205,24 @@ func (m *HashableHashMap[K, V]) UnmarshalJSON(data []byte) error {
 	}
 	m.inner = temp
 	return nil
+}
+
+type hashableHashMapIterator[K ds.Hashable[K], V any] struct {
+	nextKeyIndex int
+	keys         []K
+	Hashable     *HashableHashMap[K, V]
+}
+
+func (i *hashableHashMapIterator[K, V]) Next() ds.MapEntry[K, V] {
+	if i.nextKeyIndex >= len(i.keys) {
+		panic("index out of range")
+	}
+	key := i.keys[i.nextKeyIndex]
+	value, _ := i.Hashable.Get(key)
+	i.nextKeyIndex++
+	return ds.MapEntry[K, V]{Key: key, Value: value}
+}
+
+func (i *hashableHashMapIterator[K, V]) HasNext() bool {
+	return i.nextKeyIndex < len(i.keys)
 }

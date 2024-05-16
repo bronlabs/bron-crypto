@@ -103,6 +103,14 @@ func (s *ComparableHashSet[E]) SubSets() []ds.Set[E] {
 	return result
 }
 
+func (s *ComparableHashSet[E]) Iterator() ds.Iterator[E] {
+	return &comparableHashSetIterator[E]{
+		nextKeyIndex:      0,
+		elements:          s.List(),
+		comparableHashSet: s,
+	}
+}
+
 func (s *ComparableHashSet[E]) IsSubSet(other ds.Set[E]) bool {
 	return other.Intersection(s).Equal(s)
 }
@@ -117,17 +125,6 @@ func (s *ComparableHashSet[E]) IsSuperSet(other ds.Set[E]) bool {
 
 func (s *ComparableHashSet[E]) IsProperSuperSet(other ds.Set[E]) bool {
 	return other.IsProperSubSet(s)
-}
-
-func (s *ComparableHashSet[E]) Iter() <-chan E {
-	ch := make(chan E, 1)
-	go func() {
-		defer close(ch)
-		for k := range s.v {
-			ch <- k
-		}
-	}()
-	return ch
 }
 
 func (s *ComparableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
@@ -183,4 +180,24 @@ func (s *ComparableHashSet[E]) UnmarshalJSON(data []byte) error {
 		s.v[k] = v
 	}
 	return nil
+}
+
+type comparableHashSetIterator[E comparable] struct {
+	nextKeyIndex      int
+	elements          []E
+	comparableHashSet *ComparableHashSet[E]
+}
+
+func (i *comparableHashSetIterator[E]) Next() E {
+	var curr E
+	if i.nextKeyIndex >= len(i.elements) {
+		panic("index out of range")
+	}
+	curr = i.elements[i.nextKeyIndex]
+	i.nextKeyIndex++
+	return curr
+}
+
+func (i *comparableHashSetIterator[E]) HasNext() bool {
+	return i.nextKeyIndex < len(i.elements)
 }

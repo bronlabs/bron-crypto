@@ -53,7 +53,7 @@ func (*BaseFieldG1) Contains(e curves.BaseFieldElement) bool {
 	panic("implement me")
 }
 
-func (*BaseFieldG1) Iter() <-chan curves.BaseFieldElement {
+func (*BaseFieldG1) Iterator() ds.Iterator[curves.BaseFieldElement] {
 	//TODO implement me
 	panic("implement me")
 }

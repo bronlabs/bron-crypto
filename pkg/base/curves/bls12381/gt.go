@@ -52,7 +52,7 @@ func (*Gt) Contains(e curves.GtMember) bool {
 	panic("not implemented")
 }
 
-func (*Gt) Iter() <-chan curves.GtMember {
+func (*Gt) Iterator() ds.Iterator[curves.GtMember] {
 	panic("not implemented")
 }
 

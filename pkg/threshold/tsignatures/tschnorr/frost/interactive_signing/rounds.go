@@ -108,7 +108,8 @@ func (ic *Cosigner) processNonceCommitmentOnline(round1output network.RoundMessa
 	bigD_alpha = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 	bigE_alpha = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 
-	for senderIdentityKey := range ic.quorum.Iter() {
+	for iterator := ic.quorum.Iterator(); iterator.HasNext(); {
+		senderIdentityKey := iterator.Next()
 		sharingId, exists := ic.sharingConfig.Reverse().Get(senderIdentityKey)
 		if !exists {
 			return nil, nil, errs.NewMissing("could not find sender sharing id")

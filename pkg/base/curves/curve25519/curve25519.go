@@ -74,7 +74,7 @@ func (*Curve) Contains(e curves.Point) bool {
 	panic("implement me")
 }
 
-func (*Curve) Iter() <-chan curves.Point {
+func (*Curve) Iterator() ds.Iterator[curves.Point] {
 	//TODO implement me
 	panic("implement me")
 }

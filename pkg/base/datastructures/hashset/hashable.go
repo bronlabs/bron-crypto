@@ -70,19 +70,24 @@ func (s *HashableHashSet[E]) Union(other ds.Set[E]) ds.Set[E] {
 
 func (s *HashableHashSet[E]) Intersection(other ds.Set[E]) ds.Set[E] {
 	result := NewHashableHashSet[E]()
-	for k1 := range s.Iter() {
-		if other.Contains(k1) {
-			result.Add(k1)
+
+	for iter := s.Iterator(); iter.HasNext(); {
+		element := iter.Next()
+		if other.Contains(element) {
+			result.Add(element)
 		}
 	}
+
 	return result
 }
 
 func (s *HashableHashSet[E]) Difference(other ds.Set[E]) ds.Set[E] {
 	result := NewHashableHashSet[E]()
-	for k := range s.Iter() {
-		if !other.Contains(k) {
-			result.Add(k)
+
+	for iter := s.Iterator(); iter.HasNext(); {
+		element := iter.Next()
+		if !other.Contains(element) {
+			result.Add(element)
 		}
 	}
 	return result
@@ -118,15 +123,10 @@ func (s *HashableHashSet[E]) IsProperSuperSet(other ds.Set[E]) bool {
 	return other.IsProperSubSet(s)
 }
 
-func (s *HashableHashSet[E]) Iter() <-chan E {
-	ch := make(chan E, 1)
-	go func() {
-		defer close(ch)
-		for k := range s.v.Iter() {
-			ch <- k.Key
-		}
-	}()
-	return ch
+func (s *HashableHashSet[E]) Iterator() ds.Iterator[E] {
+	return &hashableHashSetIterator[E]{
+		internal: s.v.Iterator(),
+	}
 }
 
 func (s *HashableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
@@ -153,10 +153,13 @@ func (s *HashableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
 func (s *HashableHashSet[E]) List() []E {
 	results := make([]E, s.Size())
 	i := 0
-	for k := range s.Iter() {
+
+	for iterator := s.Iterator(); iterator.HasNext(); {
+		k := iterator.Next()
 		results[i] = k
 		i++
 	}
+
 	return results
 }
 
@@ -178,8 +181,23 @@ func (s *HashableHashSet[E]) UnmarshalJSON(data []byte) error {
 		return errs.WrapSerialisation(err, "couldn't unmarshal hashable hash set")
 	}
 	s.Clear()
-	for x := range result.Iter() {
+
+	for iter := s.Iterator(); iter.HasNext(); {
+		x := iter.Next()
 		s.Add(x)
 	}
+
 	return nil
+}
+
+type hashableHashSetIterator[E ds.Hashable[E]] struct {
+	internal ds.Iterator[ds.MapEntry[E, bool]]
+}
+
+func (i *hashableHashSetIterator[E]) Next() E {
+	return i.internal.Next().Key
+}
+
+func (i *hashableHashSetIterator[E]) HasNext() bool {
+	return i.internal.HasNext()
 }

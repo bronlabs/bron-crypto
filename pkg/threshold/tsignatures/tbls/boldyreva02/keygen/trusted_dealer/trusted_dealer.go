@@ -45,7 +45,8 @@ func Keygen[K bls.KeySubGroup](protocol types.ThresholdProtocol, prng io.Reader)
 
 	shards := hashmap.NewHashableHashMap[types.IdentityKey, *boldyreva02.Shard[K]]()
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	for pair := range sharingConfig.Iter() {
+	for iterator := sharingConfig.Iterator(); iterator.HasNext(); {
+		pair := iterator.Next()
 		identityKey := pair.Value
 		sks, exists := signingKeyShares.Get(identityKey)
 		if !exists {

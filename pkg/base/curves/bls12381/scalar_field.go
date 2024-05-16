@@ -63,7 +63,7 @@ func (*ScalarField[_]) Contains(e curves.Scalar) bool {
 	panic("implement me")
 }
 
-func (*ScalarField[_]) Iter() <-chan curves.Scalar {
+func (*ScalarField[_]) Iterator() ds.Iterator[curves.Scalar] {
 	//TODO implement me
 	panic("implement me")
 }

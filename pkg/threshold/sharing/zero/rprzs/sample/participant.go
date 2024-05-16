@@ -82,7 +82,8 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, seeds rprzs.PairWis
 	if !seeders.IsSubSet(protocol.Participants()) {
 		return errs.NewMembership("we have seeds from people who are not a participant in this protocol")
 	}
-	for pair := range seeds.Iter() {
+	for iterator := seeds.Iterator(); iterator.HasNext(); {
+		pair := iterator.Next()
 		if ct.IsAllZero(pair.Value[:]) == 1 {
 			return errs.NewIsZero("found seed that's all zero")
 		}

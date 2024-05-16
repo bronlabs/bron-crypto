@@ -22,7 +22,8 @@ func NewRoundMessages[ProtocolT types.Protocol, MessageT Message[ProtocolT]]() R
 
 func ValidateMessages[ProtocolT types.Protocol, MessageT Message[ProtocolT]](protocol ProtocolT, senders ds.Set[types.IdentityKey], receiver types.IdentityKey, messages RoundMessages[ProtocolT, MessageT]) error {
 	var receiverString string
-	for sender := range senders.Iter() {
+	for iterator := senders.Iterator(); iterator.HasNext(); {
+		sender := iterator.Next()
 		if receiver != nil && sender.Equal(receiver) {
 			continue
 		}

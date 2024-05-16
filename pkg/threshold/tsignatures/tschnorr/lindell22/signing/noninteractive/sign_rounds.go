@@ -11,7 +11,8 @@ import (
 func (c *Cosigner[V]) ProducePartialSignature(message []byte) (partialSignature *tschnorr.PartialSignature, err error) {
 	bigR1Sum := c.Protocol.SigningSuite().Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K1)
 	bigR2Sum := c.Protocol.SigningSuite().Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K2)
-	for identity := range c.quorum.Iter() {
+	for iterator := c.quorum.Iterator(); iterator.HasNext(); {
+		identity := iterator.Next()
 		if identity.Equal(c.IdentityKey()) {
 			continue
 		}

@@ -18,7 +18,8 @@ func (p *Participant) Round1() (network.RoundMessages[types.Protocol, *Round1P2P
 
 	result := network.NewRoundMessages[types.Protocol, *Round1P2P]()
 	if p.IsInitiator() {
-		for participant := range p.Protocol.Participants().Iter() {
+		for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
+			participant := iterator.Next()
 			if participant.Equal(p.IdentityKey()) {
 				continue
 			}
@@ -53,7 +54,8 @@ func (p *Participant) Round2(initiatorMessage *Round1P2P) (network.RoundMessages
 
 	// step 2.1 initiator skips.
 	if !p.IsInitiator() {
-		for participant := range p.Protocol.Participants().Iter() {
+		for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
+			participant := iterator.Next()
 			if participant.Equal(p.IdentityKey()) {
 				continue
 			}
@@ -99,7 +101,8 @@ func (p *Participant) Round3(p2pMessages network.RoundMessages[types.Protocol, *
 	if messageToVerify == nil {
 		return nil, errs.NewFailed("messageToVerify is nil")
 	}
-	for pair := range p2pMessages.Iter() {
+	for iterator := p2pMessages.Iterator(); iterator.HasNext(); {
+		pair := iterator.Next()
 		sender := pair.Key
 		message := pair.Value
 		// if it is initiator, we need to verify that all messages are the same.

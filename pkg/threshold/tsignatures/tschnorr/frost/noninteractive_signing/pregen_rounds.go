@@ -72,7 +72,8 @@ func (p *PreGenParticipant) Round2(round1output network.RoundMessages[types.Thre
 	for i := 0; i < p.Tau; i++ {
 		preSignature := make(PreSignature, p.Protocol.Participants().Size())
 		j := -1
-		for participant := range p.Protocol.Participants().Iter() {
+		for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
+			participant := iterator.Next()
 			j++
 			senderSharingId := j + 1
 			message, _ := round1output.Get(participant)

@@ -286,10 +286,12 @@ func Test_HashableHashMap_Clones(t *testing.T) {
 	require.Equal(t, hashMap.Size(), clone.Size())
 
 	// Check if the clone contains the same key-value pairs
-	for pair := range hashMap.Iter() {
-		value, ok := clone.Get(pair.Key)
+
+	for iterator := hashMap.Iterator(); iterator.HasNext(); {
+		entry := iterator.Next()
+		value, ok := clone.Get(entry.Key)
 		require.True(t, ok)
-		require.Equal(t, pair.Value, value)
+		require.Equal(t, entry.Value, value)
 	}
 
 	// Check if modifying the clone does not affect the original map
@@ -305,9 +307,10 @@ func Test_HashableHashMap_Iter(t *testing.T) {
 	hashMap.Put(&data{value: 3}, 3)
 
 	count := 0
-	for pair := range hashMap.Iter() {
-		require.Contains(t, hashMap.Keys(), pair.Key)
-		require.Contains(t, hashMap.Values(), pair.Value)
+	for iterator := hashMap.Iterator(); iterator.HasNext(); {
+		entry := iterator.Next()
+		require.Contains(t, hashMap.Keys(), entry.Key)
+		require.Contains(t, hashMap.Values(), entry.Value)
 		count++
 	}
 

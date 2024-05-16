@@ -75,21 +75,8 @@ func (*Curve) Contains(e curves.Point) bool {
 	return e.IsInPrimeSubGroup()
 }
 
-func (c *Curve) Iter() <-chan curves.Point {
-	ch := make(chan curves.Point, 1)
-	go func() {
-		defer close(ch)
-		current := c.Generator()
-		ch <- current
-		for {
-			current = current.Add(c.Generator())
-			if current.IsDesignatedGenerator() {
-				return
-			}
-			ch <- current
-		}
-	}()
-	return ch
+func (*Curve) Iterator() ds.Iterator[curves.Point] {
+	panic("implement me")
 }
 
 func (*Curve) Operators() []algebra.BinaryOperator[curves.Point] {

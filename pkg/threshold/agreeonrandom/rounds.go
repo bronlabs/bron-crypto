@@ -45,7 +45,8 @@ func (p *Participant) Round2(round1output network.RoundMessages[types.Protocol, 
 	}
 
 	// step 2.0: store all commitments
-	for sender := range p.Protocol.Participants().Iter() {
+	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
+		sender := iterator.Next()
 		if sender.Equal(p.myAuthKey) {
 			continue
 		}
@@ -71,7 +72,8 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.Protocol, 
 	}
 
 	// step 3.1: for each participant...
-	for party := range p.Protocol.Participants().Iter() {
+	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
+		party := iterator.Next()
 		if party.Equal(p.myAuthKey) {
 			continue
 		}

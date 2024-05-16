@@ -43,7 +43,8 @@ func (si *SetInvariants[S, E]) Remove(t *testing.T, A S, expectedSize int, xs ..
 		t.Helper()
 		B := A.Clone()
 		currentSize := int(B.Cardinality().Uint64())
-		for el := range A.Iter() {
+		for iterator := A.Iterator(); iterator.HasNext(); {
+			el := iterator.Next()
 			currentSize = int(B.Cardinality().Uint64())
 
 			B.Remove(el)
@@ -107,14 +108,17 @@ func (si *SetInvariants[S, E]) Union(t *testing.T, A, B S) {
 	sizeB := int(B.Cardinality().Uint64())
 	sizeC := int(C.Cardinality().Uint64())
 
-	for el := range A.Iter() {
+	for iterator := A.Iterator(); iterator.HasNext(); {
+		el := iterator.Next()
 		require.True(t, C.Contains(el), "element %v from A must be in the union", el)
 	}
-	for el := range B.Iter() {
+	for iterator := B.Iterator(); iterator.HasNext(); {
+		el := iterator.Next()
 		require.True(t, C.Contains(el), "element %v from B must be in the union", el)
 	}
 	elementsInBothSides := 0
-	for el := range C.Iter() {
+	for iterator := C.Iterator(); iterator.HasNext(); {
+		el := iterator.Next()
 		require.True(t, A.Contains(el) || B.Contains(el), "element %v must be in A or B", el)
 		if A.Contains(el) && B.Contains(el) {
 			elementsInBothSides++
@@ -131,18 +135,21 @@ func (si *SetInvariants[S, E]) Intersection(t *testing.T, A, B S) {
 	C := A.Intersection(B)
 	sizeC := int(C.Cardinality().Uint64())
 
-	for el := range A.Iter() {
+	for iterator := A.Iterator(); iterator.HasNext(); {
+		el := iterator.Next()
 		if B.Contains(el) {
 			require.True(t, C.Contains(el), "element %v from A, present in B, must be in the intersection", el)
 		}
 	}
-	for el := range B.Iter() {
+	for iterator := B.Iterator(); iterator.HasNext(); {
+		el := iterator.Next()
 		if A.Contains(el) {
 			require.True(t, C.Contains(el), "element %v from B, present in A, must be in the intersection", el)
 		}
 	}
 	elementsInBothSides := 0
-	for el := range C.Iter() {
+	for iterator := C.Iterator(); iterator.HasNext(); {
+		el := iterator.Next()
 		require.True(t, A.Contains(el) && B.Contains(el), "element %v must be in both A and B", el)
 		elementsInBothSides++
 	}
@@ -162,7 +169,8 @@ func (si *SetInvariants[S, E]) IsSubSet(t *testing.T, A, M S) {
 	require.NotNil(t, A)
 	require.NotNil(t, M)
 	wasSubSet := true
-	for ai := range A.Iter() {
+	for iterator := A.Iterator(); iterator.HasNext(); {
+		ai := iterator.Next()
 		if !M.Contains(ai) {
 			wasSubSet = false
 		}
@@ -191,7 +199,8 @@ func (si *SetInvariants[S, E]) IterSubSets(t *testing.T, A S) {
 
 	foundSubSets := 0
 	for s := range A.IterSubSets() {
-		for si := range s.Iter() {
+		for iterator := s.Iterator(); iterator.HasNext(); {
+			si := iterator.Next()
 			require.True(t, A.Contains(si), "element %v from subset is not A", si)
 		}
 		foundSubSets++

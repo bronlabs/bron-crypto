@@ -53,7 +53,8 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u netw
 	outboundP2PMessages := network.NewRoundMessages[types.ThresholdProtocol, *Round1P2P]()
 
 	// step 1.4: send (x_ij) to P_j
-	for pair := range p.SharingConfig.Iter() {
+	for iterator := p.SharingConfig.Iterator(); iterator.HasNext(); {
+		pair := iterator.Next()
 		sharingId := pair.Key
 		identityKey := pair.Value
 		if sharingId != p.SharingId() {

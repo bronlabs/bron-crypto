@@ -60,7 +60,8 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 
 	// step 0.3
 	multipliers := hashmap.NewHashableHashMap[types.IdentityKey, *signing.Multiplication]()
-	for participant := range preSigners.Iter() {
+	for iterator := preSigners.Iterator(); iterator.HasNext(); {
+		participant := iterator.Next()
 		if participant.Equal(myAuthKey) {
 			continue
 		}

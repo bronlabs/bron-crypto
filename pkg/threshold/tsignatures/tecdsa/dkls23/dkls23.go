@@ -100,7 +100,8 @@ func (s *Shard) Validate(protocol types.ThresholdProtocol, holderIdentityKey typ
 	if delta := pairwiseBaseOTHolders.SymmetricDifference(protocol.Participants()); delta.Size() != 1 || !delta.Contains(holderIdentityKey) {
 		return errs.NewMembership("pairwise base ot")
 	}
-	for pair := range s.PairwiseBaseOTs.Iter() {
+	for iterator := s.PairwiseBaseOTs.Iterator(); iterator.HasNext(); {
+		pair := iterator.Next()
 		id := pair.Key
 		v := pair.Value
 		if v == nil {
@@ -168,7 +169,8 @@ func (ppm *PreProcessingMaterial) Validate(myIdentityKey types.IdentityKey, prot
 	if ppm.PreSignature == nil {
 		return errs.NewIsNil("public material")
 	}
-	for participant := range ppm.PreSigners.Iter() {
+	for iterator := ppm.PreSigners.Iterator(); iterator.HasNext(); {
+		participant := iterator.Next()
 		Ri, exists := ppm.PreSignature.Get(participant)
 		if !exists {
 			return errs.NewMissing("could not find Ri for identity %s", participant.String())
@@ -209,7 +211,8 @@ func (pppm *PrivatePreProcessingMaterial) Validate(myIdentityKey types.IdentityK
 		return errs.NewIsNil("Zeta")
 	}
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	for participant := range preSigners.Iter() {
+	for iterator := preSigners.Iterator(); iterator.HasNext(); {
+		participant := iterator.Next()
 		if participant.Equal(myIdentityKey) {
 			continue
 		}

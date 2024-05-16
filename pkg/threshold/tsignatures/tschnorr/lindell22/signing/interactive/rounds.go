@@ -63,7 +63,8 @@ func (p *Cosigner[V]) Round2(broadcastInput network.RoundMessages[types.Threshol
 	}
 
 	p.state.theirBigRCommitment = hashmap.NewHashableHashMap[types.IdentityKey, commitments.Commitment]()
-	for identity := range p.quorum.Iter() {
+	for iterator := p.quorum.Iterator(); iterator.HasNext(); {
+		identity := iterator.Next()
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -99,7 +100,8 @@ func (p *Cosigner[V]) Round3(broadcastInput network.RoundMessages[types.Threshol
 
 	bigR := p.state.bigR
 	// step 3.1: For all other participants P_j in the quorum...
-	for identity := range p.quorum.Iter() {
+	for iterator := p.quorum.Iterator(); iterator.HasNext(); {
+		identity := iterator.Next()
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}

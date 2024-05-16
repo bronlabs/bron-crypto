@@ -54,7 +54,7 @@ func (*Ring128) Contains(_ Uint128) bool {
 	return true
 }
 
-func (*Ring128) Iter() <-chan Uint128 {
+func (*Ring128) Iterator() ds.Iterator[Uint128] {
 	panic("not supported")
 }
 

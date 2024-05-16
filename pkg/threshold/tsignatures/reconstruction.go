@@ -22,7 +22,8 @@ func ConstructPrivateKey(protocol types.ThresholdSignatureProtocol, shards ds.Ma
 	shares := make([]*shamir.Share, shards.Size())
 	var publicKey curves.Point
 	index := 0
-	for pair := range shards.Iter() {
+	for iterator := shards.Iterator(); iterator.HasNext(); {
+		pair := iterator.Next()
 		identityKey := pair.Key
 		shard := pair.Value
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
@@ -64,7 +65,8 @@ func validatePrivateKeyConstructionInputs(protocol types.ThresholdSignatureProto
 		return errs.NewSize("shard holder set size (%d) < threshold (%d)", shardHolders.Size(), protocol.Threshold())
 	}
 	var seenPublicKey curves.Point
-	for holder := range shardHolders.Iter() {
+	for iterator := shardHolders.Iterator(); iterator.HasNext(); {
+		holder := iterator.Next()
 		shard, exists := shards.Get(holder)
 		if !exists {
 			return errs.NewMissing("couldn't find shard for holder %s", holder.String())

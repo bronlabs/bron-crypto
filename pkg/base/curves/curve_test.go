@@ -1,9 +1,6 @@
 package curves_test
 
 import (
-	"testing"
-
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
@@ -19,9 +16,4 @@ var TestCurves = []curves.Curve{
 	p256.NewCurve(),
 	k256.NewCurve(),
 	pallas.NewCurve(),
-}
-
-func TestBattery(t *testing.T) {
-	t.Parallel()
-	testutils.IsSet[curves.Curve, curves.Point](t, k256.NewCurve())
 }

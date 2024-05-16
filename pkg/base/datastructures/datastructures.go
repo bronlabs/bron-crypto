@@ -8,6 +8,15 @@ import (
 
 type Incomparable [0]func()
 
+type Iterator[T any] interface {
+	Next() T
+	HasNext() bool
+}
+
+type Iterable[T any] interface {
+	Iterator() Iterator[T]
+}
+
 type Equatable[K any] interface {
 	Equal(rhs K) bool
 }
@@ -36,8 +45,9 @@ type Map[K any, V any] interface {
 	TryRemove(key K) (removed bool, removedValue V)
 	Keys() []K
 	Values() []V
-	Iter() <-chan MapEntry[K, V]
+
 	Clone() Map[K, V]
+	Iterable[MapEntry[K, V]]
 	json.Marshaler
 }
 
@@ -49,7 +59,7 @@ type BiMap[K any, V any] interface {
 type AbstractSet[E any] interface {
 	Cardinality() *saferith.Nat
 	Contains(e E) bool
-	Iter() <-chan E
+	Iterable[E]
 }
 
 type Set[E any] interface {

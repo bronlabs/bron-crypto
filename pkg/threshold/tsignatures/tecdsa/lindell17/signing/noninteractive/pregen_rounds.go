@@ -46,7 +46,8 @@ func (p *PreGenParticipant) Round2(input network.RoundMessages[types.ThresholdPr
 	}
 
 	theirBigRCommitments := hashmap.NewHashableHashMap[types.IdentityKey, commitments.Commitment]()
-	for identity := range p.preSigners.Iter() {
+	for iterator := p.preSigners.Iterator(); iterator.HasNext(); {
+		identity := iterator.Next()
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -84,7 +85,8 @@ func (p *PreGenParticipant) Round3(input network.RoundMessages[types.ThresholdPr
 	bigRs := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 	bigRs.Put(p.IdentityKey(), p.state.bigR)
 
-	for identity := range p.preSigners.Iter() {
+	for iterator := p.preSigners.Iterator(); iterator.HasNext(); {
+		identity := iterator.Next()
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}

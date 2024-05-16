@@ -85,18 +85,12 @@ func (m *ComparableHashMap[K, V]) Values() []V {
 	return maps.Values(m.inner)
 }
 
-func (m *ComparableHashMap[K, V]) Iter() <-chan ds.MapEntry[K, V] {
-	ch := make(chan ds.MapEntry[K, V], 1)
-	go func() {
-		defer close(ch)
-		for k, v := range m.inner {
-			ch <- ds.MapEntry[K, V]{
-				Key:   k,
-				Value: v,
-			}
-		}
-	}()
-	return ch
+func (m *ComparableHashMap[K, V]) Iterator() ds.Iterator[ds.MapEntry[K, V]] {
+	return &comparableHashMapIterator[K, V]{
+		nextKeyIndex:      0,
+		keys:              m.Keys(),
+		comparableHashMap: m,
+	}
 }
 
 func (m *ComparableHashMap[K, V]) Clone() ds.Map[K, V] {
@@ -123,4 +117,24 @@ func (m *ComparableHashMap[K, V]) UnmarshalJSON(data []byte) error {
 	}
 	m.inner = temp
 	return nil
+}
+
+type comparableHashMapIterator[K comparable, V any] struct {
+	nextKeyIndex      int
+	keys              []K
+	comparableHashMap *ComparableHashMap[K, V]
+}
+
+func (i *comparableHashMapIterator[K, V]) Next() ds.MapEntry[K, V] {
+	if i.nextKeyIndex >= len(i.keys) {
+		panic("index out of range")
+	}
+	key := i.keys[i.nextKeyIndex]
+	value, _ := i.comparableHashMap.Get(key)
+	i.nextKeyIndex++
+	return ds.MapEntry[K, V]{Key: key, Value: value}
+}
+
+func (i *comparableHashMapIterator[K, V]) HasNext() bool {
+	return i.nextKeyIndex < len(i.keys)
 }

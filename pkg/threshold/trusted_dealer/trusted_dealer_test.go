@@ -74,7 +74,8 @@ func Test_TrustedDealer(t *testing.T) {
 
 				t.Run("all signing key shares are valid", func(t *testing.T) {
 					t.Parallel()
-					for entry := range signingKeyShares.Iter() {
+					for iterator := signingKeyShares.Iterator(); iterator.HasNext(); {
+						entry := iterator.Next()
 						err := entry.Value.Validate(thresholdProtocol)
 						require.NoError(t, err)
 					}
@@ -82,7 +83,8 @@ func Test_TrustedDealer(t *testing.T) {
 
 				t.Run("all partial public keys are valid", func(t *testing.T) {
 					t.Parallel()
-					for entry := range partialPublicKeys.Iter() {
+					for iterator := partialPublicKeys.Iterator(); iterator.HasNext(); {
+						entry := iterator.Next()
 						err := entry.Value.Validate(thresholdProtocol)
 						require.NoError(t, err)
 					}
@@ -91,7 +93,8 @@ func Test_TrustedDealer(t *testing.T) {
 				t.Run("all public keys are the same", func(t *testing.T) {
 					t.Parallel()
 					publicKeys := map[curves.Point]bool{}
-					for entry := range signingKeyShares.Iter() {
+					for iterator := signingKeyShares.Iterator(); iterator.HasNext(); {
+						entry := iterator.Next()
 						shard := entry.Value
 						if _, exists := publicKeys[shard.PublicKey]; !exists {
 							publicKeys[shard.PublicKey] = true

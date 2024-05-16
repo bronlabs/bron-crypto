@@ -93,18 +93,8 @@ func (m *BiMap[_, V]) Values() []V {
 	return m.reverseMap.Keys()
 }
 
-func (m *BiMap[K, V]) Iter() <-chan ds.MapEntry[K, V] {
-	ch := make(chan ds.MapEntry[K, V], 1)
-	go func() {
-		defer close(ch)
-		for pair := range m.internalMap.Iter() {
-			ch <- ds.MapEntry[K, V]{
-				Key:   pair.Key,
-				Value: pair.Value,
-			}
-		}
-	}()
-	return ch
+func (m *BiMap[K, V]) Iterator() ds.Iterator[ds.MapEntry[K, V]] {
+	return m.internalMap.Iterator()
 }
 
 func (m *BiMap[K, V]) Clone() ds.Map[K, V] {

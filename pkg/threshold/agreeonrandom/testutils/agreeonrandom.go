@@ -19,7 +19,8 @@ func RunAgreeOnRandom(curve curves.Curve, identities []types.IdentityKey, prng i
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't make protocol")
 	}
-	for identity := range set.Iter() {
+	for iterator := set.Iterator(); iterator.HasNext(); {
+		identity := iterator.Next()
 		participant, err := agreeonrandom.NewParticipant(identity.(types.AuthKey), protocol, nil, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")

@@ -62,7 +62,8 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 	}
 
 	multipliers := hashmap.NewHashableHashMap[types.IdentityKey, *signing.Multiplication]()
-	for participant := range quorum.Iter() {
+	for iterator := quorum.Iterator(); iterator.HasNext(); {
+		participant := iterator.Next()
 		if participant.Equal(authKey) {
 			continue
 		}

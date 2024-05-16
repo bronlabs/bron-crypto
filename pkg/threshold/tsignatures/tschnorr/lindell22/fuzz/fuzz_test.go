@@ -70,7 +70,8 @@ func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identiti
 	require.True(t, exists)
 	publicKey := shard.SigningKeyShare.PublicKey
 	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-	for iter := range shards.Iter() {
+	for iterator := shards.Iterator(); iterator.HasNext(); {
+		iter := iterator.Next()
 		identity := iter.Key
 		shard := iter.Value
 		publicKeyShares.Put(identity, shard.PublicKeyShares)

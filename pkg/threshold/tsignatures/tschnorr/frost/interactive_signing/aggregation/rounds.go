@@ -24,7 +24,8 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 
 	sharingIds := make([]uint, a.Quorum.Size())
 	i := 0
-	for identityKey := range a.Quorum.Iter() {
+	for iterator := a.Quorum.Iterator(); iterator.HasNext(); {
+		identityKey := iterator.Next()
 		sharingId, exists := a.SharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, errs.NewMissing("could not find sharing id of %s", identityKey.String())
@@ -43,7 +44,8 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 		return nil, errs.WrapSerialisation(err, "converting hash to c failed")
 	}
 
-	for jIdentityKey := range a.Quorum.Iter() {
+	for iterator := a.Quorum.Iterator(); iterator.HasNext(); {
+		jIdentityKey := iterator.Next()
 		j, exists := a.SharingConfig.Reverse().Get(jIdentityKey)
 		if !exists {
 			return nil, errs.NewMissing("could not find the identity key of cosigner with sharing id %d", j)
@@ -77,7 +79,8 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 	}
 
 	s := a.Protocol.SigningSuite().Curve().ScalarField().Zero()
-	for pair := range partialSignatures.Iter() {
+	for iterator := partialSignatures.Iterator(); iterator.HasNext(); {
+		pair := iterator.Next()
 		partialSignature := pair.Value
 		s = s.Add(partialSignature.Zi)
 	}

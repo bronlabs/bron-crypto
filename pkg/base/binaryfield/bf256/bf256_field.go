@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
@@ -219,7 +220,7 @@ func (*Field) IsDefinedUnder(operator algebra.BinaryOperator[*FieldElement]) boo
 	panic("implement me")
 }
 
-func (*Field) Iter() <-chan *FieldElement {
+func (*Field) Iterator() ds.Iterator[*FieldElement] {
 	// TODO implement me
 	panic("implement me")
 }
