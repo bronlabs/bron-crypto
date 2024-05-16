@@ -80,7 +80,7 @@ func (p *PreGenParticipant) Round2(broadcastInput network.RoundMessages[types.Th
 		return nil, errs.WrapValidation(err, "invalid round 1 broadcast input")
 	}
 
-	theirBigRCommitment := hashmap.NewHashableHashMap[types.IdentityKey, commitments.Commitment]()
+	theirBigRCommitment := hashmap.NewHashableHashMap[types.IdentityKey, hashveccomm.VectorCommitment]()
 	for iterator := p.preSigners.Iterator(); iterator.HasNext(); {
 		identity := iterator.Next()
 		if identity.Equal(p.IdentityKey()) {
@@ -101,11 +101,11 @@ func (p *PreGenParticipant) Round2(broadcastInput network.RoundMessages[types.Th
 	}
 
 	broadcast := &Round2Broadcast{
-		BigR1:      p.state.bigR1,
-		BigR2:      p.state.bigR2,
-		opening:    p.state.opening,
-		BigR1Proof: bigR1Proof,
-		BigR2Proof: bigR2Proof,
+		BigR1:       p.state.bigR1,
+		BigR2:       p.state.bigR2,
+		BigROpening: p.state.opening,
+		BigR1Proof:  bigR1Proof,
+		BigR2Proof:  bigR2Proof,
 	}
 	p.state.theirBigRCommitment = theirBigRCommitment
 	p.Round++
@@ -133,7 +133,7 @@ func (p *PreGenParticipant) Round3(broadcastInput network.RoundMessages[types.Th
 		inBroadcast, _ := broadcastInput.Get(identity)
 		theirBigR1 := inBroadcast.BigR1
 		theirBigR2 := inBroadcast.BigR2
-		theirOpening := inBroadcast.opening
+		theirBigROpening := inBroadcast.BigROpening
 		theirPid := identity.PublicKey().ToAffineCompressed()
 		theirBigRCommitment, ok := p.state.theirBigRCommitment.Get(identity)
 		if !ok {
@@ -142,7 +142,7 @@ func (p *PreGenParticipant) Round3(broadcastInput network.RoundMessages[types.Th
 
 		// 1. verify commitment
 		vectorVerifier := hashveccomm.NewVectorVerifier(p.SessionId)
-		if err := vectorVerifier.Verify(&theirBigRCommitment, theirOpening); err != nil {
+		if err := vectorVerifier.Verify(&theirBigRCommitment, theirBigROpening); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 

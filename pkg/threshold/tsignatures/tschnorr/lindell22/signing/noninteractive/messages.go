@@ -23,11 +23,11 @@ type Round1Broadcast struct {
 type Round1P2P = setup.Round1P2P
 
 type Round2Broadcast struct {
-	BigR1      curves.Point
-	BigR2      curves.Point
-	opening    *hashveccomm.Opening
-	BigR1Proof compiler.NIZKPoKProof
-	BigR2Proof compiler.NIZKPoKProof
+	BigR1       curves.Point
+	BigR2       curves.Point
+	BigROpening *hashveccomm.Opening
+	BigR1Proof  compiler.NIZKPoKProof
+	BigR2Proof  compiler.NIZKPoKProof
 
 	_ ds.Incomparable
 }
@@ -60,7 +60,7 @@ func (r2b *Round2Broadcast) Validate(protocol types.ThresholdProtocol) error {
 	if r2b.BigR2.IsAdditiveIdentity() {
 		return errs.NewIsIdentity("big r2")
 	}
-	if err := r2b.opening.Validate(); err != nil {
+	if err := r2b.BigROpening.Validate(); err != nil {
 		return errs.WrapValidation(err, "could not validate opening")
 	}
 	if r2b.BigR1Proof == nil {
