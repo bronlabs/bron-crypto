@@ -2,6 +2,7 @@ package mixins
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/domain"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/operator"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/order"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/ring"
@@ -50,6 +51,16 @@ type HolesN[NS integer.N[NS, N], N integer.Nat[NS, N]] interface {
 type HolesNat[NS integer.N[NS, N], N integer.Nat[NS, N]] interface {
 	HolesNaturalRigElement[NS, N]
 	HolesNatPlus[NS, N]
+}
+
+type HolesZ[NS integer.Z[NS, N], N integer.Int[NS, N]] interface {
+	HolesNaturalRig[NS, N]
+	domain.HolesEuclideanDomain[NS, N]
+}
+
+type HolesInt[NS integer.Z[NS, N], N integer.Int[NS, N]] interface {
+	HolesNaturalRigElement[NS, N]
+	domain.HolesEuclideanDomainElement[NS, N]
 }
 
 func NewPositiveNaturalRg[NS integer.PositiveNaturalRg[NS, N], N integer.PositiveNaturalRgElement[NS, N]](arithmetic integer.Arithmetic[N], H HolesPositiveNaturalRg[NS, N]) PositiveNaturalRg[NS, N] {
@@ -107,18 +118,18 @@ func NewNaturalRigElement[NS integer.NaturalRig[NS, N], N integer.NaturalRigElem
 	}
 }
 
-// func NewN[S integer.N[S, E], E integer.Nat[S, E]](arithmetic integer.Arithmetic[E], H HolesN[S, E]) N[S, E] {
-// 	return N[S, E]{
-// 		NaturalRig: NewNaturalRig(arithmetic, H),
-// 		NPlus:      NewNPlus(arithmetic, H),
-// 		H:          H,
-// 	}
-// }
+func NewN[S integer.N[S, E], E integer.Nat[S, E]](arithmetic integer.Arithmetic[E], H HolesN[S, E]) N[S, E] {
+	return N[S, E]{
+		NaturalRig: NewNaturalRig(arithmetic, H),
+		NPlus:      NewNPlus(arithmetic, H),
+		H:          H,
+	}
+}
 
-// func NewNat[S integer.N[S, E], E integer.Nat[S, E]](H HolesNat[S, E]) Nat[S, E] {
-// 	return Nat[S, E]{
-// 		NaturalRigElement: NewNaturalRigElement(H),
-// 		NatPlus:           NewNatPlus(H),
-// 		H:                 H,
-// 	}
-// }
+func NewNat_[S integer.N[S, E], E integer.Nat[S, E]](H HolesNat[S, E]) Nat_[S, E] {
+	return Nat_[S, E]{
+		NaturalRigElement:                        NewNaturalRigElement(H),
+		LowerBoundedOrderTheoreticLatticeElement: order.NewLowerBoundedOrderTheoreticLatticeElement(H),
+		H:                                        H,
+	}
+}

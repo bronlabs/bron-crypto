@@ -7,7 +7,7 @@ import (
 
 type HolesMonoid[M algebra.Monoid[M, E], E algebra.MonoidElement[M, E]] interface {
 	groupoid.HolesGroupoid[M, E]
-	Identity(under algebra.Operator) (algebra.MonoidElement[M, E], error)
+	Identity(under algebra.Operator) (E, error)
 }
 
 type HolesMonoidElement[M algebra.Monoid[M, E], E algebra.MonoidElement[M, E]] interface {

@@ -21,7 +21,6 @@ func (e *RgElement[R, E]) MulAdd(p, q algebra.RgElement[R, E]) E {
 
 type RigElement[R algebra.Rig[R, E], E algebra.RigElement[R, E]] struct {
 	monoid.MonoidElement[R, E]
-	RgElement[R, E]
 	monoid.AdditiveMonoidElement[R, E]
 	monoid.MultiplicativeMonoidElement[R, E]
 

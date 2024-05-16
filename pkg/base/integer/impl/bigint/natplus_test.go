@@ -112,37 +112,36 @@ func Benchmark_ModExp(b *testing.B) {
 	m := new(saferith.Nat).Mul(pq, pq, -1)
 	mSafe := saferith.ModulusFromNat(m)
 	mBig := m.Big()
-	mArith := new(bigint.NatPlus).New(new(bigint.BigInt).New(mBig))
+	mArith := new(bigint.Nat).New(new(bigint.BigInt).New(mBig))
 
 	exp, err := RandomNatSize(prng, 4096)
 	require.NoError(b, err)
 	expBig := exp.Big()
-	expArith := new(bigint.NatPlus).New(new(bigint.BigInt).New(expBig))
+	expArith := new(bigint.Nat).New(new(bigint.BigInt).New(expBig))
 
 	base, err := RandomNatSize(prng, 4096)
 	require.NoError(b, err)
 
 	baseBig := base.Big()
-	baseArith := new(bigint.NatPlus).New(new(bigint.BigInt).New(baseBig))
+	baseArith := new(bigint.Nat).New(new(bigint.BigInt).New(baseBig))
 
 	arith := baseArith.Arithmetic().WithBottomAtZeroAndModulus(mArith)
 	require.Equal(b, arith.Type(), integer.ForZn)
 
 	b.ResetTimer()
 	b.Run("Arithmetic interface", func(b *testing.B) {
-		// b.Skip()
 		for range b.N {
-			arith.Add(baseArith, expArith)
+			arith.Mul(baseArith, expArith)
 		}
 	})
 	b.Run("big int", func(b *testing.B) {
 		for range b.N {
-			new(big.Int).Mod(new(big.Int).Add(baseBig, expBig), mBig)
+			new(big.Int).Mod(new(big.Int).Mul(baseBig, expBig), mBig)
 		}
 	})
 	b.Run("saferith nat", func(b *testing.B) {
 		for range b.N {
-			new(saferith.Nat).ModAdd(base, exp, mSafe)
+			new(saferith.Nat).ModMul(base, exp, mSafe)
 		}
 	})
 }

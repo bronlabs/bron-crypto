@@ -134,6 +134,10 @@ func (n *PositiveNaturalRgElement[NS, N]) Uint64() uint64 {
 	return n.H.Arithmetic().Uint64(n.H.Unwrap())
 }
 
+func (n *PositiveNaturalRgElement[NS, N]) CanGenerateAllElements(with algebra.Operator) bool {
+	return n.IsOne() && with == integer.Addition
+}
+
 type NPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
 	PositiveNaturalRg[NS, N]
 	order.LowerBoundedOrderTheoreticLattice[NS, N]
@@ -182,8 +186,4 @@ type NatPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
 func (n *NatPlus[NS, N]) TrySub(x integer.NatPlus[NS, N]) (N, error) {
 	arith := n.H.Arithmetic()
 	return arith.Sub(n.H.Unwrap(), x.Unwrap())
-}
-
-func (n *NatPlus[NS, N]) CanGenerateAllElements(with algebra.Operator) bool {
-	return n.IsOne() && with == integer.Addition
 }
