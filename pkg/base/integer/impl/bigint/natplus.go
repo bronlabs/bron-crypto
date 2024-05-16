@@ -119,21 +119,12 @@ func (np *NPlus) Unwrap() *NPlus {
 	return np
 }
 
-func (np *NPlus) Cardinality() *saferith.Modulus {
-	// TODO: represent inf
-	return nil
-}
-
 func (np *NPlus) domain() algebra.Set[*NatPlus] {
 	return np.Element().Structure()
 }
 
 func (np *NPlus) Successor() algebra.Successor[*NatPlus] {
 	return integer.NewSuccessorOperator(np.Arithmetic(), np.domain)
-}
-
-func (np *NPlus) Contains(x *NatPlus) bool {
-	return x.IsPositive()
 }
 
 func (np *NPlus) Element() *NatPlus {

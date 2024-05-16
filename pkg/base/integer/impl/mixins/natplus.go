@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/ring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
+	"github.com/cronokirby/saferith"
 )
 
 type PositiveNaturalRg[NS integer.PositiveNaturalRg[NS, N], N integer.PositiveNaturalRgElement[NS, N]] struct {
@@ -140,13 +141,22 @@ type NPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
 	H HolesNPlus[NS, N]
 }
 
+func (np *NPlus[NS, N]) Cardinality() *saferith.Modulus {
+	// TODO: represent inf
+	return nil
+}
+
+func (np *NPlus[NS, N]) Contains(x N) bool {
+	return x.IsPositive()
+}
+
 func (n *NPlus[NS, N]) Bottom() N {
 	return n.One()
 }
 
 func (np *NPlus[NS, N]) Iter() <-chan N {
 	ch := make(chan N, 1)
-	current := np.One()
+	current := np.Bottom()
 	ch <- current
 	go func() {
 		defer close(ch)
@@ -175,6 +185,5 @@ func (n *NatPlus[NS, N]) TrySub(x integer.NatPlus[NS, N]) (N, error) {
 }
 
 func (n *NatPlus[NS, N]) CanGenerateAllElements(with algebra.Operator) bool {
-	_, defined := n.H.Structure().GetOperator(with)
-	return n.IsOne() && defined && n.H.Structure().Addition().Name() == with
+	return n.IsOne() && with == integer.Addition
 }

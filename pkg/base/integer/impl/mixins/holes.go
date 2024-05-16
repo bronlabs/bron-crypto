@@ -32,6 +32,26 @@ type HolesNatPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] interface {
 	order.HolesLowerBoundedOrderTheoreticLatticeElement[NS, N]
 }
 
+type HolesNaturalRig[NS integer.NaturalRig[NS, N], N integer.NaturalRigElement[NS, N]] interface {
+	HolesPositiveNaturalRg[NS, N]
+	ring.HolesRig[NS, N]
+}
+
+type HolesNaturalRigElement[NS integer.NaturalRig[NS, N], N integer.NaturalRigElement[NS, N]] interface {
+	HolesPositiveNaturalRgElement[NS, N]
+	ring.HolesRigElement[NS, N]
+}
+
+type HolesN[NS integer.N[NS, N], N integer.Nat[NS, N]] interface {
+	HolesNaturalRig[NS, N]
+	HolesNPlus[NS, N]
+}
+
+type HolesNat[NS integer.N[NS, N], N integer.Nat[NS, N]] interface {
+	HolesNaturalRigElement[NS, N]
+	HolesNatPlus[NS, N]
+}
+
 func NewPositiveNaturalRg[NS integer.PositiveNaturalRg[NS, N], N integer.PositiveNaturalRgElement[NS, N]](arithmetic integer.Arithmetic[N], H HolesPositiveNaturalRg[NS, N]) PositiveNaturalRg[NS, N] {
 	addition := integer.NewAdditionOperator(arithmetic)
 	multiplication := integer.NewMultiplicationOperator(arithmetic)
@@ -68,5 +88,37 @@ func NewNatPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]](H HolesNatPlu
 		PositiveNaturalRgElement:                 NewPositiveNaturalRgElement(H),
 		LowerBoundedOrderTheoreticLatticeElement: order.NewLowerBoundedOrderTheoreticLatticeElement(H),
 		H:                                        H,
+	}
+}
+
+func NewNaturalRig[NS integer.NaturalRig[NS, N], N integer.NaturalRigElement[NS, N]](arithmetic integer.Arithmetic[N], H HolesNaturalRig[NS, N]) NaturalRig[NS, N] {
+	return NaturalRig[NS, N]{
+		PositiveNaturalRg: NewPositiveNaturalRg(arithmetic, H),
+		Rig:               ring.NewRig(H),
+		H:                 H,
+	}
+}
+
+func NewNaturalRigElement[NS integer.NaturalRig[NS, N], N integer.NaturalRigElement[NS, N]](H HolesNaturalRigElement[NS, N]) NaturalRigElement[NS, N] {
+	return NaturalRigElement[NS, N]{
+		PositiveNaturalRgElement: NewPositiveNaturalRgElement(H),
+		RigElement:               ring.NewRigElement(H),
+		H:                        H,
+	}
+}
+
+func NewN[S integer.N[S, E], E integer.Nat[S, E]](arithmetic integer.Arithmetic[E], H HolesN[S, E]) N[S, E] {
+	return N[S, E]{
+		NaturalRig: NewNaturalRig(arithmetic, H),
+		NPlus:      NewNPlus(arithmetic, H),
+		H:          H,
+	}
+}
+
+func NewNat[S integer.N[S, E], E integer.Nat[S, E]](H HolesNat[S, E]) Nat[S, E] {
+	return Nat[S, E]{
+		NaturalRigElement: NewNaturalRigElement(H),
+		NatPlus:           NewNatPlus(H),
+		H:                 H,
 	}
 }
