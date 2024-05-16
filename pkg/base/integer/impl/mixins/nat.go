@@ -22,7 +22,7 @@ func (n *NaturalRig[S, E]) Identity(under algebra.Operator) (E, error) {
 	case integer.Multiplication:
 		return n.Zero(), nil
 	default:
-		return *new(E), errs.NewType("operator (%s) is not integer addition or multiplication")
+		return *new(E), errs.NewType("operator (%s) is not integer addition or multiplication", under)
 	}
 }
 
@@ -68,7 +68,6 @@ type N[S integer.N[S, E], E integer.Nat[S, E]] struct {
 }
 
 func (n *N[S, E]) Bottom() E {
-	n.Add
 	return n.Zero()
 }
 
@@ -81,8 +80,4 @@ type Nat[S integer.N[S, E], E integer.Nat[S, E]] struct {
 	wrappedNatPlus[S, E]
 
 	H HolesNat[S, E]
-}
-
-func (n *Nat[S, E]) test() {
-	n.Mod
 }

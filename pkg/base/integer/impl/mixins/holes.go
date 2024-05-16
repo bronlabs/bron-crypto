@@ -107,18 +107,18 @@ func NewNaturalRigElement[NS integer.NaturalRig[NS, N], N integer.NaturalRigElem
 	}
 }
 
-func NewN[S integer.N[S, E], E integer.Nat[S, E]](arithmetic integer.Arithmetic[E], H HolesN[S, E]) N[S, E] {
-	return N[S, E]{
-		NaturalRig: NewNaturalRig(arithmetic, H),
-		NPlus:      NewNPlus(arithmetic, H),
-		H:          H,
-	}
-}
+// func NewN[S integer.N[S, E], E integer.Nat[S, E]](arithmetic integer.Arithmetic[E], H HolesN[S, E]) N[S, E] {
+// 	return N[S, E]{
+// 		NaturalRig: NewNaturalRig(arithmetic, H),
+// 		NPlus:      NewNPlus(arithmetic, H),
+// 		H:          H,
+// 	}
+// }
 
-func NewNat[S integer.N[S, E], E integer.Nat[S, E]](H HolesNat[S, E]) Nat[S, E] {
-	return Nat[S, E]{
-		NaturalRigElement: NewNaturalRigElement(H),
-		NatPlus:           NewNatPlus(H),
-		H:                 H,
-	}
-}
+// func NewNat[S integer.N[S, E], E integer.Nat[S, E]](H HolesNat[S, E]) Nat[S, E] {
+// 	return Nat[S, E]{
+// 		NaturalRigElement: NewNaturalRigElement(H),
+// 		NatPlus:           NewNatPlus(H),
+// 		H:                 H,
+// 	}
+// }
