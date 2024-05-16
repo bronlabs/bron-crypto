@@ -73,7 +73,7 @@ func (*Gt) Operate(operator algebra.Operator, x algebra.GroupoidElement[curves.G
 	panic("not implemented")
 }
 
-func (*Gt) Exp(base curves.GtMember, power curves.GtMember) curves.GtMember {
+func (*Gt) Exp(base algebra.MultiplicativeGroupoidElement[curves.Gt, curves.GtMember], power *saferith.Nat) curves.GtMember {
 	panic("not implemented")
 }
 

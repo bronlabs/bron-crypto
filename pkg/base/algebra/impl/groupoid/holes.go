@@ -19,7 +19,7 @@ type HolesGroupoidElement[G algebra.Groupoid[G, E], E algebra.GroupoidElement[G,
 
 type HolesAdditiveGroupoid[G algebra.AdditiveGroupoid[G, E], E algebra.AdditiveGroupoidElement[G, E]] interface {
 	HolesGroupoid[G, E]
-	Addition() algebra.BinaryOperator[E]
+	Addition() algebra.Addition[E]
 }
 
 type HolesAdditiveGroupoidElement[G algebra.AdditiveGroupoid[G, E], E algebra.AdditiveGroupoidElement[G, E]] interface {
@@ -29,7 +29,7 @@ type HolesAdditiveGroupoidElement[G algebra.AdditiveGroupoid[G, E], E algebra.Ad
 
 type HolesMultiplicativeGroupoid[G algebra.MultiplicativeGroupoid[G, E], E algebra.MultiplicativeGroupoidElement[G, E]] interface {
 	HolesGroupoid[G, E]
-	Multiplication() algebra.BinaryOperator[E]
+	Multiplication() algebra.Multiplication[E]
 }
 
 type HolesMultiplicativeGroupoidElement[G algebra.MultiplicativeGroupoid[G, E], E algebra.MultiplicativeGroupoidElement[G, E]] interface {

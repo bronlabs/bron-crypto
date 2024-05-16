@@ -98,7 +98,7 @@ func (*ScalarField[_]) Addition() algebra.Addition[curves.Scalar] {
 	panic("implement me")
 }
 
-func (*ScalarField[_]) Exp(b curves.Scalar, power curves.Scalar) curves.Scalar {
+func (*ScalarField[_]) Exp(b algebra.MultiplicativeGroupoidElement[curves.ScalarField, curves.Scalar], exponent *saferith.Nat) curves.Scalar {
 	//TODO implement me
 	panic("implement me")
 }

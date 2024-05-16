@@ -98,7 +98,7 @@ func (*Field) Mul(x algebra.MultiplicativeGroupoidElement[*Field, *FieldElement]
 	return z
 }
 
-func (*Field) Exp(b, power *FieldElement) *FieldElement {
+func (*Field) Exp(b algebra.MultiplicativeGroupoidElement[*Field, *FieldElement], power *saferith.Nat) *FieldElement {
 	// TODO implement me
 	panic("implement me")
 }

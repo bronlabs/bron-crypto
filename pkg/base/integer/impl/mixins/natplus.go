@@ -2,6 +2,7 @@ package mixins
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/operator"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/order"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/ring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -11,12 +12,41 @@ import (
 type PositiveNaturalRg[NS integer.PositiveNaturalRg[NS, N], N integer.PositiveNaturalRgElement[NS, N]] struct {
 	ring.Rg[NS, N]
 	order.Chain[NS, N]
+	operator.OperatorSuite[N]
 
 	H HolesPositiveNaturalRg[NS, N]
 }
 
+func (n *PositiveNaturalRg[NS, N]) Arithmetic() integer.Arithmetic[N] {
+	return n.H.Element().Arithmetic()
+}
+
 func (n *PositiveNaturalRg[NS, N]) One() N {
-	return n.H.Arithmetic().One().Unwrap()
+	return n.H.Element().Arithmetic().One().Unwrap()
+}
+
+func (np *PositiveNaturalRg[NS, N]) Addition() algebra.Addition[N] {
+	op, defined := np.GetOperator(integer.Addition)
+	if !defined {
+		panic(errs.NewMissing("object is malformed. does not have integer addition"))
+	}
+	addition, ok := op.(algebra.Addition[N])
+	if !ok {
+		panic(errs.NewType("object is malfored. addition operator is invalid"))
+	}
+	return addition
+}
+
+func (np *PositiveNaturalRg[NS, N]) Multiplication() algebra.Multiplication[N] {
+	op, defined := np.GetOperator(integer.Multiplication)
+	if !defined {
+		panic(errs.NewMissing("object is malformed. does not have integer multiplication"))
+	}
+	multiplication, ok := op.(algebra.Multiplication[N])
+	if !ok {
+		panic(errs.NewType("object is malfored. multiplication operator is invalid"))
+	}
+	return multiplication
 }
 
 type PositiveNaturalRgElement[NS integer.PositiveNaturalRg[NS, N], N integer.PositiveNaturalRgElement[NS, N]] struct {
@@ -108,6 +138,28 @@ type NPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
 	order.LowerBoundedOrderTheoreticLattice[NS, N]
 
 	H HolesNPlus[NS, N]
+}
+
+func (n *NPlus[NS, N]) Bottom() N {
+	return n.One()
+}
+
+func (np *NPlus[NS, N]) Iter() <-chan N {
+	ch := make(chan N, 1)
+	current := np.One()
+	ch <- current
+	go func() {
+		defer close(ch)
+		var err error
+		for {
+			current, err = np.H.Successor().Map(current)
+			if err != nil {
+				panic(errs.WrapFailed(err, "could not compute S(current)"))
+			}
+			ch <- current
+		}
+	}()
+	return ch
 }
 
 type NatPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {

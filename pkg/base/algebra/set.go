@@ -37,15 +37,11 @@ type StructuredSet[S Structure, E Element] interface {
 	Set[E]
 	WrapedStructure[S, E]
 
-	Random(prng io.Reader) (E, error)
-
 	// Element returns an unspecified element of the structure S with type E.
 	Element() E
 	Order() *saferith.Modulus
 
 	GetOperator(name Operator) (op BinaryOperator[E], isDefinedUnder bool)
-
-	ConditionallySelectable[E]
 }
 
 // StructuredSetElement implements the basic methods shared by elements of all other higher level structures.
@@ -59,11 +55,14 @@ type StructuredSetElement[S Structure, E Element] interface {
 
 type FiniteStructure[S Structure, E Element] interface {
 	StructuredSet[S, E]
+	Random(prng io.Reader) (E, error)
 	Hash(bytes []byte) (E, error)
 	// ElementSize returns the **exact** number of bytes required to represent an element, required for `SetBytes()`
 	ElementSize() int
 	// WideElementSize returns the **maximum** number of bytes used to map uniformly to an element, required for `SetBytesWide()`
 	WideElementSize() int
+
+	ConditionallySelectable[E]
 }
 
 type PointedSet[S Structure, E Element] interface {

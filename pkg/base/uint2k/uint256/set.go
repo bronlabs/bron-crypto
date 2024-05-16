@@ -139,8 +139,8 @@ func (*Ring256) Mul(x algebra.MultiplicativeGroupoidElement[*Ring256, Uint256], 
 	return z
 }
 
-func (*Ring256) Exp(b, power Uint256) Uint256 {
-	return b.Exp(power.Nat())
+func (*Ring256) Exp(b algebra.MultiplicativeGroupoidElement[*Ring256, Uint256], power *saferith.Nat) Uint256 {
+	return b.Exp(power)
 }
 
 func (*Ring256) SimExp(bases []algebra.MultiplicativeGroupoidElement[*Ring256, Uint256], exponents []*saferith.Nat) (Uint256, error) {

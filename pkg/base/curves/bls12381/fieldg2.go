@@ -92,7 +92,7 @@ func (*BaseFieldG2) Addition() algebra.Addition[curves.BaseFieldElement] {
 	panic("implement me")
 }
 
-func (*BaseFieldG2) Exp(base, power curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseFieldG2) Exp(b algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement], exponent *saferith.Nat) curves.BaseFieldElement {
 	//TODO implement me
 	panic("implement me")
 }

@@ -95,7 +95,7 @@ func (*BaseField) Mul(x algebra.MultiplicativeGroupoidElement[curves.BaseField, 
 	panic("implement me")
 }
 
-func (*BaseField) Exp(b, power curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseField) Exp(b algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement], exponent *saferith.Nat) curves.BaseFieldElement {
 	//TODO implement me
 	panic("implement me")
 }

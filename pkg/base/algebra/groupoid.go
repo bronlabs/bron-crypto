@@ -81,7 +81,7 @@ type MultiplicativeGroupoid[G Structure, E Element] interface {
 	// Multiply accepts elements x and a the list of elements ys and adds returns product(x, ys). We assume S with its
 	// multiplication operator is right associative.
 	Mul(x MultiplicativeGroupoidElement[G, E], ys ...MultiplicativeGroupoidElement[G, E]) E
-	Exp(base, power E) E
+	Exp(base MultiplicativeGroupoidElement[G, E], power *saferith.Nat) E
 
 	SimExp(bases []MultiplicativeGroupoidElement[G, E], exponents []*saferith.Nat) (E, error)
 	MultiBaseExp(bases []MultiplicativeGroupoidElement[G, E], exponent *saferith.Nat) E

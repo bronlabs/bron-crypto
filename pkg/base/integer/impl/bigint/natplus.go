@@ -3,6 +3,7 @@ package bigint
 import (
 	"encoding/json"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	aimpl "github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
@@ -100,4 +101,45 @@ func (n *NatPlus) UnmarshalJSON(data []byte) error {
 	n.V = temp.Number
 	n.NatPlus = mixins.NewNatPlus(n)
 	return nil
+}
+
+var _ integer.NPlus[*NPlus, *NatPlus] = (*NPlus)(nil)
+var _ mixins.HolesPositiveNaturalRg[*NPlus, *NatPlus] = (*NPlus)(nil)
+var _ mixins.HolesNPlus[*NPlus, *NatPlus] = (*NPlus)(nil)
+
+type NPlus struct {
+	mixins.NPlus[*NPlus, *NatPlus]
+}
+
+func (np *NPlus) Name() string {
+	return string(integer.ForNPlus)
+}
+
+func (np *NPlus) Unwrap() *NPlus {
+	return np
+}
+
+func (np *NPlus) Cardinality() *saferith.Modulus {
+	// TODO: represent inf
+	return nil
+}
+
+func (np *NPlus) domain() algebra.Set[*NatPlus] {
+	return np.Element().Structure()
+}
+
+func (np *NPlus) Successor() algebra.Successor[*NatPlus] {
+	return integer.NewSuccessorOperator(np.Arithmetic(), np.domain)
+}
+
+func (np *NPlus) Contains(x *NatPlus) bool {
+	return x.IsPositive()
+}
+
+func (np *NPlus) Element() *NatPlus {
+	return np.One()
+}
+
+func (np *NPlus) New(v uint64) *NatPlus {
+	return NewNatPlus(v)
 }

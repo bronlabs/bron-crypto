@@ -205,7 +205,7 @@ func (*Field) Equal(_ *Field) bool {
 	return true
 }
 
-func (*Field) Exp(b, power *FieldElement) *FieldElement {
+func (*Field) Exp(b algebra.MultiplicativeGroupoidElement[*Field, *FieldElement], power *saferith.Nat) *FieldElement {
 	// TODO implement me
 	panic("implement me")
 }
