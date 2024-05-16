@@ -7,12 +7,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/pkg/comm/hashcomm"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
 )
 
 const (
@@ -41,20 +42,30 @@ func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, err erro
 	bigR2 := p.Protocol.Curve().ScalarBaseMult(k2)
 
 	// 3. compute Rcom = commit(R1, R2, pid, sessionId, S)
-	bigRCommitment, bigRWitness, err := commitments.Commit(p.SessionId, p.Prng, []byte(commitmentDomainRLabel), bigR1.ToAffineCompressed(), bigR2.ToAffineCompressed(), p.state.pid, p.state.bigS)
+	vector := make([]hashcomm.Message, 5)
+	vector[0] = []byte(commitmentDomainRLabel)
+	vector[1] = bigR1.ToAffineCompressed()
+	vector[2] = bigR2.ToAffineCompressed()
+	vector[3] = p.state.pid
+	vector[4] = p.state.bigS
+	vectorCommitter, err := hashveccomm.NewVectorCommitter(p.SessionId, p.Prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot instantiate vector committer")
+	}
+	commitment, opening, err := vectorCommitter.Commit(vector)
 	if err != nil {
 		return nil, errs.NewFailed("cannot commit to R")
 	}
 
 	broadcast := &Round1Broadcast{
-		BigRCommitment: bigRCommitment,
+		BigRCommitment: commitment,
 	}
 
 	p.state.k1 = k1
 	p.state.k2 = k2
 	p.state.bigR1 = bigR1
 	p.state.bigR2 = bigR2
-	p.state.bigRWitness = bigRWitness
+	p.state.opening = opening
 	p.Round++
 
 	return broadcast, nil
@@ -76,7 +87,7 @@ func (p *PreGenParticipant) Round2(broadcastInput network.RoundMessages[types.Th
 			continue
 		}
 		inBroadcast, _ := broadcastInput.Get(identity)
-		theirBigRCommitment.Put(identity, inBroadcast.BigRCommitment)
+		theirBigRCommitment.Put(identity, *inBroadcast.BigRCommitment)
 	}
 
 	// 1. compute proof of dlog knowledge of R1 & R2
@@ -90,11 +101,11 @@ func (p *PreGenParticipant) Round2(broadcastInput network.RoundMessages[types.Th
 	}
 
 	broadcast := &Round2Broadcast{
-		BigR1:       p.state.bigR1,
-		BigR2:       p.state.bigR2,
-		BigRWitness: p.state.bigRWitness,
-		BigR1Proof:  bigR1Proof,
-		BigR2Proof:  bigR2Proof,
+		BigR1:      p.state.bigR1,
+		BigR2:      p.state.bigR2,
+		opening:    p.state.opening,
+		BigR1Proof: bigR1Proof,
+		BigR2Proof: bigR2Proof,
 	}
 	p.state.theirBigRCommitment = theirBigRCommitment
 	p.Round++
@@ -122,7 +133,7 @@ func (p *PreGenParticipant) Round3(broadcastInput network.RoundMessages[types.Th
 		inBroadcast, _ := broadcastInput.Get(identity)
 		theirBigR1 := inBroadcast.BigR1
 		theirBigR2 := inBroadcast.BigR2
-		theirBigRWitness := inBroadcast.BigRWitness
+		theirOpening := inBroadcast.opening
 		theirPid := identity.PublicKey().ToAffineCompressed()
 		theirBigRCommitment, ok := p.state.theirBigRCommitment.Get(identity)
 		if !ok {
@@ -130,7 +141,8 @@ func (p *PreGenParticipant) Round3(broadcastInput network.RoundMessages[types.Th
 		}
 
 		// 1. verify commitment
-		if err := commitments.Open(p.SessionId, theirBigRCommitment, theirBigRWitness, []byte(commitmentDomainRLabel), theirBigR1.ToAffineCompressed(), theirBigR2.ToAffineCompressed(), theirPid, p.state.bigS); err != nil {
+		vectorVerifier := hashveccomm.NewVectorVerifier(p.SessionId)
+		if err := vectorVerifier.Verify(&theirBigRCommitment, theirOpening); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 

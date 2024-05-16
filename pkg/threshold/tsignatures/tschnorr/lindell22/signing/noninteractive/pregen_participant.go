@@ -9,12 +9,12 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/copperexchange/krypton-primitives/pkg/veccomm/hashveccomm"
 )
 
 const (
@@ -59,8 +59,8 @@ type state struct {
 	k2                  curves.Scalar
 	bigR1               curves.Point
 	bigR2               curves.Point
-	bigRWitness         commitments.Witness
-	theirBigRCommitment ds.Map[types.IdentityKey, commitments.Commitment]
+	opening             *hashveccomm.Opening
+	theirBigRCommitment ds.Map[types.IdentityKey, hashveccomm.VectorCommitment]
 
 	_ ds.Incomparable
 }
