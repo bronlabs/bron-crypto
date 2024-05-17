@@ -133,3 +133,19 @@ func NewNat_[S integer.N[S, E], E integer.Nat[S, E]](H HolesNat[S, E]) Nat_[S, E
 		H:                                        H,
 	}
 }
+
+func NewZ[S integer.Z[S, E], E integer.Int[S, E]](arithmetic integer.Arithmetic[E], H HolesZ[S, E]) Z_[S, E] {
+	return Z_[S, E]{
+		NaturalRig:      NewNaturalRig(arithmetic, H),
+		EuclideanDomain: domain.NewEuclideanDomain(H),
+		H:               H,
+	}
+}
+
+func NewInt[S integer.Z[S, E], E integer.Int[S, E]](H HolesInt[S, E]) Int_[S, E] {
+	return Int_[S, E]{
+		NaturalRigElement:      NewNaturalRigElement(H),
+		EuclideanDomainElement: domain.NewEuclideanDomainElement(H),
+		H:                      H,
+	}
+}

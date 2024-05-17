@@ -1,23 +1,25 @@
 package algebra
 
 import (
+	"io"
+
 	"github.com/cronokirby/saferith"
 )
 
-type Rg[R Structure, E Element] interface {
+type PreSemiRing[R Structure, E Element] interface {
 	AdditiveGroupoid[R, E]
 	MultiplicativeGroupoid[R, E]
 }
 
-type RgElement[R Structure, E Element] interface {
+type PreSemiRingElement[R Structure, E Element] interface {
 	AdditiveGroupoidElement[R, E]
 	MultiplicativeGroupoidElement[R, E]
 
-	MulAdd(p, q RgElement[R, E]) E
+	MulAdd(p, q PreSemiRingElement[R, E]) E
 }
 
-type Rig[R Structure, E Element] interface {
-	Rg[R, E]
+type SemiRing[R Structure, E Element] interface {
+	PreSemiRing[R, E]
 	AdditiveMonoid[R, E]
 	MultiplicativeMonoid[R, E]
 	// Characteristic returns the smallest positive number of copies of the multiplicative identity that will sum to additive identity.
@@ -25,25 +27,50 @@ type Rig[R Structure, E Element] interface {
 	Characteristic() *saferith.Nat
 }
 
-type RigElement[R Structure, E Element] interface {
-	RgElement[R, E]
+type SemiRingElement[R Structure, E Element] interface {
+	PreSemiRingElement[R, E]
 	AdditiveMonoidElement[R, E]
 	MultiplicativeMonoidElement[R, E]
+}
+
+type EuclideanSemiRing[R Structure, E Element] interface {
+	SemiRing[R, E]
+
+	GCD(x E, ys ...E) (E, error)
+	LCM(x E, ys ...E) (E, error)
+	CoPrime(x E, ys ...E) bool
+	Factorise() []E
+}
+
+type EuclideanSemiRingElement[R Structure, E Element] interface {
+	SemiRingElement[R, E]
+	GCD(x E) (E, error)
+	LCM(x E) (E, error)
+	CoPrime(x E) bool
+	EuclideanDiv(x E) (quotient, reminder E)
+
+	IsPrime() bool
+}
+
+type FiniteEuclideanSemiRing[R Structure, E Element] interface {
+	EuclideanSemiRing[R, E]
+	FiniteStructure[R, E]
+
+	RandomPrime(prng io.Reader)
 }
 
 // Ring defines methods needed for S to be considered as a ring.
 // A ring (R, +, *) is a structure where (R, +) is a group and (R, *) is a monoid and * distributes wrt +.
 type Ring[R Structure, E Element] interface {
-	Rig[R, E]
+	SemiRing[R, E]
 	// Ring has methods of additive group.
 	AdditiveGroup[R, E]
-	QuadraticResidue(p RingElement[R, E]) (E, error)
 }
 
 // RingElement defines methods needed for elements of type E to be elements of ring S.
 // A ring (R, +, *) is a structure where (R, +) is a group and (R, *) is a monoid and * distributes wrt +.
 type RingElement[R Structure, E Element] interface {
-	RigElement[R, E]
+	SemiRingElement[R, E]
 	// Ring element is an element of an additive group.
 	AdditiveGroupElement[R, E]
 
@@ -54,6 +81,7 @@ type RingElement[R Structure, E Element] interface {
 type FiniteRing[R Structure, E Element] interface {
 	FiniteStructure[R, E]
 	Ring[R, E]
+	QuadraticResidue(p RingElement[R, E]) (E, error)
 }
 
 type FiniteRingElement[R Structure, E Element] interface {

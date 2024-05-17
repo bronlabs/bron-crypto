@@ -7,23 +7,23 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/monoid"
 )
 
-type HolesRg[R algebra.Rg[R, E], E algebra.RgElement[R, E]] interface {
+type HolesRg[R algebra.PreSemiRing[R, E], E algebra.PreSemiRingElement[R, E]] interface {
 	groupoid.HolesAdditiveGroupoid[R, E]
 	groupoid.HolesMultiplicativeGroupoid[R, E]
 }
 
-type HolesRgElement[R algebra.Rg[R, E], E algebra.RgElement[R, E]] interface {
+type HolesRgElement[R algebra.PreSemiRing[R, E], E algebra.PreSemiRingElement[R, E]] interface {
 	groupoid.HolesAdditiveGroupoidElement[R, E]
 	groupoid.HolesMultiplicativeGroupoidElement[R, E]
 }
 
-type HolesRig[R algebra.Rig[R, E], E algebra.RigElement[R, E]] interface {
+type HolesRig[R algebra.SemiRing[R, E], E algebra.SemiRingElement[R, E]] interface {
 	HolesRg[R, E]
 	monoid.HolesAdditiveMonoid[R, E]
 	monoid.HolesMultiplicativeMonoid[R, E]
 }
 
-type HolesRigElement[R algebra.Rig[R, E], E algebra.RigElement[R, E]] interface {
+type HolesRigElement[R algebra.SemiRing[R, E], E algebra.SemiRingElement[R, E]] interface {
 	HolesRgElement[R, E]
 	monoid.HolesAdditiveMonoidElement[R, E]
 	monoid.HolesMultiplicativeMonoidElement[R, E]
@@ -49,7 +49,7 @@ type HolesFiniteRingElement[R algebra.FiniteRing[R, E], E algebra.FiniteRingElem
 	HolesRingElement[R, E]
 }
 
-func NewRg[R algebra.Rg[R, E], E algebra.RgElement[R, E]](H HolesRg[R, E]) Rg[R, E] {
+func NewRg[R algebra.PreSemiRing[R, E], E algebra.PreSemiRingElement[R, E]](H HolesRg[R, E]) Rg[R, E] {
 	return Rg[R, E]{
 		Groupoid:               groupoid.NewGroupoid(H),
 		AdditiveGroupoid:       groupoid.NewAdditiveGroupoid(H),
@@ -58,7 +58,7 @@ func NewRg[R algebra.Rg[R, E], E algebra.RgElement[R, E]](H HolesRg[R, E]) Rg[R,
 	}
 }
 
-func NewRgElement[R algebra.Rg[R, E], E algebra.RgElement[R, E]](H HolesRgElement[R, E]) RgElement[R, E] {
+func NewRgElement[R algebra.PreSemiRing[R, E], E algebra.PreSemiRingElement[R, E]](H HolesRgElement[R, E]) RgElement[R, E] {
 	return RgElement[R, E]{
 		GroupoidElement:               groupoid.NewGroupoidElement(H),
 		AdditiveGroupoidElement:       groupoid.NewAdditiveGroupoidElement(H),
@@ -67,7 +67,7 @@ func NewRgElement[R algebra.Rg[R, E], E algebra.RgElement[R, E]](H HolesRgElemen
 	}
 }
 
-func NewRig[R algebra.Rig[R, E], E algebra.RigElement[R, E]](H HolesRig[R, E]) Rig[R, E] {
+func NewRig[R algebra.SemiRing[R, E], E algebra.SemiRingElement[R, E]](H HolesRig[R, E]) Rig[R, E] {
 	return Rig[R, E]{
 		Monoid:               monoid.NewMonoid(H),
 		AdditiveMonoid:       monoid.NewAdditiveMonoid(H),
@@ -76,7 +76,7 @@ func NewRig[R algebra.Rig[R, E], E algebra.RigElement[R, E]](H HolesRig[R, E]) R
 	}
 }
 
-func NewRigElement[R algebra.Rig[R, E], E algebra.RigElement[R, E]](H HolesRigElement[R, E]) RigElement[R, E] {
+func NewRigElement[R algebra.SemiRing[R, E], E algebra.SemiRingElement[R, E]](H HolesRigElement[R, E]) RigElement[R, E] {
 	return RigElement[R, E]{
 		MonoidElement:               monoid.NewMonoidElement(H),
 		AdditiveMonoidElement:       monoid.NewAdditiveMonoidElement(H),

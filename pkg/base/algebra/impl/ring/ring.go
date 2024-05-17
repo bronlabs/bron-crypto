@@ -7,14 +7,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/monoid"
 )
 
-type Rg[R algebra.Rg[R, E], E algebra.RgElement[R, E]] struct {
+type Rg[R algebra.PreSemiRing[R, E], E algebra.PreSemiRingElement[R, E]] struct {
 	groupoid.Groupoid[R, E]
 	groupoid.AdditiveGroupoid[R, E]
 	groupoid.MultiplicativeGroupoid[R, E]
 	H HolesRg[R, E]
 }
 
-type Rig[R algebra.Rig[R, E], E algebra.RigElement[R, E]] struct {
+type Rig[R algebra.SemiRing[R, E], E algebra.SemiRingElement[R, E]] struct {
 	Rg[R, E]
 	monoid.Monoid[R, E]
 	monoid.AdditiveMonoid[R, E]

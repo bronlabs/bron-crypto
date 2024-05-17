@@ -3,7 +3,7 @@ package integer
 import "github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 
 type PositiveNaturalRg[S algebra.Structure, E algebra.Element] interface {
-	algebra.Rg[S, E]
+	algebra.PreSemiRing[S, E]
 	algebra.Chain[S, E]
 	New(v uint64) E
 	One() E
@@ -12,7 +12,7 @@ type PositiveNaturalRg[S algebra.Structure, E algebra.Element] interface {
 }
 
 type PositiveNaturalRgElement[S algebra.Structure, E algebra.Element] interface {
-	algebra.RgElement[S, E]
+	algebra.PreSemiRingElement[S, E]
 	algebra.ChainElement[S, E]
 
 	IsOne() bool
@@ -26,7 +26,7 @@ type PositiveNaturalRgElement[S algebra.Structure, E algebra.Element] interface 
 }
 
 type NaturalRig[S algebra.Structure, E algebra.Element] interface {
-	algebra.Rig[S, E]
+	algebra.SemiRing[S, E]
 	PositiveNaturalRg[S, E]
 
 	Zero() E
@@ -37,7 +37,7 @@ type NaturalRig[S algebra.Structure, E algebra.Element] interface {
 }
 
 type NaturalRigElement[S algebra.Structure, E algebra.Element] interface {
-	algebra.RigElement[S, E]
+	algebra.SemiRingElement[S, E]
 	PositiveNaturalRgElement[S, E]
 
 	IsZero() bool

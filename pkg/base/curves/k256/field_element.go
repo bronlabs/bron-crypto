@@ -408,7 +408,7 @@ func (e *BaseFieldElement) ApplyDiv(x algebra.MultiplicativeGroupElement[curves.
 
 // === Ring Methods.
 
-func (e *BaseFieldElement) MulAdd(p, q algebra.RgElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+func (e *BaseFieldElement) MulAdd(p, q algebra.PreSemiRingElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	return e.Mul(p).Add(q)
 }
 

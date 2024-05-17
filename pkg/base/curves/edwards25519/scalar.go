@@ -415,7 +415,7 @@ func (s *Scalar) Sqrt() (curves.Scalar, error) {
 	return s.SetNat(x), nil
 }
 
-func (s *Scalar) MulAdd(y algebra.RgElement[curves.ScalarField, curves.Scalar], z algebra.RgElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+func (s *Scalar) MulAdd(y algebra.PreSemiRingElement[curves.ScalarField, curves.Scalar], z algebra.PreSemiRingElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	yy, ok := y.(*Scalar)
 	if !ok {
 		panic("y is not ScalarEd25519")

@@ -7,7 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/monoid"
 )
 
-type RgElement[R algebra.Rg[R, E], E algebra.RgElement[R, E]] struct {
+type RgElement[R algebra.PreSemiRing[R, E], E algebra.PreSemiRingElement[R, E]] struct {
 	groupoid.GroupoidElement[R, E]
 	groupoid.AdditiveGroupoidElement[R, E]
 	groupoid.MultiplicativeGroupoidElement[R, E]
@@ -15,11 +15,11 @@ type RgElement[R algebra.Rg[R, E], E algebra.RgElement[R, E]] struct {
 	H HolesRgElement[R, E]
 }
 
-func (e *RgElement[R, E]) MulAdd(p, q algebra.RgElement[R, E]) E {
+func (e *RgElement[R, E]) MulAdd(p, q algebra.PreSemiRingElement[R, E]) E {
 	return e.H.Mul(p).Add(q)
 }
 
-type RigElement[R algebra.Rig[R, E], E algebra.RigElement[R, E]] struct {
+type RigElement[R algebra.SemiRing[R, E], E algebra.SemiRingElement[R, E]] struct {
 	monoid.MonoidElement[R, E]
 	monoid.AdditiveMonoidElement[R, E]
 	monoid.MultiplicativeMonoidElement[R, E]

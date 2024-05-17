@@ -74,8 +74,8 @@ func (e *AdditiveGroupElement[G, E]) Neg() E {
 	return e.H.AdditiveInverse()
 }
 
-func (e *AdditiveGroupElement[G, E]) Sub(x AdditiveGroupElement[G, E]) E {
-	return e.H.Add(x.H.AdditiveInverse())
+func (e *AdditiveGroupElement[G, E]) Sub(x algebra.AdditiveGroupElement[G, E]) E {
+	return e.H.Add(x.AdditiveInverse())
 }
 
 func (e *AdditiveGroupElement[G, E]) ApplySub(x algebra.AdditiveGroupElement[G, E], n *saferith.Nat) E {

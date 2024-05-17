@@ -355,7 +355,7 @@ func (*Scalar) Sqrt() (curves.Scalar, error) {
 	panic("not implemented")
 }
 
-func (*Scalar) MulAdd(y algebra.RgElement[curves.ScalarField, curves.Scalar], z algebra.RgElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+func (*Scalar) MulAdd(y algebra.PreSemiRingElement[curves.ScalarField, curves.Scalar], z algebra.PreSemiRingElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	panic("not implemented")
 }
 

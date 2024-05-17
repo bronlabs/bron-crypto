@@ -357,7 +357,7 @@ func (e *BaseFieldElement) ApplyDiv(x algebra.MultiplicativeGroupElement[curves.
 
 // === Ring Methods.
 
-func (*BaseFieldElement) MulAdd(y algebra.RgElement[curves.BaseField, curves.BaseFieldElement], z algebra.RgElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+func (*BaseFieldElement) MulAdd(y algebra.PreSemiRingElement[curves.BaseField, curves.BaseFieldElement], z algebra.PreSemiRingElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	panic("not implemented")
 }
 

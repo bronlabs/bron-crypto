@@ -211,7 +211,7 @@ func (u Uint256) IsMultiplicativeIdentity() bool {
 	return u.IsOne()
 }
 
-func (u Uint256) MulAdd(p, q algebra.RgElement[*Ring256, Uint256]) Uint256 {
+func (u Uint256) MulAdd(p, q algebra.PreSemiRingElement[*Ring256, Uint256]) Uint256 {
 	return u.Mul(p).Add(q)
 }
 

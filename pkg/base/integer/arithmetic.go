@@ -5,6 +5,10 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
+type ExtraNumericMethods[S algebra.Structure, E algebra.Element] interface {
+	EuclideanDiv()
+}
+
 type Arithmetic[T any] interface {
 	Name() string
 	Type() ArithmeticType
@@ -38,8 +42,15 @@ type Arithmetic[T any] interface {
 	Sub(x, y T) (T, error)
 	Mul(x, y T) (T, error)
 	Exp(x, y T) (T, error)
+	Div(x, y T) (quotient, remainder T, err error)
 
 	Mod(x, m T) (T, error)
+
+	IsCoPrime(x T, ys ...T) (bool, error)
+	GCD(x T, ys ...T) (T, error)
+	LCM(x T, ys ...T) (T, error)
+
+	Sqrt(x T) (T, error)
 
 	Uint64(x T) uint64
 }

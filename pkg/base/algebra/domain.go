@@ -34,6 +34,21 @@ type GCDDomainElement[D Structure, E Element] interface {
 	CoPrime(x E) bool
 }
 
+// TODO: change input type
+// type GCDDomain[D Structure, E Element] interface {
+// 	IntegralDomain[D, E]
+// 	GCD(x GCDDomainElement[D, E], ys ...GCDDomainElement[D, E]) (E, error)
+// 	LCM(x GCDDomainElement[D, E], ys ...GCDDomainElement[D, E]) (E, error)
+// 	CoPrime(x GCDDomainElement[D, E], ys ...GCDDomainElement[D, E]) bool
+// }
+
+// type GCDDomainElement[D Structure, E Element] interface {
+// 	IntegralDomainElement[D, E]
+// 	GCD(x GCDDomainElement[D, E]) (E, error)
+// 	LCM(x GCDDomainElement[D, E]) (E, error)
+// 	CoPrime(x GCDDomainElement[D, E]) bool
+// }
+
 type FiniteGCDDomain[D Structure, E Element] interface {
 	GCDDomain[D, E]
 	FiniteIntegralDomain[D, E]
@@ -69,6 +84,7 @@ type EuclideanDomain[D Structure, E Element] interface {
 
 type EuclideanDomainElement[D Structure, E Element] interface {
 	FactorialRingElement[D, E]
+	// TODO: change input type
 	EuclideanDiv(x E) (quotient, reminder E)
 }
 

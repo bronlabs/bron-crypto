@@ -411,7 +411,7 @@ func (s *Scalar) Sqrt() (curves.Scalar, error) {
 	}, nil
 }
 
-func (s *Scalar) MulAdd(y algebra.RgElement[curves.ScalarField, curves.Scalar], z algebra.RgElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+func (s *Scalar) MulAdd(y algebra.PreSemiRingElement[curves.ScalarField, curves.Scalar], z algebra.PreSemiRingElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	return s.Mul(y).Add(z)
 }
 
