@@ -1,11 +1,14 @@
 package vectorcommitments
 
-import "github.com/copperexchange/krypton-primitives/pkg/commitments"
+import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+)
 
 //type Vector[M commitments.Message] []M
 
 type Vector[M commitments.Message] interface {
-	Equal(comparand Vector[M]) bool
+	datastructures.Equatable[M]
 }
 
 type VectorCommitment interface {
