@@ -33,6 +33,15 @@ type ScalarField struct {
 func (*ScalarField) Arithmetic() integer.Arithmetic[curves.Scalar] {
 	panic("not implemented")
 }
+func (*ScalarField) Factorise() []curves.Scalar {
+	panic("not implemented")
+}
+func (*ScalarField) Module() algebra.Module[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar] {
+	panic("not implemented")
+}
+func (*ScalarField) RandomPrime(prng io.Reader) curves.Scalar {
+	panic("not implemented")
+}
 
 func edwards25519ScalarFieldInit() {
 	edwards25519ScalarFieldInstance = ScalarField{}

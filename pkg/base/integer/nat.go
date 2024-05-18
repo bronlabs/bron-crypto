@@ -21,8 +21,6 @@ type NaturalPreSemiRingElement[S algebra.Structure, E algebra.Element] interface
 	IsOdd() bool
 
 	IsPositive() bool
-
-	Number[E]
 }
 
 type NaturalSemiRing[S algebra.Structure, E algebra.Element] interface {

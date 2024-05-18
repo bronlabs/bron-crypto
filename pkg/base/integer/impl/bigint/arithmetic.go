@@ -17,70 +17,6 @@ type BigArithmetic[T aimpl.ImplAdapter[T, *BigInt]] struct {
 	modulus T
 }
 
-func NewSignedArithmetic[T aimpl.ImplAdapter[T, *BigInt]](size int, validate bool) *BigArithmetic[T] {
-	out := &BigArithmetic[T]{
-		ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
-			Ctx: &integer.ArithmeticContext{
-				Size:           size,
-				ValidateInputs: validate,
-			},
-		},
-	}
-	out.ArithmeticMixin.H = out
-	return out
-}
-
-func NewUnsignedArithmetic[T aimpl.ImplAdapter[T, *BigInt]](size int, validate bool) *BigArithmetic[T] {
-	out := &BigArithmetic[T]{
-		ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
-			Ctx: &integer.ArithmeticContext{
-				BottomAtZero:   true,
-				Size:           size,
-				ValidateInputs: validate,
-			},
-		},
-	}
-	out.ArithmeticMixin.H = out
-	return out
-}
-
-func NewModularArithmetic[T aimpl.ImplAdapter[T, *BigInt]](modulus T, size int, validate bool) *BigArithmetic[T] {
-	m := modulus.Impl()
-	if m == nil {
-		panic(errs.NewIsNil("modulus"))
-	}
-	if m.Equal(Zero) {
-		panic(errs.NewValue("modulus is zero"))
-	}
-	out := &BigArithmetic[T]{
-		ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
-			Ctx: &integer.ArithmeticContext{
-				BottomAtZero:   true,
-				Modulus:        m.Nat(),
-				Size:           size,
-				ValidateInputs: validate,
-			},
-		},
-		modulus: modulus,
-	}
-	out.ArithmeticMixin.H = out
-	return out
-}
-
-func NewNPlusArithmetic[T aimpl.ImplAdapter[T, *BigInt]](size int, validate bool) *BigArithmetic[T] {
-	out := &BigArithmetic[T]{
-		ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
-			Ctx: &integer.ArithmeticContext{
-				BottomAtOne:    true,
-				Size:           size,
-				ValidateInputs: validate,
-			},
-		},
-	}
-	out.ArithmeticMixin.H = out
-	return out
-}
-
 func (*BigArithmetic[T]) new(x *BigInt) T {
 	var t T
 	return t.New(x)
@@ -88,58 +24,6 @@ func (*BigArithmetic[T]) new(x *BigInt) T {
 
 func (*BigArithmetic[T]) Name() string {
 	return Name
-}
-
-func (a *BigArithmetic[T]) WithoutBottom() integer.Arithmetic[T] {
-	return NewSignedArithmetic[T](a.Ctx.Size, a.Ctx.ValidateInputs)
-}
-
-func (a *BigArithmetic[T]) WithBottomAtZero() integer.Arithmetic[T] {
-	return NewUnsignedArithmetic[T](a.Ctx.Size, a.Ctx.ValidateInputs)
-}
-
-func (a *BigArithmetic[T]) WithBottomAtOne() integer.Arithmetic[T] {
-	return NewNPlusArithmetic[T](a.Ctx.Size, a.Ctx.ValidateInputs)
-}
-
-func (a *BigArithmetic[T]) WithBottomAtZeroAndModulus(m T) integer.Arithmetic[T] {
-	size := a.Ctx.Size
-	if m.Impl().V.BitLen() > a.Ctx.Size {
-		size = m.Impl().V.BitLen()
-	}
-	return NewModularArithmetic(m, size, a.Ctx.ValidateInputs)
-}
-
-func (a *BigArithmetic[T]) WithSize(size int) integer.Arithmetic[T] {
-	if size < 0 {
-		size = -1
-	}
-	ctx := a.Context()
-	ctx.Size = size
-	return &BigArithmetic[T]{
-		ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
-			Ctx: ctx,
-		},
-		modulus: a.modulus,
-	}
-}
-
-func (a *BigArithmetic[T]) WithContext(ctx *integer.ArithmeticContext) integer.Arithmetic[T] {
-	out := &BigArithmetic[T]{
-		ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
-			Ctx: a.Ctx,
-		},
-	}
-	if ctx.Modulus != nil {
-		out.modulus = a.new(new(BigInt).SetNat(ctx.Modulus))
-	}
-	return out
-}
-
-func (a *BigArithmetic[T]) WithoutInputValidation() integer.Arithmetic[T] {
-	ctx := a.Context()
-	ctx.ValidateInputs = false
-	return a.WithContext(ctx)
 }
 
 func (a *BigArithmetic[T]) Equal(x, y T) bool {
@@ -172,11 +56,11 @@ func (a *BigArithmetic[T]) IsOdd(x T) bool {
 }
 
 func (a *BigArithmetic[T]) Abs(x T) T {
-	return a.new(B(new(big.Int).Abs(x.Impl().V)))
+	return a.new(New(new(big.Int).Abs(x.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) neg(x T) T {
-	return a.new(B(new(big.Int).Neg(x.Impl().V)))
+	return a.new(New(new(big.Int).Neg(x.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) Neg(x T) (T, error) {
@@ -198,7 +82,7 @@ func (a *BigArithmetic[T]) Neg(x T) (T, error) {
 }
 
 func (a *BigArithmetic[T]) modInverse(x T) T {
-	return a.new(B(new(big.Int).ModInverse(x.Impl().V, a.modulus.Impl().V)))
+	return a.new(New(new(big.Int).ModInverse(x.Impl().V, a.modulus.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) Inverse(x T) (T, error) {
@@ -217,7 +101,7 @@ func (a *BigArithmetic[T]) Inverse(x T) (T, error) {
 }
 
 func (a *BigArithmetic[T]) add(x, y T) T {
-	return a.new(B(new(big.Int).Add(x.Impl().V, y.Impl().V)))
+	return a.new(New(new(big.Int).Add(x.Impl().V, y.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) Add(x, y T) (T, error) {
@@ -232,7 +116,7 @@ func (a *BigArithmetic[T]) Add(x, y T) (T, error) {
 }
 
 func (a *BigArithmetic[T]) sub(x, y T) T {
-	return a.new(B(new(big.Int).Sub(x.Impl().V, y.Impl().V)))
+	return a.new(New(new(big.Int).Sub(x.Impl().V, y.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) Sub(x, y T) (T, error) {
@@ -247,7 +131,7 @@ func (a *BigArithmetic[T]) Sub(x, y T) (T, error) {
 }
 
 func (a *BigArithmetic[T]) mul(x, y T) T {
-	return a.new(B(new(big.Int).Mul(x.Impl().V, y.Impl().V)))
+	return a.new(New(new(big.Int).Mul(x.Impl().V, y.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) Mul(x, y T) (T, error) {
@@ -262,12 +146,12 @@ func (a *BigArithmetic[T]) Mul(x, y T) (T, error) {
 }
 
 func (a *BigArithmetic[T]) div(x, y T) T {
-	return a.new(B(new(big.Int).Div(x.Impl().V, y.Impl().V)))
+	return a.new(New(new(big.Int).Div(x.Impl().V, y.Impl().V)))
 }
 
-func (a *BigArithmetic[T]) Div(x, y T) (T, error) {
+func (a *BigArithmetic[T]) Div(x, y T) (quot, rem T, err error) {
 	if err := a.ValidateDiv(x, y); err != nil {
-		return *new(T), errs.WrapValidation(err, "invalid argument")
+		return *new(T), *new(T), errs.WrapValidation(err, "invalid argument")
 	}
 	xy := a.div(x, y)
 	if a.Type() == integer.ForZn {
@@ -277,11 +161,11 @@ func (a *BigArithmetic[T]) Div(x, y T) (T, error) {
 }
 
 func (a *BigArithmetic[T]) exp(x, y T) T {
-	return a.new(B(new(big.Int).Exp(x.Impl().V, y.Impl().V, nil)))
+	return a.new(New(new(big.Int).Exp(x.Impl().V, y.Impl().V, nil)))
 }
 
 func (a *BigArithmetic[T]) modExp(x, y, m T) T {
-	return a.new(B(new(big.Int).Exp(x.Impl().V, y.Impl().V, m.Impl().V)))
+	return a.new(New(new(big.Int).Exp(x.Impl().V, y.Impl().V, m.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) Exp(x, y T) (T, error) {
@@ -295,7 +179,7 @@ func (a *BigArithmetic[T]) Exp(x, y T) (T, error) {
 }
 
 func (a *BigArithmetic[T]) mod(x, m T) T {
-	return a.new(B(new(big.Int).Mod(x.Impl().V, m.Impl().V)))
+	return a.new(New(new(big.Int).Mod(x.Impl().V, m.Impl().V)))
 }
 
 func (a *BigArithmetic[T]) Mod(x, m T) (T, error) {
@@ -311,4 +195,68 @@ func (a *BigArithmetic[T]) Mod(x, m T) (T, error) {
 
 func (a *BigArithmetic[T]) Uint64(x T) uint64 {
 	return x.Impl().Uint64()
+}
+
+func NewSignedArithmetic[T aimpl.ImplAdapter[T, *BigInt]](size int, validate bool) *BigArithmetic[T] {
+	out := &BigArithmetic[T]{
+		ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
+			Ctx: &impl.ArithmeticContext{
+				Size:           size,
+				ValidateInputs: validate,
+			},
+		},
+	}
+	out.ArithmeticMixin.H = out
+	return out
+}
+
+func NewUnsignedArithmetic[T aimpl.ImplAdapter[T, *BigInt]](size int, validate bool) *BigArithmetic[T] {
+	out := &BigArithmetic[T]{
+		ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
+			Ctx: &impl.ArithmeticContext{
+				BottomAtZero:   true,
+				Size:           size,
+				ValidateInputs: validate,
+			},
+		},
+	}
+	out.ArithmeticMixin.H = out
+	return out
+}
+
+func NewModularArithmetic[T aimpl.ImplAdapter[T, *BigInt]](modulus T, size int, validate bool) *BigArithmetic[T] {
+	m := modulus.Impl()
+	if m == nil {
+		panic(errs.NewIsNil("modulus"))
+	}
+	if m.Equal(Zero) {
+		panic(errs.NewValue("modulus is zero"))
+	}
+	out := &BigArithmetic[T]{
+		ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
+			Ctx: &impl.ArithmeticContext{
+				BottomAtZero:   true,
+				Modulus:        m.Nat(),
+				Size:           size,
+				ValidateInputs: validate,
+			},
+		},
+		modulus: modulus,
+	}
+	out.ArithmeticMixin.H = out
+	return out
+}
+
+func NewNPlusArithmetic[T aimpl.ImplAdapter[T, *BigInt]](size int, validate bool) *BigArithmetic[T] {
+	out := &BigArithmetic[T]{
+		ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
+			Ctx: &impl.ArithmeticContext{
+				BottomAtOne:    true,
+				Size:           size,
+				ValidateInputs: validate,
+			},
+		},
+	}
+	out.ArithmeticMixin.H = out
+	return out
 }

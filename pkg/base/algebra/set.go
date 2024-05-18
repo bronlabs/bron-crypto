@@ -76,3 +76,11 @@ type PointedSetElement[S Structure, E Element] interface {
 	StructuredSetElement[S, E]
 	IsBasePoint() bool
 }
+
+type ConditionallySelectable[E Element] interface {
+	// Select returns (in constant time) x0 if choice is false, and x1 if choice is true.
+	Select(choice bool, x0, x1 E) E
+	// TODO: Add later
+	// Swap(choice bool, x, y E)
+	// Assign(choice bool, x, y0, y1 E) // CMove
+}

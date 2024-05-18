@@ -39,6 +39,12 @@ func (*BaseField) GetOperator(op algebra.Operator) (algebra.BinaryOperator[curve
 	//TODO implement me
 	panic("implement me")
 }
+func (*BaseField) Factorise() []curves.BaseFieldElement {
+	panic("not implemented")
+}
+func (*BaseField) RandomPrime(prng io.Reader) curves.BaseFieldElement {
+	panic("not implemented")
+}
 
 func NewBaseField() *BaseField {
 	curve25519BaseFieldInitOnce.Do(curve25519BaseFieldInit)

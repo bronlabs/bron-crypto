@@ -2,13 +2,18 @@ package operator
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
 type OperatorSuite[E algebra.Element] struct {
-	binOp    map[algebra.Operator]algebra.BinaryOperator[E]
-	addition algebra.Operator
-	mult     algebra.Operator
+	binOp     map[algebra.Operator]algebra.BinaryOperator[E]
+	unOp      map[algebra.Operator]algebra.UnaryOperator[E]
+	primary   algebra.Operator
+	secondary algebra.Operator
+}
+
+func (ops *OperatorSuite[E]) GetUnaryOperator(name algebra.Operator) (algebra.UnaryOperator[E], bool) {
+	out, exists := ops.unOp[name]
+	return out, exists
 }
 
 func (ops *OperatorSuite[E]) GetOperator(name algebra.Operator) (algebra.BinaryOperator[E], bool) {
@@ -20,37 +25,37 @@ type Builder[E algebra.Element] struct {
 	v OperatorSuite[E]
 }
 
-func (b *Builder[E]) WithAddition(op algebra.BinaryOperator[E]) *Builder[E] {
-	b.v.addition = op.Name()
-	b.v.binOp[b.v.addition] = op
+func (b *Builder[E]) WithUnaryOperator(op algebra.UnaryOperator[E]) *Builder[E] {
+	b.v.unOp[op.Name()] = op
 	return b
 }
 
-func (b *Builder[E]) WithMultiplication(op algebra.BinaryOperator[E]) *Builder[E] {
-	b.v.mult = op.Name()
-	b.v.binOp[b.v.mult] = op
+func (b *Builder[E]) WithBinaryOperator(op algebra.BinaryOperator[E]) *Builder[E] {
+	b.v.binOp[op.Name()] = op
 	return b
 }
 
-func (b *Builder[E]) Build() (OperatorSuite[E], error) {
-	out := b.v
-	if out.addition != "" {
-		if _, ok := out.binOp[out.addition].(algebra.Addition[E]); !ok {
-			return *new(OperatorSuite[E]), errs.NewType("provided addition operator is invalid")
-		}
-	}
-	if out.mult != "" {
-		if _, ok := out.binOp[out.mult].(algebra.Multiplication[E]); !ok {
-			return *new(OperatorSuite[E]), errs.NewType("provided multiplication operator is invalid")
-		}
-	}
-	return out, nil
+func (b *Builder[E]) WithPrimary(op algebra.BinaryOperator[E]) *Builder[E] {
+	b.v.primary = op.Name()
+	b.WithBinaryOperator(op)
+	return b
+}
+
+func (b *Builder[E]) WithSecondary(op algebra.BinaryOperator[E]) *Builder[E] {
+	b.v.secondary = op.Name()
+	b.WithBinaryOperator(op)
+	return b
+}
+
+func (b *Builder[E]) Build() OperatorSuite[E] {
+	return b.v
 }
 
 func NewOperatorSuiteBuilder[E algebra.Element]() *Builder[E] {
 	return &Builder[E]{
 		v: OperatorSuite[E]{
 			binOp: make(map[algebra.Operator]algebra.BinaryOperator[E]),
+			unOp:  make(map[algebra.Operator]algebra.UnaryOperator[E]),
 		},
 	}
 }

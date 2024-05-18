@@ -44,6 +44,12 @@ func (*BaseFieldElementG2) Mod(m integer.NaturalSemiRingElement[curves.BaseField
 func (e *BaseFieldElementG2) Abs() curves.BaseFieldElement {
 	return e
 }
+func (*BaseFieldElementG2) IsUnit() bool {
+	panic("implement me")
+}
+func (*BaseFieldElementG2) IsPrime() bool {
+	panic("implement me")
+}
 
 func (e *BaseFieldElementG2) Structure() curves.BaseField {
 	return NewBaseFieldG2()

@@ -34,6 +34,12 @@ type Scalar struct {
 func (*Scalar) Mod(m integer.NaturalSemiRingElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
 	panic("implement me")
 }
+func (*Scalar) IsUnit() bool {
+	panic("implement me")
+}
+func (*Scalar) IsPrime() bool {
+	panic("implement me")
+}
 func (s *Scalar) Abs() curves.Scalar {
 	return s
 }

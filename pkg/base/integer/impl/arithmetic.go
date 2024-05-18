@@ -4,7 +4,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	aimpl "github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
+	"github.com/cronokirby/saferith"
 )
 
 type HolesArithmeticMixin[T aimpl.ImplAdapter[T, Impl], Impl any] interface {
@@ -14,22 +14,8 @@ type HolesArithmeticMixin[T aimpl.ImplAdapter[T, Impl], Impl any] interface {
 }
 
 type ArithmeticMixin[T aimpl.ImplAdapter[T, Impl], Impl any] struct {
-	Ctx *integer.ArithmeticContext
+	Ctx *ArithmeticContext
 	H   HolesArithmeticMixin[T, Impl]
-}
-
-func (a *ArithmeticMixin[T, I]) Context() *integer.ArithmeticContext {
-	return &integer.ArithmeticContext{
-		Size:           a.Ctx.Size,
-		Modulus:        a.Ctx.Modulus,
-		BottomAtZero:   a.Ctx.BottomAtZero,
-		BottomAtOne:    a.Ctx.BottomAtOne,
-		ValidateInputs: a.Ctx.ValidateInputs,
-	}
-}
-
-func (a *ArithmeticMixin[T, Impl]) Type() integer.ArithmeticType {
-	return a.Context().Eval()
 }
 
 func (a *ArithmeticMixin[T, I]) anyZeros(xs ...T) bool {
@@ -45,14 +31,14 @@ func (a *ArithmeticMixin[T, I]) validateInputs(xs ...T) error {
 	if !a.Ctx.ValidateInputs {
 		return nil
 	}
-	switch a.Type() {
-	case integer.ForNPlus:
+	switch a.Ctx.Type() {
+	case UnsignedPositive:
 		for _, x := range xs {
 			if a.H.Cmp(x, a.H.One()) == algebra.LessThan {
 				return errs.NewValue("N+ element can't be less than 1")
 			}
 		}
-	case integer.ForN:
+	case Unsigned:
 		for _, x := range xs {
 			if a.H.Cmp(x, a.H.Zero()) == algebra.LessThan {
 				return errs.NewValue("N element can't be less than 0")
@@ -66,14 +52,14 @@ func (a *ArithmeticMixin[T, I]) validateDenominator(xs ...T) error {
 	if !a.Ctx.ValidateInputs {
 		return nil
 	}
-	switch a.Type() {
-	case integer.ForNPlus, integer.ForN:
+	switch a.Ctx.Type() {
+	case UnsignedPositive, Unsigned:
 		for _, x := range xs {
 			if a.H.Cmp(x, a.H.One()) == algebra.LessThan {
 				return errs.NewValue("denominator < 1")
 			}
 		}
-	case integer.ForZ, integer.ForZn:
+	case Signed, Modular:
 		if someAreZero := a.anyZeros(xs...); someAreZero {
 			return errs.NewValue("can't divide by zero")
 		}
@@ -98,7 +84,7 @@ func (a *ArithmeticMixin[T, I]) ValidateNeg(x T) error {
 	if err := a.validateInputs(x); err != nil {
 		return errs.WrapValidation(err, "invalid argument")
 	}
-	if a.Type() == integer.ForN && a.H.Cmp(x, a.H.Zero()) != algebra.Equal {
+	if a.Ctx.Type() == Unsigned && a.H.Cmp(x, a.H.Zero()) != algebra.Equal {
 		return errs.NewValue("can only negate 0 in N")
 	}
 	return nil
@@ -116,15 +102,15 @@ func (a *ArithmeticMixin[T, I]) ValidateSub(x, y T) error {
 	if !a.Ctx.ValidateInputs {
 		return nil
 	}
-	switch a.Type() {
-	case integer.ForNPlus:
+	switch a.Ctx.Type() {
+	case UnsignedPositive:
 		if a.H.Cmp(x, y) == algebra.LessThan {
 			return errs.NewValue("x < y")
 		}
 		if a.H.Cmp(x, a.H.One()) == algebra.LessThan {
 			return errs.NewValue("y < 1")
 		}
-	case integer.ForN:
+	case Unsigned:
 		if a.H.Cmp(x, y) == algebra.LessThan {
 			return errs.NewValue("x < y")
 		}
@@ -161,4 +147,58 @@ func (a *ArithmeticMixin[T, I]) ValidateMod(x, m T) error {
 		return errs.WrapValidation(err, "invalid modulus")
 	}
 	return nil
+}
+
+type ArithmeticType string
+
+const (
+	Signed                ArithmeticType = "<SIGNED>"
+	UnsignedPositive      ArithmeticType = "<UNSIGNED_POSITIVE>"
+	Unsigned              ArithmeticType = "<UNSIGNED>"
+	Modular               ArithmeticType = "<MODULAR>"
+	invalidArithmeticType ArithmeticType = "<INVALID>"
+)
+
+type ArithmeticContext struct {
+	BottomAtZero   bool
+	BottomAtOne    bool
+	Modulus        *saferith.Nat
+	Size           int
+	ValidateInputs bool
+}
+
+func (ctx *ArithmeticContext) Type() ArithmeticType {
+	if ctx.IsSigned() {
+		return Signed
+	}
+	if ctx.IsUnsignedPositive() {
+		return UnsignedPositive
+	}
+	if ctx.IsUnsigned() {
+		return Unsigned
+	}
+	if ctx.IsModular() {
+		return Modular
+	}
+	return invalidArithmeticType
+}
+
+func (ctx *ArithmeticContext) IsSigned() bool {
+	return ctx.Modulus == nil && !ctx.BottomAtZero && !ctx.BottomAtOne
+}
+
+func (ctx *ArithmeticContext) IsUnsignedPositive() bool {
+	return ctx.Modulus == nil && !ctx.BottomAtZero && ctx.BottomAtOne
+}
+
+func (ctx *ArithmeticContext) IsUnsigned() bool {
+	return ctx.Modulus == nil && ctx.BottomAtZero && !ctx.BottomAtOne
+}
+
+func (ctx *ArithmeticContext) IsModular() bool {
+	return ctx.Modulus != nil && ctx.Modulus.EqZero() != 1 && ctx.BottomAtZero && !ctx.BottomAtOne
+}
+
+func (ctx *ArithmeticContext) Validate() bool {
+	return ctx.IsUnsignedPositive() || ctx.IsUnsigned() || ctx.IsSigned() || ctx.IsModular()
 }

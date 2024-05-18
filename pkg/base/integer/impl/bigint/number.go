@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	Zero = B(big.NewInt(0))
-	One  = B(big.NewInt(1))
-	Two  = B(big.NewInt(2))
+	Zero = New(big.NewInt(0))
+	One  = New(big.NewInt(1))
+	Two  = New(big.NewInt(2))
 )
 
 const Name = "BIG_INT"
@@ -24,7 +24,7 @@ type BigInt struct {
 	V *big.Int
 }
 
-func B(v *big.Int) *BigInt {
+func New(v *big.Int) *BigInt {
 	if v == nil {
 		return nil
 	}
@@ -34,8 +34,102 @@ func B(v *big.Int) *BigInt {
 }
 
 func (n *BigInt) New(x *big.Int) *BigInt {
-	n = B(x)
-	return n
+	return New(x)
+}
+
+func (n *BigInt) Abs() *BigInt {
+	return New(new(big.Int).Abs(n.V))
+}
+
+func (n *BigInt) Neg() *BigInt {
+	return New(new(big.Int).Neg(n.V))
+}
+
+func (n *BigInt) Cmp(x *BigInt) algebra.Ordering {
+	if x == nil {
+		panic(errs.NewIsNil("argument"))
+	}
+	return algebra.Ordering(n.V.Cmp(x.V))
+}
+
+func (n *BigInt) ModInverse(modulus *BigInt) (*BigInt, error) {
+	if modulus == nil {
+		panic(errs.NewIsNil("modulus"))
+	}
+	if modulus.Cmp(One) == algebra.LessThan {
+		return nil, errs.NewValue("modulus < 1")
+	}
+	return New(new(big.Int).ModInverse(n.V, modulus.V)), nil
+}
+
+func (n *BigInt) Mod(modulus *BigInt) (*BigInt, error) {
+	if modulus == nil {
+		panic(errs.NewIsNil("modulus"))
+	}
+	if modulus.Cmp(One) == algebra.LessThan {
+		return nil, errs.NewValue("modulus < 1")
+	}
+	return New(new(big.Int).Mod(n.V, modulus.V)), nil
+}
+
+func (n *BigInt) Add(x *BigInt) *BigInt {
+	if x == nil {
+		panic(errs.NewIsNil("argument"))
+	}
+	return New(new(big.Int).Add(n.V, x.V))
+}
+
+func (n *BigInt) Sub(x *BigInt) *BigInt {
+	if x == nil {
+		panic(errs.NewIsNil("argument"))
+	}
+	return New(new(big.Int).Sub(n.V, x.V))
+}
+
+func (n *BigInt) Mul(x *BigInt) *BigInt {
+	if x == nil {
+		panic(errs.NewIsNil("argument"))
+	}
+	return New(new(big.Int).Mul(n.V, x.V))
+}
+
+func (n *BigInt) Div(x *BigInt) (quotient *BigInt, remainder *BigInt, err error) {
+	if x == nil {
+		panic(errs.NewIsNil("argument"))
+	}
+	if x.Equal(Zero) {
+		return nil, nil, errs.NewValue("can't divide by zero")
+	}
+	q, r := new(big.Int).DivMod(n.V, x.V, new(big.Int))
+	return New(q), New(r), nil
+}
+
+func (n *BigInt) Exp(x *BigInt) *BigInt {
+	if x == nil {
+		panic(errs.NewIsNil("argument"))
+	}
+	return New(new(big.Int).Exp(n.V, x.V, nil))
+}
+
+func (n *BigInt) GCD(x *BigInt) *BigInt {
+	if x == nil {
+		panic(errs.NewIsNil("argument"))
+	}
+	return New(new(big.Int).GCD(nil, nil, n.V, x.V))
+}
+
+func (n *BigInt) LCM(x *BigInt) *BigInt {
+	if x == nil {
+		panic(errs.NewIsNil("argument"))
+	}
+	q, r, err := n.Mul(x).Div(n.GCD(x))
+	if err != nil {
+		panic(err)
+	}
+	if r.Cmp(Zero) == algebra.Equal {
+		panic("r == 0")
+	}
+	return q
 }
 
 func (n *BigInt) SetUint64(x uint64) *BigInt {
@@ -71,6 +165,7 @@ func (n *BigInt) FromBig(v *big.Int) *BigInt {
 func (n *BigInt) Uint64() uint64 {
 	return n.V.Uint64()
 }
+
 func (n *BigInt) Int64() int64 {
 	return n.V.Int64()
 }
@@ -96,6 +191,7 @@ func (n *BigInt) TrueLen() uint {
 func (n *BigInt) MarshalJSON() ([]byte, error) {
 	return n.MarshalJSON()
 }
+
 func (n *BigInt) UnmarshalJSON(data []byte) error {
 	var b *big.Int
 	if err := json.Unmarshal(data, b); err != nil {

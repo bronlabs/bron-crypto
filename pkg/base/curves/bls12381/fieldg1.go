@@ -35,6 +35,12 @@ type BaseFieldG1 struct {
 func (*BaseFieldG1) Arithmetic() integer.Arithmetic[curves.BaseFieldElement] {
 	panic("not implemented")
 }
+func (*BaseFieldG1) Factorise() []curves.BaseFieldElement {
+	panic("not implemented")
+}
+func (*BaseFieldG1) RandomPrime(prng io.Reader) curves.BaseFieldElement {
+	panic("not implemented")
+}
 
 func g1BaseFieldInit() {
 	g1BaseFieldInstance = BaseFieldG1{}

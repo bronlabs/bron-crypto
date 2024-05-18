@@ -37,6 +37,12 @@ func (*BaseFieldElement) Mod(m integer.NaturalSemiRingElement[curves.BaseField, 
 func (e *BaseFieldElement) Abs() curves.BaseFieldElement {
 	return e
 }
+func (*BaseFieldElement) IsUnit() bool {
+	panic("implement me")
+}
+func (*BaseFieldElement) IsPrime() bool {
+	panic("implement me")
+}
 
 func (*BaseFieldElement) Operate(op algebra.Operator, rhs algebra.GroupoidElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
 	panic("implement me")

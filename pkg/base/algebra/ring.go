@@ -47,7 +47,7 @@ type EuclideanSemiRingElement[R Structure, E Element] interface {
 	GCD(x E) (E, error)
 	LCM(x E) (E, error)
 	CoPrime(x E) bool
-	EuclideanDiv(x E) (quotient, reminder E)
+	EuclideanDiv(x E) (quotient, reminder E, err error)
 
 	IsPrime() bool
 }
@@ -56,7 +56,7 @@ type FiniteEuclideanSemiRing[R Structure, E Element] interface {
 	EuclideanSemiRing[R, E]
 	FiniteStructure[R, E]
 
-	RandomPrime(prng io.Reader)
+	RandomPrime(prng io.Reader) E
 }
 
 type FiniteEuclideanSemiRingElement[R Structure, E Element] interface {
@@ -80,7 +80,7 @@ type RingElement[R Structure, E Element] interface {
 	AdditiveGroupElement[R, E]
 
 	Sqrt() (E, error)
-	// IsUnit() bool
+	IsUnit() bool
 }
 
 type FiniteRing[R Structure, E Element] interface {

@@ -35,7 +35,7 @@ type GeneralEllipticCurve[EllipticCurveType, BaseFieldType, ScalarRingType algeb
 // GeneralEllipticCurvePoint is the interface to represent an element of the ***prime order subgroup*** of an elliptic curve.
 type GeneralEllipticCurvePoint[EllipticCurveType, BaseFieldType algebra.Structure, PointType, BaseFieldElementType algebra.Element] interface {
 	// Point is an element of an algebraic curve.
-	algebra.AffinePoint[EllipticCurveType, BaseFieldType, PointType, BaseFieldElementType]
+	algebra.Point[EllipticCurveType, BaseFieldType, PointType, BaseFieldElementType]
 	// Point is an element of an algebraic group element.
 	algebra.AlgebraicGroupElement[EllipticCurveType, BaseFieldType, PointType, BaseFieldElementType]
 	IsInPrimeSubGroup() bool

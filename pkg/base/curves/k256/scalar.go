@@ -37,6 +37,12 @@ func (*Scalar) Mod(m integer.NaturalSemiRingElement[curves.ScalarField, curves.S
 func (s *Scalar) Abs() curves.Scalar {
 	return s
 }
+func (*Scalar) IsUnit() bool {
+	panic("implement me")
+}
+func (*Scalar) IsPrime() bool {
+	panic("implement me")
+}
 
 func NewScalar(value uint64) *Scalar {
 	return &Scalar{
