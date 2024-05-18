@@ -48,3 +48,10 @@ type OneDimensionalModule[ModuleType, BaseRingType Structure, ModuleElementType,
 	// ScalarBaseMult returns scalar multiplication of the input with the generator of the module.
 	ScalarBaseMult(sc ModuleScalar[ModuleType, BaseRingType, ModuleElementType, ScalarType]) ModuleElementType
 }
+
+type OneDimensionalModuleElement[ModuleType, BaseRingType Structure, ModuleElementType, ScalarType Element] interface {
+	// One dimensional module is a module.
+	ModuleElement[ModuleType, BaseRingType, ModuleElementType, ScalarType]
+	// One dimensional module is a group.
+	CyclicGroupElement[ModuleType, ModuleElementType]
+}

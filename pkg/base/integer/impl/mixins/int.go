@@ -9,7 +9,7 @@ import (
 )
 
 type Z_[S integer.Z[S, E], E integer.Int[S, E]] struct {
-	NaturalRig[S, E]
+	NaturalSemiRing[S, E]
 	domain.EuclideanDomain[S, E]
 
 	H HolesZ[S, E]
@@ -72,7 +72,7 @@ func (z *Z_[S, E]) Iter() <-chan E {
 }
 
 type Int_[S integer.Z[S, E], E integer.Int[S, E]] struct {
-	NaturalRigElement[S, E]
+	NaturalSemiRingElement[S, E]
 	domain.EuclideanDomainElement[S, E]
 
 	H HolesInt[S, E]

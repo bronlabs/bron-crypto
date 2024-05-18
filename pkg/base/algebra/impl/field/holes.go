@@ -2,28 +2,28 @@ package field
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/domain"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/group"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/ring"
 )
 
 type HolesField[F algebra.Field[F, E], E algebra.FieldElement[F, E]] interface {
-	domain.HolesEuclideanDomain[F, E]
+	ring.HolesEuclideanDomain[F, E]
 	group.HolesMultiplicativeGroup[F, E]
 }
 
 type HolesFieldElement[F algebra.Field[F, E], E algebra.FieldElement[F, E]] interface {
-	domain.HolesEuclideanDomainElement[F, E]
+	ring.HolesEuclideanDomainElement[F, E]
 	group.HolesMultiplicativeGroupElement[F, E]
 }
 
 type HolesFiniteField[F algebra.FiniteField[F, E], E algebra.FiniteFieldElement[F, E]] interface {
 	HolesField[F, E]
-	domain.HolesFiniteEuclideanDomain[F, E]
+	ring.HolesFiniteEuclideanDomain[F, E]
 }
 
 type HolesFiniteFieldElement[F algebra.FiniteField[F, E], E algebra.FiniteFieldElement[F, E]] interface {
 	HolesFieldElement[F, E]
-	domain.HolesFiniteEuclideanDomainElement[F, E]
+	ring.HolesFiniteEuclideanDomainElement[F, E]
 }
 
 type HolesExtensionField[L algebra.ExtensionField[L, K, LE, KE], K algebra.Field[K, KE], LE algebra.ExtensionFieldElement[L, K, LE, KE], KE algebra.FieldElement[K, KE]] interface {
@@ -36,7 +36,7 @@ type HolesExtensionFieldElement[L algebra.ExtensionField[L, K, LE, KE], K algebr
 
 func NewField[F algebra.Field[F, E], E algebra.FieldElement[F, E]](H HolesField[F, E]) Field[F, E] {
 	return Field[F, E]{
-		EuclideanDomain:     domain.NewEuclideanDomain(H),
+		EuclideanDomain:     ring.NewEuclideanDomain(H),
 		MultiplicativeGroup: group.NewMultiplicativeGroup(H),
 		H:                   H,
 	}
@@ -44,7 +44,7 @@ func NewField[F algebra.Field[F, E], E algebra.FieldElement[F, E]](H HolesField[
 
 func NewFieldElement[F algebra.Field[F, E], E algebra.FieldElement[F, E]](H HolesFieldElement[F, E]) FieldElement[F, E] {
 	return FieldElement[F, E]{
-		EuclideanDomainElement:     domain.NewEuclideanDomainElement(H),
+		EuclideanDomainElement:     ring.NewEuclideanDomainElement(H),
 		MultiplicativeGroupElement: group.NewMultiplicativeGroupElement(H),
 		H:                          H,
 	}
@@ -53,7 +53,7 @@ func NewFieldElement[F algebra.Field[F, E], E algebra.FieldElement[F, E]](H Hole
 func NewFiniteField[F algebra.FiniteField[F, E], E algebra.FiniteFieldElement[F, E]](H HolesFiniteField[F, E]) FiniteField[F, E] {
 	return FiniteField[F, E]{
 		Field:                 NewField(H),
-		FiniteEuclideanDomain: domain.NewFiniteEuclideanDomain(H),
+		FiniteEuclideanDomain: ring.NewFiniteEuclideanDomain(H),
 		H:                     H,
 	}
 }
@@ -61,7 +61,7 @@ func NewFiniteField[F algebra.FiniteField[F, E], E algebra.FiniteFieldElement[F,
 func NewFiniteFieldElement[F algebra.FiniteField[F, E], E algebra.FiniteFieldElement[F, E]](H HolesFiniteFieldElement[F, E]) FiniteFieldElement[F, E] {
 	return FiniteFieldElement[F, E]{
 		FieldElement:                 NewFieldElement(H),
-		FiniteEuclideanDomainElement: domain.NewFiniteEuclideanDomainElement(H),
+		FiniteEuclideanDomainElement: ring.NewFiniteEuclideanDomainElement(H),
 		H:                            H,
 	}
 }

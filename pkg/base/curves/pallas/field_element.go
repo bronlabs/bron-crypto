@@ -37,7 +37,7 @@ func NewBaseFieldElement(value uint64) *BaseFieldElement {
 		V: t,
 	}
 }
-func (*BaseFieldElement) Mod(m integer.NaturalRigElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
+func (*BaseFieldElement) Mod(m integer.NaturalSemiRingElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
 	panic("implement me")
 }
 func (e *BaseFieldElement) Abs() curves.BaseFieldElement {

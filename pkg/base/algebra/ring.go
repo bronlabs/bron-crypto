@@ -59,6 +59,11 @@ type FiniteEuclideanSemiRing[R Structure, E Element] interface {
 	RandomPrime(prng io.Reader)
 }
 
+type FiniteEuclideanSemiRingElement[R Structure, E Element] interface {
+	EuclideanSemiRingElement[R, E]
+	BytesSerialization[E]
+}
+
 // Ring defines methods needed for S to be considered as a ring.
 // A ring (R, +, *) is a structure where (R, +) is a group and (R, *) is a monoid and * distributes wrt +.
 type Ring[R Structure, E Element] interface {
@@ -87,4 +92,24 @@ type FiniteRing[R Structure, E Element] interface {
 type FiniteRingElement[R Structure, E Element] interface {
 	RingElement[R, E]
 	BytesSerialization[E]
+}
+
+type EuclideanDomain[D Structure, E Element] interface {
+	Ring[D, E]
+	EuclideanSemiRing[D, E]
+}
+
+type EuclideanDomainElement[D Structure, E Element] interface {
+	RingElement[D, E]
+	EuclideanSemiRingElement[D, E]
+}
+
+type FiniteEuclideanDomain[D Structure, E Element] interface {
+	FiniteRing[D, E]
+	FiniteEuclideanSemiRing[D, E]
+}
+
+type FiniteEuclideanDomainElement[D Structure, E Element] interface {
+	FiniteRingElement[D, E]
+	FiniteEuclideanSemiRingElement[D, E]
 }

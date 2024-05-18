@@ -15,7 +15,6 @@ type AlgebraicVariety[VarietyType, BaseFieldType Structure, VarietyElementType, 
 	// FrobeniusEndomorphism returns an element whose coordinates are coordinates of p, each raised to the power of characteristic of the base field.
 	FrobeniusEndomorphism(p VarietyElementType) VarietyElementType
 	// BaseField returns the base field of the algebraic variety ST.
-
 	AlgebraicVarietyBaseField() AlgebraicVarietyBaseField[VarietyType, BaseFieldType, VarietyElementType, BaseFieldElementType]
 }
 
@@ -72,19 +71,9 @@ type AlgebraicCurve[CurveType, BaseFieldType Structure, PointType, BaseFieldElem
 
 // Point exposes some methods that we need to work with elements of algebraic group ST.
 type Point[CurveType, BaseFieldType Structure, PointType, BaseFieldElementType Element] interface {
-	AlgebraicVarietyElement[CurveType, BaseFieldType, PointType, BaseFieldElementType]
-}
-
-type AffinePoint[CurveType, BaseFieldType Structure, PointType, BaseFieldElementType Element] interface {
 	AffineAlgebraicVarietyElement[CurveType, BaseFieldType, PointType, BaseFieldElementType]
-	// Point has affine coordinates.
-	AffinePointCoordinates[BaseFieldElementType]
-}
-
-// AffinePointCoordinates defines methods needed for an algebraic curve's to represent its affine coordinates.
-type AffinePointCoordinates[FieldElement Element] interface {
 	// AffineX returns the x coordinate of the point implementing this interface.
-	AffineX() FieldElement
+	AffineX() BaseFieldElementType
 	// AffineY returns the y coordinate of the point implementing this interface.
-	AffineY() FieldElement
+	AffineY() BaseFieldElementType
 }

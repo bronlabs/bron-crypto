@@ -104,7 +104,7 @@ func (n *NatPlus) UnmarshalJSON(data []byte) error {
 }
 
 var _ integer.NPlus[*NPlus, *NatPlus] = (*NPlus)(nil)
-var _ mixins.HolesPositiveNaturalRg[*NPlus, *NatPlus] = (*NPlus)(nil)
+var _ mixins.HolesNaturalPreSemiRing[*NPlus, *NatPlus] = (*NPlus)(nil)
 var _ mixins.HolesNPlus[*NPlus, *NatPlus] = (*NPlus)(nil)
 
 type NPlus struct {

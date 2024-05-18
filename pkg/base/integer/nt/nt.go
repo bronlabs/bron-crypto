@@ -49,10 +49,10 @@ func GenerateSafePrimes[S integer.N[S, E], E integer.Nat[S, E]](prng io.Reader, 
 	panic("implement me")
 }
 
-func Jacobi[Z integer.Z[Z, I], I integer.Int[Z, I], NP integer.PositiveNaturalRg[NP, N], N integer.PositiveNaturalRgElement[NP, N]](a I, p N) (Symbol[Z, I], error) {
+func Jacobi[Z integer.Z[Z, I], I integer.Int[Z, I], NP integer.NaturalPreSemiRing[NP, N], N integer.NaturalPreSemiRingElement[NP, N]](a I, p N) (Symbol[Z, I], error) {
 	panic("implement me")
 }
 
-func Legendre[Z integer.Z[Z, I], I integer.Int[Z, I], NP integer.PositiveNaturalRg[NP, N], N integer.PositiveNaturalRgElement[NP, N]](a I, p N) (Symbol[Z, I], error) {
+func Legendre[Z integer.Z[Z, I], I integer.Int[Z, I], NP integer.NaturalPreSemiRing[NP, N], N integer.NaturalPreSemiRingElement[NP, N]](a I, p N) (Symbol[Z, I], error) {
 	panic("implement me")
 }

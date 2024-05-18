@@ -7,28 +7,38 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/monoid"
 )
 
-type RgElement[R algebra.PreSemiRing[R, E], E algebra.PreSemiRingElement[R, E]] struct {
+type PreSemiRingElement[R algebra.PreSemiRing[R, E], E algebra.PreSemiRingElement[R, E]] struct {
 	groupoid.GroupoidElement[R, E]
 	groupoid.AdditiveGroupoidElement[R, E]
 	groupoid.MultiplicativeGroupoidElement[R, E]
 
-	H HolesRgElement[R, E]
+	H HolesPreSemiRingElement[R, E]
 }
 
-func (e *RgElement[R, E]) MulAdd(p, q algebra.PreSemiRingElement[R, E]) E {
+func (e *PreSemiRingElement[R, E]) MulAdd(p, q algebra.PreSemiRingElement[R, E]) E {
 	return e.H.Mul(p).Add(q)
 }
 
-type RigElement[R algebra.SemiRing[R, E], E algebra.SemiRingElement[R, E]] struct {
+type SemiRingElement[R algebra.SemiRing[R, E], E algebra.SemiRingElement[R, E]] struct {
 	monoid.MonoidElement[R, E]
 	monoid.AdditiveMonoidElement[R, E]
 	monoid.MultiplicativeMonoidElement[R, E]
 
-	H HolesRigElement[R, E]
+	H HolesSemiRingElement[R, E]
+}
+
+type EuclideanSemiRingElement[R algebra.EuclideanSemiRing[R, E], E algebra.EuclideanSemiRingElement[R, E]] struct {
+	SemiRingElement[R, E]
+	H HolesEuclideanSemiRingElement[R, E]
+}
+
+type FiniteEuclideanSemiRingElement[R algebra.FiniteEuclideanSemiRing[R, E], E algebra.FiniteEuclideanSemiRingElement[R, E]] struct {
+	EuclideanSemiRingElement[R, E]
+	H HolesFiniteEuclideanSemiRingElement[R, E]
 }
 
 type RingElement[R algebra.Ring[R, E], E algebra.RingElement[R, E]] struct {
-	RigElement[R, E]
+	SemiRingElement[R, E]
 	group.GroupElement[R, E]
 	group.AdditiveGroupElement[R, E]
 	monoid.MultiplicativeMonoidElement[R, E]
@@ -40,4 +50,16 @@ type FiniteRingElement[R algebra.FiniteRing[R, E], E algebra.FiniteRingElement[R
 	RingElement[R, E]
 
 	H HolesFiniteRingElement[R, E]
+}
+
+type EuclideanDomainElement[R algebra.EuclideanDomain[R, E], E algebra.EuclideanDomainElement[R, E]] struct {
+	RingElement[R, E]
+	EuclideanSemiRingElement[R, E]
+	H HolesEuclideanDomainElement[R, E]
+}
+
+type FiniteEuclideanDomainElement[R algebra.FiniteEuclideanDomain[R, E], E algebra.FiniteEuclideanDomainElement[R, E]] struct {
+	FiniteRingElement[R, E]
+	FiniteEuclideanSemiRingElement[R, E]
+	H HolesFiniteEuclideanDomainElement[R, E]
 }

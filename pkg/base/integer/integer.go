@@ -4,13 +4,13 @@ import "github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 
 // Z defines methods for S for it to behave like the integers.
 type Z[S algebra.Structure, E algebra.Element] interface {
-	NaturalRig[S, E]
+	NaturalSemiRing[S, E]
 	algebra.EuclideanDomain[S, E]
 }
 
 // Int defines methods for element of type E to be elements of the integers S.
 type Int[S algebra.Structure, E algebra.Element] interface {
-	NaturalRigElement[S, E]
+	NaturalSemiRingElement[S, E]
 	algebra.EuclideanDomainElement[S, E]
 
 	Abs() E
@@ -21,7 +21,7 @@ type Int[S algebra.Structure, E algebra.Element] interface {
 type Zn[S algebra.Structure, E algebra.Element] interface {
 	algebra.FiniteRing[S, E]
 	algebra.BoundedOrderTheoreticLattice[S, E]
-	NaturalRig[S, E]
+	NaturalSemiRing[S, E]
 
 	IsDecomposable(coprimeIdealNorms ...Uint[S, E]) (bool, error)
 }
@@ -31,7 +31,7 @@ type Zn[S algebra.Structure, E algebra.Element] interface {
 type Uint[S algebra.Structure, E algebra.Element] interface {
 	algebra.FiniteRingElement[S, E]
 	algebra.BoundedOrderTheoreticLatticeElement[S, E]
-	NaturalRigElement[S, E]
+	NaturalSemiRingElement[S, E]
 }
 
 // Zp defines methods for S to behave the field of integers modulo prime.
@@ -52,10 +52,10 @@ type IntP[S algebra.Structure, E algebra.Element] interface {
 type ZnX[G algebra.Structure, E algebra.Element] interface {
 	algebra.MultiplicativeGroup[G, E]
 	algebra.BoundedOrderTheoreticLattice[G, E]
-	NaturalRig[G, E]
+	NaturalSemiRing[G, E]
 }
 
 type IntX[G algebra.Structure, E algebra.Element] interface {
 	algebra.MultiplicativeGroupElement[G, E]
-	NaturalRigElement[G, E]
+	NaturalSemiRingElement[G, E]
 }

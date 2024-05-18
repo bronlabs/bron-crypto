@@ -9,15 +9,15 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
-type NaturalRig[S integer.NaturalRig[S, E], E integer.NaturalRigElement[S, E]] struct {
-	PositiveNaturalRg[S, E]
-	ring.Rg[S, E]
-	ring.Rig[S, E]
+type NaturalSemiRing[S integer.NaturalSemiRing[S, E], E integer.NaturalSemiRingElement[S, E]] struct {
+	NaturalPreSemiRing[S, E]
+	ring.PreSemiRing[S, E]
+	ring.EuclideanSemiRing[S, E]
 
-	H HolesNaturalRig[S, E]
+	H HolesNaturalSemiRing[S, E]
 }
 
-func (n *NaturalRig[S, E]) Identity(under algebra.Operator) (E, error) {
+func (n *NaturalSemiRing[S, E]) Identity(under algebra.Operator) (E, error) {
 	switch under {
 	case integer.Addition:
 		return n.One(), nil
@@ -28,23 +28,23 @@ func (n *NaturalRig[S, E]) Identity(under algebra.Operator) (E, error) {
 	}
 }
 
-func (n *NaturalRig[S, E]) Zero() E {
+func (n *NaturalSemiRing[S, E]) Zero() E {
 	return n.Arithmetic().Zero()
 }
 
-type NaturalRigElement[S integer.NaturalRig[S, E], E integer.NaturalRigElement[S, E]] struct {
-	PositiveNaturalRgElement[S, E]
-	ring.RgElement[S, E]
-	ring.RigElement[S, E]
+type NaturalSemiRingElement[S integer.NaturalSemiRing[S, E], E integer.NaturalSemiRingElement[S, E]] struct {
+	NaturalPreSemiRingElement[S, E]
+	ring.PreSemiRingElement[S, E]
+	ring.EuclideanSemiRingElement[S, E]
 
-	H HolesNaturalRigElement[S, E]
+	H HolesNaturalSemiRingElement[S, E]
 }
 
-func (n *NaturalRigElement[S, E]) IsZero() bool {
+func (n *NaturalSemiRingElement[S, E]) IsZero() bool {
 	return n.Equal(n.H.Structure().Zero())
 }
 
-func (n *NaturalRigElement[S, E]) Mod(modulus integer.NaturalRigElement[S, E]) (E, error) {
+func (n *NaturalSemiRingElement[S, E]) Mod(modulus integer.NaturalSemiRingElement[S, E]) (E, error) {
 	out, err := n.H.Arithmetic().WithBottomAtZeroAndModulus(modulus.Unwrap()).Mod(n.H.Unwrap(), modulus.Unwrap())
 	if err != nil {
 		return *new(E), errs.WrapFailed(err, "could not compute mod")
@@ -53,12 +53,12 @@ func (n *NaturalRigElement[S, E]) Mod(modulus integer.NaturalRigElement[S, E]) (
 }
 
 type N[S integer.N[S, E], E integer.Nat[S, E]] struct {
-	PositiveNaturalRg[S, E]
+	NaturalPreSemiRing[S, E]
 	NPlus[S, E]
 
-	NaturalRig[S, E]
+	NaturalSemiRing[S, E]
 
-	ring.Rg[S, E]
+	ring.PreSemiRing[S, E]
 	order.LowerBoundedOrderTheoreticLattice[S, E]
 
 	H HolesN[S, E]
@@ -73,7 +73,7 @@ func (n *N[S, E]) Characteristic() *saferith.Nat {
 }
 
 type Nat_[S integer.N[S, E], E integer.Nat[S, E]] struct {
-	NaturalRigElement[S, E]
+	NaturalSemiRingElement[S, E]
 	// TODO: we are getting some nasty ambiguous selector errors. So we just copy TrySub method
 	// as a method for Nat_..
 	// NatPlus[S, E]

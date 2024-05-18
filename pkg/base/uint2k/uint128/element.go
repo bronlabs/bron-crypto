@@ -113,7 +113,7 @@ func (u Uint128) Nat() *saferith.Nat {
 	return res
 }
 
-func (u Uint128) Mod(x integer.NaturalRigElement[*Ring128, Uint128]) (Uint128, error) {
+func (u Uint128) Mod(x integer.NaturalSemiRingElement[*Ring128, Uint128]) (Uint128, error) {
 	panic("implement me")
 }
 

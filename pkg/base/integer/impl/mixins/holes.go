@@ -9,86 +9,86 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 )
 
-type HolesPositiveNaturalRg[NS integer.PositiveNaturalRg[NS, N], N integer.PositiveNaturalRgElement[NS, N]] interface {
-	ring.HolesRg[NS, N]
+type HolesNaturalPreSemiRing[NS integer.NaturalPreSemiRing[NS, N], N integer.NaturalPreSemiRingElement[NS, N]] interface {
+	ring.HolesPreSemiRing[NS, N]
 	order.HolesChain[NS, N]
 }
 
-type HolesPositiveNaturalRgElement[NS integer.PositiveNaturalRg[NS, N], N integer.PositiveNaturalRgElement[NS, N]] interface {
-	ring.HolesRgElement[NS, N]
+type HolesNaturalPreSemiRingElement[NS integer.NaturalPreSemiRing[NS, N], N integer.NaturalPreSemiRingElement[NS, N]] interface {
+	ring.HolesPreSemiRingElement[NS, N]
 	order.HolesChainElement[NS, N]
 
 	Arithmetic() integer.Arithmetic[N]
 }
 
 type HolesNPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] interface {
-	HolesPositiveNaturalRg[NS, N]
+	HolesNaturalPreSemiRing[NS, N]
 	order.HolesLowerBoundedOrderTheoreticLattice[NS, N]
 
 	Successor() algebra.Successor[N]
 }
 
 type HolesNatPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] interface {
-	HolesPositiveNaturalRgElement[NS, N]
+	HolesNaturalPreSemiRingElement[NS, N]
 	order.HolesLowerBoundedOrderTheoreticLatticeElement[NS, N]
 }
 
-type HolesNaturalRig[NS integer.NaturalRig[NS, N], N integer.NaturalRigElement[NS, N]] interface {
-	HolesPositiveNaturalRg[NS, N]
-	ring.HolesRig[NS, N]
+type HolesNaturalSemiRing[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]] interface {
+	HolesNaturalPreSemiRing[NS, N]
+	ring.HolesEuclideanSemiRing[NS, N]
 }
 
-type HolesNaturalRigElement[NS integer.NaturalRig[NS, N], N integer.NaturalRigElement[NS, N]] interface {
-	HolesPositiveNaturalRgElement[NS, N]
-	ring.HolesRigElement[NS, N]
+type HolesNaturalSemiRingElement[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]] interface {
+	HolesNaturalPreSemiRingElement[NS, N]
+	ring.HolesEuclideanSemiRingElement[NS, N]
 }
 
 type HolesN[NS integer.N[NS, N], N integer.Nat[NS, N]] interface {
-	HolesNaturalRig[NS, N]
+	HolesNaturalSemiRing[NS, N]
 	HolesNPlus[NS, N]
 }
 
 type HolesNat[NS integer.N[NS, N], N integer.Nat[NS, N]] interface {
-	HolesNaturalRigElement[NS, N]
+	HolesNaturalSemiRingElement[NS, N]
 	HolesNatPlus[NS, N]
 }
 
 type HolesZ[NS integer.Z[NS, N], N integer.Int[NS, N]] interface {
-	HolesNaturalRig[NS, N]
+	HolesNaturalSemiRing[NS, N]
 	domain.HolesEuclideanDomain[NS, N]
 }
 
 type HolesInt[NS integer.Z[NS, N], N integer.Int[NS, N]] interface {
-	HolesNaturalRigElement[NS, N]
+	HolesNaturalSemiRingElement[NS, N]
 	domain.HolesEuclideanDomainElement[NS, N]
 }
 
-func NewPositiveNaturalRg[NS integer.PositiveNaturalRg[NS, N], N integer.PositiveNaturalRgElement[NS, N]](arithmetic integer.Arithmetic[N], H HolesPositiveNaturalRg[NS, N]) PositiveNaturalRg[NS, N] {
+func NewNaturalPreSemiRing[NS integer.NaturalPreSemiRing[NS, N], N integer.NaturalPreSemiRingElement[NS, N]](arithmetic integer.Arithmetic[N], H HolesNaturalPreSemiRing[NS, N]) NaturalPreSemiRing[NS, N] {
 	addition := integer.NewAdditionOperator(arithmetic)
 	multiplication := integer.NewMultiplicationOperator(arithmetic)
 	b, err := operator.NewOperatorSuiteBuilder[N]().WithAddition(addition).WithMultiplication(multiplication).Build()
 	if err != nil {
 		panic(err)
 	}
-	return PositiveNaturalRg[NS, N]{
-		Rg:            ring.NewRg(H),
+	return NaturalPreSemiRing[NS, N]{
+		PreSemiRing:   ring.NewPreSemiRing(H),
 		Chain:         order.NewChain(H),
 		OperatorSuite: b,
 		H:             H,
 	}
 }
 
-func NewPositiveNaturalRgElement[NS integer.PositiveNaturalRg[NS, N], N integer.PositiveNaturalRgElement[NS, N]](H HolesPositiveNaturalRgElement[NS, N]) PositiveNaturalRgElement[NS, N] {
-	return PositiveNaturalRgElement[NS, N]{
-		RgElement:    ring.NewRgElement(H),
-		ChainElement: order.NewChainElement(H),
-		H:            H,
+func NewNaturalPreSemiRingElement[NS integer.NaturalPreSemiRing[NS, N], N integer.NaturalPreSemiRingElement[NS, N]](H HolesNaturalPreSemiRingElement[NS, N]) NaturalPreSemiRingElement[NS, N] {
+	return NaturalPreSemiRingElement[NS, N]{
+		PreSemiRingElement: ring.NewPreSemiRingElement(H),
+		ChainElement:       order.NewChainElement(H),
+		H:                  H,
 	}
 }
 
 func NewNPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]](arithmetic integer.Arithmetic[N], H HolesNPlus[NS, N]) NPlus[NS, N] {
 	return NPlus[NS, N]{
-		PositiveNaturalRg:                 NewPositiveNaturalRg(arithmetic, H),
+		NaturalPreSemiRing:                NewNaturalPreSemiRing(arithmetic, H),
 		LowerBoundedOrderTheoreticLattice: order.NewLowerBoundedOrderTheoreticLattice(H),
 		H:                                 H,
 	}
@@ -96,39 +96,39 @@ func NewNPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]](arithmetic inte
 
 func NewNatPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]](H HolesNatPlus[NS, N]) NatPlus[NS, N] {
 	return NatPlus[NS, N]{
-		PositiveNaturalRgElement:                 NewPositiveNaturalRgElement(H),
+		NaturalPreSemiRingElement:                NewNaturalPreSemiRingElement(H),
 		LowerBoundedOrderTheoreticLatticeElement: order.NewLowerBoundedOrderTheoreticLatticeElement(H),
 		H:                                        H,
 	}
 }
 
-func NewNaturalRig[NS integer.NaturalRig[NS, N], N integer.NaturalRigElement[NS, N]](arithmetic integer.Arithmetic[N], H HolesNaturalRig[NS, N]) NaturalRig[NS, N] {
-	return NaturalRig[NS, N]{
-		PositiveNaturalRg: NewPositiveNaturalRg(arithmetic, H),
-		Rig:               ring.NewRig(H),
-		H:                 H,
+func NewNaturalSemiRing[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]](arithmetic integer.Arithmetic[N], H HolesNaturalSemiRing[NS, N]) NaturalSemiRing[NS, N] {
+	return NaturalSemiRing[NS, N]{
+		NaturalPreSemiRing: NewNaturalPreSemiRing(arithmetic, H),
+		EuclideanSemiRing:  ring.NewEuclideanSemiRing(H),
+		H:                  H,
 	}
 }
 
-func NewNaturalRigElement[NS integer.NaturalRig[NS, N], N integer.NaturalRigElement[NS, N]](H HolesNaturalRigElement[NS, N]) NaturalRigElement[NS, N] {
-	return NaturalRigElement[NS, N]{
-		PositiveNaturalRgElement: NewPositiveNaturalRgElement(H),
-		RigElement:               ring.NewRigElement(H),
-		H:                        H,
+func NewNaturalSemiRingElement[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]](H HolesNaturalSemiRingElement[NS, N]) NaturalSemiRingElement[NS, N] {
+	return NaturalSemiRingElement[NS, N]{
+		NaturalPreSemiRingElement: NewNaturalPreSemiRingElement(H),
+		EuclideanSemiRingElement:  ring.NewEuclideanSemiRingElement(H),
+		H:                         H,
 	}
 }
 
 func NewN[S integer.N[S, E], E integer.Nat[S, E]](arithmetic integer.Arithmetic[E], H HolesN[S, E]) N[S, E] {
 	return N[S, E]{
-		NaturalRig: NewNaturalRig(arithmetic, H),
-		NPlus:      NewNPlus(arithmetic, H),
-		H:          H,
+		NaturalSemiRing: NewNaturalSemiRing(arithmetic, H),
+		NPlus:           NewNPlus(arithmetic, H),
+		H:               H,
 	}
 }
 
 func NewNat_[S integer.N[S, E], E integer.Nat[S, E]](H HolesNat[S, E]) Nat_[S, E] {
 	return Nat_[S, E]{
-		NaturalRigElement:                        NewNaturalRigElement(H),
+		NaturalSemiRingElement:                   NewNaturalSemiRingElement(H),
 		LowerBoundedOrderTheoreticLatticeElement: order.NewLowerBoundedOrderTheoreticLatticeElement(H),
 		H:                                        H,
 	}
@@ -136,7 +136,7 @@ func NewNat_[S integer.N[S, E], E integer.Nat[S, E]](H HolesNat[S, E]) Nat_[S, E
 
 func NewZ[S integer.Z[S, E], E integer.Int[S, E]](arithmetic integer.Arithmetic[E], H HolesZ[S, E]) Z_[S, E] {
 	return Z_[S, E]{
-		NaturalRig:      NewNaturalRig(arithmetic, H),
+		NaturalSemiRing: NewNaturalSemiRing(arithmetic, H),
 		EuclideanDomain: domain.NewEuclideanDomain(H),
 		H:               H,
 	}
@@ -144,7 +144,7 @@ func NewZ[S integer.Z[S, E], E integer.Int[S, E]](arithmetic integer.Arithmetic[
 
 func NewInt[S integer.Z[S, E], E integer.Int[S, E]](H HolesInt[S, E]) Int_[S, E] {
 	return Int_[S, E]{
-		NaturalRigElement:      NewNaturalRigElement(H),
+		NaturalSemiRingElement: NewNaturalSemiRingElement(H),
 		EuclideanDomainElement: domain.NewEuclideanDomainElement(H),
 		H:                      H,
 	}

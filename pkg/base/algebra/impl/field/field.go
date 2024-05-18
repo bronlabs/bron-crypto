@@ -2,19 +2,19 @@ package field
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/domain"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/group"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/ring"
 )
 
 type Field[F algebra.Field[F, E], E algebra.FieldElement[F, E]] struct {
-	domain.EuclideanDomain[F, E]
+	ring.EuclideanDomain[F, E]
 	group.MultiplicativeGroup[F, E]
 	H HolesField[F, E]
 }
 
 type FiniteField[F algebra.FiniteField[F, E], E algebra.FiniteFieldElement[F, E]] struct {
 	Field[F, E]
-	domain.FiniteEuclideanDomain[F, E]
+	ring.FiniteEuclideanDomain[F, E]
 	H HolesFiniteField[F, E]
 }
 

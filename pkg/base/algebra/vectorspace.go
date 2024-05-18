@@ -10,6 +10,7 @@ type VectorSpace[VectorSpaceType, BaseFieldType Structure, VectorType, ScalarTyp
 
 // VectorSpaceBaseField defines methods needed for the base field of the vector space ST.
 type VectorSpaceBaseField[VectorSpaceType, BaseFieldType Structure, VectorType, ScalarType Element] interface {
+	ModuleBaseRing[VectorSpaceType, BaseFieldType, VectorType, ScalarType]
 	Field[BaseFieldType, ScalarType]
 
 	VectorSpace() VectorSpace[VectorSpaceType, BaseFieldType, VectorType, ScalarType]
@@ -24,7 +25,7 @@ type Vector[VectorSpaceType, BaseFieldType Structure, VectorType, ScalarType Ele
 // VectorSpaceScalar defines methods needed for the elements of the basfield of the vector space ST.
 type VectorSpaceScalar[VectorSpaceType, BaseFieldType Structure, VectorType, ScalarType Element] interface {
 	// Vector space scalar is a finite field element.
-	FiniteFieldElement[BaseFieldType, ScalarType]
+	FieldElement[BaseFieldType, ScalarType]
 }
 
 // OneDimensionalVectorSpace defines methods needed for a one dimensional module ST to be a vector space.
@@ -32,4 +33,9 @@ type VectorSpaceScalar[VectorSpaceType, BaseFieldType Structure, VectorType, Sca
 type OneDimensionalVectorSpace[VectorSpaceType, BaseFieldType Structure, VectorType, ScalarType Element] interface {
 	VectorSpace[VectorSpaceType, BaseFieldType, VectorType, ScalarType]
 	OneDimensionalModule[VectorSpaceType, BaseFieldType, VectorType, ScalarType]
+}
+
+type OneDimensionalVector[VectorSpaceType, BaseFieldType Structure, VectorType, ScalarType Element] interface {
+	Vector[VectorSpaceType, BaseFieldType, VectorType, ScalarType]
+	OneDimensionalModuleElement[VectorSpaceType, BaseFieldType, VectorType, ScalarType]
 }

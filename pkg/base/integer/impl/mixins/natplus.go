@@ -10,23 +10,23 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
-type PositiveNaturalRg[NS integer.PositiveNaturalRg[NS, N], N integer.PositiveNaturalRgElement[NS, N]] struct {
-	ring.Rg[NS, N]
+type NaturalPreSemiRing[NS integer.NaturalPreSemiRing[NS, N], N integer.NaturalPreSemiRingElement[NS, N]] struct {
+	ring.PreSemiRing[NS, N]
 	order.Chain[NS, N]
 	operator.OperatorSuite[N]
 
-	H HolesPositiveNaturalRg[NS, N]
+	H HolesNaturalPreSemiRing[NS, N]
 }
 
-func (n *PositiveNaturalRg[NS, N]) Arithmetic() integer.Arithmetic[N] {
+func (n *NaturalPreSemiRing[NS, N]) Arithmetic() integer.Arithmetic[N] {
 	return n.H.Element().Arithmetic()
 }
 
-func (n *PositiveNaturalRg[NS, N]) One() N {
+func (n *NaturalPreSemiRing[NS, N]) One() N {
 	return n.H.Element().Arithmetic().One().Unwrap()
 }
 
-func (np *PositiveNaturalRg[NS, N]) Addition() algebra.Addition[N] {
+func (np *NaturalPreSemiRing[NS, N]) Addition() algebra.Addition[N] {
 	op, defined := np.GetOperator(integer.Addition)
 	if !defined {
 		panic(errs.NewMissing("object is malformed. does not have integer addition"))
@@ -38,7 +38,7 @@ func (np *PositiveNaturalRg[NS, N]) Addition() algebra.Addition[N] {
 	return addition
 }
 
-func (np *PositiveNaturalRg[NS, N]) Multiplication() algebra.Multiplication[N] {
+func (np *NaturalPreSemiRing[NS, N]) Multiplication() algebra.Multiplication[N] {
 	op, defined := np.GetOperator(integer.Multiplication)
 	if !defined {
 		panic(errs.NewMissing("object is malformed. does not have integer multiplication"))
@@ -50,22 +50,22 @@ func (np *PositiveNaturalRg[NS, N]) Multiplication() algebra.Multiplication[N] {
 	return multiplication
 }
 
-type PositiveNaturalRgElement[NS integer.PositiveNaturalRg[NS, N], N integer.PositiveNaturalRgElement[NS, N]] struct {
-	ring.RgElement[NS, N]
+type NaturalPreSemiRingElement[NS integer.NaturalPreSemiRing[NS, N], N integer.NaturalPreSemiRingElement[NS, N]] struct {
+	ring.PreSemiRingElement[NS, N]
 	order.ChainElement[NS, N]
 
-	H HolesPositiveNaturalRgElement[NS, N]
+	H HolesNaturalPreSemiRingElement[NS, N]
 }
 
-func (n *PositiveNaturalRgElement[NS, N]) Equal(x N) bool {
+func (n *NaturalPreSemiRingElement[NS, N]) Equal(x N) bool {
 	return n.H.Arithmetic().Equal(n.H.Unwrap(), x)
 }
 
-func (n *PositiveNaturalRgElement[NS, N]) HashCode() uint64 {
+func (n *NaturalPreSemiRingElement[NS, N]) HashCode() uint64 {
 	return n.Uint64()
 }
 
-func (n *PositiveNaturalRgElement[NS, N]) Mod(modulus integer.PositiveNaturalRgElement[NS, N]) (N, error) {
+func (n *NaturalPreSemiRingElement[NS, N]) Mod(modulus integer.NaturalPreSemiRingElement[NS, N]) (N, error) {
 	out, err := n.H.Structure().Arithmetic().Mod(n.H.Unwrap(), modulus.Unwrap())
 	if err != nil {
 		return *new(N), errs.WrapFailed(err, "could not compute mod")
@@ -73,11 +73,11 @@ func (n *PositiveNaturalRgElement[NS, N]) Mod(modulus integer.PositiveNaturalRgE
 	return out.Unwrap(), nil
 }
 
-func (n *PositiveNaturalRgElement[NS, N]) Cmp(x algebra.OrderTheoreticLatticeElement[NS, N]) algebra.Ordering {
+func (n *NaturalPreSemiRingElement[NS, N]) Cmp(x algebra.OrderTheoreticLatticeElement[NS, N]) algebra.Ordering {
 	return n.H.Structure().Arithmetic().Cmp(n.H.Unwrap(), x.Unwrap())
 }
 
-func (n *PositiveNaturalRgElement[NS, N]) Add(x algebra.AdditiveGroupoidElement[NS, N]) N {
+func (n *NaturalPreSemiRingElement[NS, N]) Add(x algebra.AdditiveGroupoidElement[NS, N]) N {
 	out, err := n.H.Arithmetic().Add(n.H.Unwrap(), x.Unwrap())
 	if err != nil {
 		panic(err)
@@ -85,7 +85,7 @@ func (n *PositiveNaturalRgElement[NS, N]) Add(x algebra.AdditiveGroupoidElement[
 	return out
 }
 
-func (n *PositiveNaturalRgElement[NS, N]) Mul(x algebra.MultiplicativeGroupoidElement[NS, N]) N {
+func (n *NaturalPreSemiRingElement[NS, N]) Mul(x algebra.MultiplicativeGroupoidElement[NS, N]) N {
 	out, err := n.H.Arithmetic().Mul(n.H.Unwrap(), x.Unwrap())
 	if err != nil {
 		panic(err)
@@ -93,28 +93,28 @@ func (n *PositiveNaturalRgElement[NS, N]) Mul(x algebra.MultiplicativeGroupoidEl
 	return out
 }
 
-func (n *PositiveNaturalRgElement[NS, N]) IsOne() bool {
+func (n *NaturalPreSemiRingElement[NS, N]) IsOne() bool {
 	return n.H.Structure().One().Equal(n.H.Unwrap())
 }
 
-func (n *PositiveNaturalRgElement[NS, N]) IsEven() bool {
+func (n *NaturalPreSemiRingElement[NS, N]) IsEven() bool {
 	return n.H.Structure().Arithmetic().IsEven(n.H.Unwrap())
 }
 
-func (n *PositiveNaturalRgElement[NS, N]) IsOdd() bool {
+func (n *NaturalPreSemiRingElement[NS, N]) IsOdd() bool {
 	return n.H.Structure().Arithmetic().IsOdd(n.H.Unwrap())
 }
 
-func (n *PositiveNaturalRgElement[NS, N]) IsPositive() bool {
+func (n *NaturalPreSemiRingElement[NS, N]) IsPositive() bool {
 	res := n.Cmp(n.H.Structure().One())
 	return res == algebra.Equal || res == algebra.GreaterThan
 }
 
-func (n *PositiveNaturalRgElement[NS, N]) Increment() N {
+func (n *NaturalPreSemiRingElement[NS, N]) Increment() N {
 	return n.H.Add(n.H.Structure().One())
 }
 
-func (n *PositiveNaturalRgElement[NS, N]) Decrement() N {
+func (n *NaturalPreSemiRingElement[NS, N]) Decrement() N {
 	arith := n.H.Arithmetic()
 	res, err := arith.Sub(n.H.Unwrap(), n.H.Structure().One())
 	if err != nil {
@@ -130,16 +130,16 @@ func (n *PositiveNaturalRgElement[NS, N]) Decrement() N {
 	return res
 }
 
-func (n *PositiveNaturalRgElement[NS, N]) Uint64() uint64 {
+func (n *NaturalPreSemiRingElement[NS, N]) Uint64() uint64 {
 	return n.H.Arithmetic().Uint64(n.H.Unwrap())
 }
 
-func (n *PositiveNaturalRgElement[NS, N]) CanGenerateAllElements(with algebra.Operator) bool {
+func (n *NaturalPreSemiRingElement[NS, N]) CanGenerateAllElements(with algebra.Operator) bool {
 	return n.IsOne() && with == integer.Addition
 }
 
 type NPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
-	PositiveNaturalRg[NS, N]
+	NaturalPreSemiRing[NS, N]
 	order.LowerBoundedOrderTheoreticLattice[NS, N]
 
 	H HolesNPlus[NS, N]
@@ -177,7 +177,7 @@ func (np *NPlus[NS, N]) Iter() <-chan N {
 }
 
 type NatPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
-	PositiveNaturalRgElement[NS, N]
+	NaturalPreSemiRingElement[NS, N]
 	order.LowerBoundedOrderTheoreticLatticeElement[NS, N]
 
 	H HolesNatPlus[NS, N]

@@ -12,7 +12,7 @@ import (
 )
 
 var _ integer.Nat[*N, *Nat] = (*Nat)(nil)
-var _ integer.NaturalRigElement[*N, *Nat] = (*Nat)(nil)
+var _ integer.NaturalSemiRingElement[*N, *Nat] = (*Nat)(nil)
 var _ mixins.HolesNat[*N, *Nat] = (*Nat)(nil)
 var _ aimpl.ImplAdapter[*Nat, *BigInt] = (*Nat)(nil)
 var _ integer.Number[*Nat] = (*Nat)(nil)
