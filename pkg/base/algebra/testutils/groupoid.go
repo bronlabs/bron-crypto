@@ -108,10 +108,10 @@ func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Mul(t *testing.T, groupoid a
 		"Should get the same result for multiplying ys elements one by one to x")
 }
 
-func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Exp(t *testing.T, groupoid algebra.MultiplicativeGroup[G, GE], x, n GE) {
+func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Exp(t *testing.T, groupoid algebra.MultiplicativeGroup[G, GE], x, n algebra.MultiplicativeGroupElement[G, GE]) {
 	t.Helper()
 
-	// result := groupoid.Exp(x, n)
+	// result := groupoid.Exp(x.Unwrap(), n.Unwrap())
 
 	// ys := make(algebra.MultiplicativeGroupoidElement[G, GE], len(n)) // TODO: What's the correct syntax here?
 
