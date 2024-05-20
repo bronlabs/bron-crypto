@@ -21,7 +21,7 @@ func NewMultiplicationOperator[T any](arithmetic Arithmetic[T]) algebra.Multipli
 
 func succ[T any](arithmetic Arithmetic[T]) func(x T) (T, error) {
 	return func(x T) (T, error) {
-		return arithmetic.Add(x, arithmetic.One())
+		return arithmetic.Add(x, arithmetic.New(1))
 	}
 }
 

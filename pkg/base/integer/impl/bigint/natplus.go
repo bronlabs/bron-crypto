@@ -2,6 +2,7 @@ package bigint
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	aimpl "github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl"
@@ -11,10 +12,11 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
+var nplusName = fmt.Sprintf("%s_N+", Name)
+
 var _ mixins.HolesNatPlus[*NPlus, *NatPlus] = (*NatPlus)(nil)
 var _ integer.NatPlus[*NPlus, *NatPlus] = (*NatPlus)(nil)
 var _ aimpl.ImplAdapter[*NatPlus, *BigInt] = (*NatPlus)(nil)
-var _ integer.Number[*NatPlus] = (*NatPlus)(nil)
 
 type NatPlus struct {
 	mixins.NatPlus[*NPlus, *NatPlus]
@@ -30,7 +32,7 @@ func NewNatPlus(v uint64) *NatPlus {
 }
 
 func (n *NatPlus) Arithmetic() integer.Arithmetic[*NatPlus] {
-	return NewNPlusArithmetic[*NatPlus](-1, false)
+	return NewUnsignedPositiveArithmetic[*NatPlus](-1, false)
 }
 
 func (*NatPlus) Structure() *NPlus {
@@ -76,12 +78,10 @@ func (n *NatPlus) SetNat(v *saferith.Nat) *NatPlus {
 func (n *NatPlus) MarshalJSON() ([]byte, error) {
 	type temp struct {
 		Name   string
-		Type   integer.ArithmeticType
 		Number *BigInt
 	}
 	return json.Marshal(&temp{
-		Name:   n.Arithmetic().Name(),
-		Type:   integer.ForNPlus,
+		Name:   nplusName,
 		Number: n.V,
 	})
 }
@@ -89,14 +89,16 @@ func (n *NatPlus) MarshalJSON() ([]byte, error) {
 func (n *NatPlus) UnmarshalJSON(data []byte) error {
 	var temp struct {
 		Name   string
-		Type   integer.ArithmeticType
 		Number *BigInt
 	}
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal json")
 	}
-	if string(temp.Type) != string(integer.ForNPlus) {
-		return errs.NewType("type (%s) must be (%s)", temp.Type, integer.ForNPlus)
+	if temp.Name != Name {
+		return errs.NewType("name (%s) must be (%s)", temp.Name, nplusName)
+	}
+	if temp.Number.Cmp(One) == algebra.LessThan {
+		return errs.NewValue("number is not a natplus")
 	}
 	n.V = temp.Number
 	n.NatPlus = mixins.NewNatPlus(n)
@@ -111,8 +113,12 @@ type NPlus struct {
 	mixins.NPlus[*NPlus, *NatPlus]
 }
 
+func (np *NPlus) Arithmetic() integer.Arithmetic[*NatPlus] {
+	return NewUnsignedPositiveArithmetic[*NatPlus](-1, false)
+}
+
 func (np *NPlus) Name() string {
-	return string(integer.ForNPlus)
+	return nplusName
 }
 
 func (np *NPlus) Unwrap() *NPlus {

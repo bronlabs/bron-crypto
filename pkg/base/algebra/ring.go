@@ -36,6 +36,7 @@ type SemiRingElement[R Structure, E Element] interface {
 type EuclideanSemiRing[R Structure, E Element] interface {
 	SemiRing[R, E]
 
+	// TODO: remove error type
 	GCD(x E, ys ...E) (E, error)
 	LCM(x E, ys ...E) (E, error)
 	CoPrime(x E, ys ...E) bool
@@ -47,8 +48,9 @@ type EuclideanSemiRingElement[R Structure, E Element] interface {
 	GCD(x E) (E, error)
 	LCM(x E) (E, error)
 	CoPrime(x E) bool
-	EuclideanDiv(x E) (quotient, reminder E, err error)
+	EuclideanDiv(x E) (quotient, reminder E)
 
+	// Rename to isProbablyPrime
 	IsPrime() bool
 }
 

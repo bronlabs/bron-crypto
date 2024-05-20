@@ -29,7 +29,7 @@ func (n *NaturalSemiRing[S, E]) Identity(under algebra.Operator) (E, error) {
 }
 
 func (n *NaturalSemiRing[S, E]) Zero() E {
-	return n.Arithmetic().Zero()
+	return n.H.Arithmetic().New(0)
 }
 
 type NaturalSemiRingElement[S integer.NaturalSemiRing[S, E], E integer.NaturalSemiRingElement[S, E]] struct {
@@ -40,16 +40,39 @@ type NaturalSemiRingElement[S integer.NaturalSemiRing[S, E], E integer.NaturalSe
 	H HolesNaturalSemiRingElement[S, E]
 }
 
+func (n *NaturalSemiRingElement[S, E]) IsIdentity(under algebra.Operator) (bool, error) {
+	switch under {
+	case integer.Addition:
+		return n.IsOne(), nil
+	case integer.Multiplication:
+		return n.IsZero(), nil
+	default:
+		return false, errs.NewType("operator (%s) is not integer addition or multiplication", under)
+	}
+}
+
 func (n *NaturalSemiRingElement[S, E]) IsZero() bool {
 	return n.Equal(n.H.Structure().Zero())
 }
 
 func (n *NaturalSemiRingElement[S, E]) Mod(modulus integer.NaturalSemiRingElement[S, E]) (E, error) {
-	out, err := n.H.Arithmetic().WithBottomAtZeroAndModulus(modulus.Unwrap()).Mod(n.H.Unwrap(), modulus.Unwrap())
+	out, err := n.H.Arithmetic().Mod(n.H.Unwrap(), modulus.Unwrap())
 	if err != nil {
 		return *new(E), errs.WrapFailed(err, "could not compute mod")
 	}
 	return out, nil
+}
+
+func (n *NaturalSemiRingElement[S, E]) EuclideanDiv(x E) (quotient, remainder E) {
+	q, r, err := n.H.Arithmetic().Div(n.H.Unwrap(), x.Unwrap())
+	if err != nil {
+		panic(errs.WrapFailed(err, "could not compute div from arithmetic"))
+	}
+	return q, r
+}
+
+func (n *NaturalSemiRingElement[S, E]) IsPrime() bool {
+	return n.H.Arithmetic().IsProbablyPrime(n.H.Unwrap())
 }
 
 type N[S integer.N[S, E], E integer.Nat[S, E]] struct {
@@ -80,6 +103,15 @@ type Nat_[S integer.N[S, E], E integer.Nat[S, E]] struct {
 	order.LowerBoundedOrderTheoreticLatticeElement[S, E]
 
 	H HolesNat[S, E]
+}
+
+func (n *Nat_[NS, N]) Decrement() N {
+	arith := n.H.Arithmetic()
+	res, err := arith.Sub(n.H.Unwrap(), n.H.Structure().One())
+	if err != nil {
+		res = n.H.Structure().Bottom()
+	}
+	return res
 }
 
 func (n *Nat_[NS, N]) TrySub(x integer.NatPlus[NS, N]) (N, error) {

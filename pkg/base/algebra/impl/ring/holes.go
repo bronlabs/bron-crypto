@@ -35,6 +35,7 @@ type HolesEuclideanSemiRing[R algebra.EuclideanSemiRing[R, E], E algebra.Euclide
 
 type HolesEuclideanSemiRingElement[R algebra.EuclideanSemiRing[R, E], E algebra.EuclideanSemiRingElement[R, E]] interface {
 	HolesSemiRingElement[R, E]
+	GCD(x E) (E, error)
 }
 
 type HolesFiniteEuclideanSemiRing[R algebra.FiniteEuclideanSemiRing[R, E], E algebra.FiniteEuclideanSemiRingElement[R, E]] interface {

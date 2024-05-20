@@ -52,6 +52,10 @@ func (n *BigInt) Cmp(x *BigInt) algebra.Ordering {
 	return algebra.Ordering(n.V.Cmp(x.V))
 }
 
+func (n *BigInt) IsEven() bool {
+	return n.V.Bit(0) == 0
+}
+
 func (n *BigInt) ModInverse(modulus *BigInt) (*BigInt, error) {
 	if modulus == nil {
 		panic(errs.NewIsNil("modulus"))
@@ -64,7 +68,7 @@ func (n *BigInt) ModInverse(modulus *BigInt) (*BigInt, error) {
 
 func (n *BigInt) Mod(modulus *BigInt) (*BigInt, error) {
 	if modulus == nil {
-		panic(errs.NewIsNil("modulus"))
+		return nil, errs.NewIsNil("modulus")
 	}
 	if modulus.Cmp(One) == algebra.LessThan {
 		return nil, errs.NewValue("modulus < 1")
@@ -109,6 +113,24 @@ func (n *BigInt) Exp(x *BigInt) *BigInt {
 		panic(errs.NewIsNil("argument"))
 	}
 	return New(new(big.Int).Exp(n.V, x.V, nil))
+}
+
+func (n *BigInt) Sqrt() *BigInt {
+	return New(new(big.Int).Sqrt(n.V))
+}
+
+func (n *BigInt) ModSqrt(modulus *BigInt) (*BigInt, error) {
+	if modulus == nil {
+		return nil, (errs.NewIsNil("modulus"))
+	}
+	if modulus.Cmp(One) == algebra.LessThan {
+		return nil, errs.NewValue("modulus < 1")
+	}
+	return New(new(big.Int).ModSqrt(n.V, modulus.V)), nil
+}
+
+func (n *BigInt) IsProbablyPrime() bool {
+	return n.V.ProbablyPrime(8)
 }
 
 func (n *BigInt) GCD(x *BigInt) *BigInt {

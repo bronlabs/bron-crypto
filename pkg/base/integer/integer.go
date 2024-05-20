@@ -17,6 +17,11 @@ type Int[S algebra.Structure, E algebra.Element] interface {
 	Neg() E
 }
 
+// type Z[S algebra.Structure, E algebra.Element] interface {
+// 	IntegerRing[S, E]
+// 	Arithmetic() SignedArithmetic[E]
+// }
+
 // Zn defines methods for S to behave like ring of integers modulo n.
 type Zn[S algebra.Structure, E algebra.Element] interface {
 	algebra.FiniteRing[S, E]

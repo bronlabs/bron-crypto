@@ -7,8 +7,6 @@ type NaturalPreSemiRing[S algebra.Structure, E algebra.Element] interface {
 	algebra.Chain[S, E]
 	New(v uint64) E
 	One() E
-
-	Arithmetic() Arithmetic[E]
 }
 
 type NaturalPreSemiRingElement[S algebra.Structure, E algebra.Element] interface {
@@ -49,13 +47,13 @@ type NaturalSemiRingElement[S algebra.Structure, E algebra.Element] interface {
 
 type NPlus[S algebra.Structure, E algebra.Element] interface {
 	NaturalPreSemiRing[S, E]
-
 	algebra.LowerBoundedOrderTheoreticLattice[S, E]
+
+	// UnsignedPositiveArithmetic() UnsignedPositiveArithmetic[E]
 }
 
 type NatPlus[S algebra.Structure, E algebra.Element] interface {
 	NaturalPreSemiRingElement[S, E]
-
 	algebra.LowerBoundedOrderTheoreticLatticeElement[S, E]
 
 	TrySub(x NatPlus[S, E]) (E, error)
@@ -64,6 +62,8 @@ type NatPlus[S algebra.Structure, E algebra.Element] interface {
 type N[S algebra.Structure, E algebra.Element] interface {
 	NaturalSemiRing[S, E]
 	algebra.LowerBoundedOrderTheoreticLattice[S, E]
+
+	// UnsignedArithmetic() UnsignedArithmetic[E]
 }
 
 type Nat[S algebra.Structure, E algebra.Element] interface {

@@ -9,8 +9,7 @@ import (
 
 type HolesArithmeticMixin[T aimpl.ImplAdapter[T, Impl], Impl any] interface {
 	Cmp(x, y T) algebra.Ordering
-	Zero() T
-	One() T
+	New(v uint64) T
 }
 
 type ArithmeticMixin[T aimpl.ImplAdapter[T, Impl], Impl any] struct {
@@ -18,9 +17,17 @@ type ArithmeticMixin[T aimpl.ImplAdapter[T, Impl], Impl any] struct {
 	H   HolesArithmeticMixin[T, Impl]
 }
 
+func (a *ArithmeticMixin[T, I]) Zero() T {
+	return a.H.New(0)
+}
+
+func (a *ArithmeticMixin[T, I]) One() T {
+	return a.H.New(1)
+}
+
 func (a *ArithmeticMixin[T, I]) anyZeros(xs ...T) bool {
 	for _, x := range xs {
-		if a.H.Cmp(x, a.H.Zero()) == algebra.Equal {
+		if a.H.Cmp(x, a.Zero()) == algebra.Equal {
 			return true
 		}
 	}
@@ -34,13 +41,13 @@ func (a *ArithmeticMixin[T, I]) validateInputs(xs ...T) error {
 	switch a.Ctx.Type() {
 	case UnsignedPositive:
 		for _, x := range xs {
-			if a.H.Cmp(x, a.H.One()) == algebra.LessThan {
+			if a.H.Cmp(x, a.One()) == algebra.LessThan {
 				return errs.NewValue("N+ element can't be less than 1")
 			}
 		}
 	case Unsigned:
 		for _, x := range xs {
-			if a.H.Cmp(x, a.H.Zero()) == algebra.LessThan {
+			if a.H.Cmp(x, a.Zero()) == algebra.LessThan {
 				return errs.NewValue("N element can't be less than 0")
 			}
 		}
@@ -55,7 +62,7 @@ func (a *ArithmeticMixin[T, I]) validateDenominator(xs ...T) error {
 	switch a.Ctx.Type() {
 	case UnsignedPositive, Unsigned:
 		for _, x := range xs {
-			if a.H.Cmp(x, a.H.One()) == algebra.LessThan {
+			if a.H.Cmp(x, a.One()) == algebra.LessThan {
 				return errs.NewValue("denominator < 1")
 			}
 		}
@@ -84,7 +91,7 @@ func (a *ArithmeticMixin[T, I]) ValidateNeg(x T) error {
 	if err := a.validateInputs(x); err != nil {
 		return errs.WrapValidation(err, "invalid argument")
 	}
-	if a.Ctx.Type() == Unsigned && a.H.Cmp(x, a.H.Zero()) != algebra.Equal {
+	if a.Ctx.Type() == Unsigned && a.H.Cmp(x, a.Zero()) != algebra.Equal {
 		return errs.NewValue("can only negate 0 in N")
 	}
 	return nil
@@ -94,8 +101,8 @@ func (a *ArithmeticMixin[T, I]) ValidateInverse(x T) error {
 	return a.validateDenominator(x)
 }
 
-func (a *ArithmeticMixin[T, I]) ValidateAdd(x T) error {
-	return a.validateInputs(x)
+func (a *ArithmeticMixin[T, I]) ValidateAdd(x, y T) error {
+	return a.validateInputs(x, y)
 }
 
 func (a *ArithmeticMixin[T, I]) ValidateSub(x, y T) error {
@@ -107,22 +114,22 @@ func (a *ArithmeticMixin[T, I]) ValidateSub(x, y T) error {
 		if a.H.Cmp(x, y) == algebra.LessThan {
 			return errs.NewValue("x < y")
 		}
-		if a.H.Cmp(x, a.H.One()) == algebra.LessThan {
+		if a.H.Cmp(x, a.One()) == algebra.LessThan {
 			return errs.NewValue("y < 1")
 		}
 	case Unsigned:
 		if a.H.Cmp(x, y) == algebra.LessThan {
 			return errs.NewValue("x < y")
 		}
-		if a.H.Cmp(x, a.H.Zero()) == algebra.LessThan {
+		if a.H.Cmp(x, a.Zero()) == algebra.LessThan {
 			return errs.NewValue("x < 0")
 		}
 	}
 	return nil
 }
 
-func (a *ArithmeticMixin[T, I]) ValidateMul(x T) error {
-	return a.validateInputs(x)
+func (a *ArithmeticMixin[T, I]) ValidateMul(x, y T) error {
+	return a.validateInputs(x, y)
 }
 
 func (a *ArithmeticMixin[T, I]) ValidateDiv(x, y T) error {
@@ -139,12 +146,56 @@ func (a *ArithmeticMixin[T, I]) ValidateExp(x, y T) error {
 	return a.validateInputs(x, y)
 }
 
+func (a *ArithmeticMixin[T, I]) ValidateSimExp(bases []T, exponents []T) error {
+	if len(bases) == 0 {
+		return errs.NewLength("len(bases) == 0")
+	}
+	if len(exponents) != len(bases) {
+		return errs.NewLength("len(exponents) != len(bases)")
+	}
+
+	if err := a.validateInputs(bases...); err != nil {
+		return err
+	}
+	if err := a.validateInputs(exponents...); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *ArithmeticMixin[T, I]) ValidateMultiBaseExp(bases []T, exponent T) error {
+	if len(bases) == 0 {
+		return errs.NewLength("len(bases) == 0")
+	}
+	if err := a.validateInputs(bases...); err != nil {
+		return err
+	}
+	return a.validateInputs(exponent)
+}
+
+func (a *ArithmeticMixin[T, I]) ValidateMultiExponentExp(base T, exponents []T) error {
+	if len(exponents) == 0 {
+		return errs.NewLength("len(exponents) == 0")
+	}
+	if err := a.validateInputs(exponents...); err != nil {
+		return err
+	}
+	return a.validateInputs(base)
+}
+
 func (a *ArithmeticMixin[T, I]) ValidateMod(x, m T) error {
 	if err := a.validateInputs(x); err != nil {
 		return errs.WrapValidation(err, "invalid numerator")
 	}
 	if err := a.validateModulus(x); err != nil {
 		return errs.WrapValidation(err, "invalid modulus")
+	}
+	return nil
+}
+
+func (a *ArithmeticMixin[T, I]) ValidateSqrt(x T) error {
+	if err := a.validateInputs(x); err != nil {
+		return errs.WrapValidation(err, "invalid numerator")
 	}
 	return nil
 }

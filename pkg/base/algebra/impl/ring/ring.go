@@ -5,6 +5,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/group"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/groupoid"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/monoid"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
 type PreSemiRing[R algebra.PreSemiRing[R, E], E algebra.PreSemiRingElement[R, E]] struct {
@@ -25,6 +26,48 @@ type SemiRing[R algebra.SemiRing[R, E], E algebra.SemiRingElement[R, E]] struct 
 type EuclideanSemiRing[R algebra.EuclideanSemiRing[R, E], E algebra.EuclideanSemiRingElement[R, E]] struct {
 	SemiRing[R, E]
 	H HolesEuclideanSemiRing[R, E]
+}
+
+func (r *EuclideanSemiRing[R, E]) GCD(x E, ys ...E) (E, error) {
+	if len(ys) == 0 {
+		return x, nil
+	}
+	var err error
+	res := x
+	for i, y := range ys {
+		res, err = res.GCD(y)
+		if err != nil {
+			return *new(E), errs.WrapFailed(err, "could not compute gcd at y_%d", i)
+		}
+	}
+	return res, nil
+}
+
+func (r *EuclideanSemiRing[R, E]) LCM(x E, ys ...E) (E, error) {
+	if len(ys) == 0 {
+		return x, nil
+	}
+	var err error
+	res := x
+	for i, y := range ys {
+		res, err = res.LCM(y)
+		if err != nil {
+			return *new(E), errs.WrapFailed(err, "could not compute gcd at y_%d", i)
+		}
+	}
+	return res, nil
+}
+
+func (r *EuclideanSemiRing[R, E]) CoPrime(x E, ys ...E) bool {
+	out, err := r.GCD(x, ys...)
+	if err != nil {
+		panic(err)
+	}
+	return out.IsMultiplicativeIdentity()
+}
+
+func (r *EuclideanSemiRing[R, E]) Factorise() []E {
+	panic("implement me")
 }
 
 type FiniteEuclideanSemiRing[R algebra.FiniteEuclideanSemiRing[R, E], E algebra.FiniteEuclideanSemiRingElement[R, E]] struct {

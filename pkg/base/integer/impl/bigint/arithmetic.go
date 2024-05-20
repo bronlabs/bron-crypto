@@ -10,253 +10,253 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer/impl"
 )
 
-var _ integer.Arithmetic[*NatPlus] = (*BigArithmetic[*NatPlus])(nil)
+var _ integer.Arithmetic[*NatPlus] = (*Arithmetic[*NatPlus])(nil)
 
-type BigArithmetic[T aimpl.ImplAdapter[T, *BigInt]] struct {
+type Arithmetic[T aimpl.ImplAdapter[T, *BigInt]] struct {
 	impl.ArithmeticMixin[T, *BigInt]
-	modulus T
 }
 
-func (*BigArithmetic[T]) new(x *BigInt) T {
+func (*Arithmetic[T]) wrap(x *BigInt) T {
 	var t T
 	return t.New(x)
 }
 
-func (*BigArithmetic[T]) Name() string {
-	return Name
+func (a *Arithmetic[T]) New(v uint64) T {
+	return a.wrap(New(new(big.Int).SetUint64(v)))
 }
 
-func (a *BigArithmetic[T]) Equal(x, y T) bool {
-	return a.Cmp(x, y) == algebra.Equal
-}
-
-func (a *BigArithmetic[T]) Cmp(x, y T) algebra.Ordering {
-	return algebra.Ordering(x.Impl().V.Cmp(y.Impl().V))
-}
-
-func (a *BigArithmetic[T]) Zero() T {
-	return a.new(Zero)
-}
-
-func (a *BigArithmetic[T]) One() T {
-	return a.new(One)
-}
-
-func (a *BigArithmetic[T]) Two() T {
-	return a.new(Two)
-}
-
-func (a *BigArithmetic[T]) IsEven(x T) bool {
-	out, _ := a.WithoutBottom().Mod(x, a.Two())
-	return a.Equal(out, a.One())
-}
-
-func (a *BigArithmetic[T]) IsOdd(x T) bool {
-	return !a.IsEven(x)
-}
-
-func (a *BigArithmetic[T]) Abs(x T) T {
-	return a.new(New(new(big.Int).Abs(x.Impl().V)))
-}
-
-func (a *BigArithmetic[T]) neg(x T) T {
-	return a.new(New(new(big.Int).Neg(x.Impl().V)))
-}
-
-func (a *BigArithmetic[T]) Neg(x T) (T, error) {
-	if err := a.ValidateNeg(x); err != nil {
-		return *new(T), errs.WrapValidation(err, "invalid argument")
-	}
-	switch a.Type() {
-	case integer.ForNPlus:
-		panic("should have errored out")
-	case integer.ForN:
-		return a.Zero(), nil
-	case integer.ForZ:
-		return a.neg(x), nil
-	case integer.ForZn:
-		return a.modInverse(x), nil
-	default:
-		return *new(T), errs.NewType("invalid arithmetic context")
-	}
-}
-
-func (a *BigArithmetic[T]) modInverse(x T) T {
-	return a.new(New(new(big.Int).ModInverse(x.Impl().V, a.modulus.Impl().V)))
-}
-
-func (a *BigArithmetic[T]) Inverse(x T) (T, error) {
-	if err := a.ValidateInverse(x); err != nil {
-		return *new(T), errs.WrapValidation(err, "invalid argument")
-	}
-	if a.Equal(x, a.One()) {
-		return a.One(), nil
-	}
-	switch a.Type() {
-	case integer.ForZn:
-		return a.modInverse(x), nil
-	default:
-		return *new(T), errs.NewType("invalid arithmetic context")
-	}
-}
-
-func (a *BigArithmetic[T]) add(x, y T) T {
-	return a.new(New(new(big.Int).Add(x.Impl().V, y.Impl().V)))
-}
-
-func (a *BigArithmetic[T]) Add(x, y T) (T, error) {
-	if err := a.ValidateAdd(x); err != nil {
-		return *new(T), errs.WrapValidation(err, "invalid argument")
-	}
-	xy := a.add(x, y)
-	if a.Type() == integer.ForZn {
-		xy = a.mod(xy, a.modulus)
-	}
-	return xy, nil
-}
-
-func (a *BigArithmetic[T]) sub(x, y T) T {
-	return a.new(New(new(big.Int).Sub(x.Impl().V, y.Impl().V)))
-}
-
-func (a *BigArithmetic[T]) Sub(x, y T) (T, error) {
-	if err := a.ValidateSub(x, y); err != nil {
-		return *new(T), errs.WrapValidation(err, "invalid argument")
-	}
-	xy := a.sub(x, y)
-	if a.Type() == integer.ForZn {
-		xy = a.mod(xy, a.modulus)
-	}
-	return xy, nil
-}
-
-func (a *BigArithmetic[T]) mul(x, y T) T {
-	return a.new(New(new(big.Int).Mul(x.Impl().V, y.Impl().V)))
-}
-
-func (a *BigArithmetic[T]) Mul(x, y T) (T, error) {
-	if err := a.ValidateMul(x); err != nil {
-		return *new(T), errs.WrapValidation(err, "invalid argument")
-	}
-	xy := a.mul(x, y)
-	if a.Type() == integer.ForZn {
-		xy = a.mod(xy, a.modulus)
-	}
-	return xy, nil
-}
-
-func (a *BigArithmetic[T]) div(x, y T) T {
-	return a.new(New(new(big.Int).Div(x.Impl().V, y.Impl().V)))
-}
-
-func (a *BigArithmetic[T]) Div(x, y T) (quot, rem T, err error) {
-	if err := a.ValidateDiv(x, y); err != nil {
-		return *new(T), *new(T), errs.WrapValidation(err, "invalid argument")
-	}
-	xy := a.div(x, y)
-	if a.Type() == integer.ForZn {
-		xy = a.mod(xy, a.modulus)
-	}
-	return xy, nil
-}
-
-func (a *BigArithmetic[T]) exp(x, y T) T {
-	return a.new(New(new(big.Int).Exp(x.Impl().V, y.Impl().V, nil)))
-}
-
-func (a *BigArithmetic[T]) modExp(x, y, m T) T {
-	return a.new(New(new(big.Int).Exp(x.Impl().V, y.Impl().V, m.Impl().V)))
-}
-
-func (a *BigArithmetic[T]) Exp(x, y T) (T, error) {
-	if err := a.ValidateExp(x, y); err != nil {
-		return *new(T), errs.WrapValidation(err, "invalid argument")
-	}
-	if a.Type() == integer.ForZn {
-		return a.modExp(x, y, a.modulus), nil
-	}
-	return a.exp(x, y), nil
-}
-
-func (a *BigArithmetic[T]) mod(x, m T) T {
-	return a.new(New(new(big.Int).Mod(x.Impl().V, m.Impl().V)))
-}
-
-func (a *BigArithmetic[T]) Mod(x, m T) (T, error) {
-	if err := a.ValidateMod(x, m); err != nil {
-		return *new(T), errs.WrapValidation(err, "invalid argument")
-	}
-	xm := a.mod(x, m)
-	if a.Type() == integer.ForZn && !a.Equal(m, a.modulus) {
-		xm = a.mod(xm, a.modulus)
-	}
-	return xm, nil
-}
-
-func (a *BigArithmetic[T]) Uint64(x T) uint64 {
+func (a *Arithmetic[T]) Uint64(x T) uint64 {
 	return x.Impl().Uint64()
 }
 
-func NewSignedArithmetic[T aimpl.ImplAdapter[T, *BigInt]](size int, validate bool) *BigArithmetic[T] {
-	out := &BigArithmetic[T]{
-		ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
-			Ctx: &impl.ArithmeticContext{
-				Size:           size,
-				ValidateInputs: validate,
+func (*Arithmetic[T]) Cmp(x, y T) algebra.Ordering {
+	return x.Impl().Cmp(y.Impl())
+}
+
+func (*Arithmetic[T]) IsEven(x T) bool {
+	return x.Impl().IsEven()
+}
+
+func (*Arithmetic[T]) IsProbablyPrime(x T) bool {
+	return x.Impl().IsProbablyPrime()
+}
+
+func (a *Arithmetic[T]) Neg(x T) (T, error) {
+	if err := a.ValidateNeg(x); err != nil {
+		return *new(T), errs.WrapValidation(err, "invalid argument")
+	}
+	return a.wrap(x.Impl().Neg()), nil
+}
+
+func (a *Arithmetic[T]) Sqrt(x T) (T, error) {
+	if err := a.ValidateSqrt(x); err != nil {
+		return *new(T), errs.WrapValidation(err, "invalid argument")
+	}
+	return a.wrap(x.Impl().Sqrt()), nil
+}
+
+func (a *Arithmetic[T]) Add(x, y T) (T, error) {
+	if err := a.ValidateAdd(x, y); err != nil {
+		return *new(T), errs.WrapValidation(err, "invalid argument")
+	}
+	return a.wrap(x.Impl().Add(y.Impl())), nil
+}
+
+func (a *Arithmetic[T]) Sub(x, y T) (T, error) {
+	if err := a.ValidateSub(x, y); err != nil {
+		return *new(T), errs.WrapValidation(err, "invalid argument")
+	}
+	return a.wrap(x.Impl().Sub(y.Impl())), nil
+}
+
+func (a *Arithmetic[T]) Mul(x, y T) (T, error) {
+	if err := a.ValidateMul(x, y); err != nil {
+		return *new(T), errs.WrapValidation(err, "invalid argument")
+	}
+	return a.wrap(x.Impl().Mul(y.Impl())), nil
+}
+
+func (a *Arithmetic[T]) Div(x, y T) (quot, rem T, err error) {
+	if err := a.ValidateDiv(x, y); err != nil {
+		return *new(T), *new(T), errs.WrapValidation(err, "invalid argument")
+	}
+	q, r, err := x.Impl().Div(y.Impl())
+	if err != nil {
+		return *new(T), *new(T), errs.WrapFailed(err, "could not do euclidean division")
+	}
+	return a.wrap(q), a.wrap(r), nil
+}
+
+func (a *Arithmetic[T]) Mod(x, m T) (T, error) {
+	if err := a.ValidateMod(x, m); err != nil {
+		return *new(T), errs.WrapValidation(err, "invalid argument")
+	}
+	out, err := x.Impl().Mod(m.Impl())
+	if err != nil {
+		return *new(T), errs.WrapFailed(err, "coudl not compute x mod m")
+	}
+	return a.wrap(out), nil
+}
+
+func (a *Arithmetic[T]) Exp(x, y T) (T, error) {
+	if err := a.ValidateExp(x, y); err != nil {
+		return *new(T), errs.WrapValidation(err, "invalid argument")
+	}
+	return a.wrap(x.Impl().Exp(y.Impl())), nil
+}
+
+func (a *Arithmetic[T]) SimExp(bases, exponents []T) (T, error) {
+	if err := a.ValidateSimExp(bases, exponents); err != nil {
+		return *new(T), errs.WrapValidation(err, "invalid argument")
+	}
+	out := bases[0].Impl().Exp(exponents[0].Impl())
+	for i, bi := range bases {
+		out = out.Mul(bi.Impl().Exp(exponents[i].Impl()))
+	}
+	return a.wrap(out), nil
+}
+
+func (a *Arithmetic[T]) MultiBaseExp(bases []T, exponent T) (T, error) {
+	if err := a.ValidateMultiBaseExp(bases, exponent); err != nil {
+		return *new(T), errs.WrapValidation(err, "invalid argument")
+	}
+	out := bases[0].Impl().Exp(exponent.Impl())
+	for _, b := range bases[1:] {
+		out = out.Mul(b.Impl().Exp(exponent.Impl()))
+	}
+	return a.wrap(out), nil
+}
+
+func (a *Arithmetic[T]) MultiExponentExp(b T, exponents []T) (T, error) {
+	if err := a.ValidateMultiExponentExp(b, exponents); err != nil {
+		return *new(T), errs.WrapValidation(err, "invalid argument")
+	}
+	e := exponents[0].Impl()
+	for _, ei := range exponents {
+		e = e.Add(ei.Impl())
+	}
+	return a.wrap(b.Impl().Exp(e)), nil
+}
+
+type SignedArithmetic[T aimpl.ImplAdapter[T, *BigInt]] struct {
+	Arithmetic[T]
+}
+
+func (sa *SignedArithmetic[T]) NewSignedArithmetic(validate bool) *SignedArithmetic[T] {
+	return NewSignedArithmetic[T](-1, validate)
+}
+
+type UnsignedPositiveArithmetic[T aimpl.ImplAdapter[T, *BigInt]] struct {
+	Arithmetic[T]
+}
+
+func (up *UnsignedPositiveArithmetic[T]) NewUnsignedPositiveArithmetic(validate bool) *UnsignedPositiveArithmetic[T] {
+	return NewUnsignedPositiveArithmetic[T](-1, validate)
+}
+
+type UnsignedArithmetic[T aimpl.ImplAdapter[T, *BigInt]] struct {
+	Arithmetic[T]
+}
+
+func (u *UnsignedArithmetic[T]) NewUnsignedArithmetic(validate bool) *UnsignedArithmetic[T] {
+	return NewUnsignedArithmetic[T](-1, validate)
+}
+
+type ModularArithmetic[T aimpl.ImplAdapter[T, *BigInt]] struct {
+	Arithmetic[T]
+	modulus T
+}
+
+// func (ma *ModularArithmetic[T]) NewModularArithmetic(modulus T, validate bool) *ModularArithmetic[T] {
+// 	return NewUnsignedArithmetic[T](-1, validate)
+// }
+
+// func (ma *ModularArithmetic[T]) NewPrimesPowerModularArithmetic(primes []T, powers []uint, validate bool) *ModularArithmetic[T] {
+// 	return NewUnsignedArithmetic[T](-1, validate)
+// }
+
+func NewSignedArithmetic[T aimpl.ImplAdapter[T, *BigInt]](size int, validate bool) *SignedArithmetic[T] {
+	out := &SignedArithmetic[T]{
+		Arithmetic: Arithmetic[T]{
+			ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
+				Ctx: &impl.ArithmeticContext{
+					Size:           size,
+					ValidateInputs: validate,
+				},
 			},
 		},
 	}
-	out.ArithmeticMixin.H = out
+	out.Arithmetic.ArithmeticMixin.H = out
 	return out
 }
 
-func NewUnsignedArithmetic[T aimpl.ImplAdapter[T, *BigInt]](size int, validate bool) *BigArithmetic[T] {
-	out := &BigArithmetic[T]{
-		ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
-			Ctx: &impl.ArithmeticContext{
-				BottomAtZero:   true,
-				Size:           size,
-				ValidateInputs: validate,
+func NewUnsignedPositiveArithmetic[T aimpl.ImplAdapter[T, *BigInt]](size int, validate bool) *UnsignedPositiveArithmetic[T] {
+	out := &UnsignedPositiveArithmetic[T]{
+		Arithmetic: Arithmetic[T]{
+			ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
+				Ctx: &impl.ArithmeticContext{
+					BottomAtOne:    true,
+					Size:           size,
+					ValidateInputs: validate,
+				},
 			},
 		},
 	}
-	out.ArithmeticMixin.H = out
+	out.Arithmetic.ArithmeticMixin.H = out
 	return out
 }
 
-func NewModularArithmetic[T aimpl.ImplAdapter[T, *BigInt]](modulus T, size int, validate bool) *BigArithmetic[T] {
+func NewUnsignedArithmetic[T aimpl.ImplAdapter[T, *BigInt]](size int, validate bool) *UnsignedArithmetic[T] {
+	out := &UnsignedArithmetic[T]{
+		Arithmetic: Arithmetic[T]{
+			ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
+				Ctx: &impl.ArithmeticContext{
+					BottomAtZero:   true,
+					Size:           size,
+					ValidateInputs: validate,
+				},
+			},
+		},
+	}
+	out.Arithmetic.ArithmeticMixin.H = out
+	return out
+}
+
+func NewModularArithmetic[T aimpl.ImplAdapter[T, *BigInt]](modulus T, size int, validate bool) (*ModularArithmetic[T], error) {
 	m := modulus.Impl()
 	if m == nil {
-		panic(errs.NewIsNil("modulus"))
+		return nil, (errs.NewIsNil("modulus"))
 	}
 	if m.Equal(Zero) {
-		panic(errs.NewValue("modulus is zero"))
+		return nil, (errs.NewValue("modulus is zero"))
 	}
-	out := &BigArithmetic[T]{
-		ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
-			Ctx: &impl.ArithmeticContext{
-				BottomAtZero:   true,
-				Modulus:        m.Nat(),
-				Size:           size,
-				ValidateInputs: validate,
+	out := &ModularArithmetic[T]{
+		Arithmetic: Arithmetic[T]{
+			ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
+				Ctx: &impl.ArithmeticContext{
+					BottomAtZero:   true,
+					Modulus:        m.Nat(),
+					Size:           size,
+					ValidateInputs: validate,
+				},
 			},
 		},
 		modulus: modulus,
 	}
 	out.ArithmeticMixin.H = out
-	return out
+	return out, nil
 }
 
-func NewNPlusArithmetic[T aimpl.ImplAdapter[T, *BigInt]](size int, validate bool) *BigArithmetic[T] {
-	out := &BigArithmetic[T]{
-		ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
-			Ctx: &impl.ArithmeticContext{
-				BottomAtOne:    true,
-				Size:           size,
-				ValidateInputs: validate,
-			},
-		},
-	}
-	out.ArithmeticMixin.H = out
-	return out
-}
+// func NewNPlusArithmetic[T aimpl.ImplAdapter[T, *BigInt]](size int, validate bool) *BigArithmetic[T] {
+// 	out := &BigArithmetic[T]{
+// 		ArithmeticMixin: impl.ArithmeticMixin[T, *BigInt]{
+// 			Ctx: &impl.ArithmeticContext{
+// 				BottomAtOne:    true,
+// 				Size:           size,
+// 				ValidateInputs: validate,
+// 			},
+// 		},
+// 	}
+// 	out.ArithmeticMixin.H = out
+// 	return out
+// }

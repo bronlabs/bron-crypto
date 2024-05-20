@@ -14,11 +14,11 @@ type Symbol[S integer.Z[S, E], E integer.Int[S, E]] interface {
 	Value() E
 }
 
-func GCD[S integer.Z[S, E], E integer.Int[S, E]](x E, ys ...E) E {
+func GCD[S integer.NaturalSemiRing[S, E], E integer.NaturalSemiRingElement[S, E]](x E, ys ...E) E {
 	panic("implement me")
 }
 
-func LCM[S integer.Z[S, E], E integer.Int[S, E]](gcd func(x E, y E) E, x E, ys ...E) E {
+func LCM[S integer.NaturalSemiRing[S, E], E integer.NaturalSemiRingElement[S, E]](gcd func(x E, y E) E, x E, ys ...E) E {
 	f := func(x, y E) E {
 		q, r, err := x.Mul(y).EuclideanDiv(gcd(x, y))
 		if !r.IsZero() {

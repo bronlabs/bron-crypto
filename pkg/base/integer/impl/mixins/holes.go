@@ -2,7 +2,8 @@ package mixins
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/domain"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/group"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/groupoid"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/operator"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/order"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/ring"
@@ -12,6 +13,8 @@ import (
 type HolesNaturalPreSemiRing[NS integer.NaturalPreSemiRing[NS, N], N integer.NaturalPreSemiRingElement[NS, N]] interface {
 	ring.HolesPreSemiRing[NS, N]
 	order.HolesChain[NS, N]
+
+	Arithmetic() integer.Arithmetic[N]
 }
 
 type HolesNaturalPreSemiRingElement[NS integer.NaturalPreSemiRing[NS, N], N integer.NaturalPreSemiRingElement[NS, N]] interface {
@@ -19,6 +22,7 @@ type HolesNaturalPreSemiRingElement[NS integer.NaturalPreSemiRing[NS, N], N inte
 	order.HolesChainElement[NS, N]
 
 	Arithmetic() integer.Arithmetic[N]
+	Uint64() uint64
 }
 
 type HolesNPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] interface {
@@ -55,21 +59,18 @@ type HolesNat[NS integer.N[NS, N], N integer.Nat[NS, N]] interface {
 
 type HolesZ[NS integer.Z[NS, N], N integer.Int[NS, N]] interface {
 	HolesNaturalSemiRing[NS, N]
-	domain.HolesEuclideanDomain[NS, N]
+	ring.HolesEuclideanDomain[NS, N]
 }
 
 type HolesInt[NS integer.Z[NS, N], N integer.Int[NS, N]] interface {
 	HolesNaturalSemiRingElement[NS, N]
-	domain.HolesEuclideanDomainElement[NS, N]
+	ring.HolesEuclideanDomainElement[NS, N]
 }
 
 func NewNaturalPreSemiRing[NS integer.NaturalPreSemiRing[NS, N], N integer.NaturalPreSemiRingElement[NS, N]](arithmetic integer.Arithmetic[N], H HolesNaturalPreSemiRing[NS, N]) NaturalPreSemiRing[NS, N] {
 	addition := integer.NewAdditionOperator(arithmetic)
 	multiplication := integer.NewMultiplicationOperator(arithmetic)
-	b, err := operator.NewOperatorSuiteBuilder[N]().WithAddition(addition).WithMultiplication(multiplication).Build()
-	if err != nil {
-		panic(err)
-	}
+	b := operator.NewOperatorSuiteBuilder[N]().WithPrimary(addition).WithSecondary(multiplication).Build()
 	return NaturalPreSemiRing[NS, N]{
 		PreSemiRing:   ring.NewPreSemiRing(H),
 		Chain:         order.NewChain(H),
@@ -118,7 +119,7 @@ func NewNaturalSemiRingElement[NS integer.NaturalSemiRing[NS, N], N integer.Natu
 	}
 }
 
-func NewN[S integer.N[S, E], E integer.Nat[S, E]](arithmetic integer.Arithmetic[E], H HolesN[S, E]) N[S, E] {
+func NewN_[S integer.N[S, E], E integer.Nat[S, E]](arithmetic integer.Arithmetic[E], H HolesN[S, E]) N[S, E] {
 	return N[S, E]{
 		NaturalSemiRing: NewNaturalSemiRing(arithmetic, H),
 		NPlus:           NewNPlus(arithmetic, H),
@@ -134,18 +135,22 @@ func NewNat_[S integer.N[S, E], E integer.Nat[S, E]](H HolesNat[S, E]) Nat_[S, E
 	}
 }
 
-func NewZ[S integer.Z[S, E], E integer.Int[S, E]](arithmetic integer.Arithmetic[E], H HolesZ[S, E]) Z_[S, E] {
+func NewZ_[S integer.Z[S, E], E integer.Int[S, E]](arithmetic integer.Arithmetic[E], H HolesZ[S, E]) Z_[S, E] {
 	return Z_[S, E]{
-		NaturalSemiRing: NewNaturalSemiRing(arithmetic, H),
-		EuclideanDomain: domain.NewEuclideanDomain(H),
-		H:               H,
+		Groupoid:         groupoid.NewGroupoid(H),
+		AdditiveGroupoid: groupoid.NewAdditiveGroupoid(H),
+		AdditiveGroup:    group.NewAdditiveGroup(H),
+		NaturalSemiRing:  NewNaturalSemiRing(arithmetic, H),
+		H:                H,
 	}
 }
 
-func NewInt[S integer.Z[S, E], E integer.Int[S, E]](H HolesInt[S, E]) Int_[S, E] {
+func NewInt_[S integer.Z[S, E], E integer.Int[S, E]](H HolesInt[S, E]) Int_[S, E] {
 	return Int_[S, E]{
-		NaturalSemiRingElement: NewNaturalSemiRingElement(H),
-		EuclideanDomainElement: domain.NewEuclideanDomainElement(H),
-		H:                      H,
+		NaturalSemiRingElement:  NewNaturalSemiRingElement(H),
+		GroupoidElement:         groupoid.NewGroupoidElement(H),
+		AdditiveGroupoidElement: groupoid.NewAdditiveGroupoidElement(H),
+		AdditiveGroupElement:    group.NewAdditiveGroupElement(H),
+		H:                       H,
 	}
 }

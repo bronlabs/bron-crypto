@@ -2,6 +2,7 @@ package bigint
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	aimpl "github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl"
@@ -10,6 +11,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer/impl/mixins"
 	"github.com/cronokirby/saferith"
 )
+
+var nName = fmt.Sprintf("%s_N", Name)
 
 var _ integer.Nat[*N, *Nat] = (*Nat)(nil)
 var _ integer.NaturalSemiRingElement[*N, *Nat] = (*Nat)(nil)
@@ -32,6 +35,10 @@ func NewNat(v uint64) *Nat {
 
 func (n *Nat) Arithmetic() integer.Arithmetic[*Nat] {
 	return NewUnsignedArithmetic[*Nat](-1, false)
+}
+
+func (n *Nat) GCD(x *Nat) (*Nat, error) {
+	return n.New(n.V.GCD(x.V)), nil
 }
 
 func (*Nat) Structure() *N {
@@ -77,12 +84,10 @@ func (n *Nat) SetNat(v *saferith.Nat) *Nat {
 func (n *Nat) MarshalJSON() ([]byte, error) {
 	type temp struct {
 		Name   string
-		Type   integer.ArithmeticType
 		Number *BigInt
 	}
 	return json.Marshal(&temp{
-		Name:   n.Arithmetic().Name(),
-		Type:   integer.ForN,
+		Name:   Name,
 		Number: n.V,
 	})
 }
@@ -90,14 +95,16 @@ func (n *Nat) MarshalJSON() ([]byte, error) {
 func (n *Nat) UnmarshalJSON(data []byte) error {
 	var temp struct {
 		Name   string
-		Type   integer.ArithmeticType
 		Number *BigInt
 	}
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal json")
 	}
-	if string(temp.Type) != string(integer.ForNPlus) {
-		return errs.NewType("type (%s) must be (%s)", temp.Type, integer.ForN)
+	if temp.Name != Name {
+		return errs.NewType("name (%s) must be (%s)", temp.Name, nName)
+	}
+	if temp.Number.Cmp(Zero) == algebra.LessThan {
+		return errs.NewValue("number is not a nat")
 	}
 	n.V = temp.Number
 	n.Nat_ = mixins.NewNat_(n)
@@ -112,7 +119,11 @@ type N struct {
 }
 
 func (np *N) Name() string {
-	return string(integer.ForN)
+	return nName
+}
+
+func (np *N) Arithmetic() integer.Arithmetic[*Nat] {
+	return NewUnsignedArithmetic[*Nat](-1, false)
 }
 
 func (np *N) Unwrap() *N {

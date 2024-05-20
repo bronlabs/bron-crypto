@@ -5,6 +5,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/group"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/groupoid"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/monoid"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
 type PreSemiRingElement[R algebra.PreSemiRing[R, E], E algebra.PreSemiRingElement[R, E]] struct {
@@ -30,6 +31,26 @@ type SemiRingElement[R algebra.SemiRing[R, E], E algebra.SemiRingElement[R, E]] 
 type EuclideanSemiRingElement[R algebra.EuclideanSemiRing[R, E], E algebra.EuclideanSemiRingElement[R, E]] struct {
 	SemiRingElement[R, E]
 	H HolesEuclideanSemiRingElement[R, E]
+}
+
+func (e *EuclideanSemiRingElement[R, E]) LCM(x E) (E, error) {
+	exGCD, err := e.H.GCD(x)
+	if err != nil {
+		return *new(E), errs.WrapFailed(err, "could not compute gcd")
+	}
+	q, r := e.H.Mul(x).EuclideanDiv(exGCD)
+	if !r.IsAdditiveIdentity() {
+		return *new(E), errs.NewFailed("gcd should divide multiples.")
+	}
+	return q, nil
+}
+
+func (e *EuclideanSemiRingElement[R, E]) CoPrime(x E) bool {
+	exGCD, err := e.H.GCD(x)
+	if err != nil {
+		panic(err)
+	}
+	return exGCD.IsMultiplicativeIdentity()
 }
 
 type FiniteEuclideanSemiRingElement[R algebra.FiniteEuclideanSemiRing[R, E], E algebra.FiniteEuclideanSemiRingElement[R, E]] struct {

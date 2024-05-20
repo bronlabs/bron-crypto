@@ -18,12 +18,8 @@ type NaturalPreSemiRing[NS integer.NaturalPreSemiRing[NS, N], N integer.NaturalP
 	H HolesNaturalPreSemiRing[NS, N]
 }
 
-func (n *NaturalPreSemiRing[NS, N]) Arithmetic() integer.Arithmetic[N] {
-	return n.H.Element().Arithmetic()
-}
-
 func (n *NaturalPreSemiRing[NS, N]) One() N {
-	return n.H.Element().Arithmetic().One().Unwrap()
+	return n.H.Arithmetic().New(1)
 }
 
 func (np *NaturalPreSemiRing[NS, N]) Addition() algebra.Addition[N] {
@@ -58,15 +54,15 @@ type NaturalPreSemiRingElement[NS integer.NaturalPreSemiRing[NS, N], N integer.N
 }
 
 func (n *NaturalPreSemiRingElement[NS, N]) Equal(x N) bool {
-	return n.H.Arithmetic().Equal(n.H.Unwrap(), x)
+	return n.H.Arithmetic().Cmp(n.H.Unwrap(), x) == algebra.Equal
 }
 
 func (n *NaturalPreSemiRingElement[NS, N]) HashCode() uint64 {
-	return n.Uint64()
+	return n.H.Uint64()
 }
 
 func (n *NaturalPreSemiRingElement[NS, N]) Mod(modulus integer.NaturalPreSemiRingElement[NS, N]) (N, error) {
-	out, err := n.H.Structure().Arithmetic().Mod(n.H.Unwrap(), modulus.Unwrap())
+	out, err := n.H.Arithmetic().Mod(n.H.Unwrap(), modulus.Unwrap())
 	if err != nil {
 		return *new(N), errs.WrapFailed(err, "could not compute mod")
 	}
@@ -74,7 +70,7 @@ func (n *NaturalPreSemiRingElement[NS, N]) Mod(modulus integer.NaturalPreSemiRin
 }
 
 func (n *NaturalPreSemiRingElement[NS, N]) Cmp(x algebra.OrderTheoreticLatticeElement[NS, N]) algebra.Ordering {
-	return n.H.Structure().Arithmetic().Cmp(n.H.Unwrap(), x.Unwrap())
+	return n.H.Arithmetic().Cmp(n.H.Unwrap(), x.Unwrap())
 }
 
 func (n *NaturalPreSemiRingElement[NS, N]) Add(x algebra.AdditiveGroupoidElement[NS, N]) N {
@@ -98,11 +94,11 @@ func (n *NaturalPreSemiRingElement[NS, N]) IsOne() bool {
 }
 
 func (n *NaturalPreSemiRingElement[NS, N]) IsEven() bool {
-	return n.H.Structure().Arithmetic().IsEven(n.H.Unwrap())
+	return n.H.Arithmetic().IsEven(n.H.Unwrap())
 }
 
 func (n *NaturalPreSemiRingElement[NS, N]) IsOdd() bool {
-	return n.H.Structure().Arithmetic().IsOdd(n.H.Unwrap())
+	return !n.IsEven()
 }
 
 func (n *NaturalPreSemiRingElement[NS, N]) IsPositive() bool {
@@ -112,22 +108,6 @@ func (n *NaturalPreSemiRingElement[NS, N]) IsPositive() bool {
 
 func (n *NaturalPreSemiRingElement[NS, N]) Increment() N {
 	return n.H.Add(n.H.Structure().One())
-}
-
-func (n *NaturalPreSemiRingElement[NS, N]) Decrement() N {
-	arith := n.H.Arithmetic()
-	res, err := arith.Sub(n.H.Unwrap(), n.H.Structure().One())
-	if err != nil {
-		switch n.H.Arithmetic().Type() {
-		case integer.ForNPlus:
-			res = n.H.Arithmetic().One()
-		case integer.ForN:
-			res = n.H.Arithmetic().Zero()
-		default:
-			panic(errs.WrapFailed(err, "could not sub for arithmetic type %s", n.H.Arithmetic().Type()))
-		}
-	}
-	return res
 }
 
 func (n *NaturalPreSemiRingElement[NS, N]) Uint64() uint64 {
@@ -181,6 +161,15 @@ type NatPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
 	order.LowerBoundedOrderTheoreticLatticeElement[NS, N]
 
 	H HolesNatPlus[NS, N]
+}
+
+func (n *NatPlus[NS, N]) Decrement() N {
+	arith := n.H.Arithmetic()
+	res, err := arith.Sub(n.H.Unwrap(), n.H.Structure().One())
+	if err != nil {
+		res = n.H.Structure().Bottom()
+	}
+	return res
 }
 
 func (n *NatPlus[NS, N]) TrySub(x integer.NatPlus[NS, N]) (N, error) {

@@ -2,12 +2,15 @@ package bigint
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer/impl/mixins"
 	"github.com/cronokirby/saferith"
 )
+
+var zName = fmt.Sprintf("%s_Z", Name)
 
 type Int struct {
 	mixins.Int_[*Z, *Int]
@@ -32,6 +35,10 @@ func (n *Int) Unwrap() *Int {
 
 func (n *Int) Impl() *BigInt {
 	return n.V
+}
+
+func (n *Int) GCD(x *Int) (*Int, error) {
+	return n.New(n.V.GCD(x.V)), nil
 }
 
 func (n *Int) AnnouncedLen() int {
@@ -61,12 +68,10 @@ func (n *Int) Arithmetic() integer.Arithmetic[*Int] {
 func (n *Int) MarshalJSON() ([]byte, error) {
 	type temp struct {
 		Name   string
-		Type   integer.ArithmeticType
 		Number *BigInt
 	}
 	return json.Marshal(&temp{
-		Name:   n.Arithmetic().Name(),
-		Type:   integer.ForZ,
+		Name:   Name,
 		Number: n.V,
 	})
 }
@@ -74,14 +79,13 @@ func (n *Int) MarshalJSON() ([]byte, error) {
 func (n *Int) UnmarshalJSON(data []byte) error {
 	var temp struct {
 		Name   string
-		Type   integer.ArithmeticType
 		Number *BigInt
 	}
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal json")
 	}
-	if string(temp.Type) != string(integer.ForZ) {
-		return errs.NewType("type (%s) must be (%s)", temp.Type, integer.ForZ)
+	if temp.Name != Name {
+		return errs.NewType("name (%s) must be (%s)", temp.Name, nName)
 	}
 	n.V = temp.Number
 	n.Int_ = mixins.NewInt_(n)
@@ -90,6 +94,15 @@ func (n *Int) UnmarshalJSON(data []byte) error {
 
 type Z struct {
 	mixins.Z_[*Z, *Int]
+}
+
+func (z *Z) Cardinality() *saferith.Modulus {
+	// TODO: represent inf
+	return nil
+}
+
+func (*Z) Name() string {
+	return zName
 }
 
 func (z *Z) Element() *Int {
