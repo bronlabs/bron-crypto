@@ -3,25 +3,34 @@ package bigint
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 
+	aimpl "github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
-	"github.com/copperexchange/krypton-primitives/pkg/base/integer/impl/mixins"
+	bg "github.com/copperexchange/krypton-primitives/pkg/base/integer/impl/bigint"
+	"github.com/copperexchange/krypton-primitives/pkg/base/integer/ints/impl"
 	"github.com/cronokirby/saferith"
 )
 
-var zName = fmt.Sprintf("%s_Z", Name)
+var Name = fmt.Sprintf("%s_Z", bg.Name)
+
+var _ integer.Int[*Z, *Int] = (*Int)(nil)
+
+var _ impl.HolesInt[*Z, *Int] = (*Int)(nil)
+var _ aimpl.ImplAdapter[*Int, *bg.BigInt] = (*Int)(nil)
+var _ integer.Number[*Int] = (*Int)(nil)
 
 type Int struct {
-	mixins.Int_[*Z, *Int]
-	V *BigInt
+	impl.Int_[*Z, *Int]
+	V *bg.BigInt
 }
 
-func (n *Int) New(x *BigInt) *Int {
+func (n *Int) New(x *bg.BigInt) *Int {
 	out := &Int{
 		V: x,
 	}
-	out.Int_ = mixins.NewInt_(out)
+	out.Int_ = impl.NewInt_(out)
 	return out
 }
 
@@ -33,7 +42,7 @@ func (n *Int) Unwrap() *Int {
 	return n
 }
 
-func (n *Int) Impl() *BigInt {
+func (n *Int) Impl() *bg.BigInt {
 	return n.V
 }
 
@@ -58,17 +67,17 @@ func (n *Int) Nat() *saferith.Nat {
 }
 
 func (n *Int) SetNat(v *saferith.Nat) *Int {
-	return n.New(new(BigInt).SetNat(v))
+	return n.New(new(bg.BigInt).SetNat(v))
 }
 
 func (n *Int) Arithmetic() integer.Arithmetic[*Int] {
-	return NewSignedArithmetic[*Int](-1, false)
+	return bg.NewSignedArithmetic[*Int](-1, false)
 }
 
 func (n *Int) MarshalJSON() ([]byte, error) {
 	type temp struct {
 		Name   string
-		Number *BigInt
+		Number *bg.BigInt
 	}
 	return json.Marshal(&temp{
 		Name:   Name,
@@ -79,40 +88,19 @@ func (n *Int) MarshalJSON() ([]byte, error) {
 func (n *Int) UnmarshalJSON(data []byte) error {
 	var temp struct {
 		Name   string
-		Number *BigInt
+		Number *bg.BigInt
 	}
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal json")
 	}
 	if temp.Name != Name {
-		return errs.NewType("name (%s) must be (%s)", temp.Name, nName)
+		return errs.NewType("name (%s) must be (%s)", temp.Name, Name)
 	}
 	n.V = temp.Number
-	n.Int_ = mixins.NewInt_(n)
+	n.Int_ = impl.NewInt_(n)
 	return nil
 }
 
-type Z struct {
-	mixins.Z_[*Z, *Int]
-}
-
-func (z *Z) Cardinality() *saferith.Modulus {
-	// TODO: represent inf
-	return nil
-}
-
-func (*Z) Name() string {
-	return zName
-}
-
-func (z *Z) Element() *Int {
-	return z.One()
-}
-
-func (z *Z) New(v uint64) *Int {
-	return nil
-}
-
-func (z *Z) Unwrap() *Z {
-	return z
+func NewInt(v uint64) integer.Int[*Z, *Int] {
+	return new(Int).New(bg.New(new(big.Int).SetUint64(v)))
 }

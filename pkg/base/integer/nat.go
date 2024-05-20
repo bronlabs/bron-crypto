@@ -7,6 +7,8 @@ type NaturalPreSemiRing[S algebra.Structure, E algebra.Element] interface {
 	algebra.Chain[S, E]
 	New(v uint64) E
 	One() E
+
+	Arithmetic() Arithmetic[E]
 }
 
 type NaturalPreSemiRingElement[S algebra.Structure, E algebra.Element] interface {

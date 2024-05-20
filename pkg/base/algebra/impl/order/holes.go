@@ -9,7 +9,7 @@ type HolesOrderTheoreticLattice[L algebra.OrderTheoreticLattice[L, E], E algebra
 type HolesOrderTheoreticLatticeElement[L algebra.OrderTheoreticLattice[L, E], E algebra.OrderTheoreticLatticeElement[L, E]] interface {
 	Structure() L
 	Unwrap() E
-	Cmp(rhs algebra.OrderTheoreticLatticeElement[L, E]) algebra.Ordering
+	Cmp(rhs E) algebra.Ordering
 	Equal(x E) bool
 }
 
@@ -106,7 +106,6 @@ func NewLowerBoundedOrderTheoreticLatticeElement[L algebra.LowerBoundedOrderTheo
 
 func NewBoundedOrderTheoreticLattice[L algebra.BoundedOrderTheoreticLattice[L, E], E algebra.BoundedOrderTheoreticLatticeElement[L, E]](H HolesBoundedOrderTheoreticLattice[L, E]) BoundedOrderTheoreticLattice[L, E] {
 	return BoundedOrderTheoreticLattice[L, E]{
-		OrderTheoreticLattice:             NewOrderTheoreticLattice(H),
 		UpperBoundedOrderTheoreticLattice: NewUpperBoundedOrderTheoreticLattice(H),
 		LowerBoundedOrderTheoreticLattice: NewLowerBoundedOrderTheoreticLattice(H),
 		H:                                 H,
@@ -115,7 +114,6 @@ func NewBoundedOrderTheoreticLattice[L algebra.BoundedOrderTheoreticLattice[L, E
 
 func NewBoundedOrderTheoreticLatticeElement[L algebra.BoundedOrderTheoreticLattice[L, E], E algebra.BoundedOrderTheoreticLatticeElement[L, E]](H HolesBoundedOrderTheoreticLatticeElement[L, E]) BoundedOrderTheoreticLatticeElement[L, E] {
 	return BoundedOrderTheoreticLatticeElement[L, E]{
-		OrderTheoreticLatticeElement:             NewOrderTheoreticLatticeElement(H),
 		UpperBoundedOrderTheoreticLatticeElement: NewUpperBoundedOrderTheoreticLatticeElement(H),
 		LowerBoundedOrderTheoreticLatticeElement: NewLowerBoundedOrderTheoreticLatticeElement(H),
 		H:                                        H,

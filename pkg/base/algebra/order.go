@@ -9,6 +9,15 @@ const (
 	GreaterThan  Ordering = 1
 )
 
+type PartiallyComparable[T any] interface {
+	// Cmp returns one of:
+	//  - Incomparable.
+	//  - LessThan, if this element is less than rhs.
+	//  - Equal, if this element is equal to rhs.
+	//  - GreaterThan, if this element is greater than rhs.
+	Cmp(rhs T) Ordering
+}
+
 // OrderTheoreticLattice defines methods needed for a structured set to be a lattice.
 // A lattice is a partially ordered set where every pair has a least upper bound (join) and a greatest lower bound (meet).
 type OrderTheoreticLattice[L Structure, E Element] interface {
@@ -28,12 +37,8 @@ type OrderTheoreticLattice[L Structure, E Element] interface {
 type OrderTheoreticLatticeElement[L Structure, E Element] interface {
 	// Lattic element is an element of a structured set.
 	StructuredSetElement[L, E]
-	// Cmp returns one of:
-	//  - Incomparable.
-	//  - LessThan, if this element is less than rhs.
-	//  - Equal, if this element is equal to rhs.
-	//  - GreaterThan, if this element is greater than rhs.
-	Cmp(rhs OrderTheoreticLatticeElement[L, E]) Ordering
+	PartiallyComparable[E]
+	// PartiallyComparable[OrderTheoreticLatticeElement[L, E]]
 	// Join returns the least upper bound of this element and rhs.
 	Join(rhs OrderTheoreticLatticeElement[L, E]) E
 	// Meet returns the greatest lower bound of this element and rhs.
@@ -121,4 +126,56 @@ type BoundedOrderTheoreticLatticeElement[L Structure, E Element] interface {
 	LowerBoundedOrderTheoreticLatticeElement[L, E]
 
 	BoundedLattice() BoundedOrderTheoreticLattice[L, E]
+}
+
+func IsGreaterThan[T PartiallyComparable[T]](x, y T) bool {
+	res := x.Cmp(y)
+	if res == Incomparable {
+		panic("incomparable arguments")
+	}
+	return x.Cmp(y) == GreaterThan
+}
+
+func IsLessThan[T PartiallyComparable[T]](x, y T) bool {
+	res := x.Cmp(y)
+	if res == Incomparable {
+		panic("incomparable arguments")
+	}
+	return res == LessThan
+}
+
+func IsEqual[T PartiallyComparable[T]](x, y T) bool {
+	res := x.Cmp(y)
+	if res == Incomparable {
+		panic("incomparable arguments")
+	}
+	return res == Equal
+}
+
+type ClosedInterval[S Chain[S, E], E ChainElement[S, E]] struct {
+	Left  E
+	Right E
+}
+
+func (i *ClosedInterval[S, E]) IsValid() bool {
+	res := i.Right.Cmp(i.Left)
+	return res == LessThan || res == Equal
+}
+
+func (i *ClosedInterval[S, E]) Equal(j ClosedInterval[S, E]) bool {
+	return (i.IsValid()) &&
+		(j.IsValid()) &&
+		(i.Left.Cmp(j.Left) == Equal) &&
+		(i.Right.Cmp(j.Right) == Equal)
+}
+
+func (i *ClosedInterval[S, E]) Contains(j *ClosedInterval[S, E]) bool {
+	if !i.IsValid() || j.IsValid() {
+		panic("invalid interval")
+	}
+	return i.IsValid() && j.IsValid() && !IsLessThan(i.Left, j.Left) && !IsGreaterThan(i.Right, j.Right)
+}
+
+func (i *ClosedInterval[S, E]) ContainsElement(x E) bool {
+	return i.Contains(&ClosedInterval[S, E]{x, x})
 }

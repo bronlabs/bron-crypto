@@ -102,10 +102,13 @@ func (l *LowerBoundedOrderTheoreticLattice[L, E]) LowerBoundedLatticeElement() a
 }
 
 type BoundedOrderTheoreticLattice[L algebra.BoundedOrderTheoreticLattice[L, E], E algebra.BoundedOrderTheoreticLatticeElement[L, E]] struct {
-	OrderTheoreticLattice[L, E]
 	UpperBoundedOrderTheoreticLattice[L, E]
 	LowerBoundedOrderTheoreticLattice[L, E]
 	H HolesBoundedOrderTheoreticLattice[L, E]
+}
+
+func (l *BoundedOrderTheoreticLattice[L, E]) LatticeElement() algebra.OrderTheoreticLatticeElement[L, E] {
+	return l.BoundedLatticeElement()
 }
 
 func (l *BoundedOrderTheoreticLattice[L, E]) BoundedLatticeElement() algebra.BoundedOrderTheoreticLatticeElement[L, E] {

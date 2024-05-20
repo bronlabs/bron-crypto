@@ -1,4 +1,4 @@
-package mixins
+package impl
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
@@ -6,11 +6,12 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/ring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
+	npimpl "github.com/copperexchange/krypton-primitives/pkg/base/integer/natplus/impl"
 	"github.com/cronokirby/saferith"
 )
 
 type NaturalSemiRing[S integer.NaturalSemiRing[S, E], E integer.NaturalSemiRingElement[S, E]] struct {
-	NaturalPreSemiRing[S, E]
+	npimpl.NaturalPreSemiRing[S, E]
 	ring.PreSemiRing[S, E]
 	ring.EuclideanSemiRing[S, E]
 
@@ -33,7 +34,7 @@ func (n *NaturalSemiRing[S, E]) Zero() E {
 }
 
 type NaturalSemiRingElement[S integer.NaturalSemiRing[S, E], E integer.NaturalSemiRingElement[S, E]] struct {
-	NaturalPreSemiRingElement[S, E]
+	npimpl.NaturalPreSemiRingElement[S, E]
 	ring.PreSemiRingElement[S, E]
 	ring.EuclideanSemiRingElement[S, E]
 
@@ -64,7 +65,7 @@ func (n *NaturalSemiRingElement[S, E]) Mod(modulus integer.NaturalSemiRingElemen
 }
 
 func (n *NaturalSemiRingElement[S, E]) EuclideanDiv(x E) (quotient, remainder E) {
-	q, r, err := n.H.Arithmetic().Div(n.H.Unwrap(), x.Unwrap())
+	q, r, err := n.H.Arithmetic().Div(n.H.Unwrap(), x.Unwrap(), -1)
 	if err != nil {
 		panic(errs.WrapFailed(err, "could not compute div from arithmetic"))
 	}
@@ -76,8 +77,8 @@ func (n *NaturalSemiRingElement[S, E]) IsPrime() bool {
 }
 
 type N[S integer.N[S, E], E integer.Nat[S, E]] struct {
-	NaturalPreSemiRing[S, E]
-	NPlus[S, E]
+	npimpl.NaturalPreSemiRing[S, E]
+	npimpl.NPlus[S, E]
 
 	NaturalSemiRing[S, E]
 
@@ -107,7 +108,7 @@ type Nat_[S integer.N[S, E], E integer.Nat[S, E]] struct {
 
 func (n *Nat_[NS, N]) Decrement() N {
 	arith := n.H.Arithmetic()
-	res, err := arith.Sub(n.H.Unwrap(), n.H.Structure().One())
+	res, err := arith.Sub(n.H.Unwrap(), n.H.Structure().One(), -1)
 	if err != nil {
 		res = n.H.Structure().Bottom()
 	}
@@ -116,5 +117,5 @@ func (n *Nat_[NS, N]) Decrement() N {
 
 func (n *Nat_[NS, N]) TrySub(x integer.NatPlus[NS, N]) (N, error) {
 	arith := n.H.Arithmetic()
-	return arith.Sub(n.H.Unwrap(), x.Unwrap())
+	return arith.Sub(n.H.Unwrap(), x.Unwrap(), -1)
 }

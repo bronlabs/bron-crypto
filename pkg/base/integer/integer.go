@@ -17,31 +17,25 @@ type Int[S algebra.Structure, E algebra.Element] interface {
 	Neg() E
 }
 
-// type Z[S algebra.Structure, E algebra.Element] interface {
-// 	IntegerRing[S, E]
-// 	Arithmetic() SignedArithmetic[E]
-// }
-
 // Zn defines methods for S to behave like ring of integers modulo n.
 type Zn[S algebra.Structure, E algebra.Element] interface {
+	Z[S, E]
 	algebra.FiniteRing[S, E]
 	algebra.BoundedOrderTheoreticLattice[S, E]
-	NaturalSemiRing[S, E]
 
-	IsDecomposable(coprimeIdealNorms ...Uint[S, E]) (bool, error)
+	IsDecomposable(coprimeModulusFactors ...E) bool
 }
 
 // Uint defines methods for elements of type E to behave
 // like elements of the ring of integers modulo n.
 type Uint[S algebra.Structure, E algebra.Element] interface {
+	Int[S, E]
 	algebra.FiniteRingElement[S, E]
 	algebra.BoundedOrderTheoreticLatticeElement[S, E]
-	NaturalSemiRingElement[S, E]
 }
 
 // Zp defines methods for S to behave the field of integers modulo prime.
 type Zp[S algebra.Structure, E algebra.Element] interface {
-	Z[S, E]
 	Zn[S, E]
 	algebra.FiniteField[S, E]
 }
@@ -49,18 +43,6 @@ type Zp[S algebra.Structure, E algebra.Element] interface {
 // IntP defines methods for elements of type E to behave as
 // elements of the integer field modulo prime.
 type IntP[S algebra.Structure, E algebra.Element] interface {
-	Int[S, E]
 	Uint[S, E]
 	algebra.FiniteFieldElement[S, E]
-}
-
-type ZnX[G algebra.Structure, E algebra.Element] interface {
-	algebra.MultiplicativeGroup[G, E]
-	algebra.BoundedOrderTheoreticLattice[G, E]
-	NaturalSemiRing[G, E]
-}
-
-type IntX[G algebra.Structure, E algebra.Element] interface {
-	algebra.MultiplicativeGroupElement[G, E]
-	NaturalSemiRingElement[G, E]
 }

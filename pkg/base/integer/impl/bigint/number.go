@@ -108,11 +108,11 @@ func (n *BigInt) Div(x *BigInt) (quotient *BigInt, remainder *BigInt, err error)
 	return New(q), New(r), nil
 }
 
-func (n *BigInt) Exp(x *BigInt) *BigInt {
-	if x == nil {
+func (n *BigInt) Exp(x, m *BigInt) *BigInt {
+	if x == nil || m == nil {
 		panic(errs.NewIsNil("argument"))
 	}
-	return New(new(big.Int).Exp(n.V, x.V, nil))
+	return New(new(big.Int).Exp(n.V, x.V, m.V))
 }
 
 func (n *BigInt) Sqrt() *BigInt {
@@ -161,6 +161,11 @@ func (n *BigInt) SetUint64(x uint64) *BigInt {
 
 func (n *BigInt) SetInt64(x int64) *BigInt {
 	n.V = new(big.Int).SetInt64(x)
+	return n
+}
+
+func (n *BigInt) SetBytes(buf []byte) *BigInt {
+	n.V = new(big.Int).SetBytes(buf)
 	return n
 }
 

@@ -1,4 +1,4 @@
-package mixins
+package impl
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/groupoid"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
+	nimpl "github.com/copperexchange/krypton-primitives/pkg/base/integer/nat/impl"
 	"github.com/cronokirby/saferith"
 )
 
@@ -13,7 +14,7 @@ type Z_[S integer.Z[S, E], E integer.Int[S, E]] struct {
 	groupoid.Groupoid[S, E]
 	groupoid.AdditiveGroupoid[S, E]
 	group.AdditiveGroup[S, E]
-	NaturalSemiRing[S, E]
+	nimpl.NaturalSemiRing[S, E]
 
 	H HolesZ[S, E]
 }
@@ -45,9 +46,17 @@ type Int_[S integer.Z[S, E], E integer.Int[S, E]] struct {
 	groupoid.GroupoidElement[S, E]
 	groupoid.AdditiveGroupoidElement[S, E]
 	group.AdditiveGroupElement[S, E]
-	NaturalSemiRingElement[S, E]
+	nimpl.NaturalSemiRingElement[S, E]
 
 	H HolesInt[S, E]
+}
+
+func (n *Int_[S, E]) Sub(x algebra.AdditiveGroupElement[S, E]) E {
+	out, err := n.H.Arithmetic().Sub(n.H.Unwrap(), x.Unwrap(), -1)
+	if err != nil {
+		panic(errs.WrapFailed(err, "could not sub"))
+	}
+	return out
 }
 
 func (n *Int_[S, E]) Decrement() E {
@@ -63,7 +72,7 @@ func (n *Int_[S, E]) Sqrt() (E, error) {
 }
 
 func (n *Int_[S, E]) EuclideanDiv(x E) (E, E) {
-	quot, rem, err := n.H.Arithmetic().Div(n.H.Unwrap(), x)
+	quot, rem, err := n.H.Arithmetic().Div(n.H.Unwrap(), x, -1)
 	if err != nil {
 		panic(errs.WrapFailed(err, "couldn't take euclidean div"))
 	}

@@ -7,8 +7,8 @@ type ConvertTo[S algebra.Structure, E algebra.Element] interface {
 	ToNat() (Nat[S, E], error)
 	ToInt() Int[S, E]
 
-	ToModular(modulus NatPlus[S, E]) Uint[S, E]
-	ToPrimeModular(modulus NatPlus[S, E]) IntP[S, E]
+	ToUint(modulus NatPlus[S, E]) Uint[S, E]
+	ToIntP(modulus NatPlus[S, E]) IntP[S, E]
 }
 
 type ConvertFrom[S algebra.Structure, E algebra.Element] interface {
@@ -16,6 +16,13 @@ type ConvertFrom[S algebra.Structure, E algebra.Element] interface {
 	FromNat(v Nat[S, E]) (E, error)
 	FromInt(v Int[S, E]) (E, error)
 
-	FromModular(v Uint[S, E]) (E, error)
-	FromPrimeModular(v IntP[S, E]) (E, error)
+	FromUint(v Uint[S, E]) (E, error)
+	FromIntP(v IntP[S, E]) (E, error)
 }
+
+type Conversion[S algebra.Structure, E algebra.Element] interface {
+	ConvertTo[S, E]
+	ConvertFrom[S, E]
+}
+
+func ToNatPlus()

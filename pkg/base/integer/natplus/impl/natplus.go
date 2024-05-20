@@ -1,4 +1,4 @@
-package mixins
+package impl
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
@@ -69,12 +69,12 @@ func (n *NaturalPreSemiRingElement[NS, N]) Mod(modulus integer.NaturalPreSemiRin
 	return out.Unwrap(), nil
 }
 
-func (n *NaturalPreSemiRingElement[NS, N]) Cmp(x algebra.OrderTheoreticLatticeElement[NS, N]) algebra.Ordering {
+func (n *NaturalPreSemiRingElement[NS, N]) Cmp(x N) algebra.Ordering {
 	return n.H.Arithmetic().Cmp(n.H.Unwrap(), x.Unwrap())
 }
 
 func (n *NaturalPreSemiRingElement[NS, N]) Add(x algebra.AdditiveGroupoidElement[NS, N]) N {
-	out, err := n.H.Arithmetic().Add(n.H.Unwrap(), x.Unwrap())
+	out, err := n.H.Arithmetic().Add(n.H.Unwrap(), x.Unwrap(), -1)
 	if err != nil {
 		panic(err)
 	}
@@ -82,7 +82,7 @@ func (n *NaturalPreSemiRingElement[NS, N]) Add(x algebra.AdditiveGroupoidElement
 }
 
 func (n *NaturalPreSemiRingElement[NS, N]) Mul(x algebra.MultiplicativeGroupoidElement[NS, N]) N {
-	out, err := n.H.Arithmetic().Mul(n.H.Unwrap(), x.Unwrap())
+	out, err := n.H.Arithmetic().Mul(n.H.Unwrap(), x.Unwrap(), -1)
 	if err != nil {
 		panic(err)
 	}
@@ -165,7 +165,7 @@ type NatPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
 
 func (n *NatPlus[NS, N]) Decrement() N {
 	arith := n.H.Arithmetic()
-	res, err := arith.Sub(n.H.Unwrap(), n.H.Structure().One())
+	res, err := arith.Sub(n.H.Unwrap(), n.H.Structure().One(), -1)
 	if err != nil {
 		res = n.H.Structure().Bottom()
 	}
@@ -174,5 +174,5 @@ func (n *NatPlus[NS, N]) Decrement() N {
 
 func (n *NatPlus[NS, N]) TrySub(x integer.NatPlus[NS, N]) (N, error) {
 	arith := n.H.Arithmetic()
-	return arith.Sub(n.H.Unwrap(), x.Unwrap())
+	return arith.Sub(n.H.Unwrap(), x.Unwrap(), -1)
 }

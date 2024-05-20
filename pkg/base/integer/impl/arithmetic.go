@@ -101,6 +101,10 @@ func (a *ArithmeticMixin[T, I]) ValidateInverse(x T) error {
 	return a.validateDenominator(x)
 }
 
+func (a *ArithmeticMixin[T, I]) ValidateQuadraticResidue(x T) error {
+	return a.validateDenominator(x)
+}
+
 func (a *ArithmeticMixin[T, I]) ValidateAdd(x, y T) error {
 	return a.validateInputs(x, y)
 }
