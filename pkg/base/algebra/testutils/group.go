@@ -7,6 +7,7 @@ import (
 	fu "github.com/copperexchange/krypton-primitives/pkg/base/fuzzutils"
 	"github.com/stretchr/testify/require"
 )
+type GroupElementInvariants[G algebra.Groupoid[G, GE], GE algebra.Groupoid[G,GE]] struct{}
 
 type AdditiveGroupInvariants[G algebra.AdditiveGroup[G, GE], GE algebra.AdditiveGroupElement[G, GE]] struct{}
 

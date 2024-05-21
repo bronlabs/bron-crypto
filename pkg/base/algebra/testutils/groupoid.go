@@ -10,7 +10,7 @@ import (
 
 type GroupoidInvariants[G algebra.Groupoid[G, GE], GE algebra.GroupElement[G, GE]] struct{}
 
-type GroupElementInvariants[G algebra.Groupoid[G, GE], GE algebra.GroupElement[G, GE]] struct{}
+type GroupoidElementInvariants[G algebra.Groupoid[G, GE], GE algebra.GroupElement[G, GE]] struct{}
 
 type AdditiveGroupoidInvariants[G algebra.AdditiveGroup[G, GE], GE algebra.AdditiveGroupElement[G, GE]] struct{}
 
@@ -32,11 +32,11 @@ func (gi *GroupoidInvariants[G, GE]) Order(t *testing.T, groupoid algebra.Groupo
 	t.Helper()
 	// TODO
 }
-func (gei *GroupElementInvariants[G, GE]) Order(t *testing.T, groupoid algebra.Groupoid[G, GE]) {
+func (gei *GroupoidElementInvariants[G, GE]) Order(t *testing.T, groupoid algebra.Groupoid[G, GE]) {
 	t.Helper()
 	// TODO
 }
-func (gei *GroupElementInvariants[G, GE]) ApplyOp(t *testing.T, groupoid algebra.Groupoid[G, GE]) {
+func (gei *GroupoidElementInvariants[G, GE]) ApplyOp(t *testing.T, groupoid algebra.Groupoid[G, GE]) {
 	t.Helper()
 	// TODO
 }
