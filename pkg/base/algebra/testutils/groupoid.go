@@ -71,12 +71,11 @@ func (agei *AdditiveGroupoidElementInvariants[G, GE]) ApplyAdd(t *testing.T, gro
 
 	require.Equal(t, sum, x.ApplyAdd(x, n))
 }
-func (agei *AdditiveGroupoidElementInvariants[G, GE]) Double(t *testing.T, x algebra.AdditiveGroupElement[G, GE]) {
+func (agei *AdditiveGroupoidElementInvariants[G, GE]) Double(t *testing.T, x algebra.AdditiveGroupElement[G, GE], n *saferith.Nat) {
 	t.Helper()
 
 	doubleX := x.Double()
 
-	n := new(saferith.Nat)
 	expected := x.ApplyAdd(x, n.SetUint64(uint64(2)))
 
 	require.Equal(t, expected, doubleX,
