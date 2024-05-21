@@ -35,18 +35,15 @@ func (ami *AdditiveMonoidInvariants[M, ME]) AdditiveIdentity(t *testing.T, monoi
 	//TODO: is n the number of times the operation applies to the element ?
 	addIdentity := monoid.AdditiveIdentity()
 
-	output1, err := addIdentity.ApplyOp(monoid.Addition(), addIdentity, n.SetUint64(uint64(1)))
-	require.NoError(t, err)
+	output1 := addIdentity.Add(addIdentity)
 	require.Equal(t, addIdentity, output1,
 		"identityElement + identityElement should be equal to identityElement")
 
-	output2, err := addIdentity.ApplyOp(monoid.Addition(), x, n.SetUint64(uint64(1)))
-	require.NoError(t, err)
+	output2 := addIdentity.Add(x)
 	require.Equal(t, x, output2,
-		"x + identityElement should be equal to x")
+		"identityElement + x should be equal to x")
 
-	output3, err := x.ApplyOp(monoid.Addition(), addIdentity, n.SetUint64(uint64(1)))
-	require.NoError(t, err)
+	output3 := x.Add(addIdentity)
 	require.Equal(t, x, output3,
 		"x + identityElement should be equal to x")
 }
@@ -57,31 +54,25 @@ func (amei *AdditiveMonoidElementInvariants[M, ME]) IsAdditiveIdentity(t *testin
 	isAdditiveIdentity := x.IsAdditiveIdentity()
 
 	if isAdditiveIdentity {
-		output1, err := x.ApplyOp(monoid.Addition(), x, n.SetUint64(uint64(1)))
-		require.NoError(t, err)
+		output1 := x.Add(x)
 		require.Equal(t, x, output1,
 			"identityElement + identityElement should be equal to identityElement")
 
-		output2, err := x.ApplyOp(monoid.Addition(), y, n.SetUint64(uint64(1)))
-		require.NoError(t, err)
+		output2 := x.Add(y)
 		require.Equal(t, y, output2,
 			"x + identityElement should be equal to identityElement")
 
-		output3, err := y.ApplyOp(monoid.Addition(), x, n.SetUint64(uint64(1)))
-		require.NoError(t, err)
+		output3 := y.Add(x)
 		require.Equal(t, x, output3,
 			"x + identityElement should be equal to x")
 	} else {
-		output1, err := x.ApplyOp(monoid.Addition(), x, n.SetUint64(uint64(1)))
-		require.NoError(t, err)
+		output1 := x.Add(x)
 		require.NotEqual(t, x, output1)
 
-		output2, err := x.ApplyOp(monoid.Addition(), y, n.SetUint64(uint64(1)))
-		require.NoError(t, err)
+		output2 := x.Add(y)
 		require.NotEqual(t, y, output2)
 
-		output3, err := y.ApplyOp(monoid.Addition(), x, n.SetUint64(uint64(1)))
-		require.NoError(t, err)
+		output3 := y.Add(x)
 		require.Equal(t, x, output3)
 	}
 }
@@ -93,18 +84,15 @@ func (mmi *MultiplicativeMonoidInvariants[M, ME]) MultiplicativeIdentity(t *test
 	//TODO: is n the number of times the operation applies to the element ?
 	mulIdentity := monoid.MultiplicativeIdentity()
 
-	output1, err := mulIdentity.ApplyOp(monoid.Multiplication(), mulIdentity, n.SetUint64(uint64(1)))
-	require.NoError(t, err)
+	output1 := mulIdentity.Mul(mulIdentity)
 	require.Equal(t, mulIdentity, output1,
 		"identityElement * identityElement should be equal to identityElement")
 
-	output2, err := mulIdentity.ApplyOp(monoid.Multiplication(), x, n.SetUint64(uint64(1)))
-	require.NoError(t, err)
+	output2 := mulIdentity.Mul(x)
 	require.Equal(t, x, output2,
 		"x * identityElement should be equal to x")
 
-	output3, err := x.ApplyOp(monoid.Multiplication(), mulIdentity, n.SetUint64(uint64(1)))
-	require.NoError(t, err)
+	output3 := x.Mul(mulIdentity)
 	require.Equal(t, x, output3,
 		"identityElement * x should be equal to x")
 }
@@ -115,32 +103,28 @@ func (mmei *MultiplicativeMonoidELementInvariants[M, ME]) IsMultiplicativeIdenti
 	isMulIdentity := x.IsMultiplicativeIdentity()
 
 	if isMulIdentity {
-		output1, err := x.ApplyOp(monoid.Multiplication(), x, n.SetUint64(uint64(1)))
-		require.NoError(t, err)
-		require.Equal(t, x, output1,
-			"identityElement * identityElement should be equal to identityElement")
+		mulIdentity := monoid.MultiplicativeIdentity()
 
-		output2, err := x.ApplyOp(monoid.Multiplication(), y, n.SetUint64(uint64(1)))
-		require.NoError(t, err)
-		require.Equal(t, y, output2,
-			"x * y should be equal to y")
+		output1 := x.Mul(x)
+		require.Equal(t, mulIdentity, output1,
+			"x * x should be equal to x")
 
-		output3, err := y.ApplyOp(monoid.Multiplication(), x, n.SetUint64(uint64(1)))
-		require.NoError(t, err)
-		require.Equal(t, y, output3,
-			"y * x should be equal to y")
+		output2 := x.Mul(y)
+		require.Equal(t, x, output2,
+			"x * y should be equal to x")
+
+		output3 := y.Mul(x)
+		require.Equal(t, x, output3,
+			"y * x should be equal to x")
 	} else {
-		output1, err := x.ApplyOp(monoid.Multiplication(), x, n.SetUint64(uint64(1)))
-		require.NoError(t, err)
+		output1 := x.Mul(x)
 		require.NotEqual(t, x, output1)
 
-		output2, err := x.ApplyOp(monoid.Multiplication(), y, n.SetUint64(uint64(1)))
-		require.NoError(t, err)
+		output2 := x.Mul(y)
 		require.NotEqual(t, y, output2)
 
-		output3, err := y.ApplyOp(monoid.Multiplication(), x, n.SetUint64(uint64(1)))
-		require.NoError(t, err)
-		require.NotEqual(t, y, output3)
+		output3 := y.Mul(x)
+		require.Equal(t, x, output3)
 	}
 }
 
