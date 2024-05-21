@@ -1,7 +1,6 @@
 package limb4
 
 import (
-	"encoding/binary"
 	"math/big"
 
 	"github.com/cronokirby/saferith"
@@ -205,25 +204,14 @@ func (f *FieldValue) SetZero() *FieldValue {
 // reduction always works so long as `c` is in the field; in this case it is either the
 // constant `r2` or `r3`.
 func (f *FieldValue) SetBytesWide(input *[WideFieldBytes]byte) *FieldValue {
-	d0 := [FieldLimbs]uint64{
-		binary.LittleEndian.Uint64(input[:8]),
-		binary.LittleEndian.Uint64(input[8:16]),
-		binary.LittleEndian.Uint64(input[16:24]),
-		binary.LittleEndian.Uint64(input[24:32]),
-	}
-	d1 := [FieldLimbs]uint64{
-		binary.LittleEndian.Uint64(input[32:40]),
-		binary.LittleEndian.Uint64(input[40:48]),
-		binary.LittleEndian.Uint64(input[48:56]),
-		binary.LittleEndian.Uint64(input[56:64]),
-	}
-	// Convert to Montgomery form
-	tv1 := &[FieldLimbs]uint64{}
-	tv2 := &[FieldLimbs]uint64{}
+	var d0, d1 [FieldLimbs]uint64
+	f.Arithmetic.FromBytes(&d0, (*[FieldBytes]byte)(input[:FieldBytes]))
+	f.Arithmetic.FromBytes(&d1, (*[FieldBytes]byte)(input[FieldBytes:]))
+
 	// d0*r2 + d1*r3
-	f.Arithmetic.Mul(tv1, &d0, &f.Params.R2)
-	f.Arithmetic.Mul(tv2, &d1, &f.Params.R3)
-	f.Arithmetic.Add(&f.Value, tv1, tv2)
+	f.Arithmetic.Mul(&d0, &d0, &f.Params.R2)
+	f.Arithmetic.Mul(&d1, &d1, &f.Params.R3)
+	f.Arithmetic.Add(&f.Value, &d0, &d1)
 	return f
 }
 
@@ -380,16 +368,4 @@ func Pow(out, b, exp *[FieldLimbs]uint64, params *FieldParams, arithmetic FieldA
 		}
 	}
 	*out = res
-}
-
-// Pow2k raises arg to the power `2^k`. This result is written to out.
-// Public only for convenience for some internal implementations.
-func Pow2k(out, arg *[FieldLimbs]uint64, k int, arithmetic FieldArithmetic) {
-	var t = *arg
-
-	for i := 0; i < k; i++ {
-		arithmetic.Square(&t, &t)
-	}
-
-	*out = t
 }

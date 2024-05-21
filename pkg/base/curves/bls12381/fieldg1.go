@@ -238,7 +238,7 @@ func (*BaseFieldG1) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.B
 		panic("Not a BLS12381 G1 field element")
 	}
 	return &BaseFieldElementG1{
-		V: new(bimpl.Fp).CMove(x0p.V, x1p.V, utils.BoolTo[int](choice)),
+		V: new(bimpl.Fp).CMove(x0p.V, x1p.V, utils.BoolTo[uint64](choice)),
 	}
 }
 

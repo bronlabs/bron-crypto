@@ -11,8 +11,8 @@ import (
 )
 
 func TestG2IsOnCurve(t *testing.T) {
-	require.Equal(t, 1, new(G2).Identity().IsOnCurve())
-	require.Equal(t, 1, new(G2).Generator().IsOnCurve())
+	require.Equal(t, ctTrue, new(G2).Identity().IsOnCurve())
+	require.Equal(t, ctTrue, new(G2).Generator().IsOnCurve())
 
 	z := Fp2{
 		A: Fp{
@@ -38,19 +38,19 @@ func TestG2IsOnCurve(t *testing.T) {
 	test.Y.Mul(&test.Y, &z)
 	test.Z.Set(&z)
 
-	require.Equal(t, 1, test.IsOnCurve())
+	require.Equal(t, ctTrue, test.IsOnCurve())
 
 	test.X.Set(&z)
-	require.Equal(t, 0, test.IsOnCurve())
+	require.Equal(t, ctFalse, test.IsOnCurve())
 }
 
 func TestG2Equal(t *testing.T) {
 	a := new(G2).Generator()
 	b := new(G2).Identity()
 
-	require.Equal(t, 1, a.Equal(a))
-	require.Equal(t, 0, a.Equal(b))
-	require.Equal(t, 1, b.Equal(b))
+	require.Equal(t, ctTrue, a.Equal(a))
+	require.Equal(t, ctFalse, a.Equal(b))
+	require.Equal(t, ctTrue, b.Equal(b))
 }
 
 func TestG2ToAffine(t *testing.T) {
@@ -79,12 +79,12 @@ func TestG2ToAffine(t *testing.T) {
 	a.Y.Mul(&a.Y, &z)
 	a.Z.Set(&z)
 
-	require.Equal(t, 1, a.ToAffine(a).Equal(new(G2).Generator()))
+	require.Equal(t, ctTrue, a.ToAffine(a).Equal(new(G2).Generator()))
 }
 
 func TestG2Double(t *testing.T) {
 	a := new(G2).Identity()
-	require.Equal(t, 1, a.Double(a).IsIdentity())
+	require.Equal(t, ctTrue, a.Double(a).IsIdentity())
 
 	a.Generator()
 	a.Double(a)
@@ -127,17 +127,17 @@ func TestG2Double(t *testing.T) {
 		},
 		Z: *((&Fp2{}).SetOne()),
 	}
-	require.Equal(t, 1, e.Equal(a))
+	require.Equal(t, ctTrue, e.Equal(a))
 }
 
 func TestG2Add(t *testing.T) {
 	a := new(G2).Identity()
 	b := new(G2).Identity()
 	c := new(G2).Add(a, b)
-	require.Equal(t, 1, c.IsIdentity())
+	require.Equal(t, ctTrue, c.IsIdentity())
 	b.Generator()
 	c.Add(a, b)
-	require.Equal(t, 1, c.Equal(b))
+	require.Equal(t, ctTrue, c.Equal(b))
 
 	a.Generator()
 	a.Double(a)
@@ -150,7 +150,7 @@ func TestG2Add(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		e.Add(e, d)
 	}
-	require.Equal(t, 1, e.Equal(c))
+	require.Equal(t, ctTrue, e.Equal(c))
 
 	// Degenerate case
 	beta := Fp2{
@@ -168,7 +168,7 @@ func TestG2Add(t *testing.T) {
 	b.X.Mul(&a.X, &beta)
 	b.Y.Neg(&a.Y)
 	b.Z.Set(&a.Z)
-	require.Equal(t, 1, b.IsOnCurve())
+	require.Equal(t, ctTrue, b.IsOnCurve())
 
 	c.Add(a, b)
 
@@ -209,16 +209,16 @@ func TestG2Add(t *testing.T) {
 		},
 	})
 	e.Z.SetOne()
-	require.Equal(t, 1, e.Equal(c))
+	require.Equal(t, ctTrue, e.Equal(c))
 }
 
 func TestG2Neg(t *testing.T) {
 	a := new(G2).Generator()
 	b := new(G2).Neg(a)
-	require.Equal(t, 1, new(G2).Add(a, b).IsIdentity())
-	require.Equal(t, 1, new(G2).Sub(a, b.Neg(b)).IsIdentity())
+	require.Equal(t, ctTrue, new(G2).Add(a, b).IsIdentity())
+	require.Equal(t, ctTrue, new(G2).Sub(a, b.Neg(b)).IsIdentity())
 	a.Identity()
-	require.Equal(t, 1, a.Neg(a).IsIdentity())
+	require.Equal(t, ctTrue, a.Neg(a).IsIdentity())
 }
 
 func TestG2Mul(t *testing.T) {
@@ -240,7 +240,7 @@ func TestG2Mul(t *testing.T) {
 	t1 := new(G2).Generator()
 	t1.Mul(t1, a)
 	t1.Mul(t1, b)
-	require.Equal(t, 1, t1.Equal(g.Mul(g, c)))
+	require.Equal(t, ctTrue, t1.Equal(g.Mul(g, c)))
 }
 
 func TestG2InCorrectSubgroup(t *testing.T) {
@@ -283,10 +283,10 @@ func TestG2InCorrectSubgroup(t *testing.T) {
 		},
 		Z: *(&Fp2{}).SetOne(),
 	}
-	require.Equal(t, 0, a.InCorrectSubgroup())
+	require.Equal(t, ctFalse, a.InCorrectSubgroup())
 
-	require.Equal(t, 1, new(G2).Identity().InCorrectSubgroup())
-	require.Equal(t, 1, new(G2).Generator().InCorrectSubgroup())
+	require.Equal(t, ctTrue, new(G2).Identity().InCorrectSubgroup())
+	require.Equal(t, ctTrue, new(G2).Generator().InCorrectSubgroup())
 }
 
 func TestG2MulByX(t *testing.T) {
@@ -298,7 +298,7 @@ func TestG2MulByX(t *testing.T) {
 	t1.MulByX(t1)
 	t2 := new(G2).Generator()
 	t2.Mul(t2, x)
-	require.Equal(t, 1, t1.Equal(t2))
+	require.Equal(t, ctTrue, t1.Equal(t2))
 
 	point := new(G2).Generator()
 	a := FqNew().SetUint64(42)
@@ -306,7 +306,7 @@ func TestG2MulByX(t *testing.T) {
 
 	t1.MulByX(point)
 	t2.Mul(point, x)
-	require.Equal(t, 1, t1.Equal(t2))
+	require.Equal(t, ctTrue, t1.Equal(t2))
 }
 
 func TestG2Psi(t *testing.T) {
@@ -374,25 +374,25 @@ func TestG2Psi(t *testing.T) {
 	point.X.Mul(&point.X, &z)
 	point.Z.Square(&point.Z)
 	point.Z.Mul(&point.Z, &z)
-	require.Equal(t, 1, point.IsOnCurve())
+	require.Equal(t, ctTrue, point.IsOnCurve())
 
 	// psi2(P) = psi(psi(P))
 	tv1 := new(G2).psi2(generator)
 	tv2 := new(G2).psi(generator)
 	tv2.psi(tv2)
-	require.Equal(t, 1, tv1.Equal(tv2))
+	require.Equal(t, ctTrue, tv1.Equal(tv2))
 
 	tv1.psi2(&point)
 	tv2.psi(&point)
 	tv2.psi(tv2)
-	require.Equal(t, 1, tv1.Equal(tv2))
+	require.Equal(t, ctTrue, tv1.Equal(tv2))
 
 	// psi(P) is a morphism
 	tv1.Double(generator)
 	tv1.psi(tv1)
 	tv2.psi(generator)
 	tv2.Double(tv2)
-	require.Equal(t, 1, tv1.Equal(tv2))
+	require.Equal(t, ctTrue, tv1.Equal(tv2))
 
 	tv1.psi(&point)
 	tv2.psi(generator)
@@ -402,7 +402,7 @@ func TestG2Psi(t *testing.T) {
 	tv3 := new(G2).Generator()
 	tv2.Add(tv2, tv3)
 	tv2.psi(tv2)
-	require.Equal(t, 1, tv1.Equal(tv2))
+	require.Equal(t, ctTrue, tv1.Equal(tv2))
 }
 
 func TestG2ClearCofactor(t *testing.T) {
@@ -469,22 +469,22 @@ func TestG2ClearCofactor(t *testing.T) {
 	point.Z.Square(&z)
 	point.Z.Mul(&point.Z, &z)
 
-	require.Equal(t, 1, point.IsOnCurve())
-	require.Equal(t, 0, point.InCorrectSubgroup())
+	require.Equal(t, ctTrue, point.IsOnCurve())
+	require.Equal(t, ctFalse, point.InCorrectSubgroup())
 
 	clearedPoint := new(G2).ClearCofactor(&point)
 
-	require.Equal(t, 1, clearedPoint.IsOnCurve())
-	require.Equal(t, 1, clearedPoint.InCorrectSubgroup())
+	require.Equal(t, ctTrue, clearedPoint.IsOnCurve())
+	require.Equal(t, ctTrue, clearedPoint.InCorrectSubgroup())
 
 	// the generator (and the identity) are always on the curve,
 	// even after clearing the cofactor
 	generator := new(G2).Generator()
 	generator.ClearCofactor(generator)
-	require.Equal(t, 1, generator.InCorrectSubgroup())
+	require.Equal(t, ctTrue, generator.InCorrectSubgroup())
 	id := new(G2).Identity()
 	id.ClearCofactor(id)
-	require.Equal(t, 1, id.InCorrectSubgroup())
+	require.Equal(t, ctTrue, id.InCorrectSubgroup())
 
 	// test the effect on q-torsion points multiplying by h_eff modulo q
 	// h_eff % q = 0x2b116900400069009a40200040001ffff
@@ -496,9 +496,9 @@ func TestG2ClearCofactor(t *testing.T) {
 	generator.Generator()
 	generator.multiply(generator, &hEffModq)
 	point.Generator().ClearCofactor(&point)
-	require.Equal(t, 1, point.Equal(generator))
+	require.Equal(t, ctTrue, point.Equal(generator))
 	point.ClearCofactor(clearedPoint)
-	require.Equal(t, 1, point.Equal(clearedPoint.multiply(clearedPoint, &hEffModq)))
+	require.Equal(t, ctTrue, point.Equal(clearedPoint.multiply(clearedPoint, &hEffModq)))
 }
 
 func TestG2SumOfProducts(t *testing.T) {
@@ -513,7 +513,7 @@ func TestG2SumOfProducts(t *testing.T) {
 
 	lhs := new(G2).Mul(h0, s)
 	rhs, _ := new(G2).SumOfProducts([]*G2{h0}, []*limb4.FieldValue{s})
-	require.Equal(t, 1, lhs.Equal(rhs))
+	require.Equal(t, ctTrue, lhs.Equal(rhs))
 
 	u := new(G2).Mul(h0, s)
 	uTilde := new(G2).Mul(h0, sTilde)
@@ -522,7 +522,7 @@ func TestG2SumOfProducts(t *testing.T) {
 
 	rhs.Mul(u, c)
 	rhs.Add(rhs, new(G2).Mul(h0, sHat))
-	require.Equal(t, 1, uTilde.Equal(rhs))
+	require.Equal(t, ctTrue, uTilde.Equal(rhs))
 	_, _ = rhs.SumOfProducts([]*G2{u, h0}, []*limb4.FieldValue{c, sHat})
-	require.Equal(t, 1, uTilde.Equal(rhs))
+	require.Equal(t, ctTrue, uTilde.Equal(rhs))
 }

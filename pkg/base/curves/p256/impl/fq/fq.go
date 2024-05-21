@@ -1,12 +1,12 @@
 package fq
 
 import (
+	"slices"
 	"sync"
 
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 )
 
@@ -39,8 +39,9 @@ func p256FqParamsInit() {
 	ToMontgomery((*MontgomeryDomainFieldElement)(&r2), (*NonMontgomeryDomainFieldElement)(&r))
 	ToMontgomery((*MontgomeryDomainFieldElement)(&r3), (*NonMontgomeryDomainFieldElement)(&r2))
 	Msat((*[5]uint64)(mod[:]))
-	ToBytes(&modBytes, (*[4]uint64)(mod[:]))
-	modulus := saferith.ModulusFromBytes(bitstring.ReverseBytes(modBytes[:]))
+	ToBytes(&modBytes, (*[4]uint64)(mod[:limb4.FieldLimbs]))
+	slices.Reverse(modBytes[:])
+	modulus := saferith.ModulusFromNat(new(saferith.Nat).SetBytes(modBytes[:]))
 
 	p256FqParams = limb4.FieldParams{
 		R:            r,

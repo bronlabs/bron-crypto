@@ -57,24 +57,24 @@ func (f *Fp2) Random(reader io.Reader) (*Fp2, error) {
 }
 
 // IsZero returns 1 if fp2 == 0, 0 otherwise.
-func (f *Fp2) IsZero() int {
+func (f *Fp2) IsZero() uint64 {
 	return f.A.IsZero() & f.B.IsZero()
 }
 
 // IsOne returns 1 if fp2 == 1, 0 otherwise.
-func (f *Fp2) IsOne() int {
+func (f *Fp2) IsOne() uint64 {
 	return f.A.IsOne() & f.B.IsZero()
 }
 
 // Equal returns 1 if f == rhs, 0 otherwise.
-func (f *Fp2) Equal(rhs *Fp2) int {
+func (f *Fp2) Equal(rhs *Fp2) uint64 {
 	return f.A.Equal(&rhs.A) & f.B.Equal(&rhs.B)
 }
 
 // LexicographicallyLargest returns 1 if
 // this element is strictly lexicographically larger than its negation
 // 0 otherwise.
-func (f *Fp2) LexicographicallyLargest() int {
+func (f *Fp2) LexicographicallyLargest() uint64 {
 	// If this element's B coefficient is lexicographically largest
 	// then it is lexicographically largest. Otherwise, in the event
 	// the B coefficient is zero and the A coefficient is
@@ -86,7 +86,7 @@ func (f *Fp2) LexicographicallyLargest() int {
 }
 
 // Sgn0 returns the lowest bit value.
-func (f *Fp2) Sgn0() int {
+func (f *Fp2) Sgn0() uint64 {
 	// if A = 0 return B.Sgn0  else A.Sgn0
 	a := f.A.IsZero()
 	t := f.B.Sgn0() & a
@@ -220,13 +220,13 @@ func (f *Fp2) Neg(a *Fp2) *Fp2 {
 }
 
 // Sqrt performs field square root.
-func (f *Fp2) Sqrt(a *Fp2) (el *Fp2, e3 int) {
+func (f *Fp2) Sqrt(a *Fp2) (el *Fp2, e3 uint64) {
 	// Algorithm 9, https://eprint.iacr.org/2012/685.pdf
 	// with constant time modifications.
 	var a1, alpha, x0, t, res, res2 Fp2
 	e1 := a.IsZero()
 	// a1 = self^((p - 3) / 4)
-	a1.pow(a, &[Limbs]uint64{
+	a1.pow(a, &[FieldLimbs]uint64{
 		0xee7fbfffffffeaaa,
 		0x07aaffffac54ffff,
 		0xd9cc34a83dac3d89,
@@ -264,7 +264,7 @@ func (f *Fp2) Sqrt(a *Fp2) (el *Fp2, e3 int) {
 	// Otherwise, the correct solution is (1 + alpha)^((p - 1) // 2) * x0
 	t.SetOne()
 	t.Add(&t, &alpha)
-	t.pow(&t, &[Limbs]uint64{
+	t.pow(&t, &[FieldLimbs]uint64{
 		0xdcff7fffffffd555,
 		0x0f55ffff58a9ffff,
 		0xb39869507b587b12,
@@ -289,7 +289,7 @@ func (f *Fp2) Sqrt(a *Fp2) (el *Fp2, e3 int) {
 // Invert computes the multiplicative inverse of this field
 // element, returning the original value of fp2
 // in the case that this element is zero.
-func (f *Fp2) Invert(arg *Fp2) (el *Fp2, wasInverted int) {
+func (f *Fp2) Invert(arg *Fp2) (el *Fp2, wasInverted uint64) {
 	// We wish to find the multiplicative inverse of a nonzero
 	// element a + bu in fp2. We leverage an identity
 	//
@@ -320,20 +320,20 @@ func (f *Fp2) Invert(arg *Fp2) (el *Fp2, wasInverted int) {
 
 // CMove performs conditional select.
 // selects arg1 if choice == 0 and arg2 if choice == 1.
-func (f *Fp2) CMove(arg1, arg2 *Fp2, choice int) *Fp2 {
+func (f *Fp2) CMove(arg1, arg2 *Fp2, choice uint64) *Fp2 {
 	f.A.CMove(&arg1.A, &arg2.A, choice)
 	f.B.CMove(&arg1.B, &arg2.B, choice)
 	return f
 }
 
 // CNeg conditionally negates a if choice == 1.
-func (f *Fp2) CNeg(a *Fp2, choice int) *Fp2 {
+func (f *Fp2) CNeg(a *Fp2, choice uint64) *Fp2 {
 	var t Fp2
 	t.Neg(a)
 	return f.CMove(f, &t, choice)
 }
 
-func (f *Fp2) pow(base *Fp2, exp *[Limbs]uint64) {
+func (f *Fp2) pow(base *Fp2, exp *[FieldLimbs]uint64) {
 	res := (&Fp2{}).SetOne()
 	tmp := (&Fp2{}).SetZero()
 
@@ -341,7 +341,7 @@ func (f *Fp2) pow(base *Fp2, exp *[Limbs]uint64) {
 		for j := 63; j >= 0; j-- {
 			res.Square(res)
 			tmp.Mul(res, base)
-			res.CMove(res, tmp, int(exp[i]>>j)&1)
+			res.CMove(res, tmp, (exp[i]>>j)&1)
 		}
 	}
 	f.Set(res)

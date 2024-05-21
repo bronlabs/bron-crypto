@@ -6,6 +6,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	ctTrue  = uint64(1)
+	ctFalse = uint64(0)
+)
+
 func TestFp12Arithmetic(t *testing.T) {
 	var aa, bb, cc, d, e, f Fp12
 	a := Fp12{
@@ -370,15 +375,15 @@ func TestFp12Arithmetic(t *testing.T) {
 
 	d.Square(&aa)
 	e.Mul(&aa, &aa)
-	require.Equal(t, 1, e.Equal(&d))
+	require.Equal(t, ctTrue, e.Equal(&d))
 
 	d.Square(&bb)
 	e.Mul(&bb, &bb)
-	require.Equal(t, 1, e.Equal(&d))
+	require.Equal(t, ctTrue, e.Equal(&d))
 
 	d.Square(&cc)
 	e.Mul(&cc, &cc)
-	require.Equal(t, 1, e.Equal(&d))
+	require.Equal(t, ctTrue, e.Equal(&d))
 
 	d.Square(&cc)
 	e.Add(&aa, &bb)
@@ -390,17 +395,17 @@ func TestFp12Arithmetic(t *testing.T) {
 	f.Mul(&f, &bb)
 	e.Add(&e, &f)
 
-	require.Equal(t, 1, e.Equal(&d))
+	require.Equal(t, ctTrue, e.Equal(&d))
 
 	d.Invert(&aa)
 	e.Invert(&bb)
 	f.Mul(&aa, &bb)
 	f.Invert(&f)
-	require.Equal(t, 1, f.Equal(e.Mul(&e, &d)))
+	require.Equal(t, ctTrue, f.Equal(e.Mul(&e, &d)))
 
-	require.Equal(t, 1, d.Mul(&d, &aa).IsOne())
+	require.Equal(t, ctTrue, d.Mul(&d, &aa).IsOne())
 
-	require.Equal(t, 0, aa.Equal(d.FrobeniusAutomorphism(&aa)))
+	require.Equal(t, ctFalse, aa.Equal(d.FrobeniusAutomorphism(&aa)))
 	d.FrobeniusAutomorphism(&aa).
 		FrobeniusAutomorphism(&d).
 		FrobeniusAutomorphism(&d).
@@ -413,5 +418,5 @@ func TestFp12Arithmetic(t *testing.T) {
 		FrobeniusAutomorphism(&d).
 		FrobeniusAutomorphism(&d).
 		FrobeniusAutomorphism(&d)
-	require.Equal(t, 1, aa.Equal(&d))
+	require.Equal(t, ctTrue, aa.Equal(&d))
 }

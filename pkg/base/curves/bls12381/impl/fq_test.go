@@ -287,7 +287,7 @@ func TestFqBigInt(t *testing.T) {
 	e := FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0x673053fc60e06500, 0x86e6d480b4f76ada, 0x7fc68f9fefa23291, 0x3fb17f49bdda126d})
 	b := new(saferith.Nat).SetBytes([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
 	t1.SetNat(b)
-	require.Equal(t, e, t1)
+	require.Equal(t, uint64(1), e.Equal(t1))
 	e.Neg(e)
 	b.ModNeg(b, getBls12381FqParams().Modulus)
 	t1.SetNat(b)

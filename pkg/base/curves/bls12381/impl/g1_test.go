@@ -10,8 +10,8 @@ import (
 )
 
 func TestG1IsOnCurve(t *testing.T) {
-	require.Equal(t, 1, new(G1).Identity().IsOnCurve())
-	require.Equal(t, 1, new(G1).Generator().IsOnCurve())
+	require.Equal(t, ctTrue, new(G1).Identity().IsOnCurve())
+	require.Equal(t, ctTrue, new(G1).Generator().IsOnCurve())
 
 	z := Fp{
 		0xba7afa1f9a6fe250,
@@ -28,19 +28,19 @@ func TestG1IsOnCurve(t *testing.T) {
 		Y: *(gen.Y.Mul(&gen.Y, &z)),
 		Z: z,
 	}
-	require.Equal(t, 1, test.IsOnCurve())
+	require.Equal(t, ctTrue, test.IsOnCurve())
 	test.X = z
-	require.Equal(t, 0, test.IsOnCurve())
+	require.Equal(t, ctFalse, test.IsOnCurve())
 }
 
 func TestG1Equality(t *testing.T) {
 	a := new(G1).Generator()
 	b := new(G1).Identity()
 
-	require.Equal(t, 1, a.Equal(a))
-	require.Equal(t, 1, b.Equal(b))
-	require.Equal(t, 0, a.Equal(b))
-	require.Equal(t, 0, b.Equal(a))
+	require.Equal(t, ctTrue, a.Equal(a))
+	require.Equal(t, ctTrue, b.Equal(b))
+	require.Equal(t, ctFalse, a.Equal(b))
+	require.Equal(t, ctFalse, b.Equal(a))
 
 	z := Fp{
 		0xba7afa1f9a6fe250,
@@ -56,30 +56,30 @@ func TestG1Equality(t *testing.T) {
 	c.Y.Mul(&a.Y, &z)
 	c.Z.Set(&z)
 
-	require.Equal(t, 1, c.IsOnCurve())
+	require.Equal(t, ctTrue, c.IsOnCurve())
 
-	require.Equal(t, 1, a.Equal(&c))
-	require.Equal(t, 0, b.Equal(&c))
+	require.Equal(t, ctTrue, a.Equal(&c))
+	require.Equal(t, ctFalse, b.Equal(&c))
 
 	c.Y.Neg(&c.Y)
-	require.Equal(t, 1, c.IsOnCurve())
+	require.Equal(t, ctTrue, c.IsOnCurve())
 
-	require.Equal(t, 0, a.Equal(&c))
+	require.Equal(t, ctFalse, a.Equal(&c))
 
 	c.Y.Neg(&c.Y)
 	c.X.Set(&z)
-	require.Equal(t, 0, c.IsOnCurve())
+	require.Equal(t, ctFalse, c.IsOnCurve())
 }
 
 func TestG1Double(t *testing.T) {
 	t0 := new(G1).Identity()
 	t0.Double(t0)
-	require.Equal(t, 1, t0.IsIdentity())
-	require.Equal(t, 1, t0.IsOnCurve())
+	require.Equal(t, ctTrue, t0.IsIdentity())
+	require.Equal(t, ctTrue, t0.IsOnCurve())
 
 	t0.Double(t0.Generator())
-	require.Equal(t, 0, t0.IsIdentity())
-	require.Equal(t, 1, t0.IsOnCurve())
+	require.Equal(t, ctFalse, t0.IsIdentity())
+	require.Equal(t, ctTrue, t0.IsOnCurve())
 	e := G1{
 		X: Fp{
 			0x53e978ce58a9ba3c,
@@ -97,10 +97,10 @@ func TestG1Double(t *testing.T) {
 			0x25cfc2b522d11720,
 			0x06361c83f8d09b15,
 		},
-		Z: R,
+		Z: FpOne,
 	}
 
-	require.Equal(t, 1, e.Equal(t0))
+	require.Equal(t, ctTrue, e.Equal(t0))
 }
 
 func TestG1Add(t *testing.T) {
@@ -108,8 +108,8 @@ func TestG1Add(t *testing.T) {
 	a := new(G1).Identity()
 	b := new(G1).Identity()
 	c := new(G1).Add(a, b)
-	require.Equal(t, 1, c.IsIdentity())
-	require.Equal(t, 1, c.IsOnCurve())
+	require.Equal(t, ctTrue, c.IsIdentity())
+	require.Equal(t, ctTrue, c.IsOnCurve())
 
 	b.Generator()
 	z := Fp{
@@ -124,8 +124,8 @@ func TestG1Add(t *testing.T) {
 	b.Y.Mul(&b.Y, &z)
 	b.Z.Set(&z)
 	c.Add(a, b)
-	require.Equal(t, 0, c.IsIdentity())
-	require.Equal(t, 1, g.Equal(c))
+	require.Equal(t, ctFalse, c.IsIdentity())
+	require.Equal(t, ctTrue, g.Equal(c))
 
 	a.Generator()
 	a.Double(a)
@@ -137,11 +137,11 @@ func TestG1Add(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		d.Add(d, g)
 	}
-	require.Equal(t, 0, c.IsIdentity())
-	require.Equal(t, 1, c.IsOnCurve())
-	require.Equal(t, 0, d.IsIdentity())
-	require.Equal(t, 1, d.IsOnCurve())
-	require.Equal(t, 1, c.Equal(d))
+	require.Equal(t, ctFalse, c.IsIdentity())
+	require.Equal(t, ctTrue, c.IsOnCurve())
+	require.Equal(t, ctFalse, d.IsIdentity())
+	require.Equal(t, ctTrue, d.IsOnCurve())
+	require.Equal(t, ctTrue, c.Equal(d))
 
 	beta := Fp{
 		0xcd03c9e48671f071,
@@ -158,8 +158,8 @@ func TestG1Add(t *testing.T) {
 	b.X.Mul(&a.X, &beta)
 	b.Y.Neg(&a.Y)
 	b.Z.Set(&a.Z)
-	require.Equal(t, 1, a.IsOnCurve())
-	require.Equal(t, 1, b.IsOnCurve())
+	require.Equal(t, ctTrue, a.IsOnCurve())
+	require.Equal(t, ctTrue, b.IsOnCurve())
 	c.Add(a, b)
 	d.X.Set(&Fp{
 		0x29e1e987ef68f2d0,
@@ -178,16 +178,16 @@ func TestG1Add(t *testing.T) {
 		0x07bfa4c7210f4f44,
 	})
 	d.Z.SetOne()
-	require.Equal(t, 1, c.Equal(d))
+	require.Equal(t, ctTrue, c.Equal(d))
 }
 
 func TestG1Sub(t *testing.T) {
 	a := new(G1).Generator()
 	b := new(G1).Generator()
-	require.Equal(t, 1, a.Sub(a, b).IsIdentity())
+	require.Equal(t, ctTrue, a.Sub(a, b).IsIdentity())
 	b.Double(b)
 	a.Generator()
-	require.Equal(t, 1, b.Sub(b, a).Equal(a))
+	require.Equal(t, ctTrue, b.Sub(b, a).Equal(a))
 }
 
 func TestG1Mul(t *testing.T) {
@@ -208,16 +208,16 @@ func TestG1Mul(t *testing.T) {
 	t1 := new(G1).Generator()
 	t1.Mul(t1, a)
 	t1.Mul(t1, b)
-	require.Equal(t, 1, t1.Equal(g.Mul(g, c)))
+	require.Equal(t, ctTrue, t1.Equal(g.Mul(g, c)))
 }
 
 func TestG1Neg(t *testing.T) {
 	a := new(G1).Generator()
 	b := new(G1).Neg(a)
-	require.Equal(t, 1, new(G1).Add(a, b).IsIdentity())
-	require.Equal(t, 1, new(G1).Sub(a, b.Neg(b)).IsIdentity())
+	require.Equal(t, ctTrue, new(G1).Add(a, b).IsIdentity())
+	require.Equal(t, ctTrue, new(G1).Sub(a, b.Neg(b)).IsIdentity())
 	a.Identity()
-	require.Equal(t, 1, a.Neg(a).IsIdentity())
+	require.Equal(t, ctTrue, a.Neg(a).IsIdentity())
 }
 
 func TestG1InCorrectSubgroup(t *testing.T) {
@@ -241,10 +241,10 @@ func TestG1InCorrectSubgroup(t *testing.T) {
 		},
 		Z: *(new(Fp).SetOne()),
 	}
-	require.Equal(t, 0, a.InCorrectSubgroup())
+	require.Equal(t, ctFalse, a.InCorrectSubgroup())
 
-	require.Equal(t, 1, new(G1).Identity().InCorrectSubgroup())
-	require.Equal(t, 1, new(G1).Generator().InCorrectSubgroup())
+	require.Equal(t, ctTrue, new(G1).Identity().InCorrectSubgroup())
+	require.Equal(t, ctTrue, new(G1).Generator().InCorrectSubgroup())
 }
 
 func TestG1MulByX(t *testing.T) {
@@ -255,14 +255,14 @@ func TestG1MulByX(t *testing.T) {
 	x.Neg(x)
 	lhs := new(G1).Mul(generator, x)
 	rhs := new(G1).MulByX(generator)
-	require.Equal(t, 1, lhs.Equal(rhs))
+	require.Equal(t, ctTrue, lhs.Equal(rhs))
 
 	pt := new(G1).Generator()
 	s := FqNew().SetUint64(42)
 	pt.Mul(pt, s)
 	lhs.Mul(pt, x)
 	rhs.MulByX(pt)
-	require.Equal(t, 1, lhs.Equal(rhs))
+	require.Equal(t, ctTrue, lhs.Equal(rhs))
 }
 
 func TestG1ClearCofactor(t *testing.T) {
@@ -270,10 +270,10 @@ func TestG1ClearCofactor(t *testing.T) {
 	// even after clearing the cofactor
 	generator := new(G1).Generator()
 	generator.ClearCofactor(generator)
-	require.Equal(t, 1, generator.IsOnCurve())
+	require.Equal(t, ctTrue, generator.IsOnCurve())
 	id := new(G1).Identity()
 	id.ClearCofactor(id)
-	require.Equal(t, 1, id.IsOnCurve())
+	require.Equal(t, ctTrue, id.IsOnCurve())
 
 	z := Fp{
 		0x3d2d1c670671394e,
@@ -307,18 +307,18 @@ func TestG1ClearCofactor(t *testing.T) {
 	point.Z.Square(&z)
 	point.Z.Mul(&point.Z, &z)
 
-	require.Equal(t, 1, point.IsOnCurve())
-	require.Equal(t, 0, point.InCorrectSubgroup())
+	require.Equal(t, ctTrue, point.IsOnCurve())
+	require.Equal(t, ctFalse, point.InCorrectSubgroup())
 	clearedPoint := new(G1).ClearCofactor(&point)
-	require.Equal(t, 1, clearedPoint.IsOnCurve())
-	require.Equal(t, 1, clearedPoint.InCorrectSubgroup())
+	require.Equal(t, ctTrue, clearedPoint.IsOnCurve())
+	require.Equal(t, ctTrue, clearedPoint.InCorrectSubgroup())
 
 	// in BLS12-381 the cofactor in G1 can be
 	// cleared multiplying by (1-x)
 	hEff := FqNew().SetOne()
 	hEff.Add(hEff, FqNew().SetUint64(paramX))
 	point.Mul(&point, hEff)
-	require.Equal(t, 1, clearedPoint.Equal(&point))
+	require.Equal(t, ctTrue, clearedPoint.Equal(&point))
 }
 
 func TestSerialisation(t *testing.T) {
@@ -330,33 +330,33 @@ func TestSerialisation(t *testing.T) {
 
 	aa, err := new(G1).FromCompressed(&aBytes)
 	require.NoError(t, err)
-	require.Equal(t, 1, a.Equal(aa))
+	require.Equal(t, ctTrue, a.Equal(aa))
 
 	bb, err := new(G1).FromCompressed(&bBytes)
 	require.NoError(t, err)
-	require.Equal(t, 1, b.Equal(bb))
+	require.Equal(t, ctTrue, b.Equal(bb))
 
 	auBytes := a.ToUncompressed()
 	buBytes := b.ToUncompressed()
 
 	_, err = aa.FromUncompressed(&auBytes)
 	require.NoError(t, err)
-	require.Equal(t, 1, a.Equal(aa))
+	require.Equal(t, ctTrue, a.Equal(aa))
 
 	_, err = bb.FromUncompressed(&buBytes)
 	require.NoError(t, err)
-	require.Equal(t, 1, b.Equal(bb))
+	require.Equal(t, ctTrue, b.Equal(bb))
 
 	bBytes = a.ToCompressed()
 	a.Neg(a)
 	aBytes = a.ToCompressed()
 	_, err = aa.FromCompressed(&aBytes)
 	require.NoError(t, err)
-	require.Equal(t, 1, a.Equal(aa))
+	require.Equal(t, ctTrue, a.Equal(aa))
 	_, err = aa.FromCompressed(&bBytes)
 	require.NoError(t, err)
-	require.Equal(t, 0, a.Equal(aa))
-	require.Equal(t, 1, aa.Equal(a.Neg(a)))
+	require.Equal(t, ctFalse, a.Equal(aa))
+	require.Equal(t, ctTrue, aa.Equal(a.Neg(a)))
 }
 
 func TestSumOfProducts(t *testing.T) {
@@ -371,7 +371,7 @@ func TestSumOfProducts(t *testing.T) {
 
 	lhs := new(G1).Mul(h0, s)
 	rhs, _ := new(G1).SumOfProducts([]*G1{h0}, []*limb4.FieldValue{s})
-	require.Equal(t, 1, lhs.Equal(rhs))
+	require.Equal(t, ctTrue, lhs.Equal(rhs))
 
 	u := new(G1).Mul(h0, s)
 	uTilde := new(G1).Mul(h0, sTilde)
@@ -380,7 +380,7 @@ func TestSumOfProducts(t *testing.T) {
 
 	rhs.Mul(u, c)
 	rhs.Add(rhs, new(G1).Mul(h0, sHat))
-	require.Equal(t, 1, uTilde.Equal(rhs))
+	require.Equal(t, ctTrue, uTilde.Equal(rhs))
 	_, _ = rhs.SumOfProducts([]*G1{u, h0}, []*limb4.FieldValue{c, sHat})
-	require.Equal(t, 1, uTilde.Equal(rhs))
+	require.Equal(t, ctTrue, uTilde.Equal(rhs))
 }

@@ -20,7 +20,7 @@ type pair struct {
 }
 
 type g2Prepared struct {
-	identity     int
+	identity     uint64
 	coefficients []coefficients
 
 	_ ds.Incomparable
@@ -32,7 +32,7 @@ type coefficients struct {
 	_ ds.Incomparable
 }
 
-func (c *coefficients) CMove(arg1, arg2 *coefficients, choice int) *coefficients {
+func (c *coefficients) CMove(arg1, arg2 *coefficients, choice uint64) *coefficients {
 	c.a.CMove(&arg1.a, &arg2.a, choice)
 	c.b.CMove(&arg1.b, &arg2.b, choice)
 	c.c.CMove(&arg1.c, &arg2.c, choice)

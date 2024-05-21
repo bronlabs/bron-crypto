@@ -25,8 +25,8 @@ func TestSinglePairing(t *testing.T) {
 	e.AddPairInvG1(g, h)
 	r := e.Result()
 
-	require.Equal(t, 1, p.Equal(q))
-	require.Equal(t, 1, q.Equal(r))
+	require.Equal(t, ctTrue, p.Equal(q))
+	require.Equal(t, ctTrue, q.Equal(r))
 }
 
 func TestMultiPairing(t *testing.T) {
@@ -60,5 +60,5 @@ func TestMultiPairing(t *testing.T) {
 	}
 
 	actual := e2.Result()
-	require.Equal(t, 1, expected.Equal(actual))
+	require.Equal(t, ctTrue, expected.Equal(actual))
 }

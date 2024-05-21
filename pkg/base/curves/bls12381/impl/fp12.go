@@ -92,7 +92,7 @@ func (f *Fp12) Square(arg *Fp12) *Fp12 {
 }
 
 // Invert computes this element's field inversion.
-func (f *Fp12) Invert(arg *Fp12) (el *Fp12, wasInverted int) {
+func (f *Fp12) Invert(arg *Fp12) (el *Fp12, wasInverted uint64) {
 	var a, b, t Fp6
 	a.Square(&arg.A)
 	b.Square(&arg.B)
@@ -214,23 +214,23 @@ func (f *Fp12) FrobeniusAutomorphism(arg *Fp12) *Fp12 {
 }
 
 // Equal returns 1 if fp12 == rhs, 0 otherwise.
-func (f *Fp12) Equal(rhs *Fp12) int {
+func (f *Fp12) Equal(rhs *Fp12) uint64 {
 	return f.A.Equal(&rhs.A) & f.B.Equal(&rhs.B)
 }
 
 // IsZero returns 1 if fp6 == 0, 0 otherwise.
-func (f *Fp12) IsZero() int {
+func (f *Fp12) IsZero() uint64 {
 	return f.A.IsZero() & f.B.IsZero()
 }
 
 // IsOne returns 1 if fp12 == 1, 0 otherwise.
-func (f *Fp12) IsOne() int {
+func (f *Fp12) IsOne() uint64 {
 	return f.A.IsOne() & f.B.IsZero()
 }
 
 // CMove performs conditional select.
 // selects arg1 if choice == 0 and arg2 if choice == 1.
-func (f *Fp12) CMove(arg1, arg2 *Fp12, choice int) *Fp12 {
+func (f *Fp12) CMove(arg1, arg2 *Fp12, choice uint64) *Fp12 {
 	f.A.CMove(&arg1.A, &arg2.A, choice)
 	f.B.CMove(&arg1.B, &arg2.B, choice)
 	return f

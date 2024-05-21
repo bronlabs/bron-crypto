@@ -528,12 +528,12 @@ func (g2 *G2) Generator() *G2 {
 }
 
 // IsIdentity returns true if this point is at infinity.
-func (g2 *G2) IsIdentity() int {
+func (g2 *G2) IsIdentity() uint64 {
 	return g2.Z.IsZero()
 }
 
 // IsOnCurve determines if this point represents a valid curve point.
-func (g2 *G2) IsOnCurve() int {
+func (g2 *G2) IsOnCurve() uint64 {
 	// Y^2 Z = X^3 + b Z^3
 	var lhs, rhs, t Fp2
 	lhs.Square(&g2.Y)
@@ -550,7 +550,7 @@ func (g2 *G2) IsOnCurve() int {
 }
 
 // InCorrectSubgroup returns 1 if the point is torsion free, 0 otherwise.
-func (g2 *G2) InCorrectSubgroup() int {
+func (g2 *G2) InCorrectSubgroup() uint64 {
 	var t G2
 	t.multiply(g2, &fqModulusBytes)
 	return t.IsIdentity()
@@ -676,7 +676,7 @@ func (g2 *G2) MulByX(a *G2) *G2 {
 	for x := paramX >> 1; x != 0; x >>= 1 {
 		t.Double(&t)
 		s.Add(&r, &t)
-		r.CMove(&r, &s, int(x&1))
+		r.CMove(&r, &s, x&1)
 	}
 	// Since BLS_X is negative, flip the sign
 	return g2.Neg(&r)
@@ -766,9 +766,9 @@ func (g2 *G2) FromCompressed(input *[WideFieldBytes]byte) (*G2, error) {
 	var xFp, yFp Fp2
 	var xA, xB [FieldBytes]byte
 	var p G2
-	compressedFlag := int((input[0] >> 7) & 1)
-	infinityFlag := int((input[0] >> 6) & 1)
-	sortFlag := int((input[0] >> 5) & 1)
+	compressedFlag := uint64((input[0] >> 7) & 1)
+	infinityFlag := uint64((input[0] >> 6) & 1)
+	sortFlag := uint64((input[0] >> 5) & 1)
 
 	if compressedFlag != 1 {
 		return nil, errs.NewFailed("compressed flag must be set")
@@ -883,7 +883,7 @@ func (g2 *G2) FromUncompressed(input *[WideFieldBytesFp2]byte) (*G2, error) {
 
 // ToAffine converts the point into affine coordinates.
 func (g2 *G2) ToAffine(a *G2) *G2 {
-	var wasInverted int
+	var wasInverted uint64
 	var zero, x, y, z Fp2
 	_, wasInverted = z.Invert(&a.Z)
 	x.Mul(&a.X, &z)
@@ -910,9 +910,9 @@ func (g2 *G2) GetY() *Fp2 {
 }
 
 // Equal returns 1 if the two points are equal 0 otherwise.
-func (g2 *G2) Equal(rhs *G2) int {
+func (g2 *G2) Equal(rhs *G2) uint64 {
 	var x1, x2, y1, y2 Fp2
-	var e1, e2 int
+	var e1, e2 uint64
 
 	// This technique avoids inversions
 	x1.Mul(&g2.X, &rhs.Z)
@@ -929,7 +929,7 @@ func (g2 *G2) Equal(rhs *G2) int {
 }
 
 // CMove sets g2 = arg1 if choice == 0 and g2 = arg2 if choice == 1.
-func (g2 *G2) CMove(arg1, arg2 *G2, choice int) *G2 {
+func (g2 *G2) CMove(arg1, arg2 *G2, choice uint64) *G2 {
 	g2.X.CMove(&arg1.X, &arg2.X, choice)
 	g2.Y.CMove(&arg1.Y, &arg2.Y, choice)
 	g2.Z.CMove(&arg1.Z, &arg2.Z, choice)

@@ -178,15 +178,15 @@ func TestFp6Arithmetic(t *testing.T) {
 
 	d := new(Fp6).Square(&a)
 	e := new(Fp6).Mul(&a, &a)
-	require.Equal(t, 1, e.Equal(d))
+	require.Equal(t, ctTrue, e.Equal(d))
 
 	d.Square(&b)
 	e.Mul(&b, &b)
-	require.Equal(t, 1, e.Equal(d))
+	require.Equal(t, ctTrue, e.Equal(d))
 
 	d.Square(&c)
 	e.Mul(&c, &c)
-	require.Equal(t, 1, e.Equal(d))
+	require.Equal(t, ctTrue, e.Equal(d))
 
 	// (a + b) * c^2
 	d.Add(&a, &b)
@@ -198,20 +198,20 @@ func TestFp6Arithmetic(t *testing.T) {
 	tt.Mul(tt, &b)
 	e.Add(e, tt)
 
-	require.Equal(t, 1, d.Equal(e))
+	require.Equal(t, ctTrue, d.Equal(e))
 
 	_, wasInverted := d.Invert(&a)
-	require.Equal(t, 1, wasInverted)
+	require.Equal(t, ctTrue, wasInverted)
 	_, wasInverted = e.Invert(&b)
-	require.Equal(t, 1, wasInverted)
+	require.Equal(t, ctTrue, wasInverted)
 
 	tt.Mul(&a, &b)
 	_, wasInverted = tt.Invert(tt)
-	require.Equal(t, 1, wasInverted)
+	require.Equal(t, ctTrue, wasInverted)
 	d.Mul(d, e)
-	require.Equal(t, 1, tt.Equal(d))
+	require.Equal(t, ctTrue, tt.Equal(d))
 
 	_, _ = d.Invert(&a)
 	e.SetOne()
-	require.Equal(t, 1, e.Equal(d.Mul(d, &a)))
+	require.Equal(t, ctTrue, e.Equal(d.Mul(d, &a)))
 }
