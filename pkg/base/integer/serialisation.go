@@ -24,5 +24,3 @@ type Conversion[S algebra.Structure, E algebra.Element] interface {
 	ConvertTo[S, E]
 	ConvertFrom[S, E]
 }
-
-func ToNatPlus()

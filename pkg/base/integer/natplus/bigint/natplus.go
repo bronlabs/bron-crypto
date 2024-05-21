@@ -43,6 +43,8 @@ func (*NatPlus) Structure() *NPlus {
 	return &NPlus{}
 }
 
+func (*NatPlus) FromInt()
+
 func (n *NatPlus) Unwrap() *NatPlus {
 	return n
 }

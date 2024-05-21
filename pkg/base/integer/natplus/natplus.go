@@ -9,3 +9,7 @@ type (
 	NPlus   integer.NPlus[bigint.NPlus, bigint.NatPlus]
 	NatPlus integer.NatPlus[bigint.NPlus, bigint.NatPlus]
 )
+
+func ToNatPlus[T any](n integer.Number[T]) NatPlus {
+
+}
