@@ -196,11 +196,11 @@ func (cgi *CyclicGroupoidInvariants[G, GE]) Generator(t *testing.T, groupoid alg
 	// TODO
 }
 
-func (cgi *CyclicGroupoidElementInvariants[G, GE]) CanGenerateAllElements(t *testing.T, gen algebra.CyclicGroupoidElement[G, GE]) {
+func (cgei *CyclicGroupoidElementInvariants[G, GE]) CanGenerateAllElements(t *testing.T, gen algebra.CyclicGroupoidElement[G, GE]) {
 	t.Helper()
 	// TODO
 }
-func (cgi *CyclicGroupoidElementInvariants[G, GE]) IsDesignatedGenerator(t *testing.T, gen algebra.CyclicGroupoidElement[G, GE]) {
+func (cgei *CyclicGroupoidElementInvariants[G, GE]) IsDesignatedGenerator(t *testing.T, gen algebra.CyclicGroupoidElement[G, GE]) {
 	t.Helper()
 	// TODO
 }

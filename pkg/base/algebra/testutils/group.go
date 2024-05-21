@@ -17,54 +17,87 @@ type SubGroupElementInvariants[G algebra.Group[G, GE], GE algebra.GroupElement[G
 
 type AdditiveGroupInvariants[G algebra.AdditiveGroup[G, GE], GE algebra.AdditiveGroupElement[G, GE]] struct{}
 
-func (gei *GroupElementInvariants[G, GE]) Inverse(t *testing.T, random, identityElement algebra.GroupElement[G, GE], under algebra.BinaryOperator[GE]) {
+func (gei *GroupElementInvariants[G, GE]) Inverse(t *testing.T, group algebra.Group[G, GE], random algebra.GroupElement[G, GE], under algebra.BinaryOperator[GE], n *saferith.Nat) {
 	t.Helper()
 
-	// TODO: how should I write this: inverse + inverse = 0 , inverse * inverse = 1
+	identityElement, err := group.Identity(under)
+	require.NoError(t, err)
+	inverseOfIdentity, err1 := identityElement.Inverse(under)
+	require.Equal(t, inverseOfIdentity, identityElement, "Inverse of identity element is itself")
 
 	inverse, err := random.Inverse(under)
 	require.NoError(t, err)
-
 	inverseOfInverse, err1 := inverse.Inverse(under)
 	require.NoError(t, err1)
 	require.Equal(t, random, inverseOfInverse, "Inverse of inverse of X should be equal to X")
 
-	inverse, err2 := identityElement.Inverse(under)
+	output, err := random.ApplyOp(under, inverse, n.SetUint64(uint64(1)))
+	require.Equal(t, identityElement, output, "Any element o inverse of the element should be equal to the identity element")
+}
+func (gei *GroupElementInvariants[G, GE]) IsInverse(t *testing.T, group algebra.Group[G, GE], random algebra.GroupElement[G, GE], under algebra.BinaryOperator[GE], n *saferith.Nat) {
+	t.Helper()
+
+	identityElement, err0 := group.Identity(under)
+	require.NoError(t, err0)
+	IsInverse, err1 := identityElement.IsInverse(identityElement, under)
+	require.NoError(t, err1)
+	require.True(t, IsInverse, "identity element is Inverse of itself")
+
+	inverseOfRandom, err2 := random.Inverse(under)
 	require.NoError(t, err2)
-	require.Equal(t, identityElement.Unwrap(), inverse, "Inverse of inverse of X should be equal to X")
-}
-func (gei *GroupElementInvariants[G, GE]) IsInverse(t *testing.T, x, of, identityElement algebra.GroupElement[G, GE], under algebra.BinaryOperator[GE]) {
-	t.Helper()
-	// TODO: Will add more invariants after the Inverse tests are implemented
+	IsInverseOfRandom, err3 := random.IsInverse(inverseOfRandom, under)
+	require.NoError(t, err3)
+	require.True(t, IsInverseOfRandom, "Inverse of inverse of X should be equal to X")
 
-	IsInverse, err := identityElement.IsInverse(identityElement, under)
-	require.NoError(t, err)
-	require.True(t, IsInverse, "Inverse of inverse of X should be equal to X")
+	output, err4 := random.ApplyOp(under, inverseOfRandom, n.SetUint64(uint64(1)))
+	require.NoError(t, err4)
+	IsInverse, err5 := output.IsInverse(output, under)
+	require.NoError(t, err5)
+	require.True(t, IsInverse, "identity element is Inverse of itself")
 }
-func (gei *GroupElementInvariants[G, GE]) IsTorsionElement(t *testing.T, order *saferith.Modulus, under algebra.BinaryOperator[GE]) {
+func (gei *GroupElementInvariants[G, GE]) IsTorsionElement(t *testing.T, random algebra.GroupElement[G, GE], order *saferith.Modulus, under algebra.BinaryOperator[GE], n *saferith.Nat) {
 	t.Helper()
-	// TODO: need help
-	// g^m = e
+	// TODO: need help with the syntax
+	// IsIdentity, err := random.ApplyOp(under, order.Nat())
 }
 
-func (sgi *SubGroupInvariants[G, GE]) CoFactor(t *testing.T, group algebra.SubGroup[G, GE]) {
+func (sgi *SubGroupInvariants[G, GE]) CoFactor(t *testing.T, group, subgroup algebra.SubGroup[G, GE]) {
 	t.Helper()
-	// TODO: need help
+	// TODO: need help with the syntax
+	// expected := subgroup.Order() / group.Order()
+	// actual := subgroup.cofactor()
+	// require.Equal(t, expected, actual)
 }
 
 func (sgi *SubGroupInvariants[G, GE]) SuperGroupOrder(t *testing.T, group algebra.SubGroup[G, GE]) {
 	t.Helper()
-	// TODO: need help
+	// TODO
 }
 
-func (sgi *SubGroupElementInvariants[G, GE]) IsSmallOrder(t *testing.T, group algebra.SubGroup[G, GE]) {
+func (sgi *SubGroupElementInvariants[G, GE]) IsSmallOrder(t *testing.T, group algebra.SubGroup[G, GE], element algebra.SubGroupElement[G, GE], under algebra.BinaryOperator[GE]) {
 	t.Helper()
 	// TODO: need help
+	// expoected: el.ApplyOP(under, el, n= group.cofactor()) == group.identity()
+	// actial: el.isSmallOrder()
+	expected, err := element.ApplyOp(under, element, group.CoFactor())
+	require.NoError(t, err)
+	identityElement, err0 := group.Identity(under)
+	require.NoError(t, err0)
+	if expected.Equal(identityElement) {
+		require.True(t, element.IsSmallOrder())
+	} else {
+		require.False(t, element.IsSmallOrder())
+	}
 }
 
-func (sgi *SubGroupElementInvariants[G, GE]) ClearCofactor(t *testing.T, group algebra.SubGroup[G, GE], gen algebra.SubGroupElement[G, GE]) {
+func (sgi *SubGroupElementInvariants[G, GE]) ClearCofactor(t *testing.T, group algebra.SubGroup[G, GE], element algebra.SubGroupElement[G, GE], under algebra.BinaryOperator[GE]) {
 	t.Helper()
 	// TODO: need help
+	// expected: el.ApplyOP(under, el, n= group.cofactor())
+	// Actual el.clearCofactor()
+	expected, err := element.ApplyOp(under, element, group.CoFactor())
+	require.NoError(t, err)
+	require.Equal(t, expected, element.ClearCofactor())
 }
 
 func (agi *AdditiveGroupInvariants[G, GE]) AdditiveInverse(t *testing.T, group algebra.AdditiveGroup[G, GE], element algebra.AdditiveGroupElement[G, GE]) {
@@ -73,7 +106,7 @@ func (agi *AdditiveGroupInvariants[G, GE]) AdditiveInverse(t *testing.T, group a
 }
 func (agi *AdditiveGroupInvariants[G, GE]) IsAdditiveInverse(t *testing.T) {
 	t.Helper()
-	// TODO: Will add more invariants after the AdditiveInverse tests are implemented
+	// TODO: Is it OK that I call the isInverse test and pass it the Add operator ?
 
 }
 func (agi *AdditiveGroupInvariants[G, GE]) IsTorsionElementUnderAddition(t *testing.T) {
@@ -92,11 +125,19 @@ func (agi *AdditiveGroupInvariants[G, GE]) Neg(t *testing.T, element algebra.Add
 	require.Equal(t, negElement.Neg(), negElement,
 		"inverse of X should be the same as negative of X")
 }
-func (agi *AdditiveGroupInvariants[G, GE]) Sub(t *testing.T) {
+func (agi *AdditiveGroupInvariants[G, GE]) Sub(t *testing.T, group algebra.AdditiveGroup[G, GE], x algebra.AdditiveGroupElement[G, GE], ys ...algebra.AdditiveGroupElement[G, GE]) {
 	t.Helper()
+	// TODO
+	result := group.Add(x)
+	for index := len(ys) - 1; index >= 0; index-- {
+		result = group.Add(result, ys[index].Neg())
+	}
+	require.Equal(t, result, group.Sub(x, ys...),
+		"Should get the same result for subtracting ys elements one by one from x")
 }
 func (agi *AdditiveGroupInvariants[G, GE]) ApplySub(t *testing.T) {
 	t.Helper()
+
 }
 
 func (agi *AdditiveGroupInvariants[G, GE]) IsIdentity(t *testing.T,

@@ -18,7 +18,7 @@ type GroupElement[G Structure, E Element] interface {
 	Inverse(under BinaryOperator[E]) (E, error)
 	// IsInverse checks whether the input is an inverse of this element.
 	IsInverse(of GroupElement[G, E], under BinaryOperator[E]) (bool, error)
-	// IsTorsionElement returns true if this.Mul(order) is identity.
+	// IsTorsionElement returns true if this.Op(this, order times) is identity.
 	IsTorsionElement(order *saferith.Modulus, under BinaryOperator[E]) (bool, error)
 	// IsInvolution(under BinaryOperator[E]) (bool, error)
 }
