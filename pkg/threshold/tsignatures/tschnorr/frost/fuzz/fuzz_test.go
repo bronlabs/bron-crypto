@@ -147,7 +147,7 @@ func doInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningK
 	require.NoError(t, err)
 	for _, participant := range signingParticipants {
 		if participant == nil {
-			require.Error(t, fmt.Errorf("participant is nil"))
+			require.Error(t, errs.NewIsNil("participant is nil"))
 		}
 	}
 
@@ -170,17 +170,17 @@ func doInteractiveSigning(t *testing.T, signingKeyShares []*tsignatures.SigningK
 		}
 	}
 	if len(producedSignatures) == 0 {
-		require.Error(t, fmt.Errorf("no signatures produced"))
+		require.Error(t, errs.NewIsNil("no signatures produced"))
 	}
 
 	// all signatures the same
 	for i := 0; i < len(producedSignatures); i++ {
 		for j := i + 1; j < len(producedSignatures); j++ {
 			if producedSignatures[i].R.Equal(producedSignatures[j].R) == false {
-				require.Error(t, fmt.Errorf("signatures not the same"))
+				require.Error(t, errs.NewVerification("signatures not the same"))
 			}
 			if producedSignatures[i].S.Cmp(producedSignatures[j].S) != 0 {
-				require.Error(t, fmt.Errorf("signatures not the same"))
+				require.Error(t, errs.NewVerification("signatures not the same"))
 			}
 		}
 	}
@@ -305,13 +305,13 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 	require.NoError(t, err)
 	for _, publicKeyShare := range publicKeyShares {
 		if publicKeyShare == nil {
-			require.Error(t, fmt.Errorf("public key share is nil"))
+			require.Error(t, errs.NewIsNil("public key share is nil"))
 		}
 	}
 	for i := 0; i < len(signingKeyShares); i++ {
 		for j := i + 1; j < len(signingKeyShares); j++ {
 			if signingKeyShares[i].Share.Cmp(signingKeyShares[j].Share) == 0 {
-				require.Error(t, fmt.Errorf("duplicate signing key shares"))
+				require.Error(t, errs.NewValue("duplicate signing key shares"))
 			}
 		}
 	}
@@ -319,7 +319,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 	for i := 0; i < len(signingKeyShares); i++ {
 		for j := i + 1; j < len(signingKeyShares); j++ {
 			if signingKeyShares[i].PublicKey.Equal(signingKeyShares[i].PublicKey) == false {
-				require.Error(t, fmt.Errorf("duplicate public key shares"))
+				require.Error(t, errs.NewValue("duplicate public key shares"))
 			}
 		}
 	}
@@ -339,7 +339,7 @@ func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz
 
 	derivedPublicKey := curve.ScalarBaseMult(reconstructedPrivateKey)
 	if signingKeyShares[0].PublicKey.Equal(derivedPublicKey) == false {
-		require.Error(t, fmt.Errorf("public key does not match"))
+		require.Error(t, errs.NewVerification("public key does not match"))
 	}
 	return identities, protocol, participants, signingKeyShares, publicKeyShares
 }

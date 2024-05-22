@@ -31,6 +31,10 @@ const (
 	LPrimeBytes = LPrime / 8
 )
 
+var BlockHasher = sha3.NewShake128
+
+type Counter = uint128.Uint128
+
 var _ io.Reader = (*WrappedReader)(nil)
 
 type WrappedReader struct {
@@ -38,9 +42,9 @@ type WrappedReader struct {
 	deviceRandomnessDeterministicWrappingKey types.AuthKey
 	// Extract(H(Sig(sk, tag1)), ikm) where tag1 is bounded to the device
 	prk []byte
-	// a unique nonce for each sample. Should be less than n + L.
+	// a unique nonce for each sample. Should be of size less than n + L.
 	// since L'=128, we can use a uint128.
-	tag2 uint128.Uint128
+	tag2 Counter
 }
 
 func NewWrappedReader(prng io.Reader, deterministicWrappingKey types.AuthKey) (*WrappedReader, error) {
@@ -80,11 +84,11 @@ func NewWrappedReader(prng io.Reader, deterministicWrappingKey types.AuthKey) (*
 }
 
 func (wr *WrappedReader) Read(p []byte) (n int, err error) {
-	shaker := sha3.NewShake128()
+	shaker := BlockHasher()
 	blockCount := utils.CeilDiv(len(p), NBytes)
 	for i := 0; i < blockCount; i++ {
 		var block [NBytes]byte
-		var tag2Bytes [NBytes]byte
+		var tag2Bytes [LPrimeBytes]byte
 		wr.tag2.PutBytesBE(tag2Bytes[:])
 		expander := hkdf.Expand(base.RandomOracleHashFunction, wr.prk, tag2Bytes[:])
 		if _, err := io.ReadFull(expander, block[:]); err != nil {

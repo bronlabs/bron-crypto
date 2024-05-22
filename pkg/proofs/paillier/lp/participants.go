@@ -18,6 +18,7 @@ import (
 const (
 	transcriptLabel = "COPPER_KRYPTON_PAILLIER_LP-"
 	PaillierBitSize = 1024
+	// TODO: Should we bump it to 1536 to comply with NIST recommendations?
 )
 
 type Participant struct {
@@ -31,6 +32,10 @@ type Participant struct {
 	k int // security parameter - cheating prover can succeed with probability < 2^(-k)
 
 	_ ds.Incomparable
+}
+
+func (p *Participant) SoundnessError() int {
+	return p.k
 }
 
 type VerifierState struct {

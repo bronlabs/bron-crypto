@@ -29,11 +29,11 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proof compiler.NIZ
 	}
 
 	a := make([]byte, 0)
-	aI := make([]A, r)
-	stateI := make([]S, r)
+	aI := make([]A, R)
+	stateI := make([]S, R)
 
 	// step 1. for each i in [r] compute SigmaP_a(x, w)
-	for i := 0; i < r; i++ {
+	for i := 0; i < R; i++ {
 		var err error
 		aI[i], stateI[i], err = p.sigmaProtocol.ComputeProverCommitment(statement, witness)
 		if err != nil {
@@ -44,11 +44,11 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proof compiler.NIZ
 		a = append(a, p.sigmaProtocol.SerializeCommitment(aI[i])...)
 	}
 
-	eI := make([][]byte, r)
-	zI := make([]Z, r)
+	eI := make([][]byte, R)
+	zI := make([]Z, R)
 
 	// step 3. for each i [r]
-	for i := 0; i < r; i++ {
+	for i := 0; i < R; i++ {
 		// step 3.a set e to empty
 		eSet := make([][]byte, 0)
 		for {
@@ -81,7 +81,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proof compiler.NIZ
 	}
 
 	commitmentSerialized := make([]byte, 0)
-	for i := 0; i < r; i++ {
+	for i := 0; i < R; i++ {
 		commitmentSerialized = append(commitmentSerialized, p.sigmaProtocol.SerializeCommitment(aI[i])...)
 	}
 	p.transcript.AppendMessages(commitmentLabel, commitmentSerialized)

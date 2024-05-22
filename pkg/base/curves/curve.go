@@ -78,6 +78,13 @@ type Curve interface {
 	ScalarField() ScalarField
 }
 
+// ComputationalSecurity returns the security level of the curve in bits,
+// equivalent to AES key size as per NIST SP 800-57 Part 1 Rev. 5, 05/2020
+// (https://www.keylength.com/en/4/)
+func ComputationalSecurity(c Curve) int {
+	return (c.ScalarField().ElementSize() / 2) * 8
+}
+
 // Point is the interface to represent an element of the ***prime order subgroup*** of an elliptic curve.
 type Point interface {
 	GeneralEllipticCurvePoint[Curve, BaseField, Point, BaseFieldElement]

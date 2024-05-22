@@ -46,6 +46,11 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 	SerializeStatement(statement X) []byte
 	SerializeCommitment(commitment A) []byte
 	SerializeResponse(response Z) []byte
+	// SoundnessError returns the statistical soundness error `s` of the protocol,
+	// i.e. the probability that a cheating prover can succeed is ≤ 2^(-s).
+	// For interactive proofs it must be at least base.StatisticalSecurity,
+	// for non-interactive proofs it must be at least base.ComputationalSecurity.
+	SoundnessError() int
 }
 
 type participant[X Statement, W Witness, A Commitment, S State, Z Response] struct {

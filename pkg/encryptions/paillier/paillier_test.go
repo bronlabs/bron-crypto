@@ -265,7 +265,7 @@ type lcmTest struct {
 func TestKeyGeneratorErrorConditions(t *testing.T) {
 	// Should fail if a safe prime cannot be generated.
 	f := func(bits int, reader io.Reader) (*saferith.Nat, *saferith.Nat, error) {
-		return nil, nil, fmt.Errorf("safeprime error")
+		return nil, nil, errs.NewFailed("safeprime error")
 	}
 	_, _, err := paillier.KeyGenWithPrimeGenerator(1, crand.Reader, f)
 	require.Contains(t, err.Error(), "safeprime error")

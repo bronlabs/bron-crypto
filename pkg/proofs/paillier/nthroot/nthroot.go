@@ -59,6 +59,10 @@ func (*protocol) Name() sigma.Name {
 	return Name
 }
 
+func (p *protocol) SoundnessError() int {
+	return p.n.AnnouncedLen()
+}
+
 func (p *protocol) ComputeProverCommitment(_ Statement, _ Witness) (Commitment, State, error) {
 	r, err := crand.Int(p.prng, p.nSquared.Big())
 	if err != nil {

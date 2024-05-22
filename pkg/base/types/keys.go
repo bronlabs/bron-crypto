@@ -8,6 +8,7 @@ import (
 	"github.com/cronokirby/saferith"
 	"golang.org/x/exp/constraints"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/bimap"
@@ -36,6 +37,9 @@ func ValidateIdentityKey(k IdentityKey) error {
 	if !k.PublicKey().IsInPrimeSubGroup() {
 		return errs.NewValidation("Public Key not in the prime subgroup")
 	}
+	if curveSec := curves.ComputationalSecurity(k.PublicKey().Curve()); curveSec < base.ComputationalSecurity {
+		return errs.NewCurve("Curve security (%d) below %d bits", curveSec, base.ComputationalSecurity)
+	}
 	return nil
 }
 
@@ -58,6 +62,9 @@ func ValidateAuthKey(k AuthKey) error {
 	}
 	if sk.IsZero() {
 		return errs.NewIsZero("private key")
+	}
+	if curveSec := curves.ComputationalSecurity(k.PublicKey().Curve()); curveSec < base.ComputationalSecurity {
+		return errs.NewCurve("Curve security (%d) below %d bits", curveSec, base.ComputationalSecurity)
 	}
 	return nil
 }

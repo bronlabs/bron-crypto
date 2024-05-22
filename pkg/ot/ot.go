@@ -17,7 +17,7 @@ import (
 const (
 	// Kappa (κ) is the security parameter of the OT protocols.
 	Kappa      = base.ComputationalSecurity
-	KappaBytes = base.ComputationalSecurityBytes
+	KappaBytes = Kappa / 8
 )
 
 var HashFunction = base.RandomOracleHashFunction // Output length must be >= KappaBytes

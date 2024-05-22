@@ -23,14 +23,14 @@ func hash(data ...[]byte) ([]byte, error) {
 		return nil, errs.WrapHashing(err, "cannot hash values")
 	}
 
-	return result[:lBytes], nil
+	return result[:LBytes], nil
 }
 
 func sample(existing [][]byte, length int, prng io.Reader) ([]byte, error) {
 outer:
 	for {
 		ei := make([]byte, length)
-		_, err := io.ReadFull(prng, ei[:tBytes])
+		_, err := io.ReadFull(prng, ei[:TBytes])
 		if err != nil {
 			return nil, errs.NewRandomSample("cannot read from PRNG")
 		}

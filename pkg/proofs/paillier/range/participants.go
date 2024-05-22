@@ -33,6 +33,10 @@ type Participant struct {
 	_ ds.Incomparable
 }
 
+func (p *Participant) SoundnessError() int {
+	return p.t
+}
+
 type ProverState struct {
 	esidCommitment commitments.Commitment
 	w1             []*saferith.Nat

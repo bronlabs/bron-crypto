@@ -7,8 +7,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/thirdparty/golang/crypto/chacha20"
 )
 
-const ChachaPRNGSecurityStrength = chacha20.KeySize // 256 bits
-
 // Prng uses a fast-erasure version of `chacha20` stream cipher as a Prng.
 type Prng struct {
 	chacha *chacha20.FastKeyErasureCipher
@@ -55,8 +53,8 @@ func (c *Prng) Reseed(seed, salt []byte) (err error) {
 		c.chacha = nil
 		c.seeded = false
 		return nil
-	case seedLen < ChachaPRNGSecurityStrength:
-		seed = bitstring.PadToRight(seed, ChachaPRNGSecurityStrength-len(seed))
+	case seedLen < chacha20.KeySize:
+		seed = bitstring.PadToRight(seed, chacha20.KeySize-len(seed))
 		fallthrough
 	default:
 		switch saltLen := len(salt); {
@@ -88,5 +86,5 @@ func (c *Prng) Seed(seed, salt []byte) error {
 }
 
 func (*Prng) SecurityStrength() int {
-	return ChachaPRNGSecurityStrength
+	return chacha20.KeySize
 }

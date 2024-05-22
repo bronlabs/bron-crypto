@@ -132,6 +132,10 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) GetChallengeBytesLengt
 	return p.challengeBytesLength
 }
 
+func (p protocol[_, _, _, _, _, _, _, _, _, _]) SoundnessError() int {
+	return min(p.sigma0.SoundnessError(), p.sigma1.SoundnessError())
+}
+
 func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStatement(statement *Statement[X0, X1], witness *Witness[W0, W1]) error {
 	if err := p.sigma0.ValidateStatement(statement.X0, witness.W0); err != nil {
 		return errs.WrapValidation(err, "invalid statement")

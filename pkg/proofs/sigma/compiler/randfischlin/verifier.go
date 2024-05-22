@@ -27,7 +27,7 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proof compiler.NIZKPoKProof
 		return errs.NewType("input proof")
 	}
 
-	if len(rfProof.A) != r || len(rfProof.E) != r || len(rfProof.Z) != r {
+	if len(rfProof.A) != R || len(rfProof.E) != R || len(rfProof.Z) != R {
 		return errs.NewArgument("invalid length")
 	}
 
@@ -38,7 +38,7 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proof compiler.NIZKPoKProof
 	}
 
 	commitmentSerialized := make([]byte, 0)
-	for i := 0; i < r; i++ {
+	for i := 0; i < R; i++ {
 		commitmentSerialized = append(commitmentSerialized, v.sigmaProtocol.SerializeCommitment(rfProof.A[i])...)
 	}
 	v.transcript.AppendMessages(commitmentLabel, commitmentSerialized)
@@ -46,12 +46,12 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proof compiler.NIZKPoKProof
 
 	// step 1. parse (a_i, e_i, z_i) for i in [r] and set a = (a_i) for every i in [r]
 	a := make([]byte, 0)
-	for i := 0; i < r; i++ {
+	for i := 0; i < R; i++ {
 		a = append(a, v.sigmaProtocol.SerializeCommitment(rfProof.A[i])...)
 	}
 
 	// step 2. for each i in [r] verify that hash(a, i, e_i, z_i) == 0 and SigmaV(x, (a_i, e_i, z_i)) is true, abort if not
-	for i := 0; i < r; i++ {
+	for i := 0; i < R; i++ {
 		digest, err := hash(crs, a, bitstring.ToBytes32LE(int32(i)), rfProof.E[i], v.sigmaProtocol.SerializeResponse(rfProof.Z[i]))
 		if err != nil {
 			return errs.WrapHashing(err, "cannot hash")

@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -46,6 +47,9 @@ func ValidateProtocolConfig(f Protocol) error {
 	}
 	if f.Curve() == nil {
 		return errs.NewIsNil("curve")
+	}
+	if curveSec := curves.ComputationalSecurity(f.Curve()); curveSec < base.ComputationalSecurity {
+		return errs.NewCurve("Curve security (%d) below %d bits", curveSec, base.ComputationalSecurity)
 	}
 	if f.Participants() == nil {
 		return errs.NewIsNil("participants return nil")
