@@ -17,6 +17,14 @@ type SubGroupElementInvariants[G algebra.Group[G, GE], GE algebra.GroupElement[G
 
 type AdditiveGroupInvariants[G algebra.AdditiveGroup[G, GE], GE algebra.AdditiveGroupElement[G, GE]] struct{}
 
+type AdditiveGroupElementInvariants[G algebra.AdditiveGroup[G, GE], GE algebra.AdditiveGroupElement[G, GE]] struct{}
+
+type MultiplicativeGroupInvariants[G algebra.MultiplicativeGroup[G, GE], GE algebra.MultiplicativeGroupElement[G, GE]] struct{}
+
+type MultiplicativeGroupElementInvariants[G algebra.MultiplicativeGroup[G, GE], GE algebra.MultiplicativeGroupElement[G, GE]] struct{}
+
+type CyclicGroupInvariants[G algebra.CyclicGroup[G, GE], GE algebra.CyclicGroupElement[G, GE]] struct{}
+
 func (gei *GroupElementInvariants[G, GE]) Inverse(t *testing.T, group algebra.Group[G, GE], random algebra.GroupElement[G, GE], under algebra.BinaryOperator[GE], n *saferith.Nat) {
 	t.Helper()
 
@@ -100,13 +108,34 @@ func (sgi *SubGroupElementInvariants[G, GE]) ClearCofactor(t *testing.T, group a
 	require.Equal(t, expected, element.ClearCofactor())
 }
 
-func (agi *AdditiveGroupInvariants[G, GE]) AdditiveInverse(t *testing.T, group algebra.AdditiveGroup[G, GE], element algebra.AdditiveGroupElement[G, GE]) {
+func (agi *AdditiveGroupInvariants[G, GE]) AdditiveInverse(t *testing.T, group algebra.AdditiveGroup[G, GE], element algebra.AdditiveGroupElement[G, GE], n *saferith.Nat) {
 	t.Helper()
-	// TODO: Will add more invariants after the Inverse tests are implemented
+
+	identityElement := group.AdditiveIdentity()
+	inverseOfIdentity := identityElement.AdditiveInverse()
+	require.Equal(t, inverseOfIdentity, identityElement, "Inverse of identity element is itself")
+
+	inverse := element.AdditiveInverse()
+	inverseOfInverse := inverse.AdditiveInverse()
+	require.Equal(t, element, inverseOfInverse, "Inverse of inverse of X should be equal to X")
+
+	output := element.ApplyAdd(inverse, n.SetUint64(uint64(1)))
+	require.Equal(t, identityElement, output, "Any element o inverse of the element should be equal to the identity element")
 }
-func (agi *AdditiveGroupInvariants[G, GE]) IsAdditiveInverse(t *testing.T) {
+func (agi *AdditiveGroupInvariants[G, GE]) IsAdditiveInverse(t *testing.T, group algebra.AdditiveGroup[G, GE], element algebra.AdditiveGroupElement[G, GE], n *saferith.Nat) {
 	t.Helper()
-	// TODO: Is it OK that I call the isInverse test and pass it the Add operator ?
+
+	identityElement := group.AdditiveIdentity()
+	inverseOfIdentity := identityElement.IsAdditiveInverse(identityElement)
+	require.True(t, inverseOfIdentity, "Inverse of identity element is itself")
+
+	inverseOfRandom := group.AdditiveIdentity()
+	IsInverseOfRandom := element.IsAdditiveInverse(inverseOfRandom)
+	require.True(t, IsInverseOfRandom, "Inverse of inverse of X should be equal to X")
+
+	output := element.ApplyAdd(inverseOfRandom, n.SetUint64(uint64(1)))
+	IsInverse := output.IsAdditiveInverse(output)
+	require.True(t, IsInverse, "identity element is Inverse of itself")
 
 }
 func (agi *AdditiveGroupInvariants[G, GE]) IsTorsionElementUnderAddition(t *testing.T) {
@@ -127,7 +156,7 @@ func (agi *AdditiveGroupInvariants[G, GE]) Neg(t *testing.T, element algebra.Add
 }
 func (agi *AdditiveGroupInvariants[G, GE]) Sub(t *testing.T, group algebra.AdditiveGroup[G, GE], x algebra.AdditiveGroupElement[G, GE], ys ...algebra.AdditiveGroupElement[G, GE]) {
 	t.Helper()
-	// TODO
+
 	result := group.Add(x)
 	for index := len(ys) - 1; index >= 0; index-- {
 		result = group.Add(result, ys[index].Neg())
@@ -135,9 +164,102 @@ func (agi *AdditiveGroupInvariants[G, GE]) Sub(t *testing.T, group algebra.Addit
 	require.Equal(t, result, group.Sub(x, ys...),
 		"Should get the same result for subtracting ys elements one by one from x")
 }
-func (agi *AdditiveGroupInvariants[G, GE]) ApplySub(t *testing.T) {
+func (agi *AdditiveGroupInvariants[G, GE]) ApplySub(t *testing.T, group algebra.AdditiveGroup[G, GE], x algebra.AdditiveGroupElement[G, GE], n *saferith.Nat) {
 	t.Helper()
 
+	result := x.ApplySub(x, n)
+
+	sub := x.Sub(x)
+	for i := 2; int64(i) < n.Big().Int64(); i++ { // n-2 times
+		sub = x.Sub(x)
+	}
+
+	require.Equal(t, sub, result)
+}
+
+func (mgei *MultiplicativeGroupElementInvariants[G, GE]) MultiplicativeInverse(t *testing.T, group algebra.MultiplicativeGroup[G, GE], element algebra.MultiplicativeGroupElement[G, GE], n *saferith.Nat) {
+	t.Helper()
+
+	identityElement := group.MultiplicativeIdentity()
+	inverseOfIdentity, err := identityElement.MultiplicativeInverse()
+	require.NoError(t, err)
+	require.Equal(t, inverseOfIdentity, identityElement, "Inverse of identity element is itself")
+
+	inverse, err1 := element.MultiplicativeInverse()
+	require.NoError(t, err1)
+	inverseOfInverse, err2 := inverse.MultiplicativeInverse()
+	require.NoError(t, err2)
+	require.Equal(t, element, inverseOfInverse, "Inverse of inverse of X should be equal to X")
+
+	output := element.ApplyMul(inverse, n.SetUint64(uint64(1)))
+	require.Equal(t, identityElement, output, "Any element o inverse of the element should be equal to the identity element")
+}
+
+func (mgi *MultiplicativeGroupInvariants[G, GE]) Div(t *testing.T, group algebra.MultiplicativeGroup[G, GE], x algebra.MultiplicativeGroupElement[G, GE], ys ...algebra.MultiplicativeGroupElement[G, GE]) {
+	t.Helper()
+
+	result := group.Mul(x)
+	for index := len(ys) - 1; index >= 0; index-- {
+		temp, err := ys[index].MultiplicativeInverse()
+		require.NoError(t, err)
+		result = group.Mul(result, temp)
+	}
+	output, err := group.Div(x, ys...)
+	require.NoError(t, err)
+	require.Equal(t, result, output,
+		"Should get the same result for Multiplying inverse of ys elements by x")
+}
+
+func (mgei *MultiplicativeGroupElementInvariants[G, GE]) IsMultiplicativeInverse(t *testing.T, group algebra.MultiplicativeGroup[G, GE], element algebra.MultiplicativeGroupElement[G, GE], n *saferith.Nat) {
+	t.Helper()
+
+	identityElement := group.MultiplicativeIdentity()
+	inverseOfIdentity := identityElement.IsMultiplicativeInverse(identityElement)
+	require.True(t, inverseOfIdentity, "Inverse of identity element is itself")
+
+	inverseOfRandom := group.MultiplicativeIdentity()
+	IsInverseOfRandom := element.IsMultiplicativeInverse(inverseOfRandom)
+	require.True(t, IsInverseOfRandom, "Inverse of inverse of X should be equal to X")
+
+	output := element.ApplyMul(inverseOfRandom, n.SetUint64(uint64(1)))
+	IsInverse := output.IsMultiplicativeInverse(output)
+	require.True(t, IsInverse, "identity element is Inverse of itself")
+}
+
+func (mgei *MultiplicativeGroupElementInvariants[G, GE]) IsTorsionElementUnderMultiplication(t *testing.T, group algebra.MultiplicativeGroup[G, GE], element algebra.MultiplicativeGroupElement[G, GE], n *saferith.Nat) {
+	t.Helper()
+	// TODO
+}
+func (mgei *MultiplicativeGroupElementInvariants[G, GE]) Div(t *testing.T, group algebra.MultiplicativeGroup[G, GE], x, y algebra.MultiplicativeGroupElement[G, GE]) {
+	t.Helper()
+
+	output, err := x.Div(y)
+	require.NoError(t, err)
+	yInverse, err := y.MultiplicativeInverse()
+	require.NoError(t, err)
+	expected := x.Mul(yInverse)
+	require.Equal(t, expected, output)
+
+}
+
+func (mgei *MultiplicativeGroupElementInvariants[G, GE]) ApplyDiv(t *testing.T, group algebra.MultiplicativeGroup[G, GE], x, y algebra.MultiplicativeGroupElement[G, GE], n *saferith.Nat) {
+	t.Helper()
+
+	output, err := x.ApplyDiv(y, n)
+	require.NoError(t, err)
+
+	expected, err1 := x.Div(y)
+	require.NoError(t, err1)
+
+	for i := 2; int64(i) < n.Big().Int64(); i++ { // n-2 times
+		expected, _ = x.Div(y)
+	}
+
+	require.Equal(t, expected, output)
+}
+func (mgei *CyclicGroupInvariants[G, GE]) DLog(t *testing.T, group algebra.CyclicGroup[G, GE], x, y algebra.CyclicGroupElement[G, GE]) {
+	t.Helper()
+	// TODO:
 }
 
 func (agi *AdditiveGroupInvariants[G, GE]) IsIdentity(t *testing.T,
