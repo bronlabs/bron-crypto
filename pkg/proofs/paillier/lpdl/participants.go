@@ -10,7 +10,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lp"
 	paillierrange "github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/range"
@@ -45,9 +45,9 @@ type State struct {
 
 type VerifierState struct {
 	State
-	cDoublePrimeWitness commitments.Witness
+	cDoublePrimeOpening *hashcommitments.Opening
 	bigQPrime           curves.Point
-	cHat                commitments.Commitment
+	cHat                *hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
@@ -65,8 +65,8 @@ type ProverState struct {
 	State
 	alpha                  *saferith.Nat
 	bigQHat                curves.Point
-	bigQHatWitness         commitments.Witness
-	cDoublePrimeCommitment commitments.Commitment
+	bigQHatOpening         *hashcommitments.Opening
+	cDoublePrimeCommitment *hashcommitments.Commitment
 
 	_ ds.Incomparable
 }

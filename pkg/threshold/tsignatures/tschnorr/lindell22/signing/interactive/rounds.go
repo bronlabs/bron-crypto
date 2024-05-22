@@ -1,13 +1,14 @@
 package interactive_signing
 
 import (
+	"bytes"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
@@ -35,19 +36,23 @@ func (p *Cosigner[V]) Round1() (broadcastOutput *Round1Broadcast, err error) {
 	bigR := p.Protocol.Curve().ScalarBaseMult(k)
 
 	// step 1.2: Run c_i <= commit(sid || R_i || i || S)
-	bigRCommitment, bigRWitness, err := commitments.Commit(p.SessionId, p.Prng, []byte(commitmentDomainRLabel), bigR.ToAffineCompressed(), p.state.pid, p.state.bigS)
+	committer, err := hashcommitments.NewCommitter(p.SessionId, p.Prng, []byte(commitmentDomainRLabel), p.state.pid, p.state.bigS)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot instantiate vector committer")
+	}
+	commitment, opening, err := committer.Commit(bigR.ToAffineCompressed())
 	if err != nil {
 		return nil, errs.NewFailed("cannot commit to R")
 	}
 
 	// step 1.4: Broadcast(c_i)
 	broadcast := &Round1Broadcast{
-		BigRCommitment: bigRCommitment,
+		BigRCommitment: commitment,
 	}
 
 	p.state.k = k
 	p.state.bigR = bigR
-	p.state.bigRWitness = bigRWitness
+	p.state.opening = opening
 	p.Round++
 
 	return broadcast, nil
@@ -62,9 +67,10 @@ func (p *Cosigner[V]) Round2(broadcastInput network.RoundMessages[types.Threshol
 		return nil, errs.WrapValidation(err, "invalid round 1 broadcast output")
 	}
 
-	p.state.theirBigRCommitment = hashmap.NewHashableHashMap[types.IdentityKey, commitments.Commitment]()
+	p.state.theirBigRCommitment = hashmap.NewHashableHashMap[types.IdentityKey, *hashcommitments.Commitment]()
 	for iterator := p.quorum.Iterator(); iterator.HasNext(); {
 		identity := iterator.Next()
+
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -81,7 +87,7 @@ func (p *Cosigner[V]) Round2(broadcastInput network.RoundMessages[types.Threshol
 	// step 2.3: Broadcast(π^dl_i, R_i, c_i)
 	broadcast := &Round2Broadcast{
 		BigR:        p.state.bigR,
-		BigRWitness: p.state.bigRWitness,
+		BigROpening: p.state.opening,
 		BigRProof:   bigRProof,
 	}
 
@@ -108,14 +114,18 @@ func (p *Cosigner[V]) Round3(broadcastInput network.RoundMessages[types.Threshol
 		in, _ := broadcastInput.Get(identity)
 		theirPid := identity.PublicKey().ToAffineCompressed()
 		theirBigR := in.BigR
-		theirBigRWitness := in.BigRWitness
+		theirBigROpening := in.BigROpening
 		theirBigRCommitment, exists := p.state.theirBigRCommitment.Get(identity)
 		if !exists {
 			return nil, errs.NewMissing("could not find their bigR commitment (pid=%x)", theirPid)
 		}
 
 		// step 3.2: Open(sid || R_j || j || S)
-		if err := commitments.Open(p.SessionId, theirBigRCommitment, theirBigRWitness, []byte(commitmentDomainRLabel), theirBigR.ToAffineCompressed(), theirPid, p.state.bigS); err != nil {
+		verifier := hashcommitments.NewVerifier(p.SessionId, []byte(commitmentDomainRLabel), theirPid, p.state.bigS)
+		if !bytes.Equal(theirBigR.ToAffineCompressed(), theirBigROpening.Message()) {
+			return nil, errs.NewVerification("opening is not tied to the expected value")
+		}
+		if err := verifier.Verify(theirBigRCommitment, theirBigROpening); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 

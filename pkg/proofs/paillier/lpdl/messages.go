@@ -6,7 +6,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	paillierrange "github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/range"
 )
@@ -14,7 +14,7 @@ import (
 type Round1Output struct {
 	RangeVerifierOutput    *paillierrange.Round1Output
 	CPrime                 *paillier.CipherText
-	CDoublePrimeCommitment commitments.Commitment
+	CDoublePrimeCommitment *hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
@@ -37,7 +37,7 @@ func (r1out *Round1Output) Validate() error {
 
 type Round2Output struct {
 	RangeProverOutput *paillierrange.Round2Output
-	CHat              commitments.Commitment
+	CHat              *hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
@@ -59,7 +59,7 @@ type Round3Output struct {
 	RangeVerifierOutput *paillierrange.Round3Output
 	A                   *saferith.Nat
 	B                   *saferith.Nat
-	CDoublePrimeWitness commitments.Witness
+	CDoublePrimeOpening *hashcommitments.Opening
 
 	_ ds.Incomparable
 }
@@ -77,7 +77,7 @@ func (r3out *Round3Output) Validate() error {
 	if r3out.B == nil {
 		return errs.NewIsNil("B")
 	}
-	if err := r3out.CDoublePrimeWitness.Validate(); err != nil {
+	if err := r3out.CDoublePrimeOpening.Validate(); err != nil {
 		return errs.WrapValidation(err, "invalid CDoublePrime witness")
 	}
 	return nil
@@ -86,7 +86,7 @@ func (r3out *Round3Output) Validate() error {
 type Round4Output struct {
 	RangeProverOutput *paillierrange.Round4Output
 	BigQHat           curves.Point
-	BigQHatWitness    commitments.Witness
+	BigQHatOpening    *hashcommitments.Opening
 
 	_ ds.Incomparable
 }
@@ -104,7 +104,7 @@ func (r4out *Round4Output) Validate() error {
 	if r4out.BigQHat.IsAdditiveIdentity() {
 		return errs.NewArgument("BigQHat is identity")
 	}
-	if err := r4out.BigQHatWitness.Validate(); err != nil {
+	if err := r4out.BigQHatOpening.Validate(); err != nil {
 		return errs.WrapValidation(err, "invalid BigQHat witness")
 	}
 	return nil

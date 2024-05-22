@@ -8,7 +8,7 @@ import (
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -38,7 +38,7 @@ func (p *Participant) SoundnessError() int {
 }
 
 type ProverState struct {
-	esidCommitment commitments.Commitment
+	esidCommitment *hashcommitments.Commitment
 	w1             []*saferith.Nat
 	r1             []*saferith.Nat
 	w2             []*saferith.Nat
@@ -59,7 +59,7 @@ type Prover struct {
 
 type VerifierState struct {
 	e           *big.Int
-	esidWitness commitments.Witness
+	esidOpening *hashcommitments.Opening
 	c1          []*paillier.CipherText
 	c2          []*paillier.CipherText
 

@@ -11,7 +11,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
@@ -41,9 +40,9 @@ func Test_HappyPath(t *testing.T) {
 	threshold := 2
 	total := 3
 
-	identities, err := testutils.MakeTestIdentities(cipherSuite, total)
+	identities, err := ttu.MakeTestIdentities(cipherSuite, total)
 	require.NoError(t, err)
-	protocol, err := testutils.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	require.NoError(t, err)
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(cipherSuite.Curve(), identities, crand.Reader)
 	require.NoError(t, err)
@@ -109,7 +108,7 @@ func Test_HappyPath(t *testing.T) {
 
 	t.Run("each transcript recorded common", func(t *testing.T) {
 		t.Parallel()
-		ok, err := testutils.TranscriptAtSameState("gimme something", transcripts)
+		ok, err := ttu.TranscriptAtSameState("gimme something", transcripts)
 		require.NoError(t, err)
 		require.True(t, ok)
 	})

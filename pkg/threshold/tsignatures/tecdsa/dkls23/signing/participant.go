@@ -6,7 +6,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	mult "github.com/copperexchange/krypton-primitives/pkg/threshold/mult/dkls23"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
@@ -104,8 +104,8 @@ type SignerState struct {
 	Dv_i                           map[types.SharingID]curves.Scalar
 	Psi_i                          map[types.SharingID]curves.Scalar
 	Chi_i                          map[types.SharingID]curves.Scalar
-	InstanceKeyWitness             map[types.SharingID]commitments.Witness
-	ReceivedInstanceKeyCommitments map[types.SharingID]commitments.Commitment
+	InstanceKeyOpening             map[types.SharingID]*hashcommitments.Opening
+	ReceivedInstanceKeyCommitments map[types.SharingID]*hashcommitments.Commitment
 	ReceivedBigR_i                 ds.Map[types.IdentityKey, curves.Point]
 	Protocols                      *SubProtocols
 

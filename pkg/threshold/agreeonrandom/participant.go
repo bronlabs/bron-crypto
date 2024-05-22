@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -36,8 +36,8 @@ func (p *Participant) IdentityKey() types.IdentityKey {
 
 type State struct {
 	r_i                 curves.Scalar
-	witness             commitments.Witness
-	receivedCommitments ds.Map[types.IdentityKey, commitments.Commitment]
+	opening             *hashcommitments.Opening
+	receivedCommitments ds.Map[types.IdentityKey, *hashcommitments.Commitment]
 
 	_ ds.Incomparable
 }
@@ -58,7 +58,7 @@ func NewParticipant(authKey types.AuthKey, protocol types.Protocol, transcript t
 		Protocol:   protocol,
 		Transcript: transcript,
 		state: &State{
-			receivedCommitments: hashmap.NewHashableHashMap[types.IdentityKey, commitments.Commitment](),
+			receivedCommitments: hashmap.NewHashableHashMap[types.IdentityKey, *hashcommitments.Commitment](),
 		},
 	}
 

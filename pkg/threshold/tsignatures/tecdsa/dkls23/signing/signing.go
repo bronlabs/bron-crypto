@@ -1,13 +1,15 @@
 package signing
 
 import (
+	"bytes"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
@@ -29,7 +31,7 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 	// step 1.2: public instance key BigR_i
 	state.BigR_i = protocol.Curve().ScalarBaseMult(state.R_i)
 
-	state.InstanceKeyWitness = make(map[types.SharingID]commitments.Witness)
+	state.InstanceKeyOpening = make(map[types.SharingID]*hashcommitments.Opening)
 	state.Chi_i = make(map[types.SharingID]curves.Scalar)
 	outputP2P := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round1P2P]()
 
@@ -45,17 +47,15 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 		}
 
 		// step 1.4: (c'_ij, w_ij) <- Commit(i || j || sid || R_i)
-		commitmentToInstanceKey, witness, err := commitments.Commit(
-			p.SessionId,
-			p.Prng,
-			bitstring.ToBytes32LE(int32(p.SharingId())),
-			bitstring.ToBytes32LE(int32(sharingId)),
-			state.BigR_i.ToAffineCompressed(),
-		)
+		committer, err := hashcommitments.NewCommitter(p.SessionId, p.Prng, bitstring.ToBytes32LE(int32(p.SharingId())), bitstring.ToBytes32LE(int32(sharingId)))
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "could not commit to instance key")
+			return nil, nil, errs.WrapFailed(err, "cannot instantiate committer")
 		}
-		state.InstanceKeyWitness[sharingId] = witness
+		commitmentToInstanceKey, opening, err := committer.Commit(state.BigR_i.ToAffineCompressed())
+		if err != nil {
+			return nil, nil, errs.NewFailed("cannot commit to instance key")
+		}
+		state.InstanceKeyOpening[sharingId] = opening
 
 		// step 1.5: Run γ_ij <- RVOLE.Round1() as Bob
 		multInstance, exists := state.Protocols.Multiplication.Get(participant)
@@ -104,7 +104,7 @@ func DoRound2(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 	a := [mult.L]curves.Scalar{state.R_i, state.Sk_i}
 
 	state.ReceivedBigR_i = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
-	state.ReceivedInstanceKeyCommitments = make(map[types.SharingID]commitments.Commitment)
+	state.ReceivedInstanceKeyCommitments = make(map[types.SharingID]*hashcommitments.Commitment)
 	state.Cu_i = make(map[types.SharingID]curves.Scalar)
 	state.Cv_i = make(map[types.SharingID]curves.Scalar)
 	outputP2P := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round2P2P]()
@@ -156,7 +156,7 @@ func DoRound2(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 			GammaU_ij:          gammaU_ij,
 			GammaV_ij:          gammaV_ij,
 			Psi_ij:             psi_ij,
-			InstanceKeyWitness: state.InstanceKeyWitness[sharingId],
+			InstanceKeyOpening: state.InstanceKeyOpening[sharingId],
 		})
 	}
 
@@ -202,14 +202,11 @@ func DoRound3Prologue(p *Participant, protocol types.ThresholdProtocol, quorum d
 			return errs.NewMissing("do not have BigRI in memory for %s", participant.String())
 		}
 		// step 3.2: Open(j || i || sid || R_i, c'_ij, w_ij)
-		if err := commitments.Open(
-			p.SessionId,
-			state.ReceivedInstanceKeyCommitments[sharingId],
-			receivedP2PMessage.InstanceKeyWitness,
-			bitstring.ToBytes32LE(int32(sharingId)),
-			bitstring.ToBytes32LE(int32(p.SharingId())),
-			receivedBigR_i.ToAffineCompressed(),
-		); err != nil {
+		verifier := hashcommitments.NewVerifier(p.SessionId, bitstring.ToBytes32LE(int32(sharingId)), bitstring.ToBytes32LE(int32(p.SharingId())))
+		if !bytes.Equal(receivedBigR_i.ToAffineCompressed(), receivedP2PMessage.InstanceKeyOpening.Message()) {
+			return errs.NewVerification("opening is not tied to the expected value")
+		}
+		if err := verifier.Verify(state.ReceivedInstanceKeyCommitments[sharingId], receivedP2PMessage.InstanceKeyOpening); err != nil {
 			return errs.WrapIdentifiableAbort(err, participant.String(), "message could not be opened")
 		}
 

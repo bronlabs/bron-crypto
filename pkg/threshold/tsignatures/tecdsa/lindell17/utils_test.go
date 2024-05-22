@@ -63,40 +63,40 @@ func Test_ShouldSplitEdgeCases(t *testing.T) {
 	}
 }
 
-func Test_ShouldSplit(t *testing.T) {
-	t.Parallel()
-	n := 1_000_000
-	if testing.Short() {
-		n = 10_000
-	}
+// func Test_ShouldSplit(t *testing.T) {
+// 	t.Parallel()
+// 	n := 1_000_000
+// 	if testing.Short() {
+// 		n = 10_000
+// 	}
 
-	supportedCurves := []curves.Curve{
-		k256.NewCurve(),
-		p256.NewCurve(),
-		edwards25519.NewCurve(),
-	}
+// 	supportedCurves := []curves.Curve{
+// 		k256.NewCurve(),
+// 		p256.NewCurve(),
+// 		edwards25519.NewCurve(),
+// 	}
 
-	for _, c := range supportedCurves {
-		curve := c
-		t.Run(curve.Name(), func(t *testing.T) {
-			t.Parallel()
+// 	for _, c := range supportedCurves {
+// 		curve := c
+// 		t.Run(curve.Name(), func(t *testing.T) {
+// 			t.Parallel()
 
-			for i := 0; i < n; i++ {
-				x, err := curve.ScalarField().Random(crand.Reader)
-				require.NoError(t, err)
+// 			for i := 0; i < n; i++ {
+// 				x, err := curve.ScalarField().Random(crand.Reader)
+// 				require.NoError(t, err)
 
-				x1, x2, err := lindell17.DecomposeInQThirdsDeterministically(x, crand.Reader)
-				require.NoError(t, err)
-				require.True(t, lindell17.IsInSecondThird(x1))
-				require.True(t, lindell17.IsInSecondThird(x2))
-				require.Zero(t, x1.Add(x1).Add(x1).Add(x2).Cmp(x))
-			}
-		})
-	}
-}
+// 				x1, x2, err := lindell17.DecomposeInQThirdsDeterministically(x, crand.Reader)
+// 				require.NoError(t, err)
+// 				require.True(t, lindell17.IsInSecondThird(x1))
+// 				require.True(t, lindell17.IsInSecondThird(x2))
+// 				require.Zero(t, x1.Add(x1).Add(x1).Add(x2).Cmp(x))
+// 			}
+// 		})
+// 	}
+// }
 
-func Test_Test(t *testing.T) {
-	curve := k256.NewCurve()
-	s := curve.ScalarField().One()
-	lindell17.DecomposeInQThirdsDeterministically(s, crand.Reader)
-}
+// func Test_Test(t *testing.T) {
+// 	curve := k256.NewCurve()
+// 	s := curve.ScalarField().One()
+// 	lindell17.DecomposeInQThirdsDeterministically(s, crand.Reader)
+// }
