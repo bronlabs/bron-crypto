@@ -131,13 +131,13 @@ func testPreviousDkgRoundReuse(t *testing.T, curve curves.Curve, hash func() has
 	r3InsB := ttu.MapBroadcastO2I(participants, r2OutsB)
 
 	// smuggle previous value
-	msg, exists := r3InsB[attackerIndex].Get(identities[victimIndex])
+	msg, exists := r3InsB[victimIndex].Get(identities[attackerIndex])
 	require.True(t, exists)
-	prevMsg, exists := r2InsB[attackerIndex].Get(identities[victimIndex])
+	prevMsg, exists := r2InsB[victimIndex].Get(identities[attackerIndex])
 	require.True(t, exists)
-	msg.Commitments = prevMsg.BlindedCommitments
+	msg.Ci = prevMsg.BlindedCommitments
 	_, _, err = testutils.DoDkgRound3(participants, r3InsB)
-	require.True(t, errs.IsIdentifiableAbort(err, nil))
+	require.True(t, errs.IsIdentifiableAbort(err, identities[attackerIndex]))
 }
 
 func testAliceDlogProofIsUnique(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
@@ -224,16 +224,22 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 		require.NoError(t, err)
 		r3Ins := ttu.MapBroadcastO2I(participants, r2Outs)
 
-		for iterator := r3Ins[attackerIndex].Iterator(); iterator.HasNext(); {
-			pair := iterator.Next()
-			identity := pair.Key
-			outMsg, exists := r3Ins[attackerIndex].Get(identity)
+		// smuggle the proof
+		for i := range participants {
+			if i == attackerIndex {
+				continue
+			}
+			outMsg, exists := r3Ins[i].Get(identities[attackerIndex])
 			require.True(t, exists)
 			outMsg.CommitmentsProof = proof
 		}
+		// Reuse the same participants as before, make them expect Round 3
+		for i := range participants {
+			participants[i].Round = 3
+		}
 		_, _, err = testutils.DoDkgRound3(participants, r3Ins)
 		require.Error(t, err)
-		require.True(t, errs.IsIdentifiableAbort(err, nil))
+		require.True(t, errs.IsIdentifiableAbort(err, identities[attackerIndex]))
 	})
 	t.Run("pass identity as statement", func(t *testing.T) {
 		t.Parallel()
@@ -244,29 +250,37 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 		proof, err := prover.Prove(cipherSuite.Curve().AdditiveIdentity(), randomScalar)
 		require.NoError(t, err)
 		r3Ins := ttu.MapBroadcastO2I(participants, r2Outs)
-		for iterator := r3Ins[attackerIndex].Iterator(); iterator.HasNext(); {
-			pair := iterator.Next()
-			identity := pair.Key
-			outMsg, exists := r3Ins[attackerIndex].Get(identity)
+
+		// smuggle the proof
+		for i := range participants {
+			if i == attackerIndex {
+				continue
+			}
+			outMsg, exists := r3Ins[i].Get(identities[attackerIndex])
 			require.True(t, exists)
 			outMsg.CommitmentsProof = proof
 		}
+
+		// Reuse the same participants as before, make them expect Round 3
+		for i := range participants {
+			participants[i].Round = 3
+		}
 		_, _, err = testutils.DoDkgRound3(participants, r3Ins)
 		require.Error(t, err)
-		require.True(t, errs.IsIdentifiableAbort(err, nil))
+		require.True(t, errs.IsIdentifiableAbort(err, identities[attackerIndex]))
 	})
 }
 
-func testAbortOnRogueKeyAttach(t *testing.T, curve curves.Curve, hash func() hash.Hash) {
+func testAbortOnRogueKeyAttach(t *testing.T, curve curves.Curve, hash func() hash.Hash, n, threshold int) {
 	t.Helper()
 
 	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
 	require.NoError(t, err)
-	alice := 0
-	bob := 1
-	identities, err := ttu.MakeTestIdentities(cipherSuite, 2)
+	attackerIndex := 0
+	victimIndex := 1
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	protocolConfig, err := ttu.MakeThresholdProtocol(curve, identities, 2)
+	protocolConfig, err := ttu.MakeThresholdProtocol(curve, identities, threshold)
 	require.NoError(t, err)
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
@@ -276,14 +290,20 @@ func testAbortOnRogueKeyAttach(t *testing.T, curve curves.Curve, hash func() has
 	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants)
 	require.NoError(t, err)
 	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
-	r2Outs, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
+	r2OutsB, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 	require.NoError(t, err)
 
-	// Alice replaces her C_i[0] with (C_i[0] - Bob's C_i[0])
-	r2Outs[alice].Commitments[0] = r2Outs[alice].Commitments[0].Sub(r2Outs[bob].Commitments[0])
-	r3Ins := ttu.MapBroadcastO2I(participants, r2Outs)
-	_, _, err = participants[bob].Round3(r3Ins[bob])
-	require.True(t, errs.IsIdentifiableAbort(err, nil))
+	// Attacker replaces his C_i[0] with (C_i[0] - Victim's C_i[0])
+	for i := range participants {
+		if i == attackerIndex {
+			continue
+		}
+		r2OutsB[attackerIndex].Ci[0] = r2OutsB[attackerIndex].Ci[0].Sub(r2OutsB[victimIndex].Ci[0])
+	}
+
+	r3Ins := ttu.MapBroadcastO2I(participants, r2OutsB)
+	_, _, err = participants[victimIndex].Round3(r3Ins[victimIndex])
+	require.True(t, errs.IsIdentifiableAbort(err, identities[attackerIndex]))
 	require.True(t, strings.Contains(err.Error(), "dlog proof"))
 }
 
@@ -330,7 +350,7 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve curves.Curve, hash func()
 	_, err = testutils.DoDkgRound2(participantsBeta, r2InsBBeta, r2InsUBeta)
 	require.Error(t, err)
 	if tBeta == tAlpha {
-		require.True(t, errs.IsIdentifiableAbort(err, nil), "expected identifiable abort, got: %v", err)
+		require.True(t, errs.IsIdentifiableAbort(err, identities[attackerIndex]))
 	} else {
 		require.True(t, errs.IsValidation(err), "expected validation error, got: %v", err)
 	}
@@ -347,7 +367,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAl
 	}
 	identities, err := ttu.MakeTestIdentities(cipherSuite, identitiesCount)
 	require.NoError(t, err)
-	attackerIndex := 0
+	faultyIndex := 0
 
 	// first execution (alpha)
 	uniqueSessionIdAlpha, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
@@ -373,17 +393,18 @@ func testInvalidSid(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAl
 		participantsBeta, err := testutils.MakeParticipants(uniqueSessionIdBeta, protocolConfigBeta, identities[:nBeta], cn, nil)
 		require.NoError(t, err)
 		// reused
-		participantsBeta[attackerIndex].SessionId = uniqueSessionIdAlpha
+		participantsBeta[faultyIndex].SessionId = uniqueSessionIdAlpha
 		r1OutsBBeta, r1OutsUBeta, err := testutils.DoDkgRound1(participantsBeta)
 		require.NoError(t, err)
 		r2InsBBeta, r2InsUBeta := ttu.MapO2I(participantsBeta, r1OutsBBeta, r1OutsUBeta)
 
 		// smuggle previous execution result - replay of the dlog proof
-		r2InsBBeta[attackerIndex] = r2InsBAlpha[attackerIndex]
+		r2InsBBeta[faultyIndex] = r2InsBAlpha[faultyIndex]
 		_, err = testutils.DoDkgRound2(participantsBeta, r2InsBBeta, r2InsUBeta)
 		require.Error(t, err)
 		if tBeta == tAlpha {
-			require.True(t, errs.IsIdentifiableAbort(err, nil), "expected identifiable abort, got: %v", err)
+			require.True(t, errs.IsFailed(err))
+			require.ErrorContains(t, err, fmt.Sprintf("%s could not run JF round 2", identities[faultyIndex].String()))
 		} else {
 			require.True(t, errs.IsValidation(err), "expected validation error, got: %v", err)
 		}
@@ -400,17 +421,18 @@ func testInvalidSid(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAl
 		participantsBeta, err := testutils.MakeParticipants(uniqueSessionIdBeta, protocolConfigBeta, identities[:nBeta], cn, nil)
 		require.NoError(t, err)
 		// some garbage
-		participantsBeta[attackerIndex].SessionId = []byte("2 + 2 = 5")
+		participantsBeta[faultyIndex].SessionId = []byte("2 + 2 = 5")
 		r1OutsBBeta, r1OutsUBeta, err := testutils.DoDkgRound1(participantsBeta)
 		require.NoError(t, err)
 		r2InsBBeta, r2InsUBeta := ttu.MapO2I(participantsBeta, r1OutsBBeta, r1OutsUBeta)
 
 		// smuggle previous execution result - replay of the dlog proof
-		r2InsBBeta[attackerIndex] = r2InsBAlpha[attackerIndex]
+		r2InsBBeta[faultyIndex] = r2InsBAlpha[faultyIndex]
 		_, err = testutils.DoDkgRound2(participantsBeta, r2InsBBeta, r2InsUBeta)
 		require.Error(t, err)
 		if tBeta == tAlpha {
-			require.True(t, errs.IsIdentifiableAbort(err, nil), "expected identifiable abort, got: %v", err)
+			require.True(t, errs.IsFailed(err))
+			require.ErrorContains(t, err, fmt.Sprintf("%s could not run JF round 2", identities[faultyIndex].String()))
 		} else {
 			require.True(t, errs.IsValidation(err), "expected validation error, got: %v", err)
 		}
@@ -579,13 +601,23 @@ func TestAbortOnRogueKeyAttack(t *testing.T) {
 
 	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
-			boundedCurve := curve
-			boundedHash := h
-			boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
-			t.Run(fmt.Sprintf("Rougue key attack with curve=%s and hash=%s and (t=2,n=2)", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:]), func(t *testing.T) {
-				t.Parallel()
-				testAbortOnRogueKeyAttach(t, boundedCurve, boundedHash)
-			})
+			for _, thresholdConfig := range []struct {
+				threshold int
+				n         int
+			}{
+				{threshold: 3, n: 5},
+				{threshold: 3, n: 3},
+				{threshold: 2, n: 2},
+			} {
+				boundedCurve := curve
+				boundedHash := h
+				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
+				t.Run(fmt.Sprintf("Rougue key attack with curve=%s and hash=%s and (t=2,n=2)", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:]), func(t *testing.T) {
+					t.Parallel()
+					testAbortOnRogueKeyAttach(t, boundedCurve, boundedHash,
+						thresholdConfig.n, thresholdConfig.threshold)
+				})
+			}
 		}
 	}
 }

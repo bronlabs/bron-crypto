@@ -137,16 +137,16 @@ func testPreviousDkgRoundReuse(t *testing.T, curve curves.Curve, hash func() has
 
 	r2OutsB, r2OutsU, err := testutils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
-	r3InsB, r3InsU := ttu.MapO2I(participants, r2OutsB, r2OutsU)
 
 	// smuggle previous value
-	msg, exists := r3InsU[attackerIndex].Get(identities[victimIndex])
+	msg, exists := r2OutsU[attackerIndex].Get(identities[victimIndex])
 	require.True(t, exists)
-	msg.Xij, err = curve.ScalarField().Hash(uniqueSessionId)
+	msg.Xij = participants[attackerIndex].State.A_i0
 	require.NoError(t, err)
+	r3InsB, r3InsU := ttu.MapO2I(participants, r2OutsB, r2OutsU)
 	_, _, err = testutils.DoDkgRound2(participants, r3InsB, r3InsU)
 	require.Error(t, err)
-	require.True(t, errs.IsIdentifiableAbort(err, nil))
+	require.True(t, errs.IsIdentifiableAbort(err, identities[attackerIndex]))
 }
 
 func testAliceDlogProofIsUnique(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
@@ -231,17 +231,18 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 		statement := basePoint.ScalarMul(randomScalar)
 		proof, err := prover.Prove(statement, randomScalar)
 		require.NoError(t, err)
-		r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
-		for iterator := r2InsU[attackerIndex].Iterator(); iterator.HasNext(); {
-			pair := iterator.Next()
-			identity := pair.Key
-			outMsg, exists := r2InsB[attackerIndex].Get(identity)
-			require.True(t, exists)
-			outMsg.DlogProof = proof
+
+		// smuggle the proof
+		r1OutsB[attackerIndex].DlogProof = proof
+
+		// Reuse the same participants, make them expect Round 2
+		for i := range participants {
+			participants[i].Round = 2
 		}
+		r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
 		_, _, err = testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 		require.Error(t, err)
-		require.True(t, errs.IsIdentifiableAbort(err, nil))
+		require.True(t, errs.IsIdentifiableAbort(err, identities[attackerIndex]))
 	})
 	t.Run("pass identity as statement", func(t *testing.T) {
 		t.Parallel()
@@ -252,30 +253,30 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 		proof, err := prover.Prove(cipherSuite.Curve().AdditiveIdentity(), randomScalar)
 		require.NoError(t, err)
 		r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
-		for iterator := r2InsU[attackerIndex].Iterator(); iterator.HasNext(); {
-			pair := iterator.Next()
-			identity := pair.Key
-			outMsg, exists := r2InsB[attackerIndex].Get(identity)
-			require.True(t, exists)
-			outMsg.DlogProof = proof
+		// smuggle the proof
+		r1OutsB[attackerIndex].DlogProof = proof
+
+		// Reuse the same participants, make them expect Round 2
+		for i := range participants {
+			participants[i].Round = 2
 		}
 		_, _, err = testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 		require.Error(t, err)
-		require.True(t, errs.IsIdentifiableAbort(err, nil))
+		require.True(t, errs.IsIdentifiableAbort(err, identities[attackerIndex]))
 	})
 }
 
-func testAbortOnRogueKeyAttach(t *testing.T, curve curves.Curve, hash func() hash.Hash) {
+func testAbortOnRogueKeyAttach(t *testing.T, curve curves.Curve, hash func() hash.Hash, n, threshold int) {
 	t.Helper()
 
 	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
 	require.NoError(t, err)
 
-	alice := 0
-	bob := 1
-	identities, err := ttu.MakeTestIdentities(cipherSuite, 2)
+	attackerIndex := 0
+	victimIndex := 1
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
-	protocolConfig, err := ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, 2)
+	protocolConfig, err := ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, threshold)
 	require.NoError(t, err)
 
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
@@ -285,12 +286,18 @@ func testAbortOnRogueKeyAttach(t *testing.T, curve curves.Curve, hash func() has
 	r2OutsB, r2OutsU, err := testutils.DoDkgRound1(participants, nil)
 	require.NoError(t, err)
 
-	// Alice replaces her C_i[0] with (C_i[0] - Bob's C_i[0])
-	r2OutsB[alice].Ci[0] = r2OutsB[alice].Ci[0].Sub(r2OutsB[bob].Ci[0])
+	// Attacker replaces her C_i[0] with (C_i[0] - Σ Victims' C_i[0])
+	for i := range participants {
+		if i == attackerIndex {
+			continue
+		}
+		r2OutsB[attackerIndex].Ci[0] = r2OutsB[attackerIndex].Ci[0].Sub(r2OutsB[victimIndex].Ci[0])
+	}
+
 	r3InsB, r3InsU := ttu.MapO2I(participants, r2OutsB, r2OutsU)
-	_, _, err = participants[bob].Round2(r3InsB[bob], r3InsU[bob])
+	_, _, err = participants[victimIndex].Round2(r3InsB[victimIndex], r3InsU[victimIndex])
 	require.Error(t, err)
-	require.True(t, errs.IsIdentifiableAbort(err, nil))
+	require.True(t, errs.IsIdentifiableAbort(err, identities[attackerIndex]))
 }
 
 func testPreviousDkgExecutionReuse(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAlpha, nAlpha, tBeta, nBeta int) {
@@ -496,13 +503,23 @@ func TestAbortOnRogueKeyAttack(t *testing.T) {
 
 	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
 		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
-			boundedCurve := curve
-			boundedHash := h
-			boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
-			t.Run(fmt.Sprintf("Rougue key attack with curve=%s and hash=%s and (t=2,n=2)", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:]), func(t *testing.T) {
-				t.Parallel()
-				testAbortOnRogueKeyAttach(t, boundedCurve, boundedHash)
-			})
+			for _, thresholdConfig := range []struct {
+				threshold int
+				n         int
+			}{
+				{threshold: 3, n: 5},
+				{threshold: 3, n: 3},
+				{threshold: 2, n: 2},
+			} {
+				boundedCurve := curve
+				boundedHash := h
+				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
+				t.Run(fmt.Sprintf("Rougue key attack with curve=%s and hash=%s and (t=2,n=2)", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:]), func(t *testing.T) {
+					t.Parallel()
+					testAbortOnRogueKeyAttach(t, boundedCurve, boundedHash,
+						thresholdConfig.n, thresholdConfig.threshold)
+				})
+			}
 		}
 	}
 }

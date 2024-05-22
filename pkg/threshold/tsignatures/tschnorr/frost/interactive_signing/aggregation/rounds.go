@@ -74,7 +74,7 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 		rhs := R_j.Add(cLambda_jY_j)
 
 		if !z_jG.Equal(rhs) {
-			return nil, errs.NewIdentifiableAbort(j, "participant with sharing id is misbehaving")
+			return nil, errs.NewIdentifiableAbort(jIdentityKey.String(), "participant is misbehaving (with sharing id %d)", j)
 		}
 	}
 

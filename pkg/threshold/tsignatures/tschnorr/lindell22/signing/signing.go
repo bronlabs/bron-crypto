@@ -79,7 +79,7 @@ func Aggregate[V schnorr.Variant[V]](variant schnorr.Variant[V], protocol types.
 			Build()
 		err = verifier.Verify(sig)
 		if err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, identity.PublicKey().ToAffineCompressed(), "invalid partial signatures")
+			return nil, errs.WrapIdentifiableAbort(err, identity.String(), "invalid partial signatures")
 		}
 	}
 

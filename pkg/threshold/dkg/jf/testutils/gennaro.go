@@ -43,10 +43,10 @@ func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, 
 func DoDkgRound1(participants []*jf.Participant) (round1BroadcastOutputs []*jf.Round1Broadcast, round1UnicastOutputs []network.RoundMessages[types.ThresholdProtocol, *jf.Round1P2P], err error) {
 	round1BroadcastOutputs = make([]*jf.Round1Broadcast, len(participants))
 	round1UnicastOutputs = make([]network.RoundMessages[types.ThresholdProtocol, *jf.Round1P2P], len(participants))
-	for i, participant := range participants {
-		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1()
+	for i := range participants {
+		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participants[i].Round1()
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "could not run JF round 1")
+			return nil, nil, errs.WrapFailed(err, "%s could not run JF round 1", participants[i].IdentityKey().String())
 		}
 	}
 
@@ -58,7 +58,7 @@ func DoDkgRound2(participants []*jf.Participant, round2BroadcastInputs []network
 	for i := range participants {
 		round2Outputs[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not run JF round 2")
+			return nil, errs.WrapFailed(err, "%s could not run JF round 2", participants[i].IdentityKey().String())
 		}
 	}
 	return round2Outputs, nil
@@ -70,7 +70,7 @@ func DoDkgRound3(participants []*jf.Participant, round3Inputs []network.RoundMes
 	for i := range participants {
 		signingKeyShares[i], publicKeyShares[i], err = participants[i].Round3(round3Inputs[i])
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "could not run JF round 3")
+			return nil, nil, errs.WrapFailed(err, "%s could not run JF round 3", participants[i].IdentityKey().String())
 		}
 	}
 

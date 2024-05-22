@@ -27,7 +27,7 @@ type Round1P2P struct {
 }
 
 type Round2Broadcast struct {
-	Commitments      []curves.Point
+	Ci               []curves.Point
 	CommitmentsProof compiler.NIZKPoKProof
 
 	_ ds.Incomparable
@@ -77,13 +77,13 @@ func (r1p2p *Round1P2P) Validate(protocol types.ThresholdProtocol) error {
 }
 
 func (r2b *Round2Broadcast) Validate(protocol types.ThresholdProtocol) error {
-	if len(r2b.Commitments) == 0 {
+	if len(r2b.Ci) == 0 {
 		return errs.NewSize("commitments is empty")
 	}
-	if len(r2b.Commitments) != int(protocol.Threshold()) {
-		return errs.NewLength("len(senderCommitmentVector) == %d != t == %d", len(r2b.Commitments), protocol.Threshold())
+	if len(r2b.Ci) != int(protocol.Threshold()) {
+		return errs.NewLength("len(senderCommitmentVector) == %d != t == %d", len(r2b.Ci), protocol.Threshold())
 	}
-	for i, commitment := range r2b.Commitments {
+	for i, commitment := range r2b.Ci {
 		if commitment == nil {
 			return errs.NewIsNil("commitments[%d]", i)
 		}

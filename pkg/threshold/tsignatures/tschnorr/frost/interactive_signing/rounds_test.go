@@ -199,6 +199,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, curve curves.Curve, hash fu
 	message := []byte("Hello World!")
 
 	maliciousParty := 0
+	aggregator := 1
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
@@ -225,7 +226,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, curve curves.Curve, hash fu
 	partialSignaturesAlpha, err := testutils.DoInteractiveSignRound2(participantsAlpha, r2InAlpha, message)
 	require.NoError(t, err)
 	mappedPartialSignaturesAlpha := testutils.MapPartialSignatures(identities[:threshold], partialSignaturesAlpha)
-	_, err = participantsAlpha[0].Aggregate(message, mappedPartialSignaturesAlpha)
+	_, err = participantsAlpha[aggregator].Aggregate(message, mappedPartialSignaturesAlpha)
 	require.NoError(t, err)
 
 	// second execution
@@ -240,8 +241,10 @@ func testPreviousPartialSignatureReuse(t *testing.T, curve curves.Curve, hash fu
 	// smuggle previous round partial signature
 	partialSignaturesBeta[maliciousParty] = partialSignaturesAlpha[maliciousParty]
 	mappedPartialSignaturesBeta := testutils.MapPartialSignatures(identities[:threshold], partialSignaturesBeta)
-	_, err = participantsBeta[0].Aggregate(message, mappedPartialSignaturesBeta)
-	require.True(t, errs.IsIdentifiableAbort(err, nil))
+	_, err = participantsBeta[aggregator].Aggregate(message, mappedPartialSignaturesBeta)
+	fmt.Println(err)
+	fmt.Println(identities)
+	require.True(t, errs.IsIdentifiableAbort(err, identities[maliciousParty]))
 }
 
 // make sure Alice cannot change the resulting signature at aggregation time/testing that R is correctly bound to D_i and E_i.
@@ -254,6 +257,7 @@ func testRandomPartialSignature(t *testing.T, curve curves.Curve, hash func() ha
 	message := []byte("Hello World!")
 
 	maliciousParty := 0
+	aggregator := 1
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
@@ -283,8 +287,8 @@ func testRandomPartialSignature(t *testing.T, curve curves.Curve, hash func() ha
 	partialSignatures[maliciousParty].Zi, err = curve.ScalarField().Random(crand.Reader)
 	require.NoError(t, err)
 	mappedPartialSignatures := testutils.MapPartialSignatures(identities[:threshold], partialSignatures)
-	_, err = participants[0].Aggregate(message, mappedPartialSignatures)
-	require.True(t, errs.IsIdentifiableAbort(err, nil))
+	_, err = participants[aggregator].Aggregate(message, mappedPartialSignatures)
+	require.True(t, errs.IsIdentifiableAbort(err, identities[maliciousParty]))
 }
 
 func Test_HappyPath(t *testing.T) {
