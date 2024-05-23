@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/cronokirby/saferith"
+	fu "github.com/copperexchange/krypton-primitives/pkg/base/fuzzutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,7 +30,7 @@ func (mei *MonoidElementInvariants[M, ME]) IsIdentity(t *testing.T, monoid algeb
 	// TODO
 }
 
-func (ami *AdditiveMonoidInvariants[M, ME]) AdditiveIdentity(t *testing.T, monoid algebra.AdditiveMonoid[M, ME], x algebra.AdditiveMonoidElement[M, ME], n *saferith.Nat) {
+func (ami *AdditiveMonoidInvariants[M, ME]) AdditiveIdentity(t *testing.T, monoid algebra.AdditiveMonoid[M, ME], x algebra.AdditiveMonoidElement[M, ME]) {
 	t.Helper()
 	//TODO: is n the number of times the operation applies to the element ?
 	addIdentity := monoid.AdditiveIdentity()
@@ -48,7 +48,7 @@ func (ami *AdditiveMonoidInvariants[M, ME]) AdditiveIdentity(t *testing.T, monoi
 		"x + identityElement should be equal to x")
 }
 
-func (amei *AdditiveMonoidElementInvariants[M, ME]) IsAdditiveIdentity(t *testing.T, monoid algebra.AdditiveMonoid[M, ME], x, y algebra.AdditiveMonoidElement[M, ME], n *saferith.Nat) {
+func (amei *AdditiveMonoidElementInvariants[M, ME]) IsAdditiveIdentity(t *testing.T, monoid algebra.AdditiveMonoid[M, ME], x, y algebra.AdditiveMonoidElement[M, ME]) {
 	t.Helper()
 	//TODO: making sure y isn't an identity element
 	isAdditiveIdentity := x.IsAdditiveIdentity()
@@ -77,7 +77,7 @@ func (amei *AdditiveMonoidElementInvariants[M, ME]) IsAdditiveIdentity(t *testin
 	}
 }
 
-func (mmi *MultiplicativeMonoidInvariants[M, ME]) MultiplicativeIdentity(t *testing.T, monoid algebra.MultiplicativeMonoid[M, ME], x algebra.MultiplicativeMonoidElement[M, ME], n *saferith.Nat) {
+func (mmi *MultiplicativeMonoidInvariants[M, ME]) MultiplicativeIdentity(t *testing.T, monoid algebra.MultiplicativeMonoid[M, ME], x algebra.MultiplicativeMonoidElement[M, ME]) {
 	t.Helper()
 
 	t.Helper()
@@ -97,7 +97,7 @@ func (mmi *MultiplicativeMonoidInvariants[M, ME]) MultiplicativeIdentity(t *test
 		"identityElement * x should be equal to x")
 }
 
-func (mmei *MultiplicativeMonoidELementInvariants[M, ME]) IsMultiplicativeIdentity(t *testing.T, monoid algebra.MultiplicativeMonoid[M, ME], x, y algebra.MultiplicativeMonoidElement[M, ME], n *saferith.Nat) {
+func (mmei *MultiplicativeMonoidELementInvariants[M, ME]) IsMultiplicativeIdentity(t *testing.T, monoid algebra.MultiplicativeMonoid[M, ME], x, y algebra.MultiplicativeMonoidElement[M, ME]) {
 	t.Helper()
 	//TODO: making sure y isn't an identity element
 	isMulIdentity := x.IsMultiplicativeIdentity()
@@ -128,44 +128,80 @@ func (mmei *MultiplicativeMonoidELementInvariants[M, ME]) IsMultiplicativeIdenti
 	}
 }
 
-func CheckMonoidInvariant[M algebra.Monoid[M, ME], ME algebra.MonoidElement[M, ME]](t *testing.T, monoid algebra.Monoid[M, ME], under algebra.BinaryOperator[ME]) {
+func CheckMonoidInvariant[M algebra.Monoid[M, ME], ME algebra.MonoidElement[M, ME]](t *testing.T, monoid M, elementGenerator fu.ObjectGenerator[ME]) {
 	t.Helper()
+	// TODO: need to call operator the operator
+	CheckGroupoidInvariant[M, ME](t, monoid, elementGenerator)
+	// mi := &MonoidInvariants[M, ME]{}
+	// mi.Identity(t, monoid, under)
 
-	mi := &MonoidInvariants[M, ME]{}
-	mi.Identity(t, monoid, under)
+	// mei := &MonoidElementInvariants[M, ME]{}
+	// mei.IsIdentity(t, monoid, element, under)
 }
 
-func CheckMonoidElementInvariants[M algebra.Monoid[M, ME], ME algebra.MonoidElement[M, ME]](t *testing.T, monoid algebra.Monoid[M, ME], element algebra.MonoidElement[M, ME], under algebra.BinaryOperator[ME]) {
+func CheckAdditiveMonoidInvariants[M algebra.AdditiveMonoid[M, ME], ME algebra.AdditiveMonoidElement[M, ME]](t *testing.T, monoid M, elementGenerator fu.ObjectGenerator[ME]) {
 	t.Helper()
 
-	mei := &MonoidElementInvariants[M, ME]{}
-	mei.IsIdentity(t, monoid, element, under)
-}
-
-func CheckAdditiveMonoidInvariants[M algebra.AdditiveMonoid[M, ME], ME algebra.AdditiveMonoidElement[M, ME]](t *testing.T, monoid algebra.AdditiveMonoid[M, ME], x algebra.AdditiveMonoidElement[M, ME], n *saferith.Nat) {
-	t.Helper()
-
+	CheckMonoidInvariant[M, ME](t, monoid, elementGenerator)
 	ami := &AdditiveMonoidInvariants[M, ME]{}
-	ami.AdditiveIdentity(t, monoid, x, n)
-}
-
-func CheckAdditiveMonoidElementInvariants[M algebra.AdditiveMonoid[M, ME], ME algebra.AdditiveMonoidElement[M, ME]](t *testing.T, monoid algebra.AdditiveMonoid[M, ME], x, y algebra.AdditiveMonoidElement[M, ME], n *saferith.Nat) {
-	t.Helper()
+	t.Run("AdditiveIdentity", func(t *testing.T) {
+		gen1 := elementGenerator.Clone()
+		isEmpty1 := gen1.Prng().IntRange(0, 16)
+		el1 := gen1.Empty()
+		if isEmpty1 != 0 {
+			el1 = gen1.GenerateNonZero()
+		}
+		ami.AdditiveIdentity(t, monoid, el1)
+	})
 
 	amei := &AdditiveMonoidElementInvariants[M, ME]{}
-	amei.IsAdditiveIdentity(t, monoid, x, y, n)
+	t.Run("IsAdditiveIdentity", func(t *testing.T) {
+		gen1 := elementGenerator.Clone()
+		gen2 := elementGenerator.Clone()
+		isEmpty1 := gen1.Prng().IntRange(0, 16)
+		isEmpty2 := gen2.Prng().IntRange(0, 16)
+		el1 := gen1.Empty()
+		el2 := gen2.Empty()
+		if isEmpty1 != 0 {
+			el1 = gen1.GenerateNonZero()
+		}
+		if isEmpty2 != 0 {
+			el2 = gen2.GenerateNonZero()
+		}
+		amei.IsAdditiveIdentity(t, monoid, el1, el2)
+	})
 }
 
-func CheckMultiplicativeMonoidInvariants[M algebra.MultiplicativeMonoid[M, ME], ME algebra.MultiplicativeMonoidElement[M, ME]](t *testing.T, monoid algebra.MultiplicativeMonoid[M, ME], x algebra.MultiplicativeMonoidElement[M, ME], n *saferith.Nat) {
+func CheckMultiplicativeMonoidInvariants[M algebra.MultiplicativeMonoid[M, ME], ME algebra.MultiplicativeMonoidElement[M, ME]](t *testing.T, monoid M, elementGenerator fu.ObjectGenerator[ME]) {
 	t.Helper()
+
+	CheckMonoidInvariant[M, ME](t, monoid, elementGenerator)
 
 	mmi := &MultiplicativeMonoidInvariants[M, ME]{}
-	mmi.MultiplicativeIdentity(t, monoid, x, n)
-}
-
-func CheckMultiplicativeMonoidELementInvariants[M algebra.MultiplicativeMonoid[M, ME], ME algebra.MultiplicativeMonoidElement[M, ME]](t *testing.T, monoid algebra.MultiplicativeMonoid[M, ME], x, y algebra.MultiplicativeMonoidElement[M, ME], n *saferith.Nat) {
-	t.Helper()
+	t.Run("MultiplicativeIdentity", func(t *testing.T) {
+		gen1 := elementGenerator.Clone()
+		isEmpty1 := gen1.Prng().IntRange(0, 16)
+		el1 := gen1.Empty()
+		if isEmpty1 != 0 {
+			el1 = gen1.GenerateNonZero()
+		}
+		mmi.MultiplicativeIdentity(t, monoid, el1)
+	})
 
 	mmei := &MultiplicativeMonoidELementInvariants[M, ME]{}
-	mmei.IsMultiplicativeIdentity(t, monoid, x, y, n)
+	t.Run("IsMultiplicativeIdentity", func(t *testing.T) {
+		gen1 := elementGenerator.Clone()
+		gen2 := elementGenerator.Clone()
+		isEmpty1 := gen1.Prng().IntRange(0, 16)
+		isEmpty2 := gen2.Prng().IntRange(0, 16)
+		el1 := gen1.Empty()
+		el2 := gen2.Empty()
+		if isEmpty1 != 0 {
+			el1 = gen1.GenerateNonZero()
+		}
+		if isEmpty2 != 0 {
+			el2 = gen2.GenerateNonZero()
+		}
+		mmei.IsMultiplicativeIdentity(t, monoid, el1, el2)
+	})
 }

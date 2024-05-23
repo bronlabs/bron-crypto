@@ -29,3 +29,29 @@ func Fuzz_Property_Point(f *testing.F) {
 	g := pointGeneratorFactory(f, curve)
 	fu.RunAlgebraPropertyTest(f, atu.CheckGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
 }
+func Fuzz_Property_AdditiveGroupElement(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckAdditiveGroupElementInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+
+// TODO: have check for both element and structure
+
+// func Fuzz_Propety_Subgroup(f *testing.F) {
+// 	curve := edwards25519.NewCurve()
+// 	g := pointGeneratorFactory(f, curve)
+// 	fu.RunAlgebraPropertyTest(f, atu.CheckSubGroupElementInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+// }
+
+//	func Fuzz_Property_AdditiveGroup(f *testing.F) {
+//		curve := edwards25519.NewCurve()
+//		g := pointGeneratorFactory(f, curve)
+//		fu.RunAlgebraPropertyTest(f, atu.CheckAdditiveGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+//	}
+// func Fuzz_Property_MultiplitiveGroup(f *testing.F) {
+// 	curve := edwards25519.NewCurve()
+// 	g := pointGeneratorFactory(f, curve)
+// 	fu.RunAlgebraPropertyTest(f, atu.CheckMultiplicativeGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+
+// }
+
