@@ -27,9 +27,9 @@ func cipherSuites(t *testing.T) []types.SigningSuite {
 	t.Helper()
 	cs := make([]types.SigningSuite, 2)
 	var err error
-	cs[0], err = ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
+	cs[0], err = ttu.MakeSigningSuite(k256.NewCurve(), sha3.New256)
 	require.NoError(t, err)
-	cs[1], err = ttu.MakeSignatureProtocol(p256.NewCurve(), sha3.New256)
+	cs[1], err = ttu.MakeSigningSuite(p256.NewCurve(), sha3.New256)
 	require.NoError(t, err)
 	return cs
 }

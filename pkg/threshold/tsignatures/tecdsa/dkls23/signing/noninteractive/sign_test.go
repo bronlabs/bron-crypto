@@ -49,7 +49,7 @@ func Test_HappyPath(t *testing.T) {
 				for i := range n {
 					N[i] = i
 				}
-				cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+				cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 				require.NoError(t, err)
 				t.Run(fmt.Sprintf("NonInteractive sign happy path with curve=%s and hash=%s and t=%d and n=%d", curve.Name(), hashName[strings.LastIndex(hashName, "/")+1:], threshold, n), func(t *testing.T) {
 					t.Parallel()

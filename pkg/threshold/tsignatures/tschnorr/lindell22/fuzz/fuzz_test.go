@@ -106,7 +106,7 @@ func doInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identiti
 	require.NoError(t, err)
 }
 
-// func doNonInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identities []types.IdentityKey, shards ds.HashMap[types.IdentityKey, *lindell22.Shard], message []byte, cipherSuite types.SignatureProtocol) {
+// func doNonInteractiveSigning(t *testing.T, fz *fuzz.Fuzzer, threshold int, identities []types.IdentityKey, shards ds.HashMap[types.IdentityKey, *lindell22.Shard], message []byte, cipherSuite types.SigningSuite) {
 // 	t.Helper()
 
 // 	var sid []byte
@@ -172,7 +172,7 @@ func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, int, []byte, types.Sig
 	fmt.Println("curveIndex: ", curveIndex, "hashIndex: ", hashIndex, "n: ", n, "randomSeed: ", randomSeed, "message: ", message)
 	curve := allCurves[curveIndex%len(allCurves)]
 	h := allHashes[hashIndex%len(allHashes)]
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	return fz, n, threshold, message, cipherSuite
 }

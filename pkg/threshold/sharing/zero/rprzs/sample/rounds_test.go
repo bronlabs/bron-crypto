@@ -100,7 +100,7 @@ func doSampleInvalidSid(t *testing.T, protocol types.Protocol, identities []type
 func testInvalidSid(t *testing.T, curve curves.Curve, n int) {
 	t.Helper()
 	h := sha3.New256
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
@@ -133,7 +133,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, n int) {
 func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	t.Helper()
 	h := sha3.New256
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
@@ -204,7 +204,7 @@ func Test_InvalidParticipants(t *testing.T) {
 func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 	t.Helper()
 	h := sha3.New256
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	allIdentities, _ := ttu.MakeTestIdentities(cipherSuite, 3)
 	aliceIdentity := allIdentities[0]

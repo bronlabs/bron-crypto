@@ -258,7 +258,7 @@ func doGeneratePreSignatures(t *testing.T, protocol types.ThresholdProtocol, ide
 
 func doDkg(t *testing.T, curve curves.Curve, h func() hash.Hash, n int, fz *fuzz.Fuzzer, threshold int, randomSeed int64) ([]types.IdentityKey, types.ThresholdSignatureProtocol, []*pedersen.Participant, []*tsignatures.SigningKeyShare, []*tsignatures.PartialPublicKeys) {
 	t.Helper()
-	cipherSuite, _ := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, _ := ttu.MakeSigningSuite(curve, h)
 
 	var identities []types.IdentityKey
 	for i := 0; i < n; i++ {

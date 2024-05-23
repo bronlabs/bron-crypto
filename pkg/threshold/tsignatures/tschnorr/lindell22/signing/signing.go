@@ -71,7 +71,7 @@ func Aggregate[V schnorr.Variant[V]](variant schnorr.Variant[V], protocol types.
 			S:       partialSig.S,
 		}
 		verifier := variant.NewVerifierBuilder().
-			WithSignatureProtocol(protocol.SigningSuite()).
+			WithSigningSuite(protocol.SigningSuite()).
 			WithPublicKey(&schnorr.PublicKey{A: publicShareAdditive}).
 			WithMessage(message).
 			WithChallengeCommitment(r).
@@ -89,7 +89,7 @@ func Aggregate[V schnorr.Variant[V]](variant schnorr.Variant[V], protocol types.
 	}
 
 	verifier := variant.NewVerifierBuilder().
-		WithSignatureProtocol(protocol.SigningSuite()).
+		WithSigningSuite(protocol.SigningSuite()).
 		WithPublicKey(publicKey).
 		WithMessage(message).
 		Build()

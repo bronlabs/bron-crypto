@@ -68,7 +68,7 @@ func SigningRoundTrip[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n i
 
 	keysSubGroup := bls12381.GetSourceSubGroup[K]()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(keysSubGroup, hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(keysSubGroup, hashFunc)
 	if err != nil {
 		return errs.WrapFailed(err, "could not make cipher suite")
 	}
@@ -126,17 +126,17 @@ func SigningWithDkg[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n int
 
 	keysSubGroup := bls12381.GetSourceSubGroup[K]()
 
-	signatureProtocol, err := ttu.MakeSignatureProtocol(keysSubGroup, hashFunc)
+	signingSuite, err := ttu.MakeSigningSuite(keysSubGroup, hashFunc)
 	if err != nil {
 		return errs.WrapFailed(err, "could not make cipher suite")
 	}
 
-	identities, err := ttu.MakeTestIdentities(signatureProtocol, n)
+	identities, err := ttu.MakeTestIdentities(signingSuite, n)
 	if err != nil {
 		return errs.WrapFailed(err, "Could not make test identities")
 	}
 
-	thresholdSignatureProtocol, err := ttu.MakeThresholdSignatureProtocol(signatureProtocol, identities, threshold, identities)
+	thresholdSignatureProtocol, err := ttu.MakeThresholdSignatureProtocol(signingSuite, identities, threshold, identities)
 	if err != nil {
 		return errs.WrapFailed(err, "Could not make protocol config")
 	}

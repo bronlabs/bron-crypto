@@ -24,7 +24,7 @@ func benchmarkCombineHelper[K bls.KeySubGroup, S bls.SignatureSubGroup](b *testi
 
 	keysSubGroup := bls12381.GetSourceSubGroup[K]()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(keysSubGroup, hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(keysSubGroup, hashFunc)
 	if err != nil {
 		return err
 	}

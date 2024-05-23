@@ -33,7 +33,7 @@ var cn = randomisedFischlin.Name
 func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int, prng io.Reader) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
@@ -109,7 +109,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 func testPreviousDkgRoundReuse(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	attackerIndex := 0
@@ -143,7 +143,7 @@ func testPreviousDkgRoundReuse(t *testing.T, curve curves.Curve, hash func() has
 func testAliceDlogProofIsUnique(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
@@ -188,7 +188,7 @@ func testAliceDlogProofIsUnique(t *testing.T, curve curves.Curve, hash func() ha
 func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 	prng := rand.New(rand.NewSource(0xcafebabe))
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
@@ -274,7 +274,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 func testAbortOnRogueKeyAttach(t *testing.T, curve curves.Curve, hash func() hash.Hash, n, threshold int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 	attackerIndex := 0
 	victimIndex := 1
@@ -310,7 +310,7 @@ func testAbortOnRogueKeyAttach(t *testing.T, curve curves.Curve, hash func() has
 func testPreviousDkgExecutionReuse(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAlpha, nAlpha, tBeta, nBeta int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 
 	identitiesCount := nAlpha
@@ -359,7 +359,7 @@ func testPreviousDkgExecutionReuse(t *testing.T, curve curves.Curve, hash func()
 func testInvalidSid(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAlpha, nAlpha, tBeta, nBeta int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 	identitiesCount := nAlpha
 	if nBeta > nAlpha {

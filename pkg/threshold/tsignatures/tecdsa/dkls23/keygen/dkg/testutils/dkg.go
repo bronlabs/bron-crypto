@@ -14,7 +14,7 @@ import (
 )
 
 func KeyGen(curve curves.Curve, h func() hash.Hash, threshold, n int, identities []types.IdentityKey, sid []byte) ([]types.IdentityKey, types.ThresholdSignatureProtocol, []*dkg.Participant, []*dkls23.Shard, error) {
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	if err != nil {
 		return nil, nil, nil, nil, errs.WrapFailed(err, "could not construct ciphersuite")
 	}

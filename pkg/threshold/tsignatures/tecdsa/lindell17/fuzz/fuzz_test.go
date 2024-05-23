@@ -82,12 +82,12 @@ func setup(t *testing.T, data []byte) (*fuzz.Fuzzer, int, []byte, types.SigningS
 	fmt.Println("curveIndex: ", curveIndex, "hashIndex: ", hashIndex, "n: ", n, "randomSeed: ", randomSeed, "message: ", message)
 	curve := allCurves[curveIndex%len(allCurves)]
 	h := allHashes[hashIndex%len(allHashes)]
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	return fz, n, message, cipherSuite
 }
 
-// func doNonInteractiveSigning(t *testing.T, cipherSuite types.SignatureProtocol, n int, fz *fuzz.Fuzzer, identities []types.IdentityKey, shards ds.HashMap[types.IdentityKey, *lindell17.Shard], message []byte) {
+// func doNonInteractiveSigning(t *testing.T, cipherSuite types.SigningSuite, n int, fz *fuzz.Fuzzer, identities []types.IdentityKey, shards ds.HashMap[types.IdentityKey, *lindell17.Shard], message []byte) {
 // 	t.Helper()
 
 // 	aliceIdx := 0

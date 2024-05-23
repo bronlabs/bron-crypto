@@ -6,7 +6,7 @@ import (
 )
 
 type VerifierBuilder[V any] interface {
-	WithSignatureProtocol(suite types.SigningSuite) VerifierBuilder[V]
+	WithSigningSuite(suite types.SigningSuite) VerifierBuilder[V]
 	WithPublicKey(key *PublicKey) VerifierBuilder[V]
 	WithMessage(message []byte) VerifierBuilder[V]
 	WithChallengeCommitment(nonceCommitment curves.Point) VerifierBuilder[V]

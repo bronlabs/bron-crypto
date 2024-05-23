@@ -117,7 +117,7 @@ func doInteractiveSign(protocol types.ThresholdSignatureProtocol, identities []t
 func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
@@ -155,7 +155,7 @@ func TestSignEmptyMessage(t *testing.T) {
 	curve := edwards25519.NewCurve()
 	h := sha3.New256
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, 2)
@@ -193,7 +193,7 @@ func TestSignEmptyMessage(t *testing.T) {
 func testPreviousPartialSignatureReuse(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 
 	message := []byte("Hello World!")
@@ -251,7 +251,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, curve curves.Curve, hash fu
 func testRandomPartialSignature(t *testing.T, curve curves.Curve, hash func() hash.Hash, threshold, n int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 
 	message := []byte("Hello World!")

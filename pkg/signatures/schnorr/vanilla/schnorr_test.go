@@ -39,7 +39,7 @@ func Test_HappyPath(t *testing.T) {
 			boundedH := h
 			t.Run(fmt.Sprintf("running the test for curve %s and hash no %d", boundedCurve.Name(), i), func(t *testing.T) {
 				t.Parallel()
-				cipherSuite, err := testutils.MakeSignatureProtocol(boundedCurve, boundedH)
+				cipherSuite, err := testutils.MakeSigningSuite(boundedCurve, boundedH)
 				require.NoError(t, err)
 				publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve(), crand.Reader)
 				require.NoError(t, err)
@@ -64,7 +64,7 @@ func Test_HappyPathWithEd25519Verifier(t *testing.T) {
 
 	curve := edwards25519.NewCurve()
 	h := sha512.New
-	cipherSuite, err := testutils.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := testutils.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve(), crand.Reader)
 	require.NoError(t, err)
@@ -99,7 +99,7 @@ func Test_InvalidMessageOrSignatureFailure(t *testing.T) {
 			boundedH := h
 			t.Run(fmt.Sprintf("running the test for curve %s and hash no %d", boundedCurve.Name(), i), func(t *testing.T) {
 				t.Parallel()
-				cipherSuite, err := testutils.MakeSignatureProtocol(boundedCurve, boundedH)
+				cipherSuite, err := testutils.MakeSigningSuite(boundedCurve, boundedH)
 				require.NoError(t, err)
 				publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve(), crand.Reader)
 				require.NoError(t, err)
@@ -124,7 +124,7 @@ func Test_InvalidMessageOrSignatureWithEd25519Verifier(t *testing.T) {
 
 	curve := edwards25519.NewCurve()
 	h := sha512.New
-	cipherSuite, err := testutils.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := testutils.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve(), crand.Reader)
 	require.NoError(t, err)

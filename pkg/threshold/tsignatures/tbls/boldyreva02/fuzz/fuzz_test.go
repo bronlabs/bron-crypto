@@ -54,7 +54,7 @@ func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeI
 
 	keysSubGroup := bls12381.GetSourceSubGroup[K]()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(keysSubGroup, hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(keysSubGroup, hashFunc)
 	require.NoError(t, err)
 
 	aliceIdentity, _ := ttu.MakeTestIdentity(cipherSuite, keysSubGroup.ScalarField().New(aliceSecret))
@@ -106,7 +106,7 @@ func keygen[K bls.KeySubGroup](t *testing.T, identities []types.IdentityKey, thr
 	curve := bls12381.GetSourceSubGroup[K]()
 	require.Len(t, identities, n)
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, sha256.New)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, sha256.New)
 	require.NoError(t, err)
 
 	protocol, err := ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, threshold)

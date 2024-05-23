@@ -24,7 +24,7 @@ type verifier struct {
 var _ schnorr.VerifierBuilder[ZilliqaVariant] = (*verifierBuilder)(nil)
 var _ schnorr.Verifier[ZilliqaVariant] = (*verifier)(nil)
 
-func (v *verifierBuilder) WithSignatureProtocol(_ types.SigningSuite) schnorr.VerifierBuilder[ZilliqaVariant] {
+func (v *verifierBuilder) WithSigningSuite(_ types.SigningSuite) schnorr.VerifierBuilder[ZilliqaVariant] {
 	return v
 }
 

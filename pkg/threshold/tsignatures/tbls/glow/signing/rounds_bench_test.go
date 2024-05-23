@@ -20,7 +20,7 @@ func benchmarkCombineHelper(b *testing.B, threshold, n int) error {
 	message := []byte("messi > ronaldo")
 	sid := []byte("sessionId")
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(bls12381.NewG2(), hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(bls12381.NewG2(), hashFunc)
 	if err != nil {
 		return err
 	}

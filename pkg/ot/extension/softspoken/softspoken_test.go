@@ -30,7 +30,7 @@ var curveInstances = []curves.Curve{
 
 func getKeys(t *testing.T) (senderKey, receiverKey types.AuthKey) {
 	t.Helper()
-	cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
+	cipherSuite, err := ttu.MakeSigningSuite(k256.NewCurve(), sha3.New256)
 	require.NoError(t, err)
 	authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
 	require.NoError(t, err)

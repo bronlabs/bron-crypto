@@ -12,7 +12,7 @@ import (
 )
 
 func TestCheckExistIdentity(t *testing.T) {
-	cipherSuite, err := MakeSignatureProtocol(edwards25519.NewCurve(), sha3.New256)
+	cipherSuite, err := MakeSigningSuite(edwards25519.NewCurve(), sha3.New256)
 	require.NoError(t, err)
 	sk1, err := edwards25519.NewCurve().ScalarField().Hash([]byte{1})
 	require.NoError(t, err)

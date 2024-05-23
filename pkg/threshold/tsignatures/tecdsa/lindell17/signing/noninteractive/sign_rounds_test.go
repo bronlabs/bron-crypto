@@ -39,7 +39,7 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 			t.Parallel()
 
 			hash := sha256.New
-			cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+			cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 			require.NoError(t, err)
 
 			identities, err := ttu.MakeTestIdentities(cipherSuite, n)

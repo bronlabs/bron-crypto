@@ -34,7 +34,7 @@ func Test_HappyPath(t *testing.T) {
 		t.Skip("Skipping Lindell 2017 DKG tests.")
 	}
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha256.New)
+	cipherSuite, err := ttu.MakeSigningSuite(k256.NewCurve(), sha256.New)
 	require.NoError(t, err)
 
 	threshold := 2

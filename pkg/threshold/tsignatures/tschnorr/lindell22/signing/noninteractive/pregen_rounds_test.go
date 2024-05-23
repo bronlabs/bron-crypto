@@ -16,7 +16,7 @@ func Test_PreGenHappyPath(t *testing.T) {
 
 	curve := edwards25519.NewCurve()
 	hashFunc := sha512.New
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
 	require.NoError(t, err)
 	threshold := 3
 	n := 5

@@ -19,7 +19,7 @@ func Test_CanInitialize(t *testing.T) {
 	curve := edwards25519.NewCurve()
 	h := sha512.New512_256
 	threshold := 2
-	cipherSuite, err := testutils.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := testutils.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	identities, err := testutils.MakeTestIdentities(cipherSuite, threshold)
 	require.NoError(t, err)

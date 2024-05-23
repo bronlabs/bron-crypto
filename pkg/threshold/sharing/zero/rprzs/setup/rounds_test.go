@@ -18,7 +18,7 @@ import (
 func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, base.RandomOracleHashFunction)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, base.RandomOracleHashFunction)
 	require.NoError(t, err)
 
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)

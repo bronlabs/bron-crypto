@@ -31,7 +31,7 @@ func TestHappyPath(t *testing.T) {
 					h := hh
 					t.Run(fmt.Sprintf("%s-%d-hi=%d-msg: %s", curve.Name(), n, hi, msg), func(t *testing.T) {
 						t.Parallel()
-						cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+						cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 						require.NoError(t, err)
 						happyPath(t, cipherSuite, nn, msg)
 					})
@@ -98,7 +98,7 @@ func happyPath(t *testing.T, cipherSuite types.SigningSuite, n int, msg string) 
 }
 
 func TestFailIfOnlyTwoParticipants(t *testing.T) {
-	ct, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
+	ct, err := ttu.MakeSigningSuite(k256.NewCurve(), sha3.New256)
 	require.NoError(t, err)
 	identities, err := ttu.MakeTestIdentities(ct, 2)
 	require.NoError(t, err)

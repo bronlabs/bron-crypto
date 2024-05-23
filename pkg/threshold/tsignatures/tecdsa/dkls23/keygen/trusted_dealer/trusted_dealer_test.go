@@ -18,7 +18,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	h := sha256.New
-	cipherSuite, err := testutils.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := testutils.MakeSigningSuite(curve, h)
 	th := 2
 	n := 3
 
@@ -54,7 +54,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Run("all public keys are the same", func(t *testing.T) {
 		t.Parallel()
 		publicKeys := map[curves.Point]bool{}
-		for iterator :=  shards.Iterator(); iterator.HasNext(); {
+		for iterator := shards.Iterator(); iterator.HasNext(); {
 			pair := iterator.Next()
 			shard := pair.Value
 			if _, exists := publicKeys[shard.SigningKeyShare.PublicKey]; !exists {

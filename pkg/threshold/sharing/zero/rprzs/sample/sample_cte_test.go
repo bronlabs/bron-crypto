@@ -26,7 +26,7 @@ func Test_MeasureConstantTime_round1(t *testing.T) {
 	}
 	curve := k256.NewCurve()
 	h := sha3.New256
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	var participants []*setup.Participant
 	internal.RunMeasurement(500, "sample_round1", func(i int) {
@@ -45,7 +45,7 @@ func Test_MeasureConstantTime_round2(t *testing.T) {
 
 	curve := k256.NewCurve()
 	h := sha3.New256
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	var participants []*setup.Participant
 	var r2InsU []network.RoundMessages[types.Protocol, *setup.Round1P2P]
@@ -68,7 +68,7 @@ func Test_MeasureConstantTime_round3(t *testing.T) {
 
 	curve := k256.NewCurve()
 	h := sha3.New256
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	var participants []*setup.Participant
 	var r2InsU []network.RoundMessages[types.Protocol, *setup.Round1P2P]
@@ -96,7 +96,7 @@ func Test_MeasureConstantTime_dosample(t *testing.T) {
 
 	curve := k256.NewCurve()
 	h := sha3.New256
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 	var participants []*sample.Participant
 

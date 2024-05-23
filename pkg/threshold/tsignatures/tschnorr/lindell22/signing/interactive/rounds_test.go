@@ -35,7 +35,7 @@ func Test_SanityCheck(t *testing.T) {
 
 	hashFunc := sha512.New
 	curve := edwards25519.NewCurve()
-	suite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	suite, err := ttu.MakeSigningSuite(curve, hashFunc)
 	require.NoError(t, err)
 	prng := crand.Reader
 
@@ -90,7 +90,7 @@ func Test_HappyPathThresholdEdDSA(t *testing.T) {
 	n := 3
 	sid := []byte("sessionId")
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
 	require.NoError(t, err)
 
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
@@ -145,7 +145,7 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 	n := 3
 	sid := []byte("sessionId")
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
 	require.NoError(t, err)
 
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
@@ -201,7 +201,7 @@ func Test_HappyPathThresholdZilliqa(t *testing.T) {
 	n := 3
 	sid := []byte("sessionId")
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
 	require.NoError(t, err)
 
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
@@ -258,13 +258,13 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	n := 3
 	sid := []byte("testSessionId")
 
-	signatureProtocol, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	signingSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
 	require.NoError(t, err)
 
-	identities, err := ttu.MakeTestIdentities(signatureProtocol, n)
+	identities, err := ttu.MakeTestIdentities(signingSuite, n)
 	require.NoError(t, err)
 
-	thresholdSignatureProtocol, err := ttu.MakeThresholdSignatureProtocol(signatureProtocol, identities, th, identities)
+	thresholdSignatureProtocol, err := ttu.MakeThresholdSignatureProtocol(signingSuite, identities, th, identities)
 	require.NoError(t, err)
 
 	signingKeyShares, partialPublicKeys, err := jf_testutils.RunDKG(sid, thresholdSignatureProtocol, identities)
@@ -304,6 +304,6 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
-	err = vanillaSchnorr.Verify(signatureProtocol, publicKey, message, signature)
+	err = vanillaSchnorr.Verify(signingSuite, publicKey, message, signature)
 	require.NoError(t, err)
 }
