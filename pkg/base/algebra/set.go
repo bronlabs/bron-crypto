@@ -31,9 +31,9 @@ type StructuredSet[S Structure, E Element] interface {
 	Order() *saferith.Modulus
 	// Operators returns an ordered list of operators over which the structure S is defined.
 	Operators() []BinaryOperator[E]
-
+	// TODO: documentation
 	Unwrap() S
-
+	// TODO: documentation
 	ConditionallySelectable[E]
 }
 
