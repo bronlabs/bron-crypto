@@ -36,15 +36,25 @@ func (gi *GroupoidInvariants[G, GE]) Op(t *testing.T, groupoid algebra.Groupoid[
 }
 func (gi *GroupoidInvariants[G, GE]) Order(t *testing.T, groupoid algebra.Groupoid[G, GE]) {
 	t.Helper()
-	// TODO
+	// TODO: need Iterator method for curves
 }
 func (gei *GroupoidElementInvariants[G, GE]) Order(t *testing.T, groupoid algebra.Groupoid[G, GE]) {
 	t.Helper()
-	// TODO
+	// TODO: need Iterator method for curves
 }
-func (gei *GroupoidElementInvariants[G, GE]) ApplyOp(t *testing.T, groupoid algebra.Groupoid[G, GE]) {
+func (gei *GroupoidElementInvariants[G, GE]) ApplyOp(t *testing.T, groupoid algebra.Groupoid[G, GE], element algebra.GroupoidElement[G, GE], under algebra.BinaryOperator[GE], n *saferith.Nat) {
 	t.Helper()
 	// TODO
+	if groupoid.IsDefinedUnder(under) {
+		actual, err := element.ApplyOp(under, element, n)
+		require.NoError(t, err)
+		result := element
+
+		for i := 0; int64(i) < n.Big().Int64(); i++ {
+			result, _ = result.ApplyOp(under, element, n)
+		}
+		require.True(t, result.Equal(actual))
+	}
 }
 func (agi *AdditiveGroupoidInvariants[G, GE]) Add(t *testing.T, groupoid algebra.AdditiveGroupoid[G, GE], x algebra.AdditiveGroupoidElement[G, GE], ys ...algebra.AdditiveGroupoidElement[G, GE]) {
 	t.Helper()
@@ -53,59 +63,55 @@ func (agi *AdditiveGroupoidInvariants[G, GE]) Add(t *testing.T, groupoid algebra
 	for index := len(ys) - 1; index >= 0; index-- {
 		sum = groupoid.Add(sum, ys[index])
 	}
-	require.Equal(t, sum, groupoid.Add(x, ys...),
+	require.True(t, sum.Equal(groupoid.Add(x, ys...)),
 		"Should get the same result for adding ys elements one by one to x")
 }
 
 func (agi *AdditiveGroupoidInvariants[G, GE]) Addition(t *testing.T, groupoid algebra.AdditiveGroupoid[G, GE], x, y algebra.AdditiveGroupoidElement[G, GE]) {
 	t.Helper()
-	// TODO
+	// TODO: how to test an operator
 }
 
-func (agei *AdditiveGroupoidElementInvariants[G, GE]) Add(t *testing.T, groupoid algebra.AdditiveGroupoidElement[G, GE]) {
+func (agei *AdditiveGroupoidElementInvariants[G, GE]) Add(t *testing.T, groupoid algebra.AdditiveGroupoid[G, GE], x, y algebra.AdditiveGroupoidElement[G, GE]) {
 	t.Helper()
-	// TODO
+
+	actual := x.Add(y)
+	require.True(t, actual.Equal(groupoid.Add(x, y)),
+		"Should get the same result for adding ys elements one by one to x")
 }
-func (agei *AdditiveGroupoidElementInvariants[G, GE]) ApplyAdd(t *testing.T, groupoid algebra.AdditiveGroupoidElement[G, GE], x algebra.AdditiveGroupoidElement[G, GE], n *saferith.Nat) {
+func (agei *AdditiveGroupoidElementInvariants[G, GE]) ApplyAdd(t *testing.T, x algebra.AdditiveGroupoidElement[G, GE], n *saferith.Nat) {
 	t.Helper()
 
-	sum := x.Add(x)
+	actual := x.ApplyAdd(x, n)
+	sum := x
 
-	for i := 2; int64(i) < n.Big().Int64(); i++ { // n-2 times
-		sum = x.Add(x)
+	for i := 0; int64(i) < n.Big().Int64(); i++ {
+		sum = sum.Add(x)
 	}
 
-	require.Equal(t, sum, x.ApplyAdd(x, n))
+	require.True(t, sum.Equal(actual))
 }
 func (agei *AdditiveGroupoidElementInvariants[G, GE]) Double(t *testing.T, x algebra.AdditiveGroupoidElement[G, GE]) {
 	t.Helper()
+	n := new(saferith.Nat).SetUint64(1)
 
-	doubleX := x.Double()
-	// n := new(saferith.Nat).SetUint64(2)
-	// expected := x.ApplyAdd(x, n)
-
-	// require.Equal(t, expected, doubleX,
-	// 	"2x should have the same return as ApplyAdd(GE, 2)") // TODO: why is this test wrong?
-	require.Equal(t, x.Add(x), doubleX,
+	require.True(t, x.ApplyAdd(x, n).Equal(x.Double()),
+		"2x should have the same return as ApplyAdd(GE, 2)")
+	require.True(t, x.Add(x).Equal(x.Double()),
 		"2x should have the same return as x + x")
 
 }
 func (agei *AdditiveGroupoidElementInvariants[G, GE]) Triple(t *testing.T, x algebra.AdditiveGroupoidElement[G, GE]) {
 	t.Helper()
 
-	trippleX := x.Triple()
-
-	// n := new(saferith.Nat).SetUint64(2)
-	// expected := x.ApplyAdd(x, n)
-	// require.Equal(t, expected, trippleX,
-	// 	"3x should have the same return as x + x + x") // TODO: why is this wrong?
-
-	expected := x.Double().Add(x)
-	require.Equal(t, expected, trippleX,
+	n := new(saferith.Nat).SetUint64(2)
+	require.True(t, x.ApplyAdd(x, n).Equal(x.Triple()),
+		"3x should have the same return as ApplyAdd(GE, 3)")
+	require.True(t, x.Add(x).Add(x).Equal(x.Triple()),
+		"3x should have the same return as x + x + x")
+	require.True(t, x.Double().Add(x).Equal(x.Triple()),
 		"3x should have the same return as 2x + x")
-	expected = x.Add(x).Add(x)
-	require.Equal(t, expected, trippleX,
-		"3x should have the same return as 2x + x")
+
 }
 
 func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Mul(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE], x algebra.MultiplicativeGroupoidElement[G, GE], ys ...algebra.MultiplicativeGroupoidElement[G, GE]) {
@@ -119,13 +125,9 @@ func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Mul(t *testing.T, groupoid a
 		"Should get the same result for multiplying ys elements one by one to x")
 }
 
-func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Exp(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE], x algebra.MultiplicativeGroupoidElement[G, GE]) {
+func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Exp(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE], base, power algebra.MultiplicativeGroupoidElement[G, GE]) {
 	t.Helper()
-
-	// result := groupoid.Exp(x.Unwrap(), n.Unwrap())
-
-	// ys := make(algebra.MultiplicativeGroupoidElement[G, GE], len(n)) // TODO: What's the correct syntax here?
-
+	// TODO: How to get the value of a element object
 }
 func (mgi *MultiplicativeGroupoidInvariants[G, GE]) SimExp(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE]) {
 	t.Helper()
@@ -147,43 +149,46 @@ func (mgi *MultiplicativeGroupoidInvariants[G, GE]) DiscreteExponentiation(t *te
 	t.Helper()
 	// TODO
 }
-func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) Mul(t *testing.T, x, y algebra.MultiplicativeGroupoidElement[G, GE]) {
+func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) Mul(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE], x, y algebra.MultiplicativeGroupoidElement[G, GE]) {
 	t.Helper()
-	//TODO
+
+	expected := groupoid.Mul(x, y)
+
+	require.True(t, expected.Equal(groupoid.Mul(x, y)),
+		"Should get the same result for multiplying ys elements one by one to x")
 }
-func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) ApplyMul(t *testing.T, x algebra.MultiplicativeGroupoidElement[G, GE]) {
+func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) ApplyMul(t *testing.T, x algebra.MultiplicativeGroupoidElement[G, GE], n *saferith.Nat) {
 	t.Helper()
-	n := new(saferith.Nat).SetUint64(2)
 	result := x.ApplyMul(x, n)
 
-	mul := x.Mul(x)
-	for i := 2; int64(i) < n.Big().Int64(); i++ { // n-2 times
+	mul := x
+	for i := 0; int64(i) < n.Big().Int64(); i++ {
 		mul = x.Mul(x)
 	}
 
-	require.Equal(t, mul, result)
+	require.True(t, mul.Equal(result))
 }
 func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) Square(t *testing.T, x algebra.MultiplicativeGroupoidElement[G, GE], n *saferith.Nat) {
 	t.Helper()
 
 	result := x.Square()
 
-	expected := x.ApplyMul(x, n.SetUint64(uint64(2)))
+	expected := x.ApplyMul(x, n.SetUint64(uint64(1)))
 
-	require.Equal(t, expected, result)
+	require.True(t, expected.Equal(result))
 }
 func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) Cube(t *testing.T, x algebra.MultiplicativeGroupoidElement[G, GE], n *saferith.Nat) {
 	t.Helper()
 
 	result := x.Cube()
 
-	expected := x.ApplyMul(x, n.SetUint64(uint64(3)))
+	expected := x.ApplyMul(x, n.SetUint64(uint64(2)))
 
-	require.Equal(t, expected, result,
+	require.True(t, expected.Equal(result),
 		"x * x * x should be the same as x.Cube()")
 
 	expected = x.Square().Mul(x)
-	require.Equal(t, expected, result,
+	require.True(t, expected.Equal(result),
 		"(x^2 * x) should be the same as x.Cube()")
 }
 func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) Exp(t *testing.T, x algebra.MultiplicativeGroupoidElement[G, GE], n *saferith.Nat) {
@@ -193,14 +198,14 @@ func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) Exp(t *testing.T, x 
 
 	expected := x.ApplyMul(x, n)
 
-	require.Equal(t, expected, result)
+	require.True(t, expected.Equal(result))
 
-	mul := x.Mul(x)
-	for i := 2; int64(i) < n.Big().Int64(); i++ { // n-2 times
+	mul := x
+	for i := 0; int64(i) < n.Big().Int64(); i++ {
 		mul = x.Mul(x)
 	}
 
-	require.Equal(t, mul, result)
+	require.True(t, mul.Equal(result))
 }
 
 func (cgi *CyclicGroupoidInvariants[G, GE]) Generator(t *testing.T, groupoid algebra.CyclicGroupoid[G, GE]) {
@@ -223,14 +228,26 @@ func CheckGroupoidInvariant[G algebra.Groupoid[G, GE], GE algebra.GroupoidElemen
 
 	gi := &GroupoidInvariants[G, GE]{}
 	gi.IsDefinedUnder(t, groupoid)
-	// gi.Op(t, groupoid, operator) // TODO: how to call operator
+	gi.Op(t, groupoid)
 
 	gei := &GroupoidElementInvariants[G, GE]{}
 	gei.Order(t, groupoid)
-	gei.ApplyOp(t, groupoid)
+	// t.Run("ApplyOp", func(t *testing.T) { // TODO: operators is not defined for curves
+	// 	t.Parallel()
+	// 	gen1 := elementGenerator.Clone()
+	// 	isEmpty1 := gen1.Prng().IntRange(0, 16)
+	// 	element := gen1.Empty()
+	// 	if isEmpty1 != 0 {
+	// 		element = gen1.GenerateNonZero()
+	// 	}
+	// 	n := new(saferith.Nat).SetUint64(fu.NewPrng().Uint64())
+	// 	for _, under := range groupoid.Operators() {
+	// 		gei.ApplyOp(t, groupoid, element, under, n)
+	// 	}
+	// })
 }
 
-func CheckAddiriveGroupoidInvariant[G algebra.AdditiveGroupoid[G, GE], GE algebra.AdditiveGroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
+func CheckAdditiveGroupoidInvariant[G algebra.AdditiveGroupoid[G, GE], GE algebra.AdditiveGroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
 	CheckGroupoidInvariant[G, GE](t, groupoid, elementGenerator)
 
@@ -270,29 +287,32 @@ func CheckAddiriveGroupoidInvariant[G algebra.AdditiveGroupoid[G, GE], GE algebr
 	agei := &AdditiveGroupoidElementInvariants[G, GE]{}
 	t.Run("Add for element", func(t *testing.T) {
 		gen1 := elementGenerator.Clone()
+		gen2 := elementGenerator.Clone()
+		isEmpty1 := gen1.Prng().IntRange(0, 16)
+		isEmpty2 := gen2.Prng().IntRange(0, 16)
+		el1 := gen1.Empty()
+		el2 := gen2.Empty()
+		if isEmpty1 != 0 {
+			el1 = gen1.GenerateNonZero()
+		}
+		if isEmpty2 != 0 {
+			el2 = gen2.GenerateNonZero()
+		}
+		agei.Add(t, groupoid, el1, el2)
+	})
+	t.Run("ApplyAdd", func(t *testing.T) {
+		gen1 := elementGenerator.Clone()
 		isEmpty1 := gen1.Prng().IntRange(0, 16)
 		el1 := gen1.Empty()
 		if isEmpty1 != 0 {
 			el1 = gen1.GenerateNonZero()
 		}
-		agei.Add(t, el1)
+		prng := fu.NewPrng().IntRange(0, 20)
+
+		n := new(saferith.Nat).SetUint64(uint64(prng))
+
+		agei.ApplyAdd(t, el1, n)
 	})
-	// t.Run("ApplyAdd", func(t *testing.T) {
-	// 	gen1 := elementGenerator.Clone()
-	// 	gen2 := elementGenerator.Clone()
-	// 	isEmpty1 := gen1.Prng().IntRange(0, 16)
-	// 	isEmpty2 := gen2.Prng().IntRange(0, 16)
-	// 	el1 := gen1.Empty()
-	// 	el2 := gen2.Empty()
-	// 	if isEmpty1 != 0 {
-	// 		el1 = gen1.GenerateNonZero()
-	// 	}
-	// 	if isEmpty2 != 0 {
-	// 		el2 = gen2.GenerateNonZero()
-	// 	}
-	// 	//TODO: how to properly pass n ?
-	// 	agei.ApplyAdd(t, el1, el2, n)
-	// })
 	t.Run("Double", func(t *testing.T) {
 		gen1 := elementGenerator.Clone()
 		isEmpty1 := gen1.Prng().IntRange(0, 16)
@@ -309,6 +329,7 @@ func CheckAddiriveGroupoidInvariant[G algebra.AdditiveGroupoid[G, GE], GE algebr
 		if isEmpty1 != 0 {
 			el1 = gen1.GenerateNonZero()
 		}
+
 		agei.Triple(t, el1)
 	})
 }
@@ -318,75 +339,107 @@ func CheckMultiplicativeGroupoidInvariant[G algebra.MultiplicativeGroupoid[G, GE
 	// the fuzz function doesn't accept this checkFunction: "Missing DiscreteExponentiation"
 	CheckGroupoidInvariant[G, GE](t, groupoid, elementGenerator)
 
-	// mgi := &MultiplicativeGroupoidInvariants[G, GE]{}
-	// t.Run("Mul", func(t *testing.T) {
-	// 	gen1 := elementGenerator.Clone()
-	// 	gen2 := elementGenerator.Clone()
-	// 	isEmpty1 := gen1.Prng().IntRange(0, 16)
-	// 	isEmpty2 := gen2.Prng().IntRange(0, 16)
-	// 	el1 := gen1.Empty()
-	// 	el2 := gen2.Empty()
-	// 	if isEmpty1 != 0 {
-	// 		el1 = gen1.GenerateNonZero()
-	// 	}
-	// 	if isEmpty2 != 0 {
-	// 		el2 = gen2.GenerateNonZero()
-	// 	}
-	// 	mgi.Mul(t, groupoid, el1, el2)
-	// })
-	// t.Run("Exp", func(t *testing.T) {
-	// 	gen1 := elementGenerator.Clone()
-	// 	isEmpty1 := gen1.Prng().IntRange(0, 16)
-	// 	el1 := gen1.Empty()
-	// 	if isEmpty1 != 0 {
-	// 		el1 = gen1.GenerateNonZero()
-	// 	}
-	// 	mgi.Exp(t, groupoid, el1)
-	// })
-	// t.Run("SimExp", func(t *testing.T) {
-	// 	mgi.SimExp(t, groupoid)
-	// })
-	// t.Run("MultiBaseExp", func(t *testing.T) {
-	// 	mgi.MultiBaseExp(t, groupoid)
-	// })
-	// t.Run("MultiExponentExp", func(t *testing.T) {
-	// 	mgi.MultiExponentExp(t, groupoid)
-	// })
-	// t.Run("Multiplication", func(t *testing.T) {
-	// 	mgi.Multiplication(t, groupoid)
-	// })
-	// t.Run("DiscreteExponentiation", func(t *testing.T) {
-	// 	mgi.DiscreteExponentiation(t, groupoid)
-	// })
+	mgi := &MultiplicativeGroupoidInvariants[G, GE]{}
+	t.Run("Mul", func(t *testing.T) {
+		gen1 := elementGenerator.Clone()
+		gen2 := elementGenerator.Clone()
+		isEmpty1 := gen1.Prng().IntRange(0, 16)
+		isEmpty2 := gen2.Prng().IntRange(0, 16)
+		el1 := gen1.Empty()
+		el2 := gen2.Empty()
+		if isEmpty1 != 0 {
+			el1 = gen1.GenerateNonZero()
+		}
+		if isEmpty2 != 0 {
+			el2 = gen2.GenerateNonZero()
+		}
+		mgi.Mul(t, groupoid, el1, el2)
+	})
+	t.Run("Exp", func(t *testing.T) {
+		t.Parallel()
+		gen1 := elementGenerator.Clone()
+		gen2 := elementGenerator.Clone()
+		isEmpty1 := gen1.Prng().IntRange(0, 16)
+		isEmpty2 := gen2.Prng().IntRange(0, 16)
+		el1 := gen1.Empty()
+		el2 := gen2.Empty()
+		if isEmpty1 != 0 {
+			el1 = gen1.GenerateNonZero()
+		}
+		if isEmpty2 != 0 {
+			el2 = gen2.GenerateNonZero()
+		}
+		mgi.Exp(t, groupoid, el1, el2)
+	})
+	t.Run("SimExp", func(t *testing.T) {
+	})
 
-	// mgei := &MultiplicativeGroupoidElementInvariants[G, GE]{}
-	// t.Run("Mul", func(t *testing.T) {
-		// gen1 := elementGenerator.Clone()
-		// gen2 := elementGenerator.Clone()
-		// isEmpty1 := gen1.Prng().IntRange(0, 16)
-		// isEmpty2 := gen2.Prng().IntRange(0, 16)
-		// el1 := gen1.Empty()
-		// el2 := gen2.Empty()
-		// if isEmpty1 != 0 {
-		// 	el1 = gen1.GenerateNonZero()
-		// }
-		// if isEmpty2 != 0 {
-		// 	el2 = gen2.GenerateNonZero()
-		// }
-		// mgei.Mul(t, el1, el2)
-	// })
-	// t.Run("ApplyMul", func(t *testing.T) {
-	// 	gen1 := elementGenerator.Clone()
-	// 	isEmpty1 := gen1.Prng().IntRange(0, 16)
-	// 	el1 := gen1.Empty()
-	// 	if isEmpty1 != 0 {
-	// 		el1 = gen1.GenerateNonZero()
-	// 	}
-	// 	mgei.ApplyMul(t, groupoid, el1)
-	// })
-	// mgei.Square(t, el1)
-	// mgei.Cube(t, el1)
-	// mgei.Exp(t, el1)
+	mgei := &MultiplicativeGroupoidElementInvariants[G, GE]{}
+	t.Run("Mul", func(t *testing.T) {
+		t.Parallel()
+		gen1 := elementGenerator.Clone()
+		gen2 := elementGenerator.Clone()
+		isEmpty1 := gen1.Prng().IntRange(0, 16)
+		isEmpty2 := gen2.Prng().IntRange(0, 16)
+		el1 := gen1.Empty()
+		el2 := gen2.Empty()
+		if isEmpty1 != 0 {
+			el1 = gen1.GenerateNonZero()
+		}
+		if isEmpty2 != 0 {
+			el2 = gen2.GenerateNonZero()
+		}
+		mgei.Mul(t, groupoid, el1, el2)
+	})
+	t.Run("ApplyMul", func(t *testing.T) {
+		t.Parallel()
+		gen1 := elementGenerator.Clone()
+		isEmpty1 := gen1.Prng().IntRange(0, 16)
+		el1 := gen1.Empty()
+		if isEmpty1 != 0 {
+			el1 = gen1.GenerateNonZero()
+		}
+		prng := fu.NewPrng().IntRange(0, 20)
+		n := new(saferith.Nat).SetUint64(uint64(prng))
+		mgei.ApplyMul(t, el1, n)
+	})
+	t.Run("Square", func(t *testing.T) {
+		t.Parallel()
+		gen1 := elementGenerator.Clone()
+		isEmpty1 := gen1.Prng().IntRange(0, 16)
+		el1 := gen1.Empty()
+		if isEmpty1 != 0 {
+			el1 = gen1.GenerateNonZero()
+		}
+		prng := fu.NewPrng().IntRange(0, 20)
+		n := new(saferith.Nat).SetUint64(uint64(prng))
+		mgei.Square(t, el1, n)
+
+	})
+	t.Run("Cube", func(t *testing.T) {
+		t.Parallel()
+		gen1 := elementGenerator.Clone()
+		isEmpty1 := gen1.Prng().IntRange(0, 16)
+		el1 := gen1.Empty()
+		if isEmpty1 != 0 {
+			el1 = gen1.GenerateNonZero()
+		}
+		prng := fu.NewPrng().IntRange(0, 20)
+		n := new(saferith.Nat).SetUint64(uint64(prng))
+		mgei.Cube(t, el1, n)
+	})
+	t.Run("Exp", func(t *testing.T) {
+		t.Parallel()
+		gen1 := elementGenerator.Clone()
+		isEmpty1 := gen1.Prng().IntRange(0, 16)
+		el1 := gen1.Empty()
+		if isEmpty1 != 0 {
+			el1 = gen1.GenerateNonZero()
+		}
+		prng := fu.NewPrng().IntRange(0, 20)
+		n := new(saferith.Nat).SetUint64(uint64(prng))
+		mgei.Exp(t, el1, n)
+	})
 }
 
 func CheckCyclicGroupoidInvariant[G algebra.CyclicGroupoid[G, GE], GE algebra.CyclicGroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
