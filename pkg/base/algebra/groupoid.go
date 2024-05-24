@@ -56,7 +56,7 @@ type AdditiveGroupoid[G Structure, E Element] interface {
 	// Add accepts elements x and the list of elements ys and adds returns sum(x, ys). We assume S with its
 	// addition operator is right associative.
 	Add(x AdditiveGroupoidElement[G, E], ys ...AdditiveGroupoidElement[G, E]) E
-	// TODO
+	// Returns an operator
 	Addition() Addition[E]
 }
 
@@ -83,10 +83,11 @@ type MultiplicativeGroupoid[G Structure, E Element] interface {
 	// multiplication operator is right associative.
 	Mul(x MultiplicativeGroupoidElement[G, E], ys ...MultiplicativeGroupoidElement[G, E]) E
 	Exp(base, power E) E
-	//TODO: Commment for SimExp
+	// Simultaneous exponentiation. base[0]^exponents[0] * base[1]^exponents[1] * ...
 	SimExp(bases []MultiplicativeGroupoidElement[G, E], exponents []*saferith.Nat) (E, error)
-	// (2*2*2)^2
+	// Exponentiation with multiple bases and a common exponent. base[0]^exponent * ...
 	MultiBaseExp(bases []MultiplicativeGroupoidElement[G, E], exponent *saferith.Nat) E
+	// Exponentiation with a common base and multiple exponents. base^(exponent[0] * exponents[1] * ...)
 	MultiExponentExp(base MultiplicativeGroupoidElement[G, E], exponents []*saferith.Nat) E
 
 	Multiplication() Multiplication[E]

@@ -24,34 +24,104 @@ func pointGeneratorFactory(f *testing.F, curve curves.Curve) fu.ObjectGenerator[
 	return objectGenerator
 }
 
-func Fuzz_Property_Point(f *testing.F) {
+func Fuzz_Property_Point_Group(f *testing.F) {
 	curve := edwards25519.NewCurve()
 	g := pointGeneratorFactory(f, curve)
 	fu.RunAlgebraPropertyTest(f, atu.CheckGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
 }
-func Fuzz_Property_AdditiveGroupElement(f *testing.F) {
+func Fuzz_Property_Point_SubGroup(f *testing.F) {
 	curve := edwards25519.NewCurve()
 	g := pointGeneratorFactory(f, curve)
-	fu.RunAlgebraPropertyTest(f, atu.CheckAdditiveGroupElementInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+	fu.RunAlgebraPropertyTest(f, atu.CheckSubGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+func Fuzz_Property_Point_AdditiveGroup(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckAdditiveGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
 }
 
-// TODO: have check for both element and structure
-
-// func Fuzz_Propety_Subgroup(f *testing.F) {
-// 	curve := edwards25519.NewCurve()
-// 	g := pointGeneratorFactory(f, curve)
-// 	fu.RunAlgebraPropertyTest(f, atu.CheckSubGroupElementInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
-// }
-
-//	func Fuzz_Property_AdditiveGroup(f *testing.F) {
-//		curve := edwards25519.NewCurve()
-//		g := pointGeneratorFactory(f, curve)
-//		fu.RunAlgebraPropertyTest(f, atu.CheckAdditiveGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
-//	}
-// func Fuzz_Property_MultiplitiveGroup(f *testing.F) {
-// 	curve := edwards25519.NewCurve()
+// func Fuzz_Property_Point_MultiplicativeGroup(f *testing.F) {
+// 	curve := edwards25519.NewCurve() // TODO: err `missing method DiscreteExponentiation`
 // 	g := pointGeneratorFactory(f, curve)
 // 	fu.RunAlgebraPropertyTest(f, atu.CheckMultiplicativeGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
-
 // }
 
+func Fuzz_Property_Point_CyclicGroup(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckCyclicGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+
+// Set checks
+func Fuzz_Property_Point_StructuredSet(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckStructuredSetInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+func Fuzz_Property_Point_StructuredSetConstant(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckStructuredSetConstant[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+func Fuzz_Property_Point_FiniteSet(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckFiniteStructureInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+func Fuzz_Property_Point_PointedSet(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckPointedSetElementConstant[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+
+// cofactor, IssmallORder, clearCOfactor, Neg, IsTorsion
+// Groupoid Checks
+func Fuzz_Property_Point_Groupoid(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckGroupoidInvariant[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+func Fuzz_Property_Point_AddativeGroupoid(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckAdditiveGroupoidInvariant[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+
+// func Fuzz_Property_Point_MultiplicativeGroupoid(f *testing.F) { //Missing Method DiscreteExponentiation
+// 	curve := edwards25519.NewCurve()
+// 	g := pointGeneratorFactory(f, curve)
+// 	fu.RunAlgebraPropertyTest(f, atu.CheckMultiplicativeGroupoidInvariant[curves.Curve, curves.Point], curves.Curve(curve), g)
+// }
+
+func Fuzz_Property_Point_CyclicGroupoid(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckCyclicGroupoidInvariant[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+
+//monoid Checks
+
+func Fuzz_Property_Point_Monoid(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckMonoidInvariant[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+
+// Element, Name, UnWarap
+func Fuzz_Property_Point_AddativeMonoid(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckAdditiveMonoidInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+
+// func Fuzz_Property_Point_MultiplicativeMonoid(f *testing.F) { //Missing Method DiscreteExponentiation
+// 	curve := edwards25519.NewCurve()
+// 	g := pointGeneratorFactory(f, curve)
+// 	fu.RunAlgebraPropertyTest(f, atu.CheckMultiplicativeMonoidInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+// }
+
+func Fuzz_Property_Point_CyclicMonoid(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckCyclicMonoidInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+}

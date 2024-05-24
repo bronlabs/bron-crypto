@@ -33,7 +33,7 @@ type StructuredSet[S Structure, E Element] interface {
 	Operators() []BinaryOperator[E]
 	// TODO: documentation
 	Unwrap() S
-	// TODO: documentation
+
 	ConditionallySelectable[E]
 }
 
