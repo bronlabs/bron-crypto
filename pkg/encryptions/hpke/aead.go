@@ -75,21 +75,26 @@ func (s *AEADScheme) New(key []byte) (cipher.AEAD, error) {
 	if len(key) != s.Nk() {
 		return nil, errs.NewLength("key length is %d whereas it should be %d", len(key), s.Nk())
 	}
+
 	if s.isAES() {
 		block, err := aes.NewCipher(key)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct block cipher")
 		}
+
 		gcm, err := cipher.NewGCM(block)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct gcm block cipher")
 		}
+
 		return gcm, nil
 	}
+
 	chacha, err := chacha20poly1305.New(key)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct chacha cipher")
 	}
+
 	return chacha, nil
 }
 

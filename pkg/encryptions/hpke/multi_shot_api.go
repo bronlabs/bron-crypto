@@ -7,7 +7,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
-// =========== Multi-shot API ============= //.
 type Sender struct {
 	myPrivateKey *PrivateKey
 	c            *context
@@ -19,19 +18,22 @@ func NewSender(mode ModeID, suite *CipherSuite, receiverPublicKey PublicKey, sen
 	if suite == nil {
 		return nil, nil, errs.NewIsNil("ciphersuite is nil")
 	}
+
 	kem, exists := kems[suite.KEM]
 	if !exists {
 		return nil, nil, errs.NewType("no kem constructor found for %v", suite.KEM)
 	}
-	if !receiverPublicKey.IsInPrimeSubGroup() {
-		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
-	}
+
 	var sharedSecret []byte
 	var enc PublicKey
 	var err error
 	if mode == Auth || mode == AuthPSk {
 		sharedSecret, enc, err = kem.AuthEncap(receiverPublicKey, senderPrivateKey, prng)
 	} else {
+		if senderPrivateKey != nil {
+			return nil, nil, errs.NewFailed("sender private key unsupported")
+		}
+
 		sharedSecret, enc, err = kem.Encap(receiverPublicKey, prng)
 	}
 	if err != nil {
@@ -54,10 +56,12 @@ func (s *Sender) Seal(plaintext, additionalData []byte) (ciphertext []byte, err 
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute nonce")
 	}
+
 	ciphertext = s.c.aead.Seal(nil, nonce, plaintext, additionalData)
 	if err := s.c.incrementSeq(); err != nil {
 		return nil, errs.WrapFailed(err, "increment sequence failed")
 	}
+
 	return ciphertext, nil
 }
 
@@ -78,21 +82,21 @@ func NewReceiver(mode ModeID, suite *CipherSuite, receiverPrivatekey *PrivateKey
 	if suite == nil {
 		return nil, errs.NewIsNil("ciphersuite is nil")
 	}
+
 	kem, exists := kems[suite.KEM]
 	if !exists {
 		return nil, errs.NewType("no kem constructor found for %v", suite.KEM)
 	}
-	if !ephemeralPublicKey.IsInPrimeSubGroup() {
-		return nil, errs.NewValidation("Public Key not in the prime subgroup")
-	}
-	if !senderPublicKey.IsInPrimeSubGroup() {
-		return nil, errs.NewValidation("Public Key not in the prime subgroup")
-	}
+
 	var sharedSecret []byte
 	var err error
 	if mode == Auth || mode == AuthPSk {
 		sharedSecret, err = kem.AuthDecap(receiverPrivatekey, senderPublicKey, ephemeralPublicKey)
 	} else {
+		if senderPublicKey != nil {
+			return nil, errs.NewFailed("sender public key unsupported")
+		}
+
 		sharedSecret, err = kem.Decap(receiverPrivatekey, ephemeralPublicKey)
 	}
 	if err != nil {
@@ -115,13 +119,16 @@ func (r *Receiver) Open(ciphertext, additionalData []byte) (plaintext []byte, er
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute nonce")
 	}
+
 	plaintext, err = r.c.aead.Open(nil, nonce, ciphertext, additionalData)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not open ciphertext")
 	}
+
 	if err := r.c.incrementSeq(); err != nil {
 		return nil, errs.WrapFailed(err, "increment sequence failed")
 	}
+
 	return plaintext, nil
 }
 
@@ -129,39 +136,4 @@ func (r *Receiver) Open(ciphertext, additionalData []byte) (plaintext []byte, er
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-secret-export
 func (r *Receiver) Export(exporterContext []byte, L int) ([]byte, error) {
 	return r.c.export(exporterContext, L)
-}
-
-// =========== Single-Shot API ============ //.
-
-func Seal(mode ModeID, suite *CipherSuite, plaintext, additionalData []byte, receiverPublicKey PublicKey, senderPrivateKey *PrivateKey, info, psk, pskId []byte, prng io.Reader) (ciphertext []byte, ephemeralPublicKey PublicKey, err error) {
-	sender, ephemeralPublicKey, err := NewSender(mode, suite, receiverPublicKey, senderPrivateKey, info, psk, pskId, prng)
-	if !receiverPublicKey.IsInPrimeSubGroup() {
-		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
-	}
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not construct sender")
-	}
-	ciphertext, err = sender.Seal(plaintext, additionalData)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not seal plaintext")
-	}
-	return ciphertext, ephemeralPublicKey, nil
-}
-
-func Open(mode ModeID, suite *CipherSuite, ciphertext, additionalData []byte, receiverPrivatekey *PrivateKey, ephemeralPublicKey, senderPublicKey PublicKey, info, psk, pskId []byte) (plaintext []byte, err error) {
-	receiver, err := NewReceiver(mode, suite, receiverPrivatekey, ephemeralPublicKey, senderPublicKey, info, psk, pskId)
-	if !ephemeralPublicKey.IsInPrimeSubGroup() {
-		return nil, errs.NewValidation("Public Key not in the prime subgroup")
-	}
-	if !senderPublicKey.IsInPrimeSubGroup() {
-		return nil, errs.NewValidation("Public Key not in the prime subgroup")
-	}
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct receiver")
-	}
-	plaintext, err = receiver.Open(ciphertext, additionalData)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "opening failed")
-	}
-	return plaintext, nil
 }

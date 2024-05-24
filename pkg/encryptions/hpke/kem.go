@@ -80,14 +80,17 @@ func (s *DHKEMScheme) GenerateKeyPair(prng io.Reader) (*PrivateKey, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
 	}
+
 	ikm, err := s.produceIKM(prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not produce ikm")
 	}
+
 	privateKey, err := s.DeriveKeyPair(ikm)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not produce key pair")
 	}
+
 	return privateKey, nil
 }
 
@@ -142,9 +145,7 @@ func (s *DHKEMScheme) Encap(receiverPublicKey PublicKey, prng io.Reader) (shared
 	if prng == nil {
 		return nil, nil, errs.NewIsNil("prng is nil")
 	}
-	if !receiverPublicKey.IsInPrimeSubGroup() {
-		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
-	}
+
 	ikmE, err := s.produceIKM(prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not produce ikm for ephemeral key")
@@ -163,6 +164,7 @@ func (s *DHKEMScheme) EncapWithIKM(receiverPublicKey PublicKey, ikmE []byte) (sh
 	if !receiverPublicKey.IsInPrimeSubGroup() {
 		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
 	}
+
 	ephemeralPrivateKey, err := s.DeriveKeyPair(ikmE)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not generate key pair")
@@ -192,15 +194,18 @@ func (s *DHKEMScheme) Decap(receiverPrivateKey *PrivateKey, ephemeralPublicKey P
 	if !ephemeralPublicKey.IsInPrimeSubGroup() {
 		return nil, errs.NewValidation("Public Key not in the prime subgroup")
 	}
+
 	enc := ephemeralPublicKey.ToAffineUncompressed()
 	dhElement, err := dh.DiffieHellman(receiverPrivateKey.D, ephemeralPublicKey)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "dh failed")
 	}
+
 	pkRm := receiverPrivateKey.PublicKey.ToAffineUncompressed()
 	kemContext := make([]byte, len(enc)+len(pkRm))
 	copy(kemContext, enc)
 	copy(kemContext[len(enc):], pkRm)
+
 	sharedSecret = s.extractAndExpand(dhElement.Bytes(), kemContext)
 	return sharedSecret, nil
 }
@@ -211,17 +216,17 @@ func (s *DHKEMScheme) AuthEncap(receiverPublicKey PublicKey, senderPrivateKey *P
 	if prng == nil {
 		return nil, nil, errs.NewIsNil("prng is nil")
 	}
-	if !receiverPublicKey.IsInPrimeSubGroup() {
-		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
-	}
+
 	ikmE, err := s.produceIKM(prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not produce ikm for ephemeral key")
 	}
+
 	sharedSecret, ephemeralPublicKey, err = s.AuthEncapWithIKM(receiverPublicKey, senderPrivateKey, ikmE)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "encapsulation with the provided ikm failed")
 	}
+
 	return sharedSecret, ephemeralPublicKey, nil
 }
 
@@ -232,18 +237,22 @@ func (s *DHKEMScheme) AuthEncapWithIKM(receiverPublicKey PublicKey, senderPrivat
 	if !receiverPublicKey.IsInPrimeSubGroup() {
 		return nil, nil, errs.NewValidation("Public Key not in the prime subgroup")
 	}
+
 	ephemeralPrivateKey, err := s.DeriveKeyPair(ikmE)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not generate key pair")
 	}
+
 	dhER, err := dh.DiffieHellman(ephemeralPrivateKey.D, receiverPublicKey)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "dh between receiver and ephemeral failed")
 	}
+
 	dhSR, err := dh.DiffieHellman(senderPrivateKey.D, receiverPublicKey)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "dh between receiver and sender failed")
 	}
+
 	dhBytes := make([]byte, len(dhER.Bytes())+len(dhSR.Bytes()))
 	copy(dhBytes, dhER.Bytes())
 	copy(dhBytes[len(dhER.Bytes()):], dhSR.Bytes())
@@ -272,14 +281,17 @@ func (s *DHKEMScheme) AuthDecap(receiverPrivateKey *PrivateKey, senderPublicKey,
 	if !ephemeralPublicKey.IsInPrimeSubGroup() {
 		return nil, errs.NewValidation("Public Key not in the prime subgroup")
 	}
+
 	dhRE, err := dh.DiffieHellman(receiverPrivateKey.D, ephemeralPublicKey)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "dh between receiver and ephemeral failed")
 	}
+
 	dhRS, err := dh.DiffieHellman(receiverPrivateKey.D, senderPublicKey)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "dh between receiver and sender failed")
 	}
+
 	dhBytes := make([]byte, len(dhRE.Bytes())+len(dhRS.Bytes()))
 
 	enc := ephemeralPublicKey.ToAffineUncompressed()
