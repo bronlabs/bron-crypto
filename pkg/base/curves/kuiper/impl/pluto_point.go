@@ -3,7 +3,7 @@ package impl
 import (
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
@@ -250,71 +250,63 @@ func (p *PlutoPoint) SetNat(x, y *saferith.Nat) (*PlutoPoint, error) {
 }
 
 // ToCompressed serialises this element into compressed form.
-func (*PlutoPoint) ToCompressed() [FieldBytes]byte {
-	panic("not implemented")
-	//var out [FieldBytes]byte
-	//var t G1
-	//t.ToAffine(g1)
-	//xBytes := t.X.Bytes()
-	//copy(out[:], bitstring.ReverseBytes(xBytes[:]))
-	//isInfinity := byte(g1.IsIdentity())
-	//// Compressed flag
-	//out[0] |= 1 << 7
-	//// Is infinity
-	//out[0] |= (1 << 6) & -isInfinity
-	//// Sign of y only set if not infinity
-	//out[0] |= (byte(t.Y.LexicographicallyLargest()) << 5) & (isInfinity - 1)
-	//return out
+func (p *PlutoPoint) ToCompressed() [FieldBytes]byte {
+	var out [FieldBytes]byte
+	var t PlutoPoint
+	t.ToAffine(p)
+	xBytes := t.X.Bytes()
+	copy(out[:], bitstring.ReverseBytes(xBytes[:]))
+	isInfinity := byte(p.IsIdentity())
+	// Is infinity
+	out[0] |= isInfinity << 7
+	// Sign of y only set if not infinity
+	out[0] |= (byte(t.Y.LexicographicallyLargest()) << 6) & (isInfinity - 1)
+	return out
 }
 
 // FromCompressed deserializes this element from compressed form.
-func (*PlutoPoint) FromCompressed(input *[FieldBytes]byte) (*PlutoPoint, error) {
-	panic("not implemented")
-	//var xFp, yFp Fp
-	//var x [FieldBytes]byte
-	//var p G1
-	//compressedFlag := uint64((input[0] >> 7) & 1)
-	//infinityFlag := uint64((input[0] >> 6) & 1)
-	//sortFlag := uint64((input[0] >> 5) & 1)
-	//
-	//if compressedFlag != 1 {
-	//	return nil, errs.NewFailed("compressed flag must be set")
-	//}
-	//
-	//if infinityFlag == 1 {
-	//	if sortFlag == 1 {
-	//		return nil, errs.NewFailed("infinity flag and sort flag are both set")
-	//	}
-	//	return g1.Identity(), nil
-	//}
-	//
-	//copy(x[:], bitstring.ReverseBytes(input[:]))
-	//// Mask away the flag bits
-	//x[FieldBytes-1] &= 0x1F
-	//if _, valid := xFp.SetBytes(&x); valid != 1 {
-	//	return nil, errs.NewFailed("invalid bytes - not in field")
-	//}
-	//
-	//yFp.Square(&xFp)
-	//yFp.Mul(&yFp, &xFp)
-	//yFp.Add(&yFp, &curveG1B)
-	//
-	//if _, wasSquare := yFp.Sqrt(&yFp); wasSquare != 1 {
-	//	return nil, errs.NewFailed("point is not on the curve")
-	//}
-	//
-	//yFp.CNeg(&yFp, yFp.LexicographicallyLargest()^sortFlag)
-	//p.X.Set(&xFp)
-	//p.Y.Set(&yFp)
-	//p.Z.SetOne()
-	//if p.InCorrectSubgroup() == 0 {
-	//	return nil, errs.NewFailed("point is not in correct subgroup")
-	//}
-	//return g1.Set(&p), nil
+func (p *PlutoPoint) FromCompressed(input *[FieldBytes]byte) (*PlutoPoint, error) {
+	var xFp, yFp Fp
+	var x [FieldBytes]byte
+	var t PlutoPoint
+
+	infinityFlag := uint64((input[0] >> 7) & 1)
+	sortFlag := uint64((input[0] >> 6) & 1)
+
+	if infinityFlag == 1 {
+		if sortFlag == 1 {
+			return nil, errs.NewFailed("infinity flag and sort flag are both set")
+		}
+		return p.Identity(), nil
+	}
+
+	copy(x[:], bitstring.ReverseBytes(input[:]))
+	// Mask away the flag bits
+	x[FieldBytes-1] &= 0x3F
+	if _, valid := xFp.SetBytes(&x); valid != 1 {
+		return nil, errs.NewFailed("invalid bytes - not in field")
+	}
+
+	yFp.Square(&xFp)
+	yFp.Mul(&yFp, &xFp)
+	yFp.Add(&yFp, &plutoB)
+
+	if _, wasSquare := yFp.Sqrt(&yFp); wasSquare != 1 {
+		return nil, errs.NewFailed("point is not on the curve")
+	}
+
+	yFp.CNeg(&yFp, yFp.LexicographicallyLargest()^sortFlag)
+	t.X.Set(&xFp)
+	t.Y.Set(&yFp)
+	t.Z.SetOne()
+	if t.InCorrectSubgroup() == 0 {
+		return nil, errs.NewFailed("point is not in correct subgroup")
+	}
+	return t.Set(&t), nil
 }
 
 // ToUncompressed serialises this element into uncompressed form.
-func (*PlutoPoint) ToUncompressed() [WideFieldBytes]byte {
+func (*PlutoPoint) ToUncompressed() [2 * FieldBytes]byte {
 	panic("not implemented")
 	//var out [WideFieldBytes]byte
 	//var t G1
@@ -329,7 +321,7 @@ func (*PlutoPoint) ToUncompressed() [WideFieldBytes]byte {
 }
 
 // FromUncompressed deserializes this element from uncompressed form.
-func (*PlutoPoint) FromUncompressed(input *[WideFieldBytes]byte) (*curves.Point, error) {
+func (*PlutoPoint) FromUncompressed(input *[2 * FieldBytes]byte) (*PlutoPoint, error) {
 	panic("not implemented")
 	//var xFp, yFp Fp
 	//var t [FieldBytes]byte

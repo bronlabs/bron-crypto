@@ -2,9 +2,11 @@ package impl_test
 
 import (
 	"encoding/hex"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/kuiper/impl"
-	"github.com/stretchr/testify/require"
 	"slices"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/kuiper/impl"
 )
 
 func dehex(t require.TestingT, p string) [impl.FieldBytes]byte {

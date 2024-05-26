@@ -14,8 +14,10 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/kuiper"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
@@ -25,6 +27,11 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 	message := []byte("something")
 	curveInstances := []curves.Curve{
+		bls12381.NewG1(),
+		bls12381.NewG2(),
+		kuiper.NewPluto(),
+		kuiper.NewTriton(),
+		kuiper.NewEris(),
 		k256.NewCurve(),
 		p256.NewCurve(),
 		edwards25519.NewCurve(),

@@ -1,15 +1,17 @@
 package impl
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"encoding/hex"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
 var (
-	tritonB         Fp2
-	tritonGenerator TritonPoint
-	// cofactor = 0x24000000000024000130e0000d7f70e4a803ca76f439266f443f9a5d3a8a6c7be4a7d5fe91447fd6a8a7e928a00867971ffffcd300000001
-	// order = 0x510000000000a200055bf0008dbd8160e427fd21090885b8178b80a1ad26266043fe49f67cbfaa265b8e18f095703cf67eaccd4d3108df4de87c3dc0affd96ff302ca886826cb295b868bd5e1c7f5c01268b7b977320e964c31debf42e2e95c7e9b0d4bc01788743ffff9a600000001.
+	tritonB                  Fp2
+	tritonGenerator          TritonPoint
+	tritonCofactorBytesLe, _ = hex.DecodeString("24000000000024000130e0000d7f70e4a803ca76f439266f443f9a5d3a8a6c7be4a7d5fe91447fd6a8a7e928a00867971ffffcd300000001")
 )
 
 //nolint:gochecknoinits // TODO
@@ -17,7 +19,48 @@ func init() {
 	tritonB.A.SetUint64(3)
 	tritonB.B.SetOne()
 
-	// TODO: I have no idea what the generator should be
+	// TODO: I have no idea what the generator should be so I set some random point from subgroup
+	tritonGenerator.X.A.SetLimbs(&[7]uint64{
+		0xf3898657202e58cb,
+		0x415aa2d315f10c34,
+		0xe9a9535fd905fe27,
+		0x5f14e69bd73c0ffa,
+		0x032200fe251b729e,
+		0xd3e29bae4c1fb349,
+		0x071f33f6fd98da41,
+	})
+	tritonGenerator.X.B.SetLimbs(&[7]uint64{
+		0xe39a5927b99f7c8e,
+		0xa4349f8672b000ae,
+		0x3d201c5814d9f3ce,
+		0x271d69000be7ad62,
+		0x1cae1ed391bd0553,
+		0xd2cdd2e211df8abf,
+		0x171d1edf89686cdf,
+	})
+	tritonGenerator.Y.A.SetLimbs(&[7]uint64{
+		0xaf406af8ccbbf659,
+		0x7da325313ddaf117,
+		0x3c8d70098237cdce,
+		0x5753ffdd277aca5d,
+		0xbd745ea40dbf86f5,
+		0xf06ba82e7afa7790,
+		0x21f352ef30778246,
+	})
+	tritonGenerator.Y.B.SetLimbs(&[7]uint64{
+		0xa073a3997b9dc230,
+		0xfab5dd67f1d4d925,
+		0x2bbeab302d9af1a0,
+		0xe47f5ef2ffb92b9c,
+		0xb27ac168b994aad9,
+		0x6544e6e38654bc52,
+		0x045d2f7b4aab0576,
+	})
+	tritonGenerator.Z.SetOne()
+
+	if (tritonGenerator.IsOnCurve() & tritonGenerator.InCorrectSubgroup()) != 1 {
+		panic("invalid generator")
+	}
 }
 
 type TritonPoint struct {
@@ -63,8 +106,13 @@ func (p *TritonPoint) IsOnCurve() uint64 {
 }
 
 // InCorrectSubgroup returns 1 if the point is torsion free, 0 otherwise.
-func (*TritonPoint) InCorrectSubgroup() uint64 {
-	panic("not implemented")
+func (p *TritonPoint) InCorrectSubgroup() uint64 {
+	var order [FieldLimbs + 1]uint64
+	var orderBytes [FieldBytes]byte
+
+	fiatFqMsat(&order)
+	fiatFqToBytes(&orderBytes, (*[7]uint64)(order[:FieldLimbs]))
+	return new(TritonPoint).multiply(p, &orderBytes).IsIdentity()
 }
 
 // Add adds this point to another point.
@@ -199,7 +247,8 @@ func (p *TritonPoint) MulByU(a *TritonPoint) *TritonPoint {
 }
 
 func (p *TritonPoint) ClearCofactor(a *TritonPoint) *TritonPoint {
-	panic("not implemented")
+	p.multiply(a, (*[FieldBytes]byte)(tritonCofactorBytesLe[:]))
+	return p
 }
 
 // Neg negates this point.
@@ -218,67 +267,69 @@ func (p *TritonPoint) Set(a *TritonPoint) *TritonPoint {
 }
 
 // ToCompressed serialises this element into compressed form.
-func (*TritonPoint) ToCompressed() [2 * FieldBytes]byte {
-	panic("not implemented")
-	//var out [FieldBytes]byte
-	//var t G1
-	//t.ToAffine(g1)
-	//xBytes := t.X.Bytes()
-	//copy(out[:], bitstring.ReverseBytes(xBytes[:]))
-	//isInfinity := byte(g1.IsIdentity())
-	//// Compressed flag
-	//out[0] |= 1 << 7
-	//// Is infinity
-	//out[0] |= (1 << 6) & -isInfinity
-	//// Sign of y only set if not infinity
-	//out[0] |= (byte(t.Y.LexicographicallyLargest()) << 5) & (isInfinity - 1)
-	//return out
+func (p *TritonPoint) ToCompressed() [2 * FieldBytes]byte {
+	var out [FieldBytesFp2]byte
+	var t TritonPoint
+	t.ToAffine(p)
+	xABytes := t.X.A.Bytes()
+	xBBytes := t.X.B.Bytes()
+	copy(out[:FieldBytes], bitstring.ReverseBytes(xBBytes[:]))
+	copy(out[FieldBytes:], bitstring.ReverseBytes(xABytes[:]))
+
+	isInfinity := byte(p.IsIdentity())
+
+	// Is infinity
+	out[0] |= (1 << 7) & -isInfinity
+	// Sign of y only set if not infinity
+	out[0] |= (byte(t.Y.LexicographicallyLargest()) << 6) & (isInfinity - 1)
+	return out
 }
 
 // FromCompressed deserializes this element from compressed form.
-func (*TritonPoint) FromCompressed(input *[2 * FieldBytes]byte) (*TritonPoint, error) {
-	panic("not implemented")
-	//var xFp, yFp Fp
-	//var x [FieldBytes]byte
-	//var p G1
-	//compressedFlag := uint64((input[0] >> 7) & 1)
-	//infinityFlag := uint64((input[0] >> 6) & 1)
-	//sortFlag := uint64((input[0] >> 5) & 1)
-	//
-	//if compressedFlag != 1 {
-	//	return nil, errs.NewFailed("compressed flag must be set")
-	//}
-	//
-	//if infinityFlag == 1 {
-	//	if sortFlag == 1 {
-	//		return nil, errs.NewFailed("infinity flag and sort flag are both set")
-	//	}
-	//	return g1.Identity(), nil
-	//}
-	//
-	//copy(x[:], bitstring.ReverseBytes(input[:]))
-	//// Mask away the flag bits
-	//x[FieldBytes-1] &= 0x1F
-	//if _, valid := xFp.SetBytes(&x); valid != 1 {
-	//	return nil, errs.NewFailed("invalid bytes - not in field")
-	//}
-	//
-	//yFp.Square(&xFp)
-	//yFp.Mul(&yFp, &xFp)
-	//yFp.Add(&yFp, &curveG1B)
-	//
-	//if _, wasSquare := yFp.Sqrt(&yFp); wasSquare != 1 {
-	//	return nil, errs.NewFailed("point is not on the curve")
-	//}
-	//
-	//yFp.CNeg(&yFp, yFp.LexicographicallyLargest()^sortFlag)
-	//p.X.Set(&xFp)
-	//p.Y.Set(&yFp)
-	//p.Z.SetOne()
-	//if p.InCorrectSubgroup() == 0 {
-	//	return nil, errs.NewFailed("point is not in correct subgroup")
-	//}
-	//return g1.Set(&p), nil
+func (p *TritonPoint) FromCompressed(input *[2 * FieldBytes]byte) (*TritonPoint, error) {
+	var xFp, yFp Fp2
+	var xA, xB [FieldBytes]byte
+	var t TritonPoint
+
+	infinityFlag := uint64((input[0] >> 7) & 1)
+	sortFlag := uint64((input[0] >> 6) & 1)
+
+	if infinityFlag == 1 {
+		if sortFlag == 1 {
+			return nil, errs.NewFailed("infinity flag and sort flag are both set")
+		}
+		return t.Identity(), nil
+	}
+
+	copy(xB[:], bitstring.ReverseBytes(input[:FieldBytes]))
+	copy(xA[:], bitstring.ReverseBytes(input[FieldBytes:]))
+	// Mask away the flag bits
+	xB[FieldBytes-1] &= 0x3F
+	_, validA := xFp.A.SetBytes(&xA)
+	_, validB := xFp.B.SetBytes(&xB)
+
+	if validA&validB != 1 {
+		return nil, errs.NewFailed("invalid bytes - not in field")
+	}
+
+	// Recover a y-coordinate given x by y = sqrt(x^3 + 4)
+	yFp.Square(&xFp)
+	yFp.Mul(&yFp, &xFp)
+	yFp.Add(&yFp, &tritonB)
+
+	if _, wasSquare := yFp.Sqrt(&yFp); wasSquare != 1 {
+		return nil, errs.NewFailed("point is not on the curve")
+	}
+
+	yFp.CNeg(&yFp, yFp.LexicographicallyLargest()^sortFlag)
+	t.X.Set(&xFp)
+	t.Y.Set(&yFp)
+	t.Z.SetOne()
+	if t.InCorrectSubgroup() == 0 {
+		return nil, errs.NewFailed("point is not in correct subgroup")
+	}
+
+	return p.Set(&t), nil
 }
 
 // ToUncompressed serialises this element into uncompressed form.
@@ -297,7 +348,7 @@ func (*TritonPoint) ToUncompressed() [2 * WideFieldBytes]byte {
 }
 
 // FromUncompressed deserializes this element from uncompressed form.
-func (*TritonPoint) FromUncompressed(input *[2 * WideFieldBytes]byte) (*curves.Point, error) {
+func (*TritonPoint) FromUncompressed(input *[2 * WideFieldBytes]byte) (*TritonPoint, error) {
 	panic("not implemented")
 }
 
