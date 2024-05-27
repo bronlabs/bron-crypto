@@ -133,7 +133,7 @@ func (mmei *MultiplicativeMonoidELementInvariants[M, ME]) IsMultiplicativeIdenti
 func CheckMonoidInvariant[M algebra.Monoid[M, ME], ME algebra.MonoidElement[M, ME]](t *testing.T, monoid M, elementGenerator fu.ObjectGenerator[ME]) {
 	t.Helper()
 
-	CheckGroupoidInvariant[M, ME](t, monoid, elementGenerator)
+	CheckGroupoidInvariants[M, ME](t, monoid, elementGenerator)
 	// mi := &MonoidInvariants[M, ME]{}
 	// t.Run("Identity", func(t *testing.T) {
 	// 	t.Parallel()
@@ -226,5 +226,5 @@ func CheckMultiplicativeMonoidInvariants[M algebra.MultiplicativeMonoid[M, ME], 
 func CheckCyclicMonoidInvariants[M algebra.CyclicMonoid[M, ME], ME algebra.CyclicMonoidElement[M, ME]](t *testing.T, monoid M, elementGenerator fu.ObjectGenerator[ME]) {
 	t.Helper()
 	CheckMonoidInvariant[M, ME](t, monoid, elementGenerator)
-	CheckGroupoidInvariant[M, ME](t, monoid, elementGenerator)
+	CheckGroupoidInvariants[M, ME](t, monoid, elementGenerator)
 }

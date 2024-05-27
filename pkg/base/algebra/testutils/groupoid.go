@@ -159,14 +159,15 @@ func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) Mul(t *testing.T, gr
 }
 func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) ApplyMul(t *testing.T, x algebra.MultiplicativeGroupoidElement[G, GE], n *saferith.Nat) {
 	t.Helper()
-	result := x.ApplyMul(x, n)
 
-	mul := x
+	actual := x.ApplyMul(x, n)
+	result := x
+
 	for i := 0; int64(i) < n.Big().Int64(); i++ {
-		mul = x.Mul(x)
+		result = result.Mul(x)
 	}
 
-	require.True(t, mul.Equal(result))
+	require.True(t, result.Equal(actual))
 }
 func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) Square(t *testing.T, x algebra.MultiplicativeGroupoidElement[G, GE], n *saferith.Nat) {
 	t.Helper()
@@ -194,18 +195,14 @@ func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) Cube(t *testing.T, x
 func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) Exp(t *testing.T, x algebra.MultiplicativeGroupoidElement[G, GE], n *saferith.Nat) {
 	t.Helper()
 
-	result := x.Exp(n)
+	actual := x.Exp(n)
 
-	expected := x.ApplyMul(x, n)
-
-	require.True(t, expected.Equal(result))
-
-	mul := x
-	for i := 0; int64(i) < n.Big().Int64(); i++ {
-		mul = x.Mul(x)
+	expected := x
+	for i := 1; int64(i) < n.Big().Int64(); i++ {
+		expected = expected.Mul(x)
 	}
 
-	require.True(t, mul.Equal(result))
+	require.True(t, expected.Equal(actual))
 }
 
 func (cgi *CyclicGroupoidInvariants[G, GE]) Generator(t *testing.T, groupoid algebra.CyclicGroupoid[G, GE]) {
@@ -222,7 +219,7 @@ func (cgei *CyclicGroupoidElementInvariants[G, GE]) IsDesignatedGenerator(t *tes
 	// TODO
 }
 
-func CheckGroupoidInvariant[G algebra.Groupoid[G, GE], GE algebra.GroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
+func CheckGroupoidInvariants[G algebra.Groupoid[G, GE], GE algebra.GroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
 	CheckStructuredSetInvariants[G, GE](t, groupoid, elementGenerator)
 
@@ -247,9 +244,9 @@ func CheckGroupoidInvariant[G algebra.Groupoid[G, GE], GE algebra.GroupoidElemen
 	// })
 }
 
-func CheckAdditiveGroupoidInvariant[G algebra.AdditiveGroupoid[G, GE], GE algebra.AdditiveGroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
+func CheckAdditiveGroupoidInvariants[G algebra.AdditiveGroupoid[G, GE], GE algebra.AdditiveGroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
-	CheckGroupoidInvariant[G, GE](t, groupoid, elementGenerator)
+	CheckGroupoidInvariants[G, GE](t, groupoid, elementGenerator)
 
 	agi := &AdditiveGroupoidInvariants[G, GE]{}
 
@@ -334,11 +331,12 @@ func CheckAdditiveGroupoidInvariant[G algebra.AdditiveGroupoid[G, GE], GE algebr
 	})
 }
 
-func CheckMultiplicativeGroupoidInvariant[G algebra.MultiplicativeGroupoid[G, GE], GE algebra.MultiplicativeGroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
+func CheckMultiplicativeGroupoidInvariants[G algebra.MultiplicativeGroupoid[G, GE], GE algebra.MultiplicativeGroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
 	// the fuzz function doesn't accept this checkFunction: "Missing DiscreteExponentiation"
-	CheckGroupoidInvariant[G, GE](t, groupoid, elementGenerator)
+	CheckGroupoidInvariants[G, GE](t, groupoid, elementGenerator)
 
+    
 	mgi := &MultiplicativeGroupoidInvariants[G, GE]{}
 	t.Run("Mul", func(t *testing.T) {
 		gen1 := elementGenerator.Clone()
@@ -442,9 +440,9 @@ func CheckMultiplicativeGroupoidInvariant[G algebra.MultiplicativeGroupoid[G, GE
 	})
 }
 
-func CheckCyclicGroupoidInvariant[G algebra.CyclicGroupoid[G, GE], GE algebra.CyclicGroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
+func CheckCyclicGroupoidInvariants[G algebra.CyclicGroupoid[G, GE], GE algebra.CyclicGroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
-	CheckGroupoidInvariant[G, GE](t, groupoid, elementGenerator)
+	CheckGroupoidInvariants[G, GE](t, groupoid, elementGenerator)
 
 	cgi := &CyclicGroupoidInvariants[G, GE]{}
 	cgi.Generator(t, groupoid)

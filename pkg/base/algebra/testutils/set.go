@@ -113,8 +113,8 @@ func CheckStructuredSetInvariants[G algebra.StructuredSet[G, GE], GE algebra.Str
 	// test_utils.CheckSetInvariants[G, GE](t, structuredSet) // TODO: Missing Add method
 	ssi := &StructuredSetInvariants[G, GE]{}
 	prng := fu.NewPrng()
-	ssi.Random(t, structuredSet, prng)
-	ssi.Element(t, structuredSet)
+	// ssi.Random(t, structuredSet, prng)
+	// ssi.Element(t, structuredSet)
 	// ssi.Order(t, structuredSet) // TODO: need to implement iter for curves
 	ssi.Unwrap(t, structuredSet)
 

@@ -146,8 +146,12 @@ func (agi *AdditiveGroupElementInvariants[G, GE]) IsAdditiveInverse(t *testing.T
 }
 func (agi *AdditiveGroupElementInvariants[G, GE]) IsTorsionElementUnderAddition(t *testing.T, random algebra.AdditiveGroupElement[G, GE], group algebra.AdditiveGroup[G, GE]) {
 	t.Helper()
+
 	actual := random.IsTorsionElementUnderAddition(group.Order())
-	expected := random.ApplyAdd(random, group.Order().Nat()).IsAdditiveIdentity() // TODO: Should be group.order() -1
+
+	OrderMinusOne := new(saferith.Nat).Sub(group.Order().Nat(), new(saferith.Nat).SetUint64(1), -1)
+	expected := random.ApplyAdd(random, OrderMinusOne).IsAdditiveIdentity() // TODO: Should be group.order() -1
+
 	require.Equal(t, expected, actual)
 }
 func (agi *AdditiveGroupElementInvariants[G, GE]) Neg(t *testing.T, element algebra.AdditiveGroupElement[G, GE]) {
@@ -334,7 +338,7 @@ func CheckSubGroupConstant[G algebra.SubGroup[G, GE], GE algebra.SubGroupElement
 	require.NotNil(t, elementGenerator)
 	CheckGroupInvariants[G, GE](t, group, elementGenerator)
 	sgi := &SubGroupInvariants[G, GE]{}
-	sgi.CoFactor(t, group, group) 
+	sgi.CoFactor(t, group, group)
 }
 func CheckAdditiveGroupInvariants[G algebra.AdditiveGroup[G, GE], GE algebra.AdditiveGroupElement[G, GE]](t *testing.T, group G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
@@ -389,7 +393,7 @@ func CheckAdditiveGroupInvariants[G algebra.AdditiveGroup[G, GE], GE algebra.Add
 		if isEmpty1 != 0 {
 			element = gen1.GenerateNonZero()
 		}
-		agei.IsTorsionElementUnderAddition(t, element, group) // TODO: ApplyAdd might not be working properly
+		agei.IsTorsionElementUnderAddition(t, element, group)
 	})
 	t.Run("Neg", func(t *testing.T) {
 		t.Parallel()
