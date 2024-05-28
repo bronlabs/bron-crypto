@@ -70,11 +70,13 @@ func Fuzz_Property_Point_StructuredSet(f *testing.F) {
 	g := pointGeneratorFactory(f, curve)
 	fu.RunAlgebraPropertyTest(f, atu.CheckStructuredSetInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
 }
+
 func Fuzz_Property_Point_StructuredSetConstant(f *testing.F) {
 	curve := edwards25519.NewCurve()
 	g := pointGeneratorFactory(f, curve)
 	fu.RunAlgebraPropertyTest(f, atu.CheckStructuredSetConstant[curves.Curve, curves.Point], curves.Curve(curve), g)
 }
+
 func Fuzz_Property_Point_FiniteSet(f *testing.F) {
 	curve := edwards25519.NewCurve()
 	g := pointGeneratorFactory(f, curve)

@@ -111,7 +111,6 @@ func (agei *AdditiveGroupoidElementInvariants[G, GE]) Triple(t *testing.T, x alg
 		"3x should have the same return as x + x + x")
 	require.True(t, x.Double().Add(x).Equal(x.Triple()),
 		"3x should have the same return as 2x + x")
-
 }
 
 func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Mul(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE], x algebra.MultiplicativeGroupoidElement[G, GE], ys ...algebra.MultiplicativeGroupoidElement[G, GE]) {
@@ -127,19 +126,53 @@ func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Mul(t *testing.T, groupoid a
 
 func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Exp(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE], base, power algebra.MultiplicativeGroupoidElement[G, GE]) {
 	t.Helper()
+	// powerUnWrapped := power.Unwrap()
+	
+	// n := new(saferith.Nat).SetBytes(powerUnWrapped)
+	// expected := base.ApplyMul(base, n)
 	// TODO: How to get the value of a element object
 }
-func (mgi *MultiplicativeGroupoidInvariants[G, GE]) SimExp(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE]) {
+func (mgi *MultiplicativeGroupoidInvariants[G, GE]) SimExp(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE], bases []algebra.MultiplicativeGroupoidElement[G, GE], exponents []*saferith.Nat) {
 	t.Helper()
-	// TODO
+
+	actual, err := groupoid.SimExp(bases, exponents)
+	require.NoError(t, err)
+
+	expected := bases[0].ApplyMul(bases[0], exponents[0])
+
+	for index := 1; index < len(bases); index++ {
+		temp := bases[index].ApplyMul(bases[index], exponents[index])
+		expected = expected.Mul(temp)
+	}
+
+	require.True(t, expected.Equal(actual))
 }
-func (mgi *MultiplicativeGroupoidInvariants[G, GE]) MultiBaseExp(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE]) {
+func (mgi *MultiplicativeGroupoidInvariants[G, GE]) MultiBaseExp(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE], bases []algebra.MultiplicativeGroupoidElement[G, GE], exponents *saferith.Nat) {
 	t.Helper()
-	// TODO
+
+	actual := groupoid.MultiBaseExp(bases, exponents)
+
+	expected := bases[0].ApplyMul(bases[0], exponents)
+	for index := 1; index < len(bases); index++ {
+		temp := bases[index].ApplyMul(bases[index], exponents)
+		expected = expected.Mul(temp)
+	}
+
+	require.True(t, expected.Equal(actual))
 }
-func (mgi *MultiplicativeGroupoidInvariants[G, GE]) MultiExponentExp(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE]) {
+func (mgi *MultiplicativeGroupoidInvariants[G, GE]) MultiExponentExp(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE], bases algebra.MultiplicativeGroupoidElement[G, GE], exponents []*saferith.Nat) {
 	t.Helper()
-	// TODO
+
+	actual := groupoid.MultiExponentExp(bases, exponents)
+
+	expected := bases.ApplyMul(bases, exponents[0])
+
+	for index := 1; index < len(exponents); index++ {
+		temp := bases.ApplyMul(bases, exponents[index])
+		expected = expected.Mul(temp)
+	}
+
+	require.True(t, expected.Equal(actual))
 }
 func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Multiplication(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE]) {
 	t.Helper()
@@ -221,7 +254,7 @@ func (cgei *CyclicGroupoidElementInvariants[G, GE]) IsDesignatedGenerator(t *tes
 
 func CheckGroupoidInvariants[G algebra.Groupoid[G, GE], GE algebra.GroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
-	CheckStructuredSetInvariants[G, GE](t, groupoid, elementGenerator)
+	// CheckStructuredSetInvariants[G, GE](t, groupoid, elementGenerator)
 
 	gi := &GroupoidInvariants[G, GE]{}
 	gi.IsDefinedUnder(t, groupoid)
@@ -336,7 +369,6 @@ func CheckMultiplicativeGroupoidInvariants[G algebra.MultiplicativeGroupoid[G, G
 	// the fuzz function doesn't accept this checkFunction: "Missing DiscreteExponentiation"
 	CheckGroupoidInvariants[G, GE](t, groupoid, elementGenerator)
 
-    
 	mgi := &MultiplicativeGroupoidInvariants[G, GE]{}
 	t.Run("Mul", func(t *testing.T) {
 		gen1 := elementGenerator.Clone()
@@ -370,6 +402,7 @@ func CheckMultiplicativeGroupoidInvariants[G algebra.MultiplicativeGroupoid[G, G
 		mgi.Exp(t, groupoid, el1, el2)
 	})
 	t.Run("SimExp", func(t *testing.T) {
+
 	})
 
 	mgei := &MultiplicativeGroupoidElementInvariants[G, GE]{}

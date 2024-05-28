@@ -109,8 +109,7 @@ func (psi *PointedSetElementInvariants[G, GE]) IsBasePoint(t *testing.T, pointed
 
 func CheckStructuredSetInvariants[G algebra.StructuredSet[G, GE], GE algebra.StructuredSetElement[G, GE]](t *testing.T, structuredSet G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
-
-	// test_utils.CheckSetInvariants[G, GE](t, structuredSet) // TODO: Missing Add method
+	// test_utils.CheckAbstractSetInvariants[G, GE](t, structuredSet) // TODO: Missing Add method
 	ssi := &StructuredSetInvariants[G, GE]{}
 	prng := fu.NewPrng()
 	// ssi.Random(t, structuredSet, prng)
@@ -133,12 +132,13 @@ func CheckStructuredSetInvariants[G algebra.StructuredSet[G, GE], GE algebra.Str
 }
 
 func CheckStructuredSetConstant[G algebra.StructuredSet[G, GE], GE algebra.StructuredSetElement[G, GE]](t *testing.T, structuredSet G, elementGenerator fu.ObjectGenerator[GE]) {
-	// test_utils.CheckSetInvariants[G, GE](t, structuredSet) // TODO: Missing Add method
+	// test_utils.CheckAbstractSetInvariants[G, GE](t, structuredSet) // TODO: Missing Add method
 	ssi := &StructuredSetInvariants[G, GE]{}
 	ssi.Element(t, structuredSet)
 	ssi.Name(t, structuredSet)
 	ssi.Unwrap(t, structuredSet)
 }
+
 func CheckFiniteStructureInvariants[G algebra.FiniteStructure[G, GE], GE algebra.StructuredSetElement[G, GE]](t *testing.T, finiteStructure G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
 

@@ -31,7 +31,7 @@ func (asi *AbstractSetInvariants[S, E]) ContainsAndIter(t *testing.T, A S, expec
 }
 
 // type of S is intentional. We don't want other implementations of abstract set like Curves to run these. This choice also makes construction of these sets to depend on List method as opposed to Add whose implementation will have a higher likelihood to contain a bug.
-func CheckAbstractSetInvariants[S ds.Set[E], E any](t *testing.T, g fu.CollectionGenerator[S, E]) {
+func CheckAbstractSetInvariants[S ds.AbstractSet[E], E any](t *testing.T, g fu.CollectionGenerator[S, E]) {
 	t.Helper()
 	require.NotNil(t, g)
 	invs := &AbstractSetInvariants[S, E]{}
