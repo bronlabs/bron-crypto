@@ -87,7 +87,7 @@ type MultiplicativeGroupoid[G Structure, E Element] interface {
 	SimExp(bases []MultiplicativeGroupoidElement[G, E], exponents []*saferith.Nat) (E, error)
 	// Exponentiation with multiple bases and a common exponent. base[0]^exponent * ...
 	MultiBaseExp(bases []MultiplicativeGroupoidElement[G, E], exponent *saferith.Nat) E
-	// Exponentiation with a common base and multiple exponents. base^(exponent[0] * exponents[1] * ...)
+	// Exponentiation with a common base and multiple exponents. base^(exponent[0] + exponents[1] + ...)
 	MultiExponentExp(base MultiplicativeGroupoidElement[G, E], exponents []*saferith.Nat) E
 
 	Multiplication() Multiplication[E]

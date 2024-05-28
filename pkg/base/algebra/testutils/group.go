@@ -78,11 +78,13 @@ func (gei *GroupElementInvariants[G, GE]) IsTorsionElement(t *testing.T, group a
 
 func (sgi *SubGroupInvariants[G, GE]) CoFactor(t *testing.T, group, subgroup algebra.SubGroup[G, GE]) {
 	t.Helper()
-	//TODO: Please check if implementation is correct
-	// expected := group.Order()
-	// var actual *saferith.Nat
-	// output := actual.Mul(subgroup.CoFactor(), subgroup.Order().Nat(), -1)
-	// require.Equal(t, expected, output)
+
+	expected := group.Order()
+	var actual *saferith.Nat
+	OrderMinusOne := new(saferith.Nat).Sub(group.Order().Nat(), new(saferith.Nat).SetUint64(1), -1)
+
+	output := actual.Mul(subgroup.CoFactor(), OrderMinusOne, -1)
+	require.Equal(t, expected, output)
 }
 
 func (sgi *SubGroupInvariants[G, GE]) SuperGroupOrder(t *testing.T, group algebra.SubGroup[G, GE]) {
@@ -90,7 +92,7 @@ func (sgi *SubGroupInvariants[G, GE]) SuperGroupOrder(t *testing.T, group algebr
 	// TODO: how Should I call parent?
 }
 
-func (sgi *SubGroupElementInvariants[G, GE]) IsSmallOrder(t *testing.T, group algebra.SubGroup[G, GE], element algebra.SubGroupElement[G, GE], under algebra.BinaryOperator[GE]) {
+func (sgei *SubGroupElementInvariants[G, GE]) IsSmallOrder(t *testing.T, group algebra.SubGroup[G, GE], element algebra.SubGroupElement[G, GE], under algebra.BinaryOperator[GE]) {
 	t.Helper()
 
 	expected, err := element.ApplyOp(under, element, group.CoFactor())
@@ -104,7 +106,7 @@ func (sgi *SubGroupElementInvariants[G, GE]) IsSmallOrder(t *testing.T, group al
 	}
 }
 
-func (sgi *SubGroupElementInvariants[G, GE]) ClearCofactor(t *testing.T, group algebra.SubGroup[G, GE], element algebra.SubGroupElement[G, GE], under algebra.BinaryOperator[GE]) {
+func (sgei *SubGroupElementInvariants[G, GE]) ClearCofactor(t *testing.T, group algebra.SubGroup[G, GE], element algebra.SubGroupElement[G, GE], under algebra.BinaryOperator[GE]) {
 	t.Helper()
 
 	expected, err := element.ApplyOp(under, element, group.CoFactor())
@@ -150,8 +152,7 @@ func (agi *AdditiveGroupElementInvariants[G, GE]) IsTorsionElementUnderAddition(
 	actual := random.IsTorsionElementUnderAddition(group.Order())
 
 	OrderMinusOne := new(saferith.Nat).Sub(group.Order().Nat(), new(saferith.Nat).SetUint64(1), -1)
-	expected := random.ApplyAdd(random, OrderMinusOne).IsAdditiveIdentity() // TODO: Should be group.order() -1
-
+	expected := random.ApplyAdd(random, OrderMinusOne).IsAdditiveIdentity()
 	require.Equal(t, expected, actual)
 }
 func (agi *AdditiveGroupElementInvariants[G, GE]) Neg(t *testing.T, element algebra.AdditiveGroupElement[G, GE]) {
@@ -330,7 +331,7 @@ func CheckSubGroupInvariants[G algebra.SubGroup[G, GE], GE algebra.SubGroupEleme
 	// sgei := &SubGroupElementInvariants[G, GE]{}
 	// Dependent on operators
 	// IsSamallOrder
-	// ClearCoFactor
+	// ClearCofactor
 }
 func CheckSubGroupConstant[G algebra.SubGroup[G, GE], GE algebra.SubGroupElement[G, GE]](t *testing.T, group G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()

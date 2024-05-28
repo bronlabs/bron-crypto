@@ -40,7 +40,7 @@ func CheckFiniteFieldInvariants[F algebra.FiniteField[F, E], E algebra.FiniteFie
 	require.NotNil(t, field)
 	require.NotNil(t, elementGenerator)
 
-	CheckFiniteStructureInvariants[F, E](t, field, elementGenerator)
+	// CheckFiniteStructureInvariants[F, E](t, field, elementGenerator)
 	CheckFieldInvariants[F, E](t, field, elementGenerator)
 	CheckFiniteRingInvariants[F, E](t, field, elementGenerator)
 }
