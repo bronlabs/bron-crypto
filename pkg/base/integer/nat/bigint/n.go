@@ -8,7 +8,7 @@ import (
 )
 
 var _ integer.N[*N, *Nat] = (*N)(nil)
-var _ integer.NaturalSemiRing[*N, *Nat] = (*N)(nil)
+var _ integer.NaturalRig[*N, *Nat] = (*N)(nil)
 
 var _ impl.HolesN[*N, *Nat] = (*N)(nil)
 
@@ -17,7 +17,7 @@ type N struct {
 }
 
 func (np *N) Name() string {
-	return Name
+	return natName
 }
 
 func (np *N) Arithmetic() integer.Arithmetic[*Nat] {

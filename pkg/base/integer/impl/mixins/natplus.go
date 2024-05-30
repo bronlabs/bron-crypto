@@ -1,28 +1,40 @@
-package impl
+package mixins
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/operator"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/order"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/ring"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 	"github.com/cronokirby/saferith"
 )
 
-type NaturalPreSemiRing[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]] struct {
-	ring.SemiRing[NS, N]
+type NaturalSemiRing[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]] struct {
+	ring.FactorialSemiRing[NS, N]
 	order.Chain[NS, N]
 	operator.OperatorSuite[N]
 
-	H HolesNaturalPreSemiRing[NS, N]
+	H HolesNaturalSemiRing[NS, N]
 }
 
-func (n *NaturalPreSemiRing[NS, N]) One() N {
-	return n.H.Arithmetic().New(1)
+func (n *NaturalSemiRing[NS, N]) Element() N {
+	return n.Unit()
 }
 
-func (np *NaturalPreSemiRing[NS, N]) Addition() algebra.Addition[N] {
+func (n *NaturalSemiRing[NS, N]) One() N {
+	return n.Unit()
+}
+
+func (n *NaturalSemiRing[S, E]) Identity(under algebra.Operator) (E, error) {
+	if under == integer.Multiplication {
+		return n.One(), nil
+	}
+	return *new(E), errs.NewType("operator (%s) is not integer multiplication", under)
+}
+
+func (np *NaturalSemiRing[NS, N]) Addition() algebra.Addition[N] {
 	op, defined := np.GetOperator(integer.Addition)
 	if !defined {
 		panic(errs.NewMissing("object is malformed. does not have integer addition"))
@@ -34,7 +46,7 @@ func (np *NaturalPreSemiRing[NS, N]) Addition() algebra.Addition[N] {
 	return addition
 }
 
-func (np *NaturalPreSemiRing[NS, N]) Multiplication() algebra.Multiplication[N] {
+func (np *NaturalSemiRing[NS, N]) Multiplication() algebra.Multiplication[N] {
 	op, defined := np.GetOperator(integer.Multiplication)
 	if !defined {
 		panic(errs.NewMissing("object is malformed. does not have integer multiplication"))
@@ -46,34 +58,26 @@ func (np *NaturalPreSemiRing[NS, N]) Multiplication() algebra.Multiplication[N] 
 	return multiplication
 }
 
-type NaturalPreSemiRingElement[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]] struct {
-	ring.SemiRingElement[NS, N]
+type NaturalSemiRingElement[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]] struct {
+	ring.FactorialSemiRingElement[NS, N]
 	order.ChainElement[NS, N]
 
-	H HolesNaturalPreSemiRingElement[NS, N]
+	H HolesNaturalSemiRingElement[NS, N]
 }
 
-func (n *NaturalPreSemiRingElement[NS, N]) Equal(x N) bool {
+func (n *NaturalSemiRingElement[NS, N]) Equal(x N) bool {
 	return n.H.Arithmetic().Cmp(n.H.Unwrap(), x) == algebra.Equal
 }
 
-func (n *NaturalPreSemiRingElement[NS, N]) HashCode() uint64 {
+func (n *NaturalSemiRingElement[NS, N]) HashCode() uint64 {
 	return n.H.Uint64()
 }
 
-func (n *NaturalPreSemiRingElement[NS, N]) Mod(modulus integer.NaturalSemiRingElement[NS, N]) (N, error) {
-	out, err := n.H.Arithmetic().Mod(n.H.Unwrap(), modulus.Unwrap())
-	if err != nil {
-		return *new(N), errs.WrapFailed(err, "could not compute mod")
-	}
-	return out.Unwrap(), nil
-}
-
-func (n *NaturalPreSemiRingElement[NS, N]) Cmp(x N) algebra.Ordering {
+func (n *NaturalSemiRingElement[NS, N]) Cmp(x N) algebra.Ordering {
 	return n.H.Arithmetic().Cmp(n.H.Unwrap(), x.Unwrap())
 }
 
-func (n *NaturalPreSemiRingElement[NS, N]) Add(x algebra.AdditiveGroupoidElement[NS, N]) N {
+func (n *NaturalSemiRingElement[NS, N]) Add(x algebra.AdditiveGroupoidElement[NS, N]) N {
 	out, err := n.H.Arithmetic().Add(n.H.Unwrap(), x.Unwrap(), -1)
 	if err != nil {
 		panic(err)
@@ -81,7 +85,7 @@ func (n *NaturalPreSemiRingElement[NS, N]) Add(x algebra.AdditiveGroupoidElement
 	return out
 }
 
-func (n *NaturalPreSemiRingElement[NS, N]) Mul(x algebra.MultiplicativeGroupoidElement[NS, N]) N {
+func (n *NaturalSemiRingElement[NS, N]) Mul(x algebra.MultiplicativeGroupoidElement[NS, N]) N {
 	out, err := n.H.Arithmetic().Mul(n.H.Unwrap(), x.Unwrap(), -1)
 	if err != nil {
 		panic(err)
@@ -89,37 +93,45 @@ func (n *NaturalPreSemiRingElement[NS, N]) Mul(x algebra.MultiplicativeGroupoidE
 	return out
 }
 
-func (n *NaturalPreSemiRingElement[NS, N]) IsOne() bool {
-	return n.H.Structure().One().Equal(n.H.Unwrap())
+func (n *NaturalSemiRingElement[NS, N]) IsOne() bool {
+	return n.IsUnit()
 }
 
-func (n *NaturalPreSemiRingElement[NS, N]) IsEven() bool {
+func (n *NaturalSemiRingElement[NS, N]) IsEven() bool {
 	return n.H.Arithmetic().IsEven(n.H.Unwrap())
 }
 
-func (n *NaturalPreSemiRingElement[NS, N]) IsOdd() bool {
+func (n *NaturalSemiRingElement[NS, N]) IsOdd() bool {
 	return !n.IsEven()
 }
 
-func (n *NaturalPreSemiRingElement[NS, N]) IsPositive() bool {
+func (n *NaturalSemiRingElement[NS, N]) IsPositive() bool {
 	res := n.Cmp(n.H.Structure().One())
 	return res == algebra.Equal || res == algebra.GreaterThan
 }
 
-func (n *NaturalPreSemiRingElement[NS, N]) Increment() N {
+func (n *NaturalSemiRingElement[NS, N]) Increment() N {
 	return n.H.Add(n.H.Structure().One())
 }
 
-func (n *NaturalPreSemiRingElement[NS, N]) Uint64() uint64 {
+func (n *NaturalSemiRingElement[NS, N]) Uint64() uint64 {
 	return n.H.Arithmetic().Uint64(n.H.Unwrap())
 }
 
-func (n *NaturalPreSemiRingElement[NS, N]) CanGenerateAllElements(with algebra.Operator) bool {
+func (n *NaturalSemiRingElement[NS, N]) CanGenerateAllElements(with algebra.Operator) bool {
 	return n.IsOne() && with == integer.Addition
 }
 
+func (n *NaturalSemiRingElement[S, E]) IsPrime() bool {
+	return n.H.Arithmetic().IsProbablyPrime(n.H.Unwrap())
+}
+
+func (n *NaturalSemiRingElement[S, E]) Factorise() ds.Map[E, int] {
+	panic("implement me")
+}
+
 type NPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
-	NaturalPreSemiRing[NS, N]
+	NaturalSemiRing[NS, N]
 	order.LowerBoundedOrderTheoreticLattice[NS, N]
 
 	H HolesNPlus[NS, N]
@@ -157,7 +169,7 @@ func (np *NPlus[NS, N]) Iter() <-chan N {
 }
 
 type NatPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] struct {
-	NaturalPreSemiRingElement[NS, N]
+	NaturalSemiRingElement[NS, N]
 	order.LowerBoundedOrderTheoreticLatticeElement[NS, N]
 
 	H HolesNatPlus[NS, N]

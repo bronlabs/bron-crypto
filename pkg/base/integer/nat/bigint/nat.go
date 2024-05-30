@@ -13,10 +13,10 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
-var Name = fmt.Sprintf("%s_N", bg.Name)
+var natName = fmt.Sprintf("%s_N", bg.Name)
 
 var _ integer.Nat[*N, *Nat] = (*Nat)(nil)
-var _ integer.NaturalSemiRingElement[*N, *Nat] = (*Nat)(nil)
+var _ integer.NaturalRigElement[*N, *Nat] = (*Nat)(nil)
 
 var _ impl.HolesNat[*N, *Nat] = (*Nat)(nil)
 var _ aimpl.ImplAdapter[*Nat, *bg.BigInt] = (*Nat)(nil)
@@ -80,7 +80,9 @@ func (n *Nat) Nat() *saferith.Nat {
 }
 
 func (n *Nat) SetNat(v *saferith.Nat) *Nat {
-	return n.New(new(bg.BigInt).SetNat(v))
+	res := n.New(new(bg.BigInt).SetNat(v))
+	n.V = res.V
+	return n
 }
 
 func (n *Nat) MarshalJSON() ([]byte, error) {
@@ -89,7 +91,7 @@ func (n *Nat) MarshalJSON() ([]byte, error) {
 		Number *bg.BigInt
 	}
 	return json.Marshal(&temp{
-		Name:   Name,
+		Name:   natName,
 		Number: n.V,
 	})
 }
@@ -102,8 +104,8 @@ func (n *Nat) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal json")
 	}
-	if temp.Name != Name {
-		return errs.NewType("name (%s) must be (%s)", temp.Name, Name)
+	if temp.Name != natName {
+		return errs.NewType("name (%s) must be (%s)", temp.Name, natName)
 	}
 	if temp.Number.Cmp(bg.Zero) == algebra.LessThan {
 		return errs.NewValue("number is not a nat")

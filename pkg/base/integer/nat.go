@@ -2,17 +2,16 @@ package integer
 
 import "github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 
-type NaturalPreSemiRing[S algebra.Structure, E algebra.Element] interface {
-	algebra.PreSemiRing[S, E]
+type NaturalSemiRing[S algebra.Structure, E algebra.Element] interface {
+	algebra.FactorialSemiRing[S, E]
 	algebra.Chain[S, E]
-	New(v uint64) E
 	One() E
 
 	Arithmetic() Arithmetic[E]
 }
 
-type NaturalPreSemiRingElement[S algebra.Structure, E algebra.Element] interface {
-	algebra.PreSemiRingElement[S, E]
+type NaturalSemiRingElement[S algebra.Structure, E algebra.Element] interface {
+	algebra.FactorialSemiRingElement[S, E]
 	algebra.ChainElement[S, E]
 
 	IsOne() bool
@@ -21,11 +20,13 @@ type NaturalPreSemiRingElement[S algebra.Structure, E algebra.Element] interface
 	IsOdd() bool
 
 	IsPositive() bool
+
+	Number[E]
 }
 
-type NaturalSemiRing[S algebra.Structure, E algebra.Element] interface {
-	algebra.EuclideanSemiRing[S, E]
-	NaturalPreSemiRing[S, E]
+type NaturalRig[S algebra.Structure, E algebra.Element] interface {
+	algebra.EuclideanRig[S, E]
+	NaturalSemiRing[S, E]
 
 	Zero() E
 
@@ -34,12 +35,12 @@ type NaturalSemiRing[S algebra.Structure, E algebra.Element] interface {
 	// algebra.ExclusiveDisjunctiveGroup[S, E]
 }
 
-type NaturalSemiRingElement[S algebra.Structure, E algebra.Element] interface {
-	algebra.EuclideanSemiRingElement[S, E]
-	NaturalPreSemiRingElement[S, E]
+type NaturalRigElement[S algebra.Structure, E algebra.Element] interface {
+	algebra.EuclideanRigElement[S, E]
+	NaturalSemiRingElement[S, E]
 
 	IsZero() bool
-	Mod(modulus NaturalSemiRingElement[S, E]) (E, error)
+	Mod(modulus NaturalRigElement[S, E]) (E, error)
 
 	// algebra.ConjunctiveMonoidElement[S, E]
 	// algebra.DisjunctiveMonoidElement[S, E]
@@ -48,28 +49,27 @@ type NaturalSemiRingElement[S algebra.Structure, E algebra.Element] interface {
 }
 
 type NPlus[S algebra.Structure, E algebra.Element] interface {
-	NaturalPreSemiRing[S, E]
+	NaturalSemiRing[S, E]
 	algebra.LowerBoundedOrderTheoreticLattice[S, E]
 
 	// UnsignedPositiveArithmetic() UnsignedPositiveArithmetic[E]
 }
 
 type NatPlus[S algebra.Structure, E algebra.Element] interface {
-	NaturalPreSemiRingElement[S, E]
+	NaturalSemiRingElement[S, E]
 	algebra.LowerBoundedOrderTheoreticLatticeElement[S, E]
-
 	TrySub(x NatPlus[S, E]) (E, error)
 }
 
 type N[S algebra.Structure, E algebra.Element] interface {
-	NaturalSemiRing[S, E]
+	NaturalRig[S, E]
 	algebra.LowerBoundedOrderTheoreticLattice[S, E]
 
 	// UnsignedArithmetic() UnsignedArithmetic[E]
 }
 
 type Nat[S algebra.Structure, E algebra.Element] interface {
-	NaturalSemiRingElement[S, E]
+	NaturalRigElement[S, E]
 	algebra.LowerBoundedOrderTheoreticLatticeElement[S, E]
 
 	TrySub(x NatPlus[S, E]) (E, error)

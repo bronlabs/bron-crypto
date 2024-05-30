@@ -29,7 +29,7 @@ type BaseFieldElement struct {
 	_ ds.Incomparable
 }
 
-func (*BaseFieldElement) Mod(m integer.NaturalSemiRingElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
+func (*BaseFieldElement) Mod(m integer.NaturalRigElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
 	panic("implement me")
 }
 func (e *BaseFieldElement) Abs() curves.BaseFieldElement {
@@ -363,7 +363,7 @@ func (e *BaseFieldElement) ApplyDiv(x algebra.MultiplicativeGroupElement[curves.
 
 // === Ring Methods.
 
-func (*BaseFieldElement) MulAdd(y algebra.PreSemiRingElement[curves.BaseField, curves.BaseFieldElement], z algebra.PreSemiRingElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+func (*BaseFieldElement) MulAdd(y algebra.SemiRingElement[curves.BaseField, curves.BaseFieldElement], z algebra.SemiRingElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	panic("not implemented")
 }
 

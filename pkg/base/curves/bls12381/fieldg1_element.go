@@ -34,7 +34,7 @@ func NewBaseFieldElementG1(value uint64) *BaseFieldElementG1 {
 		V: new(bimpl.Fp).SetUint64(value),
 	}
 }
-func (*BaseFieldElementG1) Mod(m integer.NaturalSemiRingElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
+func (*BaseFieldElementG1) Mod(m integer.NaturalRigElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
 	panic("implement me")
 }
 func (e *BaseFieldElementG1) Abs() curves.BaseFieldElement {
@@ -405,7 +405,7 @@ func (e *BaseFieldElementG1) ApplyDiv(x algebra.MultiplicativeGroupElement[curve
 
 // === Ring Methods.
 
-func (e *BaseFieldElementG1) MulAdd(y algebra.PreSemiRingElement[curves.BaseField, curves.BaseFieldElement], z algebra.PreSemiRingElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+func (e *BaseFieldElementG1) MulAdd(y algebra.SemiRingElement[curves.BaseField, curves.BaseFieldElement], z algebra.SemiRingElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	return e.Mul(y).Add(z)
 }
 

@@ -70,7 +70,7 @@ type ChainElement[C Structure, E Element] interface {
 
 	Increment() E
 	Decrement() E
-	NatLike[E]
+	// NatLike[E]
 }
 
 // BoundedOrderTheoreticLattice defines additional methods for a lattice S for it to be considered as bounded.

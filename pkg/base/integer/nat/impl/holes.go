@@ -7,14 +7,14 @@ import (
 	npimpl "github.com/copperexchange/krypton-primitives/pkg/base/integer/natplus/impl"
 )
 
-type HolesNaturalSemiRing[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]] interface {
+type HolesNaturalSemiRing[NS integer.NaturalRig[NS, N], N integer.NaturalRigElement[NS, N]] interface {
 	npimpl.HolesNaturalPreSemiRing[NS, N]
-	ring.HolesEuclideanSemiRing[NS, N]
+	ring.HolesEuclideanRig[NS, N]
 }
 
-type HolesNaturalSemiRingElement[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]] interface {
+type HolesNaturalSemiRingElement[NS integer.NaturalRig[NS, N], N integer.NaturalRigElement[NS, N]] interface {
 	npimpl.HolesNaturalPreSemiRingElement[NS, N]
-	ring.HolesEuclideanSemiRingElement[NS, N]
+	ring.HolesEuclideanRigElement[NS, N]
 }
 
 type HolesN[NS integer.N[NS, N], N integer.Nat[NS, N]] interface {
@@ -27,18 +27,18 @@ type HolesNat[NS integer.N[NS, N], N integer.Nat[NS, N]] interface {
 	npimpl.HolesNatPlus[NS, N]
 }
 
-func NewNaturalSemiRing[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]](arithmetic integer.Arithmetic[N], H HolesNaturalSemiRing[NS, N]) NaturalSemiRing[NS, N] {
+func NewNaturalSemiRing[NS integer.NaturalRig[NS, N], N integer.NaturalRigElement[NS, N]](arithmetic integer.Arithmetic[N], H HolesNaturalSemiRing[NS, N]) NaturalSemiRing[NS, N] {
 	return NaturalSemiRing[NS, N]{
 		NaturalPreSemiRing: npimpl.NewNaturalPreSemiRing(arithmetic, H),
-		EuclideanSemiRing:  ring.NewEuclideanSemiRing(H),
+		EuclideanRig:       ring.NewEuclideanRig(H),
 		H:                  H,
 	}
 }
 
-func NewNaturalSemiRingElement[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]](H HolesNaturalSemiRingElement[NS, N]) NaturalSemiRingElement[NS, N] {
+func NewNaturalSemiRingElement[NS integer.NaturalRig[NS, N], N integer.NaturalRigElement[NS, N]](H HolesNaturalSemiRingElement[NS, N]) NaturalSemiRingElement[NS, N] {
 	return NaturalSemiRingElement[NS, N]{
 		NaturalPreSemiRingElement: npimpl.NewNaturalPreSemiRingElement(H),
-		EuclideanSemiRingElement:  ring.NewEuclideanSemiRingElement(H),
+		EuclideanRigElement:       ring.NewEuclideanRigElement(H),
 		H:                         H,
 	}
 }

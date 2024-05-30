@@ -140,20 +140,6 @@ func (n *BigInt) GCD(x *BigInt) *BigInt {
 	return New(new(big.Int).GCD(nil, nil, n.V, x.V))
 }
 
-func (n *BigInt) LCM(x *BigInt) *BigInt {
-	if x == nil {
-		panic(errs.NewIsNil("argument"))
-	}
-	q, r, err := n.Mul(x).Div(n.GCD(x))
-	if err != nil {
-		panic(err)
-	}
-	if r.Cmp(Zero) == algebra.Equal {
-		panic("r == 0")
-	}
-	return q
-}
-
 func (n *BigInt) SetUint64(x uint64) *BigInt {
 	n.V = new(big.Int).SetUint64(x)
 	return n
@@ -162,6 +148,10 @@ func (n *BigInt) SetUint64(x uint64) *BigInt {
 func (n *BigInt) SetInt64(x int64) *BigInt {
 	n.V = new(big.Int).SetInt64(x)
 	return n
+}
+
+func (n *BigInt) Bytes() []byte {
+	return n.V.Bytes()
 }
 
 func (n *BigInt) SetBytes(buf []byte) *BigInt {

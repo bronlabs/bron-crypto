@@ -8,15 +8,15 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
 )
 
-type HolesNaturalPreSemiRing[NS integer.NaturalPreSemiRing[NS, N], N integer.NaturalPreSemiRingElement[NS, N]] interface {
-	ring.HolesPreSemiRing[NS, N]
+type HolesNaturalPreSemiRing[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]] interface {
+	ring.HolesSemiRing[NS, N]
 	order.HolesChain[NS, N]
 
 	Arithmetic() integer.Arithmetic[N]
 }
 
-type HolesNaturalPreSemiRingElement[NS integer.NaturalPreSemiRing[NS, N], N integer.NaturalPreSemiRingElement[NS, N]] interface {
-	ring.HolesPreSemiRingElement[NS, N]
+type HolesNaturalPreSemiRingElement[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]] interface {
+	ring.HolesSemiRingElement[NS, N]
 	order.HolesChainElement[NS, N]
 
 	Arithmetic() integer.Arithmetic[N]
@@ -35,23 +35,23 @@ type HolesNatPlus[NS integer.NPlus[NS, N], N integer.NatPlus[NS, N]] interface {
 	order.HolesLowerBoundedOrderTheoreticLatticeElement[NS, N]
 }
 
-func NewNaturalPreSemiRing[NS integer.NaturalPreSemiRing[NS, N], N integer.NaturalPreSemiRingElement[NS, N]](arithmetic integer.Arithmetic[N], H HolesNaturalPreSemiRing[NS, N]) NaturalPreSemiRing[NS, N] {
+func NewNaturalPreSemiRing[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]](arithmetic integer.Arithmetic[N], H HolesNaturalPreSemiRing[NS, N]) NaturalPreSemiRing[NS, N] {
 	addition := integer.NewAdditionOperator(arithmetic)
 	multiplication := integer.NewMultiplicationOperator(arithmetic)
 	b := operator.NewOperatorSuiteBuilder[N]().WithPrimary(addition).WithSecondary(multiplication).Build()
 	return NaturalPreSemiRing[NS, N]{
-		PreSemiRing:   ring.NewPreSemiRing(H),
+		SemiRing:      ring.NewSemiRing(H),
 		Chain:         order.NewChain(H),
 		OperatorSuite: b,
 		H:             H,
 	}
 }
 
-func NewNaturalPreSemiRingElement[NS integer.NaturalPreSemiRing[NS, N], N integer.NaturalPreSemiRingElement[NS, N]](H HolesNaturalPreSemiRingElement[NS, N]) NaturalPreSemiRingElement[NS, N] {
+func NewNaturalPreSemiRingElement[NS integer.NaturalSemiRing[NS, N], N integer.NaturalSemiRingElement[NS, N]](H HolesNaturalPreSemiRingElement[NS, N]) NaturalPreSemiRingElement[NS, N] {
 	return NaturalPreSemiRingElement[NS, N]{
-		PreSemiRingElement: ring.NewPreSemiRingElement(H),
-		ChainElement:       order.NewChainElement(H),
-		H:                  H,
+		SemiRingElement: ring.NewSemiRingElement(H),
+		ChainElement:    order.NewChainElement(H),
+		H:               H,
 	}
 }
 

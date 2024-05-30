@@ -4,10 +4,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 )
 
-type arithmetic[T any] interface {
-}
-
 type Arithmetic[T any] interface {
+	// Have New(v Impl) T
 	New(v uint64) T
 	Cmp(x, y T) algebra.Ordering
 	IsEven(x T) bool
@@ -35,6 +33,7 @@ type ModularArithmetic[T any] interface {
 
 	Inverse(x T) (T, error)
 	QuadraticResidue(x T) (T, error)
+	Modulus() T
 }
 
 type Number[T any] interface {

@@ -1,24 +1,23 @@
-package impl
+package mixins
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/groupoid"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/order"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl/ring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/integer"
-	npimpl "github.com/copperexchange/krypton-primitives/pkg/base/integer/natplus/impl"
 	"github.com/cronokirby/saferith"
 )
 
-type NaturalSemiRing[S integer.NaturalRig[S, E], E integer.NaturalRigElement[S, E]] struct {
-	npimpl.NaturalPreSemiRing[S, E]
-	ring.SemiRing[S, E]
+type NaturalRig[S integer.NaturalRig[S, E], E integer.NaturalRigElement[S, E]] struct {
+	NaturalSemiRing[S, E]
 	ring.EuclideanRig[S, E]
 
-	H HolesNaturalSemiRing[S, E]
+	H HolesNaturalRig[S, E]
 }
 
-func (n *NaturalSemiRing[S, E]) Identity(under algebra.Operator) (E, error) {
+func (n *NaturalRig[S, E]) Identity(under algebra.Operator) (E, error) {
 	switch under {
 	case integer.Addition:
 		return n.One(), nil
@@ -29,19 +28,18 @@ func (n *NaturalSemiRing[S, E]) Identity(under algebra.Operator) (E, error) {
 	}
 }
 
-func (n *NaturalSemiRing[S, E]) Zero() E {
+func (n *NaturalRig[S, E]) Zero() E {
 	return n.H.Arithmetic().New(0)
 }
 
-type NaturalSemiRingElement[S integer.NaturalRig[S, E], E integer.NaturalRigElement[S, E]] struct {
-	npimpl.NaturalPreSemiRingElement[S, E]
-	ring.SemiRingElement[S, E]
+type NaturalRigElement[S integer.NaturalRig[S, E], E integer.NaturalRigElement[S, E]] struct {
+	NaturalSemiRingElement[S, E]
 	ring.EuclideanRigElement[S, E]
 
-	H HolesNaturalSemiRingElement[S, E]
+	H HolesNaturalRigElement[S, E]
 }
 
-func (n *NaturalSemiRingElement[S, E]) IsIdentity(under algebra.Operator) (bool, error) {
+func (n *NaturalRigElement[S, E]) IsIdentity(under algebra.Operator) (bool, error) {
 	switch under {
 	case integer.Addition:
 		return n.IsOne(), nil
@@ -52,11 +50,11 @@ func (n *NaturalSemiRingElement[S, E]) IsIdentity(under algebra.Operator) (bool,
 	}
 }
 
-func (n *NaturalSemiRingElement[S, E]) IsZero() bool {
+func (n *NaturalRigElement[S, E]) IsZero() bool {
 	return n.Equal(n.H.Structure().Zero())
 }
 
-func (n *NaturalSemiRingElement[S, E]) Mod(modulus integer.NaturalRigElement[S, E]) (E, error) {
+func (n *NaturalRigElement[S, E]) Mod(modulus integer.NaturalRigElement[S, E]) (E, error) {
 	out, err := n.H.Arithmetic().Mod(n.H.Unwrap(), modulus.Unwrap())
 	if err != nil {
 		return *new(E), errs.WrapFailed(err, "could not compute mod")
@@ -64,7 +62,7 @@ func (n *NaturalSemiRingElement[S, E]) Mod(modulus integer.NaturalRigElement[S, 
 	return out, nil
 }
 
-func (n *NaturalSemiRingElement[S, E]) EuclideanDiv(x E) (quotient, remainder E) {
+func (n *NaturalRigElement[S, E]) EuclideanDiv(x E) (quotient, remainder E) {
 	q, r, err := n.H.Arithmetic().Div(n.H.Unwrap(), x.Unwrap(), -1)
 	if err != nil {
 		panic(errs.WrapFailed(err, "could not compute div from arithmetic"))
@@ -72,17 +70,21 @@ func (n *NaturalSemiRingElement[S, E]) EuclideanDiv(x E) (quotient, remainder E)
 	return q, r
 }
 
-func (n *NaturalSemiRingElement[S, E]) IsPrime() bool {
-	return n.H.Arithmetic().IsProbablyPrime(n.H.Unwrap())
+type nWrapper[S integer.N[S, E], E integer.Nat[S, E]] struct {
+	NPlus[S, E]
 }
 
 type N[S integer.N[S, E], E integer.Nat[S, E]] struct {
-	npimpl.NaturalPreSemiRing[S, E]
-	npimpl.NPlus[S, E]
+	// NaturalSemiRing[S, E]
+	// NPlus[S, E]
 
-	NaturalSemiRing[S, E]
+	groupoid.AdditiveGroupoid[S, E]
+	NaturalRig[S, E]
+	nWrapper[S, E]
 
-	ring.SemiRing[S, E]
+	rin
+	ring.FactorialSemiRing[S, E]
+	ring.Rig[S, E]
 	order.LowerBoundedOrderTheoreticLattice[S, E]
 
 	H HolesN[S, E]
@@ -97,7 +99,7 @@ func (n *N[S, E]) Characteristic() *saferith.Nat {
 }
 
 type Nat_[S integer.N[S, E], E integer.Nat[S, E]] struct {
-	NaturalSemiRingElement[S, E]
+	NaturalRigElement[S, E]
 	// TODO: we are getting some nasty ambiguous selector errors. So we just copy TrySub method
 	// as a method for Nat_..
 	// NatPlus[S, E]

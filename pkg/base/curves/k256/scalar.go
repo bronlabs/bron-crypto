@@ -31,7 +31,7 @@ type Scalar struct {
 	_ ds.Incomparable
 }
 
-func (*Scalar) Mod(m integer.NaturalSemiRingElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
+func (*Scalar) Mod(m integer.NaturalRigElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
 	panic("implement me")
 }
 func (s *Scalar) Abs() curves.Scalar {
@@ -421,7 +421,7 @@ func (s *Scalar) Sqrt() (curves.Scalar, error) {
 	}, nil
 }
 
-func (s *Scalar) MulAdd(p algebra.PreSemiRingElement[curves.ScalarField, curves.Scalar], q algebra.PreSemiRingElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
+func (s *Scalar) MulAdd(p algebra.SemiRingElement[curves.ScalarField, curves.Scalar], q algebra.SemiRingElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	return s.Mul(p).Add(q)
 }
 

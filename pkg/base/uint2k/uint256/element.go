@@ -55,7 +55,7 @@ func (Uint256) LowerBoundedLattice() algebra.LowerBoundedOrderTheoreticLattice[*
 func (Uint256) Structure() *Ring256 {
 	return Ring()
 }
-func (Uint256) Mod(x integer.NaturalSemiRingElement[*Ring256, Uint256]) (Uint256, error) {
+func (Uint256) Mod(x integer.NaturalRigElement[*Ring256, Uint256]) (Uint256, error) {
 	panic("not implemented")
 }
 
@@ -211,7 +211,7 @@ func (u Uint256) IsMultiplicativeIdentity() bool {
 	return u.IsOne()
 }
 
-func (u Uint256) MulAdd(p, q algebra.PreSemiRingElement[*Ring256, Uint256]) Uint256 {
+func (u Uint256) MulAdd(p, q algebra.SemiRingElement[*Ring256, Uint256]) Uint256 {
 	return u.Mul(p).Add(q)
 }
 

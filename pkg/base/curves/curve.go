@@ -116,6 +116,7 @@ type BaseFieldElement interface {
 	algebra.ExtensionFieldElement[BaseField, BaseField, BaseFieldElement, BaseFieldElement]
 	// BaseField returns the base field containing this element.
 	BaseField() BaseField
+	algebra.NatLike[BaseFieldElement]
 }
 
 // ScalarField is the interface for the elements of the scalar field of a prime order subgroup of an elliptic curve.
@@ -137,6 +138,7 @@ type Scalar interface {
 	integer.IntP[ScalarField, Scalar]
 	// ScalarField returns the scalar field containing this element.
 	ScalarField() ScalarField
+	algebra.NatLike[Scalar]
 }
 
 type ProjectiveCurveCoordinates interface {

@@ -9,7 +9,7 @@ import (
 type ZnX[G algebra.Structure, E algebra.Element] interface {
 	algebra.MultiplicativeGroup[G, E]
 	algebra.BoundedOrderTheoreticLattice[G, E]
-	integer.NaturalPreSemiRing[G, E]
+	integer.NaturalSemiRing[G, E]
 
 	Modulus() uints.Uint
 }
@@ -17,5 +17,5 @@ type ZnX[G algebra.Structure, E algebra.Element] interface {
 type IntX[G algebra.Structure, E algebra.Element] interface {
 	algebra.MultiplicativeGroupElement[G, E]
 	algebra.BoundedOrderTheoreticLatticeElement[G, E]
-	integer.NaturalPreSemiRingElement[G, E]
+	integer.NaturalSemiRingElement[G, E]
 }

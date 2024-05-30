@@ -13,7 +13,7 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
-var Name = fmt.Sprintf("%s_Z", bg.Name)
+var zName = fmt.Sprintf("%s_Z", bg.Name)
 
 var _ integer.Int[*Z, *Int] = (*Int)(nil)
 
@@ -67,7 +67,29 @@ func (n *Int) Nat() *saferith.Nat {
 }
 
 func (n *Int) SetNat(v *saferith.Nat) *Int {
-	return n.New(new(bg.BigInt).SetNat(v))
+	out := n.New(new(bg.BigInt).SetNat(v))
+	n.V = out.V
+	return n
+}
+
+func (n *Int) Int() *saferith.Int {
+	return new(saferith.Int).SetBig(n.V.V, -1)
+}
+
+func (n *Int) SetInt(v *saferith.Int) *Int {
+	out := n.New(new(bg.BigInt).New(v.Big()))
+	n.V = out.V
+	return n
+}
+
+func (n *Int) Big() *big.Int {
+	return n.V.V
+}
+
+func (n *Int) SetBig(v *big.Int) *Int {
+	out := n.New(new(bg.BigInt).New(v))
+	n.V = out.V
+	return n
 }
 
 func (n *Int) Arithmetic() integer.Arithmetic[*Int] {
@@ -80,7 +102,7 @@ func (n *Int) MarshalJSON() ([]byte, error) {
 		Number *bg.BigInt
 	}
 	return json.Marshal(&temp{
-		Name:   Name,
+		Name:   zName,
 		Number: n.V,
 	})
 }
@@ -93,14 +115,14 @@ func (n *Int) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal json")
 	}
-	if temp.Name != Name {
-		return errs.NewType("name (%s) must be (%s)", temp.Name, Name)
+	if temp.Name != zName {
+		return errs.NewType("name (%s) must be (%s)", temp.Name, zName)
 	}
 	n.V = temp.Number
 	n.Int_ = impl.NewInt_(n)
 	return nil
 }
 
-func NewInt(v uint64) integer.Int[*Z, *Int] {
-	return new(Int).New(bg.New(new(big.Int).SetUint64(v)))
+func NewInt(v int64) integer.Int[*Z, *Int] {
+	return new(Int).New(bg.New(new(big.Int).SetInt64(v)))
 }

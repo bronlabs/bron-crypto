@@ -12,7 +12,7 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
-var Name = fmt.Sprintf("%s_Zp", bg.Name)
+var zpName = fmt.Sprintf("%s_Zp", bg.Name)
 
 var _ integer.IntP[*Zp, *IntP] = (*IntP)(nil)
 
@@ -95,7 +95,7 @@ func (n *IntP) MarshalJSON() ([]byte, error) {
 		Number *bg.BigInt
 	}
 	return json.Marshal(&temp{
-		Name:   Name,
+		Name:   zpName,
 		Number: n.V,
 	})
 }
@@ -108,8 +108,8 @@ func (n *IntP) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal json")
 	}
-	if temp.Name != Name {
-		return errs.NewType("name (%s) must be (%s)", temp.Name, Name)
+	if temp.Name != zpName {
+		return errs.NewType("name (%s) must be (%s)", temp.Name, zpName)
 	}
 	n.V = temp.Number
 	n.IntP_ = impl.NewIntP_(n)

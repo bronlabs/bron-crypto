@@ -16,7 +16,7 @@ import (
 var Name = fmt.Sprintf("%s_N+", bg.Name)
 
 var _ integer.NatPlus[*NPlus, *NatPlus] = (*NatPlus)(nil)
-var _ integer.NaturalPreSemiRingElement[*NPlus, *NatPlus] = (*NatPlus)(nil)
+var _ integer.NaturalSemiRingElement[*NPlus, *NatPlus] = (*NatPlus)(nil)
 
 var _ impl.HolesNatPlus[*NPlus, *NatPlus] = (*NatPlus)(nil)
 var _ aimpl.ImplAdapter[*NatPlus, *bg.BigInt] = (*NatPlus)(nil)
@@ -42,8 +42,6 @@ func (n *NatPlus) Arithmetic() integer.Arithmetic[*NatPlus] {
 func (*NatPlus) Structure() *NPlus {
 	return &NPlus{}
 }
-
-func (*NatPlus) FromInt()
 
 func (n *NatPlus) Unwrap() *NatPlus {
 	return n
@@ -78,7 +76,9 @@ func (n *NatPlus) Nat() *saferith.Nat {
 }
 
 func (n *NatPlus) SetNat(v *saferith.Nat) *NatPlus {
-	return n.New(new(bg.BigInt).SetNat(v))
+	res := n.New(new(bg.BigInt).SetNat(v))
+	n.V = res.V
+	return n
 }
 
 func (n *NatPlus) MarshalJSON() ([]byte, error) {

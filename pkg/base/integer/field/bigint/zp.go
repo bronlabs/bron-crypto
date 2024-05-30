@@ -39,7 +39,7 @@ func (z *Zp) ModularArithmetic() integer.ModularArithmetic[*IntP] {
 }
 
 func (*Zp) Name() string {
-	return Name
+	return zpName
 }
 
 func (z *Zp) Element() *IntP {

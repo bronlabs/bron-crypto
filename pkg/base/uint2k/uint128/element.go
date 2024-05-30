@@ -113,7 +113,7 @@ func (u Uint128) Nat() *saferith.Nat {
 	return res
 }
 
-func (u Uint128) Mod(x integer.NaturalSemiRingElement[*Ring128, Uint128]) (Uint128, error) {
+func (u Uint128) Mod(x integer.NaturalRigElement[*Ring128, Uint128]) (Uint128, error) {
 	panic("implement me")
 }
 
@@ -265,7 +265,7 @@ func (u Uint128) IsMultiplicativeIdentity() bool {
 	return u.IsOne()
 }
 
-func (u Uint128) MulAdd(p, q algebra.PreSemiRingElement[*Ring128, Uint128]) Uint128 {
+func (u Uint128) MulAdd(p, q algebra.SemiRingElement[*Ring128, Uint128]) Uint128 {
 	return u.Mul(p).Add(q)
 }
 

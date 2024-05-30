@@ -1,31 +1,36 @@
 package impl
 
 import (
+	"math/big"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	aimpl "github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/cronokirby/saferith"
 )
 
-type HolesArithmeticMixin[T aimpl.ImplAdapter[T, Impl], Impl any] interface {
+type ImplAdapter[E algebra.Element, Impl any] interface {
+	Impl() Impl
+}
+
+type HolesArithmeticMixin[T any] interface {
 	Cmp(x, y T) algebra.Ordering
 	New(v uint64) T
 }
 
-type ArithmeticMixin[T aimpl.ImplAdapter[T, Impl], Impl any] struct {
+type ArithmeticMixin[T any] struct {
 	Ctx *ArithmeticContext
-	H   HolesArithmeticMixin[T, Impl]
+	H   HolesArithmeticMixin[T]
 }
 
-func (a *ArithmeticMixin[T, I]) Zero() T {
+func (a *ArithmeticMixin[T]) Zero() T {
 	return a.H.New(0)
 }
 
-func (a *ArithmeticMixin[T, I]) One() T {
+func (a *ArithmeticMixin[T]) One() T {
 	return a.H.New(1)
 }
 
-func (a *ArithmeticMixin[T, I]) anyZeros(xs ...T) bool {
+func (a *ArithmeticMixin[T]) anyZeros(xs ...T) bool {
 	for _, x := range xs {
 		if a.H.Cmp(x, a.Zero()) == algebra.Equal {
 			return true
@@ -34,7 +39,7 @@ func (a *ArithmeticMixin[T, I]) anyZeros(xs ...T) bool {
 	return false
 }
 
-func (a *ArithmeticMixin[T, I]) validateInputs(xs ...T) error {
+func (a *ArithmeticMixin[T]) validateInputs(xs ...T) error {
 	if !a.Ctx.ValidateInputs {
 		return nil
 	}
@@ -55,7 +60,7 @@ func (a *ArithmeticMixin[T, I]) validateInputs(xs ...T) error {
 	return nil
 }
 
-func (a *ArithmeticMixin[T, I]) validateDenominator(xs ...T) error {
+func (a *ArithmeticMixin[T]) validateDenominator(xs ...T) error {
 	if !a.Ctx.ValidateInputs {
 		return nil
 	}
@@ -74,7 +79,7 @@ func (a *ArithmeticMixin[T, I]) validateDenominator(xs ...T) error {
 	return nil
 }
 
-func (a *ArithmeticMixin[T, I]) validateModulus(xs ...T) error {
+func (a *ArithmeticMixin[T]) validateModulus(xs ...T) error {
 	if !a.Ctx.ValidateInputs {
 		return nil
 	}
@@ -84,7 +89,7 @@ func (a *ArithmeticMixin[T, I]) validateModulus(xs ...T) error {
 	return nil
 }
 
-func (a *ArithmeticMixin[T, I]) ValidateNeg(x T) error {
+func (a *ArithmeticMixin[T]) ValidateNeg(x T) error {
 	if !a.Ctx.ValidateInputs {
 		return nil
 	}
@@ -97,19 +102,19 @@ func (a *ArithmeticMixin[T, I]) ValidateNeg(x T) error {
 	return nil
 }
 
-func (a *ArithmeticMixin[T, I]) ValidateInverse(x T) error {
+func (a *ArithmeticMixin[T]) ValidateInverse(x T) error {
 	return a.validateDenominator(x)
 }
 
-func (a *ArithmeticMixin[T, I]) ValidateQuadraticResidue(x T) error {
+func (a *ArithmeticMixin[T]) ValidateQuadraticResidue(x T) error {
 	return a.validateDenominator(x)
 }
 
-func (a *ArithmeticMixin[T, I]) ValidateAdd(x, y T) error {
+func (a *ArithmeticMixin[T]) ValidateAdd(x, y T) error {
 	return a.validateInputs(x, y)
 }
 
-func (a *ArithmeticMixin[T, I]) ValidateSub(x, y T) error {
+func (a *ArithmeticMixin[T]) ValidateSub(x, y T) error {
 	if !a.Ctx.ValidateInputs {
 		return nil
 	}
@@ -132,11 +137,11 @@ func (a *ArithmeticMixin[T, I]) ValidateSub(x, y T) error {
 	return nil
 }
 
-func (a *ArithmeticMixin[T, I]) ValidateMul(x, y T) error {
+func (a *ArithmeticMixin[T]) ValidateMul(x, y T) error {
 	return a.validateInputs(x, y)
 }
 
-func (a *ArithmeticMixin[T, I]) ValidateDiv(x, y T) error {
+func (a *ArithmeticMixin[T]) ValidateDiv(x, y T) error {
 	if err := a.validateInputs(x); err != nil {
 		return errs.WrapValidation(err, "invalid numerator")
 	}
@@ -146,11 +151,11 @@ func (a *ArithmeticMixin[T, I]) ValidateDiv(x, y T) error {
 	return nil
 }
 
-func (a *ArithmeticMixin[T, I]) ValidateExp(x, y T) error {
+func (a *ArithmeticMixin[T]) ValidateExp(x, y T) error {
 	return a.validateInputs(x, y)
 }
 
-func (a *ArithmeticMixin[T, I]) ValidateSimExp(bases []T, exponents []T) error {
+func (a *ArithmeticMixin[T]) ValidateSimExp(bases []T, exponents []T) error {
 	if len(bases) == 0 {
 		return errs.NewLength("len(bases) == 0")
 	}
@@ -167,7 +172,7 @@ func (a *ArithmeticMixin[T, I]) ValidateSimExp(bases []T, exponents []T) error {
 	return nil
 }
 
-func (a *ArithmeticMixin[T, I]) ValidateMultiBaseExp(bases []T, exponent T) error {
+func (a *ArithmeticMixin[T]) ValidateMultiBaseExp(bases []T, exponent T) error {
 	if len(bases) == 0 {
 		return errs.NewLength("len(bases) == 0")
 	}
@@ -177,7 +182,7 @@ func (a *ArithmeticMixin[T, I]) ValidateMultiBaseExp(bases []T, exponent T) erro
 	return a.validateInputs(exponent)
 }
 
-func (a *ArithmeticMixin[T, I]) ValidateMultiExponentExp(base T, exponents []T) error {
+func (a *ArithmeticMixin[T]) ValidateMultiExponentExp(base T, exponents []T) error {
 	if len(exponents) == 0 {
 		return errs.NewLength("len(exponents) == 0")
 	}
@@ -187,7 +192,7 @@ func (a *ArithmeticMixin[T, I]) ValidateMultiExponentExp(base T, exponents []T) 
 	return a.validateInputs(base)
 }
 
-func (a *ArithmeticMixin[T, I]) ValidateMod(x, m T) error {
+func (a *ArithmeticMixin[T]) ValidateMod(x, m T) error {
 	if err := a.validateInputs(x); err != nil {
 		return errs.WrapValidation(err, "invalid numerator")
 	}
@@ -197,7 +202,7 @@ func (a *ArithmeticMixin[T, I]) ValidateMod(x, m T) error {
 	return nil
 }
 
-func (a *ArithmeticMixin[T, I]) ValidateSqrt(x T) error {
+func (a *ArithmeticMixin[T]) ValidateSqrt(x T) error {
 	if err := a.validateInputs(x); err != nil {
 		return errs.WrapValidation(err, "invalid numerator")
 	}
@@ -217,7 +222,7 @@ const (
 type ArithmeticContext struct {
 	BottomAtZero   bool
 	BottomAtOne    bool
-	Modulus        *saferith.Nat
+	Modular        bool
 	Size           int
 	ValidateInputs bool
 }
@@ -239,21 +244,33 @@ func (ctx *ArithmeticContext) Type() ArithmeticType {
 }
 
 func (ctx *ArithmeticContext) IsSigned() bool {
-	return ctx.Modulus == nil && !ctx.BottomAtZero && !ctx.BottomAtOne
+	return !ctx.Modular && !ctx.BottomAtZero && !ctx.BottomAtOne
 }
 
 func (ctx *ArithmeticContext) IsUnsignedPositive() bool {
-	return ctx.Modulus == nil && !ctx.BottomAtZero && ctx.BottomAtOne
+	return !ctx.Modular && !ctx.BottomAtZero && ctx.BottomAtOne
 }
 
 func (ctx *ArithmeticContext) IsUnsigned() bool {
-	return ctx.Modulus == nil && ctx.BottomAtZero && !ctx.BottomAtOne
+	return !ctx.Modular && ctx.BottomAtZero && !ctx.BottomAtOne
 }
 
 func (ctx *ArithmeticContext) IsModular() bool {
-	return ctx.Modulus != nil && ctx.Modulus.EqZero() != 1 && ctx.BottomAtZero && !ctx.BottomAtOne
+	return ctx.Modular && ctx.BottomAtZero && !ctx.BottomAtOne
 }
 
 func (ctx *ArithmeticContext) Validate() bool {
 	return ctx.IsUnsignedPositive() || ctx.IsUnsigned() || ctx.IsSigned() || ctx.IsModular()
+}
+
+type NatValue interface {
+	uint64 | *saferith.Nat
+}
+
+type NatPlusValue interface {
+	uint64 | *saferith.Nat | *saferith.Modulus
+}
+
+type IntValue interface {
+	int64 | *saferith.Int | *big.Int
 }

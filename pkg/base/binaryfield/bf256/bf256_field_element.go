@@ -216,7 +216,7 @@ func (el *FieldElement) IsMultiplicativeIdentity() bool {
 
 // === Ring element methods.
 
-func (el *FieldElement) MulAdd(p, q algebra.PreSemiRingElement[*Field, *FieldElement]) *FieldElement {
+func (el *FieldElement) MulAdd(p, q algebra.SemiRingElement[*Field, *FieldElement]) *FieldElement {
 	return el.Mul(p).Add(q)
 }
 

@@ -1,16 +1,19 @@
 package integer
 
-import "github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+	"github.com/cronokirby/saferith"
+)
 
 // Z defines methods for S for it to behave like the integers.
 type Z[S algebra.Structure, E algebra.Element] interface {
-	NaturalSemiRing[S, E]
+	NaturalRig[S, E]
 	algebra.EuclideanDomain[S, E]
 }
 
 // Int defines methods for element of type E to be elements of the integers S.
 type Int[S algebra.Structure, E algebra.Element] interface {
-	NaturalSemiRingElement[S, E]
+	NaturalRigElement[S, E]
 	algebra.EuclideanDomainElement[S, E]
 
 	Abs() E
@@ -24,6 +27,7 @@ type Zn[S algebra.Structure, E algebra.Element] interface {
 	algebra.BoundedOrderTheoreticLattice[S, E]
 
 	IsDecomposable(coprimeModulusFactors ...E) bool
+	Modulus() *saferith.Modulus
 }
 
 // Uint defines methods for elements of type E to behave
@@ -45,4 +49,18 @@ type Zp[S algebra.Structure, E algebra.Element] interface {
 type IntP[S algebra.Structure, E algebra.Element] interface {
 	Uint[S, E]
 	algebra.FiniteFieldElement[S, E]
+}
+
+type ZnX[G algebra.Structure, E algebra.Element] interface {
+	algebra.MultiplicativeGroup[G, E]
+	algebra.BoundedOrderTheoreticLattice[G, E]
+	algebra.Chain[G, E]
+
+	Modulus() *saferith.Modulus
+}
+
+type IntX[G algebra.Structure, E algebra.Element] interface {
+	algebra.MultiplicativeGroupElement[G, E]
+	algebra.BoundedOrderTheoreticLatticeElement[G, E]
+	algebra.ChainElement[G, E]
 }

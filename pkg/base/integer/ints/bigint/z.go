@@ -20,7 +20,7 @@ func (z *Z) Cardinality() *saferith.Modulus {
 }
 
 func (*Z) Name() string {
-	return Name
+	return zName
 }
 
 func (n *Z) Arithmetic() integer.Arithmetic[*Int] {

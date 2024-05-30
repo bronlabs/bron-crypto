@@ -38,7 +38,7 @@ func NewBaseFieldElementG2(value uint64) *BaseFieldElementG2 {
 		V: v,
 	}
 }
-func (*BaseFieldElementG2) Mod(m integer.NaturalSemiRingElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
+func (*BaseFieldElementG2) Mod(m integer.NaturalRigElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
 	panic("implement me")
 }
 func (e *BaseFieldElementG2) Abs() curves.BaseFieldElement {
@@ -419,7 +419,7 @@ func (e *BaseFieldElementG2) Sqrt() (curves.BaseFieldElement, error) {
 	}, nil
 }
 
-func (e *BaseFieldElementG2) MulAdd(y algebra.PreSemiRingElement[curves.BaseField, curves.BaseFieldElement], z algebra.PreSemiRingElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
+func (e *BaseFieldElementG2) MulAdd(y algebra.SemiRingElement[curves.BaseField, curves.BaseFieldElement], z algebra.SemiRingElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	return e.Mul(y).Add(z)
 }
 
