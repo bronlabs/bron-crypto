@@ -112,8 +112,8 @@ func CheckStructuredSetInvariants[G algebra.StructuredSet[G, GE], GE algebra.Str
 	// test_utils.CheckAbstractSetInvariants[G, GE](t, structuredSet) // TODO: Missing Add method
 	ssi := &StructuredSetInvariants[G, GE]{}
 	prng := fu.NewPrng()
-	// ssi.Random(t, structuredSet, prng)
-	// ssi.Element(t, structuredSet)
+	ssi.Random(t, structuredSet, prng)
+	ssi.Element(t, structuredSet)
 	// ssi.Order(t, structuredSet) // TODO: need to implement iter for curves
 	ssi.Unwrap(t, structuredSet)
 
@@ -145,7 +145,7 @@ func CheckFiniteStructureInvariants[G algebra.FiniteStructure[G, GE], GE algebra
 	CheckStructuredSetInvariants[G, GE](t, finiteStructure, elementGenerator)
 	prng := fu.NewPrng()
 	fsi := &FiniteStructureInvariants[G, GE]{}
-	fsi.Hash(t, finiteStructure, prng)
+	fsi.Hash(t, finiteStructure, prng) // TODO: Contains not implemented for ScalarField
 }
 
 func CheckPointedSetElementConstant[G algebra.PointedSet[G, GE], GE algebra.PointedSetElement[G, GE]](t *testing.T, pointedSet G, elementGenerator fu.ObjectGenerator[GE]) {

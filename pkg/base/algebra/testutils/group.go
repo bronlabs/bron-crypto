@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type GroupInvariants[G algebra.Group[G, GE], GE algebra.GroupElement[G, GE]] struct{}
+
 type GroupElementInvariants[G algebra.Group[G, GE], GE algebra.GroupElement[G, GE]] struct{}
 
 type SubGroupInvariants[G algebra.Group[G, GE], GE algebra.GroupElement[G, GE]] struct{}
@@ -80,11 +82,11 @@ func (sgi *SubGroupInvariants[G, GE]) CoFactor(t *testing.T, group, subgroup alg
 	t.Helper()
 
 	expected := group.Order()
-	var actual *saferith.Nat
+	actual := new(saferith.Nat).SetUint64(1)
 	OrderMinusOne := new(saferith.Nat).Sub(group.Order().Nat(), new(saferith.Nat).SetUint64(1), -1)
 
-	output := actual.Mul(subgroup.CoFactor(), OrderMinusOne, -1)
-	require.Equal(t, expected, output)
+	actual.Mul(subgroup.CoFactor(), OrderMinusOne, -1)
+	require.Equal(t, expected, actual)
 }
 
 func (sgi *SubGroupInvariants[G, GE]) SuperGroupOrder(t *testing.T, group algebra.SubGroup[G, GE]) {
@@ -309,8 +311,8 @@ func CheckGroupInvariants[G algebra.Group[G, GE], GE algebra.GroupElement[G, GE]
 	require.NotNil(t, group)
 	require.NotNil(t, elementGenerator)
 	CheckMonoidInvariant[G, GE](t, group, elementGenerator)
-
 	// Dependant on Operators
+	// gi := &GroupInvariants[G, GE]{}
 	// Inverse
 	// IsInverse
 	// IsTorsionELement
