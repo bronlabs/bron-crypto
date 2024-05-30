@@ -27,7 +27,7 @@ type RigElement[R Structure, E Element] interface {
 	RgElement[R, E]
 	AdditiveMonoidElement[R, E]
 	MultiplicativeMonoidElement[R, E]
-
+	// TODO: Should this be RingElement or RigElement?
 	MulAdd(p, q RingElement[R, E]) E
 }
 

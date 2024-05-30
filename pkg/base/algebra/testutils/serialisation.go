@@ -4,14 +4,14 @@ import (
 	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+	fu "github.com/copperexchange/krypton-primitives/pkg/base/fuzzutils"
 	"github.com/cronokirby/saferith"
-
-	// fu "github.com/copperexchange/krypton-primitives/pkg/base/fuzzutils"
-
 	"github.com/stretchr/testify/require"
 )
 
-type NatSerializationInvariants[E algebra.Object] struct{}
+type NatSerializationInvariants[E algebra.Element] struct{}
+
+type BytesSerializationInvariants[E algebra.Element] struct{}
 
 func (nsi *NatSerializationInvariants[E]) Uint64(t *testing.T, nat algebra.NatSerialization[E], input E) {
 	t.Helper()
@@ -25,6 +25,7 @@ func (nsi *NatSerializationInvariants[E]) Uint64(t *testing.T, nat algebra.NatSe
 
 func (nsi *NatSerializationInvariants[E]) SetNat(t *testing.T, nat algebra.NatSerialization[E], v *saferith.Nat) {
 	t.Helper()
+	// val1 := nat.SetNat(v)
 	// TODO
 }
 
@@ -32,4 +33,27 @@ func (nsi *NatSerializationInvariants[E]) Nat(t *testing.T, nat algebra.NatSeria
 	t.Helper()
 	// TODO
 	require.IsType(t, &saferith.Nat{}, nat.Nat())
+}
+
+func (bsi *BytesSerializationInvariants[E]) Bytes(t *testing.T, element algebra.BytesSerialization[E]) {
+	t.Helper()
+
+	actual := element.Bytes()
+	require.Len(t, actual, 32)
+	excpted, err := element.SetBytes(actual)
+	require.NoError(t, err)
+	require.Equal(t, excpted, element)
+}
+func (bsi *BytesSerializationInvariants[E]) SetBytes(t *testing.T, element algebra.BytesSerialization[E]) {
+	t.Helper()
+
+	actual := element.Bytes()
+	require.Len(t, actual, 32)
+	excpted, err := element.SetBytes(actual)
+	require.NoError(t, err)
+	require.Equal(t, excpted, element)
+}
+func CheckBytesSerializationInvariants[E algebra.Element](t *testing.T, elementGenerator fu.ObjectGenerator[E]) {
+	t.Helper()
+
 }
