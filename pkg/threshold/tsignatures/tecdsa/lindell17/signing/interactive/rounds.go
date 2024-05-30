@@ -64,7 +64,7 @@ func (sc *SecondaryCosigner) Round2(r1out *Round1OutputP2P) (r2out *Round2Output
 	}
 	sc.state.bigR2 = sc.Protocol.Curve().ScalarBaseMult(sc.state.k2)
 	// step 2.2: π <- NIPoK.Prove(k2)
-	bigR2ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, sc.SessionId, sc.IdentityKey().PublicKey().ToAffineCompressed())
+	bigR2ProofSessionId, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, sc.SessionId, sc.IdentityKey().PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR2ProofSessionId")
 	}
@@ -94,7 +94,7 @@ func (pc *PrimaryCosigner) Round3(r2out *Round2OutputP2P) (r3out *Round3OutputP2
 		return nil, errs.WrapValidation(err, "invalid round %d input", pc.Round)
 	}
 
-	bigR2ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, pc.SessionId, pc.secondaryIdentityKey.PublicKey().ToAffineCompressed())
+	bigR2ProofSessionId, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, pc.SessionId, pc.secondaryIdentityKey.PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR2ProofSessionId")
 	}
@@ -103,7 +103,7 @@ func (pc *PrimaryCosigner) Round3(r2out *Round2OutputP2P) (r3out *Round3OutputP2
 		return nil, errs.WrapIdentifiableAbort(err, pc.secondaryIdentityKey.String(), "cannot verify R2 dlog proof")
 	}
 
-	bigR1ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, pc.SessionId, pc.myAuthKey.PublicKey().ToAffineCompressed())
+	bigR1ProofSessionId, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, pc.SessionId, pc.myAuthKey.PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR1ProofSessionId")
 	}
@@ -145,7 +145,7 @@ func (sc *SecondaryCosigner) Round4(r3out *Round3OutputP2P, message []byte) (rou
 		return nil, errs.WrapFailed(err, "cannot open R commitment")
 	}
 
-	bigR1ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, sc.SessionId, sc.primaryIdentityKey.PublicKey().ToAffineCompressed())
+	bigR1ProofSessionId, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, sc.SessionId, sc.primaryIdentityKey.PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR1ProofSessionId")
 	}

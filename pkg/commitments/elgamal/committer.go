@@ -26,7 +26,7 @@ func NewCommitter(sessionId []byte, publicKey curves.Point, prng io.Reader) (*co
 		return nil, errs.NewIsNil("publicKey is nil")
 	}
 
-	hBlindBytes, err := hashing.HashChain(base.RandomOracleHashFunction, nothingUpMySleeve)
+	hBlindBytes, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, sessionId, nothingUpMySleeve)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "failed to hash sessionId")
 	}

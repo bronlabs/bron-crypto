@@ -1,7 +1,6 @@
 package hashcommitments
 
 import (
-	"bytes"
 	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
@@ -16,9 +15,6 @@ var (
 	_ commitments.Message          = Message(nil)
 	_ commitments.Commitment       = (*Commitment)(nil)
 	_ commitments.Opening[Message] = (*Opening)(nil)
-
-	// CommitmentHashFunction is used in the `commitments` package for a UC-secure commitment scheme which chains HMACs and enforces presence of a session-id. Size must be CollisionResistanceBytes.
-	hashFunc = base.RandomOracleHashFunction
 )
 
 type Witness []byte
@@ -61,13 +57,4 @@ func (c *Commitment) Validate() error {
 
 func encodeSessionId(sessionId []byte) []byte {
 	return slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytes32LE(int32(len(sessionId))), sessionId)
-}
-
-// Encode the vector as a concatenation of messages along with their position and length.
-func encode(messages ...Message) Message {
-	encoded := make([][]byte, len(messages))
-	for i, m := range messages {
-		encoded[i] = slices.Concat(bitstring.ToBytes32LE(int32(i)), bitstring.ToBytes32LE(int32(len(m))), m)
-	}
-	return bytes.Join(encoded, nil)
 }

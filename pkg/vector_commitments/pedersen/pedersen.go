@@ -56,7 +56,7 @@ func sampleGenerators(sessionId []byte, curve curves.Curve, n uint) ([]curves.Po
 	}
 	generators := make([]curves.Point, n)
 	// Derive the initial point from session identifier and SomethingUpMySleeve
-	hBytes, err := hashing.HashChain(base.RandomOracleHashFunction, sessionId, somethingUpMySleeve)
+	hBytes, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, sessionId, somethingUpMySleeve)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "failed to hash sessionId")
 	}

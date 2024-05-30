@@ -25,7 +25,7 @@ func Test_CanInitialize(t *testing.T) {
 	aliceIdentityKey, bobIdentityKey := identities[0], identities[1]
 
 	var sharedSeed rprzs.Seed
-	hashed, err := hashing.HashChain(sha3.New256, []byte("pepsi > coke"))
+	hashed, err := hashing.HashPrefixedLength(sha3.New256, []byte("pepsi > coke"))
 	require.NoError(t, err)
 	copy(sharedSeed[:], hashed)
 

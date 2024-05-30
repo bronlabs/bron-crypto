@@ -28,7 +28,7 @@ func (c *Cosigner[V]) ProducePartialSignature(message []byte) (partialSignature 
 		bigR2Sum = bigR2Sum.Add(thisR2)
 	}
 
-	deltaMessage, err := hashing.HashChain(base.RandomOracleHashFunction,
+	deltaMessage, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction,
 		c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed(),
 		bigR1Sum.ToAffineCompressed(),
 		bigR2Sum.ToAffineCompressed(),

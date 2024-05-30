@@ -20,7 +20,7 @@ func NewVerifier(sessionId []byte, publicKey curves.Point) (*verifier, error) { 
 		return nil, errs.NewIsNil("publicKey is nil")
 	}
 
-	hBlindBytes, err := hashing.HashChain(base.RandomOracleHashFunction, nothingUpMySleeve)
+	hBlindBytes, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, sessionId, nothingUpMySleeve)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "failed to hash sessionId")
 	}

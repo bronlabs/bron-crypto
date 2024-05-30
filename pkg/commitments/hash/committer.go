@@ -2,6 +2,9 @@ package hashcommitments
 
 import (
 	"io"
+	"slices"
+
+	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -24,7 +27,7 @@ func NewCommitter(sessionId []byte, prng io.Reader, prefix ...Message) (*Committ
 
 	c := &Committer{
 		sessionId: sessionId,
-		prefix:    encode(prefix...),
+		prefix:    slices.Concat(prefix...),
 		prng:      prng,
 	}
 	return c, nil
@@ -40,7 +43,7 @@ func (c *Committer) Commit(message Message) (*Commitment, *Opening, error) {
 		return nil, nil, errs.WrapRandomSample(err, "reading random bytes")
 	}
 
-	commitmentValue, err := hashing.Hmac(witness, hashFunc, encodeSessionId(c.sessionId), c.prefix, message)
+	commitmentValue, err := hashing.KmacPrefixedLength(witness, nil, sha3.NewCShake128, encodeSessionId(c.sessionId), c.prefix, message)
 	if err != nil {
 		return nil, nil, errs.WrapHashing(err, "could not compute commitment")
 	}

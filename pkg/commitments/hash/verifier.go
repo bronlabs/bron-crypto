@@ -2,6 +2,9 @@ package hashcommitments
 
 import (
 	"crypto/subtle"
+	"slices"
+
+	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
@@ -15,9 +18,9 @@ type Verifier struct {
 	prefix    []byte
 }
 
-func NewVerifier(sessionId []byte, seed ...Message) *Verifier {
+func NewVerifier(sessionId []byte, prefix ...Message) *Verifier {
 	return &Verifier{
-		prefix:    encode(seed...),
+		prefix:    slices.Concat(prefix...),
 		sessionId: sessionId,
 	}
 }
@@ -29,10 +32,12 @@ func (v *Verifier) Verify(commitment *Commitment, opening *Opening) error {
 	if err := opening.Validate(); err != nil {
 		return errs.WrapValidation(err, "invalid opening")
 	}
-	localCommitment, err := hashing.Hmac(opening.witness, hashFunc, encodeSessionId(v.sessionId), v.prefix, opening.message)
+
+	localCommitment, err := hashing.KmacPrefixedLength(opening.witness, nil, sha3.NewCShake128, encodeSessionId(v.sessionId), v.prefix, opening.message)
 	if err != nil {
 		return errs.WrapFailed(err, "could not recompute the commitment")
 	}
+
 	if subtle.ConstantTimeCompare(commitment.value, localCommitment) != 1 {
 		return errs.NewVerification("verification failed")
 	}

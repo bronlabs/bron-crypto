@@ -3,6 +3,8 @@ package hashvectorcommitments
 import (
 	"io"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
@@ -40,7 +42,7 @@ func (c *VectorCommitter) Commit(vector Vector) (*VectorCommitment, *Opening, er
 		return nil, nil, errs.WrapRandomSample(err, "reading random bytes")
 	}
 
-	commitmentValue, err := hashing.Hmac(witness, hashFunc, encodeSessionId(c.sessionId), encode(vector))
+	commitmentValue, err := hashing.KmacPrefixedLength(witness, nil, sha3.NewCShake128, encodeSessionId(c.sessionId), encode(vector))
 	if err != nil {
 		return nil, nil, errs.WrapHashing(err, "could not compute commitment")
 	}

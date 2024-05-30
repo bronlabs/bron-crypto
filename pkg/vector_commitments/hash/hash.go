@@ -17,9 +17,6 @@ const Name = "HASH_VECTOR_COMMITMENT"
 var (
 	_ commitments.Opening[Vector] = (*Opening)(nil)
 	_ vc.VectorCommitment         = (*VectorCommitment)(nil)
-
-	// CommitmentHashFunction is used in the `commitments` package for a UC-secure commitment scheme which chains HMACs and enforces presence of a session-id. Size must be CollisionResistanceBytes.
-	hashFunc = base.RandomOracleHashFunction
 )
 
 type Witness []byte

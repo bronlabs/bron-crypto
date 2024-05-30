@@ -18,7 +18,7 @@ func isAllZeros(data []byte) bool {
 }
 
 func hash(data ...[]byte) ([]byte, error) {
-	result, err := hashing.HashChain(base.RandomOracleHashFunction, data...)
+	result, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, data...)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "cannot hash values")
 	}

@@ -26,7 +26,7 @@ func NewCommitter(sessionId []byte, curve curves.Curve, prng io.Reader) (*commit
 		return nil, errs.NewIsNil("prng is nil")
 	}
 
-	hBytes, err := hashing.HashChain(base.RandomOracleHashFunction, nothingUpMySleeve)
+	hBytes, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, sessionId, nothingUpMySleeve)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "failed to hash chain")
 	}

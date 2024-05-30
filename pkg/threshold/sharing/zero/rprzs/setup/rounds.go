@@ -141,7 +141,7 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.Protocol, 
 		} else {
 			orderedAppendedSeeds = slices.Concat(message.Message, myContributedSeed.seed)
 		}
-		finalSeedBytes, err := hashing.HashChain(base.RandomOracleHashFunction, orderedAppendedSeeds)
+		finalSeedBytes, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, orderedAppendedSeeds)
 		if err != nil {
 			return nil, errs.WrapHashing(err, "could not produce final seed for participant with sharing id %d", participantIndex)
 		}

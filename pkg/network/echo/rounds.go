@@ -23,7 +23,7 @@ func (p *Participant) Round1() (network.RoundMessages[types.Protocol, *Round1P2P
 			if participant.Equal(p.IdentityKey()) {
 				continue
 			}
-			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.SessionId, participant.PublicKey().ToAffineCompressed(), p.state.messageToBroadcast)
+			authMessage, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, p.SessionId, participant.PublicKey().ToAffineCompressed(), p.state.messageToBroadcast)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "couldn't produce auth message")
 			}
@@ -59,7 +59,7 @@ func (p *Participant) Round2(initiatorMessage *Round1P2P) (network.RoundMessages
 			if participant.Equal(p.IdentityKey()) {
 				continue
 			}
-			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.SessionId, p.IdentityKey().PublicKey().ToAffineCompressed(), initiatorMessage.Message)
+			authMessage, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, p.SessionId, p.IdentityKey().PublicKey().ToAffineCompressed(), initiatorMessage.Message)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "couldn't recompute auth message")
 			}
@@ -108,7 +108,7 @@ func (p *Participant) Round3(p2pMessages network.RoundMessages[types.Protocol, *
 		// if it is initiator, we need to verify that all messages are the same.
 		// if it is responder, we need to verify that the message is the same as the one we received from the initiator.
 		if !p.IsInitiator() {
-			authMessage, err := hashing.HashChain(base.RandomOracleHashFunction, p.SessionId, sender.PublicKey().ToAffineCompressed(), messageToVerify)
+			authMessage, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, p.SessionId, sender.PublicKey().ToAffineCompressed(), messageToVerify)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "couldn't recompute auth message")
 			}

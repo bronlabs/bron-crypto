@@ -3,6 +3,8 @@ package hashvectorcommitments
 import (
 	"bytes"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
@@ -30,11 +32,12 @@ func (v *VectorVerifier) Verify(vectorCommitment *VectorCommitment, opening *Ope
 		return errs.WrapFailed(err, "opening invalid")
 	}
 
-	localCommitmentValue, err := hashing.Hmac(opening.witness, hashFunc, encodeSessionId(v.sessionId), encode(opening.Message()))
+	localCommitment, err := hashing.KmacPrefixedLength(opening.witness, nil, sha3.NewCShake128, encodeSessionId(v.sessionId), encode(opening.Message()))
 	if err != nil {
-		return errs.WrapHashing(err, "could not compute local commitment")
+		return errs.WrapFailed(err, "could not recompute the commitment")
 	}
-	if !bytes.Equal(localCommitmentValue, vectorCommitment.value) {
+
+	if !bytes.Equal(localCommitment, vectorCommitment.value) {
 		return errs.NewVerification("verification failed")
 	}
 	return nil
