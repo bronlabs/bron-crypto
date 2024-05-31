@@ -159,11 +159,7 @@ func (pk *PublicKey) EncryptWithNonce(plainText *PlainText, nonce *saferith.Nat)
 	if plainText == nil || !saferithUtils.NatIsLess(plainText, pk.N) {
 		return nil, errs.NewValidation("invalid plainText")
 	}
-	nMod, err := pk.GetNResidueParams()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot get N residue params")
-	}
-	if nonce == nil || nonce.EqZero() == 1 || !saferithUtils.NatIsLess(nonce, pk.N) || nonce.IsUnit(nMod.GetModulus()) != 1 {
+	if nonce == nil || nonce.EqZero() == 1 || !saferithUtils.NatIsLess(nonce, pk.N) || nonce.Coprime(pk.N) != 1 {
 		return nil, errs.NewValidation("invalid nonce")
 	}
 
@@ -232,11 +228,6 @@ func (pk *PublicKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText,
 		return nil, nil, errs.NewValidation("invalid plainText")
 	}
 
-	nMod, err := pk.GetNResidueParams()
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot get N residue params")
-	}
-
 	var nonce *saferith.Nat
 	for {
 		nonceBig, err := crand.Int(prng, pk.N.Big())
@@ -244,7 +235,7 @@ func (pk *PublicKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText,
 			return nil, nil, errs.NewRandomSample("cannot sample nonce")
 		}
 		nonce = new(saferith.Nat).SetBig(nonceBig, pk.N.AnnouncedLen())
-		if nonce.EqZero() != 1 && nonce.IsUnit(nMod.GetModulus()) == 1 {
+		if nonce.EqZero() != 1 && nonce.Coprime(pk.N) == 1 {
 			break
 		}
 	}
