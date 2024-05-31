@@ -2,13 +2,15 @@ package modular_test
 
 import (
 	crand "crypto/rand"
+	"math/rand/v2"
+	"testing"
+
+	"github.com/cronokirby/saferith"
+	"github.com/stretchr/testify/require"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/modular"
 	"github.com/copperexchange/krypton-primitives/pkg/base/primes"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
-	"github.com/cronokirby/saferith"
-	"github.com/stretchr/testify/require"
-	"math/rand/v2"
-	"testing"
 )
 
 func Test_PrimePowersResidueParams(t *testing.T) {
@@ -57,7 +59,7 @@ func Test_PrimePowersResidueParamsMultiBase(t *testing.T) {
 	const bits = 512
 	prng := crand.Reader
 
-	p, q, err := primes.GeneratePrimePair(512, prng)
+	p, q, err := primes.GeneratePrimePair(bits, prng)
 	require.NoError(t, err)
 
 	pPower := rand.N[uint](4) + 1

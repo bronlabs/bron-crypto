@@ -2,11 +2,13 @@ package modular_test
 
 import (
 	crand "crypto/rand"
-	"github.com/copperexchange/krypton-primitives/pkg/base/modular"
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
+	"testing"
+
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
-	"testing"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/modular"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 func Test_OddResidueParams(t *testing.T) {

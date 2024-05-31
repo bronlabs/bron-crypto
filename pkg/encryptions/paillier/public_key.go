@@ -4,13 +4,13 @@ import (
 	crand "crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/copperexchange/krypton-primitives/pkg/base/modular"
 	"io"
 	"sync"
 
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/modular"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -185,6 +185,7 @@ func (pk *PublicKey) EncryptWithNonce(plainText *PlainText, nonce *saferith.Nat)
 	}, nil
 }
 
+//nolint:dupl // required to use different variant of residue params
 func (pk *PublicKey) EncryptManyWithNonce(plainTexts []*PlainText, nonces []*saferith.Nat) ([]*CipherText, error) {
 	if plainTexts == nil {
 		return nil, errs.NewValidation("invalid plainText")
@@ -256,6 +257,7 @@ func (pk *PublicKey) Encrypt(plainText *PlainText, prng io.Reader) (*CipherText,
 	return cipherText, nonce, nil
 }
 
+//nolint:dupl // required to use different variant of residue params
 func (pk *PublicKey) EncryptMany(plainTexts []*PlainText, prng io.Reader) ([]*CipherText, []*saferith.Nat, error) {
 	if prng == nil {
 		return nil, nil, errs.NewIsNil("prng")

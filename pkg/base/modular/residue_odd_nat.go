@@ -3,11 +3,11 @@
 package modular
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"github.com/cronokirby/saferith"
 	"golang.org/x/sync/errgroup"
-	"runtime"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var (
@@ -23,7 +23,7 @@ func NewOddResidueParams(oddModulus *saferith.Nat) (ResidueParams, error) {
 		return nil, errs.NewArgument("invalid modulus")
 	}
 
-	params := &oddResidueParamsBn{
+	params := &oddResidueParamsNat{
 		saferithModulus: saferith.ModulusFromNat(oddModulus),
 	}
 
@@ -42,9 +42,7 @@ func (p *oddResidueParamsNat) ModMultiBaseExp(bases []*saferith.Nat, exponent *s
 	results := make([]*saferith.Nat, len(bases))
 
 	var errGroup errgroup.Group
-	errGroup.SetLimit(runtime.NumCPU())
 	for i := range bases {
-		i := i
 		errGroup.Go(func() error {
 			results[i] = new(saferith.Nat).Exp(bases[i], exponent, p.saferithModulus)
 			return nil

@@ -1,10 +1,11 @@
 package modular
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"github.com/cronokirby/saferith"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var (
@@ -117,12 +118,12 @@ func (p *crtResidueParams) ModMultiBaseExp(bases []*saferith.Nat, exponent *safe
 	errGroup.Go(func() error {
 		var err error
 		r1s, err = p.m1.ModMultiBaseExp(bases, eModPhiM1)
-		return err
+		return err //nolint:wrapcheck // checked on errGroup.Wait
 	})
 	errGroup.Go(func() error {
 		var err error
 		r2s, err = p.m2.ModMultiBaseExp(bases, eModPhiM2)
-		return err
+		return err //nolint:wrapcheck // checked on errGroup.Wait
 	})
 	err := errGroup.Wait()
 	if err != nil {

@@ -8,7 +8,10 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/cgo/boring"
 	"github.com/cronokirby/saferith"
 	"golang.org/x/sync/errgroup"
-	"runtime"
+)
+
+var (
+	_ ResidueParams = (*oddResidueParamsBn)(nil)
 )
 
 type oddResidueParamsBn struct {
@@ -88,7 +91,6 @@ func (p *oddResidueParamsBn) ModMultiBaseExp(bases []*saferith.Nat, exponent *sa
 
 	bnResults := make([]*boring.BigNum, len(bnBases))
 	var group errgroup.Group
-	group.SetLimit(runtime.NumCPU())
 	for i, bnBase := range bnBases {
 		i := i
 		group.Go(func() error {
