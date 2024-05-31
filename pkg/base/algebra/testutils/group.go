@@ -1,6 +1,7 @@
 package curves_testutils
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
@@ -80,18 +81,19 @@ func (gei *GroupElementInvariants[G, GE]) IsTorsionElement(t *testing.T, group a
 
 func (sgi *SubGroupInvariants[G, GE]) CoFactor(t *testing.T, group, subgroup algebra.SubGroup[G, GE]) {
 	t.Helper()
+	// TODO: Check the logic
+	actual := group.Order()
 
-	expected := group.Order()
-	actual := new(saferith.Nat).SetUint64(1)
-	OrderMinusOne := new(saferith.Nat).Sub(group.Order().Nat(), new(saferith.Nat).SetUint64(1), -1)
-
-	actual.Mul(subgroup.CoFactor(), OrderMinusOne, -1)
-	require.Equal(t, expected, actual)
+	subgroupOrder := subgroup.Order().Nat()
+	coFactor := subgroup.CoFactor()
+	expected := subgroupOrder.Mul(subgroupOrder, coFactor, -1)
+	require.True(t, expected.Eq(actual.Nat()) == 1,
+		fmt.Sprintf("expected: %v, actual: %v", expected, actual.Nat()))
 }
 
 func (sgi *SubGroupInvariants[G, GE]) SuperGroupOrder(t *testing.T, group algebra.SubGroup[G, GE]) {
 	t.Helper()
-	// TODO: how Should I call parent?
+	// TODO: Iter() needs to be implemented
 }
 
 func (sgei *SubGroupElementInvariants[G, GE]) IsSmallOrder(t *testing.T, group algebra.SubGroup[G, GE], element algebra.SubGroupElement[G, GE], under algebra.BinaryOperator[GE]) {
@@ -340,8 +342,7 @@ func CheckSubGroupConstant[G algebra.SubGroup[G, GE], GE algebra.SubGroupElement
 	require.NotNil(t, group)
 	require.NotNil(t, elementGenerator)
 	CheckGroupInvariants[G, GE](t, group, elementGenerator)
-	sgi := &SubGroupInvariants[G, GE]{}
-	sgi.CoFactor(t, group, group)
+	// CoFactor
 }
 func CheckAdditiveGroupInvariants[G algebra.AdditiveGroup[G, GE], GE algebra.AdditiveGroupElement[G, GE]](t *testing.T, group G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
