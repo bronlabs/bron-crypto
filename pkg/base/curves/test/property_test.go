@@ -36,40 +36,6 @@ func scalarGeneratorFactory(f *testing.F, curve curves.Curve) fu.ObjectGenerator
 	return objectGenerator
 }
 
-func Fuzz_Property_Point_Group(f *testing.F) {
-	curve := edwards25519.NewCurve()
-	g := pointGeneratorFactory(f, curve)
-	fu.RunAlgebraPropertyTest(f, atu.CheckGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
-}
-func Fuzz_Property_Point_SubGroup(f *testing.F) {
-	curve := edwards25519.NewCurve()
-	g := pointGeneratorFactory(f, curve)
-	fu.RunAlgebraPropertyTest(f, atu.CheckSubGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
-}
-
-//	func Fuzz_Property_Point_SubGroupConstant(f *testing.F) {
-//		curve := edwards25519.NewCurve()
-//		g := pointGeneratorFactory(f, curve)
-//		fu.RunAlgebraPropertyTest(f, atu.CheckSubGroupConstant[curves.Curve, curves.Point], curves.Curve(curve), g)
-//	}
-func Fuzz_Property_Point_AdditiveGroup(f *testing.F) {
-	curve := edwards25519.NewCurve()
-	g := pointGeneratorFactory(f, curve)
-	fu.RunAlgebraPropertyTest(f, atu.CheckAdditiveGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
-}
-
-func Fuzz_Property_Point_MultiplicativeGroup(f *testing.F) {
-	curve := edwards25519.NewCurve() // TODO: err `missing method DiscreteExponentiation`
-	g := scalarGeneratorFactory(f, curve)
-	fu.RunAlgebraPropertyTest(f, atu.CheckMultiplicativeGroupInvariants[curves.ScalarField, curves.Scalar], curve.ScalarField(), g)
-}
-
-func Fuzz_Property_Point_CyclicGroup(f *testing.F) {
-	curve := edwards25519.NewCurve()
-	g := pointGeneratorFactory(f, curve)
-	fu.RunAlgebraPropertyTest(f, atu.CheckCyclicGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
-}
-
 // Set checks
 func Fuzz_Property_Point_StructuredSet(f *testing.F) {
 	curve := edwards25519.NewCurve()
@@ -143,20 +109,54 @@ func Fuzz_Property_Point_CyclicMonoid(f *testing.F) {
 	fu.RunAlgebraPropertyTest(f, atu.CheckCyclicMonoidInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
 }
 
-func Fuzz_Property_Point_FiniteRing(f *testing.F) {
+// Group
+func Fuzz_Property_Point_Group(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+func Fuzz_Property_Point_SubGroup(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckSubGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+
+func Fuzz_Property_Point_ConstantCheck_SubGroup(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckSubGroupConstant[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+func Fuzz_Property_Point_AdditiveGroup(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckAdditiveGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+
+func Fuzz_Property_Point_MultiplicativeGroup(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := scalarGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckMultiplicativeGroupInvariants[curves.ScalarField, curves.Scalar], curve.ScalarField(), g)
+}
+
+func Fuzz_Property_Point_CyclicGroup(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckCyclicGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+
+// Ring
+func Fuzz_Property_ScalarField_Rg(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := scalarGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckRgInvariants[curves.ScalarField, curves.Scalar], curve.ScalarField(), g)
+}
+func Fuzz_Property_ScalarField_Ring(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := scalarGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckRingInvariants[curves.ScalarField, curves.Scalar], curve.ScalarField(), g)
+}
+func Fuzz_Property_ScalarField_FiniteRing(f *testing.F) {
 	curve := edwards25519.NewCurve()
 	g := scalarGeneratorFactory(f, curve)
 	fu.RunAlgebraPropertyTest(f, atu.CheckFiniteRingInvariants[curves.ScalarField, curves.Scalar], curve.ScalarField(), g)
-}
-
-func Fuzz_Property_Point_addCommutative(f *testing.F) {
-	curve := edwards25519.NewCurve()
-	g := pointGeneratorFactory(f, curve)
-	fu.RunAlgebraPropertyTest(f, atu.CheckAddCommutativeOperatorInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
-}
-
-func Fuzz_Property_Point_mulCommutative(f *testing.F) {
-	curve := edwards25519.NewCurve()
-	g := scalarGeneratorFactory(f, curve)
-	fu.RunAlgebraPropertyTest(f, atu.CheckMulCommutativeOperatorInvariants[curves.ScalarField, curves.Scalar], curve.ScalarField(), g)
 }

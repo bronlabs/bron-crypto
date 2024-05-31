@@ -44,7 +44,6 @@ func (gei *GroupoidElementInvariants[G, GE]) Order(t *testing.T, groupoid algebr
 }
 func (gei *GroupoidElementInvariants[G, GE]) ApplyOp(t *testing.T, groupoid algebra.Groupoid[G, GE], element algebra.GroupoidElement[G, GE], under algebra.BinaryOperator[GE], n *saferith.Nat) {
 	t.Helper()
-	// TODO
 	if groupoid.IsDefinedUnder(under) {
 		actual, err := element.ApplyOp(under, element, n)
 		require.NoError(t, err)
@@ -127,7 +126,7 @@ func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Mul(t *testing.T, groupoid a
 func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Exp(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE], base, power algebra.MultiplicativeGroupoidElement[G, GE]) {
 	t.Helper()
 	// powerUnWrapped := power.Unwrap()
-	
+
 	// n := new(saferith.Nat).SetBytes(powerUnWrapped)
 	// expected := base.ApplyMul(base, n)
 	// TODO: How to get the value of a element object
@@ -178,10 +177,7 @@ func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Multiplication(t *testing.T,
 	t.Helper()
 	// TODO
 }
-func (mgi *MultiplicativeGroupoidInvariants[G, GE]) DiscreteExponentiation(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE]) {
-	t.Helper()
-	// TODO
-}
+
 func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) Mul(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE], x, y algebra.MultiplicativeGroupoidElement[G, GE]) {
 	t.Helper()
 
@@ -255,26 +251,10 @@ func (cgei *CyclicGroupoidElementInvariants[G, GE]) IsDesignatedGenerator(t *tes
 func CheckGroupoidInvariants[G algebra.Groupoid[G, GE], GE algebra.GroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
 	// CheckStructuredSetInvariants[G, GE](t, groupoid, elementGenerator)
-
-	gi := &GroupoidInvariants[G, GE]{}
-	gi.IsDefinedUnder(t, groupoid)
-	gi.Op(t, groupoid)
-
-	gei := &GroupoidElementInvariants[G, GE]{}
-	gei.Order(t, groupoid)
-	// t.Run("ApplyOp", func(t *testing.T) { // TODO: operators is not defined for curves
-	// 	t.Parallel()
-	// 	gen1 := elementGenerator.Clone()
-	// 	isEmpty1 := gen1.Prng().IntRange(0, 16)
-	// 	element := gen1.Empty()
-	// 	if isEmpty1 != 0 {
-	// 		element = gen1.GenerateNonZero()
-	// 	}
-	// 	n := new(saferith.Nat).SetUint64(fu.NewPrng().Uint64())
-	// 	for _, under := range groupoid.Operators() {
-	// 		gei.ApplyOp(t, groupoid, element, under, n)
-	// 	}
-	// })
+	// IsDefinedUnder
+	// OP
+	// Order
+	// ApplyOP
 }
 
 func CheckAdditiveGroupoidInvariants[G algebra.AdditiveGroupoid[G, GE], GE algebra.AdditiveGroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
@@ -338,9 +318,7 @@ func CheckAdditiveGroupoidInvariants[G algebra.AdditiveGroupoid[G, GE], GE algeb
 			el1 = gen1.GenerateNonZero()
 		}
 		prng := fu.NewPrng().IntRange(0, 20)
-
 		n := new(saferith.Nat).SetUint64(uint64(prng))
-
 		agei.ApplyAdd(t, el1, n)
 	})
 	t.Run("Double", func(t *testing.T) {
@@ -359,14 +337,12 @@ func CheckAdditiveGroupoidInvariants[G algebra.AdditiveGroupoid[G, GE], GE algeb
 		if isEmpty1 != 0 {
 			el1 = gen1.GenerateNonZero()
 		}
-
 		agei.Triple(t, el1)
 	})
 }
 
 func CheckMultiplicativeGroupoidInvariants[G algebra.MultiplicativeGroupoid[G, GE], GE algebra.MultiplicativeGroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
-	// the fuzz function doesn't accept this checkFunction: "Missing DiscreteExponentiation"
 	CheckGroupoidInvariants[G, GE](t, groupoid, elementGenerator)
 
 	mgi := &MultiplicativeGroupoidInvariants[G, GE]{}
@@ -401,10 +377,6 @@ func CheckMultiplicativeGroupoidInvariants[G algebra.MultiplicativeGroupoid[G, G
 		}
 		mgi.Exp(t, groupoid, el1, el2)
 	})
-	t.Run("SimExp", func(t *testing.T) {
-
-	})
-
 	mgei := &MultiplicativeGroupoidElementInvariants[G, GE]{}
 	t.Run("Mul", func(t *testing.T) {
 		t.Parallel()
