@@ -1,6 +1,7 @@
 package paillier
 
 import (
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"io"
 
 	"github.com/cronokirby/saferith"
@@ -16,13 +17,16 @@ type CipherText struct {
 }
 
 func (c *CipherText) Validate(pk *PublicKey) error {
-	nnMod := pk.GetNNModulus()
-	if c == nil || c.C == nil || c.C.EqZero() == 1 || c.C.IsUnit(nnMod) != 1 {
+	if c == nil || c.C == nil || c.C.EqZero() == 1 || c.C.Coprime(pk.N) != 1 {
 		return errs.NewValidation("invalid cipher text")
 	}
 
-	_, _, less := c.C.Cmp(nnMod.Nat())
-	if less != 1 {
+	nnMod, err := pk.GetNNResidueParams()
+	if err != nil {
+		return errs.WrapValidation(err, "invalid pk")
+	}
+
+	if !saferithUtils.NatIsLess(c.C, nnMod.GetModulus().Nat()) {
 		return errs.NewValidation("invalid cipher text")
 	}
 
