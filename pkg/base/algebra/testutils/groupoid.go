@@ -122,14 +122,14 @@ func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Mul(t *testing.T, groupoid a
 	require.Equal(t, mul, groupoid.Mul(x, ys...),
 		"Should get the same result for multiplying ys elements one by one to x")
 }
-
-func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Exp(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE], base, power algebra.MultiplicativeGroupoidElement[G, GE]) {
+func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Exp(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE], base, power GE) {
 	t.Helper()
-	// powerUnWrapped := power.Unwrap()
+	actual := groupoid.Exp(base, power)
 
-	// n := new(saferith.Nat).SetBytes(powerUnWrapped)
-	// expected := base.ApplyMul(base, n)
-	// TODO: How to get the value of a element object
+	powerNat := new(saferith.Nat).SetUint64(power.HashCode())
+	expected := base.Exp(powerNat)
+
+	require.True(t, expected.Equal(actual))
 }
 func (mgi *MultiplicativeGroupoidInvariants[G, GE]) SimExp(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE], bases []algebra.MultiplicativeGroupoidElement[G, GE], exponents []*saferith.Nat) {
 	t.Helper()
