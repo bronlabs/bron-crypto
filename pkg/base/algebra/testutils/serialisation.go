@@ -11,7 +11,7 @@ import (
 
 type NatSerializationInvariants[E algebra.Element] struct{}
 
-type BytesSerializationInvariants[E algebra.Element] struct{}
+type BytesSerializationInvariants[E any] struct{}
 
 func (nsi *NatSerializationInvariants[E]) Uint64(t *testing.T, nat algebra.NatSerialization[E], input E) {
 	t.Helper()
@@ -25,7 +25,6 @@ func (nsi *NatSerializationInvariants[E]) Uint64(t *testing.T, nat algebra.NatSe
 
 func (nsi *NatSerializationInvariants[E]) SetNat(t *testing.T, nat algebra.NatSerialization[E], v *saferith.Nat) {
 	t.Helper()
-	// val1 := nat.SetNat(v)
 	// TODO
 }
 
@@ -56,4 +55,7 @@ func (bsi *BytesSerializationInvariants[E]) SetBytes(t *testing.T, element algeb
 func CheckBytesSerializationInvariants[E algebra.Element](t *testing.T, elementGenerator fu.ObjectGenerator[E]) {
 	t.Helper()
 
+	// Bytes
+	// SetBytes
+	// SetBytesWide
 }
