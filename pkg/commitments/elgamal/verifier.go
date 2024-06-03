@@ -48,15 +48,15 @@ func (v *verifier) Verify(commitment *Commitment, opening *Opening) error {
 		return errs.NewArgument("invalid opening")
 	}
 
-	c1, c2, err := encrypt(v.h, opening.message, opening.witness)
+	c1, c2, err := encrypt(v.h, opening.Message, opening.Witness)
 	if err != nil {
 		return errs.NewFailed("could not run ElGamal encryption")
 	}
 
-	if !commitment.c1.Equal(c1) {
+	if !commitment.C1.Equal(c1) {
 		return errs.NewVerification("verification failed for c1")
 	}
-	if !commitment.c2.Equal(c2) {
+	if !commitment.C2.Equal(c2) {
 		return errs.NewVerification("verification failed for c2")
 	}
 

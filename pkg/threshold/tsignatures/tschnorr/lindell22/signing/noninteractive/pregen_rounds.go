@@ -137,7 +137,7 @@ func (p *PreGenParticipant) Round3(broadcastInput network.RoundMessages[types.Th
 
 		// 1. verify commitment
 		verifier := hashcommitments.NewVerifier(p.SessionId, []byte(commitmentDomainRLabel), theirPid, p.state.bigS)
-		if !bytes.Equal(slices.Concat(theirBigR1.ToAffineCompressed(), theirBigR2.ToAffineCompressed()), theirBigROpening.Message()) {
+		if !bytes.Equal(slices.Concat(theirBigR1.ToAffineCompressed(), theirBigR2.ToAffineCompressed()), theirBigROpening.GetMessage()) {
 			return nil, errs.NewVerification("opening is not tied to the expected value")
 		}
 		if err := verifier.Verify(theirBigRCommitment, theirBigROpening); err != nil {

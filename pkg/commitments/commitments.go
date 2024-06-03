@@ -11,7 +11,7 @@ type (
 )
 
 type Opening[M Message] interface {
-	Message() M
+	GetMessage() M
 }
 
 type HomomorphicCommitmentScheme[M Message, C Commitment, O Opening[M]] interface {

@@ -203,7 +203,7 @@ func DoRound3Prologue(p *Participant, protocol types.ThresholdProtocol, quorum d
 		}
 		// step 3.2: Open(j || i || sid || R_i, c'_ij, w_ij)
 		verifier := hashcommitments.NewVerifier(p.SessionId, bitstring.ToBytes32LE(int32(sharingId)), bitstring.ToBytes32LE(int32(p.SharingId())))
-		if !bytes.Equal(receivedBigR_i.ToAffineCompressed(), receivedP2PMessage.InstanceKeyOpening.Message()) {
+		if !bytes.Equal(receivedBigR_i.ToAffineCompressed(), receivedP2PMessage.InstanceKeyOpening.GetMessage()) {
 			return errs.NewVerification("opening is not tied to the expected value")
 		}
 		if err := verifier.Verify(state.ReceivedInstanceKeyCommitments[sharingId], receivedP2PMessage.InstanceKeyOpening); err != nil {

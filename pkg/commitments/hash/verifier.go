@@ -33,12 +33,12 @@ func (v *Verifier) Verify(commitment *Commitment, opening *Opening) error {
 		return errs.WrapValidation(err, "invalid opening")
 	}
 
-	localCommitment, err := hashing.KmacPrefixedLength(opening.witness, nil, sha3.NewCShake128, encodeSessionId(v.sessionId), v.prefix, opening.message)
+	localCommitment, err := hashing.KmacPrefixedLength(opening.Witness, nil, sha3.NewCShake128, encodeSessionId(v.sessionId), v.prefix, opening.Message)
 	if err != nil {
 		return errs.WrapFailed(err, "could not recompute the commitment")
 	}
 
-	if subtle.ConstantTimeCompare(commitment.value, localCommitment) != 1 {
+	if subtle.ConstantTimeCompare(commitment.Value, localCommitment) != 1 {
 		return errs.NewVerification("verification failed")
 	}
 	return nil

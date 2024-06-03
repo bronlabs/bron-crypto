@@ -45,7 +45,7 @@ func TestSimpleHappyPath(t *testing.T) {
 
 			commitment, opening, err := committer.Commit(message)
 			require.NoError(t, err)
-			require.True(t, message.Equal(opening.Message()))
+			require.True(t, message.Equal(opening.GetMessage()))
 
 			verifier, err := elgamalcommitments.NewVerifier(sessionId, publicKey)
 			require.NoError(t, err)
@@ -121,7 +121,7 @@ func TestHappyPathCombine(t *testing.T) {
 
 			err = verifier.Verify(commitmentAPlusB, openingAPlusB)
 			require.NoError(t, err)
-			require.True(t, openingAPlusB.Message().Equal(messageAPlusB))
+			require.True(t, openingAPlusB.GetMessage().Equal(messageAPlusB))
 		})
 	}
 }
@@ -166,8 +166,8 @@ func TestOpenOnWrongCombine(t *testing.T) {
 			openingAPlusBPrime, err := verifier.CombineOpenings(openingA, openingBPrime)
 			require.NoError(t, err)
 
-			require.True(t, messageAPlusB.Equal(openingAPlusB.Message()))
-			require.True(t, messageAPlusB.Equal(openingAPlusBPrime.Message()))
+			require.True(t, messageAPlusB.Equal(openingAPlusB.GetMessage()))
+			require.True(t, messageAPlusB.Equal(openingAPlusBPrime.GetMessage()))
 
 			err = verifier.Verify(commitmentAPlusB, openingAPlusBPrime)
 			require.Error(t, err)
@@ -213,7 +213,7 @@ func TestHappyScale(t *testing.T) {
 
 			err = verifier.Verify(scaledCommitment, scaledOpening)
 			require.NoError(t, err)
-			require.True(t, scaledOpening.Message().Equal(scaledMessage))
+			require.True(t, scaledOpening.GetMessage().Equal(scaledMessage))
 		})
 	}
 }
@@ -256,8 +256,8 @@ func TestOpenOnWrongScale(t *testing.T) {
 			openingBScaled, err := verifier.ScaleOpening(openingB, scale.Nat())
 			require.NoError(t, err)
 
-			require.True(t, openingAScaled.Message().Equal(scaledMessage))
-			require.True(t, openingBScaled.Message().Equal(scaledMessage))
+			require.True(t, openingAScaled.GetMessage().Equal(scaledMessage))
+			require.True(t, openingBScaled.GetMessage().Equal(scaledMessage))
 
 			err = verifier.Verify(commitmentAScaled, openingBScaled)
 			require.Error(t, err)

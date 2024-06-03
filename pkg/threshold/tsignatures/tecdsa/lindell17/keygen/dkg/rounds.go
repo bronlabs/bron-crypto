@@ -491,7 +491,7 @@ func commit(sessionId []byte, prng io.Reader, bigQPrime, bigQDoublePrime curves.
 
 func openCommitment(sessionId []byte, commitment *hashcommitments.Commitment, opening *hashcommitments.Opening, bigQPrime, bigQDoublePrime curves.Point, pid curves.Point) (err error) {
 	verifier := hashcommitments.NewVerifier(sessionId, pid.ToAffineCompressed())
-	if !bytes.Equal(slices.Concat(bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed()), opening.Message()) {
+	if !bytes.Equal(slices.Concat(bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed()), opening.GetMessage()) {
 		errs.NewVerification("opening is not tied to the expected vector")
 	}
 	return verifier.Verify(commitment, opening)

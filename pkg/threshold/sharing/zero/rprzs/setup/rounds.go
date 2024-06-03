@@ -124,7 +124,7 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.Protocol, 
 		}
 
 		verifier := hashcommitments.NewVerifier(p.SessionId)
-		if !bytes.Equal(message.Message, message.Opening.Message()) {
+		if !bytes.Equal(message.Message, message.Opening.GetMessage()) {
 			return nil, errs.NewValidation("opening is not tied to the expected message")
 		}
 		if err := verifier.Verify(commitment, message.Opening); err != nil {

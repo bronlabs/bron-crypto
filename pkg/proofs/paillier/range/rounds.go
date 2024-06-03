@@ -137,7 +137,7 @@ func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err erro
 	}
 
 	commitVerifier := hashcommitments.NewVerifier(prover.SessionId)
-	if !bytes.Equal(r3out.E.Bytes(), r3out.EsidOpening.Message()) {
+	if !bytes.Equal(r3out.E.Bytes(), r3out.EsidOpening.GetMessage()) {
 		return nil, errs.NewVerification("opening is not tied to the expected message")
 	}
 	if err := commitVerifier.Verify(prover.state.esidCommitment, r3out.EsidOpening); err != nil {

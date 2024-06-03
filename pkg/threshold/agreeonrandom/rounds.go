@@ -87,7 +87,7 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.Protocol, 
 		receivedCommitment, _ := p.state.receivedCommitments.Get(party)
 		// step 3.2: open and check the commitments
 		verifier := hashcommitments.NewVerifier(nil)
-		if !bytes.Equal(message.Opening.Message(), message.Ri.Bytes()) {
+		if !bytes.Equal(message.Opening.GetMessage(), message.Ri.Bytes()) {
 			return nil, errs.NewVerification("opening is not tied to the expected message")
 		}
 		if err := verifier.Verify(receivedCommitment, message.Opening); err != nil {

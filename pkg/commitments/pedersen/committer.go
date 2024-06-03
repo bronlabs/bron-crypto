@@ -58,11 +58,11 @@ func (c *committer) Commit(message Message) (*Commitment, *Opening, error) {
 	rH := c.h.ScalarMul(witness)
 
 	commitment := &Commitment{
-		value: rH.Add(mG),
+		Value: rH.Add(mG),
 	}
 	opening := &Opening{
-		message: message,
-		witness: witness,
+		Message: message,
+		Witness: witness,
 	}
 
 	return commitment, opening, nil

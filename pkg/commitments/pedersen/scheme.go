@@ -18,13 +18,13 @@ func (*homomorphicScheme) CombineCommitments(x *Commitment, ys ...*Commitment) (
 	}
 
 	acc := &Commitment{
-		value: x.value.Clone(),
+		Value: x.Value.Clone(),
 	}
 	for _, y := range ys {
 		if err := y.Validate(); err != nil {
 			return nil, errs.WrapFailed(err, "invalid commitment (2nd operand)")
 		}
-		acc.value = acc.value.Add(y.value)
+		acc.Value = acc.Value.Add(y.Value)
 	}
 
 	return acc, nil
@@ -38,10 +38,10 @@ func (*homomorphicScheme) ScaleCommitment(x *Commitment, n *saferith.Nat) (*Comm
 		return nil, errs.NewIsNil("scalar")
 	}
 
-	curve := x.value.Curve()
+	curve := x.Value.Curve()
 	scalar := curve.ScalarField().Scalar().SetNat(n)
 	c := &Commitment{
-		value: x.value.ScalarMul(scalar),
+		Value: x.Value.ScalarMul(scalar),
 	}
 
 	return c, nil
@@ -53,15 +53,15 @@ func (*homomorphicScheme) CombineOpenings(x *Opening, ys ...*Opening) (*Opening,
 	}
 
 	acc := &Opening{
-		message: x.message.Clone(),
-		witness: x.witness.Clone(),
+		Message: x.Message.Clone(),
+		Witness: x.Witness.Clone(),
 	}
 	for _, y := range ys {
 		if err := y.Validate(); err != nil {
 			return nil, errs.WrapFailed(err, "invalid opening (2nd operand)")
 		}
-		acc.message = acc.message.Add(y.message)
-		acc.witness = acc.witness.Add(y.witness)
+		acc.Message = acc.Message.Add(y.Message)
+		acc.Witness = acc.Witness.Add(y.Witness)
 	}
 
 	return acc, nil
@@ -75,11 +75,11 @@ func (*homomorphicScheme) ScaleOpening(x *Opening, n *saferith.Nat) (*Opening, e
 		return nil, errs.NewIsNil("scalar")
 	}
 
-	curve := x.witness.ScalarField().Curve()
+	curve := x.Witness.ScalarField().Curve()
 	scale := curve.ScalarField().Scalar().SetNat(n)
 	opening := &Opening{
-		message: x.Message().Mul(scale),
-		witness: x.witness.Mul(scale),
+		Message: x.Message.Mul(scale),
+		Witness: x.Witness.Mul(scale),
 	}
 
 	return opening, nil

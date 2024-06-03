@@ -21,24 +21,24 @@ type Witness []byte
 type Message []byte
 
 type Opening struct {
-	message Message
-	witness Witness
+	Message Message
+	Witness Witness
 }
 
 type Commitment struct {
-	value []byte
+	Value []byte
 }
 
-func (o *Opening) Message() Message {
-	return o.message
+func (o *Opening) GetMessage() Message {
+	return o.Message
 }
 
 func (o *Opening) Validate() error {
 	if o == nil {
 		return errs.NewIsNil("receiver")
 	}
-	if len(o.witness) < base.CollisionResistanceBytes {
-		return errs.NewArgument("witness length (%d) < %d", len(o.witness), base.CollisionResistanceBytes)
+	if len(o.Witness) < base.CollisionResistanceBytes {
+		return errs.NewArgument("Witness length (%d) < %d", len(o.Witness), base.CollisionResistanceBytes)
 	}
 
 	return nil
@@ -48,8 +48,8 @@ func (c *Commitment) Validate() error {
 	if c == nil {
 		return errs.NewIsNil("receiver")
 	}
-	if len(c.value) != base.CollisionResistanceBytes {
-		return errs.NewArgument("commitment length (%d) != %d", len(c.value), base.CollisionResistanceBytes)
+	if len(c.Value) != base.CollisionResistanceBytes {
+		return errs.NewArgument("commitment length (%d) != %d", len(c.Value), base.CollisionResistanceBytes)
 	}
 
 	return nil

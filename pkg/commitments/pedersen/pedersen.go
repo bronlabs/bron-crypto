@@ -23,47 +23,47 @@ type Message curves.Scalar
 type Witness curves.Scalar
 
 type Commitment struct {
-	value curves.Point
+	Value curves.Point
 }
 
 type Opening struct {
-	message Message
-	witness Witness
+	Message Message
+	Witness Witness
 }
 
 func (c *Commitment) Validate() error {
 	if c == nil {
 		return errs.NewIsNil("receiver")
 	}
-	if c.value == nil {
+	if c.Value == nil {
 		return errs.NewIsNil("commitment")
 	}
-	if !c.value.IsInPrimeSubGroup() {
+	if !c.Value.IsInPrimeSubGroup() {
 		return errs.NewMembership("commitment is not part of the prime order subgroup")
 	}
 	return nil
 }
 
-func (c *Commitment) Value() (curves.Point, error) {
+func (c *Commitment) GetValue() (curves.Point, error) {
 	if c == nil {
 		return nil, errs.NewIsNil("receiver")
 	}
-	return c.value, nil
+	return c.Value, nil
 }
 
 func (o *Opening) Validate() error {
 	if o == nil {
 		return errs.NewIsNil("receiver")
 	}
-	if o.message == nil {
+	if o.Message == nil {
 		return errs.NewIsNil("message")
 	}
-	if o.witness == nil {
+	if o.Witness == nil {
 		return errs.NewIsNil("witness")
 	}
 	return nil
 }
 
-func (o *Opening) Message() Message {
-	return o.message
+func (o *Opening) GetMessage() Message {
+	return o.Message
 }

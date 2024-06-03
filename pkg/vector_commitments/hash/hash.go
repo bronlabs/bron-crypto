@@ -48,7 +48,7 @@ type VectorCommitment struct {
 	value []byte
 }
 
-func (o *Opening) Message() Vector {
+func (o *Opening) GetMessage() Vector {
 	return o.vector
 }
 

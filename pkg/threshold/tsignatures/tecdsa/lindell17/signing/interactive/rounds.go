@@ -138,7 +138,7 @@ func (sc *SecondaryCosigner) Round4(r3out *Round3OutputP2P, message []byte) (rou
 	}
 
 	verifier := hashcommitments.NewVerifier(sc.SessionId, sc.primaryIdentityKey.PublicKey().ToAffineCompressed())
-	if !bytes.Equal(r3out.BigR1.ToAffineCompressed(), r3out.BigR1Opening.Message()) {
+	if !bytes.Equal(r3out.BigR1.ToAffineCompressed(), r3out.BigR1Opening.GetMessage()) {
 		return nil, errs.NewVerification("opening is not tied to the expected value")
 	}
 	if err := verifier.Verify(sc.state.bigR1Commitment, r3out.BigR1Opening); err != nil {

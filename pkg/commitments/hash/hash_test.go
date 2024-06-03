@@ -13,7 +13,7 @@ var (
 	sessionId = []byte("00000001")
 
 	inputMessages = [][]byte{
-		[]byte("This is a test message"),
+		[]byte("This is a test Message"),
 		[]byte("short msg"),
 		[]byte(`This input field is intentionally longer than the SHA256 block size and the largest
 		rate of all SHA3 variants as defined in NIST FIPS PUB 202 (i.e. r = 1152 bits = 144 bytes for SHA3-224) 

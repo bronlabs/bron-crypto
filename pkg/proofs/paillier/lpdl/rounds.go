@@ -157,7 +157,7 @@ func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err erro
 	}
 
 	verifier := hashcommitments.NewVerifier(prover.sessionId)
-	if !bytes.Equal(slices.Concat(r3out.A.Bytes(), r3out.B.Bytes()), r3out.CDoublePrimeOpening.Message()) {
+	if !bytes.Equal(slices.Concat(r3out.A.Bytes(), r3out.B.Bytes()), r3out.CDoublePrimeOpening.GetMessage()) {
 		return nil, errs.NewVerification("opening is not tied to the expected values")
 	}
 	if err := verifier.Verify(prover.state.cDoublePrimeCommitment, r3out.CDoublePrimeOpening); err != nil {
@@ -195,7 +195,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	}
 
 	commitVerifier := hashcommitments.NewVerifier(verifier.sessionId)
-	if !bytes.Equal(input.BigQHat.ToAffineCompressed(), input.BigQHatOpening.Message()) {
+	if !bytes.Equal(input.BigQHat.ToAffineCompressed(), input.BigQHatOpening.GetMessage()) {
 		return errs.NewVerification("opening is not tied to the expected message")
 	}
 	if err := commitVerifier.Verify(verifier.state.cHat, input.BigQHatOpening); err != nil {

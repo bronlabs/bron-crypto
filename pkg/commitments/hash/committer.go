@@ -35,7 +35,7 @@ func NewCommitter(sessionId []byte, prng io.Reader, prefix ...Message) (*Committ
 
 func (c *Committer) Commit(message Message) (*Commitment, *Opening, error) {
 	if message == nil {
-		return nil, nil, errs.NewIsNil("message")
+		return nil, nil, errs.NewIsNil("Message")
 	}
 
 	witness := make([]byte, base.CollisionResistanceBytes)
@@ -49,11 +49,11 @@ func (c *Committer) Commit(message Message) (*Commitment, *Opening, error) {
 	}
 
 	commitment := &Commitment{
-		value: commitmentValue,
+		Value: commitmentValue,
 	}
 	opening := &Opening{
-		message: message,
-		witness: witness,
+		Message: message,
+		Witness: witness,
 	}
 	return commitment, opening, nil
 }

@@ -32,7 +32,7 @@ func (v *VectorVerifier) Verify(vectorCommitment *VectorCommitment, opening *Ope
 		return errs.WrapFailed(err, "opening invalid")
 	}
 
-	localCommitment, err := hashing.KmacPrefixedLength(opening.witness, nil, sha3.NewCShake128, encodeSessionId(v.sessionId), encode(opening.Message()))
+	localCommitment, err := hashing.KmacPrefixedLength(opening.witness, nil, sha3.NewCShake128, encodeSessionId(v.sessionId), encode(opening.GetMessage()))
 	if err != nil {
 		return errs.WrapFailed(err, "could not recompute the commitment")
 	}

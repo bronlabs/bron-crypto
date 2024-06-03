@@ -71,7 +71,7 @@ func sampleGenerators(sessionId []byte, curve curves.Curve, n uint) ([]curves.Po
 	return generators, nil
 }
 
-func (o *Opening) Message() Vector {
+func (o *Opening) GetMessage() Vector {
 	return o.vector
 }
 

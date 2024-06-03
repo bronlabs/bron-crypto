@@ -63,12 +63,12 @@ func (c *committer) Commit(message Message) (*Commitment, *Opening, error) {
 	}
 
 	commitment := &Commitment{
-		c1: c1,
-		c2: c2,
+		C1: c1,
+		C2: c2,
 	}
 	opening := &Opening{
-		message: message,
-		witness: witness,
+		Message: message,
+		Witness: witness,
 	}
 
 	return commitment, opening, nil

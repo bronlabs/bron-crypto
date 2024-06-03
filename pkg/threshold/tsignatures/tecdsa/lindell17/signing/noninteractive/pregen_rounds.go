@@ -106,7 +106,7 @@ func (p *PreGenParticipant) Round3(input network.RoundMessages[types.ThresholdPr
 		}
 
 		verifier := hashcommitments.NewVerifier(p.sessionId, identity.PublicKey().ToAffineCompressed())
-		if !bytes.Equal(in.BigR.ToAffineCompressed(), in.BigROpening.Message()) {
+		if !bytes.Equal(in.BigR.ToAffineCompressed(), in.BigROpening.GetMessage()) {
 			return nil, errs.NewVerification("opening is not tied to the expected value")
 		}
 		if err := verifier.Verify(theirBigRCommitment, in.BigROpening); err != nil {

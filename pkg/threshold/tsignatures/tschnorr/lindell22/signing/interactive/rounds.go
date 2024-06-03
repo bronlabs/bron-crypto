@@ -122,7 +122,7 @@ func (p *Cosigner[V]) Round3(broadcastInput network.RoundMessages[types.Threshol
 
 		// step 3.2: Open(sid || R_j || j || S)
 		verifier := hashcommitments.NewVerifier(p.SessionId, []byte(commitmentDomainRLabel), theirPid, p.state.bigS)
-		if !bytes.Equal(theirBigR.ToAffineCompressed(), theirBigROpening.Message()) {
+		if !bytes.Equal(theirBigR.ToAffineCompressed(), theirBigROpening.GetMessage()) {
 			return nil, errs.NewVerification("opening is not tied to the expected value")
 		}
 		if err := verifier.Verify(theirBigRCommitment, theirBigROpening); err != nil {

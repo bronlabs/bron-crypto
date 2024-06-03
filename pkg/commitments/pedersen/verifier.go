@@ -46,14 +46,14 @@ func (v *verifier) Verify(commitment *Commitment, opening *Opening) error {
 	}
 
 	curve := v.h.Curve()
-	if curve.Name() != opening.message.ScalarField().Curve().Name() {
+	if curve.Name() != opening.Message.ScalarField().Curve().Name() {
 		return errs.NewArgument("curves do not match")
 	}
 
-	mG := curve.Generator().ScalarMul(opening.message)
-	rH := v.h.ScalarMul(opening.witness)
+	mG := curve.Generator().ScalarMul(opening.Message)
+	rH := v.h.ScalarMul(opening.Witness)
 	c := rH.Add(mG)
-	if !commitment.value.Equal(c) {
+	if !commitment.Value.Equal(c) {
 		return errs.NewVerification("verification failed")
 	}
 
