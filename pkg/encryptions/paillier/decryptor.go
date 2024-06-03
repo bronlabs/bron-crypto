@@ -23,15 +23,32 @@ func (d *Decryptor) Decrypt(cipherText *CipherText) (*PlainText, error) {
 		return nil, errs.WrapFailed(err, "invalid cipher text")
 	}
 
-	mu := d.sk.GetMu()
-	nMod := d.sk.GetNModulus()
-	nnMod := d.sk.GetNNModulus()
-	crt := d.sk.GetCrtNNParams()
+	mu, err := d.sk.GetMu()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot get mu")
+	}
 
-	cToLambda := expCrt(crt, cipherText.C, d.sk.Phi, nnMod)
-	l := d.sk.L(cToLambda)
-	m := new(saferith.Nat).ModMul(l, mu, nMod)
+	nMod, err := d.sk.GetNResidueParams()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot get N residue params")
+	}
 
+	nnMod, err := d.sk.GetNNResidueParams()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot get NN residue params")
+	}
+
+	cToLambda, err := nnMod.ModExp(cipherText.C, d.sk.Phi)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot compute exp")
+	}
+
+	l, err := d.sk.L(cToLambda)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot compute L")
+	}
+
+	m := new(saferith.Nat).ModMul(l, mu, nMod.GetModulus())
 	return m, nil
 }
 

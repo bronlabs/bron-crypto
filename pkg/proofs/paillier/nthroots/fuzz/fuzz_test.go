@@ -10,7 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/nthroot"
+	"github.com/copperexchange/krypton-primitives/pkg/base/modular"
+	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/nthroots"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -26,19 +27,21 @@ func Fuzz_Test(f *testing.F) {
 		qInt, err := crand.Prime(prng, 128)
 		require.NoError(t, err)
 		q := new(saferith.Nat).SetBig(qInt, 128)
-		bigN := new(saferith.Nat).Mul(p, q, 256)
-		bigNSquared := saferith.ModulusFromNat(new(saferith.Nat).Mul(bigN, bigN, 512))
-		protocol, err := nthroot.NewSigmaProtocol(bigN, prng)
+		bigN, err := modular.NewCrtResidueParams(p, 1, q, 1)
+		require.NoError(t, err)
+		bigNSquared, err := modular.NewCrtResidueParams(p, 2, q, 2)
+		require.NoError(t, err)
+		protocol, err := nthroots.NewSigmaProtocol(bigN, bigNSquared, 1, prng)
 		require.NoError(t, err)
 
-		yInt, err := crand.Int(prng, bigN.Big())
+		yInt, err := crand.Int(prng, bigN.GetModulus().Big())
 		require.NoError(t, err)
 		y := new(saferith.Nat).SetBig(yInt, 256)
-		x := new(saferith.Nat).Exp(y, bigN, bigNSquared)
+		x := new(saferith.Nat).Exp(y, bigN.GetModulus().Nat(), bigNSquared.GetModulus())
 
-		appLabel := "NthRoot"
+		appLabel := "NthRoots"
 		proverTranscript := hagrid.NewTranscript(appLabel, nil)
-		prover, err := sigma.NewProver(sid, proverTranscript, protocol, x, y)
+		prover, err := sigma.NewProver(sid, proverTranscript, protocol, []*saferith.Nat{x}, []*saferith.Nat{y})
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
@@ -47,7 +50,7 @@ func Fuzz_Test(f *testing.F) {
 		}
 
 		verifierTranscript := hagrid.NewTranscript(appLabel, nil)
-		verifier, err := sigma.NewVerifier(sid, verifierTranscript, protocol, x, prng)
+		verifier, err := sigma.NewVerifier(sid, verifierTranscript, protocol, []*saferith.Nat{x}, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

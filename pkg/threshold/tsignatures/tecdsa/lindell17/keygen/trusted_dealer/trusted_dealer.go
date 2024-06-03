@@ -102,7 +102,7 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[t
 			if !exists {
 				return nil, errs.NewMissing("shard for sharing id %d is missing", j)
 			}
-			ct, _, err := paillierPublicKey.Encrypt(thisShard.SigningKeyShare.Share.Nat(), prng)
+			ct, _, err := paillierSecretKey.Encrypt(thisShard.SigningKeyShare.Share.Nat(), prng)
 			if err != nil {
 				return nil, errs.WrapFailed(err, "couldn't encrypt share of %d for %d", i, j)
 			}
@@ -112,7 +112,7 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[t
 	}
 
 	if err := validateShards(protocol, shards, ecdsaPrivateKey); err != nil {
-		return nil, errs.WrapValidation(err, "failed to vlidate shards")
+		return nil, errs.WrapValidation(err, "failed to validate shards")
 	}
 
 	return shards, nil
