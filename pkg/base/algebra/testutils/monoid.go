@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	fu "github.com/copperexchange/krypton-primitives/pkg/base/fuzzutils"
+	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,14 +25,38 @@ type CyclicMonoidInvariants[M algebra.CyclicMonoid[M, ME], ME algebra.CyclicMono
 
 type CyclicMonoidElementInvariants[M algebra.CyclicMonoid[M, ME], ME algebra.CyclicMonoidElement[M, ME]] struct{}
 
-func (mi *MonoidInvariants[M, ME]) Identity(t *testing.T, monoid algebra.Monoid[M, ME], under algebra.BinaryOperator[ME]) {
+func (mi *MonoidInvariants[M, ME]) Identity(t *testing.T, monoid algebra.Monoid[M, ME], under algebra.BinaryOperator[ME], element algebra.MonoidElement[M, ME]) {
 	t.Helper()
-	// TODO:
+	output1, err := monoid.Identity(under)
+	require.NoError(t, err)
+	output2, err := monoid.Identity(under)
+	require.NoError(t, err)
+	require.True(t, output1.Equal(output2),
+		"Two calls to Identity shoudl return the same element")
+
+	output3, err := output1.ApplyOp(under, output1, new(saferith.Nat).SetUint64(1))
+	require.NoError(t, err)
+	require.True(t, output3.Equal(output1))
+
+	output4, err := element.ApplyOp(under, output1, new(saferith.Nat).SetUint64(1))
+	require.NoError(t, err)
+	require.True(t, element.Equal(output4))
 }
 
 func (mei *MonoidElementInvariants[M, ME]) IsIdentity(t *testing.T, monoid algebra.Monoid[M, ME], element algebra.MonoidElement[M, ME], under algebra.BinaryOperator[ME]) {
 	t.Helper()
-	// TODO
+	identityElement, err := monoid.Identity(under)
+	output, err := identityElement.IsIdentity(under)
+	require.NoError(t, err)
+	require.True(t, output)
+
+	IsIdentity, err := element.IsIdentity(under)
+	require.NoError(t, err)
+	if IsIdentity == true {
+		require.True(t, element.Equal(identityElement))
+	} else {
+		require.False(t, element.Equal(identityElement))
+	}
 }
 
 func (ami *AdditiveMonoidInvariants[M, ME]) AdditiveIdentity(t *testing.T, monoid algebra.AdditiveMonoid[M, ME], x algebra.AdditiveMonoidElement[M, ME]) {
@@ -82,7 +107,6 @@ func (amei *AdditiveMonoidElementInvariants[M, ME]) IsAdditiveIdentity(t *testin
 }
 
 func (mmi *MultiplicativeMonoidInvariants[M, ME]) MultiplicativeIdentity(t *testing.T, monoid algebra.MultiplicativeMonoid[M, ME], x algebra.MultiplicativeMonoidElement[M, ME]) {
-
 	t.Helper()
 
 	mulIdentity := monoid.MultiplicativeIdentity()
@@ -102,7 +126,7 @@ func (mmi *MultiplicativeMonoidInvariants[M, ME]) MultiplicativeIdentity(t *test
 
 func (mmei *MultiplicativeMonoidELementInvariants[M, ME]) IsMultiplicativeIdentity(t *testing.T, monoid algebra.MultiplicativeMonoid[M, ME], x, y algebra.MultiplicativeMonoidElement[M, ME]) {
 	t.Helper()
-
+	
 	isMulIdentity := x.IsMultiplicativeIdentity()
 
 	if isMulIdentity {

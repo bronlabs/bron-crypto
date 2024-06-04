@@ -36,11 +36,15 @@ func (gi *GroupoidInvariants[G, GE]) Op(t *testing.T, groupoid algebra.Groupoid[
 }
 func (gi *GroupoidInvariants[G, GE]) Order(t *testing.T, groupoid algebra.Groupoid[G, GE]) {
 	t.Helper()
-	// TODO: need Iterator method for curves
+	require.True(t, groupoid.Order().Nat().Eq(groupoid.Order().Nat()) == 1)
 }
-func (gei *GroupoidElementInvariants[G, GE]) Order(t *testing.T, groupoid algebra.Groupoid[G, GE]) {
+func (gei *GroupoidElementInvariants[G, GE]) Order(t *testing.T, element algebra.GroupoidElement[G, GE], under algebra.BinaryOperator[GE]) {
 	t.Helper()
-	// TODO: need Iterator method for curves
+	output1, err := element.Order(under)
+	require.NoError(t, err)
+	output2, err := element.Order(under)
+	require.NoError(t, err)
+	require.True(t, output1.Nat().Eq(output2.Nat()) == 1)
 }
 func (gei *GroupoidElementInvariants[G, GE]) ApplyOp(t *testing.T, groupoid algebra.Groupoid[G, GE], element algebra.GroupoidElement[G, GE], under algebra.BinaryOperator[GE], n *saferith.Nat) {
 	t.Helper()
@@ -234,18 +238,29 @@ func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) Exp(t *testing.T, x 
 	require.True(t, expected.Equal(actual))
 }
 
-func (cgi *CyclicGroupoidInvariants[G, GE]) Generator(t *testing.T, groupoid algebra.CyclicGroupoid[G, GE]) {
+func (cgi *CyclicGroupoidInvariants[G, GE]) Generator(t *testing.T, groupoid algebra.CyclicGroupoid[G, GE], under algebra.BinaryOperator[GE]) {
 	t.Helper()
-	// TODO
+	output1 := groupoid.Generator()
+	output2 := groupoid.Generator()
+	require.True(t, output1.Equal(output2))
+
+	IsDefined := groupoid.IsDefinedUnder(under)
+
+	if IsDefined == true {
+		expectedGen, err := output1.ApplyOp(under, output1, groupoid.Order().Nat())
+		require.NoError(t, err)
+		require.True(t, output1.Equal(expectedGen),
+			"Expected orignal value after operator being called Order of times.")
+	}
 }
 
-func (cgei *CyclicGroupoidElementInvariants[G, GE]) CanGenerateAllElements(t *testing.T, gen algebra.CyclicGroupoidElement[G, GE]) {
+func (cgei *CyclicGroupoidElementInvariants[G, GE]) CanGenerateAllElements(t *testing.T, groupoid algebra.CyclicGroupoid[G, GE]) {
 	t.Helper()
 	// TODO
 }
-func (cgei *CyclicGroupoidElementInvariants[G, GE]) IsDesignatedGenerator(t *testing.T, gen algebra.CyclicGroupoidElement[G, GE]) {
+func (cgei *CyclicGroupoidElementInvariants[G, GE]) IsDesignatedGenerator(t *testing.T, element algebra.CyclicGroupoidElement[G, GE]) {
 	t.Helper()
-	// TODO
+	require.Equal(t, element.IsDesignatedGenerator(), element.IsDesignatedGenerator())
 }
 
 func CheckGroupoidInvariants[G algebra.Groupoid[G, GE], GE algebra.GroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {

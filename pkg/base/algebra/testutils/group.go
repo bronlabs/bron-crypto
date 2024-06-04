@@ -422,12 +422,6 @@ func CheckMultiplicativeGroupInvariants[G algebra.MultiplicativeGroup[G, GE], GE
 		n := new(saferith.Nat).SetUint64(uint64(prng))
 		mgei.ApplyDiv(t, group, gen.Generate(), gen.Generate(), n)
 	})
-
-	// MultiplicativeInverse
-	// IsMultiplicativeInverse
-	// IsTorsionElementUnderMultiplication
-	// Div
-	// ApplyDiv
 }
 
 func CheckCyclicGroupInvariants[G algebra.CyclicGroup[G, GE], GE algebra.CyclicGroupElement[G, GE]](t *testing.T, group G, elementGenerator fu.ObjectGenerator[GE]) {
