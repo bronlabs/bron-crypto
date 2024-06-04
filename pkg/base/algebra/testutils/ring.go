@@ -94,28 +94,13 @@ func CheckRingInvariants[R algebra.Ring[R, E], E algebra.RingElement[R, E]](t *t
 	require.NotNil(t, elementGenerator)
 	CheckRigInvariants[R, E](t, rg, elementGenerator)
 	// CheckAdditiveGroupInvariants[R, E](t, rg, elementGenerator) // TODO: IsTorsionElementUnderAddition not implemented for Scalar
+
 	rgei := &RigElementInvariants[R, E]{}
+	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
+
 	t.Run("MulAdd", func(t *testing.T) {
 		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		gen2 := elementGenerator.Clone()
-		gen3 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		isEmpty2 := gen1.Prng().IntRange(0, 16)
-		isEmpty3 := gen1.Prng().IntRange(0, 16)
-		element1 := gen1.Empty()
-		if isEmpty1 != 0 {
-			element1 = gen1.GenerateNonZero()
-		}
-		element2 := gen2.Empty()
-		if isEmpty2 != 0 {
-			element2 = gen2.GenerateNonZero()
-		}
-		element3 := gen3.Empty()
-		if isEmpty3 != 0 {
-			element3 = gen3.GenerateNonZero()
-		}
-		rgei.MulAdd(t, rg, element1, element2, element3)
+		rgei.MulAdd(t, rg, gen.Generate(), gen.Generate(), gen.Generate())
 	})
 }
 

@@ -150,7 +150,7 @@ func (agi *AdditiveGroupElementInvariants[G, GE]) IsAdditiveInverse(t *testing.T
 	require.True(t, IsInverse, "identity element is Inverse of itself")
 
 }
-func (agi *AdditiveGroupElementInvariants[G, GE]) IsTorsionElementUnderAddition(t *testing.T, random algebra.AdditiveGroupElement[G, GE], group algebra.AdditiveGroup[G, GE]) {
+func (agi *AdditiveGroupElementInvariants[G, GE]) IsTorsionElementUnderAddition(t *testing.T, group algebra.AdditiveGroup[G, GE], random algebra.AdditiveGroupElement[G, GE]) {
 	t.Helper()
 
 	actual := random.IsTorsionElementUnderAddition(group.Order())
@@ -223,20 +223,19 @@ func (mgi *MultiplicativeGroupInvariants[G, GE]) Div(t *testing.T, group algebra
 		"Should get the same result for Multiplying inverse of ys elements by x")
 }
 
-func (mgei *MultiplicativeGroupElementInvariants[G, GE]) IsMultiplicativeInverse(t *testing.T, group algebra.MultiplicativeGroup[G, GE], element algebra.MultiplicativeGroupElement[G, GE], n *saferith.Nat) {
+func (mgei *MultiplicativeGroupElementInvariants[G, GE]) IsMultiplicativeInverse(t *testing.T, group algebra.MultiplicativeGroup[G, GE], element algebra.MultiplicativeGroupElement[G, GE]) {
 	t.Helper()
 
 	identityElement := group.MultiplicativeIdentity()
-	inverseOfIdentity := identityElement.IsMultiplicativeInverse(identityElement)
-	require.True(t, inverseOfIdentity, "Inverse of identity element is itself")
+	inverseOfIdentity, err := identityElement.MultiplicativeInverse()
+	require.NoError(t, err)
+	require.True(t, inverseOfIdentity.IsMultiplicativeIdentity(), "Inverse of identity element is a MultiplicativeInverse")
 
-	inverseOfRandom := group.MultiplicativeIdentity()
-	IsInverseOfRandom := element.IsMultiplicativeInverse(inverseOfRandom)
-	require.True(t, IsInverseOfRandom, "Inverse of inverse of X should be equal to X")
-
-	output := element.ApplyMul(inverseOfRandom, n.SetUint64(uint64(1)))
-	IsInverse := output.IsMultiplicativeInverse(output)
-	require.True(t, IsInverse, "identity element is Inverse of itself")
+	inverse, err1 := element.MultiplicativeInverse()
+	require.NoError(t, err1)
+	n := new(saferith.Nat).SetUint64(1)
+	output := element.ApplyMul(inverse, n)
+	require.True(t, output.IsMultiplicativeIdentity(), "Any element o inverse of the element should be equal to the identity element")
 }
 
 func (mgei *MultiplicativeGroupElementInvariants[G, GE]) IsTorsionElementUnderMultiplication(t *testing.T, group algebra.MultiplicativeGroup[G, GE], element algebra.MultiplicativeGroupElement[G, GE]) {
@@ -260,16 +259,16 @@ func (mgei *MultiplicativeGroupElementInvariants[G, GE]) Div(t *testing.T, group
 func (mgei *MultiplicativeGroupElementInvariants[G, GE]) ApplyDiv(t *testing.T, group algebra.MultiplicativeGroup[G, GE], x, y algebra.MultiplicativeGroupElement[G, GE], n *saferith.Nat) {
 	t.Helper()
 
-	output, err := x.ApplyDiv(y, n)
+	actual, err := x.ApplyDiv(x, n)
 	require.NoError(t, err)
+	result := x
 
-	expected := x
 	for i := 0; int64(i) < n.Big().Int64(); i++ {
-		expected, err = x.Div(y)
+		result, err = result.Div(x)
 		require.NoError(t, err)
 	}
 
-	require.True(t, expected.Equal(output))
+	require.True(t, result.Equal(actual))
 }
 func (mgei *CyclicGroupInvariants[G, GE]) DLog(t *testing.T, group algebra.CyclicGroup[G, GE]) {
 	t.Helper()
@@ -326,6 +325,7 @@ func CheckSubGroupInvariants[G algebra.SubGroup[G, GE], GE algebra.SubGroupEleme
 	require.NotNil(t, group)
 	require.NotNil(t, elementGenerator)
 	CheckGroupInvariants[G, GE](t, group, elementGenerator)
+
 	sgi := &SubGroupInvariants[G, GE]{}
 	t.Run("SuperGroupOrder", func(t *testing.T) {
 		t.Parallel()
@@ -350,93 +350,40 @@ func CheckAdditiveGroupInvariants[G algebra.AdditiveGroup[G, GE], GE algebra.Add
 	require.NotNil(t, elementGenerator)
 	CheckAdditiveMonoidInvariants[G, GE](t, group, elementGenerator)
 	CheckGroupInvariants[G, GE](t, group, elementGenerator)
+
+	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 	agi := &AdditiveGroupElementInvariants[G, GE]{}
 	t.Run("Sub", func(t *testing.T) {
 		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		gen2 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		isEmpty2 := gen2.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		el2 := gen2.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-		if isEmpty2 != 0 {
-			el2 = gen2.GenerateNonZero()
-		}
-		agi.Sub(t, group, el1, el2)
+		agi.Sub(t, group, gen.Generate(), gen.Generate())
 	})
 
 	agei := &AdditiveGroupElementInvariants[G, GE]{}
 	t.Run("AdditivInverse", func(t *testing.T) {
 		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		element := gen1.Empty()
-		if isEmpty1 != 0 {
-			element = gen1.GenerateNonZero()
-		}
-		agei.AdditiveInverse(t, group, element)
+		agei.AdditiveInverse(t, group, gen.Generate())
 	})
 	t.Run("IsAdditiveInverse", func(t *testing.T) {
 		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		element := gen1.Empty()
-		if isEmpty1 != 0 {
-			element = gen1.GenerateNonZero()
-		}
-		agei.IsAdditiveInverse(t, group, element)
+		agei.IsAdditiveInverse(t, group, gen.Generate())
 	})
 	t.Run("IsTorsionElementUnderAddition", func(t *testing.T) {
 		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		element := gen1.Empty()
-		if isEmpty1 != 0 {
-			element = gen1.GenerateNonZero()
-		}
-		agei.IsTorsionElementUnderAddition(t, element, group)
+		agei.IsTorsionElementUnderAddition(t, group, gen.Generate())
 	})
 	t.Run("Neg", func(t *testing.T) {
 		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		element := gen1.Empty()
-		if isEmpty1 != 0 {
-			element = gen1.GenerateNonZero()
-		}
-		agei.Neg(t, element)
+		agei.Neg(t, gen.Generate())
 	})
 	t.Run("Sub", func(t *testing.T) {
 		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		gen2 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		isEmpty2 := gen2.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		el2 := gen2.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-		if isEmpty2 != 0 {
-			el2 = gen2.GenerateNonZero()
-		}
-		agei.Sub(t, group, el1, el2)
+		agei.Sub(t, group, gen.Generate(), gen.Generate())
 	})
 	t.Run("ApplySub", func(t *testing.T) {
 		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-
 		prng := fu.NewPrng().IntRange(0, 20)
 		n := new(saferith.Nat).SetUint64(uint64(prng))
-		agei.ApplySub(t, el1, n)
+		agei.ApplySub(t, gen.Generate(), n)
 	})
 }
 
@@ -447,10 +394,36 @@ func CheckMultiplicativeGroupInvariants[G algebra.MultiplicativeGroup[G, GE], GE
 	CheckMultiplicativeMonoidInvariants[G, GE](t, group, elementGenerator)
 	CheckGroupInvariants[G, GE](t, group, elementGenerator)
 
-	// mgi := &MultiplicativeGroupInvariants[G, GE]{}
-	//Missing method DiscreteExponentiation
-	//Div
-	//MultiplicativeInverse
+	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
+	mgi := &MultiplicativeGroupInvariants[G, GE]{}
+	t.Run("Div", func(t *testing.T) {
+		t.Parallel()
+
+		mgi.Div(t, group, gen.Generate(), gen.Generate())
+	})
+	mgei := &MultiplicativeGroupElementInvariants[G, GE]{}
+
+	mgei.MultiplicativeInverse(t, group, gen.Generate())
+	t.Run("IsMultiplicativeInverse", func(t *testing.T) {
+		t.Parallel()
+		mgei.IsMultiplicativeInverse(t, group, gen.Generate())
+	})
+	// t.Run("IsTorsionElementUnderMultiplication", func(t *testing.T) {
+	// 	t.Parallel()
+	// 	mgei.IsTorsionElementUnderMultiplication(t, group, gen.Generate())
+	// })
+	t.Run("Div", func(t *testing.T) {
+		t.Parallel()
+		mgei.Div(t, group, gen.Generate(), gen.Generate())
+	})
+	t.Run("ApplyDiv", func(t *testing.T) {
+		t.Parallel()
+		prng := fu.NewPrng().IntRange(0, 20)
+		n := new(saferith.Nat).SetUint64(uint64(prng))
+		mgei.ApplyDiv(t, group, gen.Generate(), gen.Generate(), n)
+	})
+
+	// MultiplicativeInverse
 	// IsMultiplicativeInverse
 	// IsTorsionElementUnderMultiplication
 	// Div

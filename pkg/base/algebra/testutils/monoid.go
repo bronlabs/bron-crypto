@@ -140,68 +140,38 @@ func CheckMonoidInvariant[M algebra.Monoid[M, ME], ME algebra.MonoidElement[M, M
 
 func CheckAdditiveMonoidInvariants[M algebra.AdditiveMonoid[M, ME], ME algebra.AdditiveMonoidElement[M, ME]](t *testing.T, monoid M, elementGenerator fu.ObjectGenerator[ME]) {
 	t.Helper()
+	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 
 	CheckMonoidInvariant[M, ME](t, monoid, elementGenerator)
 	ami := &AdditiveMonoidInvariants[M, ME]{}
 	t.Run("AdditiveIdentity", func(t *testing.T) {
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-		ami.AdditiveIdentity(t, monoid, el1)
+		t.Parallel()
+		ami.AdditiveIdentity(t, monoid, gen.Generate())
 	})
 
 	amei := &AdditiveMonoidElementInvariants[M, ME]{}
 	t.Run("IsAdditiveIdentity", func(t *testing.T) {
-		gen1 := elementGenerator.Clone()
-		gen2 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		isEmpty2 := gen2.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		el2 := gen2.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-		if isEmpty2 != 0 {
-			el2 = gen2.GenerateNonZero()
-		}
-		amei.IsAdditiveIdentity(t, monoid, el1, el2)
+		t.Parallel()
+		amei.IsAdditiveIdentity(t, monoid, gen.Generate(), gen.Generate())
 	})
 }
 
 func CheckMultiplicativeMonoidInvariants[M algebra.MultiplicativeMonoid[M, ME], ME algebra.MultiplicativeMonoidElement[M, ME]](t *testing.T, monoid M, elementGenerator fu.ObjectGenerator[ME]) {
 	t.Helper()
+	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 
 	CheckMonoidInvariant[M, ME](t, monoid, elementGenerator)
 
 	mmi := &MultiplicativeMonoidInvariants[M, ME]{}
 	t.Run("MultiplicativeIdentity", func(t *testing.T) {
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-		mmi.MultiplicativeIdentity(t, monoid, el1)
+		t.Parallel()
+		mmi.MultiplicativeIdentity(t, monoid, gen.Generate())
 	})
 
 	mmei := &MultiplicativeMonoidELementInvariants[M, ME]{}
 	t.Run("IsMultiplicativeIdentity", func(t *testing.T) {
-		gen1 := elementGenerator.Clone()
-		gen2 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		isEmpty2 := gen2.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		el2 := gen2.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-		if isEmpty2 != 0 {
-			el2 = gen2.GenerateNonZero()
-		}
-		mmei.IsMultiplicativeIdentity(t, monoid, el1, el2)
+		t.Parallel()
+		mmei.IsMultiplicativeIdentity(t, monoid, gen.Generate(), gen.Generate())
 	})
 }
 
