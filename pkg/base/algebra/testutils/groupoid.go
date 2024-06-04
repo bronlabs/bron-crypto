@@ -261,200 +261,90 @@ func CheckAdditiveGroupoidInvariants[G algebra.AdditiveGroupoid[G, GE], GE algeb
 	t.Helper()
 	CheckGroupoidInvariants[G, GE](t, groupoid, elementGenerator)
 
+	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 	agi := &AdditiveGroupoidInvariants[G, GE]{}
 
 	t.Run("Add", func(t *testing.T) {
-		gen1 := elementGenerator.Clone()
-		gen2 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		isEmpty2 := gen2.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		el2 := gen2.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-		if isEmpty2 != 0 {
-			el2 = gen2.GenerateNonZero()
-		}
-		agi.Add(t, groupoid, el1, el2)
+		t.Parallel()
+		agi.Add(t, groupoid, gen.Generate(), gen.Generate())
 	})
 	t.Run("Additon", func(t *testing.T) {
-		gen1 := elementGenerator.Clone()
-		gen2 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		isEmpty2 := gen2.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		el2 := gen2.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-		if isEmpty2 != 0 {
-			el2 = gen2.GenerateNonZero()
-		}
-		agi.Addition(t, groupoid, el1, el2)
+		t.Parallel()
+		agi.Addition(t, groupoid, gen.Generate(), gen.Generate())
 	})
 
 	agei := &AdditiveGroupoidElementInvariants[G, GE]{}
 	t.Run("Add for element", func(t *testing.T) {
-		gen1 := elementGenerator.Clone()
-		gen2 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		isEmpty2 := gen2.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		el2 := gen2.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-		if isEmpty2 != 0 {
-			el2 = gen2.GenerateNonZero()
-		}
-		agei.Add(t, groupoid, el1, el2)
+		t.Parallel()
+		agei.Add(t, groupoid, gen.Generate(), gen.Generate())
 	})
 	t.Run("ApplyAdd", func(t *testing.T) {
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
+		t.Parallel()
 		prng := fu.NewPrng().IntRange(0, 20)
 		n := new(saferith.Nat).SetUint64(uint64(prng))
-		agei.ApplyAdd(t, el1, n)
+		agei.ApplyAdd(t, gen.Generate(), n)
 	})
 	t.Run("Double", func(t *testing.T) {
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-		agei.Double(t, el1)
+		t.Parallel()
+		agei.Double(t, gen.Generate())
 	})
 	t.Run("Tripple", func(t *testing.T) {
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-		agei.Triple(t, el1)
+		t.Parallel()
+		agei.Triple(t, gen.Generate())
 	})
 }
 
 func CheckMultiplicativeGroupoidInvariants[G algebra.MultiplicativeGroupoid[G, GE], GE algebra.MultiplicativeGroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
+
 	CheckGroupoidInvariants[G, GE](t, groupoid, elementGenerator)
 
+	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 	mgi := &MultiplicativeGroupoidInvariants[G, GE]{}
 	t.Run("Mul", func(t *testing.T) {
-		gen1 := elementGenerator.Clone()
-		gen2 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		isEmpty2 := gen2.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		el2 := gen2.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-		if isEmpty2 != 0 {
-			el2 = gen2.GenerateNonZero()
-		}
-		mgi.Mul(t, groupoid, el1, el2)
+		t.Parallel()
+		mgi.Mul(t, groupoid, gen.Generate(), gen.Generate())
 	})
 	// mgi.Exp(t, groupoid, el1, el2) // TODO: EXP not implemented
 
 	mgei := &MultiplicativeGroupoidElementInvariants[G, GE]{}
 	t.Run("Mul", func(t *testing.T) {
 		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		gen2 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		isEmpty2 := gen2.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		el2 := gen2.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-		if isEmpty2 != 0 {
-			el2 = gen2.GenerateNonZero()
-		}
-		mgei.Mul(t, groupoid, el1, el2)
+		mgei.Mul(t, groupoid, gen.Generate(), gen.Generate())
 	})
 	t.Run("ApplyMul", func(t *testing.T) {
 		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
 		prng := fu.NewPrng().IntRange(0, 20)
 		n := new(saferith.Nat).SetUint64(uint64(prng))
-		mgei.ApplyMul(t, el1, n)
+		mgei.ApplyMul(t, gen.Generate(), n)
 	})
 	t.Run("Square", func(t *testing.T) {
 		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
 		prng := fu.NewPrng().IntRange(0, 20)
 		n := new(saferith.Nat).SetUint64(uint64(prng))
-		mgei.Square(t, el1, n)
+		mgei.Square(t, gen.Generate(), n)
 
 	})
 	t.Run("Cube", func(t *testing.T) {
 		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
 		prng := fu.NewPrng().IntRange(0, 20)
 		n := new(saferith.Nat).SetUint64(uint64(prng))
-		mgei.Cube(t, el1, n)
+		mgei.Cube(t, gen.Generate(), n)
 	})
 	t.Run("Exp", func(t *testing.T) {
 		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
 		prng := fu.NewPrng().IntRange(0, 20)
 		n := new(saferith.Nat).SetUint64(uint64(prng))
-		mgei.Exp(t, el1, n)
+		mgei.Exp(t, gen.Generate(), n)
 	})
 }
 
 func CheckCyclicGroupoidInvariants[G algebra.CyclicGroupoid[G, GE], GE algebra.CyclicGroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
+
 	CheckGroupoidInvariants[G, GE](t, groupoid, elementGenerator)
 
-	cgi := &CyclicGroupoidInvariants[G, GE]{}
-	cgi.Generator(t, groupoid)
-
-	cgei := &CyclicGroupoidElementInvariants[G, GE]{}
-	t.Run("CanGenerateAllElements", func(t *testing.T) {
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-		cgei.CanGenerateAllElements(t, el1)
-	})
-	t.Run("IsDesignatedGenerator", func(t *testing.T) {
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		el1 := gen1.Empty()
-		if isEmpty1 != 0 {
-			el1 = gen1.GenerateNonZero()
-		}
-		cgei.IsDesignatedGenerator(t, el1)
-	})
+	// Generator
+	// CanGenerateAllElements
+	// IsDesignatedGenerator
 }

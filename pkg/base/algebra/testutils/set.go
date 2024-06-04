@@ -21,18 +21,15 @@ type PointedSetInvariants[G algebra.PointedSet[G, GE], GE algebra.PointedSetElem
 
 type PointedSetElementInvariants[G algebra.PointedSet[G, GE], GE algebra.PointedSetElement[G, GE]] struct{}
 
-func (ssi *StructuredSetInvariants[G, GE]) Random(t *testing.T, structuredSet algebra.StructuredSet[G, GE], prng io.Reader) {
+func (ssi *StructuredSetInvariants[G, GE]) Random(t *testing.T, structuredSet algebra.StructuredSet[G, GE], prng io.Reader, n saferith.Nat) {
 	t.Helper()
 
-	el1, err := structuredSet.Random(prng)
-	require.NoError(t, err)
-	require.True(t, structuredSet.Contains(el1),
-		"Random set element must be always contained in the set.")
-
-	el2, err := structuredSet.Random(prng)
-	require.NoError(t, err)
-	require.True(t, structuredSet.Contains(el2),
-		"Random set element must be always contained in the set.")
+	for range n.Big().Int64() {
+		el1, err := structuredSet.Random(prng)
+		require.NoError(t, err)
+		require.True(t, structuredSet.Contains(el1),
+			"Random set element must be always contained in the set.")
+	}
 }
 
 func (ssi *StructuredSetInvariants[G, GE]) Element(t *testing.T, structuredSet algebra.StructuredSet[G, GE]) {
@@ -107,7 +104,11 @@ func (psi *PointedSetElementInvariants[G, GE]) IsBasePoint(t *testing.T, pointed
 
 func CheckStructuredSetInvariants[G algebra.StructuredSet[G, GE], GE algebra.StructuredSetElement[G, GE]](t *testing.T, structuredSet G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
+	require.NotNil(t, elementGenerator)
+	require.NotNil(t, structuredSet)
 	// test_utils.CheckAbstractSetInvariants[G, GE](t, structuredSet)
+	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
+
 	ssi := &StructuredSetInvariants[G, GE]{}
 	prng := fu.NewPrng()
 	// ssi.Random(t, structuredSet, prng) // TODO: Containts not implemented for scalar
@@ -117,19 +118,15 @@ func CheckStructuredSetInvariants[G algebra.StructuredSet[G, GE], GE algebra.Str
 	ssei := &StructuredSetElementInvariants[G, GE]{}
 	t.Run("Unwarp", func(t *testing.T) {
 		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		element := gen1.Empty()
-		if isEmpty1 != 0 {
-			element = gen1.GenerateNonZero()
-		}
-		ssei.Unwrap(t, structuredSet, element, prng)
+		ssei.Unwrap(t, structuredSet, gen.Generate(), prng)
 	})
 	ssei.Clone(t, structuredSet, prng)
 }
 
 func CheckStructuredSetConstant[G algebra.StructuredSet[G, GE], GE algebra.StructuredSetElement[G, GE]](t *testing.T, structuredSet G, elementGenerator fu.ObjectGenerator[GE]) {
-
+	t.Helper()
+	require.NotNil(t, elementGenerator)
+	require.NotNil(t, structuredSet)
 	ssi := &StructuredSetInvariants[G, GE]{}
 	// ssi.Element(t, structuredSet) // TODO: Containts not implemented for scalar
 	ssi.Name(t, structuredSet)
@@ -138,7 +135,8 @@ func CheckStructuredSetConstant[G algebra.StructuredSet[G, GE], GE algebra.Struc
 
 func CheckFiniteStructureInvariants[G algebra.FiniteStructure[G, GE], GE algebra.StructuredSetElement[G, GE]](t *testing.T, finiteStructure G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
-
+	require.NotNil(t, elementGenerator)
+	require.NotNil(t, finiteStructure)
 	CheckStructuredSetInvariants[G, GE](t, finiteStructure, elementGenerator)
 	prng := fu.NewPrng()
 	fsi := &FiniteStructureInvariants[G, GE]{}
@@ -147,6 +145,8 @@ func CheckFiniteStructureInvariants[G algebra.FiniteStructure[G, GE], GE algebra
 
 func CheckPointedSetElementConstant[G algebra.PointedSet[G, GE], GE algebra.PointedSetElement[G, GE]](t *testing.T, pointedSet G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
+	require.NotNil(t, elementGenerator)
+	require.NotNil(t, pointedSet)
 	// TODO: Implement IsBasePoint for the curve
 	CheckStructuredSetInvariants[G, GE](t, pointedSet, elementGenerator)
 	psei := &PointedSetElementInvariants[G, GE]{}

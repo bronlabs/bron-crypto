@@ -71,6 +71,10 @@ func CheckModulInvariants[MT algebra.Module[MT, BRT, MET, ST], BRT algebra.Modul
 }
 func CheckOneDimensionalModuleInvariants[MT algebra.OneDimensionalModule[MT, BRT, MET, ST], BRT algebra.ModuleBaseRing[MT, BRT, MET, ST], MET algebra.ModuleElement[MT, BRT, MET, ST], ST algebra.ModuleScalar[MT, BRT, MET, ST]](t *testing.T, module MT, baseRingType BRT, elementGeneratorMET fu.ObjectGenerator[MET], elementGeneratorST fu.ObjectGenerator[ST]) {
 	t.Helper()
+	require.NotNil(t, elementGeneratorMET)
+	require.NotNil(t, elementGeneratorST)
+	require.NotNil(t, module)
+	require.NotNil(t, baseRingType)
 
 	CheckModulInvariants[MT, BRT, MET, ST](t, module, baseRingType, elementGeneratorMET, elementGeneratorST)
 	// CheckCyclicGroupInvariants[MT, MET](t, module, elementGeneratorMET) //TODO: MET type

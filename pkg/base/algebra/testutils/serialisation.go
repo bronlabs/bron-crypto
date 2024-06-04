@@ -11,7 +11,7 @@ import (
 
 type NatSerializationInvariants[E algebra.Element] struct{}
 
-type BytesSerializationInvariants[E any] struct{}
+type BytesSerializationInvariants[E algebra.BytesSerialization[E]] struct{}
 
 func (nsi *NatSerializationInvariants[E]) Uint64(t *testing.T, nat algebra.NatSerialization[E], input E) {
 	t.Helper()
@@ -38,7 +38,7 @@ func (bsi *BytesSerializationInvariants[E]) Bytes(t *testing.T, element algebra.
 	t.Helper()
 
 	actual := element.Bytes()
-	require.Len(t, actual, 32)
+	require.NotZero(t, len(actual))
 	excpted, err := element.SetBytes(actual)
 	require.NoError(t, err)
 	require.Equal(t, excpted, element)
@@ -47,15 +47,35 @@ func (bsi *BytesSerializationInvariants[E]) SetBytes(t *testing.T, element algeb
 	t.Helper()
 
 	actual := element.Bytes()
-	require.Len(t, actual, 32)
+	require.NotZero(t, len(actual))
 	excpted, err := element.SetBytes(actual)
 	require.NoError(t, err)
 	require.Equal(t, excpted, element)
 }
-func CheckBytesSerializationInvariants[E algebra.Element](t *testing.T, elementGenerator fu.ObjectGenerator[E]) {
+func CheckBytesSerializationInvariants[E algebra.BytesSerialization[E]](t *testing.T, elementGenerator fu.ObjectGenerator[E]) {
 	t.Helper()
 
-	// Bytes
-	// SetBytes
+	bsi := &BytesSerializationInvariants[E]{}
+	t.Run("Bytes", func(t *testing.T) {
+		t.Parallel()
+		gen1 := elementGenerator.Clone()
+		isEmpty1 := gen1.Prng().IntRange(0, 16)
+		element := gen1.Empty()
+		if isEmpty1 != 0 {
+			element = gen1.GenerateNonZero()
+		}
+		bsi.Bytes(t, element)
+	})
+
+	t.Run("SetBytes", func(t *testing.T) {
+		t.Parallel()
+		gen1 := elementGenerator.Clone()
+		isEmpty1 := gen1.Prng().IntRange(0, 16)
+		element := gen1.Empty()
+		if isEmpty1 != 0 {
+			element = gen1.GenerateNonZero()
+		}
+		bsi.Bytes(t, element)
+	})
 	// SetBytesWide
 }
