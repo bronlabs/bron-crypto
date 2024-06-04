@@ -96,10 +96,23 @@ func (fsi *FiniteStructureInvariants[G, GE]) Hash(t *testing.T, finiteStructure 
 			"Set should contain the element")
 	}
 }
-
-func (psi *PointedSetElementInvariants[G, GE]) IsBasePoint(t *testing.T, pointedSet algebra.PointedSet[G, GE]) {
+func (psi *PointedSetInvariants[G, GE]) BasePoint(t *testing.T, pointedSet algebra.PointedSet[G, GE], element algebra.PointedSetElement[G, GE]) {
 	t.Helper()
-	// TODO: IsBasePoint is not Implement for the curve
+	output1 := pointedSet.BasePoint()
+	output2 := pointedSet.BasePoint()
+	require.Equal(t, output1, output2)
+}
+func (psei *PointedSetElementInvariants[G, GE]) IsBasePoint(t *testing.T, pointedSet algebra.PointedSet[G, GE], element algebra.PointedSetElement[G, GE]) {
+	t.Helper()
+	basePoint := pointedSet.BasePoint()
+	require.True(t, basePoint.IsBasePoint(), "Expected to True")
+	isBasePoint := element.IsBasePoint()
+	if isBasePoint == true {
+		require.True(t, element.Equal(basePoint))
+	} else {
+		require.False(t, element.Equal(basePoint))
+
+	}
 }
 
 func CheckStructuredSetInvariants[G algebra.StructuredSet[G, GE], GE algebra.StructuredSetElement[G, GE]](t *testing.T, structuredSet G, elementGenerator fu.ObjectGenerator[GE]) {
@@ -149,6 +162,7 @@ func CheckPointedSetElementConstant[G algebra.PointedSet[G, GE], GE algebra.Poin
 	require.NotNil(t, pointedSet)
 	// TODO: Implement IsBasePoint for the curve
 	CheckStructuredSetInvariants[G, GE](t, pointedSet, elementGenerator)
-	psei := &PointedSetElementInvariants[G, GE]{}
-	psei.IsBasePoint(t, pointedSet)
+
+	// BasePoint  
+	// IsBasePoint
 }
