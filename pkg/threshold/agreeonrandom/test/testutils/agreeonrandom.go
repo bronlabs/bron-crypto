@@ -1,4 +1,4 @@
-package testutils
+package agreeonrandom_testutils
 
 import (
 	"io"

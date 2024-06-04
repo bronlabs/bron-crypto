@@ -54,7 +54,7 @@ func (p *Cosigner[V]) Round1() (broadcastOutput *Round1Broadcast, err error) {
 }
 
 func (p *Cosigner[V]) Round2(broadcastInput network.RoundMessages[types.ThresholdSignatureProtocol, *Round1Broadcast]) (broadcastOutput *Round2Broadcast, err error) {
-	// Validation, unicastInput is delegated to Przs.Round2
+	// Validation
 	if p.Round != 2 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}

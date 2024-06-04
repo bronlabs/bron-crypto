@@ -42,3 +42,34 @@ func RunAlgebraPropertyTest[S algebra.Structure, E algebra.Element](f *testing.F
 		}
 	})
 }
+
+func RunProtocolPropertyTest[S any](
+	f *testing.F,
+	setupGenerator ObjectGenerator[S],
+	happyPath func(*testing.T, S),
+	unhappyPaths ...func(*testing.T, S),
+) {
+	f.Helper()
+
+	f.Add(uint64(0), uint64(0)) // this is to shut off the warning
+
+	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
+		t.Run(fmt.Sprintf("HappyPath"), func(t *testing.T) {
+			t.Helper()
+			happyPathSetupGenerator := setupGenerator.Clone()
+			happyPathSetupGenerator.Reseed(seed1, seed2)
+			happyPathSetup := happyPathSetupGenerator.Generate()
+			happyPath(t, happyPathSetup)
+		})
+
+		for i, unhappyPath := range unhappyPaths {
+			t.Run(fmt.Sprintf("UnhappyPath=%d", i), func(t *testing.T) {
+				t.Helper()
+				unhappyPathSetupGenerator := setupGenerator.Clone()
+				unhappyPathSetupGenerator.Reseed(seed1, seed2)
+				unhappyPathSetup := unhappyPathSetupGenerator.Generate()
+				unhappyPath(t, unhappyPathSetup)
+			})
+		}
+	})
+}

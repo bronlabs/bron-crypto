@@ -8,7 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
-	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
+	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/test/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
 )

@@ -18,7 +18,7 @@ import (
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/fkechacha20"
-	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
+	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/test/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/testutils"

@@ -11,7 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
-	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
+	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/test/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/signing"
 	interactiveSigning "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/signing/interactive"
@@ -142,6 +142,7 @@ func RunInteractiveSign(protocol types.ThresholdSignatureProtocol, identities []
 		return errs.WrapFailed(err, "failed to make interactive cosigners")
 	}
 
+	// TODO@Alberto: replace!
 	r1OutB, r1OutU, err := DoInteractiveSignRound1(participants)
 	if err != nil {
 		return errs.WrapFailed(err, "failed to run round 1 of DKLs24 signing")

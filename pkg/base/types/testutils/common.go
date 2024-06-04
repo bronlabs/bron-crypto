@@ -434,10 +434,14 @@ func (p *Protocol) Flags() ds.Set[types.ValidationFlag] {
 	return p.flags
 }
 
-func MakeProtocol(curve curves.Curve, identities []types.IdentityKey) (types.Protocol, error) {
+func MakeProtocol[K types.IdentityKey](curve curves.Curve, identities []K) (types.Protocol, error) {
+	identityKeys := make([]types.IdentityKey, 0, len(identities))
+	for _, identity := range identities {
+		identityKeys = append(identityKeys, identity)
+	}
 	protocol := &Protocol{
 		curve:        curve,
-		participants: hashset.NewHashableHashSet(identities...),
+		participants: hashset.NewHashableHashSet(identityKeys...),
 	}
 	if err := types.ValidateProtocolConfig(protocol); err != nil {
 		return nil, errs.WrapValidation(err, "protocol")

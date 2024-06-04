@@ -1,4 +1,4 @@
-package agreeonrandom
+package agreeonrandom_test
 
 import (
 	crand "crypto/rand"
@@ -11,6 +11,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
 )
 
@@ -32,16 +33,15 @@ func Test_CanInitialize(t *testing.T) {
 	protocol, err := testutils.MakeProtocol(curve, identities)
 	require.NoError(t, err)
 
-	alice, err := NewParticipant(aliceIdentityKey.(types.AuthKey), protocol, nil, crand.Reader)
+	alice, err := agreeonrandom.NewParticipant(aliceIdentityKey.(types.AuthKey), protocol, nil, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, alice)
-	bob, err := NewParticipant(bobIdentityKey.(types.AuthKey), protocol, nil, crand.Reader)
+	bob, err := agreeonrandom.NewParticipant(bobIdentityKey.(types.AuthKey), protocol, nil, crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, bob)
-	for _, party := range []*Participant{alice, bob} {
+	for _, party := range []*agreeonrandom.Participant{alice, bob} {
 		require.NoError(t, err)
 		require.Equal(t, 1, party.Round)
-		require.NotNil(t, party.state)
 	}
 	aliceExtractedBytes, _ := alice.Transcript.ExtractBytes("test", 32)
 	bobExtractedBytes, _ := bob.Transcript.ExtractBytes("test", 32)

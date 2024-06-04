@@ -65,6 +65,7 @@ func Test_HappyPath(t *testing.T) {
 	require.NotNil(t, secondary)
 	require.NoError(t, err)
 
+	// TODO Alberto: convert into a single line of code
 	r1, err := primary.Round1()
 	require.NoError(t, err)
 
