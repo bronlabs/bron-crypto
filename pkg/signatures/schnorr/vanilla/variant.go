@@ -8,8 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 )
 
-type EdDsaCompatibleVariant struct {
-}
+type EdDsaCompatibleVariant struct{}
 
 var _ schnorr.Variant[EdDsaCompatibleVariant] = (*EdDsaCompatibleVariant)(nil)
 
