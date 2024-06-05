@@ -1,5 +1,13 @@
 SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
-KRYPTON_PRIMITIVES_HOME := $(shell cd ${SELF_DIR} && pwd)
+
+# Determine the OS and set the PWD_CMD variable accordingly
+ifeq ($(OS),Windows_NT)
+    PWD_CMD = cd
+else
+    PWD_CMD = pwd
+endif
+
+KRYPTON_PRIMITIVES_HOME := $(shell cd ${SELF_DIR} && $(PWD_CMD))
 KRYPTON_PRIMITIVES_SCRIPTS_DIR := $(KRYPTON_PRIMITIVES_HOME)/scripts
 KRYPTON_PRIMITIVES_THIRD_PARTY_DIR := $(KRYPTON_PRIMITIVES_HOME)/thirdparty
 
