@@ -1,7 +1,7 @@
 package chacha20
 
 import (
-	"unsafe"
+	"encoding/binary"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/thirdparty/golang/crypto/internal/alias"
@@ -22,12 +22,30 @@ func NewFastErasureCipher(key, nonce []byte) (*FastKeyErasureCipher, error) {
 
 func (c *FastKeyErasureCipher) setKey(key []byte) {
 	key = key[:KeySize]
-	c.Cipher.key = *(*[8]uint32)(unsafe.Pointer(&key[0])) // copy key by array value
+	c.Cipher.key = [8]uint32{
+		binary.LittleEndian.Uint32(key[0:4]),
+		binary.LittleEndian.Uint32(key[4:8]),
+		binary.LittleEndian.Uint32(key[8:12]),
+		binary.LittleEndian.Uint32(key[12:16]),
+		binary.LittleEndian.Uint32(key[16:20]),
+		binary.LittleEndian.Uint32(key[20:24]),
+		binary.LittleEndian.Uint32(key[24:28]),
+		binary.LittleEndian.Uint32(key[28:32]),
+	}
 }
 
 func (c *FastKeyErasureCipher) setTmpKey(key []byte) {
 	key = key[:KeySize]
-	c.Cipher.key = *(*[8]uint32)(unsafe.Pointer(&key[0])) // copy key by array value
+	c.tmpKey = [8]uint32{
+		binary.LittleEndian.Uint32(key[0:4]),
+		binary.LittleEndian.Uint32(key[4:8]),
+		binary.LittleEndian.Uint32(key[8:12]),
+		binary.LittleEndian.Uint32(key[12:16]),
+		binary.LittleEndian.Uint32(key[16:20]),
+		binary.LittleEndian.Uint32(key[20:24]),
+		binary.LittleEndian.Uint32(key[24:28]),
+		binary.LittleEndian.Uint32(key[28:32]),
+	}
 }
 
 // XORKeyStream XORs each byte in the given slice with a byte from the
