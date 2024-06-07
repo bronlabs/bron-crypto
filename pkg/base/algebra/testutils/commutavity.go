@@ -31,8 +31,6 @@ func (aoi *AssociativeOperatorInvariants[S, E]) IsAssociative(t *testing.T, oper
 func CheckAddCommutativeOperatorInvariants[S algebra.AdditiveMonoid[S, E], E algebra.AdditiveMonoidElement[S, E]](t *testing.T, monoid S, elementGenerator fu.ObjectGenerator[E]) {
 	t.Helper()
 
-	t.Helper()
-
 	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 
 	coi := &CommutativeOperatorInvariants[S, E]{}
