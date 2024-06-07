@@ -265,7 +265,7 @@ func (cgei *CyclicGroupoidElementInvariants[G, GE]) IsDesignatedGenerator(t *tes
 
 func CheckGroupoidInvariants[G algebra.Groupoid[G, GE], GE algebra.GroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {
 	t.Helper()
-	// CheckStructuredSetInvariants[G, GE](t, groupoid, elementGenerator)
+	CheckStructuredSetInvariants[G, GE](t, groupoid, elementGenerator)
 	// IsDefinedUnder
 	// OP
 	// Order
@@ -358,7 +358,7 @@ func CheckCyclicGroupoidInvariants[G algebra.CyclicGroupoid[G, GE], GE algebra.C
 	t.Helper()
 
 	CheckGroupoidInvariants[G, GE](t, groupoid, elementGenerator)
-
+	CheckPointedSetElementConstant[G, GE](t, groupoid, elementGenerator)
 	// Generator
 	// CanGenerateAllElements
 	// IsDesignatedGenerator

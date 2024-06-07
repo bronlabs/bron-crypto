@@ -4,6 +4,9 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
+// Also known as nonunital semiring (or a nonunital ring rng without additive inverses), it's a generalisation of a Rig, dropping the
+// requirement that an identity must exist (both for addition and for multiplication).
+
 type Rg[R Structure, E Element] interface {
 	AdditiveGroupoid[R, E]
 	MultiplicativeGroupoid[R, E]
@@ -14,6 +17,8 @@ type RgElement[R Structure, E Element] interface {
 	MultiplicativeGroupoidElement[R, E]
 }
 
+// Also known as semiring (or dioid / double monoid) , it's a generalisation of a Ring, dropping the requirement that each element must
+// have an additive inverse.
 type Rig[R Structure, E Element] interface {
 	Rg[R, E]
 	AdditiveMonoid[R, E]
@@ -27,7 +32,7 @@ type RigElement[R Structure, E Element] interface {
 	RgElement[R, E]
 	AdditiveMonoidElement[R, E]
 	MultiplicativeMonoidElement[R, E]
-	// TODO: Should this be RingElement or RigElement?
+
 	MulAdd(p, q RingElement[R, E]) E
 }
 
@@ -50,8 +55,8 @@ type RingElement[R Structure, E Element] interface {
 type FiniteRing[R Structure, E Element] interface {
 	FiniteStructure[R, E]
 	Ring[R, E]
-	// QuadraticResidue outputs q where p^2 = q (mod S.Order()) and returns an error if q does not exist.
-	QuadraticResidue(p RingElement[R, E]) (E, error)
+	// QuadraticResidue outputs p where p^2 = q (mod S.Order()) and returns an error if q does not exist.
+	QuadraticResidue(q RingElement[R, E]) (E, error)
 }
 
 type FiniteRingElement[R Structure, E Element] interface {
