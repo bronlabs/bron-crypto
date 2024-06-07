@@ -17,6 +17,11 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/testutils"
 )
 
+const (
+	ctTrue  = uint64(1)
+	ctFalse = uint64(0)
+)
+
 func TestScalarBls12381G1Random(t *testing.T) {
 	curve := bls12381.NewG1()
 	sc, err := curve.ScalarField().Random(testutils.TestRng())
@@ -309,7 +314,7 @@ func TestPointBls12381G2Generator(t *testing.T) {
 	sc := bls12381G2.Generator()
 	s, ok := sc.(*bls12381.PointG2)
 	require.True(t, ok)
-	require.Equal(t, 1, s.V.Equal(new(bls12381impl.G2).Generator()))
+	require.Equal(t, ctTrue, s.V.Equal(new(bls12381impl.G2).Generator()))
 }
 
 func TestPointBls12381G2Set(t *testing.T) {
@@ -464,7 +469,7 @@ func TestPointBls12381G1Generator(t *testing.T) {
 	s, ok := sc.(*bls12381.PointG1)
 	g := new(bls12381impl.G1).Generator()
 	require.True(t, ok)
-	require.Equal(t, 1, s.V.Equal(g))
+	require.Equal(t, ctTrue, s.V.Equal(g))
 }
 
 func TestPointBls12381G1Set(t *testing.T) {

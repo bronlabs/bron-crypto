@@ -49,7 +49,7 @@ func doRoundsWithMockR1Output(t *testing.T, curve curves.Curve, identities []typ
 
 func testHappyPath(t *testing.T, curve curves.Curve, n int) []byte {
 	t.Helper()
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, sha3.New256)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, sha3.New256)
 	require.NoError(t, err)
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
@@ -75,7 +75,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) []byte {
 
 func testWithMockR1Output(t *testing.T, curve curves.Curve, n int) []byte {
 	t.Helper()
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, sha3.New256)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, sha3.New256)
 	require.NoError(t, err)
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)

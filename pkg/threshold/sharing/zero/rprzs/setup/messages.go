@@ -4,22 +4,23 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
 )
 
 var _ network.Message[types.Protocol] = (*Round1P2P)(nil)
 var _ network.Message[types.Protocol] = (*Round2P2P)(nil)
 
 type Round1P2P struct {
-	Commitment commitments.Commitment
+	Commitment *hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
 
 type Round2P2P struct {
 	Message []byte
-	Witness commitments.Witness
+	Opening *hashcommitments.Opening
 
 	_ ds.Incomparable
 }
@@ -35,8 +36,11 @@ func (r2p2p *Round2P2P) Validate(protocol types.Protocol) error {
 	if len(r2p2p.Message) == 0 {
 		return errs.NewIsNil("message")
 	}
-	if err := r2p2p.Witness.Validate(); err != nil {
-		return errs.NewValidation("invalid witness")
+	if len(r2p2p.Message) != rprzs.LambdaBytes {
+		return errs.NewLength("message")
+	}
+	if err := r2p2p.Opening.Validate(); err != nil {
+		return errs.NewValidation("invalid opening")
 	}
 	return nil
 }

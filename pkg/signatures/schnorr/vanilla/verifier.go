@@ -26,7 +26,7 @@ type verifier struct {
 var _ schnorr.VerifierBuilder[EdDsaCompatibleVariant] = (*verifierBuilder)(nil)
 var _ schnorr.Verifier[EdDsaCompatibleVariant] = (*verifier)(nil)
 
-func (v *verifierBuilder) WithSignatureProtocol(suite types.SigningSuite) schnorr.VerifierBuilder[EdDsaCompatibleVariant] {
+func (v *verifierBuilder) WithSigningSuite(suite types.SigningSuite) schnorr.VerifierBuilder[EdDsaCompatibleVariant] {
 	v.suite = suite
 	return v
 }

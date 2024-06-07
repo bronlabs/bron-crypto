@@ -19,7 +19,7 @@ import (
 func pregenHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n, tau int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)

@@ -2,10 +2,12 @@ package eddsa
 
 import (
 	"crypto/ed25519"
-	"slices"
+	"crypto/sha512"
+	"reflect"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
@@ -29,14 +31,21 @@ func Verify(publicKey *PublicKey, message []byte, signature *Signature) error {
 	if !publicKey.A.IsInPrimeSubGroup() {
 		return errs.NewValidation("Public Key not in the prime subgroup")
 	}
-	serializedSignature := slices.Concat(signature.R.ToAffineCompressed(), bitstring.ReverseBytes(signature.S.Bytes()))
-	serializedPublicKey, err := publicKey.MarshalBinary()
+	serialisedSignature, err := signature.MarshalBinary()
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not serialise signature to binary")
 	}
-	if ok := ed25519.Verify(serializedPublicKey, message, serializedSignature); !ok {
+	serializedPublicKey, err := publicKey.MarshalBinary()
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not serialise public key to binary")
+	}
+	if ok := ed25519.Verify(serializedPublicKey, message, serialisedSignature); !ok {
 		return errs.NewVerification("could not verify schnorr signature using ed25519 verifier")
 	}
 
 	return nil
+}
+
+func IsEd25519Compliant(suite types.SigningSuite) bool {
+	return (suite.Curve().Name() == edwards25519.Name) && (reflect.ValueOf(suite.Hash()).Pointer() == reflect.ValueOf(sha512.New).Pointer())
 }

@@ -270,7 +270,7 @@ func (f *Fp6) Square(arg *Fp6) *Fp6 {
 }
 
 // Invert computes this element's field inversion.
-func (f *Fp6) Invert(arg *Fp6) (el *Fp6, wasInverted int) {
+func (f *Fp6) Invert(arg *Fp6) (el *Fp6, wasInverted uint64) {
 	var a, b, c, s, t Fp2
 
 	// a' = a^2 - (b * c).mul_by_nonresidue()
@@ -322,23 +322,23 @@ func (f *Fp6) Neg(arg *Fp6) *Fp6 {
 }
 
 // IsZero returns 1 if fp6 == 0, 0 otherwise.
-func (f *Fp6) IsZero() int {
+func (f *Fp6) IsZero() uint64 {
 	return f.A.IsZero() & f.B.IsZero() & f.C.IsZero()
 }
 
 // IsOne returns 1 if fp6 == 1, 0 otherwise.
-func (f *Fp6) IsOne() int {
+func (f *Fp6) IsOne() uint64 {
 	return f.A.IsOne() & f.B.IsZero() & f.B.IsZero()
 }
 
 // Equal returns 1 if fp6 == rhs, 0 otherwise.
-func (f *Fp6) Equal(rhs *Fp6) int {
+func (f *Fp6) Equal(rhs *Fp6) uint64 {
 	return f.A.Equal(&rhs.A) & f.B.Equal(&rhs.B) & f.C.Equal(&rhs.C)
 }
 
 // CMove performs conditional select.
 // selects arg1 if choice == 0 and arg2 if choice == 1.
-func (f *Fp6) CMove(arg1, arg2 *Fp6, choice int) *Fp6 {
+func (f *Fp6) CMove(arg1, arg2 *Fp6, choice uint64) *Fp6 {
 	f.A.CMove(&arg1.A, &arg2.A, choice)
 	f.B.CMove(&arg1.B, &arg2.B, choice)
 	f.C.CMove(&arg1.C, &arg2.C, choice)

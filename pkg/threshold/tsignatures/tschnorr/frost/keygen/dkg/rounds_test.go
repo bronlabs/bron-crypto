@@ -25,7 +25,7 @@ import (
 func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
@@ -71,7 +71,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)

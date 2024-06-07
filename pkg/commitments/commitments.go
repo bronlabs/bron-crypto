@@ -1,59 +1,41 @@
 package commitments
 
 import (
-	"io"
-
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/cronokirby/saferith"
 )
 
 type (
-	Commitment []byte
-	Witness    []byte
+	Name       string
+	Message    any
+	Commitment any
 )
 
-func (c Commitment) Validate() error {
-	if len(c) != base.CollisionResistanceBytes {
-		return errs.NewArgument("commitment length (%d) != %d", len(c), base.CollisionResistanceBytes)
-	}
-	return nil
+type Opening[M Message] interface {
+	GetMessage() M
 }
 
-func (w Witness) Validate() error {
-	if len(w) != base.CollisionResistanceBytes {
-		return errs.NewArgument("witness length (%d) != %d", len(w), base.CollisionResistanceBytes)
-	}
-	return nil
+type HomomorphicCommitmentScheme[M Message, C Commitment, O Opening[M]] interface {
+	CombineCommitments(x C, ys ...C) (C, error)
+	ScaleCommitment(x C, n *saferith.Nat) (C, error)
+
+	CombineOpenings(x O, ys ...O) (O, error)
+	ScaleOpening(x O, n *saferith.Nat) (O, error)
 }
 
-func Commit(sessionId []byte, prng io.Reader, messages ...[]byte) (Commitment, Witness, error) {
-	if prng == nil {
-		return nil, nil, errs.NewIsNil("prng is nil")
-	}
-	if len(sessionId) == 0 {
-		return nil, nil, errs.NewArgument("sessionId is empty/nil")
-	}
-	if len(messages) == 0 {
-		return nil, nil, errs.NewArgument("no commit message")
-	}
-
-	return commitInternal(prng, encodeWithSessionId(sessionId, messages...)...)
+type Committer[M Message, C Commitment, O Opening[M]] interface {
+	Commit(message M) (C, O, error)
 }
 
-func Open(sessionId []byte, commitment Commitment, witness Witness, messages ...[]byte) error {
-	return openInternal(commitment, witness, encodeWithSessionId(sessionId, messages...)...)
+type HomomorphicCommitter[M Message, C Commitment, O Opening[M]] interface {
+	Committer[M, C, O]
+	HomomorphicCommitmentScheme[M, C, O]
 }
 
-func CommitWithoutSession(prng io.Reader, messages ...[]byte) (Commitment, Witness, error) {
-	if prng == nil {
-		return nil, nil, errs.NewIsNil("prng is nil")
-	}
-	if len(messages) == 0 {
-		return nil, nil, errs.NewArgument("no commit message")
-	}
-	return commitInternal(prng, encode(messages...)...)
+type Verifier[M Message, C Commitment, O Opening[M]] interface {
+	Verify(commitment C, opening O) error
 }
 
-func OpenWithoutSession(commitment Commitment, witness Witness, messages ...[]byte) error {
-	return openInternal(commitment, witness, encode(messages...)...)
+type HomomorphicVerifier[M Message, C Commitment, O Opening[M]] interface {
+	Verifier[M, C, O]
+	HomomorphicCommitmentScheme[M, C, O]
 }

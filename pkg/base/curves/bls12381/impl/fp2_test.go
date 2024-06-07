@@ -103,7 +103,7 @@ func TestFp2Mul(t *testing.T) {
 		},
 	}
 
-	require.Equal(t, 1, c.Equal(new(Fp2).Mul(&a, &b)))
+	require.Equal(t, ctTrue, c.Equal(new(Fp2).Mul(&a, &b)))
 }
 
 func TestFp2Add(t *testing.T) {
@@ -162,7 +162,7 @@ func TestFp2Add(t *testing.T) {
 		},
 	}
 
-	require.Equal(t, 1, c.Equal(new(Fp2).Add(&a, &b)))
+	require.Equal(t, ctTrue, c.Equal(new(Fp2).Add(&a, &b)))
 }
 
 func TestFp2Sub(t *testing.T) {
@@ -221,7 +221,7 @@ func TestFp2Sub(t *testing.T) {
 		},
 	}
 
-	require.Equal(t, 1, c.Equal(new(Fp2).Sub(&a, &b)))
+	require.Equal(t, ctTrue, c.Equal(new(Fp2).Sub(&a, &b)))
 }
 
 func TestFp2Neg(t *testing.T) {
@@ -262,7 +262,7 @@ func TestFp2Neg(t *testing.T) {
 		},
 	}
 
-	require.Equal(t, 1, b.Equal(new(Fp2).Neg(&a)))
+	require.Equal(t, ctTrue, b.Equal(new(Fp2).Neg(&a)))
 }
 
 func TestFp2Sqrt(t *testing.T) {
@@ -286,8 +286,8 @@ func TestFp2Sqrt(t *testing.T) {
 	}
 
 	asq, wasSquare := (&Fp2{}).Sqrt(&a)
-	require.Equal(t, 1, wasSquare)
-	require.Equal(t, 1, a.Equal(asq.Square(asq)))
+	require.Equal(t, ctTrue, wasSquare)
+	require.Equal(t, ctTrue, a.Equal(asq.Square(asq)))
 
 	b := Fp2{
 		A: Fp{
@@ -301,8 +301,8 @@ func TestFp2Sqrt(t *testing.T) {
 		B: Fp{},
 	}
 	bsq, wasSquare := (&Fp2{}).Sqrt(&b)
-	require.Equal(t, 1, wasSquare)
-	require.Equal(t, 1, b.Equal(bsq.Square(bsq)))
+	require.Equal(t, ctTrue, wasSquare)
+	require.Equal(t, ctTrue, b.Equal(bsq.Square(bsq)))
 
 	c := Fp2{
 		A: Fp{
@@ -316,8 +316,8 @@ func TestFp2Sqrt(t *testing.T) {
 		B: Fp{},
 	}
 	csq, wasSquare := (&Fp2{}).Sqrt(&c)
-	require.Equal(t, 1, wasSquare)
-	require.Equal(t, 1, c.Equal(csq.Square(csq)))
+	require.Equal(t, ctTrue, wasSquare)
+	require.Equal(t, ctTrue, c.Equal(csq.Square(csq)))
 
 	d := Fp2{
 		A: Fp{
@@ -338,10 +338,10 @@ func TestFp2Sqrt(t *testing.T) {
 		},
 	}
 	_, wasSquare = (&Fp2{}).Sqrt(&d)
-	require.Equal(t, 0, wasSquare)
+	require.Equal(t, ctFalse, wasSquare)
 
 	_, wasSquare = (&Fp2{}).Sqrt(&Fp2{})
-	require.Equal(t, 1, wasSquare)
+	require.Equal(t, ctTrue, wasSquare)
 }
 
 func TestFp2Invert(t *testing.T) {
@@ -384,16 +384,16 @@ func TestFp2Invert(t *testing.T) {
 	}
 
 	ainv, wasInverted := (&Fp2{}).Invert(&a)
-	require.Equal(t, 1, wasInverted)
-	require.Equal(t, 1, b.Equal(ainv))
+	require.Equal(t, ctTrue, wasInverted)
+	require.Equal(t, ctTrue, b.Equal(ainv))
 
 	_, wasInverted = (&Fp2{}).Invert(&Fp2{})
-	require.Equal(t, 0, wasInverted)
+	require.Equal(t, ctFalse, wasInverted)
 }
 
 func TestFp2LexicographicallyLargest(t *testing.T) {
-	require.Equal(t, 0, new(Fp2).SetZero().LexicographicallyLargest())
-	require.Equal(t, 0, new(Fp2).SetOne().LexicographicallyLargest())
+	require.Equal(t, ctFalse, new(Fp2).SetZero().LexicographicallyLargest())
+	require.Equal(t, ctFalse, new(Fp2).SetOne().LexicographicallyLargest())
 
 	a := Fp2{
 		A: Fp{
@@ -414,11 +414,11 @@ func TestFp2LexicographicallyLargest(t *testing.T) {
 		},
 	}
 
-	require.Equal(t, 1, a.LexicographicallyLargest())
+	require.Equal(t, ctTrue, a.LexicographicallyLargest())
 	aNeg := new(Fp2).Neg(&a)
-	require.Equal(t, 0, aNeg.LexicographicallyLargest())
+	require.Equal(t, ctFalse, aNeg.LexicographicallyLargest())
 	a.B.SetZero()
-	require.Equal(t, 0, a.LexicographicallyLargest())
+	require.Equal(t, ctFalse, a.LexicographicallyLargest())
 	aNeg.B.SetZero()
-	require.Equal(t, 1, aNeg.LexicographicallyLargest())
+	require.Equal(t, ctTrue, aNeg.LexicographicallyLargest())
 }

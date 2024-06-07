@@ -9,7 +9,7 @@ import (
 const (
 	// Commputational security parameter (a.k.a. lambda_c).
 	Lambda      = base.ComputationalSecurity
-	LambdaBytes = base.ComputationalSecurityBytes
+	LambdaBytes = Lambda / 8
 
 	// Statistical security parameter (a.k.a. lambda_s).
 	S      = base.ComputationalSecurity

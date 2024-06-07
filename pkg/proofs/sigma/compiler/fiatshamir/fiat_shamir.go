@@ -3,6 +3,7 @@ package fiatshamir
 import (
 	"fmt"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
@@ -35,6 +36,13 @@ type fs[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z 
 func NewCompiler[
 	X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response,
 ](sigmaProtocol sigma.Protocol[X, W, A, S, Z]) (compiler.NICompiler[X, W], error) {
+	if sigmaProtocol == nil {
+		return nil, errs.NewIsNil("sigmaProtocol")
+	}
+	if s := sigmaProtocol.SoundnessError(); s < base.ComputationalSecurity {
+		return nil, errs.NewArgument("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
+			s, base.ComputationalSecurity)
+	}
 	return &fs[X, W, A, S, Z]{
 		sigmaProtocol: sigmaProtocol,
 	}, nil

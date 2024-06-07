@@ -1,14 +1,16 @@
 package paillierrange
 
 import (
+	"bytes"
 	crand "crypto/rand"
 	"io"
 	"math/big"
 
 	"github.com/cronokirby/saferith"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 )
 
@@ -26,15 +28,15 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 	}
 
 	// 1.iv. compute commitment to (e, sessionId) and send to P
-	esidCommitment, esidWitness, err := commitments.Commit(
-		verifier.SessionId,
-		verifier.Prng,
-		verifier.state.e.Bytes(),
-	)
+	committer, err := hashcommitments.NewCommitter(verifier.SessionId, verifier.Prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot instantiate committer")
+	}
+	esidCommitment, esidOpening, err := committer.Commit(verifier.state.e.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to e, sessionId")
 	}
-	verifier.state.esidWitness = esidWitness
+	verifier.state.esidOpening = esidOpening
 
 	verifier.Round += 2
 	return &Round1Output{
@@ -79,19 +81,21 @@ func (prover *Prover) Round2(r1out *Round1Output) (r2out *Round2Output, err erro
 	}
 
 	// 2.v. computes c1i = Enc(w1i, r1i) and c2i = Enc(w2i, r2i)
-	prover.state.r1 = make([]*saferith.Nat, prover.t)
-	prover.state.r2 = make([]*saferith.Nat, prover.t)
-	c1 := make([]*paillier.CipherText, prover.t)
-	c2 := make([]*paillier.CipherText, prover.t)
-	for i := 0; i < prover.t; i++ {
-		c1[i], prover.state.r1[i], err = prover.sk.Encrypt(prover.state.w1[i], prover.Prng)
-		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot encrypt")
-		}
-		c2[i], prover.state.r2[i], err = prover.sk.Encrypt(prover.state.w2[i], prover.Prng)
-		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot encrypt")
-		}
+	var c1 []*paillier.CipherText
+	var c2 []*paillier.CipherText
+	var errGroup errgroup.Group
+
+	errGroup.Go(func() error {
+		c1, prover.state.r1, err = prover.sk.EncryptMany(prover.state.w1, prover.Prng)
+		return err //nolint:wrapcheck // checked on errGroup.Wait
+	})
+	errGroup.Go(func() error {
+		c2, prover.state.r2, err = prover.sk.EncryptMany(prover.state.w2, prover.Prng)
+		return err //nolint:wrapcheck // checked on errGroup.Wait
+	})
+	err = errGroup.Wait()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot encrypt")
 	}
 
 	// 2.vi. send c1i, c2i to V
@@ -119,7 +123,7 @@ func (verifier *Verifier) Round3(r2out *Round2Output) (r3out *Round3Output, err 
 	// 3. decommit (e, sessionId), reveal (e, sessionId) to P
 	return &Round3Output{
 		E:           verifier.state.e,
-		EsidWitness: verifier.state.esidWitness,
+		EsidOpening: verifier.state.esidOpening,
 	}, nil
 }
 
@@ -132,9 +136,17 @@ func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err erro
 		return nil, errs.WrapValidation(err, "invalid round 4 input")
 	}
 
-	err = commitments.Open(prover.SessionId, prover.state.esidCommitment, r3out.EsidWitness, r3out.E.Bytes())
-	if err != nil {
+	commitVerifier := hashcommitments.NewVerifier(prover.SessionId)
+	if !bytes.Equal(r3out.E.Bytes(), r3out.EsidOpening.GetMessage()) {
+		return nil, errs.NewVerification("opening is not tied to the expected message")
+	}
+	if err := commitVerifier.Verify(prover.state.esidCommitment, r3out.EsidOpening); err != nil {
 		return nil, errs.WrapFailed(err, "cannot open commitment")
+	}
+
+	nMod, err := prover.sk.GetNResidueParams()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot get R residue params")
 	}
 
 	// 4. for every i
@@ -159,14 +171,14 @@ func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err erro
 				zetOne[i] = &ZetOne{
 					J:        1,
 					XPlusWj:  xPlusW1,
-					RTimesRj: new(saferith.Nat).ModMul(prover.r, prover.state.r1[i], prover.sk.GetNModulus()),
+					RTimesRj: new(saferith.Nat).ModMul(prover.r, prover.state.r1[i], nMod.GetModulus()),
 				}
 			case prover.inSecondThird(xPlusW2):
 				// 4.ii. if (x + w2) in l-2l range set zi = (2, x + w2i, r * r2i mod N)
 				zetOne[i] = &ZetOne{
 					J:        2,
 					XPlusWj:  xPlusW2,
-					RTimesRj: new(saferith.Nat).ModMul(prover.r, prover.state.r2[i], prover.sk.GetNModulus()),
+					RTimesRj: new(saferith.Nat).ModMul(prover.r, prover.state.r2[i], nMod.GetModulus()),
 				}
 			default:
 				return nil, errs.NewFailed("something went wrong")
@@ -191,59 +203,65 @@ func (verifier *Verifier) Round5(r4out *Round4Output) (err error) {
 		return errs.WrapValidation(err, "invalid round 5 input")
 	}
 
+	rs := make([]*saferith.Nat, 0)
+	ps := make([]*saferith.Nat, 0)
+	cs := make([]*saferith.Nat, 0)
+
 	// 5. Parse zi
 	for i := 0; i < verifier.t; i++ {
 		if verifier.state.e.Bit(i) == 0 {
-			// 5.i. if ei == 0 check c1i == Enc(w1i, r1i) and c2i == Enc(w2i, r2i)
-			// and one of w1i, w2i is in l-2l range while other is in 0-l range
 			z := r4out.ZetZero[i]
-			c1, err := verifier.pk.EncryptWithNonce(z.W1, z.R1)
-			if err != nil {
-				return errs.WrapFailed(err, "cannot encrypt")
-			}
+			ps = append(ps, z.W1)
+			rs = append(rs, z.R1)
+			cs = append(cs, verifier.state.c1[i].C)
+			ps = append(ps, z.W2)
+			rs = append(rs, z.R2)
+			cs = append(cs, verifier.state.c2[i].C)
 
-			if c1.C.Eq(verifier.state.c1[i].C) == 0 {
-				return errs.NewVerification("verification failed")
-			}
-			c2, err := verifier.pk.EncryptWithNonce(z.W2, z.R2)
-			if err != nil {
-				return errs.WrapFailed(err, "cannot encrypt")
-			}
-
-			if c2.C.Eq(verifier.state.c2[i].C) == 0 {
-				return errs.NewVerification("verification failed")
-			}
+			// 5.i. if ei == 0 check one of w1i, w2i is in l-2l range while other is in 0-l range
 			if !((verifier.inFirstThird(z.W1) && verifier.inSecondThird(z.W2)) ||
 				(verifier.inFirstThird(z.W2) && verifier.inSecondThird(z.W1))) {
 
 				return errs.NewVerification("verification failed")
 			}
 		} else {
-			// 5.ii if ei == 1 check that c (+) cji == Enc(wi, ri) and wi in range l-2l
-			// where zi = (j, wi, ri)
 			z := r4out.ZetOne[i]
 			wi := z.XPlusWj
 			ri := z.RTimesRj
-			cCheck, err := verifier.pk.EncryptWithNonce(wi, ri)
-			if err != nil {
-				return errs.WrapFailed(err, "cannot encrypt")
-			}
-			var c *paillier.CipherText
+			ps = append(ps, wi)
+			rs = append(rs, ri)
 			if z.J == 1 {
-				c, err = verifier.pk.Add(verifier.c, verifier.state.c1[i])
+				c, err := verifier.pk.Add(verifier.c, verifier.state.c1[i])
 				if err != nil {
 					return errs.WrapFailed(err, "cannot homomorphically add")
 				}
+				cs = append(cs, c.C)
 			} else if z.J == 2 {
-				c, err = verifier.pk.Add(verifier.c, verifier.state.c2[i])
+				c, err := verifier.pk.Add(verifier.c, verifier.state.c2[i])
 				if err != nil {
 					return errs.WrapFailed(err, "cannot homomorphically add")
 				}
+				cs = append(cs, c.C)
 			}
 
-			if cCheck.C.Eq(c.C) == 0 || !verifier.inSecondThird(wi) {
+			// 5.ii if ei == 1 check that wi in range l-2l
+			if !verifier.inSecondThird(wi) {
 				return errs.NewVerification("verification failed")
 			}
+		}
+	}
+
+	cCheck, err := verifier.pk.EncryptManyWithNonce(ps, rs)
+	if err != nil {
+		return errs.WrapVerification(err, "cannot compute ciphertexts")
+	}
+
+	for i := range cs {
+		// 5.i.
+		//   if ei == 0 check c1i == Enc(w1i, r1i) and c2i == Enc(w2i, r2i)
+		//   if ei == 1 check that c (+) cji == Enc(wi, ri)
+		if cCheck[i].C.Eq(cs[i]) != 1 {
+			return errs.NewVerification("verification failed")
 		}
 	}
 

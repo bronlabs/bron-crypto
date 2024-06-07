@@ -5,7 +5,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lp"
@@ -22,13 +22,13 @@ var _ network.Message[types.ThresholdProtocol] = (*Round6P2P)(nil)
 var _ network.Message[types.ThresholdProtocol] = (*Round7P2P)(nil)
 
 type Round1Broadcast struct {
-	BigQCommitment commitments.Commitment
+	BigQCommitment *hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
 
 type Round2Broadcast struct {
-	BigQWitness          commitments.Witness
+	BigQOpening          *hashcommitments.Opening
 	BigQPrime            curves.Point
 	BigQPrimeProof       compiler.NIZKPoKProof
 	BigQDoublePrime      curves.Point
@@ -85,8 +85,8 @@ func (r1b *Round1Broadcast) Validate(protocol types.ThresholdProtocol) error {
 }
 
 func (r2b *Round2Broadcast) Validate(protocol types.ThresholdProtocol) error {
-	if r2b.BigQWitness == nil {
-		return errs.NewIsNil("big q witness")
+	if err := r2b.BigQOpening.Validate(); err != nil {
+		return errs.WrapValidation(err, "could not validate opening")
 	}
 	if r2b.BigQPrime == nil {
 		return errs.NewIsNil("big q prime")

@@ -9,7 +9,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
@@ -25,13 +25,13 @@ const (
 )
 
 type state struct {
-	pid         []byte
-	bigS        []byte
-	k           curves.Scalar
-	bigR        curves.Point
-	bigRWitness commitments.Witness
+	pid     []byte
+	bigS    []byte
+	k       curves.Scalar
+	bigR    curves.Point
+	opening *hashcommitments.Opening
 
-	theirBigRCommitment ds.Map[types.IdentityKey, commitments.Commitment]
+	theirBigRCommitment ds.Map[types.IdentityKey, *hashcommitments.Commitment]
 
 	_ ds.Incomparable
 }

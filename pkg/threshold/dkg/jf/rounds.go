@@ -135,7 +135,7 @@ func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[types.T
 	// step 2.3: Broadcast(C_i, π_i)
 	p.Round++
 	return &Round2Broadcast{
-		Commitments:      p.state.commitments,
+		Ci:               p.state.commitments,
 		CommitmentsProof: p.state.commitmentsProof,
 	}, nil
 }
@@ -164,7 +164,7 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.ThresholdP
 			return nil, nil, errs.NewMissing("can't find identity key of sharing id %d", senderSharingId)
 		}
 		broadcastedMessageFromSender, _ := round2output.Get(senderIdentityKey)
-		senderCommitmentVector := broadcastedMessageFromSender.Commitments
+		senderCommitmentVector := broadcastedMessageFromSender.Ci
 		if senderCommitmentVector == nil {
 			return nil, nil, errs.NewIsNil("sender commitment vector")
 		}

@@ -36,7 +36,7 @@ func Fuzz_Test_OTe(f *testing.F) {
 		Xi = Xi % 256
 		L = L % 3
 
-		cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
+		cipherSuite, err := ttu.MakeSigningSuite(k256.NewCurve(), sha3.New256)
 		require.NoError(t, err)
 		authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
 		require.NoError(t, err)
@@ -95,7 +95,7 @@ func Fuzz_Test_COTe(f *testing.F) {
 			t.Skip()
 		}
 
-		cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
+		cipherSuite, err := ttu.MakeSigningSuite(k256.NewCurve(), sha3.New256)
 		require.NoError(t, err)
 		authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
 		require.NoError(t, err)

@@ -66,7 +66,7 @@ func SigningRoundTrip(threshold, n int) error {
 	message := []byte("messi > ronaldo")
 	sid := []byte("sessionId")
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(bls12381.NewG1(), hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(bls12381.NewG1(), hashFunc)
 	if err != nil {
 		return errs.WrapFailed(err, "could not make ciphersuite")
 	}
@@ -122,7 +122,7 @@ func SigningWithDkg(threshold, n int) error {
 	message := []byte("messi > ronaldo")
 	sid := []byte("sessionId")
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(bls12381.NewG1(), hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(bls12381.NewG1(), hashFunc)
 	if err != nil {
 		return errs.WrapFailed(err, "could not make ciphersuite")
 	}

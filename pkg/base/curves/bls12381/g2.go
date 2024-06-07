@@ -196,7 +196,7 @@ func (*G2) Select(choice bool, x0, x1 curves.Point) curves.Point {
 		panic("Not a BLS12381 G1 point")
 	}
 	sPt := new(PointG2)
-	sPt.V.CMove(x0pt.V, x1pt.V, utils.BoolTo[int](choice))
+	sPt.V.CMove(x0pt.V, x1pt.V, utils.BoolTo[uint64](choice))
 	return sPt
 }
 

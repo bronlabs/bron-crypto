@@ -20,7 +20,7 @@ func Test_CanInitialize(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
 	hash := sha256.New
-	cipherSuite, err := testutils.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := testutils.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 	identities, err := testutils.MakeTestIdentities(cipherSuite, 3)
 	require.NoError(t, err)

@@ -563,12 +563,12 @@ func (g1 *G1) Generator() *G1 {
 }
 
 // IsIdentity returns true if this point is at infinity.
-func (g1 *G1) IsIdentity() int {
+func (g1 *G1) IsIdentity() uint64 {
 	return g1.Z.IsZero()
 }
 
 // IsOnCurve determines if this point represents a valid curve point.
-func (g1 *G1) IsOnCurve() int {
+func (g1 *G1) IsOnCurve() uint64 {
 	// Y^2 Z = X^3 + b Z^3
 	var lhs, rhs, t Fp
 	lhs.Square(&g1.Y)
@@ -585,7 +585,7 @@ func (g1 *G1) IsOnCurve() int {
 }
 
 // InCorrectSubgroup returns 1 if the point is torsion free, 0 otherwise.
-func (g1 *G1) InCorrectSubgroup() int {
+func (g1 *G1) InCorrectSubgroup() uint64 {
 	var t G1
 	t.multiply(g1, &fqModulusBytes)
 	return t.IsIdentity()
@@ -711,7 +711,7 @@ func (g1 *G1) MulByX(a *G1) *G1 {
 	for x := paramX >> 1; x != 0; x >>= 1 {
 		t.Double(&t)
 		s.Add(&r, &t)
-		r.CMove(&r, &s, int(x&1))
+		r.CMove(&r, &s, x&1)
 	}
 	// Since BLS_X is negative, flip the sign
 	return g1.Neg(&r)
@@ -792,9 +792,9 @@ func (g1 *G1) FromCompressed(input *[FieldBytes]byte) (*G1, error) {
 	var xFp, yFp Fp
 	var x [FieldBytes]byte
 	var p G1
-	compressedFlag := int((input[0] >> 7) & 1)
-	infinityFlag := int((input[0] >> 6) & 1)
-	sortFlag := int((input[0] >> 5) & 1)
+	compressedFlag := uint64((input[0] >> 7) & 1)
+	infinityFlag := uint64((input[0] >> 6) & 1)
+	sortFlag := uint64((input[0] >> 5) & 1)
 
 	if compressedFlag != 1 {
 		return nil, errs.NewFailed("compressed flag must be set")
@@ -886,7 +886,7 @@ func (g1 *G1) FromUncompressed(input *[WideFieldBytes]byte) (*G1, error) {
 
 // ToAffine converts the point into affine coordinates.
 func (g1 *G1) ToAffine(a *G1) *G1 {
-	var wasInverted int
+	var wasInverted uint64
 	var zero, x, y, z Fp
 	_, wasInverted = z.Invert(&a.Z)
 	x.Mul(&a.X, &z)
@@ -913,9 +913,9 @@ func (g1 *G1) GetY() *Fp {
 }
 
 // Equal returns 1 if the two points are equal 0 otherwise.
-func (g1 *G1) Equal(rhs *G1) int {
+func (g1 *G1) Equal(rhs *G1) uint64 {
 	var x1, x2, y1, y2 Fp
-	var e1, e2 int
+	var e1, e2 uint64
 
 	// This technique avoids inversions
 	x1.Mul(&g1.X, &rhs.Z)
@@ -932,7 +932,7 @@ func (g1 *G1) Equal(rhs *G1) int {
 }
 
 // CMove sets g1 = arg1 if choice == 0 and g1 = arg2 if choice == 1.
-func (g1 *G1) CMove(arg1, arg2 *G1, choice int) *G1 {
+func (g1 *G1) CMove(arg1, arg2 *G1, choice uint64) *G1 {
 	g1.X.CMove(&arg1.X, &arg2.X, choice)
 	g1.Y.CMove(&arg1.Y, &arg2.Y, choice)
 	g1.Z.CMove(&arg1.Z, &arg2.Z, choice)
@@ -1011,7 +1011,7 @@ func (g1 *G1) osswu3mod4(u *Fp) {
 	// xd = tv2 + tv3
 	xd.Add(&tv2, &tv3)
 	// x1n = xd + 1
-	x1n.Add(&xd, &R)
+	x1n.Add(&xd, &FpOne)
 	// x1n = x1n * B
 	x1n.Mul(&x1n, &osswuMapB)
 	// xd = -A * xd
@@ -1059,7 +1059,7 @@ func (g1 *G1) osswu3mod4(u *Fp) {
 func (g1 *G1) isogenyMap(a *G1) {
 	const Degree = 16
 	var xs [Degree]Fp
-	xs[0] = R
+	xs[0] = FpOne
 	xs[1].Set(&a.X)
 	xs[2].Square(&a.X)
 	for i := 3; i < Degree; i++ {

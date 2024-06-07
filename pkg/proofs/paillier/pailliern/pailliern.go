@@ -58,16 +58,21 @@ func (p *Prover) Prove(witness *paillier.SecretKey) (proof *Proof, statement *pa
 	}
 	transcript.AppendMessages(sessionIdTranscriptLabel, p.sessionId)
 
-	rhos, err := extractRhos(transcript, witness.GetNModulus())
+	nMod, err := witness.GetNResidueParams()
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot get N residue params")
+	}
+
+	rhos, err := extractRhos(transcript, nMod.GetModulus())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create a proof")
 	}
 
 	phi := saferith.ModulusFromNat(witness.Phi)
 	nInv := new(saferith.Nat).ModInverse(witness.N, phi)
-	sigmas := make([]*saferith.Nat, M)
-	for i, rho := range rhos {
-		sigmas[i] = new(saferith.Nat).Exp(rho, nInv, witness.GetNModulus())
+	sigmas, err := nMod.ModMultiBaseExp(rhos, nInv)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot compute exp")
 	}
 
 	proof = &Proof{
@@ -92,7 +97,12 @@ func Verify(sessionId []byte, transcript transcripts.Transcript, statement *pail
 	}
 	transcript.AppendMessages(sessionIdTranscriptLabel, sessionId)
 
-	rhos, err := extractRhos(transcript, statement.GetNModulus())
+	nMod, err := statement.GetNResidueParams()
+	if err != nil {
+		return errs.WrapFailed(err, "cannot get N residue params")
+	}
+
+	rhos, err := extractRhos(transcript, nMod.GetModulus())
 	if err != nil {
 		return errs.WrapFailed(err, "cannot verify a proof")
 	}
@@ -105,9 +115,13 @@ func Verify(sessionId []byte, transcript transcripts.Transcript, statement *pail
 		return errs.NewVerification("verification failed")
 	}
 
-	for i, sigma := range proof.Sigmas {
-		rhoCheck := new(saferith.Nat).Exp(sigma, statement.N, statement.GetNModulus())
-		if _, eq, _ := rhoCheck.Cmp(rhos[i]); eq != 1 {
+	rhoChecks, err := nMod.ModMultiBaseExp(proof.Sigmas, statement.N)
+	if err != nil {
+		return errs.WrapFailed(err, "cannot compute exp")
+	}
+
+	for i := range proof.Sigmas {
+		if rhoChecks[i].Eq(rhos[i]) != 1 {
 			return errs.NewVerification("verification failed")
 		}
 	}

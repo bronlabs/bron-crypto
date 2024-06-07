@@ -54,6 +54,10 @@ func NewSigmaProtocol(base curves.Point, prng io.Reader) (sigma.Protocol[Stateme
 	}, nil
 }
 
+func (s *protocol) SoundnessError() int {
+	return s.curve.ScalarField().Order().BitLen()
+}
+
 func (s *protocol) ComputeProverCommitment(_ Statement, _ Witness) (Commitment, State, error) {
 	k, err := s.curve.ScalarField().Random(s.prng)
 	if err != nil {

@@ -6,7 +6,9 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 )
@@ -71,7 +73,7 @@ func Aggregate[V schnorr.Variant[V]](variant schnorr.Variant[V], protocol types.
 			S:       partialSig.S,
 		}
 		verifier := variant.NewVerifierBuilder().
-			WithSignatureProtocol(protocol.SigningSuite()).
+			WithSigningSuite(protocol.SigningSuite()).
 			WithPublicKey(&schnorr.PublicKey{A: publicShareAdditive}).
 			WithMessage(message).
 			WithChallengeCommitment(r).
@@ -79,7 +81,7 @@ func Aggregate[V schnorr.Variant[V]](variant schnorr.Variant[V], protocol types.
 			Build()
 		err = verifier.Verify(sig)
 		if err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, identity.PublicKey().ToAffineCompressed(), "invalid partial signatures")
+			return nil, errs.WrapIdentifiableAbort(err, identity.String(), "invalid partial signatures")
 		}
 	}
 
@@ -88,13 +90,26 @@ func Aggregate[V schnorr.Variant[V]](variant schnorr.Variant[V], protocol types.
 		return nil, errs.WrapVerification(err, "invalid partial signatures")
 	}
 
-	verifier := variant.NewVerifierBuilder().
-		WithSignatureProtocol(protocol.SigningSuite()).
-		WithPublicKey(publicKey).
-		WithMessage(message).
-		Build()
-	if err := verifier.Verify(sig); err != nil {
-		return nil, errs.WrapVerification(err, "invalid partial signatures")
+	if eddsa.IsEd25519Compliant(protocol.SigningSuite()) {
+		eddsaPublicKey := &eddsa.PublicKey{A: publicKey.A}
+		eddsaSignature := &eddsa.Signature{
+			Variant: vanilla.NewEdDsaCompatibleVariant(),
+			E:       sig.E,
+			R:       sig.R,
+			S:       sig.S,
+		}
+		if err := eddsa.Verify(eddsaPublicKey, message, eddsaSignature); err != nil {
+			return nil, errs.WrapVerification(err, "invalid partial signatures")
+		}
+	} else {
+		verifier := variant.NewVerifierBuilder().
+			WithSigningSuite(protocol.SigningSuite()).
+			WithPublicKey(publicKey).
+			WithMessage(message).
+			Build()
+		if err := verifier.Verify(sig); err != nil {
+			return nil, errs.WrapVerification(err, "invalid partial signatures")
+		}
 	}
 
 	return sig, err

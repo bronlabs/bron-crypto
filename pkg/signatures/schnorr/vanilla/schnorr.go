@@ -96,7 +96,7 @@ func (signer *Signer) Sign(message []byte, prng io.Reader) (*Signature, error) {
 
 func Verify(suite types.SigningSuite, publicKey *PublicKey, message []byte, signature *Signature) error {
 	v := edDsaCompatibleVariant.NewVerifierBuilder().
-		WithSignatureProtocol(suite).
+		WithSigningSuite(suite).
 		WithPublicKey((*schnorr.PublicKey)(publicKey)).
 		WithMessage(message).
 		Build()

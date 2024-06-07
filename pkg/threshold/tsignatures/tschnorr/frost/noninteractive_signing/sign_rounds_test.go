@@ -118,7 +118,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, hash func() hash.Hash, thre
 
 	message := []byte("something")
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
@@ -153,7 +153,7 @@ func TestSignNilMessage(t *testing.T) {
 	curve := edwards25519.NewCurve()
 	hash := sha3.New256
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, 2)

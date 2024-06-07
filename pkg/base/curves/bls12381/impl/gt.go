@@ -71,12 +71,12 @@ func (gt *Gt) FinalExponentiation(a *Gt) *Gt {
 }
 
 // IsZero returns 1 if gt == 0, 0 otherwise.
-func (gt *Gt) IsZero() int {
+func (gt *Gt) IsZero() uint64 {
 	return (*Fp12)(gt).IsZero()
 }
 
 // IsOne returns 1 if gt == 1, 0 otherwise.
-func (gt *Gt) IsOne() int {
+func (gt *Gt) IsOne() uint64 {
 	return (*Fp12)(gt).IsOne()
 }
 
@@ -126,9 +126,9 @@ func (gt *Gt) Bytes() [GtFieldBytes]byte {
 
 // SetBytes attempts to convert a big-endian byte representation of
 // a scalar into a `Gt`, failing if the input is not canonical.
-func (gt *Gt) SetBytes(input *[GtFieldBytes]byte) (res *Gt, ok int) {
+func (gt *Gt) SetBytes(input *[GtFieldBytes]byte) (res *Gt, ok uint64) {
 	var t [FieldBytes]byte
-	var valid [12]int
+	var valid [12]uint64
 	copy(t[:], bitstring.ReverseBytes(input[:FieldBytes]))
 	_, valid[0] = gt.A.A.A.SetBytes(&t)
 	copy(t[:], bitstring.ReverseBytes(input[FieldBytes:2*FieldBytes]))
@@ -163,7 +163,7 @@ func (gt *Gt) SetBytes(input *[GtFieldBytes]byte) (res *Gt, ok int) {
 }
 
 // Equal returns 1 if gt == rhs, 0 otherwise.
-func (gt *Gt) Equal(rhs *Gt) int {
+func (gt *Gt) Equal(rhs *Gt) uint64 {
 	return (*Fp12)(gt).Equal((*Fp12)(rhs))
 }
 
@@ -344,7 +344,7 @@ func (gt *Gt) Square(a *Gt) *Gt {
 }
 
 // Invert this value.
-func (gt *Gt) Invert(a *Gt) (res *Gt, wasInverted int) {
+func (gt *Gt) Invert(a *Gt) (res *Gt, wasInverted uint64) {
 	_, wasInverted = (*Fp12)(gt).Invert((*Fp12)(a))
 	return gt, wasInverted
 }

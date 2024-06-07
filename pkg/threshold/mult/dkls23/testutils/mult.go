@@ -20,7 +20,7 @@ import (
 func MakeMult2Participants(t *testing.T, curve curves.Curve, baseOtReceiverOutput *ot.ReceiverRotOutput, baseOtSenderOutput *ot.SenderRotOutput, aliceTprng, bobTprng io.Reader, seededPrng csprng.CSPRNG, aliceSid, bobSid []byte) (alice *mult.Alice, bob *mult.Bob, err error) {
 	t.Helper()
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, sha3.New256)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, sha3.New256)
 	require.NoError(t, err)
 	authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
 	require.NoError(t, err)

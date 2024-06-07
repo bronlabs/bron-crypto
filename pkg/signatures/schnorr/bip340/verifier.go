@@ -24,7 +24,7 @@ type verifier struct {
 var _ schnorr.VerifierBuilder[TaprootVariant] = (*verifierBuilder)(nil)
 var _ schnorr.Verifier[TaprootVariant] = (*verifier)(nil)
 
-func (v *verifierBuilder) WithSignatureProtocol(_ types.SigningSuite) schnorr.VerifierBuilder[TaprootVariant] {
+func (v *verifierBuilder) WithSigningSuite(_ types.SigningSuite) schnorr.VerifierBuilder[TaprootVariant] {
 	return v
 }
 

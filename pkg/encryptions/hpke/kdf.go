@@ -69,6 +69,7 @@ func (s *KDFScheme) Hash(messages ...[]byte) ([]byte, error) {
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not hash via %s", s.hash.String())
 	}
+
 	return digest, nil
 }
 
@@ -97,6 +98,7 @@ func (s *KDFScheme) Expand(prk, info []byte, L int) []byte {
 		out = append(out, T...)
 		i++
 	}
+
 	return out[:L]
 }
 
@@ -119,6 +121,7 @@ func (s *KDFScheme) labeledExpand(suiteId, prk, label, info []byte, L int) []byt
 	if L > (1 << 16) {
 		panic("Expand length cannot be larger than 2^16")
 	}
+
 	lengthBuffer := make([]byte, 2)
 	binary.BigEndian.PutUint16(lengthBuffer, uint16(L))
 	labeledInfo := slices.Concat(

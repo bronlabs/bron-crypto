@@ -18,14 +18,14 @@ func Test_CanInitialize(t *testing.T) {
 	t.Parallel()
 	curve := edwards25519.NewCurve()
 	hash := sha3.New256
-	cipherSuite, err := testutils.MakeSignatureProtocol(curve, hash)
+	cipherSuite, err := testutils.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
 	identities, err := testutils.MakeTestIdentities(cipherSuite, 2)
 	require.NoError(t, err)
 	aliceIdentityKey, bobIdentityKey := identities[0], identities[1]
 
 	var sharedSeed rprzs.Seed
-	hashed, err := hashing.HashChain(sha3.New256, []byte("pepsi > coke"))
+	hashed, err := hashing.HashPrefixedLength(sha3.New256, []byte("pepsi > coke"))
 	require.NoError(t, err)
 	copy(sharedSeed[:], hashed)
 

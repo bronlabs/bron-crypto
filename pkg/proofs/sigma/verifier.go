@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -21,6 +22,9 @@ func NewVerifier[X Statement, W Witness, A Commitment, S State, Z Response](sess
 	}
 	if sigmaProtocol == nil {
 		return nil, errs.NewArgument("protocol or is nil")
+	}
+	if s := sigmaProtocol.SoundnessError(); s < base.StatisticalSecurity {
+		return nil, errs.NewArgument("soundness of the interactive protocol (%d) is too low (below %d)", s, base.StatisticalSecurity)
 	}
 
 	dst := fmt.Sprintf("%s-%s", transcriptLabel, sigmaProtocol.Name())

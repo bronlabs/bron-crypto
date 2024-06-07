@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
@@ -53,6 +54,9 @@ func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, pers
 		return nil, errs.NewArgument("keySize must be one of {16 (AES128), 24 (AES192), 32 (AES256)}")
 	}
 	securityStrength := keySize
+	if securityStrength*8 < base.ComputationalSecurity {
+		return nil, errs.NewArgument("security strength (%d) below %d bits", securityStrength*8, base.ComputationalSecurity)
+	}
 	// 5. Nil step.
 	if entropySource != nil {
 		NistPrng.entropySource = entropySource

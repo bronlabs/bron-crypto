@@ -55,10 +55,10 @@ func Test_TrustedDealer(t *testing.T) {
 
 				hashFunc := sha256.New
 
-				signatureProtocol, err := testutils.MakeSignatureProtocol(curve, hashFunc)
+				signingSuite, err := testutils.MakeSigningSuite(curve, hashFunc)
 				require.NoError(t, err)
 
-				identities, err := testutils.MakeTestIdentities(signatureProtocol, n)
+				identities, err := testutils.MakeTestIdentities(signingSuite, n)
 				require.NoError(t, err)
 
 				secret, err := curve.ScalarField().Random(crand.Reader)

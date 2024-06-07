@@ -44,7 +44,7 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 	variant := vanilla.NewEdDsaCompatibleVariant()
 	curve := edwards25519.NewCurve()
 	hashFunc := sha512.New
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
 	require.NoError(t, err)
 
 	prng := crand.Reader
@@ -146,7 +146,7 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 	variant := bip340.NewTaprootVariant()
 	curve := k256.NewCurve()
 	hashFunc := hashingBip340.NewBip340HashChallenge
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
 	require.NoError(t, err)
 
 	prng := crand.Reader
@@ -244,7 +244,7 @@ func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
 	variant := zilliqa.NewZilliqaVariant()
 	curve := k256.NewCurve()
 	hashFunc := sha256.New
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, hashFunc)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
 	require.NoError(t, err)
 
 	prng := crand.Reader

@@ -14,13 +14,13 @@ type ThresholdSignatureProtocol interface {
 	SigningSuite() SigningSuite
 }
 
-func NewThresholdSignatureProtocol(signatureProtocol SigningSuite, participants ds.Set[IdentityKey], threshold uint) (ThresholdSignatureProtocol, error) {
-	if err := ValidateSigningSuite(signatureProtocol); err != nil {
+func NewThresholdSignatureProtocol(signingSuite SigningSuite, participants ds.Set[IdentityKey], threshold uint) (ThresholdSignatureProtocol, error) {
+	if err := ValidateSigningSuite(signingSuite); err != nil {
 		return nil, errs.WrapValidation(err, "signature protocol config")
 	}
 	protocol := &protocol{
-		curve:        signatureProtocol.Curve(),
-		hash:         signatureProtocol.Hash(),
+		curve:        signingSuite.Curve(),
+		hash:         signingSuite.Hash(),
 		participants: participants,
 		threshold:    threshold,
 	}

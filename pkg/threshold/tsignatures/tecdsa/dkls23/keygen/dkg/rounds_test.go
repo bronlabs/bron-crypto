@@ -56,7 +56,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 
 	batchSize := ot.Kappa
 
-	cipherSuite, err := ttu.MakeSignatureProtocol(curve, h)
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 	require.NoError(t, err)
 
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)

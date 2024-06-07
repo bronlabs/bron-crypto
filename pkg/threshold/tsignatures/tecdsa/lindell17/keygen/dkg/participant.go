@@ -10,7 +10,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lp"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lpdl"
@@ -32,13 +32,13 @@ type State struct {
 	myXDoublePrime    curves.Scalar
 	myBigQPrime       curves.Point
 	myBigQDoublePrime curves.Point
-	myBigQWitness     commitments.Witness
+	myBigQOpening     *hashcommitments.Opening
 	myPaillierPk      *paillier.PublicKey
 	myPaillierSk      *paillier.SecretKey
 	myRPrime          *saferith.Nat
 	myRDoublePrime    *saferith.Nat
 
-	theirBigQCommitment          map[types.SharingID]commitments.Commitment
+	theirBigQCommitment          map[types.SharingID]*hashcommitments.Commitment
 	theirBigQPrime               map[types.SharingID]curves.Point
 	theirBigQDoublePrime         map[types.SharingID]curves.Point
 	theirPaillierPublicKeys      ds.Map[types.IdentityKey, *paillier.PublicKey]

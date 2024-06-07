@@ -23,7 +23,7 @@ var curveInstances = []curves.Curve{
 
 func getKeys(t *testing.T) (senderKey, receiverKey types.AuthKey) {
 	t.Helper()
-	cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
+	cipherSuite, err := ttu.MakeSigningSuite(k256.NewCurve(), sha3.New256)
 	require.NoError(t, err)
 	authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
 	require.NoError(t, err)
@@ -111,7 +111,7 @@ func TestHappyPathBBOT_COT(t *testing.T) {
 func BenchmarkBBOT(b *testing.B) {
 	Xi := 128
 	L := 4
-	cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
+	cipherSuite, err := ttu.MakeSigningSuite(k256.NewCurve(), sha3.New256)
 	require.NoError(b, err)
 	authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
 	require.NoError(b, err)

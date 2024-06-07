@@ -4,14 +4,16 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-// ComputationalSecurity (κ) is the number of bits of security we want to achieve in most of our cryptographic primitives.
+// ComputationalSecurity (λ) is the number of bits of comptational security we want to achieve in most of our cryptographic primitives.
 const ComputationalSecurity = 128
-const ComputationalSecurityBytes = ComputationalSecurity / 8
 const ComputationalSecurityLog2 = 7
 
-// CollisionResistance is the hash digest length to achieve κ-bits of collision resistance (birthday paradox).
+// StatisticalSecurity (λ_s) is the number of bits of statistical security we want to achieve in most of our cryptographic primitives, applicable mostly to soundness of interactive proofs.
+const StatisticalSecurity = 80
+
+// CollisionResistance is the hash digest length to achieve λ-bits of collision resistance (birthday paradox).
 const CollisionResistance = 2 * ComputationalSecurity
-const CollisionResistanceBytes = 2 * ComputationalSecurityBytes
+const CollisionResistanceBytes = CollisionResistance / 8
 
 // FieldBytes is the number of bytes needed to represent a FieldElement|Scalar in most fields of the `curves` package.
 const FieldBytes = 32

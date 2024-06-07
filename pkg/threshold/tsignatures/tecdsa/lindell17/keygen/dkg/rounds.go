@@ -1,14 +1,16 @@
 package dkg
 
 import (
+	"bytes"
 	"io"
+	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
@@ -36,7 +38,7 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	bigQDoublePrime := p.Protocol.Curve().ScalarBaseMult(xDoublePrime)
 
 	// 1.iii. calculates commitments Qcom to Q' and Q''
-	bigQCommitment, bigQWitness, err := commit(p.Prng, bigQPrime, bigQDoublePrime, p.SessionId, p.myAuthKey.PublicKey())
+	bigQCommitment, bigQOpening, err := commit(p.SessionId, p.Prng, bigQPrime, bigQDoublePrime, p.myAuthKey.PublicKey())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to (Q', Q'')")
 	}
@@ -45,7 +47,7 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	p.state.myXDoublePrime = xDoublePrime
 	p.state.myBigQPrime = bigQPrime
 	p.state.myBigQDoublePrime = bigQDoublePrime
-	p.state.myBigQWitness = bigQWitness
+	p.state.myBigQOpening = bigQOpening
 
 	// some paranoid checks
 	myPartialPublicKey, exists := p.publicKeyShares.Shares.Get(p.IdentityKey())
@@ -73,7 +75,7 @@ func (p *Participant) Round2(input network.RoundMessages[types.ThresholdProtocol
 	}
 
 	// 2. store commitments
-	p.state.theirBigQCommitment = make(map[types.SharingID]commitments.Commitment)
+	p.state.theirBigQCommitment = make(map[types.SharingID]*hashcommitments.Commitment)
 	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
 		identity := iterator.Next()
 		if identity.Equal(p.IdentityKey()) {
@@ -104,7 +106,7 @@ func (p *Participant) Round2(input network.RoundMessages[types.ThresholdProtocol
 	// 2.ii. send opening of Qcom revealing Q', Q'' and broadcast proofs of dlog knowledge of these (Qdl', Qdl'' respectively)
 	p.Round++
 	return &Round2Broadcast{
-		BigQWitness:          p.state.myBigQWitness,
+		BigQOpening:          p.state.myBigQOpening,
 		BigQPrime:            p.state.myBigQPrime,
 		BigQPrimeProof:       bigQPrimeProof,
 		BigQDoublePrime:      p.state.myBigQDoublePrime,
@@ -140,7 +142,7 @@ func (p *Participant) Round3(input network.RoundMessages[types.ThresholdProtocol
 		}
 
 		// 3.i. open commitments
-		if err := openCommitment(p.state.theirBigQCommitment[sharingId], message.BigQWitness, message.BigQPrime, message.BigQDoublePrime, p.SessionId, identity.PublicKey()); err != nil {
+		if err := openCommitment(p.SessionId, p.state.theirBigQCommitment[sharingId], message.BigQOpening, message.BigQPrime, message.BigQDoublePrime, identity.PublicKey()); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open (Q', Q'') commitment")
 		}
 
@@ -479,18 +481,20 @@ func (p *Participant) Round8(input network.RoundMessages[types.ThresholdProtocol
 	}, nil
 }
 
-func commit(prng io.Reader, bigQPrime, bigQDoublePrime curves.Point, sessionId []byte, pid curves.Point) (commitment commitments.Commitment, witness commitments.Witness, err error) {
-	return commitments.Commit(
-		sessionId,
-		prng,
-		bigQPrime.ToAffineCompressed(),
-		bigQDoublePrime.ToAffineCompressed(),
-		pid.ToAffineCompressed(),
-	)
+func commit(sessionId []byte, prng io.Reader, bigQPrime, bigQDoublePrime curves.Point, pid curves.Point) (vectorCommitment *hashcommitments.Commitment, opening *hashcommitments.Opening, err error) {
+	committer, err := hashcommitments.NewCommitter(sessionId, prng, pid.ToAffineCompressed())
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot instantiate committer")
+	}
+	return committer.Commit(slices.Concat(bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed()))
 }
 
-func openCommitment(commitment commitments.Commitment, witness commitments.Witness, bigQPrime, bigQDoublePrime curves.Point, sessionId []byte, pid curves.Point) (err error) {
-	return commitments.Open(sessionId, commitment, witness, bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed(), pid.ToAffineCompressed()) //nolint:wrapcheck // intentional.
+func openCommitment(sessionId []byte, commitment *hashcommitments.Commitment, opening *hashcommitments.Opening, bigQPrime, bigQDoublePrime curves.Point, pid curves.Point) (err error) {
+	verifier := hashcommitments.NewVerifier(sessionId, pid.ToAffineCompressed())
+	if !bytes.Equal(slices.Concat(bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed()), opening.GetMessage()) {
+		errs.NewVerification("opening is not tied to the expected vector")
+	}
+	return verifier.Verify(commitment, opening)
 }
 
 func dlogProve(x curves.Scalar, bigQ, bigQTwin curves.Point, sessionId []byte, nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, err error) {

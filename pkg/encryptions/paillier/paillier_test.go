@@ -18,6 +18,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/primes"
+	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 )
 
@@ -265,7 +266,7 @@ type lcmTest struct {
 func TestKeyGeneratorErrorConditions(t *testing.T) {
 	// Should fail if a safe prime cannot be generated.
 	f := func(bits int, reader io.Reader) (*saferith.Nat, *saferith.Nat, error) {
-		return nil, nil, fmt.Errorf("safeprime error")
+		return nil, nil, errs.NewFailed("safeprime error")
 	}
 	_, _, err := paillier.KeyGenWithPrimeGenerator(1, crand.Reader, f)
 	require.Contains(t, err.Error(), "safeprime error")
@@ -287,10 +288,16 @@ func TestNewKeysDistinct(t *testing.T) {
 	require.NoError(t, err)
 	pub2, sec2, err := paillier.KeyGen(1024, crand.Reader)
 	require.NoError(t, err)
+
+	mu1, err := sec1.GetMu()
+	require.NoError(t, err)
+	mu2, err := sec2.GetMu()
+	require.NoError(t, err)
+
 	// Ensure two fresh keys are distinct
 	require.True(t, pub1.N.Eq(pub2.N) == 0)
 	require.True(t, sec1.Phi.Eq(sec2.Phi) == 0)
-	require.True(t, sec1.GetMu().Eq(sec2.GetMu()) == 0)
+	require.True(t, mu1.Eq(mu2) == 0)
 }
 
 // Tests the restrictions on input values for paillier.Add
@@ -726,7 +733,7 @@ func Test_Precomputed(t *testing.T) {
 	secretKey, err := paillier.NewSecretKey(p, q)
 	require.NotNil(t, secretKey)
 	require.NoError(t, err)
-	if b, _, _ := p.Cmp(q); b == 1 {
+	if !saferithUtils.NatIsLess(p, q) {
 		p, q = q, p
 	}
 
@@ -736,34 +743,50 @@ func Test_Precomputed(t *testing.T) {
 	phi := new(saferith.Nat).Mul(pMinusOne, qMinusOne, -1)
 	nn := new(saferith.Nat).Mul(pq, pq, -1)
 
+	pkNMod, err := secretKey.PublicKey.GetNResidueParams()
+	require.NoError(t, err)
+	pkNNMod, err := secretKey.PublicKey.GetNNResidueParams()
+	require.NoError(t, err)
+	skP, err := secretKey.GetP()
+	require.NoError(t, err)
+	skQ, err := secretKey.GetQ()
+	require.NoError(t, err)
+	skMu, err := secretKey.GetMu()
+	require.NoError(t, err)
+
 	// validate key
 	require.True(t, pq.Eq(secretKey.N) == 1, "N is valid")
 	require.True(t, pq.Eq(secretKey.PublicKey.N) == 1, "N is valid")
-	require.True(t, pq.Eq(secretKey.PublicKey.GetNModulus().Nat()) == 1, "precomputed N is valid")
-	require.True(t, nn.Eq(secretKey.PublicKey.GetNNModulus().Nat()) == 1, "precomputed NN is valid")
+	require.True(t, pq.Eq(pkNMod.GetModulus().Nat()) == 1, "precomputed N is valid")
+	require.True(t, nn.Eq(pkNNMod.GetModulus().Nat()) == 1, "precomputed NN is valid")
 	require.True(t, phi.Eq(secretKey.Phi) == 1, "phi is valid")
-	require.True(t, p.Eq(secretKey.GetP()) == 1, "precomputed P is valid")
-	require.True(t, q.Eq(secretKey.GetQ()) == 1, "precomputed Q is valid")
-	require.True(t, new(saferith.Nat).ModMul(phi, secretKey.GetMu(), saferith.ModulusFromNat(pq)).Eq(one) == 1, "precomputed mu is valid")
+	require.True(t, p.Eq(skP) == 1, "precomputed P is valid")
+	require.True(t, q.Eq(skQ) == 1, "precomputed Q is valid")
+	require.True(t, new(saferith.Nat).ModMul(phi, skMu, saferith.ModulusFromNat(pq)).Eq(one) == 1, "precomputed mu is valid")
+
+	skNMod, err := secretKey.GetNResidueParams()
+	require.NoError(t, err)
 
 	// validate n-CRT
-	require.True(t, p.Eq(secretKey.GetCrtNParams().GetM1().Nat()) == 1, "precomputed N-CRT-P is valid")
-	require.True(t, pMinusOne.Eq(secretKey.GetCrtNParams().GetPhiM1().Nat()) == 1, "precomputed CRT-PhiP is valid")
-	require.True(t, q.Eq(secretKey.GetCrtNParams().GetM2().Nat()) == 1, "precomputed N-CRT-Q is valid")
-	require.True(t, qMinusOne.Eq(secretKey.GetCrtNParams().GetPhiM2().Nat()) == 1, "precomputed N-CRT-PhiQ is valid")
-	require.True(t, new(saferith.Nat).ModMul(p, secretKey.GetCrtNParams().GetM1InvM2(), saferith.ModulusFromNat(q)).Eq(one) == 1, "precomputed N-CRT-PInvQ is valid")
+	require.True(t, p.Eq(skNMod.GetM1().GetModulus().Nat()) == 1, "precomputed N-CRT-P is valid")
+	require.True(t, pMinusOne.Eq(skNMod.GetPhiM1().Nat()) == 1, "precomputed CRT-PhiP is valid")
+	require.True(t, q.Eq(skNMod.GetM2().GetModulus().Nat()) == 1, "precomputed N-CRT-Q is valid")
+	require.True(t, qMinusOne.Eq(skNMod.GetPhiM2().Nat()) == 1, "precomputed N-CRT-PhiQ is valid")
+	require.True(t, new(saferith.Nat).ModMul(p, skNMod.GetM1InvM2(), saferith.ModulusFromNat(q)).Eq(one) == 1, "precomputed N-CRT-PInvQ is valid")
 
 	pp := new(saferith.Nat).Mul(p, p, -1)
 	ppMinusP := new(saferith.Nat).Sub(pp, p, -1)
 	qq := new(saferith.Nat).Mul(q, q, -1)
 	qqMinusQ := new(saferith.Nat).Sub(qq, q, -1)
+	skNNMod, err := secretKey.GetNNResidueParams()
+	require.NoError(t, err)
 
 	// validate nn-CRT
-	require.True(t, pp.Eq(secretKey.GetCrtNNParams().GetM1().Nat()) == 1, "precomputed NN-CRT-PP is valid")
-	require.True(t, ppMinusP.Eq(secretKey.GetCrtNNParams().GetPhiM1().Nat()) == 1, "precomputed NN-CRT-PhiPP is valid")
-	require.True(t, qq.Eq(secretKey.GetCrtNNParams().GetM2().Nat()) == 1, "precomputed NN-CRT-QQ is valid")
-	require.True(t, qqMinusQ.Eq(secretKey.GetCrtNNParams().GetPhiM2().Nat()) == 1, "precomputed NN-PhiQQ is valid")
-	require.True(t, new(saferith.Nat).ModMul(pp, secretKey.GetCrtNNParams().GetM1InvM2(), saferith.ModulusFromNat(qq)).Eq(one) == 1, "precomputed PPInvQQ is valid")
+	require.True(t, pp.Eq(skNNMod.GetM1().GetModulus().Nat()) == 1, "precomputed NN-CRT-PP is valid")
+	require.True(t, ppMinusP.Eq(skNNMod.GetPhiM1().Nat()) == 1, "precomputed NN-CRT-PhiPP is valid")
+	require.True(t, qq.Eq(skNNMod.GetM2().GetModulus().Nat()) == 1, "precomputed NN-CRT-QQ is valid")
+	require.True(t, qqMinusQ.Eq(skNNMod.GetPhiM2().Nat()) == 1, "precomputed NN-PhiQQ is valid")
+	require.True(t, new(saferith.Nat).ModMul(pp, skNNMod.GetM1InvM2(), saferith.ModulusFromNat(qq)).Eq(one) == 1, "precomputed PPInvQQ is valid")
 }
 
 func Test_MulScalarCrt(t *testing.T) {
@@ -852,29 +875,60 @@ func Test_JsonSerialisationRoundTrip(t *testing.T) {
 	err = json.Unmarshal(serialisedSecretKey, &deserialisedSecretKey)
 	require.NoError(t, err)
 
+	pkNMod, err := secretKey.PublicKey.GetNResidueParams()
+	require.NoError(t, err)
+	pkNModDe, err := deserialisedPublicKey.GetNResidueParams()
+	require.NoError(t, err)
+	pkNNMod, err := secretKey.PublicKey.GetNNResidueParams()
+	require.NoError(t, err)
+	pkNNModDe, err := deserialisedPublicKey.GetNNResidueParams()
+	require.NoError(t, err)
+
 	// check public key
 	require.True(t, deserialisedPublicKey.N.Eq(secretKey.PublicKey.N) == 1)
-	require.True(t, deserialisedPublicKey.GetNModulus().Nat().Eq(secretKey.PublicKey.GetNModulus().Nat()) == 1)
-	require.True(t, deserialisedPublicKey.GetNNModulus().Nat().Eq(secretKey.PublicKey.GetNNModulus().Nat()) == 1)
+	require.True(t, pkNModDe.GetModulus().Nat().Eq(pkNMod.GetModulus().Nat()) == 1)
+	require.True(t, pkNNModDe.GetModulus().Nat().Eq(pkNNMod.GetModulus().Nat()) == 1)
+
+	skNMod, err := secretKey.GetNResidueParams()
+	require.NoError(t, err)
+	skNNMod, err := secretKey.GetNNResidueParams()
+	require.NoError(t, err)
+	skP, err := secretKey.GetP()
+	require.NoError(t, err)
+	skQ, err := secretKey.GetQ()
+	require.NoError(t, err)
+	skMu, err := secretKey.GetMu()
+	require.NoError(t, err)
+
+	skNModDe, err := deserialisedSecretKey.GetNResidueParams()
+	require.NoError(t, err)
+	skNNModDe, err := deserialisedSecretKey.GetNNResidueParams()
+	require.NoError(t, err)
+	skPDe, err := deserialisedSecretKey.GetP()
+	require.NoError(t, err)
+	skQDe, err := deserialisedSecretKey.GetQ()
+	require.NoError(t, err)
+	skMuDe, err := deserialisedSecretKey.GetMu()
+	require.NoError(t, err)
 
 	// check secret key
 	require.True(t, deserialisedSecretKey.N.Eq(secretKey.N) == 1)
 	require.True(t, deserialisedSecretKey.Phi.Eq(secretKey.Phi) == 1)
-	require.True(t, deserialisedSecretKey.GetP().Eq(secretKey.GetP()) == 1)
-	require.True(t, deserialisedSecretKey.GetQ().Eq(secretKey.GetQ()) == 1)
-	require.True(t, deserialisedSecretKey.GetMu().Eq(secretKey.GetMu()) == 1)
-	crtN := deserialisedSecretKey.GetCrtNParams()
-	require.True(t, crtN.GetM1().Nat().Eq(secretKey.GetCrtNParams().GetM1().Nat()) == 1)
-	require.True(t, crtN.GetM2().Nat().Eq(secretKey.GetCrtNParams().GetM2().Nat()) == 1)
-	require.True(t, crtN.GetPhiM1().Nat().Eq(secretKey.GetCrtNParams().GetPhiM1().Nat()) == 1)
-	require.True(t, crtN.GetPhiM2().Nat().Eq(secretKey.GetCrtNParams().GetPhiM2().Nat()) == 1)
-	require.True(t, crtN.GetM1InvM2().Eq(secretKey.GetCrtNParams().GetM1InvM2()) == 1)
-	crtNN := deserialisedSecretKey.GetCrtNNParams()
-	require.True(t, crtNN.GetM1().Nat().Eq(secretKey.GetCrtNNParams().GetM1().Nat()) == 1)
-	require.True(t, crtNN.GetM2().Nat().Eq(secretKey.GetCrtNNParams().GetM2().Nat()) == 1)
-	require.True(t, crtNN.GetPhiM1().Nat().Eq(secretKey.GetCrtNNParams().GetPhiM1().Nat()) == 1)
-	require.True(t, crtNN.GetPhiM2().Nat().Eq(secretKey.GetCrtNNParams().GetPhiM2().Nat()) == 1)
-	require.True(t, crtNN.GetM1InvM2().Eq(secretKey.GetCrtNNParams().GetM1InvM2()) == 1)
+	require.True(t, skPDe.Eq(skP) == 1)
+	require.True(t, skQDe.Eq(skQ) == 1)
+	require.True(t, skMuDe.Eq(skMu) == 1)
+
+	require.True(t, skNModDe.GetM1().GetModulus().Nat().Eq(skNMod.GetM1().GetModulus().Nat()) == 1)
+	require.True(t, skNModDe.GetM2().GetModulus().Nat().Eq(skNMod.GetM2().GetModulus().Nat()) == 1)
+	require.True(t, skNModDe.GetPhiM1().Nat().Eq(skNMod.GetPhiM1().Nat()) == 1)
+	require.True(t, skNModDe.GetPhiM2().Nat().Eq(skNMod.GetPhiM2().Nat()) == 1)
+	require.True(t, skNModDe.GetM1InvM2().Eq(skNMod.GetM1InvM2()) == 1)
+
+	require.True(t, skNNModDe.GetM1().GetModulus().Nat().Eq(skNNMod.GetM1().GetModulus().Nat()) == 1)
+	require.True(t, skNNModDe.GetM2().GetModulus().Nat().Eq(skNNMod.GetM2().GetModulus().Nat()) == 1)
+	require.True(t, skNNModDe.GetPhiM1().Nat().Eq(skNNMod.GetPhiM1().Nat()) == 1)
+	require.True(t, skNNModDe.GetPhiM2().Nat().Eq(skNNMod.GetPhiM2().Nat()) == 1)
+	require.True(t, skNNModDe.GetM1InvM2().Eq(skNNMod.GetM1InvM2()) == 1)
 }
 
 func Benchmark_DecryptCrt(b *testing.B) {

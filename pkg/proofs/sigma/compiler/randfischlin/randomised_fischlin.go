@@ -22,13 +22,13 @@ const (
 	commitmentLabel = "commitmentLabel-"
 	challengeLabel  = "challengeLabel-"
 
-	lambda     = base.ComputationalSecurity
-	lambdaLog2 = base.ComputationalSecurityLog2
-	l          = 8
-	r          = lambda / l
-	t          = lambdaLog2 * l
-	lBytes     = l / 8
-	tBytes     = t / 8
+	Lambda     = base.ComputationalSecurity
+	LambdaLog2 = base.ComputationalSecurityLog2
+	L          = 8
+	R          = Lambda / L
+	T          = LambdaLog2 * L
+	LBytes     = L / 8
+	TBytes     = T / 8
 )
 
 type Proof[A sigma.Commitment, Z sigma.Response] struct {
@@ -52,6 +52,10 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 	}
 	if prng == nil {
 		prng = crand.Reader
+	}
+	if s := sigmaProtocol.SoundnessError(); s < base.ComputationalSecurity {
+		return nil, errs.NewArgument("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
+			s, base.ComputationalSecurity)
 	}
 
 	return &rf[X, W, A, S, Z]{

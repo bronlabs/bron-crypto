@@ -459,7 +459,7 @@ func MakeThresholdProtocol(curve curves.Curve, identities []types.IdentityKey, t
 	return threshold, nil
 }
 
-func MakeSignatureProtocol(curve curves.Curve, h func() hash.Hash) (types.SigningSuite, error) {
+func MakeSigningSuite(curve curves.Curve, h func() hash.Hash) (types.SigningSuite, error) {
 	sig := &Protocol{
 		curve: curve,
 		hash:  h,

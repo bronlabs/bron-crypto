@@ -1,8 +1,6 @@
 package bls12381impl
 
 import (
-	"math/bits"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 )
 
@@ -11,39 +9,9 @@ var fqModulusBytes = [base.FieldBytes]byte{0x01, 0x00, 0x00, 0x00, 0xff, 0xff, 0
 const (
 	// The BLS parameter x for BLS12-381 is -0xd201000000010000.
 	paramX            = uint64(0xd201000000010000)
-	Limbs             = 6
+	FieldLimbs        = 6
 	FieldBytes        = 48
 	WideFieldBytes    = 96
 	FieldBytesFp2     = FieldBytes * 2
 	WideFieldBytesFp2 = WideFieldBytes * 2
 )
-
-// mac Multiply and Accumulate - compute a + (b * c) + d, return the result and new carry.
-func mac(a, b, c, d uint64) (lo, hi uint64) {
-	hi, lo = bits.Mul64(b, c)
-	carry2, carry := bits.Add64(a, d, 0)
-	hi, _ = bits.Add64(hi, 0, carry)
-	lo, carry = bits.Add64(lo, carry2, 0)
-	hi, _ = bits.Add64(hi, 0, carry)
-
-	return lo, hi
-}
-
-// adc Add w/Carry.
-func adc(x, y, carry uint64) (sum, carryOut uint64) {
-	sum = x + y + carry
-	// The sum will overflow if both top bits are set (x & y) or if one of them
-	// is (x | y), and a carry from the lower place happened. If such a carry
-	// happens, the top bit will be 1 + 0 + 1 = 0 (&^ sum).
-	carryOut = ((x & y) | ((x | y) &^ sum)) >> 63
-	carryOut |= ((x & carry) | ((x | carry) &^ sum)) >> 63
-	carryOut |= ((y & carry) | ((y | carry) &^ sum)) >> 63
-	return sum, carryOut
-}
-
-// sbb Subtract with borrow.
-func sbb(x, y, borrow uint64) (diff, borrowOut uint64) {
-	diff = x - (y + borrow)
-	borrowOut = ((^x & y) | (^(x ^ y) & diff)) >> 63
-	return diff, borrowOut
-}

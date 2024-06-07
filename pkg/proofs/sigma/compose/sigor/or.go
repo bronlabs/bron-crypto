@@ -84,6 +84,10 @@ func SigmaOr[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigma.Commitme
 	}
 }
 
+func (p protocol[_, _, _, _, _, _, _, _, _, _]) SoundnessError() int {
+	return min(p.sigma0.SoundnessError(), p.sigma1.SoundnessError())
+}
+
 func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverCommitment(statement *Statement[X0, X1], witness *Witness[W0, W1]) (*Commitment[A0, A1], *State[S0, S1, Z0, Z1], error) {
 	var err error
 

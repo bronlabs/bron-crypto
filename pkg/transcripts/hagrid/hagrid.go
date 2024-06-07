@@ -22,13 +22,13 @@ const (
 	protocolLabel        string           = "Hagrid v1.0"
 	domainSeparatorLabel string           = "<@>"
 	transcriptType       transcripts.Type = "Hagrid"
-	stateSize                             = base.CollisionResistanceBytes
+	StateSize                             = base.CollisionResistanceBytes
 )
 
 var _ transcripts.Transcript = (*Transcript)(nil)
 
 type Transcript struct {
-	state [stateSize]byte
+	state [StateSize]byte
 	prng  csprng.CSPRNG
 	salt  []byte
 
@@ -45,7 +45,7 @@ func NewTranscript(appLabel string, prng io.Reader) *Transcript {
 	var err error
 	seedablePrng, ok := prng.(csprng.CSPRNG)
 	if !ok {
-		var seed [fkechacha20.ChachaPRNGSecurityStrength]byte
+		var seed [chacha20.KeySize]byte
 		if _, err := io.ReadFull(prng, seed[:]); err != nil {
 			panic(err)
 		}
@@ -55,7 +55,7 @@ func NewTranscript(appLabel string, prng io.Reader) *Transcript {
 		}
 	}
 	t := Transcript{
-		state: [stateSize]byte{},
+		state: [StateSize]byte{},
 		prng:  seedablePrng,
 		salt:  salt,
 	}
@@ -135,7 +135,7 @@ func (t *Transcript) ExtractBytes(label string, outLen uint) (out []byte, err er
 // one is created with the supplied `dst` label.
 func (t *Transcript) Bind(sessionId []byte, dst string) (boundSessionId []byte, err error) {
 	t.AppendMessages(dst, sessionId)
-	boundSessionId, err = t.ExtractBytes(dst, stateSize)
+	boundSessionId, err = t.ExtractBytes(dst, StateSize)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't extract boundSessionId from transcript")
 	}
@@ -149,7 +149,7 @@ func (t *Transcript) ratchet(message []byte) error {
 		return errs.WrapHashing(err, "cannot create digest")
 	}
 
-	newState := make([]byte, stateSize)
+	newState := make([]byte, StateSize)
 	if _, err := io.ReadFull(h, newState); err != nil {
 		return errs.WrapHashing(err, "cannot create digest")
 	}

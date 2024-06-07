@@ -33,7 +33,7 @@ func Fuzz_Test(f *testing.F) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		messages := make([][2]ot.Message, batchSize)
 		prng := rand.New(rand.NewSource(randomSeed))
-		cipherSuite, err := ttu.MakeSignatureProtocol(k256.NewCurve(), sha3.New256)
+		cipherSuite, err := ttu.MakeSigningSuite(k256.NewCurve(), sha3.New256)
 		require.NoError(t, err)
 		authKeys, err := ttu.MakeTestAuthKeys(cipherSuite, 2)
 		require.NoError(t, err)

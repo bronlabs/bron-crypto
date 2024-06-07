@@ -1,10 +1,12 @@
 package interactive_signing
 
 import (
+	"bytes"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
@@ -27,17 +29,16 @@ func (pc *PrimaryCosigner) Round1() (r1out *Round1OutputP2P, err error) {
 	pc.state.bigR1 = pc.Protocol.Curve().ScalarBaseMult(pc.state.k1)
 
 	// step 1.2: c1 <- Commit(sid || Q || R1)
-	bigR1Commitment, bigR1Witness, err := commitments.Commit(
-		pc.SessionId,
-		pc.Prng,
-		pc.myAuthKey.PublicKey().ToAffineCompressed(),
-		pc.state.bigR1.ToAffineCompressed(),
-	)
+	committer, err := hashcommitments.NewCommitter(pc.SessionId, pc.Prng, pc.myAuthKey.PublicKey().ToAffineCompressed())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot commit to R1")
+		return nil, errs.WrapFailed(err, "cannot instantiate committer")
+	}
+	bigR1Commitment, bigR1Opening, err := committer.Commit(pc.state.bigR1.ToAffineCompressed())
+	if err != nil {
+		return nil, errs.NewFailed("cannot commit to R")
 	}
 
-	pc.state.bigR1Witness = bigR1Witness
+	pc.state.bigR1Opening = bigR1Opening
 
 	pc.Round = 3
 	// step 1.3: Send(c1) -> P_2
@@ -63,7 +64,7 @@ func (sc *SecondaryCosigner) Round2(r1out *Round1OutputP2P) (r2out *Round2Output
 	}
 	sc.state.bigR2 = sc.Protocol.Curve().ScalarBaseMult(sc.state.k2)
 	// step 2.2: π <- NIPoK.Prove(k2)
-	bigR2ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, sc.SessionId, sc.IdentityKey().PublicKey().ToAffineCompressed())
+	bigR2ProofSessionId, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, sc.SessionId, sc.IdentityKey().PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR2ProofSessionId")
 	}
@@ -93,7 +94,7 @@ func (pc *PrimaryCosigner) Round3(r2out *Round2OutputP2P) (r3out *Round3OutputP2
 		return nil, errs.WrapValidation(err, "invalid round %d input", pc.Round)
 	}
 
-	bigR2ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, pc.SessionId, pc.secondaryIdentityKey.PublicKey().ToAffineCompressed())
+	bigR2ProofSessionId, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, pc.SessionId, pc.secondaryIdentityKey.PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR2ProofSessionId")
 	}
@@ -102,7 +103,7 @@ func (pc *PrimaryCosigner) Round3(r2out *Round2OutputP2P) (r3out *Round3OutputP2
 		return nil, errs.WrapIdentifiableAbort(err, pc.secondaryIdentityKey.String(), "cannot verify R2 dlog proof")
 	}
 
-	bigR1ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, pc.SessionId, pc.myAuthKey.PublicKey().ToAffineCompressed())
+	bigR1ProofSessionId, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, pc.SessionId, pc.myAuthKey.PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR1ProofSessionId")
 	}
@@ -121,7 +122,7 @@ func (pc *PrimaryCosigner) Round3(r2out *Round2OutputP2P) (r3out *Round3OutputP2
 
 	pc.Round = 5
 	return &Round3OutputP2P{
-		BigR1Witness: pc.state.bigR1Witness,
+		BigR1Opening: pc.state.bigR1Opening,
 		BigR1:        pc.state.bigR1,
 		BigR1Proof:   bigR1Proof,
 	}, nil
@@ -136,12 +137,15 @@ func (sc *SecondaryCosigner) Round4(r3out *Round3OutputP2P, message []byte) (rou
 		return nil, errs.WrapValidation(err, "invalid round %d input", sc.Round)
 	}
 
-	err = commitments.Open(sc.SessionId, sc.state.bigR1Commitment, r3out.BigR1Witness, sc.primaryIdentityKey.PublicKey().ToAffineCompressed(), r3out.BigR1.ToAffineCompressed())
-	if err != nil {
-		return nil, errs.WrapIdentifiableAbort(err, sc.primaryIdentityKey.String(), "cannot open R1 commitment")
+	verifier := hashcommitments.NewVerifier(sc.SessionId, sc.primaryIdentityKey.PublicKey().ToAffineCompressed())
+	if !bytes.Equal(r3out.BigR1.ToAffineCompressed(), r3out.BigR1Opening.GetMessage()) {
+		return nil, errs.NewVerification("opening is not tied to the expected value")
+	}
+	if err := verifier.Verify(sc.state.bigR1Commitment, r3out.BigR1Opening); err != nil {
+		return nil, errs.WrapFailed(err, "cannot open R commitment")
 	}
 
-	bigR1ProofSessionId, err := hashing.HashChain(base.RandomOracleHashFunction, sc.SessionId, sc.primaryIdentityKey.PublicKey().ToAffineCompressed())
+	bigR1ProofSessionId, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, sc.SessionId, sc.primaryIdentityKey.PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not produce bigR1ProofSessionId")
 	}

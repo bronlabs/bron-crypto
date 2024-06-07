@@ -11,9 +11,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/hashing/tmmohash"
 )
 
-func FuzzHashChain(f *testing.F) {
+func FuzzHashPrefixedLength(f *testing.F) {
 	f.Fuzz(func(t *testing.T, a []byte) {
-		_, err := hashing.HashChain(sha256.New, a)
+		_, err := hashing.HashPrefixedLength(sha256.New, a)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
