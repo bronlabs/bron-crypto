@@ -5,7 +5,6 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	fu "github.com/copperexchange/krypton-primitives/pkg/base/fuzzutils"
-	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 )
 
@@ -13,69 +12,52 @@ type NatSerializationInvariants[E algebra.Element] struct{}
 
 type BytesSerializationInvariants[E algebra.BytesSerialization[E]] struct{}
 
-func (nsi *NatSerializationInvariants[E]) Uint64(t *testing.T, nat algebra.NatSerialization[E], input E) {
+func (nsi *NatSerializationInvariants[E]) Uint64(t *testing.T, object algebra.NatSerialization[E], input E) {
 	t.Helper()
 	require.NotPanics(t, func() {
-		nat.Uint64()
+		object.Uint64()
 	})
-	actual := nat.Uint64()
+	actual := object.Uint64()
 	require.IsType(t, uint64(0), actual)
 	require.GreaterOrEqual(t, actual, uint64(0))
 }
 
-func (nsi *NatSerializationInvariants[E]) SetNat(t *testing.T, nat algebra.NatSerialization[E], v *saferith.Nat) {
+func (nsi *NatSerializationInvariants[E]) SetNatAndNat(t *testing.T, object algebra.NatSerialization[E]) {
 	t.Helper()
-	// TODO
+	output := object.Nat()
+	object2 := output.Clone()
+	object2.SetNat(object2)
+	require.True(t, object2.Eq(output) == 1)
 }
 
-func (nsi *NatSerializationInvariants[E]) Nat(t *testing.T, nat algebra.NatSerialization[E]) {
-	t.Helper()
-	// TODO
-	require.IsType(t, &saferith.Nat{}, nat.Nat())
-}
-
-func (bsi *BytesSerializationInvariants[E]) Bytes(t *testing.T, element algebra.BytesSerialization[E]) {
+func (bsi *BytesSerializationInvariants[E]) BytesAndSetBytes(t *testing.T, object algebra.BytesSerialization[E]) {
 	t.Helper()
 
-	actual := element.Bytes()
+	actual := object.Bytes()
 	require.NotZero(t, len(actual))
-	excpted, err := element.SetBytes(actual)
+	excpted, err := object.SetBytes(actual)
 	require.NoError(t, err)
-	require.Equal(t, excpted, element)
+	require.Equal(t, excpted, object)
 }
-func (bsi *BytesSerializationInvariants[E]) SetBytes(t *testing.T, element algebra.BytesSerialization[E]) {
+func CheckNatSerializationInvariants[E algebra.NatSerialization[E]](t *testing.T, elementGenerator fu.ObjectGenerator[E]) {
 	t.Helper()
 
-	actual := element.Bytes()
-	require.NotZero(t, len(actual))
-	excpted, err := element.SetBytes(actual)
-	require.NoError(t, err)
-	require.Equal(t, excpted, element)
+	nsi := &NatSerializationInvariants[E]{}
+	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
+
+	t.Run("SetNatAndNat", func(t *testing.T) {
+		t.Parallel()
+		nsi.SetNatAndNat(t, gen.Generate())
+	})
 }
 func CheckBytesSerializationInvariants[E algebra.BytesSerialization[E]](t *testing.T, elementGenerator fu.ObjectGenerator[E]) {
 	t.Helper()
 
 	bsi := &BytesSerializationInvariants[E]{}
-	t.Run("Bytes", func(t *testing.T) {
-		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		element := gen1.Empty()
-		if isEmpty1 != 0 {
-			element = gen1.GenerateNonZero()
-		}
-		bsi.Bytes(t, element)
-	})
+	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 
-	t.Run("SetBytes", func(t *testing.T) {
+	t.Run("BytesAndSetBytes", func(t *testing.T) {
 		t.Parallel()
-		gen1 := elementGenerator.Clone()
-		isEmpty1 := gen1.Prng().IntRange(0, 16)
-		element := gen1.Empty()
-		if isEmpty1 != 0 {
-			element = gen1.GenerateNonZero()
-		}
-		bsi.Bytes(t, element)
+		bsi.BytesAndSetBytes(t, gen.Generate())
 	})
-	// SetBytesWide
 }

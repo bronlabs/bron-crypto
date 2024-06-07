@@ -32,7 +32,7 @@ func (mi *MonoidInvariants[M, ME]) Identity(t *testing.T, monoid algebra.Monoid[
 	output2, err := monoid.Identity(under)
 	require.NoError(t, err)
 	require.True(t, output1.Equal(output2),
-		"Two calls to Identity shoudl return the same element")
+		"Two calls to Identity should return the same element")
 
 	output3, err := output1.ApplyOp(under, output1, new(saferith.Nat).SetUint64(1))
 	require.NoError(t, err)
@@ -167,6 +167,7 @@ func CheckAdditiveMonoidInvariants[M algebra.AdditiveMonoid[M, ME], ME algebra.A
 	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 
 	CheckMonoidInvariant[M, ME](t, monoid, elementGenerator)
+	CheckAdditiveGroupoidInvariants[M, ME](t, monoid, elementGenerator)
 	ami := &AdditiveMonoidInvariants[M, ME]{}
 	t.Run("AdditiveIdentity", func(t *testing.T) {
 		t.Parallel()
@@ -185,7 +186,7 @@ func CheckMultiplicativeMonoidInvariants[M algebra.MultiplicativeMonoid[M, ME], 
 	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 
 	CheckMonoidInvariant[M, ME](t, monoid, elementGenerator)
-
+	CheckMultiplicativeGroupoidInvariants[M, ME](t, monoid, elementGenerator)
 	mmi := &MultiplicativeMonoidInvariants[M, ME]{}
 	t.Run("MultiplicativeIdentity", func(t *testing.T) {
 		t.Parallel()
