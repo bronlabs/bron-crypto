@@ -22,6 +22,7 @@ func NewFastErasureCipher(key, nonce []byte) (*FastKeyErasureCipher, error) {
 
 func (c *FastKeyErasureCipher) setKey(key []byte) {
 	key = key[:KeySize]
+	c.precompDone = false
 	c.Cipher.key = [8]uint32{
 		binary.LittleEndian.Uint32(key[0:4]),
 		binary.LittleEndian.Uint32(key[4:8]),
@@ -36,6 +37,7 @@ func (c *FastKeyErasureCipher) setKey(key []byte) {
 
 func (c *FastKeyErasureCipher) setTmpKey(key []byte) {
 	key = key[:KeySize]
+	c.precompDone = false
 	c.tmpKey = [8]uint32{
 		binary.LittleEndian.Uint32(key[0:4]),
 		binary.LittleEndian.Uint32(key[4:8]),
@@ -108,17 +110,18 @@ func (c *FastKeyErasureCipher) XORKeyStream(dst, src []byte) {
 	// CUSTOM: fast reseeding.
 	c.buf = [bufSize]byte{}
 	copy(c.buf[:], src)
-	c.xorKeyStreamBlocks(c.buf[:], c.buf[:], &c.key)
-	c.remaining = bufSize - KeySize - copy(dst, c.buf[KeySize:])
-	if len(src) <= bufSize-KeySize { // Remaining src can be filled after a reseed.
+	c.xorKeyStreamBlocksGeneric(c.buf[:blockSize], c.buf[:blockSize], &c.key)
+	copy(dst, c.buf[KeySize:blockSize])
+	if len(src) <= blockSize-KeySize { // Remaining src can be filled after a reseed.
 		c.setKey(c.buf[:KeySize])
-		bitstring.Memclr(c.buf[:bufSize-c.remaining])
+		c.remaining = blockSize - KeySize + len(src)
+		bitstring.Memclr(c.buf[:KeySize+len(src)])
 		return
 	} else { // Remaining src would require multiple reseeds. Use a temporary key instead.
 		c.setTmpKey(c.buf[:KeySize])
 		defer bitstring.Memclr(c.tmpKey[:]) // CUSTOM: erasure of temporary key
-		bitstring.Memclr(c.buf[:bufSize-c.remaining])
-		dst, src = dst[bufSize-KeySize:], src[bufSize-KeySize:]
+		bitstring.Memclr(c.buf[:blockSize])
+		dst, src = dst[blockSize-KeySize:], src[blockSize-KeySize:]
 	}
 
 	// xorKeyStreamBlocks implementations expect input lengths that are a
