@@ -214,6 +214,11 @@ func TestGet(t *testing.T) {
 			expectedOutput: func() *uint8 { var v uint8 = 1; return &v }(),
 		},
 		{
+			input:          bitstring.PackedBits{0b11100001, 0b11100100},
+			index:          15,
+			expectedOutput: func() *uint8 { var v uint8 = 1; return &v }(),
+		},
+		{
 			input:          bitstring.PackedBits{},
 			index:          7,
 			expectedOutput: nil,
@@ -230,6 +235,55 @@ func TestGet(t *testing.T) {
 			t.Run(fmt.Sprintf("Unhappy Path input: %v index: %v", tc.input, index), func(t *testing.T) {
 				t.Parallel()
 				require.Panics(t, func() { tc.input.Get(tc.index) }, "Panic should have happened")
+			})
+		}
+	}
+}
+
+func TestGetBE(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		input          bitstring.PackedBits
+		index          uint
+		expectedOutput *uint8
+	}{
+		{
+			input:          bitstring.PackedBits{0b11100001, 0b11100100},
+			index:          20,
+			expectedOutput: nil,
+		},
+		{
+			input:          bitstring.PackedBits{0b11100001, 0b11100100},
+			index:          0,
+			expectedOutput: func() *uint8 { var v uint8 = 1; return &v }(),
+		},
+		{
+			input:          bitstring.PackedBits{0b11100001, 0b11100100},
+			index:          7,
+			expectedOutput: func() *uint8 { var v uint8 = 1; return &v }(),
+		},
+		{
+			input:          bitstring.PackedBits{0b11100001, 0b11100100},
+			index:          15,
+			expectedOutput: func() *uint8 { var v uint8 = 0; return &v }(),
+		},
+		{
+			input:          bitstring.PackedBits{},
+			index:          7,
+			expectedOutput: nil,
+		},
+	}
+	for index, tc := range testCases {
+		if tc.expectedOutput != nil {
+			t.Run(fmt.Sprintf("Happy Path input: %v index: %v", tc.input, index), func(t *testing.T) {
+				t.Parallel()
+				result := tc.input.GetBE(tc.index)
+				require.Equal(t, *tc.expectedOutput, result)
+			})
+		} else {
+			t.Run(fmt.Sprintf("Unhappy Path input: %v index: %v", tc.input, index), func(t *testing.T) {
+				t.Parallel()
+				require.Panics(t, func() { tc.input.GetBE(tc.index) }, "Panic should have happened")
 			})
 		}
 	}

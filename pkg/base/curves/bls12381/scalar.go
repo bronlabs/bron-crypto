@@ -230,14 +230,25 @@ func (*Scalar) Rsh(bits uint) curves.Scalar {
 	panic("implement me")
 }
 
-func (*Scalar) BytesLE() []byte {
-	//TODO implement me
-	panic("implement me")
+func (s *Scalar) BytesLE() []byte {
+	buffer := s.V.Bytes()
+	return buffer[:]
 }
 
-func (*Scalar) SetBytesLE(bytes []byte) (curves.Scalar, error) {
-	//TODO implement me
-	panic("implement me")
+func (s *Scalar) SetBytesLE(input []byte) (curves.Scalar, error) {
+	if len(input) != base.FieldBytes {
+		return nil, errs.NewLength("invalid length")
+	}
+	reducedInput := saferithUtils.NatFromBytesMod(input, r)
+	buffer := bitstring.PadToLeft(reducedInput.Bytes(), base.FieldBytes-len(reducedInput.Bytes()))
+	value, err := bls12381impl.FqNew().SetBytes((*[base.FieldBytes]byte)(buffer))
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "couldn't set bytes")
+	}
+	return &Scalar{
+		V: value,
+		G: s.G,
+	}, nil
 }
 
 func (*Scalar) SetBytesWideLE(bytes []byte) (curves.Scalar, error) {

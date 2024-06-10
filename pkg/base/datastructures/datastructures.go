@@ -57,7 +57,9 @@ type BiMap[K any, V any] interface {
 }
 
 type AbstractSet[E any] interface {
+	// Cardinality returns the number of elements in the set.
 	Cardinality() *saferith.Nat
+	// Contains returns true if the set contains the given element.
 	Contains(e E) bool
 	Iterable[E]
 }
