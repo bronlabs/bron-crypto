@@ -9,7 +9,6 @@ import (
 
 type FastKeyErasureCipher struct {
 	*Cipher
-	tmpKey [8]uint32
 }
 
 func NewFastErasureCipher(key, nonce []byte) (*FastKeyErasureCipher, error) {
@@ -17,28 +16,13 @@ func NewFastErasureCipher(key, nonce []byte) (*FastKeyErasureCipher, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &FastKeyErasureCipher{c, [8]uint32{}}, nil
+	return &FastKeyErasureCipher{c}, nil
 }
 
 func (c *FastKeyErasureCipher) setKey(key []byte) {
 	key = key[:KeySize]
 	c.precompDone = false
 	c.Cipher.key = [8]uint32{
-		binary.LittleEndian.Uint32(key[0:4]),
-		binary.LittleEndian.Uint32(key[4:8]),
-		binary.LittleEndian.Uint32(key[8:12]),
-		binary.LittleEndian.Uint32(key[12:16]),
-		binary.LittleEndian.Uint32(key[16:20]),
-		binary.LittleEndian.Uint32(key[20:24]),
-		binary.LittleEndian.Uint32(key[24:28]),
-		binary.LittleEndian.Uint32(key[28:32]),
-	}
-}
-
-func (c *FastKeyErasureCipher) setTmpKey(key []byte) {
-	key = key[:KeySize]
-	c.precompDone = false
-	c.tmpKey = [8]uint32{
 		binary.LittleEndian.Uint32(key[0:4]),
 		binary.LittleEndian.Uint32(key[4:8]),
 		binary.LittleEndian.Uint32(key[8:12]),
@@ -111,15 +95,13 @@ func (c *FastKeyErasureCipher) XORKeyStream(dst, src []byte) {
 	c.buf = [bufSize]byte{}
 	copy(c.buf[:], src)
 	c.xorKeyStreamBlocksGeneric(c.buf[:blockSize], c.buf[:blockSize], &c.key)
+	c.setKey(c.buf[:KeySize])
 	copy(dst, c.buf[KeySize:blockSize])
-	if len(src) <= blockSize-KeySize { // Remaining src can be filled after a reseed.
-		c.setKey(c.buf[:KeySize])
+	if len(src) <= blockSize-KeySize {
 		c.remaining = blockSize - KeySize + len(src)
 		bitstring.Memclr(c.buf[:KeySize+len(src)])
 		return
-	} else { // Remaining src would require multiple reseeds. Use a temporary key instead.
-		c.setTmpKey(c.buf[:KeySize])
-		defer bitstring.Memclr(c.tmpKey[:]) // CUSTOM: erasure of temporary key
+	} else {
 		bitstring.Memclr(c.buf[:blockSize])
 		dst, src = dst[blockSize-KeySize:], src[blockSize-KeySize:]
 	}
@@ -130,7 +112,7 @@ func (c *FastKeyErasureCipher) XORKeyStream(dst, src []byte) {
 
 	full := len(src) - len(src)%bufSize
 	if full > 0 {
-		c.xorKeyStreamBlocks(dst[:full], src[:full], &c.tmpKey) // CUSTOM: use temporary key
+		c.xorKeyStreamBlocks(dst[:full], src[:full], &c.Cipher.key)
 	}
 	dst, src = dst[full:], src[full:]
 
@@ -142,7 +124,7 @@ func (c *FastKeyErasureCipher) XORKeyStream(dst, src []byte) {
 		numBlocks := (len(src) + blockSize - 1) / blockSize
 		buf := c.buf[bufSize-numBlocks*blockSize:]
 		copy(buf, src)
-		c.xorKeyStreamBlocksGeneric(buf, buf, &c.tmpKey) // CUSTOM: use temporary key
+		c.xorKeyStreamBlocksGeneric(buf, buf, &c.Cipher.key)
 		c.remaining = len(buf) - copy(dst, buf)
 		bitstring.Memclr(buf) // CUSTOM: erasure of keystream
 		return
@@ -153,7 +135,7 @@ func (c *FastKeyErasureCipher) XORKeyStream(dst, src []byte) {
 	if len(src) > 0 {
 		c.buf = [bufSize]byte{}
 		copy(c.buf[:], src)
-		c.xorKeyStreamBlocks(c.buf[:], c.buf[:], &c.tmpKey) // CUSTOM: use temporary key
+		c.xorKeyStreamBlocks(c.buf[:], c.buf[:], &c.Cipher.key)
 		c.remaining = bufSize - copy(dst, c.buf[:])
 		bitstring.Memclr(c.buf[:bufSize-c.remaining]) // CUSTOM: erasure of keystream
 	}
