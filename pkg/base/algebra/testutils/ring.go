@@ -25,28 +25,28 @@ type FiniteRingInvariants[R algebra.FiniteRing[R, E], E algebra.FiniteRingElemen
 
 type FiniteRingElementInvariants[R algebra.FiniteRing[R, E], E algebra.FiniteRingElement[R, E]] struct{}
 
-func (ri *RigInvariants[R, E]) Characteristic(t *testing.T, rg algebra.Rig[R, E], rgElement algebra.RigElement[R, E]) {
+func (ri *RigInvariants[R, E]) Characteristic(t *testing.T, rg algebra.Rig[R, E]) {
 	t.Helper()
-	// TODO: check the logic
-	order := rg.Order().Nat().Bytes()
-	orderBitLen := bitstring.PackedBits.BitLen(order)
 
-	var f func(res, P algebra.RigElement[R, E], d int) algebra.RigElement[R, E]
-	f = func(res, P algebra.RigElement[R, E], d int) algebra.RigElement[R, E] {
-		if d == 0 {
-			return rg.AdditiveIdentity()
-		} else if d == 1 {
-			return P
-		} else if d%2 == 1 {
-			return rg.Add(P, f(res, P, d-1))
-		} else {
-			return f(rg.Mul(P, P), P, d/2)
-		}
+	if rg.Characteristic().EqZero() == 1 { // No characteristic
+		return
 	}
-	P := rg.MultiplicativeIdentity()
-	res := f(rg.AdditiveIdentity(), P, orderBitLen)
-	require.True(t, res.Equal(rg.AdditiveIdentity()))
+	expected := rg.AdditiveIdentity()
+
+	// Operate  MultiplicativeIdentity `Characteristic` times via Double and Add
+	actual := rg.AdditiveIdentity()
+	doubler := rg.MultiplicativeIdentity()
+	characteristicBytes := bitstring.PackedBits(rg.Characteristic().Bytes())
+	for i := range characteristicBytes.BitLen() {
+		if characteristicBytes.GetBE(uint(characteristicBytes.BitLen()-1-i)) != 0 {
+			actual = rg.Add(actual, doubler)
+		}
+		doubler = rg.Add(doubler, doubler)
+	}
+	require.True(t, actual.Equal(expected),
+		"Characteristic did not fulfill `AdditiveIdentity = MultiplicativeIdentity * Characteristic`")
 }
+
 func (rgei *RigElementInvariants[R, E]) MulAdd(t *testing.T, rg algebra.Rig[R, E], rigElement1 algebra.RigElement[R, E], ringElement2, ringElement3 algebra.RingElement[R, E]) {
 	t.Helper()
 
@@ -56,13 +56,13 @@ func (rgei *RigElementInvariants[R, E]) MulAdd(t *testing.T, rg algebra.Rig[R, E
 	require.True(t, expected.Equal(actual))
 }
 
-func (fri *FiniteRingInvariants[R, E]) QuadraticResidue(t *testing.T, frg algebra.FiniteRing[R, E], q algebra.FiniteRingElement[R, E]) {
-	t.Helper()
-	// TODO: check the logic
-	p, err := frg.QuadraticResidue(q)
+func (fri *FiniteRingInvariants[R, E]) QuadraticResidue(t *testing.T, frg algebra.FiniteRing[R, E], p algebra.FiniteRingElement[R, E]) {
+	t.Parallel()
+	q := p.Square()
+	pActual, err := frg.QuadraticResidue(q)
 	require.NoError(t, err)
 
-	require.True(t, p.Square().Equal(q.Unwrap()), "expected p^2 = q  (mod S.Order())")
+	require.True(t, p.Equal(pActual), "expected p^2 = q  (mod S.Order())")
 }
 
 func (frei *FiniteRingElementInvariants[R, E]) Sqrt(t *testing.T, p algebra.FiniteRingElement[R, E]) {
@@ -85,12 +85,11 @@ func CheckRigInvariants[R algebra.Rig[R, E], E algebra.RigElement[R, E]](t *test
 	CheckRgInvariants[R, E](t, rg, elementGenerator)
 	CheckAdditiveMonoidInvariants[R, E](t, rg, elementGenerator)
 	CheckMultiplicativeMonoidInvariants[R, E](t, rg, elementGenerator)
-	// rig := RigInvariants[R, E]{}
-	// gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
-	// t.Run("Characteristic", func(t *testing.T) {
-	// 	t.Parallel()
-	// 	rig.Characteristic(t, rg, gen.Generate())
-	// })
+	ri := &RigInvariants[R, E]{}
+	t.Run("Characteristic", func(t *testing.T) {
+		t.Parallel()
+		ri.Characteristic(t, rg)
+	})
 }
 
 func CheckRingInvariants[R algebra.Ring[R, E], E algebra.RingElement[R, E]](t *testing.T, rg R, elementGenerator fu.ObjectGenerator[E]) {
@@ -116,13 +115,11 @@ func CheckFiniteRingInvariants[R algebra.FiniteRing[R, E], E algebra.FiniteRingE
 	// CheckFiniteStructureInvariants[R, E](t, rg, elementGenerator) // TODO: Contains not implemented for Scalar
 	// CheckRingInvariants[R, E](t, rg, elementGenerator) // TODO: IsTorsionElementUnderAddition not implemented for Scalar
 	CheckBytesSerializationInvariants[E](t, elementGenerator)
-	// gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
-	// fri := &FiniteRingInvariants[R, E]{}
-	// t.Run("quad", func(t *testing.T) {
-	// 	t.Parallel()
-	// 	fri.QuadraticResidue(t, rg, gen.Generate())
+	fri := &FiniteRingInvariants[R, E]{}
 
-	// })
-	// QuadraticResidue // TODO: check the logic
+	t.Run("QuadraticResidue", func(t *testing.T) {
+		t.Helper()
+		fri.QuadraticResidue(t, rg, elementGenerator.Generate())
+	})
 	// Sqrt // TODO: check the logic
 }

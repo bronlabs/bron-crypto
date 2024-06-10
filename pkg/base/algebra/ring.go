@@ -55,8 +55,8 @@ type RingElement[R Structure, E Element] interface {
 type FiniteRing[R Structure, E Element] interface {
 	FiniteStructure[R, E]
 	Ring[R, E]
-	// QuadraticResidue outputs p where p^2 = q (mod S.Order()) and returns an error if q does not exist.
-	QuadraticResidue(q RingElement[R, E]) (E, error)
+	// QuadraticResidue outputs q where p^2 = q (mod S.Order()) and returns an error if q does not exist.
+	QuadraticResidue(p RingElement[R, E]) (E, error)
 }
 
 type FiniteRingElement[R Structure, E Element] interface {
