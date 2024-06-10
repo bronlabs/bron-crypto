@@ -56,12 +56,13 @@ func (rgei *RigElementInvariants[R, E]) MulAdd(t *testing.T, rg algebra.Rig[R, E
 	require.True(t, expected.Equal(actual))
 }
 
-func (fri *FiniteRingInvariants[R, E]) QuadraticResidue(t *testing.T, frg algebra.FiniteRing[R, E], q algebra.FiniteRingElement[R, E]) {
-	t.Helper()
-	p, err := frg.QuadraticResidue(q)
+func (fri *FiniteRingInvariants[R, E]) QuadraticResidue(t *testing.T, frg algebra.FiniteRing[R, E], p algebra.FiniteRingElement[R, E]) {
+	t.Parallel()
+	q := p.Square()
+	pActual, err := frg.QuadraticResidue(q)
 	require.NoError(t, err)
 
-	require.True(t, p.Square().Equal(q.Unwrap()), "expected p^2 = q  (mod S.Order())")
+	require.True(t, p.Equal(pActual), "expected p^2 = q  (mod S.Order())")
 }
 
 func (frei *FiniteRingElementInvariants[R, E]) Sqrt(t *testing.T, p algebra.FiniteRingElement[R, E]) {
@@ -117,7 +118,7 @@ func CheckFiniteRingInvariants[R algebra.FiniteRing[R, E], E algebra.FiniteRingE
 	fri := &FiniteRingInvariants[R, E]{}
 
 	t.Run("QuadraticResidue", func(t *testing.T) {
-		t.Parallel()
+		t.Helper()
 		fri.QuadraticResidue(t, rg, elementGenerator.Generate())
 	})
 	// Sqrt // TODO: check the logic
