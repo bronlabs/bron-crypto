@@ -23,22 +23,35 @@ func RunCollectionPropertyTest[C Collection[O], O Object](f *testing.F, seedCorp
 	})
 }
 
-func RunAlgebraPropertyTest[S algebra.Structure, E algebra.Element](f *testing.F, checkInvariants func(*testing.T, S, ObjectGenerator[E]), structure S, generators ...ObjectGenerator[E]) {
+func RunAlgebraPropertyTest[S algebra.Structure, E algebra.Element](f *testing.F,
+	structures []S,
+	adapterFactory func(structure S) ObjectAdapter[E],
+	generatorFactory func(*testing.F, ObjectAdapter[E]) []ObjectGenerator[E],
+	checkSeveralInvariants ...func(*testing.T, S, ObjectGenerator[E]),
+) {
 	f.Helper()
-	require.GreaterOrEqual(f, len(generators), 1)
-	for _, g := range generators {
-		require.NotNil(f, g)
-	}
+
 	f.Add(uint64(0), uint64(0)) // this is to shut off the warning
 
 	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
-		for i, generator := range generators {
-			t.Run(fmt.Sprintf("generator=%d", i), func(t *testing.T) {
-				t.Helper()
-				g := generator.Clone()
-				g.Reseed(seed1, seed2)
-				checkInvariants(t, structure, g)
-			})
+		for i, structure := range structures {
+
+			generators := generatorFactory(f, adapterFactory(structure))
+			require.GreaterOrEqual(f, len(generators), 1)
+			for _, g := range generators {
+				require.NotNil(f, g)
+			}
+
+			for j, generator := range generators {
+				t.Run(fmt.Sprintf("structure=%d,generator=%d", i, j), func(t *testing.T) {
+					t.Helper()
+					g := generator.Clone()
+					g.Reseed(seed1, seed2)
+					for _, checkInvariants := range checkSeveralInvariants {
+						checkInvariants(t, structure, g)
+					}
+				})
+			}
 		}
 	})
 }

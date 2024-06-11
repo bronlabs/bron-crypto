@@ -10,15 +10,19 @@ import (
 var _ fu.ObjectAdapter[curves.Point] = (*PointAdapter)(nil)
 
 type PointAdapter struct {
-	Curve curves.Curve
+	curves.Curve
+}
+
+func NewPointAdapter(curve curves.Curve) fu.ObjectAdapter[curves.Point] {
+	return &PointAdapter{Curve: curve}
 }
 
 func (pa *PointAdapter) Wrap(x fu.Underlyer) curves.Point {
-	buffer := make([]byte, pa.Curve.ElementSize()+1)
+	buffer := make([]byte, pa.ElementSize()+1)
 	binary.LittleEndian.PutUint64(buffer[:8], x)
-	p, err := pa.Curve.Point().FromAffineCompressed(buffer)
+	p, err := pa.Element().FromAffineCompressed(buffer)
 	if err != nil { // Default to hash if point creation fails
-		p, err = pa.Curve.Hash(buffer)
+		p, err = pa.Hash(buffer)
 		if err != nil {
 			panic(err)
 		}
@@ -31,21 +35,25 @@ func (*PointAdapter) Unwrap(p curves.Point) fu.Underlyer {
 }
 
 func (pa *PointAdapter) ZeroValue() curves.Point {
-	return pa.Curve.AdditiveIdentity()
+	return pa.AdditiveIdentity()
 }
 
 var _ fu.ObjectAdapter[curves.Scalar] = (*ScalarAdapter)(nil)
 
 type ScalarAdapter struct {
-	Curve curves.Curve
+	curves.ScalarField
+}
+
+func NewScalarAdapter(scalarField curves.ScalarField) fu.ObjectAdapter[curves.Scalar] {
+	return &ScalarAdapter{ScalarField: scalarField}
 }
 
 func (sa *ScalarAdapter) Wrap(x fu.Underlyer) curves.Scalar {
-	buffer := make([]byte, sa.Curve.ElementSize())
+	buffer := make([]byte, sa.ElementSize())
 	binary.LittleEndian.PutUint64(buffer[:8], x)
-	s, err := sa.Curve.ScalarField().Scalar().SetBytes(buffer)
+	s, err := sa.Element().SetBytes(buffer)
 	if err != nil {
-		s, err = sa.Curve.ScalarField().Hash(buffer)
+		s, err = sa.Hash(buffer)
 		if err != nil {
 			panic(err)
 		}
@@ -58,21 +66,25 @@ func (*ScalarAdapter) Unwrap(s curves.Scalar) fu.Underlyer {
 }
 
 func (sa *ScalarAdapter) ZeroValue() curves.Scalar {
-	return sa.Curve.ScalarField().Zero()
+	return sa.Zero()
 }
 
 var _ fu.ObjectAdapter[curves.BaseFieldElement] = (*BaseFieldElementAdapter)(nil)
 
 type BaseFieldElementAdapter struct {
-	Curve curves.Curve
+	curves.BaseField
+}
+
+func NewBaseFieldElementAdapter(baseField curves.BaseField) fu.ObjectAdapter[curves.BaseFieldElement] {
+	return &BaseFieldElementAdapter{BaseField: baseField}
 }
 
 func (ba *BaseFieldElementAdapter) Wrap(x fu.Underlyer) curves.BaseFieldElement {
-	buffer := make([]byte, ba.Curve.ElementSize())
+	buffer := make([]byte, ba.ElementSize())
 	binary.LittleEndian.PutUint64(buffer[:8], x)
-	f, err := ba.Curve.BaseField().Element().SetBytes(buffer)
+	f, err := ba.Element().SetBytes(buffer)
 	if err != nil {
-		f, err = ba.Curve.BaseField().Hash(buffer)
+		f, err = ba.Hash(buffer)
 		if err != nil {
 			panic(err)
 		}
@@ -85,5 +97,5 @@ func (*BaseFieldElementAdapter) Unwrap(f curves.BaseFieldElement) fu.Underlyer {
 }
 
 func (ba *BaseFieldElementAdapter) ZeroValue() curves.BaseFieldElement {
-	return ba.Curve.BaseField().Zero()
+	return ba.Zero()
 }
