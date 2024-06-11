@@ -26,7 +26,7 @@ func RunCollectionPropertyTest[C Collection[O], O Object](f *testing.F, seedCorp
 func RunAlgebraPropertyTest[S algebra.Structure, E algebra.Element](f *testing.F,
 	structures []S,
 	adapterFactory func(structure S) ObjectAdapter[E],
-	generatorFactory func(*testing.F, ObjectAdapter[E]) []ObjectGenerator[E],
+	generatorFactory func(*testing.T, ObjectAdapter[E]) []ObjectGenerator[E],
 	checkSeveralInvariants ...func(*testing.T, S, ObjectGenerator[E]),
 ) {
 	f.Helper()
@@ -36,10 +36,10 @@ func RunAlgebraPropertyTest[S algebra.Structure, E algebra.Element](f *testing.F
 	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
 		for i, structure := range structures {
 
-			generators := generatorFactory(f, adapterFactory(structure))
-			require.GreaterOrEqual(f, len(generators), 1)
+			generators := generatorFactory(t, adapterFactory(structure))
+			require.GreaterOrEqual(t, len(generators), 1)
 			for _, g := range generators {
-				require.NotNil(f, g)
+				require.NotNil(t, g)
 			}
 
 			for j, generator := range generators {

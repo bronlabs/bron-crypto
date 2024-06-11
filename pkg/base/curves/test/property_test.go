@@ -12,12 +12,12 @@ import (
 	fu "github.com/copperexchange/krypton-primitives/pkg/base/fuzzutils"
 )
 
-func generatorsFactory[E algebra.Element](f *testing.F, adapter fu.ObjectAdapter[E]) []fu.ObjectGenerator[E] {
-	f.Helper()
+func generatorsFactory[E algebra.Element](t *testing.T, adapter fu.ObjectAdapter[E]) []fu.ObjectGenerator[E] {
+	t.Helper()
 
 	prng := fu.NewPrng()
 	objectGenerator, err := fu.NewObjectGenerator(adapter, prng) // base generator
-	require.NoError(f, err)
+	require.NoError(t, err)
 
 	// Add more generators here if needed
 	gs := []fu.ObjectGenerator[E]{
