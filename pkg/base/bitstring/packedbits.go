@@ -45,7 +45,6 @@ func (pb PackedBits) String() string {
 // E.g., [0x12, 0x34] --> [0,1,0,0, 1,0,0,0, 1,1,0,0, 0,0,1,0].
 func (pb PackedBits) Get(i uint) uint8 {
 	return (pb[i/8] >> (i % 8)) & 0b1
-
 }
 
 // Get gets the `i`th bit of a packed bits vector in big-endian order.

@@ -120,7 +120,6 @@ func CheckStructuredSetInvariants[G algebra.StructuredSet[G, GE], GE algebra.Str
 	require.NotNil(t, elementGenerator)
 	require.NotNil(t, structuredSet)
 	// test_utils.CheckAbstractSetInvariants[G, GE](t, structuredSet)
-	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 
 	ssi := &StructuredSetInvariants[G, GE]{}
 	prng := fu.NewPrng()
@@ -131,7 +130,7 @@ func CheckStructuredSetInvariants[G algebra.StructuredSet[G, GE], GE algebra.Str
 	ssei := &StructuredSetElementInvariants[G, GE]{}
 	t.Run("Unwarp", func(t *testing.T) {
 		t.Parallel()
-		ssei.Unwrap(t, structuredSet, gen.Generate(), prng)
+		ssei.Unwrap(t, structuredSet, elementGenerator.Generate(), prng)
 	})
 	ssei.Clone(t, structuredSet, prng)
 }

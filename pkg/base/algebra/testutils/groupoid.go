@@ -276,36 +276,35 @@ func CheckAdditiveGroupoidInvariants[G algebra.AdditiveGroupoid[G, GE], GE algeb
 	t.Helper()
 	CheckGroupoidInvariants[G, GE](t, groupoid, elementGenerator)
 
-	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 	agi := &AdditiveGroupoidInvariants[G, GE]{}
 
 	t.Run("Add", func(t *testing.T) {
 		t.Parallel()
-		agi.Add(t, groupoid, gen.Generate(), gen.Generate())
+		agi.Add(t, groupoid, elementGenerator.Generate(), elementGenerator.Generate())
 	})
 	t.Run("Additon", func(t *testing.T) {
 		t.Parallel()
-		agi.Addition(t, groupoid, gen.Generate(), gen.Generate())
+		agi.Addition(t, groupoid, elementGenerator.Generate(), elementGenerator.Generate())
 	})
 
 	agei := &AdditiveGroupoidElementInvariants[G, GE]{}
 	t.Run("Add for element", func(t *testing.T) {
 		t.Parallel()
-		agei.Add(t, groupoid, gen.Generate(), gen.Generate())
+		agei.Add(t, groupoid, elementGenerator.Generate(), elementGenerator.Generate())
 	})
 	t.Run("ApplyAdd", func(t *testing.T) {
 		t.Parallel()
 		prng := fu.NewPrng().IntRange(0, 20)
 		n := new(saferith.Nat).SetUint64(uint64(prng))
-		agei.ApplyAdd(t, gen.Generate(), n)
+		agei.ApplyAdd(t, elementGenerator.Generate(), n)
 	})
 	t.Run("Double", func(t *testing.T) {
 		t.Parallel()
-		agei.Double(t, gen.Generate())
+		agei.Double(t, elementGenerator.Generate())
 	})
 	t.Run("Tripple", func(t *testing.T) {
 		t.Parallel()
-		agei.Triple(t, gen.Generate())
+		agei.Triple(t, elementGenerator.Generate())
 	})
 }
 
@@ -314,43 +313,42 @@ func CheckMultiplicativeGroupoidInvariants[G algebra.MultiplicativeGroupoid[G, G
 
 	CheckGroupoidInvariants[G, GE](t, groupoid, elementGenerator)
 
-	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 	mgi := &MultiplicativeGroupoidInvariants[G, GE]{}
 	t.Run("Mul", func(t *testing.T) {
 		t.Parallel()
-		mgi.Mul(t, groupoid, gen.Generate(), gen.Generate())
+		mgi.Mul(t, groupoid, elementGenerator.Generate(), elementGenerator.Generate())
 	})
 	// mgi.Exp(t, groupoid, el1, el2) // TODO: EXP not implemented
 
 	mgei := &MultiplicativeGroupoidElementInvariants[G, GE]{}
 	t.Run("Mul", func(t *testing.T) {
 		t.Parallel()
-		mgei.Mul(t, groupoid, gen.Generate(), gen.Generate())
+		mgei.Mul(t, groupoid, elementGenerator.Generate(), elementGenerator.Generate())
 	})
 	t.Run("ApplyMul", func(t *testing.T) {
 		t.Parallel()
 		prng := fu.NewPrng().IntRange(0, 20)
 		n := new(saferith.Nat).SetUint64(uint64(prng))
-		mgei.ApplyMul(t, gen.Generate(), n)
+		mgei.ApplyMul(t, elementGenerator.Generate(), n)
 	})
 	t.Run("Square", func(t *testing.T) {
 		t.Parallel()
 		prng := fu.NewPrng().IntRange(0, 20)
 		n := new(saferith.Nat).SetUint64(uint64(prng))
-		mgei.Square(t, gen.Generate(), n)
+		mgei.Square(t, elementGenerator.Generate(), n)
 
 	})
 	t.Run("Cube", func(t *testing.T) {
 		t.Parallel()
 		prng := fu.NewPrng().IntRange(0, 20)
 		n := new(saferith.Nat).SetUint64(uint64(prng))
-		mgei.Cube(t, gen.Generate(), n)
+		mgei.Cube(t, elementGenerator.Generate(), n)
 	})
 	t.Run("Exp", func(t *testing.T) {
 		t.Parallel()
 		prng := fu.NewPrng().IntRange(0, 20)
 		n := new(saferith.Nat).SetUint64(uint64(prng))
-		mgei.Exp(t, gen.Generate(), n)
+		mgei.Exp(t, elementGenerator.Generate(), n)
 	})
 }
 

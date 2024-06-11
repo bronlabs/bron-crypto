@@ -31,23 +31,19 @@ func (aoi *AssociativeOperatorInvariants[S, E]) IsAssociative(t *testing.T, oper
 func CheckAddCommutativeOperatorInvariants[S algebra.AdditiveMonoid[S, E], E algebra.AdditiveMonoidElement[S, E]](t *testing.T, monoid S, elementGenerator fu.ObjectGenerator[E]) {
 	t.Helper()
 
-	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
-
 	coi := &CommutativeOperatorInvariants[S, E]{}
 	t.Run("IsCommutative", func(t *testing.T) {
 		t.Parallel()
-		coi.IsCommutative(t, monoid.Addition().Add, gen.Generate(), gen.Generate())
+		coi.IsCommutative(t, monoid.Addition().Add, elementGenerator.Generate(), elementGenerator.Generate())
 	})
 }
 func CheckMulCommutativeOperatorInvariants[S algebra.MultiplicativeMonoid[S, E], E algebra.MultiplicativeMonoidElement[S, E]](t *testing.T, monoid S, elementGenerator fu.ObjectGenerator[E]) {
 	t.Helper()
 
-	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
-
 	coi := &CommutativeOperatorInvariants[S, E]{}
 	t.Run("IsCommutative", func(t *testing.T) {
 		t.Parallel()
-		coi.IsCommutative(t, monoid.Multiplication().Multiply, gen.Generate(), gen.Generate())
+		coi.IsCommutative(t, monoid.Multiplication().Multiply, elementGenerator.Generate(), elementGenerator.Generate())
 	})
 }
 
@@ -55,23 +51,21 @@ func CheckaMulAssociativeOperatorInvariants[S algebra.MultiplicativeMonoid[S, E]
 	t.Helper()
 	require.NotNil(t, elementGenerator)
 	require.NotNil(t, monoid)
-	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 
 	aoi := &AssociativeOperatorInvariants[S, E]{}
 	t.Run("IsAssociative", func(t *testing.T) {
 		t.Parallel()
-		aoi.IsAssociative(t, monoid.Multiplication().Multiply, gen.Generate(), gen.Generate(), gen.Generate())
+		aoi.IsAssociative(t, monoid.Multiplication().Multiply, elementGenerator.Generate(), elementGenerator.Generate(), elementGenerator.Generate())
 	})
 }
 func CheckaAddAssociativeOperatorInvariants[S algebra.AdditiveMonoid[S, E], E algebra.AdditiveMonoidElement[S, E]](t *testing.T, monoid S, elementGenerator fu.ObjectGenerator[E]) {
 	t.Helper()
 	require.NotNil(t, elementGenerator)
 	require.NotNil(t, monoid)
-	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 
 	aoi := &AssociativeOperatorInvariants[S, E]{}
 	t.Run("IsAssociative", func(t *testing.T) {
 		t.Parallel()
-		aoi.IsAssociative(t, monoid.Addition().Add, gen.Generate(), gen.Generate(), gen.Generate())
+		aoi.IsAssociative(t, monoid.Addition().Add, elementGenerator.Generate(), elementGenerator.Generate(), elementGenerator.Generate())
 	})
 }

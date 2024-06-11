@@ -351,39 +351,38 @@ func CheckAdditiveGroupInvariants[G algebra.AdditiveGroup[G, GE], GE algebra.Add
 	CheckAdditiveMonoidInvariants[G, GE](t, group, elementGenerator)
 	CheckGroupInvariants[G, GE](t, group, elementGenerator)
 
-	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 	agi := &AdditiveGroupElementInvariants[G, GE]{}
 	t.Run("Sub", func(t *testing.T) {
 		t.Parallel()
-		agi.Sub(t, group, gen.Generate(), gen.Generate())
+		agi.Sub(t, group, elementGenerator.Generate(), elementGenerator.Generate())
 	})
 
 	agei := &AdditiveGroupElementInvariants[G, GE]{}
 	t.Run("AdditivInverse", func(t *testing.T) {
 		t.Parallel()
-		agei.AdditiveInverse(t, group, gen.Generate())
+		agei.AdditiveInverse(t, group, elementGenerator.Generate())
 	})
 	t.Run("IsAdditiveInverse", func(t *testing.T) {
 		t.Parallel()
-		agei.IsAdditiveInverse(t, group, gen.Generate())
+		agei.IsAdditiveInverse(t, group, elementGenerator.Generate())
 	})
 	t.Run("IsTorsionElementUnderAddition", func(t *testing.T) {
 		t.Parallel()
-		agei.IsTorsionElementUnderAddition(t, group, gen.Generate())
+		agei.IsTorsionElementUnderAddition(t, group, elementGenerator.Generate())
 	})
 	t.Run("Neg", func(t *testing.T) {
 		t.Parallel()
-		agei.Neg(t, gen.Generate())
+		agei.Neg(t, elementGenerator.Generate())
 	})
 	t.Run("Sub", func(t *testing.T) {
 		t.Parallel()
-		agei.Sub(t, group, gen.Generate(), gen.Generate())
+		agei.Sub(t, group, elementGenerator.Generate(), elementGenerator.Generate())
 	})
 	t.Run("ApplySub", func(t *testing.T) {
 		t.Parallel()
 		prng := fu.NewPrng().IntRange(0, 20)
 		n := new(saferith.Nat).SetUint64(uint64(prng))
-		agei.ApplySub(t, gen.Generate(), n)
+		agei.ApplySub(t, elementGenerator.Generate(), n)
 	})
 }
 

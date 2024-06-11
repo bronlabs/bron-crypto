@@ -20,8 +20,9 @@ func pointGeneratorFactory(f *testing.F, curve curves.Curve) fu.ObjectGenerator[
 	prng := fu.NewPrng()
 	objectGenerator, err := fu.NewObjectGenerator(adapter, prng)
 	require.NoError(f, err)
+	gen := fu.NewSkewedObjectGenerator(objectGenerator, 5)
 
-	return objectGenerator
+	return gen
 }
 
 func scalarGeneratorFactory(f *testing.F, curve curves.Curve) fu.ObjectGenerator[curves.Scalar] {
@@ -32,8 +33,9 @@ func scalarGeneratorFactory(f *testing.F, curve curves.Curve) fu.ObjectGenerator
 	prng := fu.NewPrng()
 	objectGenerator, err := fu.NewObjectGenerator(adapter, prng)
 	require.NoError(f, err)
+	gen := fu.NewSkewedObjectGenerator(objectGenerator, 5)
 
-	return objectGenerator
+	return gen
 }
 
 func baseFieldGeneratorFactory(f *testing.F, curve curves.Curve) fu.ObjectGenerator[curves.BaseFieldElement] {
@@ -44,14 +46,21 @@ func baseFieldGeneratorFactory(f *testing.F, curve curves.Curve) fu.ObjectGenera
 	prng := fu.NewPrng()
 	objectGenerator, err := fu.NewObjectGenerator(adapter, prng)
 	require.NoError(f, err)
+	gen := fu.NewSkewedObjectGenerator(objectGenerator, 5)
 
-	return objectGenerator
+	return gen
 }
 
 func Fuzz_Property_Point_AdditiveGroup(f *testing.F) {
 	curve := edwards25519.NewCurve()
 	g := pointGeneratorFactory(f, curve)
 	fu.RunAlgebraPropertyTest(f, atu.CheckAdditiveGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
+}
+
+func Fuzz_Property_Point_CyclicGroup(f *testing.F) {
+	curve := edwards25519.NewCurve()
+	g := pointGeneratorFactory(f, curve)
+	fu.RunAlgebraPropertyTest(f, atu.CheckCyclicGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
 }
 
 func Fuzz_Property_Point_FiniteStructure(f *testing.F) {
@@ -66,13 +75,13 @@ func Fuzz_Property_Point_SubGroup(f *testing.F) {
 	fu.RunAlgebraPropertyTest(f, atu.CheckSubGroupInvariants[curves.Curve, curves.Point], curves.Curve(curve), g)
 }
 
-func Fuzz_Property_ScalarField_FiniteField(f *testing.F) {
+func Fuzz_Property_ScalarField_IntegerFiniteField(f *testing.F) {
 	curve := edwards25519.NewCurve()
 	g := scalarGeneratorFactory(f, curve)
-	fu.RunAlgebraPropertyTest(f, atu.CheckFiniteFieldInvariants[curves.ScalarField, curves.Scalar], curve.ScalarField(), g)
+	fu.RunAlgebraPropertyTest(f, atu.CheckIntegerFiniteFieldInvariants[curves.ScalarField, curves.Scalar], curve.ScalarField(), g)
 }
-func Fuzz_Property_BaseField_FiniteField(f *testing.F) {
+func Fuzz_Property_BaseField_IntegerFiniteField(f *testing.F) {
 	curve := edwards25519.NewCurve()
 	g := baseFieldGeneratorFactory(f, curve)
-	fu.RunAlgebraPropertyTest(f, atu.CheckFiniteFieldInvariants[curves.BaseField, curves.BaseFieldElement], curve.BaseField(), g)
+	fu.RunAlgebraPropertyTest(f, atu.CheckIntegerFiniteFieldInvariants[curves.BaseField, curves.BaseFieldElement], curve.BaseField(), g)
 }

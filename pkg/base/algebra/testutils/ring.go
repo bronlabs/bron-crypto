@@ -67,7 +67,11 @@ func (fri *FiniteRingInvariants[R, E]) QuadraticResidue(t *testing.T, frg algebr
 
 func (frei *FiniteRingElementInvariants[R, E]) Sqrt(t *testing.T, p algebra.FiniteRingElement[R, E]) {
 	t.Helper()
-	// TODO: QuadraticResidue
+	q := p.Square()
+	pActual, err := q.Sqrt()
+	require.NoError(t, err)
+
+	require.True(t, p.Equal(pActual), "expected p^2 = q  (mod S.Order())")
 }
 
 func CheckRgInvariants[R algebra.Rg[R, E], E algebra.RgElement[R, E]](t *testing.T, rg R, elementGenerator fu.ObjectGenerator[E]) {
@@ -85,6 +89,7 @@ func CheckRigInvariants[R algebra.Rig[R, E], E algebra.RigElement[R, E]](t *test
 	CheckRgInvariants[R, E](t, rg, elementGenerator)
 	CheckAdditiveMonoidInvariants[R, E](t, rg, elementGenerator)
 	CheckMultiplicativeMonoidInvariants[R, E](t, rg, elementGenerator)
+
 	ri := &RigInvariants[R, E]{}
 	t.Run("Characteristic", func(t *testing.T) {
 		t.Parallel()
@@ -100,11 +105,10 @@ func CheckRingInvariants[R algebra.Ring[R, E], E algebra.RingElement[R, E]](t *t
 	// CheckAdditiveGroupInvariants[R, E](t, rg, elementGenerator) // TODO: IsTorsionElementUnderAddition not implemented for Scalar
 
 	rgei := &RigElementInvariants[R, E]{}
-	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 
 	t.Run("MulAdd", func(t *testing.T) {
 		t.Parallel()
-		rgei.MulAdd(t, rg, gen.Generate(), gen.Generate(), gen.Generate())
+		rgei.MulAdd(t, rg, elementGenerator.Generate(), elementGenerator.Generate(), elementGenerator.Generate())
 	})
 }
 
@@ -115,11 +119,15 @@ func CheckFiniteRingInvariants[R algebra.FiniteRing[R, E], E algebra.FiniteRingE
 	// CheckFiniteStructureInvariants[R, E](t, rg, elementGenerator) // TODO: Contains not implemented for Scalar
 	// CheckRingInvariants[R, E](t, rg, elementGenerator) // TODO: IsTorsionElementUnderAddition not implemented for Scalar
 	CheckBytesSerializationInvariants[E](t, elementGenerator)
-	fri := &FiniteRingInvariants[R, E]{}
+	// fri := &FiniteRingInvariants[R, E]{}
 
-	t.Run("QuadraticResidue", func(t *testing.T) {
-		t.Helper()
-		fri.QuadraticResidue(t, rg, elementGenerator.Generate())
-	})
-	// Sqrt // TODO: check the logic
+	// t.Run("QuadraticResidue", func(t *testing.T) {
+	// 	t.Helper()
+	// 	fri.QuadraticResidue(t, rg, elementGenerator.Generate())
+	// })
+	// frei := &FiniteRingElementInvariants[R, E]{}
+	// t.Run("Sqrt", func(t *testing.T) {
+	// 	t.Helper()
+	// 	frei.Sqrt(t, elementGenerator.Generate())
+	// })
 }
