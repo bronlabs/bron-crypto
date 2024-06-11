@@ -19,10 +19,11 @@ func generatorsFactory[E algebra.Element](f *testing.F, adapter fu.ObjectAdapter
 	objectGenerator, err := fu.NewObjectGenerator(adapter, prng) // base generator
 	require.NoError(f, err)
 
-	// Add more generators here
-	skewedGenerator := fu.NewSkewedObjectGenerator(objectGenerator, 5) // 5% chance of generating a zero element
-
-	return []fu.ObjectGenerator[E]{skewedGenerator}
+	// Add more generators here if needed
+	gs := []fu.ObjectGenerator[E]{
+		fu.NewSkewedObjectGenerator(objectGenerator, 5), // 5% chance of generating a zero element
+	}
+	return gs
 }
 
 func Fuzz_Property_Point_AdditiveGroup(f *testing.F) {

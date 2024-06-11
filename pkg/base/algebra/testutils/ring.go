@@ -56,13 +56,13 @@ func (rgei *RigElementInvariants[R, E]) MulAdd(t *testing.T, rg algebra.Rig[R, E
 	require.True(t, expected.Equal(actual))
 }
 
-func (fri *FiniteRingInvariants[R, E]) QuadraticResidue(t *testing.T, frg algebra.FiniteRing[R, E], p algebra.FiniteRingElement[R, E]) {
+func (fri *FiniteRingInvariants[R, E]) QuadraticResidue(t *testing.T, frg algebra.FiniteRing[R, E], z algebra.FiniteRingElement[R, E]) {
 	t.Parallel()
-	q := p.Square()
-	pActual, err := frg.QuadraticResidue(q)
+	x := z.Square()
+	y, err := frg.QuadraticResidue(x)
 	require.NoError(t, err)
 
-	require.True(t, p.Equal(pActual), "expected p^2 = q  (mod S.Order())")
+	require.True(t, y.Square().Equal(x), "expected QuadraticResidue(z^2)^2 == z^2")
 }
 
 func (frei *FiniteRingElementInvariants[R, E]) Sqrt(t *testing.T, p algebra.FiniteRingElement[R, E]) {
