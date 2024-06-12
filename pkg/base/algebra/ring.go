@@ -55,13 +55,14 @@ type RingElement[R Structure, E Element] interface {
 type FiniteRing[R Structure, E Element] interface {
 	FiniteStructure[R, E]
 	Ring[R, E]
-	// QuadraticResidue outputs q where p^2 = q (mod S.Order()) and returns an error if q does not exist.
-	QuadraticResidue(p RingElement[R, E]) (E, error)
+	// Sqrt outputs q where p^2 = q (mod S.Order()) and returns an error if q does not exist.
+	Sqrt(p RingElement[R, E]) (E, error)
 }
 
 type FiniteRingElement[R Structure, E Element] interface {
 	RingElement[R, E]
 	BytesSerialization[E]
+	IsQuadraticResidue() bool
 	// Sqrt outputs quadratic residue of this element ie. outputs q where p^2 = q (mod S.Order()) and returns an error if q does not exist.
 	Sqrt() (E, error)
 }

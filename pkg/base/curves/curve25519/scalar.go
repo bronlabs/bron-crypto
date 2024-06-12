@@ -326,6 +326,11 @@ func (s *Scalar) ApplyDiv(x algebra.MultiplicativeGroupElement[curves.ScalarFiel
 
 // === Ring Methods.
 
+func (s *Scalar) IsQuadraticResidue() bool {
+	_, err := s.Sqrt()
+	return err != nil
+}
+
 func (*Scalar) Sqrt() (curves.Scalar, error) {
 	panic("not implemented")
 }

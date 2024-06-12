@@ -311,7 +311,7 @@ func (*BaseField) Div(x algebra.MultiplicativeGroupElement[curves.BaseField, cur
 
 // === Ring Methods.
 
-func (*BaseField) QuadraticResidue(p algebra.RingElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
+func (*BaseField) Sqrt(p algebra.RingElement[curves.BaseField, curves.BaseFieldElement]) (curves.BaseFieldElement, error) {
 	pp, ok := p.(*BaseFieldElement)
 	if !ok {
 		return nil, errs.NewType("given point is not from this field")

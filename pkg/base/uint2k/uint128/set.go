@@ -277,7 +277,7 @@ func (*Ring128) Sub(x algebra.AdditiveGroupElement[*Ring128, Uint128], ys ...alg
 	return z
 }
 
-func (*Ring128) QuadraticResidue(p algebra.RingElement[*Ring128, Uint128]) (Uint128, error) {
+func (*Ring128) Sqrt(p algebra.RingElement[*Ring128, Uint128]) (Uint128, error) {
 	// TODO implement me
 	panic("implement me")
 }

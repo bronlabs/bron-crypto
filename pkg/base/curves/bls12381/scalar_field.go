@@ -317,7 +317,7 @@ func (*ScalarField[_]) Div(x algebra.MultiplicativeGroupElement[curves.ScalarFie
 
 // === Ring Methods.
 
-func (*ScalarField[S]) QuadraticResidue(s algebra.RingElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
+func (*ScalarField[S]) Sqrt(s algebra.RingElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
 	ss, ok := s.(*Scalar)
 	if !ok {
 		return nil, errs.NewType("given point is not from this field")

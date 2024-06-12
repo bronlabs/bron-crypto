@@ -153,7 +153,7 @@ func Ring() *Ring256 {
 
 // // === Ring Methods.
 
-// func (*Ring256) QuadraticResidue(p Uint256) (Uint256, error) {
+// func (*Ring256) Sqrt(p Uint256) (Uint256, error) {
 // 	panic("not implemented")
 // }.
 

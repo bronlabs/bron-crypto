@@ -204,6 +204,11 @@ func (el *FieldElement) MulAdd(p, q algebra.RingElement[*Field, *FieldElement]) 
 	return el.Mul(p).Add(q)
 }
 
+func (el *FieldElement) IsQuadraticResidue() bool {
+	_, err := el.Sqrt()
+	return err != nil
+}
+
 func (*FieldElement) Sqrt() (*FieldElement, error) {
 	panic("not implemented")
 }

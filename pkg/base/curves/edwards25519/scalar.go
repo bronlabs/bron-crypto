@@ -382,6 +382,11 @@ func (s *Scalar) ApplyDiv(x algebra.MultiplicativeGroupElement[curves.ScalarFiel
 
 // === Ring Methods.
 
+func (s *Scalar) IsQuadraticResidue() bool {
+	_, err := s.Sqrt()
+	return err != nil
+}
+
 func (s *Scalar) Sqrt() (curves.Scalar, error) {
 	modulus25519, _ := new(saferith.Nat).SetHex(strings.ToUpper("1000000000000000000000000000000014DEF9DEA2F79CD65812631A5CF5D3ED"))
 

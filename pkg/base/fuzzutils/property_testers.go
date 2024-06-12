@@ -35,7 +35,6 @@ func RunAlgebraPropertyTest[S algebra.Structure, E algebra.Element](f *testing.F
 
 	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
 		for i, structure := range structures {
-
 			generators := generatorFactory(t, adapterFactory(structure))
 			require.GreaterOrEqual(t, len(generators), 1)
 			for _, g := range generators {
