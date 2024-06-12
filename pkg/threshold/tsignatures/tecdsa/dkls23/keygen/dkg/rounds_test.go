@@ -23,7 +23,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-	dkls24_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
+	dkls23_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -64,7 +64,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	require.NoError(t, err)
 
-	participants, shards, err := dkls24_testutils.RunDKG(curve, protocol, identities)
+	participants, shards, err := dkls23_testutils.RunDKG(curve, protocol, identities)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
 	for _, shard := range shards {

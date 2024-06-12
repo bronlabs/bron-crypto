@@ -32,7 +32,7 @@ func NewCosigner(myAuthKey types.AuthKey, myShard *dkls23.Shard, protocol types.
 	}
 
 	if err := types.ValidateThresholdSignatureProtocol(participant, protocol); err != nil {
-		return nil, errs.WrapValidation(err, "could not construct a valid interactive dkls24 cosigner")
+		return nil, errs.WrapValidation(err, "could not construct a valid interactive dkls23 cosigner")
 	}
 
 	return participant, nil

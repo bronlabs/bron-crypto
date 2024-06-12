@@ -62,7 +62,7 @@ func DoInteractiveSignRound1(participants []*interactiveSigning.Cosigner) (round
 	for i, participant := range participants {
 		round1OutputsBroadcast[i], round1OutputsP2P[i], err = participant.Round1()
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "failed to run round 1 of DKLs24 signing")
+			return nil, nil, errs.WrapFailed(err, "failed to run round 1 of DKLs23 signing")
 		}
 	}
 
@@ -75,7 +75,7 @@ func DoInteractiveSignRound2(participants []*interactiveSigning.Cosigner, round2
 	for i := range participants {
 		round2BroadcastOutputs[i], round2UnicastOutputs[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "failed to run round 2 of DKLs24 signing")
+			return nil, nil, errs.WrapFailed(err, "failed to run round 2 of DKLs23 signing")
 		}
 	}
 	return round2BroadcastOutputs, round2UnicastOutputs, nil
@@ -86,7 +86,7 @@ func DoInteractiveSignRound3(participants []*interactiveSigning.Cosigner, round3
 	for i := range participants {
 		partialSignatures[i], err = participants[i].Round3(round3BroadcastInputs[i], round3UnicastInputs[i], message)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "failed to run round 3 of DKLs24 signing")
+			return nil, errs.WrapFailed(err, "failed to run round 3 of DKLs23 signing")
 		}
 	}
 
@@ -144,17 +144,17 @@ func RunInteractiveSign(protocol types.ThresholdSignatureProtocol, identities []
 
 	r1OutB, r1OutU, err := DoInteractiveSignRound1(participants)
 	if err != nil {
-		return errs.WrapFailed(err, "failed to run round 1 of DKLs24 signing")
+		return errs.WrapFailed(err, "failed to run round 1 of DKLs23 signing")
 	}
 	r2InB, r2InU := ttu.MapO2I(participants, r1OutB, r1OutU)
 	r2OutB, r2OutU, err := DoInteractiveSignRound2(participants, r2InB, r2InU)
 	if err != nil {
-		return errs.WrapFailed(err, "failed to run round 2 of DKLs24 signing")
+		return errs.WrapFailed(err, "failed to run round 2 of DKLs23 signing")
 	}
 	r3InB, r3InU := ttu.MapO2I(participants, r2OutB, r2OutU)
 	partialSignatures, err := DoInteractiveSignRound3(participants, r3InB, r3InU, message)
 	if err != nil {
-		return errs.WrapFailed(err, "failed to run round 3 of DKLs24 signing")
+		return errs.WrapFailed(err, "failed to run round 3 of DKLs23 signing")
 	}
 
 	producedSignatures, err := RunSignatureAggregation(protocol, identities, participants, partialSignatures, message)

@@ -96,7 +96,7 @@ func RunDKG(curve curves.Curve, protocol types.ThresholdProtocol, identities []t
 		return nil, nil, err
 	}
 
-	// Run DKLs24 specifics
+	// Run DKLs23 specifics
 	participants, err = MakeDkgParticipants(curve, protocol, identities, signingKeyShares, partialPublicKeys, nil, nil)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not make DKG participants")

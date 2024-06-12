@@ -18,7 +18,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "COPPER_KRYPTON_TECDSA_DKLS24-"
+const transcriptLabel = "COPPER_KRYPTON_TECDSA_DKLS23-"
 
 type Cosigner struct {
 	*signing.Participant
@@ -34,7 +34,7 @@ func (ic *Cosigner) IsSignatureAggregator() bool {
 	return ic.Protocol.Participants().Contains(ic.IdentityKey())
 }
 
-// NewCosigner constructs the interactive DKLs24 cosigner.
+// NewCosigner constructs the interactive DKLs23 cosigner.
 func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.IdentityKey], shard *dkls23.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Cosigner, error) {
 	if err := validateInputs(sessionId, authKey, protocol, shard, quorum); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate input")
@@ -118,7 +118,7 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 		},
 	}
 	if err := types.ValidateThresholdSignatureProtocol(cosigner, protocol); err != nil {
-		return nil, errs.WrapValidation(err, "could not construct a valid interactive dkls24 cosigner")
+		return nil, errs.WrapValidation(err, "could not construct a valid interactive dkls23 cosigner")
 	}
 	return cosigner, nil
 }

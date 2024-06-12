@@ -100,7 +100,7 @@ func NewSoftspokenSender(myAuthKey types.AuthKey, protocol types.Protocol, baseO
 
 func initialisePrg(prg csprng.CSPRNG, sessionId []byte) (csprng.CSPRNG, error) {
 	var err error
-	if prg == nil { // Default prng for DKLs24 Mult, with optimised output size.
+	if prg == nil { // Default prng for DKLs23 Mult, with optimised output size.
 		etaPrimeBytes := ((2 + 2) * (ot.KappaBytes + 2*SigmaBytes)) + SigmaBytes // η' = LOTe * ξ + σ = (L + ρ) * (2κ + 2s) + σ
 		prg, err = tmmohash.NewTmmoPrng(ot.KappaBytes, etaPrimeBytes, nil, sessionId)
 		if err != nil {

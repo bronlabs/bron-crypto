@@ -1,6 +1,6 @@
-# DKLs24 Interactive Signing
+# DKLs23 Interactive Signing
 
-This package implements the 3-round, (t, n) signing protocol of [DKLs24](https://eprint.iacr.org/2023/765.pdf), realizing the standard ECDSA functionality defined as Functionality 3.1 in the paper.
+This package implements the 3-round, (t, n) signing protocol of [DKLs23](https://eprint.iacr.org/2023/765.pdf), realizing the standard ECDSA functionality defined as Functionality 3.1 in the paper.
 
 The details of the protocol are sketched in Protocol 3.6 of the main paper. We are largely faithful to the original paper except:
 1. We have confirmation from the DKLs team that the 2nd consistency check of the paper has a typo, which we fix.

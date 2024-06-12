@@ -18,7 +18,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "COPPER_KRYPTON_PREGEN_DKLS24-"
+const transcriptLabel = "COPPER_KRYPTON_PREGEN_DKLS23-"
 
 var _ types.ThresholdParticipant = (*PreGenParticipant)(nil) // only threshold piece of the protocol is important.
 
