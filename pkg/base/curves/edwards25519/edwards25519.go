@@ -226,10 +226,16 @@ func (c *Curve) Map(u curves.BaseFieldElement) curves.Point {
 
 func (c *Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
 	x0Ed, ok0 := x0.(*Point)
+	if !ok0 || x0Ed.V == nil {
+		panic("x0 is not a non-empty edwards25519 point")
+	}
 	x1Ed, ok1 := x1.(*Point)
-	sEd, ok1s := c.Element().(*Point)
-	if !ok0 || !ok1 || ok1s {
-		panic("Not an edwards25519 point")
+	if !ok1 || x1Ed.V == nil {
+		panic("x1 is not a non-empty edwards25519 point")
+	}
+	sEd, okp := c.Element().(*Point)
+	if !okp || sEd.V == nil {
+		panic("curve.Element() not a non-empty edwards25519 point")
 	}
 	x0Ed_x, x0Ed_y, x0Ed_z, x0Ed_t := x0Ed.V.ExtendedCoordinates()
 	x1Ed_x, x1Ed_y, x1Ed_z, x1Ed_t := x1Ed.V.ExtendedCoordinates()

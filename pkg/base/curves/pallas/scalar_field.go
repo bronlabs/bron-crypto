@@ -234,10 +234,16 @@ func (*ScalarField) Hash(x []byte) (curves.Scalar, error) {
 
 func (sf *ScalarField) Select(choice bool, x0, x1 curves.Scalar) curves.Scalar {
 	x0s, ok0 := x0.(*Scalar)
+	if !ok0 || x0s.V == nil {
+		panic("x0 is not a non-empty pallas scalar")
+	}
 	x1s, ok1 := x1.(*Scalar)
+	if !ok1 || x1s.V == nil {
+		panic("x1 is not a non-empty pallas scalar")
+	}
 	s, oks := sf.Element().(*Scalar)
-	if !ok0 || !ok1 || !oks {
-		panic("Not a p256 scalar")
+	if !oks || s.V == nil {
+		panic("s is not a non-empty pallas scalar")
 	}
 	s.V.CMove(x0s.V, x1s.V, utils.BoolTo[int](choice))
 	return s

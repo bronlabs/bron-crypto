@@ -71,7 +71,7 @@ func (p *Participant) Round2(input network.RoundMessages[types.ThresholdProtocol
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), input); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 1 broadcast messages")
+		return nil, errs.WrapValidation(err, "invalid round 2 input broadcast messages")
 	}
 
 	// 2. store commitments
@@ -120,7 +120,7 @@ func (p *Participant) Round3(input network.RoundMessages[types.ThresholdProtocol
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), input); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 2 broadcast messages")
+		return nil, errs.WrapValidation(err, "invalid round 3 input broadcast messages")
 	}
 
 	p.state.theirBigQPrime = make(map[types.SharingID]curves.Point)
@@ -229,7 +229,7 @@ func (p *Participant) Round4(input network.RoundMessages[types.ThresholdProtocol
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 4, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), input); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 3 broadcast messages")
+		return nil, errs.WrapValidation(err, "invalid round 4 input broadcast messages")
 	}
 
 	p.state.theirPaillierPublicKeys = hashmap.NewHashableHashMap[types.IdentityKey, *paillier.PublicKey]()
@@ -313,7 +313,7 @@ func (p *Participant) Round5(input network.RoundMessages[types.ThresholdProtocol
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 5, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), input); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 4 p2p messages")
+		return nil, errs.WrapValidation(err, "invalid round 5 input P2P messages")
 	}
 
 	// 5. LP and LPDL continue
@@ -358,7 +358,7 @@ func (p *Participant) Round6(input network.RoundMessages[types.ThresholdProtocol
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 6, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), input); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 5 p2p messages")
+		return nil, errs.WrapValidation(err, "invalid round 6 input P2P messages")
 	}
 
 	// 6. LP and LPDL continue
@@ -397,10 +397,15 @@ func (p *Participant) Round6(input network.RoundMessages[types.ThresholdProtocol
 	return round6Outputs, nil
 }
 
-func (p *Participant) Round7(input network.RoundMessages[types.ThresholdProtocol, *Round6P2P]) (output network.RoundMessages[types.ThresholdProtocol, *Round7P2P], err error) {
+func (p *Participant) Round7(
+	inputP2P network.RoundMessages[types.ThresholdProtocol, *Round6P2P],
+) (output network.RoundMessages[types.ThresholdProtocol, *Round7P2P], err error) {
 	// Validation
 	if p.Round != 7 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 7, p.Round)
+	}
+	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), inputP2P); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 7 input P2P messages")
 	}
 
 	// 7. LP and LPDL continue
@@ -414,7 +419,7 @@ func (p *Participant) Round7(input network.RoundMessages[types.ThresholdProtocol
 		if !exists {
 			return nil, errs.NewMissing("could not find sender sharing id %s", identity.String())
 		}
-		message, exists := input.Get(identity)
+		message, exists := inputP2P.Get(identity)
 		if !exists {
 			return nil, errs.NewFailed("no input from participant with sharing id %d", sharingId)
 		}
@@ -443,6 +448,9 @@ func (p *Participant) Round8(input network.RoundMessages[types.ThresholdProtocol
 	// Validation
 	if p.Round != 8 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 8, p.Round)
+	}
+	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), input); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 6 input P2P messages")
 	}
 
 	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {

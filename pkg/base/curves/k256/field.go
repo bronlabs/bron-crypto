@@ -242,9 +242,12 @@ func (*BaseField) Hash(x []byte) (curves.BaseFieldElement, error) {
 
 func (*BaseField) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
 	x0f, ok0 := x0.(*BaseFieldElement)
+	if !ok0 || x0f.V == nil {
+		panic("x0 is not a non-empty k256 field element")
+	}
 	x1f, ok1 := x1.(*BaseFieldElement)
-	if !ok0 || !ok1 {
-		panic("Not a k256 field element")
+	if !ok1 || x1f.V == nil {
+		panic("x1 is not a non-empty k256 field element")
 	}
 	el := new(BaseFieldElement)
 	el.V.Arithmetic.Selectznz(&el.V.Value, &x0f.V.Value, &x1f.V.Value, utils.BoolTo[uint64](choice))

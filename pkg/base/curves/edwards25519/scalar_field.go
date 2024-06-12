@@ -235,9 +235,12 @@ func (*ScalarField) Hash(x []byte) (curves.Scalar, error) {
 
 func (*ScalarField) Select(choice bool, x0, x1 curves.Scalar) curves.Scalar {
 	x0s, ok0 := x0.(*Scalar)
+	if !ok0 || x0s.V == nil {
+		panic("x0 is not a non-empty Edwards25519 scalar")
+	}
 	x1s, ok1 := x1.(*Scalar)
-	if !ok0 || !ok1 {
-		panic("Not a Edwards25519 scalar")
+	if !ok1 || x1s.V == nil {
+		panic("x1 is not a non-empty Edwards25519 scalar")
 	}
 	sBytes := x0s.Bytes()
 	subtle.ConstantTimeCopy(utils.BoolTo[int](choice), sBytes, x1s.V.Bytes())

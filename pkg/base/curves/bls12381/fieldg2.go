@@ -233,9 +233,12 @@ func (*BaseFieldG2) Hash(x []byte) (curves.BaseFieldElement, error) {
 
 func (*BaseFieldG2) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
 	x0p2, ok0 := x0.(*BaseFieldElementG2)
+	if !ok0 || x0p2.V == nil {
+		panic("x0 is not a non-empty BLS12381 BaseFieldG2 element")
+	}
 	x1p2, ok1 := x1.(*BaseFieldElementG2)
-	if !ok0 || !ok1 {
-		panic("Not a BLS12381 G2 field element")
+	if !ok1 || x1p2.V == nil {
+		panic("x1 is ot a non-empty BLS12381 BaseFieldG2 element")
 	}
 	return &BaseFieldElementG2{
 		V: new(bimpl.Fp2).CMove(x0p2.V, x1p2.V, utils.BoolTo[uint64](choice)),

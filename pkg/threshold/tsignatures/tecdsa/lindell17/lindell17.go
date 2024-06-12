@@ -138,15 +138,21 @@ func (s *Shard) Validate(protocol types.ThresholdSignatureProtocol, holderIdenti
 		return errs.NewIsNil("paillier public keys")
 	}
 	paillierPublicKeyHolders := hashset.NewHashableHashSet(s.PaillierPublicKeys.Keys()...)
-	if delta := paillierPublicKeyHolders.SymmetricDifference(protocol.Participants()); delta.Size() != 1 || !delta.Contains(holderIdentityKey) {
-		return errs.NewMembership("paillier public keys")
+	if !paillierPublicKeyHolders.IsSubSet(protocol.Participants()) {
+		return errs.NewMembership("paillier public keys holders must be subset of all participants")
+	}
+	if diff := protocol.Participants().Difference(paillierPublicKeyHolders); diff.Size() != 1 || !diff.Contains(holderIdentityKey) {
+		return errs.NewMembership("paillier public keys holders should contain all participants except myself")
 	}
 	if s.PaillierEncryptedShares == nil {
 		return errs.NewIsNil("paillier encrypted share")
 	}
 	paillierEncryptedShareHolders := hashset.NewHashableHashSet(s.PaillierEncryptedShares.Keys()...)
-	if delta := paillierEncryptedShareHolders.SymmetricDifference(protocol.Participants()); delta.Size() != 1 || !delta.Contains(holderIdentityKey) {
-		return errs.NewMembership("paillier encrypted shares")
+	if !paillierEncryptedShareHolders.IsSubSet(protocol.Participants()) {
+		return errs.NewMembership("paillier encrypted share holders must be subset of all participants")
+	}
+	if diff := protocol.Participants().Difference(paillierEncryptedShareHolders); diff.Size() != 1 || !diff.Contains(holderIdentityKey) {
+		return errs.NewMembership("paillier encrypted share holders should contain all participants except myself")
 	}
 	if !paillierEncryptedShareHolders.Equal(paillierPublicKeyHolders) {
 		return errs.NewMembership("number of paillier public keys != number of encrypted paillier ciphertexts")

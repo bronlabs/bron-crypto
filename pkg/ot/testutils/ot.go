@@ -1,9 +1,10 @@
 package testutils
 
 import (
-	"bytes"
 	crand "crypto/rand"
+	"crypto/subtle"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
@@ -52,14 +53,18 @@ func ValidateOT(
 			ot.KappaBytes, len(receiverChoiceBits))
 	}
 	// Check baseOT results
+	chosenMessageElement := ot.MessageElement{}
 	for i := 0; i < Xi; i++ {
 		if len(receiverChosenMessages[i]) != L || len(senderMessages[i][0]) != L || len(senderMessages[i][1]) != L {
 			return errs.NewLength("ROT output message length mismatch (should be %d, is: %d, %d, %d)",
 				L, len(receiverChosenMessages[i]), len(senderMessages[i][0]), len(senderMessages[i][1]))
 		}
-		choice := receiverChoiceBits.Get(uint(i))
-		if !bytes.Equal(receiverChosenMessages[i][0][:], senderMessages[i][choice][0][:]) {
-			return errs.NewVerification("ROT output mismatch for index %d", i)
+		choice := int(receiverChoiceBits.Get(uint(i)))
+		for l := 0; l < L; l++ {
+			ct.SelectSlice(choice, chosenMessageElement[:], senderMessages[i][0][l][:], senderMessages[i][1][l][:])
+			if subtle.ConstantTimeCompare(receiverChosenMessages[i][l][:], chosenMessageElement[:]) != 1 {
+				return errs.NewVerification("ROT output mismatch for index %d", i)
+			}
 		}
 	}
 	return nil
@@ -119,14 +124,11 @@ func ValidateCOT(
 			z_A := senderOutput[j][l]
 			z_B := receiverOutput[j][l]
 			alpha := senderInput[j][l]
-			if x != 0 {
-				if z_A.Cmp(alpha.Sub(z_B)) != 0 {
-					return errs.NewVerification("COTe output mismatch for index %d", j)
-				}
-			} else {
-				if z_A.Cmp(z_B.Neg()) != 0 {
-					return errs.NewVerification("COTe output mismatch for index %d", j)
-				}
+
+			scalarField := alpha.ScalarField()
+			xScalar := scalarField.Select(x != 0, scalarField.Zero(), scalarField.One())
+			if z_A.Cmp(alpha.Mul(xScalar).Sub(z_B)) != 0 {
+				return errs.NewVerification("COTe output mismatch for index %d", j)
 			}
 		}
 	}

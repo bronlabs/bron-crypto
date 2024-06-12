@@ -23,8 +23,11 @@ func (p *PreGenParticipant) Round1() (*signing.Round1Broadcast, network.RoundMes
 	return outputBroadcast, outputP2P, nil
 }
 
-func (p *PreGenParticipant) Round2(round1outputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round1Broadcast], round1outputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round1P2P]) (*signing.Round2Broadcast, network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2P2P], error) {
-	// Validation, round 1 messages delegated to signing.DoRound2
+func (p *PreGenParticipant) Round2(
+	round1outputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round1Broadcast],
+	round1outputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round1P2P],
+) (*signing.Round2Broadcast, network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2P2P], error) {
+	// Validation, input messages delegated to signing.DoRound2
 	if p.Round != 2 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
@@ -38,8 +41,11 @@ func (p *PreGenParticipant) Round2(round1outputBroadcast network.RoundMessages[t
 	return outputBroadcast, outputP2P, nil
 }
 
-func (p *PreGenParticipant) Round3(round2outputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2Broadcast], round2outputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2P2P]) (*dkls23.PreProcessingMaterial, error) {
-	// Validation, round 2 messages delegated to signing.DoRound3Prologue
+func (p *PreGenParticipant) Round3(
+	round2outputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2Broadcast],
+	round2outputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2P2P],
+) (*dkls23.PreProcessingMaterial, error) {
+	// Validation, input messages delegated to signing.DoRound3Prologue
 	if p.Round != 3 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}

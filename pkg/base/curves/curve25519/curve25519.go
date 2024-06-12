@@ -196,9 +196,12 @@ func (c *Curve) Map(u curves.BaseFieldElement) curves.Point {
 // Select returns x0 if choice is false, and x1 if choice is true.
 func (*Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
 	x0p, ok0 := x0.(*Point)
+	if !ok0 {
+		panic("x0 is not a curve25519 point")
+	}
 	x1p, ok1 := x1.(*Point)
-	if !ok0 || !ok1 {
-		panic("Not a curve25519 point")
+	if !ok1 {
+		panic("x1 is not a curve25519 point")
 	}
 	el := new(Point)
 	copy(el.V[:], x0p.V[:])

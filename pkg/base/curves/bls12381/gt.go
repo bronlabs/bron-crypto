@@ -128,13 +128,16 @@ func (g *Gt) Hash(x []byte) (curves.GtMember, error) {
 	return g.Random(reader)
 }
 
-func (g *Gt) Select(choice bool, x0, x1 curves.GtMember) curves.GtMember {
+func (*Gt) Select(choice bool, x0, x1 curves.GtMember) curves.GtMember {
 	x0Gt, ok0 := x0.(*GtMember)
-	x1Gt, ok1 := x1.(*GtMember)
-	sGt, oks := g.Element().(*GtMember)
-	if !ok0 || !ok1 || oks {
-		panic("Not a BLS12381 Gt element")
+	if !ok0 || x0Gt.V == nil {
+		panic("x0 is not a non-empty BLS12381 Gt element")
 	}
+	x1Gt, ok1 := x1.(*GtMember)
+	if !ok1 || x1Gt.V == nil {
+		panic("x1 is not a non-empty BLS12381 Gt element")
+	}
+	sGt := new(GtMember)
 	sGt.V.A.CMove(&x0Gt.V.A, &x1Gt.V.A, utils.BoolTo[uint64](choice))
 	sGt.V.B.CMove(&x0Gt.V.B, &x1Gt.V.B, utils.BoolTo[uint64](choice))
 	return sGt

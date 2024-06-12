@@ -190,7 +190,7 @@ func (*Curve) HashWithDst(input []byte, dst []byte) (curves.Point, error) {
 	}
 	u0, ok0 := u[0].(*BaseFieldElement)
 	u1, ok1 := u[1].(*BaseFieldElement)
-	if !ok0 || !ok1 {
+	if !ok0 || !ok1 || u0.V == nil || u1.V == nil {
 		return nil, errs.NewType("Cast to K256 field elements failed")
 	}
 	err = p.Arithmetic.Map(u0.V, u1.V, p)
@@ -202,10 +202,16 @@ func (*Curve) HashWithDst(input []byte, dst []byte) (curves.Point, error) {
 
 func (c *Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
 	x0p, ok0 := x0.(*Point)
+	if !ok0 || x0p.V == nil {
+		panic("x0 is not a non-empty K256 point")
+	}
 	x1p, ok1 := x1.(*Point)
+	if !ok1 || x1p.V == nil {
+		panic("x1 is not a non-empty K256 point")
+	}
 	p, okp := c.Element().(*Point)
-	if !ok0 || !ok1 || okp {
-		panic("Not a K256 point")
+	if !okp || p.V == nil {
+		panic("curve.Element() not a non-empty K256 point")
 	}
 	p.V.X.CMove(x0p.V.X, x1p.V.X, utils.BoolTo[uint64](choice))
 	p.V.Y.CMove(x0p.V.Y, x1p.V.Y, utils.BoolTo[uint64](choice))
