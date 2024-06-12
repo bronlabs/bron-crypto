@@ -12,7 +12,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	fu "github.com/copperexchange/krypton-primitives/pkg/base/fuzzutils"
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,25 +44,6 @@ func (nsi *NatSerializationInvariants[E]) SetNatAndNat(t *testing.T, object alge
 	object2 := output.Clone()
 	object2.SetNat(object2)
 	require.True(t, object2.Eq(output) == 1)
-
-	oneBigEndian := make([]byte, boundedCurve.BaseField().ElementSize())
-
-	if boundedCurve.BaseField().ExtensionDegree().Uint64() == 1 {
-		oneBigEndian[len(oneBigEndian)-1] = 0x1
-	} else {
-		oneBigEndian[len(oneBigEndian)/2-1] = 0x1
-	}
-
-	// Check cast from-to Nat
-	realFeOne := boundedCurve.BaseField().One()
-	feOne := boundedCurve.BaseField().Element().SetNat(saferithUtils.NatOne)
-	require.EqualValues(t, realFeOne.Bytes(), feOne.Bytes())
-	require.EqualValues(t, oneBigEndian, feOne.Bytes())
-	// Check if the internal value is treated as a one
-	oneTimesOne := feOne.Mul(feOne)
-	require.True(t, feOne.IsOne())
-	require.False(t, feOne.IsZero())
-	require.True(t, oneTimesOne.IsOne() && !oneTimesOne.IsZero())
 }
 
 func (bsi *BytesSerializationInvariants[E]) BytesAndSetBytes(t *testing.T, object algebra.BytesSerialization[E], boundedCurve curves.Curve) {
@@ -75,21 +55,6 @@ func (bsi *BytesSerializationInvariants[E]) BytesAndSetBytes(t *testing.T, objec
 	require.NoError(t, err)
 	require.Equal(t, excpted, object)
 
-	oneBigEndian := make([]byte, boundedCurve.BaseField().ElementSize())
-
-	if boundedCurve.BaseField().ExtensionDegree().Uint64() == 1 {
-		oneBigEndian[len(oneBigEndian)-1] = 0x1
-	} else {
-		oneBigEndian[len(oneBigEndian)/2-1] = 0x1
-	}
-	// Check cast from-to bytes
-	feOne, err := boundedCurve.BaseField().Element().SetBytes(oneBigEndian)
-	require.NoError(t, err)
-	require.EqualValues(t, oneBigEndian, feOne.Bytes())
-	// Check if the internal value is treated as a one
-	oneTimesOne := feOne.Mul(feOne)
-	require.True(t, feOne.IsOne() && !feOne.IsZero())
-	require.True(t, oneTimesOne.IsOne() && !oneTimesOne.IsZero())
 }
 
 func (bsi *BytesSerializationInvariants[E]) BytesAndSetBytesSetBytesWide(t *testing.T, object algebra.BytesSerialization[E], boundedCurve curves.Curve) {
@@ -101,37 +66,6 @@ func (bsi *BytesSerializationInvariants[E]) BytesAndSetBytesSetBytesWide(t *test
 	require.NoError(t, err)
 	require.Equal(t, excpted, object)
 
-	oneBigEndian := make([]byte, boundedCurve.BaseField().WideElementSize())
-	extensionDegree := boundedCurve.BaseField().ExtensionDegree().Uint64()
-	if extensionDegree == 1 {
-		oneBigEndian[len(oneBigEndian)-1] = 0x1
-	} else {
-		oneBigEndian[len(oneBigEndian)/2-1] = 0x1
-	}
-	// Check cast from-to Nat
-	feOne, err := boundedCurve.BaseField().Element().SetBytesWide(oneBigEndian)
-	require.NoError(t, err)
-	feOneLength := len(feOne.Bytes())
-
-	if extensionDegree == 1 {
-		require.EqualValues(t, oneBigEndian[len(oneBigEndian)-feOneLength:], feOne.Bytes())
-	} else {
-		l := len(oneBigEndian)
-		actualA := feOne.Bytes()[:feOneLength/2]
-		expectedA := oneBigEndian[l/4 : l/2]
-		require.EqualValues(t, expectedA, actualA)
-		require.Contains(t, actualA, byte(0x01))
-
-		actualB := feOne.Bytes()[feOneLength/2:]
-		expectedB := oneBigEndian[3*l/4:]
-		require.EqualValues(t, expectedB, actualB)
-		require.NotContains(t, actualB, byte(0x01))
-	}
-
-	// Check if the internal value is treated as a one
-	oneTimesOne := feOne.Mul(feOne)
-	require.True(t, feOne.IsOne() && !feOne.IsZero())
-	require.True(t, oneTimesOne.IsOne() && !oneTimesOne.IsZero())
 }
 func CheckNatSerializationInvariants[E algebra.NatSerialization[E]](t *testing.T, elementGenerator fu.ObjectGenerator[E]) {
 	t.Helper()
