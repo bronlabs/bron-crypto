@@ -2,6 +2,8 @@ package ct
 
 import (
 	"crypto/subtle"
+
+	"golang.org/x/exp/constraints"
 )
 
 // Equal returns 1 if x == y and 0 otherwise. Based on the subtle package.
@@ -32,10 +34,18 @@ func Select(choice, x0, x1 uint64) uint64 {
 	return (choice-1)&x0 | ^(choice-1)&x1
 }
 
-// IsAllZero returns 1 if all values of x are zero and returns 0 otherwise. Based on the subtle package.
-func IsAllZero(x []byte) int {
-	zero := make([]byte, len(x))
-	return subtle.ConstantTimeCompare(x, zero)
+// IsAllEqual returns 1 if all values of s are equal to e and returns 0 otherwise. Based on the subtle package.
+func IsAllEqual[S ~[]E, E constraints.Integer](s S, e E) int {
+	var v E
+	for i := range s {
+		v |= s[i] ^ e
+	}
+	return Equal(uint64(v), 0)
+}
+
+// IsAllEqual returns 1 if all values of s are equal to 0 and returns 0 otherwise. Based on the subtle package.
+func IsAllZeros[S ~[]E, E constraints.Integer](s S) int {
+	return IsAllEqual(s, 0)
 }
 
 // SelectSlice yields y if v == 1, x if v == 0. Its behaviour is undefined if v

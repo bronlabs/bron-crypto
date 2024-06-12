@@ -1,6 +1,7 @@
 package ct_test
 
 import (
+	"bytes"
 	"math/rand"
 	"testing"
 
@@ -61,9 +62,16 @@ func Test_ConstantTimeGt(t *testing.T) {
 	}
 }
 
-func TestConstantTimeIsAllZero(t *testing.T) {
+func TestConstantTimeIsAllEqualNZero(t *testing.T) {
 	t.Parallel()
-	zero := [32]byte{}
-	require.Equal(t, 1, ct.IsAllZero(zero[:]))
-	require.Equal(t, 0, ct.IsAllZero([]byte("something")))
+	zero := make([]byte, 32)
+	require.Equal(t, 1, ct.IsAllEqual(zero, 0))
+	require.Equal(t, 0, ct.IsAllEqual([]byte("something"), 0))
+	require.Equal(t, 1, ct.IsAllZeros(zero))
+	require.Equal(t, 0, ct.IsAllZeros([]byte("something")))
+
+	nonZero := bytes.ReplaceAll(make([]byte, 32), []byte{0}, []byte{0xF3})
+	require.Equal(t, 1, ct.IsAllEqual(nonZero[:], 0xF3))
+	require.Equal(t, 0, ct.IsAllEqual(nonZero[:], 0))
+	require.Equal(t, 0, ct.IsAllZeros(nonZero))
 }

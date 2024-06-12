@@ -65,7 +65,7 @@ func DoDkgRound2(participants []*pedersen.Participant, round2BroadcastInputs []n
 	for i := range participants {
 		signingKeyShares[i], publicKeyShares[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "could not run Pedersen DKG round 2")
+			return nil, nil, errs.WrapFailed(err, "Participant %d could not run Pedersen DKG round 2", i)
 		}
 	}
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"math/rand"
 	"reflect"
 	"runtime"
 	"strings"
@@ -156,7 +155,7 @@ func testAliceDlogProofIsUnique(t *testing.T, curve curves.Curve, hash func() ha
 	// force to use the same data for Alice
 	alphaUniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
-	alphaPrngs[aliceIndex] = rand.New(rand.NewSource(0xcafebabe))
+	alphaPrngs[aliceIndex] = ttu.MakeTestPrng([]byte("Blood has been spilled this night - Legolas"))
 	alphaParticipants, err := testutils.MakeParticipants(alphaUniqueSessionId, protocolConfig, identities, cn, alphaPrngs)
 	require.NoError(t, err)
 	alphaR1OutsB, alphaR1OutsU, err := testutils.DoDkgRound1(alphaParticipants)
@@ -171,7 +170,7 @@ func testAliceDlogProofIsUnique(t *testing.T, curve curves.Curve, hash func() ha
 	// force to use the same data for Alice
 	betaUniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
-	betaPrngs[aliceIndex] = rand.New(rand.NewSource(0xcafebabe))
+	betaPrngs[aliceIndex] = ttu.MakeTestPrng([]byte("Certainty of death? What are we waitin' for? - Gimli"))
 	betaParticipants, err := testutils.MakeParticipants(betaUniqueSessionId, protocolConfig, identities, cn, betaPrngs)
 	require.NoError(t, err)
 	betaR1OutsB, betaR1OutsU, err := testutils.DoDkgRound1(betaParticipants)
@@ -190,7 +189,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 
 	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
-	prng := rand.New(rand.NewSource(0xcafebabe))
+	prng := ttu.MakeTestPrng([]byte("You Have No Power Here - Theoden"))
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	attackerIndex := 0
 	require.NoError(t, err)

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"math/rand"
 	"reflect"
 	"runtime"
 	"strings"
@@ -162,18 +161,19 @@ func testAliceDlogProofIsUnique(t *testing.T, curve curves.Curve, hash func() ha
 	// Alpha execution
 	alphaPrngs := make([]io.Reader, n)
 	// force to use the same data for Alice
-	alphaPrngs[0] = rand.New(rand.NewSource(0xcafebabe))
+	alphaPrngs[0] = ttu.MakeTestPrng([]byte(
+		"A day may come when the courage of men fails. But it is not this day! - Aragorn"))
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	alphaParticipants, err := testutils.MakeParticipants(uniqueSessionId, protocolConfig, identities, alphaPrngs)
 	require.NoError(t, err)
-	alphaR2OutsB, alphaR2OutsU, err := testutils.DoDkgRound1(alphaParticipants, nil)
+	alphaR1OutsB, alphaR1OutsU, err := testutils.DoDkgRound1(alphaParticipants, nil)
 	require.NoError(t, err)
-	alphaAliceDlogProof := alphaR2OutsB[0].DlogProof
+	alphaAliceDlogProof := alphaR1OutsB[0].DlogProof
 	require.NoError(t, err)
-	alphaR3InsB, alphaR3InsU := ttu.MapO2I(alphaParticipants, alphaR2OutsB, alphaR2OutsU)
-	_, _, err = testutils.DoDkgRound2(alphaParticipants, alphaR3InsB, alphaR3InsU)
+	alphaR2InsB, alphaR2InsU := ttu.MapO2I(alphaParticipants, alphaR1OutsB, alphaR1OutsU)
+	_, _, err = testutils.DoDkgRound2(alphaParticipants, alphaR2InsB, alphaR2InsU)
 	require.NoError(t, err)
 
 	// Beta execution
@@ -182,7 +182,8 @@ func testAliceDlogProofIsUnique(t *testing.T, curve curves.Curve, hash func() ha
 	uniqueSessionId, err = agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 	require.NoError(t, err)
 
-	betaPrngs[0] = rand.New(rand.NewSource(0xcafebabe))
+	betaPrngs[0] = ttu.MakeTestPrng([]byte(
+		"A day may come when the courage of men fails. But it is not this day! - Aragorn"))
 	betaParticipants, err := testutils.MakeParticipants(uniqueSessionId, protocolConfig, identities, betaPrngs)
 	require.NoError(t, err)
 	betaR2OutsB, betaR2OutsU, err := testutils.DoDkgRound1(betaParticipants, nil)
@@ -201,7 +202,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 
 	cipherSuite, err := ttu.MakeSigningSuite(curve, hash)
 	require.NoError(t, err)
-	prng := rand.New(rand.NewSource(0xcafebabe))
+	prng := ttu.MakeTestPrng([]byte("You have elected the way of ... Pain! - Saruman"))
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)

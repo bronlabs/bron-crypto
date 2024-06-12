@@ -122,7 +122,7 @@ func (s *Shard) Validate(protocol types.ThresholdProtocol, holderIdentityKey typ
 		return errs.NewMembership("pairwise seed holders")
 	}
 	for _, seed := range s.PairwiseSeeds.Values() {
-		if ct.IsAllZero(seed[:]) == 1 {
+		if ct.IsAllZeros(seed[:]) == 1 {
 			return errs.NewIsZero("found a zero przs seed")
 		}
 	}

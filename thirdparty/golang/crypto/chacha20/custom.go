@@ -98,8 +98,9 @@ func (c *FastKeyErasureCipher) XORKeyStream(dst, src []byte) {
 	c.setKey(c.buf[:KeySize])
 	copy(dst, c.buf[KeySize:blockSize])
 	if len(src) <= blockSize-KeySize {
-		c.remaining = blockSize - KeySize + len(src)
-		bitstring.Memclr(c.buf[:KeySize+len(src)])
+		c.remaining = blockSize - KeySize - len(src)
+		copy(c.buf[bufSize-c.remaining:], c.buf[KeySize+len(src):blockSize]) // needed if bufSize > blockSize
+		bitstring.Memclr(c.buf[:bufSize-c.remaining])
 		return
 	} else {
 		bitstring.Memclr(c.buf[:blockSize])
