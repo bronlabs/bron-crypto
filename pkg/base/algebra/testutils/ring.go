@@ -62,7 +62,7 @@ func (fri *FiniteRingInvariants[R, E]) Sqrt(t *testing.T, frg algebra.FiniteRing
 	y, err := frg.Sqrt(x)
 	require.NoError(t, err)
 
-	require.True(t, y.Square().Equal(x), "expected Sqrt(z^2)^2 == z^2")
+	require.True(t, y.Equal(x.Unwrap()), "expected Sqrt(z^2)^2 == z^2")
 }
 
 func (frei *FiniteRingElementInvariants[R, E]) Sqrt(t *testing.T, p algebra.FiniteRingElement[R, E]) {
