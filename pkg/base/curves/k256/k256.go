@@ -19,7 +19,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fq"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -200,7 +199,7 @@ func (*Curve) HashWithDst(input []byte, dst []byte) (curves.Point, error) {
 	return &Point{V: p}, nil
 }
 
-func (c *Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
+func (c *Curve) Select(choice uint64, x0, x1 curves.Point) curves.Point {
 	x0p, ok0 := x0.(*Point)
 	if !ok0 || x0p.V == nil {
 		panic("x0 is not a non-empty K256 point")
@@ -213,9 +212,9 @@ func (c *Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
 	if !okp || p.V == nil {
 		panic("curve.Element() not a non-empty K256 point")
 	}
-	p.V.X.CMove(x0p.V.X, x1p.V.X, utils.BoolTo[uint64](choice))
-	p.V.Y.CMove(x0p.V.Y, x1p.V.Y, utils.BoolTo[uint64](choice))
-	p.V.Z.CMove(x0p.V.Z, x1p.V.Z, utils.BoolTo[uint64](choice))
+	p.V.X.CMove(x0p.V.X, x1p.V.X, choice)
+	p.V.Y.CMove(x0p.V.Y, x1p.V.Y, choice)
+	p.V.Z.CMove(x0p.V.Z, x1p.V.Z, choice)
 	return p
 }
 

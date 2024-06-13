@@ -9,7 +9,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
@@ -89,8 +88,8 @@ func (*Ring256) HashCode() uint64 {
 	return 1
 }
 
-func (*Ring256) Select(choice bool, x0, x1 Uint256) Uint256 {
-	b := utils.BoolTo[uint64](choice)
+func (*Ring256) Select(choice uint64, x0, x1 Uint256) Uint256 {
+	b := choice
 	return Uint256{
 		^(b-1)&x0[0] | (b-1)&x1[0],
 		^(b-1)&x0[1] | (b-1)&x1[1],

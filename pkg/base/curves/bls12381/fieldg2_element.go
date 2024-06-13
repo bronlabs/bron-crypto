@@ -1,7 +1,6 @@
 package bls12381
 
 import (
-	"crypto/subtle"
 	"encoding"
 	"encoding/json"
 
@@ -240,8 +239,11 @@ func (*BaseFieldElementG2) Conjugate() curves.BaseFieldElement {
 }
 
 func (e *BaseFieldElementG2) Equal(rhs curves.BaseFieldElement) bool {
-	_, ok := rhs.(*BaseFieldElementG2)
-	return ok && subtle.ConstantTimeCompare(e.Bytes(), rhs.Bytes()) == 1
+	rhse, ok := rhs.(*BaseFieldElementG2)
+	if !ok {
+		return false
+	}
+	return e.V.Equal(rhse.V) == 1
 }
 
 func (e *BaseFieldElementG2) Clone() curves.BaseFieldElement {

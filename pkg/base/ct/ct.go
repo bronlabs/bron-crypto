@@ -50,7 +50,7 @@ func IsAllZeros[S ~[]E, E constraints.Integer](s S) int {
 
 // SelectSlice yields x1 if v == 1, x0 if v == 0. Its behaviour is undefined if
 // v takes any other value. Based on subtle.ConstantTimeCopy.
-func SelectSlice(v int, dst, x0, x1 []byte) {
+func SelectSlice[E constraints.Integer](v E, dst, x0, x1 []byte) {
 	if len(x0) != len(x1) || len(x0) != len(dst) {
 		panic("subtle: slices have different lengths")
 	}

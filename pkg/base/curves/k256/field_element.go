@@ -243,7 +243,11 @@ func NewBaseFieldElement(value uint64) *BaseFieldElement {
 // === Basic Methods.
 
 func (e *BaseFieldElement) Equal(rhs curves.BaseFieldElement) bool {
-	return e.Cmp(rhs) == 0
+	rhse, ok := rhs.(*BaseFieldElement)
+	if !ok {
+		return false
+	}
+	return e.V.Equal(rhse.V) == 1
 }
 
 func (e *BaseFieldElement) Clone() curves.BaseFieldElement {

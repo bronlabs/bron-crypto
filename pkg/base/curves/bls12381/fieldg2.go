@@ -11,7 +11,6 @@ import (
 	bimpl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -231,7 +230,7 @@ func (*BaseFieldG2) Hash(x []byte) (curves.BaseFieldElement, error) {
 	return els[0], nil
 }
 
-func (*BaseFieldG2) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseFieldG2) Select(choice uint64, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
 	x0p2, ok0 := x0.(*BaseFieldElementG2)
 	if !ok0 || x0p2.V == nil {
 		panic("x0 is not a non-empty BLS12381 BaseFieldG2 element")
@@ -241,7 +240,7 @@ func (*BaseFieldG2) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.B
 		panic("x1 is ot a non-empty BLS12381 BaseFieldG2 element")
 	}
 	return &BaseFieldElementG2{
-		V: new(bimpl.Fp2).CMove(x0p2.V, x1p2.V, utils.BoolTo[uint64](choice)),
+		V: new(bimpl.Fp2).CMove(x0p2.V, x1p2.V, choice),
 	}
 }
 

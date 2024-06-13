@@ -225,8 +225,15 @@ func (*Scalar) BytesLE() []byte {
 }
 
 func (s *Scalar) Equal(rhs curves.Scalar) bool {
-	r, ok := rhs.(*Scalar)
-	return ok && subtle.ConstantTimeCompare(s.V[:], r.V[:]) == 1
+	return s.Eq(rhs) == 1
+}
+
+func (s *Scalar) Eq(rhs curves.Scalar) uint64 {
+	rhse, ok := rhs.(*Scalar)
+	if !ok {
+		return 0
+	}
+	return uint64(subtle.ConstantTimeCompare(s.V[:], rhse.V[:]))
 }
 
 func (s *Scalar) Clone() curves.Scalar {

@@ -87,7 +87,7 @@ func (*Ring128) HashCode() uint64 {
 	return 1
 }
 
-func (*Ring128) Select(choice bool, x0, x1 Uint128) Uint128 {
+func (*Ring128) Select(choice uint64, x0, x1 Uint128) Uint128 {
 	// TODO implement me
 	panic("implement me")
 }

@@ -126,7 +126,7 @@ func ValidateCOT(
 			alpha := senderInput[j][l]
 
 			scalarField := alpha.ScalarField()
-			xScalar := scalarField.Select(x != 0, scalarField.Zero(), scalarField.One())
+			xScalar := scalarField.Select(uint64(x), scalarField.Zero(), scalarField.One())
 			if z_A.Cmp(alpha.Mul(xScalar).Sub(z_B)) != 0 {
 				return errs.NewVerification("COTe output mismatch for index %d", j)
 			}

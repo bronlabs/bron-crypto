@@ -235,7 +235,11 @@ func (*Scalar) SetBytesWideLE(bytes []byte) (curves.Scalar, error) {
 }
 
 func (s *Scalar) Equal(rhs curves.Scalar) bool {
-	return s.Cmp(rhs) == 0
+	rhse, ok := rhs.(*Scalar)
+	if !ok {
+		return false
+	}
+	return s.V.Equal(rhse.V) == 1
 }
 
 func (s *Scalar) Clone() curves.Scalar {

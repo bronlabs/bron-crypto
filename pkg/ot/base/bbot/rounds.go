@@ -97,7 +97,7 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 			phiNonChosen := curve.ScalarBaseMult(sc).ClearCofactor()
 
 			// step 2.6 (POPF.Program)
-			ct.SelectSlice(int(c_i), chosenTagRandomOracle, tagsRandomOracle[0], tagsRandomOracle[1])
+			ct.SelectSlice(c_i, chosenTagRandomOracle, tagsRandomOracle[0], tagsRandomOracle[1])
 			hashInput := slices.Concat(phiNonChosen.ToAffineCompressed(), chosenTagRandomOracle)
 			sc, err = curve.ScalarField().Hash(hashInput)
 			if err != nil {
@@ -106,8 +106,8 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 			pt := curve.ScalarBaseMult(sc).ClearCofactor()
 			phiChosen := mR_i.Sub(pt)
 
-			phi[i][0][l] = curve.Select(c_i != 0, phiChosen, phiNonChosen)
-			phi[i][1][l] = curve.Select(c_i != 0, phiNonChosen, phiChosen)
+			phi[i][0][l] = curve.Select(uint64(c_i), phiChosen, phiNonChosen)
+			phi[i][1][l] = curve.Select(uint64(c_i), phiNonChosen, phiChosen)
 		}
 	}
 

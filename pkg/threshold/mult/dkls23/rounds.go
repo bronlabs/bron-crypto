@@ -42,7 +42,7 @@ func (bob *Bob) Round1() (b curves.Scalar, r1out *Round1Output, err error) {
 	// step 1.3: b = ∑_{j∈[ξ]} β_j * g_j
 	b = bob.Protocol.Curve().ScalarField().AdditiveIdentity()
 	for j := 0; j < Xi; j++ {
-		b = bob.Protocol.Curve().ScalarField().Select(bob.Beta[j] != 0, b, b.Add(bob.gadget[j]))
+		b = bob.Protocol.Curve().ScalarField().Select(uint64(bob.Beta[j]), b, b.Add(bob.gadget[j]))
 	}
 
 	bob.Round = 3
@@ -187,15 +187,15 @@ func (bob *Bob) Round3(r2out *Round2Output) (bigD *[L]curves.Scalar, err error) 
 	for j := 0; j < Xi; j++ {
 		for i := 0; i < L; i++ {
 			// step 3.2: ḋ_{j,i} = γ_{j,i} + β_j * ã_{j,i}   ∀i∈[𝓁] ∀j∈[ξ]
-			ddot_j[i] = scalarField.Select(bob.Beta[j] != 0, bob.Gamma[j][i], bob.Gamma[j][i].Add(r2out.ATilde[j][i]))
+			ddot_j[i] = scalarField.Select(uint64(bob.Beta[j]), bob.Gamma[j][i], bob.Gamma[j][i].Add(r2out.ATilde[j][i]))
 			// step 3.3: d_i = ∑_{j∈[ξ]} g_j * ḋ_{j,i} ∀i∈[𝓁]
 			bigD[i] = bigD[i].Add(bob.gadget[j].Mul(ddot_j[i]))
 		}
 		for k := 0; k < Rho; k++ {
 			// step 3.4: ḓ_{j,k} = γ_{j,𝓁+k} + β_j * ã_{j,l+k}   ∀k∈[ρ] ∀j∈[ξ]
-			dhat_j_k = scalarField.Select(bob.Beta[j] != 0, bob.Gamma[j][L+k], bob.Gamma[j][L+k].Add(r2out.ATilde[j][L+k]))
+			dhat_j_k = scalarField.Select(uint64(bob.Beta[j]), bob.Gamma[j][L+k], bob.Gamma[j][L+k].Add(r2out.ATilde[j][L+k]))
 			// step 3.5: μb'_{j,k} = ḓ_{j,k} + ∑_{i∈[𝓁]} θ_{i*ρ + k} * ḋ_{j,i} - β_j * η_k  ∀k∈[ρ] ∀j∈[ξ]
-			muBoldPrime_j_k = scalarField.Select(bob.Beta[j] != 0, dhat_j_k, dhat_j_k.Sub(r2out.Eta[k]))
+			muBoldPrime_j_k = scalarField.Select(uint64(bob.Beta[j]), dhat_j_k, dhat_j_k.Sub(r2out.Eta[k]))
 			for i := 0; i < L; i++ {
 				muBoldPrime_j_k = muBoldPrime_j_k.Add(theta[i*Rho+k].Mul(ddot_j[i]))
 			}

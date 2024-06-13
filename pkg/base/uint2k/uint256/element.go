@@ -207,11 +207,13 @@ func (u Uint256) Previous() (Uint256, error) {
 }
 
 func (u Uint256) Min(rhs Uint256) Uint256 {
-	return Ring().Select(u.Cmp(rhs) == algebra.LessThan, u, rhs)
+	lt := uint64(subtle.ConstantTimeEq(int32(u.Cmp(rhs)), int32(algebra.LessThan)))
+	return Ring().Select(lt, u, rhs)
 }
 
 func (u Uint256) Max(rhs Uint256) Uint256 {
-	return Ring().Select(u.Cmp(rhs) == algebra.LessThan, rhs, u)
+	lt := uint64(subtle.ConstantTimeEq(int32(u.Cmp(rhs)), int32(algebra.LessThan)))
+	return Ring().Select(lt, rhs, u)
 }
 
 func (Uint256) Chain() algebra.Chain[*Ring256, Uint256] {

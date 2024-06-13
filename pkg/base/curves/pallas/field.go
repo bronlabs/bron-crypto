@@ -12,7 +12,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -233,7 +232,7 @@ func (*BaseField) Hash(x []byte) (curves.BaseFieldElement, error) {
 	return els[0], nil
 }
 
-func (*BaseField) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseField) Select(choice uint64, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
 	x0f, ok0 := x0.(*BaseFieldElement)
 	if !ok0 || x0f.V == nil {
 		panic("x0 is not a non-empty pallas field element")
@@ -243,7 +242,7 @@ func (*BaseField) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.Bas
 		panic("x1 is not a non-empty pallas field element")
 	}
 	return &BaseFieldElement{
-		V: new(fp.Fp).CMove(x0f.V, x1f.V, utils.BoolTo[int](choice)),
+		V: new(fp.Fp).CMove(x0f.V, x1f.V, int(choice)),
 	}
 }
 

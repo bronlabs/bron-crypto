@@ -1,7 +1,6 @@
 package curve25519
 
 import (
-	"crypto/subtle"
 	"io"
 	"strings"
 	"sync"
@@ -11,12 +10,12 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/mappings/elligator2"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 const Name = "curve25519" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
@@ -194,7 +193,7 @@ func (c *Curve) Map(u curves.BaseFieldElement) curves.Point {
 }
 
 // Select returns x0 if choice is false, and x1 if choice is true.
-func (*Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
+func (*Curve) Select(choice uint64, x0, x1 curves.Point) curves.Point {
 	x0p, ok0 := x0.(*Point)
 	if !ok0 {
 		panic("x0 is not a curve25519 point")
@@ -204,8 +203,7 @@ func (*Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
 		panic("x1 is not a curve25519 point")
 	}
 	el := new(Point)
-	copy(el.V[:], x0p.V[:])
-	subtle.ConstantTimeCopy(utils.BoolTo[int](choice), el.V[:], x1p.V[:])
+	ct.SelectSlice(choice, el.V[:], x0p.V[:], x1p.V[:])
 	return el
 }
 

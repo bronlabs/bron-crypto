@@ -12,7 +12,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -232,7 +231,7 @@ func (*ScalarField) Hash(x []byte) (curves.Scalar, error) {
 	return u[0], nil
 }
 
-func (sf *ScalarField) Select(choice bool, x0, x1 curves.Scalar) curves.Scalar {
+func (sf *ScalarField) Select(choice uint64, x0, x1 curves.Scalar) curves.Scalar {
 	x0s, ok0 := x0.(*Scalar)
 	if !ok0 || x0s.V == nil {
 		panic("x0 is not a non-empty pallas scalar")
@@ -245,7 +244,7 @@ func (sf *ScalarField) Select(choice bool, x0, x1 curves.Scalar) curves.Scalar {
 	if !oks || s.V == nil {
 		panic("s is not a non-empty pallas scalar")
 	}
-	s.V.CMove(x0s.V, x1s.V, utils.BoolTo[int](choice))
+	s.V.CMove(x0s.V, x1s.V, int(choice))
 	return s
 }
 
