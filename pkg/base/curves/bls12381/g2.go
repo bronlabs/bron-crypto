@@ -69,8 +69,11 @@ func (*G2) Cardinality() *saferith.Nat {
 }
 
 func (*G2) Contains(e curves.Point) bool {
-	//TODO implement me
-	panic("implement me")
+	bE, ok := e.(*PointG2)
+	if !ok {
+		return false
+	}
+	return bE.V.IsOnCurve() == uint64(1)
 }
 
 func (*G2) Iterator() ds.Iterator[curves.Point] {
@@ -126,8 +129,8 @@ func (*G2) DLog(b, x algebra.CyclicGroupElement[curves.Curve, curves.Point], und
 	panic("implement me")
 }
 
-func (*G2) ElementSize() int {
-	panic("implement me")
+func (c *G2) ElementSize() int {
+	return len(c.Element().ToAffineCompressed())
 }
 
 func (*G2) WideElementSize() int {

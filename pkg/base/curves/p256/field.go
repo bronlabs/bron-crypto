@@ -79,8 +79,11 @@ func (*BaseField) Addition() algebra.Addition[curves.BaseFieldElement] {
 }
 
 func (*BaseField) Mul(x algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement], ys ...algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
-	//TODO implement me
-	panic("implement me")
+	prod := x
+	for _, y := range ys {
+		prod = prod.Mul(y)
+	}
+	return prod.Unwrap()
 }
 
 func (*BaseField) Exp(b, power curves.BaseFieldElement) curves.BaseFieldElement {

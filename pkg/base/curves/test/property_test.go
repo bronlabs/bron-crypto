@@ -45,6 +45,7 @@ func Fuzz_Property_ScalarField_IntegerFiniteField(f *testing.F) {
 		atu.CheckIntegerFiniteFieldInvariants[curves.ScalarField, curves.Scalar],
 	)
 }
+
 func Fuzz_Property_BaseField_IntegerFiniteField(f *testing.F) {
 	baseFields := make([]curves.BaseField, len(TestCurves))
 	for i, curve := range TestCurves {

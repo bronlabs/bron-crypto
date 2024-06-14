@@ -135,8 +135,8 @@ func (c *Curve) SuperGroupOrder() *saferith.Modulus {
 	return c.Order()
 }
 
-func (*Curve) ElementSize() int {
-	panic("implement me")
+func (c *Curve) ElementSize() int {
+	return len(c.Element().ToAffineCompressed())
 }
 
 func (*Curve) WideElementSize() int {
