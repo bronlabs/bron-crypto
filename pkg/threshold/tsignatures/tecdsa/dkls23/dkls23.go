@@ -97,8 +97,11 @@ func (s *Shard) Validate(protocol types.ThresholdProtocol, holderIdentityKey typ
 		return errs.NewIsNil("pairwise base ot")
 	}
 	pairwiseBaseOTHolders := hashset.NewHashableHashSet(s.PairwiseBaseOTs.Keys()...)
-	if delta := pairwiseBaseOTHolders.SymmetricDifference(protocol.Participants()); delta.Size() != 1 || !delta.Contains(holderIdentityKey) {
-		return errs.NewMembership("pairwise base ot")
+	if !pairwiseBaseOTHolders.IsSubSet(protocol.Participants()) {
+		return errs.NewMembership("Pairwise base OT holders must be subset of all participants")
+	}
+	if diff := protocol.Participants().Difference(pairwiseBaseOTHolders); diff.Size() != 1 || !diff.Contains(holderIdentityKey) {
+		return errs.NewMembership("Pairwise base OT holders should contain all participants except myself")
 	}
 	for iterator := s.PairwiseBaseOTs.Iterator(); iterator.HasNext(); {
 		pair := iterator.Next()
@@ -118,11 +121,14 @@ func (s *Shard) Validate(protocol types.ThresholdProtocol, holderIdentityKey typ
 		return errs.NewIsNil("pairwise seeds")
 	}
 	pairwiseSeedHolders := hashset.NewHashableHashSet(s.PairwiseSeeds.Keys()...)
-	if delta := pairwiseSeedHolders.SymmetricDifference(protocol.Participants()); delta.Size() != 1 || !delta.Contains(holderIdentityKey) {
-		return errs.NewMembership("pairwise seed holders")
+	if !pairwiseSeedHolders.IsSubSet(protocol.Participants()) {
+		return errs.NewMembership("Pairwise seed holders must be subset of all participants")
+	}
+	if diff := protocol.Participants().Difference(pairwiseSeedHolders); diff.Size() != 1 || !diff.Contains(holderIdentityKey) {
+		return errs.NewMembership("Pairwise seed holders should contain all participants except myself")
 	}
 	for _, seed := range s.PairwiseSeeds.Values() {
-		if ct.IsAllZero(seed[:]) == 1 {
+		if ct.IsAllZeros(seed[:]) == 1 {
 			return errs.NewIsZero("found a zero przs seed")
 		}
 	}

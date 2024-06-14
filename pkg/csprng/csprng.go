@@ -13,7 +13,7 @@ type CSPRNG interface {
 
 	// Read pseudo-random bytes. Salts the read with `readSalt` if provided.
 	Generate(buffer, readSalt []byte) error
-	// Reseed the PRNG with a new seed and salt. It does not reset the state.
+	// Reseed the PRNG with a new seed and salt. It does not (forcibly) reset the state.
 	Reseed(seed, salt []byte) error
 	// Returns the security strength of the PRNG (in bytes).
 	SecurityStrength() int

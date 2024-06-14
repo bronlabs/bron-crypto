@@ -16,7 +16,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 const NameG2 = "BLS12381G2" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
@@ -163,7 +162,7 @@ func (*G2) Random(prng io.Reader) (curves.Point, error) {
 	}
 	u0fe, ok0 := u0.(*BaseFieldElementG2)
 	u1fe, ok1 := u1.(*BaseFieldElementG2)
-	if !ok0 || !ok1 {
+	if !ok0 || !ok1 || u0fe.V == nil || u1fe.V == nil {
 		return nil, errs.WrapHashing(err, "Cast to BLS12381 G1 field elements failed")
 	}
 	pt.Map(u0fe.V, u1fe.V)
@@ -182,21 +181,24 @@ func (*G2) HashWithDst(input, dst []byte) (curves.Point, error) {
 	}
 	u0, ok0 := u[0].(*BaseFieldElementG2)
 	u1, ok1 := u[1].(*BaseFieldElementG2)
-	if !ok0 || !ok1 {
+	if !ok0 || !ok1 || u0.V == nil || u1.V == nil {
 		return nil, errs.WrapHashing(err, "Cast to BLS12381 G2 field elements failed")
 	}
 	pt.Map(u0.V, u1.V)
 	return &PointG2{V: pt}, nil
 }
 
-func (*G2) Select(choice bool, x0, x1 curves.Point) curves.Point {
+func (*G2) Select(choice uint64, x0, x1 curves.Point) curves.Point {
 	x0pt, ok0 := x0.(*PointG2)
+	if !ok0 || x0pt.V == nil {
+		panic("x0 is not a non-empty BLS12381 G2 element")
+	}
 	x1pt, ok1 := x1.(*PointG2)
-	if !ok0 || !ok1 {
-		panic("Not a BLS12381 G1 point")
+	if !ok1 || x1pt.V == nil {
+		panic("x1 is ot a non-empty BLS12381 G2 element")
 	}
 	sPt := new(PointG2)
-	sPt.V.CMove(x0pt.V, x1pt.V, utils.BoolTo[uint64](choice))
+	sPt.V.CMove(x0pt.V, x1pt.V, choice)
 	return sPt
 }
 

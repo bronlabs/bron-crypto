@@ -64,7 +64,7 @@ func (p *Cosigner[V]) Round2(broadcastInput network.RoundMessages[types.Threshol
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.quorum, p.IdentityKey(), broadcastInput); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 1 broadcast output")
+		return nil, errs.WrapValidation(err, "invalid round 2 input broadcast messages")
 	}
 
 	p.state.theirBigRCommitment = hashmap.NewHashableHashMap[types.IdentityKey, *hashcommitments.Commitment]()
@@ -101,7 +101,7 @@ func (p *Cosigner[V]) Round3(broadcastInput network.RoundMessages[types.Threshol
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.quorum, p.IdentityKey(), broadcastInput); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round %d input", p.Round)
+		return nil, errs.WrapValidation(err, "invalid round 3 input broadcast messages")
 	}
 
 	bigR := p.state.bigR

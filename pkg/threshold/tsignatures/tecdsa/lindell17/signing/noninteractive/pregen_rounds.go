@@ -17,6 +17,7 @@ import (
 )
 
 func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
+	// Validation
 	if p.round != 1 {
 		return nil, errs.NewRound("rounds mismatch %d != 1", p.round)
 	}
@@ -46,9 +47,15 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	}, nil
 }
 
-func (p *PreGenParticipant) Round2(input network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast]) (output *Round2Broadcast, err error) {
+func (p *PreGenParticipant) Round2(
+	round1outputBroadcast network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast],
+) (output *Round2Broadcast, err error) {
+	// Validation
 	if p.round != 2 {
 		return nil, errs.NewRound("rounds mismatch %d != 2", p.round)
+	}
+	if err := network.ValidateMessages(p.protocol, p.protocol.Participants(), p.IdentityKey(), round1outputBroadcast); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 2 input broadcast messages")
 	}
 
 	theirBigRCommitments := hashmap.NewHashableHashMap[types.IdentityKey, *hashcommitments.Commitment]()
@@ -57,7 +64,7 @@ func (p *PreGenParticipant) Round2(input network.RoundMessages[types.ThresholdPr
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
-		in, ok := input.Get(identity)
+		in, ok := round1outputBroadcast.Get(identity)
 		if !ok {
 			return nil, errs.NewMissing("no input from %s", identity.String())
 		}
@@ -83,9 +90,15 @@ func (p *PreGenParticipant) Round2(input network.RoundMessages[types.ThresholdPr
 	}, nil
 }
 
-func (p *PreGenParticipant) Round3(input network.RoundMessages[types.ThresholdProtocol, *Round2Broadcast]) (*lindell17.PreProcessingMaterial, error) {
+func (p *PreGenParticipant) Round3(
+	round2outputBroadcast network.RoundMessages[types.ThresholdProtocol, *Round2Broadcast],
+) (*lindell17.PreProcessingMaterial, error) {
+	// Validation
 	if p.round != 3 {
 		return nil, errs.NewRound("rounds mismatch %d != 3", p.round)
+	}
+	if err := network.ValidateMessages(p.protocol, p.protocol.Participants(), p.IdentityKey(), round2outputBroadcast); err != nil {
+		return nil, errs.WrapValidation(err, "invalid round 3 input broadcast messages")
 	}
 
 	bigRs := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
@@ -96,7 +109,7 @@ func (p *PreGenParticipant) Round3(input network.RoundMessages[types.ThresholdPr
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
-		in, ok := input.Get(identity)
+		in, ok := round2outputBroadcast.Get(identity)
 		if !ok {
 			return nil, errs.NewMissing("no input from %x", identity.String())
 		}

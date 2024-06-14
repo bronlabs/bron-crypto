@@ -2,12 +2,14 @@ package testutils
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"io"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 )
@@ -48,21 +50,27 @@ func (m *MockReader) Read(p []byte) (n int, err error) {
 	return n, nil
 }
 
+func Sha256Sum(input string) []byte {
+	res := sha256.Sum256([]byte(input))
+	return res[:]
+}
+
 func PrngTester(t *testing.T, prngGenerator func(seed, salt []byte) (csprng.CSPRNG, error)) {
 	t.Helper()
+
 	// hardoded random 32B keys
 	keys := [][]byte{
-		{0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00,
-			0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00},
-		{0xf3, 0x52, 0x5d, 0x6c, 0x7b, 0x8a, 0x99, 0xa8, 0xb7, 0xc6, 0xd5, 0xe4, 0xf3, 0x52, 0x5d, 0x6c,
-			0x7b, 0x8a, 0x99, 0xa8, 0xb7, 0xc6, 0xd5, 0xe4, 0xf3, 0x52, 0x5d, 0x6c, 0x7b, 0x8a, 0x99, 0xa8},
+		Sha256Sum("One Ring to rule them all."),
+		Sha256Sum("One Ring to find them,"),
+		Sha256Sum("One Ring to bring them all"),
+		Sha256Sum("and in the darkness bind them."),
 	}
 	// hardoded random 32B nonces
 	nonces := [][]byte{
-		{0x59, 0x58, 0x57, 0x56, 0x55, 0x54, 0x53, 0x00, 0x51, 0x50, 0x4f, 0x4e, 0x4d, 0x00, 0x4b, 0x4a,
-			0x49, 0x48, 0x47, 0x00, 0x45, 0x44, 0x43, 0x42, 0x41, 0x00, 0x3f, 0x3e, 0x3d, 0x00, 0x3b, 0x3a},
-		{0x3f, 0x3e, 0x3d, 0x00, 0x3b, 0x3a, 0x39, 0x38, 0x37, 0x00, 0x35, 0x34, 0x33, 0x32, 0x31, 0x00,
-			0x2f, 0x2e, 0x2d, 0x00, 0x2b, 0x2a, 0x29, 0x28, 0x27, 0x00, 0x25, 0x24, 0x23, 0x00, 0x21, 0x20},
+		Sha256Sum("The world has changed. I see it in the water."),
+		Sha256Sum("I feel it in the Earth. I smell it in the air."),
+		Sha256Sum("Much that once was is lost,"),
+		Sha256Sum("For none now live who remember it. -- Galadriel"),
 	}
 	for i := range keys {
 		// create a new PRNG
@@ -98,6 +106,31 @@ func PrngTester(t *testing.T, prngGenerator func(seed, salt []byte) (csprng.CSPR
 		require.False(t, bytes.Equal(buffer, buffer4[:100]))
 		require.False(t, bytes.Equal(buffer2, buffer4[:120]))
 		require.False(t, bytes.Equal(buffer3, buffer4))
+	}
 
+	// Test that two calls to the same PRNG do not generate the same data
+	minBufferSize, maxBufferSize := 24, 100
+	prng, err := prngGenerator(keys[0], nil)
+	require.NoError(t, err)
+	for bufferSize := minBufferSize; bufferSize <= maxBufferSize; bufferSize++ {
+		buffer := make([]byte, bufferSize)
+		_, err = io.ReadFull(prng, buffer)
+		require.NoError(t, err)
+		buffer2 := make([]byte, bufferSize)
+		_, err = io.ReadFull(prng, buffer2)
+		require.NoError(t, err)
+		require.False(t, bytes.Equal(buffer, buffer2),
+			"PRNG generated the same data twice for buffer size %d", bufferSize)
+	}
+
+	// Test that the output of a PRNG is not all zeros (this should be a very rare event)
+	prng, err = prngGenerator(keys[0], nil)
+	require.NoError(t, err)
+	for bufferSize := minBufferSize; bufferSize <= maxBufferSize; bufferSize++ {
+		buffer := make([]byte, bufferSize)
+		_, err = io.ReadFull(prng, buffer)
+		require.NoError(t, err)
+		require.False(t, ct.IsAllZeros(buffer) == 1,
+			"PRNG generated all zeros for buffer size %d", bufferSize)
 	}
 }

@@ -41,7 +41,8 @@ func (r1b *Round1Broadcast) Validate(protocol types.ThresholdProtocol) error {
 			return errs.NewIsNil("ci[%d]", i)
 		}
 		if c.Curve() != protocol.Curve() {
-			return errs.NewCurve("ci[%d] curve %s is not protocol curve %s", i, c.Curve().Name(), protocol.Curve().Name())
+			return errs.NewCurve("ci[%d] curve %s is not protocol curve %s", i,
+				c.Curve().Name(), protocol.Curve().Name())
 		}
 		if (!freeCoefficientCanBeIdentity || i != 0) && c.IsAdditiveIdentity() {
 			return errs.NewIsIdentity("ci[%d] is identity", i)

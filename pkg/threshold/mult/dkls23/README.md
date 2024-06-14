@@ -1,13 +1,13 @@
-# Realization of DKLs24 RVOLE functionality
+# Realization of DKLs23 RVOLE functionality
 
-This package implements RVOLE, the two-party OT-based multiplication protocol that is used inside [DKLs24](https://eprint.iacr.org/2023/765.pdf).
+This package implements RVOLE, the two-party OT-based multiplication protocol that is used inside [DKLs23](https://eprint.iacr.org/2023/765.pdf).
 A two-party multiplication protocol between Alice and Bob is a protocol resulting in additive shares of the multiplication of Alice and Bob's secrets. In other words, Let $a$ be Alice's secret and $b$ be Bob's secret. The protocol outputs $c$ to Alice and $d$ to Bob such that $a * b = c + d$
 
 The protocol we've implemented is batched for a batch size of `𝓁=2` ie. $a_i * b = c_i + d_i \;\forall i \in [\ell]$
 
 Trivially, by providing random values as `a` and/or `b`, this protocol becomes a randomized multiplication protocol.
 
-The details of the protocol are sketched in Protocol 5.2 of [DKLs24](https://eprint.iacr.org/2023/765.pdf).
+The details of the protocol are sketched in Protocol 5.2 of [DKLs23](https://eprint.iacr.org/2023/765.pdf).
 
 ## Best-effort Constant Time implementation
 

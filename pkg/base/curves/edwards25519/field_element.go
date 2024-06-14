@@ -244,7 +244,15 @@ func (*BaseFieldElement) Conjugate() curves.BaseFieldElement {
 }
 
 func (e *BaseFieldElement) Equal(rhs curves.BaseFieldElement) bool {
-	return e.Cmp(rhs) == 0
+	return e.Eq(rhs) == 1
+}
+
+func (e *BaseFieldElement) Eq(rhs curves.BaseFieldElement) uint64 {
+	rhse, ok := rhs.(*BaseFieldElement)
+	if !ok {
+		return 0
+	}
+	return uint64(e.V.Equal(rhse.V))
 }
 
 func (e *BaseFieldElement) Clone() curves.BaseFieldElement {

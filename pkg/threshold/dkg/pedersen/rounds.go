@@ -75,16 +75,19 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u netw
 	}, outboundP2PMessages, nil
 }
 
-func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast], round1outputP2P network.RoundMessages[types.ThresholdProtocol, *Round1P2P]) (*tsignatures.SigningKeyShare, *tsignatures.PartialPublicKeys, error) {
+func (p *Participant) Round2(
+	round1outputBroadcast network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast],
+	round1outputP2P network.RoundMessages[types.ThresholdProtocol, *Round1P2P],
+) (*tsignatures.SigningKeyShare, *tsignatures.PartialPublicKeys, error) {
 	// Validation
 	if p.Round != 2 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), round1outputBroadcast); err != nil {
-		return nil, nil, errs.WrapValidation(err, "invalid round 1 broadcast messages")
+		return nil, nil, errs.WrapValidation(err, "invalid round 2 input broadcast messages")
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), round1outputP2P); err != nil {
-		return nil, nil, errs.WrapValidation(err, "invalid round 1 p2p messages")
+		return nil, nil, errs.WrapValidation(err, "invalid round 2 input P2P messages")
 	}
 
 	myShamirShare := p.State.ShareVector[p.SharingId()-1]

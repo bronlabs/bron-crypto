@@ -8,6 +8,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -228,11 +229,15 @@ func (*ScalarField) Hash(x []byte) (curves.Scalar, error) {
 	return u[0], nil
 }
 
-func (*ScalarField) Select(choice bool, x0, x1 curves.Scalar) curves.Scalar {
-	if choice {
-		return x1
+func (*ScalarField) Select(choice uint64, x0, x1 curves.Scalar) curves.Scalar {
+	x0s, ok1 := x0.(*Scalar)
+	x1s, ok2 := x1.(*Scalar)
+	if !ok1 || !ok2 {
+		panic("Not a BLS12381 G1 field element")
 	}
-	return x0
+	sFp := new(Scalar)
+	ct.SelectSlice(choice, sFp.V[:], x0s.V[:], x1s.V[:])
+	return sFp
 }
 
 // === Additive Groupoid Methods.

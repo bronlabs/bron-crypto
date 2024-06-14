@@ -1,6 +1,7 @@
 package uint128
 
 import (
+	"crypto/subtle"
 	"encoding/binary"
 	"encoding/json"
 	"math"
@@ -261,11 +262,13 @@ func (u Uint128) Previous() (Uint128, error) {
 }
 
 func (u Uint128) Min(rhs Uint128) Uint128 {
-	return Ring().Select(u.Cmp(rhs) == algebra.LessThan, u, rhs)
+	lt := uint64(subtle.ConstantTimeEq(int32(u.Cmp(rhs)), int32(algebra.LessThan)))
+	return Ring().Select(lt, u, rhs)
 }
 
 func (u Uint128) Max(rhs Uint128) Uint128 {
-	return Ring().Select(u.Cmp(rhs) == algebra.LessThan, rhs, u)
+	lt := uint64(subtle.ConstantTimeEq(int32(u.Cmp(rhs)), int32(algebra.LessThan)))
+	return Ring().Select(lt, rhs, u)
 }
 
 func (Uint128) Chain() algebra.Chain[*Ring128, Uint128] {

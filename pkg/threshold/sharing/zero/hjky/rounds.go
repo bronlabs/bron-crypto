@@ -9,7 +9,7 @@ import (
 )
 
 func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.ThresholdProtocol, *Round1P2P], error) {
-	// Validation delegated to Pedersen.Round2
+	// Validation delegated to Pedersen.Round1
 	round1broadcast, round1p2p, err := p.PedersenParty.Round1(p.PedersenParty.Protocol.Curve().ScalarField().Zero())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not compute round 1 of pedersen with free coefficient of zero")
@@ -18,7 +18,10 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.Th
 	return round1broadcast, round1p2p, nil
 }
 
-func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast], round1outputP2P network.RoundMessages[types.ThresholdProtocol, *Round1P2P]) (sample Sample, publicKeySharesMap ds.Map[types.IdentityKey, curves.Point], feldmanCommitmentVector []curves.Point, err error) {
+func (p *Participant) Round2(
+	round1outputBroadcast network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast],
+	round1outputP2P network.RoundMessages[types.ThresholdProtocol, *Round1P2P],
+) (sample Sample, publicKeySharesMap ds.Map[types.IdentityKey, curves.Point], feldmanCommitmentVector []curves.Point, err error) {
 	// Validation delegated to pedersen.Round2
 	keyShare, publicKeyShares, err := p.PedersenParty.Round2(round1outputBroadcast, round1outputP2P)
 	if err != nil {

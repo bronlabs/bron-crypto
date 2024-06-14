@@ -19,7 +19,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "COPPER_DKLS24_DKG-"
+const transcriptLabel = "COPPER_DKLS23_DKG-"
 
 var _ types.ThresholdParticipant = (*Participant)(nil)
 
@@ -53,7 +53,7 @@ func (p *Participant) SharingId() types.SharingID {
 
 func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *tsignatures.SigningKeyShare, partialPublicKeys *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, niCompiler compiler.Name, prng io.Reader, transcript transcripts.Transcript) (*Participant, error) {
 	if err := validateInputs(sessionId, authKey, signingKeyShare, partialPublicKeys, protocol, niCompiler, prng); err != nil {
-		return nil, errs.WrapArgument(err, "couldn't construct dkls24 dkg participant")
+		return nil, errs.WrapArgument(err, "couldn't construct dkls23 dkg participant")
 	}
 
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
@@ -73,7 +73,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 
 	zeroSamplingParty, err := zeroSetup.NewParticipant(boundSessionId, authKey, protocol, transcript, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not contrust dkls24 dkg participant out of zero samplig setup participant")
+		return nil, errs.WrapFailed(err, "could not contrust dkls23 dkg participant out of zero samplig setup participant")
 	}
 	senders := hashmap.NewHashableHashMap[types.IdentityKey, *bbot.Sender]()
 	receivers := hashmap.NewHashableHashMap[types.IdentityKey, *bbot.Receiver]()
@@ -112,7 +112,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 		BaseOTReceiverParties: receivers,
 	}
 	if err := types.ValidateThresholdProtocol(participant, protocol); err != nil {
-		return nil, errs.WrapValidation(err, "could not construct dkls24 dkg participant")
+		return nil, errs.WrapValidation(err, "could not construct dkls23 dkg participant")
 	}
 	return participant, nil
 }

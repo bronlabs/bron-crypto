@@ -84,7 +84,7 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, seeds rprzs.PairWis
 	}
 	for iterator := seeds.Iterator(); iterator.HasNext(); {
 		pair := iterator.Next()
-		if ct.IsAllZero(pair.Value[:]) == 1 {
+		if ct.IsAllZeros(pair.Value[:]) == 1 {
 			return errs.NewIsZero("found seed that's all zero")
 		}
 	}

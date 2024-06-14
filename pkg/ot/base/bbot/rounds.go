@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
@@ -51,17 +52,20 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 
 	phi := make([][2][]curves.Point, r.Protocol.Xi)
 	r.Output.ChosenMessages = make([]ot.Message, r.Protocol.Xi)
+	curve := r.Protocol.Curve()
 	// Setup ROs
 	r.Transcript.AppendPoints("mS", r1out.MS)
-	var tagRandomOracle [2][]byte
-	tagRandomOracle[0], err = r.Transcript.ExtractBytes(Ro0Label, TagLength)
+	var tagsRandomOracle [2][]byte
+	tagsRandomOracle[0], err = r.Transcript.ExtractBytes(Ro0Label, TagLength)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "extracting tag Ro0")
 	}
-	tagRandomOracle[1], err = r.Transcript.ExtractBytes(Ro1Label, TagLength)
+	tagsRandomOracle[1], err = r.Transcript.ExtractBytes(Ro1Label, TagLength)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "extracting tag Ro1")
 	}
+	chosenTagRandomOracle := make([]byte, TagLength)
+
 	// step 2.1
 	for i := 0; i < r.Protocol.Xi; i++ {
 		c_i := r.Output.Choices.Get(uint(i))
@@ -69,12 +73,12 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 		r.Output.ChosenMessages[i] = make(ot.Message, r.Protocol.L)
 		for l := 0; l < r.Protocol.L; l++ {
 			// step 2.2 (KA.R)
-			b_i, err := r.Protocol.Curve().ScalarField().Random(r.Prng)
+			b_i, err := curve.ScalarField().Random(r.Prng)
 			if err != nil {
 				return nil, errs.WrapRandomSample(err, "generating random scalar bi")
 			}
 			// step 2.3 (KA.msg_2)
-			mR_i := r.Protocol.Curve().ScalarBaseMult(b_i)
+			mR_i := curve.ScalarBaseMult(b_i)
 			// step 2.4 (KA.key_2)
 			sharedValue, err := dh.DiffieHellman(b_i, r1out.MS)
 			if err != nil {
@@ -86,20 +90,24 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 			}
 			copy(r.Output.ChosenMessages[i][l][:], r_i_l)
 			// step 2.5 (POPF.Program)
-			sc, err := r.Protocol.Curve().ScalarField().Random(r.Prng)
+			sc, err := curve.ScalarField().Random(r.Prng)
 			if err != nil {
 				return nil, errs.WrapRandomSample(err, "generating random scalar sc")
 			}
-			phi[i][1-c_i][l] = r.Protocol.Curve().ScalarBaseMult(sc).ClearCofactor()
+			phiNonChosen := curve.ScalarBaseMult(sc).ClearCofactor()
 
 			// step 2.6 (POPF.Program)
-			hashInput := slices.Concat(phi[i][1-c_i][l].ToAffineCompressed(), tagRandomOracle[c_i])
-			sc, err = r.Protocol.Curve().ScalarField().Hash(hashInput)
+			ct.SelectSlice(c_i, chosenTagRandomOracle, tagsRandomOracle[0], tagsRandomOracle[1])
+			hashInput := slices.Concat(phiNonChosen.ToAffineCompressed(), chosenTagRandomOracle)
+			sc, err = curve.ScalarField().Hash(hashInput)
 			if err != nil {
 				return nil, errs.WrapHashing(err, "hashing phi[%d][%d]", i, 1-c_i)
 			}
-			pt := r.Protocol.Curve().ScalarBaseMult(sc).ClearCofactor()
-			phi[i][c_i][l] = mR_i.Sub(pt)
+			pt := curve.ScalarBaseMult(sc).ClearCofactor()
+			phiChosen := mR_i.Sub(pt)
+
+			phi[i][0][l] = curve.Select(uint64(c_i), phiChosen, phiNonChosen)
+			phi[i][1][l] = curve.Select(uint64(c_i), phiNonChosen, phiChosen)
 		}
 	}
 

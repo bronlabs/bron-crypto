@@ -65,7 +65,7 @@ func (p *Participant) Round2(round1output network.RoundMessages[types.Protocol, 
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), round1output); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 1 messages")
+		return nil, errs.WrapValidation(err, "invalid round 2 input P2P messages")
 	}
 
 	output := network.NewRoundMessages[types.Protocol, *Round2P2P]()
@@ -100,7 +100,7 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.Protocol, 
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), round2output); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 2 messages")
+		return nil, errs.WrapValidation(err, "invalid round 3 input P2P messages")
 	}
 
 	myIndex, exists := p.IdentitySpace.Reverse().Get(p.IdentityKey())

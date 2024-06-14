@@ -85,7 +85,7 @@ func (ppm *PreProcessingMaterial) Validate(myIdentityKey types.IdentityKey, prot
 	if ppm.PreSignature == nil {
 		return errs.NewIsNil("public material")
 	}
-	if err := ppm.PreSignature.Validate(protocol, ppm.PreSigners); err != nil {
+	if err := ppm.PreSignature.Validate(myIdentityKey, protocol, ppm.PreSigners); err != nil {
 		return errs.WrapValidation(err, "presignature")
 	}
 	if ppm.PreSigners.Size() > 0 && !curveutils.AllIdentityKeysWithSameCurve(ppm.PreSigners.List()[0].PublicKey().Curve(), ppm.PreSigners.List()...) {
@@ -125,7 +125,7 @@ type PreSignature struct {
 	_ ds.Incomparable
 }
 
-func (ps *PreSignature) Validate(protocol types.ThresholdSignatureProtocol, preSigners ds.Set[types.IdentityKey]) error {
+func (ps *PreSignature) Validate(myIdentityKey types.IdentityKey, protocol types.ThresholdSignatureProtocol, preSigners ds.Set[types.IdentityKey]) error {
 	if ps == nil {
 		return errs.NewIsNil("receiver")
 	}
@@ -133,10 +133,10 @@ func (ps *PreSignature) Validate(protocol types.ThresholdSignatureProtocol, preS
 		return errs.NewIsNil("BigR")
 	}
 	bigRHolders := hashset.NewHashableHashSet(ps.BigR1.Keys()...)
-	if !bigRHolders.IsSubSet(protocol.Participants()) {
-		return errs.NewMembership("BigR holders are not a subset of total participants")
+	if !bigRHolders.IsSubSet(preSigners) {
+		return errs.NewMembership("BigR holders are not a subset of preSigners")
 	}
-	if bigRHolders.SymmetricDifference(preSigners).Size() != 1 {
+	if diff := preSigners.Difference(bigRHolders); diff.Size() != 1 || !diff.Contains(myIdentityKey) {
 		return errs.NewMembership("BigR holders should contain all presigners except myself")
 	}
 	if ps.BigR2 == nil {

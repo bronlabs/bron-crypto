@@ -239,7 +239,15 @@ func (*Scalar) BytesLE() []byte {
 }
 
 func (s *Scalar) Equal(rhs curves.Scalar) bool {
-	return s.Cmp(rhs) == 0
+	return s.Eq(rhs) == 1
+}
+
+func (s *Scalar) Eq(rhs curves.Scalar) uint64 {
+	rhse, ok := rhs.(*Scalar)
+	if !ok {
+		return 0
+	}
+	return uint64(s.V.Equal(rhse.V))
 }
 
 func (s *Scalar) Clone() curves.Scalar {

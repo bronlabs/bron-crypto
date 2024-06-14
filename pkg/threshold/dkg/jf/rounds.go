@@ -87,10 +87,10 @@ func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[types.T
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), round1outputBroadcast); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 1 broadcast messages")
+		return nil, errs.WrapValidation(err, "invalid round 2 input broadcast messages")
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), round1outputP2P); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 1 p2p messages")
+		return nil, errs.WrapValidation(err, "invalid round 2 input P2P messages")
 	}
 
 	secretKeyShare := p.state.myPartialSecretShare.Value
@@ -146,7 +146,7 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.ThresholdP
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), round2output); err != nil {
-		return nil, nil, errs.WrapValidation(err, "invalid round 2 messages")
+		return nil, nil, errs.WrapValidation(err, "invalid round 3 input broadcast messages")
 	}
 
 	publicKey := p.state.commitments[0]

@@ -253,7 +253,8 @@ func (s *Sender) verifyChallenge(
 		// ABORT if q̇^i != ṫ^i + Δ_i • ẋ  ∀ i ∈[κ]
 		t_val := bf128.NewElementFromBytes(challengeResponse.T_val[i][:])
 		x_val := bf128.NewElementFromBytes(challengeResponse.X_val[:])
-		qi_expected := bf128.NewField().Select(s.baseOtSeeds.Choices.Get(uint(i)) != 0, t_val, t_val.Add(x_val))
+		choice := uint64(s.baseOtSeeds.Choices.Get(uint(i)))
+		qi_expected := bf128.NewField().Select(choice, t_val, t_val.Add(x_val))
 		isCorrect = isCorrect && qi_expected.Equal(qi_val)
 	}
 	if !isCorrect {

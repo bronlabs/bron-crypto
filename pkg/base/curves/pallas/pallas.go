@@ -17,7 +17,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -201,23 +200,29 @@ func (*Curve) HashWithDst(input, dst []byte) (curves.Point, error) {
 	}
 	u0, ok0 := u[0].(*BaseFieldElement)
 	u1, ok1 := u[1].(*BaseFieldElement)
-	if !ok0 || !ok1 {
+	if !ok0 || !ok1 || u0.V == nil || u1.V == nil {
 		return nil, errs.NewType("cast to P256 field element failed")
 	}
 	p = p.Map(u0.V, u1.V)
 	return &Point{V: p}, nil
 }
 
-func (c *Curve) Select(choice bool, x0, x1 curves.Point) curves.Point {
+func (c *Curve) Select(choice uint64, x0, x1 curves.Point) curves.Point {
 	x0p, ok0 := x0.(*Point)
-	x1p, ok1 := x1.(*Point)
-	p, okp := c.Element().(*Point)
-	if !ok0 || !ok1 || okp {
-		panic("Not a K256 point")
+	if !ok0 || x0p.V == nil {
+		panic("x0 is not a non-empty Pallas point")
 	}
-	p.V.X.CMove(x0p.V.X, x1p.V.X, utils.BoolTo[int](choice))
-	p.V.Y.CMove(x0p.V.Y, x1p.V.Y, utils.BoolTo[int](choice))
-	p.V.Z.CMove(x0p.V.Z, x1p.V.Z, utils.BoolTo[int](choice))
+	x1p, ok1 := x1.(*Point)
+	if !ok1 || x1p.V == nil {
+		panic("x1 is not a non-empty Pallas point")
+	}
+	p, okp := c.Element().(*Point)
+	if !okp || p.V == nil {
+		panic("curve.Element() not a non-empty Pallas point")
+	}
+	p.V.X.CMove(x0p.V.X, x1p.V.X, int(choice))
+	p.V.Y.CMove(x0p.V.Y, x1p.V.Y, int(choice))
+	p.V.Z.CMove(x0p.V.Z, x1p.V.Z, int(choice))
 	return p
 }
 

@@ -26,7 +26,10 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.Th
 	return round1broadcast, round1p2p, nil
 }
 
-func (p *Participant) Round2(round1broadcast network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast], round1p2p network.RoundMessages[types.ThresholdProtocol, *Round1P2P]) (network.RoundMessages[types.ThresholdProtocol, *Round2P2P], error) {
+func (p *Participant) Round2(
+	round1broadcast network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast],
+	round1p2p network.RoundMessages[types.ThresholdProtocol, *Round1P2P],
+) (network.RoundMessages[types.ThresholdProtocol, *Round2P2P], error) {
 	// Validation, round1broadcast and round1p2p delegated to sampler.Round2
 	if p.Round != 2 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
@@ -106,7 +109,7 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.ThresholdP
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), round2output); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 2 P2P messages")
+		return nil, errs.WrapValidation(err, "invalid round 3 input P2P messages")
 	}
 
 	// step 3.1

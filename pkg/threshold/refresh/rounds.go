@@ -34,10 +34,10 @@ func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[types.T
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), round1outputBroadcast); err != nil {
-		return nil, nil, errs.WrapValidation(err, "invalid round 1 broadcast messages")
+		return nil, nil, errs.WrapValidation(err, "invalid round 2 input broadcast messages")
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), round1outputP2P); err != nil {
-		return nil, nil, errs.WrapValidation(err, "invalid round 1 p2p messages")
+		return nil, nil, errs.WrapValidation(err, "invalid round 2 input P2P messages")
 	}
 
 	combinedCommitmentVectors := map[types.SharingID][]curves.Point{}

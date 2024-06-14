@@ -234,8 +234,15 @@ func (*BaseFieldElement) Conjugate() curves.BaseFieldElement {
 }
 
 func (e *BaseFieldElement) Equal(rhs curves.BaseFieldElement) bool {
-	r, ok := rhs.(*BaseFieldElement)
-	return ok && subtle.ConstantTimeCompare(e.V[:], r.V[:]) == 1
+	return e.Eq(rhs) == 1
+}
+
+func (e *BaseFieldElement) Eq(rhs curves.BaseFieldElement) uint64 {
+	rhse, ok := rhs.(*BaseFieldElement)
+	if !ok {
+		return 0
+	}
+	return uint64(subtle.ConstantTimeCompare(e.V[:], rhse.V[:]))
 }
 
 func (e *BaseFieldElement) Clone() curves.BaseFieldElement {

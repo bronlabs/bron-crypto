@@ -17,7 +17,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 )
 
-func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState) (r1b *Round1Broadcast, r1p2p network.RoundMessages[types.ThresholdSignatureProtocol, *Round1P2P], err error) {
+func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState,
+) (r1b *Round1Broadcast, r1p2p network.RoundMessages[types.ThresholdSignatureProtocol, *Round1P2P], err error) {
 	// step 1.1: Sample inversion mask Phi_i and instance key R_i
 	state.Phi_i, err = protocol.Curve().ScalarField().Random(p.Prng)
 	if err != nil {
@@ -83,7 +84,18 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 	return outputBroadcast, outputP2P, nil
 }
 
-func DoRound2(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState, inputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *Round1Broadcast], inputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *Round1P2P]) (*Round2Broadcast, network.RoundMessages[types.ThresholdSignatureProtocol, *Round2P2P], error) {
+func DoRound2(p *Participant, protocol types.ThresholdSignatureProtocol, quorum ds.Set[types.IdentityKey], state *SignerState,
+	inputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *Round1Broadcast],
+	inputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *Round1P2P],
+) (*Round2Broadcast, network.RoundMessages[types.ThresholdSignatureProtocol, *Round2P2P], error) {
+	// Validation
+	if err := network.ValidateMessages(protocol, quorum, p.IdentityKey(), inputBroadcast); err != nil {
+		return nil, nil, errs.WrapValidation(err, "invalid round 2 input broadcast messages")
+	}
+	if err := network.ValidateMessages(protocol, quorum, p.IdentityKey(), inputP2P); err != nil {
+		return nil, nil, errs.WrapValidation(err, "invalid round 2 input P2P messages")
+	}
+
 	// step 2.1: ζ_i <- Zero.Sample()
 	zeta_i, err := state.Protocols.ZeroShareSampling.Sample()
 	if err != nil {
@@ -168,7 +180,18 @@ func DoRound2(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 	return outputBroadcast, outputP2P, nil
 }
 
-func DoRound3Prologue(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState, inputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *Round2Broadcast], inputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *Round2P2P]) (err error) {
+func DoRound3Prologue(p *Participant, protocol types.ThresholdSignatureProtocol, quorum ds.Set[types.IdentityKey], state *SignerState,
+	inputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *Round2Broadcast],
+	inputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *Round2P2P],
+) (err error) {
+	// Validation
+	if err := network.ValidateMessages(protocol, quorum, p.IdentityKey(), inputBroadcast); err != nil {
+		return errs.WrapValidation(err, "invalid round 3 input broadcast messages")
+	}
+	if err := network.ValidateMessages(protocol, quorum, p.IdentityKey(), inputP2P); err != nil {
+		return errs.WrapValidation(err, "invalid round 3 input P2P messages")
+	}
+
 	state.Du_i = make(map[types.SharingID]curves.Scalar)
 	state.Dv_i = make(map[types.SharingID]curves.Scalar)
 	state.Psi_i = make(map[types.SharingID]curves.Scalar)
@@ -257,7 +280,9 @@ func DoRound3Prologue(p *Participant, protocol types.ThresholdProtocol, quorum d
 	return nil
 }
 
-func DoRound3Epilogue(p *Participant, protocol types.ThresholdSignatureProtocol, quorum ds.Set[types.IdentityKey], message []byte, r, sk, phi curves.Scalar, cu, cv, du, dv, psi map[types.SharingID]curves.Scalar, bigRs ds.Map[types.IdentityKey, curves.Point]) (*dkls23.PartialSignature, error) {
+func DoRound3Epilogue(p *Participant, protocol types.ThresholdSignatureProtocol, quorum ds.Set[types.IdentityKey],
+	message []byte, r, sk, phi curves.Scalar, cu, cv, du, dv, psi map[types.SharingID]curves.Scalar, bigRs ds.Map[types.IdentityKey, curves.Point],
+) (*dkls23.PartialSignature, error) {
 	R := r.ScalarField().Curve().ScalarBaseMult(r)
 	phiPsi := phi
 	cUdU := phi.ScalarField().Zero()
@@ -313,7 +338,8 @@ func DoRound3Epilogue(p *Participant, protocol types.ThresholdSignatureProtocol,
 }
 
 // Aggregate computes the sum of partial signatures to get a valid signature. It also normalises the signature to the low-s form as well as attaches the recovery id to the final signature.
-func Aggregate(cipherSuite types.SigningSuite, publicKey curves.Point, partialSignatures network.RoundMessages[types.ThresholdSignatureProtocol, *dkls23.PartialSignature], message []byte) (*ecdsa.Signature, error) {
+func Aggregate(cipherSuite types.SigningSuite, publicKey curves.Point,
+	partialSignatures network.RoundMessages[types.ThresholdSignatureProtocol, *dkls23.PartialSignature], message []byte) (*ecdsa.Signature, error) {
 	curve := cipherSuite.Curve()
 	w := curve.ScalarField().Zero()
 	u := curve.ScalarField().Zero()

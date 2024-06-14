@@ -72,7 +72,7 @@ func (p *PreGenParticipant) Round2(broadcastInput network.RoundMessages[types.Th
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.preSigners, p.IdentityKey(), broadcastInput); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 1 broadcast input")
+		return nil, errs.WrapValidation(err, "invalid round 2 input broadcast messages")
 	}
 
 	theirBigRCommitment := hashmap.NewHashableHashMap[types.IdentityKey, *hashcommitments.Commitment]()
@@ -115,7 +115,7 @@ func (p *PreGenParticipant) Round3(broadcastInput network.RoundMessages[types.Th
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 	if err := network.ValidateMessages(p.Protocol, p.preSigners, p.IdentityKey(), broadcastInput); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 2 broadcast input")
+		return nil, errs.WrapValidation(err, "invalid round 3 input broadcast messages")
 	}
 
 	BigR1 := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()

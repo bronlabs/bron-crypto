@@ -12,7 +12,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fp"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -240,14 +239,17 @@ func (*BaseField) Hash(x []byte) (curves.BaseFieldElement, error) {
 	return els[0], nil
 }
 
-func (*BaseField) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseField) Select(choice uint64, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
 	x0f, ok0 := x0.(*BaseFieldElement)
+	if !ok0 || x0f.V == nil {
+		panic("x0 is not a non-empty k256 field element")
+	}
 	x1f, ok1 := x1.(*BaseFieldElement)
-	if !ok0 || !ok1 {
-		panic("Not a k256 field element")
+	if !ok1 || x1f.V == nil {
+		panic("x1 is not a non-empty k256 field element")
 	}
 	el := new(BaseFieldElement)
-	el.V.Arithmetic.Selectznz(&el.V.Value, &x0f.V.Value, &x1f.V.Value, utils.BoolTo[uint64](choice))
+	el.V.Arithmetic.Selectznz(&el.V.Value, &x0f.V.Value, &x1f.V.Value, choice)
 	return el
 }
 

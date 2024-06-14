@@ -25,7 +25,7 @@ const (
 
 	// SET DYNAMICALLY TO ALLOW VARIABLE-SIZE INPUTS
 	// - L is the number of OT elements per OT message.
-	// - Xi (ξ), the number of the OTe messages per OTe batch. ξ=(κ+2s) for DKLs24.
+	// - Xi (ξ), the number of the OTe messages per OTe batch. ξ=(κ+2s) for DKLs23.
 	// - eta (η=L*ξ) is the total number of κ-bit OT elements after expansion, minus the statistical redundancy.
 	// - etaPrime (η'=η+σ) is the full OT expansion size (including the statistical redundancy).
 	// - M (= η/σ) is the number of σ-bit consistency check challenges.

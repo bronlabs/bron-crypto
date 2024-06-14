@@ -1,7 +1,6 @@
 package curve25519
 
 import (
-	"crypto/subtle"
 	"io"
 	"sync"
 
@@ -9,10 +8,10 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -222,15 +221,14 @@ func (*BaseField) Random(prng io.Reader) (curves.BaseFieldElement, error) {
 	panic("not implemented")
 }
 
-func (*BaseField) Select(choice bool, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
-	xFp, ok1 := x0.(*BaseFieldElement)
-	yFp, ok2 := x1.(*BaseFieldElement)
+func (*BaseField) Select(choice uint64, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
+	x0Fp, ok1 := x0.(*BaseFieldElement)
+	x1Fp, ok2 := x1.(*BaseFieldElement)
 	if !ok1 || !ok2 {
 		panic("Not a BLS12381 G1 field element")
 	}
 	sFp := new(BaseFieldElement)
-	copy(sFp.V[:], xFp.V[:])
-	subtle.ConstantTimeCopy(utils.BoolTo[int](choice), xFp.V[:], yFp.V[:])
+	ct.SelectSlice(choice, sFp.V[:], x0Fp.V[:], x1Fp.V[:])
 	return sFp
 }
 

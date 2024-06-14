@@ -110,7 +110,7 @@ func (el *FieldElement) Add(v algebra.AdditiveGroupoidElement[*Field, *FieldElem
 
 func (el *FieldElement) ApplyAdd(x algebra.AdditiveGroupoidElement[*Field, *FieldElement], n *saferith.Nat) *FieldElement {
 	nBytes := n.Bytes()
-	nIsOdd := nBytes[len(nBytes)-1]&0x01 == 1
+	nIsOdd := uint64(nBytes[len(nBytes)-1] & 0x01)
 	return NewField().Select(nIsOdd, el, &FieldElement{})
 }
 

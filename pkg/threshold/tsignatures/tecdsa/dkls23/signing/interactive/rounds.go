@@ -23,8 +23,11 @@ func (ic *Cosigner) Round1() (*signing.Round1Broadcast, network.RoundMessages[ty
 	return outputBroadcast, outputP2P, nil
 }
 
-func (ic *Cosigner) Round2(round1outputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round1Broadcast], round1outputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round1P2P]) (*signing.Round2Broadcast, network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2P2P], error) {
-	// Validation, round 1 messages delegated to signing.DoRound2
+func (ic *Cosigner) Round2(
+	round1outputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round1Broadcast],
+	round1outputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round1P2P],
+) (*signing.Round2Broadcast, network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2P2P], error) {
+	// Validation, input round messages delegated to signing.DoRound2
 	if ic.Round != 2 {
 		return nil, nil, errs.NewRound("Running round %d but cosigner expected round %d", 2, ic.Round)
 	}
@@ -38,8 +41,12 @@ func (ic *Cosigner) Round2(round1outputBroadcast network.RoundMessages[types.Thr
 	return outputBroadcast, outputP2P, nil
 }
 
-func (ic *Cosigner) Round3(round2outputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2Broadcast], round2outputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2P2P], message []byte) (*dkls23.PartialSignature, error) {
-	// Validation, round 2 messages delegated to signing.DoRound3Prologue
+func (ic *Cosigner) Round3(
+	round2outputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2Broadcast],
+	round2outputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2P2P],
+	message []byte,
+) (*dkls23.PartialSignature, error) {
+	// Validation, input round messages delegated to signing.DoRound3Prologue
 	if ic.Round != 3 {
 		return nil, errs.NewRound("Running round %d but cosigner expected round %d", 3, ic.Round)
 	}

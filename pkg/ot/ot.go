@@ -165,7 +165,7 @@ func (rROT *ReceiverRotOutput) Decrypt(masks []OneTimePadedMaskPair) (OTchosenMe
 		choice := int(rROT.Choices.Get(uint(j)))
 		for l := 0; l < L; l++ {
 			ct.SelectSlice(choice, mask[:], masks[j][0][l][:], masks[j][1][l][:])
-			subtle.XORBytes(OTchosenMessages[j][l][:], rROT.ChosenMessages[j][l][:], masks[j][choice][l][:])
+			subtle.XORBytes(OTchosenMessages[j][l][:], rROT.ChosenMessages[j][l][:], mask[:])
 		}
 	}
 	return OTchosenMessages, nil
@@ -232,7 +232,7 @@ func (rROT *ReceiverRotOutput) ApplyCorrelation(tau []CorrelationMask) (z_B []Co
 				return nil, errs.WrapHashing(err, "bad hashing r_x_j to scalar for ROT -> COT")
 			}
 			r_x = r_x.Neg()
-			bit := rROT.Choices.Get(uint(j)) != 0
+			bit := uint64(rROT.Choices.Get(uint(j)))
 			// z_B_j = τ_j - ECS(r_x_j)  if x_j == 1
 			//       =     - ECS(r_x_j)  if x_j == 0
 			z_B[j][l] = scalarField.Select(bit, r_x, tau[j][l].Add(r_x))
