@@ -343,6 +343,11 @@ func (*BaseFieldElement) MulAdd(y algebra.RingElement[curves.BaseField, curves.B
 	panic("not implemented")
 }
 
+func (e *BaseFieldElement) IsQuadraticResidue() bool {
+	_, err := e.Sqrt()
+	return err != nil
+}
+
 func (*BaseFieldElement) Sqrt() (curves.BaseFieldElement, error) {
 	panic("not implemented")
 }

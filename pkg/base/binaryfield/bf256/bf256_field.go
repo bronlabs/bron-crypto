@@ -147,7 +147,7 @@ func (*Field) Div(x algebra.MultiplicativeGroupElement[*Field, *FieldElement], y
 
 // === Ring methods.
 
-func (*Field) QuadraticResidue(algebra.RingElement[*Field, *FieldElement]) (*FieldElement, error) {
+func (*Field) Sqrt(algebra.RingElement[*Field, *FieldElement]) (*FieldElement, error) {
 	panic("not implemented")
 }
 

@@ -381,6 +381,11 @@ func (e *BaseFieldElementG2) ApplyDiv(x algebra.MultiplicativeGroupElement[curve
 
 // === Ring Methods.
 
+func (e *BaseFieldElementG2) IsQuadraticResidue() bool {
+	_, err := e.Sqrt()
+	return err != nil
+}
+
 func (e *BaseFieldElementG2) Sqrt() (curves.BaseFieldElement, error) {
 	result, wasSquare := new(bimpl.Fp2).Sqrt(e.V)
 	if wasSquare != 1 {

@@ -390,6 +390,11 @@ func (e *BaseFieldElement) MulAdd(y algebra.RingElement[curves.BaseField, curves
 	return e.Mul(y).Add(z)
 }
 
+func (e *BaseFieldElement) IsQuadraticResidue() bool {
+	_, err := e.Sqrt()
+	return err != nil
+}
+
 func (e *BaseFieldElement) Sqrt() (curves.BaseFieldElement, error) {
 	result, wasSquare := fp.New().Sqrt(e.V)
 	if !wasSquare {

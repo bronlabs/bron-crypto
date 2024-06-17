@@ -517,6 +517,11 @@ func (u Uint256) ApplySub(x algebra.AdditiveGroupElement[*Ring256, Uint256], n *
 	return u.Sub(x.Unwrap().Mul(Uint256{}.SetNat(n)))
 }
 
+func (u Uint256) IsQuadraticResidue() bool {
+	_, err := u.Sqrt()
+	return err != nil
+}
+
 func (Uint256) Sqrt() (Uint256, error) {
 	// TODO implement me
 	panic("not supported")
