@@ -1,0 +1,21 @@
+\begin{algorithm}[ht]
+    \caption{$\quad\fndef{TmmoHash}_{n}(x)$}
+    \label{alg:tmmoHash}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            A fix-length-input and variable-length output hash constructed following the Tweakable Matyas-Meyer-Oseas (TMMO) construction from \cite{guo2020efficient}, using AES-128 in ECB mode as a permutation $\pi$, with $\kappa=128$ bits. The first block uses an arbitrary initialization vector $IV \in \Z_2^\kappa$.
+        \end{alginfo} 
+        \Require {$x \in \Z_2^\kappa$ an input of length $\kappa$ bits}
+        \Ensure {$\vect{d}\in \Z_2^{n\by\kappa}$, a digest of length $n\kappa$ bits ($n$ blocks of $\pi$)}
+        
+        \State $\pi.\fn{SetKey}(IV)$ 
+        \For{$i \in \range{n}$}
+            \State $y \leftarrow \pi.\fn{Encrypt}(x)$
+            \State $z \leftarrow \pi.\fn{Encrypt}(y \oplus i)$
+            \State $\vecti{d}{i} \leftarrow z \oplus y$
+            \State $\pi.\fn{SetKey}(\vecti{d}{i})$
+        \EndFor
+        \Return $\vect{d}$
+
+    \end{algorithmic}
+\end{algorithm}

@@ -1,0 +1,12 @@
+\begin{functionality}
+    \caption{$\quad\binom{2}{1}\mhyphen \fndef{ROT}_{\kappa}(b) \longrightarrow (m_0, m_1, m_b)$}
+    \label{alg:rand_ot}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            One-out-of-two Randomized Oblivious Transfer between $\mathcal{S}$ and $\mathcal{R}$.
+        \end{alginfo}
+        \Require $\mathcal{R}\rightarrow b \ins \Z_2$, a single choice bit.
+        \Ensure $\mathcal{S}\leftarrow \sample{(m_0, m_1)}{\Z_2^{2\by\kappa}} $, two random messages.\\
+        $\mathcal{R} \leftarrow m_b \ins \Z_2^\kappa$, a chosen message s.t. $m_b \equals m_1  b + m_0 (1-b)$
+    \end{algorithmic}
+\end{functionality}

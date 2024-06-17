@@ -1,0 +1,54 @@
+\documentclass{article}
+
+%------------------------------HEADERS & VERSION-------------------------------%
+    \input{src/headers/spec_header}
+    \input{src/headers/spec_notation}
+    
+    \newcommand{\specversion}{Version 0.9}
+
+%-----------------------------------TITLE--------------------------------------%
+    \title{Copper's Threshold Signature Primitives \\(\specversion)}
+    \author{Alireza Rafiei, Alberto Ibarrondo, Mateusz Kramarczyk \\ Hoang Ong}
+    \date{\today}
+
+\begin{document}
+
+%-------------------------------TITLE PAGE & ToC-------------------------------%
+\maketitle
+\begin{abstract}
+    This document contains the specification of the cryptographic protocols and primitives that serve as base for the Multi-Party Computation (MPC) platform of \href{https://copper.co}{Copper.co}. This specification serves a reference for the implementation of all the techniques described in it. 
+    
+    As a custody solutions provider, Copper's main objective with its MPC platform is to provide state-of-the-art protection for digital assets (e.g., cryptocurrencies) while allowing its clients to operate with them with the utmost security guarantees. To this end, we target distributed variants of Elliptic-Curve (EC) signature schemes commonly used to sign transactions in popular blockchains (ECDSA, Schnorr/EdDSA, BLS). We select MPC protocols that are proven secure against malicious adversaries in a $t$-out-of-$n$ threshold setting: $n$ parties generate and hold shares of the underlying private key, and any subset of $t$ parties can sign a transaction. This threat model tolerates up to $t-1$ static corruptions throughout the protocol execution. Our chosen distributed signing protocols are:
+    \begin{itemize}
+        \item DKLs23~\cite{DKLS23} and Lindell17~\cite{lindell17}\footnote{The latter only supports $t=2$, for any $n$.} for threshold ECDSA.
+        \item Lindell22~\cite{L22} for threshold Schnorr.
+    \end{itemize}
+    We also specify the cryptographic primitives required by these protocols, including Distributed Key Generation (DKG), Oblivious Transfer (OT), proofs of knowledge (PoK), Cryptographically-Secure Pseudo-Random Number Generation (CSPRNG) and other general primitives.
+\end{abstract}
+\newpage
+\tableofcontents
+
+%----------------------------------SECTIONS------------------------------------%
+ 
+\include{src/sections/1_introduction/1_introduction}
+
+\input{src/sections/2_preliminaries/2_preliminaries}
+
+\include{src/sections/3_signatures/3_signatures}
+
+\include{src/sections/4_threshold_signatures/4_threshold_signatures}
+
+\include{src/sections/5_tecdsa/5_tecdsa}
+
+\include{src/sections/6_tschnorr/6_tschnorr}
+
+\include{src/sections/7_tbls/7_tbls}
+
+\clearpage
+\bibliographystyle{alpha}
+\bibliography{src/bib/tecdsa.bib,src/bib/refresh.bib,src/bib/primitives.bib,src/bib/tschnorr.bib,src/bib/various.bib,src/bib/tbls.bib}
+
+\appendix
+\include{src/sections/appendix/appendix}
+
+\end{document}

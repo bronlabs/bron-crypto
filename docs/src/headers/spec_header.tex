@@ -1,0 +1,214 @@
+\usepackage[utf8]{inputenc} 
+\usepackage[section]{algorithm}% Float environment for algorithms
+\usepackage{algorithmicx}       % Syntax for algorithms
+\usepackage[noEnd=true,indLines=false,beginComment=,rightComments=true]{algpseudocodex} % Customized algorithmicx
+\usepackage{lineno}             % line numbers
+\usepackage{bm}                 % bold math
+\usepackage[section]{placeins}
+\usepackage{xcolor}
+\usepackage{comment}
+\usepackage{amsmath}
+\usepackage{import}             % For \subimport
+\usepackage{amssymb}
+\usepackage{enumitem}           % [leftmargin=12pt] in itemize
+\usepackage{graphicx}           % scalebox
+\usepackage{tcolorbox}          % Colored boxes for ideal functionalities
+\usepackage{booktabs}           % For \toprule, \midrule and \bottomrule
+\usepackage[only,llbracket,rrbracket]{stmaryrd} % For \llbracket and \rrbracket
+
+\usepackage{amsthm}             % Theorems
+\newtheorem{theorem}{Theorem}
+\newtheorem{case}{Case}
+
+\usepackage{amsfonts}           % Short minus
+\DeclareMathSymbol{\shortminus}{\mathbin}{AMSa}{"39}
+
+\usepackage[hypertexnames=false]{hyperref}           % Colour links
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue, %Colour of internal links
+}
+
+\newcommand{\hyperrefblk}[2]{\hyperref[#1]{\color{black}{#2}}} % Black hyperlinks
+
+
+%------------------------------------------------------------------------------%
+%-------------------------------FILE LOCATION----------------------------------%
+%------------------------------------------------------------------------------%
+
+\newcommand{\codepath}{../pkg}
+\newcommand{\inputAlgorithm}[2]{\inputfrom{\codepath/#1/docs/algorithms}{#2}}
+\newcommand{\inputFunctionality}[2]{\inputfrom{\codepath/#1/docs/functionalities}{#2}}
+\newcommand{\inputSection}[2]{\inputfrom{\codepath/#1/docs/sections}{#2}}
+
+
+%------------------------------------------------------------------------------%
+%-------------------------------GENERAL SETUP----------------------------------%
+%------------------------------------------------------------------------------%
+% Autoref with capitalized names
+\renewcommand{\figureautorefname}{Figure}
+\renewcommand{\tableautorefname}{Table}
+\renewcommand{\partautorefname}{Part}
+\renewcommand{\appendixautorefname}{Appendix}
+\renewcommand{\chapterautorefname}{Chapter}
+\renewcommand{\sectionautorefname}{Section}
+\renewcommand{\subsectionautorefname}{Section}
+\renewcommand{\subsubsectionautorefname}{Section}
+
+
+%------------------------------------------------------------------------------%
+%--------------------------------ALGORITHM ENV---------------------------------%
+%------------------------------------------------------------------------------%
+% ALGORITHM INPUTS, OUTPUTS, PLAYERS
+\renewcommand{\algorithmicrequire}{\textbf{Inputs:}}
+\renewcommand{\algorithmicprocedure}{}
+\renewcommand{\algorithmicensure}{\textbf{Outputs:}}
+\algnewcommand{\Players}{\item[\textbf{Players:}]}
+\algnewcommand{\Params}{\item[\textbf{Parameters:}]}
+
+% DESCRIPTIONS and COMMENTS
+\algnewcommand{\Note}{\item[\textbf{Note:}]}
+\algnewcommand{\Descr}[1]{{\setlength{\itemindent}{-\leftmargin}\item[]{#1}}}
+\algnewcommand{\Descrx}[1]{{\setlength{\itemindent}{-\labelwidth}\item[]\textit{#1}}}
+\algnewcommand{\Commentg}[1]{\Comment{\textcolor{gray}{#1}}}
+
+% PROTOCOL
+%  with "Players", "Input" and "Output"
+\newcounter{protocol}
+\makeatletter
+\newenvironment{protocol}[1][htb]{%
+    \let\c@algorithm\c@protocol
+    \renewcommand{\ALG@name}{Protocol}
+    \begin{algorithm}[#1]%
+    }{
+    \end{algorithm}
+}
+\makeatother
+
+\newcounter{scheme}
+\makeatletter
+\newenvironment{scheme}[1][htb]{%
+    \let\c@algorithm\c@scheme
+    \renewcommand{\ALG@name}{Scheme}
+    \begin{algorithm}[#1]%
+    }{
+    \end{algorithm}
+}
+\makeatother
+
+% FUNCTIONALITY
+%  with "Players", "Input" and "Output"
+\newcounter{functionality}
+\makeatletter
+\newenvironment{functionality}[1][htb]{%
+    \let\c@algorithm\c@functionality 
+    \renewcommand{\ALG@name}{Functionality}
+    \begin{tcolorbox}[left=3pt,right=3pt]
+    \vspace{-15pt}
+        \begin{algorithm}[H]
+        }{
+        \end{algorithm}
+    \end{tcolorbox}
+    }
+\makeatother
+  
+% Set Algorithmic line number
+\newcommand{\setalglineno}[1]{
+  \setcounter{ALG@line}{\numexpr#1-1}}
+
+% Gray comment in protocols / algorithms
+\newcommand{\ABORT}{{\textcolor{red}{\textsc{ABORT}}}}
+\newcommand{\grayhfill}{\color{lightgray}\hrulefill}
+
+% Change margin
+\newenvironment{changemargin}[2]{%
+  \begin{list}{}{%
+    \setlength{\topsep}{0pt}%
+    \setlength{\leftmargin}{#1}%
+    \setlength{\rightmargin}{#2}%
+    \setlength{\listparindent}{0pt}%
+    \setlength{\labelsep}{0pt}%
+    \setlength{\itemindent}{0pt}%
+    \setlength{\parsep}{\parskip}%
+  }%
+  \item[]}{\end{list}}
+
+% Algorithm info (paragraph at the beginning of the algorithm)
+\newenvironment{alginfo}{
+    \item[]
+    \begin{changemargin}{-16pt}{0pt} 
+} {\end{changemargin}\vspace{4pt} }
+
+% Round syntax style
+\algnewcommand{\RoundFmt}[2]{\textup{#1}$.$\textbf{\textsf{#2}}}
+% First round in protocol
+\algnewcommand{\AlgRoundZero}[4]{
+    \Statex % Always use one empty state to mark the beginning of the protocol.
+    \begin{changemargin}{-32pt}{0pt} 
+        \Descrx {\RoundFmt{#1}{#2}}({#3})$\dashrightarrow${#4}
+    \end{changemargin}}
+% Next protocol rounds
+\algnewcommand{\AlgRound}[4]{
+    \begin{changemargin}{0pt}{0pt} 
+        \Descrx {\RoundFmt{#1}{#2}}({#3})$\dashrightarrow${#4}
+    \end{changemargin}}
+\algnewcommand{\AlgRoundInput}{\par$\quad$} % \item for inputs of each round.
+\algnewcommand{\AlgSeparator}{{\color{lightgray}\hrulefill}\vspace{4pt}} % Round separator.
+
+% Function syntax style
+\algnewcommand{\FunctFmt}[2]{\ensuremath{\bm{\textsf{#1}}_{#2}}}
+% First Function in scheme
+\algnewcommand{\AlgFnctZero}[4]{
+    \Statex % Always use one empty state to mark the beginning of the protocol.
+    \begin{changemargin}{-32pt}{0pt} 
+        \Descrx {\FunctFmt{#1}{#2}}({#3})$\dashrightarrow${#4}
+    \end{changemargin}}
+% Next functions
+\algnewcommand{\AlgFnct}[4]{
+    \begin{changemargin}{0pt}{0pt} 
+        \Descrx {\FunctFmt{#1}{#2}}({#3})$\dashrightarrow${#4}
+    \end{changemargin}}
+
+%------------------------------------------------------------------------------%
+%---------------------------------CUSTOM ENVS----------------------------------%
+%------------------------------------------------------------------------------%
+% INDENTATION
+% Environment to indent right content based on first parameter, then indent the first line of the content by the second parameter.
+% e.g., indenting the first line by 20pt and the rest by 30pt:
+%      \begin{indent}{30pt}{-10pt} 
+%           My Paragraph.
+%      \end{indent}
+\newenvironment{indentator}[2]
+  { \setlength{\leftskip}{#1}
+    \bgroup
+    \setlength{\parindent}{#2}
+  }{\egroup
+    \setlength{\leftskip}{0pt}
+  }
+
+
+%------------------------------------------------------------------------------%
+%----------------------------------AUXILIARY-----------------------------------%
+%------------------------------------------------------------------------------%
+
+% TODOs
+\newcommand{\todo}[1]{\textcolor{orange}{[Todo: #1]}}
+
+% Super-tiny font
+\newcommand{\supertiny}[1]{\scalebox{.5}{#1}}
+
+% \oset macro for tight overset, from https://tex.stackexchange.com/a/194805/288479
+\makeatletter
+\newcommand{\oset}[3][0ex]{%
+  \mathrel{\mathop{#3}\limits^{
+    \vbox to#1{\kern-2\ex@
+    \hbox{$\scriptstyle#2$}\vss}}}}
+\makeatother
+
+% \uset macro for tight underset, from https://tex.stackexchange.com/a/194805/288479
+\makeatletter
+\newcommand{\uset}[3][0ex]{%
+  \mathrel{\mathop{#3}\limits_{
+    \vbox to#1{\kern-10\ex@
+    \hbox{$\scriptstyle#2$}\vss}}}}
+\makeatother

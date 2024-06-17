@@ -1,0 +1,11 @@
+We implement threshold BLS using Boldyreva03~\cite{boldyreva2003efficient}. The output signature is verifiable with official BLS spec\cite{irtf_bls_signature_05}. The threshold implementation supports both variants of the BLS signatures \textbf{Short public keys, long signatures} and \textbf{Short signatures, long public keys}.
+
+We remark that the protocol described in \cite{boldyreva2003efficient} restricts its security to an honest majority setting because it seeks to also provide robustness in this setting, which means $t < n/2$ is an optimal result. This restriction is imposed by the DKG (refer to proof in Appendix A of \cite{boldyreva2003efficient}). In our case, we do not care about robustness. We therefore use this protocol in dishonest majority setting.
+
+An alternative would be to use GLOW20~\cite{galindo2021fully} whose signing portion is essentially the same protocol, except that it avoids the pairing overhead during verification of partial signatures, which results in 3x speedup. They do however require keys to live in $\G_1$ (short keys, long signatures) as an artifact of the security proof of the protocol.
+
+\subsection{Signing}
+
+Unlike threshold ECDSA or Schnorr which require preprocessing $n-1$ rounds in batches to achieve non-interactivity (and is thus forced to generate and manage \textit{presignatures}), threshold BLS is naturally non-interactive. Effectively, the first round of signing leads to creation of the partial signature which then can be aggregated by a signature aggregator\footnote{Note that in BLS terminology, this role is commonly denoted as \textit{combiner}}. We detail the signing protocol in Protocol \ref{alg:tbls}.
+
+\inputAlgorithm{threshold/tsignatures/tbls/boldyreva02}{boldyreva02.tex}

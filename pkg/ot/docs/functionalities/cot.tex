@@ -1,0 +1,13 @@
+\begin{functionality}
+    \caption{$\quad\fn{\binom{2}{1}\mhyphen COT}_{\G}(a, x) \longrightarrow (z_A, z_B)$}
+    \label{alg:corr_ot}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            One-out-of-two Correlated Oblivious Transfer between a $\mathcal{S}$ and $\mathcal{R}$.
+        \end{alginfo}
+        \Require $\mathcal{S}\rightarrow a \ins \G$, an input value.\\
+                 $\mathcal{R}\rightarrow x \ins \Z_2$, a single bit.
+        \Ensure $\mathcal{S} \leftarrow z_A \ins \G$, a correlated result.\\
+                $\mathcal{R} \leftarrow z_B \ins \G$, a correlated result s.t. $z_A + z_B \equals a \cdot x$
+    \end{algorithmic}
+\end{functionality}

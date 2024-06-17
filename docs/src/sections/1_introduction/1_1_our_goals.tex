@@ -1,0 +1,29 @@
+%Our goals / implementation points/ misc. [Alireza]
+% • UC Secure, in real world (which is how we’ll rule out FROST, to be discussed later)
+%     □ We don’t care about UC in DKG. (We might have to have a bad RSA keygen later)
+% • Well-tested, minimal cryptography assumptions if we can help it (with BLS, we can’t)
+% • Reliance on peer review instead of coming up with something new (because of high stakes, money etc)
+% • Should be semi noninteractive or fully non interactive.
+% • Why we don’t care about constant time.
+% • Number of parties are small and there is CA (which why we don’t to NTT or similar)
+% Various devices to be run
+
+
+%------------------------------------------------------------------------------%
+\subsection{Our Goals}\label{sec:our_goals}
+%------------------------------------------------------------------------------%
+
+This document describes in detail the suite of cryptographic protocols supported by the MPC-based signing services of \href{https://copper.co}{Copper.co}.
+
+
+As a custody solutions provider, \href{https://copper.co}{Copper.co} aims to provide state-of-the-art protection for digital assets (e.g., cryptocurrencies) while allowing its clients to operate with them with the utmost security guarantees. To this end, we carefully select and implement several distributed variants of Elliptic-Curve (EC) signature schemes commonly used to sign transactions in popular blockchains (ECDSA, Schnorr/EdDSA, BLS), alongside their required primitives. 
+We focus on $t$-out-of-$n$ signing protocols where $n$ participants jointly generate shares of a secret key (via a \textit{Distributed Key Generation} protocol, or DKG), and $t$ out of these $n$ participants can jointly sign a public message under the distributed secret key (\textit{threshold signing}). 
+Our real-world use cases lead us to favor protocols tailored for small groups of participants (e.g., $n < 100$), with special interest in the $t=2$ case\footnote{Various optimizations could be made to increase performance for $n \gg 100$.}.
+
+We conducted exhaustive literature reviews to choose which protocols to support, picking protocols whose security is guaranteed under minimal and/or well-tested and well-understood falsifiable assumptions. As our main threat model, the selected DKG \& signing protocols are proven secure against a malicious adversary statically corrupting up to $t-1$ parties, allowing the remaining honest parties to detect misbehavior and abort upon detection. As a requirement for some of our chosen protocols, this abort mechanism must be \textit{global}: all concurrent executions of that same protocol must stop upon detection of misbehavior in any of them. Whenever possible, we favor \textit{identifiable} abort mechanisms, where the cheating party/ies can be identified.
+
+Casting aside various restrictions on the context in which these protocols are run, we favor protocols that were proven secure under concurrent composition in the Universal Composability (UC) paradigm~\cite{canetti2001universally}. Given that many instances of the signing protocols will run concurrently, we restrict our threshold signing choices to UC-secure-only protocols, guaranteeing that their security remains independent if any other runs of the same protocol takes place at the same time. \footnote{We could relax this requirement for the DKG protocols, as they are expected to run only once per key.}.
+
+While we make a conscious effort to avoid non Constant-Time (CT) implementations of protocols, we do not seek nor claim complete CT implementations. We argue that a local timing attack in one of the participants of a protocol is strictly weaker than a malicious corruption, already covered by our threat model\footnote{Furthermore, we obviate remote timing attacks due to the inherently volatile nature of communications (latency, jitter), expecting our best-effort CT approaches to shield in these seemingly impossible cases}.
+
+Because the stakes are high, and in the absence of standardization, we opt for influential peer-reviewed protocols/primitives backed by ample community convergence. Following our security principles and the financially sensitive contexts in which these protocols are being used, we stress that we have not developed any new primitives. Instead, this document aims to unambiguously specify these protocols as they are to be implemented. In the limited instances where a customization to the protocol is necessary, such customizations are carefully analyzed and meticulously presented in this document, often following an explicit confirmation by the authors of the protocols themselves. Lastly, we submitted both this document and our implementation to independent domain-expert auditing entities\footnote{\textit{TrailOfBits} conducted an audit on the code and V0.9 of this document.}, incorporating their feedback and addressing any issues raised.

@@ -1,0 +1,42 @@
+%------------------------------------------------------------------------------%
+\section{Preliminaries}\label{sec:preliminaries}
+%------------------------------------------------------------------------------%
+
+%------------------------------------------------------------------------------%
+\input{src/sections/2_preliminaries/notation}
+
+%------------------------------------------------------------------------------%
+\subsection{Generic Cryptography}\label{sec:genericcryptography}
+
+% \input{src/sections/2_preliminaries/2_2_security}
+\inputSection{hashing}{hashing.tex}
+\inputSection{hashing/tmmohash}{tmmohash.tex}
+\inputSection{csprng}{csprng.tex}
+
+\inputSection{commitments}{commitments.tex}
+
+\inputSection{encryptions/paillier}{paillier.tex}
+
+\inputSection{transcripts}{transcripts.tex}
+
+%------------------------------------------------------------------------------%
+\subsection{Proofs of Knowledge}\label{sec:proofs}
+
+\inputSection{proofs}{proofs.tex}
+\inputSection{proofs/sigma}{sigma.tex}
+\inputSection{proofs/dlog}{dlog.tex}
+\inputSection{proofs/dleq}{dleq.tex}
+\inputSection{proofs/paillier}{paillier_proofs.tex}
+
+%------------------------------------------------------------------------------%
+\newpage
+
+\subsection{Multi-Party Computation (MPC)}\label{sec:mpc}
+
+\inputSection{threshold/sharing}{sharing.tex}
+\inputSection{threshold/agreeonrandom}{agreeonrandom.tex}
+\inputSection{threshold/sharing/zero}{zero.tex}
+\inputSection{ot}{ot.tex}
+\input{src/sections/2_preliminaries/mpc_scenario}
+\inputSection{network}{network.tex}
+

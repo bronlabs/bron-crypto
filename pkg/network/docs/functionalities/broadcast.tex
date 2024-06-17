@@ -1,0 +1,9 @@
+\begin{functionality}
+    \caption{$\quad$\idealfndef{Broadcast}}\label{func:broadcast}
+    \begin{algorithmic}
+        \State Authenticated Broadcast communication among all parties $\party{1},\ldots,\party{n}$.
+        \Statex \begin{itemize}
+            \item On receiving (\textsc{broadcast-in}$, m$) from $\party{i}$ with id $i$,  $\idealfnref{Broadcast}$ sends (\textsc{broadcast-out},$i, m$) to $\party{j} \;\forall j \ins \range{n}$.
+        \end{itemize}
+    \end{algorithmic}
+\end{functionality}

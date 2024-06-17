@@ -1,0 +1,35 @@
+\begin{protocol}[H]
+    \caption{$\fn{OT}_{\xi,\ell}$}
+    \label{alg:rot2ot}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            (Standard) OT protocol from any \fn{ROT} protocol and one-time-pad encryption
+        \end{alginfo}
+        \Players a sender $\mathcal{S}$, and receiver $\mathcal{R}$
+        \Require $\mathcal{R}\!: \vect{x} \in \Z_2^\xi$, the input choice bits\\
+                    $\mathcal{S}\!: \vect{m_0}, \vect{m_1} \in \Z_2^{\xi\by\ell\by\kappa}$, pairs of messages
+
+        \Ensure  $\mathcal{R}\leftarrow \vect{m_x} \in \Z_2^{\xi\by\ell\by\kappa}$, the chosen messages
+
+        \vspace{-10pt}
+        \AlgRoundZero{\hspace{-4pt}$\mathcal{S}\&\mathcal{R}$}{RunROT}{$b$}{$\;\mathcal{S}\!: (\vect{r_0}, \vect{r_1});\; \mathcal{R}\!: \vect{r_b}$}
+            \State $\mathcal{S}$ runs $\fn{ROT}_{\xi,\ell}$ as sender, obtaining $\vect{r_0}, \vect{r_1} \in \Z_2^{\xi\by\ell\by\kappa}$
+            \State $\mathcal{R}$ runs $\fn{ROT}_{\xi,\ell}$ as receiver, obtaining $\vect{r_b} \in \Z_2^{\xi\by\ell\by\kappa}$
+   
+        \vspace{-13pt}
+        \setalglineno{1}
+        \AlgRound{\hspace{-4pt}$\mathcal{S}$}{Encrypt}{$\vect{r_0}, \vect{r_1}, \vect{m_0}, \vect{m_1}$}{$(\vect{\tau_0},\vect{\tau_1})$}
+            \State $\assign{(\vect{\tau_0},\vect{\tau_1})}{\{\{\vecti{r_0}{i,j} \oplus \vecti{m_0}{i,j}\}_{j\in\range{\ell\by\kappa}}\}_{i\in\range{\xi}}}$
+            \State $\sendTo{\mathcal{R}}{\vect{\tau_0},\vect{\tau_1}}$
+
+        \vspace{-13pt}
+        \AlgRound{\hspace{-4pt}$\mathcal{R}$}{Decrypt}{$\vect{\tau_0},\vect{\tau_1}$}{$\vect{m_x}$}
+        \Statex \Return $\assign{\vect{m_x}}{\left\{\left\{
+            \begin{matrix}
+                \vecti{\tau_0}{i,j} \oplus \vecti{r_b}{i,j} & \text{if } \vecti{x}{i}\equals 0\\
+                \vecti{\tau_1}{i,j} \oplus \vecti{r_b}{i,j} & \text{if } \vecti{x}{i}\equals 1
+            \end{matrix}
+        \right\}_{j\in\range{\ell\by\kappa}}\right\}_{i\in\range{\xi}}}$
+        
+    \end{algorithmic}
+\end{protocol}

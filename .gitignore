@@ -25,3 +25,7 @@ testdata/
 # Mac
 .DS_Store
 .vscode
+
+# Latex
+docs/build/*
+!docs/build/main.pdf

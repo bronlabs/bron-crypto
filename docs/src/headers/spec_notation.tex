@@ -1,0 +1,77 @@
+
+%------------------------------------------------------------------------------%
+%----------------------------------MATH ENV------------------------------------%
+%------------------------------------------------------------------------------%
+% Entities
+\newcommand{\party}[1]{\ensuremath{\mathcal{P}_{#1}}}                     % Party
+\newcommand{\SA}{\ensuremath{\mathcal{S\!A}}}                             % Signature Aggregator
+\newcommand{\PC}{\ensuremath{\mathcal{PC}}}                               % Pre-signature Composer
+\newcommand{\SR}{\ensuremath{\mathcal{SR}}}                               % Signature Requester
+\newcommand{\sender}{\ensuremath{\mathcal{S}}}                            % Sender
+\newcommand{\receiver}{\ensuremath{\mathcal{R}}}                          % Receiver
+\newcommand{\adversary}{\ensuremath{\mathcal{A}}}                         % Adversary
+
+% Brackets of different kinds
+\makeatletter
+\newsavebox{\@brx}
+\newcommand{\llangle}[1][]{\savebox{\@brx}{\(\m@th{#1\langle}\)}
+  \mathopen{\copy\@brx\mkern2mu\kern-0.9\wd\@brx\usebox{\@brx}}}          %<<
+\newcommand{\rrangle}[1][]{\savebox{\@brx}{\(\m@th{#1\rangle}\)}
+  \mathclose{\copy\@brx\mkern2mu\kern-0.9\wd\@brx\usebox{\@brx}}}         %>>
+\makeatother
+\newcommand{\angled}[1]{\left \langle {#1} \right \rangle}                % <x>
+\newcommand{\dangled}[1]{\llangle {#1} \rrangle}                          % <<x>>
+\newcommand{\bracked}[1]{\left[ {#1} \right]}                             % [x]
+\newcommand{\dbracked}[1]{ \llbracket {#1} \rrbracket}                    % [[x]]
+
+% Functions
+\newcommand{\fn}[1]{\ensuremath{\mathsf{#1}}}                             % Function #1
+\newcommand{\fndef}[2][]{{\fn{{#2}}\label{func:#1#2}}}                    % Function #2 with label #1#2
+\newcommand{\fnref}[2][]{\fn{\hyperrefblk{func:#1#2}{#2}}}                % Function #2 with reference to #1#2
+\newcommand{\idealfn}[2][]{\ensuremath{\mathcal{F}_{#1}^{#2}}}            % Ideal Function #1 for category #2
+\newcommand{\idealfndef}[2][]{{\idealfn{{#2}}\label{idealfunc:#1#2}}}     % Ideal Function #2 with label #1#2
+\newcommand{\idealfnref}[2][]{\idealfn{\hyperrefblk{idealfunc:#1#2}{#2}}} % Ideal Function #2 with reference to #1#2
+
+\newcommand{\sendTo}[2]{\ensuremath{\fnref{Send}(#2)\rightarrow{#1}}}
+\newcommand{\send}[3]{\ensuremath{{#1}.\fnref{Send}(#3)\rightarrow{#2}}}
+
+% Letters
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\F}{\mathbb{F}}
+\newcommand{\G}{\mathbb{G}}
+\mathchardef\mhyphen="2D
+
+% Notation
+\newcommand{\range}[1]{\ensuremath{\bm{[}{#1}\bm{]}}}                 % range 
+\newcommand{\subrange}[2]{\ensuremath{\range{#2}^{#1}}}               % subset of range 
+\newcommand{\vect}[1]{\ensuremath{\bm{#1}}}                           % vector #1
+\newcommand{\vecti}[2]{\ensuremath{{#1}_{({#2})}}}                    % #2th element of vector #1
+\newcommand{\set}[1]{\ensuremath{\mathrm{\uppercase{#1}}}}            % mathematical set #1
+\newcommand{\g}[1]{\ensuremath{\mathnormal{\uppercase{#1}}}}          % curve point
+\newcommand{\asshare}[2]{\ensuremath{{#1}_{#2}}}                      % secret shared value by party #2
+\newcommand{\pk}{\mathit{pk}}                                         % public key
+\newcommand{\sk}{\mathit{sk}}                                         % private key
+\newcommand{\paillier}[1]{\dbracked{#1}}                              % Paillier encrypted value
+\newcommand{\distrs}[2]{\ensuremath{\mathcal{#1}_{#2}}}               % Random Distribution in the set #2
+\newcommand{\distr}[1]{\ensuremath{\mathcal{#1}}}                     % Random Distribution
+\newcommand{\unif}[1]{\set{U}_{#1}}                                   % Uniform random distribution in the set #1
+\newcommand{\sample}[2]{\ensuremath{{#1}\oset{\supertiny{ \$}}{\leftarrow}{#2}}}% Sample value #1 from distribution #2
+\newcommand{\sampleAppendT}[2]{\ensuremath{{#1}\uset{\centerdot}{\oset{\supertiny{ \$}}{\leftarrow}}{#2}}}% Assign value #2 to variable #1, and append variable #1 to transcript
+\newcommand{\assignAppendT}[2]{\ensuremath{{#1}\uset{\centerdot}{\leftarrow}{#2}}}% Assign value #2 to variable #1, and append variable #1 to transcript
+\newcommand{\appendT}[1]{\ensuremath{({#1})_{\centerdot}}}
+\newcommand{\checkif}[3]{\ensuremath{{#1}\oset{\supertiny{ ?}}{#2}{#3}}} % Check condition
+\newcommand{\isequal}[2]{\checkif{#1}{=}{#2}}                         % Check equality
+\newcommand{\isgeq}[2]{\checkif{#1}{\geq}{#2}}                        % Check greater or equal
+\newcommand{\isgt}[2]{\checkif{#1}{<}{#2}}                            % Check greater
+\newcommand{\poly}[1]{\ensuremath{\bm{\mathrm{#1}}}}                  % Polynomial
+\newcommand{\polyx}[2]{\ensuremath{\poly{#1}({#2})}}                  % Polynomial evaluated on point #2
+\newcommand{\coeff}[2]{\ensuremath{\poly{#1}_{#2}}}                   % Polynomial coefficient #2
+\newcommand{\assign}[2]{\ensuremath{{#1}\leftarrow{#2}}}              % Assign value #2 to variable #1
+\newcommand{\concat}{\ensuremath{\;||\;}}                             % Concatenation operator
+\newcommand{\equals}{\ensuremath{\!=\!}}                              % Equivalence operator
+\newcommand{\ins}{\ensuremath{\!\in\!}}                               % In operator
+\newcommand{\inss}{\ensuremath{\!\!\in\!\!}}                          % In operator
+\newcommand{\by}{\ensuremath{\!\times\!}}                             % Dimension multiplication (e.g., 3 by 2 matrix)
+\newcommand{\str}[1]{\scalebox{0.75}{\ensuremath{``\mathtt{#1}"}}}    % String
+\newcommand{\setminuss}{\ensuremath{\!\setminus\!}}                   % Set minus

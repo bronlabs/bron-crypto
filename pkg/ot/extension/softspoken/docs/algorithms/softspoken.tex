@@ -1,0 +1,49 @@
+\begin{protocol}[H]
+    \caption{$\quad\fndef{ROTe}_{\xi, \ell}(\vect{x})\rightarrow (\vect{m_0}, \vect{m_1}, \vect{m_x})$}
+    \label{alg:rote}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            Maliciously secure ROT extension protocol from SoftSpokenOT~\cite{softspokenot} for a batch with $\xi$ messages of $\ell\by\kappa$ bits each, setting $\eta\equals\xi\by\ell\by\kappa$ and $\mu \equals \eta / \sigma$. It uses a pseudo-random generator $\fn{PRG}\!: \Z_2^\kappa \!\mapsto\! \Z_2^{\eta'}$ for $\eta'\equals\eta\!+\!\sigma$ (e.g., $\fnref{TmmoHash}_{\eta'}$), a transcript $\fn{T}$ (e.g., Scheme \ref{alg:transcript}), a base OT (\fn{BBOT}) and a hash $\fn{H}\!:\Z_2^\kappa \!\mapsto\!\Z_2^\kappa$
+        \end{alginfo}
+        \Players sender $\mathcal{S}$, and receiver $\mathcal{R}$
+        \Require {$\mathcal{R}: \vect{x} \in \Z_2^{\xi}$, the  choice bits}
+        \Ensure $\mathcal{S}: \vect{m_0}, \vect{m_1} \in  \Z_2^{\eta}$, pairs of random messages \\
+            $\mathcal{R}: \vect{m_x} \in  \Z_2^{\eta}$, chosen messages such that\\
+                $\qquad\vecti{m_x}{i,j} = \vecti{m_0}{i,j} \vecti{x}{i} \oplus \vecti{m_1}{i,j} (1-\vecti{x}{i})\;\;\;  \forall i \ins \range{\xi}  \;\;\forall j \ins \range{\ell}$
+                
+        \vspace{-10pt}
+        \AlgRoundZero{\hspace{-4pt}$\mathcal{S}\&\mathcal{R}$}{\fndef[rote]{Setup}}{}{$\;\mathcal{S}\!: (\vect{k_0}, \vect{k_1});\; \mathcal{R}\!:\vect{k_b}$}
+            \State $\mathcal{S}$ samples $\sample{\vect{b}}{\Z_2^\kappa}$ as the base OT choice bits
+            \State $\mathcal{R}$ runs $\fn{BBOT}_{\kappa}()$ as the base OT sender, obtaining $\vect{k_0}, \vect{k_1} \in \Z_2^{\kappa\times\kappa}$
+            \State $\mathcal{S}$ runs $\fn{BBOT}_{\kappa}(\vect{b})$ as the base OT receiver, receiving $\vect{k_b} \in \Z_2^{\kappa\times\kappa}$
+
+        \vspace{-10pt}
+        \setalglineno{1}
+        \AlgRound{\hspace{-4pt}$\mathcal{R}$}{\fndef[rote]{Round1}}{$\vect{x}\ins \Z_2^{\xi}$}{$\vect{u}, \vect{\dot{x}}, \vect{\dot{t}}, \vect{m_x}$}
+            \State Set $\assign{\vect{x_{\text{rep}}}}{\{\{\vecti{x}{i},\vecti{x}{i},\dots,\vecti{x}{i}\}_{\ell}\}_{i \in \range{\xi}}}$ by repeating $\ell$ times $\vect{x}$
+            \State Sample $\sample{\vect{x_\sigma}}{\Z_2^{\sigma}} $ and concatenate $\assign{\vect{x'}}{\vect{x_{\text{rep}}}\concat \vect{x_\sigma}}$
+            \State Extend $\assign{(\vect{t_0}, \vect{t_1})}{\{\fn{PRG}(\vecti{k_0}{i}), \fn{PRG}(\vecti{k_1}{i})\}_{i\in \range{\kappa}}}$ with $\vect{t_0}, \vect{t_1} \in \Z_2^{\kappa\times\eta'}$
+            \State $\assign{\vect{u}}{\{\{\vecti{t_0}{i,j} \oplus \vecti{t_1}{i,j} \oplus \vecti{x'}{j}\}_{j\in\range{\eta'}}\}_{i \in \range{\kappa}}}$ with $\vect{u} \in \Z_2^{\kappa\times\eta'}$
+            \State Run $\fn{T.Append}(\vect{u})$ and $\assign{\vect{\chi}}{\fn{T.Extract}(\eta)}$ to get the challenge $\vect{\chi} \ins \Z_2^{\mu \times \sigma}$
+            \State Compute the challenge response $(\vect{\dot{x}}, \vect{\dot{t}})$ as:
+                \Statex \hspace{6pt}\small{6.a:} $\assign{\vect{\dot{x}}}{\{  \vecti{x_{\sigma}}{k} \oplus \bigoplus_{m=1}^{\mu} \vecti{\chi}{m,k} \cdot \vecti{x_{\text{rep}}}{\sigma m + k}  \}_{k \in \range{\sigma}}}$ with $ \vect{\dot{x}} \ins \Z_2^\sigma$
+                \Statex \hspace{6pt}\small{6.b:} $\assign{\vect{\dot{t}}}{\{\{\vecti{t_0}{i,\eta+k}\oplus \bigoplus_{m=1}^{\mu} \vecti{\chi}{m,k}\cdot \vecti{t_0}{i,\sigma m + k}\}_{k \in \range{\sigma}}\}_{i \in \range{\kappa}}}$ with $\vect{\dot{t}} \in \Z_2^{\kappa \times \sigma}$
+            \State Transpose $\assign{\vect{t'_0}}{\{\{\vecti{t_0}{i,j}\}_{i\in\range{\kappa}}\}_{j\in\range{\eta'}}}$ with $\vect{t'_0} \in \Z_2^{\eta'\times\kappa}$
+            \State $\sendTo{\mathcal{S}}{\vect{u}, \vect{\dot{x}}, \vect{\dot{t}}}$
+            \State $\assign{\vect{m_x}}{\{\{\fn{H}(j \concat \vecti{t'_0}{j\ell+l})\}_{l\in\range{\ell}}\}_{j\in\range{\eta}}}$
+            \Statex \Return $\vect{m_x}$
+
+        \vspace{-10pt}
+        \setalglineno{1}
+        \AlgRound{\hspace{-4pt}$\mathcal{S}$}{\fndef[rote]{Round2}}{$\vect{u}, \vect{\dot{x}}, \vect{\dot{t}}$}{$(\vect{m_0}, \vect{m_1})$}
+            \State Extend $\assign{\vect{t_b}}{\{\fn{PRG}(\vecti{k_b}{i})\}_{i \in \range{\kappa}}}$ with $\vect{t_b} \in \Z_2^{\kappa\times\eta'}$
+            \State $\assign{\vect{q}}{\{\{\vecti{b}{i}\cdot \vecti{u}{i,j} \oplus \vecti{t_b}{i,j}\}_{j\in\range{\eta'}}\}_{i \in \range{\kappa}}}$ with $\vect{q} \in \Z_2^{\kappa\times\eta'}$
+            \State Run $\fn{T.Append}(\vect{u})$ and $\assign{\vect{\chi}}{\fn{T.Extract}(\eta)}$ to get the challenge $\vect{\chi} \ins \Z_2^{\mu \times \sigma}$
+            \State Verify the challenge response:
+                \Statex \hspace{6pt}\small{4.a:} $\assign{\vect{\dot{q}}}{\{\{\vecti{q}{i,\eta+k}\oplus \bigoplus_{m=1}^{\mu} \vecti{\chi}{m,k}\cdot \vecti{q}{i,\sigma m + k}\}_{k \in \range{\sigma}}\}_{i \in \range{\kappa}}}$ with $\vect{\dot{q}} \in \Z_2^{\kappa \by \sigma}$
+                \Statex \hspace{6pt}\small{4.b:} Check $\isequal{\vecti{q}{i,k}}{\vecti{\dot{q}}{i,k}}\;\;\; \forall i \ins \range{\kappa}\;\; \forall k \ins \range{\eta'}$; otherwise $\ABORT$
+            \State Transpose $\assign{\vect{q'}}{\{\{\vecti{q}{i,j}\}_{i\in\range{\kappa}}\}_{j\in\range{\eta'}}}$ with $\vect{q'} \in \Z_2^{\eta'\times\kappa}$
+            \State $\assign{(\vect{m_0}, \vect{m_1})}{\{\{\fn{H}(j \concat \vecti{q'}{j}), \fn{H}(j \concat (\vecti{q}{j\ell+l} \oplus \vecti{b}{j\ell+l}))\}_{l\in\range{\ell}}\}_{j\in\range{\xi}}}$
+            \Statex \Return $(\vect{m_0}, \vect{m_1})$
+    \end{algorithmic}
+\end{protocol}

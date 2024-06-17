@@ -1,0 +1,30 @@
+A digital signature is an asymmetric cryptographic primitive for verifying the authenticity of digital messages or documents \cite{goldwasser1983strong,goldwasser1988digital,bellare1988sign,rompel1990one,goldwasser2008lecturenotes}. A valid signature on a message gives a recipient trust in that the message was authored by a sender known to the recipient. Digital signatures are commonly used for financial transactions, software distribution, and to detect forgery or tampering in communication.
+
+Assuming that the private key remains secret, digital signatures are designed to be inherently \textit{resistant to forging}, making it computationally infeasible to generate a valid signature on behalf of a party without knowing that party's private key. They may also provide \textit{non-repudiation}, thus signer cannot successfully claim they did not sign a message. Digitally signed messages may be anything that can be represented as a bit-string, e.g., cryptocurrency transactions, electronic mail, or messages sent as part of cryptographic protocols.
+
+We generalize digital signature schemes in Functionality \ref{alg:f_signature}:
+
+\inputFunctionality{signatures}{signatures.tex}
+
+The security of digital signature schemes is filled with nuances. In general, the security of a digital signature scheme is defined by a security game between a challenger and an adversary. Based on the capabilities granted to the adversary, we distinguish three basic attacks (more details in \cite{goldwasser1983strong}):
+\begin{itemize}
+    \item \textit{Key-Only Attack (KOA)}: the adversary knows only the public key of the signer, thus it can verify signatures of messages given to him.
+    \item \textit{Known Signature Attack (KSA)}: the adversary is given the public key of the signer and message/signature pairs from a legal signer.
+    \item \textit{Chosen Message Attack (CMA)}: The adversary is also given access to a signing oracle, a black-box that signs any message of the adversary's choice. Out of the three, this is the most powerful adversary and is considered the only realistic notion for many real-world scenarios.
+\end{itemize}
+
+\noindent The adversary's goal in the security game may be:
+\begin{itemize}
+    \item \textit{Existential Forgery (EF)}: succeed in forging the signature of one message, not necessarily of his choice.
+    \item \textit{Selective Forgery (SF)}: succeed in forging the signature of some message of his choice.
+    \item \textit{Universal Forgery (UF)}: succeeds in forging the signature of any message.
+    \item \textit{Total Break}: succeed in computing the signer's secret key.
+\end{itemize}
+
+The signature scheme is then considered secure if the adversary's probability of winning the game for a given goal and attack is negligible. We refer the avid reader to \cite{goldwasser2008lecturenotes} for more formal definitions.
+
+There exist many different digital signature schemes, each with their own performance characteristics. In this section, we focus our attention to the most common signature schemes used in blockchain protocols: ECDSA~\cite{ecdsa_rfc6979}, Schnorr / EdDSA~\cite{eddsa_rfc8032}, and BLS~\cite{irtf_bls_signature_05}. These three schemes are proven secure under the \textit{UF-CMA} security definition\footnote{Some signature schemes such as Schnorr / EdDSA go even beyond, as they constitute \textit{zero knowledge proofs of knowledge} of the secret key.}, the strongest combination out of the classical security notions presented above. All these schemes are based on elliptic curve cryptography, for specifically chosen curves.
+
+\inputSection{signatures/ecdsa}{ecdsa.tex}
+\inputSection{signatures/schnorr}{schnorr.tex}
+\inputSection{signatures/bls}{bls.tex}

@@ -1,0 +1,55 @@
+
+\begin{protocol}[H]
+    \caption{$\quad$\fn{Lindell17.Sign}}\label{alg:lindell17sign}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            UC maliciously secure two-party $2$-out-of-$n$ ECDSA signing protocol from \cite[Section 3.3]{lindell17} for a group $\G(q, \g{G})$. It is based on a \fnref[blc]{Commitment} scheme, a dlog PoK \fnref{Fischlin}, a hash to field $\fn{H}_{\Z_q}$ and \fnref{Paillier} encryption scheme.
+        \end{alginfo} 
+
+        \Players{$\party{1} \& \party{2}$  hold a public key $\g{Q} \ins \G$, a private key share $x_1, x_2 \ins \Z_q$ and a \fnref{Paillier} public key $pk$}
+        \Require {a message $m$, a unique session id $sid$}
+
+        \vspace{-11pt}
+        \AlgRoundZero{\hspace{6pt}$\party{1}$}{Round1}{}{$c_1$}
+            \State Sample $\sample{k_1}{\Z_q}$ and compute $\assign{\g{R}_1}{k_1 \cdot \g{G}}$
+            \State Run $\assign{(c_1, w_1)}{\fnref[blc]{Commit}(sid \concat \g{R}_1)}$
+            \State $\sendTo{\party{2}}{c_1}$
+            
+        \vspace{-11pt}
+        \setalglineno{1}
+        \AlgRound{$\party{2}$}{Round2}{$c_1$}{$(\g{R}_2, \pi_2^{dl})$}
+            \State Sample $\sample{k_2}{\Z_q}$ and compute $\assign{\g{R}_2}{k_2 \cdot \g{G}}$
+            \State Run $\assign{\pi_2^{dl}}{\fnref{Fischlin}.\fnref[fischlin]{Prove}(k_2)}$ as a dlog PoK of $\g{R}_2$
+            \State $\sendTo{\party{1}}{\g{R}_2, \pi_2^{dl}}$
+
+        \vspace{-11pt}
+        \setalglineno{1}
+        \AlgRound{$\party{1}$}{Round3}{$\g{R}_2, \pi_2^{dl}$}{$(\g{R}_1, w_1, \pi_1^{dl})$}
+            \State Run $\fnref{Fischlin}.\fnref[fischlin]{Verify}(R_2, \pi_2^{dl})$; $\ABORT$ if it fails
+            \State Run $\assign{\pi_1^{dl}}{\fnref{Fischlin}.\fnref[fischlin]{Prove}(k_1)}$ as a dlog PoK of $\g{R}_1$
+            \State $\assign{\g{R}}{k_1 \cdot \g{R}_2}$
+            \State $\sendTo{\party{2}}{\g{R}_1, w_1, \pi_1^{dl}}$
+
+        \vspace{-11pt}
+        \setalglineno{1}
+        \AlgRound{$\party{2}$}{Round4}{$\g{R}_1, w_1, \pi_1^{dl}$}{$\paillier{c_3}$}
+            \State Run $\fnref[blc]{Open}(sid \concat \g{R}_1, c_1, w_1)$ and $\fnref{Fischlin}.\fnref[fischlin]{Verify}(R1, \pi_1^{dl})$
+            \State $\assign{\g{R}}{k_2 \cdot \g{R}_1}$
+            \State $\assign{m'}{\fn{H}_{\Z_q}(m)}$
+            \State Sample $\sample{\rho}{\Z_{q^2}}$
+            \State Sample $\sample{\Tilde{r}}{\Z_q^{*}}$ s.t. $\gcd(\Tilde{r}, N) = 1$
+            \State $\assign{x^{SS}_2}{\fnref{ShamirToAdditive}(x_2)}$
+            \State $\assign{\paillier{c_3}}{\fnref{Paillier}.\fnref[paillier]{Encrypt}(pk, \rho q + k_2^{-1}(m' + r\cdot x^{SS}_2))}$
+            \State $\sendTo{\party{1}}{\paillier{c_3}}$
+
+        \vspace{-11pt}
+        \setalglineno{1}
+        \AlgRound{$\party{1}$}{Round5}{$\paillier{c_3}$}{$\sigma\equals(r, s'', v)$}
+            \State $\assign{s'}{Dec_{sk}(\paillier{c3})}$
+            \State $\assign{s''}{k_2^{-1}s' \mod q}$
+            \State $\assign{v}{recoveryId(\g{R})}$
+            \State Verify $(R, s'')$ is a valid ECDSA signature with the public key $\g{Q}$
+            \Statex \Return $\sigma\equals(R, s'', v)$
+
+    \end{algorithmic}
+\end{protocol}

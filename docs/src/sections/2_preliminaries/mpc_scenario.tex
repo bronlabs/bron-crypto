@@ -1,0 +1,39 @@
+% ---------------------------------------------------------------------------- %
+\subsubsection{Our Multi-Party Computation Scenario}\label{sec:mpc_scenario}
+% ---------------------------------------------------------------------------- %
+
+We detail in this subsection all the assumptions made for the scenario in which our protocols are run. These are common in most of the MPC-based literature, and assumed as such in all the threshold signing protocols that we implement. We leave the concrete instantiation of these requirement out of this specification.
+
+\paragraph{On setting the participants to a protocol.} All the protocols assume its set of participants to be formed prior to the execution of the protocol, by using some out-of-band mechanism. We name this as \textit{controller set}. Furthermore, in many of these signing protocols, a participant's ID is the point at which the Shamir polynomial is evaluated to output the share for that participant. As a result, each participant will know the participant IDs of all other participants, among other things, before engaging in any of the signing protocols. 
+
+We do not make any assumption on the specifics of the controller set formation mechanism. We will leave this issue to the MPC platform and the particular Copper solution using this primitive. However, more often than not, these mechanisms require some identifier to be assigned to the participants, which has nothing to do with the primitive itself. We consider this and will require each participant to maintain a mapping from their protocol participant ID to their controller set ID.
+
+It is possible to remove the need to maintain such a mapping by evaluating the Shamir polynomial at each participant's controller set ID. This makes each party's internal state simpler to represent, at the cost of modifying protocol-specific data if a participant's controller ID changes. We think such a cost is too high. Nevertheless, suppose a change is to be made to represent participant IDs via their controller set ID. In that case, special care should be given so that they don't reduce to zero modulo $q$, forcing the Shamir polynomial to reveal the secret.
+
+\paragraph{On participant roles.} We define three specific roles for our distributed signing protocols: 
+\begin{enumerate}
+    \item A semi-trusted \textit{signature aggregator} role, denoted as $\SA$, serving the following responsibilities:
+    \begin{enumerate}
+        \item \label{sa:2} $\SA$ validates each partial signature and reports the misbehaving participant if it fails.
+        \item \label{sa:3} $\SA$ aggregates the partial signatures received from the participating parties.
+    \end{enumerate} 
+    
+    This role may be assumed by any one of the parties in the controller set or by an external entity, provided that they know the participant's partial public key \footnote{A \textit{partial public key} of a participant with the secret key share of $\sk_i$ is defined to be $\pk_i \equiv \sk_i \cdot G$ where $G$ is the generator of the curve.}. Such a role allows for less communication overhead between signers and is often practical in a real-world setting~\cite{KG20}. $\SA$ is required, and whoever assumes this role will have access to the final signature.
+    
+    Note that $\SA$ is semi-trusted: A malicious $\SA$ can perform denial-of-service attacks and report misbehavior by participants falsely, but it cannot learn the private key or cause improper messages to be signed. If all parties assume the $\SA$ role, it is impossible to prevent the last party from withholding their partial signature. This is natural since we're operating in the no-honest majority without fairness or guaranteed output delivery \cite{CY14}. All parties assume $\SA$ is equivalent to the scenario without $\SA$ described.
+    
+    \item A \textit{Presignature Composer} role denoted by $\PC$ in charge of composing the right pre-signature for the participating parties from the preprocessed material. The existence of a $\PC$ implies non-interactivity of the signing round, and it is completely optional.
+
+    \item A \textit{Signing Requester} denoted as $\SR$. $\SR$ is the entity who sends the plaintext $m$ to the parties and asks them for a signature \footnote{This role is equivalent to the role \textit{leader} in \cite{BCKMTZ22}}.
+\end{enumerate}
+
+It is \textbf{required} that all parties agree on who assumes $\PC$ and $\SA$ and $\SR$ at the beginning of the signing session since they need to know what message they should trust to sign, whether to generate pre-signature tuples or to whom they should send their partial signatures.
+
+For simplicity, we assume $\PC$ to have at most one entity, and $\SR$ as well as $\SA$ to have exactly one entity. If it is desired for these sets to contain more entities, an agreement protocol should be run on their decision. The details of acceptable agreements protocols are highly context-dependent, and depending on the fault model assumed by the users of these primitives good choices will be different \footnote{For example, a client could select fixed signature aggregators outside of the controller set, and assume crash-fault}.
+
+\paragraph{On Signing scenarios.} Various copper use cases will require different selections of each role. Below, we point out how various modes of Copper's SASS offering can be realized:
+\begin{itemize}
+    \item \textbf{Cold Signing:} non-interactive signing, with $\PC=\SR=\{\party{client}\}$ and $\SA=\{\party{copper}\}$.
+    \item \textbf{Hot Signing:} This is interactive signing where $\PC=\{\}$ and $\SR=\{\party{client}\}$ and $\SA=\{\party{copper}\}$
+    \item \textbf{Proxy:} This is equivalent to \textbf{Hot Signing}.
+\end{itemize}
