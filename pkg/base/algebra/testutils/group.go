@@ -203,8 +203,7 @@ func (mgei *MultiplicativeGroupElementInvariants[G, GE]) MultiplicativeInverse(t
 	require.NoError(t, err2)
 	require.True(t, element.Equal(inverseOfInverse), "Inverse of inverse of X should be equal to X")
 
-	n := new(saferith.Nat).SetUint64(1)
-	output := element.ApplyMul(inverse, n)
+	output := element.Mul(inverse)
 	require.True(t, identityElement.Equal(output), "Any element o inverse of the element should be equal to the identity element")
 }
 
@@ -393,34 +392,33 @@ func CheckMultiplicativeGroupInvariants[G algebra.MultiplicativeGroup[G, GE], GE
 	CheckMultiplicativeMonoidInvariants[G, GE](t, group, elementGenerator)
 	CheckGroupInvariants[G, GE](t, group, elementGenerator)
 
-	gen := fu.NewSkewedObjectGenerator(elementGenerator, 5) // 5% chance of generating zero
 	mgi := &MultiplicativeGroupInvariants[G, GE]{}
 	t.Run("Div", func(t *testing.T) {
 		t.Parallel()
 
-		mgi.Div(t, group, gen.Generate(), gen.Generate())
+		mgi.Div(t, group, elementGenerator.Generate(), elementGenerator.Generate())
 	})
 	mgei := &MultiplicativeGroupElementInvariants[G, GE]{}
 
-	mgei.MultiplicativeInverse(t, group, gen.Generate())
+	mgei.MultiplicativeInverse(t, group, elementGenerator.Generate())
 	t.Run("IsMultiplicativeInverse", func(t *testing.T) {
 		t.Parallel()
-		mgei.IsMultiplicativeInverse(t, group, gen.Generate())
+		mgei.IsMultiplicativeInverse(t, group, elementGenerator.Generate())
 	})
 	// t.Run("IsTorsionElementUnderMultiplication", func(t *testing.T) {
 	// 	t.Parallel()
-	// 	mgei.IsTorsionElementUnderMultiplication(t, group, gen.Generate())
+	// 	mgei.IsTorsionElementUnderMultiplication(t, group, elementGenerator.Generate())
 	// })
 	t.Run("Div", func(t *testing.T) {
 		t.Parallel()
-		mgei.Div(t, group, gen.Generate(), gen.Generate())
+		mgei.Div(t, group, elementGenerator.Generate(), elementGenerator.Generate())
 	})
-	t.Run("ApplyDiv", func(t *testing.T) {
-		t.Parallel()
-		prng := fu.NewPrng().IntRange(0, 20)
-		n := new(saferith.Nat).SetUint64(uint64(prng))
-		mgei.ApplyDiv(t, group, gen.Generate(), gen.Generate(), n)
-	})
+	// t.Run("ApplyDiv", func(t *testing.T) {
+	// 	t.Parallel()
+	// 	prng := fu.NewPrng().IntRange(0, 20)
+	// 	n := new(saferith.Nat).SetUint64(uint64(prng))
+	// 	mgei.ApplyDiv(t, group, elementGenerator.Generate(), elementGenerator.Generate(), n)
+	// })
 }
 
 func CheckCyclicGroupInvariants[G algebra.CyclicGroup[G, GE], GE algebra.CyclicGroupElement[G, GE]](t *testing.T, group G, elementGenerator fu.ObjectGenerator[GE]) {

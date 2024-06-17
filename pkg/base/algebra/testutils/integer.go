@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	fu "github.com/copperexchange/krypton-primitives/pkg/base/fuzzutils"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 	"github.com/stretchr/testify/require"
@@ -31,14 +32,15 @@ func (iff *IntegerFiniteFieldInvariants[F, FE]) SetNatAndNat(t *testing.T, objec
 
 func (iff *IntegerFiniteFieldInvariants[F, FE]) BytesAndSetBytes(t *testing.T, object algebra.BytesSerialization[FE]) {
 	t.Helper()
-	// TODO: Line43, [LENGTH_ERROR] input length != 32 bytes
+
 	actual := object.Bytes()
 	require.NotZero(t, len(actual))
 	excpted, err := object.SetBytes(actual)
 	require.NoError(t, err)
 	require.Equal(t, excpted, object)
 
-	one, err := object.SetBytes(saferithUtils.NatOne.Bytes())
+	one32Bytes := bitstring.PadToLeft(saferithUtils.NatOne.Bytes(), len(object.Bytes())-1)
+	one, err := object.SetBytes(one32Bytes)
 	require.NoError(t, err)
 	oneClone := one.AdditiveInverse().Neg()
 	require.EqualValues(t, one.Bytes(), oneClone.Bytes())
@@ -49,7 +51,7 @@ func (iff *IntegerFiniteFieldInvariants[F, FE]) BytesAndSetBytes(t *testing.T, o
 	require.True(t, oneTimesOne.IsOne() && !oneTimesOne.IsZero())
 }
 
-func (iff *IntegerFiniteFieldInvariants[F, FE]) BytesAndSetBytesSetBytesWide(t *testing.T, object algebra.BytesSerialization[FE]) {
+func (iff *IntegerFiniteFieldInvariants[F, FE]) BytesAndSetBytesWide(t *testing.T, object algebra.BytesSerialization[FE]) {
 	t.Helper()
 
 	actual := object.Bytes()
@@ -78,4 +80,11 @@ func CheckIntegerFiniteFieldInvariants[F algebra.IntegerFiniteField[F, FE], FE a
 	CheckNatSerializationInvariants[FE](t, elementGenerator)
 	CheckBytesSerializationInvariants[FE](t, elementGenerator)
 	CheckFiniteFieldInvariants[F, FE](t, f, elementGenerator)
+	iff := &IntegerFiniteFieldInvariants[F, FE]{}
+	t.Run("BytesAndSetBytes", func(t *testing.T) {
+		iff.BytesAndSetBytes(t, elementGenerator.Generate())
+	})
+	t.Run("BytesAndSetBytesWide", func(t *testing.T) {
+		iff.BytesAndSetBytesWide(t, elementGenerator.Generate())
+	})
 }

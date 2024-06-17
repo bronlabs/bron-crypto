@@ -300,7 +300,7 @@ func (e *BaseFieldElement) ApplyMul(x algebra.MultiplicativeGroupoidElement[curv
 
 func (e *BaseFieldElement) Square() curves.BaseFieldElement {
 	return &BaseFieldElement{
-		V: e.V.Square(e.V),
+		V: fp.New().Square(e.V),
 	}
 }
 
@@ -326,7 +326,7 @@ func (e *BaseFieldElement) AdditiveInverse() curves.BaseFieldElement {
 	var out [limb4.FieldLimbs]uint64
 	e.V.Arithmetic.Neg(&out, &e.V.Value)
 	return &BaseFieldElement{
-		V: e.V.Neg(e.V),
+		V: fp.New().Neg(e.V),
 	}
 }
 

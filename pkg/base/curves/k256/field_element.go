@@ -29,8 +29,7 @@ type BaseFieldElement struct {
 }
 
 func (*BaseFieldElement) Structure() curves.BaseField {
-	//TODO implement me
-	panic("implement me")
+	return NewBaseField()
 }
 
 func (e *BaseFieldElement) Unwrap() curves.BaseFieldElement {
