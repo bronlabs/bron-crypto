@@ -274,7 +274,7 @@ func (e *BaseFieldElement) ApplyAdd(x algebra.AdditiveGroupoidElement[curves.Bas
 
 func (e *BaseFieldElement) Double() curves.BaseFieldElement {
 	return &BaseFieldElement{
-		V: e.V.Double(e.V),
+		V: fp.New().Double(e.V),
 	}
 }
 
@@ -422,7 +422,7 @@ func (e *BaseFieldElement) Exp(exponent *saferith.Nat) curves.BaseFieldElement {
 		panic("not a p256 Fp element")
 	}
 	return &BaseFieldElement{
-		V: e.V.Exp(e.V, ex.V),
+		V: fp.New().Exp(e.V, ex.V),
 	}
 }
 

@@ -415,7 +415,7 @@ func (e *BaseFieldElementG1) Exp(rhs *saferith.Nat) curves.BaseFieldElement {
 		panic("not a bls12381 G1 base field element")
 	}
 	return &BaseFieldElementG1{
-		V: e.V.Exp(e.V, n.V),
+		V: new(bimpl.Fp).Exp(e.V, n.V),
 	}
 }
 
