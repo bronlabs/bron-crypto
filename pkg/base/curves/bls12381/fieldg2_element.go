@@ -425,8 +425,14 @@ func (e *BaseFieldElementG2) Norm() curves.BaseFieldElement {
 
 // === Zp Methods.
 
-func (*BaseFieldElementG2) Exp(rhs *saferith.Nat) curves.BaseFieldElement {
-	return nil
+func (e *BaseFieldElementG2) Exp(rhs *saferith.Nat) curves.BaseFieldElement {
+	n, ok := e.Structure().Element().SetNat(rhs).(*BaseFieldElementG2)
+	if !ok {
+		panic("not a bls12381 G2 base field element")
+	}
+	return &BaseFieldElementG2{
+		V: new(bimpl.Fp2).Exp(e.V, n.V),
+	}
 }
 
 func (e *BaseFieldElementG2) Neg() curves.BaseFieldElement {

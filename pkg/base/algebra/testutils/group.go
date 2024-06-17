@@ -234,7 +234,7 @@ func (mgei *MultiplicativeGroupElementInvariants[G, GE]) IsMultiplicativeInverse
 	require.NoError(t, err1)
 	n := new(saferith.Nat).SetUint64(1)
 	output := element.ApplyMul(inverse, n)
-	require.True(t, output.IsMultiplicativeIdentity(), "Any element o inverse of the element should be equal to the identity element")
+	require.True(t, output.IsMultiplicativeIdentity(), fmt.Sprintf("Any element o inverse of the element should be equal to the identity element %v", output))
 }
 
 func (mgei *MultiplicativeGroupElementInvariants[G, GE]) IsTorsionElementUnderMultiplication(t *testing.T, group algebra.MultiplicativeGroup[G, GE], element algebra.MultiplicativeGroupElement[G, GE]) {

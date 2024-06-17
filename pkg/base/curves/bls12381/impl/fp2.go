@@ -346,10 +346,9 @@ func (f *Fp2) pow(base *Fp2, exp *[FieldLimbs]uint64) {
 	}
 	f.Set(res)
 }
-func (f *Fp2) Exp(base, exp *Fp2) {
-	var e fiatFpNonMontgomeryDomainFieldElement
+func (f *Fp2) Exp(base, exp *Fp2) *Fp2 {
+	f.A.pow(&base.A, &exp.A)
+	f.B.pow(&base.B, &exp.B)
 
-	fiatFpFromMontgomery(&e, (*fiatFpMontgomeryDomainFieldElement)(exp))
-
-	f.pow(base, (*Fp2)(&exp))
+	return f
 }

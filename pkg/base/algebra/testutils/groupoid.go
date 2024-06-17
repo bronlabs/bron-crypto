@@ -237,7 +237,7 @@ func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) Exp(t *testing.T, x 
 		expected = expected.Mul(x)
 	}
 
-	require.True(t, expected.Equal(actual))
+	require.True(t, expected.Equal(actual), fmt.Sprintf("expected: %v, actual: %v", expected, actual))
 }
 
 func (cgi *CyclicGroupoidInvariants[G, GE]) Generator(t *testing.T, groupoid algebra.CyclicGroupoid[G, GE], under algebra.BinaryOperator[GE]) {
