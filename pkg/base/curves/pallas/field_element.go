@@ -417,7 +417,7 @@ func (e *BaseFieldElement) Exp(exponent *saferith.Nat) curves.BaseFieldElement {
 		panic("not a pallas base field element")
 	}
 	return &BaseFieldElement{
-		V: e.V.Exp(e.V, n.V),
+		V: new(fp.Fp).Exp(e.V, n.V),
 	}
 }
 

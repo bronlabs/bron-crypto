@@ -275,7 +275,7 @@ func (e *BaseFieldElement) ApplyAdd(x algebra.AdditiveGroupoidElement[curves.Bas
 
 func (e *BaseFieldElement) Double() curves.BaseFieldElement {
 	return &BaseFieldElement{
-		V: e.V.Double(e.V),
+		V: fp.New().Double(e.V),
 	}
 }
 
@@ -302,7 +302,7 @@ func (e *BaseFieldElement) ApplyMul(x algebra.MultiplicativeGroupoidElement[curv
 
 func (e *BaseFieldElement) Square() curves.BaseFieldElement {
 	return &BaseFieldElement{
-		V: e.V.Square(e.V),
+		V: fp.New().Square(e.V),
 	}
 }
 
@@ -424,7 +424,7 @@ func (e *BaseFieldElement) Exp(exponent *saferith.Nat) curves.BaseFieldElement {
 	}
 
 	return &BaseFieldElement{
-		V: e.V.Exp(e.V, n.V),
+		V: fp.New().Exp(e.V, n.V),
 	}
 }
 
