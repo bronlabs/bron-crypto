@@ -17,7 +17,7 @@ type BroadcastExchanger[P any] interface {
 }
 
 type MessageRouter interface {
-	// RegisterBroadcastRound these any's should be whatever format we serialize into (not implemented yet, not needed for simulator)
+	// RegisterBroadcastRound these any's should be whatever format we serialise into (not implemented yet, not needed for simulator)
 	RegisterBroadcastRound(round int) BroadcastExchanger[any]
 	RegisterUnicastRound(round int) UnicastExchanger[any]
 }
@@ -43,13 +43,15 @@ func NewUnicastRound[U any](me types.IdentityKey, round int, router MessageRoute
 		for iter := received.Iterator(); iter.HasNext(); {
 			e := iter.Next()
 			party := e.Key
-			payload := e.Value.(U)
-			result.Put(party, payload)
+			payload, ok := e.Value.(U)
+			if ok {
+				result.Put(party, payload)
+			}
 		}
 		in <- result
 	}()
 	go func() {
-		select {
+		select { //nolint:gosimple // changes semantics
 		case result := <-out:
 			sent := hashmap.NewHashableHashMap[types.IdentityKey, any]()
 			for iter := result.Iterator(); iter.HasNext(); {
@@ -87,13 +89,15 @@ func NewBroadcastRound[B any](me types.IdentityKey, round int, router MessageRou
 		for iter := received.Iterator(); iter.HasNext(); {
 			e := iter.Next()
 			party := e.Key
-			payload := e.Value.(B)
-			result.Put(party, payload)
+			payload, ok := e.Value.(B)
+			if ok {
+				result.Put(party, payload)
+			}
 		}
 		in <- result
 	}()
 	go func() {
-		select {
+		select { //nolint:gosimple // changes semantics
 		case result := <-out:
 			exchange.Send(me, result)
 		}

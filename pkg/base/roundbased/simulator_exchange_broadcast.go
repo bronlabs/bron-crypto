@@ -1,10 +1,11 @@
 package roundbased
 
 import (
+	"sync"
+
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"sync"
 )
 
 type SimulatorBroadcastExchanger[P any] struct {

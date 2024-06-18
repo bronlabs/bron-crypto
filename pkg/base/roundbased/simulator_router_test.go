@@ -2,15 +2,17 @@ package roundbased_test
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/sync/errgroup"
-	"testing"
-	"time"
 )
 
 func Test_BroadcastRouter(t *testing.T) {
@@ -18,7 +20,7 @@ func Test_BroadcastRouter(t *testing.T) {
 	require.NoError(t, err)
 
 	router := roundbased.NewSimulatorMessageRouter(hashset.NewHashableHashSet(identities...))
-	worker := func(me types.IdentityKey) error {
+	worker := func(me types.IdentityKey) {
 		r1b := roundbased.NewBroadcastRound[string](me, 1, router)
 		r1b.BroadcastOut() <- fmt.Sprintf("FROM[%s]", me)
 
@@ -27,8 +29,6 @@ func Test_BroadcastRouter(t *testing.T) {
 			e := iter.Next()
 			fmt.Printf("Received %s from %s\n", e.Value, e.Key.String())
 		}
-
-		return nil
 	}
 
 	errChan := make(chan error)
@@ -36,7 +36,8 @@ func Test_BroadcastRouter(t *testing.T) {
 		var grp errgroup.Group
 		for _, id := range identities {
 			grp.Go(func() error {
-				return worker(id)
+				worker(id)
+				return nil
 			})
 		}
 		errChan <- grp.Wait()
@@ -55,7 +56,7 @@ func Test_UnicastRouter(t *testing.T) {
 	require.NoError(t, err)
 
 	router := roundbased.NewSimulatorMessageRouter(hashset.NewHashableHashSet(identities...))
-	worker := func(me types.IdentityKey) error {
+	worker := func(me types.IdentityKey) {
 		r1b := roundbased.NewUnicastRound[string](me, 1, router)
 		sent := hashmap.NewHashableHashMap[types.IdentityKey, string]()
 		for _, party := range identities {
@@ -71,7 +72,6 @@ func Test_UnicastRouter(t *testing.T) {
 			e := iter.Next()
 			fmt.Printf("%s -> %s: Received %s\n", e.Key.String(), me.String(), e.Value)
 		}
-		return nil
 	}
 
 	errChan := make(chan error)
@@ -79,7 +79,8 @@ func Test_UnicastRouter(t *testing.T) {
 		var grp errgroup.Group
 		for _, id := range identities {
 			grp.Go(func() error {
-				return worker(id)
+				worker(id)
+				return nil
 			})
 		}
 		errChan <- grp.Wait()

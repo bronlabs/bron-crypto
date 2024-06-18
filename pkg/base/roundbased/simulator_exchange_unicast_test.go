@@ -2,14 +2,16 @@ package roundbased
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/sync/errgroup"
-	"testing"
-	"time"
 )
 
 func Test_UnicastExchange(t *testing.T) {

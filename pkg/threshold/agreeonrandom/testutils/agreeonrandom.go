@@ -1,6 +1,8 @@
 package testutils
 
 import (
+	crand "crypto/rand"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -11,6 +13,29 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom"
 )
+
+func MakeParticipants(n int) ([]*agreeonrandom.Participant, error) {
+	identities, err := ttu.MakeDeterministicTestIdentities(n)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create identities")
+	}
+
+	// curve not used
+	protocol, err := ttu.MakeProtocol(k256.NewCurve(), identities)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create protocol")
+	}
+
+	parties := make([]*agreeonrandom.Participant, n)
+	for i, identity := range identities {
+		parties[i], err = agreeonrandom.NewParticipant(identity.(types.AuthKey), protocol, nil, crand.Reader)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create participant")
+		}
+	}
+
+	return parties, nil
+}
 
 func RunAgreeOnRandom(curve curves.Curve, identities []types.IdentityKey, prng io.Reader) ([]byte, error) {
 	participants := make([]*agreeonrandom.Participant, 0, len(identities))

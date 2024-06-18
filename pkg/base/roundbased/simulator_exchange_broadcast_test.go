@@ -2,13 +2,15 @@ package roundbased
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/sync/errgroup"
-	"testing"
-	"time"
 )
 
 func Test_BroadcastExchange(t *testing.T) {
@@ -16,7 +18,7 @@ func Test_BroadcastExchange(t *testing.T) {
 	require.NoError(t, err)
 	router := NewSimulatorBroadcastExchanger[string](hashset.NewHashableHashSet(participants...))
 
-	worker := func(me types.IdentityKey) error {
+	worker := func(me types.IdentityKey) {
 		sent := fmt.Sprintf("[%s -> everybody]", me.String())
 		router.Send(me, sent)
 		received := router.Receive(me)
@@ -26,7 +28,6 @@ func Test_BroadcastExchange(t *testing.T) {
 			payload := e.Value
 			fmt.Printf("%s received %s from %s\n", me.String(), payload, from.String())
 		}
-		return nil
 	}
 
 	errChan := make(chan error)
@@ -34,7 +35,8 @@ func Test_BroadcastExchange(t *testing.T) {
 		var group errgroup.Group
 		for _, i := range participants {
 			group.Go(func() error {
-				return worker(i)
+				worker(i)
+				return nil
 			})
 		}
 		errChan <- group.Wait()
