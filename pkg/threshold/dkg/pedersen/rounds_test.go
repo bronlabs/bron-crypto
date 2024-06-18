@@ -211,11 +211,6 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 	require.NoError(t, err)
 	protocolConfig, err := ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, threshold)
 	require.NoError(t, err)
-	participants, err := testutils.MakeParticipants(uniqueSessionId, protocolConfig, identities, nil)
-	require.NoError(t, err)
-
-	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants, nil)
-	require.NoError(t, err)
 
 	basePoint := cipherSuite.Curve().Generator()
 	dlog, err := schnorr.NewSigmaProtocol(basePoint, prng)
@@ -233,17 +228,17 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 		proof, err := prover.Prove(statement, randomScalar)
 		require.NoError(t, err)
 
-		// smuggle the proof
-		r1OutsB[attackerIndex].DlogProof = proof
-
-		// Reuse the same participants, make them expect Round 2
-		for i := range participants {
-			participants[i].Round = 2
-		}
+		// Run a fresh DKG
+		participants, err := testutils.MakeParticipants(uniqueSessionId, protocolConfig, identities, nil)
+		require.NoError(t, err)
+		r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants, nil)
+		require.NoError(t, err)
+		r1OutsB[attackerIndex].DlogProof = proof // smuggle the proof
 		r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
 		_, _, err = testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 		require.Error(t, err)
-		require.True(t, errs.IsIdentifiableAbort(err, identities[attackerIndex]))
+		require.True(t, errs.IsIdentifiableAbort(err, identities[attackerIndex]),
+			"Error %s is not an identifiable abort", err.Error())
 	})
 	t.Run("pass identity as statement", func(t *testing.T) {
 		t.Parallel()
@@ -253,17 +248,18 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 		require.NoError(t, err)
 		proof, err := prover.Prove(cipherSuite.Curve().AdditiveIdentity(), randomScalar)
 		require.NoError(t, err)
-		r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
-		// smuggle the proof
-		r1OutsB[attackerIndex].DlogProof = proof
 
-		// Reuse the same participants, make them expect Round 2
-		for i := range participants {
-			participants[i].Round = 2
-		}
+		// Run a fresh DKG
+		participants, err := testutils.MakeParticipants(uniqueSessionId, protocolConfig, identities, nil)
+		require.NoError(t, err)
+		r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants, nil)
+		require.NoError(t, err)
+		r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
+		r1OutsB[attackerIndex].DlogProof = proof // smuggle the proof
 		_, _, err = testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 		require.Error(t, err)
-		require.True(t, errs.IsIdentifiableAbort(err, identities[attackerIndex]))
+		require.True(t, errs.IsIdentifiableAbort(err, identities[attackerIndex]),
+			"Error %s is not an identifiable abort", err.Error())
 	})
 }
 
