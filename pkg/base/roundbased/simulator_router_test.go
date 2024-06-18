@@ -1,0 +1,94 @@
+package roundbased_test
+
+import (
+	"fmt"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
+	"testing"
+	"time"
+)
+
+func Test_BroadcastRouter(t *testing.T) {
+	identities, err := testutils.MakeDeterministicTestIdentities(3)
+	require.NoError(t, err)
+
+	router := roundbased.NewSimulatorMessageRouter(hashset.NewHashableHashSet(identities...))
+	worker := func(me types.IdentityKey) error {
+		r1b := roundbased.NewBroadcastRound[string](me, 1, router)
+		r1b.BroadcastOut() <- fmt.Sprintf("FROM[%s]", me)
+
+		received := <-r1b.BroadcastIn()
+		for iter := received.Iterator(); iter.HasNext(); {
+			e := iter.Next()
+			fmt.Printf("Received %s from %s\n", e.Value, e.Key.String())
+		}
+
+		return nil
+	}
+
+	errChan := make(chan error)
+	go func() {
+		var grp errgroup.Group
+		for _, id := range identities {
+			grp.Go(func() error {
+				return worker(id)
+			})
+		}
+		errChan <- grp.Wait()
+	}()
+
+	select {
+	case err = <-errChan:
+		require.NoError(t, err)
+	case <-time.After(1 * time.Second):
+		require.Fail(t, "no response")
+	}
+}
+
+func Test_UnicastRouter(t *testing.T) {
+	identities, err := testutils.MakeDeterministicTestIdentities(3)
+	require.NoError(t, err)
+
+	router := roundbased.NewSimulatorMessageRouter(hashset.NewHashableHashSet(identities...))
+	worker := func(me types.IdentityKey) error {
+		r1b := roundbased.NewUnicastRound[string](me, 1, router)
+		sent := hashmap.NewHashableHashMap[types.IdentityKey, string]()
+		for _, party := range identities {
+			if party.Equal(me) {
+				continue
+			}
+			sent.Put(party, fmt.Sprintf("[FROM:%s -> TO:%s]", me.String(), party.String()))
+		}
+		r1b.UnicastOut() <- sent
+
+		received := <-r1b.UnicastIn()
+		for iter := received.Iterator(); iter.HasNext(); {
+			e := iter.Next()
+			fmt.Printf("%s -> %s: Received %s\n", e.Key.String(), me.String(), e.Value)
+		}
+		return nil
+	}
+
+	errChan := make(chan error)
+	go func() {
+		var grp errgroup.Group
+		for _, id := range identities {
+			grp.Go(func() error {
+				return worker(id)
+			})
+		}
+		errChan <- grp.Wait()
+	}()
+
+	select {
+	case err = <-errChan:
+		require.NoError(t, err)
+	case <-time.After(1 * time.Second):
+		require.Fail(t, "no response")
+	}
+}
