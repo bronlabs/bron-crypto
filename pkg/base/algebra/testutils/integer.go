@@ -1,7 +1,6 @@
 package curves_testutils
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
@@ -64,7 +63,7 @@ func (iff *IntegerFiniteFieldInvariants[F, FE]) BytesAndSetBytesWide(t *testing.
 	require.EqualValues(t, one.Bytes(), oneClone.Bytes())
 
 	require.True(t, oneClone.Equal(one))
-	require.False(t, oneClone.IsZero(), fmt.Sprintf("One: %v", one.Nat()))
+	require.False(t, oneClone.IsZero())
 }
 
 func CheckIntegerFiniteFieldInvariants[F algebra.IntegerFiniteField[F, FE], FE algebra.IntegerFiniteFieldElement[F, FE]](t *testing.T, f F, elementGenerator fu.ObjectGenerator[FE]) {
