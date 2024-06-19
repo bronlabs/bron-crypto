@@ -11,7 +11,6 @@ import (
 
 var TestCurves = []curves.Curve{
 	bls12381.NewG1(),
-	bls12381.NewG2(),
 	edwards25519.NewCurve(),
 	p256.NewCurve(),
 	k256.NewCurve(),

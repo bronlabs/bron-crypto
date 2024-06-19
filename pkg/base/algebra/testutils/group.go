@@ -232,6 +232,7 @@ func (mgei *MultiplicativeGroupElementInvariants[G, GE]) IsMultiplicativeInverse
 
 	inverse, err1 := element.MultiplicativeInverse()
 	require.NoError(t, err1)
+
 	output := element.Mul(inverse)
 	require.True(t, output.IsMultiplicativeIdentity(), fmt.Sprintf("Any element o inverse of the element should be equal to the identity element %v", output))
 }

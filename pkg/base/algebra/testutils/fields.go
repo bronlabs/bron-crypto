@@ -16,8 +16,6 @@ type FiniteFieldInvariants[F algebra.FiniteField[F, E], E algebra.FiniteFieldEle
 
 type FiniteFieldElementInvariants[F algebra.FiniteField[F, E], E algebra.FiniteFieldElement[F, E]] struct{}
 
-// ExtentionField, ExtentionFieldElement
-
 func (fi *FieldInvariants[F, E]) MultiplicativeGroup(t *testing.T) {
 	t.Helper()
 	// TODO

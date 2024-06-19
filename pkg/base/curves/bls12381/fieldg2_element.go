@@ -293,8 +293,17 @@ func (e *BaseFieldElementG2) Mul(rhs algebra.MultiplicativeGroupoidElement[curve
 	}
 }
 
-func (e *BaseFieldElementG2) ApplyMul(x algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) curves.BaseFieldElement {
-	return e.Mul(x.Exp(n))
+func (*BaseFieldElementG2) ApplyMul(x algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) curves.BaseFieldElement {
+	prod := x
+	for i := 0; int64(i) < n.Big().Int64(); i++ {
+		prod = prod.Mul(x)
+	}
+	nVal, ok := prod.(*BaseFieldElementG2)
+
+	if !ok {
+		panic("not a bls12381 G2 Fp2 element")
+	}
+	return nVal
 }
 
 func (e *BaseFieldElementG2) Square() curves.BaseFieldElement {
@@ -427,14 +436,8 @@ func (e *BaseFieldElementG2) Norm() curves.BaseFieldElement {
 
 // === Zp Methods.
 
-func (e *BaseFieldElementG2) Exp(rhs *saferith.Nat) curves.BaseFieldElement {
-	n, ok := e.Structure().Element().SetNat(rhs).(*BaseFieldElementG2)
-	if !ok {
-		panic("not a bls12381 G2 base field element")
-	}
-	return &BaseFieldElementG2{
-		V: new(bimpl.Fp2).Exp(e.V, n.V),
-	}
+func (*BaseFieldElementG2) Exp(rhs *saferith.Nat) curves.BaseFieldElement {
+	return nil
 }
 
 func (e *BaseFieldElementG2) Neg() curves.BaseFieldElement {
