@@ -1,6 +1,7 @@
 package curves_testutils
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
@@ -30,7 +31,7 @@ func (iff *IntegerFiniteFieldInvariants[F, FE]) SetNatAndNat(t *testing.T, objec
 
 func (iff *IntegerFiniteFieldInvariants[F, FE]) BytesAndSetBytes(t *testing.T, object algebra.BytesSerialization[FE]) {
 	t.Helper()
-	// TODO: One.Mul(one) not equal to one
+
 	actual := object.Bytes()
 	require.NotZero(t, len(actual))
 	excpted, err := object.SetBytes(actual)
@@ -56,13 +57,14 @@ func (iff *IntegerFiniteFieldInvariants[F, FE]) BytesAndSetBytesWide(t *testing.
 	require.NoError(t, err)
 	require.Equal(t, excpted, object)
 
-	one, err := object.SetBytesWide(saferithUtils.NatOne.Bytes())
+	one32Bytes := bitstring.PadToLeft(saferithUtils.NatOne.Bytes(), len(object.Bytes())-1)
+	one, err := object.SetBytes(one32Bytes)
 	require.NoError(t, err)
 	oneClone := one.AdditiveInverse().Neg()
 	require.EqualValues(t, one.Bytes(), oneClone.Bytes())
 
 	require.True(t, oneClone.Equal(one))
-	require.False(t, oneClone.IsZero())
+	require.False(t, oneClone.IsZero(), fmt.Sprintf("One: %v", one.Nat()))
 }
 
 func CheckIntegerFiniteFieldInvariants[F algebra.IntegerFiniteField[F, FE], FE algebra.IntegerFiniteFieldElement[F, FE]](t *testing.T, f F, elementGenerator fu.ObjectGenerator[FE]) {
@@ -76,6 +78,9 @@ func CheckIntegerFiniteFieldInvariants[F algebra.IntegerFiniteField[F, FE], FE a
 	CheckFiniteFieldInvariants[F, FE](t, f, elementGenerator)
 
 	iff := &IntegerFiniteFieldInvariants[F, FE]{}
+	t.Run("SetNatAndNat", func(t *testing.T) {
+		iff.SetNatAndNat(t, elementGenerator.Generate())
+	})
 	t.Run("BytesAndSetBytes", func(t *testing.T) {
 		iff.BytesAndSetBytes(t, elementGenerator.Generate())
 	})
