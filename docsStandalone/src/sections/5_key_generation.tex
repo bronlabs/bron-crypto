@@ -1,0 +1,24 @@
+%------------------------------------------------------------------------------%
+\section{Key Generation}\label{sec:key_generation}
+%------------------------------------------------------------------------------%
+
+FROST paper describes a two-round DKG protocol \cite[section 5.2]{KG20} and FROST standardization draft \cite[Appendix C]{irtf-cfrg-frost-11} proposes a simple, trusted dealer key generation mechanism.
+
+The DKG mechanism should be used for all use cases (see \ref{kg:dkg}). Trusted dealer is only for debugging purposes, as well as specific legacy systems or when an informed client explicitly requires it. Trusted-dealer setup is strictly less secure, and careful thought should be given to the setup as well as the transport of the shares. We will need not discuss this further, as this is highly context-dependent.
+
+%------------------------------------------------------------------------------%
+\subsection{Trusted Dealer}\label{kg:trusted_dealer}
+The algorithm for the trusted dealer key generation is to receive the private key from \hyperref[section:eddsa]{$\mathcal{F}_{EdDSA\_KeyGen}$} and feed it into \hyperref[alg:feldmanshare]{$FeldmanShare$}. The method is defined in Algorithm \ref{alg:trusteddealer}.
+
+% \input{src/algorithms/frost_trusted_dealer}
+
+
+%------------------------------------------------------------------------------%
+\subsection{Distributed Key Generation (DKG)}\label{kg:dkg}
+FROST DKG is a variant of the two-round Pedersen DKG \cite{P91} protocol. Pedersen DKG is where each participant executes Feldman's VSS (see section \ref{section:vss}) as the dealer in parallel and derives their secret share as the sum of the shares received from each of the $n$ VSS executions. FROST additionally requires each participant to demonstrate knowledge of their secret by providing other participants with proof in zero-knowledge instantiated as a Schnorr signature (see section \ref{section:schnorr_signature}) to protect against rogue-key attacks \cite{BBS03} in the setting where $t \geq \frac{n}{2}$. 
+
+Internal to the above zero-knowledge proof of discrete log is an extra context-string $\Phi$ (equivalent to a session-id in the literature) to prevent replay attacks. This does not need to be random but should be unique. To agree on this value we add an additional round (so, in total, three rounds) to agree on this value. There are other methods of generating $\Phi$ - by either adding some machinery at cohort generation time or even defining it as a manual process - but we will not discuss them further, as adding an extra round in the DKG is harmless and simple. 
+
+The DKG process is defined in Algorithm \ref{alg:dkg}. 
+
+% \input{src/algorithms/frost_dkg}

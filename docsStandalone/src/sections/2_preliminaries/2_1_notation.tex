@@ -1,0 +1,11 @@
+%------------------------------------------------------------------------------%
+\subsection{Notation}\label{sec:notation}
+%------------------------------------------------------------------------------%
+
+\input{src/figures/table_notation.tex}
+
+We use plain low-case letters (e.g., $a, k$) for scalars, bold letters to denote vectors (e.g., $\bm{x}$, $\bm{y}$), upper-case non-italic letters for sets (e.g., $\set{S} \equals \{1,2,3\}$) and upper-case italic letters (e.g., $\g{A}$) to denote points in elliptic curves. $\vecti{x}{i}$ denotes the $i$th element of vector $\vect{x}$. We write a polynomial $\poly{p}$ of degree $d$ as $\polyx{p}{x} = \sum_{i=0}^{d-1}  \coeff{p}{i}x^i$, where $\coeff{p}{i}$ is the $i$th coefficient of $\poly{p}$. We use $\assign{q}{4}$ to set a local variable $q$ to 4, $\isequal{a}{b}$ to check whether $a$ is equal to $b$, and $a \equals b$ to denote equivalence between $a$ and $b$. We note $\unif{\set{S}}$ as the uniform random distribution in a set $\set{S}$, and write $\sample{r}{S}$ to indicate sampling from $\unif{\set{S}}$ and assigning the sample to $r$. We use $\pk, \sk$ to denote public and private keys (e.g., Paillier, signing).  We denote $\kappa$ or $\lambda$ as the computational security parameter (128-256 bits) for all our primitives and protocols, and $\sigma$ or $\lambda_s$ as the statistical security parameter.
+
+
+In the context of MPC protocols, $\party{1},\party{2},\dots$ denote the computing parties. We generalize behavior common to a set of $k$ parties by resorting to $\party{i}$ for an index $i \in \{1,2,\dots,k\}$, and reserve the index $j \in \{1,2,\dots,k\}\!\setminus\!\{i\}$ for behavior common to all other parties $\party{j}$ given a certain party $\party{i}$. Certain parties fulfilling a specific roles are denoted with that same font (e.g., $\SA$ for signature aggregator, $\mathcal{S}$ for sender). We employ sans-serif fonts for functions and protocol rounds (e.g., $\fn{Round1}$ for the first round of a protocol, $\fn{gcd}(x,y)$ for the greatest common divisor of $x$ and $y$), and denote an ideal functionality as $\idealfn[name]{}$.
+For convenience, we summarize our notation choices in \autoref{tab:notation}.

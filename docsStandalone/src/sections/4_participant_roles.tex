@@ -1,0 +1,30 @@
+
+%------------------------------------------------------------------------------%
+\section{Participant Roles}\label{sec:participant_roles}
+%------------------------------------------------------------------------------%
+
+\todo{Merge with previous section and move somewhere else.}
+
+In FROST, there exists a semi-trusted \textit{signature aggregator} role, denoted as $\mathcal{SA}$, which may be assumed by any one of the parties in the cohort, or an external entity, provided that they know the participant's partial public key \footnote{A \textit{partial public key} of a participant with the secret key share of $x_i$ is defined to be $x_i \cdot G$ where $G$ is the basepoint of the curve.}. Such a role allows for less communication overhead between signers and is often practical in a real-world setting \cite{KG20}.
+
+Note that $\mathcal{SA}$ is semi-trusted: A malicious $\mathcal{SA}$ can perform denial-of-service attacks and report misbehavior by participants falsely, but it cannot learn the private key or cause improper messages to be signed.
+
+The $\mathcal{SA}$ effectively serves the following responsibilities:
+\begin{enumerate}
+    \item \label{sa:1} $\mathcal{SA}$ composes the right presignature for the participating parties from the preprocessed material. 
+    \item \label{sa:2} $\mathcal{SA}$ validates each partial signature and reports the misbehaving participant if it fails.
+    \item \label{sa:3} $\mathcal{SA}$ aggregates the partial signatures received from the participating parties.
+\end{enumerate}
+
+Note that FROST's $\mathcal{SA}$ serves some function not only at the final round (responsibility \ref{sa:3}) but in the beginning round as well (responsibility \ref{sa:1}). This is in contrast with the traditional notion of a signature aggregator. Instead, we will decompose this role into a \textbf{Presignature Composer} role denoted by $\mathcal{PC}$ (responsible for \ref{sa:1}) and a proper \textbf{Signature Aggregator} denoted by $\mathcal{SA}$ role (responsible for \ref{sa:2} and \ref{sa:3}). 
+
+Note that responsibility \ref{sa:2} is on $\mathcal{SA}$ because, in FROST, identifiable abort is possible only at the last signing round, as there is no further proof-checking needed anywhere else.
+
+The existence of a $\mathcal{PC}$ implies non-interactivity of the signing round, and it is completely optional. However, the $\mathcal{SA}$ is required, and whoever assumes this role will have access to the final signature. One caveat: If all parties assume the $\mathcal{SA}$ role, it is impossible to prevent the last party from withholding their partial signature. This is natural since we're operating in the no-honest majority without fairness or guaranteed output delivery \cite{CY14}. All parties assume $\mathcal{SA}$ is equivalent to the scenario without $\mathcal{SA}$ described. in the original paper \cite[section 5]{KG20}. The authors claim that it is possible to remove the $\mathcal{SA}$ by requiring parties to broadcast their partial signature and aggregate in the next round -meaning a three-round signing protocol. For the same reason, this doesn't prevent the last party not to compute the signature for herself alone and aborting.
+
+In our use case, it is also helpful to designate an additional role of \textit{signing requester} denoted as $\mathcal{SR}$. $\mathcal{SR}$ is the entity (may be one of the participants) who sends the plaintext $m$ to the parties and asks them for a signature \footnote{This role is equivalent to the role \textit{leader} in \cite{BCKMTZ22}}.
+
+Note that, It is \textbf{required} that all parties agree on who assumes $\mathcal{PC}$ and $\mathcal{SA}$ and $\mathcal{SR}$ at the beginning of the signing session since they need to know what message they should trust to sign, whether to generate presignature tuples or to whom they should send their partial signatures.
+
+For simplicity, we assume $\mathcal{PC}$ to have at most one element, and $\mathcal{SR}$ as well as $\mathcal{SA}$ to have exactly one element. If it is desired for these sets to contain more than elements, an agreement protocol should be run on their decision. We cannot discuss the details of acceptable agreements protocols any further, as these are highly context-dependent and depending on the fault model assumed by the users of these primitives, good choices will be different \footnote{For example, a client could select fixed signature aggregators outside of the cohort, and assume crash-fault}.
+

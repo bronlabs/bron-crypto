@@ -1,0 +1,63 @@
+\begin{protocol}[H]
+    \caption{$\quad\fn{VSOT}_{\xi,\ell,\G}$}
+    \label{alg:vsot}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            Maliciously secure base OT protocol from \cite[Protocol 7]{doerner2018secure} for $\ell\by\kappa$-bit messages in a $\xi$-message batch, and a group $\G(q, \g{G}$).
+            Requires a hash $\fn{H}$ and a ZKPoK of the discrete log of a value $F^{R_{DL}}_{ZK}$ (e.g., \fnref{Fischlin}).
+        \end{alginfo}
+        \Players a sender $\mathcal{S}$, and receiver $\mathcal{R}$.
+        \Require $\mathcal{R}: \vect{b} \in \Z_2^\xi$, the input choice bits. 
+        \Ensure  $\mathcal{R}\!: \vect{m_0}, \vect{m_1} \in \Z_2^{\xi\by\ell\by\kappa}$, pairs of messages\\ 
+                 $\mathcal{S}\!: \vect{m_b} \in \Z_2^{\xi\by\ell\by\kappa}$, chosen messages s.t. $\vect{m_b} \equals \vect{m_1}  \vect{b} + \vect{m_0} (1-\vect{b})$
+                        
+        \vspace{-10pt}
+        
+        \AlgRoundZero{$\mathcal{S}$}{Round1}{}{$(\pi, \g{B})$}
+            \State Sample random $\sample{\beta}{\Z_q} $ as secret key
+            \State $\g{B} = \beta\cdot \g{G}$ as its public key
+            \State $\assign{\pi}{F^{R_{DL}}_{ZK}.\fn{Prove}_{\g{G}}(\beta, \g{B})}$ as a proof of knowledge of $\beta$ 
+            \State $\sendTo{\mathcal{R}}{\pi, \g{B}}$
+
+   
+        \vspace{-13pt}
+        \setalglineno{1}
+        \AlgRound{$\mathcal{R}$}{Round2}{$\pi, \g{B}$}{$(\g{A})$}
+            \State Check if $\isequal{\mathcal{F}^{R_{DL}}_{ZK}\fn{.Verify}_{\g{G}}(\pi, B)}{1}$, $\ABORT$ otherwise
+            \For {$i \in \range{\xi};\; l \in \range{\ell}$}
+                \State Sample random $\sample{a}{\Z_q}$
+                \State $\assign{\vecti{m_b}{i,l}}{\fn{H}(\vecti{a}{i,l} \cdot \g{B})}$ as the pad
+                \State $\assign{\vecti{\g{A}}{i,l}}{\{\{\vecti{a}{i,l}\cdot \g{G} + \vecti{b}{i}\cdot \g{B}\}_{l\in\range{\ell}}\}_{i\in\range{\xi}}}$ as a choice bit commitment
+            \EndFor
+            \State $\sendTo{\mathcal{S}}{\vect{\g{A}}\equals \{\{\g{A}_{i,l}\}_{l\in\range{\ell}}\}_{i\in\range{\xi}}}$
+        
+        \vspace{-13pt}
+        \setalglineno{1}
+        \AlgRound{$\mathcal{S}$}{Round3}{$\vect{\g{A}}$}{$(\vect{\chi})$}
+            \For {$i \in \range{\xi};\; l \in \range{\ell}$}
+                \State $\assign{\vecti{m_0}{i,l}}{\fn{H}(\beta \cdot \vecti{\g{A}}{i,l})}$ and $\assign{\vecti{m_1}{i,l}}{\fn{H}(\beta \cdot (\vecti{\g{A}}{i,l}-\g{B}))}$ as random pads
+                \State $\assign{\vecti{\chi}{i,l}}{\fn{H}(\fn{H}(\vecti{m_0}{i,l})) \oplus \fn{H}(\fn{H}(\vecti{m_1}{i,l}))}$ as the challenge
+            \EndFor
+            \State $\sendTo{\mathcal{R}}{\vect{\chi}\equals \{\{\vecti{\chi}{i,l}\}_{l\in\range{\ell}}\}_{i\in\range{\xi}}}$
+
+        \vspace{-13pt}
+        \setalglineno{1}
+        \AlgRound{$\mathcal{R}$}{Round4}{$\vect{\chi}$}{$(\vect{\rho'})$}
+            \State $\assign{\vect{\rho'}}{\{\{\fn{H}(\fn{H}(\vecti{m_b}{i,l})) \oplus (\vecti{b}{i} \cdot \vecti{\chi}{i,l})\}_{l\in\range{\ell}}\}_{i\in\range{\xi}}}$
+            \State $\sendTo{\mathcal{S}}{\vect{\rho'}}$ as the challenge response
+
+        \vspace{-13pt}
+        \setalglineno{1}
+        \AlgRound{$\mathcal{S}$}{Round5}{$\vect{\rho'}$}{$(\vect{\rho_0}, \vect{\rho_1}, \vect{m_0}, \vect{m_1})$}
+            \State Check if $\isequal{\vecti{\rho'}{i,l}}{\vecti{m_b}{i,l} \oplus \vecti{\chi}{i,l}}\;\;\forall l \inss \range{\ell}\; \forall i \inss \range{\xi}$, $\ABORT$ otherwise
+            \State $\sendTo{\mathcal{R}}{\vect{\rho_0}\equals\fn{H}(\vect{m_0}), \vect{\rho_1}\equals\fn{H}(\vect{m_1})}$
+            \Statex \Return $\vect{m_0}, \vect{m_1}$
+
+        \vspace{-13pt}
+        \setalglineno{1}
+        \AlgRound{$\mathcal{R}$}{Round6}{$\vect{\rho_0}, \vect{\rho_1}$}{$(\vect{m_b})$}
+            \State Check $\isequal{\fn{H}(\vecti{m_b}{i,l})}{\vecti{\rho_1}{i,l} \vecti{b}{i} \!\oplus\! \vecti{\rho_0}{i,l} (1\!\shortminus\!\vecti{b}{i})} \;\forall l \inss \range{\ell}\; \forall i \inss \range{\xi}$, else $\ABORT$
+            \State Check $\isequal{\vecti{\chi}{i,l}}{\fn{H}(\vecti{\rho_0}{i,l}) \oplus \fn{H}(\vecti{\rho_1}{i,l})} \;\;\forall l \inss \range{\ell}\; \forall i \inss \range{\xi}$, else $\ABORT$
+            \Statex \Return $\vect{m_b}$
+    \end{algorithmic}
+\end{protocol}

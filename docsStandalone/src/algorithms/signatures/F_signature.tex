@@ -1,0 +1,16 @@
+\begin{functionality}
+    \caption{$\quad\idealfndef{Signature}$}
+    \label{alg:f_signature}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            Signature scheme, composed of three algorithms:
+            \begin{itemize}[leftmargin=12pt]
+                \item $\fndef[f_signature]{KeyGen}()\!\rightarrow\! (\sk,\pk)$, generates a private \& public key pair $(\sk, \pk)$
+                \item $\fndef[f_signature]{Sign}(\sk, m)\!\rightarrow\! \sigma$ yields signature $\sigma$ for message $m$ \& private key $\sk$
+                \item $\fndef[f_signature]{Verify}(\pk, m, \sigma)\!\rightarrow\! b \ins \{0,1\}$ verifies signature $\sigma$ for message $m$ and public key $\pk$, either accepting ($b\equals1$) or rejecting ($b\equals0$) it\footnotemark.
+            \end{itemize}
+        \end{alginfo}
+    \end{algorithmic}
+\end{functionality} 
+
+\footnotetext{Equivalently, it returns \textit{valid} ($b\equals1$) for a valid signature and $\ABORT$ otherwise.}

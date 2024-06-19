@@ -1,0 +1,26 @@
+
+% ---------------------------------------------------------------------------- %
+\subsubsection{Distributed Zero Sharing}\label{sec:zerosharing}
+% ---------------------------------------------------------------------------- %
+
+In the context of MPC, a \textit{zero sharing} functionality provides shares of zero in a given sharing scheme\footnote{More formally, it provides shares of the identity element of the group upon which the shares are defined.}. Each of these zero-shares can be locally added to the already distributed shares of an existing secret to \textit{refresh} these shares, i.e., to incorporate "fresh" randomness while still being valid shares (i.e., they combine into the same original secret). Refreshing secret shares allows us to:
+\begin{itemize}
+    \item \textbf{Recover from compromise of a secret share.} If a party's secret share (e.g., its private key share or \textit{shard}) is leaked/compromised, all the parties can refresh their shares with fresh zero-shares, and the new share will be independent of the old one. 
+    \item \textbf{Prevent leakage of secret shares.} By refreshing the shares of a secret every time before using them, we can effectively decouple each run of protocols using said shares. This kind of \textit{proactive}~\cite{herzberg1995proactive} security mechanism can enhance the overall security of a protocol at a reasonably low cost. 
+    \item \textbf{Establish an additional temporal dependency in our protocols.} Zero-shares can be generated based on randomness known only during the execution of a certain step of a protocol, effectively tying the refreshed shares to the partial execution of said protocol. This can be used to prevent replay attacks, ensuring that a certain protocol step is executed only once.
+\end{itemize}
+
+
+
+A canonical use-case for zero-sharing is to refresh the \textit{shard} during threshold signing protocols~\cite{KMOS19,BCKMTZ22}. Motivated by that use-case, we describe two protocols for generation of zero-shares: 
+\begin{enumerate}
+    \item \fnref{HJKY}, a two-move interactive protocol from~\cite{herzberg1995proactive}. It consists of running the Pedersen DKG protocol~\cite{pedersen91dkg}, but instead of sampling a random local element, this local element is set to zero by all parties.
+    
+    \input{src/algorithms/primitives/hjky.tex}
+
+    \item \fnref{Przs}, a protocol that achieves the same functionality in a non-interactive manner at the cost of an initial interactive setup succinctly described in \cite[Section 3.1]{doerner2023zero} and loosely based on~\cite{cramer2005share}. We detail it in detail in Protocol~\ref{alg:przs}.
+    
+    \input{src/algorithms/primitives/przs}
+
+\end{enumerate}
+

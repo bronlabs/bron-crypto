@@ -118,3 +118,7 @@ fuzz:
 .PHONY: fuzz-long
 fuzz-long:
 	$(MAKE) long-fuzz-test-pkg
+
+.PHONY: docs
+docs:
+	$(MAKE) -C docsStandalone docs

@@ -1,0 +1,15 @@
+%------------------------------------------------------------------------------%
+\section{Primitive Design}\label{sec:primitive_design}
+%------------------------------------------------------------------------------%
+
+\todo{Find a better place for the content of this section.}
+
+Copper has various customers who need a threshold signing solution. Services are built around an MPC platform that calls low-level MPC-based cryptography primitives. Customers interact with those services and do not directly call these primitives.
+
+We have designed these primitives to facilitate their integration into an MPC platform. We are creating each party as a state machine that ratchets through rounds and may abort at any round.
+
+These rounds are internal methods for a party. A round may have an input, a computation body, and an output. Inputs to a round are the relevant outputs of the previous rounds from other parties. Outputs of a round are either the final results or messages that should be sent to other parties (see \ref{network}). A round may have a computation step, but it is possible for a round not to have any \footnote{OT protocols where Alice has to wait for Bob are not symmetric concerning the computation step of these rounds}.
+
+Here we do not assume what underlying protocol is used to realize P2P messaging or broadcast functionalities. We assume the parent process within the MPC platform that calls these primitives collects and deserializes the necessary messages from the network and passes them to the correct round method. It is possible to enforce inputs of a round to correspond to the right round via static type checks (and we do), but no explicit network logic should be present inside rounds.
+
+We do not make any assumptions on the type of machine the code is running on (the ultimate goal is WASM-based execution), nor what storage is used for the signing key shares. We do, however, require read access to the signing key share in the second round of signing to produce partial signatures to be later aggregated by $\mathcal{SA}$ (see \autoref{sec:participant_roles}).

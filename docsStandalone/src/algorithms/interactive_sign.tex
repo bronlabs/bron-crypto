@@ -1,0 +1,110 @@
+\begin{breakablealgorithm}
+    \caption{$\{(\sigma, m), \{\}\} \gets (t, n)$ FROST Signature of $m$}\label{alg:sign:online}
+    \begin{algorithmic}[1]
+        \Require $t$ Participants are present and have previously performed a key generation and agree on the inputs and outputs therein and agree who assumes the role of $\mathcal{SA}$ and $\mathcal{SR}$ and agree on hash functions $H_1, H_2 : \left \{ 0, 1 \right \}^{\star} \rightarrow \mathbb{Z}_q$ and let $S$ be the set $\alpha: t\leq \alpha \leq n$ participants present for this signing operation
+        \Statex
+        \Statex Each participant $P_i$ calls \hyperref[alg:sign:online:round1]{Round1}, then \hyperref[alg:sign:online:round2]{Round2}. If $i \in \mathcal{SA}$ then $P_i$ will run \hyperref[alg:sign:online:aggregate]{Aggregate} after  \hyperref[alg:sign:online:round2]{Round2}.
+        \Statex $\mathcal{SR}$ should send $m$ before  \hyperref[alg:sign:online:round2]{Round2} starts.
+        \Statex
+        \Procedure {Round1}{} \label{alg:sign:online:round1}
+            \State \textcolor{red}{$(d_i, e_i) \overset{\$}{\leftarrow} \mathbb{Z}^{\star}_q \times \mathbb{Z}^{\star}_q $ and store it in memory.} \label{noncepair}
+            \State \textcolor{red}{$(D_i, E_i) \gets (d_i \cdot G, e_i \cdot G)$ and store it in memory.}
+            \State \textcolor{teal}{Pass $(i, D_i, E_i)$ to \hyperref[func:broadcast]{$\mathcal{F}_{broadcast}$}.}
+        \EndProcedure
+        \Statex
+        \Procedure {Round2}{
+        
+                $\quad m,$
+                
+                $\quad Ds \gets \left \{ D_\alpha: \alpha \in S \land \alpha \neq i \right \},$
+
+                $\quad Es \gets \left \{ E_\alpha: \alpha \in S \land \alpha \neq i \right \}$
+                
+            } \label{alg:sign:online:round2}
+            \Statex \textbf{Require: } the sender of $m$ is in $\mathcal{SR}$ and $0 \not \in Ds$ and $0 \not \in Es$.
+            \State $digest \gets H_2(m)$
+            \State $(\bm{D_\alpha}, \bm{E_\alpha}) \gets \hyperref[alg:sign:online:presig]{\textsc{ProcessNonceCommitmentOnline}}(Ds, Es)$
+            \State $R \gets 0_G$
+            \For{$j \in S$}
+                \State $r_j \gets H_1(j, digest, \bm{D_\alpha}, \bm{E_\alpha})$ 
+                \State $R_j \gets D_j + r_j \cdot E_j$
+                \State $R \gets R + R_j$
+            \EndFor
+            \State $c \gets H_1(R, Y, digest)$
+            \State Derive own's Lagrange coefficient $\lambda_i \gets \prod_{j\in S \land j \neq i} \frac{j}{j-i}$
+            \State Compute partial signature element $z_i \gets d_i + e_i r_i + \lambda_i s_i c$
+            \State \textcolor{red}{Securely delete $d_i$ and $e_i$ from memory.}
+            \For{$j \in \mathcal{SA}$}
+                \If{$j \in S$}
+                    \If{$j = i$}
+                        \State \textcolor{red}{Store $m, z_i, R, \bm{D_\alpha}, \bm{E_\alpha}$ in memory.}
+                    \EndIf
+                    \State \textcolor{teal}{Pass $(j, z_i)$ to \hyperref[func:p2psend]{$\mathcal{F}_{P2PSend}$}.}
+                \Else
+                    \Comment{\textcolor{gray}{$j^{th}$ signature aggregator is not one of the participants.}}
+                    \State \textcolor{teal}{Pass $(z_i, \bm{D_\alpha}, \bm{E_\alpha})$ to the signature aggregator in another way.}
+                \EndIf
+            \EndFor
+        \EndProcedure
+        \Statex
+        \Procedure {Aggregate}{
+
+            $\quad \bm{zs} \gets \left \{ z_\alpha: \alpha \in S \right\},$
+
+            $\quad m$ if $m$ not in memory, 
+
+            $\quad D_\alpha^\prime \gets \{(j, \bm{D_\alpha}) : j \in S\}$ if $\bm{D_\alpha}$ not in memory,
+
+            $\quad E_\alpha^\prime \gets \{(j, \bm{E_\alpha}) : j \in S\}$ if $\bm{E_\alpha}$ not in memory,
+
+        } \label{alg:sign:online:aggregate}
+            
+            \Statex \textbf{Require: } the sender of $m$ is in $\mathcal{SR}$ and $D_\alpha^\prime$ has only one element and $E_\alpha^\prime$ has only one element.
+
+            \State $digest \gets H_2(m)$
+
+            \If{$D_\alpha^\prime$ is provided}
+                \State Let $\bm{D_\alpha} \gets D_\alpha^\prime \left [ 0 \right ]$
+            \EndIf
+            \If{$E_\alpha^\prime$ is provided}
+                \State Let $\bm{E_\alpha} \gets E_\alpha^\prime \left [ 0 \right ]$
+            \EndIf
+
+            \If{$R$ not in memory}
+                \State $R \gets 0_G$
+                \For{$j \in S$}
+                    \State $r_j \gets H_1(j, digest, \bm{D_\alpha}, \bm{E_\alpha})$
+                    \State $R_j \gets D_j + r_j \cdot E_j$
+                    \State $R \gets R + R_j$
+                \EndFor
+            \EndIf
+            
+            \For{$j \in S$}
+                \Comment{\textcolor{gray}{If Identifiable Abort is not needed, skip this loop.}}\label{identifiableabort}
+                \State $c \gets H_1(R, Y, digest)$
+                \State compute public key share $Y_j \gets \sum_{l=1}^{n} \sum_{k=0}^{t-1} jk \cdot C_{(l, k)} \mod{q}$
+                \State $\lambda_j \gets \prod_{k\in S \land k \neq j} \frac{k}{k-j}$
+                \If{$z_j \cdot G \neq R_j + c\lambda_j \cdot Y_j$}
+                    \State \textcolor{red}{\textsc{ABORT WITH}} $P_j$ as misbehaving.
+                \EndIf
+            \EndFor
+            \State $z = \sum \bm{zs}$
+            \State $\sigma \gets (R, z)$
+            \State Pass $(\sigma, Y, m)$ to \hyperref[section:eddsa]{$\mathcal{F}_{EdDSA\_Verify}$} and \textcolor{red}{\textsc{ABORT}} if it fails.
+            \State \Return $(\sigma, m)$
+        \EndProcedure
+        \Statex
+        \Function{ProcessNonceCommitmentsOnline}{$Ds, Es$} \label{alg:sign:online:presig}
+            \State $\bm{D_\alpha} \gets {Ds} \cup \{D_i\}$
+            \State $\bm{E_\alpha} \gets {Es} \cup \{E_i\}$
+            \For{$j \in S$}
+                \If{$j \neq i$}
+                    \If{$D_j \not \in G^{\star} \lor E_j \not \in G^{\star}$}
+                        \State \textcolor{red}{\textsc{ABORT}}
+                    \EndIf
+                \EndIf
+            \EndFor
+            \State \Return $(\bm{D_\alpha}, \bm{E_\alpha})$
+        \EndFunction
+    \end{algorithmic}
+\end{breakablealgorithm}

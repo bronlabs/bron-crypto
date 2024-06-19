@@ -1,0 +1,15 @@
+\begin{algorithm}
+    \caption{$\left \{ True, False \right \} \leftarrow SchnorrVerify(\sigma, m, Y, params)$}\label{alg:schnorrverify}
+    \begin{algorithmic}[1]
+        \Require $Y$ is not zero and $\sigma$ is not empty.
+        \Statex
+        \State Parse $\sigma$ as $(R, z)$
+        \State Derive $c \gets H(R, Y, m, param_1 \mathbin\Vert \ldots \mathbin\Vert param_n)$ for all $param_i \in params$ 
+        \State Compute $R^\prime \gets z \cdot G - c \cdot Y$
+        \If{$R = R^\prime$}
+            \State \Return \textsc{True}
+        \Else
+            \State \Return \textsc{False}
+        \EndIf
+    \end{algorithmic}
+\end{algorithm}

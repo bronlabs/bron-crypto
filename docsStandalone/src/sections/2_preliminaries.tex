@@ -1,0 +1,234 @@
+%------------------------------------------------------------------------------%
+\section{Preliminaries}\label{sec:preliminaries}
+%------------------------------------------------------------------------------%
+
+This section will discuss the required primitives and possibly provide their pseudocode.
+
+%------------------------------------------------------------------------------%
+\subsection{ECDSA}\label{section:ecdsa}
+The Elliptic Curve Digital Signature Algorithm (ECDSA) offers a variant of the Digital Signature Algorithm (DSA) based onc uses elliptic-curve cryptography \cite{rfc6979}. We expect the reader to be familiar with ECDSA, thus we only provide a brief summary.
+
+ECDSA signature scheme contains three main functionalities: $\mathcal{F}_{ECDSA\_KeyGen}$ and $\mathcal{F}_{ECDSA\_Sign}$ and $\mathcal{F}_{ECDSA\_Verify}$. A user of our primitive should not directly implement anything that realizes these functionalities. Instead, existing high-quality implementations should be used. Note that as part of testing the implementation, as well as for signature verification, $\mathcal{F}_{ECDSA\_Verify}$ provided by one of these implementations should be used.
+
+% Note that here we do not assume how the data is encoded. Internally, we will represent them as a protobuf object \cite{protobuf}.
+
+
+%------------------------------------------------------------------------------%
+\subsection{Oblivious Transfer}\label{section:base_ot}
+An Oblivious Transfer (OT) protocol is a type of protocol in which a sender transfers one of potentially many pieces of information to a receiver, but remains oblivious as to what piece (if any) has been transferred. We use the notation $\binom{2}{1}$-OT to denote a protocol where the sender has two messages and the receiver receives one of them. The base functionality of $\binom{2}{1}$-OT is described in Functionality \ref{alg:baseot}.
+
+\input{src/algorithms/baseOT.tex}
+
+%------------------------------------------------------------------------------%
+\subsection{OT Extension}\label{section:schnorr_signature}
+Oblivious Transfer is a basic building block of MPC, and for many realistic problems, MPC protocols may require millions of OTs. These base OTs are expensive to realize. To alleviate this problem, we use the concept 
+OT extension, where a small number of OTs called \textit{base} OTs are processed to efficiently generate a much larger number of \textit{extended} OTs. Following the recommendation from DKLS23~\cite{DKLS23}, we use the OT Extension protocol from SoftSpokenOT\cite{softspokenot}, and detail its 
+
+\input{src/algorithms/softspokenOT.tex}
+
+%------------------------------------------------------------------------------%
+\subsection{Schnorr Signature}\label{section:schnorr_signature}
+As part of the FROST KeyGen, each party will have to compute a proof of knowledge of their signing key share. The proof of knowledge is realized via a Schnorr signature: A $\Sigma-protocol$ based zero-knowledge proof of discrete log made non-interactive via Fiat-Shamir heuristic \cite{sigma}.
+
+A Schnorr signature works over a group $\mathbb{G}$, of prime order $q$, with generator $G$, in which the discrete log problem is assumed to be hard. Fix a hash function $H : \left \{ 0, 1 \right \}^{\star} \rightarrow \mathbb{Z}_q$. Then given a secret key $s \overset{\$}{\leftarrow} \mathbb{Z}^{\star}_q$ and the public key $Y = s \cdot G$, the \textsc{SchnorrSign} is described in \textbf{\autoref{alg:schnorrsign}}.
+
+% \input{src/algorithms/schnorr_sign}
+
+Note that in \textbf{Algorithm \ref{alg:schnorrsign}}, we have added $params$ argument to append arbitrary elements to the Fiat-Shamir hash. Similarly \textsc{SchnorrVerify} is defined in \textbf{\autoref{alg:schnorrverify}}.
+
+% \input{src/algorithms/schnorr_verify}
+
+
+%------------------------------------------------------------------------------%
+\begin{comment}
+\subsection{Merlin Transcript}
+As mentioned in section \ref{section:schnorr_signature}, we are using a Schnorr signature as a proof of knowledge of discrete log. In this case, FROST protocol specifies two more items in the Fiat-Shamir hash: Prover's id and a context string $\phi$ to prevent replay attacks.
+
+Although this hash could be easily computed, we use a Merlin transcript \cite{merlin}. Merlin is a STROBE-based \cite{strobe} transcript construction for zero-knowledge proofs. It automates the Fiat-Shamir transform, so that by using Merlin, non-interactive protocols can be implemented as if they where interactive \cite{merlin}.
+
+In our implementation, Merlin transcripts enable each party to share the transcript state across rounds which results in fewer bugs. 
+\end{comment}
+
+
+%------------------------------------------------------------------------------%
+\subsection{Network Assumptions}\label{network}
+We assume that participants are connected via a point-to-point authenticated channel. In the pseudocode, sending a message through this channel is denoted by invoking $\mathcal{F}_P2PSend$ functionality, which is defined in \textbf{Functionality \ref{func:p2psend}}. 
+
+\begin{functionality}
+    \caption{Authenticated P2P Functionality $\mathcal{F}_{P2PSend}$}\label{func:p2psend}
+\begin{algorithmic}[1]
+        \State A functionality $\mathcal{F}_{P2PSend}$ for parties $P_1,\ldots,P_n$.
+        \Statex
+        \State On receiving (\textsc{P2PSend-in}, $j$, m) from $P_i$ with id $i$:
+        \begin{enumerate}
+            \item $\mathcal{F}_{P2PSend}$ sends (\textsc{P2PSend-out}, $i$, m) to party $P_j$ with id $j$.
+        \end{enumerate}
+    \end{algorithmic}
+\end{functionality}
+
+We also use a broadcast functionality, which is when players need to send the same message to all other players. The functionality $\mathcal{F}_{broadcast}$ is defined by \textbf{Functionality \ref{func:broadcast}}.
+
+\begin{functionality}
+    \caption{Authenticated Broadcast Functionality $\mathcal{F}_{broadcast}$}\label{func:broadcast}
+    \begin{algorithmic}
+        \State A functionality $\mathcal{F}_{broadcast}$ for parties $P_1,\ldots,P_n$.
+        \Statex
+        \State On receiving (\textsc{broadcast-in}, \textsc{sid}, m) from $P_i$ with id $i$:
+        \begin{enumerate}
+            \item $\mathcal{F}_{broadcast}$ checks that \textsc{sid} has not been used by $P_i$ before.
+            \item $\mathcal{F}_{broadcast}$ sends (\textsc{broadcast-out}, \textsc{i}, \textsc{sid}, m) to every party $P_j$.
+        \end{enumerate}
+    \end{algorithmic}
+\end{functionality}
+
+$\mathcal{F}_{broadcast}$ can be realized with the \textit{Echo-Broadcast} protocol \cite{GL02}, which should make it impossible for a dishonest party to send different messages in the broadcast round.
+
+We require that whenever a party aborts, they send a message to all other parties indicating that they have aborted. Honest parties should abort whenever they receive an abort message.
+
+\subsubsection{Using a centralized coordinator}
+Although we do not make any assumptions regarding which protocols realize the above two functionalities, in practice, the networking layer is often implemented as a star graph: The communication is usually carried out through an untrusted, possibly centralized third party that effectively routes signed messages between participants (e.g., a "coordinator" in \cite{L22}).
+
+Such a pattern may be used for various reasons: It may be too costly to set up direct communication channels between parties (in terms of bandwidth or the round complexity of the entire protocol), or some aspects of the protocol may be simplified (e.g., no need for a session-id), or it may even be the case that parties do not know anything more than the public key of others.
+
+In case a user of this primitive is to implement the networking layer as such, we should note that the protocol would remain secure as no sensitive information is passed that enables the coordinator to reconstruct the private key or forge any signatures, but the following should be considered:
+
+First, A maliciously behaving coordinator can induce an abort of the protocol by simply not sending a message from a participant. A participant cannot distinguish the malicious coordinator from the counter-party simply timing out. This issue, however, does not break the identifiable abort subprotocol of our primitive as it is only attributing aborts based on the consistency of the delivered messages, not the delivery itself (see Algorithm \ref{alg:sign:online} line \ref{identifiableabort}).
+
+Second, if the coordinator is also set as an external signature aggregator (see section \ref{roles}) and there is only one signature aggregator, then a coordinator alone can learn the signature and not send it back to the signature requester (see section \ref{roles}). In practice, however, it may be possible to detect a malicious coordinator if there is a log of the participant's activities.
+
+Finally, Note that it is critical to have the messages signed/authenticated before sending them to the coordinator. Doing so is especially important for the DKG protocol (see section \ref{kg:dkg}) as the coordinator can simulate other parties, leading each party to believe a key was successfully generated, which would have financial consequences for the crypto custody use case.
+
+% \begin{comment}
+% \subsection{Ledger}\label{ledger}
+% We need a globally available, auditable, tamper-evident log to record used presignatures. We call this construction a ledger following \cite{KMOS19} albeit this has been studied in other contexts \cite{HKD07} and with other names as well \cite{CGJKM17}. Roughly, the functionality is defined by \textbf{Functionality \ref{func:ledger}}.
+
+% \begin{functionality}
+%     \caption{Public Ledger $\mathcal{F}_{Ledger}$}\label{func:ledger}
+%     \begin{algorithmic}
+%         \State A functionality $\mathcal{F}_{Ledger}$ for parties $P_1,\ldots,P_n$.
+%         \Statex
+%         \State On receiving (\textsc{Record-in}, \textsc{sid}, m) from $P_i$ with id $i$:
+%         \begin{enumerate}
+%             \item $\mathcal{F}_{Ledger}$ checks that \textsc{sid} has not been used by $P_i$ before.
+%             \item $\mathcal{F}_{Ledger}$ stores $(m, i)$ and sends (\textsc{Record-out}, $i$) to party $P_i$ with id $i$.
+%         \end{enumerate}
+%         \Statex
+%         \State On receiving (\textsc{Membership-check-in}, m) from $P_i$ with id $i$:
+%         \begin{enumerate}
+%             \item $\mathcal{F}_{Ledger}$ checks to see if $(m, j)$ exist for all $1 \leq j \leq n$. If it does, $\mathcal{F}_{Ledger}$ sends (\textsc{membership-check-out}, $(m, \{ j \})$) to party $P_i$ with id $i$. If it does not, $\mathcal{F}_{Ledger}$ sends (\textsc{membership-check-out}, $\{\}$) to party $P_i$ with id $i$.
+%         \end{enumerate}
+%     \end{algorithmic}
+% \end{functionality}
+% \end{comment}
+
+%------------------------------------------------------------------------------%
+\subsection{Shamir's Secret Sharing Scheme (Shamir SS)}\label{section:shamir}
+
+We need a $(t, n)$-threshold secret sharing scheme. Such a scheme allows a set of $n$ participants to share a secret $s$, such that any $t$ out of the $n$ participants are required to cooperate in order to recover $s$, but any subset of fewer than $t$ participants cannot recover any information about the secret. We can use Shamir's Secret Sharing scheme to do so \cite{shamir}.
+
+For a prime $q$, Shamir's secret sharing allows a dealer to share a secret $s \in \mathbb{Z}_q$ by evaluating $n$ points on a random degree $t$ polynomial $p(.)$ with $s$ as the constant term.
+\begin{equation}\label{eq:shamirpoly}
+    p(x) = s + \sum_{i=1}^{t} a_ix^i \mod{q}
+\end{equation}
+
+Each party's share is $p(i)$ where $i$ is the party's ID distributed by a dealer. The secret is $p(0)$. Given $t+1$ shares, the polynomial can be reconstructed using \textit{Lagrange Interpolation}\cite{lagrange}.
+
+The pseudo-code for the dealer distribution routine is defined by \textbf{Algorithm \ref{alg:shamirshare}}.
+
+\begin{algorithm}
+    \caption{$[x_1,\ldots , x_n] \leftarrow ShamirShare(s, t, q, [p_1,\ldots , p_n])$}\label{alg:shamirshare}
+    \begin{algorithmic}[1]
+    
+        \Require $q$ is prime and $0 < t \leq n$ and $s \in \mathbb{Z}_q$ and not any $p_i$ is zero for all $p_i \in [p_1,\ldots , p_n]$ and not any $p_i = p_j$ where $i \neq j$
+        \Statex
+        \For{$i \in \{1, \ldots, t-1\}$}
+            \State Sample $a_i \overset{\$}{\leftarrow} \mathbb{Z}^{\star}_q$
+        \EndFor
+        \For{$i \in \{1, \ldots, n\}$}
+            \State $x_i \gets s + \sum_{j=1}^{t-1} a_jp_i^j \mod{q}$
+        \EndFor
+        \State \Return $[x_1,\ldots , x_n]$
+    \end{algorithmic}
+\end{algorithm}
+
+The pseudo-code for the combine routine is defined by \textbf{Algorithm \ref{alg:shamircombine}}. The combiner uses regular Lagrange interpolation \cite{lagrange}.
+
+Note that there exist FFT-based techniques that will make combining the shares faster for large enough number of participants \cite{TCZAPGD20, fft}. We expect the users of this implementation will have the number of parties to be small ($n \leq 10$) so we do not believe the performance gains (if any, for these values of $n$) will justify the complexity \footnote{Note that $n$ could be any number and the protocol will remain secure. Here we are just concerning ourselves with performance optimizations.} 
+
+\begin{algorithm}
+    \caption{$s \leftarrow Combine(q, [p_1, x_1],\ldots , [p_t, x_t])$}\label{alg:shamircombine}
+    \begin{algorithmic}[1]
+    
+        \Require $q$ is prime and not any $p_i$ is zero for all $p_i \in [p_1,\ldots , p_t]$ and not any $p_i = p_j$ where $i \neq j$
+        \Statex
+        \State $s \gets 0$
+        \For{$i \in [1, \ldots, t]$}
+            \State $\lambda \gets x_i$
+            \For{$j \in [1, \ldots, t]$}
+                \If{$i = j$}
+                    \State Continue
+                \Else
+                    \State $\lambda \gets \lambda \times \cfrac{p_j}{p_j - p_i} \mod{q}$
+                \EndIf
+            \EndFor
+            \State $s \gets s + \lambda \mod{q}$
+        \EndFor
+        \State \Return $s$
+    \end{algorithmic}
+\end{algorithm}
+
+% %------------------------------------------------------------------------------%
+% \subsection{Feldman's Verifiable Secret Sharing Scheme (Feldman VSS)}\label{section:vss}
+
+% The verified variant of Shamir's Secret Sharing scheme (as described in section \ref{section:shamir}) adds a verification step to demonstrate the consistency of a participant's share with a public commitment that is assumed to be correctly visible to all participants. The scheme we use is due to Feldman \cite{feldman}.
+
+% The pseudo-code for the dealer distribution routine is defined by \textbf{Algorithm \ref{alg:feldmanshare}}.
+
+% \begin{algorithm}
+%     \caption{$[C_0, \ldots, C_{t-1}], [x_1,\ldots , x_n] \leftarrow FeldmanShare(G, s, t, [p_1,\ldots , p_n])$}\label{alg:feldmanshare}
+%     \begin{algorithmic}[1]
+%         \Require $G \in \mathbb{G}$ is a generator of some cyclic group of prime order and $0 < t \leq n$ and $s \in \mathbb{Z}_q$ and not any $p_i$ is zero for all $p_i \in [p_1,\ldots , p_n]$ and not any $p_i = p_j$ where $i \neq j$
+%         \Statex
+%         \State $q \gets ord({\mathbb{G}})$
+%         \State Compute commitment to the secret $C_0 \gets s \cdot G \mod{q}$
+%         \For{$i \in \{1, \ldots, t-1\}$}
+%             \State Sample $a_i \overset{\$}{\leftarrow} \mathbb{Z}^{\star}_q$
+%             \State Compute commitment $C_i \gets a_i \cdot G \mod{q}$
+%         \EndFor
+%         \For{$i \in \{1, \ldots, n\}$}
+%             \State $x_i \gets s + \sum_{j=1}^{t-1} a_jp_i^j \mod{q}$
+%         \EndFor
+%         \State \Return $[C_0, \ldots, C_{t-1}], [x_1,\ldots , x_n]$
+%     \end{algorithmic}
+% \end{algorithm}
+
+% The pseudo-code for the \textit{combine} routine is the same as Shamir's and was defined in \textbf{Algorithm \ref{alg:shamircombine}}. A new algorithm verifies whether a given share is compatible with public commitments. This verification method is defined in \textbf{Algorithm \ref{alg:feldmanverify}}.
+
+% \begin{algorithm}
+%     \caption{$\{True, False\} \leftarrow FeldmanVerify(G, x_i, p_i, [C_0, \ldots, C_{t-1}])$}\label{alg:feldmanverify}
+%     \begin{algorithmic}[1]
+%         \Require $G \in \mathbb{G}$ is a generator of some cyclic group of prime order and $x_i$ is nonzero and $p_i$ is nonzero and not any $C_i$ is zero for all $C_i \in [C_0,\ldots , C_{t-1}]$
+%         \Statex
+%         \State $q \gets ord({\mathbb{G}})$
+%         \State Set $V \gets C_0$
+%         \For{$j \in \{1, \ldots, t-1\}$}
+%             \State $V_j \gets p_i^j \cdot C_j \mod{q}$
+%             \State $V \gets V + V_j$
+%         \EndFor
+%         \If{$V = x_i \cdot G$}
+%             \State \Return True
+%         \Else
+%             \State \Return False
+%         \EndIf
+%     \end{algorithmic}
+% \end{algorithm}
+
+% %------------------------------------------------------------------------------%
+% \subsection{Cohort Configuration}\label{cohortconfig}
+% FROST requires a set of participants to be formed using some out-of-band mechanism decided upon by the implementation \cite[section 5.1]{KG20}. We name such a set as \textit{cohort}. Furthermore, in FROST, a participant's ID is the point at which the Shamir polynomial is evaluated to output the share for that participant. As a result, each participant will know the participant IDs of all other participants, among other things, before engaging in any of the FROST protocols. 
+
+% We do not make any assumption on the specifics of the cohort formation mechanism. We will leave this issue to the MPC platform and the particular Copper solution using this primitive. However, more often than not, these mechanisms require some identifier to be assigned to the participants, which has nothing to do with the primitive itself. We consider this and will require each participant to maintain a mapping from their FROST participant ID to their cohort participant ID.
+
+% It is possible to remove the need to maintain such a mapping by evaluating the Shamir polynomial at each participant's cohort ID. This makes each party's internal state simpler to represent, at the cost of modifying protocol-specific data if a participant's cohort ID changes.
+
+% We think such a cost is too high. Nevertheless, suppose a change is to be made to represent participant IDs via their cohort ID. In that case, special care should be given so that they don't reduce to zero modulo $q$, forcing the Shamir polynomial (see equation \ref{eq:shamirpoly}) to reveal the secret.

@@ -1,0 +1,49 @@
+\begin{table}[ht!]
+    \begin{center}
+    \caption{Notation, Symbols and Operators}\label{tab:notation}%
+    \begin{tabular}{@{}ll@{}}
+    \toprule
+    Symbol & Description\\
+    \midrule
+    $a$ & An integer value $\ins \Z$, equivalent to a bit-string $\ins \{0,1\}^*$ \\
+    $|a|$ & Bit-length of bit-string $a$. \\
+    $\vect{a}$ & A vector of values $\{\vecti{a}{1},\vecti{a}{2}\dots\}$\\
+    $\vecti{a}{i}$ & $i$th element of vector $\vect{a}$\\
+    $\set{S}$ & A set with elements $\{s_1, s_2, \dots \}$\\
+    $\range{n}$ & Set of integers $\{1, 2, \dots, n\}$\\
+    $|\set{S}|$ & Number of elements in set $\set{S}$ (its cardinality)\\
+    $s_i$ & $i$th element of a set $\set{S}$, with $1\!\leq\!i\!\leq\!|\set{S}|$ \\
+    $\subrange{k}{n}$ & Set of all $k$-subsets of $\range{n}$, that is, $\subrange{k}{n} \triangleq \{\set{X}\!:\, \set{X}\! \subseteq\! \range{n} \land |\set{X}| \equals k \}$\\
+    $\g{a}\equals(\g{a}_x, \g{a}_y)$ & A group element (e.g., EC point), with coordinates $\g{a}_x, \g{a}_y$\\ 
+    $\poly{p}$ & A polynomial of a certain finite degree $d$\\
+    $\polyx{p}{x}$ & Polynomial evaluated on point $x$\\
+    $\coeff{p}{i}$ & $i$th coefficient of polynomial $\poly{p}$, s.t. $\polyx{p}{x} = \sum_{i=0}^d  \coeff{p}{i}x^i$ \\
+    $\pk, \sk$ & Public and private Paillier keys \\
+    $\paillier{a}$ & Paillier ciphertext, encryption of value $a$ with $\pk$\\
+    $\str{tag}$ & An ascii-encoded string \\
+    % $\unif{S}$ & Uniformly random distribution in the set $S$ \\
+    $\assign{a}{1}$ & Assignment operator. Set the value of $a$ to $1$ \\
+    $\sample{a}{\set{S}}$ & Sampling operator. Sample value $a$ uniformly from set $\set{S}$ \\
+    $\appendT{a}$ & Operator to appends $a$ to the transcript \\
+    $\assignAppendT{a}{1}$ & Assign value $1$ to $a$ and append $a$ to the transcript \\
+    $\isequal{a}{1}$ & Equality test operator. Returns $1$ if true, $0$ otherwise \\
+    $a \!\mod q$ & Modulo operator \\
+    $a\concat q$ & Concatenation operator (elements, sets, bit-strings\dots) \\
+    $\fn{Func}_{a}(x)$ & Function parametrized by $a$ with input $x$\\
+    $\fn{gcd}(x, y)$ & Greatest common divisor of $x$ and $y$ \\
+    $\fn{lcm}(x, y)$ & Least common multiple of $x$ and $y$ \\
+    $\fn{quot}(x)$ &  Quotient function $\lfloor \frac{x - 1}{n} \rfloor$ \\
+    $\fn{sgn}(x)$ &  Sign function, $1$ if $x>0$, $-1$ if $x<0$, $0$ if $x=0$\\
+    $\party{1}, \party{2}, \dots$ & Computing parties in MPC protocol \\
+    $\mathcal{S}, \mathcal{R}, \dots$ & Parties with a specific role (e.g., \textit{Sender}, \textit{Receiver}, \dots) \\
+    $\party{k}.\fn{Func}(x)$ & Party $k$ runs a certain function $\fn{Func}$ on input $x$. \\
+    $\idealfn[name]{}$ & An ideal functionality \\
+    $\kappa, \lambda$ & Computational security parameters (typ. 128-256 bits) \\
+    $\sigma, \lambda_s$ & The statistical security parameters (typ. 80-128 bits) \\
+    $\G(q, \g{G})$ & Cyclic group of prime order $q$ and generator $\g{G}$ \\
+    $\set{E}(\G, q, \g{G}, \g{I})$ & Elliptic curve with group $\G(q, \g{G})$ and identity element $\g{I}$ \\
+   
+    \bottomrule
+    \end{tabular}
+    \end{center}
+\end{table}

@@ -1,0 +1,135 @@
+\begin{protocol}[H]
+    \caption{\space\space\fn{COTe$_{\ell, n, \lambda}$}()}
+    \label{alg:cote}
+    \begin{algorithmic}[1]
+        \Descr Correlated OT extension for a batch of size $\ell$ with randomized inputs from SoftSpokenOT~\cite{softspokenot}. We set $p=q=2$, $k=1$ and set $\mathcal{C}=Rep(\mathbb{F}_2^n)$ following the details from Section 5.1 of \cite{softspokenot}.
+        \Players sender $\party{S}$, and receiver $\party{R}$.
+        \Require $\lambda$, the computational security parameter (typ. $\in \{128,256\}$).\\
+                 $\ell$, the size of the batch.\\
+                 $n$, the bit-size of the message space (modulo $2^n$). \\
+                 $\bm{b}$, the receiver's input choice bits
+
+        \Ensure $\party{R}$ gets U,V; $\party{S}$ gets W, $\Delta$;  s.t. $U\oplus W = V\Delta$.
+        
+        % \todo{Detail all PPRF functions.}
+        % \todo{Define functions for the Matrix operations, as well as any other operations that are not straightforward.}
+        % \todo{Explicitly specify inputs and outputs per round.}
+        % \todo{Explicitly define inputs and outputs of the entire protocol.}
+        \Statex
+        \State \textit{Round 1-2}: $\binom{2}{1}$\fn{-OT}$_{\ell, n}$(): $\party{S}\leftarrow \{F_{0,j}, F_{1,j}\}_{j\in[k]}$ \Commentg{where $F_{i,j} \in \{0,1\}^\lambda$}
+        \State \hspace{110pt}$\party{R}\leftarrow \{\bm{x}_j,F_{x_j,j}\}_{i\in[k]}$ \Commentg{{where $x_{j} \in \{0,1\}$}}
+
+        \Statex
+        \Descrx{Round 3, $\party{R}:$}
+        \State $R \sim \mathcal{R}$ \Comment{Sample a $\epsilon$-universal hash function.}
+        \State $\send{\party{R}}{\party{S}}{R}$
+        \Descrx{Round 3, $\party{S}:$}
+        \State $G, t \leftarrow \fn{BuildPPRF}(F)$\Commentg{{ where $t=\{t_{i,0}, t_{i,1}\in \{0,1\}^{\lambda\times2}\}_{1\leq i<k}$}}
+        \State $\tilde{s}, \tilde{t} \leftarrow \fn{ProvePPRF}(G)$, \Commentg{{where $s, t\in \{0,1\}^{\lambda\times2}$}}
+        \State $r_0, r_1 \leftarrow \fn{PRG}(F_{0,\cdot}), \fn{PRG}(F_{1,\cdot})$\Comment{Loop over each of the $k$ keys. Stack outputs.}
+        \State $U', V \leftarrow r_0+r_1, -r_1$ 
+        \State $[U C] \leftarrow U'T^{-1}_{\mathcal{C}}$ \Commentg{{$T_{\mathcal{C}}$ is a basis of $\mathbb{F}_2^{n_\mathcal{C}}$ ($n_\mathcal{C}$ iid. vectors, see sec. 2.1 of \cite{softspokenot})}}
+        \State $\tilde{U}, \tilde{V} \leftarrow RU, RV$
+        \State $\send{\party{S}}{\party{R}}{C \in \mathbb{F}_p^{l\times(n_\mathcal{C}-k_\mathcal{C})},t, \tilde{s}, \tilde{t}, \tilde{U}, \tilde{V}}$
+        % \State output $U_{[h]}, V_{[h]}$  \todo{clarify}
+        \Descr{\todo{Decomposition as a function}}
+
+        \Statex
+        \Descrx{Round 4, $\party{R}:$}
+        \State $y^*, G^* \leftarrow \fn{EvalPPRF}(\bm{x}, F_{\bm{x},\cdot}, t)$
+        \If{$\tilde{s}\neq \fn{VerifyPPRF}(y^*, G^*,\tilde{t})$} 
+            \State \ABORT % \todo{do we need the PRG'1 output? }
+        \EndIf
+        \State $r_x \leftarrow \fn{PRG}(F^*_{\overline{x},\cdot})$
+        \State $W' \leftarrow (y^* - \overline{y^*} )$ \todo{Check this!}
+        \State $W \leftarrow W' - [0 C] T_\mathcal{C} \cdot \text{diag}(y^*)$ \todo{Add consistency check from figure 9}
+        % \State output "commit" \todo{clarify}
+        \If{$\tilde{V}\neq RW - \tilde{U}G_\mathcal{C}\cdot\text{diag}(\Delta)$} 
+            \State \ABORT
+        \EndIf
+        \State $\bm{s} \leftarrow \bm{b} \oplus W $
+        \State $\send{\party{R}}{\party{S}}{\{s_i\}_{i\in l\ell}}$\Commentg{Receiver derandom.}
+        \Statex
+        \Descrx{Round 5, $\party{S}:$}
+        \State $U^* \leftarrow U \oplus \bm{s} $\Commentg{Sender derandom.}
+        % \EndProcedure
+        \Statex
+        \Statex
+        % {\color{lightgray}\hrulefill}
+        \algstore{alg:example}
+    \end{algorithmic}
+\end{protocol}
+\begin{protocol}[H]
+    \begin{algorithmic}
+        \algrestore{alg:example}
+        % \setalglineno{0}      % Reset line number counter
+        \Function{BuildPPRF}{$F$} \label{alg:build_pprf}
+            \For{$x \in p$}
+                \State $s^1_0, s^1_1 \leftarrow F_0(0), F_0(1)$
+            \EndFor
+            \For{$y \in [p], x \in [p]$}
+                \State $s^{i+1}_{py+x} \leftarrow PRG_x(s^i_y)$
+            \EndFor
+            \For{$x \in p$}
+                \State $t^i_x \leftarrow F_i(x) \oplus \bigoplus_{y\in [p]} s^{i+1}_{py+x}$
+            \EndFor
+            \State \Return $(y \mapsto s_y), t$
+        \EndFunction
+        \Statex
+        % {\color{lightgray}\hrulefill}
+        % \setalglineno{0}      % Reset line number counter
+        \algstore{alg:example}
+
+    \end{algorithmic}
+\end{protocol}
+\begin{protocol}[H]
+    \begin{algorithmic}
+        \algrestore{alg:example}
+        \Function{EvalPPRF}{$F$} \label{alg:eval_pprf}
+            \For{$x \in p \setminus \{x^*_0\}$}
+                \State $s^{*1}_x \leftarrow F^*_0(x)$
+            \EndFor
+            \State $y^*$
+            \For{$y \in [p], x \in [p]$}
+                \State $s^{i+1}_{py+x} \leftarrow PRG_x(s^i_y)$
+            \EndFor
+            \For{$x \in p$}
+                \State $t^i_x \leftarrow F_i(x) \oplus \bigoplus_{y\in [p]} s^{i+1}_{py+x}$
+            \EndFor
+            \State \Return $(y \mapsto s_y), t$
+        \EndFunction
+        \algstore{alg:example}
+    \end{algorithmic}
+\end{protocol}
+\begin{protocol}[H]
+    \begin{algorithmic}
+        \algrestore{alg:example}
+        \Function{ProvePPRF}{$G$} \label{alg:prove_pprf}
+            \For{$y \in [q]$}
+                \State $\tilde{s}_y \leftarrow PRG'_0(G(y))$
+            \EndFor
+            \State $\tilde{t} \leftarrow \bigoplus_{y\in [q]} \tilde{s}_y$
+            \State $\tilde{s} \leftarrow Hash(\tilde{s}_0 || \tilde{s}_1)$
+            \State \Return $\tilde{s}, \tilde{t}$
+        \EndFunction
+        \algstore{alg:example}
+    \end{algorithmic}
+\end{protocol}
+\begin{protocol}[H]
+    \begin{algorithmic}
+        \algrestore{alg:example}
+        \Function{VerifyPPRF}{$F$} \label{alg:verify_pprf}
+            \For{$y \in [q] \\ \{y^*\}$}
+                \State $s^{*1}_x \leftarrow F^*_0(x)$ %\todo{finish}
+            \EndFor
+            \State $y^*$
+            \For{$y \in [p], x \in [p]$}
+                \State $s^{i+1}_{py+x} \leftarrow PRG_x(s^i_y)$
+            \EndFor
+            \For{$x \in p$}
+                \State $t^i_x \leftarrow F_i(x) \oplus \bigoplus_{y\in [p]} s^{i+1}_{py+x}$
+            \EndFor
+            \State \Return $(y \mapsto s_y), t$
+        \EndFunction
+    \end{algorithmic}
+\end{protocol}

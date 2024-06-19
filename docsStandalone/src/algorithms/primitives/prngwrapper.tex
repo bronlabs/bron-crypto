@@ -1,0 +1,27 @@
+\begin{algorithm}[H]
+    \caption{$\quad\fndef{PrngWrapper}_{\sk,t_1,t_2}(x)\rightarrow x'$}
+    \label{alg:prngwrapper}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            A randomness wrapper based on RFC8937~\cite{cremers2020rfc} that ties the security of a CSPRNG to a signing key, parametrized by $ N \equals L \equals L' \equals\kappa$, and requiring: 
+            \begin{itemize}[leftmargin=6pt,itemsep=0pt]
+                \item A signature scheme \fn{Sign}$(\sk, m)\rightarrow\sigma$ (e.g., Section \ref{sec:signatures}) and a private key  $\sk \in \G$.
+                \item A hash function \fn{H} (e.g., SHA3~\cite{FIPS202})
+                \item A key derivation function $\fn{KDF}(\mathit{salt}, m)\!\rightarrow\! k\ins\Z_{2}^L$ (e.g., HKDF-Extract\cite{rfc5869})
+                \item A pseudo-rand. function $\fn{PRF}(k,\!\mathit{info})\!\rightarrow\!x' \ins \Z_{2}^N$ (e.g., HKDF-Expand\cite{rfc5869})
+                \item $t_1$, a context-dependent bit-string (e.g., device MAC, OS version\dots)
+                \item $t_2 \in \Z_{2}^{L'}$, a unique nonce per \fn{PrngWrapper} call (e.g., a counter)
+            \end{itemize}
+        \end{alginfo}
+        \Require $x \in \Z_{2}^\kappa$, a seed (default: use the OS randomness API)
+        \Ensure {$x' \in \Z_{2}^\kappa$, a seed to be consumed by a CSPRNG.}
+
+        %  G'(n) = Expand(Extract(H(Sig(sk, tag1)), G(L)), tag2, n)
+        \State $\assign{h_\sigma}{\fn{\fn{Sign}(sk, \fn{PrngWrapper}.t_1)}}$ \Commentg{(Can be precomputed and stored)}
+        \State $\assign{k}{\fn{KDF}(h_\sigma, x)}$
+        \State $\assign{x'}{\fn{PRF}(k, \fn{PrngWrapper}.t_2)}$
+        \State Increase $\fn{PrngWrapper}.t_2$ by one for next calls
+        \Statex \Return $x'$
+
+    \end{algorithmic}
+\end{algorithm}

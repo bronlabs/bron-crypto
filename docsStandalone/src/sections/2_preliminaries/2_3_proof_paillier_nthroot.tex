@@ -1,0 +1,25 @@
+
+\subsubsection{Paillier Proofs}\label{sec:proof_paillier}
+
+Some of our protocols require proofs over Paillier objects to detect malicious behavior. We detail them in this section.
+
+\paragraph{Proof of Valid Paillier Public Key}
+As part of the DKG protocol~\cite{lindell17} in threshold signing protocols relying on the Paillier scheme (Scheme \ref{alg:paillier}), the players need to verify that $n$ is a valid Paillier public key, i.e. $gcd(n, \phi(n)) = 1$. This is achieved via Protocol \ref{alg:valid_paillier}, based on a ZKPoK of $N$-th root of $n^n \mod n^2$ described in Protocol \ref{alg:nth_root}.
+
+\input{src/algorithms/primitives/paillierpk.tex}
+
+
+\input{src/algorithms/primitives/nthroot.tex}
+
+\paragraph{Encrypted Discrete Logarithm Proof}
+
+We employ the ZKP that a value encrypted in a given Paillier ciphertext is the discrete log of a given Elliptic curve point from \cite[Section 3.1]{lindell17}, detailed in Protocol \ref{alg:dlog_paillier}.
+
+\input{src/algorithms/primitives/paillierdlog.tex}
+
+\paragraph{Range Proof}
+
+We use the ZKPoK range proof that $x \in \lbrace \frac{q}{3}, ..., \frac{2q}{3} \rbrace$ where $c=Enc_{\pk}(x; r)$ as described in \cite[Appendix A]{lindell17}, detailed in Protocol \ref{alg:range_paillier}.
+
+\input{src/algorithms/primitives/paillierrange.tex}
+

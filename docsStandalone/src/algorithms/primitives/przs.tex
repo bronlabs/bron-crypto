@@ -1,0 +1,42 @@
+\begin{protocol}[ht]
+    \caption{$\quad$\fndef{Przs}}
+    \label{alg:przs}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            A protocol to generate shares of zero among $n$ parties, parametrized by a group $\G$. It requires a commitment scheme (e.g., Scheme \ref{alg:commitment}) and a pseudo-random number generator $\idealfnref{PRNG}$. In all cases, $j \ins \range{n}\setminus\{i\}$. The setup rounds are run once, and the sample can be run multiple times.
+        \end{alginfo} 
+        
+        \Players { $\party{1}, \dots,\party{n}$, with symmetric behavior.}
+
+        \Ensure {$\party{i}$: $o_i$, a share of zero $\forall i \inss \range{n}$ s.t. $\sum_{i \in \range{n}} o_i = 0_\G$}
+
+        \vspace{-8pt}
+        \AlgRoundZero{\hspace{-2pt}$\party{i}$}{\fndef[przs]{Setup1}}{}{$c_{i,j}$}
+        \State Sample $\sample{r_{i,j}}{\{0,1\}^\lambda}\;\forall j$ as the $n\shortminus1$ seeds of $\party{i}$, one with each party $\party{j}$
+        \State Run $\assign{c_{i,j}, w_{i,j}}{\fn{Commit}(r_{i,j})}\;\forall j$ as the commitments $c_{i,j}$ and witnesses $w_{i,j}$
+        \State $\sendTo{\party{j}}{c_{i,j}}$ to distribute each commitment to its respective party $\party{j}$
+
+        \vspace{-8pt}
+        \setalglineno{1}
+        \AlgRound{\hspace{-2pt}$\party{i}$}{\fndef[przs]{Setup2}}{$\vect{c}_i\equals\{c_{j,i}\}_{\forall j}$}{$\{r_{i,j}, w_{i,j}\}_{\forall j}$}
+        \State $\sendTo{\party{j}}{r_{i,j}, w_{i,j}}\;\forall \!j$ to reveal each $r_{i,j}$ and $w_{i,j}$ to each party $\party{j}$
+
+        \vspace{-8pt}
+        \setalglineno{1}
+        \AlgRound{\hspace{-2pt}$\party{i}$}{\fndef[przs]{Setup3}}{$\vect{r}_j\equals\{r_{j,i}\}_{\forall j}, \vect{w}_j\equals\{w_{j,i}\}_{\forall j}$}{$\{\fn{PRNG}_j\}_{\forall j}$}
+        \State $\fn{Open}(r_{j,i}, c_{j,i}, w_{j,i})\; \forall j$, $\ABORT$ if it fails
+        \State $\assign{s_{i,j}}{r_{i,j}\oplus r_{j,i}}\;\forall j$  \Commentg{May use $\assign{s_{i,j}}{\fn{H}(r_{i,j}, r_{j,i})}$ instead}
+        \State Initialize $\assign{\fn{PRNG}_j}{\fn{PRNG.Seed}(s_{i,j})}$ as a fresh instance for each party $\party{j}$ 
+        \Statex \Return $\fn{PRNG}_j$
+
+        \vspace{-8pt}
+        \setalglineno{1}
+        \AlgRound{\hspace{-2pt}$\party{i}$}{\fndef[przs]{Sample}}{$\set{X'} \subseteq \range{n} \setminuss \{i\}$}{$o_i$}
+        \State Initialize $\assign{o_i}{0}$
+        \For{$j$ in $\set{X'}$}
+            \State Run $\assign{z_j}{\fn{PRNG}_j.\fn{Sample}(1)}$
+            \State $\assign{o_i}{o_i+z_j \cdot \fn{sgn}(i-j)}$
+        \EndFor
+        \Statex \Return $o_i$ as its share of zero
+    \end{algorithmic}
+\end{protocol}

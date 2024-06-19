@@ -1,0 +1,28 @@
+\begin{protocol}[H]
+    \caption{$\quad$\fn{Valid \;Paillier \;Public \;Key(PaillierPKPoK)}}\label{alg:valid_paillier}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            ZKP from \cite{lindell17} of $n$ being a Paillier public key for an undisclosed $\phi(n)$ s.t. $gcd(n, \phi(n))= 1$, based on \fnref{NthRoot}, a ZKPoK of $N$-th root of $n^n \mod n^2$
+        \end{alginfo} 
+        \Players{A verifier $\mathcal{V}$, and a prover $\mathcal{P}$.}
+        \Require{$\mathcal{P}, \mathcal{V} \rightarrow \pk\equiv n$, a Paillier public key, \\
+                   $\mathcal{P} \rightarrow sk \equiv \phi(n)$, the corresponding Paillier private key.}
+        \vspace{-13pt}
+        \AlgRoundZero{\hspace{6pt}$\mathcal{V}$}{Round1}{$n$}{$\vect{x}$}
+            \State Sample challenge $\assign{\vect{y}}{\{\sample{\vecti{y}{i}}{\Z_n}\}_{\forall i \in \range{\sigma}}}$
+            \State $\assign{\vect{x}}{\{(\vecti{y}{i})^n \mod n^2\}_{\forall i}}$
+            \State Run $\fnref{NthRoot}(\vecti{x}{i})\;\forall i \ins \range{\sigma}$ as prover with $\mathcal{P}$ as verifier. $\ABORT$ if it fails.
+
+        \vspace{-12pt}
+        \AlgRound{\hspace{-2pt}$\mathcal{P}$}{Round2}{$n, \phi(n), \vect{x}$}{$\vect{y'}$}
+            \setalglineno{1}
+            \Statex \Return challenge response $\vect{y'}\equals\{\vecti{y'}{i}\}_{i\in\range{\sigma}}$ using $\phi(n)$ s.t. $\assign{\vecti{y}{i}'}{(\vecti{x}{i})^n}$
+            
+
+        \vspace{-12pt}
+        \AlgRound{\hspace{-2pt}$\mathcal{V}$}{Round3}{$\vect{y'}$}{\textit{valid}}
+            \setalglineno{1}
+            \State Verify if every $\isequal{\vecti{y}{i}}{\vecti{y}{i}'}$, $\ABORT$ if not.
+            \Statex \Return \textit{valid}        
+    \end{algorithmic}
+\end{protocol}

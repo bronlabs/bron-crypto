@@ -1,0 +1,18 @@
+\begin{algorithm}
+    \caption{$\quad\fndef{krand}$}
+    \label{alg:krand}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            CSPRNG algorithm with $\kappa\equals128$ bits of security, implemented following the \textsf{CTR\_DRBG} specification~\cite{barker2012ctrdrbg} alongside a $\fnref{PrngWrapper}$ initialized with device-bounded inputs $(\sk,t_1)$ and a $\kappa$-bit counter $t_2$. Realizes \idealfnref{PRNG}:
+            \begin{itemize}[leftmargin=12pt]
+                \item $\mathbf{\fn{Seed}}()$ initializes a CSPRNG instance with fresh entropy. Automatically called after a certain number of samples to reseed the CSPRNG instance. Internally it performs several steps:
+                \begin{enumerate}[leftmargin=12pt]
+                    \item Sample $\mathit{seed}\ins\{0,1\}^\kappa$ and $\mathit{salt}\ins\{0,1\}^\kappa$ from the OS randomness API.
+                    \item Compute $\assign{\mathit{seed}'}{\fnref{PrngWrapper}(\mathit{seed})}$ and $\assign{\mathit{salt}'}{\fnref{PrngWrapper}(\mathit{salt})}$.
+                    \item Seed the \textsf{CTR\_DRBG} construction with $\mathit{seed}'$ and $\mathit{salt}'$.
+                \end{enumerate}
+                \item \fn{Sample}$(n)\rightarrow u \ins \{0,1\}^n$ generates $n$ uniformly random bits from the \textsf{CTR\_DRBG} construction.
+            \end{itemize}
+        \end{alginfo}
+    \end{algorithmic}
+\end{algorithm} 

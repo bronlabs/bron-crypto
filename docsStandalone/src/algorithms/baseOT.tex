@@ -1,0 +1,13 @@
+\begin{functionality}
+    \caption{\space\space\fn{$\binom{2}{1}$-OT$_ {\ell, \lambda}$}()$\longrightarrow$ ($b, m_0, m_1, m_b$)}
+    \label{alg:baseot}
+    \begin{algorithmic}[1]
+        \Descr One-out-of-two base Oblivious Transfer (OT) with random inputs in a batch of size $\ell$, as required by SoftSpokenOT~\cite{softspokenot}.
+        \Players A sender $\party{S}$, and a receiver $\party{R}$.
+        \Require $\ell$, the size of the batch.\\
+                 $\lambda$, the bit-size of the message space (modulo approx. $2^\lambda$).\\
+        \Ensure $\party{S} \leftarrow m_0, m_1 \in \Z_\lambda^\ell$: the sender messages.\\
+                $\party{R} \leftarrow b\in \Z_2^\ell$: choice bits; $m_b \in \Z_\lambda^\ell$: the chosen messages.
+      
+    \end{algorithmic}
+\end{functionality}

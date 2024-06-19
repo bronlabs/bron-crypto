@@ -1,0 +1,41 @@
+% b. Lindell17: [Mateusz]
+% § Differences from the paper:
+%     □ Incomplete DKG
+%     □ Changes to the proofs in DKG
+%     □ Shamir Share instead of additive.
+%     □ Signing differences with simplifications
+% Some points on performance
+
+\subsection{Lindell17}\label{sec:lindell17}
+
+We also support the $2$-out-of-$n$ signing protocol of Lindell17~\cite[Protocol 3.6]{lindell17} realizing the standard ECDSA signature scheme (\ref{alg:ecdsa}) with UC security against $1$ malicious static corruption. We are largely faithful to the original paper, save for two changes:
+\begin{enumerate}
+    \item \textit{Decomposition of private key share.} In the Lindell17's DKG protocol, parties sample a random share $x$ in a range $[q/3,2q/3]$ to make it compatible with the ZK proofs presented in the paper. However, in our use case the $x$ is sampled during the DKG protocol (Protocol \ref{alg:gennarodkg}) in the full range $[0, q)$. To bridge this gap, we reformulate the provided $x$ as a combination of $x_1$ and $x_2$ such that $x = 3x_1 + x_2 \mod q$ and both $x_1$ and $x_2$ are in the specified range $[q/3,2q/3]$, making both of them ZKP-compatible. We resort to Algorithm \ref{alg:decomposetwothirds}, and prove correctness of this decomposition in Appendix~\ref{sec:proof_lindell17dkg}.
+    
+    \begin{algorithm}[H]
+        \caption{$\quad\fndef{DecomposeTwoThirds}_q(x\in \Z_q) \rightarrow (x_1, x_2)$}\label{alg:decomposetwothirds}
+        \begin{algorithmic}[1]
+            \For{$i \in \{0,1,2\}$}
+                \If{$x \in \left[\frac{3k}{18}q, \frac{3(k + 1)}{18}q \right)$} 
+                    \State Sample $\sample{x_1}{\left[\frac{9 + k}{18}q, \frac{9 + (k + 1)}{18}q \right)}$
+                \EndIf
+            \EndFor
+            \For{$i \in \{3,4,5\}$}
+                \If{$x \in \left[\frac{3k}{18}q, \frac{3(k + 1)}{18}q \right)$}
+                    \State Sample $\sample{x_1}{\left[\frac{3 + k}{18}q, \frac{3 + (k + 1)}{18}q \right)}$
+                \EndIf
+            \EndFor
+            \Statex \Return $(x_1, x - 3x_1)$
+        \end{algorithmic}
+    \end{algorithm}
+    
+    As a consequence, instead of storing $c_{key} = \paillier{x}$ in the last step of the protocol, we store $c_{key} = 3 \odot \paillier{x'} \oplus \paillier{x''}$. 
+    \item \textit{Shamir shares of private key}: we use Shamir secret sharing (SSS) instead of multiplicative sharing for the private key. This is a minor change that does not affect the security of the protocol, but it allows us to use the same private key sharing as that defined in the DKG protocol (see \autoref{sec:key_generation}).
+\end{enumerate}
+
+We describe the altered version of Lindell17's DKG in Protocol \ref{alg:lindell17dkg}. 
+The signing protocol is  implemented to faithfully match the original, with a only minor deviation: instead of using multiplicative SS for the private key, we employ additive SS derived from Shamir SS. The protocol is described in Protocol \ref{alg:lindell17sign}.
+
+\input{src/algorithms/threshold_signatures/lindell17_dkg.tex}   
+
+\input{src/algorithms/threshold_signatures/lindell17_sign.tex}

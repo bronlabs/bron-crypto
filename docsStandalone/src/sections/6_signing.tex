@@ -1,0 +1,29 @@
+%------------------------------------------------------------------------------%
+\section{Signing}\label{sec:signing}
+%------------------------------------------------------------------------------%
+
+FROST signing protocol is a two-round algorithm where in the first round, participants generate single-use nonce pairs and commit to them, and in the second round, the commitments are used to produce partial signatures using a Shamir-to-additive share conversion technique \cite{CDI05}. To perform such conversion faster, optimization is possible by precomputing the Lagrange coefficients. The storage cost is ${n \choose t} \times t$ many coefficients. We do not make any assumption on whether this optimization is present and write the pseudocode without this optimization.
+
+Finally, Partial signatures are then aggregated by the $\mathcal{SA}$ and result in the actual signature. For more information on the $\mathcal{SA}$ role, refer to section \ref{roles}.
+
+\subsection{Interactive}\label{sign:interactive}
+The full signing protocol is interactive and is defined in Algorithm \ref{alg:sign:online}.
+
+% \input{src/algorithms/interactive_sign}
+
+\subsection{Non-Interactive with Presignature generation}\label{noninteractive}
+FROST is \textit{semi non-interactive} as it accepts the message only at the final round. Therefore the first round could be processed in batches, making the protocol non-interactive. To discuss the non-interactive variant of FROST further, we will call $(d_i, e_i)$ as generated Algorithm \ref{sign:interactive} Round \ref{alg:sign:online:round1} line \ref{noncepair}, as \textsc{nonce-pair} of participant $P_i$. We will also define a \textsc{presignature} to be $((d_1 \cdot G, e_1 \cdot G), \ldots, (d_n \cdot G, e_n \cdot G))$ which is basically the commitment to the nonce-pair of all parties.
+
+We adopt \hyperref[alg:sign:online:round1]{Round1} of Algorithm \ref{alg:sign:online}. The result, however, has two rounds because all parties need access to the entire presignatures of other parties to maintain an internal mapping from their private nonce-pairs to the corresponding presignatures - recall that we need to maintain such a mapping to compute $R$. It is therefore implied that our preprocessing phase is interactive. It is possible to have a non-interactive preprocessing phase if there exists an append-only, auditable, tamper-evident ledger accessible by all parties. We would not discuss the non-interactive variant any further, as it is not in scope for this primitive.  
+
+Note that the nonce-pairs are private, and each participant should store them securely. The presignatures are public and should be stored in a manner accessible by $\mathcal{PC}$. We do not make any assumptions about where and how preprocessing materials are stored. The presignatures themselves do not require any form of encryption (because we cannot extract the scalar pairs from the presignatures due to the difficulty of the discrete logarithm). 
+
+We also require participants of the non-interactive variant of FROST to record what nonce-pairs were used. It is \textbf{critical} for nonce-pair to be used only once. We do not make any assumption on how the user of this primitive prevents nonce-pair reuse as it is context-dependent.
+
+The non-interactive variant of FROST also requires an additional signing keypair to authenticate nonce-pairs to achieve TS-SUF-4 level of unforgeability \cite{BCKMTZ22}. In our implementation, we will serialize each participant's additional Schnorr public key and consider it the participant's cohort ID (see \ref{cohortconfig}).
+
+Finally, note that, unlike online signing, for simplicity, we require that all participants who are permitted to sign be present during presignature generation. 
+
+%Also, it is recommended to refresh the key once all presignatures are used. For more information on the key refresh process, see section \ref{refresh}. 
+
+% \input{src/algorithms/noninteractive_sign}

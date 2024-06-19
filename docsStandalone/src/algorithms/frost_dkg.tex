@@ -1,0 +1,63 @@
+\begin{breakablealgorithm}
+    \caption{$(x_i, Y, C) \gets (t, n)$ Distributed Key Generation}\label{alg:dkg}
+    \begin{algorithmic}
+        \Require Participants agree on $t, n, G, [p_1,\ldots , p_n]$.
+        \Ensure $x_i$ is securely stored.
+        \Statex
+        \Statex Each participant $P_i$ calls \hyperref[alg:dkg:round1]{Round1}, then \hyperref[alg:dkg:round2]{Round2}, then \hyperref[alg:dkg:round3]{Round3}.
+        \Statex
+        \Procedure{Round1}{} \label{alg:dkg:round1}
+            \begin{enumerate}
+                \item \textcolor{red}{$r_i \overset{\$}{\leftarrow} \mathbb{Z}^{\star}_q$ and store it in memory}.
+                \item \textcolor{teal}{Pass $r_i$ to \hyperref[func:broadcast]{$\mathcal{F}_{broadcast}$}}.
+            \end{enumerate}
+        \EndProcedure
+        \Statex
+        \Procedure {Round2}{$\bm{r} \gets [r_0, \ldots, r_{i-1}, r_{i+1}, \ldots, r_n]$} \label{alg:dkg:round2}
+            \begin{enumerate}
+                \item Append $r_i$ to $\bm{r}$
+                \item Sort $\bm{r}$ based on the lexicographic order participant indices.
+                \item \textcolor{red}{Compute context string $\Phi \gets H(\bm{r})$ and store it in memory.}
+                \item $a_{(i, 0)} \overset{\$}{\leftarrow} \mathbb{Z}^{\star}_q$.
+                \item $[C_{(i, 0)}, \ldots, C_{(i, t-1)}], [x_{(i, 1)},\ldots,x_{(i, n)}] \gets \hyperref[alg:feldmanshare]{FeldmanShare(G, a_{(i, 0)}, t, [p_1,\ldots , p_n])}$
+                \item \textcolor{red}{store $[x_{(i, 1)},\ldots,x_{(i, n)}]$ in memory.}
+                \item \textcolor{red}{$C_i \gets [C_{(i, 0)}, \ldots, C_{(i, t-1)}]$ and store it in memory.}
+                \item $\sigma_i \gets \hyperref[alg:schnorrsign]{SchnorrSign(a_{(i, 0)}, i, \{ \Phi \})}$
+                \item \textcolor{teal}{Pass $(C_i, \sigma_i)$ to \hyperref[func:broadcast]{$\mathcal{F}_{broadcast}$}}.
+                \item \textbf{For} {$j \in [1, n]$} \textbf{do}
+                    \item \quad \textbf{If} {$j \neq i$} \textbf{then}
+                        \item \quad \quad \textcolor{teal}{Pass $(j, x_{(i, j)})$ to \hyperref[func:p2psend]{$\mathcal{F}_{P2PSend}$}.}
+                        \item \quad \quad \textcolor{red}{Securely delete $x_{(i, j)}$ from memory.}
+                \item \textcolor{red}{Securely delete $a_{(i, 0)}$ from memory.}
+            \end{enumerate}
+        \EndProcedure
+        \Statex
+        \Procedure {Round3}{
+        
+            $\quad [C_1, \ldots, C_{i-1}, C_{i+1}, \ldots, C_n],$
+        
+            $\quad [\sigma_1, \ldots, \sigma_{i-1}, \sigma_{i+1}, \ldots, \sigma_n],$ 
+        
+            $\quad [x_{(1, i)}, \ldots, x_{(i - 1, i)}, x_{(i + 1, i)}, \ldots, x_{(n, i)}]$
+        
+        } \label{alg:dkg:round3}
+            \For{$j \in [1, n]$}
+                \If{$j \neq i$}
+                    \State schnorr\_result $\gets \hyperref[alg:schnorrverify]{ShnorrVerify(\sigma_j, j, \{ \Phi \})}$
+                    \If{$\neg$ schnorr\_result}
+                        \State \textcolor{red}{\textsc{ABORT}}
+                    \EndIf
+                    \State feldman\_result $\gets \hyperref[alg:feldmanverify]{FeldmanVerify(G, x_{(j, i)}, C_j)}$
+                    \If{$\neg$ feldman\_result}
+                        \State \textcolor{red}{\textsc{ABORT}}
+                    \EndIf
+                \EndIf
+                \State Compute secret key share $x_i \gets \sum_{j=1}^{n} x_{(j, i)}$
+                \State \textcolor{red}{Securely delete $[x_{(0, i)}, \ldots, x_{(n, i)}]$ from memory.}
+                \State Compute public key $Y = \sum_{j=1}^{n} C_{(j, 0)}$
+                \State $C \gets [C_1, \ldots, C_n]$.
+                \State \Return $(x_i, Y, C)$
+            \EndFor
+        \EndProcedure
+    \end{algorithmic}
+\end{breakablealgorithm}

@@ -1,0 +1,6 @@
+% b. Krypton interactive [Alberto]
+% Default mode of operation. Point to next section and generalize rounds (e.g., message-dependent vs message independent).
+%------------------------------------------------------------------------------%
+\subsection{Interactive Signing}\label{sec:interactive_signing}
+%------------------------------------------------------------------------------%
+The interactive signing mode is the default mode of operation to execute our proposed signing protocols. In this mode, the chosen subset of $t$ parties run the entire protocol without storing any preprocessing tied to the signing protocol. Thus, parties will run all the rounds of the protocol for each signature they want to produce, including both the message-dependent and the message-independent rounds. In this mode, parties will not be able to produce a partial signature without the participation of the other parties.

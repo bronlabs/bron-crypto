@@ -1,0 +1,35 @@
+% Hashing   [Alberto]
+% □ Mention fiat Shamir, choice of the hash, separation of input etc
+% □ HashAES
+% □ Why?
+% □ When to use?
+% □ Mention modeling RO etc
+% □ Talk about length extension attack
+% □ PRNG
+% □ Why?
+% □ When to use?
+% Testing process (prng tester/test vector)
+%------------------------------------------------------------------------------%
+\subsubsection{Hashing}\label{sec:hashing}
+%------------------------------------------------------------------------------%
+
+
+A cryptographic hash function $\fn{H}(m)$ is a one-way function mapping arbitrary inputs, typically of a variable size, to seemingly uncorrelated outputs of a defined size~\cite[Chapter 4]{katz2007introduction}. We refer to the output of a hash function for a given input as its digest. A hash function holds several properties:
+\begin{itemize}
+    \item \textit{Preimage resistance}: Given a digest $d$, it should be difficult to find any input message $m$ such that $d = \fn{H}(m)$. This property is sometimes named "Security Strength" or "One-Way" in the literature.
+    \item \textit{Second-preimage resistance}: for a specified input $m$, it is computationally infeasible to find an input $m'$ producing the same result $\fn{H}(m') = \fn{H}(m)$.
+    \item \textit{Collision resistance}: It should be difficult to find a pair different messages $m_1$ and $m_2$ such that $\fn{H}(m_1) = \fn{H}(m_2)$. This pair is called a \textit{collision}. Due to the birthday attack, a digest size of at least $2n$ bits is required for $n$ bits of collision resistance.
+\end{itemize}
+
+In our protocols, we make extensive use of hash functions to convert interactive protocols into its non-interactive version via several transformations (more on \autoref{sec:proof_dlog}), to $\fn{Commit}$ on a secret value before opening it, and in general as a method to realize Random Oracles (ROs) by employing some agreed-upon fresh random value (the session ID or $sid$, but more of that on \autoref{sec:mpc_agreeonrandom}) alongside other arbitrary tags for domain separation.
+
+Following the official recommendations from NIST, we limit our choice of hash functions mainly to SHA256, SHA512 (as defined in FIPS 180-4~\cite{FIPS1804}), the SHA-3 fixed-output-length hash functions and the Shake variable-output-length family (as defined in FIPS-202~\cite{FIPS202}). Additionally, we implement the hash-to-curve primitives from RFC 9380~\cite{rfc9380}, defining mechanisms to hash arbitrary strings into both fields of any order and elliptic curve points.
+
+\paragraph{$\fnref{TmmoHash}$.} Following a common approach from the MPC literature, we implement a block-cipher-based hash using the Tweakable Matyas-Meyer-Oseas (TMMO) construction of \cite[Section 7.4]{guo2020efficient}. This construction benefits from hardware support of AES\footnote{AES-NI and equivalent CPU instruction sets.} in fixed-key block mode (ECB) to iteratively compute the digest. The main component of this hash function uses a block cipher (AES-128 in our case) as an ideal permutation $\pi$. With an input $x$ of size a single block of $\pi$, and an an output with $n$ blocks, the TMMO construction is defined as:
+\begin{equation} \label{eq:tmmoIter}
+	\vecti{digest}{i} = \fn{TMMO^\pi}(x,i) = \pi(\pi(x)\oplus i)\oplus\pi(x)\quad \forall i \in \range{n}
+\end{equation}
+
+\noindent where $\pi(x)$ is the block cipher using as key the previous output of the TMMO $\vecti{digest}{i-1}$ as prescribed by the Matyas-Meyer-Oseas construction, and employing a fixed Initialization Vector (IV) for the first block. The detailed description is condensed in Algorithm \ref{alg:tmmoHash}. Note that this construction provides both \textit{correlation robustness}\footnote{More concretely, it achieves \textit{tweakable} (admits variable output lengths) \textit{circular correlation robustness}, a strictly stronger notion of correlation robustness. } as proven in \cite{guo2020efficient}, and \textit{preimage resistance} due to its use of AES as a one-way function. We use \fnref{TmmoHash} in the $\fnref{RVOLE}$ protocol.
+
+\input{src/algorithms/primitives/tmmoHash.tex}

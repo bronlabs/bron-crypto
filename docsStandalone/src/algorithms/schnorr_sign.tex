@@ -1,0 +1,13 @@
+\begin{algorithm}
+    \caption{$\sigma = (R, z) \leftarrow SchnorrSign(s, m, params)$}\label{alg:schnorrsign}
+    \begin{algorithmic}[1]
+        \Require $s$ is nonzero.
+        \Statex
+        \State Sample a random nonce $k \overset{\$}{\leftarrow} \mathbb{Z}^{\star}_q$
+        \State Compute the commitment $R \gets k \cdot G \in \mathbb{G}$
+        \State Compute the challenge $c \gets H(R, Y, m, param_1 \mathbin\Vert \ldots \mathbin\Vert param_n)$ for all $param_i \in params$
+        \State Compute the response $z = k + sc \in \mathbb{Z}_q$
+        \State Set the signature $\sigma \gets (R, z)$
+        \State \Return $\sigma$
+    \end{algorithmic}
+\end{algorithm}

@@ -1,0 +1,74 @@
+
+\begin{breakablealgorithm}
+    \caption{$(((d_1, e_1), PS_1), \ldots, ((d_\tau, e_\tau), PS_\tau)) \gets PreGen(\tau)$}\label{alg:pregen}
+    \begin{algorithmic}[1]
+        \Require All $n$ participants are present, have previously performed a key generation, and agree on $\tau > 1$. Each participant $P_i$ has an additional Schnorr keypair $(w_i, W_i)$ where the public key $W_i$ is known by all participants.
+        \Ensure $PS_1, \ldots, PS_\tau$ are persistently stored such that they are accessible by $\mathcal{PC}$, and $(d_1, e_1), \ldots, (d_\tau, e_\tau)$ are securely stored persistently, and $(d_1, e_1), \ldots, (d_\tau, e_\tau)$ are securely deleted from memory after the pregeneration ceremony has ended.
+        \Statex
+        \Statex Each participant $P_i$ calls \hyperref[alg:pregen:round1]{Round1}, then \hyperref[alg:pregen:round2]{Round2}. 
+        \Statex
+        \Procedure {Round1}{} \label{alg:pregen:round1}
+            \For{$j \in [1, \tau]$}
+                \State \textcolor{red}{$(d_i^{(j)}, e_i^{(j)}) \overset{\$}{\leftarrow} \mathbb{Z}^{\star}_q \times \mathbb{Z}^{\star}_q $ and securely store it in memory.}
+                \State $(D_i^{(j)}, E_i^{(j)}) \gets (d_i^{(j)} \cdot G, e_i^{(j)} \cdot G)$
+                \State $\sigma_{D_i^{(j)}} \gets \hyperref[alg:schnorrsign]{SchnorrSign(w_i, D_i^{(j)}, \{i\})}$
+                \State $\sigma_{E_i^{(j)}} \gets \hyperref[alg:schnorrsign]{SchnorrSign(w_i, E_i^{(j)}, \{i\})}$ 
+                \State \textcolor{red}{$PS_{(i, j)} \gets ((D_i^{(j)}, \sigma_{D_i^{(j)}}), (E_i^{(j)}, \sigma_{E_i^{(j)}}))$ and store it in memory.}
+                % \State Records $[((D_i^{(j)}, \sigma_{D_i^{(j)}}), (E_i^{(j)}, \sigma_{E_i^{(j)}}))]$ in $\mathcal{F}_{Ledger}$
+            \EndFor
+        \State \textcolor{teal}{Pass $(PS_{(i, 1)}, \ldots, PS_{(i, \tau)})$ to \hyperref[func:broadcast]{$\mathcal{F}_{broadcast}$}.}
+        \EndProcedure
+        \Statex
+        \Procedure {Round2}{
+        
+                $\quad (PS_{(j, 1)}, \ldots, PS_{(j, \tau)})$ for $j \in [1,n] \land j \neq i$
+                
+            } \label{alg:pregen:round2}
+            \Statex \textbf{Require: } Not any point received is zero.
+            \For{$j \in [1, \tau]$}
+                \Comment{\textcolor{gray}{$PS_j$ is the $j^{th}$ presignature.}}
+                \State $PS_j \gets (PS_{(1, j)}, \ldots, PS_{(n, j)})$
+            \EndFor
+            \State \Return $(((d_1, e_1), PS_1), \ldots, ((d_\tau, e_\tau), PS_\tau))$
+        \EndProcedure
+    \end{algorithmic}
+\end{breakablealgorithm}
+
+The non-interactive signing is just \hyperref[alg:sign:online:round2]{Round2} of the online signing as defined in Algorithm \ref{alg:sign:online}, with one small modification: The function call of \hyperref[alg:sign:online:presig]{\textsc{ProcessNonceCommitmentsOnline}} is changed to that of \hyperref[alg:sign:offline]{\textsc{ProcessPresig}} as defined in Algorithm \ref{alg:sign:offline}.
+
+\begin{breakablealgorithm}
+    \caption{Non-Interactive Signing}\label{alg:sign:offline}
+    \begin{algorithmic}[1]
+        \Require All participants agree on who assumes the role of $\mathcal{PC}$ and participants have done presignature ceremony as defined in Algorithm \ref{alg:pregen} $\tau > 1$ many times and each participant $P_i$ has an additional Schnorr keypair $(w_i, W_i)$ where the public key $W_i$ is known by all participants and everything required by the online signing as defined in Algorithm \ref{alg:sign:online}
+        \Statex
+        \Statex Each participant $P_i$ calls \hyperref[alg:sign:online:round2]{Round2} swapping \hyperref[alg:sign:online:presig]{\textsc{ProcessNonceCommitmentOnline}} with \hyperref[alg:sign:offline:func]{ProcessPresig}. Input messages to \hyperref[alg:sign:offline:func]{ProcessPresig} are supplied by $\mathcal{PC}$.
+        \Statex If $i \in \mathcal{SA}$ then $P_i$ will run \hyperref[alg:sign:online:aggregate]{Aggregate} afterwards.
+        \Statex If $\mathcal{SR}$ is not one of the participants, then $\mathcal{SR}$ should send $m$ to unblock \hyperref[alg:sign:online:round2]{Round2}.
+        \Statex
+        \Function {ProcessPresig}{$PS_k$ for some $1 < k \leq \tau$} \label{alg:sign:offline:func}
+            \Statex \textbf{Require: } $k$ and the corresponding presignature is not used before, and the presignature matches the internal copy $P_i$.
+            \State Parse $PS_k$ as $((D_1^{(k)}, \sigma_{D_1^{(k)}}), (E_1^{(k)}, \sigma_{E_1^{(k)}})), \ldots, ((D_n^{(k)}, \sigma_{D_n^{(k)}}), (E_n^{(k)}, \sigma_{E_n^{(k)}}))$
+            \For{$j \in S$}
+                \If{$\neg $ \hyperref[alg:schnorrverify]{SchnorrVerify($\sigma_{D_j^{(k)}}$, $D_j^{(k)}$, $\{ j \}$)}}
+                    \State \textcolor{red}{\textsc{ABORT}}
+                \EndIf
+                \If{$\neg $ \hyperref[alg:schnorrverify]{SchnorrVerify($\sigma_{E_j^{(k)}}$, $E_j^{(k)}$, $\{ j \}$)}}
+                    \State \textcolor{red}{\textsc{ABORT}}
+                \EndIf
+            \EndFor
+            \If{$d_i^{(k)}$ not in memory $\lor$ $e_i^{(k)}$ not in memory}
+                \State \textcolor{red}{\textsc{ABORT}}
+            \EndIf
+            \If{$d_i^{(k)} \cdot G \neq D_i^{(k)}$}
+                \State \textcolor{red}{\textsc{ABORT}}
+            \EndIf
+            \If{$e_i^{(k)} \cdot G \neq E_i^{(k)}$}
+                \State \textcolor{red}{\textsc{ABORT}}
+            \EndIf
+            \State $\bm{D_\alpha} \gets \left \{ D_\alpha: \alpha \in S \right \}$
+            \State $\bm{E_\alpha} \gets \left \{ E_\alpha: \alpha \in S \right \}$
+            % \State Records $(\bm{D_\alpha}, \bm{E_\alpha})$ to $\mathcal{F}_{Ledger}$
+            \State \Return $(\bm{D_\alpha}, \bm{E_\alpha})$
+        \EndFunction
+    \end{algorithmic}
+\end{breakablealgorithm}

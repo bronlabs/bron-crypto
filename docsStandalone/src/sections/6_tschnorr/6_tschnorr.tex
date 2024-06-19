@@ -1,0 +1,23 @@
+% Why don't we need two protocols in this case and Lindell22 is enough? [Alireza]
+% ○ Why not FROST if it has standard? [Alireza]
+% § Pointless standard (no usable test vectors, no DKG)
+% § Bad proof
+% § Bad assumptions and incorrect author explanation
+% § No UC
+% Lindell22 is a lot less complicated
+\section{Threshold Schnorr}\label{sec:tschnorr}
+
+We select the three-round threshold Schnorr protocol of Lindell22~\cite{L22} as our principal threshold signature protocol for the Schnorr signature scheme (\ref{alg:schnorr}). In doing so, we discard the popular two-round protocol FROST~\cite{komlo2021frost} even though it is standardized, mainly because:
+\begin{itemize}
+    \item The FROST standard~\cite{irtf-cfrg-frost-11} does not include any test vectors (hence there is no simple way to validate an implementation), and it does not provide a DKG protocol.
+    \item The security proof of FROST~\cite{komlo2021frost} is based on
+    non-standard assumptions such as the one-more discrete log assumption and/or idealized generic group model assumptions. In contrast, Lindell22~\cite{L22} is proven secure under the standard ideal/real model paradigm for MPC, with full simulatability for a functionality just computing Schnorr signatures.
+    \item The FROST protocol, alongside other two-round protocols, is not UC-secure~\cite{canetti2001universally} because it relies on a variant of the forking lemma. This penalizes the tightness of the reduction from its security proof to the assumptions, and makes it very tricky and error prone to prove concurrent security~\cite{drijvers2019securitytworound,benhamouda2022insecurityRos}. In contrast, Lindell22~\cite{L22} is UC-secure.
+    \item Lindell22 is significantly simpler than FROST.
+\end{itemize}
+
+
+\paragraph{Why Schnorr an not EdDSA?} In most signature schemes a unique nonce is required for each signature. This nonce is traditionally (e.g., Schnorr, ECDSA) generated randomly for each signature, yet if the random number generator is ever broken, the signature can leak the private key. In contrast, EdDSA chooses the nonce deterministically as the hash of a part of the private key and the message. That being said, while EdDSA features might be advantageous over Schnorr/ECDSA in single-party settings, it is not the case in the multi-party setting: computing a hash in a decentralized setting requires heavy machinery to evaluate arbitrary boolean circuits (e.g., Garbled Circuits). Relying on unique random nonces allows multi-party Schnorr signature protocols to avoid this step, hence we focus on threshold Schnorr signatures in this specification, and leave threshold EdDSA for future work.
+
+
+\input{src/sections/6_tschnorr/6_lindell22}

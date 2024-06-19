@@ -1,0 +1,24 @@
+%------------------------------------------------------------------------------%
+\section{Overview}\label{sec:overview}
+%------------------------------------------------------------------------------%
+
+This document contains the functional specification to implement a $t$-out-of-$n$ protocol realizing Threshold ECDSA \cite{rfc6979} based on DKLS23~\cite{DKLS23}, where $n$ participants jointly generate shares of the secret key, and $t$ out of these $n$ participants can jointly sign a public message under the distributed secret key. The listed protocols have been proven secure against a malicious adversary statically corrupting a dishonest majority of the participants.
+
+The document is organized as follows. We kick off the document with the preliminaries in \autoref{sec:preliminaries}. We describe the primitives required by the T-ECDSA protocols in \autoref{sec:primitive_design}, building up the complete protocols for distributed key generation in \autoref{sec:key_generation} and signing in \autoref{sec:signing}.
+
+%------------------------------------------------------------------------------%
+\subsection{Notation}\label{sec:notation}
+We use plain letters (e.g., $a, k$) for scalars, bold letters to denote vectors (e.g., $\bm{x}$, $\bm{y}$) and capital letters for matrices (e.g., $U, V$) . $\bm{x}_{i}$ denotes the $i$th element of vector $\bm{x}$, $U_{i,j}$ denotes the element in the $i$th row and $j$th column of $U$. $U_{i,\cdot}$ and $U_{\cdot,j}$ indicate, respectively, the $i$th row and the $j$th column. We write $ \bm{a} \cdot \bm{b} = \bm{c}$ to denote the element-wise multiplication of two vectors or matrices of the same size where $\bm{c}_i = \bm{a}_i \bm{b}_i$. $\bm{a}^T \bm{b}$ denotes the inner product between two vectors, and $UV$ denotes the matrix multiplication between $U$ and $V$.
+
+$\party{0},\party{1},\dots$ denote the computing parties in the MPC paradigm. We generalize behavior common to all computing parties by resorting to $\party{j}$, where $j \in \{0,1,\dots\}$. 
+% Similarly, we reserve $\role{descr}$ to indicate an entity in our scenario playing a role with a certain description, e.g., $\role{setup}$ for the entity in charge of the setup, $\role{in_{\bm{x}}}$ for the entity holding the input vector $\bm{x}$. 
+% We write $\party{j} \supseteq \role{descr}$ to denote that party $\party{j}$ takes on a role $\role{descr}$. 
+We use $q\leftarrow 4$ to set a local variable $q$ to 4, and $\party{a}:${\sc Send }$q\Rightarrow \party{b}$ for party $a$ sending value $q$ to party $b$. We note $\mathcal{U}_{[S]}$ as the uniform random distribution in the set $S$, and write $r\sim\mathcal{U}_{[S]}$ to indicate sampling that distribution and assigning the sample to $r$. We employ $\texttt{1}_{x\in A}$ to denote the indicator function (e.g., $\texttt{1}_{x>5} = 1 \;\;\Leftrightarrow\;\; x>5$):
+\vspace*{-6pt}
+\begin{equation*}
+    \texttt{1}_{x\in A} \equiv \texttt{1}_A(x) \triangleq
+        \left\{\begin{matrix}
+            1   \quad \text{if } x \in A,\\
+            0   \quad \text{if } x \notin A,
+        \end{matrix}\right.
+\end{equation*}

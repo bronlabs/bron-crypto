@@ -1,0 +1,13 @@
+\begin{algorithm}
+    \caption{$([x_1,\ldots,x_n], Y, C) \gets TrustedDealerKeyGen(G, q, t, n, [p_1,\ldots , p_n])$}\label{alg:trusteddealer}
+    \begin{algorithmic}[1]
+        \Require $t,n \in \mathbb{Z}_q$ and $0 < t \leq n$ and not any $p_i$ is zero for all $p_i \in [p_1,\ldots , p_n]$ and not any $p_i = p_j$ where $i \neq j$
+        \Ensure Dealer memory is securely erased after returning the results.
+        \Statex
+        \State Receive $s$ from \hyperref[section:eddsa]{$\mathcal{F}_{EdDSA\_KeyGen}$}.
+        \State $[C_0, \ldots, C_{t-1}], [x_1,\ldots,x_n] \gets \hyperref[alg:feldmanshare]{FeldmanShare(G, s, t, [p_1,\ldots , p_n])}$
+        \State $C \gets [C_0, \ldots, C_t{t-1}]$
+        \State $Y \gets s \cdot G$
+        \State \Return $([x_1,\ldots,x_n], Y, C)$
+    \end{algorithmic}
+\end{algorithm}

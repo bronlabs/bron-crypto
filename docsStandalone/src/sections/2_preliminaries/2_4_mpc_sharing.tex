@@ -1,0 +1,44 @@
+% ii. Sharing Module: [Mateusz]
+% 1) Shamir
+%     ® Mention additive share conversion
+% 2) Feldman:
+%     ® Used in trusted dealer
+% 3) Pedersen:
+%     ® Used in dkg
+% 4) Zero share sampling:  [Alireza]
+%     ® Source from DKLs and context to be used
+% Mention it’s n-of-n and different from key refresh, with cite to the relevant key refresh discussed in dkg.
+
+% ---------------------------------------------------------------------------- %
+\subsubsection{Secret Sharing}\label{sec:mpc_sharing}
+% ---------------------------------------------------------------------------- %
+
+Secret sharing refers to methods for distributing a secret $s$ among multiple parties, in such a way that no individual holds any intelligible information about the secret $s$, but when a sufficient number of individuals combine their \textit{shares}, $s$ can be reconstructed unequivocally. In the setting of $t$-out-of-$n$ threshold schemes, there is one dealer and $n$ parties. The dealer generates a share of the secret for each of the parties (a.k.a. \fn{Split} a secret), and any subset of $t$ (for threshold) or more parties can together reconstruct the secret (a.k.a. \fn{Combine} shares) but no group of fewer than $t$ parties can. We use two standard sharing schemes in our protocols, both information-theoretic secure\footnote{Meaning that a subset of $t-1$ shares does not reveal any information about the secret.}:
+
+\begin{itemize}
+    \item The \textit{additive secret sharing} scheme ($\fn{SS}$), a $n$-out-of-$n$ sharing scheme where the secret is an element of a group, and the shares are group elements sampled uniformly at random, such that the secret is the sum of the shares evaluated in that group. Typical groups are $\Z_2$ (binary shares), $\Z_{2^k}$ ($k$-bit integer shares, convenient for simple CPU implementations when $k \in \{32, 64\}$), or a certain field $\F$ (e.g. $\Z_q$ for some prime $q$) as in ECC. \fn{SS} can be naturally extended into a $t$-out-of-$n$ scheme by stacking multiple \fn{SS} instances\footnote{It suffices to run $\binom{n}{t}$ independent $t$-out-of-$t$ $\fn{SS}$ schemes, one for every possible subset of $t$ parties. Note that this is way less efficient than SSS when the number of parties increase, specially for unbalanced ($t \approx n/2$) configurations.}. We describe it formally in Scheme \ref{alg:additive}, stressing that it is implicitly used across many protocols and algorithms in this document.
+    
+    \input{src/algorithms/primitives/additive.tex}
+
+    \item The \textit{Shamir secret sharing} scheme~\cite{shamir} ($\fn{SSS}$) sets a secret field element as the evaluation $\polyx{p}{0}$ at the point $x=0$ of a polynomial $\poly{p}$ with degree $t-1$ with randomly picked coefficients $\coeff{p}{i}$, such that the evaluations $\polyx{p}{i} \;\forall i \ins \range{n}$ are the secret shares. We describe the scheme in Scheme \ref{alg:shamir}.
+    
+    \input{src/algorithms/primitives/shamir.tex}
+
+\end{itemize}
+
+For convenience, we provide algorithms to convert from additive shares to Shamir shares in Algorithm \ref{alg:additivetoshamir}, and vice-versa in Algorithm \ref{alg:shamirtoadditive}.
+
+\input{src/algorithms/primitives/additivetoshamir.tex}
+
+\input{src/algorithms/primitives/shamirtoadditive.tex}
+
+\paragraph{Verifiable Secret Sharing.} Building up on these schemes alongside additional cryptographic primitives, Verifiable Secret Sharing (VSS) schemes allow the dealer to prove that the shares he holds are consistent via a $\fn{Verify}$ function, so that even if the dealer is malicious there is a well-defined secret that the players can later reconstruct\footnote{In contrast, in both SS and SSS the dealer is assumed to be honest.}. We use two VSS schemes in our protocols:
+\begin{itemize}
+    \item The \textit{Feldman VSS} scheme is a VSS scheme uses the Feldman commitment scheme \cite{feldman} based on a combination of SSS with any homomorphic encryption scheme (e.g., ECC, RSA, Paillier), providing computational security to the privacy of the secret to be shared. We describe it in Scheme \ref{alg:feldman}, and use it for trusted-dealer key generation (\autoref{sec:key_generation}). 
+
+    \input{src/algorithms/primitives/feldman.tex}
+    
+    \item The \textit{Pedersen VSS} scheme~\cite{pedersen1991vss} is a more secure VSS scheme that provides information-theoretic privacy of the secret to be shared. It is employed in the Distributed Key Generation (DKG) process in \autoref{sec:key_generation}. We describe it in Scheme \ref{alg:pedersen}.
+\end{itemize}
+
+\input{src/algorithms/primitives/pedersen.tex}

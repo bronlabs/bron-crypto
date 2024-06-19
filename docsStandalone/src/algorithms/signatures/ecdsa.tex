@@ -1,0 +1,34 @@
+\begin{scheme}[H]
+    \caption{$\quad$\fndef{ECDSA}}
+    \label{alg:ecdsa}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            The standardized Elliptic Curve Digital Signature Algorithm~\cite{ecdsa_rfc6979}, for an elliptic curve $\set{E}(\G, q, \g{G}, \g{I})$ with identity $\g{I}$. Following a prior \fnref[f_signature]{KeyGen}, the signer holds a private key $\sk \equiv x \in \Z_q$ and a public key $\pk\equiv\g{Q} \equals x \cdot \g{G}$
+        \end{alginfo} 
+        
+        \Require { $m$, the message to sign. }
+
+        \vspace{-8pt}
+        \AlgFnctZero{\hspace{6pt}\fndef[ecdsa]{Sign}}{}{$x\ins\Z_q,\; m$}{$\sigma$}
+            \State $\assign{d}{\fn{sha256}(m)}$ and $\assign{m'}{(d \mod 2^{|q|})}$, the $|q|$ leftmost bits of $d$
+            \State Sample $\sample{k}{\Z_{q^*}}$
+            \State $\assign{\g{R}}{k \cdot \g{G}}$ and $\assign{r}{\g{R}_x \mod q}$
+            \State Check $\isequal{r}{0}$; if so, go back to step 2
+            \State $\assign{s}{k^{-1}(m' + rx) \mod q}$
+            \State $\assign{v}{(\g{R}_y \mod 2) + 2( \isgeq{\g{R}_x}{q})}$ as the recovery identifier $\in \Z_4$
+            \If{$ \isgt{(-s \mod q)}{s}$} \Commentg{(Normalize to "low $s$ form")}
+                \State $\assign{s}{(-s) \mod q}$
+                \State $\assign{v}{(v + 2) \mod 4}$
+            \EndIf
+            \Statex \Return $\sigma \equals (r, s, v)$ as the signature
+
+
+        \vspace{-8pt}
+        \AlgFnct{\fndef[ecdsa]{Verify}}{}{$\g{Q} \ins \G,\;m,\;\sigma \equals \{r\ins\Z_{q^*}, s\ins\Z_{q^*}, v\ins\Z_{4}\}$}{\textit{valid}}
+            \State $\assign{d}{\fn{sha256}(m)}$ and $\assign{m'}{(d \mod 2^{|q|})}$, the $|q|$ leftmost bits of $d$
+            \State $\assign{\g{R}}{(m's^{-1}) \cdot \g{G} + (rs^{-1}) \cdot \g{Q}}$
+            \State Check if $(\isequal{\g{Q}}{\g{I}})$ or $(\isequal{\g{R}}{\g{I}})$ or $(\isequal{r}{\g{R}_x \mod q})$. If so, $\ABORT$
+            \Statex \Return \textit{valid}
+
+    \end{algorithmic}
+\end{scheme}

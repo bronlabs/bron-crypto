@@ -1,0 +1,71 @@
+% iii. OT  [Alberto]
+% 1) VSOT:
+%     ® Mention used by dkls18
+%     ® Modifications from simplest ot (prepending id to the hashes)
+% 2) COTe (Softspoken):
+%     ® Context (KOS15 problems)
+%     ® Our differences with the paper.
+% Forced Reuse and Fiat Shamir
+
+% ---------------------------------------------------------------------------- %
+\subsubsection{Oblivious Transfer}\label{sec:mpc_ot}
+% ---------------------------------------------------------------------------- %
+An Oblivious Transfer (OT) functionality consists of a two-party interaction where a sender transfers several messages to a receiver, and the receiver chooses a subset of these messages and receives them. Both parties remain oblivious to the other party's actions: the sender is unaware of messages the receiver chose, and the receiver does not learn the content of the messages he didn't choose.
+
+There are multiple flavors of OTs according to the number of messages, choices and the relationship established among the inputs \& outputs. For our OT functionalities, we stick to senders sending two messages and receivers receiving one message. These functionalities are:
+\begin{itemize}
+    \item \textit{Standard}: In the standard $\fn{\binom{2}{1}\mhyphen OT}$ described in Functionality \ref{alg:standard_ot}, the sender inputs $\kappa$-bit messages, and the receiver inputs a choice bit. The receiver then receives the message corresponding to his choice bit.
+    \input{src/algorithms/mpc/F_standardOT.tex}
+    \item \textit{Random}: In the random $\fn{\binom{2}{1}\mhyphen ROT}$ described in Functionality \ref{alg:rand_ot}, the sender doesn't input any messages. Instead, his messages are randomly sampled by the functionality. The relationship between the inputs and outputs is the same as in the standard OT.
+    \input{src/algorithms/mpc/F_randOT.tex}
+    \item \textit{Correlated}: In the correlated $\fn{\binom{2}{1}\mhyphen COT}$ described in Functionality \ref{alg:corr_ot}, a random OT is modified to enforce a mathematical relationship (over a group operation for group $\G$) between the inputs and outputs of the protocol, such that $z_a + z_B = a \cdot x$.
+    \input{src/algorithms/mpc/F_corrOT.tex}
+\end{itemize}
+
+These functionalities are tightly related. In fact, both the standard OT and the Correlated OTs are commonly constructed from a Random OT~\cite{mansy2019endemic}. To achieve standard OT, the sender uses the ROT output messages to one-time-pad encrypt (XOR) his two input messages, and the receiver can only decrypt one of the two encrypted messages. Similarly, a Correlated OT sender maps the ROT output messages into a group $\G$ and uses them to create and send a correlating mask, and the receiver can apply this mask to his ROT output to establish the desired correlation. Based on the techniques from \cite{mansy2019endemic}, we specify the $\fn{ROT}\rightarrowtail \fn{OT}$ composition in Protocol \ref{alg:rot2ot}, and the $\fn{ROT}\rightarrowtail  \fn{COT}$ composition in Protocol \ref{alg:rot2cot}. Consequently, the remaining protocols in this section focus only on the ROT functionality. All protocols are generalized to run a batch of $\xi$ OTs in parallel (with $\xi$ choice bits), and all ROT/OT/COT messages are composed of $\ell$ elements, where each element is either a $\kappa$-bit string (ROT/OT) or an element of a group $\G$ (COT).
+
+\input{src/algorithms/mpc/ROT_to_OT}
+
+
+\input{src/algorithms/mpc/ROT_to_COT}
+
+
+OT protocols can realize these functionalities with or without relying on pre-processing generated in a a setup phase, yielding two classes of OT protocols:
+\begin{itemize}
+    \item \textit{Base OTs} do not rely on a setup phase, yet they require public-key cryptography and thus incur in higher computation costs, higher per-bit communication costs and more rounds to achieve. As such, they are used mostly as a building block in the one-time setup of OT extensions.
+    \item \textit{OT Extensions} rely on the prior execution of a few Base OTs in a setup phase, and \textit{extend} each Base OT by seeding a PRNG with the Base OT outputs and generating a pseudo-random sequence that holds the OT relationship. Semi-honest security is achieved cheaply without communication, whereas malicious security requires some communication. 
+\end{itemize}
+
+We implement three OT protocols in our suite: two Base $\fn{\binom{2}{1}\mhyphen ROT}$ named \textit{Batched Simplest OT}~\cite[Figure 3]{mcquoid2021batching} and \textit{Verifiable Simplest OT}~\cite[Protocol 7]{doerner2018secure}, and a $\fn{\binom{2}{1}\mhyphen ROT}$ Extension named SoftspokenOT~\cite{softspokenot}. 
+
+\paragraph{Verifiable Simplest OT.} We follow Protocol 7 of \cite{doerner2018secure} as a maliciously-secure ROT, skipping the last "Message Transfer" phase to achieve the Random OT. The resulting protocol, depicted in Protocol \ref{alg:vsot} comprises three phases. At first, the sender generates a private/public key pair, and sends the public key to the receiver. In the second phase, the receiver encodes its choice bit and the sender generates two random pads based on the choice bit for the receiver to recover only one. The third phase is the verification necessary to achieve malicious security. We perform some changes to the original protocol:
+
+\begin{itemize}
+    \item We run $\xi \times \ell$ instances of the protocol in parallel to match the sizes of the OT extension functionality.
+    \item To avoid potential issues with ill-defined hash input boundaries and EC point serialization, we employ hash chaining (e.g., HKDF~\cite{rfc5869}) for pad generation (\fn{H} in steps 2.4 and 3.2).
+\end{itemize}
+
+\input{src/algorithms/mpc/VSOT}
+
+\paragraph{Batched Base OT.} We implement Figure 3 of \cite{mcquoid2021batching} as a Base OT protocol achieving endemic security\footnote{That is, while a maliciously corrupted party may influence his output, the resulting protocol outputs preserve the desired relationship (selection / correlation). More info in~\cite{mansy2019endemic}.}. We detail this three-round protocol in Protocol \ref{alg:bbot}. The notation for our protocol follows closely that of an analogous description of a $\fn{\binom{2}{1}\mhyphen ROT}$ from ~\cite[Figure 3]{mcquoid2021batching}. To realize \fn{BBOT} we select:
+\begin{itemize}
+    \item the Key Agreement (KA) protocol from ~\cite[Figure 8]{mcquoid2021batching}, employing Hash2Curve (RFC9380~\cite{rfc9380}) as a random oracle that gives outputs in the curve.
+    \item  the Programmable-Once Pseudo-random Function (POPF) from \cite[Figure 6]{mcquoid2021batching}, making use of two random oracles $H_0$ and $H_1$.
+\end{itemize}
+
+
+
+\input{src/algorithms/mpc/BBOT}
+
+\input{src/algorithms/mpc/softspokenOTe}
+
+\paragraph{SoftspokenOT Extension.} We implement the $\fn{\binom{2}{1}\mhyphen ROT}$ Extension from SoftspokenOT~\cite{softspokenot}. The protocol is depicted in Protocol \ref{alg:rote}. The protocol comprises three rounds, and requires a one-time setup of $\kappa$ batched Base OTs where the Sender/Receiver roles are reversed w.r.t. the ROT extension. To realize this protocol, we the parameters of \cite[Figure 12]{softspokenot} to $p=q_{softspoken}=2$, $k=1$, $\mathcal{C}=Rep(\mathbb{F}_2^n)$. The notation for our protocol follows closely that of an analogous description of a $\fn{\binom{2}{1}\mhyphen ROT}$ from ~\cite[Figure 10]{keller2015actively}. We perform several modifications with respect to ~\cite{keller2015actively}:
+
+
+\begin{enumerate}
+    \item Following the definitions from SoftspokenOT~\cite{softspokenot}, and diverging from Figure 10 of \cite{keller2015actively}, we apply the Fiat-Shamir transformation~\cite{fiatShamirTransform} to convert the interactive coin-flipping exchange for the challenge generation into a non-interactive computation based on the currently exchanged transcript, maintaining UC security of the transformed protocol as corroborated by the authors~\cite[Private communication]{DKLSCommunication}. As a clarifying note, the consistency check of the protocol can be framed as an interactive proof \fn{IP} without a commitment phase (therefore it is not a sigma protocol) and with a single challenge generation. Consequently, it suffices to query the random oracle only once in the Random Oracle Model (ROM), an therefore the \textit{salt} that Fiat-Shamir transformation requires~\cite[Section 14]{snargsBook2024} is immediately achieved by appending the \text{sid} to the transcript at the beginning of the protocol.
+    \item Following the authors' recommendations, we set the statistical security parameter $\sigma = \kappa$ to align the statistical security with the computational security given that we are using the Fiat-Shamir transformation~\cite[Private communication]{DKLSCommunication}.
+    \item We generalize the behavior of the protocol to run $\xi$ instances of the protocol in parallel, each with messages of $\ell$ blocks of $\kappa$ bits each, to accommodate the requirements of the $\fnref{RVOLE}$ protocol.
+\end{enumerate}
+
+Overall, the protocol relies on a one-time setup of $\kappa$ Base OTs whose results are used as persistent seeds for all executions of the protocol. A first \textit{expansion} phase (step 3 of $\mathcal{R}$.\fnref[rote]{Round1} and step 1 of $\mathcal{S}$.\fnref[rote]{Round2}) extends these seeds and establishes the correlation with the receiver's choice bits $x$ (step 4 of $\mathcal{R}$.\fnref[rote]{Round1} and step 2 of $\mathcal{S}$.\fnref[rote]{Round2}). To induce the same choice inside all bits of each message, the receiver repeats his choice bits $\ell$ times ( $\vect{x_{\text{rep}}}$ in step 1 of $\mathcal{R}$.\fnref[rote]{Round1}) and then concatenates $\sigma$ additional random choice bits ($\vect{x_{\sigma}}$) to be consumed as part of the consistency check. A subsequent \textit{consistency check} phase, made non-interactive via the Fiat-Shamir transformation, provides security against a malicious receiver\footnote{The protocol is secure against a malicious sender by design, as the random messages $(\vect{m_0}, \vect{m_1})$ arise from an expansion of the baseOT seeds  $(\vect{k_0}, \vect{k_1})$} (steps 5-6 of $\mathcal{R}$.\fnref[rote]{Round1} and steps 3-4 of $\mathcal{S}$.\fnref[rote]{Round2}). The protocol concludes with a \textit{re-randomization} phase, where both parties break the correlation of their output messages with the Base OT choice bits while maintaining the correlation with the \fnref{ROTe} receiver's choice bits (steps 7-8 of $\mathcal{R}$.\fnref[rote]{Round1} and steps 5-6 of $\mathcal{S}$.\fnref[rote]{Round2}).

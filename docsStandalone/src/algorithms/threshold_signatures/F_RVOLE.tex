@@ -1,0 +1,18 @@
+\begin{functionality}
+    \caption{$\quad{\idealfndef{RVOLE}}_{q, \ell}(\vect{a}) \longrightarrow (b, \vect{c}, \vect{d})$}
+    \label{alg:f_rvole}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            Random Vector Oblivious Linear Evaluation interacting with two parties Alice $\party{A}$ and Bob $\party{B}$.
+        \end{alginfo}
+        \Players{ A sender $\party{A}$, and a receiver $\party{B}$.}
+        \Require $\party{A} \leftarrow \vect{a} \in \Z_q$, a vector of multiplicative shares.
+        \Ensure 
+            $\party{A} \leftarrow \vect{c} \in \Z_q^\ell$, a vector of additive shares.\\
+            $\party{B} \leftarrow (b \in \Z_{q}, \vect{d} \in \Z^\ell_q)$, a choice bit and the additive shares.
+        \vspace{-6pt}
+        \AlgRoundZero{$\idealfn{RVOLE}$}{Sampling}{}{$b, \vect{c}$} Sample and send $\sample{b}{\Z_q}$ to $\party{B}$, sample and send $\sample{\vect{c}}{\Z^\ell_q}$ to $\party{A}$.
+        \vspace{-18pt}
+        \AlgRoundZero{$\idealfn{RVOLE}$}{Multiplication}{$\vect{a}$}{$\vect{d}$} Receive $\vect{a}$ from $\party{A}$, send $\vect{d}$ to $\party{B}$ s.t. $\vecti{c}{i}+\vecti{d}{i} = \vecti{a}{i} \cdot b \;\;\forall i \in \range{\ell}$.
+    \end{algorithmic}
+\end{functionality}
