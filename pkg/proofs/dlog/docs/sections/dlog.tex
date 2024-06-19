@@ -1,0 +1,29 @@
+%------------------------------------------------------------------------------%
+\subsubsection{PoK of the Discrete Log of a number}\label{sec:proof_dlog}
+%------------------------------------------------------------------------------%
+
+The interactive Schnorr protocol~\cite{schnorr} for proving knowledge of the discrete logarithm of a group element is a textbook example of ZKPoK, while also being a prime example of Sigma Protocols. This proof system, realizing $\idealfndef{R_{DL}}$ with relationship $\fndef{R_{DL}}= \{(\g{G}, \g{X}, w): \g{X} \equals \g{G} \cdot w\}$ reads as follows: given a group element $\g{X}$ and a secret $w$, the prover $\mathcal{P}$ must convince the verifier $\mathcal{V}$ that it knows the discrete logarithm of $\g{X}$ with respect to the base point $\g{G}$, i.e., $\g{X} \equals w\cdot \g{G} $. This proof system $\Sigma_{DL}$ works as follows:
+
+\begin{align}\label{eq:schnorr_proof}
+    \begin{split}
+        \text{Commitment:} &  \quad  \sample{a}{\Z_q} \quad  \assign{\g{A}}{\g{G}\cdot a}  \\
+        \text{Challenge:} &  \quad  \sample{e}{\Z_q}  \\
+        \text{Response:} &  \quad  \assign{z}{a + e \cdot w}  \\
+        \text{Verify:} &  \quad  \isequal{\g{X}}{\g{G} \cdot z - \g{A} \cdot e}
+    \end{split}
+\end{align}
+
+Given the prevalence of non-interactive ZKPoK proofs of this kind in our protocols, we describe in Scheme \ref{alg:fischlin} the non-interactive ZKPoK (or NIZKPoK) system resulting from compiling the said Schnorr protocol with the Randomized Fischlin transform~\cite{kondiShelatTransform}.
+Among other uses, we employ this NIZKPoK in our threshold signing protocols to prove that a share of the secret signing key is valid without revealing it.
+
+
+\paragraph{Batching Schnorr Proofs.} There are instances where we need to prove the knowledge of the discrete logarithms of $n$ group elements at once. To this end, we employ the batching technique described in~\cite{gennaro2004batching} to aggregate multiple Schnorr proofs into a single proof. In short, given the relation $\fndef{R_{BatchDL}}(\G, \g{G}) = \left\{\left\{\g{X}_i, w_i \right\}_{i \in \range{n}}: \g{X}_i = \g{G} \cdot w_i \;\; \forall i \ins \range{n}\right\}$ the sigma protocol $\bm{\Sigma}_{\fndef{BatchDL}}$ that constructs such proofs consists of:
+
+\begin{align}\label{eq:batched_schnorr_proof}
+    \begin{split}
+        \text{Commitment:} &  \quad  \sample{a}{\Z_q} \quad  \assign{\g{A}}{\g{G}\cdot a}  \\
+        \text{Challenge:} &  \quad  \sample{e_i}{\Z_q} \;\forall i \in \range{n} \\
+        \text{Response:} &  \quad  \assign{z}{a +  \cdot \Sigma (e_i \cdot w_i)}  \\
+        \text{Verify:} &  \quad  \isequal{\g{G}\cdot z}{  \equals \g{A} + \Sigma (\g{X}_i \cdot e_i)}
+    \end{split}
+\end{align}

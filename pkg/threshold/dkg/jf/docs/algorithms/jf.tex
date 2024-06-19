@@ -1,0 +1,35 @@
+\begin{protocol}
+    \caption{$\quad$ $\fn{Joint\shortminus Feldman}$ \fndef[gennarodkg]{DKG}} \label{alg:gennarodkg}
+    \begin{algorithmic}[1]
+    \begin{alginfo}
+        Maliciously secure threshold DKG protocol from \cite{gennaroDKG} for a group $\G(q,\g{G})$, using $t$-out-of-$n$ \fnref{Pedersen} VSS and a ZKPoK of the discrete log (e.g., \fnref{Fischlin})
+    \end{alginfo}
+    \Players { $\party{1}, \dots,\party{i},\dots,\party{n}$, a set of $n$ share holders.}
+    \Require $sid$, a unique session identifier (e.g., obtained from Protocol \ref{alg:agreeonrandom})
+    \Ensure A public key $\g{Y}$ and $n$ secret shares $x_i$ of the private key $x$.
+    \vspace{-8pt}
+    \AlgRoundZero{\hspace{-2pt}$\party{i}$}{\fndef[gennarodkg]{Round1}}{}{$(\vect{x}_i, \vect{x'}_i, \vect{\g{B}}_i)$}
+       \State Sample $\sample{a_{i,0}}{\Z_q}$
+       \State Run $\assign{(\vect{x}_i,\vect{x'}_i,\vect{\g{C}}_i,\vect{\g{B}}_i)}{\fnref{Pedersen}.\fnref[pedersen]{Split}(a_{i,0})}$ as shares $\vect{x}_i$, blinding shares $\vect{x'}_i$, public key shares $\vect{\g{C}}_i$ and blinded public key shares $\vect{\g{B}}_i$
+       \State Run $\assign{\mathit{\pi}_i}{\{\fnref{Fischlin}.\fn{Prove}(s)\} \; \forall s \inss \{a_{i,0}, \vecti{x}{i,1},\dots, \vecti{x}{i,n}\}}$
+       \State $\sendTo{\party{j}}{\vecti{x}{i,j}, \vecti{x'}{i,j}} \;\; \forall j \ins \range{n}$
+       \State $\idealfnref{Broadcast}(\vect{\g{B}}_i)$
+
+    \vspace{-8pt}
+    \setalglineno{1}
+    \AlgRound{\hspace{-2pt}$\party{i}$}{\fndef[gennarodkg]{Round2}}{$\{\vect{\g{B}}_j\}_{j\in\range{n}}$, $\{\vecti{x}{j,i}, \vecti{x'}{j,i}\}_{j\in\range{n}}$}{$(\vect{\g{C}}_i$, $\vect{\pi})_i$}
+        \State Check $\fnref{Pedersen}.\fnref[pedersen]{Verify}(j, \vecti{x}{j,i}, \vecti{x'}{j,i}, \vect{\g{B}}_j) \;\;\forall j \ins \range{n}$; $\ABORT$ if it fails
+        \State $\assign{x_i}{\sum_{j\in \range{n}} \vecti{x}{j,i}}$ as the private key share of  $\party{i}$
+        \State $\idealfnref{Broadcast}(\vect{\g{C}}_i,\vect{\pi}_i)$
+
+    \vspace{-8pt}
+    \setalglineno{1}
+    \AlgRound{\hspace{-2pt}$\party{i}$}{\fndef[gennarodkg]{Round3}}{$\{\vect{\g{C}}_j\}_{j\in\range{n}}$, $\{\vect{\pi}_j\}_{j\in\range{n}}$}{$(x_i, \g{Y})$}
+        \State Run $\fnref{Fischlin}.\fnref[fischlin]{Verify}(j, \vect{\pi}_j) \;\;\forall j \ins \range{n}$; $\ABORT$ if it fails
+        \State Run $\fnref{Feldman}.\fnref[feldman]{Verify}(j, \vecti{x}{j,i}, \vect{\g{C}}_{j}) \;\;\forall j \ins \range{n}$; $\ABORT$ if it fails
+
+        \State $\assign{\g{Y}}{\sum_{j=1}^{n} \vect{\g{C}}_{(j,0)}}$ as the public key
+        \Statex \Return $(x_i, \g{Y})$
+    \end{algorithmic}
+\end{protocol}
+    

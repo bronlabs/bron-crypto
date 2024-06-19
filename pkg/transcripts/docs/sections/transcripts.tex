@@ -1,0 +1,21 @@
+% ---------------------------------------------------------------------------- %
+\subsubsection{Transcript}\label{sec:mpc_transcript}
+% ---------------------------------------------------------------------------- %
+
+A transcript is a data structure used to hold the public history of a protocol execution, that is, all the messages publicly exchanged among parties. This shared record of interactions is used mainly for two purposes:
+\begin{enumerate}
+    \item To glue together the different phases of our protocols by making subsequent phases depend on the transcript of the previous ones, e.g., to salt/customize the hash function by employing the a succinct representation of transcript (its \textit{state}) as an input. The transcript \textit{state} then  acts as a Common Reference String (CRS).
+    \item To perform the Fiat-Shamir transformation, by replacing the random challenges with a hash of the transcript (e.g., in the Schnorr ZKPoK, but more of this on Section \ref{sec:proofs}).
+\end{enumerate}
+
+In a nutshell, the Fiat-Shamir heuristic provides a way to transform a (public-coin) interactive proof into a non-interactive proof. Intuitively, the idea is to replace a verifier's random challenges with a hash of the prover's prior messages. In general, cryptographic protocols are designed and analyzed in the interactive setting, whereas their implementation is often sought to be non-interactive. However there are many details to be specified: what exactly the prover's messages are, how they are formatted, how to ensure the encoding is unambiguous, how to handle domain separators, how to link challenges between rounds (in multi-round protocols), or how to expand challenges (in the case that a protocol requires more challenge bytes than the digest size), etc. These details open space for security vulnerabilities, such as in the Helios protocol used for IACR elections~\cite{bernhard2012not}, and in the SwissPost/Scytl e-voting system~\cite{haines2020not}.
+
+We present a \fn{Transcript} structure\footnote{We discard the use of Merlin Transcripts~\cite{merlin} based on \textit{strobe}~\cite{strobe}, as they specifically warn that their use is not recommended for production-level environments.} to specify all these details (Scheme \ref{alg:transcript}). Our construction relies on a hash function \fn{H} to chain inputs\footnote{In line with the optimisation described in \cite[Chapter 15]{snargsBook2024}, we perform hash chaining instead of message concatenation to avoid a quadratic blow-up in the inputs to the hash function when applying the Fiat-Shamir transform.} into an internal state $s$, and use this state as seed for a PRNG to extract randomness when needed. In this line, the two functions provided by this structure are:
+\begin{itemize}
+    \item \fn{Append}$(s,l,m)$: embeds a message $m$ with a label $l$ (a.k.a. domain separation tag) into the transcript state $s$ via hash chaining.
+    \item \fn{Extract}$(s,l,k)$: extracts $k$ bits of randomness by seeding a PRNG with the transcript state $s$, using a label $l$ as domain separation tag.
+\end{itemize}
+
+\inputAlgorithm{transcripts/hagrid}{hagrid.tex}
+
+Throughout our protocols, we append all the exchanged messages among parties\footnote{We thus follow the \textit{strong} Fiat-Shamir strategy when transcribing messages (a.k.a. append all the messages). We purposely discard the \textit{weak} Fiat-Shamir strategy where you transcribe only the commitments of PoK, as it often leads to unintended pitfalls.}, we set fixed formats for all the messages being appended to the transcript with unambiguous encoding, we hardcode a unique label for each message to act as domain separator tags, we pass a unified transcript object to link challenges between rounds, and we use the \fn{Extract} function to expand challenges when needed. In addition to its use for Fiat-Shamir transformations, we employ it to glue protocols together with a common source of randomness. We obviate the choices of labels $l$ across all our protocols for simplicity, and we mark the moment a message is appended to the transcript with a subscript $\centerdot$ either on the message (e.g., $\appendT{m}$) or on the assign/sample operators (e.g., $\assignAppendT{m}{42}$ or $\sampleAppendT{m}{\Z_q}$).

@@ -1,0 +1,9 @@
+\subsubsection{Random VOLE} 
+
+DKLs23's signing protocol builds upon a $\idealfn{RVOLE}$ functionality, which we detail below in the honest case\footnote{The extra details for the malicious case are detailed in Functionality 3.5 of \cite{DKLS23}}. We incorporate an additional optimization suggested in Section 5.1 of \cite{DKLS23}.
+
+\inputFunctionality{threshold/mult/dkls23}{rvole.tex}
+
+To realize this functionality, we follow the instructions from \cite{DKLS23} to implement a forced-reuse variant the $\pi^\ell_{2PMul}$ protocol from \cite[Protocol 1]{DKLs19} where $b$ is fixed for all the elements in the batch of size $\ell$ by reusing Bob's OT instances. Protocol \ref{alg:rvole} details the implementation of this variant. Trivially, by providing random input values, this protocol becomes a randomized multiplication protocol. We fix a typo\footnote{Corroborated by the authors~\cite{DKLSCommunication}} from the original paper in our step 2.7, correctly writing $\vecti{\theta}{i,k}$ instead of $\vecti{\theta}{k,k}$
+
+\inputAlgorithm{threshold/mult/dkls23}{rvole.tex}

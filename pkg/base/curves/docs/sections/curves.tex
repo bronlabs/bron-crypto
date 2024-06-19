@@ -1,0 +1,42 @@
+% • Curves:   [Mateusz]
+% □ Mention the names of the curves , and which signing scheme supports what.
+% □ Briefly mention formal verification fiat cryptography etc.
+% For BLS, mention MultiPairing with one fewer miller loop  [Alireza]
+%------------------------------------------------------------------------------%
+\subsection{An overview on Elliptic Curves}\label{sec:curves}
+%------------------------------------------------------------------------------%
+
+An elliptic curve  $\fn{E}(\G, \g{G}, q)$ is a non-singular\footnote{Smooth, contains no \textit{singular} points without properly defined derivatives.} projective\footnote{A curve that can be defined over projections on higher dimension spaces.} algebraic curve by the solutions to an equation in two variables ($x$ and $y$) and a field $\F_{p^k}$. An elliptic curve equation in the context of Elliptic Curve Cryptography (ECC) takes one of several standard forms defined by two non-zero parameters. The most common forms\footnote{it is often possible to map one form to another} are:
+\begin{itemize}
+    \item \textit{Weierstrass}: $y^2 = x^3 + ax + b$, for parameters $a$ and $b$ where $4a^3 + 27b^2 \neq 0$.
+    \item \textit{Montgomery}: $by^2 = x^3 + ax^2 + x$ for parameters $A$ and $B$ where $(a^2 - 4)/b^2 \neq 0$ and non-square in $\F$.
+    \item \textit{Edwards}: $x^2 + y^2 = 1 + dx^2y^2$ for parameter $d$ where $d \notin \{0,1\}$.
+    \item \textit{Twisted Edwards}: $ax^2 + y^2 = 1 + dx^2y^2$ for parameters $a$ and $d$ where $a \neq 0$ and $d \neq 0$.
+\end{itemize}
+
+For ECC, $\F$ is a finite field $GF(p^k)$ of prime characteristic\footnote{You obtain the additive identity (e.g., $0$) when you add $p$ times the multiplicative identity (e.g., $1$).} $p > 3$. In most cases (all but BLS for our supported curves), $\F$ is a prime field ($k=1$). Otherwise, $\F$ is an extension field ($k > 1$). A curve $\fn{E}(\G, \g{G}, q)$ induces an algebraic group of order $q$, defined with:
+\begin{itemize}
+    \item A set of $q$ distinct elements, where each element is a curve point satisfying the curve equation with affine coordinates $(x, y)$ with $x, y \in \F$.
+    \item A group operation $+: \G\times \G \rightarrow \G$, represented as addition without loss of generality, taking two group elements and producing a group element. Indirectly, it forms a scalar multiplication operation $\cdot: \Z_q \times \G \rightarrow \G$ defined as a repeated application of the group operation on an element.
+    \item A distinguished element $\g{I}$, called the identity point, which acts as the identity element for the group operation ($\g{I} + \g{P} = \g{P}\;\; \forall \;\g{P} \ins \G$).
+\end{itemize}
+
+For security reasons, cryptographic applications of elliptic curves generally require using a sub-group $\G$ of prime order $q'$, where $q = c\cdot q'$. In this equation, $c$ is an integer called the \textit{cofactor}. An algorithm that takes as input an arbitrary point on the curve $\fn{E}$ and produces as output a point in the subgroup $\G$ of $\fn{E}$ is said to \textit{clear the cofactor} (a.k.a. an injective mapping to the prime-order sub-group). We stress that careful consideration should be made to exchange curves for another, as not all curves are isomorphic\footnote{There exists bijective mapping between two elliptic curves that preserves the group structure. A \textit{twist} is a special case of these mappings, applicable between curves such as \textit{curve25519}~\cite{rfc8031} and \textit{ed25519}~\cite{eddsa_rfc8032}.} to each other.
+
+\paragraph*{Pairing-based ECC.} Pairing-based cryptography is a form of public-key cryptography that relies on the existence of a bilinear map (a.k.a. a \textit{pairing}) between two additive cyclic groups $\G_1$ \& $\G_2$ of prime order $q$ and a "target" multiplicative group $\G_T$ of the same order. The pairing is a map $e: \G_1 \times \G_2 \rightarrow \G_T$ that satisfies the following properties:
+\begin{itemize}[itemsep=0pt,label=\textendash]
+    \item Bi-linearity: $e(aP, bQ) = e(P, Q)^{ab}\;\;\forall a, b \in \F_{q^*},\; \forall P \ins \G_1, \;\forall Q \ins \G_2$.
+    \item Non-degeneracy: $e(P, Q) \neq 1 \; \forall (P,Q) \ins (\G_1,\G_2)$.
+    \item Computability: $e(P, Q)$ can be efficiently computed $\forall (P,Q) \ins (\G_1,\G_2)$.
+\end{itemize}
+
+\noindent Pairings are commonly categorized into three types, depending on the groups involved: \textit{type I} with $\G_1 = \G_2$, \textit{type II} with $\G_1 \neq \G_2$ but with an efficient homomorphism $\phi: \G_2 \rightarrow \G_1$, and \textit{type III} with $\G_1 \neq \G_2$ and no efficient homomorphism. The most common pairings used in cryptography are the \textit{Weil pairing}, the \textit{Tate pairing} and the \textit{Ate pairing}\footnote{We refer the avid reader to \cite{el2017pairingcrypto} for more detailed information of these pairings.}. The \textit{BLS signature scheme}~\cite{boneh2001short} is a type III pairing-based signature scheme of particular interest to us, as it is used in the \textit{BLS threshold signature scheme}~\cite{boldyreva2003efficient}.
+
+\paragraph*{Supported curves.} Our MPC implementation targets the following curves:
+
+\begin{itemize}
+    \item \textit{secp256k1}~\cite{qu2010sec}: A 256-bit elliptic curve with a group of prime order $q$, widely used in cryptocurrencies (e.g., Bitcoin, Ethereum)
+    \item \textit{p256 (NIST P-256)}~\cite{chen2023recommendations}: Another 256-bit EC with a group of prime order $q$ commonly used in cryptography. It is referenced in the ECDSA signature scheme specification~\cite{ecdsa_rfc6979}.
+    \item \textit{edwards25519}~\cite{eddsa_rfc8032}: A 255-bit EC with a twist (over \textit{Curve25519}), designed to be efficient\footnote{Its group order is very close to a power of two, allowing seamless conversions between uniform bit-strings and group elements with very low bias.} at the cost of employing a group of composite order ($c\neq1$), hence requiring cofactor clearing to operate in the prime subgroup. Not as widely used as K256 or P256, it is referenced in the EdDSA signature scheme.
+    \item \textit{bls12-381}~\cite{irtf_bls_signature_05}: A 381-bit elliptic curve designed for pairing-based BLS signatures~\cite{boneh2001short}, over a field extension $\F_{p^k}$ with extension $k=12$, with a group of prime order.
+\end{itemize}

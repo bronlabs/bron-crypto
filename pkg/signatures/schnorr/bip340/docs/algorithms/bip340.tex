@@ -1,0 +1,48 @@
+
+\begin{scheme}[H]
+    \caption{$\quad$\fndef{BIP340}} \label{alg:bip340}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            The BIP340 signature scheme~\cite{bip340} for \textit{secp256k1}$(\G, q, \g{G}, \g{I})$ and hash function $\fn{sha256}$~\cite{FIPS1804}. Signer holds private key $x\in \Z_q$ and public key $\g{Q} \equals x\cdot \g{G}$
+        \end{alginfo} 
+
+        \Require { $m$, a message to sign. }
+    
+        \vspace{-12pt}
+        \AlgFnctZero{\hspace{6pt}\fndef[bip340]{Sign}}{}{$m,\;x\ins\Z_q,\;\g{Q}\ins\G$}{$\sigma$}
+            \State Sample $\sample{a}{\{0,1\}^{256}}$  \Commentg{(Nonce generation)}
+            \State $\assign{d}{-x}$ if $(\g{Q}_y \mod 2 \neq 0)$ else $\assign{d}{x}$
+            \State $\assign{t}{d \oplus \fn{Sha256}(\str{BIP0340/aux} \concat \str{BIP0340/aux} \concat a)}$
+            \State $\assign{k'}{\fn{Sha256}(\str{BIP0340/nonce} \concat \str{BIP0340/nonce} \concat t \concat \g{Q}_x \concat m)}$
+            \State $\assign{\g{R}}{k' \cdot \g{G}}$  \Commentg{(Commitment)}
+            \State $\assign{e}{\fn{Sha256}(\str{BIP0340/challenge} \!\concat \! \str{BIP0340/challenge}  \!\concat \! \g{R}_x \!\concat\! \g{Q}_x \!\concat\! m)}$ \Commentg{(Challenge)}
+            \State $\assign{k'}{-k'}$ if $(\g{Q}_y \mod 2 \neq 0)$
+            \State $\assign{s}{k' + e \cdot d}$ \Commentg{(Signature composition)}
+            \Statex \Return $\sigma\equals(\g{R},s)$ as the signature
+
+        \vspace{-12pt}
+        \setalglineno{1}
+        \AlgFnctZero{\hspace{34pt}\fndef[bip340]{Verify}}{}{$m,\;\sigma \equals (\g{R}\ins\G,s\ins\Z_{q^*},\;\g{Q} \ins \G)$}{\textit{valid}}
+            \State $\assign{\g{Q}'}{-\g{Q}}$ if  $(\vecti{\g{Q}_y}{i} \mod 2 \neq 0)$, otherwise $\assign{\g{Q}'}{\g{Q}}$
+            \State $\assign{e}{\fn{Sha256}(\str{BIP0340/challenge} \concat \str{BIP0340/challenge} \concat \g{R}_x \concat \g{\g{Q}}_x \concat m)}$
+            \State $\assign{R'}{s \cdot G - e \cdot \g{Q}'}$
+            \State Check if $\isequal{R_x}{\g{R}'_x}$. Otherwise $\ABORT$
+            \Statex \Return \textit{valid}
+            
+        \vspace{-12pt}
+        \setalglineno{1}
+        \AlgFnctZero{\hspace{34pt}\fndef[bip340]{VerifyBatch}$_{\forall i \in \range{n}}$}{}{$\vect{m}\equals\{\!\vecti{m}{i}\!\},\vect{\g{Q}}\equals\{\!\vecti{\g{Q}}{i}\inss \G\!\}, \vect{\sigma} \equals \{\vecti{\g{R}}{i} \inss \G,\vecti{s}{i} \inss \Z^n_{q^*}\}$}{\textit{valid}}
+            \State Set $\assign{\vecti{a}{1}}{1}$ and $\assign{\g{C}}{\g{I}}$
+            \State Sample $\sample{\{\vecti{a}{2},...,\vecti{a}{n}\}}{\Z^{n-1}_{q^*}}$ and compute $\assign{l}{\sum_{i=1}^{n} \vecti{a}{i} \cdot \vecti{s}{i}}$
+            \For {$i \in \range{n}$}
+                \State $\assign{\g{\g{Q}'}}{-\vecti{\g{Q}}{i}}$ if  $(\vecti{\g{Q}_y}{i} \mod 2 \neq 0)$, otherwise $\assign{\g{\g{Q}'}}{\vecti{\g{Q}}{i}}$
+                \State $\assign{e}{\fn{Sha256}(\str{BIP0340/challenge} \!\concat\!  \str{BIP0340/challenge} \!\concat\!  \vecti{{\g{R}_x}}{i} \!\concat\! \vecti{{\g{Q}_x}}{i} \!\concat\! \vecti{m}{i})}$
+                \State $\assign{\g{C}}{\g{C} + a_i \cdot (\g{R}_i + e) \cdot \g{\g{Q}'}}$
+            \EndFor
+            \State Check if $\isequal{\g{C}}{l\cdot \g{G}}$. Otherwise $\ABORT$.
+            \Statex \Return \textit{valid}
+
+% =============================
+        
+    \end{algorithmic}
+\end{scheme}

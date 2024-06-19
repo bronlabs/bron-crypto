@@ -1,0 +1,20 @@
+% • Dlog proof [Alireza]
+% □ Schnorr proofs  
+%     ® Fischlin then randomized Fischlin
+% We’ll Prefer Fischlin randomized and use that everywhere.
+%------------------------------------------------------------------------------%
+\subsubsection{PoK of Discrete Log Equality}\label{sec:proof_dleq}
+%------------------------------------------------------------------------------%
+
+On $\fndef{R_{DLEQ}}(\G, \g{G}_1, \g{G}_2) = \left\{{\g{X}_1, \g{X}_2, w_1, w_2}: \g{X}_1 \equals w_1\g{G}_1  \land \g{X}_2 \equals w_2\g{G}_2  \land w_1 \equals w_2\right\}$, the relation of equality $w_1 \equals w_2$ of the discrete log of two group elements $\g{X}_1\equals w_1\cdot\g{G}_1 $ and $\g{X}_2\equals  w_2\cdot\g{G}_2$ with respect to two base points $\g{G}_1, \g{G}_2$, we can prove it via the sigma protocol $\Sigma_{\text{DLEQ}}$ from Chaum-Pedersen~\cite{galindo2021fully}:
+
+\begin{align}\label{alg:sigma_dleq}
+    \begin{split}
+        \text{Commitment:} & \quad \sample{s}{\Z_q}, \quad \assign{\g{A}_1}{\g{G}_1 \cdot s}, \quad \assign{\g{A}_2}{\g{G}_2 \cdot s} \\
+        \text{Challenge:} & \quad \sample{e}{\Z_q}, \\
+        \text{Response:} & \quad \assign{z}{s + e \cdot w} \\
+        \text{Verify:} & \quad \isequal{\g{G}_1 \cdot z}{\g{A}_1 + \g{X}_1 \cdot e} \quad \text{and}\quad \isequal{\g{G}_2 \cdot z}{\g{A}_2 + \g{X}_2 \cdot e}
+    \end{split}
+\end{align}
+
+Much like the Schnorr protocol, we use our compiler to straightforwardly transform the Sigma Protocol $\Sigma_{\text{DLEQ}}$ into a non-interactive proof. We omit the resulting non interactive proof for brevity.

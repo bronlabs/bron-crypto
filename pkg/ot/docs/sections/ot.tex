@@ -1,0 +1,38 @@
+% ---------------------------------------------------------------------------- %
+\subsubsection{Oblivious Transfer}\label{sec:mpc_ot}
+% ---------------------------------------------------------------------------- %
+An Oblivious Transfer (OT) functionality consists of a two-party interaction where a sender transfers several messages to a receiver, and the receiver chooses a subset of these messages and receives them. Both parties remain oblivious to the other party's actions: the sender is unaware of messages the receiver chose, and the receiver does not learn the content of the messages he didn't choose.
+
+There are multiple flavors of OTs according to the number of messages, choices and the relationship established among the inputs \& outputs. For our OT functionalities, we stick to senders sending two messages and receivers receiving one message. These functionalities are:
+\begin{itemize}
+    \item \textit{Standard}: In the standard $\fn{\binom{2}{1}\mhyphen OT}$ described in Functionality \ref{alg:standard_ot}, the sender inputs $\kappa$-bit messages, and the receiver inputs a choice bit. The receiver then receives the message corresponding to his choice bit.
+    \inputFunctionality{ot}{ot.tex}
+
+    \item \textit{Random}: In the random $\fn{\binom{2}{1}\mhyphen ROT}$ described in Functionality \ref{alg:rand_ot}, the sender doesn't input any messages. Instead, his messages are randomly sampled by the functionality. The relationship between the inputs and outputs is the same as in the standard OT.    
+    \inputFunctionality{ot}{rot.tex}
+
+    \item \textit{Correlated}: In the correlated $\fn{\binom{2}{1}\mhyphen COT}$ described in Functionality \ref{alg:corr_ot}, a random OT is modified to enforce a mathematical relationship (over a group operation for group $\G$) between the inputs and outputs of the protocol, such that $z_a + z_B = a \cdot x$.
+    \inputFunctionality{ot}{cot.tex}
+\end{itemize}
+
+These functionalities are tightly related. In fact, both the standard OT and the Correlated OTs are commonly constructed from a Random OT~\cite{mansy2019endemic}. To achieve standard OT, the sender uses the ROT output messages to one-time-pad encrypt (XOR) his two input messages, and the receiver can only decrypt one of the two encrypted messages. Similarly, a Correlated OT sender maps the ROT output messages into a group $\G$ and uses them to create and send a correlating mask, and the receiver can apply this mask to his ROT output to establish the desired correlation. Based on the techniques from \cite{mansy2019endemic}, we specify the $\fn{ROT}\rightarrowtail \fn{OT}$ composition in Protocol \ref{alg:rot2ot}, and the $\fn{ROT}\rightarrowtail  \fn{COT}$ composition in Protocol \ref{alg:rot2cot}. Consequently, the remaining protocols in this section focus only on the ROT functionality. All protocols are generalized to run a batch of $\xi$ OTs in parallel (with $\xi$ choice bits), and all ROT/OT/COT messages are composed of $\ell$ elements, where each element is either a $\kappa$-bit string (ROT/OT) or an element of a group $\G$ (COT).
+
+
+\inputAlgorithm{ot}{rot2ot.tex}
+
+\inputAlgorithm{ot}{rot2cot.tex}
+
+
+OT protocols can realize these functionalities with or without relying on pre-processing generated in a a setup phase, yielding two classes of OT protocols:
+\begin{itemize}
+    \item \textit{Base OTs} do not rely on a setup phase, yet they require public-key cryptography and thus incur in higher computation costs, higher per-bit communication costs and more rounds to achieve. As such, they are used mostly as a building block in the one-time setup of OT extensions.
+    \item \textit{OT Extensions} rely on the prior execution of a few Base OTs in a setup phase, and \textit{extend} each Base OT by seeding a PRNG with the Base OT outputs and generating a pseudo-random sequence that holds the OT relationship. Semi-honest security is achieved cheaply without communication, whereas malicious security requires some communication. 
+\end{itemize}
+
+We implement three OT protocols in our suite: two Base $\fn{\binom{2}{1}\mhyphen ROT}$ named \textit{Batched Simplest OT}~\cite[Figure 3]{mcquoid2021batching} and \textit{Verifiable Simplest OT}~\cite[Protocol 7]{doerner2018secure}, and a $\fn{\binom{2}{1}\mhyphen ROT}$ Extension named SoftspokenOT~\cite{softspokenot}. 
+
+\inputSection{ot/base/vsot}{vsot.tex}
+
+\inputSection{ot/base/bbot}{bbot.tex}
+
+\inputSection{ot/extension/softspoken}{softspoken.tex}

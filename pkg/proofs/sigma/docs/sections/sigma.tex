@@ -1,0 +1,34 @@
+%------------------------------------------------------------------------------%
+\subsubsection{Sigma Protocols and Non-Interactivity}\label{sec:proof_sigma}
+%------------------------------------------------------------------------------%
+In this context, a Sigma Protocol $\bm{\Sigma}$ is a four-move interactive PoK protocol run between a prover $\mathcal{P}$ and a verifier $\mathcal{V}$ with three distinct communication rounds:
+\begin{enumerate}
+    \item \fndef[sigma]{Commitment}: $\mathcal{P}$ gets $\assign{A}{\fn{Commit}(w)}$ of statement $w$ and sends it to $\mathcal{V}$.
+    \item \fndef[sigma]{Challenge}: $\mathcal{V}$ computes and sends a challenge $e$ to $\mathcal{P}$.
+    \item \fndef[sigma]{Response}: $\mathcal{P}$ computes and sends a response $z$ to $\mathcal{V}$.
+    \item \fndef[sigma]{Verify}: $\mathcal{V}$ checks if the response is \textit{valid}, rejecting the proof otherwise.
+\end{enumerate}
+
+$\bm{\Sigma}$-protocols require heavy interaction, often employing more rounds of communication than the protocols in which they are used. To transform any interactive Sigma Protocol into a non-interactive proof, we develop a \textbf{compiler} that applies one of two well-studied transformations:
+
+\inputAlgorithm{proofs/sigma/compiler/fiatshamir}{fiatshamir.tex}
+
+
+\begin{itemize}
+    \item \textbf{Fiat-Shamir Heuristic}~\cite{fiatShamirTransform}: replaces the challenge $e$ with a hash of the commitment $A$ and the transcript of the previous rounds. This popular non-interactive transformation is used throughout our suite of protocols, such as the Schnorr signing scheme described in Scheme \ref{alg:schnorr} or the consistency check as part of the Oblivious Transfer Extension from Protocol \ref{alg:rote}. Despite its simplicity, the Fiat-Shamir heuristic is not universally composable (UC) secure, as it requires forking to extract the simulator's view. This limitation is addressed by the Fischlin transform, which we describe next. A more recent take on the Fiat-Shamir heuristic can be consulted in \cite{snargsBook2024}. 
+    
+
+    \item \textbf{Fischlin Transform}~\cite{fischlinTransform}: replaces the challenge $e$ with a set of hashes of the commitment $A$ with random values $r$ sampled by the prover $\mathcal{P}$. Contrary to Fiat-Shamir, the Fischlin transform is straight-line extractable without forking, allowing it to be proven UC secure. Despite this, a known limitation of the Fischlin transform is that it applies to a limited class of Sigma Protocols with a “quasi-unique response” property, which doesn't necessarily permit standard compositions for Sigma protocols (e.g. one proof OR another proof). A randomized variant of Fischlin proposed by Kondi-Shelat~\cite[Section 6.4]{kondiShelatTransform} removes this limitation, and thus we select it for our compiler.
+
+    \inputAlgorithm{proofs/sigma/compiler/randfischlin}{fischlin.tex}
+
+\end{itemize}
+
+We apply our compiler to all the proofs in our suite, allowing us to use them in a non-interactive manner in our protocols. As a byproduct, we enhance our compiler to provide composition of proofs:
+
+\begin{itemize}[leftmargin=10pt]
+    \item[] $ \text{AND}(\bm{\Sigma}_1, \bm{\Sigma}_2)$: Straightforwardly achieved by running both proofs in parallel.
+    \item[] $\text{OR}(\bm{\Sigma}_1, \bm{\Sigma}_2)$: Following the composition technique from \cite{damgaard2002sigma,ciampi2016improved}, it requires simulating the proof that is not used by the prover $\mathcal{P}$ while running the proof that is used in a standard fashion.
+\end{itemize}
+
+This composition forces the challenge generation in our proofs to be defined over generic bit-strings in order to generalize over different kinds of challenge spaces (i.e., $\{0,1\}^n$ or $\mathbb{Z}_q$). Additionally, all proofs must provide a \textit{simulator} that can generate a valid transcript without knowing the secret $a$ of $\mathcal{P}$.

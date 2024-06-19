@@ -1,0 +1,12 @@
+\begin{functionality}
+    \caption{$\quad\fn{\binom{2}{1}\mhyphen OT}_{\kappa}(x, m_0, m_1) \longrightarrow (m_x)$}
+    \label{alg:standard_ot}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            One-out-of-two Oblivious Transfer between two parties $\mathcal{S}$ and $\mathcal{R}$.
+        \end{alginfo}
+        \Require $\mathcal{S}\rightarrow m_0, m_1 \ins \Z_2^\kappa$, two messages of bit-length $\kappa$\\
+                 $\mathcal{R}\rightarrow x \ins \Z_2$, a single choice bit.
+        \Ensure $\mathcal{R} \leftarrow m_x \ins \Z_2^\kappa$, a chosen message s.t. $m_x \equals m_1  x + m_0 (1-x)$
+    \end{algorithmic}
+\end{functionality}

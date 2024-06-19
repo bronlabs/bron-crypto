@@ -1,0 +1,12 @@
+We support two threshold ECDSA protocols: \cite{DKLS23} \& \cite{lindell17}. 
+
+
+\paragraph*{Why two protocols?}
+MPC can provide strong security guarantees, if done correctly. Yet, this is an area of active research and it is important to pick the right primitives, with few standard assumptions and battle-tested pieces. But bugs and security vulnerabilities still occur and some bugs require deep analysis that takes time. Depending on where the bug is, it is not always necessary to suspend all company operations to correctly assess the situation. 
+
+Consider the case of well-known \cite{keller2015actively} protocol which was commonly deployed in threshold ECDSA protocols based on OT extension. \cite{softspokenot} invalidated the security proof of KOS15 and demonstrated a concrete attack if the security parameter is a multiple of 20. Less than a month later, \cite{diamond2022security} claimed full proof of security circumventing \cite{softspokenot} and later clarified to be providing asymptotic security for large security parameters. Although Roy did not demonstrate a concrete attack for the actual common security parameters, both \cite{keller2015actively} authors and \cite{diamond2022security} eventually recommended using a different OT extension protocol. For real-world scenarios, this translates into months of work involving R\&D, development, audit and deployment.
+
+It is therefore necessary to have an alternative solution to which one can switch, while the main protocol goes under re-evaluations. We set \cite{DKLS23} as our main t-ECDSA protocol, and \cite{lindell17} as a backup protocol. 
+
+\inputSection{threshold/tsignatures/tecdsa/dkls23}{dkls23.tex}
+\inputSection{threshold/tsignatures/tecdsa/lindell17}{lindell17.tex}

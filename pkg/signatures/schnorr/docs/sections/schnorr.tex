@@ -1,0 +1,30 @@
+% ---------------------------------------------------------------------------- %
+\subsection{Schnorr}\label{sec:schnorr}
+% ---------------------------------------------------------------------------- %
+
+
+The Schnorr signature scheme~\cite{schnorr}, known for its simplicity, is an efficient scheme that generates short signatures based on the hardness of the discrete log assumption. In fact, Schnorr is essentially a ZKPoK of the discrete log of the public key, obtained via the Fiat-Shamir paradigm applied to the classic Schnorr Sigma protocol. The Schnorr scheme provides a meaningful benefit over ECDSA: it allows for native signature aggregation, enabling batch verification. 
+
+We begin by detailing the original Schnorr signature scheme~\cite{schnorr}, covered in Scheme \ref{alg:schnorr}. We can distinguish the following steps:
+\begin{enumerate}
+    \item \textit{Nonce generation}: the signer generates a random nonce.
+    \item \textit{Commitment}: the signer commits to the nonce.
+    \item \textit{Challenge}: the signer creates a challenge via hashing a combination of the public key, the commitment, the message and other parameters.
+    \item \textit{Signature composition}: the signer crafts the final signature.
+\end{enumerate}
+
+\inputAlgorithm{signatures/schnorr}{schnorr.tex}
+
+Multiple variants of the Schnorr signature scheme have been proposed over the years, each with its own version of the steps above:
+ 
+\begin{itemize}
+    \item \fnref{EdDSA}~\cite{eddsa_rfc8032}: Used by cryptocurrencies such as Monero, Stellar or Nano, EdDSA (Edwards Digital Signature Algorithm) is a variant that uses deterministic nonce generation via hashing. It is defined over a twist of \textit{curve25519}, supporting very simple validation of curve points and scalars thanks to a close-to-power-of-two field order.
+    \item \fnref{BIP340}\fn{/BIP341}~\cite{bip340,bip341}: A variant of Schnorr used by Bitcoin, defined over the \textit{secp256k1} curve. It is a simple and efficient scheme that allows for batch verification, with an update (BIP341~\cite{bip341}, a.k.a., \textit{taproot}) that sets a new signature encoding format. 
+    \item \fn{Zilliqa}~\cite{zilliqaWhitepaper}: A variant of Schnorr, also defined over the \textit{secp256k1} curve. It is used by the Zilliqa blockchain. We  omit the details of this variant due to its close resemblance to the original Schnorr scheme.
+\end{itemize}
+
+We detail \fnref{EdDSA} (Scheme \ref{alg:eddsa}) and \fnref{BIP340} (Scheme \ref{alg:bip340}) below, and employ the convention $\fn{Schnorr}.\fndef[schnorr]{Variant}()$ to select a specific variant and carry out the corresponding customized signing steps.
+
+\inputAlgorithm{signatures/schnorr/bip340}{bip340.tex}
+
+\inputAlgorithm{signatures/eddsa}{eddsa.tex}

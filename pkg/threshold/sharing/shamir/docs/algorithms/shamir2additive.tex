@@ -1,0 +1,16 @@
+
+\begin{algorithm}[H]
+    \caption{$\quad\fndef{ShamirToAdditive}_{t,n,\F}(i, \set{X}, \vecti{y}{i})\gets \vecti{x}{i}$} \label{alg:shamirtoadditive}
+    \begin{algorithmic}[1]
+    \Require {
+        $i \ins \range{n}$ as the party index \\
+        $\set{X} \ins \subrange{t}{n}$ as a subset of $t$ indeces \\
+        $\vecti{y}{i} \ins \F$ as a $t$-out-of-$n$ shamir share
+        }
+    \Ensure $\vecti{x}{i} \ins \F$ as the corresponding $t$-out-of-$t$ additive share 
+
+    \State Set $\assign{\set{X'}}{\set{X} \setminus \{i\}}$
+    \State $\assign{\ell_i}{\prod_{j \in \set{X'}} \frac{k}{k-i}}$ as the Lagrange coefficient
+    \Statex \Return $\assign{\vecti{x}{i}}{\vecti{y}{i} \cdot \ell_i}$ as the additive share
+    \end{algorithmic}
+\end{algorithm}

@@ -1,0 +1,61 @@
+% ---------------------------------------------------------------------------- %
+\subsection{Proof of correctness of \fnref{DecomposeTwoThirds}}\label{sec:proof_lindell17dkg}
+% ---------------------------------------------------------------------------- %
+
+\begin{theorem}
+    Let $x$ and $q$ be non-negative integers such that $0 \le x < q$ (i.e. $x \in \Z_q$), then for every $x\in \Z_q$, $\fnref{DecomposeTwoThirds}_q(x)$ yields two integers $x_1, x_2$ such that $x = 3x_1 + x_2 \mod q$ and $\frac{1}{3}q \le x_1 < \frac{2}{3}q$ and $\frac{1}{3}q \le x_2 < \frac{2}{3}q$.
+\end{theorem}
+
+\begin{proof}
+    Let's proceed with the proof by cases depending on the value of $x$ covering the whole range of possible values of $x$. In each case the value of $x_1$ is sampled from a sub-range contained in $\left[\frac{1}{3}q, \frac{2}{3}q \right)$ and it is proved that $x_2 = x - 3x_1 \mod q$ will also be in the range $\left[\frac{1}{3}q, \frac{2}{3}q \right)$
+
+    \begin{case}
+        For each $k \ins \lbrace 0, 1, 2 \rbrace$,
+        if $x \ins \left[\frac{3k}{18}q, \frac{3(k + 1)}{18}q \right)$,
+        let $x_1 \ins \left[\frac{9 + k}{18}q, \frac{9 + (k + 1)}{18}q \right) \subseteq \left[\frac{9}{18}q, \frac{12}{18}q \right) \subseteq \left[\frac{1}{3}q, \frac{2}{3}q \right)$
+        then:
+        \begin{alignat*}{2}
+            \left(\frac{3k}{18}q-3\frac{9 + (k + 1)}{18}q\right) &\le \left(x - 3x_1\right) &&< \left(\frac{3(k + 1)}{18}q-3\frac{9 + k}{18}q \right) \\
+            \frac{3k - 3k - 30}{18}q &\le \left(x - 3x_1\right) &&< \frac{3k + 3 - 3k - 27}{18}q \\
+            -\frac{30}{18}q &\le \left(x - 3x_1\right) &&< -\frac{24}{18}q \\
+            \left(2q - \frac{30}{18}q \right) &\le \left(2q + x - 3x_1\right) &&< \left(2q - \frac{24}{18}q \right) \\
+            \frac{1}{3}q &\le \left(2q + x - 3x_1\right) &&< \frac{2}{3}q \\
+            \frac{1}{3}q &\le \left(x_2 \mod q\right) &&< \frac{2}{3}q
+        \end{alignat*}
+    \end{case}
+
+    \begin{case}
+        For each $k \ins \lbrace 3, 4, 5 \rbrace$,
+        if $x \ins \left[\frac{3k}{18}q, \frac{3(k + 1)}{18}q \right)$,
+        let $x_1 \ins \left[\frac{3 + k}{18}q, \frac{3 + (k + 1)}{18}q \right) \subseteq \left[\frac{6}{18}q, \frac{9}{18}q \right) \subseteq \left[\frac{1}{3}q, \frac{2}{3}q \right)$
+        then:
+        \begin{alignat*}{2}
+            \left(\frac{3k}{18}q-3\frac{3 + (k + 1)}{18}q\right) &\le \left(x - 3x_1\right) &&< \left(\frac{3(k + 1)}{18}q-3\frac{3 + k}{18}q \right) \\
+            \frac{3k - 3k - 12}{18}q &\le \left(x - 3x_1\right) &&< \frac{3k + 3 - 3k - 9}{18}q \\
+            -\frac{12}{18}q &\le \left(x - 3x_1\right) &&< -\frac{6}{18}q \\
+            \left(q - \frac{12}{18}q \right) &\le \left(q + x - 3x_1\right) &&< \left(q - \frac{6}{18}q \right) \\
+            \frac{1}{3}q &\le \left(q + x - 3x_1\right) &&< \frac{2}{3}q \\
+            \frac{1}{3}q &\le \left(x_2 \mod q\right) &&< \frac{2}{3}q
+        \end{alignat*}
+    \end{case}
+
+\end{proof}
+
+% % ---------------------------------------------------------------------------- %
+% \subsection{Our ZKP range proof}\label{sec:rangeproof_lindell17dkg}
+% % ---------------------------------------------------------------------------- %
+
+% As part of the ZKP for $L_{PDL}$ of \cite[Section 6]{lindell17}, the prover must first prove that the value $x$ encrypted inside ciphertext $c\equals \fn{Enc}_{\pk}(x)$ is in $\Z_q$, that is, $\fn{Dec}_{sk}(c) \in [0, q)$. For simplicity of implementation, \cite{lindell17} resorts to a proof that guarantees that $\fn{Dec}_{sk}(c) \in \Z_q$ but is only complete if $\fn{Dec}_{sk}(c) \in \{\frac{q}{3}, \frac{2q}{3}\}$. The author shows that $x$, the secret key share of $\party{1}$, can be sampled as $\sample{x}{\{\frac{q}{3}, \frac{2q}{3}\}}$ without affecting security. However, this proof is not complete for all values of $x \in \Z_q$, limiting the range of possible values for $x$.
+
+% This limitation gains importance when using this key share on of other threshold signing protocols that expect the secret key shares to be sampled from the whole range of $\Z_q$ for their security proofs to hold. To address this limitation, we propose a new ZKP range proof that guarantees that $x$ is in the range $[0, q)$, which is complete for all values of $x \in \Z_q$. We do this by combining two \cite{lindell17} range proofs, showing that $x$ can be decomposed into two integers $x_1, x_2$ such that $x = 3x_1 + x_2 \mod q$ and $\frac{q}{3} \le x_1 < \frac{2q}{3}$ and $\frac{q}{3} \le x_2 < \frac{2q}{3}$.
+
+% Succinctly, our ZK range proof proves that $x \in \Z_q$ where $c = \fn{Enc}_{\pk}(x)$. The \textit{sid} is provided by the application. The underlying proof that we use proves for $x \in \{0, \dots, \frac{q}{3}\}$ that it is in the range $[-\frac{q}{3}, \frac{2q}{3})$. In order to use this proof, we begin by subtracting $\frac{q}{3}$ from $x$. This suffices since we need completeness for $x \in \{\frac{q}{3}, \dots, \frac{2q}{3}\}$ and soundness for $x \in \Z_q$, and the proof that we use works with completeness
+
+
+
+% From each of the elements of our composition we prove that:
+% \begin{enumerate}
+%     \item $x_1 \in \left[\frac{q}{3}, \frac{2q}{3}\right)$ with correctness in that range and soundness for $x_1 \in \Z_q$.
+%     \item $x_2 \in \left[\frac{q}{3}, \frac{2q}{3}\right)$ with correctness in that range and soundness for $x_2 \in \Z_q$.
+% \end{enumerate}
+

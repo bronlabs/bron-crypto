@@ -1,0 +1,11 @@
+% ---------------------------------------------------------------------------- %
+\subsection{ECDSA}\label{sec:ecdsa}
+% ---------------------------------------------------------------------------- %
+
+\inputAlgorithm{signatures/ecdsa}{ecdsa.tex}
+
+The ECDSA (Elliptic Curve Digital Signature Algorithm)~\cite{ecdsa_rfc6979} is a cryptographically secure digital signature scheme, based on elliptic-curve cryptography (ECC). The security of ECDSA, similarly to other ECC signature schemes, is based on  the difficulty of the discrete logarithm problem defined for cyclic groups of EC over finite fields. ECDSA keys and signatures are shorter than in RSA for the same security level, e.g., a 256-bit ECDSA signature has the same security strength like 3072-bit RSA signature. ECDSA is used by some of the most popular cryptocurrencies such as Bitcoin and Ethereum, employing the \textit{secp256k1}~ curve (often in Weierstrass form). We detail it in Scheme \ref{alg:ecdsa}.
+
+In addition, and specific to ECDSA, we provide an algorithm to recover the public key from a message and a signature of said message, detailed in Algorithm \ref{alg:ecdsa_recoverpk}. This algorithm is useful in scenarios where the public key is not transmitted alongside the signature, e.g., in Bitcoin's transaction verification. The algorithm is based on the fact that the $x$-coordinate of the public key can be recovered from the signature and the message, and the $y$-coordinate can be derived from the $x$-coordinate and the curve equation.
+
+\inputAlgorithm{signatures/ecdsa}{ecdsa_recoverpk.tex}

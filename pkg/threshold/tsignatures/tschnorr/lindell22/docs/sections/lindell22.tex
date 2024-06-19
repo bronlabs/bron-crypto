@@ -1,0 +1,24 @@
+%------------------------------------------------------------------------------%
+\subsection{Lindell22}\label{sec:lindell22}
+%------------------------------------------------------------------------------%
+
+We implement the Lindell22 protocol based on the original paper \cite{L22}, and describe it in Protocol \ref{alg:lindell22}. It is a fully simulatable three-round protocol realizing an ideal Schnorr signing functionality with perfect security in the ideal commitment and zero-knowledge hybrid model, that is, proven secure under concurrent composition in the standard model as long as the commitment and zero-knowledge primitives used are UC-secure. To ensure they are UC-secure, we use the hash-based commitments from Section \ref{sec:commitments} with a unique session ID, and the UC-secure discrete-log PoK protocol from Section \ref{sec:proof_dlog}.
+
+\inputAlgorithm{threshold/tsignatures/tschnorr/lindell22/signing}{signing.tex}
+
+We make two modifications to the original protocol:
+\begin{enumerate}
+    \item We add several sign flipping steps to be compatible, upon selection, with the Taproot update of Bitcoin~\cite{wuille2020taproot} or the Zilliqa variant of Schnorr signatures~\cite{zilliqaWhitepaper}.
+    % \item We refresh the secret key shares on each signing by adding zero shares generated with \fnref{Przs}.
+    \item  We perform pre-signature re-randomization for the non-interactive version of this protocol as prescribed by \cite[Section 2.5]{shoup2023manyfaces}, in order to avoid the parties knowing $R$ before the message is known. We derive the re-randomization tweak ($\delta$) via a hash to scalar function~\cite{rfc9380} and introduce a second random group element ($R_2$) as a part of the pre-signature. The pre-signature is thus computed as:
+    \begin{align}\label{eq:schorr_pre-signature}
+        \begin{split}
+        &\assign{\delta}{\fn{Hash2Scalar}(\g{Q}, \g{R}, \g{R}_2, i, m)} \\
+        &\assign{\g{R'}}{\g{R} + \delta \g{R}_2}
+        \end{split}
+    \end{align}
+\end{enumerate} 
+
+    % \assign{\delta}{Hash2Scalar(\pk, R, R_2, idx, m)} //
+    % \assign{R'}{R + \delta R_2}
+        

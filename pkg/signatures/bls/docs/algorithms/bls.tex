@@ -1,0 +1,36 @@
+
+\begin{scheme}[ht]
+    \caption{$\quad\fndef{BLS}$}
+    \label{alg:bls}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            The pairing-based signing scheme from \cite{boneh2001short} over curve BLS 123 81 \cite{irtf_bls_signature_05}, instantiated with short keys \textit{wlog} and with all rogue key prevention schemes. It uses hash functions $\fn{H}_{\G_1}$ and $\fn{H}_{\G_2}$ over $\G_1$ and $\G_2$ respectively. $\mathbf{BLS123\mhyphen81}.\fn{Verify}(m, \sigma)$ is a pairing-based verification function returning $\isequal{(\fn{H}_{\G_1}(m) \times \g{Y}^{-1}) \cdot (\g{G}_1 \times \sigma)}{1}$.
+        \end{alginfo}
+        \Require {A unique session identifier $sid$, a message $\vect{m}$ to be signed, a public key $\g{Y}_i$, and a private key $x_i$ for each signer $\party{i} \;\forall i \in \range{t}$.}
+
+        \Ensure {A partial signature $\sigma_i$ for each player $\party{i} \;\forall i \in \range{t}$ after round 1, and a signature $\sigma$ after aggregation, }
+
+        \vspace{-12pt}
+        \setalglineno{1}
+        \AlgFnctZero{\fndef[bls]{Sign}}{i}{$\vect{m}$}{$\sigma_i$}
+            \State If $\fn{MessageAug}$, $\assign{\vect{m}}{\g{Y}_i \concat  \vect{m} }$.
+            \State If $\fn{PoP}$,  $\assign{\pi_i}{\fn x_i  \times \fn{H}_{\G_2}(\g{Y}_i) }$.
+            
+            \State $\sigma_i \gets x_i \times \fn{H}_{\G_2}(\vect{m})$
+            \State \Return $\sigma_i$ as the partial signature, attaching $\pi_i$ to it if $\fn{PoP}$.
+      
+        \vspace{-12pt}
+        \setalglineno{1}
+        \AlgFnct{\fndef[bls]{Verify}}{}{$\{\sigma_i\}_{i \in \range{t}}$}{\textit{valid}}
+            \For{$i \in \range{t}$}
+                \State If $\fn{Basic}$, ensure all $\vecti{m}{i}$ are unique. $\ABORT$ otherwise.
+                \State If $\fn{PoP}$, check if $\fn{\mathbf{BLS123\mhyphen81}.Verify}(\g{Y}_i, \pi_i)$ is \textit{valid}. $\ABORT$ otherwise.
+                \State If $\fn{MessageAug}$, $\assign{\vect{m}}{\g{Y}_i \concat  \vect{m} }$.
+                \State Check if $\fn{\mathbf{BLS123\mhyphen81}.Verify}(\g{Y}_i, \sigma_i)$ is \textit{valid}. $\ABORT$ otherwise.
+            \EndFor
+            \Statex \Return \textit{valid}.
+
+    %TODO: Batch aggregate verify
+
+    \end{algorithmic}
+\end{scheme}

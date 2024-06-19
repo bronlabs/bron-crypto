@@ -1,0 +1,32 @@
+
+\begin{protocol}[H]
+    \caption{$\quad$\fndef{NthRoot}}\label{alg:nth_root}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            ZKPoK of the value $v$ such that $u=v^n \mod n^2$, from \cite{lindell17}.
+        \end{alginfo} 
+        \Players{A a prover $\mathcal{P}$ and verifier $\mathcal{V}$.}
+        \Require { $\mathcal{P}$: $v$, such that $u = v^n \mod n^2$
+        }
+
+        \vspace{-13pt}
+        \AlgRoundZero{\hspace{6pt}$\mathcal{P}$}{Round1}{}{$r$}
+            \setalglineno{1}
+            \State $\sendTo{\mathcal{V}}{\sample{r}{\Z_{n^2}}}$ as the commitment.
+
+        \vspace{-12pt}
+        \AlgRound{\hspace{-2pt}$\mathcal{V}$}{Round2}{$r$}{$e$}
+            \setalglineno{1}
+            \State $\sendTo{\mathcal{V}}{\sample{e}{{\Z_2^{2\sigma}}}}$ as a random $2\sigma$-bit challenge
+
+        \vspace{-12pt}
+        \AlgRound{\hspace{-2pt}$\mathcal{P}$}{Round3}{$e, v$}{$z$}
+            \setalglineno{1}
+            \State $\sendTo{\mathcal{P}}{\assign{z}{rv^e \mod n^2}}$ as the challenge response 
+
+        \vspace{-12pt}
+        \AlgRound{\hspace{-2pt}$\mathcal{V}$}{Round4}{$z$}{\textit{valid}}
+            \setalglineno{1}
+            \State Check if $\isequal{z^n}{ru^e \mod n^2}$. $\ABORT$ otherwise.
+    \end{algorithmic}
+\end{protocol}

@@ -1,0 +1,33 @@
+\begin{protocol}[H]
+    \caption{$\fn{COT}_{\G,\xi,\ell}$}
+    \label{alg:rot2cot}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            Correlated OT protocol from any \fn{ROT} protocol and a uniform mapper $\fn{H}\!: \Z_2^\kappa \mapsto \G$ (e.g., Hash2Field~\cite{rfc9380} for EC), parametrized by a group $\G$
+        \end{alginfo}
+        \Players a sender $\mathcal{S}$, and receiver $\mathcal{R}$
+        \Require  
+            $\mathcal{S}\!: \vect{a} \in \G^{\xi\by\ell}$, group elements\\
+            $\mathcal{R}\!: \vect{x} \in \Z_2^\xi$, the choice bits
+        \Ensure 
+            $\mathcal{S} \leftarrow \vect{z_A} \ins \G^{\xi\by\ell}$\\
+            $\mathcal{R} \leftarrow \vect{z_B} \ins \G^{\xi\by\ell}$ s.t. $\vecti{z_A}{i,j} + \vecti{z_B}{i,j} \equals \vecti{a}{i,j} \cdot \vecti{x}{i}\;\;\;\forall i\inss \range{\xi} \;\forall j\inss \range{\ell}$
+
+        \vspace{-10pt}
+        \AlgRoundZero{\hspace{-4pt}$\mathcal{S}\&\mathcal{R}$}{RunROT}{$b$}{$\;\mathcal{S}\!: (\vect{r_0}, \vect{r_1});\; \mathcal{R}\!: \vect{r_b}$}
+            \State $\mathcal{S}$ runs $\fn{ROT}_{\xi,\ell}$ as sender, obtaining $\vect{r_0}, \vect{r_1} \in \Z_2^{\xi\by\ell\by\kappa}$
+            \State $\mathcal{R}$ runs $\fn{ROT}_{\xi,\ell}$ as receiver, obtaining $\vect{r_b} \in \Z_2^{\xi\by\ell\by\kappa}$
+   
+        \vspace{-13pt}
+        \setalglineno{1}
+        \AlgRound{\hspace{-4pt}$\mathcal{S}$}{CreateCorrelation}{$\vect{r_0}, \vect{r_1}, \vect{a}$}{$(\vect{\tau})$}
+            \State $\assign{\vect{z_A}}{\{\{\fn{H}(\vecti{r_0}{i,j}) \}_{j\in\range{\ell}}\}_{i\in\range{\xi}}}$
+            \State $\assign{\vect{\tau}}{\{\{\fn{H}(\vecti{r_1}{i,j}) - \vecti{z_A}{i,j} +  \vecti{a}{i,j}\}_{j\in\range{\ell}}\}_{i\in\range{\xi}}}$
+            \State $\sendTo{\mathcal{R}}{\vect{\tau}}$
+            \Statex \Return $\vect{z_A}$
+
+        \vspace{-13pt}
+        \AlgRound{\hspace{-4pt}$\mathcal{R}$}{ApplyCorrelation}{$\vect{\tau}$}{$\vect{z_B}$}
+            \Statex \Return $\assign{\vect{z_B}}{\{\{\vecti{\tau}{i,j} \cdot \vecti{b}{i} - \fn{H}(\vecti{r_b}{i,j})\}_{j\in\range{\ell}}\}_{i\in\range{\xi}}}$        
+    \end{algorithmic}
+\end{protocol}

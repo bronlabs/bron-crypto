@@ -1,0 +1,7 @@
+%------------------------------------------------------------------------------%
+\subsubsection{Paillier}\label{sec:paillier}
+%------------------------------------------------------------------------------%
+
+The Paillier scheme~\cite{paillierEncryption} is a probabilistic asymmetric encryption scheme for public key cryptography. The main feature of the scheme is that its ciphertexts are additive homomorphic: given only the public key $\pk$ and the encryptions $\paillier{m_1}$ and $\paillier{m_2}$ of $m_1$ and $m_2$, one can compute the encryption $\paillier{m_1+m_2}$ of $m_1+m_2$, and given a scalar integer $s$ and encryption $\paillier{m}$ of $m$, one can compute the encryption $\paillier{sm}$ of $sm$. This feature, tied to its lightweight nature \footnote{E.g., Modern Homomorphic Encryption schemes based on lattices are several orders of magnitude more computationally intensive.}, makes it a popular choice for MPC protocols.
+
+\inputAlgorithm{encryptions/paillier}{paillier.tex}

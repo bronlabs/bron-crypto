@@ -1,0 +1,128 @@
+\usepackage{graphicx}
+
+\usepackage{tikz}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+% \usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx} % http://ctan.org/pkg/graphicx
+\usepackage{url}
+\usepackage{bm}       % bold greek letters
+\usepackage{algorithm} 
+\usepackage[noend]{algorithmic}[1]
+\usepackage{tcolorbox}
+\usepackage{balance}
+\usepackage{diagbox} % Diagonal split of table cells
+\usepackage{multirow} % Multirow table cells
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{footnote}
+\usepackage{footmisc}
+\usepackage{tablefootnote} % Footnotes in tables with \tablefootnote
+\usepackage{mathtools}  % \mathclap to compress formula
+\RequirePackage{fix-cm}
+
+% \renewcommand{\thefootnote}{\fnsymbol{footnote}} % Footnote symbols
+
+% Circled numbers, command \circled{1}
+\usepackage{tikz}
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+            \node[shape=circle,draw,inner sep=1pt] (char) {#1};}}
+
+
+%% custom paragraph that stands out more
+\newcommand{\fakeparagraph}[1]{\vskip 0pt\noindent\textbf{#1 }}
+
+
+\newcommand{\party}[1]{\textsf{P}_{#1}}
+\newcommand{\role}[1]{\textsf{R}_{#1}}
+
+% Math operators
+\makeatletter
+\newsavebox{\@brx}
+\newcommand{\llangle}[1][]{\savebox{\@brx}{\(\m@th{#1\langle}\)}%
+  \mathopen{\copy\@brx\mkern2mu\kern-0.9\wd\@brx\usebox{\@brx}}}
+\newcommand{\rrangle}[1][]{\savebox{\@brx}{\(\m@th{#1\rangle}\)}%
+  \mathclose{\copy\@brx\mkern2mu\kern-0.9\wd\@brx\usebox{\@brx}}}
+\makeatother
+
+\newcommand{\encr}[1]{\left \langle {#1} \right \rangle_{\mathbf{pub}}} 
+\newcommand{\angled}[1]{\left \langle {#1} \right \rangle} 
+\newcommand{\dangled}[1]{\llangle {#1} \rrangle} 
+\newcommand{\bracked}[1]{\left[ {#1} \right]} 
+\newcommand{\dbracked}[1]{ \llbracket {#1} \rrbracket} 
+
+\newcommand{\bxor}[0]{\! \oplus \!}
+\newcommand{\band}[0]{\! \wedge \!}
+\newcommand{\toint}[1]{\ensuremath{\lfloor#1\rceil_{\mathbb{Z}_{2^n}}}}
+
+%%> ROTATING COLUMNS: https://tex.stackexchange.com/questions/32683/
+\usepackage{xparse}   % http://ctan.org/pkg/xparse
+% Rotation: \rot[<angle>][<width>]{<stuff>}
+\NewDocumentCommand{\rot}{O{45} O{1em} m}{\makebox[#2][l]{\rotatebox{#1}{#3}}}%
+
+% Notes, Missing references and TODOs				
+\newcommand{\notte}[1]{\color{red}(#1!)\color{black}}
+\newcommand{\missref}[1][]{\notte{[REF#1]}}
+\newcommand{\todo}[1]{\textcolor{orange}{[Todo: #1]}}
+
+% Math Environments
+\renewcommand{\algorithmicrequire}{\textbf{Players:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
+\newcommand{\PARAMS}{\hspace{-0.55cm}\textbf{Input:}\space\space}
+
+\newcounter{protocol}
+\newenvironment{protocol}[1][htb]{%
+  \floatname{algorithm}{Protocol}% Update algorithm name
+  \begin{algorithm}[#1]%
+}{\end{algorithm}}
+
+\newcounter{algo}
+\newenvironment{algo}[1][htb]{%
+  \renewcommand{\algorithmicrequire}{\textbf{Inputs:}}
+  \renewcommand{\algorithmicensure}{\textbf{Output:}}
+  \floatname{algorithm}{Algorithm}% Update algorithm name
+  \begin{algorithm}[#1]%
+}{\end{algorithm}}
+
+
+\makeatletter
+\newcounter{simulator}
+\newenvironment{simulator}[1][htb]{%
+  \let\c@algorithm\c@simulator
+    \renewcommand{\ALG@name}{Simulator}% 
+   \begin{algorithm}[#1]%
+  }{\end{algorithm}}
+\makeatother
+
+% INDENTATOR
+% Environment to indent right content based on first parameter, then indent the first line of the content by the second parameter.
+% e.g., indenting the first line by 20pt and the rest by 30pt:
+%      \begin{indent}{30pt}{-10pt} 
+%           My Paragraph.
+%      \end{indent}
+\newenvironment{indentator}[2]
+  {%
+    \setlength{\leftskip}{#1}
+    \bgroup
+    \setlength{\parindent}{#2}
+  }
+  {
+    \egroup
+    \setlength{\leftskip}{0pt}
+  }
+
+
+% Simulator for real-ideal world proof
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+
+
+\newcommand\blfootnote[1]{%
+  \begingroup
+  \renewcommand\thefootnote{}\footnote{#1}%
+  \addtocounter{footnote}{-1}%
+  \endgroup
+}

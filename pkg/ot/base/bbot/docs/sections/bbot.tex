@@ -1,0 +1,7 @@
+\paragraph{Batched Base OT.} We implement Figure 3 of \cite{mcquoid2021batching} as a Base OT protocol achieving endemic security\footnote{That is, while a maliciously corrupted party may influence his output, the resulting protocol outputs preserve the desired relationship (selection / correlation). More info in~\cite{mansy2019endemic}.}. We detail this three-round protocol in Protocol \ref{alg:bbot}. The notation for our protocol follows closely that of an analogous description of a $\fn{\binom{2}{1}\mhyphen ROT}$ from ~\cite[Figure 3]{mcquoid2021batching}. To realize \fn{BBOT} we select:
+\begin{itemize}
+    \item the Key Agreement (KA) protocol from ~\cite[Figure 8]{mcquoid2021batching}, employing Hash2Curve (RFC9380~\cite{rfc9380}) as a random oracle that gives outputs in the curve.
+    \item  the Programmable-Once Pseudo-random Function (POPF) from \cite[Figure 6]{mcquoid2021batching}, making use of two random oracles $H_0$ and $H_1$.
+\end{itemize}
+
+\inputAlgorithm{ot/base/bbot}{bbot.tex}

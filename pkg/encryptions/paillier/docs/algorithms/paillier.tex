@@ -1,0 +1,43 @@
+
+\begin{scheme}[H]
+    \caption{$\quad\fndef{Paillier}$} \label{alg:paillier}
+    \begin{algorithmic}[1]
+        \begin{alginfo}
+            An additively homomorphic, probabilistic public-key encryption scheme based on the difficulty of computing discrete logarithms. The scheme is parameterized by the bit-length $k$ of the underlying primes $p$ and $q$.
+        \end{alginfo}
+        \vspace{-12pt}
+
+        \AlgFnct{\hspace{4pt}\fndef[paillier]{KeyGen}}{k}{}{$(\sk, \pk)$}
+            \State Choose\footnotemark two $k$-bit prime numbers $p$ and $q$.
+            \State $\assign{n}{pq}$, the public key.
+            \State $\assign{\lambda}{\fn{lcm}(p - 1, q - 1)}$.
+            \State $\assign{\mu}{\fn{quot}((n\!+\!1)^\lambda \!\mod n^2)^{-1} \!\mod n}$. $\ABORT$ if no inverse.
+            \Statex \Return $\sk\equiv(\lambda, \mu)$ and $\pk\equiv n$ as secret and public key respectively.
+        \vspace{-12pt}
+
+        \AlgFnct{\fndef[paillier]{Encrypt}}{}{$\pk, m \in \Z_n$}{$\paillier{m}$}
+            \setalglineno{1}
+            \State Sample $\sample{r}{\Z_n^{*}}$ s.t. $\gcd(r, n) = 1$.
+            \State $\paillier{m} \leftarrow r^n(n + 1)^m \mod n^2$, the ciphertext of $m$.
+            \Statex \Return  $c\equiv \paillier{m}$
+        \vspace{-12pt}
+
+        \AlgFnct{\fndef[paillier]{Decrypt}}{}{$\pk, \sk, c \in \Z_{n^2}^{*}$}{$m$}
+            \setalglineno{1}
+            \State $m \leftarrow \fn{quot}(c^{\lambda} \mod n^2)  \mu \mod n$, the decryption of $\paillier{m}$.
+            \Statex \Return $m$.
+        \vspace{-12pt}
+        
+        \AlgFnct{\fndef[paillier]{Add}}{}{$\pk,\paillier{m_1} \equiv  c_1\in \Z_{n^2}^{*}, \paillier{m_2}\equiv c_2 \in \Z_{n^2}^{*}$}{$\paillier{m_1+m_2}$}
+            \setalglineno{1}
+            \State $\assign{c_{sum}}{c_1  c_2 \mod n^2}$.
+            \Statex \Return $c_{sum}\equiv\paillier{m_1 + m_2}{n}$.
+        \vspace{-12pt}
+
+        \AlgFnct{\fndef[paillier]{ScalarMultiply}}{}{$\pk$, $s \in \Z_n, \paillier{m}\equiv c\in \Z_{n^2}^{*}$}{$\paillier{s \cdot m}$}
+            \setalglineno{1}
+            \State $c_{mult} \leftarrow (c (n + 1)^s) \mod n^2$.
+            \Statex \Return $c_{mult} \equiv \paillier{s \cdot m}{n}$.
+    \end{algorithmic}
+\end{scheme}
+\footnotetext{In practice we resort to a secure prime number generator from standard libraries. Note that $\gcd(pq, (p - 1)(q - 1)) = 1$ holds because both primes are of equal length.}
