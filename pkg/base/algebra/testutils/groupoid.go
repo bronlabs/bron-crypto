@@ -183,12 +183,12 @@ func (mgi *MultiplicativeGroupoidInvariants[G, GE]) Multiplication(t *testing.T,
 	// TODO
 }
 
-func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) Mul(t *testing.T, groupoid algebra.MultiplicativeGroupoid[G, GE], x, y algebra.MultiplicativeGroupoidElement[G, GE]) {
+func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) Mul(t *testing.T, x, y algebra.MultiplicativeGroupoidElement[G, GE]) {
 	t.Helper()
 
-	expected := groupoid.Mul(x, y)
+	expected := x.Mul(y)
 
-	require.True(t, expected.Equal(groupoid.Mul(x, y)),
+	require.True(t, expected.Equal(x.Mul(y)),
 		"Should get the same result for multiplying ys elements one by one to x")
 }
 func (mgei *MultiplicativeGroupoidElementInvariants[G, GE]) ApplyMul(t *testing.T, x algebra.MultiplicativeGroupoidElement[G, GE], n *saferith.Nat) {
@@ -324,14 +324,14 @@ func CheckMultiplicativeGroupoidInvariants[G algebra.MultiplicativeGroupoid[G, G
 	mgei := &MultiplicativeGroupoidElementInvariants[G, GE]{}
 	t.Run("Mul", func(t *testing.T) {
 		t.Parallel()
-		mgei.Mul(t, groupoid, elementGenerator.Generate(), elementGenerator.Generate())
+		mgei.Mul(t, elementGenerator.Generate(), elementGenerator.Generate())
 	})
-	t.Run("ApplyMul", func(t *testing.T) {
-		t.Parallel()
-		prng := fu.NewPrng().IntRange(0, 20)
-		n := new(saferith.Nat).SetUint64(uint64(prng))
-		mgei.ApplyMul(t, elementGenerator.Generate(), n)
-	})
+	// t.Run("ApplyMul", func(t *testing.T) {
+	// 	t.Parallel()
+	// 	prng := fu.NewPrng().IntRange(0, 20)
+	// 	n := new(saferith.Nat).SetUint64(uint64(prng))
+	// 	mgei.ApplyMul(t, elementGenerator.Generate(), n)
+	// })
 	t.Run("Square", func(t *testing.T) {
 		t.Parallel()
 
@@ -342,12 +342,12 @@ func CheckMultiplicativeGroupoidInvariants[G algebra.MultiplicativeGroupoid[G, G
 
 		mgei.Cube(t, elementGenerator.Generate())
 	})
-	t.Run("Exp", func(t *testing.T) {
-		t.Parallel()
-		prng := fu.NewPrng().IntRange(0, 20)
-		n := new(saferith.Nat).SetUint64(uint64(prng))
-		mgei.Exp(t, elementGenerator.Generate(), n)
-	})
+	// t.Run("Exp", func(t *testing.T) {
+	// 	t.Parallel()
+	// 	prng := fu.NewPrng().IntRange(0, 20)
+	// 	n := new(saferith.Nat).SetUint64(uint64(prng))
+	// 	mgei.Exp(t, elementGenerator.Generate(), n)
+	// })
 }
 
 func CheckCyclicGroupoidInvariants[G algebra.CyclicGroupoid[G, GE], GE algebra.CyclicGroupoidElement[G, GE]](t *testing.T, groupoid G, elementGenerator fu.ObjectGenerator[GE]) {

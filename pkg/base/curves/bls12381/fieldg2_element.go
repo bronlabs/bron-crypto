@@ -283,9 +283,11 @@ func (e *BaseFieldElementG2) Triple() curves.BaseFieldElement {
 
 func (e *BaseFieldElementG2) Mul(rhs algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
 	n, ok := rhs.(*BaseFieldElementG2)
+	
 	if !ok {
 		panic("not a bls12381 G2 Fp2 element")
 	}
+
 	return &BaseFieldElementG2{
 		V: new(bimpl.Fp2).Mul(e.V, n.V),
 	}
