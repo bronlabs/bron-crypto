@@ -7,12 +7,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased/simulator"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 )
 
-func Test_AgreeOnRandomRoundBasedRunner(t *testing.T) {
+func Test_HappyPathRandomRoundBasedRunner(t *testing.T) {
 	t.Parallel()
 
 	participants, err := testutils.MakeParticipants(3)
@@ -22,7 +22,7 @@ func Test_AgreeOnRandomRoundBasedRunner(t *testing.T) {
 	results := make([][]byte, len(participants))
 	errChan := make(chan error)
 	go func() {
-		router := roundbased.NewSimulatorMessageRouter(identities)
+		router := simulator.NewEchoBroadcastMessageRouter(identities)
 		var errGrp errgroup.Group
 		for i, participant := range participants {
 			errGrp.Go(func() error {

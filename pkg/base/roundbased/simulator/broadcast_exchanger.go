@@ -1,49 +1,51 @@
-package roundbased
+package simulator
 
 import (
 	"sync"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
+	rb "github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-type SimulatorBroadcastExchanger[P any] struct {
+type broadcastExchanger[P any] struct {
 	participants map[string]types.IdentityKey
-	buffer       []*SimulatorExchange[P]
+	buffer       []*exchange[P]
 	mutex        sync.Mutex
 	cond         *sync.Cond
 }
 
-func NewSimulatorBroadcastExchanger[P any](participants ds.Set[types.IdentityKey]) *SimulatorBroadcastExchanger[P] {
+func NewBroadcastExchanger[P any](participants ds.Set[types.IdentityKey]) rb.BroadcastExchanger[P] {
 	parties := make(map[string]types.IdentityKey)
 	for iter := participants.Iterator(); iter.HasNext(); {
 		p := iter.Next()
 		parties[p.String()] = p
 	}
 
-	exchanger := &SimulatorBroadcastExchanger[P]{
+	exchanger := &broadcastExchanger[P]{
 		participants: parties,
-		buffer:       make([]*SimulatorExchange[P], 0),
-		mutex:        sync.Mutex{},
+		buffer:       []*exchange[P]{},
+		// mutex is stored here by value, so it is not accidentally copied
+		mutex: sync.Mutex{},
 	}
 	exchanger.cond = sync.NewCond(&exchanger.mutex)
 
 	return exchanger
 }
 
-func (r *SimulatorBroadcastExchanger[P]) Send(me types.IdentityKey, message P) {
+func (r *broadcastExchanger[P]) Send(me types.IdentityKey, message P) {
 	r.cond.L.Lock()
 	defer r.cond.L.Unlock()
 
-	r.buffer = append(r.buffer, &SimulatorExchange[P]{
+	r.buffer = append(r.buffer, &exchange[P]{
 		from:    me.String(),
 		payload: message,
 	})
 	r.cond.Broadcast()
 }
 
-func (r *SimulatorBroadcastExchanger[P]) Receive(me types.IdentityKey) ds.Map[types.IdentityKey, P] {
+func (r *broadcastExchanger[P]) Receive(me types.IdentityKey) ds.Map[types.IdentityKey, P] {
 	r.cond.L.Lock()
 	defer r.cond.L.Unlock()
 	for !r.hasAllMessages(me) {
@@ -61,7 +63,7 @@ func (r *SimulatorBroadcastExchanger[P]) Receive(me types.IdentityKey) ds.Map[ty
 	return result
 }
 
-func (r *SimulatorBroadcastExchanger[P]) hasAllMessages(me types.IdentityKey) bool {
+func (r *broadcastExchanger[P]) hasAllMessages(me types.IdentityKey) bool {
 main:
 	for _, participant := range r.participants {
 		if participant.Equal(me) {

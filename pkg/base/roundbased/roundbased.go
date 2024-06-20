@@ -51,17 +51,15 @@ func NewUnicastRound[U any](me types.IdentityKey, round int, router MessageRoute
 		in <- result
 	}()
 	go func() {
-		select { //nolint:gosimple // changes semantics
-		case result := <-out:
-			sent := hashmap.NewHashableHashMap[types.IdentityKey, any]()
-			for iter := result.Iterator(); iter.HasNext(); {
-				e := iter.Next()
-				party := e.Key
-				payload := e.Value
-				sent.Put(party, payload)
-			}
-			exchange.Send(me, sent)
+		result := <-out
+		sent := hashmap.NewHashableHashMap[types.IdentityKey, any]()
+		for iter := result.Iterator(); iter.HasNext(); {
+			e := iter.Next()
+			party := e.Key
+			payload := e.Value
+			sent.Put(party, payload)
 		}
+		exchange.Send(me, sent)
 	}()
 
 	return &UnicastRound[U]{
@@ -97,10 +95,8 @@ func NewBroadcastRound[B any](me types.IdentityKey, round int, router MessageRou
 		in <- result
 	}()
 	go func() {
-		select { //nolint:gosimple // changes semantics
-		case result := <-out:
-			exchange.Send(me, result)
-		}
+		result := <-out
+		exchange.Send(me, result)
 	}()
 
 	return &BroadcastRound[B]{

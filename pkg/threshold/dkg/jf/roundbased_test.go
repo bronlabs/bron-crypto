@@ -8,7 +8,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased/simulator"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
@@ -16,7 +16,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
 
-func Test_RoundBasedRunner(t *testing.T) {
+func Test_HappyPathRoundBasedRunner(t *testing.T) {
 	t.Parallel()
 
 	const n = 3
@@ -30,7 +30,7 @@ func Test_RoundBasedRunner(t *testing.T) {
 	participants, err := testutils.MakeParticipants([]byte(sessionId), protocol, identities, cn, nil)
 	require.NoError(t, err)
 
-	router := roundbased.NewSimulatorMessageRouter(protocol.Participants())
+	router := simulator.NewEchoBroadcastMessageRouter(protocol.Participants())
 	signingKeyShares := make([]*tsignatures.SigningKeyShare, n)
 	publicKeyShares := make([]*tsignatures.PartialPublicKeys, n)
 	errChan := make(chan error)

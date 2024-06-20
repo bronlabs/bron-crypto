@@ -1,38 +1,40 @@
-package roundbased
+package simulator
 
 import (
 	"sync"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
+	rb "github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-type SimulatorUnicastExchanger[P any] struct {
+type unicastExchanger[P any] struct {
 	participants map[string]types.IdentityKey
-	buffer       map[string][]*SimulatorExchange[P]
+	buffer       map[string][]*exchange[P]
 	mutex        sync.Mutex
 	cond         *sync.Cond
 }
 
-func NewSimulatorUnicastExchanger[P any](participants ds.Set[types.IdentityKey]) *SimulatorUnicastExchanger[P] {
+func NewUnicastExchanger[P any](participants ds.Set[types.IdentityKey]) rb.UnicastExchanger[P] {
 	parties := make(map[string]types.IdentityKey)
 	for iter := participants.Iterator(); iter.HasNext(); {
 		p := iter.Next()
 		parties[p.String()] = p
 	}
 
-	router := &SimulatorUnicastExchanger[P]{
+	router := &unicastExchanger[P]{
 		participants: parties,
-		buffer:       make(map[string][]*SimulatorExchange[P]),
-		mutex:        sync.Mutex{},
+		buffer:       make(map[string][]*exchange[P]),
+		// mutex is stored here by value, so it is not accidentally copied
+		mutex: sync.Mutex{},
 	}
 	router.cond = sync.NewCond(&router.mutex)
 
 	return router
 }
 
-func (r *SimulatorUnicastExchanger[P]) Send(me types.IdentityKey, messages ds.Map[types.IdentityKey, P]) {
+func (r *unicastExchanger[P]) Send(me types.IdentityKey, messages ds.Map[types.IdentityKey, P]) {
 	r.cond.L.Lock()
 	defer r.cond.L.Unlock()
 
@@ -41,9 +43,9 @@ func (r *SimulatorUnicastExchanger[P]) Send(me types.IdentityKey, messages ds.Ma
 		destination := e.Key
 		payload := e.Value
 		if _, ok := r.buffer[destination.String()]; !ok {
-			r.buffer[destination.String()] = make([]*SimulatorExchange[P], 0)
+			r.buffer[destination.String()] = []*exchange[P]{}
 		}
-		r.buffer[destination.String()] = append(r.buffer[destination.String()], &SimulatorExchange[P]{
+		r.buffer[destination.String()] = append(r.buffer[destination.String()], &exchange[P]{
 			from:    me.String(),
 			payload: payload,
 		})
@@ -51,7 +53,7 @@ func (r *SimulatorUnicastExchanger[P]) Send(me types.IdentityKey, messages ds.Ma
 	r.cond.Broadcast()
 }
 
-func (r *SimulatorUnicastExchanger[P]) Receive(me types.IdentityKey) ds.Map[types.IdentityKey, P] {
+func (r *unicastExchanger[P]) Receive(me types.IdentityKey) ds.Map[types.IdentityKey, P] {
 	r.cond.L.Lock()
 	defer r.cond.L.Unlock()
 	for !r.hasAllMessages(me) {
@@ -66,7 +68,7 @@ func (r *SimulatorUnicastExchanger[P]) Receive(me types.IdentityKey) ds.Map[type
 	return result
 }
 
-func (r *SimulatorUnicastExchanger[P]) hasAllMessages(me types.IdentityKey) bool {
+func (r *unicastExchanger[P]) hasAllMessages(me types.IdentityKey) bool {
 main:
 	for _, participant := range r.participants {
 		if participant.Equal(me) {
