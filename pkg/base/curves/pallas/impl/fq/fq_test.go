@@ -1,6 +1,7 @@
 package fq
 
 import (
+	crand "crypto/rand"
 	"math/rand"
 	"testing"
 
@@ -240,4 +241,22 @@ func TestFqSetBytesWide(t *testing.T) {
 		0xc0, 0x2c, 0x71, 0x69, 0x9e, 0x58, 0xea, 0x52,
 	})
 	require.Equal(t, e, a)
+}
+
+func TestFqCmp(t *testing.T) {
+	const n = 256
+	for range n {
+		xInt, err := crand.Int(crand.Reader, Modulus.Big())
+		require.NoError(t, err)
+		xNat := new(saferith.Nat).SetBig(xInt, 255)
+		x := new(Fq).SetNat(xNat)
+		yInt, err := crand.Int(crand.Reader, Modulus.Big())
+		require.NoError(t, err)
+		yNat := new(saferith.Nat).SetBig(yInt, 255)
+		y := new(Fq).SetNat(yNat)
+
+		expected := xInt.Cmp(yInt)
+		actual := x.Cmp(y)
+		require.Equal(t, expected, actual)
+	}
 }

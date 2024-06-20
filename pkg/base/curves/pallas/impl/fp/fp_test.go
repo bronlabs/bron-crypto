@@ -1,6 +1,7 @@
 package fp
 
 import (
+	crand "crypto/rand"
 	"math/rand"
 	"testing"
 
@@ -240,4 +241,22 @@ func TestFpSetBytesWide(t *testing.T) {
 		0x1d, 0x47, 0x2f, 0x26, 0x7e, 0xe2, 0xeb, 0x26,
 	})
 	require.Equal(t, e, a)
+}
+
+func TestFpCmp(t *testing.T) {
+	const n = 256
+	for range n {
+		xInt, err := crand.Int(crand.Reader, Modulus.Big())
+		require.NoError(t, err)
+		xNat := new(saferith.Nat).SetBig(xInt, 255)
+		x := new(Fp).SetNat(xNat)
+		yInt, err := crand.Int(crand.Reader, Modulus.Big())
+		require.NoError(t, err)
+		yNat := new(saferith.Nat).SetBig(yInt, 255)
+		y := new(Fp).SetNat(yNat)
+
+		expected := xInt.Cmp(yInt)
+		actual := x.Cmp(y)
+		require.Equal(t, expected, actual)
+	}
 }

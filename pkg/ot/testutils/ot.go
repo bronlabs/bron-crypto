@@ -59,9 +59,9 @@ func ValidateOT(
 			return errs.NewLength("ROT output message length mismatch (should be %d, is: %d, %d, %d)",
 				L, len(receiverChosenMessages[i]), len(senderMessages[i][0]), len(senderMessages[i][1]))
 		}
-		choice := int(receiverChoiceBits.Get(uint(i)))
+		choice := uint64(receiverChoiceBits.Get(uint(i)))
 		for l := 0; l < L; l++ {
-			ct.SelectSlice(choice, chosenMessageElement[:], senderMessages[i][0][l][:], senderMessages[i][1][l][:])
+			ct.SliceSelect(choice, chosenMessageElement[:], senderMessages[i][0][l][:], senderMessages[i][1][l][:])
 			if subtle.ConstantTimeCompare(receiverChosenMessages[i][l][:], chosenMessageElement[:]) != 1 {
 				return errs.NewVerification("ROT output mismatch for index %d", i)
 			}

@@ -236,7 +236,7 @@ func (*ScalarField) Select(choice uint64, x0, x1 curves.Scalar) curves.Scalar {
 		panic("Not a BLS12381 G1 field element")
 	}
 	sFp := new(Scalar)
-	ct.SelectSlice(choice, sFp.V[:], x0s.V[:], x1s.V[:])
+	ct.SliceSelect(choice, sFp.V[:], x0s.V[:], x1s.V[:])
 	return sFp
 }
 

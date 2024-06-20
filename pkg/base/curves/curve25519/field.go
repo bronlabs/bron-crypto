@@ -228,7 +228,7 @@ func (*BaseField) Select(choice uint64, x0, x1 curves.BaseFieldElement) curves.B
 		panic("Not a BLS12381 G1 field element")
 	}
 	sFp := new(BaseFieldElement)
-	ct.SelectSlice(choice, sFp.V[:], x0Fp.V[:], x1Fp.V[:])
+	ct.SliceSelect(choice, sFp.V[:], x0Fp.V[:], x1Fp.V[:])
 	return sFp
 }
 

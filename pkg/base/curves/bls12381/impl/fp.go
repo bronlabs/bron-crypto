@@ -6,6 +6,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
@@ -75,7 +76,7 @@ func (f *Fp) Cmp(rhs *Fp) int64 {
 
 	fiatFpFromMontgomery(&l, (*fiatFpMontgomeryDomainFieldElement)(f))
 	fiatFpFromMontgomery(&r, (*fiatFpMontgomeryDomainFieldElement)(rhs))
-	return cmpLimbs((*[FieldLimbs]uint64)(&l), (*[FieldLimbs]uint64)(&r))
+	return ct.SliceCmpLE(l[:], r[:])
 }
 
 // Equal returns 1 if fp == rhs, 0 otherwise.
@@ -239,7 +240,7 @@ func (f *Fp) SetBytes(arg *[FieldBytes]byte) (fRes *Fp, mask uint64) {
 	var t fiatFpNonMontgomeryDomainFieldElement
 	fiatFpFromBytes((*[FieldLimbs]uint64)(&t), arg)
 	fiatFpToMontgomery((*fiatFpMontgomeryDomainFieldElement)(f), &t)
-	check := uint64(cmpLimbs((*[6]uint64)(&t), &FpModulusLimbs) ^ int64(-1))
+	check := uint64(ct.SliceCmpLE(t[:], FpModulusLimbs[:]) ^ int64(-1))
 	return f, ((check | -check) >> 63) ^ 1
 }
 
@@ -363,30 +364,4 @@ func (f *Fp) pow(base, e *Fp) *Fp {
 
 	*f = res
 	return f
-}
-
-func cmpLimbs(l, r *[FieldLimbs]uint64) int64 {
-	gt := uint64(0)
-	lt := uint64(0)
-	for i := FieldLimbs - 1; i >= 0; i-- {
-		// convert to two 64-bit numbers where
-		// the leading bits are zeros and hold no meaning
-		//  so rhs - f actually means gt
-		// and f - rhs actually means lt.
-		rhsH := r[i] >> 32
-		rhsL := r[i] & 0xffffffff
-		lhsH := l[i] >> 32
-		lhsL := l[i] & 0xffffffff
-
-		// Check the leading bit
-		// if negative then f > rhs
-		// if positive then f < rhs
-		gt |= (rhsH - lhsH) >> 32 & 1 &^ lt
-		lt |= (lhsH - rhsH) >> 32 & 1 &^ gt
-		gt |= (rhsL - lhsL) >> 32 & 1 &^ lt
-		lt |= (lhsL - rhsL) >> 32 & 1 &^ gt
-	}
-
-	// Make the result -1 for <, 0 for =, 1 for >
-	return int64(gt) - int64(lt)
 }

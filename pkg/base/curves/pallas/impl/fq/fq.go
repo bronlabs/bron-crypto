@@ -7,6 +7,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
 
@@ -37,31 +38,20 @@ var Modulus, _ = saferith.ModulusFromHex(strings.ToUpper("4000000000000000000000
 // 0 if fp == rhs
 // 1 if fp > rhs.
 func (fq *Fq) Cmp(rhs *Fq) int {
-	gt := 0
-	lt := 0
-	for i := len(fq) - 1; i >= 0; i-- {
-		gt |= int((rhs[i]-fq[i])>>63) &^ lt
-		lt |= int((fq[i]-rhs[i])>>63) &^ gt
-	}
-	return gt - lt
+	var l, r fiat_pasta_fq_non_montgomery_domain_field_element
+	fiat_pasta_fq_from_montgomery(&l, (*fiat_pasta_fq_montgomery_domain_field_element)(fq))
+	fiat_pasta_fq_from_montgomery(&r, (*fiat_pasta_fq_montgomery_domain_field_element)(rhs))
+	return int(ct.SliceCmpLE(l[:], r[:]))
 }
 
 // Equal returns true if fp == rhs.
 func (fq *Fq) Equal(rhs *Fq) bool {
-	t := fq[0] ^ rhs[0]
-	t |= fq[1] ^ rhs[1]
-	t |= fq[2] ^ rhs[2]
-	t |= fq[3] ^ rhs[3]
-	return t == 0
+	return ct.SliceEqual(fq[:], rhs[:]) == 1
 }
 
 // IsZero returns true if fp == 0.
 func (fq *Fq) IsZero() bool {
-	t := fq[0]
-	t |= fq[1]
-	t |= fq[2]
-	t |= fq[3]
-	return t == 0
+	return ct.SliceIsZero(fq[:]) == 1
 }
 
 // IsOne returns true if fp == r.
@@ -155,7 +145,7 @@ func (fq *Fq) SetBytes(input *[32]byte) (*Fq, error) {
 		binary.LittleEndian.Uint64(input[16:24]),
 		binary.LittleEndian.Uint64(input[24:32]),
 	}
-	if d0.Cmp(modulusLimbs) != -1 {
+	if ct.SliceCmpLE(d0[:], modulusLimbs[:]) != -1 {
 		return nil, errs.NewFailed("invalid byte sequence")
 	}
 	fiat_pasta_fq_from_bytes((*[4]uint64)(fq), input)

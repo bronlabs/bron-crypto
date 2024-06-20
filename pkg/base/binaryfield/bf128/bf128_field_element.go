@@ -32,8 +32,9 @@ func (el *FieldElement) Equal(e *FieldElement) bool {
 }
 
 func (el *FieldElement) Eq(e *FieldElement) int {
-	return (ct.Equal(el.V[0], e.V[0]) &
-		ct.Equal(el.V[1], e.V[1]))
+	return int(
+		ct.Equal(el.V[1], e.V[1]) & ct.Equal(el.V[0], e.V[0]),
+	)
 }
 
 func (el *FieldElement) Clone() *FieldElement {

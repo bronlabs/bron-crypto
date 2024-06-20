@@ -130,7 +130,7 @@ func PrngTester(t *testing.T, prngGenerator func(seed, salt []byte) (csprng.CSPR
 		buffer := make([]byte, bufferSize)
 		_, err = io.ReadFull(prng, buffer)
 		require.NoError(t, err)
-		require.False(t, ct.IsAllZeros(buffer) == 1,
+		require.False(t, ct.SliceIsZero(buffer) == 1,
 			"PRNG generated all zeros for buffer size %d", bufferSize)
 	}
 }

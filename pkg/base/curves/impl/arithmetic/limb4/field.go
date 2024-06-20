@@ -6,6 +6,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
@@ -92,49 +93,12 @@ func (f *FieldValue) Cmp(rhs *FieldValue) int64 {
 
 	f.Arithmetic.FromMontgomery(&lhsNonMont, &f.Value)
 	f.Arithmetic.FromMontgomery(&rhsNonMont, &rhs.Value)
-	return cmpHelper(&lhsNonMont, &rhsNonMont)
-}
-
-// cmpHelper returns -1 if lhs < rhs
-// 0 if lhs == rhs
-// 1 if lhs > rhs
-// Public only for convenience for some internal implementations.
-func cmpHelper(lhs, rhs *[FieldLimbs]uint64) int64 {
-	gt := uint64(0)
-	lt := uint64(0)
-	for i := 3; i >= 0; i-- {
-		// convert to two 64-bit numbers where
-		// the leading bits are zeros and hold no meaning
-		//  so rhs - fp actually means gt
-		// and fp - rhs actually means lt.
-		rhsH := rhs[i] >> 32
-		rhsL := rhs[i] & 0xffffffff
-		lhsH := lhs[i] >> 32
-		lhsL := lhs[i] & 0xffffffff
-
-		// Check the leading bit
-		// if negative then fp > rhs
-		// if positive then fp < rhs
-		gt |= (rhsH - lhsH) >> 32 & 1 &^ lt
-		lt |= (lhsH - rhsH) >> 32 & 1 &^ gt
-		gt |= (rhsL - lhsL) >> 32 & 1 &^ lt
-		lt |= (lhsL - rhsL) >> 32 & 1 &^ gt
-	}
-	// Make the result -1 for <, 0 for =, 1 for >
-	return int64(gt) - int64(lt)
+	return ct.SliceCmpLE(lhsNonMont[:], rhsNonMont[:])
 }
 
 // Equal returns 1 if f == rhs, 0 otherwise.
 func (f *FieldValue) Equal(rhs *FieldValue) uint64 {
-	return equalHelper(&f.Value, &rhs.Value)
-}
-
-func equalHelper(lhs, rhs *[FieldLimbs]uint64) uint64 {
-	t := lhs[0] ^ rhs[0]
-	t |= lhs[1] ^ rhs[1]
-	t |= lhs[2] ^ rhs[2]
-	t |= lhs[3] ^ rhs[3]
-	return ((t | -t) >> 63) ^ 1
+	return ct.SliceEqual(f.Value[:], rhs.Value[:])
 }
 
 // IsZero returns 1 if f == 0, 0 otherwise.
@@ -155,7 +119,7 @@ func (f *FieldValue) IsNonZero() uint64 {
 func (f *FieldValue) IsOne() uint64 {
 	var one [FieldLimbs]uint64
 	f.Arithmetic.SetOne(&one)
-	return equalHelper(&f.Value, &one)
+	return ct.SliceEqual(f.Value[:], one[:])
 }
 
 // Set f = rhs.
@@ -221,7 +185,7 @@ func (f *FieldValue) SetBytes(input *[FieldBytes]byte) (*FieldValue, error) {
 	d0 := [FieldLimbs]uint64{0, 0, 0, 0}
 	f.Arithmetic.FromBytes(&d0, input)
 
-	if cmpHelper(&d0, &f.Params.ModulusLimbs) != -1 {
+	if ct.SliceCmpLE(d0[:], f.Params.ModulusLimbs[:]) != -1 {
 		return nil, errs.NewFailed("invalid byte sequence")
 	}
 	return f.SetLimbs(&d0), nil

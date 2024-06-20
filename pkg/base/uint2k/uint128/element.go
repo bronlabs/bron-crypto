@@ -234,8 +234,8 @@ func (u Uint128) MulAdd(p, q algebra.RingElement[*Ring128, Uint128]) Uint128 {
 
 func (u Uint128) Cmp(rhs algebra.OrderTheoreticLatticeElement[*Ring128, Uint128]) algebra.Ordering {
 	v := rhs.Unwrap()
-	ltHigh := ct.GreaterThan(v.Hi, u.Hi)
-	ltLow := ct.GreaterThan(v.Lo, u.Lo)
+	ltHigh := ct.Greater(v.Hi, u.Hi)
+	ltLow := ct.Greater(v.Lo, u.Lo)
 	eqHigh := ct.Equal(u.Hi, v.Hi)
 	eqLow := ct.Equal(u.Lo, v.Lo)
 	return algebra.Ordering(1 - (eqHigh & eqLow) - 2*(ltHigh|(eqHigh&ltLow)))

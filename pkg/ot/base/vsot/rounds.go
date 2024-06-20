@@ -258,8 +258,8 @@ func (r *Receiver) Round6(r5out *Round5P2P) error {
 			if err != nil {
 				return errs.WrapHashing(err, "hashing the decryption key to open challenge")
 			}
-			choice := int(r.Output.Choices.Get(uint(i)))
-			ct.SelectSlice(choice, challengeOpening[:], r5out.Openings[i][0][l][:], r5out.Openings[i][1][l][:])
+			choice := uint64(r.Output.Choices.Get(uint(i)))
+			ct.SliceSelect(choice, challengeOpening[:], r5out.Openings[i][0][l][:], r5out.Openings[i][1][l][:])
 			if subtle.ConstantTimeCompare(hashedDecryptionKey[:ot.KappaBytes], challengeOpening[:]) != 1 {
 				return errs.NewIdentifiableAbort(r.OtherParty().String(), "sender's supposed H(m^omega) doesn't match our own")
 			}

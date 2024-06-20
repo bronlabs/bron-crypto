@@ -172,18 +172,7 @@ func (u Uint256) MulAdd(p, q algebra.RingElement[*Ring256, Uint256]) Uint256 {
 
 func (u Uint256) Cmp(rhs algebra.OrderTheoreticLatticeElement[*Ring256, Uint256]) algebra.Ordering {
 	v := rhs.Unwrap()
-
-	gtTop := ct.GreaterThan(u[3], v[3])
-	gtHi := ct.GreaterThan(u[2], v[2])
-	gtLo := ct.GreaterThan(u[1], v[1])
-	gtBot := ct.GreaterThan(u[0], v[0])
-
-	eqTop := ct.Equal(u[3], v[3])
-	eqHi := ct.Equal(u[2], v[2])
-	eqLo := ct.Equal(u[1], v[1])
-	eqBot := ct.Equal(u[0], v[0])
-
-	return algebra.Ordering(-1 + (eqTop & eqHi & eqLo & eqBot) + 2*(gtTop|(eqTop&(gtHi|(eqHi&(gtLo|(eqLo&gtBot)))))))
+	return algebra.Ordering(ct.SliceCmpLE(u[:], v[:]))
 }
 
 func (u Uint256) Join(rhs algebra.OrderTheoreticLatticeElement[*Ring256, Uint256]) Uint256 {

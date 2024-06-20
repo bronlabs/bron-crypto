@@ -203,7 +203,7 @@ func (*Curve) Select(choice uint64, x0, x1 curves.Point) curves.Point {
 		panic("x1 is not a curve25519 point")
 	}
 	el := new(Point)
-	ct.SelectSlice(choice, el.V[:], x0p.V[:], x1p.V[:])
+	ct.SliceSelect(choice, el.V[:], x0p.V[:], x1p.V[:])
 	return el
 }
 

@@ -162,9 +162,9 @@ func (rROT *ReceiverRotOutput) Decrypt(masks []OneTimePadedMaskPair) (OTchosenMe
 			return nil, errs.NewArgument("mask[%d] length should be L (%d != %d)", j, len(masks[j][0]), L)
 		}
 		OTchosenMessages[j] = make(Message, L)
-		choice := int(rROT.Choices.Get(uint(j)))
+		choice := uint64(rROT.Choices.Get(uint(j)))
 		for l := 0; l < L; l++ {
-			ct.SelectSlice(choice, mask[:], masks[j][0][l][:], masks[j][1][l][:])
+			ct.SliceSelect(choice, mask[:], masks[j][0][l][:], masks[j][1][l][:])
 			subtle.XORBytes(OTchosenMessages[j][l][:], rROT.ChosenMessages[j][l][:], mask[:])
 		}
 	}

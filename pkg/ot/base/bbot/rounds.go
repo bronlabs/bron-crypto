@@ -97,7 +97,7 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 			phiNonChosen := curve.ScalarBaseMult(sc).ClearCofactor()
 
 			// step 2.6 (POPF.Program)
-			ct.SelectSlice(c_i, chosenTagRandomOracle, tagsRandomOracle[0], tagsRandomOracle[1])
+			ct.SliceSelect(uint64(c_i), chosenTagRandomOracle, tagsRandomOracle[0], tagsRandomOracle[1])
 			hashInput := slices.Concat(phiNonChosen.ToAffineCompressed(), chosenTagRandomOracle)
 			sc, err = curve.ScalarField().Hash(hashInput)
 			if err != nil {
