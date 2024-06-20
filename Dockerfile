@@ -43,6 +43,7 @@ COPY Makefile Makefile
 COPY env_docker.mk env.mk
 COPY thirdparty/thirdparty.mk thirdparty/thirdparty.mk
 COPY scripts/scripts.mk scripts/scripts.mk
+COPY docs/docs.mk docs/docs.mk
 COPY thirdparty/boringssl thirdparty/boringssl
 RUN make deps-boring
 

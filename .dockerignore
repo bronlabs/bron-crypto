@@ -8,4 +8,5 @@
 !/Makefile
 !/env_docker.mk
 !/thirdparty/*
+!/docs/docs.mk
 thirdparty/boringssl/build

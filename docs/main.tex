@@ -9,7 +9,7 @@
 %-----------------------------------TITLE--------------------------------------%
     \title{Copper's Threshold Signature Primitives \\(\specversion)}
     \author{Alireza Rafiei, Alberto Ibarrondo, Mateusz Kramarczyk \\ Hoang Ong}
-    \date{\today}
+    \date{\today} 
 
 \begin{document}
 
@@ -27,28 +27,36 @@
 \end{abstract}
 \newpage
 \tableofcontents
+\clearpage
 
 %----------------------------------SECTIONS------------------------------------%
  
-\include{src/sections/1_introduction/1_introduction}
+
+\input{src/sections/1_introduction/1_introduction}
+\clearpage
 
 \input{src/sections/2_preliminaries/2_preliminaries}
-
-\include{src/sections/3_signatures/3_signatures}
-
-\include{src/sections/4_threshold_signatures/4_threshold_signatures}
-
-\include{src/sections/5_tecdsa/5_tecdsa}
-
-\include{src/sections/6_tschnorr/6_tschnorr}
-
-\include{src/sections/7_tbls/7_tbls}
-
 \clearpage
+
+\input{src/sections/3_signatures/3_signatures}
+\clearpage
+
+\input{src/sections/4_threshold_signatures/4_threshold_signatures}
+\clearpage
+
+\input{src/sections/5_tecdsa/5_tecdsa}
+\clearpage
+
+\input{src/sections/6_tschnorr/6_tschnorr}
+\clearpage
+
+\input{src/sections/7_tbls/7_tbls}
+\clearpage
+
 \bibliographystyle{alpha}
 \bibliography{src/bib/tecdsa.bib,src/bib/refresh.bib,src/bib/primitives.bib,src/bib/tschnorr.bib,src/bib/various.bib,src/bib/tbls.bib}
 
 \appendix
-\include{src/sections/appendix/appendix}
+\input{src/sections/appendix/appendix}
 
 \end{document}
