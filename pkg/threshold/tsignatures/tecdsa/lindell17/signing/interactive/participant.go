@@ -143,6 +143,10 @@ func NewPrimaryCosigner(sessionId []byte, myAuthKey types.AuthKey, secondaryIden
 	return primaryCosigner, nil
 }
 
+func (pc *PrimaryCosigner) GetSecondaryCosigner() types.IdentityKey {
+	return pc.secondaryIdentityKey
+}
+
 func NewSecondaryCosigner(sessionId []byte, myAuthKey types.AuthKey, primaryIdentityKey types.IdentityKey, myShard *lindell17.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner, err error) {
 	cosigner, hisSharingId, err := NewCosigner(sessionId, myAuthKey, primaryIdentityKey, myShard, protocol, niCompiler, transcript, prng, 2)
 	if err != nil {
@@ -158,6 +162,10 @@ func NewSecondaryCosigner(sessionId []byte, myAuthKey types.AuthKey, primaryIden
 		return nil, errs.WrapValidation(err, "could not validate secondary cosigner")
 	}
 	return secondaryCosigner, nil
+}
+
+func (sc *SecondaryCosigner) GetPrimaryCosigner() types.IdentityKey {
+	return sc.primaryIdentityKey
 }
 
 func validateInputs(sessionId []byte, myAuthKey types.AuthKey, other types.IdentityKey, myShard *lindell17.Shard, protocol types.ThresholdSignatureProtocol, nic compiler.Name, prng io.Reader) error {
