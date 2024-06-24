@@ -92,10 +92,10 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.Prot
 		return errs.WrapValidation(err, "protocol config is invalid")
 	}
 	if err := types.ValidateIdentityKey(initiator); err != nil {
-		return errs.WrapValidation(err, "initator identity key")
+		return errs.WrapValidation(err, "initiator identity key")
 	}
 	if !protocol.Participants().Contains(initiator) {
-		return errs.NewMissing("initator is not one of the participants")
+		return errs.NewMissing("initiator is not one of the participants")
 	}
 	if protocol.Participants().Size() <= 2 {
 		return errs.NewSize("total participants (%d) <= 2", protocol.Participants().Size())
