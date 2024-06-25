@@ -293,6 +293,8 @@ func (s *DHKEMScheme) AuthDecap(receiverPrivateKey *PrivateKey, senderPublicKey,
 	}
 
 	dhBytes := make([]byte, len(dhRE.Bytes())+len(dhRS.Bytes()))
+	copy(dhBytes, dhRE.Bytes())
+	copy(dhBytes[len(dhRE.Bytes()):], dhRS.Bytes())
 
 	enc := ephemeralPublicKey.ToAffineUncompressed()
 	pkRm := receiverPrivateKey.PublicKey.ToAffineUncompressed()
