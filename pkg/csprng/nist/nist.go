@@ -17,11 +17,14 @@ const (
 			"\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f",
 	)
 	// Parameters defined at Table 3 of section 10.2.1 in SP800-90A Rev. 1.
-	//------------- Parameter ---------//---- Value ---//--- Name/s in SP800-90A ---//.
-	reseedInterval                = 1 << 48  // 2^48 times   //  `reseed_interval`
-	maxNumberOfBytesDF            = 512 >> 3 // 512 bits     //  `max_number_of_bits`
-	maxNumberOfBytesRequest       = 1 << 16  // 2^19 bit     //  `max_number_of_bits_per_request`
-	maxLength               int64 = 1 << 32  // 2^35 bits    //  `max_length`, `max_additional_input_length`,
+	// Note that lower values than those specified in the standard are set for
+	// `reseed_interval` and `max_number_of_bits_per_request` to force reseeding
+	// more frequently andt limit a single state’s exposure to an attacker, respectively.
+	//------------- Parameter ---------//---- Value in SP800-90A  ---//--- Name/s in SP800-90A ---//.
+	reseedInterval                 = 1 << 12  // 2^48 times   //  `reseed_interval`
+	maxNumberOfBytesDF             = 512 >> 3 // 512 bits     //  `max_number_of_bits`
+	maxNumberOfBytesRequest        = 1 << 10  // 2^19 bits    //  `max_number_of_bits_per_request`
+	maxLength               uint64 = 1 << 32  // 2^35 bits    //  `max_length`, `max_additional_input_length`,
 	// .                                               //   `max_personalization_string_length`.
 )
 
@@ -46,7 +49,7 @@ func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, pers
 	// 1. IF (requested_security_strength > ... --> Skipped, security_strength = keyLen.
 	// 2. IF prediction_resistance_flag... --> Skipped, No prediction resistance.
 	// 3. IF (len(personalization_string) > max_personalization_string_length) --> error.
-	if int64(len(personalization)) > maxLength {
+	if uint64(len(personalization)) > maxLength {
 		return nil, errs.NewLength("personalization too large")
 	}
 	// 4. Set security_strength = keyLen.
@@ -74,7 +77,7 @@ func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, pers
 		}
 	case entropyInputLen < securityStrength:
 		return nil, errs.NewLength("entropyInput too small")
-	case int64(entropyInputLen) > maxLength:
+	case uint64(entropyInputLen) > maxLength:
 		return nil, errs.NewLength("entropyInput too large")
 	}
 	// 8. Obtain a nonce if not provided.
@@ -107,7 +110,7 @@ func (prg *PrngNist) Reseed(entropyInput, additionalInput []byte) (err error) {
 	// 1. Using state_handle, obtain the current internal state. --> implicit.
 	// 2. IF prediction_resistance_flag... --> Skipped, implicit.
 	// 3. IF len(additional_input) > max_additional_input_length: return EEROR_FLAG
-	if int64(len(additionalInput)) > maxLength {
+	if uint64(len(additionalInput)) > maxLength {
 		return errs.NewLength("additionalInput too large")
 	}
 	// 4&5. (status, entropy_input) = Get_entropy_input (security_strength, min_length,
@@ -124,7 +127,7 @@ func (prg *PrngNist) Reseed(entropyInput, additionalInput []byte) (err error) {
 		}
 	case entropyInputLen < prg.SecurityStrength():
 		return errs.NewLength("entropyInput too small")
-	case int64(entropyInputLen) > maxLength:
+	case uint64(entropyInputLen) > maxLength:
 		return errs.NewLength("entropyInput too large")
 	}
 	// 6. new_working_state = Reseed_algorithm(working_state, entropy_input,
@@ -153,7 +156,7 @@ func (prg *PrngNist) Generate(buffer, additionalInput []byte) error {
 	// 3. IF requested_security_strength > security_strength... --> implicit.
 	// 4. IF (length of the additional_input > max_additional_input_length):
 	// .	return (ERROR_FLAG, Nil).
-	if int64(len(additionalInput)) > maxLength {
+	if uint64(len(additionalInput)) > maxLength {
 		return errs.NewLength("additionalInput too large")
 	}
 	// 5. If prediction_resistance_request is set... --> implicit.
@@ -220,7 +223,7 @@ func (prg *PrngNist) Seed(entropyInput, nonce []byte) (err error) {
 	switch entropyInputLen := len(entropyInput); {
 	case entropyInputLen < prg.SecurityStrength():
 		return errs.NewLength("entropyInput too small")
-	case int64(entropyInputLen) > maxLength:
+	case uint64(entropyInputLen) > maxLength:
 		return errs.NewLength("entropyInput too large")
 	}
 	switch nonceLen := len(nonce); {
