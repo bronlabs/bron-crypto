@@ -1,4 +1,4 @@
-package dudect
+package main
 
 import (
 	"log"

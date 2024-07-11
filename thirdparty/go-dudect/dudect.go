@@ -1,5 +1,5 @@
 // All credit goes to Oscar Reparaz, Josep Balasch and Ingrid Verbauwhede for dudect's ideas and design
-package dudect
+package main
 
 import (
 	"fmt"
@@ -207,7 +207,7 @@ func doit() {
 func main() {
 	fmt.Println("dudect start")
 
-	for {
+	for _ = range 500 {
 		doit()
 	}
 

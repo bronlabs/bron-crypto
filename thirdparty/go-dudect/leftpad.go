@@ -16,7 +16,7 @@
 //  designed by Oscar Reparaz, Josep Balasch and Ingrid Verbauwhede, all credits due.
 // ------------------ AnomalRoil 2016 >
 
-package dudect
+package main
 
 import (
 	"crypto/rand"
