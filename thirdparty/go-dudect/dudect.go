@@ -1,10 +1,11 @@
 // All credit goes to Oscar Reparaz, Josep Balasch and Ingrid Verbauwhede for dudect's ideas and design
-package main
+package dudect
 
 import (
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"time"
 )
 
@@ -18,8 +19,8 @@ const chunck_size = 16
 const number_measurements = 3000
 const enough_measurements = 3000 // may be handled by the Go benchmark package later
 
-const t_threshold_bananas = 500 // test failed, with overwhelming probability
-const t_threshold_moderate = 5  // here we could also take 4.5 e.g.
+const t_threshold_bananas = 50 // test failed, with overwhelming probability
+const t_threshold_moderate = 5 // here we could also take 4.5 e.g.
 
 const number_percentiles = 100
 const number_tests = 1 + number_percentiles + 1 // we perform 1
@@ -181,7 +182,7 @@ func report() {
 
 	if max_t > t_threshold_bananas {
 		fmt.Printf(" Definitely not constant time.\n")
-		return
+		os.Exit(3)
 	}
 	if max_t > t_threshold_moderate {
 		fmt.Printf(" Probably not constant time.\n")
