@@ -1,2 +1,3 @@
 https://github.com/golang/crypto.git golang/crypto b91329d961d4ba7270e79ed661eb324c299ab812
 https://github.com/golang/go.git golang/go 6bf8b76b95b22e3a7fbcd7cb95bfdb3f42bba60a
+https://github.com/AnomalRoil/go-dudect anomalroil/go-dudect aed708ad931975dcff04010fe4bc2da9010f6b50
