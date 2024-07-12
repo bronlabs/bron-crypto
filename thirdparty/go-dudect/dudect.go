@@ -207,7 +207,8 @@ func doit() {
 func main() {
 	fmt.Println("dudect start")
 
-	for _ = range 500 {
+	// limit to 1000*3000 = 3M measurements for efficiency
+	for _ = range 1000 {
 		doit()
 	}
 
