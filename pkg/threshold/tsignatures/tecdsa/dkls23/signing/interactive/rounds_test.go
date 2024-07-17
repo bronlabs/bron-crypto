@@ -1,6 +1,7 @@
 package interactive_test
 
 import (
+	crand "crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"hash"
@@ -9,18 +10,22 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased/simulator"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/fkechacha20"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/signing/interactive"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
 )
 
@@ -52,6 +57,28 @@ func Test_HappyPath(t *testing.T) {
 	}
 }
 
+func Test_HappyPathRunner(t *testing.T) {
+	t.Parallel()
+	for _, curve := range testCurves {
+		for _, h := range testHashFunctions {
+			for _, thresholdConfig := range []struct{ t, n int }{
+				{t: 2, n: 3},
+				{t: 3, n: 3},
+				{t: 3, n: 5},
+				{t: 4, n: 4}} {
+				boundedCurve := curve
+				boundedHash := h
+				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
+				boundedThresholdConfig := thresholdConfig
+				boundedMessage := []byte("Hello World!")
+				t.Run(fmt.Sprintf("Interactive sign happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+					t.Parallel()
+					testHappyPathRunner(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedMessage)
+				})
+			}
+		}
+	}
+}
 func Test_UnHappyPath(t *testing.T) {
 	t.Parallel()
 	if os.Getenv("DEFLAKE_TIME_TEST") == "1" {
@@ -119,6 +146,59 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 			require.NoError(t, err)
 		})
 	}
+}
+
+func testHappyPathRunner(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
+	t.Helper()
+	sessionId := []byte("JoinFeldmanDkgTestSessionId")
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
+	require.NoError(t, err)
+
+	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, threshold, allIdentities)
+	require.NoError(t, err)
+
+	_, shards, err := testutils.RunDKG(curve, protocol, allIdentities)
+	require.NoError(t, err)
+	participants := make([]*interactive.Cosigner, protocol.TotalParties())
+
+	for i, identity := range allIdentities {
+		seededPrng, err := fkechacha20.NewPrng(nil, nil)
+		require.NoError(t, err)
+
+		participants[i], err = interactive.NewCosigner(sessionId, identity.(types.AuthKey), protocol.Participants(), shards[i], protocol, crand.Reader, seededPrng, nil)
+		require.NoError(t, err)
+	}
+
+	router := simulator.NewEchoBroadcastMessageRouter(protocol.Participants())
+	partialSignature := make([]*dkls23.PartialSignature, n)
+
+	errChan := make(chan error)
+	go func() {
+		var errGrp errgroup.Group
+		for i, party := range participants {
+			errGrp.Go(func() error {
+				var err error
+				partialSignature[i], err = party.Run(router, message)
+				return err
+			})
+		}
+		errChan <- errGrp.Wait()
+	}()
+
+	select {
+	case err := <-errChan:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		require.Fail(t, "timeout")
+	}
+
+	producedSignatures, err := testutils.RunSignatureAggregation(protocol, allIdentities, participants, partialSignature, message)
+	require.NoError(t, err)
+	err = testutils.CheckInteractiveSignResults(producedSignatures)
+	require.NoError(t, err)
 }
 
 // This test runs the protocol correctly once, and then runs it again with one party

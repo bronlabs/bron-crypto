@@ -183,7 +183,6 @@ func doProof(x curves.Scalar, bigQ curves.Point, xEncrypted *paillier.CipherText
 	if err != nil {
 		return err
 	}
-
 	proverTranscript := hagrid.NewTranscript(transcriptLabel, nil)
 	prover, err := lpdl.NewProver(sk, x, r, sessionId, proverTranscript, prng)
 	if err != nil {

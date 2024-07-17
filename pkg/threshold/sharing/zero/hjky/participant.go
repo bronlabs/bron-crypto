@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
@@ -82,4 +84,25 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 		return errs.NewCurve("authKey and participants have different curves")
 	}
 	return nil
+}
+
+func (p *Participant) Run(router roundbased.MessageRouter) (curves.Scalar, ds.Map[types.IdentityKey, curves.Point], []curves.Point, error) {
+	id := p.IdentityKey()
+	r1b := roundbased.NewBroadcastRound[*Round1Broadcast](id, 1, router)
+	r1u := roundbased.NewUnicastRound[*Round1P2P](id, 1, router)
+
+	// round 1
+	r1bo, r1uo, err := p.Round1()
+	if err != nil {
+		return nil, nil, nil, errs.WrapFailed(err, "round 1 failed")
+	}
+	r1b.BroadcastOut() <- r1bo
+	r1u.UnicastOut() <- r1uo
+
+	// round 2
+	r2scalar, r2map, r2point, err := p.Round2(<-r1b.BroadcastIn(), <-r1u.UnicastIn())
+	if err != nil {
+		return nil, nil, nil, errs.WrapFailed(err, "round 2 failed")
+	}
+	return r2scalar, r2map, r2point, nil
 }

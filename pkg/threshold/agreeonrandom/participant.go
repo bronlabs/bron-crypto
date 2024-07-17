@@ -7,6 +7,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -80,4 +81,30 @@ func validateInputs(authKey types.AuthKey, protocol types.Protocol, prng io.Read
 		return errs.NewIsNil("prng")
 	}
 	return nil
+}
+
+func (p *Participant) Run(router roundbased.MessageRouter) ([]byte, error) {
+	r1 := roundbased.NewBroadcastRound[*Round1Broadcast](p.IdentityKey(), 1, router)
+	r2 := roundbased.NewBroadcastRound[*Round2Broadcast](p.IdentityKey(), 2, router)
+
+	// round 1
+	r1Out, err := p.Round1()
+	if err != nil {
+		return nil, err
+	}
+	r1.BroadcastOut() <- r1Out
+
+	// round 2
+	r2Out, err := p.Round2(<-r1.BroadcastIn())
+	if err != nil {
+		return nil, err
+	}
+	r2.BroadcastOut() <- r2Out
+
+	// round 3
+	r3Out, err := p.Round3(<-r2.BroadcastIn())
+	if err != nil {
+		return nil, err
+	}
+	return r3Out, nil
 }

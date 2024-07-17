@@ -3,14 +3,18 @@ package dkg_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
-	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
 	"os"
 	"testing"
+	"time"
+
+	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased/simulator"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
@@ -18,6 +22,7 @@ import (
 	jfTestUtils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	lindell17DkgTestUtils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -102,6 +107,155 @@ func Test_HappyPath(t *testing.T) {
 	shards, err := lindell17DkgTestUtils.DoDkgRound8(lindellParticipants, r8i)
 	require.NoError(t, err)
 	require.NotNil(t, shards)
+
+	t.Run("each transcript recorded common", func(t *testing.T) {
+		t.Parallel()
+		ok, err := ttu.TranscriptAtSameState("gimme something", transcripts)
+		require.NoError(t, err)
+		require.True(t, ok)
+	})
+
+	t.Run("each signing share is different", func(t *testing.T) {
+		t.Parallel()
+
+		for i := 0; i < len(shards); i++ {
+			for j := i + 1; j < len(shards); j++ {
+				require.NotZero(t, shards[i].SigningKeyShare.Share.Cmp(shards[j].SigningKeyShare.Share))
+			}
+		}
+	})
+
+	t.Run("each public key is the same", func(t *testing.T) {
+		t.Parallel()
+		for i := 0; i < len(shards); i++ {
+			for j := i + 1; j < len(shards); j++ {
+				require.True(t, shards[i].SigningKeyShare.PublicKey.Equal(shards[j].SigningKeyShare.PublicKey))
+			}
+		}
+	})
+
+	t.Run("private key matches public key", func(t *testing.T) {
+		t.Parallel()
+
+		shamirDealer, err := shamir.NewDealer(2, 3, cipherSuite.Curve())
+		require.NoError(t, err)
+		require.NotNil(t, shamirDealer)
+		shamirShares := make([]*shamir.Share, len(lindellParticipants))
+		for i := 0; i < len(lindellParticipants); i++ {
+			shamirShares[i] = &shamir.Share{
+				Id:    uint(lindellParticipants[i].SharingId()),
+				Value: signingKeyShares[i].Share,
+			}
+		}
+
+		reconstructedPrivateKey, err := shamirDealer.Combine(shamirShares...)
+		require.NoError(t, err)
+
+		derivedPublicKey := cipherSuite.Curve().ScalarBaseMult(reconstructedPrivateKey)
+		require.True(t, signingKeyShares[0].PublicKey.Equal(derivedPublicKey))
+	})
+
+	t.Run("cKey is encryption of share", func(t *testing.T) {
+		t.Parallel()
+		for i := 0; i < len(shards); i++ {
+			for j := 0; j < len(shards); j++ {
+				if i != j {
+					myShard := shards[i]
+					theirShard := shards[j]
+					mySigningShare := myShard.SigningKeyShare.Share
+					theirEncryptedSigningShare, exists := theirShard.PaillierEncryptedShares.Get(identities[i])
+					require.True(t, exists)
+					decryptor, err := paillier.NewDecryptor(myShard.PaillierSecretKey)
+					require.NoError(t, err)
+					theirDecryptedSigningShareInt, err := decryptor.Decrypt(theirEncryptedSigningShare)
+					require.NoError(t, err)
+					theirDecryptedSigningShare := cipherSuite.Curve().ScalarField().Element().SetNat(theirDecryptedSigningShareInt)
+					require.Zero(t, mySigningShare.Cmp(theirDecryptedSigningShare))
+				}
+			}
+		}
+	})
+
+	t.Run("Disaster recovery", func(t *testing.T) {
+		shardMap := hashmap.NewHashableHashMap[types.IdentityKey, tsignatures.Shard]()
+		for i := 0; i < threshold; i++ {
+			shardMap.Put(identities[i], shards[i])
+		}
+		recoveredPrivateKey, err := tsignatures.ConstructPrivateKey(protocol, shardMap)
+		require.NoError(t, err)
+		recoveredPublicKey := cipherSuite.Curve().ScalarBaseMult(recoveredPrivateKey)
+		require.True(t, recoveredPublicKey.Equal(shards[0].SigningKeyShare.PublicKey))
+	})
+}
+
+func Test_HappyPathRunner(t *testing.T) {
+	t.Parallel()
+	if os.Getenv("DEFLAKE_TIME_TEST") == "1" {
+		t.Skip("Skipping this test in deflake mode.")
+	}
+
+	cipherSuite, err := ttu.MakeSigningSuite(k256.NewCurve(), sha256.New)
+	require.NoError(t, err)
+
+	threshold := 3
+	total := 3
+
+	identities, err := ttu.MakeTestIdentities(cipherSuite, total)
+	require.NoError(t, err)
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
+	require.NoError(t, err)
+	uniqueSessionId, err := agreeonrandomTestUtils.RunAgreeOnRandom(cipherSuite.Curve(), identities, crand.Reader)
+	require.NoError(t, err)
+
+	jfParticipants, err := jfTestUtils.MakeParticipants(uniqueSessionId, protocol, identities, cn, nil)
+	require.NoError(t, err)
+
+	r1OutsB, r1OutsU, err := jfTestUtils.DoDkgRound1(jfParticipants)
+	require.NoError(t, err)
+	for _, out := range r1OutsU {
+		require.Equal(t, out.Size(), int(protocol.TotalParties())-1)
+	}
+
+	r2InsB, r2InsU := ttu.MapO2I(jfParticipants, r1OutsB, r1OutsU)
+	r2Outs, err := jfTestUtils.DoDkgRound2(jfParticipants, r2InsB, r2InsU)
+	require.NoError(t, err)
+	for _, out := range r2Outs {
+		require.NotNil(t, out)
+	}
+	r3Ins := ttu.MapBroadcastO2I(jfParticipants, r2Outs)
+	signingKeyShares, publicKeyShares, err := jfTestUtils.DoDkgRound3(jfParticipants, r3Ins)
+	require.NoError(t, err)
+
+	transcripts := make([]transcripts.Transcript, len(identities))
+	for i := range identities {
+		transcripts[i] = hagrid.NewTranscript("Lindell 2017 DKG", nil)
+	}
+
+	lindellParticipants, err := lindell17DkgTestUtils.MakeParticipants([]byte("sid"), protocol, identities, signingKeyShares, publicKeyShares, transcripts, nil)
+	require.NoError(t, err)
+
+	shards := make([]*lindell17.Shard, len(lindellParticipants))
+	router := simulator.NewEchoBroadcastMessageRouter(protocol.Participants())
+	errChan := make(chan error)
+
+	go func() {
+		var errGrp errgroup.Group
+		for i, party := range lindellParticipants {
+			errGrp.Go(func() error {
+				var err error
+				shards[i], err = party.Run(router)
+				return err
+			})
+		}
+		errChan <- errGrp.Wait()
+	}()
+
+	select {
+	case err := <-errChan:
+		require.NoError(t, err)
+	case <-time.After(60 * time.Second):
+		require.Fail(t, "timeout")
+	}
 
 	t.Run("each transcript recorded common", func(t *testing.T) {
 		t.Parallel()

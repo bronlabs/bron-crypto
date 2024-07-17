@@ -9,15 +9,18 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased/simulator"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
@@ -147,6 +150,90 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 
 		err := doInteractiveSign(protocol, identities, signingKeyShares, publicKeyShares, message)
 		require.NoError(t, err)
+	}
+}
+
+func testHappyPathRunner(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
+	t.Helper()
+
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
+	require.NoError(t, err)
+
+	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, threshold, allIdentities)
+	require.NoError(t, err)
+
+	signingKeyShares, publicKeyShares, err := doDkg(curve, protocol, allIdentities)
+	require.NoError(t, err)
+	var shards []*frost.Shard
+	for i := range signingKeyShares {
+		shards = append(shards, &frost.Shard{
+			SigningKeyShare: signingKeyShares[i],
+			PublicKeyShares: publicKeyShares[i],
+		})
+	}
+
+	N := make([]int, n)
+	for i := range n {
+		N[i] = i
+	}
+	combinations, err := combinatorics.Combinations(N, uint(threshold))
+	require.NoError(t, err)
+	for _, combinationIndices := range combinations {
+		identities := make([]types.IdentityKey, threshold)
+		for i, index := range combinationIndices {
+			identities[i] = allIdentities[index]
+		}
+		participants, err := testutils.MakeInteractiveSignParticipants(protocol, identities, shards)
+		require.NoError(t, err)
+
+		router := simulator.NewEchoBroadcastMessageRouter(protocol.Participants())
+		partialSignatures := make([]*frost.PartialSignature, n)
+		errChan := make(chan error)
+		go func() {
+			var errGrp errgroup.Group
+			for i, party := range participants {
+				errGrp.Go(func() error {
+					var err error
+					partialSignatures[i], err = party.Run(router, message)
+					return err
+				})
+			}
+			errChan <- errGrp.Wait()
+		}()
+
+		select {
+		case err := <-errChan:
+			require.NoError(t, err)
+		case <-time.After(5 * time.Second):
+			require.Fail(t, "timeout")
+		}
+		mappedPartialSignatures := testutils.MapPartialSignatures(identities, partialSignatures)
+		var producedSignatures []*schnorr.Signature
+		for i, participant := range participants {
+			if participant.IsSignatureAggregator() {
+				signature, err := participant.Aggregate(message, mappedPartialSignatures)
+				producedSignatures = append(producedSignatures, signature)
+				require.NoError(t, err)
+
+				err = schnorr.Verify(protocol.SigningSuite(), &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, message, signature)
+				require.NoError(t, err)
+			}
+		}
+
+		// all signatures the same
+		for i := 0; i < len(producedSignatures); i++ {
+			for j := i + 1; j < len(producedSignatures); j++ {
+				if producedSignatures[i].R.Equal(producedSignatures[j].R) == true {
+					require.NoError(t, err)
+				}
+				if producedSignatures[i].S.Cmp(producedSignatures[j].S) == 0 {
+					require.NoError(t, err)
+				}
+			}
+		}
 	}
 }
 
@@ -300,7 +387,7 @@ func Test_HappyPath(t *testing.T) {
 				t int
 				n int
 			}{
-				{t: 2, n: 3},
+				{t: 5, n: 5},
 				{t: 3, n: 3},
 			} {
 				boundedCurve := curve
@@ -310,6 +397,7 @@ func Test_HappyPath(t *testing.T) {
 				t.Run(fmt.Sprintf("Interactive sign happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testHappyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, []byte("Hello World!"))
+					testHappyPathRunner(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, []byte("Hello World!"))
 				})
 			}
 		}

@@ -5,14 +5,18 @@ import (
 	"fmt"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased/simulator"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/fkechacha20"
@@ -171,6 +175,70 @@ func Test_MultiplicationFailForReplayedMessages(t *testing.T) {
 				require.NoError(t, err)
 				_, err = bob.Round3(aliceOutput_Run1)
 				require.Error(t, err)
+			})
+		}
+	}
+}
+
+func Test_HappyPathWithRunner(t *testing.T) {
+	t.Parallel()
+	for _, cipherSuite := range cipherSuites(t) {
+		for _, baseOTrunner := range baseOTrunners {
+			boundedCipherSuite := cipherSuite
+			boundedBaseOTrunner := baseOTrunner
+			authKeys, err := ttu.MakeTestAuthKeys(boundedCipherSuite, 2)
+			require.NoError(t, err)
+			senderKey, receiverKey := authKeys[0], authKeys[1]
+			t.Run(fmt.Sprintf("running multiplication happy path for curve %s", boundedCipherSuite.Curve().Name()), func(t *testing.T) {
+				t.Parallel()
+				sid := []byte("this is a unique session id")
+				baseOtSenderOutput, baseOtReceiverOutput, err := boundedBaseOTrunner(senderKey, receiverKey, ot.Kappa, 1, boundedCipherSuite.Curve(), sid, crand.Reader)
+				require.NoError(t, err)
+
+				seededPrng, err := fkechacha20.NewPrng(nil, nil)
+				require.NoError(t, err)
+
+				alice, bob, err := testutils.MakeMult2Participants(t, boundedCipherSuite.Curve(), baseOtReceiverOutput, baseOtSenderOutput, crand.Reader, crand.Reader, seededPrng, sid, sid)
+				require.NoError(t, err)
+
+				a := [mult.L]curves.Scalar{}
+				for i := 0; i < mult.L; i++ {
+					a[i], err = boundedCipherSuite.Curve().ScalarField().Random(crand.Reader)
+					require.NoError(t, err)
+				}
+
+				identities, err := ttu.MakeDeterministicTestIdentities(3)
+				require.NoError(t, err)
+				router := simulator.NewEchoBroadcastMessageRouter(hashset.NewHashableHashSet(identities...))
+
+				var b curves.Scalar
+				var zA, zB *[2]curves.Scalar
+
+				errChan := make(chan error)
+				go func() {
+					var errGrp errgroup.Group
+					errGrp.Go(func() error {
+						var err error
+						b, zA, zB, err = bob.Run(router, alice, a)
+
+						return err
+					})
+					errChan <- errGrp.Wait()
+				}()
+
+				select {
+				case err := <-errChan:
+					require.NoError(t, err)
+				case <-time.After(5 * time.Second):
+					require.Fail(t, "timeout")
+				}
+
+				// Check that the first multiplication is correct.
+				for i := 0; i < mult.L; i++ {
+					lhs := zA[i].Add(zB[i])
+					rhs := a[i].Mul(b)
+					require.Equal(t, algebra.Ordering(0), lhs.Cmp(rhs))
+				}
 			})
 		}
 	}

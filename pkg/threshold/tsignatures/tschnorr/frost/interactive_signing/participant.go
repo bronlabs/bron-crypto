@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/aggregation"
@@ -115,4 +116,23 @@ func validateInputs(authKey types.AuthKey, quorum ds.Set[types.IdentityKey], sha
 		return errs.NewIsNil("prng is nil")
 	}
 	return nil
+}
+
+func (ic *Cosigner) Run(router roundbased.MessageRouter, msg []byte) (*frost.PartialSignature, error) {
+	r1b := roundbased.NewBroadcastRound[*Round1Broadcast](ic.IdentityKey(), 1, router)
+
+	// round 1
+	r1Out, err := ic.Round1()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 1 failed")
+	}
+	r1b.BroadcastOut() <- r1Out
+
+	// round 2
+	r2Out, err := ic.Round2(<-r1b.BroadcastIn(), msg)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 2 failed")
+	}
+
+	return r2Out, nil
 }

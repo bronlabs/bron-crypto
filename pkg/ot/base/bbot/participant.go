@@ -4,7 +4,10 @@ import (
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -58,4 +61,66 @@ func NewReceiver(myAuthKey types.AuthKey, protocol types.Protocol, Xi, L int, se
 		Output:      &ot.ReceiverRotOutput{Choices: choices},
 		Participant: *participant,
 	}, nil
+}
+
+func sendTo[M any](p2p chan<- ds.Map[types.IdentityKey, M], destination types.IdentityKey, m M) {
+	p2pMessage := hashmap.NewHashableHashMap[types.IdentityKey, M]()
+	p2pMessage.Put(destination, m)
+	p2p <- p2pMessage
+}
+
+func receiveFrom[M any](p2p <-chan ds.Map[types.IdentityKey, M], source types.IdentityKey) (M, error) {
+	p2pMessage := <-p2p
+	m, ok := p2pMessage.Get(source)
+	if !ok {
+		return *new(M), errs.NewFailed("no message")
+	}
+	return m, nil
+}
+
+func (s *Sender) Run(router roundbased.MessageRouter, r *Receiver) (*ot.SenderRotOutput, *ot.ReceiverRotOutput, error) {
+	me := s.IdentityKey()
+	him := r.IdentityKey()
+
+	r1 := roundbased.NewUnicastRound[*Round1P2P](me, 1, router)
+	r2 := roundbased.NewUnicastRound[*Round2P2P](me, 2, router)
+
+	// round 1
+	r1Out, err := s.Round1()
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "round 1 failed")
+	}
+	sendTo(r1.UnicastOut(), him, r1Out)
+
+	// round 3
+	r3In, err := receiveFrom(r2.UnicastIn(), him)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "round 3 failed")
+	}
+	err = s.Round3(r3In)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "round 3 failed")
+	}
+
+	return s.Output, r.Output, nil
+}
+
+func (r *Receiver) Run(router roundbased.MessageRouter, s *Sender) error {
+	me := r.IdentityKey()
+	him := s.IdentityKey()
+	r1 := roundbased.NewUnicastRound[*Round1P2P](me, 1, router)
+	r2 := roundbased.NewUnicastRound[*Round2P2P](me, 2, router)
+
+	// round 2
+	r2In, err := receiveFrom(r1.UnicastIn(), him)
+	if err != nil {
+		return errs.WrapFailed(err, "round 2 failed")
+	}
+	r2Out, err := r.Round2(r2In)
+	if err != nil {
+		return errs.WrapFailed(err, "round 2 failed")
+	}
+	sendTo(r2.UnicastOut(), him, r2Out)
+
+	return nil
 }

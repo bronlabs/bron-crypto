@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot"
@@ -15,6 +16,7 @@ import (
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -140,4 +142,27 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 		return errs.NewIsNil("prng is nil")
 	}
 	return nil
+}
+
+func (p *Participant) Run(router roundbased.MessageRouter, mySigningKeyShare *tsignatures.SigningKeyShare) (*dkls23.Shard, error) {
+
+	r1u := roundbased.NewUnicastRound[*Round1P2P](p.myAuthKey, 1, router)
+	r2u := roundbased.NewUnicastRound[*Round2P2P](p.myAuthKey, 2, router)
+	r1uo, err := p.Round1()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 1 failed")
+	}
+	r1u.UnicastOut() <- r1uo
+
+	r2uo, err := p.Round2(<-r1u.UnicastIn())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 2 failed")
+	}
+	r2u.UnicastOut() <- r2uo
+
+	r3uo, err := p.Round3(mySigningKeyShare, <-r2u.UnicastIn())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 3 failed")
+	}
+	return r3uo, nil
 }

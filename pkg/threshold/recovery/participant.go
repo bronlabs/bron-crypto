@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/hjky"
@@ -198,4 +199,33 @@ func validateLostPartyInputs(sessionId []byte, authKey types.AuthKey, protocol t
 		return errs.NewCurve("authKey and presentRecoverers have different curves")
 	}
 	return nil
+}
+
+func (p *Participant) Run(router roundbased.MessageRouter) (*tsignatures.SigningKeyShare, error) {
+	id := p.IdentityKey()
+	r1b := roundbased.NewBroadcastRound[*Round1Broadcast](id, 1, router)
+	r1u := roundbased.NewUnicastRound[*Round1P2P](id, 1, router)
+	r2u := roundbased.NewUnicastRound[*Round2P2P](id, 2, router)
+
+	// round 1
+	r1bo, r1uo, err := p.Round1()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 1 failed")
+	}
+	r1b.BroadcastOut() <- r1bo
+	r1u.UnicastOut() <- r1uo
+
+	// round 2
+	r2uo, err := p.Round2(<-r1b.BroadcastIn(), <-r1u.UnicastIn())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 2 failed")
+	}
+	r2u.UnicastOut() <- r2uo
+
+	// round 3
+	r3Out, err := p.Round3(<-r2u.UnicastIn())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 3 failed")
+	}
+	return r3Out, nil
 }

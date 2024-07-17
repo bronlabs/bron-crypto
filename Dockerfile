@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine3.19 as base
+FROM golang:1.22-alpine3.19 AS base
 
 ENV HOME="/user"
 ENV TMPDIR="/tmp"
@@ -24,7 +24,7 @@ RUN rm -rf ${GOLANGCI_LINT_CACHE} && \
 WORKDIR /usr/local/src
 
 
-FROM base as builder
+FROM base AS builder
 
 RUN apk add --no-cache \
     make \

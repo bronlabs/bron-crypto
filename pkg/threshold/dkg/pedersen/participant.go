@@ -8,11 +8,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -121,4 +123,24 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 		return errs.NewCurve("authKey and participants have different curves")
 	}
 	return nil
+}
+
+func (p *Participant) Run(router roundbased.MessageRouter) (*tsignatures.SigningKeyShare, *tsignatures.PartialPublicKeys, error) {
+	r1b := roundbased.NewBroadcastRound[*Round1Broadcast](p.IdentityKey(), 1, router)
+	r1u := roundbased.NewUnicastRound[*Round1P2P](p.IdentityKey(), 1, router)
+
+	// round 1
+	r1bo, r1uo, err := p.Round1(nil)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "round 1 failed")
+	}
+	r1b.BroadcastOut() <- r1bo
+	r1u.UnicastOut() <- r1uo
+
+	// round 2
+	signingKeyShare, publicKeyShares, err := p.Round2(<-r1b.BroadcastIn(), <-r1u.UnicastIn())
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "round 2 failed")
+	}
+	return signingKeyShare, publicKeyShares, nil
 }

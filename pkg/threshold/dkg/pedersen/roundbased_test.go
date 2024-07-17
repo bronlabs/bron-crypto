@@ -10,7 +10,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased/simulator"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
@@ -39,7 +38,7 @@ func Test_HappyPathRandomRoundBasedRunner(t *testing.T) {
 		for i, party := range participants {
 			errGrp.Go(func() error {
 				var err error
-				signingKeyShares[i], publicKeyShares[i], err = pedersen.RoundBasedRunner(router, party)
+				signingKeyShares[i], publicKeyShares[i], err = party.Run(router)
 				return err
 			})
 		}

@@ -4,6 +4,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
@@ -110,4 +111,40 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.Prot
 		return errs.NewCurve("not all participants have the same curve")
 	}
 	return nil
+}
+
+func (p *Participant) Run(router roundbased.MessageRouter) ([]byte, error) {
+	id := p.IdentityKey()
+	r1u := roundbased.NewUnicastRound[*Round1P2P](id, 1, router)
+	r2u := roundbased.NewUnicastRound[*Round2P2P](id, 2, router)
+
+	// round 1
+	r1Out, err := p.Round1()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 1 failed")
+	}
+	r1u.UnicastOut() <- r1Out
+
+	// round 2
+	var msg *Round1P2P
+	var exists bool
+	if !p.IdentityKey().PublicKey().Equal(p.initiator.PublicKey()) {
+		msg, exists = r1Out.Get(p.IdentityKey())
+	}
+	if !exists {
+		return nil, errs.WrapFailed(err, "round 2 failed")
+	}
+	r2bo, err := p.Round2(msg)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 2 failed")
+	}
+	r2u.UnicastOut() <- r2bo
+
+	// round 3
+	r3Out, err := p.Round3(<-r2u.UnicastIn())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 2 failed")
+	}
+
+	return r3Out, nil
 }

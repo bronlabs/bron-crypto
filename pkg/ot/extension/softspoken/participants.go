@@ -3,7 +3,11 @@ package softspoken
 import (
 	"io"
 
+	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing/tmmohash"
@@ -113,4 +117,48 @@ func initialisePrg(prg csprng.CSPRNG, sessionId []byte) (csprng.CSPRNG, error) {
 		}
 	}
 	return prg, nil
+}
+
+func sendTo[M any](p2p chan<- ds.Map[types.IdentityKey, M], destination types.IdentityKey, m M) {
+	p2pMessage := hashmap.NewHashableHashMap[types.IdentityKey, M]()
+	p2pMessage.Put(destination, m)
+	p2p <- p2pMessage
+}
+
+func receiveFrom[M any](p2p <-chan ds.Map[types.IdentityKey, M], source types.IdentityKey) (M, error) {
+	p2pMessage := <-p2p
+	m, ok := p2pMessage.Get(source)
+	if !ok {
+		return *new(M), errs.NewFailed("no message")
+	}
+	return m, nil
+}
+
+func (s *Sender) Run(router roundbased.MessageRouter, receiver *Receiver) (oTeSenderOutput [][2][][16]byte, err error) {
+	me := s.IdentityKey()
+	her := receiver.IdentityKey()
+	r1 := roundbased.NewUnicastRound[*Round1Output](me, 1, router)
+
+	r2In, err := receiveFrom(r1.UnicastIn(), her)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 2 failed")
+	}
+	r2Out, err := s.Round2(r2In)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 2 failed")
+	}
+	return r2Out, nil
+}
+
+func (r *Receiver) Run(router roundbased.MessageRouter, sender *Sender, x bitstring.PackedBits) (oTeReceiverOutput [][][16]byte, err error) {
+	me := r.IdentityKey()
+	her := sender.IdentityKey()
+	r1 := roundbased.NewUnicastRound[*Round1Output](me, 1, router)
+
+	oTeReceiverOutput, r1Out, err := r.Round1(x)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 1 failed")
+	}
+	sendTo(r1.UnicastOut(), her, r1Out)
+	return oTeReceiverOutput, nil
 }

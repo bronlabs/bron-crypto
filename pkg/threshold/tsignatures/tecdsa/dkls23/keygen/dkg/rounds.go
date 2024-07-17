@@ -68,7 +68,7 @@ func (p *Participant) Round2(round1outputP2P network.RoundMessages[types.Thresho
 
 	zeroSamplingRound1Output := network.NewRoundMessages[types.Protocol, *zeroSetup.Round1P2P]()
 	baseOtRound1Output := network.NewRoundMessages[types.Protocol, *bbot.Round1P2P]()
-	for iterator := round1outputP2P.Iterator(); iterator.HasNext();{
+	for iterator := round1outputP2P.Iterator(); iterator.HasNext(); {
 		pair := iterator.Next()
 		sender := pair.Key
 		message := pair.Value
@@ -82,7 +82,7 @@ func (p *Participant) Round2(round1outputP2P network.RoundMessages[types.Thresho
 	}
 
 	baseOTP2P := network.NewRoundMessages[types.Protocol, *bbot.Round2P2P]()
-	for iterator := p.BaseOTReceiverParties.Iterator(); iterator.HasNext();{
+	for iterator := p.BaseOTReceiverParties.Iterator(); iterator.HasNext(); {
 		pair := iterator.Next()
 		identity := pair.Key
 		party := pair.Value

@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
@@ -152,4 +153,32 @@ func generateGadgetVector(curve curves.Curve, transcript transcripts.Transcript)
 		}
 	}
 	return gadget, nil
+}
+
+func (b *Bob) Run(router roundbased.MessageRouter, a *Alice, aliceInput [2]curves.Scalar) (Round1Scalar curves.Scalar, Round2Scalar, Round3Scalar *OutputShares, err error) {
+	bob := b.IdentityKey()
+	alice := a.IdentityKey()
+	r1 := roundbased.NewBroadcastRound[*Round1Output](bob, 1, router)
+	r2 := roundbased.NewBroadcastRound[*Round2Output](alice, 2, router)
+
+	// Round 1
+	r1Scalar, r1Out, err := b.Round1()
+	if err != nil {
+		return nil, nil, nil, errs.WrapFailed(err, "round 1 failed")
+	}
+	r1.BroadcastOut() <- r1Out
+
+	// Round 2
+	r2Scalar, r2Out, err := a.Round2(r1Out, aliceInput)
+	if err != nil {
+		return nil, nil, nil, errs.WrapFailed(err, "round 2 failed")
+	}
+	r2.BroadcastOut() <- r2Out
+
+	// Round 3
+	r3Scalar, err := b.Round3(r2Out)
+	if err != nil {
+		return nil, nil, nil, errs.WrapFailed(err, "round 3 failed")
+	}
+	return r1Scalar, r2Scalar, r3Scalar, err
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 	mult "github.com/copperexchange/krypton-primitives/pkg/threshold/mult/dkls23"
@@ -149,4 +150,33 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 		return errs.NewMembership("session participants do not include me")
 	}
 	return nil
+}
+
+func (ic *Cosigner) Run(router roundbased.MessageRouter, message []byte) (*dkls23.PartialSignature, error) {
+	r1b := roundbased.NewBroadcastRound[*signing.Round1Broadcast](ic.IdentityKey(), 1, router)
+	r1u := roundbased.NewUnicastRound[*signing.Round1P2P](ic.IdentityKey(), 1, router)
+
+	r2b := roundbased.NewBroadcastRound[*signing.Round2Broadcast](ic.IdentityKey(), 2, router)
+	r2u := roundbased.NewUnicastRound[*signing.Round2P2P](ic.IdentityKey(), 2, router)
+
+	r1bo, r1uo, err := ic.Round1()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 1 failed")
+	}
+	r1b.BroadcastOut() <- r1bo
+	r1u.UnicastOut() <- r1uo
+
+	r2bo, r2uo, err := ic.Round2(<-r1b.BroadcastIn(), <-r1u.UnicastIn())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 2 failed")
+	}
+	r2b.BroadcastOut() <- r2bo
+	r2u.UnicastOut() <- r2uo
+
+	signature, err := ic.Round3(<-r2b.BroadcastIn(), <-r2u.UnicastIn(), message)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 3 failed")
+	}
+
+	return signature, nil
 }
