@@ -1,0 +1,169 @@
+package poseidon3w
+
+import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
+)
+
+type state struct {
+	v          []curves.BaseFieldElement
+	parameters *Parameters
+}
+
+func newInitialState(parameters *Parameters) *state {
+	s := &state{
+		v:          make([]curves.BaseFieldElement, parameters.stateSize),
+		parameters: parameters,
+	}
+	for i := range s.v {
+		s.v[i] = pallas.NewBaseField().Zero()
+	}
+	return s
+}
+
+// Permute from: https://github.com/o1-labs/o1js-bindings/blob/df8c87ed6804465f79196fdff84e5147ae71e92d/crypto/poseidon.ts#L125
+// Standard Poseidon (without "partial rounds") goes like this:
+//
+//	ARK_0 -> SBOX -> MDS
+//
+// -> ARK_1 -> SBOX -> MDS
+// -> ...
+// -> ARK_{rounds - 1} -> SBOX -> MDS
+//
+// where all computation operates on a vector of field elements, the "state", and
+// - ARK  ... add vector of round constants to the state, element-wise (different vector in each round)
+// - SBOX ... raise state to a power, element-wise
+// - MDS  ... multiply the state by a constant matrix (same matrix every round)
+// (these operations are done modulo p of course)
+//
+// For constraint efficiency reasons, in Mina's implementation the first round constant addition is left out
+// and is done at the end instead, so that effectively the order of operations in each iteration is rotated:
+//
+//	SBOX -> MDS -> ARK_0
+//
+// -> SBOX -> MDS -> ARK_1
+// -> ...
+// -> SBOX -> MDS -> ARK_{rounds - 1}
+//
+// If `hasInitialRoundConstant` is true, another ARK step is added at the beginning.
+//
+// See also Snarky.Sponge.Poseidon.block_cipher.
+func (s *state) Permute() {
+	roundKeysOffset := 0
+	if s.parameters.hashInitialRoundConstant {
+		for i := range s.parameters.stateSize {
+			s.v[i] = s.v[i].Add(s.parameters.roundConstants[0][i])
+		}
+		roundKeysOffset = 1
+	}
+	for round := range s.parameters.fullRounds {
+		s.sbox()
+		s.mds()
+		s.ark(round, roundKeysOffset)
+	}
+}
+
+func (s *state) sbox() {
+	for i := range s.parameters.stateSize {
+		vi, ok := s.v[i].(*pallas.BaseFieldElement)
+		if !ok {
+			panic("not Pallas base field element")
+		}
+
+		exp(vi.V, s.parameters.power)
+		s.v[i] = vi
+	}
+}
+
+func (s *state) mds() {
+	state2 := newInitialState(s.parameters)
+	for row := range s.parameters.stateSize {
+		for col := range s.parameters.stateSize {
+			state2.v[row] = state2.v[row].Add(s.v[col].Mul(s.parameters.mds[row][col]))
+		}
+	}
+	for i, v2 := range state2.v { //nolint:gosimple // false positive
+		s.v[i] = v2
+	}
+}
+
+func (s *state) ark(round, offset int) {
+	for i := range s.parameters.stateSize {
+		s.v[i] = s.v[i].Add(s.parameters.roundConstants[round+offset][i])
+	}
+}
+
+type Poseidon struct {
+	state  *state
+	offset int
+}
+
+func NewKimchi(parameters *Parameters) *Poseidon {
+	return &Poseidon{
+		state:  newInitialState(parameters),
+		offset: 0,
+	}
+}
+
+func NewLegacy() *Poseidon {
+	return &Poseidon{
+		state:  newInitialState(SigningParameters),
+		offset: 0,
+	}
+}
+
+func (p *Poseidon) Rate() int {
+	return p.state.parameters.rate
+}
+
+func (p *Poseidon) Update(xs ...curves.BaseFieldElement) {
+	if len(xs) == 0 {
+		p.state.Permute()
+		return
+	}
+
+	for range len(xs) % p.Rate() {
+		xs = append(xs, xs[0].BaseField().Zero())
+	}
+
+	for blockIndex := 0; blockIndex < len(xs); blockIndex += p.Rate() {
+		for i := range p.Rate() {
+			p.state.v[i] = p.state.v[i].Add(xs[blockIndex+i])
+		}
+		p.state.Permute()
+	}
+}
+
+func (p *Poseidon) Hash(xs ...curves.BaseFieldElement) curves.BaseFieldElement {
+	p.state = newInitialState(p.state.parameters)
+	p.Update(xs...)
+	return p.Digest()
+}
+
+func (p *Poseidon) Digest() curves.BaseFieldElement {
+	return p.state.v[0]
+}
+
+// exp mutates f by computing x^3, x^5, x^7 or x^-1 as described in
+// https://eprint.iacr.org/2019/458.pdf page 8
+func exp(f *fp.Fp, power int) {
+	if power == 3 {
+		t := new(fp.Fp).Square(f)
+		f.Mul(t, f)
+	}
+	if power == 5 {
+		t := new(fp.Fp).Square(f)
+		t.Square(t)
+		f.Mul(t, f)
+	}
+	if power == 7 {
+		f2 := new(fp.Fp).Square(f)
+		f4 := new(fp.Fp).Square(f2)
+		t := new(fp.Fp).Mul(f2, f4)
+		f.Mul(t, f)
+	}
+	if power == -1 {
+		f.Invert(f)
+	}
+}
