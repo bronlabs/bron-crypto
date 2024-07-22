@@ -13,7 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
 
-type Cosigner[V schnorr.Variant[V]] struct {
+type Cosigner[V schnorr.Variant[V, M], M any] struct {
 	// Base participant
 	myAuthKey  types.AuthKey
 	Prng       io.Reader
@@ -29,22 +29,22 @@ type Cosigner[V schnorr.Variant[V]] struct {
 	ppm     *lindell22.PreProcessingMaterial
 	quorum  ds.Set[types.IdentityKey]
 
-	variant schnorr.Variant[V]
+	variant schnorr.Variant[V, M]
 
 	_ ds.Incomparable
 }
 
-var _ types.ThresholdSignatureParticipant = (*Cosigner[vanilla.EdDsaCompatibleVariant])(nil)
+var _ types.ThresholdSignatureParticipant = (*Cosigner[vanilla.EdDsaCompatibleVariant, []byte])(nil)
 
-func (c *Cosigner[V]) IdentityKey() types.IdentityKey {
+func (c *Cosigner[V, M]) IdentityKey() types.IdentityKey {
 	return c.myAuthKey
 }
 
-func (c *Cosigner[V]) SharingId() types.SharingID {
+func (c *Cosigner[V, M]) SharingId() types.SharingID {
 	return c.mySharingId
 }
 
-func NewCosigner[V schnorr.Variant[V]](myAuthKey types.AuthKey, myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, quorum ds.Set[types.IdentityKey], ppm *lindell22.PreProcessingMaterial, variant schnorr.Variant[V], transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner[V], err error) {
+func NewCosigner[V schnorr.Variant[V, M], M any](myAuthKey types.AuthKey, myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, quorum ds.Set[types.IdentityKey], ppm *lindell22.PreProcessingMaterial, variant schnorr.Variant[V, M], transcript transcripts.Transcript, prng io.Reader) (cosigner *Cosigner[V, M], err error) {
 	if err := validateCosignerInputs(myAuthKey, myShard, protocol, quorum, ppm, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid arguments")
 	}
@@ -55,7 +55,7 @@ func NewCosigner[V schnorr.Variant[V]](myAuthKey types.AuthKey, myShard *lindell
 		return nil, errs.NewMissing("could not find my sharing id")
 	}
 
-	cosigner = &Cosigner[V]{
+	cosigner = &Cosigner[V, M]{
 		myAuthKey:     myAuthKey,
 		Prng:          prng,
 		Protocol:      protocol,

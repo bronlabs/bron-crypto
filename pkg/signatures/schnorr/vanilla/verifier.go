@@ -23,45 +23,45 @@ type verifier struct {
 	challengePublicKey curves.Point
 }
 
-var _ schnorr.VerifierBuilder[EdDsaCompatibleVariant] = (*verifierBuilder)(nil)
-var _ schnorr.Verifier[EdDsaCompatibleVariant] = (*verifier)(nil)
+var _ schnorr.VerifierBuilder[EdDsaCompatibleVariant, []byte] = (*verifierBuilder)(nil)
+var _ schnorr.Verifier[EdDsaCompatibleVariant, []byte] = (*verifier)(nil)
 
-func (v *verifierBuilder) WithSigningSuite(suite types.SigningSuite) schnorr.VerifierBuilder[EdDsaCompatibleVariant] {
+func (v *verifierBuilder) WithSigningSuite(suite types.SigningSuite) schnorr.VerifierBuilder[EdDsaCompatibleVariant, []byte] {
 	v.suite = suite
 	return v
 }
 
-func (v *verifierBuilder) WithPublicKey(publicKey *schnorr.PublicKey) schnorr.VerifierBuilder[EdDsaCompatibleVariant] {
+func (v *verifierBuilder) WithPublicKey(publicKey *schnorr.PublicKey) schnorr.VerifierBuilder[EdDsaCompatibleVariant, []byte] {
 	v.publicKey = publicKey
 	return v
 }
 
-func (v *verifierBuilder) WithMessage(message []byte) schnorr.VerifierBuilder[EdDsaCompatibleVariant] {
+func (v *verifierBuilder) WithMessage(message []byte) schnorr.VerifierBuilder[EdDsaCompatibleVariant, []byte] {
 	v.message = message
 	return v
 }
 
-func (v *verifierBuilder) WithChallengeCommitment(partialNonceCommitment curves.Point) schnorr.VerifierBuilder[EdDsaCompatibleVariant] {
+func (v *verifierBuilder) WithChallengeCommitment(partialNonceCommitment curves.Point) schnorr.VerifierBuilder[EdDsaCompatibleVariant, []byte] {
 	v.nonceCommitment = partialNonceCommitment
 	return v
 }
 
-func (v *verifierBuilder) WithChallengePublicKey(challengePublicKey curves.Point) schnorr.VerifierBuilder[EdDsaCompatibleVariant] {
+func (v *verifierBuilder) WithChallengePublicKey(challengePublicKey curves.Point) schnorr.VerifierBuilder[EdDsaCompatibleVariant, []byte] {
 	v.challengePublicKey = challengePublicKey
 	return v
 }
 
-func (v *verifierBuilder) Build() schnorr.Verifier[EdDsaCompatibleVariant] {
+func (v *verifierBuilder) Build() (schnorr.Verifier[EdDsaCompatibleVariant, []byte], error) {
 	return &verifier{
 		suite:              v.suite,
 		publicKey:          v.publicKey,
 		message:            v.message,
 		nonceCommitment:    v.nonceCommitment,
 		challengePublicKey: v.challengePublicKey,
-	}
+	}, nil
 }
 
-func (v *verifier) Verify(signature *schnorr.Signature[EdDsaCompatibleVariant]) error {
+func (v *verifier) Verify(signature *schnorr.Signature[EdDsaCompatibleVariant, []byte]) error {
 	if err := types.ValidateSigningSuite(v.suite); err != nil {
 		return errs.WrapArgument(err, "invalid cipher suite")
 	}
@@ -88,8 +88,7 @@ func (v *verifier) Verify(signature *schnorr.Signature[EdDsaCompatibleVariant]) 
 	if challengePk == nil {
 		challengePk = v.publicKey.A
 	}
-	eBytes := edDsaCompatibleVariant.ComputeChallengeBytes(challengeR, challengePk, v.message)
-	e, err := schnorr.MakeGenericSchnorrChallenge(v.suite, eBytes)
+	e, err := edDsaCompatibleVariant.ComputeChallenge(v.suite, challengeR, challengePk, v.message)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create challenge scalar")
 	}

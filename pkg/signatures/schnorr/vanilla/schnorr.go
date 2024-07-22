@@ -13,7 +13,7 @@ type PublicKey schnorr.PublicKey
 
 type PrivateKey schnorr.PrivateKey
 
-type Signature = schnorr.Signature[EdDsaCompatibleVariant]
+type Signature = schnorr.Signature[EdDsaCompatibleVariant, []byte]
 
 func (pk *PublicKey) MarshalBinary() ([]byte, error) {
 	serializedPublicKey := pk.A.ToAffineCompressed()
@@ -71,8 +71,8 @@ func NewSigner(suite types.SigningSuite, privateKey *PrivateKey) (*Signer, error
 	}
 
 	return &Signer{
-		suite,
-		privateKey,
+		suite:      suite,
+		privateKey: privateKey,
 	}, nil
 }
 
@@ -84,8 +84,7 @@ func (signer *Signer) Sign(message []byte, prng io.Reader) (*Signature, error) {
 	R := signer.suite.Curve().ScalarBaseMult(k)
 	a := signer.suite.Curve().ScalarBaseMult(signer.privateKey.S)
 
-	eBytes := edDsaCompatibleVariant.ComputeChallengeBytes(R, a, message)
-	e, err := schnorr.MakeGenericSchnorrChallenge(signer.suite, eBytes)
+	e, err := edDsaCompatibleVariant.ComputeChallenge(signer.suite, R, a, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create challenge scalar")
 	}
@@ -95,11 +94,14 @@ func (signer *Signer) Sign(message []byte, prng io.Reader) (*Signature, error) {
 }
 
 func Verify(suite types.SigningSuite, publicKey *PublicKey, message []byte, signature *Signature) error {
-	v := edDsaCompatibleVariant.NewVerifierBuilder().
+	v, err := edDsaCompatibleVariant.NewVerifierBuilder().
 		WithSigningSuite(suite).
 		WithPublicKey((*schnorr.PublicKey)(publicKey)).
 		WithMessage(message).
 		Build()
+	if err != nil {
+		return errs.WrapFailed(err, "could not build the verifier")
+	}
 
 	//nolint:wrapcheck // forward errors
 	return v.Verify(signature)

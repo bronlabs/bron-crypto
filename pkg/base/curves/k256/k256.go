@@ -1,7 +1,6 @@
 package k256
 
 import (
-	"fmt"
 	"io"
 	"reflect"
 	"strings"
@@ -70,7 +69,6 @@ func (c *Curve) Cardinality() *saferith.Nat {
 }
 
 func (*Curve) Contains(e curves.Point) bool {
-	fmt.Println(e.ToAffineCompressed())
 	return e.IsInPrimeSubGroup()
 }
 

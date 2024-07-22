@@ -25,16 +25,15 @@ func BigS(participants ds.Set[types.IdentityKey]) []byte {
 	return bigS
 }
 
-func Aggregate[V schnorr.Variant[V]](variant schnorr.Variant[V], protocol types.ThresholdSignatureProtocol, message []byte, publicShares ds.Map[types.IdentityKey, *tsignatures.PartialPublicKeys], publicKey *schnorr.PublicKey, partialSignatures ds.Map[types.IdentityKey, *tschnorr.PartialSignature]) (signature *schnorr.Signature[V], err error) {
+func Aggregate[V schnorr.Variant[V, M], M any](variant schnorr.Variant[V, M], protocol types.ThresholdSignatureProtocol, message M, publicShares ds.Map[types.IdentityKey, *tsignatures.PartialPublicKeys], publicKey *schnorr.PublicKey, partialSignatures ds.Map[types.IdentityKey, *tschnorr.PartialSignature]) (signature *schnorr.Signature[V, M], err error) {
 	sigs := partialSignatures.Values()
 	sig0 := sigs[0]
-	r := sig0.R.Curve().AdditiveIdentity()
+	bigR := sig0.R.Curve().AdditiveIdentity()
 	for _, sigI := range sigs {
-		r = r.Add(sigI.R)
+		bigR = bigR.Add(sigI.R)
 	}
 
-	eBytes := variant.ComputeChallengeBytes(r, publicKey.A, message)
-	e, err := schnorr.MakeGenericSchnorrChallenge(protocol.SigningSuite(), eBytes)
+	e, err := variant.ComputeChallenge(protocol.SigningSuite(), bigR, publicKey.A, message)
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "cannot compute challenge")
 	}
@@ -66,21 +65,23 @@ func Aggregate[V schnorr.Variant[V]](variant schnorr.Variant[V], protocol types.
 			return nil, errs.NewVerification("invalid partial signatures")
 		}
 
-		sig := &schnorr.Signature[V]{
+		sig := &schnorr.Signature[V, M]{
 			Variant: variant,
 			E:       partialSig.E,
 			R:       partialSig.R,
 			S:       partialSig.S,
 		}
-		verifier := variant.NewVerifierBuilder().
+		verifier, err := variant.NewVerifierBuilder().
 			WithSigningSuite(protocol.SigningSuite()).
 			WithPublicKey(&schnorr.PublicKey{A: publicShareAdditive}).
 			WithMessage(message).
-			WithChallengeCommitment(r).
+			WithChallengeCommitment(bigR).
 			WithChallengePublicKey(publicKey.A).
 			Build()
-		err = verifier.Verify(sig)
 		if err != nil {
+			return nil, errs.WrapFailed(err, "could not build verifier")
+		}
+		if err := verifier.Verify(sig); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, identity.String(), "invalid partial signatures")
 		}
 	}
@@ -98,15 +99,22 @@ func Aggregate[V schnorr.Variant[V]](variant schnorr.Variant[V], protocol types.
 			R:       sig.R,
 			S:       sig.S,
 		}
-		if err := eddsa.Verify(eddsaPublicKey, message, eddsaSignature); err != nil {
+		msg, ok := any(message).([]byte)
+		if !ok {
+			return nil, errs.NewVerification("unsupported message type")
+		}
+		if err := eddsa.Verify(eddsaPublicKey, msg, eddsaSignature); err != nil {
 			return nil, errs.WrapVerification(err, "invalid partial signatures")
 		}
 	} else {
-		verifier := variant.NewVerifierBuilder().
+		verifier, err := variant.NewVerifierBuilder().
 			WithSigningSuite(protocol.SigningSuite()).
 			WithPublicKey(publicKey).
 			WithMessage(message).
 			Build()
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not build verifier")
+		}
 		if err := verifier.Verify(sig); err != nil {
 			return nil, errs.WrapVerification(err, "invalid partial signatures")
 		}
@@ -115,7 +123,7 @@ func Aggregate[V schnorr.Variant[V]](variant schnorr.Variant[V], protocol types.
 	return sig, err
 }
 
-func aggregateInternal[V schnorr.Variant[V]](variant schnorr.Variant[V], partialSignatures ...*tschnorr.PartialSignature) (signature *schnorr.Signature[V], err error) {
+func aggregateInternal[V schnorr.Variant[V, M], M any](variant schnorr.Variant[V, M], partialSignatures ...*tschnorr.PartialSignature) (signature *schnorr.Signature[V, M], err error) {
 	if len(partialSignatures) < 2 {
 		return nil, errs.NewFailed("not enough partial signatures")
 	}
@@ -135,7 +143,7 @@ func aggregateInternal[V schnorr.Variant[V]](variant schnorr.Variant[V], partial
 		s = s.Add(partialSignature.S)
 	}
 
-	return &schnorr.Signature[V]{
+	return &schnorr.Signature[V, M]{
 		Variant: variant,
 		E:       e,
 		R:       r,

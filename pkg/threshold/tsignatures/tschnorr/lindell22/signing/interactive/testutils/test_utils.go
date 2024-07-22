@@ -19,13 +19,13 @@ import (
 
 var cn = randomisedFischlin.Name
 
-func MakeParticipants[V schnorr.Variant[V]](sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.Map[types.IdentityKey, *lindell22.Shard], allTranscripts []transcripts.Transcript, variant schnorr.Variant[V]) (participants []*interactive_signing.Cosigner[V], err error) {
+func MakeParticipants[V schnorr.Variant[V, M], M any](sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.Map[types.IdentityKey, *lindell22.Shard], allTranscripts []transcripts.Transcript, variant schnorr.Variant[V, M]) (participants []*interactive_signing.Cosigner[V, M], err error) {
 	if len(identities) < int(protocol.Threshold()) {
 		return nil, errs.NewLength("invalid number of identities %d != %d", len(identities), protocol.Threshold())
 	}
 
 	prng := crand.Reader
-	participants = make([]*interactive_signing.Cosigner[V], protocol.Threshold())
+	participants = make([]*interactive_signing.Cosigner[V, M], protocol.Threshold())
 	for i, identity := range identities {
 		if !protocol.Participants().Contains(identity) {
 			return nil, errs.NewMissing("protocol config is missing identity")
@@ -34,7 +34,7 @@ func MakeParticipants[V schnorr.Variant[V]](sid []byte, protocol types.Threshold
 		if !exists {
 			return nil, errs.NewMissing("shard for idnetity %x", identity)
 		}
-		participants[i], err = interactive_signing.NewCosigner[V](identity.(types.AuthKey), sid, hashset.NewHashableHashSet(identities...), thisShard, protocol, cn, allTranscripts[i], variant, prng)
+		participants[i], err = interactive_signing.NewCosigner[V, M](identity.(types.AuthKey), sid, hashset.NewHashableHashSet(identities...), thisShard, protocol, cn, allTranscripts[i], variant, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "failed to create cosigner")
 		}
@@ -43,7 +43,7 @@ func MakeParticipants[V schnorr.Variant[V]](sid []byte, protocol types.Threshold
 	return participants, nil
 }
 
-func DoRound1[V schnorr.Variant[V]](participants []*interactive_signing.Cosigner[V]) (round2BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *interactive_signing.Round1Broadcast], err error) {
+func DoRound1[V schnorr.Variant[V, M], M any](participants []*interactive_signing.Cosigner[V, M]) (round2BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *interactive_signing.Round1Broadcast], err error) {
 	round1BroadcastOutputs := make([]*interactive_signing.Round1Broadcast, len(participants))
 	for i, participant := range participants {
 		round1BroadcastOutputs[i], err = participant.Round1()
@@ -55,7 +55,7 @@ func DoRound1[V schnorr.Variant[V]](participants []*interactive_signing.Cosigner
 	return testutils.MapBroadcastO2I(participants, round1BroadcastOutputs), nil
 }
 
-func DoRound2[V schnorr.Variant[V]](participants []*interactive_signing.Cosigner[V], round2BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *interactive_signing.Round1Broadcast]) (round3BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *interactive_signing.Round2Broadcast], err error) {
+func DoRound2[V schnorr.Variant[V, M], M any](participants []*interactive_signing.Cosigner[V, M], round2BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *interactive_signing.Round1Broadcast]) (round3BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *interactive_signing.Round2Broadcast], err error) {
 	round2BroadcastOutputs := make([]*interactive_signing.Round2Broadcast, len(participants))
 	for i, participant := range participants {
 		round2BroadcastOutputs[i], err = participant.Round2(round2BroadcastInputs[i])
@@ -67,7 +67,7 @@ func DoRound2[V schnorr.Variant[V]](participants []*interactive_signing.Cosigner
 	return testutils.MapBroadcastO2I(participants, round2BroadcastOutputs), nil
 }
 
-func DoRound3[V schnorr.Variant[V]](participants []*interactive_signing.Cosigner[V], round3BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *interactive_signing.Round2Broadcast], message []byte) (partialSignatures []*tschnorr.PartialSignature, err error) {
+func DoRound3[V schnorr.Variant[V, M], M any](participants []*interactive_signing.Cosigner[V, M], round3BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *interactive_signing.Round2Broadcast], message M) (partialSignatures []*tschnorr.PartialSignature, err error) {
 	partialSignatures = make([]*tschnorr.PartialSignature, len(participants))
 	for i, participant := range participants {
 		partialSignatures[i], err = participant.Round3(round3BroadcastInputs[i], message)
@@ -79,7 +79,7 @@ func DoRound3[V schnorr.Variant[V]](participants []*interactive_signing.Cosigner
 	return partialSignatures, nil
 }
 
-func RunInteractiveSigning[V schnorr.Variant[V]](participants []*interactive_signing.Cosigner[V], message []byte) (partialSignatures []*tschnorr.PartialSignature, err error) {
+func RunInteractiveSigning[V schnorr.Variant[V, M], M any](participants []*interactive_signing.Cosigner[V, M], message M) (partialSignatures []*tschnorr.PartialSignature, err error) {
 	r2bi, err := DoRound1(participants)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to do lindell22 round 1")

@@ -5,12 +5,13 @@ import (
 	"encoding"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 )
 
 type PublicKey schnorr.PublicKey
 
-type Signature = schnorr.Signature[ZilliqaVariant]
+type Signature = schnorr.Signature[ZilliqaVariant, []byte]
 
 var _ encoding.BinaryMarshaler = (*PublicKey)(nil)
 
@@ -21,10 +22,13 @@ var (
 )
 
 func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
-	v := zilliqaVariant.NewVerifierBuilder().
+	v, err := zilliqaVariant.NewVerifierBuilder().
 		WithPublicKey((*schnorr.PublicKey)(publicKey)).
 		WithMessage(message).
 		Build()
+	if err != nil {
+		return errs.WrapFailed(err, "could not build the verifier")
+	}
 
 	//nolint:wrapcheck // forward errors
 	return v.Verify(signature)

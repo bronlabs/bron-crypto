@@ -4,13 +4,14 @@ import (
 	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 )
 
-type TaprootVariant struct {
-}
+type TaprootVariant struct{}
 
-var _ schnorr.Variant[TaprootVariant] = (*TaprootVariant)(nil)
+var _ schnorr.Variant[TaprootVariant, []byte] = (*TaprootVariant)(nil)
 
 var taprootVariant = &TaprootVariant{}
 
@@ -26,8 +27,18 @@ func (TaprootVariant) ComputeNonceCommitment(nonceCommitment, partialNonceCommit
 	}
 }
 
-func (TaprootVariant) ComputeChallengeBytes(nonceCommitment, publicKey curves.Point, message []byte) []byte {
-	return slices.Concat(nonceCommitment.ToAffineCompressed()[1:], publicKey.ToAffineCompressed()[1:], message)
+func (TaprootVariant) ComputeChallenge(signingSuite types.SigningSuite, nonceCommitment, publicKey curves.Point, message []byte) (curves.Scalar, error) {
+	roinput := slices.Concat(
+		nonceCommitment.ToAffineCompressed()[1:],
+		publicKey.ToAffineCompressed()[1:],
+		message,
+	)
+
+	e, err := schnorr.MakeGenericSchnorrChallenge(signingSuite, roinput)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create challenge scalar")
+	}
+	return e, nil
 }
 
 func (TaprootVariant) ComputeResponse(nonceCommitment, publicKey curves.Point, partialNonce, partialSecretKey, challenge curves.Scalar) curves.Scalar {
@@ -44,10 +55,10 @@ func (TaprootVariant) ComputeResponse(nonceCommitment, publicKey curves.Point, p
 	return k.Add(challenge.Mul(sk))
 }
 
-func (TaprootVariant) SerializeSignature(signature *Signature) []byte {
+func (TaprootVariant) SerializeSignature(signature *schnorr.Signature[TaprootVariant, []byte]) []byte {
 	return slices.Concat(signature.R.ToAffineCompressed()[1:], signature.S.Bytes())
 }
 
-func (TaprootVariant) NewVerifierBuilder() schnorr.VerifierBuilder[TaprootVariant] {
+func (TaprootVariant) NewVerifierBuilder() schnorr.VerifierBuilder[TaprootVariant, []byte] {
 	return &verifierBuilder{}
 }

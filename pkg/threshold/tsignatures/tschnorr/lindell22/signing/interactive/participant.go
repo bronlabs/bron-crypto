@@ -36,7 +36,7 @@ type state struct {
 	_ ds.Incomparable
 }
 
-type Cosigner[F schnorr.Variant[F]] struct {
+type Cosigner[F schnorr.Variant[F, M], M any] struct {
 	// Base participant
 	myAuthKey  types.AuthKey
 	Prng       io.Reader
@@ -51,7 +51,7 @@ type Cosigner[F schnorr.Variant[F]] struct {
 
 	mySigningKeyShare *tsignatures.SigningKeyShare
 
-	variant schnorr.Variant[F]
+	variant schnorr.Variant[F, M]
 	quorum  ds.Set[types.IdentityKey]
 	nic     compiler.Name
 
@@ -60,15 +60,15 @@ type Cosigner[F schnorr.Variant[F]] struct {
 	_ ds.Incomparable
 }
 
-func (p *Cosigner[V]) IdentityKey() types.IdentityKey {
+func (p *Cosigner[V, M]) IdentityKey() types.IdentityKey {
 	return p.myAuthKey
 }
 
-func (p *Cosigner[V]) SharingId() types.SharingID {
+func (p *Cosigner[V, M]) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
-func NewCosigner[V schnorr.Variant[V]](myAuthKey types.AuthKey, sessionId []byte, quorum ds.Set[types.IdentityKey], myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, variant schnorr.Variant[V], prng io.Reader) (p *Cosigner[V], err error) {
+func NewCosigner[V schnorr.Variant[V, M], M any](myAuthKey types.AuthKey, sessionId []byte, quorum ds.Set[types.IdentityKey], myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, variant schnorr.Variant[V, M], prng io.Reader) (p *Cosigner[V, M], err error) {
 	if err := validateInputs(sessionId, myAuthKey, quorum, myShard, protocol, niCompiler, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
@@ -90,7 +90,7 @@ func NewCosigner[V schnorr.Variant[V]](myAuthKey types.AuthKey, sessionId []byte
 		return nil, errs.NewMissing("couldn't find my sharing id")
 	}
 
-	cosigner := &Cosigner[V]{
+	cosigner := &Cosigner[V, M]{
 		myAuthKey:         myAuthKey,
 		Prng:              prng,
 		Protocol:          protocol,

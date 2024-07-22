@@ -12,7 +12,7 @@ import (
 	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
-type Signature = schnorr.Signature[vanillaSchnorr.EdDsaCompatibleVariant]
+type Signature = schnorr.Signature[vanillaSchnorr.EdDsaCompatibleVariant, []byte]
 
 type PublicKey schnorr.PublicKey
 

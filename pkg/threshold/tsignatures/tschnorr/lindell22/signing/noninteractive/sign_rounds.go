@@ -1,14 +1,15 @@
 package noninteractive_signing
 
 import (
+	"encoding/json"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 )
 
-func (c *Cosigner[V]) ProducePartialSignature(message []byte) (partialSignature *tschnorr.PartialSignature, err error) {
+func (c *Cosigner[V, M]) ProducePartialSignature(message M) (partialSignature *tschnorr.PartialSignature, err error) {
 	bigR1Sum := c.Protocol.SigningSuite().Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K1)
 	bigR2Sum := c.Protocol.SigningSuite().Curve().ScalarBaseMult(c.ppm.PrivateMaterial.K2)
 	for iterator := c.quorum.Iterator(); iterator.HasNext(); {
@@ -28,11 +29,17 @@ func (c *Cosigner[V]) ProducePartialSignature(message []byte) (partialSignature 
 		bigR2Sum = bigR2Sum.Add(thisR2)
 	}
 
+	// TODO: come up with something better?
+	buf, err := json.Marshal(message)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "couldn't serialise message")
+	}
+
 	deltaMessage, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction,
 		c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed(),
 		bigR1Sum.ToAffineCompressed(),
 		bigR2Sum.ToAffineCompressed(),
-		message,
+		buf,
 	)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't produce delta message")
@@ -47,8 +54,7 @@ func (c *Cosigner[V]) ProducePartialSignature(message []byte) (partialSignature 
 	bigR := bigR1Sum.Add(bigR2Sum.ScalarMul(delta))
 
 	// 3.ii. compute e = H(R || pk || message)
-	eBytes := c.variant.ComputeChallengeBytes(bigR, c.myShard.PublicKey(), message)
-	e, err := schnorr.MakeGenericSchnorrChallenge(c.Protocol.SigningSuite(), eBytes)
+	e, err := c.variant.ComputeChallenge(c.Protocol.SigningSuite(), bigR, c.myShard.PublicKey(), message)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create digest scalar")
 	}

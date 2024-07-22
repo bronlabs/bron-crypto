@@ -5,8 +5,8 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 )
 
-type Signature[F any] struct {
-	Variant Variant[F]
+type Signature[F any, M any] struct {
+	Variant Variant[F, M]
 
 	E curves.Scalar
 	R curves.Point
@@ -15,8 +15,8 @@ type Signature[F any] struct {
 	_ ds.Incomparable
 }
 
-func NewSignature[F Variant[F]](variant Variant[F], e curves.Scalar, r curves.Point, s curves.Scalar) *Signature[F] {
-	return &Signature[F]{
+func NewSignature[F Variant[F, M], M any](variant Variant[F, M], e curves.Scalar, r curves.Point, s curves.Scalar) *Signature[F, M] {
+	return &Signature[F, M]{
 		Variant: variant,
 		E:       e,
 		R:       r,
@@ -24,6 +24,6 @@ func NewSignature[F Variant[F]](variant Variant[F], e curves.Scalar, r curves.Po
 	}
 }
 
-func (s *Signature[F]) MarshalBinary() (data []byte, err error) {
+func (s *Signature[F, M]) MarshalBinary() (data []byte, err error) {
 	return s.Variant.SerializeSignature(s), nil
 }

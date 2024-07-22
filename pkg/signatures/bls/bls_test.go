@@ -572,7 +572,8 @@ func TestBatchVerifyVectors(t *testing.T) {
 		require.NoError(t, err)
 
 		var vector *batchVerifyVector
-		json.Unmarshal(content, &vector)
+		err = json.Unmarshal(content, &vector)
+		require.NoError(t, err)
 
 		boundedFileName := file.Name()
 

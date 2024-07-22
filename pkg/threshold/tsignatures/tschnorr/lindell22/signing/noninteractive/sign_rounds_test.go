@@ -15,13 +15,16 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	hashingBip340 "github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/poseidon"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/mina"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/zilliqa"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
@@ -231,6 +234,106 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 					require.NoError(t, err)
 
 					err = bip340.Verify(&bip340.PublicKey{A: publicKey}, signature, message)
+					require.NoError(t, err)
+				}
+			}
+		})
+	}
+}
+
+func Test_SignNonInteractiveThresholdMina(t *testing.T) {
+	t.Parallel()
+
+	networkId := mina.MainNet
+	variant := mina.NewMinaVariant(networkId)
+	curve := pallas.NewCurve()
+	hashFunc := poseidon.NewLegacyHash
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
+	require.NoError(t, err)
+
+	prng := crand.Reader
+	sid := []byte("sessionId")
+	message := new(mina.ROInput).Init()
+	message.AddBytes([]byte("Lorem ipsum"))
+	transcriptAppLabel := "Lindell2022NonInteractiveSignTest"
+
+	for _, cfg := range configs {
+		n := cfg.nParticipants
+		nPresigners := cfg.nPreSigners
+		threshold := cfg.nThreshold
+		t.Run(fmt.Sprintf("Mina (%d,%d,%d)", n, nPresigners, threshold), func(t *testing.T) {
+			t.Parallel()
+
+			identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+			require.NoError(t, err)
+
+			protocolConfig, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
+			require.NoError(t, err)
+
+			shards, err := trusted_dealer.Keygen(protocolConfig, prng)
+			require.NoError(t, err)
+
+			aliceShard, exists := shards.Get(identities[0])
+			require.True(t, exists)
+			publicKey := aliceShard.PublicKey()
+			publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+			for iterator := shards.Iterator(); iterator.HasNext(); {
+				iter := iterator.Next()
+				identity := iter.Key
+				shard := iter.Value
+				publicKeyShares.Put(identity, shard.PublicKeyShares)
+			}
+
+			N := make([]int, n)
+			for i := range n {
+				N[i] = i
+			}
+			preSignersCombinations, err := combinatorics.Combinations(N, uint(nPresigners))
+			require.NoError(t, err)
+			for _, preSignersCombination := range preSignersCombinations {
+				preSignersIdentities := make([]types.IdentityKey, len(preSignersCombination))
+				for i, p := range preSignersCombination {
+					preSignersIdentities[i] = identities[p]
+				}
+
+				preSignerstranscripts := ttu.MakeTranscripts(transcriptAppLabel, preSignersIdentities)
+
+				preSigners, err := testutils.MakePreGenParticipants(preSignersIdentities, sid, protocolConfig, preSignerstranscripts)
+				require.NoError(t, err)
+
+				ppms, err := testutils.DoLindell2022PreGen(preSigners)
+				require.NoError(t, err)
+
+				PS := make([]int, len(preSigners))
+				for i := range preSigners {
+					PS[i] = i
+				}
+				cosignersCombinations, err := combinatorics.Combinations(PS, uint(threshold))
+				require.NoError(t, err)
+				for _, cosignerCombination := range cosignersCombinations {
+					cosignersIdentities := make([]types.IdentityKey, len(cosignerCombination))
+					for i, c := range cosignerCombination {
+						cosignersIdentities[i] = preSignersIdentities[c]
+					}
+
+					partialSignatures := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+					for _, c := range cosignerCombination {
+						shard, exists := shards.Get(preSignersIdentities[c])
+						require.True(t, exists)
+
+						cosigner, err := noninteractive_signing.NewCosigner(preSignersIdentities[c].(types.AuthKey), shard, protocolConfig, hashset.NewHashableHashSet(cosignersIdentities...), ppms[c], variant, nil, prng)
+						require.NoError(t, err)
+
+						psig, err := cosigner.ProducePartialSignature(message)
+						require.NoError(t, err)
+
+						partialSignatures.Put(preSignersIdentities[c], psig)
+					}
+
+					signature, err := signing.Aggregate(variant, protocolConfig, message, publicKeyShares, &schnorr.PublicKey{A: publicKey}, partialSignatures)
+					require.NoError(t, err)
+
+					err = mina.Verify(&mina.PublicKey{A: publicKey}, signature, message, networkId)
 					require.NoError(t, err)
 				}
 			}

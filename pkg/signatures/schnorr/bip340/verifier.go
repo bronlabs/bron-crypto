@@ -12,6 +12,7 @@ type verifierBuilder struct {
 	message            []byte
 	nonceCommitment    curves.Point
 	challengePublicKey curves.Point
+	challengePrefixes  [][]byte //nolint:unused // fot future features
 }
 
 type verifier struct {
@@ -19,45 +20,46 @@ type verifier struct {
 	message            []byte
 	nonceCommitment    curves.Point
 	challengePublicKey curves.Point
+	challengePrefixes  [][]byte //nolint:unused // for future features
 }
 
-var _ schnorr.VerifierBuilder[TaprootVariant] = (*verifierBuilder)(nil)
-var _ schnorr.Verifier[TaprootVariant] = (*verifier)(nil)
+var _ schnorr.VerifierBuilder[TaprootVariant, []byte] = (*verifierBuilder)(nil)
+var _ schnorr.Verifier[TaprootVariant, []byte] = (*verifier)(nil)
 
-func (v *verifierBuilder) WithSigningSuite(_ types.SigningSuite) schnorr.VerifierBuilder[TaprootVariant] {
+func (v *verifierBuilder) WithSigningSuite(_ types.SigningSuite) schnorr.VerifierBuilder[TaprootVariant, []byte] {
 	return v
 }
 
-func (v *verifierBuilder) WithPublicKey(publicKey *schnorr.PublicKey) schnorr.VerifierBuilder[TaprootVariant] {
+func (v *verifierBuilder) WithPublicKey(publicKey *schnorr.PublicKey) schnorr.VerifierBuilder[TaprootVariant, []byte] {
 	v.publicKey = publicKey
 	return v
 }
 
-func (v *verifierBuilder) WithMessage(message []byte) schnorr.VerifierBuilder[TaprootVariant] {
+func (v *verifierBuilder) WithMessage(message []byte) schnorr.VerifierBuilder[TaprootVariant, []byte] {
 	v.message = message
 	return v
 }
 
-func (v *verifierBuilder) WithChallengeCommitment(partialNonceCommitment curves.Point) schnorr.VerifierBuilder[TaprootVariant] {
+func (v *verifierBuilder) WithChallengeCommitment(partialNonceCommitment curves.Point) schnorr.VerifierBuilder[TaprootVariant, []byte] {
 	v.nonceCommitment = partialNonceCommitment
 	return v
 }
 
-func (v *verifierBuilder) WithChallengePublicKey(challengePublicKey curves.Point) schnorr.VerifierBuilder[TaprootVariant] {
+func (v *verifierBuilder) WithChallengePublicKey(challengePublicKey curves.Point) schnorr.VerifierBuilder[TaprootVariant, []byte] {
 	v.challengePublicKey = challengePublicKey
 	return v
 }
 
-func (v *verifierBuilder) Build() schnorr.Verifier[TaprootVariant] {
+func (v *verifierBuilder) Build() (schnorr.Verifier[TaprootVariant, []byte], error) {
 	return &verifier{
 		publicKey:          v.publicKey,
 		message:            v.message,
 		nonceCommitment:    v.nonceCommitment,
 		challengePublicKey: v.challengePublicKey,
-	}
+	}, nil
 }
 
-func (v *verifier) Verify(signature *schnorr.Signature[TaprootVariant]) error {
+func (v *verifier) Verify(signature *schnorr.Signature[TaprootVariant, []byte]) error {
 	if v.publicKey == nil || v.publicKey.A == nil || v.publicKey.A.Curve().Name() != suite.Curve().Name() {
 		return errs.NewArgument("curve not supported")
 	}
@@ -83,10 +85,9 @@ func (v *verifier) Verify(signature *schnorr.Signature[TaprootVariant]) error {
 	if challengeR == nil {
 		challengeR = signature.R
 	}
-	eBytes := taprootVariant.ComputeChallengeBytes(challengeR, challengePk, v.message)
-	e, err := schnorr.MakeGenericSchnorrChallenge(suite, eBytes)
+	e, err := taprootVariant.ComputeChallenge(suite, challengeR, challengePk, v.message)
 	if err != nil {
-		return errs.WrapVerification(err, "invalid signature")
+		return errs.WrapFailed(err, "cannot create challenge scalar")
 	}
 
 	if signature.E != nil && !signature.E.Equal(e) {

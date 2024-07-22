@@ -29,7 +29,7 @@ type PrivateKey struct {
 	_ ds.Incomparable
 }
 
-type Signature = schnorr.Signature[TaprootVariant]
+type Signature = schnorr.Signature[TaprootVariant, []byte]
 
 func (pk *PublicKey) MarshalBinary() ([]byte, error) {
 	serializedPublicKey := pk.A.ToAffineCompressed()[1:]
@@ -130,8 +130,7 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 
 	// 10. Let k = k' if R.x is even, otherwise let k = n - k', R = k ⋅ G
 	// 11. Let e = int(hashBIP0340/challenge(bytes(R) || bytes(P) || m)) mod n.
-	eBytes := taprootVariant.ComputeChallengeBytes(bigR, bigP, message)
-	e, err := schnorr.MakeGenericSchnorrChallenge(suite, eBytes)
+	e, err := taprootVariant.ComputeChallenge(suite, bigR, bigP, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to get e")
 	}
@@ -141,11 +140,15 @@ func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, err
 	signature := schnorr.NewSignature(taprootVariant, e, taprootVariant.ComputeNonceCommitment(bigR, bigR), s)
 
 	// 13. If Verify(bytes(P), m, sig) returns failure, abort.
-	err = taprootVariant.NewVerifierBuilder().
+	verifier, err := taprootVariant.NewVerifierBuilder().
 		WithPublicKey((*schnorr.PublicKey)(&signer.privateKey.PublicKey)).
 		WithMessage(message).
-		Build().Verify(signature)
+		Build()
 	if err != nil {
+		return nil, errs.WrapFailed(err, "could not build the verifier")
+	}
+
+	if err := verifier.Verify(signature); err != nil {
 		return nil, errs.NewFailed("cannot create signature")
 	}
 
@@ -157,10 +160,13 @@ func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
 	if !publicKey.A.IsInPrimeSubGroup() {
 		return errs.NewValidation("Public Key not in the prime subgroup")
 	}
-	v := taprootVariant.NewVerifierBuilder().
+	v, err := taprootVariant.NewVerifierBuilder().
 		WithPublicKey((*schnorr.PublicKey)(publicKey)).
 		WithMessage(message).
 		Build()
+	if err != nil {
+		return errs.WrapFailed(err, "could not build the verifier")
+	}
 
 	//nolint:wrapcheck // forward errors
 	return v.Verify(signature)
@@ -202,10 +208,9 @@ func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]
 		bigP[i] = negPointIfPointYOdd(publicKeys[i].A)
 
 		// 5. Let ei = int(hashBIP0340/challenge(bytes(r_i) || bytes(P_i) || mi)) mod n.
-		eBytes := taprootVariant.ComputeChallengeBytes(sig.R, publicKeys[i].A, messages[i])
-		e, err := schnorr.MakeGenericSchnorrChallenge(suite, eBytes)
+		e, err := taprootVariant.ComputeChallenge(suite, sig.R, publicKeys[i].A, messages[i])
 		if err != nil {
-			return errs.WrapVerification(err, "invalid signature")
+			return errs.WrapFailed(err, "invalid signature")
 		}
 
 		// 6. Let Ri = lift_x(ri); fail if lift_x(ri) fails.

@@ -30,6 +30,7 @@ func ToBytes32LE(i int32) []byte {
 	return b
 }
 
+// TODO: add pad argument
 // PadToRight pads the input bytes to the right with padLen zeroed bytes.
 func PadToRight(inBytes []byte, padLen int) []byte {
 	if padLen < 0 {

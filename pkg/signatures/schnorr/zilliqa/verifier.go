@@ -21,43 +21,43 @@ type verifier struct {
 	challengePublicKey curves.Point
 }
 
-var _ schnorr.VerifierBuilder[ZilliqaVariant] = (*verifierBuilder)(nil)
-var _ schnorr.Verifier[ZilliqaVariant] = (*verifier)(nil)
+var _ schnorr.VerifierBuilder[ZilliqaVariant, []byte] = (*verifierBuilder)(nil)
+var _ schnorr.Verifier[ZilliqaVariant, []byte] = (*verifier)(nil)
 
-func (v *verifierBuilder) WithSigningSuite(_ types.SigningSuite) schnorr.VerifierBuilder[ZilliqaVariant] {
+func (v *verifierBuilder) WithSigningSuite(_ types.SigningSuite) schnorr.VerifierBuilder[ZilliqaVariant, []byte] {
 	return v
 }
 
-func (v *verifierBuilder) WithPublicKey(publicKey *schnorr.PublicKey) schnorr.VerifierBuilder[ZilliqaVariant] {
+func (v *verifierBuilder) WithPublicKey(publicKey *schnorr.PublicKey) schnorr.VerifierBuilder[ZilliqaVariant, []byte] {
 	v.publicKey = publicKey
 	return v
 }
 
-func (v *verifierBuilder) WithMessage(message []byte) schnorr.VerifierBuilder[ZilliqaVariant] {
+func (v *verifierBuilder) WithMessage(message []byte) schnorr.VerifierBuilder[ZilliqaVariant, []byte] {
 	v.message = message
 	return v
 }
 
-func (v *verifierBuilder) WithChallengeCommitment(partialNonceCommitment curves.Point) schnorr.VerifierBuilder[ZilliqaVariant] {
+func (v *verifierBuilder) WithChallengeCommitment(partialNonceCommitment curves.Point) schnorr.VerifierBuilder[ZilliqaVariant, []byte] {
 	v.nonceCommitment = partialNonceCommitment
 	return v
 }
 
-func (v *verifierBuilder) WithChallengePublicKey(challengePublicKey curves.Point) schnorr.VerifierBuilder[ZilliqaVariant] {
+func (v *verifierBuilder) WithChallengePublicKey(challengePublicKey curves.Point) schnorr.VerifierBuilder[ZilliqaVariant, []byte] {
 	v.challengePublicKey = challengePublicKey
 	return v
 }
 
-func (v *verifierBuilder) Build() schnorr.Verifier[ZilliqaVariant] {
+func (v *verifierBuilder) Build() (schnorr.Verifier[ZilliqaVariant, []byte], error) {
 	return &verifier{
 		publicKey:          v.publicKey,
 		message:            v.message,
 		nonceCommitment:    v.nonceCommitment,
 		challengePublicKey: v.challengePublicKey,
-	}
+	}, nil
 }
 
-func (v *verifier) Verify(signature *schnorr.Signature[ZilliqaVariant]) error {
+func (v *verifier) Verify(signature *schnorr.Signature[ZilliqaVariant, []byte]) error {
 	if v.publicKey == nil || signature == nil || len(v.message) == 0 {
 		return errs.NewIsNil("argument is empty")
 	}
@@ -99,8 +99,7 @@ func (v *verifier) Verify(signature *schnorr.Signature[ZilliqaVariant]) error {
 	if challengeR == nil {
 		challengeR = signature.R
 	}
-	eCheckBytes := zilliqaVariant.ComputeChallengeBytes(challengeR, challengePk, v.message)
-	eCheck, err := schnorr.MakeGenericSchnorrChallenge(protocol, eCheckBytes)
+	eCheck, err := zilliqaVariant.ComputeChallenge(protocol, challengeR, challengePk, v.message)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot compute challenge")
 	}

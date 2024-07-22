@@ -12,13 +12,16 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	hashing_bip340 "github.com/copperexchange/krypton-primitives/pkg/hashing/bip340"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing/poseidon"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/bip340"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/mina"
 	vanillaSchnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/zilliqa"
 	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
@@ -187,6 +190,65 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 
 	err = bip340.Verify(&bip340.PublicKey{A: publicKey}, signature, message)
 	require.NoError(t, err)
+}
+
+func Test_HappyPathThresholdMina(t *testing.T) {
+	t.Parallel()
+
+	networkId := mina.TestNet
+	variant := mina.NewMinaVariant(networkId)
+	hashFunc := poseidon.NewLegacyHash
+	curve := pallas.NewCurve()
+	prng := crand.Reader
+	message := new(mina.ROInput).Init()
+	message.AddBytes([]byte("Hello World!"))
+	th := 2
+	n := 3
+	sid := []byte("sessionId")
+
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
+	require.NoError(t, err)
+
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
+	require.NoError(t, err)
+
+	shards, err := trusted_dealer.Keygen(protocol, prng)
+	require.NoError(t, err)
+	aliceShard, exists := shards.Get(identities[0])
+	require.True(t, exists)
+	publicKey := aliceShard.SigningKeyShare.PublicKey
+	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+	for iterator := shards.Iterator(); iterator.HasNext(); {
+		iter := iterator.Next()
+		identity := iter.Key
+		shard := iter.Value
+		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	}
+
+	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+
+	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, variant)
+	require.NoError(t, err)
+
+	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
+	require.NoError(t, err)
+	require.NotNil(t, partialSignatures)
+
+	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+	for i, partialSignature := range partialSignatures {
+		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
+	}
+
+	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey{A: publicKey}, partialSignaturesMap)
+	require.NoError(t, err)
+	require.NotNil(t, signature)
+
+	err = mina.Verify(&mina.PublicKey{A: publicKey}, signature, message, networkId)
+	require.NoError(t, err)
+
 }
 
 func Test_HappyPathThresholdZilliqa(t *testing.T) {

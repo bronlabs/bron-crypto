@@ -12,7 +12,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 )
@@ -22,7 +21,7 @@ const (
 	transcriptDLogSLabel   = "Lindell2022InteractiveSignDLogS-"
 )
 
-func (p *Cosigner[V]) Round1() (broadcastOutput *Round1Broadcast, err error) {
+func (p *Cosigner[V, M]) Round1() (broadcastOutput *Round1Broadcast, err error) {
 	// Validation
 	if p.Round != 1 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
@@ -58,7 +57,7 @@ func (p *Cosigner[V]) Round1() (broadcastOutput *Round1Broadcast, err error) {
 	return broadcast, nil
 }
 
-func (p *Cosigner[V]) Round2(broadcastInput network.RoundMessages[types.ThresholdSignatureProtocol, *Round1Broadcast]) (broadcastOutput *Round2Broadcast, err error) {
+func (p *Cosigner[V, M]) Round2(broadcastInput network.RoundMessages[types.ThresholdSignatureProtocol, *Round1Broadcast]) (broadcastOutput *Round2Broadcast, err error) {
 	// Validation, unicastInput is delegated to Przs.Round2
 	if p.Round != 2 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
@@ -95,7 +94,7 @@ func (p *Cosigner[V]) Round2(broadcastInput network.RoundMessages[types.Threshol
 	return broadcast, nil
 }
 
-func (p *Cosigner[V]) Round3(broadcastInput network.RoundMessages[types.ThresholdSignatureProtocol, *Round2Broadcast], message []byte) (partialSignature *tschnorr.PartialSignature, err error) {
+func (p *Cosigner[V, M]) Round3(broadcastInput network.RoundMessages[types.ThresholdSignatureProtocol, *Round2Broadcast], message M) (partialSignature *tschnorr.PartialSignature, err error) {
 	// Validation, unicastInput is delegated to Przs.Round3
 	if p.Round != 3 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
@@ -145,8 +144,7 @@ func (p *Cosigner[V]) Round3(broadcastInput network.RoundMessages[types.Threshol
 	}
 
 	// step 3.7.2: compute e
-	eBytes := p.variant.ComputeChallengeBytes(bigR, p.mySigningKeyShare.PublicKey, message)
-	e, err := schnorr.MakeGenericSchnorrChallenge(p.Protocol.SigningSuite(), eBytes)
+	e, err := p.variant.ComputeChallenge(p.Protocol.SigningSuite(), bigR, p.mySigningKeyShare.PublicKey, message)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create digest scalar")
 	}

@@ -32,6 +32,10 @@ func NewLegacy() *Poseidon {
 	}
 }
 
+func NewLegacyHash() hash.Hash {
+	return NewLegacy()
+}
+
 func (p *Poseidon) Rate() int {
 	return p.state.parameters.rate
 }

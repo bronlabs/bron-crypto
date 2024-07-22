@@ -2,13 +2,14 @@ package schnorr
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
 
-type Variant[F any] interface {
+type Variant[F any, M any] interface {
 	ComputeNonceCommitment(nonceCommitment, partialNonceCommitment curves.Point) curves.Point
-	ComputeChallengeBytes(nonceCommitment, publicKey curves.Point, message []byte) []byte
+	ComputeChallenge(signingSuite types.SigningSuite, nonceCommitment, publicKey curves.Point, message M) (curves.Scalar, error)
 	ComputeResponse(nonceCommitment, publicKey curves.Point, nonce, secretKey, challenge curves.Scalar) curves.Scalar
-	SerializeSignature(signature *Signature[F]) []byte
+	SerializeSignature(signature *Signature[F, M]) []byte
 
 	// NewVerifierBuilder returns a verifier builder specific to a variant of the Schnorr signature.
 	// The reason we need it is twofold:
@@ -22,5 +23,5 @@ type Variant[F any] interface {
 	//  * https://datatracker.ietf.org/doc/html/rfc8032
 	//  * https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 	//  * https://docs.zilliqa.com/whitepaper.pdf
-	NewVerifierBuilder() VerifierBuilder[F]
+	NewVerifierBuilder() VerifierBuilder[F, M]
 }
