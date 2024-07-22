@@ -1,10 +1,129 @@
-package poseidon3w
+package poseidon
 
 import (
+	"hash"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
+
+var (
+	_ hash.Hash = (*Poseidon)(nil)
+)
+
+type Poseidon struct {
+	state  *state
+	offset int
+}
+
+func NewKimchi() *Poseidon {
+	return &Poseidon{
+		state:  newInitialState(poseidonParamsKimchiFp),
+		offset: 0,
+	}
+}
+
+func NewLegacy() *Poseidon {
+	return &Poseidon{
+		state:  newInitialState(poseidonParamsLegacyFp),
+		offset: 0,
+	}
+}
+
+func (p *Poseidon) Rate() int {
+	return p.state.parameters.rate
+}
+
+func (p *Poseidon) Update(xs ...curves.BaseFieldElement) {
+	if len(xs) == 0 {
+		p.state.Permute()
+		return
+	}
+
+	for range len(xs) % p.Rate() {
+		xs = append(xs, xs[0].BaseField().Zero())
+	}
+
+	for blockIndex := 0; blockIndex < len(xs); blockIndex += p.Rate() {
+		for i := range p.Rate() {
+			p.state.v[i] = p.state.v[i].Add(xs[blockIndex+i])
+		}
+		p.state.Permute()
+	}
+}
+
+func (p *Poseidon) Hash(xs ...curves.BaseFieldElement) curves.BaseFieldElement {
+	p.state = newInitialState(p.state.parameters)
+	p.Update(xs...)
+	return p.Digest()
+}
+
+func (p *Poseidon) Digest() curves.BaseFieldElement {
+	return p.state.v[0]
+}
+
+func (p *Poseidon) Write(data []byte) (n int, err error) {
+	if (len(data) % 32) != 0 {
+		return 0, errs.NewHashing("data length must be multiple of 32")
+	}
+
+	elems := []curves.BaseFieldElement{}
+	for i := range (len(data) + 31) / 32 {
+		bytes := data[32*i : 32*(i+1)]
+		fe, err := pallas.NewBaseFieldElement(0).SetBytes(bytes)
+		if err != nil {
+			return 0, errs.WrapHashing(err, "cannot create Pallas base field element")
+		}
+		elems = append(elems, fe)
+	}
+	p.Hash(elems...)
+	return len(data), nil
+}
+
+func (p *Poseidon) Sum(data []byte) []byte {
+	_, err := p.Write(data)
+	if err != nil {
+		panic(err)
+	}
+	return p.Digest().Bytes()
+}
+
+func (p *Poseidon) Reset() {
+	p.state = newInitialState(p.state.parameters)
+}
+
+func (*Poseidon) Size() int {
+	return 32
+}
+
+func (*Poseidon) BlockSize() int {
+	return 32
+}
+
+// exp mutates f by computing x^3, x^5, x^7 or x^-1 as described in
+// https://eprint.iacr.org/2019/458.pdf page 8
+func exp(f *fp.Fp, power int) {
+	if power == 3 {
+		t := new(fp.Fp).Square(f)
+		f.Mul(t, f)
+	}
+	if power == 5 {
+		t := new(fp.Fp).Square(f)
+		t.Square(t)
+		f.Mul(t, f)
+	}
+	if power == 7 {
+		f2 := new(fp.Fp).Square(f)
+		f4 := new(fp.Fp).Square(f2)
+		t := new(fp.Fp).Mul(f2, f4)
+		f.Mul(t, f)
+	}
+	if power == -1 {
+		f.Invert(f)
+	}
+}
 
 type state struct {
 	v          []curves.BaseFieldElement
@@ -91,79 +210,5 @@ func (s *state) mds() {
 func (s *state) ark(round, offset int) {
 	for i := range s.parameters.stateSize {
 		s.v[i] = s.v[i].Add(s.parameters.roundConstants[round+offset][i])
-	}
-}
-
-type Poseidon struct {
-	state  *state
-	offset int
-}
-
-func NewKimchi(parameters *Parameters) *Poseidon {
-	return &Poseidon{
-		state:  newInitialState(parameters),
-		offset: 0,
-	}
-}
-
-func NewLegacy() *Poseidon {
-	return &Poseidon{
-		state:  newInitialState(SigningParameters),
-		offset: 0,
-	}
-}
-
-func (p *Poseidon) Rate() int {
-	return p.state.parameters.rate
-}
-
-func (p *Poseidon) Update(xs ...curves.BaseFieldElement) {
-	if len(xs) == 0 {
-		p.state.Permute()
-		return
-	}
-
-	for range len(xs) % p.Rate() {
-		xs = append(xs, xs[0].BaseField().Zero())
-	}
-
-	for blockIndex := 0; blockIndex < len(xs); blockIndex += p.Rate() {
-		for i := range p.Rate() {
-			p.state.v[i] = p.state.v[i].Add(xs[blockIndex+i])
-		}
-		p.state.Permute()
-	}
-}
-
-func (p *Poseidon) Hash(xs ...curves.BaseFieldElement) curves.BaseFieldElement {
-	p.state = newInitialState(p.state.parameters)
-	p.Update(xs...)
-	return p.Digest()
-}
-
-func (p *Poseidon) Digest() curves.BaseFieldElement {
-	return p.state.v[0]
-}
-
-// exp mutates f by computing x^3, x^5, x^7 or x^-1 as described in
-// https://eprint.iacr.org/2019/458.pdf page 8
-func exp(f *fp.Fp, power int) {
-	if power == 3 {
-		t := new(fp.Fp).Square(f)
-		f.Mul(t, f)
-	}
-	if power == 5 {
-		t := new(fp.Fp).Square(f)
-		t.Square(t)
-		f.Mul(t, f)
-	}
-	if power == 7 {
-		f2 := new(fp.Fp).Square(f)
-		f4 := new(fp.Fp).Square(f2)
-		t := new(fp.Fp).Mul(f2, f4)
-		f.Mul(t, f)
-	}
-	if power == -1 {
-		f.Invert(f)
 	}
 }
