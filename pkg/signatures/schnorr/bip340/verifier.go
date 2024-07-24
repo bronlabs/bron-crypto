@@ -12,7 +12,6 @@ type verifierBuilder struct {
 	message            []byte
 	nonceCommitment    curves.Point
 	challengePublicKey curves.Point
-	challengePrefixes  [][]byte //nolint:unused // fot future features
 }
 
 type verifier struct {
@@ -20,7 +19,6 @@ type verifier struct {
 	message            []byte
 	nonceCommitment    curves.Point
 	challengePublicKey curves.Point
-	challengePrefixes  [][]byte //nolint:unused // for future features
 }
 
 var _ schnorr.VerifierBuilder[TaprootVariant, []byte] = (*verifierBuilder)(nil)

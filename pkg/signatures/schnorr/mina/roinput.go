@@ -82,7 +82,7 @@ func (r *ROInput) PackToFields() []curves.BaseFieldElement {
 			offset := idx % maxChunkSize
 			byteIdx := offset / 8
 			bitIdx := offset % 8
-			chunk[byteIdx] |= r.bits.Element(i) << bitIdx
+			chunk[byteIdx] |= r.bits.Element(idx) << bitIdx
 			idx++
 		}
 		slices.Reverse(chunk[:])

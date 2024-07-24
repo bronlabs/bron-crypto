@@ -75,7 +75,9 @@ func (MinaVariant) ComputeResponse(nonceCommitment, _ curves.Point, partialNonce
 }
 
 func (MinaVariant) SerializeSignature(signature *schnorr.Signature[MinaVariant, *ROInput]) []byte {
-	return slices.Concat(signature.E.Bytes(), signature.S.Bytes())
+	rx := signature.R.AffineX().Bytes()
+	s := signature.S.Bytes()
+	return slices.Concat(rx, s)
 }
 func (v MinaVariant) NewVerifierBuilder() schnorr.VerifierBuilder[MinaVariant, *ROInput] {
 	return &verifierBuilder{
