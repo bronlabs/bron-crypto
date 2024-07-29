@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
 )
 
 var (
@@ -59,12 +60,18 @@ func (r *ROInput) AddFields(fieldElements ...curves.BaseFieldElement) {
 	r.fields = append(r.fields, fieldElements...)
 }
 
-func (r *ROInput) AddBytes(input []byte) {
-	for _, b := range input {
-		for i := 0; i < 8; i++ {
+func (r *ROInput) AddString(input string) {
+	for _, b := range []byte(input) {
+		for i := range 8 {
 			bitIdx := 7 - i
 			r.bits.Append((b >> bitIdx) & 1)
 		}
+	}
+}
+
+func (r *ROInput) AddBits(bits ...bool) {
+	for _, b := range bits {
+		r.bits.Append(utils.BoolTo[byte](b))
 	}
 }
 

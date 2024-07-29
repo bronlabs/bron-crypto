@@ -49,7 +49,7 @@ func Test_MinaSignMessage(t *testing.T) {
 	require.Equal(t, "28387199546673507202866414450281545215199183201766863666714284315614039951407", r.AffineY().Nat().Big().Text(10))
 
 	message := new(mina.ROInput).Init()
-	message.AddBytes([]byte("hello"))
+	message.AddString("hello")
 
 	e, err := variant.ComputeChallenge(nil, r, pk, message)
 	require.NoError(t, err)
@@ -76,7 +76,7 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	message := new(mina.ROInput).Init()
-	message.AddBytes([]byte("Hello World!"))
+	message.AddString("Hello World!")
 
 	signature, err := signer.Sign(message, prng)
 	require.NoError(t, err)

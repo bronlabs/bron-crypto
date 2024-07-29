@@ -201,7 +201,7 @@ func Test_HappyPathThresholdMina(t *testing.T) {
 	curve := pallas.NewCurve()
 	prng := crand.Reader
 	message := new(mina.ROInput).Init()
-	message.AddBytes([]byte("Hello World!"))
+	message.AddString("Hello World!")
 	th := 2
 	n := 3
 	sid := []byte("sessionId")
@@ -249,6 +249,85 @@ func Test_HappyPathThresholdMina(t *testing.T) {
 	err = mina.Verify(&mina.PublicKey{A: publicKey}, signature, message, networkId)
 	require.NoError(t, err)
 
+}
+
+func Test_ThresholdMinaAgainstMinaSigner(t *testing.T) {
+	t.Parallel()
+
+	msg := "Hello World!"
+	networkId := mina.TestNet
+	variant := mina.NewMinaVariant(networkId)
+	hashFunc := poseidon.NewLegacyHash
+	curve := pallas.NewCurve()
+	prng := crand.Reader
+	message := new(mina.ROInput).Init()
+	message.AddString(msg)
+	th := 2
+	n := 3
+	sid := []byte("sessionId")
+
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
+	require.NoError(t, err)
+
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
+	require.NoError(t, err)
+
+	shards, err := trusted_dealer.Keygen(protocol, prng)
+	require.NoError(t, err)
+	aliceShard, exists := shards.Get(identities[0])
+	require.True(t, exists)
+	publicKey := aliceShard.SigningKeyShare.PublicKey
+	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+	for iterator := shards.Iterator(); iterator.HasNext(); {
+		iter := iterator.Next()
+		identity := iter.Key
+		shard := iter.Value
+		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	}
+
+	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+
+	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, variant)
+	require.NoError(t, err)
+
+	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
+	require.NoError(t, err)
+	require.NotNil(t, partialSignatures)
+
+	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+	for i, partialSignature := range partialSignatures {
+		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
+	}
+
+	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey{A: publicKey}, partialSignaturesMap)
+	require.NoError(t, err)
+	require.NotNil(t, signature)
+
+	err = mina.Verify(&mina.PublicKey{A: publicKey}, signature, message, networkId)
+	require.NoError(t, err)
+
+	// spit out data, so it can be verified with mina signer
+	println("r", signature.R.AffineX().Nat().Big().Text(10))
+	println("s", signature.S.Nat().Big().Text(10))
+	println("fields: []")
+	bitsStr := "["
+	for _, byte := range []byte(msg) {
+		for i := 0; i < 8; i++ {
+			bit := (byte & (1 << (7 - i))) != 0
+			bStr := "false,"
+			if bit {
+				bStr = "true,"
+			}
+			bitsStr = bitsStr + bStr
+		}
+	}
+	bitsStr = bitsStr + "]"
+	println("bits", bitsStr)
+	println("x", publicKey.AffineX().Nat().Big().Text(10))
+	println("isOdd", publicKey.AffineY().IsOdd())
 }
 
 func Test_HappyPathThresholdZilliqa(t *testing.T) {

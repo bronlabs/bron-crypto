@@ -254,7 +254,7 @@ func Test_SignNonInteractiveThresholdMina(t *testing.T) {
 	prng := crand.Reader
 	sid := []byte("sessionId")
 	message := new(mina.ROInput).Init()
-	message.AddBytes([]byte("Lorem ipsum"))
+	message.AddString("Lorem ipsum")
 	transcriptAppLabel := "Lindell2022NonInteractiveSignTest"
 
 	for _, cfg := range configs {

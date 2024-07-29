@@ -79,6 +79,7 @@ func NewSigner(privateKey *PrivateKey, networkId NetworkId) (*Signer, error) {
 
 func (signer *Signer) Sign(message *ROInput, prng io.Reader) (*Signature, error) {
 	variant := NewMinaVariant(signer.networkId)
+	publicKey := curve.ScalarBaseMult(signer.privateKey.S)
 
 	// TODO: implement "deriveNonceLegacy, for now sample randomly"
 	kPrime, err := curve.ScalarField().Random(prng)
@@ -90,13 +91,13 @@ func (signer *Signer) Sign(message *ROInput, prng io.Reader) (*Signature, error)
 	}
 	bigR := curve.ScalarBaseMult(kPrime)
 
-	e, err := variant.ComputeChallenge(suite, bigR, signer.privateKey.A, message)
+	e, err := variant.ComputeChallenge(suite, bigR, publicKey, message)
 	if err != nil {
 		return nil, errs.NewFailed("cannot compute challenge")
 	}
 
 	r := variant.ComputeNonceCommitment(bigR, bigR)
-	s := variant.ComputeResponse(bigR, signer.privateKey.A, kPrime, signer.privateKey.S, e)
+	s := variant.ComputeResponse(bigR, publicKey, kPrime, signer.privateKey.S, e)
 
 	return schnorr.NewSignature(variant, nil, r, s), nil
 }
