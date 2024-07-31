@@ -29,3 +29,7 @@ testdata/
 # Latex
 docs/build/*
 !docs/build/main.pdf
+
+# golangci-lint Cache
+.golangcicache:/tmp/.golangcicache
+.gocache:/tmp/.gocache
