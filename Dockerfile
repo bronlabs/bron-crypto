@@ -47,7 +47,7 @@ COPY docs/docs.mk docs/docs.mk
 COPY thirdparty/boringssl thirdparty/boringssl
 RUN make deps-boring
 
-COPY go.mod go.sum .golangciLong.yml./
+COPY go.mod go.sum ./
 
 RUN make deps-go
 
