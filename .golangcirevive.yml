@@ -1,0 +1,302 @@
+run:
+  tests: true
+  build-tags:
+    - nobignum
+    - purego
+
+output:
+  formats: colored-line-number
+  sort-results: true
+  show-stats: true
+
+# https://golangci-lint.run/usage/linters
+linters:
+  disable-all: true
+  enable:
+    - revive
+  fast: false
+
+linters-settings:
+  revive:
+    rules:
+      
+      # Disallows the usage of basic types in context.WithValue.
+      - name: context-keys-type
+      # Suggests to use time.Time.Equal instead of == and != for equality check time.
+      - name: time-equal
+      # Conventions around the naming of time variables.
+      - name: time-naming
+      # # whitelist & blacklist of initialisms
+      # # TODO: enable this once field elements are exported
+      # - name: var-naming
+      #   arguments:
+      #     # whitelist - we do not enforce consistent capitalization in naming of the following initialisms
+      #     - ["ID", "RHS"]
+      #     # Blacklist - opposite of whitelist
+      #     - ["KMS", "RSA", "HSM", "ECDH", "ECIES", "JSON", "URL", "PublicKey", "PrivateKey", "UUID", "HKDF", "TLS", "SQS", "SNS", "S2S", "DKLs"]
+      # Reduces redundancies around variable declaration.
+      - name: var-declaration
+      # # Warns when a public return is from unexported type.
+      # # TODO: enable this once
+      - name: unexported-return
+      # Disallows blank imports
+      - name: blank-imports
+      # context.Context should be the first argument of a function.
+      - name: context-as-argument
+      # Forbids . imports.
+      - name: dot-imports
+      # The error return parameter should be last.
+      - name: error-return
+      # Conventions around error strings.
+      - name: error-strings
+      # Naming of error variables.
+      - name: error-naming
+      # Naming and commenting conventions on exported symbols.
+      - name: exported
+      # Redundant if when returning an error.
+      - name: if-return
+      # Use i++ and i-- instead of i += 1 and i -= 1.
+      - name: increment-decrement
+      # Package commenting conventions.
+      - name: package-comments
+      # Prevents redundant variables when iterating over a collection.
+      - name: range
+      # Conventions around the naming of receivers.
+      - name: receiver-naming
+      # Warns on empty code blocks
+      - name: empty-block
+      # Looks for program exits in funcs other than main() or init()
+      - name: deep-exit
+      # Prevents redundant else statements (extends indent-error-flow)
+      - name: superfluous-else
+      # Warns on getters that do not yield any result
+      - name: get-return
+      # Warns on assignments to function parameters
+      - name: modifies-parameter
+      # Checks inefficient conditional expressions
+      - name: optimize-operands-order
+      # Warns on specific string literals that fail one or more user-configured regular expressions
+      - name: string-format
+      # Suggests to name potentially confusing function results
+      - name: confusing-results
+      # Spots potential dataraces
+      - name: datarace
+      # # Warns on boolean parameters that create a control coupling
+      # # TODO: enable this in krypton sdk
+      # - name: flag-parameter
+      # Warns on unreachable code
+      - name: unreachable-code
+      # Suggests removing or simplifying unnecessary statements
+      - name: unnecessary-stmt
+      # Checks common struct tags like json,xml,yaml
+      - name: struct-tag
+      # Check for common mistaken usages of the sync/atomic package
+      - name: atomic
+      # Warns on assignments to value-passed method receivers
+      - name: modifies-value-receiver
+      # Warns on constant logical expressions
+      - name: constant-logical-expr
+      # Suggests removing Boolean literals from logic expressions
+      - name: bool-literal-in-expr
+      # Warns on redefinitions of builtin identifiers
+      - name: redefines-builtin-id
+      # Warns if range value is used in a closure dispatched as goroutine
+      - name: range-val-in-closure
+      # Warns if address of range value is used dangerously
+      - name: range-val-address
+      # Warns on functions taking sync.WaitGroup as a by-value parameter
+      - name: waitgroup-by-value
+      # Warns on explicit call to the garbage collector
+      - name: call-to-gc
+      # Looks for packages that are imported two or more times
+      - name: duplicated-imports
+      # Spots identifiers that shadow an import
+      - name: import-shadowing
+      # Warns on bare returns
+      - name: bare-return
+      # Suggests to rename or remove unused method receivers
+      - name: unused-receiver
+      # Warns on suspicious casts from int to string
+      - name: string-of-int
+      # Spots if-then-else statements that can be refactored to simplify code reading
+      - name: early-return
+      # Warns on function calls that will lead to (direct) infinite recursion
+      - name: unconditional-recursion
+      # Spots if-then-else statements with identical then and else branches
+      - name: identical-branches
+      # Warns on some defer gotchas: https://blog.learngoprogramming.com/5-gotchas-of-defer-in-go-golang-part-iii-36a1ab3d6ef1
+      - name: defer
+        arguments:
+          # call-chain:	even if deferring call-chains of the form foo()() is valid, it does not helps code understanding (only the last call is deferred)
+          # loop: deferring inside loops can be misleading (deferred functions are not executed at the end of the loop iteration but of the current function) and it could lead to exhausting the execution stack
+          # method-call: deferring a call to a method can lead to subtle bugs if the method does not have a pointer receiver
+          # recover: calling recover outside a deferred function has no effect
+          # return: returning values form a deferred function has no effect
+          - ["call-chain", "method-call", "recover", "return"]
+  
+issues:
+  exclude-dirs:
+    - gen
+    - testutils
+    - thirdparty
+  # Excluding configuration per-path, per-linter, per-text and per-source
+  exclude-rules:
+    # Exclude some linters from running on tests files.
+    - path: _test\.go
+      linters:
+        # We're disabling `goconst` in tests, because there are a lot of
+        # repeated non-constant strings in the tests that we don't want to
+        # change eg. `cosigner id` as the cosigner id etc.
+        - goconst
+        # We're only enabling `godot` for library and internal code to make documentation
+        # generation and/or text-editor's job prettier.
+        - godot
+        # It's unnecessary to have a hard wrapping requirement for tests.
+        - wrapcheck
+        # It's unnecessary to enforce errors are not defined dynamically
+        - err113
+        # Ignore revive results for tests because there a lot of conflicting
+        # suggestions eg. `var-naming` says we shouldn't use underscores in
+        # function names but that's a common pattern that we use.
+        - revive
+        # In tests we disable the check that prevents assigning errors to _
+        - errcheck
+        # duplicate code detection tends to break the subtesting pattern that we use.
+        - dupl
+        - gocritic
+        - dogsled
+        - errorlint
+        - asciicheck
+        - decorder
+        - depguard
+        - forbidigo
+        - forcetypeassert
+        - gochecknoinits
+        - gosec # mostly weak prng
+        - nilnil
+        - prealloc
+        - whitespace
+        - govet
+        - copyloopvar # TODO: enable later
+    - path: testutils/
+      linters:
+        - depguard
+        - wrapcheck
+        - dupl
+        - forbidigo
+        - forcetypeassert
+        - err113
+        - gosec # mostly weak prng
+        - nilnil
+        - prealloc
+        - whitespace
+        - govet
+    # too much work for now
+    - path: curves/
+      linters:
+        - errcheck
+        - gocritic
+        - forbidigo
+        - forcetypeassert
+        - err113
+        - nakedret
+        # TODO: ENABLE THIS
+        - wrapcheck
+
+    - path: signatures/bls/
+      linters:
+        # so many castings to pairing point would then need redundant checks.
+        # fix when we move to actual algebraic interfaces
+        - errcheck
+        - forcetypeassert
+
+    # linter thinks value is unused if we type cast the interface and panic if not ok
+    - path: curves/
+      text: "SA4006"
+      linters:
+        staticcheck
+
+    # big portions of `aes` trigger duplicated code (encrypt vs devrypt, constants) and 
+    # unused constants (poly).
+    - path: thirdparty/
+      linters:
+        - dupl
+        - unused
+
+    # a lot of false positives for cselect
+    - path: curves/
+      text: "nilness: nil dereference in field selection"
+      linters:
+        govet
+
+    # contents of impl are not supposed to be used by outside libraries, its constants
+    - path: impl/
+      text: "unexported-return"
+      linters:
+        - revive
+
+    - path: impl/
+      linters:
+        - dupl
+
+    - path: pkg/cgo
+      linters:
+        - gocritic
+
+    # Exclude some revive messages
+    - linters:
+        - revive
+      text: "var-naming: don't use ALL_CAPS in Go names; use CamelCase"
+
+    # We don't want to check whether statements like `x, err := ...` shadows `err`
+    - linters:
+        - govet
+      text: 'shadow: declaration of "err" shadows declaration at line'
+
+    - linters:
+        - govet
+      text: 'shadow: declaration of "ok" shadows declaration at line'
+
+    - linters:
+        - gocritic
+      text: "captLocal: `G1' should not be capitalized"
+
+    - linters:
+        - gocritic
+      text: "captLocal: `G2' should not be capitalized"
+
+    - linters:
+        - gocritic
+      text: "captLocal: `Gt' should not be capitalized"
+
+    - path: ot/
+      text: "captLocal"
+      linters:
+        - gocritic
+
+    - path: key_agreement/
+      text: "captLocal"
+      linters:
+        - gocritic
+
+    - path: encryptions/
+      text: "captLocal: `AD' should not be capitalized"
+      linters:
+        - gocritic
+
+    - path: hpke/
+      text: "captLocal: `L' should not be capitalized"
+      linters:
+        - gocritic
+
+    # this has a collision with wrapcheck. We care about wrapcheck more, but
+    # errchkjson is also important because it reports unsafe marshaling
+    - linters:
+        - errchkjson
+      text: 'Error return value of `encoding/json.Marshal` is checked but passed argument is safe'
+
+  # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
+  max-same-issues: 0
+  # Fix found issues (if it's supported by the linter). To prevent any problems
+  # with CI, this is disabled. Use `make lint-fix` instead.
+  fix: false

@@ -938,7 +938,7 @@ issues:
         # Ignore revive results for tests because there a lot of conflicting
         # suggestions eg. `var-naming` says we shouldn't use underscores in
         # function names but that's a common pattern that we use.
-        - revive
+        # - revive
         # In tests we disable the check that prevents assigning errors to _
         - errcheck
         # duplicate code detection tends to break the subtesting pattern that we use.

@@ -82,7 +82,7 @@ githooks:
 .PHONY: lint
 lint:
 	$(RUN_IN_DOCKER) 'go list -json -m all | nancy sleuth -d /tmp/.ossindexcache'
-	$(RUN_IN_DOCKER) 'golangci-lint run --timeout=5m'
+	$(RUN_IN_DOCKER) 'golangci-lint run -v --timeout=5m'
 
 .PHONY: lint-long
 lint-long:
@@ -91,7 +91,11 @@ lint-long:
 
 .PHONY: lint-fix
 lint-fix:
-	$(RUN_IN_DOCKER) 'golangci-lint run --fix --timeout=120m'
+	$(RUN_IN_DOCKER) 'golangci-lint run --config=./.golangci.yml --fix -v --timeout=120m'
+
+.PHONY: lint-fast
+lint-fast:
+	$(RUN_IN_DOCKER) 'golangci-lint run --config=./.golangcirevive.yml -v --timeout=120m'
 
 .PHONY: test
 test:
