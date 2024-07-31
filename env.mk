@@ -1,1 +1,1 @@
-RUN_IN_DOCKER := docker run --user `id -u`:`id -g` --rm -it --platform=linux/arm64 -v ${KRYPTON_PRIMITIVES_HOME}:/usr/local/src `docker build --ssh default --platform=linux/arm64 --target=base -q .` sh -c
+RUN_IN_DOCKER := docker run --user `id -u`:`id -g` --rm -it --platform=linux/arm64 -v ${KRYPTON_PRIMITIVES_HOME}:/usr/local/src -v $(HOME):/tmp `docker build --ssh default --platform=linux/arm64 --target=base -q .` sh -c
