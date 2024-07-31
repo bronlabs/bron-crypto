@@ -19,7 +19,6 @@ linters:
 linters-settings:
   revive:
     rules:
-      
       # Disallows the usage of basic types in context.WithValue.
       - name: context-keys-type
       # Suggests to use time.Time.Equal instead of == and != for equality check time.
@@ -144,90 +143,7 @@ issues:
     # Exclude some linters from running on tests files.
     - path: _test\.go
       linters:
-        # We're disabling `goconst` in tests, because there are a lot of
-        # repeated non-constant strings in the tests that we don't want to
-        # change eg. `cosigner id` as the cosigner id etc.
-        - goconst
-        # We're only enabling `godot` for library and internal code to make documentation
-        # generation and/or text-editor's job prettier.
-        - godot
-        # It's unnecessary to have a hard wrapping requirement for tests.
-        - wrapcheck
-        # It's unnecessary to enforce errors are not defined dynamically
-        - err113
-        # Ignore revive results for tests because there a lot of conflicting
-        # suggestions eg. `var-naming` says we shouldn't use underscores in
-        # function names but that's a common pattern that we use.
         - revive
-        # In tests we disable the check that prevents assigning errors to _
-        - errcheck
-        # duplicate code detection tends to break the subtesting pattern that we use.
-        - dupl
-        - gocritic
-        - dogsled
-        - errorlint
-        - asciicheck
-        - decorder
-        - depguard
-        - forbidigo
-        - forcetypeassert
-        - gochecknoinits
-        - gosec # mostly weak prng
-        - nilnil
-        - prealloc
-        - whitespace
-        - govet
-        - copyloopvar # TODO: enable later
-    - path: testutils/
-      linters:
-        - depguard
-        - wrapcheck
-        - dupl
-        - forbidigo
-        - forcetypeassert
-        - err113
-        - gosec # mostly weak prng
-        - nilnil
-        - prealloc
-        - whitespace
-        - govet
-    # too much work for now
-    - path: curves/
-      linters:
-        - errcheck
-        - gocritic
-        - forbidigo
-        - forcetypeassert
-        - err113
-        - nakedret
-        # TODO: ENABLE THIS
-        - wrapcheck
-
-    - path: signatures/bls/
-      linters:
-        # so many castings to pairing point would then need redundant checks.
-        # fix when we move to actual algebraic interfaces
-        - errcheck
-        - forcetypeassert
-
-    # linter thinks value is unused if we type cast the interface and panic if not ok
-    - path: curves/
-      text: "SA4006"
-      linters:
-        staticcheck
-
-    # big portions of `aes` trigger duplicated code (encrypt vs devrypt, constants) and 
-    # unused constants (poly).
-    - path: thirdparty/
-      linters:
-        - dupl
-        - unused
-
-    # a lot of false positives for cselect
-    - path: curves/
-      text: "nilness: nil dereference in field selection"
-      linters:
-        govet
 
     # contents of impl are not supposed to be used by outside libraries, its constants
     - path: impl/
@@ -235,66 +151,11 @@ issues:
       linters:
         - revive
 
-    - path: impl/
-      linters:
-        - dupl
-
-    - path: pkg/cgo
-      linters:
-        - gocritic
-
     # Exclude some revive messages
     - linters:
         - revive
       text: "var-naming: don't use ALL_CAPS in Go names; use CamelCase"
-
-    # We don't want to check whether statements like `x, err := ...` shadows `err`
-    - linters:
-        - govet
-      text: 'shadow: declaration of "err" shadows declaration at line'
-
-    - linters:
-        - govet
-      text: 'shadow: declaration of "ok" shadows declaration at line'
-
-    - linters:
-        - gocritic
-      text: "captLocal: `G1' should not be capitalized"
-
-    - linters:
-        - gocritic
-      text: "captLocal: `G2' should not be capitalized"
-
-    - linters:
-        - gocritic
-      text: "captLocal: `Gt' should not be capitalized"
-
-    - path: ot/
-      text: "captLocal"
-      linters:
-        - gocritic
-
-    - path: key_agreement/
-      text: "captLocal"
-      linters:
-        - gocritic
-
-    - path: encryptions/
-      text: "captLocal: `AD' should not be capitalized"
-      linters:
-        - gocritic
-
-    - path: hpke/
-      text: "captLocal: `L' should not be capitalized"
-      linters:
-        - gocritic
-
-    # this has a collision with wrapcheck. We care about wrapcheck more, but
-    # errchkjson is also important because it reports unsafe marshaling
-    - linters:
-        - errchkjson
-      text: 'Error return value of `encoding/json.Marshal` is checked but passed argument is safe'
-
+      
   # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
   max-same-issues: 0
   # Fix found issues (if it's supported by the linter). To prevent any problems
