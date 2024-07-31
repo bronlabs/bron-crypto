@@ -48,6 +48,8 @@ COPY thirdparty/boringssl thirdparty/boringssl
 RUN make deps-boring
 
 COPY go.mod go.sum ./
+COPY .golangci-long.yml .golangci-long.yml ./
+COPY .golangci-short.yml .golangci-short.yml ./
 
 RUN make deps-go
 
