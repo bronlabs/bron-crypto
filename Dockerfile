@@ -3,7 +3,7 @@ FROM golang:1.22-alpine3.19 as base
 ENV HOME="/user"
 ENV TMPDIR="/tmp"
 ENV GOLANGCI_LINT_CACHE="${TMPDIR}/.golangcicache"
-ENV GOCACHE="${TMPDIR}/.gocache"
+ENV GOCACHE="/usr/local/src/.gocache"
 
 RUN mkdir ${HOME} && \
     chmod -R a+rwX ${HOME}
@@ -47,7 +47,8 @@ COPY docs/docs.mk docs/docs.mk
 COPY thirdparty/boringssl thirdparty/boringssl
 RUN make deps-boring
 
-COPY go.mod go.sum .golangci.yml ./
+COPY go.mod go.sum ./
+COPY .golangci-long.yml .golangci-short.yml ./
 RUN make deps-go
 
 COPY . .
