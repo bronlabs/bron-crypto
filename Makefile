@@ -79,30 +79,35 @@ githooks:
 	git config core.hooksPath .githooks
 	chmod +x .githooks/*
 
-.PHONY: nancy
-nancy:
-	$(RUN_IN_DOCKER) 'go list -json -m all | nancy sleuth -d /tmp/.ossindexcache'
+# .PHONY: nancy
+# nancy:
+# 	$(RUN_IN_DOCKER) 'go list -json -m all | nancy sleuth -d /tmp/.ossindexcache'
 
-.PHONY: golangci-long
-golangci-long:
-	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --fix --config=./.golangci-long.yml --timeout=120m'
+# .PHONY: golangci-long
+# golangci-long:
+# 	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --fix --config=./.golangci-long.yml --timeout=120m'
 
-.PHONY: golangci-short
-golangci-short:
-	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --fix --config=./.golangci-short.yml --timeout=120m'
+# .PHONY: golangci-short
+# golangci-short:
+# 	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --fix --config=./.golangci-short.yml --timeout=120m'
 
 .PHONY: lint
 lint:
 	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --config=./.golangci-short.yml --timeout=120m'
 
 .PHONY: lint-long
-lint-long:
-	make -j 2 nancy golangci-long 
+nancy:
+	$(RUN_IN_DOCKER) 'go list -json -m all | nancy sleuth -d /tmp/.ossindexcache'
 
+golangci-long:
+	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --fix --config=./.golangci-long.yml --timeout=120m'
+
+lint-long:
+	make -j golangci-long nancy 
 
 .PHONY: lint-fix
 lint-fix:
-	make -j 3 nancy golangci-long  golangci-short 
+	make -j lint-long  lint
 
 .PHONY: test
 test:
