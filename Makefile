@@ -99,11 +99,11 @@ lint:
 nancy:
 	$(RUN_IN_DOCKER) 'go list -json -m all | nancy sleuth -d /tmp/.ossindexcache'
 
-golangci-long:
+golangci-lint-long:
 	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --fix --config=./.golangci-long.yml --timeout=120m'
 
 lint-long:
-	make -j golangci-long nancy 
+	make -j golangci-lint-long nancy 
 
 .PHONY: lint-fix
 lint-fix:
