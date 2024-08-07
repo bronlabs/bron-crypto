@@ -79,16 +79,16 @@ githooks:
 	git config core.hooksPath .githooks
 	chmod +x .githooks/*
 
-.PHONY: nancy
-nancy:
+.PHONY: check-deps
+check-deps:
 	$(RUN_IN_DOCKER) 'go list -json -m all | nancy sleuth -d /tmp/.ossindexcache'
 
-.PHONY: lint-complete
-lint-complete:
+.PHONY: lint-long-go
+lint-long-go:
 	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --config=./.golangci-long.yml --timeout=120m'
 
-.PHONY: lint-complete-fix
-lint-complete-fix:
+.PHONY: lint-fix-go
+lint-fix-go:
 	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --fix --config=./.golangci-long.yml --timeout=120m'
 
 .PHONY: lint
@@ -96,10 +96,10 @@ lint:
 	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --config=./.golangci-short.yml --timeout=120m'
 
 .PHONY: lint-long
-lint-long: nancy lint-complete
+lint-long: check-deps lint-long-go
 
 .PHONY: lint-fix
-lint-fix: nancy lint-complete-fix
+lint-fix: check-deps lint-fix-go
 
 .PHONY: test
 test:
