@@ -3,7 +3,7 @@ FROM golang:1.22-alpine3.19 as base
 ENV HOME="/user"
 ENV TMPDIR="/tmp"
 ENV GOLANGCI_LINT_CACHE="${TMPDIR}/.golangcicache"
-ENV GOCACHE="/usr/local/src/.gocache"
+ENV GOCACHE="${TMPDIR}/.gocache"
 
 RUN mkdir ${HOME} && \
     chmod -R a+rwX ${HOME}

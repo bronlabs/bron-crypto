@@ -89,11 +89,16 @@ lint-long-go:
 
 .PHONY: lint-fix-go
 lint-fix-go:
-	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --fix --config=./.golangci-long.yml --timeout=120m'
+	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --fix --config=./.golangci-long.yml -v --timeout=120m'
+
+build-linter-image:
+    docker build -f linter.Dockerfile --ssh default --platform=linux/arm64 -t krypton-linter -q .
+
+RUN_IN_DOCKER := docker run --user `id -u`:`id -g` --rm -it --platform=linux/arm64 -v ${KRYPTON_PRIMITIVES_HOME}:/usr/local/src krypton-linter sh -c
 
 .PHONY: lint
-lint:
-	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --config=./.golangci-short.yml --timeout=120m'
+lint: build-linter-image
+	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --fix --config=./.golangci-short.yml --timeout=120m'
 
 .PHONY: lint-long
 lint-long: check-deps lint-long-go
