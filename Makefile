@@ -79,32 +79,21 @@ githooks:
 	git config core.hooksPath .githooks
 	chmod +x .githooks/*
 
-.PHONY: check-deps
-check-deps:
-	$(RUN_IN_DOCKER) 'go list -json -m all | nancy sleuth -d /tmp/.ossindexcache'
-
-.PHONY: lint-long-go
-lint-long-go:
-	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --config=./.golangci-long.yml --timeout=120m'
-
-.PHONY: lint-fix-go
-lint-fix-go:
-	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --fix --config=./.golangci-long.yml --timeout=120m'
-
-build-linter-image:
-    docker build -f linter.Dockerfile --ssh default --platform=linux/arm64 -t krypton-linter -q .
-
-RUN_IN_DOCKER := docker run --user `id -u`:`id -g` --rm -it --platform=linux/arm64 ${KRYPTON_PRIMITIVES_HOME}:/usr/local/src krypton-linter sh -c
 
 .PHONY: lint
-lint: build-linter-image
-	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --fix --config=./.golangci-short.yml --timeout=120m'
+lint:
+	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --config=./.golangci-long.yml --timeout=120m'
 
 .PHONY: lint-long
-lint-long: check-deps lint-long-go build-linter-image
+lint-long:
+	@($(RUN_IN_DOCKER) 'go list -json -m all | nancy sleuth -d /tmp/.ossindexcache'\
+	  $(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --fix --config=./.golangci-long.yml --timeout=120m') && wait
 
 .PHONY: lint-fix
-lint-fix: check-deps lint-fix-go build-linter-image
+lint-fix:
+	@($(RUN_IN_DOCKER) 'go list -json -m all | nancy sleuth -d /tmp/.ossindexcache'\
+	  $(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --fix --config=./.golangci-long.yml --timeout=120m' \
+	  $(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --fix --config=./.golangci-short.yml --timeout=120m') && wait
 
 .PHONY: test
 test:

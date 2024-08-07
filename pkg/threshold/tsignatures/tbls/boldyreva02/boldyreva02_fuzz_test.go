@@ -1,0 +1,120 @@
+package boldyreva02_test
+
+import (
+	crand "crypto/rand"
+	"crypto/sha256"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/trusted_dealer"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/testutils"
+)
+
+var schemes = []bls.RogueKeyPrevention{
+	bls.Basic, bls.MessageAugmentation, bls.POP,
+}
+
+func Fuzz_Test(f *testing.F) {
+	f.Add(uint(0), uint64(0), uint64(1), uint64(2), []byte("sid"), []byte("message"))
+	f.Add(uint(0), uint64(0), uint64(1), uint64(2), []byte("sid"), []byte(""))
+	f.Fuzz(func(t *testing.T, schemeIndex uint, aliceSecret uint64, bobSecret uint64, charlieSecret uint64, sid []byte, message []byte) {
+		roundtrip[bls12381.G1, bls12381.G2](t, schemeIndex, aliceSecret, bobSecret, charlieSecret, sid, message)
+		roundtrip[bls12381.G2, bls12381.G1](t, schemeIndex, aliceSecret, bobSecret, charlieSecret, sid, message)
+	})
+}
+
+func roundtrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t *testing.T, schemeIndex uint, aliceSecret uint64, bobSecret uint64, charlieSecret uint64, sid []byte, message []byte) {
+	t.Helper()
+	scheme := schemes[schemeIndex%uint(len(schemes))]
+	hashFunc := sha256.New
+
+	if aliceSecret == 0 {
+		aliceSecret++
+	}
+	if bobSecret == 0 {
+		bobSecret++
+	}
+	if charlieSecret == 0 {
+		charlieSecret++
+	}
+
+	if hashset.NewComparableHashSet(aliceSecret, bobSecret, charlieSecret).Size() != 3 {
+		t.Skip()
+	}
+
+	keysSubGroup := bls12381.GetSourceSubGroup[K]()
+
+	cipherSuite, err := ttu.MakeSigningSuite(keysSubGroup, hashFunc)
+	require.NoError(t, err)
+
+	aliceIdentity, _ := ttu.MakeTestIdentity(cipherSuite, keysSubGroup.ScalarField().New(aliceSecret))
+	bobIdentity, _ := ttu.MakeTestIdentity(cipherSuite, keysSubGroup.ScalarField().New(bobSecret))
+	charlieIdentity, _ := ttu.MakeTestIdentity(cipherSuite, keysSubGroup.ScalarField().New(charlieSecret))
+	identities := []types.IdentityKey{aliceIdentity, bobIdentity, charlieIdentity}
+
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, 2, identities)
+	if err != nil && !errs.IsKnownError(err) {
+		require.NoError(t, err)
+	}
+	if err != nil {
+		t.Skip(err.Error())
+	}
+	require.NoError(t, err)
+
+	shards := keygen[K](t, identities, 2, 3)
+	shard, exists := shards.Get(identities[0])
+	require.True(t, exists)
+
+	publicKeyShares := shard.PublicKeyShares
+	publicKey := publicKeyShares.PublicKey
+
+	participants, err := testutils.MakeSigningParticipants[K, S](sid, protocol, identities, shards, scheme)
+	require.NoError(t, err)
+
+	partialSignatures, err := testutils.ProducePartialSignature(participants, message, bls.Basic)
+	if err != nil && !errs.IsKnownError(err) {
+		require.NoError(t, err)
+	}
+	if err != nil {
+		t.Skip(err.Error())
+	}
+	require.NoError(t, err)
+
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	aggregatorInput := testutils.MapPartialSignatures(identities, partialSignatures)
+
+	signature, signaturePOP, err := signing.Aggregate(sharingConfig, publicKeyShares, aggregatorInput, message, scheme)
+	require.NoError(t, err)
+
+	err = bls.Verify(publicKey, signature, message, signaturePOP, scheme, nil)
+	require.NoError(t, err)
+}
+
+func keygen[K bls.KeySubGroup](t *testing.T, identities []types.IdentityKey, threshold, n int) ds.Map[types.IdentityKey, *boldyreva02.Shard[K]] {
+	t.Helper()
+
+	curve := bls12381.GetSourceSubGroup[K]()
+	require.Len(t, identities, n)
+
+	cipherSuite, err := ttu.MakeSigningSuite(curve, sha256.New)
+	require.NoError(t, err)
+
+	protocol, err := ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, threshold)
+	require.NoError(t, err)
+	require.Equal(t, n, protocol.Participants().Size())
+
+	shards, err := trusted_dealer.Keygen[K](protocol, crand.Reader)
+	require.NoError(t, err)
+
+	return shards
+}

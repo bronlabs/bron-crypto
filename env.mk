@@ -1,1 +1,1 @@
-# RUN_IN_DOCKER := docker run --user `id -u`:`id -g` --rm -it --platform=linux/arm64 -v ${KRYPTON_PRIMITIVES_HOME}:/usr/local/src `docker build -f linter.Dockerfile --ssh default --platform=linux/arm64 -t krypton-linter:latest -q .` sh -c
+RUN_IN_DOCKER := docker run --user `id -u`:`id -g` --rm -it --platform=linux/arm64 -v ${KRYPTON_PRIMITIVES_HOME}:/usr/local/src `docker build --ssh default --platform=linux/arm64 --target=base -q .` sh -c
