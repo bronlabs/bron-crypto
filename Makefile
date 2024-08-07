@@ -82,7 +82,7 @@ githooks:
 
 .PHONY: lint
 lint:
-	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --config=./.golangci-long.yml --timeout=120m'
+	$(RUN_IN_DOCKER) 'GOLANGCI_LINT_CACHE=/usr/local/src/.golangcicache golangci-lint run --config=./.golangci-short.yml --timeout=120m'
 
 .PHONY: lint-long
 lint-long:
