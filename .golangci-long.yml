@@ -121,9 +121,8 @@ linters:
     - noctx
     # Checks for misuse of Sprintf to construct a host with port in a URL.
     - nosprintfhostport
-    # # Paralleltest detects missing usage of t.Parallel() method in your Go test.
-    # # TODO: enable this
-    # - paralleltest
+    # Paralleltest detects missing usage of t.Parallel() method in your Go test.
+    - paralleltest
     # Finds slice declarations that could potentially be preallocated
     - prealloc
     # find code that shadows one of Go's predeclared identifiers
@@ -173,6 +172,14 @@ linters:
     - zerologlint
 
 linters-settings:
+  paralleltest:
+    # Ignore missing calls to `t.Parallel()` and only report incorrect uses of it.
+    # Default: false
+    ignore-missing: false
+    # Ignore missing calls to `t.Parallel()` in subtests. Top-level tests are
+    # still required to have `t.Parallel`, but subtests are allowed to skip it.
+    # Default: false
+    ignore-missing-subtests: false
   asasalint:
     # To specify a set of function names to exclude.
     # The values are merged with the builtin exclusions.

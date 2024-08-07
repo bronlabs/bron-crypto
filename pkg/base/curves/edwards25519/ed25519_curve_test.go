@@ -18,6 +18,7 @@ import (
 )
 
 func TestScalarRandom(t *testing.T) {
+	t.Parallel()
 	ed25519 := edwards25519.NewCurve()
 	sc, err := ed25519.ScalarField().Random(testutils.TestRng())
 	require.NoError(t, err)
@@ -36,6 +37,7 @@ func TestScalarRandom(t *testing.T) {
 }
 
 func TestScalarHash(t *testing.T) {
+	t.Parallel()
 	var b [32]byte
 	ed25519 := edwards25519.NewCurve()
 	sc, err := ed25519.ScalarField().Hash(b[:])
@@ -47,6 +49,7 @@ func TestScalarHash(t *testing.T) {
 }
 
 func TestScalarZero(t *testing.T) {
+	t.Parallel()
 	edwards25519 := edwards25519.NewCurve()
 	sc := edwards25519.ScalarField().Zero()
 	require.True(t, sc.IsZero())
@@ -54,6 +57,7 @@ func TestScalarZero(t *testing.T) {
 }
 
 func TestScalarOne(t *testing.T) {
+	t.Parallel()
 	edwards25519 := edwards25519.NewCurve()
 	sc := edwards25519.ScalarField().One()
 	require.True(t, sc.IsOne())
@@ -61,6 +65,7 @@ func TestScalarOne(t *testing.T) {
 }
 
 func TestScalarNew(t *testing.T) {
+	t.Parallel()
 	three := edwards25519.NewScalar(3)
 	require.True(t, three.IsOdd())
 	four := edwards25519.NewScalar(4)
@@ -72,24 +77,28 @@ func TestScalarNew(t *testing.T) {
 }
 
 func TestScalarSquare(t *testing.T) {
+	t.Parallel()
 	three := edwards25519.NewScalar(3)
 	nine := edwards25519.NewScalar(9)
 	require.Equal(t, algebra.Equal, three.Square().Cmp(nine))
 }
 
 func TestScalarCube(t *testing.T) {
+	t.Parallel()
 	three := edwards25519.NewScalar(3)
 	twentySeven := edwards25519.NewScalar(27)
 	require.Equal(t, algebra.Equal, three.Cube().Cmp(twentySeven))
 }
 
 func TestScalarDouble(t *testing.T) {
+	t.Parallel()
 	three := edwards25519.NewScalar(3)
 	six := edwards25519.NewScalar(6)
 	require.Equal(t, algebra.Equal, three.Double().Cmp(six))
 }
 
 func TestScalarNeg(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	one := curve.ScalarField().One()
 	neg1 := edwards25519.NewScalar(1).Neg()
@@ -100,6 +109,7 @@ func TestScalarNeg(t *testing.T) {
 }
 
 func TestScalarInvert(t *testing.T) {
+	t.Parallel()
 	nine := edwards25519.NewScalar(9)
 	actual, err := nine.MultiplicativeInverse()
 	require.NoError(t, err)
@@ -109,6 +119,7 @@ func TestScalarInvert(t *testing.T) {
 }
 
 func TestScalarSqrt(t *testing.T) {
+	t.Parallel()
 	nine := edwards25519.NewScalar(9)
 	actual, err := nine.Sqrt()
 	sa, _ := actual.(*edwards25519.Scalar)
@@ -118,6 +129,7 @@ func TestScalarSqrt(t *testing.T) {
 }
 
 func TestScalarAdd(t *testing.T) {
+	t.Parallel()
 	nine := edwards25519.NewScalar(9)
 	six := edwards25519.NewScalar(6)
 	fifteen := nine.Add(six)
@@ -132,6 +144,7 @@ func TestScalarAdd(t *testing.T) {
 }
 
 func TestScalarSub(t *testing.T) {
+	t.Parallel()
 	nine := edwards25519.NewScalar(9)
 	six := edwards25519.NewScalar(6)
 	expected := edwards25519.NewScalar(3).Neg()
@@ -144,6 +157,7 @@ func TestScalarSub(t *testing.T) {
 }
 
 func TestScalarMul(t *testing.T) {
+	t.Parallel()
 	nine := edwards25519.NewScalar(9)
 	six := edwards25519.NewScalar(6)
 	actual := nine.Mul(six)
@@ -154,6 +168,7 @@ func TestScalarMul(t *testing.T) {
 }
 
 func TestScalarDiv(t *testing.T) {
+	t.Parallel()
 	nine := edwards25519.NewScalar(9)
 	actual, err := nine.Div(nine)
 	require.NoError(t, err)
@@ -164,6 +179,7 @@ func TestScalarDiv(t *testing.T) {
 }
 
 func TestScalarExp(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	seventeen := edwards25519.NewScalar(17)
 
@@ -181,6 +197,7 @@ func TestScalarExp(t *testing.T) {
 }
 
 func TestScalarSerialize(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	sc := edwards25519.NewScalar(255)
 	sequence := bitstring.ReverseBytes(sc.Bytes())
@@ -204,6 +221,7 @@ func TestScalarSerialize(t *testing.T) {
 }
 
 func TestScalarNil(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	one := edwards25519.NewScalar(1)
 	require.Panics(t, func() { one.Add(nil) })
@@ -217,6 +235,7 @@ func TestScalarNil(t *testing.T) {
 }
 
 func TestPointRandom(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	sc, err := curve.Random(testutils.TestRng())
 	require.NoError(t, err)
@@ -243,6 +262,7 @@ func TestPointRandom(t *testing.T) {
 }
 
 func TestPointIdentity(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	sc := curve.AdditiveIdentity()
 	require.True(t, sc.IsAdditiveIdentity())
@@ -250,6 +270,7 @@ func TestPointIdentity(t *testing.T) {
 }
 
 func TestPointGenerator(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	sc := curve.Generator()
 	s, ok := sc.(*edwards25519.Point)
@@ -258,6 +279,7 @@ func TestPointGenerator(t *testing.T) {
 }
 
 func TestPointSet(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	z := curve.BaseFieldElement().SetNat(new(saferith.Nat).SetUint64(0))
 	identity, err := curve.NewPoint(z, z)
@@ -273,6 +295,7 @@ func TestPointSet(t *testing.T) {
 }
 
 func TestPointDouble(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	g := curve.Generator()
 	g2 := g.Double()
@@ -282,6 +305,7 @@ func TestPointDouble(t *testing.T) {
 }
 
 func TestPointNeg(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	g := curve.Generator().Neg()
 	require.True(t, g.Neg().Equal(curve.Generator()))
@@ -289,6 +313,7 @@ func TestPointNeg(t *testing.T) {
 }
 
 func TestPointAdd(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	pt := curve.Generator()
 	require.True(t, pt.Add(pt).Equal(pt.Double()))
@@ -296,6 +321,7 @@ func TestPointAdd(t *testing.T) {
 }
 
 func TestPointSub(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	g := curve.Generator()
 	pt := curve.Generator().ScalarMul(edwards25519.NewScalar(4))
@@ -304,6 +330,7 @@ func TestPointSub(t *testing.T) {
 }
 
 func TestPointMul(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	g := curve.Generator()
 	pt := curve.Generator().ScalarMul(edwards25519.NewScalar(4))
@@ -311,6 +338,7 @@ func TestPointMul(t *testing.T) {
 }
 
 func TestPointSerialize(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	ss, err := curve.ScalarField().Random(testutils.TestRng())
 	require.NoError(t, err)
@@ -348,6 +376,7 @@ func TestPointSerialize(t *testing.T) {
 }
 
 func TestPointNil(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	one := curve.Generator()
 	require.Panics(t, func() { one.Add(nil) })
@@ -359,6 +388,7 @@ func TestPointNil(t *testing.T) {
 }
 
 func TestPointSumOfProducts(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	lhs := curve.Generator().ScalarMul(edwards25519.NewScalar(50))
 	points := make([]curves.Point, 5)

@@ -23,6 +23,7 @@ const (
 )
 
 func TestScalarBls12381G1Random(t *testing.T) {
+	t.Parallel()
 	curve := bls12381.NewG1()
 	sc, err := curve.ScalarField().Random(testutils.TestRng())
 	require.NoError(t, err)
@@ -41,6 +42,7 @@ func TestScalarBls12381G1Random(t *testing.T) {
 }
 
 func TestScalarBls12381G1Zero(t *testing.T) {
+	t.Parallel()
 	bls12381G1 := bls12381.NewG1()
 	sc := bls12381G1.ScalarField().Zero()
 	require.True(t, sc.IsZero())
@@ -48,6 +50,7 @@ func TestScalarBls12381G1Zero(t *testing.T) {
 }
 
 func TestScalarBls12381G1One(t *testing.T) {
+	t.Parallel()
 	bls12381G1 := bls12381.NewG1()
 	sc := bls12381G1.ScalarField().One()
 	require.True(t, sc.IsOne())
@@ -55,6 +58,7 @@ func TestScalarBls12381G1One(t *testing.T) {
 }
 
 func TestScalarBls12381G1New(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	three, err := bls12381.NewScalar(g1, 3)
 	require.NoError(t, err)
@@ -73,6 +77,7 @@ func TestScalarBls12381G1New(t *testing.T) {
 }
 
 func TestScalarBls12381G1Square(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	three, err := bls12381.NewScalar(g1, 3)
 	require.NoError(t, err)
@@ -82,6 +87,7 @@ func TestScalarBls12381G1Square(t *testing.T) {
 }
 
 func TestScalarBls12381G1Cube(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	three, err := bls12381.NewScalar(g1, 3)
 	require.NoError(t, err)
@@ -92,6 +98,7 @@ func TestScalarBls12381G1Cube(t *testing.T) {
 }
 
 func TestScalarBls12381G1Double(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	three, err := bls12381.NewScalar(g1, 3)
 	require.NoError(t, err)
@@ -101,6 +108,7 @@ func TestScalarBls12381G1Double(t *testing.T) {
 }
 
 func TestScalarBls12381G1Invert(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	nine, err := bls12381.NewScalar(g1, 9)
 	require.NoError(t, err)
@@ -113,6 +121,7 @@ func TestScalarBls12381G1Invert(t *testing.T) {
 }
 
 func TestScalarBls12381G1Sqrt(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	nine, err := bls12381.NewScalar(g1, 9)
 	require.NoError(t, err)
@@ -125,6 +134,7 @@ func TestScalarBls12381G1Sqrt(t *testing.T) {
 }
 
 func TestScalarBls12381G1Add(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	nine, err := bls12381.NewScalar(g1, 9)
 	require.NoError(t, err)
@@ -146,6 +156,7 @@ func TestScalarBls12381G1Add(t *testing.T) {
 }
 
 func TestScalarBls12381G1Sub(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	nine, err := bls12381.NewScalar(g1, 9)
 	require.NoError(t, err)
@@ -166,6 +177,7 @@ func TestScalarBls12381G1Sub(t *testing.T) {
 }
 
 func TestScalarBls12381G1Mul(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	nine, err := bls12381.NewScalar(g1, 9)
 	require.NoError(t, err)
@@ -185,6 +197,7 @@ func TestScalarBls12381G1Mul(t *testing.T) {
 }
 
 func TestScalarBls12381G1Div(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	nine, err := bls12381.NewScalar(g1, 9)
 	require.NoError(t, err)
@@ -203,6 +216,7 @@ func TestScalarBls12381G1Div(t *testing.T) {
 }
 
 func TestScalarBls12381G1Exp(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	seventeen, err := bls12381.NewScalar(g1, 17)
 	require.NoError(t, err)
@@ -225,6 +239,7 @@ func TestScalarBls12381G1Exp(t *testing.T) {
 }
 
 func TestScalarBls12381G1Serialize(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	sc, err := bls12381.NewScalar(g1, 255)
 	require.NoError(t, err)
@@ -250,6 +265,7 @@ func TestScalarBls12381G1Serialize(t *testing.T) {
 }
 
 func TestScalarBls12381G1Nil(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	one, err := bls12381.NewScalar(g1, 1)
 	require.NoError(t, err)
@@ -264,6 +280,7 @@ func TestScalarBls12381G1Nil(t *testing.T) {
 }
 
 func TestScalarBls12381Point(t *testing.T) {
+	t.Parallel()
 	bls12381G1 := bls12381.NewG1()
 	_, ok := bls12381G1.AdditiveIdentity().(*bls12381.PointG1)
 	require.True(t, ok)
@@ -303,6 +320,7 @@ func TestScalarBls12381Point(t *testing.T) {
 // }
 
 func TestPointBls12381G2Identity(t *testing.T) {
+	t.Parallel()
 	bls12381G2 := bls12381.NewG2()
 	sc := bls12381G2.AdditiveIdentity()
 	require.True(t, sc.IsAdditiveIdentity())
@@ -310,6 +328,7 @@ func TestPointBls12381G2Identity(t *testing.T) {
 }
 
 func TestPointBls12381G2Generator(t *testing.T) {
+	t.Parallel()
 	bls12381G2 := bls12381.NewG2()
 	sc := bls12381G2.Generator()
 	s, ok := sc.(*bls12381.PointG2)
@@ -318,6 +337,7 @@ func TestPointBls12381G2Generator(t *testing.T) {
 }
 
 func TestPointBls12381G2Set(t *testing.T) {
+	t.Parallel()
 	bls12381G2 := bls12381.NewG2()
 	z := bls12381G2.BaseFieldElement().SetNat(new(saferith.Nat).SetUint64(0))
 	identity, err := bls12381G2.NewPoint(z, z)
@@ -331,6 +351,7 @@ func TestPointBls12381G2Set(t *testing.T) {
 }
 
 func TestPointBls12381G2Double(t *testing.T) {
+	t.Parallel()
 	g2 := bls12381.NewG2()
 	g := g2.Generator()
 	gg2 := g.Double()
@@ -342,6 +363,7 @@ func TestPointBls12381G2Double(t *testing.T) {
 }
 
 func TestPointBls12381G2Neg(t *testing.T) {
+	t.Parallel()
 	bls12381G2 := bls12381.NewG2()
 	g := bls12381G2.Generator().Neg()
 	require.True(t, g.Neg().Equal(bls12381G2.Generator()))
@@ -349,6 +371,7 @@ func TestPointBls12381G2Neg(t *testing.T) {
 }
 
 func TestPointBls12381G2Add(t *testing.T) {
+	t.Parallel()
 	g2 := bls12381.NewG2()
 	pt := g2.Generator()
 	require.True(t, pt.Add(pt).Equal(pt.Double()))
@@ -358,6 +381,7 @@ func TestPointBls12381G2Add(t *testing.T) {
 }
 
 func TestPointBls12381G2Sub(t *testing.T) {
+	t.Parallel()
 	g2 := bls12381.NewG2()
 	g := g2.Generator()
 	four, err := bls12381.NewScalar(g2, 4)
@@ -368,6 +392,7 @@ func TestPointBls12381G2Sub(t *testing.T) {
 }
 
 func TestPointBls12381G2Mul(t *testing.T) {
+	t.Parallel()
 	g2 := bls12381.NewG2()
 	g := g2.Generator()
 	four, err := bls12381.NewScalar(g2, 4)
@@ -377,6 +402,7 @@ func TestPointBls12381G2Mul(t *testing.T) {
 }
 
 func TestPointBls12381G2Serialize(t *testing.T) {
+	t.Parallel()
 	bls12381G2 := bls12381.NewG2()
 	ss, err := bls12381G2.ScalarField().Random(testutils.TestRng())
 	require.NoError(t, err)
@@ -414,6 +440,7 @@ func TestPointBls12381G2Serialize(t *testing.T) {
 }
 
 func TestPointBls12381G2Nil(t *testing.T) {
+	t.Parallel()
 	bls12381G2 := bls12381.NewG2()
 	one := bls12381G2.Generator()
 	require.Panics(t, func() { one.Add(nil) })
@@ -457,6 +484,7 @@ func TestPointBls12381G2Nil(t *testing.T) {
 // }
 
 func TestPointBls12381G1Identity(t *testing.T) {
+	t.Parallel()
 	bls12381G1 := bls12381.NewG1()
 	sc := bls12381G1.AdditiveIdentity()
 	require.True(t, sc.IsAdditiveIdentity())
@@ -464,6 +492,7 @@ func TestPointBls12381G1Identity(t *testing.T) {
 }
 
 func TestPointBls12381G1Generator(t *testing.T) {
+	t.Parallel()
 	bls12381G1 := bls12381.NewG1()
 	sc := bls12381G1.Generator()
 	s, ok := sc.(*bls12381.PointG1)
@@ -473,6 +502,7 @@ func TestPointBls12381G1Generator(t *testing.T) {
 }
 
 func TestPointBls12381G1Set(t *testing.T) {
+	t.Parallel()
 	bls12381G1 := bls12381.NewG1()
 	z := bls12381G1.BaseFieldElement().SetNat(new(saferith.Nat).SetUint64(0))
 	iden, err := bls12381G1.NewPoint(z, z)
@@ -486,6 +516,7 @@ func TestPointBls12381G1Set(t *testing.T) {
 }
 
 func TestPointBls12381G1Double(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	g := g1.Generator()
 	gDouble := g.Double()
@@ -497,6 +528,7 @@ func TestPointBls12381G1Double(t *testing.T) {
 }
 
 func TestPointBls12381G1Neg(t *testing.T) {
+	t.Parallel()
 	bls12381G1 := bls12381.NewG1()
 	g := bls12381G1.Generator().Neg()
 	require.True(t, g.Neg().Equal(bls12381G1.Generator()))
@@ -504,6 +536,7 @@ func TestPointBls12381G1Neg(t *testing.T) {
 }
 
 func TestPointBls12381G1Add(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	pt := g1.Generator()
 	require.True(t, pt.Add(pt).Equal(pt.Double()))
@@ -513,6 +546,7 @@ func TestPointBls12381G1Add(t *testing.T) {
 }
 
 func TestPointBls12381G1Sub(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	g := g1.Generator()
 	four, err := bls12381.NewScalar(g1, 4)
@@ -523,6 +557,7 @@ func TestPointBls12381G1Sub(t *testing.T) {
 }
 
 func TestPointBls12381G1Mul(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	g := g1.Generator()
 	four, err := bls12381.NewScalar(g1, 4)
@@ -532,6 +567,7 @@ func TestPointBls12381G1Mul(t *testing.T) {
 }
 
 func TestPointBls12381G1Serialize(t *testing.T) {
+	t.Parallel()
 	bls12381G1 := bls12381.NewG1()
 	ss, err := bls12381G1.ScalarField().Random(testutils.TestRng())
 	require.NoError(t, err)
@@ -569,6 +605,7 @@ func TestPointBls12381G1Serialize(t *testing.T) {
 }
 
 func TestPointBls12381G1Nil(t *testing.T) {
+	t.Parallel()
 	bls12381G1 := bls12381.NewG1()
 	one := bls12381G1.Generator()
 	require.Panics(t, func() { one.Add(nil) })
@@ -582,6 +619,7 @@ func TestPointBls12381G1Nil(t *testing.T) {
 }
 
 func TestPointBls12381G1SumOfProducts(t *testing.T) {
+	t.Parallel()
 	g1 := bls12381.NewG1()
 	fifty, err := bls12381.NewScalar(g1, 50)
 	require.NoError(t, err)

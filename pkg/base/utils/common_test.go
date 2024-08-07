@@ -11,6 +11,7 @@ import (
 )
 
 func Test_CeilDiv(t *testing.T) {
+	t.Parallel()
 	// Try all combinations of a and b in [0, 20].
 	for a := 1; a < 20; a++ {
 		for b := 1; b < 20; b++ {

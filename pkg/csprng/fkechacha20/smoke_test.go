@@ -10,6 +10,7 @@ import (
 )
 
 func TestSmoke(t *testing.T) {
+	t.Parallel()
 	require.GreaterOrEqual(t, chacha20.KeySize*8, base.ComputationalSecurity,
 		"chacha20.KeySize must be above base.ComputationalSecurity")
 }

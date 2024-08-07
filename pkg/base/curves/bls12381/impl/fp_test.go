@@ -13,6 +13,7 @@ import (
 )
 
 func TestFpSetOne(t *testing.T) {
+	t.Parallel()
 	var fp Fp
 	fp.SetOne()
 	require.NotNil(t, fp)
@@ -20,6 +21,7 @@ func TestFpSetOne(t *testing.T) {
 }
 
 func TestFpSetUint64(t *testing.T) {
+	t.Parallel()
 	var act Fp
 	act.SetUint64(1 << 60)
 	require.NotNil(t, act)
@@ -28,6 +30,7 @@ func TestFpSetUint64(t *testing.T) {
 }
 
 func TestFpAdd(t *testing.T) {
+	t.Parallel()
 	var lhs, rhs, exp, res Fp
 	lhs.SetOne()
 	rhs.SetOne()
@@ -53,6 +56,7 @@ func TestFpAdd(t *testing.T) {
 }
 
 func TestFpSub(t *testing.T) {
+	t.Parallel()
 	var lhs, rhs, exp, res Fp
 	lhs.SetOne()
 	rhs.SetOne()
@@ -81,6 +85,7 @@ func TestFpSub(t *testing.T) {
 }
 
 func TestFpMul(t *testing.T) {
+	t.Parallel()
 	var lhs, rhs, exp, res Fp
 	lhs.SetOne()
 	rhs.SetOne()
@@ -106,6 +111,7 @@ func TestFpMul(t *testing.T) {
 }
 
 func TestFpDouble(t *testing.T) {
+	t.Parallel()
 	var a, e, res Fp
 	a.SetUint64(2)
 	e.SetUint64(4)
@@ -121,6 +127,7 @@ func TestFpDouble(t *testing.T) {
 }
 
 func TestFpSquare(t *testing.T) {
+	t.Parallel()
 	var a, e, res Fp
 	a.SetUint64(4)
 	e.SetUint64(16)
@@ -140,6 +147,7 @@ func TestFpSquare(t *testing.T) {
 }
 
 func TestFpNeg(t *testing.T) {
+	t.Parallel()
 	var g, a, e Fp
 	g.SetLimbs(&[FieldLimbs]uint64{7, 0, 0, 0, 0, 0})
 	a.SetOne()
@@ -152,6 +160,7 @@ func TestFpNeg(t *testing.T) {
 }
 
 func TestFpExp(t *testing.T) {
+	t.Parallel()
 	var a, e, by Fp
 	e.SetUint64(8)
 	a.SetUint64(2)
@@ -160,6 +169,7 @@ func TestFpExp(t *testing.T) {
 }
 
 func TestFpSqrt(t *testing.T) {
+	t.Parallel()
 	var t1, t2, t3 Fp
 	t1.SetUint64(2)
 	t2.Neg(&t1)
@@ -174,6 +184,7 @@ func TestFpSqrt(t *testing.T) {
 }
 
 func TestFpInvert(t *testing.T) {
+	t.Parallel()
 	var two, twoInv, a, lhs, rhs, rhsInv Fp
 	twoInv.SetRaw(&[FieldLimbs]uint64{0x1804000000015554, 0x855000053ab00001, 0x633cb57c253c276f, 0x6e22d1ec31ebb502, 0xd3916126f2d14ca2, 0x17fbb8571a006596})
 	two.SetUint64(2)
@@ -193,6 +204,7 @@ func TestFpInvert(t *testing.T) {
 }
 
 func TestFpCMove(t *testing.T) {
+	t.Parallel()
 	var t1, t2, tt Fp
 	t1.SetUint64(5)
 	t2.SetUint64(10)
@@ -201,6 +213,7 @@ func TestFpCMove(t *testing.T) {
 }
 
 func TestFpBytes(t *testing.T) {
+	t.Parallel()
 	var t1, t2 Fp
 	t1.SetUint64(99)
 	seq := t1.Bytes()
@@ -218,6 +231,7 @@ func TestFpBytes(t *testing.T) {
 }
 
 func TestFpBigInt(t *testing.T) {
+	t.Parallel()
 	var t1, t2, e Fp
 	t1.SetNat(new(saferith.Nat).SetUint64(9999))
 	t2.SetNat(t1.Nat())
@@ -234,6 +248,7 @@ func TestFpBigInt(t *testing.T) {
 }
 
 func TestFpSetBytesWideBigInt(t *testing.T) {
+	t.Parallel()
 	var a Fp
 	var tv2 [96]byte
 	for i := 0; i < 25; i++ {
@@ -250,12 +265,14 @@ func TestFpSetBytesWideBigInt(t *testing.T) {
 }
 
 func TestFpToMontgomery(t *testing.T) {
+	t.Parallel()
 	var v Fp
 	v.SetUint64(2)
 	require.Equal(t, Fp{0x321300000006554f, 0xb93c0018d6c40005, 0x57605e0db0ddbb51, 0x8b256521ed1f9bcb, 0x6cf28d7901622c03, 0x11ebab9dbb81e28c}, v)
 }
 
 func TestFpLexicographicallyLargest(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, ctFalse, new(Fp).SetZero().LexicographicallyLargest())
 	require.Equal(t, ctFalse, new(Fp).SetOne().LexicographicallyLargest())
 	require.Equal(t, ctFalse, (&Fp{

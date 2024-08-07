@@ -10,6 +10,7 @@ import (
 )
 
 func TestK256PointArithmetic_Map(t *testing.T) {
+	t.Parallel()
 	sc := impl.PointNew()
 
 	u0 := fp.New().SetUint64(4)

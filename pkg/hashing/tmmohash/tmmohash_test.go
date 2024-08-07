@@ -15,6 +15,7 @@ import (
 )
 
 func Test_Tmmohash(t *testing.T) {
+	t.Parallel()
 	// Hardcode multiple input data strings to hash, of sizes %BlockSize == 0.
 	testInputs := []string{
 		"0123456789ABCDEF0123456789ABCDEF",
@@ -72,6 +73,7 @@ func Test_Tmmohash(t *testing.T) {
 }
 
 func Test_TmmoAesPrng(t *testing.T) {
+	t.Parallel()
 	keySize := 32
 	seed := [32]byte{
 		0x3e, 0xbb, 0x57, 0xf6, 0x33, 0x96, 0xcf, 0xbb, 0x6f, 0x40, 0x28, 0x08, 0x50, 0xb3, 0x91, 0x75,
@@ -112,6 +114,7 @@ func Test_TmmoAesPrng(t *testing.T) {
 }
 
 func Test_BenchmarkTmmohash(t *testing.T) {
+	t.Parallel()
 	numRounds := int64(10000)
 	t_tmmo, t_sha3, t_sha256 := int64(0), int64(0), int64(0)
 	for inputSize := 16; inputSize < 256; inputSize = inputSize * 2 {

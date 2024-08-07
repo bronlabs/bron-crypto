@@ -31,6 +31,7 @@ func decodeHex_or_panic(s string) []byte {
 // Test_AES256_ApiUsage tests the PRNG API for the inputs defined in the last test case
 // of "[AES-256 UseDF]" with PR false, COUNT=0, as part of the DRBGVS spec.
 func Test_AES256_ApiUsage(t *testing.T) {
+	t.Parallel()
 	entropySource := io.Reader(nil) // Set to nil to force crypto/rand.Reader by default
 	keySize := 32                   // 256 bits
 
@@ -62,6 +63,7 @@ func Test_AES256_ApiUsage(t *testing.T) {
 // Test_AES128_ApiUsage tests the PRNG API for the inputs defined in the last test case
 // of "[AES-128 UseDF]" with PR false, COUNT=0, as part of the DRBGVS spec.
 func Test_AES128_ApiUsage(t *testing.T) {
+	t.Parallel()
 	entropySource := io.Reader(nil) // Use crypto/rand.Reader by default
 	keySize := 16                   // 128 bits
 
@@ -93,6 +95,7 @@ func Test_AES128_ApiUsage(t *testing.T) {
 // Test_AES256_Read tests the PRNG Read for the inputs defined in the first test
 // case of "[AES-256 UseDF]" no reseed, COUNT=0, as part of the DRBGVS spec.
 func Test_AES256_ReadnResetState(t *testing.T) {
+	t.Parallel()
 	entropySource := io.Reader(nil) // Set to nil to force crypto/rand.Reader by default
 	keySize := 32                   // 256 bits
 
@@ -118,6 +121,7 @@ func Test_AES256_ReadnResetState(t *testing.T) {
 }
 
 func Test_NistPrng(t *testing.T) {
+	t.Parallel()
 	for _, keySize := range []int{16, 32} {
 		prngGenerator := func(seed, salt []byte) (csprng.CSPRNG, error) {
 			return nist.NewNistPRNG(keySize, nil, seed, salt, nil)
@@ -127,6 +131,7 @@ func Test_NistPrng(t *testing.T) {
 }
 
 func Test_NistValidation(t *testing.T) {
+	t.Parallel()
 	for _, testParams := range []struct {
 		keySize int
 		useDf   bool
@@ -137,6 +142,7 @@ func Test_NistValidation(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("PRNG[AES-%d UseDF=%t]", testParams.keySize, testParams.useDf),
 			func(t *testing.T) {
+				t.Parallel()
 				require.NoError(t, nist_testutils.RunNistValidationTest(testParams.keySize, testParams.useDf))
 			})
 	}

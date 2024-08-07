@@ -39,6 +39,7 @@ func (d *dataK) Equal(rhs *dataK) bool {
 var _ datastructures.Hashable[*dataK] = (*dataK)(nil)
 
 func Test_Add(t *testing.T) {
+	t.Parallel()
 	emptyKey := hashmap.NewHashableHashMap[*dataK, *dataV]()
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
@@ -66,6 +67,7 @@ func Test_Add(t *testing.T) {
 	require.Equal(t, data4, result)
 
 	t.Run("test reverse", func(t *testing.T) {
+		t.Parallel()
 		// Test Reverse method
 		reverseMap := biMap.Reverse()
 
@@ -98,6 +100,7 @@ func Test_Add(t *testing.T) {
 	})
 }
 func Test_Clear(t *testing.T) {
+	t.Parallel()
 	emptyKey := hashmap.NewHashableHashMap[*dataK, *dataV]()
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
@@ -122,6 +125,7 @@ func Test_Clear(t *testing.T) {
 	require.False(t, ok)
 }
 func Test_ContainsKey(t *testing.T) {
+	t.Parallel()
 	emptyKey := hashmap.NewHashableHashMap[*dataK, *dataV]()
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
@@ -138,6 +142,7 @@ func Test_ContainsKey(t *testing.T) {
 	require.False(t, biMap.ContainsKey(&dataK{value: 3}))
 }
 func Test_Size(t *testing.T) {
+	t.Parallel()
 	emptyKey := hashmap.NewHashableHashMap[*dataK, *dataV]()
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
@@ -162,6 +167,7 @@ func Test_Size(t *testing.T) {
 }
 
 func Test_IsEmpty(t *testing.T) {
+	t.Parallel()
 	emptyKey := hashmap.NewHashableHashMap[*dataK, *dataV]()
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
@@ -181,6 +187,7 @@ func Test_IsEmpty(t *testing.T) {
 }
 
 func Test_TryRemove(t *testing.T) {
+	t.Parallel()
 	emptyKey := hashmap.NewHashableHashMap[*dataK, *dataV]()
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
@@ -206,6 +213,7 @@ func Test_TryRemove(t *testing.T) {
 }
 
 func Test_Keys(t *testing.T) {
+	t.Parallel()
 	emptyKey := hashmap.NewHashableHashMap[*dataK, *dataV]()
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
@@ -226,6 +234,7 @@ func Test_Keys(t *testing.T) {
 }
 
 func Test_Values(t *testing.T) {
+	t.Parallel()
 	emptyKey := hashmap.NewHashableHashMap[*dataK, *dataV]()
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
@@ -245,6 +254,7 @@ func Test_Values(t *testing.T) {
 	require.Contains(t, values, data2)
 }
 func Test_Iter(t *testing.T) {
+	t.Parallel()
 	emptyKey := hashmap.NewHashableHashMap[*dataK, *dataV]()
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
@@ -273,6 +283,7 @@ func Test_Iter(t *testing.T) {
 }
 
 func Test_Clone(t *testing.T) {
+	t.Parallel()
 	emptyKey := hashmap.NewHashableHashMap[*dataK, *dataV]()
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 
@@ -302,6 +313,7 @@ func Test_Clone(t *testing.T) {
 	require.NotEqual(t, biMap, clone)
 }
 func Test_Remove(t *testing.T) {
+	t.Parallel()
 	emptyKey := hashmap.NewHashableHashMap[*dataK, *dataV]()
 	emptyValue := hashmap.NewHashableHashMap[*dataV, *dataK]()
 

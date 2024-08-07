@@ -11,6 +11,7 @@ import (
 )
 
 func TestSimpleTranscript(t *testing.T) {
+	t.Parallel()
 	mt := hagrid.NewTranscript("test protocol", nil)
 	mt.AppendMessages("some label", []byte("some data"))
 
@@ -24,6 +25,7 @@ func TestSimpleTranscript(t *testing.T) {
 }
 
 func TestSimpleTranscriptWithPRNG(t *testing.T) {
+	t.Parallel()
 	prng, err := tmmohash.NewTmmoPrng(32, 256, nil, []byte("test protocol"))
 	require.NoError(t, err)
 	mt := hagrid.NewTranscript("test protocol", prng)
@@ -39,6 +41,7 @@ func TestSimpleTranscriptWithPRNG(t *testing.T) {
 }
 
 func TestComplexTranscript(t *testing.T) {
+	t.Parallel()
 	tr := hagrid.NewTranscript("test protocol", nil)
 	tr.AppendMessages("step1", []byte("some data"))
 

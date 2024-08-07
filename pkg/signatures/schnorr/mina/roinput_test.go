@@ -9,6 +9,7 @@ import (
 )
 
 func Test_BitsToPackedFields(t *testing.T) {
+	t.Parallel()
 	input := new(mina.ROInput).Init()
 	input.AddString("someveryverylongmessagecmrewiugriuhtrlugchmtrlugchslrifudjtrfunhvgudysrthvgnkyudrtgcvdnkurytcnhgkdtuyrnhgkryutcghksrecyuhgkstruhgmsrtucghslrutcghslrtuhgkdsfuhgcmsruthcvgslrtuhgmlrtuichslrmutsrthdl")
 	fields := input.PackToFields()

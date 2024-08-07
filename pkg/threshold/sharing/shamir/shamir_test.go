@@ -12,6 +12,7 @@ import (
 )
 
 func TestShamirSplitInvalidArgs(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	_, err := shamir.NewDealer(0, 0, curve)
 	require.Error(t, err)
@@ -25,6 +26,7 @@ func TestShamirSplitInvalidArgs(t *testing.T) {
 }
 
 func TestShamirCombineNoShares(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	scheme, err := shamir.NewDealer(2, 3, curve)
 	require.NoError(t, err)
@@ -34,6 +36,7 @@ func TestShamirCombineNoShares(t *testing.T) {
 }
 
 func TestShamirCombineDuplicateShare(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	scheme, err := shamir.NewDealer(2, 3, curve)
 	require.NoError(t, err)
@@ -52,6 +55,7 @@ func TestShamirCombineDuplicateShare(t *testing.T) {
 }
 
 func TestShamirCombineBadIdentifier(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	scheme, err := shamir.NewDealer(2, 3, curve)
 	require.NoError(t, err)
@@ -77,6 +81,7 @@ func TestShamirCombineBadIdentifier(t *testing.T) {
 }
 
 func TestShamirCombineSingle(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	scheme, err := shamir.NewDealer(2, 3, curve)
 	require.NoError(t, err)
@@ -94,6 +99,7 @@ func TestShamirCombineSingle(t *testing.T) {
 
 // Test ComputeL function to compute Lagrange coefficients.
 func TestShamirComputeL(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	scheme, err := shamir.NewDealer(2, 2, curve)
 	require.NoError(t, err)
@@ -121,6 +127,7 @@ func TestShamirComputeL(t *testing.T) {
 }
 
 func TestShamirAllCombinations(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	scheme, err := shamir.NewDealer(3, 5, curve)
 	require.NoError(t, err)
@@ -191,6 +198,7 @@ func TestAdditiveAllCombinations(t *testing.T) {
 
 // Ensures that Share's un/marshal successfully.
 func TestMarshalJsonRoundTrip(t *testing.T) {
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	shares := []shamir.Share{
 		{Id: 0, Value: curve.ScalarField().New(300)},

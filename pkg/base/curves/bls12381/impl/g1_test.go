@@ -10,6 +10,7 @@ import (
 )
 
 func TestG1IsOnCurve(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, ctTrue, new(G1).Identity().IsOnCurve())
 	require.Equal(t, ctTrue, new(G1).Generator().IsOnCurve())
 
@@ -34,6 +35,7 @@ func TestG1IsOnCurve(t *testing.T) {
 }
 
 func TestG1Equality(t *testing.T) {
+	t.Parallel()
 	a := new(G1).Generator()
 	b := new(G1).Identity()
 
@@ -72,6 +74,7 @@ func TestG1Equality(t *testing.T) {
 }
 
 func TestG1Double(t *testing.T) {
+	t.Parallel()
 	t0 := new(G1).Identity()
 	t0.Double(t0)
 	require.Equal(t, ctTrue, t0.IsIdentity())
@@ -104,6 +107,7 @@ func TestG1Double(t *testing.T) {
 }
 
 func TestG1Add(t *testing.T) {
+	t.Parallel()
 	g := new(G1).Generator()
 	a := new(G1).Identity()
 	b := new(G1).Identity()
@@ -182,6 +186,7 @@ func TestG1Add(t *testing.T) {
 }
 
 func TestG1Sub(t *testing.T) {
+	t.Parallel()
 	a := new(G1).Generator()
 	b := new(G1).Generator()
 	require.Equal(t, ctTrue, a.Sub(a, b).IsIdentity())
@@ -191,6 +196,7 @@ func TestG1Sub(t *testing.T) {
 }
 
 func TestG1Mul(t *testing.T) {
+	t.Parallel()
 	g := new(G1).Generator()
 	a := FqNew().SetRaw(&[limb4.FieldLimbs]uint64{
 		0x2b568297a56da71c,
@@ -212,6 +218,7 @@ func TestG1Mul(t *testing.T) {
 }
 
 func TestG1Neg(t *testing.T) {
+	t.Parallel()
 	a := new(G1).Generator()
 	b := new(G1).Neg(a)
 	require.Equal(t, ctTrue, new(G1).Add(a, b).IsIdentity())
@@ -221,6 +228,7 @@ func TestG1Neg(t *testing.T) {
 }
 
 func TestG1InCorrectSubgroup(t *testing.T) {
+	t.Parallel()
 	// ZCash test vector
 	a := G1{
 		X: Fp{
@@ -248,6 +256,7 @@ func TestG1InCorrectSubgroup(t *testing.T) {
 }
 
 func TestG1MulByX(t *testing.T) {
+	t.Parallel()
 	// multiplying by `x` a point in G1 is the same as multiplying by
 	// the equivalent scalar.
 	generator := new(G1).Generator()
@@ -266,6 +275,7 @@ func TestG1MulByX(t *testing.T) {
 }
 
 func TestG1ClearCofactor(t *testing.T) {
+	t.Parallel()
 	// the generator (and the identity) are always on the curve,
 	// even after clearing the cofactor
 	generator := new(G1).Generator()
@@ -322,6 +332,7 @@ func TestG1ClearCofactor(t *testing.T) {
 }
 
 func TestSerialisation(t *testing.T) {
+	t.Parallel()
 	a := new(G1).Generator()
 	b := new(G1).Generator().Double(a)
 
@@ -360,6 +371,7 @@ func TestSerialisation(t *testing.T) {
 }
 
 func TestSumOfProducts(t *testing.T) {
+	t.Parallel()
 	var b [64]byte
 	h0 := new(G1).Generator().Double(new(G1).Generator())
 	_, _ = crand.Read(b[:])

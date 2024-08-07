@@ -15,6 +15,7 @@ import (
 )
 
 func TestRunProfile(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("skipping profiling test in short mode")
 	}

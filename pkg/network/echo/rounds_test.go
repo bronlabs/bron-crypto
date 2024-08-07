@@ -98,6 +98,7 @@ func happyPath(t *testing.T, cipherSuite types.SigningSuite, n int, msg string) 
 }
 
 func TestFailIfOnlyTwoParticipants(t *testing.T) {
+	t.Parallel()
 	ct, err := ttu.MakeSigningSuite(k256.NewCurve(), sha3.New256)
 	require.NoError(t, err)
 	identities, err := ttu.MakeTestIdentities(ct, 2)

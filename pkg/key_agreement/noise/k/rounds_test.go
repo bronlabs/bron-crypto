@@ -15,14 +15,27 @@ import (
 )
 
 func TestHappyPath(t *testing.T) {
+	t.Parallel()
 	var allHashes = []noise.SupportedHash{noise.NOISE_HASH_SHA3256, noise.NOISE_HASH_BLAKE2S}
 	var messages = []string{"hello", ""}
 	for _, c := range []curves.Curve{k256.NewCurve(), edwards25519.NewCurve(), curve25519.NewCurve()} {
-		for _, hashFunc := range allHashes {
-			for _, message := range messages {
-				happyPath(t, c, []byte(message), hashFunc)
+		c := c // capture range variable
+		t.Run(fmt.Sprintf("Curve_%v", c), func(t *testing.T) {
+			t.Parallel()
+			for _, hashFunc := range allHashes {
+				hashFunc := hashFunc // capture range variable
+				t.Run(fmt.Sprintf("Hash_%v", hashFunc), func(t *testing.T) {
+					t.Parallel()
+					for _, message := range messages {
+						message := message // capture range variable
+						t.Run(fmt.Sprintf("Message_%s", message), func(t *testing.T) {
+							t.Parallel()
+							happyPath(t, c, []byte(message), hashFunc)
+						})
+					}
+				})
 			}
-		}
+		})
 	}
 }
 

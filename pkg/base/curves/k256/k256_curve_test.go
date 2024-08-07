@@ -18,6 +18,7 @@ import (
 )
 
 func TestScalarK256Random(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	sc, err := curve.ScalarField().Random(testutils.TestRng())
 	require.NoError(t, err)
@@ -37,6 +38,7 @@ func TestScalarK256Random(t *testing.T) {
 }
 
 func TestScalarK256Hash(t *testing.T) {
+	t.Parallel()
 	var b [32]byte
 	curve := k256.NewCurve()
 	sc, err := curve.ScalarField().Hash(b[:])
@@ -49,6 +51,7 @@ func TestScalarK256Hash(t *testing.T) {
 }
 
 func TestScalarZero(t *testing.T) {
+	t.Parallel()
 	k256 := k256.NewCurve()
 	sc := k256.ScalarField().Zero()
 	require.True(t, sc.IsZero())
@@ -56,6 +59,7 @@ func TestScalarZero(t *testing.T) {
 }
 
 func TestScalarOne(t *testing.T) {
+	t.Parallel()
 	k256 := k256.NewCurve()
 	sc := k256.ScalarField().One()
 	require.True(t, sc.IsOne())
@@ -63,6 +67,7 @@ func TestScalarOne(t *testing.T) {
 }
 
 func TestScalarNew(t *testing.T) {
+	t.Parallel()
 	three := k256.NewScalar(3)
 	require.True(t, three.IsOdd())
 	four := k256.NewScalar(4)
@@ -74,24 +79,28 @@ func TestScalarNew(t *testing.T) {
 }
 
 func TestScalarSquare(t *testing.T) {
+	t.Parallel()
 	three := k256.NewScalar(3)
 	nine := k256.NewScalar(9)
 	require.Equal(t, algebra.Equal, three.Square().Cmp(nine))
 }
 
 func TestScalarCube(t *testing.T) {
+	t.Parallel()
 	three := k256.NewScalar(3)
 	twentySeven := k256.NewScalar(27)
 	require.Equal(t, algebra.Equal, three.Cube().Cmp(twentySeven))
 }
 
 func TestScalarDouble(t *testing.T) {
+	t.Parallel()
 	three := k256.NewScalar(3)
 	six := k256.NewScalar(6)
 	require.Equal(t, algebra.Equal, three.Double().Cmp(six))
 }
 
 func TestScalarNeg(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	one := curve.ScalarField().One()
 	neg1 := k256.NewScalar(1).Neg()
@@ -102,6 +111,7 @@ func TestScalarNeg(t *testing.T) {
 }
 
 func TestScalarInvert(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	nine := k256.NewScalar(9)
 	actual, err := nine.MultiplicativeInverse()
@@ -113,6 +123,7 @@ func TestScalarInvert(t *testing.T) {
 }
 
 func TestScalarSqrt(t *testing.T) {
+	t.Parallel()
 	nine := k256.NewScalar(9)
 	actual, err := nine.Sqrt()
 	sa, _ := actual.(*k256.Scalar)
@@ -122,6 +133,7 @@ func TestScalarSqrt(t *testing.T) {
 }
 
 func TestScalarAdd(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	nine := k256.NewScalar(9)
 	six := k256.NewScalar(6)
@@ -139,6 +151,7 @@ func TestScalarAdd(t *testing.T) {
 }
 
 func TestScalarSub(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	nine := k256.NewScalar(9)
 	six := k256.NewScalar(6)
@@ -154,6 +167,7 @@ func TestScalarSub(t *testing.T) {
 }
 
 func TestScalarMul(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	nine := k256.NewScalar(9)
 	six := k256.NewScalar(6)
@@ -166,6 +180,7 @@ func TestScalarMul(t *testing.T) {
 }
 
 func TestScalarDiv(t *testing.T) {
+	t.Parallel()
 	nine := k256.NewScalar(9)
 	actual, err := nine.Div(nine)
 	require.NoError(t, err)
@@ -176,6 +191,7 @@ func TestScalarDiv(t *testing.T) {
 }
 
 func TestScalarExp(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	seventeen := k256.NewScalar(17)
 
@@ -193,6 +209,7 @@ func TestScalarExp(t *testing.T) {
 }
 
 func TestScalarSerialize(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	sc := k256.NewScalar(255)
 	sequence := sc.Bytes()
@@ -218,6 +235,7 @@ func TestScalarSerialize(t *testing.T) {
 }
 
 func TestScalarNil(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	one := k256.NewScalar(1)
 	require.Panics(t, func() { one.Add(nil) })
@@ -261,6 +279,7 @@ func TestScalarNil(t *testing.T) {
 // }
 
 func TestPointIdentity(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	sc := curve.AdditiveIdentity()
 	require.True(t, sc.IsAdditiveIdentity())
@@ -277,6 +296,7 @@ func TestPointIdentity(t *testing.T) {
 // }
 
 func TestPointSet(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	z := k256.NewBaseFieldElement(0)
 	identity, err := curve.NewPoint(z, z)
@@ -291,6 +311,7 @@ func TestPointSet(t *testing.T) {
 }
 
 func TestPointDouble(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	g := curve.Generator()
 	g2 := g.Double()
@@ -302,6 +323,7 @@ func TestPointDouble(t *testing.T) {
 }
 
 func TestPointNeg(t *testing.T) {
+	t.Parallel()
 	k256 := k256.NewCurve()
 	g := k256.Generator().Neg()
 	require.True(t, g.Neg().Equal(k256.Generator()))
@@ -309,6 +331,7 @@ func TestPointNeg(t *testing.T) {
 }
 
 func TestPointAdd(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	pt := curve.Generator().(*k256.Point)
 	pt1 := pt.Add(pt).(*k256.Point)
@@ -322,6 +345,7 @@ func TestPointAdd(t *testing.T) {
 }
 
 func TestPointSub(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	g := curve.Generator()
 	pt := curve.Generator().ScalarMul(k256.NewScalar(4))
@@ -331,6 +355,7 @@ func TestPointSub(t *testing.T) {
 }
 
 func TestPointMul(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	g := curve.Generator()
 	pt := curve.Generator().ScalarMul(k256.NewScalar(4))
@@ -338,6 +363,7 @@ func TestPointMul(t *testing.T) {
 }
 
 func TestPointSerialize(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	ss, err := curve.ScalarField().Random(testutils.TestRng())
 	require.NoError(t, err)
@@ -377,6 +403,7 @@ func TestPointSerialize(t *testing.T) {
 }
 
 func TestPointNil(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	one := curve.Generator()
 	require.Panics(t, func() { one.Add(nil) })
@@ -390,6 +417,7 @@ func TestPointNil(t *testing.T) {
 }
 
 func TestPointSumOfProducts(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	lhs := curve.Generator().ScalarMul(k256.NewScalar(50))
 	points := make([]curves.Point, 5)

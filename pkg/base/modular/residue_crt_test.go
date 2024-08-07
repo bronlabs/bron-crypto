@@ -14,6 +14,7 @@ import (
 )
 
 func Test_PrimePowersResidueParams(t *testing.T) {
+	t.Parallel()
 	const n = 64
 	const bits = 512
 	prng := crand.Reader
@@ -55,6 +56,7 @@ func Test_PrimePowersResidueParams(t *testing.T) {
 }
 
 func Test_PrimePowersResidueParamsMultiBase(t *testing.T) {
+	t.Parallel()
 	const n = 64
 	const bits = 512
 	prng := crand.Reader

@@ -7,6 +7,7 @@ import (
 )
 
 func TestFp2Square(t *testing.T) {
+	t.Parallel()
 	a := Fp2{
 		A: Fp{
 			0xc9a2183163ee70d4,
@@ -48,6 +49,7 @@ func TestFp2Square(t *testing.T) {
 }
 
 func TestFp2Mul(t *testing.T) {
+	t.Parallel()
 	a := Fp2{
 		A: Fp{
 			0xc9a2183163ee70d4,
@@ -107,6 +109,7 @@ func TestFp2Mul(t *testing.T) {
 }
 
 func TestFp2Add(t *testing.T) {
+	t.Parallel()
 	a := Fp2{
 		A: Fp{
 			0xc9a2183163ee70d4,
@@ -166,6 +169,7 @@ func TestFp2Add(t *testing.T) {
 }
 
 func TestFp2Sub(t *testing.T) {
+	t.Parallel()
 	a := Fp2{
 		A: Fp{
 			0xc9a2183163ee70d4,
@@ -225,6 +229,7 @@ func TestFp2Sub(t *testing.T) {
 }
 
 func TestFp2Neg(t *testing.T) {
+	t.Parallel()
 	a := Fp2{
 		A: Fp{
 			0xc9a2183163ee70d4,
@@ -266,6 +271,7 @@ func TestFp2Neg(t *testing.T) {
 }
 
 func TestFp2Sqrt(t *testing.T) {
+	t.Parallel()
 	a := Fp2{
 		A: Fp{
 			0x2beed14627d7f9e9,
@@ -345,6 +351,7 @@ func TestFp2Sqrt(t *testing.T) {
 }
 
 func TestFp2Invert(t *testing.T) {
+	t.Parallel()
 	a := Fp2{
 		A: Fp{
 			0x1128ecad67549455,
@@ -392,6 +399,7 @@ func TestFp2Invert(t *testing.T) {
 }
 
 func TestFp2LexicographicallyLargest(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, ctFalse, new(Fp2).SetZero().LexicographicallyLargest())
 	require.Equal(t, ctFalse, new(Fp2).SetOne().LexicographicallyLargest())
 

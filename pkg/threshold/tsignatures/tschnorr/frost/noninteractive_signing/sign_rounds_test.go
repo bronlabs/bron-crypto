@@ -150,6 +150,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, hash func() hash.Hash, thre
 
 func TestSignNilMessage(t *testing.T) {
 	t.Helper()
+	t.Parallel()
 	curve := edwards25519.NewCurve()
 	hash := sha3.New256
 

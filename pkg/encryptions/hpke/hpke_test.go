@@ -11,6 +11,7 @@ import (
 )
 
 func Test_AuthSealOpenRoundTrip(t *testing.T) {
+	t.Parallel()
 	senderSk, err := p256.NewCurve().ScalarField().Random(crand.Reader)
 	require.NoError(t, err)
 	senderPk := p256.NewCurve().ScalarBaseMult(senderSk)

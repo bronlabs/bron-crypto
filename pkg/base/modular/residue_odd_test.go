@@ -12,6 +12,7 @@ import (
 )
 
 func Test_OddResidueParams(t *testing.T) {
+	t.Parallel()
 	const n = 64
 	const bits = 4096
 	prng := crand.Reader
@@ -43,6 +44,7 @@ func Test_OddResidueParams(t *testing.T) {
 }
 
 func Test_OddResidueParamsMultiBase(t *testing.T) {
+	t.Parallel()
 	const n = 64
 	const bits = 4096
 	prng := crand.Reader

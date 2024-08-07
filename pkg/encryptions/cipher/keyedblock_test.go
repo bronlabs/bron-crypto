@@ -11,6 +11,7 @@ import (
 )
 
 func Test_keyedblock(t *testing.T) {
+	t.Parallel()
 	var err error
 	numRuns := 100
 	input, output, ctxt, ctxt2, key := new([16]byte), new([16]byte), new([16]byte), new([16]byte), new([16]byte)

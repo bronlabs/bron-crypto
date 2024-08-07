@@ -21,9 +21,11 @@ type Message struct {
 }
 
 func TestVectorKPattern(t *testing.T) {
+	t.Parallel()
 	curve := curve25519.NewCurve()
 	// ref: https://github.com/symbolicsoft/noiseexplorer/blob/master/implementations/tests/cacophony.json
 	t.Run("case Noise_K_25519_ChaChaPoly_BLAKE2s", func(t *testing.T) {
+		t.Parallel()
 		messages := []Message{
 			{
 				msg:   "4c756477696720766f6e204d69736573",
@@ -113,9 +115,11 @@ func TestVectorKPattern(t *testing.T) {
 }
 
 func TestVectorKKPattern(t *testing.T) {
+	t.Parallel()
 	curve := curve25519.NewCurve()
 	// ref: https://github.com/symbolicsoft/noiseexplorer/blob/master/implementations/tests/cacophony.json
 	t.Run("case Noise_KK_25519_ChaChaPoly_BLAKE2s", func(t *testing.T) {
+		t.Parallel()
 		messages := []Message{
 			{
 				msg:   "4c756477696720766f6e204d69736573",
@@ -165,6 +169,7 @@ func TestVectorKKPattern(t *testing.T) {
 			Aead:  noise.NOISE_AEAD_CHACHA,
 		}
 		for i, m := range messages {
+
 			msg, err := hex.DecodeString(m.msg)
 			require.NoError(t, err)
 			expectedEncryptedMsg, err := hex.DecodeString(m.ciper)

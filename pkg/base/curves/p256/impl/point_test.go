@@ -10,6 +10,7 @@ import (
 )
 
 func TestP256PointArithmetic_Double(t *testing.T) {
+	t.Parallel()
 	g := impl.PointNew().Generator()
 	pt1 := impl.PointNew().Double(g)
 	pt2 := impl.PointNew().Add(g, g)

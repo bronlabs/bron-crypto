@@ -14,12 +14,14 @@ import (
 )
 
 func TestFqSetOne(t *testing.T) {
+	t.Parallel()
 	fq := FqNew().SetOne()
 	require.NotNil(t, fq)
 	require.Equal(t, fq.Value, getBls12381FqParams().R)
 }
 
 func TestFqSetUint64(t *testing.T) {
+	t.Parallel()
 	act := FqNew().SetUint64(1 << 60)
 	require.NotNil(t, act)
 	// Remember it will be in montgomery form
@@ -27,6 +29,7 @@ func TestFqSetUint64(t *testing.T) {
 }
 
 func TestFqAdd(t *testing.T) {
+	t.Parallel()
 	lhs := FqNew().SetOne()
 	rhs := FqNew().SetOne()
 	exp := FqNew().SetUint64(2)
@@ -51,6 +54,7 @@ func TestFqAdd(t *testing.T) {
 }
 
 func TestFqSub(t *testing.T) {
+	t.Parallel()
 	lhs := FqNew().SetOne()
 	rhs := FqNew().SetOne()
 	exp := FqNew().SetZero()
@@ -78,6 +82,7 @@ func TestFqSub(t *testing.T) {
 }
 
 func TestFqMul(t *testing.T) {
+	t.Parallel()
 	lhs := FqNew().SetOne()
 	rhs := FqNew().SetOne()
 	exp := FqNew().SetOne()
@@ -102,6 +107,7 @@ func TestFqMul(t *testing.T) {
 }
 
 func TestFqDouble(t *testing.T) {
+	t.Parallel()
 	a := FqNew().SetUint64(2)
 	e := FqNew().SetUint64(4)
 	require.Equal(t, e, FqNew().Double(a))
@@ -116,6 +122,7 @@ func TestFqDouble(t *testing.T) {
 }
 
 func TestFqSquare(t *testing.T) {
+	t.Parallel()
 	a := FqNew().SetUint64(4)
 	e := FqNew().SetUint64(16)
 	require.Equal(t, uint64(1), e.Equal(a.Square(a)))
@@ -134,6 +141,7 @@ func TestFqSquare(t *testing.T) {
 }
 
 func TestFqNeg(t *testing.T) {
+	t.Parallel()
 	g := FqNew().SetRaw(&fqGenerator)
 	a := FqNew().SetOne()
 	a.Neg(a)
@@ -145,6 +153,7 @@ func TestFqNeg(t *testing.T) {
 }
 
 func TestFqExp(t *testing.T) {
+	t.Parallel()
 	e := FqNew().SetUint64(8)
 	a := FqNew().SetUint64(2)
 	by := FqNew().SetUint64(3)
@@ -152,6 +161,7 @@ func TestFqExp(t *testing.T) {
 }
 
 func TestFqSqrt(t *testing.T) {
+	t.Parallel()
 	t1 := FqNew().SetUint64(2)
 	t2 := FqNew().Neg(t1)
 	t3 := FqNew().Square(t1)
@@ -165,6 +175,7 @@ func TestFqSqrt(t *testing.T) {
 }
 
 func TestFqInvert(t *testing.T) {
+	t.Parallel()
 	twoInv := FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0xffffffff, 0xac425bfd0001a401, 0xccc627f7f65e27fa, 0xc1258acd66282b7})
 	two := FqNew().SetUint64(2)
 	a, inverted := FqNew().Invert(two)
@@ -189,6 +200,7 @@ func TestFqInvert(t *testing.T) {
 }
 
 func TestFqCMove(t *testing.T) {
+	t.Parallel()
 	t1 := FqNew().SetUint64(5)
 	t2 := FqNew().SetUint64(10)
 	require.Equal(t, t1, FqNew().CMove(t1, t2, 0))
@@ -196,6 +208,7 @@ func TestFqCMove(t *testing.T) {
 }
 
 func TestFqBytes(t *testing.T) {
+	t.Parallel()
 	t1 := FqNew().SetUint64(99)
 	seq := t1.Bytes()
 	t2, err := FqNew().SetBytes(&seq)
@@ -212,6 +225,7 @@ func TestFqBytes(t *testing.T) {
 }
 
 func TestFqCmp(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		a *limb4.FieldValue
 		b *limb4.FieldValue
@@ -271,6 +285,7 @@ func TestFqCmp(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			t.Parallel()
 			require.Equal(t, test.e, test.a.Cmp(test.b))
 			require.Equal(t, -test.e, test.b.Cmp(test.a))
 			require.Equal(t, int64(0), test.a.Cmp(test.a))
@@ -280,6 +295,7 @@ func TestFqCmp(t *testing.T) {
 }
 
 func TestFqBigInt(t *testing.T) {
+	t.Parallel()
 	t1 := FqNew().SetNat(new(saferith.Nat).SetUint64(9999))
 	t2 := FqNew().SetNat(t1.Nat())
 	require.Equal(t, t1, t2)
@@ -295,6 +311,7 @@ func TestFqBigInt(t *testing.T) {
 }
 
 func TestFqSetBytesWide(t *testing.T) {
+	t.Parallel()
 	e := FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0xc759fba87ff8c5a6, 0x9ef5194839e7df44, 0x21375d22b678bf0e, 0x38b105387033fd57})
 
 	a := FqNew().SetBytesWide(&[64]byte{
@@ -311,6 +328,7 @@ func TestFqSetBytesWide(t *testing.T) {
 }
 
 func TestFqSetBytesWideBigInt(t *testing.T) {
+	t.Parallel()
 	params := getBls12381FqParams()
 	var tv2 [64]byte
 	for i := 0; i < 25; i++ {
@@ -326,11 +344,13 @@ func TestFqSetBytesWideBigInt(t *testing.T) {
 }
 
 func TestFqToMontgomery(t *testing.T) {
+	t.Parallel()
 	v := FqNew().SetUint64(2)
 	require.Equal(t, [limb4.FieldLimbs]uint64{0x3fffffffc, 0xb1096ff400069004, 0x33189fdfd9789fea, 0x304962b3598a0adf}, v.Value)
 }
 
 func TestFqFromMontgomery(t *testing.T) {
+	t.Parallel()
 	e := [limb4.FieldLimbs]uint64{2, 0, 0, 0}
 	a := [limb4.FieldLimbs]uint64{0, 0, 0, 0}
 	v := FqNew().SetUint64(2)

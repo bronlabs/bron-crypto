@@ -13,6 +13,7 @@ import (
 )
 
 func Test_SignAgainstMinaSigner(t *testing.T) {
+	t.Parallel()
 	network := mina.MainNet
 
 	// gen keys and create signer

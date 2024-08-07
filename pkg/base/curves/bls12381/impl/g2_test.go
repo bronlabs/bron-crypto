@@ -11,6 +11,7 @@ import (
 )
 
 func TestG2IsOnCurve(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, ctTrue, new(G2).Identity().IsOnCurve())
 	require.Equal(t, ctTrue, new(G2).Generator().IsOnCurve())
 
@@ -45,6 +46,7 @@ func TestG2IsOnCurve(t *testing.T) {
 }
 
 func TestG2Equal(t *testing.T) {
+	t.Parallel()
 	a := new(G2).Generator()
 	b := new(G2).Identity()
 
@@ -54,6 +56,7 @@ func TestG2Equal(t *testing.T) {
 }
 
 func TestG2ToAffine(t *testing.T) {
+	t.Parallel()
 	a := new(G2).Generator()
 
 	z := Fp2{
@@ -83,6 +86,7 @@ func TestG2ToAffine(t *testing.T) {
 }
 
 func TestG2Double(t *testing.T) {
+	t.Parallel()
 	a := new(G2).Identity()
 	require.Equal(t, ctTrue, a.Double(a).IsIdentity())
 
@@ -131,6 +135,7 @@ func TestG2Double(t *testing.T) {
 }
 
 func TestG2Add(t *testing.T) {
+	t.Parallel()
 	a := new(G2).Identity()
 	b := new(G2).Identity()
 	c := new(G2).Add(a, b)
@@ -213,6 +218,7 @@ func TestG2Add(t *testing.T) {
 }
 
 func TestG2Neg(t *testing.T) {
+	t.Parallel()
 	a := new(G2).Generator()
 	b := new(G2).Neg(a)
 	require.Equal(t, ctTrue, new(G2).Add(a, b).IsIdentity())
@@ -222,6 +228,7 @@ func TestG2Neg(t *testing.T) {
 }
 
 func TestG2Mul(t *testing.T) {
+	t.Parallel()
 	g := new(G2).Generator()
 	a := FqNew().SetRaw(&[limb4.FieldLimbs]uint64{
 		0x2b56_8297_a56d_a71c,
@@ -244,6 +251,7 @@ func TestG2Mul(t *testing.T) {
 }
 
 func TestG2InCorrectSubgroup(t *testing.T) {
+	t.Parallel()
 	a := G2{
 		X: Fp2{
 			A: Fp{
@@ -290,6 +298,7 @@ func TestG2InCorrectSubgroup(t *testing.T) {
 }
 
 func TestG2MulByX(t *testing.T) {
+	t.Parallel()
 	// multiplying by `x` a point in G2 is the same as multiplying by
 	// the equivalent scalar.
 	x := FqNew().SetUint64(paramX)
@@ -310,6 +319,7 @@ func TestG2MulByX(t *testing.T) {
 }
 
 func TestG2Psi(t *testing.T) {
+	t.Parallel()
 	generator := new(G2).Generator()
 
 	z := Fp2{
@@ -406,6 +416,7 @@ func TestG2Psi(t *testing.T) {
 }
 
 func TestG2ClearCofactor(t *testing.T) {
+	t.Parallel()
 	z := Fp2{
 		A: Fp{
 			0x0ef2ddffab187c0a,
@@ -502,6 +513,7 @@ func TestG2ClearCofactor(t *testing.T) {
 }
 
 func TestG2SumOfProducts(t *testing.T) {
+	t.Parallel()
 	var b [64]byte
 	h0 := new(G2).Generator().Double(new(G2).Generator())
 	_, _ = crand.Read(b[:])

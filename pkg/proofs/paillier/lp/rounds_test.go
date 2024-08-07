@@ -73,6 +73,7 @@ func doProof(k int, pk *paillier.PublicKey, sk *paillier.SecretKey) (err error) 
 }
 
 func Test_HappyPath(t *testing.T) {
+	t.Parallel()
 	prng := crand.Reader
 	pInt, err := crand.Prime(prng, 512)
 	require.NoError(t, err)

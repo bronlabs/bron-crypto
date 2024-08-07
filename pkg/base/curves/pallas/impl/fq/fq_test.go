@@ -10,12 +10,14 @@ import (
 )
 
 func TestFqSetOne(t *testing.T) {
+	t.Parallel()
 	fq := new(Fq).SetOne()
 	require.NotNil(t, fq)
 	require.True(t, fq.Equal(r))
 }
 
 func TestFqSetUint64(t *testing.T) {
+	t.Parallel()
 	act := new(Fq).SetUint64(1 << 60)
 	require.NotNil(t, act)
 	// Remember it will be in montgomery form
@@ -23,6 +25,7 @@ func TestFqSetUint64(t *testing.T) {
 }
 
 func TestFqAdd(t *testing.T) {
+	t.Parallel()
 	lhs := new(Fq).SetOne()
 	rhs := new(Fq).SetOne()
 	exp := new(Fq).SetUint64(2)
@@ -47,6 +50,7 @@ func TestFqAdd(t *testing.T) {
 }
 
 func TestFqSub(t *testing.T) {
+	t.Parallel()
 	lhs := new(Fq).SetOne()
 	rhs := new(Fq).SetOne()
 	exp := new(Fq).SetZero()
@@ -74,6 +78,7 @@ func TestFqSub(t *testing.T) {
 }
 
 func TestFqMul(t *testing.T) {
+	t.Parallel()
 	lhs := new(Fq).SetOne()
 	rhs := new(Fq).SetOne()
 	exp := new(Fq).SetOne()
@@ -98,6 +103,7 @@ func TestFqMul(t *testing.T) {
 }
 
 func TestFqDouble(t *testing.T) {
+	t.Parallel()
 	a := new(Fq).SetUint64(2)
 	e := new(Fq).SetUint64(4)
 	require.Equal(t, e, new(Fq).Double(a))
@@ -112,6 +118,7 @@ func TestFqDouble(t *testing.T) {
 }
 
 func TestFqSquare(t *testing.T) {
+	t.Parallel()
 	a := new(Fq).SetUint64(4)
 	e := new(Fq).SetUint64(16)
 	require.Equal(t, e, a.Square(a))
@@ -126,6 +133,7 @@ func TestFqSquare(t *testing.T) {
 }
 
 func TestFqNeg(t *testing.T) {
+	t.Parallel()
 	a := new(Fq).SetOne()
 	a.Neg(a)
 	e := &Fq{0x311bac8400000004, 0x891a63f02652a376, 0, 0}
@@ -136,6 +144,7 @@ func TestFqNeg(t *testing.T) {
 }
 
 func TestFqExp(t *testing.T) {
+	t.Parallel()
 	e := new(Fq).SetUint64(8)
 	a := new(Fq).SetUint64(2)
 	by := new(Fq).SetUint64(3)
@@ -143,6 +152,7 @@ func TestFqExp(t *testing.T) {
 }
 
 func TestFqSqrt(t *testing.T) {
+	t.Parallel()
 	t1 := new(Fq).SetUint64(2)
 	t2 := new(Fq).Neg(t1)
 	t3 := new(Fq).Square(t1)
@@ -155,6 +165,7 @@ func TestFqSqrt(t *testing.T) {
 }
 
 func TestFqInvert(t *testing.T) {
+	t.Parallel()
 	twoInv := &Fq{0xc623759080000001, 0x11234c7e04ca546e, 0x0000000000000000, 0x2000000000000000}
 	fiat_pasta_fq_to_montgomery((*fiat_pasta_fq_montgomery_domain_field_element)(twoInv), (*fiat_pasta_fq_non_montgomery_domain_field_element)(twoInv))
 	two := new(Fq).SetUint64(2)
@@ -182,6 +193,7 @@ func TestFqInvert(t *testing.T) {
 }
 
 func TestFqCMove(t *testing.T) {
+	t.Parallel()
 	t1 := new(Fq).SetUint64(5)
 	t2 := new(Fq).SetUint64(10)
 	require.Equal(t, t1, new(Fq).CMove(t1, t2, 0))
@@ -189,6 +201,7 @@ func TestFqCMove(t *testing.T) {
 }
 
 func TestFqBytes(t *testing.T) {
+	t.Parallel()
 	t1 := new(Fq).SetUint64(99)
 	seq := t1.Bytes()
 	t2, err := new(Fq).SetBytes(&seq)
@@ -205,6 +218,7 @@ func TestFqBytes(t *testing.T) {
 }
 
 func TestFqBigInt(t *testing.T) {
+	t.Parallel()
 	t1 := new(Fq).SetNat(new(saferith.Nat).SetUint64(9999))
 	t2 := new(Fq).SetNat(t1.Nat())
 	require.Equal(t, t1, t2)
@@ -223,11 +237,13 @@ func TestFqBigInt(t *testing.T) {
 }
 
 func TestFqSetBool(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, new(Fq).SetOne(), new(Fq).SetBool(true))
 	require.Equal(t, new(Fq).SetZero(), new(Fq).SetBool(false))
 }
 
 func TestFqSetBytesWide(t *testing.T) {
+	t.Parallel()
 	e := &Fq{0xe22bd0d1b22cc43e, 0x6b84e5b52490a7c8, 0x264262941ac9e229, 0x27dcfdf361ce4254}
 	fiat_pasta_fq_to_montgomery((*fiat_pasta_fq_montgomery_domain_field_element)(e), (*fiat_pasta_fq_non_montgomery_domain_field_element)(e))
 	a := new(Fq).SetBytesWide(&[64]byte{
@@ -244,6 +260,7 @@ func TestFqSetBytesWide(t *testing.T) {
 }
 
 func TestFqCmp(t *testing.T) {
+	t.Parallel()
 	const n = 256
 	for range n {
 		xInt, err := crand.Int(crand.Reader, Modulus.Big())

@@ -10,11 +10,13 @@ import (
 )
 
 func Test_ChachaPrng(t *testing.T) {
+	t.Parallel()
 	// run the test
 	testutils.PrngTester(t, fkechacha20.NewPrng)
 }
 
 func Test_TmmoPrng(t *testing.T) {
+	t.Parallel()
 	// run the test
 	NewNistPrngShort := func(seed, salt []byte) (csprng.CSPRNG, error) {
 		return tmmohash.NewTmmoPrng(32, 16*7, seed, salt)

@@ -10,7 +10,7 @@ import (
 )
 
 func Test_NatJacobi(t *testing.T) {
-
+	t.Parallel()
 	// stolen from wikipedia
 	data := [][]int{
 		/*  1 */ {1},

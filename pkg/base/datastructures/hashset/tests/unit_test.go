@@ -203,7 +203,7 @@ func TestHashableHashSet_SubSets(t *testing.T) {
 	}
 }
 func TestHashableHashSet_IterSubSets(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	A := hashset.NewHashableHashSet[data]()
 	A.Add(data(123))

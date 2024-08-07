@@ -32,6 +32,7 @@ func Test_MinaSignaturePrefix(t *testing.T) {
 }
 
 func Test_MinaSignMessage(t *testing.T) {
+	t.Parallel()
 	curve := pallas.NewCurve()
 	networkId := mina.MainNet
 	variant := mina.NewMinaVariant(networkId)
@@ -66,6 +67,7 @@ func Test_MinaSignMessage(t *testing.T) {
 }
 
 func Test_HappyPath(t *testing.T) {
+	t.Parallel()
 	prng := crand.Reader
 	networkId := mina.MainNet
 

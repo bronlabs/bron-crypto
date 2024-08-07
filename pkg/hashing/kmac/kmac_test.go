@@ -64,6 +64,7 @@ var kmacTests = []struct {
 }
 
 func TestHappyPathKMAC(t *testing.T) {
+	t.Parallel()
 	for _, test := range kmacTests {
 		key, err := hex.DecodeString(test.key)
 		require.NoError(t, err)

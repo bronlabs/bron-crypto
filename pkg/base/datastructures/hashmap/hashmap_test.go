@@ -25,6 +25,7 @@ func (d *data) Equal(rhs *data) bool {
 var _ ds.Hashable[*data] = (*data)(nil)
 
 func Test_HashableHashMap(t *testing.T) {
+	t.Parallel()
 	hashMap := hashmap.NewHashableHashMap[*data, int]()
 
 	// check empty map
@@ -122,6 +123,7 @@ func Test_HashableHashMap(t *testing.T) {
 }
 
 func Test_OrderedHashMap(t *testing.T) {
+	t.Parallel()
 	hashMap := hashmap.NewComparableHashMap[int, int]()
 
 	// check empty map
@@ -218,6 +220,7 @@ func Test_OrderedHashMap(t *testing.T) {
 	require.False(t, ok)
 }
 func Test_HashableHashMap_Remove(t *testing.T) {
+	t.Parallel()
 	hashMap := hashmap.NewHashableHashMap[*data, int]()
 
 	// add some elements
@@ -235,6 +238,7 @@ func Test_HashableHashMap_Remove(t *testing.T) {
 	require.Equal(t, 2, hashMap.Size())
 }
 func Test_TryRemove_KeyNotExists(t *testing.T) {
+	t.Parallel()
 	hashMap := hashmap.NewHashableHashMap[*data, int]()
 
 	// check empty map
@@ -251,6 +255,7 @@ func Test_TryRemove_KeyNotExists(t *testing.T) {
 	require.True(t, hashMap.IsEmpty())
 }
 func Test_HashableHashMap_Keys(t *testing.T) {
+	t.Parallel()
 	hashMap := hashmap.NewHashableHashMap[*data, int]()
 	hashMap.Put(&data{value: 1}, 1)
 	hashMap.Put(&data{value: 2}, 2)
@@ -264,6 +269,7 @@ func Test_HashableHashMap_Keys(t *testing.T) {
 }
 
 func Test_HashableHashMap_Values(t *testing.T) {
+	t.Parallel()
 	hashMap := hashmap.NewHashableHashMap[*data, int]()
 	hashMap.Put(&data{value: 1}, 1)
 	hashMap.Put(&data{value: 2}, 2)
@@ -277,6 +283,7 @@ func Test_HashableHashMap_Values(t *testing.T) {
 }
 
 func Test_HashableHashMap_Clones(t *testing.T) {
+	t.Parallel()
 	hashMap := hashmap.NewHashableHashMap[*data, int]()
 	hashMap.Put(&data{value: 1}, 1)
 	hashMap.Put(&data{value: 2}, 2)
@@ -301,6 +308,7 @@ func Test_HashableHashMap_Clones(t *testing.T) {
 }
 
 func Test_HashableHashMap_Iter(t *testing.T) {
+	t.Parallel()
 	hashMap := hashmap.NewHashableHashMap[*data, int]()
 	hashMap.Put(&data{value: 1}, 1)
 	hashMap.Put(&data{value: 2}, 2)
@@ -318,6 +326,7 @@ func Test_HashableHashMap_Iter(t *testing.T) {
 }
 
 func Test_HashableHashMap_Filter(t *testing.T) {
+	t.Parallel()
 	hashMap := hashmap.NewHashableHashMap[*data, int]()
 	hashMap.Put(&data{value: 1}, 1)
 	hashMap.Put(&data{value: 2}, 2)
@@ -339,6 +348,7 @@ func Test_HashableHashMap_Filter(t *testing.T) {
 }
 
 func Test_HashableHashMap_Retain(t *testing.T) {
+	t.Parallel()
 	hashMap := hashmap.NewHashableHashMap[*data, int]()
 	hashMap.Put(&data{value: 1}, 1)
 	hashMap.Put(&data{value: 2}, 2)

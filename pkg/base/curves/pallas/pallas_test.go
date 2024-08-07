@@ -15,6 +15,7 @@ import (
 )
 
 func Test_PointPallasAddDoubleMul(t *testing.T) {
+	t.Parallel()
 	g := new(pallas.Ep).Generator()
 	id := new(pallas.Ep).Identity()
 	require.Equal(t, g.Add(g, id), g)
@@ -31,6 +32,7 @@ func Test_PointPallasAddDoubleMul(t *testing.T) {
 }
 
 func TestPointPointPallasHash(t *testing.T) {
+	t.Parallel()
 	h0, err := pallas.NewCurve().Hash(nil)
 	require.NoError(t, err)
 	h1, err := pallas.NewCurve().Hash([]byte{})
@@ -42,6 +44,7 @@ func TestPointPointPallasHash(t *testing.T) {
 }
 
 func TestPointPointPallasNeg(t *testing.T) {
+	t.Parallel()
 	g := new(pallas.Ep).Generator()
 	g.Neg(g)
 	require.True(t, g.Neg(g).Equal(new(pallas.Ep).Generator()))
@@ -50,6 +53,7 @@ func TestPointPointPallasNeg(t *testing.T) {
 }
 
 func TestPointPointPallasRandom(t *testing.T) {
+	t.Parallel()
 	aP, err := pallas.NewCurve().Random(testutils.TestRng())
 	require.NoError(t, err)
 	a := aP.(*pallas.Point).V
@@ -60,6 +64,7 @@ func TestPointPointPallasRandom(t *testing.T) {
 }
 
 func TestPointPointPallasSerialize(t *testing.T) {
+	t.Parallel()
 	sc, err := pallas.NewScalarField().Random(testutils.TestRng())
 	require.NoError(t, err)
 	ss, ok := sc.(*pallas.Scalar)
@@ -101,6 +106,7 @@ func TestPointPointPallasSerialize(t *testing.T) {
 }
 
 func TestPointPointPallasCMove(t *testing.T) {
+	t.Parallel()
 	a, err := pallas.NewCurve().Random(crand.Reader)
 	require.NoError(t, err)
 	b, err := pallas.NewCurve().Random(crand.Reader)
@@ -112,6 +118,7 @@ func TestPointPointPallasCMove(t *testing.T) {
 }
 
 func TestPointPointPallasSumOfProducts(t *testing.T) {
+	t.Parallel()
 	lhs := new(pallas.Ep).Generator()
 	lhs.Mul(lhs, new(fq.Fq).SetUint64(50))
 	pallasPoints := make([]*pallas.Ep, 5)
@@ -131,6 +138,7 @@ func TestPointPointPallasSumOfProducts(t *testing.T) {
 }
 
 func TestScalarMul(t *testing.T) {
+	t.Parallel()
 	nine := pallas.NewScalar(9)
 	six := pallas.NewScalar(6)
 	actual := nine.Mul(six)
@@ -141,6 +149,7 @@ func TestScalarMul(t *testing.T) {
 }
 
 func TestScalarExp(t *testing.T) {
+	t.Parallel()
 	curve := pallas.NewCurve()
 	seventeen := pallas.NewScalar(17)
 

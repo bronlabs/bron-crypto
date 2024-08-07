@@ -9,6 +9,7 @@ import (
 )
 
 func Test_MeasureConstantTime_append(t *testing.T) {
+	t.Parallel()
 	if os.Getenv("EXEC_TIME_TEST") == "" {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}
@@ -23,6 +24,7 @@ func Test_MeasureConstantTime_append(t *testing.T) {
 }
 
 func Test_MeasureConstantTime_extract(t *testing.T) {
+	t.Parallel()
 	if os.Getenv("EXEC_TIME_TEST") == "" {
 		t.Skip("Skipping test because EXEC_TIME_TEST is not set")
 	}

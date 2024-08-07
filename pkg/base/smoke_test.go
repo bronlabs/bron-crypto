@@ -9,6 +9,7 @@ import (
 )
 
 func TestSmoke(t *testing.T) {
+	t.Parallel()
 	require.GreaterOrEqual(t, base.ComputationalSecurity, 128,
 		"Ensure a minimum of 128-bit computational security")
 	require.GreaterOrEqual(t, base.StatisticalSecurity, 80,

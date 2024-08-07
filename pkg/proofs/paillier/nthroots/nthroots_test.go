@@ -18,6 +18,7 @@ import (
 )
 
 func Test_HappyPathInteractive(t *testing.T) {
+	t.Parallel()
 	prng := crand.Reader
 	pInt, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
@@ -40,6 +41,7 @@ func Test_HappyPathInteractive(t *testing.T) {
 }
 
 func Test_InvalidRootInteractive(t *testing.T) {
+	t.Parallel()
 	prng := crand.Reader
 	pInt, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
@@ -72,6 +74,7 @@ func Test_InvalidRootInteractive(t *testing.T) {
 }
 
 func Test_HappyPathNonInteractive(t *testing.T) {
+	t.Parallel()
 	sessionId := []byte("nthRootSession")
 	appLabel := "NthRoot"
 	prng := crand.Reader
@@ -112,6 +115,7 @@ func Test_HappyPathNonInteractive(t *testing.T) {
 }
 
 func Test_InvalidRootNonInteractive(t *testing.T) {
+	t.Parallel()
 	sessionId := []byte("nthRootSession")
 	appLabel := "NthRoot"
 	prng := crand.Reader
@@ -175,6 +179,7 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 }
 
 func Test_Simulator(t *testing.T) {
+	t.Parallel()
 	prng := crand.Reader
 	pInt, err := crand.Prime(prng, 128)
 	require.NoError(t, err)

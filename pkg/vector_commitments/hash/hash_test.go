@@ -10,6 +10,7 @@ import (
 )
 
 func TestSimpleHappyPath(t *testing.T) {
+	t.Parallel()
 	sessionId := []byte("00000001")
 	c, err := hashvectorcommitments.NewVectorCommitter(sessionId, crand.Reader)
 	require.NoError(t, err)

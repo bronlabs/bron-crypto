@@ -12,6 +12,7 @@ const (
 )
 
 func TestFp12Arithmetic(t *testing.T) {
+	t.Parallel()
 	var aa, bb, cc, d, e, f Fp12
 	a := Fp12{
 		A: Fp6{

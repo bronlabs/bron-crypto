@@ -7,6 +7,7 @@ import (
 )
 
 func TestFp6Arithmetic(t *testing.T) {
+	t.Parallel()
 	a := Fp6{
 		A: Fp2{
 			A: Fp{

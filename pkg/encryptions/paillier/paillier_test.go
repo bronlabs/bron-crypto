@@ -153,6 +153,7 @@ func Example_homomorphicMultiplication() {
 }
 
 func TestKeyGen(t *testing.T) {
+	t.Parallel()
 	testValues := []*keygenTest{
 		{
 			bits:    32,
@@ -203,6 +204,7 @@ func TestKeyGen(t *testing.T) {
 	for i, test := range testValues {
 		theTest := test
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			t.Parallel()
 			safePrimes := []*saferith.Nat{theTest.p, theTest.q}
 			f := func(bits int, reader io.Reader) (*saferith.Nat, *saferith.Nat, error) {
 				return safePrimes[0], safePrimes[1], nil
@@ -217,6 +219,7 @@ func TestKeyGen(t *testing.T) {
 }
 
 func TestGenerateSafePrimes(t *testing.T) {
+	t.Parallel()
 	p, err := primes.GenerateSafePrime(32)
 	if err != nil {
 		t.Errorf("GenerateSafePrime failed: %v", err)
@@ -234,6 +237,7 @@ func TestGenerateSafePrimes(t *testing.T) {
 }
 
 func TestGenerateSafePrimesLong(t *testing.T) {
+	t.Parallel()
 	const bits = 1024
 
 	if testing.Short() {
@@ -252,6 +256,7 @@ func TestGenerateSafePrimesLong(t *testing.T) {
 }
 
 func TestGenerateSafePrimesTooLow(t *testing.T) {
+	t.Parallel()
 	_, err := primes.GenerateSafePrime(2)
 	require.Error(t, err)
 }
@@ -264,6 +269,7 @@ type lcmTest struct {
 }
 
 func TestKeyGeneratorErrorConditions(t *testing.T) {
+	t.Parallel()
 	// Should fail if a safe prime cannot be generated.
 	f := func(bits int, reader io.Reader) (*saferith.Nat, *saferith.Nat, error) {
 		return nil, nil, errs.NewFailed("safeprime error")
@@ -284,6 +290,7 @@ func TestKeyGeneratorErrorConditions(t *testing.T) {
 }
 
 func TestNewKeysDistinct(t *testing.T) {
+	t.Parallel()
 	pub1, sec1, err := paillier.KeyGen(1024, crand.Reader)
 	require.NoError(t, err)
 	pub2, sec2, err := paillier.KeyGen(1024, crand.Reader)
@@ -302,6 +309,7 @@ func TestNewKeysDistinct(t *testing.T) {
 
 // Tests the restrictions on input values for paillier.Add
 func TestAddErrorConditions(t *testing.T) {
+	t.Parallel()
 	pk, err := paillier.NewPublicKey(n)
 	require.NoError(t, err)
 
@@ -330,6 +338,7 @@ func TestAddErrorConditions(t *testing.T) {
 	for i, test := range tests {
 		theTest := test
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			t.Parallel()
 			_, err := pk.Add(&paillier.CipherText{C: theTest.x}, &paillier.CipherText{C: theTest.y})
 			if theTest.expectedPass {
 				require.NoError(t, err)
@@ -341,6 +350,7 @@ func TestAddErrorConditions(t *testing.T) {
 }
 
 func TestSubPlaintext(t *testing.T) {
+	t.Parallel()
 	pk, sk, err := paillier.KeyGen(128, crand.Reader)
 	require.NoError(t, err)
 
@@ -356,6 +366,7 @@ func TestSubPlaintext(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%d - %d = %d", test.x, test.y, test.expected), func(t *testing.T) {
+			t.Parallel()
 			encryptedX, _, err := pk.Encrypt(new(saferith.Nat).SetUint64(test.x), crand.Reader)
 			require.NoError(t, err)
 			zEncrypted, err := pk.SubPlaintext(encryptedX, new(saferith.Nat).SetUint64(test.y))
@@ -371,6 +382,7 @@ func TestSubPlaintext(t *testing.T) {
 
 // Tests for paillier addition with known answers
 func TestAdd(t *testing.T) {
+	t.Parallel()
 	z9, err := paillier.NewPublicKey(new(saferith.Nat).SetUint64(3))
 	require.NoError(t, err)
 	pk, err := paillier.NewPublicKey(n)
@@ -404,6 +416,7 @@ func TestAdd(t *testing.T) {
 	for i, test := range tests {
 		theTest := test
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			t.Parallel()
 			actual, err := test.pk.Add(&paillier.CipherText{C: theTest.x}, &paillier.CipherText{C: theTest.y})
 			require.NoError(t, err)
 			require.NotZero(t, theTest.expected.Eq(actual.C))
@@ -413,6 +426,7 @@ func TestAdd(t *testing.T) {
 
 // Tests the restrictions on input values for paillier.Mul
 func TestMulErrorConditions(t *testing.T) {
+	t.Parallel()
 	pk, err := paillier.NewPublicKey(n)
 	require.NoError(t, err)
 
@@ -441,6 +455,7 @@ func TestMulErrorConditions(t *testing.T) {
 	for i, test := range tests {
 		theTest := test
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			t.Parallel()
 			_, err := pk.MulPlaintext(&paillier.CipherText{C: theTest.y}, theTest.x)
 			if theTest.expectedPass {
 				require.NoError(t, err)
@@ -453,6 +468,7 @@ func TestMulErrorConditions(t *testing.T) {
 
 // Tests for paillier multiplication with known answers
 func TestMul(t *testing.T) {
+	t.Parallel()
 	z25, err := paillier.NewPublicKey(nat("5"))
 	require.NoError(t, err)
 	pk, err := paillier.NewPublicKey(n)
@@ -500,6 +516,7 @@ func TestMul(t *testing.T) {
 	for i, test := range tests {
 		theTest := test
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			t.Parallel()
 			actual, err := theTest.pk.MulPlaintext(&paillier.CipherText{C: theTest.c}, theTest.a)
 			require.NoError(t, err)
 			require.NotZero(t, theTest.expected.Eq(actual.C))
@@ -509,6 +526,7 @@ func TestMul(t *testing.T) {
 
 // EncryptWithNonce() is provided a nonce and must be deterministic
 func TestLittleEncryptDeterministic(t *testing.T) {
+	t.Parallel()
 	pk, err := paillier.NewPublicKey(n)
 	require.NoError(t, err)
 	rBig, err := crand.Int(crand.Reader, pk.N.Big())
@@ -535,6 +553,7 @@ func TestLittleEncryptDeterministic(t *testing.T) {
 
 // Tests the restrictions on input values for paillier.Encrypt
 func TestEncryptErrorConditions(t *testing.T) {
+	t.Parallel()
 	pk, err := paillier.NewPublicKey(n)
 	require.NoError(t, err)
 
@@ -570,6 +589,7 @@ func TestEncryptErrorConditions(t *testing.T) {
 
 // Tests that each invocation of Encrypt() produces a distinct output
 func TestEncryptIsRandomized(t *testing.T) {
+	t.Parallel()
 	pk, err := paillier.NewPublicKey(n)
 	require.NoError(t, err)
 	msg := one
@@ -591,6 +611,7 @@ func TestEncryptIsRandomized(t *testing.T) {
 
 // Encrypt should succeed over a range of arbitrary, valid messages
 func TestEncryptSucceeds(t *testing.T) {
+	t.Parallel()
 	pk, err := paillier.NewPublicKey(n)
 	require.NoError(t, err)
 	iterations := 100
@@ -605,6 +626,7 @@ func TestEncryptSucceeds(t *testing.T) {
 
 // Tests the restrictions on input values for paillier.Decrypt
 func TestDecryptErrorConditions(t *testing.T) {
+	t.Parallel()
 	// A fake secret key, but good enough to test parameter validation
 	sk := &paillier.SecretKey{
 		PublicKey: paillier.PublicKey{
@@ -658,6 +680,7 @@ func TestDecryptErrorConditions(t *testing.T) {
 
 // Decrypt·Encrypt is the identity function
 func TestEncryptDecryptRoundTrip(t *testing.T) {
+	t.Parallel()
 	// Pre-computed safe primes
 	p := nat("133788347333574532510542341875219452703250094560184213896952738579939377079849213618116996737030817731544214409221015150233522821287955673536671953914660520267670984696713816508768479853621956967492030516224494353641551367310541202655075859386716364585825364092974073148178887544704793573033779774765431460367")
 	q := nat("121400263190232595456200749546561304956161672968687911935494950378721768184159069938532869288284686583150658925255722159156454219960265942696166947144912738151554579878178746701374346180640493532962639632666540478486867810588884360492830920363713588684509182704981665082591486786717530494254613085570321507623")
@@ -697,6 +720,7 @@ func TestEncryptDecryptRoundTrip(t *testing.T) {
 }
 
 func TestNewSecretKeyErrorConditions(t *testing.T) {
+	t.Parallel()
 	testArgs := []lcmTest{
 		{
 			x: nil,
@@ -714,6 +738,7 @@ func TestNewSecretKeyErrorConditions(t *testing.T) {
 	for i, arg := range testArgs {
 		test := arg
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			t.Parallel()
 			_, err := paillier.NewSecretKey(test.x, test.y)
 			require.True(t, errs.IsIsNil(err))
 		})
@@ -721,6 +746,7 @@ func TestNewSecretKeyErrorConditions(t *testing.T) {
 }
 
 func Test_Precomputed(t *testing.T) {
+	t.Parallel()
 	prng := crand.Reader
 	pBig, err := crand.Prime(prng, 256)
 	require.NoError(t, err)
@@ -790,6 +816,7 @@ func Test_Precomputed(t *testing.T) {
 }
 
 func Test_MulScalarCrt(t *testing.T) {
+	t.Parallel()
 	prng := crand.Reader
 	pBig, err := crand.Prime(prng, 256)
 	require.NoError(t, err)
@@ -821,6 +848,7 @@ func Test_MulScalarCrt(t *testing.T) {
 }
 
 func Test_EncryptCrt(t *testing.T) {
+	t.Parallel()
 	prng := crand.Reader
 	pBig, err := crand.Prime(prng, 256)
 	require.NoError(t, err)
@@ -850,6 +878,7 @@ func Test_EncryptCrt(t *testing.T) {
 }
 
 func Test_JsonSerialisationRoundTrip(t *testing.T) {
+	t.Parallel()
 	prng := crand.Reader
 	pBig, err := crand.Prime(prng, 256)
 	require.NoError(t, err)

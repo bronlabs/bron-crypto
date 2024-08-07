@@ -14,12 +14,14 @@ import (
 )
 
 func TestFpSetOne(t *testing.T) {
+	t.Parallel()
 	fq := New().SetOne()
 	require.NotNil(t, fq)
 	require.Equal(t, fq.Value, getP256FpParams().R)
 }
 
 func TestFpSetUint64(t *testing.T) {
+	t.Parallel()
 	act := New().SetUint64(1 << 60)
 	require.NotNil(t, act)
 	// Remember it will be in montgomery form
@@ -27,6 +29,7 @@ func TestFpSetUint64(t *testing.T) {
 }
 
 func TestFpAdd(t *testing.T) {
+	t.Parallel()
 	lhs := New().SetOne()
 	rhs := New().SetOne()
 	exp := New().SetUint64(2)
@@ -51,6 +54,7 @@ func TestFpAdd(t *testing.T) {
 }
 
 func TestFpSub(t *testing.T) {
+	t.Parallel()
 	lhs := New().SetOne()
 	rhs := New().SetOne()
 	exp := New().SetZero()
@@ -78,6 +82,7 @@ func TestFpSub(t *testing.T) {
 }
 
 func TestFpMul(t *testing.T) {
+	t.Parallel()
 	lhs := New().SetOne()
 	rhs := New().SetOne()
 	exp := New().SetOne()
@@ -102,6 +107,7 @@ func TestFpMul(t *testing.T) {
 }
 
 func TestFpDouble(t *testing.T) {
+	t.Parallel()
 	a := New().SetUint64(2)
 	e := New().SetUint64(4)
 	require.Equal(t, e, New().Double(a))
@@ -116,6 +122,7 @@ func TestFpDouble(t *testing.T) {
 }
 
 func TestFpSquare(t *testing.T) {
+	t.Parallel()
 	a := New().SetUint64(4)
 	e := New().SetUint64(16)
 	require.Equal(t, e, a.Square(a))
@@ -130,6 +137,7 @@ func TestFpSquare(t *testing.T) {
 }
 
 func TestFpNeg(t *testing.T) {
+	t.Parallel()
 	g := New().SetUint64(7)
 	a := New().SetOne()
 	a.Neg(a)
@@ -141,6 +149,7 @@ func TestFpNeg(t *testing.T) {
 }
 
 func TestFpExp(t *testing.T) {
+	t.Parallel()
 	e := New().SetUint64(8)
 	a := New().SetUint64(2)
 	by := New().SetUint64(3)
@@ -148,6 +157,7 @@ func TestFpExp(t *testing.T) {
 }
 
 func TestFpSqrt(t *testing.T) {
+	t.Parallel()
 	t1 := New().SetUint64(2)
 	t2 := New().Neg(t1)
 	t3 := New().Square(t1)
@@ -161,6 +171,7 @@ func TestFpSqrt(t *testing.T) {
 }
 
 func TestFpInvert(t *testing.T) {
+	t.Parallel()
 	twoInv := New().SetRaw(&[limb4.FieldLimbs]uint64{0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x8000000000000000})
 	two := New().SetUint64(2)
 	a, inverted := New().Invert(two)
@@ -185,6 +196,7 @@ func TestFpInvert(t *testing.T) {
 }
 
 func TestFpCMove(t *testing.T) {
+	t.Parallel()
 	t1 := New().SetUint64(5)
 	t2 := New().SetUint64(10)
 	require.Equal(t, t1, New().CMove(t1, t2, 0))
@@ -192,6 +204,7 @@ func TestFpCMove(t *testing.T) {
 }
 
 func TestFpBytes(t *testing.T) {
+	t.Parallel()
 	t1 := New().SetUint64(99)
 	seq := t1.Bytes()
 	t2, err := New().SetBytes(&seq)
@@ -208,6 +221,7 @@ func TestFpBytes(t *testing.T) {
 }
 
 func TestFpCmp(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		a *limb4.FieldValue
 		b *limb4.FieldValue
@@ -267,6 +281,7 @@ func TestFpCmp(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			t.Parallel()
 			require.Equal(t, test.e, test.a.Cmp(test.b))
 			require.Equal(t, -test.e, test.b.Cmp(test.a))
 			require.Equal(t, int64(0), test.a.Cmp(test.a))
@@ -276,6 +291,7 @@ func TestFpCmp(t *testing.T) {
 }
 
 func TestFpBigInt(t *testing.T) {
+	t.Parallel()
 	t1 := New().SetNat(new(saferith.Nat).SetUint64(9999))
 	t2 := New().SetNat(t1.Nat())
 	require.Equal(t, t1, t2)
@@ -294,6 +310,7 @@ func TestFpBigInt(t *testing.T) {
 }
 
 func TestFpSetBytesWide(t *testing.T) {
+	t.Parallel()
 	e := New().SetRaw(&[limb4.FieldLimbs]uint64{0xccdefd48c77805bc, 0xe935dc2db86364d6, 0xca8ee6e5870a020e, 0x4c94bf4467f3b5bf})
 
 	a := New().SetBytesWide(&[64]byte{
@@ -310,6 +327,7 @@ func TestFpSetBytesWide(t *testing.T) {
 }
 
 func TestFpSetBytesWideBigInt(t *testing.T) {
+	t.Parallel()
 	params := getP256FpParams()
 	var tv2 [64]byte
 	for i := 0; i < 25; i++ {

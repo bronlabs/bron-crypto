@@ -10,6 +10,7 @@ import (
 )
 
 func TestSinglePairing(t *testing.T) {
+	t.Parallel()
 	g := new(G1).Generator()
 	h := new(G2).Generator()
 
@@ -30,6 +31,7 @@ func TestSinglePairing(t *testing.T) {
 }
 
 func TestMultiPairing(t *testing.T) {
+	t.Parallel()
 	const Tests = 10
 	e1 := new(Engine)
 	e2 := new(Engine)

@@ -20,6 +20,7 @@ const ctGreater = int64(1)
 const reps = 128
 
 func Test_ConstantTimeEq(t *testing.T) {
+	t.Parallel()
 	// Try all combinations of x and y in [0, 20].
 	for x := uint64(0); x < 20; x++ {
 		for y := uint64(0); y < 20; y++ {
@@ -38,6 +39,7 @@ func Test_ConstantTimeEq(t *testing.T) {
 }
 
 func Test_ConstantTimeGreater(t *testing.T) {
+	t.Parallel()
 	// Try all combinations of x and y in [0, 20].
 	for x := uint64(0); x < 20; x++ {
 		for y := uint64(0); y < 20; y++ {
@@ -56,6 +58,7 @@ func Test_ConstantTimeGreater(t *testing.T) {
 }
 
 func Test_ConstantTimeGreaterOrEqual(t *testing.T) {
+	t.Parallel()
 	// Try all combinations of x and y in [0, 20].
 	for x := uint64(0); x < 20; x++ {
 		for y := uint64(0); y < 20; y++ {
@@ -75,6 +78,7 @@ func Test_ConstantTimeGreaterOrEqual(t *testing.T) {
 }
 
 func Test_ConstantTimeLess(t *testing.T) {
+	t.Parallel()
 	// Try all combinations of x and y in [0, 20].
 	for x := uint64(0); x < 20; x++ {
 		for y := uint64(0); y < 20; y++ {
@@ -93,6 +97,7 @@ func Test_ConstantTimeLess(t *testing.T) {
 }
 
 func Test_ConstantTimeLessOrEqual(t *testing.T) {
+	t.Parallel()
 	// Try all combinations of x and y in [0, 20].
 	for x := uint64(0); x < 20; x++ {
 		for y := uint64(0); y < 20; y++ {
@@ -112,6 +117,7 @@ func Test_ConstantTimeLessOrEqual(t *testing.T) {
 }
 
 func Test_ConstantTimeSliceGreater(t *testing.T) {
+	t.Parallel()
 	for x := 0xf0; x < 0x800; x++ {
 		for y := 0xf0; y < 0x800; y++ {
 			xBytes := binary.LittleEndian.AppendUint16([]byte{}, uint16(x))
@@ -133,6 +139,7 @@ func Test_ConstantTimeSliceGreater(t *testing.T) {
 }
 
 func Test_ConstantTimeSliceCmp(t *testing.T) {
+	t.Parallel()
 	for x := 0xf0; x < 0x800; x++ {
 		for y := 0xf0; y < 0x800; y++ {
 			xBytes := binary.LittleEndian.AppendUint16([]byte{}, uint16(x))

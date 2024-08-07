@@ -16,6 +16,7 @@ import (
 var testCurve = edwards25519.NewCurve()
 
 func TestEd25519FeldmanSplitInvalidArgs(t *testing.T) {
+	t.Parallel()
 	_, err := feldman.NewDealer(0, 0, testCurve)
 	require.Error(t, err)
 	_, err = feldman.NewDealer(3, 2, testCurve)
@@ -28,6 +29,7 @@ func TestEd25519FeldmanSplitInvalidArgs(t *testing.T) {
 }
 
 func TestEd25519FeldmanCombineNoShares(t *testing.T) {
+	t.Parallel()
 	scheme, err := feldman.NewDealer(2, 3, testCurve)
 	require.NoError(t, err)
 	require.NotNil(t, scheme)
@@ -36,6 +38,7 @@ func TestEd25519FeldmanCombineNoShares(t *testing.T) {
 }
 
 func TestEd25519FeldmanCombineDuplicateShare(t *testing.T) {
+	t.Parallel()
 	scheme, err := feldman.NewDealer(2, 3, testCurve)
 	require.NoError(t, err)
 	require.NotNil(t, scheme)
@@ -53,6 +56,7 @@ func TestEd25519FeldmanCombineDuplicateShare(t *testing.T) {
 }
 
 func TestEd25519FeldmanCombineBadIdentifier(t *testing.T) {
+	t.Parallel()
 	scheme, err := feldman.NewDealer(2, 3, testCurve)
 	require.NoError(t, err)
 	require.NotNil(t, scheme)
@@ -77,6 +81,7 @@ func TestEd25519FeldmanCombineBadIdentifier(t *testing.T) {
 }
 
 func TestEd25519FeldmanCombineSingle(t *testing.T) {
+	t.Parallel()
 	scheme, err := feldman.NewDealer(2, 3, testCurve)
 	require.NoError(t, err)
 	require.NotNil(t, scheme)
@@ -104,6 +109,7 @@ func TestEd25519FeldmanCombineSingle(t *testing.T) {
 }
 
 func TestEd25519FeldmanAllCombinations(t *testing.T) {
+	t.Parallel()
 	scheme, err := feldman.NewDealer(3, 5, testCurve)
 	require.NoError(t, err)
 	require.NotNil(t, scheme)
