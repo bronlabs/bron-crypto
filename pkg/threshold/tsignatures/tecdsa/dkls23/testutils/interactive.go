@@ -2,6 +2,7 @@ package testutils
 
 import (
 	crand "crypto/rand"
+	"github.com/stretchr/testify/require"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
@@ -17,7 +18,7 @@ import (
 	interactiveSigning "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/signing/interactive"
 )
 
-func MakeInteractiveCosigners(protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards []*dkls23.Shard, tprngs []io.Reader, seededPrng csprng.CSPRNG, sids [][]byte) (participants []*interactiveSigning.Cosigner, err error) {
+func MakeInteractiveCosigners(t require.TestingT, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards []*dkls23.Shard, tprngs []io.Reader, seededPrng csprng.CSPRNG, sids [][]byte) (participants []*interactiveSigning.Cosigner, err error) {
 	if len(identities) < int(protocol.Threshold()) {
 		return nil, errs.NewArgument("invalid number of identities %d != %d", len(identities), protocol.Threshold())
 	}
@@ -26,7 +27,7 @@ func MakeInteractiveCosigners(protocol types.ThresholdSignatureProtocol, identit
 	}
 	if sids == nil { // Create a common sid if no hardcoded sids are provided
 		sids = make([][]byte, len(identities))
-		sid, err := agreeonrandom_testutils.RunAgreeOnRandom(protocol.Curve(), identities, crand.Reader)
+		sid, err := agreeonrandom_testutils.RunAgreeOnRandom(t, protocol.Curve(), identities, crand.Reader)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "failed to produce shared random value")
 		}
@@ -136,8 +137,8 @@ func CheckInteractiveSignResults(producedSignatures []*ecdsa.Signature) error {
 	return nil
 }
 
-func RunInteractiveSign(protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards []*dkls23.Shard, message []byte, seededPrng csprng.CSPRNG, sids [][]byte) error {
-	participants, err := MakeInteractiveCosigners(protocol, identities, shards, nil, seededPrng, sids)
+func RunInteractiveSign(t require.TestingT, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards []*dkls23.Shard, message []byte, seededPrng csprng.CSPRNG, sids [][]byte) error {
+	participants, err := MakeInteractiveCosigners(t, protocol, identities, shards, nil, seededPrng, sids)
 	if err != nil {
 		return errs.WrapFailed(err, "failed to make interactive cosigners")
 	}
@@ -146,12 +147,12 @@ func RunInteractiveSign(protocol types.ThresholdSignatureProtocol, identities []
 	if err != nil {
 		return errs.WrapFailed(err, "failed to run round 1 of DKLs23 signing")
 	}
-	r2InB, r2InU := ttu.MapO2I(participants, r1OutB, r1OutU)
+	r2InB, r2InU := ttu.MapO2I(t, participants, r1OutB, r1OutU)
 	r2OutB, r2OutU, err := DoInteractiveSignRound2(participants, r2InB, r2InU)
 	if err != nil {
 		return errs.WrapFailed(err, "failed to run round 2 of DKLs23 signing")
 	}
-	r3InB, r3InU := ttu.MapO2I(participants, r2OutB, r2OutU)
+	r3InB, r3InU := ttu.MapO2I(t, participants, r2OutB, r2OutU)
 	partialSignatures, err := DoInteractiveSignRound3(participants, r3InB, r3InU, message)
 	if err != nil {
 		return errs.WrapFailed(err, "failed to run round 3 of DKLs23 signing")
@@ -166,4 +167,9 @@ func RunInteractiveSign(protocol types.ThresholdSignatureProtocol, identities []
 		return errs.WrapVerification(err, "Verification of interactive sign results failed")
 	}
 	return err
+}
+
+func RunInteractiveSignHappyPath(t require.TestingT, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards []*dkls23.Shard, message []byte, seededPrng csprng.CSPRNG, sids [][]byte) {
+	err := RunInteractiveSign(t, protocol, identities, shards, message, seededPrng, sids)
+	require.NoError(t, err)
 }

@@ -28,8 +28,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/testutils"
 )
 
-func doDkg(curve curves.Curve, protocol types.ThresholdProtocol, identities []types.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
-	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
+func doDkg(t require.TestingT, curve curves.Curve, protocol types.ThresholdProtocol, identities []types.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(t, curve, identities, crand.Reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -43,7 +43,7 @@ func doDkg(curve curves.Curve, protocol types.ThresholdProtocol, identities []ty
 		return nil, nil, err
 	}
 
-	r3InB, r3InU := ttu.MapO2I(dkgParticipants, r2OutB, r2OutU)
+	r3InB, r3InU := ttu.MapO2I(t, dkgParticipants, r2OutB, r2OutU)
 	signingKeyShares, publicKeyShares, err = testutils.DoDkgRound2(dkgParticipants, r3InB, r3InU)
 	if err != nil {
 		return nil, nil, err
@@ -52,7 +52,7 @@ func doDkg(curve curves.Curve, protocol types.ThresholdProtocol, identities []ty
 	return signingKeyShares, publicKeyShares, nil
 }
 
-func doPreGen(protocol types.ThresholdProtocol, tau int) (noninteractive_signing.PreSignatureBatch, [][]*noninteractive_signing.PrivateNoncePair, error) {
+func doPreGen(t require.TestingT, protocol types.ThresholdProtocol, tau int) (noninteractive_signing.PreSignatureBatch, [][]*noninteractive_signing.PrivateNoncePair, error) {
 	participants, err := testutils.MakePreGenParticipants(protocol, tau)
 	if err != nil {
 		return nil, nil, err
@@ -61,7 +61,7 @@ func doPreGen(protocol types.ThresholdProtocol, tau int) (noninteractive_signing
 	if err != nil {
 		return nil, nil, err
 	}
-	r2Ins := ttu.MapBroadcastO2I(participants, r1Outs)
+	r2Ins := ttu.MapBroadcastO2I(t, participants, r1Outs)
 	preSignatureBatches, privateNoncePairsOfAllParties, err := testutils.DoPreGenRound2(participants, r2Ins)
 	if err != nil {
 		return nil, nil, err
@@ -127,7 +127,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, hash func() hash.Hash, thre
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, protocol, allIdentities)
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(t, curve, protocol, allIdentities)
 	require.NoError(t, err)
 
 	for i, share := range allSigningKeyShares {
@@ -136,7 +136,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, hash func() hash.Hash, thre
 		require.True(t, partialPublicKey.Equal(curve.ScalarBaseMult(share.Share)))
 	}
 
-	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(protocol, tau)
+	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(t, protocol, tau)
 	require.NoError(t, err)
 
 	firstUnusedPreSignatureIndices := make([]int, n)
@@ -163,7 +163,7 @@ func TestSignNilMessage(t *testing.T) {
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, 2, allIdentities)
 	require.NoError(t, err)
 
-	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, protocol, allIdentities)
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(t, curve, protocol, allIdentities)
 	require.NoError(t, err)
 
 	for i, share := range allSigningKeyShares {
@@ -172,7 +172,7 @@ func TestSignNilMessage(t *testing.T) {
 		require.True(t, partialPublicKey.Equal(curve.ScalarBaseMult(share.Share)))
 	}
 
-	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(protocol, 5)
+	preSignatureBatch, privateNoncePairsOfAllParties, err := doPreGen(t, protocol, 5)
 	require.NoError(t, err)
 
 	firstUnusedPreSignatureIndices := make([]int, 2)

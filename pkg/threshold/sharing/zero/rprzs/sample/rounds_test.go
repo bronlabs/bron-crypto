@@ -24,8 +24,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/testutils"
 )
 
-func doSetup(curve curves.Curve, identities []types.IdentityKey) (allPairwiseSeeds []rprzs.PairWiseSeeds, err error) {
-	participants, err := testutils.MakeSetupParticipants(curve, identities, crand.Reader)
+func doSetup(t require.TestingT, curve curves.Curve, identities []types.IdentityKey) (allPairwiseSeeds []rprzs.PairWiseSeeds, err error) {
+	participants, err := testutils.MakeSetupParticipants(t, curve, identities, crand.Reader)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not make setup participants")
 	}
@@ -35,13 +35,13 @@ func doSetup(curve curves.Curve, identities []types.IdentityKey) (allPairwiseSee
 		return nil, errs.WrapFailed(err, "could not run setup round 1")
 	}
 
-	r2InsU := ttu.MapUnicastO2I(participants, r1OutsU)
+	r2InsU := ttu.MapUnicastO2I(t, participants, r1OutsU)
 	r2OutsU, err := testutils.DoSetupRound2(participants, r2InsU)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not run setup round 2")
 	}
 
-	r3InsU := ttu.MapUnicastO2I(participants, r2OutsU)
+	r3InsU := ttu.MapUnicastO2I(t, participants, r2OutsU)
 	allPairwiseSeeds, err = testutils.DoSetupRound3(participants, r3InsU)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not run setup round 3")
@@ -51,7 +51,7 @@ func doSetup(curve curves.Curve, identities []types.IdentityKey) (allPairwiseSee
 
 func doSample(t *testing.T, protocol types.Protocol, identities []types.IdentityKey, seeds []rprzs.PairWiseSeeds, seededPrng csprng.CSPRNG) {
 	t.Helper()
-	participants, err := testutils.MakeSampleParticipants(protocol, identities, seeds, seededPrng, nil)
+	participants, err := testutils.MakeSampleParticipants(t, protocol, identities, seeds, seededPrng, nil)
 	require.NoError(t, err)
 
 	zeroShares, err := testutils.DoSample(participants)
@@ -80,7 +80,7 @@ func doSample(t *testing.T, protocol types.Protocol, identities []types.Identity
 func doSampleInvalidSid(t *testing.T, protocol types.Protocol, identities []types.IdentityKey, seeds []rprzs.PairWiseSeeds, seededPrng csprng.CSPRNG) {
 	t.Helper()
 	wrongUniqueSessionId := []byte("This is an invalid sid")
-	participants, err := testutils.MakeSampleParticipants(protocol, identities, seeds, seededPrng, wrongUniqueSessionId)
+	participants, err := testutils.MakeSampleParticipants(t, protocol, identities, seeds, seededPrng, wrongUniqueSessionId)
 	require.NoError(t, err)
 	for _, participant := range participants {
 		require.NotNil(t, participant)
@@ -105,7 +105,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, n int) {
 	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	allPairwiseSeeds, err := doSetup(curve, allIdentities)
+	allPairwiseSeeds, err := doSetup(t, curve, allIdentities)
 	require.NoError(t, err)
 	protocol, err := ttu.MakeProtocol(curve, allIdentities)
 	require.NoError(t, err)
@@ -140,7 +140,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	protocol, err := ttu.MakeProtocol(curve, allIdentities)
 	require.NoError(t, err)
 
-	allPairwiseSeeds, err := doSetup(curve, allIdentities)
+	allPairwiseSeeds, err := doSetup(t, curve, allIdentities)
 	require.NoError(t, err)
 	seededPrng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
@@ -211,12 +211,12 @@ func testInvalidParticipants(t *testing.T, curve curves.Curve) {
 	bobIdentity := allIdentities[1]
 	charlieIdentity := allIdentities[2]
 
-	allPairwiseSeeds, _ := doSetup(curve, allIdentities)
+	allPairwiseSeeds, _ := doSetup(t, curve, allIdentities)
 	aliceSeed := allPairwiseSeeds[0]
 	bobSeed := allPairwiseSeeds[1]
 	charlieSeed := allPairwiseSeeds[2]
 
-	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, allIdentities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(t, curve, allIdentities, crand.Reader)
 	require.NoError(t, err)
 	protocol, err := ttu.MakeProtocol(curve, allIdentities)
 	require.NoError(t, err)

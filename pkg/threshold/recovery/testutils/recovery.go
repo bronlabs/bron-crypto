@@ -4,6 +4,8 @@ import (
 	crand "crypto/rand"
 	"io"
 
+	"github.com/stretchr/testify/require"
+
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -81,7 +83,7 @@ func DoRecoveryRound3(participants []*recovery.Participant, lostPartyIndex int, 
 	return signingKeyShare, nil
 }
 
-func RunRecovery(uniqueSessionId []byte, protocol types.ThresholdProtocol, presentRecoverers []ds.Set[types.IdentityKey], identities []types.IdentityKey, lostPartyIndex int, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, prngs []io.Reader) (participants []*recovery.Participant, recoveredShare *tsignatures.SigningKeyShare, err error) {
+func RunRecovery(t require.TestingT, uniqueSessionId []byte, protocol types.ThresholdProtocol, presentRecoverers []ds.Set[types.IdentityKey], identities []types.IdentityKey, lostPartyIndex int, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, prngs []io.Reader) (participants []*recovery.Participant, recoveredShare *tsignatures.SigningKeyShare, err error) {
 	participants, err = MakeParticipants(uniqueSessionId, protocol, presentRecoverers, identities, lostPartyIndex, signingKeyShares, publicKeyShares, prngs)
 	if err != nil {
 		return nil, nil, err
@@ -92,13 +94,13 @@ func RunRecovery(uniqueSessionId []byte, protocol types.ThresholdProtocol, prese
 		return nil, nil, err
 	}
 
-	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := ttu.MapO2I(t, participants, r1OutsB, r1OutsU)
 	r2OutsU, err := DoRecoveryRound2(participants, lostPartyIndex, r2InsB, r2InsU)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	r3InsU := ttu.MapUnicastO2I(participants, r2OutsU)
+	r3InsU := ttu.MapUnicastO2I(t, participants, r2OutsU)
 	recoveredShare, err = DoRecoveryRound3(participants, lostPartyIndex, r3InsU[lostPartyIndex])
 	if err != nil {
 		return nil, nil, err

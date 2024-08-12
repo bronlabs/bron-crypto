@@ -34,7 +34,7 @@ func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n in
 	protocol, err = ttu.MakeThresholdProtocol(curve, identities, threshold)
 	require.NoError(t, err)
 
-	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(t, curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	return uniqueSessionId, identities, protocol
@@ -45,7 +45,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 
 	uniqueSessionId, identities, protocol := setup(t, curve, h, threshold, n)
 
-	participants, samples, publicKeySharesMaps, _, err := testutils.RunSample(uniqueSessionId, protocol, identities)
+	participants, samples, publicKeySharesMaps, _, err := testutils.RunSample(t, uniqueSessionId, protocol, identities)
 	require.NoError(t, err)
 
 	t.Run("none of the samples are zero", func(t *testing.T) {

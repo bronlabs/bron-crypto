@@ -17,12 +17,12 @@ import (
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
-	jf_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
+	jfTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
-	lindell17_dkg_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg/testutils"
+	lindell17DkgTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
-	interactive_signing "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing/interactive"
+	interactiveSigning "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing/interactive"
 )
 
 var cn = randomisedFischlin.Name
@@ -57,27 +57,27 @@ func Test_HappyPath(t *testing.T) {
 	require.True(t, exists)
 
 	sessionId := []byte("TestSession")
-	primary, err := interactive_signing.NewPrimaryCosigner(sessionId, alice.(types.AuthKey), bob, aliceShard, protocol, cn, nil, crand.Reader)
+	primary, err := interactiveSigning.NewPrimaryCosigner(sessionId, alice.(types.AuthKey), bob, aliceShard, protocol, cn, nil, crand.Reader)
 	require.NotNil(t, primary)
 	require.NoError(t, err)
 
-	secondary, err := interactive_signing.NewSecondaryCosigner(sessionId, bob.(types.AuthKey), alice, bobShard, protocol, cn, nil, crand.Reader)
+	secondary, err := interactiveSigning.NewSecondaryCosigner(sessionId, bob.(types.AuthKey), alice, bobShard, protocol, cn, nil, crand.Reader)
 	require.NotNil(t, secondary)
 	require.NoError(t, err)
 
 	r1, err := primary.Round1()
 	require.NoError(t, err)
 
-	r2, err := secondary.Round2(r1)
+	r2, err := secondary.Round2(ttu.GobRoundTripMessage(t, r1))
 	require.NoError(t, err)
 
-	r3, err := primary.Round3(r2)
+	r3, err := primary.Round3(ttu.GobRoundTripMessage(t, r2))
 	require.NoError(t, err)
 
-	r4, err := secondary.Round4(r3, message)
+	r4, err := secondary.Round4(ttu.GobRoundTripMessage(t, r3), message)
 	require.NoError(t, err)
 
-	signature, err := primary.Round5(r4, message)
+	signature, err := primary.Round5(ttu.GobRoundTripMessage(t, r4), message)
 	require.NoError(t, err)
 
 	err = ecdsa.Verify(signature, cipherSuite.Hash(), bobShard.SigningKeyShare.PublicKey, message)
@@ -153,11 +153,11 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 			require.True(t, exists)
 
 			sessionId := []byte("TestSession")
-			primary, err := interactive_signing.NewPrimaryCosigner(sessionId, alice.(types.AuthKey), bob, aliceShard, protocol, cn, nil, crand.Reader)
+			primary, err := interactiveSigning.NewPrimaryCosigner(sessionId, alice.(types.AuthKey), bob, aliceShard, protocol, cn, nil, crand.Reader)
 			require.NotNil(t, primary)
 			require.NoError(t, err)
 
-			secondary, err := interactive_signing.NewSecondaryCosigner(sessionId, bob.(types.AuthKey), alice, bobShard, protocol, cn, nil, crand.Reader)
+			secondary, err := interactiveSigning.NewSecondaryCosigner(sessionId, bob.(types.AuthKey), alice, bobShard, protocol, cn, nil, crand.Reader)
 			require.NotNil(t, secondary)
 			require.NoError(t, err)
 
@@ -167,13 +167,13 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 			r2, err := secondary.Round2(r1)
 			require.NoError(t, err)
 
-			r3, err := primary.Round3(r2)
+			r3, err := primary.Round3(ttu.GobRoundTripMessage(t, r2))
 			require.NoError(t, err)
 
-			r4, err := secondary.Round4(r3, message)
+			r4, err := secondary.Round4(ttu.GobRoundTripMessage(t, r3), message)
 			require.NoError(t, err)
 
-			signature, err := primary.Round5(r4, message)
+			signature, err := primary.Round5(ttu.GobRoundTripMessage(t, r4), message)
 			require.NoError(t, err)
 
 			err = ecdsa.Verify(signature, cipherSuite.Hash(), bobShard.SigningKeyShare.PublicKey, message)
@@ -201,25 +201,23 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 }
 
 func doJf(t *testing.T, sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys) {
-	t.Helper()
-
-	jf_participants, err := jf_testutils.MakeParticipants(sid, protocol, identities, cn, nil)
+	jfParticipants, err := jfTestutils.MakeParticipants(t, sid, protocol, identities, cn, nil)
 	require.NoError(t, err)
-
-	r1OutsB, r1OutsU, err := jf_testutils.DoDkgRound1(jf_participants)
+	r1OutsB, r1OutsU, err := jfTestutils.DoDkgRound1(t, jfParticipants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
 		require.Equal(t, out.Size(), int(protocol.TotalParties())-1)
 	}
 
-	r2InsB, r2InsU := ttu.MapO2I(jf_participants, r1OutsB, r1OutsU)
-	r2Outs, err := jf_testutils.DoDkgRound2(jf_participants, r2InsB, r2InsU)
+	r2InsB, r2InsU := ttu.MapO2I(t, jfParticipants, r1OutsB, r1OutsU)
+	r2Outs, err := jfTestutils.DoDkgRound2(t, jfParticipants, r2InsB, r2InsU)
 	require.NoError(t, err)
 	for _, out := range r2Outs {
 		require.NotNil(t, out)
 	}
-	r3Ins := ttu.MapBroadcastO2I(jf_participants, r2Outs)
-	signingKeyShares, publicKeyShares, err = jf_testutils.DoDkgRound3(jf_participants, r3Ins)
+
+	r3Ins := ttu.MapBroadcastO2I(t, jfParticipants, r2Outs)
+	signingKeyShares, publicKeyShares, err = jfTestutils.DoDkgRound3(t, jfParticipants, r3Ins)
 	require.NoError(t, err)
 
 	return signingKeyShares, publicKeyShares
@@ -228,39 +226,22 @@ func doJf(t *testing.T, sid []byte, protocol types.ThresholdSignatureProtocol, i
 func doLindell17Dkg(t *testing.T, sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys) (shards []*lindell17.Shard) {
 	t.Helper()
 
-	lindellParticipants, err := lindell17_dkg_testutils.MakeParticipants(sid, protocol, identities, signingKeyShares, publicKeyShares, nil, nil)
-	require.NoError(t, err)
-
-	r1o, err := lindell17_dkg_testutils.DoDkgRound1(lindellParticipants)
-	require.NoError(t, err)
-
-	r2i := ttu.MapBroadcastO2I(lindellParticipants, r1o)
-	r2o, err := lindell17_dkg_testutils.DoDkgRound2(lindellParticipants, r2i)
-	require.NoError(t, err)
-
-	r3i := ttu.MapBroadcastO2I(lindellParticipants, r2o)
-	r3o, err := lindell17_dkg_testutils.DoDkgRound3(lindellParticipants, r3i)
-	require.NoError(t, err)
-
-	r4i := ttu.MapBroadcastO2I(lindellParticipants, r3o)
-	r4o, err := lindell17_dkg_testutils.DoDkgRound4(lindellParticipants, r4i)
-	require.NoError(t, err)
-
-	r5i := ttu.MapUnicastO2I(lindellParticipants, r4o)
-	r5o, err := lindell17_dkg_testutils.DoDkgRound5(lindellParticipants, r5i)
-	require.NoError(t, err)
-
-	r6i := ttu.MapUnicastO2I(lindellParticipants, r5o)
-	r6o, err := lindell17_dkg_testutils.DoDkgRound6(lindellParticipants, r6i)
-	require.NoError(t, err)
-
-	r7i := ttu.MapUnicastO2I(lindellParticipants, r6o)
-	r7o, err := lindell17_dkg_testutils.DoDkgRound7(lindellParticipants, r7i)
-	require.NoError(t, err)
-
-	r8i := ttu.MapUnicastO2I(lindellParticipants, r7o)
-	shards, err = lindell17_dkg_testutils.DoDkgRound8(lindellParticipants, r8i)
-	require.NoError(t, err)
+	lindellParticipants := lindell17DkgTestutils.MakeParticipants(t, sid, protocol, identities, signingKeyShares, publicKeyShares, nil, nil)
+	r1o := lindell17DkgTestutils.DoDkgRound1(t, lindellParticipants)
+	r2i := ttu.MapBroadcastO2I(t, lindellParticipants, r1o)
+	r2o := lindell17DkgTestutils.DoDkgRound2(t, lindellParticipants, r2i)
+	r3i := ttu.MapBroadcastO2I(t, lindellParticipants, r2o)
+	r3o := lindell17DkgTestutils.DoDkgRound3(t, lindellParticipants, r3i)
+	r4i := ttu.MapBroadcastO2I(t, lindellParticipants, r3o)
+	r4o := lindell17DkgTestutils.DoDkgRound4(t, lindellParticipants, r4i)
+	r5i := ttu.MapUnicastO2I(t, lindellParticipants, r4o)
+	r5o := lindell17DkgTestutils.DoDkgRound5(t, lindellParticipants, r5i)
+	r6i := ttu.MapUnicastO2I(t, lindellParticipants, r5o)
+	r6o := lindell17DkgTestutils.DoDkgRound6(t, lindellParticipants, r6i)
+	r7i := ttu.MapUnicastO2I(t, lindellParticipants, r6o)
+	r7o := lindell17DkgTestutils.DoDkgRound7(t, lindellParticipants, r7i)
+	r8i := ttu.MapUnicastO2I(t, lindellParticipants, r7o)
+	shards = lindell17DkgTestutils.DoDkgRound8(t, lindellParticipants, r8i)
 	require.NotNil(t, shards)
 
 	return shards
@@ -269,27 +250,27 @@ func doLindell17Dkg(t *testing.T, sid []byte, protocol types.ThresholdSignatureP
 func doLindell17Sign(t *testing.T, sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards []*lindell17.Shard, alice, bob int, message []byte) (signature *ecdsa.Signature) {
 	t.Helper()
 
-	primary, err := interactive_signing.NewPrimaryCosigner(sid, identities[alice].(types.AuthKey), identities[bob], shards[alice], protocol, cn, nil, crand.Reader)
+	primary, err := interactiveSigning.NewPrimaryCosigner(sid, identities[alice].(types.AuthKey), identities[bob], shards[alice], protocol, cn, nil, crand.Reader)
 	require.NotNil(t, primary)
 	require.NoError(t, err)
 
-	secondary, err := interactive_signing.NewSecondaryCosigner(sid, identities[bob].(types.AuthKey), identities[alice], shards[bob], protocol, cn, nil, crand.Reader)
+	secondary, err := interactiveSigning.NewSecondaryCosigner(sid, identities[bob].(types.AuthKey), identities[alice], shards[bob], protocol, cn, nil, crand.Reader)
 	require.NotNil(t, secondary)
 	require.NoError(t, err)
 
 	r1, err := primary.Round1()
 	require.NoError(t, err)
 
-	r2, err := secondary.Round2(r1)
+	r2, err := secondary.Round2(ttu.GobRoundTripMessage(t, r1))
 	require.NoError(t, err)
 
-	r3, err := primary.Round3(r2)
+	r3, err := primary.Round3(ttu.GobRoundTripMessage(t, r2))
 	require.NoError(t, err)
 
-	r4, err := secondary.Round4(r3, message)
+	r4, err := secondary.Round4(ttu.GobRoundTripMessage(t, r3), message)
 	require.NoError(t, err)
 
-	signature, err = primary.Round5(r4, message)
+	signature, err = primary.Round5(ttu.GobRoundTripMessage(t, r4), message)
 	require.NoError(t, err)
 
 	return signature

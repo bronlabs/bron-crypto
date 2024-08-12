@@ -60,8 +60,7 @@ func Test_HappyPath(t *testing.T) {
 					protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, threshold, allIdentities)
 					require.NoError(t, err)
 
-					_, shards, err := testutils.RunDKG(cipherSuite.Curve(), protocol, allIdentities)
-					require.NoError(t, err)
+					_, shards := testutils.DoDkg(t, cipherSuite.Curve(), protocol, allIdentities)
 
 					combinations, err := combinatorics.Combinations(N, uint(threshold))
 					require.NoError(t, err)

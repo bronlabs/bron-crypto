@@ -63,7 +63,7 @@ func happyPath(t *testing.T, cipherSuite types.SigningSuite, n int, msg string) 
 		require.NoError(t, err)
 		r1OutMessages[i] = r1OutMessage
 	}
-	r2InMessages := ttu.MapUnicastO2I(allParticipants, r1OutMessages)
+	r2InMessages := ttu.MapUnicastO2I(t, allParticipants, r1OutMessages)
 	r2OutMessages := make([]network.RoundMessages[types.Protocol, *echo.Round2P2P], len(allParticipants))
 	for i, participant := range allParticipants {
 		var msg *echo.Round1P2P
@@ -76,7 +76,7 @@ func happyPath(t *testing.T, cipherSuite types.SigningSuite, n int, msg string) 
 		require.NoError(t, err)
 		r2OutMessages[i] = p2p
 	}
-	_, r3InMessages := ttu.MapO2I(allParticipants, []*echo.Round2P2P{}, r2OutMessages)
+	_, r3InMessages := ttu.MapO2I(t, allParticipants, []*echo.Round2P2P{}, r2OutMessages)
 	require.NoError(t, err)
 
 	outputMessages := make([][]byte, len(allParticipants))

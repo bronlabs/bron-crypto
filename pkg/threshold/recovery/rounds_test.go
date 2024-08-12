@@ -23,48 +23,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
 
-func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) (uniqueSessiondId []byte, identities []types.IdentityKey, protocol types.ThresholdProtocol, dkgSigningKeyShares []*tsignatures.SigningKeyShare, dkgPublicKeyShares []*tsignatures.PartialPublicKeys) {
-	t.Helper()
-
-	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
-	require.NoError(t, err)
-	identities, err = ttu.MakeTestIdentities(cipherSuite, n)
-	require.NoError(t, err)
-	protocol, err = ttu.MakeThresholdProtocol(curve, identities, threshold)
-	require.NoError(t, err)
-
-	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
-	require.NoError(t, err)
-
-	dkgSigningKeyShares, dkgPublicKeyShares, err = jf_testutils.RunDKG(uniqueSessionId, protocol, identities)
-	require.NoError(t, err)
-
-	return uniqueSessionId, identities, protocol, dkgSigningKeyShares, dkgPublicKeyShares
-}
-
-func testHappyPath(t *testing.T, curve curves.Curve, threshold, n int) {
-	t.Helper()
-
-	uniqueSessionId, identities, protocol, dkgSigningKeyShares, dkgPublicKeyShares := setup(t, curve, sha3.New256, threshold, n)
-	for i := 0; i < n; i++ {
-		lostPartyIndex := i
-		t.Run(fmt.Sprintf("running recovery for participant index %d", lostPartyIndex), func(t *testing.T) {
-			t.Parallel()
-
-			presentRecoverers := hashset.NewHashableHashSet(identities...)
-			presentRecoverers.Remove(identities[lostPartyIndex])
-			allPresentRecoverers := make([]ds.Set[types.IdentityKey], len(identities))
-			for i := 0; i < len(identities); i++ {
-				allPresentRecoverers[i] = presentRecoverers.Clone()
-			}
-
-			_, recoveredShare, err := testutils.RunRecovery(uniqueSessionId, protocol, allPresentRecoverers, identities, lostPartyIndex, dkgSigningKeyShares, dkgPublicKeyShares, nil)
-			require.NoError(t, err)
-			require.Zero(t, recoveredShare.Share.Cmp(dkgSigningKeyShares[lostPartyIndex].Share))
-		})
-	}
-}
-
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
@@ -119,4 +77,45 @@ func TestSanity(t *testing.T) {
 
 	recovered := partialBob.Add(partialCharlie)
 	require.Zero(t, alice.Value.Cmp(recovered))
+}
+
+func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) (uniqueSessiondId []byte, identities []types.IdentityKey, protocol types.ThresholdProtocol, dkgSigningKeyShares []*tsignatures.SigningKeyShare, dkgPublicKeyShares []*tsignatures.PartialPublicKeys) {
+	t.Helper()
+
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
+	require.NoError(t, err)
+	identities, err = ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+	protocol, err = ttu.MakeThresholdProtocol(curve, identities, threshold)
+	require.NoError(t, err)
+
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(t, curve, identities, crand.Reader)
+	require.NoError(t, err)
+
+	dkgSigningKeyShares, dkgPublicKeyShares = jf_testutils.DoDkgHappyPath(t, uniqueSessionId, protocol, identities)
+
+	return uniqueSessionId, identities, protocol, dkgSigningKeyShares, dkgPublicKeyShares
+}
+
+func testHappyPath(t *testing.T, curve curves.Curve, threshold, n int) {
+	t.Helper()
+
+	uniqueSessionId, identities, protocol, dkgSigningKeyShares, dkgPublicKeyShares := setup(t, curve, sha3.New256, threshold, n)
+	for i := 0; i < n; i++ {
+		lostPartyIndex := i
+		t.Run(fmt.Sprintf("running recovery for participant index %d", lostPartyIndex), func(t *testing.T) {
+			t.Parallel()
+
+			presentRecoverers := hashset.NewHashableHashSet(identities...)
+			presentRecoverers.Remove(identities[lostPartyIndex])
+			allPresentRecoverers := make([]ds.Set[types.IdentityKey], len(identities))
+			for i := 0; i < len(identities); i++ {
+				allPresentRecoverers[i] = presentRecoverers.Clone()
+			}
+
+			_, recoveredShare, err := testutils.RunRecovery(t, uniqueSessionId, protocol, allPresentRecoverers, identities, lostPartyIndex, dkgSigningKeyShares, dkgPublicKeyShares, nil)
+			require.NoError(t, err)
+			require.Zero(t, recoveredShare.Share.Cmp(dkgSigningKeyShares[lostPartyIndex].Share))
+		})
+	}
 }

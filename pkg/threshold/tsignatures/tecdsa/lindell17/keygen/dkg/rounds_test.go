@@ -41,26 +41,26 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	require.NoError(t, err)
-	uniqueSessionId, err := agreeonrandomTestUtils.RunAgreeOnRandom(cipherSuite.Curve(), identities, crand.Reader)
+	uniqueSessionId, err := agreeonrandomTestUtils.RunAgreeOnRandom(t, cipherSuite.Curve(), identities, crand.Reader)
 	require.NoError(t, err)
 
-	jfParticipants, err := jfTestUtils.MakeParticipants(uniqueSessionId, protocol, identities, cn, nil)
+	jfParticipants, err := jfTestUtils.MakeParticipants(t, uniqueSessionId, protocol, identities, cn, nil)
 	require.NoError(t, err)
 
-	r1OutsB, r1OutsU, err := jfTestUtils.DoDkgRound1(jfParticipants)
+	r1OutsB, r1OutsU, err := jfTestUtils.DoDkgRound1(t, jfParticipants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
 		require.Equal(t, out.Size(), int(protocol.TotalParties())-1)
 	}
 
-	r2InsB, r2InsU := ttu.MapO2I(jfParticipants, r1OutsB, r1OutsU)
-	r2Outs, err := jfTestUtils.DoDkgRound2(jfParticipants, r2InsB, r2InsU)
+	r2InsB, r2InsU := ttu.MapO2I(t, jfParticipants, r1OutsB, r1OutsU)
+	r2Outs, err := jfTestUtils.DoDkgRound2(t, jfParticipants, r2InsB, r2InsU)
 	require.NoError(t, err)
 	for _, out := range r2Outs {
 		require.NotNil(t, out)
 	}
-	r3Ins := ttu.MapBroadcastO2I(jfParticipants, r2Outs)
-	signingKeyShares, publicKeyShares, err := jfTestUtils.DoDkgRound3(jfParticipants, r3Ins)
+	r3Ins := ttu.MapBroadcastO2I(t, jfParticipants, r2Outs)
+	signingKeyShares, publicKeyShares, err := jfTestUtils.DoDkgRound3(t, jfParticipants, r3Ins)
 	require.NoError(t, err)
 
 	transcripts := make([]transcripts.Transcript, len(identities))
@@ -68,39 +68,22 @@ func Test_HappyPath(t *testing.T) {
 		transcripts[i] = hagrid.NewTranscript("Lindell 2017 DKG", nil)
 	}
 
-	lindellParticipants, err := lindell17DkgTestUtils.MakeParticipants([]byte("sid"), protocol, identities, signingKeyShares, publicKeyShares, transcripts, nil)
-	require.NoError(t, err)
-
-	r1o, err := lindell17DkgTestUtils.DoDkgRound1(lindellParticipants)
-	require.NoError(t, err)
-
-	r2i := ttu.MapBroadcastO2I(lindellParticipants, r1o)
-	r2o, err := lindell17DkgTestUtils.DoDkgRound2(lindellParticipants, r2i)
-	require.NoError(t, err)
-
-	r3i := ttu.MapBroadcastO2I(lindellParticipants, r2o)
-	r3o, err := lindell17DkgTestUtils.DoDkgRound3(lindellParticipants, r3i)
-	require.NoError(t, err)
-
-	r4i := ttu.MapBroadcastO2I(lindellParticipants, r3o)
-	r4o, err := lindell17DkgTestUtils.DoDkgRound4(lindellParticipants, r4i)
-	require.NoError(t, err)
-
-	r5i := ttu.MapUnicastO2I(lindellParticipants, r4o)
-	r5o, err := lindell17DkgTestUtils.DoDkgRound5(lindellParticipants, r5i)
-	require.NoError(t, err)
-
-	r6i := ttu.MapUnicastO2I(lindellParticipants, r5o)
-	r6o, err := lindell17DkgTestUtils.DoDkgRound6(lindellParticipants, r6i)
-	require.NoError(t, err)
-
-	r7i := ttu.MapUnicastO2I(lindellParticipants, r6o)
-	r7o, err := lindell17DkgTestUtils.DoDkgRound7(lindellParticipants, r7i)
-	require.NoError(t, err)
-
-	r8i := ttu.MapUnicastO2I(lindellParticipants, r7o)
-	shards, err := lindell17DkgTestUtils.DoDkgRound8(lindellParticipants, r8i)
-	require.NoError(t, err)
+	lindellParticipants := lindell17DkgTestUtils.MakeParticipants(t, []byte("sid"), protocol, identities, signingKeyShares, publicKeyShares, transcripts, nil)
+	r1o := lindell17DkgTestUtils.DoDkgRound1(t, lindellParticipants)
+	r2i := ttu.MapBroadcastO2I(t, lindellParticipants, r1o)
+	r2o := lindell17DkgTestUtils.DoDkgRound2(t, lindellParticipants, r2i)
+	r3i := ttu.MapBroadcastO2I(t, lindellParticipants, r2o)
+	r3o := lindell17DkgTestUtils.DoDkgRound3(t, lindellParticipants, r3i)
+	r4i := ttu.MapBroadcastO2I(t, lindellParticipants, r3o)
+	r4o := lindell17DkgTestUtils.DoDkgRound4(t, lindellParticipants, r4i)
+	r5i := ttu.MapUnicastO2I(t, lindellParticipants, r4o)
+	r5o := lindell17DkgTestUtils.DoDkgRound5(t, lindellParticipants, r5i)
+	r6i := ttu.MapUnicastO2I(t, lindellParticipants, r5o)
+	r6o := lindell17DkgTestUtils.DoDkgRound6(t, lindellParticipants, r6i)
+	r7i := ttu.MapUnicastO2I(t, lindellParticipants, r6o)
+	r7o := lindell17DkgTestUtils.DoDkgRound7(t, lindellParticipants, r7i)
+	r8i := ttu.MapUnicastO2I(t, lindellParticipants, r7o)
+	shards := lindell17DkgTestUtils.DoDkgRound8(t, lindellParticipants, r8i)
 	require.NotNil(t, shards)
 
 	t.Run("each transcript recorded common", func(t *testing.T) {

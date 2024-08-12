@@ -26,8 +26,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/testutils"
 )
 
-func doDkg(curve curves.Curve, protocol types.ThresholdProtocol, identities []types.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
-	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
+func doDkg(t require.TestingT, curve curves.Curve, protocol types.ThresholdProtocol, identities []types.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(t, curve, identities, crand.Reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -42,7 +42,7 @@ func doDkg(curve curves.Curve, protocol types.ThresholdProtocol, identities []ty
 		return nil, nil, err
 	}
 
-	r3InB, r3InU := ttu.MapO2I(dkgParticipants, r2OutB, r2OutU)
+	r3InB, r3InU := ttu.MapO2I(t, dkgParticipants, r2OutB, r2OutU)
 	signingKeyShares, publicKeyShares, err = testutils.DoDkgRound2(dkgParticipants, r3InB, r3InU)
 	if err != nil {
 		return nil, nil, err
@@ -51,7 +51,7 @@ func doDkg(curve curves.Curve, protocol types.ThresholdProtocol, identities []ty
 	return signingKeyShares, publicKeyShares, nil
 }
 
-func doInteractiveSign(protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, message []byte) error {
+func doInteractiveSign(t require.TestingT, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, message []byte) error {
 	var shards []*frost.Shard
 	for i := range signingKeyShares {
 		shards = append(shards, &frost.Shard{
@@ -75,7 +75,7 @@ func doInteractiveSign(protocol types.ThresholdSignatureProtocol, identities []t
 		return err
 	}
 
-	r2In := ttu.MapBroadcastO2I(participants, r1Out)
+	r2In := ttu.MapBroadcastO2I(t, participants, r1Out)
 	partialSignatures, err := testutils.DoInteractiveSignRound2(participants, r2In, message)
 	if err != nil {
 		return err
@@ -126,7 +126,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, protocol, allIdentities)
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(t, curve, protocol, allIdentities)
 	require.NoError(t, err)
 
 	N := make([]int, n)
@@ -145,7 +145,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 			publicKeyShares[i] = allPublicKeyShares[index]
 		}
 
-		err := doInteractiveSign(protocol, identities, signingKeyShares, publicKeyShares, message)
+		err := doInteractiveSign(t, protocol, identities, signingKeyShares, publicKeyShares, message)
 		require.NoError(t, err)
 	}
 }
@@ -165,7 +165,7 @@ func TestSignEmptyMessage(t *testing.T) {
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, 2, allIdentities)
 	require.NoError(t, err)
 
-	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, protocol, allIdentities)
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(t, curve, protocol, allIdentities)
 	require.NoError(t, err)
 
 	N := []uint{0, 1}
@@ -181,11 +181,11 @@ func TestSignEmptyMessage(t *testing.T) {
 			publicKeyShares[i] = allPublicKeyShares[index]
 		}
 
-		err := doInteractiveSign(protocol, identities, signingKeyShares, publicKeyShares, []byte{})
+		err := doInteractiveSign(t, protocol, identities, signingKeyShares, publicKeyShares, []byte{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "message is empty")
 
-		err = doInteractiveSign(protocol, identities, signingKeyShares, publicKeyShares, nil)
+		err = doInteractiveSign(t, protocol, identities, signingKeyShares, publicKeyShares, nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "message is empty")
 	}
@@ -207,7 +207,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, curve curves.Curve, hash fu
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	require.NoError(t, err)
 
-	signingKeyShares, publicKeyShares, err := doDkg(curve, protocol, identities)
+	signingKeyShares, publicKeyShares, err := doDkg(t, curve, protocol, identities)
 	require.NoError(t, err)
 
 	var shards []*frost.Shard
@@ -223,7 +223,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, curve curves.Curve, hash fu
 	require.NoError(t, err)
 	r1OutAlpha, err := testutils.DoInteractiveSignRound1(participantsAlpha)
 	require.NoError(t, err)
-	r2InAlpha := ttu.MapBroadcastO2I(participantsAlpha, r1OutAlpha)
+	r2InAlpha := ttu.MapBroadcastO2I(t, participantsAlpha, r1OutAlpha)
 	partialSignaturesAlpha, err := testutils.DoInteractiveSignRound2(participantsAlpha, r2InAlpha, message)
 	require.NoError(t, err)
 	mappedPartialSignaturesAlpha := testutils.MapPartialSignatures(identities[:threshold], partialSignaturesAlpha)
@@ -235,7 +235,7 @@ func testPreviousPartialSignatureReuse(t *testing.T, curve curves.Curve, hash fu
 	require.NoError(t, err)
 	r1OutBeta, err := testutils.DoInteractiveSignRound1(participantsBeta)
 	require.NoError(t, err)
-	r2InBeta := ttu.MapBroadcastO2I(participantsBeta, r1OutBeta)
+	r2InBeta := ttu.MapBroadcastO2I(t, participantsBeta, r1OutBeta)
 	partialSignaturesBeta, err := testutils.DoInteractiveSignRound2(participantsBeta, r2InBeta, message)
 	require.NoError(t, err)
 
@@ -265,7 +265,7 @@ func testRandomPartialSignature(t *testing.T, curve curves.Curve, hash func() ha
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	require.NoError(t, err)
 
-	signingKeyShares, publicKeyShares, err := doDkg(curve, protocol, identities)
+	signingKeyShares, publicKeyShares, err := doDkg(t, curve, protocol, identities)
 	require.NoError(t, err)
 
 	var shards []*frost.Shard
@@ -280,7 +280,7 @@ func testRandomPartialSignature(t *testing.T, curve curves.Curve, hash func() ha
 	require.NoError(t, err)
 	r1Out, err := testutils.DoInteractiveSignRound1(participants)
 	require.NoError(t, err)
-	r2In := ttu.MapBroadcastO2I(participants, r1Out)
+	r2In := ttu.MapBroadcastO2I(t, participants, r1Out)
 	partialSignatures, err := testutils.DoInteractiveSignRound2(participants, r2In, message)
 	require.NoError(t, err)
 

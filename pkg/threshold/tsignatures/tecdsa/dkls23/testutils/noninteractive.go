@@ -45,7 +45,6 @@ func MakePreGenParticipants(t *testing.T, sid []byte, protocol types.ThresholdSi
 }
 
 func RunPreGen(t *testing.T, parties []*noninteractiveSigning.PreGenParticipant) []*dkls23.PreProcessingMaterial {
-	t.Helper()
 	var err error
 
 	r1ob := make([]*signing.Round1Broadcast, len(parties))
@@ -55,7 +54,7 @@ func RunPreGen(t *testing.T, parties []*noninteractiveSigning.PreGenParticipant)
 		require.NoError(t, err)
 	}
 
-	r2ib, r2iu := testutils.MapO2I(parties, r1ob, r1ou)
+	r2ib, r2iu := testutils.MapO2I(t, parties, r1ob, r1ou)
 	r2ob := make([]*signing.Round2Broadcast, len(parties))
 	r2ou := make([]network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2P2P], len(parties))
 	for i := range parties {
@@ -63,7 +62,7 @@ func RunPreGen(t *testing.T, parties []*noninteractiveSigning.PreGenParticipant)
 		require.NoError(t, err)
 	}
 
-	r3ib, r3iu := testutils.MapO2I(parties, r2ob, r2ou)
+	r3ib, r3iu := testutils.MapO2I(t, parties, r2ob, r2ou)
 	ppm := make([]*dkls23.PreProcessingMaterial, len(parties))
 	for i := range parties {
 		ppm[i], err = parties[i].Round3(r3ib[i], r3iu[i])
@@ -74,7 +73,6 @@ func RunPreGen(t *testing.T, parties []*noninteractiveSigning.PreGenParticipant)
 }
 
 func MakeNonInteractiveCosigners(t *testing.T, protocol types.ThresholdSignatureProtocol, quorum []types.IdentityKey, shards []*dkls23.Shard, preSignatures []*dkls23.PreProcessingMaterial) []*noninteractiveSigning.Cosigner {
-	t.Helper()
 	var err error
 
 	cosigners := make([]*noninteractiveSigning.Cosigner, len(quorum))

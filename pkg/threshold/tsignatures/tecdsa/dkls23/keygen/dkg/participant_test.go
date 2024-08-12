@@ -30,11 +30,10 @@ func Test_CanInitialize(t *testing.T) {
 	protocol, err := testutils.MakeThresholdSignatureProtocol(cipherSuite, identities, 2, identities)
 	require.NoError(t, err)
 
-	sid, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
+	sid, err := agreeonrandom_testutils.RunAgreeOnRandom(t, curve, identities, crand.Reader)
 	require.NoError(t, err)
 
-	signingKeyShares, partialPublicKeys, err := jf_testutils.RunDKG(sid, protocol, identities)
-	require.NoError(t, err)
+	signingKeyShares, partialPublicKeys := jf_testutils.DoDkgHappyPath(t, sid, protocol, identities)
 
 	alice, err := dkg.NewParticipant(sid, identities[0].(types.AuthKey), signingKeyShares[0], partialPublicKeys[0], protocol, cn, crand.Reader, nil)
 	require.NoError(t, err)

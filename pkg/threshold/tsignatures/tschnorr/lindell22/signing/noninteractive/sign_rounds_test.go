@@ -95,12 +95,8 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 				}
 
 				preSignerstranscripts := ttu.MakeTranscripts(transcriptAppLabel, preSignersIdentities)
-
-				preSigners, err := testutils.MakePreGenParticipants(preSignersIdentities, sid, protocolConfig, preSignerstranscripts)
-				require.NoError(t, err)
-
-				ppms, err := testutils.DoLindell2022PreGen(preSigners)
-				require.NoError(t, err)
+				preSigners := testutils.MakePreGenParticipants(t, preSignersIdentities, sid, protocolConfig, preSignerstranscripts)
+				ppms := testutils.DoLindell2022PreGen(t, preSigners)
 
 				PS := make([]int, len(preSigners))
 				for i := range preSigners {
@@ -197,18 +193,14 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 				}
 
 				preSignerstranscripts := ttu.MakeTranscripts(transcriptAppLabel, preSignersIdentities)
+				preSigners := testutils.MakePreGenParticipants(t, preSignersIdentities, sid, protocolConfig, preSignerstranscripts)
+				ppms := testutils.DoLindell2022PreGen(t, preSigners)
 
-				preSigners, err := testutils.MakePreGenParticipants(preSignersIdentities, sid, protocolConfig, preSignerstranscripts)
-				require.NoError(t, err)
-
-				ppms, err := testutils.DoLindell2022PreGen(preSigners)
-				require.NoError(t, err)
-
-				PS := make([]int, len(preSigners))
+				ps := make([]int, len(preSigners))
 				for i := range preSigners {
-					PS[i] = i
+					ps[i] = i
 				}
-				cosignersCombinations, err := combinatorics.Combinations(PS, uint(threshold))
+				cosignersCombinations, err := combinatorics.Combinations(ps, uint(threshold))
 				require.NoError(t, err)
 				for _, cosignerCombination := range cosignersCombinations {
 					cosignersIdentities := make([]types.IdentityKey, len(cosignerCombination))
@@ -297,18 +289,14 @@ func Test_SignNonInteractiveThresholdMina(t *testing.T) {
 				}
 
 				preSignerstranscripts := ttu.MakeTranscripts(transcriptAppLabel, preSignersIdentities)
+				preSigners := testutils.MakePreGenParticipants(t, preSignersIdentities, sid, protocolConfig, preSignerstranscripts)
+				ppms := testutils.DoLindell2022PreGen(t, preSigners)
 
-				preSigners, err := testutils.MakePreGenParticipants(preSignersIdentities, sid, protocolConfig, preSignerstranscripts)
-				require.NoError(t, err)
-
-				ppms, err := testutils.DoLindell2022PreGen(preSigners)
-				require.NoError(t, err)
-
-				PS := make([]int, len(preSigners))
+				ps := make([]int, len(preSigners))
 				for i := range preSigners {
-					PS[i] = i
+					ps[i] = i
 				}
-				cosignersCombinations, err := combinatorics.Combinations(PS, uint(threshold))
+				cosignersCombinations, err := combinatorics.Combinations(ps, uint(threshold))
 				require.NoError(t, err)
 				for _, cosignerCombination := range cosignersCombinations {
 					cosignersIdentities := make([]types.IdentityKey, len(cosignerCombination))
@@ -395,18 +383,14 @@ func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
 				}
 
 				preSignerstranscripts := ttu.MakeTranscripts(transcriptAppLabel, preSignersIdentities)
+				preSigners := testutils.MakePreGenParticipants(t, preSignersIdentities, sid, protocolConfig, preSignerstranscripts)
+				ppms := testutils.DoLindell2022PreGen(t, preSigners)
 
-				preSigners, err := testutils.MakePreGenParticipants(preSignersIdentities, sid, protocolConfig, preSignerstranscripts)
-				require.NoError(t, err)
-
-				ppms, err := testutils.DoLindell2022PreGen(preSigners)
-				require.NoError(t, err)
-
-				PS := make([]int, len(preSigners))
+				ps := make([]int, len(preSigners))
 				for i := range preSigners {
-					PS[i] = i
+					ps[i] = i
 				}
-				cosignersCombinations, err := combinatorics.Combinations(PS, uint(threshold))
+				cosignersCombinations, err := combinatorics.Combinations(ps, uint(threshold))
 				require.NoError(t, err)
 				for _, cosignerCombination := range cosignersCombinations {
 					cosignersIdentities := make([]types.IdentityKey, len(cosignerCombination))

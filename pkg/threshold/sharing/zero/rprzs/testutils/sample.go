@@ -2,6 +2,7 @@ package testutils
 
 import (
 	crand "crypto/rand"
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -12,11 +13,11 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/sample"
 )
 
-func MakeSampleParticipants(protocol types.Protocol, identities []types.IdentityKey, seeds []rprzs.PairWiseSeeds, seededPrng csprng.CSPRNG, wrongFirstUniqueSessionId []byte) (participants []*sample.Participant, err error) {
+func MakeSampleParticipants(t require.TestingT, protocol types.Protocol, identities []types.IdentityKey, seeds []rprzs.PairWiseSeeds, seededPrng csprng.CSPRNG, wrongFirstUniqueSessionId []byte) (participants []*sample.Participant, err error) {
 	participants = make([]*sample.Participant, len(identities))
 
 	random := crand.Reader
-	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(protocol.Curve(), identities, random)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(t, protocol.Curve(), identities, random)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not produce shared random value")
 	}

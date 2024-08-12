@@ -31,10 +31,10 @@ func doRoundsWithMockR1Output(t *testing.T, curve curves.Curve, identities []typ
 
 	r1Out, err := testutils.DoRound1(participants)
 	require.NoError(t, err)
-	r2In := ttu.MapBroadcastO2I(participants, r1Out)
+	r2In := ttu.MapBroadcastO2I(t, participants, r1Out)
 	r2Out, err := testutils.DoRound2(participants, r2In)
 	require.NoError(t, err)
-	r3In := ttu.MapBroadcastO2I(participants, r2Out)
+	r3In := ttu.MapBroadcastO2I(t, participants, r2Out)
 	agreeOnRandoms, err := testutils.DoRound3(participants, r3In)
 	require.NoError(t, err)
 	require.Len(t, agreeOnRandoms, len(identities))
@@ -66,7 +66,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) []byte {
 			for i, index := range combinationIndices {
 				identities[i] = allIdentities[index]
 			}
-			random, err = testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
+			random, err = testutils.RunAgreeOnRandom(t, curve, identities, crand.Reader)
 			require.NoError(t, err)
 		}
 	}

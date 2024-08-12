@@ -2,6 +2,7 @@ package testutils
 
 import (
 	crand "crypto/rand"
+	"github.com/stretchr/testify/require"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -70,7 +71,7 @@ func DoDkgRound2(participants []*hjky.Participant, round2BroadcastInputs []netwo
 	return samples, publicKeySharesMaps, feldmanCommitmentVectors, nil
 }
 
-func RunSample(sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey) (participants []*hjky.Participant, samples []hjky.Sample, publicKeySharesMaps []ds.Map[types.IdentityKey, curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
+func RunSample(t require.TestingT, sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey) (participants []*hjky.Participant, samples []hjky.Sample, publicKeySharesMaps []ds.Map[types.IdentityKey, curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
 	participants, err = MakeParticipants(sid, protocol, identities, nil)
 	if err != nil {
 		return nil, nil, nil, nil, err
@@ -81,7 +82,7 @@ func RunSample(sid []byte, protocol types.ThresholdProtocol, identities []types.
 		return nil, nil, nil, nil, err
 	}
 
-	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := ttu.MapO2I(t, participants, r1OutsB, r1OutsU)
 	samples, publicKeySharesMaps, feldmanCommitmentVectors, err = DoDkgRound2(participants, r2InsB, r2InsU)
 	if err != nil {
 		return nil, nil, nil, nil, err

@@ -2,6 +2,7 @@ package testutils
 
 import (
 	crand "crypto/rand"
+	"github.com/stretchr/testify/require"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -68,7 +69,7 @@ func DoDkgRound2(participants []*refresh.Participant, round2BroadcastInputs []ne
 	return signingKeyShares, publicKeyShares, nil
 }
 
-func RunRefresh(sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, initialSigningKeyShares []*tsignatures.SigningKeyShare, initialPublicKeyShares []*tsignatures.PartialPublicKeys) (participants []*refresh.Participant, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
+func RunRefresh(t require.TestingT, sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, initialSigningKeyShares []*tsignatures.SigningKeyShare, initialPublicKeyShares []*tsignatures.PartialPublicKeys) (participants []*refresh.Participant, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
 	participants, err = MakeParticipants(sid, protocol, identities, initialSigningKeyShares, initialPublicKeyShares, nil)
 	if err != nil {
 		return nil, nil, nil, err
@@ -79,7 +80,7 @@ func RunRefresh(sid []byte, protocol types.ThresholdProtocol, identities []types
 		return nil, nil, nil, err
 	}
 
-	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := ttu.MapO2I(t, participants, r1OutsB, r1OutsU)
 	signingKeyShares, publicKeyShares, err = DoDkgRound2(participants, r2InsB, r2InsU)
 	if err != nil {
 		return nil, nil, nil, err

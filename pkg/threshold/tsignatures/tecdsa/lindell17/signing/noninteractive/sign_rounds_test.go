@@ -57,11 +57,8 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 			require.Equal(t, shards.Size(), int(protocol.TotalParties()))
 
 			transcripts := testutils.MakeTranscripts(transcriptAppLabel, identities)
-			participants, err := testutils.MakePreGenParticipants(identities, sid, protocol, transcripts)
-			require.NoError(t, err)
-
-			ppms, err := testutils.DoLindell2017PreGen(participants)
-			require.NoError(t, err)
+			participants := testutils.MakePreGenParticipants(t, identities, sid, protocol, transcripts)
+			ppms := testutils.DoLindell2017PreGen(t, participants)
 			require.NotNil(t, ppms)
 
 			aliceIdx := 0
@@ -80,7 +77,7 @@ func Test_NonInteractiveSignHappyPath(t *testing.T) {
 			partialSignature, err := alice.ProducePartialSignature(message)
 			require.NoError(t, err)
 
-			signature, err := bob.ProduceSignature(partialSignature, message)
+			signature, err := bob.ProduceSignature(ttu.GobRoundTrip(t, partialSignature), message)
 			require.NoError(t, err)
 
 			// signature is valid

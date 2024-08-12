@@ -131,8 +131,8 @@ func (z1 *ZetOne) Validate() error {
 }
 
 type Round4Output struct {
-	ZetZero []*ZetZero
-	ZetOne  []*ZetOne
+	ZetZero map[int]*ZetZero
+	ZetOne  map[int]*ZetOne
 
 	_ ds.Incomparable
 }
@@ -141,11 +141,8 @@ func (r4out *Round4Output) Validate(t int) error {
 	if r4out == nil {
 		return errs.NewIsNil("round 4 output")
 	}
-	if len(r4out.ZetZero) != t {
-		return errs.NewLength("ZetZero length (%d) != t (%d)", len(r4out.ZetZero), t)
-	}
-	if len(r4out.ZetOne) != t {
-		return errs.NewLength("ZetOne length (%d) != t (%d)", len(r4out.ZetOne), t)
+	if (len(r4out.ZetZero) + len(r4out.ZetOne)) != t {
+		return errs.NewLength("ZetZero length (%d) != t (%d)", len(r4out.ZetZero)+len(r4out.ZetOne), t)
 	}
 	for i := range t {
 		if r4out.ZetOne[i] == nil {

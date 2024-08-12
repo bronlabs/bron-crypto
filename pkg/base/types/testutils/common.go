@@ -7,13 +7,17 @@ import (
 	"crypto/sha512"
 	"crypto/subtle"
 	"encoding/binary"
+	"encoding/gob"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"hash"
+	"reflect"
 	"slices"
 	"sort"
 	"strings"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -512,4 +516,20 @@ func TranscriptAtSameState(label string, allTranscripts []transcripts.Transcript
 	}
 
 	return true, nil
+}
+
+func GobRoundTrip[M any](t require.TestingT, message M) M {
+	if reflect.ValueOf(message).IsNil() {
+		return message
+	}
+
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(message)
+	require.NoError(t, err)
+	dec := gob.NewDecoder(&buf)
+	var out M
+	err = dec.Decode(&out)
+	require.NoError(t, err)
+	return out
 }

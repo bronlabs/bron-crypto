@@ -150,8 +150,8 @@ func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err erro
 	}
 
 	// 4. for every i
-	zetZero := make([]*ZetZero, prover.t)
-	zetOne := make([]*ZetOne, prover.t)
+	zetZero := make(map[int]*ZetZero)
+	zetOne := make(map[int]*ZetOne, prover.t)
 	for i := 0; i < prover.t; i++ {
 		if r3out.E.Bit(i) == 0 {
 			// 4.i. if ei == 0 set zi = (w1i, r1i, w2i, r2i)
@@ -210,7 +210,10 @@ func (verifier *Verifier) Round5(r4out *Round4Output) (err error) {
 	// 5. Parse zi
 	for i := 0; i < verifier.t; i++ {
 		if verifier.state.e.Bit(i) == 0 {
-			z := r4out.ZetZero[i]
+			z, ok := r4out.ZetZero[i]
+			if !ok {
+				return errs.NewVerification("verification failed")
+			}
 			ps = append(ps, z.W1)
 			rs = append(rs, z.R1)
 			cs = append(cs, verifier.state.c1[i].C)
@@ -225,7 +228,10 @@ func (verifier *Verifier) Round5(r4out *Round4Output) (err error) {
 				return errs.NewVerification("verification failed")
 			}
 		} else {
-			z := r4out.ZetOne[i]
+			z, ok := r4out.ZetOne[i]
+			if !ok {
+				return errs.NewFailed("verification failed")
+			}
 			wi := z.XPlusWj
 			ri := z.RTimesRj
 			ps = append(ps, wi)

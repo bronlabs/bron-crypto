@@ -2,6 +2,7 @@ package testutils
 
 import (
 	crand "crypto/rand"
+	"github.com/stretchr/testify/require"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -19,7 +20,7 @@ import (
 
 var cn = randomisedFischlin.Name
 
-func MakeDkgParticipants(curve curves.Curve, protocol types.ThresholdProtocol, identities []types.IdentityKey, signingKeyShares []*tsignatures.SigningKeyShare, partialPublicKeys []*tsignatures.PartialPublicKeys, prngs []io.Reader, sid []byte) (participants []*dkg.Participant, err error) {
+func MakeDkgParticipants(t require.TestingT, curve curves.Curve, protocol types.ThresholdProtocol, identities []types.IdentityKey, signingKeyShares []*tsignatures.SigningKeyShare, partialPublicKeys []*tsignatures.PartialPublicKeys, prngs []io.Reader, sid []byte) (participants []*dkg.Participant, err error) {
 	if len(identities) != int(protocol.TotalParties()) {
 		return nil, errs.NewLength("invalid number of identities %d != %d", len(identities), protocol.TotalParties())
 	}
@@ -27,7 +28,7 @@ func MakeDkgParticipants(curve curves.Curve, protocol types.ThresholdProtocol, i
 	participants = make([]*dkg.Participant, protocol.TotalParties())
 
 	if len(sid) == 0 {
-		sid, err = agreeonrandomTestutils.RunAgreeOnRandom(curve, identities, crand.Reader)
+		sid, err = agreeonrandomTestutils.RunAgreeOnRandom(t, curve, identities, crand.Reader)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct sid")
 		}
@@ -88,35 +89,24 @@ func DoDkgRound3(mySigningKeyShares []*tsignatures.SigningKeyShare, participants
 	return shards, nil
 }
 
-func RunDKG(curve curves.Curve, protocol types.ThresholdProtocol, identities []types.IdentityKey) (participants []*dkg.Participant, shards []*dkls23.Shard, err error) {
+func DoDkg(t require.TestingT, curve curves.Curve, protocol types.ThresholdProtocol, identities []types.IdentityKey) (participants []*dkg.Participant, shards []*dkls23.Shard) {
 	// Run JF-DKG first
 	sessionId := []byte("JoinFeldmanDkgTestSessionId")
-	signingKeyShares, partialPublicKeys, err := jf_testutils.RunDKG(sessionId, protocol, identities)
-	if err != nil {
-		return nil, nil, err
-	}
+	signingKeyShares, partialPublicKeys := jf_testutils.DoDkgHappyPath(t, sessionId, protocol, identities)
 
 	// Run DKLs23 specifics
-	participants, err = MakeDkgParticipants(curve, protocol, identities, signingKeyShares, partialPublicKeys, nil, nil)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not make DKG participants")
-	}
+	participants, err := MakeDkgParticipants(t, curve, protocol, identities, signingKeyShares, partialPublicKeys, nil, nil)
 
 	r1OutsU, err := DoDkgRound1(participants)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not run DKG round 1")
-	}
+	require.NoError(t, err, "could not run DKG round 1")
 
-	r2InsU := ttu.MapUnicastO2I(participants, r1OutsU)
+	r2InsU := ttu.MapUnicastO2I(t, participants, r1OutsU)
 	r2OutsU, err := DoDkgRound2(participants, r2InsU)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not run DKG round 2")
-	}
+	require.NoError(t, err, "could not run DKG round 2")
 
-	r3InsU := ttu.MapUnicastO2I(participants, r2OutsU)
+	r3InsU := ttu.MapUnicastO2I(t, participants, r2OutsU)
 	shards, err = DoDkgRound3(signingKeyShares, participants, r3InsU)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not run DKG round 3")
-	}
-	return participants, shards, nil
+	require.NoError(t, err, "could not run DKG round 3")
+
+	return participants, shards
 }

@@ -29,6 +29,10 @@ var TestCurves = []curves.Curve{
 	pallas.NewCurve(),
 }
 
+func init() {
+	curveutils.RegisterCurvesForGob()
+}
+
 func Test_ScalarMarshalRoundTrip(t *testing.T) {
 	t.Parallel()
 	for _, c := range TestCurves {
@@ -257,9 +261,6 @@ func Test_GobRoundTrip(t *testing.T) {
 						if ni != 10 {
 							to.Nested = nested
 						}
-
-						curveutils.RegisterForGob(c1)
-						curveutils.RegisterForGob(c2)
 
 						var buf bytes.Buffer
 

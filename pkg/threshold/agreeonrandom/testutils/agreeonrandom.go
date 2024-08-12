@@ -3,6 +3,8 @@ package testutils
 import (
 	"io"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -12,7 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom"
 )
 
-func RunAgreeOnRandom(curve curves.Curve, identities []types.IdentityKey, prng io.Reader) ([]byte, error) {
+func RunAgreeOnRandom(t require.TestingT, curve curves.Curve, identities []types.IdentityKey, prng io.Reader) ([]byte, error) {
 	participants := make([]*agreeonrandom.Participant, 0, len(identities))
 	set := hashset.NewHashableHashSet(identities...)
 	protocol, err := ttu.MakeProtocol(curve, identities)
@@ -32,12 +34,12 @@ func RunAgreeOnRandom(curve curves.Curve, identities []types.IdentityKey, prng i
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not execute round 1")
 	}
-	r2In := ttu.MapBroadcastO2I(participants, r1Out)
+	r2In := ttu.MapBroadcastO2I(t, participants, r1Out)
 	r2Out, err := DoRound2(participants, r2In)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not execute round 2")
 	}
-	r3In := ttu.MapBroadcastO2I(participants, r2Out)
+	r3In := ttu.MapBroadcastO2I(t, participants, r2Out)
 	agreeOnRandoms, err := DoRound3(participants, r3In)
 
 	if err != nil {

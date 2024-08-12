@@ -33,7 +33,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	require.NoError(t, err)
 
-	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(t, curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	participants, err := testutils.MakeDkgParticipants(uniqueSessionId, protocol, identities, nil)
@@ -45,7 +45,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		require.Equal(t, out.Size(), int(protocol.TotalParties())-1)
 	}
 
-	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := ttu.MapO2I(t, participants, r1OutsB, r1OutsU)
 	signingKeyShares, publicKeyShares, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 
 	require.NoError(t, err)
@@ -79,7 +79,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 	protocol, err := ttu.MakeThresholdProtocol(cipherSuite.Curve(), identities, threshold)
 	require.NoError(t, err)
 
-	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(t, curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	participants, err := testutils.MakeDkgParticipants(uniqueSessionId, protocol, identities, nil)
@@ -92,7 +92,7 @@ func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, thresh
 		require.Equal(t, out.Size(), int(protocol.TotalParties())-1)
 	}
 
-	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
+	r2InsB, r2InsU := ttu.MapO2I(t, participants, r1OutsB, r1OutsU)
 	_, _, err = testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 	require.True(t, errs.IsIdentifiableAbort(err, nil))
 }

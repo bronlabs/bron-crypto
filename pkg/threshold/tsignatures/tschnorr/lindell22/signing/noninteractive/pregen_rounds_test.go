@@ -30,11 +30,8 @@ func Test_PreGenHappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	transcripts := ttu.MakeTranscripts(transcriptAppLabel, identities)
-	participants, err := testutils.MakePreGenParticipants(identities, sid, protocol, transcripts)
-	require.NoError(t, err)
-
-	ppm, err := testutils.DoLindell2022PreGen(participants)
-	require.NoError(t, err)
+	participants := testutils.MakePreGenParticipants(t, identities, sid, protocol, transcripts)
+	ppm := testutils.DoLindell2022PreGen(t, participants)
 	require.NotNil(t, ppm)
 
 	t.Run("k matches R", func(t *testing.T) {

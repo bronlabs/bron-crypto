@@ -57,7 +57,7 @@ func benchmarkCombineHelper(b *testing.B, threshold, n int) error {
 		return err
 	}
 
-	aggregatorInput := testutils.MapPartialSignatures(identities, partialSignatures)
+	aggregatorInput := testutils.MapPartialSignatures(b, identities, partialSignatures)
 
 	b.StartTimer()
 	signature, err := signing.Aggregate(publicKeyShares, protocol, aggregatorInput, message)
@@ -82,7 +82,7 @@ func Benchmark_Basic(b *testing.B) {
 	total := 7
 
 	for n := 0; n < b.N; n++ {
-		err := testutils.SigningRoundTrip(threshold, total)
+		err := testutils.DoSignRoundTrip(b, threshold, total)
 		if err != nil {
 			b.Fatal(err)
 		}

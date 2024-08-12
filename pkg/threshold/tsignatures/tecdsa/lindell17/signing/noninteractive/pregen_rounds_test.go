@@ -30,11 +30,8 @@ func Test_PreGenHappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	transcripts := ttu.MakeTranscripts(transcriptAppLabel, identities)
-	participants, err := testutils.MakePreGenParticipants(identities, sid, protocol, transcripts)
-	require.NoError(t, err)
-
-	ppms, err := testutils.DoLindell2017PreGen(participants)
-	require.NoError(t, err)
+	participants := testutils.MakePreGenParticipants(t, identities, sid, protocol, transcripts)
+	ppms := testutils.DoLindell2017PreGen(t, participants)
 	require.NotNil(t, ppms)
 
 	t.Run("all ppms are valid", func(t *testing.T) {

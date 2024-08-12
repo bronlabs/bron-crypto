@@ -3,6 +3,7 @@ package testutils
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -53,15 +54,15 @@ func ProducePartialSignature[K bls.KeySubGroup, S bls.SignatureSubGroup](partici
 	return partialSignatures, nil
 }
 
-func MapPartialSignatures[S bls.SignatureSubGroup](identities []types.IdentityKey, partialSignatures []*boldyreva02.PartialSignature[S]) network.RoundMessages[types.ThresholdProtocol, *boldyreva02.PartialSignature[S]] {
+func MapPartialSignatures[S bls.SignatureSubGroup](t require.TestingT, identities []types.IdentityKey, partialSignatures []*boldyreva02.PartialSignature[S]) network.RoundMessages[types.ThresholdProtocol, *boldyreva02.PartialSignature[S]] {
 	result := network.NewRoundMessages[types.ThresholdProtocol, *boldyreva02.PartialSignature[S]]()
 	for i, identity := range identities {
-		result.Put(identity, partialSignatures[i])
+		result.Put(identity, ttu.GobRoundTrip(t, partialSignatures[i]))
 	}
 	return result
 }
 
-func SigningRoundTrip[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n int, scheme bls.RogueKeyPrevention) error {
+func DoSignRoundTrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t require.TestingT, threshold, n int, scheme bls.RogueKeyPrevention) error {
 	hashFunc := sha256.New
 	message := []byte("messi > ronaldo")
 	sid := []byte("sessionId")
@@ -106,7 +107,7 @@ func SigningRoundTrip[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n i
 	}
 
 	sharingConfig := types.DeriveSharingConfig(protocolConfig.Participants())
-	aggregatorInput := MapPartialSignatures(identities, partialSignatures)
+	aggregatorInput := MapPartialSignatures(t, identities, partialSignatures)
 	signature, signaturePOP, err := signing.Aggregate(sharingConfig, publicKeyShares, aggregatorInput, message, scheme)
 	if err != nil {
 		return errs.WrapFailed(err, "Could not aggregate partial signatures")
@@ -119,7 +120,7 @@ func SigningRoundTrip[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n i
 	return nil
 }
 
-func SigningWithDkg[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n int, scheme bls.RogueKeyPrevention) error {
+func DoSignWithDkg[K bls.KeySubGroup, S bls.SignatureSubGroup](t require.TestingT, threshold, n int, scheme bls.RogueKeyPrevention) error {
 	hashFunc := sha256.New
 	message := []byte("messi > ronaldo")
 	sid := []byte("sessionId")
@@ -141,10 +142,7 @@ func SigningWithDkg[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n int
 		return errs.WrapFailed(err, "Could not make protocol config")
 	}
 
-	signingKeyShares, partialPublicKeys, err := jf_testutils.RunDKG(sid, thresholdSignatureProtocol, identities)
-	if err != nil {
-		return errs.WrapFailed(err, "could not run JK-DKG")
-	}
+	signingKeyShares, partialPublicKeys := jf_testutils.DoDkgHappyPath(t, sid, thresholdSignatureProtocol, identities)
 
 	shards := hashmap.NewHashableHashMap[types.IdentityKey, *boldyreva02.Shard[K]]()
 	for i, id := range identities {
@@ -173,7 +171,7 @@ func SigningWithDkg[K bls.KeySubGroup, S bls.SignatureSubGroup](threshold, n int
 	}
 
 	sharingConfig := types.DeriveSharingConfig(thresholdSignatureProtocol.Participants())
-	aggregatorInput := MapPartialSignatures(identities, partialSignatures)
+	aggregatorInput := MapPartialSignatures(t, identities, partialSignatures)
 	signature, signaturePOP, err := signing.Aggregate(sharingConfig, publicKeyShares, aggregatorInput, message, scheme)
 	if err != nil {
 		return errs.WrapFailed(err, "Could not aggregate partial signatures")

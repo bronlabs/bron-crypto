@@ -36,7 +36,7 @@ func pregenHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thres
 	for _, out := range r1Outs {
 		require.NotNil(t, out)
 	}
-	r2Ins := ttu.MapBroadcastO2I(participants, r1Outs)
+	r2Ins := ttu.MapBroadcastO2I(t, participants, r1Outs)
 	preSignatureBatches, privateNoncePairsOfAllParties, err := testutils.DoPreGenRound2(participants, r2Ins)
 	require.NoError(t, err)
 
@@ -44,7 +44,14 @@ func pregenHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thres
 	for i, batch := range preSignatureBatches {
 		for j, otherBatch := range preSignatureBatches {
 			if i != j {
-				require.Equal(t, batch, otherBatch)
+				require.Len(t, batch, len(otherBatch))
+				for k := range batch {
+					ps1 := batch[k]
+					ps2 := otherBatch[k]
+					for l := range ps1 {
+						require.True(t, ps1[l].Equal(ps2[l]))
+					}
+				}
 			}
 		}
 	}

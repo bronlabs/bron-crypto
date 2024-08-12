@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"github.com/stretchr/testify/require"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -13,9 +14,9 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
 )
 
-func MakeSetupParticipants(curve curves.Curve, identities []types.IdentityKey, prng io.Reader) (participants []*setup.Participant, err error) {
+func MakeSetupParticipants(t require.TestingT, curve curves.Curve, identities []types.IdentityKey, prng io.Reader) (participants []*setup.Participant, err error) {
 	participants = make([]*setup.Participant, len(identities))
-	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, prng)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(t, curve, identities, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not run agree on random")
 	}

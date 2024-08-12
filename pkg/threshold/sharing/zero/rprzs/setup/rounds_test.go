@@ -24,7 +24,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
 	require.NoError(t, err)
 
-	participants, err := testutils.MakeSetupParticipants(curve, identities, crand.Reader)
+	participants, err := testutils.MakeSetupParticipants(t, curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	r1OutsU, err := testutils.DoSetupRound1(participants)
@@ -33,14 +33,14 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) {
 		require.Equal(t, out.Size(), len(identities)-1)
 	}
 
-	r2InsU := ttu.MapUnicastO2I(participants, r1OutsU)
+	r2InsU := ttu.MapUnicastO2I(t, participants, r1OutsU)
 	r2OutsU, err := testutils.DoSetupRound2(participants, r2InsU)
 	require.NoError(t, err)
 	for _, out := range r2OutsU {
 		require.Equal(t, out.Size(), len(identities)-1)
 	}
 
-	r3InsU := ttu.MapUnicastO2I(participants, r2OutsU)
+	r3InsU := ttu.MapUnicastO2I(t, participants, r2OutsU)
 	allPairwiseSeeds, err := testutils.DoSetupRound3(participants, r3InsU)
 	require.NoError(t, err)
 

@@ -29,22 +29,22 @@ func TestHappyPath(t *testing.T) {
 				t.Parallel()
 				t.Run("short keys", func(t *testing.T) {
 					t.Parallel()
-					err := testutils.SigningRoundTrip[bls12381.G1, bls12381.G2](boundedConfig.threshold, boundedConfig.total, boundedScheme)
+					err := testutils.DoSignRoundTrip[bls12381.G1, bls12381.G2](t, boundedConfig.threshold, boundedConfig.total, boundedScheme)
 					require.NoError(t, err)
 				})
 				t.Run("short signatures", func(t *testing.T) {
 					t.Parallel()
-					err := testutils.SigningRoundTrip[bls12381.G2, bls12381.G1](boundedConfig.threshold, boundedConfig.total, boundedScheme)
+					err := testutils.DoSignRoundTrip[bls12381.G2, bls12381.G1](t, boundedConfig.threshold, boundedConfig.total, boundedScheme)
 					require.NoError(t, err)
 				})
 				t.Run("short keys with DKG", func(t *testing.T) {
 					t.Parallel()
-					err := testutils.SigningWithDkg[bls12381.G1, bls12381.G2](boundedConfig.threshold, boundedConfig.total, boundedScheme)
+					err := testutils.DoSignWithDkg[bls12381.G1, bls12381.G2](t, boundedConfig.threshold, boundedConfig.total, boundedScheme)
 					require.NoError(t, err)
 				})
 				t.Run("short signatures with DKG", func(t *testing.T) {
 					t.Parallel()
-					err := testutils.SigningWithDkg[bls12381.G2, bls12381.G1](boundedConfig.threshold, boundedConfig.total, boundedScheme)
+					err := testutils.DoSignWithDkg[bls12381.G2, bls12381.G1](t, boundedConfig.threshold, boundedConfig.total, boundedScheme)
 					require.NoError(t, err)
 				})
 			})

@@ -17,6 +17,11 @@ var compilers = map[compiler.Name]any{
 	randomisedFischlin.Name: nil,
 }
 
+func RegisterNICompilersForGob() {
+	fiatShamir.RegisterForGob()
+	randomisedFischlin.RegisterForGob()
+}
+
 func MakeNonInteractive[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](compilerName compiler.Name, protocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NICompiler[X, W], error) {
 	if s := protocol.SoundnessError(); s < base.ComputationalSecurity {
 		return nil, errs.NewArgument("protocol soundness (%d) is too low (<%d) for a non-interactive proof",

@@ -90,8 +90,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	_, shards, err := testutils.RunDKG(curve, protocol, allIdentities)
-	require.NoError(t, err)
+	_, shards := testutils.DoDkg(t, curve, protocol, allIdentities)
 
 	seededPrng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
@@ -115,8 +114,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		}
 		t.Run(fmt.Sprintf("running the happy path with identities %v", identities), func(t *testing.T) {
 			t.Parallel()
-			err := testutils.RunInteractiveSign(protocol, identities, selectedShards, message, seededPrng, nil)
-			require.NoError(t, err)
+			testutils.RunInteractiveSignHappyPath(t, protocol, identities, selectedShards, message, seededPrng, nil)
 		})
 	}
 }
@@ -134,8 +132,7 @@ func testFailForReplayedMessages(t *testing.T, curve curves.Curve, h func() hash
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	_, shards, err := testutils.RunDKG(curve, protocol, allIdentities)
-	require.NoError(t, err)
+	_, shards := testutils.DoDkg(t, curve, protocol, allIdentities)
 
 	seededPrng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
@@ -150,14 +147,14 @@ func testFailForReplayedMessages(t *testing.T, curve curves.Curve, h func() hash
 		t.Helper()
 
 		// Run the protocol once.
-		participants, err := testutils.MakeInteractiveCosigners(protocol, identities, shards, nil, seededPrng, nil)
+		participants, err := testutils.MakeInteractiveCosigners(t, protocol, identities, shards, nil, seededPrng, nil)
 		require.NoError(t, err)
 		r1OutB, r1OutU, err := testutils.DoInteractiveSignRound1(participants)
 		require.NoError(t, err)
-		r2InB, r2InU := ttu.MapO2I(participants, r1OutB, r1OutU)
+		r2InB, r2InU := ttu.MapO2I(t, participants, r1OutB, r1OutU)
 		r2OutB, r2OutU, err := testutils.DoInteractiveSignRound2(participants, r2InB, r2InU)
 		require.NoError(t, err)
-		r3InB, r3InU := ttu.MapO2I(participants, r2OutB, r2OutU)
+		r3InB, r3InU := ttu.MapO2I(t, participants, r2OutB, r2OutU)
 		partialSignatures, err := testutils.DoInteractiveSignRound3(participants, r3InB, r3InU, message)
 		require.NoError(t, err)
 		producedSignatures, err := testutils.RunSignatureAggregation(protocol, identities, participants, partialSignatures, message)
@@ -166,28 +163,28 @@ func testFailForReplayedMessages(t *testing.T, curve curves.Curve, h func() hash
 		require.NoError(t, err)
 
 		// Run the protocol again (with a fresh sid), with the first participant replaying messages from the previous run.
-		participants2, err := testutils.MakeInteractiveCosigners(protocol, identities, shards, nil, seededPrng, nil)
+		participants2, err := testutils.MakeInteractiveCosigners(t, protocol, identities, shards, nil, seededPrng, nil)
 		require.NoError(t, err)
 		r1OutB2, r1OutU2, err := testutils.DoInteractiveSignRound1(participants2)
 		require.NoError(t, err)
 
 		// Party 1 switches his P2P messages to the ones from the previous run.
 		r1OutU2[0] = r1OutU[0]
-		r2InB2, r2InU2 := ttu.MapO2I(participants2, r1OutB2, r1OutU2)
+		r2InB2, r2InU2 := ttu.MapO2I(t, participants2, r1OutB2, r1OutU2)
 		_, _, err = testutils.DoInteractiveSignRound2(participants2, r2InB2, r2InU2)
 		require.Error(t, err)
 
 		// Run the protocol again with a fresh sid.
-		participants3, err := testutils.MakeInteractiveCosigners(protocol, identities, shards, nil, seededPrng, nil)
+		participants3, err := testutils.MakeInteractiveCosigners(t, protocol, identities, shards, nil, seededPrng, nil)
 		require.NoError(t, err)
 		r1OutB3, r1OutU3, err := testutils.DoInteractiveSignRound1(participants3)
 		require.NoError(t, err)
-		r2InB3, r2InU3 := ttu.MapO2I(participants3, r1OutB3, r1OutU3)
+		r2InB3, r2InU3 := ttu.MapO2I(t, participants3, r1OutB3, r1OutU3)
 		r2OutB3, r2OutU3, err := testutils.DoInteractiveSignRound2(participants3, r2InB3, r2InU3)
 		require.NoError(t, err)
 		// Party 1 switches his broadcast messages to the ones from the previous run.
 		r2OutB3[0] = r2OutB[0]
-		r3InB3, r3InU3 := ttu.MapO2I(participants3, r2OutB3, r2OutU3)
+		r3InB3, r3InU3 := ttu.MapO2I(t, participants3, r2OutB3, r2OutU3)
 		_, err = testutils.DoInteractiveSignRound3(participants3, r3InB3, r3InU3, message)
 		require.Error(t, err)
 	})
@@ -207,8 +204,7 @@ func testFailForDifferentSID(t *testing.T, curve curves.Curve, h func() hash.Has
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	_, shards, err := testutils.RunDKG(curve, protocol, allIdentities)
-	require.NoError(t, err)
+	_, shards := testutils.DoDkg(t, curve, protocol, allIdentities)
 
 	seededPrng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
@@ -232,7 +228,7 @@ func testFailForDifferentSID(t *testing.T, curve curves.Curve, h func() hash.Has
 	}
 	t.Run(fmt.Sprintf("running the diverging SID unhappy path with identities %v", identities), func(t *testing.T) {
 		t.Parallel()
-		err := testutils.RunInteractiveSign(protocol, identities, selectedShards, message, seededPrng, sids)
+		err := testutils.RunInteractiveSign(t, protocol, identities, selectedShards, message, seededPrng, sids)
 		require.Error(t, err)
 	})
 

@@ -116,11 +116,8 @@ func Test_HappyPathThresholdEdDSA(t *testing.T) {
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
 
-	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, variant)
-	require.NoError(t, err)
-
-	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
-	require.NoError(t, err)
+	participants := testutils.MakeParticipants(t, sid, protocol, identities[:th], shards, transcripts, variant)
+	partialSignatures := testutils.RunInteractiveSigning(t, participants, message)
 	require.NotNil(t, partialSignatures)
 
 	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
@@ -171,12 +168,8 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 	}
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
-
-	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, variant)
-	require.NoError(t, err)
-
-	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
-	require.NoError(t, err)
+	participants := testutils.MakeParticipants(t, sid, protocol, identities[:th], shards, transcripts, variant)
+	partialSignatures := testutils.RunInteractiveSigning(t, participants, message)
 	require.NotNil(t, partialSignatures)
 
 	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
@@ -229,12 +222,8 @@ func Test_HappyPathThresholdMina(t *testing.T) {
 	}
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
-
-	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, variant)
-	require.NoError(t, err)
-
-	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
-	require.NoError(t, err)
+	participants := testutils.MakeParticipants(t, sid, protocol, identities[:th], shards, transcripts, variant)
+	partialSignatures := testutils.RunInteractiveSigning(t, participants, message)
 	require.NotNil(t, partialSignatures)
 
 	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
@@ -289,12 +278,8 @@ func Test_ThresholdMinaAgainstMinaSigner(t *testing.T) {
 	}
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
-
-	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, variant)
-	require.NoError(t, err)
-
-	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
-	require.NoError(t, err)
+	participants := testutils.MakeParticipants(t, sid, protocol, identities[:th], shards, transcripts, variant)
+	partialSignatures := testutils.RunInteractiveSigning(t, participants, message)
 	require.NotNil(t, partialSignatures)
 
 	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
@@ -367,12 +352,8 @@ func Test_HappyPathThresholdZilliqa(t *testing.T) {
 	publicKey := aliceShard.SigningKeyShare.PublicKey
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
-
-	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, variant)
-	require.NoError(t, err)
-
-	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
-	require.NoError(t, err)
+	participants := testutils.MakeParticipants(t, sid, protocol, identities[:th], shards, transcripts, variant)
+	partialSignatures := testutils.RunInteractiveSigning(t, participants, message)
 	require.NotNil(t, partialSignatures)
 
 	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
@@ -408,8 +389,7 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	thresholdSignatureProtocol, err := ttu.MakeThresholdSignatureProtocol(signingSuite, identities, th, identities)
 	require.NoError(t, err)
 
-	signingKeyShares, partialPublicKeys, err := jf_testutils.RunDKG(sid, thresholdSignatureProtocol, identities)
-	require.NoError(t, err)
+	signingKeyShares, partialPublicKeys := jf_testutils.DoDkgHappyPath(t, sid, thresholdSignatureProtocol, identities)
 
 	shards := hashmap.NewHashableHashMap[types.IdentityKey, *lindell22.Shard]()
 	for i, id := range identities {
@@ -427,12 +407,8 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	}
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
-
-	participants, err := testutils.MakeParticipants(sid, thresholdSignatureProtocol, identities[:th], shards, transcripts, variant)
-	require.NoError(t, err)
-
-	partialSignatures, err := testutils.RunInteractiveSigning(participants, message)
-	require.NoError(t, err)
+	participants := testutils.MakeParticipants(t, sid, thresholdSignatureProtocol, identities[:th], shards, transcripts, variant)
+	partialSignatures := testutils.RunInteractiveSigning(t, participants, message)
 	require.NotNil(t, partialSignatures)
 
 	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()

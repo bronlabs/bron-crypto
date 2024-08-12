@@ -39,7 +39,7 @@ func Test_CanInitialize(t *testing.T) {
 	aliceSeeds.Put(bobIdentityKey, sharedSeed)
 	bobSeeds := hashmap.NewHashableHashMap[types.IdentityKey, [32]byte]()
 	bobSeeds.Put(aliceIdentityKey, sharedSeed)
-	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(t, curve, identities, crand.Reader)
 	require.NoError(t, err)
 
 	protocol, err := testutils.MakeThresholdProtocol(curve, identities, threshold)

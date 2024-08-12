@@ -3,6 +3,7 @@ package testutils
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -53,15 +54,15 @@ func ProducePartialSignature(participants []*signing.Cosigner, message []byte) (
 	return partialSignatures, nil
 }
 
-func MapPartialSignatures(identities []types.IdentityKey, partialSignatures []*glow.PartialSignature) network.RoundMessages[types.ThresholdProtocol, *glow.PartialSignature] {
+func MapPartialSignatures(t require.TestingT, identities []types.IdentityKey, partialSignatures []*glow.PartialSignature) network.RoundMessages[types.ThresholdProtocol, *glow.PartialSignature] {
 	result := network.NewRoundMessages[types.ThresholdProtocol, *glow.PartialSignature]()
 	for i, identity := range identities {
-		result.Put(identity, partialSignatures[i])
+		result.Put(identity, ttu.GobRoundTrip(t, partialSignatures[i]))
 	}
 	return result
 }
 
-func SigningRoundTrip(threshold, n int) error {
+func DoSignRoundTrip(t require.TestingT, threshold, n int) error {
 	hashFunc := sha256.New
 	message := []byte("messi > ronaldo")
 	sid := []byte("sessionId")
@@ -103,7 +104,7 @@ func SigningRoundTrip(threshold, n int) error {
 		return errs.WrapFailed(err, "could not produce partial signatures")
 	}
 
-	aggregatorInput := MapPartialSignatures(identities, partialSignatures)
+	aggregatorInput := MapPartialSignatures(t, identities, partialSignatures)
 
 	signature, err := signing.Aggregate(publicKeyShares, protocol, aggregatorInput, message)
 	if err != nil {
@@ -117,7 +118,7 @@ func SigningRoundTrip(threshold, n int) error {
 	return nil
 }
 
-func SigningWithDkg(threshold, n int) error {
+func DoSignWithDkg(t require.TestingT, threshold, n int) error {
 	hashFunc := sha256.New
 	message := []byte("messi > ronaldo")
 	sid := []byte("sessionId")
@@ -137,10 +138,7 @@ func SigningWithDkg(threshold, n int) error {
 		return errs.WrapFailed(err, "could not make protocol config")
 	}
 
-	signingKeyShares, partialPublicKeys, err := jf_testutils.RunDKG(sid, protocol, identities)
-	if err != nil {
-		return errs.WrapFailed(err, "could not run JK-DKG")
-	}
+	signingKeyShares, partialPublicKeys := jf_testutils.DoDkgHappyPath(t, sid, protocol, identities)
 
 	shards := hashmap.NewHashableHashMap[types.IdentityKey, *glow.Shard]()
 	for i, id := range identities {
@@ -161,7 +159,7 @@ func SigningWithDkg(threshold, n int) error {
 		return errs.WrapFailed(err, "could not produce partial signatures")
 	}
 
-	aggregatorInput := MapPartialSignatures(identities, partialSignatures)
+	aggregatorInput := MapPartialSignatures(t, identities, partialSignatures)
 
 	aliceShard, _ := shards.Get(identities[0])
 

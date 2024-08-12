@@ -1,6 +1,7 @@
 package noninteractive_signing
 
 import (
+	"slices"
 	"sort"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -24,6 +25,13 @@ type AttestedCommitmentToNoncePair struct {
 	Attestation []byte
 
 	_ ds.Incomparable
+}
+
+func (ac *AttestedCommitmentToNoncePair) Equal(rhs *AttestedCommitmentToNoncePair) bool {
+	return ac.Attestor.PublicKey().Equal(rhs.Attestor.PublicKey()) &&
+		ac.D.Equal(rhs.D) &&
+		ac.E.Equal(rhs.E) &&
+		slices.Equal(ac.Attestation, rhs.Attestation)
 }
 
 func (ac *AttestedCommitmentToNoncePair) Validate(protocol types.ThresholdProtocol) error {

@@ -64,8 +64,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
 	require.NoError(t, err)
 
-	participants, shards, err := dkls23_testutils.RunDKG(curve, protocol, identities)
-	require.NoError(t, err)
+	participants, shards := dkls23_testutils.DoDkg(t, curve, protocol, identities)
 	require.NotNil(t, shards)
 	for _, shard := range shards {
 		require.NotNil(t, shard.SigningKeyShare)

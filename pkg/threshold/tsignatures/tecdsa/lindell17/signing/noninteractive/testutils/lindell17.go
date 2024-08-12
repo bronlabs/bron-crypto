@@ -2,6 +2,8 @@ package testutils
 
 import (
 	crand "crypto/rand"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -24,83 +26,54 @@ func MakeTranscripts(label string, identities []types.IdentityKey) []transcripts
 	return allTranscripts
 }
 
-func MakePreGenParticipants(identities []types.IdentityKey, sid []byte, protocol types.ThresholdProtocol, allTranscripts []transcripts.Transcript) (participants []*noninteractive_signing.PreGenParticipant, err error) {
+func MakePreGenParticipants(t require.TestingT, identities []types.IdentityKey, sid []byte, protocol types.ThresholdProtocol, allTranscripts []transcripts.Transcript) (participants []*noninteractive_signing.PreGenParticipant) {
+	var err error
 	prng := crand.Reader
 	parties := make([]*noninteractive_signing.PreGenParticipant, len(identities))
 	for i := range identities {
 		parties[i], err = noninteractive_signing.NewPreGenParticipant(sid, allTranscripts[i], identities[i].(types.AuthKey), protocol, hashset.NewHashableHashSet(identities...), cn, prng)
-		if err != nil {
-			return nil, err
-		}
+		require.NoError(t, err)
 	}
 
-	return parties, nil
+	return parties
 }
 
-func DoPreGenRound1(participants []*noninteractive_signing.PreGenParticipant) (output []network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round1Broadcast], err error) {
-	result := make([]network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round1Broadcast], len(participants))
-	for i := range participants {
-		result[i] = network.NewRoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round1Broadcast]()
-	}
-
+func DoPreGenRound1(t require.TestingT, participants []*noninteractive_signing.PreGenParticipant) (output []network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round1Broadcast]) {
+	var err error
+	result := make([]*noninteractive_signing.Round1Broadcast, len(participants))
 	for i, party := range participants {
-		out, err := participants[i].Round1()
-		if err != nil {
-			return nil, err
-		}
-		for j := range participants {
-			if j != i {
-				result[j].Put(party.IdentityKey(), out)
-			}
-		}
+		result[i], err = party.Round1()
+		require.NoError(t, err)
 	}
 
-	return result, nil
+	r1Out := testutils.MapBroadcastO2I(t, participants, result)
+	return r1Out
 }
 
-func DoPreGenRound2(participants []*noninteractive_signing.PreGenParticipant, input []network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round1Broadcast]) (output []network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round2Broadcast], err error) {
-	result := make([]network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round2Broadcast], len(participants))
-	for i := range participants {
-		result[i] = network.NewRoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round2Broadcast]()
-	}
-
+func DoPreGenRound2(t require.TestingT, participants []*noninteractive_signing.PreGenParticipant, input []network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round1Broadcast]) (output []network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round2Broadcast]) {
+	var err error
+	result := make([]*noninteractive_signing.Round2Broadcast, len(participants))
 	for i, party := range participants {
-		out, err := participants[i].Round2(input[i])
-		if err != nil {
-			return nil, err
-		}
-		for j := range participants {
-			if j != i {
-				result[j].Put(party.IdentityKey(), out)
-			}
-		}
+		result[i], err = party.Round2(input[i])
+		require.NoError(t, err)
 	}
 
-	return result, nil
+	return testutils.MapBroadcastO2I(t, participants, result)
 }
 
-func DoPreGenRound3(participants []*noninteractive_signing.PreGenParticipant, input []network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round2Broadcast]) (output []*lindell17.PreProcessingMaterial, err error) {
+func DoPreGenRound3(t require.TestingT, participants []*noninteractive_signing.PreGenParticipant, input []network.RoundMessages[types.ThresholdProtocol, *noninteractive_signing.Round2Broadcast]) (output []*lindell17.PreProcessingMaterial) {
+	var err error
 	result := make([]*lindell17.PreProcessingMaterial, len(participants))
-
-	for i := range participants {
-		out, err := participants[i].Round3(input[i])
-		if err != nil {
-			return nil, err
-		}
-		result[i] = out
+	for i, party := range participants {
+		result[i], err = party.Round3(input[i])
+		require.NoError(t, err)
 	}
 
-	return result, nil
+	return result
 }
 
-func DoLindell2017PreGen(participants []*noninteractive_signing.PreGenParticipant) (output []*lindell17.PreProcessingMaterial, err error) {
-	r1, err := DoPreGenRound1(participants)
-	if err != nil {
-		return nil, err
-	}
-	r2, err := DoPreGenRound2(participants, r1)
-	if err != nil {
-		return nil, err
-	}
-	return DoPreGenRound3(participants, r2)
+func DoLindell2017PreGen(t require.TestingT, participants []*noninteractive_signing.PreGenParticipant) (output []*lindell17.PreProcessingMaterial) {
+	r1 := DoPreGenRound1(t, participants)
+	r2 := DoPreGenRound2(t, participants, r1)
+	return DoPreGenRound3(t, participants, r2)
 }
