@@ -1,4 +1,4 @@
-package kk
+package kk_test
 
 import (
 	crand "crypto/rand"
@@ -12,6 +12,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/noise"
+	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/noise/kk"
 )
 
 func TestHappyPath(t *testing.T) {
@@ -44,9 +45,9 @@ func happyPath(t *testing.T, curve curves.Curve, hashFunc noise.SupportedHash) {
 		Hash:  hashFunc,
 		Aead:  noise.NOISE_AEAD_CHACHA,
 	}
-	aliceSession, err := NewInitiator(suite, crand.Reader, sid, aliceIdentity, bobIdentity.PublicKey, []byte("handshake1"), []byte("handshake2"))
+	aliceSession, err := kk.NewInitiator(suite, crand.Reader, sid, aliceIdentity, bobIdentity.PublicKey, []byte("handshake1"), []byte("handshake2"))
 	require.NoError(t, err)
-	bobSession, err := NewResponder(suite, crand.Reader, sid, bobIdentity, aliceIdentity.PublicKey, []byte("handshake1"), []byte("handshake2"))
+	bobSession, err := kk.NewResponder(suite, crand.Reader, sid, bobIdentity, aliceIdentity.PublicKey, []byte("handshake1"), []byte("handshake2"))
 	require.NoError(t, err)
 
 	t.Run(fmt.Sprintf("[%s] alice and bob exchange messages for handshaking", curve.Name()), func(t *testing.T) {
