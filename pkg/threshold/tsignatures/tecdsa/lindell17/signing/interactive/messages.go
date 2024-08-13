@@ -30,7 +30,7 @@ type Round2OutputP2P struct {
 }
 
 type Round3OutputP2P struct {
-	BigR1Opening hashcommitments.Witness
+	BigR1Opening hashcommitments.Opening
 	BigR1        curves.Point
 	BigR1Proof   compiler.NIZKPoKProof
 

@@ -28,10 +28,7 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 
 	// 1.iv. compute commitment to (e, sessionId) and send to P
 	committer := hashcommitments.NewScheme(hashcommitments.CrsFromSessionId(verifier.SessionId))
-	//if err != nil {
-	//	return nil, errs.WrapFailed(err, "cannot instantiate committer")
-	//}
-	esidCommitment, esidOpening /*, err*/ := committer.Commit(hashcommitments.Message{verifier.state.e.Bytes()}, verifier.Prng)
+	esidCommitment, esidOpening, err := committer.Commit(hashcommitments.Message{verifier.state.e.Bytes()}, verifier.Prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to e, sessionId")
 	}

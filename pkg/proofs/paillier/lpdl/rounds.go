@@ -41,10 +41,10 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 
 	// 1.ii. compute c'' = commit(a, b)
 	committer := hashcommitments.NewScheme(hashcommitments.CrsFromSessionId(verifier.sessionId))
-	cDoublePrimeCommitment, cDoublePrimeOpening := committer.Commit(hashcommitments.Message{verifier.state.a.Bytes(), verifier.state.b.Bytes()}, verifier.prng)
-	//if err != nil {
-	//	return nil, errs.WrapFailed(err, "cannot commit to a and b")
-	//}
+	cDoublePrimeCommitment, cDoublePrimeOpening, err := committer.Commit(hashcommitments.Message{verifier.state.a.Bytes(), verifier.state.b.Bytes()}, verifier.prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot commit to a and b")
+	}
 	verifier.state.cDoublePrimeOpening = cDoublePrimeOpening
 
 	// 1.iii. compute Q' = aQ + bQ
@@ -92,10 +92,10 @@ func (prover *Prover) Round2(r1out *Round1Output) (r2out *Round2Output, err erro
 
 	// 2.ii. compute c^ = commit(Q^) and send to V
 	committer := hashcommitments.NewScheme(hashcommitments.CrsFromSessionId(prover.sessionId))
-	bigQHatCommitment, bigQHatOpening := committer.Commit(hashcommitments.Message{prover.state.bigQHat.ToAffineCompressed()}, prover.prng)
-	//if err != nil {
-	//	return nil, errs.WrapFailed(err, "cannot commit to Q hat")
-	//}
+	bigQHatCommitment, bigQHatOpening, err := committer.Commit(hashcommitments.Message{prover.state.bigQHat.ToAffineCompressed()}, prover.prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot commit to Q hat")
+	}
 	prover.state.bigQHatOpening = bigQHatOpening
 
 	// 4.i. In parallel to the above, run L_P protocol

@@ -36,10 +36,10 @@ func (p *Cosigner[V, M]) Round1() (broadcastOutput *Round1Broadcast, err error) 
 	// step 1.2: Run c_i <= commit(sid || R_i || i || S)
 	crs := hashcommitments.CrsFromSessionId(p.SessionId, []byte(commitmentDomainRLabel), p.state.pid, p.state.bigS)
 	committer := hashcommitments.NewScheme(crs)
-	commitment, opening := committer.Commit(hashcommitments.Message{bigR.ToAffineCompressed()}, p.Prng)
-	//if err != nil {
-	//	return nil, errs.NewFailed("cannot commit to R")
-	//}
+	commitment, opening, err := committer.Commit(hashcommitments.Message{bigR.ToAffineCompressed()}, p.Prng)
+	if err != nil {
+		return nil, errs.NewFailed("cannot commit to R")
+	}
 
 	// step 1.4: Broadcast(c_i)
 	broadcast := &Round1Broadcast{

@@ -1,4 +1,4 @@
-package df_test
+package dfcommitment_test
 
 import (
 	crand "crypto/rand"
@@ -16,12 +16,13 @@ func Test_HappyPath(t *testing.T) {
 	prng := crand.Reader
 
 	g, h, n := genParams(t, prng)
-	scheme := df.NewScheme(g, h, n)
+	scheme := dfcommitment.NewScheme(g, h, n)
 
 	message := randomMessage(t, 2048, prng)
 
-	commitment, witness := scheme.Commit(message, prng)
-	err := scheme.Verify(message, commitment, witness)
+	commitment, witness, err := scheme.Commit(message, prng)
+	require.NoError(t, err)
+	err = scheme.Verify(message, commitment, witness)
 	require.NoError(t, err)
 }
 
@@ -30,14 +31,16 @@ func Test_ShouldFailOnInvalidCommitmentOrOpening(t *testing.T) {
 	prng := crand.Reader
 
 	g, h, n := genParams(t, prng)
-	scheme := df.NewScheme(g, h, n)
+	scheme := dfcommitment.NewScheme(g, h, n)
 
 	message := randomMessage(t, 2048, prng)
 
-	commitmentA, witnessA := scheme.Commit(message, prng)
-	commitmentB, witnessB := scheme.Commit(message, prng)
+	commitmentA, witnessA, err := scheme.Commit(message, prng)
+	require.NoError(t, err)
+	commitmentB, witnessB, err := scheme.Commit(message, prng)
+	require.NoError(t, err)
 
-	err := scheme.Verify(message, commitmentA, witnessB)
+	err = scheme.Verify(message, commitmentA, witnessB)
 	require.Error(t, err)
 
 	err = scheme.Verify(message, commitmentB, witnessA)
@@ -49,14 +52,14 @@ func Test_ShouldFailOnNilCommitment(t *testing.T) {
 	prng := crand.Reader
 
 	g, h, n := genParams(t, prng)
-	scheme := df.NewScheme(g, h, n)
+	scheme := dfcommitment.NewScheme(g, h, n)
 
 	message := randomMessage(t, 2048, prng)
 
-	_, witness := scheme.Commit(message, prng)
-	//require.NoError(t, err)
+	_, witness, err := scheme.Commit(message, prng)
+	require.NoError(t, err)
 
-	err := scheme.Verify(message, nil, witness)
+	err = scheme.Verify(message, nil, witness)
 	require.Error(t, err)
 
 }
@@ -66,19 +69,21 @@ func Test_HappyPathAdd(t *testing.T) {
 	prng := crand.Reader
 
 	g, h, n := genParams(t, prng)
-	scheme := df.NewScheme(g, h, n)
+	scheme := dfcommitment.NewScheme(g, h, n)
 
 	messageA := randomMessage(t, 2048, prng)
 	messageB := randomMessage(t, 2048, prng)
 	messageAPlusB := new(saferith.Int).Add(messageA, messageB, -1)
 
-	commitmentA, witnessA := scheme.Commit(messageA, prng)
-	commitmentB, witnessB := scheme.Commit(messageB, prng)
+	commitmentA, witnessA, err := scheme.Commit(messageA, prng)
+	require.NoError(t, err)
+	commitmentB, witnessB, err := scheme.Commit(messageB, prng)
+	require.NoError(t, err)
 
 	aPlusBCommitment := scheme.CommitmentAdd(commitmentA, commitmentB)
-	aPlusBWitness := scheme.WitnessAdd(witnessA, witnessB)
+	aPlusBWitness := scheme.OpeningAdd(witnessA, witnessB)
 
-	err := scheme.Verify(messageAPlusB, aPlusBCommitment, aPlusBWitness)
+	err = scheme.Verify(messageAPlusB, aPlusBCommitment, aPlusBWitness)
 	require.NoError(t, err)
 
 }
@@ -89,9 +94,9 @@ func Test_HappyPathSum(t *testing.T) {
 	const k = 16
 
 	g, h, n := genParams(t, prng)
-	scheme := df.NewScheme(g, h, n)
+	scheme := dfcommitment.NewScheme(g, h, n)
 
-	var messages [k]*df.Message
+	var messages [k]*dfcommitment.Message
 	for i := range k {
 		messages[i] = randomMessage(t, 2048, prng)
 	}
@@ -101,14 +106,16 @@ func Test_HappyPathSum(t *testing.T) {
 		messagesSum.Add(messagesSum, m, -1)
 	}
 
-	var commitments [k]*df.Commitment
-	var witnesses [k]*df.Witness
+	var commitments [k]*dfcommitment.Commitment
+	var witnesses [k]*dfcommitment.Opening
 	for i := range k {
-		commitments[i], witnesses[i] = scheme.Commit(messages[i], prng)
+		var err error
+		commitments[i], witnesses[i], err = scheme.Commit(messages[i], prng)
+		require.NoError(t, err)
 	}
 
 	sumCommitment := scheme.CommitmentSum(commitments[0], commitments[1:]...)
-	sumWitness := scheme.WitnessSum(witnesses[0], witnesses[1:]...)
+	sumWitness := scheme.OpeningSum(witnesses[0], witnesses[1:]...)
 	err := scheme.Verify(messagesSum, sumCommitment, sumWitness)
 	require.NoError(t, err)
 }
@@ -118,19 +125,21 @@ func Test_HappyPathSub(t *testing.T) {
 	prng := crand.Reader
 
 	g, h, n := genParams(t, prng)
-	scheme := df.NewScheme(g, h, n)
+	scheme := dfcommitment.NewScheme(g, h, n)
 
 	messageA := randomMessage(t, 2048, prng)
 	messageB := randomMessage(t, 2048, prng)
 	messageAMinusB := new(saferith.Int).Add(messageA, new(saferith.Int).SetInt(messageB).Neg(1), -1)
 
-	commitmentA, witnessA := scheme.Commit(messageA, prng)
-	commitmentB, witnessB := scheme.Commit(messageB, prng)
+	commitmentA, witnessA, err := scheme.Commit(messageA, prng)
+	require.NoError(t, err)
+	commitmentB, witnessB, err := scheme.Commit(messageB, prng)
+	require.NoError(t, err)
 
 	aMinusBCommitment := scheme.CommitmentSub(commitmentA, commitmentB)
-	aMinusBWitness := scheme.WitnessSub(witnessA, witnessB)
+	aMinusBWitness := scheme.OpeningSub(witnessA, witnessB)
 
-	err := scheme.Verify(messageAMinusB, aMinusBCommitment, aMinusBWitness)
+	err = scheme.Verify(messageAMinusB, aMinusBCommitment, aMinusBWitness)
 	require.NoError(t, err)
 
 }
@@ -140,15 +149,17 @@ func Test_HappyPathNeg(t *testing.T) {
 	prng := crand.Reader
 
 	g, h, n := genParams(t, prng)
-	scheme := df.NewScheme(g, h, n)
+	scheme := dfcommitment.NewScheme(g, h, n)
 
 	message := randomMessage(t, 2048, prng)
 	messageNeg := new(saferith.Int).SetInt(message).Neg(1)
 
-	commitment, witness := scheme.Commit(message, prng)
+	commitment, witness, err := scheme.Commit(message, prng)
+	require.NoError(t, err)
+
 	negCommitment := scheme.CommitmentNeg(commitment)
-	negWitness := scheme.WitnessNeg(witness)
-	err := scheme.Verify(messageNeg, negCommitment, negWitness)
+	negWitness := scheme.OpeningNeg(witness)
+	err = scheme.Verify(messageNeg, negCommitment, negWitness)
 	require.NoError(t, err)
 
 }
@@ -158,16 +169,19 @@ func Test_HappyPathScale(t *testing.T) {
 	prng := crand.Reader
 
 	g, h, n := genParams(t, prng)
-	scheme := df.NewScheme(g, h, n)
+	scheme := dfcommitment.NewScheme(g, h, n)
 
 	message := randomMessage(t, 2048, prng)
 	sc := randomMessage(t, 2048, prng)
 	scaledMessage := new(saferith.Int).Mul(message, sc, -1)
 
-	commitment, witness := scheme.Commit(message, prng)
+	commitment, witness, err := scheme.Commit(message, prng)
+	require.NoError(t, err)
+
 	scaledCommitment := scheme.CommitmentScale(commitment, sc)
-	scaledWitness := scheme.WitnessScale(witness, sc)
-	err := scheme.Verify(scaledMessage, scaledCommitment, scaledWitness)
+	scaledWitness := scheme.OpeningScale(witness, sc)
+
+	err = scheme.Verify(scaledMessage, scaledCommitment, scaledWitness)
 	require.NoError(t, err)
 
 }
@@ -177,22 +191,25 @@ func Test_OpenOnWrongAdd(t *testing.T) {
 	prng := crand.Reader
 
 	g, h, n := genParams(t, prng)
-	scheme := df.NewScheme(g, h, n)
+	scheme := dfcommitment.NewScheme(g, h, n)
 
 	messageA := randomMessage(t, 2048, prng)
 	messageB := randomMessage(t, 2048, prng)
 	messageAPlusB := new(saferith.Int).Add(messageA, messageB, -1)
 
-	commitmentA, witnessA := scheme.Commit(messageA, prng)
-	commitmentB, witnessB := scheme.Commit(messageB, prng)
-	commitmentBPrime, witnessBPrime := scheme.Commit(messageB, prng)
+	commitmentA, witnessA, err := scheme.Commit(messageA, prng)
+	require.NoError(t, err)
+	commitmentB, witnessB, err := scheme.Commit(messageB, prng)
+	require.NoError(t, err)
+	commitmentBPrime, witnessBPrime, err := scheme.Commit(messageB, prng)
+	require.NoError(t, err)
 
 	commitmentAPlusB := scheme.CommitmentAdd(commitmentA, commitmentB)
 	commitmentAPlusBPrime := scheme.CommitmentAdd(commitmentA, commitmentBPrime)
-	witnessAPlusB := scheme.WitnessAdd(witnessA, witnessB)
-	witnessAPlusBPrime := scheme.WitnessAdd(witnessA, witnessBPrime)
+	witnessAPlusB := scheme.OpeningAdd(witnessA, witnessB)
+	witnessAPlusBPrime := scheme.OpeningAdd(witnessA, witnessBPrime)
 
-	err := scheme.Verify(messageAPlusB, commitmentAPlusB, witnessAPlusBPrime)
+	err = scheme.Verify(messageAPlusB, commitmentAPlusB, witnessAPlusBPrime)
 	require.Error(t, err)
 
 	err = scheme.Verify(messageAPlusB, commitmentAPlusBPrime, witnessAPlusB)
@@ -204,22 +221,24 @@ func Test_OpenOnWrongScale(t *testing.T) {
 	prng := crand.Reader
 
 	g, h, n := genParams(t, prng)
-	scheme := df.NewScheme(g, h, n)
+	scheme := dfcommitment.NewScheme(g, h, n)
 
 	message := randomMessage(t, 2048, prng)
 	scale := randomMessage(t, 2048, prng)
 	scaledMessage := new(saferith.Int).Mul(message, scale, -1)
 
-	commitmentA, witnessA := scheme.Commit(message, prng)
-	commitmentB, witnessB := scheme.Commit(message, prng)
+	commitmentA, witnessA, err := scheme.Commit(message, prng)
+	require.NoError(t, err)
+	commitmentB, witnessB, err := scheme.Commit(message, prng)
+	require.NoError(t, err)
 
 	commitmentAScaled := scheme.CommitmentScale(commitmentA, scale)
 	commitmentBScaled := scheme.CommitmentScale(commitmentB, scale)
 
-	openingAScaled := scheme.WitnessScale(witnessA, scale)
-	openingBScaled := scheme.WitnessScale(witnessB, scale)
+	openingAScaled := scheme.OpeningScale(witnessA, scale)
+	openingBScaled := scheme.OpeningScale(witnessB, scale)
 
-	err := scheme.Verify(scaledMessage, commitmentAScaled, openingBScaled)
+	err = scheme.Verify(scaledMessage, commitmentAScaled, openingBScaled)
 	require.Error(t, err)
 
 	err = scheme.Verify(scaledMessage, commitmentBScaled, openingAScaled)

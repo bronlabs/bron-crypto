@@ -20,7 +20,7 @@ var _ types.ThresholdParticipant = (*PreGenParticipant)(nil)
 type preGenParticipantState struct {
 	k           curves.Scalar
 	bigR        curves.Point
-	bigROpening hashcommitments.Witness
+	bigROpening hashcommitments.Opening
 
 	theirBigRCommitments ds.Map[types.IdentityKey, hashcommitments.Commitment]
 

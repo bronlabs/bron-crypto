@@ -36,10 +36,10 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	bigQDoublePrime := p.Protocol.Curve().ScalarBaseMult(xDoublePrime)
 
 	// 1.iii. calculates commitments Qcom to Q' and Q''
-	bigQCommitment, bigQOpening := commit(p.SessionId, p.Prng, bigQPrime, bigQDoublePrime, p.myAuthKey.PublicKey())
-	//if err != nil {
-	//	return nil, errs.WrapFailed(err, "cannot commit to (Q', Q'')")
-	//}
+	bigQCommitment, bigQOpening, err := commit(p.SessionId, p.Prng, bigQPrime, bigQDoublePrime, p.myAuthKey.PublicKey())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot commit to (Q', Q'')")
+	}
 
 	p.state.myXPrime = xPrime
 	p.state.myXDoublePrime = xDoublePrime
@@ -487,12 +487,12 @@ func (p *Participant) Round8(input network.RoundMessages[types.ThresholdProtocol
 	}, nil
 }
 
-func commit(sessionId []byte, prng io.Reader, bigQPrime, bigQDoublePrime curves.Point, pid curves.Point) (vectorCommitment hashcommitments.Commitment, opening hashcommitments.Witness) {
+func commit(sessionId []byte, prng io.Reader, bigQPrime, bigQDoublePrime curves.Point, pid curves.Point) (vectorCommitment hashcommitments.Commitment, opening hashcommitments.Opening, err error) {
 	committer := hashcommitments.NewScheme(hashcommitments.CrsFromSessionId(sessionId, pid.ToAffineCompressed()))
 	return committer.Commit(hashcommitments.Message{bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed()}, prng)
 }
 
-func openCommitment(sessionId []byte, commitment hashcommitments.Commitment, opening hashcommitments.Witness, bigQPrime, bigQDoublePrime curves.Point, pid curves.Point) (err error) {
+func openCommitment(sessionId []byte, commitment hashcommitments.Commitment, opening hashcommitments.Opening, bigQPrime, bigQDoublePrime curves.Point, pid curves.Point) (err error) {
 	verifier := hashcommitments.NewScheme(hashcommitments.CrsFromSessionId(sessionId, pid.ToAffineCompressed()))
 	return verifier.Verify(hashcommitments.Message{bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed()}, commitment, opening)
 }

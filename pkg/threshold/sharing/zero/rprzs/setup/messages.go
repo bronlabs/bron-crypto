@@ -20,7 +20,7 @@ type Round1P2P struct {
 
 type Round2P2P struct {
 	Message []byte
-	Opening hashcommitments.Witness
+	Opening hashcommitments.Opening
 
 	_ ds.Incomparable
 }

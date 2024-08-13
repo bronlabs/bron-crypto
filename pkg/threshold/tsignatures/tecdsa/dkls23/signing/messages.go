@@ -40,7 +40,7 @@ type Round2P2P struct {
 	GammaU_ij          curves.Point
 	GammaV_ij          curves.Point
 	Psi_ij             curves.Scalar
-	InstanceKeyOpening hashcommitments.Witness
+	InstanceKeyOpening hashcommitments.Opening
 
 	_ ds.Incomparable
 }

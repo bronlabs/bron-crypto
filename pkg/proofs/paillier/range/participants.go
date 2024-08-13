@@ -59,7 +59,7 @@ type Prover struct {
 
 type VerifierState struct {
 	e           *big.Int
-	esidOpening hashcommitments.Witness
+	esidOpening hashcommitments.Opening
 	c1          []*paillier.CipherText
 	c2          []*paillier.CipherText
 

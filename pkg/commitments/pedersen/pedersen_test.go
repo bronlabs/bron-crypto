@@ -40,8 +40,9 @@ func Test_HappyPath(t *testing.T) {
 			message, err := curve.ScalarField().Random(prng)
 			require.NoError(t, err)
 
-			commitment, witness := scheme.Commit(message, prng)
-			err = scheme.Verify(message, commitment, witness)
+			commitment, opening, err := scheme.Commit(message, prng)
+			require.NoError(t, err)
+			err = scheme.Verify(message, commitment, opening)
 			require.NoError(t, err)
 		})
 	}
@@ -64,13 +65,15 @@ func Test_ShouldFailOnInvalidCommitmentOrOpening(t *testing.T) {
 			message, err := curve.ScalarField().Random(prng)
 			require.NoError(t, err)
 
-			commitmentA, witnessA := scheme.Commit(message, prng)
-			commitmentB, witnessB := scheme.Commit(message, prng)
+			commitmentA, openingA, err := scheme.Commit(message, prng)
+			require.NoError(t, err)
+			commitmentB, openingB, err := scheme.Commit(message, prng)
+			require.NoError(t, err)
 
-			err = scheme.Verify(message, commitmentA, witnessB)
+			err = scheme.Verify(message, commitmentA, openingB)
 			require.Error(t, err)
 
-			err = scheme.Verify(message, commitmentB, witnessA)
+			err = scheme.Verify(message, commitmentB, openingA)
 			require.Error(t, err)
 		})
 	}
@@ -93,10 +96,10 @@ func Test_ShouldFailOnNilCommitment(t *testing.T) {
 			message, err := curve.ScalarField().Random(prng)
 			require.NoError(t, err)
 
-			_, witness := scheme.Commit(message, prng)
-			//require.NoError(t, err)
+			_, opening, err := scheme.Commit(message, prng)
+			require.NoError(t, err)
 
-			err = scheme.Verify(message, nil, witness)
+			err = scheme.Verify(message, nil, opening)
 			require.Error(t, err)
 		})
 	}
@@ -122,13 +125,15 @@ func Test_HappyPathAdd(t *testing.T) {
 			require.NoError(t, err)
 			messageAPlusB := messageA.Add(messageB)
 
-			commitmentA, witnessA := scheme.Commit(messageA, prng)
-			commitmentB, witnessB := scheme.Commit(messageB, prng)
+			commitmentA, openingA, err := scheme.Commit(messageA, prng)
+			require.NoError(t, err)
+			commitmentB, openingB, err := scheme.Commit(messageB, prng)
+			require.NoError(t, err)
 
 			aPlusBCommitment := scheme.CommitmentAdd(commitmentA, commitmentB)
-			aPlusBWitness := scheme.WitnessAdd(witnessA, witnessB)
+			aPlusBOpening := scheme.OpeningAdd(openingA, openingB)
 
-			err = scheme.Verify(messageAPlusB, aPlusBCommitment, aPlusBWitness)
+			err = scheme.Verify(messageAPlusB, aPlusBCommitment, aPlusBOpening)
 			require.NoError(t, err)
 		})
 	}
@@ -161,15 +166,16 @@ func Test_HappyPathSum(t *testing.T) {
 			}
 
 			var commitments [k]pedersencommitment.Commitment
-			var witnesses [k]pedersencommitment.Witness
+			var openings [k]pedersencommitment.Opening
 			for i := range k {
-				commitments[i], witnesses[i] = scheme.Commit(messages[i], prng)
-				//require.NoError(t, err)
+				var err error
+				commitments[i], openings[i], err = scheme.Commit(messages[i], prng)
+				require.NoError(t, err)
 			}
 
 			sumCommitment := scheme.CommitmentSum(commitments[0], commitments[1:]...)
-			sumWitness := scheme.WitnessSum(witnesses[0], witnesses[1:]...)
-			err = scheme.Verify(messagesSum, sumCommitment, sumWitness)
+			sumOpening := scheme.OpeningSum(openings[0], openings[1:]...)
+			err = scheme.Verify(messagesSum, sumCommitment, sumOpening)
 			require.NoError(t, err)
 		})
 	}
@@ -195,13 +201,15 @@ func Test_HappyPathSub(t *testing.T) {
 			require.NoError(t, err)
 			messageAMinusB := messageA.Sub(messageB)
 
-			commitmentA, witnessA := scheme.Commit(messageA, prng)
-			commitmentB, witnessB := scheme.Commit(messageB, prng)
+			commitmentA, openingA, err := scheme.Commit(messageA, prng)
+			require.NoError(t, err)
+			commitmentB, openingB, err := scheme.Commit(messageB, prng)
+			require.NoError(t, err)
 
 			aMinusBCommitment := scheme.CommitmentSub(commitmentA, commitmentB)
-			aMinusBWitness := scheme.WitnessSub(witnessA, witnessB)
+			aMinusBOpening := scheme.OpeningSub(openingA, openingB)
 
-			err = scheme.Verify(messageAMinusB, aMinusBCommitment, aMinusBWitness)
+			err = scheme.Verify(messageAMinusB, aMinusBCommitment, aMinusBOpening)
 			require.NoError(t, err)
 		})
 	}
@@ -225,10 +233,11 @@ func Test_HappyPathNeg(t *testing.T) {
 			require.NoError(t, err)
 			messageNeg := message.Neg()
 
-			commitment, witness := scheme.Commit(message, prng)
+			commitment, opening, err := scheme.Commit(message, prng)
+			require.NoError(t, err)
 			negCommitment := scheme.CommitmentNeg(commitment)
-			negWitness := scheme.WitnessNeg(witness)
-			err = scheme.Verify(messageNeg, negCommitment, negWitness)
+			negOpening := scheme.OpeningNeg(opening)
+			err = scheme.Verify(messageNeg, negCommitment, negOpening)
 			require.NoError(t, err)
 		})
 	}
@@ -254,10 +263,12 @@ func Test_HappyPathScale(t *testing.T) {
 			require.NoError(t, err)
 			scaledMessage := message.Mul(sc)
 
-			commitment, witness := scheme.Commit(message, prng)
+			commitment, opening, err := scheme.Commit(message, prng)
+			require.NoError(t, err)
+
 			scaledCommitment := scheme.CommitmentScale(commitment, sc)
-			scaledWitness := scheme.WitnessScale(witness, sc)
-			err = scheme.Verify(scaledMessage, scaledCommitment, scaledWitness)
+			scaledOpening := scheme.OpeningScale(opening, sc)
+			err = scheme.Verify(scaledMessage, scaledCommitment, scaledOpening)
 			require.NoError(t, err)
 		})
 	}
@@ -283,19 +294,22 @@ func Test_OpenOnWrongAdd(t *testing.T) {
 			require.NoError(t, err)
 			messageAPlusB := messageA.Add(messageB)
 
-			commitmentA, witnessA := scheme.Commit(messageA, prng)
-			commitmentB, witnessB := scheme.Commit(messageB, prng)
-			commitmentBPrime, witnessBPrime := scheme.Commit(messageB, prng)
+			commitmentA, openingA, err := scheme.Commit(messageA, prng)
+			require.NoError(t, err)
+			commitmentB, openingB, err := scheme.Commit(messageB, prng)
+			require.NoError(t, err)
+			commitmentBPrime, openingBPrime, err := scheme.Commit(messageB, prng)
+			require.NoError(t, err)
 
 			commitmentAPlusB := scheme.CommitmentAdd(commitmentA, commitmentB)
 			commitmentAPlusBPrime := scheme.CommitmentAdd(commitmentA, commitmentBPrime)
-			witnessAPlusB := scheme.WitnessAdd(witnessA, witnessB)
-			witnessAPlusBPrime := scheme.WitnessAdd(witnessA, witnessBPrime)
+			openingAPlusB := scheme.OpeningAdd(openingA, openingB)
+			openingAPlusBPrime := scheme.OpeningAdd(openingA, openingBPrime)
 
-			err = scheme.Verify(messageAPlusB, commitmentAPlusB, witnessAPlusBPrime)
+			err = scheme.Verify(messageAPlusB, commitmentAPlusB, openingAPlusBPrime)
 			require.Error(t, err)
 
-			err = scheme.Verify(messageAPlusB, commitmentAPlusBPrime, witnessAPlusB)
+			err = scheme.Verify(messageAPlusB, commitmentAPlusBPrime, openingAPlusB)
 			require.Error(t, err)
 		})
 	}
@@ -321,14 +335,16 @@ func Test_OpenOnWrongScale(t *testing.T) {
 			require.NoError(t, err)
 			scaledMessage := message.Mul(scale)
 
-			commitmentA, witnessA := scheme.Commit(message, prng)
-			commitmentB, witnessB := scheme.Commit(message, prng)
+			commitmentA, openingA, err := scheme.Commit(message, prng)
+			require.NoError(t, err)
+			commitmentB, openingB, err := scheme.Commit(message, prng)
+			require.NoError(t, err)
 
 			commitmentAScaled := scheme.CommitmentScale(commitmentA, scale)
 			commitmentBScaled := scheme.CommitmentScale(commitmentB, scale)
 
-			openingAScaled := scheme.WitnessScale(witnessA, scale)
-			openingBScaled := scheme.WitnessScale(witnessB, scale)
+			openingAScaled := scheme.OpeningScale(openingA, scale)
+			openingBScaled := scheme.OpeningScale(openingB, scale)
 
 			err = scheme.Verify(scaledMessage, commitmentAScaled, openingBScaled)
 			require.Error(t, err)

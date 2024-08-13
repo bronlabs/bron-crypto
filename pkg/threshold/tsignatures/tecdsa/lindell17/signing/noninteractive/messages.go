@@ -22,7 +22,7 @@ type Round1Broadcast struct {
 type Round2Broadcast struct {
 	BigR        curves.Point
 	BigRProof   compiler.NIZKPoKProof
-	BigROpening hashcommitments.Witness
+	BigROpening hashcommitments.Opening
 
 	_ ds.Incomparable
 }

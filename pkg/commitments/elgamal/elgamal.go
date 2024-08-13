@@ -9,15 +9,15 @@ import (
 
 var (
 	_ commitments.Message    = Message(nil)
-	_ commitments.Witness    = Witness(nil)
+	_ commitments.Opening    = Opening(nil)
 	_ commitments.Scalar     = Scalar(nil)
 	_ commitments.Commitment = (*Commitment)(nil)
 
-	_ commitments.HomomorphicScheme[*Commitment, Message, Witness, Scalar] = (*Scheme)(nil)
+	_ commitments.HomomorphicScheme[*Commitment, Message, Opening, Scalar] = (*Scheme)(nil)
 )
 
 type Message PlainText
-type Witness Nonce
+type Opening Nonce
 type Scalar curves.Scalar
 type Commitment = CipherText
 
@@ -31,33 +31,39 @@ func NewScheme(pk *PublicKey) *Scheme {
 	}
 }
 
-func (s *Scheme) RandomWitness(prng io.Reader) Witness {
+func (s *Scheme) RandomOpening(prng io.Reader) (Opening, error) {
 	witness, err := s.pk.H.Curve().ScalarField().Random(prng)
 	if err != nil {
-		panic(err)
+		return nil, errs.WrapRandomSample(err, "cannot sample opening")
 	}
-	return witness
+	return witness, nil
 }
 
-func (s *Scheme) CommitWithWitness(message Message, witness Witness) *Commitment {
-	return EncryptWithNonce(s.pk, message, witness)
+func (s *Scheme) CommitWithOpening(message Message, witness Opening) (*Commitment, error) {
+	return EncryptWithNonce(s.pk, message, witness), nil
 }
 
-func (s *Scheme) Commit(message Message, prng io.Reader) (*Commitment, Witness) {
-	witness := s.RandomWitness(prng)
-	return EncryptWithNonce(s.pk, message, witness), witness
+func (s *Scheme) Commit(message Message, prng io.Reader) (*Commitment, Opening, error) {
+	witness, err := s.RandomOpening(prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSample(err, "cannot sample opening")
+	}
+	return EncryptWithNonce(s.pk, message, witness), witness, nil
 }
 
-func (s *Scheme) Verify(message Message, commitment *Commitment, witness Witness) error {
+func (s *Scheme) Verify(message Message, commitment *Commitment, witness Opening) error {
 	if message == nil || commitment == nil || witness == nil {
 		return errs.NewVerification("verification failed")
 	}
-	rhs := s.CommitWithWitness(message, witness)
-	if s.IsEqual(commitment, rhs) {
-		return nil
+	rhs, err := s.CommitWithOpening(message, witness)
+	if err != nil {
+		return errs.WrapVerification(err, "verification failed")
+	}
+	if !s.IsEqual(commitment, rhs) {
+		return errs.NewVerification("verification failed")
 	}
 
-	return errs.NewVerification("verification failed")
+	return nil
 }
 
 func (s *Scheme) IsEqual(lhs, rhs *Commitment) bool {
@@ -108,26 +114,26 @@ func (s *Scheme) CommitmentScale(x *Commitment, sc Scalar) *Commitment {
 	}
 }
 
-func (s *Scheme) WitnessSum(x Witness, ys ...Witness) Witness {
+func (s *Scheme) OpeningSum(x Opening, ys ...Opening) Opening {
 	sum := x.Clone()
 	for _, y := range ys {
-		sum = s.WitnessAdd(sum, y)
+		sum = s.OpeningAdd(sum, y)
 	}
 	return sum
 }
 
-func (s *Scheme) WitnessAdd(x, y Witness) Witness {
+func (s *Scheme) OpeningAdd(x, y Opening) Opening {
 	return x.Add(y)
 }
 
-func (s *Scheme) WitnessSub(x, y Witness) Witness {
+func (s *Scheme) OpeningSub(x, y Opening) Opening {
 	return x.Sub(y)
 }
 
-func (s *Scheme) WitnessNeg(x Witness) Witness {
+func (s *Scheme) OpeningNeg(x Opening) Opening {
 	return x.Neg()
 }
 
-func (s *Scheme) WitnessScale(x Witness, sc Scalar) Witness {
+func (s *Scheme) OpeningScale(x Opening, sc Scalar) Opening {
 	return x.Mul(sc)
 }

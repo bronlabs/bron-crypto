@@ -45,7 +45,7 @@ type Cosigner struct {
 
 type PrimaryCosignerState struct {
 	k1           curves.Scalar
-	bigR1Opening hashcommitments.Witness
+	bigR1Opening hashcommitments.Opening
 	bigR         curves.Point
 	r            curves.Scalar
 	bigR1        curves.Point

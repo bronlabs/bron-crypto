@@ -43,10 +43,10 @@ func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, err erro
 	// 3. compute Rcom = commit(R1, R2, pid, sessionId, S)
 	crs := hashcommitments.CrsFromSessionId(p.SessionId, []byte(commitmentDomainRLabel), p.state.pid, p.state.bigS)
 	committer := hashcommitments.NewScheme(crs)
-	commitment, opening := committer.Commit(hashcommitments.Message{bigR1.ToAffineCompressed(), bigR2.ToAffineCompressed()}, p.Prng)
-	//if err != nil {
-	//	return nil, errs.NewFailed("cannot commit to R")
-	//}
+	commitment, opening, err := committer.Commit(hashcommitments.Message{bigR1.ToAffineCompressed(), bigR2.ToAffineCompressed()}, p.Prng)
+	if err != nil {
+		return nil, errs.NewFailed("cannot commit to R")
+	}
 
 	broadcast := &Round1Broadcast{
 		BigRCommitment: commitment,

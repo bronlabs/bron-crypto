@@ -55,7 +55,7 @@ type Round3Output struct {
 	RangeVerifierOutput *paillierrange.Round3Output
 	A                   *saferith.Nat
 	B                   *saferith.Nat
-	CDoublePrimeOpening hashcommitments.Witness
+	CDoublePrimeOpening hashcommitments.Opening
 
 	_ ds.Incomparable
 }
@@ -80,7 +80,7 @@ func (r3out *Round3Output) Validate() error {
 type Round4Output struct {
 	RangeProverOutput *paillierrange.Round4Output
 	BigQHat           curves.Point
-	BigQHatOpening    hashcommitments.Witness
+	BigQHatOpening    hashcommitments.Opening
 
 	_ ds.Incomparable
 }

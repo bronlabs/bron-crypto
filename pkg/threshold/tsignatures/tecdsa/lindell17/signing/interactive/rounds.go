@@ -29,10 +29,10 @@ func (pc *PrimaryCosigner) Round1() (r1out *Round1OutputP2P, err error) {
 	// step 1.2: c1 <- Commit(sid || Q || R1)
 	crs := hashcommitments.CrsFromSessionId(pc.SessionId, pc.myAuthKey.PublicKey().ToAffineCompressed())
 	committer := hashcommitments.NewScheme(crs)
-	bigR1Commitment, bigR1Opening := committer.Commit(hashcommitments.Message{pc.state.bigR1.ToAffineCompressed()}, pc.Prng)
-	//if err != nil {
-	//	return nil, errs.NewFailed("cannot commit to R")
-	//}
+	bigR1Commitment, bigR1Opening, err := committer.Commit(hashcommitments.Message{pc.state.bigR1.ToAffineCompressed()}, pc.Prng)
+	if err != nil {
+		return nil, errs.NewFailed("cannot commit to R")
+	}
 
 	pc.state.bigR1Opening = bigR1Opening
 

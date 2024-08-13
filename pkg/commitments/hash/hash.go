@@ -1,4 +1,4 @@
-package hashcommitments
+package hashcommitment
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
@@ -12,14 +12,14 @@ import (
 
 var (
 	_ commitments.Message    = Message(nil)
-	_ commitments.Witness    = Witness(nil)
+	_ commitments.Opening    = Opening(nil)
 	_ commitments.Commitment = Commitment(nil)
 
-	_ commitments.Scheme[Commitment, Message, Witness] = (*Scheme)(nil)
+	_ commitments.Scheme[Commitment, Message, Opening] = (*Scheme)(nil)
 )
 
 type Message = [][]byte
-type Witness = []byte
+type Opening = []byte
 type Commitment = []byte
 
 type Scheme struct {
@@ -32,36 +32,47 @@ func NewScheme(crs []byte) *Scheme {
 	}
 }
 
-func (s *Scheme) RandomWitness(prng io.Reader) Witness {
+func (s *Scheme) RandomOpening(prng io.Reader) (Opening, error) {
 	var witness [base.CollisionResistanceBytes]byte
 	_, err := io.ReadFull(prng, witness[:])
 	if err != nil {
-		panic(err)
+		return nil, errs.WrapRandomSample(err, "cannot sample opening")
 	}
 
-	return witness[:]
+	return witness[:], nil
 }
 
-func (s *Scheme) CommitWithWitness(message Message, witness Witness) Commitment {
+func (s *Scheme) CommitWithOpening(message Message, witness Opening) (Commitment, error) {
 	commitment, err := hashing.KmacPrefixedLength(witness, s.crs, sha3.NewCShake128, message...)
 	if err != nil {
-		panic(err)
+		return nil, errs.WrapHashing(err, "cannot compute digest")
 	}
-	return commitment
+	return commitment, nil
 }
 
-func (s *Scheme) Commit(message Message, prng io.Reader) (Commitment, Witness) {
-	witness := s.RandomWitness(prng)
-	return s.CommitWithWitness(message, witness), witness
-}
-
-func (s *Scheme) Verify(message Message, commitment Commitment, witness Witness) error {
-	rhs := s.CommitWithWitness(message, witness)
-	if s.IsEqual(commitment, rhs) {
-		return nil
+func (s *Scheme) Commit(message Message, prng io.Reader) (Commitment, Opening, error) {
+	witness, err := s.RandomOpening(prng)
+	if err != nil {
+		return nil, nil, errs.WrapRandomSample(err, "cannot sample opening")
+	}
+	commitment, err := s.CommitWithOpening(message, witness)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot compute commitment")
 	}
 
-	return errs.NewVerification("verification failed")
+	return commitment, witness, nil
+}
+
+func (s *Scheme) Verify(message Message, commitment Commitment, witness Opening) error {
+	rhs, err := s.CommitWithOpening(message, witness)
+	if err != nil {
+		return errs.WrapVerification(err, "verification failed")
+	}
+	if !s.IsEqual(commitment, rhs) {
+		return errs.NewVerification("verification failed")
+	}
+
+	return nil
 }
 
 func (s *Scheme) IsEqual(lhs, rhs Commitment) bool {

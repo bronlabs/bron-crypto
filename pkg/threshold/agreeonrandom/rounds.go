@@ -22,10 +22,10 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 
 	// step 1.2: commit your sample
 	committer := hashcommitments.NewScheme(hashcommitments.CrsFromSessionId(nil))
-	commitment, opening := committer.Commit(hashcommitments.Message{r_i.Bytes()}, p.Prng)
-	//if err != nil {
-	//	return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.IdentityKey().String())
-	//}
+	commitment, opening, err := committer.Commit(hashcommitments.Message{r_i.Bytes()}, p.Prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.IdentityKey().String())
+	}
 	p.state.r_i = r_i
 	p.state.opening = opening
 

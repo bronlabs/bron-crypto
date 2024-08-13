@@ -30,7 +30,7 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 	// step 1.2: public instance key BigR_i
 	state.BigR_i = protocol.Curve().ScalarBaseMult(state.R_i)
 
-	state.InstanceKeyOpening = make(map[types.SharingID]hashcommitments.Witness)
+	state.InstanceKeyOpening = make(map[types.SharingID]hashcommitments.Opening)
 	state.Chi_i = make(map[types.SharingID]curves.Scalar)
 	outputP2P := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round1P2P]()
 
@@ -48,10 +48,10 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 		// step 1.4: (c'_ij, w_ij) <- Commit(i || j || sid || R_i)
 		committerCrs := hashcommitments.CrsFromSessionId(p.SessionId, bitstring.ToBytes32LE(int32(p.SharingId())), bitstring.ToBytes32LE(int32(sharingId)))
 		committer := hashcommitments.NewScheme(committerCrs)
-		commitmentToInstanceKey, opening := committer.Commit(hashcommitments.Message{state.BigR_i.ToAffineCompressed()}, p.Prng)
-		//if err != nil {
-		//	return nil, nil, errs.NewFailed("cannot commit to instance key")
-		//}
+		commitmentToInstanceKey, opening, err := committer.Commit(hashcommitments.Message{state.BigR_i.ToAffineCompressed()}, p.Prng)
+		if err != nil {
+			return nil, nil, errs.NewFailed("cannot commit to instance key")
+		}
 		state.InstanceKeyOpening[sharingId] = opening
 
 		// step 1.5: Run γ_ij <- RVOLE.Round1() as Bob

@@ -54,7 +54,7 @@ func (r2out *Round2Output) Validate(t int) error {
 
 type Round3Output struct {
 	E           *big.Int
-	EsidOpening hashcommitments.Witness
+	EsidOpening hashcommitments.Opening
 
 	_ ds.Incomparable
 }

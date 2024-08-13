@@ -25,7 +25,7 @@ type Round1P2P = setup.Round1P2P
 type Round2Broadcast struct {
 	BigR1       curves.Point
 	BigR2       curves.Point
-	BigROpening hashcommitments.Witness
+	BigROpening hashcommitments.Opening
 	BigR1Proof  compiler.NIZKPoKProof
 	BigR2Proof  compiler.NIZKPoKProof
 

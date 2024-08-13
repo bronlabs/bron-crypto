@@ -50,7 +50,7 @@ type State struct {
 type committedSeedContribution struct {
 	seed       []byte
 	commitment hashcommitments.Commitment
-	opening    hashcommitments.Witness
+	opening    hashcommitments.Opening
 
 	_ ds.Incomparable
 }

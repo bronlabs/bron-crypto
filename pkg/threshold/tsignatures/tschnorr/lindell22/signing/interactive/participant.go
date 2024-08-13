@@ -29,7 +29,7 @@ type state struct {
 	bigS    []byte
 	k       curves.Scalar
 	bigR    curves.Point
-	opening hashcommitments.Witness
+	opening hashcommitments.Opening
 
 	theirBigRCommitment ds.Map[types.IdentityKey, hashcommitments.Commitment]
 

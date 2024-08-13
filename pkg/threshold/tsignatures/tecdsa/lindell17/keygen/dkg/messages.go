@@ -28,7 +28,7 @@ type Round1Broadcast struct {
 }
 
 type Round2Broadcast struct {
-	BigQOpening          hashcommitments.Witness
+	BigQOpening          hashcommitments.Opening
 	BigQPrime            curves.Point
 	BigQPrimeProof       compiler.NIZKPoKProof
 	BigQDoublePrime      curves.Point

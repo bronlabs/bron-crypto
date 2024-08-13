@@ -1,4 +1,4 @@
-package hashcommitments_test
+package hashcommitment_test
 
 import (
 	crand "crypto/rand"
@@ -31,13 +31,14 @@ func TestHappyPathCommitment(t *testing.T) {
 		t.Run(string(slices.Concat(message[:]...)), func(t *testing.T) {
 			t.Parallel()
 
-			scheme := hashcommitments.NewScheme(crs)
+			scheme := hashcommitment.NewScheme(crs)
 
-			commitment, witness := scheme.Commit(message, prng)
+			commitment, witness, err := scheme.Commit(message, prng)
+			require.NoError(t, err)
 			require.NotNil(t, commitment)
 			require.NotNil(t, witness)
 
-			err := scheme.Verify(message, commitment, witness)
+			err = scheme.Verify(message, commitment, witness)
 			require.NoError(t, err)
 
 			if len(message[0]) > 0 {

@@ -36,7 +36,7 @@ func (p *Participant) IdentityKey() types.IdentityKey {
 
 type State struct {
 	r_i                 curves.Scalar
-	opening             hashcommitments.Witness
+	opening             hashcommitments.Opening
 	receivedCommitments ds.Map[types.IdentityKey, hashcommitments.Commitment]
 
 	_ ds.Incomparable

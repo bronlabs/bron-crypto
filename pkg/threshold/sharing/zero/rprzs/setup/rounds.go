@@ -39,10 +39,10 @@ func (p *Participant) Round1() (network.RoundMessages[types.Protocol, *Round1P2P
 		//if err != nil {
 		//	return nil, errs.WrapFailed(err, "cannot instantiate committer")
 		//}
-		commitment, opening := committer.Commit(hashcommitments.Message{seedForThisParticipant[:]}, p.Prng)
-		//if err != nil {
-		//	return nil, errs.WrapFailed(err, "could not commit to the seed for participant with index %d", participantIndex)
-		//}
+		commitment, opening, err := committer.Commit(hashcommitments.Message{seedForThisParticipant[:]}, p.Prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not commit to the seed for participant with index %d", participantIndex)
+		}
 		p.state.sentSeeds.Put(participant, &committedSeedContribution{
 			seed:       seedForThisParticipant[:],
 			commitment: commitment,

@@ -29,10 +29,10 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 
 	crs := hashcommitments.CrsFromSessionId(p.sessionId, p.IdentityKey().PublicKey().ToAffineCompressed())
 	committer := hashcommitments.NewScheme(crs)
-	bigRCommitment, bigROpening := committer.Commit(hashcommitments.Message{bigR.ToAffineCompressed()}, p.prng)
-	//if err != nil {
-	//	return nil, errs.NewFailed("cannot commit to R")
-	//}
+	bigRCommitment, bigROpening, err := committer.Commit(hashcommitments.Message{bigR.ToAffineCompressed()}, p.prng)
+	if err != nil {
+		return nil, errs.NewFailed("cannot commit to R")
+	}
 
 	p.state.k = k
 	p.state.bigR = bigR

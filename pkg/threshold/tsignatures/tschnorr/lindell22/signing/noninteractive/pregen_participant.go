@@ -59,7 +59,7 @@ type state struct {
 	k2                  curves.Scalar
 	bigR1               curves.Point
 	bigR2               curves.Point
-	opening             hashcommitments.Witness
+	opening             hashcommitments.Opening
 	theirBigRCommitment ds.Map[types.IdentityKey, hashcommitments.Commitment]
 
 	_ ds.Incomparable
