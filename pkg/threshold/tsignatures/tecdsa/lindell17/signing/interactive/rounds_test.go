@@ -201,6 +201,7 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 }
 
 func doJf(t *testing.T, sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys) {
+	t.Helper()
 	jfParticipants, err := jfTestutils.MakeParticipants(t, sid, protocol, identities, cn, nil)
 	require.NoError(t, err)
 	r1OutsB, r1OutsU, err := jfTestutils.DoDkgRound1(t, jfParticipants)

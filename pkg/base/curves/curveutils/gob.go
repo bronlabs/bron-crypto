@@ -10,11 +10,11 @@ import (
 )
 
 func RegisterCurvesForGob() {
-		bls12381.RegisterForGob()
-		bls12381.RegisterForGob()
-		curve25519.RegisterForGob()
-		edwards25519.RegisterForGob()
-		k256.RegisterForGob()
-		p256.RegisterForGob()
-		pallas.RegisterForGob()
+	bls12381.RegisterForGob()
+	bls12381.RegisterForGob()
+	curve25519.RegisterForGob()
+	edwards25519.RegisterForGob()
+	k256.RegisterForGob()
+	p256.RegisterForGob()
+	pallas.RegisterForGob()
 }
