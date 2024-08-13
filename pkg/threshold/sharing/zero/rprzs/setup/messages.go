@@ -25,7 +25,7 @@ type Round2P2P struct {
 	_ ds.Incomparable
 }
 
-func (r1p2p *Round1P2P) Validate(protocol types.Protocol) error {
+func (*Round1P2P) Validate(protocol types.Protocol) error {
 	return nil
 }
 

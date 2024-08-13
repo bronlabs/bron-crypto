@@ -25,7 +25,7 @@ type Round2Broadcast struct {
 	_ ds.Incomparable
 }
 
-func (r1b *Round1Broadcast) Validate(protocol types.Protocol) error {
+func (*Round1Broadcast) Validate(protocol types.Protocol) error {
 	return nil
 }
 

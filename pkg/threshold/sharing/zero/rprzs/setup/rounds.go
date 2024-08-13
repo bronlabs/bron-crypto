@@ -36,9 +36,6 @@ func (p *Participant) Round1() (network.RoundMessages[types.Protocol, *Round1P2P
 		}
 		// step 1.2: commit to the seed
 		committer := hashcommitments.NewScheme(hashcommitments.CrsFromSessionId(p.SessionId))
-		//if err != nil {
-		//	return nil, errs.WrapFailed(err, "cannot instantiate committer")
-		//}
 		commitment, opening, err := committer.Commit(hashcommitments.Message{seedForThisParticipant[:]}, p.Prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not commit to the seed for participant with index %d", participantIndex)

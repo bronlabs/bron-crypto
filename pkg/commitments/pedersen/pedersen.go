@@ -93,19 +93,19 @@ func (s *Scheme) CommitmentSum(x Commitment, ys ...Commitment) Commitment {
 	return sum
 }
 
-func (s *Scheme) CommitmentAdd(x, y Commitment) Commitment {
+func (*Scheme) CommitmentAdd(x, y Commitment) Commitment {
 	return x.Add(y)
 }
 
-func (s *Scheme) CommitmentSub(x, y Commitment) Commitment {
+func (*Scheme) CommitmentSub(x, y Commitment) Commitment {
 	return x.Sub(y)
 }
 
-func (s *Scheme) CommitmentNeg(x Commitment) Commitment {
+func (*Scheme) CommitmentNeg(x Commitment) Commitment {
 	return x.Neg()
 }
 
-func (s *Scheme) CommitmentScale(x Commitment, sc Scalar) Commitment {
+func (*Scheme) CommitmentScale(x Commitment, sc Scalar) Commitment {
 	return x.ScalarMul(sc)
 }
 
@@ -117,18 +117,18 @@ func (s *Scheme) OpeningSum(x Opening, ys ...Opening) Opening {
 	return sum
 }
 
-func (s *Scheme) OpeningAdd(x, y Opening) Opening {
+func (*Scheme) OpeningAdd(x, y Opening) Opening {
 	return x.Add(y)
 }
 
-func (s *Scheme) OpeningSub(x, y Opening) Opening {
+func (*Scheme) OpeningSub(x, y Opening) Opening {
 	return x.Sub(y)
 }
 
-func (s *Scheme) OpeningNeg(x Opening) Opening {
+func (*Scheme) OpeningNeg(x Opening) Opening {
 	return x.Neg()
 }
 
-func (s *Scheme) OpeningScale(x Opening, sc Scalar) Opening {
+func (*Scheme) OpeningScale(x Opening, sc Scalar) Opening {
 	return x.Mul(sc)
 }

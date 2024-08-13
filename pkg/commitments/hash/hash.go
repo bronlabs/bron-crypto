@@ -32,7 +32,7 @@ func NewScheme(crs []byte) *Scheme {
 	}
 }
 
-func (s *Scheme) RandomOpening(prng io.Reader) (Opening, error) {
+func (*Scheme) RandomOpening(prng io.Reader) (Opening, error) {
 	var witness [base.CollisionResistanceBytes]byte
 	_, err := io.ReadFull(prng, witness[:])
 	if err != nil {
@@ -75,6 +75,6 @@ func (s *Scheme) Verify(message Message, commitment Commitment, witness Opening)
 	return nil
 }
 
-func (s *Scheme) IsEqual(lhs, rhs Commitment) bool {
+func (*Scheme) IsEqual(lhs, rhs Commitment) bool {
 	return slices.Equal(lhs, rhs)
 }

@@ -34,7 +34,7 @@ type Round2Broadcast struct {
 
 type Round2P2P = setup.Round2P2P
 
-func (r1b *Round1Broadcast) Validate(_ types.ThresholdProtocol) error {
+func (*Round1Broadcast) Validate(_ types.ThresholdProtocol) error {
 	return nil
 }
 

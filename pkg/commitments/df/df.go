@@ -85,7 +85,7 @@ func (s *Scheme) Verify(message *Message, commitment *Commitment, witness *Openi
 	return nil
 }
 
-func (s *Scheme) IsEqual(lhs, rhs *Commitment) bool {
+func (*Scheme) IsEqual(lhs, rhs *Commitment) bool {
 	if lhs == nil || rhs == nil {
 		return lhs == rhs
 	}
@@ -127,7 +127,7 @@ func (s *Scheme) OpeningSum(x *Opening, ys ...*Opening) *Opening {
 	return sum
 }
 
-func (s *Scheme) OpeningAdd(x, y *Opening) *Opening {
+func (*Scheme) OpeningAdd(x, y *Opening) *Opening {
 	return new(saferith.Int).Add(x, y, -1)
 }
 
@@ -135,10 +135,10 @@ func (s *Scheme) OpeningSub(x, y *Opening) *Opening {
 	return new(saferith.Int).Add(x, s.OpeningNeg(y), -1)
 }
 
-func (s *Scheme) OpeningNeg(x *Opening) *Opening {
+func (*Scheme) OpeningNeg(x *Opening) *Opening {
 	return new(saferith.Int).SetInt(x).Neg(1)
 }
 
-func (s *Scheme) OpeningScale(x *Opening, sc *Scalar) *Opening {
+func (*Scheme) OpeningScale(x *Opening, sc *Scalar) *Opening {
 	return new(saferith.Int).Mul(x, sc, -1)
 }

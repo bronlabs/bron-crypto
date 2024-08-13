@@ -66,7 +66,7 @@ func (s *Scheme) Verify(message Message, commitment *Commitment, witness Opening
 	return nil
 }
 
-func (s *Scheme) IsEqual(lhs, rhs *Commitment) bool {
+func (*Scheme) IsEqual(lhs, rhs *Commitment) bool {
 	if lhs == nil || rhs == nil {
 		return lhs == rhs
 	}
@@ -86,28 +86,28 @@ func (s *Scheme) CommitmentSum(x *Commitment, ys ...*Commitment) *Commitment {
 	return sum
 }
 
-func (s *Scheme) CommitmentAdd(x, y *Commitment) *Commitment {
+func (*Scheme) CommitmentAdd(x, y *Commitment) *Commitment {
 	return &Commitment{
 		C1: x.C1.Add(y.C1),
 		C2: x.C2.Add(y.C2),
 	}
 }
 
-func (s *Scheme) CommitmentSub(x, y *Commitment) *Commitment {
+func (*Scheme) CommitmentSub(x, y *Commitment) *Commitment {
 	return &Commitment{
 		C1: x.C1.Sub(y.C1),
 		C2: x.C2.Sub(y.C2),
 	}
 }
 
-func (s *Scheme) CommitmentNeg(x *Commitment) *Commitment {
+func (*Scheme) CommitmentNeg(x *Commitment) *Commitment {
 	return &Commitment{
 		C1: x.C1.Neg(),
 		C2: x.C2.Neg(),
 	}
 }
 
-func (s *Scheme) CommitmentScale(x *Commitment, sc Scalar) *Commitment {
+func (*Scheme) CommitmentScale(x *Commitment, sc Scalar) *Commitment {
 	return &Commitment{
 		C1: x.C1.ScalarMul(sc),
 		C2: x.C2.ScalarMul(sc),
@@ -122,18 +122,18 @@ func (s *Scheme) OpeningSum(x Opening, ys ...Opening) Opening {
 	return sum
 }
 
-func (s *Scheme) OpeningAdd(x, y Opening) Opening {
+func (*Scheme) OpeningAdd(x, y Opening) Opening {
 	return x.Add(y)
 }
 
-func (s *Scheme) OpeningSub(x, y Opening) Opening {
+func (*Scheme) OpeningSub(x, y Opening) Opening {
 	return x.Sub(y)
 }
 
-func (s *Scheme) OpeningNeg(x Opening) Opening {
+func (*Scheme) OpeningNeg(x Opening) Opening {
 	return x.Neg()
 }
 
-func (s *Scheme) OpeningScale(x Opening, sc Scalar) Opening {
+func (*Scheme) OpeningScale(x Opening, sc Scalar) Opening {
 	return x.Mul(sc)
 }
