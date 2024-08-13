@@ -54,7 +54,7 @@ func Hmac(key []byte, h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 	return out, nil
 }
 
-// Same as Hmac but applies encodedPrefixLength to the inputs.
+// HmacPrefixedLength same as Hmac but applies encodedPrefixLength to the inputs.
 func HmacPrefixedLength(key []byte, h func() hash.Hash, xs ...[]byte) []byte {
 	hmacFunc := func() hash.Hash { return hmac.New(h, key) }
 	out := HashPrefixedLength(hmacFunc, xs...)
@@ -78,7 +78,7 @@ func Kmac(key, customizationString []byte, h func(n, s []byte) sha3.ShakeHash, x
 	return k.Sum(nil), nil
 }
 
-// Same as Kmac but applies encodedPrefixLength to the inputs.
+// KmacPrefixedLength same as Kmac but applies encodedPrefixLength to the inputs.
 func KmacPrefixedLength(key, customizationString []byte, h func(n, s []byte) sha3.ShakeHash, xs ...[]byte) ([]byte, error) {
 	cShake := h([]byte("KMAC"), customizationString)
 	if len(key) < cShake.Size()/2 {

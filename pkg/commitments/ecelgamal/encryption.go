@@ -1,4 +1,4 @@
-package elgamalcommitment
+package ecelgamalcommitment
 
 import "github.com/copperexchange/krypton-primitives/pkg/base/curves"
 

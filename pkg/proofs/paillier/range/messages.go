@@ -7,8 +7,8 @@ import (
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 type Round1Output struct {

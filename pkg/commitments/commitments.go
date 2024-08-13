@@ -12,7 +12,7 @@ type Scheme[C Commitment, M Message, O Opening] interface {
 	CommitWithOpening(message M, witness O) (C, error)
 	Commit(message M, prng io.Reader) (C, O, error)
 	Verify(message M, commitment C, witness O) error
-	IsEqual(lhs, rhs C) bool
+	CommitmentEqual(lhs, rhs C) bool
 }
 
 type HomomorphicScheme[C Commitment, M Message, O Opening, S Scalar] interface {

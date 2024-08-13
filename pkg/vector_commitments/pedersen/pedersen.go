@@ -1,93 +1,96 @@
-package pedersenvectorcommitments
+package vpedersencomm
 
-//import (
-//	"fmt"
-//
-//	"github.com/copperexchange/krypton-primitives/pkg/base"
-//	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-//	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-//	"github.com/copperexchange/krypton-primitives/pkg/commitments"
-//	pedersencommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/pedersen"
-//	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-//	vc "github.com/copperexchange/krypton-primitives/pkg/vector_commitments"
-//)
-//
-//const Name = "PEDERSEN_VECTOR_COMMITMENT"
-//
-//var (
-//	_ commitments.Opening[Vector] = (*Opening)(nil)
-//	_ vc.VectorCommitment         = (*VectorCommitment)(nil)
-//
-//	// hardcoded seed used to derive generators along with the session-id.
-//	somethingUpMySleeve = []byte(fmt.Sprintf("COPPER_KRYPTON_%s_SOMETHING_UP_MY_SLEEVE-", Name))
-//)
-//
-//type VectorElement = pedersencommitments.Message
-//type Witness = pedersencommitments.Witness
-//
-//type Vector []VectorElement
-//
-//func (v Vector) Equal(w vc.Vector[VectorElement]) bool {
-//	ww, ok := w.(Vector)
-//	if !ok || len(v) != len(ww) {
-//		return false
-//	}
-//	for i, vi := range v {
-//		if !vi.Equal(ww[i]) {
-//			return false
-//		}
-//	}
-//	return true
-//}
-//
-//type Opening struct {
-//	vector  Vector
-//	witness Witness
-//}
-//
-//type VectorCommitment struct {
-//	value curves.Point
-//}
-//
-//// This function draw different generators through hash2curve chaining.
-//func sampleGenerators(sessionId []byte, curve curves.Curve, n uint) ([]curves.Point, error) {
-//	if curve == nil {
-//		return nil, errs.NewIsNil("curve is nil")
-//	}
-//	generators := make([]curves.Point, n)
-//	// Derive the initial point from session identifier and SomethingUpMySleeve
-//	hBytes, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, sessionId, somethingUpMySleeve)
-//	if err != nil {
-//		return nil, errs.WrapHashing(err, "failed to hash sessionId")
-//	}
-//	for i := range generators {
-//		generators[i], err = curve.Hash(hBytes)
-//		if err != nil {
-//			return nil, errs.WrapHashing(err, "failed to hash to curve for H")
-//		}
-//		// Subsequent points are linked to the previous ones
-//		hBytes = append(hBytes, generators[i].ToAffineCompressed()...)
-//	}
-//	return generators, nil
-//}
-//
-//func (o *Opening) GetMessage() Vector {
-//	return o.vector
-//}
-//
-//func (vectorCommitment *VectorCommitment) Validate() error {
-//	if vectorCommitment == nil {
-//		return errs.NewIsNil("receiver")
-//	}
-//	if !vectorCommitment.value.IsInPrimeSubGroup() {
-//		return errs.NewMembership("commitment is not part of the prime order subgroup")
-//	}
-//	return nil
-//}
-//
-//func (o *Opening) Validate() error {
-//	if o == nil {
-//		return errs.NewIsNil("receiver")
-//	}
-//	return nil
-//}
+import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	vectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments"
+	"io"
+)
+
+var (
+	_ vectorcommitments.Element    = Element(nil)
+	_ vectorcommitments.Commitment = Commitment(nil)
+	_ vectorcommitments.Opening    = Opening(nil)
+
+	_ vectorcommitments.Scheme[Commitment, Element, Opening] = (*Scheme)(nil)
+)
+
+type Element = curves.Scalar
+type Commitment = curves.Point
+type Opening = curves.Scalar
+
+type Scheme struct {
+	gs []curves.Point
+	h  curves.Point
+}
+
+func NewScheme(gs []curves.Point, h curves.Point) *Scheme {
+	return &Scheme{
+		gs: gs,
+		h:  h,
+	}
+}
+
+func (s *Scheme) RandomOpening(prng io.Reader) (Opening, error) {
+	r, err := s.h.Curve().ScalarField().Random(prng)
+	if err != nil {
+		return nil, errs.NewRandomSample("cannot sample point")
+	}
+
+	return r, nil
+}
+
+func (s *Scheme) CommitWithOpening(vector []Element, opening Opening) (Commitment, error) {
+	if len(vector) != len(s.gs) {
+		return nil, errs.NewFailed("invalid vector length")
+	}
+
+	c := s.h.Curve().AdditiveIdentity()
+	for i, g := range s.gs {
+		gm := g.ScalarMul(vector[i])
+		c = c.Add(gm)
+	}
+	hr := s.h.ScalarMul(opening)
+	c = c.Add(hr)
+
+	return c, nil
+}
+
+func (s *Scheme) Commit(vector []Element, prng io.Reader) (Commitment, Opening, error) {
+	r, err := s.RandomOpening(prng)
+	if err != nil {
+		return nil, nil, errs.NewRandomSample("cannot sample point")
+	}
+
+	c, err := s.CommitWithOpening(vector, r)
+	if err != nil {
+		return nil, nil, errs.NewRandomSample("cannot sample opening")
+	}
+
+	return c, r, nil
+}
+
+func (s *Scheme) Verify(vector []Element, commitment Commitment, opening Opening) error {
+	if len(vector) == 0 || commitment == nil || opening == nil {
+		return errs.NewVerification("verification failed")
+	}
+
+	c, err := s.CommitWithOpening(vector, opening)
+	if err != nil {
+		return errs.WrapVerification(err, "verification failed")
+	}
+
+	if !s.CommitmentEqual(commitment, c) {
+		return errs.NewVerification("verification failed")
+	}
+
+	return nil
+}
+
+func (*Scheme) CommitmentEqual(lhs, rhs Commitment) bool {
+	if lhs == nil || rhs == nil {
+		return lhs == rhs
+	}
+
+	return lhs.Equal(rhs)
+}

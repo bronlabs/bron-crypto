@@ -6,11 +6,11 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	mult "github.com/copperexchange/krypton-primitives/pkg/threshold/mult/dkls23"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 var _ types.ThresholdSignatureParticipant = (*Participant)(nil)

@@ -5,8 +5,8 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {

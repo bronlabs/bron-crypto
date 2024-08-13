@@ -8,7 +8,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
@@ -17,6 +16,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 func (p *Participant) Round1() (output *Round1Broadcast, err error) {

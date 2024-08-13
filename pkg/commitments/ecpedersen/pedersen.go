@@ -1,4 +1,4 @@
-package pedersencommitment
+package ecpedersencommitment
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -70,14 +70,14 @@ func (s *Scheme) Verify(message Message, commitment Commitment, witness Opening)
 	if err != nil {
 		return errs.WrapVerification(err, "verification failed")
 	}
-	if !s.IsEqual(commitment, rhs) {
+	if !s.CommitmentEqual(commitment, rhs) {
 		return errs.NewVerification("verification failed")
 	}
 
 	return nil
 }
 
-func (s *Scheme) IsEqual(lhs, rhs Commitment) bool {
+func (*Scheme) CommitmentEqual(lhs, rhs Commitment) bool {
 	if lhs == nil || rhs == nil {
 		return rhs == lhs
 	}

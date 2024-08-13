@@ -6,9 +6,9 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	mult "github.com/copperexchange/krypton-primitives/pkg/threshold/mult/dkls23"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 var _ network.Message[types.ThresholdSignatureProtocol] = (*Round1Broadcast)(nil)

@@ -1,4 +1,4 @@
-package elgamalcommitment_test
+package ecelgamalcommitment_test
 
 import (
 	crand "crypto/rand"
@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments/elgamal"
+	"github.com/copperexchange/krypton-primitives/pkg/commitments/ecelgamal"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -35,11 +35,11 @@ func Test_HappyPath(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			pk := &elgamalcommitment.PublicKey{
+			pk := &ecelgamalcommitment.PublicKey{
 				G: g,
 				H: h,
 			}
-			scheme := elgamalcommitment.NewScheme(pk)
+			scheme := ecelgamalcommitment.NewScheme(pk)
 
 			message, err := curve.Random(prng)
 			require.NoError(t, err)
@@ -65,11 +65,11 @@ func Test_ShouldFailOnInvalidCommitmentOrOpening(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			pk := &elgamalcommitment.PublicKey{
+			pk := &ecelgamalcommitment.PublicKey{
 				G: g,
 				H: h,
 			}
-			scheme := elgamalcommitment.NewScheme(pk)
+			scheme := ecelgamalcommitment.NewScheme(pk)
 
 			message, err := curve.Random(prng)
 			require.NoError(t, err)
@@ -100,11 +100,11 @@ func Test_ShouldFailOnNilCommitment(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			pk := &elgamalcommitment.PublicKey{
+			pk := &ecelgamalcommitment.PublicKey{
 				G: g,
 				H: h,
 			}
-			scheme := elgamalcommitment.NewScheme(pk)
+			scheme := ecelgamalcommitment.NewScheme(pk)
 
 			message, err := curve.Random(prng)
 			require.NoError(t, err)
@@ -130,11 +130,11 @@ func Test_HappyPathAdd(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			pk := &elgamalcommitment.PublicKey{
+			pk := &ecelgamalcommitment.PublicKey{
 				G: g,
 				H: h,
 			}
-			scheme := elgamalcommitment.NewScheme(pk)
+			scheme := ecelgamalcommitment.NewScheme(pk)
 
 			messageA, err := curve.Random(prng)
 			require.NoError(t, err)
@@ -169,13 +169,13 @@ func Test_HappyPathSum(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			pk := &elgamalcommitment.PublicKey{
+			pk := &ecelgamalcommitment.PublicKey{
 				G: g,
 				H: h,
 			}
-			scheme := elgamalcommitment.NewScheme(pk)
+			scheme := ecelgamalcommitment.NewScheme(pk)
 
-			var messages [k]elgamalcommitment.Message
+			var messages [k]ecelgamalcommitment.Message
 			for i := range k {
 				messages[i], err = curve.Random(prng)
 				require.NoError(t, err)
@@ -186,8 +186,8 @@ func Test_HappyPathSum(t *testing.T) {
 				messagesSum = messagesSum.Add(m)
 			}
 
-			var commitments [k]*elgamalcommitment.Commitment
-			var witnesses [k]elgamalcommitment.Opening
+			var commitments [k]*ecelgamalcommitment.Commitment
+			var witnesses [k]ecelgamalcommitment.Opening
 			for i := range k {
 				var err error
 				commitments[i], witnesses[i], err = scheme.Commit(messages[i], prng)
@@ -214,11 +214,11 @@ func Test_HappyPathSub(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			pk := &elgamalcommitment.PublicKey{
+			pk := &ecelgamalcommitment.PublicKey{
 				G: g,
 				H: h,
 			}
-			scheme := elgamalcommitment.NewScheme(pk)
+			scheme := ecelgamalcommitment.NewScheme(pk)
 
 			messageA, err := curve.Random(prng)
 			require.NoError(t, err)
@@ -252,11 +252,11 @@ func Test_HappyPathNeg(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			pk := &elgamalcommitment.PublicKey{
+			pk := &ecelgamalcommitment.PublicKey{
 				G: g,
 				H: h,
 			}
-			scheme := elgamalcommitment.NewScheme(pk)
+			scheme := ecelgamalcommitment.NewScheme(pk)
 
 			message, err := curve.Random(prng)
 			require.NoError(t, err)
@@ -285,11 +285,11 @@ func Test_HappyPathScale(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			pk := &elgamalcommitment.PublicKey{
+			pk := &ecelgamalcommitment.PublicKey{
 				G: g,
 				H: h,
 			}
-			scheme := elgamalcommitment.NewScheme(pk)
+			scheme := ecelgamalcommitment.NewScheme(pk)
 
 			message, err := curve.Random(prng)
 			require.NoError(t, err)
@@ -320,11 +320,11 @@ func Test_OpenOnWrongAdd(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			pk := &elgamalcommitment.PublicKey{
+			pk := &ecelgamalcommitment.PublicKey{
 				G: g,
 				H: h,
 			}
-			scheme := elgamalcommitment.NewScheme(pk)
+			scheme := ecelgamalcommitment.NewScheme(pk)
 
 			messageA, err := curve.Random(prng)
 			require.NoError(t, err)
@@ -365,11 +365,11 @@ func Test_OpenOnWrongScale(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			pk := &elgamalcommitment.PublicKey{
+			pk := &ecelgamalcommitment.PublicKey{
 				G: g,
 				H: h,
 			}
-			scheme := elgamalcommitment.NewScheme(pk)
+			scheme := ecelgamalcommitment.NewScheme(pk)
 
 			message, err := curve.Random(prng)
 			require.NoError(t, err)

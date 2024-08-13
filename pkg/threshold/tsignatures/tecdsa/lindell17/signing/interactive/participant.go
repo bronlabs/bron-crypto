@@ -8,12 +8,12 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 const (

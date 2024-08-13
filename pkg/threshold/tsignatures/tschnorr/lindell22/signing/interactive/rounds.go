@@ -7,12 +7,12 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 const (

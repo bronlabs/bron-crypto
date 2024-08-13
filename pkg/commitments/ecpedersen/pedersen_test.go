@@ -1,4 +1,4 @@
-package pedersencommitment_test
+package ecpedersencommitment_test
 
 import (
 	crand "crypto/rand"
@@ -9,7 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments/pedersen"
+	"github.com/copperexchange/krypton-primitives/pkg/commitments/ecpedersen"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -35,7 +35,7 @@ func Test_HappyPath(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			scheme := pedersencommitment.NewScheme(g, h)
+			scheme := ecpedersencommitment.NewScheme(g, h)
 
 			message, err := curve.ScalarField().Random(prng)
 			require.NoError(t, err)
@@ -60,7 +60,7 @@ func Test_ShouldFailOnInvalidCommitmentOrOpening(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			scheme := pedersencommitment.NewScheme(g, h)
+			scheme := ecpedersencommitment.NewScheme(g, h)
 
 			message, err := curve.ScalarField().Random(prng)
 			require.NoError(t, err)
@@ -91,7 +91,7 @@ func Test_ShouldFailOnNilCommitment(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			scheme := pedersencommitment.NewScheme(g, h)
+			scheme := ecpedersencommitment.NewScheme(g, h)
 
 			message, err := curve.ScalarField().Random(prng)
 			require.NoError(t, err)
@@ -117,7 +117,7 @@ func Test_HappyPathAdd(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			scheme := pedersencommitment.NewScheme(g, h)
+			scheme := ecpedersencommitment.NewScheme(g, h)
 
 			messageA, err := curve.ScalarField().Random(prng)
 			require.NoError(t, err)
@@ -152,9 +152,9 @@ func Test_HappyPathSum(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			scheme := pedersencommitment.NewScheme(g, h)
+			scheme := ecpedersencommitment.NewScheme(g, h)
 
-			var messages [k]pedersencommitment.Message
+			var messages [k]ecpedersencommitment.Message
 			for i := range k {
 				messages[i], err = curve.ScalarField().Random(prng)
 				require.NoError(t, err)
@@ -165,8 +165,8 @@ func Test_HappyPathSum(t *testing.T) {
 				messagesSum = messagesSum.Add(m)
 			}
 
-			var commitments [k]pedersencommitment.Commitment
-			var openings [k]pedersencommitment.Opening
+			var commitments [k]ecpedersencommitment.Commitment
+			var openings [k]ecpedersencommitment.Opening
 			for i := range k {
 				var err error
 				commitments[i], openings[i], err = scheme.Commit(messages[i], prng)
@@ -193,7 +193,7 @@ func Test_HappyPathSub(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			scheme := pedersencommitment.NewScheme(g, h)
+			scheme := ecpedersencommitment.NewScheme(g, h)
 
 			messageA, err := curve.ScalarField().Random(prng)
 			require.NoError(t, err)
@@ -227,7 +227,7 @@ func Test_HappyPathNeg(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			scheme := pedersencommitment.NewScheme(g, h)
+			scheme := ecpedersencommitment.NewScheme(g, h)
 
 			message, err := curve.ScalarField().Random(prng)
 			require.NoError(t, err)
@@ -255,7 +255,7 @@ func Test_HappyPathScale(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			scheme := pedersencommitment.NewScheme(g, h)
+			scheme := ecpedersencommitment.NewScheme(g, h)
 
 			message, err := curve.ScalarField().Random(prng)
 			require.NoError(t, err)
@@ -286,7 +286,7 @@ func Test_OpenOnWrongAdd(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			scheme := pedersencommitment.NewScheme(g, h)
+			scheme := ecpedersencommitment.NewScheme(g, h)
 
 			messageA, err := curve.ScalarField().Random(prng)
 			require.NoError(t, err)
@@ -327,7 +327,7 @@ func Test_OpenOnWrongScale(t *testing.T) {
 			require.NoError(t, err)
 			h, err := curve.Random(prng)
 			require.NoError(t, err)
-			scheme := pedersencommitment.NewScheme(g, h)
+			scheme := ecpedersencommitment.NewScheme(g, h)
 
 			message, err := curve.ScalarField().Random(prng)
 			require.NoError(t, err)

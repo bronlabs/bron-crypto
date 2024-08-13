@@ -1,28 +1,56 @@
-package hashvectorcommitments_test
+package vhashcomm_test
 
-//import (
-//	crand "crypto/rand"
-//	"testing"
-//
-//	"github.com/stretchr/testify/require"
-//
-//	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
-//)
-//
-//func TestSimpleHappyPath(t *testing.T) {
-//	t.Parallel()
-//	sessionId := []byte("00000001")
-//	c, err := hashvectorcommitments.NewVectorCommitter(sessionId, crand.Reader)
-//	require.NoError(t, err)
-//	v := hashvectorcommitments.NewVectorVerifier(sessionId)
-//
-//	messages := hashvectorcommitments.Vector(make([]hashvectorcommitments.Message, 3))
-//	messages[0] = []byte("Hello")
-//	messages[1] = []byte("World")
-//	messages[2] = []byte("!")
-//
-//	com, opn, err := c.Commit(messages)
-//	require.NoError(t, err)
-//	err = v.Verify(com, opn)
-//	require.NoError(t, err)
-//}
+import (
+	crand "crypto/rand"
+	vhashcomm "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
+	"slices"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+var (
+	crs = []byte("00000001")
+
+	inputMessages = [][][]byte{
+		{[]byte("This is a test Message")},
+		{[]byte("two short msgs - 1"), []byte("two short msgs - 2")},
+		{[]byte(`This input field is intentionally longer than the SHA256 block size and the largest
+		rate of all SHA3 variants as defined in NIST FIPS PUB 202 (i.e. r = 1152 bits = 144 bytes for SHA3-224) 
+		to cover cases where multiple blocks have to be processed.`)},
+		{{0xFB, 0x1A, 0x18, 0x47, 0x39, 0x3C, 0x9F, 0x45, 0x5F, 0x29, 0x4C, 0x51, 0x42, 0x30, 0xA6, 0xB9}},
+		{{}},
+	}
+)
+
+func TestHappyPathCommitment(t *testing.T) {
+	t.Parallel()
+	prng := crand.Reader
+
+	for _, message := range inputMessages {
+		t.Run(string(slices.Concat(message[:]...)), func(t *testing.T) {
+			t.Parallel()
+
+			scheme := vhashcomm.NewScheme(crs)
+
+			commitment, witness, err := scheme.Commit(message, prng)
+			require.NoError(t, err)
+			require.NotNil(t, commitment)
+			require.NotNil(t, witness)
+
+			err = scheme.Verify(message, commitment, witness)
+			require.NoError(t, err)
+
+			if len(message[0]) > 0 {
+				message[0][0]++
+				t.Run("should fail if message invalid", func(t *testing.T) {
+					t.Parallel()
+
+					err := scheme.Verify(message, commitment, witness)
+					require.Error(t, err)
+
+				})
+			}
+		})
+	}
+}

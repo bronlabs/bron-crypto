@@ -9,8 +9,8 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {

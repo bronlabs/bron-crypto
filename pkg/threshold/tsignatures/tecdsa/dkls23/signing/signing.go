@@ -7,12 +7,12 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	mult "github.com/copperexchange/krypton-primitives/pkg/threshold/mult/dkls23"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState,

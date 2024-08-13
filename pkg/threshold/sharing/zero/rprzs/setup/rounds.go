@@ -8,10 +8,10 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 func (p *Participant) Round1() (network.RoundMessages[types.Protocol, *Round1P2P], error) {

@@ -1,4 +1,4 @@
-package hashcommitment
+package vhashcomm
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"

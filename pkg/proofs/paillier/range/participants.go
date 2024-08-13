@@ -8,10 +8,10 @@ import (
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 const (

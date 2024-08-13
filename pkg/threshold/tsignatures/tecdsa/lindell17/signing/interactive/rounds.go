@@ -4,13 +4,13 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing"
+	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 func (pc *PrimaryCosigner) Round1() (r1out *Round1OutputP2P, err error) {
