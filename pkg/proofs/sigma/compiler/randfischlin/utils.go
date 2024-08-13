@@ -17,13 +17,9 @@ func isAllZeros(data []byte) bool {
 	return zeros == 0
 }
 
-func hash(data ...[]byte) ([]byte, error) {
-	result, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, data...)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "cannot hash values")
-	}
-
-	return result[:LBytes], nil
+func hash(data ...[]byte) []byte {
+	result := hashing.HashPrefixedLength(base.RandomOracleHashFunction, data...)
+	return result[:LBytes]
 }
 
 func sample(existing [][]byte, length int, prng io.Reader) ([]byte, error) {

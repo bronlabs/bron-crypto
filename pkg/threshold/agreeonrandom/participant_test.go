@@ -26,8 +26,7 @@ func Test_CanInitialize(t *testing.T) {
 	aliceIdentityKey, bobIdentityKey := identities[0], identities[1]
 
 	var sharedSeed rprzs.Seed
-	hashed, err := hashing.HashPrefixedLength(sha3.New256, []byte("pepsi > coke"))
-	require.NoError(t, err)
+	hashed := hashing.HashPrefixedLength(sha3.New256, []byte("pepsi > coke"))
 	copy(sharedSeed[:], hashed)
 
 	protocol, err := testutils.MakeProtocol(curve, identities)

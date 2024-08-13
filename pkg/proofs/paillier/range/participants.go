@@ -38,7 +38,7 @@ func (p *Participant) SoundnessError() int {
 }
 
 type ProverState struct {
-	esidCommitment *hashcommitments.Commitment
+	esidCommitment hashcommitments.Commitment
 	w1             []*saferith.Nat
 	r1             []*saferith.Nat
 	w2             []*saferith.Nat
@@ -59,7 +59,7 @@ type Prover struct {
 
 type VerifierState struct {
 	e           *big.Int
-	esidOpening *hashcommitments.Opening
+	esidOpening hashcommitments.Witness
 	c1          []*paillier.CipherText
 	c2          []*paillier.CipherText
 

@@ -88,10 +88,7 @@ func (r *Receiver) Round2(r1out *Round1P2P) (r2out *Round2P2P, err error) {
 			subtle.ConstantTimeCopy(int(r.Output.Choices.Get(uint(i))), r2out.MaskedChoices[i][l], option1Bytes)
 			// step 2.4: Compute m_b
 			m_b := r.SenderPublicKey.ScalarMul(a)
-			output, err := hashing.HashPrefixedLength(ot.HashFunction, r.SessionId, []byte{byte(i*r.Protocol.L + l)}, m_b.ToAffineCompressed())
-			if err != nil {
-				return nil, errs.WrapHashing(err, "creating one time pad decryption keys")
-			}
+			output := hashing.HashPrefixedLength(ot.HashFunction, r.SessionId, []byte{byte(i*r.Protocol.L + l)}, m_b.ToAffineCompressed())
 			copy(r.Output.ChosenMessages[i][l][:], output)
 		}
 	}
@@ -133,10 +130,7 @@ func (s *Sender) Round3(r2out *Round2P2P) (r3out *Round3P2P, err error) {
 			m[1] = receiverChoiceMinusSenderPublicKey.ScalarMul(s.SecretKey)
 
 			for k := 0; k < 2; k++ {
-				output, err := hashing.HashPrefixedLength(ot.HashFunction, s.SessionId, []byte{byte(i*s.Protocol.L + l)}, m[k].ToAffineCompressed())
-				if err != nil {
-					return nil, errs.WrapHashing(err, "creating one time pad encryption keys")
-				}
+				output := hashing.HashPrefixedLength(ot.HashFunction, s.SessionId, []byte{byte(i*s.Protocol.L + l)}, m[k].ToAffineCompressed())
 				copy(s.Output.MessagePairs[i][k][l][:], output[:ot.KappaBytes])
 
 				// step 3.3: Compute challenge by XORing the hash of the hash of the key. Not a typo ;)

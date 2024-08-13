@@ -1,60 +1,69 @@
 package hashcommitments
 
 import (
-	"slices"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"golang.org/x/crypto/sha3"
+	"io"
+	"slices"
 )
-
-const Name commitments.Name = "HASH_COMMITMENT"
 
 var (
-	_ commitments.Message          = Message(nil)
-	_ commitments.Commitment       = (*Commitment)(nil)
-	_ commitments.Opening[Message] = (*Opening)(nil)
+	_ commitments.Message    = Message(nil)
+	_ commitments.Witness    = Witness(nil)
+	_ commitments.Commitment = Commitment(nil)
+
+	_ commitments.Scheme[Commitment, Message, Witness] = (*Scheme)(nil)
 )
 
-type Witness []byte
-type Message []byte
+type Message = [][]byte
+type Witness = []byte
+type Commitment = []byte
 
-type Opening struct {
-	Message Message
-	Witness Witness
+type Scheme struct {
+	crs []byte
 }
 
-type Commitment struct {
-	Value []byte
-}
-
-func (o *Opening) GetMessage() Message {
-	return o.Message
-}
-
-func (o *Opening) Validate() error {
-	if o == nil {
-		return errs.NewIsNil("receiver")
+func NewScheme(crs []byte) *Scheme {
+	return &Scheme{
+		crs: crs,
 	}
-	if len(o.Witness) < base.CollisionResistanceBytes {
-		return errs.NewArgument("Witness length (%d) < %d", len(o.Witness), base.CollisionResistanceBytes)
+}
+
+func (s *Scheme) RandomWitness(prng io.Reader) Witness {
+	var witness [base.CollisionResistanceBytes]byte
+	_, err := io.ReadFull(prng, witness[:])
+	if err != nil {
+		panic(err)
 	}
 
-	return nil
+	return witness[:]
 }
 
-func (c *Commitment) Validate() error {
-	if c == nil {
-		return errs.NewIsNil("receiver")
+func (s *Scheme) CommitWithWitness(message Message, witness Witness) Commitment {
+	commitment, err := hashing.KmacPrefixedLength(witness, s.crs, sha3.NewCShake128, message...)
+	if err != nil {
+		panic(err)
 	}
-	if len(c.Value) != base.CollisionResistanceBytes {
-		return errs.NewArgument("commitment length (%d) != %d", len(c.Value), base.CollisionResistanceBytes)
-	}
-
-	return nil
+	return commitment
 }
 
-func encodeSessionId(sessionId []byte) []byte {
-	return slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytes32LE(int32(len(sessionId))), sessionId)
+func (s *Scheme) Commit(message Message, prng io.Reader) (Commitment, Witness) {
+	witness := s.RandomWitness(prng)
+	return s.CommitWithWitness(message, witness), witness
+}
+
+func (s *Scheme) Verify(message Message, commitment Commitment, witness Witness) error {
+	rhs := s.CommitWithWitness(message, witness)
+	if s.IsEqual(commitment, rhs) {
+		return nil
+	}
+
+	return errs.NewVerification("verification failed")
+}
+
+func (s *Scheme) IsEqual(lhs, rhs Commitment) bool {
+	return slices.Equal(lhs, rhs)
 }

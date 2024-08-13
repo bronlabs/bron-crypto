@@ -32,13 +32,13 @@ type State struct {
 	myXDoublePrime    curves.Scalar
 	myBigQPrime       curves.Point
 	myBigQDoublePrime curves.Point
-	myBigQOpening     *hashcommitments.Opening
+	myBigQOpening     hashcommitments.Witness
 	myPaillierPk      *paillier.PublicKey
 	myPaillierSk      *paillier.SecretKey
 	myRPrime          *saferith.Nat
 	myRDoublePrime    *saferith.Nat
 
-	theirBigQCommitment          map[types.SharingID]*hashcommitments.Commitment
+	theirBigQCommitment          map[types.SharingID]hashcommitments.Commitment
 	theirBigQPrime               map[types.SharingID]curves.Point
 	theirBigQDoublePrime         map[types.SharingID]curves.Point
 	theirPaillierPublicKeys      ds.Map[types.IdentityKey, *paillier.PublicKey]

@@ -95,10 +95,7 @@ func ComputeR(protocolConfig types.ThresholdSignatureProtocol, sharingConfig typ
 		if !exists {
 			return nil, nil, nil, errs.NewMissing("couldn't find the sharing id for participant %s", identityKey.String())
 		}
-		rjMessage, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, []byte{byte(sharingId)}, message, combinedDsAndEs)
-		if err != nil {
-			return nil, nil, nil, errs.WrapHashing(err, "couldn't produce rj message")
-		}
+		rjMessage := hashing.HashPrefixedLength(base.RandomOracleHashFunction, []byte{byte(sharingId)}, message, combinedDsAndEs)
 		r_j, err := protocolConfig.SigningSuite().Curve().ScalarField().Hash(rjMessage)
 		if err != nil {
 			return nil, nil, nil, errs.WrapHashing(err, "could not hash to r_j")

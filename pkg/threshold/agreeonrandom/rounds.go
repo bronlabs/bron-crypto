@@ -1,8 +1,6 @@
 package agreeonrandom
 
 import (
-	"bytes"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
@@ -23,14 +21,11 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	}
 
 	// step 1.2: commit your sample
-	committer, err := hashcommitments.NewCommitter(nil, p.Prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot instantiate committer")
-	}
-	commitment, opening, err := committer.Commit(r_i.Bytes())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.IdentityKey().String())
-	}
+	committer := hashcommitments.NewScheme(hashcommitments.CrsFromSessionId(nil))
+	commitment, opening := committer.Commit(hashcommitments.Message{r_i.Bytes()}, p.Prng)
+	//if err != nil {
+	//	return nil, errs.WrapFailed(err, "could not commit to the seed for participant %x", p.IdentityKey().String())
+	//}
 	p.state.r_i = r_i
 	p.state.opening = opening
 
@@ -86,11 +81,8 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.Protocol, 
 		message, _ := round2output.Get(party)
 		receivedCommitment, _ := p.state.receivedCommitments.Get(party)
 		// step 3.2: open and check the commitments
-		verifier := hashcommitments.NewVerifier(nil)
-		if !bytes.Equal(message.Opening.GetMessage(), message.Ri.Bytes()) {
-			return nil, errs.NewVerification("opening is not tied to the expected message")
-		}
-		if err := verifier.Verify(receivedCommitment, message.Opening); err != nil {
+		verifier := hashcommitments.NewScheme(hashcommitments.CrsFromSessionId(nil))
+		if err := verifier.Verify(hashcommitments.Message{message.Ri.Bytes()}, receivedCommitment, message.Opening); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, party.String(), "commitment from participant with sharing id can't be opened")
 		}
 	}

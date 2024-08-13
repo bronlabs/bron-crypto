@@ -1,9 +1,6 @@
 package lpdl
 
 import (
-	"bytes"
-	"slices"
-
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -43,14 +40,11 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 	}
 
 	// 1.ii. compute c'' = commit(a, b)
-	committer, err := hashcommitments.NewCommitter(verifier.sessionId, verifier.prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot instantiate committer")
-	}
-	cDoublePrimeCommitment, cDoublePrimeOpening, err := committer.Commit(slices.Concat(verifier.state.a.Bytes(), verifier.state.b.Bytes()))
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot commit to a and b")
-	}
+	committer := hashcommitments.NewScheme(hashcommitments.CrsFromSessionId(verifier.sessionId))
+	cDoublePrimeCommitment, cDoublePrimeOpening := committer.Commit(hashcommitments.Message{verifier.state.a.Bytes(), verifier.state.b.Bytes()}, verifier.prng)
+	//if err != nil {
+	//	return nil, errs.WrapFailed(err, "cannot commit to a and b")
+	//}
 	verifier.state.cDoublePrimeOpening = cDoublePrimeOpening
 
 	// 1.iii. compute Q' = aQ + bQ
@@ -97,14 +91,11 @@ func (prover *Prover) Round2(r1out *Round1Output) (r2out *Round2Output, err erro
 	prover.state.bigQHat = prover.state.curve.ScalarBaseMult(alphaScalar)
 
 	// 2.ii. compute c^ = commit(Q^) and send to V
-	committer, err := hashcommitments.NewCommitter(prover.sessionId, prover.prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot instantiate committer")
-	}
-	bigQHatCommitment, bigQHatOpening, err := committer.Commit(prover.state.bigQHat.ToAffineCompressed())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot commit to Q hat")
-	}
+	committer := hashcommitments.NewScheme(hashcommitments.CrsFromSessionId(prover.sessionId))
+	bigQHatCommitment, bigQHatOpening := committer.Commit(hashcommitments.Message{prover.state.bigQHat.ToAffineCompressed()}, prover.prng)
+	//if err != nil {
+	//	return nil, errs.WrapFailed(err, "cannot commit to Q hat")
+	//}
 	prover.state.bigQHatOpening = bigQHatOpening
 
 	// 4.i. In parallel to the above, run L_P protocol
@@ -156,11 +147,8 @@ func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err erro
 		return nil, errs.WrapValidation(err, "invalid round 4 input")
 	}
 
-	verifier := hashcommitments.NewVerifier(prover.sessionId)
-	if !bytes.Equal(slices.Concat(r3out.A.Bytes(), r3out.B.Bytes()), r3out.CDoublePrimeOpening.GetMessage()) {
-		return nil, errs.NewVerification("opening is not tied to the expected values")
-	}
-	if err := verifier.Verify(prover.state.cDoublePrimeCommitment, r3out.CDoublePrimeOpening); err != nil {
+	verifier := hashcommitments.NewScheme(hashcommitments.CrsFromSessionId(prover.sessionId))
+	if err := verifier.Verify(hashcommitments.Message{r3out.A.Bytes(), r3out.B.Bytes()}, prover.state.cDoublePrimeCommitment, r3out.CDoublePrimeOpening); err != nil {
 		return nil, errs.WrapFailed(err, "cannot open R commitment")
 	}
 
@@ -194,11 +182,8 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 		return errs.WrapValidation(err, "invalid round 5 input")
 	}
 
-	commitVerifier := hashcommitments.NewVerifier(verifier.sessionId)
-	if !bytes.Equal(input.BigQHat.ToAffineCompressed(), input.BigQHatOpening.GetMessage()) {
-		return errs.NewVerification("opening is not tied to the expected message")
-	}
-	if err := commitVerifier.Verify(verifier.state.cHat, input.BigQHatOpening); err != nil {
+	commitVerifier := hashcommitments.NewScheme(hashcommitments.CrsFromSessionId(verifier.sessionId))
+	if err := commitVerifier.Verify(hashcommitments.Message{input.BigQHat.ToAffineCompressed()}, verifier.state.cHat, input.BigQHatOpening); err != nil {
 		return errs.WrapFailed(err, "cannot decommit Q hat")
 	}
 

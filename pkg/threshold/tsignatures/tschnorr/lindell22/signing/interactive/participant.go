@@ -29,9 +29,9 @@ type state struct {
 	bigS    []byte
 	k       curves.Scalar
 	bigR    curves.Point
-	opening *hashcommitments.Opening
+	opening hashcommitments.Witness
 
-	theirBigRCommitment ds.Map[types.IdentityKey, *hashcommitments.Commitment]
+	theirBigRCommitment ds.Map[types.IdentityKey, hashcommitments.Commitment]
 
 	_ ds.Incomparable
 }

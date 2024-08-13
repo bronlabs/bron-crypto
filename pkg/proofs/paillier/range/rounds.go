@@ -1,7 +1,6 @@
 package paillierrange
 
 import (
-	"bytes"
 	crand "crypto/rand"
 	"io"
 	"math/big"
@@ -28,11 +27,11 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 	}
 
 	// 1.iv. compute commitment to (e, sessionId) and send to P
-	committer, err := hashcommitments.NewCommitter(verifier.SessionId, verifier.Prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot instantiate committer")
-	}
-	esidCommitment, esidOpening, err := committer.Commit(verifier.state.e.Bytes())
+	committer := hashcommitments.NewScheme(hashcommitments.CrsFromSessionId(verifier.SessionId))
+	//if err != nil {
+	//	return nil, errs.WrapFailed(err, "cannot instantiate committer")
+	//}
+	esidCommitment, esidOpening /*, err*/ := committer.Commit(hashcommitments.Message{verifier.state.e.Bytes()}, verifier.Prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to e, sessionId")
 	}
@@ -136,11 +135,8 @@ func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err erro
 		return nil, errs.WrapValidation(err, "invalid round 4 input")
 	}
 
-	commitVerifier := hashcommitments.NewVerifier(prover.SessionId)
-	if !bytes.Equal(r3out.E.Bytes(), r3out.EsidOpening.GetMessage()) {
-		return nil, errs.NewVerification("opening is not tied to the expected message")
-	}
-	if err := commitVerifier.Verify(prover.state.esidCommitment, r3out.EsidOpening); err != nil {
+	commitmentVerifier := hashcommitments.NewScheme(hashcommitments.CrsFromSessionId(prover.SessionId))
+	if err := commitmentVerifier.Verify(hashcommitments.Message{r3out.E.Bytes()}, prover.state.esidCommitment, r3out.EsidOpening); err != nil {
 		return nil, errs.WrapFailed(err, "cannot open commitment")
 	}
 

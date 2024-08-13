@@ -84,10 +84,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	HMessage, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, sessionId, []byte(NothingUpMySleeve))
-	if err != nil {
-		return nil, errs.WrapHashing(err, "could not produce dlog of H")
-	}
+	HMessage := hashing.HashPrefixedLength(base.RandomOracleHashFunction, sessionId, []byte(NothingUpMySleeve))
 	H, err := protocol.Curve().Hash(HMessage)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "failed to hash to curve for H")

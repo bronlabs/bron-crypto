@@ -1,41 +1,31 @@
 package commitments
 
-import (
-	"github.com/cronokirby/saferith"
-)
+import "io"
 
-type (
-	Name       string
-	Message    any
-	Commitment any
-)
+type Commitment any
+type Message any
+type Witness any
+type Scalar any
 
-type Opening[M Message] interface {
-	GetMessage() M
+type Scheme[C Commitment, M Message, W Witness] interface {
+	RandomWitness(prng io.Reader) W
+	CommitWithWitness(message M, witness W) C
+	Commit(message M, prng io.Reader) (C, W)
+	Verify(message M, commitment C, witness W) error
+	IsEqual(lhs, rhs C) bool
 }
 
-type HomomorphicCommitmentScheme[M Message, C Commitment, O Opening[M]] interface {
-	CombineCommitments(x C, ys ...C) (C, error)
-	ScaleCommitment(x C, n *saferith.Nat) (C, error)
+type HomomorphicScheme[C Commitment, M Message, W Witness, S Scalar] interface {
+	Scheme[C, M, W]
+	CommitmentSum(x C, ys ...C) C
+	CommitmentAdd(x, y C) C
+	CommitmentSub(x, y C) C
+	CommitmentNeg(x C) C
+	CommitmentScale(x C, s S) C
 
-	CombineOpenings(x O, ys ...O) (O, error)
-	ScaleOpening(x O, n *saferith.Nat) (O, error)
-}
-
-type Committer[M Message, C Commitment, O Opening[M]] interface {
-	Commit(message M) (C, O, error)
-}
-
-type HomomorphicCommitter[M Message, C Commitment, O Opening[M]] interface {
-	Committer[M, C, O]
-	HomomorphicCommitmentScheme[M, C, O]
-}
-
-type Verifier[M Message, C Commitment, O Opening[M]] interface {
-	Verify(commitment C, opening O) error
-}
-
-type HomomorphicVerifier[M Message, C Commitment, O Opening[M]] interface {
-	Verifier[M, C, O]
-	HomomorphicCommitmentScheme[M, C, O]
+	WitnessSum(x W, ys ...W) W
+	WitnessAdd(x, y W) W
+	WitnessSub(x, y W) W
+	WitnessNeg(x W) W
+	WitnessScale(x W, s S) W
 }

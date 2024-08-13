@@ -35,15 +35,12 @@ func (c *Cosigner[V, M]) ProducePartialSignature(message M) (partialSignature *t
 		return nil, errs.WrapSerialisation(err, "couldn't serialise message")
 	}
 
-	deltaMessage, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction,
+	deltaMessage := hashing.HashPrefixedLength(base.RandomOracleHashFunction,
 		c.myShard.SigningKeyShare.PublicKey.ToAffineCompressed(),
 		bigR1Sum.ToAffineCompressed(),
 		bigR2Sum.ToAffineCompressed(),
 		buf,
 	)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "couldn't produce delta message")
-	}
 
 	delta, err := c.Protocol.SigningSuite().Curve().ScalarField().Hash(deltaMessage)
 	if err != nil {

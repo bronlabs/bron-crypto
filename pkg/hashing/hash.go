@@ -24,11 +24,11 @@ func Hash(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 	return digest, nil
 }
 
-func HashPrefixedLength(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
+func HashPrefixedLength(h func() hash.Hash, xs ...[]byte) []byte {
 	H := h()
 	H.Write(encodePrefixedLength(xs...))
 	digest := H.Sum(nil)
-	return digest, nil
+	return digest
 }
 
 func HashChain(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
@@ -55,13 +55,10 @@ func Hmac(key []byte, h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 }
 
 // Same as Hmac but applies encodedPrefixLength to the inputs.
-func HmacPrefixedLength(key []byte, h func() hash.Hash, xs ...[]byte) ([]byte, error) {
+func HmacPrefixedLength(key []byte, h func() hash.Hash, xs ...[]byte) []byte {
 	hmacFunc := func() hash.Hash { return hmac.New(h, key) }
-	out, err := HashPrefixedLength(hmacFunc, xs...)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "computing hmac")
-	}
-	return out, nil
+	out := HashPrefixedLength(hmacFunc, xs...)
+	return out
 }
 
 // Kmac iteratively writes all the inputs to a kmac (defined by the cSHAKE function) and returns the result.

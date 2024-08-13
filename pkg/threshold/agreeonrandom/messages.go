@@ -13,22 +13,19 @@ var _ network.Message[types.Protocol] = (*Round1Broadcast)(nil)
 var _ network.Message[types.Protocol] = (*Round2Broadcast)(nil)
 
 type Round1Broadcast struct {
-	Commitment *hashcommitments.Commitment
+	Commitment hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
 
 type Round2Broadcast struct {
 	Ri      curves.Scalar
-	Opening *hashcommitments.Opening
+	Opening hashcommitments.Witness
 
 	_ ds.Incomparable
 }
 
 func (r1b *Round1Broadcast) Validate(protocol types.Protocol) error {
-	if err := r1b.Commitment.Validate(); err != nil {
-		return errs.WrapValidation(err, "invalid commitment")
-	}
 	return nil
 }
 
@@ -41,9 +38,6 @@ func (r2b *Round2Broadcast) Validate(protocol types.Protocol) error {
 	}
 	if r2b.Ri.IsZero() {
 		return errs.NewIsZero("r_i is zero")
-	}
-	if err := r2b.Opening.Validate(); err != nil {
-		return errs.WrapValidation(err, "invalid opening")
 	}
 	return nil
 }

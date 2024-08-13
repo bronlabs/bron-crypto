@@ -1,7 +1,6 @@
 package interactive_signing
 
 import (
-	"bytes"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -35,14 +34,12 @@ func (p *Cosigner[V, M]) Round1() (broadcastOutput *Round1Broadcast, err error) 
 	bigR := p.Protocol.Curve().ScalarBaseMult(k)
 
 	// step 1.2: Run c_i <= commit(sid || R_i || i || S)
-	committer, err := hashcommitments.NewCommitter(p.SessionId, p.Prng, []byte(commitmentDomainRLabel), p.state.pid, p.state.bigS)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot instantiate vector committer")
-	}
-	commitment, opening, err := committer.Commit(bigR.ToAffineCompressed())
-	if err != nil {
-		return nil, errs.NewFailed("cannot commit to R")
-	}
+	crs := hashcommitments.CrsFromSessionId(p.SessionId, []byte(commitmentDomainRLabel), p.state.pid, p.state.bigS)
+	committer := hashcommitments.NewScheme(crs)
+	commitment, opening := committer.Commit(hashcommitments.Message{bigR.ToAffineCompressed()}, p.Prng)
+	//if err != nil {
+	//	return nil, errs.NewFailed("cannot commit to R")
+	//}
 
 	// step 1.4: Broadcast(c_i)
 	broadcast := &Round1Broadcast{
@@ -66,7 +63,7 @@ func (p *Cosigner[V, M]) Round2(broadcastInput network.RoundMessages[types.Thres
 		return nil, errs.WrapValidation(err, "invalid round 2 input broadcast messages")
 	}
 
-	p.state.theirBigRCommitment = hashmap.NewHashableHashMap[types.IdentityKey, *hashcommitments.Commitment]()
+	p.state.theirBigRCommitment = hashmap.NewHashableHashMap[types.IdentityKey, hashcommitments.Commitment]()
 	for iterator := p.quorum.Iterator(); iterator.HasNext(); {
 		identity := iterator.Next()
 
@@ -120,11 +117,9 @@ func (p *Cosigner[V, M]) Round3(broadcastInput network.RoundMessages[types.Thres
 		}
 
 		// step 3.2: Open(sid || R_j || j || S)
-		verifier := hashcommitments.NewVerifier(p.SessionId, []byte(commitmentDomainRLabel), theirPid, p.state.bigS)
-		if !bytes.Equal(theirBigR.ToAffineCompressed(), theirBigROpening.GetMessage()) {
-			return nil, errs.NewVerification("opening is not tied to the expected value")
-		}
-		if err := verifier.Verify(theirBigRCommitment, theirBigROpening); err != nil {
+		crs := hashcommitments.CrsFromSessionId(p.SessionId, []byte(commitmentDomainRLabel), theirPid, p.state.bigS)
+		verifier := hashcommitments.NewScheme(crs)
+		if err := verifier.Verify(hashcommitments.Message{theirBigR.ToAffineCompressed()}, theirBigRCommitment, theirBigROpening); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 

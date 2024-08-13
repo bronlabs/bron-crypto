@@ -131,9 +131,6 @@ func bindDevice(prng io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not json marshal device profile")
 	}
-	info, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, marshaledProfile, []byte(reflect.TypeOf(prng).String()))
-	if err != nil {
-		return nil, errs.WrapHashing(err, "could not hash device info")
-	}
+	info := hashing.HashPrefixedLength(base.RandomOracleHashFunction, marshaledProfile, []byte(reflect.TypeOf(prng).String()))
 	return info, nil
 }

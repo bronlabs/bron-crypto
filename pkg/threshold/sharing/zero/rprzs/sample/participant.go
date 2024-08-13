@@ -120,10 +120,7 @@ func (p *Participant) createPrngs(seededPrng csprng.CSPRNG) error {
 		if !exists {
 			return errs.NewMissing("could not find shared seed for index %d", i)
 		}
-		salt, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, p.sessionId)
-		if err != nil {
-			return errs.WrapHashing(err, "could not seed PRNG for index %d", i)
-		}
+		salt := hashing.HashPrefixedLength(base.RandomOracleHashFunction, p.sessionId)
 		prng, err := seededPrng.New(sharedSeed[:], salt)
 		if err != nil {
 			return errs.WrapFailed(err, "could not seed PRNG for index %d", i)

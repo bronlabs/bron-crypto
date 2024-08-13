@@ -1,69 +1,124 @@
-package pedersencommitments
+package pedersencommitment
 
 import (
-	"fmt"
-
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"io"
 )
 
-const Name commitments.Name = "PEDERSEN_COMMITMENT"
-
 var (
-	_ commitments.Message          = Message(nil)
-	_ commitments.Commitment       = (*Commitment)(nil)
-	_ commitments.Opening[Message] = (*Opening)(nil)
+	_ commitments.Message    = Message(nil)
+	_ commitments.Witness    = Witness(nil)
+	_ commitments.Scalar     = Scalar(nil)
+	_ commitments.Commitment = Commitment(nil)
 
-	// hardcoded seed used to derive generators along with the session-id.
-	nothingUpMySleeve = []byte(fmt.Sprintf("COPPER_KRYPTON_%s_SOMETHING_UP_MY_SLEEVE-", Name))
+	_ commitments.HomomorphicScheme[Commitment, Message, Witness, Scalar] = (*Scheme)(nil)
 )
 
 type Message curves.Scalar
 type Witness curves.Scalar
+type Scalar curves.Scalar
+type Commitment curves.Point
 
-type Commitment struct {
-	Value curves.Point
+type Scheme struct {
+	g curves.Point
+	h curves.Point
 }
 
-type Opening struct {
-	Message Message
-	Witness Witness
+func NewScheme(g, h curves.Point) *Scheme {
+	return &Scheme{
+		g: g,
+		h: h,
+	}
 }
 
-func (c *Commitment) Validate() error {
-	if c == nil {
-		return errs.NewIsNil("receiver")
+func (s *Scheme) RandomWitness(prng io.Reader) Witness {
+	curve := s.g.Curve()
+	w, err := curve.ScalarField().Random(prng)
+	if err != nil {
+		panic(err)
 	}
-	if c.Value == nil {
-		return errs.NewIsNil("commitment")
-	}
-	if !c.Value.IsInPrimeSubGroup() {
-		return errs.NewMembership("commitment is not part of the prime order subgroup")
-	}
-	return nil
+	return w
 }
 
-func (c *Commitment) GetValue() (curves.Point, error) {
-	if c == nil {
-		return nil, errs.NewIsNil("receiver")
-	}
-	return c.Value, nil
+func (s *Scheme) CommitWithWitness(message Message, witness Witness) Commitment {
+	gm := s.g.ScalarMul(message)
+	hr := s.h.ScalarMul(witness)
+	c := gm.Add(hr)
+	return c
 }
 
-func (o *Opening) Validate() error {
-	if o == nil {
-		return errs.NewIsNil("receiver")
-	}
-	if o.Message == nil {
-		return errs.NewIsNil("message")
-	}
-	if o.Witness == nil {
-		return errs.NewIsNil("witness")
-	}
-	return nil
+func (s *Scheme) Commit(message Message, prng io.Reader) (Commitment, Witness) {
+	witness := s.RandomWitness(prng)
+	return s.CommitWithWitness(message, witness), witness
 }
 
-func (o *Opening) GetMessage() Message {
-	return o.Message
+func (s *Scheme) Verify(message Message, commitment Commitment, witness Witness) error {
+	if message == nil || commitment == nil || witness == nil {
+		return errs.NewVerification("verification failed")
+	}
+
+	rhs := s.CommitWithWitness(message, witness)
+	if s.IsEqual(commitment, rhs) {
+		return nil
+	}
+
+	return errs.NewVerification("verification failed")
+}
+
+func (s *Scheme) IsEqual(lhs, rhs Commitment) bool {
+	if lhs == nil || rhs == nil {
+		return rhs == lhs
+	}
+
+	return lhs.Equal(rhs)
+}
+
+func (s *Scheme) CommitmentSum(x Commitment, ys ...Commitment) Commitment {
+	sum := x.Clone()
+	for _, y := range ys {
+		sum = s.CommitmentAdd(sum, y)
+	}
+	return sum
+}
+
+func (s *Scheme) CommitmentAdd(x, y Commitment) Commitment {
+	return x.Add(y)
+}
+
+func (s *Scheme) CommitmentSub(x, y Commitment) Commitment {
+	return x.Sub(y)
+}
+
+func (s *Scheme) CommitmentNeg(x Commitment) Commitment {
+	return x.Neg()
+}
+
+func (s *Scheme) CommitmentScale(x Commitment, sc Scalar) Commitment {
+	return x.ScalarMul(sc)
+}
+
+func (s *Scheme) WitnessSum(x Witness, ys ...Witness) Witness {
+	sum := x.Clone()
+	for _, y := range ys {
+		sum = s.WitnessAdd(sum, y)
+	}
+	return sum
+}
+
+func (s *Scheme) WitnessAdd(x, y Witness) Witness {
+	return x.Add(y)
+}
+
+func (s *Scheme) WitnessSub(x, y Witness) Witness {
+	return x.Sub(y)
+}
+
+func (s *Scheme) WitnessNeg(x Witness) Witness {
+	return x.Neg()
+}
+
+func (s *Scheme) WitnessScale(x Witness, sc Scalar) Witness {
+	return x.Mul(sc)
 }

@@ -22,13 +22,13 @@ var _ network.Message[types.ThresholdProtocol] = (*Round6P2P)(nil)
 var _ network.Message[types.ThresholdProtocol] = (*Round7P2P)(nil)
 
 type Round1Broadcast struct {
-	BigQCommitment *hashcommitments.Commitment
+	BigQCommitment hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
 
 type Round2Broadcast struct {
-	BigQOpening          *hashcommitments.Opening
+	BigQOpening          hashcommitments.Witness
 	BigQPrime            curves.Point
 	BigQPrimeProof       compiler.NIZKPoKProof
 	BigQDoublePrime      curves.Point
@@ -85,9 +85,6 @@ func (r1b *Round1Broadcast) Validate(protocol types.ThresholdProtocol) error {
 }
 
 func (r2b *Round2Broadcast) Validate(protocol types.ThresholdProtocol) error {
-	if err := r2b.BigQOpening.Validate(); err != nil {
-		return errs.WrapValidation(err, "could not validate opening")
-	}
 	if r2b.BigQPrime == nil {
 		return errs.NewIsNil("big q prime")
 	}

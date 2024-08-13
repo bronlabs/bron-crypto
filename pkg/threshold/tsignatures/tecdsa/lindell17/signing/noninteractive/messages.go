@@ -14,7 +14,7 @@ var _ network.Message[types.ThresholdProtocol] = (*Round1Broadcast)(nil)
 var _ network.Message[types.ThresholdProtocol] = (*Round2Broadcast)(nil)
 
 type Round1Broadcast struct {
-	BigRCommitment *hashcommitments.Commitment
+	BigRCommitment hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
@@ -22,7 +22,7 @@ type Round1Broadcast struct {
 type Round2Broadcast struct {
 	BigR        curves.Point
 	BigRProof   compiler.NIZKPoKProof
-	BigROpening *hashcommitments.Opening
+	BigROpening hashcommitments.Witness
 
 	_ ds.Incomparable
 }
@@ -47,8 +47,6 @@ func (r2b *Round2Broadcast) Validate(protocol types.ThresholdProtocol) error {
 	if r2b.BigRProof == nil {
 		return errs.NewIsNil("bigRProof")
 	}
-	if err := r2b.BigROpening.Validate(); err != nil {
-		return errs.WrapValidation(err, "could not validate opening")
-	}
+
 	return nil
 }

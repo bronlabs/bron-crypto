@@ -23,10 +23,7 @@ func (p *Participant) Round1() (network.RoundMessages[types.Protocol, *Round1P2P
 			if participant.Equal(p.IdentityKey()) {
 				continue
 			}
-			authMessage, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, p.SessionId, participant.PublicKey().ToAffineCompressed(), p.state.messageToBroadcast)
-			if err != nil {
-				return nil, errs.WrapHashing(err, "couldn't produce auth message")
-			}
+			authMessage := hashing.HashPrefixedLength(base.RandomOracleHashFunction, p.SessionId, participant.PublicKey().ToAffineCompressed(), p.state.messageToBroadcast)
 			// step 1.1 and 1.2
 			result.Put(participant, &Round1P2P{
 				InitiatorSignature: p.AuthKey().Sign(authMessage),
@@ -59,10 +56,7 @@ func (p *Participant) Round2(initiatorMessage *Round1P2P) (network.RoundMessages
 			if participant.Equal(p.IdentityKey()) {
 				continue
 			}
-			authMessage, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, p.SessionId, p.IdentityKey().PublicKey().ToAffineCompressed(), initiatorMessage.Message)
-			if err != nil {
-				return nil, errs.WrapHashing(err, "couldn't recompute auth message")
-			}
+			authMessage := hashing.HashPrefixedLength(base.RandomOracleHashFunction, p.SessionId, p.IdentityKey().PublicKey().ToAffineCompressed(), initiatorMessage.Message)
 			// step 2.2 responder verifies the signature.
 			if err := p.initiator.Verify(initiatorMessage.InitiatorSignature, authMessage); err != nil {
 				// step 2.3
@@ -108,10 +102,7 @@ func (p *Participant) Round3(p2pMessages network.RoundMessages[types.Protocol, *
 		// if it is initiator, we need to verify that all messages are the same.
 		// if it is responder, we need to verify that the message is the same as the one we received from the initiator.
 		if !p.IsInitiator() {
-			authMessage, err := hashing.HashPrefixedLength(base.RandomOracleHashFunction, p.SessionId, sender.PublicKey().ToAffineCompressed(), messageToVerify)
-			if err != nil {
-				return nil, errs.WrapHashing(err, "couldn't recompute auth message")
-			}
+			authMessage := hashing.HashPrefixedLength(base.RandomOracleHashFunction, p.SessionId, sender.PublicKey().ToAffineCompressed(), messageToVerify)
 			// Step 3.1
 			if err := p.initiator.Verify(message.InitiatorSignature, authMessage); err != nil {
 				return nil, errs.NewIdentifiableAbort(sender.String(), "failed to verify signature")

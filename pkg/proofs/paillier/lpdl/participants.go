@@ -45,9 +45,9 @@ type State struct {
 
 type VerifierState struct {
 	State
-	cDoublePrimeOpening *hashcommitments.Opening
+	cDoublePrimeOpening hashcommitments.Witness
 	bigQPrime           curves.Point
-	cHat                *hashcommitments.Commitment
+	cHat                hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
@@ -65,8 +65,8 @@ type ProverState struct {
 	State
 	alpha                  *saferith.Nat
 	bigQHat                curves.Point
-	bigQHatOpening         *hashcommitments.Opening
-	cDoublePrimeCommitment *hashcommitments.Commitment
+	bigQHatOpening         hashcommitments.Witness
+	cDoublePrimeCommitment hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
