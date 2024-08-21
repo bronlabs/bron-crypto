@@ -14,4 +14,4 @@ ${BORINGSSL_BUILD}/crypto/libcrypto.a: ${BORINGSSL_SUBMODULE}/include/openssl/bn
 deps-boring: ${BORINGSSL_BUILD}/crypto/libcrypto.a
 
 deps-boring-ios:
-	make deps-boring BORINGSSL_BUILD_ARGS="-DCMAKE_OSX_SYSROOT=${sysroot} -DCMAKE_OSX_ARCHITECTURES=arm64"
+	make deps-boring BORINGSSL_BUILD_ARGS="-DCMAKE_OSX_SYSROOT=${sysroot} -DCMAKE_OSX_ARCHITECTURES=${arch}"
