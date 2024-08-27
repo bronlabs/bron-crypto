@@ -1,4 +1,4 @@
-package bls12381impl
+package bls12381impl_test
 
 import (
 	crand "crypto/rand"
@@ -6,15 +6,16 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 )
 
 func TestSinglePairing(t *testing.T) {
 	t.Parallel()
-	g := new(G1).Generator()
-	h := new(G2).Generator()
+	g := new(bls12381impl.G1).Generator()
+	h := new(bls12381impl.G2).Generator()
 
-	e := new(Engine)
+	e := new(bls12381impl.Engine)
 	e.AddPair(g, h)
 	p := e.Result()
 	p.Neg(p)
@@ -33,20 +34,20 @@ func TestSinglePairing(t *testing.T) {
 func TestMultiPairing(t *testing.T) {
 	t.Parallel()
 	const Tests = 10
-	e1 := new(Engine)
-	e2 := new(Engine)
+	e1 := new(bls12381impl.Engine)
+	e2 := new(bls12381impl.Engine)
 
-	g1s := make([]*G1, Tests)
-	g2s := make([]*G2, Tests)
+	g1s := make([]*bls12381impl.G1, Tests)
+	g2s := make([]*bls12381impl.G2, Tests)
 	sc := make([]*limb4.FieldValue, Tests)
-	res := make([]*Gt, Tests)
-	expected := new(Gt).SetOne()
+	res := make([]*bls12381impl.Gt, Tests)
+	expected := new(bls12381impl.Gt).SetOne()
 
 	for i := 0; i < Tests; i++ {
 		var bytes [64]byte
-		g1s[i] = new(G1).Generator()
-		g2s[i] = new(G2).Generator()
-		sc[i] = FqNew()
+		g1s[i] = new(bls12381impl.G1).Generator()
+		g2s[i] = new(bls12381impl.G2).Generator()
+		sc[i] = bls12381impl.FqNew()
 		_, _ = crand.Read(bytes[:])
 		sc[i].SetBytesWide(&bytes)
 		if i&1 == 0 {

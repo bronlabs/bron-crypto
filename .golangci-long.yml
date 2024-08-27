@@ -148,8 +148,7 @@ linters:
     # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
     - staticcheck
     # linter that makes you use a separate _test package
-    # TODO: enable this
-    # - testpackage
+    - testpackage
     # thelper detects golang test helpers without t.Helper() call and checks the consistency of test helpers
     - thelper
     # tparallel detects inappropriate usage of t.Parallel() method in your Go test codes

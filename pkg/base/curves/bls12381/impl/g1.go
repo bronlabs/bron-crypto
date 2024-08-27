@@ -708,7 +708,7 @@ func (g1 *G1) MulByX(a *G1) *G1 {
 	r.Identity()
 	t.Set(a)
 
-	for x := paramX >> 1; x != 0; x >>= 1 {
+	for x := X >> 1; x != 0; x >>= 1 {
 		t.Double(&t)
 		s.Add(&r, &t)
 		r.CMove(&r, &s, x&1)

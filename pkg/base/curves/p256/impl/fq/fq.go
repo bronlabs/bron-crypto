@@ -222,10 +222,10 @@ func (Arithmetic) SetOne(out *[limb4.FieldLimbs]uint64) {
 // generator = 7 mod q is a generator of the `q - 1` order multiplicative
 // subgroup, or in other words a primitive element of the field.
 // generator^t where t * 2^s + 1 = q.
-var generator = &[limb4.FieldLimbs]uint64{0x55eb74ab1949fac9, 0xd5af25406e5aaa5d, 0x0000000000000001, 0x00000006fffffff9}
+var Generator = &[limb4.FieldLimbs]uint64{0x55eb74ab1949fac9, 0xd5af25406e5aaa5d, 0x0000000000000001, 0x00000006fffffff9}
 
 // s satisfies the equation 2^s * t = q - 1 with t odd.
 var s = 4
 
 // rootOfUnity.
-var rootOfUnity = &[limb4.FieldLimbs]uint64{0x0592d7fbb41e6602, 0x1546cad004378daf, 0xba807ace842a3dfc, 0xffc97f062a770992}
+var RootOfUnity = &[limb4.FieldLimbs]uint64{0x0592d7fbb41e6602, 0x1546cad004378daf, 0xba807ace842a3dfc, 0xffc97f062a770992}

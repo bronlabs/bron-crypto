@@ -1,24 +1,41 @@
-package fq
+package fq_test
 
 import (
 	crand "crypto/rand"
+	"io"
 	"math/rand"
 	"testing"
 
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
 )
 
 func TestFqSetOne(t *testing.T) {
 	t.Parallel()
-	fq := new(Fq).SetOne()
-	require.NotNil(t, fq)
-	require.True(t, fq.Equal(r))
+
+	fqOne := new(fq.Fq).SetOne()
+	require.NotNil(t, fqOne)
+
+	var fqRandom *fq.Fq
+	for fqRandom == nil || fqRandom.IsZero() {
+		var randomBytes [64]byte
+		_, err := io.ReadFull(crand.Reader, randomBytes[:])
+		require.NoError(t, err)
+		fqRandom = new(fq.Fq).SetBytesWide(&randomBytes)
+	}
+	require.NotNil(t, fqRandom)
+	require.False(t, fqRandom.IsZero())
+
+	fqOneTimesRandom := new(fq.Fq).Mul(fqOne, fqRandom)
+	require.NotNil(t, fqOneTimesRandom)
+	require.True(t, fqRandom.Equal(fqOneTimesRandom))
 }
 
 func TestFqSetUint64(t *testing.T) {
 	t.Parallel()
-	act := new(Fq).SetUint64(1 << 60)
+	act := new(fq.Fq).SetUint64(1 << 60)
 	require.NotNil(t, act)
 	// Remember it will be in montgomery form
 	require.Equal(t, int64(0x4c46eb2100000001), int64(act[0]))
@@ -26,10 +43,10 @@ func TestFqSetUint64(t *testing.T) {
 
 func TestFqAdd(t *testing.T) {
 	t.Parallel()
-	lhs := new(Fq).SetOne()
-	rhs := new(Fq).SetOne()
-	exp := new(Fq).SetUint64(2)
-	res := new(Fq).Add(lhs, rhs)
+	lhs := new(fq.Fq).SetOne()
+	rhs := new(fq.Fq).SetOne()
+	exp := new(fq.Fq).SetUint64(2)
+	res := new(fq.Fq).Add(lhs, rhs)
 	require.NotNil(t, res)
 	require.True(t, res.Equal(exp))
 
@@ -43,7 +60,7 @@ func TestFqAdd(t *testing.T) {
 		rhs.SetUint64(r)
 		exp.SetUint64(e)
 
-		a := new(Fq).Add(lhs, rhs)
+		a := new(fq.Fq).Add(lhs, rhs)
 		require.NotNil(t, a)
 		require.Equal(t, exp, a)
 	}
@@ -51,10 +68,10 @@ func TestFqAdd(t *testing.T) {
 
 func TestFqSub(t *testing.T) {
 	t.Parallel()
-	lhs := new(Fq).SetOne()
-	rhs := new(Fq).SetOne()
-	exp := new(Fq).SetZero()
-	res := new(Fq).Sub(lhs, rhs)
+	lhs := new(fq.Fq).SetOne()
+	rhs := new(fq.Fq).SetOne()
+	exp := new(fq.Fq).SetZero()
+	res := new(fq.Fq).Sub(lhs, rhs)
 	require.NotNil(t, res)
 	require.True(t, res.Equal(exp))
 
@@ -71,7 +88,7 @@ func TestFqSub(t *testing.T) {
 		rhs.SetUint64(r)
 		exp.SetUint64(e)
 
-		a := new(Fq).Sub(lhs, rhs)
+		a := new(fq.Fq).Sub(lhs, rhs)
 		require.NotNil(t, a)
 		require.Equal(t, exp, a)
 	}
@@ -79,10 +96,10 @@ func TestFqSub(t *testing.T) {
 
 func TestFqMul(t *testing.T) {
 	t.Parallel()
-	lhs := new(Fq).SetOne()
-	rhs := new(Fq).SetOne()
-	exp := new(Fq).SetOne()
-	res := new(Fq).Mul(lhs, rhs)
+	lhs := new(fq.Fq).SetOne()
+	rhs := new(fq.Fq).SetOne()
+	exp := new(fq.Fq).SetOne()
+	res := new(fq.Fq).Mul(lhs, rhs)
 	require.NotNil(t, res)
 	require.True(t, res.Equal(exp))
 
@@ -96,7 +113,7 @@ func TestFqMul(t *testing.T) {
 		rhs.SetUint64(uint64(r))
 		exp.SetUint64(e)
 
-		a := new(Fq).Mul(lhs, rhs)
+		a := new(fq.Fq).Mul(lhs, rhs)
 		require.NotNil(t, a)
 		require.Equal(t, exp, a)
 	}
@@ -104,23 +121,23 @@ func TestFqMul(t *testing.T) {
 
 func TestFqDouble(t *testing.T) {
 	t.Parallel()
-	a := new(Fq).SetUint64(2)
-	e := new(Fq).SetUint64(4)
-	require.Equal(t, e, new(Fq).Double(a))
+	a := new(fq.Fq).SetUint64(2)
+	e := new(fq.Fq).SetUint64(4)
+	require.Equal(t, e, new(fq.Fq).Double(a))
 
 	for i := 0; i < 25; i++ {
 		tv := rand.Uint32()
 		ttv := uint64(tv) * 2
-		a = new(Fq).SetUint64(uint64(tv))
-		e = new(Fq).SetUint64(ttv)
-		require.Equal(t, e, new(Fq).Double(a))
+		a = new(fq.Fq).SetUint64(uint64(tv))
+		e = new(fq.Fq).SetUint64(ttv)
+		require.Equal(t, e, new(fq.Fq).Double(a))
 	}
 }
 
 func TestFqSquare(t *testing.T) {
 	t.Parallel()
-	a := new(Fq).SetUint64(4)
-	e := new(Fq).SetUint64(16)
+	a := new(fq.Fq).SetUint64(4)
+	e := new(fq.Fq).SetUint64(16)
 	require.Equal(t, e, a.Square(a))
 
 	for i := 0; i < 25; i++ {
@@ -134,77 +151,80 @@ func TestFqSquare(t *testing.T) {
 
 func TestFqNeg(t *testing.T) {
 	t.Parallel()
-	a := new(Fq).SetOne()
-	a.Neg(a)
-	e := &Fq{0x311bac8400000004, 0x891a63f02652a376, 0, 0}
-	require.Equal(t, e, a)
-	a.Neg(generator)
-	e = &Fq{0xf58a5e9400000014, 0xad83f3b0bf9d314e, 0x2, 0x0}
-	require.Equal(t, e, a)
+	var randomBytes [64]byte
+	_, err := io.ReadFull(crand.Reader, randomBytes[:])
+	require.NoError(t, err)
+	fqRandom := new(fq.Fq).SetBytesWide(&randomBytes)
+	require.NotNil(t, fqRandom)
+
+	fqRandomNeg := new(fq.Fq).Neg(fqRandom)
+	require.NotNil(t, fqRandomNeg)
+
+	sum := new(fq.Fq).Add(fqRandomNeg, fqRandom)
+	require.NotNil(t, sum)
+	require.True(t, sum.IsZero())
 }
 
 func TestFqExp(t *testing.T) {
 	t.Parallel()
-	e := new(Fq).SetUint64(8)
-	a := new(Fq).SetUint64(2)
-	by := new(Fq).SetUint64(3)
+	e := new(fq.Fq).SetUint64(8)
+	a := new(fq.Fq).SetUint64(2)
+	by := new(fq.Fq).SetUint64(3)
 	require.Equal(t, a.Exp(a, by), e)
 }
 
 func TestFqSqrt(t *testing.T) {
 	t.Parallel()
-	t1 := new(Fq).SetUint64(2)
-	t2 := new(Fq).Neg(t1)
-	t3 := new(Fq).Square(t1)
+	t1 := new(fq.Fq).SetUint64(2)
+	t2 := new(fq.Fq).Neg(t1)
+	t3 := new(fq.Fq).Square(t1)
 	_, wasSquare := t3.Sqrt(t3)
 	require.True(t, wasSquare)
 	require.True(t, t1.Equal(t3) || t2.Equal(t3))
 	t1.SetUint64(5)
-	_, wasSquare = new(Fq).Sqrt(t1)
+	_, wasSquare = new(fq.Fq).Sqrt(t1)
 	require.False(t, wasSquare)
 }
 
 func TestFqInvert(t *testing.T) {
 	t.Parallel()
-	twoInv := &Fq{0xc623759080000001, 0x11234c7e04ca546e, 0x0000000000000000, 0x2000000000000000}
-	fiat_pasta_fq_to_montgomery((*fiat_pasta_fq_montgomery_domain_field_element)(twoInv), (*fiat_pasta_fq_non_montgomery_domain_field_element)(twoInv))
-	two := new(Fq).SetUint64(2)
-	a, inverted := new(Fq).Invert(two)
+	twoInv := new(fq.Fq).SetRaw(&[4]uint64{0xc623759080000001, 0x11234c7e04ca546e, 0x0000000000000000, 0x2000000000000000})
+	two := new(fq.Fq).SetUint64(2)
+	a, inverted := new(fq.Fq).Invert(two)
 	require.True(t, inverted)
 	require.Equal(t, a, twoInv)
 
-	rootOfUnity := &Fq{0xa70e2c1102b6d05f, 0x9bb97ea3c106f049, 0x9e5c4dfd492ae26e, 0x2de6a9b8746d3f58}
-	fiat_pasta_fq_to_montgomery((*fiat_pasta_fq_montgomery_domain_field_element)(rootOfUnity), (*fiat_pasta_fq_non_montgomery_domain_field_element)(rootOfUnity))
-	rootOfUnityInv := &Fq{0x57eecda0a84b6836, 0x4ad38b9084b8a80c, 0xf4c8f353124086c1, 0x2235e1a7415bf936}
-	fiat_pasta_fq_to_montgomery((*fiat_pasta_fq_montgomery_domain_field_element)(rootOfUnityInv), (*fiat_pasta_fq_non_montgomery_domain_field_element)(rootOfUnityInv))
-	a, inverted = new(Fq).Invert(rootOfUnity)
+	rootOfUnity := new(fq.Fq).SetRaw(&[4]uint64{0xa70e2c1102b6d05f, 0x9bb97ea3c106f049, 0x9e5c4dfd492ae26e, 0x2de6a9b8746d3f58})
+	rootOfUnityInv := new(fq.Fq).SetRaw(&[4]uint64{0x57eecda0a84b6836, 0x4ad38b9084b8a80c, 0xf4c8f353124086c1, 0x2235e1a7415bf936})
+
+	a, inverted = new(fq.Fq).Invert(rootOfUnity)
 	require.True(t, inverted)
 	require.Equal(t, a, rootOfUnityInv)
 
-	lhs := new(Fq).SetUint64(9)
-	rhs := new(Fq).SetUint64(3)
-	rhsInv, inverted := new(Fq).Invert(rhs)
+	lhs := new(fq.Fq).SetUint64(9)
+	rhs := new(fq.Fq).SetUint64(3)
+	rhsInv, inverted := new(fq.Fq).Invert(rhs)
 	require.True(t, inverted)
-	require.Equal(t, rhs, new(Fq).Mul(lhs, rhsInv))
+	require.Equal(t, rhs, new(fq.Fq).Mul(lhs, rhsInv))
 
 	rhs.SetZero()
-	_, inverted = new(Fq).Invert(rhs)
+	_, inverted = new(fq.Fq).Invert(rhs)
 	require.False(t, inverted)
 }
 
 func TestFqCMove(t *testing.T) {
 	t.Parallel()
-	t1 := new(Fq).SetUint64(5)
-	t2 := new(Fq).SetUint64(10)
-	require.Equal(t, t1, new(Fq).CMove(t1, t2, 0))
-	require.Equal(t, t2, new(Fq).CMove(t1, t2, 1))
+	t1 := new(fq.Fq).SetUint64(5)
+	t2 := new(fq.Fq).SetUint64(10)
+	require.Equal(t, t1, new(fq.Fq).CMove(t1, t2, 0))
+	require.Equal(t, t2, new(fq.Fq).CMove(t1, t2, 1))
 }
 
 func TestFqBytes(t *testing.T) {
 	t.Parallel()
-	t1 := new(Fq).SetUint64(99)
+	t1 := new(fq.Fq).SetUint64(99)
 	seq := t1.Bytes()
-	t2, err := new(Fq).SetBytes(&seq)
+	t2, err := new(fq.Fq).SetBytes(&seq)
 	require.NoError(t, err)
 	require.Equal(t, t1, t2)
 
@@ -219,11 +239,11 @@ func TestFqBytes(t *testing.T) {
 
 func TestFqBigInt(t *testing.T) {
 	t.Parallel()
-	t1 := new(Fq).SetNat(new(saferith.Nat).SetUint64(9999))
-	t2 := new(Fq).SetNat(t1.Nat())
+	t1 := new(fq.Fq).SetNat(new(saferith.Nat).SetUint64(9999))
+	t2 := new(fq.Fq).SetNat(t1.Nat())
 	require.Equal(t, t1, t2)
 
-	e := &Fq{0x7bb1416dea3d6ae3, 0x62f9108a340aa525, 0x303b3f30fcaa477f, 0x11c9ef5422d80a4d}
+	e := &fq.Fq{0x7bb1416dea3d6ae3, 0x62f9108a340aa525, 0x303b3f30fcaa477f, 0x11c9ef5422d80a4d}
 	b := new(saferith.Nat).SetBytes([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
 	t1.SetNat(b)
 	require.Equal(t, e, t1)
@@ -231,22 +251,21 @@ func TestFqBigInt(t *testing.T) {
 	e[1] = 0xbf4d8871d58a03b8
 	e[2] = 0xcfc4c0cf0355b880
 	e[3] = 0x2e3610abdd27f5b2
-	b.ModNeg(b, Modulus)
+	b.ModNeg(b, fq.Modulus)
 	t1.SetNat(b)
 	require.Equal(t, e, t1)
 }
 
 func TestFqSetBool(t *testing.T) {
 	t.Parallel()
-	require.Equal(t, new(Fq).SetOne(), new(Fq).SetBool(true))
-	require.Equal(t, new(Fq).SetZero(), new(Fq).SetBool(false))
+	require.Equal(t, new(fq.Fq).SetOne(), new(fq.Fq).SetBool(true))
+	require.Equal(t, new(fq.Fq).SetZero(), new(fq.Fq).SetBool(false))
 }
 
 func TestFqSetBytesWide(t *testing.T) {
 	t.Parallel()
-	e := &Fq{0xe22bd0d1b22cc43e, 0x6b84e5b52490a7c8, 0x264262941ac9e229, 0x27dcfdf361ce4254}
-	fiat_pasta_fq_to_montgomery((*fiat_pasta_fq_montgomery_domain_field_element)(e), (*fiat_pasta_fq_non_montgomery_domain_field_element)(e))
-	a := new(Fq).SetBytesWide(&[64]byte{
+	e := new(fq.Fq).SetRaw(&[4]uint64{0xe22bd0d1b22cc43e, 0x6b84e5b52490a7c8, 0x264262941ac9e229, 0x27dcfdf361ce4254})
+	a := new(fq.Fq).SetBytesWide(&[64]byte{
 		0x69, 0x23, 0x5a, 0x0b, 0xce, 0x0c, 0xa8, 0x64,
 		0x3c, 0x78, 0xbc, 0x01, 0x05, 0xef, 0xf2, 0x84,
 		0xde, 0xbb, 0x6b, 0xc8, 0x63, 0x5e, 0x6e, 0x69,
@@ -263,14 +282,14 @@ func TestFqCmp(t *testing.T) {
 	t.Parallel()
 	const n = 256
 	for range n {
-		xInt, err := crand.Int(crand.Reader, Modulus.Big())
+		xInt, err := crand.Int(crand.Reader, fq.Modulus.Big())
 		require.NoError(t, err)
 		xNat := new(saferith.Nat).SetBig(xInt, 255)
-		x := new(Fq).SetNat(xNat)
-		yInt, err := crand.Int(crand.Reader, Modulus.Big())
+		x := new(fq.Fq).SetNat(xNat)
+		yInt, err := crand.Int(crand.Reader, fq.Modulus.Big())
 		require.NoError(t, err)
 		yNat := new(saferith.Nat).SetBig(yInt, 255)
-		y := new(Fq).SetNat(yNat)
+		y := new(fq.Fq).SetNat(yNat)
 
 		expected := xInt.Cmp(yInt)
 		actual := x.Cmp(y)

@@ -418,7 +418,7 @@ func (f *Fp12) cyclotomicExp(a *Fp12) {
 	foundOne := 0
 
 	for i := 63; i >= 0; i-- {
-		b := int((paramX >> i) & 1)
+		b := int((X >> i) & 1)
 		if foundOne == 1 {
 			t.cyclotomicSquare(&t)
 		} else {

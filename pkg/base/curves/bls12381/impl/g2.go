@@ -552,7 +552,7 @@ func (g2 *G2) IsOnCurve() uint64 {
 // InCorrectSubgroup returns 1 if the point is torsion free, 0 otherwise.
 func (g2 *G2) InCorrectSubgroup() uint64 {
 	var t G2
-	t.multiply(g2, &fqModulusBytes)
+	t.Multiply(g2, &fqModulusBytes)
 	return t.IsIdentity()
 }
 
@@ -642,10 +642,10 @@ func (g2 *G2) Double(a *G2) *G2 {
 // Mul multiplies this point by the input scalar.
 func (g2 *G2) Mul(a *G2, s *limb4.FieldValue) *G2 {
 	bytes := s.Bytes()
-	return g2.multiply(a, &bytes)
+	return g2.Multiply(a, &bytes)
 }
 
-func (g2 *G2) multiply(a *G2, bytes *[base.FieldBytes]byte) *G2 {
+func (g2 *G2) Multiply(a *G2, bytes *[base.FieldBytes]byte) *G2 {
 	var p G2
 	precomputed := [16]*G2{}
 	precomputed[0] = new(G2).Identity()
@@ -673,7 +673,7 @@ func (g2 *G2) MulByX(a *G2) *G2 {
 	r.Identity()
 	t.Set(a)
 
-	for x := paramX >> 1; x != 0; x >>= 1 {
+	for x := X >> 1; x != 0; x >>= 1 {
 		t.Double(&t)
 		s.Add(&r, &t)
 		r.CMove(&r, &s, x&1)
@@ -689,10 +689,10 @@ func (g2 *G2) ClearCofactor(a *G2) *G2 {
 	var t1, t2, t3, pt G2
 
 	t1.MulByX(a)
-	t2.psi(a)
+	t2.Psi(a)
 
 	pt.Double(a)
-	pt.psi2(&pt)
+	pt.Psi2(&pt)
 
 	t3.Add(&t1, &t2)
 	t3.MulByX(&t3)
@@ -993,12 +993,11 @@ func (g2 *G2) SumOfProducts(points []*G2, scalars []*limb4.FieldValue) (*G2, err
 	return g2, nil
 }
 
-func (g2 *G2) psi(a *G2) *G2 {
+func (g2 *G2) Psi(a *G2) *G2 {
 	g2.X.FrobeniusAutomorphism(&a.X)
 	g2.Y.FrobeniusAutomorphism(&a.Y)
 	// z = frobenius(z)
 	g2.Z.FrobeniusAutomorphism(&a.Z)
-
 	// x = frobenius(x)/((u+1)^((p-1)/3))
 	g2.X.Mul(&g2.X, &psiCoeffX)
 	// y = frobenius(y)/(u+1)^((p-1)/2)
@@ -1007,7 +1006,7 @@ func (g2 *G2) psi(a *G2) *G2 {
 	return g2
 }
 
-func (g2 *G2) psi2(a *G2) *G2 {
+func (g2 *G2) Psi2(a *G2) *G2 {
 	// x = frobenius^2(x)/2^((p-1)/3); note that q^2 is the order of the field.
 	g2.X.Mul(&a.X, &psi2CoeffX)
 	// y = -frobenius^2(y); note that q^2 is the order of the field.

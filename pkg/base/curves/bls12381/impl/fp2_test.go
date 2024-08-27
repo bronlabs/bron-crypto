@@ -1,15 +1,18 @@
-package bls12381impl
+package bls12381impl_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 )
 
-func TestFp2Square(t *testing.T) {
+func Fp2Square(t *testing.T) {
+	t.Helper()
 	t.Parallel()
-	a := Fp2{
-		A: Fp{
+	a := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0xc9a2183163ee70d4,
 			0xbc3770a7196b5c91,
 			0xa247f8c1304c5f44,
@@ -17,7 +20,7 @@ func TestFp2Square(t *testing.T) {
 			0xe1d293e5bbd919c9,
 			0x04b78e80020ef2ca,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0x952ea4460462618f,
 			0x238d5eddf025c62f,
 			0xf6c94b012ea92e72,
@@ -26,8 +29,8 @@ func TestFp2Square(t *testing.T) {
 			0x010a768d0df4eabc,
 		},
 	}
-	b := Fp2{
-		A: Fp{
+	b := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0xa1e09175a4d2c1fe,
 			0x8b33acfc204eff12,
 			0xe24415a11b456e42,
@@ -35,7 +38,7 @@ func TestFp2Square(t *testing.T) {
 			0x1164dbe8667c853c,
 			0x0788557acc7d9c79,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0xda6a87cc6f48fa36,
 			0x0fc7b488277c1903,
 			0x9445ac4adc448187,
@@ -48,10 +51,11 @@ func TestFp2Square(t *testing.T) {
 	require.Equal(t, &b, a.Square(&a))
 }
 
-func TestFp2Mul(t *testing.T) {
+func Fp2Mul(t *testing.T) {
+	t.Helper()
 	t.Parallel()
-	a := Fp2{
-		A: Fp{
+	a := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0xc9a2183163ee70d4,
 			0xbc3770a7196b5c91,
 			0xa247f8c1304c5f44,
@@ -59,7 +63,7 @@ func TestFp2Mul(t *testing.T) {
 			0xe1d293e5bbd919c9,
 			0x04b78e80020ef2ca,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0x952ea4460462618f,
 			0x238d5eddf025c62f,
 			0xf6c94b012ea92e72,
@@ -68,8 +72,8 @@ func TestFp2Mul(t *testing.T) {
 			0x010a768d0df4eabc,
 		},
 	}
-	b := Fp2{
-		A: Fp{
+	b := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0xa1e09175a4d2c1fe,
 			0x8b33acfc204eff12,
 			0xe24415a11b456e42,
@@ -77,7 +81,7 @@ func TestFp2Mul(t *testing.T) {
 			0x1164dbe8667c853c,
 			0x0788557acc7d9c79,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0xda6a87cc6f48fa36,
 			0x0fc7b488277c1903,
 			0x9445ac4adc448187,
@@ -86,8 +90,8 @@ func TestFp2Mul(t *testing.T) {
 			0x11b94d5076c7b7b1,
 		},
 	}
-	c := Fp2{
-		A: Fp{
+	c := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0xf597483e27b4e0f7,
 			0x610fbadf811dae5f,
 			0x8432af917714327a,
@@ -95,7 +99,7 @@ func TestFp2Mul(t *testing.T) {
 			0xf05a7bf8bad0eb01,
 			0x09549131c003ffae,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0x963b02d0f93d37cd,
 			0xc95ce1cdb30a73d4,
 			0x308725fa3126f9b8,
@@ -105,13 +109,14 @@ func TestFp2Mul(t *testing.T) {
 		},
 	}
 
-	require.Equal(t, ctTrue, c.Equal(new(Fp2).Mul(&a, &b)))
+	require.Equal(t, ctTrue, c.Equal(new(bls12381impl.Fp2).Mul(&a, &b)))
 }
 
-func TestFp2Add(t *testing.T) {
+func Fp2Add(t *testing.T) {
+	t.Helper()
 	t.Parallel()
-	a := Fp2{
-		A: Fp{
+	a := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0xc9a2183163ee70d4,
 			0xbc3770a7196b5c91,
 			0xa247f8c1304c5f44,
@@ -119,7 +124,7 @@ func TestFp2Add(t *testing.T) {
 			0xe1d293e5bbd919c9,
 			0x04b78e80020ef2ca,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0x952ea4460462618f,
 			0x238d5eddf025c62f,
 			0xf6c94b012ea92e72,
@@ -128,8 +133,8 @@ func TestFp2Add(t *testing.T) {
 			0x010a768d0df4eabc,
 		},
 	}
-	b := Fp2{
-		A: Fp{
+	b := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0xa1e09175a4d2c1fe,
 			0x8b33acfc204eff12,
 			0xe24415a11b456e42,
@@ -137,7 +142,7 @@ func TestFp2Add(t *testing.T) {
 			0x1164dbe8667c853c,
 			0x0788557acc7d9c79,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0xda6a87cc6f48fa36,
 			0x0fc7b488277c1903,
 			0x9445ac4adc448187,
@@ -146,8 +151,8 @@ func TestFp2Add(t *testing.T) {
 			0x11b94d5076c7b7b1,
 		},
 	}
-	c := Fp2{
-		A: Fp{
+	c := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0x6b82a9a708c132d2,
 			0x476b1da339ba5ba4,
 			0x848c0e624b91cd87,
@@ -155,7 +160,7 @@ func TestFp2Add(t *testing.T) {
 			0xf3376fce22559f06,
 			0x0c3fe3face8c8f43,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0x6f992c1273ab5bc5,
 			0x3355136617a1df33,
 			0x8b0ef74c0aedaff9,
@@ -165,13 +170,14 @@ func TestFp2Add(t *testing.T) {
 		},
 	}
 
-	require.Equal(t, ctTrue, c.Equal(new(Fp2).Add(&a, &b)))
+	require.Equal(t, ctTrue, c.Equal(new(bls12381impl.Fp2).Add(&a, &b)))
 }
 
-func TestFp2Sub(t *testing.T) {
+func Fp2Sub(t *testing.T) {
+	t.Helper()
 	t.Parallel()
-	a := Fp2{
-		A: Fp{
+	a := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0xc9a2183163ee70d4,
 			0xbc3770a7196b5c91,
 			0xa247f8c1304c5f44,
@@ -179,7 +185,7 @@ func TestFp2Sub(t *testing.T) {
 			0xe1d293e5bbd919c9,
 			0x04b78e80020ef2ca,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0x952ea4460462618f,
 			0x238d5eddf025c62f,
 			0xf6c94b012ea92e72,
@@ -188,8 +194,8 @@ func TestFp2Sub(t *testing.T) {
 			0x010a768d0df4eabc,
 		},
 	}
-	b := Fp2{
-		A: Fp{
+	b := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0xa1e09175a4d2c1fe,
 			0x8b33acfc204eff12,
 			0xe24415a11b456e42,
@@ -197,7 +203,7 @@ func TestFp2Sub(t *testing.T) {
 			0x1164dbe8667c853c,
 			0x0788557acc7d9c79,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0xda6a87cc6f48fa36,
 			0x0fc7b488277c1903,
 			0x9445ac4adc448187,
@@ -206,8 +212,8 @@ func TestFp2Sub(t *testing.T) {
 			0x11b94d5076c7b7b1,
 		},
 	}
-	c := Fp2{
-		A: Fp{
+	c := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0xe1c086bbbf1b5981,
 			0x4fafc3a9aa705d7e,
 			0x2734b5c10bb7e726,
@@ -215,7 +221,7 @@ func TestFp2Sub(t *testing.T) {
 			0x1b895fb398a84164,
 			0x17304aef6f113cec,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0x74c31c7995191204,
 			0x3271aa5479fdad2b,
 			0xc9b471574915a30f,
@@ -225,13 +231,14 @@ func TestFp2Sub(t *testing.T) {
 		},
 	}
 
-	require.Equal(t, ctTrue, c.Equal(new(Fp2).Sub(&a, &b)))
+	require.Equal(t, ctTrue, c.Equal(new(bls12381impl.Fp2).Sub(&a, &b)))
 }
 
-func TestFp2Neg(t *testing.T) {
+func Fp2Neg(t *testing.T) {
+	t.Helper()
 	t.Parallel()
-	a := Fp2{
-		A: Fp{
+	a := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0xc9a2183163ee70d4,
 			0xbc3770a7196b5c91,
 			0xa247f8c1304c5f44,
@@ -239,7 +246,7 @@ func TestFp2Neg(t *testing.T) {
 			0xe1d293e5bbd919c9,
 			0x04b78e80020ef2ca,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0x952ea4460462618f,
 			0x238d5eddf025c62f,
 			0xf6c94b012ea92e72,
@@ -248,8 +255,8 @@ func TestFp2Neg(t *testing.T) {
 			0x010a768d0df4eabc,
 		},
 	}
-	b := Fp2{
-		A: Fp{
+	b := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0xf05ce7ce9c1139d7,
 			0x62748f5797e8a36d,
 			0xc4e8d9dfc66496df,
@@ -257,7 +264,7 @@ func TestFp2Neg(t *testing.T) {
 			0x694913d08772930d,
 			0x1549836a3770f3cf,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0x24d05bb9fb9d491c,
 			0xfb1ea120c12e39d0,
 			0x7067879fc807c7b1,
@@ -267,13 +274,14 @@ func TestFp2Neg(t *testing.T) {
 		},
 	}
 
-	require.Equal(t, ctTrue, b.Equal(new(Fp2).Neg(&a)))
+	require.Equal(t, ctTrue, b.Equal(new(bls12381impl.Fp2).Neg(&a)))
 }
 
-func TestFp2Sqrt(t *testing.T) {
+func Fp2Sqrt(t *testing.T) {
+	t.Helper()
 	t.Parallel()
-	a := Fp2{
-		A: Fp{
+	a := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0x2beed14627d7f9e9,
 			0xb6614e06660e5dce,
 			0x06c4cc7c2f91d42c,
@@ -281,7 +289,7 @@ func TestFp2Sqrt(t *testing.T) {
 			0xebaebc4c820d574e,
 			0x18865e12d93fd845,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0x7d828664baf4f566,
 			0xd17e663996ec7339,
 			0x679ead55cb4078d0,
@@ -291,12 +299,12 @@ func TestFp2Sqrt(t *testing.T) {
 		},
 	}
 
-	asq, wasSquare := (&Fp2{}).Sqrt(&a)
+	asq, wasSquare := (&bls12381impl.Fp2{}).Sqrt(&a)
 	require.Equal(t, ctTrue, wasSquare)
 	require.Equal(t, ctTrue, a.Equal(asq.Square(asq)))
 
-	b := Fp2{
-		A: Fp{
+	b := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0x6631000000105545,
 			0x211400400eec000d,
 			0x3fa7af30c820e316,
@@ -304,14 +312,14 @@ func TestFp2Sqrt(t *testing.T) {
 			0x9fb4e61d1e83eac5,
 			0x005cb922afe84dc7,
 		},
-		B: Fp{},
+		B: bls12381impl.Fp{},
 	}
-	bsq, wasSquare := (&Fp2{}).Sqrt(&b)
+	bsq, wasSquare := (&bls12381impl.Fp2{}).Sqrt(&b)
 	require.Equal(t, ctTrue, wasSquare)
 	require.Equal(t, ctTrue, b.Equal(bsq.Square(bsq)))
 
-	c := Fp2{
-		A: Fp{
+	c := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0x44f600000051ffae,
 			0x86b8014199480043,
 			0xd7159952f1f3794a,
@@ -319,14 +327,14 @@ func TestFp2Sqrt(t *testing.T) {
 			0xd36cd6db5547e905,
 			0x02f8c8ecbf1867bb,
 		},
-		B: Fp{},
+		B: bls12381impl.Fp{},
 	}
-	csq, wasSquare := (&Fp2{}).Sqrt(&c)
+	csq, wasSquare := (&bls12381impl.Fp2{}).Sqrt(&c)
 	require.Equal(t, ctTrue, wasSquare)
 	require.Equal(t, ctTrue, c.Equal(csq.Square(csq)))
 
-	d := Fp2{
-		A: Fp{
+	d := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0xc5fa1bc8fd00d7f6,
 			0x3830ca454606003b,
 			0x2b287f1104b102da,
@@ -334,7 +342,7 @@ func TestFp2Sqrt(t *testing.T) {
 			0x339cdb9ee953dbf0,
 			0x0d78ec51d989fc57,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0x27ec4898cf87f613,
 			0x9de1394e1abb05a5,
 			0x0947f85dc170fc14,
@@ -343,17 +351,18 @@ func TestFp2Sqrt(t *testing.T) {
 			0x13e1c895cc4b6c22,
 		},
 	}
-	_, wasSquare = (&Fp2{}).Sqrt(&d)
+	_, wasSquare = (&bls12381impl.Fp2{}).Sqrt(&d)
 	require.Equal(t, ctFalse, wasSquare)
 
-	_, wasSquare = (&Fp2{}).Sqrt(&Fp2{})
+	_, wasSquare = (&bls12381impl.Fp2{}).Sqrt(&bls12381impl.Fp2{})
 	require.Equal(t, ctTrue, wasSquare)
 }
 
-func TestFp2Invert(t *testing.T) {
+func Fp2Invert(t *testing.T) {
+	t.Helper()
 	t.Parallel()
-	a := Fp2{
-		A: Fp{
+	a := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0x1128ecad67549455,
 			0x9e7a1cff3a4ea1a8,
 			0xeb208d51e08bcf27,
@@ -361,7 +370,7 @@ func TestFp2Invert(t *testing.T) {
 			0x736c3a59232d511d,
 			0x10acd42d29cfcbb6,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0xd328e37cc2f58d41,
 			0x948df0858a605869,
 			0x6032f9d56f93a573,
@@ -371,8 +380,8 @@ func TestFp2Invert(t *testing.T) {
 		},
 	}
 
-	b := Fp2{
-		A: Fp{
+	b := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0x0581a1333d4f48a6,
 			0x58242f6ef0748500,
 			0x0292c955349e6da5,
@@ -380,7 +389,7 @@ func TestFp2Invert(t *testing.T) {
 			0x70d167903aa5dfc5,
 			0x11895e118b58a9d5,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0x0eda09d2d7a85d17,
 			0x8808e137a7d1a2cf,
 			0x43ae2625c1ff21db,
@@ -390,21 +399,22 @@ func TestFp2Invert(t *testing.T) {
 		},
 	}
 
-	ainv, wasInverted := (&Fp2{}).Invert(&a)
+	ainv, wasInverted := (&bls12381impl.Fp2{}).Invert(&a)
 	require.Equal(t, ctTrue, wasInverted)
 	require.Equal(t, ctTrue, b.Equal(ainv))
 
-	_, wasInverted = (&Fp2{}).Invert(&Fp2{})
+	_, wasInverted = (&bls12381impl.Fp2{}).Invert(&bls12381impl.Fp2{})
 	require.Equal(t, ctFalse, wasInverted)
 }
 
-func TestFp2LexicographicallyLargest(t *testing.T) {
+func Fp2LexicographicallyLargest(t *testing.T) {
+	t.Helper()
 	t.Parallel()
-	require.Equal(t, ctFalse, new(Fp2).SetZero().LexicographicallyLargest())
-	require.Equal(t, ctFalse, new(Fp2).SetOne().LexicographicallyLargest())
+	require.Equal(t, ctFalse, new(bls12381impl.Fp2).SetZero().LexicographicallyLargest())
+	require.Equal(t, ctFalse, new(bls12381impl.Fp2).SetOne().LexicographicallyLargest())
 
-	a := Fp2{
-		A: Fp{
+	a := bls12381impl.Fp2{
+		A: bls12381impl.Fp{
 			0x1128_ecad_6754_9455,
 			0x9e7a_1cff_3a4e_a1a8,
 			0xeb20_8d51_e08b_cf27,
@@ -412,7 +422,7 @@ func TestFp2LexicographicallyLargest(t *testing.T) {
 			0x736c_3a59_232d_511d,
 			0x10ac_d42d_29cf_cbb6,
 		},
-		B: Fp{
+		B: bls12381impl.Fp{
 			0xd328_e37c_c2f5_8d41,
 			0x948d_f085_8a60_5869,
 			0x6032_f9d5_6f93_a573,
@@ -423,7 +433,7 @@ func TestFp2LexicographicallyLargest(t *testing.T) {
 	}
 
 	require.Equal(t, ctTrue, a.LexicographicallyLargest())
-	aNeg := new(Fp2).Neg(&a)
+	aNeg := new(bls12381impl.Fp2).Neg(&a)
 	require.Equal(t, ctFalse, aNeg.LexicographicallyLargest())
 	a.B.SetZero()
 	require.Equal(t, ctFalse, a.LexicographicallyLargest())

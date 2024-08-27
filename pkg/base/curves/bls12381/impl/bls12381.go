@@ -8,7 +8,7 @@ var fqModulusBytes = [base.FieldBytes]byte{0x01, 0x00, 0x00, 0x00, 0xff, 0xff, 0
 
 const (
 	// The BLS parameter x for BLS12-381 is -0xd201000000010000.
-	paramX            = uint64(0xd201000000010000)
+	X                 = uint64(0xd201000000010000)
 	FieldLimbs        = 6
 	FieldBytes        = 48
 	WideFieldBytes    = 96

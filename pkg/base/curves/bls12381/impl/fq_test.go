@@ -1,4 +1,4 @@
-package bls12381impl
+package bls12381impl_test
 
 import (
 	crand "crypto/rand"
@@ -10,19 +10,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 )
 
 func TestFqSetOne(t *testing.T) {
 	t.Parallel()
-	fq := FqNew().SetOne()
+	fq := bls12381impl.FqNew().SetOne()
 	require.NotNil(t, fq)
-	require.Equal(t, fq.Value, getBls12381FqParams().R)
+	require.Equal(t, fq.Value, bls12381impl.FqNew().Params.R)
 }
 
 func TestFqSetUint64(t *testing.T) {
 	t.Parallel()
-	act := FqNew().SetUint64(1 << 60)
+	act := bls12381impl.FqNew().SetUint64(1 << 60)
 	require.NotNil(t, act)
 	// Remember it will be in montgomery form
 	require.Equal(t, uint64(0xbc98da2820121c89), act.Value[0])
@@ -30,10 +31,10 @@ func TestFqSetUint64(t *testing.T) {
 
 func TestFqAdd(t *testing.T) {
 	t.Parallel()
-	lhs := FqNew().SetOne()
-	rhs := FqNew().SetOne()
-	exp := FqNew().SetUint64(2)
-	res := FqNew().Add(lhs, rhs)
+	lhs := bls12381impl.FqNew().SetOne()
+	rhs := bls12381impl.FqNew().SetOne()
+	exp := bls12381impl.FqNew().SetUint64(2)
+	res := bls12381impl.FqNew().Add(lhs, rhs)
 	require.NotNil(t, res)
 	require.Equal(t, uint64(1), res.Equal(exp))
 
@@ -47,7 +48,7 @@ func TestFqAdd(t *testing.T) {
 		rhs.SetUint64(r)
 		exp.SetUint64(e)
 
-		a := FqNew().Add(lhs, rhs)
+		a := bls12381impl.FqNew().Add(lhs, rhs)
 		require.NotNil(t, a)
 		require.Equal(t, exp, a)
 	}
@@ -55,10 +56,10 @@ func TestFqAdd(t *testing.T) {
 
 func TestFqSub(t *testing.T) {
 	t.Parallel()
-	lhs := FqNew().SetOne()
-	rhs := FqNew().SetOne()
-	exp := FqNew().SetZero()
-	res := FqNew().Sub(lhs, rhs)
+	lhs := bls12381impl.FqNew().SetOne()
+	rhs := bls12381impl.FqNew().SetOne()
+	exp := bls12381impl.FqNew().SetZero()
+	res := bls12381impl.FqNew().Sub(lhs, rhs)
 	require.NotNil(t, res)
 	require.Equal(t, uint64(1), res.Equal(exp))
 
@@ -75,7 +76,7 @@ func TestFqSub(t *testing.T) {
 		rhs.SetUint64(r)
 		exp.SetUint64(e)
 
-		a := FqNew().Sub(lhs, rhs)
+		a := bls12381impl.FqNew().Sub(lhs, rhs)
 		require.NotNil(t, a)
 		require.Equal(t, exp, a)
 	}
@@ -83,10 +84,10 @@ func TestFqSub(t *testing.T) {
 
 func TestFqMul(t *testing.T) {
 	t.Parallel()
-	lhs := FqNew().SetOne()
-	rhs := FqNew().SetOne()
-	exp := FqNew().SetOne()
-	res := FqNew().Mul(lhs, rhs)
+	lhs := bls12381impl.FqNew().SetOne()
+	rhs := bls12381impl.FqNew().SetOne()
+	exp := bls12381impl.FqNew().SetOne()
+	res := bls12381impl.FqNew().Mul(lhs, rhs)
 	require.NotNil(t, res)
 	require.Equal(t, uint64(1), res.Equal(exp))
 
@@ -100,7 +101,7 @@ func TestFqMul(t *testing.T) {
 		rhs.SetUint64(uint64(r))
 		exp.SetUint64(e)
 
-		a := FqNew().Mul(lhs, rhs)
+		a := bls12381impl.FqNew().Mul(lhs, rhs)
 		require.NotNil(t, a)
 		require.Equal(t, exp, a)
 	}
@@ -108,23 +109,23 @@ func TestFqMul(t *testing.T) {
 
 func TestFqDouble(t *testing.T) {
 	t.Parallel()
-	a := FqNew().SetUint64(2)
-	e := FqNew().SetUint64(4)
-	require.Equal(t, e, FqNew().Double(a))
+	a := bls12381impl.FqNew().SetUint64(2)
+	e := bls12381impl.FqNew().SetUint64(4)
+	require.Equal(t, e, bls12381impl.FqNew().Double(a))
 
 	for i := 0; i < 25; i++ {
 		tv := rand.Uint32()
 		ttv := uint64(tv) * 2
-		a = FqNew().SetUint64(uint64(tv))
-		e = FqNew().SetUint64(ttv)
-		require.Equal(t, e, FqNew().Double(a))
+		a = bls12381impl.FqNew().SetUint64(uint64(tv))
+		e = bls12381impl.FqNew().SetUint64(ttv)
+		require.Equal(t, e, bls12381impl.FqNew().Double(a))
 	}
 }
 
 func TestFqSquare(t *testing.T) {
 	t.Parallel()
-	a := FqNew().SetUint64(4)
-	e := FqNew().SetUint64(16)
+	a := bls12381impl.FqNew().SetUint64(4)
+	e := bls12381impl.FqNew().SetUint64(16)
 	require.Equal(t, uint64(1), e.Equal(a.Square(a)))
 
 	a.SetUint64(2854263694)
@@ -142,76 +143,76 @@ func TestFqSquare(t *testing.T) {
 
 func TestFqNeg(t *testing.T) {
 	t.Parallel()
-	g := FqNew().SetRaw(&fqGenerator)
-	a := FqNew().SetOne()
+	g := bls12381impl.FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0x0000000efffffff1, 0x17e363d300189c0f, 0xff9c57876f8457b0, 0x351332208fc5a8c4})
+	a := bls12381impl.FqNew().SetOne()
 	a.Neg(a)
-	e := FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0xfffffffd00000003, 0xfb38ec08fffb13fc, 0x99ad88181ce5880f, 0x5bc8f5f97cd877d8})
+	e := bls12381impl.FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0xfffffffd00000003, 0xfb38ec08fffb13fc, 0x99ad88181ce5880f, 0x5bc8f5f97cd877d8})
 	require.Equal(t, uint64(1), e.Equal(a))
 	a.Neg(g)
-	e = FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0xfffffff000000010, 0x3bda402fffe5bfef, 0x339d80809a1d8055, 0x3eda753299d7d483})
+	e = bls12381impl.FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0xfffffff000000010, 0x3bda402fffe5bfef, 0x339d80809a1d8055, 0x3eda753299d7d483})
 	require.Equal(t, e, a)
 }
 
 func TestFqExp(t *testing.T) {
 	t.Parallel()
-	e := FqNew().SetUint64(8)
-	a := FqNew().SetUint64(2)
-	by := FqNew().SetUint64(3)
+	e := bls12381impl.FqNew().SetUint64(8)
+	a := bls12381impl.FqNew().SetUint64(2)
+	by := bls12381impl.FqNew().SetUint64(3)
 	require.Equal(t, a.Exp(a, by), e)
 }
 
 func TestFqSqrt(t *testing.T) {
 	t.Parallel()
-	t1 := FqNew().SetUint64(2)
-	t2 := FqNew().Neg(t1)
-	t3 := FqNew().Square(t1)
+	t1 := bls12381impl.FqNew().SetUint64(2)
+	t2 := bls12381impl.FqNew().Neg(t1)
+	t3 := bls12381impl.FqNew().Square(t1)
 	_, wasSquare := t3.Sqrt(t3)
 
 	require.True(t, wasSquare)
 	require.Equal(t, uint64(1), t1.Equal(t3)|t2.Equal(t3))
 	t1.SetUint64(5)
-	_, wasSquare = FqNew().Sqrt(t1)
+	_, wasSquare = bls12381impl.FqNew().Sqrt(t1)
 	require.False(t, wasSquare)
 }
 
 func TestFqInvert(t *testing.T) {
 	t.Parallel()
-	twoInv := FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0xffffffff, 0xac425bfd0001a401, 0xccc627f7f65e27fa, 0xc1258acd66282b7})
-	two := FqNew().SetUint64(2)
-	a, inverted := FqNew().Invert(two)
+	twoInv := bls12381impl.FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0xffffffff, 0xac425bfd0001a401, 0xccc627f7f65e27fa, 0xc1258acd66282b7})
+	two := bls12381impl.FqNew().SetUint64(2)
+	a, inverted := bls12381impl.FqNew().Invert(two)
 	require.True(t, inverted)
 	require.Equal(t, a, twoInv)
 
-	rootOfUnity := FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0xb9b58d8c5f0e466a, 0x5b1b4c801819d7ec, 0x0af53ae352a31e64, 0x5bf3adda19e9b27b})
-	rootOfUnityInv := FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0x4256481adcf3219a, 0x45f37b7f96b6cad3, 0xf9c3f1d75f7a3b27, 0x2d2fc049658afd43})
-	a, inverted = FqNew().Invert(rootOfUnity)
+	rootOfUnity := bls12381impl.FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0xb9b58d8c5f0e466a, 0x5b1b4c801819d7ec, 0x0af53ae352a31e64, 0x5bf3adda19e9b27b})
+	rootOfUnityInv := bls12381impl.FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0x4256481adcf3219a, 0x45f37b7f96b6cad3, 0xf9c3f1d75f7a3b27, 0x2d2fc049658afd43})
+	a, inverted = bls12381impl.FqNew().Invert(rootOfUnity)
 	require.True(t, inverted)
 	require.Equal(t, a, rootOfUnityInv)
 
-	lhs := FqNew().SetUint64(9)
-	rhs := FqNew().SetUint64(3)
-	rhsInv, inverted := FqNew().Invert(rhs)
+	lhs := bls12381impl.FqNew().SetUint64(9)
+	rhs := bls12381impl.FqNew().SetUint64(3)
+	rhsInv, inverted := bls12381impl.FqNew().Invert(rhs)
 	require.True(t, inverted)
-	require.Equal(t, rhs, FqNew().Mul(lhs, rhsInv))
+	require.Equal(t, rhs, bls12381impl.FqNew().Mul(lhs, rhsInv))
 
 	rhs.SetZero()
-	_, inverted = FqNew().Invert(rhs)
+	_, inverted = bls12381impl.FqNew().Invert(rhs)
 	require.False(t, inverted)
 }
 
 func TestFqCMove(t *testing.T) {
 	t.Parallel()
-	t1 := FqNew().SetUint64(5)
-	t2 := FqNew().SetUint64(10)
-	require.Equal(t, t1, FqNew().CMove(t1, t2, 0))
-	require.Equal(t, t2, FqNew().CMove(t1, t2, 1))
+	t1 := bls12381impl.FqNew().SetUint64(5)
+	t2 := bls12381impl.FqNew().SetUint64(10)
+	require.Equal(t, t1, bls12381impl.FqNew().CMove(t1, t2, 0))
+	require.Equal(t, t2, bls12381impl.FqNew().CMove(t1, t2, 1))
 }
 
 func TestFqBytes(t *testing.T) {
 	t.Parallel()
-	t1 := FqNew().SetUint64(99)
+	t1 := bls12381impl.FqNew().SetUint64(99)
 	seq := t1.Bytes()
-	t2, err := FqNew().SetBytes(&seq)
+	t2, err := bls12381impl.FqNew().SetBytes(&seq)
 	require.NoError(t, err)
 	require.Equal(t, t1, t2)
 
@@ -232,53 +233,53 @@ func TestFqCmp(t *testing.T) {
 		e int64
 	}{
 		{
-			a: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{2731658267414164836, 14655288906067898431, 6537465423330262322, 8306191141697566219}),
-			b: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{6472764012681988529, 10848812988401906064, 2961825807536828898, 4282183981941645679}),
+			a: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{2731658267414164836, 14655288906067898431, 6537465423330262322, 8306191141697566219}),
+			b: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{6472764012681988529, 10848812988401906064, 2961825807536828898, 4282183981941645679}),
 			e: 1,
 		},
 		{
-			a: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{8023004109510539223, 4652004072850285717, 1877219145646046927, 383214385093921911}),
-			b: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{10099384440823804262, 16139476942229308465, 8636966320777393798, 5435928725024696785}),
+			a: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{8023004109510539223, 4652004072850285717, 1877219145646046927, 383214385093921911}),
+			b: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{10099384440823804262, 16139476942229308465, 8636966320777393798, 5435928725024696785}),
 			e: -1,
 		},
 		{
-			a: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{3741840066202388211, 12165774400417314871, 16619312580230515379, 16195032234110087705}),
-			b: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{3905865991286066744, 543690822309071825, 17963103015950210055, 3745476720756119742}),
+			a: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{3741840066202388211, 12165774400417314871, 16619312580230515379, 16195032234110087705}),
+			b: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{3905865991286066744, 543690822309071825, 17963103015950210055, 3745476720756119742}),
 			e: 1,
 		},
 		{
-			a: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{16660853697936147788, 7799793619412111108, 13515141085171033220, 2641079731236069032}),
-			b: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{17790588295388238399, 571847801379669440, 14537208974498222469, 12792570372087452754}),
+			a: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{16660853697936147788, 7799793619412111108, 13515141085171033220, 2641079731236069032}),
+			b: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{17790588295388238399, 571847801379669440, 14537208974498222469, 12792570372087452754}),
 			e: -1,
 		},
 		{
-			a: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{3912839285384959186, 2701177075110484070, 6453856448115499033, 6475797457962597458}),
-			b: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{1282566391665688512, 13503640416992806563, 2962240104675990153, 3374904770947067689}),
+			a: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{3912839285384959186, 2701177075110484070, 6453856448115499033, 6475797457962597458}),
+			b: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{1282566391665688512, 13503640416992806563, 2962240104675990153, 3374904770947067689}),
 			e: 1,
 		},
 		{
-			a: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{5716631803409360103, 7859567470082614154, 12747956220853330146, 18434584096087315020}),
-			b: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{16317076441459028418, 12854146980376319601, 2258436689269031143, 9531877130792223752}),
+			a: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{5716631803409360103, 7859567470082614154, 12747956220853330146, 18434584096087315020}),
+			b: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{16317076441459028418, 12854146980376319601, 2258436689269031143, 9531877130792223752}),
 			e: 1,
 		},
 		{
-			a: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{17955191469941083403, 10350326247207200880, 17263512235150705075, 12700328451238078022}),
-			b: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{6767595547459644695, 7146403825494928147, 12269344038346710612, 9122477829383225603}),
+			a: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{17955191469941083403, 10350326247207200880, 17263512235150705075, 12700328451238078022}),
+			b: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{6767595547459644695, 7146403825494928147, 12269344038346710612, 9122477829383225603}),
 			e: 1,
 		},
 		{
-			a: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{17099388671847024438, 6426264987820696548, 10641143464957227405, 7709745403700754098}),
-			b: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{10799154372990268556, 17178492485719929374, 5705777922258988797, 8051037767683567782}),
+			a: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{17099388671847024438, 6426264987820696548, 10641143464957227405, 7709745403700754098}),
+			b: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{10799154372990268556, 17178492485719929374, 5705777922258988797, 8051037767683567782}),
 			e: -1,
 		},
 		{
-			a: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{4567139260680454325, 1629385880182139061, 16607020832317899145, 1261011562621553200}),
-			b: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{13487234491304534488, 17872642955936089265, 17651026784972590233, 9468934643333871559}),
+			a: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{4567139260680454325, 1629385880182139061, 16607020832317899145, 1261011562621553200}),
+			b: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{13487234491304534488, 17872642955936089265, 17651026784972590233, 9468934643333871559}),
 			e: 1,
 		},
 		{
-			a: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{18071070103467571798, 11787850505799426140, 10631355976141928593, 4867785203635092610}),
-			b: FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{12596443599426461624, 10176122686151524591, 17075755296887483439, 6726169532695070719}),
+			a: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{18071070103467571798, 11787850505799426140, 10631355976141928593, 4867785203635092610}),
+			b: bls12381impl.FqNew().SetLimbs(&[limb4.FieldLimbs]uint64{12596443599426461624, 10176122686151524591, 17075755296887483439, 6726169532695070719}),
 			e: -1,
 		},
 	}
@@ -296,25 +297,25 @@ func TestFqCmp(t *testing.T) {
 
 func TestFqBigInt(t *testing.T) {
 	t.Parallel()
-	t1 := FqNew().SetNat(new(saferith.Nat).SetUint64(9999))
-	t2 := FqNew().SetNat(t1.Nat())
+	t1 := bls12381impl.FqNew().SetNat(new(saferith.Nat).SetUint64(9999))
+	t2 := bls12381impl.FqNew().SetNat(t1.Nat())
 	require.Equal(t, t1, t2)
 
-	e := FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0x673053fc60e06500, 0x86e6d480b4f76ada, 0x7fc68f9fefa23291, 0x3fb17f49bdda126d})
+	e := bls12381impl.FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0x673053fc60e06500, 0x86e6d480b4f76ada, 0x7fc68f9fefa23291, 0x3fb17f49bdda126d})
 	b := new(saferith.Nat).SetBytes([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
 	t1.SetNat(b)
 	require.Equal(t, uint64(1), e.Equal(t1))
 	e.Neg(e)
-	b.ModNeg(b, getBls12381FqParams().Modulus)
+	b.ModNeg(b, bls12381impl.FqNew().Params.Modulus)
 	t1.SetNat(b)
 	require.Equal(t, e, t1)
 }
 
 func TestFqSetBytesWide(t *testing.T) {
 	t.Parallel()
-	e := FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0xc759fba87ff8c5a6, 0x9ef5194839e7df44, 0x21375d22b678bf0e, 0x38b105387033fd57})
+	e := bls12381impl.FqNew().SetRaw(&[limb4.FieldLimbs]uint64{0xc759fba87ff8c5a6, 0x9ef5194839e7df44, 0x21375d22b678bf0e, 0x38b105387033fd57})
 
-	a := FqNew().SetBytesWide(&[64]byte{
+	a := bls12381impl.FqNew().SetBytesWide(&[64]byte{
 		0x69, 0x23, 0x5a, 0x0b, 0xce, 0x0c, 0xa8, 0x64,
 		0x3c, 0x78, 0xbc, 0x01, 0x05, 0xef, 0xf2, 0x84,
 		0xde, 0xbb, 0x6b, 0xc8, 0x63, 0x5e, 0x6e, 0x69,
@@ -329,7 +330,7 @@ func TestFqSetBytesWide(t *testing.T) {
 
 func TestFqSetBytesWideBigInt(t *testing.T) {
 	t.Parallel()
-	params := getBls12381FqParams()
+	params := bls12381impl.FqNew().Params
 	var tv2 [64]byte
 	for i := 0; i < 25; i++ {
 		_, _ = crand.Read(tv2[:])
@@ -338,14 +339,14 @@ func TestFqSetBytesWideBigInt(t *testing.T) {
 
 		tv := bitstring.ReverseBytes(tv2[:])
 		copy(tv2[:], tv)
-		a := FqNew().SetBytesWide(&tv2)
+		a := bls12381impl.FqNew().SetBytesWide(&tv2)
 		require.NotZero(t, e.Eq(a.Nat()))
 	}
 }
 
 func TestFqToMontgomery(t *testing.T) {
 	t.Parallel()
-	v := FqNew().SetUint64(2)
+	v := bls12381impl.FqNew().SetUint64(2)
 	require.Equal(t, [limb4.FieldLimbs]uint64{0x3fffffffc, 0xb1096ff400069004, 0x33189fdfd9789fea, 0x304962b3598a0adf}, v.Value)
 }
 
@@ -353,7 +354,7 @@ func TestFqFromMontgomery(t *testing.T) {
 	t.Parallel()
 	e := [limb4.FieldLimbs]uint64{2, 0, 0, 0}
 	a := [limb4.FieldLimbs]uint64{0, 0, 0, 0}
-	v := FqNew().SetUint64(2)
+	v := bls12381impl.FqNew().SetUint64(2)
 	v.Arithmetic.FromMontgomery(&a, &v.Value)
 	require.Equal(t, e, a)
 }

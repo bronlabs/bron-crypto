@@ -1,4 +1,4 @@
-package bls12381impl
+package bls12381impl_test
 
 import (
 	crand "crypto/rand"
@@ -10,19 +10,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
 )
 
 func TestFpSetOne(t *testing.T) {
 	t.Parallel()
-	var fp Fp
+	var fp bls12381impl.Fp
 	fp.SetOne()
 	require.NotNil(t, fp)
-	require.Equal(t, fp, FpOne)
+	require.Equal(t, fp, bls12381impl.FpOne)
 }
 
 func TestFpSetUint64(t *testing.T) {
 	t.Parallel()
-	var act Fp
+	var act bls12381impl.Fp
 	act.SetUint64(1 << 60)
 	require.NotNil(t, act)
 	// Remember it will be in montgomery form
@@ -31,7 +32,7 @@ func TestFpSetUint64(t *testing.T) {
 
 func TestFpAdd(t *testing.T) {
 	t.Parallel()
-	var lhs, rhs, exp, res Fp
+	var lhs, rhs, exp, res bls12381impl.Fp
 	lhs.SetOne()
 	rhs.SetOne()
 	exp.SetUint64(2)
@@ -57,7 +58,7 @@ func TestFpAdd(t *testing.T) {
 
 func TestFpSub(t *testing.T) {
 	t.Parallel()
-	var lhs, rhs, exp, res Fp
+	var lhs, rhs, exp, res bls12381impl.Fp
 	lhs.SetOne()
 	rhs.SetOne()
 	exp.SetZero()
@@ -86,7 +87,7 @@ func TestFpSub(t *testing.T) {
 
 func TestFpMul(t *testing.T) {
 	t.Parallel()
-	var lhs, rhs, exp, res Fp
+	var lhs, rhs, exp, res bls12381impl.Fp
 	lhs.SetOne()
 	rhs.SetOne()
 	exp.SetOne()
@@ -112,7 +113,7 @@ func TestFpMul(t *testing.T) {
 
 func TestFpDouble(t *testing.T) {
 	t.Parallel()
-	var a, e, res Fp
+	var a, e, res bls12381impl.Fp
 	a.SetUint64(2)
 	e.SetUint64(4)
 	require.Equal(t, &e, res.Double(&a))
@@ -128,7 +129,7 @@ func TestFpDouble(t *testing.T) {
 
 func TestFpSquare(t *testing.T) {
 	t.Parallel()
-	var a, e, res Fp
+	var a, e, res bls12381impl.Fp
 	a.SetUint64(4)
 	e.SetUint64(16)
 	require.Equal(t, ctTrue, e.Equal(res.Square(&a)))
@@ -148,20 +149,20 @@ func TestFpSquare(t *testing.T) {
 
 func TestFpNeg(t *testing.T) {
 	t.Parallel()
-	var g, a, e Fp
-	g.SetLimbs(&[FieldLimbs]uint64{7, 0, 0, 0, 0, 0})
+	var g, a, e bls12381impl.Fp
+	g.SetLimbs(&[bls12381impl.FieldLimbs]uint64{7, 0, 0, 0, 0, 0})
 	a.SetOne()
 	a.Neg(&a)
-	e.SetRaw(&[FieldLimbs]uint64{0x43f5fffffffcaaae, 0x32b7fff2ed47fffd, 0x07e83a49a2e99d69, 0xeca8f3318332bb7a, 0xef148d1ea0f4c069, 0x040ab3263eff0206})
+	e.SetRaw(&[bls12381impl.FieldLimbs]uint64{0x43f5fffffffcaaae, 0x32b7fff2ed47fffd, 0x07e83a49a2e99d69, 0xeca8f3318332bb7a, 0xef148d1ea0f4c069, 0x040ab3263eff0206})
 	require.Equal(t, ctTrue, e.Equal(&a))
 	a.Neg(&g)
-	e.SetRaw(&[FieldLimbs]uint64{0x21baffffffe90017, 0x445bffa5cba3ffed, 0xd028c5627db257bc, 0x14275ad5a2de0d96, 0x3e7434202365960e, 0x0249d4217f792796})
+	e.SetRaw(&[bls12381impl.FieldLimbs]uint64{0x21baffffffe90017, 0x445bffa5cba3ffed, 0xd028c5627db257bc, 0x14275ad5a2de0d96, 0x3e7434202365960e, 0x0249d4217f792796})
 	require.Equal(t, e, a)
 }
 
 func TestFpExp(t *testing.T) {
 	t.Parallel()
-	var a, e, by Fp
+	var a, e, by bls12381impl.Fp
 	e.SetUint64(8)
 	a.SetUint64(2)
 	by.SetUint64(3)
@@ -170,7 +171,7 @@ func TestFpExp(t *testing.T) {
 
 func TestFpSqrt(t *testing.T) {
 	t.Parallel()
-	var t1, t2, t3 Fp
+	var t1, t2, t3 bls12381impl.Fp
 	t1.SetUint64(2)
 	t2.Neg(&t1)
 	t3.Square(&t1)
@@ -185,8 +186,8 @@ func TestFpSqrt(t *testing.T) {
 
 func TestFpInvert(t *testing.T) {
 	t.Parallel()
-	var two, twoInv, a, lhs, rhs, rhsInv Fp
-	twoInv.SetRaw(&[FieldLimbs]uint64{0x1804000000015554, 0x855000053ab00001, 0x633cb57c253c276f, 0x6e22d1ec31ebb502, 0xd3916126f2d14ca2, 0x17fbb8571a006596})
+	var two, twoInv, a, lhs, rhs, rhsInv bls12381impl.Fp
+	twoInv.SetRaw(&[bls12381impl.FieldLimbs]uint64{0x1804000000015554, 0x855000053ab00001, 0x633cb57c253c276f, 0x6e22d1ec31ebb502, 0xd3916126f2d14ca2, 0x17fbb8571a006596})
 	two.SetUint64(2)
 	_, inverted := a.Invert(&two)
 	require.Equal(t, ctTrue, inverted)
@@ -205,7 +206,7 @@ func TestFpInvert(t *testing.T) {
 
 func TestFpCMove(t *testing.T) {
 	t.Parallel()
-	var t1, t2, tt Fp
+	var t1, t2, tt bls12381impl.Fp
 	t1.SetUint64(5)
 	t2.SetUint64(10)
 	require.Equal(t, &t1, tt.CMove(&t1, &t2, 0))
@@ -214,7 +215,7 @@ func TestFpCMove(t *testing.T) {
 
 func TestFpBytes(t *testing.T) {
 	t.Parallel()
-	var t1, t2 Fp
+	var t1, t2 bls12381impl.Fp
 	t1.SetUint64(99)
 	seq := t1.Bytes()
 	_, suc := t2.SetBytes(&seq)
@@ -232,30 +233,30 @@ func TestFpBytes(t *testing.T) {
 
 func TestFpBigInt(t *testing.T) {
 	t.Parallel()
-	var t1, t2, e Fp
+	var t1, t2, e bls12381impl.Fp
 	t1.SetNat(new(saferith.Nat).SetUint64(9999))
 	t2.SetNat(t1.Nat())
 	require.Equal(t, t1, t2)
 
-	e.SetRaw(&[FieldLimbs]uint64{0x922af810e5e35f31, 0x6bc75973ed382d59, 0xd4716c9d4d491d42, 0x69d98d1ebeeb3f6e, 0x7e425d7b46d4a82b, 0x12d04b0965870e92})
+	e.SetRaw(&[bls12381impl.FieldLimbs]uint64{0x922af810e5e35f31, 0x6bc75973ed382d59, 0xd4716c9d4d491d42, 0x69d98d1ebeeb3f6e, 0x7e425d7b46d4a82b, 0x12d04b0965870e92})
 	b := new(saferith.Nat).SetBytes([]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9})
 	t1.SetNat(b)
 	require.Equal(t, e, t1)
 	e.Neg(&e)
-	b.ModNeg(b, FpModulus)
+	b.ModNeg(b, bls12381impl.FpModulus)
 	t1.SetNat(b)
 	require.Equal(t, e, t1)
 }
 
 func TestFpSetBytesWideBigInt(t *testing.T) {
 	t.Parallel()
-	var a Fp
+	var a bls12381impl.Fp
 	var tv2 [96]byte
 	for i := 0; i < 25; i++ {
 		_, err := io.ReadFull(crand.Reader, tv2[:])
 		require.NoError(t, err)
 		e := new(saferith.Nat).SetBytes(tv2[:])
-		e.Mod(e, FpModulus)
+		e.Mod(e, bls12381impl.FpModulus)
 
 		tv := bitstring.ReverseBytes(tv2[:])
 		copy(tv2[:], tv)
@@ -266,16 +267,16 @@ func TestFpSetBytesWideBigInt(t *testing.T) {
 
 func TestFpToMontgomery(t *testing.T) {
 	t.Parallel()
-	var v Fp
+	var v bls12381impl.Fp
 	v.SetUint64(2)
-	require.Equal(t, Fp{0x321300000006554f, 0xb93c0018d6c40005, 0x57605e0db0ddbb51, 0x8b256521ed1f9bcb, 0x6cf28d7901622c03, 0x11ebab9dbb81e28c}, v)
+	require.Equal(t, bls12381impl.Fp{0x321300000006554f, 0xb93c0018d6c40005, 0x57605e0db0ddbb51, 0x8b256521ed1f9bcb, 0x6cf28d7901622c03, 0x11ebab9dbb81e28c}, v)
 }
 
 func TestFpLexicographicallyLargest(t *testing.T) {
 	t.Parallel()
-	require.Equal(t, ctFalse, new(Fp).SetZero().LexicographicallyLargest())
-	require.Equal(t, ctFalse, new(Fp).SetOne().LexicographicallyLargest())
-	require.Equal(t, ctFalse, (&Fp{
+	require.Equal(t, ctFalse, new(bls12381impl.Fp).SetZero().LexicographicallyLargest())
+	require.Equal(t, ctFalse, new(bls12381impl.Fp).SetOne().LexicographicallyLargest())
+	require.Equal(t, ctFalse, (&bls12381impl.Fp{
 		0xa1fafffffffe5557,
 		0x995bfff976a3fffe,
 		0x03f41d24d174ceb4,
@@ -283,7 +284,7 @@ func TestFpLexicographicallyLargest(t *testing.T) {
 		0x778a468f507a6034,
 		0x020559931f7f8103,
 	}).LexicographicallyLargest())
-	require.Equal(t, ctTrue, (&Fp{
+	require.Equal(t, ctTrue, (&bls12381impl.Fp{
 		0x1804000000015554,
 		0x855000053ab00001,
 		0x633cb57c253c276f,
@@ -291,7 +292,7 @@ func TestFpLexicographicallyLargest(t *testing.T) {
 		0xd3916126f2d14ca2,
 		0x17fbb8571a006596,
 	}).LexicographicallyLargest())
-	require.Equal(t, ctTrue, (&Fp{
+	require.Equal(t, ctTrue, (&bls12381impl.Fp{
 		0x43f5fffffffcaaae,
 		0x32b7fff2ed47fffd,
 		0x07e83a49a2e99d69,

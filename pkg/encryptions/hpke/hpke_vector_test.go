@@ -1,3 +1,4 @@
+//nolint:testpackage // Allow testing of unexported functions
 package hpke
 
 import (

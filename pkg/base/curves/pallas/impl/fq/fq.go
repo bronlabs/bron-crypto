@@ -22,10 +22,6 @@ var r2 = &Fq{0xfc9678ff0000000f, 0x67bb433d891a16e3, 0x7fae231004ccf590, 0x096d4
 // r3 = 2^768 mod p.
 var r3 = &Fq{0x008b421c249dae4c, 0xe13bda50dba41326, 0x88fececb8e15cb63, 0x07dd97a06e6792c8}
 
-// generator = 5 mod p is a generator of the `p - 1` order multiplicative
-// subgroup, or in other words a primitive element of the field.
-var generator = &Fq{0x96bc8c8cffffffed, 0x74c2a54b49f7778e, 0xfffffffffffffffd, 0x3fffffffffffffff}
-
 var s = 32
 
 // Modulus representation
