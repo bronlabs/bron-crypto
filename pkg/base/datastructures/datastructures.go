@@ -56,6 +56,27 @@ type BiMap[K any, V any] interface {
 	Reverse() BiMap[V, K]
 }
 
+type ConcurrentBiMap[K any, V any] interface {
+	BiMap[K, V]
+	ConcurrentMap[K, V]
+}
+
+type ConcurrentMap[K any, V any] interface {
+	Map[K, V]
+
+	Compute(key K, remappingFunction func(key K, oldVal V, exist bool) (V, bool)) V
+	ComputeIfAbsent(key K, mappingFunction func(key K) (V, bool)) V
+	ComputeIfPresent(key K, remappingFunction func(key K, oldVal V) (V, bool)) V
+}
+
+type ConcurrentSet[E any] interface {
+	Set[E]
+
+	Compute(e E, remappingFunction func(e E, exist bool) (E, bool)) E
+	ComputeIfAbsent(e E, mappingFunction func(e E) (E, bool)) E
+	ComputeIfPresent(e E, remappingFunction func(e E) (E, bool)) E
+}
+
 type AbstractSet[E any] interface {
 	Cardinality() *saferith.Nat
 	Contains(e E) bool

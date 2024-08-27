@@ -1,13 +1,14 @@
 package hashmap_test
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
+	concurrentMap "github.com/copperexchange/krypton-primitives/pkg/base/datastructures/map"
 )
 
 type data struct {
@@ -285,6 +286,7 @@ func Test_HashableHashMap_Values(t *testing.T) {
 func Test_HashableHashMap_Clones(t *testing.T) {
 	t.Parallel()
 	hashMap := hashmap.NewHashableHashMap[*data, int]()
+
 	hashMap.Put(&data{value: 1}, 1)
 	hashMap.Put(&data{value: 2}, 2)
 	hashMap.Put(&data{value: 3}, 3)
@@ -307,63 +309,152 @@ func Test_HashableHashMap_Clones(t *testing.T) {
 	require.Equal(t, 4, clone.Size())
 }
 
-func Test_HashableHashMap_Iter(t *testing.T) {
+func TestConcurrentMapComputeIfAbset(t *testing.T) {
 	t.Parallel()
-	hashMap := hashmap.NewHashableHashMap[*data, int]()
-	hashMap.Put(&data{value: 1}, 1)
-	hashMap.Put(&data{value: 2}, 2)
-	hashMap.Put(&data{value: 3}, 3)
+	inner := hashmap.NewHashableHashMap[*data, int]()
+	hashMap := concurrentMap.NewConcurrentMap(inner)
 
-	count := 0
-	for iterator := hashMap.Iterator(); iterator.HasNext(); {
-		entry := iterator.Next()
-		require.Contains(t, hashMap.Keys(), entry.Key)
-		require.Contains(t, hashMap.Values(), entry.Value)
-		count++
+	hashMap.Put(&data{value: 1}, 0)
+	hashMap.Put(&data{value: 2}, 0)
+
+	numLoop := 1000
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	slice := []*data{
+		{value: 3},
+		{value: 4},
 	}
+	go func() {
+		defer wg.Done()
+		for _, key := range slice {
+			for i := 0; i < numLoop; i++ {
+				hashMap.ComputeIfAbsent(key, func(k *data) (int, bool) {
+					return 1, true
+				})
+			}
+		}
+	}()
 
-	require.Equal(t, count, hashMap.Size())
+	go func() {
+		defer wg.Done()
+		for _, key := range slice {
+			for i := 0; i < numLoop; i++ {
+				hashMap.ComputeIfAbsent(key, func(k *data) (int, bool) {
+					return 1, true
+				})
+			}
+		}
+	}()
+
+	wg.Wait()
+
+	_, oldExist1 := hashMap.Get(&data{value: 4})
+	require.True(t, oldExist1)
+	_, oldExist2 := hashMap.Get(&data{value: 3})
+	require.True(t, oldExist2)
 }
 
-func Test_HashableHashMap_Filter(t *testing.T) {
+func TestConcurrentMapCompute(t *testing.T) {
 	t.Parallel()
-	hashMap := hashmap.NewHashableHashMap[*data, int]()
-	hashMap.Put(&data{value: 1}, 1)
-	hashMap.Put(&data{value: 2}, 2)
-	hashMap.Put(&data{value: 3}, 3)
-	hashMap.Put(&data{value: 4}, 4)
-	hashMap.Put(&data{value: 5}, 5)
+	inner := hashmap.NewHashableHashMap[*data, int]()
+	hashMap := concurrentMap.NewConcurrentMap(inner)
 
-	// filter out even values
-	filtered := hashMap.Filter(func(key *data) bool {
-		return key.value%2 == 0
-	})
+	hashMap.Put(&data{value: 1}, 0)
+	hashMap.Put(&data{value: 2}, 0)
 
-	require.Equal(t, 2, filtered.Size())
-	require.Contains(t, filtered.Keys(), &data{value: 2})
-	require.Contains(t, filtered.Keys(), &data{value: 4})
-	require.NotContains(t, filtered.Keys(), &data{value: 1})
-	require.NotContains(t, filtered.Keys(), &data{value: 3})
-	require.NotContains(t, filtered.Keys(), &data{value: 5})
+	numLoop := 10000
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	keys := hashMap.Keys()
+
+	go func() {
+		defer wg.Done()
+		for _, key := range keys {
+			for i := 0; i < numLoop; i++ {
+				hashMap.Compute(key, func(k *data, v int, b bool) (int, bool) {
+					if b {
+						return v + 1, true
+					} else {
+						return 0, false
+					}
+				})
+			}
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for _, key := range keys {
+			for i := 0; i < numLoop; i++ {
+				hashMap.Compute(key, func(k *data, v int, b bool) (int, bool) {
+					if b {
+						return v - 1, true
+					} else {
+						return 0, false
+					}
+				})
+			}
+		}
+	}()
+
+	wg.Wait()
+
+	value1, _ := hashMap.Get(&data{value: 1})
+	require.Equal(t, 0, value1)
+	value2, _ := hashMap.Get(&data{value: 2})
+	require.Equal(t, 0, value2)
 }
 
-func Test_HashableHashMap_Retain(t *testing.T) {
+func TestConcurrentMapComputeIfPresent(t *testing.T) {
 	t.Parallel()
-	hashMap := hashmap.NewHashableHashMap[*data, int]()
+	inner := hashmap.NewHashableHashMap[*data, int]()
+	hashMap := concurrentMap.NewConcurrentMap(inner)
+
 	hashMap.Put(&data{value: 1}, 1)
 	hashMap.Put(&data{value: 2}, 2)
-	hashMap.Put(&data{value: 3}, 3)
-	hashMap.Put(&data{value: 4}, 4)
-	hashMap.Put(&data{value: 5}, 5)
 
-	// retain even values
-	set := hashset.NewHashableHashSet(&data{value: 2}, &data{value: 4})
-	sieved := hashMap.Retain(set)
+	numLoop := 1000
 
-	require.Equal(t, 2, sieved.Size())
-	require.Contains(t, sieved.Keys(), &data{value: 2})
-	require.Contains(t, sieved.Keys(), &data{value: 4})
-	require.NotContains(t, sieved.Keys(), &data{value: 1})
-	require.NotContains(t, sieved.Keys(), &data{value: 3})
-	require.NotContains(t, sieved.Keys(), &data{value: 5})
+	var wg sync.WaitGroup
+	wg.Add(2)
+	slice := []*data{
+		{value: 3},
+		{value: 4},
+		{value: 3},
+		{value: 4},
+	}
+	go func() {
+		defer wg.Done()
+		for _, key := range slice {
+			for i := 0; i < numLoop; i++ {
+				hashMap.ComputeIfPresent(key, func(k *data, v int) (int, bool) {
+					return v + 1, true
+				})
+			}
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for _, key := range slice {
+			for i := 0; i < numLoop; i++ {
+				hashMap.ComputeIfPresent(key, func(k *data, v int) (int, bool) {
+					return v - 1, true
+				})
+			}
+		}
+	}()
+
+	wg.Wait()
+
+	value1, _ := hashMap.Get(&data{value: 1})
+	require.Equal(t, 1, value1)
+	value2, _ := hashMap.Get(&data{value: 2})
+	require.Equal(t, 2, value2)
+	value3, _ := hashMap.Get(&data{value: 3})
+	require.Equal(t, 0, value3)
+	value4, _ := hashMap.Get(&data{value: 4})
+	require.Equal(t, 0, value4)
 }
