@@ -510,3 +510,172 @@ func Test_HappyPathThresholdZilliqaWithRunner(t *testing.T) {
 	err = zilliqa.Verify(&zilliqa.PublicKey{A: publicKey}, signature, message)
 	require.NoError(t, err)
 }
+
+func Test_HappyPathThresholdEdDSAWithParallelParties(t *testing.T) {
+	t.Parallel()
+
+	variant := vanillaSchnorr.NewEdDsaCompatibleVariant()
+	hashFunc := sha512.New
+	curve := edwards25519.NewCurve()
+	prng := crand.Reader
+	message := []byte("Hello World!")
+	th := 2
+	n := 3
+	sid := []byte("sessionId")
+
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
+	require.NoError(t, err)
+
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
+	require.NoError(t, err)
+
+	shards, err := trusted_dealer.Keygen(protocol, prng)
+	require.NoError(t, err)
+
+	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+	for iterator := shards.Iterator(); iterator.HasNext(); {
+		iter := iterator.Next()
+		identity := iter.Key
+		shard := iter.Value
+		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	}
+	alicePublicKeyShares, _ := publicKeyShares.Get(identities[0])
+
+	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+
+	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, variant)
+	require.NoError(t, err)
+
+	partialSignatures, err := testutils.RunParallelParties(participants, message)
+	require.NoError(t, err)
+	require.NotNil(t, partialSignatures)
+
+	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+	for i, partialSignature := range partialSignatures {
+		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
+	}
+
+	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey{A: alicePublicKeyShares.PublicKey}, partialSignaturesMap)
+	require.NoError(t, err)
+	require.NotNil(t, signature)
+
+	err = vanillaSchnorr.Verify(cipherSuite, &vanillaSchnorr.PublicKey{A: alicePublicKeyShares.PublicKey}, message, signature)
+	require.NoError(t, err)
+}
+
+func Test_HappyPathThresholdBIP340WithParallelParties(t *testing.T) {
+	t.Parallel()
+
+	variant := bip340.NewTaprootVariant()
+	hashFunc := hashing_bip340.NewBip340HashChallenge
+	curve := k256.NewCurve()
+	prng := crand.Reader
+	message := []byte("Hello World!")
+	th := 2
+	n := 3
+	sid := []byte("sessionId")
+
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
+	require.NoError(t, err)
+
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
+	require.NoError(t, err)
+
+	shards, err := trusted_dealer.Keygen(protocol, prng)
+	require.NoError(t, err)
+	aliceShard, exists := shards.Get(identities[0])
+	require.True(t, exists)
+	publicKey := aliceShard.SigningKeyShare.PublicKey
+	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+	for iterator := shards.Iterator(); iterator.HasNext(); {
+		iter := iterator.Next()
+		identity := iter.Key
+		shard := iter.Value
+		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	}
+
+	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+
+	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, variant)
+	require.NoError(t, err)
+
+	partialSignatures, err := testutils.RunParallelParties(participants, message)
+	require.NoError(t, err)
+	require.NotNil(t, partialSignatures)
+
+	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+	for i, partialSignature := range partialSignatures {
+		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
+	}
+
+	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey{A: publicKey}, partialSignaturesMap)
+	require.NoError(t, err)
+	require.NotNil(t, signature)
+
+	err = bip340.Verify(&bip340.PublicKey{A: publicKey}, signature, message)
+	require.NoError(t, err)
+}
+
+func Test_HappyPathThresholdZilliqaWithParallelParties(t *testing.T) {
+	t.Parallel()
+
+	variant := zilliqa.NewZilliqaVariant()
+	hashFunc := sha256.New
+	curve := k256.NewCurve()
+	prng := crand.Reader
+	message := []byte("Hello World!")
+	th := 2
+	n := 3
+	sid := []byte("sessionId")
+
+	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
+	require.NoError(t, err)
+
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
+	require.NoError(t, err)
+
+	shards, err := trusted_dealer.Keygen(protocol, prng)
+	require.NoError(t, err)
+
+	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+	for iterator := shards.Iterator(); iterator.HasNext(); {
+		iter := iterator.Next()
+		identity := iter.Key
+		shard := iter.Value
+		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	}
+
+	aliceShard, exists := shards.Get(identities[0])
+	require.True(t, exists)
+	publicKey := aliceShard.SigningKeyShare.PublicKey
+
+	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+
+	participants, err := testutils.MakeParticipants(sid, protocol, identities[:th], shards, transcripts, variant)
+	require.NoError(t, err)
+
+	partialSignatures, err := testutils.RunParallelParties(participants, message)
+	require.NoError(t, err)
+	require.NotNil(t, partialSignatures)
+
+	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+	for i, partialSignature := range partialSignatures {
+		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
+	}
+
+	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey{A: publicKey}, partialSignaturesMap)
+	require.NoError(t, err)
+	require.NotNil(t, signature)
+
+	err = zilliqa.Verify(&zilliqa.PublicKey{A: publicKey}, signature, message)
+	require.NoError(t, err)
+}
