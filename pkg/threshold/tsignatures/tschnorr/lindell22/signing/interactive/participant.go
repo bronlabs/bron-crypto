@@ -8,12 +8,14 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -150,4 +152,28 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types
 		return errs.NewCurve("shard and protocol have different curves")
 	}
 	return nil
+}
+
+func (p *Cosigner[V]) Run(router roundbased.MessageRouter, message []byte) (*tschnorr.PartialSignature, error) {
+	r1b := roundbased.NewBroadcastRound[*Round1Broadcast](p.IdentityKey(), 1, router)
+	r2b := roundbased.NewBroadcastRound[*Round2Broadcast](p.IdentityKey(), 2, router)
+
+	r1bOut, err := p.Round1()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 1 failed")
+	}
+	r1b.BroadcastOut() <- r1bOut
+
+	r2bOut, err := p.Round2(<-r1b.BroadcastIn())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 2 failed")
+	}
+	r2b.BroadcastOut() <- r2bOut
+
+	r3bOut, err := p.Round3(<-r2b.BroadcastIn(), message)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "round 3 failed")
+	}
+
+	return r3bOut, nil
 }
