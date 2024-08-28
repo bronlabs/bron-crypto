@@ -71,9 +71,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		require.NotNil(t, shard.PublicKeyShares)
 		require.NotNil(t, shard.PairwiseBaseOTs)
 		require.Equal(t, shard.PairwiseBaseOTs.Size(), protocol.Participants().Size()-1)
-		for iterator := shard.PairwiseBaseOTs.Iterator(); iterator.HasNext(); {
-			pair := iterator.Next()
-			baseOTConfig := pair.Value
+		for _, baseOTConfig := range shard.PairwiseBaseOTs.Iter() {
 			require.NotNil(t, baseOTConfig)
 			require.NotNil(t, baseOTConfig.AsSender)
 			require.NotNil(t, baseOTConfig.AsReceiver)

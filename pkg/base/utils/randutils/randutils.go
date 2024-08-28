@@ -18,7 +18,7 @@ const (
 )
 
 func IsSigned[T constraints.Integer](x T) bool {
-	switch reflect.TypeOf(x).Kind() { //nolint:exhaustive // intentional, for readability.
+	switch reflect.TypeOf(x).Kind() { //nolint:exhaustive // intentional,for readability.
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return true
 	default:

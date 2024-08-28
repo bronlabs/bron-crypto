@@ -40,7 +40,7 @@ deps: deps-go deps-boring
 deps-go:
 	${GO} mod download
 	${GO} mod verify
-	${GO} mod tidy -compat=1.22
+	${GO} mod tidy -compat=1.23
 
 .PHONY: codegen
 codegen: pkg/base/errs/error_functions.gen.go pkg/base/errs/known_errors.gen.go

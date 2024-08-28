@@ -37,8 +37,7 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 	outputP2P := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round1P2P]()
 
 	// step 1.3: For each other cosigner in the quorum...
-	for iterator := quorum.Iterator(); iterator.HasNext(); {
-		participant := iterator.Next()
+	for participant := range quorum.Iter() {
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -121,8 +120,7 @@ func DoRound2(p *Participant, protocol types.ThresholdSignatureProtocol, quorum 
 	state.Cv_i = make(map[types.SharingID]curves.Scalar)
 	outputP2P := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round2P2P]()
 	// step 2.4: For each other cosigner in the quorum...
-	for iterator := quorum.Iterator(); iterator.HasNext(); {
-		participant := iterator.Next()
+	for participant := range quorum.Iter() {
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -197,8 +195,7 @@ func DoRound3Prologue(p *Participant, protocol types.ThresholdSignatureProtocol,
 	state.Psi_i = make(map[types.SharingID]curves.Scalar)
 	refreshedPublicKey := state.Pk_i // this has zeta_i added so different from the one from public key share map
 	// step 3.1: For each other cosigner in the quorum...
-	for iterator := quorum.Iterator(); iterator.HasNext(); {
-		participant := iterator.Next()
+	for participant := range quorum.Iter() {
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -287,8 +284,7 @@ func DoRound3Epilogue(p *Participant, protocol types.ThresholdSignatureProtocol,
 	phiPsi := phi
 	cUdU := phi.ScalarField().Zero()
 	cVdV := phi.ScalarField().Zero()
-	for iterator := quorum.Iterator(); iterator.HasNext(); {
-		participant := iterator.Next()
+	for participant := range quorum.Iter() {
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -345,9 +341,7 @@ func Aggregate(cipherSuite types.SigningSuite, publicKey curves.Point,
 	u := curve.ScalarField().Zero()
 	R := curve.AdditiveIdentity()
 	// step 4.1: R <- Σ R_i   &    rx <- R_x
-	for iterator := partialSignatures.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		partialSignature := pair.Value
+	for _, partialSignature := range partialSignatures.Iter() {
 		w = w.Add(partialSignature.Wi)
 		u = u.Add(partialSignature.Ui)
 		R = R.Add(partialSignature.Ri)

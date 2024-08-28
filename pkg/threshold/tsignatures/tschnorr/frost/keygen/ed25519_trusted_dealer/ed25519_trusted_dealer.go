@@ -40,18 +40,12 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.Iden
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 
 	publicKeySharesMap := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
-	for iterator := sharingConfig.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		sharingId := pair.Key
-		identityKey := pair.Value
+	for sharingId, identityKey := range sharingConfig.Iter() {
 		publicKeySharesMap.Put(identityKey, protocol.Curve().ScalarBaseMult(shamirShares[sharingId-1].Value))
 	}
 
 	shards := hashmap.NewHashableHashMap[types.IdentityKey, *frost.Shard]()
-	for iterator := sharingConfig.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		sharingId := pair.Key
-		identityKey := pair.Value
+	for sharingId, identityKey := range sharingConfig.Iter() {
 		share := shamirShares[int(sharingId)-1].Value
 		shards.Put(identityKey, &frost.Shard{
 			SigningKeyShare: &tsignatures.SigningKeyShare{

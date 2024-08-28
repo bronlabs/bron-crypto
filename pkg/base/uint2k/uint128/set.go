@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/cronokirby/saferith"
+	"iter"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
@@ -54,7 +55,7 @@ func (*Ring128) Contains(_ Uint128) bool {
 	return true
 }
 
-func (*Ring128) Iterator() ds.Iterator[Uint128] {
+func (*Ring128) Iter() iter.Seq[Uint128] {
 	panic("not supported")
 }
 

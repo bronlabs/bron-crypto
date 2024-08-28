@@ -22,8 +22,7 @@ func (asi *AbstractSetInvariants[S, E]) ContainsAndIter(t *testing.T, A S, expec
 	require.NotNil(t, A)
 	require.GreaterOrEqual(t, expectedCardinality, 0)
 	countedElements := 0
-	for iterator := A.Iterator(); iterator.HasNext(); {
-		e := iterator.Next()
+	for e := range A.Iter() {
 		require.True(t, A.Contains(e), "element %v must be in the set", e)
 		countedElements++
 	}

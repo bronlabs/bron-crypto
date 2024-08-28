@@ -8,6 +8,7 @@ import (
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	concurrentMap "github.com/copperexchange/krypton-primitives/pkg/base/datastructures/map"
 )
 
@@ -286,7 +287,6 @@ func Test_HashableHashMap_Values(t *testing.T) {
 func Test_HashableHashMap_Clones(t *testing.T) {
 	t.Parallel()
 	hashMap := hashmap.NewHashableHashMap[*data, int]()
-
 	hashMap.Put(&data{value: 1}, 1)
 	hashMap.Put(&data{value: 2}, 2)
 	hashMap.Put(&data{value: 3}, 3)
@@ -295,18 +295,78 @@ func Test_HashableHashMap_Clones(t *testing.T) {
 	require.Equal(t, hashMap.Size(), clone.Size())
 
 	// Check if the clone contains the same key-value pairs
-
-	for iterator := hashMap.Iterator(); iterator.HasNext(); {
-		entry := iterator.Next()
-		value, ok := clone.Get(entry.Key)
+	for Key, Value := range hashMap.Iter() {
+		value, ok := clone.Get(Key)
 		require.True(t, ok)
-		require.Equal(t, entry.Value, value)
+		require.Equal(t, Value, value)
 	}
 
 	// Check if modifying the clone does not affect the original map
 	clone.Put(&data{value: 4}, 4)
 	require.Equal(t, 3, hashMap.Size())
 	require.Equal(t, 4, clone.Size())
+}
+
+func Test_HashableHashMap_Iter(t *testing.T) {
+	t.Parallel()
+	hashMap := hashmap.NewComparableHashMap[*data, int]()
+
+	replaced, _ := hashMap.TryPut(&data{value: 1}, 1)
+	require.False(t, replaced)
+	replaced, _ = hashMap.TryPut(&data{value: 2}, 2)
+	require.False(t, replaced)
+	replaced, _ = hashMap.TryPut(&data{value: 3}, 3)
+	require.False(t, replaced)
+
+	for key, value := range hashMap.Iter() {
+		require.Contains(t, hashMap.Keys(), key)
+		require.Contains(t, hashMap.Values(), value)
+	}
+	require.Equal(t, 3, hashMap.Size())
+
+}
+
+func Test_HashableHashMap_Filter(t *testing.T) {
+	t.Parallel()
+	hashMap := hashmap.NewHashableHashMap[*data, int]()
+	hashMap.Put(&data{value: 1}, 1)
+	hashMap.Put(&data{value: 2}, 2)
+	hashMap.Put(&data{value: 3}, 3)
+	hashMap.Put(&data{value: 4}, 4)
+	hashMap.Put(&data{value: 5}, 5)
+
+	// filter out even values
+	filtered := hashMap.Filter(func(key *data) bool {
+		return key.value%2 == 0
+	})
+
+	require.Equal(t, 2, filtered.Size())
+	require.Contains(t, filtered.Keys(), &data{value: 2})
+	require.Contains(t, filtered.Keys(), &data{value: 4})
+	require.NotContains(t, filtered.Keys(), &data{value: 1})
+	require.NotContains(t, filtered.Keys(), &data{value: 3})
+	require.NotContains(t, filtered.Keys(), &data{value: 5})
+}
+
+func Test_HashableHashMap_Retain(t *testing.T) {
+	t.Parallel()
+	hashMap := hashmap.NewHashableHashMap[*data, int]()
+	hashMap.Put(&data{value: 1}, 1)
+	hashMap.Put(&data{value: 2}, 2)
+	hashMap.Put(&data{value: 3}, 3)
+	hashMap.Put(&data{value: 4}, 4)
+	hashMap.Put(&data{value: 5}, 5)
+
+	// retain even values
+	set := hashset.NewHashableHashSet(&data{value: 2}, &data{value: 4})
+	sieved := hashMap.Retain(set)
+
+	require.Equal(t, 2, sieved.Size())
+	require.Contains(t, sieved.Keys(), &data{value: 2})
+	require.Contains(t, sieved.Keys(), &data{value: 4})
+	require.NotContains(t, sieved.Keys(), &data{value: 1})
+	require.NotContains(t, sieved.Keys(), &data{value: 3})
+	require.NotContains(t, sieved.Keys(), &data{value: 5})
 }
 
 func TestConcurrentMapComputeIfAbset(t *testing.T) {

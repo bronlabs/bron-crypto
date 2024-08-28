@@ -3,6 +3,8 @@ package bimap
 import (
 	"encoding/json"
 
+	"iter"
+
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
@@ -93,8 +95,16 @@ func (m *BiMap[_, V]) Values() []V {
 	return m.reverseMap.Keys()
 }
 
-func (m *BiMap[K, V]) Iterator() ds.Iterator[ds.MapEntry[K, V]] {
-	return m.internalMap.Iterator()
+func (m *BiMap[K, V]) Iter() iter.Seq2[K, V] {
+	keys := m.Keys()
+	return func(yield func(K, V) bool) {
+		for _, key := range keys {
+			value, _ := m.Get(key)
+			if !yield(key, value) {
+				return
+			}
+		}
+	}
 }
 
 func (m *BiMap[K, V]) Clone() ds.Map[K, V] {

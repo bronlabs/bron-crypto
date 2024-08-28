@@ -22,10 +22,7 @@ func (p *Participant) Round1() (network.RoundMessages[types.ThresholdProtocol, *
 		return nil, errs.WrapFailed(err, "zero sampling round 1 failed")
 	}
 	baseOtP2P := hashmap.NewHashableHashMap[types.IdentityKey, *bbot.Round1P2P]()
-	for iterator := p.BaseOTSenderParties.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		identity := pair.Key
-		party := pair.Value
+	for identity, party := range p.BaseOTSenderParties.Iter() {
 		r1out, err := party.Round1()
 		if err != nil {
 			return nil, errs.WrapFailed(err, "BaseOT as sender for identity %s", identity.String())
@@ -34,8 +31,7 @@ func (p *Participant) Round1() (network.RoundMessages[types.ThresholdProtocol, *
 	}
 
 	p2pOutput := network.NewRoundMessages[types.ThresholdProtocol, *Round1P2P]()
-	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
-		identity := iterator.Next()
+	for identity := range p.Protocol.Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -68,10 +64,7 @@ func (p *Participant) Round2(round1outputP2P network.RoundMessages[types.Thresho
 
 	zeroSamplingRound1Output := network.NewRoundMessages[types.Protocol, *zeroSetup.Round1P2P]()
 	baseOtRound1Output := network.NewRoundMessages[types.Protocol, *bbot.Round1P2P]()
-	for iterator := round1outputP2P.Iterator(); iterator.HasNext();{
-		pair := iterator.Next()
-		sender := pair.Key
-		message := pair.Value
+	for sender, message := range round1outputP2P.Iter() {
 		baseOtRound1Output.Put(sender, message.BaseOTSender)
 		zeroSamplingRound1Output.Put(sender, message.ZeroSampling)
 	}
@@ -82,10 +75,7 @@ func (p *Participant) Round2(round1outputP2P network.RoundMessages[types.Thresho
 	}
 
 	baseOTP2P := network.NewRoundMessages[types.Protocol, *bbot.Round2P2P]()
-	for iterator := p.BaseOTReceiverParties.Iterator(); iterator.HasNext();{
-		pair := iterator.Next()
-		identity := pair.Key
-		party := pair.Value
+	for identity, party := range p.BaseOTReceiverParties.Iter() {
 		r2In, exists := baseOtRound1Output.Get(identity)
 		if !exists {
 			return nil, errs.NewMissing("did not have a message from %s", identity.String())
@@ -97,8 +87,7 @@ func (p *Participant) Round2(round1outputP2P network.RoundMessages[types.Thresho
 		baseOTP2P.Put(identity, r2out)
 	}
 	p2pOutput := network.NewRoundMessages[types.ThresholdProtocol, *Round2P2P]()
-	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
-		identity := iterator.Next()
+	for identity := range p.Protocol.Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -135,8 +124,7 @@ func (p *Participant) Round3(mySigningKeyShare *tsignatures.SigningKeyShare, rou
 	baseOtRound2Output := network.NewRoundMessages[types.Protocol, *bbot.Round2P2P]()
 	zeroSamplingRound2Output := network.NewRoundMessages[types.Protocol, *zeroSetup.Round2P2P]()
 
-	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
-		party := iterator.Next()
+	for party := range p.Protocol.Participants().Iter() {
 		if party.Equal(p.myAuthKey) {
 			continue
 		}
@@ -150,18 +138,14 @@ func (p *Participant) Round3(mySigningKeyShare *tsignatures.SigningKeyShare, rou
 		return nil, errs.WrapFailed(err, "zero sampling round 3 failed")
 	}
 
-	for iterator := p.BaseOTSenderParties.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		identity := pair.Key
-		party := pair.Value
+	for identity, party := range p.BaseOTSenderParties.Iter() {
 		message, _ := baseOtRound2Output.Get(identity)
 		if err := party.Round3(message); err != nil {
 			return nil, errs.WrapFailed(err, "base OT as sender for identity %s", identity.String())
 		}
 	}
 	pairwiseBaseOTs := hashmap.NewHashableHashMap[types.IdentityKey, *dkls23.BaseOTConfig]()
-	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
-		identity := iterator.Next()
+	for identity := range p.Protocol.Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}

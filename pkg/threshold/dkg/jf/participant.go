@@ -99,7 +99,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 	}
 	niCompiler, err := compilerUtils.MakeNonInteractive(niCompilerName, batchSchnorrProtocol, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, fmt.Sprintf("cannot create %s compiler", niCompilerName))
+		return nil, errs.WrapFailed(err, "cannot create %s compiler", niCompilerName)
 	}
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	mySharingId, exists := sharingConfig.Reverse().Get(authKey)

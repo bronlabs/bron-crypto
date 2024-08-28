@@ -3,6 +3,8 @@ package bimap
 import (
 	"sync"
 
+	"iter"
+
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
@@ -106,10 +108,10 @@ func (m *ConcurrentBiMap[_, V]) Values() []V {
 	return m.internalMap.Values()
 }
 
-func (m *ConcurrentBiMap[K, V]) Iterator() ds.Iterator[ds.MapEntry[K, V]] {
+func (m *ConcurrentBiMap[K, V]) Iter() iter.Seq2[K, V] {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.internalMap.Iterator()
+	return m.internalMap.Iter()
 }
 
 func (m *ConcurrentBiMap[K, V]) Clone() ds.Map[K, V] {

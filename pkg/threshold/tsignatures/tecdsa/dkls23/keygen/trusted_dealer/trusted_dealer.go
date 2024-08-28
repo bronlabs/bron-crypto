@@ -58,9 +58,7 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.Iden
 
 	results := hashmap.NewHashableHashMap[types.IdentityKey, *dkls23.Shard]()
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	for iterator := sharingConfig.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		identityKey := pair.Value
+	for _, identityKey := range sharingConfig.Iter() {
 		share, exists := signingKeyShares.Get(identityKey)
 		if !exists {
 			return nil, errs.NewFailed("signing key share is missing")

@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/cronokirby/saferith"
+	"iter"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
@@ -62,7 +63,7 @@ func (*ScalarField[_]) Contains(e curves.Scalar) bool {
 	panic("implement me")
 }
 
-func (*ScalarField[_]) Iterator() ds.Iterator[curves.Scalar] {
+func (*ScalarField[_]) Iter() iter.Seq[curves.Scalar] {
 	//TODO implement me
 	panic("implement me")
 }

@@ -39,10 +39,7 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 	sigmaPOP := bls12381.GetSourceSubGroup[S]().AdditiveIdentity()
 
 	// step 2.1
-	for iterator := partialSignatures.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		identityKey := pair.Key
-		psig := pair.Value
+	for identityKey, psig := range partialSignatures.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, nil, errs.NewMissing("could not find sharing id of participant %s", identityKey.String())

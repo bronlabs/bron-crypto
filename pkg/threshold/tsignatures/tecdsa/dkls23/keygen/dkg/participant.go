@@ -77,9 +77,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 	}
 	senders := hashmap.NewHashableHashMap[types.IdentityKey, *bbot.Sender]()
 	receivers := hashmap.NewHashableHashMap[types.IdentityKey, *bbot.Receiver]()
-	for iterator := protocol.Participants().Iterator(); iterator.HasNext(); {
-		participant := iterator.Next()
-
+	for participant := range protocol.Participants().Iter() {
 		if participant.Equal(authKey) {
 			continue
 		}

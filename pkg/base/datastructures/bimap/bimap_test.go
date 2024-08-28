@@ -268,12 +268,8 @@ func Test_Iter(t *testing.T) {
 
 	var pairs []datastructures.MapEntry[*dataK, *dataV]
 	// Iterate over the map and collect the key-value pairs
-	for iterator := biMap.Iterator(); iterator.HasNext(); {
-		// Verify the iterator
-		require.NotNil(t, iterator)
-		pair := iterator.Next()
-		pairs = append(pairs, pair)
-
+	for key, value := range biMap.Iter() {
+		pairs = append(pairs, datastructures.MapEntry[*dataK, *dataV]{Key: key, Value: value})
 	}
 
 	// Verify the collected key-value pairs

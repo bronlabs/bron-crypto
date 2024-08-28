@@ -103,10 +103,7 @@ func (s *Shard) Validate(protocol types.ThresholdProtocol, holderIdentityKey typ
 	if diff := protocol.Participants().Difference(pairwiseBaseOTHolders); diff.Size() != 1 || !diff.Contains(holderIdentityKey) {
 		return errs.NewMembership("Pairwise base OT holders should contain all participants except myself")
 	}
-	for iterator := s.PairwiseBaseOTs.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		id := pair.Key
-		v := pair.Value
+	for id, v := range s.PairwiseBaseOTs.Iter() {
 		if v == nil {
 			return errs.NewIsNil("base ot pair for id %s", id.String())
 		}
@@ -175,8 +172,7 @@ func (ppm *PreProcessingMaterial) Validate(myIdentityKey types.IdentityKey, prot
 	if ppm.PreSignature == nil {
 		return errs.NewIsNil("public material")
 	}
-	for iterator := ppm.PreSigners.Iterator(); iterator.HasNext(); {
-		participant := iterator.Next()
+	for participant := range ppm.PreSigners.Iter() {
 		Ri, exists := ppm.PreSignature.Get(participant)
 		if !exists {
 			return errs.NewMissing("could not find Ri for identity %s", participant.String())
@@ -217,8 +213,7 @@ func (pppm *PrivatePreProcessingMaterial) Validate(myIdentityKey types.IdentityK
 		return errs.NewIsNil("Zeta")
 	}
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	for iterator := preSigners.Iterator(); iterator.HasNext(); {
-		participant := iterator.Next()
+	for participant := range preSigners.Iter() {
 		if participant.Equal(myIdentityKey) {
 			continue
 		}

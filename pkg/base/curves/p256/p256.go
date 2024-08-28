@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/cronokirby/saferith"
+	"iter"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
@@ -71,7 +72,7 @@ func (*Curve) Contains(e curves.Point) bool {
 	panic("implement me")
 }
 
-func (*Curve) Iterator() ds.Iterator[curves.Point] {
+func (*Curve) Iter() iter.Seq[curves.Point] {
 	//TODO implement me
 	panic("implement me")
 }

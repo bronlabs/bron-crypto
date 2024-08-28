@@ -56,10 +56,7 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[t
 
 	shards := hashmap.NewHashableHashMap[types.IdentityKey, *lindell17.Shard]()
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	for iterator := sharingConfig.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		identityKey := pair.Value
-
+	for _, identityKey := range sharingConfig.Iter() {
 		sks, exists := signingKeyShares.Get(identityKey)
 		if !exists {
 			return nil, errs.NewFailed("signing key share is missing")
@@ -78,10 +75,7 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[t
 	}
 
 	// generate Paillier key pairs and encrypt share
-	for iterator := sharingConfig.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		i := pair.Key
-		identityKey := pair.Value
+	for i, identityKey := range sharingConfig.Iter() {
 		paillierPublicKey, paillierSecretKey, err := paillier.KeyGen(paillierPrimeBitLength, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot generate paillier keys")
@@ -91,10 +85,8 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[t
 			return nil, errs.NewMissing("couldn't find shard for sharing id %d", i)
 		}
 		thisShard.PaillierSecretKey = paillierSecretKey
-		for iterator := sharingConfig.Iterator(); iterator.HasNext(); {
-			pair := iterator.Next()
-			j := pair.Key
-			otherIdentityKey := pair.Value
+		for j, value := range sharingConfig.Iter() {
+			otherIdentityKey := value
 			if identityKey.Equal(otherIdentityKey) {
 				continue
 			}
@@ -121,10 +113,7 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[t
 func validateShards(protocol types.ThresholdSignatureProtocol, shards ds.Map[types.IdentityKey, *lindell17.Shard], ecdsaPrivateKey *ecdsa.PrivateKey) error {
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 
-	for iterator := shards.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		id := pair.Key
-		shard := pair.Value
+	for id, shard := range shards.Iter() {
 		if err := shard.Validate(protocol, id.(types.IdentityKey), true); err != nil {
 			return errs.WrapValidation(err, "shard for id %x", id)
 		}
@@ -174,15 +163,11 @@ func validateShards(protocol types.ThresholdSignatureProtocol, shards ds.Map[typ
 	}
 
 	// verify Paillier encryption of shards
-	for iterator := shards.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		myIdentityKey := pair.Key
-		myShard := pair.Value
+	for myIdentityKey, myShard := range shards.Iter() {
 		myShare := myShard.SigningKeyShare.Share.Nat()
 		myPaillierPrivateKey := myShard.PaillierSecretKey
-		for iterator := shards.Iterator(); iterator.HasNext(); {
-			pair := iterator.Next()
-			theirShard := pair.Value
+		for _, value := range shards.Iter() {
+			theirShard := value
 			if myShard.PaillierSecretKey.N.Eq(theirShard.PaillierSecretKey.N) == 0 {
 				theirEncryptedShare, exists := theirShard.PaillierEncryptedShares.Get(myIdentityKey)
 				if !exists {

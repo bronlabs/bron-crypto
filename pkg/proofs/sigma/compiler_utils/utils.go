@@ -1,7 +1,6 @@
 package compiler_utils
 
 import (
-	"fmt"
 	"io"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
@@ -41,7 +40,7 @@ func MakeNonInteractive[X sigma.Statement, W sigma.Witness, A sigma.Commitment, 
 		}
 		return fs, nil
 	default:
-		return nil, errs.NewFailed(fmt.Sprintf("no such compiler %s", compilerName))
+		return nil, errs.NewFailed("no such compiler %s", compilerName)
 	}
 }
 

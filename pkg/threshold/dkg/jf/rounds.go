@@ -51,10 +51,7 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.Th
 
 	// step 1.4: Send (x_ij, x'_ij) -> P_j
 	outboundP2PMessages := network.NewRoundMessages[types.ThresholdProtocol, *Round1P2P]()
-	for iterator := p.SharingConfig.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		identityKey := pair.Value
-		sharingId := pair.Key
+	for sharingId, identityKey := range p.SharingConfig.Iter() {
 		if sharingId == p.SharingId() {
 			continue
 		}

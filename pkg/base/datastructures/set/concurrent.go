@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/cronokirby/saferith"
+	"iter"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -153,10 +154,10 @@ func (s *ConcurrentSet[E]) Clone() ds.Set[E] {
 	return clone
 }
 
-func (s *ConcurrentSet[E]) Iterator() ds.Iterator[E] {
+func (s *ConcurrentSet[E]) Iter() iter.Seq[E] {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.v.Iterator()
+	return s.v.Iter()
 }
 
 func (s *ConcurrentSet[E]) MarshalJSON() ([]byte, error) {

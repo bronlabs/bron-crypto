@@ -12,10 +12,7 @@ func (p *Participant) Sample() (zeroShare rprzs.Sample, err error) {
 	if !exists {
 		return nil, errs.NewMissing("couldn't find my identity index")
 	}
-	for iterator := p.Prngs.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		participant := pair.Key
-		prng := pair.Value
+	for participant, prng := range p.Prngs.Iter() {
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}

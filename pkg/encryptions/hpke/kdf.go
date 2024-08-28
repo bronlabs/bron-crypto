@@ -52,8 +52,7 @@ func NewKDFSHA512() *KDFScheme {
 
 // ID returns the KDF ID as per https://www.rfc-editor.org/rfc/rfc9180.html#name-key-derivation-functions-kd
 func (s *KDFScheme) ID() KDFID {
-	//nolint:exhaustive // the other hashes are not supported, so no need to check.
-	switch s.hash {
+	switch s.hash { //nolint:exhaustive // intentional, for readability.
 	case crypto.SHA256:
 		return KDF_HKDF_SHA256
 	case crypto.SHA512:

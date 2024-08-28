@@ -45,9 +45,7 @@ func Keygen[K bls.KeySubGroup](protocol types.ThresholdProtocol, prng io.Reader)
 
 	shards := hashmap.NewHashableHashMap[types.IdentityKey, *boldyreva02.Shard[K]]()
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	for iterator := sharingConfig.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		identityKey := pair.Value
+	for _, identityKey := range sharingConfig.Iter() {
 		sks, exists := signingKeyShares.Get(identityKey)
 		if !exists {
 			return nil, errs.NewFailed("share is missing")

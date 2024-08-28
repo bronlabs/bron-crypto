@@ -5,6 +5,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 	"golang.org/x/exp/maps"
+	"iter"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -103,11 +104,13 @@ func (s *ComparableHashSet[E]) SubSets() []ds.Set[E] {
 	return result
 }
 
-func (s *ComparableHashSet[E]) Iterator() ds.Iterator[E] {
-	return &comparableHashSetIterator[E]{
-		nextKeyIndex:      0,
-		elements:          s.List(),
-		comparableHashSet: s,
+func (s *ComparableHashSet[E]) Iter() iter.Seq[E] {
+	return func(yield func(E) bool) {
+		for el := range s.v {
+			if !yield(el) {
+				return
+			}
+		}
 	}
 }
 
@@ -180,24 +183,4 @@ func (s *ComparableHashSet[E]) UnmarshalJSON(data []byte) error {
 		s.v[k] = v
 	}
 	return nil
-}
-
-type comparableHashSetIterator[E comparable] struct {
-	nextKeyIndex      int
-	elements          []E
-	comparableHashSet *ComparableHashSet[E]
-}
-
-func (i *comparableHashSetIterator[E]) Next() E {
-	var curr E
-	if i.nextKeyIndex >= len(i.elements) {
-		panic("index out of range")
-	}
-	curr = i.elements[i.nextKeyIndex]
-	i.nextKeyIndex++
-	return curr
-}
-
-func (i *comparableHashSetIterator[E]) HasNext() bool {
-	return i.nextKeyIndex < len(i.elements)
 }

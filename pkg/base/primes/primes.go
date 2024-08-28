@@ -3,7 +3,6 @@ package primes
 import (
 	crand "crypto/rand"
 	"crypto/rsa"
-	"fmt"
 	"io"
 	"math"
 	"math/big"
@@ -81,7 +80,7 @@ func GeneratePrimePair(bits int, prng io.Reader) (p, q *saferith.Nat, err error)
 	qBig := rsaPrivateKey.Primes[1]
 	// double check
 	if pBig.BitLen() != bits || qBig.BitLen() != bits {
-		return nil, nil, errs.WrapFailed(err, fmt.Sprintf("p,q have invalid length (%d, %d) - expected %d", pBig.BitLen(), qBig.BitLen(), bits))
+		return nil, nil, errs.WrapFailed(err, "p,q have invalid length (%d, %d) - expected %d", pBig.BitLen(), qBig.BitLen(), bits)
 	}
 
 	p = new(saferith.Nat).SetBig(pBig, bits)

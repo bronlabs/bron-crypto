@@ -106,10 +106,7 @@ func Test_HappyPathThresholdEdDSA(t *testing.T) {
 	require.NoError(t, err)
 
 	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-	for iterator := shards.Iterator(); iterator.HasNext(); {
-		iter := iterator.Next()
-		identity := iter.Key
-		shard := iter.Value
+	for identity, shard := range shards.Iter() {
 		publicKeyShares.Put(identity, shard.PublicKeyShares)
 	}
 	alicePublicKeyShares, _ := publicKeyShares.Get(identities[0])
@@ -160,10 +157,7 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 	require.True(t, exists)
 	publicKey := aliceShard.SigningKeyShare.PublicKey
 	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-	for iterator := shards.Iterator(); iterator.HasNext(); {
-		iter := iterator.Next()
-		identity := iter.Key
-		shard := iter.Value
+	for identity, shard := range shards.Iter() {
 		publicKeyShares.Put(identity, shard.PublicKeyShares)
 	}
 
@@ -214,10 +208,7 @@ func Test_HappyPathThresholdMina(t *testing.T) {
 	require.True(t, exists)
 	publicKey := aliceShard.SigningKeyShare.PublicKey
 	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-	for iterator := shards.Iterator(); iterator.HasNext(); {
-		iter := iterator.Next()
-		identity := iter.Key
-		shard := iter.Value
+	for identity, shard := range shards.Iter() {
 		publicKeyShares.Put(identity, shard.PublicKeyShares)
 	}
 
@@ -270,10 +261,7 @@ func Test_ThresholdMinaAgainstMinaSigner(t *testing.T) {
 	require.True(t, exists)
 	publicKey := aliceShard.SigningKeyShare.PublicKey
 	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-	for iterator := shards.Iterator(); iterator.HasNext(); {
-		iter := iterator.Next()
-		identity := iter.Key
-		shard := iter.Value
+	for identity, shard := range shards.Iter() {
 		publicKeyShares.Put(identity, shard.PublicKeyShares)
 	}
 
@@ -340,10 +328,7 @@ func Test_HappyPathThresholdZilliqa(t *testing.T) {
 	require.NoError(t, err)
 
 	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-	for iterator := shards.Iterator(); iterator.HasNext(); {
-		iter := iterator.Next()
-		identity := iter.Key
-		shard := iter.Value
+	for identity, shard := range shards.Iter() {
 		publicKeyShares.Put(identity, shard.PublicKeyShares)
 	}
 
@@ -399,10 +384,7 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	}
 
 	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-	for iterator := shards.Iterator(); iterator.HasNext(); {
-		iter := iterator.Next()
-		identity := iter.Key
-		shard := iter.Value
+	for identity, shard := range shards.Iter() {
 		publicKeyShares.Put(identity, shard.PublicKeyShares)
 	}
 

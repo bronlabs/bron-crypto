@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"golang.org/x/exp/maps"
+	"iter"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -85,14 +86,6 @@ func (m *ComparableHashMap[K, V]) Values() []V {
 	return maps.Values(m.inner)
 }
 
-func (m *ComparableHashMap[K, V]) Iterator() ds.Iterator[ds.MapEntry[K, V]] {
-	return &comparableHashMapIterator[K, V]{
-		nextKeyIndex:      0,
-		keys:              m.Keys(),
-		comparableHashMap: m,
-	}
-}
-
 func (m *ComparableHashMap[K, V]) Clone() ds.Map[K, V] {
 	return &ComparableHashMap[K, V]{
 		inner: maps.Clone(m.inner),
@@ -119,22 +112,14 @@ func (m *ComparableHashMap[K, V]) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type comparableHashMapIterator[K comparable, V any] struct {
-	nextKeyIndex      int
-	keys              []K
-	comparableHashMap *ComparableHashMap[K, V]
-}
-
-func (i *comparableHashMapIterator[K, V]) Next() ds.MapEntry[K, V] {
-	if i.nextKeyIndex >= len(i.keys) {
-		panic("index out of range")
+func (m *ComparableHashMap[K, V]) Iter() iter.Seq2[K, V] {
+	return func(yield func(K, V) bool) {
+		for i := range len(m.Keys()) {
+			key := m.Keys()[i]
+			value, _ := m.Get(key)
+			if !yield(key, value) {
+				return
+			}
+		}
 	}
-	key := i.keys[i.nextKeyIndex]
-	value, _ := i.comparableHashMap.Get(key)
-	i.nextKeyIndex++
-	return ds.MapEntry[K, V]{Key: key, Value: value}
-}
-
-func (i *comparableHashMapIterator[K, V]) HasNext() bool {
-	return i.nextKeyIndex < len(i.keys)
 }

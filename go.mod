@@ -1,8 +1,8 @@
 module github.com/copperexchange/krypton-primitives
 
-go 1.22
+go 1.23
 
-toolchain go1.22.0
+toolchain go1.23.0
 
 require (
 	filippo.io/edwards25519 v1.1.0

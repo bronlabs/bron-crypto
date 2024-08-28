@@ -75,10 +75,7 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 			require.True(t, exists)
 			publicKey := aliceShard.PublicKey()
 			publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-			for iterator := shards.Iterator(); iterator.HasNext(); {
-				iter := iterator.Next()
-				identity := iter.Key
-				shard := iter.Value
+			for identity, shard := range shards.Iter() {
 				publicKeyShares.Put(identity, shard.PublicKeyShares)
 			}
 
@@ -173,10 +170,7 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 			require.True(t, exists)
 			publicKey := aliceShard.PublicKey()
 			publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-			for iterator := shards.Iterator(); iterator.HasNext(); {
-				iter := iterator.Next()
-				identity := iter.Key
-				shard := iter.Value
+			for identity, shard := range shards.Iter() {
 				publicKeyShares.Put(identity, shard.PublicKeyShares)
 			}
 
@@ -269,10 +263,7 @@ func Test_SignNonInteractiveThresholdMina(t *testing.T) {
 			require.True(t, exists)
 			publicKey := aliceShard.PublicKey()
 			publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-			for iterator := shards.Iterator(); iterator.HasNext(); {
-				iter := iterator.Next()
-				identity := iter.Key
-				shard := iter.Value
+			for identity, shard := range shards.Iter() {
 				publicKeyShares.Put(identity, shard.PublicKeyShares)
 			}
 
@@ -363,10 +354,7 @@ func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
 			require.True(t, exists)
 			publicKey := aliceShard.PublicKey()
 			publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-			for iterator := shards.Iterator(); iterator.HasNext(); {
-				iter := iterator.Next()
-				identity := iter.Key
-				shard := iter.Value
+			for identity, shard := range shards.Iter() {
 				publicKeyShares.Put(identity, shard.PublicKeyShares)
 			}
 

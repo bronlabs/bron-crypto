@@ -60,11 +60,7 @@ func Deal(protocol types.ThresholdProtocol, secret curves.Scalar, prng io.Reader
 	partialPublicKeys := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
 	partialPublicKeysShares := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 
-	for iterator := sharingConfig.Iterator(); iterator.HasNext(); {
-		item := iterator.Next()
-		sharingId := item.Key
-		identity := item.Value
-
+	for sharingId, identity := range sharingConfig.Iter() {
 		share := &tsignatures.SigningKeyShare{
 			Share:     nil,
 			PublicKey: publicKey,
@@ -83,10 +79,7 @@ func Deal(protocol types.ThresholdProtocol, secret curves.Scalar, prng io.Reader
 		partialPublicKeysShares.Put(identity, protocol.Curve().ScalarBaseMult(share.Share))
 	}
 
-	for iterator := sharingConfig.Iterator(); iterator.HasNext(); {
-		item := iterator.Next()
-		sharingId := item.Key
-		identity := item.Value
+	for sharingId, identity := range sharingConfig.Iter() {
 		polyCoeffs := coeffs[sharingId-1]
 		commitments := make([]curves.Point, len(polyCoeffs))
 		for j := range commitments {

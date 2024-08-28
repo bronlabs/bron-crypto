@@ -6,6 +6,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 	"golang.org/x/crypto/sha3"
+	"iter"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
@@ -51,7 +52,7 @@ func (*Gt) Contains(e curves.GtMember) bool {
 	panic("not implemented")
 }
 
-func (*Gt) Iterator() ds.Iterator[curves.GtMember] {
+func (*Gt) Iter() iter.Seq[curves.GtMember] {
 	panic("not implemented")
 }
 

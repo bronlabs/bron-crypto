@@ -4,18 +4,10 @@ import (
 	"encoding/json"
 
 	"github.com/cronokirby/saferith"
+	"iter"
 )
 
 type Incomparable [0]func()
-
-type Iterator[T any] interface {
-	Next() T
-	HasNext() bool
-}
-
-type Iterable[T any] interface {
-	Iterator() Iterator[T]
-}
 
 type Equatable[K any] interface {
 	Equal(rhs K) bool
@@ -46,8 +38,8 @@ type Map[K any, V any] interface {
 	Keys() []K
 	Values() []V
 
+	Iter() iter.Seq2[K, V]
 	Clone() Map[K, V]
-	Iterable[MapEntry[K, V]]
 	json.Marshaler
 }
 
@@ -80,7 +72,7 @@ type ConcurrentSet[E any] interface {
 type AbstractSet[E any] interface {
 	Cardinality() *saferith.Nat
 	Contains(e E) bool
-	Iterable[E]
+	Iter() iter.Seq[E]
 }
 
 type Set[E any] interface {

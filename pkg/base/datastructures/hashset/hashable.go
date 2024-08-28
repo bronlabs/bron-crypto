@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/cronokirby/saferith"
+	"iter"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
@@ -71,8 +72,7 @@ func (s *HashableHashSet[E]) Union(other ds.Set[E]) ds.Set[E] {
 func (s *HashableHashSet[E]) Intersection(other ds.Set[E]) ds.Set[E] {
 	result := NewHashableHashSet[E]()
 
-	for iter := s.Iterator(); iter.HasNext(); {
-		element := iter.Next()
+	for element := range s.Iter() {
 		if other.Contains(element) {
 			result.Add(element)
 		}
@@ -84,8 +84,7 @@ func (s *HashableHashSet[E]) Intersection(other ds.Set[E]) ds.Set[E] {
 func (s *HashableHashSet[E]) Difference(other ds.Set[E]) ds.Set[E] {
 	result := NewHashableHashSet[E]()
 
-	for iter := s.Iterator(); iter.HasNext(); {
-		element := iter.Next()
+	for element := range s.Iter() {
 		if !other.Contains(element) {
 			result.Add(element)
 		}
@@ -123,9 +122,13 @@ func (s *HashableHashSet[E]) IsProperSuperSet(other ds.Set[E]) bool {
 	return other.IsProperSubSet(s)
 }
 
-func (s *HashableHashSet[E]) Iterator() ds.Iterator[E] {
-	return &hashableHashSetIterator[E]{
-		internal: s.v.Iterator(),
+func (s *HashableHashSet[E]) Iter() iter.Seq[E] {
+	return func(yield func(E) bool) {
+		for el := range s.v.Iter() {
+			if !yield(el) {
+				return
+			}
+		}
 	}
 }
 
@@ -154,8 +157,7 @@ func (s *HashableHashSet[E]) List() []E {
 	results := make([]E, s.Size())
 	i := 0
 
-	for iterator := s.Iterator(); iterator.HasNext(); {
-		k := iterator.Next()
+	for k := range s.Iter() {
 		results[i] = k
 		i++
 	}
@@ -182,22 +184,9 @@ func (s *HashableHashSet[E]) UnmarshalJSON(data []byte) error {
 	}
 	s.Clear()
 
-	for iter := s.Iterator(); iter.HasNext(); {
-		x := iter.Next()
+	for x := range s.Iter() {
 		s.Add(x)
 	}
 
 	return nil
-}
-
-type hashableHashSetIterator[E ds.Hashable[E]] struct {
-	internal ds.Iterator[ds.MapEntry[E, bool]]
-}
-
-func (i *hashableHashSetIterator[E]) Next() E {
-	return i.internal.Next().Key
-}
-
-func (i *hashableHashSetIterator[E]) HasNext() bool {
-	return i.internal.HasNext()
 }

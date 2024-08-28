@@ -3,6 +3,8 @@ package hashmap
 import (
 	"encoding/json"
 
+	"iter"
+
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
@@ -156,15 +158,10 @@ func (m *HashableHashMap[K, V]) Keys() []K {
 }
 
 func (m *HashableHashMap[K, V]) Values() []V {
-	result := make([]V, m.Size())
-	i := 0
-
-	for iterator := m.Iterator(); iterator.HasNext(); {
-		value := iterator.Next()
-		result[i] = value.Value
-		i++
+	result := make([]V, 0)
+	for _, value := range m.Iter() {
+		result = append(result, value)
 	}
-
 	return result
 }
 
@@ -182,11 +179,15 @@ func (m *HashableHashMap[K, V]) Clone() ds.Map[K, V] {
 	return result
 }
 
-func (m *HashableHashMap[K, V]) Iterator() ds.Iterator[ds.MapEntry[K, V]] {
-	return &hashableHashMapIterator[K, V]{
-		nextKeyIndex: 0,
-		keys:         m.Keys(),
-		Hashable:     m,
+func (m *HashableHashMap[K, V]) Iter() iter.Seq2[K, V] {
+	keys := m.Keys()
+	return func(yield func(K, V) bool) {
+		for _, key := range keys {
+			value, _ := m.Get(key)
+			if !yield(key, value) {
+				return
+			}
+		}
 	}
 }
 
@@ -205,24 +206,4 @@ func (m *HashableHashMap[K, V]) UnmarshalJSON(data []byte) error {
 	}
 	m.inner = temp
 	return nil
-}
-
-type hashableHashMapIterator[K ds.Hashable[K], V any] struct {
-	nextKeyIndex int
-	keys         []K
-	Hashable     *HashableHashMap[K, V]
-}
-
-func (i *hashableHashMapIterator[K, V]) Next() ds.MapEntry[K, V] {
-	if i.nextKeyIndex >= len(i.keys) {
-		panic("index out of range")
-	}
-	key := i.keys[i.nextKeyIndex]
-	value, _ := i.Hashable.Get(key)
-	i.nextKeyIndex++
-	return ds.MapEntry[K, V]{Key: key, Value: value}
-}
-
-func (i *hashableHashMapIterator[K, V]) HasNext() bool {
-	return i.nextKeyIndex < len(i.keys)
 }

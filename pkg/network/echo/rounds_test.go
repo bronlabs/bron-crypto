@@ -82,10 +82,9 @@ func happyPath(t *testing.T, cipherSuite types.SigningSuite, n int, msg string) 
 	outputMessages := make([][]byte, len(allParticipants))
 	for i, participant := range allParticipants {
 		nonNilR3InMessages := network.NewRoundMessages[types.Protocol, *echo.Round2P2P]()
-		for iterator := r3InMessages[i].Iterator(); iterator.HasNext(); {
-			mj := iterator.Next()
-			if mj.Value != nil {
-				nonNilR3InMessages.Put(mj.Key, mj.Value)
+		for key, value := range r3InMessages[i].Iter() {
+			if value != nil {
+				nonNilR3InMessages.Put(key, value)
 			}
 		}
 		outputMessages[i], err = participant.Round3(nonNilR3InMessages)

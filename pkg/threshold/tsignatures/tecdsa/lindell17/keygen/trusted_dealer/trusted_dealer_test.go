@@ -37,18 +37,16 @@ func Test_HappyPath(t *testing.T) {
 
 	t.Run("all signing key shares are valid", func(t *testing.T) {
 		t.Parallel()
-		for iterator := shards.Iterator(); iterator.HasNext(); {
-			pair := iterator.Next()
-			err = pair.Value.SigningKeyShare.Validate(protocol)
+		for _, value := range shards.Iter() {
+			err = value.SigningKeyShare.Validate(protocol)
 			require.NoError(t, err)
 		}
 	})
 
 	t.Run("all partial public keys are valid", func(t *testing.T) {
 		t.Parallel()
-		for iterator := shards.Iterator(); iterator.HasNext(); {
-			pair := iterator.Next()
-			err = pair.Value.PublicKeyShares.Validate(protocol)
+		for _, value := range shards.Iter() {
+			err = value.PublicKeyShares.Validate(protocol)
 			require.NoError(t, err)
 		}
 	})
@@ -56,10 +54,9 @@ func Test_HappyPath(t *testing.T) {
 	t.Run("all public keys are the same", func(t *testing.T) {
 		t.Parallel()
 		publicKeys := map[curves.Point]bool{}
-		for iterator := shards.Iterator(); iterator.HasNext(); {
-			pair := iterator.Next()
-			if _, exists := publicKeys[pair.Value.SigningKeyShare.PublicKey]; !exists {
-				publicKeys[pair.Value.SigningKeyShare.PublicKey] = true
+		for _, value := range shards.Iter() {
+			if _, exists := publicKeys[value.SigningKeyShare.PublicKey]; !exists {
+				publicKeys[value.SigningKeyShare.PublicKey] = true
 			}
 		}
 		require.Len(t, publicKeys, 1)
@@ -93,15 +90,11 @@ func Test_HappyPath(t *testing.T) {
 	t.Run("all encrypted shares decrypts to correct values", func(t *testing.T) {
 		t.Parallel()
 
-		for iterator := shards.Iterator(); iterator.HasNext(); {
-			pair := iterator.Next()
-			myIdentityKey := pair.Key
-			myShard := pair.Value
+		for myIdentityKey, myShard := range shards.Iter() {
 			myShare := myShard.SigningKeyShare.Share.Nat()
 			myPaillierPrivateKey := myShard.PaillierSecretKey
-			for iterator := shards.Iterator(); iterator.HasNext(); {
-				pair := iterator.Next()
-				theirShard := pair.Value
+			for _, value := range shards.Iter() {
+				theirShard := value
 				if myShard.PaillierSecretKey.N.Eq(theirShard.PaillierSecretKey.N) == 0 {
 					theirEncryptedShare, exists := theirShard.PaillierEncryptedShares.Get(myIdentityKey)
 					require.True(t, exists)

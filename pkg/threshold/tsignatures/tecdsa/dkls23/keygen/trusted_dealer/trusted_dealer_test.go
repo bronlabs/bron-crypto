@@ -35,18 +35,16 @@ func Test_HappyPath(t *testing.T) {
 
 	t.Run("all signing key shares are valid", func(t *testing.T) {
 		t.Parallel()
-		for iterator := shards.Iterator(); iterator.HasNext(); {
-			pair := iterator.Next()
-			err = pair.Value.SigningKeyShare.Validate(protocol)
+		for _, value := range shards.Iter() {
+			err = value.SigningKeyShare.Validate(protocol)
 			require.NoError(t, err)
 		}
 	})
 
 	t.Run("all partial public keys are valid", func(t *testing.T) {
 		t.Parallel()
-		for iterator := shards.Iterator(); iterator.HasNext(); {
-			pair := iterator.Next()
-			err := pair.Value.PublicKeyShares.Validate(protocol)
+		for _, value := range shards.Iter() {
+			err := value.PublicKeyShares.Validate(protocol)
 			require.NoError(t, err)
 		}
 	})
@@ -54,9 +52,8 @@ func Test_HappyPath(t *testing.T) {
 	t.Run("all public keys are the same", func(t *testing.T) {
 		t.Parallel()
 		publicKeys := map[curves.Point]bool{}
-		for iterator := shards.Iterator(); iterator.HasNext(); {
-			pair := iterator.Next()
-			shard := pair.Value
+		for _, value := range shards.Iter() {
+			shard := value
 			if _, exists := publicKeys[shard.SigningKeyShare.PublicKey]; !exists {
 				publicKeys[shard.SigningKeyShare.PublicKey] = true
 			}

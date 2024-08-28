@@ -10,10 +10,7 @@ import (
 
 func ConstructPublicKeySharesMap(protocol types.ThresholdProtocol, commitmentVectors map[types.SharingID][]curves.Point, sharingConfig types.SharingConfig) (ds.Map[types.IdentityKey, curves.Point], error) {
 	shares := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
-	for iterator := sharingConfig.Iterator(); iterator.HasNext(); {
-		pair := iterator.Next()
-		identityKey := pair.Value
-		j := pair.Key
+	for j, identityKey := range sharingConfig.Iter() {
 		Y_j := protocol.Curve().AdditiveIdentity()
 		jToKs := make([]curves.Scalar, protocol.Threshold())
 		for k := 0; k < int(protocol.Threshold()); k++ {

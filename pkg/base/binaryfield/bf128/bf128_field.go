@@ -5,11 +5,11 @@ import (
 	"io"
 
 	"github.com/cronokirby/saferith"
+	"iter"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
@@ -52,7 +52,7 @@ func (*Field) Contains(_ *FieldElement) bool {
 	return true
 }
 
-func (*Field) Iterator() ds.Iterator[*FieldElement] {
+func (*Field) Iter() iter.Seq[*FieldElement] {
 	// TODO implement me
 	panic("implement me")
 }

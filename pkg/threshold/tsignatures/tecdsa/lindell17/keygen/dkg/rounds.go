@@ -76,8 +76,7 @@ func (p *Participant) Round2(input network.RoundMessages[types.ThresholdProtocol
 
 	// 2. store commitments
 	p.state.theirBigQCommitment = make(map[types.SharingID]*hashcommitments.Commitment)
-	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
-		identity := iterator.Next()
+	for identity := range p.Protocol.Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -127,8 +126,7 @@ func (p *Participant) Round3(input network.RoundMessages[types.ThresholdProtocol
 	p.state.theirBigQDoublePrime = make(map[types.SharingID]curves.Point)
 
 	// 3.i. verify proofs of dlog knowledge of Qdl'_j Qdl''_j
-	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
-		identity := iterator.Next()
+	for identity := range p.Protocol.Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -190,8 +188,7 @@ func (p *Participant) Round3(input network.RoundMessages[types.ThresholdProtocol
 	p.state.lpProvers = make(map[types.SharingID]*lp.Prover)
 	p.state.lpdlPrimeProvers = make(map[types.SharingID]*lpdl.Prover)
 	p.state.lpdlDoublePrimeProvers = make(map[types.SharingID]*lpdl.Prover)
-	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
-		identity := iterator.Next()
+	for identity := range p.Protocol.Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -239,8 +236,7 @@ func (p *Participant) Round4(input network.RoundMessages[types.ThresholdProtocol
 	p.state.lpdlDoublePrimeVerifiers = make(map[types.SharingID]*lpdl.Verifier)
 
 	round4Outputs := network.NewRoundMessages[types.ThresholdProtocol, *Round4P2P]()
-	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
-		identity := iterator.Next()
+	for identity := range p.Protocol.Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -318,8 +314,7 @@ func (p *Participant) Round5(input network.RoundMessages[types.ThresholdProtocol
 
 	// 5. LP and LPDL continue
 	round5Outputs := network.NewRoundMessages[types.ThresholdProtocol, *Round5P2P]()
-	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
-		identity := iterator.Next()
+	for identity := range p.Protocol.Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -363,8 +358,7 @@ func (p *Participant) Round6(input network.RoundMessages[types.ThresholdProtocol
 
 	// 6. LP and LPDL continue
 	round6Outputs := network.NewRoundMessages[types.ThresholdProtocol, *Round6P2P]()
-	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
-		identity := iterator.Next()
+	for identity := range p.Protocol.Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -410,8 +404,7 @@ func (p *Participant) Round7(
 
 	// 7. LP and LPDL continue
 	round7Outputs := network.NewRoundMessages[types.ThresholdProtocol, *Round7P2P]()
-	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
-		identity := iterator.Next()
+	for identity := range p.Protocol.Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -453,8 +446,7 @@ func (p *Participant) Round8(input network.RoundMessages[types.ThresholdProtocol
 		return nil, errs.WrapValidation(err, "invalid round 6 input P2P messages")
 	}
 
-	for iterator := p.Protocol.Participants().Iterator(); iterator.HasNext(); {
-		identity := iterator.Next()
+	for identity := range p.Protocol.Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}

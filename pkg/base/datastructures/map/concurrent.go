@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"sync"
 
+	"iter"
+
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 )
@@ -99,10 +101,10 @@ func (m *ConcurrentMap[K, V]) TryRemove(key K) (removed bool, removedValue V) {
 	return m.inner.TryRemove(key)
 }
 
-func (m *ConcurrentMap[K, V]) Iterator() ds.Iterator[ds.MapEntry[K, V]] {
+func (m *ConcurrentMap[K, V]) Iter() iter.Seq2[K, V] {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.inner.Iterator()
+	return m.inner.Iter()
 }
 
 func (m *ConcurrentMap[K, V]) Keys() []K {
