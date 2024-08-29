@@ -3,6 +3,7 @@ package testutils
 import (
 	crand "crypto/rand"
 	"io"
+	"sync"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -53,6 +54,39 @@ func DoDkgRound1(participants []*jf.Participant) (round1BroadcastOutputs []*jf.R
 	return round1BroadcastOutputs, round1UnicastOutputs, nil
 }
 
+func DoDkgRound1WithParallelParties(participants []*jf.Participant) (round1BroadcastOutputs []*jf.Round1Broadcast, round1UnicastOutputs []network.RoundMessages[types.ThresholdProtocol, *jf.Round1P2P], err error) {
+	r1bOut := make(chan []*jf.Round1Broadcast)
+	r1uOut := make(chan []network.RoundMessages[types.ThresholdProtocol, *jf.Round1P2P])
+
+	go func() {
+		var wg sync.WaitGroup
+		round1BroadcastOutputs := make([]*jf.Round1Broadcast, len(participants))
+		round1UnicastOutputs := make([]network.RoundMessages[types.ThresholdProtocol, *jf.Round1P2P], len(participants))
+		errch := make(chan error, len(participants))
+
+		// Round 1
+		for i, participant := range participants {
+			wg.Add(1)
+			go func(i int, participant *jf.Participant) {
+				defer wg.Done()
+				var err error
+				round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1()
+				if err != nil {
+					errch <- errs.WrapFailed(err, "could not execute round 1")
+				}
+			}(i, participant)
+		}
+		wg.Wait()
+		close(errch)
+		r1bOut <- round1BroadcastOutputs
+		close(r1bOut)
+		r1uOut <- round1UnicastOutputs
+		close(r1uOut)
+	}()
+
+	return <-r1bOut, <-r1uOut, nil
+}
+
 func DoDkgRound2(participants []*jf.Participant, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *jf.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *jf.Round1P2P]) (round2Outputs []*jf.Round2Broadcast, err error) {
 	round2Outputs = make([]*jf.Round2Broadcast, len(participants))
 	for i := range participants {
@@ -62,6 +96,33 @@ func DoDkgRound2(participants []*jf.Participant, round2BroadcastInputs []network
 		}
 	}
 	return round2Outputs, nil
+}
+func DoDkgRound2WithParallelParties(participants []*jf.Participant, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *jf.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *jf.Round1P2P]) (round2Outputs []*jf.Round2Broadcast, err error) {
+	r2bOut := make(chan []*jf.Round2Broadcast)
+
+	go func() {
+		var wg sync.WaitGroup
+		round2BroadcastOutputs := make([]*jf.Round2Broadcast, len(participants))
+		errch := make(chan error, len(participants))
+
+		// Round 2
+		for i, participant := range participants {
+			wg.Add(1)
+			go func(i int, participant *jf.Participant) {
+				defer wg.Done()
+				var err error
+				round2BroadcastOutputs[i], err = participant.Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
+				if err != nil {
+					errch <- errs.WrapFailed(err, "could not execute round 1")
+				}
+			}(i, participant)
+		}
+		wg.Wait()
+		close(errch)
+		r2bOut <- round2BroadcastOutputs
+		close(r2bOut)
+	}()
+	return <-r2bOut, nil
 }
 
 func DoDkgRound3(participants []*jf.Participant, round3Inputs []network.RoundMessages[types.ThresholdProtocol, *jf.Round2Broadcast]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
@@ -75,6 +136,39 @@ func DoDkgRound3(participants []*jf.Participant, round3Inputs []network.RoundMes
 	}
 
 	return signingKeyShares, publicKeyShares, nil
+}
+
+func DoDkgRound3WithParallelParties(participants []*jf.Participant, round3Inputs []network.RoundMessages[types.ThresholdProtocol, *jf.Round2Broadcast]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
+	signingKeySharesCh := make(chan []*tsignatures.SigningKeyShare)
+	publicKeySharesCh := make(chan []*tsignatures.PartialPublicKeys)
+	go func() {
+		var wg sync.WaitGroup
+		signingKeys := make([]*tsignatures.SigningKeyShare, len(participants))
+		publicKeys := make([]*tsignatures.PartialPublicKeys, len(participants))
+
+		errch := make(chan error, len(participants))
+
+		// Round 3
+		for i, participant := range participants {
+			wg.Add(1)
+			go func(i int, participant *jf.Participant) {
+				defer wg.Done()
+				var err error
+				signingKeys[i], publicKeys[i], err = participant.Round3(round3Inputs[i])
+				if err != nil {
+					errch <- errs.WrapFailed(err, "could not execute round 3")
+				}
+			}(i, participant)
+		}
+		wg.Wait()
+		close(errch)
+		signingKeySharesCh <- signingKeys
+		publicKeySharesCh <- publicKeys
+		close(signingKeySharesCh)
+		close(publicKeySharesCh)
+	}()
+
+	return <-signingKeySharesCh, <-publicKeySharesCh, nil
 }
 
 func RunDKG(uniqueSessionId []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {

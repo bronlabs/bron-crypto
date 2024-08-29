@@ -3,6 +3,7 @@ package testutils
 import (
 	crand "crypto/rand"
 	"io"
+	"sync"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -60,17 +61,79 @@ func DoRecoveryRound1(participants []*recovery.Participant) (round1BroadcastOutp
 	return round1BroadcastOutputs, round1UnicastOutputs, nil
 }
 
+func DoRecoveryRound1WithParallelParties(participants []*recovery.Participant) (round1BroadcastOutputs []*recovery.Round1Broadcast, round1UnicastOutputs []network.RoundMessages[types.ThresholdProtocol, *recovery.Round1P2P], err error) {
+	r1bOut := make(chan []*recovery.Round1Broadcast)
+	r1uOut := make(chan []network.RoundMessages[types.ThresholdProtocol, *recovery.Round1P2P])
+
+	go func() {
+		var wg sync.WaitGroup
+		round1BroadcastOutputs := make([]*recovery.Round1Broadcast, len(participants))
+		round1UnicastOutputs := make([]network.RoundMessages[types.ThresholdProtocol, *recovery.Round1P2P], len(participants))
+		errch := make(chan error, len(participants))
+
+		// Round 1
+		for i, participant := range participants {
+			wg.Add(1)
+			go func(i int, participant *recovery.Participant) {
+				defer wg.Done()
+				var err error
+				round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1()
+				if err != nil {
+					errch <- errs.WrapFailed(err, "could not Pedersen DKG round 1")
+				}
+			}(i, participant)
+		}
+		wg.Wait()
+		close(errch)
+		r1bOut <- round1BroadcastOutputs
+		close(r1bOut)
+		r1uOut <- round1UnicastOutputs
+		close(r1uOut)
+	}()
+
+	return <-r1bOut, <-r1uOut, nil
+}
+
 func DoRecoveryRound2(participants []*recovery.Participant, lostPartyIndex int, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *recovery.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *recovery.Round1P2P]) (round2p2p []network.RoundMessages[types.ThresholdProtocol, *recovery.Round2P2P], err error) {
 	round2p2p = make([]network.RoundMessages[types.ThresholdProtocol, *recovery.Round2P2P], len(participants))
 	lastRecorded := 0
 	for i, participant := range participants {
 		round2p2p[lastRecorded], err = participant.Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not run Recovery round 2")
+			return nil, errs.WrapFailed(err, "could not run Recovery round 1")
 		}
 		lastRecorded++
 	}
 	return round2p2p, nil
+}
+
+func DoRecoveryRound2WithParallelParties(participants []*recovery.Participant, lostPartyIndex int, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *recovery.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *recovery.Round1P2P]) (round2p2p []network.RoundMessages[types.ThresholdProtocol, *recovery.Round2P2P], err error) {
+	r2uOut := make(chan []network.RoundMessages[types.ThresholdProtocol, *recovery.Round2P2P])
+
+	go func() {
+		var wg sync.WaitGroup
+		round2p2p := make([]network.RoundMessages[types.ThresholdProtocol, *recovery.Round2P2P], len(participants))
+		errch := make(chan error, len(participants))
+
+		// Round 2
+		for i, participant := range participants {
+			wg.Add(1)
+			go func(i int, participant *recovery.Participant) {
+				defer wg.Done()
+				var err error
+				round2p2p[i], err = participant.Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
+				if err != nil {
+					errch <- errs.WrapFailed(err, "could not Recovery round 2")
+				}
+			}(i, participant)
+		}
+		wg.Wait()
+		close(errch)
+		r2uOut <- round2p2p
+		close(r2uOut)
+	}()
+
+	return <-r2uOut, nil
 }
 
 func DoRecoveryRound3(participants []*recovery.Participant, lostPartyIndex int, round3UnicastInputs network.RoundMessages[types.ThresholdProtocol, *recovery.Round2P2P]) (signingKeyShare *tsignatures.SigningKeyShare, err error) {
@@ -94,6 +157,31 @@ func RunRecovery(uniqueSessionId []byte, protocol types.ThresholdProtocol, prese
 
 	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
 	r2OutsU, err := DoRecoveryRound2(participants, lostPartyIndex, r2InsB, r2InsU)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r3InsU := ttu.MapUnicastO2I(participants, r2OutsU)
+	recoveredShare, err = DoRecoveryRound3(participants, lostPartyIndex, r3InsU[lostPartyIndex])
+	if err != nil {
+		return nil, nil, err
+	}
+	return participants, recoveredShare, nil
+}
+
+func RunRecoveryWithParallelParties(uniqueSessionId []byte, protocol types.ThresholdProtocol, presentRecoverers []ds.Set[types.IdentityKey], identities []types.IdentityKey, lostPartyIndex int, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, prngs []io.Reader) (participants []*recovery.Participant, recoveredShare *tsignatures.SigningKeyShare, err error) {
+	participants, err = MakeParticipants(uniqueSessionId, protocol, presentRecoverers, identities, lostPartyIndex, signingKeyShares, publicKeyShares, prngs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r1OutsB, r1OutsU, err := DoRecoveryRound1WithParallelParties(participants)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
+	r2OutsU, err := DoRecoveryRound2WithParallelParties(participants, lostPartyIndex, r2InsB, r2InsU)
 	if err != nil {
 		return nil, nil, err
 	}

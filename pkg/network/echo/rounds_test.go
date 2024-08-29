@@ -4,6 +4,7 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"hash"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/roundbased/simulator"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
@@ -37,6 +39,7 @@ func TestHappyPath(t *testing.T) {
 						cipherSuite, err := ttu.MakeSigningSuite(curve, h)
 						require.NoError(t, err)
 						happyPath(t, cipherSuite, nn, msg)
+						happyPathWithParallelParties(t, cipherSuite, nn, msg)
 						happyPathWithRunner(t, cipherSuite, nn, msg)
 					})
 				}
@@ -142,6 +145,118 @@ func happyPathWithRunner(t *testing.T, cipherSuite types.SigningSuite, n int, ms
 	}
 	for i := range allParticipants {
 		require.Equal(t, outputMessages[0], outputMessages[i])
+	}
+}
+
+func happyPathWithParallelParties(t *testing.T, cipherSuite types.SigningSuite, n int, msg string) {
+	t.Helper()
+	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+	protocol, err := ttu.MakeProtocol(cipherSuite.Curve(), identities)
+	require.NoError(t, err)
+	sid := []byte("sid")
+	initiator, err := echo.NewInitiator(sid, identities[0].(types.AuthKey), protocol, []byte(msg))
+	require.NoError(t, err)
+	responders := make([]*echo.Participant, n-1)
+	for i := 1; i < n; i++ {
+		responders[i-1], err = echo.NewResponder(sid, identities[i].(types.AuthKey), protocol, initiator.IdentityKey())
+		require.NoError(t, err)
+	}
+	allParticipants := []*echo.Participant{initiator}
+	allParticipants = append(allParticipants, responders...)
+	r1bOut := make(chan []network.RoundMessages[types.Protocol, *echo.Round1P2P])
+	go func() {
+		var wg sync.WaitGroup
+		round1BroadcastOutputs := make([]network.RoundMessages[types.Protocol, *echo.Round1P2P], len(allParticipants))
+		errch := make(chan error, len(allParticipants))
+
+		// Round 1
+		for i, participant := range allParticipants {
+			wg.Add(1)
+			go func(i int, participant *echo.Participant) {
+				defer wg.Done()
+				var err error
+				round1BroadcastOutputs[i], err = participant.Round1()
+				if err != nil {
+					errch <- errs.WrapFailed(err, "could not run sign round 1")
+				}
+			}(i, participant)
+		}
+		wg.Wait()
+		close(errch)
+		r1bOut <- round1BroadcastOutputs
+		close(r1bOut)
+	}()
+
+	r2bOut := make(chan []network.RoundMessages[types.Protocol, *echo.Round2P2P])
+	go func() {
+		var wg sync.WaitGroup
+		round2BroadcastOutputs := make([]network.RoundMessages[types.Protocol, *echo.Round2P2P], len(allParticipants))
+		errch := make(chan error, len(allParticipants))
+		r2In := ttu.MapUnicastO2I(allParticipants, <-r1bOut)
+
+		// Round 2
+		for i, participant := range allParticipants {
+			wg.Add(1)
+			go func(i int, participant *echo.Participant) {
+				defer wg.Done()
+				var err error
+				var msg *echo.Round1P2P
+				var exists bool
+				if !participant.IdentityKey().Equal(initiator.IdentityKey()) {
+					msg, exists = r2In[i].Get(initiator.IdentityKey())
+					if !exists {
+						errch <- errs.WrapFailed(err, "Identity Key does not exist")
+					}
+				}
+				round2BroadcastOutputs[i], err = participant.Round2(msg)
+				if err != nil {
+					errch <- errs.WrapFailed(err, "could not run sign round 2")
+				}
+			}(i, participant)
+		}
+		wg.Wait()
+		close(errch)
+		r2bOut <- round2BroadcastOutputs
+		close(r2bOut)
+	}()
+
+	outputMessages := make(chan [][]byte, len(allParticipants))
+	_, r3InMessages := ttu.MapO2I(allParticipants, []*echo.Round2P2P{}, <-r2bOut)
+
+	go func() {
+		var wg sync.WaitGroup
+		r3Out := make([][]byte, len(allParticipants))
+		errch := make(chan error, len(allParticipants))
+
+		// Round 3
+		for i, participant := range allParticipants {
+			wg.Add(1)
+			go func(i int, participant *echo.Participant) {
+				defer wg.Done()
+				var err error
+				nonNilR3InMessages := network.NewRoundMessages[types.Protocol, *echo.Round2P2P]()
+				for iterator := r3InMessages[i].Iterator(); iterator.HasNext(); {
+					mj := iterator.Next()
+					if mj.Value != nil {
+						nonNilR3InMessages.Put(mj.Key, mj.Value)
+					}
+				}
+				r3Out[i], err = participant.Round3(nonNilR3InMessages)
+				if err != nil {
+					errch <- errs.WrapFailed(err, "round 3 failed")
+				}
+			}(i, participant)
+		}
+		wg.Wait()
+		close(errch)
+		outputMessages <- r3Out
+		close(outputMessages)
+	}()
+	// check all output r1OutMessages are the same
+	msgs := <-outputMessages
+	for i := range msgs {
+		require.Equal(t, msgs[0], msgs[i])
 	}
 }
 

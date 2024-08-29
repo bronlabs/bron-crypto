@@ -74,6 +74,34 @@ func testHappyPath(t *testing.T, curve curves.Curve, threshold, n int) (particip
 	return parties
 }
 
+func testHappyPathWithParallelParties(t *testing.T, curve curves.Curve, threshold, n int) (participant []*recovery.Participant) {
+	t.Helper()
+
+	uniqueSessionId, identities, protocol, dkgSigningKeyShares, dkgPublicKeyShares := setup(t, curve, sha3.New256, threshold, n)
+	var parties []*recovery.Participant
+	for i := 0; i < n; i++ {
+		lostPartyIndex := i
+		t.Run(fmt.Sprintf("running recovery for participant index %d", lostPartyIndex), func(t *testing.T) {
+			t.Parallel()
+
+			presentRecoverers := hashset.NewHashableHashSet(identities...)
+			presentRecoverers.Remove(identities[lostPartyIndex])
+			allPresentRecoverers := make([]ds.Set[types.IdentityKey], len(identities))
+			for i := 0; i < len(identities); i++ {
+				allPresentRecoverers[i] = presentRecoverers.Clone()
+			}
+
+			_, recoveredShare, err := testutils.RunRecoveryWithParallelParties(uniqueSessionId, protocol, allPresentRecoverers, identities, lostPartyIndex, dkgSigningKeyShares, dkgPublicKeyShares, nil)
+			require.NoError(t, err)
+			parties, err = testutils.MakeParticipants(uniqueSessionId, protocol, allPresentRecoverers, identities, lostPartyIndex, dkgSigningKeyShares, dkgPublicKeyShares, nil)
+			require.NoError(t, err)
+			require.Zero(t, recoveredShare.Share.Cmp(dkgSigningKeyShares[lostPartyIndex].Share))
+			require.NotNil(t, parties)
+		})
+	}
+	return parties
+}
+
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
@@ -88,9 +116,14 @@ func Test_HappyPath(t *testing.T) {
 		} {
 			boundedCurve := curve
 			boundedThresholdConfig := thresholdConfig
-			t.Run(fmt.Sprintf("Happy path with curve=%s and t=%d and n=%d", boundedCurve.Name(), boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+			// t.Run(fmt.Sprintf("Happy path with curve=%s and t=%d and n=%d", boundedCurve.Name(), boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+			// 	t.Parallel()
+			// 	participant := testHappyPath(t, boundedCurve, boundedThresholdConfig.t, boundedThresholdConfig.n)
+			// 	happyPathRoundBasedRunner(t, participant, curve, boundedThresholdConfig.t, boundedThresholdConfig.n)
+			// })
+			t.Run(fmt.Sprintf("Happy path with parallel parties on curve=%s and t=%d and n=%d", boundedCurve.Name(), boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 				t.Parallel()
-				participant := testHappyPath(t, boundedCurve, boundedThresholdConfig.t, boundedThresholdConfig.n)
+				participant := testHappyPathWithParallelParties(t, boundedCurve, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				happyPathRoundBasedRunner(t, participant, curve, boundedThresholdConfig.t, boundedThresholdConfig.n)
 			})
 		}

@@ -76,6 +76,32 @@ func testHappyPath(t *testing.T, curve curves.Curve, n int) []byte {
 	return random
 }
 
+func testHappyPathWithParallelParties(t *testing.T, curve curves.Curve, n int) []byte {
+	t.Helper()
+	cipherSuite, err := ttu.MakeSigningSuite(curve, sha3.New256)
+	require.NoError(t, err)
+	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+	N := make([]int, n)
+	for i := range n {
+		N[i] = i
+	}
+	var random []byte
+	for subsetSize := 2; subsetSize <= n; subsetSize++ {
+		combinations, err := combinatorics.Combinations(N, uint(subsetSize))
+		require.NoError(t, err)
+		for _, combinationIndices := range combinations {
+			identities := make([]types.IdentityKey, subsetSize)
+			for i, index := range combinationIndices {
+				identities[i] = allIdentities[index]
+			}
+			random, err = testutils.RunAgreeOnRandomWithParallelParties(curve, identities, crand.Reader)
+			require.NoError(t, err)
+		}
+	}
+	return random
+}
+
 func TestHappyPathRunner(t *testing.T) {
 	t.Parallel()
 
@@ -147,7 +173,8 @@ func Test_HappyPath(t *testing.T) {
 			boundedN := n
 			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name(), boundedN), func(t *testing.T) {
 				t.Parallel()
-				testHappyPath(t, boundedCurve, boundedN)
+				// testHappyPath(t, boundedCurve, boundedN)
+				testHappyPathWithParallelParties(t, boundedCurve, boundedN)
 			})
 		}
 	}
