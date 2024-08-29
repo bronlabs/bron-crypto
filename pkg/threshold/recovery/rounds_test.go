@@ -116,11 +116,11 @@ func Test_HappyPath(t *testing.T) {
 		} {
 			boundedCurve := curve
 			boundedThresholdConfig := thresholdConfig
-			// t.Run(fmt.Sprintf("Happy path with curve=%s and t=%d and n=%d", boundedCurve.Name(), boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
-			// 	t.Parallel()
-			// 	participant := testHappyPath(t, boundedCurve, boundedThresholdConfig.t, boundedThresholdConfig.n)
-			// 	happyPathRoundBasedRunner(t, participant, curve, boundedThresholdConfig.t, boundedThresholdConfig.n)
-			// })
+			t.Run(fmt.Sprintf("Happy path with curve=%s and t=%d and n=%d", boundedCurve.Name(), boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+				t.Parallel()
+				participant := testHappyPath(t, boundedCurve, boundedThresholdConfig.t, boundedThresholdConfig.n)
+				happyPathRoundBasedRunner(t, participant, curve, boundedThresholdConfig.t, boundedThresholdConfig.n)
+			})
 			t.Run(fmt.Sprintf("Happy path with parallel parties on curve=%s and t=%d and n=%d", boundedCurve.Name(), boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 				t.Parallel()
 				participant := testHappyPathWithParallelParties(t, boundedCurve, boundedThresholdConfig.t, boundedThresholdConfig.n)
