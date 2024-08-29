@@ -12,8 +12,8 @@ import (
 
 var (
 	MakeDkgParticipants = testutils.MakeParticipants
-	DoDkgRound1 = testutils.DoDkgRound1
-	DoDkgRound2 = testutils.DoDkgRound2
+	DoDkgRound1         = testutils.DoDkgRound1
+	DoDkgRound2         = testutils.DoDkgRound2
 )
 
 func MakeParticipants(uniqueSessionId []byte, config types.ThresholdProtocol, identities []types.IdentityKey, prngs []io.Reader) (participants []*dkg.Participant, err error) {

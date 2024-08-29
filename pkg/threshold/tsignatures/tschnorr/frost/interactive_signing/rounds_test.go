@@ -117,6 +117,63 @@ func doInteractiveSign(protocol types.ThresholdSignatureProtocol, identities []t
 	return nil
 }
 
+func doInteractiveSignWithParallelParties(protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, message []byte) error {
+	var shards []*frost.Shard
+	for i := range signingKeyShares {
+		shards = append(shards, &frost.Shard{
+			SigningKeyShare: signingKeyShares[i],
+			PublicKeyShares: publicKeyShares[i],
+		})
+	}
+
+	participants, err := testutils.MakeInteractiveSignParticipants(protocol, identities, shards)
+	if err != nil {
+		return err
+	}
+	for _, participant := range participants {
+		if participant == nil {
+			return errs.NewFailed("nil participant")
+		}
+	}
+
+	partialSignatures, err := testutils.RunParallelParties(participants, message)
+	if err != nil {
+		return err
+	}
+
+	mappedPartialSignatures := testutils.MapPartialSignatures(identities, partialSignatures)
+	var producedSignatures []*schnorr.Signature
+	for i, participant := range participants {
+		if participant.IsSignatureAggregator() {
+			signature, err := participant.Aggregate(message, mappedPartialSignatures)
+			producedSignatures = append(producedSignatures, signature)
+			if err != nil {
+				return err
+			}
+			err = schnorr.Verify(protocol.SigningSuite(), &schnorr.PublicKey{A: signingKeyShares[i].PublicKey}, message, signature)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if len(producedSignatures) == 0 {
+		return errs.NewFailed("no signatures produced")
+	}
+
+	// all signatures the same
+	for i := 0; i < len(producedSignatures); i++ {
+		for j := i + 1; j < len(producedSignatures); j++ {
+			if producedSignatures[i].R.Equal(producedSignatures[j].R) == false {
+				return errs.NewFailed("signatures not equal")
+			}
+			if producedSignatures[i].S.Cmp(producedSignatures[j].S) != 0 {
+				return errs.NewFailed("signatures not equal")
+			}
+		}
+	}
+	return nil
+}
+
 func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
 	t.Helper()
 
@@ -149,6 +206,42 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		}
 
 		err := doInteractiveSign(protocol, identities, signingKeyShares, publicKeyShares, message)
+		require.NoError(t, err)
+	}
+}
+
+func testHappyPathWithParallelParties(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
+	t.Helper()
+
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
+	require.NoError(t, err)
+
+	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, threshold, allIdentities)
+	require.NoError(t, err)
+
+	allSigningKeyShares, allPublicKeyShares, err := doDkg(curve, protocol, allIdentities)
+	require.NoError(t, err)
+
+	N := make([]int, n)
+	for i := range n {
+		N[i] = i
+	}
+	combinations, err := combinatorics.Combinations(N, uint(threshold))
+	require.NoError(t, err)
+	for _, combinationIndices := range combinations {
+		identities := make([]types.IdentityKey, threshold)
+		signingKeyShares := make([]*frost.SigningKeyShare, threshold)
+		publicKeyShares := make([]*frost.PublicKeyShares, threshold)
+		for i, index := range combinationIndices {
+			identities[i] = allIdentities[index]
+			signingKeyShares[i] = allSigningKeyShares[index]
+			publicKeyShares[i] = allPublicKeyShares[index]
+		}
+
+		err := doInteractiveSignWithParallelParties(protocol, identities, signingKeyShares, publicKeyShares, message)
 		require.NoError(t, err)
 	}
 }
@@ -397,6 +490,7 @@ func Test_HappyPath(t *testing.T) {
 				t.Run(fmt.Sprintf("Interactive sign happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testHappyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, []byte("Hello World!"))
+					testHappyPathWithParallelParties(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, []byte("Hello World!"))
 					testHappyPathRunner(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, []byte("Hello World!"))
 				})
 			}

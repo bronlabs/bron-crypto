@@ -129,7 +129,6 @@ func RunParallelParties[V schnorr.Variant[V]](participants []*interactive_signin
 		round2BroadcastOutputs := make([]*interactive_signing.Round2Broadcast, len(participants))
 		errch := make(chan error, len(participants))
 
-		// Receive from r2bOut channel
 		r2Input := <-r1bOut
 
 		// Round 2
@@ -158,7 +157,6 @@ func RunParallelParties[V schnorr.Variant[V]](participants []*interactive_signin
 		round3BroadcastOutputs := make([]*tschnorr.PartialSignature, len(participants))
 		errch := make(chan error, len(participants))
 
-		// Receive from r2bOut channel
 		r3Input := <-r2bOut
 
 		// Round 3

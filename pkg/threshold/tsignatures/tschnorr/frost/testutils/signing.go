@@ -2,12 +2,14 @@ package testutils
 
 import (
 	crand "crypto/rand"
+	"sync"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 	signing_helpers "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing"
@@ -87,4 +89,59 @@ func DoProducePartialSignature(participants []*noninteractive_signing.Cosigner, 
 	}
 
 	return partialSignatures, nil
+}
+
+func RunParallelParties(participants []*signing_helpers.Cosigner, message []byte) (partialSignatures []*frost.PartialSignature, err error) {
+	r1bOut := make(chan []*signing_helpers.Round1Broadcast)
+	go func() {
+		var wg sync.WaitGroup
+		round1BroadcastOutputs := make([]*signing_helpers.Round1Broadcast, len(participants))
+		errch := make(chan error, len(participants))
+
+		// Round 1
+		for i, participant := range participants {
+			wg.Add(1)
+			go func(i int, participant *signing_helpers.Cosigner) {
+				defer wg.Done()
+				var err error
+				round1BroadcastOutputs[i], err = participant.Round1()
+				if err != nil {
+					errch <- errs.WrapFailed(err, "could not run sign round 1")
+				}
+			}(i, participant)
+		}
+		wg.Wait()
+		close(errch)
+		r1bOut <- round1BroadcastOutputs
+		close(r1bOut)
+	}()
+
+	r2bOut := make(chan []*frost.PartialSignature)
+	go func() {
+		var wg sync.WaitGroup
+		round2BroadcastOutputs := make([]*frost.PartialSignature, len(participants))
+		errch := make(chan error, len(participants))
+
+		r2Input := <-r1bOut
+
+		// Round 2
+		for i, participant := range participants {
+			wg.Add(1)
+			go func(i int, participant *signing_helpers.Cosigner) {
+				defer wg.Done()
+				var err error
+
+				r2In := testutils.MapBroadcastO2I(participants, r2Input)
+				round2BroadcastOutputs[i], err = participant.Round2(r2In[i], message)
+				if err != nil {
+					errch <- errs.WrapFailed(err, "could not run sign round 2")
+				}
+			}(i, participant)
+		}
+		wg.Wait()
+		close(errch)
+		r2bOut <- round2BroadcastOutputs
+		close(r2bOut)
+	}()
+	return <-r2bOut, nil
 }
