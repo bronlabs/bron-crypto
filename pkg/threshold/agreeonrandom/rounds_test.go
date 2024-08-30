@@ -173,7 +173,7 @@ func Test_HappyPath(t *testing.T) {
 			boundedN := n
 			t.Run(fmt.Sprintf("Happy path with curve=%s and n=%d", boundedCurve.Name(), boundedN), func(t *testing.T) {
 				t.Parallel()
-				// testHappyPath(t, boundedCurve, boundedN)
+				testHappyPath(t, boundedCurve, boundedN)
 				testHappyPathWithParallelParties(t, boundedCurve, boundedN)
 			})
 		}

@@ -100,7 +100,7 @@ func DoRecoveryRound2(participants []*recovery.Participant, lostPartyIndex int, 
 	for i, participant := range participants {
 		round2p2p[lastRecorded], err = participant.Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not run Recovery round 1")
+			return nil, errs.WrapFailed(err, "could not run Recovery round 2")
 		}
 		lastRecorded++
 	}
