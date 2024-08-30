@@ -92,6 +92,54 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 
 }
 
+func testHappyPathWithParallelParties(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) {
+	t.Helper()
+
+	uniqueSessionId, identities, protocol := setup(t, curve, h, threshold, n)
+
+	participants, samples, publicKeySharesMaps, _, err := testutils.RunSampleWithParallelParties(uniqueSessionId, protocol, identities)
+	require.NoError(t, err)
+
+	t.Run("none of the samples are zero", func(t *testing.T) {
+		t.Parallel()
+		for _, sample := range samples {
+			require.False(t, sample.IsZero())
+		}
+	})
+
+	t.Run("samples combine to zero", func(t *testing.T) {
+		t.Parallel()
+		shamirDealer, err := shamir.NewDealer(uint(threshold), uint(n), curve)
+		require.NoError(t, err)
+		require.NotNil(t, shamirDealer)
+		shamirShares := make([]*shamir.Share, len(participants))
+		for i := 0; i < len(participants); i++ {
+			shamirShares[i] = &shamir.Share{
+				Id:    uint(participants[i].SharingId()),
+				Value: samples[i],
+			}
+		}
+
+		combined, err := shamirDealer.Combine(shamirShares...)
+		require.NoError(t, err)
+		require.True(t, combined.IsZero())
+
+	})
+
+	t.Run("public key shares are consistent", func(t *testing.T) {
+		t.Parallel()
+
+		for i, participant := range participants {
+			for j := range participants {
+				pk, exists := publicKeySharesMaps[j].Get(participant.IdentityKey())
+				require.True(t, exists)
+				require.True(t, curve.ScalarBaseMult(samples[i]).Equal(pk))
+			}
+		}
+	})
+
+}
+
 func testHappyPathRunner(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) {
 	t.Helper()
 
@@ -183,6 +231,7 @@ func Test_HappyPath(t *testing.T) {
 				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testHappyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
+					testHappyPathWithParallelParties(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 					testHappyPathRunner(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
 			}

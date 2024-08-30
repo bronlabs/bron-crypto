@@ -3,6 +3,7 @@ package testutils
 import (
 	crand "crypto/rand"
 	"io"
+	"sync"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -70,6 +71,73 @@ func DoDkgRound2(participants []*hjky.Participant, round2BroadcastInputs []netwo
 	return samples, publicKeySharesMaps, feldmanCommitmentVectors, nil
 }
 
+func DoRound1WithParallelParties(participants []*hjky.Participant) (round1BroadcastOutputs []*hjky.Round1Broadcast, round1UnicastOutputs []network.RoundMessages[types.ThresholdProtocol, *hjky.Round1P2P], err error) {
+	r1bOut := make(chan []*hjky.Round1Broadcast)
+	r1uOut := make(chan []network.RoundMessages[types.ThresholdProtocol, *hjky.Round1P2P])
+	go func() {
+		var wg sync.WaitGroup
+		round1BroadcastOutputs := make([]*hjky.Round1Broadcast, len(participants))
+		round1UniCastOutputs := make([]network.RoundMessages[types.ThresholdProtocol, *hjky.Round1P2P], len(participants))
+		errch := make(chan error, len(participants))
+
+		// Round 1
+		for i, participant := range participants {
+			wg.Add(1)
+			go func(i int, participant *hjky.Participant) {
+				defer wg.Done()
+				var err error
+				round1BroadcastOutputs[i], round1UniCastOutputs[i], err = participant.Round1()
+				if err != nil {
+					errch <- errs.WrapFailed(err, "could not execute round 1")
+				}
+			}(i, participant)
+		}
+		wg.Wait()
+		close(errch)
+		r1bOut <- round1BroadcastOutputs
+		r1uOut <- round1UniCastOutputs
+		close(r1bOut)
+		close(r1uOut)
+	}()
+	return <-r1bOut, <-r1uOut, nil
+}
+
+func DoDkgRound2WithParallelParties(participants []*hjky.Participant, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *hjky.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *hjky.Round1P2P]) (samples []hjky.Sample, publicKeySharesMaps []ds.Map[types.IdentityKey, curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
+	sample := make(chan []hjky.Sample)
+	publicKeySharesMap := make(chan []ds.Map[types.IdentityKey, curves.Point])
+	feldmanCommitmentVector := make(chan [][]curves.Point)
+	go func() {
+		var wg sync.WaitGroup
+		samples := make([]hjky.Sample, len(participants))
+		publicKeySharesMaps := make([]ds.Map[types.IdentityKey, curves.Point], len(participants))
+		feldmanCommitmentVectors := make([][]curves.Point, len(participants))
+		errch := make(chan error, len(participants))
+
+		// Round 1
+		for i, participant := range participants {
+			wg.Add(1)
+			go func(i int, participant *hjky.Participant) {
+				defer wg.Done()
+				var err error
+				samples[i], publicKeySharesMaps[i], feldmanCommitmentVectors[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
+				if err != nil {
+					errch <- errs.WrapFailed(err, "could not execute round 1")
+				}
+			}(i, participant)
+		}
+		wg.Wait()
+		close(errch)
+		sample <- samples
+		publicKeySharesMap <- publicKeySharesMaps
+		feldmanCommitmentVector <- feldmanCommitmentVectors
+		close(sample)
+		close(publicKeySharesMap)
+		close(feldmanCommitmentVector)
+	}()
+
+	return <-sample, <-publicKeySharesMap, <-feldmanCommitmentVector, nil
+}
+
 func RunSample(sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey) (participants []*hjky.Participant, samples []hjky.Sample, publicKeySharesMaps []ds.Map[types.IdentityKey, curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
 	participants, err = MakeParticipants(sid, protocol, identities, nil)
 	if err != nil {
@@ -83,6 +151,25 @@ func RunSample(sid []byte, protocol types.ThresholdProtocol, identities []types.
 
 	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
 	samples, publicKeySharesMaps, feldmanCommitmentVectors, err = DoDkgRound2(participants, r2InsB, r2InsU)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	return participants, samples, publicKeySharesMaps, feldmanCommitmentVectors, nil
+}
+
+func RunSampleWithParallelParties(sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey) (participants []*hjky.Participant, samples []hjky.Sample, publicKeySharesMaps []ds.Map[types.IdentityKey, curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
+	participants, err = MakeParticipants(sid, protocol, identities, nil)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	r1OutsB, r1OutsU, err := DoRound1WithParallelParties(participants)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
+	samples, publicKeySharesMaps, feldmanCommitmentVectors, err = DoDkgRound2WithParallelParties(participants, r2InsB, r2InsU)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}

@@ -3,12 +3,14 @@ package testutils
 import (
 	crand "crypto/rand"
 	"io"
+	"sync"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/refresh"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
@@ -68,6 +70,68 @@ func DoDkgRound2(participants []*refresh.Participant, round2BroadcastInputs []ne
 	return signingKeyShares, publicKeyShares, nil
 }
 
+func DoDkgRound1WithParallelParties(participants []*refresh.Participant) (round1BroadcastOutputs []*refresh.Round1Broadcast, round1UnicastOutputs []network.RoundMessages[types.ThresholdProtocol, *refresh.Round1P2P], err error) {
+	r1bOut := make(chan []*refresh.Round1Broadcast)
+	r1uOut := make(chan []network.RoundMessages[types.ThresholdProtocol, *refresh.Round1P2P])
+	go func() {
+		var wg sync.WaitGroup
+		round1BroadcastOutputs := make([]*refresh.Round1Broadcast, len(participants))
+		round1UniCastOutputs := make([]network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1P2P], len(participants))
+		errch := make(chan error, len(participants))
+
+		// Round 1
+		for i, participant := range participants {
+			wg.Add(1)
+			go func(i int, participant *refresh.Participant) {
+				defer wg.Done()
+				var err error
+				round1BroadcastOutputs[i], round1UniCastOutputs[i], err = participant.Round1()
+				if err != nil {
+					errch <- errs.WrapFailed(err, "could not execute round 1")
+				}
+			}(i, participant)
+		}
+		wg.Wait()
+		close(errch)
+		r1bOut <- round1BroadcastOutputs
+		r1uOut <- round1UniCastOutputs
+		close(r1bOut)
+		close(r1uOut)
+	}()
+	return <-r1bOut, <-r1uOut, nil
+}
+
+func DoDkgRound2WithParallelParties(participants []*refresh.Participant, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *refresh.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *refresh.Round1P2P]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
+	signingKeyShareChan := make(chan []*tsignatures.SigningKeyShare)
+	partialPublicKeysChan := make(chan []*tsignatures.PartialPublicKeys)
+	go func() {
+		var wg sync.WaitGroup
+		signingKeyShare := make([]*tsignatures.SigningKeyShare, len(participants))
+		PartialPublicKeys := make([]*tsignatures.PartialPublicKeys, len(participants))
+		errch := make(chan error, len(participants))
+
+		// Round 2
+		for i, participant := range participants {
+			wg.Add(1)
+			go func(i int, participant *refresh.Participant) {
+				defer wg.Done()
+				var err error
+				signingKeyShare[i], PartialPublicKeys[i], err = participant.Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
+				if err != nil {
+					errch <- errs.WrapFailed(err, "could not execute round 2")
+				}
+			}(i, participant)
+		}
+		wg.Wait()
+		close(errch)
+		signingKeyShareChan <- signingKeyShare
+		partialPublicKeysChan <- PartialPublicKeys
+		close(signingKeyShareChan)
+		close(partialPublicKeysChan)
+	}()
+	return <-signingKeyShareChan, <-partialPublicKeysChan, nil
+}
+
 func RunRefresh(sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, initialSigningKeyShares []*tsignatures.SigningKeyShare, initialPublicKeyShares []*tsignatures.PartialPublicKeys) (participants []*refresh.Participant, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
 	participants, err = MakeParticipants(sid, protocol, identities, initialSigningKeyShares, initialPublicKeyShares, nil)
 	if err != nil {
@@ -81,6 +145,25 @@ func RunRefresh(sid []byte, protocol types.ThresholdProtocol, identities []types
 
 	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
 	signingKeyShares, publicKeyShares, err = DoDkgRound2(participants, r2InsB, r2InsU)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return participants, signingKeyShares, publicKeyShares, nil
+}
+
+func RunRefreshWithParallelParties(sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, initialSigningKeyShares []*tsignatures.SigningKeyShare, initialPublicKeyShares []*tsignatures.PartialPublicKeys) (participants []*refresh.Participant, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
+	participants, err = MakeParticipants(sid, protocol, identities, initialSigningKeyShares, initialPublicKeyShares, nil)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	r1OutsB, r1OutsU, err := DoDkgRound1WithParallelParties(participants)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
+	signingKeyShares, publicKeyShares, err = DoDkgRound2WithParallelParties(participants, r2InsB, r2InsU)
 	if err != nil {
 		return nil, nil, nil, err
 	}
