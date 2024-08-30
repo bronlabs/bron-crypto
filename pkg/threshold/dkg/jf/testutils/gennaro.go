@@ -195,3 +195,28 @@ func RunDKG(uniqueSessionId []byte, protocol types.ThresholdProtocol, identities
 	}
 	return signingKeyShares, publicKeyShares, nil
 }
+
+func RunDKGWithParallelParties(uniqueSessionId []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
+	participants, err := MakeParticipants(uniqueSessionId, protocol, identities, randomisedFischlin.Name, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r1OutsB, r1OutsU, err := DoDkgRound1WithParallelParties(participants)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
+	r2OutsB, err := DoDkgRound2WithParallelParties(participants, r2InsB, r2InsU)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r3InsB := ttu.MapBroadcastO2I(participants, r2OutsB)
+	signingKeyShares, publicKeyShares, err = DoDkgRound3WithParallelParties(participants, r3InsB)
+	if err != nil {
+		return nil, nil, err
+	}
+	return signingKeyShares, publicKeyShares, nil
+}

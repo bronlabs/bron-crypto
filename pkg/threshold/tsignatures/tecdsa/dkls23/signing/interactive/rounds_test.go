@@ -51,6 +51,7 @@ func Test_HappyPath(t *testing.T) {
 				t.Run(fmt.Sprintf("Interactive sign happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testHappyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedMessage)
+					testHappyPathWithParallelParties(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, boundedMessage)
 				})
 			}
 		}
@@ -118,6 +119,49 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	require.NoError(t, err)
 
 	_, shards, err := testutils.RunDKG(curve, protocol, allIdentities)
+	require.NoError(t, err)
+
+	seededPrng, err := fkechacha20.NewPrng(nil, nil)
+	require.NoError(t, err)
+
+	N := make([]int, n)
+	for i := range n {
+		N[i] = i
+	}
+
+	combinations, err := combinatorics.Combinations(N, uint(threshold))
+	require.NoError(t, err)
+	if testing.Short() {
+		combinations = combinations[:1]
+	}
+	for _, combinationIndices := range combinations {
+		identities := make([]types.IdentityKey, threshold)
+		selectedShards := make([]*dkls23.Shard, threshold)
+		for i, index := range combinationIndices {
+			identities[i] = allIdentities[index]
+			selectedShards[i] = shards[index]
+		}
+		t.Run(fmt.Sprintf("running the happy path with identities %v", identities), func(t *testing.T) {
+			t.Parallel()
+			err := testutils.RunInteractiveSign(protocol, identities, selectedShards, message, seededPrng, nil)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func testHappyPathWithParallelParties(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int, message []byte) {
+	t.Helper()
+
+	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
+	require.NoError(t, err)
+
+	allIdentities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	require.NoError(t, err)
+
+	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, threshold, allIdentities)
+	require.NoError(t, err)
+
+	_, shards, err := testutils.RunDKGWithParallelParties(curve, protocol, allIdentities)
 	require.NoError(t, err)
 
 	seededPrng, err := fkechacha20.NewPrng(nil, nil)
