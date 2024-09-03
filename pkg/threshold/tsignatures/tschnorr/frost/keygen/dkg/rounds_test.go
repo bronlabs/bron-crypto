@@ -72,52 +72,6 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	}
 }
 
-func testHappyPathWithParallelParties(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {
-	t.Helper()
-
-	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
-	require.NoError(t, err)
-
-	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
-	require.NoError(t, err)
-	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)
-	require.NoError(t, err)
-
-	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
-	require.NoError(t, err)
-
-	participants, err := testutils.MakeDkgParticipants(uniqueSessionId, protocol, identities, nil)
-	require.NoError(t, err)
-
-	r1OutsB, r1OutsU, err := testutils.DoDkgRound1WithParallelParties(participants, nil)
-	require.NoError(t, err)
-	for _, out := range r1OutsU {
-		require.Equal(t, out.Size(), int(protocol.TotalParties())-1)
-	}
-
-	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
-	signingKeyShares, publicKeyShares, err := testutils.DoDkgRound2WithParallelParties(participants, r2InsB, r2InsU)
-
-	require.NoError(t, err)
-	for _, publicKeyShare := range publicKeyShares {
-		require.NotNil(t, publicKeyShare)
-	}
-
-	// each signing share is different
-	for i := 0; i < len(signingKeyShares); i++ {
-		for j := i + 1; j < len(signingKeyShares); j++ {
-			require.NotZero(t, signingKeyShares[i].Share.Cmp(signingKeyShares[j].Share))
-		}
-	}
-
-	// each public key is the same
-	for i := 0; i < len(signingKeyShares); i++ {
-		for j := i + 1; j < len(signingKeyShares); j++ {
-			require.True(t, signingKeyShares[i].PublicKey.Equal(signingKeyShares[i].PublicKey))
-		}
-	}
-}
-
 func testInvalidSid(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold int, n int) {
 	t.Helper()
 
@@ -166,7 +120,6 @@ func Test_HappyPath(t *testing.T) {
 				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
 					t.Parallel()
 					testHappyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
-					testHappyPathWithParallelParties(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
 				})
 			}
 		}

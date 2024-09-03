@@ -14,11 +14,7 @@ var (
 	MakeDkgParticipants = testutils.MakeParticipants
 	DoDkgRound1         = testutils.DoDkgRound1
 	DoDkgRound2         = testutils.DoDkgRound2
-	DoDkgRound1WithParallelParties = testutils.DoDkgRound1WithParallelParties
-	DoDkgRound2WithParallelParties = testutils.DoDkgRound2WithParallelParties
-
 )
-
 
 func MakeParticipants(uniqueSessionId []byte, config types.ThresholdProtocol, identities []types.IdentityKey, prngs []io.Reader) (participants []*dkg.Participant, err error) {
 

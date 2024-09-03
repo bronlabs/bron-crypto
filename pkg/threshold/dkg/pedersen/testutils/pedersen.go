@@ -42,38 +42,6 @@ func MakeParticipants(uniqueSessionId []byte, config types.ThresholdProtocol, id
 }
 
 func DoDkgRound1(participants []*pedersen.Participant, a_i0s []curves.Scalar) (round1BroadcastOutputs []*pedersen.Round1Broadcast, round1UnicastOutputs []network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1P2P], err error) {
-	round1BroadcastOutputs = make([]*pedersen.Round1Broadcast, len(participants))
-	round1UnicastOutputs = make([]network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1P2P], len(participants))
-	for i, participant := range participants {
-		var a_i0 curves.Scalar
-		if a_i0s == nil {
-			a_i0 = nil
-		} else {
-			a_i0 = a_i0s[i]
-		}
-		round1BroadcastOutputs[i], round1UnicastOutputs[i], err = participant.Round1(a_i0)
-		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "could not run Pedersen DKG round 1")
-		}
-	}
-
-	return round1BroadcastOutputs, round1UnicastOutputs, nil
-}
-
-func DoDkgRound2(participants []*pedersen.Participant, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1P2P]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
-	signingKeyShares = make([]*tsignatures.SigningKeyShare, len(participants))
-	publicKeyShares = make([]*tsignatures.PartialPublicKeys, len(participants))
-	for i := range participants {
-		signingKeyShares[i], publicKeyShares[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
-		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "Participant %d could not run Pedersen DKG round 2", i)
-		}
-	}
-
-	return signingKeyShares, publicKeyShares, nil
-}
-
-func DoDkgRound1WithParallelParties(participants []*pedersen.Participant, a_i0s []curves.Scalar) (round1BroadcastOutputs []*pedersen.Round1Broadcast, round1UnicastOutputs []network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1P2P], err error) {
 	r1bOut := make(chan []*pedersen.Round1Broadcast)
 	r1uOut := make(chan []network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1P2P])
 
@@ -112,7 +80,7 @@ func DoDkgRound1WithParallelParties(participants []*pedersen.Participant, a_i0s 
 	return <-r1bOut, <-r1uOut, nil
 }
 
-func DoDkgRound2WithParallelParties(participants []*pedersen.Participant, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1P2P]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
+func DoDkgRound2(participants []*pedersen.Participant, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *pedersen.Round1P2P]) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
 	signingKeySharesCh := make(chan []*tsignatures.SigningKeyShare)
 	publicKeySharesCh := make(chan []*tsignatures.PartialPublicKeys)
 

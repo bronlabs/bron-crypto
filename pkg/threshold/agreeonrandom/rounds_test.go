@@ -95,7 +95,7 @@ func testHappyPathWithParallelParties(t *testing.T, curve curves.Curve, n int) [
 			for i, index := range combinationIndices {
 				identities[i] = allIdentities[index]
 			}
-			random, err = testutils.RunAgreeOnRandomWithParallelParties(curve, identities, crand.Reader)
+			random, err = testutils.RunAgreeOnRandom(curve, identities, crand.Reader)
 			require.NoError(t, err)
 		}
 	}

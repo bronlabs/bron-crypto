@@ -34,39 +34,6 @@ func MakeSetupParticipants(curve curves.Curve, identities []types.IdentityKey, p
 }
 
 func DoSetupRound1(participants []*setup.Participant) (round2Outputs []network.RoundMessages[types.Protocol, *setup.Round1P2P], err error) {
-	round2Outputs = make([]network.RoundMessages[types.Protocol, *setup.Round1P2P], len(participants))
-	for i, participant := range participants {
-		round2Outputs[i], err = participant.Round1()
-		if err != nil {
-			return nil, errs.WrapFailed(err, "could not run Setup round 1")
-		}
-	}
-	return round2Outputs, nil
-}
-
-func DoSetupRound2(participants []*setup.Participant, round3Inputs []network.RoundMessages[types.Protocol, *setup.Round1P2P]) (round3Outputs []network.RoundMessages[types.Protocol, *setup.Round2P2P], err error) {
-	round3Outputs = make([]network.RoundMessages[types.Protocol, *setup.Round2P2P], len(participants))
-	for i, participant := range participants {
-		round3Outputs[i], err = participant.Round2(round3Inputs[i])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "could not run Setup round 2")
-		}
-	}
-	return round3Outputs, nil
-}
-
-func DoSetupRound3(participants []*setup.Participant, round4Inputs []network.RoundMessages[types.Protocol, *setup.Round2P2P]) (allPairwiseSeeds []rprzs.PairWiseSeeds, err error) {
-	allPairwiseSeeds = make([]rprzs.PairWiseSeeds, len(participants))
-	for i, participant := range participants {
-		allPairwiseSeeds[i], err = participant.Round3(round4Inputs[i])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "could not run Setup round 3")
-		}
-	}
-	return allPairwiseSeeds, nil
-}
-
-func DoSetupRound1WithParallelParties(participants []*setup.Participant) (round1Outputs []network.RoundMessages[types.Protocol, *setup.Round1P2P], err error) {
 	r1uOut := make(chan []network.RoundMessages[types.Protocol, *setup.Round1P2P])
 	go func() {
 		var wg sync.WaitGroup
@@ -93,14 +60,14 @@ func DoSetupRound1WithParallelParties(participants []*setup.Participant) (round1
 	return <-r1uOut, nil
 }
 
-func DoSetupRound2WithParallelParties(participants []*setup.Participant, round2Inputs []network.RoundMessages[types.Protocol, *setup.Round1P2P]) (round2Outputs []network.RoundMessages[types.Protocol, *setup.Round2P2P], err error) {
+func DoSetupRound2(participants []*setup.Participant, round2Inputs []network.RoundMessages[types.Protocol, *setup.Round1P2P]) (round3Outputs []network.RoundMessages[types.Protocol, *setup.Round2P2P], err error) {
 	r2uOut := make(chan []network.RoundMessages[types.Protocol, *setup.Round2P2P])
 	go func() {
 		var wg sync.WaitGroup
 		round1UniCastOutputs := make([]network.RoundMessages[types.Protocol, *setup.Round2P2P], len(participants))
 		errch := make(chan error, len(participants))
 
-		// Round 1
+		// Round 2
 		for i, participant := range participants {
 			wg.Add(1)
 			go func(i int, participant *setup.Participant) {
@@ -120,14 +87,14 @@ func DoSetupRound2WithParallelParties(participants []*setup.Participant, round2I
 	return <-r2uOut, nil
 }
 
-func DoSetupRound3WithParallelParties(participants []*setup.Participant, round3Inputs []network.RoundMessages[types.Protocol, *setup.Round2P2P]) (allPairwiseSeeds []rprzs.PairWiseSeeds, err error) {
+func DoSetupRound3(participants []*setup.Participant, round3Inputs []network.RoundMessages[types.Protocol, *setup.Round2P2P]) (allPairwiseSeeds []rprzs.PairWiseSeeds, err error) {
 	allPairwiseSeedsChan := make(chan []rprzs.PairWiseSeeds)
 	go func() {
 		var wg sync.WaitGroup
 		allPairwiseSeeds := make([]rprzs.PairWiseSeeds, len(participants))
 		errch := make(chan error, len(participants))
 
-		// Round 1
+		// Round 3
 		for i, participant := range participants {
 			wg.Add(1)
 			go func(i int, participant *setup.Participant) {

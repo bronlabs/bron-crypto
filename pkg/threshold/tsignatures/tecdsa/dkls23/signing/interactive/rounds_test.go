@@ -161,7 +161,7 @@ func testHappyPathWithParallelParties(t *testing.T, curve curves.Curve, h func()
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	_, shards, err := testutils.RunDKGWithParallelParties(curve, protocol, allIdentities)
+	_, shards, err := testutils.RunDKG(curve, protocol, allIdentities)
 	require.NoError(t, err)
 
 	seededPrng, err := fkechacha20.NewPrng(nil, nil)

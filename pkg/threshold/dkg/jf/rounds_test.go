@@ -121,20 +121,20 @@ func testHappyPathWithParallelParties(t *testing.T, curve curves.Curve, h func()
 	participants, err := testutils.MakeParticipants(uniqueSessionId, protocol, identities, cn, nil)
 	require.NoError(t, err)
 
-	r1OutsB, r1OutsU, err := testutils.DoDkgRound1WithParallelParties(participants)
+	r1OutsB, r1OutsU, err := testutils.DoDkgRound1(participants)
 	require.NoError(t, err)
 	for _, out := range r1OutsU {
 		require.Equal(t, out.Size(), int(protocol.TotalParties())-1)
 	}
 
 	r2InsB, r2InsU := ttu.MapO2I(participants, r1OutsB, r1OutsU)
-	r2Outs, err := testutils.DoDkgRound2WithParallelParties(participants, r2InsB, r2InsU)
+	r2Outs, err := testutils.DoDkgRound2(participants, r2InsB, r2InsU)
 	require.NoError(t, err)
 	for _, out := range r2Outs {
 		require.NotNil(t, out)
 	}
 	r3Ins := ttu.MapBroadcastO2I(participants, r2Outs)
-	signingKeyShares, publicKeyShares, err := testutils.DoDkgRound3WithParallelParties(participants, r3Ins)
+	signingKeyShares, publicKeyShares, err := testutils.DoDkgRound3(participants, r3Ins)
 	require.NoError(t, err)
 	for _, publicKeyShare := range publicKeyShares {
 		require.NotNil(t, publicKeyShare)
