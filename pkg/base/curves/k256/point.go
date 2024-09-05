@@ -31,48 +31,49 @@ type Point struct {
 	_ ds.Incomparable
 }
 
-func NewPoint() *Point {
-	return NewCurve().AdditiveIdentity().(*Point)
+func NewPoint() Point {
+	point, _ := NewCurve().AdditiveIdentity().(Point)
+	return point
 }
 
 // === Basic Methods.
 
-func (*Point) Structure() curves.Curve {
+func (Point) Structure() curves.Curve {
 	return NewCurve()
 }
 
-func (p *Point) Unwrap() curves.Point {
+func (p Point) Unwrap() curves.Point {
 	return p
 }
 
-func (*Point) ApplyOp(operator algebra.BinaryOperator[curves.Point], x algebra.GroupoidElement[curves.Curve, curves.Point], n *saferith.Nat) (curves.Point, error) {
+func (Point) ApplyOp(operator algebra.BinaryOperator[curves.Point], x algebra.GroupoidElement[curves.Curve, curves.Point], n *saferith.Nat) (curves.Point, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (p *Point) IsInPrimeSubGroup() bool {
+func (p Point) IsInPrimeSubGroup() bool {
 	return p.V.IsOnCurve() || p.IsAdditiveIdentity()
 }
 
-func (p *Point) IsTorsionElementUnderAddition(order *saferith.Modulus) bool {
+func (p Point) IsTorsionElementUnderAddition(order *saferith.Modulus) bool {
 	e := p.Curve().ScalarField().Element().SetNat(order.Nat())
 	return p.ScalarMul(e).IsAdditiveIdentity()
 }
 
-func (p *Point) IsBasePoint() bool {
+func (p Point) IsBasePoint() bool {
 	return NewCurve().Generator().Equal(p)
 }
 
-func (p *Point) CanGenerateAllElements() bool {
+func (p Point) CanGenerateAllElements() bool {
 	return p.IsInPrimeSubGroup()
 }
 
-func (p *Point) IsDesignatedGenerator() bool {
+func (p Point) IsDesignatedGenerator() bool {
 	return p.IsBasePoint()
 }
 
-func (p *Point) Equal(rhs curves.Point) bool {
-	r, ok := rhs.(*Point)
+func (p Point) Equal(rhs curves.Point) bool {
+	r, ok := rhs.(Point)
 	if ok {
 		return p.V.Equal(r.V) == 1
 	} else {
@@ -80,23 +81,23 @@ func (p *Point) Equal(rhs curves.Point) bool {
 	}
 }
 
-func (p *Point) Clone() curves.Point {
-	return &Point{
+func (p Point) Clone() curves.Point {
+	return Point{
 		V: k256impl.PointNew().Set(p.V),
 	}
 }
 
 // === Groupoid Methods.
 
-func (p *Point) Operate(rhs curves.Point) curves.Point {
+func (p Point) Operate(rhs curves.Point) curves.Point {
 	return p.Add(rhs)
 }
 
-func (p *Point) OperateIteratively(n *saferith.Nat) curves.Point {
+func (p Point) OperateIteratively(n *saferith.Nat) curves.Point {
 	return p.Unwrap().ScalarMul(NewCurve().Scalar().SetNat(n))
 }
 
-func (*Point) Order(op algebra.BinaryOperator[curves.Point]) (*saferith.Modulus, error) {
+func (Point) Order(op algebra.BinaryOperator[curves.Point]) (*saferith.Modulus, error) {
 	//TODO implement me
 	panic("implement me")
 	//if p.IsIdentity() {
@@ -113,95 +114,95 @@ func (*Point) Order(op algebra.BinaryOperator[curves.Point]) (*saferith.Modulus,
 
 // === Additive Groupoid Methods.
 
-func (p *Point) Add(rhs algebra.AdditiveGroupoidElement[curves.Curve, curves.Point]) curves.Point {
+func (p Point) Add(rhs algebra.AdditiveGroupoidElement[curves.Curve, curves.Point]) curves.Point {
 	if rhs == nil {
 		panic("rhs is nil")
 	}
-	r, ok := rhs.(*Point)
+	r, ok := rhs.(Point)
 	if ok {
 		value := k256impl.PointNew().Add(p.V, r.V)
-		return &Point{V: value}
+		return Point{V: value}
 	} else {
 		panic("rhs is not PointK256")
 	}
 }
 
-func (p *Point) ApplyAdd(q algebra.AdditiveGroupoidElement[curves.Curve, curves.Point], n *saferith.Nat) curves.Point {
+func (p Point) ApplyAdd(q algebra.AdditiveGroupoidElement[curves.Curve, curves.Point], n *saferith.Nat) curves.Point {
 	return p.Add(q.Unwrap().ScalarMul(NewScalarField().Element().SetNat(n)))
 }
 
-func (p *Point) Double() curves.Point {
+func (p Point) Double() curves.Point {
 	value := k256impl.PointNew().Double(p.V)
-	return &Point{V: value}
+	return Point{V: value}
 }
 
-func (p *Point) Triple() curves.Point {
+func (p Point) Triple() curves.Point {
 	return p.Double().Add(p)
 }
 
 // === Monoid Methods.
 
-func (*Point) IsIdentity(under algebra.BinaryOperator[curves.Point]) (bool, error) {
+func (Point) IsIdentity(under algebra.BinaryOperator[curves.Point]) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
 // === Additive Monoid Methods.
 
-func (p *Point) IsAdditiveIdentity() bool {
+func (p Point) IsAdditiveIdentity() bool {
 	return p.V.IsIdentity()
 }
 
 // === Group Methods.
 
-func (*Point) Inverse(under algebra.BinaryOperator[curves.Point]) (curves.Point, error) {
+func (Point) Inverse(under algebra.BinaryOperator[curves.Point]) (curves.Point, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (*Point) IsInverse(of algebra.GroupElement[curves.Curve, curves.Point], under algebra.BinaryOperator[curves.Point]) (bool, error) {
+func (Point) IsInverse(of algebra.GroupElement[curves.Curve, curves.Point], under algebra.BinaryOperator[curves.Point]) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
 // === Additive Group Methods.
 
-func (p *Point) AdditiveInverse() curves.Point {
+func (p Point) AdditiveInverse() curves.Point {
 	value := k256impl.PointNew().Neg(p.V)
-	return &Point{V: value}
+	return Point{V: value}
 }
 
-func (p *Point) IsAdditiveInverse(of algebra.AdditiveGroupElement[curves.Curve, curves.Point]) bool {
+func (p Point) IsAdditiveInverse(of algebra.AdditiveGroupElement[curves.Curve, curves.Point]) bool {
 	return p.Add(of).IsAdditiveIdentity()
 }
 
-func (p *Point) Sub(rhs algebra.AdditiveGroupElement[curves.Curve, curves.Point]) curves.Point {
+func (p Point) Sub(rhs algebra.AdditiveGroupElement[curves.Curve, curves.Point]) curves.Point {
 	if rhs == nil {
 		panic("rhs is nil")
 	}
-	r, ok := rhs.(*Point)
+	r, ok := rhs.(Point)
 	if ok {
 		value := k256impl.PointNew().Sub(p.V, r.V)
-		return &Point{V: value}
+		return Point{V: value}
 	} else {
 		panic("rhs is not PointK256")
 	}
 }
 
-func (p *Point) ApplySub(q algebra.AdditiveGroupElement[curves.Curve, curves.Point], n *saferith.Nat) curves.Point {
+func (p Point) ApplySub(q algebra.AdditiveGroupElement[curves.Curve, curves.Point], n *saferith.Nat) curves.Point {
 	return p.Sub(q.Unwrap().ScalarMul(NewScalarField().Element().SetNat(n)))
 }
 
 // === Vector Space Methods.
 
-func (p *Point) ScalarMul(rhs algebra.ModuleScalar[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar]) curves.Point {
+func (p Point) ScalarMul(rhs algebra.ModuleScalar[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar]) curves.Point {
 	if rhs == nil {
 		panic("rhs is nil")
 	}
 	r, ok := rhs.(*Scalar)
 	if ok {
 		value := k256impl.PointNew().Mul(p.V, r.V)
-		return &Point{V: value}
+		return Point{V: value}
 	} else {
 		panic("rhs is not ScalarK256")
 	}
@@ -209,62 +210,62 @@ func (p *Point) ScalarMul(rhs algebra.ModuleScalar[curves.Curve, curves.ScalarFi
 
 // === Curve Methods.
 
-func (*Point) Curve() curves.Curve {
+func (Point) Curve() curves.Curve {
 	return NewCurve()
 }
 
-func (p *Point) Neg() curves.Point {
+func (p Point) Neg() curves.Point {
 	return p.AdditiveInverse()
 }
 
-func (p *Point) IsNegative() bool {
+func (p Point) IsNegative() bool {
 	return p.V.GetY().Value[0]&1 == 1
 }
 
-func (*Point) IsSmallOrder() bool {
+func (Point) IsSmallOrder() bool {
 	return false
 }
 
-func (*Point) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOperator[curves.Point]) (bool, error) {
+func (Point) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOperator[curves.Point]) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (p *Point) ClearCofactor() curves.Point {
+func (p Point) ClearCofactor() curves.Point {
 	return p.Clone()
 }
 
 // === Coordinates interface methods.
 
-func (p *Point) AffineCoordinates() []curves.BaseFieldElement {
+func (p Point) AffineCoordinates() []curves.BaseFieldElement {
 	return []curves.BaseFieldElement{p.AffineX(), p.AffineY()}
 }
 
-func (p *Point) AffineX() curves.BaseFieldElement {
+func (p Point) AffineX() curves.BaseFieldElement {
 	return &BaseFieldElement{
 		V: p.V.GetX(),
 	}
 }
 
-func (p *Point) AffineY() curves.BaseFieldElement {
+func (p Point) AffineY() curves.BaseFieldElement {
 	return &BaseFieldElement{
 		V: p.V.GetY(),
 	}
 }
 
-func (p *Point) ProjectiveX() curves.BaseFieldElement {
+func (p Point) ProjectiveX() curves.BaseFieldElement {
 	return &BaseFieldElement{
 		V: p.V.X,
 	}
 }
 
-func (p *Point) ProjectiveY() curves.BaseFieldElement {
+func (p Point) ProjectiveY() curves.BaseFieldElement {
 	return &BaseFieldElement{
 		V: p.V.Y,
 	}
 }
 
-func (p *Point) ProjectiveZ() curves.BaseFieldElement {
+func (p Point) ProjectiveZ() curves.BaseFieldElement {
 	return &BaseFieldElement{
 		V: p.V.Z,
 	}
@@ -272,7 +273,7 @@ func (p *Point) ProjectiveZ() curves.BaseFieldElement {
 
 // === Serialisation.
 
-func (p *Point) ToAffineCompressed() []byte {
+func (p Point) ToAffineCompressed() []byte {
 	var x [33]byte
 	x[0] = byte(2)
 
@@ -285,7 +286,7 @@ func (p *Point) ToAffineCompressed() []byte {
 	return x[:]
 }
 
-func (p *Point) ToAffineUncompressed() []byte {
+func (p Point) ToAffineUncompressed() []byte {
 	var out [65]byte
 	out[0] = byte(4)
 	t := k256impl.PointNew().ToAffine(p.V)
@@ -296,7 +297,7 @@ func (p *Point) ToAffineUncompressed() []byte {
 	return out[:]
 }
 
-func (*Point) FromAffineCompressed(input []byte) (curves.Point, error) {
+func (Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 	var raw [base.FieldBytes]byte
 	if len(input) != 33 {
 		return nil, errs.NewLength("invalid byte sequence")
@@ -329,10 +330,10 @@ func (*Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 		value.Y = y
 		value.Z.SetOne()
 	}
-	return &Point{V: value}, nil
+	return Point{V: value}, nil
 }
 
-func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
+func (Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	var arr [base.FieldBytes]byte
 	if len(input) != 65 {
 		return nil, errs.NewLength("invalid byte sequence")
@@ -358,10 +359,10 @@ func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	if !value.IsOnCurve() {
 		return nil, errs.NewMembership("deserialised value is not on curve")
 	}
-	return &Point{V: value}, nil
+	return Point{V: value}, nil
 }
 
-func (p *Point) MarshalBinary() ([]byte, error) {
+func (p Point) MarshalBinary() ([]byte, error) {
 	res := impl.MarshalBinary(p.Curve().Name(), p.ToAffineCompressed)
 	if len(res) < 1 {
 		return nil, errs.NewSerialisation("could not marshal")
@@ -369,7 +370,7 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 	return res, nil
 }
 
-func (p *Point) UnmarshalBinary(input []byte) error {
+func (p Point) UnmarshalBinary(input []byte) error {
 	pt, err := impl.UnmarshalBinary(p.FromAffineCompressed, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal binary")
@@ -381,7 +382,7 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 	if name != p.Curve().Name() {
 		return errs.NewType("name %s is not supported", name)
 	}
-	ppt, ok := pt.(*Point)
+	ppt, ok := pt.(Point)
 	if !ok {
 		return errs.NewType("invalid point")
 	}
@@ -389,7 +390,7 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 	return nil
 }
 
-func (p *Point) MarshalJSON() ([]byte, error) {
+func (p Point) MarshalJSON() ([]byte, error) {
 	res, err := impl.MarshalJson(p.Curve().Name(), p.ToAffineCompressed)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not marshal")
@@ -397,7 +398,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 	return res, nil
 }
 
-func (p *Point) UnmarshalJSON(input []byte) error {
+func (p Point) UnmarshalJSON(input []byte) error {
 	pt, err := impl.UnmarshalJson(p.FromAffineCompressed, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
@@ -409,7 +410,7 @@ func (p *Point) UnmarshalJSON(input []byte) error {
 	if name != p.Curve().Name() {
 		return errs.NewType("name %s is not supported", name)
 	}
-	P, ok := pt.(*Point)
+	P, ok := pt.(Point)
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}
@@ -419,6 +420,6 @@ func (p *Point) UnmarshalJSON(input []byte) error {
 
 // === Hashable.
 
-func (p *Point) HashCode() uint64 {
+func (p Point) HashCode() uint64 {
 	return binary.BigEndian.Uint64(p.ToAffineCompressed())
 }

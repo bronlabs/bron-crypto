@@ -17,6 +17,261 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/testutils"
 )
 
+func BenchmarkMethods(b *testing.B) {
+	benchmarks := []struct {
+		name string
+		fn   func(b *testing.B)
+	}{
+		{"benchAddPointReceiver", benchAddPointReceiver},
+		{"benchScalarBaseMultPointReceiver", benchScalarBaseMultPointReceiver},
+		{"benchScalarRandom", benchScalarRandom},
+		{"benchScalarHash", benchScalarHash},
+		{"benchScalarZero", benchScalarZero},
+		{"benchScalarOne", benchScalarOne},
+		{"benchScalarNew", benchScalarNew},
+		{"benchScalarSquare", benchScalarSquare},
+		{"BenchmarkScalarCube", BenchmarkScalarCube},
+		{"BenchmarkScalarDouble", BenchmarkScalarDouble},
+		{"BenchmarkScalarNeg", BenchmarkScalarNeg},
+		{"BenchmarkScalarInvert", BenchmarkScalarInvert},
+		{"BenchmarkScalarSqrt", BenchmarkScalarSqrt},
+		{"BenchmarkScalarAdd", BenchmarkScalarAdd},
+		{"BenchmarkScalarSub", BenchmarkScalarSub},
+		{"BenchmarkScalarMul", BenchmarkScalarMul},
+		{"BenchmarkScalarNeg", BenchmarkScalarNeg},
+		{"BenchmarkScalarDiv", BenchmarkScalarDiv},
+		{"BenchmarkScalarExp", BenchmarkScalarExp},
+		{"BenchmarkPointDouble", BenchmarkPointDouble},
+		{"BenchmarkPointNeg", BenchmarkPointNeg},
+		{"BenchmarkPointAdd", BenchmarkPointAdd},
+		{"BenchmarkPointSub", BenchmarkPointSub},
+		{"BenchmarkPointMul", BenchmarkPointMul},
+		{"BenchmarkPointSerialize", BenchmarkPointSerialize},
+		{"BenchmarkPointSumOfProducts", BenchmarkPointSumOfProducts},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, bm.fn)
+	}
+}
+
+func benchAddPointReceiver(b *testing.B) {
+	curve := k256.NewCurve()
+	p1 := curve.Generator()
+	p2 := curve.Generator()
+
+	for i := 0; i < b.N; i++ {
+		p1.Add(p2)
+	}
+}
+
+func benchScalarBaseMultPointReceiver(b *testing.B) {
+	curve := k256.NewCurve()
+	scalar := curve.ScalarField().Element()
+	for i := 0; i < b.N; i++ {
+		curve.ScalarBaseMult(scalar)
+	}
+}
+
+func benchScalarRandom(b *testing.B) {
+	ed25519 := k256.NewCurve()
+	for i := 0; i < b.N; i++ {
+		sc, err := ed25519.ScalarField().Random(crand.Reader)
+		if err != nil {
+			b.Fatalf("Failed to generate random scalar: %v", err)
+		}
+		_, ok := sc.(*k256.Scalar)
+		if !ok {
+			b.Fatalf("Generated scalar is not of type *k256.Scalar")
+		}
+	}
+}
+
+func benchScalarHash(b *testing.B) {
+	var data [32]byte
+	ed25519 := k256.NewCurve()
+	for i := 0; i < b.N; i++ {
+		_, err := ed25519.ScalarField().Hash(data[:])
+		if err != nil {
+			b.Fatalf("Failed to hash scalar: %v", err)
+		}
+	}
+}
+
+func benchScalarZero(b *testing.B) {
+	ed25519 := k256.NewCurve()
+	for i := 0; i < b.N; i++ {
+		_ = ed25519.ScalarField().Zero()
+	}
+}
+
+func benchScalarOne(b *testing.B) {
+	ed25519 := k256.NewCurve()
+	for i := 0; i < b.N; i++ {
+		_ = ed25519.ScalarField().One()
+	}
+}
+
+func benchScalarNew(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = k256.NewScalar(3)
+		_ = k256.NewScalar(4)
+		_ = k256.NewScalar(1).Neg()
+		_ = k256.NewScalar(2).Neg()
+	}
+}
+
+func benchScalarSquare(b *testing.B) {
+	three := k256.NewScalar(3)
+	for i := 0; i < b.N; i++ {
+		_ = three.Square()
+	}
+}
+
+func BenchmarkScalarCube(b *testing.B) {
+	three := k256.NewScalar(3)
+	for i := 0; i < b.N; i++ {
+		_ = three.Cube()
+	}
+}
+
+func BenchmarkScalarDouble(b *testing.B) {
+	three := k256.NewScalar(3)
+	for i := 0; i < b.N; i++ {
+		_ = three.Double()
+	}
+}
+
+func BenchmarkScalarNeg(b *testing.B) {
+	one := k256.NewScalar(1)
+	for i := 0; i < b.N; i++ {
+		_ = one.Neg()
+	}
+}
+
+func BenchmarkScalarInvert(b *testing.B) {
+	nine := k256.NewScalar(9)
+	for i := 0; i < b.N; i++ {
+		_, _ = nine.MultiplicativeInverse()
+	}
+}
+
+func BenchmarkScalarSqrt(b *testing.B) {
+	nine := k256.NewScalar(9)
+	for i := 0; i < b.N; i++ {
+		_, _ = nine.Sqrt()
+	}
+}
+
+func BenchmarkScalarAdd(b *testing.B) {
+	nine := k256.NewScalar(9)
+	six := k256.NewScalar(6)
+	for i := 0; i < b.N; i++ {
+		_ = nine.Add(six)
+	}
+}
+
+func BenchmarkScalarSub(b *testing.B) {
+	nine := k256.NewScalar(9)
+	six := k256.NewScalar(6)
+	for i := 0; i < b.N; i++ {
+		_ = six.Sub(nine)
+	}
+}
+
+func BenchmarkScalarMul(b *testing.B) {
+	nine := k256.NewScalar(9)
+	six := k256.NewScalar(6)
+	for i := 0; i < b.N; i++ {
+		_ = nine.Mul(six)
+	}
+}
+
+func BenchmarkScalarDiv(b *testing.B) {
+	nine := k256.NewScalar(9)
+	for i := 0; i < b.N; i++ {
+		_, _ = nine.Div(nine)
+	}
+}
+
+func BenchmarkScalarExp(b *testing.B) {
+	curve := k256.NewCurve()
+	seventeen := k256.NewScalar(17)
+	for i := 0; i < b.N; i++ {
+		_ = seventeen.Exp(curve.ScalarField().One().Nat())
+	}
+}
+
+func BenchmarkPointDouble(b *testing.B) {
+	curve := k256.NewCurve()
+	g := curve.Generator()
+	for i := 0; i < b.N; i++ {
+		_ = g.Double()
+	}
+}
+
+func BenchmarkPointNeg(b *testing.B) {
+	curve := k256.NewCurve()
+	g := curve.Generator()
+	for i := 0; i < b.N; i++ {
+		_ = g.Neg()
+	}
+}
+
+func BenchmarkPointAdd(b *testing.B) {
+	curve := k256.NewCurve()
+	pt := curve.Generator()
+	for i := 0; i < b.N; i++ {
+		_ = pt.Add(pt)
+	}
+}
+
+func BenchmarkPointSub(b *testing.B) {
+	curve := k256.NewCurve()
+	g := curve.Generator()
+	pt := curve.Generator().ScalarMul(k256.NewScalar(4))
+	for i := 0; i < b.N; i++ {
+		_ = pt.Sub(g)
+	}
+}
+
+func BenchmarkPointMul(b *testing.B) {
+	curve := k256.NewCurve()
+	g := curve.Generator()
+	for i := 0; i < b.N; i++ {
+		_ = g.ScalarMul(k256.NewScalar(4))
+	}
+}
+
+func BenchmarkPointSerialize(b *testing.B) {
+	curve := k256.NewCurve()
+	ss, _ := curve.ScalarField().Random(testutils.TestRng())
+	g := curve.Generator()
+	ppt := g.ScalarMul(ss)
+	for i := 0; i < b.N; i++ {
+		_ = ppt.ToAffineCompressed()
+		_ = ppt.ToAffineUncompressed()
+	}
+}
+
+func BenchmarkPointSumOfProducts(b *testing.B) {
+	curve := k256.NewCurve()
+	points := make([]curves.Point, 5)
+	for i := range points {
+		points[i] = curve.Generator()
+	}
+	scalars := []curves.Scalar{
+		k256.NewScalar(8),
+		k256.NewScalar(9),
+		k256.NewScalar(10),
+		k256.NewScalar(11),
+		k256.NewScalar(12),
+	}
+	for i := 0; i < b.N; i++ {
+		_, _ = curve.MultiScalarMult(scalars, points)
+	}
+}
+
 func TestScalarK256Random(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
