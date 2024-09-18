@@ -249,7 +249,7 @@ func FuzzMemclr(f *testing.F) {
 	f.Fuzz(func(t *testing.T, inputArray []byte) {
 
 		originalArray := make([]int, len(inputArray))
-		bitstring.Memclr(inputArray)
+		bitstring.MemClr(inputArray)
 
 		require.Len(t, originalArray, len(inputArray), "Expected len(result) and len(input) to be the same")
 

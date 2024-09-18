@@ -233,7 +233,7 @@ func TestMemclr(t *testing.T) {
 		t.Run(fmt.Sprintf("testname: %s index: %d", tc.name, index), func(t *testing.T) {
 			t.Parallel()
 
-			bitstring.Memclr(tc.input)
+			bitstring.MemClr(tc.input)
 			require.Equal(t, tc.output, tc.input)
 		})
 	}
