@@ -30,8 +30,8 @@ func ToBytes32LE(i int32) []byte {
 	return b
 }
 
-// TODO: add pad argument
 // PadToRight pads the input bytes to the right with padLen zeroed bytes.
+// TODO: add pad argument
 func PadToRight(inBytes []byte, padLen int) []byte {
 	if padLen < 0 {
 		return inBytes
@@ -48,8 +48,8 @@ func TruncateWithEllipsis(text string, maxLen uint) string {
 	return text
 }
 
-// Memclr clears a byte slice. Compiles to `memclr` (https://github.com/golang/go/issues/5373).
-func Memclr[T constraints.Integer](dst []T) {
+// MemClr clears a byte slice. Compiles to `memclr` (https://github.com/golang/go/issues/5373).
+func MemClr[S ~[]T, T constraints.Integer](dst S) {
 	for i := range dst {
 		dst[i] = 0
 	}
