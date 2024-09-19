@@ -35,7 +35,7 @@ class Cl(AbelianGroup, ABC):
 
     @override
     def __neg__(self) -> Self:
-        return type(self)(self.a, self.b, self.c)
+        return type(self)(self.a, -self.b, self.c)
 
     @override
     def __add__(self, other: Self) -> Self:

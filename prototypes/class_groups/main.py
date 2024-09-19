@@ -36,3 +36,10 @@ if __name__ == "__main__":
         sage: z = elem + y; z
         Class of 21923*x^2 + 21401*x*y + 58177*y^2
     """
+
+    t = elem - y
+    assert t == Group(12011, 3485, 96907)
+    """
+        sage: t = elem - y; t
+        Class of 12011*x^2 + 3485*x*y + 96907*y^2
+    """
