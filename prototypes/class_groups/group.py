@@ -6,29 +6,23 @@ from typing import Self
 class AbelianGroup(ABC):
     @classmethod
     @abstractmethod
-    def zero(cls) -> Self:
-        ...
+    def zero(cls) -> Self: ...
 
     @classmethod
     @abstractmethod
-    def random(cls) -> Self:
-        ...
+    def random(cls) -> Self: ...
 
     @abstractmethod
-    def __add__(self, other: Self) -> Self:
-        ...
+    def __add__(self, other: Self) -> Self: ...
 
     @abstractmethod
-    def __neg__(self) -> Self:
-        ...
+    def __neg__(self) -> Self: ...
 
     @abstractmethod
-    def __eq__(self, other: Self) -> bool:
-        ...
+    def __eq__(self, other: object) -> bool: ...
 
     @abstractmethod
-    def __copy__(self) -> Self:
-        ...
+    def __copy__(self) -> Self: ...
 
     def __sub__(self, other: Self) -> Self:
         return self + -other
@@ -48,8 +42,9 @@ class AbelianGroup(ABC):
             other >>= 1
         return res
 
-    def __rmul__(self, other: Self) -> Self:
+    def __rmul__(self, other: int) -> Self:
         return self * other
+
 
 def element_order(e: AbelianGroup) -> int:
     identity = e.zero()

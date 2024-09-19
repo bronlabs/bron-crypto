@@ -3,15 +3,15 @@ from random import randint
 from typing import Self, override
 from prototypes.class_groups.group import AbelianGroup
 
+
 class Cl(AbelianGroup, ABC):
-    def __init__(self, a, b, c) -> None:
+    def __init__(self, a: int, b: int, c: int) -> None:
         assert b * b - 4 * a * c == self.discriminant()
         self.a, self.b, self.c = _reduce(a, b, c)
 
     @classmethod
     @abstractmethod
-    def discriminant(cls) -> int:
-        ...
+    def discriminant(cls) -> int: ...
 
     @classmethod
     @override
@@ -28,7 +28,9 @@ class Cl(AbelianGroup, ABC):
             return cls(1, 0, -d // 4)
 
     @override
-    def __eq__(self, other: Self) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, type(self)):
+            return False
         return self.a == other.a and self.b == other.b and self.c == other.c
 
     @override
@@ -36,7 +38,7 @@ class Cl(AbelianGroup, ABC):
         return type(self)(self.a, self.b, self.c)
 
     @override
-    def __add__(self, other) -> Self:
+    def __add__(self, other: Self) -> Self:
         d, r, s, t = _egcd(self.a, other.a, (self.b + other.b) // 2)
         a = self.a * other.a // d**2
         b = other.b + 2 * other.a * (s * (self.b - other.b) // 2 - t * other.c) // d
@@ -50,19 +52,27 @@ class Cl(AbelianGroup, ABC):
     def __repr__(self) -> str:
         return "({}, {}, {})".format(self.a, self.b, self.c)
 
-def new_cl_class(discriminant: int):
+
+def new_cl_class(discriminant: int) -> type[Cl]:
     assert discriminant % 4 == 1 and _is_probably_prime(-discriminant)
 
-    return type("Cl{}".format(-discriminant), (Cl,), {
-        "discriminant": classmethod(override(lambda cls: discriminant)),
-        "__module__": __name__,
-    })
+    return type(
+        "Cl{}".format(-discriminant),
+        (Cl,),
+        {
+            "discriminant": classmethod(override(lambda cls: discriminant)),
+            "__module__": __name__,
+        },
+    )
 
-def _is_normal(a: int, b: int, c: int) -> bool:
+
+def _is_normal(a: int, b: int, _c: int) -> bool:
     return -a < b <= a
+
 
 def _is_reduced(a: int, b: int, c: int) -> bool:
     return _is_normal(a, b, c) and a <= c and (b >= 0 if a == c else True)
+
 
 def _is_probably_prime(p: int) -> bool:
     assert p % 4 == 3
@@ -74,13 +84,15 @@ def _is_probably_prime(p: int) -> bool:
             return False
     return True
 
+
 def _reduction_step(a: int, b: int, c: int) -> tuple[int, int, int]:
     s = (c + b) // (2 * c)
     return (
         c,
         -b + 2 * s * c,
-        c * s**2 - b * s +a,
+        c * s**2 - b * s + a,
     )
+
 
 def _reduce(a: int, b: int, c: int) -> tuple[int, int, int]:
     if not _is_normal(a, b, c):
@@ -89,18 +101,21 @@ def _reduce(a: int, b: int, c: int) -> tuple[int, int, int]:
         a, b, c = _reduction_step(a, b, c)
     return a, b, c
 
+
 def _egcd(*integers: int) -> tuple[int, ...]:
     if len(integers) == 0:
         return (0,)
 
-    (g, cs) = (integers[0], [1]) # Running accumulators for the results.
-    for (i, a) in enumerate(integers):
-        if not isinstance(a, int): # Check type of all arguments.
+    (g, cs) = (integers[0], [1])  # Running accumulators for the results.
+    for i, a in enumerate(integers):
+        if not isinstance(a, int):  # Check type of all arguments.
             raise TypeError(
-                "'" + type(a).__name__ + "'" +
-                ' object cannot be interpreted as an integer'
+                "'"
+                + type(a).__name__
+                + "'"
+                + " object cannot be interpreted as an integer"
             )
-        if i == 0: # First argument is already assigned to ``g``.
+        if i == 0:  # First argument is already assigned to ``g``.
             continue
 
         # Perform an iterative version of the extended Euclidean algorithm for
