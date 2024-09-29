@@ -62,9 +62,9 @@ func (p *Participant) Round2(initiatorMessage *Round1P2P) (network.RoundMessages
 				return nil, errs.WrapHashing(err, "couldn't recompute auth message")
 			}
 			// step 2.2 responder verifies the signature.
-			if err := p.initiator.Verify(initiatorMessage.InitiatorSignature, authMessage); err != nil {
+			if err := p.Initiator.Verify(initiatorMessage.InitiatorSignature, authMessage); err != nil {
 				// step 2.3
-				return nil, errs.NewIdentifiableAbort(p.initiator.String(), "failed to verify signature")
+				return nil, errs.NewIdentifiableAbort(p.Initiator.String(), "failed to verify signature")
 			}
 			// step 2.4
 			result.Put(participant, &Round2P2P{
@@ -108,7 +108,7 @@ func (p *Participant) Round3(p2pMessages network.RoundMessages[types.Protocol, *
 				return nil, errs.WrapHashing(err, "couldn't recompute auth message")
 			}
 			// Step 3.1
-			if err := p.initiator.Verify(message.InitiatorSignature, authMessage); err != nil {
+			if err := p.Initiator.Verify(message.InitiatorSignature, authMessage); err != nil {
 				return nil, errs.NewIdentifiableAbort(sender.String(), "failed to verify signature")
 			}
 		}

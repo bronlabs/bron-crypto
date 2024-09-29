@@ -15,7 +15,7 @@ type Participant struct {
 	Round     int
 	SessionId []byte
 
-	initiator types.IdentityKey
+	Initiator types.IdentityKey
 	state     *State
 
 	_ ds.Incomparable
@@ -30,12 +30,12 @@ func (p *Participant) AuthKey() types.AuthKey {
 }
 
 func (p *Participant) IsInitiator() bool {
-	return p.IdentityKey().PublicKey().Equal(p.initiator.PublicKey())
+	return p.IdentityKey().PublicKey().Equal(p.Initiator.PublicKey())
 }
 
 func (p *Participant) NonInitiatorParticipants() ds.Set[types.IdentityKey] {
 	receivers := p.Protocol.Participants().Clone()
-	receivers.Remove(p.initiator)
+	receivers.Remove(p.Initiator)
 	return receivers
 }
 
@@ -55,7 +55,7 @@ func NewInitiator(sessionId []byte, authKey types.AuthKey, protocol types.Protoc
 		Protocol:  protocol,
 		Round:     1,
 		SessionId: sessionId,
-		initiator: authKey,
+		Initiator: authKey,
 		state: &State{
 			messageToBroadcast: message,
 		},
@@ -72,7 +72,7 @@ func NewResponder(sessionId []byte, authKey types.AuthKey, protocol types.Protoc
 	}
 	result := &Participant{
 		myAuthKey: authKey,
-		initiator: initiator,
+		Initiator: initiator,
 		SessionId: sessionId,
 		state:     &State{},
 		Protocol:  protocol,
