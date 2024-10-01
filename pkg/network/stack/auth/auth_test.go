@@ -43,7 +43,7 @@ func Test_HappyPath(t *testing.T) {
 		// 1. send a messages
 		for _, recipient := range recipients {
 			payload := fmt.Sprintf("Message from %s to %s",
-				hex.EncodeToString(party.GetIdentityKey().PublicKey().ToAffineCompressed()),
+				hex.EncodeToString(party.GetAuthKey().PublicKey().ToAffineCompressed()),
 				hex.EncodeToString(recipient.PublicKey().ToAffineCompressed()),
 			)
 			party.SendTo(recipient, []byte(payload))
@@ -55,7 +55,7 @@ func Test_HappyPath(t *testing.T) {
 		for {
 			from, payload := party.Recv()
 			fmt.Printf("'%s' received message from '%s' with payload: '%s'.\n",
-				hex.EncodeToString(party.GetIdentityKey().PublicKey().ToAffineCompressed()),
+				hex.EncodeToString(party.GetAuthKey().PublicKey().ToAffineCompressed()),
 				hex.EncodeToString(from.PublicKey().ToAffineCompressed()),
 				string(payload),
 			)

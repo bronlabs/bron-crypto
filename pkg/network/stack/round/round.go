@@ -1,8 +1,8 @@
 package round
 
 import (
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
 )
 
 type ClientFactory interface {
@@ -10,21 +10,7 @@ type ClientFactory interface {
 }
 
 type Client interface {
-	RegisterRound(roundId string)
-	RegisterBroadcastRound(roundId string)
-	RegisterUnicastRound(roundId string)
+	Send(roundId string, b []byte, u ds.Map[types.IdentityKey, []byte])
+	Receive(roundId string, fromB []types.IdentityKey, fromU []types.IdentityKey) (b ds.Map[types.IdentityKey, []byte], u ds.Map[types.IdentityKey, []byte])
 	GetAuthKey() types.AuthKey
-}
-
-type RoundBase interface {
-	GetId() string
-}
-
-type BroadcastRound interface {
-	RoundBase
-	Broadcast(message network.Message[])
-}
-
-type UnicastRound interface {
-	RoundBase
 }
