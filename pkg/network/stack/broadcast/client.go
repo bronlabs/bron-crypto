@@ -2,13 +2,14 @@ package broadcast
 
 import (
 	"bytes"
-	"crypto/rand"
+	crand "crypto/rand"
 	"encoding/gob"
+	"io"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	echo2 "github.com/copperexchange/krypton-primitives/pkg/network/echo"
 	"github.com/copperexchange/krypton-primitives/pkg/network/stack/auth"
-	"io"
 )
 
 var (
@@ -76,7 +77,7 @@ func (c *broadcastClientImpl) processOutgoing() {
 		select {
 		case bOut := <-c.outgoingBroadcast:
 			var mId messageId
-			_, err := io.ReadFull(rand.Reader, mId[:])
+			_, err := io.ReadFull(crand.Reader, mId[:])
 			if err != nil {
 				panic(err)
 			}
@@ -105,6 +106,9 @@ func (c *broadcastClientImpl) processOutgoing() {
 					Type:    bcastType,
 					Payload: r1Buf.Bytes(),
 				})
+				if err != nil {
+					panic(err)
+				}
 				c.downstream.SendTo(k, msgBuf.Bytes())
 			}
 		case uOut := <-c.outgoingUnicast:
@@ -156,6 +160,9 @@ func (c *broadcastClientImpl) processIncoming() {
 			}
 
 			r2Out, err := c.responders[msg.Id].Round2(&r2In)
+			if err != nil {
+				panic(err)
+			}
 			for k, v := range r2Out.Iter() {
 				r2Buf := new(bytes.Buffer)
 				enc := gob.NewEncoder(r2Buf)

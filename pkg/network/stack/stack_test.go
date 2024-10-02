@@ -2,6 +2,11 @@ package stack_test
 
 import (
 	crand "crypto/rand"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -13,12 +18,9 @@ import (
 	jfTestutils "github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
-	"github.com/stretchr/testify/require"
-	"sync"
-	"testing"
 )
 
-func runDkg(t testing.TB, participant *jf.Participant, communicationStack stack.Stack) (*tsignatures.SigningKeyShare, *tsignatures.PartialPublicKeys) {
+func runDkg(participant *jf.Participant, communicationStack stack.Stack) (*tsignatures.SigningKeyShare, *tsignatures.PartialPublicKeys, error) {
 	const ROUND1 string = "r1"
 	const ROUND2 string = "r2"
 
@@ -29,21 +31,27 @@ func runDkg(t testing.TB, participant *jf.Participant, communicationStack stack.
 
 	// Round 1
 	r1bo, r1uo, err := participant.Round1()
-	require.NoError(t, err)
+	if err != nil {
+		return nil, nil, err
+	}
 	stack.RoundSend(communicationClient, ROUND1, r1bo, r1uo)
 
 	// Round 2
 	r2bi, r2ui := stack.RoundReceive[*jf.Round1Broadcast, *jf.Round1P2P](communicationClient, ROUND1, coparties, coparties)
 	r2bo, err := participant.Round2(r2bi, r2ui)
-	require.NoError(t, err)
+	if err != nil {
+		return nil, nil, err
+	}
 	stack.RoundSendBroadcastOnly(communicationClient, ROUND2, r2bo)
 
 	// Round 3
 	r3bi := stack.RoundReceiveBroadcastOnly[*jf.Round2Broadcast](communicationClient, ROUND2, coparties)
 	keyShare, partialPublicKeys, err := participant.Round3(r3bi)
-	require.NoError(t, err)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	return keyShare, partialPublicKeys
+	return keyShare, partialPublicKeys, nil
 }
 
 func Test_HappyPathDkg(t *testing.T) {
@@ -72,15 +80,16 @@ func Test_HappyPathDkg(t *testing.T) {
 	signingKeyShares := make([]*tsignatures.SigningKeyShare, n)
 	partialPublicKeys := make([]*tsignatures.PartialPublicKeys, n)
 
-	var wg sync.WaitGroup
+	var eg errgroup.Group
 	for i := range n {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			signingKeyShares[i], partialPublicKeys[i] = runDkg(t, participants[i], communicationStack)
-		}()
+		eg.Go(func() error {
+			var err error
+			signingKeyShares[i], partialPublicKeys[i], err = runDkg(participants[i], communicationStack)
+			return err
+		})
 	}
-	wg.Wait()
+	err = eg.Wait()
+	require.NoError(t, err)
 
 	t.Run("each signing key share is different than all others", func(t *testing.T) {
 		t.Parallel()

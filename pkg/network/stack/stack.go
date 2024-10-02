@@ -3,6 +3,7 @@ package stack
 import (
 	"bytes"
 	"encoding/gob"
+
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -71,10 +72,10 @@ func RoundSendUnicastOnly[U network.Message[P], P types.Protocol](stack Protocol
 	stack.RoundSend(roundId, nil, u)
 }
 
-func RoundReceive[B network.Message[P], U network.Message[P], P types.Protocol](stack ProtocolClient, roundId string, fromBroadcast ds.Set[types.IdentityKey], fromUnicast ds.Set[types.IdentityKey]) (network.RoundMessages[P, B], network.RoundMessages[P, U]) {
+func RoundReceive[B network.Message[P], U network.Message[P], P types.Protocol](stack ProtocolClient, roundId string, fromBroadcast, fromUnicast ds.Set[types.IdentityKey]) (b network.RoundMessages[P, B], u network.RoundMessages[P, U]) {
 	bRaw, uRaw := stack.RoundReceive(roundId, fromBroadcast, fromUnicast)
 
-	b := hashmap.NewHashableHashMap[types.IdentityKey, B]()
+	b = hashmap.NewHashableHashMap[types.IdentityKey, B]()
 	for from, payload := range bRaw.Iter() {
 		dec := gob.NewDecoder(bytes.NewReader(payload))
 		var bMsg B
@@ -85,7 +86,7 @@ func RoundReceive[B network.Message[P], U network.Message[P], P types.Protocol](
 		b.Put(from, bMsg)
 	}
 
-	u := hashmap.NewHashableHashMap[types.IdentityKey, U]()
+	u = hashmap.NewHashableHashMap[types.IdentityKey, U]()
 	for from, payload := range uRaw.Iter() {
 		dec := gob.NewDecoder(bytes.NewReader(payload))
 		var uMsg U
@@ -116,7 +117,7 @@ func RoundReceiveBroadcastOnly[B network.Message[P], P types.Protocol](stack Pro
 	return b
 }
 
-func RoundReceiveUnicastOnly[U network.Message[P], P types.Protocol](stack ProtocolClient, roundId string, fromBroadcast ds.Set[types.IdentityKey], fromUnicast ds.Set[types.IdentityKey]) network.RoundMessages[P, U] {
+func RoundReceiveUnicastOnly[U network.Message[P], P types.Protocol](stack ProtocolClient, roundId string, fromUnicast ds.Set[types.IdentityKey]) network.RoundMessages[P, U] {
 	_, uRaw := stack.RoundReceive(roundId, nil, fromUnicast)
 
 	u := hashmap.NewHashableHashMap[types.IdentityKey, U]()

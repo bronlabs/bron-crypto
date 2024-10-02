@@ -1,10 +1,11 @@
 package round
 
 import (
+	"sync"
+
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/network/stack/broadcast"
-	"sync"
 )
 
 var (

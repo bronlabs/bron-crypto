@@ -4,6 +4,7 @@ import (
 	"bytes"
 	crand "crypto/rand"
 	"encoding/gob"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/hpke"
@@ -40,7 +41,7 @@ func (c *authClientImpl) SendTo(to types.IdentityKey, payload []byte) {
 	}
 }
 
-func (c *authClientImpl) Recv() (types.IdentityKey, []byte) {
+func (c *authClientImpl) Recv() (from types.IdentityKey, payload []byte) {
 	in := <-c.incoming
 	return in.toFrom, in.payload
 }

@@ -15,6 +15,7 @@ type Client interface {
 	GetAuthKey() types.AuthKey
 }
 
+//nolint:gochecknoinits // required
 func init() {
 	curveutils.RegisterCurvesForGob()
 }

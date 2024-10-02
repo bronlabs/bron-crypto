@@ -3,11 +3,12 @@ package round
 import (
 	"bytes"
 	"encoding/gob"
+	"sync"
+
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/network/stack/broadcast"
-	"sync"
 )
 
 var (
@@ -61,7 +62,7 @@ func (c *roundClientImpl) Send(roundId string, b []byte, u ds.Map[types.Identity
 	}
 }
 
-func (c *roundClientImpl) Receive(roundId string, fromB []types.IdentityKey, fromU []types.IdentityKey) (b ds.Map[types.IdentityKey, []byte], u ds.Map[types.IdentityKey, []byte]) {
+func (c *roundClientImpl) Receive(roundId string, fromB, fromU []types.IdentityKey) (b, u ds.Map[types.IdentityKey, []byte]) {
 	c.bufferCondVar.L.Lock()
 	defer c.bufferCondVar.L.Unlock()
 	for !c.hasAllMessage(roundId, fromB, fromU) {

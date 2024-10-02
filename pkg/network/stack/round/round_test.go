@@ -4,6 +4,11 @@ import (
 	crand "crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
@@ -12,12 +17,11 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/network/stack/broadcast"
 	"github.com/copperexchange/krypton-primitives/pkg/network/stack/round"
 	"github.com/copperexchange/krypton-primitives/pkg/network/stack/testutils"
-	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 func Test_HappyPath(t *testing.T) {
+	t.Parallel()
+
 	prng := crand.Reader
 
 	// create keys
