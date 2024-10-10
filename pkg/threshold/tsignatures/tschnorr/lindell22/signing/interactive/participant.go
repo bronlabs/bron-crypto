@@ -52,7 +52,7 @@ type Cosigner[F schnorr.Variant[F, M], M any] struct {
 	mySigningKeyShare *tsignatures.SigningKeyShare
 
 	variant schnorr.Variant[F, M]
-	quorum  ds.Set[types.IdentityKey]
+	Quorum  ds.Set[types.IdentityKey]
 	nic     compiler.Name
 
 	state *state
@@ -100,7 +100,7 @@ func NewCosigner[V schnorr.Variant[V, M], M any](myAuthKey types.AuthKey, sessio
 		mySharingId:       mySharingId,
 		sharingConfig:     sharingConfig,
 		mySigningKeyShare: myShard.SigningKeyShare,
-		quorum:            quorum,
+		Quorum:            quorum,
 		variant:           variant,
 		nic:               niCompiler,
 		state: &state{

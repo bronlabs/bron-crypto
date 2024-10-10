@@ -62,12 +62,12 @@ func (p *Cosigner[V, M]) Round2(broadcastInput network.RoundMessages[types.Thres
 	if p.Round != 2 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
-	if err := network.ValidateMessages(p.Protocol, p.quorum, p.IdentityKey(), broadcastInput); err != nil {
+	if err := network.ValidateMessages(p.Protocol, p.Quorum, p.IdentityKey(), broadcastInput); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 2 input broadcast messages")
 	}
 
 	p.state.theirBigRCommitment = hashmap.NewHashableHashMap[types.IdentityKey, *hashcommitments.Commitment]()
-	for identity := range p.quorum.Iter() {
+	for identity := range p.Quorum.Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -97,13 +97,13 @@ func (p *Cosigner[V, M]) Round3(broadcastInput network.RoundMessages[types.Thres
 	if p.Round != 3 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
-	if err := network.ValidateMessages(p.Protocol, p.quorum, p.IdentityKey(), broadcastInput); err != nil {
+	if err := network.ValidateMessages(p.Protocol, p.Quorum, p.IdentityKey(), broadcastInput); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 3 input broadcast messages")
 	}
 
 	bigR := p.state.bigR
 	// step 3.1: For all other participants P_j in the quorum...
-	for identity := range p.quorum.Iter() {
+	for identity := range p.Quorum.Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -135,7 +135,7 @@ func (p *Cosigner[V, M]) Round3(broadcastInput network.RoundMessages[types.Thres
 	}
 
 	// step 3.7.1: compute additive share d_i'
-	sk, err := p.mySigningKeyShare.ToAdditive(p.IdentityKey(), p.quorum, p.Protocol)
+	sk, err := p.mySigningKeyShare.ToAdditive(p.IdentityKey(), p.Quorum, p.Protocol)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot converts to additive share")
 	}
