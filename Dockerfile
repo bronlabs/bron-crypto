@@ -34,6 +34,14 @@ RUN apk add --no-cache \
     ninja \
     build-base
 
+RUN apk add --no-cache \
+    python3 \
+    py3-pip 
+
+
+RUN python3 -m venv ~/.local_python --system-site-packages
+
+ENV PATH="${HOME}/.local_python/bin:${PATH}"
 
 FROM builder
 
@@ -45,6 +53,11 @@ COPY thirdparty/thirdparty.mk thirdparty/thirdparty.mk
 COPY scripts/scripts.mk scripts/scripts.mk
 COPY docs/docs.mk docs/docs.mk
 COPY thirdparty/boringssl thirdparty/boringssl
+COPY docs/build.py docs/build.py
+COPY docs/requirements.txt docs/requirements.txt
+
+RUN make deps-docs
+
 RUN make deps-boring
 
 COPY go.mod go.sum ./

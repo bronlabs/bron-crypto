@@ -1,28 +1,24 @@
-.PHONY: docs
-docs:
-	mkdir -p build
-	docker run \
-		--rm \
-		-v "$(KRYPTON_PRIMITIVES_HOME)":/krypton-primitives \
-		-w /krypton-primitives/docs \
-		texlive/texlive:latest-full \
-		latexmk \
-			-bibtex \
-			--max-print-line=10000 \
-			-synctex=1 \
-			-aux-directory="build" \
-			-output-directory="build" \
-			-view=none \
-			-pdf \
-			main.tex
+# VERBOSE:="--verbose"
 
+.PHONY: docs
+docs: spec all-standalone-docs
+
+.PHONY: deps-docs
+deps-docs:
+	python3 -m pip install -r docs/requirements.txt
+
+.PHONY: spec
+spec:
+	python3 docs/build.py $(VERBOSE) --main
+
+.PHONY: standalone-docs
+standalone-docs:
+	python3 docs/build.py --clean $(VERBOSE) --standalone-path "$(KRYPTON_PKG)"
+
+.PHONY: all-standalone-docs
+all-standalone-docs:
+	python3 docs/build.py --clean $(VERBOSE) --standalone-path "all"
+
+.PHONY: clean-docs
 clean-docs:
-	docker run \
-		-v "$(KRYPTON_PRIMITIVES_HOME)":/krypton-primitives \
-		-w /krypton-primitives/docs \
-		texlive/texlive:latest-full \
-		latexmk -c \
-			-bibtex \
-			-aux-directory="build" \
-			-output-directory="build" \
-			main.tex
+	python3 docs/build.py --clean
