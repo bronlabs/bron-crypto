@@ -20,8 +20,8 @@ func NewRoundClientFactory(downstream broadcast.ClientFactory) ClientFactory {
 	return &roundClientFactoryImpl{downstream: downstream}
 }
 
-func (r *roundClientFactoryImpl) Dial(self types.AuthKey, protocol types.Protocol) Client {
-	downstream := r.downstream.Dial(self, protocol)
+func (r *roundClientFactoryImpl) Dial(coordinatorURL string, sessionID []byte, identity types.AuthKey, protocol types.Protocol) Client {
+	downstream := r.downstream.Dial(coordinatorURL, sessionID, identity, protocol)
 	c := &roundClientImpl{
 		downstream:      downstream,
 		unicastBuffer:   make(map[string]ds.Map[types.IdentityKey, []byte]),

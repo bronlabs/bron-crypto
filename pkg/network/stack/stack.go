@@ -11,7 +11,7 @@ import (
 )
 
 type Stack interface {
-	Dial(id types.AuthKey, protocol types.Protocol) ProtocolClient
+	Dial(sessionID []byte, identity types.AuthKey, protocol types.Protocol) ProtocolClient
 }
 
 type ProtocolClient interface {

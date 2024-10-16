@@ -24,10 +24,10 @@ func NewBroadcastClientFactory(downstream auth.ClientFactory) ClientFactory {
 	return &broadcastClientFactoryImpl{downstream: downstream}
 }
 
-func (f *broadcastClientFactoryImpl) Dial(self types.AuthKey, protocol types.Protocol) Client {
-	downstream := f.downstream.Dial(self)
+func (f *broadcastClientFactoryImpl) Dial(coordinatorURL string, sessionID []byte, identity types.AuthKey, protocol types.Protocol) Client {
+	downstream := f.downstream.Dial(coordinatorURL, sessionID, identity, protocol.Participants().List())
 	c := &broadcastClientImpl{
-		id:                self,
+		id:                identity,
 		downstream:        downstream,
 		protocol:          protocol,
 		senders:           make(map[messageId]*echo.Participant),

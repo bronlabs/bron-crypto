@@ -19,6 +19,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	prng := crand.Reader
+	sessionId := []byte("TestSessionId_2")
 
 	// create keys
 	aliceSk, err := p256.NewScalarField().Random(prng)
@@ -32,13 +33,14 @@ func Test_HappyPath(t *testing.T) {
 	alice := testutils.NewTestAuthKey(aliceSk)
 	bob := testutils.NewTestAuthKey(bobSk)
 	charlie := testutils.NewTestAuthKey(charlieSk)
+	allParties := []types.IdentityKey{alice, bob, charlie}
 
 	authClientFactory := auth.NewAuthClientFactory(testutils.NewSimulatorClientFactory())
 
 	// create clients (resemble SDK)
-	aliceClient := authClientFactory.Dial(alice)
-	bobClient := authClientFactory.Dial(bob)
-	charlieClient := authClientFactory.Dial(charlie)
+	aliceClient := authClientFactory.Dial("", sessionId, alice, allParties)
+	bobClient := authClientFactory.Dial("", sessionId, bob, allParties)
+	charlieClient := authClientFactory.Dial("", sessionId, charlie, allParties)
 
 	// run worker for each client (everyone sends a message to other parties)
 	// and prints any received messages

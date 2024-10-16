@@ -27,12 +27,12 @@ type SimulatorClientFactory struct {
 	outgoing *sync.Map
 }
 
-func (f *SimulatorClientFactory) Dial(self types.IdentityKey) coordinator.Client {
+func (f *SimulatorClientFactory) Dial(coordinatorURL string, sessionID []byte, identity types.IdentityKey, participants []types.IdentityKey) coordinator.Client {
 	incoming := make(chan *message, 1)
-	f.outgoing.Store(identityToString(self), incoming)
+	f.outgoing.Store(identityToString(identity), incoming)
 
 	c := &SimulatorClient{
-		id:       self,
+		id:       identity,
 		incoming: incoming,
 		outgoing: f.incoming,
 	}

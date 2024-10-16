@@ -24,10 +24,10 @@ func NewAuthClientFactory(downstream coordinator.ClientFactory) ClientFactory {
 	}
 }
 
-func (f *authClientFactoryImpl) Dial(self types.AuthKey) Client {
-	downstream := f.downstream.Dial(self)
+func (f *authClientFactoryImpl) Dial(coordinatorURL string, sessionID []byte, identity types.AuthKey, participants []types.IdentityKey) Client {
+	downstream := f.downstream.Dial(coordinatorURL, sessionID, identity, participants)
 	c := &authClientImpl{
-		id:         self,
+		id:         identity,
 		downstream: downstream,
 		outgoing:   make(chan *exchange, 1),
 		incoming:   make(chan *exchange, 1),

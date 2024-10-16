@@ -14,6 +14,7 @@ import (
 
 func Test_HappyPath(t *testing.T) {
 	prng := crand.Reader
+	sessionId := []byte("DummySessionId")
 
 	// create keys
 	alicePk, err := p256.NewCurve().Random(prng)
@@ -27,14 +28,15 @@ func Test_HappyPath(t *testing.T) {
 	alice := testutils.NewTestIdentityKey(alicePk)
 	bob := testutils.NewTestIdentityKey(bobPk)
 	charlie := testutils.NewTestIdentityKey(charliePk)
+	allParties := []types.IdentityKey{alice, bob, charlie}
 
 	// create a server (resembles Coordinator)
 	clientFactory := testutils.NewSimulatorClientFactory()
 
 	// create clients (resemble SDK)
-	aliceClient := clientFactory.Dial(alice)
-	bobClient := clientFactory.Dial(bob)
-	charlieClient := clientFactory.Dial(charlie)
+	aliceClient := clientFactory.Dial("", sessionId, alice, allParties)
+	bobClient := clientFactory.Dial("", sessionId, bob, allParties)
+	charlieClient := clientFactory.Dial("", sessionId, charlie, allParties)
 
 	// run worker for each client (everyone sends a message to other parties)
 	// and prints any received messages

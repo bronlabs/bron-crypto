@@ -23,6 +23,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	prng := crand.Reader
+	sessionId := []byte("TestSessionId")
 
 	// create keys
 	aliceSk, err := p256.NewScalarField().Random(prng)
@@ -43,9 +44,9 @@ func Test_HappyPath(t *testing.T) {
 	roundFactory := round.NewRoundClientFactory(broadcast.NewBroadcastClientFactory(auth.NewAuthClientFactory(testutils.NewSimulatorClientFactory())))
 
 	// create clients (resemble SDK)
-	aliceClient := roundFactory.Dial(alice, dummyProtocol)
-	bobClient := roundFactory.Dial(bob, dummyProtocol)
-	charlieClient := roundFactory.Dial(charlie, dummyProtocol)
+	aliceClient := roundFactory.Dial("", sessionId, alice, dummyProtocol)
+	bobClient := roundFactory.Dial("", sessionId, bob, dummyProtocol)
+	charlieClient := roundFactory.Dial("", sessionId, charlie, dummyProtocol)
 
 	// run worker for each client (everyone sends a message to other parties)
 	// and prints any received messages
@@ -68,10 +69,10 @@ func Test_HappyPath(t *testing.T) {
 
 		if party == aliceClient {
 			for from, payload := range r2b.Iter() {
-				fmt.Printf("B %s<-%s '%s'\n", hex.EncodeToString(party.GetAuthKey().PublicKey().ToAffineCompressed()), hex.EncodeToString(from.PublicKey().ToAffineCompressed()), string(payload))
+				fmt.Printf("B %s <-- %s '%s'\n", hex.EncodeToString(party.GetAuthKey().PublicKey().ToAffineCompressed()), hex.EncodeToString(from.PublicKey().ToAffineCompressed()), string(payload))
 			}
 			for from, payload := range r2u.Iter() {
-				fmt.Printf("U %s<-%s '%s'\n", hex.EncodeToString(party.GetAuthKey().PublicKey().ToAffineCompressed()), hex.EncodeToString(from.PublicKey().ToAffineCompressed()), string(payload))
+				fmt.Printf("U %s <-- %s '%s'\n", hex.EncodeToString(party.GetAuthKey().PublicKey().ToAffineCompressed()), hex.EncodeToString(from.PublicKey().ToAffineCompressed()), string(payload))
 			}
 		}
 	}

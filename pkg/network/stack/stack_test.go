@@ -131,7 +131,7 @@ func Test_HappyPathDkg(t *testing.T) {
 	const threshold = 2
 	const niCompilerName = fiatShamir.Name
 	curve := edwards25519.NewCurve()
-	sessionId := []byte("LoremIpsum12345678_Test")
+	sessionId := "LoremIpsum12345678_Test"
 
 	identities := make([]types.IdentityKey, 3)
 	for i := range identities {
@@ -143,7 +143,7 @@ func Test_HappyPathDkg(t *testing.T) {
 	protocol, err := typesTestutils.MakeThresholdProtocol(curve, identities, threshold)
 	require.NoError(t, err)
 
-	participants, err := jfTestutils.MakeParticipants(t, sessionId, protocol, identities, niCompilerName, nil)
+	participants, err := jfTestutils.MakeParticipants(t, []byte(sessionId), protocol, identities, niCompilerName, nil)
 	require.NoError(t, err)
 
 	communicationStack := testutils.NewSimulatorStack()
@@ -154,7 +154,7 @@ func Test_HappyPathDkg(t *testing.T) {
 	for i := range n {
 		eg.Go(func() error {
 			var err error
-			comm := communicationStack.Dial(identities[i].(types.AuthKey), protocol)
+			comm := communicationStack.Dial([]byte(sessionId), identities[i].(types.AuthKey), protocol)
 			signingKeyShares[i], partialPublicKeys[i], err = runDkg(participants[i], comm)
 			return err
 		})
@@ -207,7 +207,7 @@ func Test_RunAoRAndDKG(t *testing.T) {
 	const n = 3
 	const threshold = 2
 	curve := edwards25519.NewCurve()
-	sessionId := "LoremIpsum12345678_Test"
+	sessionId := []byte("LoremIpsum12345678_Test")
 
 	identities := make([]types.IdentityKey, n)
 	for i := range identities {
@@ -229,7 +229,7 @@ func Test_RunAoRAndDKG(t *testing.T) {
 
 	trans := make([]transcripts.Transcript, n)
 	for i := range trans {
-		trans[i] = hagrid.NewTranscript(sessionId, nil)
+		trans[i] = hagrid.NewTranscript(string(sessionId), nil)
 	}
 
 	communicationStack := testutils.NewSimulatorStack()
@@ -240,7 +240,7 @@ func Test_RunAoRAndDKG(t *testing.T) {
 	for i := range n {
 		eg.Go(func() error {
 			var err error
-			comm := communicationStack.Dial(identities[i].(types.AuthKey), protocol)
+			comm := communicationStack.Dial(sessionId, identities[i].(types.AuthKey), protocol)
 			signingKeyShares[i], partialPublicKeys[i], err = runCombined(i, protocol, trans[i], identities, comm)
 			return err
 		})

@@ -6,7 +6,7 @@ import (
 )
 
 type ClientFactory interface {
-	Dial(self types.AuthKey) Client
+	Dial(coordinatorURL string, sessionID []byte, identity types.AuthKey, participants []types.IdentityKey) Client
 }
 
 type Client interface {

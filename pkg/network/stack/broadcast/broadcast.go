@@ -5,7 +5,7 @@ import (
 )
 
 type ClientFactory interface {
-	Dial(self types.AuthKey, protocol types.Protocol) Client
+	Dial(coordinatorURL string, sessionID []byte, identity types.AuthKey, protocol types.Protocol) Client
 }
 
 type MessageType string

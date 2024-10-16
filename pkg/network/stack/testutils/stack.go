@@ -43,7 +43,7 @@ func NewSimulatorStack() stack.Stack {
 	return s
 }
 
-func (s *simulatorStack) Dial(id types.AuthKey, protocol types.Protocol) stack.ProtocolClient {
-	c := s.factory.Dial(id, protocol)
+func (s *simulatorStack) Dial(sessionID []byte, identity types.AuthKey, protocol types.Protocol) stack.ProtocolClient {
+	c := s.factory.Dial("", sessionID, identity, protocol)
 	return &simulatorClient{c}
 }
