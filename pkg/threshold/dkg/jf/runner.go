@@ -3,6 +3,8 @@ package jf
 import (
 	"encoding/hex"
 	"fmt"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/network/stack"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
@@ -11,10 +13,10 @@ func RunDkg(participant *Participant, comm stack.ProtocolClient) (*tsignatures.S
 	const roundPrefixLabel = "GennaroDKG"
 	roundPrefixBytes, err := participant.Transcript.ExtractBytes(roundPrefixLabel, 16)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errs.WrapRandomSample(err, "cannot extract prefix")
 	}
-	round1 := fmt.Sprintf("%s_GennaroDKG_R1", hex.EncodeToString(roundPrefixBytes[:]))
-	round2 := fmt.Sprintf("%s_GennaroDKG_R2", hex.EncodeToString(roundPrefixBytes[:]))
+	round1 := fmt.Sprintf("%s_GennaroDKG_R1", hex.EncodeToString(roundPrefixBytes))
+	round2 := fmt.Sprintf("%s_GennaroDKG_R2", hex.EncodeToString(roundPrefixBytes))
 
 	coparties := participant.Protocol.Participants().Clone()
 	coparties.Remove(participant.IdentityKey())
