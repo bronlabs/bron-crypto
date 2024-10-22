@@ -3,11 +3,14 @@
 !/go.sum
 !/.golangci-long.yml
 !/.golangci-short.yml
+!/pyproject.toml
+!/setup.cfg
 !/internal/*
 !/pkg/*
 !/scripts/*
 !/Makefile
 !/env_docker.mk
 !/thirdparty/*
-!/docs/docs.mk
+!/docs/*
+/docs/build
 thirdparty/boringssl/build
