@@ -7,8 +7,9 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs2"
 	"github.com/stretchr/testify/require"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/errs2"
 )
 
 func TestTagString(t *testing.T) {
@@ -226,6 +227,7 @@ func TestCanExtractAndCheckTagFromErrorChain(t *testing.T) {
 					if i == j {
 						require.Equal(t, err, f(err), fmt.Sprintf("tag %d should be in error %s", i, err.Error()))
 					} else {
+						//nolint:testifylint // error test
 						require.Nil(t, f(err), fmt.Sprintf("tag %d should not be in error %s", i, err.Error()))
 					}
 				}
@@ -261,6 +263,7 @@ func TestCanExtractAndCheckTagFromErrorChain(t *testing.T) {
 							require.NotEqual(t, err, f(err), fmt.Sprintf("tag %d should be in error %s", i, err.Error()))
 							require.Equal(t, errs[i], f(err), fmt.Sprintf("tag %d should be in error %s", i, err.Error()))
 						} else {
+							//nolint:testifylint // error test
 							require.Nil(t, f(err), fmt.Sprintf("tag %d should not be in error %s", i, err.Error()))
 						}
 					}
@@ -320,11 +323,11 @@ func TestTagWrapping(t *testing.T) {
 		expected := a
 		for i, x := range chain {
 			if i < len(chain)-1 {
-				err, ok := x.(errs2.Wrapped0Error)
+				err, ok := x.(errs2.WrappedError)
 				require.True(t, ok)
 				require.Equal(t, expected, err.Cause())
 			} else {
-				_, ok := x.(errs2.Wrapped0Error)
+				_, ok := x.(errs2.WrappedError)
 				require.False(t, ok)
 				require.Equal(t, expected, x)
 			}
@@ -332,13 +335,14 @@ func TestTagWrapping(t *testing.T) {
 	})
 
 	t.Run("unwrap", func(t *testing.T) {
+		t.Parallel()
 		for i, x := range chain {
 			if i < len(chain)-1 {
-				err, ok := x.(errs2.Wrapped0Error)
+				err, ok := x.(errs2.WrappedError)
 				require.True(t, ok)
 				require.Equal(t, chain[i+1], err.Unwrap())
 			} else {
-				_, ok := x.(errs2.Wrapped0Error)
+				_, ok := x.(errs2.WrappedError)
 				require.False(t, ok)
 			}
 		}

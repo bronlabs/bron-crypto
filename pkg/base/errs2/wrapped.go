@@ -22,7 +22,7 @@ func Wrapf(err error, format string, args ...any) error {
 
 func UnwrapAll(err error) []error {
 	//nolint:errorlint // error package internals
-	top, ok := err.(Wrapped0Error)
+	top, ok := err.(WrappedError)
 	if !ok {
 		return []error{err}
 	}
@@ -31,7 +31,7 @@ func UnwrapAll(err error) []error {
 	for current != nil {
 		errs = append(errs, current)
 		//nolint:errorlint // error package internals
-		wrappedCurrent, ok := current.(Wrapped0Error)
+		wrappedCurrent, ok := current.(WrappedError)
 		if !ok {
 			break
 		}
@@ -54,68 +54,84 @@ func Extract(errorChain error, tag Tagger) error {
 	return nil
 }
 
-var _ Wrapped0Error = wrapped0Error{}
+var _ WrappedError = wrapped0Error{}
 
 type wrapped0Error struct {
 	tagged0Error
 	underlying error
 }
 
-func (we wrapped0Error) Unwrap() error {
-	return we.underlying
+func (w0 wrapped0Error) Unwrap() error {
+	return w0.underlying
 }
 
-func (we wrapped0Error) Cause() error {
-	return cause(we)
+func (w0 wrapped0Error) Cause() error {
+	return cause(w0)
 }
 
-func (we wrapped0Error) Format(s fmt.State, verb rune) {
+func (w0 wrapped0Error) Format(s fmt.State, verb rune) {
 	directive := "%" + string(verb)
-	wrappedFormatter(fmt.Sprintf(directive, we.tagged0Error), we, s, verb)
+	wrappedFormatter(fmt.Sprintf(directive, w0.tagged0Error), w0, s, verb)
 }
+
+func (w0 wrapped0Error) ToTagged() error {
+	return w0.tagged0Error
+}
+
+var _ WrappedError = wrapped1Error[any]{}
 
 type wrapped1Error[T any] struct {
 	tagged1Error[T]
 	underlying error
 }
 
-func (we wrapped1Error[T]) Unwrap() error {
-	return we.underlying
+func (w1 wrapped1Error[T]) Unwrap() error {
+	return w1.underlying
 }
 
-func (we wrapped1Error[T]) Cause() error {
-	return cause(we)
+func (w1 wrapped1Error[T]) Cause() error {
+	return cause(w1)
 }
 
-func (we wrapped1Error[T]) Format(s fmt.State, verb rune) {
+func (w1 wrapped1Error[T]) Format(s fmt.State, verb rune) {
 	directive := "%" + string(verb)
-	wrappedFormatter(fmt.Sprintf(directive, we.tagged1Error), we, s, verb)
+	wrappedFormatter(fmt.Sprintf(directive, w1.tagged1Error), w1, s, verb)
 }
+
+func (w1 wrapped1Error[T]) ToTagged() error {
+	return w1.tagged1Error
+}
+
+var _ WrappedError = wrapped2Error[any, any]{}
 
 type wrapped2Error[T any, U any] struct {
 	tagged2Error[T, U]
 	underlying error
 }
 
-func (we wrapped2Error[T, U]) Unwrap() error {
-	return we.underlying
+func (w2 wrapped2Error[T, U]) Unwrap() error {
+	return w2.underlying
 }
 
-func (we wrapped2Error[T, U]) Cause() error {
-	return cause(we)
+func (w2 wrapped2Error[T, U]) Cause() error {
+	return cause(w2)
 }
 
-func (we wrapped2Error[T, U]) Format(s fmt.State, verb rune) {
+func (w2 wrapped2Error[T, U]) Format(s fmt.State, verb rune) {
 	directive := "%" + string(verb)
-	wrappedFormatter(fmt.Sprintf(directive, we.tagged2Error), we, s, verb)
+	wrappedFormatter(fmt.Sprintf(directive, w2.tagged2Error), w2, s, verb)
 }
 
-func cause(err Wrapped0Error) error {
+func (w2 wrapped2Error[T, U]) ToTagged() error {
+	return w2.tagged2Error
+}
+
+func cause(err WrappedError) error {
 	chain := UnwrapAll(err)
 	return chain[len(chain)-1]
 }
 
-func wrappedFormatter(formattedSelf string, err Wrapped0Error, s fmt.State, verb rune) {
+func wrappedFormatter(formattedSelf string, err WrappedError, s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('0') {
@@ -123,7 +139,13 @@ func wrappedFormatter(formattedSelf string, err Wrapped0Error, s fmt.State, verb
 		} else {
 			chain := UnwrapAll(err)
 			for i, err := range chain {
-				fmt.Fprintf(s, "%v\n", err)
+				//nolint:errorlint // error package internals
+				if weErr, ok := err.(WrappedError); ok {
+					fmt.Fprintf(s, "%v\n", weErr.ToTagged())
+				} else {
+					fmt.Fprintf(s, "%v\n", err)
+				}
+
 				if s.Flag('+') {
 					//nolint:errorlint // error package internals
 					if weErr, ok := err.(WithStackError); ok {
@@ -131,7 +153,7 @@ func wrappedFormatter(formattedSelf string, err Wrapped0Error, s fmt.State, verb
 					}
 				}
 				if i < len(chain)-1 {
-					fmt.Fprintf(s, "\n -> \n")
+					fmt.Fprintf(s, "\n\nCaused by:\n")
 				}
 			}
 		}

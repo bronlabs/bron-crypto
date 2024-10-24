@@ -12,10 +12,11 @@ type WithStackError interface {
 	fmt.Formatter
 }
 
-type Wrapped0Error interface {
+type WrappedError interface {
 	error
 	Unwrap() error
 	Cause() error
+	ToTagged() error
 	fmt.Formatter
 }
 
