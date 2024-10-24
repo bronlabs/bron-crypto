@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"slices"
 	"strings"
 )
 
-var untaggedTag = NewTag0("", "")
+var untaggedTag = Tag0("")
 
 func IsTagged(err error) bool {
 	if err == nil {
@@ -37,12 +38,6 @@ var _ Tagger = Tag0("")
 
 type Tag0 string
 
-func NewTag0(kind, description string) Tag0 {
-	t := Tag0(kind)
-	registerTag(t, description)
-	return t
-}
-
 func (t0 Tag0) String() string {
 	return strings.ReplaceAll(
 		strings.ToUpper(string(t0)),
@@ -61,7 +56,7 @@ func (t0 Tag0) Errorf(format string, args ...any) error {
 }
 
 func (t0 Tag0) New(messages ...string) error {
-	return t0.Errorf("%s", parseMessages(t0.String(), messages))
+	return t0.Errorf("%s", strings.Join(messages, " "))
 }
 
 func (t0 Tag0) Wrapf(err error, format string, args ...any) error {
@@ -73,7 +68,7 @@ func (t0 Tag0) Wrapf(err error, format string, args ...any) error {
 }
 
 func (t0 Tag0) Wrap(err error, messages ...string) error {
-	return t0.Wrapf(err, "%s", parseMessages(t0.String(), messages))
+	return t0.Wrapf(err, "%s", concat(t0.String(), messages...))
 }
 
 //nolint:revive // TODO: export this?
@@ -104,12 +99,6 @@ var _ Tagger = Tag1[any]("")
 
 type Tag1[T any] string
 
-func NewTag1[T any](kind, description string) Tag1[T] {
-	t := Tag1[T](kind)
-	registerTag1(t, description)
-	return t
-}
-
 func (t1 Tag1[T]) String() string {
 	tName := typeName[T]()
 	return fmt.Sprintf(
@@ -131,7 +120,7 @@ func (t1 Tag1[T]) Errorf(arg T, format string, args ...any) error {
 }
 
 func (t1 Tag1[T]) New(arg T, messages ...string) error {
-	return t1.Errorf(arg, parseMessages(t1.String(), messages))
+	return t1.Errorf(arg, strings.Join(messages, " "))
 }
 
 func (t1 Tag1[T]) Wrapf(err error, arg T, format string, args ...any) error {
@@ -143,7 +132,7 @@ func (t1 Tag1[T]) Wrapf(err error, arg T, format string, args ...any) error {
 }
 
 func (t1 Tag1[T]) Wrap(err error, arg T, messages ...string) error {
-	return t1.Wrapf(err, arg, parseMessages(t1.String(), messages))
+	return t1.Wrapf(err, arg, concat(t1.String(), messages...))
 }
 
 //nolint:revive // TODO: export builder?
@@ -174,14 +163,8 @@ var _ Tagger = Tag2[any, any]("")
 
 type Tag2[T, U any] string
 
-func NewTag2[T, U any](kind, description string) Tag2[T, U] {
-	t := Tag2[T, U](kind)
-	registerTag2(t, description)
-	return t
-}
-
 func (t2 Tag2[T, U]) New(arg1 T, arg2 U, messages ...string) error {
-	return t2.Errorf(arg1, arg2, parseMessages(t2.String(), messages))
+	return t2.Errorf(arg1, arg2, strings.Join(messages, " "))
 }
 
 func (t2 Tag2[T, U]) Errorf(arg1 T, arg2 U, format string, args ...any) error {
@@ -216,7 +199,7 @@ func (t2 Tag2[T, U]) Wrapf(err error, arg1 T, arg2 U, format string, args ...any
 }
 
 func (t2 Tag2[T, U]) Wrap(err error, arg1 T, arg2 U, messages ...string) error {
-	return t2.Wrapf(err, arg1, arg2, parseMessages(t2.String(), messages))
+	return t2.Wrapf(err, arg1, arg2, concat(t2.String(), messages...))
 }
 
 //nolint:revive // TODO: export builder?
@@ -277,4 +260,8 @@ func typeName[T any]() string {
 	} else {
 		return typ.String()
 	}
+}
+
+func concat(car string, cdr ...string) string {
+	return strings.Join(slices.Concat([]string{car}, cdr), " ")
 }

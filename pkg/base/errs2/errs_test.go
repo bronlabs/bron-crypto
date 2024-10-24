@@ -15,9 +15,9 @@ func TestTagString(t *testing.T) {
 	t.Parallel()
 	t.Run("regular tag", func(t *testing.T) {
 		t.Parallel()
-		first := errs2.Tag("first")
+		first := errs2.Tag0("first")
 		require.Equal(t, "FIRST", first.String())
-		second := errs2.Tag("SEcoNd tAg")
+		second := errs2.Tag0("SEcoNd tAg")
 		require.Equal(t, "SECOND_TAG", second.String())
 	})
 	t.Run("tag1", func(t *testing.T) {
@@ -35,7 +35,7 @@ func TestTagString(t *testing.T) {
 		first := errs2.Tag2[string, int]("first")
 		require.Equal(t, "FIRST<string, int>", first.String())
 		second := errs2.Tag2[any, any]("SEcoNd tAg")
-		require.Equal(t, "SECOND_TAG<<nil>, <nil>>", second.String())
+		require.Equal(t, "SECOND_TAG<any, any>", second.String())
 		type myString string
 		third := errs2.Tag2[myString, string]("third")
 		require.True(t, regexp.MustCompile(`^THIRD<([^>]+)\.myString, string>$`).MatchString(third.String()))
@@ -46,7 +46,7 @@ func TestTagCreation(t *testing.T) {
 	t.Parallel()
 	t.Run("regular tag", func(t *testing.T) {
 		t.Parallel()
-		tag := errs2.Tag("tag")
+		tag := errs2.Tag0("tag")
 		t.Run("errorf", func(t *testing.T) {
 			t.Parallel()
 			err := tag.Errorf("message %s", "here")
@@ -97,20 +97,20 @@ func TestTagCreation(t *testing.T) {
 
 func TestTagChecking(t *testing.T) {
 	t.Parallel()
-	tag := errs2.Tag("tag")
+	tag0 := errs2.Tag0("tag")
 	tag1 := errs2.Tag1[int]("tag1")
 	tag2 := errs2.Tag2[string, uint]("tag2")
 
 	errs := []error{
-		tag.New("something"),
+		tag0.New("something"),
 		tag1.New(1, "something else"),
 		tag2.New("param", 0, "yet another thing"),
 	}
 	wrapped := [][]error{
 		{
-			tag.Wrap(errs[0], "wrapped 0"),
-			tag.Wrap(errs[1], "wrapped 1"),
-			tag.Wrap(errs[2], "wrapped 2"),
+			tag0.Wrap(errs[0], "wrapped 0"),
+			tag0.Wrap(errs[1], "wrapped 1"),
+			tag0.Wrap(errs[2], "wrapped 2"),
 		},
 		{
 			tag1.Wrap(errs[0], 1, "wrapped 0"),
@@ -124,9 +124,9 @@ func TestTagChecking(t *testing.T) {
 		},
 	}
 
-	iss := []func(error) bool{tag.IsTagging, tag1.IsTagging, tag2.IsTagging}
+	iss := []func(error) bool{tag0.IsTagging, tag1.IsTagging, tag2.IsTagging}
 	funcs := []func(error) bool{
-		func(err error) bool { return errs2.IsTaggedWith(err, tag) },
+		func(err error) bool { return errs2.IsTaggedWith(err, tag0) },
 		func(err error) bool { return errs2.IsTaggedWith(err, tag1) },
 		func(err error) bool { return errs2.IsTaggedWith(err, tag2) },
 	}
@@ -170,20 +170,20 @@ func TestTagChecking(t *testing.T) {
 
 func TestCanExtractAndCheckTagFromErrorChain(t *testing.T) {
 	t.Parallel()
-	tag := errs2.Tag("tag")
+	tag0 := errs2.Tag0("tag")
 	tag1 := errs2.Tag1[int]("tag1")
 	tag2 := errs2.Tag2[string, uint]("tag2")
 
 	errs := []error{
-		tag.New("something"),
+		tag0.New("something"),
 		tag1.New(1, "something else"),
 		tag2.New("param", 0, "yet another thing"),
 	}
 	wrapped := [][]error{
 		{
-			tag.Wrap(errs[0], "wrapped 0"),
-			tag.Wrap(errs[1], "wrapped 1"),
-			tag.Wrap(errs[2], "wrapped 2"),
+			tag0.Wrap(errs[0], "wrapped 0"),
+			tag0.Wrap(errs[1], "wrapped 1"),
+			tag0.Wrap(errs[2], "wrapped 2"),
 		},
 		{
 			tag1.Wrap(errs[0], 1, "wrapped 0"),
@@ -198,12 +198,12 @@ func TestCanExtractAndCheckTagFromErrorChain(t *testing.T) {
 	}
 
 	isins := []func(error) bool{
-		func(err error) bool { return errs2.Has(err, tag) },
+		func(err error) bool { return errs2.Has(err, tag0) },
 		func(err error) bool { return errs2.Has(err, tag1) },
 		func(err error) bool { return errs2.Has(err, tag2) },
 	}
 	extractors := []func(error) error{
-		func(err error) error { return errs2.Extract(err, tag) },
+		func(err error) error { return errs2.Extract(err, tag0) },
 		func(err error) error { return errs2.Extract(err, tag1) },
 		func(err error) error { return errs2.Extract(err, tag2) },
 	}
@@ -212,7 +212,7 @@ func TestCanExtractAndCheckTagFromErrorChain(t *testing.T) {
 		t.Parallel()
 		t.Run("check", func(t *testing.T) {
 			t.Parallel()
-			iss := []func(error) bool{tag.IsTagging, tag1.IsTagging, tag2.IsTagging}
+			iss := []func(error) bool{tag0.IsTagging, tag1.IsTagging, tag2.IsTagging}
 			for i, f := range isins {
 				for _, err := range errs {
 					require.Equal(t, f(err), iss[i](err), fmt.Sprintf("tag %d should be in error %s", i, err.Error()))
@@ -273,7 +273,7 @@ func TestCanExtractAndCheckTagFromErrorChain(t *testing.T) {
 
 func TestIsTagged(t *testing.T) {
 	t.Parallel()
-	tag := errs2.Tag("tag")
+	tag0 := errs2.Tag0("tag")
 	tag1 := errs2.Tag1[int]("tag1")
 	tag2 := errs2.Tag2[string, uint]("tag2")
 
@@ -286,7 +286,7 @@ func TestIsTagged(t *testing.T) {
 	}
 
 	taggedErrs := []error{
-		tag.New("something"),
+		tag0.New("something"),
 		tag1.New(1, "something else"),
 		tag2.New("param", 0, "yet another thing"),
 	}
@@ -304,12 +304,12 @@ func TestIsTagged(t *testing.T) {
 
 func TestTagWrapping(t *testing.T) {
 	t.Parallel()
-	tag := errs2.Tag("tag")
+	tag0 := errs2.Tag0("tag")
 	tag1 := errs2.Tag1[int]("tag1")
 	tag2 := errs2.Tag2[string, uint]("tag2")
 
 	a := fmt.Errorf("A")
-	b := tag.Wrap(a, "B")
+	b := tag0.Wrap(a, "B")
 	c := tag1.Wrap(b, 1, "C")
 	d := tag2.Wrap(c, "param", 0, "D")
 
@@ -320,11 +320,11 @@ func TestTagWrapping(t *testing.T) {
 		expected := a
 		for i, x := range chain {
 			if i < len(chain)-1 {
-				err, ok := x.(errs2.WrappedError)
+				err, ok := x.(errs2.Wrapped0Error)
 				require.True(t, ok)
 				require.Equal(t, expected, err.Cause())
 			} else {
-				_, ok := x.(errs2.WrappedError)
+				_, ok := x.(errs2.Wrapped0Error)
 				require.False(t, ok)
 				require.Equal(t, expected, x)
 			}
@@ -334,11 +334,11 @@ func TestTagWrapping(t *testing.T) {
 	t.Run("unwrap", func(t *testing.T) {
 		for i, x := range chain {
 			if i < len(chain)-1 {
-				err, ok := x.(errs2.WrappedError)
+				err, ok := x.(errs2.Wrapped0Error)
 				require.True(t, ok)
 				require.Equal(t, chain[i+1], err.Unwrap())
 			} else {
-				_, ok := x.(errs2.WrappedError)
+				_, ok := x.(errs2.Wrapped0Error)
 				require.False(t, ok)
 			}
 		}
