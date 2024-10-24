@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+const UNKNOWN = "unknown"
+
 // Frame represents a program counter inside a stack frame.
 // For historical reasons if Frame is interpreted as a uintptr
 // its value represents the program counter + 1.
@@ -23,7 +25,7 @@ func (f Frame) pc() uintptr { return uintptr(f) - 1 }
 func (f Frame) file() string {
 	fn := runtime.FuncForPC(f.pc())
 	if fn == nil {
-		return "unknown"
+		return UNKNOWN
 	}
 	file, _ := fn.FileLine(f.pc())
 	return file
@@ -44,7 +46,7 @@ func (f Frame) line() int {
 func (f Frame) name() string {
 	fn := runtime.FuncForPC(f.pc())
 	if fn == nil {
-		return "unknown"
+		return UNKNOWN
 	}
 	return fn.Name()
 }
@@ -66,19 +68,33 @@ func (f Frame) Format(s fmt.State, verb rune) {
 	case 's':
 		switch {
 		case s.Flag('+'):
-			io.WriteString(s, f.name())
-			io.WriteString(s, "\n\t")
-			io.WriteString(s, f.file())
+			if _, err := io.WriteString(s, f.name()); err != nil {
+				panic(err)
+			}
+			if _, err := io.WriteString(s, "\n\t"); err != nil {
+				panic(err)
+			}
+			if _, err := io.WriteString(s, f.file()); err != nil {
+				panic(err)
+			}
 		default:
-			io.WriteString(s, path.Base(f.file()))
+			if _, err := io.WriteString(s, path.Base(f.file())); err != nil {
+				panic(err)
+			}
 		}
 	case 'd':
-		io.WriteString(s, strconv.Itoa(f.line()))
+		if _, err := io.WriteString(s, strconv.Itoa(f.line())); err != nil {
+			panic(err)
+		}
 	case 'n':
-		io.WriteString(s, funcname(f.name()))
+		if _, err := io.WriteString(s, funcname(f.name())); err != nil {
+			panic(err)
+		}
 	case 'v':
 		f.Format(s, 's')
-		io.WriteString(s, ":")
+		if _, err := io.WriteString(s, ":"); err != nil {
+			panic(err)
+		}
 		f.Format(s, 'd')
 	}
 }
@@ -87,7 +103,7 @@ func (f Frame) Format(s fmt.State, verb rune) {
 // same as that of fmt.Sprintf("%+v", f), but without newlines or tabs.
 func (f Frame) MarshalText() ([]byte, error) {
 	name := f.name()
-	if name == "unknown" {
+	if name == UNKNOWN {
 		return []byte(name), nil
 	}
 	return []byte(fmt.Sprintf("%s %s:%d", name, f.file(), f.line())), nil
@@ -107,10 +123,13 @@ type StackTrace []Frame
 func (st StackTrace) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
+
 		switch {
 		case s.Flag('+'):
 			for _, f := range st {
-				io.WriteString(s, "\n")
+				if _, err := io.WriteString(s, "\n"); err != nil {
+					panic(err)
+				}
 				f.Format(s, verb)
 			}
 		case s.Flag('#'):
@@ -126,22 +145,30 @@ func (st StackTrace) Format(s fmt.State, verb rune) {
 // formatSlice will format this StackTrace into the given buffer as a slice of
 // Frame, only valid when called with '%s' or '%v'.
 func (st StackTrace) formatSlice(s fmt.State, verb rune) {
-	io.WriteString(s, "[")
+	if _, err := io.WriteString(s, "["); err != nil {
+		panic(err)
+	}
 	for i, f := range st {
 		if i > 0 {
-			io.WriteString(s, " ")
+			if _, err := io.WriteString(s, " "); err != nil {
+				panic(err)
+			}
 		}
 		f.Format(s, verb)
 	}
-	io.WriteString(s, "]")
+	if _, err := io.WriteString(s, "]"); err != nil {
+		panic(err)
+	}
 }
 
 // Stack represents a Stack of program counters.
 type Stack []uintptr
 
 func (s *Stack) Format(st fmt.State, verb rune) {
+	//nolint:gocritic,revive // keep switch
 	switch verb {
 	case 'v':
+		//nolint:gocritic,revive // keep switch
 		switch {
 		case st.Flag('+'):
 			for _, pc := range *s {

@@ -5,21 +5,24 @@ import (
 )
 
 func Wrap(err error, message string) error {
-	return wrappedError{
-		taggedError: UNTAGGED_TAG.Errorf(message).(taggedError),
-		underlying:  err,
+	return wrapped0Error{
+		//nolint:errorlint,forcetypeassert // error package internals
+		tagged0Error: untaggedTag.Errorf("%s", message).(tagged0Error),
+		underlying:   err,
 	}
 }
 
 func Wrapf(err error, format string, args ...any) error {
-	return wrappedError{
-		taggedError: UNTAGGED_TAG.Errorf(format, args...).(taggedError),
-		underlying:  err,
+	return wrapped0Error{
+		//nolint:errorlint,forcetypeassert // error package internals
+		tagged0Error: untaggedTag.Errorf(format, args...).(tagged0Error),
+		underlying:   err,
 	}
 }
 
 func UnwrapAll(err error) []error {
-	top, ok := err.(WrappedError)
+	//nolint:errorlint // error package internals
+	top, ok := err.(Wrapped0Error)
 	if !ok {
 		return []error{err}
 	}
@@ -27,7 +30,8 @@ func UnwrapAll(err error) []error {
 	current := top.Unwrap()
 	for current != nil {
 		errs = append(errs, current)
-		wrappedCurrent, ok := current.(WrappedError)
+		//nolint:errorlint // error package internals
+		wrappedCurrent, ok := current.(Wrapped0Error)
 		if !ok {
 			break
 		}
@@ -50,68 +54,68 @@ func Extract(errorChain error, tag Tagger) error {
 	return nil
 }
 
-var _ (WrappedError) = wrappedError{}
+var _ Wrapped0Error = wrapped0Error{}
 
-type wrappedError struct {
-	taggedError
+type wrapped0Error struct {
+	tagged0Error
 	underlying error
 }
 
-func (we wrappedError) Unwrap() error {
+func (we wrapped0Error) Unwrap() error {
 	return we.underlying
 }
 
-func (we wrappedError) Cause() error {
+func (we wrapped0Error) Cause() error {
 	return cause(we)
 }
 
-func (we wrappedError) Format(s fmt.State, verb rune) {
+func (we wrapped0Error) Format(s fmt.State, verb rune) {
 	directive := "%" + string(verb)
-	wrappedFormatter(fmt.Sprintf(directive, we.taggedError), we, s, verb)
+	wrappedFormatter(fmt.Sprintf(directive, we.tagged0Error), we, s, verb)
 }
 
-type wrappedError1[T any] struct {
-	taggedError1[T]
+type wrapped1Error[T any] struct {
+	tagged1Error[T]
 	underlying error
 }
 
-func (we wrappedError1[T]) Unwrap() error {
+func (we wrapped1Error[T]) Unwrap() error {
 	return we.underlying
 }
 
-func (we wrappedError1[T]) Cause() error {
+func (we wrapped1Error[T]) Cause() error {
 	return cause(we)
 }
 
-func (we wrappedError1[T]) Format(s fmt.State, verb rune) {
+func (we wrapped1Error[T]) Format(s fmt.State, verb rune) {
 	directive := "%" + string(verb)
-	wrappedFormatter(fmt.Sprintf(directive, we.taggedError1), we, s, verb)
+	wrappedFormatter(fmt.Sprintf(directive, we.tagged1Error), we, s, verb)
 }
 
-type wrappedError2[T any, U any] struct {
-	taggedError2[T, U]
+type wrapped2Error[T any, U any] struct {
+	tagged2Error[T, U]
 	underlying error
 }
 
-func (we wrappedError2[T, U]) Unwrap() error {
+func (we wrapped2Error[T, U]) Unwrap() error {
 	return we.underlying
 }
 
-func (we wrappedError2[T, U]) Cause() error {
+func (we wrapped2Error[T, U]) Cause() error {
 	return cause(we)
 }
 
-func (we wrappedError2[T, U]) Format(s fmt.State, verb rune) {
+func (we wrapped2Error[T, U]) Format(s fmt.State, verb rune) {
 	directive := "%" + string(verb)
-	wrappedFormatter(fmt.Sprintf(directive, we.taggedError2), we, s, verb)
+	wrappedFormatter(fmt.Sprintf(directive, we.tagged2Error), we, s, verb)
 }
 
-func cause(err WrappedError) error {
+func cause(err Wrapped0Error) error {
 	chain := UnwrapAll(err)
 	return chain[len(chain)-1]
 }
 
-func wrappedFormatter(formattedSelf string, err WrappedError, s fmt.State, verb rune) {
+func wrappedFormatter(formattedSelf string, err Wrapped0Error, s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('0') {
@@ -121,7 +125,8 @@ func wrappedFormatter(formattedSelf string, err WrappedError, s fmt.State, verb 
 			for i, err := range chain {
 				fmt.Fprintf(s, "%v\n", err)
 				if s.Flag('+') {
-					if weErr, ok := err.(ErrorWithStack); ok {
+					//nolint:errorlint // error package internals
+					if weErr, ok := err.(WithStackError); ok {
 						weErr.Stack().Format(s, verb)
 					}
 				}

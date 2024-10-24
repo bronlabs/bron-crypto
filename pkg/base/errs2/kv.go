@@ -5,21 +5,21 @@ import (
 	"maps"
 )
 
-var _ ErrorWithKeyValueInfo = errorWithKeyValue{}
+var _ WithKeyValueInfoError = withKeyValueError{}
 
 func Attach(err error, kv map[string]any) error {
-	return &errorWithKeyValue{
+	return &withKeyValueError{
 		error: err,
 		kv:    maps.Clone(kv),
 	}
 }
 
-type errorWithKeyValue struct {
+type withKeyValueError struct {
 	error
 	kv map[string]any
 }
 
-func (e errorWithKeyValue) Format(s fmt.State, verb rune) {
+func (e withKeyValueError) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		fmt.Fprintf(s, "%v", e.error)
@@ -36,112 +36,112 @@ func (e errorWithKeyValue) Format(s fmt.State, verb rune) {
 	}
 }
 
-func (e errorWithKeyValue) Map() map[string]any {
+func (e withKeyValueError) Map() map[string]any {
 	return maps.Clone(e.kv)
 }
 
-func (e errorWithKeyValue) Value(key string) any {
+func (e withKeyValueError) Value(key string) any {
 	return e.kv[key]
 }
 
-var _ tagBuilder = taggedErrorWithKeyValueBuilder{}
+var _ tag0Builder = tagged0WithKeyValueErrorBuilder{}
 
-type taggedErrorWithKeyValueBuilder struct {
-	tag Tag
+type tagged0WithKeyValueErrorBuilder struct {
+	tag Tag0
 	kv  map[string]any
 }
 
-func (t taggedErrorWithKeyValueBuilder) Errorf(format string, args ...any) error {
-	return errorWithKeyValue{
+func (t tagged0WithKeyValueErrorBuilder) Errorf(format string, args ...any) error {
+	return withKeyValueError{
 		error: t.tag.Errorf(format, args...),
 		kv:    t.kv,
 	}
 }
 
-func (t taggedErrorWithKeyValueBuilder) New(messages ...string) error {
-	return errorWithKeyValue{
+func (t tagged0WithKeyValueErrorBuilder) New(messages ...string) error {
+	return withKeyValueError{
 		error: t.tag.New(messages...),
 		kv:    t.kv,
 	}
 }
 
-func (t taggedErrorWithKeyValueBuilder) Wrapf(err error, format string, args ...any) error {
-	return errorWithKeyValue{
+func (t tagged0WithKeyValueErrorBuilder) Wrapf(err error, format string, args ...any) error {
+	return withKeyValueError{
 		error: t.tag.Wrapf(err, format, args...),
 		kv:    t.kv,
 	}
 }
 
-func (t taggedErrorWithKeyValueBuilder) Wrap(err error, messages ...string) error {
-	return errorWithKeyValue{
+func (t tagged0WithKeyValueErrorBuilder) Wrap(err error, messages ...string) error {
+	return withKeyValueError{
 		error: t.tag.Wrap(err, messages...),
 		kv:    t.kv,
 	}
 }
 
-var _ tag1Builder[any] = taggedError1WithKeyValueBuilder[any]{}
+var _ tag1Builder[any] = tagged1WithKeyValueErrorBuilder[any]{}
 
-type taggedError1WithKeyValueBuilder[T any] struct {
+type tagged1WithKeyValueErrorBuilder[T any] struct {
 	tag Tag1[T]
 	kv  map[string]any
 }
 
-func (t taggedError1WithKeyValueBuilder[T]) Errorf(arg T, format string, args ...any) error {
-	return errorWithKeyValue{
+func (t tagged1WithKeyValueErrorBuilder[T]) Errorf(arg T, format string, args ...any) error {
+	return withKeyValueError{
 		error: t.tag.Errorf(arg, format, args...),
 		kv:    t.kv,
 	}
 }
 
-func (t taggedError1WithKeyValueBuilder[T]) New(arg T, messages ...string) error {
-	return errorWithKeyValue{
+func (t tagged1WithKeyValueErrorBuilder[T]) New(arg T, messages ...string) error {
+	return withKeyValueError{
 		error: t.tag.New(arg, messages...),
 		kv:    t.kv,
 	}
 }
 
-func (t taggedError1WithKeyValueBuilder[T]) Wrapf(err error, arg T, format string, args ...any) error {
-	return errorWithKeyValue{
+func (t tagged1WithKeyValueErrorBuilder[T]) Wrapf(err error, arg T, format string, args ...any) error {
+	return withKeyValueError{
 		error: t.tag.Wrapf(err, arg, format, args...),
 		kv:    t.kv,
 	}
 }
 
-func (t taggedError1WithKeyValueBuilder[T]) Wrap(err error, arg T, messages ...string) error {
-	return errorWithKeyValue{
+func (t tagged1WithKeyValueErrorBuilder[T]) Wrap(err error, arg T, messages ...string) error {
+	return withKeyValueError{
 		error: t.tag.Wrap(err, arg, messages...),
 		kv:    t.kv,
 	}
 }
 
-type taggedError2WithKeyValueBuilder[T, U any] struct {
+type tagged2WithKeyValueErrorBuilder[T, U any] struct {
 	tag Tag2[T, U]
 	kv  map[string]any
 }
 
-func (t taggedError2WithKeyValueBuilder[T, U]) Errorf(arg T, arg2 U, format string, args ...any) error {
-	return errorWithKeyValue{
+func (t tagged2WithKeyValueErrorBuilder[T, U]) Errorf(arg T, arg2 U, format string, args ...any) error {
+	return withKeyValueError{
 		error: t.tag.Errorf(arg, arg2, format, args...),
 		kv:    t.kv,
 	}
 }
 
-func (t taggedError2WithKeyValueBuilder[T, U]) New(arg T, arg2 U, messages ...string) error {
-	return errorWithKeyValue{
+func (t tagged2WithKeyValueErrorBuilder[T, U]) New(arg T, arg2 U, messages ...string) error {
+	return withKeyValueError{
 		error: t.tag.New(arg, arg2, messages...),
 		kv:    t.kv,
 	}
 }
 
-func (t taggedError2WithKeyValueBuilder[T, U]) Wrapf(err error, arg T, arg2 U, format string, args ...any) error {
-	return errorWithKeyValue{
+func (t tagged2WithKeyValueErrorBuilder[T, U]) Wrapf(err error, arg T, arg2 U, format string, args ...any) error {
+	return withKeyValueError{
 		error: t.tag.Wrapf(err, arg, arg2, format, args...),
 		kv:    t.kv,
 	}
 }
 
-func (t taggedError2WithKeyValueBuilder[T, U]) Wrap(err error, arg T, arg2 U, messages ...string) error {
-	return errorWithKeyValue{
+func (t tagged2WithKeyValueErrorBuilder[T, U]) Wrap(err error, arg T, arg2 U, messages ...string) error {
+	return withKeyValueError{
 		error: t.tag.Wrap(err, arg, arg2, messages...),
 		kv:    t.kv,
 	}
