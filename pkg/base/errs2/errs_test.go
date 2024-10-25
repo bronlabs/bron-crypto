@@ -12,42 +12,42 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs2"
 )
 
-func TestTagString(t *testing.T) {
+func TestKindString(t *testing.T) {
 	t.Parallel()
-	t.Run("regular tag", func(t *testing.T) {
+	t.Run("regular kind", func(t *testing.T) {
 		t.Parallel()
-		first := errs2.Tag0("first")
+		first := errs2.Kind("first")
 		require.Equal(t, "FIRST", first.String())
-		second := errs2.Tag0("SEcoNd tAg")
+		second := errs2.Kind("SEcoNd tAg")
 		require.Equal(t, "SECOND_TAG", second.String())
 	})
-	t.Run("tag1", func(t *testing.T) {
+	t.Run("kind1", func(t *testing.T) {
 		t.Parallel()
-		first := errs2.Tag1[string]("first")
+		first := errs2.Kind1[string]("first")
 		require.Equal(t, "FIRST<string>", first.String())
-		second := errs2.Tag1[string]("SEcoNd tAg")
+		second := errs2.Kind1[string]("SEcoNd tAg")
 		require.Equal(t, "SECOND_TAG<string>", second.String())
 		type myString string
-		third := errs2.Tag1[myString]("third")
+		third := errs2.Kind1[myString]("third")
 		require.True(t, regexp.MustCompile(`^THIRD<([^>]+)\.myString>$`).MatchString(third.String()))
 	})
-	t.Run("tag2", func(t *testing.T) {
+	t.Run("kind2", func(t *testing.T) {
 		t.Parallel()
-		first := errs2.Tag2[string, int]("first")
+		first := errs2.Kind2[string, int]("first")
 		require.Equal(t, "FIRST<string, int>", first.String())
-		second := errs2.Tag2[any, any]("SEcoNd tAg")
+		second := errs2.Kind2[any, any]("SEcoNd tAg")
 		require.Equal(t, "SECOND_TAG<any, any>", second.String())
 		type myString string
-		third := errs2.Tag2[myString, string]("third")
+		third := errs2.Kind2[myString, string]("third")
 		require.True(t, regexp.MustCompile(`^THIRD<([^>]+)\.myString, string>$`).MatchString(third.String()))
 	})
 }
 
-func TestTagCreation(t *testing.T) {
+func TestKindCreation(t *testing.T) {
 	t.Parallel()
-	t.Run("regular tag", func(t *testing.T) {
+	t.Run("regular kind", func(t *testing.T) {
 		t.Parallel()
-		tag := errs2.Tag0("tag")
+		tag := errs2.Kind("tag")
 		t.Run("errorf", func(t *testing.T) {
 			t.Parallel()
 			err := tag.Errorf("message %s", "here")
@@ -61,9 +61,9 @@ func TestTagCreation(t *testing.T) {
 			require.Equal(t, "[TAG]", err.Error(), "could not create tag with no message")
 		})
 	})
-	t.Run("tag1", func(t *testing.T) {
+	t.Run("kind1", func(t *testing.T) {
 		t.Parallel()
-		tag := errs2.Tag1[int]("tag")
+		tag := errs2.Kind1[int]("tag")
 		t.Run("errorf", func(t *testing.T) {
 			t.Parallel()
 			err := tag.Errorf(42, "message %s", "here")
@@ -77,9 +77,9 @@ func TestTagCreation(t *testing.T) {
 			require.Equal(t, "[TAG<int>](10)", err.Error(), "could not create tag with no message")
 		})
 	})
-	t.Run("tag2", func(t *testing.T) {
+	t.Run("kind2", func(t *testing.T) {
 		t.Parallel()
-		tag := errs2.Tag2[int, uint]("tag")
+		tag := errs2.Kind2[int, uint]("tag")
 		t.Run("errorf", func(t *testing.T) {
 			t.Parallel()
 			err := tag.Errorf(42, 42, "message %s", "here")
@@ -96,11 +96,11 @@ func TestTagCreation(t *testing.T) {
 	})
 }
 
-func TestTagChecking(t *testing.T) {
+func TestKindChecking(t *testing.T) {
 	t.Parallel()
-	tag0 := errs2.Tag0("tag")
-	tag1 := errs2.Tag1[int]("tag1")
-	tag2 := errs2.Tag2[string, uint]("tag2")
+	tag0 := errs2.Kind("tag")
+	tag1 := errs2.Kind1[int]("tag1")
+	tag2 := errs2.Kind2[string, uint]("tag2")
 
 	errs := []error{
 		tag0.New("something"),
@@ -125,11 +125,11 @@ func TestTagChecking(t *testing.T) {
 		},
 	}
 
-	iss := []func(error) bool{tag0.IsTagging, tag1.IsTagging, tag2.IsTagging}
+	iss := []func(error) bool{tag0.IsKinded, tag1.IsKinded, tag2.IsKinded}
 	funcs := []func(error) bool{
-		func(err error) bool { return errs2.IsTaggedWith(err, tag0) },
-		func(err error) bool { return errs2.IsTaggedWith(err, tag1) },
-		func(err error) bool { return errs2.IsTaggedWith(err, tag2) },
+		func(err error) bool { return errs2.IsKindOf(err, tag0) },
+		func(err error) bool { return errs2.IsKindOf(err, tag1) },
+		func(err error) bool { return errs2.IsKindOf(err, tag2) },
 	}
 
 	t.Run("regular errors", func(t *testing.T) {
@@ -169,11 +169,11 @@ func TestTagChecking(t *testing.T) {
 	})
 }
 
-func TestCanExtractAndCheckTagFromErrorChain(t *testing.T) {
+func TestCanExtractAndCheckKindFromErrorChain(t *testing.T) {
 	t.Parallel()
-	tag0 := errs2.Tag0("tag")
-	tag1 := errs2.Tag1[int]("tag1")
-	tag2 := errs2.Tag2[string, uint]("tag2")
+	tag0 := errs2.Kind("tag")
+	tag1 := errs2.Kind1[int]("tag1")
+	tag2 := errs2.Kind2[string, uint]("tag2")
 
 	errs := []error{
 		tag0.New("something"),
@@ -213,7 +213,7 @@ func TestCanExtractAndCheckTagFromErrorChain(t *testing.T) {
 		t.Parallel()
 		t.Run("check", func(t *testing.T) {
 			t.Parallel()
-			iss := []func(error) bool{tag0.IsTagging, tag1.IsTagging, tag2.IsTagging}
+			iss := []func(error) bool{tag0.IsKinded, tag1.IsKinded, tag2.IsKinded}
 			for i, f := range isins {
 				for _, err := range errs {
 					require.Equal(t, f(err), iss[i](err), fmt.Sprintf("tag %d should be in error %s", i, err.Error()))
@@ -274,18 +274,18 @@ func TestCanExtractAndCheckTagFromErrorChain(t *testing.T) {
 	})
 }
 
-func TestIsTagged(t *testing.T) {
+func TestIsKinded(t *testing.T) {
 	t.Parallel()
-	tag0 := errs2.Tag0("tag")
-	tag1 := errs2.Tag1[int]("tag1")
-	tag2 := errs2.Tag2[string, uint]("tag2")
+	tag0 := errs2.Kind("tag")
+	tag1 := errs2.Kind1[int]("tag1")
+	tag2 := errs2.Kind2[string, uint]("tag2")
 
 	untaggedErrs := []error{
 		fmt.Errorf("fmt error"),
 		errors.New("errors package"),
 	}
 	for _, err := range untaggedErrs {
-		require.False(t, errs2.IsTagged(err), err.Error())
+		require.False(t, errs2.IsKinded(err), err.Error())
 	}
 
 	taggedErrs := []error{
@@ -301,15 +301,15 @@ func TestIsTagged(t *testing.T) {
 	}
 
 	for _, err := range taggedErrs {
-		require.True(t, errs2.IsTagged(err), err.Error())
+		require.True(t, errs2.IsKinded(err), err.Error())
 	}
 }
 
-func TestTagWrapping(t *testing.T) {
+func TestKindWrapping(t *testing.T) {
 	t.Parallel()
-	tag0 := errs2.Tag0("tag")
-	tag1 := errs2.Tag1[int]("tag1")
-	tag2 := errs2.Tag2[string, uint]("tag2")
+	tag0 := errs2.Kind("tag")
+	tag1 := errs2.Kind1[int]("tag1")
+	tag2 := errs2.Kind2[string, uint]("tag2")
 
 	a := fmt.Errorf("A")
 	b := tag0.Wrap(a, "B")

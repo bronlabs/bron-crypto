@@ -16,7 +16,7 @@ type WrappedError interface {
 	error
 	Unwrap() error
 	Cause() error
-	ToTagged() error
+	WrappingError() error
 	fmt.Formatter
 }
 
@@ -27,34 +27,34 @@ type WithKeyValueInfoError interface {
 	fmt.Formatter
 }
 
-type Tagger interface {
-	IsTagging(err error) bool
+type Kinder interface {
+	IsKinded(err error) bool
 }
 
-type Tagged0Error interface {
+type KindedError interface {
 	WithStackError
-	Tag() Tag0
+	Kind() Kind
 }
 
-type Tagged1Error[T any] interface {
+type Kinded1Error[T any] interface {
 	WithStackError
-	Tag() Tag1[T]
+	Kind() Kind1[T]
 	Arg() T
 }
 
-type Tagged2Error[T, U any] interface {
+type Kinded2Error[T, U any] interface {
 	WithStackError
-	Tag() Tag2[T, U]
+	Kind() Kind2[T, U]
 	Arg() T
 	Arg2() U
 }
 
 func New(messages ...string) error {
-	return untaggedTag.New(messages...)
+	return NoKind.New(messages...)
 }
 
 func Errorf(format string, args ...any) error {
-	return untaggedTag.Errorf(format, args...)
+	return NoKind.Errorf(format, args...)
 }
 
 var _ WithStackError = withStackError{}
@@ -94,112 +94,112 @@ func (e withStackError) Format(s fmt.State, verb rune) {
 	}
 }
 
-var _ Tagged0Error = tagged0Error{}
+var _ KindedError = kindedError{}
 
-type tagged0Error struct {
+type kindedError struct {
 	withStackError
-	tag Tag0
+	kind Kind
 }
 
-func (e tagged0Error) Tag() Tag0 {
-	return e.tag
+func (e kindedError) Kind() Kind {
+	return e.kind
 }
 
-func (e tagged0Error) MarshalText() ([]byte, error) {
-	if e.Tag() == untaggedTag {
+func (e kindedError) MarshalText() ([]byte, error) {
+	if e.Kind() == NoKind {
 		return []byte(e.Message()), nil
 	}
 	if e.Message() == "" {
-		return []byte(fmt.Sprintf("[%s]", e.Tag())), nil
+		return []byte(fmt.Sprintf("[%s]", e.Kind())), nil
 	}
-	return []byte(fmt.Sprintf("[%s] %s", e.Tag(), e.Message())), nil
+	return []byte(fmt.Sprintf("[%s] %s", e.Kind(), e.Message())), nil
 }
 
-func (e tagged0Error) Error() string {
+func (e kindedError) Error() string {
 	out, _ := e.MarshalText()
 	return string(out)
 }
 
-func (e tagged0Error) Format(s fmt.State, verb rune) {
-	taggedFormatter(e, e.Tag().String(), s, verb)
+func (e kindedError) Format(s fmt.State, verb rune) {
+	formatKindedError(e, e.Kind().String(), s, verb)
 }
 
-type tagged1Error[T any] struct {
+type kinded1Error[T any] struct {
 	withStackError
-	tag Tag1[T]
-	arg T
+	kind Kind1[T]
+	arg  T
 }
 
-var _ Tagged1Error[any] = tagged1Error[any]{}
+var _ Kinded1Error[any] = kinded1Error[any]{}
 
-func (e1 tagged1Error[T]) Tag() Tag1[T] {
-	return e1.tag
+func (e1 kinded1Error[T]) Kind() Kind1[T] {
+	return e1.kind
 }
 
-func (e1 tagged1Error[T]) MarshalText() ([]byte, error) {
-	if e1.Tag() == "" {
+func (e1 kinded1Error[T]) MarshalText() ([]byte, error) {
+	if e1.Kind() == "" {
 		return []byte(e1.Message()), nil
 	}
 	if e1.Message() == "" {
-		return []byte(fmt.Sprintf("[%s](%v)", e1.Tag(), e1.Arg())), nil
+		return []byte(fmt.Sprintf("[%s](%v)", e1.Kind(), e1.Arg())), nil
 	}
-	return []byte(fmt.Sprintf("[%s](%v) %s", e1.Tag(), e1.Arg(), e1.Message())), nil
+	return []byte(fmt.Sprintf("[%s](%v) %s", e1.Kind(), e1.Arg(), e1.Message())), nil
 }
 
-func (e1 tagged1Error[T]) Format(s fmt.State, verb rune) {
-	taggedFormatter(e1, e1.Tag().String(), s, verb)
+func (e1 kinded1Error[T]) Format(s fmt.State, verb rune) {
+	formatKindedError(e1, e1.Kind().String(), s, verb)
 }
 
-func (e1 tagged1Error[T]) Error() string {
+func (e1 kinded1Error[T]) Error() string {
 	out, _ := e1.MarshalText()
 	return string(out)
 }
 
-func (e1 tagged1Error[T]) Arg() T {
+func (e1 kinded1Error[T]) Arg() T {
 	return e1.arg
 }
 
-var _ Tagged2Error[any, any] = tagged2Error[any, any]{}
+var _ Kinded2Error[any, any] = kinded2Error[any, any]{}
 
-type tagged2Error[T, U any] struct {
+type kinded2Error[T, U any] struct {
 	withStackError
-	tag  Tag2[T, U]
+	kind Kind2[T, U]
 	arg  T
 	arg2 U
 }
 
-func (e2 tagged2Error[T, U]) Tag() Tag2[T, U] {
-	return e2.tag
+func (e2 kinded2Error[T, U]) Kind() Kind2[T, U] {
+	return e2.kind
 }
 
-func (e2 tagged2Error[T, U]) MarshalText() ([]byte, error) {
-	if e2.Tag() == "" {
+func (e2 kinded2Error[T, U]) MarshalText() ([]byte, error) {
+	if e2.Kind() == "" {
 		return []byte(e2.Message()), nil
 	}
 	if e2.Message() == "" {
-		return []byte(fmt.Sprintf("[%s](%v, %v)", e2.Tag(), e2.Arg(), e2.Arg2())), nil
+		return []byte(fmt.Sprintf("[%s](%v, %v)", e2.Kind(), e2.Arg(), e2.Arg2())), nil
 	}
-	return []byte(fmt.Sprintf("[%s](%v, %v) %s", e2.Tag(), e2.Arg(), e2.Arg2(), e2.Message())), nil
+	return []byte(fmt.Sprintf("[%s](%v, %v) %s", e2.Kind(), e2.Arg(), e2.Arg2(), e2.Message())), nil
 }
 
-func (e2 tagged2Error[T, U]) Format(s fmt.State, verb rune) {
-	taggedFormatter(e2, e2.Tag().String(), s, verb)
+func (e2 kinded2Error[T, U]) Format(s fmt.State, verb rune) {
+	formatKindedError(e2, e2.Kind().String(), s, verb)
 }
 
-func (e2 tagged2Error[T, U]) Error() string {
+func (e2 kinded2Error[T, U]) Error() string {
 	out, _ := e2.MarshalText()
 	return string(out)
 }
 
-func (e2 tagged2Error[T, U]) Arg() T {
+func (e2 kinded2Error[T, U]) Arg() T {
 	return e2.arg
 }
 
-func (e2 tagged2Error[T, U]) Arg2() U {
+func (e2 kinded2Error[T, U]) Arg2() U {
 	return e2.arg2
 }
 
-func taggedFormatter(e WithStackError, tagMessage string, s fmt.State, verb rune) {
+func formatKindedError(e WithStackError, kindMessage string, s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if _, err := io.WriteString(s, e.Error()); err != nil {
@@ -209,7 +209,7 @@ func taggedFormatter(e WithStackError, tagMessage string, s fmt.State, verb rune
 			e.Stack().Format(s, verb)
 		}
 	case 'T':
-		if _, err := io.WriteString(s, tagMessage); err != nil {
+		if _, err := io.WriteString(s, kindMessage); err != nil {
 			panic(err)
 		}
 	case 's':

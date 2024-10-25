@@ -7,16 +7,16 @@ import (
 func Wrap(err error, message string) error {
 	return wrapped0Error{
 		//nolint:errorlint,forcetypeassert // error package internals
-		tagged0Error: untaggedTag.Errorf("%s", message).(tagged0Error),
-		underlying:   err,
+		kindedError: NoKind.Errorf("%s", message).(kindedError),
+		underlying:  err,
 	}
 }
 
 func Wrapf(err error, format string, args ...any) error {
 	return wrapped0Error{
 		//nolint:errorlint,forcetypeassert // error package internals
-		tagged0Error: untaggedTag.Errorf(format, args...).(tagged0Error),
-		underlying:   err,
+		kindedError: NoKind.Errorf(format, args...).(kindedError),
+		underlying:  err,
 	}
 }
 
@@ -40,14 +40,14 @@ func UnwrapAll(err error) []error {
 	return errs
 }
 
-func Has(errorChain error, tag Tagger) bool {
-	return Extract(errorChain, tag) != nil
+func Has(errorChain error, kinder Kinder) bool {
+	return Extract(errorChain, kinder) != nil
 }
 
-func Extract(errorChain error, tag Tagger) error {
+func Extract(errorChain error, kinder Kinder) error {
 	chain := UnwrapAll(errorChain)
 	for _, err := range chain {
-		if tag.IsTagging(err) {
+		if kinder.IsKinded(err) {
 			return err
 		}
 	}
@@ -57,7 +57,7 @@ func Extract(errorChain error, tag Tagger) error {
 var _ WrappedError = wrapped0Error{}
 
 type wrapped0Error struct {
-	tagged0Error
+	kindedError
 	underlying error
 }
 
@@ -71,17 +71,17 @@ func (w0 wrapped0Error) Cause() error {
 
 func (w0 wrapped0Error) Format(s fmt.State, verb rune) {
 	directive := "%" + string(verb)
-	wrappedFormatter(fmt.Sprintf(directive, w0.tagged0Error), w0, s, verb)
+	wrappedFormatter(fmt.Sprintf(directive, w0.kindedError), w0, s, verb)
 }
 
-func (w0 wrapped0Error) ToTagged() error {
-	return w0.tagged0Error
+func (w0 wrapped0Error) WrappingError() error {
+	return w0.kindedError
 }
 
 var _ WrappedError = wrapped1Error[any]{}
 
 type wrapped1Error[T any] struct {
-	tagged1Error[T]
+	kinded1Error[T]
 	underlying error
 }
 
@@ -95,17 +95,17 @@ func (w1 wrapped1Error[T]) Cause() error {
 
 func (w1 wrapped1Error[T]) Format(s fmt.State, verb rune) {
 	directive := "%" + string(verb)
-	wrappedFormatter(fmt.Sprintf(directive, w1.tagged1Error), w1, s, verb)
+	wrappedFormatter(fmt.Sprintf(directive, w1.kinded1Error), w1, s, verb)
 }
 
-func (w1 wrapped1Error[T]) ToTagged() error {
-	return w1.tagged1Error
+func (w1 wrapped1Error[T]) WrappingError() error {
+	return w1.kinded1Error
 }
 
 var _ WrappedError = wrapped2Error[any, any]{}
 
 type wrapped2Error[T any, U any] struct {
-	tagged2Error[T, U]
+	kinded2Error[T, U]
 	underlying error
 }
 
@@ -119,11 +119,11 @@ func (w2 wrapped2Error[T, U]) Cause() error {
 
 func (w2 wrapped2Error[T, U]) Format(s fmt.State, verb rune) {
 	directive := "%" + string(verb)
-	wrappedFormatter(fmt.Sprintf(directive, w2.tagged2Error), w2, s, verb)
+	wrappedFormatter(fmt.Sprintf(directive, w2.kinded2Error), w2, s, verb)
 }
 
-func (w2 wrapped2Error[T, U]) ToTagged() error {
-	return w2.tagged2Error
+func (w2 wrapped2Error[T, U]) WrappingError() error {
+	return w2.kinded2Error
 }
 
 func cause(err WrappedError) error {
@@ -141,7 +141,7 @@ func wrappedFormatter(formattedSelf string, err WrappedError, s fmt.State, verb 
 			for i, err := range chain {
 				//nolint:errorlint // error package internals
 				if weErr, ok := err.(WrappedError); ok {
-					fmt.Fprintf(s, "%v\n", weErr.ToTagged())
+					fmt.Fprintf(s, "%v\n", weErr.WrappingError())
 				} else {
 					fmt.Fprintf(s, "%v\n", err)
 				}
