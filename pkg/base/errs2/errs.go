@@ -121,7 +121,7 @@ func (e kindedError) Error() string {
 }
 
 func (e kindedError) Format(s fmt.State, verb rune) {
-	formatKindedError(e, e.Kind().String(), s, verb)
+	formatKindedError(e, s, verb)
 }
 
 type kinded1Error[T any] struct {
@@ -147,7 +147,7 @@ func (e1 kinded1Error[T]) MarshalText() ([]byte, error) {
 }
 
 func (e1 kinded1Error[T]) Format(s fmt.State, verb rune) {
-	formatKindedError(e1, e1.Kind().String(), s, verb)
+	formatKindedError(e1, s, verb)
 }
 
 func (e1 kinded1Error[T]) Error() string {
@@ -183,7 +183,7 @@ func (e2 kinded2Error[T, U]) MarshalText() ([]byte, error) {
 }
 
 func (e2 kinded2Error[T, U]) Format(s fmt.State, verb rune) {
-	formatKindedError(e2, e2.Kind().String(), s, verb)
+	formatKindedError(e2, s, verb)
 }
 
 func (e2 kinded2Error[T, U]) Error() string {
@@ -199,7 +199,7 @@ func (e2 kinded2Error[T, U]) Arg2() U {
 	return e2.arg2
 }
 
-func formatKindedError(e WithStackError, kindMessage string, s fmt.State, verb rune) {
+func formatKindedError(e WithStackError, s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if _, err := io.WriteString(s, e.Error()); err != nil {
@@ -207,10 +207,6 @@ func formatKindedError(e WithStackError, kindMessage string, s fmt.State, verb r
 		}
 		if s.Flag('+') {
 			e.Stack().Format(s, verb)
-		}
-	case 'T':
-		if _, err := io.WriteString(s, kindMessage); err != nil {
-			panic(err)
 		}
 	case 's':
 		if _, err := io.WriteString(s, e.Message()); err != nil {

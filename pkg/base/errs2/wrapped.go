@@ -157,8 +157,6 @@ func wrappedFormatter(formattedSelf string, err WrappedError, s fmt.State, verb 
 				}
 			}
 		}
-	case 'T':
-		fmt.Fprintf(s, "%s <- %T", formattedSelf, err.Unwrap())
 	case 'q', 's':
 		fmt.Fprintf(s, "%s", formattedSelf)
 	}
