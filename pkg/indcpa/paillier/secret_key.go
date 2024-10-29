@@ -13,6 +13,12 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/copperexchange/krypton-primitives/pkg/indcpa"
+)
+
+var (
+	_ indcpa.HomomorphicEncryptionKey[*PlainText, *Nonce, *CipherText, *Scalar]             = (*SecretKey)(nil)
+	_ indcpa.HomomorphicDecryptionKey[*PlainText, *Nonce, *CipherText, *Scalar, *PublicKey] = (*SecretKey)(nil)
 )
 
 type SecretKeyPrecomputed struct {
@@ -77,6 +83,71 @@ func NewSecretKey(p, q *saferith.Nat) (*SecretKey, error) {
 	}
 
 	return key, nil
+}
+
+func (sk *SecretKey) ToEncryptionKey() (*PublicKey, error) {
+	return &sk.PublicKey, nil
+}
+
+func (sk *SecretKey) Decrypt(cipherText *CipherText) (*PlainText, error) {
+	if err := cipherText.Validate(&sk.PublicKey); err != nil {
+		return nil, errs.WrapFailed(err, "invalid cipher text")
+	}
+
+	mu, err := sk.GetMu()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot get mu")
+	}
+
+	nMod, err := sk.GetNResidueParams()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot get N residue params")
+	}
+
+	nnMod, err := sk.GetNNResidueParams()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot get NN residue params")
+	}
+
+	cToLambda, err := nnMod.ModExp(cipherText.C, sk.Phi)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot compute exp")
+	}
+
+	l, err := sk.L(cToLambda)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot compute L")
+	}
+
+	m := new(saferith.Nat).ModMul(l, mu, nMod.GetModulus())
+	return m, nil
+}
+
+func (sk *SecretKey) Open(cipherText *CipherText) (p *PlainText, r *Nonce, err error) {
+	if err := cipherText.Validate(&sk.PublicKey); err != nil {
+		return nil, nil, errs.WrapFailed(err, "invalid cipher text")
+	}
+
+	nMod, err := sk.GetNResidueParams()
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot get N residue params")
+	}
+	nInv := new(saferith.Nat).ModInverse(sk.N, saferith.ModulusFromNat(sk.Phi))
+
+	p, err = sk.Decrypt(cipherText)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot decrypt cipher text")
+	}
+	s, err := sk.CipherTextSubPlainText(cipherText, p)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot decrypt cipher text")
+	}
+	r, err = nMod.ModExp(s.C, nInv)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot open nonce")
+	}
+
+	return p, r, nil
 }
 
 func (sk *SecretKey) EncryptWithNonce(plainText *PlainText, nonce *saferith.Nat) (*CipherText, error) {
@@ -207,7 +278,7 @@ func (sk *SecretKey) EncryptMany(plainTexts []*PlainText, prng io.Reader) ([]*Ci
 	return cipherTexts, nonces, nil
 }
 
-func (sk *SecretKey) MulPlaintext(lhs *CipherText, rhs *PlainText) (*CipherText, error) {
+func (sk *SecretKey) CipherTextMul(lhs *CipherText, rhs *Scalar) (*CipherText, error) {
 	if err := lhs.Validate(&sk.PublicKey); err != nil {
 		return nil, errs.WrapValidation(err, "invalid lhs")
 	}

@@ -13,7 +13,7 @@ import (
 
 	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	paillierrange "github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/range"
 	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )

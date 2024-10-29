@@ -41,7 +41,7 @@ func (p *Participant) IdentityKey() types.IdentityKey {
 }
 
 type State struct {
-	receivedSeeds ds.Map[types.IdentityKey, *hashcommitments.Commitment]
+	receivedSeeds ds.Map[types.IdentityKey, hashcommitments.Commitment]
 	sentSeeds     ds.Map[types.IdentityKey, *committedSeedContribution]
 
 	_ ds.Incomparable
@@ -49,8 +49,8 @@ type State struct {
 
 type committedSeedContribution struct {
 	seed       []byte
-	commitment *hashcommitments.Commitment
-	opening    *hashcommitments.Opening
+	commitment hashcommitments.Commitment
+	opening    hashcommitments.Witness
 
 	_ ds.Incomparable
 }
@@ -86,7 +86,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.Prot
 		SortedParticipants: sortedParticipants,
 		IdentitySpace:      identitySpace,
 		state: &State{
-			receivedSeeds: hashmap.NewHashableHashMap[types.IdentityKey, *hashcommitments.Commitment](),
+			receivedSeeds: hashmap.NewHashableHashMap[types.IdentityKey, hashcommitments.Commitment](),
 			sentSeeds:     hashmap.NewHashableHashMap[types.IdentityKey, *committedSeedContribution](),
 		},
 	}

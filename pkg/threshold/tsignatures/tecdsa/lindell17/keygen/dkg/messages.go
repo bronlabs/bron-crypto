@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/network"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/lp"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/lpdl"
@@ -22,13 +22,13 @@ var _ network.Message[types.ThresholdProtocol] = (*Round6P2P)(nil)
 var _ network.Message[types.ThresholdProtocol] = (*Round7P2P)(nil)
 
 type Round1Broadcast struct {
-	BigQCommitment *hashcommitments.Commitment
+	BigQCommitment hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
 
 type Round2Broadcast struct {
-	BigQOpening          *hashcommitments.Opening
+	BigQOpening          hashcommitments.Witness
 	BigQPrime            curves.Point
 	BigQPrimeProof       compiler.NIZKPoKProof
 	BigQDoublePrime      curves.Point
@@ -77,17 +77,14 @@ type Round7P2P struct {
 	_ ds.Incomparable
 }
 
-func (r1b *Round1Broadcast) Validate(protocol types.ThresholdProtocol) error {
-	if r1b.BigQCommitment == nil {
-		return errs.NewIsNil("big q commitment")
-	}
+func (r1b *Round1Broadcast) Validate(types.ThresholdProtocol) error {
 	return nil
 }
 
 func (r2b *Round2Broadcast) Validate(protocol types.ThresholdProtocol) error {
-	if err := r2b.BigQOpening.Validate(); err != nil {
-		return errs.WrapValidation(err, "could not validate opening")
-	}
+	//if err := r2b.BigQOpening.Validate(); err != nil {
+	//	return errs.WrapValidation(err, "could not validate opening")
+	//}
 	if r2b.BigQPrime == nil {
 		return errs.NewIsNil("big q prime")
 	}

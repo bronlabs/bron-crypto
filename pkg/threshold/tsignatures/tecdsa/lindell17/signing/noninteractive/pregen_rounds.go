@@ -1,7 +1,6 @@
 package noninteractive_signing
 
 import (
-	"bytes"
 	"io"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
@@ -28,11 +27,11 @@ func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {
 	}
 	bigR := p.protocol.Curve().ScalarBaseMult(k)
 
-	committer, err := hashcommitments.NewCommitter(p.sessionId, p.prng, p.IdentityKey().PublicKey().ToAffineCompressed())
+	committer, err := hashcommitments.NewCommittingKeyFromCrsBytes(p.sessionId, p.IdentityKey().PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot instantiate committer")
 	}
-	bigRCommitment, bigROpening, err := committer.Commit(bigR.ToAffineCompressed())
+	bigRCommitment, bigROpening, err := committer.Commit(bigR.ToAffineCompressed(), p.prng)
 	if err != nil {
 		return nil, errs.NewFailed("cannot commit to R")
 	}
@@ -58,7 +57,7 @@ func (p *PreGenParticipant) Round2(
 		return nil, errs.WrapValidation(err, "invalid round 2 input broadcast messages")
 	}
 
-	theirBigRCommitments := hashmap.NewHashableHashMap[types.IdentityKey, *hashcommitments.Commitment]()
+	theirBigRCommitments := hashmap.NewHashableHashMap[types.IdentityKey, hashcommitments.Commitment]()
 	for identity := range p.preSigners.Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
@@ -66,10 +65,6 @@ func (p *PreGenParticipant) Round2(
 		in, ok := round1outputBroadcast.Get(identity)
 		if !ok {
 			return nil, errs.NewMissing("no input from %s", identity.String())
-		}
-		commitment := in.BigRCommitment
-		if commitment == nil {
-			return nil, errs.NewIsNil("commitment from %s", identity.String())
 		}
 		theirBigRCommitments.Put(identity, in.BigRCommitment)
 	}
@@ -116,11 +111,14 @@ func (p *PreGenParticipant) Round3(
 			return nil, errs.NewFailed("no commitment saved from %x", identity.String())
 		}
 
-		verifier := hashcommitments.NewVerifier(p.sessionId, identity.PublicKey().ToAffineCompressed())
-		if !bytes.Equal(in.BigR.ToAffineCompressed(), in.BigROpening.GetMessage()) {
-			return nil, errs.NewVerification("opening is not tied to the expected value")
+		verifier, err := hashcommitments.NewCommittingKeyFromCrsBytes(p.sessionId, identity.PublicKey().ToAffineCompressed())
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot instantiate verifier")
 		}
-		if err := verifier.Verify(theirBigRCommitment, in.BigROpening); err != nil {
+		// if !bytes.Equal(in.BigR.ToAffineCompressed(), in.BigROpening.GetMessage()) {
+		//	return nil, errs.NewVerification("opening is not tied to the expected value")
+		//}
+		if err := verifier.Verify(theirBigRCommitment, in.BigR.ToAffineCompressed(), in.BigROpening); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 		if err := verifyDlogProof(p.sessionId, p.transcript.Clone(), identity, in.BigR, in.BigRProof, p.nic); err != nil {

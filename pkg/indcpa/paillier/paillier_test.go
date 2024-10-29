@@ -2,6 +2,7 @@ package paillier_test
 
 import (
 	crand "crypto/rand"
+	"crypto/rsa"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -19,7 +20,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/primes"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 )
 
 var (
@@ -96,7 +97,7 @@ func Example_homomorphicAddition() {
 	}
 
 	fmt.Println("Adding their encrypted versions together.")
-	cipher3, err := pub.Add(cipher1, cipher2)
+	cipher3, err := pub.CipherTextAdd(cipher1, cipher2)
 	if err != nil {
 		log.Fatalf("Error in adding the two ciphertexts: %v", err)
 	}
@@ -132,7 +133,7 @@ func Example_homomorphicMultiplication() {
 	}
 
 	fmt.Printf("Multiplying plain %s with the encrypted %s.\n", msg2.Big().String(), msg1.Big().String())
-	cipher3, err := pub.MulPlaintext(cipher1, msg2)
+	cipher3, err := pub.CipherTextMul(cipher1, msg2)
 	if err != nil {
 		log.Fatalf("Error in adding the two ciphertexts: %v", err)
 	}
@@ -308,6 +309,7 @@ func TestNewKeysDistinct(t *testing.T) {
 }
 
 // Tests the restrictions on input values for paillier.Add
+
 func TestAddErrorConditions(t *testing.T) {
 	t.Parallel()
 	pk, err := paillier.NewPublicKey(n)
@@ -339,7 +341,7 @@ func TestAddErrorConditions(t *testing.T) {
 		theTest := test
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			t.Parallel()
-			_, err := pk.Add(&paillier.CipherText{C: theTest.x}, &paillier.CipherText{C: theTest.y})
+			_, err := pk.CipherTextAdd(&paillier.CipherText{C: theTest.x}, &paillier.CipherText{C: theTest.y})
 			if theTest.expectedPass {
 				require.NoError(t, err)
 			} else {
@@ -369,7 +371,7 @@ func TestSubPlaintext(t *testing.T) {
 			t.Parallel()
 			encryptedX, _, err := pk.Encrypt(new(saferith.Nat).SetUint64(test.x), crand.Reader)
 			require.NoError(t, err)
-			zEncrypted, err := pk.SubPlaintext(encryptedX, new(saferith.Nat).SetUint64(test.y))
+			zEncrypted, err := pk.CipherTextSubPlainText(encryptedX, new(saferith.Nat).SetUint64(test.y))
 			require.NoError(t, err)
 			decryptor, err := paillier.NewDecryptor(sk)
 			require.NoError(t, err)
@@ -381,6 +383,7 @@ func TestSubPlaintext(t *testing.T) {
 }
 
 // Tests for paillier addition with known answers
+
 func TestAdd(t *testing.T) {
 	t.Parallel()
 	z9, err := paillier.NewPublicKey(new(saferith.Nat).SetUint64(3))
@@ -417,7 +420,7 @@ func TestAdd(t *testing.T) {
 		theTest := test
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			t.Parallel()
-			actual, err := test.pk.Add(&paillier.CipherText{C: theTest.x}, &paillier.CipherText{C: theTest.y})
+			actual, err := test.pk.CipherTextAdd(&paillier.CipherText{C: theTest.x}, &paillier.CipherText{C: theTest.y})
 			require.NoError(t, err)
 			require.NotZero(t, theTest.expected.Eq(actual.C))
 		})
@@ -425,6 +428,7 @@ func TestAdd(t *testing.T) {
 }
 
 // Tests the restrictions on input values for paillier.Mul
+
 func TestMulErrorConditions(t *testing.T) {
 	t.Parallel()
 	pk, err := paillier.NewPublicKey(n)
@@ -456,7 +460,7 @@ func TestMulErrorConditions(t *testing.T) {
 		theTest := test
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			t.Parallel()
-			_, err := pk.MulPlaintext(&paillier.CipherText{C: theTest.y}, theTest.x)
+			_, err := pk.CipherTextMul(&paillier.CipherText{C: theTest.y}, theTest.x)
 			if theTest.expectedPass {
 				require.NoError(t, err)
 			} else {
@@ -467,6 +471,7 @@ func TestMulErrorConditions(t *testing.T) {
 }
 
 // Tests for paillier multiplication with known answers
+
 func TestMul(t *testing.T) {
 	t.Parallel()
 	z25, err := paillier.NewPublicKey(nat("5"))
@@ -517,7 +522,7 @@ func TestMul(t *testing.T) {
 		theTest := test
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			t.Parallel()
-			actual, err := theTest.pk.MulPlaintext(&paillier.CipherText{C: theTest.c}, theTest.a)
+			actual, err := theTest.pk.CipherTextMul(&paillier.CipherText{C: theTest.c}, theTest.a)
 			require.NoError(t, err)
 			require.NotZero(t, theTest.expected.Eq(actual.C))
 		})
@@ -525,6 +530,7 @@ func TestMul(t *testing.T) {
 }
 
 // EncryptWithNonce() is provided a nonce and must be deterministic
+
 func TestLittleEncryptDeterministic(t *testing.T) {
 	t.Parallel()
 	pk, err := paillier.NewPublicKey(n)
@@ -552,6 +558,7 @@ func TestLittleEncryptDeterministic(t *testing.T) {
 }
 
 // Tests the restrictions on input values for paillier.Encrypt
+
 func TestEncryptErrorConditions(t *testing.T) {
 	t.Parallel()
 	pk, err := paillier.NewPublicKey(n)
@@ -588,6 +595,7 @@ func TestEncryptErrorConditions(t *testing.T) {
 }
 
 // Tests that each invocation of Encrypt() produces a distinct output
+
 func TestEncryptIsRandomized(t *testing.T) {
 	t.Parallel()
 	pk, err := paillier.NewPublicKey(n)
@@ -610,6 +618,7 @@ func TestEncryptIsRandomized(t *testing.T) {
 }
 
 // Encrypt should succeed over a range of arbitrary, valid messages
+
 func TestEncryptSucceeds(t *testing.T) {
 	t.Parallel()
 	pk, err := paillier.NewPublicKey(n)
@@ -625,6 +634,7 @@ func TestEncryptSucceeds(t *testing.T) {
 }
 
 // Tests the restrictions on input values for paillier.Decrypt
+
 func TestDecryptErrorConditions(t *testing.T) {
 	t.Parallel()
 	// A fake secret key, but good enough to test parameter validation
@@ -679,6 +689,7 @@ func TestDecryptErrorConditions(t *testing.T) {
 }
 
 // Decrypt·Encrypt is the identity function
+
 func TestEncryptDecryptRoundTrip(t *testing.T) {
 	t.Parallel()
 	// Pre-computed safe primes
@@ -743,6 +754,226 @@ func TestNewSecretKeyErrorConditions(t *testing.T) {
 			require.True(t, errs.IsIsNil(err))
 		})
 	}
+}
+
+func Test_RoundTrip(t *testing.T) {
+	t.Parallel()
+	prng := crand.Reader
+
+	sk := randomSecretKey(t, crand.Reader)
+	pk := &sk.PublicKey
+
+	p := randomPlainText(t, pk, prng)
+	c, r, err := pk.Encrypt(p, prng)
+	require.NoError(t, err)
+
+	decryptedP, decryptedR, err := sk.Open(c)
+	require.NoError(t, err)
+	require.True(t, decryptedP.Eq(p) == 1)
+	require.True(t, decryptedR.Eq(r) == 1)
+}
+
+func Test_HomomorphicAdd(t *testing.T) {
+	t.Parallel()
+	prng := crand.Reader
+
+	sk := randomSecretKey(t, crand.Reader)
+	pk, err := sk.ToEncryptionKey()
+	require.NoError(t, err)
+
+	p1 := randomPlainText(t, pk, prng)
+	p2 := randomPlainText(t, pk, prng)
+
+	c1, r1, err := pk.Encrypt(p1, prng)
+	require.NoError(t, err)
+	c2, r2, err := pk.Encrypt(p2, prng)
+	require.NoError(t, err)
+
+	p := new(saferith.Nat).ModAdd(p1, p2, saferith.ModulusFromNat(pk.N))
+	c, err := pk.CipherTextAdd(c1, c2)
+	require.NoError(t, err)
+	r, err := pk.NonceAdd(r1, r2)
+	require.NoError(t, err)
+
+	decrypted, err := sk.Decrypt(c)
+	require.NoError(t, err)
+	require.True(t, decrypted.Eq(p) == 1)
+
+	reEncrypted, err := pk.EncryptWithNonce(p, r)
+	require.NoError(t, err)
+	require.True(t, reEncrypted.C.Eq(c.C) == 1)
+	require.True(t, pk.CipherTextEqual(reEncrypted, c))
+
+}
+
+func Test_HomomorphicSub(t *testing.T) {
+	t.Parallel()
+	prng := crand.Reader
+
+	sk := randomSecretKey(t, crand.Reader)
+	pk, err := sk.ToEncryptionKey()
+	require.NoError(t, err)
+
+	p1 := randomPlainText(t, pk, prng)
+	p2 := randomPlainText(t, pk, prng)
+
+	c1, r1, err := pk.Encrypt(p1, prng)
+	require.NoError(t, err)
+	c2, r2, err := pk.Encrypt(p2, prng)
+	require.NoError(t, err)
+
+	p := new(saferith.Nat).ModSub(p1, p2, saferith.ModulusFromNat(pk.N))
+	c, err := pk.CipherTextSub(c1, c2)
+	require.NoError(t, err)
+	r, err := pk.NonceSub(r1, r2)
+	require.NoError(t, err)
+
+	decrypted, err := sk.Decrypt(c)
+	require.NoError(t, err)
+	require.True(t, decrypted.Eq(p) == 1)
+
+	reEncrypted, err := pk.EncryptWithNonce(p, r)
+	require.NoError(t, err)
+	require.True(t, reEncrypted.C.Eq(c.C) == 1)
+	require.True(t, pk.CipherTextEqual(reEncrypted, c))
+
+}
+
+func Test_HomomorphicAddPlainText(t *testing.T) {
+	t.Parallel()
+	prng := crand.Reader
+
+	sk := randomSecretKey(t, crand.Reader)
+	pk, err := sk.ToEncryptionKey()
+	require.NoError(t, err)
+
+	p1 := randomPlainText(t, pk, prng)
+	p2 := randomPlainText(t, pk, prng)
+
+	c1, r, err := pk.Encrypt(p1, prng)
+	require.NoError(t, err)
+
+	p := new(saferith.Nat).ModAdd(p1, p2, saferith.ModulusFromNat(pk.N))
+	c, err := pk.CipherTextAddPlainText(c1, p2)
+	require.NoError(t, err)
+
+	decrypted, err := sk.Decrypt(c)
+	require.NoError(t, err)
+	require.True(t, decrypted.Eq(p) == 1)
+
+	reEncrypted, err := pk.EncryptWithNonce(p, r)
+	require.NoError(t, err)
+	require.True(t, reEncrypted.C.Eq(c.C) == 1)
+	require.True(t, pk.CipherTextEqual(reEncrypted, c))
+}
+
+func Test_HomomorphicSubPlainText(t *testing.T) {
+	t.Parallel()
+	prng := crand.Reader
+
+	sk := randomSecretKey(t, crand.Reader)
+	pk, err := sk.ToEncryptionKey()
+	require.NoError(t, err)
+
+	p1 := randomPlainText(t, pk, prng)
+	p2 := randomPlainText(t, pk, prng)
+
+	c1, r, err := pk.Encrypt(p1, prng)
+	require.NoError(t, err)
+
+	p := new(saferith.Nat).ModSub(p1, p2, saferith.ModulusFromNat(pk.N))
+	c, err := pk.CipherTextSubPlainText(c1, p2)
+	require.NoError(t, err)
+
+	decrypted, err := sk.Decrypt(c)
+	require.NoError(t, err)
+	require.True(t, decrypted.Eq(p) == 1)
+
+	reEncrypted, err := pk.EncryptWithNonce(p, r)
+	require.NoError(t, err)
+	require.True(t, reEncrypted.C.Eq(c.C) == 1)
+	require.True(t, pk.CipherTextEqual(reEncrypted, c))
+}
+
+func Test_HomomorphicMul(t *testing.T) {
+	t.Parallel()
+	prng := crand.Reader
+
+	sk := randomSecretKey(t, crand.Reader)
+	pk, err := sk.ToEncryptionKey()
+	require.NoError(t, err)
+
+	p1 := randomPlainText(t, pk, prng)
+	s := randomPlainText(t, pk, prng)
+	require.NoError(t, err)
+
+	c1, r1, err := pk.Encrypt(p1, prng)
+	require.NoError(t, err)
+
+	p := new(saferith.Nat).ModMul(p1, s, saferith.ModulusFromNat(pk.N))
+	c, err := pk.CipherTextMul(c1, s)
+	require.NoError(t, err)
+	r, err := pk.NonceMul(r1, s)
+	require.NoError(t, err)
+
+	decrypted, err := sk.Decrypt(c)
+	require.NoError(t, err)
+	require.True(t, decrypted.Eq(p) == 1)
+
+	reEncrypted, err := pk.EncryptWithNonce(p, r)
+	require.NoError(t, err)
+	require.True(t, reEncrypted.C.Eq(c.C) == 1)
+	require.True(t, pk.CipherTextEqual(reEncrypted, c))
+
+}
+
+func Test_HomomorphicNeg(t *testing.T) {
+	t.Parallel()
+	prng := crand.Reader
+
+	sk := randomSecretKey(t, crand.Reader)
+	pk, err := sk.ToEncryptionKey()
+	require.NoError(t, err)
+
+	p1 := randomPlainText(t, pk, prng)
+	c1, r1, err := pk.Encrypt(p1, prng)
+	require.NoError(t, err)
+
+	p := new(saferith.Nat).ModNeg(p1, saferith.ModulusFromNat(pk.N))
+	c, err := pk.CipherTextNeg(c1)
+	require.NoError(t, err)
+	r, err := pk.NonceNeg(r1)
+	require.NoError(t, err)
+
+	decrypted, err := sk.Decrypt(c)
+	require.NoError(t, err)
+	require.True(t, decrypted.Eq(p) == 1)
+
+	reEncrypted, err := pk.EncryptWithNonce(p, r)
+	require.NoError(t, err)
+	require.True(t, reEncrypted.C.Eq(c.C) == 1)
+	require.True(t, pk.CipherTextEqual(reEncrypted, c))
+}
+
+func randomPlainText(tb testing.TB, pk *paillier.PublicKey, prng io.Reader) *paillier.PlainText {
+	tb.Helper()
+
+	p, err := crand.Int(prng, pk.N.Big())
+	require.NoError(tb, err)
+	return new(saferith.Nat).SetBig(p, 2048)
+}
+
+func randomSecretKey(tb testing.TB, prng io.Reader) *paillier.SecretKey {
+	tb.Helper()
+
+	rsaKey, err := rsa.GenerateKey(prng, 2048)
+	require.NoError(tb, err)
+	p := new(saferith.Nat).SetBig(rsaKey.Primes[0], 1024)
+	q := new(saferith.Nat).SetBig(rsaKey.Primes[1], 1024)
+	paillierKey, err := paillier.NewSecretKey(p, q)
+	require.NoError(tb, err)
+
+	return paillierKey
 }
 
 func Test_Precomputed(t *testing.T) {
@@ -838,7 +1069,7 @@ func Test_MulScalarCrt(t *testing.T) {
 		rhs := rand.Uint32()
 		lhsCipherText, _, err := secretKey.PublicKey.Encrypt(new(saferith.Nat).SetUint64(uint64(lhs)), prng)
 		require.NoError(t, err)
-		lhsTimesRhsCipherTextCrt, err := secretKey.MulPlaintext(lhsCipherText, new(saferith.Nat).SetUint64(uint64(rhs)))
+		lhsTimesRhsCipherTextCrt, err := secretKey.CipherTextMul(lhsCipherText, new(saferith.Nat).SetUint64(uint64(rhs)))
 		require.NoError(t, err)
 
 		decryptedCrt, err := decryptor.Decrypt(lhsTimesRhsCipherTextCrt)
@@ -1027,7 +1258,7 @@ func Benchmark_MulPlainTextCrt(b *testing.B) {
 			scalarBig, err := crand.Int(prng, secretKey.N.Big())
 			require.NoError(b, err)
 			scalar := new(saferith.Nat).SetBig(scalarBig, secretKey.N.AnnouncedLen())
-			_, err = secretKey.PublicKey.MulPlaintext(messageEncrypted, scalar)
+			_, err = secretKey.PublicKey.CipherTextMul(messageEncrypted, scalar)
 			require.NoError(b, err)
 		}
 	})
@@ -1036,7 +1267,7 @@ func Benchmark_MulPlainTextCrt(b *testing.B) {
 			scalarBig, err := crand.Int(prng, secretKey.N.Big())
 			require.NoError(b, err)
 			scalar := new(saferith.Nat).SetBig(scalarBig, secretKey.N.AnnouncedLen())
-			_, err = secretKey.MulPlaintext(messageEncrypted, scalar)
+			_, err = secretKey.CipherTextMul(messageEncrypted, scalar)
 			require.NoError(b, err)
 		}
 	})

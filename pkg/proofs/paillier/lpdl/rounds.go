@@ -1,7 +1,6 @@
 package lpdl
 
 import (
-	"bytes"
 	"slices"
 
 	"github.com/cronokirby/saferith"
@@ -9,7 +8,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
 	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 )
 
 func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
@@ -29,7 +28,7 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 	}
 
 	// 1.i. compute a (*) c (+) Enc(b, r) for random r
-	acEnc, err := verifier.pk.MulPlaintext(verifier.c, verifier.state.a)
+	acEnc, err := verifier.pk.CipherTextMul(verifier.c, verifier.state.a)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot perform homomorphic multiplication")
 	}
@@ -37,21 +36,21 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt value")
 	}
-	cPrime, err := verifier.pk.Add(acEnc, bEnc)
+	cPrime, err := verifier.pk.CipherTextAdd(acEnc, bEnc)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot perform homomorphic addition")
 	}
 
 	// 1.ii. compute c'' = commit(a, b)
-	committer, err := hashcommitments.NewCommitter(verifier.sessionId, verifier.prng)
+	committer, err := hashcommitments.NewCommittingKeyFromCrsBytes(verifier.sessionId)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot instantiate committer")
 	}
-	cDoublePrimeCommitment, cDoublePrimeOpening, err := committer.Commit(slices.Concat(verifier.state.a.Bytes(), verifier.state.b.Bytes()))
+	cDoublePrimeCommitment, cDoublePrimeWitness, err := committer.Commit(slices.Concat(verifier.state.a.Bytes(), verifier.state.b.Bytes()), verifier.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to a and b")
 	}
-	verifier.state.cDoublePrimeOpening = cDoublePrimeOpening
+	verifier.state.cDoublePrimeWitness = cDoublePrimeWitness
 
 	// 1.iii. compute Q' = aQ + bQ
 	aScalar := verifier.state.curve.ScalarField().Element().SetNat(verifier.state.a)
@@ -97,15 +96,15 @@ func (prover *Prover) Round2(r1out *Round1Output) (r2out *Round2Output, err erro
 	prover.state.bigQHat = prover.state.curve.ScalarBaseMult(alphaScalar)
 
 	// 2.ii. compute c^ = commit(Q^) and send to V
-	committer, err := hashcommitments.NewCommitter(prover.sessionId, prover.prng)
+	committer, err := hashcommitments.NewCommittingKeyFromCrsBytes(prover.sessionId)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot instantiate committer")
 	}
-	bigQHatCommitment, bigQHatOpening, err := committer.Commit(prover.state.bigQHat.ToAffineCompressed())
+	bigQHatCommitment, bigQHatOpening, err := committer.Commit(prover.state.bigQHat.ToAffineCompressed(), prover.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to Q hat")
 	}
-	prover.state.bigQHatOpening = bigQHatOpening
+	prover.state.bigQHatWitness = bigQHatOpening
 
 	// 4.i. In parallel to the above, run L_P protocol
 	rangeProverOutput, err := prover.rangeProver.Round2(r1out.RangeVerifierOutput)
@@ -143,35 +142,35 @@ func (verifier *Verifier) Round3(r2out *Round2Output) (r3out *Round3Output, err 
 		RangeVerifierOutput: rangeVerifierOutput,
 		A:                   verifier.state.a,
 		B:                   verifier.state.b,
-		CDoublePrimeOpening: verifier.state.cDoublePrimeOpening,
+		CDoublePrimeWitness: verifier.state.cDoublePrimeWitness,
 	}, nil
 }
 
-func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err error) {
+func (prover *Prover) Round4(r4In *Round3Output) (r4out *Round4Output, err error) {
 	// Validation; RangeVerifierOutput deferred to `rangeProver.Round4`
 	if prover.round != 4 {
 		return nil, errs.NewRound("%d != 4", prover.round)
 	}
-	if err := r3out.Validate(); err != nil {
+	if err := r4In.Validate(); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 4 input")
 	}
 
-	verifier := hashcommitments.NewVerifier(prover.sessionId)
-	if !bytes.Equal(slices.Concat(r3out.A.Bytes(), r3out.B.Bytes()), r3out.CDoublePrimeOpening.GetMessage()) {
-		return nil, errs.NewVerification("opening is not tied to the expected values")
-	}
-	if err := verifier.Verify(prover.state.cDoublePrimeCommitment, r3out.CDoublePrimeOpening); err != nil {
+	verifier, _ := hashcommitments.NewCommittingKeyFromCrsBytes(prover.sessionId)
+	// if !bytes.Equal(slices.Concat(r3out.A.Bytes(), r3out.B.Bytes()), r3out.CDoublePrimeWitness.GetMessage()) {
+	//	return nil, errs.NewVerification("opening is not tied to the expected values")
+	//}
+	if err := verifier.Verify(prover.state.cDoublePrimeCommitment, slices.Concat(r4In.A.Bytes(), r4In.B.Bytes()), r4In.CDoublePrimeWitness); err != nil {
 		return nil, errs.WrapFailed(err, "cannot open R commitment")
 	}
 
 	// 4. check that alpha == ax + b (over integers), if not aborts
-	ax := new(saferith.Nat).Mul(r3out.A, prover.x.Nat(), -1)
-	axPlusB := new(saferith.Nat).Add(ax, r3out.B, prover.state.q2.BitLen()+1)
+	ax := new(saferith.Nat).Mul(r4In.A, prover.x.Nat(), -1)
+	axPlusB := new(saferith.Nat).Add(ax, r4In.B, prover.state.q2.BitLen()+1)
 	if prover.state.alpha.Eq(axPlusB) == 0 {
 		return nil, errs.NewIdentifiableAbort("verifier", "verifier is misbehaving")
 	}
 
-	rangeProverOutput, err := prover.rangeProver.Round4(r3out.RangeVerifierOutput)
+	rangeProverOutput, err := prover.rangeProver.Round4(r4In.RangeVerifierOutput)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "range prover round 4")
 	}
@@ -181,7 +180,7 @@ func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err erro
 	return &Round4Output{
 		RangeProverOutput: rangeProverOutput,
 		BigQHat:           prover.state.bigQHat,
-		BigQHatOpening:    prover.state.bigQHatOpening,
+		BigQHatWitness:    prover.state.bigQHatWitness,
 	}, nil
 }
 
@@ -194,11 +193,14 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 		return errs.WrapValidation(err, "invalid round 5 input")
 	}
 
-	commitVerifier := hashcommitments.NewVerifier(verifier.sessionId)
-	if !bytes.Equal(input.BigQHat.ToAffineCompressed(), input.BigQHatOpening.GetMessage()) {
-		return errs.NewVerification("opening is not tied to the expected message")
+	commitVerifier, err := hashcommitments.NewCommittingKeyFromCrsBytes(verifier.sessionId)
+	if err != nil {
+		return errs.WrapFailed(err, "cannot create committing key")
 	}
-	if err := commitVerifier.Verify(verifier.state.cHat, input.BigQHatOpening); err != nil {
+	// if !bytes.Equal(input.BigQHat.ToAffineCompressed(), input.BigQHatWitness.GetMessage()) {
+	//	return errs.NewVerification("opening is not tied to the expected message")
+	//}
+	if err := commitVerifier.Verify(verifier.state.cHat, input.BigQHat.ToAffineCompressed(), input.BigQHatWitness); err != nil {
 		return errs.WrapFailed(err, "cannot decommit Q hat")
 	}
 

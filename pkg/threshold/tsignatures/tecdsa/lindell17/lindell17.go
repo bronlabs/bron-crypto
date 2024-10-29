@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
 )
 

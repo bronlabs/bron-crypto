@@ -1,8 +1,6 @@
 package signing
 
 import (
-	"bytes"
-
 	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
@@ -176,7 +174,7 @@ func DoRound3(p *Participant, protocol types.ThresholdSignatureProtocol, state *
 	// step 1.2: public instance key BigR_i
 	state.BigR_i = protocol.Curve().ScalarBaseMult(state.R_i)
 
-	state.InstanceKeyOpening = make(map[types.SharingID]*hashcommitments.Opening)
+	state.InstanceKeyOpening = make(map[types.SharingID]hashcommitments.Witness)
 	state.Chi_i = make(map[types.SharingID]curves.Scalar)
 	outputP2P := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round3P2P]()
 
@@ -191,11 +189,11 @@ func DoRound3(p *Participant, protocol types.ThresholdSignatureProtocol, state *
 		}
 
 		// step 1.4: (c'_ij, w_ij) <- Commit(i || j || sid || R_i)
-		committer, err := hashcommitments.NewCommitter(p.SessionId, p.Prng, bitstring.ToBytes32LE(int32(p.SharingId())), bitstring.ToBytes32LE(int32(sharingId)))
+		committer, err := hashcommitments.NewCommittingKeyFromCrsBytes(p.SessionId, bitstring.ToBytes32LE(int32(p.SharingId())), bitstring.ToBytes32LE(int32(sharingId)))
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot instantiate committer")
 		}
-		commitmentToInstanceKey, opening, err := committer.Commit(state.BigR_i.ToAffineCompressed())
+		commitmentToInstanceKey, opening, err := committer.Commit(state.BigR_i.ToAffineCompressed(), p.Prng)
 		if err != nil {
 			return nil, nil, errs.NewFailed("cannot commit to instance key")
 		}
@@ -259,7 +257,7 @@ func DoRound4(p *Participant, protocol types.ThresholdSignatureProtocol, state *
 	a := [mult.L]curves.Scalar{state.R_i, state.Sk_i}
 
 	state.ReceivedBigR_i = hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
-	state.ReceivedInstanceKeyCommitments = make(map[types.SharingID]*hashcommitments.Commitment)
+	state.ReceivedInstanceKeyCommitments = make(map[types.SharingID]hashcommitments.Commitment)
 	state.Cu_i = make(map[types.SharingID]curves.Scalar)
 	state.Cv_i = make(map[types.SharingID]curves.Scalar)
 	outputP2P := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round4P2P]()
@@ -366,11 +364,14 @@ func DoRound5Prologue(p *Participant, protocol types.ThresholdSignatureProtocol,
 			return errs.NewMissing("do not have BigRI in memory for %s", participant.String())
 		}
 		// step 3.2: Open(j || i || sid || R_i, c'_ij, w_ij)
-		verifier := hashcommitments.NewVerifier(p.SessionId, bitstring.ToBytes32LE(int32(sharingId)), bitstring.ToBytes32LE(int32(p.SharingId())))
-		if !bytes.Equal(receivedBigR_i.ToAffineCompressed(), receivedP2PMessage.InstanceKeyOpening.GetMessage()) {
-			return errs.NewVerification("opening is not tied to the expected value")
+		verifier, err := hashcommitments.NewCommittingKeyFromCrsBytes(p.SessionId, bitstring.ToBytes32LE(int32(sharingId)), bitstring.ToBytes32LE(int32(p.SharingId())))
+		if err != nil {
+			return errs.WrapFailed(err, "cannot create verifier")
 		}
-		if err := verifier.Verify(state.ReceivedInstanceKeyCommitments[sharingId], receivedP2PMessage.InstanceKeyOpening); err != nil {
+		// if !bytes.Equal(receivedBigR_i.ToAffineCompressed(), receivedP2PMessage.InstanceKeyOpening.GetMessage()) {
+		//	return errs.NewVerification("opening is not tied to the expected value")
+		//}
+		if err := verifier.Verify(state.ReceivedInstanceKeyCommitments[sharingId], receivedBigR_i.ToAffineCompressed(), receivedP2PMessage.InstanceKeyOpening); err != nil {
 			return errs.WrapIdentifiableAbort(err, participant.String(), "message could not be opened")
 		}
 

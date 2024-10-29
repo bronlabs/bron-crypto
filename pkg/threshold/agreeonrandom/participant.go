@@ -36,8 +36,8 @@ func (p *Participant) IdentityKey() types.IdentityKey {
 
 type State struct {
 	r_i                 curves.Scalar
-	opening             *hashcommitments.Opening
-	receivedCommitments ds.Map[types.IdentityKey, *hashcommitments.Commitment]
+	opening             hashcommitments.Witness
+	receivedCommitments ds.Map[types.IdentityKey, hashcommitments.Commitment]
 
 	_ ds.Incomparable
 }
@@ -58,7 +58,7 @@ func NewParticipant(authKey types.AuthKey, protocol types.Protocol, transcript t
 		Protocol:   protocol,
 		Transcript: transcript,
 		state: &State{
-			receivedCommitments: hashmap.NewHashableHashMap[types.IdentityKey, *hashcommitments.Commitment](),
+			receivedCommitments: hashmap.NewHashableHashMap[types.IdentityKey, hashcommitments.Commitment](),
 		},
 	}
 
