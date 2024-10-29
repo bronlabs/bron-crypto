@@ -9,7 +9,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -38,11 +38,11 @@ func (p *Participant) SoundnessError() int {
 }
 
 type ProverState struct {
-	esidCommitment *hashcommitments.Commitment
-	w1             []*saferith.Nat
-	r1             []*saferith.Nat
-	w2             []*saferith.Nat
-	r2             []*saferith.Nat
+	eCommitment hashcommitments.Commitment
+	w1          []*saferith.Nat
+	r1          []*saferith.Nat
+	w2          []*saferith.Nat
+	r2          []*saferith.Nat
 
 	_ ds.Incomparable
 }
@@ -58,10 +58,10 @@ type Prover struct {
 }
 
 type VerifierState struct {
-	e           *big.Int
-	esidOpening *hashcommitments.Opening
-	c1          []*paillier.CipherText
-	c2          []*paillier.CipherText
+	e        *big.Int
+	eWitness hashcommitments.Witness
+	c1       []*paillier.CipherText
+	c2       []*paillier.CipherText
 
 	_ ds.Incomparable
 }
@@ -155,7 +155,7 @@ func NewVerifier(t int, q *saferith.Nat, pk *paillier.PublicKey, xEncrypted *pai
 	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), capLen)
 
 	// 1.ii. computes c = c (-) l
-	cMinusQThirdEncrypted, err := pk.SubPlaintext(xEncrypted, l)
+	cMinusQThirdEncrypted, err := pk.CipherTextSubPlainText(xEncrypted, l)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt l")
 	}

@@ -8,10 +8,19 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/primes"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/copperexchange/krypton-primitives/pkg/indcpa"
+)
+
+var (
+	_ indcpa.PlainText  = (*PlainText)(nil)
+	_ indcpa.Nonce      = (*Nonce)(nil)
+	_ indcpa.CipherText = (*CipherText)(nil)
+	_ indcpa.Scalar     = (*Scalar)(nil)
 )
 
 type PlainText = saferith.Nat
-
+type Nonce = saferith.Nat
+type Scalar = saferith.Nat
 type CipherText struct {
 	C *saferith.Nat
 }

@@ -13,7 +13,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton-primitives/pkg/indcpa/paillier"
 	paillierrange "github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/range"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )

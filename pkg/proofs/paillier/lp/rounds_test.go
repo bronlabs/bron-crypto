@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lp"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )

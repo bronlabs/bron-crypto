@@ -112,8 +112,8 @@ type SignerState struct {
 	Dv_i                           map[types.SharingID]curves.Scalar
 	Psi_i                          map[types.SharingID]curves.Scalar
 	Chi_i                          map[types.SharingID]curves.Scalar
-	InstanceKeyOpening             map[types.SharingID]*hashcommitments.Opening
-	ReceivedInstanceKeyCommitments map[types.SharingID]*hashcommitments.Commitment
+	InstanceKeyOpening             map[types.SharingID]hashcommitments.Witness
+	ReceivedInstanceKeyCommitments map[types.SharingID]hashcommitments.Commitment
 	ReceivedBigR_i                 ds.Map[types.IdentityKey, curves.Point]
 	Protocols                      *SubProtocols
 

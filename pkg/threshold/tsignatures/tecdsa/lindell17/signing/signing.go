@@ -9,8 +9,8 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/copperexchange/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
@@ -50,7 +50,7 @@ func CalcC3(lambda1, k2, mPrime, r, additiveShare curves.Scalar, q *saferith.Nat
 	}
 
 	// c2 = Enc(k2^(-1) * r * (cKey * λ1 + share * λ2))
-	c2Left, err := pk.MulPlaintext(cKey, k2Inv.Mul(r).Mul(lambda1).Nat())
+	c2Left, err := pk.CipherTextMul(cKey, k2Inv.Mul(r).Mul(lambda1).Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "homomorphic multiplication failed")
 	}
@@ -58,13 +58,13 @@ func CalcC3(lambda1, k2, mPrime, r, additiveShare curves.Scalar, q *saferith.Nat
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt c2")
 	}
-	c2, err := pk.Add(c2Left, c2Right)
+	c2, err := pk.CipherTextAdd(c2Left, c2Right)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "homomorphic addition failed")
 	}
 
 	// c3 = c1 + c2 = Enc(ρq + k2^(-1)(m' + r * (y1 * λ1 + y2 * λ2)))
-	c3, err = pk.Add(c1, c2)
+	c3, err = pk.CipherTextAdd(c1, c2)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "homomorphic addition failed")
 	}

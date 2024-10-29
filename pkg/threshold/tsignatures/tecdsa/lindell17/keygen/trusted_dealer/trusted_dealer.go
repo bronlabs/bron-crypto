@@ -14,7 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"

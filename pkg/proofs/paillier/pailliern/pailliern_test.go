@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/pailliern"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )

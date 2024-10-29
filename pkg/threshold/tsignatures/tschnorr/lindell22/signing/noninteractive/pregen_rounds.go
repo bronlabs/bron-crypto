@@ -1,7 +1,6 @@
 package noninteractive_signing
 
 import (
-	"bytes"
 	"io"
 	"slices"
 
@@ -43,11 +42,11 @@ func (p *PreGenParticipant) Round1() (broadcastOutput *Round1Broadcast, err erro
 	bigR2 := p.Protocol.Curve().ScalarBaseMult(k2)
 
 	// 3. compute Rcom = commit(R1, R2, pid, sessionId, S)
-	committer, err := hashcommitments.NewCommitter(p.SessionId, p.Prng, []byte(commitmentDomainRLabel), p.state.pid, p.state.bigS)
+	committer, err := hashcommitments.NewCommittingKeyFromCrsBytes(p.SessionId, []byte(commitmentDomainRLabel), p.state.pid, p.state.bigS)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot instantiate committer")
 	}
-	commitment, opening, err := committer.Commit(slices.Concat(bigR1.ToAffineCompressed(), bigR2.ToAffineCompressed()))
+	commitment, opening, err := committer.Commit(slices.Concat(bigR1.ToAffineCompressed(), bigR2.ToAffineCompressed()), p.Prng)
 	if err != nil {
 		return nil, errs.NewFailed("cannot commit to R")
 	}
@@ -75,7 +74,7 @@ func (p *PreGenParticipant) Round2(broadcastInput network.RoundMessages[types.Th
 		return nil, errs.WrapValidation(err, "invalid round 2 input broadcast messages")
 	}
 
-	theirBigRCommitment := hashmap.NewHashableHashMap[types.IdentityKey, *hashcommitments.Commitment]()
+	theirBigRCommitment := hashmap.NewHashableHashMap[types.IdentityKey, hashcommitments.Commitment]()
 	for identity := range p.preSigners.Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
@@ -134,11 +133,14 @@ func (p *PreGenParticipant) Round3(broadcastInput network.RoundMessages[types.Th
 		}
 
 		// 1. verify commitment
-		verifier := hashcommitments.NewVerifier(p.SessionId, []byte(commitmentDomainRLabel), theirPid, p.state.bigS)
-		if !bytes.Equal(slices.Concat(theirBigR1.ToAffineCompressed(), theirBigR2.ToAffineCompressed()), theirBigROpening.GetMessage()) {
-			return nil, errs.NewVerification("opening is not tied to the expected value")
+		verifier, err := hashcommitments.NewCommittingKeyFromCrsBytes(p.SessionId, []byte(commitmentDomainRLabel), theirPid, p.state.bigS)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot instantiate verifier")
 		}
-		if err := verifier.Verify(theirBigRCommitment, theirBigROpening); err != nil {
+		// if !bytes.Equal(, theirBigROpening.GetMessage()) {
+		//	return nil, errs.NewVerification("opening is not tied to the expected value")
+		//}
+		if err := verifier.Verify(theirBigRCommitment, slices.Concat(theirBigR1.ToAffineCompressed(), theirBigR2.ToAffineCompressed()), theirBigROpening); err != nil {
 			return nil, errs.WrapFailed(err, "cannot open R commitment")
 		}
 

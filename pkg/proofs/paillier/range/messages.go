@@ -8,11 +8,11 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/copperexchange/krypton-primitives/pkg/indcpa/paillier"
 )
 
 type Round1Output struct {
-	EsidCommitment *hashcommitments.Commitment
+	ECommitment hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
@@ -21,9 +21,9 @@ func (r1out *Round1Output) Validate() error {
 	if r1out == nil {
 		return errs.NewIsNil("round 1 output")
 	}
-	if err := r1out.EsidCommitment.Validate(); err != nil {
-		return errs.WrapValidation(err, "invalid Esid commitment")
-	}
+	// if err := r1out.EsidCommitment.Validate(); err != nil {
+	//	return errs.WrapValidation(err, "invalid Esid commitment")
+	//}
 	return nil
 }
 
@@ -56,26 +56,10 @@ func (r2out *Round2Output) Validate(t int) error {
 }
 
 type Round3Output struct {
-	E           *big.Int
-	EsidOpening *hashcommitments.Opening
+	E        *big.Int
+	EWitness hashcommitments.Witness
 
 	_ ds.Incomparable
-}
-
-func (r3out *Round3Output) Validate(t int) error {
-	if r3out == nil {
-		return errs.NewIsNil("round 3 output")
-	}
-	if r3out.E == nil {
-		return errs.NewIsNil("E")
-	}
-	if r3out.E.Cmp(big.NewInt(0)) != 1 {
-		return errs.NewArgument("E (%s) not positive", r3out.E.String())
-	}
-	if err := r3out.EsidOpening.Validate(); err != nil {
-		return errs.WrapValidation(err, "invalid Esid opening")
-	}
-	return nil
 }
 
 type ZetZero struct {
