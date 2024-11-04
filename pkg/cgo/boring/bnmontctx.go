@@ -5,20 +5,23 @@ package boring
 // #cgo CFLAGS: -I "${SRCDIR}/../../../thirdparty/boringssl/include"
 // #include <openssl/bn.h>
 import "C"
-import "runtime"
+import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/nocopy"
+	"runtime"
+)
 
 type nativeBnMontCtx = *C.BN_MONT_CTX
 
 type BigNumMontCtx struct {
 	nativeBnMontCtx
 
-	noCopy      noCopy
-	copyChecker copyChecker
+	noCopy      nocopy.NoCopy
+	copyChecker nocopy.CopyChecker
 }
 
 func NewBigNumMontCtx(m *BigNum, bigNumCtx *BigNumCtx) (*BigNumMontCtx, error) {
-	m.copyChecker.check()
-	bigNumCtx.copyChecker.check()
+	m.copyChecker.Check()
+	bigNumCtx.copyChecker.Check()
 
 	nativeCtx := C.BN_MONT_CTX_new_consttime(&m.nativeBigNum, bigNumCtx.nativeBnCtx)
 	if nativeCtx == nil {
@@ -34,7 +37,7 @@ func NewBigNumMontCtx(m *BigNum, bigNumCtx *BigNumCtx) (*BigNumMontCtx, error) {
 		runtime.KeepAlive(montCtx)
 	})
 
-	ctx.copyChecker.check()
+	ctx.copyChecker.Check()
 	runtime.KeepAlive(m)
 	runtime.KeepAlive(bigNumCtx)
 	return ctx, nil

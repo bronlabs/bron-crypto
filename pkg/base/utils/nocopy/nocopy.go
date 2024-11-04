@@ -1,6 +1,4 @@
-//go:build !purego && !nobignum
-
-package boring
+package nocopy
 
 import (
 	"sync"
@@ -8,10 +6,10 @@ import (
 	"unsafe"
 )
 
-// copyChecker holds back pointer to itself to detect object copying.
-type copyChecker uintptr
+// CopyChecker holds back pointer to itself to detect object copying.
+type CopyChecker uintptr
 
-func (c *copyChecker) check() {
+func (c *CopyChecker) Check() {
 	// Check if c has been copied in three steps:
 	// 1. The first comparison is the fast-path. If c has been initialised and not copied, this will return immediately. Otherwise, c is either not initialised, or has been copied.
 	// 2. Ensure c is initialised. If the CAS succeeds, we're done. If it fails, c was either initialised concurrently and we simply lost the race, or c has been copied.
@@ -24,17 +22,17 @@ func (c *copyChecker) check() {
 	}
 }
 
-// noCopy may be added to structs which must not be copied
+// NoCopy may be added to structs which must not be copied
 // after the first use.
 //
 // See https://golang.org/issues/8005#issuecomment-190753527
 // for details.
 //
 // Note that it must not be embedded, due to the Lock and Unlock methods.
-type noCopy struct{}
+type NoCopy struct{}
 
-var _ sync.Locker = (*noCopy)(nil)
+var _ sync.Locker = (*NoCopy)(nil)
 
 // Lock is a no-op used by -copylocks checker from `go vet`.
-func (*noCopy) Lock()   {}
-func (*noCopy) Unlock() {}
+func (*NoCopy) Lock()   {}
+func (*NoCopy) Unlock() {}

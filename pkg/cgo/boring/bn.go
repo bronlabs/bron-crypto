@@ -9,6 +9,7 @@ import (
 )
 
 import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/nocopy"
 	"runtime"
 	"unsafe"
 
@@ -20,8 +21,8 @@ type nativeBigNum = C.BIGNUM
 type BigNum struct {
 	nativeBigNum
 
-	noCopy      noCopy
-	copyChecker copyChecker
+	noCopy      nocopy.NoCopy
+	copyChecker nocopy.CopyChecker
 }
 
 var (
@@ -48,7 +49,7 @@ func NewBigNum() *BigNum {
 		runtime.KeepAlive(bn)
 	})
 
-	bn.copyChecker.check()
+	bn.copyChecker.Check()
 	return bn
 }
 
@@ -57,7 +58,7 @@ func NewBigNum() *BigNum {
 // (This is needed for Diffie-Hellman groups to ensure that the only subgroups are of size 2 and (p-1)/2.)
 // Beware: this function is rather slow for safe primes. Use dedicated DiffieHellmanGroup.GenerateParameters instead.
 func (bn *BigNum) GenPrime(bits int, safe bool) (*BigNum, error) {
-	bn.copyChecker.check()
+	bn.copyChecker.Check()
 
 	safeInt := utils.BoolTo[C.int](safe)
 	ret := C.BN_generate_prime_ex(&bn.nativeBigNum, (C.int)(bits), safeInt, nil, nil, nil)
@@ -70,10 +71,10 @@ func (bn *BigNum) GenPrime(bits int, safe bool) (*BigNum, error) {
 
 // Gcd sets bn = gcd(a, b).
 func (bn *BigNum) Gcd(a, b *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
-	bn.copyChecker.check()
-	a.copyChecker.check()
-	b.copyChecker.check()
-	bnCtx.copyChecker.check()
+	bn.copyChecker.Check()
+	a.copyChecker.Check()
+	b.copyChecker.Check()
+	bnCtx.copyChecker.Check()
 
 	ret := C.BN_gcd(&bn.nativeBigNum, &a.nativeBigNum, &b.nativeBigNum, bnCtx.nativeBnCtx)
 	if ret != 1 {
@@ -88,7 +89,7 @@ func (bn *BigNum) Gcd(a, b *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
 
 // Bytes serialises the value of bn as a big-endian integer.
 func (bn *BigNum) Bytes() ([]byte, error) {
-	bn.copyChecker.check()
+	bn.copyChecker.Check()
 
 	announcedLen := ((C.BN_BITS2 * bn.nativeBigNum.width) + 7) / 8
 	buffer := make([]byte, announcedLen)
@@ -106,12 +107,12 @@ func (bn *BigNum) Bytes() ([]byte, error) {
 // Exp sets bn equal to a^p mod m.
 // It treats a, p, and m as secrets and requires 0 <= a < m.
 func (bn *BigNum) Exp(a, p, m *BigNum, montCtx *BigNumMontCtx, bnCtx *BigNumCtx) (*BigNum, error) {
-	bn.copyChecker.check()
-	a.copyChecker.check()
-	p.copyChecker.check()
-	m.copyChecker.check()
-	montCtx.copyChecker.check()
-	bnCtx.copyChecker.check()
+	bn.copyChecker.Check()
+	a.copyChecker.Check()
+	p.copyChecker.Check()
+	m.copyChecker.Check()
+	montCtx.copyChecker.Check()
+	bnCtx.copyChecker.Check()
 
 	ret := C.BN_mod_exp_mont_consttime(&bn.nativeBigNum, &a.nativeBigNum, &p.nativeBigNum, &m.nativeBigNum, bnCtx.nativeBnCtx, montCtx.nativeBnMontCtx)
 	if ret != 1 {
@@ -128,11 +129,11 @@ func (bn *BigNum) Exp(a, p, m *BigNum, montCtx *BigNumMontCtx, bnCtx *BigNumCtx)
 
 // ModMul sets bn = a*b mod m.
 func (bn *BigNum) ModMul(l, r, m *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
-	bn.copyChecker.check()
-	l.copyChecker.check()
-	r.copyChecker.check()
-	m.copyChecker.check()
-	bnCtx.copyChecker.check()
+	bn.copyChecker.Check()
+	l.copyChecker.Check()
+	r.copyChecker.Check()
+	m.copyChecker.Check()
+	bnCtx.copyChecker.Check()
 
 	ret := C.BN_mod_mul(&bn.nativeBigNum, &l.nativeBigNum, &r.nativeBigNum, &m.nativeBigNum, bnCtx.nativeBnCtx)
 	if ret != 1 {
@@ -149,10 +150,10 @@ func (bn *BigNum) ModMul(l, r, m *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
 // ModSub sets bn = l - r mod m
 // It requires that l and r be less than m.
 func (bn *BigNum) ModSub(l, r, m *BigNum) (*BigNum, error) {
-	bn.copyChecker.check()
-	l.copyChecker.check()
-	r.copyChecker.check()
-	m.copyChecker.check()
+	bn.copyChecker.Check()
+	l.copyChecker.Check()
+	r.copyChecker.Check()
+	m.copyChecker.Check()
 
 	ret := C.BN_mod_sub_quick(&bn.nativeBigNum, &l.nativeBigNum, &r.nativeBigNum, &m.nativeBigNum)
 	if ret != 1 {
@@ -168,10 +169,10 @@ func (bn *BigNum) ModSub(l, r, m *BigNum) (*BigNum, error) {
 // ModAdd sets bn = l + r mod m.
 // It requires that l and r be less than m.
 func (bn *BigNum) ModAdd(l, r, m *BigNum) (*BigNum, error) {
-	bn.copyChecker.check()
-	l.copyChecker.check()
-	r.copyChecker.check()
-	m.copyChecker.check()
+	bn.copyChecker.Check()
+	l.copyChecker.Check()
+	r.copyChecker.Check()
+	m.copyChecker.Check()
 
 	ret := C.BN_mod_add_quick(&bn.nativeBigNum, &l.nativeBigNum, &r.nativeBigNum, &m.nativeBigNum)
 	if ret != 1 {
@@ -186,10 +187,10 @@ func (bn *BigNum) ModAdd(l, r, m *BigNum) (*BigNum, error) {
 
 // Mod sets bn = x mod m.
 func (bn *BigNum) Mod(x, m *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
-	bn.copyChecker.check()
-	x.copyChecker.check()
-	m.copyChecker.check()
-	bnCtx.copyChecker.check()
+	bn.copyChecker.Check()
+	x.copyChecker.Check()
+	m.copyChecker.Check()
+	bnCtx.copyChecker.Check()
 
 	r := C.BN_nnmod(&bn.nativeBigNum, &x.nativeBigNum, &m.nativeBigNum, bnCtx.nativeBnCtx)
 	if r != 1 {
@@ -205,7 +206,7 @@ func (bn *BigNum) Mod(x, m *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
 
 // SetBytes sets bn to the value of bytes from data, interpreted as a big-endian number.
 func (bn *BigNum) SetBytes(data []byte) (*BigNum, error) {
-	bn.copyChecker.check()
+	bn.copyChecker.Check()
 
 	if len(data) == 0 {
 		C.BN_clear_free(&bn.nativeBigNum)

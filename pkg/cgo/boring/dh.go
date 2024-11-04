@@ -6,15 +6,18 @@ package boring
 // #include <openssl/dh.h>
 // #include <openssl/bn.h>
 import "C"
-import "runtime"
+import (
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/nocopy"
+	"runtime"
+)
 
 type nativeDh = *C.DH
 
 type DiffieHellmanGroup struct {
 	nativeDh
 
-	noCopy
-	copyChecker copyChecker
+	nocopy.NoCopy
+	copyChecker nocopy.CopyChecker
 }
 
 func NewDiffieHellmanGroup() *DiffieHellmanGroup {
@@ -31,12 +34,12 @@ func NewDiffieHellmanGroup() *DiffieHellmanGroup {
 		runtime.KeepAlive(dhGroup)
 	})
 
-	dhGroup.copyChecker.check()
+	dhGroup.copyChecker.Check()
 	return dhGroup
 }
 
 func (dh *DiffieHellmanGroup) GenerateParameters(primeBits int) *DiffieHellmanGroup {
-	dh.copyChecker.check()
+	dh.copyChecker.Check()
 
 	ret := C.DH_generate_parameters_ex(dh.nativeDh, C.int(primeBits), C.DH_GENERATOR_2, nil)
 	if ret != 1 {
@@ -47,7 +50,7 @@ func (dh *DiffieHellmanGroup) GenerateParameters(primeBits int) *DiffieHellmanGr
 }
 
 func (dh *DiffieHellmanGroup) GetP() *BigNum {
-	dh.copyChecker.check()
+	dh.copyChecker.Check()
 
 	nativeP := C.DH_get0_p(dh.nativeDh)
 	if nativeP == nil {

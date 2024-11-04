@@ -24,9 +24,9 @@ import (
 )
 
 func (bn *BigNum) Jacobi(b *BigNum, bnCtx *BigNumCtx) (int, error) {
-	bn.copyChecker.check()
-	b.copyChecker.check()
-	bnCtx.copyChecker.check()
+	bn.copyChecker.Check()
+	b.copyChecker.Check()
+	bnCtx.copyChecker.Check()
 
 	ret := C.BN_jacobi(&bn.nativeBigNum, &b.nativeBigNum, bnCtx.nativeBnCtx)
 	if ret == -2 {
