@@ -185,6 +185,7 @@ func Test_HappyPathThresholdMina(t *testing.T) {
 	networkId := mina.TestNet
 	variant := mina.NewMinaVariant(networkId)
 	hashFunc := poseidon.NewLegacyHash
+	identitiesHashFunc := sha256.New
 	curve := pallas.NewCurve()
 	prng := crand.Reader
 	message := new(mina.ROInput).Init()
@@ -196,7 +197,10 @@ func Test_HappyPathThresholdMina(t *testing.T) {
 	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
 	require.NoError(t, err)
 
-	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	identityCipherSuite, err := ttu.MakeSigningSuite(curve, identitiesHashFunc)
+	require.NoError(t, err)
+
+	identities, err := ttu.MakeTestIdentities(identityCipherSuite, n)
 	require.NoError(t, err)
 
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
@@ -238,6 +242,7 @@ func Test_ThresholdMinaAgainstMinaSigner(t *testing.T) {
 	networkId := mina.TestNet
 	variant := mina.NewMinaVariant(networkId)
 	hashFunc := poseidon.NewLegacyHash
+	identitiesHashFunc := sha256.New
 	curve := pallas.NewCurve()
 	prng := crand.Reader
 	message := new(mina.ROInput).Init()
@@ -249,7 +254,10 @@ func Test_ThresholdMinaAgainstMinaSigner(t *testing.T) {
 	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
 	require.NoError(t, err)
 
-	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+	identityCipherSuite, err := ttu.MakeSigningSuite(curve, identitiesHashFunc)
+	require.NoError(t, err)
+
+	identities, err := ttu.MakeTestIdentities(identityCipherSuite, n)
 	require.NoError(t, err)
 
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)

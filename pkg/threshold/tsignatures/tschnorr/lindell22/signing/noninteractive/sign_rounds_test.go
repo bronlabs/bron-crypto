@@ -234,6 +234,11 @@ func Test_SignNonInteractiveThresholdMina(t *testing.T) {
 	variant := mina.NewMinaVariant(networkId)
 	curve := pallas.NewCurve()
 	hashFunc := poseidon.NewLegacyHash
+	identitiesHashFunc := sha256.New
+
+	identityCipherSuite, err := ttu.MakeSigningSuite(curve, identitiesHashFunc)
+	require.NoError(t, err)
+
 	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
 	require.NoError(t, err)
 
@@ -250,7 +255,7 @@ func Test_SignNonInteractiveThresholdMina(t *testing.T) {
 		t.Run(fmt.Sprintf("Mina (%d,%d,%d)", n, nPresigners, threshold), func(t *testing.T) {
 			t.Parallel()
 
-			identities, err := ttu.MakeTestIdentities(cipherSuite, n)
+			identities, err := ttu.MakeTestIdentities(identityCipherSuite, n)
 			require.NoError(t, err)
 
 			protocolConfig, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, threshold, identities)

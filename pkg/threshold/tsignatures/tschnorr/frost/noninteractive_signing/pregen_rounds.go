@@ -31,7 +31,10 @@ func (p *PreGenParticipant) Round1() (*Round1Broadcast, error) {
 		Ej := p.Protocol.Curve().ScalarBaseMult(ej)
 		message := Dj.ToAffineCompressed()
 		message = append(message, Ej.ToAffineCompressed()...)
-		attestation := p.myAuthKey.Sign(message)
+		attestation, err := p.myAuthKey.Sign(message)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not sign attestation")
+		}
 
 		p.state.ds[j] = dj
 		p.state.es[j] = ej

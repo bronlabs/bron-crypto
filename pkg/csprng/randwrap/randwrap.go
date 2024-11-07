@@ -56,7 +56,10 @@ func NewWrappedReader(prng io.Reader, deterministicWrappingKey types.AuthKey) (*
 		return nil, errs.WrapFailed(err, "could not read device info")
 	}
 
-	signedTag1 := deterministicWrappingKey.Sign(tag1)
+	signedTag1, err := deterministicWrappingKey.Sign(tag1)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not sign tag1")
+	}
 	salt, err := hashing.Hash(base.RandomOracleHashFunction, signedTag1)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not hash signed tag1")
@@ -113,7 +116,11 @@ func validateInputs(prng io.Reader, deterministicWrappingKey types.AuthKey) erro
 	if deterministicWrappingKey == nil {
 		return errs.NewIsNil("deterministic wrapping key is nil")
 	}
-	if !types.AuthKeyIsDeterministic(deterministicWrappingKey) {
+	deterministic, err := types.AuthKeyIsDeterministic(deterministicWrappingKey)
+	if err != nil {
+		return errs.WrapValidation(err, "deterministic wrapping key")
+	}
+	if !deterministic {
 		return errs.NewType("wrapping key is not deterministic")
 	}
 	return nil

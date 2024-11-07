@@ -45,8 +45,9 @@ func ValidateIdentityKey(k IdentityKey) error {
 
 type AuthKey interface {
 	IdentityKey
-	Sign(message []byte) []byte
-	PrivateKey() curves.Scalar
+	Sign(message []byte) ([]byte, error)
+	Encrypt(plaintext []byte, receiverKey IdentityKey, opts any) ([]byte, error)
+	Decrypt(ciphertext []byte, senderKey IdentityKey, opts any) ([]byte, error)
 }
 
 func ValidateAuthKey(k AuthKey) error {
@@ -56,12 +57,13 @@ func ValidateAuthKey(k AuthKey) error {
 	if err := ValidateIdentityKey(k); err != nil {
 		return errs.WrapValidation(err, "identity key")
 	}
-	sk := k.PrivateKey()
-	if sk == nil {
-		return errs.NewIsNil("private key")
+	message := []byte("Brazil Fifa 2002 team > all other teams")
+	signed, err := k.Sign(message)
+	if err != nil {
+		return errs.WrapValidation(err, "failed to sign")
 	}
-	if sk.IsZero() {
-		return errs.NewIsZero("private key")
+	if err := k.Verify(signed, message); err != nil {
+		return errs.WrapValidation(err, "failed to verify")
 	}
 	if curveSec := curves.ComputationalSecurity(k.PublicKey().Curve()); curveSec < base.ComputationalSecurity {
 		return errs.NewCurve("Curve security (%d) below %d bits", curveSec, base.ComputationalSecurity)
@@ -69,9 +71,17 @@ func ValidateAuthKey(k AuthKey) error {
 	return nil
 }
 
-func AuthKeyIsDeterministic(k AuthKey) bool {
+func AuthKeyIsDeterministic(k AuthKey) (bool, error) {
 	message := []byte("Brazil Fifa 2002 team > all other teams")
-	return subtle.ConstantTimeCompare(k.Sign(message), k.Sign(message)) == 1
+	signFirst, err := k.Sign(message)
+	if err != nil {
+		return false, errs.WrapFailed(err, "failed to sign")
+	}
+	signSecond, err := k.Sign(message)
+	if err != nil {
+		return false, errs.WrapFailed(err, "failed to sign")
+	}
+	return subtle.ConstantTimeCompare(signFirst, signSecond) == 1, nil
 }
 
 type ByPublicKey []IdentityKey

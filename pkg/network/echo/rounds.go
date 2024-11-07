@@ -27,8 +27,12 @@ func (p *Participant) Round1() (network.RoundMessages[types.Protocol, *Round1P2P
 				return nil, errs.WrapHashing(err, "couldn't produce auth message")
 			}
 			// step 1.1 and 1.2
+			initiatorSignature, err := p.AuthKey().Sign(authMessage)
+			if err != nil {
+				return nil, errs.WrapFailed(err, "failed to sign auth message")
+			}
 			result.Put(participant, &Round1P2P{
-				InitiatorSignature: p.AuthKey().Sign(authMessage),
+				InitiatorSignature: initiatorSignature,
 				Message:            p.state.messageToBroadcast,
 			})
 		}

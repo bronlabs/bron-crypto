@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/copperexchange/krypton-primitives/pkg/encryptions/hpke"
 	"hash"
 	"reflect"
 	"slices"
@@ -32,6 +33,11 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
 
+type message struct {
+	EphemeralPublicKey curves.Point
+	CipherText         []byte
+}
+
 type TestAuthKey struct {
 	suite      types.SigningSuite
 	privateKey *vanillaSchnorr.PrivateKey
@@ -42,12 +48,15 @@ type TestAuthKey struct {
 
 type TestIdentityKey = TestAuthKey
 
-var _ types.IdentityKey = (*TestAuthKey)(nil)
-var _ types.AuthKey = (*TestAuthKey)(nil)
-
-func (k *TestAuthKey) PrivateKey() curves.Scalar {
-	return k.privateKey.S
-}
+var (
+	_           types.IdentityKey = (*TestAuthKey)(nil)
+	_           types.AuthKey     = (*TestAuthKey)(nil)
+	cipherSuite                   = &hpke.CipherSuite{
+		KDF:  hpke.KDF_HKDF_SHA256,
+		KEM:  hpke.DHKEM_P256_HKDF_SHA256,
+		AEAD: hpke.AEAD_CHACHA_20_POLY_1305,
+	}
+)
 
 func (k *TestAuthKey) PublicKey() curves.Point {
 	return k.publicKey.A
@@ -61,16 +70,16 @@ func (k *TestAuthKey) Equal(rhs types.IdentityKey) bool {
 	return subtle.ConstantTimeCompare(k.PublicKey().ToAffineCompressed(), rhs.PublicKey().ToAffineCompressed()) == 1
 }
 
-func (k *TestAuthKey) Sign(message []byte) []byte {
+func (k *TestAuthKey) Sign(message []byte) ([]byte, error) {
 	signer, err := vanillaSchnorr.NewSigner(k.suite, k.privateKey)
 	if err != nil {
-		panic(err)
+		return nil, errs.WrapFailed(err, "could not create schnorr signer")
 	}
 	signature, err := signer.Sign(message, crand.Reader)
 	if err != nil {
-		panic(err)
+		return nil, errs.WrapFailed(err, "could not sign message")
 	}
-	return slices.Concat(signature.R.ToAffineCompressed(), signature.S.Bytes())
+	return slices.Concat(signature.R.ToAffineCompressed(), signature.S.Bytes()), nil
 }
 
 func (k *TestAuthKey) Verify(signature, message []byte) error {
@@ -102,6 +111,14 @@ func (k *TestAuthKey) Verify(signature, message []byte) error {
 	return nil
 }
 
+func (k *TestAuthKey) Encrypt(plaintext []byte, receiverKey types.IdentityKey, opts any) ([]byte, error) {
+	return encrypt(&hpke.PrivateKey{PublicKey: k.PublicKey(), D: k.privateKey.S}, plaintext, receiverKey)
+}
+
+func (k *TestAuthKey) Decrypt(ciphertext []byte, senderKey types.IdentityKey, opts any) ([]byte, error) {
+	return decrypt(&hpke.PrivateKey{PublicKey: k.PublicKey(), D: k.privateKey.S}, ciphertext, senderKey)
+}
+
 func (k *TestAuthKey) String() string {
 	return fmt.Sprintf("%x", k.PublicKey().ToAffineCompressed())
 }
@@ -115,12 +132,6 @@ var _ types.AuthKey = (*TestDeterministicAuthKey)(nil)
 type TestDeterministicAuthKey struct {
 	privateKey ed25519.PrivateKey
 	publicKey  ed25519.PublicKey
-}
-
-func (k *TestDeterministicAuthKey) PrivateKey() curves.Scalar {
-	hashed := sha512.Sum512(k.privateKey.Seed())
-	result, _ := edwards25519.NewScalar(0).SetBytesWithClampingLE(hashed[:32])
-	return result
 }
 
 func (k *TestDeterministicAuthKey) PublicKey() curves.Point {
@@ -139,12 +150,26 @@ func (k *TestDeterministicAuthKey) Equal(rhs types.IdentityKey) bool {
 	return subtle.ConstantTimeCompare(k.PublicKey().ToAffineCompressed(), rhs.PublicKey().ToAffineCompressed()) == 1
 }
 
-func (k *TestDeterministicAuthKey) Sign(message []byte) []byte {
+func (k *TestDeterministicAuthKey) Sign(message []byte) ([]byte, error) {
 	signature, err := k.privateKey.Sign(crand.Reader, message, &ed25519.Options{})
 	if err != nil {
-		panic(err)
+		return nil, errs.WrapFailed(err, "could not sign message")
 	}
-	return signature
+	return signature, nil
+}
+
+func (k *TestDeterministicAuthKey) Encrypt(plaintext []byte, receiverKey types.IdentityKey, opts any) ([]byte, error) {
+	hashed := sha512.Sum512(k.privateKey.Seed())
+	result, _ := edwards25519.NewScalar(0).SetBytesWithClampingLE(hashed[:32])
+
+	return encrypt(&hpke.PrivateKey{PublicKey: k.PublicKey(), D: result}, plaintext, receiverKey)
+}
+
+func (k *TestDeterministicAuthKey) Decrypt(ciphertext []byte, senderKey types.IdentityKey, opts any) ([]byte, error) {
+	hashed := sha512.Sum512(k.privateKey.Seed())
+	result, _ := edwards25519.NewScalar(0).SetBytesWithClampingLE(hashed[:32])
+
+	return decrypt(&hpke.PrivateKey{PublicKey: k.PublicKey(), D: result}, ciphertext, senderKey)
 }
 
 func (k *TestDeterministicAuthKey) Verify(signature, message []byte) error {
@@ -160,6 +185,40 @@ func (k *TestDeterministicAuthKey) String() string {
 
 func (*TestDeterministicAuthKey) MarshalJSON() ([]byte, error) {
 	panic("not implemented")
+}
+
+func encrypt(key *hpke.PrivateKey, plaintext []byte, receiverKey types.IdentityKey) ([]byte, error) {
+	cipherText, ephemeralPublicKey, err := hpke.Seal(hpke.Auth, cipherSuite, plaintext, nil, receiverKey.PublicKey(), key, nil, nil, nil, crand.Reader)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not encrypt message")
+	}
+	msg := &message{
+		EphemeralPublicKey: ephemeralPublicKey,
+		CipherText:         cipherText,
+	}
+	encryptedPayload := new(bytes.Buffer)
+	enc := gob.NewEncoder(encryptedPayload)
+	err = enc.Encode(msg)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not encode message")
+	}
+
+	return encryptedPayload.Bytes(), nil
+}
+
+func decrypt(key *hpke.PrivateKey, ciphertext []byte, senderKey types.IdentityKey) ([]byte, error) {
+	dec := gob.NewDecoder(bytes.NewReader(ciphertext))
+	var msg *message
+	if err := dec.Decode(msg); err != nil {
+		return nil, errs.WrapSerialisation(err, "could not decode message")
+	}
+
+	decrypted, err := hpke.Open(hpke.Auth, cipherSuite, msg.CipherText, nil, key, msg.EphemeralPublicKey, senderKey.PublicKey(), nil, nil, nil)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not decrypt message")
+	}
+
+	return decrypted, nil
 }
 
 type HexBytes []byte
