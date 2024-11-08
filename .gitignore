@@ -34,3 +34,5 @@ docs/build/*
 # golangci-lint Cache
 /.golangcicache
 /.gocache
+
+thirdparty/boringssl

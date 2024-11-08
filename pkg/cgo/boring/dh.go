@@ -2,7 +2,6 @@
 
 package boring
 
-// #cgo CFLAGS: -I "${SRCDIR}/../../../thirdparty/boringssl/include"
 // #include <openssl/dh.h>
 // #include <openssl/bn.h>
 import "C"

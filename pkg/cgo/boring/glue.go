@@ -2,8 +2,6 @@
 
 package boring
 
-// #cgo CFLAGS: -I "${SRCDIR}/../../../thirdparty/boringssl" -I "${SRCDIR}/../../../thirdparty/boringssl/include"
-// #cgo LDFLAGS: -L"${SRCDIR}/../../../thirdparty/boringssl/build/crypto" -lcrypto
 // #include "crypto/fipsmodule/bn/internal.h"
 // #include <openssl/err.h>
 //
