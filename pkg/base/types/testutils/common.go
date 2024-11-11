@@ -111,12 +111,25 @@ func (k *TestAuthKey) Verify(signature, message []byte) error {
 	return nil
 }
 
-func (k *TestAuthKey) Encrypt(plaintext []byte, receiverKey types.IdentityKey, opts any) ([]byte, error) {
-	return encrypt(&hpke.PrivateKey{PublicKey: k.PublicKey(), D: k.privateKey.S}, plaintext, receiverKey)
+func (k *TestAuthKey) Encrypt(plaintext []byte) ([]byte, error) {
+	return encrypt(k.PublicKey(), plaintext)
 }
 
-func (k *TestAuthKey) Decrypt(ciphertext []byte, senderKey types.IdentityKey, opts any) ([]byte, error) {
-	return decrypt(&hpke.PrivateKey{PublicKey: k.PublicKey(), D: k.privateKey.S}, ciphertext, senderKey)
+func (k *TestAuthKey) EncryptFrom(sender types.AuthKey, plaintext []byte) ([]byte, error) {
+	senderKey, ok := sender.(*TestAuthKey)
+	if !ok {
+		return nil, errs.NewType("sender is not deterministic auth key")
+	}
+
+	return encryptFrom(&hpke.PrivateKey{PublicKey: k.PublicKey(), D: senderKey.privateKey.S}, plaintext, k.PublicKey())
+}
+
+func (k *TestAuthKey) Decrypt(ciphertext []byte) ([]byte, error) {
+	return decrypt(&hpke.PrivateKey{PublicKey: k.PublicKey(), D: k.privateKey.S}, ciphertext)
+}
+
+func (k *TestAuthKey) DecryptFrom(sender types.IdentityKey, ciphertext []byte) ([]byte, error) {
+	return decryptFrom(&hpke.PrivateKey{PublicKey: k.PublicKey(), D: k.privateKey.S}, ciphertext, sender)
 }
 
 func (k *TestAuthKey) String() string {
@@ -158,18 +171,34 @@ func (k *TestDeterministicAuthKey) Sign(message []byte) ([]byte, error) {
 	return signature, nil
 }
 
-func (k *TestDeterministicAuthKey) Encrypt(plaintext []byte, receiverKey types.IdentityKey, opts any) ([]byte, error) {
-	hashed := sha512.Sum512(k.privateKey.Seed())
-	result, _ := edwards25519.NewScalar(0).SetBytesWithClampingLE(hashed[:32])
-
-	return encrypt(&hpke.PrivateKey{PublicKey: k.PublicKey(), D: result}, plaintext, receiverKey)
+func (k *TestDeterministicAuthKey) Encrypt(plaintext []byte) ([]byte, error) {
+	return encrypt(k.PublicKey(), plaintext)
 }
 
-func (k *TestDeterministicAuthKey) Decrypt(ciphertext []byte, senderKey types.IdentityKey, opts any) ([]byte, error) {
+func (k *TestDeterministicAuthKey) EncryptFrom(sender types.AuthKey, plaintext []byte) ([]byte, error) {
+	senderDeterministicKey, ok := sender.(*TestDeterministicAuthKey)
+	if !ok {
+		return nil, errs.NewType("sender is not deterministic auth key")
+	}
+
+	hashed := sha512.Sum512(senderDeterministicKey.privateKey.Seed())
+	result, _ := edwards25519.NewScalar(0).SetBytesWithClampingLE(hashed[:32])
+
+	return encryptFrom(&hpke.PrivateKey{PublicKey: k.PublicKey(), D: result}, plaintext, k.PublicKey())
+}
+
+func (k *TestDeterministicAuthKey) Decrypt(ciphertext []byte) ([]byte, error) {
 	hashed := sha512.Sum512(k.privateKey.Seed())
 	result, _ := edwards25519.NewScalar(0).SetBytesWithClampingLE(hashed[:32])
 
-	return decrypt(&hpke.PrivateKey{PublicKey: k.PublicKey(), D: result}, ciphertext, senderKey)
+	return decrypt(&hpke.PrivateKey{PublicKey: k.PublicKey(), D: result}, ciphertext)
+}
+
+func (k *TestDeterministicAuthKey) DecryptFrom(sender types.IdentityKey, ciphertext []byte) ([]byte, error) {
+	hashed := sha512.Sum512(k.privateKey.Seed())
+	result, _ := edwards25519.NewScalar(0).SetBytesWithClampingLE(hashed[:32])
+
+	return decryptFrom(&hpke.PrivateKey{PublicKey: k.PublicKey(), D: result}, ciphertext, sender)
 }
 
 func (k *TestDeterministicAuthKey) Verify(signature, message []byte) error {
@@ -187,8 +216,8 @@ func (*TestDeterministicAuthKey) MarshalJSON() ([]byte, error) {
 	panic("not implemented")
 }
 
-func encrypt(key *hpke.PrivateKey, plaintext []byte, receiverKey types.IdentityKey) ([]byte, error) {
-	cipherText, ephemeralPublicKey, err := hpke.Seal(hpke.Auth, cipherSuite, plaintext, nil, receiverKey.PublicKey(), key, nil, nil, nil, crand.Reader)
+func encrypt(publicKey curves.Point, plaintext []byte) ([]byte, error) {
+	cipherText, ephemeralPublicKey, err := hpke.Seal(hpke.Base, cipherSuite, plaintext, nil, publicKey, nil, nil, nil, nil, crand.Reader)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not encrypt message")
 	}
@@ -206,7 +235,41 @@ func encrypt(key *hpke.PrivateKey, plaintext []byte, receiverKey types.IdentityK
 	return encryptedPayload.Bytes(), nil
 }
 
-func decrypt(key *hpke.PrivateKey, ciphertext []byte, senderKey types.IdentityKey) ([]byte, error) {
+func encryptFrom(key *hpke.PrivateKey, plaintext []byte, receiverKey curves.Point) ([]byte, error) {
+	cipherText, ephemeralPublicKey, err := hpke.Seal(hpke.Auth, cipherSuite, plaintext, nil, receiverKey, key, nil, nil, nil, crand.Reader)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not encrypt message")
+	}
+	msg := &message{
+		EphemeralPublicKey: ephemeralPublicKey,
+		CipherText:         cipherText,
+	}
+	encryptedPayload := new(bytes.Buffer)
+	enc := gob.NewEncoder(encryptedPayload)
+	err = enc.Encode(msg)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not encode message")
+	}
+
+	return encryptedPayload.Bytes(), nil
+}
+
+func decrypt(key *hpke.PrivateKey, ciphertext []byte) ([]byte, error) {
+	dec := gob.NewDecoder(bytes.NewReader(ciphertext))
+	var msg *message
+	if err := dec.Decode(msg); err != nil {
+		return nil, errs.WrapSerialisation(err, "could not decode message")
+	}
+
+	decrypted, err := hpke.Open(hpke.Base, cipherSuite, msg.CipherText, nil, key, msg.EphemeralPublicKey, nil, nil, nil, nil)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not decrypt message")
+	}
+
+	return decrypted, nil
+}
+
+func decryptFrom(key *hpke.PrivateKey, ciphertext []byte, senderKey types.IdentityKey) ([]byte, error) {
 	dec := gob.NewDecoder(bytes.NewReader(ciphertext))
 	var msg *message
 	if err := dec.Decode(msg); err != nil {

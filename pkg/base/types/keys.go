@@ -19,7 +19,11 @@ import (
 type IdentityKey interface {
 	String() string
 	PublicKey() curves.Point
+
 	Verify(signature []byte, message []byte) error
+
+	Encrypt(plaintext []byte) ([]byte, error)
+	EncryptFrom(sender AuthKey, plaintext []byte) ([]byte, error)
 	ds.Hashable[IdentityKey]
 	json.Marshaler
 }
@@ -46,8 +50,9 @@ func ValidateIdentityKey(k IdentityKey) error {
 type AuthKey interface {
 	IdentityKey
 	Sign(message []byte) ([]byte, error)
-	Encrypt(plaintext []byte, receiverKey IdentityKey, opts any) ([]byte, error)
-	Decrypt(ciphertext []byte, senderKey IdentityKey, opts any) ([]byte, error)
+
+	Decrypt(ciphertext []byte) ([]byte, error)
+	DecryptFrom(sender IdentityKey, ciphertext []byte) ([]byte, error)
 }
 
 func ValidateAuthKey(k AuthKey) error {
