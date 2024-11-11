@@ -256,7 +256,7 @@ func encryptFrom(key *hpke.PrivateKey, plaintext []byte, receiverKey curves.Poin
 
 func decrypt(key *hpke.PrivateKey, ciphertext []byte) ([]byte, error) {
 	dec := gob.NewDecoder(bytes.NewReader(ciphertext))
-	var msg *message
+	msg := &message{}
 	if err := dec.Decode(msg); err != nil {
 		return nil, errs.WrapSerialisation(err, "could not decode message")
 	}
@@ -271,7 +271,7 @@ func decrypt(key *hpke.PrivateKey, ciphertext []byte) ([]byte, error) {
 
 func decryptFrom(key *hpke.PrivateKey, ciphertext []byte, senderKey types.IdentityKey) ([]byte, error) {
 	dec := gob.NewDecoder(bytes.NewReader(ciphertext))
-	var msg *message
+	msg := &message{}
 	if err := dec.Decode(msg); err != nil {
 		return nil, errs.WrapSerialisation(err, "could not decode message")
 	}
