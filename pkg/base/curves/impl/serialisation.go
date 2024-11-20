@@ -10,8 +10,15 @@ import (
 type Serializer func() []byte
 type Deserializer[E any] func(input []byte) (E, error)
 
+// this is same as pem.Block, but with json tags to print it nicely.
+type jsonPemBlock struct {
+	Type    string            `json:"type"`
+	Headers map[string]string `json:"headers,omitempty"`
+	Bytes   []byte            `json:"bytes"`
+}
+
 func MarshalJson(name string, f Serializer) ([]byte, error) {
-	e := &pem.Block{
+	e := &jsonPemBlock{
 		Type:  name,
 		Bytes: f(),
 	}
@@ -23,7 +30,7 @@ func MarshalJson(name string, f Serializer) ([]byte, error) {
 }
 
 func UnmarshalJson[E any](f Deserializer[E], input []byte) (E, error) {
-	var block pem.Block
+	var block jsonPemBlock
 	if err := json.Unmarshal(input, &block); err != nil {
 		return *new(E), errs.WrapSerialisation(err, "could not unmarshal json to pem block")
 	}
@@ -31,7 +38,7 @@ func UnmarshalJson[E any](f Deserializer[E], input []byte) (E, error) {
 }
 
 func ParseJSON(data []byte) (name string, serialised []byte, err error) {
-	var e pem.Block
+	var e jsonPemBlock
 	if err := json.Unmarshal(data, &e); err != nil {
 		return "", nil, errs.WrapSerialisation(err, "json unmarshal failed")
 	}
