@@ -70,7 +70,13 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 		if !exists {
 			return nil, errs.NewMissing("missing ot config for participant %s", participant.String())
 		}
-		otProtocol, err := types.NewProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, authKey.(types.IdentityKey)))
+
+		myIdentityKey, ok := authKey.(types.IdentityKey)
+		if !ok {
+			return nil, errs.NewType("could not convert auth key to identity key")
+		}
+
+		otProtocol, err := types.NewProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, myIdentityKey))
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct ot protocol config for me and %s", participant.String())
 		}

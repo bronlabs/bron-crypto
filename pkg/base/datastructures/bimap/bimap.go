@@ -2,7 +2,6 @@ package bimap
 
 import (
 	"encoding/json"
-
 	"iter"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"

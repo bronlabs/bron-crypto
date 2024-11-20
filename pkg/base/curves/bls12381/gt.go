@@ -2,11 +2,11 @@ package bls12381
 
 import (
 	"io"
+	"iter"
 	"sync"
 
 	"github.com/cronokirby/saferith"
 	"golang.org/x/crypto/sha3"
-	"iter"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"

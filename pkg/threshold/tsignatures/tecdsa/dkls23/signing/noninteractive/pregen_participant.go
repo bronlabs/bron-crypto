@@ -64,7 +64,13 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 		if participant.Equal(myAuthKey) {
 			continue
 		}
-		otProtocol, err := types.NewProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, myAuthKey.(types.IdentityKey)))
+
+		myIdentityKey, ok := myAuthKey.(types.IdentityKey)
+		if !ok {
+			return nil, errs.NewType("could not convert my auth key to identity key")
+		}
+
+		otProtocol, err := types.NewProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, myIdentityKey))
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct ot protocol config for me and %s", participant.String())
 		}

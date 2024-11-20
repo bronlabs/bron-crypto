@@ -49,8 +49,6 @@ linters:
     - errorlint
     # check exhaustiveness of enum switch statements
     - exhaustive
-    # checks for pointers to enclosing loop variables
-    - exportloopref
     # Forbids identifiers
     - forbidigo
     # finds forced type assertions
@@ -277,6 +275,8 @@ linters-settings:
     # minimal occurrences count to trigger, 3 by default
     min-occurrences: 3
   gosec:
+    excludes:
+      - G115 # Potential integer overflow when converting between integer types TODO: enable this back and revisit the code
     # To select a subset of rules to run.
     # Available rules: https://github.com/securego/gosec#available-rules
     # Default: [] - means include all rules
@@ -1005,7 +1005,7 @@ issues:
       linters:
         staticcheck
 
-    # big portions of `aes` trigger duplicated code (encrypt vs devrypt, constants) and 
+    # big portions of `aes` trigger duplicated code (encrypt vs devrypt, constants) and
     # unused constants (poly).
     - path: thirdparty/
       linters:

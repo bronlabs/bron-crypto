@@ -3,9 +3,9 @@ package bf128
 import (
 	"encoding/binary"
 	"io"
+	"iter"
 
 	"github.com/cronokirby/saferith"
-	"iter"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"

@@ -2,12 +2,12 @@ package p256
 
 import (
 	"io"
+	"iter"
 	"reflect"
 	"strings"
 	"sync"
 
 	"github.com/cronokirby/saferith"
-	"iter"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"

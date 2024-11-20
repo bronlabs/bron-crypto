@@ -2,9 +2,9 @@ package uint256
 
 import (
 	"io"
+	"iter"
 
 	"github.com/cronokirby/saferith"
-	"iter"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"

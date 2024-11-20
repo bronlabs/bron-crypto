@@ -2,12 +2,12 @@ package curve25519
 
 import (
 	"io"
+	"iter"
 	"strings"
 	"sync"
 
 	"github.com/cronokirby/saferith"
 	curve25519n "golang.org/x/crypto/curve25519"
-	"iter"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"

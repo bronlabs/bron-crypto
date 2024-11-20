@@ -2,11 +2,11 @@ package edwards25519
 
 import (
 	"io"
+	"iter"
 	"sync"
 
 	filippo_field "filippo.io/edwards25519/field"
 	"github.com/cronokirby/saferith"
-	"iter"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"

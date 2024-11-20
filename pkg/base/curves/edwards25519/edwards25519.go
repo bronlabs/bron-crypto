@@ -2,6 +2,7 @@ package edwards25519
 
 import (
 	"io"
+	"iter"
 	"reflect"
 	"strings"
 	"sync"
@@ -9,7 +10,6 @@ import (
 	filippo "filippo.io/edwards25519"
 	filippo_field "filippo.io/edwards25519/field"
 	"github.com/cronokirby/saferith"
-	"iter"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"

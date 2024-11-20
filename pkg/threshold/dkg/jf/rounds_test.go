@@ -484,7 +484,7 @@ func testAbortOnRogueKeyAttach(t *testing.T, curve curves.Curve, hash func() has
 	r3Ins := ttu.MapBroadcastO2I(t, participants, r2OutsB)
 	_, _, err = participants[victimIndex].Round3(r3Ins[victimIndex])
 	require.True(t, errs.IsIdentifiableAbort(err, identities[attackerIndex]))
-	require.True(t, strings.Contains(err.Error(), "dlog proof"))
+	require.ErrorContains(t, err, "dlog proof")
 }
 
 func testPreviousDkgExecutionReuse(t *testing.T, curve curves.Curve, hash func() hash.Hash, tAlpha, nAlpha, tBeta, nBeta int) {

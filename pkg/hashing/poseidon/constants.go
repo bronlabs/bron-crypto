@@ -860,5 +860,5 @@ func dec(dec string) *pallas.BaseFieldElement {
 	}
 	bn := new(saferith.Nat).SetBig(bi, 256)
 	fe := pallas.NewBaseFieldElement(0).SetNat(bn)
-	return fe.(*pallas.BaseFieldElement) //nolint:forcetypeassert // force
+	return fe.(*pallas.BaseFieldElement) //nolint:forcetypeassert,errcheck // force
 }

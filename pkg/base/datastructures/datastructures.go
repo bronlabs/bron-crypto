@@ -2,9 +2,9 @@ package datastructures
 
 import (
 	"encoding/json"
+	"iter"
 
 	"github.com/cronokirby/saferith"
-	"iter"
 )
 
 type Incomparable [0]func()

@@ -3,11 +3,11 @@ package edwards25519
 import (
 	"crypto/subtle"
 	"io"
+	"iter"
 	"sync"
 
 	filippo "filippo.io/edwards25519"
 	"github.com/cronokirby/saferith"
-	"iter"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"

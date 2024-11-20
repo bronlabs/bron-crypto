@@ -2,9 +2,9 @@ package hashset
 
 import (
 	"encoding/json"
+	"iter"
 
 	"github.com/cronokirby/saferith"
-	"iter"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"

@@ -2,9 +2,8 @@ package concurrentMap
 
 import (
 	"encoding/json"
-	"sync"
-
 	"iter"
+	"sync"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"

@@ -2,9 +2,9 @@ package hashmap
 
 import (
 	"encoding/json"
+	"iter"
 
 	"golang.org/x/exp/maps"
-	"iter"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"

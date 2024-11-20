@@ -2,10 +2,10 @@ package hashset
 
 import (
 	"encoding/json"
+	"iter"
 
 	"github.com/cronokirby/saferith"
 	"golang.org/x/exp/maps"
-	"iter"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
