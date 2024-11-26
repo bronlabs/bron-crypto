@@ -275,8 +275,8 @@ linters-settings:
     # minimal occurrences count to trigger, 3 by default
     min-occurrences: 3
   gosec:
-    excludes:
-      - G115 # Potential integer overflow when converting between integer types TODO: enable this back and revisit the code
+    # excludes:
+    #   - G115 # Potential integer overflow when converting between integer types TODO: enable this back and revisit the code
     # To select a subset of rules to run.
     # Available rules: https://github.com/securego/gosec#available-rules
     # Default: [] - means include all rules
