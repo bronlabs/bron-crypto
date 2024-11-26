@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
 	mult "github.com/copperexchange/krypton-primitives/pkg/threshold/mult/dkls23"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/sample"
@@ -133,7 +134,7 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 	if preSigners == nil {
 		return errs.NewIsNil("preSigners")
 	}
-	if preSigners.Size() < int(protocol.Threshold()) {
+	if preSigners.Size() < safecast.MustToInt(protocol.Threshold()) {
 		return errs.NewSize("not enough session participants: %d", preSigners.Size())
 	}
 	if preSigners.Difference(protocol.Participants()).Size() != 0 {

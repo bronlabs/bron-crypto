@@ -15,6 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	saferith_utils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -247,7 +248,7 @@ func (s *Scalar) Eq(rhs curves.Scalar) uint64 {
 	if !ok {
 		return 0
 	}
-	return uint64(s.V.Equal(rhse.V))
+	return safecast.MustToUint64(s.V.Equal(rhse.V))
 }
 
 func (s *Scalar) Clone() curves.Scalar {
@@ -477,7 +478,7 @@ func (s *Scalar) Cmp(rhs algebra.OrderTheoreticLatticeElement[curves.ScalarField
 	r, ok := rhs.(*Scalar)
 	if ok {
 		g, e, _ := s.Nat().Cmp(r.Nat())
-		return algebra.Ordering((int(g) + int(g) + int(e)) - 1)
+		return algebra.Ordering((safecast.MustToInt(g) + safecast.MustToInt(g) + safecast.MustToInt(e)) - 1)
 	}
 
 	return algebra.Incomparable

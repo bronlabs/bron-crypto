@@ -14,6 +14,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/uint2k/uint256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
@@ -197,7 +198,7 @@ func BitsToInt(b []byte, curve curves.Curve) uint256.Uint256 {
 	// Limit to exactly |q| bits, padded with zeros
 	qlen := curve.Order().BitLen()
 	if blen > qlen {
-		bUint = bUint.Rsh(uint(blen - qlen))
+		bUint = bUint.Rsh(safecast.MustToUint(blen - qlen))
 	}
 	return bUint
 }

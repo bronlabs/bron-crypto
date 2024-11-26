@@ -8,6 +8,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 const (
@@ -30,7 +31,7 @@ type kmac struct {
 
 // Copied from "golang.org/x/crypto/sha3/shake".
 func Bytepad(input []byte, w int) []byte {
-	buf := LeftEncode(uint64(w))
+	buf := LeftEncode(safecast.MustToUint64(w))
 	buf = slices.Concat(buf, input)
 	padlen := w - (len(buf) % w)
 	return slices.Concat(buf, make([]byte, padlen))
@@ -67,7 +68,7 @@ func RightEncode(value uint64) []byte {
 func AbsorbPaddedKey(key []byte, tagSize int, c sha3.ShakeHash) hash.Hash {
 	k := &kmac{ShakeHash: c, tagSize: tagSize}
 	// absorb bytepad(encode_string(K), rate) into the internal state
-	k.initBlock = LeftEncode(uint64(len(key) * 8))
+	k.initBlock = LeftEncode(safecast.MustToUint64(len(key) * 8))
 	k.initBlock = slices.Concat(k.initBlock, key)
 	k.Write(Bytepad(k.initBlock, k.BlockSize()))
 	return k
@@ -111,7 +112,7 @@ func (k *kmac) Size() int {
 func (k *kmac) Sum(b []byte) []byte {
 	clone := k.ShakeHash.Clone()
 	// absorb right_encode(L)
-	clone.Write(RightEncode(uint64(k.tagSize * 8)))
+	clone.Write(RightEncode(safecast.MustToUint64(k.tagSize * 8)))
 
 	// squeeze tagSize bytes
 	tag := make([]byte, k.tagSize)

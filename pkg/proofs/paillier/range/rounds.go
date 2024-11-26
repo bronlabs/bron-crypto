@@ -10,6 +10,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 )
@@ -22,7 +23,7 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 
 	// 1.iii. chooses a random e (t bit length)
 	// this values is used to iterate over bits - more convenient to keep as big.Int
-	verifier.state.e, err = crand.Int(verifier.Prng, new(big.Int).Lsh(big.NewInt(1), uint(verifier.t)))
+	verifier.state.e, err = crand.Int(verifier.Prng, new(big.Int).Lsh(big.NewInt(1), safecast.MustToUint(verifier.t)))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get random number")
 	}

@@ -9,6 +9,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 type HashableHashSet[E ds.Hashable[E]] struct {
@@ -56,7 +57,7 @@ func (s *HashableHashSet[_]) Size() int {
 }
 
 func (s *HashableHashSet[_]) Cardinality() *saferith.Nat {
-	return new(saferith.Nat).SetUint64(uint64(s.v.Size()))
+	return new(saferith.Nat).SetUint64(safecast.MustToUint64(s.v.Size()))
 }
 
 func (s *HashableHashSet[_]) IsEmpty() bool {

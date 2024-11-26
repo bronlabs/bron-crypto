@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -245,7 +246,7 @@ func (sf *ScalarField) Select(choice uint64, x0, x1 curves.Scalar) curves.Scalar
 	if !oks || s.V == nil {
 		panic("s is not a non-empty pallas scalar")
 	}
-	s.V.CMove(x0s.V, x1s.V, int(choice))
+	s.V.CMove(x0s.V, x1s.V, safecast.MustToInt(choice))
 	return s
 }
 

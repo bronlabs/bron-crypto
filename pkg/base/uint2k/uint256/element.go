@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 var (
@@ -196,12 +197,12 @@ func (u Uint256) Previous() (Uint256, error) {
 }
 
 func (u Uint256) Min(rhs Uint256) Uint256 {
-	lt := uint64(subtle.ConstantTimeEq(int32(u.Cmp(rhs)), int32(algebra.LessThan)))
+	lt := safecast.MustToUint64(subtle.ConstantTimeEq(safecast.MustToInt32(u.Cmp(rhs)), safecast.MustToInt32(algebra.LessThan)))
 	return Ring().Select(lt, u, rhs)
 }
 
 func (u Uint256) Max(rhs Uint256) Uint256 {
-	lt := uint64(subtle.ConstantTimeEq(int32(u.Cmp(rhs)), int32(algebra.LessThan)))
+	lt := safecast.MustToUint64(subtle.ConstantTimeEq(safecast.MustToInt32(u.Cmp(rhs)), safecast.MustToInt32(algebra.LessThan)))
 	return Ring().Select(lt, rhs, u)
 }
 
@@ -380,9 +381,9 @@ func (u Uint256) IsExclusiveDisjunctiveInverse(of algebra.ExclusiveDisjunctiveGr
 func (u Uint256) Lsh(n uint) Uint256 {
 	s := [4]uint64{0, 0, 0, 0}
 
-	nLeq64Mask := uint64(0) - uint64(subtle.ConstantTimeLessOrEq(int(n), 64))
-	nLeq128Gt64Mask := (uint64(0) - uint64(subtle.ConstantTimeLessOrEq(int(n), 128))) ^ nLeq64Mask
-	nLeq192Gt128Mask := (uint64(0) - uint64(subtle.ConstantTimeLessOrEq(int(n), 192))) ^ (nLeq64Mask | nLeq128Gt64Mask)
+	nLeq64Mask := uint64(0) - safecast.MustToUint64(subtle.ConstantTimeLessOrEq(safecast.MustToInt(n), 64))
+	nLeq128Gt64Mask := (uint64(0) - safecast.MustToUint64(subtle.ConstantTimeLessOrEq(safecast.MustToInt(n), 128))) ^ nLeq64Mask
+	nLeq192Gt128Mask := (uint64(0) - safecast.MustToUint64(subtle.ConstantTimeLessOrEq(safecast.MustToInt(n), 192))) ^ (nLeq64Mask | nLeq128Gt64Mask)
 	s[0] = (u[0] << n) & nLeq64Mask
 	s[1] = (u[1] << n) | (u[0]>>(64-n))&nLeq64Mask |
 		u[0]<<(n-64)&nLeq128Gt64Mask
@@ -400,9 +401,9 @@ func (u Uint256) Lsh(n uint) Uint256 {
 func (u Uint256) Rsh(n uint) Uint256 {
 	s := [4]uint64{0, 0, 0, 0}
 
-	nLeq64Mask := uint64(0) - uint64(subtle.ConstantTimeLessOrEq(int(n), 64))
-	nLeq128Gt64Mask := (uint64(0) - uint64(subtle.ConstantTimeLessOrEq(int(n), 128))) ^ nLeq64Mask
-	nLeq192Gt128Mask := (uint64(0) - uint64(subtle.ConstantTimeLessOrEq(int(n), 192))) ^ (nLeq64Mask | nLeq128Gt64Mask)
+	nLeq64Mask := uint64(0) - safecast.MustToUint64(subtle.ConstantTimeLessOrEq(safecast.MustToInt(n), 64))
+	nLeq128Gt64Mask := (uint64(0) - safecast.MustToUint64(subtle.ConstantTimeLessOrEq(safecast.MustToInt(n), 128))) ^ nLeq64Mask
+	nLeq192Gt128Mask := (uint64(0) - safecast.MustToUint64(subtle.ConstantTimeLessOrEq(safecast.MustToInt(n), 192))) ^ (nLeq64Mask | nLeq128Gt64Mask)
 	s[0] = (u[0] >> n) | (u[1]<<(64-n))&nLeq64Mask |
 		(u[1] >> (n - 64)) | (u[2]<<(128-n))&nLeq128Gt64Mask |
 		(u[2] >> (n - 128)) | (u[3]<<(192-n))&nLeq192Gt128Mask |

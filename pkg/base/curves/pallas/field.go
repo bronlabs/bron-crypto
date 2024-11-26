@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -243,7 +244,7 @@ func (*BaseField) Select(choice uint64, x0, x1 curves.BaseFieldElement) curves.B
 		panic("x1 is not a non-empty pallas field element")
 	}
 	return &BaseFieldElement{
-		V: new(fp.Fp).CMove(x0f.V, x1f.V, int(choice)),
+		V: new(fp.Fp).CMove(x0f.V, x1f.V, safecast.MustToInt(choice)),
 	}
 }
 

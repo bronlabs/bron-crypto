@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -65,7 +66,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proof compiler.NIZ
 			if err != nil {
 				return nil, errs.WrapFailed(err, "cannot generate response")
 			}
-			digest, err := hash(crs, a, bitstring.ToBytes32LE(int32(i)), e, p.sigmaProtocol.SerializeResponse(z))
+			digest, err := hash(crs, a, bitstring.ToBytes32LE(safecast.MustToInt32(i)), e, p.sigmaProtocol.SerializeResponse(z))
 			if err != nil {
 				return nil, errs.WrapHashing(err, "cannot compute digest")
 			}

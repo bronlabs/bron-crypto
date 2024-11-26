@@ -19,6 +19,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/mappings/elligator2"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 const Name = "edwards25519" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
@@ -239,10 +240,10 @@ func (c *Curve) Select(choice uint64, x0, x1 curves.Point) curves.Point {
 	}
 	x0Ed_x, x0Ed_y, x0Ed_z, x0Ed_t := x0Ed.V.ExtendedCoordinates()
 	x1Ed_x, x1Ed_y, x1Ed_z, x1Ed_t := x1Ed.V.ExtendedCoordinates()
-	xEd := new(filippo_field.Element).Select(x1Ed_x, x0Ed_x, int(choice))
-	yEd := new(filippo_field.Element).Select(x1Ed_y, x0Ed_y, int(choice))
-	zEd := new(filippo_field.Element).Select(x1Ed_z, x0Ed_z, int(choice))
-	tEd := new(filippo_field.Element).Select(x1Ed_t, x0Ed_t, int(choice))
+	xEd := new(filippo_field.Element).Select(x1Ed_x, x0Ed_x, safecast.MustToInt(choice))
+	yEd := new(filippo_field.Element).Select(x1Ed_y, x0Ed_y, safecast.MustToInt(choice))
+	zEd := new(filippo_field.Element).Select(x1Ed_z, x0Ed_z, safecast.MustToInt(choice))
+	tEd := new(filippo_field.Element).Select(x1Ed_t, x0Ed_t, safecast.MustToInt(choice))
 	var err error
 	sEd.V, err = sEd.V.SetExtendedCoordinates(xEd, yEd, zEd, tEd)
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 // GtFieldBytes is the number of bytes needed to represent this field.
@@ -418,7 +419,7 @@ func (f *Fp12) cyclotomicExp(a *Fp12) {
 	foundOne := 0
 
 	for i := 63; i >= 0; i-- {
-		b := int((X >> i) & 1)
+		b := safecast.MustToInt((X >> i) & 1)
 		if foundOne == 1 {
 			t.cyclotomicSquare(&t)
 		} else {

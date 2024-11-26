@@ -7,6 +7,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
@@ -130,7 +131,7 @@ func Verify(sessionId []byte, transcript transcripts.Transcript, statement *pail
 }
 
 func extractRhos(transcript transcripts.Transcript, n *saferith.Modulus) ([]*saferith.Nat, error) {
-	byteSize := uint((n.BitLen() + 7) / 8)
+	byteSize := safecast.MustToUint((n.BitLen() + 7) / 8)
 	excessBits := n.BitLen() % 8
 
 	result := make([]*saferith.Nat, M)

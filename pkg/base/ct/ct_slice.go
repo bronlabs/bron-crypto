@@ -1,6 +1,10 @@
 package ct
 
-import "golang.org/x/exp/constraints"
+import (
+	"golang.org/x/exp/constraints"
+
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
+)
 
 // SliceEachEqual returns 1 if all values of s are equal to e and returns 0 otherwise. Based on the subtle package.
 func SliceEachEqual[S ~[]I, I constraints.Unsigned](s S, e I) uint64 {
@@ -48,7 +52,7 @@ func SliceSelect[S ~[]E, E constraints.Unsigned](choice uint64, dst, x0, x1 S) {
 // SliceGreaterLE returns 1 if x > y and 0 otherwise,
 // where the slice is little-endian limb-like representation.
 func SliceGreaterLE[S ~[]E, E constraints.Unsigned](x, y S) uint64 {
-	return IsZero(uint64(SliceCmpLE(x, y) ^ 1))
+	return IsZero(safecast.MustToUint64(SliceCmpLE(x, y) ^ 1))
 }
 
 // SliceCmpLE returns 1 if x > y, 0 if x == y, -1 if x < y,
@@ -64,5 +68,5 @@ func SliceCmpLE[S ~[]E, E constraints.Unsigned](x, y S) int64 {
 		gt |= Greater(x[i], y[i]) & ^lt
 		lt |= Less(x[i], y[i]) & ^gt
 	}
-	return int64(gt) - int64(lt)
+	return safecast.MustToInt64(gt) - safecast.MustToInt64(lt)
 }

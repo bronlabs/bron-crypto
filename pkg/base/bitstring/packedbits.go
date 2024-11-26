@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 // PackedBits is a byte vector of little-endian packed bits.
@@ -31,7 +32,7 @@ func Pack(unpackedBits []uint8) (PackedBits, error) {
 func (pb PackedBits) Unpack() []uint8 {
 	vOut := make([]byte, pb.BitLen())
 	for i := range pb.BitLen() {
-		vOut[i] = pb.Get(uint(i))
+		vOut[i] = pb.Get(safecast.MustToUint(i))
 	}
 	return vOut
 }
@@ -77,7 +78,7 @@ func (pb PackedBits) Repeat(nRepetitions int) PackedBits {
 	vOut := PackedBits(make([]byte, len(pb)*nRepetitions))
 	nextBit := 0
 	for i := range pb.BitLen() {
-		bit := pb.Get(uint(i))
+		bit := pb.Get(safecast.MustToUint(i))
 		for range nRepetitions {
 			vOut[nextBit/8] |= bit << (nextBit % 8)
 			nextBit++
@@ -145,7 +146,7 @@ func Parse(v string) (PackedBits, error) {
 			return nil, errs.NewArgument("Invalid character in the input")
 		}
 		byteIndex := i / 8
-		bitPos := uint(i % 8)
+		bitPos := safecast.MustToUint(i % 8)
 
 		if char == '1' {
 			packedBits[byteIndex] |= 1 << (byte(bitPos))

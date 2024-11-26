@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 type Polynomial struct {
@@ -16,13 +17,13 @@ type Polynomial struct {
 }
 
 func (p *Polynomial) Degree() uint {
-	return uint(len(p.Coefficients) - 1)
+	return safecast.MustToUint(len(p.Coefficients) - 1)
 }
 
 func (p *Polynomial) Evaluate(x curves.Scalar) curves.Scalar {
 	degree := p.Degree()
 	out := p.Coefficients[degree].Clone()
-	for i := int(degree - 1); i >= 0; i-- {
+	for i := safecast.MustToInt(degree - 1); i >= 0; i-- {
 		out = out.Mul(x).Add(p.Coefficients[i])
 	}
 	return out
@@ -35,7 +36,7 @@ func NewRandomPolynomial(intercept curves.Scalar, degree uint, prng io.Reader) (
 	p = &Polynomial{Curve: intercept.ScalarField().Curve()}
 	p.Coefficients = make([]curves.Scalar, degree)
 	p.Coefficients[0] = intercept.Clone()
-	for i := 1; i < int(degree); i++ {
+	for i := 1; i < safecast.MustToInt(degree); i++ {
 		p.Coefficients[i], err = intercept.ScalarField().Random(prng)
 		if err != nil {
 			return nil, errs.WrapRandomSample(err, "could not generate random coefficient")

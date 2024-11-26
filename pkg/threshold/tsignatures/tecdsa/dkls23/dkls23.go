@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
@@ -157,7 +158,7 @@ func (ppm *PreProcessingMaterial) Validate(myIdentityKey types.IdentityKey, prot
 	if ppm.PreSigners == nil {
 		return errs.NewIsNil("presigners")
 	}
-	if ppm.PreSigners.Size() < int(protocol.Threshold()) {
+	if ppm.PreSigners.Size() < safecast.MustToInt(protocol.Threshold()) {
 		return errs.NewSize("not enough session participants: %d", ppm.PreSigners.Size())
 	}
 	if !ppm.PreSigners.IsSubSet(protocol.Participants()) {

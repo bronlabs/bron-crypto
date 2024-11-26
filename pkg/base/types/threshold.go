@@ -4,6 +4,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 type SharingID uint
@@ -61,7 +62,7 @@ func validateExtrasThresholdProtocolConfig(f ThresholdProtocol) error {
 	if n < t {
 		return errs.NewValue(" n < t")
 	}
-	if int(n) != f.Participants().Size() {
+	if n != safecast.MustToUint(f.Participants().Size()) {
 		return errs.NewSize("n != size of participants")
 	}
 	return nil

@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/uint2k/uint128"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 type CtrDRBG struct {
@@ -230,9 +231,9 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 		return nil, errs.NewLength("no_of_bits_to_return > max_number_of_bits")
 	}
 	// 2. L = len(input_string)/8.
-	l := uint32(len(inputString))
+	l := safecast.MustToUint32(len(inputString))
 	// 3. N = no_of_bits_to_return/8.
-	n := uint32(noOfBytesToReturn)
+	n := safecast.MustToUint32(noOfBytesToReturn)
 	// 5. Pad S with zeros, if necessary.
 	// WHILE (len (S) mod outlen) != 0, DO {S = S || 0x00}
 	sBlocks := utils.CeilDiv(int(4+4+l+1), aes.BlockSize)
@@ -262,7 +263,7 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 		if i > 0 {
 			clear(ivNs[:aes.BlockSize])
 		}
-		binary.BigEndian.PutUint32(ivNs[:aes.BlockSize], uint32(i))
+		binary.BigEndian.PutUint32(ivNs[:aes.BlockSize], safecast.MustToUint32(i))
 		// 9.2. temp = temp || BCC (K, (IV || S)).
 		BCC(aesCipher, ivNs, temp[i*aes.BlockSize:(i+1)*aes.BlockSize])
 		// 9.3. i = i + 1.

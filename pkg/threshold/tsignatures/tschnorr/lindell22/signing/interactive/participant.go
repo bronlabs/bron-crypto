@@ -9,6 +9,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
@@ -139,7 +140,7 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types
 	if quorum == nil {
 		return errs.NewIsNil("session participants")
 	}
-	if quorum.Size() < int(protocol.Threshold()) {
+	if quorum.Size() < safecast.MustToInt(protocol.Threshold()) {
 		return errs.NewSize("not enough session participants")
 	}
 	if !quorum.IsSubSet(protocol.Participants()) {

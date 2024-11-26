@@ -28,6 +28,8 @@
 
 package bitstring
 
+import "github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
+
 // A BitVector is a variable sized vector of bits. It supports
 // lookups, sets, appends, insertions, and deletions.
 //
@@ -102,7 +104,7 @@ func (vector *BitVector) indexAssert(i int) {
 
 // Append adds a bit to the end of a bit vector.
 func (vector *BitVector) Append(bit byte) {
-	index := uint32(vector.length)
+	index := safecast.MustToUint32(vector.length)
 	vector.length++
 
 	if vector.bytesLength() > len(vector.data) {
@@ -129,7 +131,7 @@ func (vector *BitVector) Append(bit byte) {
 func (vector *BitVector) Element(i int) byte {
 	vector.indexAssert(i)
 	byteIndex := i >> 3
-	byteOffset := uint32(i % 8)
+	byteOffset := safecast.MustToUint32(i % 8)
 	b := vector.data[byteIndex]
 	// Check the offset bit
 	return (b >> byteOffset) & 1
@@ -139,8 +141,8 @@ func (vector *BitVector) Element(i int) byte {
 // bit.
 func (vector *BitVector) Set(bit byte, index int) {
 	vector.indexAssert(index)
-	byteIndex := uint32(index >> 3)
-	byteOffset := uint32(index % 8)
+	byteIndex := safecast.MustToUint32(index >> 3)
+	byteOffset := safecast.MustToUint32(index % 8)
 
 	oldByte := vector.data[byteIndex]
 
@@ -168,8 +170,8 @@ func (vector *BitVector) Insert(bit byte, index int) {
 		vector.data = append(vector.data, 0)
 	}
 
-	byteIndex := uint32(index >> 3)
-	byteOffset := uint32(index % 8)
+	byteIndex := safecast.MustToUint32(index >> 3)
+	byteOffset := safecast.MustToUint32(index % 8)
 	var bitToInsert byte
 	if bit == 1 {
 		bitToInsert = 1 << byteOffset
@@ -198,8 +200,8 @@ func (vector *BitVector) Insert(bit byte, index int) {
 func (vector *BitVector) Delete(index int) {
 	vector.indexAssert(index)
 	vector.length--
-	byteIndex := uint32(index >> 3)
-	byteOffset := uint32(index % 8)
+	byteIndex := safecast.MustToUint32(index >> 3)
+	byteOffset := safecast.MustToUint32(index % 8)
 
 	oldByte := vector.data[byteIndex]
 

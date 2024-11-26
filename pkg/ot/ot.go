@@ -10,6 +10,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -162,7 +163,7 @@ func (rROT *ReceiverRotOutput) Decrypt(masks []OneTimePadedMaskPair) (OTchosenMe
 			return nil, errs.NewArgument("mask[%d] length should be L (%d != %d)", j, len(masks[j][0]), L)
 		}
 		OTchosenMessages[j] = make(Message, L)
-		choice := uint64(rROT.Choices.Get(uint(j)))
+		choice := uint64(rROT.Choices.Get(safecast.MustToUint(j)))
 		for l := 0; l < L; l++ {
 			ct.SliceSelect(choice, mask[:], masks[j][0][l][:], masks[j][1][l][:])
 			subtle.XORBytes(OTchosenMessages[j][l][:], rROT.ChosenMessages[j][l][:], mask[:])
@@ -232,7 +233,7 @@ func (rROT *ReceiverRotOutput) ApplyCorrelation(tau []CorrelationMask) (z_B []Co
 				return nil, errs.WrapHashing(err, "bad hashing r_x_j to scalar for ROT -> COT")
 			}
 			r_x = r_x.Neg()
-			bit := uint64(rROT.Choices.Get(uint(j)))
+			bit := uint64(rROT.Choices.Get(safecast.MustToUint(j)))
 			// z_B_j = τ_j - ECS(r_x_j)  if x_j == 1
 			//       =     - ECS(r_x_j)  if x_j == 0
 			z_B[j][l] = scalarField.Select(bit, r_x, tau[j][l].Add(r_x))

@@ -2,6 +2,7 @@ package fiatshamir
 
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -25,7 +26,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKPr
 	}
 	p.transcript.AppendMessages(commitmentLabel, p.sigmaProtocol.SerializeCommitment(a))
 
-	e, err := p.transcript.ExtractBytes(challengeLabel, uint(p.sigmaProtocol.GetChallengeBytesLength()))
+	e, err := p.transcript.ExtractBytes(challengeLabel, safecast.MustToUint(p.sigmaProtocol.GetChallengeBytesLength()))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot extract bytes from transcript")
 	}

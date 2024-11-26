@@ -7,6 +7,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -125,7 +126,7 @@ func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte
 	if quorum == nil {
 		return errs.NewIsNil("session participants")
 	}
-	if quorum.Size() < int(protocol.Threshold()) {
+	if quorum.Size() < safecast.MustToInt(protocol.Threshold()) {
 		return errs.NewSize("not enough session participants")
 	}
 	if !quorum.IsSubSet(protocol.Participants()) {

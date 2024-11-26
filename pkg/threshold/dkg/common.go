@@ -13,7 +13,7 @@ func ConstructPublicKeySharesMap(protocol types.ThresholdProtocol, commitmentVec
 	for j, identityKey := range sharingConfig.Iter() {
 		Y_j := protocol.Curve().AdditiveIdentity()
 		jToKs := make([]curves.Scalar, protocol.Threshold())
-		for k := 0; k < int(protocol.Threshold()); k++ {
+		for k := uint(0); k < protocol.Threshold(); k++ {
 			exp := protocol.Curve().ScalarField().New(uint64(k))
 			jToK := protocol.Curve().ScalarField().New(uint64(j)).Exp(exp.Nat())
 			jToKs[k] = jToK

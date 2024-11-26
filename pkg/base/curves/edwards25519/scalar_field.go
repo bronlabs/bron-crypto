@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -243,7 +244,7 @@ func (*ScalarField) Select(choice uint64, x0, x1 curves.Scalar) curves.Scalar {
 		panic("x1 is not a non-empty Edwards25519 scalar")
 	}
 	sBytes := x0s.Bytes()
-	subtle.ConstantTimeCopy(int(choice), sBytes, x1s.V.Bytes())
+	subtle.ConstantTimeCopy(safecast.MustToInt(choice), sBytes, x1s.V.Bytes())
 	s, err := filippo.NewScalar().SetCanonicalBytes(sBytes)
 	if err != nil {
 		panic(err)

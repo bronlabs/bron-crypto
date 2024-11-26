@@ -10,6 +10,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 // GenerateSafePrime creates a prime number `p`
@@ -26,7 +27,7 @@ func GenerateSafePrime(bits uint) (*saferith.Nat, error) {
 		// rand.Prime throws an error if bits < 2
 		// -1 so the Sophie-Germain prime is 1023 bits
 		// and the Safe prime is 1024
-		p, err = crand.Prime(crand.Reader, int(bits)-1)
+		p, err = crand.Prime(crand.Reader, safecast.MustToInt(bits)-1)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "reading from crand")
 		}
@@ -37,7 +38,7 @@ func GenerateSafePrime(bits uint) (*saferith.Nat, error) {
 		}
 	}
 
-	return new(saferith.Nat).SetBig(p, int(bits)), nil
+	return new(saferith.Nat).SetBig(p, safecast.MustToInt(bits)), nil
 }
 
 func GenerateSafePrimePair(bits uint) (p, q *saferith.Nat, err error) {

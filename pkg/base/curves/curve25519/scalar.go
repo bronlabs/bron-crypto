@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	saferith_utils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -233,7 +234,7 @@ func (s *Scalar) Eq(rhs curves.Scalar) uint64 {
 	if !ok {
 		return 0
 	}
-	return uint64(subtle.ConstantTimeCompare(s.V[:], rhse.V[:]))
+	return safecast.MustToUint64(subtle.ConstantTimeCompare(s.V[:], rhse.V[:]))
 }
 
 func (s *Scalar) Clone() curves.Scalar {

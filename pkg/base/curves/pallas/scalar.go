@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
@@ -464,7 +465,7 @@ func (s *Scalar) Cmp(rhs algebra.OrderTheoreticLatticeElement[curves.ScalarField
 	r, ok := rhs.(*Scalar)
 	if ok {
 		gt, eq, _ := s.Nat().Cmp(r.Nat())
-		return algebra.Ordering(int(gt)+int(gt)+int(eq)) - 1
+		return algebra.Ordering(safecast.MustToInt(gt)+safecast.MustToInt(gt)+safecast.MustToInt(eq)) - 1
 	} else {
 		return algebra.Incomparable
 	}

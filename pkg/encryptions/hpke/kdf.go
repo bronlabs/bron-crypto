@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 )
 
@@ -122,7 +123,7 @@ func (s *KDFScheme) labeledExpand(suiteId, prk, label, info []byte, L int) []byt
 	}
 
 	lengthBuffer := make([]byte, 2)
-	binary.BigEndian.PutUint16(lengthBuffer, uint16(L))
+	binary.BigEndian.PutUint16(lengthBuffer, safecast.MustToUint16(L))
 	labeledInfo := slices.Concat(
 		lengthBuffer, []byte(version), suiteId, label, info,
 	)

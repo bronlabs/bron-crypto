@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 var TotalPermutations = Factorial
@@ -91,7 +92,7 @@ func PartialPermutationsGenerator[T any](input *[]T, k uint) <-chan []T {
 	}
 	L := make([]int, k)
 	for i := range k {
-		L[i] = int(i)
+		L[i] = safecast.MustToInt(i)
 	}
 
 	ch := make(chan []T, 1)
@@ -101,7 +102,7 @@ func PartialPermutationsGenerator[T any](input *[]T, k uint) <-chan []T {
 		ch <- mapIndicesToElements(input, L)
 
 		for {
-			j := int(k) - 1
+			j := safecast.MustToInt(k) - 1
 			for j >= 0 {
 				A[L[j]] = false
 				t := L[j] + 1
@@ -113,7 +114,7 @@ func PartialPermutationsGenerator[T any](input *[]T, k uint) <-chan []T {
 					L[j] = t
 					r := 0
 					j++
-					for j < int(k) {
+					for j < safecast.MustToInt(k) {
 						for A[r] {
 							r++
 						}

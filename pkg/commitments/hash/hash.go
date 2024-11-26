@@ -6,6 +6,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/commitments"
 )
 
@@ -56,5 +57,5 @@ func (c *Commitment) Validate() error {
 }
 
 func encodeSessionId(sessionId []byte) []byte {
-	return slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytes32LE(int32(len(sessionId))), sessionId)
+	return slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytes32LE(safecast.MustToInt32(len(sessionId))), sessionId)
 }

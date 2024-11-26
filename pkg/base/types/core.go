@@ -5,6 +5,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 type protocol struct {
@@ -50,7 +51,7 @@ func (p *protocol) Threshold() uint {
 }
 
 func (p *protocol) TotalParties() uint {
-	return uint(p.participants.Size())
+	return safecast.MustToUint(p.participants.Size())
 }
 
 func (p *protocol) SigningSuite() SigningSuite {

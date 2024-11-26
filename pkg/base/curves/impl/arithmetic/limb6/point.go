@@ -5,6 +5,7 @@ import (
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 // EllipticPoint represents a Weierstrauss elliptic curve point.
@@ -118,7 +119,7 @@ func (p *EllipticPoint) Mul(point *EllipticPoint, scalar *FieldValue) *EllipticP
 		slot := (bytes[pos>>3] >> (pos & 7)) & 0xf
 		t.Identity()
 		for i := 1; i < 16; i++ {
-			choice := (((uint64(slot) ^ uint64(i)) - 1) >> 8) & 1
+			choice := (((safecast.MustToUint64(slot) ^ safecast.MustToUint64(i)) - 1) >> 8) & 1
 			t.CMove(t, precomputed[i], choice)
 		}
 

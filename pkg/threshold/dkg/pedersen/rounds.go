@@ -5,6 +5,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
@@ -35,7 +36,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u netw
 		return nil, nil, errs.WrapFailed(err, "couldn't construct feldman dealer")
 	}
 	proverTranscript := p.Transcript.Clone()
-	proverTranscript.AppendMessages(SharingIdLabel, bitstring.ToBytes32LE(int32(p.SharingId())))
+	proverTranscript.AppendMessages(SharingIdLabel, bitstring.ToBytes32LE(safecast.MustToInt32(p.SharingId())))
 	prover, err := p.State.NiCompiler.NewProver(p.SessionId, proverTranscript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create commitment prover")
@@ -120,7 +121,7 @@ func (p *Participant) Round2(
 		// step 2.1: Feldman.Verify(Ci)
 		// step 2.2: π_i <- NIZKPoK.Prove(s)  ∀s∈{Ci, x_ji}
 		verifierTranscript := p.Transcript.Clone()
-		verifierTranscript.AppendMessages(SharingIdLabel, bitstring.ToBytes32LE(int32(senderSharingId)))
+		verifierTranscript.AppendMessages(SharingIdLabel, bitstring.ToBytes32LE(safecast.MustToInt32(senderSharingId)))
 		verifier, err := p.State.NiCompiler.NewVerifier(p.SessionId, verifierTranscript)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot create commitment verifier")
@@ -132,7 +133,7 @@ func (p *Participant) Round2(
 		partialPublicKeyShare := p.Protocol.Curve().ScalarBaseMult(receivedSecretKeyShare)
 		iToKs := make([]curves.Scalar, p.Protocol.Threshold())
 		C_lks := make([]curves.Point, p.Protocol.Threshold())
-		for k := 0; k < int(p.Protocol.Threshold()); k++ {
+		for k := uint(0); k < p.Protocol.Threshold(); k++ {
 			exp := p.Protocol.Curve().ScalarField().New(uint64(k))
 			iToK := p.Protocol.Curve().ScalarField().New(uint64(p.SharingId())).Exp(exp.Nat())
 			C_lk := senderCommitmentVector[k]

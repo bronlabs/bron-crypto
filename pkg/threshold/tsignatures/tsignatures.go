@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
@@ -134,7 +135,7 @@ func (p *PartialPublicKeys) Validate(protocol types.ThresholdProtocol) error {
 	if !p.PublicKey.IsInPrimeSubGroup() {
 		return errs.NewValidation("Public Key not in the prime subgroup")
 	}
-	if len(p.FeldmanCommitmentVector) != int(protocol.Threshold()) {
+	if len(p.FeldmanCommitmentVector) != safecast.MustToInt(protocol.Threshold()) {
 		return errs.NewLength("feldman commitment vector length is invalid")
 	}
 	if p.Shares == nil {
@@ -157,7 +158,7 @@ func (p *PartialPublicKeys) Validate(protocol types.ThresholdProtocol) error {
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	sharingIds := make([]curves.Scalar, protocol.TotalParties())
 	partialPublicKeys := make([]curves.Point, protocol.TotalParties())
-	for i := 0; i < int(protocol.TotalParties()); i++ {
+	for i := uint(0); i < protocol.TotalParties(); i++ {
 		sharingId := types.SharingID(i + 1)
 		sharingIds[i] = p.PublicKey.Curve().ScalarField().New(uint64(sharingId))
 		identityKey, exists := sharingConfig.Get(sharingId)

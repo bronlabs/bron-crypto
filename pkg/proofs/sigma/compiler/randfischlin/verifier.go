@@ -3,6 +3,7 @@ package randfischlin
 import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -52,7 +53,7 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proof compiler.NIZKPoKProof
 
 	// step 2. for each i in [r] verify that hash(a, i, e_i, z_i) == 0 and SigmaV(x, (a_i, e_i, z_i)) is true, abort if not
 	for i := 0; i < R; i++ {
-		digest, err := hash(crs, a, bitstring.ToBytes32LE(int32(i)), rfProof.E[i], v.sigmaProtocol.SerializeResponse(rfProof.Z[i]))
+		digest, err := hash(crs, a, bitstring.ToBytes32LE(safecast.MustToInt32(i)), rfProof.E[i], v.sigmaProtocol.SerializeResponse(rfProof.Z[i]))
 		if err != nil {
 			return errs.WrapHashing(err, "cannot hash")
 		}

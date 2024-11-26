@@ -7,6 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
@@ -58,7 +59,7 @@ func validatePrivateKeyConstructionInputs(protocol types.ThresholdSignatureProto
 	if !shardHolders.IsSubSet(protocol.Participants()) {
 		return errs.NewMembership("shardholder set is not a subset of total participants")
 	}
-	if shardHolders.Size() < int(protocol.Threshold()) {
+	if shardHolders.Size() < safecast.MustToInt(protocol.Threshold()) {
 		return errs.NewSize("shard holder set size (%d) < threshold (%d)", shardHolders.Size(), protocol.Threshold())
 	}
 	var seenPublicKey curves.Point

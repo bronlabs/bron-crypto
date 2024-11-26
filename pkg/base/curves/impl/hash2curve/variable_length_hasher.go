@@ -7,6 +7,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 // VariableLengthHasher encapsulates the variable-length hash functions of blake2b.XOF and sha3.ShakeHash.
@@ -36,7 +37,7 @@ func (vlh *VariableLengthHasher) ExpandMessage(outLen int, msg, dst []byte) ([]b
 	//  uniform_bytes = H(msg || I2OSP(len_in_bytes, 2) || DST || I2OSP(len(DST), 1), len_in_bytes)
 	dstLen := byte(len(dst))
 	_, _ = h.Write(msg)
-	_, _ = h.Write([]byte{uint8(outLen >> 8), uint8(outLen)})
+	_, _ = h.Write([]byte{safecast.MustToUint8(outLen >> 8), safecast.MustToUint8(outLen)})
 	_, _ = h.Write(dst)
 	_, _ = h.Write([]byte{dstLen})
 	// step 5
@@ -72,7 +73,7 @@ func (vlh *VariableLengthHasher) HashToFieldElements(count int, msg, dst []byte)
 	if dst == nil {
 		dst = vlh.Dst()
 	}
-	m := int(vlh.Curve().BaseField().ExtensionDegree().Uint64())
+	m := safecast.MustToInt(vlh.Curve().BaseField().ExtensionDegree().Uint64())
 	u, err = hashToField(vlh, MapToFieldElement, msg, dst, count, vlh.lFieldElement, m)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "hash to field element with variable-length hash function failed")

@@ -5,6 +5,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
 )
@@ -31,7 +32,7 @@ func (r1b *Round1Broadcast) Validate(protocol types.ThresholdProtocol) error {
 	if len(r1b.Ci) == 0 {
 		return errs.NewSize("ci is empty")
 	}
-	if len(r1b.Ci) != int(protocol.Threshold()) {
+	if len(r1b.Ci) != safecast.MustToInt(protocol.Threshold()) {
 		return errs.NewLength("len(ci) == %d != t == %d", len(r1b.Ci), protocol.Threshold())
 	}
 	// ci[0] is allowed to be identity in some protocols, e.g., in recovery/refresh

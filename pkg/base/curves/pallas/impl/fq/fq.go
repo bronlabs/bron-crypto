@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 type Fq fiat_pasta_fq_montgomery_domain_field_element
@@ -318,7 +319,7 @@ func (fq *Fq) pow(base *Fq, exp [4]uint64) *Fq {
 		for j := 63; j >= 0; j-- {
 			res.Square(res)
 			tmp.Mul(res, base)
-			res.CMove(res, tmp, int(exp[i]>>j)&1)
+			res.CMove(res, tmp, safecast.MustToInt(exp[i]>>j)&1)
 		}
 	}
 	return fq.Set(res)
@@ -328,7 +329,7 @@ func (fq *Fq) pow(base *Fq, exp [4]uint64) *Fq {
 func (fq *Fq) CMove(lhs, rhs *Fq, choice int) *Fq {
 	dlhs := (*[4]uint64)(lhs)
 	drhs := (*[4]uint64)(rhs)
-	fiat_pasta_fq_selectznz((*[4]uint64)(fq), fiat_pasta_fq_uint1(choice), dlhs, drhs)
+	fiat_pasta_fq_selectznz((*[4]uint64)(fq), fiat_pasta_fq_uint1(safecast.MustToUint64(choice)), dlhs, drhs)
 	return fq
 }
 

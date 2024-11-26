@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 // FixedLengthCurveHasher encapsulates the fixed-length hash functions of sha256, sha512, sha3 and blake2b.
@@ -49,7 +50,7 @@ func (flh *FixedLengthCurveHasher) ExpandMessage(outLen int, msg, dst []byte) ([
 	dstLen := byte(len(dst))
 	_, _ = h.Write(make([]byte, h.BlockSize()))
 	_, _ = h.Write(msg)
-	_, _ = h.Write([]byte{uint8(outLen >> 8), uint8(outLen)})
+	_, _ = h.Write([]byte{safecast.MustToUint8(outLen >> 8), safecast.MustToUint8(outLen)})
 	_, _ = h.Write([]byte{0})
 	_, _ = h.Write(dst)
 	_, _ = h.Write([]byte{dstLen})
@@ -71,7 +72,7 @@ func (flh *FixedLengthCurveHasher) ExpandMessage(outLen int, msg, dst []byte) ([
 		tmp := make([]byte, h.Size())
 		subtle.XORBytes(tmp, b0, bi)
 		_, _ = h.Write(tmp)
-		_, _ = h.Write([]byte{1 + uint8(i)})
+		_, _ = h.Write([]byte{1 + safecast.MustToUint8(i)})
 		_, _ = h.Write(dst)
 		_, _ = h.Write([]byte{dstLen})
 		//  uniform_bytes = b_1 || ... || b_(ell - 1)
@@ -108,7 +109,7 @@ func (flh *FixedLengthCurveHasher) HashToFieldElements(count int, msg, dst []byt
 	if dst == nil {
 		dst = flh.Dst()
 	}
-	m := int(flh.Curve().BaseField().ExtensionDegree().Uint64())
+	m := safecast.MustToInt(flh.Curve().BaseField().ExtensionDegree().Uint64())
 	u, err = hashToField(flh, MapToFieldElement, msg, dst, count, flh.lFieldElement, m)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "hash to field element with fixed-length hash function failed")

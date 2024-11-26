@@ -8,6 +8,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 const (
@@ -94,7 +95,7 @@ func (f *Fp) Equal(rhs *Fp) uint64 {
 // 0 otherwise.
 func (f *Fp) LexicographicallyLargest() uint64 {
 	fNeg := new(Fp).Neg(f)
-	t := uint64(f.Cmp(fNeg)) ^ 1
+	t := safecast.MustToUint64(f.Cmp(fNeg)) ^ 1
 	return ((t | -t) >> 63) ^ 1
 }
 
@@ -240,7 +241,7 @@ func (f *Fp) SetBytes(arg *[FieldBytes]byte) (fRes *Fp, mask uint64) {
 	var t fiatFpNonMontgomeryDomainFieldElement
 	fiatFpFromBytes((*[FieldLimbs]uint64)(&t), arg)
 	fiatFpToMontgomery((*fiatFpMontgomeryDomainFieldElement)(f), &t)
-	check := uint64(ct.SliceCmpLE(t[:], FpModulusLimbs[:]) ^ int64(-1))
+	check := safecast.MustToUint64(ct.SliceCmpLE(t[:], FpModulusLimbs[:]) ^ int64(-1))
 	return f, ((check | -check) >> 63) ^ 1
 }
 

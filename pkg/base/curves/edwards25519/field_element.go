@@ -15,6 +15,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 var _ curves.BaseFieldElement = (*BaseFieldElement)(nil)
@@ -252,7 +253,7 @@ func (e *BaseFieldElement) Eq(rhs curves.BaseFieldElement) uint64 {
 	if !ok {
 		return 0
 	}
-	return uint64(e.V.Equal(rhse.V))
+	return safecast.MustToUint64(e.V.Equal(rhse.V))
 }
 
 func (e *BaseFieldElement) Clone() curves.BaseFieldElement {

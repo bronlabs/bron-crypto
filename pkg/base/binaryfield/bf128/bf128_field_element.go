@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 var _ algebra.FiniteFieldElement[*Field, *FieldElement] = (*FieldElement)(nil)
@@ -32,7 +33,7 @@ func (el *FieldElement) Equal(e *FieldElement) bool {
 }
 
 func (el *FieldElement) Eq(e *FieldElement) int {
-	return int(
+	return safecast.MustToInt(
 		ct.Equal(el.V[1], e.V[1]) & ct.Equal(el.V[0], e.V[0]),
 	)
 }

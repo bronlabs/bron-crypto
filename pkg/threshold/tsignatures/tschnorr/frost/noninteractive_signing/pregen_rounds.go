@@ -4,6 +4,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 )
 
@@ -65,7 +66,7 @@ func (p *PreGenParticipant) Round2(round1output network.RoundMessages[types.Thre
 		Tau:         p.Tau,
 		Commitments: p.state.Commitments,
 	})
-	if round1output.Size() != int(p.Protocol.TotalParties()) {
+	if round1output.Size() != safecast.MustToInt(p.Protocol.TotalParties()) {
 		return nil, nil, errs.NewSize("the number of received messages is not equal to total parties")
 	}
 

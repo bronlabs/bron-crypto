@@ -14,6 +14,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 type Uint128 struct {
@@ -106,7 +107,7 @@ func (u Uint128) Nat() *saferith.Nat {
 
 // ConstantTimeSelect returns x if b == true or y if b == false. Inspired by subtle.ConstantTimeSelect().
 func ConstantTimeSelect(v bool, x, y Uint128) Uint128 {
-	vv := uint64(utils.BoolTo[int](v))
+	vv := safecast.MustToUint64(utils.BoolTo[int](v))
 	return Uint128{^(vv-1)&x.Lo | (vv-1)&y.Lo, ^(vv-1)&x.Hi | (vv-1)&y.Hi}
 }
 
@@ -238,7 +239,7 @@ func (u Uint128) Cmp(rhs algebra.OrderTheoreticLatticeElement[*Ring128, Uint128]
 	ltLow := ct.Greater(v.Lo, u.Lo)
 	eqHigh := ct.Equal(u.Hi, v.Hi)
 	eqLow := ct.Equal(u.Lo, v.Lo)
-	return algebra.Ordering(1 - (eqHigh & eqLow) - 2*(ltHigh|(eqHigh&ltLow)))
+	return algebra.Ordering(safecast.MustToInt(1 - (eqHigh & eqLow) - 2*(ltHigh|(eqHigh&ltLow))))
 }
 
 func (u Uint128) Join(rhs algebra.OrderTheoreticLatticeElement[*Ring128, Uint128]) Uint128 {
@@ -262,12 +263,12 @@ func (u Uint128) Previous() (Uint128, error) {
 }
 
 func (u Uint128) Min(rhs Uint128) Uint128 {
-	lt := uint64(subtle.ConstantTimeEq(int32(u.Cmp(rhs)), int32(algebra.LessThan)))
+	lt := safecast.MustToUint64(subtle.ConstantTimeEq(safecast.MustToInt32(u.Cmp(rhs)), safecast.MustToInt32(algebra.LessThan)))
 	return Ring().Select(lt, u, rhs)
 }
 
 func (u Uint128) Max(rhs Uint128) Uint128 {
-	lt := uint64(subtle.ConstantTimeEq(int32(u.Cmp(rhs)), int32(algebra.LessThan)))
+	lt := safecast.MustToUint64(subtle.ConstantTimeEq(safecast.MustToInt32(u.Cmp(rhs)), safecast.MustToInt32(algebra.LessThan)))
 	return Ring().Select(lt, rhs, u)
 }
 

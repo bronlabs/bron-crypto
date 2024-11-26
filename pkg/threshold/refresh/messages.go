@@ -5,6 +5,7 @@ import (
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/hjky"
 )
@@ -24,7 +25,7 @@ func (r1b *Round1Broadcast) Validate(protocol types.ThresholdProtocol) error {
 	if r1b.Sampler == nil {
 		return errs.NewIsNil("sampler")
 	}
-	if len(r1b.PreviousFeldmanCommitment) != int(protocol.Threshold()) {
+	if len(r1b.PreviousFeldmanCommitment) != safecast.MustToInt(protocol.Threshold()) {
 		return errs.NewLength("len(previous feldman commitment) == %d != t == %d", len(r1b.PreviousFeldmanCommitment), protocol.Threshold())
 	}
 	return nil

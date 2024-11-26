@@ -4,6 +4,7 @@ import (
 	"math/bits"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 type ArrayTree[T any] []T
@@ -21,7 +22,7 @@ func NewArrayTree[T any](leaves []T) ArrayTree[T] {
 // Level returns the depth level of the node at index x.
 // 0 means the most bottom (leaf).
 func (ArrayTree[T]) Level(x int) int {
-	return bits.TrailingZeros32(^(uint32(x)))
+	return bits.TrailingZeros32(^(safecast.MustToUint32(x)))
 }
 
 // Root returns the index of the root element node of the tree.

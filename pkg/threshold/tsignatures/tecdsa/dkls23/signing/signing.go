@@ -9,6 +9,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
@@ -47,7 +48,7 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 		}
 
 		// step 1.4: (c'_ij, w_ij) <- Commit(i || j || sid || R_i)
-		committer, err := hashcommitments.NewCommitter(p.SessionId, p.Prng, bitstring.ToBytes32LE(int32(p.SharingId())), bitstring.ToBytes32LE(int32(sharingId)))
+		committer, err := hashcommitments.NewCommitter(p.SessionId, p.Prng, bitstring.ToBytes32LE(safecast.MustToInt32(p.SharingId())), bitstring.ToBytes32LE(safecast.MustToInt32(sharingId)))
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot instantiate committer")
 		}
@@ -222,7 +223,7 @@ func DoRound3Prologue(p *Participant, protocol types.ThresholdSignatureProtocol,
 			return errs.NewMissing("do not have BigRI in memory for %s", participant.String())
 		}
 		// step 3.2: Open(j || i || sid || R_i, c'_ij, w_ij)
-		verifier := hashcommitments.NewVerifier(p.SessionId, bitstring.ToBytes32LE(int32(sharingId)), bitstring.ToBytes32LE(int32(p.SharingId())))
+		verifier := hashcommitments.NewVerifier(p.SessionId, bitstring.ToBytes32LE(safecast.MustToInt32(sharingId)), bitstring.ToBytes32LE(safecast.MustToInt32(p.SharingId())))
 		if !bytes.Equal(receivedBigR_i.ToAffineCompressed(), receivedP2PMessage.InstanceKeyOpening.GetMessage()) {
 			return errs.NewVerification("opening is not tied to the expected value")
 		}

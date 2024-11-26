@@ -7,6 +7,7 @@ import (
 	"golang.org/x/exp/constraints"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/utils/itertools"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 // ReverseBytes reverses the order of the bytes in a new slice.
@@ -26,7 +27,7 @@ func PadToLeft(inBytes []byte, padLen int) []byte {
 
 func ToBytes32LE(i int32) []byte {
 	b := make([]byte, 4)
-	binary.LittleEndian.PutUint32(b, uint32(i))
+	binary.LittleEndian.PutUint32(b, safecast.MustToUint32(i))
 	return b
 }
 
@@ -42,8 +43,8 @@ func PadToRight(inBytes []byte, padLen int) []byte {
 }
 
 func TruncateWithEllipsis(text string, maxLen uint) string {
-	if len(text) > int(maxLen) {
-		return text[:maxLen] + fmt.Sprintf("...(%d)", len(text)-int(maxLen))
+	if len(text) > safecast.MustToInt(maxLen) {
+		return text[:maxLen] + fmt.Sprintf("...(%d)", len(text)-safecast.MustToInt(maxLen))
 	}
 	return text
 }

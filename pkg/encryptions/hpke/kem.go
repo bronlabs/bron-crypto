@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curve25519"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/dh"
 )
 
@@ -111,7 +112,7 @@ func (s *DHKEMScheme) DeriveKeyPair(ikm []byte) (*PrivateKey, error) {
 			if counter > 255 {
 				return nil, errs.NewFailed("DeriveKeyPairError")
 			}
-			skBytes := s.kdf.labeledExpand(s.suiteID(), dpkPrk, []byte("candidate"), []byte{uint8(counter)}, s.NSk())
+			skBytes := s.kdf.labeledExpand(s.suiteID(), dpkPrk, []byte("candidate"), []byte{safecast.MustToUint8(counter)}, s.NSk())
 			skBytes[0] &= P256BitMask
 
 			sk, err = s.curve.ScalarField().Element().SetBytes(skBytes)

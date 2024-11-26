@@ -13,6 +13,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -248,7 +249,7 @@ func (*BaseField) Select(choice uint64, x0, x1 curves.BaseFieldElement) curves.B
 		panic("x1 is not a non-empty edwards25519 field element")
 	}
 	return &BaseFieldElement{
-		V: new(filippo_field.Element).Select(x1f.V, x0f.V, int(choice)),
+		V: new(filippo_field.Element).Select(x1f.V, x0f.V, safecast.MustToInt(choice)),
 	}
 }
 
