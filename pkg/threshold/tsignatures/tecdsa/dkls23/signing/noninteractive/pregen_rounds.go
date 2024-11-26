@@ -14,7 +14,7 @@ func (p *PreGenParticipant) Round1() (*signing.Round1Broadcast, network.RoundMes
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
 	}
 
-	outputBroadcast, outputP2P, err := signing.DoRound1(&p.Participant, p.Protocol, p.Quorum, p.state)
+	outputBroadcast, outputP2P, err := signing.DoRound1(&p.Participant, p.Protocol, p.Quorum(), p.state)
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
@@ -32,7 +32,7 @@ func (p *PreGenParticipant) Round2(
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
 	}
 
-	outputBroadcast, outputP2P, err := signing.DoRound2(&p.Participant, p.Protocol, p.Quorum, p.state, round1outputBroadcast, round1outputP2P)
+	outputBroadcast, outputP2P, err := signing.DoRound2(&p.Participant, p.Protocol, p.Quorum(), p.state, round1outputBroadcast, round1outputP2P)
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
@@ -50,7 +50,7 @@ func (p *PreGenParticipant) Round3(
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
 	}
 
-	if err := signing.DoRound3Prologue(&p.Participant, p.Protocol, p.Quorum, p.state, round2outputBroadcast, round2outputP2P); err != nil {
+	if err := signing.DoRound3Prologue(&p.Participant, p.Protocol, p.Quorum(), p.state, round2outputBroadcast, round2outputP2P); err != nil {
 		return nil, err //nolint:wrapcheck // done deliberately to forward aborts
 	}
 
@@ -58,7 +58,7 @@ func (p *PreGenParticipant) Round3(
 	Rs.Put(p.IdentityKey(), p.Protocol.Curve().ScalarBaseMult(p.state.R_i))
 
 	ppm := &dkls23.PreProcessingMaterial{
-		PreSigners: p.Quorum,
+		PreSigners: p.Quorum(),
 		PrivateMaterial: &dkls23.PrivatePreProcessingMaterial{
 			Cu:   p.state.Cu_i,
 			Cv:   p.state.Cv_i,

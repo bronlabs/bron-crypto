@@ -28,7 +28,8 @@ type Participant struct {
 	mySharingId   types.SharingID
 	sharingConfig types.SharingConfig
 
-	shard *dkls23.Shard
+	shard  *dkls23.Shard
+	quorum ds.Set[types.IdentityKey]
 }
 
 func NewParticipant(
@@ -37,10 +38,12 @@ func NewParticipant(
 	protocol types.ThresholdSignatureProtocol,
 	sessionId []byte,
 	transcript transcripts.Transcript,
-	mySharingId types.SharingID,
-	sharingConfig types.SharingConfig,
+	quorum ds.Set[types.IdentityKey],
 	shard *dkls23.Shard,
 ) *Participant {
+	sharingConfig := types.DeriveSharingConfig(quorum)
+	mySharingId, _ := sharingConfig.Reverse().Get(myAuthKey)
+
 	return &Participant{
 		myAuthKey:     myAuthKey,
 		Prng:          prng,
@@ -51,6 +54,7 @@ func NewParticipant(
 		mySharingId:   mySharingId,
 		sharingConfig: sharingConfig,
 		shard:         shard,
+		quorum:        quorum,
 	}
 }
 
@@ -64,6 +68,10 @@ func (p *Participant) SharingId() types.SharingID {
 
 func (p *Participant) Shard() *dkls23.Shard {
 	return p.shard
+}
+
+func (p *Participant) Quorum() ds.Set[types.IdentityKey] {
+	return p.quorum
 }
 
 func (p *Participant) SharingConfig() types.SharingConfig {

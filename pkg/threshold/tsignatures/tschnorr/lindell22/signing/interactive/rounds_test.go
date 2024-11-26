@@ -122,7 +122,7 @@ func Test_HappyPathThresholdEdDSA(t *testing.T) {
 		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
 	}
 
-	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey{A: alicePublicKeyShares.PublicKey}, partialSignaturesMap)
+	signature, err := signing.Aggregate(variant, protocol, message, alicePublicKeyShares, &schnorr.PublicKey{A: alicePublicKeyShares.PublicKey}, partialSignaturesMap)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
@@ -156,9 +156,10 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 	aliceShard, exists := shards.Get(identities[0])
 	require.True(t, exists)
 	publicKey := aliceShard.SigningKeyShare.PublicKey
-	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-	for identity, shard := range shards.Iter() {
-		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	var publicKeyShares *tsignatures.PartialPublicKeys
+	for _, shard := range shards.Iter() {
+		publicKeyShares = shard.PublicKeyShares
+		break
 	}
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
@@ -211,9 +212,10 @@ func Test_HappyPathThresholdMina(t *testing.T) {
 	aliceShard, exists := shards.Get(identities[0])
 	require.True(t, exists)
 	publicKey := aliceShard.SigningKeyShare.PublicKey
-	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-	for identity, shard := range shards.Iter() {
-		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	var publicKeyShares *tsignatures.PartialPublicKeys
+	for _, shard := range shards.Iter() {
+		publicKeyShares = shard.PublicKeyShares
+		break
 	}
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
@@ -268,9 +270,10 @@ func Test_ThresholdMinaAgainstMinaSigner(t *testing.T) {
 	aliceShard, exists := shards.Get(identities[0])
 	require.True(t, exists)
 	publicKey := aliceShard.SigningKeyShare.PublicKey
-	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-	for identity, shard := range shards.Iter() {
-		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	var publicKeyShares *tsignatures.PartialPublicKeys
+	for _, shard := range shards.Iter() {
+		publicKeyShares = shard.PublicKeyShares
+		break
 	}
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
@@ -335,9 +338,10 @@ func Test_HappyPathThresholdZilliqa(t *testing.T) {
 	shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
 
-	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-	for identity, shard := range shards.Iter() {
-		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	var publicKeyShares *tsignatures.PartialPublicKeys
+	for _, shard := range shards.Iter() {
+		publicKeyShares = shard.PublicKeyShares
+		break
 	}
 
 	aliceShard, exists := shards.Get(identities[0])
@@ -391,9 +395,10 @@ func Test_HappyPathWithDkg(t *testing.T) {
 		shards.Put(id, shard)
 	}
 
-	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-	for identity, shard := range shards.Iter() {
-		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	var publicKeyShares *tsignatures.PartialPublicKeys
+	for _, shard := range shards.Iter() {
+		publicKeyShares = shard.PublicKeyShares
+		break
 	}
 
 	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)

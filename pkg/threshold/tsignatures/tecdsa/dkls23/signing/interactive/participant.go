@@ -23,8 +23,6 @@ const transcriptLabel = "COPPER_KRYPTON_TECDSA_DKLS23-"
 type Cosigner struct {
 	*signing.Participant
 
-	Quorum ds.Set[types.IdentityKey]
-
 	state *signing.SignerState
 
 	_ ds.Incomparable
@@ -47,12 +45,6 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
-	}
-
-	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.Reverse().Get(authKey)
-	if !exists {
-		return nil, errs.NewMissing("could not find my sharing id")
 	}
 
 	// step 0.2: zero share sampling setup
@@ -111,10 +103,9 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 			Bob:   bob,
 		})
 	}
-	signingParticipant := signing.NewParticipant(authKey, prng, protocol, boundSessionId, transcript, mySharingId, sharingConfig, shard)
+	signingParticipant := signing.NewParticipant(authKey, prng, protocol, boundSessionId, transcript, quorum, shard)
 	cosigner := &Cosigner{
 		Participant: signingParticipant,
-		Quorum:      quorum,
 		state: &signing.SignerState{
 			Protocols: &signing.SubProtocols{
 				ZeroShareSampling: zeroShareSamplingParty,

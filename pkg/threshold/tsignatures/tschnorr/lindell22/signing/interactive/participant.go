@@ -68,6 +68,14 @@ func (p *Cosigner[V, M]) SharingId() types.SharingID {
 	return p.mySharingId
 }
 
+func (p *Cosigner[V, M]) Variant() schnorr.Variant[V, M] {
+	return p.variant
+}
+
+func (p *Cosigner[V, M]) Quorum() ds.Set[types.IdentityKey] {
+	return p.quorum
+}
+
 func NewCosigner[V schnorr.Variant[V, M], M any](myAuthKey types.AuthKey, sessionId []byte, quorum ds.Set[types.IdentityKey], myShard *lindell22.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, variant schnorr.Variant[V, M], prng io.Reader) (p *Cosigner[V, M], err error) {
 	if err := validateInputs(sessionId, myAuthKey, quorum, myShard, protocol, niCompiler, prng); err != nil {
 		return nil, errs.WrapArgument(err, "invalid input arguments")

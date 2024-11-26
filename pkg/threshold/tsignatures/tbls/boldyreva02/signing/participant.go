@@ -34,6 +34,7 @@ type Cosigner[K bls.KeySubGroup, S bls.SignatureSubGroup] struct {
 
 	myShard *boldyreva02.Shard[K]
 	scheme  bls.RogueKeyPrevention
+	quorum  ds.Set[types.IdentityKey]
 }
 
 func (p *Cosigner[_, _]) IdentityKey() types.IdentityKey {
@@ -42,6 +43,14 @@ func (p *Cosigner[_, _]) IdentityKey() types.IdentityKey {
 
 func (p *Cosigner[_, _]) SharingId() types.SharingID {
 	return p.mySharingId
+}
+
+func (p *Cosigner[_, _]) RogueKeyPreventionScheme() bls.RogueKeyPrevention {
+	return p.scheme
+}
+
+func (p *Cosigner[_, _]) Quorum() ds.Set[types.IdentityKey] {
+	return p.quorum
 }
 
 func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, authKey types.AuthKey, scheme bls.RogueKeyPrevention, quorum ds.Set[types.IdentityKey], myShard *boldyreva02.Shard[K], protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript) (*Cosigner[K, S], error) {
@@ -83,6 +92,7 @@ func NewCosigner[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte, a
 		myShard:       myShard,
 		Transcript:    transcript,
 		scheme:        scheme,
+		quorum:        quorum,
 		Round:         1,
 	}
 

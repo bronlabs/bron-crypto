@@ -86,10 +86,10 @@ type PartialPublicKeys struct {
 	_ ds.Incomparable
 }
 
-func (p *PartialPublicKeys) ToAdditive(protocol types.ThresholdSignatureProtocol, signers []types.IdentityKey) (ds.Map[types.IdentityKey, curves.Point], error) {
+func (p *PartialPublicKeys) ToAdditive(protocol types.ThresholdSignatureProtocol, signers ds.Set[types.IdentityKey]) (ds.Map[types.IdentityKey, curves.Point], error) {
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	signersSharingIds := make([]uint, len(signers))
-	for i, signer := range signers {
+	signersSharingIds := make([]uint, signers.Size())
+	for i, signer := range signers.List() {
 		sharingId, exists := sharingConfig.Reverse().Get(signer)
 		if !exists {
 			return nil, errs.NewFailed("invalid identity")
@@ -98,7 +98,7 @@ func (p *PartialPublicKeys) ToAdditive(protocol types.ThresholdSignatureProtocol
 	}
 
 	publicShares := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
-	for _, signer := range signers {
+	for signer := range signers.Iter() {
 		publicKeyShare, exists := p.Shares.Get(signer)
 		if !exists {
 			return nil, errs.NewFailed("invalid identity")

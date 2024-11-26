@@ -74,9 +74,10 @@ func Test_SignNonInteractiveThresholdEdDSA(t *testing.T) {
 			aliceShard, exists := shards.Get(identities[0])
 			require.True(t, exists)
 			publicKey := aliceShard.PublicKey()
-			publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-			for identity, shard := range shards.Iter() {
-				publicKeyShares.Put(identity, shard.PublicKeyShares)
+			var publicKeyShares *tsignatures.PartialPublicKeys
+			for _, shard := range shards.Iter() {
+				publicKeyShares = shard.PublicKeyShares
+				break
 			}
 
 			N := make([]int, n)
@@ -169,9 +170,10 @@ func Test_SignNonInteractiveThresholdTaproot(t *testing.T) {
 			aliceShard, exists := shards.Get(identities[0])
 			require.True(t, exists)
 			publicKey := aliceShard.PublicKey()
-			publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-			for identity, shard := range shards.Iter() {
-				publicKeyShares.Put(identity, shard.PublicKeyShares)
+			var publicKeyShares *tsignatures.PartialPublicKeys
+			for _, shard := range shards.Iter() {
+				publicKeyShares = shard.PublicKeyShares
+				break
 			}
 
 			N := make([]int, n)
@@ -267,9 +269,10 @@ func Test_SignNonInteractiveThresholdMina(t *testing.T) {
 			aliceShard, exists := shards.Get(identities[0])
 			require.True(t, exists)
 			publicKey := aliceShard.PublicKey()
-			publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-			for identity, shard := range shards.Iter() {
-				publicKeyShares.Put(identity, shard.PublicKeyShares)
+			var publicKeyShares *tsignatures.PartialPublicKeys
+			for _, shard := range shards.Iter() {
+				publicKeyShares = shard.PublicKeyShares
+				break
 			}
 
 			N := make([]int, n)
@@ -358,9 +361,10 @@ func Test_SignNonInteractiveThresholdZilliqa(t *testing.T) {
 			aliceShard, exists := shards.Get(identities[0])
 			require.True(t, exists)
 			publicKey := aliceShard.PublicKey()
-			publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-			for identity, shard := range shards.Iter() {
-				publicKeyShares.Put(identity, shard.PublicKeyShares)
+			var publicKeyShares *tsignatures.PartialPublicKeys
+			for _, shard := range shards.Iter() {
+				publicKeyShares = shard.PublicKeyShares
+				break
 			}
 
 			N := make([]int, n)

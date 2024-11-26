@@ -31,6 +31,7 @@ type Cosigner struct {
 	prng       io.Reader
 	transcript transcripts.Transcript
 	round      int
+	quorum     ds.Set[types.IdentityKey]
 
 	_ ds.Incomparable
 }
@@ -41,6 +42,10 @@ func (p *Cosigner) IdentityKey() types.IdentityKey {
 
 func (p *Cosigner) SharingId() types.SharingID {
 	return p.mySharingId
+}
+
+func (p *Cosigner) Quorum() ds.Set[types.IdentityKey] {
+	return p.quorum
 }
 
 func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, quorum ds.Set[types.IdentityKey], myShard *glow.Shard, protocol types.ThresholdSignatureProtocol, transcript transcripts.Transcript, prng io.Reader) (*Cosigner, error) {
@@ -82,6 +87,7 @@ func NewCosigner(sessionId []byte, myAuthKey types.AuthKey, quorum ds.Set[types.
 		transcript:    transcript,
 		myShard:       myShard,
 		prng:          prng,
+		quorum:        quorum,
 		round:         1,
 	}
 

@@ -4,6 +4,7 @@ import (
 	"io"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
@@ -41,6 +42,10 @@ func (p *Cosigner) SharingId() types.SharingID {
 
 func (p *Cosigner) IsSignatureAggregator() bool {
 	return p.aggregatorIdentity.Equal(p.IdentityKey())
+}
+
+func (p *Cosigner) Quorum() ds.Set[types.IdentityKey] {
+	return hashset.NewHashableHashSet(p.initiatorIdentity, p.aggregatorIdentity)
 }
 
 func NewCosigner(protocol types.ThresholdSignatureProtocol, myAuthKey types.AuthKey, myShard *lindell17.Shard, ppm *lindell17.PreProcessingMaterial, initiatorIdentity, aggregatorIdentity types.IdentityKey, prng io.Reader) (participant *Cosigner, err error) {

@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
@@ -25,7 +26,7 @@ func BigS(participants ds.Set[types.IdentityKey]) []byte {
 	return bigS
 }
 
-func Aggregate[V schnorr.Variant[V, M], M any](variant schnorr.Variant[V, M], protocol types.ThresholdSignatureProtocol, message M, publicShares ds.Map[types.IdentityKey, *tsignatures.PartialPublicKeys], publicKey *schnorr.PublicKey, partialSignatures ds.Map[types.IdentityKey, *tschnorr.PartialSignature]) (signature *schnorr.Signature[V, M], err error) {
+func Aggregate[V schnorr.Variant[V, M], M any](variant schnorr.Variant[V, M], protocol types.ThresholdSignatureProtocol, message M, partialPublicKeys *tsignatures.PartialPublicKeys, publicKey *schnorr.PublicKey, partialSignatures ds.Map[types.IdentityKey, *tschnorr.PartialSignature]) (signature *schnorr.Signature[V, M], err error) {
 	sigs := partialSignatures.Values()
 	sig0 := sigs[0]
 	bigR := sig0.R.Curve().AdditiveIdentity()
@@ -43,24 +44,19 @@ func Aggregate[V schnorr.Variant[V, M], M any](variant schnorr.Variant[V, M], pr
 		}
 	}
 
-	signers := partialSignatures.Keys()
+	signers := hashset.NewComparableHashSet(partialSignatures.Keys()...)
+	additivePartialPublicKeys, err := partialPublicKeys.ToAdditive(protocol, signers)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not convert partial public keys to additive")
+	}
+
 	for _, identity := range partialSignatures.Keys() {
 		partialSig, exists := partialSignatures.Get(identity)
 		if !exists {
 			return nil, errs.NewVerification("invalid partial signatures")
 		}
 
-		partialPublicKeyShares, exists := publicShares.Get(identity)
-		if !exists {
-			return nil, errs.NewVerification("invalid partial signatures")
-		}
-
-		partialPublicKeys, err := partialPublicKeyShares.ToAdditive(protocol, signers)
-		if err != nil {
-			return nil, errs.WrapVerification(err, "invalid partial signatures")
-		}
-
-		publicShareAdditive, exists := partialPublicKeys.Get(identity)
+		publicShareAdditive, exists := additivePartialPublicKeys.Get(identity)
 		if !exists {
 			return nil, errs.NewVerification("invalid partial signatures")
 		}

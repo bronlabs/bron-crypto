@@ -26,7 +26,7 @@ type Cosigner struct {
 	SignatureAggregators ds.Set[types.IdentityKey]
 
 	Protocol      types.ThresholdSignatureProtocol
-	Quorum        ds.Set[types.IdentityKey]
+	quorum        ds.Set[types.IdentityKey]
 	SharingConfig types.SharingConfig
 
 	myPrivateNoncePairs []*PrivateNoncePair
@@ -46,6 +46,10 @@ func (nic *Cosigner) IdentityKey() types.IdentityKey {
 
 func (nic *Cosigner) SharingId() types.SharingID {
 	return nic.MySharingId
+}
+
+func (nic *Cosigner) Quorum() ds.Set[types.IdentityKey] {
+	return nic.quorum
 }
 
 func (nic *Cosigner) IsSignatureAggregator() bool {
@@ -100,7 +104,7 @@ func NewNonInteractiveCosigner(
 		Protocol:                     protocol,
 		SharingConfig:                sharingConfig,
 		SignatureAggregators:         signatureAggregators,
-		Quorum:                       presentParties,
+		quorum:                       presentParties,
 		myPrivateNoncePairs:          privateNoncePairs,
 		aggregationParameter: &aggregation.SignatureAggregatorParameters{
 			D_alpha: D_alpha,

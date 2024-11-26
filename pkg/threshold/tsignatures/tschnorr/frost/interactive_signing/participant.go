@@ -47,6 +47,10 @@ func (ic *Cosigner) IsSignatureAggregator() bool {
 	return ic.Protocol.Participants().Contains(ic.IdentityKey())
 }
 
+func (ic *Cosigner) Quorum() ds.Set[types.IdentityKey] {
+	return ic.quorum
+}
+
 type State struct {
 	d_i curves.Scalar
 	D_i curves.Point

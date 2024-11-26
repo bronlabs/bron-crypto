@@ -25,8 +25,6 @@ var _ types.ThresholdParticipant = (*PreGenParticipant)(nil) // only threshold p
 type PreGenParticipant struct {
 	signing.Participant
 
-	Quorum ds.Set[types.IdentityKey]
-
 	state *signing.SignerState
 
 	_ ds.Incomparable
@@ -44,12 +42,6 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 	boundSessionId, err := transcript.Bind(sessionId, dst)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
-	}
-
-	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
-	if !exists {
-		return nil, errs.NewMissing("could not find my sharing id")
 	}
 
 	// step 0.2
@@ -107,7 +99,7 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 		})
 	}
 
-	signingParticipant := signing.NewParticipant(myAuthKey, prng, protocol, boundSessionId, transcript, mySharingId, sharingConfig, myShard)
+	signingParticipant := signing.NewParticipant(myAuthKey, prng, protocol, boundSessionId, transcript, preSigners, myShard)
 	participant = &PreGenParticipant{
 		Participant: *signingParticipant,
 		state: &signing.SignerState{
@@ -116,7 +108,6 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 				Multiplication:    multipliers,
 			},
 		},
-		Quorum: preSigners,
 	}
 
 	if err := types.ValidateThresholdProtocol(participant, protocol); err != nil {

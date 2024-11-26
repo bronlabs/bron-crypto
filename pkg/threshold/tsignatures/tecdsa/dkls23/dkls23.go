@@ -212,7 +212,7 @@ func (pppm *PrivatePreProcessingMaterial) Validate(myIdentityKey types.IdentityK
 	if pppm.Zeta == nil {
 		return errs.NewIsNil("Zeta")
 	}
-	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	sharingConfig := types.DeriveSharingConfig(preSigners)
 	for participant := range preSigners.Iter() {
 		if participant.Equal(myIdentityKey) {
 			continue

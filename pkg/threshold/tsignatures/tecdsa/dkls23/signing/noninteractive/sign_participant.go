@@ -20,12 +20,7 @@ func NewCosigner(myAuthKey types.AuthKey, myShard *dkls23.Shard, protocol types.
 	if err := validateInputsSign([]byte("no session id for noninteractive"), myAuthKey, protocol, myShard, ppm); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate input")
 	}
-	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
-	if !exists {
-		return nil, errs.NewMissing("could not find my sharing id")
-	}
-	signingParticipant := signing.NewParticipant(myAuthKey, nil, protocol, nil, nil, mySharingId, sharingConfig, myShard)
+	signingParticipant := signing.NewParticipant(myAuthKey, nil, protocol, nil, nil, ppm.PreSigners, myShard)
 	participant := &Cosigner{
 		Participant: signingParticipant,
 		ppm:         ppm,

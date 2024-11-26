@@ -7,6 +7,7 @@ import (
 
 type ThresholdSignatureParticipant interface {
 	ThresholdParticipant
+	Quorum() ds.Set[IdentityKey]
 }
 
 type ThresholdSignatureProtocol interface {
