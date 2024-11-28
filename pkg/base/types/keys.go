@@ -22,8 +22,8 @@ type IdentityKey interface {
 
 	Verify(signature []byte, message []byte) error
 
-	Encrypt(plaintext []byte) ([]byte, error)
-	EncryptFrom(sender AuthKey, plaintext []byte) ([]byte, error)
+	Encrypt(plaintext []byte, opts any) ([]byte, error)
+	EncryptFrom(sender AuthKey, plaintext []byte, opts any) ([]byte, error)
 	ds.Hashable[IdentityKey]
 	json.Marshaler
 }
