@@ -29,10 +29,13 @@ func MarshalJson(name string, f Serializer) ([]byte, error) {
 	return marshalled, nil
 }
 
-func UnmarshalJson[E any](f Deserializer[E], input []byte) (E, error) {
+func UnmarshalJson[E any](name string, f Deserializer[E], input []byte) (E, error) {
 	var block jsonPemBlock
 	if err := json.Unmarshal(input, &block); err != nil {
 		return *new(E), errs.WrapSerialisation(err, "could not unmarshal json to pem block")
+	}
+	if block.Type != name {
+		return *new(E), errs.NewType("name %s is not supported", block.Type)
 	}
 	return f(block.Bytes)
 }

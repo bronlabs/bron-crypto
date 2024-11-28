@@ -531,16 +531,9 @@ func (s *Scalar) MarshalJSON() ([]byte, error) {
 }
 
 func (s *Scalar) UnmarshalJSON(input []byte) error {
-	sc, err := impl.UnmarshalJson(s.SetBytes, input)
+	sc, err := impl.UnmarshalJson(s.ScalarField().Name(), s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract a base field element from json")
-	}
-	name, _, err := impl.ParseJSON(input)
-	if err != nil {
-		return errs.WrapSerialisation(err, "could not extract name from input")
-	}
-	if name != s.ScalarField().Name() {
-		return errs.NewType("name %s is not supported", name)
 	}
 	S, ok := sc.(*Scalar)
 	if !ok {

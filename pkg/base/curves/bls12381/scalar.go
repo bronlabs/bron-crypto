@@ -677,7 +677,7 @@ func (s *Scalar) UnmarshalJSON(input []byte) error {
 	default:
 		return errs.NewType("name %s is not supported", name)
 	}
-	sc, err := impl.UnmarshalJson(s.SetBytes, input)
+	sc, err := impl.UnmarshalJson(name, s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract a base field element from json")
 	}

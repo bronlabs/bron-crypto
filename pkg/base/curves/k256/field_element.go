@@ -563,16 +563,9 @@ func (e *BaseFieldElement) MarshalJSON() ([]byte, error) {
 }
 
 func (e *BaseFieldElement) UnmarshalJSON(input []byte) error {
-	sc, err := impl.UnmarshalJson(e.SetBytes, input)
+	sc, err := impl.UnmarshalJson(e.BaseField().Name(), e.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract a base field element from json")
-	}
-	name, _, err := impl.ParseBinary(input)
-	if err != nil {
-		return errs.WrapSerialisation(err, "could not extract name from input")
-	}
-	if name != e.BaseField().Name() {
-		return errs.NewType("name %s is not supported", name)
 	}
 	S, ok := sc.(*BaseFieldElement)
 	if !ok {

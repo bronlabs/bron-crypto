@@ -352,16 +352,9 @@ func (p *PointG1) MarshalJSON() ([]byte, error) {
 }
 
 func (p *PointG1) UnmarshalJSON(input []byte) error {
-	pt, err := impl.UnmarshalJson(p.FromAffineCompressed, input)
+	pt, err := impl.UnmarshalJson(p.Curve().Name(), p.FromAffineCompressed, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
-	}
-	name, _, err := impl.ParseBinary(input)
-	if err != nil {
-		return errs.WrapSerialisation(err, "could not extract name from input")
-	}
-	if name != p.Curve().Name() {
-		return errs.NewType("name %s is not supported", name)
 	}
 	P, ok := pt.(*PointG1)
 	if !ok {

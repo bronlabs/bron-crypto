@@ -260,16 +260,9 @@ func (g *GtMember) MarshalJSON() ([]byte, error) {
 }
 
 func (g *GtMember) UnmarshalJSON(input []byte) error {
-	sc, err := impl.UnmarshalJson(g.SetBytes, input)
+	sc, err := impl.UnmarshalJson(g.Gt().Name(), g.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract a base field element from json")
-	}
-	name, _, err := impl.ParseJSON(input)
-	if err != nil {
-		return errs.WrapSerialisation(err, "could not extract name from input")
-	}
-	if name != g.Gt().Name() {
-		return errs.NewType("name %s is not supported", name)
 	}
 	S, ok := sc.(*GtMember)
 	if !ok {
