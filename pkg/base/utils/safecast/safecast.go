@@ -120,7 +120,7 @@ func MustToInt[T constraints.Integer](in T) int {
 func ToUint[T constraints.Integer](in T) (out uint, err error) {
 	out = uint(in)
 
-	if uint64(in) > math.MaxInt || in < 0 {
+	if uint64(in) > math.MaxUint || in < 0 {
 		err = ErrOutOfBounds
 	}
 
