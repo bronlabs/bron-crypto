@@ -51,8 +51,10 @@ func SliceSelect[S ~[]E, E constraints.Unsigned](choice uint64, dst, x0, x1 S) {
 
 // SliceGreaterLE returns 1 if x > y and 0 otherwise,
 // where the slice is little-endian limb-like representation.
+//
+//nolint:gosec // disable G115
 func SliceGreaterLE[S ~[]E, E constraints.Unsigned](x, y S) uint64 {
-	return IsZero(safecast.MustToUint64(SliceCmpLE(x, y) ^ 1))
+	return IsZero(uint64(SliceCmpLE(x, y) ^ 1))
 }
 
 // SliceCmpLE returns 1 if x > y, 0 if x == y, -1 if x < y,

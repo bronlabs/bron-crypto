@@ -38,8 +38,6 @@ package fq
 
 import (
 	"math/bits"
-
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils/safecast"
 )
 
 type (
@@ -84,9 +82,11 @@ func fiat_pasta_fq_subborrowx_u64(x, y uint64, carry fiat_pasta_fq_uint1) (uint6
 // Output Bounds:
 //
 //	out1: [0x0 ~> 0xffffffffffffffff]
+//
+//nolint:gosec // disable G115
 func fiat_pasta_fq_cmovznz_u64(out1 *uint64, arg1 fiat_pasta_fq_uint1, arg2, arg3 uint64) {
-	x1 := safecast.MustToInt64(arg1)
-	x2 := (safecast.MustToUint64((fiat_pasta_fq_int1(safecast.MustToInt64(0x0)) - fiat_pasta_fq_int1(x1))) & 0xffffffffffffffff)
+	x1 := int64(arg1)
+	x2 := (uint64((fiat_pasta_fq_int1(uint64(0x0)) - fiat_pasta_fq_int1(x1))) & 0xffffffffffffffff)
 	x3 := ((x2 & arg3) | ((^x2) & arg2))
 	*out1 = x3
 }

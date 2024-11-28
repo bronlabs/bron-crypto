@@ -319,7 +319,7 @@ func (fq *Fq) pow(base *Fq, exp [4]uint64) *Fq {
 		for j := 63; j >= 0; j-- {
 			res.Square(res)
 			tmp.Mul(res, base)
-			res.CMove(res, tmp, safecast.MustToInt(exp[i]>>j)&1)
+			res.CMove(res, tmp, safecast.MustToInt(exp[i]>>j&1))
 		}
 	}
 	return fq.Set(res)

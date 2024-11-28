@@ -50,7 +50,8 @@ func (flh *FixedLengthCurveHasher) ExpandMessage(outLen int, msg, dst []byte) ([
 	dstLen := byte(len(dst))
 	_, _ = h.Write(make([]byte, h.BlockSize()))
 	_, _ = h.Write(msg)
-	_, _ = h.Write([]byte{safecast.MustToUint8(outLen >> 8), safecast.MustToUint8(outLen)})
+	//nolint:gosec // disable G115
+	_, _ = h.Write([]byte{uint8(outLen >> 8), uint8(outLen)})
 	_, _ = h.Write([]byte{0})
 	_, _ = h.Write(dst)
 	_, _ = h.Write([]byte{dstLen})

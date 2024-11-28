@@ -233,13 +233,14 @@ func (u Uint128) MulAdd(p, q algebra.RingElement[*Ring128, Uint128]) Uint128 {
 	return u.Mul(p).Add(q)
 }
 
+//nolint:gosec // disable G115
 func (u Uint128) Cmp(rhs algebra.OrderTheoreticLatticeElement[*Ring128, Uint128]) algebra.Ordering {
 	v := rhs.Unwrap()
 	ltHigh := ct.Greater(v.Hi, u.Hi)
 	ltLow := ct.Greater(v.Lo, u.Lo)
 	eqHigh := ct.Equal(u.Hi, v.Hi)
 	eqLow := ct.Equal(u.Lo, v.Lo)
-	return algebra.Ordering(safecast.MustToInt(1 - (eqHigh & eqLow) - 2*(ltHigh|(eqHigh&ltLow))))
+	return algebra.Ordering(1 - (eqHigh & eqLow) - 2*(ltHigh|(eqHigh&ltLow)))
 }
 
 func (u Uint128) Join(rhs algebra.OrderTheoreticLatticeElement[*Ring128, Uint128]) Uint128 {

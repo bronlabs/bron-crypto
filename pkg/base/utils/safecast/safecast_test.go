@@ -100,7 +100,7 @@ func TestToUint64(t *testing.T) {
 		})
 	}
 
-	t.Run(fmt.Sprintf("ToUint64 underflow"), func(t *testing.T) {
+	t.Run("ToUint64 underflow", func(t *testing.T) {
 		t.Parallel()
 		out, err := safecast.ToUint64(math.MinInt64)
 		require.Equal(t, safecast.ErrOutOfBounds, err)

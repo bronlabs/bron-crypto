@@ -25,9 +25,10 @@ func PadToLeft(inBytes []byte, padLen int) []byte {
 	return outBytes
 }
 
+//nolint:gosec // disable G115
 func ToBytes32LE(i int32) []byte {
 	b := make([]byte, 4)
-	binary.LittleEndian.PutUint32(b, safecast.MustToUint32(i))
+	binary.LittleEndian.PutUint32(b, uint32(i))
 	return b
 }
 

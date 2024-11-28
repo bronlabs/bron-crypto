@@ -317,6 +317,7 @@ func (fp *Fp) Exp(base, exp *Fp) *Fp {
 	return fp.pow(base, *e)
 }
 
+//nolint:gosec // disable G115
 func (fp *Fp) pow(base *Fp, exp [4]uint64) *Fp {
 	res := new(Fp).SetOne()
 	tmp := new(Fp)
@@ -325,7 +326,7 @@ func (fp *Fp) pow(base *Fp, exp [4]uint64) *Fp {
 		for j := 63; j >= 0; j-- {
 			res.Square(res)
 			tmp.Mul(res, base)
-			res.CMove(res, tmp, safecast.MustToInt(exp[i]>>j)&1)
+			res.CMove(res, tmp, int(exp[i]>>j)&1)
 		}
 	}
 	return fp.Set(res)
