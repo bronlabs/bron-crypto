@@ -465,7 +465,7 @@ func (s *Scalar) Cmp(rhs algebra.OrderTheoreticLatticeElement[curves.ScalarField
 	r, ok := rhs.(*Scalar)
 	if ok {
 		gt, eq, _ := s.Nat().Cmp(r.Nat())
-		return algebra.Ordering(safecast.MustToInt(gt)+safecast.MustToInt(gt)+safecast.MustToInt(eq)) - 1
+		return algebra.Ordering(safecast.ToInt(gt)+safecast.ToInt(gt)+safecast.ToInt(eq)) - 1
 	} else {
 		return algebra.Incomparable
 	}

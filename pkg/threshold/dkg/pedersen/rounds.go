@@ -36,7 +36,7 @@ func (p *Participant) Round1(a_i0 curves.Scalar) (r1b *Round1Broadcast, r1u netw
 		return nil, nil, errs.WrapFailed(err, "couldn't construct feldman dealer")
 	}
 	proverTranscript := p.Transcript.Clone()
-	proverTranscript.AppendMessages(SharingIdLabel, bitstring.ToBytes32LE(safecast.MustToInt32(p.SharingId())))
+	proverTranscript.AppendMessages(SharingIdLabel, bitstring.ToBytes32LE(safecast.ToInt32(p.SharingId())))
 	prover, err := p.State.NiCompiler.NewProver(p.SessionId, proverTranscript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create commitment prover")
@@ -121,7 +121,7 @@ func (p *Participant) Round2(
 		// step 2.1: Feldman.Verify(Ci)
 		// step 2.2: π_i <- NIZKPoK.Prove(s)  ∀s∈{Ci, x_ji}
 		verifierTranscript := p.Transcript.Clone()
-		verifierTranscript.AppendMessages(SharingIdLabel, bitstring.ToBytes32LE(safecast.MustToInt32(senderSharingId)))
+		verifierTranscript.AppendMessages(SharingIdLabel, bitstring.ToBytes32LE(safecast.ToInt32(senderSharingId)))
 		verifier, err := p.State.NiCompiler.NewVerifier(p.SessionId, verifierTranscript)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot create commitment verifier")

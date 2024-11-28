@@ -31,7 +31,7 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proof compiler.NIZKPoKProof
 	a := fsProof.A
 	v.transcript.AppendMessages(commitmentLabel, v.sigmaProtocol.SerializeCommitment(a))
 
-	e, err := v.transcript.ExtractBytes(challengeLabel, safecast.MustToUint(v.sigmaProtocol.GetChallengeBytesLength()))
+	e, err := v.transcript.ExtractBytes(challengeLabel, safecast.ToUint(v.sigmaProtocol.GetChallengeBytesLength()))
 	if err != nil {
 		return errs.WrapFailed(err, "cannot extract bytes from transcript")
 	}

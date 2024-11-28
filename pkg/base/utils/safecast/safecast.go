@@ -19,7 +19,7 @@ import (
 
 var ErrOutOfBounds = errors.New("casting value out of bounds")
 
-func ToUint8[T constraints.Integer](in T) (out uint8, err error) {
+func MaybeUint8[T constraints.Integer](in T) (out uint8, err error) {
 	out = uint8(in)
 
 	if uint64(in) > math.MaxUint8 || in < 0 {
@@ -29,11 +29,11 @@ func ToUint8[T constraints.Integer](in T) (out uint8, err error) {
 	return out, err
 }
 
-func MustToUint8[T constraints.Integer](in T) uint8 {
-	return Must(ToUint8(in))
+func ToUint8[T constraints.Integer](in T) uint8 {
+	return Must(MaybeUint8(in))
 }
 
-func ToUint16[T constraints.Integer](in T) (out uint16, err error) {
+func MaybeUint16[T constraints.Integer](in T) (out uint16, err error) {
 	out = uint16(in)
 
 	if uint64(in) > math.MaxUint16 || in < 0 {
@@ -43,11 +43,11 @@ func ToUint16[T constraints.Integer](in T) (out uint16, err error) {
 	return out, err
 }
 
-func MustToUint16[T constraints.Integer](in T) uint16 {
-	return Must(ToUint16(in))
+func ToUint16[T constraints.Integer](in T) uint16 {
+	return Must(MaybeUint16(in))
 }
 
-func ToInt64[T constraints.Integer](in T) (out int64, err error) {
+func MaybeInt64[T constraints.Integer](in T) (out int64, err error) {
 	out = int64(in)
 
 	if uint64(in) > math.MaxInt64 {
@@ -57,11 +57,11 @@ func ToInt64[T constraints.Integer](in T) (out int64, err error) {
 	return out, err
 }
 
-func MustToInt64[T constraints.Integer](in T) int64 {
-	return Must(ToInt64(in))
+func ToInt64[T constraints.Integer](in T) int64 {
+	return Must(MaybeInt64(in))
 }
 
-func ToUint64[T constraints.Integer](in T) (out uint64, err error) {
+func MaybeUint64[T constraints.Integer](in T) (out uint64, err error) {
 	out = uint64(in)
 
 	if in < 0 {
@@ -71,11 +71,11 @@ func ToUint64[T constraints.Integer](in T) (out uint64, err error) {
 	return out, err
 }
 
-func MustToUint64[T constraints.Integer](in T) uint64 {
-	return Must(ToUint64(in))
+func ToUint64[T constraints.Integer](in T) uint64 {
+	return Must(MaybeUint64(in))
 }
 
-func ToInt32[T constraints.Integer](in T) (out int32, err error) {
+func MaybeToInt32[T constraints.Integer](in T) (out int32, err error) {
 	out = int32(in)
 
 	if uint64(in) > math.MaxInt32 || int64(in) < math.MinInt32 {
@@ -85,11 +85,11 @@ func ToInt32[T constraints.Integer](in T) (out int32, err error) {
 	return out, err
 }
 
-func MustToInt32[T constraints.Integer](in T) int32 {
-	return Must(ToInt32(in))
+func ToInt32[T constraints.Integer](in T) int32 {
+	return Must(MaybeToInt32(in))
 }
 
-func ToUint32[T constraints.Integer](in T) (out uint32, err error) {
+func MaybeUint32[T constraints.Integer](in T) (out uint32, err error) {
 	out = uint32(in)
 
 	if uint64(in) > math.MaxInt32 || in < 0 {
@@ -99,11 +99,11 @@ func ToUint32[T constraints.Integer](in T) (out uint32, err error) {
 	return out, err
 }
 
-func MustToUint32[T constraints.Integer](in T) uint32 {
-	return Must(ToUint32(in))
+func ToUint32[T constraints.Integer](in T) uint32 {
+	return Must(MaybeUint32(in))
 }
 
-func ToInt[T constraints.Integer](in T) (out int, err error) {
+func MaybeInt[T constraints.Integer](in T) (out int, err error) {
 	out = int(in)
 
 	if uint64(in) > math.MaxInt || int64(in) < math.MinInt {
@@ -113,11 +113,11 @@ func ToInt[T constraints.Integer](in T) (out int, err error) {
 	return out, err
 }
 
-func MustToInt[T constraints.Integer](in T) int {
-	return Must(ToInt(in))
+func ToInt[T constraints.Integer](in T) int {
+	return Must(MaybeInt(in))
 }
 
-func ToUint[T constraints.Integer](in T) (out uint, err error) {
+func MaybeUint[T constraints.Integer](in T) (out uint, err error) {
 	out = uint(in)
 
 	if uint64(in) > math.MaxUint || in < 0 {
@@ -127,8 +127,8 @@ func ToUint[T constraints.Integer](in T) (out uint, err error) {
 	return out, err
 }
 
-func MustToUint[T constraints.Integer](in T) uint {
-	return Must(ToUint(in))
+func ToUint[T constraints.Integer](in T) uint {
+	return Must(MaybeUint(in))
 }
 
 func Must[T any](v T, err error) T {

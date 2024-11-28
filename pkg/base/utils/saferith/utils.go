@@ -111,15 +111,15 @@ func NatRandomBits(prng io.Reader, bits uint) (*saferith.Nat, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to get random")
 	}
-	return new(saferith.Nat).SetBytes(randBytes).Resize(safecast.MustToInt(bits)), nil
+	return new(saferith.Nat).SetBytes(randBytes).Resize(safecast.ToInt(bits)), nil
 }
 
 func NatGetBit(x *saferith.Nat, bit uint) uint {
-	return x.Big().Bit(safecast.MustToInt(bit))
+	return x.Big().Bit(safecast.ToInt(bit))
 }
 
 func NatSetBit(value *saferith.Nat, bit uint) *saferith.Nat {
-	return new(saferith.Nat).SetBig(new(big.Int).SetBit(value.Big(), safecast.MustToInt(bit), 1), value.AnnouncedLen())
+	return new(saferith.Nat).SetBig(new(big.Int).SetBit(value.Big(), safecast.ToInt(bit), 1), value.AnnouncedLen())
 }
 
 func NatIsLess(l, r *saferith.Nat) bool {

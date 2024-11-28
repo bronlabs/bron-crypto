@@ -32,13 +32,13 @@ func CombinationGenerator[T any](input *[]T, k uint) <-chan []T {
 			next := make([]uint, k)
 			copy(next, current)
 
-			for j := safecast.MustToInt(k - 1); j >= 0; j-- {
-				if next[j] == n+safecast.MustToUint(j)-k {
+			for j := safecast.ToInt(k - 1); j >= 0; j-- {
+				if next[j] == n+safecast.ToUint(j)-k {
 					continue
 				}
 				next[j]++
-				for l := safecast.MustToUint(j + 1); l < k; l++ {
-					next[l] = next[j] + l - safecast.MustToUint(j)
+				for l := safecast.ToUint(j + 1); l < k; l++ {
+					next[l] = next[j] + l - safecast.ToUint(j)
 				}
 				break
 			}

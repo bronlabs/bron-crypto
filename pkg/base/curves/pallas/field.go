@@ -244,7 +244,7 @@ func (*BaseField) Select(choice uint64, x0, x1 curves.BaseFieldElement) curves.B
 		panic("x1 is not a non-empty pallas field element")
 	}
 	return &BaseFieldElement{
-		V: new(fp.Fp).CMove(x0f.V, x1f.V, safecast.MustToInt(choice)),
+		V: new(fp.Fp).CMove(x0f.V, x1f.V, safecast.ToInt(choice)),
 	}
 }
 

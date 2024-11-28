@@ -135,7 +135,7 @@ func (p *PartialPublicKeys) Validate(protocol types.ThresholdProtocol) error {
 	if !p.PublicKey.IsInPrimeSubGroup() {
 		return errs.NewValidation("Public Key not in the prime subgroup")
 	}
-	if len(p.FeldmanCommitmentVector) != safecast.MustToInt(protocol.Threshold()) {
+	if len(p.FeldmanCommitmentVector) != safecast.ToInt(protocol.Threshold()) {
 		return errs.NewLength("feldman commitment vector length is invalid")
 	}
 	if p.Shares == nil {

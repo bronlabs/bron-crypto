@@ -93,7 +93,7 @@ func (e *Engine) millerLoop(f *Fp12, coeffs []g2Prepared) {
 	found := 0
 	cIdx := 0
 	for i := 63; i >= 0; i-- {
-		x := safecast.MustToInt(((X >> 1) >> i) & 1)
+		x := safecast.ToInt(((X >> 1) >> i) & 1)
 		if found == 0 {
 			found |= x
 			continue
@@ -142,7 +142,7 @@ func (e *Engine) computeCoeffs() []g2Prepared {
 		k := 0
 
 		for j := 63; j >= 0; j-- {
-			x := safecast.MustToInt(((X >> 1) >> j) & 1)
+			x := safecast.ToInt(((X >> 1) >> j) & 1)
 			if found == 0 {
 				found |= x
 				continue

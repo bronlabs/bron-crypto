@@ -23,7 +23,7 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 
 	// 1.iii. chooses a random e (t bit length)
 	// this values is used to iterate over bits - more convenient to keep as big.Int
-	verifier.state.e, err = crand.Int(verifier.Prng, new(big.Int).Lsh(big.NewInt(1), safecast.MustToUint(verifier.t)))
+	verifier.state.e, err = crand.Int(verifier.Prng, new(big.Int).Lsh(big.NewInt(1), safecast.ToUint(verifier.t)))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get random number")
 	}

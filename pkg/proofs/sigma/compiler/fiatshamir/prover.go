@@ -26,7 +26,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKPr
 	}
 	p.transcript.AppendMessages(commitmentLabel, p.sigmaProtocol.SerializeCommitment(a))
 
-	e, err := p.transcript.ExtractBytes(challengeLabel, safecast.MustToUint(p.sigmaProtocol.GetChallengeBytesLength()))
+	e, err := p.transcript.ExtractBytes(challengeLabel, safecast.ToUint(p.sigmaProtocol.GetChallengeBytesLength()))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot extract bytes from transcript")
 	}

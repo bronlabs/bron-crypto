@@ -25,12 +25,12 @@ func CeilDiv(numerator, denominator int) int {
 
 // FloorLog2 return floor(log2(x)).
 func FloorLog2(x int) int {
-	return 63 - bits.LeadingZeros64(safecast.MustToUint64(x))
+	return 63 - bits.LeadingZeros64(safecast.ToUint64(x))
 }
 
 // CeilLog2 return ceil(log2(x)).
 func CeilLog2(x int) int {
-	return 64 - bits.LeadingZeros64(safecast.MustToUint64(x-1))
+	return 64 - bits.LeadingZeros64(safecast.ToUint64(x-1))
 }
 
 // DecodeString decodes a hex string into a byte slice. It panics if the string is not a valid hex string.

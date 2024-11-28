@@ -44,8 +44,8 @@ func PadToRight(inBytes []byte, padLen int) []byte {
 }
 
 func TruncateWithEllipsis(text string, maxLen uint) string {
-	if len(text) > safecast.MustToInt(maxLen) {
-		return text[:maxLen] + fmt.Sprintf("...(%d)", len(text)-safecast.MustToInt(maxLen))
+	if len(text) > safecast.ToInt(maxLen) {
+		return text[:maxLen] + fmt.Sprintf("...(%d)", len(text)-safecast.ToInt(maxLen))
 	}
 	return text
 }

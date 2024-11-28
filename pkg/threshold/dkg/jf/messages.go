@@ -38,7 +38,7 @@ func (r1b *Round1Broadcast) Validate(protocol types.ThresholdProtocol) error {
 	if len(r1b.BlindedCommitments) == 0 {
 		return errs.NewIsNil("blinded commitments is empty")
 	}
-	if len(r1b.BlindedCommitments) != safecast.MustToInt(protocol.Threshold()) {
+	if len(r1b.BlindedCommitments) != safecast.ToInt(protocol.Threshold()) {
 		return errs.NewLength("len(blindedCommitments) == %d != t == %d", len(r1b.BlindedCommitments), protocol.Threshold())
 	}
 	for i, commitment := range r1b.BlindedCommitments {
@@ -81,7 +81,7 @@ func (r2b *Round2Broadcast) Validate(protocol types.ThresholdProtocol) error {
 	if len(r2b.Ci) == 0 {
 		return errs.NewSize("commitments is empty")
 	}
-	if len(r2b.Ci) != safecast.MustToInt(protocol.Threshold()) {
+	if len(r2b.Ci) != safecast.ToInt(protocol.Threshold()) {
 		return errs.NewLength("len(senderCommitmentVector) == %d != t == %d", len(r2b.Ci), protocol.Threshold())
 	}
 	for i, commitment := range r2b.Ci {

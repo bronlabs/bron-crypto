@@ -53,12 +53,12 @@ func euclidianAdhoc(u, p *saferith.Nat) (r, uOut *saferith.Nat) {
 
 func sampleW1W2(prng io.Reader, mu *saferith.Nat) (w1, w2 *saferith.Nat, err error) {
 	for {
-		w1, err := saferith_utils.NatRandomBits(prng, safecast.MustToUint(mu.TrueLen()/2+1))
+		w1, err := saferith_utils.NatRandomBits(prng, safecast.ToUint(mu.TrueLen()/2+1))
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not produce a nat from random bits")
 		}
 
-		w2, err := saferith_utils.NatRandomBits(prng, safecast.MustToUint(mu.TrueLen()/2+1))
+		w2, err := saferith_utils.NatRandomBits(prng, safecast.ToUint(mu.TrueLen()/2+1))
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "could not produce a nat from random bits")
 		}

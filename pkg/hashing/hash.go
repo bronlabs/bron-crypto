@@ -99,7 +99,7 @@ func KmacPrefixedLength(key, customizationString []byte, h func(n, s []byte) sha
 func encodePrefixedLength(messages ...[]byte) []byte {
 	output := []byte{}
 	for i, message := range messages {
-		encodedMessage := slices.Concat(bitstring.ToBytes32LE(safecast.MustToInt32(i)), bitstring.ToBytes32LE(safecast.MustToInt32(len(message))), message)
+		encodedMessage := slices.Concat(bitstring.ToBytes32LE(safecast.ToInt32(i)), bitstring.ToBytes32LE(safecast.ToInt32(len(message))), message)
 		output = slices.Concat(output, encodedMessage)
 	}
 	return output

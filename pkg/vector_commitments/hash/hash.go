@@ -74,14 +74,14 @@ func (o *Opening) Validate() error {
 }
 
 func encodeSessionId(sessionId []byte) []byte {
-	return slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytes32LE(safecast.MustToInt32(len(sessionId))), sessionId)
+	return slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytes32LE(safecast.ToInt32(len(sessionId))), sessionId)
 }
 
 // Encode the vector as a concatenation of messages along with their position and length.
 func encode(v Vector) Message {
 	encoded := make([][]byte, len(v))
 	for i, m := range v {
-		encoded[i] = slices.Concat(bitstring.ToBytes32LE(safecast.MustToInt32(i)), bitstring.ToBytes32LE(safecast.MustToInt32(len(m))), m)
+		encoded[i] = slices.Concat(bitstring.ToBytes32LE(safecast.ToInt32(i)), bitstring.ToBytes32LE(safecast.ToInt32(len(m))), m)
 	}
 	return bytes.Join(encoded, nil)
 }

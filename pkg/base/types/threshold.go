@@ -62,7 +62,7 @@ func validateExtrasThresholdProtocolConfig(f ThresholdProtocol) error {
 	if n < t {
 		return errs.NewValue(" n < t")
 	}
-	if n != safecast.MustToUint(f.Participants().Size()) {
+	if n != safecast.ToUint(f.Participants().Size()) {
 		return errs.NewSize("n != size of participants")
 	}
 	return nil

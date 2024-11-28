@@ -128,7 +128,7 @@ func (h *TmmoHash) Write(input []byte) (n int, err error) {
 			// 3.1.2) π(x)⊕i - XOR the result of the block cipher with the index.
 			// We increase a hash-level counter on each TMMO call and use it as index.
 			h.counter++
-			xorIndexBE(h.permutedOnceBlock, outputBlock, safecast.MustToInt32(h.counter))
+			xorIndexBE(h.permutedOnceBlock, outputBlock, safecast.ToInt32(h.counter))
 			// 3.1.3) π(π(x)⊕i) - Apply the block cipher to the result of the XOR.
 			h.keyedBlockCipher.Encrypt(outputBlock, outputBlock)
 			// 3.1.4) π(π(x)⊕i)⊕π(x) - XOR the two results of the block cipher.

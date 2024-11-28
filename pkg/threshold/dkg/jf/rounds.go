@@ -40,7 +40,7 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.Th
 	}
 	// step 1.3: π_i <- NIZKPoK.Prove(s)  ∀s∈{a_i0, x_i1, x_i2, ..., x_in}
 	proverTranscript := p.Transcript.Clone()
-	proverTranscript.AppendMessages(sharingIdLabel, bitstring.ToBytes32LE(safecast.MustToInt32(p.SharingId())))
+	proverTranscript.AppendMessages(sharingIdLabel, bitstring.ToBytes32LE(safecast.ToInt32(p.SharingId())))
 	prover, err := p.state.niCompiler.NewProver(p.SessionId, proverTranscript)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct dlog prover")
@@ -166,13 +166,13 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.ThresholdP
 		if senderCommitmentVector == nil {
 			return nil, nil, errs.NewIsNil("sender commitment vector")
 		}
-		if len(senderCommitmentVector) != safecast.MustToInt(p.Protocol.Threshold()) {
+		if len(senderCommitmentVector) != safecast.ToInt(p.Protocol.Threshold()) {
 			return nil, nil, errs.NewLength("len(senderCommitmentVector) == %d != t == %d", len(senderCommitmentVector), p.Protocol.Threshold())
 		}
 		senderCommitmentToTheirLocalSecret := senderCommitmentVector[0]
 		// step 3.1: NIZKPoK.Verify(π_i)
 		verifierTranscript := p.Transcript.Clone()
-		verifierTranscript.AppendMessages(sharingIdLabel, bitstring.ToBytes32LE(safecast.MustToInt32(senderSharingId)))
+		verifierTranscript.AppendMessages(sharingIdLabel, bitstring.ToBytes32LE(safecast.ToInt32(senderSharingId)))
 		verifier, err := p.state.niCompiler.NewVerifier(p.SessionId, verifierTranscript)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot create commitments verifier")

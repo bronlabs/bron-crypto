@@ -33,7 +33,7 @@ func (el *FieldElement) Equal(e *FieldElement) bool {
 }
 
 func (el *FieldElement) Eq(e *FieldElement) int {
-	return safecast.MustToInt(
+	return safecast.ToInt(
 		ct.Equal(el.V[1], e.V[1]) & ct.Equal(el.V[0], e.V[0]),
 	)
 }

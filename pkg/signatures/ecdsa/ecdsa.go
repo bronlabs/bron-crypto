@@ -198,7 +198,7 @@ func BitsToInt(b []byte, curve curves.Curve) uint256.Uint256 {
 	// Limit to exactly |q| bits, padded with zeros
 	qlen := curve.Order().BitLen()
 	if blen > qlen {
-		bUint = bUint.Rsh(safecast.MustToUint(blen - qlen))
+		bUint = bUint.Rsh(safecast.ToUint(blen - qlen))
 	}
 	return bUint
 }

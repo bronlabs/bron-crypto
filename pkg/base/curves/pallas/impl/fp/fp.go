@@ -336,7 +336,7 @@ func (fp *Fp) pow(base *Fp, exp [4]uint64) *Fp {
 func (fp *Fp) CMove(lhs, rhs *Fp, choice int) *Fp {
 	dlhs := (*[4]uint64)(lhs)
 	drhs := (*[4]uint64)(rhs)
-	fiat_pasta_fp_selectznz((*[4]uint64)(fp), fiat_pasta_fp_uint1(safecast.MustToUint64(choice)), dlhs, drhs)
+	fiat_pasta_fp_selectznz((*[4]uint64)(fp), fiat_pasta_fp_uint1(safecast.ToUint64(choice)), dlhs, drhs)
 	return fp
 }
 

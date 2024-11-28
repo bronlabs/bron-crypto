@@ -222,9 +222,9 @@ func (c *Curve) Select(choice uint64, x0, x1 curves.Point) curves.Point {
 	if !okp || p.V == nil {
 		panic("curve.Element() not a non-empty Pallas point")
 	}
-	p.V.X.CMove(x0p.V.X, x1p.V.X, safecast.MustToInt(choice))
-	p.V.Y.CMove(x0p.V.Y, x1p.V.Y, safecast.MustToInt(choice))
-	p.V.Z.CMove(x0p.V.Z, x1p.V.Z, safecast.MustToInt(choice))
+	p.V.X.CMove(x0p.V.X, x1p.V.X, safecast.ToInt(choice))
+	p.V.Y.CMove(x0p.V.Y, x1p.V.Y, safecast.ToInt(choice))
+	p.V.Z.CMove(x0p.V.Z, x1p.V.Z, safecast.ToInt(choice))
 	return p
 }
 
@@ -458,7 +458,7 @@ func PippengerMultiScalarMultPallas(points []*Ep, scalars []*saferith.Nat) *Ep {
 		}
 
 		for i := 0; i < len(scalars); i++ {
-			index := bucketSize & new(saferith.Nat).Rsh(scalars[i], safecast.MustToUint(w*j), fp.Modulus.BitLen()).Uint64()
+			index := bucketSize & new(saferith.Nat).Rsh(scalars[i], safecast.ToUint(w*j), fp.Modulus.BitLen()).Uint64()
 			if index != 0 {
 				bucket[index-1].Add(bucket[index-1], points[i])
 			}

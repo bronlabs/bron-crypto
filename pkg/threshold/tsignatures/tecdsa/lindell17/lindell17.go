@@ -63,7 +63,7 @@ func (ppm *PreProcessingMaterial) Validate(myIdentityKey types.IdentityKey, prot
 	if ppm.PreSigners == nil {
 		return errs.NewIsNil("presigners")
 	}
-	if ppm.PreSigners.Size() < safecast.MustToInt(protocol.Threshold()) {
+	if ppm.PreSigners.Size() < safecast.ToInt(protocol.Threshold()) {
 		return errs.NewSize("not enough session participants: %d", ppm.PreSigners.Size())
 	}
 	if !ppm.PreSigners.IsSubSet(protocol.Participants()) {

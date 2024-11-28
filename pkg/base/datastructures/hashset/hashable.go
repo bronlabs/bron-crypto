@@ -57,7 +57,7 @@ func (s *HashableHashSet[_]) Size() int {
 }
 
 func (s *HashableHashSet[_]) Cardinality() *saferith.Nat {
-	return new(saferith.Nat).SetUint64(safecast.MustToUint64(s.v.Size()))
+	return new(saferith.Nat).SetUint64(safecast.ToUint64(s.v.Size()))
 }
 
 func (s *HashableHashSet[_]) IsEmpty() bool {

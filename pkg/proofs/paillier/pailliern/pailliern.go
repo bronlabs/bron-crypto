@@ -131,7 +131,7 @@ func Verify(sessionId []byte, transcript transcripts.Transcript, statement *pail
 }
 
 func extractRhos(transcript transcripts.Transcript, n *saferith.Modulus) ([]*saferith.Nat, error) {
-	byteSize := safecast.MustToUint((n.BitLen() + 7) / 8)
+	byteSize := safecast.ToUint((n.BitLen() + 7) / 8)
 	excessBits := n.BitLen() % 8
 
 	result := make([]*saferith.Nat, M)

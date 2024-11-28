@@ -66,7 +66,7 @@ func (p *PreGenParticipant) Round2(round1output network.RoundMessages[types.Thre
 		Tau:         p.Tau,
 		Commitments: p.state.Commitments,
 	})
-	if round1output.Size() != safecast.MustToInt(p.Protocol.TotalParties()) {
+	if round1output.Size() != safecast.ToInt(p.Protocol.TotalParties()) {
 		return nil, nil, errs.NewSize("the number of received messages is not equal to total parties")
 	}
 

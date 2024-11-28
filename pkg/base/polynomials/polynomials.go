@@ -17,13 +17,13 @@ type Polynomial struct {
 }
 
 func (p *Polynomial) Degree() uint {
-	return safecast.MustToUint(len(p.Coefficients) - 1)
+	return safecast.ToUint(len(p.Coefficients) - 1)
 }
 
 func (p *Polynomial) Evaluate(x curves.Scalar) curves.Scalar {
 	degree := p.Degree()
 	out := p.Coefficients[degree].Clone()
-	for i := safecast.MustToInt(degree - 1); i >= 0; i-- {
+	for i := safecast.ToInt(degree - 1); i >= 0; i-- {
 		out = out.Mul(x).Add(p.Coefficients[i])
 	}
 	return out
@@ -36,7 +36,7 @@ func NewRandomPolynomial(intercept curves.Scalar, degree uint, prng io.Reader) (
 	p = &Polynomial{Curve: intercept.ScalarField().Curve()}
 	p.Coefficients = make([]curves.Scalar, degree)
 	p.Coefficients[0] = intercept.Clone()
-	for i := 1; i < safecast.MustToInt(degree); i++ {
+	for i := 1; i < safecast.ToInt(degree); i++ {
 		p.Coefficients[i], err = intercept.ScalarField().Random(prng)
 		if err != nil {
 			return nil, errs.WrapRandomSample(err, "could not generate random coefficient")

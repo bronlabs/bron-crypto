@@ -123,7 +123,7 @@ func (s *KDFScheme) labeledExpand(suiteId, prk, label, info []byte, L int) []byt
 	}
 
 	lengthBuffer := make([]byte, 2)
-	binary.BigEndian.PutUint16(lengthBuffer, safecast.MustToUint16(L))
+	binary.BigEndian.PutUint16(lengthBuffer, safecast.ToUint16(L))
 	labeledInfo := slices.Concat(
 		lengthBuffer, []byte(version), suiteId, label, info,
 	)

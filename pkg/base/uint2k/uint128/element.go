@@ -107,7 +107,7 @@ func (u Uint128) Nat() *saferith.Nat {
 
 // ConstantTimeSelect returns x if b == true or y if b == false. Inspired by subtle.ConstantTimeSelect().
 func ConstantTimeSelect(v bool, x, y Uint128) Uint128 {
-	vv := safecast.MustToUint64(utils.BoolTo[int](v))
+	vv := safecast.ToUint64(utils.BoolTo[int](v))
 	return Uint128{^(vv-1)&x.Lo | (vv-1)&y.Lo, ^(vv-1)&x.Hi | (vv-1)&y.Hi}
 }
 
@@ -264,12 +264,12 @@ func (u Uint128) Previous() (Uint128, error) {
 }
 
 func (u Uint128) Min(rhs Uint128) Uint128 {
-	lt := safecast.MustToUint64(subtle.ConstantTimeEq(safecast.MustToInt32(u.Cmp(rhs)), safecast.MustToInt32(algebra.LessThan)))
+	lt := safecast.ToUint64(subtle.ConstantTimeEq(safecast.ToInt32(u.Cmp(rhs)), safecast.ToInt32(algebra.LessThan)))
 	return Ring().Select(lt, u, rhs)
 }
 
 func (u Uint128) Max(rhs Uint128) Uint128 {
-	lt := safecast.MustToUint64(subtle.ConstantTimeEq(safecast.MustToInt32(u.Cmp(rhs)), safecast.MustToInt32(algebra.LessThan)))
+	lt := safecast.ToUint64(subtle.ConstantTimeEq(safecast.ToInt32(u.Cmp(rhs)), safecast.ToInt32(algebra.LessThan)))
 	return Ring().Select(lt, rhs, u)
 }
 

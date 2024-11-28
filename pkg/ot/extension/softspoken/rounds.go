@@ -89,7 +89,7 @@ func (r *Receiver) Round1(x ot.PackedBits) (oTeReceiverOutput []ot.Message, r1Ou
 	for j := 0; j < r.Protocol.Xi; j++ {
 		r.Output.ChosenMessages[j] = make(ot.Message, r.Protocol.L)
 		for l := 0; l < r.Protocol.L; l++ {
-			digest, err := hashing.Hash(ot.HashFunction, []byte(transcriptLabel), r.SessionId, bitstring.ToBytes32LE(safecast.MustToInt32(j)), t_j[j*r.Protocol.L+l])
+			digest, err := hashing.Hash(ot.HashFunction, []byte(transcriptLabel), r.SessionId, bitstring.ToBytes32LE(safecast.ToInt32(j)), t_j[j*r.Protocol.L+l])
 			if err != nil {
 				return nil, nil, errs.WrapHashing(err, "bad hashing t_j for SoftSpoken COTe")
 			}
@@ -132,7 +132,7 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput [][2]ot.Message, e
 	for i := 0; i < ot.Kappa; i++ {
 		extCorrelations[i] = t_b[i]
 		subtle.XORBytes(qiTemp, r1out.U[i], t_b[i])
-		subtle.ConstantTimeCopy(int(s.baseOtSeeds.Choices.Get(safecast.MustToUint(i))), extCorrelations[i], qiTemp)
+		subtle.ConstantTimeCopy(int(s.baseOtSeeds.Choices.Get(safecast.ToUint(i))), extCorrelations[i], qiTemp)
 	}
 
 	// CONSISTENCY CHECK (Fiat-Shamir)
@@ -171,12 +171,12 @@ func (s *Sender) Round2(r1out *Round1Output) (oTeSenderOutput [][2]ot.Message, e
 		s.Output.MessagePairs[j][0] = make(ot.Message, s.Protocol.L)
 		s.Output.MessagePairs[j][1] = make(ot.Message, s.Protocol.L)
 		for l := 0; l < s.Protocol.L; l++ {
-			digest, err := hashing.Hash(ot.HashFunction, []byte(transcriptLabel), s.SessionId, bitstring.ToBytes32LE(safecast.MustToInt32(j)), qjTransposed[j*s.Protocol.L+l])
+			digest, err := hashing.Hash(ot.HashFunction, []byte(transcriptLabel), s.SessionId, bitstring.ToBytes32LE(safecast.ToInt32(j)), qjTransposed[j*s.Protocol.L+l])
 			if err != nil {
 				return nil, errs.WrapHashing(err, "bad hashing q_j for SoftSpoken COTe (T&R.2)")
 			}
 			copy(s.Output.MessagePairs[j][0][l][:], digest)
-			digest, err = hashing.Hash(ot.HashFunction, []byte(transcriptLabel), s.SessionId, bitstring.ToBytes32LE(safecast.MustToInt32(j)), qjTransposedPlusDelta[j*s.Protocol.L+l])
+			digest, err = hashing.Hash(ot.HashFunction, []byte(transcriptLabel), s.SessionId, bitstring.ToBytes32LE(safecast.ToInt32(j)), qjTransposedPlusDelta[j*s.Protocol.L+l])
 			if err != nil {
 				return nil, errs.WrapHashing(err, "bad hashing q_j_pDelta for SoftSpoken COTe (T&R.2)")
 			}

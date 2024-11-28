@@ -57,5 +57,5 @@ func (c *Commitment) Validate() error {
 }
 
 func encodeSessionId(sessionId []byte) []byte {
-	return slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytes32LE(safecast.MustToInt32(len(sessionId))), sessionId)
+	return slices.Concat([]byte("SESSION_ID_"), bitstring.ToBytes32LE(safecast.ToInt32(len(sessionId))), sessionId)
 }

@@ -25,7 +25,7 @@ func (r1b *Round1Broadcast) Validate(protocol types.ThresholdProtocol) error {
 	if r1b.Sampler == nil {
 		return errs.NewIsNil("sampler")
 	}
-	if len(r1b.PreviousFeldmanCommitment) != safecast.MustToInt(protocol.Threshold()) {
+	if len(r1b.PreviousFeldmanCommitment) != safecast.ToInt(protocol.Threshold()) {
 		return errs.NewLength("len(previous feldman commitment) == %d != t == %d", len(r1b.PreviousFeldmanCommitment), protocol.Threshold())
 	}
 	return nil

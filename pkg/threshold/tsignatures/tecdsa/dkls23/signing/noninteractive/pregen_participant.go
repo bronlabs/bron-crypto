@@ -134,7 +134,7 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 	if preSigners == nil {
 		return errs.NewIsNil("preSigners")
 	}
-	if preSigners.Size() < safecast.MustToInt(protocol.Threshold()) {
+	if preSigners.Size() < safecast.ToInt(protocol.Threshold()) {
 		return errs.NewSize("not enough session participants: %d", preSigners.Size())
 	}
 	if preSigners.Difference(protocol.Participants()).Size() != 0 {

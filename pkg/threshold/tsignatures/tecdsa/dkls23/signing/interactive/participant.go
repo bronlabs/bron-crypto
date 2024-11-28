@@ -136,7 +136,7 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 	if quorum == nil {
 		return errs.NewIsNil("invalid number of session participants")
 	}
-	if quorum.Size() < safecast.MustToInt(protocol.Threshold()) {
+	if quorum.Size() < safecast.ToInt(protocol.Threshold()) {
 		return errs.NewSize("not enough session participants: %d", quorum.Size())
 	}
 	if quorum.Difference(protocol.Participants()).Size() != 0 {

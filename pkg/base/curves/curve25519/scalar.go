@@ -234,7 +234,7 @@ func (s *Scalar) Eq(rhs curves.Scalar) uint64 {
 	if !ok {
 		return 0
 	}
-	return safecast.MustToUint64(subtle.ConstantTimeCompare(s.V[:], rhse.V[:]))
+	return safecast.ToUint64(subtle.ConstantTimeCompare(s.V[:], rhse.V[:]))
 }
 
 func (s *Scalar) Clone() curves.Scalar {

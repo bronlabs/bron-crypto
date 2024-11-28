@@ -126,7 +126,7 @@ func validateInputs[K bls.KeySubGroup, S bls.SignatureSubGroup](sessionId []byte
 	if quorum == nil {
 		return errs.NewIsNil("session participants")
 	}
-	if quorum.Size() < safecast.MustToInt(protocol.Threshold()) {
+	if quorum.Size() < safecast.ToInt(protocol.Threshold()) {
 		return errs.NewSize("not enough session participants")
 	}
 	if !quorum.IsSubSet(protocol.Participants()) {

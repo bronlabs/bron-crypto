@@ -112,7 +112,7 @@ func (s *DHKEMScheme) DeriveKeyPair(ikm []byte) (*PrivateKey, error) {
 			if counter > 255 {
 				return nil, errs.NewFailed("DeriveKeyPairError")
 			}
-			skBytes := s.kdf.labeledExpand(s.suiteID(), dpkPrk, []byte("candidate"), []byte{safecast.MustToUint8(counter)}, s.NSk())
+			skBytes := s.kdf.labeledExpand(s.suiteID(), dpkPrk, []byte("candidate"), []byte{safecast.ToUint8(counter)}, s.NSk())
 			skBytes[0] &= P256BitMask
 
 			sk, err = s.curve.ScalarField().Element().SetBytes(skBytes)

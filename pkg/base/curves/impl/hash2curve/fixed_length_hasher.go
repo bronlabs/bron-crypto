@@ -73,7 +73,7 @@ func (flh *FixedLengthCurveHasher) ExpandMessage(outLen int, msg, dst []byte) ([
 		tmp := make([]byte, h.Size())
 		subtle.XORBytes(tmp, b0, bi)
 		_, _ = h.Write(tmp)
-		_, _ = h.Write([]byte{1 + safecast.MustToUint8(i)})
+		_, _ = h.Write([]byte{1 + safecast.ToUint8(i)})
 		_, _ = h.Write(dst)
 		_, _ = h.Write([]byte{dstLen})
 		//  uniform_bytes = b_1 || ... || b_(ell - 1)
@@ -110,7 +110,7 @@ func (flh *FixedLengthCurveHasher) HashToFieldElements(count int, msg, dst []byt
 	if dst == nil {
 		dst = flh.Dst()
 	}
-	m := safecast.MustToInt(flh.Curve().BaseField().ExtensionDegree().Uint64())
+	m := safecast.ToInt(flh.Curve().BaseField().ExtensionDegree().Uint64())
 	u, err = hashToField(flh, MapToFieldElement, msg, dst, count, flh.lFieldElement, m)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "hash to field element with fixed-length hash function failed")

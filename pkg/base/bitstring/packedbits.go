@@ -32,7 +32,7 @@ func Pack(unpackedBits []uint8) (PackedBits, error) {
 func (pb PackedBits) Unpack() []uint8 {
 	vOut := make([]byte, pb.BitLen())
 	for i := range pb.BitLen() {
-		vOut[i] = pb.Get(safecast.MustToUint(i))
+		vOut[i] = pb.Get(safecast.ToUint(i))
 	}
 	return vOut
 }
@@ -78,7 +78,7 @@ func (pb PackedBits) Repeat(nRepetitions int) PackedBits {
 	vOut := PackedBits(make([]byte, len(pb)*nRepetitions))
 	nextBit := 0
 	for i := range pb.BitLen() {
-		bit := pb.Get(safecast.MustToUint(i))
+		bit := pb.Get(safecast.ToUint(i))
 		for range nRepetitions {
 			vOut[nextBit/8] |= bit << (nextBit % 8)
 			nextBit++
@@ -146,7 +146,7 @@ func Parse(v string) (PackedBits, error) {
 			return nil, errs.NewArgument("Invalid character in the input")
 		}
 		byteIndex := i / 8
-		bitPos := safecast.MustToUint(i % 8)
+		bitPos := safecast.ToUint(i % 8)
 
 		if char == '1' {
 			packedBits[byteIndex] |= 1 << (byte(bitPos))

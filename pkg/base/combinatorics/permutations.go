@@ -92,7 +92,7 @@ func PartialPermutationsGenerator[T any](input *[]T, k uint) <-chan []T {
 	}
 	L := make([]int, k)
 	for i := range k {
-		L[i] = safecast.MustToInt(i)
+		L[i] = safecast.ToInt(i)
 	}
 
 	ch := make(chan []T, 1)
@@ -102,7 +102,7 @@ func PartialPermutationsGenerator[T any](input *[]T, k uint) <-chan []T {
 		ch <- mapIndicesToElements(input, L)
 
 		for {
-			j := safecast.MustToInt(k) - 1
+			j := safecast.ToInt(k) - 1
 			for j >= 0 {
 				A[L[j]] = false
 				t := L[j] + 1
@@ -114,7 +114,7 @@ func PartialPermutationsGenerator[T any](input *[]T, k uint) <-chan []T {
 					L[j] = t
 					r := 0
 					j++
-					for j < safecast.MustToInt(k) {
+					for j < safecast.ToInt(k) {
 						for A[r] {
 							r++
 						}

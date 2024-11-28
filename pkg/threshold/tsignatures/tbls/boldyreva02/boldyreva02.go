@@ -124,7 +124,7 @@ func (p *PartialPublicKeys[K]) Validate(protocol types.ThresholdProtocol) error 
 	if !curveutils.AllPointsOfSameCurve(protocol.Curve(), p.PublicKey.Y) {
 		return errs.NewCurve("public key")
 	}
-	if len(p.FeldmanCommitmentVector) != safecast.MustToInt(protocol.Threshold()) {
+	if len(p.FeldmanCommitmentVector) != safecast.ToInt(protocol.Threshold()) {
 		return errs.NewLength("feldman commitment vector length is invalid")
 	}
 	partialPublicKeyHolders := hashset.NewHashableHashSet(p.Shares.Keys()...)
@@ -156,7 +156,7 @@ func (p *PartialPublicKeys[K]) ValidateWithSharingConfig(sharingConfig types.Sha
 
 	sharingIds := make([]curves.Scalar, sharingConfig.Size())
 	partialPublicKeys := make([]curves.Point, sharingConfig.Size())
-	for i := uint(0); i < safecast.MustToUint(sharingConfig.Size()); i++ {
+	for i := uint(0); i < safecast.ToUint(sharingConfig.Size()); i++ {
 		sharingId := types.SharingID(i + 1)
 		sharingIds[i] = p.PublicKey.Y.Curve().ScalarField().New(uint64(sharingId))
 		identityKey, exists := sharingConfig.Get(sharingId)

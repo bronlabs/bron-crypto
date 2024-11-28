@@ -66,7 +66,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proof compiler.NIZ
 			if err != nil {
 				return nil, errs.WrapFailed(err, "cannot generate response")
 			}
-			digest, err := hash(crs, a, bitstring.ToBytes32LE(safecast.MustToInt32(i)), e, p.sigmaProtocol.SerializeResponse(z))
+			digest, err := hash(crs, a, bitstring.ToBytes32LE(safecast.ToInt32(i)), e, p.sigmaProtocol.SerializeResponse(z))
 			if err != nil {
 				return nil, errs.WrapHashing(err, "cannot compute digest")
 			}

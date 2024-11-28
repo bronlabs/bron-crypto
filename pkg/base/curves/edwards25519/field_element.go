@@ -253,7 +253,7 @@ func (e *BaseFieldElement) Eq(rhs curves.BaseFieldElement) uint64 {
 	if !ok {
 		return 0
 	}
-	return safecast.MustToUint64(e.V.Equal(rhse.V))
+	return safecast.ToUint64(e.V.Equal(rhse.V))
 }
 
 func (e *BaseFieldElement) Clone() curves.BaseFieldElement {

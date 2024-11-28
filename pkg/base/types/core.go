@@ -51,7 +51,7 @@ func (p *protocol) Threshold() uint {
 }
 
 func (p *protocol) TotalParties() uint {
-	return safecast.MustToUint(p.participants.Size())
+	return safecast.ToUint(p.participants.Size())
 }
 
 func (p *protocol) SigningSuite() SigningSuite {

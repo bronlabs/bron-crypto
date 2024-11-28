@@ -70,5 +70,5 @@ func SliceCmpLE[S ~[]E, E constraints.Unsigned](x, y S) int64 {
 		gt |= Greater(x[i], y[i]) & ^lt
 		lt |= Less(x[i], y[i]) & ^gt
 	}
-	return safecast.MustToInt64(gt) - safecast.MustToInt64(lt)
+	return safecast.ToInt64(gt) - safecast.ToInt64(lt)
 }

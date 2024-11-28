@@ -248,7 +248,7 @@ func (s *Scalar) Eq(rhs curves.Scalar) uint64 {
 	if !ok {
 		return 0
 	}
-	return safecast.MustToUint64(s.V.Equal(rhse.V))
+	return safecast.ToUint64(s.V.Equal(rhse.V))
 }
 
 func (s *Scalar) Clone() curves.Scalar {
@@ -478,7 +478,7 @@ func (s *Scalar) Cmp(rhs algebra.OrderTheoreticLatticeElement[curves.ScalarField
 	r, ok := rhs.(*Scalar)
 	if ok {
 		g, e, _ := s.Nat().Cmp(r.Nat())
-		return algebra.Ordering((safecast.MustToInt(g) + safecast.MustToInt(g) + safecast.MustToInt(e)) - 1)
+		return algebra.Ordering((safecast.ToInt(g) + safecast.ToInt(g) + safecast.ToInt(e)) - 1)
 	}
 
 	return algebra.Incomparable

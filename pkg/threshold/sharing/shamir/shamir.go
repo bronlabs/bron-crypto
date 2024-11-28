@@ -99,9 +99,9 @@ func (s *Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reade
 	}
 	shares := make([]*Share, s.Total)
 	for i := range shares {
-		x := s.Curve.ScalarField().New(safecast.MustToUint64(i + 1))
+		x := s.Curve.ScalarField().New(safecast.ToUint64(i + 1))
 		shares[i] = &Share{
-			Id:    safecast.MustToUint(i + 1),
+			Id:    safecast.ToUint(i + 1),
 			Value: poly.Evaluate(x),
 		}
 	}
@@ -109,10 +109,10 @@ func (s *Dealer) GeneratePolynomialAndShares(secret curves.Scalar, prng io.Reade
 }
 
 func (s *Dealer) LagrangeCoefficients(identities []uint) (map[uint]curves.Scalar, error) {
-	if len(identities) < safecast.MustToInt(s.Threshold) {
+	if len(identities) < safecast.ToInt(s.Threshold) {
 		return nil, errs.NewArgument("not enough identities")
 	}
-	if len(identities) > safecast.MustToInt(s.Total) {
+	if len(identities) > safecast.ToInt(s.Total) {
 		return nil, errs.NewArgument("too many identities")
 	}
 	lambdas, err := LagrangeCoefficients(s.Curve, identities)
@@ -123,7 +123,7 @@ func (s *Dealer) LagrangeCoefficients(identities []uint) (map[uint]curves.Scalar
 }
 
 func (s *Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
-	if len(shares) < safecast.MustToInt(s.Threshold) {
+	if len(shares) < safecast.ToInt(s.Threshold) {
 		return nil, errs.NewSize("invalid number of shares")
 	}
 	dups := make(map[uint]bool, len(shares))
@@ -153,7 +153,7 @@ func (s *Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
 }
 
 func (s *Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
-	if len(shares) < safecast.MustToInt(s.Threshold) {
+	if len(shares) < safecast.ToInt(s.Threshold) {
 		return nil, errs.NewSize("invalid number of shares (%d != %d)", len(shares), s.Threshold)
 	}
 
