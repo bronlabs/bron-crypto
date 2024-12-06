@@ -34,8 +34,8 @@ var accessStructures = []struct {
 }{
 	{threshold: 2, total: 3},
 	{threshold: 5, total: 5},
-	{threshold: 3, total: 11},
-	{threshold: 8, total: 12},
+	{threshold: 2, total: 7},
+	{threshold: 6, total: 8},
 }
 
 func Test_HappyPath(t *testing.T) {
@@ -55,7 +55,7 @@ func Test_HappyPath(t *testing.T) {
 				secret, err := curve.ScalarField().Random(prng)
 				require.NoError(t, err)
 
-				shares, commitments, err := pedersenDealer.Deal(secret, prng)
+				shares, commitments, _, err := pedersenDealer.Deal(secret, prng)
 				require.NoError(t, err)
 
 				for _, share := range shares {

@@ -26,48 +26,45 @@ func (s *Share) AsShamir() *shamir.Share {
 }
 
 type Dealer struct {
-	ck               *ecpedersen_comm.CommittingKey
-	threshold, total uint
+	Ck               *ecpedersen_comm.CommittingKey
+	Threshold, Total uint
 }
 
 func NewDealer(ck *ecpedersen_comm.CommittingKey, threshold, total uint) *Dealer {
 	return &Dealer{
-		ck:        ck,
-		threshold: threshold,
-		total:     total,
+		Ck:        ck,
+		Threshold: threshold,
+		Total:     total,
 	}
 }
 
-func (d *Dealer) Deal(secret ecpedersen_comm.Message, prng io.Reader) (shares map[types.SharingID]*Share, commitments []ecpedersen_comm.Commitment, err error) {
-	messages := make([]ecpedersen_comm.Message, d.threshold)
-	commitments = make([]ecpedersen_comm.Commitment, d.threshold)
-	witnesses := make([]ecpedersen_comm.Witness, d.threshold)
+func (d *Dealer) DealPolynomial(secretPolynomial []curves.Scalar, prng io.Reader) (shares map[types.SharingID]*Share, commitments []ecpedersen_comm.Commitment, err error) {
+	if len(secretPolynomial) != int(d.Threshold) {
+		return nil, nil, errs.NewSize("invalid polynomial length")
+	}
 
-	scalarField := secret.ScalarField()
-	for i := range d.threshold {
-		if i == 0 {
-			messages[i] = secret.Clone()
-		} else {
-			messages[i], err = scalarField.Random(prng)
-			if err != nil {
-				return nil, nil, errs.WrapRandomSample(err, "cannot sample scalar")
-			}
-		}
-		commitments[i], witnesses[i], err = d.ck.Commit(messages[i], prng)
+	messages := make([]ecpedersen_comm.Message, d.Threshold)
+	commitments = make([]ecpedersen_comm.Commitment, d.Threshold)
+	witnesses := make([]ecpedersen_comm.Witness, d.Threshold)
+
+	scalarField := secretPolynomial[0].ScalarField()
+	for i := range d.Threshold {
+		messages[i] = secretPolynomial[i]
+		commitments[i], witnesses[i], err = d.Ck.Commit(messages[i], prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot commit to scalar")
 		}
 	}
 
 	shares = make(map[types.SharingID]*Share)
-	for i := range d.total {
+	for i := range d.Total {
 		sharingId := types.SharingID(i + 1)
 		at := scalarField.New(uint64(sharingId))
-		value, err := evalPolyAt(messages, ecpedersen_comm.Scalar(at), d.ck.MessageAdd, d.ck.MessageMul)
+		value, err := evalPolyAt(messages, ecpedersen_comm.Scalar(at), d.Ck.MessageAdd, d.Ck.MessageMul)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot evaluate poly")
 		}
-		witness, err := evalPolyAt(witnesses, ecpedersen_comm.Scalar(at), d.ck.WitnessAdd, d.ck.WitnessMul)
+		witness, err := evalPolyAt(witnesses, ecpedersen_comm.Scalar(at), d.Ck.WitnessAdd, d.Ck.WitnessMul)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot evaluate poly")
 		}
@@ -84,8 +81,29 @@ func (d *Dealer) Deal(secret ecpedersen_comm.Message, prng io.Reader) (shares ma
 	return shares, commitments, nil
 }
 
+func (d *Dealer) Deal(secret curves.Scalar, prng io.Reader) (shares map[types.SharingID]*Share, commitments []ecpedersen_comm.Commitment, secretPolynomial []curves.Scalar, err error) {
+	scalarField := secret.ScalarField()
+	secretPolynomial = make([]curves.Scalar, d.Threshold)
+	secretPolynomial[0] = secret.Clone()
+	for i := 1; i < int(d.Threshold); i++ {
+		secretPolynomial[i], err = scalarField.Random(prng)
+		if err != nil {
+			return nil, nil, nil, errs.WrapRandomSample(err, "cannot sample scalar")
+		}
+	}
+
+	shares, commitments, err = d.DealPolynomial(secretPolynomial, prng)
+	if err != nil {
+		return nil, nil, nil, errs.WrapFailed(err, "cannot deal with polynomial")
+	}
+	return shares, commitments, secretPolynomial, nil
+}
+
 func (d *Dealer) VerifyReveal(commitments []ecpedersen_comm.Commitment, shares ...*Share) (ecpedersen_comm.Message, error) {
-	if len(shares) < int(d.threshold) {
+	if len(commitments) != int(d.Threshold) {
+		return nil, errs.NewSize("invalid length of commitment vector")
+	}
+	if len(shares) < int(d.Threshold) {
 		return nil, errs.NewSize("invalid number of shares")
 	}
 	dups := make(map[uint]bool, len(shares))
@@ -94,8 +112,8 @@ func (d *Dealer) VerifyReveal(commitments []ecpedersen_comm.Commitment, shares .
 	rs := make([]curves.Scalar, len(shares))
 
 	for i, share := range shares {
-		if share.Id > d.total {
-			return nil, errs.NewValue("invalid share identifier id: %d must be greater than total: %d", share.Id, d.total)
+		if share.Id > d.Total {
+			return nil, errs.NewValue("invalid share identifier id: %d must be greater than total: %d", share.Id, d.Total)
 		}
 		if err := d.VerifyShare(share, commitments); err != nil {
 			return nil, errs.NewValue("invalid share")
@@ -118,7 +136,7 @@ func (d *Dealer) VerifyReveal(commitments []ecpedersen_comm.Commitment, shares .
 		return nil, errs.WrapFailed(err, "could not interpolate")
 	}
 
-	err = d.ck.Verify(commitments[0], message, witness)
+	err = d.Ck.Verify(commitments[0], message, witness)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "verification failed")
 	}
@@ -127,11 +145,11 @@ func (d *Dealer) VerifyReveal(commitments []ecpedersen_comm.Commitment, shares .
 
 func (d *Dealer) VerifyShare(share *Share, commitments []ecpedersen_comm.Commitment) error {
 	at := share.Value.ScalarField().New(uint64(share.Id))
-	commitment, err := evalPolyAt(commitments, ecpedersen_comm.Scalar(at), d.ck.CommitmentAdd, d.ck.CommitmentMul)
+	commitment, err := evalPolyAt(commitments, ecpedersen_comm.Scalar(at), d.Ck.CommitmentAdd, d.Ck.CommitmentMul)
 	if err != nil {
 		return errs.NewVerification("cannot verify share")
 	}
-	return d.ck.Verify(commitment, share.Value, share.R)
+	return d.Ck.Verify(commitment, share.Value, share.R)
 }
 
 func evalPolyAt[Y any, X any](poly []Y, at X, addFunc func(lhs, rhs Y) (Y, error), mulFunc func(lhs Y, rhs X) (Y, error)) (Y, error) {
