@@ -8,6 +8,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
@@ -87,7 +88,7 @@ func Deal(protocol types.ThresholdProtocol, secret curves.Scalar, prng io.Reader
 		}
 		partialPublicKeys.Put(identity, &tsignatures.PartialPublicKeys{
 			PublicKey:               publicKey,
-			Shares:                  partialPublicKeysShares,
+			Shares:                  dkg.AsSharingIDMappedToPartialPublicKeys(partialPublicKeysShares),
 			FeldmanCommitmentVector: commitments,
 		})
 	}

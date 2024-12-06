@@ -93,11 +93,7 @@ func (m *ComparableHashMap[K, V]) Clone() ds.Map[K, V] {
 }
 
 func (m *ComparableHashMap[K, V]) MarshalJSON() ([]byte, error) {
-	temp := make(map[K]V)
-	for k, v := range m.inner {
-		temp[k] = v
-	}
-	serialised, err := json.Marshal(temp)
+	serialised, err := json.Marshal(m.inner)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not json marshal")
 	}
@@ -114,10 +110,8 @@ func (m *ComparableHashMap[K, V]) UnmarshalJSON(data []byte) error {
 
 func (m *ComparableHashMap[K, V]) Iter() iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
-		for i := range len(m.Keys()) {
-			key := m.Keys()[i]
-			value, _ := m.Get(key)
-			if !yield(key, value) {
+		for k, v := range m.inner {
+			if !yield(k, v) {
 				return
 			}
 		}

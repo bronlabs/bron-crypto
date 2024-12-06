@@ -5,13 +5,9 @@ import (
 	"io"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	mult "github.com/copperexchange/krypton-primitives/pkg/threshold/mult/dkls23"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -44,70 +40,13 @@ func NewPreGenParticipant(sessionId []byte, myAuthKey types.AuthKey, preSigners 
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	// step 0.2
-	zeroShareSamplingParty, err := sample.NewParticipant(boundSessionId, myAuthKey, myShard.PairwiseSeeds, protocol, preSigners, seededPrng)
+	signingParticipant, err := signing.NewParticipant(myAuthKey, prng, protocol, boundSessionId, transcript, preSigners, myShard)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
+		return nil, errs.WrapFailed(err, "could not construct a lindell22 participant")
 	}
-
-	// step 0.3
-	multipliers := hashmap.NewHashableHashMap[types.IdentityKey, *signing.Multiplication]()
-	for participant := range preSigners.Iter() {
-		if participant.Equal(myAuthKey) {
-			continue
-		}
-
-		myIdentityKey, ok := myAuthKey.(types.IdentityKey)
-		if !ok {
-			return nil, errs.NewType("could not convert my auth key to identity key")
-		}
-
-		otProtocol, err := types.NewProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, myIdentityKey))
-		if err != nil {
-			return nil, errs.WrapFailed(err, "could not construct ot protocol config for me and %s", participant.String())
-		}
-		seedOtResults, exists := myShard.PairwiseBaseOTs.Get(participant)
-		if !exists {
-			return nil, errs.NewMissing("missing ot config for participant %s", participant.String())
-		}
-		multTranscript := transcript.Clone()
-		identities := types.NewIdentitySpace(otProtocol.Participants())
-		first, exists := identities.Get(1)
-		if !exists {
-			return nil, errs.NewMissing("could not find the first multiplier's identity")
-		}
-		second, exists := identities.Get(2)
-		if !exists {
-			return nil, errs.NewMissing("could not find the second multiplier's identity")
-		}
-		multTranscript.AppendMessages("participants", first.PublicKey().ToAffineCompressed(), second.PublicKey().ToAffineCompressed())
-		multSessionId, err := multTranscript.Bind(boundSessionId, dst)
-		if err != nil {
-			return nil, errs.WrapHashing(err, "could not produce binded session id for mult")
-		}
-		alice, err := mult.NewAlice(myAuthKey, otProtocol, seedOtResults.AsReceiver, multSessionId, prng, seededPrng, multTranscript.Clone())
-		if err != nil {
-			return nil, errs.WrapFailed(err, "alice construction for participant %s", participant.String())
-		}
-		bob, err := mult.NewBob(myAuthKey, otProtocol, seedOtResults.AsSender, multSessionId, prng, seededPrng, multTranscript.Clone())
-		if err != nil {
-			return nil, errs.WrapFailed(err, "bob construction for participant %s", participant.String())
-		}
-		multipliers.Put(participant, &signing.Multiplication{
-			Alice: alice,
-			Bob:   bob,
-		})
-	}
-
-	signingParticipant := signing.NewParticipant(myAuthKey, prng, protocol, boundSessionId, transcript, preSigners, myShard)
 	participant = &PreGenParticipant{
 		Participant: *signingParticipant,
-		state: &signing.SignerState{
-			Protocols: &signing.SubProtocols{
-				ZeroShareSampling: zeroShareSamplingParty,
-				Multiplication:    multipliers,
-			},
-		},
+		state:       &signing.SignerState{},
 	}
 
 	if err := types.ValidateThresholdProtocol(participant, protocol); err != nil {
@@ -127,7 +66,7 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
-	if err := shard.Validate(protocol, authKey); err != nil {
+	if err := shard.Validate(protocol); err != nil {
 		return errs.WrapValidation(err, "could not validate shard")
 	}
 	if preSigners == nil {

@@ -32,6 +32,10 @@ type SecretKey struct {
 	precomputedOnce sync.Once
 }
 
+func (sk *SecretKey) Equal(other *SecretKey) bool {
+	return sk != nil && other != nil && sk.PublicKey.Equal(&other.PublicKey) && sk.Phi != nil && sk.Phi.Eq(other.Phi) == 1
+}
+
 type secretKeyJson struct {
 	N   string `json:"n"`
 	Phi string `json:"phi"`

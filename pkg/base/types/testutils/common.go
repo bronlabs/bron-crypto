@@ -11,12 +11,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/hpke"
 	"hash"
 	"reflect"
 	"slices"
 	"sort"
 	"strings"
+
+	"github.com/copperexchange/krypton-primitives/pkg/encryptions/hpke"
 
 	"github.com/stretchr/testify/require"
 
@@ -141,8 +142,43 @@ func (k *TestAuthKey) String() string {
 	return fmt.Sprintf("%x", k.PublicKey().ToAffineCompressed())
 }
 
-func (*TestIdentityKey) MarshalJSON() ([]byte, error) {
-	panic("not implemented")
+func (k *TestIdentityKey) MarshalJSON() ([]byte, error) {
+	privateKey := k.privateKey.S.Bytes()
+	publicKey := k.publicKey.A.ToAffineCompressed()
+	return json.Marshal(&struct {
+		PrivateKey []byte
+		PublicKey  []byte
+	}{
+		PrivateKey: privateKey,
+		PublicKey:  publicKey,
+	})
+}
+
+func (k *TestIdentityKey) UnmarshalJSON(data []byte) error {
+	var temp struct {
+		PrivateKey []byte
+		PublicKey  []byte
+	}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return errs.WrapSerialisation(err, "could not unmarshal identity key")
+	}
+	A, err := edwards25519.NewCurve().Point().FromAffineCompressed(temp.PublicKey)
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not unmarshal public key")
+	}
+	s, err := edwards25519.NewScalarField().Element().SetBytes(temp.PrivateKey)
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not unmarshal private key")
+	}
+	privateKey := &vanillaSchnorr.PrivateKey{
+		S: s,
+		PublicKey: schnorr.PublicKey{
+			A: A,
+		},
+	}
+	k.privateKey = privateKey
+	k.publicKey = &vanillaSchnorr.PublicKey{A: A}
+	return nil
 }
 
 var _ types.AuthKey = (*TestDeterministicAuthKey)(nil)

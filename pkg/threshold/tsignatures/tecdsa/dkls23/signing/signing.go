@@ -12,13 +12,157 @@ import (
 	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/hashing"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
+	"github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot"
 	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
 	mult "github.com/copperexchange/krypton-primitives/pkg/threshold/mult/dkls23"
+	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 )
 
-func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], state *SignerState,
-) (r1b *Round1Broadcast, r1p2p network.RoundMessages[types.ThresholdSignatureProtocol, *Round1P2P], err error) {
+func DoRound1(p *Participant, protocol types.ThresholdSignatureProtocol) (network.RoundMessages[types.ThresholdSignatureProtocol, *Round1P2P], error) {
+	zeroSamplingP2P, err := p.ZeroSamplingParty.Round1()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "zero sampling round 1 failed")
+	}
+	baseOtP2P := hashmap.NewHashableHashMap[types.IdentityKey, *bbot.Round1P2P]()
+	for identity, party := range p.BaseOTSenderParties.Iter() {
+		r1out, err := party.Round1()
+		if err != nil {
+			return nil, errs.WrapFailed(err, "BaseOT as sender for identity %s", identity.String())
+		}
+		baseOtP2P.Put(identity, r1out)
+	}
+
+	p2pOutput := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round1P2P]()
+	for identity := range p.Quorum().Iter() {
+		if identity.Equal(p.IdentityKey()) {
+			continue
+		}
+		zeroSamplingMessage, exists := zeroSamplingP2P.Get(identity)
+		if !exists {
+			return nil, errs.NewMissing("do not have a zero sampling message for %s", identity.String())
+		}
+		baseOtMessage, exists := baseOtP2P.Get(identity)
+		if !exists {
+			return nil, errs.NewMissing("do not have a baseot message for %s", identity.String())
+		}
+		p2pOutput.Put(identity, &Round1P2P{
+			ZeroSampling: zeroSamplingMessage,
+			BaseOTSender: baseOtMessage,
+		})
+	}
+	return p2pOutput, nil
+}
+
+func DoRound2(p *Participant, protocol types.ThresholdSignatureProtocol,
+	inputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *Round1P2P],
+) (network.RoundMessages[types.ThresholdSignatureProtocol, *Round2P2P], error) {
+	// Validation
+	if err := network.ValidateMessages(p.Protocol, p.Quorum(), p.IdentityKey(), inputP2P); err != nil {
+		return nil, errs.WrapValidation(err, "round 1 output is invalid")
+	}
+
+	zeroSamplingRound1Output := network.NewRoundMessages[types.Protocol, *zeroSetup.Round1P2P]()
+	baseOtRound1Output := network.NewRoundMessages[types.Protocol, *bbot.Round1P2P]()
+	for sender, message := range inputP2P.Iter() {
+		baseOtRound1Output.Put(sender, message.BaseOTSender)
+		zeroSamplingRound1Output.Put(sender, message.ZeroSampling)
+	}
+
+	zeroSamplingP2P, err := p.ZeroSamplingParty.Round2(zeroSamplingRound1Output)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "zero sampling round 2 failed")
+	}
+
+	baseOTP2P := network.NewRoundMessages[types.Protocol, *bbot.Round2P2P]()
+	for identity, party := range p.BaseOTReceiverParties.Iter() {
+		r2In, exists := baseOtRound1Output.Get(identity)
+		if !exists {
+			return nil, errs.NewMissing("did not have a message from %s", identity.String())
+		}
+		r2out, err := party.Round2(r2In)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "base OT as receiver for identity %s", identity.String())
+		}
+		baseOTP2P.Put(identity, r2out)
+	}
+	p2pOutput := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round2P2P]()
+	for identity := range p.Quorum().Iter() {
+		if identity.Equal(p.IdentityKey()) {
+			continue
+		}
+		zeroSamplingMessage, exists := zeroSamplingP2P.Get(identity)
+		if !exists {
+			return nil, errs.NewMissing("do not have a zero sampling message for %s", identity.String())
+		}
+		baseOtMessage, exists := baseOTP2P.Get(identity)
+		if !exists {
+			return nil, errs.NewMissing("do not have a baseot message for %s", identity.String())
+		}
+		p2pOutput.Put(identity, &Round2P2P{
+			ZeroSampling:   zeroSamplingMessage,
+			BaseOTReceiver: baseOtMessage,
+		})
+	}
+	return p2pOutput, nil
+}
+
+func DoRound3Prologue(p *Participant, protocol types.ThresholdSignatureProtocol,
+	round2outputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *Round2P2P]) (dkls23.PairwiseSeeds, ds.Map[types.IdentityKey, *BaseOTConfig], error) {
+	if err := network.ValidateMessages(p.Protocol, p.Quorum(), p.IdentityKey(), round2outputP2P); err != nil {
+		return nil, nil, errs.WrapValidation(err, "round 2 output is invalid")
+	}
+	if err := p.shard.Validate(p.Protocol); err != nil {
+		return nil, nil, errs.WrapValidation(err, "signing key share is invalid")
+	}
+
+	baseOtRound2Output := network.NewRoundMessages[types.Protocol, *bbot.Round2P2P]()
+	zeroSamplingRound2Output := network.NewRoundMessages[types.Protocol, *zeroSetup.Round2P2P]()
+
+	for party := range p.Quorum().Iter() {
+		if party.Equal(p.myAuthKey) {
+			continue
+		}
+		message, _ := round2outputP2P.Get(party)
+		baseOtRound2Output.Put(party, message.BaseOTReceiver)
+		zeroSamplingRound2Output.Put(party, message.ZeroSampling)
+	}
+
+	pairwiseSeeds, err := p.ZeroSamplingParty.Round3(zeroSamplingRound2Output)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "zero sampling round 3 failed")
+	}
+
+	for identity, party := range p.BaseOTSenderParties.Iter() {
+		message, _ := baseOtRound2Output.Get(identity)
+		if err := party.Round3(message); err != nil {
+			return nil, nil, errs.WrapFailed(err, "base OT as sender for identity %s", identity.String())
+		}
+	}
+	pairwiseBaseOTs := hashmap.NewHashableHashMap[types.IdentityKey, *BaseOTConfig]()
+	for identity := range p.Quorum().Iter() {
+		if identity.Equal(p.IdentityKey()) {
+			continue
+		}
+		sender, exists := p.BaseOTSenderParties.Get(identity)
+		if !exists {
+			return nil, nil, errs.NewMissing("cannot get the sender party for %s", identity.String())
+		}
+		receiver, exists := p.BaseOTReceiverParties.Get(identity)
+		if !exists {
+			return nil, nil, errs.NewMissing("cannot get the receiver party for %s", identity.String())
+		}
+		pairwiseBaseOTs.Put(identity, &BaseOTConfig{
+			AsSender:   sender.Output,
+			AsReceiver: receiver.Output,
+		})
+	}
+
+	return pairwiseSeeds, pairwiseBaseOTs, nil
+}
+
+func DoRound3(p *Participant, protocol types.ThresholdSignatureProtocol, state *SignerState,
+) (r1b *Round3Broadcast, r1p2p network.RoundMessages[types.ThresholdSignatureProtocol, *Round3P2P], err error) {
 	// step 1.1: Sample inversion mask Phi_i and instance key R_i
 	state.Phi_i, err = protocol.Curve().ScalarField().Random(p.Prng)
 	if err != nil {
@@ -34,10 +178,10 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 
 	state.InstanceKeyOpening = make(map[types.SharingID]*hashcommitments.Opening)
 	state.Chi_i = make(map[types.SharingID]curves.Scalar)
-	outputP2P := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round1P2P]()
+	outputP2P := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round3P2P]()
 
 	// step 1.3: For each other cosigner in the quorum...
-	for participant := range quorum.Iter() {
+	for participant := range p.Quorum().Iter() {
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -58,7 +202,7 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 		state.InstanceKeyOpening[sharingId] = opening
 
 		// step 1.5: Run γ_ij <- RVOLE.Round1() as Bob
-		multInstance, exists := state.Protocols.Multiplication.Get(participant)
+		multInstance, exists := p.SubProtocols.Multiplication.Get(participant)
 		if !exists {
 			return nil, nil, errs.NewMissing("could not find multiplication instance for %s", participant.String())
 		}
@@ -69,41 +213,41 @@ func DoRound1(p *Participant, protocol types.ThresholdProtocol, quorum ds.Set[ty
 		state.Chi_i[sharingId] = b
 
 		// step 1.6: Send(c'_ij, γ_ij) -> P_j
-		outputP2P.Put(participant, &Round1P2P{
+		outputP2P.Put(participant, &Round3P2P{
 			InstanceKeyCommitment: commitmentToInstanceKey,
 			MultiplicationOutput:  multiplicationOutput,
 		})
 	}
 
 	// step 1.7: Broadcast(R_i)
-	outputBroadcast := &Round1Broadcast{
+	outputBroadcast := &Round3Broadcast{
 		BigR_i: state.BigR_i,
 	}
 
 	return outputBroadcast, outputP2P, nil
 }
 
-func DoRound2(p *Participant, protocol types.ThresholdSignatureProtocol, quorum ds.Set[types.IdentityKey], state *SignerState,
-	inputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *Round1Broadcast],
-	inputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *Round1P2P],
-) (*Round2Broadcast, network.RoundMessages[types.ThresholdSignatureProtocol, *Round2P2P], error) {
+func DoRound4(p *Participant, protocol types.ThresholdSignatureProtocol, state *SignerState,
+	inputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *Round3Broadcast],
+	inputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *Round3P2P],
+) (*Round4Broadcast, network.RoundMessages[types.ThresholdSignatureProtocol, *Round4P2P], error) {
 	// Validation
-	if err := network.ValidateMessages(protocol, quorum, p.IdentityKey(), inputBroadcast); err != nil {
+	if err := network.ValidateMessages(protocol, p.Quorum(), p.IdentityKey(), inputBroadcast); err != nil {
 		return nil, nil, errs.WrapValidation(err, "invalid round 2 input broadcast messages")
 	}
-	if err := network.ValidateMessages(protocol, quorum, p.IdentityKey(), inputP2P); err != nil {
+	if err := network.ValidateMessages(protocol, p.Quorum(), p.IdentityKey(), inputP2P); err != nil {
 		return nil, nil, errs.WrapValidation(err, "invalid round 2 input P2P messages")
 	}
 
 	// step 2.1: ζ_i <- Zero.Sample()
-	zeta_i, err := state.Protocols.ZeroShareSampling.Sample()
+	zeta_i, err := p.SubProtocols.ZeroShareSampling.Sample()
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "mask F_Zero (sample)")
 	}
 	state.Zeta_i = zeta_i
 
 	// step 2.2: a_i <- Shamir.AdditiveShare(i, S, x_i)
-	myAdditiveShare, err := p.Shard().SigningKeyShare.ToAdditive(p.IdentityKey(), quorum, protocol)
+	myAdditiveShare, err := p.Shard().SigningKeyShare.ToAdditive(p.IdentityKey(), p.Quorum(), protocol)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not convert my shamir share to additive share")
 	}
@@ -118,9 +262,9 @@ func DoRound2(p *Participant, protocol types.ThresholdSignatureProtocol, quorum 
 	state.ReceivedInstanceKeyCommitments = make(map[types.SharingID]*hashcommitments.Commitment)
 	state.Cu_i = make(map[types.SharingID]curves.Scalar)
 	state.Cv_i = make(map[types.SharingID]curves.Scalar)
-	outputP2P := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round2P2P]()
+	outputP2P := network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round4P2P]()
 	// step 2.4: For each other cosigner in the quorum...
-	for participant := range quorum.Iter() {
+	for participant := range p.Quorum().Iter() {
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -142,7 +286,7 @@ func DoRound2(p *Participant, protocol types.ThresholdSignatureProtocol, quorum 
 		state.ReceivedInstanceKeyCommitments[sharingId] = receivedP2PMessage.InstanceKeyCommitment
 
 		// step 2.5: Run (μ_ij, c={c^u_ij, c^v_ij}) <- RVOLE.Round2(γ_ij, a={r_i, sk_i}) as Alice
-		multInstance, exists := state.Protocols.Multiplication.Get(participant)
+		multInstance, exists := p.SubProtocols.Multiplication.Get(participant)
 		if !exists {
 			return nil, nil, errs.NewMissing("could not find multiplication instance for %s", participant.String())
 		}
@@ -161,7 +305,7 @@ func DoRound2(p *Participant, protocol types.ThresholdSignatureProtocol, quorum 
 		psi_ij := state.Phi_i.Sub(state.Chi_i[sharingId])
 
 		// step 2.8: Send(μ_ij, Γ^u_ij, Γ^v_ij, ψ_ij, w_ij, R_i) -> P_j
-		outputP2P.Put(participant, &Round2P2P{
+		outputP2P.Put(participant, &Round4P2P{
 			Multiplication:     multiplicationOutput,
 			GammaU_ij:          gammaU_ij,
 			GammaV_ij:          gammaV_ij,
@@ -171,22 +315,22 @@ func DoRound2(p *Participant, protocol types.ThresholdSignatureProtocol, quorum 
 	}
 
 	// step 2.9: Broadcast(Pk_i)
-	outputBroadcast := &Round2Broadcast{
+	outputBroadcast := &Round4Broadcast{
 		Pk_i: state.Pk_i,
 	}
 
 	return outputBroadcast, outputP2P, nil
 }
 
-func DoRound3Prologue(p *Participant, protocol types.ThresholdSignatureProtocol, quorum ds.Set[types.IdentityKey], state *SignerState,
-	inputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *Round2Broadcast],
-	inputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *Round2P2P],
+func DoRound5Prologue(p *Participant, protocol types.ThresholdSignatureProtocol, state *SignerState,
+	inputBroadcast network.RoundMessages[types.ThresholdSignatureProtocol, *Round4Broadcast],
+	inputP2P network.RoundMessages[types.ThresholdSignatureProtocol, *Round4P2P],
 ) (err error) {
 	// Validation
-	if err := network.ValidateMessages(protocol, quorum, p.IdentityKey(), inputBroadcast); err != nil {
+	if err := network.ValidateMessages(protocol, p.Quorum(), p.IdentityKey(), inputBroadcast); err != nil {
 		return errs.WrapValidation(err, "invalid round 3 input broadcast messages")
 	}
-	if err := network.ValidateMessages(protocol, quorum, p.IdentityKey(), inputP2P); err != nil {
+	if err := network.ValidateMessages(protocol, p.Quorum(), p.IdentityKey(), inputP2P); err != nil {
 		return errs.WrapValidation(err, "invalid round 3 input P2P messages")
 	}
 
@@ -195,7 +339,7 @@ func DoRound3Prologue(p *Participant, protocol types.ThresholdSignatureProtocol,
 	state.Psi_i = make(map[types.SharingID]curves.Scalar)
 	refreshedPublicKey := state.Pk_i // this has zeta_i added so different from the one from public key share map
 	// step 3.1: For each other cosigner in the quorum...
-	for participant := range quorum.Iter() {
+	for participant := range p.Quorum().Iter() {
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}
@@ -231,7 +375,7 @@ func DoRound3Prologue(p *Participant, protocol types.ThresholdSignatureProtocol,
 		}
 
 		// step 3.3: Run ({d^u_ij, d^v_ij}) <- RVOLE.Round3(μ_ij) as Bob
-		multInstance, exists := state.Protocols.Multiplication.Get(participant)
+		multInstance, exists := p.SubProtocols.Multiplication.Get(participant)
 		if !exists {
 			return errs.NewMissing("could not find multiplication instance for %s", participant.String())
 		}
@@ -277,14 +421,14 @@ func DoRound3Prologue(p *Participant, protocol types.ThresholdSignatureProtocol,
 	return nil
 }
 
-func DoRound3Epilogue(p *Participant, protocol types.ThresholdSignatureProtocol, quorum ds.Set[types.IdentityKey],
+func DoRound5Epilogue(p *Participant, protocol types.ThresholdSignatureProtocol,
 	message []byte, r, sk, phi curves.Scalar, cu, cv, du, dv, psi map[types.SharingID]curves.Scalar, bigRs ds.Map[types.IdentityKey, curves.Point],
 ) (*dkls23.PartialSignature, error) {
 	R := r.ScalarField().Curve().ScalarBaseMult(r)
 	phiPsi := phi
 	cUdU := phi.ScalarField().Zero()
 	cVdV := phi.ScalarField().Zero()
-	for participant := range quorum.Iter() {
+	for participant := range p.Quorum().Iter() {
 		if participant.Equal(p.IdentityKey()) {
 			continue
 		}

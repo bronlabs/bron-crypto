@@ -44,7 +44,7 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 		if !exists {
 			return nil, nil, errs.NewMissing("could not find sharing id of participant %s", identityKey.String())
 		}
-		publicKeyShare, exists := partialPublicKeys.Shares.Get(identityKey)
+		publicKeyShare, exists := partialPublicKeys.Shares.Get(sharingId)
 		if !exists {
 			return nil, nil, errs.NewMissing("couldn't find public key share of %s", identityKey.String())
 		}

@@ -2,8 +2,9 @@ package testutils
 
 import (
 	crand "crypto/rand"
-	"github.com/stretchr/testify/require"
 	"io"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
@@ -48,7 +49,7 @@ func MakeInteractiveCosigners(t require.TestingT, protocol types.ThresholdSignat
 		if !protocol.Participants().Contains(identity) {
 			return nil, errs.NewValue("identity not in protocol config")
 		}
-		participants[i], err = interactiveSigning.NewCosigner(sids[i], identity.(types.AuthKey), hashset.NewHashableHashSet(identities...), shards[i], protocol, prng, seededPrng, nil)
+		participants[i], err = interactiveSigning.NewCosigner(sids[i], identity.(types.AuthKey), hashset.NewHashableHashSet(identities...), shards[i], protocol, seededPrng, prng, nil)
 		if err != nil || participants[i] == nil {
 			return nil, errs.WrapFailed(err, "failed to create cosigner")
 		}
@@ -57,37 +58,59 @@ func MakeInteractiveCosigners(t require.TestingT, protocol types.ThresholdSignat
 	return participants, nil
 }
 
-func DoInteractiveSignRound1(participants []*interactiveSigning.Cosigner) (round1OutputsBroadcast []*signing.Round1Broadcast, round1OutputsP2P []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round1P2P], err error) {
-	round1OutputsBroadcast = make([]*signing.Round1Broadcast, len(participants))
+func DoInteractiveSignRound1(participants []*interactiveSigning.Cosigner) (round1OutputsP2P []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round1P2P], err error) {
 	round1OutputsP2P = make([]network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round1P2P], len(participants))
 	for i, participant := range participants {
-		round1OutputsBroadcast[i], round1OutputsP2P[i], err = participant.Round1()
+		round1OutputsP2P[i], err = participant.Round1()
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "failed to run round 1 of DKLs23 signing")
+			return nil, errs.WrapFailed(err, "failed to run round 1 of DKLs23 signing")
 		}
 	}
-
-	return round1OutputsBroadcast, round1OutputsP2P, nil
+	return round1OutputsP2P, nil
 }
 
-func DoInteractiveSignRound2(participants []*interactiveSigning.Cosigner, round2BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round1P2P]) (round2BroadcastOutputs []*signing.Round2Broadcast, round2UnicastOutputs []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2P2P], err error) {
-	round2BroadcastOutputs = make([]*signing.Round2Broadcast, len(participants))
+func DoInteractiveSignRound2(participants []*interactiveSigning.Cosigner, round2UnicastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round1P2P]) (round2UnicastOutputs []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2P2P], err error) {
 	round2UnicastOutputs = make([]network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2P2P], len(participants))
 	for i := range participants {
-		round2BroadcastOutputs[i], round2UnicastOutputs[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
+		round2UnicastOutputs[i], err = participants[i].Round2(round2UnicastInputs[i])
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "failed to run round 2 of DKLs23 signing")
+			return nil, errs.WrapFailed(err, "failed to run round 2 of DKLs23 signing")
 		}
 	}
-	return round2BroadcastOutputs, round2UnicastOutputs, nil
+	return round2UnicastOutputs, nil
 }
 
-func DoInteractiveSignRound3(participants []*interactiveSigning.Cosigner, round3BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2Broadcast], round3UnicastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2P2P], message []byte) (partialSignatures []*dkls23.PartialSignature, err error) {
+func DoInteractiveSignRound3(participants []*interactiveSigning.Cosigner, round3UnicastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round2P2P]) (round3OutputsBroadcast []*signing.Round3Broadcast, round3OutputsP2P []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round3P2P], err error) {
+	round3OutputsBroadcast = make([]*signing.Round3Broadcast, len(participants))
+	round3OutputsP2P = make([]network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round3P2P], len(participants))
+	for i, participant := range participants {
+		round3OutputsBroadcast[i], round3OutputsP2P[i], err = participant.Round3(round3UnicastInputs[i])
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "failed to run round 3 of DKLs23 signing")
+		}
+	}
+
+	return round3OutputsBroadcast, round3OutputsP2P, nil
+}
+
+func DoInteractiveSignRound4(participants []*interactiveSigning.Cosigner, round4BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round3Broadcast], round4UnicastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round3P2P]) (round4BroadcastOutputs []*signing.Round4Broadcast, round4UnicastOutputs []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round4P2P], err error) {
+	round4BroadcastOutputs = make([]*signing.Round4Broadcast, len(participants))
+	round4UnicastOutputs = make([]network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round4P2P], len(participants))
+	for i := range participants {
+		round4BroadcastOutputs[i], round4UnicastOutputs[i], err = participants[i].Round4(round4BroadcastInputs[i], round4UnicastInputs[i])
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "failed to run round 4 of DKLs23 signing")
+		}
+	}
+	return round4BroadcastOutputs, round4UnicastOutputs, nil
+}
+
+func DoInteractiveSignRound5(participants []*interactiveSigning.Cosigner, round5BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round4Broadcast], round5UnicastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *signing.Round4P2P], message []byte) (partialSignatures []*dkls23.PartialSignature, err error) {
 	partialSignatures = make([]*dkls23.PartialSignature, len(participants))
 	for i := range participants {
-		partialSignatures[i], err = participants[i].Round3(round3BroadcastInputs[i], round3UnicastInputs[i], message)
+		partialSignatures[i], err = participants[i].Round5(round5BroadcastInputs[i], round5UnicastInputs[i], message)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "failed to run round 3 of DKLs23 signing")
+			return nil, errs.WrapFailed(err, "failed to run round 5 DKLs23 signing")
 		}
 	}
 
@@ -143,19 +166,29 @@ func RunInteractiveSign(t require.TestingT, protocol types.ThresholdSignaturePro
 		return errs.WrapFailed(err, "failed to make interactive cosigners")
 	}
 
-	r1OutB, r1OutU, err := DoInteractiveSignRound1(participants)
+	r1OutU, err := DoInteractiveSignRound1(participants)
 	if err != nil {
 		return errs.WrapFailed(err, "failed to run round 1 of DKLs23 signing")
 	}
-	r2InB, r2InU := ttu.MapO2I(t, participants, r1OutB, r1OutU)
-	r2OutB, r2OutU, err := DoInteractiveSignRound2(participants, r2InB, r2InU)
+	r2InU := ttu.MapUnicastO2I(t, participants, r1OutU)
+	r2OutU, err := DoInteractiveSignRound2(participants, r2InU)
 	if err != nil {
 		return errs.WrapFailed(err, "failed to run round 2 of DKLs23 signing")
 	}
-	r3InB, r3InU := ttu.MapO2I(t, participants, r2OutB, r2OutU)
-	partialSignatures, err := DoInteractiveSignRound3(participants, r3InB, r3InU, message)
+	r3InU := ttu.MapUnicastO2I(t, participants, r2OutU)
+	r3OutB, r3OutU, err := DoInteractiveSignRound3(participants, r3InU)
 	if err != nil {
 		return errs.WrapFailed(err, "failed to run round 3 of DKLs23 signing")
+	}
+	r4InB, r4InU := ttu.MapO2I(t, participants, r3OutB, r3OutU)
+	r4OutB, r4OutU, err := DoInteractiveSignRound4(participants, r4InB, r4InU)
+	if err != nil {
+		return errs.WrapFailed(err, "failed to run round 4 of DKLs23 signing")
+	}
+	r5InB, r5InU := ttu.MapO2I(t, participants, r4OutB, r4OutU)
+	partialSignatures, err := DoInteractiveSignRound5(participants, r5InB, r5InU, message)
+	if err != nil {
+		return errs.WrapFailed(err, "failed to run round 5 of DKLs23 signing")
 	}
 
 	producedSignatures, err := RunSignatureAggregation(protocol, identities, participants, partialSignatures, message)

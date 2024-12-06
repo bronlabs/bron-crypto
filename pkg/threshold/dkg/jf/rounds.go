@@ -218,9 +218,10 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.ThresholdP
 		Share:     p.state.secretKeyShare,
 		PublicKey: publicKey,
 	}
+
 	publicKeyShares := &tsignatures.PartialPublicKeys{
 		PublicKey:               publicKey,
-		Shares:                  publicKeySharesMap,
+		Shares:                  dkg.AsSharingIDMappedToPartialPublicKeys(publicKeySharesMap),
 		FeldmanCommitmentVector: p.state.commitments,
 	}
 	p.Round++

@@ -5,13 +5,9 @@ import (
 	"io"
 
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	mult "github.com/copperexchange/krypton-primitives/pkg/threshold/mult/dkls23"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/sample"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/signing"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
@@ -33,7 +29,7 @@ func (ic *Cosigner) IsSignatureAggregator() bool {
 }
 
 // NewCosigner constructs the interactive DKLs23 cosigner.
-func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.IdentityKey], shard *dkls23.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader, seededPrng csprng.CSPRNG, transcript transcripts.Transcript) (*Cosigner, error) {
+func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.IdentityKey], shard *dkls23.Shard, protocol types.ThresholdSignatureProtocol, seededPrng csprng.CSPRNG, prng io.Reader, transcript transcripts.Transcript) (*Cosigner, error) {
 	if err := validateInputs(sessionId, authKey, protocol, shard, quorum); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate input")
 	}
@@ -47,72 +43,15 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	// step 0.2: zero share sampling setup
-	zeroShareSamplingParty, err := sample.NewParticipant(boundSessionId, authKey, shard.PairwiseSeeds, protocol, quorum, seededPrng)
+	signingParticipant, err := signing.NewParticipant(authKey, prng, protocol, boundSessionId, transcript, quorum, shard)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct zero share sampling party")
+		return nil, errs.WrapFailed(err, "could not construct signing participant")
 	}
-
-	multipliers := hashmap.NewHashableHashMap[types.IdentityKey, *signing.Multiplication]()
-	for participant := range quorum.Iter() {
-		if participant.Equal(authKey) {
-			continue
-		}
-		seedOtResults, exists := shard.PairwiseBaseOTs.Get(participant)
-		if !exists {
-			return nil, errs.NewMissing("missing ot config for participant %s", participant.String())
-		}
-
-		myIdentityKey, ok := authKey.(types.IdentityKey)
-		if !ok {
-			return nil, errs.NewType("could not convert auth key to identity key")
-		}
-
-		otProtocol, err := types.NewProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, myIdentityKey))
-		if err != nil {
-			return nil, errs.WrapFailed(err, "could not construct ot protocol config for me and %s", participant.String())
-		}
-
-		multTranscript := transcript.Clone()
-		identities := types.NewIdentitySpace(otProtocol.Participants())
-		first, exists := identities.Get(1)
-		if !exists {
-			return nil, errs.NewMissing("could not find the first multiplier's identity")
-		}
-		second, exists := identities.Get(2)
-		if !exists {
-			return nil, errs.NewMissing("could not find the second multiplier's identity")
-		}
-		multTranscript.AppendMessages("participants", first.PublicKey().ToAffineCompressed(), second.PublicKey().ToAffineCompressed())
-		multSessionId, err := multTranscript.Bind(boundSessionId, dst)
-		if err != nil {
-			return nil, errs.WrapHashing(err, "could not produce binded session id for mult")
-		}
-		// step 0.3: RVOLE setup as Alice, with P_k as Bob
-		alice, err := mult.NewAlice(authKey, otProtocol, seedOtResults.AsReceiver, multSessionId, prng, seededPrng, multTranscript.Clone())
-		if err != nil {
-			return nil, errs.WrapFailed(err, "alice construction for participant %s", participant.String())
-		}
-		// step 0.4: RVOLE setup as Bob, with P_k as Alice
-		bob, err := mult.NewBob(authKey, otProtocol, seedOtResults.AsSender, multSessionId, prng, seededPrng, multTranscript.Clone())
-		if err != nil {
-			return nil, errs.WrapFailed(err, "bob construction for participant %s", participant.String())
-		}
-		multipliers.Put(participant, &signing.Multiplication{
-			Alice: alice,
-			Bob:   bob,
-		})
-	}
-	signingParticipant := signing.NewParticipant(authKey, prng, protocol, boundSessionId, transcript, quorum, shard)
 	cosigner := &Cosigner{
 		Participant: signingParticipant,
-		state: &signing.SignerState{
-			Protocols: &signing.SubProtocols{
-				ZeroShareSampling: zeroShareSamplingParty,
-				Multiplication:    multipliers,
-			},
-		},
+		state:       &signing.SignerState{},
 	}
+	cosigner.Participant.SeededPrng = seededPrng
 	if err := types.ValidateThresholdSignatureProtocol(cosigner, protocol); err != nil {
 		return nil, errs.WrapValidation(err, "could not construct a valid interactive dkls23 cosigner")
 	}
@@ -129,7 +68,7 @@ func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 	if err := types.ValidateAuthKey(authKey); err != nil {
 		return errs.WrapValidation(err, "auth key")
 	}
-	if err := shard.Validate(protocol, authKey); err != nil {
+	if err := shard.Validate(protocol); err != nil {
 		return errs.WrapValidation(err, "could not validate shard")
 	}
 	if quorum == nil {

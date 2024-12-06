@@ -21,7 +21,7 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.Th
 func (p *Participant) Round2(
 	round1outputBroadcast network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast],
 	round1outputP2P network.RoundMessages[types.ThresholdProtocol, *Round1P2P],
-) (sample Sample, publicKeySharesMap ds.Map[types.IdentityKey, curves.Point], feldmanCommitmentVector []curves.Point, err error) {
+) (sample Sample, publicKeySharesMap ds.Map[types.SharingID, curves.Point], feldmanCommitmentVector []curves.Point, err error) {
 	// Validation delegated to pedersen.Round2
 	keyShare, publicKeyShares, err := p.PedersenParty.Round2(round1outputBroadcast, round1outputP2P)
 	if err != nil {

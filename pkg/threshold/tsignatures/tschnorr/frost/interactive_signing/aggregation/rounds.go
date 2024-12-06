@@ -48,7 +48,7 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 		if !exists {
 			return nil, errs.NewMissing("could not find the identity key of cosigner with sharing id %d", j)
 		}
-		Y_j, exists := a.PublicKeyShares.Shares.Get(jIdentityKey)
+		Y_j, exists := a.PublicKeyShares.Shares.Get(j)
 		if !exists {
 			return nil, errs.NewMissing("could not find public key share of sharing id %d", j)
 		}

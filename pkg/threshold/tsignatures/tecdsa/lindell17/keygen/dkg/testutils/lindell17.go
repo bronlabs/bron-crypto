@@ -2,10 +2,13 @@ package testutils
 
 import (
 	crand "crypto/rand"
-	"github.com/stretchr/testify/require"
 	"io"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	randomisedFischlin "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
@@ -121,5 +124,29 @@ func DoDkgRound8(t require.TestingT, participants []*lindell17Dkg.Participant, r
 		shards[i], err = participants[i].Round8(round8Inputs[i])
 		require.NoError(t, err, "could not run DKG round 8")
 	}
+	return shards
+}
+
+func RunDKG(t *testing.T, sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys) (shards []*lindell17.Shard) {
+	t.Helper()
+
+	lindellParticipants := MakeParticipants(t, sid, protocol, identities, signingKeyShares, publicKeyShares, nil, nil)
+	r1o := DoDkgRound1(t, lindellParticipants)
+	r2i := ttu.MapBroadcastO2I(t, lindellParticipants, r1o)
+	r2o := DoDkgRound2(t, lindellParticipants, r2i)
+	r3i := ttu.MapBroadcastO2I(t, lindellParticipants, r2o)
+	r3o := DoDkgRound3(t, lindellParticipants, r3i)
+	r4i := ttu.MapBroadcastO2I(t, lindellParticipants, r3o)
+	r4o := DoDkgRound4(t, lindellParticipants, r4i)
+	r5i := ttu.MapUnicastO2I(t, lindellParticipants, r4o)
+	r5o := DoDkgRound5(t, lindellParticipants, r5i)
+	r6i := ttu.MapUnicastO2I(t, lindellParticipants, r5o)
+	r6o := DoDkgRound6(t, lindellParticipants, r6i)
+	r7i := ttu.MapUnicastO2I(t, lindellParticipants, r6o)
+	r7o := DoDkgRound7(t, lindellParticipants, r7i)
+	r8i := ttu.MapUnicastO2I(t, lindellParticipants, r7o)
+	shards = DoDkgRound8(t, lindellParticipants, r8i)
+	require.NotNil(t, shards)
+
 	return shards
 }

@@ -168,7 +168,7 @@ func (p *Participant) Round2(
 
 	publicKeyShares := &tsignatures.PartialPublicKeys{
 		PublicKey:               publicKey,
-		Shares:                  publicKeySharesMap,
+		Shares:                  dkg.AsSharingIDMappedToPartialPublicKeys(publicKeySharesMap),
 		FeldmanCommitmentVector: p.State.Commitments,
 	}
 	if err := publicKeyShares.Validate(p.Protocol); err != nil {

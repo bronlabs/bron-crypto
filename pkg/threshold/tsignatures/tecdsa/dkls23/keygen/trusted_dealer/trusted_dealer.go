@@ -6,7 +6,6 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
@@ -71,20 +70,8 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.Iden
 		results.Put(identityKey, &dkls23.Shard{
 			SigningKeyShare: share,
 			PublicKeyShares: partialPublic,
-			PairwiseBaseOTs: nil,
 		})
 	}
 
-	for _, identityKey := range results.Keys() {
-		for _, otherIdentityKey := range results.Keys() {
-			if identityKey.Equal(otherIdentityKey) {
-				continue
-			}
-			randomSeed := [base.FieldBytes]byte{}
-			if _, err := io.ReadFull(prng, randomSeed[:]); err != nil {
-				return nil, errs.WrapRandomSample(err, "could not produce random seed")
-			}
-		}
-	}
 	return results, nil
 }

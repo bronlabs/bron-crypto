@@ -13,10 +13,9 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (*dkls23.PartialSigna
 	}
 	blindedAdditiveShare := myAdditiveShare.Add(c.ppm.PrivateMaterial.Zeta)
 
-	partialSignature, err := signing.DoRound3Epilogue(
+	partialSignature, err := signing.DoRound5Epilogue(
 		c.Participant,
 		c.Protocol,
-		c.ppm.PreSigners,
 		message,
 		c.ppm.PrivateMaterial.R,
 		blindedAdditiveShare,

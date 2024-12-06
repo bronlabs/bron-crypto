@@ -69,13 +69,17 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[t
 		shards.Put(identityKey, &lindell17.Shard{
 			SigningKeyShare:         sks,
 			PublicKeyShares:         ppk,
-			PaillierPublicKeys:      hashmap.NewHashableHashMap[types.IdentityKey, *paillier.PublicKey](),
-			PaillierEncryptedShares: hashmap.NewHashableHashMap[types.IdentityKey, *paillier.CipherText](),
+			PaillierPublicKeys:      hashmap.NewComparableHashMap[types.SharingID, *paillier.PublicKey](),
+			PaillierEncryptedShares: hashmap.NewComparableHashMap[types.SharingID, *paillier.CipherText](),
 		})
 	}
 
 	// generate Paillier key pairs and encrypt share
 	for i, identityKey := range sharingConfig.Iter() {
+		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
+		if !exists {
+			return nil, errs.NewMissing("sharing id of %s not found in sharing config", identityKey.String())
+		}
 		paillierPublicKey, paillierSecretKey, err := paillier.KeyGen(paillierPrimeBitLength, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot generate paillier keys")
@@ -98,8 +102,8 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[t
 			if err != nil {
 				return nil, errs.WrapFailed(err, "couldn't encrypt share of %d for %d", i, j)
 			}
-			otherShard.PaillierEncryptedShares.Put(identityKey, ct)
-			otherShard.PaillierPublicKeys.Put(identityKey, paillierPublicKey)
+			otherShard.PaillierEncryptedShares.Put(sharingId, ct)
+			otherShard.PaillierPublicKeys.Put(sharingId, paillierPublicKey)
 		}
 	}
 
@@ -164,12 +168,16 @@ func validateShards(protocol types.ThresholdSignatureProtocol, shards ds.Map[typ
 
 	// verify Paillier encryption of shards
 	for myIdentityKey, myShard := range shards.Iter() {
+		mySharingId, exists := sharingConfig.Reverse().Get(myIdentityKey)
+		if !exists {
+			return errs.NewMissing("sharing id of %s not found in sharing config", myIdentityKey.String())
+		}
 		myShare := myShard.SigningKeyShare.Share.Nat()
 		myPaillierPrivateKey := myShard.PaillierSecretKey
 		for _, value := range shards.Iter() {
 			theirShard := value
 			if myShard.PaillierSecretKey.N.Eq(theirShard.PaillierSecretKey.N) == 0 {
-				theirEncryptedShare, exists := theirShard.PaillierEncryptedShares.Get(myIdentityKey)
+				theirEncryptedShare, exists := theirShard.PaillierEncryptedShares.Get(mySharingId)
 				if !exists {
 					return errs.NewMissing("their encrypted share did not exist")
 				}

@@ -20,11 +20,11 @@ func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *li
 	bigRx := bigR.AffineX().Nat()
 	r := p.protocol.Curve().ScalarField().Element().SetNat(bigRx)
 
-	paillierPublicKey, exists := p.myShard.PaillierPublicKeys.Get(p.aggregatorIdentity)
+	paillierPublicKey, exists := p.myShard.PaillierPublicKeys.Get(p.aggregatorSharingId)
 	if !exists {
 		return nil, errs.NewMissing("their public key is missing")
 	}
-	cKey, exists := p.myShard.PaillierEncryptedShares.Get(p.aggregatorIdentity)
+	cKey, exists := p.myShard.PaillierEncryptedShares.Get(p.aggregatorSharingId)
 	if !exists {
 		return nil, errs.NewMissing("their paillier encrypted share is missing")
 	}

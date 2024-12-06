@@ -3,9 +3,10 @@ package dkg_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
-	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
 	"os"
 	"testing"
+
+	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
 
 	"github.com/stretchr/testify/require"
 
@@ -86,6 +87,8 @@ func Test_HappyPath(t *testing.T) {
 	shards := lindell17DkgTestUtils.DoDkgRound8(t, lindellParticipants, r8i)
 	require.NotNil(t, shards)
 
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+
 	t.Run("each transcript recorded common", func(t *testing.T) {
 		t.Parallel()
 		ok, err := ttu.TranscriptAtSameState("gimme something", transcripts)
@@ -141,7 +144,9 @@ func Test_HappyPath(t *testing.T) {
 					myShard := shards[i]
 					theirShard := shards[j]
 					mySigningShare := myShard.SigningKeyShare.Share
-					theirEncryptedSigningShare, exists := theirShard.PaillierEncryptedShares.Get(identities[i])
+					theirSharingId, exists := sharingConfig.Reverse().Get(identities[i])
+					require.True(t, exists)
+					theirEncryptedSigningShare, exists := theirShard.PaillierEncryptedShares.Get(theirSharingId)
 					require.True(t, exists)
 					decryptor, err := paillier.NewDecryptor(myShard.PaillierSecretKey)
 					require.NoError(t, err)

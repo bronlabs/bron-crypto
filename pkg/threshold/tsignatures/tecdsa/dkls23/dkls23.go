@@ -1,14 +1,11 @@
 package dkls23
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/ot"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
 )
@@ -55,35 +52,35 @@ func (ps *PartialSignature) Validate(protocol types.ThresholdSignatureProtocol) 
 	return nil
 }
 
-type BaseOTConfig struct {
-	AsSender   *ot.SenderRotOutput
-	AsReceiver *ot.ReceiverRotOutput
-
-	_ ds.Incomparable
-}
-
-func (b *BaseOTConfig) Validate() error {
-	if b.AsSender == nil || len(b.AsSender.MessagePairs) == 0 {
-		return errs.NewArgument("invalid base OT as sender")
-	}
-	if b.AsReceiver == nil || len(b.AsReceiver.ChosenMessages) == 0 || len(b.AsReceiver.Choices) == 0 {
-		return errs.NewArgument("invalid base OT as receiver")
-	}
-	return nil
-}
-
 var _ tsignatures.Shard = (*Shard)(nil)
 
 type Shard struct {
 	SigningKeyShare *SigningKeyShare
 	PublicKeyShares *PublicKeyShares
-	PairwiseSeeds   PairwiseSeeds
-	PairwiseBaseOTs ds.Map[types.IdentityKey, *BaseOTConfig]
-
-	_ ds.Incomparable
+	_               ds.Incomparable
 }
 
-func (s *Shard) Validate(protocol types.ThresholdProtocol, holderIdentityKey types.IdentityKey) error {
+func NewShard(protocol types.ThresholdProtocol, signingKeyShare *SigningKeyShare, partialPublicKeys *PublicKeyShares) (*Shard, error) {
+	if err := signingKeyShare.Validate(protocol); err != nil {
+		return nil, errs.WrapVerification(err, "invalid signing key share")
+	}
+	if err := partialPublicKeys.Validate(protocol); err != nil {
+		return nil, errs.WrapVerification(err, "invalid public key share")
+	}
+
+	shard := &Shard{
+		SigningKeyShare: signingKeyShare,
+		PublicKeyShares: partialPublicKeys,
+	}
+	return shard, nil
+}
+
+func (s *Shard) Equal(other tsignatures.Shard) bool {
+	otherShard, ok := other.(*Shard)
+	return ok && s.SigningKeyShare.Equal(otherShard.SigningKeyShare) && s.PublicKeyShares.Equal(otherShard.PublicKeyShares)
+}
+
+func (s *Shard) Validate(protocol types.ThresholdProtocol) error {
 	if s == nil {
 		return errs.NewIsNil("receiver")
 	}
@@ -92,42 +89,6 @@ func (s *Shard) Validate(protocol types.ThresholdProtocol, holderIdentityKey typ
 	}
 	if err := s.PublicKeyShares.Validate(protocol); err != nil {
 		return errs.WrapVerification(err, "invalid public key shares")
-	}
-	if s.PairwiseBaseOTs == nil {
-		return errs.NewIsNil("pairwise base ot")
-	}
-	pairwiseBaseOTHolders := hashset.NewHashableHashSet(s.PairwiseBaseOTs.Keys()...)
-	if !pairwiseBaseOTHolders.IsSubSet(protocol.Participants()) {
-		return errs.NewMembership("Pairwise base OT holders must be subset of all participants")
-	}
-	if diff := protocol.Participants().Difference(pairwiseBaseOTHolders); diff.Size() != 1 || !diff.Contains(holderIdentityKey) {
-		return errs.NewMembership("Pairwise base OT holders should contain all participants except myself")
-	}
-	for id, v := range s.PairwiseBaseOTs.Iter() {
-		if v == nil {
-			return errs.NewIsNil("base ot pair for id %s", id.String())
-		}
-		if v.AsSender == nil {
-			return errs.NewIsNil("base ot as sender wrt id %s", id.String())
-		}
-		if v.AsReceiver == nil {
-			return errs.NewIsNil("base ot as receiver wrt id %s", id.String())
-		}
-	}
-	if s.PairwiseSeeds == nil {
-		return errs.NewIsNil("pairwise seeds")
-	}
-	pairwiseSeedHolders := hashset.NewHashableHashSet(s.PairwiseSeeds.Keys()...)
-	if !pairwiseSeedHolders.IsSubSet(protocol.Participants()) {
-		return errs.NewMembership("Pairwise seed holders must be subset of all participants")
-	}
-	if diff := protocol.Participants().Difference(pairwiseSeedHolders); diff.Size() != 1 || !diff.Contains(holderIdentityKey) {
-		return errs.NewMembership("Pairwise seed holders should contain all participants except myself")
-	}
-	for _, seed := range s.PairwiseSeeds.Values() {
-		if ct.SliceIsZero(seed[:]) == 1 {
-			return errs.NewIsZero("found a zero przs seed")
-		}
 	}
 	return nil
 }
@@ -140,7 +101,7 @@ func (s *Shard) PublicKey() curves.Point {
 	return s.SigningKeyShare.PublicKey
 }
 
-func (s *Shard) PartialPublicKeys() ds.Map[types.IdentityKey, curves.Point] {
+func (s *Shard) PartialPublicKeys() ds.Map[types.SharingID, curves.Point] {
 	return s.PublicKeyShares.Shares
 }
 

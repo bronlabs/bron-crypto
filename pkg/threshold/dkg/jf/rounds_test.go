@@ -266,6 +266,29 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		}
 	})
 
+	t.Run("all public key shares are the same", func(t *testing.T) {
+		t.Parallel()
+		for i, pki := range publicKeyShares {
+			for j, pkj := range publicKeyShares {
+				if i == j {
+					continue
+				}
+				require.True(t, pki.PublicKey.Equal(pkj.PublicKey))
+
+				for owner, share := range pki.Shares.Iter() {
+					otherShare, exists := pkj.Shares.Get(owner)
+					require.True(t, exists)
+					require.True(t, share.Equal(otherShare))
+				}
+
+				for k, vik := range pkj.FeldmanCommitmentVector {
+					vjk := pkj.FeldmanCommitmentVector[k]
+					require.True(t, vik.Equal(vjk))
+				}
+			}
+		}
+	})
+
 	t.Run("reconstructed private key is the dlog of the public key", func(t *testing.T) {
 		t.Parallel()
 		shamirDealer, err := shamir.NewDealer(uint(threshold), uint(n), curve)

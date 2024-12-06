@@ -93,7 +93,7 @@ func (p *Participant) Round2(round1outputBroadcast network.RoundMessages[types.T
 
 	publicKeyShares := &tsignatures.PartialPublicKeys{
 		PublicKey:               refreshedSigningKeyShare.PublicKey,
-		Shares:                  publicKeySharesMap,
+		Shares:                  dkg.AsSharingIDMappedToPartialPublicKeys(publicKeySharesMap),
 		FeldmanCommitmentVector: combinedCommitmentVectors[p.SharingId()],
 	}
 	if err := publicKeyShares.Validate(p.Protocol); err != nil {

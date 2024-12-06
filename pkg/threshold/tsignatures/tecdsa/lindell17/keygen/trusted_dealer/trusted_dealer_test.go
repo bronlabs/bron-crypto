@@ -9,6 +9,7 @@ import (
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
+	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
@@ -34,6 +35,8 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, shards)
 	require.Equal(t, shards.Size(), int(protocol.TotalParties()))
+
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 
 	t.Run("all signing key shares are valid", func(t *testing.T) {
 		t.Parallel()
@@ -93,10 +96,12 @@ func Test_HappyPath(t *testing.T) {
 		for myIdentityKey, myShard := range shards.Iter() {
 			myShare := myShard.SigningKeyShare.Share.Nat()
 			myPaillierPrivateKey := myShard.PaillierSecretKey
+			mySharingId, exists := sharingConfig.Reverse().Get(myIdentityKey)
+			require.True(t, exists)
 			for _, value := range shards.Iter() {
 				theirShard := value
 				if myShard.PaillierSecretKey.N.Eq(theirShard.PaillierSecretKey.N) == 0 {
-					theirEncryptedShare, exists := theirShard.PaillierEncryptedShares.Get(myIdentityKey)
+					theirEncryptedShare, exists := theirShard.PaillierEncryptedShares.Get(mySharingId)
 					require.True(t, exists)
 					decryptor, err := paillier.NewDecryptor(myPaillierPrivateKey)
 					require.NoError(t, err)

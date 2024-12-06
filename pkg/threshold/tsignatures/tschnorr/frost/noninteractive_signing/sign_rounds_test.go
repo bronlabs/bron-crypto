@@ -131,7 +131,7 @@ func testHappyPath(t *testing.T, curve curves.Curve, hash func() hash.Hash, thre
 	require.NoError(t, err)
 
 	for i, share := range allSigningKeyShares {
-		partialPublicKey, exists := allPublicKeyShares[i].Shares.Get(allIdentities[i])
+		partialPublicKey, exists := allPublicKeyShares[i].IdentityBasedMapping(protocol.Participants()).Get(allIdentities[i])
 		require.True(t, exists)
 		require.True(t, partialPublicKey.Equal(curve.ScalarBaseMult(share.Share)))
 	}
@@ -167,7 +167,7 @@ func TestSignNilMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	for i, share := range allSigningKeyShares {
-		partialPublicKey, exists := allPublicKeyShares[i].Shares.Get(allIdentities[i])
+		partialPublicKey, exists := allPublicKeyShares[i].IdentityBasedMapping(protocol.Participants()).Get(allIdentities[i])
 		require.True(t, exists)
 		require.True(t, partialPublicKey.Equal(curve.ScalarBaseMult(share.Share)))
 	}

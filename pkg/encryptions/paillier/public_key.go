@@ -25,6 +25,10 @@ type PublicKey struct {
 	precomputedOnce sync.Once
 }
 
+func (pk *PublicKey) Equal(other *PublicKey) bool {
+	return pk != nil && other != nil && pk.N != nil && pk.N.Eq(other.N) == 1
+}
+
 type publicKeyJson struct {
 	N string `json:"n"`
 }

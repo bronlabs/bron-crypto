@@ -119,7 +119,7 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.ThresholdP
 		res = res.Add(receivedMessage.BlindedPartiallyRecoveredShare)
 	}
 	// step 3.2
-	partialPublicKey, exists := p.publicKeyShares.Shares.Get(p.lostPartyIdentityKey)
+	partialPublicKey, exists := p.publicKeyShares.IdentityBasedMapping(p.Protocol.Participants()).Get(p.lostPartyIdentityKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find lost party partial public key")
 	}

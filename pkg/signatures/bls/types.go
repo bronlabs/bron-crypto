@@ -137,6 +137,10 @@ type PublicKey[K KeySubGroup] struct {
 	_ ds.Incomparable
 }
 
+func (pk *PublicKey[K]) Equal(other *PublicKey[K]) bool {
+	return other != nil && pk.Y != nil && pk.Y.Equal(other.Y)
+}
+
 // The Validate algorithm ensures that a public key is valid. In particular, it ensures that a public key represents a valid, non-identity point that is in the correct subgroup.
 // Note that if the RogueKeyPreventionScheme is POP, this public key must be accompanied with a proof of possession.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-keyvalidate

@@ -50,7 +50,7 @@ func (p *Participant) Round1() (output *Round1Broadcast, err error) {
 	p.state.myBigQOpening = bigQOpening
 
 	// some paranoid checks
-	myPartialPublicKey, exists := p.publicKeyShares.Shares.Get(p.IdentityKey())
+	myPartialPublicKey, exists := p.publicKeyShares.IdentityBasedMapping(p.Protocol.Participants()).Get(p.IdentityKey())
 	if !exists {
 		return nil, errs.NewMissing("could not find my partial public key")
 	}
@@ -156,7 +156,7 @@ func (p *Participant) Round3(input network.RoundMessages[types.ThresholdProtocol
 
 		// 3.ii. verify that y_j == 3Q'_j + Q''_j and abort if not
 		theirBigQ := p.state.theirBigQPrime[sharingId].ScalarMul(p.Protocol.Curve().ScalarField().New(3)).Add(message.BigQDoublePrime)
-		partialPublicKey, exists := p.publicKeyShares.Shares.Get(identity)
+		partialPublicKey, exists := p.publicKeyShares.IdentityBasedMapping(p.Protocol.Participants()).Get(identity)
 		if !exists {
 			return nil, errs.NewMissing("could not find participant partial publickey (sharing id=%d)", sharingId)
 		}
@@ -476,8 +476,8 @@ func (p *Participant) Round8(input network.RoundMessages[types.ThresholdProtocol
 		SigningKeyShare:         p.mySigningKeyShare,
 		PublicKeyShares:         p.publicKeyShares,
 		PaillierSecretKey:       p.state.myPaillierSk,
-		PaillierPublicKeys:      p.state.theirPaillierPublicKeys,
-		PaillierEncryptedShares: p.state.theirPaillierEncryptedShares,
+		PaillierPublicKeys:      lindell17.PaillierPublicKeysAsSharingIDMappedToPublicKeys(p.Protocol, p.state.theirPaillierPublicKeys),
+		PaillierEncryptedShares: lindell17.PaillierEncryptedSharesAsSharingIDMappedToCiphertexts(p.Protocol, p.state.theirPaillierEncryptedShares),
 	}, nil
 }
 

@@ -35,6 +35,11 @@ func NewShard(protocol types.ThresholdProtocol, signingKeyShare *tsignatures.Sig
 	return shard, nil
 }
 
+func (s *Shard) Equal(other tsignatures.Shard) bool {
+	otherShard, ok := other.(*Shard)
+	return ok && s.SigningKeyShare.Equal(otherShard.SigningKeyShare) && s.PublicKeyShares.Equal(otherShard.PublicKeyShares)
+}
+
 func (s *Shard) Validate(protocol types.ThresholdProtocol) error {
 	if err := s.SigningKeyShare.Validate(protocol); err != nil {
 		return errs.WrapValidation(err, "invalid signing key share")
@@ -53,7 +58,7 @@ func (s *Shard) PublicKey() curves.Point {
 	return s.SigningKeyShare.PublicKey
 }
 
-func (s *Shard) PartialPublicKeys() ds.Map[types.IdentityKey, curves.Point] {
+func (s *Shard) PartialPublicKeys() ds.Map[types.SharingID, curves.Point] {
 	return s.PublicKeyShares.Shares
 }
 

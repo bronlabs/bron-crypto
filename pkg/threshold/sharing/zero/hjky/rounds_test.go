@@ -48,6 +48,8 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	participants, samples, publicKeySharesMaps, _, err := testutils.RunSample(t, uniqueSessionId, protocol, identities)
 	require.NoError(t, err)
 
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+
 	t.Run("none of the samples are zero", func(t *testing.T) {
 		t.Parallel()
 		for _, sample := range samples {
@@ -77,9 +79,11 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	t.Run("public key shares are consistent", func(t *testing.T) {
 		t.Parallel()
 
-		for i, participant := range participants {
+		for i := range participants {
 			for j := range participants {
-				pk, exists := publicKeySharesMaps[j].Get(participant.IdentityKey())
+				sharingId, exists := sharingConfig.Reverse().Get(identities[i])
+				require.True(t, exists)
+				pk, exists := publicKeySharesMaps[j].Get(sharingId)
 				require.True(t, exists)
 				require.True(t, curve.ScalarBaseMult(samples[i]).Equal(pk))
 			}

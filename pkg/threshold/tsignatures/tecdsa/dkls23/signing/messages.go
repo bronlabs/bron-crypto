@@ -8,34 +8,52 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
+	"github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot"
 	mult "github.com/copperexchange/krypton-primitives/pkg/threshold/mult/dkls23"
+	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
 )
 
-var _ network.Message[types.ThresholdSignatureProtocol] = (*Round1Broadcast)(nil)
 var _ network.Message[types.ThresholdSignatureProtocol] = (*Round1P2P)(nil)
-var _ network.Message[types.ThresholdSignatureProtocol] = (*Round2Broadcast)(nil)
 var _ network.Message[types.ThresholdSignatureProtocol] = (*Round2P2P)(nil)
+var _ network.Message[types.ThresholdSignatureProtocol] = (*Round3Broadcast)(nil)
+var _ network.Message[types.ThresholdSignatureProtocol] = (*Round3P2P)(nil)
+var _ network.Message[types.ThresholdSignatureProtocol] = (*Round4Broadcast)(nil)
+var _ network.Message[types.ThresholdSignatureProtocol] = (*Round4P2P)(nil)
 
-type Round1Broadcast struct {
+type Round1P2P struct {
+	ZeroSampling *zeroSetup.Round1P2P
+	BaseOTSender *bbot.Round1P2P
+
+	_ ds.Incomparable
+}
+
+type Round2P2P struct {
+	ZeroSampling   *zeroSetup.Round2P2P
+	BaseOTReceiver *bbot.Round2P2P
+
+	_ ds.Incomparable
+}
+
+type Round3Broadcast struct {
 	BigR_i curves.Point
 
 	_ ds.Incomparable
 }
 
-type Round1P2P struct {
+type Round3P2P struct {
 	InstanceKeyCommitment *hashcommitments.Commitment
 	MultiplicationOutput  *mult.Round1Output
 
 	_ ds.Incomparable
 }
 
-type Round2Broadcast struct {
+type Round4Broadcast struct {
 	Pk_i curves.Point
 
 	_ ds.Incomparable
 }
 
-type Round2P2P struct {
+type Round4P2P struct {
 	Multiplication     *mult.Round2Output
 	GammaU_ij          curves.Point
 	GammaV_ij          curves.Point
@@ -45,7 +63,27 @@ type Round2P2P struct {
 	_ ds.Incomparable
 }
 
-func (r1b *Round1Broadcast) Validate(protocol types.ThresholdSignatureProtocol) error {
+func (r *Round1P2P) Validate(protocol types.ThresholdSignatureProtocol) error {
+	if r.ZeroSampling == nil {
+		return errs.NewIsNil("zero sampling message")
+	}
+	if r.BaseOTSender == nil {
+		return errs.NewIsNil("base ot sender message")
+	}
+	return nil
+}
+
+func (r *Round2P2P) Validate(protocol types.ThresholdSignatureProtocol) error {
+	if r.ZeroSampling == nil {
+		return errs.NewIsNil("zero sampling message")
+	}
+	if r.BaseOTReceiver == nil {
+		return errs.NewIsNil("base ot receiver message")
+	}
+	return nil
+}
+
+func (r1b *Round3Broadcast) Validate(protocol types.ThresholdSignatureProtocol) error {
 	if r1b.BigR_i == nil {
 		return errs.NewIsNil("BigR_i")
 	}
@@ -58,7 +96,7 @@ func (r1b *Round1Broadcast) Validate(protocol types.ThresholdSignatureProtocol) 
 	return nil
 }
 
-func (r1p2p *Round1P2P) Validate(protocol types.ThresholdSignatureProtocol) error {
+func (r1p2p *Round3P2P) Validate(protocol types.ThresholdSignatureProtocol) error {
 	if r1p2p.InstanceKeyCommitment == nil {
 		return errs.NewIsNil("InstanceKeyCommitment")
 	}
@@ -68,7 +106,7 @@ func (r1p2p *Round1P2P) Validate(protocol types.ThresholdSignatureProtocol) erro
 	return nil
 }
 
-func (r2b *Round2Broadcast) Validate(protocol types.ThresholdSignatureProtocol) error {
+func (r2b *Round4Broadcast) Validate(protocol types.ThresholdSignatureProtocol) error {
 	if r2b.Pk_i == nil {
 		return errs.NewIsNil("Pk_i")
 	}
@@ -81,7 +119,7 @@ func (r2b *Round2Broadcast) Validate(protocol types.ThresholdSignatureProtocol) 
 	return nil
 }
 
-func (r2p2p *Round2P2P) Validate(protocol types.ThresholdSignatureProtocol) error {
+func (r2p2p *Round4P2P) Validate(protocol types.ThresholdSignatureProtocol) error {
 	if r2p2p.Multiplication == nil {
 		return errs.NewIsNil("Multiplication")
 	}

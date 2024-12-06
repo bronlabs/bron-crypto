@@ -20,7 +20,10 @@ func NewCosigner(myAuthKey types.AuthKey, myShard *dkls23.Shard, protocol types.
 	if err := validateInputsSign([]byte("no session id for noninteractive"), myAuthKey, protocol, myShard, ppm); err != nil {
 		return nil, errs.WrapArgument(err, "could not validate input")
 	}
-	signingParticipant := signing.NewParticipant(myAuthKey, nil, protocol, nil, nil, ppm.PreSigners, myShard)
+	signingParticipant, err := signing.NewParticipant(myAuthKey, nil, protocol, nil, nil, ppm.PreSigners, myShard)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not construct signing participant")
+	}
 	participant := &Cosigner{
 		Participant: signingParticipant,
 		ppm:         ppm,

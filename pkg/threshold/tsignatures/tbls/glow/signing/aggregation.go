@@ -55,7 +55,7 @@ func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSi
 		if psig.SigmaI == nil {
 			return nil, errs.NewMissing("missing signature for %s", identityKey.String())
 		}
-		publicKeyShare, exists := publicKeyShares.Shares.Get(identityKey)
+		publicKeyShare, exists := publicKeyShares.Shares.Get(sharingId)
 		if !exists {
 			return nil, errs.NewMissing("couldn't find public key share of %s", identityKey.String())
 		}

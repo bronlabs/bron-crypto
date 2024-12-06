@@ -1,11 +1,12 @@
 package tsignatures
 
 import (
+	"encoding/json"
+
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
@@ -15,8 +16,10 @@ import (
 type Shard interface {
 	SecretShare() curves.Scalar
 	PublicKey() curves.Point
-	PartialPublicKeys() ds.Map[types.IdentityKey, curves.Point]
+	PartialPublicKeys() ds.Map[types.SharingID, curves.Point]
 	FeldmanCommitmentVector() []curves.Point
+
+	ds.Equatable[Shard]
 }
 
 type SigningKeyShare struct {
@@ -78,12 +81,50 @@ func (s *SigningKeyShare) ToAdditive(myIdentityKey types.IdentityKey, quorum ds.
 	return additiveShare, nil
 }
 
+func (s *SigningKeyShare) UnmarshalJSON(data []byte) error {
+	var temp struct {
+		Share     json.RawMessage
+		PublicKey json.RawMessage
+	}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return errs.WrapSerialisation(err, "could not unmarshal signing key share")
+	}
+	share, err := curveutils.NewScalarFromJSON(temp.Share)
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not unmarshal share")
+	}
+	publicKey, err := curveutils.NewPointFromJSON(temp.PublicKey)
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not unmarshal public key")
+	}
+	s.Share = share
+	s.PublicKey = publicKey
+	return nil
+}
+
+func (s *SigningKeyShare) Equal(other *SigningKeyShare) bool {
+	return s.Share != nil && s.Share.Equal(other.Share) && s.PublicKey != nil && s.PublicKey.Equal(other.PublicKey)
+}
+
 type PartialPublicKeys struct {
 	PublicKey               curves.Point
-	Shares                  ds.Map[types.IdentityKey, curves.Point]
+	Shares                  ds.Map[types.SharingID, curves.Point]
 	FeldmanCommitmentVector []curves.Point
 
 	_ ds.Incomparable
+}
+
+func (p *PartialPublicKeys) IdentityBasedMapping(participants ds.Set[types.IdentityKey]) ds.Map[types.IdentityKey, curves.Point] {
+	sharingConfig := types.DeriveSharingConfig(participants)
+	identityBasedMap := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
+	for sharingId, partialPublicKey := range p.Shares.Iter() {
+		identityKey, exists := sharingConfig.Get(sharingId)
+		if !exists {
+			panic(errs.NewMissing("could not find identity key for sharing id %d", sharingId))
+		}
+		identityBasedMap.Put(identityKey, partialPublicKey)
+	}
+	return identityBasedMap
 }
 
 func (p *PartialPublicKeys) ToAdditive(protocol types.ThresholdSignatureProtocol, signers ds.Set[types.IdentityKey]) (ds.Map[types.IdentityKey, curves.Point], error) {
@@ -99,7 +140,11 @@ func (p *PartialPublicKeys) ToAdditive(protocol types.ThresholdSignatureProtocol
 
 	publicShares := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
 	for signer := range signers.Iter() {
-		publicKeyShare, exists := p.Shares.Get(signer)
+		sharingId, exists := sharingConfig.Reverse().Get(signer)
+		if !exists {
+			return nil, errs.NewMissing("could not find sharing id of %s", signer.String())
+		}
+		publicKeyShare, exists := p.Shares.Get(sharingId)
 		if !exists {
 			return nil, errs.NewFailed("invalid identity")
 		}
@@ -140,10 +185,6 @@ func (p *PartialPublicKeys) Validate(protocol types.ThresholdProtocol) error {
 	if p.Shares == nil {
 		return errs.NewIsNil("shares map")
 	}
-	partialPublicKeyHolders := hashset.NewHashableHashSet(p.Shares.Keys()...)
-	if !partialPublicKeyHolders.Equal(protocol.Participants()) {
-		return errs.NewMembership("shares map is not equal to the participant set")
-	}
 	if !curveutils.AllPointsOfSameCurve(protocol.Curve(), p.PublicKey) {
 		return errs.NewCurve("public key")
 	}
@@ -154,17 +195,12 @@ func (p *PartialPublicKeys) Validate(protocol types.ThresholdProtocol) error {
 		return errs.NewCurve("feldman commitment vector")
 	}
 
-	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	sharingIds := make([]curves.Scalar, protocol.TotalParties())
 	partialPublicKeys := make([]curves.Point, protocol.TotalParties())
 	for i := 0; i < int(protocol.TotalParties()); i++ {
 		sharingId := types.SharingID(i + 1)
 		sharingIds[i] = p.PublicKey.Curve().ScalarField().New(uint64(sharingId))
-		identityKey, exists := sharingConfig.Get(sharingId)
-		if !exists {
-			return errs.NewMissing("missing identity key for sharing id %d", i+1)
-		}
-		partialPublicKey, exists := p.Shares.Get(identityKey)
+		partialPublicKey, exists := p.Shares.Get(sharingId)
 		if !exists {
 			return errs.NewMissing("partial public key doesn't exist for sharing id %d", sharingId)
 		}
@@ -179,6 +215,95 @@ func (p *PartialPublicKeys) Validate(protocol types.ThresholdProtocol) error {
 		return errs.NewVerification("reconstructed public key is incorrect")
 	}
 	return nil
+}
+
+func (p *PartialPublicKeys) MarshalJSON() ([]byte, error) {
+	sharesStructure, ok := p.Shares.(*hashmap.ComparableHashMap[types.SharingID, curves.Point])
+	if !ok {
+		return nil, errs.NewType("shares map is not of the correct type")
+	}
+	out, err := json.Marshal(&struct {
+		PublicKey               curves.Point
+		Shares                  *hashmap.ComparableHashMap[types.SharingID, curves.Point]
+		FeldmanCommitmentVector []curves.Point
+	}{
+		PublicKey:               p.PublicKey,
+		Shares:                  sharesStructure,
+		FeldmanCommitmentVector: p.FeldmanCommitmentVector,
+	})
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not marshal partial public keys")
+	}
+	return out, nil
+}
+
+func (p *PartialPublicKeys) UnmarshalJSON(data []byte) error {
+	var temp struct {
+		PublicKey               json.RawMessage
+		Shares                  *hashmap.ComparableHashMap[types.SharingID, json.RawMessage]
+		FeldmanCommitmentVector []json.RawMessage
+	}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return errs.WrapSerialisation(err, "could not unmarshal partial public keys")
+	}
+	publicKey, err := curveutils.NewPointFromJSON(temp.PublicKey)
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not unmarshal public key")
+	}
+
+	unmarshaledShares := hashmap.NewComparableHashMap[types.SharingID, curves.Point]()
+	for sharingId, rawPoint := range temp.Shares.Iter() {
+		point, err := curveutils.NewPointFromJSON(rawPoint)
+		if err != nil {
+			return errs.WrapSerialisation(err, "could not unmarshal partial public key")
+		}
+		unmarshaledShares.Put(sharingId, point)
+	}
+
+	feldmanVector := make([]curves.Point, len(temp.FeldmanCommitmentVector))
+	for i, rawPoint := range temp.FeldmanCommitmentVector {
+		point, err := curveutils.NewPointFromJSON(rawPoint)
+		if err != nil {
+			return errs.WrapSerialisation(err, "could not unmarshal feldman commitment vector")
+		}
+		feldmanVector[i] = point
+	}
+	p.PublicKey = publicKey
+	p.Shares = unmarshaledShares
+	p.FeldmanCommitmentVector = feldmanVector
+	return nil
+}
+
+func (p *PartialPublicKeys) Equal(other *PartialPublicKeys) bool {
+	if other == nil {
+		return false
+	}
+
+	if p.PublicKey == nil || !p.PublicKey.Equal(other.PublicKey) {
+		return false
+	}
+
+	if p.Shares == nil || other.Shares == nil {
+		return false
+	}
+	for identity, partialShare := range p.Shares.Iter() {
+		otherShare, exists := other.Shares.Get(identity)
+		if !exists {
+			return false
+		}
+		if !partialShare.Equal(otherShare) {
+			return false
+		}
+	}
+	if len(p.FeldmanCommitmentVector) != len(other.FeldmanCommitmentVector) {
+		return false
+	}
+	for i, point := range p.FeldmanCommitmentVector {
+		if !point.Equal(other.FeldmanCommitmentVector[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 type PreProcessingMaterial[PrivateType any, PreSignatureType any] struct {

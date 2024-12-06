@@ -2,8 +2,9 @@ package testutils
 
 import (
 	crand "crypto/rand"
-	"github.com/stretchr/testify/require"
 	"io"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
@@ -57,9 +58,9 @@ func DoRound1(participants []*hjky.Participant) (round1BroadcastOutputs []*hjky.
 	return round1BroadcastOutputs, round1UnicastOutputs, nil
 }
 
-func DoDkgRound2(participants []*hjky.Participant, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *hjky.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *hjky.Round1P2P]) (samples []hjky.Sample, publicKeySharesMaps []ds.Map[types.IdentityKey, curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
+func DoDkgRound2(participants []*hjky.Participant, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *hjky.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *hjky.Round1P2P]) (samples []hjky.Sample, publicKeySharesMaps []ds.Map[types.SharingID, curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
 	samples = make([]hjky.Sample, len(participants))
-	publicKeySharesMaps = make([]ds.Map[types.IdentityKey, curves.Point], len(participants))
+	publicKeySharesMaps = make([]ds.Map[types.SharingID, curves.Point], len(participants))
 	feldmanCommitmentVectors = make([][]curves.Point, len(participants))
 	for i := range participants {
 		samples[i], publicKeySharesMaps[i], feldmanCommitmentVectors[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
@@ -71,7 +72,7 @@ func DoDkgRound2(participants []*hjky.Participant, round2BroadcastInputs []netwo
 	return samples, publicKeySharesMaps, feldmanCommitmentVectors, nil
 }
 
-func RunSample(t require.TestingT, sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey) (participants []*hjky.Participant, samples []hjky.Sample, publicKeySharesMaps []ds.Map[types.IdentityKey, curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
+func RunSample(t require.TestingT, sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey) (participants []*hjky.Participant, samples []hjky.Sample, publicKeySharesMaps []ds.Map[types.SharingID, curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
 	participants, err = MakeParticipants(sid, protocol, identities, nil)
 	if err != nil {
 		return nil, nil, nil, nil, err

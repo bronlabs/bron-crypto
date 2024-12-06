@@ -163,11 +163,11 @@ func (sc *SecondaryCosigner) Round4(r3out *Round3OutputP2P, message []byte) (rou
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive my additive share")
 	}
-	paillierPublicKey, exists := sc.myShard.PaillierPublicKeys.Get(sc.primaryIdentityKey)
+	paillierPublicKey, exists := sc.myShard.PaillierPublicKeys.Get(sc.primarySharingId)
 	if !exists {
 		return nil, errs.NewMissing("couldn't get primary paillier public key")
 	}
-	cKey, exists := sc.myShard.PaillierEncryptedShares.Get(sc.primaryIdentityKey)
+	cKey, exists := sc.myShard.PaillierEncryptedShares.Get(sc.primarySharingId)
 	if !exists {
 		return nil, errs.NewMissing("couldn't get primary encrypted signing key share")
 	}

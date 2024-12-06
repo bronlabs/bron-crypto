@@ -4,6 +4,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
+	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 )
@@ -31,4 +32,15 @@ func ConstructPublicKeySharesMap(protocol types.ThresholdProtocol, commitmentVec
 		shares.Put(identityKey, Y_j)
 	}
 	return shares, nil
+}
+
+func AsSharingIDMappedToPartialPublicKeys(pks ds.Map[types.IdentityKey, curves.Point]) ds.Map[types.SharingID, curves.Point] {
+	pksKeys := hashset.NewHashableHashSet(pks.Keys()...)
+	sharingConfig := types.DeriveSharingConfig(pksKeys)
+	out := hashmap.NewComparableHashMap[types.SharingID, curves.Point]()
+	for identityKey, Y_j := range pks.Iter() {
+		sharingID, _ := sharingConfig.Reverse().Get(identityKey)
+		out.Put(sharingID, Y_j)
+	}
+	return out
 }

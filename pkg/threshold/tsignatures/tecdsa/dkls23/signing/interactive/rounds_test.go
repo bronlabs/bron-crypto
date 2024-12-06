@@ -1,12 +1,14 @@
 package interactive_test
 
 import (
+	crand "crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"hash"
 	"os"
 	"reflect"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -17,10 +19,12 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
+	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/csprng/fkechacha20"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
+	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/trusted_dealer"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
 )
 
@@ -90,7 +94,8 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	_, shards := testutils.DoDkg(t, curve, protocol, allIdentities)
+	shards, err := trusted_dealer.Keygen(protocol, crand.Reader)
+	require.NoError(t, err)
 
 	seededPrng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
@@ -106,17 +111,35 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		combinations = combinations[:1]
 	}
 	for _, combinationIndices := range combinations {
-		identities := make([]types.IdentityKey, threshold)
-		selectedShards := make([]*dkls23.Shard, threshold)
-		for i, index := range combinationIndices {
-			identities[i] = allIdentities[index]
-			selectedShards[i] = shards[index]
+		identities := []types.IdentityKey{}
+		selectedShards := []*dkls23.Shard{}
+		i := 0
+		for identity, shard := range shards.Iter() {
+			if len(identities) == threshold {
+				break
+			}
+			if slices.Index(combinationIndices, i) == -1 {
+				i++
+				continue
+			}
+			identities = append(identities, identity)
+			selectedShards = append(selectedShards, shard)
+			i++
 		}
 		t.Run(fmt.Sprintf("running the happy path with identities %v", identities), func(t *testing.T) {
 			t.Parallel()
 			testutils.RunInteractiveSignHappyPath(t, protocol, identities, selectedShards, message, seededPrng, nil)
 		})
 	}
+}
+
+func splitShards(t *testing.T, shards ds.Map[types.IdentityKey, *dkls23.Shard]) (identities []types.IdentityKey, theirShards []*dkls23.Shard) {
+	t.Helper()
+	for identity, shard := range shards.Iter() {
+		identities = append(identities, identity)
+		theirShards = append(theirShards, shard)
+	}
+	return
 }
 
 // This test runs the protocol correctly once, and then runs it again with one party
@@ -132,7 +155,11 @@ func testFailForReplayedMessages(t *testing.T, curve curves.Curve, h func() hash
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	_, shards := testutils.DoDkg(t, curve, protocol, allIdentities)
+	shards, err := trusted_dealer.Keygen(protocol, crand.Reader)
+	require.NoError(t, err)
+
+	var theirShards []*dkls23.Shard
+	allIdentities, theirShards = splitShards(t, shards)
 
 	seededPrng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
@@ -141,21 +168,28 @@ func testFailForReplayedMessages(t *testing.T, curve curves.Curve, h func() hash
 	selectedShards := make([]*dkls23.Shard, threshold)
 	for i := 0; i < threshold; i++ {
 		identities[i] = allIdentities[i]
-		selectedShards[i] = shards[i]
+		selectedShards[i] = theirShards[i]
 	}
 	t.Run(fmt.Sprintf("running the replayed messages unhappy path with identities %v", identities), func(t *testing.T) {
 		t.Helper()
 
 		// Run the protocol once.
-		participants, err := testutils.MakeInteractiveCosigners(t, protocol, identities, shards, nil, seededPrng, nil)
+		participants, err := testutils.MakeInteractiveCosigners(t, protocol, identities, theirShards, nil, seededPrng, nil)
 		require.NoError(t, err)
-		r1OutB, r1OutU, err := testutils.DoInteractiveSignRound1(participants)
+
+		r1OutU, err := testutils.DoInteractiveSignRound1(participants)
 		require.NoError(t, err)
-		r2InB, r2InU := ttu.MapO2I(t, participants, r1OutB, r1OutU)
-		r2OutB, r2OutU, err := testutils.DoInteractiveSignRound2(participants, r2InB, r2InU)
+		r2InU := ttu.MapUnicastO2I(t, participants, r1OutU)
+		r2OutU, err := testutils.DoInteractiveSignRound2(participants, r2InU)
 		require.NoError(t, err)
-		r3InB, r3InU := ttu.MapO2I(t, participants, r2OutB, r2OutU)
-		partialSignatures, err := testutils.DoInteractiveSignRound3(participants, r3InB, r3InU, message)
+		r3InU := ttu.MapUnicastO2I(t, participants, r2OutU)
+		r3OutB, r3OutU, err := testutils.DoInteractiveSignRound3(participants, r3InU)
+		require.NoError(t, err)
+		r4InB, r4InU := ttu.MapO2I(t, participants, r3OutB, r3OutU)
+		r4OutB, r4OutU, err := testutils.DoInteractiveSignRound4(participants, r4InB, r4InU)
+		require.NoError(t, err)
+		r5InB, r5InU := ttu.MapO2I(t, participants, r4OutB, r4OutU)
+		partialSignatures, err := testutils.DoInteractiveSignRound5(participants, r5InB, r5InU, message)
 		require.NoError(t, err)
 		producedSignatures, err := testutils.RunSignatureAggregation(protocol, identities, participants, partialSignatures, message)
 		require.NoError(t, err)
@@ -163,29 +197,19 @@ func testFailForReplayedMessages(t *testing.T, curve curves.Curve, h func() hash
 		require.NoError(t, err)
 
 		// Run the protocol again (with a fresh sid), with the first participant replaying messages from the previous run.
-		participants2, err := testutils.MakeInteractiveCosigners(t, protocol, identities, shards, nil, seededPrng, nil)
+		participants2, err := testutils.MakeInteractiveCosigners(t, protocol, identities, theirShards, nil, seededPrng, nil)
 		require.NoError(t, err)
-		r1OutB2, r1OutU2, err := testutils.DoInteractiveSignRound1(participants2)
+		r1OutU2, err := testutils.DoInteractiveSignRound1(participants2)
 		require.NoError(t, err)
 
 		// Party 1 switches his P2P messages to the ones from the previous run.
-		r1OutU2[0] = r1OutU[0]
-		r2InB2, r2InU2 := ttu.MapO2I(t, participants2, r1OutB2, r1OutU2)
-		_, _, err = testutils.DoInteractiveSignRound2(participants2, r2InB2, r2InU2)
-		require.Error(t, err)
+		r2InU2 := ttu.MapUnicastO2I(t, participants2, r1OutU2)
+		r2OutU2, err := testutils.DoInteractiveSignRound2(participants2, r2InU2)
+		require.NoError(t, err)
+		r3InU2 := ttu.MapUnicastO2I(t, participants, r2OutU2)
 
-		// Run the protocol again with a fresh sid.
-		participants3, err := testutils.MakeInteractiveCosigners(t, protocol, identities, shards, nil, seededPrng, nil)
-		require.NoError(t, err)
-		r1OutB3, r1OutU3, err := testutils.DoInteractiveSignRound1(participants3)
-		require.NoError(t, err)
-		r2InB3, r2InU3 := ttu.MapO2I(t, participants3, r1OutB3, r1OutU3)
-		r2OutB3, r2OutU3, err := testutils.DoInteractiveSignRound2(participants3, r2InB3, r2InU3)
-		require.NoError(t, err)
-		// Party 1 switches his broadcast messages to the ones from the previous run.
-		r2OutB3[0] = r2OutB[0]
-		r3InB3, r3InU3 := ttu.MapO2I(t, participants3, r2OutB3, r2OutU3)
-		_, err = testutils.DoInteractiveSignRound3(participants3, r3InB3, r3InU3, message)
+		r3InU2[0] = r3InU[0]
+		_, _, err = testutils.DoInteractiveSignRound3(participants, r3InU2)
 		require.Error(t, err)
 	})
 }
@@ -204,7 +228,8 @@ func testFailForDifferentSID(t *testing.T, curve curves.Curve, h func() hash.Has
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, allIdentities, threshold, allIdentities)
 	require.NoError(t, err)
 
-	_, shards := testutils.DoDkg(t, curve, protocol, allIdentities)
+	shards, err := trusted_dealer.Keygen(protocol, crand.Reader)
+	require.NoError(t, err)
 
 	seededPrng, err := fkechacha20.NewPrng(nil, nil)
 	require.NoError(t, err)
@@ -222,9 +247,14 @@ func testFailForDifferentSID(t *testing.T, curve curves.Curve, h func() hash.Has
 
 	identities := make([]types.IdentityKey, threshold)
 	selectedShards := make([]*dkls23.Shard, threshold)
-	for i := 0; i < threshold; i++ {
-		identities[i] = allIdentities[i]
-		selectedShards[i] = shards[i]
+	i := 0
+	for identity, shard := range shards.Iter() {
+		if i >= threshold {
+			break
+		}
+		identities[i] = identity
+		selectedShards[i] = shard
+		i++
 	}
 	t.Run(fmt.Sprintf("running the diverging SID unhappy path with identities %v", identities), func(t *testing.T) {
 		t.Parallel()
