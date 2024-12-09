@@ -68,12 +68,9 @@ func (*Point) IsDesignatedGenerator() bool {
 }
 
 func (p *Point) Equal(rhs curves.Point) bool {
-	if rhs == nil {
-		panic("rhs is nil")
-	}
 	r, ok := rhs.(*Point)
 	if !ok {
-		panic("rhs is not a pallas point")
+		return false
 	}
 	return p.V.Equal(r.V)
 }
