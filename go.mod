@@ -7,11 +7,11 @@ require (
 	github.com/cronokirby/saferith v0.33.0
 	github.com/google/gofuzz v1.2.0
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.9.0
-	golang.org/x/crypto v0.27.0
-	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0
-	golang.org/x/sync v0.8.0
-	golang.org/x/sys v0.25.0
+	github.com/stretchr/testify v1.10.0
+	golang.org/x/crypto v0.31.0
+	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
+	golang.org/x/sync v0.10.0
+	golang.org/x/sys v0.28.0
 )
 
 require (
