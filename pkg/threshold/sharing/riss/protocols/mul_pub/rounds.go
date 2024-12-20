@@ -20,18 +20,18 @@ func (p *Participant) Round1(lhs, rhs *riss.IntShare) (p2pOut network.RoundMessa
 
 	for _, set := range p.MyUnqualifiedSets {
 		j := 0
-		for sharingId, _ := range p.SharingCfg.Iter() {
+		for sharingId := range p.SharingCfg.Iter() {
 			if !set.Has(sharingId) && sharingId < p.MySharingId {
 				j++
 			}
 		}
 
-		for i := 0; i < int(p.Protocol.Threshold())-2; i++ {
+		for i := 0; i < int(p.Protocol.Threshold()-2); i++ {
 			z, err := p.options.sampleBlinding(p.Seed.Prfs[set])
 			if err != nil {
 				return nil, errs.WrapRandomSample(err, "cannot sample blinding")
 			}
-			if j == int(p.Protocol.Threshold()) {
+			if j == int(p.Protocol.Threshold()-1) {
 				v.Sub(v, z)
 			} else if j == i {
 				v.Add(v, z)
@@ -45,7 +45,7 @@ func (p *Participant) Round1(lhs, rhs *riss.IntShare) (p2pOut network.RoundMessa
 		if sharingId == p.MySharingId {
 			continue
 		}
-		p2pOut.Put(id, &Round1P2P{V: p.State.V})
+		p2pOut.Put(id, &Round1P2P{V: new(big.Int).Set(p.State.V)})
 	}
 
 	return p2pOut, nil

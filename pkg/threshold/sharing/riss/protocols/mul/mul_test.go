@@ -118,50 +118,6 @@ func Test_HappyPathMod(t *testing.T) {
 	}
 }
 
-//func Test_HappyPathMod(t *testing.T) {
-//	t.Parallel()
-//	const threshold = 2
-//	const total = 3
-//	const iters = 128
-//	prng := crand.Reader
-//	modulusBound := new(big.Int)
-//	modulusBound.SetBit(modulusBound, 2048, 1)
-//	modulus, err := crand.Int(prng, modulusBound)
-//	require.NoError(t, err)
-//
-//	for range iters {
-//		identities, err := testutils.MakeDeterministicTestIdentities(total)
-//		require.NoError(t, err)
-//		tapes := make([]transcripts.Transcript, total)
-//		for i := range tapes {
-//			tapes[i] = hagrid.NewTranscript("test", nil)
-//		}
-//
-//		seeds := runSeedSetup(t, threshold, identities, tapes, prng)
-//		lhs := make([]*riss.IntShare, total)
-//		rhs := make([]*riss.IntShare, total)
-//		for i := range total {
-//			lhs[i], err = seeds[i].Sample(riss.WithModulus(modulus))
-//			require.NoError(t, err)
-//			rhs[i], err = seeds[i].Sample(riss.WithModulus(modulus))
-//			require.NoError(t, err)
-//		}
-//
-//		dealer, err := riss.NewDealer(threshold, total, riss.WithModulus(modulus))
-//		require.NoError(t, err)
-//		l, err := dealer.Open(lhs...)
-//		require.NoError(t, err)
-//		r, err := dealer.Open(rhs...)
-//		require.NoError(t, err)
-//		expected := new(big.Int).Mul(l, r)
-//		expected.Mod(expected, modulus)
-//		products := runMulPub(t, threshold, identities, tapes, seeds, prng, lhs, rhs, riss.WithModulus(modulus))
-//		for _, p := range products {
-//			require.Zero(t, p.Cmp(expected))
-//		}
-//	}
-//}
-
 func runSeedSetup(tb testing.TB, threshold uint, identities []types.IdentityKey, tapes []transcripts.Transcript, prng io.Reader) []*riss.PseudoRandomSeed {
 	tb.Helper()
 

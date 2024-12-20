@@ -2,6 +2,7 @@ package riss_mul_pub_test
 
 import (
 	crand "crypto/rand"
+	"fmt"
 	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
@@ -17,87 +18,104 @@ import (
 	"testing"
 )
 
+var accessStructures = []struct{ th, n, iters uint }{
+	{th: 2, n: 3, iters: 128},
+	{th: 2, n: 4, iters: 128},
+	{th: 3, n: 5, iters: 128},
+	{th: 3, n: 6, iters: 32},
+	{th: 4, n: 7, iters: 16},
+	{th: 4, n: 8, iters: 16},
+	{th: 5, n: 9, iters: 8},
+	{th: 5, n: 10, iters: 4},
+}
+
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
-	const threshold = 2
-	const total = 3
 	const bitLen = 2048
-	const iters = 128
 	prng := crand.Reader
 
-	for range iters {
-		identities, err := testutils.MakeDeterministicTestIdentities(total)
-		require.NoError(t, err)
-		tapes := make([]transcripts.Transcript, total)
-		for i := range tapes {
-			tapes[i] = hagrid.NewTranscript("test", nil)
-		}
+	for _, ac := range accessStructures {
+		t.Run(fmt.Sprintf("(%d,%d)", ac.th, ac.n), func(t *testing.T) {
+			t.Parallel()
 
-		seeds := runSeedSetup(t, threshold, identities, tapes, prng)
-		lhs := make([]*riss.IntShare, total)
-		rhs := make([]*riss.IntShare, total)
-		for i := range total {
-			lhs[i], err = seeds[i].Sample(riss.WithBitLen(bitLen))
-			require.NoError(t, err)
-			rhs[i], err = seeds[i].Sample(riss.WithBitLen(bitLen))
-			require.NoError(t, err)
-		}
+			for range ac.iters {
+				identities, err := testutils.MakeDeterministicTestIdentities(int(ac.n))
+				require.NoError(t, err)
+				tapes := make([]transcripts.Transcript, ac.n)
+				for i := range tapes {
+					tapes[i] = hagrid.NewTranscript("test", nil)
+				}
 
-		dealer, err := riss.NewDealer(threshold, total, riss.WithBitLen(bitLen))
-		require.NoError(t, err)
-		l, err := dealer.Open(lhs...)
-		require.NoError(t, err)
-		r, err := dealer.Open(rhs...)
-		require.NoError(t, err)
-		expected := new(big.Int).Mul(l, r)
-		products := runMulPub(t, threshold, identities, tapes, seeds, prng, lhs, rhs, riss.WithBitLen(2*bitLen))
-		for _, p := range products {
-			require.Zero(t, p.Cmp(expected))
-		}
+				seeds := runSeedSetup(t, ac.th, identities, tapes, prng)
+				lhs := make([]*riss.IntShare, ac.n)
+				rhs := make([]*riss.IntShare, ac.n)
+				for i := range ac.n {
+					lhs[i], err = seeds[i].Sample(riss.WithBitLen(bitLen))
+					require.NoError(t, err)
+					rhs[i], err = seeds[i].Sample(riss.WithBitLen(bitLen))
+					require.NoError(t, err)
+				}
+
+				dealer, err := riss.NewDealer(ac.th, ac.n, riss.WithBitLen(bitLen))
+				require.NoError(t, err)
+				l, err := dealer.Open(lhs...)
+				require.NoError(t, err)
+				r, err := dealer.Open(rhs...)
+				require.NoError(t, err)
+				expected := new(big.Int).Mul(l, r)
+				products := runMulPub(t, ac.th, identities, tapes, seeds, prng, lhs, rhs, riss.WithBitLen(2*bitLen))
+				for _, p := range products {
+					require.Zero(t, p.Cmp(expected))
+				}
+			}
+		})
 	}
 }
 
 func Test_HappyPathMod(t *testing.T) {
 	t.Parallel()
-	const threshold = 2
-	const total = 3
-	const iters = 128
 	prng := crand.Reader
 	modulusBound := new(big.Int)
 	modulusBound.SetBit(modulusBound, 2048, 1)
 	modulus, err := crand.Int(prng, modulusBound)
 	require.NoError(t, err)
 
-	for range iters {
-		identities, err := testutils.MakeDeterministicTestIdentities(total)
-		require.NoError(t, err)
-		tapes := make([]transcripts.Transcript, total)
-		for i := range tapes {
-			tapes[i] = hagrid.NewTranscript("test", nil)
-		}
+	for _, ac := range accessStructures {
+		t.Run(fmt.Sprintf("(%d,%d)", ac.th, ac.n), func(t *testing.T) {
+			t.Parallel()
 
-		seeds := runSeedSetup(t, threshold, identities, tapes, prng)
-		lhs := make([]*riss.IntShare, total)
-		rhs := make([]*riss.IntShare, total)
-		for i := range total {
-			lhs[i], err = seeds[i].Sample(riss.WithModulus(modulus))
-			require.NoError(t, err)
-			rhs[i], err = seeds[i].Sample(riss.WithModulus(modulus))
-			require.NoError(t, err)
-		}
+			for range ac.iters {
+				identities, err := testutils.MakeDeterministicTestIdentities(int(ac.n))
+				require.NoError(t, err)
+				tapes := make([]transcripts.Transcript, ac.n)
+				for i := range tapes {
+					tapes[i] = hagrid.NewTranscript("test", nil)
+				}
 
-		dealer, err := riss.NewDealer(threshold, total, riss.WithModulus(modulus))
-		require.NoError(t, err)
-		l, err := dealer.Open(lhs...)
-		require.NoError(t, err)
-		r, err := dealer.Open(rhs...)
-		require.NoError(t, err)
-		expected := new(big.Int).Mul(l, r)
-		expected.Mod(expected, modulus)
-		products := runMulPub(t, threshold, identities, tapes, seeds, prng, lhs, rhs, riss.WithModulus(modulus))
-		for _, p := range products {
-			require.Zero(t, p.Cmp(expected))
-		}
+				seeds := runSeedSetup(t, ac.th, identities, tapes, prng)
+				lhs := make([]*riss.IntShare, ac.n)
+				rhs := make([]*riss.IntShare, ac.n)
+				for i := range ac.n {
+					lhs[i], err = seeds[i].Sample(riss.WithModulus(modulus))
+					require.NoError(t, err)
+					rhs[i], err = seeds[i].Sample(riss.WithModulus(modulus))
+					require.NoError(t, err)
+				}
+
+				dealer, err := riss.NewDealer(ac.th, ac.n, riss.WithModulus(modulus))
+				require.NoError(t, err)
+				l, err := dealer.Open(lhs...)
+				require.NoError(t, err)
+				r, err := dealer.Open(rhs...)
+				require.NoError(t, err)
+				expected := new(big.Int).Mul(l, r)
+				expected.Mod(expected, modulus)
+				products := runMulPub(t, ac.th, identities, tapes, seeds, prng, lhs, rhs, riss.WithModulus(modulus))
+				for _, p := range products {
+					require.Zero(t, p.Cmp(expected))
+				}
+			}
+		})
 	}
 }
 
