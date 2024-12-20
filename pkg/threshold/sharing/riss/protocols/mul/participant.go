@@ -61,10 +61,10 @@ func NewParticipant(myIdentityKey types.IdentityKey, protocol types.ThresholdPro
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to build rho mapping")
 	}
-	chi, err := riss.BuildChiMapping(allUnqualifiedSets, protocol.TotalParties())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to build chi mapping")
-	}
+	chi := riss.BuildChiMapping(protocol.Threshold(), protocol.TotalParties())
+	//if err != nil {
+	//	return nil, errs.WrapFailed(err, "failed to build chi mapping")
+	//}
 	var myUnqualifiedSets []riss.SharingIdSet
 	for _, set := range allUnqualifiedSets {
 		if !set.Has(mySharingId) {

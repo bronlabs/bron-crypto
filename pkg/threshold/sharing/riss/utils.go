@@ -4,7 +4,6 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"golang.org/x/exp/constraints"
 	"slices"
 	"sort"
 )
@@ -63,102 +62,19 @@ func BuildRhoMapping(sortedMaxUnqualifiedSets []SharingIdSet, total uint) (map[S
 	return mapping, nil
 }
 
-type unqualifiedSetUsage struct {
-	set SharingIdSet
-	c   uint64
-}
-
-type byUnqualifiedSetUsage []unqualifiedSetUsage
-
-func (s byUnqualifiedSetUsage) Len() int {
-	return len(s)
-}
-
-func (s byUnqualifiedSetUsage) Less(i, j int) bool {
-	return s[i].c < s[j].c
-}
-
-func (s byUnqualifiedSetUsage) Swap(i, j int) {
-	tmp := s[i]
-	s[i] = s[j]
-	s[j] = tmp
-}
-
-func BuildChiMapping(unqualifiedSets []SharingIdSet, total uint) (map[types.SharingID]SharingIdSet, error) {
-	permutation := make([]SharingIdSet, len(unqualifiedSets))
-	copy(permutation, unqualifiedSets)
-
-	for {
-		chi, err := tryBuildChiMapping(permutation, total)
-		if err == nil {
-			return chi, nil
-		}
-		if !NextPermutation(permutation) {
-			return nil, err
-		}
-	}
-}
-
-func tryBuildChiMapping(unqualifiedSets []SharingIdSet, total uint) (map[types.SharingID]SharingIdSet, error) {
+func BuildChiMapping(threshold, total uint) map[types.SharingID]SharingIdSet {
 	mapping := make(map[types.SharingID]SharingIdSet)
-	utilization := make([]SharingIdSet, total)
-	copy(utilization, unqualifiedSets)
-	utilizationLen := len(utilization)
-
-next:
-	for id := types.SharingID(total); id >= types.SharingID(1); id-- {
-		for i := 0; i < utilizationLen; i++ {
-			if !utilization[i].Has(id) {
-				mapping[id] = utilization[i]
-				slices.Delete(utilization, i, i+1)
-				utilizationLen--
-				continue next
-			}
+	for sharingId := types.SharingID(1); sharingId <= types.SharingID(total); sharingId++ {
+		var set []types.SharingID
+		for i := uint(1); i < threshold; i++ {
+			id := types.SharingID(((uint(sharingId) - 1 + i) % total) + 1)
+			set = append(set, id)
 		}
-		return nil, errs.NewFailed("unable to build chi mapping")
+		mapping[sharingId] = NewSharingIdSetOf(set...)
 	}
 
-	return mapping, nil
+	return mapping
 }
-
-// NextPermutation generates the next permutation of the
-// sortable collection x in lexical order.  It returns false
-// if the permutations are exhausted.
-//
-// Knuth, Donald (2011), "Section 7.2.1.2: Generating All Permutations",
-// The Art of Computer Programming, volume 4A.
-func NextPermutation[S ~[]E, E constraints.Ordered](s S) bool {
-	n := len(s) - 1
-	if n < 1 {
-		return false
-	}
-	j := n - 1
-	for ; s[j] >= s[j+1]; j-- {
-		if j == 0 {
-			return false
-		}
-	}
-	l := n
-	for s[j] >= s[l] {
-		l--
-	}
-	tmp := s[j]
-	s[j] = s[l]
-	s[l] = tmp
-	for k, l := j+1, n; k < l; {
-		tmp := s[k]
-		s[k] = s[l]
-		s[l] = tmp
-		k++
-		l--
-	}
-	return true
-}
-
-//type SharingIdSetPair struct {
-//	L SharingIdSet
-//	R SharingIdSet
-//}
 
 func BuildSortedMaxUnqualifiedSets(threshold, total uint) ([]SharingIdSet, error) {
 	sharingIds := make([]types.SharingID, total)
