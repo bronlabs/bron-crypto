@@ -4,6 +4,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
 	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
 	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"golang.org/x/exp/constraints"
 	"slices"
 	"sort"
 )
@@ -84,16 +85,33 @@ func (s byUnqualifiedSetUsage) Swap(i, j int) {
 }
 
 func BuildChiMapping(unqualifiedSets []SharingIdSet, total uint) (map[types.SharingID]SharingIdSet, error) {
+	permutation := make([]SharingIdSet, len(unqualifiedSets))
+	copy(permutation, unqualifiedSets)
+
+	for {
+		chi, err := tryBuildChiMapping(permutation, total)
+		if err == nil {
+			return chi, nil
+		}
+		if !NextPermutation(permutation) {
+			return nil, err
+		}
+	}
+}
+
+func tryBuildChiMapping(unqualifiedSets []SharingIdSet, total uint) (map[types.SharingID]SharingIdSet, error) {
 	mapping := make(map[types.SharingID]SharingIdSet)
 	utilization := make([]SharingIdSet, total)
 	copy(utilization, unqualifiedSets)
+	utilizationLen := len(utilization)
 
 next:
-	for id := types.SharingID(total); id > 0; id-- {
-		for i := 0; i < len(unqualifiedSets); i++ {
+	for id := types.SharingID(total); id >= types.SharingID(1); id-- {
+		for i := 0; i < utilizationLen; i++ {
 			if !utilization[i].Has(id) {
 				mapping[id] = utilization[i]
 				slices.Delete(utilization, i, i+1)
+				utilizationLen--
 				continue next
 			}
 		}
@@ -101,6 +119,40 @@ next:
 	}
 
 	return mapping, nil
+}
+
+// NextPermutation generates the next permutation of the
+// sortable collection x in lexical order.  It returns false
+// if the permutations are exhausted.
+//
+// Knuth, Donald (2011), "Section 7.2.1.2: Generating All Permutations",
+// The Art of Computer Programming, volume 4A.
+func NextPermutation[S ~[]E, E constraints.Ordered](s S) bool {
+	n := len(s) - 1
+	if n < 1 {
+		return false
+	}
+	j := n - 1
+	for ; s[j] >= s[j+1]; j-- {
+		if j == 0 {
+			return false
+		}
+	}
+	l := n
+	for s[j] >= s[l] {
+		l--
+	}
+	tmp := s[j]
+	s[j] = s[l]
+	s[l] = tmp
+	for k, l := j+1, n; k < l; {
+		tmp := s[k]
+		s[k] = s[l]
+		s[l] = tmp
+		k++
+		l--
+	}
+	return true
 }
 
 //type SharingIdSetPair struct {

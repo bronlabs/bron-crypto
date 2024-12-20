@@ -7,7 +7,7 @@ import (
 	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
 	"github.com/copperexchange/krypton-primitives/pkg/network"
 	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/riss"
-	rissMulPub "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/riss/protocols/mulpub"
+	rissMulPub "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/riss/protocols/mul_pub"
 	rissSeedSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/riss/protocols/seed_setup"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
 	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
