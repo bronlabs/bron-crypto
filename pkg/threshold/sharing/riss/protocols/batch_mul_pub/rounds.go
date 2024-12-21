@@ -37,7 +37,7 @@ func (p *Participant) Round1(lhs, rhs []*riss.IntShare) (p2pOut network.RoundMes
 				if err != nil {
 					return nil, errs.WrapRandomSample(err, "cannot sample blinding")
 				}
-				if j == int(p.Protocol.Threshold()) {
+				if j == int(p.Protocol.Threshold())-1 {
 					v[k].Sub(v[k], z)
 				} else if j == i {
 					v[k].Add(v[k], z)

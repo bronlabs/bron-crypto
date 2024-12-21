@@ -34,11 +34,7 @@ func Test_ChiMapping(t *testing.T) {
 		t.Run(fmt.Sprintf("(%d,%d)", ac.th, ac.n), func(t *testing.T) {
 			t.Parallel()
 
-			unqualifiedSets, err := riss.BuildSortedMaxUnqualifiedSets(ac.th, ac.n)
-			require.NoError(t, err)
-
-			chiMap, err := riss.BuildChiMapping(unqualifiedSets, ac.n)
-			require.NoError(t, err)
+			chiMap := riss.BuildChiMapping(ac.th, ac.n)
 			require.Len(t, chiMap, int(ac.n))
 		})
 	}
