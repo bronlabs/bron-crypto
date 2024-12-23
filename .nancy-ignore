@@ -1,0 +1,1 @@
+CVE-2024-45338 # https://pkg.go.dev/vuln/GO-2024-3333 not critical for us (html parsing), no patch for now
