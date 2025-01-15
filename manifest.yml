@@ -1,6 +1,7 @@
 info:
   name: krypton
   version: "0.1"
+  category: krypton
 
 include:
   - file: /etc/serve/include.d/library.yml
