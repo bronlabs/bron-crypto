@@ -1,8 +1,8 @@
 package compiler
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
 )
 
 type Name string

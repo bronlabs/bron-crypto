@@ -3,12 +3,12 @@ package lpdl
 import (
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
-	paillierrange "github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/range"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
+	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	paillierrange "github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/range"
 )
 
 type Round1Output struct {

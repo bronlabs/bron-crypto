@@ -4,14 +4,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
-	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
+	"github.com/bronlabs/krypton-primitives/pkg/network"
+	agreeonrandom_testutils "github.com/bronlabs/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
 )
 
 func MakeSetupParticipants(t require.TestingT, curve curves.Curve, identities []types.IdentityKey, prng io.Reader) (participants []*setup.Participant, err error) {

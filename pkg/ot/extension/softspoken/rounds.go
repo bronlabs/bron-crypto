@@ -4,12 +4,12 @@ import (
 	"crypto/subtle"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/binaryfield/bf128"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"github.com/copperexchange/krypton-primitives/pkg/ot"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/krypton-primitives/pkg/base/binaryfield/bf128"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/hashing"
+	"github.com/bronlabs/krypton-primitives/pkg/ot"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
 )
 
 // Round1 uses the PRG to extend the baseOT seeds, then proves consistency of the extension.

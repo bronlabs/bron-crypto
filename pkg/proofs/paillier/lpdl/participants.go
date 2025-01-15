@@ -6,20 +6,20 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/lp"
-	paillierrange "github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/range"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/krypton-primitives/pkg/base"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
+	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/lp"
+	paillierrange "github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/range"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 const (
-	transcriptLabel = "COPPER_KRYPTON_PAILLIER_LPDL-"
+	transcriptLabel = "KRYPTON_PAILLIER_LPDL-"
 )
 
 type Participant struct {

@@ -1,14 +1,14 @@
 package noninteractive_signing
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
+	"github.com/bronlabs/krypton-primitives/pkg/network"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
 )
 
 var _ network.Message[types.ThresholdProtocol] = (*Round1Broadcast)(nil)

@@ -10,11 +10,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/ecdsa/deterministic"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/signatures/ecdsa"
+	"github.com/bronlabs/krypton-primitives/pkg/signatures/ecdsa/deterministic"
 )
 
 func Test_DeterministicECDSA_RFC6979(t *testing.T) {

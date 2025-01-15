@@ -8,10 +8,10 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/testutils"
+	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas/impl/fq"
+	"github.com/bronlabs/krypton-primitives/pkg/csprng/testutils"
 )
 
 func Test_PointPallasAddDoubleMul(t *testing.T) {

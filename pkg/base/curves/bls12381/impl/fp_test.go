@@ -9,8 +9,8 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
+	bls12381impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
 )
 
 func TestFpSetOne(t *testing.T) {

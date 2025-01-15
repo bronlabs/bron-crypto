@@ -8,10 +8,10 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing/poseidon"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/mina"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/hashing/poseidon"
+	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr"
+	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/mina"
 )
 
 func Test_MinaSignaturePrefix(t *testing.T) {

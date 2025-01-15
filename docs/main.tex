@@ -3,22 +3,22 @@
 %------------------------------HEADERS & VERSION-------------------------------%
     \input{src/headers/spec_header}
     \input{src/headers/spec_notation}
-    
+
     \newcommand{\specversion}{Version 0.9}
 
 %-----------------------------------TITLE--------------------------------------%
-    \title{Cryptographic Specification of Copper.co\\(\specversion)}
+    \title{Cryptographic Specification of Bron.xyz\\(\specversion)}
     \author{Alireza Rafiei, Alberto Ibarrondo, Mateusz Kramarczyk \\ Hoang Ong}
-    \date{\today} 
+    \date{\today}
 
 \begin{document}
 
 %-------------------------------TITLE PAGE & ToC-------------------------------%
 \maketitle
 \begin{abstract}
-    This document contains the specification of the cryptographic protocols and primitives that serve as base for the Multi-Party Computation (MPC) platform of \href{https://copper.co}{Copper.co}. This specification serves a reference for the implementation of all the techniques described in it. 
-    
-    As a custody solutions provider, Copper's main objective with its MPC platform is to provide state-of-the-art protection for digital assets (e.g., cryptocurrencies) while allowing its clients to operate with them with the utmost security guarantees. To this end, we target distributed variants of Elliptic-Curve (EC) signature schemes commonly used to sign transactions in popular blockchains (ECDSA, Schnorr/EdDSA, BLS). We select MPC protocols that are proven secure against malicious adversaries in a $t$-out-of-$n$ threshold setting: $n$ parties generate and hold shares of the underlying private key, and any subset of $t$ parties can sign a transaction. This threat model tolerates up to $t-1$ static corruptions throughout the protocol execution. Our chosen distributed signing protocols are:
+    This document contains the specification of the cryptographic protocols and primitives that serve as base for the Multi-Party Computation (MPC) platform of \href{https://bron.xyz}{Bron}. This specification serves a reference for the implementation of all the techniques described in it.
+
+    As a custody solutions provider, Bron's main objective with its MPC platform is to provide state-of-the-art protection for digital assets (e.g., cryptocurrencies) while allowing its clients to operate with them with the utmost security guarantees. To this end, we target distributed variants of Elliptic-Curve (EC) signature schemes commonly used to sign transactions in popular blockchains (ECDSA, Schnorr/EdDSA, BLS). We select MPC protocols that are proven secure against malicious adversaries in a $t$-out-of-$n$ threshold setting: $n$ parties generate and hold shares of the underlying private key, and any subset of $t$ parties can sign a transaction. This threat model tolerates up to $t-1$ static corruptions throughout the protocol execution. Our chosen distributed signing protocols are:
     \begin{itemize}
         \item DKLs23~\cite{DKLS23} and Lindell17~\cite{lindell17}\footnote{The latter only supports $t=2$, for any $n$.} for threshold ECDSA.
         \item Lindell22~\cite{L22} for threshold Schnorr.
@@ -30,7 +30,7 @@
 \clearpage
 
 %----------------------------------SECTIONS------------------------------------%
- 
+
 
 \input{src/sections/1_introduction/1_introduction}
 \clearpage

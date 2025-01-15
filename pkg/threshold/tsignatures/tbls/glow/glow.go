@@ -1,18 +1,18 @@
 package glow
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	fiatShamir "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
+	fiatShamir "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
+	"github.com/bronlabs/krypton-primitives/pkg/signatures/bls"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 )
 
 const (
-	transcriptLabel  = "COPPER_KRYPTON_TBLS_GLOW-"
+	transcriptLabel  = "KRYPTON_TBLS_GLOW-"
 	DleqNIZKCompiler = fiatShamir.Name
 )
 

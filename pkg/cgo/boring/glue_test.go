@@ -9,7 +9,7 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/cgo/boring"
+	"github.com/bronlabs/krypton-primitives/pkg/cgo/boring"
 )
 
 func TestBigNum_Jacobi(t *testing.T) {

@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
+	"github.com/bronlabs/krypton-primitives/pkg/network"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
 )
 
 func (p *PreGenParticipant) Round1() (output *Round1Broadcast, err error) {

@@ -10,10 +10,10 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/pailliern"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/pailliern"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 func Test_pIsCorrect(t *testing.T) {

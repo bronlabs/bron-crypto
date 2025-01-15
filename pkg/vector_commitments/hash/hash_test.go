@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	hashvectorcommitments "github.com/copperexchange/krypton-primitives/pkg/vector_commitments/hash"
+	hashvectorcommitments "github.com/bronlabs/krypton-primitives/pkg/vector_commitments/hash"
 )
 
 func TestSimpleHappyPath(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/tree"
+	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/tree"
 )
 
 /*

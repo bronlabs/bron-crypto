@@ -5,7 +5,7 @@ package boring
 // #include <openssl/bn.h>
 import "C"
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils/nocopy"
+	"github.com/bronlabs/krypton-primitives/pkg/base/utils/nocopy"
 	"runtime"
 )
 

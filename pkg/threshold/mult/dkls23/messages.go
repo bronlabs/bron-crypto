@@ -1,13 +1,13 @@
 package dkls23
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
+	"github.com/bronlabs/krypton-primitives/pkg/base"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/network"
+	"github.com/bronlabs/krypton-primitives/pkg/ot/extension/softspoken"
 )
 
 var _ network.Message[types.Protocol] = (*Round2Output)(nil)

@@ -3,12 +3,12 @@ package art
 import (
 	"sort"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/tree"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
-	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/dh"
-	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/tripledh"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/tree"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/utils"
+	"github.com/bronlabs/krypton-primitives/pkg/key_agreement/dh"
+	"github.com/bronlabs/krypton-primitives/pkg/key_agreement/tripledh"
 )
 
 type AsynchronousRatchetTree struct {

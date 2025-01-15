@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
 )
 
 type Statement[X0, X1 sigma.Statement] struct {

@@ -1,6 +1,6 @@
 package algebra
 
-import "github.com/copperexchange/krypton-primitives/pkg/base/errs"
+import "github.com/bronlabs/krypton-primitives/pkg/base/errs"
 
 func Hyper[S Structure, E Element](monoid Monoid[S, E], operator BinaryOperator[E]) (BinaryOperator[E], error) {
 	identity, err := monoid.Identity(operator)

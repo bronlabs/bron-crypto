@@ -9,11 +9,11 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
-	paillierrange "github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/range"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/krypton-primitives/pkg/base"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	paillierrange "github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/range"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 func Fuzz_Test(f *testing.F) {

@@ -4,19 +4,19 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	compilerUtils "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/pedersen"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/krypton-primitives/pkg/base"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/hashing"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
+	compilerUtils "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler_utils"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/pedersen"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 // To get H for Pedersen commitments, we'll hash concatenation of below and provided sessionId to the curve.
@@ -24,8 +24,8 @@ import (
 // We assume that it is not possible to get discrete log of the resulting H wrt G designated by a curve.
 // If you are not happy with the 2nd assumption, then you should add rounds to agree on H. We recommend using `agreeonrandom` package to derive a random sessionId (which normally only has to be unique) and pass it to the constructor.
 const (
-	NothingUpMySleeve = "COPPER_KRYPTON_JF_SOMETHING_UP_MY_SLEEVE-"
-	transcriptLabel   = "COPPER_KRYPTON_JF-"
+	NothingUpMySleeve = "KRYPTON_JF_SOMETHING_UP_MY_SLEEVE-"
+	transcriptLabel   = "KRYPTON_JF-"
 )
 
 var _ types.ThresholdParticipant = (*Participant)(nil)

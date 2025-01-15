@@ -9,16 +9,16 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/dlog/schnorr"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
-	sigmaCompose "github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compose/sigand"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/schnorr"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
+	sigmaCompose "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compose/sigand"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 func Test_SchnorrAndSchnorr(t *testing.T) {

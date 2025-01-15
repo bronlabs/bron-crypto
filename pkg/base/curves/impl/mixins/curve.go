@@ -3,8 +3,8 @@ package mixins
 import (
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/algebra/impl"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 )
 
 type Curve struct {

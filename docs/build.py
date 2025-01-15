@@ -3,7 +3,7 @@ import argparse
 import subprocess
 import jinja2
 
-KRYPTON_PRIMITIVES_URL = "https://github.com/copperexchange/krypton-primitives"
+KRYPTON_PRIMITIVES_URL = "https://github.com/bronlabs/krypton-primitives"
 
 
 def setup():

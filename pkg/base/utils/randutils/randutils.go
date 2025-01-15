@@ -8,8 +8,8 @@ import (
 
 	"golang.org/x/exp/constraints"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/combinatorics"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 const (

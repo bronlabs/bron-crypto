@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	ttu "github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/noninteractive/testutils"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
+	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/noninteractive/testutils"
 )
 
 func Test_PreGenHappyPath(t *testing.T) {

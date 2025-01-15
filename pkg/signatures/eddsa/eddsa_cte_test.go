@@ -9,13 +9,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/internal"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	"github.com/bronlabs/krypton-primitives/internal"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/bronlabs/krypton-primitives/pkg/hashing"
+	"github.com/bronlabs/krypton-primitives/pkg/signatures/eddsa"
+	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr"
+	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/vanilla"
 )
 
 func Test_MeasureConstantTime_eddsa(t *testing.T) {

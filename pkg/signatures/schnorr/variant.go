@@ -1,8 +1,8 @@
 package schnorr
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 )
 
 type Variant[F any, M any] interface {

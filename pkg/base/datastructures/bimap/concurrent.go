@@ -4,8 +4,8 @@ import (
 	"iter"
 	"sync"
 
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 var _ ds.ConcurrentBiMap[any, any] = (*ConcurrentBiMap[any, any])(nil)

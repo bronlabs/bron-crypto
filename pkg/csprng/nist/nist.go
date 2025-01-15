@@ -4,10 +4,10 @@ import (
 	crand "crypto/rand"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng"
+	"github.com/bronlabs/krypton-primitives/pkg/base"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/utils"
+	"github.com/bronlabs/krypton-primitives/pkg/csprng"
 )
 
 const (

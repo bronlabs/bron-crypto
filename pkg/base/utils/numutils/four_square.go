@@ -5,8 +5,8 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	saferith_utils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	saferith_utils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var (

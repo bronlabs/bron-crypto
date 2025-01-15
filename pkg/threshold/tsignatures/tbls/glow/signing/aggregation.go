@@ -1,15 +1,15 @@
 package signing
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/dleq"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/glow"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/network"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/dleq"
+	"github.com/bronlabs/krypton-primitives/pkg/signatures/bls"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tbls/glow"
 )
 
 func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSignatureProtocol, partialSignatures network.RoundMessages[types.ThresholdProtocol, *glow.PartialSignature], message []byte) (*bls.Signature[bls12381.G2], error) {

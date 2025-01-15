@@ -4,19 +4,19 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/pkg/ot"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/extension/softspoken"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/krypton-primitives/pkg/base"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/csprng"
+	"github.com/bronlabs/krypton-primitives/pkg/ot"
+	"github.com/bronlabs/krypton-primitives/pkg/ot/extension/softspoken"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "COPPER_DKLS_MULTIPLY-"
+const transcriptLabel = "KRYPTON_DKLS_MULTIPLY-"
 
 var _ types.Participant = (*Alice)(nil)
 var _ types.Participant = (*Bob)(nil)
@@ -140,7 +140,7 @@ func validateParticipantInputs[T any](myIdentityKey types.IdentityKey, protocol 
 
 func generateGadgetVector(curve curves.Curve, transcript transcripts.Transcript) (gadget *[Xi]curves.Scalar, err error) {
 	gadget = new([Xi]curves.Scalar)
-	transcript.AppendMessages("gadget vector", []byte("COPPER_KRYPTON_DKLS19_MULT_GADGET_VECTOR"))
+	transcript.AppendMessages("gadget vector", []byte("KRYPTON_DKLS19_MULT_GADGET_VECTOR"))
 	for i := 0; i < Xi; i++ {
 		bytes, err := transcript.ExtractBytes("gadget", base.WideFieldBytes)
 		if err != nil {

@@ -3,18 +3,18 @@ package fiatshamir
 import (
 	"fmt"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/krypton-primitives/pkg/base"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 const (
 	Name compiler.Name = "FiatShamir"
 
-	transcriptLabel = "COPPER_KRYPTON_NIZKP_FIATSHAMIR-"
+	transcriptLabel = "KRYPTON_NIZKP_FIATSHAMIR-"
 	statementLabel  = "statementLabel-"
 	commitmentLabel = "commitmentLabel-"
 	challengeLabel  = "challengeLabel-"

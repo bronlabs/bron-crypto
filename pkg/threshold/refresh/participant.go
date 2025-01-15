@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/hjky"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/zero/hjky"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "COPPER_KRYPTON_HJKY_KEY_REFRESH-"
+const transcriptLabel = "KRYPTON_HJKY_KEY_REFRESH-"
 
 var _ types.ThresholdParticipant = (*Participant)(nil)
 

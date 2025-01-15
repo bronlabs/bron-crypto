@@ -1,11 +1,11 @@
 package sigma
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
 )
 
 const (
-	transcriptLabel = "COPPER_KRYPTON_SIGMA_POK-"
+	transcriptLabel = "KRYPTON_SIGMA_POK-"
 
 	statementLabel  = "statementLabel-"
 	commitmentLabel = "commitmentLabel-"

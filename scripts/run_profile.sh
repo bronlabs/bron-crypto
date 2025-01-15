@@ -29,8 +29,8 @@ do
         mkdir -p ${TMPDIR}${parentDir}
         let COUNTER++
         PROFILE_TEST=1 go test -timeout 300s -run ^$func\$ $parentDir -memprofile ${TMPDIR}${parentDir}/memprofile.out -cpuprofile ${TMPDIR}${parentDir}/cpuprofile.out
-        go tool pprof -top ${TMPDIR}${parentDir}/memprofile.out | grep copperexchange
-        go tool pprof -top ${TMPDIR}${parentDir}/cpuprofile.out | grep copperexchange
+        go tool pprof -top ${TMPDIR}${parentDir}/memprofile.out | grep bronlabs
+        go tool pprof -top ${TMPDIR}${parentDir}/cpuprofile.out | grep bronlabs
         set +x
     done
 done

@@ -1,4 +1,4 @@
-module github.com/copperexchange/krypton-primitives
+module github.com/bronlabs/krypton-primitives
 
 go 1.23
 
@@ -8,10 +8,11 @@ require (
 	github.com/google/gofuzz v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/crypto v0.27.0
+	golang.org/x/crypto v0.32.0
 	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0
+	golang.org/x/net v0.34.0
 	golang.org/x/sync v0.8.0
-	golang.org/x/sys v0.25.0
+	golang.org/x/sys v0.29.0
 )
 
 require (

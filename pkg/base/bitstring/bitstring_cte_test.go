@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/copperexchange/krypton-primitives/internal"
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
+	"github.com/bronlabs/krypton-primitives/internal"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 )
 
 func Test_MeasureConstantTime_SelectBit(t *testing.T) {

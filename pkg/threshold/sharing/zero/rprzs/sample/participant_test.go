@@ -8,15 +8,15 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/fkechacha20"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	agreeonrandom_testutils "github.com/copperexchange/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/sample"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
+	"github.com/bronlabs/krypton-primitives/pkg/csprng/fkechacha20"
+	"github.com/bronlabs/krypton-primitives/pkg/hashing"
+	agreeonrandom_testutils "github.com/bronlabs/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/zero/rprzs/sample"
 )
 
 func Test_CanInitialize(t *testing.T) {

@@ -3,7 +3,7 @@ package bitstring
 import (
 	"fmt"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 // PackedBits is a byte vector of little-endian packed bits.

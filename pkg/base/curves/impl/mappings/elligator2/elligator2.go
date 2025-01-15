@@ -3,10 +3,10 @@ package elligator2
 import (
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/bronlabs/krypton-primitives/pkg/base/ct"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/utils"
+	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var (

@@ -3,7 +3,7 @@ package csprng
 import (
 	"sync"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 // Provide a thread-safe version for PRNGs.

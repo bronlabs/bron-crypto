@@ -1,6 +1,6 @@
 package impl
 
-import "github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+import "github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 
 type IntegralDomain[D algebra.IntegralDomain[D, E], E algebra.IntegralDomainElement[D, E]] struct {
 	algebra.IntegralDomain[D, E]

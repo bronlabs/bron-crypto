@@ -1,18 +1,18 @@
 package pedersen
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/feldman"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/network"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/dkg"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
 )
 
 const (
-	DkgLabel       = "COPPER_KRYPTON_PEDERSEN_DKG-"
+	DkgLabel       = "KRYPTON_PEDERSEN_DKG-"
 	SharingIdLabel = "Pedersen_DKG_sharing_label-"
 )
 

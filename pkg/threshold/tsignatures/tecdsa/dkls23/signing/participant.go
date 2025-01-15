@@ -4,28 +4,28 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/pkg/ot"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/base/bbot"
-	mult "github.com/copperexchange/krypton-primitives/pkg/threshold/mult/dkls23"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/sample"
-	zeroSetup "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
+	"github.com/bronlabs/krypton-primitives/pkg/csprng"
+	"github.com/bronlabs/krypton-primitives/pkg/ot"
+	"github.com/bronlabs/krypton-primitives/pkg/ot/base/bbot"
+	mult "github.com/bronlabs/krypton-primitives/pkg/threshold/mult/dkls23"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/zero/rprzs/sample"
+	zeroSetup "github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 var _ types.ThresholdSignatureParticipant = (*Participant)(nil)
 
-const transcriptLabel = "COPPER_DKLS23_-"
+const transcriptLabel = "KRYPTON_DKLS23_-"
 
 type Participant struct {
 	// Base participant

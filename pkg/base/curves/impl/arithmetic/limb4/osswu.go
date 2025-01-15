@@ -1,7 +1,7 @@
 package limb4
 
 import (
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 )
 
 // SswuParams for computing the Simplified SWU mapping

@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/bls"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/testutils"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
+	"github.com/bronlabs/krypton-primitives/pkg/signatures/bls"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/testutils"
 )
 
 func TestHappyPath(t *testing.T) {

@@ -3,14 +3,14 @@ package vsot
 import (
 	"crypto/subtle"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"github.com/copperexchange/krypton-primitives/pkg/ot"
+	"github.com/bronlabs/krypton-primitives/pkg/base/ct"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/hashing"
+	"github.com/bronlabs/krypton-primitives/pkg/ot"
 )
 
-const transcriptLabel = "COPPER_KRYPTON_VSOT-"
+const transcriptLabel = "KRYPTON_VSOT-"
 
 // Round1 computes a secret/public key pair and the dlog proof of the secret key.
 func (s *Sender) Round1() (r1out *Round1P2P, err error) {

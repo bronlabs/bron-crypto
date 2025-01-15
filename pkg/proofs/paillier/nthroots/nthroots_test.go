@@ -9,12 +9,12 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/modular"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/nthroots"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/nthroots"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 func Test_HappyPathInteractive(t *testing.T) {

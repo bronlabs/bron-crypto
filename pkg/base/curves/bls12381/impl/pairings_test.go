@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
+	bls12381impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 )
 
 func TestSinglePairing(t *testing.T) {

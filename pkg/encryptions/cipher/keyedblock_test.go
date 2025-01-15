@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/thirdparty/golang/go/src/crypto/aes"
+	"github.com/bronlabs/krypton-primitives/thirdparty/golang/go/src/crypto/aes"
 )
 
 func Test_keyedblock(t *testing.T) {

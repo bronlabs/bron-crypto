@@ -1,8 +1,8 @@
 package dkls23
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 )
 
 // These should really be parameters, but we are declaring them as constants for readability of struct field types.

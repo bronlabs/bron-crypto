@@ -10,8 +10,8 @@ import (
 	"crypto/cipher"
 	"slices"
 
-	kcipher "github.com/copperexchange/krypton-primitives/pkg/encryptions/cipher"
-	"github.com/copperexchange/krypton-primitives/thirdparty/golang/go/src/crypto/internal/alias"
+	kcipher "github.com/bronlabs/krypton-primitives/pkg/encryptions/cipher"
+	"github.com/bronlabs/krypton-primitives/thirdparty/golang/go/src/crypto/internal/alias"
 )
 
 // defined in asm_*.s.

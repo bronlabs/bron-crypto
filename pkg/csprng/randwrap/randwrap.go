@@ -8,13 +8,13 @@ import (
 	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/copperexchange/krypton-primitives/internal"
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/base/uint2k/uint128"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/bronlabs/krypton-primitives/internal"
+	"github.com/bronlabs/krypton-primitives/pkg/base"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/base/uint2k/uint128"
+	"github.com/bronlabs/krypton-primitives/pkg/base/utils"
+	"github.com/bronlabs/krypton-primitives/pkg/hashing"
 )
 
 const (

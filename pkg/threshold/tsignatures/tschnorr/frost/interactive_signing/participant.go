@@ -3,13 +3,13 @@ package interactive_signing
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/aggregation"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/aggregation"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
 )
 
 var _ types.ThresholdSignatureParticipant = (*Cosigner)(nil)

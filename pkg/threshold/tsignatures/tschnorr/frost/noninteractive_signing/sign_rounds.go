@@ -1,13 +1,13 @@
 package noninteractive_signing
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
-	schnorr "github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/aggregation"
-	signing_helpers "github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/helpers"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/network"
+	schnorr "github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/aggregation"
+	signing_helpers "github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/helpers"
 )
 
 func (nic *Cosigner) ProducePartialSignature(message []byte) (*frost.PartialSignature, error) {

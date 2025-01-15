@@ -1,10 +1,10 @@
 package fkechacha20
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/thirdparty/golang/crypto/chacha20"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/csprng"
+	"github.com/bronlabs/krypton-primitives/thirdparty/golang/crypto/chacha20"
 )
 
 // Prng uses a fast-erasure version of `chacha20` stream cipher as a Prng.

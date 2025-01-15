@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/internal"
-	hashing "github.com/copperexchange/krypton-primitives/pkg/hashing/tmmohash"
+	"github.com/bronlabs/krypton-primitives/internal"
+	hashing "github.com/bronlabs/krypton-primitives/pkg/hashing/tmmohash"
 )
 
 func Test_MeasureConstantTime_HashAes(t *testing.T) {

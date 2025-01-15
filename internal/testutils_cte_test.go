@@ -7,7 +7,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/internal"
+	"github.com/bronlabs/krypton-primitives/internal"
 )
 
 func Test_MeasureConstantTime_bigint(t *testing.T) {

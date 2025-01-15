@@ -3,11 +3,11 @@ package elgamalcommitments
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing"
+	"github.com/bronlabs/krypton-primitives/pkg/base"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/commitments"
+	"github.com/bronlabs/krypton-primitives/pkg/hashing"
 )
 
 var _ commitments.HomomorphicCommitter[Message, *Commitment, *Opening] = (*committer)(nil)

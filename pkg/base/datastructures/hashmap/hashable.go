@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"iter"
 
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 type HashableHashMap[K ds.Hashable[K], V any] struct {

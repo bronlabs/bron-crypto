@@ -9,17 +9,17 @@ import (
 	"hash"
 	"slices"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/cipher"
-	keyedaes "github.com/copperexchange/krypton-primitives/thirdparty/golang/go/src/crypto/aes"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/utils"
+	"github.com/bronlabs/krypton-primitives/pkg/csprng"
+	"github.com/bronlabs/krypton-primitives/pkg/encryptions/cipher"
+	keyedaes "github.com/bronlabs/krypton-primitives/thirdparty/golang/go/src/crypto/aes"
 )
 
 const (
 	// IV is the hash's initialisation vector. We choose 32 arbitrary bytes.
-	IV = string("ThereIsNothingUpMySleeveMrCopper")
+	IV = string("ThereIsNothingUpMySleeveDearBron")
 )
 
 /*

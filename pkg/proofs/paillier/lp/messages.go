@@ -3,11 +3,11 @@ package lp
 import (
 	"github.com/cronokirby/saferith"
 
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/nthroots"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/nthroots"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
 )
 
 type Round1Output struct {

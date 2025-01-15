@@ -3,7 +3,7 @@ package uint256_test
 import (
 	"testing"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/uint2k/uint256"
+	"github.com/bronlabs/krypton-primitives/pkg/base/uint2k/uint256"
 )
 
 func TestUint256Constants(t *testing.T) {

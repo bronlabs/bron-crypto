@@ -3,10 +3,10 @@ package pallas
 import (
 	"crypto/subtle"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fp"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas/impl/fq"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas/impl/fp"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas/impl/fq"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 type Ep struct {

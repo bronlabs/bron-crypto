@@ -9,17 +9,17 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/hash2curve"
-	p256impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fp"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256/impl/fq"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/bronlabs/krypton-primitives/pkg/base"
+	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/hash2curve"
+	p256impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl/fp"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl/fq"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
 )
 
 const Name = "P256" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)

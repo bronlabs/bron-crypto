@@ -1,8 +1,8 @@
 package dkg
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma/compiler_utils"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 )
 
 func init() {

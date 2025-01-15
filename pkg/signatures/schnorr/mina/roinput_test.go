@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/mina"
+	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/mina"
 )
 
 func Test_BitsToPackedFields(t *testing.T) {

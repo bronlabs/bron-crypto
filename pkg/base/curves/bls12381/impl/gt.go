@@ -3,8 +3,8 @@ package bls12381impl
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
 )
 
 // GtFieldBytes is the number of bytes needed to represent this field.

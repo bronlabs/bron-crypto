@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
+	"github.com/bronlabs/krypton-primitives/pkg/base/combinatorics"
 )
 
 func TestBinomial(t *testing.T) {

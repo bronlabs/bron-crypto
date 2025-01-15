@@ -1,11 +1,11 @@
 package dkg
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/dkg/pedersen"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/network"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/pedersen"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 )
 
 type Round1Broadcast = pedersen.Round1Broadcast

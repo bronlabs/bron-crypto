@@ -3,19 +3,19 @@ package bbot
 import (
 	"slices"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/bitstring"
-	"github.com/copperexchange/krypton-primitives/pkg/base/ct"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/dh"
-	"github.com/copperexchange/krypton-primitives/pkg/ot"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
+	"github.com/bronlabs/krypton-primitives/pkg/base/ct"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/hashing"
+	"github.com/bronlabs/krypton-primitives/pkg/key_agreement/dh"
+	"github.com/bronlabs/krypton-primitives/pkg/ot"
 )
 
 const (
-	PopfKeyLabel = "COPPER-BBOT-POPF-"
-	Ro0Label     = "COPPER-BBOT-RO0-"
-	Ro1Label     = "COPPER-BBOT-RO1-"
+	PopfKeyLabel = "KRYPTON-BBOT-POPF-"
+	Ro0Label     = "KRYPTON-BBOT-RO0-"
+	Ro1Label     = "KRYPTON-BBOT-RO1-"
 	TagLength    = ot.KappaBytes
 )
 

@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
+	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
 )
 
 func Test_FieldElementSetNatToOne_BigEndian(t *testing.T) {

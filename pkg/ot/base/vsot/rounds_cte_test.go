@@ -7,11 +7,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/internal"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/ot"
-	"github.com/copperexchange/krypton-primitives/pkg/ot/base/vsot/testutils"
-	ot_testutils "github.com/copperexchange/krypton-primitives/pkg/ot/testutils"
+	"github.com/bronlabs/krypton-primitives/internal"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
+	"github.com/bronlabs/krypton-primitives/pkg/ot"
+	"github.com/bronlabs/krypton-primitives/pkg/ot/base/vsot/testutils"
+	ot_testutils "github.com/bronlabs/krypton-primitives/pkg/ot/testutils"
 )
 
 func Test_MeasureConstantTime_encrypt(t *testing.T) {

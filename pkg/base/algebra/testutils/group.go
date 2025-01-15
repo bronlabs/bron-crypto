@@ -3,8 +3,8 @@ package curves_testutils
 import (
 	"testing"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	fu "github.com/copperexchange/krypton-primitives/pkg/base/fuzzutils"
+	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
+	fu "github.com/bronlabs/krypton-primitives/pkg/base/fuzzutils"
 	"github.com/stretchr/testify/require"
 )
 

@@ -1,7 +1,7 @@
 package limb4
 
 import (
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 )
 
 // IsogenyParams are the parameters needed to map from an isogeny to the main curve.

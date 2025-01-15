@@ -9,15 +9,15 @@ import (
 
 	"golang.org/x/sys/cpu"
 
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/fkechacha20"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/nist"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng/randwrap"
-	"github.com/copperexchange/krypton-primitives/thirdparty/golang/crypto/chacha20"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/csprng"
+	"github.com/bronlabs/krypton-primitives/pkg/csprng/fkechacha20"
+	"github.com/bronlabs/krypton-primitives/pkg/csprng/nist"
+	"github.com/bronlabs/krypton-primitives/pkg/csprng/randwrap"
+	"github.com/bronlabs/krypton-primitives/thirdparty/golang/crypto/chacha20"
 )
 
 type cacheType struct {

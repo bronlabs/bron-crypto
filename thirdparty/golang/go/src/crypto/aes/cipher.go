@@ -9,9 +9,9 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	keyedcipher "github.com/copperexchange/krypton-primitives/pkg/encryptions/cipher"
-	"github.com/copperexchange/krypton-primitives/thirdparty/golang/go/src/crypto/internal/alias"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	keyedcipher "github.com/bronlabs/krypton-primitives/pkg/encryptions/cipher"
+	"github.com/bronlabs/krypton-primitives/thirdparty/golang/go/src/crypto/internal/alias"
 )
 
 // The AES block size in bytes.

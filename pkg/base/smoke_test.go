@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
+	"github.com/bronlabs/krypton-primitives/pkg/base"
 )
 
 func TestSmoke(t *testing.T) {

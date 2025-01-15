@@ -3,7 +3,7 @@ package combinatorics
 import (
 	"golang.org/x/exp/constraints"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 func BinomialCoefficient(n, k uint) (uint, error) {

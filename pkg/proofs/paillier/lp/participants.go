@@ -6,17 +6,17 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/paillier/nthroots"
-	"github.com/copperexchange/krypton-primitives/pkg/proofs/sigma"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts/hagrid"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/nthroots"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
 
 const (
-	transcriptLabel = "COPPER_KRYPTON_PAILLIER_LP-"
+	transcriptLabel = "KRYPTON_PAILLIER_LP-"
 	PaillierBitSize = 1024
 	// TODO: Should we bump it to 1536 to comply with NIST recommendations?
 )

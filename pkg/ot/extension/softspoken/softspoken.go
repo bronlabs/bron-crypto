@@ -16,7 +16,7 @@ PRG to expand each Base OT with κ-bit messages into η-bit message OTs.
 package softspoken
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/ot"
+	"github.com/bronlabs/krypton-primitives/pkg/ot"
 )
 
 const (

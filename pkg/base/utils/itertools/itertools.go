@@ -3,7 +3,7 @@ package itertools
 import (
 	"reflect"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 func Contains[T any](xs []T, y T, isEqual func(a, b T) bool) bool {

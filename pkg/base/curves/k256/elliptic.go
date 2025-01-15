@@ -7,13 +7,13 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	secp256k1 "github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fp"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256/impl/fq"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/bronlabs/krypton-primitives/pkg/base"
+	secp256k1 "github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl/fp"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl/fq"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var (

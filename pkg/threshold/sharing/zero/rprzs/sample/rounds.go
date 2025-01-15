@@ -1,8 +1,8 @@
 package sample
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
 )
 
 func (p *Participant) Sample() (zeroShare rprzs.Sample, err error) {

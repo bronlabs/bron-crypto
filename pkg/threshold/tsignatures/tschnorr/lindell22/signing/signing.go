@@ -3,15 +3,15 @@ package signing
 import (
 	"sort"
 
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/eddsa"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr"
-	"github.com/copperexchange/krypton-primitives/pkg/signatures/schnorr/vanilla"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/signatures/eddsa"
+	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr"
+	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 )
 
 func BigS(participants ds.Set[types.IdentityKey]) []byte {

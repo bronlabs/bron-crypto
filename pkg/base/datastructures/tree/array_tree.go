@@ -3,7 +3,7 @@ package tree
 import (
 	"math/bits"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/utils"
+	"github.com/bronlabs/krypton-primitives/pkg/base/utils"
 )
 
 type ArrayTree[T any] []T

@@ -7,13 +7,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
-	//"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	//"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	//"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
-	//"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
-	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/tripledh"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
+	//"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
+	//"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
+	//"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
+	//"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/key_agreement/tripledh"
 )
 
 func Test_HappyPathTripleDH(t *testing.T) {

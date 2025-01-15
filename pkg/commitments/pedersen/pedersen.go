@@ -3,9 +3,9 @@ package pedersencommitments
 import (
 	"fmt"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/commitments"
 )
 
 const Name commitments.Name = "PEDERSEN_COMMITMENT"
@@ -16,7 +16,7 @@ var (
 	_ commitments.Opening[Message] = (*Opening)(nil)
 
 	// hardcoded seed used to derive generators along with the session-id.
-	nothingUpMySleeve = []byte(fmt.Sprintf("COPPER_KRYPTON_%s_SOMETHING_UP_MY_SLEEVE-", Name))
+	nothingUpMySleeve = []byte(fmt.Sprintf("KRYPTON_%s_SOMETHING_UP_MY_SLEEVE-", Name))
 )
 
 type Message curves.Scalar

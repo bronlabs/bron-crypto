@@ -8,9 +8,9 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/modular"
-	"github.com/copperexchange/krypton-primitives/pkg/base/primes"
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
+	"github.com/bronlabs/krypton-primitives/pkg/base/primes"
+	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
 )
 
 func Test_PrimePowersResidueParams(t *testing.T) {

@@ -3,9 +3,9 @@ package curveutils
 import (
 	"reflect"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/impl"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 func MarshalPointToBinary(point curves.Point) ([]byte, error) {

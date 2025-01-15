@@ -1,7 +1,7 @@
 package agreeonrandom
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/curveutils"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
 )
 
 //nolint:gochecknoinits // We need the init function here.

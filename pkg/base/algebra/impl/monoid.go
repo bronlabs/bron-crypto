@@ -1,8 +1,8 @@
 package impl
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 type MonoidElement[M algebra.Monoid[M, E], E algebra.MonoidElement[M, E]] struct {

@@ -3,7 +3,7 @@ package hpke
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 func Seal(mode ModeID, suite *CipherSuite, plaintext, additionalData []byte, receiverPublicKey PublicKey, senderPrivateKey *PrivateKey, info, psk, pskId []byte, prng io.Reader) (ciphertext []byte, ephemeralPublicKey PublicKey, err error) {

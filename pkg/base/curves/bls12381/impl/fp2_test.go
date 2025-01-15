@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	bls12381impl "github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381/impl"
+	bls12381impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
 )
 
 func Fp2Square(t *testing.T) {

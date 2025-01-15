@@ -1,7 +1,7 @@
 package hashset_test
 
 import (
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 )
 
 var _ ds.Hashable[data] = (*data)(nil)

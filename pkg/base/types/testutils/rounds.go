@@ -1,8 +1,8 @@
 package testutils
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/network"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/network"
 	"github.com/stretchr/testify/require"
 	"reflect"
 )
@@ -10,7 +10,7 @@ import (
 // MapO2I maps the outputs of all participants in a round of a protocol to the inputs of the next round
 // with serializing and deserializing them throughout the process.
 func MapO2I[
-ProtocolT types.Protocol, PartyT types.Participant, BcastT network.Message[ProtocolT], UnicastT network.Message[ProtocolT],
+	ProtocolT types.Protocol, PartyT types.Participant, BcastT network.Message[ProtocolT], UnicastT network.Message[ProtocolT],
 ](
 	t require.TestingT,
 	participants []PartyT,
@@ -32,7 +32,7 @@ ProtocolT types.Protocol, PartyT types.Participant, BcastT network.Message[Proto
 // MapBroadcastO2I maps the broadcasts of all participants in a round of a protocol to the inputs of the next round
 // with serializing and deserializing them throughout the process.
 func MapBroadcastO2I[
-ProtocolT types.Protocol, PartyT types.Participant, BcastT network.Message[ProtocolT],
+	ProtocolT types.Protocol, PartyT types.Participant, BcastT network.Message[ProtocolT],
 ](
 	t require.TestingT,
 	participants []PartyT,
@@ -57,7 +57,7 @@ ProtocolT types.Protocol, PartyT types.Participant, BcastT network.Message[Proto
 // MapUnicastO2I maps the P2P messages of all participants in a round of a protocol to the inputs of the next round
 // with serializing and deserializing them throughout the process.
 func MapUnicastO2I[
-ProtocolT types.Protocol, PartyT types.Participant, UnicastT network.Message[ProtocolT],
+	ProtocolT types.Protocol, PartyT types.Participant, UnicastT network.Message[ProtocolT],
 ](
 	t require.TestingT,
 	participants []PartyT,

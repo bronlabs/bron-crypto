@@ -6,8 +6,8 @@ import (
 	"github.com/cronokirby/saferith"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	saferithUtils "github.com/copperexchange/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var (

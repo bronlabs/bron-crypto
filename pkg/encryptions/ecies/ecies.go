@@ -11,15 +11,15 @@ import (
 
 	"golang.org/x/crypto/hkdf"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	ds "github.com/copperexchange/krypton-primitives/pkg/base/datastructures"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/key_agreement/dh"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/key_agreement/dh"
 )
 
 const (
-	P1 = "COPPER_KRYPTON_ECIES_IEEE_1363A_HKDF_512_INFO-"
-	P2 = "COPPER_KRYPTON_ECIES_IEEE_1363A_HMAC_512_ENCODING_PARAMETER-"
+	P1 = "KRYPTON_ECIES_IEEE_1363A_HKDF_512_INFO-"
+	P2 = "KRYPTON_ECIES_IEEE_1363A_HMAC_512_ENCODING_PARAMETER-"
 	L2 = 64
 )
 

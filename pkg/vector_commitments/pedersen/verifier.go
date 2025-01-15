@@ -1,10 +1,10 @@
 package pedersenvectorcommitments
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
-	vc "github.com/copperexchange/krypton-primitives/pkg/vector_commitments"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/commitments"
+	vc "github.com/bronlabs/krypton-primitives/pkg/vector_commitments"
 )
 
 var _ vc.VectorVerifier[VectorElement, *VectorCommitment, Vector, *Opening] = (*VectorVerifier)(nil)

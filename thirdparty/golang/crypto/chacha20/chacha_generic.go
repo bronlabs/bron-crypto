@@ -11,8 +11,8 @@ import (
 	"encoding/binary"
 	"math/bits"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/thirdparty/golang/crypto/internal/alias"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/thirdparty/golang/crypto/internal/alias"
 )
 
 const (

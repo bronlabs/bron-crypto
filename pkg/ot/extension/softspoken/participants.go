@@ -3,15 +3,15 @@ package softspoken
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	"github.com/copperexchange/krypton-primitives/pkg/csprng"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing/tmmohash"
-	"github.com/copperexchange/krypton-primitives/pkg/ot"
-	"github.com/copperexchange/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/csprng"
+	"github.com/bronlabs/krypton-primitives/pkg/hashing/tmmohash"
+	"github.com/bronlabs/krypton-primitives/pkg/ot"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
 )
 
-const transcriptLabel = "COPPER_KRYPTON_SOFTSPOKEN_OTe-"
+const transcriptLabel = "KRYPTON_SOFTSPOKEN_OTe-"
 
 type Receiver struct {
 	ot.Participant

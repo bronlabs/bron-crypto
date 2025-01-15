@@ -1,7 +1,7 @@
 package impl
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/algebra"
+	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 )
 
 type Rg[R algebra.Rg[R, E], E algebra.RgElement[R, E]] struct {

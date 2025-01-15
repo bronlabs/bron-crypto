@@ -3,13 +3,13 @@ package pedersenvectorcommitments
 import (
 	"fmt"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
-	pedersencommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/pedersen"
-	"github.com/copperexchange/krypton-primitives/pkg/hashing"
-	vc "github.com/copperexchange/krypton-primitives/pkg/vector_commitments"
+	"github.com/bronlabs/krypton-primitives/pkg/base"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/commitments"
+	pedersencommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/pedersen"
+	"github.com/bronlabs/krypton-primitives/pkg/hashing"
+	vc "github.com/bronlabs/krypton-primitives/pkg/vector_commitments"
 )
 
 const Name = "PEDERSEN_VECTOR_COMMITMENT"
@@ -19,7 +19,7 @@ var (
 	_ vc.VectorCommitment         = (*VectorCommitment)(nil)
 
 	// hardcoded seed used to derive generators along with the session-id.
-	somethingUpMySleeve = []byte(fmt.Sprintf("COPPER_KRYPTON_%s_SOMETHING_UP_MY_SLEEVE-", Name))
+	somethingUpMySleeve = []byte(fmt.Sprintf("KRYPTON_%s_SOMETHING_UP_MY_SLEEVE-", Name))
 )
 
 type VectorElement = pedersencommitments.Message

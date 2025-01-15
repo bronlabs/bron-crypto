@@ -9,9 +9,9 @@ import (
 	"github.com/cronokirby/saferith"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	hashcommitments "github.com/copperexchange/krypton-primitives/pkg/commitments/hash"
-	"github.com/copperexchange/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
+	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
 )
 
 func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {

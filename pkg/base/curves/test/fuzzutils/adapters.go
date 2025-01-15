@@ -3,8 +3,8 @@ package curves_testutils
 import (
 	"encoding/binary"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	fu "github.com/copperexchange/krypton-primitives/pkg/base/fuzzutils"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	fu "github.com/bronlabs/krypton-primitives/pkg/base/fuzzutils"
 )
 
 var _ fu.ObjectAdapter[curves.Point] = (*PointAdapter)(nil)
