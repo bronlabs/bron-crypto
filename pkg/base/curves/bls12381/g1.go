@@ -12,53 +12,41 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	bls12381impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/hash2curve"
+	bls12381Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/h2c"
+	pointsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/points"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
-const NameG1 = "BLS12381G1" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
+const (
+	NameG1                  = "BLS12381G1"
+	Hash2CurveSuiteG1       = "BLS12381G1_XMD:SHA-256_SSWU_RO_"
+	Hash2CurveScalarSuiteG1 = "BLS12381G1_XMD:SHA-256_SSWU_RO_SC_"
+)
 
 var (
-	g1Initonce sync.Once
+	g1InitOnce sync.Once
 	g1Instance G1
 
-	cofactorG1, _ = new(saferith.Nat).SetHex(strings.ToUpper("396C8C005555E1568C00AAAB0000AAAB"))
-	g1FullOrder   = saferith.ModulusFromNat(new(saferith.Nat).Mul(r.Nat(), cofactorG1, r.Nat().AnnouncedLen()+cofactorG1.AnnouncedLen()))
+	g1Cofactor, _      = new(saferith.Nat).SetHex(strings.ToUpper("396c8c005555e1568c00aaab0000aaab"))
+	g1HEffective, _    = new(saferith.Nat).SetHex(strings.ToUpper("d201000000010001"))
+	g1SubGroupOrder, _ = saferith.ModulusFromHex(strings.ToUpper("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001"))
+	g1Order            = saferith.ModulusFromNat(new(saferith.Nat).Mul(g1Cofactor, g1SubGroupOrder.Nat(), -1))
 )
 
 var _ curves.Curve = (*G1)(nil)
 
 type G1 struct {
-	hash2curve.CurveHasher
-
 	_ ds.Incomparable
 }
 
 func g1Init() {
 	g1Instance = G1{}
-	g1Instance.CurveHasher = hash2curve.NewCurveHasherSha256(
-		curves.Curve(&g1Instance),
-		base.HASH2CURVE_APP_TAG,
-		hash2curve.DstTagSswu,
-	)
-}
-
-// SetHasherAppTag sets the hasher to use for hash-to-curve operations with a
-// custom "appTag". Not exposed in the `curves.Curve` interface, as by
-// default we should use the library-wide HASH2CURVE_APP_TAG for compatibility.
-func (c *G1) SetHasherAppTag(appTag string) {
-	c.CurveHasher = hash2curve.NewCurveHasherSha256(
-		curves.Curve(&g1Instance),
-		appTag,
-		hash2curve.DstTagSswu,
-	)
 }
 
 func NewG1() *G1 {
-	g1Initonce.Do(g1Init)
+	g1InitOnce.Do(g1Init)
 	return &g1Instance
 }
 
@@ -136,7 +124,7 @@ func (*G1) WideElementSize() int {
 }
 
 func (*G1) SuperGroupOrder() *saferith.Modulus {
-	return g1FullOrder
+	return g1Order
 }
 
 func (*G1) Name() string {
@@ -144,7 +132,7 @@ func (*G1) Name() string {
 }
 
 func (*G1) Order() *saferith.Modulus {
-	return r
+	return bls12381SubGroupOrder
 }
 
 func (c *G1) Element() curves.Point {
@@ -155,54 +143,64 @@ func (*G1) Random(prng io.Reader) (curves.Point, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
 	}
-	pt := new(bls12381impl.G1)
-	u0, err := NewBaseFieldG1().Random(prng)
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "couldn't generate random field element")
+	pt := new(PointG1)
+	ok := pt.V.SetRandom(prng)
+	if ok != 1 {
+		return nil, errs.NewRandomSample("bls12381 g1")
 	}
-	u1, err := NewBaseFieldG1().Random(prng)
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "couldn't generate random field element")
+
+	return pt, nil
+}
+
+func (*G1) HashToFieldElements(count int, dstPrefix string, msg []byte) (u []curves.BaseFieldElement, err error) {
+	out := make([]bls12381Impl.Fp, count)
+	h2c.HashToField(out[:], bls12381Impl.G1CurveHasherParams{}, dstPrefix+Hash2CurveSuiteG1, msg)
+
+	u = make([]curves.BaseFieldElement, count)
+	for i := range out {
+		v := new(BaseFieldElementG1)
+		v.V.Set(&out[i])
+		u[i] = v
 	}
-	u0fe, ok0 := u0.(*BaseFieldElementG1)
-	u1fe, ok1 := u1.(*BaseFieldElementG1)
-	if !ok0 || !ok1 || u0fe.V == nil || u1fe.V == nil {
-		return nil, errs.WrapType(err, "Cast to BLS12381 G1 field elements failed")
+
+	return u, nil
+}
+
+func (c *G1) HashToScalars(count int, dstPrefix string, msg []byte) (u []curves.Scalar, err error) {
+	out := make([]bls12381Impl.Fq, count)
+	h2c.HashToField(out[:], bls12381Impl.G1CurveHasherParams{}, dstPrefix+Hash2CurveScalarSuiteG1, msg)
+
+	u = make([]curves.Scalar, count)
+	for i := range out {
+		s := &Scalar{G: c}
+		s.V.Set(&out[i])
+		u[i] = s
 	}
-	pt.Map(u0fe.V, u1fe.V)
-	return &PointG1{V: pt}, nil
+
+	return u, nil
 }
 
 func (c *G1) Hash(input []byte) (curves.Point, error) {
-	return c.HashWithDst(input, nil)
+	return c.HashWithDst(base.Hash2CurveAppTag+Hash2CurveSuiteG1, input)
 }
 
-func (*G1) HashWithDst(input, dst []byte) (curves.Point, error) {
-	pt := new(bls12381impl.G1)
-	u, err := NewG1().HashToFieldElements(2, input, dst)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "hash to field element of BLS12381 G1 failed")
-	}
-	u0, ok0 := u[0].(*BaseFieldElementG1)
-	u1, ok1 := u[1].(*BaseFieldElementG1)
-	if !ok0 || !ok1 || u0.V == nil || u1.V == nil {
-		return nil, errs.WrapType(err, "Cast to BLS12381 G1 field elements failed")
-	}
-	pt.Map(u0.V, u1.V)
-	return &PointG1{V: pt}, nil
+func (*G1) HashWithDst(dst string, input []byte) (curves.Point, error) {
+	result := new(PointG1)
+	result.V.Hash(dst, input)
+	return result, nil
 }
 
 func (*G1) Select(choice uint64, x0, x1 curves.Point) curves.Point {
 	x0pt, ok0 := x0.(*PointG1)
-	if !ok0 || x0pt.V == nil {
+	if !ok0 {
 		panic("x0 is not a non-empty BLS12381 G1 element")
 	}
 	x1pt, ok1 := x1.(*PointG1)
-	if !ok1 || x1pt.V == nil {
+	if !ok1 {
 		panic("x1 is ot a non-empty BLS12381 G1 element")
 	}
 	sPt := new(PointG1)
-	sPt.V.CMove(x0pt.V, x1pt.V, choice)
+	sPt.V.Select(choice, &x0pt.V, &x1pt.V)
 	return sPt
 }
 
@@ -225,15 +223,15 @@ func (*G1) Identity(under algebra.BinaryOperator[curves.Point]) (curves.Point, e
 // === Additive Monoid Methods.
 
 func (*G1) AdditiveIdentity() curves.Point {
-	return &PointG1{
-		V: new(bls12381impl.G1).Identity(),
-	}
+	result := new(PointG1)
+	result.V.SetIdentity()
+	return result
 }
 
 // === Group Methods.
 
 func (*G1) CoFactor() *saferith.Nat {
-	return cofactorG1
+	return g1Cofactor
 }
 
 // === Additive Group Methods.
@@ -249,9 +247,9 @@ func (*G1) Sub(x algebra.AdditiveGroupElement[curves.Curve, curves.Point], ys ..
 // === Cyclic Group Methods.
 
 func (*G1) Generator() curves.Point {
-	return &PointG1{
-		V: new(bls12381impl.G1).Generator(),
-	}
+	result := new(PointG1)
+	result.V.SetGenerator()
+	return result
 }
 
 // === Variety Methods.
@@ -271,7 +269,7 @@ func (*G1) BaseField() curves.BaseField {
 	return NewBaseFieldG1()
 }
 
-func (*G1) NewPoint(x, y algebra.AlgebraicVarietyBaseFieldElement[curves.Curve, curves.BaseField, curves.Point, curves.BaseFieldElement]) (curves.Point, error) {
+func (c *G1) NewPoint(x, y algebra.AlgebraicVarietyBaseFieldElement[curves.Curve, curves.BaseField, curves.Point, curves.BaseFieldElement]) (curves.Point, error) {
 	if x == nil || y == nil {
 		return nil, errs.NewIsNil("argument is nil")
 	}
@@ -284,11 +282,17 @@ func (*G1) NewPoint(x, y algebra.AlgebraicVarietyBaseFieldElement[curves.Curve, 
 		return nil, errs.NewType("y is not of the right type")
 	}
 
-	value, err := new(bls12381impl.G1).SetNat(xx.Nat(), yy.Nat())
-	if err != nil {
-		return nil, errs.WrapCoordinates(err, "invalid coordinates")
+	if xx.IsAdditiveIdentity() && yy.IsAdditiveIdentity() {
+		return c.AdditiveIdentity(), nil
 	}
-	return &PointG1{V: value}, nil
+
+	result := new(PointG1)
+	ok2 := result.V.SetAffine(&xx.V, &yy.V)
+	if ok2 != 1 {
+		return nil, errs.NewFailed("invalid coordinates")
+	}
+
+	return result, nil
 }
 
 // === Elliptic Curve Methods.
@@ -313,19 +317,20 @@ func (c *G1) BaseFieldElement() curves.BaseFieldElement {
 	return c.BaseField().Zero()
 }
 
-func (c *G1) FrobeniusEndomorphism(p curves.Point) curves.Point {
-	pp, ok := p.(*PointG1)
-	if !ok {
-		panic("given point is not of the right type")
-	}
-	x := pp.AffineX()
-	y := pp.AffineY()
-	characteristic := NewBaseFieldG1().Characteristic()
-	result, err := c.NewPoint(x.Exp(characteristic), y.Exp(characteristic))
-	if err != nil {
-		panic(errs.WrapFailed(err, "forbenius endomorphism did not succeed"))
-	}
-	return result
+func (*G1) FrobeniusEndomorphism(p curves.Point) curves.Point {
+	//pp, ok := p.(*PointG1)
+	//if !ok {
+	//	panic("given point is not of the right type")
+	//}
+	//x := pp.AffineX()
+	//y := pp.AffineY()
+	//characteristic := NewBaseFieldG1().Characteristic()
+	//result, err := c.NewPoint(x.Exp(characteristic), y.Exp(characteristic))
+	//if err != nil {
+	//	panic(errs.WrapFailed(err, "forbenius endomorphism did not succeed"))
+	//}
+	//return result
+	panic("implement me")
 }
 
 func (*G1) TraceOfFrobenius() *saferith.Int {
@@ -340,7 +345,7 @@ func (*G1) JInvariant() *saferith.Int {
 // === Prime SubGroup Methods.
 
 func (*G1) SubGroupOrder() *saferith.Modulus {
-	return r
+	return bls12381SubGroupOrder
 }
 
 func (c *G1) ScalarBaseMult(sc algebra.ModuleScalar[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar]) curves.Point {
@@ -348,27 +353,29 @@ func (c *G1) ScalarBaseMult(sc algebra.ModuleScalar[curves.Curve, curves.ScalarF
 }
 
 func (*G1) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
-	nPoints := make([]*bls12381impl.G1, len(points))
-	nScalars := make([]*limb4.FieldValue, len(scalars))
+	nPoints := make([]bls12381Impl.G1Point, len(points))
+	nScalars := make([][]byte, len(scalars))
 	for i, pt := range points {
 		pp, ok := pt.(*PointG1)
 		if !ok {
 			return nil, errs.NewFailed("invalid point type %s, expected PointBls12381G1", reflect.TypeOf(pt).Name())
 		}
-		nPoints[i] = pp.V
+		nPoints[i].Set(&pp.V)
 	}
 	for i, sc := range scalars {
 		s, ok := sc.(*Scalar)
 		if !ok {
 			return nil, errs.NewFailed("invalid scalar type %s, expected ScalarBls12381", reflect.TypeOf(sc).Name())
 		}
-		nScalars[i] = s.V
+		nScalars[i] = s.V.Bytes()
 	}
-	value, err := new(bls12381impl.G1).SumOfProducts(nPoints, nScalars)
+
+	value := new(PointG1)
+	err := pointsImpl.MultiScalarMul[*bls12381Impl.Fp](&value.V, nPoints, nScalars)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "multi scalar multiplication failed")
+		return nil, errs.WrapFailed(err, "multi scalar")
 	}
-	return &PointG1{V: value}, nil
+	return value, nil
 }
 
 func (*G1) DeriveFromAffineX(x curves.BaseFieldElement) (evenY, oddY curves.Point, err error) {

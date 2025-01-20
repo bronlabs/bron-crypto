@@ -5,14 +5,14 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 )
 
 type Parameters struct {
 	fullRounds, partialRounds, stateSize, rate, power int
 	hashInitialRoundConstant                          bool
-	roundConstants                                    [][]*pallas.BaseFieldElement
-	mds                                               [][]*pallas.BaseFieldElement
+	roundConstants                                    [][]*pasta.PallasBaseFieldElement
+	mds                                               [][]*pasta.PallasBaseFieldElement
 }
 
 // https://github.com/o1-labs/o1js-bindings/blob/df8c87ed6804465f79196fdff84e5147ae71e92d/crypto/constants.ts#L282
@@ -24,7 +24,7 @@ var poseidonParamsKimchiFp = &Parameters{
 	power:                    7,
 	hashInitialRoundConstant: true,
 	// TODO: import these
-	roundConstants: [][]*pallas.BaseFieldElement{
+	roundConstants: [][]*pasta.PallasBaseFieldElement{
 		{
 			dec("21155079691556475130150866428468322463125560312786319980770950159250751855431"),
 			dec("16883442198399350202652499677723930673110172289234921799701652810789093522349"),
@@ -301,7 +301,7 @@ var poseidonParamsKimchiFp = &Parameters{
 			dec("10888828634279127981352133512429657747610298502219125571406085952954136470354"),
 		},
 	},
-	mds: [][]*pallas.BaseFieldElement{
+	mds: [][]*pasta.PallasBaseFieldElement{
 		{
 			dec("12035446894107573964500871153637039653510326950134440362813193268448863222019"),
 			dec("25461374787957152039031444204194007219326765802730624564074257060397341542093"),
@@ -328,7 +328,7 @@ var poseidonParamsLegacyFp = &Parameters{
 	stateSize:                3,
 	rate:                     2,
 	power:                    5,
-	roundConstants: [][]*pallas.BaseFieldElement{
+	roundConstants: [][]*pasta.PallasBaseFieldElement{
 		{
 			dec("1346081094044643970582493287085428191977688221215786919106342366360741041016"),
 			dec("10635969173348128974923358283368657934408577270968219574411363948927109531877"),
@@ -834,7 +834,7 @@ var poseidonParamsLegacyFp = &Parameters{
 			dec("7511239878692099209014947248389283109997289411550315391143819429585903287870"),
 		},
 	},
-	mds: [][]*pallas.BaseFieldElement{
+	mds: [][]*pasta.PallasBaseFieldElement{
 		{
 			dec("5328350144166205084223774245058198666309664348635459768305312917086056785354"),
 			dec("15214731724107930304595906373487084110291887262136882623959435918484004667388"),
@@ -853,12 +853,12 @@ var poseidonParamsLegacyFp = &Parameters{
 	},
 }
 
-func dec(dec string) *pallas.BaseFieldElement {
+func dec(dec string) *pasta.PallasBaseFieldElement {
 	bi, ok := new(big.Int).SetString(dec, 10)
 	if !ok {
 		panic("invalid number")
 	}
 	bn := new(saferith.Nat).SetBig(bi, 256)
-	fe := pallas.NewBaseFieldElement(0).SetNat(bn)
-	return fe.(*pallas.BaseFieldElement) //nolint:forcetypeassert,errcheck // force
+	fe := pasta.NewPallasBaseFieldElement(0).SetNat(bn)
+	return fe.(*pasta.PallasBaseFieldElement) //nolint:forcetypeassert,errcheck // force
 }

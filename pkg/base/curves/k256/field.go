@@ -1,27 +1,41 @@
 package k256
 
 import (
+	"encoding/binary"
 	"io"
 	"iter"
+	"slices"
 	"sync"
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl/fp"
+	k256Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var (
-	k256BaseFieldInitOnce sync.Once
-	k256BaseFieldInstance BaseField
+	_ curves.BaseField = (*BaseField)(nil)
 )
 
-var _ curves.BaseField = (*BaseField)(nil)
+var (
+	k256BaseFieldInitOnce sync.Once
+	k256BaseFieldInstance BaseField
+	k256BaseFieldModulus  *saferith.Modulus
+)
+
+//nolint:gochecknoinits // keep it for code generated values
+func init() {
+	var modulusBytes [8 * k256Impl.FpSatLimbs]byte
+	for i, l := range k256Impl.FpModulus {
+		binary.LittleEndian.PutUint64(modulusBytes[i*8:(i+1)*8], l)
+	}
+	slices.Reverse(modulusBytes[:])
+	k256BaseFieldModulus = saferith.ModulusFromBytes(modulusBytes[:])
+}
 
 type BaseField struct {
 	_ ds.Incomparable
@@ -172,11 +186,11 @@ func (*BaseField) ExclusiveDisjunctiveIdentity() curves.BaseFieldElement {
 }
 
 func (*BaseField) ElementSize() int {
-	return base.FieldBytes
+	return k256Impl.FpBytes
 }
 
 func (*BaseField) WideElementSize() int {
-	return base.WideFieldBytes
+	return k256Impl.FpWideBytes
 }
 
 func (*BaseField) IsDecomposable(coprimeIdealNorms ...algebra.IntegerRingElement[curves.BaseField, curves.BaseFieldElement]) (bool, error) {
@@ -209,7 +223,7 @@ func (*BaseField) Name() string {
 }
 
 func (*BaseField) Order() *saferith.Modulus {
-	return fp.New().Params.Modulus
+	return k256BaseFieldModulus
 }
 
 func (f *BaseField) Element() curves.BaseFieldElement {
@@ -217,40 +231,31 @@ func (f *BaseField) Element() curves.BaseFieldElement {
 }
 
 func (*BaseField) Random(prng io.Reader) (curves.BaseFieldElement, error) {
-	if prng == nil {
-		return nil, errs.NewIsNil("prng is nil")
+	e := new(BaseFieldElement)
+	ok := e.V.SetRandom(prng)
+	if ok != 1 {
+		return nil, errs.NewRandomSample("cannot sample random field element")
 	}
-	var seed [base.WideFieldBytes]byte
-	_, err := io.ReadFull(prng, seed[:])
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "could not read from prng")
-	}
-	value, err := NewBaseFieldElement(0).SetBytesWide(seed[:])
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not set bytes")
-	}
-	return value, nil
+
+	return e, nil
 }
 
 func (*BaseField) Hash(x []byte) (curves.BaseFieldElement, error) {
-	els, err := NewCurve().HashToFieldElements(1, x, nil)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "could not hash to field element in k256")
-	}
-	return els[0], nil
+	panic("implement me")
 }
 
 func (*BaseField) Select(choice uint64, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
 	x0f, ok0 := x0.(*BaseFieldElement)
-	if !ok0 || x0f.V == nil {
+	if !ok0 {
 		panic("x0 is not a non-empty k256 field element")
 	}
 	x1f, ok1 := x1.(*BaseFieldElement)
-	if !ok1 || x1f.V == nil {
+	if !ok1 {
 		panic("x1 is not a non-empty k256 field element")
 	}
+
 	el := new(BaseFieldElement)
-	el.V.Arithmetic.Selectznz(&el.V.Value, &x0f.V.Value, &x1f.V.Value, choice)
+	el.V.Select(choice, &x0f.V, &x1f.V)
 	return el
 }
 
@@ -277,17 +282,17 @@ func (*BaseField) Multiply(x curves.BaseFieldElement, ys ...curves.BaseFieldElem
 // === Additive Monoid Methods.
 
 func (*BaseField) AdditiveIdentity() curves.BaseFieldElement {
-	return &BaseFieldElement{
-		V: fp.New().SetZero(),
-	}
+	zero := new(BaseFieldElement)
+	zero.V.SetZero()
+	return zero
 }
 
 // === Multiplicative Monoid Methods.
 
 func (*BaseField) MultiplicativeIdentity() curves.BaseFieldElement {
-	return &BaseFieldElement{
-		V: fp.New().SetOne(),
-	}
+	one := new(BaseFieldElement)
+	one.V.SetOne()
+	return one
 }
 
 // === Additive Group Methods.
@@ -351,11 +356,11 @@ func (f *BaseField) Trace(e curves.BaseFieldElement) curves.BaseFieldElement {
 }
 
 func (*BaseField) FieldBytes() int {
-	return base.FieldBytes
+	return k256Impl.FpBytes
 }
 
 func (*BaseField) WideFieldBytes() int {
-	return base.WideFieldBytes
+	return k256Impl.FpWideBytes
 }
 
 // === Zp Methods.

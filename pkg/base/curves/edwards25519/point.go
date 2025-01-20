@@ -1,37 +1,33 @@
 package edwards25519
 
 import (
-	"crypto/subtle"
 	"encoding"
 	"encoding/binary"
 	"encoding/json"
+	"slices"
 
-	filippo "filippo.io/edwards25519"
-	"filippo.io/edwards25519/field"
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	edwards25519Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519/impl"
+	curvesImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 var _ curves.Point = (*Point)(nil)
-var _ curves.ExtendedCoordinates = (*Point)(nil)
 var _ encoding.BinaryMarshaler = (*Point)(nil)
 var _ encoding.BinaryUnmarshaler = (*Point)(nil)
 var _ json.Unmarshaler = (*Point)(nil)
 
 type Point struct {
-	V *filippo.Point
-
-	_ ds.Incomparable
+	V edwards25519Impl.Point
 }
 
 func NewPoint() *Point {
-	return &Point{V: filippo.NewIdentityPoint()}
+	result := new(Point)
+	result.V.SetIdentity()
+	return result
 }
 
 func (*Point) Structure() curves.Curve {
@@ -78,23 +74,18 @@ func (*Point) IsDesignatedGenerator() bool {
 }
 
 func (p *Point) Equal(rhs curves.Point) bool {
-	r, ok := rhs.(*Point)
-	if ok {
-		// We would like to check that the point (X/Z, Y/Z) is equal to
-		// the point (X'/Z', Y'/Z') without converting into affine
-		// coordinates (x, y) and (x', y'), which requires two inversions.
-		// We have that X = xZ and X' = x'Z'. Thus, x = x' is equivalent to
-		// (xZ)Z' = (x'Z')Z, and similarly for the y-coordinate.
-		return p.V.Equal(r.V) == 1
-	} else {
+	rhsP, ok := rhs.(*Point)
+	if !ok {
 		return false
 	}
+
+	return p.V.Equals(&rhsP.V) == 1
 }
 
 func (p *Point) Clone() curves.Point {
-	return &Point{
-		V: filippo.NewIdentityPoint().Set(p.V),
-	}
+	clone := new(Point)
+	clone.V.Set(&p.V)
+	return clone
 }
 
 // === Groupoid Methods.
@@ -128,11 +119,13 @@ func (p *Point) Add(rhs algebra.AdditiveGroupoidElement[curves.Curve, curves.Poi
 		panic("rhs in nil")
 	}
 	r, ok := rhs.(*Point)
-	if ok {
-		return &Point{V: filippo.NewIdentityPoint().Add(p.V, r.V)}
-	} else {
+	if !ok {
 		panic("rhs in not PointEd25519")
 	}
+
+	result := new(Point)
+	result.V.Add(&p.V, &r.V)
+	return result
 }
 
 func (p *Point) ApplyAdd(q algebra.AdditiveGroupoidElement[curves.Curve, curves.Point], n *saferith.Nat) curves.Point {
@@ -140,7 +133,9 @@ func (p *Point) ApplyAdd(q algebra.AdditiveGroupoidElement[curves.Curve, curves.
 }
 
 func (p *Point) Double() curves.Point {
-	return &Point{V: filippo.NewIdentityPoint().Add(p.V, p.V)}
+	result := new(Point)
+	result.V.Double(&p.V)
+	return result
 }
 
 func (p *Point) Triple() curves.Point {
@@ -156,7 +151,7 @@ func (*Point) IsIdentity(under algebra.BinaryOperator[curves.Point]) (bool, erro
 // === Additive Monoid Methods.
 
 func (p *Point) IsAdditiveIdentity() bool {
-	return p.Equal(NewCurve().AdditiveIdentity())
+	return p.V.IsIdentity() == 1
 }
 
 // === Group Methods.
@@ -172,7 +167,9 @@ func (*Point) IsInverse(of algebra.GroupElement[curves.Curve, curves.Point], und
 // === Additive Group Methods.
 
 func (p *Point) AdditiveInverse() curves.Point {
-	return &Point{V: filippo.NewIdentityPoint().Negate(p.V)}
+	result := new(Point)
+	result.V.Neg(&p.V)
+	return result
 }
 
 func (p *Point) IsAdditiveInverse(of algebra.AdditiveGroupElement[curves.Curve, curves.Point]) bool {
@@ -184,12 +181,13 @@ func (p *Point) Sub(rhs algebra.AdditiveGroupElement[curves.Curve, curves.Point]
 		panic("rhs in nil")
 	}
 	r, ok := rhs.(*Point)
-	if ok {
-		rTmp := filippo.NewIdentityPoint().Negate(r.V)
-		return &Point{V: filippo.NewIdentityPoint().Add(p.V, rTmp)}
-	} else {
+	if !ok {
 		panic("rhs in not PointEd25519")
 	}
+
+	result := new(Point)
+	result.V.Sub(&p.V, &r.V)
+	return result
 }
 
 func (p *Point) ApplySub(q algebra.AdditiveGroupElement[curves.Curve, curves.Point], n *saferith.Nat) curves.Point {
@@ -203,12 +201,13 @@ func (p *Point) ScalarMul(rhs algebra.ModuleScalar[curves.Curve, curves.ScalarFi
 		panic("rhs in nil")
 	}
 	r, ok := rhs.(*Scalar)
-	if ok {
-		value := filippo.NewIdentityPoint().ScalarMult(r.V, p.V)
-		return &Point{V: value}
-	} else {
+	if !ok {
 		panic("rhs in not ScalarEd25519")
 	}
+
+	result := new(Point)
+	result.V.ScalarMul(&p.V, &r.V)
+	return result
 }
 
 // === Curve Methods.
@@ -226,9 +225,9 @@ func (p *Point) IsNegative() bool {
 }
 
 func (p *Point) ClearCofactor() curves.Point {
-	return &Point{
-		V: filippo.NewIdentityPoint().MultByCofactor(p.V),
-	}
+	result := new(Point)
+	result.V.ClearCofactor(&p.V)
+	return result
 }
 
 func (p *Point) IsSmallOrder() bool {
@@ -262,106 +261,71 @@ func (*Point) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOper
 // === Coordinates.
 
 func (p *Point) AffineCoordinates() []curves.BaseFieldElement {
-	return []curves.BaseFieldElement{p.AffineX(), p.AffineY()}
+	var x, y BaseFieldElement
+	_ = p.V.ToAffine(&x.V, &y.V)
+
+	return []curves.BaseFieldElement{&x, &y}
 }
 
 func (p *Point) AffineX() curves.BaseFieldElement {
-	x, _, z, _ := p.V.ExtendedCoordinates()
-	recip := new(field.Element).Invert(z)
-	xx := new(field.Element).Multiply(x, recip)
-	return &BaseFieldElement{
-		V: xx,
-	}
+	return p.AffineCoordinates()[0]
 }
 
 func (p *Point) AffineY() curves.BaseFieldElement {
-	_, y, z, _ := p.V.ExtendedCoordinates()
-	recip := new(field.Element).Invert(z)
-	y.Multiply(y, recip)
-	return &BaseFieldElement{
-		V: y,
-	}
-}
-
-func (p *Point) ExtendedX() curves.BaseFieldElement {
-	x, _, _, _ := p.V.ExtendedCoordinates()
-	return &BaseFieldElement{
-		V: x,
-	}
-}
-
-func (p *Point) ExtendedY() curves.BaseFieldElement {
-	_, y, _, _ := p.V.ExtendedCoordinates()
-	return &BaseFieldElement{
-		V: y,
-	}
-}
-
-func (p *Point) ExtendedZ() curves.BaseFieldElement {
-	_, _, z, _ := p.V.ExtendedCoordinates()
-	return &BaseFieldElement{
-		V: z,
-	}
-}
-
-func (p *Point) ExtendedT() curves.BaseFieldElement {
-	_, _, _, t := p.V.ExtendedCoordinates()
-	return &BaseFieldElement{
-		V: t,
-	}
+	return p.AffineCoordinates()[1]
 }
 
 // === Serialisation.
 
 func (p *Point) ToAffineCompressed() []byte {
-	return p.V.Bytes()
+	return p.V.V.Bytes()
 }
 
 func (p *Point) ToAffineUncompressed() []byte {
-	x, y, z, _ := p.V.ExtendedCoordinates()
-	recip := new(field.Element).Invert(z)
-	x.Multiply(x, recip)
-	y.Multiply(y, recip)
-	var out [64]byte
-	copy(out[:32], x.Bytes())
-	copy(out[32:], y.Bytes())
-	return out[:]
+	var x, y BaseFieldElement
+	_ = p.V.ToAffine(&x.V, &y.V)
+
+	return slices.Concat(x.V.Bytes(), y.V.Bytes())
 }
 
 func (*Point) FromAffineCompressed(inBytes []byte) (curves.Point, error) {
-	pt, err := filippo.NewIdentityPoint().SetBytes(inBytes)
+	result := new(Point)
+	_, err := result.V.V.SetBytes(inBytes)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "set bytes method failed")
+		return nil, errs.WrapFailed(err, "invalid bytes sequence")
 	}
-	return &Point{V: pt}, nil
+
+	return result, nil
 }
 
 func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
-	if len(inBytes) != base.WideFieldBytes {
+	if len(inBytes) != 2*32 {
 		return nil, errs.NewLength("invalid byte sequence")
 	}
-	if subtle.ConstantTimeCompare(inBytes, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}) == 1 {
-		return &Point{V: filippo.NewIdentityPoint()}, nil
+	xBytes := inBytes[:32]
+	yBytes := inBytes[32:]
+
+	var x, y BaseFieldElement
+	ok := x.V.SetBytes(xBytes)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x")
 	}
-	x, err := new(field.Element).SetBytes(inBytes[:base.FieldBytes])
-	if err != nil {
-		return nil, errs.WrapCoordinates(err, "x")
+	ok = y.V.SetBytes(yBytes)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("y")
 	}
-	y, err := new(field.Element).SetBytes(inBytes[base.FieldBytes:])
-	if err != nil {
-		return nil, errs.WrapCoordinates(err, "y")
+
+	result := new(Point)
+	ok = result.V.SetAffine(&x.V, &y.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x/y")
 	}
-	z := new(field.Element).One()
-	t := new(field.Element).Multiply(x, y)
-	value, err := filippo.NewIdentityPoint().SetExtendedCoordinates(x, y, z, t)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "set extended coordinates")
-	}
-	return &Point{V: value}, nil
+
+	return result, nil
 }
 
 func (p *Point) MarshalBinary() ([]byte, error) {
-	res := impl.MarshalBinary(p.Curve().Name(), p.ToAffineCompressed)
+	res := curvesImpl.MarshalBinary(p.Curve().Name(), p.ToAffineCompressed)
 	if len(res) < 1 {
 		return nil, errs.NewSerialisation("could not marshal")
 	}
@@ -369,11 +333,11 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 }
 
 func (p *Point) UnmarshalBinary(input []byte) error {
-	pt, err := impl.UnmarshalBinary(p.FromAffineCompressed, input)
+	pt, err := curvesImpl.UnmarshalBinary(p.FromAffineCompressed, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal binary")
 	}
-	name, _, err := impl.ParseBinary(input)
+	name, _, err := curvesImpl.ParseBinary(input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
@@ -384,12 +348,12 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 	if !ok {
 		return errs.NewType("invalid point")
 	}
-	p.V = ppt.V
+	p.V.Set(&ppt.V)
 	return nil
 }
 
 func (p *Point) MarshalJSON() ([]byte, error) {
-	res, err := impl.MarshalJson(p.Curve().Name(), p.ToAffineCompressed)
+	res, err := curvesImpl.MarshalJson(p.Curve().Name(), p.ToAffineCompressed)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
@@ -397,7 +361,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 }
 
 func (p *Point) UnmarshalJSON(input []byte) error {
-	pt, err := impl.UnmarshalJson(p.Curve().Name(), p.FromAffineCompressed, input)
+	pt, err := curvesImpl.UnmarshalJson(p.Curve().Name(), p.FromAffineCompressed, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
@@ -405,7 +369,7 @@ func (p *Point) UnmarshalJSON(input []byte) error {
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}
-	p.V = P.V
+	p.V.Set(&P.V)
 	return nil
 }
 

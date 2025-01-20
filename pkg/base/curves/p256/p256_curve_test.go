@@ -26,7 +26,7 @@ func TestScalarRandom(t *testing.T) {
 	require.True(t, ok)
 	expected, err := new(saferith.Nat).SetHex(strings.ToUpper("58bfa0ce0afed82ea6cf14c7002b9783c5fbfba0eea88471cc171918b535c487"))
 	require.NoError(t, err)
-	require.NotZero(t, s.V.Nat().Eq(expected))
+	require.NotZero(t, s.Nat().Eq(expected))
 	// Try 10 random values
 	for i := 0; i < 10; i++ {
 		sc, err := curve.ScalarField().Random(crand.Reader)
@@ -45,9 +45,9 @@ func TestScalarHash(t *testing.T) {
 	require.NoError(t, err)
 	s, ok := sc.(*p256.Scalar)
 	require.True(t, ok)
-	expected, err := new(saferith.Nat).SetHex(strings.ToUpper("883c55a3c14c8bea2d9eb3bfaaef000b5da7a15924587ef66a7a461218a69292"))
+	expected, err := new(saferith.Nat).SetHex(strings.ToUpper("f7527451f3de5d6a98384bdb3a618186e08190d021b46dc948012728861d2ed0"))
 	require.NoError(t, err)
-	require.EqualValues(t, hex.EncodeToString(s.V.Nat().Bytes()), hex.EncodeToString(expected.Bytes()))
+	require.EqualValues(t, hex.EncodeToString(s.Nat().Bytes()), hex.EncodeToString(expected.Bytes()))
 }
 
 func TestScalarZero(t *testing.T) {

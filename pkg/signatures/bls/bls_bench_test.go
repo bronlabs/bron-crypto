@@ -112,6 +112,8 @@ func Benchmark_ManyPartyBatchVerify_ShortKeys(b *testing.B) {
 		schemes[i] = scheme
 	}
 
+	b.ResetTimer()
+
 	b.Run("SingleVerify", func(b *testing.B) {
 		for n := 0; n < b.N; n++ {
 			for i := 0; i < batchSize; i++ {

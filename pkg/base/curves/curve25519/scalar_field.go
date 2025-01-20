@@ -215,7 +215,7 @@ func (*ScalarField) Random(prng io.Reader) (curves.Scalar, error) {
 	if prng == nil {
 		panic("prng in nil")
 	}
-	var seed [base.FieldBytes]byte
+	var seed [32]byte
 	if _, err := io.ReadFull(prng, seed[:]); err != nil {
 		return nil, errs.WrapRandomSample(err, "could not read from prng")
 	}
@@ -223,7 +223,7 @@ func (*ScalarField) Random(prng io.Reader) (curves.Scalar, error) {
 }
 
 func (*ScalarField) Hash(x []byte) (curves.Scalar, error) {
-	u, err := NewCurve().HashToScalars(1, x, nil)
+	u, err := NewCurve().HashToScalars(1, base.Hash2CurveAppTag+Hash2CurveScalarSuite, x)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "hash to scalar failed for edwards25519")
 	}
@@ -334,11 +334,11 @@ func (sf *ScalarField) Trace(e curves.Scalar) curves.Scalar {
 }
 
 func (*ScalarField) FieldBytes() int {
-	return base.FieldBytes
+	return 32
 }
 
 func (*ScalarField) WideFieldBytes() int {
-	return base.WideFieldBytes
+	return 64
 }
 
 // === Zp Methods.

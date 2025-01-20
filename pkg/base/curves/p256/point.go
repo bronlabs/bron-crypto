@@ -4,17 +4,15 @@ import (
 	"encoding"
 	"encoding/binary"
 	"encoding/json"
+	"slices"
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
-	p256impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl/fp"
+	curvesImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
+	pointsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/points"
+	p256Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
@@ -26,7 +24,7 @@ var _ encoding.BinaryUnmarshaler = (*Point)(nil)
 var _ json.Unmarshaler = (*Point)(nil)
 
 type Point struct {
-	V *limb4.EllipticPoint
+	V p256Impl.Point
 
 	_ ds.Incomparable
 }
@@ -48,8 +46,8 @@ func (*Point) ApplyOp(operator algebra.BinaryOperator[curves.Point], x algebra.G
 	panic("implement me")
 }
 
-func (p *Point) IsInPrimeSubGroup() bool {
-	return p.V.IsOnCurve() || p.IsAdditiveIdentity()
+func (*Point) IsInPrimeSubGroup() bool {
+	return true
 }
 
 func (p *Point) IsTorsionElementUnderAddition(order *saferith.Modulus) bool {
@@ -74,17 +72,17 @@ func (*Point) IsDesignatedGenerator() bool {
 
 func (p *Point) Equal(rhs curves.Point) bool {
 	r, ok := rhs.(*Point)
-	if ok {
-		return p.V.Equal(r.V) == 1
-	} else {
+	if !ok {
 		return false
 	}
+
+	return p.V.Equals(&r.V) == 1
 }
 
 func (p *Point) Clone() curves.Point {
-	return &Point{
-		V: p256impl.PointNew().Set(p.V),
-	}
+	clone := new(Point)
+	clone.V.Set(&p.V)
+	return clone
 }
 
 // === Groupoid Methods.
@@ -118,12 +116,13 @@ func (p *Point) Add(rhs algebra.AdditiveGroupoidElement[curves.Curve, curves.Poi
 		panic("rhs is nil")
 	}
 	r, ok := rhs.(*Point)
-	if ok {
-		value := p256impl.PointNew().Add(p.V, r.V)
-		return &Point{V: value}
-	} else {
+	if !ok {
 		panic("rhs is not PointP256")
 	}
+
+	value := new(Point)
+	value.V.Add(&p.V, &r.V)
+	return value
 }
 
 func (p *Point) ApplyAdd(q algebra.AdditiveGroupoidElement[curves.Curve, curves.Point], n *saferith.Nat) curves.Point {
@@ -131,8 +130,9 @@ func (p *Point) ApplyAdd(q algebra.AdditiveGroupoidElement[curves.Curve, curves.
 }
 
 func (p *Point) Double() curves.Point {
-	value := p256impl.PointNew().Double(p.V)
-	return &Point{V: value}
+	value := new(Point)
+	value.V.Double(&p.V)
+	return value
 }
 
 func (p *Point) Triple() curves.Point {
@@ -148,7 +148,7 @@ func (*Point) IsIdentity(under algebra.BinaryOperator[curves.Point]) (bool, erro
 // === Additive Monoid Methods.
 
 func (p *Point) IsAdditiveIdentity() bool {
-	return p.V.IsIdentity()
+	return p.V.IsIdentity() == 1
 }
 
 // === Group Methods.
@@ -166,8 +166,9 @@ func (*Point) IsInverse(of algebra.GroupElement[curves.Curve, curves.Point], und
 // === Additive Group Methods.
 
 func (p *Point) AdditiveInverse() curves.Point {
-	value := p256impl.PointNew().Neg(p.V)
-	return &Point{V: value}
+	value := new(Point)
+	value.V.Neg(&p.V)
+	return value
 }
 
 func (p *Point) IsAdditiveInverse(of algebra.AdditiveGroupElement[curves.Curve, curves.Point]) bool {
@@ -179,12 +180,13 @@ func (p *Point) Sub(rhs algebra.AdditiveGroupElement[curves.Curve, curves.Point]
 		panic("rhs is nil")
 	}
 	r, ok := rhs.(*Point)
-	if ok {
-		value := p256impl.PointNew().Sub(p.V, r.V)
-		return &Point{V: value}
-	} else {
+	if !ok {
 		panic("rhs is not PointP256")
 	}
+
+	value := new(Point)
+	value.V.Sub(&p.V, &r.V)
+	return value
 }
 
 func (p *Point) ApplySub(q algebra.AdditiveGroupElement[curves.Curve, curves.Point], n *saferith.Nat) curves.Point {
@@ -198,12 +200,13 @@ func (p *Point) ScalarMul(rhs algebra.ModuleScalar[curves.Curve, curves.ScalarFi
 		panic("rhs is nil")
 	}
 	r, ok := rhs.(*Scalar)
-	if ok {
-		value := p256impl.PointNew().Mul(p.V, r.V)
-		return &Point{V: value}
-	} else {
+	if !ok {
 		panic("rhs is not ScalarP256")
 	}
+
+	value := new(Point)
+	pointsImpl.ScalarMul[*p256Impl.Fp](&value.V, &p.V, r.V.Bytes())
+	return value
 }
 
 // === Curve Methods.
@@ -217,7 +220,13 @@ func (p *Point) Neg() curves.Point {
 }
 
 func (p *Point) IsNegative() bool {
-	return p.V.GetY().Value[0]&1 == 1
+	var x, y p256Impl.Fp
+	ok := p.V.ToAffine(&x, &y)
+	if ok != 1 {
+		return false
+	}
+
+	return y.Bytes()[0]&0b1 == 1
 }
 
 func (*Point) IsSmallOrder() bool {
@@ -236,19 +245,25 @@ func (p *Point) ClearCofactor() curves.Point {
 // === Coordinates interface methods.
 
 func (p *Point) AffineCoordinates() []curves.BaseFieldElement {
-	return []curves.BaseFieldElement{p.AffineX(), p.AffineY()}
+	x := new(BaseFieldElement)
+	y := new(BaseFieldElement)
+	ok := p.V.ToAffine(&x.V, &y.V)
+	if ok != 1 {
+		return []curves.BaseFieldElement{
+			p.Curve().BaseField().AdditiveIdentity(),
+			p.Curve().BaseField().AdditiveIdentity(),
+		}
+	}
+
+	return []curves.BaseFieldElement{x, y}
 }
 
 func (p *Point) AffineX() curves.BaseFieldElement {
-	return &BaseFieldElement{
-		V: p.V.GetX(),
-	}
+	return p.AffineCoordinates()[0]
 }
 
 func (p *Point) AffineY() curves.BaseFieldElement {
-	return &BaseFieldElement{
-		V: p.V.GetY(),
-	}
+	return p.AffineCoordinates()[1]
 }
 
 func (p *Point) ProjectiveX() curves.BaseFieldElement {
@@ -272,96 +287,130 @@ func (p *Point) ProjectiveZ() curves.BaseFieldElement {
 // === Serialisation.
 
 func (p *Point) ToAffineCompressed() []byte {
-	var x [33]byte
-	x[0] = byte(2)
+	var result [33]byte
+	result[0] = byte(2)
+	if p.IsAdditiveIdentity() {
+		return result[:]
+	}
 
-	t := p256impl.PointNew().ToAffine(p.V)
+	var x, y p256Impl.Fp
+	ok := p.V.ToAffine(&x, &y)
+	if ok != 1 {
+		panic("this should never happen")
+	}
 
-	x[0] |= t.Y.Bytes()[0] & 1
+	xBytes := x.Bytes()
+	slices.Reverse(xBytes)
+	copy(result[1:], xBytes)
+	result[0] |= y.Bytes()[0] & 1
 
-	xBytes := t.X.Bytes()
-	copy(x[1:], bitstring.ReverseBytes(xBytes[:]))
-	return x[:]
+	return result[:]
 }
 
 func (p *Point) ToAffineUncompressed() []byte {
 	var out [65]byte
 	out[0] = byte(4)
-	t := p256impl.PointNew().ToAffine(p.V)
-	arr := t.X.Bytes()
-	copy(out[1:33], bitstring.ReverseBytes(arr[:]))
-	arr = t.Y.Bytes()
-	copy(out[33:], bitstring.ReverseBytes(arr[:]))
+	if p.IsAdditiveIdentity() {
+		return out[:]
+	}
+
+	var px, py p256Impl.Fp
+	ok := p.V.ToAffine(&px, &py)
+	if ok != 1 {
+		panic("this should never happen")
+	}
+
+	pxBytes := px.Bytes()
+	slices.Reverse(pxBytes)
+	copy(out[1:33], pxBytes)
+
+	pyBytes := py.Bytes()
+	slices.Reverse(pyBytes)
+	copy(out[33:], pyBytes)
+
 	return out[:]
 }
 
-func (*Point) FromAffineCompressed(input []byte) (curves.Point, error) {
-	var raw [base.FieldBytes]byte
+func (p *Point) FromAffineCompressed(input []byte) (curves.Point, error) {
 	if len(input) != 33 {
 		return nil, errs.NewLength("invalid byte sequence")
 	}
-	sign := int(input[0])
+
+	sign := input[0]
 	if sign != 2 && sign != 3 {
-		return nil, errs.NewSerialisation("invalid sign byte")
+		return nil, errs.NewFailed("invalid sign byte")
 	}
 	sign &= 0x1
 
-	copy(raw[:], bitstring.ReverseBytes(input[1:]))
-	x, err := fp.New().SetBytes(&raw)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "set bytes failed")
+	var xBytes [p256Impl.FpBytes]byte
+	copy(xBytes[:], input[1:])
+	slices.Reverse(xBytes[:])
+
+	var x, y p256Impl.Fp
+	ok := x.SetBytes(xBytes[:])
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x")
+	}
+	if x.IsZero() == 1 {
+		return p.Curve().AdditiveIdentity(), nil
 	}
 
-	value := p256impl.PointNew().Identity()
-	rhs := fp.New()
-	value.Arithmetic.RhsEq(rhs, x)
-	// test that rhs is quadratic residue
-	// if not, then this Point is at infinity
-	y, wasQr := fp.New().Sqrt(rhs)
-	if wasQr {
-		// fix the sign
-		sigY := int(y.Bytes()[0] & 1)
-		if sigY != sign {
-			y.Neg(y)
-		}
-		value.X = x
-		value.Y = y
-		value.Z.SetOne()
+	result := new(Point)
+	ok = result.V.SetFromAffineX(&x)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x")
 	}
-	return &Point{V: value}, nil
+	ok = result.V.ToAffine(&x, &y)
+	if ok != 1 {
+		panic("this should never happen")
+	}
+
+	ySign := result.V.Y.Bytes()[0] & 0b1
+	if sign != ySign {
+		result.V.Neg(&result.V)
+	}
+
+	return result, nil
 }
 
-func (*Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
-	var arr [base.FieldBytes]byte
+func (p *Point) FromAffineUncompressed(input []byte) (curves.Point, error) {
 	if len(input) != 65 {
 		return nil, errs.NewLength("invalid byte sequence")
 	}
 	if input[0] != 4 {
-		return nil, errs.NewSerialisation("invalid sign byte")
+		return nil, errs.NewFailed("invalid sign byte")
 	}
 
-	copy(arr[:], bitstring.ReverseBytes(input[1:33]))
-	x, err := fp.New().SetBytes(&arr)
-	if err != nil {
-		return nil, errs.WrapCoordinates(err, "set bytes failed")
+	var xBytes, yBytes [32]byte
+	copy(xBytes[:], input[1:33])
+	copy(yBytes[:], input[33:])
+	slices.Reverse(xBytes[:])
+	slices.Reverse(yBytes[:])
+
+	var x, y p256Impl.Fp
+	okx := x.SetBytes(xBytes[:])
+	if okx != 1 {
+		return nil, errs.NewCoordinates("x")
 	}
-	copy(arr[:], bitstring.ReverseBytes(input[33:]))
-	y, err := fp.New().SetBytes(&arr)
-	if err != nil {
-		return nil, errs.WrapCoordinates(err, "set bytes failed")
+	oky := y.SetBytes(yBytes[:])
+	if oky != 1 {
+		return nil, errs.NewCoordinates("y")
 	}
-	value := p256impl.PointNew()
-	value.X = x
-	value.Y = y
-	value.Z.SetOne()
-	if !value.IsOnCurve() {
-		return nil, errs.NewMembership("deserialised value is not on curve")
+	if x.IsZero() == 1 && y.IsZero() == 1 {
+		return p.Curve().AdditiveIdentity(), nil
 	}
-	return &Point{V: value}, nil
+
+	result := new(Point)
+	ok := result.V.SetAffine(&x, &y)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x/y")
+	}
+
+	return result, nil
 }
 
 func (p *Point) MarshalBinary() ([]byte, error) {
-	res := impl.MarshalBinary(p.Curve().Name(), p.ToAffineCompressed)
+	res := curvesImpl.MarshalBinary(p.Curve().Name(), p.ToAffineCompressed)
 	if len(res) < 1 {
 		return nil, errs.NewSerialisation("could not marshal")
 	}
@@ -369,11 +418,11 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 }
 
 func (p *Point) UnmarshalBinary(input []byte) error {
-	pt, err := impl.UnmarshalBinary(p.FromAffineCompressed, input)
+	pt, err := curvesImpl.UnmarshalBinary(p.FromAffineCompressed, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal binary")
 	}
-	name, _, err := impl.ParseBinary(input)
+	name, _, err := curvesImpl.ParseBinary(input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
@@ -384,12 +433,12 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 	if !ok {
 		return errs.NewType("invalid point")
 	}
-	p.V = ppt.V
+	p.V.Set(&ppt.V)
 	return nil
 }
 
 func (p *Point) MarshalJSON() ([]byte, error) {
-	res, err := impl.MarshalJson(p.Curve().Name(), p.ToAffineCompressed)
+	res, err := curvesImpl.MarshalJson(p.Curve().Name(), p.ToAffineCompressed)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
@@ -397,7 +446,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 }
 
 func (p *Point) UnmarshalJSON(input []byte) error {
-	pt, err := impl.UnmarshalJson(p.Curve().Name(), p.FromAffineCompressed, input)
+	pt, err := curvesImpl.UnmarshalJson(p.Curve().Name(), p.FromAffineCompressed, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
@@ -405,7 +454,7 @@ func (p *Point) UnmarshalJSON(input []byte) error {
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}
-	p.V = P.V
+	p.V.Set(&P.V)
 	return nil
 }
 

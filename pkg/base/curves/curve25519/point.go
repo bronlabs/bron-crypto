@@ -11,7 +11,7 @@ import (
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
+	curvesImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
@@ -268,7 +268,7 @@ func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
 }
 
 func (p *Point) MarshalBinary() ([]byte, error) {
-	res := impl.MarshalBinary(p.Curve().Name(), p.ToAffineCompressed)
+	res := curvesImpl.MarshalBinary(p.Curve().Name(), p.ToAffineCompressed)
 	if len(res) < 1 {
 		return nil, errs.NewSerialisation("could not marshal")
 	}
@@ -276,11 +276,11 @@ func (p *Point) MarshalBinary() ([]byte, error) {
 }
 
 func (p *Point) UnmarshalBinary(input []byte) error {
-	pt, err := impl.UnmarshalBinary(p.FromAffineCompressed, input)
+	pt, err := curvesImpl.UnmarshalBinary(p.FromAffineCompressed, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal binary")
 	}
-	name, _, err := impl.ParseBinary(input)
+	name, _, err := curvesImpl.ParseBinary(input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
@@ -296,7 +296,7 @@ func (p *Point) UnmarshalBinary(input []byte) error {
 }
 
 func (p *Point) MarshalJSON() ([]byte, error) {
-	res, err := impl.MarshalJson(p.Curve().Name(), p.ToAffineCompressed)
+	res, err := curvesImpl.MarshalJson(p.Curve().Name(), p.ToAffineCompressed)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
@@ -304,7 +304,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 }
 
 func (p *Point) UnmarshalJSON(input []byte) error {
-	pt, err := impl.UnmarshalJson(p.Curve().Name(), p.FromAffineCompressed, input)
+	pt, err := curvesImpl.UnmarshalJson(p.Curve().Name(), p.FromAffineCompressed, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
 	}

@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
@@ -27,7 +27,8 @@ var (
 		k256.NewCurve(),
 		p256.NewCurve(),
 		edwards25519.NewCurve(),
-		pallas.NewCurve(),
+		pasta.NewPallasCurve(),
+		pasta.NewVestaCurve(),
 		bls12381.NewG1(),
 		bls12381.NewG2(),
 	}

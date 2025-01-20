@@ -1,12 +1,10 @@
 package edwards25519
 
 import (
-	"crypto/subtle"
 	"io"
 	"iter"
 	"sync"
 
-	filippo "filippo.io/edwards25519"
 	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base"
@@ -181,11 +179,11 @@ func (*ScalarField) ExclusiveDisjunctiveIdentity() curves.Scalar {
 }
 
 func (*ScalarField) ElementSize() int {
-	return base.FieldBytes
+	return 32
 }
 
 func (*ScalarField) WideElementSize() int {
-	return base.WideFieldBytes
+	return 64
 }
 
 func (*ScalarField) IsDecomposable(coprimeIdealNorms ...algebra.IntegerRingElement[curves.ScalarField, curves.Scalar]) (bool, error) {
@@ -213,20 +211,18 @@ func (*ScalarField) Random(prng io.Reader) (curves.Scalar, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
 	}
-	var seed [base.WideFieldBytes]byte
-	_, err := io.ReadFull(prng, seed[:])
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "could not read from prng")
+
+	result := new(Scalar)
+	ok := result.V.SetRandom(prng)
+	if ok != 1 {
+		return nil, errs.NewRandomSample("scalar")
 	}
-	value, err := NewScalar(0).SetBytesWide(seed[:])
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not set bytes")
-	}
-	return value, nil
+
+	return result, nil
 }
 
 func (*ScalarField) Hash(x []byte) (curves.Scalar, error) {
-	u, err := NewCurve().HashToScalars(1, x, nil)
+	u, err := NewCurve().HashToScalars(1, base.Hash2CurveAppTag+HashToCurveScalarSuite, x)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "hash to scalar failed for edwards25519")
 	}
@@ -235,20 +231,17 @@ func (*ScalarField) Hash(x []byte) (curves.Scalar, error) {
 
 func (*ScalarField) Select(choice uint64, x0, x1 curves.Scalar) curves.Scalar {
 	x0s, ok0 := x0.(*Scalar)
-	if !ok0 || x0s.V == nil {
+	if !ok0 {
 		panic("x0 is not a non-empty Edwards25519 scalar")
 	}
 	x1s, ok1 := x1.(*Scalar)
-	if !ok1 || x1s.V == nil {
+	if !ok1 {
 		panic("x1 is not a non-empty Edwards25519 scalar")
 	}
-	sBytes := x0s.Bytes()
-	subtle.ConstantTimeCopy(int(choice), sBytes, x1s.V.Bytes())
-	s, err := filippo.NewScalar().SetCanonicalBytes(sBytes)
-	if err != nil {
-		panic(err)
-	}
-	return &Scalar{V: s}
+
+	result := new(Scalar)
+	result.V.Select(choice, &x0s.V, &x1s.V)
+	return result
 }
 
 // === Additive Groupoid Methods.
@@ -274,17 +267,17 @@ func (*ScalarField) Mul(x algebra.MultiplicativeGroupoidElement[curves.ScalarFie
 // === Additive Monoid Methods.
 
 func (*ScalarField) AdditiveIdentity() curves.Scalar {
-	return &Scalar{
-		V: filippo.NewScalar(),
-	}
+	result := new(Scalar)
+	result.V.SetZero()
+	return result
 }
 
 // === Multiplicative Monoid Methods.
 
 func (*ScalarField) MultiplicativeIdentity() curves.Scalar {
-	return &Scalar{
-		V: filippo.NewScalar().Set(scOne),
-	}
+	result := new(Scalar)
+	result.V.SetOne()
+	return result
 }
 
 // === Additive Group Methods.
@@ -349,11 +342,11 @@ func (sf *ScalarField) Trace(e curves.Scalar) curves.Scalar {
 }
 
 func (*ScalarField) FieldBytes() int {
-	return base.FieldBytes
+	return 32
 }
 
 func (*ScalarField) WideFieldBytes() int {
-	return base.WideFieldBytes
+	return 64
 }
 
 // === Zp Methods.

@@ -5,7 +5,6 @@ import (
 	"iter"
 	"sync"
 
-	filippo_field "filippo.io/edwards25519/field"
 	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base"
@@ -19,9 +18,6 @@ import (
 var (
 	edwards25519BaseFieldInitOnce sync.Once
 	edwards25519BaseFieldInstance BaseField
-
-	feZero = new(filippo_field.Element).Zero()
-	feOne  = new(filippo_field.Element).One()
 )
 
 var _ curves.BaseField = (*BaseField)(nil)
@@ -183,11 +179,11 @@ func (*BaseField) ExclusiveDisjunctiveIdentity() curves.BaseFieldElement {
 }
 
 func (*BaseField) ElementSize() int {
-	return base.FieldBytes
+	return 32
 }
 
 func (*BaseField) WideElementSize() int {
-	return base.WideFieldBytes
+	return 64
 }
 
 func (*BaseField) IsDecomposable(coprimeIdealNorms ...algebra.IntegerRingElement[curves.BaseField, curves.BaseFieldElement]) (bool, error) {
@@ -213,7 +209,7 @@ func (f *BaseField) Element() curves.BaseFieldElement {
 }
 
 func (*BaseField) Hash(x []byte) (curves.BaseFieldElement, error) {
-	els, err := NewCurve().HashToFieldElements(1, x, nil)
+	els, err := NewCurve().HashToFieldElements(1, base.Hash2CurveAppTag+HashToCurveSuite, x)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not hash to field element in edwards25519")
 	}
@@ -224,32 +220,28 @@ func (*BaseField) Random(prng io.Reader) (curves.BaseFieldElement, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
 	}
-	buf := make([]byte, base.FieldBytes)
-	_, err := io.ReadFull(prng, buf)
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "could not read from prng")
+
+	result := new(BaseFieldElement)
+	ok := result.V.SetRandom(prng)
+	if ok != 1 {
+		return nil, errs.NewRandomSample("base field element")
 	}
-	el, err := new(filippo_field.Element).SetBytes(buf)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not set bytes of edwards25519 field element")
-	}
-	return &BaseFieldElement{
-		V: el,
-	}, nil
+	return result, nil
 }
 
 func (*BaseField) Select(choice uint64, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
 	x0f, ok0 := x0.(*BaseFieldElement)
-	if !ok0 || x0f.V == nil {
+	if !ok0 {
 		panic("x0 is not a non-empty edwards25519 field element")
 	}
 	x1f, ok1 := x1.(*BaseFieldElement)
-	if !ok1 || x1f.V == nil {
+	if !ok1 {
 		panic("x1 is not a non-empty edwards25519 field element")
 	}
-	return &BaseFieldElement{
-		V: new(filippo_field.Element).Select(x1f.V, x0f.V, int(choice)),
-	}
+
+	result := new(BaseFieldElement)
+	result.V.Select(choice, &x0f.V, &x1f.V)
+	return result
 }
 
 // === Additive Groupoid Methods.
@@ -275,17 +267,17 @@ func (*BaseField) Mul(x algebra.MultiplicativeGroupoidElement[curves.BaseField, 
 // === Additive Monoid Methods.
 
 func (*BaseField) AdditiveIdentity() curves.BaseFieldElement {
-	return &BaseFieldElement{
-		V: new(filippo_field.Element).Zero(),
-	}
+	result := new(BaseFieldElement)
+	result.V.SetZero()
+	return result
 }
 
 // === Multiplicative Monoid Methods.
 
 func (*BaseField) MultiplicativeIdentity() curves.BaseFieldElement {
-	return &BaseFieldElement{
-		V: new(filippo_field.Element).One(),
-	}
+	result := new(BaseFieldElement)
+	result.V.SetOne()
+	return result
 }
 
 // === Additive Group Methods.
@@ -349,11 +341,11 @@ func (f *BaseField) Trace(e curves.BaseFieldElement) curves.BaseFieldElement {
 }
 
 func (*BaseField) FieldBytes() int {
-	return base.FieldBytes
+	return 32
 }
 
 func (*BaseField) WideFieldBytes() int {
-	return base.WideFieldBytes
+	return 64
 }
 
 // === Zp Methods.

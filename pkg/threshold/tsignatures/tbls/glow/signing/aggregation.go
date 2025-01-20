@@ -35,7 +35,7 @@ func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSi
 	}
 
 	sigma := bls12381.NewG2().AdditiveIdentity()
-	Hm, err := bls12381.NewPairingCurve().G2().HashWithDst(message, []byte(bls.DstSignatureBasicInG2))
+	Hm, err := bls12381.NewPairingCurve().G2().HashWithDst(bls.DstSignatureBasicInG2, message)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't hash message")
 	}

@@ -102,7 +102,7 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 	// step 2.4: ã_j = { { α0_{j,i} - α1_{j,i} + a_i }_{i∈[𝓁]} ||
 	//                 { { α0_{j,l+k} - α1_{j,l+k} + â_i }_{k∈[ρ]} }  ∀j∈[ξ]
 	var aTilde [Xi][LOTe]curves.Scalar
-	aTildeBytes := make([]byte, 0, (Xi * LOTe * base.FieldBytes))
+	var aTildeBytes []byte
 	for j := 0; j < Xi; j++ {
 		for i := 0; i < L; i++ {
 			aTilde[j][i] = a[i].Add(alpha0[j][i]).Sub(alpha1[j][i])
@@ -115,7 +115,7 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 	}
 
 	// step 2.5: θ <--- H_{ℤq^{𝓁xρ}} (sessionId || ã)
-	theta, err := alice.Protocol.Curve().HashToScalars(L*Rho, alice.SessionId, aTildeBytes)
+	theta, err := alice.Protocol.Curve().HashToScalars(L*Rho, string(alice.SessionId), aTildeBytes)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not hash to theta")
 	}
@@ -130,7 +130,7 @@ func (alice *Alice) Round2(r1out *Round1Output, a RvoleAliceInput) (c *OutputSha
 	}
 
 	// step 2.7: μb_{j,k} = α0_{j,l+k} + ∑_{i∈[𝓁]} θ_{i*ρ + k} * α0_{j,i}  ∀k∈[ρ]  ∀j∈[ξ]
-	muBytes := make([]byte, 0, (Xi * Rho * base.FieldBytes))
+	var muBytes []byte
 	for j := 0; j < Xi; j++ {
 		for k := 0; k < Rho; k++ {
 			muBold_j_k := alpha0[j][L+k]
@@ -167,7 +167,7 @@ func (bob *Bob) Round3(r2out *Round2Output) (bigD *[L]curves.Scalar, err error) 
 	}
 
 	// step 3.1: θ <--- H_{ℤq^{𝓁xρ}} (ã || sessionId)
-	aTildeBytes := make([]byte, 0, ((L + Rho) * Xi * base.FieldBytes))
+	var aTildeBytes []byte
 	for j := 0; j < Xi; j++ {
 		for i := 0; i < L; i++ {
 			aTildeBytes = append(aTildeBytes, r2out.ATilde[j][i].Bytes()...)
@@ -176,14 +176,14 @@ func (bob *Bob) Round3(r2out *Round2Output) (bigD *[L]curves.Scalar, err error) 
 			aTildeBytes = append(aTildeBytes, r2out.ATilde[j][L+k].Bytes()...)
 		}
 	}
-	theta, err := bob.Protocol.Curve().HashToScalars(L*Rho, bob.SessionId, aTildeBytes)
+	theta, err := bob.Protocol.Curve().HashToScalars(L*Rho, string(bob.SessionId), aTildeBytes)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bob could not hash to theta")
 	}
 
 	var ddot_j [L]curves.Scalar
 	var dhat_j_k, muBoldPrime_j_k curves.Scalar
-	muPrimeBytes := make([]byte, 0, (Xi * Rho * base.FieldBytes))
+	var muPrimeBytes []byte
 	for j := 0; j < Xi; j++ {
 		for i := 0; i < L; i++ {
 			// step 3.2: ḋ_{j,i} = γ_{j,i} + β_j * ã_{j,i}   ∀i∈[𝓁] ∀j∈[ξ]

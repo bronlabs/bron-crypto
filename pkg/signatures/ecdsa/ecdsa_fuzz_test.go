@@ -2,7 +2,6 @@ package ecdsa_test
 
 import (
 	nativeEcdsa "crypto/ecdsa"
-	"crypto/elliptic"
 	crand "crypto/rand"
 	"crypto/sha256"
 	"hash"
@@ -13,6 +12,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
@@ -28,7 +28,8 @@ func Fuzz_Test(f *testing.F) {
 	f.Fuzz(func(t *testing.T, curveIndex uint, hashIndex uint, message []byte) {
 		curve := allCurves[int(curveIndex)%len(allCurves)]
 		hashFunc := allHashes[int(hashIndex)%len(allHashes)]
-		nativeCurve := elliptic.P256()
+		nativeCurve, err := curveutils.ToGoEllipticCurve(curve)
+		require.NoError(t, err)
 
 		messageHash, err := hashing.Hash(hashFunc, message)
 		require.NoError(t, err)

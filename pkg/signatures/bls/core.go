@@ -13,7 +13,7 @@ import (
 func coreSign[K KeySubGroup, S SignatureSubGroup](privateKey *PrivateKey[K], message, dst []byte) (curves.PairingPoint, error) {
 	signatureSubGroup := bls12381.GetSourceSubGroup[K]()
 	// step 2.6.1
-	Hm, err := privateKey.PublicKey.Y.OtherPrimeAlgebraicSubGroup().HashWithDst(message, dst)
+	Hm, err := privateKey.PublicKey.Y.OtherPrimeAlgebraicSubGroup().HashWithDst(string(dst), message)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not hash message")
 	}
@@ -54,7 +54,7 @@ func coreVerify[K KeySubGroup, S SignatureSubGroup](publicKey *PublicKey[K], mes
 	// that'll be done in multipairing
 
 	// step 2.7.6
-	Hm, err := publicKey.Y.OtherPrimeAlgebraicSubGroup().HashWithDst(message, dst)
+	Hm, err := publicKey.Y.OtherPrimeAlgebraicSubGroup().HashWithDst(string(dst), message)
 	if err != nil {
 		return errs.WrapHashing(err, "could not hash message")
 	}
@@ -129,10 +129,10 @@ func coreAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publi
 		}
 
 		if messages[i] == nil {
-			return errs.NewIsNil("nil message is not alloed at index %d", i)
+			return errs.NewIsNil("nil message is not allowed at index %d", i)
 		}
 		// step 2.9.8
-		Q, err := publicKey.Y.OtherPrimeAlgebraicSubGroup().HashWithDst(message, dst)
+		Q, err := publicKey.Y.OtherPrimeAlgebraicSubGroup().HashWithDst(string(dst), message)
 		if err != nil {
 			return errs.WrapHashing(err, "could not hash message %d", i)
 		}

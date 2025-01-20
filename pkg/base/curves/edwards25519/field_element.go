@@ -2,17 +2,17 @@ package edwards25519
 
 import (
 	"encoding"
-	"encoding/binary"
 	"encoding/json"
+	"slices"
 
-	filippo_field "filippo.io/edwards25519/field"
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
+	"github.com/bronlabs/krypton-primitives/pkg/base/ct"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
+	edwards25519Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519/impl"
+	curvesImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
@@ -23,21 +23,15 @@ var _ encoding.BinaryUnmarshaler = (*BaseFieldElement)(nil)
 var _ json.Unmarshaler = (*BaseFieldElement)(nil)
 
 type BaseFieldElement struct {
-	V *filippo_field.Element
+	V edwards25519Impl.Fp
 
 	_ ds.Incomparable
 }
 
 func NewBaseFieldElement(value uint64) *BaseFieldElement {
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, value)
-	el, err := new(filippo_field.Element).SetBytes(buf)
-	if err != nil {
-		panic(err)
-	}
-	return &BaseFieldElement{
-		V: el,
-	}
+	result := new(BaseFieldElement)
+	result.V.SetUint64(value)
+	return result
 }
 
 func (*BaseFieldElement) Structure() curves.BaseField {
@@ -252,13 +246,13 @@ func (e *BaseFieldElement) Eq(rhs curves.BaseFieldElement) uint64 {
 	if !ok {
 		return 0
 	}
-	return uint64(e.V.Equal(rhse.V))
+	return e.V.Equals(&rhse.V)
 }
 
 func (e *BaseFieldElement) Clone() curves.BaseFieldElement {
-	return &BaseFieldElement{
-		V: new(filippo_field.Element).Set(e.V),
-	}
+	clone := new(BaseFieldElement)
+	clone.V.Set(&e.V)
+	return clone
 }
 
 // === Additive Groupoid Methods.
@@ -268,9 +262,10 @@ func (e *BaseFieldElement) Add(rhs algebra.AdditiveGroupoidElement[curves.BaseFi
 	if !ok {
 		panic("rhs is not an edwards25519 base field element")
 	}
-	return &BaseFieldElement{
-		V: new(filippo_field.Element).Add(e.V, n.V),
-	}
+
+	result := new(BaseFieldElement)
+	result.V.Add(&e.V, &n.V)
+	return result
 }
 
 func (e *BaseFieldElement) ApplyAdd(x algebra.AdditiveGroupoidElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) curves.BaseFieldElement {
@@ -279,9 +274,7 @@ func (e *BaseFieldElement) ApplyAdd(x algebra.AdditiveGroupoidElement[curves.Bas
 }
 
 func (e *BaseFieldElement) Double() curves.BaseFieldElement {
-	return &BaseFieldElement{
-		V: new(filippo_field.Element).Add(e.V, e.V),
-	}
+	return e.Add(e)
 }
 
 func (e *BaseFieldElement) Triple() curves.BaseFieldElement {
@@ -295,9 +288,10 @@ func (e *BaseFieldElement) Mul(rhs algebra.MultiplicativeGroupoidElement[curves.
 	if !ok {
 		panic("rhs is not an edwards25519 base field element")
 	}
-	return &BaseFieldElement{
-		V: new(filippo_field.Element).Multiply(e.V, n.V),
-	}
+
+	result := new(BaseFieldElement)
+	result.V.Mul(&e.V, &n.V)
+	return result
 }
 
 func (e *BaseFieldElement) ApplyMul(x algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) curves.BaseFieldElement {
@@ -305,36 +299,33 @@ func (e *BaseFieldElement) ApplyMul(x algebra.MultiplicativeGroupoidElement[curv
 }
 
 func (e *BaseFieldElement) Square() curves.BaseFieldElement {
-	return &BaseFieldElement{
-		V: new(filippo_field.Element).Square(e.V),
-	}
+	result := new(BaseFieldElement)
+	result.V.Square(&e.V)
+	return result
 }
 
 func (e *BaseFieldElement) Cube() curves.BaseFieldElement {
-	eSq := new(filippo_field.Element).Square(e.V)
-	return &BaseFieldElement{
-		V: eSq.Multiply(eSq, e.V),
-	}
+	return e.Square().Mul(e)
 }
 
 // === Additive Monoid Methods.
 
 func (e *BaseFieldElement) IsAdditiveIdentity() bool {
-	return e.V.Equal(feZero) == 1
+	return e.V.IsZero() == 1
 }
 
 // === Multiplicative Monoid Methods.
 
 func (e *BaseFieldElement) IsMultiplicativeIdentity() bool {
-	return e.V.Equal(feOne) == 1
+	return e.V.IsOne() == 1
 }
 
 // === Additive Group Methods.
 
 func (e *BaseFieldElement) AdditiveInverse() curves.BaseFieldElement {
-	return &BaseFieldElement{
-		V: new(filippo_field.Element).Negate(e.V),
-	}
+	result := new(BaseFieldElement)
+	result.V.Neg(&e.V)
+	return result
 }
 
 func (e *BaseFieldElement) IsAdditiveInverse(of algebra.AdditiveGroupElement[curves.BaseField, curves.BaseFieldElement]) bool {
@@ -346,9 +337,10 @@ func (e *BaseFieldElement) Sub(rhs algebra.AdditiveGroupElement[curves.BaseField
 	if !ok {
 		panic("rhs is not an edwards25519 base field element")
 	}
-	return &BaseFieldElement{
-		V: new(filippo_field.Element).Subtract(e.V, n.V),
-	}
+
+	result := new(BaseFieldElement)
+	result.V.Sub(&e.V, &n.V)
+	return result
 }
 
 func (e *BaseFieldElement) ApplySub(x algebra.AdditiveGroupElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) curves.BaseFieldElement {
@@ -359,9 +351,13 @@ func (e *BaseFieldElement) ApplySub(x algebra.AdditiveGroupElement[curves.BaseFi
 // === Multiplicative Group Methods.
 
 func (e *BaseFieldElement) MultiplicativeInverse() (curves.BaseFieldElement, error) {
-	return &BaseFieldElement{
-		V: new(filippo_field.Element).Invert(e.V),
-	}, nil
+	result := new(BaseFieldElement)
+	ok := result.V.Inv(&e.V)
+	if ok != 1 {
+		return nil, errs.NewFailed("division by zero")
+	}
+
+	return result, nil
 }
 
 func (e *BaseFieldElement) IsMultiplicativeInverse(of algebra.MultiplicativeGroupElement[curves.BaseField, curves.BaseFieldElement]) bool {
@@ -373,14 +369,14 @@ func (e *BaseFieldElement) Div(rhs algebra.MultiplicativeGroupElement[curves.Bas
 	if !ok {
 		return nil, errs.NewFailed("rhs is not an edwards25519 base field element")
 	}
-	inverted := new(filippo_field.Element).Invert(rhsFe.V)
-	if inverted.Equal(feZero) == 1 {
-		return nil, errs.NewFailed("inverse of rhs is zero. cannot divide")
+
+	result := new(BaseFieldElement)
+	ok2 := result.V.Div(&e.V, &rhsFe.V)
+	if ok2 != 1 {
+		return nil, errs.NewFailed("division by zero")
 	}
 
-	return &BaseFieldElement{
-		V: inverted.Multiply(e.V, inverted),
-	}, nil
+	return result, nil
 }
 
 func (e *BaseFieldElement) ApplyDiv(x algebra.MultiplicativeGroupElement[curves.BaseField, curves.BaseFieldElement], n *saferith.Nat) (curves.BaseFieldElement, error) {
@@ -390,18 +386,7 @@ func (e *BaseFieldElement) ApplyDiv(x algebra.MultiplicativeGroupElement[curves.
 // === Ring Methods.
 
 func (e *BaseFieldElement) MulAdd(y algebra.RingElement[curves.BaseField, curves.BaseFieldElement], z algebra.RingElement[curves.BaseField, curves.BaseFieldElement]) curves.BaseFieldElement {
-	yFe, ok := y.(*BaseFieldElement)
-	if !ok {
-		panic("y is not an edwards25519 base field element")
-	}
-	zFe, ok := z.(*BaseFieldElement)
-	if !ok {
-		panic("y is not an edwards25519 base field element")
-	}
-	v := new(filippo_field.Element).Multiply(e.V, yFe.V)
-	return &BaseFieldElement{
-		V: v.Add(v, zFe.V),
-	}
+	return e.Mul(y).Add(z)
 }
 
 func (e *BaseFieldElement) IsQuadraticResidue() bool {
@@ -410,13 +395,13 @@ func (e *BaseFieldElement) IsQuadraticResidue() bool {
 }
 
 func (e *BaseFieldElement) Sqrt() (curves.BaseFieldElement, error) {
-	res, ok := e.V.SqrtRatio(e.V, feOne)
-	if ok == 1 {
-		return &BaseFieldElement{
-			V: res,
-		}, nil
+	result := new(BaseFieldElement)
+	ok := result.V.Sqrt(&e.V)
+	if ok != 1 {
+		return nil, errs.NewFailed("quadratic non residue")
 	}
-	return nil, errs.NewFailed("could compute sqrt")
+
+	return result, nil
 }
 
 // === Finite Field Methods.
@@ -475,18 +460,12 @@ func (e *BaseFieldElement) Decrement() curves.BaseFieldElement {
 // === Ordering Methods.
 
 func (e *BaseFieldElement) Cmp(rhs algebra.OrderTheoreticLatticeElement[curves.BaseField, curves.BaseFieldElement]) algebra.Ordering {
-	n, ok := rhs.(*BaseFieldElement)
+	rhse, ok := rhs.(*BaseFieldElement)
 	if !ok {
-		return algebra.Incomparable
+		panic("rhs is not an edwards25519 base field element")
 	}
-	if e.V.Equal(n.V) == 1 {
-		return algebra.Equal
-	}
-	v := e.V.Subtract(e.V, n.V)
-	if v.IsNegative() == 1 {
-		return algebra.LessThan
-	}
-	return algebra.GreaterThan
+
+	return algebra.Ordering(ct.SliceCmpLE(e.Bytes(), rhse.Bytes()))
 }
 
 func (e *BaseFieldElement) IsBottom() bool {
@@ -540,7 +519,7 @@ func (*BaseFieldElement) BaseField() curves.BaseField {
 // === Serialisation.
 
 func (e *BaseFieldElement) MarshalBinary() ([]byte, error) {
-	res := impl.MarshalBinary(e.BaseField().Curve().Name(), e.Bytes)
+	res := curvesImpl.MarshalBinary(e.BaseField().Curve().Name(), e.Bytes)
 	if len(res) < 1 {
 		return nil, errs.NewSerialisation("could not marshal")
 	}
@@ -548,11 +527,11 @@ func (e *BaseFieldElement) MarshalBinary() ([]byte, error) {
 }
 
 func (e *BaseFieldElement) UnmarshalBinary(input []byte) error {
-	sc, err := impl.UnmarshalBinary(NewBaseFieldElement(0).SetBytes, input)
+	sc, err := curvesImpl.UnmarshalBinary(NewBaseFieldElement(0).SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
-	name, _, err := impl.ParseBinary(input)
+	name, _, err := curvesImpl.ParseBinary(input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
@@ -563,12 +542,12 @@ func (e *BaseFieldElement) UnmarshalBinary(input []byte) error {
 	if !ok {
 		return errs.NewType("invalid base field element")
 	}
-	e.V = ss.V
+	e.V.Set(&ss.V)
 	return nil
 }
 
 func (e *BaseFieldElement) MarshalJSON() ([]byte, error) {
-	res, err := impl.MarshalJson(e.BaseField().Curve().Name(), e.Bytes)
+	res, err := curvesImpl.MarshalJson(e.BaseField().Curve().Name(), e.Bytes)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
@@ -576,7 +555,7 @@ func (e *BaseFieldElement) MarshalJSON() ([]byte, error) {
 }
 
 func (e *BaseFieldElement) UnmarshalJSON(input []byte) error {
-	sc, err := impl.UnmarshalJson(e.BaseField().Name(), e.SetBytes, input)
+	sc, err := curvesImpl.UnmarshalJson(e.BaseField().Name(), e.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract a base field element from json")
 	}
@@ -584,7 +563,7 @@ func (e *BaseFieldElement) UnmarshalJSON(input []byte) error {
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}
-	e.V = S.V
+	e.V.Set(&S.V)
 	return nil
 }
 
@@ -597,50 +576,44 @@ func (e *BaseFieldElement) SetNat(value *saferith.Nat) curves.BaseFieldElement {
 		return nil
 	}
 	moddedValue := new(saferith.Nat).Mod(value, e.BaseField().Order())
-	v, err := new(filippo_field.Element).SetBytes(bitstring.ReverseBytes(moddedValue.Bytes()))
-	if err != nil {
-		panic(errs.WrapSerialisation(err, "could not set nat bytes"))
-	}
-	return &BaseFieldElement{
-		V: v,
-	}
+
+	b := moddedValue.Bytes()
+	slices.Reverse(b)
+	result := new(BaseFieldElement)
+	result.V.SetBytesWide(b)
+	return result
 }
 
 func (e *BaseFieldElement) Nat() *saferith.Nat {
 	return new(saferith.Nat).SetBytes(e.Bytes())
 }
 
-func (e *BaseFieldElement) SetBytes(input []byte) (curves.BaseFieldElement, error) {
-	if len(input) != base.FieldBytes {
-		return nil, errs.NewLength("input length != %d bytes", base.FieldBytes)
+func (*BaseFieldElement) SetBytes(input []byte) (curves.BaseFieldElement, error) {
+	buf := bitstring.ReverseBytes(input)
+	result := new(BaseFieldElement)
+	ok := result.V.SetBytes(buf)
+	if ok != 1 {
+		return nil, errs.NewSerialisation("could not set bytes")
 	}
-	result, err := e.V.SetBytes(bitstring.ReverseBytes(input))
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not set bytes")
-	}
-	return &BaseFieldElement{
-		V: result,
-	}, nil
+
+	return result, nil
 }
 
-func (e *BaseFieldElement) SetBytesWide(input []byte) (curves.BaseFieldElement, error) {
-	if len(input) > base.WideFieldBytes {
-		return nil, errs.NewLength("input length > %d bytes", base.WideFieldBytes)
+func (*BaseFieldElement) SetBytesWide(input []byte) (curves.BaseFieldElement, error) {
+	buf := bitstring.ReverseBytes(input)
+	result := new(BaseFieldElement)
+	ok := result.V.SetBytesWide(buf)
+	if ok != 1 {
+		return nil, errs.NewSerialisation("could not set bytes")
 	}
-	inputLE := bitstring.ReverseBytes(input)
-	buffer := bitstring.PadToRight(inputLE, base.WideFieldBytes-len(input))
-	result, err := e.V.SetWideBytes(buffer)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not set bytes")
-	}
-	return &BaseFieldElement{
-		V: result,
-	}, nil
+
+	return result, nil
 }
 
 func (e *BaseFieldElement) Bytes() []byte {
 	result := e.V.Bytes()
-	return bitstring.ReverseBytes(result)
+	slices.Reverse(result)
+	return result
 }
 func (e *BaseFieldElement) HashCode() uint64 {
 	return e.Uint64()

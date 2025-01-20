@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/ot"
@@ -22,7 +22,7 @@ import (
 )
 
 // TODO: put back ed25519 when bug is fixed
-var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), pallas.NewCurve()}
+var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), pasta.NewPallasCurve()}
 
 func Fuzz_Test_OTe(f *testing.F) {
 	f.Add(uint(0), 3, 2, int64(1))

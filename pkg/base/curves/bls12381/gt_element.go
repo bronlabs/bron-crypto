@@ -9,8 +9,8 @@ import (
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	bls12381impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
+	bls12381Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
+	curvesImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
@@ -22,13 +22,13 @@ var _ encoding.BinaryUnmarshaler = (*GtMember)(nil)
 var _ json.Unmarshaler = (*GtMember)(nil)
 
 type GtMember struct {
-	V *bls12381impl.Gt
+	V bls12381Impl.Gt
 
 	_ ds.Incomparable
 }
 
 func NewGtMember(input uint64) (curves.GtMember, error) {
-	var data [bls12381impl.GtFieldBytes]byte
+	var data [bls12381Impl.GtBytes]byte
 	data[7] = byte(input >> 56 & 0xFF)
 	data[6] = byte(input >> 48 & 0xFF)
 	data[5] = byte(input >> 40 & 0xFF)
@@ -38,11 +38,12 @@ func NewGtMember(input uint64) (curves.GtMember, error) {
 	data[1] = byte(input >> 8 & 0xFF)
 	data[0] = byte(input & 0xFF)
 
-	value, isCanonical := new(bls12381impl.Gt).SetBytes(&data)
+	result := new(GtMember)
+	isCanonical := result.V.SetBytes(data[:])
 	if isCanonical != 1 {
 		return nil, errs.NewArgument("input is not canonical")
 	}
-	return &GtMember{V: value}, nil
+	return result, nil
 }
 
 // === Basic Methods.
@@ -65,13 +66,17 @@ func (*GtMember) Exp(exponent *saferith.Nat) curves.GtMember {
 
 func (g *GtMember) Equal(rhs curves.GtMember) bool {
 	r, ok := rhs.(*GtMember)
-	return ok && g.V.Equal(r.V) == 1
+	if !ok {
+		return false
+	}
+
+	return g.V.Equals(&r.V.Fp12) == 1
 }
 
 func (g *GtMember) Clone() curves.GtMember {
-	return &GtMember{
-		V: new(bls12381impl.Gt).Set(g.V),
-	}
+	result := new(GtMember)
+	result.V.Set(&g.V.Fp12)
+	return result
 }
 
 // === Groupoid Methods.
@@ -80,8 +85,8 @@ func (g *GtMember) Operate(rhs curves.GtMember) curves.GtMember {
 	return g.Mul(rhs)
 }
 
-func (g *GtMember) OperateIteratively(n *saferith.Nat) curves.GtMember {
-	return g.Gt().MultiplicativeIdentity().ApplyMul(g, n)
+func (*GtMember) OperateIteratively(n *saferith.Nat) curves.GtMember {
+	panic("implement me")
 }
 
 func (*GtMember) Order(operator algebra.BinaryOperator[curves.GtMember]) (*saferith.Modulus, error) {
@@ -103,13 +108,13 @@ func (*GtMember) Order(operator algebra.BinaryOperator[curves.GtMember]) (*safer
 
 func (g *GtMember) Mul(rhs algebra.MultiplicativeGroupoidElement[curves.Gt, curves.GtMember]) curves.GtMember {
 	r, ok := rhs.(*GtMember)
-	if ok {
-		return &GtMember{
-			V: new(bls12381impl.Gt).Add(g.V, r.V),
-		}
-	} else {
+	if !ok {
 		panic("rhs is not in Gt")
 	}
+
+	result := new(GtMember)
+	result.V.Mul(&g.V.Fp12, &r.V.Fp12)
+	return result
 }
 
 func (g *GtMember) ApplyMul(x algebra.MultiplicativeGroupoidElement[curves.Gt, curves.GtMember], n *saferith.Nat) curves.GtMember {
@@ -126,17 +131,13 @@ func (g *GtMember) ApplyMul(x algebra.MultiplicativeGroupoidElement[curves.Gt, c
 }
 
 func (g *GtMember) Square() curves.GtMember {
-	return &GtMember{
-		V: new(bls12381impl.Gt).Square(g.V),
-	}
+	result := new(GtMember)
+	result.V.Square(&g.V.Fp12)
+	return result
 }
 
 func (g *GtMember) Cube() curves.GtMember {
-	value := new(bls12381impl.Gt).Square(g.V)
-	value.Add(value, g.V)
-	return &GtMember{
-		V: value,
-	}
+	return g.Square().Mul(g)
 }
 
 // === Monoid Methods.
@@ -172,14 +173,12 @@ func (g *GtMember) IsTorsionElementUnderMultiplication(order *saferith.Modulus) 
 // === Multiplicative Group Methods.
 
 func (g *GtMember) MultiplicativeInverse() (curves.GtMember, error) {
-	value, wasInverted := new(bls12381impl.Gt).Invert(g.V)
+	value := new(GtMember)
+	wasInverted := value.V.Inv(&g.V.Fp12)
 	if wasInverted != 1 {
 		return nil, errs.NewFailed("not invertible")
 	}
-
-	return &GtMember{
-		V: value,
-	}, nil
+	return value, nil
 }
 
 func (g *GtMember) IsMultiplicativeInverse(of algebra.MultiplicativeGroupElement[curves.Gt, curves.GtMember]) bool {
@@ -188,13 +187,16 @@ func (g *GtMember) IsMultiplicativeInverse(of algebra.MultiplicativeGroupElement
 
 func (g *GtMember) Div(rhs algebra.MultiplicativeGroupElement[curves.Gt, curves.GtMember]) (curves.GtMember, error) {
 	r, ok := rhs.(*GtMember)
-	if ok {
-		return &GtMember{
-			V: new(bls12381impl.Gt).Sub(g.V, r.V),
-		}, nil
-	} else {
+	if !ok {
 		panic("rhs is not in Gt")
 	}
+
+	result := new(GtMember)
+	ok2 := result.V.Div(&g.V.Fp12, &r.V.Fp12)
+	if ok2 != 1 {
+		return nil, errs.NewFailed("not invertible")
+	}
+	return result, nil
 }
 
 func (g *GtMember) ApplyDiv(x algebra.MultiplicativeGroupElement[curves.Gt, curves.GtMember], n *saferith.Nat) (curves.GtMember, error) {
@@ -224,7 +226,7 @@ func (*GtMember) Gt() curves.Gt {
 // === Serialisation.
 
 func (g *GtMember) MarshalBinary() ([]byte, error) {
-	res := impl.MarshalBinary(g.Gt().Name(), g.Bytes)
+	res := curvesImpl.MarshalBinary(g.Gt().Name(), g.Bytes)
 	if len(res) < 1 {
 		return nil, errs.NewSerialisation("could not marshal")
 	}
@@ -232,11 +234,11 @@ func (g *GtMember) MarshalBinary() ([]byte, error) {
 }
 
 func (g *GtMember) UnmarshalBinary(input []byte) error {
-	sc, err := impl.UnmarshalBinary(g.SetBytes, input)
+	sc, err := curvesImpl.UnmarshalBinary(g.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
-	name, _, err := impl.ParseBinary(input)
+	name, _, err := curvesImpl.ParseBinary(input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
@@ -247,12 +249,12 @@ func (g *GtMember) UnmarshalBinary(input []byte) error {
 	if !ok {
 		return errs.NewType("invalid base field element")
 	}
-	g.V = ss.V
+	g.V.Set(&ss.V.Fp12)
 	return nil
 }
 
 func (g *GtMember) MarshalJSON() ([]byte, error) {
-	res, err := impl.MarshalJson(g.Gt().Name(), g.Bytes)
+	res, err := curvesImpl.MarshalJson(g.Gt().Name(), g.Bytes)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
@@ -260,7 +262,7 @@ func (g *GtMember) MarshalJSON() ([]byte, error) {
 }
 
 func (g *GtMember) UnmarshalJSON(input []byte) error {
-	sc, err := impl.UnmarshalJson(g.Gt().Name(), g.SetBytes, input)
+	sc, err := curvesImpl.UnmarshalJson(g.Gt().Name(), g.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract a base field element from json")
 	}
@@ -268,44 +270,46 @@ func (g *GtMember) UnmarshalJSON(input []byte) error {
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}
-	g.V = S.V
+	g.V.Set(&S.V.Fp12)
 	return nil
 }
 
 func (g *GtMember) Bytes() []byte {
-	bytes_ := g.V.Bytes()
-	// should already be big endian
-	return bytes_[:]
+	data := g.V.Bytes()
+	return data[:]
 }
 
 func (*GtMember) SetBytes(input []byte) (curves.GtMember, error) {
-	var b [bls12381impl.GtFieldBytes]byte
+	var b [bls12381Impl.GtBytes]byte
 	copy(b[:], input)
-	ss, isCanonical := new(bls12381impl.Gt).SetBytes(&b)
+
+	result := new(GtMember)
+	isCanonical := result.V.SetBytes(b[:])
 	if isCanonical == 0 {
 		return nil, errs.NewSerialisation("invalid bytes")
 	}
-	return &GtMember{V: ss}, nil
+	return result, nil
 }
 
 func (*GtMember) SetBytesWide(input []byte) (curves.GtMember, error) {
-	if l := len(input); l != bls12381impl.GtFieldBytes*2 {
-		return nil, errs.NewLength("invalid byte sequence")
-	}
-	var b [bls12381impl.GtFieldBytes]byte
-	copy(b[:], input[:bls12381impl.GtFieldBytes])
-
-	value, isCanonical := new(bls12381impl.Gt).SetBytes(&b)
-	if isCanonical == 0 {
-		return nil, errs.NewSerialisation("invalid bytes")
-	}
-	copy(b[:], input[bls12381impl.GtFieldBytes:])
-	value2, isCanonical := new(bls12381impl.Gt).SetBytes(&b)
-	if isCanonical == 0 {
-		return nil, errs.NewSerialisation("invalid bytes")
-	}
-	value.Add(value, value2)
-	return &GtMember{V: value}, nil
+	//if l := len(input); l != bls12381impl.GtFieldBytes*2 {
+	//	return nil, errs.NewLength("invalid byte sequence")
+	//}
+	//var b [bls12381impl.GtFieldBytes]byte
+	//copy(b[:], input[:bls12381impl.GtFieldBytes])
+	//
+	//value, isCanonical := new(bls12381impl.Gt).SetBytes(&b)
+	//if isCanonical == 0 {
+	//	return nil, errs.NewSerialisation("invalid bytes")
+	//}
+	//copy(b[:], input[bls12381impl.GtFieldBytes:])
+	//value2, isCanonical := new(bls12381impl.Gt).SetBytes(&b)
+	//if isCanonical == 0 {
+	//	return nil, errs.NewSerialisation("invalid bytes")
+	//}
+	//value.Add(value, value2)
+	//return &GtMember{V: value}, nil
+	panic("implement me")
 }
 
 func (g *GtMember) HashCode() uint64 {

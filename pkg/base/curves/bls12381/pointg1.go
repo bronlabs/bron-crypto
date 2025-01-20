@@ -4,13 +4,16 @@ import (
 	"encoding"
 	"encoding/binary"
 	"encoding/json"
+	"slices"
 
 	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	bls12381impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
+	bls12381Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
+	curvesImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
+	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
+	pointsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/points"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
@@ -22,7 +25,7 @@ var _ encoding.BinaryUnmarshaler = (*PointG1)(nil)
 var _ json.Unmarshaler = (*PointG1)(nil)
 
 type PointG1 struct {
-	V *bls12381impl.G1
+	V bls12381Impl.G1Point
 
 	_ ds.Incomparable
 }
@@ -47,7 +50,11 @@ func (*PointG1) ApplyOp(operator algebra.BinaryOperator[curves.Point], x algebra
 }
 
 func (p *PointG1) IsInPrimeSubGroup() bool {
-	return p.V.InCorrectSubgroup() == 1
+	orderBytes := g1SubGroupOrder.Bytes()
+	slices.Reverse(orderBytes)
+	var pp bls12381Impl.G1Point
+	pointsImpl.ScalarMul[*bls12381Impl.Fp](&pp, &p.V, orderBytes)
+	return pp.IsIdentity() == 1
 }
 
 func (p *PointG1) IsTorsionElementUnderAddition(order *saferith.Modulus) bool {
@@ -71,16 +78,18 @@ func (*PointG1) IsDesignatedGenerator() bool {
 }
 
 func (p *PointG1) Equal(rhs curves.Point) bool {
-	r, ok := rhs.(*PointG1)
-	if ok {
-		return p.V.Equal(r.V) == 1
-	} else {
+	rhsp, ok := rhs.(*PointG1)
+	if !ok {
 		return false
 	}
+
+	return p.V.Equals(&rhsp.V) == 1
 }
 
 func (p *PointG1) Clone() curves.Point {
-	return &PointG1{V: new(bls12381impl.G1).Set(p.V)}
+	clone := new(PointG1)
+	clone.V.Set(&p.V)
+	return clone
 }
 
 // === Groupoid Methods.
@@ -114,11 +123,13 @@ func (p *PointG1) Add(rhs algebra.AdditiveGroupoidElement[curves.Curve, curves.P
 		panic("rhs is nil")
 	}
 	r, ok := rhs.(*PointG1)
-	if ok {
-		return &PointG1{V: new(bls12381impl.G1).Add(p.V, r.V)}
-	} else {
+	if !ok {
 		panic("rhs is not PointBls12381G1")
 	}
+
+	result := new(PointG1)
+	result.V.Add(&p.V, &r.V)
+	return result
 }
 
 func (p *PointG1) ApplyAdd(q algebra.AdditiveGroupoidElement[curves.Curve, curves.Point], n *saferith.Nat) curves.Point {
@@ -126,7 +137,9 @@ func (p *PointG1) ApplyAdd(q algebra.AdditiveGroupoidElement[curves.Curve, curve
 }
 
 func (p *PointG1) Double() curves.Point {
-	return &PointG1{V: new(bls12381impl.G1).Double(p.V)}
+	result := new(PointG1)
+	result.V.Double(&p.V)
+	return result
 }
 
 func (p *PointG1) Triple() curves.Point {
@@ -158,7 +171,9 @@ func (*PointG1) IsInverse(of algebra.GroupElement[curves.Curve, curves.Point], u
 // === Additive Group Methods.
 
 func (p *PointG1) AdditiveInverse() curves.Point {
-	return &PointG1{V: new(bls12381impl.G1).Neg(p.V)}
+	result := new(PointG1)
+	result.V.Neg(&p.V)
+	return result
 }
 
 func (p *PointG1) IsAdditiveInverse(of algebra.AdditiveGroupElement[curves.Curve, curves.Point]) bool {
@@ -170,11 +185,13 @@ func (p *PointG1) Sub(rhs algebra.AdditiveGroupElement[curves.Curve, curves.Poin
 		panic("rhs is nil")
 	}
 	r, ok := rhs.(*PointG1)
-	if ok {
-		return &PointG1{V: new(bls12381impl.G1).Sub(p.V, r.V)}
-	} else {
+	if !ok {
 		panic("rhs is not PointBls12381G1")
 	}
+
+	result := new(PointG1)
+	result.V.Sub(&p.V, &r.V)
+	return result
 }
 
 func (p *PointG1) ApplySub(q algebra.AdditiveGroupElement[curves.Curve, curves.Point], n *saferith.Nat) curves.Point {
@@ -188,11 +205,13 @@ func (p *PointG1) ScalarMul(rhs algebra.ModuleScalar[curves.Curve, curves.Scalar
 		panic("rhs is nil")
 	}
 	r, ok := rhs.(*Scalar)
-	if ok {
-		return &PointG1{V: new(bls12381impl.G1).Mul(p.V, r.V)}
-	} else {
+	if !ok {
 		panic("rhs is not ScalarBls12381")
 	}
+
+	result := new(PointG1)
+	pointsImpl.ScalarMulLimbs[*bls12381Impl.Fp](&result.V, &p.V, r.V.Limbs())
+	return result
 }
 
 // === Curve Methods.
@@ -208,7 +227,9 @@ func (p *PointG1) Neg() curves.Point {
 func (p *PointG1) IsNegative() bool {
 	// According to https://github.com/zcash/librustzcash/blob/6e0364cd42a2b3d2b958a54771ef51a8db79dd29/pairing/src/bls12_381/README.md#serialization
 	// This bit represents the sign of the `y` coordinate which is what we want
-	return (p.V.ToCompressed()[0]>>5)&1 == 1
+	var x, y bls12381Impl.Fp
+	p.V.ToAffine(&x, &y)
+	return fieldsImpl.IsNegative(&y) == 1
 }
 
 func (p *PointG1) IsSmallOrder() bool {
@@ -216,7 +237,12 @@ func (p *PointG1) IsSmallOrder() bool {
 }
 
 func (p *PointG1) ClearCofactor() curves.Point {
-	return &PointG1{V: new(bls12381impl.G1).ClearCofactor(p.V)}
+	hEffBytes := g1HEffective.Bytes()
+	slices.Reverse(hEffBytes)
+
+	result := new(PointG1)
+	pointsImpl.ScalarMul[*bls12381Impl.Fp](&result.V, &p.V, hEffBytes)
+	return result
 }
 
 // === Pairing Methods.
@@ -239,84 +265,187 @@ func (*PointG1) IsTorsionElement(order *saferith.Modulus, under algebra.BinaryOp
 }
 
 func (p *PointG1) Pair(rhs curves.PairingPoint) curves.GtMember {
-	e := new(bls12381impl.Engine)
-	e.AddPair(p.V, rhs.(*PointG2).V)
-
+	e := new(bls12381Impl.Engine)
+	e.AddPair(&p.V, &rhs.(*PointG2).V)
 	value := e.Result()
 
-	return &GtMember{V: value}
+	result := new(GtMember)
+	result.V.Set(value)
+	return result
 }
 
 // === Coordinate Interface Methods.
 
 func (p *PointG1) AffineCoordinates() []curves.BaseFieldElement {
-	return []curves.BaseFieldElement{p.AffineX(), p.AffineY()}
+	x := new(BaseFieldElementG1)
+	y := new(BaseFieldElementG1)
+	ok := p.V.ToAffine(&x.V, &y.V)
+	if ok != 1 {
+		return []curves.BaseFieldElement{
+			p.Curve().BaseField().AdditiveIdentity(),
+			p.Curve().BaseField().AdditiveIdentity(),
+		}
+	}
+
+	return []curves.BaseFieldElement{x, y}
 }
 
 func (p *PointG1) AffineX() curves.BaseFieldElement {
-	return &BaseFieldElementG1{
-		V: p.V.GetX(),
-	}
+	return p.AffineCoordinates()[0]
 }
 
 func (p *PointG1) AffineY() curves.BaseFieldElement {
-	return &BaseFieldElementG1{
-		V: p.V.GetY(),
-	}
+	return p.AffineCoordinates()[1]
 }
 
 func (p *PointG1) ProjectiveX() curves.BaseFieldElement {
-	return &BaseFieldElementG1{
-		V: &p.V.X,
-	}
+	x := new(BaseFieldElementG1)
+	x.V.Set(&p.V.X)
+	return x
 }
 
 func (p *PointG1) ProjectiveY() curves.BaseFieldElement {
-	return &BaseFieldElementG1{
-		V: &p.V.Y,
-	}
+	y := new(BaseFieldElementG1)
+	y.V.Set(&p.V.Y)
+	return y
 }
 
 func (p *PointG1) ProjectiveZ() curves.BaseFieldElement {
-	return &BaseFieldElementG1{
-		V: &p.V.Z,
-	}
+	z := new(BaseFieldElementG1)
+	z.V.Set(&p.V.Z)
+	return z
 }
 
 // === Serialisation.
 
 func (p *PointG1) ToAffineCompressed() []byte {
-	out := p.V.ToCompressed()
-	return out[:]
+	var x, y bls12381Impl.Fp
+	x.SetZero()
+	y.SetZero()
+	p.V.ToAffine(&x, &y)
+
+	bitC := uint64(1)
+	bitI := p.V.IsIdentity()
+	bitS := fieldsImpl.IsNegative(&y) & (bitI ^ 1)
+	m := byte((bitC << 7) | (bitI << 6) | (bitS << 5))
+
+	xBytes := x.Bytes()
+	slices.Reverse(xBytes)
+	xBytes[0] |= m
+	return xBytes
 }
 
 func (p *PointG1) ToAffineUncompressed() []byte {
-	out := p.V.ToUncompressed()
-	return out[:]
+	var x, y bls12381Impl.Fp
+	x.SetZero()
+	y.SetZero()
+	p.V.ToAffine(&x, &y)
+
+	bitC := uint64(0)
+	bitI := p.V.IsIdentity()
+	bitS := uint64(0)
+	m := byte((bitC << 7) | (bitI << 6) | (bitS << 5))
+
+	xBytes := x.Bytes()
+	slices.Reverse(xBytes)
+	yBytes := y.Bytes()
+	slices.Reverse(yBytes)
+
+	result := slices.Concat(xBytes, yBytes)
+	result[0] |= m
+	return result
 }
 
 func (*PointG1) FromAffineCompressed(input []byte) (curves.Point, error) {
-	var b [bls12381impl.FieldBytes]byte
-	copy(b[:], input)
-	value, err := new(bls12381impl.G1).FromCompressed(&b)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "couldn't construct G1 point from affine compressed")
+	if len(input) != bls12381Impl.FpBytes {
+		return nil, errs.NewLength("invalid input")
 	}
-	return &PointG1{V: value}, nil
+
+	var xFp, yFp, yNegFp bls12381Impl.Fp
+	var xBytes [bls12381Impl.FpBytes]byte
+	pp := new(PointG1)
+	compressedFlag := uint64((input[0] >> 7) & 1)
+	infinityFlag := uint64((input[0] >> 6) & 1)
+	sortFlag := uint64((input[0] >> 5) & 1)
+
+	if compressedFlag != 1 {
+		return nil, errs.NewFailed("compressed flag must be set")
+	}
+
+	if infinityFlag == 1 {
+		if sortFlag == 1 {
+			return nil, errs.NewFailed("infinity flag and sort flag are both set")
+		}
+		pp.V.SetIdentity()
+		return pp, nil
+	}
+
+	copy(xBytes[:], input)
+	// Mask away the flag bits
+	xBytes[0] &= 0x1f
+	slices.Reverse(xBytes[:])
+	if valid := xFp.SetBytes(xBytes[:]); valid != 1 {
+		return nil, errs.NewFailed("invalid bytes - not in field")
+	}
+
+	if wasSquare := pp.V.SetFromAffineX(&xFp); wasSquare != 1 {
+		return nil, errs.NewFailed("point is not on the curve")
+	}
+	if ok := pp.V.ToAffine(&xFp, &yFp); ok != 1 {
+		panic("this should never happen")
+	}
+
+	yNegFp.Neg(&pp.V.Y)
+	pp.V.Y.Select(fieldsImpl.IsNegative(&yFp)^sortFlag, &pp.V.Y, &yNegFp)
+
+	if !pp.IsInPrimeSubGroup() {
+		return nil, errs.NewFailed("point is not in correct subgroup")
+	}
+
+	return pp, nil
 }
 
 func (*PointG1) FromAffineUncompressed(input []byte) (curves.Point, error) {
-	var b [96]byte
-	copy(b[:], input)
-	value, err := new(bls12381impl.G1).FromUncompressed(&b)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "couldn't construct G1 point from affine uncompressed")
+	if len(input) != 2*bls12381Impl.FpBytes {
+		return nil, errs.NewLength("invalid input")
 	}
-	return &PointG1{V: value}, nil
+
+	var xFp, yFp bls12381Impl.Fp
+	var t [2 * bls12381Impl.FpBytes]byte
+	pp := new(PointG1)
+	infinityFlag := uint64((input[0] >> 6) & 1)
+
+	if infinityFlag == 1 {
+		pp.V.SetIdentity()
+		return pp, nil
+	}
+
+	copy(t[:], input)
+	// Mask away top bits
+	t[0] &= 0x1f
+	xBytes := t[:bls12381Impl.FpBytes]
+	slices.Reverse(xBytes)
+	yBytes := t[bls12381Impl.FpBytes:]
+	slices.Reverse(yBytes)
+
+	if valid := xFp.SetBytes(xBytes); valid != 1 {
+		return nil, errs.NewFailed("invalid bytes - x not in field")
+	}
+	if valid := yFp.SetBytes(yBytes); valid != 1 {
+		return nil, errs.NewFailed("invalid bytes - y not in field")
+	}
+	if valid := pp.V.SetAffine(&xFp, &yFp); valid != 1 {
+		return nil, errs.NewFailed("point is not on the curve")
+	}
+	if !pp.IsInPrimeSubGroup() {
+		return nil, errs.NewFailed("point is not in correct subgroup")
+	}
+
+	return pp, nil
 }
 
 func (p *PointG1) MarshalBinary() ([]byte, error) {
-	res := impl.MarshalBinary(p.Curve().Name(), p.ToAffineCompressed)
+	res := curvesImpl.MarshalBinary(p.Curve().Name(), p.ToAffineCompressed)
 	if len(res) < 1 {
 		return nil, errs.NewSerialisation("could not marshal")
 	}
@@ -324,11 +453,11 @@ func (p *PointG1) MarshalBinary() ([]byte, error) {
 }
 
 func (p *PointG1) UnmarshalBinary(input []byte) error {
-	pt, err := impl.UnmarshalBinary(p.FromAffineCompressed, input)
+	pt, err := curvesImpl.UnmarshalBinary(p.FromAffineCompressed, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal binary")
 	}
-	name, _, err := impl.ParseBinary(input)
+	name, _, err := curvesImpl.ParseBinary(input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
@@ -339,12 +468,12 @@ func (p *PointG1) UnmarshalBinary(input []byte) error {
 	if !ok {
 		return errs.NewType("invalid point")
 	}
-	p.V = ppt.V
+	p.V.Set(&ppt.V)
 	return nil
 }
 
 func (p *PointG1) MarshalJSON() ([]byte, error) {
-	res, err := impl.MarshalJson(p.Curve().Name(), p.ToAffineCompressed)
+	res, err := curvesImpl.MarshalJson(p.Curve().Name(), p.ToAffineCompressed)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
@@ -352,7 +481,7 @@ func (p *PointG1) MarshalJSON() ([]byte, error) {
 }
 
 func (p *PointG1) UnmarshalJSON(input []byte) error {
-	pt, err := impl.UnmarshalJson(p.Curve().Name(), p.FromAffineCompressed, input)
+	pt, err := curvesImpl.UnmarshalJson(p.Curve().Name(), p.FromAffineCompressed, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
@@ -360,7 +489,7 @@ func (p *PointG1) UnmarshalJSON(input []byte) error {
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}
-	p.V = P.V
+	p.V.Set(&P.V)
 	return nil
 }
 

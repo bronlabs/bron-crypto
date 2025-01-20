@@ -4,7 +4,7 @@ import (
 	"slices"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/hashing/poseidon"
@@ -43,11 +43,11 @@ func (v MinaVariant) ComputeChallenge(suite types.SigningSuite, nonceCommitment,
 		}
 	}
 
-	pallasPublicKey, ok := publicKey.(*pallas.Point)
+	pallasPublicKey, ok := publicKey.(*pasta.PallasPoint)
 	if !ok {
 		return nil, errs.NewType("given public key is not a pallas point")
 	}
-	pallasR, ok := nonceCommitment.(*pallas.Point)
+	pallasR, ok := nonceCommitment.(*pasta.PallasPoint)
 	if !ok {
 		return nil, errs.NewType("given nonceCommitment is not a pallas point")
 	}
@@ -99,12 +99,12 @@ func hashWithPrefix(prefix Prefix, inputs ...curves.BaseFieldElement) (curves.Sc
 	// hashWithPrefix itself
 	h.Update(inputs...)
 
-	outBfe, ok := h.Digest().(*pallas.BaseFieldElement)
+	outBfe, ok := h.Digest().(*pasta.PallasBaseFieldElement)
 	if !ok {
 		return nil, errs.NewType("output of poseidon is not a valid pallas base field element")
 	}
 
-	s, err := pallas.NewScalarField().Element().SetBytes(outBfe.Bytes())
+	s, err := pasta.NewPallasScalarField().Element().SetBytes(outBfe.Bytes())
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "cannot deserialize scalar")
 	}

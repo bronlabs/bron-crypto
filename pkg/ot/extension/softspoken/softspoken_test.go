@@ -10,9 +10,10 @@ import (
 
 	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/ot"
@@ -25,7 +26,10 @@ import (
 var curveInstances = []curves.Curve{
 	k256.NewCurve(),
 	p256.NewCurve(),
-	pallas.NewCurve(),
+	bls12381.NewG1(),
+	bls12381.NewG2(),
+	pasta.NewPallasCurve(),
+	pasta.NewVestaCurve(),
 }
 
 func getKeys(t *testing.T) (senderKey, receiverKey types.AuthKey) {

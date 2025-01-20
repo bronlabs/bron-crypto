@@ -3,13 +3,15 @@ package bls12381
 import (
 	"io"
 	"iter"
+	"strings"
 	"sync"
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	bimpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
+	bls12381Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
@@ -21,7 +23,7 @@ var (
 )
 
 var (
-	g1BaseFieldOrder = saferith.ModulusFromNat(saferithUtils.NatDec(p.Nat()))
+	g1BaseFieldOrder, _ = saferith.ModulusFromHex(strings.ToUpper("1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab"))
 )
 
 var _ curves.BaseField = (*BaseFieldG1)(nil)
@@ -82,7 +84,7 @@ func (*BaseFieldG1) Addition() algebra.Addition[curves.BaseFieldElement] {
 	panic("implement me")
 }
 
-func (*BaseFieldG1) Exp(base, power curves.BaseFieldElement) curves.BaseFieldElement {
+func (*BaseFieldG1) Exp(b, power curves.BaseFieldElement) curves.BaseFieldElement {
 	//TODO implement me
 	panic("implement me")
 }
@@ -97,7 +99,7 @@ func (*BaseFieldG1) MultiBaseExp(bases []algebra.MultiplicativeGroupoidElement[c
 	panic("implement me")
 }
 
-func (*BaseFieldG1) MultiExponentExp(base algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement], exponents []*saferith.Nat) curves.BaseFieldElement {
+func (*BaseFieldG1) MultiExponentExp(b algebra.MultiplicativeGroupoidElement[curves.BaseField, curves.BaseFieldElement], exponents []*saferith.Nat) curves.BaseFieldElement {
 	//TODO implement me
 	panic("implement me")
 }
@@ -183,11 +185,11 @@ func (*BaseFieldG1) ExclusiveDisjunctiveIdentity() curves.BaseFieldElement {
 }
 
 func (*BaseFieldG1) ElementSize() int {
-	return 48
+	return bls12381Impl.FpBytes
 }
 
 func (*BaseFieldG1) WideElementSize() int {
-	return 2 * 48
+	return bls12381Impl.FpWideBytes
 }
 
 func (*BaseFieldG1) IsDecomposable(coprimeIdealNorms ...algebra.IntegerRingElement[curves.BaseField, curves.BaseFieldElement]) (bool, error) {
@@ -212,19 +214,21 @@ func (f *BaseFieldG1) Element() curves.BaseFieldElement {
 	return f.AdditiveIdentity()
 }
 
-func (f *BaseFieldG1) Random(prng io.Reader) (curves.BaseFieldElement, error) {
+func (*BaseFieldG1) Random(prng io.Reader) (curves.BaseFieldElement, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
 	}
-	result, err := f.Element().(*BaseFieldElementG1).V.Random(prng)
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "could not generate random field element")
+	result := new(BaseFieldElementG1)
+	ok := result.V.SetRandom(prng)
+	if ok != 1 {
+		return nil, errs.NewRandomSample("could not generate random field element")
 	}
-	return &BaseFieldElementG1{V: result}, nil
+
+	return result, nil
 }
 
-func (*BaseFieldG1) Hash(x []byte) (curves.BaseFieldElement, error) {
-	els, err := NewG1().HashToFieldElements(1, x, nil)
+func (f *BaseFieldG1) Hash(x []byte) (curves.BaseFieldElement, error) {
+	els, err := f.Curve().HashToFieldElements(1, base.Hash2CurveAppTag+Hash2CurveSuiteG1, x)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not hash to field element in bls12381 G1")
 	}
@@ -233,16 +237,17 @@ func (*BaseFieldG1) Hash(x []byte) (curves.BaseFieldElement, error) {
 
 func (*BaseFieldG1) Select(choice uint64, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
 	x0p, ok0 := x0.(*BaseFieldElementG1)
-	if !ok0 || x0p.V == nil {
+	if !ok0 {
 		panic("x0 is not a non-empty BLS12381 BaseFieldG1 element")
 	}
 	x1p, ok1 := x1.(*BaseFieldElementG1)
-	if !ok1 || x1p.V == nil {
+	if !ok1 {
 		panic("x1 is not a non-empty BLS12381 BaseFieldG1 element")
 	}
-	return &BaseFieldElementG1{
-		V: new(bimpl.Fp).CMove(x0p.V, x1p.V, choice),
-	}
+
+	result := new(BaseFieldElementG1)
+	result.V.Select(choice, &x0p.V, &x1p.V)
+	return result
 }
 
 // === Additive Groupoid Methods.
@@ -268,17 +273,17 @@ func (*BaseFieldG1) Mul(x algebra.MultiplicativeGroupoidElement[curves.BaseField
 // === Additive Monoid Methods.
 
 func (*BaseFieldG1) AdditiveIdentity() curves.BaseFieldElement {
-	return &BaseFieldElementG1{
-		V: new(bimpl.Fp).SetZero(),
-	}
+	result := new(BaseFieldElementG1)
+	result.V.SetZero()
+	return result
 }
 
 // === Multiplicative Monoid Methods.
 
 func (*BaseFieldG1) MultiplicativeIdentity() curves.BaseFieldElement {
-	return &BaseFieldElementG1{
-		V: new(bimpl.Fp).SetOne(),
-	}
+	result := new(BaseFieldElementG1)
+	result.V.SetOne()
+	return result
 }
 
 // === Additive Group Methods.
@@ -342,11 +347,11 @@ func (f *BaseFieldG1) Trace(e curves.BaseFieldElement) curves.BaseFieldElement {
 }
 
 func (*BaseFieldG1) FieldBytes() int {
-	return bimpl.FieldBytes
+	return bls12381Impl.FpBytes
 }
 
 func (*BaseFieldG1) WideFieldBytes() int {
-	return bimpl.WideFieldBytes
+	return bls12381Impl.FpWideBytes
 }
 
 // === Zp Methods.

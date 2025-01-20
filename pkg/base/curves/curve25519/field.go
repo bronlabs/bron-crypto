@@ -211,7 +211,7 @@ func (f *BaseField) Element() curves.BaseFieldElement {
 }
 
 func (*BaseField) Hash(x []byte) (curves.BaseFieldElement, error) {
-	els, err := NewCurve().HashToFieldElements(1, x, nil)
+	els, err := NewCurve().HashToFieldElements(1, base.Hash2CurveAppTag+Hash2CurveSuite, x)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not hash to field element in edwards25519")
 	}
@@ -328,11 +328,11 @@ func (f *BaseField) Trace(e curves.BaseFieldElement) curves.BaseFieldElement {
 }
 
 func (*BaseField) FieldBytes() int {
-	return base.FieldBytes
+	return 32
 }
 
 func (*BaseField) WideFieldBytes() int {
-	return base.WideFieldBytes
+	return 64
 }
 
 // === Zp Methods.
