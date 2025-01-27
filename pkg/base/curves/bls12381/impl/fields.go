@@ -1,4 +1,4 @@
-//go:generate go run ../../newimpl/fields/codegen pkg/base/curves/bls12381/newimpl
+//go:generate go run -tags codegen ../../impl/fields/codegen pkg/base/curves/bls12381/impl
 package impl
 
 import (
