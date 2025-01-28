@@ -6,8 +6,6 @@ import (
 
 	"golang.org/x/crypto/blake2b"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/commitments"
 )

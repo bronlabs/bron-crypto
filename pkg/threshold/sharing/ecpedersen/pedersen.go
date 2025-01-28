@@ -1,13 +1,14 @@
 package ecpedersen_vss
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
-	"github.com/copperexchange/krypton-primitives/pkg/base/types"
-	ecpedersen_comm "github.com/copperexchange/krypton-primitives/pkg/commitments/ecpedersen"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
 	"io"
+
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	ecpedersen_comm "github.com/bronlabs/krypton-primitives/pkg/commitments/ecpedersen"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
 type ShamirShare = shamir.Share
@@ -147,9 +148,14 @@ func (d *Dealer) VerifyShare(share *Share, commitments []ecpedersen_comm.Commitm
 	at := share.Value.ScalarField().New(uint64(share.Id))
 	commitment, err := evalPolyAt(commitments, ecpedersen_comm.Scalar(at), d.Ck.CommitmentAdd, d.Ck.CommitmentMul)
 	if err != nil {
-		return errs.NewVerification("cannot verify share")
+		return errs.WrapVerification(err, "cannot verify share")
 	}
-	return d.Ck.Verify(commitment, share.Value, share.R)
+	err = d.Ck.Verify(commitment, share.Value, share.R)
+	if err != nil {
+		return errs.WrapVerification(err, "cannot verify share")
+	}
+
+	return nil
 }
 
 func evalPolyAt[Y any, X any](poly []Y, at X, addFunc func(lhs, rhs Y) (Y, error), mulFunc func(lhs Y, rhs X) (Y, error)) (Y, error) {

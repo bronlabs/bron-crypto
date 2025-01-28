@@ -1,6 +1,6 @@
 package ecelgamal
 
-import "github.com/copperexchange/krypton-primitives/pkg/base/curves"
+import "github.com/bronlabs/krypton-primitives/pkg/base/curves"
 
 type PlainText = curves.Point
 type Scalar = curves.Scalar

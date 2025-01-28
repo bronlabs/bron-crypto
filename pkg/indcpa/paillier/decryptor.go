@@ -1,7 +1,7 @@
 package paillier
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 type Decryptor struct {

@@ -1,6 +1,6 @@
 package commitments
 
-import "github.com/copperexchange/krypton-primitives/pkg/base/errs"
+import "github.com/bronlabs/krypton-primitives/pkg/base/errs"
 
 type Opening[M Message, W Witness] struct {
 	message M

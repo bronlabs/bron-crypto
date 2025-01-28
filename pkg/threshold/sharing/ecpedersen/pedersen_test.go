@@ -3,20 +3,22 @@ package ecpedersen_vss_test
 import (
 	crand "crypto/rand"
 	"fmt"
-	"github.com/copperexchange/krypton-primitives/pkg/base/combinatorics"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/bls12381"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/k256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/p256"
-	"github.com/copperexchange/krypton-primitives/pkg/base/curves/pallas"
-	ecpedersen_comm "github.com/copperexchange/krypton-primitives/pkg/commitments/ecpedersen"
-	ecpedersen_vss "github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/ecpedersen"
-	"github.com/copperexchange/krypton-primitives/pkg/threshold/sharing/shamir"
-	"github.com/stretchr/testify/require"
 	"maps"
 	"slices"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/krypton-primitives/pkg/base/combinatorics"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	ecpedersen_comm "github.com/bronlabs/krypton-primitives/pkg/commitments/ecpedersen"
+	ecpedersen_vss "github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/ecpedersen"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
 var supportedCurves = []curves.Curve{
@@ -64,6 +66,7 @@ func Test_HappyPath(t *testing.T) {
 				}
 				sharingIds := slices.Collect(maps.Keys(shares))
 				sharingIdCombinations, err := combinatorics.Combinations(sharingIds, as.threshold)
+				require.NoError(t, err)
 
 				// reveal with shamir dealer
 				shamirDealer, err := shamir.NewDealer(as.threshold, as.total, curve)

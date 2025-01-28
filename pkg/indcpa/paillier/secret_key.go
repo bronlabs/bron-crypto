@@ -13,7 +13,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
-	"github.com/copperexchange/krypton-primitives/pkg/indcpa"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa"
 )
 
 var (

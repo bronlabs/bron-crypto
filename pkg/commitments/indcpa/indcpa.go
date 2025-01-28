@@ -3,9 +3,9 @@ package indcpa_comm
 import (
 	"io"
 
-	"github.com/copperexchange/krypton-primitives/pkg/base/errs"
-	"github.com/copperexchange/krypton-primitives/pkg/commitments"
-	"github.com/copperexchange/krypton-primitives/pkg/indcpa"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/commitments"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa"
 )
 
 type Commitment[C indcpa.CipherText] struct {
