@@ -5,7 +5,7 @@ import (
 	"slices"
 )
 
-type QuadraticFieldExtensionArith[BFP FiniteFieldPtr[BFP]] interface {
+type QuadraticFieldExtensionArith[BFP FiniteField[BFP]] interface {
 	MulByQuadraticNonResidue(out BFP, in BFP)
 }
 

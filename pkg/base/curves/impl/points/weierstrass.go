@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/h2c"
 )
 
-type ShortWeierstrassCurveParams[FP fieldsImpl.FiniteFieldPtr[FP]] interface {
+type ShortWeierstrassCurveParams[FP fieldsImpl.FiniteField[FP]] interface {
 	// SetGenerator sets generator coordinates.
 	SetGenerator(xOut, yOut, zOut FP)
 

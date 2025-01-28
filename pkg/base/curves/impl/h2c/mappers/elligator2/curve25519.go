@@ -102,7 +102,7 @@ func mapToCurveElligator2Curve25519[FP fieldsImpl.PrimeFieldPtrConstraint[FP, F]
 	FP(ydOut).SetOne()
 }
 
-func sgn0[FP fieldsImpl.PrimeFieldPtr[FP]](in FP) uint64 {
+func sgn0[FP fieldsImpl.PrimeField[FP]](in FP) uint64 {
 	inBytes := in.Bytes()
 	return uint64(inBytes[0] & 0b1)
 }

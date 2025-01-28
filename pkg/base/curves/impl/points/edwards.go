@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/h2c"
 )
 
-type TwistedEdwardsCurveParams[FP fields.FiniteFieldPtr[FP]] interface {
+type TwistedEdwardsCurveParams[FP fields.FiniteField[FP]] interface {
 	// SetGenerator sets generator coordinates.
 	SetGenerator(xOut, yOut, tOut, zOut FP)
 

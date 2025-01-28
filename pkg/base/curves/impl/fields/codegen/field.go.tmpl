@@ -21,7 +21,7 @@ const (
 )
 
 var (
-    _ fields.PrimeFieldPtr[*{{- .TypeName }}] = (*{{- .TypeName }})(nil)
+    _ fields.PrimeField[*{{- .TypeName }}] = (*{{- .TypeName }})(nil)
 
 	{{ .TypeName -}}ProgenitorExp = [...]byte{ {{- .ProgenitorExponent -}} }
 	{{ .TypeName -}}Modulus       [{{ .TypeName -}}SatLimbs]uint64

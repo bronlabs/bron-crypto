@@ -10,7 +10,7 @@ import (
 	pointsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/points"
 )
 
-var _ pointsImpl.PointPtr[*Fp, *Point] = (*Point)(nil)
+var _ pointsImpl.Point[*Fp, *Point] = (*Point)(nil)
 
 type Point struct {
 	V filippo.Point

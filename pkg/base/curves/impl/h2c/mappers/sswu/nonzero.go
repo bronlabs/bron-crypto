@@ -4,7 +4,7 @@ import (
 	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
 )
 
-type NonZeroPointMapperParams[FP fieldsImpl.FiniteFieldPtr[FP]] interface {
+type NonZeroPointMapperParams[FP fieldsImpl.FiniteField[FP]] interface {
 	MulByA(out, in FP)
 	MulByB(out, in FP)
 	SetZ(out FP)

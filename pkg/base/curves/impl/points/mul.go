@@ -5,7 +5,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
-func ScalarMul[FP fieldsImpl.FiniteFieldPtr[FP], PP PointPtrConstraint[FP, PP, P], P any](out, pp *P, s []byte) {
+func ScalarMul[FP fieldsImpl.FiniteField[FP], PP PointPtrConstraint[FP, PP, P], P any](out, pp *P, s []byte) {
 	var precomputed [16]P
 
 	PP(&precomputed[0]).SetIdentity()
@@ -36,7 +36,7 @@ func ScalarMul[FP fieldsImpl.FiniteFieldPtr[FP], PP PointPtrConstraint[FP, PP, P
 	PP(out).Set(&res)
 }
 
-func ScalarMulLimbs[FP fieldsImpl.FiniteFieldPtr[FP], PP PointPtrConstraint[FP, PP, P], P any](out, pp *P, s []uint64) {
+func ScalarMulLimbs[FP fieldsImpl.FiniteField[FP], PP PointPtrConstraint[FP, PP, P], P any](out, pp *P, s []uint64) {
 	var precomputed [16]P
 	PP(&precomputed[0]).SetIdentity()
 	PP(&precomputed[1]).Set(pp)
@@ -64,7 +64,7 @@ func ScalarMulLimbs[FP fieldsImpl.FiniteFieldPtr[FP], PP PointPtrConstraint[FP, 
 // MultiScalarMul computes the multi-exponentiation for the specified
 // points and scalars and stores the result in `out`.
 // Returns an error if the lengths of the arguments is not equal.
-func MultiScalarMul[FP fieldsImpl.FiniteFieldPtr[FP], PP PointPtrConstraint[FP, PP, P], P any](out *P, points []P, scalars [][]byte) (err error) {
+func MultiScalarMul[FP fieldsImpl.FiniteField[FP], PP PointPtrConstraint[FP, PP, P], P any](out *P, points []P, scalars [][]byte) (err error) {
 	const Upper = 256
 	const W = 4
 	const Windows = Upper / W // careful--use ceiling division in case this doesn't divide evenly

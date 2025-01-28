@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	_ fields.PrimeFieldPtr[*Fq] = (*Fq)(nil)
+	_ fields.PrimeField[*Fq] = (*Fq)(nil)
 
 	FqRootOfUnity Fq
 )

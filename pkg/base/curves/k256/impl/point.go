@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	_ pointsImpl.PointPtr[*Fp, *Point] = (*Point)(nil)
+	_ pointsImpl.Point[*Fp, *Point] = (*Point)(nil)
 )
 
 type Point = pointsImpl.ShortWeierstrassPointImpl[*Fp, curveParams, CurveHasherParams, curveMapper, Fp]

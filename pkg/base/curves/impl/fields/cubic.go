@@ -5,7 +5,7 @@ import (
 	"slices"
 )
 
-type CubicFieldExtensionArith[BF FiniteFieldPtr[BF]] interface {
+type CubicFieldExtensionArith[BF FiniteField[BF]] interface {
 	MulByCubicNonResidue(out BF, in BF)
 	RootOfUnity(out BF)
 	ProgenitorExponent() []uint8
@@ -14,7 +14,7 @@ type CubicFieldExtensionArith[BF FiniteFieldPtr[BF]] interface {
 
 type CubicFieldExtensionImpl[BFP interface {
 	*BF
-	FiniteFieldPtr[BFP]
+	FiniteField[BFP]
 }, A CubicFieldExtensionArith[BFP], BF any] struct {
 	U0 BF
 	U1 BF

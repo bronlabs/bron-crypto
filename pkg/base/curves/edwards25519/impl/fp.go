@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
 )
 
-var _ fields.PrimeFieldPtr[*Fp] = (*Fp)(nil)
+var _ fields.PrimeField[*Fp] = (*Fp)(nil)
 
 type Fp struct {
 	V filippoField.Element

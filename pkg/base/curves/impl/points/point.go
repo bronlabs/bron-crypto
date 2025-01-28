@@ -6,7 +6,7 @@ import (
 	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
 )
 
-type pointPtr[FP fieldsImpl.FiniteFieldPtr[FP], PP any] interface {
+type point[FP fieldsImpl.FiniteField[FP], PP any] interface {
 	Encode(dstPrefix string, message []byte)
 	Hash(dstPrefix string, message []byte)
 
@@ -29,11 +29,11 @@ type pointPtr[FP fieldsImpl.FiniteFieldPtr[FP], PP any] interface {
 	ToAffine(x, y FP) (ok uint64)
 }
 
-type PointPtr[FP fieldsImpl.FiniteFieldPtr[FP], PP pointPtr[FP, PP]] interface {
-	pointPtr[FP, PP]
+type Point[FP fieldsImpl.FiniteField[FP], PP point[FP, PP]] interface {
+	point[FP, PP]
 }
 
-type PointPtrConstraint[FP fieldsImpl.FiniteFieldPtr[FP], PP pointPtr[FP, PP], P any] interface {
+type PointPtrConstraint[FP fieldsImpl.FiniteField[FP], PP point[FP, PP], P any] interface {
 	*P
-	pointPtr[FP, PP]
+	point[FP, PP]
 }

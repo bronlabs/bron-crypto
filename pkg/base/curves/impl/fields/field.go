@@ -2,7 +2,7 @@ package fields
 
 import "io"
 
-type fieldPtr[FP any] interface {
+type field[FP any] interface {
 	Set(v FP)
 	SetZero()
 	SetOne()
@@ -23,17 +23,17 @@ type fieldPtr[FP any] interface {
 	IsOne() uint64
 }
 
-type FieldPtr[FP fieldPtr[FP]] interface {
-	fieldPtr[FP]
+type Field[FP field[FP]] interface {
+	field[FP]
 }
 
-type FieldPtrConstraint[FP fieldPtr[FP], F any] interface {
+type FieldPtrConstraint[FP field[FP], F any] interface {
 	*F
-	fieldPtr[FP]
+	field[FP]
 }
 
-type finiteFieldPtr[FP fieldPtr[FP]] interface {
-	fieldPtr[FP]
+type finiteField[FP field[FP]] interface {
+	field[FP]
 
 	SetUniformBytes(componentsData ...[]byte) (ok uint64)
 	SetRandom(prng io.Reader) (ok uint64)
@@ -42,17 +42,17 @@ type finiteFieldPtr[FP fieldPtr[FP]] interface {
 	Degree() uint64
 }
 
-type FiniteFieldPtr[FP finiteFieldPtr[FP]] interface {
-	finiteFieldPtr[FP]
+type FiniteField[FP finiteField[FP]] interface {
+	finiteField[FP]
 }
 
-type FiniteFieldPtrConstraint[FP finiteFieldPtr[FP], F any] interface {
+type FiniteFieldPtrConstraint[FP finiteField[FP], F any] interface {
 	FieldPtrConstraint[FP, F]
-	finiteFieldPtr[FP]
+	finiteField[FP]
 }
 
-type primeFieldPtr[PF finiteFieldPtr[PF]] interface {
-	finiteFieldPtr[PF]
+type primeField[PF finiteField[PF]] interface {
+	finiteField[PF]
 
 	SetUint64(u uint64)
 	SetLimbs(data []uint64) (ok uint64)
@@ -63,11 +63,11 @@ type primeFieldPtr[PF finiteFieldPtr[PF]] interface {
 	Limbs() []uint64
 }
 
-type PrimeFieldPtr[FP primeFieldPtr[FP]] interface {
-	primeFieldPtr[FP]
+type PrimeField[FP primeField[FP]] interface {
+	primeField[FP]
 }
 
-type PrimeFieldPtrConstraint[FP primeFieldPtr[FP], F any] interface {
+type PrimeFieldPtrConstraint[FP primeField[FP], F any] interface {
 	FiniteFieldPtrConstraint[FP, F]
-	primeFieldPtr[FP]
+	primeField[FP]
 }

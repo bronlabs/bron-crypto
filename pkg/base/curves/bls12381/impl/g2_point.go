@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	_ pointsImpl.PointPtr[*Fp2, *G2Point] = (*G2Point)(nil)
+	_ pointsImpl.Point[*Fp2, *G2Point] = (*G2Point)(nil)
 )
 
 type G2Point = pointsImpl.ShortWeierstrassPointImpl[*Fp2, g2CurveParams, G2CurveHasherParams, g2CurveMapper, Fp2]
