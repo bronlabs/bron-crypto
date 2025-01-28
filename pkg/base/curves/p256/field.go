@@ -1,8 +1,10 @@
 package p256
 
 import (
+	"encoding/binary"
 	"io"
 	"iter"
+	"slices"
 	"sync"
 
 	"github.com/cronokirby/saferith"
@@ -10,7 +12,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl/fp"
+	p256Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
@@ -19,6 +21,7 @@ import (
 var (
 	p256BaseFieldInitOnce sync.Once
 	p256BaseFieldInstance BaseField
+	p256BaseFieldModulus  *saferith.Modulus
 )
 
 var _ curves.BaseField = (*BaseField)(nil)
@@ -28,6 +31,13 @@ type BaseField struct {
 }
 
 func p256BaseFieldInit() {
+	var modulusBytes [8 * p256Impl.FpSatLimbs]byte
+	for i, l := range p256Impl.FpModulus {
+		binary.LittleEndian.PutUint64(modulusBytes[i*8:(i+1)*8], l)
+	}
+	slices.Reverse(modulusBytes[:])
+	p256BaseFieldModulus = saferith.ModulusFromBytes(modulusBytes[:])
+
 	p256BaseFieldInstance = BaseField{}
 }
 
@@ -185,11 +195,11 @@ func (*BaseField) ExclusiveDisjunctiveIdentity() curves.BaseFieldElement {
 }
 
 func (*BaseField) ElementSize() int {
-	return base.FieldBytes
+	return p256Impl.FpBytes
 }
 
 func (*BaseField) WideElementSize() int {
-	return base.WideFieldBytes
+	return p256Impl.FpWideBytes
 }
 
 func (*BaseField) IsDecomposable(coprimeIdealNorms ...algebra.IntegerRingElement[curves.BaseField, curves.BaseFieldElement]) (bool, error) {
@@ -207,7 +217,7 @@ func (*BaseField) Name() string {
 }
 
 func (*BaseField) Order() *saferith.Modulus {
-	return fp.New().Params.Modulus
+	return p256BaseFieldModulus
 }
 
 func (f *BaseField) Element() curves.BaseFieldElement {
@@ -218,7 +228,7 @@ func (*BaseField) Random(prng io.Reader) (curves.BaseFieldElement, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
 	}
-	var seed [base.WideFieldBytes]byte
+	var seed [p256Impl.FpWideBytes]byte
 	_, err := io.ReadFull(prng, seed[:])
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "could not read from prng")
@@ -231,7 +241,7 @@ func (*BaseField) Random(prng io.Reader) (curves.BaseFieldElement, error) {
 }
 
 func (*BaseField) Hash(x []byte) (curves.BaseFieldElement, error) {
-	els, err := NewCurve().HashToFieldElements(1, x, nil)
+	els, err := NewCurve().HashToFieldElements(1, base.Hash2CurveAppTag+Hash2CurveSuite, x)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not hash to field element in p256")
 	}
@@ -240,15 +250,15 @@ func (*BaseField) Hash(x []byte) (curves.BaseFieldElement, error) {
 
 func (*BaseField) Select(choice uint64, x0, x1 curves.BaseFieldElement) curves.BaseFieldElement {
 	x0f, ok0 := x0.(*BaseFieldElement)
-	if !ok0 || x0f.V == nil {
+	if !ok0 {
 		panic("x0 is not a non-empty p256 field element")
 	}
 	x1f, ok1 := x1.(*BaseFieldElement)
-	if !ok1 || x1f.V == nil {
+	if !ok1 {
 		panic("x1 is not a non-empty p256 field element")
 	}
 	el := new(BaseFieldElement)
-	el.V.Arithmetic.Selectznz(&el.V.Value, &x0f.V.Value, &x1f.V.Value, choice)
+	el.V.Select(choice, &x0f.V, &x1f.V)
 	return el
 }
 
@@ -275,17 +285,17 @@ func (*BaseField) Multiply(x curves.BaseFieldElement, ys ...curves.BaseFieldElem
 // === Additive Monoid Methods.
 
 func (*BaseField) AdditiveIdentity() curves.BaseFieldElement {
-	return &BaseFieldElement{
-		V: fp.New().SetZero(),
-	}
+	bf := new(BaseFieldElement)
+	bf.V.SetZero()
+	return bf
 }
 
 // === Multiplicative Monoid Methods.
 
 func (*BaseField) MultiplicativeIdentity() curves.BaseFieldElement {
-	return &BaseFieldElement{
-		V: fp.New().SetOne(),
-	}
+	bf := new(BaseFieldElement)
+	bf.V.SetOne()
+	return bf
 }
 
 // === Additive Group Methods.
@@ -349,11 +359,11 @@ func (f *BaseField) Trace(e curves.BaseFieldElement) curves.BaseFieldElement {
 }
 
 func (*BaseField) FieldBytes() int {
-	return base.FieldBytes
+	return p256Impl.FpBytes
 }
 
 func (*BaseField) WideFieldBytes() int {
-	return base.WideFieldBytes
+	return p256Impl.FpWideBytes
 }
 
 // === Zp Methods.

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/mina"
 )
 
@@ -17,7 +17,7 @@ func Test_SignAgainstMinaSigner(t *testing.T) {
 	network := mina.MainNet
 
 	// gen keys and create signer
-	sk, err := pallas.NewScalarField().Random(crand.Reader)
+	sk, err := pasta.NewPallasScalarField().Random(crand.Reader)
 	require.NoError(t, err)
 	signer, err := mina.NewSigner(&mina.PrivateKey{S: sk}, network)
 	require.NoError(t, err)
@@ -25,7 +25,7 @@ func Test_SignAgainstMinaSigner(t *testing.T) {
 	// sample random fields
 	var fields [4]curves.BaseFieldElement
 	for i := range fields {
-		randomFe, err := pallas.NewBaseField().Random(crand.Reader)
+		randomFe, err := pasta.NewPallasBaseField().Random(crand.Reader)
 		require.NoError(t, err)
 		fields[i] = randomFe
 
@@ -45,7 +45,7 @@ func Test_SignAgainstMinaSigner(t *testing.T) {
 	require.NoError(t, err)
 
 	// verify
-	pk := pallas.NewCurve().ScalarBaseMult(sk)
+	pk := pasta.NewPallasCurve().ScalarBaseMult(sk)
 	err = mina.Verify(&mina.PublicKey{A: pk}, signature, input, network)
 	require.NoError(t, err)
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/utils"
 )
@@ -93,7 +93,7 @@ func (r *ROInput) PackToFields() []curves.BaseFieldElement {
 			idx++
 		}
 		slices.Reverse(chunk[:])
-		field, _ := pallas.NewBaseField().Element().SetBytes(chunk[:])
+		field, _ := pasta.NewPallasBaseField().Element().SetBytes(chunk[:])
 		fields = append(fields, field)
 	}
 

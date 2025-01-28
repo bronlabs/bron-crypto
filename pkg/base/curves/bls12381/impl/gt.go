@@ -1,160 +1,83 @@
-package bls12381impl
+package impl
 
 import (
-	"io"
-
 	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl/internal/fiat"
+	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
 )
 
-// GtFieldBytes is the number of bytes needed to represent this field.
-const GtFieldBytes = 576
+// GtBytes is the number of bytes needed to represent this field.
+const GtBytes = 12 * FpBytes
+
+//var _ pointsImpl.Point[*Gt, *Fp6] = (*Gt)(nil).
 
 // Gt is the target group.
-type Gt Fp12
-
-// Random generates a random field element.
-func (gt *Gt) Random(reader io.Reader) (*Gt, error) {
-	_, err := (*Fp12)(gt).Random(reader)
-	return gt, err
-}
-
-// FinalExponentiation performs a "final exponentiation" routine to convert the result
-// of a Miller loop into an element of `Gt` with help of efficient squaring
-// operation in the so-called `cyclotomic subgroup` of `Fq6` so that
-// it can be compared with other elements of `Gt`.
-func (gt *Gt) FinalExponentiation(a *Gt) *Gt {
-	var t0, t1, t2, t3, t4, t5, t6, t Fp12
-	t0.FrobeniusAutomorphism((*Fp12)(a))
-	t0.FrobeniusAutomorphism(&t0)
-	t0.FrobeniusAutomorphism(&t0)
-	t0.FrobeniusAutomorphism(&t0)
-	t0.FrobeniusAutomorphism(&t0)
-	t0.FrobeniusAutomorphism(&t0)
-
-	// Shouldn't happen since we enforce `a` to be non-zero but just in case
-	_, wasInverted := t1.Invert((*Fp12)(a))
-	t2.Mul(&t0, &t1)
-	t1.Set(&t2)
-	t2.FrobeniusAutomorphism(&t2)
-	t2.FrobeniusAutomorphism(&t2)
-	t2.Mul(&t2, &t1)
-	t1.cyclotomicSquare(&t2)
-	t1.Conjugate(&t1)
-
-	t3.cyclotomicExp(&t2)
-	t4.cyclotomicSquare(&t3)
-	t5.Mul(&t1, &t3)
-	t1.cyclotomicExp(&t5)
-	t0.cyclotomicExp(&t1)
-	t6.cyclotomicExp(&t0)
-	t6.Mul(&t6, &t4)
-	t4.cyclotomicExp(&t6)
-	t5.Conjugate(&t5)
-	t4.Mul(&t4, &t5)
-	t4.Mul(&t4, &t2)
-	t5.Conjugate(&t2)
-	t1.Mul(&t1, &t2)
-	t1.FrobeniusAutomorphism(&t1)
-	t1.FrobeniusAutomorphism(&t1)
-	t1.FrobeniusAutomorphism(&t1)
-	t6.Mul(&t6, &t5)
-	t6.FrobeniusAutomorphism(&t6)
-	t3.Mul(&t3, &t0)
-	t3.FrobeniusAutomorphism(&t3)
-	t3.FrobeniusAutomorphism(&t3)
-	t3.Mul(&t3, &t1)
-	t3.Mul(&t3, &t6)
-	t.Mul(&t3, &t4)
-	(*Fp12)(gt).CMove((*Fp12)(gt), &t, wasInverted)
-	return gt
-}
-
-// IsZero returns 1 if gt == 0, 0 otherwise.
-func (gt *Gt) IsZero() uint64 {
-	return (*Fp12)(gt).IsZero()
-}
-
-// IsOne returns 1 if gt == 1, 0 otherwise.
-func (gt *Gt) IsOne() uint64 {
-	return (*Fp12)(gt).IsOne()
-}
-
-// SetOne gt = one.
-func (gt *Gt) SetOne() *Gt {
-	(*Fp12)(gt).SetOne()
-	return gt
-}
-
-// Set copies a into gt.
-func (gt *Gt) Set(a *Gt) *Gt {
-	gt.A.Set(&a.A)
-	gt.B.Set(&a.B)
-	return gt
+type Gt struct {
+	Fp12
 }
 
 // Bytes returns the Gt field byte representation.
-func (gt *Gt) Bytes() [GtFieldBytes]byte {
-	var out [GtFieldBytes]byte
-	t := gt.A.A.A.Bytes()
-	copy(out[:FieldBytes], bitstring.ReverseBytes(t[:]))
-	t = gt.A.A.B.Bytes()
-	copy(out[FieldBytes:2*FieldBytes], bitstring.ReverseBytes(t[:]))
-	t = gt.A.B.A.Bytes()
-	copy(out[2*FieldBytes:3*FieldBytes], bitstring.ReverseBytes(t[:]))
-	t = gt.A.B.B.Bytes()
-	copy(out[3*FieldBytes:4*FieldBytes], bitstring.ReverseBytes(t[:]))
-	t = gt.A.C.A.Bytes()
-	copy(out[4*FieldBytes:5*FieldBytes], bitstring.ReverseBytes(t[:]))
-	t = gt.A.C.B.Bytes()
-	copy(out[5*FieldBytes:6*FieldBytes], bitstring.ReverseBytes(t[:]))
-	t = gt.B.A.A.Bytes()
-	copy(out[6*FieldBytes:7*FieldBytes], bitstring.ReverseBytes(t[:]))
-	t = gt.B.A.B.Bytes()
-	copy(out[7*FieldBytes:8*FieldBytes], bitstring.ReverseBytes(t[:]))
-	t = gt.B.B.A.Bytes()
-	copy(out[8*FieldBytes:9*FieldBytes], bitstring.ReverseBytes(t[:]))
-	t = gt.B.B.B.Bytes()
-	copy(out[9*FieldBytes:10*FieldBytes], bitstring.ReverseBytes(t[:]))
-	t = gt.B.C.A.Bytes()
-	copy(out[10*FieldBytes:11*FieldBytes], bitstring.ReverseBytes(t[:]))
-	t = gt.B.C.B.Bytes()
-	copy(out[11*FieldBytes:12*FieldBytes], bitstring.ReverseBytes(t[:]))
+func (gt *Gt) Bytes() []byte {
+	var out [GtBytes]byte
+	t := gt.U0.U0.U0.Bytes()
+	copy(out[:FpBytes], bitstring.ReverseBytes(t))
+	t = gt.U0.U0.U1.Bytes()
+	copy(out[FpBytes:2*FpBytes], bitstring.ReverseBytes(t))
+	t = gt.U0.U1.U0.Bytes()
+	copy(out[2*FpBytes:3*FpBytes], bitstring.ReverseBytes(t))
+	t = gt.U0.U1.U1.Bytes()
+	copy(out[3*FpBytes:4*FpBytes], bitstring.ReverseBytes(t))
+	t = gt.U0.U2.U0.Bytes()
+	copy(out[4*FpBytes:5*FpBytes], bitstring.ReverseBytes(t))
+	t = gt.U0.U2.U1.Bytes()
+	copy(out[5*FpBytes:6*FpBytes], bitstring.ReverseBytes(t))
+	t = gt.U1.U0.U0.Bytes()
+	copy(out[6*FpBytes:7*FpBytes], bitstring.ReverseBytes(t))
+	t = gt.U1.U0.U1.Bytes()
+	copy(out[7*FpBytes:8*FpBytes], bitstring.ReverseBytes(t))
+	t = gt.U1.U1.U0.Bytes()
+	copy(out[8*FpBytes:9*FpBytes], bitstring.ReverseBytes(t))
+	t = gt.U1.U1.U1.Bytes()
+	copy(out[9*FpBytes:10*FpBytes], bitstring.ReverseBytes(t))
+	t = gt.U1.U2.U0.Bytes()
+	copy(out[10*FpBytes:11*FpBytes], bitstring.ReverseBytes(t))
+	t = gt.U1.U2.U1.Bytes()
+	copy(out[11*FpBytes:], bitstring.ReverseBytes(t))
 
-	return out
+	return out[:]
 }
 
 // SetBytes attempts to convert a big-endian byte representation of
 // a scalar into a `Gt`, failing if the input is not canonical.
-func (gt *Gt) SetBytes(input *[GtFieldBytes]byte) (res *Gt, ok uint64) {
-	var t [FieldBytes]byte
+func (gt *Gt) SetBytes(input []byte) (ok uint64) {
+	var t [FpBytes]byte
 	var valid [12]uint64
-	copy(t[:], bitstring.ReverseBytes(input[:FieldBytes]))
-	_, valid[0] = gt.A.A.A.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[FieldBytes:2*FieldBytes]))
-	_, valid[1] = gt.A.A.B.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[2*FieldBytes:3*FieldBytes]))
-	_, valid[2] = gt.A.B.A.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[3*FieldBytes:4*FieldBytes]))
-	_, valid[3] = gt.A.B.B.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[4*FieldBytes:5*FieldBytes]))
-	_, valid[4] = gt.A.C.A.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[5*FieldBytes:6*FieldBytes]))
-	_, valid[5] = gt.A.C.B.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[6*FieldBytes:7*FieldBytes]))
-	_, valid[6] = gt.B.A.A.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[7*FieldBytes:8*FieldBytes]))
-	_, valid[7] = gt.B.A.B.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[8*FieldBytes:9*FieldBytes]))
-	_, valid[8] = gt.B.B.A.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[9*FieldBytes:10*FieldBytes]))
-	_, valid[9] = gt.B.B.B.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[10*FieldBytes:11*FieldBytes]))
-	_, valid[10] = gt.B.C.A.SetBytes(&t)
-	copy(t[:], bitstring.ReverseBytes(input[11*FieldBytes:12*FieldBytes]))
-	_, valid[11] = gt.B.C.B.SetBytes(&t)
+	copy(t[:], bitstring.ReverseBytes(input[:FpBytes]))
+	valid[0] = gt.U0.U0.U0.SetBytes(t[:])
+	copy(t[:], bitstring.ReverseBytes(input[FpBytes:2*FpBytes]))
+	valid[1] = gt.U0.U0.U1.SetBytes(t[:])
+	copy(t[:], bitstring.ReverseBytes(input[2*FpBytes:3*FpBytes]))
+	valid[2] = gt.U0.U1.U0.SetBytes(t[:])
+	copy(t[:], bitstring.ReverseBytes(input[3*FpBytes:4*FpBytes]))
+	valid[3] = gt.U0.U1.U1.SetBytes(t[:])
+	copy(t[:], bitstring.ReverseBytes(input[4*FpBytes:5*FpBytes]))
+	valid[4] = gt.U0.U2.U0.SetBytes(t[:])
+	copy(t[:], bitstring.ReverseBytes(input[5*FpBytes:6*FpBytes]))
+	valid[5] = gt.U0.U2.U1.SetBytes(t[:])
+	copy(t[:], bitstring.ReverseBytes(input[6*FpBytes:7*FpBytes]))
+	valid[6] = gt.U1.U0.U0.SetBytes(t[:])
+	copy(t[:], bitstring.ReverseBytes(input[7*FpBytes:8*FpBytes]))
+	valid[7] = gt.U1.U0.U1.SetBytes(t[:])
+	copy(t[:], bitstring.ReverseBytes(input[8*FpBytes:9*FpBytes]))
+	valid[8] = gt.U1.U1.U0.SetBytes(t[:])
+	copy(t[:], bitstring.ReverseBytes(input[9*FpBytes:10*FpBytes]))
+	valid[9] = gt.U1.U1.U1.SetBytes(t[:])
+	copy(t[:], bitstring.ReverseBytes(input[10*FpBytes:11*FpBytes]))
+	valid[10] = gt.U1.U2.U0.SetBytes(t[:])
+	copy(t[:], bitstring.ReverseBytes(input[11*FpBytes:12*FpBytes]))
+	valid[11] = gt.U1.U2.U1.SetBytes(t[:])
 
-	return gt, valid[0] & valid[1] &
+	return valid[0] & valid[1] &
 		valid[2] & valid[3] &
 		valid[4] & valid[5] &
 		valid[6] & valid[7] &
@@ -162,265 +85,154 @@ func (gt *Gt) SetBytes(input *[GtFieldBytes]byte) (res *Gt, ok uint64) {
 		valid[10] & valid[11]
 }
 
-// Equal returns 1 if gt == rhs, 0 otherwise.
-func (gt *Gt) Equal(rhs *Gt) uint64 {
-	return (*Fp12)(gt).Equal((*Fp12)(rhs))
+// FinalExponentiation performs a "final exponentiation" routine to convert the result
+// of a Miller loop into an element of `Gt` with help of efficient squaring
+// operation in the so-called `cyclotomic subgroup` of `Fq6` so that
+// it can be compared with other elements of `Gt`.
+func (gt *Gt) FinalExponentiation(a *Gt) {
+	var t0, t1, t2, t3, t4, t5, t6, t Fp12
+	Fp12FrobeniusAutomorphism(&t0, &a.Fp12)
+	Fp12FrobeniusAutomorphism(&t0, &t0)
+	Fp12FrobeniusAutomorphism(&t0, &t0)
+	Fp12FrobeniusAutomorphism(&t0, &t0)
+	Fp12FrobeniusAutomorphism(&t0, &t0)
+	Fp12FrobeniusAutomorphism(&t0, &t0)
+
+	// Shouldn't happen since we enforce `a` to be non-zero but just in case
+	wasInverted := t1.Inv(&a.Fp12)
+	t2.Mul(&t0, &t1)
+	t1.Set(&t2)
+	Fp12FrobeniusAutomorphism(&t2, &t2)
+	Fp12FrobeniusAutomorphism(&t2, &t2)
+	t2.Mul(&t2, &t1)
+	CyclotomicSquare(&t1, &t2)
+	Conjugate(&t1, &t1)
+
+	CyclotomicExp(&t3, &t2, X)
+	CyclotomicSquare(&t4, &t3)
+	t5.Mul(&t1, &t3)
+	CyclotomicExp(&t1, &t5, X)
+	CyclotomicExp(&t0, &t1, X)
+	CyclotomicExp(&t6, &t0, X)
+	t6.Mul(&t6, &t4)
+	CyclotomicExp(&t4, &t6, X)
+	Conjugate(&t5, &t5)
+	t4.Mul(&t4, &t5)
+	t4.Mul(&t4, &t2)
+	Conjugate(&t5, &t2)
+	t1.Mul(&t1, &t2)
+	Fp12FrobeniusAutomorphism(&t1, &t1)
+	Fp12FrobeniusAutomorphism(&t1, &t1)
+	Fp12FrobeniusAutomorphism(&t1, &t1)
+	t6.Mul(&t6, &t5)
+	Fp12FrobeniusAutomorphism(&t6, &t6)
+	t3.Mul(&t3, &t0)
+	Fp12FrobeniusAutomorphism(&t3, &t3)
+	Fp12FrobeniusAutomorphism(&t3, &t3)
+	t3.Mul(&t3, &t1)
+	t3.Mul(&t3, &t6)
+	t.Mul(&t3, &t4)
+
+	gt.Select(wasInverted, &gt.Fp12, &t)
 }
 
-// Generator returns the base point.
-func (gt *Gt) Generator() *Gt {
-	// pairing(&G1::generator(), &G2::generator())
-	gt.Set((*Gt)(&Fp12{
-		A: Fp6{
-			A: Fp2{
-				A: Fp{
-					0x1972e433a01f85c5,
-					0x97d32b76fd772538,
-					0xc8ce546fc96bcdf9,
-					0xcef63e7366d40614,
-					0xa611342781843780,
-					0x13f3448a3fc6d825,
-				},
-				B: Fp{
-					0xd26331b02e9d6995,
-					0x9d68a482f7797e7d,
-					0x9c9b29248d39ea92,
-					0xf4801ca2e13107aa,
-					0xa16c0732bdbcb066,
-					0x083ca4afba360478,
-				},
-			},
-			B: Fp2{
-				A: Fp{
-					0x59e261db0916b641,
-					0x2716b6f4b23e960d,
-					0xc8e55b10a0bd9c45,
-					0x0bdb0bd99c4deda8,
-					0x8cf89ebf57fdaac5,
-					0x12d6b7929e777a5e,
-				},
-				B: Fp{
-					0x5fc85188b0e15f35,
-					0x34a06e3a8f096365,
-					0xdb3126a6e02ad62c,
-					0xfc6f5aa97d9a990b,
-					0xa12f55f5eb89c210,
-					0x1723703a926f8889,
-				},
-			},
-			C: Fp2{
-				A: Fp{
-					0x93588f2971828778,
-					0x43f65b8611ab7585,
-					0x3183aaf5ec279fdf,
-					0xfa73d7e18ac99df6,
-					0x64e176a6a64c99b0,
-					0x179fa78c58388f1f,
-				},
-				B: Fp{
-					0x672a0a11ca2aef12,
-					0x0d11b9b52aa3f16b,
-					0xa44412d0699d056e,
-					0xc01d0177221a5ba5,
-					0x66e0cede6c735529,
-					0x05f5a71e9fddc339,
-				},
-			},
-		},
-		B: Fp6{
-			A: Fp2{
-				A: Fp{
-					0xd30a88a1b062c679,
-					0x5ac56a5d35fc8304,
-					0xd0c834a6a81f290d,
-					0xcd5430c2da3707c7,
-					0xf0c27ff780500af0,
-					0x09245da6e2d72eae,
-				},
-				B: Fp{
-					0x9f2e0676791b5156,
-					0xe2d1c8234918fe13,
-					0x4c9e459f3c561bf4,
-					0xa3e85e53b9d3e3c1,
-					0x820a121e21a70020,
-					0x15af618341c59acc,
-				},
-			},
-			B: Fp2{
-				A: Fp{
-					0x7c95658c24993ab1,
-					0x73eb38721ca886b9,
-					0x5256d749477434bc,
-					0x8ba41902ea504a8b,
-					0x04a3d3f80c86ce6d,
-					0x18a64a87fb686eaa,
-				},
-				B: Fp{
-					0xbb83e71bb920cf26,
-					0x2a5277ac92a73945,
-					0xfc0ee59f94f046a0,
-					0x7158cdf3786058f7,
-					0x7cc1061b82f945f6,
-					0x03f847aa9fdbe567,
-				},
-			},
-			C: Fp2{
-				A: Fp{
-					0x8078dba56134e657,
-					0x1cd7ec9a43998a6e,
-					0xb1aa599a1a993766,
-					0xc9a0f62f0842ee44,
-					0x8e159be3b605dffa,
-					0x0c86ba0d4af13fc2,
-				},
-				B: Fp{
-					0xe80ff2a06a52ffb1,
-					0x7694ca48721a906c,
-					0x7583183e03b08514,
-					0xf567afdd40cee4e2,
-					0x9a6d96d2e526a5fc,
-					0x197e9f49861f2242,
-				},
+func Fp12FrobeniusAutomorphism(f, arg *Fp12) *Fp12 {
+	var a, b, up1epm1div6 Fp6
+
+	// (u + 1)^((p - 1) / 6)
+	up1epm1div6.U0 = Fp2{
+		U0: Fp{
+			FpMontgomeryDomainFieldElement: fiat.FpMontgomeryDomainFieldElement{
+				0x07089552b319d465,
+				0xc6695f92b50a8313,
+				0x97e83cccd117228f,
+				0xa35baecab2dc29ee,
+				0x1ce393ea5daace4d,
+				0x08f2220fb0fb66eb,
 			},
 		},
-	}))
-	return gt
-}
-
-// Add adds this value to another value.
-func (gt *Gt) Add(arg1, arg2 *Gt) *Gt {
-	(*Fp12)(gt).Mul((*Fp12)(arg1), (*Fp12)(arg2))
-	return gt
-}
-
-// Double this value.
-func (gt *Gt) Double(a *Gt) *Gt {
-	(*Fp12)(gt).Square((*Fp12)(a))
-	return gt
-}
-
-// Sub subtracts the two values.
-func (gt *Gt) Sub(arg1, arg2 *Gt) *Gt {
-	var t Fp12
-	t.Conjugate((*Fp12)(arg2))
-	(*Fp12)(gt).Mul((*Fp12)(arg1), &t)
-	return gt
-}
-
-// Neg negates this value.
-func (gt *Gt) Neg(a *Gt) *Gt {
-	(*Fp12)(gt).Conjugate((*Fp12)(a))
-	return gt
-}
-
-// Mul multiplies this value by the input scalar.
-func (gt *Gt) Mul(a *Gt, s *limb4.FieldValue) *Gt {
-	var f, p Fp12
-	f.Set((*Fp12)(a))
-	bytes := s.Bytes()
-
-	precomputed := [16]Fp12{}
-	precomputed[1].Set(&f)
-	for i := 2; i < 16; i += 2 {
-		precomputed[i].Square(&precomputed[i>>1])
-		precomputed[i+1].Mul(&precomputed[i], &f)
+		U1: Fp{
+			FpMontgomeryDomainFieldElement: fiat.FpMontgomeryDomainFieldElement{
+				0xb2f66aad4ce5d646,
+				0x5842a06bfc497cec,
+				0xcf4895d42599d394,
+				0xc11b9cba40a8e8d0,
+				0x2e3813cbe5a0de89,
+				0x110eefda88847faf,
+			},
+		},
 	}
-	for i := 0; i < 256; i += 4 {
-		// Brouwer / windowing method. window size of 4.
-		for j := 0; j < 4; j++ {
-			p.Square(&p)
-		}
-		window := bytes[32-1-i>>3] >> (4 - i&0x04) & 0x0F
-		p.Mul(&p, &precomputed[window])
+
+	Fp6FrobeniusAutomorphism(&a, &arg.U0)
+	Fp6FrobeniusAutomorphism(&b, &arg.U1)
+
+	// b' = b' * (u + 1)^((p - 1) / 6)
+	b.Mul(&b, &up1epm1div6)
+
+	f.U0.Set(&a)
+	f.U1.Set(&b)
+	return f
+}
+
+// Fp6FrobeniusAutomorphism raises this element to p.
+func Fp6FrobeniusAutomorphism(f, arg *Fp6) *Fp6 {
+	var a, b, c Fp2
+	pm1Div3 := Fp2{
+		U1: Fp{
+			FpMontgomeryDomainFieldElement: fiat.FpMontgomeryDomainFieldElement{
+				0xcd03c9e48671f071,
+				0x5dab22461fcda5d2,
+				0x587042afd3851b95,
+				0x8eb60ebe01bacb9e,
+				0x03f97d6e83d050d2,
+				0x18f0206554638741,
+			},
+		},
 	}
-	(*Fp12)(gt).Set(&p)
-	return gt
+	p2m2Div3 := Fp2{
+		U0: Fp{
+			FpMontgomeryDomainFieldElement: fiat.FpMontgomeryDomainFieldElement{
+				0x890dc9e4867545c3,
+				0x2af322533285a5d5,
+				0x50880866309b7e2c,
+				0xa20d1b8c7e881024,
+				0x14e4f04fe2db9068,
+				0x14e56d3f1564853a,
+			},
+		},
+	}
+	Fp2FrobeniusAutomorphism(&a, &arg.U0)
+	Fp2FrobeniusAutomorphism(&b, &arg.U1)
+	Fp2FrobeniusAutomorphism(&c, &arg.U2)
+
+	// b = b * (u + 1)^((p - 1) / 3)
+	b.Mul(&b, &pm1Div3)
+
+	// c = c * (u + 1)^((2p - 2) / 3)
+	c.Mul(&c, &p2m2Div3)
+
+	f.U0.Set(&a)
+	f.U1.Set(&b)
+	f.U2.Set(&c)
+	return f
 }
 
-// Square this value.
-func (gt *Gt) Square(a *Gt) *Gt {
-	(*Fp12)(gt).cyclotomicSquare((*Fp12)(a))
-	return gt
+// Fp2FrobeniusAutomorphism raises this element to p.
+func Fp2FrobeniusAutomorphism(f, a *Fp2) {
+	// This is always just a conjugation. If you're curious why, here's
+	// an article about it: https://alicebob.cryptoland.net/the-frobenius-endomorphism-with-finite-fields/
+	Conjugate(f, a)
 }
 
-// Invert this value.
-func (gt *Gt) Invert(a *Gt) (res *Gt, wasInverted uint64) {
-	_, wasInverted = (*Fp12)(gt).Invert((*Fp12)(a))
-	return gt, wasInverted
-}
-
-func fp4Square(a, b, arg1, arg2 *Fp2) {
-	var t0, t1, t2 Fp2
-
-	t0.Square(arg1)
-	t1.Square(arg2)
-	t2.MulByNonResidue(&t1)
-	a.Add(&t2, &t0)
-	t2.Add(arg1, arg2)
-	t2.Square(&t2)
-	t2.Sub(&t2, &t0)
-	b.Sub(&t2, &t1)
-}
-
-func (f *Fp12) cyclotomicSquare(a *Fp12) {
-	// Adaptation of Algorithm 5.5.4, Guide to Pairing-Based Cryptography
-	// Faster Squaring in the Cyclotomic Subgroup of Sixth Degree Extensions
-	// https://eprint.iacr.org/2009/565.pdf
-	var z0, z1, z2, z3, z4, z5, t0, t1, t2, t3 Fp2
-	z0.Set(&a.A.A)
-	z4.Set(&a.A.B)
-	z3.Set(&a.A.C)
-	z2.Set(&a.B.A)
-	z1.Set(&a.B.B)
-	z5.Set(&a.B.C)
-
-	fp4Square(&t0, &t1, &z0, &z1)
-	z0.Sub(&t0, &z0)
-	z0.Double(&z0)
-	z0.Add(&z0, &t0)
-
-	z1.Add(&t1, &z1)
-	z1.Double(&z1)
-	z1.Add(&z1, &t1)
-
-	fp4Square(&t0, &t1, &z2, &z3)
-	fp4Square(&t2, &t3, &z4, &z5)
-
-	z4.Sub(&t0, &z4)
-	z4.Double(&z4)
-	z4.Add(&z4, &t0)
-
-	z5.Add(&z5, &t1)
-	z5.Double(&z5)
-	z5.Add(&z5, &t1)
-
-	t0.MulByNonResidue(&t3)
-	z2.Add(&z2, &t0)
-	z2.Double(&z2)
-	z2.Add(&z2, &t0)
-
-	z3.Sub(&t2, &z3)
-	z3.Double(&z3)
-	z3.Add(&z3, &t2)
-
-	f.A.A.Set(&z0)
-	f.A.B.Set(&z4)
-	f.A.C.Set(&z3)
-
-	f.B.A.Set(&z2)
-	f.B.B.Set(&z1)
-	f.B.C.Set(&z5)
-}
-
-func (f *Fp12) cyclotomicExp(a *Fp12) {
+func CyclotomicExp(f *Fp12, a *Fp12, exp uint64) {
 	var t Fp12
 	t.SetOne()
-	foundOne := 0
+	foundOne := uint64(0)
 
 	for i := 63; i >= 0; i-- {
-		b := int((X >> i) & 1)
+		b := (exp >> i) & 1
 		if foundOne == 1 {
-			t.cyclotomicSquare(&t)
+			CyclotomicSquare(&t, &t)
 		} else {
 			foundOne = b
 		}
@@ -428,5 +240,74 @@ func (f *Fp12) cyclotomicExp(a *Fp12) {
 			t.Mul(&t, a)
 		}
 	}
-	f.Conjugate(&t)
+	Conjugate(f, &t)
+}
+
+func CyclotomicSquare(f, a *Fp12) {
+	// Adaptation of Algorithm 5.5.4, Guide to Pairing-Based Cryptography
+	// Faster Squaring in the Cyclotomic Subgroup of Sixth Degree Extensions
+	// https://eprint.iacr.org/2009/565.pdf
+	var params fp6Params
+	var z0, z1, z2, z3, z4, z5, t0, t1, t2, t3 Fp2
+	z0.Set(&a.U0.U0)
+	z4.Set(&a.U0.U1)
+	z3.Set(&a.U0.U2)
+	z2.Set(&a.U1.U0)
+	z1.Set(&a.U1.U1)
+	z5.Set(&a.U1.U2)
+
+	fp4Square(&t0, &t1, &z0, &z1)
+	z0.Sub(&t0, &z0)
+	z0.Add(&z0, &z0)
+	z0.Add(&z0, &t0)
+
+	z1.Add(&t1, &z1)
+	z1.Add(&z1, &z1)
+	z1.Add(&z1, &t1)
+
+	fp4Square(&t0, &t1, &z2, &z3)
+	fp4Square(&t2, &t3, &z4, &z5)
+
+	z4.Sub(&t0, &z4)
+	z4.Add(&z4, &z4)
+	z4.Add(&z4, &t0)
+
+	z5.Add(&z5, &t1)
+	z5.Add(&z5, &z5)
+	z5.Add(&z5, &t1)
+
+	params.MulByCubicNonResidue(&t0, &t3)
+	z2.Add(&z2, &t0)
+	z2.Add(&z2, &z2)
+	z2.Add(&z2, &t0)
+
+	z3.Sub(&t2, &z3)
+	z3.Add(&z3, &z3)
+	z3.Add(&z3, &t2)
+
+	f.U0.U0.Set(&z0)
+	f.U0.U1.Set(&z4)
+	f.U0.U2.Set(&z3)
+	f.U1.U0.Set(&z2)
+	f.U1.U1.Set(&z1)
+	f.U1.U2.Set(&z5)
+}
+
+func Conjugate[BFP fieldsImpl.FiniteFieldPtrConstraint[BFP, BF], A fieldsImpl.QuadraticFieldExtensionArith[BFP], BF any](f, arg *fieldsImpl.QuadraticFieldExtensionImpl[BFP, A, BF]) {
+	BFP(&f.U0).Set(&arg.U0)
+	BFP(&f.U1).Neg(&arg.U1)
+}
+
+func fp4Square(a, b, arg1, arg2 *Fp2) {
+	var params fp6Params
+	var t0, t1, t2 Fp2
+
+	t0.Square(arg1)
+	t1.Square(arg2)
+	params.MulByCubicNonResidue(&t2, &t1)
+	a.Add(&t2, &t0)
+	t2.Add(arg1, arg2)
+	t2.Square(&t2)
+	t2.Sub(&t2, &t0)
+	b.Sub(&t2, &t1)
 }

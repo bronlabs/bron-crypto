@@ -3,12 +3,13 @@ package bls12381
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	bls12381impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
+	bls12381Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
@@ -16,12 +17,11 @@ import (
 const Name = "BLS12381"
 
 var (
-	pcInitonce sync.Once
+	pcInitOnce sync.Once
 	pcInstance PairingCurve
 
-	p               = bls12381impl.FpModulus
-	r               = bls12381impl.FqModulus
-	embeddingDegree = new(saferith.Nat).SetUint64(12)
+	bls12381SubGroupOrder, _ = saferith.ModulusFromHex(strings.ToUpper("73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001"))
+	embeddingDegree          = new(saferith.Nat).SetUint64(12)
 )
 
 type SourceSubGroups interface {
@@ -56,7 +56,7 @@ func pcInit() {
 }
 
 func NewPairingCurve() *PairingCurve {
-	pcInitonce.Do(pcInit)
+	pcInitOnce.Do(pcInit)
 	return &pcInstance
 }
 
@@ -96,7 +96,7 @@ func (*PairingCurve) MultiPair(points ...curves.PairingPoint) (curves.GtMember, 
 	if len(points)%2 != 0 {
 		return nil, errs.NewLength("#G1 != #G2")
 	}
-	eng := new(bls12381impl.Engine)
+	eng := new(bls12381Impl.Engine)
 	for i := 0; i < len(points); i += 2 {
 		pt1, ok := points[i].(*PointG1)
 		if !ok {
@@ -106,8 +106,10 @@ func (*PairingCurve) MultiPair(points ...curves.PairingPoint) (curves.GtMember, 
 		if !ok {
 			return nil, errs.NewType("point %d is not G2", i+1)
 		}
-		eng.AddPair(pt1.V, pt2.V)
+		eng.AddPair(&pt1.V, &pt2.V)
 	}
 	value := eng.Result()
-	return &GtMember{V: value}, nil
+	result := new(GtMember)
+	result.V.Set(value)
+	return result, nil
 }

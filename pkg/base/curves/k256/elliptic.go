@@ -7,10 +7,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
-	secp256k1 "github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl/fp"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl/fq"
+	k256Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
@@ -38,7 +35,7 @@ func oldK256InitAll() {
 	oldK256.Gx = curve.Generator().AffineX().Nat().Big()
 	oldK256.Gy = curve.Generator().AffineY().Nat().Big()
 	oldK256.B = B.Nat().Big()
-	oldK256.BitSize = base.FieldBytes * 8
+	oldK256.BitSize = k256Impl.FpBits
 	oldK256.Name = Name
 }
 
@@ -52,23 +49,23 @@ func (curve *Koblitz256) Params() *elliptic.CurveParams {
 }
 
 func (*Koblitz256) IsOnCurve(x, y *big.Int) bool {
-	_, err := secp256k1.PointNew().SetNat(
-		saferithUtils.NatFromBigMod(x, fp.New().Params.Modulus),
-		saferithUtils.NatFromBigMod(y, fp.New().Params.Modulus),
-	)
+	c := NewCurve()
+	x11 := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(x, k256BaseFieldModulus))
+	y11 := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(y, k256BaseFieldModulus))
+	_, err := c.NewPoint(x11, y11)
 	return err == nil
 }
 
 func (*Koblitz256) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
 	c := NewCurve()
-	x11 := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(x1, fp.New().Params.Modulus))
-	y11 := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(y1, fp.New().Params.Modulus))
+	x11 := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(x1, k256BaseFieldModulus))
+	y11 := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(y1, k256BaseFieldModulus))
 	p1, err := c.NewPoint(x11, y11)
 	if err != nil {
 		panic("set point")
 	}
-	x22 := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(x2, fp.New().Params.Modulus))
-	y22 := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(y2, fp.New().Params.Modulus))
+	x22 := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(x2, k256BaseFieldModulus))
+	y22 := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(y2, k256BaseFieldModulus))
 	p2, err := c.NewPoint(x22, y22)
 	if err != nil {
 		panic("set point")
@@ -79,8 +76,8 @@ func (*Koblitz256) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
 
 func (*Koblitz256) Double(x1, y1 *big.Int) (x, y *big.Int) {
 	c := NewCurve()
-	x11 := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(x1, fp.New().Params.Modulus))
-	y11 := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(y1, fp.New().Params.Modulus))
+	x11 := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(x1, k256BaseFieldModulus))
+	y11 := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(y1, k256BaseFieldModulus))
 	p1, err := c.NewPoint(x11, y11)
 	if err != nil {
 		panic("set point")
@@ -91,16 +88,16 @@ func (*Koblitz256) Double(x1, y1 *big.Int) (x, y *big.Int) {
 
 func (*Koblitz256) ScalarMult(Bx, By *big.Int, k []byte) (x, y *big.Int) {
 	c := NewCurve()
-	Bxx := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(Bx, fp.New().Params.Modulus))
-	Byy := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(By, fp.New().Params.Modulus))
+	Bxx := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(Bx, k256BaseFieldModulus))
+	Byy := NewBaseFieldElement(0).SetNat(saferithUtils.NatFromBigMod(By, k256BaseFieldModulus))
 	p1, err := c.NewPoint(Bxx, Byy)
 	if err != nil {
-		panic(errs.WrapSerialisation(err, "set pointt"))
+		panic(errs.WrapSerialisation(err, "set point"))
 	}
 	if len(k) > 32 {
 		panic("invalid scalar length")
 	}
-	kk := c.Scalar().SetNat(saferithUtils.NatFromBigMod(new(big.Int).SetBytes(k), fq.New().Params.Modulus))
+	kk := c.Scalar().SetNat(saferithUtils.NatFromBigMod(new(big.Int).SetBytes(k), k256Order))
 	result := p1.ScalarMul(kk)
 	return result.AffineX().Nat().Big(), result.AffineY().Nat().Big()
 }
@@ -110,7 +107,7 @@ func (*Koblitz256) ScalarBaseMult(k []byte) (x, y *big.Int) {
 		panic("invalid scalar length")
 	}
 	c := NewCurve()
-	kk := c.Scalar().SetNat(saferithUtils.NatFromBigMod(new(big.Int).SetBytes(k), fq.New().Params.Modulus))
+	kk := c.Scalar().SetNat(saferithUtils.NatFromBigMod(new(big.Int).SetBytes(k), k256Order))
 	result := c.ScalarBaseMult(kk)
 	return result.AffineX().Nat().Big(), result.AffineY().Nat().Big()
 }

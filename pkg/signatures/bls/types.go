@@ -4,11 +4,10 @@ import (
 	"crypto/subtle"
 	"encoding"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
-	bimpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
+	bls12381Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
@@ -105,16 +104,15 @@ func (sk *PrivateKey[K]) UnmarshalBinary(data []byte) error {
 	if subtle.ConstantTimeCompare(data, zeros) == 1 {
 		return errs.NewIsZero("secret key cannot be zero")
 	}
-	var bb [base.FieldBytes]byte
+	var bb [bls12381Impl.FqBytes]byte
 	copy(bb[:], bitstring.ReverseBytes(data))
-	value, err := bimpl.FqNew().SetBytes(&bb)
-	if err != nil {
-		return errs.WrapSerialisation(err, "couldn't set bytes")
+
+	sk.d = &bls12381.Scalar{G: bls12381.GetSourceSubGroup[K]()}
+	ok := sk.d.V.SetBytes(bb[:])
+	if ok != 1 {
+		return errs.NewSerialisation("couldn't set bytes")
 	}
-	sk.d = &bls12381.Scalar{
-		V: value,
-		G: bls12381.GetSourceSubGroup[K](),
-	}
+
 	Y := sk.d.ScalarField().Curve().ScalarBaseMult(sk.d).(curves.PairingPoint)
 	sk.PublicKey = &PublicKey[K]{
 		Y: Y,

@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 )
 
 func RegisterCurvesForGob() {
@@ -16,5 +16,5 @@ func RegisterCurvesForGob() {
 	edwards25519.RegisterForGob()
 	k256.RegisterForGob()
 	p256.RegisterForGob()
-	pallas.RegisterForGob()
+	pasta.RegisterForGob()
 }

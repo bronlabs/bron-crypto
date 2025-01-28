@@ -4,7 +4,7 @@ import (
 	"reflect"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
+	curvesImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
@@ -13,7 +13,7 @@ func MarshalPointToBinary(point curves.Point) ([]byte, error) {
 }
 
 func NewPointFromBinary(input []byte) (curves.Point, error) {
-	name, data, err := impl.ParseBinary(input)
+	name, data, err := curvesImpl.ParseBinary(input)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not get curve name from binary")
 	}
@@ -33,7 +33,7 @@ func MarshalScalarToBinary(scalar curves.Scalar) ([]byte, error) {
 }
 
 func NewScalarFromBinary(input []byte) (curves.Scalar, error) {
-	name, data, err := impl.ParseBinary(input)
+	name, data, err := curvesImpl.ParseBinary(input)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not get curve name from binary")
 	}
@@ -53,7 +53,7 @@ func MarshalBaseFieldElementToBinary(element curves.BaseFieldElement) ([]byte, e
 }
 
 func NewBaseFieldElementFromBinary(input []byte) (curves.BaseFieldElement, error) {
-	name, data, err := impl.ParseBinary(input)
+	name, data, err := curvesImpl.ParseBinary(input)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not get curve name from binary")
 	}

@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	bls12381impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
+	bls12381Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
@@ -193,11 +193,11 @@ func (*ScalarField[_]) ExclusiveDisjunctiveIdentity() curves.Scalar {
 }
 
 func (*ScalarField[_]) ElementSize() int {
-	return base.FieldBytes
+	return bls12381Impl.FqBytes
 }
 
 func (*ScalarField[_]) WideElementSize() int {
-	return base.WideFieldBytes
+	return bls12381Impl.FqWideBytes
 }
 
 func (*ScalarField[_]) IsDecomposable(coprimeIdealNorms ...algebra.IntegerRingElement[curves.ScalarField, curves.Scalar]) (bool, error) {
@@ -214,7 +214,7 @@ func (*ScalarField[G]) Name() string {
 }
 
 func (*ScalarField[_]) Order() *saferith.Modulus {
-	return r
+	return bls12381SubGroupOrder
 }
 
 func (sf *ScalarField[_]) Element() curves.Scalar {
@@ -225,7 +225,7 @@ func (sf *ScalarField[_]) Random(prng io.Reader) (curves.Scalar, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
 	}
-	var buffer [base.WideFieldBytes]byte
+	var buffer [bls12381Impl.FqWideBytes]byte
 	_, err := io.ReadFull(prng, buffer[:])
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "could not read from prng")
@@ -235,7 +235,7 @@ func (sf *ScalarField[_]) Random(prng io.Reader) (curves.Scalar, error) {
 }
 
 func (sf *ScalarField[_]) Hash(x []byte) (curves.Scalar, error) {
-	u, err := sf.Curve().HashToScalars(1, x, nil)
+	u, err := sf.Curve().HashToScalars(1, base.Hash2CurveAppTag+Hash2CurveScalarSuiteG1, x)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "hash to scalar for bls12381 failed")
 	}
@@ -244,18 +244,16 @@ func (sf *ScalarField[_]) Hash(x []byte) (curves.Scalar, error) {
 
 func (sf *ScalarField[_]) Select(choice uint64, x0, x1 curves.Scalar) curves.Scalar {
 	x0s, ok0 := x0.(*Scalar)
-	if !ok0 || x0s.V == nil {
+	if !ok0 {
 		panic("x0 is not a non-empty BLS12381 scalar")
 	}
 	x1s, ok1 := x1.(*Scalar)
-	if !ok1 || x1s.V == nil {
+	if !ok1 {
 		panic("x1 is not a non-empty BLS12381 scalar")
 	}
-	s, oks := sf.Element().(*Scalar)
-	if !oks || s.V == nil {
-		panic("s is not a non-empty BLS12381 scalar")
-	}
-	s.V.CMove(x0s.V, x1s.V, choice)
+
+	s := &Scalar{G: sf.Curve()}
+	s.V.Select(choice, &x0s.V, &x1s.V)
 	return s
 }
 
@@ -281,20 +279,18 @@ func (*ScalarField[_]) Mul(x algebra.MultiplicativeGroupoidElement[curves.Scalar
 
 // === Additive Monoid Methods.
 
-func (*ScalarField[S]) AdditiveIdentity() curves.Scalar {
-	return &Scalar{
-		V: bls12381impl.FqNew().SetZero(),
-		G: GetSourceSubGroup[S](),
-	}
+func (sf *ScalarField[_]) AdditiveIdentity() curves.Scalar {
+	result := &Scalar{G: sf.Curve()}
+	result.V.SetZero()
+	return result
 }
 
 // === Multiplicative Monoid Methods.
 
-func (*ScalarField[S]) MultiplicativeIdentity() curves.Scalar {
-	return &Scalar{
-		V: bls12381impl.FqNew().SetOne(),
-		G: GetSourceSubGroup[S](),
-	}
+func (sf *ScalarField[S]) MultiplicativeIdentity() curves.Scalar {
+	result := &Scalar{G: sf.Curve()}
+	result.V.SetOne()
+	return result
 }
 
 // === Additive Group Methods.
@@ -323,13 +319,19 @@ func (*ScalarField[_]) Div(x algebra.MultiplicativeGroupElement[curves.ScalarFie
 
 // === Ring Methods.
 
-func (*ScalarField[S]) Sqrt(s algebra.RingElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
+func (sf *ScalarField[S]) Sqrt(s algebra.RingElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
 	ss, ok := s.(*Scalar)
 	if !ok {
 		return nil, errs.NewType("given point is not from this field")
 	}
-	ss.G = GetSourceSubGroup[S]()
-	return ss.Sqrt()
+
+	result := &Scalar{G: sf.Curve()}
+	ok2 := result.V.Sqrt(&ss.V)
+	if ok2 != 1 {
+		return nil, errs.NewFailed("not a square")
+	}
+
+	return result, nil
 }
 
 // === Finite Field Methods.
@@ -359,17 +361,19 @@ func (sf *ScalarField[_]) Trace(e curves.Scalar) curves.Scalar {
 }
 
 func (*ScalarField[_]) FieldBytes() int {
-	return base.FieldBytes
+	return bls12381Impl.FqBytes
 }
 
 func (*ScalarField[_]) WideFieldBytes() int {
-	return base.WideFieldBytes
+	return bls12381Impl.FqWideBytes
 }
 
 // === Zp Methods.
 
-func (*ScalarField[S]) New(value uint64) curves.Scalar {
-	return GetSourceSubGroup[S]().ScalarField().Element().SetNat(new(saferith.Nat).SetUint64(value))
+func (sf *ScalarField[S]) New(value uint64) curves.Scalar {
+	result := &Scalar{G: sf.Curve()}
+	result.V.SetUint64(value)
+	return result
 }
 
 func (sf *ScalarField[_]) Zero() curves.Scalar {

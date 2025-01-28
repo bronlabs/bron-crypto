@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 )
@@ -22,7 +22,8 @@ var allCurvesMapper = map[string]curves.Curve{
 	edwards25519.Name: edwards25519.NewCurve(),
 	k256.Name:         k256.NewCurve(),
 	p256.Name:         p256.NewCurve(),
-	pallas.Name:       pallas.NewCurve(),
+	pasta.PallasName:  pasta.NewPallasCurve(),
+	pasta.VestaName:   pasta.NewVestaCurve(),
 }
 
 func GetCurveByName(name string) (curves.Curve, error) {

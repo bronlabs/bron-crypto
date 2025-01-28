@@ -1,9 +1,11 @@
 package p256
 
 import (
+	"encoding/binary"
 	"io"
 	"iter"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 
@@ -12,54 +14,74 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/hash2curve"
-	p256impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl/fp"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl/fq"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/h2c"
+	pointsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/points"
+	p256Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
 )
 
-const Name = "P256" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
+const (
+	Name                  = "P256"
+	Hash2CurveSuite       = "P256_XMD:SHA-256_SSWU_RO_"
+	Hash2CurveScalarSuite = "P256_XMD:SHA-256_SSWU_RO_SC_"
+)
 
 var (
-	p256Initonce sync.Once
+	p256InitOnce sync.Once
 	p256Instance Curve
+	p256Order    *saferith.Modulus
 )
 
 var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
-	hash2curve.CurveHasher
-
 	_ ds.Incomparable
 }
 
 func p256Init() {
-	p256Instance = Curve{}
-	p256Instance.CurveHasher = hash2curve.NewCurveHasherSha256(
-		curves.Curve(&p256Instance),
-		base.HASH2CURVE_APP_TAG,
-		hash2curve.DstTagSswu,
-	)
-}
+	var orderBytes [8 * p256Impl.FqSatLimbs]byte
+	for i, l := range p256Impl.FqModulus {
+		binary.LittleEndian.PutUint64(orderBytes[i*8:(i+1)*8], l)
+	}
+	slices.Reverse(orderBytes[:])
+	p256Order = saferith.ModulusFromBytes(orderBytes[:])
 
-// SetHasherAppTag sets the hasher to use for hash-to-curve operations with a
-// custom "appTag". Not exposed in the `curves.Curve` interface, as by
-// default we should use the library-wide HASH2CURVE_APP_TAG for compatibility.
-func (c *Curve) SetHasherAppTag(appTag string) {
-	c.CurveHasher = hash2curve.NewCurveHasherSha256(
-		curves.Curve(&p256Instance),
-		appTag,
-		hash2curve.DstTagSswu,
-	)
+	p256Instance = Curve{}
 }
 
 func NewCurve() *Curve {
-	p256Initonce.Do(p256Init)
+	p256InitOnce.Do(p256Init)
 	return &p256Instance
+}
+
+func (*Curve) HashToFieldElements(count int, dstPrefix string, msg []byte) (u []curves.BaseFieldElement, err error) {
+	out := make([]p256Impl.Fp, count)
+	h2c.HashToField(out[:], p256Impl.CurveHasherParams{}, dstPrefix+Hash2CurveSuite, msg)
+
+	u = make([]curves.BaseFieldElement, count)
+	for i := range out {
+		v := new(BaseFieldElement)
+		v.V.Set(&out[i])
+		u[i] = v
+	}
+
+	return u, nil
+}
+
+func (*Curve) HashToScalars(count int, dstPrefix string, msg []byte) (u []curves.Scalar, err error) {
+	out := make([]p256Impl.Fq, count)
+	h2c.HashToField(out[:], p256Impl.CurveHasherParams{}, dstPrefix+Hash2CurveScalarSuite, msg)
+
+	u = make([]curves.Scalar, count)
+	for i := range out {
+		v := new(Scalar)
+		v.V.Set(&out[i])
+		u[i] = v
+	}
+
+	return u, nil
 }
 
 func (*Curve) Cardinality() *saferith.Nat {
@@ -154,55 +176,38 @@ func (c *Curve) Element() curves.Point {
 	return c.AdditiveIdentity()
 }
 
-func (c *Curve) Random(prng io.Reader) (curves.Point, error) {
-	if prng == nil {
-		return nil, errs.NewIsNil("prng is nil")
+func (*Curve) Random(prng io.Reader) (curves.Point, error) {
+	p := new(Point)
+	ok := p.V.SetRandom(prng)
+	if ok != 1 {
+		return nil, errs.NewRandomSample("point")
 	}
-	var seed [64]byte
-	if _, err := io.ReadFull(prng, seed[:]); err != nil {
-		return nil, errs.WrapRandomSample(err, "could not read seed")
-	}
-	return c.Hash(seed[:])
+
+	return p, nil
 }
 
 func (c *Curve) Hash(input []byte) (curves.Point, error) {
-	return c.HashWithDst(input, nil)
+	return c.HashWithDst(base.Hash2CurveAppTag+Hash2CurveSuite, input)
 }
 
-func (*Curve) HashWithDst(input, dst []byte) (curves.Point, error) {
-	p := p256impl.PointNew()
-	u, err := NewCurve().HashToFieldElements(2, input, dst)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "hash to field element of P256 failed")
-	}
-	u0, ok0 := u[0].(*BaseFieldElement)
-	u1, ok1 := u[1].(*BaseFieldElement)
-	if !ok0 || !ok1 || u0.V == nil || u1.V == nil {
-		return nil, errs.NewType("cast to P256 field element failed")
-	}
-	err = p.Arithmetic.Map(u0.V, u1.V, p)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "map to P256 point failed")
-	}
-	return &Point{V: p}, nil
+func (*Curve) HashWithDst(dst string, input []byte) (curves.Point, error) {
+	p := new(Point)
+	p.V.Hash(dst, input)
+	return p, nil
 }
 
-func (c *Curve) Select(choice uint64, x0, x1 curves.Point) curves.Point {
+func (*Curve) Select(choice uint64, x0, x1 curves.Point) curves.Point {
 	x0p, ok0 := x0.(*Point)
-	if !ok0 || x0p.V == nil {
+	if !ok0 {
 		panic("x0 is not a non-empty P256 point")
 	}
 	x1p, ok1 := x1.(*Point)
-	if !ok1 || x1p.V == nil {
+	if !ok1 {
 		panic("x1 is not a non-empty P256 point")
 	}
-	p, okp := c.Element().(*Point)
-	if !okp || p.V == nil {
-		panic("curve.Element() is not a non-empty P256 point")
-	}
-	p.V.X.CMove(x0p.V.X, x1p.V.X, choice)
-	p.V.Y.CMove(x0p.V.Y, x1p.V.Y, choice)
-	p.V.Z.CMove(x0p.V.Z, x1p.V.Z, choice)
+
+	p := new(Point)
+	p.V.Select(choice, &x0p.V, &x1p.V)
 	return p
 }
 
@@ -219,9 +224,9 @@ func (*Curve) Add(x algebra.AdditiveGroupoidElement[curves.Curve, curves.Point],
 // === Monoid Methods.
 
 func (*Curve) AdditiveIdentity() curves.Point {
-	return &Point{
-		V: p256impl.PointNew().Identity(),
-	}
+	p := new(Point)
+	p.V.SetIdentity()
+	return p
 }
 
 // === Group Methods.
@@ -243,9 +248,9 @@ func (*Curve) Sub(x algebra.AdditiveGroupElement[curves.Curve, curves.Point], ys
 // === Cyclic Group Methods.
 
 func (*Curve) Generator() curves.Point {
-	return &Point{
-		V: p256impl.PointNew().Generator(),
-	}
+	p := new(Point)
+	p.V.SetGenerator()
+	return p
 }
 
 // === Variety Methods.
@@ -265,7 +270,7 @@ func (*Curve) BaseField() curves.BaseField {
 	return NewBaseField()
 }
 
-func (*Curve) NewPoint(x, y algebra.AlgebraicVarietyBaseFieldElement[curves.Curve, curves.BaseField, curves.Point, curves.BaseFieldElement]) (curves.Point, error) {
+func (c *Curve) NewPoint(x, y algebra.AlgebraicVarietyBaseFieldElement[curves.Curve, curves.BaseField, curves.Point, curves.BaseFieldElement]) (curves.Point, error) {
 	if x == nil || y == nil {
 		return nil, errs.NewIsNil("argument is nil")
 	}
@@ -277,11 +282,18 @@ func (*Curve) NewPoint(x, y algebra.AlgebraicVarietyBaseFieldElement[curves.Curv
 	if !ok {
 		return nil, errs.NewType("y is not the right type")
 	}
-	value, err := p256impl.PointNew().SetNat(xx.Nat(), yy.Nat())
-	if err != nil {
-		return nil, errs.WrapCoordinates(err, "could not set x,y")
+
+	if xx.IsZero() && yy.IsZero() {
+		return c.AdditiveIdentity(), nil
 	}
-	return &Point{V: value}, nil
+
+	value := new(Point)
+	ok2 := value.V.SetAffine(&xx.V, &yy.V)
+	if ok2 != 1 {
+		return nil, errs.NewCoordinates("could not set x,y")
+	}
+
+	return value, nil
 }
 
 // === Curve Methods.
@@ -306,19 +318,20 @@ func (c *Curve) BaseFieldElement() curves.BaseFieldElement {
 	return c.BaseField().Zero()
 }
 
-func (c *Curve) FrobeniusEndomorphism(p curves.Point) curves.Point {
-	pp, ok := p.(*Point)
-	if !ok {
-		panic("given point is not of the right type")
-	}
-	x := pp.AffineX()
-	y := pp.AffineY()
-	characteristic := NewBaseFieldElement(0).SetNat(NewBaseField().Characteristic())
-	result, err := c.NewPoint(x.Exp(characteristic.Nat()), y.Exp(characteristic.Nat()))
-	if err != nil {
-		panic(errs.WrapFailed(err, "forbenius endomorphism did not succeed"))
-	}
-	return result
+func (*Curve) FrobeniusEndomorphism(p curves.Point) curves.Point {
+	//pp, ok := p.(*Point)
+	//if !ok {
+	//	panic("given point is not of the right type")
+	//}
+	//x := pp.AffineX()
+	//y := pp.AffineY()
+	//characteristic := NewBaseFieldElement(0).SetNat(NewBaseField().Characteristic())
+	//result, err := c.NewPoint(x.Exp(characteristic.Nat()), y.Exp(characteristic.Nat()))
+	//if err != nil {
+	//	panic(errs.WrapFailed(err, "forbenius endomorphism did not succeed"))
+	//}
+	//return result
+	panic("not implemented")
 }
 
 func (*Curve) TraceOfFrobenius() *saferith.Int {
@@ -334,7 +347,7 @@ func (*Curve) JInvariant() *saferith.Int {
 // === Prime SubGroup Methods.
 
 func (*Curve) SubGroupOrder() *saferith.Modulus {
-	return fq.New().Params.Modulus
+	return p256Order
 }
 
 func (c *Curve) ScalarBaseMult(sc algebra.ModuleScalar[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar]) curves.Point {
@@ -342,58 +355,41 @@ func (c *Curve) ScalarBaseMult(sc algebra.ModuleScalar[curves.Curve, curves.Scal
 }
 
 func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
-	nPoints := make([]*limb4.EllipticPoint, len(points))
-	nScalars := make([]*limb4.FieldValue, len(scalars))
+	nPoints := make([]p256Impl.Point, len(points))
+	nScalars := make([][]byte, len(scalars))
 	for i, pt := range points {
 		ptv, ok := pt.(*Point)
 		if !ok {
 			return nil, errs.NewFailed("invalid point type %s, expected PointP256", reflect.TypeOf(pt).Name())
 		}
-		nPoints[i] = ptv.V
+		nPoints[i].Set(&ptv.V)
 	}
 	for i, sc := range scalars {
 		s, ok := sc.(*Scalar)
 		if !ok {
 			return nil, errs.NewFailed("invalid scalar type %s, expected ScalarP256", reflect.TypeOf(sc).Name())
 		}
-		nScalars[i] = s.V
+		nScalars[i] = s.V.Bytes()
 	}
-	value := p256impl.PointNew()
-	_, err := value.SumOfProducts(nPoints, nScalars)
+	value := new(Point)
+	err := pointsImpl.MultiScalarMul[*p256Impl.Fp](&value.V, nPoints, nScalars)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "multiscalar multiplication")
 	}
-	return &Point{V: value}, nil
+
+	return value, nil
 }
 
-func (c *Curve) DeriveFromAffineX(x curves.BaseFieldElement) (evenY, oddY curves.Point, err error) {
+func (*Curve) DeriveFromAffineX(x curves.BaseFieldElement) (evenY, oddY curves.Point, err error) {
 	xc, ok := x.(*BaseFieldElement)
 	if !ok {
 		return nil, nil, errs.NewType("provided x coordinate is not a p256 field element")
 	}
-	rhs := fp.New()
-	cp, ok := c.Point().(*Point)
-	if !ok {
-		return nil, nil, errs.NewType("provided point is not a p256 point")
-	}
-	cp.V.Arithmetic.RhsEq(rhs, xc.V)
-	y, wasQr := fp.New().Sqrt(rhs)
-	if !wasQr {
-		return nil, nil, errs.NewCoordinates("x was not a quadratic residue")
-	}
-	p1e := p256impl.PointNew().Identity()
-	p1e.X = xc.V
-	p1e.Y = fp.New().Set(y)
-	p1e.Z.SetOne()
 
-	p2e := p256impl.PointNew().Identity()
-	p2e.X = xc.V
-	p2e.Y = fp.New().Neg(fp.New().Set(y))
-	p2e.Z.SetOne()
-
-	p1 := &Point{V: p1e}
-	p2 := &Point{V: p2e}
-
+	p1 := new(Point)
+	p1.V.SetFromAffineX(&xc.V)
+	p2 := new(Point)
+	p2.V.Neg(&p1.V)
 	if p1.AffineY().IsEven() {
 		return p1, p2, nil
 	}

@@ -9,20 +9,21 @@ import (
 	"github.com/cronokirby/saferith"
 	curve25519n "golang.org/x/crypto/curve25519"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/ct"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/hash2curve"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/mappings/elligator2"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
-const Name = "curve25519" // Compliant with Hash2curve (https://datatracker.ietf.org/doc/html/rfc9380)
+const (
+	Name                  = "curve25519"
+	Hash2CurveSuite       = "curve25519_XMD:SHA-512_ELL2_RO_"
+	Hash2CurveScalarSuite = "curve25519_XMD:SHA-512_ELL2_RO_SC_"
+)
 
 var (
-	curve25519Initonce sync.Once
+	curve25519InitOnce sync.Once
 	curve25519Instance Curve
 	cofactor           = new(saferith.Nat).SetUint64(8)
 	subgroupOrder, _   = saferith.ModulusFromHex(strings.ToUpper("1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed"))
@@ -33,34 +34,15 @@ var (
 var _ curves.Curve = (*Curve)(nil)
 
 type Curve struct {
-	hash2curve.CurveHasher
-	*elligator2.Params
 	_ ds.Incomparable
 }
 
 func curve25519Init() {
 	curve25519Instance = Curve{}
-	curve25519Instance.CurveHasher = hash2curve.NewCurveHasherSha512(
-		curves.Curve(&curve25519Instance),
-		base.HASH2CURVE_APP_TAG,
-		hash2curve.DstTagElligator2,
-	)
-	curve25519Instance.Params = elligator2.NewParams(&curve25519Instance, true)
-}
-
-// SetHasherAppTag sets the hasher to use for hash-to-curve operations with a
-// custom "appTag". Not exposed in the `curves.Curve` interface, as by
-// default we should use the library-wide HASH2CURVE_APP_TAG for compatibility.
-func (c *Curve) SetHasherAppTag(appTag string) {
-	c.CurveHasher = hash2curve.NewCurveHasherSha512(
-		curves.Curve(&curve25519Instance),
-		appTag,
-		hash2curve.DstTagElligator2,
-	)
 }
 
 func NewCurve() *Curve {
-	curve25519Initonce.Do(curve25519Init)
+	curve25519InitOnce.Do(curve25519Init)
 	return &curve25519Instance
 }
 
@@ -151,46 +133,24 @@ func (c *Curve) Element() curves.Point {
 	return c.AdditiveIdentity()
 }
 
-func (c *Curve) Random(prng io.Reader) (curves.Point, error) {
-	u0, err := c.BaseField().Random(prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not generate random field element")
-	}
-	u1, err := c.BaseField().Random(prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not generate random field element")
-	}
-	p0 := c.Map(u0)
-	p1 := c.Map(u1)
-	return p0.Add(p1).ClearCofactor(), nil
+func (*Curve) Random(prng io.Reader) (curves.Point, error) {
+	panic("implement me")
 }
 
-func (c *Curve) Hash(input []byte) (curves.Point, error) {
-	return c.HashWithDst(input, nil)
+func (*Curve) Hash(input []byte) (curves.Point, error) {
+	panic("implement me")
 }
 
-func (c *Curve) HashWithDst(input, dst []byte) (curves.Point, error) {
-	u, err := c.HashToFieldElements(2, input, dst)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "could not hash to field elements in ed25519")
-	}
-	p0 := c.Map(u[0])
-	p1 := c.Map(u[1])
-	return p0.Add(p1).ClearCofactor(), nil
+func (*Curve) HashWithDst(dst string, input []byte) (curves.Point, error) {
+	panic("implement me")
 }
 
-// Map a curve25519 field element into a point on curve25519, using the Elligator2 map.
-// See https://datatracker.ietf.org/doc/html/rfc9380#section-6.7.1
-func (c *Curve) Map(u curves.BaseFieldElement) curves.Point {
-	xn, xd, yn, yd := c.MapToCurveElligator2Curve25519(u)
-	// To affine coordinates.
-	x, _ := xn.Div(xd)
-	y := yn.Mul(yd)
-	p, err := c.NewPoint(x, y)
-	if err != nil {
-		panic(err)
-	}
-	return p
+func (*Curve) HashToFieldElements(count int, dstPrefix string, msg []byte) (u []curves.BaseFieldElement, err error) {
+	panic("implement me")
+}
+
+func (*Curve) HashToScalars(count int, dstPrefix string, msg []byte) (u []curves.Scalar, err error) {
+	panic("implement me")
 }
 
 // Select returns x0 if choice is false, and x1 if choice is true.

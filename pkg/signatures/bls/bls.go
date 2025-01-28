@@ -385,7 +385,7 @@ func BatchAggregateVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*Publ
 		sStar = sStar.Add(aggregatedSignature.Value.ScalarMul(r))
 
 		for i, m := range messages {
-			M, err := signatureSubGroup.HashWithDst(m, dst)
+			M, err := signatureSubGroup.HashWithDst(string(dst), m)
 			if err != nil {
 				return errs.WrapHashing(err, "could not compute hash of m_%d", i)
 			}
@@ -522,7 +522,7 @@ func BatchVerify[K KeySubGroup, S SignatureSubGroup](publicKeys []*PublicKey[K],
 
 		sStar = sStar.Add(signature.Value.ScalarMul(r))
 
-		M, err := signatureSubGroup.HashWithDst(message, dst)
+		M, err := signatureSubGroup.HashWithDst(string(dst), message)
 		if err != nil {
 			return errs.WrapHashing(err, "could not compute hash of m_%d", batch)
 		}

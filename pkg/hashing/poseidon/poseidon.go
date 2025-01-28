@@ -4,8 +4,7 @@ import (
 	"hash"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas/impl/fp"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
@@ -76,7 +75,7 @@ func (p *Poseidon) Write(data []byte) (n int, err error) {
 	elems := []curves.BaseFieldElement{}
 	for i := range (len(data) + 31) / 32 {
 		bytes := data[32*i : 32*(i+1)]
-		fe, err := pallas.NewBaseFieldElement(0).SetBytes(bytes)
+		fe, err := pasta.NewPallasBaseFieldElement(0).SetBytes(bytes)
 		if err != nil {
 			return 0, errs.WrapHashing(err, "cannot create Pallas base field element")
 		}
@@ -108,25 +107,33 @@ func (*Poseidon) BlockSize() int {
 
 // exp mutates f by computing x^3, x^5, x^7 or x^-1 as described in
 // https://eprint.iacr.org/2019/458.pdf page 8
-func exp(f *fp.Fp, power int) {
+func exp(f curves.BaseFieldElement, power int) curves.BaseFieldElement {
 	if power == 3 {
-		t := new(fp.Fp).Square(f)
-		f.Mul(t, f)
+		f2 := f.Square()
+		f3 := f.Mul(f2)
+		return f3
 	}
 	if power == 5 {
-		t := new(fp.Fp).Square(f)
-		t.Square(t)
-		f.Mul(t, f)
+		f2 := f.Square()
+		f4 := f2.Square()
+		f5 := f.Mul(f4)
+		return f5
 	}
 	if power == 7 {
-		f2 := new(fp.Fp).Square(f)
-		f4 := new(fp.Fp).Square(f2)
-		t := new(fp.Fp).Mul(f2, f4)
-		f.Mul(t, f)
+		f2 := f.Square()
+		f4 := f2.Square()
+		f6 := f2.Mul(f4)
+		f7 := f.Mul(f6)
+		return f7
 	}
 	if power == -1 {
-		f.Invert(f)
+		fInv, err := f.MultiplicativeInverse()
+		if err != nil {
+			return pasta.NewPallasBaseFieldElement(0)
+		}
+		return fInv
 	}
+	return pasta.NewPallasBaseFieldElement(0)
 }
 
 type state struct {
@@ -140,7 +147,7 @@ func newInitialState(parameters *Parameters) *state {
 		parameters: parameters,
 	}
 	for i := range s.v {
-		s.v[i] = pallas.NewBaseField().Zero()
+		s.v[i] = pasta.NewPallasBaseField().Zero()
 	}
 	return s
 }
@@ -189,13 +196,7 @@ func (s *state) Permute() {
 
 func (s *state) sbox() {
 	for i := range s.parameters.stateSize {
-		vi, ok := s.v[i].(*pallas.BaseFieldElement)
-		if !ok {
-			panic("not Pallas base field element")
-		}
-
-		exp(vi.V, s.parameters.power)
-		s.v[i] = vi
+		s.v[i] = exp(s.v[i], s.parameters.power)
 	}
 }
 

@@ -9,14 +9,14 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
-	bimpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
+	bls12381Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/hashing"
 )
 
 const (
 	// Secret key in Fr.
-	SecretKeySize = base.FieldBytes
+	SecretKeySize = bls12381Impl.FqBytes
 	// The salt used with generating secret keys
 	// See section 2.3 from https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-keygen
 	HKDFKeyGenSalt = "BLS-SIG-KEYGEN-SALT-"
@@ -44,7 +44,7 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 		ikm = append(ikm, 0)
 		// step 2.3.2
 		kdf := hkdf.New(base.RandomOracleHashFunction, ikm, salt, []byte{0, 48})
-		var okm [base.WideFieldBytes]byte
+		var okm [bls12381Impl.FqWideBytes]byte
 		// Leaves key_info parameter as the default empty string
 		// step 2.3.3
 		_, err := io.ReadFull(kdf, okm[:48])
@@ -54,12 +54,13 @@ func KeyGenWithSeed[K KeySubGroup](ikm []byte) (*PrivateKey[K], error) {
 		copy(okm[:48], bitstring.ReverseBytes(okm[:48]))
 
 		// step 2.3.4
-		v := bimpl.FqNew().SetBytesWide(&okm)
-
-		d = &bls12381.Scalar{
-			V: v,
-			G: keySubGroup,
+		di := &bls12381.Scalar{G: keySubGroup}
+		ok := di.V.SetBytesWide(okm[:])
+		if ok != 1 {
+			return nil, errs.NewFailed("could not set key bytes")
 		}
+		d = di
+
 		salt, err = hashing.Hash(base.RandomOracleHashFunction, salt)
 		if err != nil {
 			return nil, errs.WrapHashing(err, "could not produce salt")

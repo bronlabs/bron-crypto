@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl/fq"
+	k256Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
@@ -181,11 +181,11 @@ func (*ScalarField) ExclusiveDisjunctiveIdentity() curves.Scalar {
 }
 
 func (*ScalarField) ElementSize() int {
-	return base.FieldBytes
+	return k256Impl.FqBytes
 }
 
 func (*ScalarField) WideElementSize() int {
-	return base.WideFieldBytes
+	return k256Impl.FqWideBytes
 }
 
 func (*ScalarField) IsDecomposable(coprimeIdealNorms ...algebra.IntegerRingElement[curves.ScalarField, curves.Scalar]) (bool, error) {
@@ -236,7 +236,7 @@ func (*ScalarField) Random(prng io.Reader) (curves.Scalar, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
 	}
-	var seed [base.WideFieldBytes]byte
+	var seed [k256Impl.FqWideBytes]byte
 	_, err := io.ReadFull(prng, seed[:])
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "could not read from prng")
@@ -249,27 +249,25 @@ func (*ScalarField) Random(prng io.Reader) (curves.Scalar, error) {
 }
 
 func (*ScalarField) Hash(input []byte) (curves.Scalar, error) {
-	u, err := NewCurve().HashToScalars(1, input, nil)
+	u, err := NewCurve().HashToScalars(1, base.Hash2CurveAppTag+Hash2CurveScalarSuite, input)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "hash to scalar failed for k256")
 	}
 	return u[0], nil
 }
 
-func (sf *ScalarField) Select(choice uint64, x0, x1 curves.Scalar) curves.Scalar {
+func (*ScalarField) Select(choice uint64, x0, x1 curves.Scalar) curves.Scalar {
 	x0s, ok0 := x0.(*Scalar)
-	if !ok0 || x0s.V == nil {
+	if !ok0 {
 		panic("x0 is not a non-empty k256 scalar")
 	}
 	x1s, ok1 := x1.(*Scalar)
-	if !ok1 || x1s.V == nil {
+	if !ok1 {
 		panic("x1 is ot a non-empty k256 scalar")
 	}
-	s, oks := sf.Element().(*Scalar)
-	if !oks || s.V == nil {
-		panic("sf.Element() is ot a non-empty k256 scalar")
-	}
-	s.V.CMove(x0s.V, x1s.V, choice)
+
+	s := new(Scalar)
+	s.V.Select(choice, &x0s.V, &x1s.V)
 	return s
 }
 
@@ -296,17 +294,17 @@ func (*ScalarField) Mul(x algebra.MultiplicativeGroupoidElement[curves.ScalarFie
 // === Additive Monoid Methods.
 
 func (*ScalarField) AdditiveIdentity() curves.Scalar {
-	return &Scalar{
-		V: fq.New().SetZero(),
-	}
+	zero := new(Scalar)
+	zero.V.SetZero()
+	return zero
 }
 
 // === Multiplicative Monoid Methods.
 
 func (*ScalarField) MultiplicativeIdentity() curves.Scalar {
-	return &Scalar{
-		V: fq.New().SetOne(),
-	}
+	one := new(Scalar)
+	one.V.SetOne()
+	return one
 }
 
 // === Additive Group Methods.
@@ -370,11 +368,11 @@ func (sf *ScalarField) Trace(e curves.Scalar) curves.Scalar {
 }
 
 func (*ScalarField) FieldBytes() int {
-	return base.FieldBytes
+	return k256Impl.FqBytes
 }
 
 func (*ScalarField) WideFieldBytes() int {
-	return base.WideFieldBytes
+	return k256Impl.FqWideBytes
 }
 
 // === Zp Methods.

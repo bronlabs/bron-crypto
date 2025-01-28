@@ -4,7 +4,7 @@ import (
 	"slices"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
@@ -20,7 +20,7 @@ type Prefix []byte
 
 // https://github.com/o1-labs/o1js-bindings/blob/df8c87ed6804465f79196fdff84e5147ae71e92d/lib/binable.ts#L317
 func (p Prefix) ToBaseFieldElement() (curves.BaseFieldElement, error) {
-	fieldSize := pallas.NewBaseField().ElementSize() // TODO: ensure this is correct size
+	fieldSize := pasta.NewPallasBaseField().ElementSize() // TODO: ensure this is correct size
 	if len(p) > fieldSize {
 		return nil, errs.NewLength("prefix too long")
 	}
@@ -28,7 +28,7 @@ func (p Prefix) ToBaseFieldElement() (curves.BaseFieldElement, error) {
 	var feBytes [32]byte
 	copy(feBytes[:], p)
 	slices.Reverse(feBytes[:])
-	out, err := pallas.NewBaseField().Element().SetBytes(feBytes[:])
+	out, err := pasta.NewPallasBaseField().Element().SetBytes(feBytes[:])
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "set bytes failed")
 	}

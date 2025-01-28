@@ -58,22 +58,22 @@ type Curve interface {
 	// DeriveFromAffineX accepts the x coordinate and returns (evenY, oddY) coordinates of the resulting points.
 	DeriveFromAffineX(x BaseFieldElement) (evenY, oddY Point, err error)
 
-	// HashToFieldElement hashes `msg` using the default curve hasher ([RFC9380])
+	// HashToFieldElements hashes `msg` using the default curve hasher ([RFC9380])
 	// to obtain `count` field elements. Optionally, a custom domain separation
 	// tag (dst) can be provided for message expansion (default nil).
 	//
 	// [RFC9380]: https://datatracker.ietf.org/doc/html/rfc9380#section-5
-	HashToFieldElements(count int, msg, optionalDst []byte) (u []BaseFieldElement, err error)
-	// HashToScalar hashes `msg` using the default curve hasher ([RFC9380])
+	HashToFieldElements(count int, dstPrefix string, msg []byte) (u []BaseFieldElement, err error)
+	// HashToScalars hashes `msg` using the default curve hasher ([RFC9380])
 	// to obtain `count` scalars (in a prime field Fq). Optionally, a custom domain
 	//  separation  tag (dst) can be provided for message expansion (default nil).
 	//
 	// [RFC9380]: https://datatracker.ietf.org/doc/html/rfc9380#section-5
-	HashToScalars(count int, msg, optionalDst []byte) (u []Scalar, err error)
+	HashToScalars(count int, dstPrefix string, msg []byte) (u []Scalar, err error)
 	// HashWithDst hashes `msg` using ([RFC9380]) with a custom DST.
 	//
 	// [RFC9380]: https://datatracker.ietf.org/doc/html/rfc9380#section-5
-	HashWithDst(msg, dst []byte) (Point, error)
+	HashWithDst(dst string, msg []byte) (Point, error)
 
 	ScalarField() ScalarField
 }
