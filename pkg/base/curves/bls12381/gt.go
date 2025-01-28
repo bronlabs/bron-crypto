@@ -10,8 +10,6 @@ import (
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	bls12381impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/hash2curve"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
@@ -19,17 +17,15 @@ import (
 const NameGt = "BLS12381Gt"
 
 var (
-	gtInitonce sync.Once
+	gtInitOnce sync.Once
 	gtInstance Gt
 
-	p12 = new(saferith.Nat).Mul(p.Nat(), embeddingDegree, p.Nat().AnnouncedLen()+embeddingDegree.AnnouncedLen())
+	gtOrder = new(saferith.Nat).Mul(g1BaseFieldOrder.Nat(), embeddingDegree, -1)
 )
 
 var _ curves.Gt = (*Gt)(nil)
 
 type Gt struct {
-	hash2curve.CurveHasher
-
 	_ ds.Incomparable
 }
 
@@ -38,7 +34,7 @@ func gtInit() {
 }
 
 func NewGt() *Gt {
-	gtInitonce.Do(gtInit)
+	gtInitOnce.Do(gtInit)
 	return &gtInstance
 }
 
@@ -101,7 +97,7 @@ func (*Gt) Name() string {
 }
 
 func (*Gt) Order() *saferith.Modulus {
-	return saferith.ModulusFromNat(p12)
+	return saferith.ModulusFromNat(gtOrder)
 }
 
 func (g *Gt) Element() curves.GtMember {
@@ -112,11 +108,12 @@ func (*Gt) Random(prng io.Reader) (curves.GtMember, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
 	}
-	value, err := new(bls12381impl.Gt).Random(prng)
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "could not generate random scalar in BLS12381Gt")
+	value := new(GtMember)
+	ok := value.V.SetRandom(prng)
+	if ok != 1 {
+		return nil, errs.NewRandomSample("could not generate random scalar in BLS12381Gt")
 	}
-	return &GtMember{V: value}, nil
+	return value, nil
 }
 
 func (g *Gt) Hash(x []byte) (curves.GtMember, error) {
@@ -130,16 +127,15 @@ func (g *Gt) Hash(x []byte) (curves.GtMember, error) {
 
 func (*Gt) Select(choice uint64, x0, x1 curves.GtMember) curves.GtMember {
 	x0Gt, ok0 := x0.(*GtMember)
-	if !ok0 || x0Gt.V == nil {
+	if !ok0 {
 		panic("x0 is not a non-empty BLS12381 Gt element")
 	}
 	x1Gt, ok1 := x1.(*GtMember)
-	if !ok1 || x1Gt.V == nil {
+	if !ok1 {
 		panic("x1 is not a non-empty BLS12381 Gt element")
 	}
 	sGt := new(GtMember)
-	sGt.V.A.CMove(&x0Gt.V.A, &x1Gt.V.A, choice)
-	sGt.V.B.CMove(&x0Gt.V.B, &x1Gt.V.B, choice)
+	sGt.V.Select(choice, &x0Gt.V.Fp12, &x1Gt.V.Fp12)
 	return sGt
 }
 
@@ -162,7 +158,9 @@ func (*Gt) Identity(under algebra.BinaryOperator[curves.GtMember]) (curves.GtMem
 // === Multiplicative Monoid Methods.
 
 func (*Gt) MultiplicativeIdentity() curves.GtMember {
-	return &GtMember{V: new(bls12381impl.Gt).SetOne()}
+	result := new(GtMember)
+	result.V.SetOne()
+	return result
 }
 
 // === Multiplicative Group Methods.

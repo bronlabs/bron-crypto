@@ -9,9 +9,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas/impl/fp"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	itu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/hashing/poseidon"
 )
@@ -75,11 +75,8 @@ func parseInput(t *testing.T, xs []itu.HexBytes) []curves.BaseFieldElement {
 
 func parseOutput(t *testing.T, x itu.HexBytes) curves.BaseFieldElement {
 	t.Helper()
-	var xb32 [32]byte
-	copy(xb32[:], x)
-	f, err := new(fp.Fp).SetBytes(&xb32)
+	b := bitstring.ReverseBytes(x)
+	f, err := pasta.NewPallasBaseField().Element().SetBytesWide(b)
 	require.NoError(t, err)
-	return &pallas.BaseFieldElement{
-		V: f,
-	}
+	return f
 }

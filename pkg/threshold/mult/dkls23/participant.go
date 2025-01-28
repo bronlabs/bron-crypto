@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
@@ -142,7 +141,7 @@ func generateGadgetVector(curve curves.Curve, transcript transcripts.Transcript)
 	gadget = new([Xi]curves.Scalar)
 	transcript.AppendMessages("gadget vector", []byte("KRYPTON_DKLS19_MULT_GADGET_VECTOR"))
 	for i := 0; i < Xi; i++ {
-		bytes, err := transcript.ExtractBytes("gadget", base.WideFieldBytes)
+		bytes, err := transcript.ExtractBytes("gadget", 64)
 		if err != nil {
 			return gadget, errs.WrapFailed(err, "extracting bytes from transcript")
 		}

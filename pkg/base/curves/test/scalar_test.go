@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
 )
 
@@ -71,10 +70,10 @@ func Test_ScalarSetNat_BigEndian(t *testing.T) {
 		boundedCurve := curve
 		t.Run(boundedCurve.Name(), func(t *testing.T) {
 			t.Parallel()
-			oneBigEndian := make([]byte, base.FieldBytes)
+			scalarOne := boundedCurve.ScalarField().Element().SetNat(saferithUtils.NatOne)
+			oneBigEndian := make([]byte, len(scalarOne.Bytes()))
 			oneBigEndian[len(oneBigEndian)-1] = 0x1 // 0x000000...0001
 			// Check cast from-to Nat
-			scalarOne := boundedCurve.ScalarField().Element().SetNat(saferithUtils.NatOne)
 			require.EqualValues(t, oneBigEndian, scalarOne.Bytes())
 			require.EqualValues(t, oneBigEndian, scalarOne.Nat().Bytes())
 			// Check if the internal value is treated as a one
@@ -85,13 +84,15 @@ func Test_ScalarSetNat_BigEndian(t *testing.T) {
 		})
 	}
 }
+
 func Test_ScalarSetBytes_BigEndian(t *testing.T) {
 	t.Parallel()
 	for _, curve := range TestCurves {
 		boundedCurve := curve
 		t.Run(boundedCurve.Name(), func(t *testing.T) {
 			t.Parallel()
-			oneBigEndian := make([]byte, base.FieldBytes)
+			sLen := len(boundedCurve.ScalarField().Element().Bytes())
+			oneBigEndian := make([]byte, sLen)
 			oneBigEndian[len(oneBigEndian)-1] = 0x1 // 0x000000...0001
 			// Check cast from-to bytes
 			scalarOne, err := boundedCurve.ScalarField().Element().SetBytes(oneBigEndian)
@@ -112,12 +113,14 @@ func Test_ScalarSetBytesWide_BigEndian(t *testing.T) {
 		boundedCurve := curve
 		t.Run(boundedCurve.Name(), func(t *testing.T) {
 			t.Parallel()
-			oneBigEndian := make([]byte, base.WideFieldBytes)
+			sLen := len(boundedCurve.ScalarField().Element().Bytes())
+			sWideLen := 2 * sLen
+			oneBigEndian := make([]byte, sWideLen)
 			oneBigEndian[len(oneBigEndian)-1] = 0x1 // 0x000000...0001
 			// Check cast from-to widebytes
 			scalarOne, err := boundedCurve.ScalarField().Element().SetBytesWide(oneBigEndian)
 			require.NoError(t, err)
-			require.EqualValues(t, scalarOne.Bytes(), oneBigEndian[base.FieldBytes:])
+			require.EqualValues(t, scalarOne.Bytes(), oneBigEndian[sLen:])
 			// Check if the internal value is treated as a one
 			identityTimesGenerator := boundedCurve.ScalarBaseMult(scalarOne)
 			require.True(t, identityTimesGenerator.Equal(boundedCurve.Generator()))

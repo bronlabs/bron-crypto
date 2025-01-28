@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/key_agreement/gka/art"
 )
@@ -26,9 +26,10 @@ func Test_HappyPathArt(t *testing.T) {
 	}{
 		{k256.NewCurve(), 6},
 		{p256.NewCurve(), 11},
-		{pallas.NewCurve(), 3},
+		{pasta.NewPallasCurve(), 3},
+		{pasta.NewVestaCurve(), 3},
 		{edwards25519.NewCurve(), 5},
-		{bls12381.NewG2(), 7},
+		{bls12381.NewG1(), 7},
 		{bls12381.NewG2(), 10},
 	}
 
@@ -140,9 +141,10 @@ func Test_HappyPathArtRatchet(t *testing.T) {
 	}{
 		{k256.NewCurve(), 11},
 		{p256.NewCurve(), 3},
-		{pallas.NewCurve(), 41},
+		{pasta.NewPallasCurve(), 41},
+		{pasta.NewVestaCurve(), 41},
 		{edwards25519.NewCurve(), 17},
-		{bls12381.NewG2(), 3},
+		{bls12381.NewG1(), 3},
 		{bls12381.NewG2(), 40},
 	}
 

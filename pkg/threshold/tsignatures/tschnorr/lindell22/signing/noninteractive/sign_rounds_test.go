@@ -15,7 +15,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/combinatorics"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
@@ -234,7 +234,7 @@ func Test_SignNonInteractiveThresholdMina(t *testing.T) {
 
 	networkId := mina.MainNet
 	variant := mina.NewMinaVariant(networkId)
-	curve := pallas.NewCurve()
+	curve := pasta.NewPallasCurve()
 	hashFunc := poseidon.NewLegacyHash
 	identitiesHashFunc := sha256.New
 

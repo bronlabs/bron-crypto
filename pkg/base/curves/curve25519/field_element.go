@@ -7,10 +7,9 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
+	curvesImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
@@ -21,7 +20,7 @@ var _ encoding.BinaryUnmarshaler = (*BaseFieldElement)(nil)
 var _ json.Unmarshaler = (*BaseFieldElement)(nil)
 
 type BaseFieldElement struct {
-	V [base.FieldBytes]byte
+	V [32]byte
 
 	_ ds.Incomparable
 }
@@ -435,7 +434,7 @@ func (*BaseFieldElement) BaseField() curves.BaseField {
 // === Serialisation.
 
 func (e *BaseFieldElement) MarshalBinary() ([]byte, error) {
-	res := impl.MarshalBinary(e.BaseField().Curve().Name(), e.Bytes)
+	res := curvesImpl.MarshalBinary(e.BaseField().Curve().Name(), e.Bytes)
 	if len(res) < 1 {
 		return nil, errs.NewSerialisation("could not marshal")
 	}
@@ -443,11 +442,11 @@ func (e *BaseFieldElement) MarshalBinary() ([]byte, error) {
 }
 
 func (e *BaseFieldElement) UnmarshalBinary(input []byte) error {
-	sc, err := impl.UnmarshalBinary(NewBaseFieldElement(0).SetBytes, input)
+	sc, err := curvesImpl.UnmarshalBinary(NewBaseFieldElement(0).SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
-	name, _, err := impl.ParseBinary(input)
+	name, _, err := curvesImpl.ParseBinary(input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
@@ -463,7 +462,7 @@ func (e *BaseFieldElement) UnmarshalBinary(input []byte) error {
 }
 
 func (e *BaseFieldElement) MarshalJSON() ([]byte, error) {
-	res, err := impl.MarshalJson(e.BaseField().Curve().Name(), e.Bytes)
+	res, err := curvesImpl.MarshalJson(e.BaseField().Curve().Name(), e.Bytes)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
@@ -471,7 +470,7 @@ func (e *BaseFieldElement) MarshalJSON() ([]byte, error) {
 }
 
 func (e *BaseFieldElement) UnmarshalJSON(input []byte) error {
-	sc, err := impl.UnmarshalJson(e.BaseField().Name(), e.SetBytes, input)
+	sc, err := curvesImpl.UnmarshalJson(e.BaseField().Name(), e.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract a base field element from json")
 	}
@@ -489,7 +488,7 @@ func (e *BaseFieldElement) Uint64() uint64 {
 
 func (*BaseFieldElement) SetNat(value *saferith.Nat) curves.BaseFieldElement {
 	return &BaseFieldElement{
-		V: *(*[base.FieldBytes]byte)(value.Bytes()),
+		V: *(*[32]byte)(value.Bytes()),
 	}
 }
 

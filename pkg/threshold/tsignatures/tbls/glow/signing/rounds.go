@@ -18,7 +18,7 @@ func (c *Cosigner) ProducePartialSignature(message []byte) (*glow.PartialSignatu
 		return nil, errs.WrapFailed(err, "could not produce partial signature")
 	}
 	// step 1.2
-	Hm, err := bls12381.NewPairingCurve().G2().HashWithDst(message, []byte(bls.DstSignatureBasicInG2))
+	Hm, err := bls12381.NewPairingCurve().G2().HashWithDst(bls.DstSignatureBasicInG2, message)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "could not hash message")
 	}

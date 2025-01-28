@@ -16,8 +16,8 @@ const (
 	SBytes = S / 8
 
 	// Group order bit-size (=|q| for group Zq).
-	QBitLen      = base.FieldBytes * 8
-	QBitLenBytes = base.FieldBytes
+	QBitLen      = QBitLenBytes * 8
+	QBitLenBytes = 32
 
 	// Scalar batch size.
 	L = 2

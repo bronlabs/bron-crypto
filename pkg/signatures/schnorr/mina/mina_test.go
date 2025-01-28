@@ -8,7 +8,7 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/hashing/poseidon"
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/mina"
@@ -33,7 +33,7 @@ func Test_MinaSignaturePrefix(t *testing.T) {
 
 func Test_MinaSignMessage(t *testing.T) {
 	t.Parallel()
-	curve := pallas.NewCurve()
+	curve := pasta.NewPallasCurve()
 	networkId := mina.MainNet
 	variant := mina.NewMinaVariant(networkId)
 
@@ -87,14 +87,14 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func strToScalar(t *testing.T, str string) *pallas.Scalar {
+func strToScalar(t *testing.T, str string) *pasta.PallasScalar {
 	t.Helper()
 
 	b, ok := new(big.Int).SetString(str, 10)
 	require.True(t, ok)
 	n := new(saferith.Nat).SetBig(b, 256)
-	s := pallas.NewScalarField().Element().SetNat(n)
-	return s.(*pallas.Scalar)
+	s := pasta.NewPallasScalarField().Element().SetNat(n)
+	return s.(*pasta.PallasScalar)
 }
 
 func testPrefix(t *testing.T, prefix mina.Prefix, expectedString string) {
@@ -110,6 +110,6 @@ func testPrefix(t *testing.T, prefix mina.Prefix, expectedString string) {
 	expectedInt, ok := new(big.Int).SetString(expectedString, 10)
 	require.True(t, ok)
 	expectedNat := new(saferith.Nat).SetBig(expectedInt, 256)
-	expected := pallas.NewBaseField().Element().SetNat(expectedNat)
+	expected := pasta.NewPallasBaseField().Element().SetNat(expectedNat)
 	require.True(t, result.Equal(expected))
 }

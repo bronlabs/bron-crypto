@@ -21,7 +21,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
@@ -95,14 +94,7 @@ func (k *TestAuthKey) Verify(signature, message []byte) error {
 		return errs.NewSerialisation("cannot deserialize signature")
 	}
 	s := k.suite.Curve().ScalarField().Zero()
-	switch len(s.Bytes()) {
-	case base.WideFieldBytes:
-		s, err = s.SetBytesWide(signature[len(r.ToAffineCompressed()):])
-	case base.FieldBytes:
-		s, err = s.SetBytes(signature[len(r.ToAffineCompressed()):])
-	default:
-		err = errs.NewSerialisation("cannot deserialize signature")
-	}
+	s, err = s.SetBytes(signature[len(r.ToAffineCompressed()):])
 	if err != nil {
 		return errs.NewSerialisation("cannot deserialize signature")
 	}

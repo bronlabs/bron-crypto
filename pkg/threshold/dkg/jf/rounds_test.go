@@ -15,8 +15,11 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/schnorr"
@@ -29,25 +32,41 @@ import (
 
 var niCompilerName = randomisedFischlin.Name
 
+var testCurves = []curves.Curve{
+	k256.NewCurve(),
+	p256.NewCurve(),
+	edwards25519.NewCurve(),
+	pasta.NewPallasCurve(),
+	pasta.NewVestaCurve(),
+	bls12381.NewG1(),
+	bls12381.NewG2(),
+}
+
+var testHashes = []func() hash.Hash{
+	sha3.New256,
+	sha512.New,
+}
+
+var testAccessStructures = []struct {
+	t int
+	n int
+}{
+	{t: 2, n: 2},
+	{t: 2, n: 3},
+	{t: 3, n: 3},
+	{t: 3, n: 5},
+}
+
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{k256.NewCurve(), edwards25519.NewCurve()} {
-		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
-			for _, thresholdConfig := range []struct {
-				t int
-				n int
-			}{
-				{t: 2, n: 3},
-				{t: 3, n: 3},
-			} {
-				boundedCurve := curve
-				boundedHash := h
-				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
-				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
+	for _, curve := range testCurves {
+		for _, h := range testHashes {
+			for _, thresholdCfg := range testAccessStructures {
+				hashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
+				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", curve.Name(), hashName[strings.LastIndex(hashName, "/")+1:], thresholdCfg.t, thresholdCfg.n), func(t *testing.T) {
 					t.Parallel()
-					testHappyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n, crand.Reader)
+					testHappyPath(t, curve, h, thresholdCfg.t, thresholdCfg.n, crand.Reader)
 				})
 			}
 		}

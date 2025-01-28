@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
@@ -16,9 +16,9 @@ import (
 var (
 	_ encoding.BinaryMarshaler = (*PublicKey)(nil)
 
-	curve     = pallas.NewCurve()
+	curve     = pasta.NewPallasCurve()
 	curveName = curve.Name()
-	suite, _  = types.NewSigningSuite(pallas.NewCurve(), poseidon.NewLegacyHash)
+	suite, _  = types.NewSigningSuite(pasta.NewPallasCurve(), poseidon.NewLegacyHash)
 )
 
 type PublicKey schnorr.PublicKey

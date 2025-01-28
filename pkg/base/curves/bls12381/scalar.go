@@ -4,19 +4,19 @@ import (
 	"encoding"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
+	"github.com/bronlabs/krypton-primitives/pkg/base/ct"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	bls12381impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
+	bls12381Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
+	curvesImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
+	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
@@ -25,8 +25,8 @@ var _ encoding.BinaryUnmarshaler = (*Scalar)(nil)
 var _ json.Unmarshaler = (*Scalar)(nil)
 
 type Scalar struct {
-	V *limb4.FieldValue
 	G curves.Curve
+	V bls12381Impl.Fq
 
 	_ ds.Incomparable
 }
@@ -35,10 +35,12 @@ func NewScalar(subgroup curves.Curve, value uint64) (*Scalar, error) {
 	if subgroup.Name() != NewG1().Name() && subgroup.Name() != NewG2().Name() {
 		return nil, errs.NewCurve("subgroup %s is not one of the bls source subgroups", subgroup.Name())
 	}
-	return &Scalar{
-		V: bls12381impl.FqNew().SetUint64(value),
+
+	result := &Scalar{
 		G: subgroup,
-	}, nil
+	}
+	result.V.SetUint64(value)
+	return result, nil
 }
 
 func (s *Scalar) Structure() curves.ScalarField {
@@ -250,28 +252,27 @@ func (s *Scalar) Equal(rhs curves.Scalar) bool {
 	if !ok {
 		return false
 	}
-	return s.V.Equal(rhse.V) == 1
+
+	return s.V.Equals(&rhse.V) == 1
 }
 
 func (s *Scalar) Clone() curves.Scalar {
-	return &Scalar{
-		V: bls12381impl.FqNew().Set(s.V),
-		G: s.G,
-	}
+	result := &Scalar{G: s.G}
+	result.V.Set(&s.V)
+	return result
 }
 
 // === Additive Groupoid Methods.
 
 func (s *Scalar) Add(rhs algebra.AdditiveGroupoidElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	r, ok := rhs.(*Scalar)
-	if ok {
-		return &Scalar{
-			V: bls12381impl.FqNew().Add(s.V, r.V),
-			G: s.G,
-		}
-	} else {
+	if !ok {
 		panic("rhs is not ScalarBls12381")
 	}
+
+	result := &Scalar{G: s.G}
+	result.V.Add(&s.V, &r.V)
+	return result
 }
 
 func (s *Scalar) ApplyAdd(x algebra.AdditiveGroupoidElement[curves.ScalarField, curves.Scalar], n *saferith.Nat) curves.Scalar {
@@ -281,11 +282,7 @@ func (s *Scalar) ApplyAdd(x algebra.AdditiveGroupoidElement[curves.ScalarField, 
 }
 
 func (s *Scalar) Double() curves.Scalar {
-	v := bls12381impl.FqNew().Double(s.V)
-	return &Scalar{
-		V: v,
-		G: s.G,
-	}
+	return s.Add(s)
 }
 
 func (s *Scalar) Triple() curves.Scalar {
@@ -296,14 +293,13 @@ func (s *Scalar) Triple() curves.Scalar {
 
 func (s *Scalar) Mul(rhs algebra.MultiplicativeGroupoidElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	r, ok := rhs.(*Scalar)
-	if ok {
-		return &Scalar{
-			V: bls12381impl.FqNew().Mul(s.V, r.V),
-			G: s.G,
-		}
-	} else {
+	if !ok {
 		panic("rhs is not ScalarBls12381")
 	}
+
+	result := &Scalar{G: s.G}
+	result.V.Mul(&s.V, &r.V)
+	return result
 }
 
 func (s *Scalar) ApplyMul(x algebra.MultiplicativeGroupoidElement[curves.ScalarField, curves.Scalar], n *saferith.Nat) curves.Scalar {
@@ -311,19 +307,13 @@ func (s *Scalar) ApplyMul(x algebra.MultiplicativeGroupoidElement[curves.ScalarF
 }
 
 func (s *Scalar) Square() curves.Scalar {
-	return &Scalar{
-		V: bls12381impl.FqNew().Square(s.V),
-		G: s.G,
-	}
+	result := &Scalar{G: s.G}
+	result.V.Square(&s.V)
+	return result
 }
 
 func (s *Scalar) Cube() curves.Scalar {
-	value := bls12381impl.FqNew().Square(s.V)
-	value.Mul(value, s.V)
-	return &Scalar{
-		V: value,
-		G: s.G,
-	}
+	return s.Square().Mul(s)
 }
 
 // === Additive Monoid Methods.
@@ -341,10 +331,9 @@ func (s *Scalar) IsMultiplicativeIdentity() bool {
 // === Additive Group Methods.
 
 func (s *Scalar) AdditiveInverse() curves.Scalar {
-	return &Scalar{
-		V: bls12381impl.FqNew().Neg(s.V),
-		G: s.G,
-	}
+	result := &Scalar{G: s.G}
+	result.V.Neg(&result.V)
+	return result
 }
 
 func (s *Scalar) IsAdditiveInverse(of algebra.AdditiveGroupElement[curves.ScalarField, curves.Scalar]) bool {
@@ -353,14 +342,13 @@ func (s *Scalar) IsAdditiveInverse(of algebra.AdditiveGroupElement[curves.Scalar
 
 func (s *Scalar) Sub(rhs algebra.AdditiveGroupElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
 	r, ok := rhs.(*Scalar)
-	if ok {
-		return &Scalar{
-			V: bls12381impl.FqNew().Sub(s.V, r.V),
-			G: s.G,
-		}
-	} else {
+	if !ok {
 		panic("rhs is not ScalarBls12381")
 	}
+
+	result := &Scalar{G: s.G}
+	result.V.Sub(&s.V, &r.V)
+	return result
 }
 
 func (s *Scalar) ApplySub(x algebra.AdditiveGroupElement[curves.ScalarField, curves.Scalar], n *saferith.Nat) curves.Scalar {
@@ -372,15 +360,13 @@ func (s *Scalar) ApplySub(x algebra.AdditiveGroupElement[curves.ScalarField, cur
 // === Multiplicative Group Methods.
 
 func (s *Scalar) MultiplicativeInverse() (curves.Scalar, error) {
-	value, wasInverted := bls12381impl.FqNew().Invert(s.V)
-	if !wasInverted {
+	value := &Scalar{G: s.G}
+	wasInverted := value.V.Inv(&s.V)
+	if wasInverted != 1 {
 		return nil, errs.NewFailed("inverse doesn't exist")
 	}
 
-	return &Scalar{
-		V: value,
-		G: s.G,
-	}, nil
+	return value, nil
 }
 
 func (s *Scalar) IsMultiplicativeInverse(of algebra.MultiplicativeGroupElement[curves.ScalarField, curves.Scalar]) bool {
@@ -388,20 +374,18 @@ func (s *Scalar) IsMultiplicativeInverse(of algebra.MultiplicativeGroupElement[c
 }
 
 func (s *Scalar) Div(rhs algebra.MultiplicativeGroupElement[curves.ScalarField, curves.Scalar]) (curves.Scalar, error) {
-	r, ok := rhs.(*Scalar)
-	if ok {
-		v, wasInverted := bls12381impl.FqNew().Invert(r.V)
-		if !wasInverted {
-			return nil, errs.NewFailed("cannot invert scalar")
-		}
-		v.Mul(v, s.V)
-		return &Scalar{
-			V: v,
-			G: s.G,
-		}, nil
-	} else {
+	rhse, ok := rhs.(*Scalar)
+	if !ok {
 		return nil, errs.NewFailed("rhs is not ScalarBls12381")
 	}
+
+	v := &Scalar{G: s.G}
+	wasInverted := v.V.Div(&s.V, &rhse.V)
+	if wasInverted != 1 {
+		return nil, errs.NewFailed("cannot invert scalar")
+	}
+
+	return v, nil
 }
 
 func (s *Scalar) ApplyDiv(x algebra.MultiplicativeGroupElement[curves.ScalarField, curves.Scalar], n *saferith.Nat) (curves.Scalar, error) {
@@ -416,14 +400,13 @@ func (s *Scalar) IsQuadraticResidue() bool {
 }
 
 func (s *Scalar) Sqrt() (curves.Scalar, error) {
-	value, wasSquare := bls12381impl.FqNew().Sqrt(s.V)
-	if !wasSquare {
+	value := &Scalar{G: s.G}
+	wasSquare := value.V.Sqrt(&s.V)
+	if wasSquare != 1 {
 		return nil, errs.NewFailed("not a square")
 	}
-	return &Scalar{
-		V: value,
-		G: s.G,
-	}, nil
+
+	return value, nil
 }
 
 func (s *Scalar) MulAdd(y algebra.RingElement[curves.ScalarField, curves.Scalar], z algebra.RingElement[curves.ScalarField, curves.Scalar]) curves.Scalar {
@@ -443,20 +426,18 @@ func (s *Scalar) Norm() curves.Scalar {
 // === Zp Methods.
 
 func (s *Scalar) Exp(k *saferith.Nat) curves.Scalar {
-	exp, ok := s.Structure().Element().SetNat(k).(*Scalar)
-	if !ok {
-		panic("rhs is not ScalarBls12381")
-	}
+	eBytes := k.Bytes()
+	slices.Reverse(eBytes)
 
-	value := bls12381impl.FqNew().Exp(s.V, exp.V)
-	return &Scalar{
-		V: value,
-		G: s.G,
-	}
+	value := &Scalar{G: s.G}
+	fieldsImpl.Pow(&value.V, &s.V, eBytes)
+	return value
 }
 
 func (s *Scalar) Neg() curves.Scalar {
-	return s.AdditiveInverse()
+	result := &Scalar{G: s.G}
+	result.V.Neg(&s.V)
+	return result
 }
 
 func (s *Scalar) IsZero() bool {
@@ -468,13 +449,13 @@ func (s *Scalar) IsOne() bool {
 }
 
 func (s *Scalar) IsOdd() bool {
-	bytes_ := s.V.Bytes()
-	return bytes_[0]&1 == 1
+	data := s.V.Bytes()
+	return data[0]&1 == 1
 }
 
 func (s *Scalar) IsEven() bool {
-	bytes_ := s.V.Bytes()
-	return bytes_[0]&1 == 0
+	data := s.V.Bytes()
+	return data[0]&1 == 0
 }
 
 func (s *Scalar) Increment() curves.Scalar {
@@ -496,23 +477,12 @@ func (s *Scalar) Decrement() curves.Scalar {
 // === Ordering Methods.
 
 func (s *Scalar) Cmp(rhs algebra.OrderTheoreticLatticeElement[curves.ScalarField, curves.Scalar]) algebra.Ordering {
-	r, ok := rhs.(*Scalar)
-	if ok {
-		// TODO: debug Cmp for BLS
-		gt, eq, lt := s.Nat().Cmp(r.Nat())
-		if gt == 1 {
-			return 1
-		}
-		if eq == 1 {
-			return 0
-		}
-		if lt == 1 {
-			return -1
-		}
-		return algebra.Incomparable
-	} else {
+	rhse, ok := rhs.(*Scalar)
+	if !ok {
 		return algebra.Incomparable
 	}
+
+	return algebra.Ordering(ct.SliceCmpLE(s.V.Limbs(), rhse.V.Limbs()))
 }
 
 func (s *Scalar) IsBottom() bool {
@@ -580,51 +550,62 @@ func (s *Scalar) SetNat(v *saferith.Nat) curves.Scalar {
 	if v == nil {
 		return nil
 	}
-	return &Scalar{
-		V: bls12381impl.FqNew().SetNat(v),
-		G: s.G,
+
+	natReduces := new(saferith.Nat).Mod(v, bls12381SubGroupOrder)
+	natBytes := natReduces.Bytes()
+	slices.Reverse(natBytes)
+	result := &Scalar{G: s.G}
+	ok := result.V.SetBytesWide(natBytes)
+	if ok != 1 {
+		panic("this should never happer")
 	}
+
+	return result
 }
 
 func (s *Scalar) Nat() *saferith.Nat {
-	return s.V.Nat()
+	sBytes := s.V.Bytes()
+	slices.Reverse(sBytes)
+	return new(saferith.Nat).SetBytes(sBytes)
 }
 
 func (s *Scalar) Bytes() []byte {
 	t := s.V.Bytes()
-	return bitstring.ReverseBytes(t[:])
+	slices.Reverse(t)
+	return t
 }
 
 func (s *Scalar) SetBytes(input []byte) (curves.Scalar, error) {
-	if len(input) != base.FieldBytes {
+	if len(input) != bls12381Impl.FqBytes {
 		return nil, errs.NewLength("invalid length")
 	}
-	reducedInput := saferithUtils.NatFromBytesMod(input, r)
-	buffer := bitstring.PadToRight(bitstring.ReverseBytes(reducedInput.Bytes()), base.FieldBytes-len(reducedInput.Bytes()))
-	value, err := bls12381impl.FqNew().SetBytes((*[base.FieldBytes]byte)(buffer))
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "couldn't set bytes")
+
+	buffer := bitstring.ReverseBytes(input)
+	value := &Scalar{G: s.G}
+	ok := value.V.SetBytes(buffer)
+	if ok != 1 {
+		return nil, errs.NewSerialisation("couldn't set bytes")
 	}
-	return &Scalar{
-		V: value,
-		G: s.G,
-	}, nil
+	return value, nil
 }
 
 func (s *Scalar) SetBytesWide(input []byte) (curves.Scalar, error) {
-	if len(input) > base.WideFieldBytes {
-		return nil, errs.NewLength("invalid length > %d", base.WideFieldBytes)
+	if len(input) > bls12381Impl.FqWideBytes {
+		return nil, errs.NewLength("invalid length > %d", bls12381Impl.FqWideBytes)
 	}
-	buffer := bitstring.PadToRight(bitstring.ReverseBytes(input), base.WideFieldBytes-len(input))
-	value := bls12381impl.FqNew().SetBytesWide((*[base.WideFieldBytes]byte)(buffer))
-	return &Scalar{
-		V: value,
-		G: s.G,
-	}, nil
+
+	buffer := bitstring.ReverseBytes(input)
+	value := &Scalar{G: s.G}
+	ok := value.V.SetBytesWide(buffer)
+	if ok != 1 {
+		panic("this should never happer")
+	}
+
+	return value, nil
 }
 
 func (s *Scalar) MarshalBinary() ([]byte, error) {
-	res := impl.MarshalBinary(s.ScalarField().Curve().Name(), s.Bytes)
+	res := curvesImpl.MarshalBinary(s.ScalarField().Curve().Name(), s.Bytes)
 	if len(res) < 1 {
 		return nil, errs.NewSerialisation("could not marshal")
 	}
@@ -632,7 +613,7 @@ func (s *Scalar) MarshalBinary() ([]byte, error) {
 }
 
 func (s *Scalar) UnmarshalBinary(input []byte) error {
-	sc, err := impl.UnmarshalBinary(s.SetBytes, input)
+	sc, err := curvesImpl.UnmarshalBinary(s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
@@ -640,8 +621,8 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 	if !ok {
 		return errs.NewType("invalid base field element")
 	}
-	s.V = ss.V
-	name, _, err := impl.ParseBinary(input)
+	s.V.Set(&ss.V)
+	name, _, err := curvesImpl.ParseBinary(input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "couldn't extract name from input")
 	}
@@ -657,7 +638,7 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 }
 
 func (s *Scalar) MarshalJSON() ([]byte, error) {
-	res, err := impl.MarshalJson(s.ScalarField().Curve().Name(), s.Bytes)
+	res, err := curvesImpl.MarshalJson(s.ScalarField().Curve().Name(), s.Bytes)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
@@ -665,7 +646,7 @@ func (s *Scalar) MarshalJSON() ([]byte, error) {
 }
 
 func (s *Scalar) UnmarshalJSON(input []byte) error {
-	name, _, err := impl.ParseJSON(input)
+	name, _, err := curvesImpl.ParseJSON(input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "couldn't extract name from input")
 	}
@@ -677,7 +658,7 @@ func (s *Scalar) UnmarshalJSON(input []byte) error {
 	default:
 		return errs.NewType("name %s is not supported", name)
 	}
-	sc, err := impl.UnmarshalJson(name, s.SetBytes, input)
+	sc, err := curvesImpl.UnmarshalJson(name, s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract a base field element from json")
 	}
@@ -685,9 +666,10 @@ func (s *Scalar) UnmarshalJSON(input []byte) error {
 	if !ok {
 		return errs.NewFailed("invalid type")
 	}
-	s.V = S.V
+	s.V.Set(&S.V)
 	return nil
 }
+
 func (s *Scalar) HashCode() uint64 {
 	return s.Uint64()
 }

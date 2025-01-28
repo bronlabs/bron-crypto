@@ -249,7 +249,7 @@ func (p *AsynchronousRatchetTree) rebuildTree() (err error) {
 			case p.arrayTree[left].privateNodeKey != nil && p.arrayTree[right].publicNodeKey != nil:
 				sk, err := dh.DiffieHellman(p.arrayTree[left].privateNodeKey, p.arrayTree[right].publicNodeKey)
 				if err != nil {
-					return errs.NewFailed("cannot derive secret value at %d", parent)
+					return errs.WrapFailed(err, "cannot derive secret value at %d", parent)
 				}
 				p.arrayTree[parent].privateNodeKey, err = p.arrayTree[left].privateNodeKey.ScalarField().Hash(sk.Bytes())
 				if err != nil {
@@ -261,7 +261,7 @@ func (p *AsynchronousRatchetTree) rebuildTree() (err error) {
 			case p.arrayTree[left].publicNodeKey != nil && p.arrayTree[right].privateNodeKey != nil:
 				sk, err := dh.DiffieHellman(p.arrayTree[right].privateNodeKey, p.arrayTree[left].publicNodeKey)
 				if err != nil {
-					return errs.NewFailed("cannot derive secret value %d", parent)
+					return errs.WrapFailed(err, "cannot derive secret value %d", parent)
 				}
 				p.arrayTree[parent].privateNodeKey, err = p.arrayTree[right].privateNodeKey.ScalarField().Hash(sk.Bytes())
 				if err != nil {

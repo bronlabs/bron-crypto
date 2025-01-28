@@ -2,12 +2,12 @@ package curveutils
 
 import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
+	curvesImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 func NewPointFromJSON(input []byte) (curves.Point, error) {
-	name, data, err := impl.ParseJSON(input)
+	name, data, err := curvesImpl.ParseJSON(input)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not get curve name from json")
 	}
@@ -23,7 +23,7 @@ func NewPointFromJSON(input []byte) (curves.Point, error) {
 }
 
 func NewScalarFromJSON(input []byte) (curves.Scalar, error) {
-	name, data, err := impl.ParseJSON(input)
+	name, data, err := curvesImpl.ParseJSON(input)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not get curve name from json")
 	}
@@ -39,7 +39,7 @@ func NewScalarFromJSON(input []byte) (curves.Scalar, error) {
 }
 
 func NewBaseFieldElementFromJSON(input []byte) (curves.BaseFieldElement, error) {
-	name, data, err := impl.ParseJSON(input)
+	name, data, err := curvesImpl.ParseJSON(input)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not get curve name from json")
 	}

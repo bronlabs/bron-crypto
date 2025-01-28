@@ -8,13 +8,12 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
+	curvesImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	saferith_utils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
+	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
 )
 
 var _ curves.Scalar = (*Scalar)(nil)
@@ -360,7 +359,7 @@ func (s *Scalar) Norm() curves.Scalar {
 
 func (s *Scalar) Exp(k *saferith.Nat) curves.Scalar {
 	v := NewScalarField().One()
-	for i := new(saferith.Nat).SetUint64(0); saferith_utils.NatIsLess(i, k); i = new(saferith.Nat).Add(i, saferith_utils.NatOne, k.AnnouncedLen()) {
+	for i := new(saferith.Nat).SetUint64(0); saferithUtils.NatIsLess(i, k); i = new(saferith.Nat).Add(i, saferithUtils.NatOne, k.AnnouncedLen()) {
 		v = v.Mul(s)
 	}
 	return v
@@ -479,7 +478,7 @@ func (*Scalar) SetBytesWide(input []byte) (sc curves.Scalar, err error) {
 }
 
 func (*Scalar) SetBytes(input []byte) (sc curves.Scalar, err error) {
-	var ss [base.FieldBytes]byte
+	var ss [32]byte
 	copy(ss[:], input)
 	return &Scalar{V: ss}, nil
 }
@@ -495,7 +494,7 @@ func (*Scalar) SetBytesWideLE(bytes []byte) (curves.Scalar, error) {
 }
 
 func (s *Scalar) MarshalBinary() ([]byte, error) {
-	res := impl.MarshalBinary(s.ScalarField().Curve().Name(), s.Bytes)
+	res := curvesImpl.MarshalBinary(s.ScalarField().Curve().Name(), s.Bytes)
 	if len(res) < 1 {
 		return nil, errs.NewSerialisation("could not marshal")
 	}
@@ -503,11 +502,11 @@ func (s *Scalar) MarshalBinary() ([]byte, error) {
 }
 
 func (s *Scalar) UnmarshalBinary(input []byte) error {
-	sc, err := impl.UnmarshalBinary(s.SetBytes, input)
+	sc, err := curvesImpl.UnmarshalBinary(s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal")
 	}
-	name, _, err := impl.ParseBinary(input)
+	name, _, err := curvesImpl.ParseBinary(input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract name from input")
 	}
@@ -523,7 +522,7 @@ func (s *Scalar) UnmarshalBinary(input []byte) error {
 }
 
 func (s *Scalar) MarshalJSON() ([]byte, error) {
-	res, err := impl.MarshalJson(s.ScalarField().Curve().Name(), s.Bytes)
+	res, err := curvesImpl.MarshalJson(s.ScalarField().Curve().Name(), s.Bytes)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not marshal")
 	}
@@ -531,7 +530,7 @@ func (s *Scalar) MarshalJSON() ([]byte, error) {
 }
 
 func (s *Scalar) UnmarshalJSON(input []byte) error {
-	sc, err := impl.UnmarshalJson(s.ScalarField().Name(), s.SetBytes, input)
+	sc, err := curvesImpl.UnmarshalJson(s.ScalarField().Name(), s.SetBytes, input)
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not extract a base field element from json")
 	}
@@ -542,6 +541,7 @@ func (s *Scalar) UnmarshalJSON(input []byte) error {
 	s.V = S.V
 	return nil
 }
+
 func (s *Scalar) HashCode() uint64 {
 	return s.Uint64()
 }

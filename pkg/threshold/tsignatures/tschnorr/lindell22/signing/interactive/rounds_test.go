@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
@@ -50,7 +50,7 @@ func Test_SanityCheck(t *testing.T) {
 	require.NoError(t, err)
 
 	schnorrPrivateKeyBytes := dHashed[:32]
-	schnorrPrivateKey, err := curve.Scalar().SetBytes(schnorrPrivateKeyBytes)
+	schnorrPrivateKey, err := curve.Scalar().SetBytesWide(schnorrPrivateKeyBytes)
 	require.NoError(t, err)
 	publicKey := curve.ScalarBaseMult(schnorrPrivateKey)
 
@@ -187,7 +187,7 @@ func Test_HappyPathThresholdMina(t *testing.T) {
 	variant := mina.NewMinaVariant(networkId)
 	hashFunc := poseidon.NewLegacyHash
 	identitiesHashFunc := sha256.New
-	curve := pallas.NewCurve()
+	curve := pasta.NewPallasCurve()
 	prng := crand.Reader
 	message := new(mina.ROInput).Init()
 	message.AddString("Hello World!")
@@ -245,7 +245,7 @@ func Test_ThresholdMinaAgainstMinaSigner(t *testing.T) {
 	variant := mina.NewMinaVariant(networkId)
 	hashFunc := poseidon.NewLegacyHash
 	identitiesHashFunc := sha256.New
-	curve := pallas.NewCurve()
+	curve := pasta.NewPallasCurve()
 	prng := crand.Reader
 	message := new(mina.ROInput).Init()
 	message.AddString(msg)

@@ -10,9 +10,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
+	k256Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr"
@@ -316,7 +316,7 @@ func Test_HappyPathBatchVerify(t *testing.T) {
 }
 
 func unmarshalPublicKey(input []byte) (*bip340.PublicKey, error) {
-	if len(input) != base.FieldBytes {
+	if len(input) != k256Impl.FpBytes {
 		return nil, errs.NewSerialisation("invalid length")
 	}
 	p, err := decodePoint(input)
@@ -329,9 +329,10 @@ func unmarshalPublicKey(input []byte) (*bip340.PublicKey, error) {
 }
 
 func unmarshalPrivateKey(input []byte) (*bip340.PrivateKey, error) {
-	if len(input) != base.FieldBytes {
+	if len(input) != k256Impl.FpBytes {
 		return nil, errs.NewSerialisation("invalid length")
 	}
+
 	curve := k256.NewCurve()
 	k, err := curve.Scalar().SetBytes(input)
 	if err != nil {
