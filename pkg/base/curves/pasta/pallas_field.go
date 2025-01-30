@@ -1,10 +1,9 @@
 package pasta
 
 import (
-	"encoding/binary"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"io"
 	"iter"
-	"slices"
 	"sync"
 
 	"github.com/cronokirby/saferith"
@@ -30,12 +29,7 @@ type PallasBaseField struct {
 }
 
 func pallasBaseFieldInit() {
-	var modulusBytes [8 * pastaImpl.FpSatLimbs]byte
-	for i, l := range pastaImpl.FpModulus {
-		binary.LittleEndian.PutUint64(modulusBytes[i*8:(i+1)*8], l)
-	}
-	slices.Reverse(modulusBytes[:])
-	pallasBaseFieldModulus = saferith.ModulusFromBytes(modulusBytes[:])
+	pallasBaseFieldModulus = saferith.ModulusFromBytes(bitstring.ReverseBytes(pastaImpl.FqModulus[:]))
 
 	pallasBaseFieldInstance = PallasBaseField{}
 }

@@ -1,10 +1,9 @@
 package k256
 
 import (
-	"encoding/binary"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"io"
 	"iter"
-	"slices"
 	"sync"
 
 	"github.com/cronokirby/saferith"
@@ -29,12 +28,7 @@ var (
 
 //nolint:gochecknoinits // keep it for code generated values
 func init() {
-	var modulusBytes [8 * k256Impl.FpSatLimbs]byte
-	for i, l := range k256Impl.FpModulus {
-		binary.LittleEndian.PutUint64(modulusBytes[i*8:(i+1)*8], l)
-	}
-	slices.Reverse(modulusBytes[:])
-	k256BaseFieldModulus = saferith.ModulusFromBytes(modulusBytes[:])
+	k256BaseFieldModulus = saferith.ModulusFromBytes(bitstring.ReverseBytes(k256Impl.FpModulus[:]))
 }
 
 type BaseField struct {

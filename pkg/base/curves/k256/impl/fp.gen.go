@@ -4,8 +4,6 @@ package impl
 
 import (
 	"encoding/hex"
-	internal "github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl/internal/fiat"
-	fields "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
 	"io"
 	"slices"
 )
@@ -21,16 +19,17 @@ const (
 )
 
 var (
-    _ fields.PrimeField[*Fp] = (*Fp)(nil)
-
 	FpProgenitorExp = [...]byte{0x0b, 0xff, 0xff, 0xbf, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3f}
-	FpModulus       [FpSatLimbs]uint64
+	FpModulus       = [...]byte{0x2f, 0xfc, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	FpRootOfUnity   Fp
 )
 
 func init() {
-	internal.FpMsat(&FpModulus)
 	FpRootOfUnity.MustSetHex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e")
+}
+
+type Fp struct {
+	fiatFpMontgomeryDomainFieldElement
 }
 
 func (f *Fp) Set(v *Fp) {
@@ -42,7 +41,7 @@ func (f *Fp) SetZero() {
 }
 
 func (f *Fp) SetOne() {
-	internal.FpSetOne(&f.FpMontgomeryDomainFieldElement)
+	fiatFpSetOne(&f.fiatFpMontgomeryDomainFieldElement)
 }
 
 func (f *Fp) SetUint64(v uint64) {
@@ -51,7 +50,7 @@ func (f *Fp) SetUint64(v uint64) {
 }
 
 func (f *Fp) SetLimbs(data []uint64) (ok uint64) {
-	internal.FpToMontgomery(&f.FpMontgomeryDomainFieldElement, (*internal.FpNonMontgomeryDomainFieldElement)(data))
+	fiatFpToMontgomery(&f.fiatFpMontgomeryDomainFieldElement, (*fiatFpNonMontgomeryDomainFieldElement)(data))
 	return 1
 }
 
@@ -60,9 +59,9 @@ func (f *Fp) SetBytes(data []byte) (ok uint64) {
 		return 0
 	}
 
-	var nonMonty internal.FpNonMontgomeryDomainFieldElement
-	internal.FpFromBytes((*[FpLimbs]uint64)(&nonMonty), (*[FpBytes]uint8)(data))
-	internal.FpToMontgomery(&f.FpMontgomeryDomainFieldElement, &nonMonty)
+	var nonMonty fiatFpNonMontgomeryDomainFieldElement
+	fiatFpFromBytes((*[FpLimbs]uint64)(&nonMonty), (*[FpBytes]uint8)(data))
+	fiatFpToMontgomery(&f.fiatFpMontgomeryDomainFieldElement, &nonMonty)
 	return 1
 }
 
@@ -75,14 +74,14 @@ func (f *Fp) SetBytesWide(data []byte) (ok uint64) {
 	copy(wideData[:], data)
 
 	var d1, d0 [FpLimbs]uint64
-	internal.FpFromBytes(&d0, (*[FpBytes]uint8)(wideData[:FpBytes]))
-	internal.FpFromBytes(&d1, (*[FpBytes]uint8)(wideData[FpBytes:]))
+	fiatFpFromBytes(&d0, (*[FpBytes]uint8)(wideData[:FpBytes]))
+	fiatFpFromBytes(&d1, (*[FpBytes]uint8)(wideData[FpBytes:]))
 
 	// d0*r2 + d1*r3
-	internal.FpToMontgomery((*internal.FpMontgomeryDomainFieldElement)(&d0), (*internal.FpNonMontgomeryDomainFieldElement)(&d0))
-	internal.FpToMontgomery((*internal.FpMontgomeryDomainFieldElement)(&d1), (*internal.FpNonMontgomeryDomainFieldElement)(&d1))
-	internal.FpToMontgomery((*internal.FpMontgomeryDomainFieldElement)(&d1), (*internal.FpNonMontgomeryDomainFieldElement)(&d1))
-	internal.FpAdd(&f.FpMontgomeryDomainFieldElement, (*internal.FpMontgomeryDomainFieldElement)(&d0), (*internal.FpMontgomeryDomainFieldElement)(&d1))
+	fiatFpToMontgomery((*fiatFpMontgomeryDomainFieldElement)(&d0), (*fiatFpNonMontgomeryDomainFieldElement)(&d0))
+	fiatFpToMontgomery((*fiatFpMontgomeryDomainFieldElement)(&d1), (*fiatFpNonMontgomeryDomainFieldElement)(&d1))
+	fiatFpToMontgomery((*fiatFpMontgomeryDomainFieldElement)(&d1), (*fiatFpNonMontgomeryDomainFieldElement)(&d1))
+	fiatFpAdd(&f.fiatFpMontgomeryDomainFieldElement, (*fiatFpMontgomeryDomainFieldElement)(&d0), (*fiatFpMontgomeryDomainFieldElement)(&d1))
 	return 1
 }
 
@@ -104,27 +103,27 @@ func (f *Fp) SetRandom(prng io.Reader) (ok uint64) {
 }
 
 func (f *Fp) Select(choice uint64, z, nz *Fp) {
-	internal.FpSelect((*[FpLimbs]uint64)(&f.FpMontgomeryDomainFieldElement), choice, (*[FpLimbs]uint64)(&z.FpMontgomeryDomainFieldElement), (*[FpLimbs]uint64)(&nz.FpMontgomeryDomainFieldElement))
+	fiatFpSelectznz((*[FpLimbs]uint64)(&f.fiatFpMontgomeryDomainFieldElement),fiatFpUint1(choice), (*[FpLimbs]uint64)(&z.fiatFpMontgomeryDomainFieldElement), (*[FpLimbs]uint64)(&nz.fiatFpMontgomeryDomainFieldElement))
 }
 
 func (f *Fp) Add(lhs, rhs *Fp) {
-	internal.FpAdd(&f.FpMontgomeryDomainFieldElement, &lhs.FpMontgomeryDomainFieldElement, &rhs.FpMontgomeryDomainFieldElement)
+	fiatFpAdd(&f.fiatFpMontgomeryDomainFieldElement, &lhs.fiatFpMontgomeryDomainFieldElement, &rhs.fiatFpMontgomeryDomainFieldElement)
 }
 
 func (f *Fp) Sub(lhs, rhs *Fp) {
-	internal.FpSub(&f.FpMontgomeryDomainFieldElement, &lhs.FpMontgomeryDomainFieldElement, &rhs.FpMontgomeryDomainFieldElement)
+	fiatFpSub(&f.fiatFpMontgomeryDomainFieldElement, &lhs.fiatFpMontgomeryDomainFieldElement, &rhs.fiatFpMontgomeryDomainFieldElement)
 }
 
 func (f *Fp) Neg(v *Fp) {
-	internal.FpOpp(&f.FpMontgomeryDomainFieldElement, &v.FpMontgomeryDomainFieldElement)
+	fiatFpOpp(&f.fiatFpMontgomeryDomainFieldElement, &v.fiatFpMontgomeryDomainFieldElement)
 }
 
 func (f *Fp) Mul(lhs, rhs *Fp) {
-	internal.FpMul(&f.FpMontgomeryDomainFieldElement, &lhs.FpMontgomeryDomainFieldElement, &rhs.FpMontgomeryDomainFieldElement)
+	fiatFpMul(&f.fiatFpMontgomeryDomainFieldElement, &lhs.fiatFpMontgomeryDomainFieldElement, &rhs.fiatFpMontgomeryDomainFieldElement)
 }
 
 func (f *Fp) Square(v *Fp) {
-	internal.FpSquare(&f.FpMontgomeryDomainFieldElement, &v.FpMontgomeryDomainFieldElement)
+	fiatFpSquare(&f.fiatFpMontgomeryDomainFieldElement, &v.fiatFpMontgomeryDomainFieldElement)
 }
 
 func (f *Fp) Inv(a *Fp) (ok uint64) {
@@ -133,25 +132,25 @@ func (f *Fp) Inv(a *Fp) (ok uint64) {
 	var out1, inverted uint64
 
 	d := uint64(1)
-	internal.FpDivstepPrecomp(&precomp)
-	internal.FpFromMontgomery((*internal.FpNonMontgomeryDomainFieldElement)(g[:FpLimbs]), &a.FpMontgomeryDomainFieldElement)
-	internal.FpMsat(&ff)
-	internal.FpSetOne((*internal.FpMontgomeryDomainFieldElement)(&r))
+	fiatFpDivstepPrecomp(&precomp)
+	fiatFpFromMontgomery((*fiatFpNonMontgomeryDomainFieldElement)(g[:FpLimbs]), &a.fiatFpMontgomeryDomainFieldElement)
+	fiatFpMsat(&ff)
+	fiatFpSetOne((*fiatFpMontgomeryDomainFieldElement)(&r))
 
 	for i := 0; i < FpDivSteps-(FpDivSteps%2); i += 2 {
-		internal.FpDivstep(&out1, &out2, &out3, &out4, &out5, d, &ff, &g, &v, &r)
-		internal.FpDivstep(&d, &ff, &g, &v, &r, out1, &out2, &out3, &out4, &out5)
+		fiatFpDivstep(&out1, &out2, &out3, &out4, &out5, d, &ff, &g, &v, &r)
+		fiatFpDivstep(&d, &ff, &g, &v, &r, out1, &out2, &out3, &out4, &out5)
 	}
 	if (FpDivSteps % 2) != 0 { // compile time if - always true
-		internal.FpDivstep(&out1, &out2, &out3, &out4, &out5, d, &ff, &g, &v, &r)
+		fiatFpDivstep(&out1, &out2, &out3, &out4, &out5, d, &ff, &g, &v, &r)
 		v = out4
 		ff = out2
 	}
 
-	internal.FpOpp((*internal.FpMontgomeryDomainFieldElement)(&h), (*internal.FpMontgomeryDomainFieldElement)(&v))
-	internal.FpSelect(&v, ff[FpLimbs] >> 63, &v, &h)
-	internal.FpMul(&f.FpMontgomeryDomainFieldElement, (*internal.FpMontgomeryDomainFieldElement)(&v), (*internal.FpMontgomeryDomainFieldElement)(&precomp))
-	internal.FpNonzero(&inverted, (*[FpLimbs]uint64)(&f.FpMontgomeryDomainFieldElement))
+	fiatFpOpp((*fiatFpMontgomeryDomainFieldElement)(&h), (*fiatFpMontgomeryDomainFieldElement)(&v))
+	fiatFpSelectznz(&v, fiatFpUint1(ff[FpLimbs]>>63), &v, &h)
+	fiatFpMul(&f.fiatFpMontgomeryDomainFieldElement, (*fiatFpMontgomeryDomainFieldElement)(&v), (*fiatFpMontgomeryDomainFieldElement)(&precomp))
+	fiatFpNonzero(&inverted, (*[FpLimbs]uint64)(&f.fiatFpMontgomeryDomainFieldElement))
 
 	return (inverted | -inverted) >> 63
 }
@@ -164,16 +163,16 @@ func (f *Fp) Div(lhs, rhs *Fp) (ok uint64) {
 }
 
 func (f *Fp) Sqrt(x *Fp) (ok uint64) {
-	return f.SqrtTrait.Sqrt(f, x, &FpRootOfUnity, FpE, FpProgenitorExp[:])
+	return sqrt(f, x, &FpRootOfUnity, FpE, FpProgenitorExp[:])
 }
 
 func (f *Fp) IsNonZero() uint64 {
 	// montgomery form might not be "fully reduced"
-	var nonMonty internal.FpNonMontgomeryDomainFieldElement
-	internal.FpFromMontgomery(&nonMonty, &f.FpMontgomeryDomainFieldElement)
+	var nonMonty fiatFpNonMontgomeryDomainFieldElement
+	fiatFpFromMontgomery(&nonMonty, &f.fiatFpMontgomeryDomainFieldElement)
 
 	var nonZero uint64
-	internal.FpNonzero(&nonZero, (*[FpLimbs]uint64)(&nonMonty))
+	fiatFpNonzero(&nonZero, (*[FpLimbs]uint64)(&nonMonty))
 	return (nonZero | -nonZero) >> 63
 }
 
@@ -198,17 +197,17 @@ func (f *Fp) ComponentsBytes() [][]byte {
 }
 
 func (f *Fp) Bytes() []byte {
-	var nonMonty internal.FpNonMontgomeryDomainFieldElement
-	internal.FpFromMontgomery(&nonMonty, &f.FpMontgomeryDomainFieldElement)
+	var nonMonty fiatFpNonMontgomeryDomainFieldElement
+	fiatFpFromMontgomery(&nonMonty, &f.fiatFpMontgomeryDomainFieldElement)
 	var data [FpBytes]byte
-	internal.FpToBytes(&data, (*[FpLimbs]uint64)(&nonMonty))
+	fiatFpToBytes(&data, (*[FpLimbs]uint64)(&nonMonty))
 	return data[:]
 
 }
 
 func (f *Fp) Limbs() []uint64 {
-	var nonMonty internal.FpNonMontgomeryDomainFieldElement
-	internal.FpFromMontgomery(&nonMonty, &f.FpMontgomeryDomainFieldElement)
+	var nonMonty fiatFpNonMontgomeryDomainFieldElement
+	fiatFpFromMontgomery(&nonMonty, &f.fiatFpMontgomeryDomainFieldElement)
 	return nonMonty[:]
 }
 

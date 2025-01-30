@@ -1,11 +1,10 @@
 package p256
 
 import (
-	"encoding/binary"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"io"
 	"iter"
 	"reflect"
-	"slices"
 	"strings"
 	"sync"
 
@@ -41,12 +40,7 @@ type Curve struct {
 }
 
 func p256Init() {
-	var orderBytes [8 * p256Impl.FqSatLimbs]byte
-	for i, l := range p256Impl.FqModulus {
-		binary.LittleEndian.PutUint64(orderBytes[i*8:(i+1)*8], l)
-	}
-	slices.Reverse(orderBytes[:])
-	p256Order = saferith.ModulusFromBytes(orderBytes[:])
+	p256Order = saferith.ModulusFromBytes(bitstring.ReverseBytes(p256Impl.FqModulus[:]))
 
 	p256Instance = Curve{}
 }

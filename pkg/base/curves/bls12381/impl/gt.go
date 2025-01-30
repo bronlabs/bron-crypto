@@ -2,7 +2,6 @@ package impl
 
 import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl/internal/fiat"
 	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
 )
 
@@ -142,7 +141,7 @@ func Fp12FrobeniusAutomorphism(f, arg *Fp12) *Fp12 {
 	// (u + 1)^((p - 1) / 6)
 	up1epm1div6.U0 = Fp2{
 		U0: Fp{
-			FpMontgomeryDomainFieldElement: fiat.FpMontgomeryDomainFieldElement{
+			fiatFpMontgomeryDomainFieldElement: fiatFpMontgomeryDomainFieldElement{
 				0x07089552b319d465,
 				0xc6695f92b50a8313,
 				0x97e83cccd117228f,
@@ -152,7 +151,7 @@ func Fp12FrobeniusAutomorphism(f, arg *Fp12) *Fp12 {
 			},
 		},
 		U1: Fp{
-			FpMontgomeryDomainFieldElement: fiat.FpMontgomeryDomainFieldElement{
+			fiatFpMontgomeryDomainFieldElement: fiatFpMontgomeryDomainFieldElement{
 				0xb2f66aad4ce5d646,
 				0x5842a06bfc497cec,
 				0xcf4895d42599d394,
@@ -179,7 +178,7 @@ func Fp6FrobeniusAutomorphism(f, arg *Fp6) *Fp6 {
 	var a, b, c Fp2
 	pm1Div3 := Fp2{
 		U1: Fp{
-			FpMontgomeryDomainFieldElement: fiat.FpMontgomeryDomainFieldElement{
+			fiatFpMontgomeryDomainFieldElement: fiatFpMontgomeryDomainFieldElement{
 				0xcd03c9e48671f071,
 				0x5dab22461fcda5d2,
 				0x587042afd3851b95,
@@ -191,7 +190,7 @@ func Fp6FrobeniusAutomorphism(f, arg *Fp6) *Fp6 {
 	}
 	p2m2Div3 := Fp2{
 		U0: Fp{
-			FpMontgomeryDomainFieldElement: fiat.FpMontgomeryDomainFieldElement{
+			fiatFpMontgomeryDomainFieldElement: fiatFpMontgomeryDomainFieldElement{
 				0x890dc9e4867545c3,
 				0x2af322533285a5d5,
 				0x50880866309b7e2c,

@@ -1,11 +1,10 @@
 package pasta
 
 import (
-	"encoding/binary"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"io"
 	"iter"
 	"reflect"
-	"slices"
 	"strings"
 	"sync"
 
@@ -41,12 +40,7 @@ type VestaCurve struct {
 }
 
 func vestaInit() {
-	var orderBytes [8 * pastaImpl.FpSatLimbs]byte
-	for i, l := range pastaImpl.FpModulus {
-		binary.LittleEndian.PutUint64(orderBytes[i*8:(i+1)*8], l)
-	}
-	slices.Reverse(orderBytes[:])
-	vestaOrder = saferith.ModulusFromBytes(orderBytes[:])
+	vestaOrder = saferith.ModulusFromBytes(bitstring.ReverseBytes(pastaImpl.FpModulus[:]))
 
 	vestaInstance = VestaCurve{}
 }
