@@ -1,6 +1,6 @@
 module github.com/bronlabs/krypton-primitives
 
-go 1.23.4
+go 1.23
 
 require (
 	filippo.io/edwards25519 v1.1.0
