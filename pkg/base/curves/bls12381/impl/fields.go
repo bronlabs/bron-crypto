@@ -1,8 +1,8 @@
-//go:generate go run -tags codegen ../../impl/fields/codegen pkg/base/curves/bls12381/impl
+//go:generate go run github.com/bronlabs/krypton-primitives/tools/field-codegen --mode word-by-word-montgomery --modulus "0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab" --type Fp --sqrt sqrt
+//go:generate go run github.com/bronlabs/krypton-primitives/tools/field-codegen --mode word-by-word-montgomery --modulus "0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001" --type Fq --sqrt sqrt
 package impl
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl/internal/fiat"
 	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
 )
 
@@ -11,18 +11,6 @@ var (
 	_ fieldsImpl.CubicFieldExtensionArith[*Fp2]     = fp6Params{}
 	_ fieldsImpl.QuadraticFieldExtensionArith[*Fp6] = fp12Params{}
 )
-
-//nolint:tagliatelle // embedded fields
-type Fp struct {
-	fieldsImpl.SqrtTrait[*Fp, Fp]       `fiat:"sqrt_trait"`
-	fiat.FpMontgomeryDomainFieldElement `fiat:"word_by_word_montgomery,order=0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab,primitive_element=2"`
-}
-
-//nolint:tagliatelle // embedded fields
-type Fq struct {
-	fieldsImpl.SqrtTrait[*Fq, Fq]       `fiat:"sqrt_trait"`
-	fiat.FqMontgomeryDomainFieldElement `fiat:"word_by_word_montgomery,order=0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001,primitive_element=7"`
-}
 
 type Fp2 = fieldsImpl.QuadraticFieldExtensionImpl[*Fp, fp2Params, Fp]
 type Fp6 = fieldsImpl.CubicFieldExtensionImpl[*Fp2, fp6Params, Fp2]
@@ -70,4 +58,8 @@ func (fp12Params) MulByQuadraticNonResidue(out, in *Fp6) {
 	params.MulByCubicNonResidue(&c.U0, &in.U2)
 
 	out.Set(&c)
+}
+
+func sqrt[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](out, x, rootOfUnity *F, e uint64, progenitorExp []uint8) (ok uint64) {
+	return fieldsImpl.TonelliShanks[FP, F](out, x, rootOfUnity, e, progenitorExp)
 }

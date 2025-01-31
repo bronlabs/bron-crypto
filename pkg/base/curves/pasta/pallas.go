@@ -1,11 +1,10 @@
 package pasta
 
 import (
-	"encoding/binary"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"io"
 	"iter"
 	"reflect"
-	"slices"
 	"strings"
 	"sync"
 
@@ -41,12 +40,7 @@ type PallasCurve struct {
 }
 
 func pallasInit() {
-	var orderBytes [8 * pastaImpl.FqSatLimbs]byte
-	for i, l := range pastaImpl.FqModulus {
-		binary.LittleEndian.PutUint64(orderBytes[i*8:(i+1)*8], l)
-	}
-	slices.Reverse(orderBytes[:])
-	pallasOrder = saferith.ModulusFromBytes(orderBytes[:])
+	pallasOrder = saferith.ModulusFromBytes(bitstring.ReverseBytes(pastaImpl.FqModulus[:]))
 
 	pallasInstance = PallasCurve{}
 }

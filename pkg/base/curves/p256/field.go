@@ -1,10 +1,9 @@
 package p256
 
 import (
-	"encoding/binary"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"io"
 	"iter"
-	"slices"
 	"sync"
 
 	"github.com/cronokirby/saferith"
@@ -31,12 +30,7 @@ type BaseField struct {
 }
 
 func p256BaseFieldInit() {
-	var modulusBytes [8 * p256Impl.FpSatLimbs]byte
-	for i, l := range p256Impl.FpModulus {
-		binary.LittleEndian.PutUint64(modulusBytes[i*8:(i+1)*8], l)
-	}
-	slices.Reverse(modulusBytes[:])
-	p256BaseFieldModulus = saferith.ModulusFromBytes(modulusBytes[:])
+	p256BaseFieldModulus = saferith.ModulusFromBytes(bitstring.ReverseBytes(p256Impl.FpModulus[:]))
 
 	p256BaseFieldInstance = BaseField{}
 }

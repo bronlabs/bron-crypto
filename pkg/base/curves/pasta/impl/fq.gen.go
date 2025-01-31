@@ -4,8 +4,6 @@ package impl
 
 import (
 	"encoding/hex"
-	internal "github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta/impl/internal/fiat"
-	fields "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
 	"io"
 	"slices"
 )
@@ -21,16 +19,17 @@ const (
 )
 
 var (
-    _ fields.PrimeField[*Fq] = (*Fq)(nil)
-
 	FqProgenitorExp = [...]byte{0x90, 0x75, 0x23, 0xc6, 0x6e, 0x54, 0xca, 0x04, 0x7e, 0x4c, 0x23, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x20}
-	FqModulus       [FqSatLimbs]uint64
+	FqModulus       = [...]byte{0x01, 0x00, 0x00, 0x00, 0x21, 0xeb, 0x46, 0x8c, 0xdd, 0xa8, 0x94, 0x09, 0xfc, 0x98, 0x46, 0x22, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40}
 	FqRootOfUnity   Fq
 )
 
 func init() {
-	internal.FqMsat(&FqModulus)
 	FqRootOfUnity.MustSetHex("2de6a9b8746d3f589e5c4dfd492ae26e9bb97ea3c106f049a70e2c1102b6d05f")
+}
+
+type Fq struct {
+	fiatFqMontgomeryDomainFieldElement
 }
 
 func (f *Fq) Set(v *Fq) {
@@ -42,7 +41,7 @@ func (f *Fq) SetZero() {
 }
 
 func (f *Fq) SetOne() {
-	internal.FqSetOne(&f.FqMontgomeryDomainFieldElement)
+	fiatFqSetOne(&f.fiatFqMontgomeryDomainFieldElement)
 }
 
 func (f *Fq) SetUint64(v uint64) {
@@ -51,7 +50,7 @@ func (f *Fq) SetUint64(v uint64) {
 }
 
 func (f *Fq) SetLimbs(data []uint64) (ok uint64) {
-	internal.FqToMontgomery(&f.FqMontgomeryDomainFieldElement, (*internal.FqNonMontgomeryDomainFieldElement)(data))
+	fiatFqToMontgomery(&f.fiatFqMontgomeryDomainFieldElement, (*fiatFqNonMontgomeryDomainFieldElement)(data))
 	return 1
 }
 
@@ -60,9 +59,9 @@ func (f *Fq) SetBytes(data []byte) (ok uint64) {
 		return 0
 	}
 
-	var nonMonty internal.FqNonMontgomeryDomainFieldElement
-	internal.FqFromBytes((*[FqLimbs]uint64)(&nonMonty), (*[FqBytes]uint8)(data))
-	internal.FqToMontgomery(&f.FqMontgomeryDomainFieldElement, &nonMonty)
+	var nonMonty fiatFqNonMontgomeryDomainFieldElement
+	fiatFqFromBytes((*[FqLimbs]uint64)(&nonMonty), (*[FqBytes]uint8)(data))
+	fiatFqToMontgomery(&f.fiatFqMontgomeryDomainFieldElement, &nonMonty)
 	return 1
 }
 
@@ -75,14 +74,14 @@ func (f *Fq) SetBytesWide(data []byte) (ok uint64) {
 	copy(wideData[:], data)
 
 	var d1, d0 [FqLimbs]uint64
-	internal.FqFromBytes(&d0, (*[FqBytes]uint8)(wideData[:FqBytes]))
-	internal.FqFromBytes(&d1, (*[FqBytes]uint8)(wideData[FqBytes:]))
+	fiatFqFromBytes(&d0, (*[FqBytes]uint8)(wideData[:FqBytes]))
+	fiatFqFromBytes(&d1, (*[FqBytes]uint8)(wideData[FqBytes:]))
 
 	// d0*r2 + d1*r3
-	internal.FqToMontgomery((*internal.FqMontgomeryDomainFieldElement)(&d0), (*internal.FqNonMontgomeryDomainFieldElement)(&d0))
-	internal.FqToMontgomery((*internal.FqMontgomeryDomainFieldElement)(&d1), (*internal.FqNonMontgomeryDomainFieldElement)(&d1))
-	internal.FqToMontgomery((*internal.FqMontgomeryDomainFieldElement)(&d1), (*internal.FqNonMontgomeryDomainFieldElement)(&d1))
-	internal.FqAdd(&f.FqMontgomeryDomainFieldElement, (*internal.FqMontgomeryDomainFieldElement)(&d0), (*internal.FqMontgomeryDomainFieldElement)(&d1))
+	fiatFqToMontgomery((*fiatFqMontgomeryDomainFieldElement)(&d0), (*fiatFqNonMontgomeryDomainFieldElement)(&d0))
+	fiatFqToMontgomery((*fiatFqMontgomeryDomainFieldElement)(&d1), (*fiatFqNonMontgomeryDomainFieldElement)(&d1))
+	fiatFqToMontgomery((*fiatFqMontgomeryDomainFieldElement)(&d1), (*fiatFqNonMontgomeryDomainFieldElement)(&d1))
+	fiatFqAdd(&f.fiatFqMontgomeryDomainFieldElement, (*fiatFqMontgomeryDomainFieldElement)(&d0), (*fiatFqMontgomeryDomainFieldElement)(&d1))
 	return 1
 }
 
@@ -104,27 +103,27 @@ func (f *Fq) SetRandom(prng io.Reader) (ok uint64) {
 }
 
 func (f *Fq) Select(choice uint64, z, nz *Fq) {
-	internal.FqSelect((*[FqLimbs]uint64)(&f.FqMontgomeryDomainFieldElement), choice, (*[FqLimbs]uint64)(&z.FqMontgomeryDomainFieldElement), (*[FqLimbs]uint64)(&nz.FqMontgomeryDomainFieldElement))
+	fiatFqSelectznz((*[FqLimbs]uint64)(&f.fiatFqMontgomeryDomainFieldElement),fiatFqUint1(choice), (*[FqLimbs]uint64)(&z.fiatFqMontgomeryDomainFieldElement), (*[FqLimbs]uint64)(&nz.fiatFqMontgomeryDomainFieldElement))
 }
 
 func (f *Fq) Add(lhs, rhs *Fq) {
-	internal.FqAdd(&f.FqMontgomeryDomainFieldElement, &lhs.FqMontgomeryDomainFieldElement, &rhs.FqMontgomeryDomainFieldElement)
+	fiatFqAdd(&f.fiatFqMontgomeryDomainFieldElement, &lhs.fiatFqMontgomeryDomainFieldElement, &rhs.fiatFqMontgomeryDomainFieldElement)
 }
 
 func (f *Fq) Sub(lhs, rhs *Fq) {
-	internal.FqSub(&f.FqMontgomeryDomainFieldElement, &lhs.FqMontgomeryDomainFieldElement, &rhs.FqMontgomeryDomainFieldElement)
+	fiatFqSub(&f.fiatFqMontgomeryDomainFieldElement, &lhs.fiatFqMontgomeryDomainFieldElement, &rhs.fiatFqMontgomeryDomainFieldElement)
 }
 
 func (f *Fq) Neg(v *Fq) {
-	internal.FqOpp(&f.FqMontgomeryDomainFieldElement, &v.FqMontgomeryDomainFieldElement)
+	fiatFqOpp(&f.fiatFqMontgomeryDomainFieldElement, &v.fiatFqMontgomeryDomainFieldElement)
 }
 
 func (f *Fq) Mul(lhs, rhs *Fq) {
-	internal.FqMul(&f.FqMontgomeryDomainFieldElement, &lhs.FqMontgomeryDomainFieldElement, &rhs.FqMontgomeryDomainFieldElement)
+	fiatFqMul(&f.fiatFqMontgomeryDomainFieldElement, &lhs.fiatFqMontgomeryDomainFieldElement, &rhs.fiatFqMontgomeryDomainFieldElement)
 }
 
 func (f *Fq) Square(v *Fq) {
-	internal.FqSquare(&f.FqMontgomeryDomainFieldElement, &v.FqMontgomeryDomainFieldElement)
+	fiatFqSquare(&f.fiatFqMontgomeryDomainFieldElement, &v.fiatFqMontgomeryDomainFieldElement)
 }
 
 func (f *Fq) Inv(a *Fq) (ok uint64) {
@@ -133,25 +132,25 @@ func (f *Fq) Inv(a *Fq) (ok uint64) {
 	var out1, inverted uint64
 
 	d := uint64(1)
-	internal.FqDivstepPrecomp(&precomp)
-	internal.FqFromMontgomery((*internal.FqNonMontgomeryDomainFieldElement)(g[:FqLimbs]), &a.FqMontgomeryDomainFieldElement)
-	internal.FqMsat(&ff)
-	internal.FqSetOne((*internal.FqMontgomeryDomainFieldElement)(&r))
+	fiatFqDivstepPrecomp(&precomp)
+	fiatFqFromMontgomery((*fiatFqNonMontgomeryDomainFieldElement)(g[:FqLimbs]), &a.fiatFqMontgomeryDomainFieldElement)
+	fiatFqMsat(&ff)
+	fiatFqSetOne((*fiatFqMontgomeryDomainFieldElement)(&r))
 
 	for i := 0; i < FqDivSteps-(FqDivSteps%2); i += 2 {
-		internal.FqDivstep(&out1, &out2, &out3, &out4, &out5, d, &ff, &g, &v, &r)
-		internal.FqDivstep(&d, &ff, &g, &v, &r, out1, &out2, &out3, &out4, &out5)
+		fiatFqDivstep(&out1, &out2, &out3, &out4, &out5, d, &ff, &g, &v, &r)
+		fiatFqDivstep(&d, &ff, &g, &v, &r, out1, &out2, &out3, &out4, &out5)
 	}
 	if (FqDivSteps % 2) != 0 { // compile time if - always true
-		internal.FqDivstep(&out1, &out2, &out3, &out4, &out5, d, &ff, &g, &v, &r)
+		fiatFqDivstep(&out1, &out2, &out3, &out4, &out5, d, &ff, &g, &v, &r)
 		v = out4
 		ff = out2
 	}
 
-	internal.FqOpp((*internal.FqMontgomeryDomainFieldElement)(&h), (*internal.FqMontgomeryDomainFieldElement)(&v))
-	internal.FqSelect(&v, ff[FqLimbs] >> 63, &v, &h)
-	internal.FqMul(&f.FqMontgomeryDomainFieldElement, (*internal.FqMontgomeryDomainFieldElement)(&v), (*internal.FqMontgomeryDomainFieldElement)(&precomp))
-	internal.FqNonzero(&inverted, (*[FqLimbs]uint64)(&f.FqMontgomeryDomainFieldElement))
+	fiatFqOpp((*fiatFqMontgomeryDomainFieldElement)(&h), (*fiatFqMontgomeryDomainFieldElement)(&v))
+	fiatFqSelectznz(&v, fiatFqUint1(ff[FqLimbs]>>63), &v, &h)
+	fiatFqMul(&f.fiatFqMontgomeryDomainFieldElement, (*fiatFqMontgomeryDomainFieldElement)(&v), (*fiatFqMontgomeryDomainFieldElement)(&precomp))
+	fiatFqNonzero(&inverted, (*[FqLimbs]uint64)(&f.fiatFqMontgomeryDomainFieldElement))
 
 	return (inverted | -inverted) >> 63
 }
@@ -164,16 +163,16 @@ func (f *Fq) Div(lhs, rhs *Fq) (ok uint64) {
 }
 
 func (f *Fq) Sqrt(x *Fq) (ok uint64) {
-	return f.SqrtTrait.Sqrt(f, x, &FqRootOfUnity, FqE, FqProgenitorExp[:])
+	return sqrt(f, x, &FqRootOfUnity, FqE, FqProgenitorExp[:])
 }
 
 func (f *Fq) IsNonZero() uint64 {
 	// montgomery form might not be "fully reduced"
-	var nonMonty internal.FqNonMontgomeryDomainFieldElement
-	internal.FqFromMontgomery(&nonMonty, &f.FqMontgomeryDomainFieldElement)
+	var nonMonty fiatFqNonMontgomeryDomainFieldElement
+	fiatFqFromMontgomery(&nonMonty, &f.fiatFqMontgomeryDomainFieldElement)
 
 	var nonZero uint64
-	internal.FqNonzero(&nonZero, (*[FqLimbs]uint64)(&nonMonty))
+	fiatFqNonzero(&nonZero, (*[FqLimbs]uint64)(&nonMonty))
 	return (nonZero | -nonZero) >> 63
 }
 
@@ -198,17 +197,17 @@ func (f *Fq) ComponentsBytes() [][]byte {
 }
 
 func (f *Fq) Bytes() []byte {
-	var nonMonty internal.FqNonMontgomeryDomainFieldElement
-	internal.FqFromMontgomery(&nonMonty, &f.FqMontgomeryDomainFieldElement)
+	var nonMonty fiatFqNonMontgomeryDomainFieldElement
+	fiatFqFromMontgomery(&nonMonty, &f.fiatFqMontgomeryDomainFieldElement)
 	var data [FqBytes]byte
-	internal.FqToBytes(&data, (*[FqLimbs]uint64)(&nonMonty))
+	fiatFqToBytes(&data, (*[FqLimbs]uint64)(&nonMonty))
 	return data[:]
 
 }
 
 func (f *Fq) Limbs() []uint64 {
-	var nonMonty internal.FqNonMontgomeryDomainFieldElement
-	internal.FqFromMontgomery(&nonMonty, &f.FqMontgomeryDomainFieldElement)
+	var nonMonty fiatFqNonMontgomeryDomainFieldElement
+	fiatFqFromMontgomery(&nonMonty, &f.fiatFqMontgomeryDomainFieldElement)
 	return nonMonty[:]
 }
 
