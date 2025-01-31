@@ -1,10 +1,9 @@
 package pasta
 
 import (
-	"encoding/binary"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"io"
 	"iter"
-	"slices"
 	"sync"
 
 	"github.com/cronokirby/saferith"
@@ -30,12 +29,7 @@ type VestaBaseField struct {
 }
 
 func vestaBaseFieldInit() {
-	var modulusBytes [8 * pastaImpl.FqSatLimbs]byte
-	for i, l := range pastaImpl.FqModulus {
-		binary.LittleEndian.PutUint64(modulusBytes[i*8:(i+1)*8], l)
-	}
-	slices.Reverse(modulusBytes[:])
-	vestaBaseFieldModulus = saferith.ModulusFromBytes(modulusBytes[:])
+	vestaBaseFieldModulus = saferith.ModulusFromBytes(bitstring.ReverseBytes(pastaImpl.FqModulus[:]))
 
 	vestaBaseFieldInstance = VestaBaseField{}
 }

@@ -1,19 +1,11 @@
-//go:generate go run -tags codegen ../../impl/fields/codegen pkg/base/curves/pasta/impl
+//go:generate go run github.com/bronlabs/krypton-primitives/tools/field-codegen --mode word-by-word-montgomery --modulus "2^254 + 45560315531419706090280762371685220353" --type Fp --sqrt sqrt
+//go:generate go run github.com/bronlabs/krypton-primitives/tools/field-codegen --mode word-by-word-montgomery --modulus "2^254 + 45560315531506369815346746415080538113" --type Fq --sqrt sqrt
 package impl
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta/impl/internal/fiat"
+	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
 )
 
-//nolint:tagliatelle // embedded fields
-type Fp struct {
-	fields.SqrtTrait[*Fp, Fp]           `fiat:"sqrt_trait"`
-	fiat.FpMontgomeryDomainFieldElement `fiat:"word_by_word_montgomery,order=0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001,primitive_element=5"`
-}
-
-//nolint:tagliatelle // embedded fields
-type Fq struct {
-	fields.SqrtTrait[*Fq, Fq]           `fiat:"sqrt_trait"`
-	fiat.FqMontgomeryDomainFieldElement `fiat:"word_by_word_montgomery,order=0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001,primitive_element=5"`
+func sqrt[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](out, x, rootOfUnity *F, e uint64, progenitorExp []uint8) (ok uint64) {
+	return fieldsImpl.TonelliShanks[FP, F](out, x, rootOfUnity, e, progenitorExp)
 }
