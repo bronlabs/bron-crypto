@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-//go:embed root-of-unity.sage.py
+//go:embed root-of-unity.sage
 var sageScriptString string
 
 func ComputeRootOfUnity(modulusStr string) (rootOfUnity *big.Int, modulus *big.Int) {
@@ -19,9 +19,9 @@ func ComputeRootOfUnity(modulusStr string) (rootOfUnity *big.Int, modulus *big.I
 	sageMathRequest := testcontainers.ContainerRequest{
 		Image: "sagemath/sagemath",
 		Files: []testcontainers.ContainerFile{
-			{Reader: bytes.NewBufferString(sageScriptString), ContainerFilePath: "/tmp/script.sage.py", FileMode: 0x755},
+			{Reader: bytes.NewBufferString(sageScriptString), ContainerFilePath: "/tmp/script.sage", FileMode: 0x755},
 		},
-		Cmd: []string{"/tmp/script.sage.py", "'" + modulusStr + "'"},
+		Cmd: []string{"/tmp/script.sage", "'" + modulusStr + "'"},
 		LogConsumerCfg: &testcontainers.LogConsumerConfig{
 			Consumers: []testcontainers.LogConsumer{NewWriterLogConsumer(sageOutputBuffer)},
 		},
