@@ -355,5 +355,5 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) String() string {
 	FP(&y).Select(ok, &p.Y, &y)
 	FP(&z).Select(ok, &p.Z, &one)
 
-	return fmt.Sprintf("(%s : %s : %s)", FP(&x), FP(&y), FP(&one))
+	return fmt.Sprintf("(%s : %s : %s)", FP(&x), FP(&y), FP(&z))
 }
