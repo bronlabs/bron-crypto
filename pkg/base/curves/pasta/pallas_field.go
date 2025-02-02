@@ -1,7 +1,6 @@
 package pasta
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"io"
 	"iter"
 	"sync"
@@ -9,6 +8,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	pastaImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"

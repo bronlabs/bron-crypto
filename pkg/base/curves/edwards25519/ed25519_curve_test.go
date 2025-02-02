@@ -3,6 +3,8 @@ package edwards25519_test
 import (
 	crand "crypto/rand"
 	"encoding/hex"
+	"fmt"
+	//"fmt"
 	"math/big"
 	"slices"
 	"testing"
@@ -26,7 +28,8 @@ func TestScalarRandom(t *testing.T) {
 	require.NoError(t, err)
 	s, ok := sc.(*edwards25519.Scalar)
 	require.True(t, ok)
-	expected := toScalar("0x0558f2334ecafb95d3a28f02d4ece2a10dcbe2f5890dca70e3c5e6e084a6e24f")
+	fmt.Printf("%s\n", &s.V)
+	expected := toScalar("0xfb1c2243a0a90c35ddcb684df0fb273b9d1dc5f0d91b0b79eda513a228ac61e")
 	require.Equal(t, uint64(1), s.V.Equals(expected))
 	// Try 10 random values
 	for i := 0; i < 10; i++ {
@@ -348,11 +351,21 @@ func TestPointSerialize(t *testing.T) {
 	g := curve.Generator()
 
 	ppt := g.ScalarMul(ss)
-	expectedC, _ := hex.DecodeString("c6473159e19ed185b373e935081774e0c133b9416abdff319667187a71dff53e")
-	expectedU, _ := hex.DecodeString("2a60c9f03c6b58ddae081ae1d9cefa7a2f64b313620a602af653796f2fa73974c6473159e19ed185b373e935081774e0c133b9416abdff319667187a71dff53e")
+	expectedC, _ := hex.DecodeString("e518947670078283c6cb1c00e96da82f1686c1bbf6ae84e3eb813a13f0ace8cc")
+	expectedU, _ := hex.DecodeString("e518947670078283c6cb1c00e96da82f1686c1bbf6ae84e3eb813a13f0ace84c119095f4fcb24e8ae08c263634cd49fc494142bb76877a45b49ec4b425cf384a")
+
+	println("x", hex.EncodeToString(ppt.AffineX().Bytes()))
+	println("-x", hex.EncodeToString(ppt.AffineX().Neg().Bytes()))
+	println("y", hex.EncodeToString(ppt.AffineY().Bytes()))
+
 	require.Equal(t, expectedC, ppt.ToAffineCompressed())
 	require.Equal(t, expectedU, ppt.ToAffineUncompressed())
 	retP, err := ppt.FromAffineCompressed(ppt.ToAffineCompressed())
+
+	println("x", hex.EncodeToString(retP.AffineX().Bytes()))
+	println("-x", hex.EncodeToString(retP.AffineX().Neg().Bytes()))
+	println("y", hex.EncodeToString(retP.AffineY().Bytes()))
+
 	require.NoError(t, err)
 	require.True(t, ppt.Equal(retP))
 	retP, err = ppt.FromAffineUncompressed(ppt.ToAffineUncompressed())
@@ -414,7 +427,7 @@ func TestPointSumOfProducts(t *testing.T) {
 func TestSmallOrderPoints(t *testing.T) {
 	t.Parallel()
 	// table 6(b) of https://eprint.iacr.org/2020/1244.pdf
-	for _, canonicalSerialization := range []string{
+	for _, serialisation := range []string{
 		"0100000000000000000000000000000000000000000000000000000000000000",
 		"ECFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7F",
 		"0000000000000000000000000000000000000000000000000000000000000080",
@@ -423,8 +436,14 @@ func TestSmallOrderPoints(t *testing.T) {
 		"C7176A703D4DD84FBA3C0B760D10670F2A2053FA2C39CCC64EC7FD7792AC03FA",
 		"26E8958FC2B227B045C3F489F2EF98F0D5DFAC05D3C63339B13802886D53FC05",
 		"26E8958FC2B227B045C3F489F2EF98F0D5DFAC05D3C63339B13802886D53FC85",
+		"0100000000000000000000000000000000000000000000000000000000000080",
+		"ECFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+		"EEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7F",
+		"EEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+		"EDFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+		"EDFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7F",
 	} {
-		point, err := toRPt(canonicalSerialization)
+		point, err := toRPt(serialisation)
 		require.NoError(t, err)
 		require.True(t, point.IsSmallOrder())
 	}

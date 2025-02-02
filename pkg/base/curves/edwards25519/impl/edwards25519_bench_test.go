@@ -2,12 +2,14 @@ package impl_test
 
 import (
 	crand "crypto/rand"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519/impl"
 )
 
-func Benchmark_K256(b *testing.B) {
+func Benchmark_Edwards25519(b *testing.B) {
 	prng := crand.Reader
 
 	b.Run("fp", func(b *testing.B) {

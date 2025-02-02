@@ -35,7 +35,6 @@ func ComputeRootOfUnity(modulusStr string) (rootOfUnity *big.Int, modulus *big.I
 	defer sageMathContainer.Terminate(context.Background())
 
 	out := strings.Split(sageOutputBuffer.String(), " ")
-	println(sageOutputBuffer.String())
 	rootOfUnity = MustOk(new(big.Int).SetString(strings.TrimSpace(out[0]), 0))
 	modulus = MustOk(new(big.Int).SetString(strings.TrimSpace(out[1]), 0))
 

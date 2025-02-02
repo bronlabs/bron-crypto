@@ -549,10 +549,19 @@ func (*Scalar) SetBytesCanonicalLE(input []byte) (curves.Scalar, error) {
 // pruning described in RFC 8032, Section 5.1.5 (also known as clamping) and
 // returns the resulting ed25519 scalar.
 func (*Scalar) SetBytesWithClampingLE(input []byte) (curves.Scalar, error) {
+	if len(input) != 32 {
+		return nil, errs.NewLength("input")
+	}
+
+	var buffer [32]byte
+	copy(buffer[:], input)
+	buffer[0] &= 0xf8
+	buffer[31] |= 0x40
+
 	result := new(Scalar)
-	_, err := result.V.V.SetBytesWithClamping(input)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "invalid input")
+	ok := result.V.SetBytes(buffer[:])
+	if ok != 1 {
+		return nil, errs.NewFailed("invalid input")
 	}
 
 	return result, nil

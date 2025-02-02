@@ -5,6 +5,7 @@ package {{ .Pkg }}
 import (
 	"encoding/hex"
 	"io"
+	"math/big"
 	"slices"
 )
 
@@ -231,4 +232,17 @@ func (f *{{- .TypeName }}) Hex() string {
 
 func (f *{{- .TypeName }}) Degree() uint64 {
 	return 1
+}
+
+func (f *{{- .TypeName }}) String() string {
+	fBytes := f.Bytes()
+	slices.Reverse(fBytes)
+	fBi := new(big.Int).SetBytes(fBytes)
+	return fBi.String()
+}
+
+func (f *{{- .TypeName }}) GoString() string {
+	fBytes := f.Bytes()
+	slices.Reverse(fBytes)
+	return "0x" + hex.EncodeToString(f.Bytes())
 }

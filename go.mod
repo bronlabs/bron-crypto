@@ -3,7 +3,6 @@ module github.com/bronlabs/krypton-primitives
 go 1.23
 
 require (
-	filippo.io/edwards25519 v1.1.0
 	github.com/cronokirby/saferith v0.33.0
 	github.com/google/gofuzz v1.2.0
 	github.com/pkg/errors v0.9.1

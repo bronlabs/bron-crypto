@@ -12,6 +12,8 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	edwards25519Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519/impl"
 	curvesImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl"
+	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
+	pointsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/points"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
@@ -206,7 +208,7 @@ func (p *Point) ScalarMul(rhs algebra.ModuleScalar[curves.Curve, curves.ScalarFi
 	}
 
 	result := new(Point)
-	result.V.ScalarMul(&p.V, &r.V)
+	pointsImpl.ScalarMul[*edwards25519Impl.Fp](&result.V, &p.V, r.V.Bytes())
 	return result
 }
 
@@ -278,21 +280,45 @@ func (p *Point) AffineY() curves.BaseFieldElement {
 // === Serialisation.
 
 func (p *Point) ToAffineCompressed() []byte {
-	return p.V.V.Bytes()
+	var x, y BaseFieldElement
+	_ = p.V.ToAffine(&x.V, &y.V)
+	yBytes := y.V.Bytes()
+	yBytes[31] |= byte(fieldsImpl.IsOdd(&x.V) << 7)
+	return yBytes
 }
 
 func (p *Point) ToAffineUncompressed() []byte {
 	var x, y BaseFieldElement
 	_ = p.V.ToAffine(&x.V, &y.V)
 
-	return slices.Concat(x.V.Bytes(), y.V.Bytes())
+	return slices.Concat(y.V.Bytes(), x.V.Bytes())
 }
 
 func (*Point) FromAffineCompressed(inBytes []byte) (curves.Point, error) {
+	if len(inBytes) != 32 {
+		return nil, errs.NewLength("input must be 32 bytes long")
+	}
+
+	var yBytes [32]byte
+	copy(yBytes[:], inBytes)
+	var y BaseFieldElement
+	yBytes[31] &= 0x7f
+	ok := y.V.SetBytes(yBytes[:])
+	if ok != 1 {
+		return nil, errs.NewFailed("invalid point")
+	}
+
+	var x BaseFieldElement
 	result := new(Point)
-	_, err := result.V.V.SetBytes(inBytes)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "invalid bytes sequence")
+	ok = result.V.SetFromAffineY(&y.V)
+	_ = result.V.ToAffine(&x.V, &y.V)
+	if ok != 1 {
+		return nil, errs.NewFailed("invalid point")
+	}
+
+	isOdd := uint64(inBytes[31] >> 7)
+	if fieldsImpl.IsOdd(&x.V) != isOdd {
+		result = result.Neg().(*Point)
 	}
 
 	return result, nil
@@ -302,8 +328,8 @@ func (*Point) FromAffineUncompressed(inBytes []byte) (curves.Point, error) {
 	if len(inBytes) != 2*32 {
 		return nil, errs.NewLength("invalid byte sequence")
 	}
-	xBytes := inBytes[:32]
-	yBytes := inBytes[32:]
+	yBytes := inBytes[:32]
+	xBytes := inBytes[32:]
 
 	var x, y BaseFieldElement
 	ok := x.V.SetBytes(xBytes)
