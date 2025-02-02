@@ -354,14 +354,14 @@ func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (c
 	for i, pt := range points {
 		ptv, ok := pt.(*Point)
 		if !ok {
-			return nil, errs.NewFailed("invalid point type %s, expected PointP256", reflect.TypeOf(pt).Name())
+			return nil, errs.NewFailed("invalid point type %s, expected PointEdwards25519", reflect.TypeOf(pt).Name())
 		}
 		nPoints[i].Set(&ptv.V)
 	}
 	for i, sc := range scalars {
 		s, ok := sc.(*Scalar)
 		if !ok {
-			return nil, errs.NewFailed("invalid scalar type %s, expected ScalarP256", reflect.TypeOf(sc).Name())
+			return nil, errs.NewFailed("invalid scalar type %s, expected PointEdwards25519", reflect.TypeOf(sc).Name())
 		}
 		nScalars[i] = s.V.Bytes()
 	}

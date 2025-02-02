@@ -3,8 +3,6 @@ package edwards25519_test
 import (
 	crand "crypto/rand"
 	"encoding/hex"
-	"fmt"
-	//"fmt"
 	"math/big"
 	"slices"
 	"testing"
@@ -28,7 +26,6 @@ func TestScalarRandom(t *testing.T) {
 	require.NoError(t, err)
 	s, ok := sc.(*edwards25519.Scalar)
 	require.True(t, ok)
-	fmt.Printf("%s\n", &s.V)
 	expected := toScalar("0xfb1c2243a0a90c35ddcb684df0fb273b9d1dc5f0d91b0b79eda513a228ac61e")
 	require.Equal(t, uint64(1), s.V.Equals(expected))
 	// Try 10 random values
@@ -353,21 +350,13 @@ func TestPointSerialize(t *testing.T) {
 	ppt := g.ScalarMul(ss)
 	expectedC, _ := hex.DecodeString("e518947670078283c6cb1c00e96da82f1686c1bbf6ae84e3eb813a13f0ace8cc")
 	expectedU, _ := hex.DecodeString("e518947670078283c6cb1c00e96da82f1686c1bbf6ae84e3eb813a13f0ace84c119095f4fcb24e8ae08c263634cd49fc494142bb76877a45b49ec4b425cf384a")
-
-	println("x", hex.EncodeToString(ppt.AffineX().Bytes()))
-	println("-x", hex.EncodeToString(ppt.AffineX().Neg().Bytes()))
-	println("y", hex.EncodeToString(ppt.AffineY().Bytes()))
-
 	require.Equal(t, expectedC, ppt.ToAffineCompressed())
 	require.Equal(t, expectedU, ppt.ToAffineUncompressed())
+
 	retP, err := ppt.FromAffineCompressed(ppt.ToAffineCompressed())
-
-	println("x", hex.EncodeToString(retP.AffineX().Bytes()))
-	println("-x", hex.EncodeToString(retP.AffineX().Neg().Bytes()))
-	println("y", hex.EncodeToString(retP.AffineY().Bytes()))
-
 	require.NoError(t, err)
 	require.True(t, ppt.Equal(retP))
+
 	retP, err = ppt.FromAffineUncompressed(ppt.ToAffineUncompressed())
 	require.NoError(t, err)
 	require.True(t, ppt.Equal(retP))

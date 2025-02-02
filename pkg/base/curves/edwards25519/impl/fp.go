@@ -11,7 +11,10 @@ import (
 )
 
 const (
-	FpE uint64 = 2
+	FpE         uint64 = 2
+	FpBits      uint64 = 255
+	FpBytes     uint64 = 32
+	FpWideBytes uint64 = 64
 )
 
 var (
@@ -43,7 +46,7 @@ func (f *Fp) SetOne() {
 }
 
 func (f *Fp) SetUint64(u uint64) {
-	f.v = fiatFpTightFieldElement{u}
+	f.v = fiatFpTightFieldElement{u & ((1 << 51) - 1), u >> 51}
 }
 
 func (f *Fp) Select(choice uint64, z, nz *Fp) {
@@ -164,7 +167,7 @@ func (f *Fp) Equals(rhs *Fp) uint64 {
 }
 
 func (f *Fp) IsNonZero() uint64 {
-	var data [32]byte
+	var data [FpBytes]byte
 	fiatFpToBytes(&data, &f.v)
 	return anyNonZero(&data)
 }
@@ -188,7 +191,7 @@ func (f *Fp) SetUniformBytes(componentsData ...[]byte) (ok uint64) {
 }
 
 func (f *Fp) SetRandom(prng io.Reader) (ok uint64) {
-	var data [64]byte
+	var data [FpWideBytes]byte
 	_, err := io.ReadFull(prng, data[:])
 	if err != nil {
 		return 0
@@ -210,7 +213,7 @@ func (f *Fp) SetLimbs(data []uint64) (ok uint64) {
 		return 0
 	}
 
-	var byteData [32]byte
+	var byteData [FpBytes]byte
 	binary.LittleEndian.PutUint64(byteData[:8], data[0])
 	binary.LittleEndian.PutUint64(byteData[8:16], data[1])
 	binary.LittleEndian.PutUint64(byteData[16:24], data[2])
@@ -220,31 +223,31 @@ func (f *Fp) SetLimbs(data []uint64) (ok uint64) {
 }
 
 func (f *Fp) SetBytes(data []byte) (ok uint64) {
-	if len(data) != 32 || (data[31]&0x80 != 0) {
+	if len(data) != int(FpBytes) || (data[FpBytes-1]&0x80 != 0) {
 		return 0
 	}
 
-	fiatFpFromBytes(&f.v, (*[32]uint8)(data))
+	fiatFpFromBytes(&f.v, (*[FpBytes]uint8)(data))
 	return 1
 }
 
 func (f *Fp) SetBytesWide(data []byte) (ok uint64) {
-	if len(data) > 64 {
+	if len(data) > int(FpWideBytes) {
 		return 0
 	}
 
-	var wideData [64]byte
+	var wideData [FpWideBytes]byte
 	copy(wideData[:], data[:])
-	p255 := uint64(wideData[31] >> 7)
-	wideData[31] &= 0x7f
-	p511 := uint64(wideData[63] >> 7)
-	wideData[63] &= 0x7f
+	p255 := uint64(wideData[FpBytes-1] >> 7)
+	wideData[FpBytes-1] &= 0x7f
+	p511 := uint64(wideData[FpWideBytes-1] >> 7)
+	wideData[FpWideBytes-1] &= 0x7f
 
 	var zero, lo, hi, twoTo256, pLo, pHi Fp
 	zero.SetZero()
 	twoTo256.SetUint64(19 * 2)
-	okLo := lo.SetBytes(wideData[:32])
-	okHi := hi.SetBytes(wideData[32:])
+	okLo := lo.SetBytes(wideData[:FpBytes])
+	okHi := hi.SetBytes(wideData[FpBytes:])
 	hi.Mul(&hi, &twoTo256)
 	ok = okLo & okHi
 	pLo.SetUint64(19)
@@ -261,7 +264,7 @@ func (f *Fp) SetBytesWide(data []byte) (ok uint64) {
 }
 
 func (f *Fp) Bytes() []byte {
-	var data [32]byte
+	var data [FpBytes]byte
 	fiatFpToBytes(&data, &f.v)
 	return data[:]
 }
@@ -302,7 +305,7 @@ func (f *Fp) GoString() string {
 	return "0x" + hex.EncodeToString(f.Bytes())
 }
 
-func anyNonZero(data *[32]byte) (ok uint64) {
+func anyNonZero(data *[FpBytes]byte) (ok uint64) {
 	v := uint64(
 		data[0] | data[1] | data[2] | data[3] | data[4] | data[5] | data[6] | data[7] |
 			data[8] | data[9] | data[10] | data[11] | data[12] | data[13] | data[14] | data[15] |
