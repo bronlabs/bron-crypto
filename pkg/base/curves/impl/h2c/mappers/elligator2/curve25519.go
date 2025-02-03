@@ -8,7 +8,7 @@ var (
 	curve25519Elligator2JLimbs  = [...]uint64{0x0000000000076d06, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000}
 	curve25519Elligator2C2Limbs = [...]uint64{0xc4ee1b274a0ea0b1, 0x2f431806ad2fe478, 0x2b4d00993dfbd7a7, 0x2b8324804fc1df0b}
 	curve25519Elligator2C3Limbs = [...]uint64{0xc4ee1b274a0ea0b0, 0x2f431806ad2fe478, 0x2b4d00993dfbd7a7, 0x2b8324804fc1df0b}
-	curve25519Elligator2C4      = [...]uint64{0xfffffffffffffffd, 0xffffffffffffffff, 0xffffffffffffffff, 0x0fffffffffffffff}
+	curve25519Elligator2C4      = [...]uint8{0xfd, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x0f}
 )
 
 func mapToCurveElligator2Curve25519[FP fieldsImpl.PrimeFieldPtrConstraint[FP, F], F any](xnOut, xdOut, ynOut, ydOut, u *F) {
@@ -49,7 +49,7 @@ func mapToCurveElligator2Curve25519[FP fieldsImpl.PrimeFieldPtrConstraint[FP, F]
 	// 15. tv2 = tv2 * tv3       # gx1 * gxd^7
 	FP(&tv2).Mul(&tv2, &tv3)
 	// 16. y11 = tv2^c4          # (gx1 * gxd^7)^((p - 5) / 8)
-	fieldsImpl.PowLimbs[FP](&y11, &tv2, curve25519Elligator2C4[:])
+	fieldsImpl.Pow[FP](&y11, &tv2, curve25519Elligator2C4[:])
 	// 17. y11 = y11 * tv3       # gx1 * gxd^3 * (gx1 * gxd^7)^((p - 5) / 8)
 	FP(&y11).Mul(&y11, &tv3)
 	// 18. y12 = y11 * c3

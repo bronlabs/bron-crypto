@@ -90,8 +90,12 @@ githooks:
 test:
 	${RUN_IN_CLAUSE} '${GOENV} gotestsum ${BUILD_TAGS} -- ./...'
 
+test-edwards25519:
+	${RUN_IN_CLAUSE} '${GOENV} gotestsum ${BUILD_TAGS} -- github.com/bronlabs/krypton-primitives/tools/edwards25519-tester'
+
 test-long: ## Runs all tests, including long-running tests
 	${RUN_IN_CLAUSE} '${GOENV} gotestsum ${BUILD_TAGS} -- -timeout 120m ./...'
+	${RUN_IN_CLAUSE} '${GOENV} gotestsum ${BUILD_TAGS} -- -timeout 120m github.com/bronlabs/krypton-primitives/tools/edwards25519-tester'
 
 check-thirdparty:
 	@${SCRIPTS_DIR}/check_thirdparty.sh ${THIRDPARTY_DIR}/manifest.txt
@@ -109,7 +113,9 @@ fuzz-long:
 	${RUN_IN_CLAUSE} 'make long-fuzz-test-pkg'
 
 check-deps:
-	${RUN_IN_CLAUSE}  'go list -json -m all | nancy sleuth -d /tmp/.ossindexcache'
+	# from: https://github.com/sonatype-nexus-community/nancy?tab=readme-ov-file#what-is-the-best-usage-of-nancy
+	# takes into account only dependencies that will end-up in the final binary
+	${RUN_IN_CLAUSE}  'go list -json -deps ./... | nancy sleuth --loud -d /tmp/.ossindexcache'
 
 lint-long-go:
 	${RUN_IN_CLAUSE} 'golangci-lint run --config=./.golangci-long.yml --timeout=120m'

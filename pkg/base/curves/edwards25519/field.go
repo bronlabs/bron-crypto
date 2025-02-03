@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	edwards25519Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519/impl"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
@@ -179,7 +180,7 @@ func (*BaseField) ExclusiveDisjunctiveIdentity() curves.BaseFieldElement {
 }
 
 func (*BaseField) ElementSize() int {
-	return 32
+	return int(edwards25519Impl.FpBytes)
 }
 
 func (*BaseField) WideElementSize() int {
@@ -341,11 +342,11 @@ func (f *BaseField) Trace(e curves.BaseFieldElement) curves.BaseFieldElement {
 }
 
 func (*BaseField) FieldBytes() int {
-	return 32
+	return int(edwards25519Impl.FpBytes)
 }
 
 func (*BaseField) WideFieldBytes() int {
-	return 64
+	return int(edwards25519Impl.FpWideBytes)
 }
 
 // === Zp Methods.

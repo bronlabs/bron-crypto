@@ -2,7 +2,7 @@
 
 if len(sys.argv) != 2:
     print(sys.argv)
-    sys.exit("Usage: root-of-unity.py <modulus>")
+    sys.exit("Usage: root-of-unity.sage <modulus>")
 
 p = eval(preparse(sys.argv[1]))
 fp = GF(p)

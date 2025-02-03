@@ -7,7 +7,7 @@ func IsNegative[FP PrimeFieldPtrConstraint[FP, F], F any](v *F) (neg uint64) {
 }
 
 func IsOdd[FP PrimeFieldPtrConstraint[FP, F], F any](v *F) (odd uint64) {
-	return FP(v).Limbs()[0] & 0b1
+	return uint64(FP(v).Bytes()[0] & 0b1)
 }
 
 func Degree[FP FiniteFieldPtrConstraint[FP, F], F any]() uint64 {

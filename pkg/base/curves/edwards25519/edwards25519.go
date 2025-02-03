@@ -3,6 +3,7 @@ package edwards25519
 import (
 	"io"
 	"iter"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	edwards25519Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519/impl"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/h2c"
+	pointsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/points"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
@@ -337,45 +339,39 @@ func (*Curve) SubGroupOrder() *saferith.Modulus {
 	return subgroupOrder
 }
 
-func (*Curve) ScalarBaseMult(sc algebra.ModuleScalar[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar]) curves.Point {
+func (c *Curve) ScalarBaseMult(sc algebra.ModuleScalar[curves.Curve, curves.ScalarField, curves.Point, curves.Scalar]) curves.Point {
 	scalar, ok := sc.(*Scalar)
 	if !ok {
 		panic("scalar is not of type edwards25519 Scalar")
 	}
 
-	p := new(Point)
-	p.V.ScalarBaseMul(&scalar.V)
-	return p
+	return c.Generator().ScalarMul(scalar)
 }
 
-func (c *Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
-	// TODO(mkk): investigate
-	result := c.AdditiveIdentity()
-	for i := range points {
-		result = result.Add(points[i].ScalarMul(scalars[i]))
+func (*Curve) MultiScalarMult(scalars []curves.Scalar, points []curves.Point) (curves.Point, error) {
+	nPoints := make([]edwards25519Impl.Point, len(points))
+	nScalars := make([][]byte, len(scalars))
+	for i, pt := range points {
+		ptv, ok := pt.(*Point)
+		if !ok {
+			return nil, errs.NewFailed("invalid point type %s, expected PointEdwards25519", reflect.TypeOf(pt).Name())
+		}
+		nPoints[i].Set(&ptv.V)
 	}
-	return result, nil
+	for i, sc := range scalars {
+		s, ok := sc.(*Scalar)
+		if !ok {
+			return nil, errs.NewFailed("invalid scalar type %s, expected PointEdwards25519", reflect.TypeOf(sc).Name())
+		}
+		nScalars[i] = s.V.Bytes()
+	}
+	value := new(Point)
+	err := pointsImpl.MultiScalarMul[*edwards25519Impl.Fp](&value.V, nPoints, nScalars)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "multiscalar multiplication")
+	}
 
-	//nPoints := make([]*edwards25519Impl.Point, len(points))
-	//nScalars := make([]*edwards25519Impl.Fq, len(scalars))
-	//for i, sc := range scalars {
-	//	ss, ok := sc.(*Scalar)
-	//	if !ok {
-	//		return nil, errs.NewFailed("invalid point type, expected ScalarEd25519")
-	//	}
-	//	nScalars[i] = &ss.V
-	//}
-	//for i, pt := range points {
-	//	pp, ok := pt.(*Point)
-	//	if !ok {
-	//		return nil, errs.NewFailed("invalid point type, expected PointEd25519")
-	//	}
-	//	nPoints[i] = &pp.V
-	//}
-	//
-	//result := new(Point)
-	//result.V.MultiScalarMult(nPoints, nScalars)
-	//return result, nil
+	return value, nil
 }
 
 func (*Curve) DeriveFromAffineX(x curves.BaseFieldElement) (p1, p2 curves.Point, err error) {

@@ -21,12 +21,16 @@ const (
 )
 
 func main() {
-	mode, goPackage, _, goType, modulus, sqrtFunc := ReadInput()
-	if mode != MontgomeryMode {
-		panic("only montgomery mode is supported (yet)")
+	mode, fiatOnly, goPackage, _, goType, modulus, sqrtFunc := ReadInput()
+	if mode != MontgomeryMode && mode != SolinasMode {
+		panic("unsupported mode")
 	}
 
-	fiatFileName := GenerateFiat(goPackage, goType, modulus)
+	fiatFileName := GenerateFiat(goPackage, goType, mode, modulus)
+	if fiatOnly {
+		return
+	}
+
 	fiatElementType := FiatPrefix + goType + MontgomeryElementSuffix
 	fieldLimbs := FindLimbCount(goPackage, fiatFileName, fiatElementType)
 

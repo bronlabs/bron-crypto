@@ -2,6 +2,7 @@ package impl
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/h2c"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/h2c/mappers/sswu"
@@ -21,7 +22,7 @@ var (
 	g1CurveGy              Fp
 	g1CurveMessageExpander = h2c.NewXMDMessageExpander(sha256.New)
 
-	g1SqrtRatioC1  = [...]uint64{0xee7fbfffffffeaaa, 0x07aaffffac54ffff, 0xd9cc34a83dac3d89, 0xd91dd2e13ce144af, 0x92c6e9ed90d2eb35, 0x680447a8e5ff9a6}
+	g1SqrtRatioC1  = [...]uint8{0xaa, 0xea, 0xff, 0xff, 0xff, 0xbf, 0x7f, 0xee, 0xff, 0xff, 0x54, 0xac, 0xff, 0xff, 0xaa, 0x07, 0x89, 0x3d, 0xac, 0x3d, 0xa8, 0x34, 0xcc, 0xd9, 0xaf, 0x44, 0xe1, 0x3c, 0xe1, 0xd2, 0x1d, 0xd9, 0x35, 0xeb, 0xd2, 0x90, 0xed, 0xe9, 0xc6, 0x92, 0xa6, 0xf9, 0x5f, 0x8e, 0x7a, 0x44, 0x80, 0x06}
 	g1SqrtRationC2 Fp
 
 	g1SswuZ           Fp
@@ -135,7 +136,7 @@ func (g1CurveParams) ClearCofactor(xOut, yOut, zOut, xIn, yIn, zIn *Fp) {
 	in.Z.Set(zIn)
 
 	var out G1Point
-	pointsImpl.ScalarMulLimbs[*Fp](&out, &in, []uint64{X + 1})
+	pointsImpl.ScalarMul[*Fp](&out, &in, binary.LittleEndian.AppendUint64(nil, X+1))
 	xOut.Set(&out.X)
 	yOut.Set(&out.Y)
 	zOut.Set(&out.Z)

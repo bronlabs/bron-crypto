@@ -1,6 +1,7 @@
 package points
 
 import (
+	"fmt"
 	"io"
 
 	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
@@ -45,7 +46,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Encode(dstPrefix string, mes
 	mapper.Map(&xn, &xd, &yn, &yd, &u[0])
 
 	var q ShortWeierstrassPointImpl[FP, C, H, M, F]
-	q.SetFractions(&xn, &xd, &yn, &yd)
+	q.setFractions(&xn, &xd, &yn, &yd)
 
 	curveParams.ClearCofactor(&p.X, &p.Y, &p.Z, &q.X, &q.Y, &q.Z)
 }
@@ -63,8 +64,8 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Hash(dst string, message []b
 	mapper.Map(&xn1, &xd1, &yn1, &yd1, &u[1])
 
 	var q0, q1 ShortWeierstrassPointImpl[FP, C, H, M, F]
-	q0.SetFractions(&xn0, &xd0, &yn0, &yd0)
-	q1.SetFractions(&xn1, &xd1, &yn1, &yd1)
+	q0.setFractions(&xn0, &xd0, &yn0, &yd0)
+	q1.setFractions(&xn1, &xd1, &yn1, &yd1)
 
 	var q ShortWeierstrassPointImpl[FP, C, H, M, F]
 	q.Add(&q0, &q1)
@@ -104,8 +105,8 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetRandom(prng io.Reader) (o
 	mapper.Map(&xn1, &xd1, &yn1, &yd1, &u[1])
 
 	var q0, q1 ShortWeierstrassPointImpl[FP, C, H, M, F]
-	q0.SetFractions(&xn0, &xd0, &yn0, &yd0)
-	q1.SetFractions(&xn1, &xd1, &yn1, &yd1)
+	q0.setFractions(&xn0, &xd0, &yn0, &yd0)
+	q1.setFractions(&xn1, &xd1, &yn1, &yd1)
 
 	var q ShortWeierstrassPointImpl[FP, C, H, M, F]
 	q.Add(&q0, &q1)
@@ -134,7 +135,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetAffine(x, y FP) (ok uint6
 	return ok
 }
 
-func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetFractions(xn, xd, yn, yd FP) {
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) setFractions(xn, xd, yn, yd FP) {
 	FP(&p.X).Mul(xn, yd)
 	FP(&p.Y).Mul(yn, xd)
 	FP(&p.Z).Mul(xd, yd)
@@ -343,4 +344,16 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) ToAffine(xOut, yOut FP) (ok 
 	xOut.Select(ok, xOut, &x)
 	yOut.Select(ok, yOut, &y)
 	return ok
+}
+
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) String() string {
+	var one, x, y, z F
+	FP(&one).SetOne()
+
+	ok := p.ToAffine(&x, &y)
+	FP(&x).Select(ok, &p.X, &x)
+	FP(&y).Select(ok, &p.Y, &y)
+	FP(&z).Select(ok, &p.Z, &one)
+
+	return fmt.Sprintf("(%s : %s : %s)", FP(&x), FP(&y), FP(&z))
 }

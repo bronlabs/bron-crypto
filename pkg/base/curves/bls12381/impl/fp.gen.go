@@ -5,6 +5,7 @@ package impl
 import (
 	"encoding/hex"
 	"io"
+	"math/big"
 	"slices"
 )
 
@@ -231,4 +232,17 @@ func (f *Fp) Hex() string {
 
 func (f *Fp) Degree() uint64 {
 	return 1
+}
+
+func (f *Fp) String() string {
+	fBytes := f.Bytes()
+	slices.Reverse(fBytes)
+	fBi := new(big.Int).SetBytes(fBytes)
+	return fBi.String()
+}
+
+func (f *Fp) GoString() string {
+	fBytes := f.Bytes()
+	slices.Reverse(fBytes)
+	return "0x" + hex.EncodeToString(f.Bytes())
 }
