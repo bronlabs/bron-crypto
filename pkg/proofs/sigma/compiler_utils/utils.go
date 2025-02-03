@@ -1,4 +1,4 @@
-package compiler_utils
+package compilerUtils
 
 import (
 	"io"
@@ -9,18 +9,16 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
 	fiatShamir "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 )
 
 var compilers = map[compiler.Name]any{
-	fiatShamir.Name:         nil,
-	fischlin.Name:           nil,
-	randomisedFischlin.Name: nil,
+	fiatShamir.Name: nil,
+	fischlin.Name:   nil,
 }
 
 func RegisterNICompilersForGob() {
 	fiatShamir.RegisterForGob()
-	randomisedFischlin.RegisterForGob()
+	fischlin.RegisterForGob()
 }
 
 func MakeNonInteractive[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](compilerName compiler.Name, protocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NICompiler[X, W], error) {
@@ -29,12 +27,6 @@ func MakeNonInteractive[X sigma.Statement, W sigma.Witness, A sigma.Commitment, 
 			s, base.ComputationalSecurity)
 	}
 	switch compilerName {
-	case randomisedFischlin.Name:
-		rf, err := randomisedFischlin.NewCompiler(protocol, prng)
-		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot create randomised fischlin compiler")
-		}
-		return rf, nil
 	case fiatShamir.Name:
 		fs, err := fiatShamir.NewCompiler(protocol)
 		if err != nil {
@@ -42,7 +34,7 @@ func MakeNonInteractive[X sigma.Statement, W sigma.Witness, A sigma.Commitment, 
 		}
 		return fs, nil
 	case fischlin.Name:
-		rho := getSimplifiedFischlinRho(protocol.Name())
+		rho := getFischlinRho(protocol.Name())
 		sf, err := fischlin.NewCompiler(protocol, rho, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create simplified compiler")

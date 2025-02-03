@@ -18,7 +18,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/ecdsa"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
@@ -26,10 +26,9 @@ import (
 )
 
 // testing with too many participants will slow down the fuzzer and it may cause the fuzzer to timeout or memory issue
-var (
+const (
 	maxParticipants = 3
-	// maxNumberOfPreSignatures = 10
-	cn = randomisedFischlin.Name
+	cn              = fischlin.Name
 )
 
 // we assume that input curves and hash functions are valid

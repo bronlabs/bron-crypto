@@ -12,7 +12,8 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
+	compilerUtils "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
 )
 
@@ -31,7 +32,7 @@ func Fuzz_Test(f *testing.F) {
 		require.NoError(t, err)
 		protocol, err := batch_schnorr.NewSigmaProtocol(uint(th), curve.Generator(), prng)
 		require.NoError(t, err)
-		comp, err := randomisedFischlin.NewCompiler(protocol, prng)
+		comp, err := compilerUtils.MakeNonInteractive(fischlin.Name, protocol, prng)
 		require.NoError(t, err)
 		prover, err := comp.NewProver([]byte("test"), nil)
 		require.NoError(t, err)

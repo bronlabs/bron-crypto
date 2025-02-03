@@ -2,13 +2,13 @@ package testutils
 
 import (
 	crand "crypto/rand"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
 	"io"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/network"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/pedersen"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
 )
@@ -31,7 +31,7 @@ func MakeParticipants(uniqueSessionId []byte, config types.ThresholdProtocol, id
 			return nil, errs.NewMissing("given test identity not a participant (problem in tests?)")
 		}
 
-		participants[i], err = pedersen.NewParticipant(uniqueSessionId, identity.(types.AuthKey), config, randomisedFischlin.Name, nil, prng)
+		participants[i], err = pedersen.NewParticipant(uniqueSessionId, identity.(types.AuthKey), config, fischlin.Name, nil, prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}

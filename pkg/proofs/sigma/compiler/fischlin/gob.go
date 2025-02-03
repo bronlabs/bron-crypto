@@ -1,4 +1,4 @@
-package randfischlin
+package fischlin
 
 import (
 	"encoding/gob"

@@ -8,7 +8,8 @@ import (
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
+	compilerUtils "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
 )
@@ -92,7 +93,7 @@ func TestEd25519FeldmanCombineSingle(t *testing.T) {
 	require.NoError(t, err)
 	batchSchnorr, err := batch_schnorr.NewSigmaProtocol(uint(th), testCurve.Generator(), crand.Reader)
 	require.NoError(t, err)
-	fischlinBatchSchnorr, err := randomisedFischlin.NewCompiler(batchSchnorr, crand.Reader)
+	fischlinBatchSchnorr, err := compilerUtils.MakeNonInteractive(fischlin.Name, batchSchnorr, crand.Reader)
 	require.NoError(t, err)
 	prover, err := fischlinBatchSchnorr.NewProver([]byte("test"), nil)
 	require.NoError(t, err)
@@ -123,7 +124,7 @@ func TestEd25519FeldmanAllCombinations(t *testing.T) {
 
 	dlogProofProtocol, err := batch_schnorr.NewSigmaProtocol(uint(th), testCurve.Generator(), crand.Reader)
 	require.NoError(t, err)
-	randomisedFischlinCompiler, err := randomisedFischlin.NewCompiler(dlogProofProtocol, crand.Reader)
+	randomisedFischlinCompiler, err := compilerUtils.MakeNonInteractive(fischlin.Name, dlogProofProtocol, crand.Reader)
 	require.NoError(t, err)
 
 	sid := []byte("TestEd25519FeldmanAllCombinations")

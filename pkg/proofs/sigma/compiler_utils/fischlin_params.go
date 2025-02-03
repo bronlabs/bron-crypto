@@ -1,4 +1,4 @@
-package compiler_utils
+package compilerUtils
 
 import (
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/dleq/chaum"
@@ -19,7 +19,7 @@ var simplifiedFischlinRho = map[sigma.Name]uint64{
 }
 
 // TODO: At some point move it to specific sigma protocol
-func getSimplifiedFischlinRho(sigmaName sigma.Name) uint64 {
+func getFischlinRho(sigmaName sigma.Name) uint64 {
 	v, ok := simplifiedFischlinRho[sigmaName]
 	if ok {
 		return v

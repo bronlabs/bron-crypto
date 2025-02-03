@@ -20,7 +20,8 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/schnorr"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
+	compilerUtils "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler_utils"
 	agreeonrandom_testutils "github.com/bronlabs/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/pedersen/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
@@ -215,7 +216,7 @@ func testAliceDlogProofStatementIsSameAsPartialPublicKey(t *testing.T, curve cur
 	basePoint := cipherSuite.Curve().Generator()
 	dlog, err := schnorr.NewSigmaProtocol(basePoint, prng)
 	require.NoError(t, err)
-	nidlog, err := randomisedFischlin.NewCompiler(dlog, prng)
+	nidlog, err := compilerUtils.MakeNonInteractive(fischlin.Name, dlog, prng)
 	require.NoError(t, err)
 
 	t.Run("proving something irrelevant", func(t *testing.T) {

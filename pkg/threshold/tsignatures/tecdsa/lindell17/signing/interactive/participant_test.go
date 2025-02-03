@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
 	interactive_signing "github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing/interactive"
 )
@@ -19,7 +19,7 @@ func Test_CanInitialize(t *testing.T) {
 	t.Parallel()
 
 	prng := crand.Reader
-	cn := randomisedFischlin.Name
+	const cn = fischlin.Name
 
 	curve := k256.NewCurve()
 	hash := sha256.New

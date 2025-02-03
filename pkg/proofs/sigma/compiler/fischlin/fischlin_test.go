@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/dleq/chaum"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
@@ -29,7 +29,8 @@ var supportedCurve = []curves.Curve{
 	k256.NewCurve(),
 	p256.NewCurve(),
 	edwards25519.NewCurve(),
-	pallas.NewCurve(),
+	pasta.NewPallasCurve(),
+	pasta.NewVestaCurve(),
 	bls12381.NewG1(),
 	bls12381.NewG2(),
 }
@@ -49,7 +50,7 @@ func Test_HappyPathWithSchnorr(t *testing.T) {
 			schnorrProtocol, err := schnorr.NewSigmaProtocol(curve.Generator(), prng)
 			require.NoError(t, err)
 
-			nizk, err := compiler_utils.MakeNonInteractive(fischlin.Name, schnorrProtocol, prng)
+			nizk, err := compilerUtils.MakeNonInteractive(fischlin.Name, schnorrProtocol, prng)
 			require.NoError(t, err)
 
 			proverTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
@@ -100,7 +101,7 @@ func Test_HappyPathWithBatchSchnorr(t *testing.T) {
 			schnorrProtocol, err := batch_schnorr.NewSigmaProtocol(uint(n), curve.Generator(), prng)
 			require.NoError(t, err)
 
-			nizk, err := compiler_utils.MakeNonInteractive(fischlin.Name, schnorrProtocol, prng)
+			nizk, err := compilerUtils.MakeNonInteractive(fischlin.Name, schnorrProtocol, prng)
 			require.NoError(t, err)
 
 			proverTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
@@ -162,7 +163,7 @@ func Test_HappyPathWithChaumPedersen(t *testing.T) {
 			chaumPedersenProtocol, err := chaum.NewSigmaProtocol(g1, g2, prng)
 			require.NoError(t, err)
 
-			nizk, err := compiler_utils.MakeNonInteractive(fischlin.Name, chaumPedersenProtocol, prng)
+			nizk, err := compilerUtils.MakeNonInteractive(fischlin.Name, chaumPedersenProtocol, prng)
 			require.NoError(t, err)
 
 			proverTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
@@ -220,7 +221,7 @@ func Test_HappyPathNthRoot(t *testing.T) {
 	nthRootProtocol, err := nthroots.NewSigmaProtocol(n, nn, 1, prng)
 	require.NoError(t, err)
 
-	nizk, err := compiler_utils.MakeNonInteractive(fischlin.Name, nthRootProtocol, prng)
+	nizk, err := compilerUtils.MakeNonInteractive(fischlin.Name, nthRootProtocol, prng)
 	require.NoError(t, err)
 
 	proverTranscript := hagrid.NewTranscript("Test", nil)
