@@ -36,31 +36,6 @@ func ScalarMul[FP fieldsImpl.FiniteField[FP], PP PointPtrConstraint[FP, PP, P], 
 	PP(out).Set(&res)
 }
 
-func ScalarMulLimbs[FP fieldsImpl.FiniteField[FP], PP PointPtrConstraint[FP, PP, P], P any](out, pp *P, s []uint64) {
-	var precomputed [16]P
-	PP(&precomputed[0]).SetIdentity()
-	PP(&precomputed[1]).Set(pp)
-	for i := 2; i < 16; i += 2 {
-		PP(&precomputed[i]).Double(&precomputed[i/2])
-		PP(&precomputed[i+1]).Add(&precomputed[i], pp)
-	}
-
-	var res P
-	PP(&res).SetIdentity()
-	for i := len(s) - 1; i >= 0; i-- {
-		for j := 64 - 4; j >= 0; j -= 4 {
-			PP(&res).Double(&res)
-			PP(&res).Double(&res)
-			PP(&res).Double(&res)
-			PP(&res).Double(&res)
-			w := (s[i] >> j) & 0b1111
-			PP(&res).Add(&res, &precomputed[w])
-		}
-	}
-
-	PP(out).Set(&res)
-}
-
 // MultiScalarMul computes the multi-exponentiation for the specified
 // points and scalars and stores the result in `out`.
 // Returns an error if the lengths of the arguments is not equal.

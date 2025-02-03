@@ -33,18 +33,3 @@ func Pow[FP FieldPtrConstraint[FP, F], F any](result, base *F, exp []uint8) {
 
 	FP(result).Set(&res)
 }
-
-func PowLimbs[FP FieldPtrConstraint[FP, F], F any](result, base *F, exp []uint64) {
-	var tmp, res F
-	FP(&res).SetOne()
-
-	for i := len(exp) - 1; i >= 0; i-- {
-		for j := 63; j >= 0; j-- {
-			FP(&res).Square(&res)
-			FP(&tmp).Mul(&res, base)
-			FP(&res).Select((exp[i]>>j)&1, &res, &tmp)
-		}
-	}
-
-	FP(result).Set(&res)
-}

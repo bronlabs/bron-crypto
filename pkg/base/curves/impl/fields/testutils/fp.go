@@ -95,7 +95,7 @@ func (fp *TestFp) Inv(v *TestFp) (ok uint64) {
 	}
 
 	var vInv TestFp
-	fields.PowLimbs(&vInv, v, []uint64{TestFpModulus - 2})
+	fields.Pow(&vInv, v, binary.LittleEndian.AppendUint64(nil, TestFpModulus-2))
 
 	var sanityCheck TestFp
 	sanityCheck.Mul(&vInv, v)
@@ -113,7 +113,7 @@ func (fp *TestFp) Div(lhs, rhs *TestFp) (ok uint64) {
 	}
 
 	var rhsInv TestFp
-	fields.PowLimbs(&rhsInv, rhs, []uint64{TestFpModulus - 2})
+	fields.Pow(&rhsInv, rhs, binary.LittleEndian.AppendUint64(nil, TestFpModulus-2))
 	*fp = (*lhs * rhsInv) % TestFpModulus
 	return 1
 }
