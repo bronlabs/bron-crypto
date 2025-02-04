@@ -22,11 +22,20 @@ type Shard interface {
 	ds.Equatable[Shard]
 }
 
+type ChainCode [32]byte
+
 type SigningKeyShare struct {
 	Share     curves.Scalar
 	PublicKey curves.Point
 
 	_ ds.Incomparable
+}
+
+type ExtendedSigningKeyShare struct {
+	SigningKeyShare
+	ChainCode ChainCode
+
+	ds.Incomparable
 }
 
 func (s *SigningKeyShare) Validate(protocol types.ThresholdProtocol) error {
