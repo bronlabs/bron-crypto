@@ -17,11 +17,12 @@ var (
 
 var (
 	curveB               Fp
+	curveB3              Fp
 	curveGx              Fp
 	curveGy              Fp
 	curveMessageExpander = h2c.NewXMDMessageExpander(sha256.New)
 
-	sqrtRatioC1 = [...]uint64{0xffffffffbfffff0b, 0xffffffffffffffff, 0xffffffffffffffff, 0x3fffffffffffffff}
+	sqrtRatioC1 = [...]uint8{0x0b, 0xff, 0xff, 0xbf, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3f}
 	sqrtRatioC2 Fp
 
 	sswuZ           Fp
@@ -41,6 +42,7 @@ type curveMapper = sswu.ZeroPointMapper[*Fp, curveMapperParams, Fp]
 //nolint:gochecknoinits // keep for static parameters
 func init() {
 	curveB.MustSetHex("0000000000000000000000000000000000000000000000000000000000000007")
+	curveB3.MustSetHex("0000000000000000000000000000000000000000000000000000000000000015")
 	curveGx.MustSetHex("79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798")
 	curveGy.MustSetHex("483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8")
 
@@ -85,13 +87,7 @@ func (curveParams) MulByA(out *Fp, _ *Fp) {
 
 // MulBy3B multiples provided element by 21 (secp256k1 b=7, hence 3*7 = 21).
 func (curveParams) MulBy3B(out *Fp, in *Fp) {
-	var in2, in4, in8, in16, in20 Fp
-	in2.Add(in, in)
-	in4.Add(&in2, &in2)
-	in8.Add(&in4, &in4)
-	in16.Add(&in8, &in8)
-	in20.Add(&in16, &in4)
-	out.Add(&in20, in)
+	out.Mul(in, &curveB3)
 }
 
 func (curveParams) AddA(out *Fp, in *Fp) {

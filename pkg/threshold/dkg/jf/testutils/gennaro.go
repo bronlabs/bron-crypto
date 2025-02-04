@@ -2,6 +2,7 @@ package testutils
 
 import (
 	crand "crypto/rand"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/stretchr/testify/require"
 	"io"
 
@@ -10,7 +11,6 @@ import (
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/network"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/jf"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
 )
@@ -79,7 +79,7 @@ func DoDkgRound3(t require.TestingT, participants []*jf.Participant, round3Input
 }
 
 func DoDkg(t require.TestingT, uniqueSessionId []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, err error) {
-	participants, err := MakeParticipants(t, uniqueSessionId, protocol, identities, randomisedFischlin.Name, nil)
+	participants, err := MakeParticipants(t, uniqueSessionId, protocol, identities, fischlin.Name, nil)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -210,7 +210,7 @@ func (p *PointG2) ScalarMul(rhs algebra.ModuleScalar[curves.Curve, curves.Scalar
 	}
 
 	result := new(PointG2)
-	pointsImpl.ScalarMulLimbs[*bls12381Impl.Fp2](&result.V, &p.V, r.V.Limbs())
+	pointsImpl.ScalarMul[*bls12381Impl.Fp2](&result.V, &p.V, r.V.Bytes())
 	return result
 }
 

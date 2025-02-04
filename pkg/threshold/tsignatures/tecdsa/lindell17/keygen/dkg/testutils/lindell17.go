@@ -2,6 +2,7 @@ package testutils
 
 import (
 	crand "crypto/rand"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
 	"io"
 	"testing"
 
@@ -10,14 +11,13 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/network"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	lindell17Dkg "github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg"
 	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
 )
 
-var cn = randomisedFischlin.Name
+const cn = fischlin.Name
 
 func MakeParticipants(t require.TestingT, sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, signingShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, allTranscripts []transcripts.Transcript, prngs []io.Reader) (participants []*lindell17Dkg.Participant) {
 	var err error

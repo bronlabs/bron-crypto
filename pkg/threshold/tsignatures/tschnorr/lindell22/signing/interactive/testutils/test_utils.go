@@ -2,6 +2,7 @@ package testutils
 
 import (
 	crand "crypto/rand"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/stretchr/testify/require"
 
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
@@ -9,7 +10,6 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/network"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
@@ -17,7 +17,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
 )
 
-var nizkCompilerName = randomisedFischlin.Name
+const nizkCompilerName = fischlin.Name
 
 func MakeParticipants[V schnorr.Variant[V, M], M any](t require.TestingT, sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.Map[types.IdentityKey, *lindell22.Shard], allTranscripts []transcripts.Transcript, variant schnorr.Variant[V, M]) (participants []*interactive_signing.Cosigner[V, M]) {
 	require.Len(t, identities, int(protocol.Threshold()), "invalid number of identities %d != %d", len(identities), protocol.Threshold())

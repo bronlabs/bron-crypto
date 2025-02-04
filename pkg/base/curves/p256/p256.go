@@ -1,7 +1,6 @@
 package p256
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"io"
 	"iter"
 	"reflect"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
+	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/h2c"
 	pointsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/points"

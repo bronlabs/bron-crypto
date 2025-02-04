@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
@@ -20,10 +21,18 @@ import (
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/ot"
 	"github.com/bronlabs/krypton-primitives/pkg/ot/base/vsot"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
 )
 
-var allCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve(), edwards25519.NewCurve(), pasta.NewPallasCurve()}
+var allCurves = []curves.Curve{
+	k256.NewCurve(),
+	p256.NewCurve(),
+	edwards25519.NewCurve(),
+	pasta.NewPallasCurve(),
+	pasta.NewVestaCurve(),
+	bls12381.NewG1(),
+	bls12381.NewG2(),
+}
 
 const L = 4
 
@@ -42,14 +51,14 @@ func Fuzz_Test(f *testing.F) {
 		otProtocol, err := types.NewProtocol(curve, hashset.NewHashableHashSet(senderKey.(types.IdentityKey), receiverKey.(types.IdentityKey)))
 		require.NoError(t, err)
 
-		receiver, err := vsot.NewReceiver(receiverKey, otProtocol, int(batchSize), L, sid[:], randomisedFischlin.Name, nil, prng)
+		receiver, err := vsot.NewReceiver(receiverKey, otProtocol, int(batchSize), L, sid[:], fischlin.Name, nil, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}
 		if err != nil {
 			t.Skip()
 		}
-		sender, err := vsot.NewSender(senderKey, otProtocol, int(batchSize), L, sid[:], randomisedFischlin.Name, nil, prng)
+		sender, err := vsot.NewSender(senderKey, otProtocol, int(batchSize), L, sid[:], fischlin.Name, nil, prng)
 		if err != nil && !errs.IsKnownError(err) {
 			require.NoError(t, err)
 		}

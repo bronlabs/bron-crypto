@@ -3,14 +3,12 @@ module github.com/bronlabs/krypton-primitives
 go 1.23
 
 require (
-	filippo.io/edwards25519 v1.1.0
 	github.com/cronokirby/saferith v0.33.0
 	github.com/google/gofuzz v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/crypto v0.32.0
 	golang.org/x/exp v0.0.0-20250128182459-e0ece0dbea4c
-	golang.org/x/net v0.34.0
 	golang.org/x/sync v0.10.0
 	golang.org/x/sys v0.29.0
 )

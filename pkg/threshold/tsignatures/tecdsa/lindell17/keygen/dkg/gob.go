@@ -7,5 +7,5 @@ import (
 
 func init() {
 	curveutils.RegisterCurvesForGob()
-	compiler_utils.RegisterNICompilersForGob()
+	compilerUtils.RegisterNICompilersForGob()
 }

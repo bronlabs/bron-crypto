@@ -114,21 +114,3 @@ func TestMultiPairing(t *testing.T) {
 	actual := e2.Result()
 	require.True(t, expected.Equals(actual) == 1)
 }
-
-func Test_Generators(t *testing.T) {
-	t.Parallel()
-
-	g1 := new(bls12381Impl.G1Point)
-	g1.SetGenerator()
-	g2 := new(bls12381Impl.G2Point)
-	g2.SetGenerator()
-
-	println(g1.IsIdentity())
-	println(g2.IsIdentity())
-
-	engine := new(bls12381Impl.Engine)
-	engine.AddPair(g1, g2)
-	gt := engine.Result()
-
-	println(gt.IsOne())
-}

@@ -5,8 +5,9 @@ import (
 	"os"
 )
 
-func ReadInput() (mode Mode, goPackage, goFile, goType, modulus, sqrtFunc string) {
+func ReadInput() (mode Mode, fiatOnly bool, goPackage, goFile, goType, modulus, sqrtFunc string) {
 	modeFlag := flag.String("mode", "", "word-by-word-montgomery or unsaturated-solinas")
+	fiatOnlyFlag := flag.Bool("fiat-only", false, "generate fiat only file")
 	modulusFlag := flag.String("modulus", "", "the order of the field (must be prime)")
 	sqrtFuncFlag := flag.String("sqrt", "", "square root function")
 	goTypeFlag := flag.String("type", "", "the name of type to be generated")
@@ -27,5 +28,5 @@ func ReadInput() (mode Mode, goPackage, goFile, goType, modulus, sqrtFunc string
 		panic("GOFILE environment variable not set")
 	}
 
-	return mode, goPackage, goFile, *goTypeFlag, *modulusFlag, *sqrtFuncFlag
+	return mode, *fiatOnlyFlag, goPackage, goFile, *goTypeFlag, *modulusFlag, *sqrtFuncFlag
 }

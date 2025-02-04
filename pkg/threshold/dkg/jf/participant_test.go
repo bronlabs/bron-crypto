@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/jf"
 )
 
@@ -26,9 +26,9 @@ func Test_CanInitialize(t *testing.T) {
 
 	protocol, err := testutils.MakeThresholdProtocol(curve, identities, threshold)
 	require.NoError(t, err)
-	alice, err := jf.NewParticipant([]byte("sid"), identities[0].(types.AuthKey), protocol, randomisedFischlin.Name, crand.Reader, nil)
+	alice, err := jf.NewParticipant([]byte("sid"), identities[0].(types.AuthKey), protocol, fischlin.Name, crand.Reader, nil)
 	require.NoError(t, err)
-	bob, err := jf.NewParticipant([]byte("sid"), identities[1].(types.AuthKey), protocol, randomisedFischlin.Name, crand.Reader, nil)
+	bob, err := jf.NewParticipant([]byte("sid"), identities[1].(types.AuthKey), protocol, fischlin.Name, crand.Reader, nil)
 	require.NoError(t, err)
 	require.NotEqual(t, alice.SharingId(), bob.SharingId())
 	require.True(t, alice.H.Equal(bob.H))

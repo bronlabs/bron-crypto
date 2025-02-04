@@ -206,7 +206,7 @@ func (p *Point) ScalarMul(rhs algebra.ModuleScalar[curves.Curve, curves.ScalarFi
 	}
 
 	value := new(Point)
-	pointsImpl.ScalarMulLimbs[*k256Impl.Fp](&value.V, &p.V, r.V.Limbs())
+	pointsImpl.ScalarMul[*k256Impl.Fp](&value.V, &p.V, r.V.Bytes())
 	return value
 }
 

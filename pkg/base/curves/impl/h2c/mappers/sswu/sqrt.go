@@ -1,17 +1,19 @@
 package sswu
 
 import (
+	"encoding/binary"
+
 	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
 )
 
-func SqrtRatio[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](yOut *F, c1 uint64, c3 []uint64, c4, c5 uint64, c6, c7, u, v *F) (ok uint64) {
+func SqrtRatio[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](yOut *F, c1 uint64, c3 []uint8, c4, c5 uint64, c6, c7, u, v *F) (ok uint64) {
 	var one, tv1, tv2, tv3, tv4, tv5 F
 	FP(&one).SetOne()
 
 	//  1. tv1 = c6
 	FP(&tv1).Set(c6)
 	//  2. tv2 = v^c4
-	fieldsImpl.PowLimbs[FP](&tv2, v, []uint64{c4})
+	fieldsImpl.Pow[FP](&tv2, v, binary.LittleEndian.AppendUint64(nil, c4))
 	//  3. tv3 = tv2^2
 	FP(&tv3).Square(&tv2)
 	//  4. tv3 = tv3 * v
@@ -19,7 +21,7 @@ func SqrtRatio[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](yOut *F, c1
 	//  5. tv5 = u * tv3
 	FP(&tv5).Mul(u, &tv3)
 	//  6. tv5 = tv5^c3
-	fieldsImpl.PowLimbs[FP](&tv5, &tv5, c3)
+	fieldsImpl.Pow[FP](&tv5, &tv5, c3)
 	//  7. tv5 = tv5 * tv2
 	FP(&tv5).Mul(&tv5, &tv2)
 	//  8. tv2 = tv5 * v
@@ -29,7 +31,7 @@ func SqrtRatio[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](yOut *F, c1
 	// 10. tv4 = tv3 * tv2
 	FP(&tv4).Mul(&tv3, &tv2)
 	// 11. tv5 = tv4^c5
-	fieldsImpl.PowLimbs[FP](&tv5, &tv4, []uint64{c5})
+	fieldsImpl.Pow[FP](&tv5, &tv4, binary.LittleEndian.AppendUint64(nil, c5))
 	// 12. isQR = tv5 == 1
 	isQr := FP(&tv5).IsOne()
 	// 13. tv2 = tv3 * c7
@@ -47,7 +49,7 @@ func SqrtRatio[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](yOut *F, c1
 		// 19. tv5 = 2 ^ tv5
 		tv5i = 1 << tv5i
 		// 20. tv5 = tv4 ^ tv5
-		fieldsImpl.PowLimbs[FP](&tv5, &tv4, []uint64{tv5i})
+		fieldsImpl.Pow[FP](&tv5, &tv4, binary.LittleEndian.AppendUint64(nil, tv5i))
 		// 21. e1 = tv5 == 1
 		e1 := FP(&tv5).IsOne()
 		// 22. tv2 = tv3 * tv1
@@ -66,7 +68,7 @@ func SqrtRatio[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](yOut *F, c1
 	return isQr
 }
 
-func SqrtRatio3Mod4[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](yOut *F, c1 []uint64, c2, u, v *F) (ok uint64) {
+func SqrtRatio3Mod4[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](yOut *F, c1 []uint8, c2, u, v *F) (ok uint64) {
 	var tv1, tv2, tv3, y1, y2 F
 
 	//  1. tv1 = v^2
@@ -76,7 +78,7 @@ func SqrtRatio3Mod4[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](yOut *
 	//  3. tv1 = tv1 * tv2
 	FP(&tv1).Mul(&tv1, &tv2)
 	//  4. y1 = tv1^c1
-	fieldsImpl.PowLimbs[FP](&y1, &tv1, c1)
+	fieldsImpl.Pow[FP](&y1, &tv1, c1)
 	//  5. y1 = y1 * tv2
 	FP(&y1).Mul(&y1, &tv2)
 	//  6. y2 = y1 * c2

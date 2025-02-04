@@ -2,19 +2,19 @@ package testutils
 
 import (
 	crand "crypto/rand"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/network"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
 	noninteractive_signing "github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/noninteractive"
 	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
 )
 
-var cn = randomisedFischlin.Name
+const cn = fischlin.Name
 
 func MakePreGenParticipants(t require.TestingT, identities []types.IdentityKey, sid []byte, protocol types.ThresholdProtocol, myTranscripts []transcripts.Transcript) (participants []*noninteractive_signing.PreGenParticipant) {
 	var err error

@@ -88,7 +88,7 @@ func (p protocol[_, _, _, _, _, _, _, _, _, _]) SoundnessError() int {
 	return min(p.sigma0.SoundnessError(), p.sigma1.SoundnessError())
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverCommitment(statement *Statement[X0, X1], witness *Witness[W0, W1]) (*Commitment[A0, A1], *State[S0, S1, Z0, Z1], error) {
+func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverCommitment(statement *Statement[X0, X1], witness *Witness[W0, W1]) (*Commitment[A0, A1], *State[S0, S1, Z0, Z1], error) {
 	var err error
 
 	if statement == nil || witness == nil {
@@ -137,7 +137,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverCommitmen
 	return a, s, nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(statement *Statement[X0, X1], witness *Witness[W0, W1], commitment *Commitment[A0, A1], state *State[S0, S1, Z0, Z1], challengeBytes sigma.ChallengeBytes) (*Response[Z0, Z1], error) {
+func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(statement *Statement[X0, X1], witness *Witness[W0, W1], commitment *Commitment[A0, A1], state *State[S0, S1, Z0, Z1], challengeBytes sigma.ChallengeBytes) (*Response[Z0, Z1], error) {
 	if statement == nil || witness == nil || commitment == nil || state == nil {
 		return nil, errs.NewIsNil("statement/witness/commitment/statement is nil")
 	}
@@ -182,7 +182,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(
 	return z, nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *Statement[X0, X1], commitment *Commitment[A0, A1], challengeBytes sigma.ChallengeBytes, response *Response[Z0, Z1]) error {
+func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *Statement[X0, X1], commitment *Commitment[A0, A1], challengeBytes sigma.ChallengeBytes, response *Response[Z0, Z1]) error {
 	if statement == nil || commitment == nil || response == nil {
 		return errs.NewIsNil("statement/commitment/response is nil")
 	}
@@ -209,7 +209,7 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *Stat
 	return nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement *Statement[X0, X1], challengeBytes sigma.ChallengeBytes) (*Commitment[A0, A1], *Response[Z0, Z1], error) {
+func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement *Statement[X0, X1], challengeBytes sigma.ChallengeBytes) (*Commitment[A0, A1], *Response[Z0, Z1], error) {
 	if statement == nil {
 		return nil, nil, errs.NewIsNil("statement")
 	}
@@ -240,11 +240,15 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement
 	return a, z, nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) GetChallengeBytesLength() int {
+func (p *protocol[_, _, _, _, _, _, _, _, _, _]) SpecialSoundness() uint {
+	return max(p.sigma0.SpecialSoundness(), p.sigma1.SpecialSoundness())
+}
+
+func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) GetChallengeBytesLength() int {
 	return p.challengeBytesLength
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStatement(statement *Statement[X0, X1], witness *Witness[W0, W1]) error {
+func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStatement(statement *Statement[X0, X1], witness *Witness[W0, W1]) error {
 	err0 := p.sigma0.ValidateStatement(statement.X0, witness.W0)
 	err1 := p.sigma1.ValidateStatement(statement.X1, witness.W1)
 
@@ -255,18 +259,18 @@ func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStatement(stat
 	return nil
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeStatement(statement *Statement[X0, X1]) []byte {
+func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeStatement(statement *Statement[X0, X1]) []byte {
 	return slices.Concat(p.sigma0.SerializeStatement(statement.X0), p.sigma1.SerializeStatement(statement.X1))
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeCommitment(commitment *Commitment[A0, A1]) []byte {
+func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeCommitment(commitment *Commitment[A0, A1]) []byte {
 	return slices.Concat(p.sigma0.SerializeCommitment(commitment.A0), p.sigma1.SerializeCommitment(commitment.A1))
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeResponse(response *Response[Z0, Z1]) []byte {
+func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) SerializeResponse(response *Response[Z0, Z1]) []byte {
 	return slices.Concat(p.sigma0.SerializeResponse(response.Z0), p.sigma1.SerializeResponse(response.Z1))
 }
 
-func (p protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Name() sigma.Name {
+func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Name() sigma.Name {
 	return sigma.Name(fmt.Sprintf("(%s)_OR_(%s)", p.sigma0.Name(), p.sigma1.Name()))
 }

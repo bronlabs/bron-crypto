@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/pedersen"
 )
 
@@ -28,9 +28,9 @@ func Test_CanInitialize(t *testing.T) {
 	protocol, err := testutils.MakeThresholdProtocol(curve, identities, threshold)
 	require.NoError(t, err)
 
-	alice, err := pedersen.NewParticipant([]byte("test"), aliceIdentityKey.(types.AuthKey), protocol, randomisedFischlin.Name, nil, crand.Reader)
+	alice, err := pedersen.NewParticipant([]byte("test"), aliceIdentityKey.(types.AuthKey), protocol, fischlin.Name, nil, crand.Reader)
 	require.NoError(t, err)
-	bob, err := pedersen.NewParticipant([]byte("test"), bobIdentityKey.(types.AuthKey), protocol, randomisedFischlin.Name, nil, crand.Reader)
+	bob, err := pedersen.NewParticipant([]byte("test"), bobIdentityKey.(types.AuthKey), protocol, fischlin.Name, nil, crand.Reader)
 	require.NoError(t, err)
 	for _, party := range []*pedersen.Participant{alice, bob} {
 		require.NoError(t, err)

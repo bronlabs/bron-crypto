@@ -41,10 +41,11 @@ func Test_HappyPathWithBatchSchnorr(t *testing.T) {
 		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
+			n := 16
 			prng := crand.Reader
 			sessionId := []byte("TestSessionId" + strconv.Itoa(i))
 
-			schnorrProtocol, err := batch_schnorr.NewSigmaProtocol(curve.Generator(), prng)
+			schnorrProtocol, err := batch_schnorr.NewSigmaProtocol(uint(n), curve.Generator(), prng)
 			require.NoError(t, err)
 
 			nizk, err := randomisedFischlin.NewCompiler(schnorrProtocol, prng)
@@ -60,7 +61,6 @@ func Test_HappyPathWithBatchSchnorr(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, verifier)
 
-			n := 16
 			witness := make([]curves.Scalar, n)
 			statement := make([]curves.Point, n)
 			for j := 0; j < n; j++ {
@@ -242,10 +242,11 @@ func Test_VerificationFailsOnInvalidWitness(t *testing.T) {
 		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
+			n := 8
 			prng := crand.Reader
 			sessionId := []byte("TestSessionId" + strconv.Itoa(i))
 
-			schnorrProtocol, err := batch_schnorr.NewSigmaProtocol(curve.Generator(), prng)
+			schnorrProtocol, err := batch_schnorr.NewSigmaProtocol(uint(n), curve.Generator(), prng)
 			require.NoError(t, err)
 
 			nizk, err := randomisedFischlin.NewCompiler(schnorrProtocol, prng)
@@ -261,7 +262,6 @@ func Test_VerificationFailsOnInvalidWitness(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, verifier)
 
-			n := 8
 			witness := make([]curves.Scalar, n)
 			statement := make([]curves.Point, n)
 			for k := range witness {
