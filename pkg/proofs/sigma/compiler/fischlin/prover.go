@@ -42,7 +42,7 @@ redo:
 		for i := uint64(0); i < p.rho; i++ {
 			var err error
 
-			// 1.a) compute (m_i, σ_i) ← ProverFirstMessage(x, w) independently for each i
+			// 1.a. compute (m_i, σ_i) ← ProverFirstMessage(x, w) independently for each i
 			aI[i], stateI[i], err = p.sigmaProtocol.ComputeProverCommitment(statement, witness)
 			if err != nil {
 				return nil, errs.WrapFailed(err, "cannot generate commitment")
@@ -60,28 +60,26 @@ redo:
 
 		// 4. For i = 1, ..., ρ:
 		for i := uint64(0); i < p.rho; i++ {
-
-			// 4.a) For ei = 0, ..., 2^t − 1:
+			// 4.a. For ei = 0, ..., 2^t − 1:
 			for j := uint64(0); j < (1 << p.t); j++ {
-
-				// 4.1.i. z_i ← ProverSecondMessage(x, w, σ_i, e_i)
+				// 4.a.i. z_i ← ProverSecondMessage(x, w, σ_i, e_i)
 				eI[i], zI[i], err = p.challengeBytesAndResponse(j, statement, witness, aI[i], stateI[i])
 				if err != nil {
 					return nil, errs.WrapFailed(err, "cannot compute proof")
 				}
 
-				// 4.1.ii. h_i ← H(common-h, i, e_i, z_i), where H is the first b bits of output of hash
+				// 4.a.ii. h_i ← H(common-h, i, e_i, z_i), where H is the first b bits of output of hash
 				hI, err := hash(p.b, commonH, i, eI[i], p.sigmaProtocol.SerializeResponse(zI[i]))
 				if err != nil {
 					return nil, errs.WrapFailed(err, "cannot compute proof")
 				}
 
-				// 4.1.iii. If hi == 0, break
+				// 4.a.iii. If hi == 0, break
 				if isAllZeros(hI) {
 					break
 				}
 
-				// 4.1.iv. If e_i == 2^t − 1, redo the entire proof from the beginning
+				// 4.a.iv. If e_i == 2^t − 1, redo the entire proof from the beginning
 				// (If this occurs, then it means that no break ever took place, meaning that the proof failed)
 				if j == ((1 << p.t) - 1) {
 					continue redo
@@ -108,7 +106,7 @@ redo:
 	proof := &Proof[A, Z]{
 		Rho: p.rho,
 		B:   p.b,
-		A:   aI, // 2. Let m = (m_1, ..., m_ρ)
+		A:   aI, // 2. m ← (m_1, ..., m_ρ)
 		E:   eI, // 5. e ← (e_1, ..., e_ρ)
 		Z:   zI, // 6. z ← (z_1, ..., z_ρ)
 	}
