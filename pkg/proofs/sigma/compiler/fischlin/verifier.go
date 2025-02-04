@@ -26,11 +26,14 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proof compiler.NIZKPoKProo
 	if proof == nil {
 		return errs.NewIsNil("proof")
 	}
+
+	// 1. Parse π as (m, e, z)
 	fischlinProof, ok := proof.(*Proof[A, Z])
 	if !ok {
 		return errs.NewType("input proof")
 	}
 
+	// 2. If m, e, and z do not each have ρ elements, then output reject
 	if uint64(len(fischlinProof.A)) != fischlinProof.Rho || uint64(len(fischlinProof.E)) != fischlinProof.Rho || uint64(len(fischlinProof.Z)) != fischlinProof.Rho {
 		return errs.NewArgument("invalid length")
 	}
@@ -58,21 +61,25 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proof compiler.NIZKPoKProo
 		a = append(a, v.sigmaProtocol.SerializeCommitment(fischlinProof.A[i])...)
 	}
 
+	// 3. common-h ← H(x, m, sid)
 	commonH, err := hashing.Hash(base.RandomOracleHashFunction, v.sigmaProtocol.SerializeStatement(statement), a, v.sessionId)
 	if err != nil {
 		return errs.WrapHashing(err, "cannot serialise statement")
 	}
 
+	// 4. For i ∈ {1, ..., ρ}
 	for i := uint64(0); i < fischlinProof.Rho; i++ {
 		digest, err := v.hash(fischlinProof.B, commonH, i, fischlinProof.E[i], fischlinProof.Z[i])
 		if err != nil {
 			return errs.WrapHashing(err, "cannot compute digest")
 		}
 
+		// 4.b) Halt and output reject if Hb(common-h, i, e_i, z_i) != 0
 		if !isAllZeros(digest) {
 			return errs.NewVerification("invalid challenge")
 		}
 
+		// 4.a) Halt and output reject if VerifyProof(x, m_i, e_i, z_i) == 0
 		eBytes := make([]byte, v.sigmaProtocol.GetChallengeBytesLength())
 		copy(eBytes[len(eBytes)-len(fischlinProof.E[i]):], fischlinProof.E[i])
 		err = v.sigmaProtocol.Verify(statement, fischlinProof.A[i], eBytes, fischlinProof.Z[i])
@@ -87,6 +94,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proof compiler.NIZKPoKProo
 	}
 	v.transcript.AppendMessages(responseLabel, responseSerialized...)
 
+	// 5. Output accept
 	return nil
 }
 

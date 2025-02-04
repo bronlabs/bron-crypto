@@ -38,33 +38,51 @@ func (p *prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKP
 
 redo:
 	for {
+		// 1. For i = 1, ..., ρ:
 		for i := uint64(0); i < p.rho; i++ {
 			var err error
+
+			// 1.a) compute (m_i, σ_i) ← ProverFirstMessage(x, w) independently for each i
 			aI[i], stateI[i], err = p.sigmaProtocol.ComputeProverCommitment(statement, witness)
 			if err != nil {
 				return nil, errs.WrapFailed(err, "cannot generate commitment")
 			}
+
 			a = append(a, p.sigmaProtocol.SerializeCommitment(aI[i])...)
 		}
 
+		// 3. common-h ← H(x, m, sid)
+		// (This is a full hash, with output length 2*κc)
 		commonH, err := hashing.Hash(base.RandomOracleHashFunction, p.sigmaProtocol.SerializeStatement(statement), a, p.sessionId)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot generate commitment")
 		}
 
+		// 4. For i = 1, ..., ρ:
 		for i := uint64(0); i < p.rho; i++ {
+
+			// 4.a) For ei = 0, ..., 2^t − 1:
 			for j := uint64(0); j < (1 << p.t); j++ {
-				eI[i], zI[i], err = p.sample(j, statement, witness, aI[i], stateI[i])
+
+				// 4.1.i. z_i ← ProverSecondMessage(x, w, σ_i, e_i)
+				eI[i], zI[i], err = p.challengeBytesAndResponse(j, statement, witness, aI[i], stateI[i])
 				if err != nil {
 					return nil, errs.WrapFailed(err, "cannot compute proof")
 				}
-				hb, err := hash(p.b, commonH, i, eI[i], p.sigmaProtocol.SerializeResponse(zI[i]))
+
+				// 4.1.ii. h_i ← H(common-h, i, e_i, z_i), where H is the first b bits of output of hash
+				hI, err := hash(p.b, commonH, i, eI[i], p.sigmaProtocol.SerializeResponse(zI[i]))
 				if err != nil {
 					return nil, errs.WrapFailed(err, "cannot compute proof")
 				}
-				if isAllZeros(hb) {
+
+				// 4.1.iii. If hi == 0, break
+				if isAllZeros(hI) {
 					break
 				}
+
+				// 4.1.iv. If e_i == 2^t − 1, redo the entire proof from the beginning
+				// (If this occurs, then it means that no break ever took place, meaning that the proof failed)
 				if j == ((1 << p.t) - 1) {
 					continue redo
 				}
@@ -82,23 +100,24 @@ redo:
 	for i := uint64(0); i < p.rho; i++ {
 		responseSerialized = append(responseSerialized, p.sigmaProtocol.SerializeResponse(zI[i]))
 	}
-
 	p.transcript.AppendMessages(commitmentLabel, commitmentSerialized...)
 	p.transcript.AppendMessages(challengeLabel, eI...)
 	p.transcript.AppendMessages(responseLabel, responseSerialized...)
 
+	// 7. π ← (m, e, z)
 	proof := &Proof[A, Z]{
 		Rho: p.rho,
 		B:   p.b,
-		A:   aI,
-		E:   eI,
-		Z:   zI,
+		A:   aI, // 2. Let m = (m_1, ..., m_ρ)
+		E:   eI, // 5. e ← (e_1, ..., e_ρ)
+		Z:   zI, // 6. z ← (z_1, ..., z_ρ)
 	}
 
+	// 8. Output π
 	return proof, nil
 }
 
-func (p *prover[X, W, A, S, Z]) sample(t uint64, statement X, witness W, commitment A, state S) (e []byte, response Z, err error) {
+func (p *prover[X, W, A, S, Z]) challengeBytesAndResponse(t uint64, statement X, witness W, commitment A, state S) (e []byte, response Z, err error) {
 	e = make([]byte, 8)
 	binary.BigEndian.PutUint64(e, t)
 	eBytes := make([]byte, p.sigmaProtocol.GetChallengeBytesLength())
