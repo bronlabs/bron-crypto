@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
 	"io"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
@@ -9,7 +10,6 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/ot"
 	"github.com/bronlabs/krypton-primitives/pkg/ot/base/vsot"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 )
 
 func RunVSOT(senderAuthKey, receiverAuthKey types.AuthKey, batchSize, messageLength int, curve curves.Curve, uniqueSessionId []byte, prng io.Reader) (*ot.SenderRotOutput, *ot.ReceiverRotOutput, error) {
@@ -17,11 +17,11 @@ func RunVSOT(senderAuthKey, receiverAuthKey types.AuthKey, batchSize, messageLen
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not construct ot protocol config")
 	}
-	receiver, err := vsot.NewReceiver(receiverAuthKey, protocol, batchSize, messageLength, uniqueSessionId, randomisedFischlin.Name, nil, prng)
+	receiver, err := vsot.NewReceiver(receiverAuthKey, protocol, batchSize, messageLength, uniqueSessionId, fischlin.Name, nil, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "constructing OT receiver in run VSOT")
 	}
-	sender, err := vsot.NewSender(senderAuthKey, protocol, batchSize, messageLength, uniqueSessionId, randomisedFischlin.Name, nil, prng)
+	sender, err := vsot.NewSender(senderAuthKey, protocol, batchSize, messageLength, uniqueSessionId, fischlin.Name, nil, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "constructing OT sender in run VSOT")
 	}

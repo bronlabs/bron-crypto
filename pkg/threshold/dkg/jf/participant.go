@@ -93,7 +93,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 		return nil, errs.WrapHashing(err, "failed to hash to curve for H")
 	}
 
-	batchSchnorrProtocol, err := batch_schnorr.NewSigmaProtocol(protocol.Curve().Generator(), prng)
+	batchSchnorrProtocol, err := batch_schnorr.NewSigmaProtocol(protocol.Threshold(), protocol.Curve().Generator(), prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create batch Schnorr protocol")
 	}

@@ -15,7 +15,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/ecdsa"
 	jfTestutils "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
@@ -25,7 +25,7 @@ import (
 	interactiveSigning "github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing/interactive"
 )
 
-var cn = randomisedFischlin.Name
+const cn = fischlin.Name
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()

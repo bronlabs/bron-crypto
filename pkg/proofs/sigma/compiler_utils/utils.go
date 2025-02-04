@@ -1,4 +1,4 @@
-package compiler_utils
+package compilerUtils
 
 import (
 	"io"
@@ -8,17 +8,20 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
 	fiatShamir "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 )
 
-var compilers = map[compiler.Name]any{
-	fiatShamir.Name:         nil,
-	randomisedFischlin.Name: nil,
+var compilers = map[compiler.Name]bool{
+	fiatShamir.Name:   true,
+	fischlin.Name:     true,
+	randfischlin.Name: true,
 }
 
 func RegisterNICompilersForGob() {
 	fiatShamir.RegisterForGob()
-	randomisedFischlin.RegisterForGob()
+	fischlin.RegisterForGob()
+	randfischlin.RegisterForGob()
 }
 
 func MakeNonInteractive[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](compilerName compiler.Name, protocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NICompiler[X, W], error) {
@@ -27,18 +30,25 @@ func MakeNonInteractive[X sigma.Statement, W sigma.Witness, A sigma.Commitment, 
 			s, base.ComputationalSecurity)
 	}
 	switch compilerName {
-	case randomisedFischlin.Name:
-		rf, err := randomisedFischlin.NewCompiler(protocol, prng)
-		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot create randomised fischlin compiler")
-		}
-		return rf, nil
 	case fiatShamir.Name:
 		fs, err := fiatShamir.NewCompiler(protocol)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create fiat-shamir compiler")
 		}
 		return fs, nil
+	case fischlin.Name:
+		rho := getFischlinRho(protocol.Name())
+		sf, err := fischlin.NewCompiler(protocol, rho, prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create fischlin compiler")
+		}
+		return sf, nil
+	case randfischlin.Name:
+		rf, err := randfischlin.NewCompiler(protocol, prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create randomised fischlin compiler")
+		}
+		return rf, nil
 	default:
 		return nil, errs.NewFailed("no such compiler %s", compilerName)
 	}

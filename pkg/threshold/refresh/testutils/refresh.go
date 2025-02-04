@@ -2,6 +2,7 @@ package testutils
 
 import (
 	crand "crypto/rand"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/stretchr/testify/require"
 	"io"
 
@@ -9,12 +10,11 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/network"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/refresh"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
 )
 
-var cn = randomisedFischlin.Name
+const cn = fischlin.Name
 
 func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys, prngs []io.Reader) (participants []*refresh.Participant, err error) {
 	if len(identities) != int(protocol.TotalParties()) {

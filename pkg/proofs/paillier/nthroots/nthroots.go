@@ -190,6 +190,10 @@ func (p *protocol) SoundnessError() int {
 	return p.nMod.GetModulus().BitLen()
 }
 
+func (*protocol) SpecialSoundness() uint {
+	return 2
+}
+
 func (p *protocol) GetChallengeBytesLength() int {
 	byteLen := (p.nnMod.GetModulus().BitLen() + 7) / 8
 	return byteLen

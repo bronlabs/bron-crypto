@@ -20,8 +20,12 @@ type (
 	Commitment any
 	State      any
 	Response   any
-	// Sigma protocols are defined on an arbitrary [enumerable] challenge space. Our implementation choice is to enforce working with a binary encoding of a challenge. This is to make OR-composition easier.
-	// Internally, each implementation for the sigma protocol interface will deserialize ChallengeBytes into their own suitable challenge type.
+
+	// ChallengeBytes
+	// Sigma protocols are defined on an arbitrary [enumerable] challenge space.
+	// Our implementation choice is to enforce working with a binary encoding of a challenge.
+	// This is to make OR-composition easier. Internally, each implementation for the sigma protocol interface
+	// will deserialize ChallengeBytes into their own suitable challenge type.
 	ChallengeBytes []byte
 )
 
@@ -41,11 +45,18 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 	// would be valid if played in the right order.
 	RunSimulator(statement X, challenge ChallengeBytes) (A, Z, error)
 
+	// SpecialSoundness returns n for which protocol has n-special soundness.
+	// In other words it returns minimal number of how many distinct, valid
+	// sigma protocol transcripts T_i = (x, e_i, z_i) for i = 1, 2, ..., n
+	// are required for existence of polynomial-time extractor of witness.
+	SpecialSoundness() uint
+
 	ValidateStatement(statement X, witness W) error
 	GetChallengeBytesLength() int
 	SerializeStatement(statement X) []byte
 	SerializeCommitment(commitment A) []byte
 	SerializeResponse(response Z) []byte
+
 	// SoundnessError returns the statistical soundness error `s` of the protocol,
 	// i.e. the probability that a cheating prover can succeed is ≤ 2^(-s).
 	// For interactive proofs it must be at least base.StatisticalSecurity,
