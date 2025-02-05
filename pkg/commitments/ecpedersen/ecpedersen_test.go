@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/commitments/ecpedersen"
 )
 
@@ -23,7 +23,8 @@ func Test_ValidCommitment(t *testing.T) {
 		p256.NewCurve(),
 		k256.NewCurve(),
 		edwards25519.NewCurve(),
-		pallas.NewCurve(),
+		pasta.NewPallasCurve(),
+		pasta.NewVestaCurve(),
 		bls12381.NewG1(),
 		bls12381.NewG2(),
 	}
@@ -51,7 +52,8 @@ func Test_InvalidCommitment(t *testing.T) {
 		p256.NewCurve(),
 		k256.NewCurve(),
 		edwards25519.NewCurve(),
-		pallas.NewCurve(),
+		pasta.NewPallasCurve(),
+		pasta.NewVestaCurve(),
 		bls12381.NewG1(),
 		bls12381.NewG2(),
 	}
@@ -95,7 +97,8 @@ func Test_HomomorphicAdd(t *testing.T) {
 		p256.NewCurve(),
 		k256.NewCurve(),
 		edwards25519.NewCurve(),
-		pallas.NewCurve(),
+		pasta.NewPallasCurve(),
+		pasta.NewVestaCurve(),
 		bls12381.NewG1(),
 		bls12381.NewG2(),
 	}
@@ -132,7 +135,8 @@ func Test_HomomorphicAddMessage(t *testing.T) {
 		p256.NewCurve(),
 		k256.NewCurve(),
 		edwards25519.NewCurve(),
-		pallas.NewCurve(),
+		pasta.NewPallasCurve(),
+		pasta.NewVestaCurve(),
 		bls12381.NewG1(),
 		bls12381.NewG2(),
 	}
@@ -165,7 +169,8 @@ func Test_HomomorphicSub(t *testing.T) {
 		p256.NewCurve(),
 		k256.NewCurve(),
 		edwards25519.NewCurve(),
-		pallas.NewCurve(),
+		pasta.NewPallasCurve(),
+		pasta.NewVestaCurve(),
 		bls12381.NewG1(),
 		bls12381.NewG2(),
 	}
@@ -202,7 +207,8 @@ func Test_HomomorphicSubMessage(t *testing.T) {
 		p256.NewCurve(),
 		k256.NewCurve(),
 		edwards25519.NewCurve(),
-		pallas.NewCurve(),
+		pasta.NewPallasCurve(),
+		pasta.NewVestaCurve(),
 		bls12381.NewG1(),
 		bls12381.NewG2(),
 	}
@@ -235,7 +241,8 @@ func Test_HomomorphicMul(t *testing.T) {
 		p256.NewCurve(),
 		k256.NewCurve(),
 		edwards25519.NewCurve(),
-		pallas.NewCurve(),
+		pasta.NewPallasCurve(),
+		pasta.NewVestaCurve(),
 		bls12381.NewG1(),
 		bls12381.NewG2(),
 	}
@@ -270,7 +277,8 @@ func Test_HomomorphicNeg(t *testing.T) {
 		p256.NewCurve(),
 		k256.NewCurve(),
 		edwards25519.NewCurve(),
-		pallas.NewCurve(),
+		pasta.NewPallasCurve(),
+		pasta.NewVestaCurve(),
 		bls12381.NewG1(),
 		bls12381.NewG2(),
 	}
