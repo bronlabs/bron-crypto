@@ -5,7 +5,7 @@ go 1.23
 require (
 	github.com/mmcloughlin/addchain v0.4.0
 	github.com/testcontainers/testcontainers-go v0.35.0
-	golang.org/x/text v0.21.0
+	golang.org/x/text v0.22.0
 )
 
 require (
