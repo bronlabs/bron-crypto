@@ -17,19 +17,19 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 		return nil, errs.WrapFailed(err, "could not compute R")
 	}
 
-	dealer, err := shamir.NewDealer(a.Protocol.Threshold(), a.Protocol.TotalParties(), a.Protocol.SigningSuite().Curve())
+	dealer, err := shamir.NewScheme(a.Protocol.Threshold(), a.Protocol.TotalParties(), a.Protocol.SigningSuite().Curve())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not initialise shamir config")
 	}
 
-	sharingIds := make([]uint, a.Quorum.Size())
+	sharingIds := make([]types.SharingID, a.Quorum.Size())
 	i := 0
 	for identityKey := range a.Quorum.Iter() {
 		sharingId, exists := a.SharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, errs.NewMissing("could not find sharing id of %s", identityKey.String())
 		}
-		sharingIds[i] = uint(sharingId)
+		sharingIds[i] = sharingId
 		i++
 	}
 	lagrangeCoefficients, err := dealer.LagrangeCoefficients(sharingIds)
@@ -52,7 +52,7 @@ func (a *Aggregator) Aggregate(partialSignatures ds.Map[types.IdentityKey, *fros
 		if !exists {
 			return nil, errs.NewMissing("could not find public key share of sharing id %d", j)
 		}
-		lambda_j, exists := lagrangeCoefficients[uint(j)]
+		lambda_j, exists := lagrangeCoefficients[j]
 		if !exists {
 			return nil, errs.NewMissing("could not find lagrange coefficient of sharing id %d", j)
 		}

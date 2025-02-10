@@ -2,10 +2,9 @@ package testutils
 
 import (
 	crand "crypto/rand"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
+	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
 	"io"
-
-	"github.com/stretchr/testify/require"
+	"testing"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
@@ -16,9 +15,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/zero/hjky"
 )
 
-const cn = fischlin.Name
-
-func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, prngs []io.Reader) (participants []*hjky.Participant, err error) {
+func MakeParticipants(sessionId []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, tapes []transcripts.Transcript, prngs []io.Reader) (participants []*hjky.Participant, err error) {
 	if len(identities) != int(protocol.TotalParties()) {
 		return nil, errs.NewLength("invalid number of identities %d != %d", len(identities), protocol.TotalParties())
 	}
@@ -36,7 +33,7 @@ func MakeParticipants(uniqueSessionId []byte, protocol types.ThresholdProtocol, 
 			return nil, errs.NewMissing("given test identity not in protocol config (problem in tests?)")
 		}
 
-		participants[i], err = hjky.NewParticipant(uniqueSessionId, identity.(types.AuthKey), protocol, cn, nil, prng)
+		participants[i], err = hjky.NewParticipant(sessionId, identity.(types.AuthKey), protocol, tapes[i], prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct participant")
 		}
@@ -58,22 +55,22 @@ func DoRound1(participants []*hjky.Participant) (round1BroadcastOutputs []*hjky.
 	return round1BroadcastOutputs, round1UnicastOutputs, nil
 }
 
-func DoDkgRound2(participants []*hjky.Participant, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *hjky.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *hjky.Round1P2P]) (samples []hjky.Sample, publicKeySharesMaps []ds.Map[types.SharingID, curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
-	samples = make([]hjky.Sample, len(participants))
+func DoRound2(participants []*hjky.Participant, round2BroadcastInputs []network.RoundMessages[types.ThresholdProtocol, *hjky.Round1Broadcast], round2UnicastInputs []network.RoundMessages[types.ThresholdProtocol, *hjky.Round1P2P]) (zeroShares []curves.Scalar, publicKeySharesMaps []ds.Map[types.SharingID, curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
+	zeroShares = make([]curves.Scalar, len(participants))
 	publicKeySharesMaps = make([]ds.Map[types.SharingID, curves.Point], len(participants))
 	feldmanCommitmentVectors = make([][]curves.Point, len(participants))
 	for i := range participants {
-		samples[i], publicKeySharesMaps[i], feldmanCommitmentVectors[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
+		zeroShares[i], publicKeySharesMaps[i], feldmanCommitmentVectors[i], err = participants[i].Round2(round2BroadcastInputs[i], round2UnicastInputs[i])
 		if err != nil {
 			return nil, nil, nil, errs.WrapFailed(err, "could not run HJKY DKG round 2")
 		}
 	}
 
-	return samples, publicKeySharesMaps, feldmanCommitmentVectors, nil
+	return zeroShares, publicKeySharesMaps, feldmanCommitmentVectors, nil
 }
 
-func RunSample(t require.TestingT, sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey) (participants []*hjky.Participant, samples []hjky.Sample, publicKeySharesMaps []ds.Map[types.SharingID, curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
-	participants, err = MakeParticipants(sid, protocol, identities, nil)
+func DoRun(tb testing.TB, sid []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, tapes []transcripts.Transcript) (participants []*hjky.Participant, shares []curves.Scalar, publicKeySharesMaps []ds.Map[types.SharingID, curves.Point], feldmanCommitmentVectors [][]curves.Point, err error) {
+	participants, err = MakeParticipants(sid, protocol, identities, tapes, nil)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -83,10 +80,10 @@ func RunSample(t require.TestingT, sid []byte, protocol types.ThresholdProtocol,
 		return nil, nil, nil, nil, err
 	}
 
-	r2InsB, r2InsU := ttu.MapO2I(t, participants, r1OutsB, r1OutsU)
-	samples, publicKeySharesMaps, feldmanCommitmentVectors, err = DoDkgRound2(participants, r2InsB, r2InsU)
+	r2InsB, r2InsU := ttu.MapO2I(tb, participants, r1OutsB, r1OutsU)
+	shares, publicKeySharesMaps, feldmanCommitmentVectors, err = DoRound2(participants, r2InsB, r2InsU)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	return participants, samples, publicKeySharesMaps, feldmanCommitmentVectors, nil
+	return participants, shares, publicKeySharesMaps, feldmanCommitmentVectors, nil
 }

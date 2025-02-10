@@ -1,183 +1,275 @@
-package pedersen
+package pedersen_vss
 
 import (
+	"github.com/bronlabs/krypton-primitives/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing"
 	"io"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	ecpedersen_comm "github.com/bronlabs/krypton-primitives/pkg/commitments/pedersen"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
-type Share = shamir.Share
+var (
+	_ sharing.Share                                                                                      = (*Share)(nil)
+	_ sharing.LinearVerifiableScheme[*Share, curves.Scalar, curves.Scalar, []ecpedersen_comm.Commitment] = (*Scheme)(nil)
+)
 
-// Dealer Verifiable Secret Sharing Scheme.
-type Dealer struct {
+type Share struct {
+	ShamirShare shamir.Share
+	Witness     ecpedersen_comm.Witness
+}
+
+func (s *Share) SharingId() types.SharingID {
+	return s.ShamirShare.Id
+}
+
+type Scheme struct {
+	Ck               *ecpedersen_comm.CommittingKey
 	Threshold, Total uint
-	Curve            curves.Curve
-	Generator        curves.Point
-
-	_ ds.Incomparable
 }
 
-func Verify(share, blindShare *Share, commitments []curves.Point, generator curves.Point) (err error) {
-	curve := generator.Curve()
-	if err := share.Validate(curve); err != nil {
-		return errs.WrapValidation(err, "invalid share")
+func NewScheme(ck *ecpedersen_comm.CommittingKey, threshold, total uint) *Scheme {
+	return &Scheme{
+		Ck:        ck,
+		Threshold: threshold,
+		Total:     total,
 	}
-	if err := blindShare.Validate(curve); err != nil {
-		return errs.WrapValidation(err, "invalid blind share")
-	}
+}
 
-	x := curve.ScalarField().New(uint64(share.Id))
-	i := curve.ScalarField().One()
-	is := make([]curves.Scalar, len(commitments))
-	for j := 1; j < len(commitments); j++ {
-		i = i.Mul(x)
-		is[j] = i
-	}
-	rhs, err := curve.MultiScalarMult(is[1:], commitments[1:])
+func (d *Scheme) DealWithPolynomial(secret curves.Scalar, prng io.Reader) (shares map[types.SharingID]*Share, polynomial []curves.Scalar, verificationVector []ecpedersen_comm.Commitment, err error) {
+	shamirDealer, err := shamir.NewScheme(d.Threshold, d.Total, secret.ScalarField().Curve())
 	if err != nil {
-		return errs.WrapFailed(err, "multiscalarmult failed")
+		return nil, nil, nil, errs.WrapFailed(err, "could not generate polynomial and shares")
 	}
-	rhs = rhs.Add(commitments[0])
-
-	g := commitments[0].Curve().Generator().ScalarMul(share.Value)
-	h := generator.ScalarMul(blindShare.Value)
-	lhs := g.Add(h)
-
-	if lhs.Equal(rhs) {
-		return nil
-	} else {
-		return errs.NewVerification("not equal")
-	}
-}
-
-// Output contains all the data from calling Split.
-type Output struct {
-	Blinding                        curves.Scalar
-	BlindingShares, SecretShares    []*Share
-	Commitments, BlindedCommitments []curves.Point
-	PolynomialCoefficients          []curves.Scalar
-	Generator                       curves.Point
-
-	_ ds.Incomparable
-}
-
-// NewDealer creates a new pedersen VSS.
-func NewDealer(threshold, total uint, generator curves.Point) (*Dealer, error) {
-	err := validateInputs(threshold, total, generator)
+	shamirShares, poly, err := shamirDealer.GeneratePolynomialAndShares(secret, prng)
 	if err != nil {
-		return nil, errs.WrapArgument(err, "invalid inputs to pedersen VSS")
+		return nil, nil, nil, errs.WrapFailed(err, "could not generate polynomial and shares")
 	}
 
-	return &Dealer{Threshold: threshold, Total: total, Curve: generator.Curve(), Generator: generator}, nil
+	verificationVector = make([]ecpedersen_comm.Commitment, len(poly.Coefficients))
+	witnessCoefficients := make([]ecpedersen_comm.Witness, len(poly.Coefficients))
+	for i, c := range poly.Coefficients {
+		verificationVector[i], witnessCoefficients[i], err = d.Ck.Commit(c, prng)
+	}
+
+	witnesses := make(map[types.SharingID]ecpedersen_comm.Witness)
+	for sharingId := range shamirShares {
+		x := sharingId.ToScalar(secret.ScalarField())
+		witnesses[sharingId], err = evalPolyAt(witnessCoefficients, ecpedersen_comm.Scalar(x), d.Ck.WitnessAdd, d.Ck.WitnessMul)
+		if err != nil {
+			return nil, nil, nil, errs.WrapFailed(err, "could not evaluate polynomial and shares")
+		}
+	}
+
+	shares = make(map[types.SharingID]*Share)
+	for sharingId, share := range shamirShares {
+		shares[sharingId] = &Share{
+			ShamirShare: shamir.Share{
+				Id:    share.Id,
+				Value: share.Value,
+			},
+			Witness: witnesses[sharingId],
+		}
+	}
+
+	return shares, poly.Coefficients, verificationVector, nil
 }
 
-func validateInputs(threshold, total uint, generator curves.Point) error {
-	if total < threshold {
-		return errs.NewArgument("total cannot be less than threshold")
+func (d *Scheme) DealVerifiable(secret curves.Scalar, prng io.Reader) (shares map[types.SharingID]*Share, verificationVector []ecpedersen_comm.Commitment, err error) {
+	shares, _, verificationVector, err = d.DealWithPolynomial(secret, prng)
+	return shares, verificationVector, err
+}
+
+func (d *Scheme) Deal(secret curves.Scalar, prng io.Reader) (shares map[types.SharingID]*Share, err error) {
+	shares, _, err = d.DealVerifiable(secret, prng)
+	return shares, err
+}
+
+func (d *Scheme) VerifyShare(share *Share, verificationVector []ecpedersen_comm.Commitment) error {
+	if len(verificationVector) != int(d.Threshold) {
+		return errs.NewFailed("invalid commitment vector")
 	}
-	if threshold < 2 {
-		return errs.NewArgument("threshold cannot be less than 2")
+	if share.SharingId() < 1 || uint(share.SharingId()) > d.Total {
+		return errs.NewFailed("invalid sharing id")
 	}
-	if generator == nil {
-		return errs.NewIsNil("generator is nil")
+
+	x := share.ShamirShare.Id.ToScalar(share.ShamirShare.Value.ScalarField())
+	y, err := evalPolyAt(verificationVector, ecpedersen_comm.Scalar(x), d.Ck.CommitmentAdd, d.Ck.CommitmentMul)
+	err = d.Ck.Verify(y, share.ShamirShare.Value, share.Witness)
+	if err != nil {
+		return errs.NewFailed("invalid share")
 	}
-	if generator.IsAdditiveIdentity() {
-		return errs.NewIsIdentity("invalid generator")
-	}
+
 	return nil
 }
 
-// Split creates the verifiers, blinding and shares.
-func (pd Dealer) Split(secret curves.Scalar, prng io.Reader) (*Output, error) {
-	// generate a random blinding factor
-	blinding, err := pd.Curve.ScalarField().Random(prng)
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "could not generate random scalar")
+func (d *Scheme) Open(shares ...*Share) (curves.Scalar, error) {
+	if len(shares) < 2 {
+		return nil, errs.NewFailed("invalid shares")
 	}
 
-	shamirDealer := shamir.Dealer{
-		Threshold: pd.Threshold,
-		Total:     pd.Total,
-		Curve:     pd.Curve,
-	}
-	// split the secret into shares
-	shares, poly, err := shamirDealer.GeneratePolynomialAndShares(secret, prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not generate polynomial and shares")
-	}
-
-	// split the blinding into shares
-	blindingShares, polyBlinding, err := shamirDealer.GeneratePolynomialAndShares(blinding, prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not generate polynomial and shares")
-	}
-
-	// Generate the verifiable commitments to the polynomial for the shares
-	blindedCommitments := make([]curves.Point, pd.Threshold)
-	commitments := make([]curves.Point, pd.Threshold)
-
-	// ({p0 * G + b0 * H}, ...,{pt * G + bt * H})
-	for i, c := range poly.Coefficients {
-		s := pd.Curve.ScalarBaseMult(c)
-		b := pd.Generator.ScalarMul(polyBlinding.Coefficients[i])
-		bv := s.Add(b)
-		blindedCommitments[i] = bv
-		commitments[i] = s
-	}
-
-	return &Output{
-		Blinding:               blinding,
-		BlindingShares:         blindingShares,
-		SecretShares:           shares,
-		Commitments:            commitments,
-		BlindedCommitments:     blindedCommitments,
-		PolynomialCoefficients: poly.Coefficients,
-		Generator:              pd.Generator,
-	}, nil
-}
-
-func (pd Dealer) LagrangeCoefficients(shares map[uint]*Share) (map[uint]curves.Scalar, error) {
-	shamirDealer := &shamir.Dealer{
-		Threshold: pd.Threshold,
-		Total:     pd.Total,
-		Curve:     pd.Curve,
-	}
-	identities := make([]uint, len(shares))
-	for i, xi := range shares {
-		identities[i] = xi.Id
-	}
-	lambdas, err := shamirDealer.LagrangeCoefficients(identities)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not derive lagrange coefficients")
-	}
-	return lambdas, nil
-}
-
-func (pd Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
-	shamirDealer := &shamir.Dealer{
-		Threshold: pd.Threshold,
-		Total:     pd.Total,
-		Curve:     pd.Curve,
-	}
-	result, err := shamirDealer.Combine(shares...)
+	shamirDealer, err := shamir.NewScheme(d.Threshold, d.Total, shares[0].ShamirShare.Value.ScalarField().Curve())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not combine shares")
 	}
+
+	shamirShares := sliceutils.Map(shares, func(s *Share) *shamir.Share { return &s.ShamirShare })
+	result, err := shamirDealer.Open(shamirShares...)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not combine shares")
+	}
+
 	return result, nil
 }
 
-func (pd Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
-	shamirDealer := &shamir.Dealer{
-		Threshold: pd.Threshold,
-		Total:     pd.Total,
-		Curve:     pd.Curve,
+func (d *Scheme) ShareAdd(lhs, rhs *Share) *Share {
+	v, _ := d.Ck.MessageAdd(lhs.ShamirShare.Value, rhs.ShamirShare.Value)
+	w, _ := d.Ck.WitnessAdd(lhs.Witness, rhs.Witness)
+
+	return &Share{
+		ShamirShare: shamir.Share{
+			Id:    lhs.ShamirShare.Id,
+			Value: v,
+		},
+		Witness: w,
 	}
-	result, err := shamirDealer.CombinePoints(shares...)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not combine points")
+}
+
+func (d *Scheme) ShareAddValue(lhs *Share, rhs curves.Scalar) *Share {
+	v, _ := d.Ck.MessageAdd(lhs.ShamirShare.Value, rhs)
+
+	return &Share{
+		ShamirShare: shamir.Share{
+			Id:    lhs.ShamirShare.Id,
+			Value: v,
+		},
+		Witness: lhs.Witness,
 	}
+}
+
+func (d *Scheme) ShareSub(lhs, rhs *Share) *Share {
+	v, _ := d.Ck.MessageSub(lhs.ShamirShare.Value, rhs.ShamirShare.Value)
+	w, _ := d.Ck.WitnessSub(lhs.Witness, rhs.Witness)
+
+	return &Share{
+		ShamirShare: shamir.Share{
+			Id:    lhs.ShamirShare.Id,
+			Value: v,
+		},
+		Witness: w,
+	}
+}
+
+func (d *Scheme) ShareSubValue(lhs *Share, rhs curves.Scalar) *Share {
+	v, _ := d.Ck.MessageSub(lhs.ShamirShare.Value, rhs)
+
+	return &Share{
+		ShamirShare: shamir.Share{
+			Id:    lhs.ShamirShare.Id,
+			Value: v,
+		},
+		Witness: lhs.Witness,
+	}
+}
+
+func (d *Scheme) ShareNeg(lhs *Share) *Share {
+	v, _ := d.Ck.MessageNeg(lhs.ShamirShare.Value)
+	w, _ := d.Ck.WitnessNeg(lhs.Witness)
+
+	return &Share{
+		ShamirShare: shamir.Share{
+			Id:    lhs.ShamirShare.Id,
+			Value: v,
+		},
+		Witness: w,
+	}
+}
+
+func (d *Scheme) ShareMul(lhs *Share, rhs curves.Scalar) *Share {
+	v, _ := d.Ck.MessageMul(lhs.ShamirShare.Value, rhs)
+	w, _ := d.Ck.WitnessMul(lhs.Witness, rhs)
+
+	return &Share{
+		ShamirShare: shamir.Share{
+			Id:    lhs.ShamirShare.Id,
+			Value: v,
+		},
+		Witness: w,
+	}
+}
+
+func (d *Scheme) VerificationAdd(lhs, rhs []ecpedersen_comm.Commitment) []ecpedersen_comm.Commitment {
+	v := make([]ecpedersen_comm.Commitment, len(lhs))
+	for i, l := range lhs {
+		r := rhs[i]
+		v[i], _ = d.Ck.CommitmentAdd(l, r)
+	}
+
+	return v
+}
+
+func (d *Scheme) VerificationAddValue(lhs []ecpedersen_comm.Commitment, rhs curves.Scalar) []ecpedersen_comm.Commitment {
+	v := make([]ecpedersen_comm.Commitment, len(lhs))
+	for i, l := range lhs {
+		v[i], _ = d.Ck.CommitmentAddMessage(l, rhs)
+	}
+
+	return v
+}
+
+func (d *Scheme) VerificationSub(lhs, rhs []ecpedersen_comm.Commitment) []ecpedersen_comm.Commitment {
+	v := make([]ecpedersen_comm.Commitment, len(lhs))
+	for i, l := range lhs {
+		r := rhs[i]
+		v[i], _ = d.Ck.CommitmentSub(l, r)
+	}
+
+	return v
+}
+
+func (d *Scheme) VerificationSubValue(lhs []ecpedersen_comm.Commitment, rhs curves.Scalar) []ecpedersen_comm.Commitment {
+	v := make([]ecpedersen_comm.Commitment, len(lhs))
+	for i, l := range lhs {
+		v[i], _ = d.Ck.CommitmentSubMessage(l, rhs)
+	}
+
+	return v
+}
+
+func (d *Scheme) VerificationNeg(lhs []ecpedersen_comm.Commitment) []ecpedersen_comm.Commitment {
+	v := make([]ecpedersen_comm.Commitment, len(lhs))
+	for i, l := range lhs {
+		v[i], _ = d.Ck.CommitmentNeg(l)
+	}
+
+	return v
+}
+
+func (d *Scheme) VerificationMul(lhs []ecpedersen_comm.Commitment, rhs curves.Scalar) []ecpedersen_comm.Commitment {
+	v := make([]ecpedersen_comm.Commitment, len(lhs))
+	for i, l := range lhs {
+		v[i], _ = d.Ck.CommitmentMul(l, rhs)
+	}
+
+	return v
+}
+
+func evalPolyAt[Y any, X any](poly []Y, at X, addFunc func(lhs, rhs Y) (Y, error), mulFunc func(lhs Y, rhs X) (Y, error)) (Y, error) {
+	result := poly[len(poly)-1]
+	for i := len(poly) - 2; i >= 0; i-- {
+		var err error
+		result, err = mulFunc(result, at)
+		if err != nil {
+			return *new(Y), errs.WrapFailed(err, "cannot perform multiplication")
+		}
+		result, err = addFunc(result, poly[i])
+		if err != nil {
+			return *new(Y), errs.WrapFailed(err, "cannot perform addition")
+		}
+	}
+
 	return result, nil
 }

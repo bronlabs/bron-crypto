@@ -65,7 +65,7 @@ func NewRecoverer(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey 
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	sampler, err := hjky.NewParticipant(boundSessionId, authKey, protocol, niCompiler, transcript, prng)
+	sampler, err := hjky.NewParticipant(boundSessionId, authKey, protocol, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampler")
 	}
@@ -150,7 +150,7 @@ func NewLostParty(sessionId []byte, authKey types.AuthKey, protocol types.Thresh
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	sampler, err := hjky.NewParticipant(boundSessionId, authKey, protocol, niCompiler, transcript, prng)
+	sampler, err := hjky.NewParticipant(boundSessionId, authKey, protocol, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct zero share sampler")
 	}

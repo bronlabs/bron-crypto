@@ -14,7 +14,7 @@ func ConstructPrivateKey(protocol types.ThresholdSignatureProtocol, shards ds.Ma
 	if err := validatePrivateKeyConstructionInputs(protocol, shards); err != nil {
 		return nil, errs.WrapArgument(err, "couldn't construct private key")
 	}
-	shamirDealer, err := shamir.NewDealer(protocol.Threshold(), protocol.TotalParties(), protocol.Curve())
+	shamirDealer, err := shamir.NewScheme(protocol.Threshold(), protocol.TotalParties(), protocol.Curve())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create shamir dealer")
 	}
@@ -28,7 +28,7 @@ func ConstructPrivateKey(protocol types.ThresholdSignatureProtocol, shards ds.Ma
 			return nil, errs.NewMissing("couldn't find sharing id for identity key %s", identityKey.String())
 		}
 		shares[index] = &shamir.Share{
-			Id:    uint(sharingId),
+			Id:    sharingId,
 			Value: shard.SecretShare(),
 		}
 		index++
@@ -36,7 +36,7 @@ func ConstructPrivateKey(protocol types.ThresholdSignatureProtocol, shards ds.Ma
 			publicKey = shard.PublicKey()
 		}
 	}
-	recoveredPrivateKey, err := shamirDealer.Combine(shares...)
+	recoveredPrivateKey, err := shamirDealer.Open(shares...)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to combine shares")
 	}
@@ -56,7 +56,7 @@ func validatePrivateKeyConstructionInputs(protocol types.ThresholdSignatureProto
 	}
 	shardHolders := hashset.NewHashableHashSet(shards.Keys()...)
 	if !shardHolders.IsSubSet(protocol.Participants()) {
-		return errs.NewMembership("shardholder set is not a subset of total participants")
+		return errs.NewMembership("shard holder set is not a subset of total participants")
 	}
 	if shardHolders.Size() < int(protocol.Threshold()) {
 		return errs.NewSize("shard holder set size (%d) < threshold (%d)", shardHolders.Size(), protocol.Threshold())

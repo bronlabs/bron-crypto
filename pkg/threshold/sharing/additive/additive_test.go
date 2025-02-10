@@ -3,108 +3,551 @@ package additive_test
 import (
 	crand "crypto/rand"
 	"fmt"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/base/utils/maputils"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing"
+	"maps"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/combinatorics"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/additive"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
-func TestSplitAndCombine(t *testing.T) {
-	t.Parallel()
-	curve := k256.NewCurve()
-	dealer, err := additive.NewDealer(5, curve)
-	require.NoError(t, err)
-	require.NotNil(t, dealer)
-
-	secret, err := curve.ScalarField().Hash([]byte("test"))
-	require.NoError(t, err)
-
-	shares, err := dealer.Split(secret, crand.Reader)
-	require.NoError(t, err)
-	require.NotNil(t, shares)
-	require.Len(t, shares, 5)
-
-	recomputedSecret, err := dealer.Combine(shares)
-	require.NoError(t, err)
-	require.NotNil(t, recomputedSecret)
-	require.Zero(t, secret.Cmp(recomputedSecret))
+var supportedCurves = []curves.Curve{
+	k256.NewCurve(),
+	p256.NewCurve(),
+	edwards25519.NewCurve(),
+	pasta.NewPallasCurve(),
+	pasta.NewVestaCurve(),
+	bls12381.NewG1(),
+	bls12381.NewG2(),
 }
 
-func TestShamirAdditiveRoundTrip(t *testing.T) {
+var supportedTotals = []uint{2, 3, 5}
+
+func TestDealAndOpen(t *testing.T) {
 	t.Parallel()
-	total := 5
-	threshold := 3
-	Total := make([]int, total)
-	for i := range total {
-		Total[i] = i
-	}
-	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve(), p256.NewCurve()} {
-		boundedCurve := curve
-		t.Run(fmt.Sprintf("running the round trip for curve %s", boundedCurve.Name()), func(t *testing.T) {
-			t.Parallel()
-			shamirDealer, err := shamir.NewDealer(uint(threshold), uint(total), boundedCurve)
-			require.NoError(t, err)
-			require.NotNil(t, shamirDealer)
 
-			secret, err := boundedCurve.ScalarField().Hash([]byte("2+2=5"))
-			require.NoError(t, err)
+	prng := crand.Reader
+	for _, curve := range supportedCurves {
+		for _, total := range supportedTotals {
+			t.Run(fmt.Sprintf("%s_%d", curve.Name(), total), func(t *testing.T) {
+				t.Parallel()
 
-			shamirShares, err := shamirDealer.Split(secret, crand.Reader)
-			require.NoError(t, err)
-			require.NotNil(t, shamirShares)
-
-			allValidSetsOfShamirIndices := [][]int{}
-			for i := 0; i <= total-threshold; i++ {
-				c, err := combinatorics.Combinations(Total, uint(threshold+i))
+				dealer, err := additive.NewScheme(total, curve)
 				require.NoError(t, err)
-				allValidSetsOfShamirIndices = append(
-					allValidSetsOfShamirIndices,
-					c...,
-				)
-			}
-			for _, indices := range allValidSetsOfShamirIndices {
-				identities := make([]uint, len(indices))
-				for i, index := range indices {
-					identities[i] = uint(index + 1)
-				}
-				t.Run(fmt.Sprintf("testing round trip for identities %v", identities), func(t *testing.T) {
-					t.Parallel()
+				require.NotNil(t, dealer)
 
-					additiveDealer, err := additive.NewDealer(len(identities), boundedCurve)
-					require.NoError(t, err)
-					require.NotNil(t, additiveDealer)
+				secret, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
 
-					additiveShares := make([]*additive.Share, len(identities))
-					for i, id := range identities {
-						value, err := shamirShares[id-1].ToAdditive(identities)
-						require.NoError(t, err)
-						additiveShares[i] = &additive.Share{Value: value}
-					}
+				shares, err := dealer.Deal(secret, prng)
+				require.NoError(t, err)
+				require.NotNil(t, shares)
+				require.Len(t, shares, int(total))
 
-					combinedAdditiveShares, err := additiveDealer.Combine(additiveShares)
-					require.NoError(t, err)
-					require.Zero(t, secret.Cmp(combinedAdditiveShares))
+				recomputedSecret, err := dealer.Open(slices.Collect(maps.Values(shares))...)
+				require.NoError(t, err)
+				require.NotNil(t, recomputedSecret)
+				require.True(t, secret.Equal(recomputedSecret))
+			})
+		}
+	}
+}
 
-					recomputedShamirShares := make([]*shamir.Share, len(identities))
-					for i, additiveShare := range additiveShares {
-						recomputedShare, err := additiveShare.ConvertToShamir(identities[i], uint(threshold), uint(total), identities)
-						require.NoError(t, err)
-						recomputedShamirShares[i] = recomputedShare
-					}
+func TestShareAndOpenInExponent(t *testing.T) {
+	t.Parallel()
 
-					recomputedSecret, err := shamirDealer.Combine(recomputedShamirShares...)
-					require.NoError(t, err)
-					require.NotNil(t, recomputedSecret)
-					require.Zero(t, secret.Cmp(recomputedSecret))
-				})
-			}
-		})
+	prng := crand.Reader
+	for _, curve := range supportedCurves {
+		for _, total := range supportedTotals {
+			t.Run(fmt.Sprintf("%s_%d", curve.Name(), total), func(t *testing.T) {
+				t.Parallel()
+
+				dealer, err := additive.NewScheme(total, curve)
+				require.NoError(t, err)
+				require.NotNil(t, dealer)
+
+				secret, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+				secretInExp := curve.ScalarBaseMult(secret)
+
+				shares, err := dealer.Deal(secret, prng)
+				require.NoError(t, err)
+				require.NotNil(t, shares)
+				require.Len(t, shares, int(total))
+				sharesInExponent := maputils.MapValues(shares, func(_ types.SharingID, s *additive.Share) *additive.ShareInExp { return s.Exp() })
+
+				recomputedSecretInExp, err := dealer.OpenInExponent(slices.Collect(maps.Values(sharesInExponent))...)
+				require.NoError(t, err)
+				require.NotNil(t, recomputedSecretInExp)
+				require.True(t, secretInExp.Equal(recomputedSecretInExp))
+			})
+		}
+	}
+}
+
+func TestLinearAdd(t *testing.T) {
+	t.Parallel()
+
+	prng := crand.Reader
+	for _, curve := range supportedCurves {
+		for _, total := range supportedTotals {
+			t.Run(fmt.Sprintf("%s_%d", curve.Name(), total), func(t *testing.T) {
+				t.Parallel()
+
+				dealer, err := additive.NewScheme(total, curve)
+				require.NoError(t, err)
+				require.NotNil(t, dealer)
+
+				secretA, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+				secretB, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+
+				sharesA, err := dealer.Deal(secretA, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesA)
+				require.Len(t, sharesA, int(total))
+
+				sharesB, err := dealer.Deal(secretB, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesB)
+				require.Len(t, sharesB, int(total))
+
+				secret := secretA.Add(secretB)
+				shares := sharing.AddSharesMap(dealer, sharesA, sharesB)
+
+				recomputedSecret, err := dealer.Open(slices.Collect(maps.Values(shares))...)
+				require.NoError(t, err)
+				require.NotNil(t, recomputedSecret)
+				require.Zero(t, secret.Cmp(recomputedSecret))
+			})
+		}
+	}
+}
+
+func TestLinearAddValue(t *testing.T) {
+	t.Parallel()
+
+	prng := crand.Reader
+	for _, curve := range supportedCurves {
+		for _, total := range supportedTotals {
+			t.Run(fmt.Sprintf("%s_%d", curve.Name(), total), func(t *testing.T) {
+				t.Parallel()
+
+				dealer, err := additive.NewScheme(total, curve)
+				require.NoError(t, err)
+				require.NotNil(t, dealer)
+
+				secretA, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+				secretB, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+
+				sharesA, err := dealer.Deal(secretA, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesA)
+				require.Len(t, sharesA, int(total))
+
+				secret := secretA.Add(secretB)
+				shares := sharing.AddSharesValueMap(dealer, sharesA, secretB)
+
+				recomputedSecret, err := dealer.Open(slices.Collect(maps.Values(shares))...)
+				require.NoError(t, err)
+				require.NotNil(t, recomputedSecret)
+				require.Zero(t, secret.Cmp(recomputedSecret))
+			})
+		}
+	}
+}
+
+func TestLinearSub(t *testing.T) {
+	t.Parallel()
+
+	prng := crand.Reader
+	for _, curve := range supportedCurves {
+		for _, total := range supportedTotals {
+			t.Run(fmt.Sprintf("%s_%d", curve.Name(), total), func(t *testing.T) {
+				t.Parallel()
+
+				dealer, err := additive.NewScheme(total, curve)
+				require.NoError(t, err)
+				require.NotNil(t, dealer)
+
+				secretA, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+				secretB, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+
+				sharesA, err := dealer.Deal(secretA, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesA)
+				require.Len(t, sharesA, int(total))
+
+				sharesB, err := dealer.Deal(secretB, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesB)
+				require.Len(t, sharesB, int(total))
+
+				secret := secretA.Sub(secretB)
+				shares := sharing.SubSharesMap(dealer, sharesA, sharesB)
+
+				recomputedSecret, err := dealer.Open(slices.Collect(maps.Values(shares))...)
+				require.NoError(t, err)
+				require.NotNil(t, recomputedSecret)
+				require.Zero(t, secret.Cmp(recomputedSecret))
+			})
+		}
+	}
+}
+
+func TestLinearSubValue(t *testing.T) {
+	t.Parallel()
+
+	prng := crand.Reader
+	for _, curve := range supportedCurves {
+		for _, total := range supportedTotals {
+			t.Run(fmt.Sprintf("%s_%d", curve.Name(), total), func(t *testing.T) {
+				t.Parallel()
+
+				dealer, err := additive.NewScheme(total, curve)
+				require.NoError(t, err)
+				require.NotNil(t, dealer)
+
+				secretA, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+				secretB, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+
+				sharesA, err := dealer.Deal(secretA, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesA)
+				require.Len(t, sharesA, int(total))
+
+				secret := secretA.Sub(secretB)
+				shares := sharing.SubSharesValueMap(dealer, sharesA, secretB)
+
+				recomputedSecret, err := dealer.Open(slices.Collect(maps.Values(shares))...)
+				require.NoError(t, err)
+				require.NotNil(t, recomputedSecret)
+				require.Zero(t, secret.Cmp(recomputedSecret))
+			})
+		}
+	}
+}
+
+func TestLinearNeg(t *testing.T) {
+	t.Parallel()
+
+	prng := crand.Reader
+	for _, curve := range supportedCurves {
+		for _, total := range supportedTotals {
+			t.Run(fmt.Sprintf("%s_%d", curve.Name(), total), func(t *testing.T) {
+				t.Parallel()
+
+				dealer, err := additive.NewScheme(total, curve)
+				require.NoError(t, err)
+				require.NotNil(t, dealer)
+
+				secretA, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+
+				sharesA, err := dealer.Deal(secretA, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesA)
+				require.Len(t, sharesA, int(total))
+
+				secret := secretA.Neg()
+				shares := sharing.NegSharesMap(dealer, sharesA)
+
+				recomputedSecret, err := dealer.Open(slices.Collect(maps.Values(shares))...)
+				require.NoError(t, err)
+				require.NotNil(t, recomputedSecret)
+				require.Zero(t, secret.Cmp(recomputedSecret))
+			})
+		}
+	}
+}
+
+func TestLinearScalarMul(t *testing.T) {
+	t.Parallel()
+
+	prng := crand.Reader
+	for _, curve := range supportedCurves {
+		for _, total := range supportedTotals {
+			t.Run(fmt.Sprintf("%s_%d", curve.Name(), total), func(t *testing.T) {
+				t.Parallel()
+
+				dealer, err := additive.NewScheme(total, curve)
+				require.NoError(t, err)
+				require.NotNil(t, dealer)
+
+				secretA, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+				scalar, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+
+				sharesA, err := dealer.Deal(secretA, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesA)
+				require.Len(t, sharesA, int(total))
+
+				secret := secretA.Mul(scalar)
+				shares := sharing.MulSharesMap(dealer, sharesA, scalar)
+
+				recomputedSecret, err := dealer.Open(slices.Collect(maps.Values(shares))...)
+				require.NoError(t, err)
+				require.NotNil(t, recomputedSecret)
+				require.Zero(t, secret.Cmp(recomputedSecret))
+			})
+		}
+	}
+}
+
+func TestLinearAddInExp(t *testing.T) {
+	t.Parallel()
+
+	prng := crand.Reader
+	for _, curve := range supportedCurves {
+		for _, total := range supportedTotals {
+			t.Run(fmt.Sprintf("%s_%d", curve.Name(), total), func(t *testing.T) {
+				t.Parallel()
+
+				dealer, err := additive.NewScheme(total, curve)
+				require.NoError(t, err)
+				require.NotNil(t, dealer)
+
+				secretA, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+				secretAInExp := curve.ScalarBaseMult(secretA)
+				secretB, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+				secretBInExp := curve.ScalarBaseMult(secretB)
+
+				sharesA, err := dealer.Deal(secretA, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesA)
+				require.Len(t, sharesA, int(total))
+				sharesAInExp := maputils.MapValues(sharesA, func(_ types.SharingID, s *additive.Share) *additive.ShareInExp { return s.Exp() })
+
+				sharesB, err := dealer.Deal(secretB, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesB)
+				require.Len(t, sharesB, int(total))
+				sharesBInExp := maputils.MapValues(sharesB, func(_ types.SharingID, s *additive.Share) *additive.ShareInExp { return s.Exp() })
+
+				secretInExp := secretAInExp.Add(secretBInExp)
+				sharesInExp := maputils.Join(sharesAInExp, sharesBInExp, func(_ types.SharingID, l, r *additive.ShareInExp) *additive.ShareInExp { return l.Add(r) })
+
+				recomputedSecretInExp, err := dealer.OpenInExponent(slices.Collect(maps.Values(sharesInExp))...)
+				require.NoError(t, err)
+				require.NotNil(t, recomputedSecretInExp)
+				require.True(t, secretInExp.Equal(recomputedSecretInExp))
+			})
+		}
+	}
+}
+
+func TestLinearAddValueInExp(t *testing.T) {
+	t.Parallel()
+
+	prng := crand.Reader
+	for _, curve := range supportedCurves {
+		for _, total := range supportedTotals {
+			t.Run(fmt.Sprintf("%s_%d", curve.Name(), total), func(t *testing.T) {
+				t.Parallel()
+
+				dealer, err := additive.NewScheme(total, curve)
+				require.NoError(t, err)
+				require.NotNil(t, dealer)
+
+				secretA, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+				secretAInExp := curve.ScalarBaseMult(secretA)
+
+				secretB, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+				secretBInExp := curve.ScalarBaseMult(secretB)
+
+				sharesA, err := dealer.Deal(secretA, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesA)
+				require.Len(t, sharesA, int(total))
+				sharesAInExp := maputils.MapValues(sharesA, func(_ types.SharingID, s *additive.Share) *additive.ShareInExp { return s.Exp() })
+
+				secretInExp := secretAInExp.Add(secretBInExp)
+				sharesInExp := maputils.MapValues(sharesAInExp, func(_ types.SharingID, s *additive.ShareInExp) *additive.ShareInExp { return s.AddValue(secretBInExp) })
+
+				recomputedSecretInExp, err := dealer.OpenInExponent(slices.Collect(maps.Values(sharesInExp))...)
+				require.NoError(t, err)
+				require.NotNil(t, recomputedSecretInExp)
+				require.True(t, secretInExp.Equal(recomputedSecretInExp))
+			})
+		}
+	}
+}
+
+func TestLinearSubInExp(t *testing.T) {
+	t.Parallel()
+
+	prng := crand.Reader
+	for _, curve := range supportedCurves {
+		for _, total := range supportedTotals {
+			t.Run(fmt.Sprintf("%s_%d", curve.Name(), total), func(t *testing.T) {
+				t.Parallel()
+
+				dealer, err := additive.NewScheme(total, curve)
+				require.NoError(t, err)
+				require.NotNil(t, dealer)
+
+				secretA, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+				secretAInExp := curve.ScalarBaseMult(secretA)
+				secretB, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+				secretBInExp := curve.ScalarBaseMult(secretB)
+
+				sharesA, err := dealer.Deal(secretA, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesA)
+				require.Len(t, sharesA, int(total))
+				sharesAInExp := maputils.MapValues(sharesA, func(_ types.SharingID, s *additive.Share) *additive.ShareInExp { return s.Exp() })
+
+				sharesB, err := dealer.Deal(secretB, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesB)
+				require.Len(t, sharesB, int(total))
+				sharesBInExp := maputils.MapValues(sharesB, func(_ types.SharingID, s *additive.Share) *additive.ShareInExp { return s.Exp() })
+
+				secretInExp := secretAInExp.Sub(secretBInExp)
+				sharesInExp := maputils.Join(sharesAInExp, sharesBInExp, func(_ types.SharingID, l, r *additive.ShareInExp) *additive.ShareInExp { return l.Sub(r) })
+
+				recomputedSecretInExp, err := dealer.OpenInExponent(slices.Collect(maps.Values(sharesInExp))...)
+				require.NoError(t, err)
+				require.NotNil(t, recomputedSecretInExp)
+				require.True(t, secretInExp.Equal(recomputedSecretInExp))
+			})
+		}
+	}
+}
+
+func TestLinearSubValueInExp(t *testing.T) {
+	t.Parallel()
+
+	prng := crand.Reader
+	for _, curve := range supportedCurves {
+		for _, total := range supportedTotals {
+			t.Run(fmt.Sprintf("%s_%d", curve.Name(), total), func(t *testing.T) {
+				t.Parallel()
+
+				dealer, err := additive.NewScheme(total, curve)
+				require.NoError(t, err)
+				require.NotNil(t, dealer)
+
+				secretA, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+				secretAInExp := curve.ScalarBaseMult(secretA)
+
+				secretB, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+				secretBInExp := curve.ScalarBaseMult(secretB)
+
+				sharesA, err := dealer.Deal(secretA, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesA)
+				require.Len(t, sharesA, int(total))
+				sharesAInExp := maputils.MapValues(sharesA, func(_ types.SharingID, s *additive.Share) *additive.ShareInExp { return s.Exp() })
+
+				secretInExp := secretAInExp.Sub(secretBInExp)
+				sharesInExp := maputils.MapValues(sharesAInExp, func(_ types.SharingID, s *additive.ShareInExp) *additive.ShareInExp { return s.SubValue(secretBInExp) })
+
+				recomputedSecretInExp, err := dealer.OpenInExponent(slices.Collect(maps.Values(sharesInExp))...)
+				require.NoError(t, err)
+				require.NotNil(t, recomputedSecretInExp)
+				require.True(t, secretInExp.Equal(recomputedSecretInExp))
+			})
+		}
+	}
+}
+
+func TestLinearNegInExp(t *testing.T) {
+	t.Parallel()
+
+	prng := crand.Reader
+	for _, curve := range supportedCurves {
+		for _, total := range supportedTotals {
+			t.Run(fmt.Sprintf("%s_%d", curve.Name(), total), func(t *testing.T) {
+				t.Parallel()
+
+				dealer, err := additive.NewScheme(total, curve)
+				require.NoError(t, err)
+				require.NotNil(t, dealer)
+
+				secretA, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+
+				sharesA, err := dealer.Deal(secretA, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesA)
+				require.Len(t, sharesA, int(total))
+				sharesAInExp := maputils.MapValues(sharesA, func(_ types.SharingID, s *additive.Share) *additive.ShareInExp { return s.Exp() })
+
+				secret := secretA.Neg()
+				secretInExp := curve.ScalarBaseMult(secret)
+				sharesInExp := maputils.MapValues(sharesAInExp, func(_ types.SharingID, s *additive.ShareInExp) *additive.ShareInExp { return s.Neg() })
+
+				recomputedSecretInExp, err := dealer.OpenInExponent(slices.Collect(maps.Values(sharesInExp))...)
+				require.NoError(t, err)
+				require.NotNil(t, recomputedSecretInExp)
+				require.True(t, secretInExp.Equal(recomputedSecretInExp))
+			})
+		}
+	}
+}
+
+func TestLinearScalarMulInExp(t *testing.T) {
+	t.Parallel()
+
+	prng := crand.Reader
+	for _, curve := range supportedCurves {
+		for _, total := range supportedTotals {
+			t.Run(fmt.Sprintf("%s_%d", curve.Name(), total), func(t *testing.T) {
+				t.Parallel()
+
+				dealer, err := additive.NewScheme(total, curve)
+				require.NoError(t, err)
+				require.NotNil(t, dealer)
+
+				secretA, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+
+				secretB, err := curve.ScalarField().Random(prng)
+				require.NoError(t, err)
+
+				sharesA, err := dealer.Deal(secretA, prng)
+				require.NoError(t, err)
+				require.NotNil(t, sharesA)
+				require.Len(t, sharesA, int(total))
+				sharesAInExp := maputils.MapValues(sharesA, func(_ types.SharingID, s *additive.Share) *additive.ShareInExp { return s.Exp() })
+
+				secret := secretA.Mul(secretB)
+				secretInExp := curve.ScalarBaseMult(secret)
+				sharesInExp := maputils.MapValues(sharesAInExp, func(_ types.SharingID, s *additive.ShareInExp) *additive.ShareInExp { return s.ScalarMul(secretB) })
+
+				recomputedSecretInExp, err := dealer.OpenInExponent(slices.Collect(maps.Values(sharesInExp))...)
+				require.NoError(t, err)
+				require.NotNil(t, recomputedSecretInExp)
+				require.True(t, secretInExp.Equal(recomputedSecretInExp))
+			})
+		}
 	}
 }

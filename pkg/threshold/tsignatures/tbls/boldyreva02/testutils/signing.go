@@ -3,7 +3,9 @@ package testutils
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
+	gennaroTu "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/stretchr/testify/require"
+	"testing"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
@@ -14,7 +16,6 @@ import (
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/network"
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/bls"
-	jf_testutils "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/keygen/trusted_dealer"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02/signing"
@@ -120,7 +121,7 @@ func DoSignRoundTrip[K bls.KeySubGroup, S bls.SignatureSubGroup](t require.Testi
 	return nil
 }
 
-func DoSignWithDkg[K bls.KeySubGroup, S bls.SignatureSubGroup](t require.TestingT, threshold, n int, scheme bls.RogueKeyPrevention) error {
+func DoSignWithDkg[K bls.KeySubGroup, S bls.SignatureSubGroup](t testing.TB, threshold, n int, scheme bls.RogueKeyPrevention) error {
 	hashFunc := sha256.New
 	message := []byte("messi > ronaldo")
 	sid := []byte("sessionId")
@@ -142,7 +143,8 @@ func DoSignWithDkg[K bls.KeySubGroup, S bls.SignatureSubGroup](t require.Testing
 		return errs.WrapFailed(err, "Could not make protocol config")
 	}
 
-	signingKeyShares, partialPublicKeys := jf_testutils.DoDkgHappyPath(t, sid, thresholdSignatureProtocol, identities)
+	tapes := ttu.MakeTranscripts("test test", identities)
+	signingKeyShares, partialPublicKeys := gennaroTu.DoDkgHappyPath(t, sid, thresholdSignatureProtocol, identities, tapes)
 
 	shards := hashmap.NewHashableHashMap[types.IdentityKey, *boldyreva02.Shard[K]]()
 	for i, id := range identities {

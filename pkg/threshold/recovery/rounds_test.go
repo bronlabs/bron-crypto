@@ -17,7 +17,6 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	agreeonrandom_testutils "github.com/bronlabs/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	jf_testutils "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/recovery/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
@@ -51,9 +50,9 @@ func TestSanity(t *testing.T) {
 	secret, err := curve.ScalarField().Random(crand.Reader)
 	require.NoError(t, err)
 
-	dealer, err := shamir.NewDealer(2, 3, curve)
+	dealer, err := shamir.NewScheme(2, 3, curve)
 	require.NoError(t, err)
-	shares, err := dealer.Split(secret, crand.Reader)
+	shares, err := dealer.Deal(secret, crand.Reader)
 	require.NoError(t, err)
 
 	alice := shares[0]

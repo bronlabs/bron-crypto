@@ -54,7 +54,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, signingKeyShare *ts
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	sampler, err := hjky.NewParticipant(boundSessionId, authKey, protocol, niCompiler, transcript, prng)
+	sampler, err := hjky.NewParticipant(boundSessionId, authKey, protocol, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct hjky zero share sampling participant")
 	}

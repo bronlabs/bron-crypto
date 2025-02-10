@@ -120,15 +120,15 @@ func Test_TrustedDealer(t *testing.T) {
 							require.True(t, exists)
 
 							shamirShares = append(shamirShares, &shamir.Share{
-								Id:    uint(sharingId),
+								Id:    sharingId,
 								Value: signingKeyShare.Share,
 							})
 						}
 
-						shamirDealer, err := shamir.NewDealer(uint(threshold), uint(n), curve)
+						shamirDealer, err := shamir.NewScheme(uint(threshold), uint(n), curve)
 						require.NoError(t, err)
 
-						reconstructedPrivateKey, err := shamirDealer.Combine(shamirShares...)
+						reconstructedPrivateKey, err := shamirDealer.Open(shamirShares...)
 						require.NoError(t, err)
 						require.True(t, reconstructedPrivateKey.Equal(secret))
 

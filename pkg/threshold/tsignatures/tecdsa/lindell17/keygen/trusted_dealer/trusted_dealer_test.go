@@ -68,7 +68,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Run("all signing key shares interpolate to dlog of public key", func(t *testing.T) {
 		t.Parallel()
 
-		shamirDealer, err := shamir.NewDealer(uint(th), uint(n), curve)
+		shamirDealer, err := shamir.NewScheme(uint(th), uint(n), curve)
 		require.NoError(t, err)
 		require.NotNil(t, shamirDealer)
 		shamirShares := make([]*shamir.Share, n)
@@ -76,12 +76,12 @@ func Test_HappyPath(t *testing.T) {
 			thisShard, exists := shards.Get(identities[i])
 			require.True(t, exists)
 			shamirShares[i] = &shamir.Share{
-				Id:    uint(i + 1),
+				Id:    types.SharingID(i + 1),
 				Value: thisShard.SigningKeyShare.Share,
 			}
 		}
 
-		reconstructedPrivateKey, err := shamirDealer.Combine(shamirShares...)
+		reconstructedPrivateKey, err := shamirDealer.Open(shamirShares...)
 		require.NoError(t, err)
 
 		derivedPublicKey := curve.ScalarBaseMult(reconstructedPrivateKey)

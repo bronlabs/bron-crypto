@@ -40,18 +40,18 @@ func ProducePartialSignature(
 		return nil, errs.WrapSerialisation(err, "converting hash to c failed")
 	}
 
-	presentPartySharingIds := make([]uint, quorum.Size())
+	presentPartySharingIds := make([]types.SharingID, quorum.Size())
 	i := 0
 	for identityKey := range quorum.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
 		if !exists {
 			return nil, errs.NewMissing("could not find sharing id of %s", identityKey.String())
 		}
-		presentPartySharingIds[i] = uint(sharingId)
+		presentPartySharingIds[i] = sharingId
 		i++
 	}
 	shamirShare := &shamir.Share{
-		Id:    uint(participant.SharingId()),
+		Id:    participant.SharingId(),
 		Value: signingKeyShare.Share,
 	}
 	additiveShare, err := shamirShare.ToAdditive(presentPartySharingIds)

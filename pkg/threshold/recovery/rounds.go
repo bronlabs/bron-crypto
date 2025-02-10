@@ -44,22 +44,22 @@ func (p *Participant) Round2(
 	}
 	// step 2.2
 	wrappedSample := &shamir.Share{
-		Id:    uint(p.SharingId()),
+		Id:    p.SharingId(),
 		Value: sample,
 	}
 
-	partiesOfAdditiveConversion := make([]uint, len(p.sortedPresentRecoverersList)+1) // recoverers and lost party, all share samples of zero.
+	partiesOfAdditiveConversion := make([]types.SharingID, len(p.sortedPresentRecoverersList)+1) // recoverers and lost party, all share samples of zero.
 	lostPartySharingId, exists := p.sampler.PedersenParty.SharingConfig.Reverse().Get(p.lostPartyIdentityKey)
 	if !exists {
 		return nil, errs.NewMissing("could not find lost party sharing id")
 	}
-	partiesOfAdditiveConversion[0] = uint(lostPartySharingId)
+	partiesOfAdditiveConversion[0] = lostPartySharingId
 	for i := 0; i < len(p.sortedPresentRecoverersList); i++ {
 		recovererSharingId, exists := p.sampler.PedersenParty.SharingConfig.Reverse().Get(p.sortedPresentRecoverersList[i]) // 0'th identity is that of the lost party, hence indexing at i+1
 		if !exists {
 			return nil, errs.NewMissing("couldn't find sharing id for recoverer %d", i)
 		}
-		partiesOfAdditiveConversion[i+1] = uint(recovererSharingId)
+		partiesOfAdditiveConversion[i+1] = recovererSharingId
 	}
 	p.additiveShareOfZero, err = wrappedSample.ToAdditive(partiesOfAdditiveConversion)
 	if err != nil {
@@ -86,7 +86,7 @@ func (p *Participant) Round2(
 	if myIndex == -1 {
 		return nil, errs.NewMissing("could not find my lagrange basis index")
 	}
-	lx, err := lagrange.L_i(curve, myIndex, recovererSharingIdScalar, lostPartySharingIdScalar)
+	lx, err := lagrange.L_i(curve.ScalarField(), myIndex, recovererSharingIdScalar, lostPartySharingIdScalar)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute lagrange basis polynomial at x=%d", lostPartySharingId)
 	}

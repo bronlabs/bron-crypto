@@ -18,15 +18,15 @@ import (
 
 // CalcOtherPartyLagrangeCoefficient computes Lagrange coefficient of there other party.
 func CalcOtherPartyLagrangeCoefficient(otherPartySharingId, mySharingId types.SharingID, n uint, curve curves.Curve) (curves.Scalar, error) {
-	dealer, err := shamir.NewDealer(lindell17.Threshold, n, curve)
+	dealer, err := shamir.NewScheme(lindell17.Threshold, n, curve)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create shamir dealer")
 	}
-	coefficients, err := dealer.LagrangeCoefficients([]uint{uint(otherPartySharingId), uint(mySharingId)})
+	coefficients, err := dealer.LagrangeCoefficients([]types.SharingID{otherPartySharingId, mySharingId})
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get Lagrange coefficients")
 	}
-	return coefficients[uint(otherPartySharingId)], nil
+	return coefficients[otherPartySharingId], nil
 }
 
 // CalcC3 calculates Enc_pk(ρq + k2^(-1)(m' + r * (cKey * λ1 + share * λ2))), ρ is chosen randomly: 0 < ρ < pk^2.

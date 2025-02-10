@@ -5,6 +5,7 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"fmt"
+	gennaroTu "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"hash"
 	"reflect"
 	"runtime"
@@ -28,27 +29,14 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/testutils"
 )
 
-func doDkg(t require.TestingT, curve curves.Curve, protocol types.ThresholdProtocol, identities []types.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
-	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(t, curve, identities, crand.Reader)
-	if err != nil {
-		return nil, nil, err
-	}
-	dkgParticipants, err := testutils.MakeDkgParticipants(uniqueSessionId, protocol, identities, nil)
+func doDkg(tb testing.TB, curve curves.Curve, protocol types.ThresholdProtocol, identities []types.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
+	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(tb, curve, identities, crand.Reader)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	r2OutB, r2OutU, err := testutils.DoDkgRound1(dkgParticipants, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	r3InB, r3InU := ttu.MapO2I(t, dkgParticipants, r2OutB, r2OutU)
-	signingKeyShares, publicKeyShares, err = testutils.DoDkgRound2(dkgParticipants, r3InB, r3InU)
-	if err != nil {
-		return nil, nil, err
-	}
-
+	tapes := ttu.MakeTranscripts("test test", identities)
+	signingKeyShares, publicKeyShares = gennaroTu.DoDkgHappyPath(tb, uniqueSessionId, protocol, identities, tapes)
 	return signingKeyShares, publicKeyShares, nil
 }
 

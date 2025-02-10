@@ -3,6 +3,7 @@ package dkg_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
+	gennaroTu "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"os"
 	"testing"
 
@@ -16,7 +17,6 @@ import (
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	agreeonrandomTestUtils "github.com/bronlabs/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	jfTestUtils "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/jf/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
 	lindell17DkgTestUtils "github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg/testutils"
@@ -45,23 +45,8 @@ func Test_HappyPath(t *testing.T) {
 	uniqueSessionId, err := agreeonrandomTestUtils.RunAgreeOnRandom(t, cipherSuite.Curve(), identities, crand.Reader)
 	require.NoError(t, err)
 
-	jfParticipants, err := jfTestUtils.MakeParticipants(t, uniqueSessionId, protocol, identities, cn, nil)
-	require.NoError(t, err)
-
-	r1OutsB, r1OutsU, err := jfTestUtils.DoDkgRound1(t, jfParticipants)
-	require.NoError(t, err)
-	for _, out := range r1OutsU {
-		require.Equal(t, out.Size(), int(protocol.TotalParties())-1)
-	}
-
-	r2InsB, r2InsU := ttu.MapO2I(t, jfParticipants, r1OutsB, r1OutsU)
-	r2Outs, err := jfTestUtils.DoDkgRound2(t, jfParticipants, r2InsB, r2InsU)
-	require.NoError(t, err)
-	for _, out := range r2Outs {
-		require.NotNil(t, out)
-	}
-	r3Ins := ttu.MapBroadcastO2I(t, jfParticipants, r2Outs)
-	signingKeyShares, publicKeyShares, err := jfTestUtils.DoDkgRound3(t, jfParticipants, r3Ins)
+	tapes := ttu.MakeTranscripts("testtest", identities)
+	signingKeyShares, publicKeyShares, err := gennaroTu.DoGennaroDkg(t, uniqueSessionId, protocol, identities, tapes)
 	require.NoError(t, err)
 
 	transcripts := make([]transcripts.Transcript, len(identities))
@@ -118,18 +103,18 @@ func Test_HappyPath(t *testing.T) {
 	t.Run("private key matches public key", func(t *testing.T) {
 		t.Parallel()
 
-		shamirDealer, err := shamir.NewDealer(2, 3, cipherSuite.Curve())
+		shamirDealer, err := shamir.NewScheme(2, 3, cipherSuite.Curve())
 		require.NoError(t, err)
 		require.NotNil(t, shamirDealer)
 		shamirShares := make([]*shamir.Share, len(lindellParticipants))
 		for i := 0; i < len(lindellParticipants); i++ {
 			shamirShares[i] = &shamir.Share{
-				Id:    uint(lindellParticipants[i].SharingId()),
+				Id:    lindellParticipants[i].SharingId(),
 				Value: signingKeyShares[i].Share,
 			}
 		}
 
-		reconstructedPrivateKey, err := shamirDealer.Combine(shamirShares...)
+		reconstructedPrivateKey, err := shamirDealer.Open(shamirShares...)
 		require.NoError(t, err)
 
 		derivedPublicKey := cipherSuite.Curve().ScalarBaseMult(reconstructedPrivateKey)

@@ -10,7 +10,6 @@ import (
 
 type Polynomial struct {
 	Coefficients []curves.Scalar
-	Curve        curves.Curve
 
 	_ ds.Incomparable
 }
@@ -28,11 +27,15 @@ func (p *Polynomial) Evaluate(x curves.Scalar) curves.Scalar {
 	return out
 }
 
+func NewPolynomial(coefficients []curves.Scalar) *Polynomial {
+	return &Polynomial{Coefficients: coefficients}
+}
+
 func NewRandomPolynomial(intercept curves.Scalar, degree uint, prng io.Reader) (p *Polynomial, err error) {
 	if degree < 1 {
 		return nil, errs.NewSize("degree must be greater than zero")
 	}
-	p = &Polynomial{Curve: intercept.ScalarField().Curve()}
+	p = new(Polynomial)
 	p.Coefficients = make([]curves.Scalar, degree)
 	p.Coefficients[0] = intercept.Clone()
 	for i := 1; i < int(degree); i++ {
@@ -42,4 +45,12 @@ func NewRandomPolynomial(intercept curves.Scalar, degree uint, prng io.Reader) (
 		}
 	}
 	return p, nil
+}
+
+func EvalInExponent(coefficients []curves.Point, x curves.Scalar) curves.Point {
+	out := coefficients[len(coefficients)-1].Clone()
+	for i := len(coefficients) - 2; i >= 0; i-- {
+		out = out.ScalarMul(x).Add(coefficients[i])
+	}
+	return out
 }
