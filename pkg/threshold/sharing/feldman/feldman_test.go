@@ -2,11 +2,11 @@ package feldman_vss_test
 
 import (
 	crand "crypto/rand"
+	"fmt"
 	"maps"
 	"slices"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
@@ -44,7 +44,7 @@ func TestFeldmanHappyPath(t *testing.T) {
 
 	for _, curve := range supportedCurves {
 		for _, as := range supportedAccessStructures {
-			t.Run(spew.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
 				t.Parallel()
 
 				scheme, err := feldman_vss.NewScheme(as.th, as.n, curve)
@@ -78,7 +78,7 @@ func TestFeldmanLinearAdd(t *testing.T) {
 
 	for _, curve := range supportedCurves {
 		for _, as := range supportedAccessStructures {
-			t.Run(spew.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
 				t.Parallel()
 
 				scheme, err := feldman_vss.NewScheme(as.th, as.n, curve)

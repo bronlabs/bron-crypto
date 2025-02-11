@@ -2,11 +2,11 @@ package pedersen_vss_test
 
 import (
 	crand "crypto/rand"
+	"fmt"
 	"maps"
 	"slices"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
@@ -45,14 +45,15 @@ func TestPedersenHappyPath(t *testing.T) {
 
 	for _, curve := range supportedCurves {
 		for _, as := range supportedAccessStructures {
-			t.Run(spew.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
 				t.Parallel()
 
 				h, err := curve.Random(prng)
 				require.NoError(t, err)
 				ck := ecpedersen_comm.NewCommittingKey(curve.Generator(), h)
 
-				scheme := ecpedersen_vss.NewScheme(ck, as.th, as.n)
+				scheme, err := ecpedersen_vss.NewScheme(ck, as.th, as.n)
+				require.NoError(t, err)
 
 				randomScalar, err := curve.ScalarField().Random(prng)
 				require.NoError(t, err)
@@ -81,14 +82,15 @@ func TestPedersenLinearAdd(t *testing.T) {
 
 	for _, curve := range supportedCurves {
 		for _, as := range supportedAccessStructures {
-			t.Run(spew.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
 				t.Parallel()
 
 				h, err := curve.Random(prng)
 				require.NoError(t, err)
 				ck := ecpedersen_comm.NewCommittingKey(curve.Generator(), h)
 
-				scheme := ecpedersen_vss.NewScheme(ck, as.th, as.n)
+				scheme, err := ecpedersen_vss.NewScheme(ck, as.th, as.n)
+				require.NoError(t, err)
 
 				randomScalarA, err := curve.ScalarField().Random(prng)
 				require.NoError(t, err)

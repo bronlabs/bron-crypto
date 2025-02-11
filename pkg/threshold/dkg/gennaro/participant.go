@@ -53,10 +53,13 @@ func NewParticipant(sessionId []byte, myAuthKey types.AuthKey, protocol types.Th
 	}
 	ck := pedersen_comm.NewCommittingKey(protocol.Curve().Generator(), h)
 
-	pedersenVss := pedersen_vss.NewScheme(ck, protocol.Threshold(), protocol.TotalParties())
+	pedersenVss, err := pedersen_vss.NewScheme(ck, protocol.Threshold(), protocol.TotalParties())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create Pedersen-VSS scheme")
+	}
 	feldmanVss, err := feldman_vss.NewScheme(protocol.Threshold(), protocol.TotalParties(), protocol.Curve())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create feldman-VSS scheme")
+		return nil, errs.WrapFailed(err, "cannot create Feldman-VSS scheme")
 	}
 
 	p := &Participant{

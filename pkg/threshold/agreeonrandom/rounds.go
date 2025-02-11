@@ -87,9 +87,6 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.Protocol, 
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot instantiate verifier")
 		}
-		// if !bytes.Equal(message.Opening.GetMessage(), message.Ri.Bytes()) {
-		//	return nil, errs.NewVerification("opening is not tied to the expected message")
-		//}
 		if err := verifier.Verify(receivedCommitment, message.Ri.Bytes(), message.Opening); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, party.String(), "commitment from participant with sharing id can't be opened")
 		}

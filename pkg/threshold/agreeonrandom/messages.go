@@ -26,9 +26,6 @@ type Round2Broadcast struct {
 }
 
 func (*Round1Broadcast) Validate(types.Protocol) error {
-	// if err := r1b.Commitment.Validate(); err != nil {
-	//	return errs.WrapValidation(err, "invalid commitment")
-	//}
 	return nil
 }
 
@@ -42,8 +39,6 @@ func (r2b *Round2Broadcast) Validate(protocol types.Protocol) error {
 	if r2b.Ri.IsZero() {
 		return errs.NewIsZero("r_i is zero")
 	}
-	// if err := r2b.Opening.Validate(); err != nil {
-	//	return errs.WrapValidation(err, "invalid opening")
-	//}
+
 	return nil
 }

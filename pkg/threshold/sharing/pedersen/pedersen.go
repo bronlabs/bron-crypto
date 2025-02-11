@@ -31,12 +31,19 @@ type Scheme struct {
 	Threshold, Total uint
 }
 
-func NewScheme(ck *ecpedersen_comm.CommittingKey, threshold, total uint) *Scheme {
+func NewScheme(ck *ecpedersen_comm.CommittingKey, threshold, total uint) (scheme *Scheme, err error) {
+	if ck == nil {
+		return nil, errs.NewIsNil("ck")
+	}
+	if threshold < 2 || threshold > total || total < 2 {
+		return nil, errs.NewValidation("invalid access structure")
+	}
+
 	return &Scheme{
 		Ck:        ck,
 		Threshold: threshold,
 		Total:     total,
-	}
+	}, nil
 }
 
 func (d *Scheme) DealWithPolynomial(secret curves.Scalar, prng io.Reader) (shares map[types.SharingID]*Share, polynomial []curves.Scalar, verificationVector []ecpedersen_comm.Commitment, err error) {

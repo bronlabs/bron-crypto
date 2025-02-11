@@ -8,7 +8,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/combinatorics"
@@ -46,7 +45,7 @@ func TestShamirDealInvalidArgs(t *testing.T) {
 	t.Parallel()
 
 	for _, curve := range supportedCurve {
-		t.Run(spew.Sprintf("%s", curve.Name()), func(t *testing.T) {
+		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
 			_, err := shamir.NewScheme(0, 0, curve)
@@ -66,7 +65,7 @@ func TestShamirOpenNoShares(t *testing.T) {
 
 	for _, curve := range supportedCurve {
 		for _, as := range supportedAccessStructures {
-			t.Run(spew.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
 				t.Parallel()
 
 				scheme, err := shamir.NewScheme(as.th, as.n, curve)
@@ -84,7 +83,7 @@ func TestShamirOpenDuplicateShare(t *testing.T) {
 
 	for _, curve := range supportedCurve {
 		for _, as := range supportedAccessStructures {
-			t.Run(spew.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
 				t.Parallel()
 
 				scheme, err := shamir.NewScheme(as.th, as.n, curve)
@@ -110,7 +109,7 @@ func TestShamirOpenBadIdentifier(t *testing.T) {
 	t.Parallel()
 
 	for _, curve := range supportedCurve {
-		t.Run(spew.Sprintf("%s", curve.Name()), func(t *testing.T) {
+		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
 			scheme, err := shamir.NewScheme(2, 3, curve)
@@ -144,7 +143,7 @@ func TestShamirOpenSingle(t *testing.T) {
 
 	for _, curve := range supportedCurve {
 		for _, as := range supportedAccessStructures {
-			t.Run(spew.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
 				t.Parallel()
 
 				scheme, err := shamir.NewScheme(as.th, as.n, curve)
@@ -170,7 +169,7 @@ func TestShamirOpenSingleInExp(t *testing.T) {
 
 	for _, curve := range supportedCurve {
 		for _, as := range supportedAccessStructures {
-			t.Run(spew.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s_(%d,%d)", curve.Name(), as.th, as.n), func(t *testing.T) {
 				t.Parallel()
 
 				scheme, err := shamir.NewScheme(as.th, as.n, curve)

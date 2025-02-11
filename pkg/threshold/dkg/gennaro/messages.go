@@ -13,8 +13,6 @@ var _ network.Message[types.ThresholdProtocol] = (*Round1Broadcast)(nil)
 var _ network.Message[types.ThresholdProtocol] = (*Round2P2P)(nil)
 var _ network.Message[types.ThresholdProtocol] = (*Round2Broadcast)(nil)
 
-//var _ network.Message[types.ThresholdProtocol] = (*Round2Broadcast)(nil)
-
 type Round1Broadcast struct {
 	PedersenVerification []pedersen_comm.Commitment
 }
@@ -31,8 +29,8 @@ type Round2P2P struct {
 	PedersenShare *pedersen_vss.Share
 }
 
-func (m *Round2P2P) Validate(_ types.ThresholdProtocol) error {
-	if m.PedersenShare == nil {
+func (m *Round2P2P) Validate(protocol types.ThresholdProtocol) error {
+	if m.PedersenShare == nil || m.PedersenShare.SharingId() < 1 || uint(m.PedersenShare.SharingId()) > protocol.TotalParties() {
 		return errs.NewValidation("invalid pedersen share")
 	}
 
