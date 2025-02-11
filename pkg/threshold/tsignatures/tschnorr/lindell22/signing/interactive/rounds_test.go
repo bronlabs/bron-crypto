@@ -5,7 +5,6 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
-	gennaroTu "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -25,6 +24,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/mina"
 	vanillaSchnorr "github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/zilliqa"
+	gennaroTu "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"

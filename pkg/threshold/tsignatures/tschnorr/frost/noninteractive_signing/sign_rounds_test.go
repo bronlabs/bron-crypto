@@ -5,7 +5,6 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"fmt"
-	gennaroTu "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"hash"
 	"reflect"
 	"runtime"
@@ -24,12 +23,15 @@ import (
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	schnorr "github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	agreeonrandom_testutils "github.com/bronlabs/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
+	gennaroTu "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/noninteractive_signing"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/testutils"
 )
 
 func doDkg(tb testing.TB, curve curves.Curve, protocol types.ThresholdProtocol, identities []types.IdentityKey) (signingKeyShares []*frost.SigningKeyShare, publicKeyShares []*frost.PublicKeyShares, err error) {
+	tb.Helper()
+
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(tb, curve, identities, crand.Reader)
 	if err != nil {
 		return nil, nil, err

@@ -2,6 +2,13 @@ package pedersen_vss_test
 
 import (
 	crand "crypto/rand"
+	"maps"
+	"slices"
+	"testing"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
@@ -12,11 +19,6 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/utils/maputils"
 	ecpedersen_comm "github.com/bronlabs/krypton-primitives/pkg/commitments/pedersen"
 	ecpedersen_vss "github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/pedersen"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/stretchr/testify/require"
-	"maps"
-	"slices"
-	"testing"
 )
 
 var supportedCurves = []curves.Curve{

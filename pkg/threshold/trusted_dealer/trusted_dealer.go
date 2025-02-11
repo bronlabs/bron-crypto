@@ -1,15 +1,15 @@
 package trusted_dealer
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/polynomials"
-	feldman_vss "github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
 	"io"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/polynomials"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	feldman_vss "github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
 )
 

@@ -1,14 +1,14 @@
 package pedersen_vss
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing"
 	"io"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/base/utils/sliceutils"
 	ecpedersen_comm "github.com/bronlabs/krypton-primitives/pkg/commitments/pedersen"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
@@ -53,6 +53,9 @@ func (d *Scheme) DealWithPolynomial(secret curves.Scalar, prng io.Reader) (share
 	witnessCoefficients := make([]ecpedersen_comm.Witness, len(poly.Coefficients))
 	for i, c := range poly.Coefficients {
 		verificationVector[i], witnessCoefficients[i], err = d.Ck.Commit(c, prng)
+		if err != nil {
+			return nil, nil, nil, errs.WrapFailed(err, "could not commit to coefficient")
+		}
 	}
 
 	witnesses := make(map[types.SharingID]ecpedersen_comm.Witness)
@@ -98,6 +101,10 @@ func (d *Scheme) VerifyShare(share *Share, verificationVector []ecpedersen_comm.
 
 	x := share.ShamirShare.Id.ToScalar(share.ShamirShare.Value.ScalarField())
 	y, err := evalPolyAt(verificationVector, ecpedersen_comm.Scalar(x), d.Ck.CommitmentAdd, d.Ck.CommitmentMul)
+	if err != nil {
+		return errs.WrapFailed(err, "cannot evaluate polynomial")
+	}
+
 	err = d.Ck.Verify(y, share.ShamirShare.Value, share.Witness)
 	if err != nil {
 		return errs.NewFailed("invalid share")

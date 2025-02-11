@@ -1,11 +1,12 @@
 package additive
 
 import (
+	"io"
+
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing"
-	"io"
 )
 
 var (
@@ -120,7 +121,7 @@ func (*Scheme) ShareMul(lhs *Share, rhs curves.Scalar) *Share {
 //// shamir configs.
 //// In case after conversion, resharing of the new shamir share is desired. A new protocol must
 //// be implemented where it runs the Pedersen DKG with a_i0 = Share.Value.
-//func (s *ScalarShare) ConvertToShamir(t, n uint, identities []types.SharingID) (*shamir.ScalarShare, error) {
+// func (s *ScalarShare) ConvertToShamir(t, n uint, identities []types.SharingID) (*shamir.ScalarShare, error) {
 //	field := s.Value.ScalarField()
 //	shamirDealer, err := shamir.NewScalarDealer(t, n, field)
 //	if err != nil {
@@ -144,4 +145,4 @@ func (*Scheme) ShareMul(lhs *Share, rhs curves.Scalar) *Share {
 //		Id:    s.Id,
 //		Value: sOverC,
 //	}, nil
-//}
+// }.

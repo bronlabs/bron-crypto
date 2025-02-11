@@ -1,6 +1,8 @@
 package feldman_vss
 
 import (
+	"io"
+
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
@@ -8,7 +10,6 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
-	"io"
 )
 
 var (
@@ -75,6 +76,10 @@ func (d *Scheme) DealVerifiable(secret curves.Scalar, prng io.Reader) (shares ma
 
 func (d *Scheme) Deal(secret curves.Scalar, prng io.Reader) (shares map[types.SharingID]*Share, err error) {
 	shares, _, err = d.DealVerifiable(secret, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not deal shares")
+	}
+
 	return shares, nil
 }
 

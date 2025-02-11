@@ -3,11 +3,6 @@ package additive_test
 import (
 	crand "crypto/rand"
 	"fmt"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/base/utils/maputils"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing"
 	"maps"
 	"slices"
 	"testing"
@@ -15,9 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/base/utils/maputils"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/additive"
 )
 

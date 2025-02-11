@@ -2,13 +2,13 @@ package hjky
 
 import (
 	"fmt"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	feldman_vss "github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
 	"io"
 
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	feldman_vss "github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
 )
 
@@ -57,7 +57,7 @@ func NewParticipant(sessionId []byte, authKey types.AuthKey, protocol types.Thre
 
 	feldmanScheme, err := feldman_vss.NewScheme(protocol.Threshold(), protocol.TotalParties(), protocol.Curve())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to initialize Feldman-VSS")
+		return nil, errs.WrapFailed(err, "failed to initialise Feldman-VSS")
 	}
 
 	p := &Participant{

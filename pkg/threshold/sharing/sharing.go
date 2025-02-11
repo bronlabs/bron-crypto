@@ -1,9 +1,11 @@
 package sharing
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"golang.org/x/exp/constraints"
 	"io"
+
+	"golang.org/x/exp/constraints"
+
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 )
 
 type Share interface {

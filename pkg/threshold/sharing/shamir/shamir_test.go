@@ -4,23 +4,23 @@ import (
 	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
+	"testing"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/krypton-primitives/pkg/base/combinatorics"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/base/utils/maputils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing"
-	"github.com/davecgh/go-spew/spew"
-	"maps"
-	"slices"
-	"testing"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
 )
 
@@ -742,7 +742,7 @@ func TestMarshalJsonRoundTrip(t *testing.T) {
 	t.Parallel()
 
 	for _, curve := range supportedCurve {
-		t.Run(fmt.Sprintf("%s", curve.Name()), func(t *testing.T) {
+		t.Run(curve.Name(), func(t *testing.T) {
 			t.Parallel()
 
 			shares := []shamir.Share{

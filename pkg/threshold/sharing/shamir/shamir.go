@@ -1,6 +1,8 @@
 package shamir
 
 import (
+	"io"
+
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
@@ -8,7 +10,6 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing"
-	"io"
 )
 
 var (
@@ -45,6 +46,7 @@ func (d *Scheme) Deal(secret curves.Scalar, prng io.Reader) (map[types.SharingID
 	return shares, nil
 }
 
+//nolint:dupl // false positive: duplicate but for scalars
 func (d *Scheme) Open(shares ...*Share) (curves.Scalar, error) {
 	if len(shares) < int(d.Threshold) {
 		return nil, errs.NewSize("invalid number of shares")
@@ -79,6 +81,7 @@ func (d *Scheme) Open(shares ...*Share) (curves.Scalar, error) {
 	return result, nil
 }
 
+//nolint:dupl // false positive: duplicate but for points
 func (d *Scheme) OpenInExponent(shares ...*ShareInExp) (curves.Point, error) {
 	if len(shares) < int(d.Threshold) {
 		return nil, errs.NewSize("invalid number of shares")
