@@ -150,7 +150,11 @@ func (d *Scheme) VerificationAddValue(lhs []curves.Point, rhs curves.Scalar) []c
 	r := d.Curve.ScalarBaseMult(rhs)
 	out := make([]curves.Point, len(lhs))
 	for i, l := range lhs {
-		out[i] = l.Add(r)
+		if i == 0 {
+			out[i] = l.Add(r)
+		} else {
+			out[i] = l
+		}
 	}
 	return out
 }
@@ -168,7 +172,11 @@ func (d *Scheme) VerificationSubValue(lhs []curves.Point, rhs curves.Scalar) []c
 	r := d.Curve.ScalarBaseMult(rhs)
 	out := make([]curves.Point, len(lhs))
 	for i, l := range lhs {
-		out[i] = l.Sub(r)
+		if i == 0 {
+			out[i] = l.Sub(r)
+		} else {
+			out[i] = l
+		}
 	}
 	return out
 }

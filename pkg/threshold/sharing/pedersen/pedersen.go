@@ -221,7 +221,11 @@ func (d *Scheme) VerificationAdd(lhs, rhs []ecpedersen_comm.Commitment) []ecpede
 func (d *Scheme) VerificationAddValue(lhs []ecpedersen_comm.Commitment, rhs curves.Scalar) []ecpedersen_comm.Commitment {
 	v := make([]ecpedersen_comm.Commitment, len(lhs))
 	for i, l := range lhs {
-		v[i], _ = d.Ck.CommitmentAddMessage(l, rhs)
+		if i == 0 {
+			v[i], _ = d.Ck.CommitmentAddMessage(l, rhs)
+		} else {
+			v[i] = l
+		}
 	}
 
 	return v
@@ -240,7 +244,11 @@ func (d *Scheme) VerificationSub(lhs, rhs []ecpedersen_comm.Commitment) []ecpede
 func (d *Scheme) VerificationSubValue(lhs []ecpedersen_comm.Commitment, rhs curves.Scalar) []ecpedersen_comm.Commitment {
 	v := make([]ecpedersen_comm.Commitment, len(lhs))
 	for i, l := range lhs {
-		v[i], _ = d.Ck.CommitmentSubMessage(l, rhs)
+		if i == 0 {
+			v[i], _ = d.Ck.CommitmentSubMessage(l, rhs)
+		} else {
+			v[i] = l
+		}
 	}
 
 	return v
