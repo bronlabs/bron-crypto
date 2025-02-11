@@ -164,6 +164,8 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.ThresholdP
 		receivedMessage, _ := round2output.Get(recoverer)
 		res = res.Add(receivedMessage.BlindedPartiallyRecoveredShare)
 	}
+	println("recovered share: ", hex.EncodeToString(res.Bytes()))
+
 	// step 3.2
 	partialPublicKey, exists := p.publicKeyShares.IdentityBasedMapping(p.Protocol.Participants()).Get(p.lostPartyIdentityKey)
 	if !exists {
