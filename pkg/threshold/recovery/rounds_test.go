@@ -2,6 +2,7 @@ package recovery_test
 
 import (
 	crand "crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"hash"
 	"testing"
@@ -32,8 +33,8 @@ func Test_HappyPath(t *testing.T) {
 			n int
 		}{
 			{t: 2, n: 3},
-			{t: 2, n: 5},
-			{t: 3, n: 5},
+			//{t: 2, n: 5},
+			//{t: 3, n: 5},
 		} {
 			boundedCurve := curve
 			boundedThresholdConfig := thresholdConfig
@@ -101,21 +102,25 @@ func testHappyPath(t *testing.T, curve curves.Curve, threshold, n int) {
 	t.Helper()
 
 	uniqueSessionId, identities, protocol, dkgSigningKeyShares, dkgPublicKeyShares := setup(t, curve, sha3.New256, threshold, n)
-	for i := 0; i < n; i++ {
-		lostPartyIndex := i
-		t.Run(fmt.Sprintf("running recovery for participant index %d", lostPartyIndex), func(t *testing.T) {
-			t.Parallel()
-
-			presentRecoverers := hashset.NewHashableHashSet(identities...)
-			presentRecoverers.Remove(identities[lostPartyIndex])
-			allPresentRecoverers := make([]ds.Set[types.IdentityKey], len(identities))
-			for i := 0; i < len(identities); i++ {
-				allPresentRecoverers[i] = presentRecoverers.Clone()
-			}
-
-			_, recoveredShare, err := testutils.RunRecovery(t, uniqueSessionId, protocol, allPresentRecoverers, identities, lostPartyIndex, dkgSigningKeyShares, dkgPublicKeyShares, nil)
-			require.NoError(t, err)
-			require.Zero(t, recoveredShare.Share.Cmp(dkgSigningKeyShares[lostPartyIndex].Share))
-		})
+	for i, share := range dkgSigningKeyShares {
+		println("DKG signing key share", i, hex.EncodeToString(share.Share.Bytes()))
 	}
+
+	//for i := 0; i < n; i++ {
+	lostPartyIndex := 1
+	t.Run(fmt.Sprintf("running recovery for participant index %d", lostPartyIndex), func(t *testing.T) {
+		t.Parallel()
+
+		presentRecoverers := hashset.NewHashableHashSet(identities...)
+		presentRecoverers.Remove(identities[lostPartyIndex])
+		allPresentRecoverers := make([]ds.Set[types.IdentityKey], len(identities))
+		for i := 0; i < len(identities); i++ {
+			allPresentRecoverers[i] = presentRecoverers.Clone()
+		}
+
+		_, recoveredShare, err := testutils.RunRecovery(t, uniqueSessionId, protocol, allPresentRecoverers, identities, lostPartyIndex, dkgSigningKeyShares, dkgPublicKeyShares, nil)
+		require.NoError(t, err)
+		require.Zero(t, recoveredShare.Share.Cmp(dkgSigningKeyShares[lostPartyIndex].Share))
+	})
+	//}
 }

@@ -23,9 +23,10 @@ var _ types.ThresholdParticipant = (*Participant)(nil)
 
 type Participant struct {
 	// Base participant
-	Prng     io.Reader
-	Protocol types.ThresholdProtocol
-	Round    int
+	Prng       io.Reader
+	Protocol   types.ThresholdProtocol
+	Round      int
+	SharingCfg types.SharingConfig
 
 	sampler                     *hjky.Participant
 	sortedPresentRecoverersList []types.IdentityKey
@@ -36,7 +37,14 @@ type Participant struct {
 	lostPartyIdentityKey types.IdentityKey
 	additiveShareOfZero  curves.Scalar
 
+	attack attack
+
 	_ ds.Incomparable
+}
+
+type attack struct {
+	sample    curves.Scalar
+	addIdents []uint
 }
 
 func (p *Participant) IdentityKey() types.IdentityKey {
@@ -72,6 +80,7 @@ func NewRecoverer(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey 
 	presentRecoverersList := presentRecoverers.List()
 	sort.Sort(types.ByPublicKey(presentRecoverersList))
 
+	sharingCfg := types.DeriveSharingConfig(protocol.Participants())
 	result := &Participant{
 		Prng:                        prng,
 		sampler:                     sampler,
@@ -80,6 +89,7 @@ func NewRecoverer(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey 
 		signingKeyShare:             signingKeyShare,
 		lostPartyIdentityKey:        lostPartyIdentityKey,
 		Protocol:                    protocol,
+		SharingCfg:                  sharingCfg,
 		Round:                       1,
 	}
 	if err := types.ValidateThresholdProtocol(result, protocol); err != nil {
@@ -157,6 +167,7 @@ func NewLostParty(sessionId []byte, authKey types.AuthKey, protocol types.Thresh
 	presentRecoverersList := presentRecoverers.List()
 	sort.Sort(types.ByPublicKey(presentRecoverersList))
 
+	sharingCfg := types.DeriveSharingConfig(protocol.Participants())
 	result := &Participant{
 		Prng:                        prng,
 		sampler:                     sampler,
@@ -164,6 +175,7 @@ func NewLostParty(sessionId []byte, authKey types.AuthKey, protocol types.Thresh
 		lostPartyIdentityKey:        authKey,
 		publicKeyShares:             publicKeyShares,
 		Protocol:                    protocol,
+		SharingCfg:                  sharingCfg,
 		Round:                       1,
 	}
 	if err := types.ValidateThresholdProtocol(result, protocol); err != nil {

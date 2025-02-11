@@ -1,6 +1,7 @@
 package recovery
 
 import (
+	"encoding/hex"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
@@ -66,6 +67,10 @@ func (p *Participant) Round2(
 		return nil, errs.WrapFailed(err, "could not convert sampled zero share to additive form")
 	}
 
+	// XXX
+	p.attack.sample = sample
+	p.attack.addIdents = partiesOfAdditiveConversion
+
 	if !p.IsRecoverer() {
 		p.Round++
 		return output, nil
@@ -110,6 +115,47 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.ThresholdP
 	}
 	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), round2output); err != nil {
 		return nil, errs.WrapValidation(err, "invalid round 3 input P2P messages")
+	}
+
+	if !p.IsRecoverer() {
+		// XXX: attack
+		for _, recoverer := range p.sortedPresentRecoverersList {
+			sharingId, _ := p.SharingCfg.Reverse().Get(recoverer)
+
+			fs := &shamir.Share{
+				Id:    uint(sharingId),
+				Value: p.Protocol.Curve().ScalarField().New(1),
+			}
+			f, _ := fs.ToAdditive(p.attack.addIdents)
+			g, _ := fs.ToAdditive([]uint{uint(p.SharingId()), uint(sharingId)})
+			hs := &shamir.Share{
+				Id:    uint(p.SharingId()),
+				Value: p.attack.sample,
+			}
+			h, _ := hs.ToAdditive([]uint{uint(p.SharingId()), uint(sharingId)})
+
+			r2, _ := round2output.Get(recoverer)
+			s2 := r2.BlindedPartiallyRecoveredShare
+			s2, _ = s2.Div(f)
+			s2 = s2.Mul(g)
+			s2 = s2.Add(h)
+			s2, _ = s2.Div(g)
+			s2 = s2.Mul(f)
+
+			curve := p.Protocol.Curve()
+			lostPartySharingIdScalar := curve.ScalarField().New(uint64(p.SharingId()))
+			recovererSharingIdScalar := make([]curves.Scalar, len(p.sortedPresentRecoverersList))
+			myIndex := -1
+			for i, recovererSharingId := range p.attack.addIdents[1:] { // 0th index is the lost party
+				recovererSharingIdScalar[i] = curve.ScalarField().New(uint64(recovererSharingId))
+				if uint(sharingId) == recovererSharingId {
+					myIndex = i
+				}
+			}
+			lx, _ := lagrange.L_i(curve, myIndex, recovererSharingIdScalar, lostPartySharingIdScalar)
+			unblindedShare, _ := s2.Div(lx)
+			println("XXX un-blinded recoverer share: ", hex.EncodeToString(unblindedShare.Bytes()))
+		}
 	}
 
 	// step 3.1
