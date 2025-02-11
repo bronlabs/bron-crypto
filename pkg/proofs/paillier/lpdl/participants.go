@@ -173,8 +173,11 @@ func NewProver(secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, 
 	qSquared := saferith.ModulusFromNat(new(saferith.Nat).Mul(q.Nat(), q.Nat(), -1))
 
 	rangeProofTranscript := transcript.Clone()
-	rangeProver, _ := paillierrange.NewProver(base.ComputationalSecurity, q.Nat(),
+	rangeProver, err := paillierrange.NewProver(base.ComputationalSecurity, q.Nat(),
 		secretKey, x.Nat(), r, sessionId, rangeProofTranscript, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't initialise prover")
+	}
 
 	return &Prover{
 		Participant: Participant{

@@ -21,9 +21,7 @@ func (r1out *Round1Output) Validate() error {
 	if r1out == nil {
 		return errs.NewIsNil("round 1 output")
 	}
-	// if err := r1out.EsidCommitment.Validate(); err != nil {
-	//	return errs.WrapValidation(err, "invalid Esid commitment")
-	//}
+
 	return nil
 }
 

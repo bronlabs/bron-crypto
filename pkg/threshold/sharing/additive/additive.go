@@ -115,34 +115,3 @@ func (*Scheme) ShareNeg(lhs *Share) *Share {
 func (*Scheme) ShareMul(lhs *Share, rhs curves.Scalar) *Share {
 	return lhs.ScalarMul(rhs)
 }
-
-//// ConvertToShamir converts len(identities) many additive shares into a (t, n) shamir scheme. An `id`
-//// is a shamir concept, and the holder of the additive share may have different ids for different
-//// shamir configs.
-//// In case after conversion, resharing of the new shamir share is desired. A new protocol must
-//// be implemented where it runs the Pedersen DKG with a_i0 = Share.Value.
-// func (s *ScalarShare) ConvertToShamir(t, n uint, identities []types.SharingID) (*shamir.ScalarShare, error) {
-//	field := s.Value.ScalarField()
-//	shamirDealer, err := shamir.NewScalarDealer(t, n, field)
-//	if err != nil {
-//		return nil, errs.WrapFailed(err, "could not construct shamir share")
-//	}
-//	coefficients, err := shamirDealer.LagrangeCoefficients(identities)
-//	if err != nil {
-//		return nil, errs.WrapFailed(err, "could not derive lagrange coefficients")
-//	}
-//	myCoefficient, exists := coefficients[s.Id]
-//	if !exists {
-//		return nil, errs.NewMissing("i am not one of the provided identities")
-//	}
-//
-//	sOverC, err := s.Value.Div(myCoefficient)
-//	if err != nil {
-//		return nil, errs.WrapFailed(err, "could not divide coefficient")
-//	}
-//
-//	return &shamir.ScalarShare{
-//		Id:    s.Id,
-//		Value: sOverC,
-//	}, nil
-// }.

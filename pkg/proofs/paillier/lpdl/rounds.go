@@ -155,10 +155,10 @@ func (prover *Prover) Round4(r4In *Round3Output) (r4out *Round4Output, err error
 		return nil, errs.WrapValidation(err, "invalid round 4 input")
 	}
 
-	verifier, _ := hashcommitments.NewCommittingKeyFromCrsBytes(prover.sessionId)
-	// if !bytes.Equal(slices.Concat(r3out.A.Bytes(), r3out.B.Bytes()), r3out.CDoublePrimeWitness.GetMessage()) {
-	//	return nil, errs.NewVerification("opening is not tied to the expected values")
-	//}
+	verifier, err := hashcommitments.NewCommittingKeyFromCrsBytes(prover.sessionId)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot instantiate commitment key")
+	}
 	if err := verifier.Verify(prover.state.cDoublePrimeCommitment, slices.Concat(r4In.A.Bytes(), r4In.B.Bytes()), r4In.CDoublePrimeWitness); err != nil {
 		return nil, errs.WrapFailed(err, "cannot open R commitment")
 	}
@@ -197,9 +197,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create committing key")
 	}
-	// if !bytes.Equal(input.BigQHat.ToAffineCompressed(), input.BigQHatWitness.GetMessage()) {
-	//	return errs.NewVerification("opening is not tied to the expected message")
-	//}
+
 	if err := commitVerifier.Verify(verifier.state.cHat, input.BigQHat.ToAffineCompressed(), input.BigQHatWitness); err != nil {
 		return errs.WrapFailed(err, "cannot decommit Q hat")
 	}

@@ -29,9 +29,7 @@ func (r1out *Round1Output) Validate() error {
 	if r1out.CPrime == nil {
 		return errs.NewIsNil("CPrime")
 	}
-	// if err := r1out.CDoublePrimeCommitment.Validate(); err != nil {
-	//	return errs.WrapValidation(err, "invalid CDoublePrime commitment")
-	//}
+
 	return nil
 }
 
@@ -49,9 +47,7 @@ func (r2out *Round2Output) Validate() error {
 	if r2out.RangeProverOutput == nil {
 		return errs.NewIsNil("range prover output")
 	}
-	// if err := r2out.CHat.Validate(); err != nil {
-	//	return errs.WrapValidation(err, "invalid CHat commitment")
-	//}
+
 	return nil
 }
 
@@ -77,9 +73,7 @@ func (r3out *Round3Output) Validate() error {
 	if r3out.B == nil {
 		return errs.NewIsNil("B")
 	}
-	// if err := r3out.CDoublePrimeWitness.Validate(); err != nil {
-	//	return errs.WrapValidation(err, "invalid CDoublePrime witness")
-	//}
+
 	return nil
 }
 
@@ -104,8 +98,6 @@ func (r4out *Round4Output) Validate() error {
 	if r4out.BigQHat.IsAdditiveIdentity() {
 		return errs.NewArgument("BigQHat is identity")
 	}
-	// if err := r4out.BigQHatWitness.Validate(); err != nil {
-	//	return errs.WrapValidation(err, "invalid BigQHat witness")
-	//}
+
 	return nil
 }

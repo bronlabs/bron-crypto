@@ -131,14 +131,12 @@ func (prover *Prover) Round4(r4In *Round3Output) (r4out *Round4Output, err error
 	if prover.Round != 4 {
 		return nil, errs.NewRound("%d != 4", prover.Round)
 	}
-	// if err := r3out.Validate(prover.t); err != nil {
-	//	return nil, errs.WrapValidation(err, "invalid round 4 input")
-	//}
 
 	commitVerifier, err := hashcommitments.NewCommittingKeyFromCrsBytes(prover.SessionId)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create verifier")
 	}
+
 	if err := commitVerifier.Verify(prover.state.eCommitment, r4In.E.Bytes(), r4In.EWitness); err != nil {
 		return nil, errs.WrapFailed(err, "cannot open commitment")
 	}
