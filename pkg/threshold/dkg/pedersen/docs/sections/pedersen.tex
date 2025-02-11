@@ -1,5 +1,0 @@
-\subsubsection{Pedersen DKG} \label{sec:pedersen_dkg}
-
-The \fnref{PedersenDKG} from \cite{pedersen91dkg} outlines a two-round DKG based on  $t$-out-of-$n$ \fnref{Feldman} VSS. Following the standard practices for equivalent DKGs~\cite{lindell17,DKLs19,doerner2023zero,chen2024feldman} we include a ZKPoK (via \idealfn[ZK]{R_{DL}}) of each secret key share and of each of the VSS shares, as a means to thwart \textit{rogue key attacks}. Protocol \ref{alg:pedersendkg} describes this approach.
-
-\inputAlgorithm{threshold/dkg/pedersen}{pedersen.tex}

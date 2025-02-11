@@ -248,8 +248,14 @@ func doInteractiveProof(x, y *saferith.Nat, bigN, bigNN modular.ResidueParams, p
 	}
 
 	label := "gimme, gimme"
-	proverBytes, _ := proverTranscript.ExtractBytes(label, 128)
-	verifierBytes, _ := verifierTranscript.ExtractBytes(label, 128)
+	proverBytes, err := proverTranscript.ExtractBytes(label, 128)
+	if err != nil {
+		return err
+	}
+	verifierBytes, err := verifierTranscript.ExtractBytes(label, 128)
+	if err != nil {
+		return err
+	}
 	if !bytes.Equal(proverBytes, verifierBytes) {
 		return errs.NewFailed("transcript record different data")
 	}

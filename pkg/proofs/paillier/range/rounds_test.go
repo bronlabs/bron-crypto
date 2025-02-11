@@ -13,7 +13,7 @@ import (
 
 	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	paillierrange "github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/range"
 	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -152,8 +152,14 @@ func doProof(x *saferith.Nat, xEncrypted *paillier.CipherText, r, q *saferith.Na
 	}
 
 	label := "gimme, gimme"
-	proverBytes, _ := proverTranscript.ExtractBytes(label, base.ComputationalSecurity)
-	verifierBytes, _ := verifierTranscript.ExtractBytes(label, base.ComputationalSecurity)
+	proverBytes, err := proverTranscript.ExtractBytes(label, base.ComputationalSecurity)
+	if err != nil {
+		return err
+	}
+	verifierBytes, err := verifierTranscript.ExtractBytes(label, base.ComputationalSecurity)
+	if err != nil {
+		return err
+	}
 	if !bytes.Equal(proverBytes, verifierBytes) {
 		return errs.NewFailed("transcript record different data")
 	}

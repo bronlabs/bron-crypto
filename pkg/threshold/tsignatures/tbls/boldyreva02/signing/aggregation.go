@@ -30,7 +30,7 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't get sharing ids")
 	}
-	lambdas, err := shamir.LagrangeCoefficients(bls12381.GetSourceSubGroup[K](), sharingIds)
+	lambdas, err := shamir.LagrangeCoefficients(bls12381.GetSourceSubGroup[K]().ScalarField(), sharingIds)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "couldn't produce lagrange coefficients for present participants")
 	}
@@ -83,7 +83,7 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 			return nil, nil, errs.WrapIdentifiableAbort(err, identityKey.String(), "could not verify partial signature")
 		}
 
-		lambda_i, exists := lambdas[uint(sharingId)]
+		lambda_i, exists := lambdas[sharingId]
 		if !exists {
 			return nil, nil, errs.NewMissing("couldn't find lagrange coefficient for %s", identityKey.String())
 		}
@@ -121,14 +121,14 @@ func Aggregate[K bls.KeySubGroup, S bls.SignatureSubGroup](sharingConfig types.S
 	}
 }
 
-func getSharingIds(quorum ds.Set[types.IdentityKey], sharingConfig types.SharingConfig) ([]uint, error) {
-	sharingIds := make([]uint, quorum.Size())
+func getSharingIds(quorum ds.Set[types.IdentityKey], sharingConfig types.SharingConfig) ([]types.SharingID, error) {
+	sharingIds := make([]types.SharingID, quorum.Size())
 	for i, signer := range quorum.List() {
 		sharingId, exists := sharingConfig.Reverse().Get(signer)
 		if !exists {
 			return nil, errs.NewMembership("participant %s is not in protocol config", signer.String())
 		}
-		sharingIds[i] = uint(sharingId)
+		sharingIds[i] = sharingId
 	}
 	return sharingIds, nil
 }

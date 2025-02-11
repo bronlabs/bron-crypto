@@ -1,52 +1,75 @@
-package hashcommitments_test
+package hash_comm_test
 
 import (
 	crand "crypto/rand"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
+	hash_comm "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
 )
 
-var (
-	sessionId = []byte("00000001")
-
-	inputMessages = [][]byte{
-		[]byte("This is a test Message"),
-		[]byte("short msg"),
-		[]byte(`This input field is intentionally longer than the SHA256 block size and the largest
-		rate of all SHA3 variants as defined in NIST FIPS PUB 202 (i.e. r = 1152 bits = 144 bytes for SHA3-224) 
-		to cover cases where multiple blocks have to be processed.`),
-		{0xFB, 0x1A, 0x18, 0x47, 0x39, 0x3C, 0x9F, 0x45, 0x5F, 0x29, 0x4C, 0x51, 0x42, 0x30, 0xA6, 0xB9},
-		{},
-	}
-)
-
-func TestHappyPathCommitment(t *testing.T) {
+func Test_ValidCommitment(t *testing.T) {
 	t.Parallel()
-
 	prng := crand.Reader
 
-	for _, message := range inputMessages {
-		t.Run(string(message[:]), func(t *testing.T) {
-			t.Parallel()
+	ck := randomCk(t, prng)
+	m := randomMessage(t, prng)
 
-			committer, err := hashcommitments.NewCommitter(sessionId, prng)
-			require.NoError(t, err)
-			require.NotNil(t, committer)
+	c, r, err := ck.Commit(m, prng)
+	require.NoError(t, err)
 
-			verifier := hashcommitments.NewVerifier(sessionId)
-			require.NoError(t, err)
-			require.NotNil(t, verifier)
+	err = ck.Verify(c, m, r)
+	require.NoError(t, err)
+}
 
-			commit, opening, err := committer.Commit(message)
-			require.NoError(t, err)
-			require.NotNil(t, commit)
-			require.NotNil(t, opening)
+func Test_InvalidCommitment(t *testing.T) {
+	t.Parallel()
+	prng := crand.Reader
 
-			err = verifier.Verify(commit, opening)
-			require.NoError(t, err)
-		})
-	}
+	ck := randomCk(t, prng)
+	m := randomMessage(t, prng)
+	invalidCk := randomCk(t, prng)
+	invalidM := randomMessage(t, prng)
+
+	c, r, err := ck.Commit(m, prng)
+	require.NoError(t, err)
+
+	err = ck.Verify(c, m, r)
+	require.NoError(t, err)
+
+	invalidC, invalidR, err := invalidCk.Commit(invalidM, prng)
+	require.NoError(t, err)
+
+	err = invalidCk.Verify(c, m, r)
+	require.Error(t, err)
+	err = ck.Verify(invalidC, m, r)
+	require.Error(t, err)
+	err = ck.Verify(c, invalidM, r)
+	require.Error(t, err)
+	err = ck.Verify(c, m, invalidR)
+	require.Error(t, err)
+	err = ck.Verify(c, invalidM, invalidR)
+	require.Error(t, err)
+}
+
+func randomCk(tb testing.TB, prng io.Reader) *hash_comm.CommittingKey {
+	tb.Helper()
+
+	var key [32]byte
+	_, err := io.ReadFull(prng, key[:])
+	require.NoError(tb, err)
+
+	return hash_comm.NewCommittingKey(key)
+}
+
+func randomMessage(tb testing.TB, prng io.Reader) hash_comm.Message {
+	tb.Helper()
+
+	var message [64]byte
+	_, err := io.ReadFull(prng, message[:])
+	require.NoError(tb, err)
+
+	return message[:]
 }

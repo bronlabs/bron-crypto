@@ -1,7 +1,6 @@
 package paillierrange
 
 import (
-	"bytes"
 	crand "crypto/rand"
 	"io"
 	"math/big"
@@ -11,7 +10,7 @@ import (
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 )
 
 func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
@@ -28,19 +27,19 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 	}
 
 	// 1.iv. compute commitment to (e, sessionId) and send to P
-	committer, err := hashcommitments.NewCommitter(verifier.SessionId, verifier.Prng)
+	committer, err := hashcommitments.NewCommittingKeyFromCrsBytes(verifier.SessionId)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot instantiate committer")
 	}
-	esidCommitment, esidOpening, err := committer.Commit(verifier.state.e.Bytes())
+	eCommitment, eWitness, err := committer.Commit(verifier.state.e.Bytes(), verifier.Prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot commit to e, sessionId")
 	}
-	verifier.state.esidOpening = esidOpening
+	verifier.state.eWitness = eWitness
 
 	verifier.Round += 2
 	return &Round1Output{
-		EsidCommitment: esidCommitment,
+		ECommitment: eCommitment,
 	}, nil
 }
 
@@ -53,7 +52,7 @@ func (prover *Prover) Round2(r1out *Round1Output) (r2out *Round2Output, err erro
 		return nil, errs.WrapValidation(err, "invalid round 2 input")
 	}
 
-	prover.state.esidCommitment = r1out.EsidCommitment
+	prover.state.eCommitment = r1out.ECommitment
 	prover.state.w1 = make([]*saferith.Nat, prover.t)
 	prover.state.w2 = make([]*saferith.Nat, prover.t)
 	for i := 0; i < prover.t; i++ {
@@ -122,25 +121,23 @@ func (verifier *Verifier) Round3(r2out *Round2Output) (r3out *Round3Output, err 
 
 	// 3. decommit (e, sessionId), reveal (e, sessionId) to P
 	return &Round3Output{
-		E:           verifier.state.e,
-		EsidOpening: verifier.state.esidOpening,
+		E:        verifier.state.e,
+		EWitness: verifier.state.eWitness,
 	}, nil
 }
 
-func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err error) {
+func (prover *Prover) Round4(r4In *Round3Output) (r4out *Round4Output, err error) {
 	// Validation
 	if prover.Round != 4 {
 		return nil, errs.NewRound("%d != 4", prover.Round)
 	}
-	if err := r3out.Validate(prover.t); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 4 input")
+
+	commitVerifier, err := hashcommitments.NewCommittingKeyFromCrsBytes(prover.SessionId)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create verifier")
 	}
 
-	commitVerifier := hashcommitments.NewVerifier(prover.SessionId)
-	if !bytes.Equal(r3out.E.Bytes(), r3out.EsidOpening.GetMessage()) {
-		return nil, errs.NewVerification("opening is not tied to the expected message")
-	}
-	if err := commitVerifier.Verify(prover.state.esidCommitment, r3out.EsidOpening); err != nil {
+	if err := commitVerifier.Verify(prover.state.eCommitment, r4In.E.Bytes(), r4In.EWitness); err != nil {
 		return nil, errs.WrapFailed(err, "cannot open commitment")
 	}
 
@@ -153,7 +150,7 @@ func (prover *Prover) Round4(r3out *Round3Output) (r4out *Round4Output, err erro
 	zetZero := make(map[int]*ZetZero)
 	zetOne := make(map[int]*ZetOne, prover.t)
 	for i := 0; i < prover.t; i++ {
-		if r3out.E.Bit(i) == 0 {
+		if r4In.E.Bit(i) == 0 {
 			// 4.i. if ei == 0 set zi = (w1i, r1i, w2i, r2i)
 			zetZero[i] = &ZetZero{
 				W1: prover.state.w1[i],
@@ -237,13 +234,13 @@ func (verifier *Verifier) Round5(r4out *Round4Output) (err error) {
 			ps = append(ps, wi)
 			rs = append(rs, ri)
 			if z.J == 1 {
-				c, err := verifier.pk.Add(verifier.c, verifier.state.c1[i])
+				c, err := verifier.pk.CipherTextAdd(verifier.c, verifier.state.c1[i])
 				if err != nil {
 					return errs.WrapFailed(err, "cannot homomorphically add")
 				}
 				cs = append(cs, c.C)
 			} else if z.J == 2 {
-				c, err := verifier.pk.Add(verifier.c, verifier.state.c2[i])
+				c, err := verifier.pk.CipherTextAdd(verifier.c, verifier.state.c2[i])
 				if err != nil {
 					return errs.WrapFailed(err, "cannot homomorphically add")
 				}

@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/lpdl"
 	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -216,8 +216,14 @@ func doProof(x curves.Scalar, bigQ curves.Point, xEncrypted *paillier.CipherText
 	}
 
 	label := "gimme, gimme"
-	proverBytes, _ := proverTranscript.ExtractBytes(label, 128)
-	verifierBytes, _ := verifierTranscript.ExtractBytes(label, 128)
+	proverBytes, err := proverTranscript.ExtractBytes(label, 128)
+	if err != nil {
+		return err
+	}
+	verifierBytes, err := verifierTranscript.ExtractBytes(label, 128)
+	if err != nil {
+		return err
+	}
 	if !bytes.Equal(proverBytes, verifierBytes) {
 		return errs.NewFailed("transcript record different data")
 	}

@@ -3,37 +3,56 @@ package hjky
 import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/polynomials"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/network"
 )
 
-func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.ThresholdProtocol, *Round1P2P], error) {
-	// Validation delegated to Pedersen.Round1
-	round1broadcast, round1p2p, err := p.PedersenParty.Round1(p.PedersenParty.Protocol.Curve().ScalarField().Zero())
+func (p *Participant) Round1() (r1bo *Round1Broadcast, r1uo network.RoundMessages[types.ThresholdProtocol, *Round1P2P], err error) {
+	shares, verification, err := p.State.feldmanScheme.DealVerifiable(p.Protocol.Curve().ScalarField().Zero(), p.Prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not compute round 1 of pedersen with free coefficient of zero")
+		return nil, nil, errs.WrapFailed(err, "failed to share zero")
+	}
+	p.State.feldmanVerification = verification
+
+	r1bo = &Round1Broadcast{FeldmanVerification: verification}
+	r1uo = network.NewRoundMessages[types.ThresholdProtocol, *Round1P2P]()
+	for sharingId, identityKey := range p.SharingCfg.Iter() {
+		if sharingId == p.MySharingId {
+			p.State.feldmanShare = shares[sharingId]
+		} else {
+			r1uo.Put(identityKey, &Round1P2P{FeldmanShare: shares[sharingId]})
+		}
 	}
 
-	return round1broadcast, round1p2p, nil
+	return r1bo, r1uo, nil
 }
 
 func (p *Participant) Round2(
-	round1outputBroadcast network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast],
-	round1outputP2P network.RoundMessages[types.ThresholdProtocol, *Round1P2P],
-) (sample Sample, publicKeySharesMap ds.Map[types.SharingID, curves.Point], feldmanCommitmentVector []curves.Point, err error) {
-	// Validation delegated to pedersen.Round2
-	keyShare, publicKeyShares, err := p.PedersenParty.Round2(round1outputBroadcast, round1outputP2P)
-	if err != nil {
-		return nil, nil, nil, errs.WrapFailed(err, "could not compute round 2 of pedersen")
-	}
-	if keyShare.Share.IsZero() {
-		return nil, nil, nil, errs.NewIsZero("sample itself is zero")
-	}
-	// This check is just for good measure. We already check this in Round 2 during message validation.
-	if !publicKeyShares.PublicKey.IsAdditiveIdentity() {
-		return nil, nil, nil, errs.NewTotalAbort(nil, "the shares will not combine to zero")
+	r2bi network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast],
+	r2ui network.RoundMessages[types.ThresholdProtocol, *Round1P2P],
+) (share curves.Scalar, publicKeySharesMap ds.Map[types.SharingID, curves.Point], feldmanCommitmentVector []curves.Point, err error) {
+	for sharingId, identityKey := range p.SharingCfg.Iter() {
+		if sharingId == p.MySharingId {
+			continue
+		}
+
+		bIn, _ := r2bi.Get(identityKey)
+		uIn, _ := r2ui.Get(identityKey)
+		if err := p.State.feldmanScheme.VerifyShare(uIn.FeldmanShare, bIn.FeldmanVerification); err != nil || !bIn.FeldmanVerification[0].IsAdditiveIdentity() {
+			return nil, nil, nil, errs.NewIdentifiableAbort(identityKey.String(), "invalid share")
+		}
+
+		p.State.feldmanShare = p.State.feldmanScheme.ShareAdd(p.State.feldmanShare, uIn.FeldmanShare)
+		p.State.feldmanVerification = p.State.feldmanScheme.VerificationAdd(p.State.feldmanVerification, bIn.FeldmanVerification)
 	}
 
-	return keyShare.Share, publicKeyShares.Shares, publicKeyShares.FeldmanCommitmentVector, nil
+	publicKeySharesMap = hashmap.NewComparableHashMap[types.SharingID, curves.Point]()
+	for sharingId := range p.SharingCfg.Iter() {
+		publicKeySharesMap.Put(sharingId, polynomials.EvalInExponent(p.State.feldmanVerification, sharingId.ToScalar(p.Protocol.Curve().ScalarField())))
+	}
+
+	return p.State.feldmanShare.Value, publicKeySharesMap, p.State.feldmanVerification, nil
 }

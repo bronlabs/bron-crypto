@@ -7,6 +7,11 @@ import (
 )
 
 type SharingID uint
+
+func (id SharingID) ToScalar(scalarField curves.ScalarField) curves.Scalar {
+	return scalarField.New(uint64(id))
+}
+
 type SharingConfig AbstractIdentitySpace[SharingID]
 
 type ThresholdParticipant interface {

@@ -1,7 +1,6 @@
 package dkg
 
 import (
-	"bytes"
 	"io"
 	"slices"
 
@@ -11,7 +10,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/network"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/lp"
@@ -75,7 +74,7 @@ func (p *Participant) Round2(input network.RoundMessages[types.ThresholdProtocol
 	}
 
 	// 2. store commitments
-	p.state.theirBigQCommitment = make(map[types.SharingID]*hashcommitments.Commitment)
+	p.state.theirBigQCommitment = make(map[types.SharingID]hashcommitments.Commitment)
 	for identity := range p.Protocol.Participants().Iter() {
 		if identity.Equal(p.IdentityKey()) {
 			continue
@@ -254,15 +253,15 @@ func (p *Participant) Round4(input network.RoundMessages[types.ThresholdProtocol
 		theirCKeyDoublePrime := message.CKeyDoublePrime
 
 		// 4.i. calculate and store ckey_j = 3 (*) ckey'_j (+) ckey''_j
-		cKey1, err := theirPaillierPublicKey.Add(theirCKeyPrime, theirCKeyPrime)
+		cKey1, err := theirPaillierPublicKey.CipherTextAdd(theirCKeyPrime, theirCKeyPrime)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot add ciphertexts")
 		}
-		cKey2, err := theirPaillierPublicKey.Add(cKey1, theirCKeyPrime)
+		cKey2, err := theirPaillierPublicKey.CipherTextAdd(cKey1, theirCKeyPrime)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot add ciphertexts")
 		}
-		theirEncryptedShare, err := theirPaillierPublicKey.Add(cKey2, theirCKeyDoublePrime)
+		theirEncryptedShare, err := theirPaillierPublicKey.CipherTextAdd(cKey2, theirCKeyDoublePrime)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot add ciphertexts")
 		}
@@ -481,20 +480,21 @@ func (p *Participant) Round8(input network.RoundMessages[types.ThresholdProtocol
 	}, nil
 }
 
-func commit(sessionId []byte, prng io.Reader, bigQPrime, bigQDoublePrime curves.Point, pid curves.Point) (vectorCommitment *hashcommitments.Commitment, opening *hashcommitments.Opening, err error) {
-	committer, err := hashcommitments.NewCommitter(sessionId, prng, pid.ToAffineCompressed())
+func commit(sessionId []byte, prng io.Reader, bigQPrime, bigQDoublePrime curves.Point, pid curves.Point) (vectorCommitment hashcommitments.Commitment, witness hashcommitments.Witness, err error) {
+	committer, err := hashcommitments.NewCommittingKeyFromCrsBytes(sessionId, pid.ToAffineCompressed())
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot instantiate committer")
+		return *new(hashcommitments.Commitment), *new(hashcommitments.Witness), errs.WrapFailed(err, "cannot instantiate committer")
 	}
-	return committer.Commit(slices.Concat(bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed()))
+	return committer.Commit(slices.Concat(bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed()), prng)
 }
 
-func openCommitment(sessionId []byte, commitment *hashcommitments.Commitment, opening *hashcommitments.Opening, bigQPrime, bigQDoublePrime curves.Point, pid curves.Point) (err error) {
-	verifier := hashcommitments.NewVerifier(sessionId, pid.ToAffineCompressed())
-	if !bytes.Equal(slices.Concat(bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed()), opening.GetMessage()) {
-		errs.NewVerification("opening is not tied to the expected vector")
+func openCommitment(sessionId []byte, commitment hashcommitments.Commitment, witness hashcommitments.Witness, bigQPrime, bigQDoublePrime curves.Point, pid curves.Point) (err error) {
+	verifier, err := hashcommitments.NewCommittingKeyFromCrsBytes(sessionId, pid.ToAffineCompressed())
+	if err != nil {
+		return errs.WrapFailed(err, "cannot instantiate committer")
 	}
-	return verifier.Verify(commitment, opening)
+
+	return verifier.Verify(commitment, slices.Concat(bigQPrime.ToAffineCompressed(), bigQDoublePrime.ToAffineCompressed()), witness)
 }
 
 func dlogProve(x curves.Scalar, bigQ, bigQTwin curves.Point, sessionId []byte, nic compiler.Name, transcript transcripts.Transcript, prng io.Reader) (proof compiler.NIZKPoKProof, err error) {

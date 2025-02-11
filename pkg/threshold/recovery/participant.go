@@ -1,201 +1,164 @@
 package recovery
 
 import (
-	"fmt"
 	"io"
-	"sort"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/zero/hjky"
+	feldman_vss "github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "KRYPTON_KEY_RECOVERY-"
-
-var _ types.ThresholdParticipant = (*Participant)(nil)
+var (
+	_ types.ThresholdParticipant = (*Mislayer)(nil)
+)
 
 type Participant struct {
-	// Base participant
-	Prng     io.Reader
-	Protocol types.ThresholdProtocol
-	Round    int
+	MySharingId            types.SharingID
+	MyIdentityKey          types.AuthKey
+	MislayerSharingId      types.SharingID
+	MislayerIdentityKey    types.IdentityKey
+	RecoverersIdentityKeys ds.Set[types.IdentityKey]
+	Protocol               types.ThresholdProtocol
+	SharingCfg             types.SharingConfig
+	Prng                   io.Reader
+	State                  State
+}
 
-	sampler                     *hjky.Participant
-	sortedPresentRecoverersList []types.IdentityKey
-
-	signingKeyShare *tsignatures.SigningKeyShare
-	publicKeyShares *tsignatures.PartialPublicKeys
-
-	lostPartyIdentityKey types.IdentityKey
-	additiveShareOfZero  curves.Scalar
-
-	_ ds.Incomparable
+type State struct {
+	feldmanScheme *feldman_vss.Scheme
 }
 
 func (p *Participant) IdentityKey() types.IdentityKey {
-	return p.sampler.IdentityKey()
+	return p.MyIdentityKey
 }
 
 func (p *Participant) SharingId() types.SharingID {
-	return p.sampler.SharingId()
+	return p.MySharingId
 }
 
-func (p *Participant) IsRecoverer() bool {
-	return !p.IdentityKey().Equal(p.lostPartyIdentityKey)
+type Mislayer struct {
+	Participant
 }
 
-func NewRecoverer(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey types.IdentityKey, signingKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, presentRecoverers ds.Set[types.IdentityKey], niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	if err := validateRecovererInputs(sessionId, authKey, lostPartyIdentityKey, signingKeyShare, publicKeyShares, protocol, presentRecoverers, prng); err != nil {
-		return nil, errs.WrapArgument(err, "could not validate inputs")
+type Recoverer struct {
+	Participant
+
+	MySigningKeyShare   *tsignatures.SigningKeyShare
+	MyPartialPublicKeys *tsignatures.PartialPublicKeys
+	RecovererState      RecovererState
+}
+
+type RecovererState struct {
+	blindShares        map[types.SharingID]*feldman_vss.Share
+	blindVerifications map[types.SharingID][]curves.Point
+}
+
+func NewMislayer(myAuthKey types.AuthKey, recoverers ds.Set[types.IdentityKey], protocol types.ThresholdProtocol, prng io.Reader) (*Mislayer, error) {
+	if myAuthKey == nil || recoverers == nil || protocol == nil || prng == nil {
+		return nil, errs.NewIsNil("arg")
+	}
+	if recoverers.Contains(myAuthKey) {
+		return nil, errs.NewFailed("mislayer is recoverers")
+	}
+	if !protocol.Participants().Contains(myAuthKey) {
+		return nil, errs.NewFailed("mislayer not in protocol participants")
+	}
+	for recoverer := range recoverers.Iter() {
+		if !protocol.Participants().Contains(recoverer) {
+			return nil, errs.NewFailed("recoverers not in protocol participants")
+		}
+	}
+	if recoverers.Size() < int(protocol.Threshold()) {
+		return nil, errs.NewFailed("recoverers set is too small")
 	}
 
-	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(dst, prng)
+	sharingCfg := types.DeriveSharingConfig(protocol.Participants())
+	mySharingId, ok := sharingCfg.Reverse().Get(myAuthKey)
+	if !ok {
+		return nil, errs.NewFailed("auth key not found in protocol participants")
 	}
-	boundSessionId, err := transcript.Bind(sessionId, dst)
+
+	feldmanScheme, err := feldman_vss.NewScheme(protocol.Threshold(), protocol.TotalParties(), protocol.Curve())
 	if err != nil {
-		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
+		return nil, errs.WrapFailed(err, "failed to initialise feldman-vss scheme")
 	}
 
-	sampler, err := hjky.NewParticipant(boundSessionId, authKey, protocol, niCompiler, transcript, prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct zero share sampler")
+	p := &Mislayer{
+		Participant{
+			MySharingId:            mySharingId,
+			MyIdentityKey:          myAuthKey,
+			MislayerSharingId:      mySharingId,
+			MislayerIdentityKey:    myAuthKey,
+			RecoverersIdentityKeys: recoverers,
+			Protocol:               protocol,
+			SharingCfg:             sharingCfg,
+			Prng:                   prng,
+			State: State{
+				feldmanScheme: feldmanScheme,
+			},
+		},
 	}
-	presentRecoverersList := presentRecoverers.List()
-	sort.Sort(types.ByPublicKey(presentRecoverersList))
 
-	result := &Participant{
-		Prng:                        prng,
-		sampler:                     sampler,
-		sortedPresentRecoverersList: presentRecoverersList,
-		publicKeyShares:             publicKeyShares,
-		signingKeyShare:             signingKeyShare,
-		lostPartyIdentityKey:        lostPartyIdentityKey,
-		Protocol:                    protocol,
-		Round:                       1,
-	}
-	if err := types.ValidateThresholdProtocol(result, protocol); err != nil {
-		return nil, errs.WrapValidation(err, "could not construct recoverer")
-	}
-	return result, nil
+	return p, nil
 }
 
-func validateRecovererInputs(sessionId []byte, authKey types.AuthKey, lostPartyIdentityKey types.IdentityKey, signingKeyShare *tsignatures.SigningKeyShare, publicKeyShares *tsignatures.PartialPublicKeys, protocol types.ThresholdProtocol, presentRecoverers ds.Set[types.IdentityKey], prng io.Reader) error {
-	if len(sessionId) == 0 {
-		return errs.NewIsZero("sessionId length is zero")
+func NewRecoverer(myAuthKey types.AuthKey, mislayerIdentityKey types.IdentityKey, recoverers ds.Set[types.IdentityKey], protocol types.ThresholdProtocol, mySigningKeyShare *tsignatures.SigningKeyShare, myPartialPublicKeys *tsignatures.PartialPublicKeys, prng io.Reader) (*Recoverer, error) {
+	if myAuthKey == nil || recoverers == nil || protocol == nil || prng == nil {
+		return nil, errs.NewIsNil("arg")
 	}
-	if err := types.ValidateAuthKey(authKey); err != nil {
-		return errs.WrapValidation(err, "authKey")
+	if !recoverers.Contains(myAuthKey) {
+		return nil, errs.NewFailed("not in recoverers")
 	}
-	if err := types.ValidateIdentityKey(lostPartyIdentityKey); err != nil {
-		return errs.WrapValidation(err, "lost party identity Key")
+	if recoverers.Contains(mislayerIdentityKey) {
+		return nil, errs.NewFailed("mislayer in recoverers")
 	}
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
-		return errs.WrapValidation(err, "threshold protocol")
+	if !protocol.Participants().Contains(myAuthKey) {
+		return nil, errs.NewFailed("recoverer not in protocol participants")
 	}
-	if err := signingKeyShare.Validate(protocol); err != nil {
-		return errs.WrapValidation(err, "signing key shares")
+	for recoverer := range recoverers.Iter() {
+		if !protocol.Participants().Contains(recoverer) {
+			return nil, errs.NewFailed("recoverers not in protocol participants")
+		}
 	}
-	if err := publicKeyShares.Validate(protocol); err != nil {
-		return errs.WrapValidation(err, "public key shares are invlaid")
+	if recoverers.Size() < int(protocol.Threshold()) {
+		return nil, errs.NewFailed("recoverers set is too small")
 	}
-	if authKey.Equal(lostPartyIdentityKey) {
-		return errs.NewType("recoverer can't be lost party")
-	}
-	if !protocol.Participants().Contains(lostPartyIdentityKey) {
-		return errs.NewMissing("lost party is not one of the participants")
-	}
-	if presentRecoverers.Contains(lostPartyIdentityKey) {
-		return errs.NewType("recoverer can't be lost party")
-	}
-	if !presentRecoverers.IsSubSet(protocol.Participants()) {
-		return errs.NewMembership("present recoverer set is not a subset of all participants")
-	}
-	if prng == nil {
-		return errs.NewIsNil("prng")
-	}
-	if !curveutils.AllIdentityKeysWithSameCurve(authKey.PublicKey().Curve(), protocol.Participants().List()...) {
-		return errs.NewCurve("authKey and participants have different curves")
-	}
-	if !curveutils.AllIdentityKeysWithSameCurve(authKey.PublicKey().Curve(), lostPartyIdentityKey) {
-		return errs.NewCurve("authKey and lostPartyIdentityKey have different curves")
-	}
-	if !curveutils.AllIdentityKeysWithSameCurve(authKey.PublicKey().Curve(), presentRecoverers.List()...) {
-		return errs.NewCurve("authKey and presentRecoverers have different curves")
-	}
-	if !curveutils.AllPointsOfSameCurve(signingKeyShare.PublicKey.Curve(), publicKeyShares.PublicKey) {
-		return errs.NewCurve("authKey and lostPartyIdentityKey have different curves")
-	}
-	return nil
-}
 
-func NewLostParty(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, niCompiler compiler.Name, presentRecoverers ds.Set[types.IdentityKey], publicKeyShares *tsignatures.PartialPublicKeys, transcript transcripts.Transcript, prng io.Reader) (*Participant, error) {
-	if err := validateLostPartyInputs(sessionId, authKey, protocol, presentRecoverers, publicKeyShares, prng); err != nil {
-		return nil, errs.WrapArgument(err, "could not validate inputs")
+	sharingCfg := types.DeriveSharingConfig(protocol.Participants())
+	mySharingId, ok := sharingCfg.Reverse().Get(myAuthKey)
+	if !ok {
+		return nil, errs.NewFailed("auth key not found in protocol participants")
 	}
-	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
-	if transcript == nil {
-		transcript = hagrid.NewTranscript(dst, prng)
+	mislayerSharingId, ok := sharingCfg.Reverse().Get(mislayerIdentityKey)
+	if !ok {
+		return nil, errs.NewFailed("mislayer key not found in protocol participants")
 	}
-	boundSessionId, err := transcript.Bind(sessionId, dst)
+
+	feldmanScheme, err := feldman_vss.NewScheme(protocol.Threshold(), protocol.TotalParties(), protocol.Curve())
 	if err != nil {
-		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
+		return nil, errs.WrapFailed(err, "failed to initialise feldman-vss scheme")
 	}
 
-	sampler, err := hjky.NewParticipant(boundSessionId, authKey, protocol, niCompiler, transcript, prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct zero share sampler")
+	p := &Recoverer{
+		Participant: Participant{
+			MySharingId:            mySharingId,
+			MyIdentityKey:          myAuthKey,
+			MislayerSharingId:      mislayerSharingId,
+			MislayerIdentityKey:    mislayerIdentityKey,
+			RecoverersIdentityKeys: recoverers,
+			Protocol:               protocol,
+			SharingCfg:             sharingCfg,
+			Prng:                   prng,
+			State: State{
+				feldmanScheme: feldmanScheme,
+			},
+		},
+		MySigningKeyShare:   mySigningKeyShare,
+		MyPartialPublicKeys: myPartialPublicKeys,
 	}
-	presentRecoverersList := presentRecoverers.List()
-	sort.Sort(types.ByPublicKey(presentRecoverersList))
 
-	result := &Participant{
-		Prng:                        prng,
-		sampler:                     sampler,
-		sortedPresentRecoverersList: presentRecoverersList,
-		lostPartyIdentityKey:        authKey,
-		publicKeyShares:             publicKeyShares,
-		Protocol:                    protocol,
-		Round:                       1,
-	}
-	if err := types.ValidateThresholdProtocol(result, protocol); err != nil {
-		return nil, errs.WrapValidation(err, "could not construct lost party")
-	}
-	return result, nil
-}
-
-func validateLostPartyInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, presentRecoverers ds.Set[types.IdentityKey], publicKeyShares *tsignatures.PartialPublicKeys, prng io.Reader) error {
-	if len(sessionId) == 0 {
-		return errs.NewIsZero("sessionId length is zero")
-	}
-	if err := types.ValidateAuthKey(authKey); err != nil {
-		return errs.WrapValidation(err, "authKey")
-	}
-	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
-		return errs.WrapValidation(err, "threshold protocol")
-	}
-	if err := publicKeyShares.Validate(protocol); err != nil {
-		return errs.WrapValidation(err, "public key shares are invlaid")
-	}
-	if !presentRecoverers.IsSubSet(protocol.Participants()) {
-		return errs.NewMembership("present recoverer set is not a subset of all participants")
-	}
-	if prng == nil {
-		return errs.NewIsNil("prng")
-	}
-	if !curveutils.AllIdentityKeysWithSameCurve(authKey.PublicKey().Curve(), protocol.Participants().List()...) {
-		return errs.NewCurve("authKey and participants have different curves")
-	}
-	if !curveutils.AllIdentityKeysWithSameCurve(authKey.PublicKey().Curve(), presentRecoverers.List()...) {
-		return errs.NewCurve("authKey and presentRecoverers have different curves")
-	}
-	return nil
+	return p, nil
 }

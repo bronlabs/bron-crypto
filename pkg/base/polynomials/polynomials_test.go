@@ -116,7 +116,7 @@ func TestLi(t *testing.T) {
 			if sign2 == -1 {
 				expectedScalar = expectedScalar.Neg()
 			}
-			actual, err := lagrange.L_i(curve, tt.i, xsScalar, xScalar)
+			actual, err := lagrange.L_i(curve.ScalarField(), tt.i, xsScalar, xScalar)
 			require.NoError(t, err)
 			require.Exactly(t, expectedScalar, actual)
 		})
@@ -255,7 +255,7 @@ func TestAllBasisPolynomials(t *testing.T) {
 					expectedScalar[k] = expectedScalar[k].Neg()
 				}
 			}
-			actual, err := lagrange.Basis(curve, xsScalar, xScalar)
+			actual, err := lagrange.Basis(curve.ScalarField(), xsScalar, xScalar)
 			require.NoError(t, err)
 			require.Exactly(t, expectedScalar, actual)
 		})
