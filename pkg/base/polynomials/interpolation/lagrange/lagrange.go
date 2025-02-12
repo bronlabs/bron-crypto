@@ -6,12 +6,12 @@ import (
 )
 
 // L_i returns the i'th basis polynomial.
-func L_i(curve curves.Curve, i int, xs []curves.Scalar, x curves.Scalar) (curves.Scalar, error) {
+func L_i(field curves.ScalarField, i int, xs []curves.Scalar, x curves.Scalar) (curves.Scalar, error) {
 	if i < 0 || i >= len(xs) {
 		return nil, errs.NewArgument("i is out of range")
 	}
-	numerator := curve.ScalarField().One()
-	denominator := curve.ScalarField().One()
+	numerator := field.One()
+	denominator := field.One()
 	for j, xj := range xs {
 		if j == i {
 			continue
@@ -30,10 +30,10 @@ func L_i(curve curves.Curve, i int, xs []curves.Scalar, x curves.Scalar) (curves
 }
 
 // Basis computes the set of basis polynomials, and returns a map from i to L_i.
-func Basis(curve curves.Curve, xs []curves.Scalar, x curves.Scalar) (map[int]curves.Scalar, error) {
+func Basis(field curves.ScalarField, xs []curves.Scalar, x curves.Scalar) (map[int]curves.Scalar, error) {
 	result := make(map[int]curves.Scalar, len(xs))
 	for i := range xs {
-		li, err := L_i(curve, i, xs, x)
+		li, err := L_i(field, i, xs, x)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not evaluate lagrange basis polynomial i=%d at x=%d", i, x)
 		}
@@ -44,7 +44,7 @@ func Basis(curve curves.Curve, xs []curves.Scalar, x curves.Scalar) (map[int]cur
 
 func Interpolate(curve curves.Curve, xs, ys []curves.Scalar, evaluateAt curves.Scalar) (curves.Scalar, error) {
 	result := curve.ScalarField().Zero()
-	ls, err := Basis(curve, xs, evaluateAt)
+	ls, err := Basis(curve.ScalarField(), xs, evaluateAt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not derive all basis polynomials")
 	}
@@ -57,7 +57,7 @@ func Interpolate(curve curves.Curve, xs, ys []curves.Scalar, evaluateAt curves.S
 
 func InterpolateInTheExponent(curve curves.Curve, xs []curves.Scalar, bigYs []curves.Point, evaluateAt curves.Scalar) (curves.Point, error) {
 	coefficients := make([]curves.Scalar, len(xs))
-	ls, err := Basis(curve, xs, evaluateAt)
+	ls, err := Basis(curve.ScalarField(), xs, evaluateAt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute all basis polynomials")
 	}

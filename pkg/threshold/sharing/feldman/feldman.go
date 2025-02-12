@@ -1,4 +1,4 @@
-package feldman
+package feldman_vss
 
 import (
 	"io"
@@ -6,131 +6,208 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
+	"github.com/bronlabs/krypton-primitives/pkg/base/polynomials"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
+)
+
+var (
+	_ sharing.LinearVerifiableScheme[*Share, curves.Scalar, curves.Scalar, []curves.Point] = (*Scheme)(nil)
 )
 
 type Share = shamir.Share
 
-func Verify(share *Share, commitments []curves.Point, verifier compiler.NIVerifier[batch_schnorr.Statement], proof compiler.NIZKPoKProof) (err error) {
-	curve := share.Value.ScalarField().Curve()
-	if err := share.Validate(curve); err != nil {
-		return errs.WrapValidation(err, "share validation failed")
-	}
-	x := curve.ScalarField().New(uint64(share.Id))
-	i := curve.ScalarField().One()
-
-	is := make([]curves.Scalar, len(commitments))
-	for j := 1; j < len(commitments); j++ {
-		i = i.Mul(x)
-		is[j] = i
-	}
-	rhs, err := curve.MultiScalarMult(is[1:], commitments[1:])
-	if err != nil {
-		return errs.WrapFailed(err, "multiscalarmult failed")
-	}
-	rhs = rhs.Add(commitments[0])
-
-	lhs := commitments[0].Curve().Generator().ScalarMul(share.Value)
-	if !lhs.Equal(rhs) {
-		return errs.NewVerification("not equal")
-	}
-
-	if err := verifier.Verify(commitments, proof); err != nil {
-		return errs.NewVerification("invalid proof")
-	}
-
-	return nil
-}
-
-type Dealer struct {
+type Scheme struct {
 	Threshold, Total uint
 	Curve            curves.Curve
 
 	_ ds.Incomparable
 }
 
-func NewDealer(threshold, total uint, curve curves.Curve) (*Dealer, error) {
-	dealer := &Dealer{Threshold: threshold, Total: total, Curve: curve}
+func NewScheme(threshold, total uint, curve curves.Curve) (*Scheme, error) {
+	dealer := &Scheme{
+		Threshold: threshold, Total: total, Curve: curve,
+	}
 	if err := dealer.Validate(); err != nil {
 		return nil, errs.WrapFailed(err, "invalid dealer")
 	}
+
 	return dealer, nil
 }
 
-func (f *Dealer) Split(secret curves.Scalar, prover compiler.NIProver[batch_schnorr.Statement, batch_schnorr.Witness], prng io.Reader) (commitments []curves.Point, shares []*Share, proof compiler.NIZKPoKProof, err error) {
-	shamirDealer := &shamir.Dealer{
-		Threshold: f.Threshold,
-		Total:     f.Total,
-		Curve:     f.Curve,
+func (d *Scheme) DealPolynomial(coefficients []curves.Scalar) (shares map[types.SharingID]*Share, verificationVector []curves.Point, err error) {
+	if len(coefficients) != int(d.Threshold) {
+		return nil, nil, errs.NewValidation("invalid coefficients length")
 	}
-	shares, poly, err := shamirDealer.GeneratePolynomialAndShares(secret, prng)
-	if err != nil {
-		return nil, nil, nil, errs.WrapFailed(err, "could not generate polynomial and shares")
+
+	polynomial := polynomials.NewPolynomial(coefficients)
+	shares = make(map[types.SharingID]*shamir.Share)
+	for i := range d.Total {
+		sharingId := types.SharingID(i + 1)
+		x := sharingId.ToScalar(d.Curve.ScalarField())
+		shares[sharingId] = &shamir.Share{
+			Id:    sharingId,
+			Value: polynomial.Evaluate(x),
+		}
 	}
-	commitments = make([]curves.Point, f.Threshold)
-	for i := range commitments {
-		commitments[i] = f.Curve.ScalarBaseMult(poly.Coefficients[i])
+
+	verificationVector = make([]curves.Point, len(polynomial.Coefficients))
+	for i, c := range polynomial.Coefficients {
+		verificationVector[i] = d.Curve.ScalarBaseMult(c)
 	}
-	proof, err = prover.Prove(commitments, poly.Coefficients)
-	if err != nil {
-		return nil, nil, nil, errs.WrapFailed(err, "cannot create a proof")
-	}
-	return commitments, shares, proof, nil
+
+	return shares, verificationVector, nil
 }
 
-func (f *Dealer) LagrangeCoeffs(shares map[uint]*Share) (map[uint]curves.Scalar, error) {
-	shamirDealer := &shamir.Dealer{
-		Threshold: f.Threshold,
-		Total:     f.Total,
-		Curve:     f.Curve,
-	}
-	identities := make([]uint, len(shares))
-	for i, xi := range shares {
-		identities[i] = xi.Id
-	}
-	lambdas, err := shamirDealer.LagrangeCoefficients(identities)
+func (d *Scheme) DealVerifiable(secret curves.Scalar, prng io.Reader) (shares map[types.SharingID]*Share, verificationVector []curves.Point, err error) {
+	shamirDealer, err := shamir.NewScheme(d.Threshold, d.Total, d.Curve)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not derive lagrange coefficients")
+		return nil, nil, errs.WrapFailed(err, "could not generate polynomial and shares")
 	}
-	return lambdas, nil
+	_, poly, err := shamirDealer.GeneratePolynomialAndShares(secret, prng)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not generate polynomial and shares")
+	}
+
+	shares, verificationVector, err = d.DealPolynomial(poly.Coefficients)
+	return shares, verificationVector, err
 }
 
-func (f *Dealer) Combine(shares ...*Share) (curves.Scalar, error) {
-	shamirDealer := &shamir.Dealer{
-		Threshold: f.Threshold,
-		Total:     f.Total,
-		Curve:     f.Curve,
+func (d *Scheme) Deal(secret curves.Scalar, prng io.Reader) (shares map[types.SharingID]*Share, err error) {
+	shares, _, err = d.DealVerifiable(secret, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not deal shares")
 	}
-	result, err := shamirDealer.Combine(shares...)
+
+	return shares, nil
+}
+
+func (d *Scheme) Open(shares ...*Share) (curves.Scalar, error) {
+	shamirDealer, err := shamir.NewScheme(d.Threshold, d.Total, d.Curve)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not combine shares")
+	}
+
+	result, err := shamirDealer.Open(shares...)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not combine shares")
 	}
 	return result, nil
 }
 
-func (f *Dealer) CombinePoints(shares ...*Share) (curves.Point, error) {
-	shamirDealer := &shamir.Dealer{
-		Threshold: f.Threshold,
-		Total:     f.Total,
-		Curve:     f.Curve,
+func (d *Scheme) VerifyShare(share *Share, verificationVector []curves.Point) (err error) {
+	if len(verificationVector) != int(d.Threshold) {
+		return errs.NewFailed("invalid commitment vector")
 	}
-	result, err := shamirDealer.CombinePoints(shares...)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not combine points")
+	if share.SharingId() < 1 || uint(share.SharingId()) > d.Total {
+		return errs.NewFailed("invalid sharing id")
 	}
-	return result, nil
+
+	x := share.Id.ToScalar(d.Curve.ScalarField())
+	y := polynomials.EvalInExponent(verificationVector, x)
+	if !y.Equal(d.Curve.ScalarBaseMult(share.Value)) {
+		return errs.NewFailed("invalid share")
+	}
+
+	return nil
 }
 
-func (f *Dealer) Validate() error {
-	if f.Total < f.Threshold {
+func (*Scheme) ShareAdd(lhs, rhs *Share) *Share {
+	return lhs.Add(rhs)
+}
+
+func (*Scheme) ShareAddValue(lhs *Share, rhs curves.Scalar) *Share {
+	return lhs.AddValue(rhs)
+}
+
+func (*Scheme) ShareSub(lhs, rhs *Share) *Share {
+	return lhs.Sub(rhs)
+}
+
+func (*Scheme) ShareSubValue(lhs *Share, rhs curves.Scalar) *Share {
+	return lhs.SubValue(rhs)
+}
+
+func (*Scheme) ShareNeg(lhs *Share) *Share {
+	return lhs.Neg()
+}
+
+func (*Scheme) ShareMul(lhs *Share, rhs curves.Scalar) *Share {
+	return lhs.ScalarMul(rhs)
+}
+
+func (*Scheme) VerificationAdd(lhs, rhs []curves.Point) []curves.Point {
+	out := make([]curves.Point, len(lhs))
+	for i, l := range lhs {
+		r := rhs[i]
+		out[i] = l.Add(r)
+	}
+	return out
+}
+
+func (d *Scheme) VerificationAddValue(lhs []curves.Point, rhs curves.Scalar) []curves.Point {
+	r := d.Curve.ScalarBaseMult(rhs)
+	out := make([]curves.Point, len(lhs))
+	for i, l := range lhs {
+		if i == 0 {
+			out[i] = l.Add(r)
+		} else {
+			out[i] = l
+		}
+	}
+	return out
+}
+
+func (*Scheme) VerificationSub(lhs, rhs []curves.Point) []curves.Point {
+	out := make([]curves.Point, len(lhs))
+	for i, l := range lhs {
+		r := rhs[i]
+		out[i] = l.Sub(r)
+	}
+	return out
+}
+
+func (d *Scheme) VerificationSubValue(lhs []curves.Point, rhs curves.Scalar) []curves.Point {
+	r := d.Curve.ScalarBaseMult(rhs)
+	out := make([]curves.Point, len(lhs))
+	for i, l := range lhs {
+		if i == 0 {
+			out[i] = l.Sub(r)
+		} else {
+			out[i] = l
+		}
+	}
+	return out
+}
+
+func (*Scheme) VerificationNeg(lhs []curves.Point) []curves.Point {
+	out := make([]curves.Point, len(lhs))
+	for i, l := range lhs {
+		out[i] = l.Neg()
+	}
+	return out
+}
+
+func (*Scheme) VerificationMul(lhs []curves.Point, rhs curves.Scalar) []curves.Point {
+	out := make([]curves.Point, len(lhs))
+	for i, l := range lhs {
+		out[i] = l.ScalarMul(rhs)
+	}
+	return out
+}
+
+func (d *Scheme) Validate() error {
+	if d == nil {
+		return errs.NewIsNil("receiver")
+	}
+	if d.Total < d.Threshold {
 		return errs.NewArgument("total cannot be less than threshold")
 	}
-	if f.Threshold < 2 {
+	if d.Threshold < 2 {
 		return errs.NewArgument("threshold cannot be less than 2")
 	}
-	if f.Curve == nil {
+	if d.Curve == nil {
 		return errs.NewIsNil("curve is nil")
 	}
 	return nil

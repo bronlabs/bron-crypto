@@ -41,7 +41,7 @@ type Round3Broadcast struct {
 }
 
 type Round3P2P struct {
-	InstanceKeyCommitment *hashcommitments.Commitment
+	InstanceKeyCommitment hashcommitments.Commitment
 	MultiplicationOutput  *mult.Round1Output
 
 	_ ds.Incomparable
@@ -58,7 +58,7 @@ type Round4P2P struct {
 	GammaU_ij          curves.Point
 	GammaV_ij          curves.Point
 	Psi_ij             curves.Scalar
-	InstanceKeyOpening *hashcommitments.Opening
+	InstanceKeyOpening hashcommitments.Witness
 
 	_ ds.Incomparable
 }
@@ -96,10 +96,10 @@ func (r1b *Round3Broadcast) Validate(protocol types.ThresholdSignatureProtocol) 
 	return nil
 }
 
-func (r1p2p *Round3P2P) Validate(protocol types.ThresholdSignatureProtocol) error {
-	if r1p2p.InstanceKeyCommitment == nil {
-		return errs.NewIsNil("InstanceKeyCommitment")
-	}
+func (r1p2p *Round3P2P) Validate(types.ThresholdSignatureProtocol) error {
+	// if r1p2p.InstanceKeyCommitment == nil {
+	//	return errs.NewIsNil("InstanceKeyCommitment")
+	//}
 	if r1p2p.MultiplicationOutput == nil {
 		return errs.NewIsNil("MultiplicationOutput")
 	}
@@ -142,8 +142,8 @@ func (r2p2p *Round4P2P) Validate(protocol types.ThresholdSignatureProtocol) erro
 	if r2p2p.Psi_ij.IsZero() {
 		return errs.NewIsZero("Psi_ij")
 	}
-	if err := r2p2p.InstanceKeyOpening.Validate(); err != nil {
-		return errs.WrapValidation(err, "could not validate opening")
-	}
+	// if err := r2p2p.InstanceKeyOpening.Validate(); err != nil {
+	//	return errs.WrapValidation(err, "could not validate opening")
+	//}
 	return nil
 }

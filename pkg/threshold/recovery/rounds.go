@@ -2,140 +2,170 @@ package recovery
 
 import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/polynomials"
 	"github.com/bronlabs/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/network"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
+	feldman_vss "github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
 )
 
-func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.ThresholdProtocol, *Round1P2P], error) {
-	// Validation
-	if p.Round != 1 {
-		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, p.Round)
-	}
-
-	// step 1.1
-	round1broadcast, round1p2p, err := p.sampler.Round1()
+func (p *Recoverer) Round1() (r1bo *Round1Broadcast, err error) {
+	blind, err := p.Protocol.Curve().ScalarField().Random(p.Prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not compute round 1 of zero share sampler")
+		return nil, errs.WrapRandomSample(err, "cannot sample blind")
 	}
 
-	p.Round++
-	return round1broadcast, round1p2p, nil
+	blindShares, blindVerification, err := p.State.feldmanScheme.DealVerifiable(blind, p.Prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot deal blind")
+	}
+
+	shift := blindShares[p.MislayerSharingId].Value
+	blindVerification = p.State.feldmanScheme.VerificationSubValue(blindVerification, shift)
+	for sharingId, share := range blindShares {
+		blindShares[sharingId] = p.State.feldmanScheme.ShareSubValue(share, shift)
+	}
+	p.RecovererState.blindShares = blindShares
+
+	r1bo = &Round1Broadcast{FeldmanVerification: blindVerification}
+	return r1bo, nil
 }
 
-func (p *Participant) Round2(
-	round1broadcast network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast],
-	round1p2p network.RoundMessages[types.ThresholdProtocol, *Round1P2P],
-) (network.RoundMessages[types.ThresholdProtocol, *Round2P2P], error) {
-	// Validation, round1broadcast and round1p2p delegated to sampler.Round2
-	if p.Round != 2 {
-		return nil, errs.NewRound("Running round %d but participant expected round %d", 2, p.Round)
-	}
-
-	output := network.NewRoundMessages[types.ThresholdProtocol, *Round2P2P]()
-
-	// step 2.1
-	sample, _, _, err := p.sampler.Round2(round1broadcast, round1p2p)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not sample a zero share")
-	}
-	// step 2.2
-	wrappedSample := &shamir.Share{
-		Id:    uint(p.SharingId()),
-		Value: sample,
-	}
-
-	partiesOfAdditiveConversion := make([]uint, len(p.sortedPresentRecoverersList)+1) // recoverers and lost party, all share samples of zero.
-	lostPartySharingId, exists := p.sampler.PedersenParty.SharingConfig.Reverse().Get(p.lostPartyIdentityKey)
-	if !exists {
-		return nil, errs.NewMissing("could not find lost party sharing id")
-	}
-	partiesOfAdditiveConversion[0] = uint(lostPartySharingId)
-	for i := 0; i < len(p.sortedPresentRecoverersList); i++ {
-		recovererSharingId, exists := p.sampler.PedersenParty.SharingConfig.Reverse().Get(p.sortedPresentRecoverersList[i]) // 0'th identity is that of the lost party, hence indexing at i+1
-		if !exists {
-			return nil, errs.NewMissing("couldn't find sharing id for recoverer %d", i)
+func (p *Recoverer) Round2(r2bi network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast]) (r2uo network.RoundMessages[types.ThresholdProtocol, *Round2P2P], err error) {
+	p.RecovererState.blindVerifications = make(map[types.SharingID][]curves.Point)
+	for sharingId, identityKey := range p.SharingCfg.Iter() {
+		if sharingId == p.MySharingId || !p.RecoverersIdentityKeys.Contains(identityKey) {
+			continue
 		}
-		partiesOfAdditiveConversion[i+1] = uint(recovererSharingId)
-	}
-	p.additiveShareOfZero, err = wrappedSample.ToAdditive(partiesOfAdditiveConversion)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not convert sampled zero share to additive form")
-	}
 
-	if !p.IsRecoverer() {
-		p.Round++
-		return output, nil
-	}
-
-	curve := p.Protocol.Curve()
-
-	// step 2.3.1
-	lostPartySharingIdScalar := curve.ScalarField().New(uint64(lostPartySharingId))
-	recovererSharingIdScalar := make([]curves.Scalar, len(p.sortedPresentRecoverersList))
-	myIndex := -1
-	for i, recovererSharingId := range partiesOfAdditiveConversion[1:] { // 0th index is the lost party
-		recovererSharingIdScalar[i] = curve.ScalarField().New(uint64(recovererSharingId))
-		if uint(p.SharingId()) == recovererSharingId {
-			myIndex = i
+		inB, _ := r2bi.Get(identityKey)
+		p.RecovererState.blindVerifications[sharingId] = inB.FeldmanVerification
+		if !polynomials.EvalInExponent(p.RecovererState.blindVerifications[sharingId], p.MislayerSharingId.ToScalar(p.Protocol.Curve().ScalarField())).IsAdditiveIdentity() {
+			return nil, errs.NewIdentifiableAbort(sharingId, "invalid verification")
 		}
 	}
-	if myIndex == -1 {
-		return nil, errs.NewMissing("could not find my lagrange basis index")
-	}
-	lx, err := lagrange.L_i(curve, myIndex, recovererSharingIdScalar, lostPartySharingIdScalar)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not compute lagrange basis polynomial at x=%d", lostPartySharingId)
-	}
-	// step 2.3.2
-	s := lx.Mul(p.signingKeyShare.Share)
-	// step 2.3.3
-	sHat := s.Add(p.additiveShareOfZero)
-	// step 2.3.4
-	output.Put(p.lostPartyIdentityKey, &Round2P2P{
-		BlindedPartiallyRecoveredShare: sHat,
-	})
 
-	p.Round++
-	return output, nil
+	r2uo = network.NewRoundMessages[types.ThresholdProtocol, *Round2P2P]()
+	for sharingId, identityKey := range p.SharingCfg.Iter() {
+		if sharingId == p.MySharingId || !p.RecoverersIdentityKeys.Contains(identityKey) {
+			continue
+		}
+
+		r2uo.Put(identityKey, &Round2P2P{FeldmanShare: p.RecovererState.blindShares[sharingId]})
+	}
+
+	return r2uo, nil
 }
 
-func (p *Participant) Round3(round2output network.RoundMessages[types.ThresholdProtocol, *Round2P2P]) (*tsignatures.SigningKeyShare, error) {
-	// Validation
-	if p.Round != 3 {
-		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, p.Round)
+func (p *Recoverer) Round3(r3ui network.RoundMessages[types.ThresholdProtocol, *Round2P2P]) (r3bo *Round3Broadcast, r3uo network.RoundMessages[types.ThresholdProtocol, *Round3P2P], err error) {
+	signingShare := &feldman_vss.Share{
+		Id:    p.MySharingId,
+		Value: p.MySigningKeyShare.Share,
 	}
-	if err := network.ValidateMessages(p.Protocol, p.Protocol.Participants(), p.IdentityKey(), round2output); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 3 input P2P messages")
+	blindShare := p.State.feldmanScheme.ShareAdd(signingShare, p.RecovererState.blindShares[p.MySharingId])
+
+	for sharingId, identityKey := range p.SharingCfg.Iter() {
+		if sharingId == p.MySharingId || !p.RecoverersIdentityKeys.Contains(identityKey) {
+			continue
+		}
+
+		inU, _ := r3ui.Get(identityKey)
+		share := inU.FeldmanShare
+		if err := p.State.feldmanScheme.VerifyShare(share, p.RecovererState.blindVerifications[sharingId]); err != nil {
+			return nil, nil, errs.WrapIdentifiableAbort(err, sharingId, "invalid share")
+		}
+		blindShare = p.State.feldmanScheme.ShareAdd(blindShare, share)
 	}
 
-	// step 3.1
-	res := p.additiveShareOfZero // this, added to all blinded share, will all cancel out to zero
-	for _, recoverer := range p.sortedPresentRecoverersList {
-		receivedMessage, _ := round2output.Get(recoverer)
-		res = res.Add(receivedMessage.BlindedPartiallyRecoveredShare)
-	}
-	// step 3.2
-	partialPublicKey, exists := p.publicKeyShares.IdentityBasedMapping(p.Protocol.Participants()).Get(p.lostPartyIdentityKey)
-	if !exists {
-		return nil, errs.NewMissing("could not find lost party partial public key")
-	}
-	if !p.Protocol.Curve().ScalarBaseMult(res).Equal(partialPublicKey) {
-		return nil, errs.NewTotalAbort(nil, "recovered partial key is incompatible")
+	r3bo = &Round3Broadcast{FeldmanVerification: p.MyPartialPublicKeys.FeldmanCommitmentVector}
+	r3uo = network.NewRoundMessages[types.ThresholdProtocol, *Round3P2P]()
+	r3uo.Put(p.MislayerIdentityKey, &Round3P2P{BlindFeldmanShare: blindShare})
+
+	return r3bo, r3uo, nil
+}
+
+func (p *Recoverer) Round4(r4bi network.RoundMessages[types.ThresholdProtocol, *Round3Broadcast]) (err error) {
+	for sharingId, identityKey := range p.SharingCfg.Iter() {
+		if sharingId == p.MySharingId || !p.RecoverersIdentityKeys.Contains(identityKey) {
+			continue
+		}
+
+		inB, _ := r4bi.Get(identityKey)
+		if len(inB.FeldmanVerification) != len(p.MyPartialPublicKeys.FeldmanCommitmentVector) {
+			return errs.NewIdentifiableAbort(sharingId, "invalid feldman vector")
+		}
+		for i, l := range p.MyPartialPublicKeys.FeldmanCommitmentVector {
+			r := inB.FeldmanVerification[i]
+			if !l.Equal(r) {
+				return errs.NewIdentifiableAbort(sharingId, "invalid feldman vector")
+			}
+		}
 	}
 
-	// step 3.3
-	signingKeyShare := &tsignatures.SigningKeyShare{
-		Share:     res,
-		PublicKey: p.publicKeyShares.PublicKey,
-	}
-	if err := signingKeyShare.Validate(p.Protocol); err != nil {
-		return nil, errs.WrapValidation(err, "reconstructed signing key share")
+	return nil
+}
+
+func (p *Mislayer) Round4(r4bi network.RoundMessages[types.ThresholdProtocol, *Round3Broadcast], r4ui network.RoundMessages[types.ThresholdProtocol, *Round3P2P]) (sks *tsignatures.SigningKeyShare, ppk *tsignatures.PartialPublicKeys, err error) {
+	xs := make([]curves.Scalar, 0, p.RecoverersIdentityKeys.Size())
+	ys := make([]curves.Scalar, 0, p.RecoverersIdentityKeys.Size())
+
+	var verification []curves.Point
+	for sharingId, identityKey := range p.SharingCfg.Iter() {
+		if sharingId == p.MySharingId || !p.RecoverersIdentityKeys.Contains(identityKey) {
+			continue
+		}
+
+		inU, _ := r4ui.Get(identityKey)
+		xs = append(xs, sharingId.ToScalar(p.Protocol.Curve().ScalarField()))
+		ys = append(ys, inU.BlindFeldmanShare.Value)
+
+		inB, _ := r4bi.Get(identityKey)
+		if verification == nil {
+			verification = inB.FeldmanVerification
+		} else {
+			if len(verification) != len(inB.FeldmanVerification) {
+				return nil, nil, errs.NewFailed("invalid verification")
+			}
+			for i, l := range verification {
+				r := inB.FeldmanVerification[i]
+				if !l.Equal(r) {
+					return nil, nil, errs.NewFailed("invalid verification")
+				}
+			}
+		}
 	}
 
-	p.Round++
-	return signingKeyShare, nil
+	recoveredShare, err := lagrange.Interpolate(p.Protocol.Curve(), xs, ys, p.MySharingId.ToScalar(p.Protocol.Curve().ScalarField()))
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot interpolate recovered share")
+	}
+	recoveredFeldmanShare := &feldman_vss.Share{
+		Id:    p.MySharingId,
+		Value: recoveredShare,
+	}
+	err = p.State.feldmanScheme.VerifyShare(recoveredFeldmanShare, verification)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "invalid recovered share")
+	}
+
+	recoveredPublicKey := verification[0]
+	recoveredPartialPublicKeys := hashmap.NewComparableHashMap[types.SharingID, curves.Point]()
+	for sharingId := range p.SharingCfg.Iter() {
+		recoveredPartialPublicKeys.Put(sharingId, polynomials.EvalInExponent(verification, sharingId.ToScalar(p.Protocol.Curve().ScalarField())))
+	}
+
+	sks = &tsignatures.SigningKeyShare{
+		Share:     recoveredShare,
+		PublicKey: recoveredPublicKey,
+	}
+	pks := &tsignatures.PartialPublicKeys{
+		PublicKey:               recoveredPublicKey,
+		Shares:                  recoveredPartialPublicKeys,
+		FeldmanCommitmentVector: verification,
+	}
+
+	return sks, pks, nil
 }

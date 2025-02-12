@@ -4,104 +4,114 @@ import (
 	"io"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing"
 )
 
-type Share struct {
-	Value curves.Scalar `json:"value"`
+var (
+	_ sharing.LinearScheme[*Share, curves.Scalar, curves.Scalar] = (*Scheme)(nil)
+)
 
-	_ ds.Incomparable
+type Scheme struct {
+	Curve curves.Curve
+	Total uint
 }
 
-// ConvertToShamir converts len(identities) many additive shares into a (t, n) shamir scheme. An `id`
-// is a shamir concept, and the holder of the additive share may have different ids for different
-// shamir configs.
-// In case after conversion, resharing of the new shamir share is desired. A new protocol must
-// be implemented where it runs the Pedersen DKG with a_i0 = Share.Value.
-func (s Share) ConvertToShamir(id, t, n uint, identities []uint) (*shamir.Share, error) {
-	curve := s.Value.ScalarField().Curve()
-	shamirDealer, err := shamir.NewDealer(t, n, curve)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct shamir share")
+func NewScheme(total uint, curve curves.Curve) (*Scheme, error) {
+	if total < 2 {
+		return nil, errs.NewArgument("threshold cannot be less than 2")
 	}
-	coefficients, err := shamirDealer.LagrangeCoefficients(identities)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not derive lagrange coefficients")
-	}
-	myCoefficient, exists := coefficients[id]
-	if !exists {
-		return nil, errs.NewMissing("i am not one of the provided identities")
+	if curve == nil {
+		return nil, errs.NewIsNil("invalid curve")
 	}
 
-	sOverC, err := s.Value.Div(myCoefficient)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not divide coefficient")
-	}
-
-	return &shamir.Share{
-		Id:    id,
-		Value: sOverC,
+	return &Scheme{
+		Curve: curve,
+		Total: total,
 	}, nil
 }
 
-type Dealer struct {
-	Total int
-	Curve curves.Curve
+func (d *Scheme) Deal(secret curves.Scalar, prng io.Reader) (shares map[types.SharingID]*Share, err error) {
+	shares = make(map[types.SharingID]*Share)
 
-	_ ds.Incomparable
-}
-
-func NewDealer(total int, curve curves.Curve) (*Dealer, error) {
-	dealer := &Dealer{Total: total, Curve: curve}
-	if err := dealer.Validate(); err != nil {
-		return nil, errs.WrapFailed(err, "invalid additive sharing dealer")
-	}
-	return dealer, nil
-}
-
-func (d *Dealer) Validate() error {
-	if d == nil {
-		return errs.NewIsNil("dealer is nil")
-	}
-	if d.Total < 2 {
-		return errs.NewArgument("threshold cannot be less than 2")
-	}
-	if d.Curve == nil {
-		return errs.NewIsNil("invalid curve")
-	}
-	return nil
-}
-
-func (d *Dealer) Split(secret curves.Scalar, prng io.Reader) ([]*Share, error) {
-	if secret.IsZero() {
-		return nil, errs.NewIsZero("invalid secret")
-	}
-	shares := make([]*Share, d.Total)
 	partialSum := d.Curve.ScalarField().Zero()
-	for i := 1; i < d.Total; i++ {
+	for i := uint(1); i < d.Total; i++ {
+		sharingId := types.SharingID(i)
 		share, err := d.Curve.ScalarField().Random(prng)
 		if err != nil {
 			return nil, errs.WrapRandomSample(err, "could not generate random scalar")
 		}
 		partialSum = partialSum.Add(share)
-		shares[i] = &Share{Value: share}
+		shares[sharingId] = &Share{
+			Id:    sharingId,
+			Value: share,
+		}
 	}
-	shares[0] = &Share{Value: secret.Sub(partialSum)}
+	shares[types.SharingID(d.Total)] = &Share{
+		Id:    types.SharingID(d.Total),
+		Value: secret.Sub(partialSum),
+	}
+
 	return shares, nil
 }
 
-func (d *Dealer) Combine(shares []*Share) (curves.Scalar, error) {
-	if len(shares) != d.Total {
+func (d *Scheme) Open(shares ...*Share) (secret curves.Scalar, err error) {
+	if len(shares) != int(d.Total) {
 		return nil, errs.NewFailed("len(shares) != N")
 	}
-	secret := d.Curve.ScalarField().Zero()
+
+	sharingIds := make(map[types.SharingID]bool)
+	secret = d.Curve.ScalarField().Zero()
 	for _, share := range shares {
-		if share == nil || share.Value.IsZero() {
-			return nil, errs.NewIsZero("found a share with value %s", share.Value.Nat().String())
+		if share == nil || share.Value == nil || share.Id > types.SharingID(d.Total) || sharingIds[share.Id] {
+			return nil, errs.NewIsZero("invalid shares")
 		}
 		secret = secret.Add(share.Value)
+		sharingIds[share.Id] = true
 	}
+
 	return secret, nil
+}
+
+func (d *Scheme) OpenInExponent(shares ...*ShareInExp) (secretInExponent curves.Point, err error) {
+	if len(shares) != int(d.Total) {
+		return nil, errs.NewFailed("len(shares) != N")
+	}
+
+	sharingIds := make(map[types.SharingID]bool)
+	secretInExponent = d.Curve.AdditiveIdentity()
+	for _, share := range shares {
+		if share == nil || share.Value == nil || share.Id > types.SharingID(d.Total) || sharingIds[share.Id] {
+			return nil, errs.NewIsZero("invalid shares")
+		}
+		secretInExponent = secretInExponent.Add(share.Value)
+		sharingIds[share.Id] = true
+	}
+
+	return secretInExponent, nil
+}
+
+func (*Scheme) ShareAdd(lhs, rhs *Share) *Share {
+	return lhs.Add(rhs)
+}
+
+func (*Scheme) ShareAddValue(lhs *Share, rhs curves.Scalar) *Share {
+	return lhs.AddValue(rhs)
+}
+
+func (*Scheme) ShareSub(lhs, rhs *Share) *Share {
+	return lhs.Sub(rhs)
+}
+
+func (*Scheme) ShareSubValue(lhs *Share, rhs curves.Scalar) *Share {
+	return lhs.SubValue(rhs)
+}
+
+func (*Scheme) ShareNeg(lhs *Share) *Share {
+	return lhs.Neg()
+}
+
+func (*Scheme) ShareMul(lhs *Share, rhs curves.Scalar) *Share {
+	return lhs.ScalarMul(rhs)
 }

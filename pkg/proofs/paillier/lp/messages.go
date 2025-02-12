@@ -5,7 +5,7 @@ import (
 
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/nthroots"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
 )

@@ -18,18 +18,18 @@ func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSi
 	if err := validateAggregatorInputs(publicKeyShares, protocol); err != nil {
 		return nil, errs.WrapFailed(err, "could not validate inputs")
 	}
-	sharingIds := make([]uint, partialSignatures.Size())
+	sharingIds := make([]types.SharingID, partialSignatures.Size())
 	i := 0
 	for key := range partialSignatures.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(key)
 		if !exists {
 			return nil, errs.NewMembership("participant %s is not in protocol config", key.String())
 		}
-		sharingIds[i] = uint(sharingId)
+		sharingIds[i] = sharingId
 		i++
 	}
 
-	lambdas, err := shamir.LagrangeCoefficients(new(glow.KeySubGroup), sharingIds)
+	lambdas, err := shamir.LagrangeCoefficients(new(glow.KeySubGroup).ScalarField(), sharingIds)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't produce lagrange coefficients for present participants")
 	}
@@ -68,7 +68,7 @@ func Aggregate(publicKeyShares *glow.PublicKeyShares, protocol types.ThresholdSi
 			return nil, errs.WrapIdentifiableAbort(err, identityKey.String(), "could not verify dleq proof")
 		}
 
-		lambda_i, exists := lambdas[uint(sharingId)]
+		lambda_i, exists := lambdas[sharingId]
 		if !exists {
 			return nil, errs.NewMissing("couldn't find lagrange coefficient for %s", identityKey.String())
 		}

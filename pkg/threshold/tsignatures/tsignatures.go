@@ -53,8 +53,8 @@ func (s *SigningKeyShare) ToAdditive(myIdentityKey types.IdentityKey, quorum ds.
 		return nil, errs.NewMembership("present participants is not a subset of total participants")
 	}
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	mySharingId := uint(0)
-	shamirIdentities := make([]uint, quorum.Size())
+	mySharingId := types.SharingID(0)
+	shamirIdentities := make([]types.SharingID, quorum.Size())
 	i := 0
 	for identityKey := range quorum.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
@@ -62,9 +62,9 @@ func (s *SigningKeyShare) ToAdditive(myIdentityKey types.IdentityKey, quorum ds.
 			return nil, errs.NewMissing("could not find participant sharing id %s", identityKey.String())
 		}
 		if identityKey.Equal(myIdentityKey) {
-			mySharingId = uint(sharingId)
+			mySharingId = sharingId
 		}
-		shamirIdentities[i] = uint(sharingId)
+		shamirIdentities[i] = sharingId
 		i++
 	}
 	if mySharingId == 0 {
@@ -129,13 +129,13 @@ func (p *PartialPublicKeys) IdentityBasedMapping(participants ds.Set[types.Ident
 
 func (p *PartialPublicKeys) ToAdditive(protocol types.ThresholdSignatureProtocol, signers ds.Set[types.IdentityKey]) (ds.Map[types.IdentityKey, curves.Point], error) {
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	signersSharingIds := make([]uint, signers.Size())
+	signersSharingIds := make([]types.SharingID, signers.Size())
 	for i, signer := range signers.List() {
 		sharingId, exists := sharingConfig.Reverse().Get(signer)
 		if !exists {
 			return nil, errs.NewFailed("invalid identity")
 		}
-		signersSharingIds[i] = uint(sharingId)
+		signersSharingIds[i] = sharingId
 	}
 
 	publicShares := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
@@ -155,7 +155,7 @@ func (p *PartialPublicKeys) ToAdditive(protocol types.ThresholdSignatureProtocol
 		}
 
 		lagrangeCoefficient, err := (&shamir.Share{
-			Id:    uint(mySharingId),
+			Id:    mySharingId,
 			Value: publicKeyShare.Curve().ScalarField().One(),
 		}).ToAdditive(signersSharingIds)
 		if err != nil {

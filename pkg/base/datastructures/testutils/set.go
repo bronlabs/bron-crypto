@@ -7,7 +7,7 @@ import (
 
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	fu "github.com/bronlabs/krypton-primitives/pkg/base/fuzzutils"
-	"github.com/bronlabs/krypton-primitives/pkg/base/utils/itertools"
+	"github.com/bronlabs/krypton-primitives/pkg/base/utils/sliceutils"
 )
 
 type SetInvariants[S ds.Set[E], E any] struct{}
@@ -232,8 +232,8 @@ func CheckSetInvariants[S ds.Set[E], E any](t *testing.T, g fu.CollectionGenerat
 		A := pt.GenerateAnySize(true, false)
 		xs := pt.SliceOfElements().GenerateAnySize(false, false)
 
-		expectedSize := len(itertools.UniqueComparable(
-			itertools.Product(
+		expectedSize := len(sliceutils.Unique(
+			sliceutils.Product(
 				pt.Adapter().Unwrap(A),
 				pt.SliceOfElements().Adapter().Unwrap(xs),
 			),
@@ -248,7 +248,7 @@ func CheckSetInvariants[S ds.Set[E], E any](t *testing.T, g fu.CollectionGenerat
 		A := pt.GenerateAnySize(true, false)
 		xs := pt.SliceOfElements().GenerateAnySize(false, false)
 
-		expectedSize := len(itertools.FilterOut(
+		expectedSize := len(sliceutils.FilterOut(
 			pt.Adapter().Unwrap(A),
 			pt.SliceOfElements().Adapter().Unwrap(xs)...,
 		))

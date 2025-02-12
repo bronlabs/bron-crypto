@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/network"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
 )
@@ -17,7 +17,7 @@ var _ network.Message[types.Protocol] = (*Round3OutputP2P)(nil)
 var _ network.Message[types.Protocol] = (*Round4OutputP2P)(nil)
 
 type Round1OutputP2P struct {
-	BigR1Commitment *hashcommitments.Commitment
+	BigR1Commitment hashcommitments.Commitment
 
 	_ ds.Incomparable
 }
@@ -30,7 +30,7 @@ type Round2OutputP2P struct {
 }
 
 type Round3OutputP2P struct {
-	BigR1Opening *hashcommitments.Opening
+	BigR1Opening hashcommitments.Witness
 	BigR1        curves.Point
 	BigR1Proof   compiler.NIZKPoKProof
 
@@ -43,10 +43,10 @@ type Round4OutputP2P struct {
 	_ ds.Incomparable
 }
 
-func (r1p2p *Round1OutputP2P) Validate(protocol types.Protocol) error {
-	if err := r1p2p.BigR1Commitment.Validate(); err != nil {
-		return errs.WrapValidation(err, "could not validate commitment")
-	}
+func (*Round1OutputP2P) Validate(types.Protocol) error {
+	// if err := r1p2p.BigR1Commitment.Validate(); err != nil {
+	//	return errs.WrapValidation(err, "could not validate commitment")
+	//}
 	return nil
 }
 
@@ -67,9 +67,9 @@ func (r2p2p *Round2OutputP2P) Validate(protocol types.Protocol) error {
 }
 
 func (r3p2p *Round3OutputP2P) Validate(protocol types.Protocol) error {
-	if err := r3p2p.BigR1Opening.Validate(); err != nil {
-		return errs.WrapValidation(err, "could not validate opening")
-	}
+	// if err := r3p2p.BigR1Opening.Validate(); err != nil {
+	//	return errs.WrapValidation(err, "could not validate opening")
+	//}
 	if r3p2p.BigR1 == nil {
 		return errs.NewIsNil("big r1")
 	}

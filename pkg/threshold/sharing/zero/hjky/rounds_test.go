@@ -1,51 +1,65 @@
 package hjky_test
 
 import (
-	crand "crypto/rand"
-	"crypto/sha512"
 	"fmt"
-	"hash"
-	"reflect"
-	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
+	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	agreeonrandom_testutils "github.com/bronlabs/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/zero/hjky/testutils"
 )
 
-func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) (uniqueSessiondId []byte, identities []types.IdentityKey, protocol types.ThresholdProtocol) {
-	t.Helper()
-
-	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
-	require.NoError(t, err)
-
-	identities, err = ttu.MakeTestIdentities(cipherSuite, n)
-	require.NoError(t, err)
-	protocol, err = ttu.MakeThresholdProtocol(curve, identities, threshold)
-	require.NoError(t, err)
-
-	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(t, curve, identities, crand.Reader)
-	require.NoError(t, err)
-
-	return uniqueSessionId, identities, protocol
+var testCurves = []curves.Curve{
+	k256.NewCurve(),
+	p256.NewCurve(),
+	edwards25519.NewCurve(),
+	pasta.NewPallasCurve(),
+	pasta.NewVestaCurve(),
+	bls12381.NewG1(),
+	bls12381.NewG2(),
 }
 
-func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) {
+var testThresholdCfgs = []struct{ th, n uint }{
+	{th: 2, n: 2},
+	{th: 2, n: 3},
+	{th: 3, n: 5},
+	{th: 4, n: 6},
+	{th: 8, n: 8},
+}
+
+func Test_HappyPath(t *testing.T) {
+	t.Parallel()
+
+	for _, curve := range testCurves {
+		for _, thresholdConfig := range testThresholdCfgs {
+			t.Run(fmt.Sprintf("curve=%s and t=%d and n=%d", curve.Name(), thresholdConfig.th, thresholdConfig.n), func(t *testing.T) {
+				t.Parallel()
+				testHappyPath(t, curve, thresholdConfig.th, thresholdConfig.n)
+			})
+		}
+	}
+}
+
+func testHappyPath(t *testing.T, curve curves.Curve, threshold, n uint) {
 	t.Helper()
 
-	uniqueSessionId, identities, protocol := setup(t, curve, h, threshold, n)
+	sessionId := []byte("zero share session id")
+	identities, err := ttu.MakeDeterministicTestIdentities(int(n))
+	require.NoError(t, err)
+	protocol, err := ttu.MakeThresholdProtocol(curve, identities, int(threshold))
+	require.NoError(t, err)
+	tapes := ttu.MakeTranscripts("test tape", identities)
 
-	participants, samples, publicKeySharesMaps, _, err := testutils.RunSample(t, uniqueSessionId, protocol, identities)
+	participants, samples, publicKeySharesMaps, _, err := testutils.DoRun(t, sessionId, protocol, identities, tapes)
 	require.NoError(t, err)
 
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
@@ -59,18 +73,18 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 
 	t.Run("samples combine to zero", func(t *testing.T) {
 		t.Parallel()
-		shamirDealer, err := shamir.NewDealer(uint(threshold), uint(n), curve)
+		shamirDealer, err := shamir.NewScheme(threshold, n, curve)
 		require.NoError(t, err)
 		require.NotNil(t, shamirDealer)
 		shamirShares := make([]*shamir.Share, len(participants))
 		for i := 0; i < len(participants); i++ {
 			shamirShares[i] = &shamir.Share{
-				Id:    uint(participants[i].SharingId()),
+				Id:    participants[i].SharingId(),
 				Value: samples[i],
 			}
 		}
 
-		combined, err := shamirDealer.Combine(shamirShares...)
+		combined, err := shamirDealer.Open(shamirShares...)
 		require.NoError(t, err)
 		require.True(t, combined.IsZero())
 
@@ -90,29 +104,4 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, thresho
 		}
 	})
 
-}
-
-func Test_HappyPath(t *testing.T) {
-	t.Parallel()
-
-	for _, curve := range []curves.Curve{edwards25519.NewCurve(), k256.NewCurve()} {
-		for _, h := range []func() hash.Hash{sha3.New256, sha512.New} {
-			for _, thresholdConfig := range []struct {
-				t int
-				n int
-			}{
-				{t: 2, n: 3},
-				{t: 3, n: 3},
-			} {
-				boundedCurve := curve
-				boundedHash := h
-				boundedHashName := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
-				boundedThresholdConfig := thresholdConfig
-				t.Run(fmt.Sprintf("Happy path with curve=%s and hash=%s and t=%d and n=%d", boundedCurve.Name(), boundedHashName[strings.LastIndex(boundedHashName, "/")+1:], boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
-					t.Parallel()
-					testHappyPath(t, boundedCurve, boundedHash, boundedThresholdConfig.t, boundedThresholdConfig.n)
-				})
-			}
-		}
-	}
 }

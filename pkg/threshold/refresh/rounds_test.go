@@ -19,7 +19,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	agreeonrandom_testutils "github.com/bronlabs/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	jf_testutils "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/jf/testutils"
+	gennaroTu "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/refresh/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
@@ -38,7 +38,10 @@ func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n in
 	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(t, curve, identities, crand.Reader)
 	require.NoError(t, err)
 
-	dkgSigningKeyShares, dkgPublicKeyShares = jf_testutils.DoDkgHappyPath(t, uniqueSessionId, protocol, identities)
+	tapes := ttu.MakeTranscripts("testtest", identities)
+	dkgSigningKeyShares, dkgPublicKeyShares, err = gennaroTu.DoGennaroDkg(t, uniqueSessionId, protocol, identities, tapes)
+	require.NoError(t, err)
+
 	return uniqueSessionId, identities, protocol, dkgSigningKeyShares, dkgPublicKeyShares
 }
 
@@ -89,18 +92,18 @@ func testHappyPath(t *testing.T, curve curves.Curve, h func() hash.Hash, iterati
 
 		t.Run("reconstructed private key is the dlog of the public key", func(t *testing.T) {
 			t.Parallel()
-			shamirDealer, err := shamir.NewDealer(uint(threshold), uint(n), curve)
+			shamirDealer, err := shamir.NewScheme(uint(threshold), uint(n), curve)
 			require.NoError(t, err)
 			require.NotNil(t, shamirDealer)
 			shamirShares := make([]*shamir.Share, len(participants))
 			for i := 0; i < len(participants); i++ {
 				shamirShares[i] = &shamir.Share{
-					Id:    uint(participants[i].SharingId()),
+					Id:    participants[i].SharingId(),
 					Value: signingKeyShares[i].Share,
 				}
 			}
 
-			reconstructedPrivateKey, err := shamirDealer.Combine(shamirShares...)
+			reconstructedPrivateKey, err := shamirDealer.Open(shamirShares...)
 			require.NoError(t, err)
 
 			derivedPublicKey := curve.ScalarBaseMult(reconstructedPrivateKey)

@@ -1,41 +1,38 @@
 package commitments
 
-import (
-	"github.com/cronokirby/saferith"
-)
+import "io"
 
 type (
-	Name       string
-	Message    any
 	Commitment any
+	Message    any
+	Witness    any
+	Scalar     any
 )
 
-type Opening[M Message] interface {
-	GetMessage() M
+type CommittingKey[C Commitment, M Message, W Witness] interface {
+	RandomWitness(prng io.Reader) (witness W, err error)
+	CommitWithWitness(message M, witness W) (commitment C, err error)
+	Commit(message M, prng io.Reader) (commitment C, witness W, err error)
+	Verify(commitment C, message M, witness W) (err error)
 }
 
-type HomomorphicCommitmentScheme[M Message, C Commitment, O Opening[M]] interface {
-	CombineCommitments(x C, ys ...C) (C, error)
-	ScaleCommitment(x C, n *saferith.Nat) (C, error)
+type HomomorphicCommittingKey[C Commitment, M Message, W Witness, S Scalar] interface {
+	CommittingKey[C, M, W]
 
-	CombineOpenings(x O, ys ...O) (O, error)
-	ScaleOpening(x O, n *saferith.Nat) (O, error)
-}
+	MessageAdd(lhs, rhs M) (message M, err error)
+	MessageSub(lhs, rhs M) (message M, err error)
+	MessageNeg(x M) (message M, err error)
+	MessageMul(lhs M, rhs S) (message M, err error)
 
-type Committer[M Message, C Commitment, O Opening[M]] interface {
-	Commit(message M) (C, O, error)
-}
+	CommitmentAdd(lhs, rhs C) (commitment C, err error)
+	CommitmentAddMessage(lhs C, rhs M) (commitment C, err error)
+	CommitmentSub(lhs, rhs C) (commitment C, err error)
+	CommitmentSubMessage(lhs C, rhs M) (commitment C, err error)
+	CommitmentNeg(x C) (commitment C, err error)
+	CommitmentMul(lhs C, rhs S) (commitment C, err error)
 
-type HomomorphicCommitter[M Message, C Commitment, O Opening[M]] interface {
-	Committer[M, C, O]
-	HomomorphicCommitmentScheme[M, C, O]
-}
-
-type Verifier[M Message, C Commitment, O Opening[M]] interface {
-	Verify(commitment C, opening O) error
-}
-
-type HomomorphicVerifier[M Message, C Commitment, O Opening[M]] interface {
-	Verifier[M, C, O]
-	HomomorphicCommitmentScheme[M, C, O]
+	WitnessAdd(lhs, rhs W) (witness W, err error)
+	WitnessSub(lhs, rhs W) (witness W, err error)
+	WitnessNeg(x W) (witness W, err error)
+	WitnessMul(lhs W, rhs S) (witness W, err error)
 }

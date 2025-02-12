@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/lp"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/lpdl"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
@@ -32,13 +32,13 @@ type State struct {
 	myXDoublePrime    curves.Scalar
 	myBigQPrime       curves.Point
 	myBigQDoublePrime curves.Point
-	myBigQOpening     *hashcommitments.Opening
+	myBigQOpening     hashcommitments.Witness
 	myPaillierPk      *paillier.PublicKey
 	myPaillierSk      *paillier.SecretKey
 	myRPrime          *saferith.Nat
 	myRDoublePrime    *saferith.Nat
 
-	theirBigQCommitment          map[types.SharingID]*hashcommitments.Commitment
+	theirBigQCommitment          map[types.SharingID]hashcommitments.Commitment
 	theirBigQPrime               map[types.SharingID]curves.Point
 	theirBigQDoublePrime         map[types.SharingID]curves.Point
 	theirPaillierPublicKeys      ds.Map[types.IdentityKey, *paillier.PublicKey]

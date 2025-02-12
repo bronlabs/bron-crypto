@@ -24,7 +24,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/mina"
 	vanillaSchnorr "github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/vanilla"
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/zilliqa"
-	jf_testutils "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/jf/testutils"
+	gennaroTu "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
@@ -386,7 +386,8 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	thresholdSignatureProtocol, err := ttu.MakeThresholdSignatureProtocol(signingSuite, identities, th, identities)
 	require.NoError(t, err)
 
-	signingKeyShares, partialPublicKeys := jf_testutils.DoDkgHappyPath(t, sid, thresholdSignatureProtocol, identities)
+	tapes := ttu.MakeTranscripts("testtest", identities)
+	signingKeyShares, partialPublicKeys := gennaroTu.DoDkgHappyPath(t, sid, thresholdSignatureProtocol, identities, tapes)
 
 	shards := hashmap.NewHashableHashMap[types.IdentityKey, *lindell22.Shard]()
 	for i, id := range identities {

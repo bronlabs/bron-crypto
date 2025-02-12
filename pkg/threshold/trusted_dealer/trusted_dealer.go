@@ -7,9 +7,9 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/polynomials"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/dkg"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
+	feldman_vss "github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
 )
 
@@ -24,74 +24,37 @@ func Deal(protocol types.ThresholdProtocol, secret curves.Scalar, prng io.Reader
 		return nil, nil, errs.NewValidation("curve mismatch %s != %s", protocol.Curve().Name(), secret.ScalarField().Curve().Name())
 	}
 
-	shamirDealer, err := shamir.NewDealer(protocol.Threshold(), protocol.TotalParties(), protocol.Curve())
+	feldmanDealer, err := feldman_vss.NewScheme(protocol.Threshold(), protocol.TotalParties(), protocol.Curve())
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot create Shamir dealer")
+		return nil, nil, errs.WrapFailed(err, "cannot create Feldman-VSS dealer")
 	}
-
-	shamirShares, poly, err := shamirDealer.GeneratePolynomialAndShares(secret, prng)
+	shares, verification, err := feldmanDealer.DealVerifiable(secret, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot deal shares")
 	}
 
-	coeffsSum := make([]curves.Scalar, len(poly.Coefficients))
-	for i := range coeffsSum {
-		coeffsSum[i] = protocol.Curve().ScalarField().Zero()
-	}
-
-	coeffs := make([][]curves.Scalar, protocol.TotalParties())
-	for i := uint(0); i < protocol.TotalParties()-1; i++ {
-		coeffs[i] = make([]curves.Scalar, protocol.Threshold())
-		for j := uint(0); j < protocol.Threshold(); j++ {
-			coeffs[i][j], err = protocol.Curve().ScalarField().Random(prng)
-			if err != nil {
-				return nil, nil, errs.WrapRandomSample(err, "cannot sample scalar")
-			}
-			coeffsSum[j] = coeffsSum[j].Add(coeffs[i][j])
-		}
-	}
-	coeffs[protocol.TotalParties()-1] = make([]curves.Scalar, protocol.Threshold())
-	for j := uint(0); j < protocol.Threshold(); j++ {
-		coeffs[protocol.TotalParties()-1][j] = poly.Coefficients[j].Sub(coeffsSum[j])
-	}
-
-	publicKey := protocol.Curve().ScalarBaseMult(secret)
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	signingKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.SigningKeyShare]()
-	partialPublicKeys := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
-	partialPublicKeysShares := hashmap.NewHashableHashMap[types.IdentityKey, curves.Point]()
-
-	for sharingId, identity := range sharingConfig.Iter() {
-		share := &tsignatures.SigningKeyShare{
-			Share:     nil,
-			PublicKey: publicKey,
-		}
-		for _, shamirShare := range shamirShares {
-			if shamirShare.Id == uint(sharingId) {
-				share.Share = shamirShare.Value
-				break
-			}
-		}
-		if share.Share == nil {
-			return nil, nil, errs.NewFailed("invalid sharing id")
-		}
-
-		signingKeyShares.Put(identity, share)
-		partialPublicKeysShares.Put(identity, protocol.Curve().ScalarBaseMult(share.Share))
+	publicShares := hashmap.NewComparableHashMap[types.SharingID, curves.Point]()
+	for sharingId := range sharingConfig.Iter() {
+		publicShares.Put(sharingId, polynomials.EvalInExponent(verification, sharingId.ToScalar(protocol.Curve().ScalarField())))
 	}
 
-	for sharingId, identity := range sharingConfig.Iter() {
-		polyCoeffs := coeffs[sharingId-1]
-		commitments := make([]curves.Point, len(polyCoeffs))
-		for j := range commitments {
-			commitments[j] = protocol.Curve().ScalarBaseMult(polyCoeffs[j])
-		}
-		partialPublicKeys.Put(identity, &tsignatures.PartialPublicKeys{
-			PublicKey:               publicKey,
-			Shares:                  dkg.AsSharingIDMappedToPartialPublicKeys(partialPublicKeysShares),
-			FeldmanCommitmentVector: commitments,
+	sks = hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.SigningKeyShare]()
+	for sharingId, identityKey := range sharingConfig.Iter() {
+		sks.Put(identityKey, &tsignatures.SigningKeyShare{
+			Share:     shares[sharingId].Value,
+			PublicKey: verification[0],
 		})
 	}
 
-	return signingKeyShares, partialPublicKeys, nil
+	ppk = hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+	for _, identityKey := range sharingConfig.Iter() {
+		ppk.Put(identityKey, &tsignatures.PartialPublicKeys{
+			PublicKey:               verification[0],
+			Shares:                  publicShares,
+			FeldmanCommitmentVector: verification,
+		})
+	}
+
+	return sks, ppk, nil
 }

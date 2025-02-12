@@ -1,7 +1,6 @@
 package setup
 
 import (
-	"bytes"
 	"io"
 	"slices"
 
@@ -36,11 +35,11 @@ func (p *Participant) Round1() (network.RoundMessages[types.Protocol, *Round1P2P
 			return nil, errs.WrapRandomSample(err, "could not produce random bytes for party with index %d", participantIndex)
 		}
 		// step 1.2: commit to the seed
-		committer, err := hashcommitments.NewCommitter(p.SessionId, p.Prng)
+		committer, err := hashcommitments.NewCommittingKeyFromCrsBytes(p.SessionId)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot instantiate committer")
 		}
-		commitment, opening, err := committer.Commit(seedForThisParticipant[:])
+		commitment, opening, err := committer.Commit(seedForThisParticipant[:], p.Prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not commit to the seed for participant with index %d", participantIndex)
 		}
@@ -123,11 +122,14 @@ func (p *Participant) Round3(round2output network.RoundMessages[types.Protocol, 
 			return nil, errs.NewMissing("do not have a commitment from participant with index %d", participantIndex)
 		}
 
-		verifier := hashcommitments.NewVerifier(p.SessionId)
-		if !bytes.Equal(message.Message, message.Opening.GetMessage()) {
-			return nil, errs.NewValidation("opening is not tied to the expected message")
+		verifier, err := hashcommitments.NewCommittingKeyFromCrsBytes(p.SessionId)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not create verifier")
 		}
-		if err := verifier.Verify(commitment, message.Opening); err != nil {
+		// if !bytes.Equal(message.Message, message.Opening.GetMessage()) {
+		//	return nil, errs.NewValidation("opening is not tied to the expected message")
+		//}
+		if err := verifier.Verify(commitment, message.Message, message.Opening); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, participant.String(), "commitment from participant with sharing id can't be opened")
 		}
 		myContributedSeed, exists := p.state.sentSeeds.Get(participant)

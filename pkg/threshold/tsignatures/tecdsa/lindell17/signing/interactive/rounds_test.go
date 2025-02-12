@@ -17,7 +17,7 @@ import (
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/ecdsa"
-	jfTestutils "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/jf/testutils"
+	gennaroTu "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	lindell17DkgTestutils "github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg/testutils"
@@ -106,7 +106,7 @@ func Test_HappyPathWithDkg(t *testing.T) {
 	sid := []byte("SessionId")
 	message := []byte("Hello World!")
 
-	signingKeyShares, publicKeyShares := doJf(t, sid, protocol, identities)
+	signingKeyShares, publicKeyShares := doDkg(t, sid, protocol, identities)
 	shards := lindell17DkgTestutils.RunDKG(t, sid, protocol, identities, signingKeyShares, publicKeyShares)
 	signature := doLindell17Sign(t, sid, protocol, identities, shards, alice, bob, message)
 
@@ -199,25 +199,11 @@ func Test_RecoveryIdCalculation(t *testing.T) {
 	}
 }
 
-func doJf(t *testing.T, sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys) {
+func doDkg(t *testing.T, sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey) (signingKeyShares []*tsignatures.SigningKeyShare, publicKeyShares []*tsignatures.PartialPublicKeys) {
 	t.Helper()
-	jfParticipants, err := jfTestutils.MakeParticipants(t, sid, protocol, identities, cn, nil)
-	require.NoError(t, err)
-	r1OutsB, r1OutsU, err := jfTestutils.DoDkgRound1(t, jfParticipants)
-	require.NoError(t, err)
-	for _, out := range r1OutsU {
-		require.Equal(t, out.Size(), int(protocol.TotalParties())-1)
-	}
 
-	r2InsB, r2InsU := ttu.MapO2I(t, jfParticipants, r1OutsB, r1OutsU)
-	r2Outs, err := jfTestutils.DoDkgRound2(t, jfParticipants, r2InsB, r2InsU)
-	require.NoError(t, err)
-	for _, out := range r2Outs {
-		require.NotNil(t, out)
-	}
-
-	r3Ins := ttu.MapBroadcastO2I(t, jfParticipants, r2Outs)
-	signingKeyShares, publicKeyShares, err = jfTestutils.DoDkgRound3(t, jfParticipants, r3Ins)
+	tapes := ttu.MakeTranscripts("testtest", identities)
+	signingKeyShares, publicKeyShares, err := gennaroTu.DoGennaroDkg(t, sid, protocol, identities, tapes)
 	require.NoError(t, err)
 
 	return signingKeyShares, publicKeyShares

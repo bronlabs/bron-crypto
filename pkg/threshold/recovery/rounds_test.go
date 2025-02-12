@@ -2,120 +2,87 @@ package recovery_test
 
 import (
 	crand "crypto/rand"
-	"fmt"
-	"hash"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	agreeonrandom_testutils "github.com/bronlabs/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	jf_testutils "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/jf/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/recovery/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
+	"github.com/bronlabs/krypton-primitives/pkg/network"
+	gennaroTu "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
+	"github.com/bronlabs/krypton-primitives/pkg/threshold/recovery"
 )
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	for _, curve := range []curves.Curve{k256.NewCurve()} {
-		for _, thresholdConfig := range []struct {
-			t int
-			n int
-		}{
-			{t: 2, n: 3},
-			{t: 2, n: 5},
-			{t: 3, n: 5},
-		} {
-			boundedCurve := curve
-			boundedThresholdConfig := thresholdConfig
-			t.Run(fmt.Sprintf("Happy path with curve=%s and t=%d and n=%d", boundedCurve.Name(), boundedThresholdConfig.t, boundedThresholdConfig.n), func(t *testing.T) {
-				t.Parallel()
-				testHappyPath(t, boundedCurve, boundedThresholdConfig.t, boundedThresholdConfig.n)
-			})
-		}
-	}
-}
+	const n = 3
+	const th = 2
 
-func TestSanity(t *testing.T) {
-	t.Parallel()
+	prng := crand.Reader
 	curve := k256.NewCurve()
-	secret, err := curve.ScalarField().Random(crand.Reader)
+	sessionId := []byte("test-session-id")
+	identities, err := testutils.MakeDeterministicTestIdentities(n)
+	require.NoError(t, err)
+	protocol, err := testutils.MakeThresholdProtocol(curve, identities, th)
+	require.NoError(t, err)
+	tapes := testutils.MakeTranscripts("testtest", identities)
+
+	shares, publicShares, err := gennaroTu.DoGennaroDkg(t, sessionId, protocol, identities, tapes)
 	require.NoError(t, err)
 
-	dealer, err := shamir.NewDealer(2, 3, curve)
+	// pretend bob lost his share
+	aliceShare := shares[0]
+	alicePublicShare := publicShares[0]
+	charlieShare := shares[2]
+	charliePublicShare := publicShares[2]
+
+	recoverers := hashset.NewHashableHashSet[types.IdentityKey](identities[0], identities[2])
+	alice, err := recovery.NewRecoverer(identities[0].(types.AuthKey), identities[1], recoverers, protocol, aliceShare, alicePublicShare, prng)
 	require.NoError(t, err)
-	shares, err := dealer.Split(secret, crand.Reader)
+	bob, err := recovery.NewMislayer(identities[1].(types.AuthKey), recoverers, protocol, prng)
 	require.NoError(t, err)
-
-	alice := shares[0]
-	aliceX := curve.ScalarField().New(uint64(alice.Id))
-
-	bob := shares[1]
-	bobX := curve.ScalarField().New(uint64(bob.Id))
-
-	charlie := shares[2]
-	charlieX := curve.ScalarField().New(uint64(charlie.Id))
-
-	xs := []curves.Scalar{bobX, charlieX}
-
-	l2, err := lagrange.L_i(curve, 0, xs, aliceX)
-	require.NoError(t, err)
-	l3, err := lagrange.L_i(curve, 1, xs, aliceX)
+	charlie, err := recovery.NewRecoverer(identities[2].(types.AuthKey), identities[1], recoverers, protocol, charlieShare, charliePublicShare, prng)
 	require.NoError(t, err)
 
-	partialBob := bob.Value.Mul(l2)
-	partialCharlie := charlie.Value.Mul(l3)
-
-	recovered := partialBob.Add(partialCharlie)
-	require.Zero(t, alice.Value.Cmp(recovered))
-}
-
-func setup(t *testing.T, curve curves.Curve, h func() hash.Hash, threshold, n int) (uniqueSessiondId []byte, identities []types.IdentityKey, protocol types.ThresholdProtocol, dkgSigningKeyShares []*tsignatures.SigningKeyShare, dkgPublicKeyShares []*tsignatures.PartialPublicKeys) {
-	t.Helper()
-
-	cipherSuite, err := ttu.MakeSigningSuite(curve, h)
+	// r1
+	r1bo := make([]*recovery.Round1Broadcast, 3)
+	r1bo[0], err = alice.Round1()
 	require.NoError(t, err)
-	identities, err = ttu.MakeTestIdentities(cipherSuite, n)
-	require.NoError(t, err)
-	protocol, err = ttu.MakeThresholdProtocol(curve, identities, threshold)
+	r1bo[2], err = charlie.Round1()
 	require.NoError(t, err)
 
-	uniqueSessionId, err := agreeonrandom_testutils.RunAgreeOnRandom(t, curve, identities, crand.Reader)
+	// r2
+	r2bi := testutils.MapBroadcastO2I(t, []types.ThresholdParticipant{alice, bob, charlie}, r1bo)
+	r2uo := make([]network.RoundMessages[types.ThresholdProtocol, *recovery.Round2P2P], 3)
+	r2uo[0], err = alice.Round2(r2bi[0])
+	require.NoError(t, err)
+	r2uo[2], err = charlie.Round2(r2bi[2])
 	require.NoError(t, err)
 
-	dkgSigningKeyShares, dkgPublicKeyShares = jf_testutils.DoDkgHappyPath(t, uniqueSessionId, protocol, identities)
+	// r3
+	r3ui := testutils.MapUnicastO2I(t, []types.ThresholdParticipant{alice, bob, charlie}, r2uo)
+	r3bo := make([]*recovery.Round3Broadcast, 3)
+	r3uo := make([]network.RoundMessages[types.ThresholdProtocol, *recovery.Round3P2P], 3)
+	r3bo[0], r3uo[0], err = alice.Round3(r3ui[0])
+	require.NoError(t, err)
+	r3bo[2], r3uo[2], err = charlie.Round3(r3ui[2])
+	require.NoError(t, err)
 
-	return uniqueSessionId, identities, protocol, dkgSigningKeyShares, dkgPublicKeyShares
-}
+	// r4
+	r4bi, r4ui := testutils.MapO2I(t, []types.ThresholdParticipant{alice, bob, charlie}, r3bo, r3uo)
+	err = alice.Round4(r4bi[0])
+	require.NoError(t, err)
+	recoveredSks, recoveredPpk, err := bob.Round4(r4bi[1], r4ui[1])
+	require.NoError(t, err)
+	err = charlie.Round4(r4bi[2])
+	require.NoError(t, err)
 
-func testHappyPath(t *testing.T, curve curves.Curve, threshold, n int) {
-	t.Helper()
+	bobShare := shares[1]
+	bobPublicShare := publicShares[1]
 
-	uniqueSessionId, identities, protocol, dkgSigningKeyShares, dkgPublicKeyShares := setup(t, curve, sha3.New256, threshold, n)
-	for i := 0; i < n; i++ {
-		lostPartyIndex := i
-		t.Run(fmt.Sprintf("running recovery for participant index %d", lostPartyIndex), func(t *testing.T) {
-			t.Parallel()
-
-			presentRecoverers := hashset.NewHashableHashSet(identities...)
-			presentRecoverers.Remove(identities[lostPartyIndex])
-			allPresentRecoverers := make([]ds.Set[types.IdentityKey], len(identities))
-			for i := 0; i < len(identities); i++ {
-				allPresentRecoverers[i] = presentRecoverers.Clone()
-			}
-
-			_, recoveredShare, err := testutils.RunRecovery(t, uniqueSessionId, protocol, allPresentRecoverers, identities, lostPartyIndex, dkgSigningKeyShares, dkgPublicKeyShares, nil)
-			require.NoError(t, err)
-			require.Zero(t, recoveredShare.Share.Cmp(dkgSigningKeyShares[lostPartyIndex].Share))
-		})
-	}
+	require.True(t, recoveredSks.Equal(bobShare))
+	require.True(t, recoveredPpk.Equal(bobPublicShare))
 }

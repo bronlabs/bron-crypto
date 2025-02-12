@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/trusted_dealer"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
@@ -124,7 +124,7 @@ func validateShards(protocol types.ThresholdSignatureProtocol, shards ds.Map[typ
 	}
 
 	// verify private key
-	feldmanShares := make([]*feldman.Share, shards.Size())
+	feldmanShares := make([]*feldman_vss.Share, shards.Size())
 	for i := range feldmanShares {
 		sharingId := types.SharingID(i + 1)
 		identity, exists := sharingConfig.Get(sharingId)
@@ -135,16 +135,16 @@ func validateShards(protocol types.ThresholdSignatureProtocol, shards ds.Map[typ
 		if !exists {
 			return errs.NewMissing("couldn't find shard for sharing id %d", sharingId)
 		}
-		feldmanShares[i] = &feldman.Share{
-			Id:    uint(sharingId),
+		feldmanShares[i] = &feldman_vss.Share{
+			Id:    sharingId,
 			Value: thisShard.SigningKeyShare.Share,
 		}
 	}
-	dealer, err := feldman.NewDealer(protocol.Threshold(), protocol.TotalParties(), protocol.Curve())
+	dealer, err := feldman_vss.NewScheme(protocol.Threshold(), protocol.TotalParties(), protocol.Curve())
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create Feldman dealer")
 	}
-	recoveredPrivateKey, err := dealer.Combine(feldmanShares...)
+	recoveredPrivateKey, err := dealer.Open(feldmanShares...)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot combine Feldman shares")
 	}

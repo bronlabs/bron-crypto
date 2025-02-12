@@ -1,14 +1,12 @@
 package interactive_signing
 
 import (
-	"bytes"
-
 	"github.com/bronlabs/krypton-primitives/pkg/base"
 	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/hashing"
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog"
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/ecdsa"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
@@ -29,11 +27,11 @@ func (pc *PrimaryCosigner) Round1() (r1out *Round1OutputP2P, err error) {
 	pc.state.bigR1 = pc.Protocol.Curve().ScalarBaseMult(pc.state.k1)
 
 	// step 1.2: c1 <- Commit(sid || Q || R1)
-	committer, err := hashcommitments.NewCommitter(pc.SessionId, pc.Prng, pc.myAuthKey.PublicKey().ToAffineCompressed())
+	committer, err := hashcommitments.NewCommittingKeyFromCrsBytes(pc.SessionId, pc.myAuthKey.PublicKey().ToAffineCompressed())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot instantiate committer")
 	}
-	bigR1Commitment, bigR1Opening, err := committer.Commit(pc.state.bigR1.ToAffineCompressed())
+	bigR1Commitment, bigR1Opening, err := committer.Commit(pc.state.bigR1.ToAffineCompressed(), pc.Prng)
 	if err != nil {
 		return nil, errs.NewFailed("cannot commit to R")
 	}
@@ -137,11 +135,14 @@ func (sc *SecondaryCosigner) Round4(r3out *Round3OutputP2P, message []byte) (rou
 		return nil, errs.WrapValidation(err, "invalid round %d input", sc.Round)
 	}
 
-	verifier := hashcommitments.NewVerifier(sc.SessionId, sc.primaryIdentityKey.PublicKey().ToAffineCompressed())
-	if !bytes.Equal(r3out.BigR1.ToAffineCompressed(), r3out.BigR1Opening.GetMessage()) {
-		return nil, errs.NewVerification("opening is not tied to the expected value")
+	verifier, err := hashcommitments.NewCommittingKeyFromCrsBytes(sc.SessionId, sc.primaryIdentityKey.PublicKey().ToAffineCompressed())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot instantiate verifier")
 	}
-	if err := verifier.Verify(sc.state.bigR1Commitment, r3out.BigR1Opening); err != nil {
+	// if !bytes.Equal(r3out.BigR1.ToAffineCompressed(), r3out.BigR1Opening.GetMessage()) {
+	//	return nil, errs.NewVerification("opening is not tied to the expected value")
+	//}
+	if err := verifier.Verify(sc.state.bigR1Commitment, r3out.BigR1.ToAffineCompressed(), r3out.BigR1Opening); err != nil {
 		return nil, errs.WrapFailed(err, "cannot open R commitment")
 	}
 
