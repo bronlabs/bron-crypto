@@ -3,23 +3,23 @@ package commitments
 import "github.com/bronlabs/krypton-primitives/pkg/base/errs"
 
 type Opening[M Message, W Witness] struct {
-	message M
-	witness W
+	M M
+	W W
 }
 
 func NewOpening[M Message, W Witness](message M, witness W) *Opening[M, W] {
 	return &Opening[M, W]{
-		message: message,
-		witness: witness,
+		M: message,
+		W: witness,
 	}
 }
 
 func (o *Opening[M, W]) Message() M {
-	return o.message
+	return o.M
 }
 
 func (o *Opening[M, W]) Witness() W {
-	return o.witness
+	return o.W
 }
 
 func OpeningAdd[C Commitment, M Message, W Witness, S Scalar, CK HomomorphicCommittingKey[C, M, W, S]](ck CK, lhs, rhs *Opening[M, W]) (*Opening[M, W], error) {

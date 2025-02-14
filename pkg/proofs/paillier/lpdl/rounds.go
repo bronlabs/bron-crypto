@@ -206,7 +206,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	if !input.BigQHat.Equal(verifier.state.bigQPrime) {
 		return errs.NewVerification("cannot verify")
 	}
-	err = verifier.rangeVerifier.Round5(input.RangeProverOutput)
+	err = verifier.rangeVerifier.Verify(input.RangeProverOutput)
 	if err != nil {
 		return errs.WrapFailed(err, "range verifier round 5")
 	}

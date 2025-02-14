@@ -15,6 +15,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
+	_ "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
 	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	agreeonrandomTestUtils "github.com/bronlabs/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"

@@ -1,9 +1,8 @@
 package sharing
 
 import (
+	"cmp"
 	"io"
-
-	"golang.org/x/exp/constraints"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 )
@@ -47,7 +46,7 @@ type LinearVerifiableScheme[S Share, W any, SC any, V any] interface {
 	VerificationMul(lhs V, rhs SC) V
 }
 
-func AddSharesMap[M ~map[K]S, S Share, W, SC any, K constraints.Ordered](scheme LinearScheme[S, W, SC], lhs, rhs M) M {
+func AddSharesMap[M ~map[K]S, S Share, W, SC any, K cmp.Ordered](scheme LinearScheme[S, W, SC], lhs, rhs M) M {
 	result := make(M)
 	for i, l := range lhs {
 		r := rhs[i]
@@ -57,7 +56,7 @@ func AddSharesMap[M ~map[K]S, S Share, W, SC any, K constraints.Ordered](scheme 
 	return result
 }
 
-func AddSharesValueMap[M ~map[K]S, S Share, W, SC any, K constraints.Ordered](scheme LinearScheme[S, W, SC], lhs M, rhs W) M {
+func AddSharesValueMap[M ~map[K]S, S Share, W, SC any, K cmp.Ordered](scheme LinearScheme[S, W, SC], lhs M, rhs W) M {
 	result := make(M)
 	for i, l := range lhs {
 		result[i] = scheme.ShareAddValue(l, rhs)
@@ -66,7 +65,7 @@ func AddSharesValueMap[M ~map[K]S, S Share, W, SC any, K constraints.Ordered](sc
 	return result
 }
 
-func SubSharesMap[M ~map[K]S, S Share, W, SC any, K constraints.Ordered](scheme LinearScheme[S, W, SC], lhs, rhs M) M {
+func SubSharesMap[M ~map[K]S, S Share, W, SC any, K cmp.Ordered](scheme LinearScheme[S, W, SC], lhs, rhs M) M {
 	result := make(M)
 	for i, l := range lhs {
 		r := rhs[i]
@@ -76,7 +75,7 @@ func SubSharesMap[M ~map[K]S, S Share, W, SC any, K constraints.Ordered](scheme 
 	return result
 }
 
-func SubSharesValueMap[M ~map[K]S, S Share, W, SC any, K constraints.Ordered](scheme LinearScheme[S, W, SC], lhs M, rhs W) M {
+func SubSharesValueMap[M ~map[K]S, S Share, W, SC any, K cmp.Ordered](scheme LinearScheme[S, W, SC], lhs M, rhs W) M {
 	result := make(M)
 	for i, l := range lhs {
 		result[i] = scheme.ShareSubValue(l, rhs)
@@ -85,7 +84,7 @@ func SubSharesValueMap[M ~map[K]S, S Share, W, SC any, K constraints.Ordered](sc
 	return result
 }
 
-func NegSharesMap[M ~map[K]S, S Share, W, SC any, K constraints.Ordered](scheme LinearScheme[S, W, SC], lhs M) M {
+func NegSharesMap[M ~map[K]S, S Share, W, SC any, K cmp.Ordered](scheme LinearScheme[S, W, SC], lhs M) M {
 	result := make(M)
 	for i, l := range lhs {
 		result[i] = scheme.ShareNeg(l)
@@ -94,7 +93,7 @@ func NegSharesMap[M ~map[K]S, S Share, W, SC any, K constraints.Ordered](scheme 
 	return result
 }
 
-func MulSharesMap[M ~map[K]S, S Share, W, SC any, K constraints.Ordered](scheme LinearScheme[S, W, SC], lhs M, rhs SC) M {
+func MulSharesMap[M ~map[K]S, S Share, W, SC any, K cmp.Ordered](scheme LinearScheme[S, W, SC], lhs M, rhs SC) M {
 	result := make(M)
 	for k, l := range lhs {
 		result[k] = scheme.ShareMul(l, rhs)

@@ -23,6 +23,8 @@ import (
 	lindell17DkgTestutils "github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
 	interactiveSigning "github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing/interactive"
+
+	_ "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
 )
 
 const cn = fischlin.Name
