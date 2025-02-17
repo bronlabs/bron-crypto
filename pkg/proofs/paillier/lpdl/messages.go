@@ -8,12 +8,13 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/commitments"
 	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
+	pedersen_comm "github.com/bronlabs/krypton-primitives/pkg/commitments/pedersen"
 	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	paillierrange "github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/range"
 )
 
 type Round1Output struct {
-	RangeVerifierOutput    hashcommitments.Commitment
+	RangeVerifierOutput    pedersen_comm.Commitment
 	CPrime                 *paillier.CipherText
 	CDoublePrimeCommitment hashcommitments.Commitment
 
@@ -50,7 +51,7 @@ func (r2out *Round2Output) Validate() error {
 }
 
 type Round3Output struct {
-	RangeVerifierOutput *commitments.Opening[hashcommitments.Message, hashcommitments.Witness]
+	RangeVerifierOutput *commitments.Opening[pedersen_comm.Message, pedersen_comm.Witness]
 	A                   *saferith.Nat
 	B                   *saferith.Nat
 	CDoublePrimeWitness hashcommitments.Witness
