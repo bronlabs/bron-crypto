@@ -60,6 +60,11 @@ func (v *Verifier[X, W, A, S, Z]) Round1() (hashcommitments.Commitment, error) {
 	}
 
 	v.challengeBytes = make([]byte, v.protocol.GetChallengeBytesLength())
+	_, err := io.ReadFull(v.prng, v.challengeBytes)
+	if err != nil {
+		return hashcommitments.Commitment{}, errs.WrapRandomSample(err, "couldn't sample challenge")
+	}
+
 	eCommitment, eWitness, err := v.ck.Commit(hashcommitments.Message(v.challengeBytes), v.prng)
 	if err != nil {
 		return hashcommitments.Commitment{}, errs.WrapHashing(err, "couldn't commit to challenge")
