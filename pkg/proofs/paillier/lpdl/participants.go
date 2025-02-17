@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/lp"
 	paillierrange "github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/range"
+	zkcompiler "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/zk"
 	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
 	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
@@ -54,7 +55,7 @@ type VerifierState struct {
 
 type Verifier struct {
 	Participant
-	rangeVerifier *paillierrange.Verifier
+	rangeVerifier *zkcompiler.Verifier[*paillierrange.Statement, *paillierrange.Witness, *paillierrange.Commitment, *paillierrange.State, *paillierrange.Response]
 	c             *paillier.CipherText
 	state         *VerifierState
 
@@ -73,7 +74,7 @@ type ProverState struct {
 
 type Prover struct {
 	Participant
-	rangeProver *paillierrange.Prover
+	rangeProver *zkcompiler.Prover[*paillierrange.Statement, *paillierrange.Witness, *paillierrange.Commitment, *paillierrange.State, *paillierrange.Response]
 	sk          *paillier.SecretKey
 	x           curves.Scalar
 	state       *ProverState
@@ -99,10 +100,19 @@ func NewVerifier(publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *p
 
 	q := curve.Order()
 	q2 := saferith.ModulusFromNat(new(saferith.Nat).Mul(q.Nat(), q.Nat(), 2*q.BitLen()))
+	qThird := new(saferith.Nat).Div(q.Nat(), saferith.ModulusFromUint64(3), q.BitLen())
 
 	rangeProofTranscript := transcript.Clone()
-	rangeVerifier, err := paillierrange.NewVerifier(base.ComputationalSecurity, q.Nat(),
-		publicKey, xEncrypted, sessionId, rangeProofTranscript, prng)
+	rangeProtocol, err := paillierrange.NewPaillierRange(base.ComputationalSecurity, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't create range protocol")
+	}
+	rangeCipherText, err := publicKey.CipherTextSubPlainText(xEncrypted, qThird)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't create range statement")
+	}
+	rangeStatement := paillierrange.NewStatement(publicKey, rangeCipherText, qThird)
+	rangeVerifier, err := zkcompiler.NewVerifier(boundSessionId, rangeProofTranscript, rangeProtocol, rangeStatement, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Paillier range verifier")
 	}
@@ -171,10 +181,25 @@ func NewProver(secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, 
 
 	q := curve.Order()
 	qSquared := saferith.ModulusFromNat(new(saferith.Nat).Mul(q.Nat(), q.Nat(), -1))
+	qThird := new(saferith.Nat).Div(q.Nat(), saferith.ModulusFromUint64(3), q.BitLen())
 
 	rangeProofTranscript := transcript.Clone()
-	rangeProver, err := paillierrange.NewProver(base.ComputationalSecurity, q.Nat(),
-		secretKey, x.Nat(), r, sessionId, rangeProofTranscript, prng)
+
+	rangeProtocol, err := paillierrange.NewPaillierRange(base.ComputationalSecurity, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't create range protocol")
+	}
+	rangePlainText, err := secretKey.PlainTextSub(x.Nat(), qThird)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't create range witness")
+	}
+	rangeCipherText, err := secretKey.EncryptWithNonce(rangePlainText, r)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't create range statement")
+	}
+	rangeWitness := paillierrange.NewWitness(secretKey, rangePlainText, r)
+	rangeStatement := paillierrange.NewStatement(&secretKey.PublicKey, rangeCipherText, qThird)
+	rangeProver, err := zkcompiler.NewProver(boundSessionId, rangeProofTranscript, rangeProtocol, rangeStatement, rangeWitness)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't initialise prover")
 	}

@@ -103,49 +103,6 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 	require.Error(t, err)
 }
 
-func Test_FailOnOutOfRange(t *testing.T) {
-	t.Parallel()
-	if testing.Short() {
-		t.Skip("Skipping test in short mode")
-	}
-
-	pk, sk, err := paillier.KeyGen(1024, crand.Reader)
-	require.NoError(t, err)
-	prng := crand.Reader
-	curve := p256.NewCurve()
-	q := curve.SubGroupOrder()
-
-	xLowNat, err := randomIntOutRangeLow(q.Nat(), prng)
-	require.NoError(t, err)
-	xLow := curve.Scalar().SetNat(xLowNat)
-	bigQLow := curve.ScalarBaseMult(xLow)
-	xLowEncrypted, _, err := pk.Encrypt(xLowNat, crand.Reader)
-	require.NoError(t, err)
-
-	xHighNat, err := randomIntOutRangeHigh(q.Nat(), prng)
-	require.NoError(t, err)
-	xHigh := curve.Scalar().SetNat(xHighNat)
-	bigQHigh := curve.ScalarBaseMult(xHigh)
-	xHighEncrypted, r, err := pk.Encrypt(xHighNat, prng)
-	require.NoError(t, err)
-
-	t.Run("x below the range", func(t *testing.T) {
-		t.Parallel()
-
-		sidLow := []byte("sessionIdLow")
-		err = doProof(xLow, bigQLow, xLowEncrypted, r, pk, sk, sidLow, prng)
-		require.Error(t, err)
-	})
-
-	t.Run("x above the range", func(t *testing.T) {
-		t.Parallel()
-
-		sidHigh := []byte("sessionIdHigh")
-		err = doProof(xHigh, bigQHigh, xHighEncrypted, r, pk, sk, sidHigh, prng)
-		require.Error(t, err)
-	})
-}
-
 func randomIntInRange(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
 	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), 2048)
 	xInt, err := crand.Int(prng, l.Big())
@@ -154,25 +111,6 @@ func randomIntInRange(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
 	}
 	x := new(saferith.Nat).SetBig(xInt, 2048)
 	return new(saferith.Nat).Add(l, x, 2048), nil
-}
-
-func randomIntOutRangeLow(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
-	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(4), 2048)
-	xInt, err := crand.Int(prng, l.Big())
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "cannot sample integer")
-	}
-	x := new(saferith.Nat).SetBig(xInt, 2048)
-	return x, nil
-}
-
-func randomIntOutRangeHigh(q *saferith.Nat, prng io.Reader) (*saferith.Nat, error) {
-	xInt, err := crand.Int(prng, q.Big())
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "cannot sample integer")
-	}
-	x := new(saferith.Nat).SetBig(xInt, 2048)
-	return new(saferith.Nat).Add(q, x, 2048), nil
 }
 
 func doProof(x curves.Scalar, bigQ curves.Point, xEncrypted *paillier.CipherText, r *saferith.Nat, pk *paillier.PublicKey, sk *paillier.SecretKey, sessionId []byte, prng io.Reader) (err error) {

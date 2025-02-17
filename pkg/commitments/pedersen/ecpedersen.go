@@ -1,6 +1,7 @@
 package pedersen_comm
 
 import (
+	"encoding/gob"
 	"io"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
@@ -145,4 +146,9 @@ func (*CommittingKey) WitnessNeg(x Witness) (witness Witness, err error) {
 
 func (*CommittingKey) WitnessMul(lhs Witness, rhs Scalar) (witness Witness, err error) {
 	return lhs.Mul(rhs), nil
+}
+
+//nolint:gochecknoinits // register for gob
+func init() {
+	gob.Register(new(commitments.Opening[Message, Witness]))
 }
