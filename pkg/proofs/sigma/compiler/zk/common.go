@@ -1,6 +1,8 @@
 package zkcompiler
 
 import (
+	"bytes"
+
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	k256Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
@@ -34,7 +36,7 @@ type participant[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma
 	round uint
 }
 
-func (*participant[X, W, A, S, Z]) challengeBytesToPedersenMessage(challengeBytes []byte) (pedersen_comm.Message, error) {
+func (p *participant[X, W, A, S, Z]) challengeBytesToPedersenMessage(challengeBytes []byte) (pedersen_comm.Message, error) {
 	if len(challengeBytes) > k256Impl.FqBytes {
 		return nil, errs.NewFailed("challenge is too big")
 	}
@@ -44,6 +46,9 @@ func (*participant[X, W, A, S, Z]) challengeBytesToPedersenMessage(challengeByte
 	challengeScalar, err := pedersenCommitmentCurve.ScalarField().Element().SetBytes(challengeScalarBytes)
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "couldn't construct challenge")
+	}
+	if !bytes.Equal(p.pedersenMessageToChallengeBytes(challengeScalar), challengeBytes) {
+		return nil, errs.NewFailed("challenge is invalid")
 	}
 
 	return challengeScalar, nil
