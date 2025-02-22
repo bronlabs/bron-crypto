@@ -6,13 +6,15 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/commitments"
 	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
+	pedersen_comm "github.com/bronlabs/krypton-primitives/pkg/commitments/pedersen"
 	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	paillierrange "github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/range"
 )
 
 type Round1Output struct {
-	RangeVerifierOutput    *paillierrange.Round1Output
+	RangeVerifierOutput    pedersen_comm.Commitment
 	CPrime                 *paillier.CipherText
 	CDoublePrimeCommitment hashcommitments.Commitment
 
@@ -23,9 +25,6 @@ func (r1out *Round1Output) Validate() error {
 	if r1out == nil {
 		return errs.NewIsNil("round 1 output")
 	}
-	if r1out.RangeVerifierOutput == nil {
-		return errs.NewIsNil("range verifier output")
-	}
 	if r1out.CPrime == nil {
 		return errs.NewIsNil("CPrime")
 	}
@@ -34,7 +33,7 @@ func (r1out *Round1Output) Validate() error {
 }
 
 type Round2Output struct {
-	RangeProverOutput *paillierrange.Round2Output
+	RangeProverOutput *paillierrange.Commitment
 	CHat              hashcommitments.Commitment
 
 	_ ds.Incomparable
@@ -52,7 +51,7 @@ func (r2out *Round2Output) Validate() error {
 }
 
 type Round3Output struct {
-	RangeVerifierOutput *paillierrange.Round3Output
+	RangeVerifierOutput *commitments.Opening[pedersen_comm.Message, pedersen_comm.Witness]
 	A                   *saferith.Nat
 	B                   *saferith.Nat
 	CDoublePrimeWitness hashcommitments.Witness
@@ -78,7 +77,7 @@ func (r3out *Round3Output) Validate() error {
 }
 
 type Round4Output struct {
-	RangeProverOutput *paillierrange.Round4Output
+	RangeProverOutput *paillierrange.Response
 	BigQHat           curves.Point
 	BigQHatWitness    hashcommitments.Witness
 

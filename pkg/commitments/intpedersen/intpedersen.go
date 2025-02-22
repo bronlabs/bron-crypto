@@ -1,6 +1,7 @@
 package intpedersen_comm
 
 import (
+	"encoding/gob"
 	"io"
 
 	"github.com/cronokirby/saferith"
@@ -155,4 +156,9 @@ func (*CommittingKey) WitnessNeg(x *Witness) (witness *Witness, err error) {
 
 func (*CommittingKey) WitnessMul(lhs *Witness, rhs *Scalar) (witness *Witness, err error) {
 	return new(saferith.Int).Mul(lhs, rhs, -1), nil
+}
+
+//nolint:gochecknoinits // register for gob
+func init() {
+	gob.Register(new(commitments.Opening[*Message, *Witness]))
 }

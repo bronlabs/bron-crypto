@@ -1,6 +1,7 @@
 package hash_comm
 
 import (
+	"encoding/gob"
 	"io"
 	"slices"
 
@@ -70,4 +71,9 @@ func (k *CommittingKey) Verify(commitment Commitment, message Message, witness W
 	}
 
 	return nil
+}
+
+//nolint:gochecknoinits // register for gob
+func init() {
+	gob.Register(new(commitments.Opening[Message, Witness]))
 }
