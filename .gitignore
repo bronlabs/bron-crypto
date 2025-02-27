@@ -36,3 +36,4 @@ docs/build/*
 /.gocache
 
 thirdparty/boringssl
+test
