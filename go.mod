@@ -1,6 +1,6 @@
 module github.com/bronlabs/krypton-primitives
 
-go 1.23
+go 1.24
 
 require (
 	github.com/cronokirby/saferith v0.33.0
