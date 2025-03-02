@@ -4,14 +4,12 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
-	"testing"
-
-	"github.com/stretchr/testify/require"
-
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func Test_ShardSerialisationToJsonRoundTrip(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/pailliern"
 )
 
-func TestSmoke(t *testing.T) {
+func Test_Smoke(t *testing.T) {
 	t.Parallel()
 
 	kappa := int(pailliern.M * math.Log2(pailliern.Alpha)) // κ ≥ m log(ɑ)

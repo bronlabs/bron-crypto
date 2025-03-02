@@ -212,13 +212,11 @@ func Test_HappyPathNthRoot(t *testing.T) {
 	nBig, err := crand.Prime(prng, 1024)
 	require.NoError(t, err)
 
-	n, err := modular.NewOddResidueParams(new(saferith.Nat).SetBig(nBig, 1024))
+	n, err := modular.NewFastModulus(new(saferith.Nat).SetBig(nBig, 1024))
 	require.NoError(t, err)
+	nn := saferith.ModulusFromNat(new(saferith.Nat).Mul(n.Modulus().Nat(), n.Modulus().Nat(), -1))
 
-	nn, err := modular.NewOddResidueParams(new(saferith.Nat).Mul(n.GetModulus().Nat(), n.GetModulus().Nat(), 2048))
-	require.NoError(t, err)
-
-	nthRootProtocol, err := nthroots.NewSigmaProtocol(n, nn, 1, prng)
+	nthRootProtocol, err := nthroots.NewSigmaProtocol(n, 1, prng)
 	require.NoError(t, err)
 
 	nizk, err := compilerUtils.MakeNonInteractive(fischlin.Name, nthRootProtocol, prng)
@@ -239,7 +237,7 @@ func Test_HappyPathNthRoot(t *testing.T) {
 	root := new(saferith.Nat).SetBig(rootBig, 2048)
 
 	witness := nthroots.Witness([]*saferith.Nat{root})
-	statement := nthroots.Statement([]*saferith.Nat{new(saferith.Nat).Exp(root, n.GetModulus().Nat(), nn.GetModulus())})
+	statement := nthroots.Statement([]*saferith.Nat{new(saferith.Nat).Exp(root, n.Modulus().Nat(), nn)})
 
 	proof, err := prover.Prove(statement, witness)
 	require.NoError(t, err)

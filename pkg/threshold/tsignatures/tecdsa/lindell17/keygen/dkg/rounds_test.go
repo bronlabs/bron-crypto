@@ -16,7 +16,6 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
 	_ "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
-	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	agreeonrandomTestUtils "github.com/bronlabs/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
@@ -134,11 +133,9 @@ func Test_HappyPath(t *testing.T) {
 					require.True(t, exists)
 					theirEncryptedSigningShare, exists := theirShard.PaillierEncryptedShares.Get(theirSharingId)
 					require.True(t, exists)
-					decryptor, err := paillier.NewDecryptor(myShard.PaillierSecretKey)
+					theirDecryptedSigningShareInt, err := myShard.PaillierSecretKey.Decrypt(theirEncryptedSigningShare)
 					require.NoError(t, err)
-					theirDecryptedSigningShareInt, err := decryptor.Decrypt(theirEncryptedSigningShare)
-					require.NoError(t, err)
-					theirDecryptedSigningShare := cipherSuite.Curve().ScalarField().Element().SetNat(theirDecryptedSigningShareInt)
+					theirDecryptedSigningShare := cipherSuite.Curve().ScalarField().Element().SetNat(theirDecryptedSigningShareInt.Abs())
 					require.Zero(t, mySigningShare.Cmp(theirDecryptedSigningShare))
 				}
 			}

@@ -64,7 +64,7 @@ type Verifier struct {
 
 type ProverState struct {
 	State
-	alpha                  *saferith.Nat
+	alpha                  *saferith.Int
 	bigQHat                curves.Point
 	bigQHatWitness         hashcommitments.Witness
 	cDoublePrimeCommitment hashcommitments.Commitment
@@ -107,7 +107,7 @@ func NewVerifier(publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *p
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't create range protocol")
 	}
-	rangeCipherText, err := publicKey.CipherTextSubPlainText(xEncrypted, qThird)
+	rangeCipherText, err := publicKey.CipherTextSubPlainText(xEncrypted, new(saferith.Int).SetNat(qThird))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't create range statement")
 	}
@@ -145,7 +145,7 @@ func validateVerifierInputs(publicKey *paillier.PublicKey, bigQ curves.Point, xE
 	if publicKey == nil {
 		return errs.NewIsNil("public key is nil")
 	}
-	if publicKey.N.TrueLen() < lp.PaillierBitSize {
+	if publicKey.N.BitLen() < lp.PaillierBitSize {
 		return errs.NewArgument("invalid paillier public key: modulus is too small")
 	}
 	if bigQ == nil {
@@ -189,7 +189,7 @@ func NewProver(secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, 
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't create range protocol")
 	}
-	rangePlainText, err := secretKey.PlainTextSub(x.Nat(), qThird)
+	rangePlainText, err := secretKey.PlainTextSub(new(saferith.Int).SetNat(x.Nat()), new(saferith.Int).SetNat(qThird))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't create range witness")
 	}
@@ -233,7 +233,7 @@ func validateProverInputs(secretKey *paillier.SecretKey, x curves.Scalar, r *saf
 	if secretKey == nil {
 		return errs.NewIsNil("secret key is nil")
 	}
-	if secretKey.N.TrueLen() < lp.PaillierBitSize {
+	if secretKey.N.BitLen() < lp.PaillierBitSize {
 		return errs.NewSize("invalid paillier public key: modulus is too small")
 	}
 	if x == nil {

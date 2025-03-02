@@ -1,6 +1,7 @@
 package lp
 
 import (
+	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
 	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
@@ -15,9 +16,9 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	rootTranscript := verifier.Transcript.Clone()
 
 	// V picks x = y^N mod N^2 which is the Paillier encryption of zero (N being the Paillier public-key)
-	zeros := make([]*saferith.Nat, verifier.k)
+	zeros := make([]*saferith.Int, verifier.k)
 	for i := range zeros {
-		zeros[i] = new(saferith.Nat).SetUint64(0).Resize(1)
+		zeros[i] = new(saferith.Int).SetUint64(0).Resize(0)
 	}
 	verifier.state.x, verifier.state.y, err = verifier.paillierPublicKey.EncryptMany(zeros, verifier.Prng)
 	if err != nil {
@@ -26,7 +27,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 
 	xs := make([]*saferith.Nat, verifier.k)
 	for i, x := range verifier.state.x {
-		xs[i] = x.C
+		xs[i] = &x.C
 	}
 	verifier.state.rootsProver, err = sigma.NewProver(verifier.SessionId, rootTranscript.Clone(), verifier.nthRootsProtocol, xs, verifier.state.y)
 	if err != nil {
@@ -56,7 +57,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 	prover.state.x = input.X
 	xs := make([]*saferith.Nat, prover.k)
 	for i, x := range input.X {
-		xs[i] = x.C
+		xs[i] = &x.C
 	}
 
 	rootTranscript := prover.Transcript.Clone()
@@ -111,18 +112,18 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	// V proved the knowledge of Nth root x
 	bases := make([]*saferith.Nat, prover.k)
 	for i, c := range prover.state.x {
-		bases[i] = c.C
+		bases[i] = &c.C
 	}
 
-	nMod, err := prover.paillierSecretKey.GetNResidueParams()
+	nMod, err := modular.NewFastModulusFromPrimeFactors(prover.paillierSecretKey.P.Nat(), prover.paillierSecretKey.Q.Nat())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get NN residue params")
 	}
 
 	// P calculates a y', the Nth root of x
 	// see: Yehuda Lindell's answer (https://crypto.stackexchange.com/a/46745) for reference
-	m := new(saferith.Nat).ModInverse(prover.paillierSecretKey.N, saferith.ModulusFromNat(prover.paillierSecretKey.Phi))
-	yPrime, err := nMod.ModMultiBaseExp(bases, m)
+	m := new(saferith.Nat).ModInverse(prover.paillierSecretKey.N.Nat(), prover.paillierSecretKey.Phi())
+	yPrime, err := nMod.MultiBaseExp(bases, m)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot compute exp")
 	}

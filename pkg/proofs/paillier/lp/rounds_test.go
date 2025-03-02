@@ -14,6 +14,23 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
 
+func Test_HappyPath(t *testing.T) {
+	t.Parallel()
+	prng := crand.Reader
+	pInt, err := crand.Prime(prng, 1024)
+	require.NoError(t, err)
+	p := new(saferith.Nat).SetBig(pInt, 1024)
+	qInt, err := crand.Prime(prng, 1024)
+	require.NoError(t, err)
+	q := new(saferith.Nat).SetBig(qInt, 1024)
+
+	sk, err := paillier.NewSecretKey(p, q)
+	require.NoError(t, err)
+
+	err = doProof(40, &sk.PublicKey, sk)
+	require.NoError(t, err)
+}
+
 func doProof(k int, pk *paillier.PublicKey, sk *paillier.SecretKey) (err error) {
 	prng := crand.Reader
 	sessionId := []byte("lpSession")
@@ -70,21 +87,4 @@ func doProof(k int, pk *paillier.PublicKey, sk *paillier.SecretKey) (err error) 
 	}
 
 	return nil
-}
-
-func Test_HappyPath(t *testing.T) {
-	t.Parallel()
-	prng := crand.Reader
-	pInt, err := crand.Prime(prng, 512)
-	require.NoError(t, err)
-	p := new(saferith.Nat).SetBig(pInt, 512)
-	qInt, err := crand.Prime(prng, 512)
-	require.NoError(t, err)
-	q := new(saferith.Nat).SetBig(qInt, 512)
-
-	sk, err := paillier.NewSecretKey(p, q)
-	require.NoError(t, err)
-
-	err = doProof(40, &sk.PublicKey, sk)
-	require.NoError(t, err)
 }
