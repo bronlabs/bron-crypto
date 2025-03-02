@@ -4,12 +4,14 @@ import (
 	"encoding"
 	"encoding/hex"
 	"encoding/json"
+	"io"
+
+	"github.com/cronokirby/saferith"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
 	"github.com/bronlabs/krypton-primitives/pkg/indcpa"
-	"github.com/cronokirby/saferith"
-	"golang.org/x/sync/errgroup"
-	"io"
 )
 
 var (
@@ -195,17 +197,22 @@ func (pk *PublicKey) CipherTextEqual(lhs, rhs *CipherText) bool {
 func (pk *PublicKey) MarshalJSON() ([]byte, error) {
 	nBytes, err := pk.N.MarshalBinary()
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapSerialisation(err, "failed to serialise public key")
 	}
 	pkJson := &publicKeyJson{N: hex.EncodeToString(nBytes)}
-	return json.Marshal(pkJson)
+	data, err := json.Marshal(pkJson)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to serialise public key")
+	}
+
+	return data, nil
 }
 
 func (pk *PublicKey) UnmarshalJSON(bytes []byte) error {
 	var pkJson publicKeyJson
 	err := json.Unmarshal(bytes, &pkJson)
 	if err != nil {
-		return err
+		return errs.WrapFailed(err, "failed to deserialise public key")
 	}
 	nBytes, err := hex.DecodeString(pkJson.N)
 	if err != nil {
@@ -215,21 +222,26 @@ func (pk *PublicKey) UnmarshalJSON(bytes []byte) error {
 	pk.N = new(saferith.Modulus)
 	err = pk.N.UnmarshalBinary(nBytes)
 	if err != nil {
-		return err
+		return errs.WrapSerialisation(err, "failed to decode n")
 	}
 	pk.precompute()
 	return nil
 }
 
 func (pk *PublicKey) MarshalBinary() (data []byte, err error) {
-	return pk.N.MarshalBinary()
+	data, err = pk.N.MarshalBinary()
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to encode n")
+	}
+
+	return data, nil
 }
 
 func (pk *PublicKey) UnmarshalBinary(data []byte) error {
 	pk.N = new(saferith.Modulus)
 	err := pk.N.UnmarshalBinary(data)
 	if err != nil {
-		return err
+		return errs.WrapSerialisation(err, "failed to decode public key")
 	}
 	pk.precompute()
 	return nil
@@ -244,7 +256,12 @@ func (pk *PublicKey) gToM(m *saferith.Int) *saferith.Nat {
 }
 
 func (pk *PublicKey) rToN(r *saferith.Nat) (*saferith.Nat, error) {
-	return modular.FastExp(r, pk.N.Nat(), pk.nn)
+	r, err := modular.FastExp(r, pk.N.Nat(), pk.nn)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to compute r^N")
+	}
+
+	return r, nil
 }
 
 func (pk *PublicKey) validPlaintext(plainText *PlainText) bool {

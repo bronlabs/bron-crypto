@@ -475,10 +475,10 @@ func randomInRange(lowInclusive, highExclusive *paillier.PlainText, prng io.Read
 	return new(saferith.Int).SetBig(v, highExclusive.AnnouncedLen()), nil
 }
 
-//func isLess(highExclusive, v *paillier.PlainText) bool {
+// func isLess(highExclusive, v *paillier.PlainText) bool {
 //	_, _, l := v.Cmp(highExclusive)
 //	return l != 0
-//}
+// }.
 
 func isLess(lhs, rhs *saferith.Int) bool {
 	// this is ridiculous that Int doesn't have any methods to compare

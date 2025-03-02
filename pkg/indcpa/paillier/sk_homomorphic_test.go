@@ -2,9 +2,10 @@ package paillier_test
 
 import (
 	crand "crypto/rand"
+	"testing"
+
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func Test_HomomorphicScalarMulWithSecret(t *testing.T) {

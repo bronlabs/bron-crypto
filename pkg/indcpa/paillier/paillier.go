@@ -3,10 +3,12 @@ package paillier
 import (
 	"encoding/hex"
 	"encoding/json"
+	"io"
+
+	"github.com/cronokirby/saferith"
+
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/primes"
-	"github.com/cronokirby/saferith"
-	"io"
 )
 
 var (
@@ -25,16 +27,21 @@ type CipherText struct {
 func (ct *CipherText) MarshalJSON() ([]byte, error) {
 	ctBytes, err := ct.C.MarshalBinary()
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapSerialisation(err, "unable to serialise ciphertext")
 	}
 	ctStr := hex.EncodeToString(ctBytes)
-	return json.Marshal(ctStr)
+	data, err := json.Marshal(ctStr)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "unable to serialise ciphertext")
+	}
+
+	return data, nil
 }
 
 func (ct *CipherText) UnmarshalJSON(bytes []byte) error {
 	var ctStr string
 	if err := json.Unmarshal(bytes, &ctStr); err != nil {
-		return err
+		return errs.WrapSerialisation(err, "unable to deserialise ciphertext")
 	}
 	ctBytes, err := hex.DecodeString(ctStr)
 	if err != nil {
@@ -42,7 +49,7 @@ func (ct *CipherText) UnmarshalJSON(bytes []byte) error {
 	}
 
 	if err := ct.C.UnmarshalBinary(ctBytes); err != nil {
-		return err
+		return errs.WrapSerialisation(err, "invalid ciphertext format")
 	}
 
 	return nil

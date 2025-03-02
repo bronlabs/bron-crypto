@@ -1,12 +1,13 @@
 package paillier
 
 import (
+	"github.com/cronokirby/saferith"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
 	"github.com/bronlabs/krypton-primitives/pkg/base/utils/numutils"
 	"github.com/bronlabs/krypton-primitives/pkg/indcpa"
-	"github.com/cronokirby/saferith"
-	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -29,12 +30,12 @@ func (sk *SecretKey) NonceMul(lhs *Nonce, rhs *Scalar) (nonce *Nonce, err error)
 	eg.Go(func() error {
 		var err error
 		rp, err = modular.FastExp(lhs, ep, sk.P)
-		return err
+		return err //nolint:wrapcheck // checked in eg.Wait()
 	})
 	eg.Go(func() error {
 		var err error
 		rq, err = modular.FastExp(lhs, eq, sk.Q)
-		return err
+		return err //nolint:wrapcheck // checked in eg.Wait()
 	})
 	err = eg.Wait()
 	if err != nil {
@@ -61,12 +62,12 @@ func (sk *SecretKey) CipherTextMul(lhs *CipherText, rhs *Scalar) (cipherText *Ci
 	eg.Go(func() error {
 		var err error
 		cp, err = modular.FastExp(&lhs.C, sp, sk.pp)
-		return err
+		return err //nolint:wrapcheck // checked in eg.Wait()
 	})
 	eg.Go(func() error {
 		var err error
 		cq, err = modular.FastExp(&lhs.C, sq, sk.qq)
-		return err
+		return err //nolint:wrapcheck // checked in eg.Wait()
 	})
 	err = eg.Wait()
 	if err != nil {

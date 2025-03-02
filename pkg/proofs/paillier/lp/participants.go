@@ -2,13 +2,13 @@ package lp
 
 import (
 	"fmt"
-	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
 	"io"
 
 	"github.com/cronokirby/saferith"
 
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
 	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/nthroots"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
@@ -70,7 +70,6 @@ type Prover struct {
 	_ ds.Incomparable
 }
 
-//nolint:dupl // false positive
 func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
 	if err := validateVerifierInputs(k, paillierPublicKey, sessionId, prng); err != nil {
 		return nil, errs.NewArgument("invalid input arguments")
@@ -128,7 +127,6 @@ func validateVerifierInputs(k int, paillierPublicKey *paillier.PublicKey, sessio
 	return nil
 }
 
-//nolint:dupl // false positive
 func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
 	if err := validateProverInputs(k, paillierSecretKey, sessionId, prng); err != nil {
 		return nil, errs.NewArgument("invalid input arguments")

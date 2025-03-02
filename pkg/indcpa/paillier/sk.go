@@ -4,14 +4,16 @@ import (
 	"encoding"
 	"encoding/hex"
 	"encoding/json"
+	"io"
+	"slices"
+
+	"github.com/cronokirby/saferith"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
 	"github.com/bronlabs/krypton-primitives/pkg/base/utils/numutils"
 	"github.com/bronlabs/krypton-primitives/pkg/indcpa"
-	"github.com/cronokirby/saferith"
-	"golang.org/x/sync/errgroup"
-	"io"
-	"slices"
 )
 
 var (
@@ -117,12 +119,12 @@ func (sk *SecretKey) Decrypt(cipherText *CipherText) (plainText *PlainText, err 
 	eg.Go(func() error {
 		var err error
 		cToPm1, err = modular.FastExp(&cipherText.C, sk.pm1.Nat(), sk.pp)
-		return err
+		return err //nolint:wrapcheck // wrapped at eg.Wait()
 	})
 	eg.Go(func() error {
 		var err error
 		cToQm1, err = modular.FastExp(&cipherText.C, sk.qm1.Nat(), sk.qq)
-		return err
+		return err //nolint:wrapcheck // wrapped at eg.Wait()
 	})
 	err = eg.Wait()
 	if err != nil {
@@ -149,22 +151,22 @@ func (sk *SecretKey) Open(cipherText *CipherText) (plainText *PlainText, nonce *
 	eg.Go(func() error {
 		var err error
 		cToPm1, err = modular.FastExp(&cipherText.C, sk.pm1.Nat(), sk.pp)
-		return err
+		return err //nolint:wrapcheck // wrapped at eg.Wait()
 	})
 	eg.Go(func() error {
 		var err error
 		cToQm1, err = modular.FastExp(&cipherText.C, sk.qm1.Nat(), sk.qq)
-		return err
+		return err //nolint:wrapcheck // wrapped at eg.Wait()
 	})
 	eg.Go(func() error {
 		var err error
 		rp, err = modular.FastExp(&cipherText.C, sk.nInvP, sk.P)
-		return err
+		return err //nolint:wrapcheck // wrapped at eg.Wait()
 	})
 	eg.Go(func() error {
 		var err error
 		rq, err = modular.FastExp(&cipherText.C, sk.nInvQ, sk.Q)
-		return err
+		return err //nolint:wrapcheck // wrapped at eg.Wait()
 	})
 	err = eg.Wait()
 	if err != nil {
@@ -271,14 +273,19 @@ func (sk *SecretKey) MarshalJSON() ([]byte, error) {
 		P: hex.EncodeToString(sk.P.Bytes()),
 		Q: hex.EncodeToString(sk.Q.Bytes()),
 	}
-	return json.Marshal(skJson)
+	data, err := json.Marshal(skJson)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "unable to marshal secret key")
+	}
+
+	return data, nil
 }
 
 func (sk *SecretKey) UnmarshalJSON(bytes []byte) error {
 	var skJson secretKeyJson
 	err := json.Unmarshal(bytes, &skJson)
 	if err != nil {
-		return err
+		return errs.WrapSerialisation(err, "unable to deserialise secret key")
 	}
 
 	pBytes, err := hex.DecodeString(skJson.P)
@@ -301,11 +308,11 @@ func (sk *SecretKey) UnmarshalJSON(bytes []byte) error {
 func (sk *SecretKey) MarshalBinary() (data []byte, err error) {
 	pBytes, err := sk.P.MarshalBinary()
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapSerialisation(err, "unable to deserialise secret key")
 	}
 	qBytes, err := sk.Q.MarshalBinary()
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapSerialisation(err, "invalid q")
 	}
 
 	return slices.Concat(pBytes, qBytes), nil
@@ -317,12 +324,12 @@ func (sk *SecretKey) UnmarshalBinary(data []byte) error {
 	p := new(saferith.Modulus)
 	err := p.UnmarshalBinary(pBytes)
 	if err != nil {
-		return err
+		return errs.WrapSerialisation(err, "invalid p")
 	}
 	q := new(saferith.Modulus)
 	err = q.UnmarshalBinary(qBytes)
 	if err != nil {
-		return err
+		return errs.WrapSerialisation(err, "invalid q")
 	}
 
 	sk.P = p
@@ -379,12 +386,12 @@ func (sk *SecretKey) rToN(r *saferith.Nat) (*saferith.Nat, error) {
 	eg.Go(func() error {
 		var err error
 		rpp, err = modular.FastExp(r, sk.N.Nat(), sk.pp)
-		return err
+		return err //nolint:wrapcheck // checked in eg.Wait()
 	})
 	eg.Go(func() error {
 		var err error
 		rqq, err = modular.FastExp(r, sk.N.Nat(), sk.qq)
-		return err
+		return err //nolint:wrapcheck // checked in eg.Wait()
 	})
 
 	err := eg.Wait()

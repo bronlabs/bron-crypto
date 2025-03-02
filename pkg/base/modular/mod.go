@@ -1,10 +1,11 @@
 package modular
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/utils/numutils"
 	"github.com/cronokirby/saferith"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/utils/numutils"
 )
 
 type FastModulus interface {
@@ -56,7 +57,7 @@ type primeFactorsModulus struct {
 	n    *saferith.Modulus
 }
 
-func NewFastModulusFromPrimeFactors(p *saferith.Nat, q *saferith.Nat) (FastModulus, error) {
+func NewFastModulusFromPrimeFactors(p, q *saferith.Nat) (FastModulus, error) {
 	if p == nil || q == nil {
 		return nil, errs.NewIsNil("p and q cannot be nil")
 	}
@@ -88,7 +89,7 @@ func (m *primeFactorsModulus) Modulus() *saferith.Modulus {
 	return m.n
 }
 
-func (m *primeFactorsModulus) Exp(b *saferith.Nat, e *saferith.Nat) (*saferith.Nat, error) {
+func (m *primeFactorsModulus) Exp(b, e *saferith.Nat) (*saferith.Nat, error) {
 	ep := new(saferith.Nat).Mod(e, m.phiP)
 	eq := new(saferith.Nat).Mod(e, m.phiQ)
 

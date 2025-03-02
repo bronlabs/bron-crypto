@@ -1,10 +1,11 @@
 package paillier
 
 import (
+	"github.com/cronokirby/saferith"
+
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
 	"github.com/bronlabs/krypton-primitives/pkg/indcpa"
-	"github.com/cronokirby/saferith"
 )
 
 var (

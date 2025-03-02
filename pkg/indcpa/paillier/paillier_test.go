@@ -6,12 +6,14 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
-	"github.com/cronokirby/saferith"
-	"github.com/stretchr/testify/require"
 	"io"
 	"log"
 	"testing"
+
+	"github.com/cronokirby/saferith"
+	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 )
 
 func Test_RoundTrip(t *testing.T) {
@@ -412,21 +414,21 @@ func Example_homomorphicMultiplication() {
 	// Succeeded in decrypting 1092.
 }
 
-func randomKeys(t testing.TB, keyLen int, prng io.Reader) (*paillier.SecretKey, *paillier.PublicKey) {
-	t.Helper()
+func randomKeys(tb testing.TB, keyLen int, prng io.Reader) (*paillier.SecretKey, *paillier.PublicKey) {
+	tb.Helper()
 
 	pBig, err := crand.Prime(prng, keyLen/2)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	p := new(saferith.Nat).SetBig(pBig, keyLen/2)
 
 	qBig, err := crand.Prime(prng, keyLen/2)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	q := new(saferith.Nat).SetBig(qBig, keyLen/2)
 
 	sk, err := paillier.NewSecretKey(p, q)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	pk, err := sk.ToEncryptionKey()
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	return sk, pk
 }

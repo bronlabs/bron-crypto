@@ -3,7 +3,6 @@ package nthroots_test
 import (
 	"bytes"
 	crand "crypto/rand"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
 	"io"
 	"testing"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/nthroots"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
+	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
 )
 

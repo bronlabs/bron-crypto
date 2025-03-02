@@ -2,10 +2,11 @@ package paillier_test
 
 import (
 	crand "crypto/rand"
-	"github.com/cronokirby/saferith"
-	"github.com/stretchr/testify/require"
 	"io"
 	"testing"
+
+	"github.com/cronokirby/saferith"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_HomomorphicAdd(t *testing.T) {
@@ -223,14 +224,15 @@ func Test_HomomorphicNeg(t *testing.T) {
 	}
 }
 
-func randomInt(t testing.TB, bitLen int, prng io.Reader) *saferith.Int {
-	t.Helper()
+//nolint:unparam // test code
+func randomInt(tb testing.TB, bitLen int, prng io.Reader) *saferith.Int {
+	tb.Helper()
 
 	intBytes := make([]byte, 1+((bitLen+7)/8))
 	_, err := io.ReadFull(prng, intBytes)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	i := new(saferith.Int)
 	err = i.UnmarshalBinary(intBytes)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return i
 }
