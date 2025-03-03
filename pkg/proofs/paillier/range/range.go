@@ -24,6 +24,8 @@ var (
 	_ sigma.Protocol[*Statement, *Witness, *Commitment, *State, *Response] = (*PaillierRange)(nil)
 )
 
+var zero *paillier.PlainText = new(saferith.Int).SetUint64(0).Resize(0)
+
 type Witness struct {
 	Sk *paillier.SecretKey
 	X  *paillier.PlainText
@@ -98,8 +100,8 @@ func (*PaillierRange) Name() sigma.Name {
 }
 
 func (p *PaillierRange) ComputeProverCommitment(statement *Statement, witness *Witness) (*Commitment, *State, error) {
-	lowBound := statement.L
-	highBound, err := witness.Sk.PlainTextAdd(statement.L, statement.L)
+	lowBound := new(saferith.Int).SetNat(statement.L)
+	highBound, err := witness.Sk.PlainTextAdd(lowBound, lowBound)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot compute high bound")
 	}
@@ -148,8 +150,8 @@ func (p *PaillierRange) ComputeProverCommitment(statement *Statement, witness *W
 }
 
 func (p *PaillierRange) ComputeProverResponse(statement *Statement, witness *Witness, _ *Commitment, state *State, challenge sigma.ChallengeBytes) (*Response, error) {
-	lowBound := statement.L
-	highBound, err := witness.Sk.PlainTextAdd(statement.L, statement.L)
+	lowBound := new(saferith.Int).SetNat(statement.L)
+	highBound, err := witness.Sk.PlainTextAdd(lowBound, lowBound)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot compute high bound")
 	}
@@ -174,7 +176,7 @@ func (p *PaillierRange) ComputeProverResponse(statement *Statement, witness *Wit
 			z.R2[i] = state.R2[i]
 
 			// put some dummy value to it can be serialised
-			z.Wj[i] = new(saferith.Nat)
+			z.Wj[i] = new(saferith.Int)
 			z.Rj[i] = new(saferith.Nat)
 			z.J[i] = 0
 		case 1:
@@ -182,9 +184,7 @@ func (p *PaillierRange) ComputeProverResponse(statement *Statement, witness *Wit
 			if err != nil {
 				return nil, errs.WrapFailed(err, "cannot compute x + wj")
 			}
-			b, e, _ := xPlusW1.Cmp(lowBound)
-			_, _, l := xPlusW1.Cmp(highBound)
-			if ((b | e) & l) == 1 {
+			if isInRange(lowBound, highBound, xPlusW1) {
 				z.Wj[i] = xPlusW1
 				z.Rj[i], err = witness.Sk.NonceAdd(witness.R, state.R1[i])
 				if err != nil {
@@ -205,9 +205,9 @@ func (p *PaillierRange) ComputeProverResponse(statement *Statement, witness *Wit
 			}
 
 			// put some dummy value to it can be serialised
-			z.W1[i] = new(saferith.Nat)
+			z.W1[i] = new(saferith.Int)
 			z.R1[i] = new(saferith.Nat)
-			z.W2[i] = new(saferith.Nat)
+			z.W2[i] = new(saferith.Int)
 			z.R2[i] = new(saferith.Nat)
 		default:
 			panic("this should never happen")
@@ -218,8 +218,8 @@ func (p *PaillierRange) ComputeProverResponse(statement *Statement, witness *Wit
 }
 
 func (p *PaillierRange) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
-	lowBound := statement.L
-	highBound, err := statement.Pk.PlainTextAdd(statement.L, statement.L)
+	lowBound := new(saferith.Int).SetNat(statement.L)
+	highBound, err := statement.Pk.PlainTextAdd(lowBound, lowBound)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot compute high bound")
 	}
@@ -233,8 +233,8 @@ func (p *PaillierRange) Verify(statement *Statement, commitment *Commitment, cha
 		case 0:
 			w1i := response.W1[i]
 			w2i := response.W2[i]
-			if !((isInRange(lowBound, highBound, w1i) && isLess(lowBound, w2i)) ||
-				isInRange(lowBound, highBound, w2i) && isLess(lowBound, w1i)) {
+			if !((isInRange(lowBound, highBound, w1i) && isInRange(zero, lowBound, w2i)) ||
+				isInRange(lowBound, highBound, w2i) && isInRange(zero, lowBound, w1i)) {
 
 				return errs.NewVerification("verification failed")
 			}
@@ -289,8 +289,8 @@ func (p *PaillierRange) Verify(statement *Statement, commitment *Commitment, cha
 }
 
 func (p *PaillierRange) RunSimulator(statement *Statement, challenge sigma.ChallengeBytes) (*Commitment, *Response, error) {
-	lowBound := statement.L
-	highBound, err := statement.Pk.PlainTextAdd(statement.L, statement.L)
+	lowBound := new(saferith.Int).SetNat(statement.L)
+	highBound, err := statement.Pk.PlainTextAdd(lowBound, lowBound)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot compute high bound")
 	}
@@ -335,7 +335,7 @@ func (p *PaillierRange) RunSimulator(statement *Statement, challenge sigma.Chall
 			if err != nil {
 				return nil, nil, errs.WrapFailed(err, "cannot encrypt wji")
 			}
-			wZero := new(saferith.Nat)
+			wZero := new(saferith.Int)
 			cZero, _, err := statement.Pk.Encrypt(wZero, p.prng)
 			if err != nil {
 				return nil, nil, errs.WrapFailed(err, "cannot encrypt zero")
@@ -399,19 +399,16 @@ func (*PaillierRange) ValidateStatement(statement *Statement, witness *Witness) 
 		return errs.NewValidation("plaintext/ciphertext mismatch")
 	}
 
-	lowBound, err := statement.Pk.PlainTextNeg(statement.L)
+	lowBound, err := statement.Pk.PlainTextNeg(new(saferith.Int).SetNat(statement.L))
 	if err != nil {
 		return errs.NewValidation("cannot compute low bound")
 	}
-	highBound, err := statement.Pk.PlainTextAdd(statement.L, statement.L)
+	highBound, err := statement.Pk.PlainTextAdd(new(saferith.Int).SetNat(statement.L), new(saferith.Int).SetNat(statement.L))
 	if err != nil {
 		return errs.NewValidation("cannot compute high bound")
 	}
 
-	// DO NOT USE isInRange, as the range overflow modulus
-	_, _, l := witness.X.Cmp(lowBound)
-	b, e, _ := witness.X.Cmp(highBound)
-	if l&(b|e) != 0 {
+	if !isInRange(lowBound, highBound, witness.X) {
 		return errs.NewValidation("witness out of range")
 	}
 
@@ -468,23 +465,39 @@ func (p *PaillierRange) SoundnessError() int {
 }
 
 func randomInRange(lowInclusive, highExclusive *paillier.PlainText, prng io.Reader) (*paillier.PlainText, error) {
-	boundRange := new(saferith.Nat).Sub(highExclusive, lowInclusive, highExclusive.AnnouncedLen())
+	boundRange := new(saferith.Int).Add(highExclusive, lowInclusive.Clone().Neg(1), highExclusive.AnnouncedLen())
 	v, err := crand.Int(prng, boundRange.Big())
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "cannot sample random")
 	}
 	v.Add(v, lowInclusive.Big())
 
-	return new(saferith.Nat).SetBig(v, highExclusive.AnnouncedLen()), nil
+	return new(saferith.Int).SetBig(v, highExclusive.AnnouncedLen()), nil
 }
 
-func isLess(highExclusive, v *paillier.PlainText) bool {
-	_, _, l := v.Cmp(highExclusive)
-	return l != 0
+// func isLess(highExclusive, v *paillier.PlainText) bool {
+//	_, _, l := v.Cmp(highExclusive)
+//	return l != 0
+// }.
+
+func isLess(lhs, rhs *saferith.Int) bool {
+	// this is ridiculous that Int doesn't have any methods to compare
+	gtAbs, _, ltAbs := lhs.Abs().Cmp(rhs.Abs())
+	lNeg := lhs.IsNegative() != 0
+	rNeg := rhs.IsNegative() != 0
+
+	switch {
+	case lNeg && rNeg:
+		return gtAbs != 0
+	case !lNeg && !rNeg:
+		return ltAbs != 0
+	case lNeg:
+		return true
+	default:
+		return false
+	}
 }
 
 func isInRange(lowInclusive, highExclusive, v *paillier.PlainText) bool {
-	b, e, _ := v.Cmp(lowInclusive)
-	_, _, l := v.Cmp(highExclusive)
-	return ((b | e) & l) != 0
+	return !isLess(v, lowInclusive) && isLess(v, highExclusive)
 }

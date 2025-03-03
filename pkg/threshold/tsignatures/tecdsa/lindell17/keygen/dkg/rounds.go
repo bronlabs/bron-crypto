@@ -1,6 +1,7 @@
 package dkg
 
 import (
+	"github.com/cronokirby/saferith"
 	"io"
 	"slices"
 
@@ -169,13 +170,13 @@ func (p *Participant) Round3(input network.RoundMessages[types.ThresholdProtocol
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate Paillier keys")
 	}
-	cKeyPrime, rPrime, err := p.state.myPaillierPk.Encrypt(p.state.myXPrime.Nat(), p.Prng)
+	cKeyPrime, rPrime, err := p.state.myPaillierPk.Encrypt(new(saferith.Int).SetNat(p.state.myXPrime.Nat()), p.Prng)
 
 	// 3.iv. calculate ckey' = Enc(x'; r') and ckey'' = Enc(x''; r'')
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt x'")
 	}
-	cKeyDoublePrime, rDoublePrime, err := p.state.myPaillierPk.Encrypt(p.state.myXDoublePrime.Nat(), p.Prng)
+	cKeyDoublePrime, rDoublePrime, err := p.state.myPaillierPk.Encrypt(new(saferith.Int).SetNat(p.state.myXDoublePrime.Nat()), p.Prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt x''")
 	}

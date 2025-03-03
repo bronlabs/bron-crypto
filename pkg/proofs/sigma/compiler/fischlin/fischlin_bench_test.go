@@ -150,13 +150,11 @@ func Benchmark_NthRoot(b *testing.B) {
 	nBig, err := crand.Prime(prng, 512)
 	require.NoError(b, err)
 
-	n, err := modular.NewOddResidueParams(new(saferith.Nat).SetBig(nBig, 512))
+	n, err := modular.NewFastModulus(new(saferith.Nat).SetBig(nBig, 512))
 	require.NoError(b, err)
+	nn := saferith.ModulusFromNat(new(saferith.Nat).Mul(n.Modulus().Nat(), n.Modulus().Nat(), -1))
 
-	nn, err := modular.NewOddResidueParams(new(saferith.Nat).Mul(n.GetModulus().Nat(), n.GetModulus().Nat(), 1024))
-	require.NoError(b, err)
-
-	nthRootProtocol, err := nthroots.NewSigmaProtocol(n, nn, 1, prng)
+	nthRootProtocol, err := nthroots.NewSigmaProtocol(n, 1, prng)
 	require.NoError(b, err)
 
 	for rho := uint64(16); rho <= 64; rho++ {
@@ -178,7 +176,7 @@ func Benchmark_NthRoot(b *testing.B) {
 		root := new(saferith.Nat).SetBig(rootBig, 2048)
 
 		witness := nthroots.Witness([]*saferith.Nat{root})
-		statement := nthroots.Statement([]*saferith.Nat{new(saferith.Nat).Exp(root, n.GetModulus().Nat(), nn.GetModulus())})
+		statement := nthroots.Statement([]*saferith.Nat{new(saferith.Nat).Exp(root, n.Modulus().Nat(), nn)})
 
 		b.Run(fmt.Sprintf("rho: %d", rho), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {

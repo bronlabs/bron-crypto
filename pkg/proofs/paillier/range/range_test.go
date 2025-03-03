@@ -1,3 +1,4 @@
+//go:debug rsa1024min=0
 package paillierrange_test
 
 import (
@@ -38,7 +39,7 @@ func Test_HappyPath(t *testing.T) {
 	for range 128 {
 		xBig, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
-		x := new(saferith.Nat).SetBig(xBig, xBig.BitLen())
+		x := new(saferith.Int).SetBig(xBig, xBig.BitLen())
 		c, r, err := pk.Encrypt(x, prng)
 		require.NoError(t, err)
 
@@ -71,7 +72,7 @@ func Test_HappyPath(t *testing.T) {
 	}
 }
 
-func Test_CheatingProver(t *testing.T) {
+func Test_CheatingProverBelowRange(t *testing.T) {
 	t.Parallel()
 
 	prng := crand.Reader
@@ -83,17 +84,66 @@ func Test_CheatingProver(t *testing.T) {
 	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurity, prng)
 	require.NoError(t, err)
 
-	// [0, N) \ [-l, 2l) mod N == [2l, N-l)
-	lowBound := new(big.Int).Add(lBig, lBig)
-	highBound := new(big.Int).Sub(pk.N.Big(), lBig)
-	rangeBound := new(big.Int).Sub(highBound, lowBound)
+	lowBound := new(big.Int).Neg(lBig)
 
 	for range 128 {
-		xBig, err := crand.Int(prng, rangeBound)
+		shift, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
-		xBig.Add(xBig, lowBound)
+		xBig := new(big.Int).Sub(lowBound, shift)
+		x := new(saferith.Int).SetBig(xBig, xBig.BitLen())
+		c, r, err := pk.Encrypt(x, prng)
+		require.NoError(t, err)
 
-		x := new(saferith.Nat).SetBig(xBig, xBig.BitLen())
+		statement := &paillierrange.Statement{
+			Pk: pk,
+			C:  c,
+			L:  l,
+		}
+		witness := &paillierrange.Witness{
+			Sk: sk,
+			X:  x,
+			R:  r,
+		}
+
+		// this must fail as witness is out of bound
+		err = protocol.ValidateStatement(statement, witness)
+		require.Error(t, err)
+
+		a, s, err := protocol.ComputeProverCommitment(statement, witness)
+		require.NoError(t, err)
+
+		e := make([]byte, protocol.GetChallengeBytesLength())
+		_, err = io.ReadFull(prng, e)
+		require.NoError(t, err)
+
+		z, err := protocol.ComputeProverResponse(statement, witness, a, s, e)
+		require.NoError(t, err)
+
+		// make sure cheating prover is caught
+		err = protocol.Verify(statement, a, e, z)
+		require.Error(t, err)
+	}
+}
+
+func Test_CheatingProverAboveRange(t *testing.T) {
+	t.Parallel()
+
+	prng := crand.Reader
+	pk, sk, err := paillier.KeyGen(primeLen, prng)
+	require.NoError(t, err)
+
+	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
+	l := new(saferith.Nat).SetBig(lBig, lBig.BitLen())
+	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurity, prng)
+	require.NoError(t, err)
+
+	highBound := new(big.Int).Add(lBig, lBig)
+
+	for range 128 {
+		shift, err := crand.Int(prng, lBig)
+		require.NoError(t, err)
+		xBig := new(big.Int).Add(highBound, shift)
+		x := new(saferith.Int).SetBig(xBig, xBig.BitLen())
 		c, r, err := pk.Encrypt(x, prng)
 		require.NoError(t, err)
 
@@ -143,7 +193,7 @@ func Test_Simulator(t *testing.T) {
 	for range 128 {
 		xBig, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
-		x := new(saferith.Nat).SetBig(xBig, xBig.BitLen())
+		x := new(saferith.Int).SetBig(xBig, xBig.BitLen())
 		c, r, err := pk.Encrypt(x, prng)
 		require.NoError(t, err)
 
@@ -187,7 +237,7 @@ func Test_Interactive(t *testing.T) {
 	for range 128 {
 		xBig, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
-		x := new(saferith.Nat).SetBig(xBig, xBig.BitLen())
+		x := new(saferith.Int).SetBig(xBig, xBig.BitLen())
 		c, r, err := pk.Encrypt(x, prng)
 		require.NoError(t, err)
 
@@ -243,7 +293,7 @@ func Test_InteractiveZk(t *testing.T) {
 	for range 128 {
 		xBig, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
-		x := new(saferith.Nat).SetBig(xBig, xBig.BitLen())
+		x := new(saferith.Int).SetBig(xBig, xBig.BitLen())
 		c, r, err := pk.Encrypt(x, prng)
 		require.NoError(t, err)
 
@@ -300,7 +350,7 @@ func Test_NonInteractiveFiatShamir(t *testing.T) {
 
 	xBig, err := crand.Int(prng, lBig)
 	require.NoError(t, err)
-	x := new(saferith.Nat).SetBig(xBig, xBig.BitLen())
+	x := new(saferith.Int).SetBig(xBig, xBig.BitLen())
 	c, r, err := pk.Encrypt(x, prng)
 	require.NoError(t, err)
 
@@ -355,7 +405,7 @@ func Test_NonInteractiveFischlin(t *testing.T) {
 
 	xBig, err := crand.Int(prng, lBig)
 	require.NoError(t, err)
-	x := new(saferith.Nat).SetBig(xBig, xBig.BitLen())
+	x := new(saferith.Int).SetBig(xBig, xBig.BitLen())
 	c, r, err := pk.Encrypt(x, prng)
 	require.NoError(t, err)
 
@@ -410,7 +460,7 @@ func Test_NonInteractiveRandomisedFischlin(t *testing.T) {
 
 	xBig, err := crand.Int(prng, lBig)
 	require.NoError(t, err)
-	x := new(saferith.Nat).SetBig(xBig, xBig.BitLen())
+	x := new(saferith.Int).SetBig(xBig, xBig.BitLen())
 	c, r, err := pk.Encrypt(x, prng)
 	require.NoError(t, err)
 

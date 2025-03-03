@@ -11,7 +11,6 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
 )
@@ -100,14 +99,12 @@ func Test_HappyPath(t *testing.T) {
 			require.True(t, exists)
 			for _, value := range shards.Iter() {
 				theirShard := value
-				if myShard.PaillierSecretKey.N.Eq(theirShard.PaillierSecretKey.N) == 0 {
+				if myShard.PaillierSecretKey.N.Nat().Eq(theirShard.PaillierSecretKey.N.Nat()) == 0 {
 					theirEncryptedShare, exists := theirShard.PaillierEncryptedShares.Get(mySharingId)
 					require.True(t, exists)
-					decryptor, err := paillier.NewDecryptor(myPaillierPrivateKey)
+					theirDecryptedShare, err := myPaillierPrivateKey.Decrypt(theirEncryptedShare)
 					require.NoError(t, err)
-					theirDecryptedShare, err := decryptor.Decrypt(theirEncryptedShare)
-					require.NoError(t, err)
-					require.NotZero(t, theirDecryptedShare.Eq(myShare))
+					require.NotZero(t, theirDecryptedShare.Abs().Eq(myShare))
 				}
 			}
 		}

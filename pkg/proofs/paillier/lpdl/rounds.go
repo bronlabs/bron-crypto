@@ -8,7 +8,6 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
 	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
-	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 )
 
 func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
@@ -28,11 +27,11 @@ func (verifier *Verifier) Round1() (r1out *Round1Output, err error) {
 	}
 
 	// 1.i. compute a (*) c (+) Enc(b, r) for random r
-	acEnc, err := verifier.pk.CipherTextMul(verifier.c, verifier.state.a)
+	acEnc, err := verifier.pk.CipherTextMul(verifier.c, new(saferith.Int).SetNat(verifier.state.a))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot perform homomorphic multiplication")
 	}
-	bEnc, _, err := verifier.pk.Encrypt(verifier.state.b, verifier.prng)
+	bEnc, _, err := verifier.pk.Encrypt(new(saferith.Int).SetNat(verifier.state.b), verifier.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt value")
 	}
@@ -84,15 +83,11 @@ func (prover *Prover) Round2(r1out *Round1Output) (r2out *Round2Output, err erro
 	prover.state.cDoublePrimeCommitment = r1out.CDoublePrimeCommitment
 
 	// 2.i. decrypt c' to obtain alpha, compute Q^ = alpha * G
-	decrytor, err := paillier.NewDecryptor(prover.sk)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create decryptor")
-	}
-	prover.state.alpha, err = decrytor.Decrypt(r1out.CPrime)
+	prover.state.alpha, err = prover.sk.Decrypt(r1out.CPrime)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt cipher text")
 	}
-	alphaScalar := prover.state.curve.ScalarField().Element().SetNat(prover.state.alpha)
+	alphaScalar := prover.state.curve.ScalarField().Element().SetNat(prover.state.alpha.Mod(prover.pk.N))
 	prover.state.bigQHat = prover.state.curve.ScalarBaseMult(alphaScalar)
 
 	// 2.ii. compute c^ = commit(Q^) and send to V
@@ -166,7 +161,7 @@ func (prover *Prover) Round4(r4In *Round3Output) (r4out *Round4Output, err error
 	// 4. check that alpha == ax + b (over integers), if not aborts
 	ax := new(saferith.Nat).Mul(r4In.A, prover.x.Nat(), -1)
 	axPlusB := new(saferith.Nat).Add(ax, r4In.B, prover.state.q2.BitLen()+1)
-	if prover.state.alpha.Eq(axPlusB) == 0 {
+	if prover.state.alpha.Eq(new(saferith.Int).SetNat(axPlusB)) == 0 {
 		return nil, errs.NewIdentifiableAbort("verifier", "verifier is misbehaving")
 	}
 
