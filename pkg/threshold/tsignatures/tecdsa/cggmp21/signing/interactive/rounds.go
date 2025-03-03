@@ -4,8 +4,10 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/krypton-primitives/pkg/hashing"
 	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/network"
+	"github.com/bronlabs/krypton-primitives/pkg/signatures/ecdsa"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/cggmp21"
 	"github.com/cronokirby/saferith"
@@ -24,14 +26,17 @@ func (c *Cosigner) Round1() (r1bOut *Round1Broadcast, err error) {
 		return nil, err
 	}
 
+	c.state.bigK = make(map[types.SharingID]*paillier.CipherText)
 	c.state.bigK[c.MySharingId], _, err = c.MyShard.PaillierSecretKey.Encrypt(mapScalarToPaillierPlaintext(c.state.k), c.Prng)
+	c.state.bigG = make(map[types.SharingID]*paillier.CipherText)
 	c.state.bigG[c.MySharingId], _, err = c.MyShard.PaillierSecretKey.Encrypt(mapScalarToPaillierPlaintext(c.state.gamma), c.Prng)
 
 	r1bOut = &Round1Broadcast{
 		BigK: c.state.bigK[c.MySharingId],
 		BigG: c.state.bigG[c.MySharingId],
 	}
-	return nil, nil
+
+	return r1bOut, nil
 }
 
 func (c *Cosigner) Round2(r2bIn network.RoundMessages[types.ThresholdSignatureProtocol, *Round1Broadcast]) (r2bOut *Round2Broadcast, r2uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round2P2P], err error) {
@@ -41,8 +46,8 @@ func (c *Cosigner) Round2(r2bIn network.RoundMessages[types.ThresholdSignaturePr
 		}
 
 		in, _ := r2bIn.Get(identityKey)
-		c.state.bigK[sharingId] = in.bigK
-		c.state.bigG[sharingId] = in.bigG
+		c.state.bigK[sharingId] = in.BigK
+		c.state.bigG[sharingId] = in.BigG
 	}
 
 	beta := make(map[types.SharingID]*paillier.PlainText)
@@ -176,8 +181,8 @@ func (c *Cosigner) Round3(r3bIn network.RoundMessages[types.ThresholdSignaturePr
 
 	c.state.delta = c.state.gamma.Mul(c.state.k).Add(alphaSum).Add(mapPaillierPlaintextToScalar(c.Protocol.Curve().ScalarField(), c.state.betaSum))
 	c.state.chi = x.Mul(c.state.k).Add(alphaDashSum).Add(mapPaillierPlaintextToScalar(c.Protocol.Curve().ScalarField(), c.state.betaDashSum))
-	c.state.BigDelta = c.state.bigGamma.ScalarMul(c.state.k)
-	c.state.BigS = c.state.bigGamma.ScalarMul(c.state.chi)
+	c.state.bigDelta = c.state.bigGamma.ScalarMul(c.state.k)
+	c.state.bigS = c.state.bigGamma.ScalarMul(c.state.chi)
 
 	r3bOut = &Round3Broadcast{
 		Delta:    c.state.delta,
@@ -187,7 +192,7 @@ func (c *Cosigner) Round3(r3bIn network.RoundMessages[types.ThresholdSignaturePr
 	return r3bOut, nil
 }
 
-func (c *Cosigner) Round4(r4bIn network.RoundMessages[types.ThresholdSignatureProtocol, *Round3Broadcast], message []byte) (err error) {
+func (c *Cosigner) Round4(r4bIn network.RoundMessages[types.ThresholdSignatureProtocol, *Round3Broadcast], message []byte) (partialSignature *cggmp21.PartialSignature, err error) {
 	for sharingId, identityKey := range c.QuorumIdentities {
 		if sharingId == c.MySharingId {
 			continue
@@ -201,26 +206,29 @@ func (c *Cosigner) Round4(r4bIn network.RoundMessages[types.ThresholdSignaturePr
 
 	kTilde, err := c.state.k.Div(c.state.delta)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	chiTilde, err := c.state.chi.Div(c.state.delta)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// TODO: add verification
 
-	hashFunc := c.Protocol.SigningSuite().Hash()
-	hash := hashFunc()
-	hash.Write(message)
-	digest := hash.Sum(nil)
-	m, err := c.Protocol.Curve().ScalarField().Element().SetBytes(digest)
+	m, err := messageToScalar(c.Protocol.SigningSuite(), message)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	rBytes := c.state.bigGamma.AffineX().Bytes()
-	r := c.Protocol.Curve().ScalarField().Element().SetBytes(rBytes)
+	r, err := c.Protocol.SigningSuite().Curve().ScalarField().Element().SetBytesWide(c.state.bigGamma.AffineX().Bytes())
+	if err != nil {
+		return nil, err
+	}
 	sigma := kTilde.Mul(m).Add(r.Mul(chiTilde))
+	partialSignature = &cggmp21.PartialSignature{
+		R: r,
+		S: sigma,
+	}
 
+	return partialSignature, nil
 }
 
 func mapScalarToPaillierPlaintext(s curves.Scalar) *paillier.PlainText {
@@ -249,4 +257,17 @@ func sampleJRange(prng io.Reader) (*saferith.Int, error) {
 	}
 
 	return &result, nil
+}
+
+func messageToScalar(cipherSuite types.SigningSuite, message []byte) (curves.Scalar, error) {
+	messageHash, err := hashing.Hash(cipherSuite.Hash(), message)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "cannot hash message")
+	}
+	mPrimeUint := ecdsa.BitsToInt(messageHash, cipherSuite.Curve())
+	mPrime, err := cipherSuite.Curve().ScalarField().Element().SetBytes(mPrimeUint.Bytes())
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "cannot convert message to scalar")
+	}
+	return mPrime, nil
 }
