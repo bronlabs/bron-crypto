@@ -6,7 +6,6 @@ import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
 	"github.com/bronlabs/krypton-primitives/pkg/hashing"
-	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog"
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/ecdsa"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
@@ -204,15 +203,11 @@ func (pc *PrimaryCosigner) Round5(r4out *lindell17.PartialSignature, message []b
 	}
 
 	paillierSecretKey := pc.myShard.PaillierSecretKey
-	decryptor, err := paillier.NewDecryptor(paillierSecretKey)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create paillier decryptor")
-	}
-	sPrimeInt, err := decryptor.Decrypt(r4out.C3)
+	sPrimeInt, err := paillierSecretKey.Decrypt(r4out.C3)
 	if err != nil {
 		return nil, errs.WrapIdentifiableAbort(err, pc.secondaryIdentityKey.String(), "cannot decrypt c3")
 	}
-	sPrime := pc.Protocol.Curve().ScalarField().Element().SetNat(sPrimeInt)
+	sPrime := pc.Protocol.Curve().ScalarField().Element().SetNat(sPrimeInt.Abs())
 	k1Inv, err := pc.state.k1.MultiplicativeInverse()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute k1 inverse")

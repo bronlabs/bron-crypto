@@ -7,6 +7,7 @@ import (
 	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
 	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
 	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
@@ -58,19 +59,18 @@ func (p *Prover) Prove(witness *paillier.SecretKey) (proof *Proof, statement *pa
 	}
 	transcript.AppendMessages(sessionIdTranscriptLabel, p.sessionId)
 
-	nMod, err := witness.GetNResidueParams()
+	nMod, err := modular.NewFastModulusFromPrimeFactors(witness.P.Nat(), witness.Q.Nat())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot get N residue params")
 	}
 
-	rhos, err := extractRhos(transcript, nMod.GetModulus())
+	rhos, err := extractRhos(transcript, witness.N)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create a proof")
 	}
 
-	phi := saferith.ModulusFromNat(witness.Phi)
-	nInv := new(saferith.Nat).ModInverse(witness.N, phi)
-	sigmas, err := nMod.ModMultiBaseExp(rhos, nInv)
+	nInv := new(saferith.Nat).ModInverse(witness.N.Nat(), witness.Phi())
+	sigmas, err := nMod.MultiBaseExp(rhos, nInv)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot compute exp")
 	}
@@ -97,17 +97,17 @@ func Verify(sessionId []byte, transcript transcripts.Transcript, statement *pail
 	}
 	transcript.AppendMessages(sessionIdTranscriptLabel, sessionId)
 
-	nMod, err := statement.GetNResidueParams()
+	nMod, err := modular.NewFastModulus(statement.N.Nat())
 	if err != nil {
 		return errs.WrapFailed(err, "cannot get N residue params")
 	}
 
-	rhos, err := extractRhos(transcript, nMod.GetModulus())
+	rhos, err := extractRhos(transcript, statement.N)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot verify a proof")
 	}
 
-	if statement.N.Coprime(P) != 1 {
+	if statement.N.Nat().Coprime(P) != 1 {
 		return errs.NewVerification("verification failed")
 	}
 
@@ -115,7 +115,7 @@ func Verify(sessionId []byte, transcript transcripts.Transcript, statement *pail
 		return errs.NewVerification("verification failed")
 	}
 
-	rhoChecks, err := nMod.ModMultiBaseExp(proof.Sigmas, statement.N)
+	rhoChecks, err := nMod.MultiBaseExp(proof.Sigmas, statement.N.Nat())
 	if err != nil {
 		return errs.WrapFailed(err, "cannot compute exp")
 	}

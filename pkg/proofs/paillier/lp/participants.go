@@ -8,6 +8,7 @@ import (
 
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
 	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/nthroots"
 	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
@@ -17,8 +18,8 @@ import (
 
 const (
 	transcriptLabel = "KRYPTON_PAILLIER_LP-"
-	PaillierBitSize = 1024
-	// TODO: Should we bump it to 1536 to comply with NIST recommendations?
+	// PaillierBitSize TODO: Should we bump it to 3072 to comply with NIST recommendations?
+	PaillierBitSize = 2048
 )
 
 type Participant struct {
@@ -69,7 +70,6 @@ type Prover struct {
 	_ ds.Incomparable
 }
 
-//nolint:dupl // false positive
 func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
 	if err := validateVerifierInputs(k, paillierPublicKey, sessionId, prng); err != nil {
 		return nil, errs.NewArgument("invalid input arguments")
@@ -84,17 +84,12 @@ func NewVerifier(k int, paillierPublicKey *paillier.PublicKey, sessionId []byte,
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	nResidueParams, err := paillierPublicKey.GetNResidueParams()
+	nMod, err := modular.NewFastModulus(paillierPublicKey.N.Nat())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't get N residue params")
 	}
 
-	nnResidueParams, err := paillierPublicKey.GetNNResidueParams()
-	if err != nil {
-		return nil, errs.WrapHashing(err, "couldn't get NN residue params")
-	}
-
-	nthRootsSigmaProtocol, err := nthroots.NewSigmaProtocol(nResidueParams, nnResidueParams, k, prng)
+	nthRootsSigmaProtocol, err := nthroots.NewSigmaProtocol(nMod, k, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Nth root protocol")
 	}
@@ -120,7 +115,7 @@ func validateVerifierInputs(k int, paillierPublicKey *paillier.PublicKey, sessio
 	if paillierPublicKey == nil {
 		return errs.NewIsNil("invalid paillier public key")
 	}
-	if paillierPublicKey.N.TrueLen() < PaillierBitSize {
+	if paillierPublicKey.N.BitLen() < PaillierBitSize {
 		return errs.NewSize("invalid paillier public key: modulus is too small")
 	}
 	if k < 1 {
@@ -132,7 +127,6 @@ func validateVerifierInputs(k int, paillierPublicKey *paillier.PublicKey, sessio
 	return nil
 }
 
-//nolint:dupl // false positive
 func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
 	if err := validateProverInputs(k, paillierSecretKey, sessionId, prng); err != nil {
 		return nil, errs.NewArgument("invalid input arguments")
@@ -147,17 +141,12 @@ func NewProver(k int, paillierSecretKey *paillier.SecretKey, sessionId []byte, t
 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
 	}
 
-	nResidueParams, err := paillierSecretKey.GetNResidueParams()
+	nMod, err := modular.NewFastModulusFromPrimeFactors(paillierSecretKey.P.Nat(), paillierSecretKey.Q.Nat())
 	if err != nil {
 		return nil, errs.WrapHashing(err, "couldn't get N residue params")
 	}
 
-	nnResidueParams, err := paillierSecretKey.GetNNResidueParams()
-	if err != nil {
-		return nil, errs.WrapHashing(err, "couldn't get NN residue params")
-	}
-
-	nthRootsSigmaProtocol, err := nthroots.NewSigmaProtocol(nResidueParams, nnResidueParams, k, prng)
+	nthRootsSigmaProtocol, err := nthroots.NewSigmaProtocol(nMod, k, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Nth root protocol")
 	}

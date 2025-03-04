@@ -3,7 +3,6 @@ package noninteractive_signing
 import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
 	"github.com/bronlabs/krypton-primitives/pkg/signatures/ecdsa"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing"
@@ -67,15 +66,11 @@ func (p *Cosigner) ProduceSignature(theirPartialSignature *lindell17.PartialSign
 	r := p.protocol.Curve().ScalarField().Element().SetNat(bigRx)
 
 	paillierSecretKey := p.myShard.PaillierSecretKey
-	decryptor, err := paillier.NewDecryptor(paillierSecretKey)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create paillier decryptor")
-	}
-	sPrimeInt, err := decryptor.Decrypt(theirPartialSignature.C3)
+	sPrimeInt, err := paillierSecretKey.Decrypt(theirPartialSignature.C3)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot decrypt c3")
 	}
-	sPrime := p.protocol.Curve().ScalarField().Element().SetNat(sPrimeInt)
+	sPrime := p.protocol.Curve().ScalarField().Element().SetNat(sPrimeInt.Abs())
 
 	k1Inv, err := p.preProcessingMaterial.PrivateMaterial.K.MultiplicativeInverse()
 	if err != nil {

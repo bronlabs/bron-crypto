@@ -36,23 +36,19 @@ var _ sigma.Response = Response(nil)
 
 type protocol struct {
 	t     int
-	nMod  modular.ResidueParams
-	nnMod modular.ResidueParams
+	nMod  modular.FastModulus
+	nnMod modular.FastModulus
 	prng  io.Reader
 }
 
 var _ sigma.Protocol[Statement, Witness, Commitment, State, Response] = (*protocol)(nil)
 
-func NewSigmaProtocol(nMod, nnMod modular.ResidueParams, t int, prng io.Reader) (sigma.Protocol[Statement, Witness, Commitment, State, Response], error) {
-	if nMod == nil || nnMod == nil {
+func NewSigmaProtocol(nMod modular.FastModulus, t int, prng io.Reader) (sigma.Protocol[Statement, Witness, Commitment, State, Response], error) {
+	if nMod == nil {
 		return nil, errs.NewIsNil("n")
 	}
 	if t < 1 {
 		return nil, errs.NewVerification("t must be positive")
-	}
-	nnCheck := new(saferith.Nat).Mul(nMod.GetModulus().Nat(), nMod.GetModulus().Nat(), -1)
-	if nnCheck.Eq(nnMod.GetModulus().Nat()) != 1 {
-		return nil, errs.NewVerification("modulus doesn't match")
 	}
 
 	if prng == nil {
@@ -62,7 +58,7 @@ func NewSigmaProtocol(nMod, nnMod modular.ResidueParams, t int, prng io.Reader) 
 	return &protocol{
 		t:     t,
 		nMod:  nMod,
-		nnMod: nnMod,
+		nnMod: nMod.Square(),
 		prng:  prng,
 	}, nil
 }
@@ -74,14 +70,14 @@ func (*protocol) Name() sigma.Name {
 func (p *protocol) ComputeProverCommitment(_ Statement, _ Witness) (Commitment, State, error) {
 	s := make([]*saferith.Nat, p.t)
 	for i := 0; i < p.t; i++ {
-		siBig, err := crand.Int(p.prng, p.nnMod.GetModulus().Nat().Big())
+		siBig, err := crand.Int(p.prng, p.nnMod.Modulus().Nat().Big())
 		if err != nil {
 			return nil, nil, errs.WrapRandomSample(err, "cannot sample commitment")
 		}
-		s[i] = new(saferith.Nat).SetBig(siBig, p.nnMod.GetModulus().BitLen())
+		s[i] = new(saferith.Nat).SetBig(siBig, p.nnMod.Modulus().BitLen())
 	}
 
-	a, err := p.nnMod.ModMultiBaseExp(s, p.nMod.GetModulus().Nat())
+	a, err := p.nnMod.MultiBaseExp(s, p.nMod.Modulus().Nat())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot compute exp")
 	}
@@ -91,14 +87,14 @@ func (p *protocol) ComputeProverCommitment(_ Statement, _ Witness) (Commitment, 
 
 func (p *protocol) ComputeProverResponse(_ Statement, witness Witness, _ Commitment, state State, challenge sigma.ChallengeBytes) (Response, error) {
 	e := p.mapBytesToChallenge(challenge)
-	vsToE, err := p.nnMod.ModMultiBaseExp(witness, e)
+	vsToE, err := p.nnMod.MultiBaseExp(witness, e)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot compute exp")
 	}
 
 	z := make([]*saferith.Nat, p.t)
 	for i, vToE := range vsToE {
-		z[i] = new(saferith.Nat).ModMul(state[i], vToE, p.nnMod.GetModulus())
+		z[i] = new(saferith.Nat).ModMul(state[i], vToE, p.nnMod.Modulus())
 	}
 	return z, nil
 }
@@ -115,12 +111,12 @@ func (p *protocol) Verify(statement Statement, commitment Commitment, challenge 
 	var errGroup errgroup.Group
 	errGroup.Go(func() error {
 		var err error
-		usToE, err = p.nnMod.ModMultiBaseExp(statement, e)
+		usToE, err = p.nnMod.MultiBaseExp(statement, e)
 		return err //nolint:wrapcheck // checked on errGroup.Wait
 	})
 	errGroup.Go(func() error {
 		var err error
-		zLhs, err = p.nnMod.ModMultiBaseExp(response, p.nMod.GetModulus().Nat())
+		zLhs, err = p.nnMod.MultiBaseExp(response, p.nMod.Modulus().Nat())
 		return err //nolint:wrapcheck // checked on errGroup.Wait
 	})
 	err := errGroup.Wait()
@@ -129,7 +125,7 @@ func (p *protocol) Verify(statement Statement, commitment Commitment, challenge 
 	}
 
 	for i := range usToE {
-		zRhs := new(saferith.Nat).ModMul(commitment[i], usToE[i], p.nnMod.GetModulus())
+		zRhs := new(saferith.Nat).ModMul(commitment[i], usToE[i], p.nnMod.Modulus())
 		if zLhs[i].Eq(zRhs) != 1 {
 			return errs.NewVerification("verification failed")
 		}
@@ -142,37 +138,37 @@ func (p *protocol) RunSimulator(statement Statement, challenge sigma.ChallengeBy
 	e := p.mapBytesToChallenge(challenge)
 	z := make([]*saferith.Nat, p.t)
 	for i := range z {
-		zInt, err := crand.Int(p.prng, p.nnMod.GetModulus().Big())
+		zInt, err := crand.Int(p.prng, p.nnMod.Modulus().Big())
 		if err != nil {
 			return nil, nil, errs.WrapRandomSample(err, "cannot sample response")
 		}
-		z[i] = new(saferith.Nat).SetBig(zInt, p.nnMod.GetModulus().BitLen())
+		z[i] = new(saferith.Nat).SetBig(zInt, p.nnMod.Modulus().BitLen())
 	}
 
-	zsToN, err := p.nnMod.ModMultiBaseExp(z, p.nMod.GetModulus().Nat())
+	zsToN, err := p.nnMod.MultiBaseExp(z, p.nMod.Modulus().Nat())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot compute exp")
 	}
-	usToE, err := p.nnMod.ModMultiBaseExp(statement, e)
+	usToE, err := p.nnMod.MultiBaseExp(statement, e)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot compute exp")
 	}
 
 	usToEInv := make([]*saferith.Nat, p.t)
 	for i, uToE := range usToE {
-		usToEInv[i] = new(saferith.Nat).ModInverse(uToE, p.nnMod.GetModulus())
+		usToEInv[i] = new(saferith.Nat).ModInverse(uToE, p.nnMod.Modulus())
 	}
 
 	a := make([]*saferith.Nat, p.t)
 	for i := 0; i < p.t; i++ {
-		a[i] = new(saferith.Nat).ModMul(zsToN[i], usToEInv[i], p.nnMod.GetModulus())
+		a[i] = new(saferith.Nat).ModMul(zsToN[i], usToEInv[i], p.nnMod.Modulus())
 	}
 
 	return a, z, nil
 }
 
 func (p *protocol) ValidateStatement(statement Statement, witness Witness) error {
-	lhs, err := p.nnMod.ModMultiBaseExp(witness, p.nMod.GetModulus().Nat())
+	lhs, err := p.nnMod.MultiBaseExp(witness, p.nMod.Modulus().Nat())
 	if err != nil {
 		return errs.WrapFailed(err, "cannot compute exp")
 	}
@@ -187,7 +183,7 @@ func (p *protocol) ValidateStatement(statement Statement, witness Witness) error
 }
 
 func (p *protocol) SoundnessError() int {
-	return p.nMod.GetModulus().BitLen()
+	return p.nMod.Modulus().BitLen()
 }
 
 func (*protocol) SpecialSoundness() uint {
@@ -195,7 +191,7 @@ func (*protocol) SpecialSoundness() uint {
 }
 
 func (p *protocol) GetChallengeBytesLength() int {
-	byteLen := (p.nnMod.GetModulus().BitLen() + 7) / 8
+	byteLen := (p.nnMod.Modulus().BitLen() + 7) / 8
 	return byteLen
 }
 

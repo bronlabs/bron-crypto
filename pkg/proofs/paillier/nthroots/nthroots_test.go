@@ -26,17 +26,16 @@ func Test_HappyPathInteractive(t *testing.T) {
 	qInt, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetBig(qInt, 128)
-	bigN, err := modular.NewCrtResidueParams(p, 1, q, 1)
+	bigN, err := modular.NewFastModulusFromPrimeFactors(p, q)
 	require.NoError(t, err)
-	bigNSquared, err := modular.NewCrtResidueParams(p, 2, q, 2)
-	require.NoError(t, err)
+	bigNSquared := saferith.ModulusFromNat(new(saferith.Nat).Mul(bigN.Modulus().Nat(), bigN.Modulus().Nat(), -1))
 
-	yInt, err := crand.Int(prng, bigN.GetModulus().Big())
+	yInt, err := crand.Int(prng, bigN.Modulus().Big())
 	require.NoError(t, err)
 	y := new(saferith.Nat).SetBig(yInt, 256)
-	x := new(saferith.Nat).Exp(y, bigN.GetModulus().Nat(), bigNSquared.GetModulus())
+	x := new(saferith.Nat).Exp(y, bigN.Modulus().Nat(), bigNSquared)
 
-	err = doInteractiveProof(x, y, bigN, bigNSquared, prng)
+	err = doInteractiveProof(x, y, bigN, prng)
 	require.NoError(t, err)
 }
 
@@ -49,26 +48,25 @@ func Test_InvalidRootInteractive(t *testing.T) {
 	qInt, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetBig(qInt, 128)
-	bigN, err := modular.NewCrtResidueParams(p, 1, q, 1)
+	bigN, err := modular.NewFastModulusFromPrimeFactors(p, q)
 	require.NoError(t, err)
-	bigNSquared, err := modular.NewCrtResidueParams(p, 2, q, 2)
-	require.NoError(t, err)
+	bigNSquared := saferith.ModulusFromNat(new(saferith.Nat).Mul(bigN.Modulus().Nat(), bigN.Modulus().Nat(), -1))
 
-	y1Int, err := crand.Int(prng, bigN.GetModulus().Big())
+	y1Int, err := crand.Int(prng, bigN.Modulus().Big())
 	require.NoError(t, err)
 	y1 := new(saferith.Nat).SetBig(y1Int, 256)
-	x1 := new(saferith.Nat).Exp(y1, bigN.GetModulus().Nat(), bigNSquared.GetModulus())
+	x1 := new(saferith.Nat).Exp(y1, bigN.Modulus().Nat(), bigNSquared)
 
-	y2Int, err := crand.Int(prng, bigN.GetModulus().Big())
+	y2Int, err := crand.Int(prng, bigN.Modulus().Big())
 	require.NoError(t, err)
 	y2 := new(saferith.Nat).SetBig(y2Int, 256)
-	x2 := new(saferith.Nat).Exp(y2, bigN.GetModulus().Nat(), bigNSquared.GetModulus())
+	x2 := new(saferith.Nat).Exp(y2, bigN.Modulus().Nat(), bigNSquared)
 
-	err = doInteractiveProof(x1, y2, bigN, bigNSquared, prng)
+	err = doInteractiveProof(x1, y2, bigN, prng)
 	require.Error(t, err)
 	require.True(t, errs.IsVerification(err))
 
-	err = doInteractiveProof(x2, y1, bigN, bigNSquared, prng)
+	err = doInteractiveProof(x2, y1, bigN, prng)
 	require.Error(t, err)
 	require.True(t, errs.IsVerification(err))
 }
@@ -84,17 +82,16 @@ func Test_HappyPathNonInteractive(t *testing.T) {
 	qInt, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetBig(qInt, 128)
-	bigN, err := modular.NewCrtResidueParams(p, 1, q, 1)
+	bigN, err := modular.NewFastModulusFromPrimeFactors(p, q)
 	require.NoError(t, err)
-	bigNSquared, err := modular.NewCrtResidueParams(p, 2, q, 2)
-	require.NoError(t, err)
-	protocol, err := nthroots.NewSigmaProtocol(bigN, bigNSquared, 1, prng)
+	bigNSquared := saferith.ModulusFromNat(new(saferith.Nat).Mul(bigN.Modulus().Nat(), bigN.Modulus().Nat(), -1))
+	protocol, err := nthroots.NewSigmaProtocol(bigN, 1, prng)
 	require.NoError(t, err)
 
-	yInt, err := crand.Int(prng, bigN.GetModulus().Big())
+	yInt, err := crand.Int(prng, bigN.Modulus().Big())
 	require.NoError(t, err)
 	y := new(saferith.Nat).SetBig(yInt, 256)
-	x := new(saferith.Nat).Exp(y, bigN.GetModulus().Nat(), bigNSquared.GetModulus())
+	x := new(saferith.Nat).Exp(y, bigN.Modulus().Nat(), bigNSquared)
 
 	fsProtocol, err := fiatshamir.NewCompiler(protocol)
 	require.NoError(t, err)
@@ -125,22 +122,21 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	qInt, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetBig(qInt, 128)
-	bigN, err := modular.NewCrtResidueParams(p, 1, q, 1)
+	bigN, err := modular.NewFastModulusFromPrimeFactors(p, q)
 	require.NoError(t, err)
-	bigNSquared, err := modular.NewCrtResidueParams(p, 2, q, 2)
-	require.NoError(t, err)
-	protocol, err := nthroots.NewSigmaProtocol(bigN, bigNSquared, 1, prng)
+	nn := saferith.ModulusFromNat(new(saferith.Nat).Mul(bigN.Modulus().Nat(), bigN.Modulus().Nat(), -1))
+	protocol, err := nthroots.NewSigmaProtocol(bigN, 1, prng)
 	require.NoError(t, err)
 
-	y1Int, err := crand.Int(prng, bigN.GetModulus().Big())
+	y1Int, err := crand.Int(prng, bigN.Modulus().Big())
 	require.NoError(t, err)
 	y1 := new(saferith.Nat).SetBig(y1Int, 256)
-	x1 := new(saferith.Nat).Exp(y1, bigN.GetModulus().Nat(), bigNSquared.GetModulus())
+	x1 := new(saferith.Nat).Exp(y1, bigN.Modulus().Nat(), nn)
 
-	y2Int, err := crand.Int(prng, bigN.GetModulus().Nat().Big())
+	y2Int, err := crand.Int(prng, bigN.Modulus().Nat().Big())
 	require.NoError(t, err)
 	y2 := new(saferith.Nat).SetBig(y2Int, 256)
-	x2 := new(saferith.Nat).Exp(y2, bigN.GetModulus().Nat(), bigNSquared.GetModulus())
+	x2 := new(saferith.Nat).Exp(y2, bigN.Modulus().Nat(), nn)
 
 	fsProtocol, err := fiatshamir.NewCompiler(protocol)
 	require.NoError(t, err)
@@ -187,16 +183,15 @@ func Test_Simulator(t *testing.T) {
 	qInt, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
 	q := new(saferith.Nat).SetBig(qInt, 128)
-	bigN, err := modular.NewCrtResidueParams(p, 1, q, 1)
+	bigN, err := modular.NewFastModulusFromPrimeFactors(p, q)
 	require.NoError(t, err)
-	bigNSquared, err := modular.NewCrtResidueParams(p, 2, q, 2)
-	require.NoError(t, err)
-	yInt, err := crand.Int(prng, bigN.GetModulus().Big())
+	bigNSquared := saferith.ModulusFromNat(new(saferith.Nat).Mul(bigN.Modulus().Nat(), bigN.Modulus().Nat(), -1))
+	yInt, err := crand.Int(prng, bigN.Modulus().Big())
 	require.NoError(t, err)
 	y := new(saferith.Nat).SetBig(yInt, 256)
-	x := new(saferith.Nat).Exp(y, bigN.GetModulus().Nat(), bigNSquared.GetModulus())
+	x := new(saferith.Nat).Exp(y, bigN.Modulus().Nat(), bigNSquared)
 
-	protocol, err := nthroots.NewSigmaProtocol(bigN, bigNSquared, 1, prng)
+	protocol, err := nthroots.NewSigmaProtocol(bigN, 1, prng)
 	require.NoError(t, err)
 
 	e := make([]byte, protocol.GetChallengeBytesLength())
@@ -210,10 +205,10 @@ func Test_Simulator(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func doInteractiveProof(x, y *saferith.Nat, bigN, bigNN modular.ResidueParams, prng io.Reader) (err error) {
+func doInteractiveProof(x, y *saferith.Nat, bigN modular.FastModulus, prng io.Reader) (err error) {
 	sessionId := []byte("nthRootsSession")
 	appLabel := "NthRoot"
-	protocol, err := nthroots.NewSigmaProtocol(bigN, bigNN, 1, prng)
+	protocol, err := nthroots.NewSigmaProtocol(bigN, 1, prng)
 	if err != nil {
 		return err
 	}
