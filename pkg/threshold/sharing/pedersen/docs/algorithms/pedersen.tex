@@ -1,0 +1,50 @@
+
+\begin{scheme}[t]
+    \caption{$\quad\fndef{Pedersen}\;\;\fn{VSS}$}\label{alg:pedersen}
+    \begin{algorithmic}[1]
+    \begin{alginfo}
+        Pedersen sharing scheme~\cite{pedersen1991vss} implements a VSS scheme based on \fn{Pedersen} \fnref[dlc]{Commitment}. This scheme is parametrized by a group $\G$ of prime order $q$ with a generator $\g{G}$ (e.g., from an elliptic curve $\fn{E}(\G, q, \g{G})$), a second generator $\g{H}$ chosen independently\footnotemark from $\g{G}$, the number of shares produced $n$, and the number of shares required to reconstruct $t$ (threshold).
+    \end{alginfo}
+
+    \vspace{-10pt}
+    \AlgFnct{\hspace{4pt}\fndef[pedersen]{Split}}{}{$
+        s \ins \F_q
+    $}{$
+        (\vect{y} \equals \{\vecti{y}{i}\}_{i \in  \range{n}},\;
+        \vect{b}\equals \{\vecti{b}{i}\}_{i \in   \range{n}},\;
+        \g{\vect{C}}\equals\{\vecti{\g{C}}{j}\}_{j \in  \range{t}}\;
+        \g{\vect{D}}\equals\{\vecti{\g{D}}{j}\}_{j \in  \range{t}})
+    $}
+        \State Run $\assign{\vect{y}, \set{X}, \vect{\g{\vect{C}}}}{\fn{Feldman.Split}_{\g{G}}(s)}$ to get shares $\vect{y}$ and commitments $\vect{\g{\vect{C}}}$
+        \State Sample $\sample{\beta}{\Z_{q^*}}$ as a blinding element.
+        \State Run $\assign{\vect{b},\vect{\g{\vect{B}}}}{\fn{Feldman.Split}_{\g{H}}(\beta)}$ as blinding shares $\vect{b}$ and commitments $\vect{\g{\vect{B}}}$
+        \State $\assign{\g{\vect{D}}}\{\vecti{\g{C}}{j} + \vecti{\g{B}}{j}\}_{j \in \range{t}}$ as the blinded commitments.
+        \Statex \Return $(\vect{y},\vect{b},\vect{\g{\vect{C}}},\g{\vect{D}})$
+    
+    \vspace{-10pt}
+    \setalglineno{1}
+    \AlgFnct{\hspace{-2pt}\fndef[pedersen]{Verify}}{}{$
+        i \ins \range{n},\;
+        \vecti{y}{i} \ins \F_q,\;
+        \vecti{b}{i} \ins \F_q,\;
+        \vect{D}\equals\{\vecti{\g{D}}{1},\dots, \vecti{\g{D}}{t}\}
+    $}{\textit{valid}}
+        \State $\assign{\g{R}}{\g{D}_1 + \sum_{j=1}^{t-1} (j\!\cdot\!i) \cdot \vecti{\g{D}}{j+1}}$ as the expected blinded commitment.
+        \State $\assign{\g{L}}{(\vecti{y}{i} \cdot \g{G}) + (\vecti{b}{i} \cdot \g{H})}$ as the actual blinded commitment of $\vecti{y}{i}$.
+        \State Check if $\isequal{\g{L}}{\g{R}}$, $\ABORT$ if not.
+        \Statex \Return \textit{valid}
+        
+    \vspace{-10pt}
+    \setalglineno{1}
+    \AlgFnct{\hspace{-2pt}\fndef[pedersen]{Combine}}{}{$
+        \set{X'} \ins \subrange{t}{n},\;
+        \vect{y'}\equals\{\vecti{y}{i} \in \F\}_{ i \in \set{X'}},\;
+        \vect{D}\equals\{\vecti{\g{D}}{j}\}_{j \in \range{t}}
+    $}{$s$}
+        \State Run $\fn{Pedersen.Verify}_{\g{G}}(i, \vecti{y}{i}, \vect{D}) \;\forall i\!\in\!\set{X'}$ to verify all the $t$ shares.
+        \State Run $\fn{SSS.Combine}(\set{X'}, \vect{y'})$ to reconstruct the secret $s$.
+        \Statex \Return $s$
+
+    \end{algorithmic}
+\end{scheme}
+\footnotetext{In the selection of a second generator $\g{H}$, $x$ s.t. $\g{H} = x \cdot \g{G}$ must remain unknown to the parties. This is effectively achieved in the DKG (\autoref{sec:key_generation}) via aggregation of commitments of independent random values, following the instructions of~\cite{pedersen1991vss}.}
