@@ -26,7 +26,7 @@ func Test_HappyPath(t *testing.T) {
 
 	curve := k256.NewCurve()
 	hashFunc := sha256.New
-	message := "Hello World"
+	message := []byte("Hello World")
 	rawShards, err := trusted_dealer.KeyGen(threshold, total, curve, prng)
 	require.NoError(t, err)
 	_shard, ok := rawShards.Get(1)
@@ -80,7 +80,7 @@ func Test_HappyPath(t *testing.T) {
 	r4InB := testutils.MapBroadcastO2I(t, participants, r3OutB)
 	partialSignatures := make([]*cggmp21.PartialSignature, len(participants))
 	for i, participant := range participants {
-		partialSignatures[i], err = participant.Round4(r4InB[i], []byte(message))
+		partialSignatures[i], err = participant.Round4(r4InB[i], message)
 		require.NoError(t, err)
 	}
 
@@ -88,6 +88,10 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
-	err = ecdsa.Verify(signature, hashFunc, publicKey, []byte(message))
+	err = ecdsa.Verify(signature, hashFunc, publicKey, message)
 	require.NoError(t, err)
+
+	recoveredPk, err := ecdsa.RecoverPublicKey(signature, hashFunc, message)
+	require.NoError(t, err)
+	require.True(t, recoveredPk.Equal(publicKey))
 }

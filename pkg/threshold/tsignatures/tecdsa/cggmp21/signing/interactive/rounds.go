@@ -218,12 +218,17 @@ func (c *Cosigner) Round4(r4bIn network.RoundMessages[types.ThresholdSignaturePr
 	if err != nil {
 		return nil, err
 	}
+	v, err := ecdsa.CalculateRecoveryId(c.state.bigGamma)
+	if err != nil {
+		return nil, err
+	}
 	r, err := c.Protocol.SigningSuite().Curve().ScalarField().Element().SetBytesWide(c.state.bigGamma.AffineX().Bytes())
 	if err != nil {
 		return nil, err
 	}
 	sigma := kTilde.Mul(m).Add(r.Mul(chiTilde))
 	partialSignature = &cggmp21.PartialSignature{
+		V: &v,
 		R: r,
 		S: sigma,
 	}
