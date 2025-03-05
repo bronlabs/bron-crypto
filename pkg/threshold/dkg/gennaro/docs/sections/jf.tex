@@ -3,4 +3,4 @@
 
 The \fn{Joint-Feldman} \fnref[gennarodkg]{DKG}, a DKG described in Protocol \ref{alg:gennarodkg}. This DKG protocol follows \cite{gennaroDKG}, employing Pedersen commitments~\cite[Section 3]{pedersen1991vss} to prevent bias while enhancing the security with an additional ZKPoK of the discrete log of their secret share to protect against rogue-key attacks~\cite{jarecki2000adaptively,BBS03}. Following \cite{chen2024feldman}, we enhance the original protocol by providing ZKPoKs not only for the commitment of the free coefficient, but for all the coefficients and commitments. We remove the blaming and blamed share reconstruction steps from Gennaro DKG as in \cite{chen2024feldman}, since our threat model does not cover robustness.
 
-\inputAlgorithm{threshold/dkg/jf}{jf.tex}
+\inputAlgorithm{threshold/dkg/gennaro}{jf.tex}
