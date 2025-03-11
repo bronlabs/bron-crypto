@@ -1,7 +1,7 @@
 package groups
 
 import (
-	algebra "github.com/bronlabs/krypton-primitives/pkg/base/algebra4"
+	algebra "github.com/bronlabs/krypton-primitives/pkg/base/algebra2"
 	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 

@@ -24,14 +24,17 @@ type Algebra[AE AlgebraElement[AE, S], S FieldElement[S]] interface {
 	Ring[AE]
 }
 
-type AlgebraElement[AE AlgebraElement[AE, S], S FieldElement[S]] interface {
+type AlgebraElement[AE interface {
+	Vector[AE, S]
+	RingElement[AE]
+}, S FieldElement[S]] interface {
 	Vector[AE, S]
 	RingElement[AE]
 }
 
 // ******************* Polynomials
 
-type PolynomialRing[P Polynomial[E, C], C FieldElement[C]] interface {
+type PolynomialRing[P Polynomial[P, C], C FieldElement[C]] interface {
 	Algebra[P, C]
 	EuclideanDomain[P]
 
@@ -39,7 +42,10 @@ type PolynomialRing[P Polynomial[E, C], C FieldElement[C]] interface {
 	Random(degree int, freeCoeff C, prng io.Reader) (P, error)
 }
 
-type Polynomial[P AlgebraElement[AE, S], S FieldElement[S]] interface {
+type Polynomial[P interface {
+	AlgebraElement[P, S]
+	EuclideanDomainElement[P]
+}, S FieldElement[S]] interface {
 	AlgebraElement[P, S]
 	EuclideanDomainElement[P]
 
@@ -50,21 +56,21 @@ type Polynomial[P AlgebraElement[AE, S], S FieldElement[S]] interface {
 
 // ******************* Matrices
 
-type MatrixAlgebra[M Matrix[E, C], C RingElement[C]] interface {
+type MatrixAlgebra[M Matrix[M, C], C FieldElement[C]] interface {
 	Algebra[M, C]
 
 	New(n, m int) M
 	Random(n, m int, prng io.Reader) (M, error)
 }
 
-type Matrix[M AlgebraElement[AE, S], S RingElement[S]] interface {
+type Matrix[M AlgebraElement[M, S], S FieldElement[S]] interface {
 	AlgebraElement[M, S]
 
 	IsSquare() bool
 	Dimensions() (n int, m int)
 }
 
-type SquareMatrix[M Matrix[M, S], S RingElement[S]] interface {
+type SquareMatrix[M Matrix[M, S], S FieldElement[S]] interface {
 	Matrix[M, S]
 
 	Determinant() S

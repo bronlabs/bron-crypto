@@ -53,7 +53,7 @@ type Map[K any, V any] interface {
 	Remove(key K)
 	TryRemove(key K) (removed bool, removedValue V)
 
-	Freeze() ImmutableMap[K, V]
+	// Freeze() ImmutableMap[K, V]
 }
 
 type BiMap[K any, V any] interface {
@@ -101,7 +101,7 @@ type Set[E any] interface {
 	Remove(e E)
 	Clear()
 
-	Freeze() ImmutableSet[E]
+	// Freeze() ImmutableSet[E]
 }
 
 type immutableSet[E, T any] interface {
@@ -117,7 +117,8 @@ type immutableSet[E, T any] interface {
 	IsProperSubSet(other T) bool
 	IsSuperSet(other T) bool
 	IsProperSuperSet(other T) bool
-	IterSubSets() iter.Seq[T]
+	// IterSubSets() iter.Seq[T]
+	IterSubSets() <-chan Set[E]
 	List() []E
 	Clone() T
 

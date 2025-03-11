@@ -16,7 +16,7 @@ type Structure Object
 // Element is a type of an element of a structured set. Examples are elements of a group or points of a curve.
 type Element Object
 
-type Set[E Element] ds.AbstractSet[E]
+type Set[E Element] ds.AbstractSet[E, *saferith.Nat]
 
 // StructuredSet implements the basic methods shared by all other higher level structures.
 type StructuredSet[S Structure, E Element] interface {

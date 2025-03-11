@@ -5,10 +5,11 @@ import (
 
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 	fu "github.com/bronlabs/krypton-primitives/pkg/base/fuzzutils"
+	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 )
 
-type AbstractSetInvariants[S ds.AbstractSet[E], E any] struct{}
+type AbstractSetInvariants[S ds.AbstractSet[E, *saferith.Nat], E any] struct{}
 
 func (asi *AbstractSetInvariants[S, E]) Cardinality(t *testing.T, A S, expectedCardinality int) {
 	t.Helper()

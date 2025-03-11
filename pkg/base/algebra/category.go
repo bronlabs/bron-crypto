@@ -3,6 +3,7 @@ package algebra
 import (
 	"github.com/bronlabs/krypton-primitives/pkg/base/combinatorics"
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/cronokirby/saferith"
 )
 
 type MorphismComposition[X, Y, Z Object, x, y, z Element] interface {
@@ -10,7 +11,7 @@ type MorphismComposition[X, Y, Z Object, x, y, z Element] interface {
 }
 
 type Object any
-type Collection[Obj Object] ds.AbstractSet[Obj]
+type Collection[Obj Object] ds.AbstractSet[Obj, *saferith.Nat]
 type Class[Obj Object] Collection[Obj]
 
 func ObjectsAreEqual[T any](x, y Object) bool {

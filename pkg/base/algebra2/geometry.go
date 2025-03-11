@@ -34,7 +34,7 @@ type AlgebraicPoint[Point interface {
 }
 
 type EllipticCurve[Point EllipticCurvePoint[Point, BaseRingElement, Scalar],
-	BaseRingElement Uint[BaseRingElement], Scalar RingElement[Scalar],
+	BaseRingElement RingElement[BaseRingElement], Scalar RingElement[Scalar],
 ] interface {
 	AlgebraicCurve[Point, BaseRingElement]
 	AbelianGroup[Point, Scalar]
@@ -51,15 +51,15 @@ type EllipticCurvePoint[Point interface {
 }
 
 type Pairing[
-	g1 EllipticCurve[g1Point, g1Coordinate, g1Scalar], g1Point EllipticCurvePoint[g1Point, g1Coordinate, g1Scalar], g1Coordinate Uint[g1Coordinate], g1Scalar Uint[g1Scalar],
-	g2 EllipticCurve[g2Point, g2Coordinate, g2Scalar], g2Point EllipticCurvePoint[g2Point, g2Coordinate, g2Scalar], g2Coordinate Uint[g2Coordinate], g2Scalar Uint[g2Scalar],
+	g1 EllipticCurve[g1Point, g1Coordinate, g1Scalar], g1Point EllipticCurvePoint[g1Point, g1Coordinate, g1Scalar], g1Coordinate RingElement[g1Coordinate], g1Scalar RingElement[g1Scalar],
+	g2 EllipticCurve[g2Point, g2Coordinate, g2Scalar], g2Point EllipticCurvePoint[g2Point, g2Coordinate, g2Scalar], g2Coordinate RingElement[g2Coordinate], g2Scalar RingElement[g2Scalar],
 	gt interface {
 		MultiplicativeGroup[gtElement]
 		AbelianGroup[gtElement, gtScalar]
 	}, gtElement interface {
 		MultiplicativeGroupElement[gtElement]
 		AbelianGroupElement[gtElement, gtScalar]
-	}, gtScalar Uint[gtScalar],
+	}, gtScalar RingElement[gtScalar],
 ] interface {
 	G1() g1
 	G2() g2
@@ -72,7 +72,7 @@ type Pairing[
 // aliases
 type Curve[
 	Point EllipticCurvePoint[Point, BaseRingElement, Scalar],
-	BaseRingElement Uint[BaseRingElement], Scalar RingElement[Scalar],
+	BaseRingElement RingElement[BaseRingElement], Scalar RingElement[Scalar],
 ] = EllipticCurve[Point, BaseRingElement, Scalar]
 
 type Point[
