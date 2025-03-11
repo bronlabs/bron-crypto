@@ -114,10 +114,6 @@ type AdditiveGroupElement[E GroupElement[E]] interface {
 	Sub(E) E
 }
 
-type MultiplicativelyInvertible[E any] interface {
-	Inv() E
-}
-
 type MultiplicativeGroup[E MultiplicativeGroupElement[E]] interface {
 	Group[E]
 	MultiplicativeMonoid[E]
@@ -129,8 +125,8 @@ type MultiplicativeGroupElement[E interface {
 }] interface {
 	GroupElement[E]
 	MultiplicativeMonoidElement[E]
-	MultiplicativelyInvertible[E]
 
+	Inv() E
 	Div(E) E
 }
 
@@ -148,8 +144,8 @@ type MultiplicativeGroupWithZeroElement[E interface {
 	GroupElement[E]
 	MultiplicativeMonoidElement[E]
 	MonoidWithZeroElement[E]
-	MultiplicativelyInvertible[E]
 
+	TryInv() (E, error)
 	TryDiv(E) (E, error)
 }
 

@@ -74,5 +74,5 @@ type SquareMatrix[M Matrix[M, S], S FieldElement[S]] interface {
 	Matrix[M, S]
 
 	Determinant() S
-	Inv() (M, error)
+	TryInv() (M, error)
 }

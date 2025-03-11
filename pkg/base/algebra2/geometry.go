@@ -11,6 +11,7 @@ type AffineElement[E Element[E], C RingElement[C]] interface {
 	Element[E]
 	Coordinates() []C
 
+	// TODO(aalireza): we should probably rename these, technically they represent chosen method of serialisation (e.g. secg for Weierstrass curves, zcash for BLS12381, and RFCxxx for Edwards)
 	ToAffineCompressed() []byte
 	ToAffineUncompressed() []byte
 }
@@ -29,6 +30,9 @@ type AlgebraicPoint[Point interface {
 	GroupElement[Point]
 	AffineElement[Point, Coordinate]
 
+	// TODO(aalireza): Add IsTorsionFree (or IsInPrimeSubGroup or whatever)
+
+	// TODO(aalireza): Should these return errors? Identity point not always have "affine" representation
 	AffineX() Coordinate
 	AffineY() Coordinate
 }

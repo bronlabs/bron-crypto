@@ -2,7 +2,6 @@ package groups
 
 import (
 	algebra "github.com/bronlabs/krypton-primitives/pkg/base/algebra2"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 type (
@@ -25,26 +24,6 @@ type (
 	PrimeGroupElement[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] algebra.PrimeGroupElement[E, S]
 )
 
-func NewNonZeroMultiplicativeGroupWithZeroElement[E MultiplicativeGroupWithZeroElement[E]](e E) (*NonZeroMultiplicativeGroupWithZeroElement[E], error) {
-	if e.IsZero() {
-		return nil, errs.NewIsZero("zero is not a non-zero element")
-	}
-	return &NonZeroMultiplicativeGroupWithZeroElement[E]{e}, nil
-}
-
-type NonZeroMultiplicativeGroupWithZeroElement[E interface {
-	MultiplicativeGroupWithZeroElement[E]
-}] struct {
-	MultiplicativeGroupWithZeroElement[E]
-}
-
-func (e NonZeroMultiplicativeGroupWithZeroElement[E]) Div(rhs E) E {
-	if rhs.IsZero() {
-		panic("division by zero")
-	}
-	out, err := e.MultiplicativeGroupWithZeroElement.TryDiv(rhs)
-	if err != nil {
-		panic(errs.WrapIsZero(err, "division by zero"))
-	}
-	return out
+func GetGroup[GE GroupElement[GE]](ge GE) Group[GE] {
+	return ge.Structure().(Group[GE])
 }

@@ -1,6 +1,8 @@
 package algebra
 
-import "github.com/cronokirby/saferith"
+import (
+	"github.com/cronokirby/saferith"
+)
 
 // ******************** HemiRing
 type HemiRing[E HemiRingElement[E]] interface {
@@ -110,7 +112,7 @@ type FiniteField[FE FiniteFieldElement[FE]] interface {
 
 type FiniteFieldElement[FE FieldElement[FE]] FieldElement[FE]
 
-type PrimeField[E PrimeFieldElement[E]] interface {
+type PrimeField[E FieldElement[E]] interface {
 	FiniteField[E]
 
 	FromNat(*saferith.Nat) E

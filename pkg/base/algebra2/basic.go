@@ -20,6 +20,8 @@ type Element[E any] interface {
 	encoding.BinaryUnmarshaler
 	ds.Clonable[E]
 	ds.Hashable[E]
+
+	Structure() Structure[E]
 }
 
 type Structure[E any] interface {
