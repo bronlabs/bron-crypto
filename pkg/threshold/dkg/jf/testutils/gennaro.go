@@ -5,14 +5,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"io"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/network"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/jf"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	ttu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
+	randomisedFischlin "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/jf"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures"
 )
 
 func MakeParticipants(t require.TestingT, uniqueSessionId []byte, protocol types.ThresholdProtocol, identities []types.IdentityKey, niCompilerName compiler.Name, prngs []io.Reader) (participants []*jf.Participant, err error) {

@@ -3,8 +3,8 @@ package ds_testutils
 import (
 	"testing"
 
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	fu "github.com/bronlabs/krypton-primitives/pkg/base/fuzzutils"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	fu "github.com/bronlabs/bron-crypto/pkg/base/fuzzutils"
 	"github.com/stretchr/testify/require"
 )
 

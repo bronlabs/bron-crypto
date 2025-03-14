@@ -3,13 +3,13 @@ package pedersenvectorcommitments
 import (
 	"fmt"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/commitments"
-	pedersencommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/pedersen"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing"
-	vc "github.com/bronlabs/krypton-primitives/pkg/vector_commitments"
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
+	pedersencommitments "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	vc "github.com/bronlabs/bron-crypto/pkg/vector_commitments"
 )
 
 const Name = "PEDERSEN_VECTOR_COMMITMENT"

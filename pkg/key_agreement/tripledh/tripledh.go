@@ -3,9 +3,9 @@ package tripledh
 import (
 	"slices"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/key_agreement/dh"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh"
 )
 
 // DeriveSecretLocal computes Triple Diffie-Hellman between two parties.

@@ -6,13 +6,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
-	pedersenvectorcommitments "github.com/bronlabs/krypton-primitives/pkg/vector_commitments/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pallas"
+	pedersenvectorcommitments "github.com/bronlabs/bron-crypto/pkg/vector_commitments/pedersen"
 )
 
 var supportedCurves = []curves.Curve{

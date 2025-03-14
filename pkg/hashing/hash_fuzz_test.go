@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing/tmmohash"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/bron-crypto/pkg/hashing/tmmohash"
 )
 
 func FuzzHashPrefixedLength(f *testing.F) {

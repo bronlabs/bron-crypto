@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	hashing "github.com/bronlabs/krypton-primitives/pkg/hashing/tmmohash"
+	hashing "github.com/bronlabs/bron-crypto/pkg/hashing/tmmohash"
 )
 
 func Test_Tmmohash(t *testing.T) {

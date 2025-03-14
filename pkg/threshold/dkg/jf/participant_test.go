@@ -7,11 +7,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/jf"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
+	randomisedFischlin "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/jf"
 )
 
 func Test_CanInitialize(t *testing.T) {

@@ -5,11 +5,11 @@ import (
 	"crypto/subtle"
 	"slices"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/commitments"
-	vc "github.com/bronlabs/krypton-primitives/pkg/vector_commitments"
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
+	vc "github.com/bronlabs/bron-crypto/pkg/vector_commitments"
 )
 
 const Name = "HASH_VECTOR_COMMITMENT"

@@ -5,13 +5,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/network"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/agreeonrandom"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	ttu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/agreeonrandom"
 )
 
 func RunAgreeOnRandom(t require.TestingT, curve curves.Curve, identities []types.IdentityKey, prng io.Reader) ([]byte, error) {

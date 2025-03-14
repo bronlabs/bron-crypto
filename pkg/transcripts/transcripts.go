@@ -3,7 +3,7 @@ package transcripts
 import (
 	"golang.org/x/crypto/sha3"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 )
 
 var (

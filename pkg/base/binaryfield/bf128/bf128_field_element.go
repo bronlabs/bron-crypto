@@ -5,10 +5,10 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	"github.com/bronlabs/krypton-primitives/pkg/base/ct"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 var _ algebra.FiniteFieldElement[*Field, *FieldElement] = (*FieldElement)(nil)

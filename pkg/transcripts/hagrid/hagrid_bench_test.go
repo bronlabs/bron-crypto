@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func BenchmarkTranscript_AppendMessages(b *testing.B) {

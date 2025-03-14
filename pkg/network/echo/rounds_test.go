@@ -9,14 +9,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/network"
-	"github.com/bronlabs/krypton-primitives/pkg/network/echo"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	ttu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/network/echo"
 )
 
 func TestHappyPath(t *testing.T) {

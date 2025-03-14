@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/pedersen"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curveutils"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 const transcriptLabel = "KRYPTON_HJKY_ZERO_SAMPLE-"

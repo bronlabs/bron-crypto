@@ -3,12 +3,12 @@ package shamir
 import (
 	"io"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/polynomials"
-	"github.com/bronlabs/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/lagrange"
 )
 
 type Share struct {

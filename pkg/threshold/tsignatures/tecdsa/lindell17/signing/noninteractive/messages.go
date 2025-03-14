@@ -1,13 +1,13 @@
 package noninteractive_signing
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
-	"github.com/bronlabs/krypton-primitives/pkg/network"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	hashcommitments "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 )
 
 var _ network.Message[types.ThresholdProtocol] = (*Round1Broadcast)(nil)

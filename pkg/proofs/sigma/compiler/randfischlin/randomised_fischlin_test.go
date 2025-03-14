@@ -8,18 +8,18 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/dleq/chaum"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/schnorr"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pallas"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dleq/chaum"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
+	randomisedFischlin "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 var supportedCurve = []curves.Curve{

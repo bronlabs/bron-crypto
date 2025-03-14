@@ -6,11 +6,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
+	randomisedFischlin "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 )
 
 var testCurve = edwards25519.NewCurve()

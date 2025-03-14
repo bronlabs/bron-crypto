@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/mult/dkls23"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23"
 )
 
 func TestSmoke(t *testing.T) {

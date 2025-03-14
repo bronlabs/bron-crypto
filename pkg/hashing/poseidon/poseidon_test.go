@@ -9,11 +9,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas/impl/fp"
-	itu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing/poseidon"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pallas"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pallas/impl/fp"
+	itu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
 )
 
 const dir = "./vectors"

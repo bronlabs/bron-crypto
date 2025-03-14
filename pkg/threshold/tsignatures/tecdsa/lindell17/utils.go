@@ -5,10 +5,10 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curveutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	saferithUtils "github.com/bronlabs/bron-crypto/pkg/base/utils/saferith"
 )
 
 // DecomposeInQThirdsDeterministically splits scalar x deterministically to x' and x” such that x = 3x' + x” and x', x” are in range [q/3, 2q/3).

@@ -1,12 +1,12 @@
 package noninteractive_signing
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/ecdsa"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/encryptions/paillier"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/lindell17"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/lindell17/signing"
 )
 
 func (p *Cosigner) ProducePartialSignature(message []byte) (partialSignature *lindell17.PartialSignature, err error) {

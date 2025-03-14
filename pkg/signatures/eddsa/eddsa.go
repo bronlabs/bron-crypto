@@ -5,11 +5,11 @@ import (
 	"crypto/sha512"
 	"reflect"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr"
-	vanillaSchnorr "github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
+	vanillaSchnorr "github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/vanilla"
 )
 
 type Signature = schnorr.Signature[vanillaSchnorr.EdDsaCompatibleVariant, []byte]

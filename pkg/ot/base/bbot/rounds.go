@@ -3,13 +3,13 @@ package bbot
 import (
 	"slices"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	"github.com/bronlabs/krypton-primitives/pkg/base/ct"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing"
-	"github.com/bronlabs/krypton-primitives/pkg/key_agreement/dh"
-	"github.com/bronlabs/krypton-primitives/pkg/ot"
+	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh"
+	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
 const (

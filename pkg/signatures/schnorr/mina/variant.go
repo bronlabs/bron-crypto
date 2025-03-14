@@ -3,12 +3,12 @@ package mina
 import (
 	"slices"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing/poseidon"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pallas"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
 )
 
 var (

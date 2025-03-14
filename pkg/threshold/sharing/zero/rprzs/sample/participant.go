@@ -3,17 +3,17 @@ package sample
 import (
 	"sort"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
-	"github.com/bronlabs/krypton-primitives/pkg/base/ct"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/csprng"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/zero/rprzs"
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curveutils"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/csprng"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs"
 )
 
 var _ types.Participant = (*Participant)(nil)

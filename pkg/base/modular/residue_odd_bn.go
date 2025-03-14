@@ -3,9 +3,9 @@
 package modular
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
-	"github.com/bronlabs/krypton-primitives/pkg/cgo/boring"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	saferithUtils "github.com/bronlabs/bron-crypto/pkg/base/utils/saferith"
+	"github.com/bronlabs/bron-crypto/pkg/cgo/boring"
 	"github.com/cronokirby/saferith"
 	"golang.org/x/sync/errgroup"
 )

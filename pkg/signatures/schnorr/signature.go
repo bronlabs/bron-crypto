@@ -1,8 +1,8 @@
 package schnorr
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 )
 
 type Signature[F any, M any] struct {

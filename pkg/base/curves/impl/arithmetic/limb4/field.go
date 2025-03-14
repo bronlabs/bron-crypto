@@ -5,10 +5,10 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	"github.com/bronlabs/krypton-primitives/pkg/base/ct"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 // FieldLimbs is the number of uint64 limbs needed to represent an element of most fields.

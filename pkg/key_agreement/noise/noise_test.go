@@ -8,11 +8,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curve25519"
-	"github.com/bronlabs/krypton-primitives/pkg/key_agreement/noise"
-	"github.com/bronlabs/krypton-primitives/pkg/key_agreement/noise/k"
-	"github.com/bronlabs/krypton-primitives/pkg/key_agreement/noise/kk"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
+	"github.com/bronlabs/bron-crypto/pkg/key_agreement/noise"
+	"github.com/bronlabs/bron-crypto/pkg/key_agreement/noise/k"
+	"github.com/bronlabs/bron-crypto/pkg/key_agreement/noise/kk"
 )
 
 type Message struct {

@@ -1,14 +1,14 @@
 package glow
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
-	fiatShamir "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/bls"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
+	fiatShamir "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tbls/boldyreva02"
 )
 
 const (

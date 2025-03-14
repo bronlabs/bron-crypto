@@ -9,10 +9,10 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/internal"
-	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/nthroots"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
+	"github.com/bronlabs/bron-crypto/internal"
+	"github.com/bronlabs/bron-crypto/pkg/base/modular"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroots"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
 func Test_MeasureConstantTime_round1(t *testing.T) {

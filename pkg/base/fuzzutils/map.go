@@ -1,7 +1,7 @@
 package fuzzutils
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 type Map[K, V Object] any

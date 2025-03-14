@@ -8,14 +8,14 @@ import (
 
 	"golang.org/x/crypto/chacha20"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/csprng"
-	"github.com/bronlabs/krypton-primitives/pkg/csprng/fkechacha20"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/csprng"
+	"github.com/bronlabs/bron-crypto/pkg/csprng/fkechacha20"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const (

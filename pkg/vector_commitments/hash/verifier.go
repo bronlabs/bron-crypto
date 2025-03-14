@@ -5,10 +5,10 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/commitments"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing"
-	vc "github.com/bronlabs/krypton-primitives/pkg/vector_commitments"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	vc "github.com/bronlabs/bron-crypto/pkg/vector_commitments"
 )
 
 var _ vc.VectorVerifier[Message, *VectorCommitment, Vector, *Opening] = (*VectorVerifier)(nil)

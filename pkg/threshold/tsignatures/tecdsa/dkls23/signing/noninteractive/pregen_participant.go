@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"io"
 
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/csprng"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/signing"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/csprng"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/dkls23"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/dkls23/signing"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 const transcriptLabel = "KRYPTON_PREGEN_DKLS23-"

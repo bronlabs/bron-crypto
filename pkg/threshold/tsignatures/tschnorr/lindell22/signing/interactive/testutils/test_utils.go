@@ -4,17 +4,17 @@ import (
 	crand "crypto/rand"
 	"github.com/stretchr/testify/require"
 
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/network"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
-	interactive_signing "github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/interactive"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	randomisedFischlin "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/lindell22"
+	interactive_signing "github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/lindell22/signing/interactive"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 var nizkCompilerName = randomisedFischlin.Name

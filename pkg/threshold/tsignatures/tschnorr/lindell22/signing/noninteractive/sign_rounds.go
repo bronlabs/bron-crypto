@@ -3,10 +3,10 @@ package noninteractive_signing
 import (
 	"encoding/json"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr"
 )
 
 func (c *Cosigner[V, M]) ProducePartialSignature(message M) (partialSignature *tschnorr.PartialSignature, err error) {

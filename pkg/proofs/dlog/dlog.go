@@ -3,14 +3,14 @@ package dlog
 import (
 	"io"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/schnorr"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
-	compilerUtils "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler_utils"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curveutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
+	compilerUtils "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler_utils"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const (

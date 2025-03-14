@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 var tempDir = os.TempDir()

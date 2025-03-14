@@ -13,10 +13,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/csprng"
-	"github.com/bronlabs/krypton-primitives/pkg/csprng/nist"
-	nist_testutils "github.com/bronlabs/krypton-primitives/pkg/csprng/nist/testutils"
-	csprng_testutils "github.com/bronlabs/krypton-primitives/pkg/csprng/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/csprng"
+	"github.com/bronlabs/bron-crypto/pkg/csprng/nist"
+	nist_testutils "github.com/bronlabs/bron-crypto/pkg/csprng/nist/testutils"
+	csprng_testutils "github.com/bronlabs/bron-crypto/pkg/csprng/testutils"
 )
 
 // decode_or_panic decodes a hex string into a byte slice, or panics if the string is invalid.

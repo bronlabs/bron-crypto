@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/hashing/tmmohash"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/bron-crypto/pkg/hashing/tmmohash"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func TestSimpleTranscript(t *testing.T) {

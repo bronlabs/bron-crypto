@@ -3,7 +3,7 @@ package bls12381impl
 import (
 	"io"
 
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 )
 
 // Fp2 is a point in p^2.

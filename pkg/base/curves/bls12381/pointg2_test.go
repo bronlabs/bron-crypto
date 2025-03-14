@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
-	itu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381"
+	itu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
 )
 
 type pointG2 struct {

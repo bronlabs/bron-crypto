@@ -5,9 +5,9 @@ import (
 	"crypto/cipher"
 	"encoding/binary"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/uint2k/uint128"
-	"github.com/bronlabs/krypton-primitives/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/uint2k/uint128"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 type CtrDRBG struct {

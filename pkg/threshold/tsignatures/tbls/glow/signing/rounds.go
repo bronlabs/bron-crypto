@@ -1,11 +1,11 @@
 package signing
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/dleq"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/bls"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tbls/glow"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dleq"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tbls/glow"
 )
 
 func (c *Cosigner) ProducePartialSignature(message []byte) (*glow.PartialSignature, error) {

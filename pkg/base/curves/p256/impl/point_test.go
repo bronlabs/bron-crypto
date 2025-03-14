@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl/fp"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256/impl/fp"
 )
 
 func TestP256PointArithmetic_Double(t *testing.T) {

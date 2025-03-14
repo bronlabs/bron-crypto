@@ -1,10 +1,10 @@
 package dh
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curve25519"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	ecsdvpDhc "github.com/bronlabs/krypton-primitives/pkg/key_agreement/dh/dhc"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	ecsdvpDhc "github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
 )
 
 func DiffieHellman(myPrivateKey curves.Scalar, otherPartyPublicKey curves.Point) (curves.BaseFieldElement, error) {

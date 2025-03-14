@@ -4,9 +4,9 @@ import (
 	crand "crypto/rand"
 	"io"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
 const Name sigma.Name = "ZKPOK_DLOG_SCHNORR"

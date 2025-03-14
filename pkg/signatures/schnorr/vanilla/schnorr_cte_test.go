@@ -8,10 +8,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/internal"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	schnorr "github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/vanilla"
+	"github.com/bronlabs/bron-crypto/internal"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
+	"github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
+	schnorr "github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/vanilla"
 )
 
 func Test_MeasureConstantTime_signing(t *testing.T) {

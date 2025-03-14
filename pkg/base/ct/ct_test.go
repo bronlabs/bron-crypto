@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 const ctTrue = uint64(1)

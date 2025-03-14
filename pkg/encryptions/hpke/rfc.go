@@ -3,7 +3,7 @@ package hpke
 import (
 	"io"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 // These are the actual APIs defined in the RFC.

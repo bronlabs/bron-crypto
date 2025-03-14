@@ -1,4 +1,4 @@
-% c. Krypton Non interactive  [Alireza]
+% c. Bron Non interactive  [Alireza]
 % § Overall mention n-1 rounds in parallel
 % - Accepts an index to the presignature batch. What presignatures are, what presignature bach are, check that indeces are not reused.
 % § Define Pregen, Presignature composer, and Signature aggregator
@@ -12,9 +12,9 @@ In contrast to the above, the non-interactive signing mode involves running the 
 
 Upon receiving a request to sign a certain message/transaction, the pre-signatures are used for signing this message in a non-interactive fashion, by having the same subset of $t$ signing parties execute the final message-dependent round(s) of the protocol. This typically involves some local computation and one round of communication to send the signature shares to the \textit{Signature Aggregator} for it to combine them into a full signature.
 
-The non-interactive signing mode is particularly useful in scenarios where the signing parties are not all online at the time of signing, or as a way to speed-up signing operations by leveraging periods of time when the signing servers have low load (e.g., at night). 
+The non-interactive signing mode is particularly useful in scenarios where the signing parties are not all online at the time of signing, or as a way to speed-up signing operations by leveraging periods of time when the signing servers have low load (e.g., at night).
 
-This mode incorporates an additional role, the \textbf{pre-signature composer} $\PC$ defined in \autoref{sec:mpc_scenario}. If participants do not hold their own pre-signatures, $\PC$ will select the right pre-signature with the right certificate. In a common configuration, the $\SR$ will also act as $\PC$ by picking the index of the pre-signature to be used for a non-interactive signing request. 
+This mode incorporates an additional role, the \textbf{pre-signature composer} $\PC$ defined in \autoref{sec:mpc_scenario}. If participants do not hold their own pre-signatures, $\PC$ will select the right pre-signature with the right certificate. In a common configuration, the $\SR$ will also act as $\PC$ by picking the index of the pre-signature to be used for a non-interactive signing request.
 
 
 In this mode, special care must be taken to ensure that the pre-signatures are not reused. Indeed, if a pre-signature is used to sign more than one message, the security of the protocol is compromised. To tackle this issue, we employ indexing inside the batch of pre-signatures in order to choose the pre-signature to be used in a non-interactive signing request. Handling the choice of index for each request while ensuring that this index wasn't previously used is outside of the scope of this document. Nonetheless, we stress the need for some kind of synchronization mechanism between the parties to avoid batch index reuse. This mechanism could take the form of a ledger (e.g., writing information to a blockchain) that parties should read upon each message signing request, or as an additional coordination protocol between the parties.

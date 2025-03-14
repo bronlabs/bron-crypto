@@ -8,11 +8,11 @@ import (
 )
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/utils/nocopy"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/nocopy"
 	"runtime"
 	"unsafe"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 type nativeBigNum = C.BIGNUM

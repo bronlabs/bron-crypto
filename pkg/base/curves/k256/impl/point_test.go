@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl/fp"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl/fp"
 )
 
 func TestK256PointArithmetic_Map(t *testing.T) {

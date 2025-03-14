@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
+	hashcommitments "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 )
 
 var (

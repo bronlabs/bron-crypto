@@ -5,7 +5,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
+	saferithUtils "github.com/bronlabs/bron-crypto/pkg/base/utils/saferith"
 )
 
 const (

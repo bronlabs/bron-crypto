@@ -7,8 +7,8 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
-	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/bronlabs/bron-crypto/pkg/base/modular"
+	saferithUtils "github.com/bronlabs/bron-crypto/pkg/base/utils/saferith"
 )
 
 func Test_OddResidueParams(t *testing.T) {

@@ -4,9 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
 )
 
 type PublicKey schnorr.PublicKey

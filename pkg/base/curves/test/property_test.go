@@ -5,11 +5,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	atu "github.com/bronlabs/krypton-primitives/pkg/base/algebra/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
-	ctu "github.com/bronlabs/krypton-primitives/pkg/base/curves/test/fuzzutils"
-	fu "github.com/bronlabs/krypton-primitives/pkg/base/fuzzutils"
+	atu "github.com/bronlabs/bron-crypto/pkg/base/algebra/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
+	ctu "github.com/bronlabs/bron-crypto/pkg/base/curves/test/fuzzutils"
+	fu "github.com/bronlabs/bron-crypto/pkg/base/fuzzutils"
 )
 
 func pointGeneratorFactory(f *testing.F, curve curves.Curve) fu.ObjectGenerator[curves.Point] {

@@ -3,12 +3,12 @@ package testutils
 import (
 	"io"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/ot"
-	"github.com/bronlabs/krypton-primitives/pkg/ot/extension/softspoken"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/ot"
+	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 )
 
 /*.------------------------- Random OT extension ----------------------------.*/

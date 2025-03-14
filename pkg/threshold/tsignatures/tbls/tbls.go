@@ -1,8 +1,8 @@
 package tbls
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/bls"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 )
 
 type Protocol struct {

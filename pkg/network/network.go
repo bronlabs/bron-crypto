@@ -3,11 +3,11 @@ package network
 import (
 	"sort"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
 )
 
 type Message[ProtocolT types.Protocol] interface {

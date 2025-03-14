@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 )
 
 func RunCollectionPropertyTest[C Collection[O], O Object](f *testing.F, seedCorpus [][2]uint64, checkInvariants func(*testing.T, CollectionGenerator[C, O]), generator CollectionGenerator[C, O]) {

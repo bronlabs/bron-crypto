@@ -3,12 +3,12 @@ package softspoken
 import (
 	"io"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/csprng"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing/tmmohash"
-	"github.com/bronlabs/krypton-primitives/pkg/ot"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/csprng"
+	"github.com/bronlabs/bron-crypto/pkg/hashing/tmmohash"
+	"github.com/bronlabs/bron-crypto/pkg/ot"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const transcriptLabel = "KRYPTON_SOFTSPOKEN_OTe-"

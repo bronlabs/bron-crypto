@@ -15,11 +15,11 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/primes"
-	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/primes"
+	saferithUtils "github.com/bronlabs/bron-crypto/pkg/base/utils/saferith"
+	"github.com/bronlabs/bron-crypto/pkg/encryptions/paillier"
 )
 
 var (

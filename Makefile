@@ -1,4 +1,4 @@
-BUILD_IMAGE_NAME := "docker.boople.co/infra/golang:1.23-alpine3.20"
+BUILD_IMAGE_NAME := "docker.nobr.io/infra/golang:1.24-alpine"
 SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 # Determine the OS and set the PWD_CMD variable accordingly
@@ -8,16 +8,20 @@ else
     PWD_CMD = pwd
 endif
 
-RUN_IN_GOCD := $(if ${LOCAL},true,${RUN_IN_GOCD})
+TESTS_FORMATTER := $(if ${HOST_EXECUTION_MODE},--junitfile build/junit-report/tests.xml,--format pkgname)
+TESTCONTAINERS_ENV := $(if ${HOST_EXECUTION_MODE},TESTCONTAINERS_RYUK_DISABLED=true,)
+
+HOST_EXECUTION_MODE := $(if ${LOCAL},true,${HOST_EXECUTION_MODE})
+LOCAL_LINKER := $(if ${LOCAL}, -Xlinker -no_warn_duplicate_libraries)
 # folder where project is located
 PROJECT_DIR := $(shell cd ${SELF_DIR} && $(PWD_CMD))
 
 # base folder of project. When we build inside docker, we should use /src as base folder
-BASE_DIR := $(if ${RUN_IN_GOCD},${PROJECT_DIR},/src)
+BASE_DIR := $(if ${HOST_EXECUTION_MODE},${PROJECT_DIR},/src)
+
 SCRIPTS_DIR := $(BASE_DIR)/scripts
 THIRD_PARTY_DIR := $(BASE_DIR)/thirdparty
 DOCS_DIR := $(BASE_DIR)/docs
-LOCAL_LINKER := $(if ${LOCAL}, -Xlinker -no_warn_duplicate_libraries)
 
 include ./scripts/scripts.mk
 include ./thirdparty/thirdparty.mk
@@ -26,21 +30,16 @@ include ./docs/docs.mk
 GOENV=GO111MODULE=on CGO_CFLAGS="-I${BORINGSSL_SUBMODULE} -I${BORINGSSL_SUBMODULE}/include" CGO_LDFLAGS="-L${BORINGSSL_BUILD}/crypto -lcrypto ${LOCAL_LINKER}"
 GO=${GOENV} go
 
-COVERAGE_OUT="$(mktemp -d)/coverage.out"
-
-TESTS_FORMATTER := $(if ${RUN_IN_GOCD},--junitfile build/junit-report/tests.xml,--format pkgname)
-TESTCONTAINERS_ENV := $(if ${RUN_IN_GOCD},TESTCONTAINERS_RYUK_DISABLED=true,)
-TEST_CLAUSE= $(if ${TEST}, -run ${TEST})
 BUILD_TAGS= $(if ${TAGS}, -tags=${TAGS})
 
 # mount ssh to fetch deps, TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal cause on macOS you need override https://github.com/testcontainers/testcontainers-java/blob/main/docs/supported_docker_environment/continuous_integration/dind_patterns.md#docker-only-example
-RUN_IN_DOCKER := docker run --mount type=bind,src=/run/host-services/ssh-auth.sock,target=/run/host-services/ssh-auth.sock -e SSH_AUTH_SOCK="/run/host-services/ssh-auth.sock" -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal --rm -it -v /tmp/.golangcicache:/tmp/.golangcicache -v /tmp/.gocache:/tmp/.gocache -v /tmp/.gomodcache:/tmp/.gomodcache -v /var/run/docker.sock:/var/run/docker.sock -v ${PROJECT_DIR}:/src ${BUILD_IMAGE_NAME} sh -c
-RUN_IN_CI := sh -c
-RUN_IN_CLAUSE= $(if ${RUN_IN_GOCD}, ${RUN_IN_CI}, ${RUN_IN_DOCKER})
+RUN_IN_DOCKER := docker run --platform linux/amd64 --mount type=bind,src=/run/host-services/ssh-auth.sock,target=/run/host-services/ssh-auth.sock -e SSH_AUTH_SOCK="/run/host-services/ssh-auth.sock" -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal --rm -it -v /tmp/.golangcicache:/tmp/.golangcicache -v /tmp/.gocache:/tmp/.gocache -v /tmp/.gomodcache:/tmp/.gomodcache -v /var/run/docker.sock:/var/run/docker.sock -v ${PROJECT_DIR}:/src ${BUILD_IMAGE_NAME} sh -c
+RUN_ON_HOST := sh -c
+RUN_IN_CLAUSE= $(if ${HOST_EXECUTION_MODE}, ${RUN_ON_HOST}, ${RUN_IN_DOCKER})
 
 .PHONY: all deps deps-go deps-boring codegen build build-nocgo bench clean \
- clean-test clean-fuzz cover githooks test test-long lint lint-long check-thirdparty deflake \
- deflake-long fuzz fuzz-long check-deps lint-long-go lint-long-go lint-short lint lint-long lint-fix \
+ clean-test clean-fuzz cover githooks test test-long check-thirdparty deflake \
+ deflake-long fuzz fuzz-long check-deps lint-go lint lint-fix \
 
 all: deps build lint test
 
@@ -57,7 +56,7 @@ deps: deps-go deps-boring
 deps-go:
 	${RUN_IN_CLAUSE} '${GO} mod download'
 	${RUN_IN_CLAUSE} '${GO} mod verify'
-	${RUN_IN_CLAUSE} '${GO} mod tidy -compat=1.23'
+	${RUN_IN_CLAUSE} '${GO} mod tidy -compat=1.24'
 
 codegen: pkg/base/errs/error_functions.gen.go pkg/base/errs/known_errors.gen.go
 
@@ -109,19 +108,16 @@ fuzz-long:
 	${RUN_IN_CLAUSE} 'make long-fuzz-test-pkg'
 
 check-deps:
-	${RUN_IN_CLAUSE}  'go list -json -m all | nancy sleuth -d /tmp/.ossindexcache'
+	# from: https://github.com/sonatype-nexus-community/nancy?tab=readme-ov-file#what-is-the-best-usage-of-nancy
+	# takes into account only dependencies that will end-up in the final binary
+	${RUN_IN_CLAUSE}  'go list -json -deps ./... | nancy sleuth --loud -d /tmp/.ossindexcache'
 
-lint-long-go:
-	${RUN_IN_CLAUSE} 'golangci-lint run --config=./.golangci-long.yml --timeout=120m'
+lint-go:
+	${RUN_IN_CLAUSE} 'golangci-lint run --config=./.golangci.yml --timeout=120m'
 
 lint-fix-go:
-	${RUN_IN_CLAUSE} 'golangci-lint run --fix --config=./.golangci-long.yml --timeout=120m'
+	${RUN_IN_CLAUSE} 'golangci-lint run --fix --config=./.golangci.yml --timeout=120m'
 
-lint-short:
-	${RUN_IN_CLAUSE} 'golangci-lint run --fix --config=./.golangci-short.yml --timeout=120m'
-
-lint: lint-short
-
-lint-long: check-deps lint-long-go
+lint: check-deps lint-go
 
 lint-fix: check-deps lint-fix-go

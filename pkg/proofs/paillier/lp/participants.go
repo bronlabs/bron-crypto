@@ -6,13 +6,13 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/nthroots"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/encryptions/paillier"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroots"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 const (

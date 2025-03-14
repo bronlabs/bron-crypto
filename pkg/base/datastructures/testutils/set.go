@@ -5,9 +5,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	fu "github.com/bronlabs/krypton-primitives/pkg/base/fuzzutils"
-	"github.com/bronlabs/krypton-primitives/pkg/base/utils/itertools"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	fu "github.com/bronlabs/bron-crypto/pkg/base/fuzzutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/itertools"
 )
 
 type SetInvariants[S ds.Set[E], E any] struct{}

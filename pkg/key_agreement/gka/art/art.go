@@ -3,12 +3,12 @@ package art
 import (
 	"sort"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/tree"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/utils"
-	"github.com/bronlabs/krypton-primitives/pkg/key_agreement/dh"
-	"github.com/bronlabs/krypton-primitives/pkg/key_agreement/tripledh"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/tree"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh"
+	"github.com/bronlabs/bron-crypto/pkg/key_agreement/tripledh"
 )
 
 type AsynchronousRatchetTree struct {

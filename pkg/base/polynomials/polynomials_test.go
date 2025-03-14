@@ -6,11 +6,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	p "github.com/bronlabs/krypton-primitives/pkg/base/polynomials"
-	"github.com/bronlabs/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	p "github.com/bronlabs/bron-crypto/pkg/base/polynomials"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/lagrange"
 )
 
 func TestNewPoly(t *testing.T) {

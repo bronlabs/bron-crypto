@@ -5,9 +5,9 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	saferith_utils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	saferith_utils "github.com/bronlabs/bron-crypto/pkg/base/utils/saferith"
 )
 
 type Groupoid[G algebra.Groupoid[G, E], E algebra.GroupoidElement[G, E]] struct {

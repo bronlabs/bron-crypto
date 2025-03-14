@@ -7,8 +7,8 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/utils/numutils"
-	saferith_utils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/numutils"
+	saferith_utils "github.com/bronlabs/bron-crypto/pkg/base/utils/saferith"
 )
 
 func verify(mu *saferith.Nat, w1 *saferith.Nat, w2 *saferith.Nat, w3 *saferith.Nat, w4 *saferith.Nat) bool {

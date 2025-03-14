@@ -1,6 +1,6 @@
 package testutils
 
-import "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/pedersen/testutils"
+import "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/pedersen/testutils"
 
 var (
 	MakeDkgParticipants = testutils.MakeParticipants

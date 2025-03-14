@@ -10,21 +10,21 @@ package noninteractive_test
 // 	"strings"
 // 	"testing"
 
-// 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+// 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 // 	"github.com/stretchr/testify/require"
 // 	"golang.org/x/crypto/sha3"
 
-// 	"github.com/bronlabs/krypton-primitives/pkg/base/combinatorics"
-// 	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-// 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-// 	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-// 	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-// 	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-// 	"github.com/bronlabs/krypton-primitives/pkg/network"
-// 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-// 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/trusted_dealer"
-// 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/signing"
-// 	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
+// 	"github.com/bronlabs/bron-crypto/pkg/base/combinatorics"
+// 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+// 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+// 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+// 	"github.com/bronlabs/bron-crypto/pkg/base/types"
+// 	ttu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
+// 	"github.com/bronlabs/bron-crypto/pkg/network"
+// 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/dkls23"
+// 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/trusted_dealer"
+// 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/dkls23/signing"
+// 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/dkls23/testutils"
 // )
 
 // var testCurves = []curves.Curve{k256.NewCurve(), p256.NewCurve()}

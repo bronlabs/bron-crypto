@@ -1,8 +1,8 @@
 package algebra
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/combinatorics"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/combinatorics"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 )
 
 type MorphismComposition[X, Y, Z Object, x, y, z Element] interface {

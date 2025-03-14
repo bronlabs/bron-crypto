@@ -1,8 +1,8 @@
 package hjky
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/pedersen"
 )
 
 type Round1Broadcast = pedersen.Round1Broadcast

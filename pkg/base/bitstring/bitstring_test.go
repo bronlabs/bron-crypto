@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
+	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
 )
 
 func TestReverseBytes(t *testing.T) {

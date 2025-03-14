@@ -1,7 +1,7 @@
 package sigma
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const (

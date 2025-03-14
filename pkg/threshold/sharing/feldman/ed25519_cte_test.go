@@ -7,13 +7,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/internal"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler"
-	randomisedFischlin "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/internal"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
+	randomisedFischlin "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 )
 
 func Test_MeasureConstantTime_split(t *testing.T) {

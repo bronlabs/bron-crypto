@@ -6,9 +6,9 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/commitments"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
 var _ commitments.Verifier[Message, *Commitment, *Opening] = (*Verifier)(nil)

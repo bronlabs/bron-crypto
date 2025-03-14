@@ -3,8 +3,8 @@ package kk
 import (
 	"bytes"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/key_agreement/noise"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/key_agreement/noise"
 )
 
 func (p *Participant) Round1(input *noise.P2PMessage) (*noise.P2PMessage, error) {

@@ -9,9 +9,9 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	bls12381impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
+	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
+	bls12381impl "github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/arithmetic/limb4"
 )
 
 func TestFqSetOne(t *testing.T) {

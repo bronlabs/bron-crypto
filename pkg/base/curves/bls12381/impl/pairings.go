@@ -1,7 +1,7 @@
 package bls12381impl
 
 import (
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 )
 
 const coefficientsG2 = 68

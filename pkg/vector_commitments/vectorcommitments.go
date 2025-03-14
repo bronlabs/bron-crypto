@@ -1,8 +1,8 @@
 package vectorcommitments
 
 import (
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/commitments"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
 )
 
 type Vector[VectorElement commitments.Message] interface {

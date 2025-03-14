@@ -5,14 +5,14 @@ import (
 	"io"
 	"sort"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curveutils"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	hashcommitments "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 const transcriptLabel = "KRYPTON_PRZS_ZERO_SETUP-"

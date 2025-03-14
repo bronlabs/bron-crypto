@@ -4,10 +4,10 @@ import (
 	crand "crypto/rand"
 	"crypto/subtle"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/ct"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/ot"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
 /*.-------------------- RANDOM OBLIVIOUS TRANSFER (ROT) ---------------------.*/

@@ -3,8 +3,8 @@ package impl
 import (
 	"sync"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/arithmetic/limb4"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl/fp"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/arithmetic/limb4"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl/fp"
 )
 
 var (

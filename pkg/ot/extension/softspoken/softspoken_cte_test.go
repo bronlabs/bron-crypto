@@ -7,14 +7,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/internal"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/ot"
-	vsot_testutils "github.com/bronlabs/krypton-primitives/pkg/ot/base/vsot/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/ot/extension/softspoken"
-	ot_testutils "github.com/bronlabs/krypton-primitives/pkg/ot/testutils"
+	"github.com/bronlabs/bron-crypto/internal"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/ot"
+	vsot_testutils "github.com/bronlabs/bron-crypto/pkg/ot/base/vsot/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
+	ot_testutils "github.com/bronlabs/bron-crypto/pkg/ot/testutils"
 )
 
 func Test_MeasureConstantTime_round1(t *testing.T) {

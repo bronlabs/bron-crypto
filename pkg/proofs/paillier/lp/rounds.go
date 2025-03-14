@@ -3,8 +3,8 @@ package lp
 import (
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
 func (verifier *Verifier) Round1() (output *Round1Output, err error) {

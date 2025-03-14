@@ -1,16 +1,16 @@
 package signing
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	hashcommitments "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
-	"github.com/bronlabs/krypton-primitives/pkg/network"
-	"github.com/bronlabs/krypton-primitives/pkg/ot/base/bbot"
-	mult "github.com/bronlabs/krypton-primitives/pkg/threshold/mult/dkls23"
-	zeroSetup "github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/zero/rprzs/setup"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curveutils"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	hashcommitments "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/ot/base/bbot"
+	mult "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23"
+	zeroSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs/setup"
 )
 
 var _ network.Message[types.ThresholdSignatureProtocol] = (*Round1P2P)(nil)

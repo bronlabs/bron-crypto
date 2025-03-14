@@ -3,14 +3,14 @@ package jf
 import (
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/network"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/dkg"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/pedersen"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
+	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures"
 )
 
 const (

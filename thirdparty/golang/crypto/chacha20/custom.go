@@ -3,8 +3,8 @@ package chacha20
 import (
 	"encoding/binary"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	"github.com/bronlabs/krypton-primitives/thirdparty/golang/crypto/internal/alias"
+	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
+	"github.com/bronlabs/bron-crypto/thirdparty/golang/crypto/internal/alias"
 )
 
 type FastKeyErasureCipher struct {

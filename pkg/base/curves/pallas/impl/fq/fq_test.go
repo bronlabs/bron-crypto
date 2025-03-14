@@ -9,7 +9,7 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pallas/impl/fq"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pallas/impl/fq"
 )
 
 func TestFqSetOne(t *testing.T) {

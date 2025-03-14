@@ -6,18 +6,18 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/paillier"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/trusted_dealer"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curveutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	saferithUtils "github.com/bronlabs/bron-crypto/pkg/base/utils/saferith"
+	"github.com/bronlabs/bron-crypto/pkg/encryptions/paillier"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trusted_dealer"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/lindell17"
 )
 
 const (
@@ -40,7 +40,7 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[t
 
 	eCurve, err := curveutils.ToGoEllipticCurve(curve)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not convert krypton curve to go curve")
+		return nil, errs.WrapFailed(err, "could not convert bron curve to go curve")
 	}
 
 	ecdsaPrivateKey, err := ecdsa.GenerateKey(eCurve, prng)

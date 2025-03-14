@@ -6,16 +6,16 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/trusted_dealer"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curveutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	saferithUtils "github.com/bronlabs/bron-crypto/pkg/base/utils/saferith"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trusted_dealer"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/dkls23"
 )
 
 func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.IdentityKey, *dkls23.Shard], error) {
@@ -28,7 +28,7 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.Iden
 
 	eCurve, err := curveutils.ToGoEllipticCurve(protocol.Curve())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not convert krypton curve to elliptic curve")
+		return nil, errs.WrapFailed(err, "could not convert bron curve to elliptic curve")
 	}
 	ecdsaPrivateKey, err := ecdsa.GenerateKey(eCurve, prng)
 	if err != nil {
@@ -43,7 +43,7 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.Iden
 	)
 	publicKey, err := protocol.Curve().NewPoint(px, py)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not convert go public key bytes to a krypton point")
+		return nil, errs.WrapSerialisation(err, "could not convert go public key bytes to a bron point")
 	}
 	calculatedPublicKey := protocol.Curve().ScalarBaseMult(privateKey)
 	if !calculatedPublicKey.Equal(publicKey) {
