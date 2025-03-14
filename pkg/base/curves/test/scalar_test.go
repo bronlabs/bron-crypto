@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
+	saferithUtils "github.com/bronlabs/bron-crypto/pkg/base/utils/saferith"
 )
 
 func Test_ScalarCmp(t *testing.T) {

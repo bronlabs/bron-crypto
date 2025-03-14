@@ -4,8 +4,8 @@ import (
 	"github.com/cronokirby/saferith"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/utils/numutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/numutils"
 )
 
 type FastModulus interface {

@@ -1,8 +1,8 @@
 package points
 
 import (
-	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 func ScalarMul[FP fieldsImpl.FiniteField[FP], PP PointPtrConstraint[FP, PP, P], P any](out, pp *P, s []byte) {

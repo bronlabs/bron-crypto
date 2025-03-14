@@ -1,4 +1,4 @@
-module github.com/bronlabs/krypton-primitives/tools/edwards25519-tester
+module github.com/bronlabs/bron-crypto/tools/edwards25519-tester
 
 go 1.24
 

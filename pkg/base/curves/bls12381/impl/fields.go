@@ -1,9 +1,9 @@
-//go:generate go run github.com/bronlabs/krypton-primitives/tools/field-codegen --mode word-by-word-montgomery --modulus "0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab" --type Fp --sqrt sqrt
-//go:generate go run github.com/bronlabs/krypton-primitives/tools/field-codegen --mode word-by-word-montgomery --modulus "0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001" --type Fq --sqrt sqrt
+//go:generate go run github.com/bronlabs/bron-crypto/tools/field-codegen --mode word-by-word-montgomery --modulus "0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab" --type Fp --sqrt sqrt
+//go:generate go run github.com/bronlabs/bron-crypto/tools/field-codegen --mode word-by-word-montgomery --modulus "0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001" --type Fq --sqrt sqrt
 package impl
 
 import (
-	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 )
 
 var (

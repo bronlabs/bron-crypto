@@ -4,7 +4,7 @@ import (
 	"cmp"
 	"io"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
 )
 
 type Share interface {

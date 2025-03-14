@@ -9,7 +9,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 )
 
 func randUint128() Uint128 {

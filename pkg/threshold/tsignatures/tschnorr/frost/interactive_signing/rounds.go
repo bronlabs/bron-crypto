@@ -1,16 +1,16 @@
 package interactive_signing
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/network"
-	vanillaSchnorr "github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/vanilla"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/aggregation"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/helpers"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	vanillaSchnorr "github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/vanilla"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/frost"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/aggregation"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/frost/interactive_signing/helpers"
 )
 
 func (ic *Cosigner) Round1() (r1b *Round1Broadcast, err error) {

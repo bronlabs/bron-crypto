@@ -1,7 +1,7 @@
 package testutils
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 	"github.com/stretchr/testify/require"
 	"testing"
 )

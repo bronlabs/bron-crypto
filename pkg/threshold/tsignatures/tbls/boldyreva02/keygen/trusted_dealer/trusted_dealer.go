@@ -3,15 +3,15 @@ package trusted_dealer
 import (
 	"io"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/bls"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/trusted_dealer"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tbls/boldyreva02"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trusted_dealer"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tbls/boldyreva02"
 )
 
 func Keygen[K bls.KeySubGroup](protocol types.ThresholdProtocol, prng io.Reader) (ds.Map[types.IdentityKey, *boldyreva02.Shard[K]], error) {

@@ -1,6 +1,6 @@
 package impl
 
-import "github.com/bronlabs/krypton-primitives/pkg/base/algebra"
+import "github.com/bronlabs/bron-crypto/pkg/base/algebra"
 
 type Field[F algebra.Field[F, E], E algebra.FieldElement[F, E]] struct {
 	algebra.Field[F, E]

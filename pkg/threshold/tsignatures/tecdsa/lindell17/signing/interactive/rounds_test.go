@@ -9,22 +9,22 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/ecdsa"
-	gennaroTu "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
-	lindell17DkgTestutils "github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
-	interactiveSigning "github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/signing/interactive"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
+	ttu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
+	gennaroTu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/lindell17"
+	lindell17DkgTestutils "github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
+	interactiveSigning "github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/lindell17/signing/interactive"
 
-	_ "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
+	_ "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 )
 
 const cn = fischlin.Name

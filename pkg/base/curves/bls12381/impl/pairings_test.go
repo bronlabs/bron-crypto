@@ -9,10 +9,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	bls12381Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
-	fieldsTu "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields/testutils"
-	pointsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/points"
-	pointsTu "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/points/testutils"
+	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381/impl"
+	fieldsTu "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields/testutils"
+	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
+	pointsTu "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points/testutils"
 
 	_ "embed"
 )

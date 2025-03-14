@@ -5,7 +5,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 )
 
 type Parameters struct {

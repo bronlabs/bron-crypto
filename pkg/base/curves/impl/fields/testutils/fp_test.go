@@ -3,7 +3,7 @@ package testutils_test
 import (
 	_ "embed"
 	"encoding/json"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields/testutils"
 	"github.com/stretchr/testify/require"
 	"testing"
 )

@@ -1,7 +1,7 @@
 package elligator2
 
 import (
-	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 )
 
 var (

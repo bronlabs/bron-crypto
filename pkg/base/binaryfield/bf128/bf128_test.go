@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/binaryfield/bf128"
+	"github.com/bronlabs/bron-crypto/pkg/base/binaryfield/bf128"
 )
 
 func TestF2e128Mult(t *testing.T) {

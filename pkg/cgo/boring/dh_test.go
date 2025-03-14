@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/cgo/boring"
+	"github.com/bronlabs/bron-crypto/pkg/cgo/boring"
 )
 
 func Test_LongDhGen(t *testing.T) {

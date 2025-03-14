@@ -8,15 +8,15 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/dleq/chaum"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/schnorr"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/nthroots"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/modular"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dleq/chaum"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroots"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func Benchmark_Schnorr(b *testing.B) {

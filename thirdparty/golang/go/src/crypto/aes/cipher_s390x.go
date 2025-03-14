@@ -12,7 +12,7 @@ import (
 
 	"golang.org/x/sys/cpu"
 
-	"github.com/bronlabs/krypton-primitives/thirdparty/golang/go/src/crypto/internal/alias"
+	"github.com/bronlabs/bron-crypto/thirdparty/golang/go/src/crypto/internal/alias"
 )
 
 type code int

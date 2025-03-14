@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/exp/constraints"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 var _ ObjectAdapter[int] = (*IntegerAdapter[int])(nil)

@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 func Test_CeilDiv(t *testing.T) {

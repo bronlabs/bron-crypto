@@ -9,12 +9,12 @@ import (
 	"hash"
 	"slices"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/utils"
-	"github.com/bronlabs/krypton-primitives/pkg/csprng"
-	"github.com/bronlabs/krypton-primitives/pkg/encryptions/cipher"
-	keyedaes "github.com/bronlabs/krypton-primitives/thirdparty/golang/go/src/crypto/aes"
+	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/csprng"
+	"github.com/bronlabs/bron-crypto/pkg/encryptions/cipher"
+	keyedaes "github.com/bronlabs/bron-crypto/thirdparty/golang/go/src/crypto/aes"
 )
 
 const (

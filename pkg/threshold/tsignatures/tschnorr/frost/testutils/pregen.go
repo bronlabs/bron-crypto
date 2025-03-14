@@ -4,10 +4,10 @@ import (
 	crand "crypto/rand"
 	"sort"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/network"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/frost/noninteractive_signing"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/frost/noninteractive_signing"
 )
 
 func MakePreGenParticipants(protocol types.ThresholdProtocol, tau int) (participants []*noninteractive_signing.PreGenParticipant, err error) {

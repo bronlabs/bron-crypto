@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	hash_comm "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
+	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 )
 
 func Test_ValidCommitment(t *testing.T) {

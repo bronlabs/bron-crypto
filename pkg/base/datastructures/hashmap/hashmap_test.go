@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
-	concurrentMap "github.com/bronlabs/krypton-primitives/pkg/base/datastructures/map"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	concurrentMap "github.com/bronlabs/bron-crypto/pkg/base/datastructures/map"
 )
 
 type data struct {

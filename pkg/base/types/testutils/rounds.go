@@ -1,8 +1,8 @@
 package testutils
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/stretchr/testify/require"
 	"reflect"
 )

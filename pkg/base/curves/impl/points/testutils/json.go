@@ -3,9 +3,9 @@ package testutils
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
-	fieldsTu "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields/testutils"
-	pointsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/points"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
+	fieldsTu "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields/testutils"
+	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
 )
 
 type PointJson[FP fields.FiniteFieldPtrConstraint[FP, F], PP pointsImpl.PointPtrConstraint[FP, PP, P], F, P any] struct {

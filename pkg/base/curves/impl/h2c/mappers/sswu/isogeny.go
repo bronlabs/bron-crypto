@@ -1,7 +1,7 @@
 package sswu
 
 import (
-	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 )
 
 func mapIso[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], P ZeroPointMapperParams[FP, F], F any](xnOut, xdOut, ynOut, ydOut *F, params P, xIn, yIn *F) {

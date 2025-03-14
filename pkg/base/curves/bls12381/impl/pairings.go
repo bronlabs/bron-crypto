@@ -1,9 +1,9 @@
 package impl
 
 import (
-	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/h2c"
-	pointsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/points"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
+	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
 )
 
 const coefficientsG2 = 68

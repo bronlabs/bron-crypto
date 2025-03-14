@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
-	"github.com/bronlabs/krypton-primitives/pkg/csprng/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+	"github.com/bronlabs/bron-crypto/pkg/csprng/testutils"
 )
 
 var curve = pasta.NewPallasCurve()

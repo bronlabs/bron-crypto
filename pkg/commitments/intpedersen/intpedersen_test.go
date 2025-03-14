@@ -8,7 +8,7 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	intpedersen_comm "github.com/bronlabs/krypton-primitives/pkg/commitments/intpedersen"
+	intpedersen_comm "github.com/bronlabs/bron-crypto/pkg/commitments/intpedersen"
 )
 
 func Test_ValidCommitment(t *testing.T) {

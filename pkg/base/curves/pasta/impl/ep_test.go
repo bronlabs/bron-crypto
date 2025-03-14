@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	pastaImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta/impl"
+	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
 
 	_ "embed"
 )

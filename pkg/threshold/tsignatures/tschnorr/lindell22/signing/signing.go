@@ -3,15 +3,15 @@ package signing
 import (
 	"sort"
 
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/eddsa"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/vanilla"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/eddsa"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/vanilla"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr"
 )
 
 func BigS(participants ds.Set[types.IdentityKey]) []byte {

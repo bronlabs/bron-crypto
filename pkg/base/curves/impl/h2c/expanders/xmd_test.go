@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/h2c"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
 
 	_ "embed"
 )

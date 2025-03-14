@@ -6,11 +6,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/polynomials/interpolation/lagrange"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	feldman_vss "github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/lagrange"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	feldman_vss "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 )
 
 func Test_Sanity(t *testing.T) {

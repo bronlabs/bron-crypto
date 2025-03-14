@@ -9,28 +9,28 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing"
-	hashing_bip340 "github.com/bronlabs/krypton-primitives/pkg/hashing/bip340"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing/poseidon"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/bip340"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/mina"
-	vanillaSchnorr "github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/vanilla"
-	"github.com/bronlabs/krypton-primitives/pkg/signatures/schnorr/zilliqa"
-	gennaroTu "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tschnorr/lindell22/signing/interactive/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	ttu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	hashing_bip340 "github.com/bronlabs/bron-crypto/pkg/hashing/bip340"
+	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/bip340"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/mina"
+	vanillaSchnorr "github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/vanilla"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/zilliqa"
+	gennaroTu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/lindell22/signing/interactive/testutils"
 )
 
 func Test_SanityCheck(t *testing.T) {
@@ -72,12 +72,12 @@ func Test_SanityCheck(t *testing.T) {
 	require.True(t, ok)
 
 	// verify krypton
-	kryptonSignature := schnorr.NewSignature(vanillaSchnorr.NewEdDsaCompatibleVariant(), nil, bigR, bigS)
-	kryptonPublicKey := &vanillaSchnorr.PublicKey{
+	bronSignature := schnorr.NewSignature(vanillaSchnorr.NewEdDsaCompatibleVariant(), nil, bigR, bigS)
+	bronPublicKey := &vanillaSchnorr.PublicKey{
 		A: publicKey,
 	}
 
-	err = vanillaSchnorr.Verify(suite, kryptonPublicKey, message, kryptonSignature)
+	err = vanillaSchnorr.Verify(suite, bronPublicKey, message, bronSignature)
 	require.NoError(t, err)
 }
 

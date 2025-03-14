@@ -6,7 +6,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 )
 
 // Structure is a type that implements methods needed for the corresponding structured set. Example: Some struct that

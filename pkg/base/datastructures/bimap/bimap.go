@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"iter"
 
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 var _ ds.BiMap[int, any] = &BiMap[int, any]{}

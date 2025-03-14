@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/h2c"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
 )
 
 type ShortWeierstrassCurveParams[FP fieldsImpl.FiniteField[FP]] interface {

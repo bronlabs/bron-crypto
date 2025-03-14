@@ -3,7 +3,7 @@
 package boring
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/cronokirby/saferith"
 )
 

@@ -2,19 +2,19 @@ package testutils
 
 import (
 	crand "crypto/rand"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
 	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/network"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17"
-	lindell17Dkg "github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	ttu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/lindell17"
+	lindell17Dkg "github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const cn = fischlin.Name

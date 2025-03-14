@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	bls12381Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
+	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381/impl"
 
 	_ "embed"
 )

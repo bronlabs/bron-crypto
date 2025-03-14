@@ -3,7 +3,7 @@ package sswu
 import (
 	"encoding/binary"
 
-	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 )
 
 func SqrtRatio[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](yOut *F, c1 uint64, c3 []uint8, c4, c5 uint64, c6, c7, u, v *F) (ok uint64) {

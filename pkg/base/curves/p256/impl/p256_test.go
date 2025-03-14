@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	p256Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl"
+	p256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/p256/impl"
 
 	_ "embed"
 )

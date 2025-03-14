@@ -5,8 +5,8 @@ import (
 	"iter"
 	"sync"
 
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 var _ ds.ConcurrentMap[any, any] = (*ConcurrentMap[any, any])(nil)

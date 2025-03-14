@@ -1,9 +1,9 @@
 package testutils
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	"github.com/bronlabs/krypton-primitives/pkg/csprng"
-	"github.com/bronlabs/krypton-primitives/pkg/csprng/fkechacha20"
+	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
+	"github.com/bronlabs/bron-crypto/pkg/csprng"
+	"github.com/bronlabs/bron-crypto/pkg/csprng/fkechacha20"
 )
 
 // MakeTestPrng creates a new deterministic PRNG for testing purposes. The seed

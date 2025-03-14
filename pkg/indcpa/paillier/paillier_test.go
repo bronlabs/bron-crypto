@@ -14,7 +14,7 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
+	"github.com/bronlabs/bron-crypto/pkg/indcpa/paillier"
 )
 
 func Test_RoundTrip(t *testing.T) {

@@ -10,15 +10,15 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
-	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/range"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
-	fiatShamir "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fischlin"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/randfischlin"
-	zkcompiler "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/zk"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/indcpa/paillier"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	fiatShamir "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
+	zkcompiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/zk"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 const primeLen = 512

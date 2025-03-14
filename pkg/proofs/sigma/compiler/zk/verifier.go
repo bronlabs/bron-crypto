@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
-	k256Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/commitments"
-	pedersen_comm "github.com/bronlabs/krypton-primitives/pkg/commitments/pedersen"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
+	pedersen_comm "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {

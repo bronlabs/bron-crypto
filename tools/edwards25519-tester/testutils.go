@@ -2,8 +2,8 @@ package edwards25519_tester
 
 import (
 	filippo "filippo.io/edwards25519"
-	edwards25519Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519/impl"
-	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
+	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 	"github.com/stretchr/testify/require"
 	"io"
 	"testing"

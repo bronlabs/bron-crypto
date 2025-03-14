@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 )
 
 func Benchmark_K256(b *testing.B) {

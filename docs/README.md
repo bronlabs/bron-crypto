@@ -1,5 +1,5 @@
-# Krypton Primitives Specification
-This repository contains the Latex skeleton for the cryptographic specification of the `krypton-primitives` library. The specification is written in Latex and is divided into several sections, drawing most of its content from the `docs` folders inside most packages in source code of the library.
+# Bron Crypto Specification
+This repository contains the Latex skeleton for the cryptographic specification of the `bron-crypto` library. The specification is written in Latex and is divided into several sections, drawing most of its content from the `docs` folders inside most packages in source code of the library.
 
 --------------------------
 --------------------------
@@ -13,7 +13,7 @@ The `docs/release` folder contains the latest release of the specification. The 
 The docs are build using `latexmk` in a docker container with a full TeXLive installation. To build the docs, you need to have `docker` installed on your machine. If document generation fails silently, uncomment the `VERBOSE` variable in the `docs.mk` file to see the full output of the `latexmk` command.
 
 #### The spec
-To build the main spec, run from the krypton-primitives root folder:
+To build the main spec, run from the bron-crypto root folder:
 
 ```bash
 make spec
@@ -21,24 +21,24 @@ make spec
 
 #### Standalone algorithms in a certain package
 
-To build the standalone algorithms in a certain package, run from the krypton-primitives root folder:
+To build the standalone algorithms in a certain package, run from the bron-crypto root folder:
 
 ```bash
-make standalone-docs KRYPTON_PKG="<package>"
+make standalone-docs BRON_PKG="<package>"
 ```
 
 where `<package>` is the name of the package you want to build the standalone algorithms for, relative to the `pkg` folder (e.g., `tanscripts`, `csprng/krand`)
 
 #### All standalone algorithms
 
-To build all standalone algorithms, run from the krypton-primitives root folder:
+To build all standalone algorithms, run from the bron-crypto root folder:
 
 ```bash
 make all-standalone-docs
 ```
 
 #### Debugging docs build issues
-If no PDF is generated, run the build command with the `VERBOSE` variable set to `--verbose`. E.g., (for the main spec) run from the krypton-primitives root folder:
+If no PDF is generated, run the build command with the `VERBOSE` variable set to `--verbose`. E.g., (for the main spec) run from the bron-crypto root folder:
 
 ```bash
 make spec VERBOSE="--verbose"
@@ -46,7 +46,7 @@ make spec VERBOSE="--verbose"
 
 ## Cleaning the docs
 
-To clean the docs, run from the krypton-primitives root folder:
+To clean the docs, run from the bron-crypto root folder:
 
 ```bash
 make clean-docs
@@ -66,15 +66,15 @@ A doc inside a package can contain the following elements:
 
 Packages can contain any combination of these elements, but none are required. There can be multiple sections, algorithms, and functionalities in a single package.
 
-To tie these elements together, the `krypton-primitives/docs/src` folder contains the skeleton of the full specification document, with a `main.tex` file that includes all the sections, algorithms, and functionalities in the correct order.
+To tie these elements together, the `bron-crypto/docs/src` folder contains the skeleton of the full specification document, with a `main.tex` file that includes all the sections, algorithms, and functionalities in the correct order.
 
 To write a new doc inside a package, create a new `.tex` file in the `pkg/**/docs/section`, `pkg/**/docs/algorithm`, or `pkg/**/docs/functionality` folder, and include it in the appropriate section in the `docs/src` folder. Use an existing `.tex` file from another package as template.
 
 **How to generate spec for a package.**
-Each package with an existing `**/docs/algorithms/*.tex` file can be built as a standalone document with the `make standalone-docs KRYPTON_PKG="<package>"` command (see above). This will generate a standalone PDF file for the package in that package's `**/docs` folder.
+Each package with an existing `**/docs/algorithms/*.tex` file can be built as a standalone document with the `make standalone-docs BRON_PKG="<package>"` command (see above). This will generate a standalone PDF file for the package in that package's `**/docs` folder.
 
 **How to generate spec for threshold signing.**
-The full spec contains a section on threshold signing. To generate the full spec, run `make spec` from the krypton-primitives root folder.
+The full spec contains a section on threshold signing. To generate the full spec, run `make spec` from the bron-crypto root folder.
 
 If a specific threshold signing spec is desired, strip the relevant parts from the `docs/main.tex` file and include them in a new `.tex` file in the `docs/src` folder. Then adapt the `docs.mk` build command alongside the `docs/build.py` script to manage the new file instead of the original `main.tex` (without the standalone machinery).
 

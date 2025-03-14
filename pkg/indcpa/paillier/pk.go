@@ -9,9 +9,9 @@ import (
 	"github.com/cronokirby/saferith"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/modular"
-	"github.com/bronlabs/krypton-primitives/pkg/indcpa"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/modular"
+	"github.com/bronlabs/bron-crypto/pkg/indcpa"
 )
 
 var (

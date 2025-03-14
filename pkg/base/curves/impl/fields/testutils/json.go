@@ -3,7 +3,7 @@ package testutils
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 	"math/big"
 	"slices"
 )

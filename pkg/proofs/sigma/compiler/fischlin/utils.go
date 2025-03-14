@@ -3,10 +3,10 @@ package fischlin
 import (
 	"encoding/binary"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
 func hash(b uint64, commonH []byte, i uint64, challenge sigma.ChallengeBytes, serializedResponse []byte) ([]byte, error) {

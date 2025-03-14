@@ -10,10 +10,10 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	saferithUtils "github.com/bronlabs/krypton-primitives/pkg/base/utils/saferith"
-	"github.com/bronlabs/krypton-primitives/pkg/csprng/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	saferithUtils "github.com/bronlabs/bron-crypto/pkg/base/utils/saferith"
+	"github.com/bronlabs/bron-crypto/pkg/csprng/testutils"
 )
 
 func TestScalarK256Random(t *testing.T) {

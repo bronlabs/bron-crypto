@@ -9,12 +9,12 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/indcpa/paillier"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/lpdl"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/indcpa/paillier"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lpdl"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func Test_HappyPath(t *testing.T) {

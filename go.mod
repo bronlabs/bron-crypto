@@ -1,4 +1,4 @@
-module github.com/bronlabs/krypton-primitives
+module github.com/bronlabs/bron-crypto
 
 go 1.24
 

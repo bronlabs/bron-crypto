@@ -1,7 +1,7 @@
 package sswu
 
 import (
-	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 )
 
 type ZeroPointMapperParams[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any] interface {

@@ -5,9 +5,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/bimap"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bimap"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 )
 
 type dataV struct {

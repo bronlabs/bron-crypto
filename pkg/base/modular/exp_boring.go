@@ -3,8 +3,8 @@
 package modular
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/cgo/boring"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/cgo/boring"
 	"github.com/cronokirby/saferith"
 	"golang.org/x/sync/errgroup"
 )

@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curve25519"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 )
 
 // test results are based on parameters on https://cr.yp.to/ecdh/curve25519-20060209.pdf

@@ -3,11 +3,11 @@ package curves_test
 import (
 	"testing"
 
-	bls12381Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/bls12381/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/points"
-	k256Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl"
-	p256Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/p256/impl"
-	pastaImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/pasta/impl"
+	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
+	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
+	p256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/p256/impl"
+	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
 )
 
 func Benchmark_K256(b *testing.B) {

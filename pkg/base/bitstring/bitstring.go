@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/exp/constraints"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 // ReverseBytes reverses the order of the bytes in a new slice.

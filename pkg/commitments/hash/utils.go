@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/crypto/blake2b"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 func NewCommittingKeyFromCrsBytes(sessionId []byte, crs ...[]byte) (*CommittingKey, error) {

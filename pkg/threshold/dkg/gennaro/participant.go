@@ -1,13 +1,13 @@
 package gennaro
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	pedersen_comm "github.com/bronlabs/krypton-primitives/pkg/commitments/pedersen"
-	feldman_vss "github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/feldman"
-	pedersen_vss "github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/pedersen"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	pedersen_comm "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
+	feldman_vss "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	pedersen_vss "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"io"
 )
 

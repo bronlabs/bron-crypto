@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/h2c/expanders"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c/expanders"
 )
 
 type MessageExpander interface {

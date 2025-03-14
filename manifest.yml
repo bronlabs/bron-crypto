@@ -1,7 +1,7 @@
 info:
-  name: krypton-primitives
+  name: bron-crypto
   version: "0.1"
-  category: krypton
+  category: mpc
 
 include:
   - file: /etc/serve/include.d/library.yml
@@ -13,4 +13,4 @@ conf:
     "*": "test-{{ vars.test-suite }}"
 
 build:
-  - golang: make deps build lint-long {{ conf.test-suite }}
+  - golang: make deps build lint {{ conf.test-suite }}

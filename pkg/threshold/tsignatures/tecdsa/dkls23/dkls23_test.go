@@ -8,10 +8,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/trusted_dealer"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	ttu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/dkls23"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/trusted_dealer"
 )
 
 func Test_ShardSerialisationToJSONRoundTrip(t *testing.T) {

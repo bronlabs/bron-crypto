@@ -1,4 +1,4 @@
-module github.com/bronlabs/krypton-primitives/tools/field-codegen
+module github.com/bronlabs/bron-crypto/tools/field-codegen
 
 go 1.24
 

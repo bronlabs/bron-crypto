@@ -3,7 +3,7 @@ package testutils
 import (
 	_ "embed"
 	"encoding/binary"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 	"io"
 	"math/bits"
 )

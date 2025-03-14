@@ -3,7 +3,7 @@ import argparse
 import subprocess
 import jinja2
 
-KRYPTON_PRIMITIVES_URL = "https://github.com/bronlabs/krypton-primitives"
+BRON_CRYPTO_URL = "https://github.com/bronlabs/bron-crypto"
 
 
 def setup():
@@ -22,11 +22,11 @@ def setup():
     build_path = docs_path / "build"
     templates_path = docs_path / "src" / "templates"
 
-    if root_path.name != "krypton-primitives" or not (
+    if root_path.name != "bron-crypto" or not (
         pkg_path.exists() and docs_path.exists() and templates_path.exists()
     ):
         raise RuntimeError(
-            "This script must be run from the krypton-primitives root folder"
+            "This script must be run from the bron-crypto root folder"
         )
     build_path.mkdir(exist_ok=True)
 
@@ -48,9 +48,9 @@ def buildLatex(tex_file: Path, verbose: bool = False):
             "run",
             "--rm",  # Remove container after running
             "-v",
-            f"{str(root_path)}:/krypton-primitives",  # Mount the main dir
+            f"{str(root_path)}:/bron-crypto",  # Mount the main dir
             "-w",
-            "/krypton-primitives/docs",  # Set working dir to main `docs`
+            "/bron-crypto/docs",  # Set working dir to main `docs`
             "texlive/texlive:latest-full",  # Use the texlive docker image
             "latexmk",  # Run the latexmk command...
             "-synctex=1",  # ...with synctex (click on PDF)...
@@ -86,7 +86,7 @@ def buildStandaloneLatex(standalone_file: Path, verbose: bool = False):
     # Render the template
     filled_template = template.render(
         input_cmd=f"\\inputAlgorithm{{{go_pkg}}}{{{standalone_file.name}}}",
-        pkg_url_cmd=f"\\href{{{KRYPTON_PRIMITIVES_URL}/{go_pkg}}}{{{go_pkg}}}",
+        pkg_url_cmd=f"\\href{{{BRON_CRYPTO_URL}/{go_pkg}}}{{{go_pkg}}}",
     )
 
     # Write the filled template to the `docs` directory
@@ -141,7 +141,7 @@ def cleanLatex():
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Build krypton primitives docs from LaTeX files"
+        description="Build bron crypto docs from LaTeX files"
     )
 
     group = parser.add_mutually_exclusive_group()

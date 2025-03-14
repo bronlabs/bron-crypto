@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tbls/glow/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tbls/glow/testutils"
 )
 
 func TestHappyPath(t *testing.T) {

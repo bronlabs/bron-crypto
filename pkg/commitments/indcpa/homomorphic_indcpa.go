@@ -3,8 +3,8 @@ package indcpa_comm
 import (
 	"io"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/indcpa"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/indcpa"
 )
 
 type HomomorphicCommittingKey[PK indcpa.HomomorphicEncryptionKey[P, R, C, S], P indcpa.PlainText, R indcpa.Nonce, C indcpa.CipherText, S indcpa.Scalar] struct {

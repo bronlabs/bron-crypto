@@ -1,12 +1,12 @@
 package zkcompiler
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	k256Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	pedersen_comm "github.com/bronlabs/krypton-primitives/pkg/commitments/pedersen"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	pedersen_comm "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 const (

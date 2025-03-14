@@ -1,12 +1,12 @@
 package compilerUtils
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/dleq/chaum"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/batch_schnorr"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/dlog/schnorr"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/nthroots"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/paillier/range"
-	"github.com/bronlabs/krypton-primitives/pkg/proofs/sigma"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dleq/chaum"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroots"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
 const defaultRho = uint64(16)

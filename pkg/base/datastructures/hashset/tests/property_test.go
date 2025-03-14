@@ -5,10 +5,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashset"
-	dstu "github.com/bronlabs/krypton-primitives/pkg/base/datastructures/testutils"
-	fu "github.com/bronlabs/krypton-primitives/pkg/base/fuzzutils"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	dstu "github.com/bronlabs/bron-crypto/pkg/base/datastructures/testutils"
+	fu "github.com/bronlabs/bron-crypto/pkg/base/fuzzutils"
 )
 
 var _ fu.CollectionAdapter[ds.Set[data], data] = (*collectionAdapter)(nil)

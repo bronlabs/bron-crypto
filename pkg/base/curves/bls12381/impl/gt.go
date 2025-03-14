@@ -1,8 +1,8 @@
 package impl
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	fieldsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 )
 
 // GtBytes is the number of bytes needed to represent this field.

@@ -3,25 +3,25 @@ package dkg_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
-	gennaroTu "github.com/bronlabs/krypton-primitives/pkg/threshold/dkg/gennaro/testutils"
+	gennaroTu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
 	"os"
 	"testing"
 
-	fiatShamir "github.com/bronlabs/krypton-primitives/pkg/proofs/sigma/compiler/fiatshamir"
+	fiatShamir "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/krypton-primitives/pkg/base/types"
-	ttu "github.com/bronlabs/krypton-primitives/pkg/base/types/testutils"
-	_ "github.com/bronlabs/krypton-primitives/pkg/commitments/hash"
-	agreeonrandomTestUtils "github.com/bronlabs/krypton-primitives/pkg/threshold/agreeonrandom/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/sharing/shamir"
-	"github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures"
-	lindell17DkgTestUtils "github.com/bronlabs/krypton-primitives/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts"
-	"github.com/bronlabs/krypton-primitives/pkg/transcripts/hagrid"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	ttu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
+	_ "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	agreeonrandomTestUtils "github.com/bronlabs/bron-crypto/pkg/threshold/agreeonrandom/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures"
+	lindell17DkgTestUtils "github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/dkg/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 var cn = fiatShamir.Name

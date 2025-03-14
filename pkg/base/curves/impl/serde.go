@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 type Serializer func() []byte

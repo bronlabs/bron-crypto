@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
 )
 
 func Benchmark_Edwards25519(b *testing.B) {

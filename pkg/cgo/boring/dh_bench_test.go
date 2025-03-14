@@ -5,7 +5,7 @@ package boring_test
 import (
 	"testing"
 
-	"github.com/bronlabs/krypton-primitives/pkg/cgo/boring"
+	"github.com/bronlabs/bron-crypto/pkg/cgo/boring"
 )
 
 func Benchmark_DhGen1024(b *testing.B) {

@@ -1,6 +1,6 @@
 package impl
 
-import "github.com/bronlabs/krypton-primitives/pkg/base/algebra"
+import "github.com/bronlabs/bron-crypto/pkg/base/algebra"
 
 type PointedSetElement[S algebra.PointedSet[S, E], E algebra.PointedSetElement[S, E]] struct {
 	algebra.PointedSetElement[S, E]

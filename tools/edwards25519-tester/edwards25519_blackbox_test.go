@@ -3,9 +3,9 @@ package edwards25519_tester_test
 import (
 	crand "crypto/rand"
 	filippo "filippo.io/edwards25519"
-	edwards25519Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/edwards25519/impl"
-	pointsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/points"
-	edwards25519Tester "github.com/bronlabs/krypton-primitives/tools/edwards25519-tester"
+	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
+	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
+	edwards25519Tester "github.com/bronlabs/bron-crypto/tools/edwards25519-tester"
 	"testing"
 )
 

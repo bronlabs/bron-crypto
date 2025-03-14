@@ -7,14 +7,14 @@ import (
 
 	"github.com/cronokirby/saferith"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/k256"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/p256"
-	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/uint2k/uint256"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curveutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/uint2k/uint256"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
 type Signature struct {
@@ -174,7 +174,7 @@ func Verify(signature *Signature, hashFunc func() hash.Hash, publicKey curves.Po
 
 	nativeCurve, err := curveutils.ToGoEllipticCurve(curve)
 	if err != nil {
-		return errs.WrapCurve(err, "krypton curve cannot be converted to Go's elliptic curve representation")
+		return errs.WrapCurve(err, "bron curve cannot be converted to Go's elliptic curve representation")
 	}
 
 	nativePublicKey := &nativeEcdsa.PublicKey{

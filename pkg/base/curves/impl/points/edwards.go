@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/fields"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/impl/h2c"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
 )
 
 type TwistedEdwardsCurveParams[FP fields.FiniteField[FP]] interface {

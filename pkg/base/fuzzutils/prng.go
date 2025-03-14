@@ -4,8 +4,8 @@ import (
 	"io"
 	"math/rand/v2"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/bronlabs/krypton-primitives/pkg/base/utils/randutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/randutils"
 )
 
 var _ io.Reader = (*PCG)(nil)

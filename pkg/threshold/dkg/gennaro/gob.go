@@ -1,7 +1,7 @@
 package gennaro
 
 import (
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves/curveutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curveutils"
 )
 
 //nolint:gochecknoinits // We need the init function here.

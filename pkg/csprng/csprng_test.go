@@ -3,10 +3,10 @@ package csprng_test
 import (
 	"testing"
 
-	"github.com/bronlabs/krypton-primitives/pkg/csprng"
-	"github.com/bronlabs/krypton-primitives/pkg/csprng/fkechacha20"
-	"github.com/bronlabs/krypton-primitives/pkg/csprng/testutils"
-	"github.com/bronlabs/krypton-primitives/pkg/hashing/tmmohash"
+	"github.com/bronlabs/bron-crypto/pkg/csprng"
+	"github.com/bronlabs/bron-crypto/pkg/csprng/fkechacha20"
+	"github.com/bronlabs/bron-crypto/pkg/csprng/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/hashing/tmmohash"
 )
 
 func Test_ChachaPrng(t *testing.T) {
