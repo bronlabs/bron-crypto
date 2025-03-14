@@ -13,7 +13,7 @@ spec:
 
 .PHONY: standalone-docs
 standalone-docs:
-	python3 docs/build.py --clean $(VERBOSE) --standalone-path "$(KRYPTON_PKG)"
+	python3 docs/build.py --clean $(VERBOSE) --standalone-path "$(BRON_PKG)"
 
 .PHONY: all-standalone-docs
 all-standalone-docs:
