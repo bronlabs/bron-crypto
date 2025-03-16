@@ -1,22 +1,30 @@
 package algebra
 
-// ******************** SemiGroup
+// ******************** Magma
 
-type SemiGroup[E SemiGroupElement[E]] Structure[E]
-
-type SemiGroupElement[E Element[E]] interface {
+type Magma[E MagmaElement[E]] interface {
+	Structure[E]
+	Operator() BinaryOperator[E]
+}
+type MagmaElement[E Element[E]] interface {
 	Element[E]
+	Operand[E]
 
-	Op(rhs E) E
 	Order() Cardinal
 }
+
+// ******************** SemiGroup
+
+type SemiGroup[E SemiGroupElement[E]] Magma[E]
+
+type SemiGroupElement[E Element[E]] MagmaElement[E]
 
 type AdditiveSemiGroup[E AdditiveSemiGroupElement[E]] SemiGroup[E]
 
 type AdditiveSemiGroupElement[E SemiGroupElement[E]] interface {
 	SemiGroupElement[E]
+	Summand[E]
 
-	Add(rhs E) E
 	Double() E
 }
 
@@ -24,17 +32,20 @@ type MultiplicativeSemiGroup[E MultiplicativeSemiGroupElement[E]] SemiGroup[E]
 
 type MultiplicativeSemiGroupElement[E SemiGroupElement[E]] interface {
 	SemiGroupElement[E]
-	Mul(rhs E) E
+	Multiplicand[E]
+
 	Square() E
 }
 
 type CyclicSemiGroup[E CyclicSemiGroupElement[E]] interface {
 	SemiGroup[E]
-	Generator()
+	NPointedSet[E]
+	Generator() E
 }
 
 type CyclicSemiGroupElement[E SemiGroupElement[E]] interface {
 	SemiGroupElement[E]
+	NPointedSetElement[E]
 	IsDesignatedGenerator() bool
 	CanBeGenerator() bool
 }
@@ -49,6 +60,8 @@ type Monoid[ME MonoidElement[ME]] interface {
 type MonoidElement[ME SemiGroupElement[ME]] interface {
 	SemiGroupElement[ME]
 	IsOpIdentity() bool
+
+	TryOpInv() (ME, error)
 }
 
 type AdditiveMonoid[ME AdditiveMonoidElement[ME]] interface {
@@ -61,6 +74,9 @@ type AdditiveMonoidElement[ME MonoidElement[ME]] interface {
 	MonoidElement[ME]
 	AdditiveSemiGroupElement[ME]
 	IsZero() bool
+
+	TryNeg() (ME, error)
+	TrySub(ME) (ME, error)
 }
 
 type MultiplicativeMonoid[ME MultiplicativeMonoidElement[ME]] interface {
@@ -73,6 +89,9 @@ type MultiplicativeMonoidElement[E MultiplicativeSemiGroupElement[E]] interface 
 	MonoidElement[E]
 	MultiplicativeSemiGroupElement[E]
 	IsOne() bool
+
+	TryInv() (E, error)
+	TryDiv(E) (E, error)
 }
 
 type UniqueFactorizationMonoid[ME UniqueFactorizationMonoidElement[ME]] Monoid[ME]
@@ -80,16 +99,6 @@ type UniqueFactorizationMonoid[ME UniqueFactorizationMonoidElement[ME]] Monoid[M
 type UniqueFactorizationMonoidElement[ME MonoidElement[ME]] interface {
 	MonoidElement[ME]
 	IsProbablyPrime() bool
-}
-
-type MonoidWithZero[ME MonoidWithZeroElement[ME]] interface {
-	Monoid[ME]
-	Zero() ME
-}
-
-type MonoidWithZeroElement[ME MonoidElement[ME]] interface {
-	MonoidElement[ME]
-	IsZero() bool
 }
 
 // ******************** Group
@@ -122,47 +131,36 @@ type MultiplicativeGroup[E MultiplicativeGroupElement[E]] interface {
 type MultiplicativeGroupElement[E interface {
 	GroupElement[E]
 	MultiplicativeMonoidElement[E]
+	Inv() E
+	Div(E) E
 }] interface {
 	GroupElement[E]
 	MultiplicativeMonoidElement[E]
-
 	Inv() E
 	Div(E) E
 }
 
-type MultiplicativeGroupWithZero[E MultiplicativeGroupWithZeroElement[E]] interface {
-	Group[E]
-	MultiplicativeMonoid[E]
-	MonoidWithZero[E]
-}
-
-type MultiplicativeGroupWithZeroElement[E interface {
-	GroupElement[E]
-	MultiplicativeMonoidElement[E]
-	MonoidWithZeroElement[E]
-}] interface {
-	GroupElement[E]
-	MultiplicativeMonoidElement[E]
-	MonoidWithZeroElement[E]
-
-	TryInv() (E, error)
-	TryDiv(E) (E, error)
-}
-
 // ************** Extra
 
-type AbelianGroup[E AbelianGroupElement[E, S], S RingElement[S]] Module[E, S]
+type AbelianGroup[E AbelianGroupElement[E, S], S IntLike[S]] Module[E, S]
 
-type AbelianGroupElement[E ModuleElement[E, S], S RingElement[S]] ModuleElement[E, S]
+type AbelianGroupElement[E ModuleElement[E, S], S IntLike[S]] ModuleElement[E, S]
+
+type FiniteAbelianGroup[E FiniteAbelianGroupElement[E, S], S UintLike[S]] interface {
+	AbelianGroup[E, S]
+	FiniteStructure[E]
+}
+
+type FiniteAbelianGroupElement[E AbelianGroupElement[E, S], S UintLike[S]] AbelianGroupElement[E, S]
 
 type PrimeGroup[E PrimeGroupElement[E, S], S PrimeFieldElement[S]] interface {
-	AbelianGroup[E, S]
+	FiniteAbelianGroup[E, S]
 	VectorSpace[E, S]
 	CyclicSemiGroup[E]
 }
 
-type PrimeGroupElement[E AbelianGroupElement[E, S], S PrimeFieldElement[S]] interface {
-	AbelianGroupElement[E, S]
+type PrimeGroupElement[E Vector[E, S], S PrimeFieldElement[S]] interface {
+	FiniteAbelianGroupElement[E, S]
 	Vector[E, S]
 	CyclicSemiGroupElement[E]
 }

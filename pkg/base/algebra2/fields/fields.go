@@ -16,121 +16,26 @@ type (
 	PrimeFieldElement[FE algebra.PrimeFieldElement[FE]] algebra.PrimeFieldElement[FE]
 )
 
-func GetField[FE FieldElement[FE]](fe FE) Field[FE] {
-	return fe.Structure().(Field[FE])
-}
-
-func GetFiniteField[FE FiniteFieldElement[FE]](fe FE) FiniteField[FE] {
-	return fe.Structure().(FiniteField[FE])
-}
-
-func GetPrimeField[FE PrimeFieldElement[FE]](fe FE) PrimeField[FE] {
-	return fe.Structure().(PrimeField[FE])
-}
-
-type MultiplicativeGroupOfField[FE FieldElement[FE]] struct {
-	F Field[FE]
-}
-
-func (g *MultiplicativeGroupOfField[FE]) Name() string {
-	return "Multiplicative group of " + g.F.Name()
-}
-
-func (g *MultiplicativeGroupOfField[FE]) Order() algebra.Cardinal {
-	panic("implement me")
-	// return f.Order() - 1
-}
-
-type NonZeroFieldElement[FE FieldElement[FE]] struct {
-	Fe FE
-}
-
-func AsMulGroupElement[FE FieldElement[FE]](fe FE) (*NonZeroFieldElement[FE], error) {
-	if fe.IsZero() {
-		return nil, errs.NewFailed("argument is zero")
+func GetField[FE FieldElement[FE]](fe FE) (Field[FE], error) {
+	f, ok := fe.Structure().(Field[FE])
+	if !ok {
+		return nil, (errs.NewType("FieldElement does not have a Field structure"))
 	}
-
-	return &NonZeroFieldElement[FE]{
-		Fe: fe,
-	}, nil
+	return f, nil
 }
 
-func (ge *NonZeroFieldElement[FE]) FieldElement() FE {
-	return ge.Fe
-}
-
-func (ge *NonZeroFieldElement[FE]) Structure() algebra.Structure[*NonZeroFieldElement[FE]] {
-	return &MultiplicativeGroupOfField[FE]{
-		F: GetField(ge.Fe),
+func GetFiniteField[FE FiniteFieldElement[FE]](fe FE) (FiniteField[FE], error) {
+	f, ok := fe.Structure().(FiniteField[FE])
+	if !ok {
+		return nil, (errs.NewType("FieldElement does not have a FiniteField structure"))
 	}
+	return f, nil
 }
 
-func (ge *NonZeroFieldElement[FE]) MarshalBinary() (data []byte, err error) {
-	panic("implement me")
-}
-
-func (ge *NonZeroFieldElement[FE]) UnmarshalBinary(data []byte) error {
-	panic("implement me")
-}
-
-func (ge *NonZeroFieldElement[FE]) Clone() *NonZeroFieldElement[FE] {
-	return &NonZeroFieldElement[FE]{
-		Fe: ge.Fe.Clone(),
+func GetPrimeField[FE PrimeFieldElement[FE]](fe FE) (PrimeField[FE], error) {
+	f, ok := fe.Structure().(PrimeField[FE])
+	if !ok {
+		return nil, (errs.NewType("FieldElement does not have a PrimeField structure"))
 	}
-}
-
-func (ge *NonZeroFieldElement[FE]) Equal(rhs *NonZeroFieldElement[FE]) bool {
-	return ge.Fe.Equal(rhs.Fe)
-}
-
-func (ge *NonZeroFieldElement[FE]) HashCode() uint64 {
-	panic("implement me")
-}
-
-func (ge *NonZeroFieldElement[FE]) Op(rhs *NonZeroFieldElement[FE]) *NonZeroFieldElement[FE] {
-	return ge.Mul(rhs)
-}
-
-func (ge *NonZeroFieldElement[FE]) Order() algebra.Cardinal {
-	panic("implement me")
-}
-
-func (ge *NonZeroFieldElement[FE]) IsOpIdentity() bool {
-	return ge.IsOne()
-}
-
-func (ge *NonZeroFieldElement[FE]) OpInv() *NonZeroFieldElement[FE] {
-	return ge.Inv()
-}
-
-func (ge *NonZeroFieldElement[FE]) Mul(rhs *NonZeroFieldElement[FE]) *NonZeroFieldElement[FE] {
-	return &NonZeroFieldElement[FE]{
-		Fe: ge.Fe.Mul(rhs.Fe),
-	}
-}
-
-func (ge *NonZeroFieldElement[FE]) Square() *NonZeroFieldElement[FE] {
-	return &NonZeroFieldElement[FE]{
-		Fe: ge.Fe.Square(),
-	}
-}
-
-func (ge *NonZeroFieldElement[FE]) IsOne() bool {
-	return ge.Fe.IsOne()
-}
-
-func (ge *NonZeroFieldElement[FE]) Inv() *NonZeroFieldElement[FE] {
-	// TODO(aalireza): FieldElement is missing TryInv method
-	//q, _ := ge.Fe.TryInv()
-	//return &NonZeroFieldElement[FE]{
-	//	Fe: q,
-	//}
-	panic("WTF?")
-}
-
-func (ge *NonZeroFieldElement[FE]) Div(e *NonZeroFieldElement[FE]) *NonZeroFieldElement[FE] {
-	q, _ := ge.Fe.TryDiv(e.Fe)
-	return &NonZeroFieldElement[FE]{
-		Fe: q,
-	}
+	return f, nil
 }

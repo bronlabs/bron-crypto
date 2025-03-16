@@ -2,6 +2,7 @@ package groups
 
 import (
 	algebra "github.com/bronlabs/krypton-primitives/pkg/base/algebra2"
+	"github.com/bronlabs/krypton-primitives/pkg/base/errs"
 )
 
 type (
@@ -14,16 +15,36 @@ type (
 	MultiplicativeGroup[E algebra.MultiplicativeGroupElement[E]]        algebra.MultiplicativeGroup[E]
 	MultiplicativeGroupElement[E algebra.MultiplicativeGroupElement[E]] algebra.MultiplicativeGroupElement[E]
 
-	MultiplicativeGroupWithZero[E algebra.MultiplicativeGroupWithZeroElement[E]]        algebra.MultiplicativeGroupWithZero[E]
-	MultiplicativeGroupWithZeroElement[E algebra.MultiplicativeGroupWithZeroElement[E]] algebra.MultiplicativeGroupWithZeroElement[E]
+	AbelianGroup[E algebra.AbelianGroupElement[E, S], S algebra.IntLike[S]]        algebra.AbelianGroup[E, S]
+	AbelianGroupElement[E algebra.AbelianGroupElement[E, S], S algebra.IntLike[S]] algebra.AbelianGroupElement[E, S]
 
-	AbelianGroup[E algebra.AbelianGroupElement[E, S], S algebra.RingElement[S]]        algebra.AbelianGroup[E, S]
-	AbelianGroupElement[E algebra.AbelianGroupElement[E, S], S algebra.RingElement[S]] algebra.AbelianGroupElement[E, S]
+	FiniteAbelianGroup[E algebra.FiniteAbelianGroupElement[E, S], S algebra.UintLike[S]]        algebra.FiniteAbelianGroup[E, S]
+	FiniteAbelianGroupElement[E algebra.FiniteAbelianGroupElement[E, S], S algebra.UintLike[S]] algebra.FiniteAbelianGroupElement[E, S]
 
 	PrimeGroup[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]]        algebra.PrimeGroup[E, S]
 	PrimeGroupElement[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] algebra.PrimeGroupElement[E, S]
 )
 
-func GetGroup[GE GroupElement[GE]](ge GE) Group[GE] {
-	return ge.Structure().(Group[GE])
+func GetGroup[GE GroupElement[GE]](ge GE) (Group[GE], error) {
+	g, ok := ge.Structure().(Group[GE])
+	if !ok {
+		return nil, errs.NewType("GroupElement does not have a Group structure")
+	}
+	return g, nil
+}
+
+func GetAdditiveGroup[GE AdditiveGroupElement[GE]](ge GE) (AdditiveGroup[GE], error) {
+	f, ok := ge.Structure().(AdditiveGroup[GE])
+	if !ok {
+		return nil, (errs.NewType("GroupElement does not have an AdditiveGroup structure"))
+	}
+	return f, nil
+}
+
+func GetMultiplicativeGroup[GE MultiplicativeGroupElement[GE]](ge GE) (MultiplicativeGroup[GE], error) {
+	f, ok := ge.Structure().(MultiplicativeGroup[GE])
+	if !ok {
+		return nil, (errs.NewType("GroupElement does not have a MultiplicativeGroup structure"))
+	}
+	return f, nil
 }

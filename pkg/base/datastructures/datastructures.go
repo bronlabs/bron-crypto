@@ -129,3 +129,43 @@ type immutableSet[E, T any] interface {
 type ImmutableSet[E any] interface {
 	immutableSet[E, ImmutableSet[E]]
 }
+
+type AbstractMatrix[T any] interface {
+	Dimensions() (n, m int)
+	Transpose() T
+	SubMatrix(row1, row2, col1, col2 int) T
+	IsSquare() bool
+	IsDiagonal() bool
+
+	Clonable[T]
+	Equatable[T]
+}
+
+type immutableMatrix[E, T any] interface {
+	AbstractMatrix[T]
+
+	Get(row, col int) E
+	GetRow(row int) []E
+	GetColumn(col int) []E
+
+	IterRows() iter.Seq[iter.Seq[E]]
+	IterColumns() iter.Seq[iter.Seq[E]]
+}
+
+type ImmutableMatrix[E any] interface {
+	immutableMatrix[E, ImmutableMatrix[E]]
+}
+
+type Matrix[E any] interface {
+	immutableMatrix[E, Matrix[E]]
+
+	Set(row, col int, value E) error
+	SetRow(row int, values ...E) error
+	SetColumn(col int, values ...E) error
+
+	InsertRow(row int, values ...E) error
+	InsertColumn(col int, values ...E) error
+
+	DeleteRow(row int) error
+	DeleteColumn(col int) error
+}

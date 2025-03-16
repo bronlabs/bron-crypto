@@ -2,12 +2,14 @@ package example_test
 
 import (
 	crand "crypto/rand"
+	"io"
+	"testing"
+
+	algebra "github.com/bronlabs/krypton-primitives/pkg/base/algebra2"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra2/example"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra2/fields"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra2/groups"
 	"github.com/stretchr/testify/require"
-	"io"
-	"testing"
 )
 
 func Double[GE groups.GroupElement[GE]](ge GE) GE {
@@ -15,14 +17,25 @@ func Double[GE groups.GroupElement[GE]](ge GE) GE {
 }
 
 func Inc[FE fields.FieldElement[FE]](fe FE) FE {
-	one := fields.GetField(fe).One()
+	f, _ := fields.GetField(fe)
+	one := f.One()
 	return fe.Add(one)
+}
+
+func IsCommutative[FE fields.FieldElement[FE]](a, b FE) bool {
+
+	var op algebra.BinaryOperator[FE] = algebra.Operate[FE]
+
+	return op.IsCommutative(a, b)
+
+	// return a.Op(b).Equal(b.Op(a))
 }
 
 func Random[FE fields.FiniteFieldElement[FE]](prng io.Reader) (FE, error) {
 	// TODO(aalireza): This will fail for "non-static" structures, not sure if this is OK or not thou
 	var fe FE
-	return fields.GetFiniteField(fe).Random(prng)
+	f, _ := fields.GetFiniteField(fe)
+	return f.Random(prng)
 }
 
 func Test_Double(t *testing.T) {
@@ -31,7 +44,7 @@ func Test_Double(t *testing.T) {
 	fe2Expected := &example.Z7Element{V: 6}
 	require.True(t, fe2Expected.Equal(fe2))
 
-	ge1, err := fields.AsMulGroupElement(fe1)
+	ge1, err := fields.NewUnitSubGroupElement(fe1)
 	require.NoError(t, err)
 	fe3 := Double(ge1).FieldElement()
 	fe3Expected := &example.Z7Element{V: 2}

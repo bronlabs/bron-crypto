@@ -20,7 +20,7 @@ type AlgebraicCurve[Point AlgebraicPoint[Point, Coordinate], Coordinate RingElem
 	Group[Point]
 	AffineSystem[Point, Coordinate]
 
-	NewPoint(x, y Coordinate) (Point, error)
+	NewPoint(affineX, affineY Coordinate) (Point, error)
 }
 
 type AlgebraicPoint[Point interface {
@@ -30,40 +30,61 @@ type AlgebraicPoint[Point interface {
 	GroupElement[Point]
 	AffineElement[Point, Coordinate]
 
-	// TODO(aalireza): Add IsTorsionFree (or IsInPrimeSubGroup or whatever)
-
-	// TODO(aalireza): Should these return errors? Identity point not always have "affine" representation
-	AffineX() Coordinate
-	AffineY() Coordinate
+	AffineX() (Coordinate, error)
+	AffineY() (Coordinate, error)
 }
 
-type EllipticCurve[Point EllipticCurvePoint[Point, BaseRingElement, Scalar],
-	BaseRingElement RingElement[BaseRingElement], Scalar RingElement[Scalar],
+type GenericEllipticCurve[
+	Point GenericEllipticCurvePoint[Point, BaseFieldElement, Scalar, TorsionFreePoint, TorsionFreeScalar], BaseFieldElement FiniteFieldElement[BaseFieldElement], Scalar UintLike[Scalar],
+	TorsionFreePoint TorsionFreeEllipticCurvePoint[TorsionFreePoint, BaseFieldElement, TorsionFreeScalar], TorsionFreeScalar PrimeFieldElement[TorsionFreeScalar],
 ] interface {
-	AlgebraicCurve[Point, BaseRingElement]
-	AbelianGroup[Point, Scalar]
-
-	PrimeSubGroupGenerator() Point
+	AlgebraicCurve[Point, BaseFieldElement]
+	FiniteAbelianGroup[Point, Scalar]
+	TorsionFreeSubGroupGenerator() TorsionFreePoint
 }
 
-type EllipticCurvePoint[Point interface {
-	AlgebraicPoint[Point, BaseRingElement]
+type GenericEllipticCurvePoint[Point interface {
+	AlgebraicPoint[Point, BaseFieldElement]
+	FiniteAbelianGroupElement[Point, Scalar]
+}, BaseFieldElement FiniteFieldElement[BaseFieldElement], Scalar UintLike[Scalar],
+	TorsionFreePoint TorsionFreeEllipticCurvePoint[TorsionFreePoint, BaseFieldElement, TorsionFreeScalar], TorsionFreeScalar PrimeFieldElement[TorsionFreeScalar],
+] interface {
+	AlgebraicPoint[Point, BaseFieldElement]
 	AbelianGroupElement[Point, Scalar]
-}, BaseRingElement RingElement[BaseRingElement], Scalar RingElement[Scalar]] interface {
-	AlgebraicPoint[Point, BaseRingElement]
-	AbelianGroupElement[Point, Scalar]
+
+	ClearCofactor() TorsionFreePoint
+}
+
+type TorsionFreeEllipticCurve[Point TorsionFreeEllipticCurvePoint[Point, BaseFieldElement, Scalar],
+	BaseFieldElement FiniteFieldElement[BaseFieldElement], Scalar PrimeFieldElement[Scalar],
+] interface {
+	GenericEllipticCurve[Point, BaseFieldElement, Scalar, Point, Scalar]
+	PrimeGroup[Point, Scalar]
+	CyclicSemiGroup[Point]
+}
+
+type TorsionFreeEllipticCurvePoint[Point interface {
+	AlgebraicPoint[Point, BaseFieldElement]
+	PrimeGroupElement[Point, Scalar]
+	CyclicSemiGroupElement[Point]
+	ClearCofactor() Point
+}, BaseFieldElement FiniteFieldElement[BaseFieldElement], Scalar PrimeFieldElement[Scalar]] interface {
+	AlgebraicPoint[Point, BaseFieldElement]
+	PrimeGroupElement[Point, Scalar]
+	CyclicSemiGroupElement[Point]
+	ClearCofactor() Point
 }
 
 type Pairing[
-	g1 EllipticCurve[g1Point, g1Coordinate, g1Scalar], g1Point EllipticCurvePoint[g1Point, g1Coordinate, g1Scalar], g1Coordinate RingElement[g1Coordinate], g1Scalar RingElement[g1Scalar],
-	g2 EllipticCurve[g2Point, g2Coordinate, g2Scalar], g2Point EllipticCurvePoint[g2Point, g2Coordinate, g2Scalar], g2Coordinate RingElement[g2Coordinate], g2Scalar RingElement[g2Scalar],
+	g1 TorsionFreeEllipticCurve[g1Point, g1Coordinate, g1Scalar], g1Point TorsionFreeEllipticCurvePoint[g1Point, g1Coordinate, g1Scalar], g1Coordinate FiniteFieldElement[g1Coordinate], g1Scalar PrimeFieldElement[g1Scalar],
+	g2 TorsionFreeEllipticCurve[g2Point, g2Coordinate, g2Scalar], g2Point TorsionFreeEllipticCurvePoint[g2Point, g2Coordinate, g2Scalar], g2Coordinate FiniteFieldElement[g2Coordinate], g2Scalar PrimeFieldElement[g2Scalar],
 	gt interface {
 		MultiplicativeGroup[gtElement]
 		AbelianGroup[gtElement, gtScalar]
 	}, gtElement interface {
 		MultiplicativeGroupElement[gtElement]
 		AbelianGroupElement[gtElement, gtScalar]
-	}, gtScalar RingElement[gtScalar],
+	}, gtScalar IntLike[gtScalar],
 ] interface {
 	G1() g1
 	G2() g2
@@ -72,14 +93,3 @@ type Pairing[
 	Pair(p g1Point, q g2Point) (gtElement, error)
 	MultiPair(ps []g1Point, qs []g2Point) (gtElement, error)
 }
-
-// aliases
-type Curve[
-	Point EllipticCurvePoint[Point, BaseRingElement, Scalar],
-	BaseRingElement RingElement[BaseRingElement], Scalar RingElement[Scalar],
-] = EllipticCurve[Point, BaseRingElement, Scalar]
-
-type Point[
-	Point EllipticCurvePoint[Point, BaseRingElement, Scalar],
-	BaseRingElement RingElement[BaseRingElement], Scalar RingElement[Scalar],
-] = EllipticCurvePoint[Point, BaseRingElement, Scalar]

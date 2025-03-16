@@ -2,11 +2,14 @@ package example
 
 import (
 	"crypto/sha256"
+
 	algebra "github.com/bronlabs/krypton-primitives/pkg/base/algebra2"
 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra2/fields"
+
 	//"github.com/bronlabs/krypton-primitives/pkg/base/errs"
-	"github.com/cronokirby/saferith"
 	"io"
+
+	"github.com/cronokirby/saferith"
 )
 
 var (
@@ -73,8 +76,28 @@ func (f *Z7) WideElementSize() int {
 	return 8
 }
 
-func (f *Z7) FromNat(nat *saferith.Nat) *Z7Element {
+func (f *Z7) FromNat(nat *saferith.Nat) (*Z7Element, error) {
 	panic("implement me")
+}
+
+func (f *Z7) Modulus() algebra.Cardinal {
+	return new(saferith.Nat).SetUint64(7)
+}
+
+func (f *Z7) Operator() algebra.BinaryOperator[*Z7Element] {
+	return algebra.Add
+}
+
+func (f *Z7) OtherOperator() algebra.BinaryOperator[*Z7Element] {
+	return algebra.Add
+}
+
+func (f *Z7) PartialCompare(a, b *Z7Element) algebra.PartialOrdering {
+	return algebra.PartialCompare(a, b)
+}
+
+func (f *Z7) Compare(a, b *Z7Element) algebra.Ordering {
+	return algebra.Compare(a, b)
 }
 
 type Z7Element struct {
@@ -91,6 +114,10 @@ func (fe *Z7Element) UnmarshalBinary(data []byte) error {
 
 func (fe *Z7Element) Clone() *Z7Element {
 	return &Z7Element{V: fe.V}
+}
+
+func (fe *Z7Element) IsLessThanOrEqual(rhs *Z7Element) bool {
+	return fe.V <= rhs.V
 }
 
 func (fe *Z7Element) Equal(rhs *Z7Element) bool {
@@ -145,12 +172,24 @@ func (fe *Z7Element) IsZero() bool {
 	return fe.V == 0
 }
 
+func (fe *Z7Element) TryOpInv() (*Z7Element, error) {
+	return fe.Neg(), nil
+}
+
 func (fe *Z7Element) OpInv() *Z7Element {
 	return fe.Neg()
 }
 
+func (fe *Z7Element) TryNeg() (*Z7Element, error) {
+	return fe.Neg(), nil
+}
+
 func (fe *Z7Element) Neg() *Z7Element {
 	return &Z7Element{V: 7 - fe.V}
+}
+
+func (fe *Z7Element) TrySub(e *Z7Element) (*Z7Element, error) {
+	return fe.Sub(e), nil
 }
 
 func (fe *Z7Element) Sub(e *Z7Element) *Z7Element {
@@ -161,10 +200,10 @@ func (fe *Z7Element) IsProbablyPrime() bool {
 	panic("wtf?")
 }
 
-func (fe *Z7Element) EuclideanDiv(rhs *Z7Element) (quot, rem *Z7Element) {
+func (fe *Z7Element) EuclideanDiv(rhs *Z7Element) (quot, rem *Z7Element, err error) {
 	// TODO(aalireza): how to handle errors?
 	q, _ := fe.TryDiv(rhs)
-	return q, Z7Instance.Zero()
+	return q, Z7Instance.Zero(), nil
 }
 
 func (fe *Z7Element) TryInv() (*Z7Element, error) {

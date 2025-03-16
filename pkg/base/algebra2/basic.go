@@ -16,12 +16,13 @@ var Infinite Cardinal = nil
 // === Interfaces
 
 type Element[E any] interface {
-	encoding.BinaryMarshaler
-	encoding.BinaryUnmarshaler
 	ds.Clonable[E]
 	ds.Hashable[E]
 
 	Structure() Structure[E]
+
+	encoding.BinaryMarshaler
+	encoding.BinaryUnmarshaler
 }
 
 type Structure[E any] interface {
