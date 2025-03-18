@@ -10,7 +10,7 @@ type MagmaElement[E Element[E]] interface {
 	Element[E]
 	Operand[E]
 
-	Order() Cardinal
+	// Order() Cardinal
 }
 
 // ******************** SemiGroup

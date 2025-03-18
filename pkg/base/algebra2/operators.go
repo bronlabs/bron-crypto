@@ -4,7 +4,7 @@ import (
 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
 )
 
-type UnaryOperator[E Element[E]] func(E) E
+type UnaryOperator[E ds.Equatable[E]] func(E) E
 
 func (u UnaryOperator[E]) IsIdempotent(x E) bool {
 	return u(u(x)).Equal(u(x))
@@ -75,6 +75,8 @@ type Summand[E Operand[E]] interface {
 	Add(E) E
 }
 
+type Addition[E Summand[E]] BinaryOperator[E]
+
 func Add[E Summand[E]](a, b E) E {
 	return a.Add(b)
 }
@@ -83,6 +85,8 @@ type Multiplicand[E Operand[E]] interface {
 	Operand[E]
 	Mul(E) E
 }
+
+type Multiplication[E Multiplicand[E]] BinaryOperator[E]
 
 func Mul[E Multiplicand[E]](a, b E) E {
 	return a.Mul(b)
@@ -93,6 +97,8 @@ type Conjunct[E Operand[E]] interface {
 	And(E) E
 }
 
+type Conjunction[E Conjunct[E]] BinaryOperator[E]
+
 func And[E Conjunct[E]](a, b E) E {
 	return a.And(b)
 }
@@ -101,6 +107,8 @@ type Disjunct[E Operand[E]] interface {
 	Operand[E]
 	Or(E) E
 }
+
+type Disjunction[E Disjunct[E]] BinaryOperator[E]
 
 func Or[E Disjunct[E]](a, b E) E {
 	return a.Or(b)
@@ -111,6 +119,8 @@ type ExclusiveDisjunct[E Operand[E]] interface {
 	Xor(E) E
 }
 
+type ExclusiveDisjunction[E ExclusiveDisjunct[E]] BinaryOperator[E]
+
 func Xor[E ExclusiveDisjunct[E]](a, b E) E {
 	return a.Xor(b)
 }
@@ -119,6 +129,8 @@ type Negand[E Operand[E]] interface {
 	Operand[E]
 	Not() E
 }
+
+type Negation[E Negand[E]] UnaryOperator[E]
 
 func Not[E Negand[E]](a E) E {
 	return a.Not()

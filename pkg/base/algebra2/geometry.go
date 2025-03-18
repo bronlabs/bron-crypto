@@ -83,8 +83,8 @@ type Pairing[
 		AbelianGroup[gtElement, gtScalar]
 	}, gtElement interface {
 		MultiplicativeGroupElement[gtElement]
-		AbelianGroupElement[gtElement, gtScalar]
-	}, gtScalar IntLike[gtScalar],
+		FiniteAbelianGroupElement[gtElement, gtScalar]
+	}, gtScalar UintLike[gtScalar],
 ] interface {
 	G1() g1
 	G2() g2

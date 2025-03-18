@@ -152,8 +152,6 @@ type ZnLike[E UintLike[E]] interface {
 	ZLike[E]
 	FiniteStructure[E]
 
-	Modulus() Cardinal
-
 	FromNat(*saferith.Nat) (E, error)
 }
 
