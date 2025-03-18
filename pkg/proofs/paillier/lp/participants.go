@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	transcriptLabel = "KRYPTON_PAILLIER_LP-"
+	transcriptLabel = "BRON_CRYPTO_PAILLIER_LP-"
 	// PaillierBitSize TODO: Should we bump it to 3072 to comply with NIST recommendations?
 	PaillierBitSize = 2048
 )

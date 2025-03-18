@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	transcriptLabel = "KRYPTON_PAILLIER_LPDL-"
+	transcriptLabel = "BRON_CRYPTO_PAILLIER_LPDL-"
 )
 
 type Participant struct {

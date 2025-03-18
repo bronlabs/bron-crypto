@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	appTranscriptLabel       = "KRYPTON_NIZK_PAILLIER_N"
-	sessionIdTranscriptLabel = "KRYPTON_NIZK_PAILLIER_N_SESSION_ID"
+	appTranscriptLabel       = "BRON_CRYPTO_NIZK_PAILLIER_N"
+	sessionIdTranscriptLabel = "BRON_CRYPTO_NIZK_PAILLIER_N_SESSION_ID"
 
 	// Alpha ɑ.
 	Alpha = 6370

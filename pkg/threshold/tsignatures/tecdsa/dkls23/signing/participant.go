@@ -25,7 +25,7 @@ import (
 
 var _ types.ThresholdSignatureParticipant = (*Participant)(nil)
 
-const transcriptLabel = "KRYPTON_DKLS23_-"
+const transcriptLabel = "BRON_CRYPTO_DKLS23_-"
 
 type Participant struct {
 	// Base participant

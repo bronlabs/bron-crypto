@@ -46,7 +46,7 @@ func TestScalarHash(t *testing.T) {
 	require.NoError(t, err)
 	s, ok := sc.(*edwards25519.Scalar)
 	require.True(t, ok)
-	expected := toScalar("0x7ce147b73e70e423efa9e6491a60dbba2d0595551144db9094b17827cbfc484")
+	expected := toScalar("0x07FDA8549531A0BD38B133C79A92BC9D87A1FAE79AEAFF3598E89396E9D2E2CE")
 	require.Equal(t, uint64(1), s.V.Equals(expected))
 }
 

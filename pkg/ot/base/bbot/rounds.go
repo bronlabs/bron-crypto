@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	PopfKeyLabel = "KRYPTON-BBOT-POPF-"
-	Ro0Label     = "KRYPTON-BBOT-RO0-"
-	Ro1Label     = "KRYPTON-BBOT-RO1-"
+	PopfKeyLabel = "BRON_CRYPTO-BBOT-POPF-"
+	Ro0Label     = "BRON_CRYPTO-BBOT-RO0-"
+	Ro1Label     = "BRON_CRYPTO-BBOT-RO1-"
 	TagLength    = ot.KappaBytes
 )
 

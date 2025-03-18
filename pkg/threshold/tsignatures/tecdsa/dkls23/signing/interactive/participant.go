@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "KRYPTON_TECDSA_DKLS23-"
+const transcriptLabel = "BRON_CRYPTO_TECDSA_DKLS23-"
 
 type Cosigner struct {
 	*signing.Participant

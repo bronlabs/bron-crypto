@@ -16,7 +16,7 @@ import (
 const (
 	Name compiler.Name = "RandomisedFischlin"
 
-	transcriptLabel = "BRONLABS_KRYPTON_NIZK_RANDOMISED_FISCHLIN-"
+	transcriptLabel = "BRON_CRYPTO_NIZK_RANDOMISED_FISCHLIN-"
 
 	statementLabel  = "statementLabel-"
 	commitmentLabel = "commitmentLabel-"

@@ -13,7 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "KRYPTON_TBLS_BOLDYREVA-"
+const transcriptLabel = "BRON_CRYPTO_TBLS_BOLDYREVA-"
 
 var _ types.ThresholdSignatureParticipant = (*Cosigner[bls12381.G1, bls12381.G2])(nil)
 var _ types.ThresholdSignatureParticipant = (*Cosigner[bls12381.G2, bls12381.G1])(nil)

@@ -13,7 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "KRYPTON_AGREE_ON_RANDOM-"
+const transcriptLabel = "BRON_CRYPTO_AGREE_ON_RANDOM-"
 
 var _ types.Participant = (*Participant)(nil)
 

@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	transcriptLabel = "KRYPTON_LINDELL22_SIGN-"
+	transcriptLabel = "BRON_CRYPTO_LINDELL22_SIGN-"
 )
 
 type state struct {

@@ -52,7 +52,7 @@ func (p *PreGenParticipant) SharingId() types.SharingID {
 }
 
 const (
-	transcriptLabel = "KRYPTON_LINDELL17_NISIGN-"
+	transcriptLabel = "BRON_CRYPTO_LINDELL17_NISIGN-"
 )
 
 func NewPreGenParticipant(sessionId []byte, transcript transcripts.Transcript, myAuthKey types.AuthKey, protocol types.ThresholdProtocol, preSigners ds.Set[types.IdentityKey], nic compiler.Name, prng io.Reader) (participant *PreGenParticipant, err error) {

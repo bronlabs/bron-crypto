@@ -15,7 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "KRYPTON_DKLS_MULTIPLY-"
+const transcriptLabel = "BRON_CRYPTO_DKLS_MULTIPLY-"
 
 var _ types.Participant = (*Alice)(nil)
 var _ types.Participant = (*Bob)(nil)
@@ -139,7 +139,7 @@ func validateParticipantInputs[T any](myIdentityKey types.IdentityKey, protocol 
 
 func generateGadgetVector(curve curves.Curve, transcript transcripts.Transcript) (gadget *[Xi]curves.Scalar, err error) {
 	gadget = new([Xi]curves.Scalar)
-	transcript.AppendMessages("gadget vector", []byte("KRYPTON_DKLS19_MULT_GADGET_VECTOR"))
+	transcript.AppendMessages("gadget vector", []byte("BRON_CRYPTO_DKLS19_MULT_GADGET_VECTOR"))
 	for i := 0; i < Xi; i++ {
 		bytes, err := transcript.ExtractBytes("gadget", 64)
 		if err != nil {

@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
-const transcriptLabel = "KRYPTON_HJKY_ZERO_SAMPLE-"
+const transcriptLabel = "BRON_CRYPTO_HJKY_ZERO_SAMPLE-"
 
 var _ types.ThresholdParticipant = (*Participant)(nil)
 

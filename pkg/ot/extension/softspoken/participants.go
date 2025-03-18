@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
-const transcriptLabel = "KRYPTON_SOFTSPOKEN_OTe-"
+const transcriptLabel = "BRON_CRYPTO_SOFTSPOKEN_OTe-"
 
 type Receiver struct {
 	ot.Participant

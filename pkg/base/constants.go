@@ -16,7 +16,7 @@ const CollisionResistance = 2 * ComputationalSecurity
 const CollisionResistanceBytes = CollisionResistance / 8
 
 // Hash2CurveAppTag is a library-wide tag for Hash2Curve hashing as Random Oracle.
-const Hash2CurveAppTag = "bronlabs-krypton-primitives-with-"
+const Hash2CurveAppTag = "bron-crypto-with-"
 
 // Choices of hash functions.
 var (

@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "KRYPTON_PREGEN_DKLS23-"
+const transcriptLabel = "BRON_CRYPTO_PREGEN_DKLS23-"
 
 var _ types.ThresholdParticipant = (*PreGenParticipant)(nil) // only threshold piece of the protocol is important.
 
