@@ -1,8 +1,0 @@
-\paragraph{Verifiable Simplest OT.} We follow Protocol 7 of \cite{doerner2018secure} as a maliciously-secure ROT, skipping the last "Message Transfer" phase to achieve the Random OT. The resulting protocol, depicted in Protocol \ref{alg:vsot} comprises three phases. At first, the sender generates a private/public key pair, and sends the public key to the receiver. In the second phase, the receiver encodes its choice bit and the sender generates two random pads based on the choice bit for the receiver to recover only one. The third phase is the verification necessary to achieve malicious security. We perform some changes to the original protocol:
-
-\begin{itemize}
-    \item We run $\xi \times \ell$ instances of the protocol in parallel to match the sizes of the OT extension functionality.
-    \item To avoid potential issues with ill-defined hash input boundaries and EC point serialization, we employ hash chaining (e.g., HKDF~\cite{rfc5869}) for pad generation (\fn{H} in steps 2.4 and 3.2).
-\end{itemize}
-
-\inputAlgorithm{ot/base/vsot}{vsot.tex}

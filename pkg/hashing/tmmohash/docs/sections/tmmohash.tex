@@ -1,8 +1,0 @@
-\paragraph{$\fnref{TmmoHash}$.} Following a common approach from the MPC literature, we implement a block-cipher-based hash using the Tweakable Matyas-Meyer-Oseas (TMMO) construction of \cite[Section 7.4]{guo2020efficient}. This construction benefits from hardware support of AES\footnote{AES-NI and equivalent CPU instruction sets.} in fixed-key block mode (ECB) to iteratively compute the digest. The main component of this hash function uses a block cipher (AES-128 in our case) as an ideal permutation $\pi$. With an input $x$ of size a single block of $\pi$, and an an output with $n$ blocks, the TMMO construction is defined as:
-\begin{equation} \label{eq:tmmoIter}
-	\vecti{digest}{i} = \fn{TMMO^\pi}(x,i) = \pi(\pi(x)\oplus i)\oplus\pi(x)\quad \forall i \in \range{n}
-\end{equation}
-
-\noindent where $\pi(x)$ is the block cipher using as key the previous output of the TMMO $\vecti{digest}{i-1}$ as prescribed by the Matyas-Meyer-Oseas construction, and employing a fixed Initialization Vector (IV) for the first block. The detailed description is condensed in Algorithm \ref{alg:tmmoHash}. Note that this construction provides both \textit{correlation robustness}\footnote{More concretely, it achieves \textit{tweakable} (admits variable output lengths) \textit{circular correlation robustness}, a strictly stronger notion of correlation robustness. } as proven in \cite{guo2020efficient}, and \textit{preimage resistance} due to its use of AES as a one-way function. We use \fnref{TmmoHash} in the $\fnref{RVOLE}$ protocol.
-
-\inputAlgorithm{hashing/tmmohash}{tmmohash.tex}

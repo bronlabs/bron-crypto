@@ -1,90 +1,95 @@
 package algebra
 
-import "github.com/cronokirby/saferith"
+type AffineSystem[E AffineElement[E, C], C RingElement[C]] interface {
+	Structure[E]
 
-// AlgebraicVariety defines some methods that the structure ST must have to be an algebraic variety.
-// An algebraic variety is the set of solutions of some polynomial defined over a base field.
-// Note that these methods are not sufficient eg. we are also not defining interface methods related to projective space, even though
-// these varieties must have projective embeddings (equivalent to above point).
-type AlgebraicVariety[VarietyType, BaseFieldType Structure, VarietyElementType, BaseFieldElementType Element] interface {
-	// Dimension returns the number of variables of the polynomial.
-	Dimension() int
-	// Discriminant returns some number as function of its coefficients. The exact definition is context dependent.
-	// eg. for elliptic curves it would be -16(4a^3+27b^2)
-	Discriminant() *saferith.Int
-	// FrobeniusEndomorphism returns an element whose coordinates are coordinates of p, each raised to the power of characteristic of the base field.
-	FrobeniusEndomorphism(p VarietyElementType) VarietyElementType
-	// BaseField returns the base field of the algebraic variety ST.
-
-	AlgebraicVarietyBaseField() AlgebraicVarietyBaseField[VarietyType, BaseFieldType, VarietyElementType, BaseFieldElementType]
+	FromAffineCompressed(b []byte) (E, error)
+	FromAffineUncompressed(b []byte) (E, error)
 }
 
-// AlgebraicVarietyElement the type parameter of elements of the algebraic variety ST.
-type AlgebraicVarietyElement[VarietyType, BaseFieldType Structure, VarietyElementType, BaseFieldElementType Element] any
+type AffineElement[E Element[E], C RingElement[C]] interface {
+	Element[E]
+	Coordinates() []C
 
-type AlgebraicVarietyBaseField[VarietyType, BaseFieldType Structure, VarietyElementType, BaseFieldElementType Element] interface {
-	Field[BaseFieldType, BaseFieldElementType]
-	AlgebraicVariety() AlgebraicVariety[VarietyType, BaseFieldType, VarietyElementType, BaseFieldElementType]
-}
-
-type AlgebraicVarietyBaseFieldElement[VarietyType, BaseFieldType Structure, VarietyElementType, BaseFieldElementType Element] interface {
-	FieldElement[BaseFieldType, BaseFieldElementType]
-}
-
-// AffineAlgebraicVarietyElement defines additional methods needed to treat affine aspects of algebraic variety members.
-type AffineAlgebraicVarietyElement[VarietyType, BaseFieldType Structure, VarietyElementType, BaseFieldElementType Element] interface {
-	AlgebraicVarietyElement[VarietyType, BaseFieldType, VarietyElementType, BaseFieldElementType]
-	// AffineCoordinates return an ordered slice of field elements that are the coordinates of the point implementing this interface.
-	AffineCoordinates() []BaseFieldElementType
-	// ToAffineCompressed returns the compressed affine serialisation of this element.
+	// TODO(aalireza): we should probably rename these, technically they represent chosen method of serialisation (e.g. secg for Weierstrass curves, zcash for BLS12381, and RFCxxx for Edwards)
 	ToAffineCompressed() []byte
-	// ToAffineUncompressed returns the uncompressed affine serialisation of this element.
 	ToAffineUncompressed() []byte
-	// FromAffineCompressed returns the element represented by the compressed affine serialisation.
-	FromAffineCompressed(bytes []byte) (VarietyElementType, error)
-	// FromAffineUncompressed returns the element represented by the uncompressed affine serialisation.
-	FromAffineUncompressed(bytes []byte) (VarietyElementType, error)
 }
 
-// AlgebraicGroup defines methods needed for algebraic variety ST to form a group.
-type AlgebraicGroup[GroupType, BaseFieldType Structure, GroupElementType, BaseFieldElementType Element] interface {
-	// Algebraic group is a group.
-	Group[GroupType, GroupElementType]
-	// Algebraic group is an algebraic variety.
-	AlgebraicVariety[GroupType, BaseFieldType, GroupElementType, BaseFieldElementType]
+type AlgebraicCurve[Point AlgebraicPoint[Point, Coordinate], Coordinate RingElement[Coordinate]] interface {
+	Group[Point]
+	AffineSystem[Point, Coordinate]
+
+	NewPoint(affineX, affineY Coordinate) (Point, error)
 }
 
-// AlgebraicGroupElement defines methods needed for elements of type E to be elements of algebraic group ST.
-type AlgebraicGroupElement[GroupType, BaseFieldType Structure, GroupElementType, BaseFieldElementType Element] interface {
-	// Algebraic group element is an algebraic variety element.
-	AlgebraicVarietyElement[GroupType, BaseFieldType, GroupElementType, BaseFieldElementType]
-	// Algebraic group element is a group element.
-	GroupElement[GroupType, GroupElementType]
+type AlgebraicPoint[Point interface {
+	GroupElement[Point]
+	AffineElement[Point, Coordinate]
+}, Coordinate RingElement[Coordinate]] interface {
+	GroupElement[Point]
+	AffineElement[Point, Coordinate]
+
+	AffineX() (Coordinate, error)
+	AffineY() (Coordinate, error)
 }
 
-// AlgebraicCurve exposes some methods that we need to work with algebraic groups of dimension one easily. ST here is the type of the algebraic curve.
-type AlgebraicCurve[CurveType, BaseFieldType Structure, PointType, BaseFieldElementType Element] interface {
-	// Algebraic curve is an algebraic variety of dimension 1.
-	AlgebraicVariety[CurveType, BaseFieldType, PointType, BaseFieldElementType]
-	// NewPoint returns a point of type E given affine coordinates x and y of type F. It returns an error if the (x, y) is not on curve.
-	NewPoint(affineX, affineY AlgebraicVarietyBaseFieldElement[CurveType, BaseFieldType, PointType, BaseFieldElementType]) (PointType, error)
+type GenericEllipticCurve[
+	Point GenericEllipticCurvePoint[Point, BaseFieldElement, Scalar, TorsionFreePoint, TorsionFreeScalar], BaseFieldElement FiniteFieldElement[BaseFieldElement], Scalar UintLike[Scalar],
+	TorsionFreePoint TorsionFreeEllipticCurvePoint[TorsionFreePoint, BaseFieldElement, TorsionFreeScalar], TorsionFreeScalar PrimeFieldElement[TorsionFreeScalar],
+] interface {
+	AlgebraicCurve[Point, BaseFieldElement]
+	FiniteAbelianGroup[Point, Scalar]
+	TorsionFreeSubGroupGenerator() TorsionFreePoint
 }
 
-// Point exposes some methods that we need to work with elements of algebraic group ST.
-type Point[CurveType, BaseFieldType Structure, PointType, BaseFieldElementType Element] interface {
-	AlgebraicVarietyElement[CurveType, BaseFieldType, PointType, BaseFieldElementType]
+type GenericEllipticCurvePoint[Point interface {
+	AlgebraicPoint[Point, BaseFieldElement]
+	FiniteAbelianGroupElement[Point, Scalar]
+}, BaseFieldElement FiniteFieldElement[BaseFieldElement], Scalar UintLike[Scalar],
+	TorsionFreePoint TorsionFreeEllipticCurvePoint[TorsionFreePoint, BaseFieldElement, TorsionFreeScalar], TorsionFreeScalar PrimeFieldElement[TorsionFreeScalar],
+] interface {
+	AlgebraicPoint[Point, BaseFieldElement]
+	AbelianGroupElement[Point, Scalar]
+
+	ClearCofactor() TorsionFreePoint
 }
 
-type AffinePoint[CurveType, BaseFieldType Structure, PointType, BaseFieldElementType Element] interface {
-	AffineAlgebraicVarietyElement[CurveType, BaseFieldType, PointType, BaseFieldElementType]
-	// Point has affine coordinates.
-	AffinePointCoordinates[BaseFieldElementType]
+type TorsionFreeEllipticCurve[Point TorsionFreeEllipticCurvePoint[Point, BaseFieldElement, Scalar],
+	BaseFieldElement FiniteFieldElement[BaseFieldElement], Scalar PrimeFieldElement[Scalar],
+] interface {
+	GenericEllipticCurve[Point, BaseFieldElement, Scalar, Point, Scalar]
+	PrimeGroup[Point, Scalar]
+	CyclicSemiGroup[Point]
 }
 
-// AffinePointCoordinates defines methods needed for an algebraic curve's to represent its affine coordinates.
-type AffinePointCoordinates[FieldElement Element] interface {
-	// AffineX returns the x coordinate of the point implementing this interface.
-	AffineX() FieldElement
-	// AffineY returns the y coordinate of the point implementing this interface.
-	AffineY() FieldElement
+type TorsionFreeEllipticCurvePoint[Point interface {
+	AlgebraicPoint[Point, BaseFieldElement]
+	PrimeGroupElement[Point, Scalar]
+	CyclicSemiGroupElement[Point]
+	ClearCofactor() Point
+}, BaseFieldElement FiniteFieldElement[BaseFieldElement], Scalar PrimeFieldElement[Scalar]] interface {
+	AlgebraicPoint[Point, BaseFieldElement]
+	PrimeGroupElement[Point, Scalar]
+	CyclicSemiGroupElement[Point]
+	ClearCofactor() Point
+}
+
+type Pairing[
+	g1 TorsionFreeEllipticCurve[g1Point, g1Coordinate, g1Scalar], g1Point TorsionFreeEllipticCurvePoint[g1Point, g1Coordinate, g1Scalar], g1Coordinate FiniteFieldElement[g1Coordinate], g1Scalar PrimeFieldElement[g1Scalar],
+	g2 TorsionFreeEllipticCurve[g2Point, g2Coordinate, g2Scalar], g2Point TorsionFreeEllipticCurvePoint[g2Point, g2Coordinate, g2Scalar], g2Coordinate FiniteFieldElement[g2Coordinate], g2Scalar PrimeFieldElement[g2Scalar],
+	gt interface {
+		MultiplicativeGroup[gtElement]
+		AbelianGroup[gtElement, gtScalar]
+	}, gtElement interface {
+		MultiplicativeGroupElement[gtElement]
+		FiniteAbelianGroupElement[gtElement, gtScalar]
+	}, gtScalar UintLike[gtScalar],
+] interface {
+	G1() g1
+	G2() g2
+	Gt() gt
+
+	Pair(p g1Point, q g2Point) (gtElement, error)
+	MultiPair(ps []g1Point, qs []g2Point) (gtElement, error)
 }

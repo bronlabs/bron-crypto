@@ -12,6 +12,9 @@ type Incomparable [0]func()
 type Equatable[K any] interface {
 	Equal(rhs K) bool
 }
+type Clonable[T any] interface {
+	Clone() T
+}
 
 type Hashable[K any] interface {
 	Equatable[K]
@@ -23,29 +26,44 @@ type MapEntry[K any, V any] struct {
 	Value V
 }
 
-type Map[K any, V any] interface {
+type immutableMap[K, V, T any] interface {
 	Get(key K) (value V, exists bool)
-	Retain(keys Set[K]) Map[K, V]
-	Filter(predicate func(key K) bool) Map[K, V]
+	Retain(keys Set[K]) T
+	Filter(predicate func(key K) bool) T
 	ContainsKey(key K) bool
-	Put(key K, value V)
-	TryPut(key K, newValue V) (replaced bool, oldValue V)
-	Clear()
 	Size() int
 	IsEmpty() bool
-	Remove(key K)
-	TryRemove(key K) (removed bool, removedValue V)
 	Keys() []K
 	Values() []V
 
 	Iter() iter.Seq2[K, V]
-	Clone() Map[K, V]
+	Clone() T
 	json.Marshaler
+}
+
+type ImmutableMap[K any, V any] interface {
+	immutableMap[K, V, ImmutableMap[K, V]]
+}
+
+type Map[K any, V any] interface {
+	immutableMap[K, V, Map[K, V]]
+	Put(key K, value V)
+	TryPut(key K, newValue V) (replaced bool, oldValue V)
+	Clear()
+	Remove(key K)
+	TryRemove(key K) (removed bool, removedValue V)
+
+	// Freeze() ImmutableMap[K, V]
 }
 
 type BiMap[K any, V any] interface {
 	Map[K, V]
 	Reverse() BiMap[V, K]
+}
+
+type ImmutableBiMap[K any, V any] interface {
+	ImmutableMap[K, V]
+	Reverse() ImmutableBiMap[V, K]
 }
 
 type ConcurrentBiMap[K any, V any] interface {
@@ -69,33 +87,85 @@ type ConcurrentSet[E any] interface {
 	ComputeIfPresent(e E, remappingFunction func(e E) (E, bool)) E
 }
 
-type AbstractSet[E any] interface {
-	Cardinality() *saferith.Nat
+type AbstractSet[E, C any] interface {
+	Cardinality() C
 	Contains(e E) bool
 	Iter() iter.Seq[E]
 }
 
 type Set[E any] interface {
-	AbstractSet[E]
+	AbstractSet[E, *saferith.Nat]
+	immutableSet[E, Set[E]]
 	Add(e E)
 	AddAll(es ...E)
 	Remove(e E)
 	Clear()
+
+	// Freeze() ImmutableSet[E]
+}
+
+type immutableSet[E, T any] interface {
+	AbstractSet[E, *saferith.Nat]
 	Size() int
 	IsEmpty() bool
-	Union(other Set[E]) Set[E]
-	Intersection(other Set[E]) Set[E]
-	Difference(other Set[E]) Set[E]
-	SymmetricDifference(other Set[E]) Set[E]
-	SubSets() []Set[E]
-	IsSubSet(other Set[E]) bool
-	IsProperSubSet(other Set[E]) bool
-	IsSuperSet(other Set[E]) bool
-	IsProperSuperSet(other Set[E]) bool
+	Union(other T) T
+	Intersection(other T) T
+	Difference(other T) T
+	SymmetricDifference(other T) T
+	SubSets() []T
+	IsSubSet(other T) bool
+	IsProperSubSet(other T) bool
+	IsSuperSet(other T) bool
+	IsProperSuperSet(other T) bool
+	// IterSubSets() iter.Seq[T]
 	IterSubSets() <-chan Set[E]
 	List() []E
-	Clone() Set[E]
+	Clone() T
 
-	Equatable[Set[E]]
+	Equatable[T]
 	json.Marshaler
+}
+
+type ImmutableSet[E any] interface {
+	immutableSet[E, ImmutableSet[E]]
+}
+
+type AbstractMatrix[T any] interface {
+	Dimensions() (n, m int)
+	Transpose() T
+	SubMatrix(row1, row2, col1, col2 int) T
+	IsSquare() bool
+	IsDiagonal() bool
+
+	Clonable[T]
+	Equatable[T]
+}
+
+type immutableMatrix[E, T any] interface {
+	AbstractMatrix[T]
+
+	Get(row, col int) E
+	GetRow(row int) []E
+	GetColumn(col int) []E
+
+	IterRows() iter.Seq[iter.Seq[E]]
+	IterColumns() iter.Seq[iter.Seq[E]]
+}
+
+type ImmutableMatrix[E any] interface {
+	immutableMatrix[E, ImmutableMatrix[E]]
+}
+
+type Matrix[E any] interface {
+	immutableMatrix[E, Matrix[E]]
+
+	Set(row, col int, value E) error
+	SetRow(row int, values ...E) error
+	SetColumn(col int, values ...E) error
+
+	InsertRow(row int, values ...E) error
+	InsertColumn(col int, values ...E) error
+
+	DeleteRow(row int) error
+	DeleteColumn(col int) error
 }

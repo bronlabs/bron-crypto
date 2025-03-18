@@ -1,108 +1,78 @@
 package algebra
 
-type Ordering int
+import "github.com/bronlabs/bron-crypto/pkg/base/errs"
+
+type PartialOrdering int
+type Ordering uint
 
 const (
-	Incomparable Ordering = -2
-	LessThan     Ordering = -1
-	Equal        Ordering = 0
-	GreaterThan  Ordering = 1
+	Incomparable PartialOrdering = -1
+	LessThan     PartialOrdering = 0
+	Equal        PartialOrdering = 1
+	GreaterThan  PartialOrdering = 2
 )
 
-type Max[E Element] interface {
-	BinaryOperator[E]
-	Max(x, y E) E
+func orderString(o int) string {
+	switch o {
+	case -1:
+		return "Incomparable"
+	case 0:
+		return "Equal"
+	case 1:
+		return "LessThan"
+	case 2:
+		return "GreaterThan"
+	default:
+		return "Invalid"
+	}
 }
 
-type Min[E Element] interface {
-	BinaryOperator[E]
-	Min(x, y E) E
+func (o PartialOrdering) String() string {
+	return orderString(int(o))
 }
 
-type Enumerable[E Element] interface {
-	Next() (E, error)
-	Previous() (E, error)
+func (o Ordering) String() string {
+	return orderString(int(o))
 }
 
-// OrderTheoreticLattice defines methods needed for a structured set to be a lattice.
-// A lattice is a partially ordered set where every pair has a least upper bound (join) and a greatest lower bound (meet).
-type OrderTheoreticLattice[L Structure, E Element] interface {
-	// Lattice is a structured set.
-	StructuredSet[L, E]
-	// Join returns the least upper bound of x and y.
-	Join(x, y OrderTheoreticLatticeElement[L, E]) E
-	// Meet returns the greatest lower bound of x and y.
-	Meet(x, y OrderTheoreticLatticeElement[L, E]) E
-
-	LatticeElement() OrderTheoreticLatticeElement[L, E]
+type PartiallyComparable[E any] interface {
+	IsLessThanOrEqual(rhs E) bool
 }
 
-// OrderTheoreticLatticeElement defines methods needed for elements of type E to be elements of
-// lattice S.
-// A lattice is a set where every pair has a least upper bound (join) and a greatest lower bound (meet).
-type OrderTheoreticLatticeElement[L Structure, E Element] interface {
-	// Lattic element is an element of a structured set.
-	StructuredSetElement[L, E]
-	// Cmp returns one of:
-	//  - Incomparable.
-	//  - LessThan, if this element is less than rhs.
-	//  - Equal, if this element is equal to rhs.
-	//  - GreaterThan, if this element is greater than rhs.
-	Cmp(rhs OrderTheoreticLatticeElement[L, E]) Ordering
-	// Join returns the least upper bound of this element and rhs.
-	Join(rhs OrderTheoreticLatticeElement[L, E]) E
-	// Meet returns the greatest lower bound of this element and rhs.
-	Meet(rhs OrderTheoreticLatticeElement[L, E]) E
-
-	Lattice() OrderTheoreticLattice[L, E]
+func PartialCompare[E PartiallyComparable[E]](x, y E) PartialOrdering {
+	if x.IsLessThanOrEqual(y) && y.IsLessThanOrEqual(x) {
+		return Equal
+	}
+	if x.IsLessThanOrEqual(y) {
+		return LessThan
+	}
+	if y.IsLessThanOrEqual(x) {
+		return GreaterThan
+	}
+	return Incomparable
 }
 
-// Chain defines methods needed for S to be a totally ordered subset of some larger bounded lattice.
-type Chain[C Structure, E Element] interface {
-	OrderTheoreticLattice[C, E]
-	// Max returns the maximum of the inputs.
-	Max(x ChainElement[C, E], ys ...ChainElement[C, E]) E
-	// Min returns the minimum of the inputs.
-	Min(x ChainElement[C, E], ys ...ChainElement[C, E]) E
-
-	ChainElement() ChainElement[C, E]
+func Compare[E PartiallyComparable[E]](x, y E) Ordering {
+	out := PartialCompare(x, y)
+	if out == Incomparable {
+		panic(errs.NewValue("Incomparable"))
+	}
+	return Ordering(out)
 }
 
-// ChainElement defined methods for elements of type E to be elements of chain S.
-type ChainElement[C Structure, E Element] interface {
-	OrderTheoreticLatticeElement[C, E]
-	Enumerable[E]
-	// Min returns the minimum of this element and rhs.
-	Min(rhs E) E
-	// Max returns the maximum of this element and rhs.
-	Max(rhs E) E
-
-	Chain() Chain[C, E]
-
-	Increment() E
-	Decrement() E
-	NatSerialization[E]
+type Poset[E PartiallyComparableElement[E]] interface {
+	Structure[E]
+	PartialCompare(x, y E) PartialOrdering
 }
 
-// BoundedOrderTheoreticLattice defines additional methods for a lattice S for it to be considered as bounded.
-type BoundedOrderTheoreticLattice[L Structure, E Element] interface {
-	OrderTheoreticLattice[L, E]
-	// Top returns the maximum of S.
-	Top() E
-	// Bottom returns minimum of S.
-	Bottom() E
-
-	BoundedLatticeElement() BoundedOrderTheoreticLatticeElement[L, E]
+type Chain[E PartiallyComparableElement[E]] interface {
+	Poset[E]
+	Compare(x, y E) Ordering
 }
-
-// BoundedOrderTheoreticLatticeElement defines additional methods for elements of type E to be elements of
-// the bounded lattice S.
-type BoundedOrderTheoreticLatticeElement[L Structure, E Element] interface {
-	OrderTheoreticLatticeElement[L, E]
-	// IsTop returns true if this element is the maximum of S.
-	IsTop() bool
-	// IsBottom returns true if this element is the minimum of S.
-	IsBottom() bool
-
-	BoundedLattice() BoundedOrderTheoreticLattice[L, E]
+type PartiallyComparableElement[E interface {
+	Element[E]
+	PartiallyComparable[E]
+}] interface {
+	Element[E]
+	PartiallyComparable[E]
 }

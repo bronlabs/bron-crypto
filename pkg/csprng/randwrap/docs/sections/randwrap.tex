@@ -1,9 +1,0 @@
-\paragraph{CSPRNG Wrapper}\label{sec:csprng_wrapper}
-
-In some cases, the entropy source of the CSPRNG may be compromised due to faulty hardware or other reasons. To mitigate this risk we implement RFC8937~\cite{cremers2020rfc}, a randomness wrapper that ties the security of the CSPRNG not only to the high-entropy source, but also to a deterministic signing key held by the device. We summarize the construction in Algorithm \ref{alg:prngwrapper}, We refer to RFC8937~\cite{cremers2020rfc} for its security analysis.
-
-
-\inputAlgorithm{csprng/randwrap}{randwrap.tex}
-
-
-We incorporate \fnref{RandWrap} as an intermediate step in the seeding and reseeding of the {CTR\_DRBG}. For the sake of clarity, we name the resulting construction as \fnref{krand} and describe it in Algorithm \ref{alg:krand}.
