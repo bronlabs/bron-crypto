@@ -158,7 +158,7 @@ func NewParticipant(
 		if participant.Equal(myAuthKey) {
 			continue
 		}
-		otProtocol, err := types.NewProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, myAuthKey.(types.IdentityKey))) //nolint:errcheck // trivial type check
+		otProtocol, err := types.NewProtocol(protocol.Curve(), hashset.NewHashableHashSet(participant, myAuthKey.(types.IdentityKey))) //nolint:errcheck,forcetypeassert // trivial type check
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not construct protocol config for myself and %s", participant.String())
 		}
