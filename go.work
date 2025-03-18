@@ -2,6 +2,6 @@ go 1.24
 
 use (
 	.
-	./tools/edwards25519-tester
+	// ./tools/edwards25519-tester
 	./tools/field-codegen
 )

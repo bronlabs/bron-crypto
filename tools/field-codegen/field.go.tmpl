@@ -31,6 +31,8 @@ func init() {
 
 type {{ .TypeName }} struct {
 	{{ .FiatPrefix -}}MontgomeryDomainFieldElement
+
+	_ [0]func()
 }
 
 func (f *{{- .TypeName }}) Set(v *{{- .TypeName }}) {
