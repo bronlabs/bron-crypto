@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	transcriptLabel  = "KRYPTON_TBLS_GLOW-"
+	transcriptLabel  = "BRON_CRYPTO_TBLS_GLOW-"
 	DleqNIZKCompiler = fiatShamir.Name
 )
 

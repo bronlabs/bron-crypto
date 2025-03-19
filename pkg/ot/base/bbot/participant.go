@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
-const transcriptLabel = "KRYPTON_BBOT-"
+const transcriptLabel = "BRON_CRYPTO_BBOT-"
 
 // Sender obtains the 2 random messages for the 1|2 ROT.
 type Sender struct {

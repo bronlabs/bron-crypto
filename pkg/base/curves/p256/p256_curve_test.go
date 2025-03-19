@@ -45,7 +45,7 @@ func TestScalarHash(t *testing.T) {
 	require.NoError(t, err)
 	s, ok := sc.(*p256.Scalar)
 	require.True(t, ok)
-	expected, err := new(saferith.Nat).SetHex(strings.ToUpper("f7527451f3de5d6a98384bdb3a618186e08190d021b46dc948012728861d2ed0"))
+	expected, err := new(saferith.Nat).SetHex(strings.ToUpper("ad0660580b399d19a6cd94731df8f97114a1e821521d8f3ff180a385cd90c5eb"))
 	require.NoError(t, err)
 	require.EqualValues(t, hex.EncodeToString(s.Nat().Bytes()), hex.EncodeToString(expected.Bytes()))
 }

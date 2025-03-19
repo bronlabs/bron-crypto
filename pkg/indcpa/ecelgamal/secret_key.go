@@ -24,7 +24,7 @@ func (sk *SecretKey) Decrypt(cipherText *CipherText) (PlainText, error) {
 	m := cipherText.C2.Sub(s)
 	return m, nil
 }
-func (*SecretKey) Open(_ *CipherText) (PlainText, Nonce, error) {
+func (*SecretKey) Open(_ *CipherText) (pk PlainText, nonce Nonce, err error) {
 	return nil, nil, errs.NewFailed("Cannot open an encryption")
 }
 

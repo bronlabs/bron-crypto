@@ -15,7 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "KRYPTON_HJKY_KEY_REFRESH-"
+const transcriptLabel = "BRON_CRYPTO_HJKY_KEY_REFRESH-"
 
 var _ types.ThresholdParticipant = (*Participant)(nil)
 

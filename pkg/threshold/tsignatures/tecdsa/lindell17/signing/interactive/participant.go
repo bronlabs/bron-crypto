@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	transcriptLabel = "KRYPTON_LINDELL17_SIGN-"
+	transcriptLabel = "BRON_CRYPTO_LINDELL17_SIGN-"
 )
 
 var (

@@ -17,7 +17,7 @@ import (
 const (
 	Name compiler.Name = "Fischlin"
 
-	transcriptLabel = "BRONLABS_KRYPTON_NIZK_FISCHLIN-"
+	transcriptLabel = "BRON_CRYPTO_NIZK_FISCHLIN-"
 
 	rhoLabel        = "rhoLabel-"
 	statementLabel  = "statementLabel-"

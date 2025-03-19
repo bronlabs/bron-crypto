@@ -44,7 +44,7 @@ func TestScalarK256Hash(t *testing.T) {
 	require.NoError(t, err)
 	s, ok := sc.(*k256.Scalar)
 	require.True(t, ok)
-	expected, err := new(saferith.Nat).SetHex("E95FF61F0417C3720403FFAB02E38B41662BBF1651F31878B4F15D7E03F48537")
+	expected, err := new(saferith.Nat).SetHex("8B0F39DBFF9E1C4DD0308AC2844DEC1F138AF60E93A91D0F30AFC09AC394E5FD")
 	require.NoError(t, err)
 	require.NotZero(t, s.Nat().Eq(expected))
 }

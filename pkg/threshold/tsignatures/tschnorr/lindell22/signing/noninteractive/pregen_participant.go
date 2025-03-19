@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	transcriptLabel = "KRYPTON_LINDELL22_PREGEN-"
+	transcriptLabel = "BRON_CRYPTO_LINDELL22_PREGEN-"
 )
 
 var _ types.ThresholdParticipant = (*PreGenParticipant)(nil)

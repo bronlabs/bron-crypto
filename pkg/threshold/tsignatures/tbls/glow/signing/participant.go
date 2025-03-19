@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "KRYPTON_THRESHOLD_BLS_GLOW-"
+const transcriptLabel = "BRON_CRYPTO_THRESHOLD_BLS_GLOW-"
 
 var _ types.ThresholdSignatureParticipant = (*Cosigner)(nil)
 

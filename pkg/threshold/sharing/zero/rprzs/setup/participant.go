@@ -15,7 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
-const transcriptLabel = "KRYPTON_PRZS_ZERO_SETUP-"
+const transcriptLabel = "BRON_CRYPTO_PRZS_ZERO_SETUP-"
 
 var _ types.Participant = (*Participant)(nil)
 

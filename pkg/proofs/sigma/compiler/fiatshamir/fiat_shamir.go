@@ -14,7 +14,7 @@ import (
 const (
 	Name compiler.Name = "FiatShamir"
 
-	transcriptLabel = "KRYPTON_NIZKP_FIATSHAMIR-"
+	transcriptLabel = "BRON_CRYPTO_NIZKP_FIATSHAMIR-"
 	statementLabel  = "statementLabel-"
 	commitmentLabel = "commitmentLabel-"
 	challengeLabel  = "challengeLabel-"

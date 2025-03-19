@@ -13,8 +13,8 @@ type ReceiverContext = Receiver
 
 // SetupBaseS establishes a context for the sender that can be used to encrypt.
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key
-func SetupBaseS(suite *CipherSuite, receiverPublicKey PublicKey, info []byte, prng io.Reader) (PublicKey, *SenderContext, error) {
-	sender, enc, err := NewSender(Base, suite, receiverPublicKey, nil, info, nil, nil, prng)
+func SetupBaseS(suite *CipherSuite, receiverPublicKey PublicKey, info []byte, prng io.Reader) (enc PublicKey, sender *SenderContext, err error) {
+	sender, enc, err = NewSender(Base, suite, receiverPublicKey, nil, info, nil, nil, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to construct sender context")
 	}
@@ -63,8 +63,8 @@ func OpenBase(suite *CipherSuite, additionalData, ciphertext []byte, receiverPri
 
 // SetupPSKS establishes a context for the sender that can be used to encrypt. This variant extends the base mechanism by allowing the recipient to authenticate that the sender possessed a given PSK. We assume that both parties have been provisioned with both the PSK value psk and another byte string psk_id that is used to identify which PSK should be used.
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-a-pre-
-func SetupPSKS(suite *CipherSuite, receiverPublicKey PublicKey, psk, pskId, info []byte, prng io.Reader) (PublicKey, *SenderContext, error) {
-	sender, enc, err := NewSender(PSk, suite, receiverPublicKey, nil, info, psk, pskId, prng)
+func SetupPSKS(suite *CipherSuite, receiverPublicKey PublicKey, psk, pskId, info []byte, prng io.Reader) (enc PublicKey, sender *SenderContext, err error) {
+	sender, enc, err = NewSender(PSk, suite, receiverPublicKey, nil, info, psk, pskId, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to construct sender context")
 	}
@@ -113,8 +113,8 @@ func OpenPSK(suite *CipherSuite, additionalData, ciphertext []byte, receiverPriv
 
 // SetupAuthS establishes a context for the sender that can be used to encrypt.This variant extends the base mechanism by allowing the recipient to authenticate that the sender possessed a given KEM private key.
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy
-func SetupAuthS(suite *CipherSuite, receiverPublicKey PublicKey, senderPrivateKey *PrivateKey, info []byte, prng io.Reader) (PublicKey, *SenderContext, error) {
-	sender, enc, err := NewSender(Auth, suite, receiverPublicKey, senderPrivateKey, info, nil, nil, prng)
+func SetupAuthS(suite *CipherSuite, receiverPublicKey PublicKey, senderPrivateKey *PrivateKey, info []byte, prng io.Reader) (enc PublicKey, sender *SenderContext, err error) {
+	sender, enc, err = NewSender(Auth, suite, receiverPublicKey, senderPrivateKey, info, nil, nil, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to construct sender context")
 	}
@@ -163,8 +163,8 @@ func OpenAuth(suite *CipherSuite, additionalData, ciphertext []byte, receiverPri
 
 // SetupAuthPSKS establishes a context for the sender that can be used to encrypt. This mode is a straightforward combination of the PSK and authenticated modes. Like the PSK mode, a PSK is provided as input to the key schedule, and like the authenticated mode, authenticated KEM variants are used.
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-both-a
-func SetupAuthPSKS(suite *CipherSuite, receiverPublicKey PublicKey, senderPrivateKey *PrivateKey, psk, pskId, info []byte, prng io.Reader) (PublicKey, *SenderContext, error) {
-	sender, enc, err := NewSender(AuthPSk, suite, receiverPublicKey, senderPrivateKey, info, psk, pskId, prng)
+func SetupAuthPSKS(suite *CipherSuite, receiverPublicKey PublicKey, senderPrivateKey *PrivateKey, psk, pskId, info []byte, prng io.Reader) (enc PublicKey, sender *SenderContext, err error) {
+	sender, enc, err = NewSender(AuthPSk, suite, receiverPublicKey, senderPrivateKey, info, psk, pskId, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to construct sender context")
 	}

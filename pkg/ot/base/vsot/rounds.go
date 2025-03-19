@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
-const transcriptLabel = "KRYPTON_VSOT-"
+const transcriptLabel = "BRON_CRYPTO_VSOT-"
 
 // Round1 computes a secret/public key pair and the dlog proof of the secret key.
 func (s *Sender) Round1() (r1out *Round1P2P, err error) {

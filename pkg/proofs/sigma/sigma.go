@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	transcriptLabel = "KRYPTON_SIGMA_POK-"
+	transcriptLabel = "BRON_CRYPTO_SIGMA_POK-"
 
 	statementLabel  = "statementLabel-"
 	commitmentLabel = "commitmentLabel-"
