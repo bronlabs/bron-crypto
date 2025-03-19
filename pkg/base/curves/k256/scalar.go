@@ -1,13 +1,17 @@
 package k256
 
 import (
+	"encoding"
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"io"
 	"slices"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/cronokirby/saferith"
 )
@@ -18,18 +22,16 @@ var (
 
 	_ fields.PrimeField[*Scalar]        = (*ScalarField)(nil)
 	_ fields.PrimeFieldElement[*Scalar] = (*Scalar)(nil)
+	_ encoding.BinaryMarshaler          = (*Scalar)(nil)
 
-	k256Order = saferith.ModulusFromBytes(reverseBytes(k256Impl.FqModulus[:]))
+	k256Order *saferith.Modulus
 )
 
-// TODO: move/rewrite to/in bitstring/utils package
-func reverseBytes(b []byte) []byte {
-	out := slices.Clone(b)
-	slices.Reverse(out)
-	return out
-}
-
 func scalarFieldInit() {
+	orderBytes := make([]byte, len(k256Impl.FqModulus))
+	copy(orderBytes, k256Impl.FqModulus[:])
+	slices.Reverse(orderBytes)
+	k256Order = saferith.ModulusFromBytes(orderBytes)
 	scalarFieldInstance = ScalarField{}
 }
 
@@ -39,7 +41,7 @@ func NewScalarField() ScalarField {
 }
 
 type ScalarField struct {
-	traits.ScalarField[*k256Impl.Fq, k256Impl.Fq, *Scalar, Scalar]
+	traits.ScalarField[*k256Impl.Fq, *Scalar, Scalar]
 }
 
 func (ScalarField) Name() string {
@@ -75,15 +77,26 @@ func (ScalarField) Order() algebra.Cardinal {
 }
 
 func (ScalarField) Random(prng io.Reader) (*Scalar, error) {
-	panic("implement me")
+	var e Scalar
+	ok := e.V.SetRandom(prng)
+	if ok == 0 {
+		return nil, errs.NewRandomSample("cannot sample scalar")
+	}
+
+	return &e, nil
 }
 
 func (ScalarField) Hash(input []byte) (*Scalar, error) {
-	panic("implement me")
+	var e [1]k256Impl.Fq
+	h2c.HashToField(e[:], k256Impl.CurveHasherParams{}, base.Hash2CurveAppTag+Hash2CurveScalarSuite, input)
+
+	var s Scalar
+	s.V.Set(&e[0])
+	return &s, nil
 }
 
 func (f ScalarField) FromNat(v *saferith.Nat) (*Scalar, error) {
-	return traits.NewScalarFromNat[*k256Impl.Fq, k256Impl.Fq, *Scalar](v, k256Order)
+	return traits.NewScalarFromNat[*k256Impl.Fq, *Scalar, Scalar](v, k256Order)
 }
 
 type Scalar struct {
@@ -99,9 +112,13 @@ func (s *Scalar) Fq() *k256Impl.Fq {
 }
 
 func (s *Scalar) SetFq(v k256Impl.Fq) {
-	s.Scalar.V = v
+	s.Scalar.V.Set(&v)
 }
 
 func (s *Scalar) UnmarshalBinary(data []byte) error {
-	panic("implement me")
+	if ok := s.V.SetBytes(data); ok == 0 {
+		return errs.NewSerialisation("cannot unmarshal scalar")
+	}
+
+	return nil
 }

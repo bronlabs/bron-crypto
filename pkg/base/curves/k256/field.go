@@ -1,43 +1,111 @@
 package k256
 
-// import (
-// 	"sync"
+import (
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
+	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/cronokirby/saferith"
+	"slices"
+	"sync"
+)
 
-// 	"github.com/bronlabs/bron-crypto/pkg/base/algebra2/fields"
-// 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
-// )
+const (
+	BaseFieldName = "K256Fp"
+)
 
-// var (
-// 	baseFieldInitOnce sync.Once
-// 	baseFieldInstance BaseField
+var (
+	_ algebra.FiniteField[*BaseFieldElement]        = (*BaseField)(nil)
+	_ algebra.FiniteFieldElement[*BaseFieldElement] = (*BaseFieldElement)(nil)
 
-// 	_ fields.PrimeField[BaseFieldElement]        = BaseField{}
-// 	_ fields.PrimeFieldElement[BaseFieldElement] = BaseFieldElement{}
-// )
+	baseFieldInstance *BaseField
+	baseFieldInitOnce sync.Once
+	baseFieldOrder    *saferith.Modulus
+)
 
-// func baseFieldInit() {
-// 	baseFieldInstance = BaseField{}
-// }
+type BaseField struct {
+	traits.BaseField[*k256Impl.Fp, *BaseFieldElement, BaseFieldElement]
+}
 
-// func NewBaseField() BaseField {
-// 	baseFieldInitOnce.Do(baseFieldInit)
-// 	return baseFieldInstance
-// }
+func NewBaseField() *BaseField {
+	baseFieldInitOnce.Do(func() {
+		orderBytes := make([]byte, len(k256Impl.FpModulus))
+		copy(orderBytes, k256Impl.FpModulus[:])
+		slices.Reverse(orderBytes)
+		baseFieldOrder = saferith.ModulusFromBytes(orderBytes)
+		baseFieldInstance = &BaseField{}
+	})
 
-// type BaseField struct{}
+	return baseFieldInstance
+}
 
-// type BaseFieldElement struct {
-// 	v k256Impl.Fp
-// }
+func (f *BaseField) Hash(bytes []byte) (*BaseFieldElement, error) {
+	var e [1]k256Impl.Fp
+	h2c.HashToField(e[:], k256Impl.CurveHasherParams{}, base.Hash2CurveAppTag+Hash2CurveSuite, bytes)
 
-// func (e BaseFieldElement) Add(other BaseFieldElement) BaseFieldElement {
-// 	out := new(k256Impl.Fp)
-// 	out.Add(&e.v, &other.v)
-// 	return BaseFieldElement{v: *out}
-// }
+	var s BaseFieldElement
+	s.V.Set(&e[0])
+	return &s, nil
+}
 
-// func (e BaseFieldElement) Mul(other BaseFieldElement) BaseFieldElement {
-// 	out := new(k256Impl.Fp)
-// 	out.Mul(&e.v, &other.v)
-// 	return BaseFieldElement{v: *out}
-// }
+func (f *BaseField) Name() string {
+	return BaseFieldName
+}
+
+func (f *BaseField) Order() algebra.Cardinal {
+	return baseFieldOrder.Nat()
+}
+
+func (f *BaseField) Operator() algebra.BinaryOperator[*BaseFieldElement] {
+	return algebra.Add[*BaseFieldElement]
+}
+
+func (f *BaseField) OtherOperator() algebra.BinaryOperator[*BaseFieldElement] {
+	return algebra.Mul[*BaseFieldElement]
+}
+
+func (f *BaseField) Characteristic() algebra.Cardinal {
+	return baseFieldOrder.Nat()
+}
+
+func (f *BaseField) ExtensionDegree() uint {
+	return 1
+}
+
+func (f *BaseField) ElementSize() int {
+	return k256Impl.FpBytes
+}
+
+func (f *BaseField) WideElementSize() int {
+	return k256Impl.FpWideBytes
+}
+
+type BaseFieldElement struct {
+	traits.BaseFieldElement[*k256Impl.Fp, k256Impl.Fp, *BaseFieldElement, BaseFieldElement]
+}
+
+func (fp *BaseFieldElement) Structure() algebra.Structure[*BaseFieldElement] {
+	return NewBaseField()
+}
+
+func (fp *BaseFieldElement) MarshalBinary() (data []byte, err error) {
+	return fp.V.Bytes(), nil
+}
+
+func (fp *BaseFieldElement) UnmarshalBinary(data []byte) error {
+	if ok := fp.V.SetBytes(data); ok == 0 {
+		return errs.NewSerialisation("cannot unmarshal field element")
+	}
+
+	return nil
+}
+
+func (fp *BaseFieldElement) SetFp(other *k256Impl.Fp) {
+	fp.V.Set(other)
+}
+
+func (fp *BaseFieldElement) Fp() *k256Impl.Fp {
+	return &fp.V
+}

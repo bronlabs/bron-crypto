@@ -14,21 +14,20 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
-type ScalarTraitInheriter[FE fields.PrimeFieldElementPtrConstraint[FE, FET], FET any] interface {
-	SetFq(FET)
-	Fq() FE
+type ScalarTraitInheriter[FQ fields.PrimeFieldElement[FQ]] interface {
+	Fq() FQ
 }
 
-type ScalarTraitInheriterPtrConstraint[FE fields.PrimeFieldElementPtrConstraint[FE, FET], FET any, WT any] interface {
+type ScalarTraitInheriterPtrConstraint[FQ fields.PrimeFieldElement[FQ], WT any] interface {
 	*WT
-	ScalarTraitInheriter[FE, FET]
+	ScalarTraitInheriter[FQ]
 }
 
-type ScalarField[FE fields.PrimeFieldElementPtrConstraint[FE, T], T any, W ScalarTraitInheriterPtrConstraint[FE, T, WT], WT any] struct {
+type ScalarField[FQ fields.PrimeFieldElement[FQ], W ScalarTraitInheriterPtrConstraint[FQ, WT], WT any] struct {
 	_ ds.Incomparable
 }
 
-func (f ScalarField[FE, T, W, WT]) SubFieldIdentity(i uint) (any, error) {
+func (f *ScalarField[FQ, W, WT]) SubFieldIdentity(i uint) (any, error) {
 	if i == 1 {
 		return f.OpIdentity(), nil
 	}
@@ -36,35 +35,31 @@ func (f ScalarField[FE, T, W, WT]) SubFieldIdentity(i uint) (any, error) {
 	return out, errs.NewValue("invalid subfield index")
 }
 
-func (f ScalarField[FE, T, W, WT]) Zero() W {
-	var v T
-	FE(&v).SetZero()
-	var out WT
-	W(&out).SetFq(v)
-	return W(&out)
+func (f *ScalarField[FQ, W, WT]) Zero() W {
+	var v WT
+	W(&v).Fq().SetZero()
+	return &v
 }
 
-func (f ScalarField[FE, T, W, WT]) One() W {
-	var v T
-	FE(&v).SetOne()
-	var out WT
-	W(&out).SetFq(v)
-	return W(&out)
+func (f *ScalarField[FQ, W, WT]) One() W {
+	var v WT
+	W(&v).Fq().SetOne()
+	return &v
 }
 
-func (f ScalarField[FE, T, W, WT]) OpIdentity() W {
+func (f *ScalarField[FQ, W, WT]) OpIdentity() W {
 	return f.Zero()
 }
 
-func (f ScalarField[FE, T, W, WT]) Compare(x, y W) algebra.Ordering {
+func (f *ScalarField[FQ, W, WT]) Compare(x, y W) algebra.Ordering {
 	return algebra.Ordering(ct.SliceCmpLE(x.Fq().Limbs(), y.Fq().Limbs()))
 }
 
-func (f ScalarField[FE, T, W, WT]) PartialCompare(x, y W) algebra.PartialOrdering {
+func (f *ScalarField[FQ, W, WT]) PartialCompare(x, y W) algebra.PartialOrdering {
 	return algebra.PartialOrdering(f.Compare(x, y))
 }
 
-func NewScalarFromNat[FE fields.PrimeFieldElementPtrConstraint[FE, T], T any, W ScalarTraitInheriterPtrConstraint[FE, T, WT], WT any](input *saferith.Nat, fieldOrder *saferith.Modulus) (W, error) {
+func NewScalarFromNat[FQ fields.PrimeFieldElement[FQ], W ScalarTraitInheriterPtrConstraint[FQ, WT], WT any](input *saferith.Nat, fieldOrder *saferith.Modulus) (W, error) {
 	if input == nil || fieldOrder == nil {
 		return nil, errs.NewIsNil("argument")
 	}
@@ -72,17 +67,14 @@ func NewScalarFromNat[FE fields.PrimeFieldElementPtrConstraint[FE, T], T any, W 
 	vBytes := reducedV.Bytes()
 	slices.Reverse(vBytes)
 
-	var v T
-	ok := FE(&v).SetBytesWide(vBytes)
-	if ok != 1 {
+	var v WT
+	if ok := W(&v).Fq().SetBytesWide(vBytes); ok == 0 {
 		return nil, errs.NewFailed("cannot set scalar")
 	}
-	var out WT
-	W(&out).SetFq(v)
-	return W(&out), nil
+	return &v, nil
 }
 
-type Scalar[FE fields.PrimeFieldElementPtrConstraint[FE, T], T any, W ScalarTraitInheriterPtrConstraint[FE, T, WT], WT any] struct {
+type Scalar[FE fields.PrimeFieldElementPtrConstraint[FE, T], T any, W ScalarTraitInheriterPtrConstraint[FE, WT], WT any] struct {
 	V T
 }
 
@@ -99,19 +91,15 @@ func (s *Scalar[_, _, W, _]) OtherOp(x W) W {
 }
 
 func (s *Scalar[FE, T, W, WT]) Add(x W) W {
-	var v T
-	FE(&v).Add(&s.V, x.Fq())
-	var out WT
-	W(&out).SetFq(v)
-	return W(&out)
+	var v WT
+	W(&v).Fq().Add(&s.V, x.Fq())
+	return &v
 }
 
 func (s *Scalar[FE, T, W, WT]) Mul(x W) W {
-	var v T
-	FE(&v).Mul(&s.V, x.Fq())
-	var out WT
-	W(&out).SetFq(v)
-	return W(&out)
+	var v WT
+	W(&v).Fq().Mul(&s.V, x.Fq())
+	return &v
 }
 
 func (s *Scalar[FE, _, W, _]) Equal(x W) bool {
@@ -139,11 +127,9 @@ func (s *Scalar[_, _, W, _]) TryOpInv() (W, error) {
 }
 
 func (s *Scalar[FE, T, W, WT]) Neg() W {
-	var v T
-	FE(&v).Neg(&s.V)
-	var out WT
-	W(&out).SetFq(v)
-	return W(&out)
+	var v WT
+	W(&v).Fq().Neg(&s.V)
+	return &v
 }
 
 func (s *Scalar[_, _, W, _]) TryNeg() (W, error) {
@@ -151,11 +137,9 @@ func (s *Scalar[_, _, W, _]) TryNeg() (W, error) {
 }
 
 func (s *Scalar[FE, T, W, WT]) Sub(x W) W {
-	var v T
-	FE(&v).Sub(&s.V, x.Fq())
-	var out WT
-	W(&out).SetFq(v)
-	return W(&out)
+	var v WT
+	W(&v).Fq().Sub(&s.V, x.Fq())
+	return &v
 }
 
 func (s *Scalar[_, _, W, _]) TrySub(x W) (W, error) {
@@ -167,49 +151,42 @@ func (s *Scalar[_, _, W, _]) Double() W {
 }
 
 func (s *Scalar[FE, T, W, WT]) Square() W {
-	var v T
-	FE(&v).Square(&s.V)
-	var out WT
-	W(&out).SetFq(v)
-	return W(&out)
+	var v WT
+	W(&v).Fq().Square(&s.V)
+	return &v
 }
 
 func (s *Scalar[_, _, W, WT]) Clone() W {
 	var out WT
-	W(&out).SetFq(s.V)
-	return W(&out)
+	W(&out).Fq().Set(&s.V)
+	return &out
 }
 
-func (s Scalar[FE, _, _, _]) HashCode() uint64 {
+func (s *Scalar[FE, _, _, _]) HashCode() uint64 {
 	h := fnv.New64a()
-	buf := make([]byte, 8)
 
-	for _, v := range FE(&s.V).Limbs() {
-		binary.LittleEndian.PutUint64(buf, v)
-		h.Write(buf)
+	for _, v := range FE(&s.V).ComponentsBytes() {
+		_, _ = h.Write(binary.BigEndian.AppendUint64(nil, uint64(len(v))))
+		_, _ = h.Write(v)
 	}
 
 	return h.Sum64()
 }
 
 func (s *Scalar[FE, T, W, WT]) TryDiv(x W) (W, error) {
-	var v T
-	if FE(&v).Div(&s.V, x.Fq()) != 1 {
+	var v WT
+	if W(&v).Fq().Div(&s.V, x.Fq()) != 1 {
 		return nil, errs.NewFailed("cannot divide")
 	}
-	var out WT
-	W(&out).SetFq(v)
-	return W(&out), nil
+	return &v, nil
 }
 
 func (s *Scalar[FE, T, W, WT]) TryInv() (W, error) {
-	var v T
-	if FE(&v).Inv(&s.V) == 1 {
+	var v WT
+	if W(&v).Fq().Inv(&s.V) == 1 {
 		return nil, errs.NewFailed("cannot invert")
 	}
-	var out WT
-	W(&out).SetFq(v)
-	return W(&out), nil
+	return &v, nil
 }
 
 func (s *Scalar[FE, _, W, _]) IsLessThanOrEqual(x W) bool {
