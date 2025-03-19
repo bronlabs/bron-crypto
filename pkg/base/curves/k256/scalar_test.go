@@ -1,12 +1,26 @@
 package k256_test
 
 import (
+	"bytes"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 )
+
+func equals[E algebra.Element[E]](lhs, rhs E) bool {
+	return lhs.Equal(rhs)
+}
+
+func equalsByBytes[F algebra.UintLike[F]](lhs, rhs F) bool {
+	return bytes.Equal(lhs.Nat().Bytes(), rhs.Nat().Bytes())
+}
+
+func isOne[F algebra.FieldElement[F]](f F) bool {
+	return f.IsOne()
+}
 
 func TestAdd(t *testing.T) {
 	t.Parallel()
@@ -24,8 +38,8 @@ func TestAdd(t *testing.T) {
 	sc5, err := scs.FromNat(five)
 	require.NoError(t, err)
 
-	require.True(t, sc5.Equal(sc2.Add(sc3)))
-	require.Equal(t, sc5.Nat().Bytes(), sc2.Add(sc3).Nat().Bytes())
+	require.True(t, equals(sc5, sc2.Add(sc3)))
+	require.True(t, equalsByBytes(sc5, sc2.Add(sc3)))
 }
 
 func TestOther(t *testing.T) {
@@ -34,6 +48,6 @@ func TestOther(t *testing.T) {
 	scs := k256.NewScalarField()
 
 	one := scs.One()
-	require.True(t, one.IsOne())
+	require.True(t, isOne(one))
 
 }

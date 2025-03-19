@@ -46,7 +46,7 @@ func (f ScalarField[FE, T, W, WT]) Zero() W {
 
 func (f ScalarField[FE, T, W, WT]) One() W {
 	var v T
-	FE(&v).SetZero()
+	FE(&v).SetOne()
 	var out WT
 	W(&out).SetFq(v)
 	return W(&out)
