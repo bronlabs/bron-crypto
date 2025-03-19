@@ -4,6 +4,6 @@ import (
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 )
 
-type PointMapper[FP fieldsImpl.FiniteField[FP]] interface {
+type PointMapper[FP fieldsImpl.FiniteFieldElement[FP]] interface {
 	Map(xnOut, xdOut, ynOut, ydOut, u FP)
 }

@@ -4,7 +4,7 @@ import (
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 )
 
-func mapIso[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], P ZeroPointMapperParams[FP, F], F any](xnOut, xdOut, ynOut, ydOut *F, params P, xIn, yIn *F) {
+func mapIso[FP fieldsImpl.FiniteFieldElementPtrConstraint[FP, F], P ZeroPointMapperParams[FP, F], F any](xnOut, xdOut, ynOut, ydOut *F, params P, xIn, yIn *F) {
 	var xNum, xDen, yNum, yDen F
 
 	polyEval[FP](&xNum, params.XNum(), xIn)
@@ -19,7 +19,7 @@ func mapIso[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], P ZeroPointMapperPara
 	FP(ydOut).Set(&yDen)
 }
 
-func polyEval[FP fieldsImpl.FieldPtrConstraint[FP, F], F any](result *F, coefficients []F, at *F) {
+func polyEval[FP fieldsImpl.FieldElementPtrConstraint[FP, F], F any](result *F, coefficients []F, at *F) {
 	FP(result).Set(&coefficients[len(coefficients)-1])
 	for i := len(coefficients) - 2; i >= 0; i-- {
 		FP(result).Mul(result, at)

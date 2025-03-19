@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	_ fields.QuadraticFieldExtensionArith[*testFp6] = testFp12Params{}
+	_ fields.QuadraticFieldExtensionArithmetic[*testFp6] = testFp12Params{}
 )
 
 type testFp12Params struct{}

@@ -3,15 +3,16 @@ package testutils
 import (
 	_ "embed"
 	"encoding/binary"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 	"io"
 	"math/bits"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 )
 
 const TestFpModulus = 0x429d16a1
 
 var (
-	_ fields.PrimeField[*TestFp] = (*TestFp)(nil)
+	_ fields.PrimeFieldElement[*TestFp] = (*TestFp)(nil)
 
 	TestFpE             = uint64(bits.TrailingZeros64(uint64(TestFpModulus) - 1))
 	TestFpProgenitorExp = binary.LittleEndian.AppendUint32(nil, TestFpModulus>>(TestFpE+1))

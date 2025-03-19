@@ -3,16 +3,17 @@ package testutils
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 	"math/big"
 	"slices"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 )
 
-type FiniteFieldJson[FP fields.FiniteFieldPtrConstraint[FP, F], F any] struct {
+type FiniteFieldElementJson[FP fields.FiniteFieldElementPtrConstraint[FP, F], F any] struct {
 	V F
 }
 
-func (f *FiniteFieldJson[FP, F]) UnmarshalJSON(data []byte) error {
+func (f *FiniteFieldElementJson[FP, F]) UnmarshalJSON(data []byte) error {
 	type innerType []string
 	var innerData innerType
 	err := json.Unmarshal(data, &innerData)

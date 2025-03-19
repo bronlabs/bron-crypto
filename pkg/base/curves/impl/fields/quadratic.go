@@ -5,11 +5,11 @@ import (
 	"slices"
 )
 
-type QuadraticFieldExtensionArith[BFP FiniteField[BFP]] interface {
+type QuadraticFieldExtensionArithmetic[BFP FiniteFieldElement[BFP]] interface {
 	MulByQuadraticNonResidue(out BFP, in BFP)
 }
 
-type QuadraticFieldExtensionImpl[BFP FiniteFieldPtrConstraint[BFP, BF], A QuadraticFieldExtensionArith[BFP], BF any] struct {
+type QuadraticFieldExtensionImpl[BFP FiniteFieldElementPtrConstraint[BFP, BF], A QuadraticFieldExtensionArithmetic[BFP], BF any] struct {
 	U0 BF
 	U1 BF
 }

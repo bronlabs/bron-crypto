@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
 )
 
-type TwistedEdwardsCurveParams[FP fields.FiniteField[FP]] interface {
+type TwistedEdwardsCurveParams[FP fields.FiniteFieldElement[FP]] interface {
 	// SetGenerator sets generator coordinates.
 	SetGenerator(xOut, yOut, tOut, zOut FP)
 
@@ -21,7 +21,7 @@ type TwistedEdwardsCurveParams[FP fields.FiniteField[FP]] interface {
 	MulBy2D(out, in FP)
 }
 
-type TwistedEdwardsPointImpl[FP fields.FiniteFieldPtrConstraint[FP, F], C TwistedEdwardsCurveParams[FP], H h2c.HasherParams, M h2c.PointMapper[FP], F any] struct {
+type TwistedEdwardsPointImpl[FP fields.FiniteFieldElementPtrConstraint[FP, F], C TwistedEdwardsCurveParams[FP], H h2c.HasherParams, M h2c.PointMapper[FP], F any] struct {
 	X F
 	Y F
 	T F

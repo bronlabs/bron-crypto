@@ -3,9 +3,9 @@ package impl
 import (
 	"crypto/sha256"
 
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves2/impl/h2c"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves2/impl/h2c/mappers/sswu"
-	pointsImpl "github.com/bronlabs/krypton-primitives/pkg/base/curves2/impl/points"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c/mappers/sswu"
+	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
 )
 
 var (

@@ -3,8 +3,8 @@ package k256
 // import (
 // 	"sync"
 
-// 	"github.com/bronlabs/krypton-primitives/pkg/base/algebra2/fields"
-// 	k256Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl"
+// 	"github.com/bronlabs/bron-crypto/pkg/base/algebra2/fields"
+// 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 // )
 
 // var (

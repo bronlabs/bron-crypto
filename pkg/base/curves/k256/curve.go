@@ -3,8 +3,8 @@ package k256
 // import (
 // 	"sync"
 
-// 	curves "github.com/bronlabs/krypton-primitives/pkg/base/curves2"
-// 	ds "github.com/bronlabs/krypton-primitives/pkg/base/datastructures"
+// 	curves "github.com/bronlabs/bron-crypto/pkg/base/curves2"
+// 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 // )
 
 const (

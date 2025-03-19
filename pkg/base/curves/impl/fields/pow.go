@@ -1,6 +1,6 @@
 package fields
 
-func Pow[FP FieldPtrConstraint[FP, F], F any](result, base *F, exp []uint8) {
+func Pow[FP FieldElementPtrConstraint[FP, F], F any](result, base *F, exp []uint8) {
 	var tmp, res F
 	FP(&res).SetOne()
 

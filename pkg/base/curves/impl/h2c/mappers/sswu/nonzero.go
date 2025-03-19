@@ -4,7 +4,7 @@ import (
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 )
 
-type NonZeroPointMapperParams[FP fieldsImpl.FiniteField[FP]] interface {
+type NonZeroPointMapperParams[FP fieldsImpl.FiniteFieldElement[FP]] interface {
 	MulByA(out, in FP)
 	MulByB(out, in FP)
 	SetZ(out FP)
@@ -12,7 +12,7 @@ type NonZeroPointMapperParams[FP fieldsImpl.FiniteField[FP]] interface {
 	Sgn0(v FP) uint64
 }
 
-type NonZeroPointMapper[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], P NonZeroPointMapperParams[FP], F any] struct{}
+type NonZeroPointMapper[FP fieldsImpl.FiniteFieldElementPtrConstraint[FP, F], P NonZeroPointMapperParams[FP], F any] struct{}
 
 func (NonZeroPointMapper[FP, P, F]) Map(xnOut, xdOut, ynOut, ydOut, u FP) {
 	var params P

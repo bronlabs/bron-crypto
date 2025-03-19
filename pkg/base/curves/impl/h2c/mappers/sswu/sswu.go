@@ -4,7 +4,7 @@ import (
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 )
 
-func sswu[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], P NonZeroPointMapperParams[FP], F any](xOut, yOut *F, params P, u *F) {
+func sswu[FP fieldsImpl.FiniteFieldElementPtrConstraint[FP, F], P NonZeroPointMapperParams[FP], F any](xOut, yOut *F, params P, u *F) {
 	var one, z, tv1, tv2, tv2n, tv3, tv4, tv5, tv6, y1, yn F
 	FP(&one).SetOne()
 	params.SetZ(&z)

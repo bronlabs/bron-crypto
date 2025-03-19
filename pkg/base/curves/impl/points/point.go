@@ -6,7 +6,7 @@ import (
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 )
 
-type point[FP fieldsImpl.FiniteField[FP], PP any] interface {
+type point[FP fieldsImpl.FiniteFieldElement[FP], PP any] interface {
 	Encode(dstPrefix string, message []byte)
 	Hash(dstPrefix string, message []byte)
 
@@ -29,11 +29,11 @@ type point[FP fieldsImpl.FiniteField[FP], PP any] interface {
 	ToAffine(x, y FP) (ok uint64)
 }
 
-type Point[FP fieldsImpl.FiniteField[FP], PP point[FP, PP]] interface {
+type Point[FP fieldsImpl.FiniteFieldElement[FP], PP point[FP, PP]] interface {
 	point[FP, PP]
 }
 
-type PointPtrConstraint[FP fieldsImpl.FiniteField[FP], PP point[FP, PP], P any] interface {
+type PointPtrConstraint[FP fieldsImpl.FiniteFieldElement[FP], PP point[FP, PP], P any] interface {
 	*P
 	point[FP, PP]
 }

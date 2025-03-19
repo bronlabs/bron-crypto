@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	_ fields.CubicFieldExtensionArith[*testutils.TestFp] = testFp3Params{}
+	_ fields.CubicFieldExtensionArithmetic[*testutils.TestFp] = testFp3Params{}
 )
 
 type testFp3Params struct{}

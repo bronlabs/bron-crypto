@@ -8,13 +8,13 @@ var (
 	edwards25519Elligator2C1Limbs = [...]uint64{0xcc6e04aaff457e06, 0xc5a1d3d14b7d1a82, 0xd27b08dc03fc4f7e, 0x0f26edf460a006bb}
 )
 
-type Edwards25519PointMapper[FP fieldsImpl.PrimeFieldPtrConstraint[FP, F], F any] struct{}
+type Edwards25519PointMapper[FP fieldsImpl.PrimeFieldElementPtrConstraint[FP, F], F any] struct{}
 
 func (Edwards25519PointMapper[FP, F]) Map(xn, xd, yn, yd, u FP) {
 	mapToCurveElligator2Edwards25519[FP](xn, xd, yn, yd, u)
 }
 
-func mapToCurveElligator2Edwards25519[FP fieldsImpl.PrimeFieldPtrConstraint[FP, F], F any](xnOut, xdOut, ynOut, ydOut, u *F) {
+func mapToCurveElligator2Edwards25519[FP fieldsImpl.PrimeFieldElementPtrConstraint[FP, F], F any](xnOut, xdOut, ynOut, ydOut, u *F) {
 	var zero, one, c1, xMn, xMd, yMn, yMd, tv1, xn, xd, yn, yd F
 	FP(&zero).SetZero()
 	FP(&one).SetOne()

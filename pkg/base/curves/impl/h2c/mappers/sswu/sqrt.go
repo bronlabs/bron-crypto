@@ -6,7 +6,7 @@ import (
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 )
 
-func SqrtRatio[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](yOut *F, c1 uint64, c3 []uint8, c4, c5 uint64, c6, c7, u, v *F) (ok uint64) {
+func SqrtRatio[FP fieldsImpl.FiniteFieldElementPtrConstraint[FP, F], F any](yOut *F, c1 uint64, c3 []uint8, c4, c5 uint64, c6, c7, u, v *F) (ok uint64) {
 	var one, tv1, tv2, tv3, tv4, tv5 F
 	FP(&one).SetOne()
 
@@ -68,7 +68,7 @@ func SqrtRatio[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](yOut *F, c1
 	return isQr
 }
 
-func SqrtRatio3Mod4[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](yOut *F, c1 []uint8, c2, u, v *F) (ok uint64) {
+func SqrtRatio3Mod4[FP fieldsImpl.FiniteFieldElementPtrConstraint[FP, F], F any](yOut *F, c1 []uint8, c2, u, v *F) (ok uint64) {
 	var tv1, tv2, tv3, y1, y2 F
 
 	//  1. tv1 = v^2

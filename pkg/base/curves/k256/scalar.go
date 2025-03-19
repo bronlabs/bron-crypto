@@ -2,13 +2,13 @@ package k256
 
 import (
 	"io"
+	"slices"
 	"sync"
 
-	algebra "github.com/bronlabs/krypton-primitives/pkg/base/algebra2"
-	"github.com/bronlabs/krypton-primitives/pkg/base/algebra2/fields"
-	"github.com/bronlabs/krypton-primitives/pkg/base/bitstring"
-	k256Impl "github.com/bronlabs/krypton-primitives/pkg/base/curves/k256/impl"
-	"github.com/bronlabs/krypton-primitives/pkg/base/curves2/impl/traits"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
+	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/cronokirby/saferith"
 )
 
@@ -19,8 +19,15 @@ var (
 	_ fields.PrimeField[*Scalar]        = (*ScalarField)(nil)
 	_ fields.PrimeFieldElement[*Scalar] = (*Scalar)(nil)
 
-	k256Order = saferith.ModulusFromBytes(bitstring.ReverseBytes(k256Impl.FqModulus[:]))
+	k256Order = saferith.ModulusFromBytes(reverseBytes(k256Impl.FqModulus[:]))
 )
+
+// TODO: move/rewrite to/in bitstring/utils package
+func reverseBytes(b []byte) []byte {
+	out := slices.Clone(b)
+	slices.Reverse(out)
+	return out
+}
 
 func scalarFieldInit() {
 	scalarFieldInstance = ScalarField{}

@@ -11,7 +11,7 @@ type HasherParams interface {
 	MessageExpander() MessageExpander
 }
 
-func HashToField[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], F any](out []F, params HasherParams, dstStr string, msg []byte) {
+func HashToField[FP fieldsImpl.FiniteFieldElementPtrConstraint[FP, F], F any](out []F, params HasherParams, dstStr string, msg []byte) {
 	m := fieldsImpl.Degree[FP]()
 	l := params.L()
 	expander := params.MessageExpander()

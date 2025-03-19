@@ -3,9 +3,10 @@ package testutils_test
 import (
 	_ "embed"
 	"encoding/json"
+	"testing"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields/testutils"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 //go:embed vectors/fp.add.gen.json

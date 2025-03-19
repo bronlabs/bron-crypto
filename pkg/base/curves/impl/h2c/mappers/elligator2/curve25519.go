@@ -11,7 +11,7 @@ var (
 	curve25519Elligator2C4      = [...]uint8{0xfd, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x0f}
 )
 
-func mapToCurveElligator2Curve25519[FP fieldsImpl.PrimeFieldPtrConstraint[FP, F], F any](xnOut, xdOut, ynOut, ydOut, u *F) {
+func mapToCurveElligator2Curve25519[FP fieldsImpl.PrimeFieldElementPtrConstraint[FP, F], F any](xnOut, xdOut, ynOut, ydOut, u *F) {
 	var one, j, c2, c3, tv1, tv2, tv3, xd, xn, x1n, x2n, gxd, gx1, gx2, y, yn, y1, y11, y12, y2, y21, y22 F
 	FP(&one).SetOne()
 	FP(&j).SetLimbs(curve25519Elligator2JLimbs[:])
@@ -102,7 +102,7 @@ func mapToCurveElligator2Curve25519[FP fieldsImpl.PrimeFieldPtrConstraint[FP, F]
 	FP(ydOut).SetOne()
 }
 
-func sgn0[FP fieldsImpl.PrimeField[FP]](in FP) uint64 {
+func sgn0[FP fieldsImpl.PrimeFieldElement[FP]](in FP) uint64 {
 	inBytes := in.Bytes()
 	return uint64(inBytes[0] & 0b1)
 }

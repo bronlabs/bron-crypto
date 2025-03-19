@@ -1,12 +1,12 @@
 package fields
 
-type SqrtTrait[FP FiniteFieldPtrConstraint[FP, F], F any] struct{}
+type SqrtTrait[FP FiniteFieldElementPtrConstraint[FP, F], F any] struct{}
 
 func (SqrtTrait[FP, F]) Sqrt(out, x, rootOfUnity *F, e uint64, progenitorExponent []uint8) (ok uint64) {
 	return TonelliShanks[FP](out, x, rootOfUnity, e, progenitorExponent)
 }
 
-func TonelliShanks[FP FiniteFieldPtrConstraint[FP, F], F any](out, x, ethRootOfUnity *F, e uint64, progenitorExp []uint8) (ok uint64) {
+func TonelliShanks[FP FiniteFieldElementPtrConstraint[FP, F], F any](out, x, ethRootOfUnity *F, e uint64, progenitorExp []uint8) (ok uint64) {
 	var y, s, t, z F
 
 	Pow[FP](&y, x, progenitorExp)

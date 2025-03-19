@@ -6,9 +6,11 @@ import (
 
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
+
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 )
 
-type ShortWeierstrassCurveParams[FP fieldsImpl.FiniteField[FP]] interface {
+type ShortWeierstrassCurveParams[FP fieldsImpl.FiniteFieldElement[FP]] interface {
 	// SetGenerator sets generator coordinates.
 	SetGenerator(xOut, yOut, zOut FP)
 
@@ -28,10 +30,12 @@ type ShortWeierstrassCurveParams[FP fieldsImpl.FiniteField[FP]] interface {
 	MulBy3B(out FP, in FP)
 }
 
-type ShortWeierstrassPointImpl[FP fieldsImpl.FiniteFieldPtrConstraint[FP, F], C ShortWeierstrassCurveParams[FP], H h2c.HasherParams, M h2c.PointMapper[FP], F any] struct {
+type ShortWeierstrassPointImpl[FP fieldsImpl.FiniteFieldElementPtrConstraint[FP, F], C ShortWeierstrassCurveParams[FP], H h2c.HasherParams, M h2c.PointMapper[FP], F any] struct {
 	X F
 	Y F
 	Z F
+
+	_ ds.Incomparable
 }
 
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Encode(dstPrefix string, message []byte) {
