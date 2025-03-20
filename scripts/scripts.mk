@@ -62,14 +62,14 @@ long-deflake-test-%:
 .PHONY: test-master
 test-master:
 	${RUN_IN_CLAUSE} 'make test-long'
-	${RUN_IN_CLAUSE} 'make lint-long'
+	${RUN_IN_CLAUSE} 'make lint'
 	${RUN_IN_CLAUSE} 'make fuzz'
 	${RUN_IN_CLAUSE} 'make deflake'
 
 .PHONY: test-nightly
 test-nightly:
 	${RUN_IN_CLAUSE} 'make test-long'
-	${RUN_IN_CLAUSE} 'make lint-long'
+	${RUN_IN_CLAUSE} 'make lint'
 	${RUN_IN_CLAUSE} 'make fuzz-long'
 	${RUN_IN_CLAUSE} 'make deflake-long'
 	# TODO: enable this later
