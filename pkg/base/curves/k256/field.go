@@ -3,6 +3,7 @@ package k256
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
@@ -13,12 +14,12 @@ import (
 )
 
 const (
-	BaseFieldName = "K256Fp"
+	BaseFieldName = "secp256k1Fp"
 )
 
 var (
-	_ algebra.FiniteField[*BaseFieldElement]        = (*BaseField)(nil)
-	_ algebra.FiniteFieldElement[*BaseFieldElement] = (*BaseFieldElement)(nil)
+	_ fields.FiniteField[*BaseFieldElement]        = (*BaseField)(nil)
+	_ fields.FiniteFieldElement[*BaseFieldElement] = (*BaseFieldElement)(nil)
 
 	baseFieldInstance *BaseField
 	baseFieldInitOnce sync.Once
@@ -100,10 +101,6 @@ func (fp *BaseFieldElement) UnmarshalBinary(data []byte) error {
 	}
 
 	return nil
-}
-
-func (fp *BaseFieldElement) SetFp(other *k256Impl.Fp) {
-	fp.V.Set(other)
 }
 
 func (fp *BaseFieldElement) Fp() *k256Impl.Fp {
