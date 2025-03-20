@@ -132,9 +132,15 @@ type FieldElement[FE interface {
 type FiniteField[FE FiniteFieldElement[FE]] interface {
 	Field[FE]
 	FiniteStructure[FE]
+
+	FromComponentsBytes([][]byte) (FE, error)
 }
 
-type FiniteFieldElement[FE FieldElement[FE]] FieldElement[FE]
+type FiniteFieldElement[FE FieldElement[FE]] interface {
+	FieldElement[FE]
+
+	ComponentsBytes() [][]byte
+}
 
 // ********************** Integers
 
@@ -167,6 +173,9 @@ type PrimeField[E interface {
 }] interface {
 	FiniteField[E]
 	ZnLike[E]
+
+	FromBytes([]byte) (E, error)
+	FromWideBytes([]byte) (E, error)
 }
 
 type PrimeFieldElement[E interface {
@@ -175,4 +184,6 @@ type PrimeFieldElement[E interface {
 }] interface {
 	FiniteFieldElement[E]
 	UintLike[E]
+
+	Bytes() []byte
 }

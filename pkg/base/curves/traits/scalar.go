@@ -35,6 +35,48 @@ func (f *ScalarField[FQ, W, WT]) SubFieldIdentity(i uint) (any, error) {
 	return out, errs.NewValue("invalid subfield index")
 }
 
+func (f *ScalarField[FQ, W, WT]) FromBytes(data []byte) (W, error) {
+	leBytes := make([]byte, len(data))
+	copy(leBytes, data)
+	slices.Reverse(leBytes)
+
+	var out WT
+	if ok := W(&out).Fq().SetBytes(leBytes); ok == 0 {
+		return nil, errs.NewFailed("invalid bytes")
+	}
+
+	return &out, nil
+}
+
+func (f *ScalarField[FQ, W, WT]) FromWideBytes(data []byte) (W, error) {
+	leBytes := make([]byte, len(data))
+	copy(leBytes, data)
+	slices.Reverse(leBytes)
+
+	var out WT
+	if ok := W(&out).Fq().SetBytesWide(leBytes); ok == 0 {
+		return nil, errs.NewFailed("invalid bytes")
+	}
+
+	return &out, nil
+}
+
+func (f *ScalarField[FQ, W, WT]) FromComponentsBytes(data [][]byte) (W, error) {
+	leData := make([][]byte, len(data))
+	for i, c := range data {
+		leData[i] = make([]byte, len(c))
+		copy(leData[i], c)
+		slices.Reverse(leData[i])
+	}
+
+	var e WT
+	if ok := W(&e).Fq().SetUniformBytes(leData...); ok == 0 {
+		return nil, errs.NewFailed("invalid bytes")
+	}
+
+	return &e, nil
+}
+
 func (f *ScalarField[FQ, W, WT]) Zero() W {
 	var v WT
 	W(&v).Fq().SetZero()
@@ -203,6 +245,22 @@ func (s *Scalar[FE, _, _, _]) Nat() *saferith.Nat {
 	b := FE(&s.V).Bytes()
 	slices.Reverse(b)
 	return new(saferith.Nat).SetBytes(b)
+}
+
+func (s *Scalar[FE, T, W, WT]) Bytes() []byte {
+	data := FE(&s.V).Bytes()
+	slices.Reverse(data)
+	return data
+}
+
+func (s *Scalar[FE, T, W, WT]) ComponentsBytes() [][]byte {
+	// TODO(aalireza): agree on big or little endian
+	cb := FE(&s.V).ComponentsBytes()
+	for i := range cb {
+		slices.Reverse(cb[i])
+	}
+
+	return cb
 }
 
 func (s *Scalar[_, _, W, _]) EuclideanDiv(x W) (quot, rem W, err error) {

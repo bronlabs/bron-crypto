@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"sync"
 )
 
 const (
@@ -20,6 +21,9 @@ const (
 var (
 	_ curves.Curve[*Point, *BaseFieldElement, *Scalar] = (*Curve)(nil)
 	_ curves.Point[*Point, *BaseFieldElement, *Scalar] = (*Point)(nil)
+
+	curveInstance *Curve
+	curveInitOnce sync.Once
 )
 
 type Curve struct {
@@ -27,7 +31,11 @@ type Curve struct {
 }
 
 func NewCurve() *Curve {
-	return nil
+	curveInitOnce.Do(func() {
+		curveInstance = &Curve{}
+	})
+
+	return curveInstance
 }
 
 func (c *Curve) Name() string {
@@ -95,8 +103,7 @@ func (p *Point) HashCode() uint64 {
 }
 
 func (p *Point) Structure() algebra.Structure[*Point] {
-	//TODO implement me
-	panic("implement me")
+	return NewCurve()
 }
 
 func (p *Point) MarshalBinary() (data []byte, err error) {

@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"hash/fnv"
 	"io"
+	"slices"
 )
 
 type BaseFieldTraitInheriter[FP fields.FiniteFieldElement[FP]] interface {
@@ -43,6 +44,22 @@ func (f *BaseField[FP, W, WT]) Random(prng io.Reader) (W, error) {
 	return &element, nil
 }
 
+func (f *BaseField[FP, W, WT]) FromComponentsBytes(data [][]byte) (W, error) {
+	leData := make([][]byte, len(data))
+	for i, c := range data {
+		leData[i] = make([]byte, len(c))
+		copy(leData[i], c)
+		slices.Reverse(leData[i])
+	}
+
+	var e WT
+	if ok := W(&e).Fp().SetUniformBytes(leData...); ok == 0 {
+		return nil, errs.NewFailed("invalid bytes")
+	}
+
+	return &e, nil
+}
+
 func (f *BaseField[FP, W, WT]) OpIdentity() W {
 	return f.Zero()
 }
@@ -74,6 +91,16 @@ func (fp *BaseFieldElement[FP, T, W, WT]) HashCode() uint64 {
 	}
 
 	return h.Sum64()
+}
+
+func (fp *BaseFieldElement[FP, T, W, WT]) ComponentsBytes() [][]byte {
+	// TODO(aalireza): agree on big or little endian
+	cb := FP(&fp.V).ComponentsBytes()
+	for i := range cb {
+		slices.Reverse(cb[i])
+	}
+
+	return cb
 }
 
 func (fp *BaseFieldElement[FP, T, W, WT]) Add(e W) W {

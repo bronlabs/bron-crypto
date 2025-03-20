@@ -42,6 +42,18 @@ func NewBaseField() *BaseField {
 	return baseFieldInstance
 }
 
+func (f *BaseField) FromBytes(data []byte) (*BaseFieldElement, error) {
+	leData := make([]byte, len(data))
+	copy(leData, data)
+	slices.Reverse(leData)
+
+	var e BaseFieldElement
+	if ok := e.V.SetBytes(data); ok == 0 {
+		return nil, errs.NewFailed("invalid data")
+	}
+	return &e, nil
+}
+
 func (f *BaseField) Hash(bytes []byte) (*BaseFieldElement, error) {
 	var e [1]k256Impl.Fp
 	h2c.HashToField(e[:], k256Impl.CurveHasherParams{}, base.Hash2CurveAppTag+Hash2CurveSuite, bytes)
@@ -101,6 +113,10 @@ func (fp *BaseFieldElement) UnmarshalBinary(data []byte) error {
 	}
 
 	return nil
+}
+
+func (fp *BaseFieldElement) Bytes() []byte {
+	return fp.ComponentsBytes()[0]
 }
 
 func (fp *BaseFieldElement) Fp() *k256Impl.Fp {
