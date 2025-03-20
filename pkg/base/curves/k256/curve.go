@@ -58,8 +58,12 @@ func (c *Curve) NewPoint(affineX, affineY *BaseFieldElement) (*Point, error) {
 }
 
 func (c *Curve) Hash(bytes []byte) (*Point, error) {
+	return c.HashWithDst(base.Hash2CurveAppTag+Hash2CurveSuite, bytes)
+}
+
+func (c *Curve) HashWithDst(dst string, bytes []byte) (*Point, error) {
 	var p Point
-	p.V.Hash(base.Hash2CurveAppTag+Hash2CurveSuite, bytes)
+	p.V.Hash(dst, bytes)
 	return &p, nil
 }
 

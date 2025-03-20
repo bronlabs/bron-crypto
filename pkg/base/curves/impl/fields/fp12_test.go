@@ -126,8 +126,7 @@ func Test_Fp12Inv(t *testing.T) {
 	err := json.Unmarshal([]byte(fp12InvVectors), &vectors)
 	require.NoError(t, err)
 
-	for i, vector := range vectors.Vectors {
-		println(i)
+	for _, vector := range vectors.Vectors {
 		testutils.TestUnaryOpWithOk(t, &vector.A.V, &vector.C.V, vector.Ok, (*testFp12).Inv)
 	}
 }
