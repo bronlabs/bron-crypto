@@ -3,7 +3,6 @@ package schnorr
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	"hash"
 )
 

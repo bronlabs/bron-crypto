@@ -21,13 +21,12 @@ func (pk *PublicKey[P, B, S]) MarshalBinary() ([]byte, error) {
 	return serializedPublicKey, nil
 }
 
-type Signer[C curves.Curve[P, B, S], P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]] struct {
-	curve      C
+type Signer[P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]] struct {
 	hashFunc   func() hash.Hash
 	privateKey *PrivateKey[P, B, S]
 }
 
-func KeyGen[C curves.Curve[P, B, S], P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]](curve C, prng io.Reader) (*PublicKey[P, B, S], *PrivateKey[P, B, S], error) {
+func KeyGen[P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]](curve curves.Curve[P, B, S], prng io.Reader) (*PublicKey[P, B, S], *PrivateKey[P, B, S], error) {
 	if curve == nil {
 		return nil, nil, errs.NewIsNil("curve is nil")
 	}
@@ -35,11 +34,11 @@ func KeyGen[C curves.Curve[P, B, S], P curves.Point[P, B, S], B fields.FiniteFie
 		return nil, nil, errs.NewIsNil("prng is nil")
 	}
 
-	// TODO(aalireza) add method to get scalar field from curve
-	scalarField, err := fields.GetPrimeField(*new(S))
-	if err != nil {
-		return nil, nil, errs.NewIsNil("scalarField is nil")
-	}
+	// TODO(aalireza) add method to get scalar field from curve somehow?
+	scalarField := curve.ScalarField()
+	//if err != nil {
+	//	return nil, nil, errs.NewIsNil("scalarField is nil")
+	//}
 	scalar, err := scalarField.Random(prng)
 	if err != nil {
 		return nil, nil, errs.NewIsNil("scalar is nil")
@@ -52,19 +51,19 @@ func KeyGen[C curves.Curve[P, B, S], P curves.Point[P, B, S], B fields.FiniteFie
 	pk := &PublicKey[P, B, S]{
 		A: point,
 	}
+
+	return pk, sk, nil
 }
 
-func NewSigner[C curves.Curve[P, B, S], P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]](curve C, hashFunc func() hash.Hash, privateKey *PrivateKey[P, B, S]) (*Signer[C, P, B, S], error) {
-	return &Signer[C, P, B, S]{
-		curve:      curve,
+func NewSigner[P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]](hashFunc func() hash.Hash, privateKey *PrivateKey[P, B, S]) (*Signer[P, B, S], error) {
+	return &Signer[P, B, S]{
 		hashFunc:   hashFunc,
 		privateKey: privateKey,
 	}, nil
 }
 
-func (signer *Signer[C, P, B, S]) Sign(message []byte, prng io.Reader) (*Signature[P, B, S], error) {
-	// TODO(aalireza) add method to get scalar field from curve
-	scalarField, err := fields.GetPrimeField(*new(S))
+func (signer *Signer[P, B, S]) Sign(message []byte, prng io.Reader) (*Signature[P, B, S], error) {
+	scalarField, err := fields.GetPrimeField(signer.privateKey.S)
 	if err != nil {
 		return nil, errs.NewIsNil("scalarField is nil")
 	}
@@ -72,11 +71,17 @@ func (signer *Signer[C, P, B, S]) Sign(message []byte, prng io.Reader) (*Signatu
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "could not generate random scalar")
 	}
-	R := signer.curve.Generator().ScalarMul(k)
-	a := signer.curve.Generator().ScalarMul(signer.privateKey.S)
 
-	variant := NewEdDsaCompatibleVariant(signer.curve)
-	e, err := variant.ComputeChallenge(signer.suite, R, a, message)
+	curve, err := curves.GetCurve[P, B, S](signer.privateKey.A)
+	if err != nil {
+		return nil, errs.NewIsNil("curve is nil")
+	}
+	// TODO(aalireza): Add ScalarBaseMul(...)
+	R := curve.Generator().ScalarMul(k)
+	a := curve.Generator().ScalarMul(signer.privateKey.S)
+
+	variant := NewEdDsaCompatibleVariant[P]()
+	e, err := variant.ComputeChallenge(signer.hashFunc, R, a, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create challenge scalar")
 	}
@@ -85,10 +90,10 @@ func (signer *Signer[C, P, B, S]) Sign(message []byte, prng io.Reader) (*Signatu
 	return schnorr.NewSignature(variant, e, variant.ComputeNonceCommitment(R, R), s), nil
 }
 
-func Verify[C curves.Curve[P, B, S], P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]](curve C, hashFunc func() hash.Hash, publicKey *PublicKey[P, B, S], message []byte, signature *Signature[P, B, S]) error {
-	variant := NewEdDsaCompatibleVariant(curve)
+func Verify[P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]](hashFunc func() hash.Hash, publicKey *PublicKey[P, B, S], message []byte, signature *Signature[P, B, S]) error {
+	variant := NewEdDsaCompatibleVariant[P]()
 	v, err := variant.NewVerifierBuilder().
-		WithSigningSuite(suite).
+		WithHashFunc(hashFunc).
 		WithPublicKey((*schnorr.PublicKey[P, B, S])(publicKey)).
 		WithMessage(message).
 		Build()

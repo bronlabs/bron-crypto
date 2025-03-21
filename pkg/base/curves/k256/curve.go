@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"slices"
 	"sync"
 )
 
@@ -89,6 +90,10 @@ func (c *Curve) BasePoints() ds.ImmutableMap[string, *Point] {
 	panic("implement me")
 }
 
+func (c *Curve) ScalarField() algebra.PrimeField[*Scalar] {
+	return NewScalarField()
+}
+
 type Point struct {
 	traits.Point[*k256Impl.Fp, *k256Impl.Point, k256Impl.Point, *Point, Point]
 }
@@ -124,8 +129,23 @@ func (p *Point) Coordinates() []*BaseFieldElement {
 }
 
 func (p *Point) ToAffineCompressed() []byte {
-	//TODO implement me
-	panic("implement me")
+	var compressedBytes [33]byte
+	compressedBytes[0] = byte(2)
+	if p.IsOpIdentity() {
+		return compressedBytes[:]
+	}
+
+	var px, py k256Impl.Fp
+	ok := p.V.ToAffine(&px, &py)
+	if ok != 1 {
+		panic("this should never happen")
+	}
+
+	compressedBytes[0] |= py.Bytes()[0] & 1
+	pxBytes := px.Bytes()
+	slices.Reverse(pxBytes)
+	copy(compressedBytes[1:], pxBytes)
+	return compressedBytes[:]
 }
 
 func (p *Point) ToAffineUncompressed() []byte {

@@ -41,6 +41,8 @@ type GenericEllipticCurve[
 	AlgebraicCurve[Point, BaseFieldElement]
 	FiniteAbelianGroup[Point, Scalar]
 	TorsionFreeSubGroupGenerator() TorsionFreePoint
+
+	ScalarField() PrimeField[TorsionFreeScalar]
 }
 
 type GenericEllipticCurvePoint[Point interface {
@@ -72,6 +74,7 @@ type TorsionFreeEllipticCurvePoint[Point interface {
 	AlgebraicPoint[Point, BaseFieldElement]
 	PrimeGroupElement[Point, Scalar]
 	CyclicSemiGroupElement[Point]
+
 	ClearCofactor() Point
 }
 

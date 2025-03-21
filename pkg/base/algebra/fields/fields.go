@@ -19,7 +19,7 @@ type (
 func GetField[FE FieldElement[FE]](fe FE) (Field[FE], error) {
 	f, ok := fe.Structure().(Field[FE])
 	if !ok {
-		return nil, (errs.NewType("FieldElement does not have a Field structure"))
+		return nil, errs.NewType("FieldElement does not have a Field structure")
 	}
 	return f, nil
 }
@@ -27,7 +27,7 @@ func GetField[FE FieldElement[FE]](fe FE) (Field[FE], error) {
 func GetFiniteField[FE FiniteFieldElement[FE]](fe FE) (FiniteField[FE], error) {
 	f, ok := fe.Structure().(FiniteField[FE])
 	if !ok {
-		return nil, (errs.NewType("FieldElement does not have a FiniteField structure"))
+		return nil, errs.NewType("FieldElement does not have a FiniteField structure")
 	}
 	return f, nil
 }
@@ -35,7 +35,7 @@ func GetFiniteField[FE FiniteFieldElement[FE]](fe FE) (FiniteField[FE], error) {
 func GetPrimeField[FE PrimeFieldElement[FE]](fe FE) (PrimeField[FE], error) {
 	f, ok := fe.Structure().(PrimeField[FE])
 	if !ok {
-		return nil, (errs.NewType("FieldElement does not have a PrimeField structure"))
+		return nil, errs.NewType("FieldElement does not have a PrimeField structure")
 	}
 	return f, nil
 }

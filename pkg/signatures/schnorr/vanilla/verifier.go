@@ -4,9 +4,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
 	"hash"
+	"reflect"
 )
 
 type verifierBuilder[P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]] struct {
@@ -19,7 +19,7 @@ type verifierBuilder[P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S 
 
 type verifier[P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]] struct {
 	hashFunc           func() hash.Hash
-	publicKey          P
+	publicKey          *schnorr.PublicKey[P, B, S]
 	message            []byte
 	nonceCommitment    P
 	challengePublicKey P
@@ -80,26 +80,32 @@ func (v *verifier[P, B, S]) Verify(signature *schnorr.Signature[EdDsaCompatibleV
 	//	return errs.NewValidation("Public Key not in the prime subgroup")
 	//}
 	challengeR := v.nonceCommitment
-	if challengeR == nil {
+	if reflect.ValueOf(challengeR).IsNil() { // TODO(aalireza): any idea how to work this around? (challenge.(Point[R,..]) == nil does not work neither)
 		challengeR = signature.R
 	}
 	challengePk := v.challengePublicKey
-	if challengePk == nil {
+	if reflect.ValueOf(challengePk).IsNil() {
 		challengePk = v.publicKey.A
 	}
-	variant := NewEdDsaCompatibleVariant()
-	e, err := edDsaCompatibleVariant.ComputeChallenge(v.suite, challengeR, challengePk, v.message)
+	curve, err := curves.GetCurve(signature.R)
+	if err != nil {
+		return errs.WrapFailed(err, "cannot get curve")
+	}
+
+	variant := NewEdDsaCompatibleVariant[P]()
+	e, err := variant.ComputeChallenge(v.hashFunc, challengeR, challengePk, v.message)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create challenge scalar")
 	}
-	if signature.E != nil && !signature.E.Equal(e) {
+	if fields.PrimeFieldElement[S](signature.E) != nil && !signature.E.Equal(e) {
 		return errs.NewFailed("incompatible schnorr signature")
 	}
 
-	cofactorNat := v.suite.Curve().CoFactor()
-	cofactor := v.suite.Curve().ScalarField().Element().SetNat(cofactorNat)
-	left := v.suite.Curve().ScalarBaseMult(signature.S.Mul(cofactor))
-	right := signature.R.ScalarMul(cofactor).Add(v.publicKey.A.ScalarMul(e.Mul(cofactor)))
+	// TODO(aalireza): what to do with cofactor?
+	//cofactorNat := v.suite.Curve().CoFactor()
+	//cofactor := v.suite.Curve().ScalarField().Element().SetNat(cofactorNat)
+	left := curve.Generator().ScalarMul(signature.S)
+	right := signature.R.Op(v.publicKey.A.ScalarMul(e))
 	if !left.Equal(right) {
 		return errs.NewVerification("invalid signature")
 	}
