@@ -51,14 +51,82 @@ func (c *Curve) Operator() algebra.BinaryOperator[*Point] {
 	return algebra.Add[*Point]
 }
 
-func (c *Curve) FromAffineCompressed(b []byte) (*Point, error) {
-	//TODO implement me
-	panic("implement me")
+func (c *Curve) FromAffineCompressed(input []byte) (*Point, error) {
+	if len(input) != 33 {
+		return nil, errs.NewLength("invalid byte sequence")
+	}
+
+	sign := input[0]
+	if sign != 2 && sign != 3 {
+		return nil, errs.NewFailed("invalid sign byte")
+	}
+	sign &= 0x1
+
+	var xBytes [k256Impl.FpBytes]byte
+	copy(xBytes[:], input[1:])
+	slices.Reverse(xBytes[:])
+
+	var x, y k256Impl.Fp
+	ok := x.SetBytes(xBytes[:])
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x")
+	}
+	if x.IsZero() == 1 {
+		return c.OpIdentity(), nil
+	}
+
+	var result Point
+	ok = result.V.SetFromAffineX(&x)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x")
+	}
+	ok = result.V.ToAffine(&x, &y)
+	if ok != 1 {
+		panic("this should never happen")
+	}
+
+	ySign := result.V.Y.Bytes()[0] & 0b1
+	if sign != ySign {
+		result.V.Neg(&result.V)
+	}
+
+	return &result, nil
 }
 
-func (c *Curve) FromAffineUncompressed(b []byte) (*Point, error) {
-	//TODO implement me
-	panic("implement me")
+func (c *Curve) FromAffineUncompressed(input []byte) (*Point, error) {
+	if len(input) != 65 {
+		return nil, errs.NewLength("invalid byte sequence")
+	}
+	if input[0] != 4 {
+		return nil, errs.NewFailed("invalid sign byte")
+	}
+
+	var xBytes, yBytes [32]byte
+	copy(xBytes[:], input[1:33])
+	copy(yBytes[:], input[33:])
+	slices.Reverse(xBytes[:])
+	slices.Reverse(yBytes[:])
+
+	var x, y k256Impl.Fp
+	okx := x.SetBytes(xBytes[:])
+	if okx != 1 {
+		return nil, errs.NewCoordinates("x")
+	}
+	oky := y.SetBytes(yBytes[:])
+	if oky != 1 {
+		return nil, errs.NewCoordinates("y")
+	}
+	if x.IsZero() == 1 && y.IsZero() == 1 {
+		return c.OpIdentity(), nil
+	}
+
+	var result Point
+	ok := result.V.SetAffine(&x, &y)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x/y")
+	}
+
+	return &result, nil
 }
 
 func (c *Curve) NewPoint(affineX, affineY *BaseFieldElement) (*Point, error) {
@@ -76,6 +144,7 @@ func (c *Curve) HashWithDst(dst string, bytes []byte) (*Point, error) {
 	return &p, nil
 }
 
+// TODO(aalireza): doesn't make sense of curve/point
 func (c *Curve) ElementSize() int {
 	//TODO implement me
 	panic("implement me")
@@ -121,6 +190,7 @@ func (p *Point) UnmarshalBinary(data []byte) error {
 	panic("implement me")
 }
 
+// TODO(aalireza): not sure if this should always return affine coordinates or implementation defined coordinates
 func (p *Point) Coordinates() []*BaseFieldElement {
 	var x, y BaseFieldElement
 	p.V.ToAffine(&x.V, &y.V)
@@ -149,8 +219,27 @@ func (p *Point) ToAffineCompressed() []byte {
 }
 
 func (p *Point) ToAffineUncompressed() []byte {
-	//TODO implement me
-	panic("implement me")
+	var out [65]byte
+	out[0] = byte(4)
+	if p.IsOpIdentity() {
+		return out[:]
+	}
+
+	var px, py k256Impl.Fp
+	ok := p.V.ToAffine(&px, &py)
+	if ok != 1 {
+		panic("this should never happen")
+	}
+
+	pxBytes := px.Bytes()
+	slices.Reverse(pxBytes)
+	copy(out[1:33], pxBytes)
+
+	pyBytes := py.Bytes()
+	slices.Reverse(pyBytes)
+	copy(out[33:], pyBytes)
+
+	return out[:]
 }
 
 func (p *Point) AffineX() (*BaseFieldElement, error) {
@@ -186,6 +275,7 @@ func (p *Point) IsBasePoint(id string) bool {
 	panic("implement me")
 }
 
+// TODO(aalireza): no use of it
 func (p *Point) CanBeGenerator() bool {
 	//TODO implement me
 	panic("implement me")

@@ -110,7 +110,7 @@ func NewScalarFromNat[FQ fields.PrimeFieldElement[FQ], W ScalarTraitInheriterPtr
 	slices.Reverse(vBytes)
 
 	var v WT
-	if ok := W(&v).Fq().SetBytesWide(vBytes); ok == 0 {
+	if ok := W(&v).Fq().SetBytes(vBytes); ok == 0 {
 		return nil, errs.NewFailed("cannot set scalar")
 	}
 	return &v, nil
@@ -263,6 +263,13 @@ func (s *Scalar[FE, T, W, WT]) ComponentsBytes() [][]byte {
 	return cb
 }
 
-func (s *Scalar[_, _, W, _]) EuclideanDiv(x W) (quot, rem W, err error) {
-	panic("implement me")
+func (s *Scalar[_, _, W, WT]) EuclideanDiv(x W) (quot, rem W, err error) {
+	quot, err = s.TryDiv(x)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "division by zero")
+	}
+
+	var r WT
+	W(&r).Fq().SetZero()
+	return quot, &r, nil
 }
