@@ -2,7 +2,7 @@
 
 package boring
 
-// #include <openssl/bn.h>
+// #include "openssl/bn.h"
 import "C"
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/nocopy"
