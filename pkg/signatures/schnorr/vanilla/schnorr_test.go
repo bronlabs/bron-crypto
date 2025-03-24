@@ -3,33 +3,43 @@ package vanilla_test
 import (
 	crand "crypto/rand"
 	"crypto/sha256"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/vanilla"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func Test_HappyPath(t *testing.T) {
-	curve := k256.NewCurve()
+	testHappyPath(t, k256.NewCurve())
+	testHappyPath(t, p256.NewCurve())
+	testHappyPath(t, pasta.NewPallasCurve())
+	testHappyPath(t, pasta.NewVestaCurve())
+}
+
+func testHappyPath[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](tb testing.TB, curve curves.Curve[P, F, S]) {
 	hashFunc := sha256.New
 	prng := crand.Reader
 	message := []byte("something")
 
 	publicKey, secretKey, err := vanilla.KeyGen(curve, prng)
-	require.NotNil(t, publicKey)
-	require.NotNil(t, secretKey)
-	require.NoError(t, err)
+	require.NotNil(tb, publicKey)
+	require.NotNil(tb, secretKey)
+	require.NoError(tb, err)
 
 	signer, err := vanilla.NewSigner(hashFunc, secretKey)
-	require.NoError(t, err)
-	require.NotNil(t, signer)
+	require.NoError(tb, err)
+	require.NotNil(tb, signer)
 
 	signature, err := signer.Sign(message, crand.Reader)
-	require.NoError(t, err)
-	require.NotNil(t, signature)
+	require.NoError(tb, err)
+	require.NotNil(tb, signature)
 
 	err = vanilla.Verify(hashFunc, publicKey, message, signature)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 }
 
 //func Test_HappyPath(t *testing.T) {
