@@ -25,26 +25,26 @@ type (
 	PrimeGroupElement[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] algebra.PrimeGroupElement[E, S]
 )
 
-func GetGroup[GE GroupElement[GE]](ge GE) (Group[GE], error) {
+func GetGroup[GE GroupElement[GE]](ge GE) Group[GE] {
 	g, ok := ge.Structure().(Group[GE])
 	if !ok {
-		return nil, errs.NewType("GroupElement does not have a Group structure")
+		panic(errs.NewType("GroupElement does not have a Group structure"))
 	}
-	return g, nil
+	return g
 }
 
-func GetAdditiveGroup[GE AdditiveGroupElement[GE]](ge GE) (AdditiveGroup[GE], error) {
+func GetAdditiveGroup[GE AdditiveGroupElement[GE]](ge GE) AdditiveGroup[GE] {
 	f, ok := ge.Structure().(AdditiveGroup[GE])
 	if !ok {
-		return nil, (errs.NewType("GroupElement does not have an AdditiveGroup structure"))
+		panic(errs.NewType("GroupElement does not have an AdditiveGroup structure"))
 	}
-	return f, nil
+	return f
 }
 
-func GetMultiplicativeGroup[GE MultiplicativeGroupElement[GE]](ge GE) (MultiplicativeGroup[GE], error) {
+func GetMultiplicativeGroup[GE MultiplicativeGroupElement[GE]](ge GE) MultiplicativeGroup[GE] {
 	f, ok := ge.Structure().(MultiplicativeGroup[GE])
 	if !ok {
-		return nil, (errs.NewType("GroupElement does not have a MultiplicativeGroup structure"))
+		panic(errs.NewType("GroupElement does not have a MultiplicativeGroup structure"))
 	}
-	return f, nil
+	return f
 }

@@ -30,7 +30,10 @@ type Structure[E any] interface {
 	Order() Cardinal
 }
 
-// === Aspects
+type OrderedPair[T, U any] struct {
+	First  T
+	Second U
+}
 
 type FiniteStructure[E any] interface {
 	Random(prng io.Reader) (E, error)
