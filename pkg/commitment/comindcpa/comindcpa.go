@@ -5,7 +5,7 @@ import (
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
-	"github.com/bronlabs/bron-crypto/pkg/base/types/commitment"
+	"github.com/bronlabs/bron-crypto/pkg/commitment"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 )
 
