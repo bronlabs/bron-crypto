@@ -225,7 +225,7 @@ func (s *Scalar[FE, T, W, WT]) TryDiv(x W) (W, error) {
 
 func (s *Scalar[FE, T, W, WT]) TryInv() (W, error) {
 	var v WT
-	if W(&v).Fq().Inv(&s.V) == 1 {
+	if W(&v).Fq().Inv(&s.V) == 0 {
 		return nil, errs.NewFailed("cannot invert")
 	}
 	return &v, nil

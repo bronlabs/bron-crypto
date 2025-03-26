@@ -1,0 +1,28 @@
+{
+  "source": "https://github.com/zcash/pasta_curves/blob/main/src/pallas.rs",
+  "suite": "pallas_XMD:BLAKE2b_SSWU_RO_",
+  "dst": "z.cash:test-pallas_XMD:BLAKE2b_SSWU_RO_",
+  "vectors": [
+    {
+      "msg": "Trans rights now!",
+      "p": {
+        "x": "1818cda31ffdc8c3ff23df3d88c26f952340257d0f187a0236695c9b640b6bd3",
+        "y": "01e20888510123752166a0306332e126289f6f9a2774160395f2f1efc9b1280c"
+      },
+      "u": [
+        "",
+        ""
+      ],
+      "q": [
+        {
+          "x": "",
+          "y": ""
+        },
+        {
+          "x": "",
+          "y": ""
+        }
+      ]
+    }
+  ]
+}

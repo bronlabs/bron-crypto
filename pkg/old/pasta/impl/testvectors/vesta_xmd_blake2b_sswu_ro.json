@@ -1,0 +1,28 @@
+{
+  "source": "https://github.com/zcash/pasta_curves/blob/main/src/vesta.rs",
+  "suite": "vesta_XMD:BLAKE2b_SSWU_RO_",
+  "dst": "z.cash:test-vesta_XMD:BLAKE2b_SSWU_RO_",
+  "vectors": [
+    {
+      "msg": "hello",
+      "p": {
+        "x": "2e983e009cf3b86bc95f91b3411bd6cbd0a87f8c3c3dae80f3f2637084849204",
+        "y": "310fb8f3316d069a1fb9374bdbc0fb1391c864a5208b2a812341db7f50b2e106"
+      },
+      "u": [
+        "02ff3bc53fd8e95662b4614d32237aef43b36e53774401004eac13537507b1ac",
+        "249ed75088f240d4c420e893e3b9cebfeb151a2a6e3e3f7dad559a98f139fcef"
+      ],
+      "q": [
+        {
+          "x": "",
+          "y": ""
+        },
+        {
+          "x": "",
+          "y": ""
+        }
+      ]
+    }
+  ]
+}
