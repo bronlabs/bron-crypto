@@ -4,14 +4,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/groups"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 )
 
-const (
-	Type   encryption.Type = "elgamal"
-	TypeEC encryption.Type = "elgamal in the exponent"
-)
+const Type encryption.Type = "elgamal"
 
 type UnderlyingGroup[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] interface {
 	groups.FiniteAbelianGroup[E, S]
@@ -26,76 +22,41 @@ type UnderlyingGroupElement[E interface {
 	algebra.CyclicSemiGroupElement[E]
 }
 
-type SchemeElement[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct{}
-
-func (*SchemeElement[E, S]) Scheme() types.Scheme[encryption.Type] {
-	return nil
+func NewScheme[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](g UnderlyingGroup[E, S], z algebra.ZnLike[S], codec *encryption.PlaintextCodec[*Plaintext[E, S]]) (encryption.Scheme[*PrivateKey[E, S], *PublicKey[E, S], *Plaintext[E, S], *Ciphertext[E, S], *Nonce[E, S]], error) {
+	if g == nil {
+		return nil, errs.NewIsNil("group")
+	}
+	if z == nil {
+		return nil, errs.NewIsNil("z")
+	}
+	if codec == nil || codec.Encoder == nil {
+		return nil, errs.NewIsNil("codec")
+	}
+	return &scheme[E, S]{g, z, codec}, nil
 }
 
-func (*SchemeElement[E, S]) Type() encryption.Type {
-	//TODO: some helper for EC detection
+type scheme[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
+	g     UnderlyingGroup[E, S]
+	z     algebra.ZnLike[S]
+	codec *encryption.PlaintextCodec[*Plaintext[E, S]]
+}
+
+func (s *scheme[E, S]) Type() encryption.Type {
 	return Type
 }
 
-// type PublicKeySpace[PK PublicKey[PK, S], S algebra.UintLike[S]] UnderlyingGroup[PK, S]
-
-// type PublicKey[PK UnderlyingGroupElement[PK, S], S algebra.UintLike[S]] struct {
-// 	UnderlyingGroupElement[PK, S]
-// }
-
-// type MessageSpace[M Message[M, S], S algebra.UintLike[S]] UnderlyingGroup[M, S]
-// type Message[M UnderlyingGroupElement[M, S], S algebra.UintLike[S]] UnderlyingGroupElement[M, S]
-
-// type Encode[M Message[M, S], S algebra.UintLike[S]] func(b []byte) (M, error)
-// type Decode[M Message[M, S], S algebra.UintLike[S]] func(m M) ([]byte, error)
-
-// type PrivateKeySpace[K PrivateKeyyy[K]] algebra.ZnLike[K]
-
-// type PrivateKeyyy[K algebra.UintLike[K]] algebra.UintLike[K]
-
-type Plaintext[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
-	SchemeElement[E, S]
-	decoder encryption.Decoder[*Plaintext[E, S]]
-	v       E
+func (s *scheme[E, S]) IsInTheExponent() bool {
+	return s.codec.Decoder == nil
 }
 
-func (p *Plaintext[E, S]) Decode() ([]byte, error) {
-	out, err := p.decoder(p)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to decode plaintext")
-	}
-	return out, nil
+func (s *scheme[E, S]) Keygen() encryption.KeyGenerator[*PrivateKey[E, S], *PublicKey[E, S]] {
+	return &keyGenerator[E, S]{s.g, s.z}
 }
 
-type PublicKey[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
-	SchemeElement[E, S]
-	v E
+func (s *scheme[E, S]) Encrypter() encryption.Encrypter[*PublicKey[E, S], *Plaintext[E, S], *Ciphertext[E, S], *Nonce[E, S]] {
+	return &encrypter[E, S]{s.g, s.z}
 }
 
-func (pk *PublicKey[E, S]) Equal(x *PublicKey[E, S]) bool {
-	return pk.v.Equal(x.v)
+func (s *scheme[E, S]) Decrypter(sk *PrivateKey[E, S]) encryption.Decrypter[*PrivateKey[E, S], *PublicKey[E, S], *Plaintext[E, S], *Ciphertext[E, S]] {
+	return &decrypter[E, S]{s.g, s.z, sk}
 }
-
-func (pk *PublicKey[E, S]) Clone() *PublicKey[E, S] {
-	out := &PublicKey[E, S]{}
-	out.v = pk.v.Clone()
-	return out
-}
-
-type PrivateKey[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
-	v  E
-	pk PublicKey[E, S]
-}
-
-type Ciphertext[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
-}
-
-type Nonce[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
-}
-
-// type scheme[G UnderlyingGroup[E, S], E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct{}
-
-// func (s *scheme[G, E, S]) Type() encryption.Type {
-// 	//TODO: some helper for EC detection
-// 	return Type
-// }

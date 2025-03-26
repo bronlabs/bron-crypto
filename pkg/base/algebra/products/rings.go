@@ -15,6 +15,13 @@ func NewDirectProductRing[R1 rings.Ring[E1], E1 rings.RingElement[E1], R2 rings.
 	return out
 }
 
+func NewDirectProductRingElement[E1 rings.RingElement[E1], E2 rings.RingElement[E2]](left E1, right E2) *DirectProductRingElement[E1, E2] {
+	out := &DirectProductRingElement[E1, E2]{}
+	out.Set(left, right)
+	var _ rings.RingElement[*DirectProductRingElement[E1, E2]] = out
+	return out
+}
+
 type DirectProductRing[R1 rings.Ring[E1], E1 rings.RingElement[E1], R2 rings.Ring[E2], E2 rings.RingElement[E2]] struct {
 	traits.DirectProductGroup[R1, E1, R2, E2, *DirectProductRingElement[E1, E2], DirectProductRingElement[E1, E2]]
 }

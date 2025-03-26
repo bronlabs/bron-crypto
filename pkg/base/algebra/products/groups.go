@@ -17,6 +17,13 @@ func NewDirectProductGroup[G1 groups.Group[E1], E1 groups.GroupElement[E1], G2 g
 	return out
 }
 
+func NewDirectProductGroupElement[E1 groups.GroupElement[E1], E2 groups.GroupElement[E2]](left E1, right E2) *DirectProductGroupElement[E1, E2] {
+	out := &DirectProductGroupElement[E1, E2]{}
+	out.Set(left, right)
+	var _ groups.GroupElement[*DirectProductGroupElement[E1, E2]] = out
+	return out
+}
+
 type DirectProductGroup[G1 groups.Group[E1], E1 groups.GroupElement[E1], G2 groups.Group[E2], E2 groups.GroupElement[E2]] struct {
 	traits.DirectProductGroup[G1, E1, G2, E2, *DirectProductGroupElement[E1, E2], DirectProductGroupElement[E1, E2]]
 }

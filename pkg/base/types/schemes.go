@@ -15,8 +15,8 @@ type SchemeElement[T ~string] interface {
 	Scheme() Scheme[T]
 }
 
-type Participant[S Scheme[T], T ~string] interface {
-	Scheme() S
+type Participant[T ~string] interface {
+	Scheme() Scheme[T]
 }
 
 type ParticipantIdentifier fmt.Stringer
@@ -27,7 +27,7 @@ type Session interface {
 type AuthenticatedScheme[T ~string] Scheme[T]
 type AuthenticatedParticipant[ID ParticipantIdentifier, P AuthenticatedScheme[T], T ~string] interface {
 	ID() ID
-	Participant[P, T]
+	Participant[T]
 }
 
 type MPCScheme[ID ParticipantIdentifier, T ~string] interface {
@@ -37,7 +37,7 @@ type MPCScheme[ID ParticipantIdentifier, T ~string] interface {
 }
 
 type MPCParticipant[ID ParticipantIdentifier, P MPCScheme[ID, T], T ~string] interface {
-	Participant[P, T]
+	Participant[T]
 	AuthenticatedParticipant[ID, P, T]
 }
 type MPCSession[ID ParticipantIdentifier] interface {

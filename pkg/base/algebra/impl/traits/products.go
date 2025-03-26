@@ -6,6 +6,7 @@ import (
 )
 
 type DirectProduct[L algebra.SemiGroupElement[L], R algebra.SemiGroupElement[R]] interface {
+	Components() (L, R)
 	Left() L
 	Right() R
 }
@@ -36,6 +37,10 @@ func (d *DirectProductSemiGroupElement[L, R, W, WT]) Left() L {
 
 func (d *DirectProductSemiGroupElement[L, R, W, WT]) Right() R {
 	return d.right
+}
+
+func (d *DirectProductSemiGroupElement[L, R, W, WT]) Components() (L, R) {
+	return d.Left(), d.Right()
 }
 
 func (d *DirectProductSemiGroupElement[L, R, W, WT]) Op(x W) W {
@@ -224,6 +229,10 @@ func (s *DirectProductSemiGroup[S1, E1, S2, E2, W, WT]) Left() S1 {
 
 func (s *DirectProductSemiGroup[S1, E1, S2, E2, W, WT]) Right() S2 {
 	return s.right
+}
+
+func (s *DirectProductSemiGroup[S1, E1, S2, E2, W, WT]) Components() (S1, S2) {
+	return s.Left(), s.Right()
 }
 
 func (s *DirectProductSemiGroup[S1, E1, S2, E2, W, WT]) Order() algebra.Cardinal {
