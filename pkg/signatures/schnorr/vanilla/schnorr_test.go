@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
@@ -18,6 +19,8 @@ func Test_HappyPath(t *testing.T) {
 	testHappyPath(t, p256.NewCurve())
 	testHappyPath(t, pasta.NewPallasCurve())
 	testHappyPath(t, pasta.NewVestaCurve())
+	testHappyPath(t, bls12381.NewG1Curve())
+	testHappyPath(t, bls12381.NewG2Curve())
 }
 
 func testHappyPath[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](tb testing.TB, curve curves.Curve[P, F, S]) {

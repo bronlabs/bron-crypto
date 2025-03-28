@@ -26,7 +26,7 @@ type BaseFieldG2 struct {
 	traits.BaseField[*bls12381Impl.Fp2, *BaseFieldElementG2, BaseFieldElementG2]
 }
 
-func NewBaseFieldG2() *BaseFieldG2 {
+func NewG2BaseField() *BaseFieldG2 {
 	baseFieldInitOnceG2.Do(func() {
 		baseFieldInstanceG2 = &BaseFieldG2{}
 	})
@@ -64,7 +64,7 @@ func (f *BaseFieldG2) OtherOperator() algebra.BinaryOperator[*BaseFieldElementG2
 }
 
 func (f *BaseFieldG2) Characteristic() algebra.Cardinal {
-	return NewBaseFieldG1().Order()
+	return NewG1BaseField().Order()
 }
 
 func (f *BaseFieldG2) ExtensionDegree() uint {
@@ -84,7 +84,7 @@ type BaseFieldElementG2 struct {
 }
 
 func (fp *BaseFieldElementG2) Structure() algebra.Structure[*BaseFieldElementG2] {
-	return NewBaseFieldG2()
+	return NewG2BaseField()
 }
 
 func (fp *BaseFieldElementG2) MarshalBinary() (data []byte, err error) {

@@ -217,7 +217,11 @@ func (p *Point) ScalarMul(actor *Scalar) *Point {
 }
 
 func (p *Point) IsTorsionFree() bool {
-	return true
+	primeOrderBytes := scalarFieldOrder.Bytes()
+	slices.Reverse(primeOrderBytes)
+	var e edwards25519Impl.Point
+	pointsImpl.ScalarMul[*edwards25519Impl.Fp](&e, &p.V, primeOrderBytes)
+	return e.IsIdentity() == 1
 }
 
 func (p *Point) IsBasePoint(id string) bool {

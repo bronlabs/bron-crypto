@@ -31,7 +31,7 @@ type CurveG2 struct {
 	traits.Curve[*bls12381Impl.Fp2, *bls12381Impl.G2Point, *PointG2, PointG2]
 }
 
-func NewCurveG2() *CurveG2 {
+func NewG2Curve() *CurveG2 {
 	curveInitOnceG2.Do(func() {
 		curveInstanceG2 = &CurveG2{}
 	})
@@ -200,7 +200,7 @@ func (p *PointG2) HashCode() uint64 {
 }
 
 func (p *PointG2) Structure() algebra.Structure[*PointG2] {
-	return NewCurveG2()
+	return NewG2Curve()
 }
 
 func (p *PointG2) MarshalBinary() (data []byte, err error) {
@@ -289,7 +289,11 @@ func (p *PointG2) ScalarMul(actor *Scalar) *PointG2 {
 }
 
 func (p *PointG2) IsTorsionFree() bool {
-	return true
+	orderBytes := scalarFieldOrder.Bytes()
+	slices.Reverse(orderBytes)
+	var e bls12381Impl.G2Point
+	pointsImpl.ScalarMul[*bls12381Impl.Fp2](&e, &p.V, orderBytes)
+	return e.IsIdentity() == 1
 }
 
 func (p *PointG2) IsBasePoint(id string) bool {

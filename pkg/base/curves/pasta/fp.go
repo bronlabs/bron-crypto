@@ -40,9 +40,17 @@ type FpField struct {
 	traits.ScalarField[*pastaImpl.Fp, *FpFieldElement, FpFieldElement]
 }
 
-func NewFpField() *FpField {
+func newFpField() *FpField {
 	fpFieldInitOnce.Do(fpFieldInit)
 	return fpFieldInstance
+}
+
+func NewPallasBaseField() *FpField {
+	return newFpField()
+}
+
+func NewVestaScalarField() *FpField {
+	return newFpField()
 }
 
 func (*FpField) Name() string {
@@ -105,7 +113,7 @@ type FpFieldElement struct {
 }
 
 func (s *FpFieldElement) Structure() algebra.Structure[*FpFieldElement] {
-	return NewFpField()
+	return newFpField()
 }
 
 func (s *FpFieldElement) Fq() *pastaImpl.Fp {

@@ -30,7 +30,7 @@ type BaseFieldG1 struct {
 	traits.BaseField[*bls12381Impl.Fp, *BaseFieldElementG1, BaseFieldElementG1]
 }
 
-func NewBaseFieldG1() *BaseFieldG1 {
+func NewG1BaseField() *BaseFieldG1 {
 	baseFieldInitOnceG1.Do(func() {
 		orderBytes := make([]byte, len(bls12381Impl.FpModulus))
 		copy(orderBytes, bls12381Impl.FpModulus[:])
@@ -100,7 +100,7 @@ type BaseFieldElementG1 struct {
 }
 
 func (fp *BaseFieldElementG1) Structure() algebra.Structure[*BaseFieldElementG1] {
-	return NewBaseFieldG1()
+	return NewG1BaseField()
 }
 
 func (fp *BaseFieldElementG1) MarshalBinary() (data []byte, err error) {

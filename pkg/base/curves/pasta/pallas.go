@@ -143,7 +143,7 @@ func (c *PallasCurve) BasePoints() ds.ImmutableMap[string, *PallasPoint] {
 }
 
 func (c *PallasCurve) ScalarField() algebra.PrimeField[*PallasScalar] {
-	return NewFqField()
+	return newFqField()
 }
 
 type PallasPoint struct {
