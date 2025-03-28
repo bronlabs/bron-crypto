@@ -1,11 +1,11 @@
-package k256
+package p256
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
-	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
+	p256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/p256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	CurveName             = "secp256k1"
-	Hash2CurveSuite       = "secp256k1_XMD:SHA-256_SSWU_RO_"
-	Hash2CurveScalarSuite = "secp256k1_XMD:SHA-256_SSWU_RO_SC_"
+	CurveName             = "P256"
+	Hash2CurveSuite       = "P256_XMD:SHA-256_SSWU_RO_"
+	Hash2CurveScalarSuite = "P256_XMD:SHA-256_SSWU_RO_SC_"
 )
 
 var (
@@ -28,7 +28,7 @@ var (
 )
 
 type Curve struct {
-	traits.Curve[*k256Impl.Fp, *k256Impl.Point, *Point, Point]
+	traits.Curve[*p256Impl.Fp, *p256Impl.Point, *Point, Point]
 }
 
 func NewCurve() *Curve {
@@ -62,11 +62,11 @@ func (c *Curve) FromAffineCompressed(input []byte) (*Point, error) {
 	}
 	sign &= 0x1
 
-	var xBytes [k256Impl.FpBytes]byte
+	var xBytes [p256Impl.FpBytes]byte
 	copy(xBytes[:], input[1:])
 	slices.Reverse(xBytes[:])
 
-	var x, y k256Impl.Fp
+	var x, y p256Impl.Fp
 	ok := x.SetBytes(xBytes[:])
 	if ok != 1 {
 		return nil, errs.NewCoordinates("x")
@@ -107,7 +107,7 @@ func (c *Curve) FromAffineUncompressed(input []byte) (*Point, error) {
 	slices.Reverse(xBytes[:])
 	slices.Reverse(yBytes[:])
 
-	var x, y k256Impl.Fp
+	var x, y p256Impl.Fp
 	okx := x.SetBytes(xBytes[:])
 	if okx != 1 {
 		return nil, errs.NewCoordinates("x")
@@ -164,10 +164,10 @@ func (c *Curve) ScalarField() algebra.PrimeField[*Scalar] {
 }
 
 type Point struct {
-	traits.Point[*k256Impl.Fp, *k256Impl.Point, k256Impl.Point, *Point, Point]
+	traits.Point[*p256Impl.Fp, *p256Impl.Point, p256Impl.Point, *Point, Point]
 }
 
-func (p *Point) P() *k256Impl.Point {
+func (p *Point) P() *p256Impl.Point {
 	return &p.V
 }
 
@@ -205,7 +205,7 @@ func (p *Point) ToAffineCompressed() []byte {
 		return compressedBytes[:]
 	}
 
-	var px, py k256Impl.Fp
+	var px, py p256Impl.Fp
 	ok := p.V.ToAffine(&px, &py)
 	if ok != 1 {
 		panic("this should never happen")
@@ -225,7 +225,7 @@ func (p *Point) ToAffineUncompressed() []byte {
 		return out[:]
 	}
 
-	var px, py k256Impl.Fp
+	var px, py p256Impl.Fp
 	ok := p.V.ToAffine(&px, &py)
 	if ok != 1 {
 		panic("this should never happen")
@@ -262,7 +262,7 @@ func (p *Point) AffineY() (*BaseFieldElement, error) {
 
 func (p *Point) ScalarMul(actor *Scalar) *Point {
 	var result Point
-	pointsImpl.ScalarMul[*k256Impl.Fp](&result.V, &p.V, actor.V.Bytes())
+	pointsImpl.ScalarMul[*p256Impl.Fp](&result.V, &p.V, actor.V.Bytes())
 	return &result
 }
 

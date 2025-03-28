@@ -120,6 +120,7 @@ type Field[FE FieldElement[FE]] interface {
 	// SubFieldElement returns a field element in F_p, a subfield of F_{p^k} depending on its extension degree k:
 	//  - For k>1 (with subfields F_{p_1}, ..., F_{p_k}), the element of F_{p_((i+1)%k)}.
 	//  - For k=1, the element itself (in F_p already) regardless of i.
+	// TODO(aalireza): remove
 	SubFieldIdentity(i uint) (any, error)
 }
 

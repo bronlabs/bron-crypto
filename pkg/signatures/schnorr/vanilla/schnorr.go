@@ -34,11 +34,7 @@ func KeyGen[P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.Pr
 		return nil, nil, errs.NewIsNil("prng is nil")
 	}
 
-	// TODO(aalireza) add method to get scalar field from curve somehow?
 	scalarField := curve.ScalarField()
-	//if err != nil {
-	//	return nil, nil, errs.NewIsNil("scalarField is nil")
-	//}
 	scalar, err := scalarField.Random(prng)
 	if err != nil {
 		return nil, nil, errs.NewIsNil("scalar is nil")

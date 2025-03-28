@@ -1,11 +1,12 @@
-package k256
+package edwards25519
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
-	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -28,7 +29,7 @@ var (
 )
 
 type Curve struct {
-	traits.Curve[*k256Impl.Fp, *k256Impl.Point, *Point, Point]
+	traits.Curve[*edwards25519Impl.Fp, *edwards25519Impl.Point, *Point, Point]
 }
 
 func NewCurve() *Curve {
@@ -51,82 +52,60 @@ func (c *Curve) Operator() algebra.BinaryOperator[*Point] {
 	return algebra.Add[*Point]
 }
 
-func (c *Curve) FromAffineCompressed(input []byte) (*Point, error) {
-	if len(input) != 33 {
-		return nil, errs.NewLength("invalid byte sequence")
+func (c *Curve) FromAffineCompressed(inBytes []byte) (*Point, error) {
+	if len(inBytes) != 32 {
+		return nil, errs.NewLength("input must be 32 bytes long")
 	}
 
-	sign := input[0]
-	if sign != 2 && sign != 3 {
-		return nil, errs.NewFailed("invalid sign byte")
-	}
-	sign &= 0x1
-
-	var xBytes [k256Impl.FpBytes]byte
-	copy(xBytes[:], input[1:])
-	slices.Reverse(xBytes[:])
-
-	var x, y k256Impl.Fp
-	ok := x.SetBytes(xBytes[:])
+	var yBytes [32]byte
+	copy(yBytes[:], inBytes)
+	var y BaseFieldElement
+	yBytes[31] &= 0x7f
+	ok := y.V.SetBytes(yBytes[:])
 	if ok != 1 {
-		return nil, errs.NewCoordinates("x")
-	}
-	if x.IsZero() == 1 {
-		return c.OpIdentity(), nil
+		return nil, errs.NewFailed("invalid point")
 	}
 
-	var result Point
-	ok = result.V.SetFromAffineX(&x)
+	var x BaseFieldElement
+	result := new(Point)
+	ok = result.V.SetFromAffineY(&y.V)
+	_ = result.V.ToAffine(&x.V, &y.V)
 	if ok != 1 {
-		return nil, errs.NewCoordinates("x")
-	}
-	ok = result.V.ToAffine(&x, &y)
-	if ok != 1 {
-		panic("this should never happen")
+		return nil, errs.NewFailed("invalid point")
 	}
 
-	ySign := result.V.Y.Bytes()[0] & 0b1
-	if sign != ySign {
-		result.V.Neg(&result.V)
+	isOdd := uint64(inBytes[31] >> 7)
+	if fieldsImpl.IsOdd(&x.V) != isOdd {
+		result = result.Neg()
 	}
 
-	return &result, nil
+	return result, nil
 }
 
-func (c *Curve) FromAffineUncompressed(input []byte) (*Point, error) {
-	if len(input) != 65 {
+func (c *Curve) FromAffineUncompressed(inBytes []byte) (*Point, error) {
+	if len(inBytes) != 2*32 {
 		return nil, errs.NewLength("invalid byte sequence")
 	}
-	if input[0] != 4 {
-		return nil, errs.NewFailed("invalid sign byte")
-	}
+	yBytes := inBytes[:32]
+	xBytes := inBytes[32:]
 
-	var xBytes, yBytes [32]byte
-	copy(xBytes[:], input[1:33])
-	copy(yBytes[:], input[33:])
-	slices.Reverse(xBytes[:])
-	slices.Reverse(yBytes[:])
-
-	var x, y k256Impl.Fp
-	okx := x.SetBytes(xBytes[:])
-	if okx != 1 {
+	var x, y BaseFieldElement
+	ok := x.V.SetBytes(xBytes)
+	if ok != 1 {
 		return nil, errs.NewCoordinates("x")
 	}
-	oky := y.SetBytes(yBytes[:])
-	if oky != 1 {
+	ok = y.V.SetBytes(yBytes)
+	if ok != 1 {
 		return nil, errs.NewCoordinates("y")
 	}
-	if x.IsZero() == 1 && y.IsZero() == 1 {
-		return c.OpIdentity(), nil
-	}
 
-	var result Point
-	ok := result.V.SetAffine(&x, &y)
+	result := new(Point)
+	ok = result.V.SetAffine(&x.V, &y.V)
 	if ok != 1 {
 		return nil, errs.NewCoordinates("x/y")
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 func (c *Curve) NewPoint(affineX, affineY *BaseFieldElement) (*Point, error) {
@@ -164,10 +143,10 @@ func (c *Curve) ScalarField() algebra.PrimeField[*Scalar] {
 }
 
 type Point struct {
-	traits.Point[*k256Impl.Fp, *k256Impl.Point, k256Impl.Point, *Point, Point]
+	traits.Point[*edwards25519Impl.Fp, *edwards25519Impl.Point, edwards25519Impl.Point, *Point, Point]
 }
 
-func (p *Point) P() *k256Impl.Point {
+func (p *Point) P() *edwards25519Impl.Point {
 	return &p.V
 }
 
@@ -199,47 +178,18 @@ func (p *Point) Coordinates() []*BaseFieldElement {
 }
 
 func (p *Point) ToAffineCompressed() []byte {
-	var compressedBytes [33]byte
-	compressedBytes[0] = byte(2)
-	if p.IsOpIdentity() {
-		return compressedBytes[:]
-	}
-
-	var px, py k256Impl.Fp
-	ok := p.V.ToAffine(&px, &py)
-	if ok != 1 {
-		panic("this should never happen")
-	}
-
-	compressedBytes[0] |= py.Bytes()[0] & 1
-	pxBytes := px.Bytes()
-	slices.Reverse(pxBytes)
-	copy(compressedBytes[1:], pxBytes)
-	return compressedBytes[:]
+	var x, y BaseFieldElement
+	_ = p.V.ToAffine(&x.V, &y.V)
+	yBytes := y.V.Bytes()
+	yBytes[31] |= byte(fieldsImpl.IsOdd(&x.V) << 7)
+	return yBytes
 }
 
 func (p *Point) ToAffineUncompressed() []byte {
-	var out [65]byte
-	out[0] = byte(4)
-	if p.IsOpIdentity() {
-		return out[:]
-	}
+	var x, y BaseFieldElement
+	_ = p.V.ToAffine(&x.V, &y.V)
 
-	var px, py k256Impl.Fp
-	ok := p.V.ToAffine(&px, &py)
-	if ok != 1 {
-		panic("this should never happen")
-	}
-
-	pxBytes := px.Bytes()
-	slices.Reverse(pxBytes)
-	copy(out[1:33], pxBytes)
-
-	pyBytes := py.Bytes()
-	slices.Reverse(pyBytes)
-	copy(out[33:], pyBytes)
-
-	return out[:]
+	return slices.Concat(y.V.Bytes(), x.V.Bytes())
 }
 
 func (p *Point) AffineX() (*BaseFieldElement, error) {
@@ -262,12 +212,16 @@ func (p *Point) AffineY() (*BaseFieldElement, error) {
 
 func (p *Point) ScalarMul(actor *Scalar) *Point {
 	var result Point
-	pointsImpl.ScalarMul[*k256Impl.Fp](&result.V, &p.V, actor.V.Bytes())
+	pointsImpl.ScalarMul[*edwards25519Impl.Fp](&result.V, &p.V, actor.V.Bytes())
 	return &result
 }
 
 func (p *Point) IsTorsionFree() bool {
-	return true
+	primeOrderBytes := scalarFieldOrder.Bytes()
+	slices.Reverse(primeOrderBytes)
+	var e edwards25519Impl.Point
+	pointsImpl.ScalarMul[*edwards25519Impl.Fp](&e, &p.V, primeOrderBytes)
+	return e.IsIdentity() == 1
 }
 
 func (p *Point) IsBasePoint(id string) bool {
