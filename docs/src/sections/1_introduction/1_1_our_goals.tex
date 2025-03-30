@@ -16,7 +16,7 @@
 This document describes in detail the suite of cryptographic protocols supported by the MPC-based signing services of \href{https://bron.xyz}{Bron}.
 
 
-As a custody solutions provider, \href{https://bron.xyz}{Bron} aims to provide state-of-the-art protection for digital assets (e.g., cryptocurrencies) while allowing its clients to operate with them with the utmost security guarantees. To this end, we carefully select and implement several distributed variants of Elliptic-Curve (EC) signature schemes commonly used to sign transactions in popular blockchains (ECDSA, Schnorr/EdDSA, BLS), alongside their required primitives.
+As a custody solutions provider, \href{https://bron.org}{Bron} aims to provide state-of-the-art protection for digital assets (e.g., cryptocurrencies) while allowing its clients to operate with them with the utmost security guarantees. To this end, we carefully select and implement several distributed variants of Elliptic-Curve (EC) signature schemes commonly used to sign transactions in popular blockchains (ECDSA, Schnorr/EdDSA, BLS), alongside their required primitives.
 We focus on $t$-out-of-$n$ signing protocols where $n$ participants jointly generate shares of a secret key (via a \textit{Distributed Key Generation} protocol, or DKG), and $t$ out of these $n$ participants can jointly sign a public message under the distributed secret key (\textit{threshold signing}).
 Our real-world use cases lead us to favor protocols tailored for small groups of participants (e.g., $n < 100$), with special interest in the $t=2$ case\footnote{Various optimizations could be made to increase performance for $n \gg 100$.}.
 
