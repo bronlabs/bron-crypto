@@ -18,6 +18,7 @@ func MakeGenericSchnorrChallenge[FE fields.PrimeFieldElement[FE]](field fields.P
 	h := hashFunc()
 	_, _ = h.Write(slices.Concat(xs...))
 	digest := h.Sum(nil)
+	slices.Reverse(digest)
 	challenge, err := field.FromWideBytes(digest)
 	if err != nil {
 		return *new(FE), err

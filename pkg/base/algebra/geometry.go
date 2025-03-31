@@ -43,6 +43,7 @@ type GenericEllipticCurve[
 	TorsionFreeSubGroupGenerator() TorsionFreePoint
 
 	ScalarField() PrimeField[TorsionFreeScalar]
+	BaseField() FiniteField[BaseFieldElement]
 }
 
 type GenericEllipticCurvePoint[Point interface {
@@ -76,6 +77,12 @@ type TorsionFreeEllipticCurvePoint[Point interface {
 	CyclicSemiGroupElement[Point]
 
 	ClearCofactor() Point
+}
+
+type PairingFriendlyCurve[P TorsionFreeEllipticCurvePoint[P, B, S], B FiniteFieldElement[B], S PrimeFieldElement[S], P2 TorsionFreeEllipticCurvePoint[P2, B2, S], B2 FiniteFieldElement[B2]] interface {
+	TorsionFreeEllipticCurve[P, B, S]
+
+	OtherCurve() TorsionFreeEllipticCurve[P2, B2, S]
 }
 
 type Pairing[

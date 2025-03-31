@@ -163,6 +163,10 @@ func (c *Curve) ScalarField() algebra.PrimeField[*Scalar] {
 	return NewScalarField()
 }
 
+func (c *Curve) BaseField() algebra.FiniteField[*BaseFieldElement] {
+	return NewBaseField()
+}
+
 type Point struct {
 	traits.Point[*k256Impl.Fp, *k256Impl.Point, k256Impl.Point, *Point, Point]
 }

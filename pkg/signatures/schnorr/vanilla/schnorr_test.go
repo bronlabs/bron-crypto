@@ -1,30 +1,110 @@
 package vanilla_test
 
 import (
+	"crypto/ed25519"
 	crand "crypto/rand"
 	"crypto/sha256"
+	"crypto/sha512"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/vanilla"
 	"github.com/stretchr/testify/require"
+	"hash"
+	"slices"
 	"testing"
 )
 
-func Test_HappyPath(t *testing.T) {
-	testHappyPath(t, k256.NewCurve())
-	testHappyPath(t, p256.NewCurve())
-	testHappyPath(t, pasta.NewPallasCurve())
-	testHappyPath(t, pasta.NewVestaCurve())
-	testHappyPath(t, bls12381.NewG1Curve())
-	testHappyPath(t, bls12381.NewG2Curve())
+var hs = []func() hash.Hash{
+	sha256.New,
+	sha512.New,
 }
 
-func testHappyPath[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](tb testing.TB, curve curves.Curve[P, F, S]) {
-	hashFunc := sha256.New
+func Test_HappyPath(t *testing.T) {
+	t.Parallel()
+
+	for _, h := range hs {
+		testHappyPath(t, k256.NewCurve(), h)
+		testHappyPath(t, p256.NewCurve(), h)
+		testHappyPath(t, edwards25519.NewCurve(), h)
+		testHappyPath(t, pasta.NewPallasCurve(), h)
+		testHappyPath(t, pasta.NewVestaCurve(), h)
+		testHappyPath(t, bls12381.NewG1Curve(), h)
+		testHappyPath(t, bls12381.NewG2Curve(), h)
+	}
+}
+
+func Test_InvalidMessage(t *testing.T) {
+	t.Parallel()
+
+	for _, h := range hs {
+		testInvalidMessage(t, k256.NewCurve(), h)
+		testInvalidMessage(t, p256.NewCurve(), h)
+		testInvalidMessage(t, edwards25519.NewCurve(), h)
+		testInvalidMessage(t, pasta.NewPallasCurve(), h)
+		testInvalidMessage(t, pasta.NewVestaCurve(), h)
+		testInvalidMessage(t, bls12381.NewG1Curve(), h)
+		testInvalidMessage(t, bls12381.NewG2Curve(), h)
+	}
+}
+
+func Test_HappyPathWithEd25519Verifier(t *testing.T) {
+	t.Parallel()
+	message := []byte("something")
+
+	curve := edwards25519.NewCurve()
+	hashFunc := sha512.New
+
+	publicKey, privateKey, err := vanilla.KeyGen(curve, crand.Reader)
+	require.NoError(t, err)
+
+	signer, err := vanilla.NewSigner(hashFunc, privateKey)
+	require.NoError(t, err)
+	require.NotNil(t, signer)
+
+	signature, err := signer.Sign(message, crand.Reader)
+	require.NoError(t, err)
+
+	rBytes := signature.R.ToAffineCompressed()
+	sBytes := signature.S.Bytes()
+	slices.Reverse(sBytes)
+	nativeSignature := slices.Concat(rBytes, sBytes)
+	ok := ed25519.Verify(publicKey.A.ToAffineCompressed(), message, nativeSignature)
+	require.True(t, ok)
+}
+
+func Test_InvalidMessageWithEd25519Verifier(t *testing.T) {
+	t.Parallel()
+	message := []byte("something")
+
+	curve := edwards25519.NewCurve()
+	hashFunc := sha512.New
+
+	publicKey, privateKey, err := vanilla.KeyGen(curve, crand.Reader)
+	require.NoError(t, err)
+
+	signer, err := vanilla.NewSigner(hashFunc, privateKey)
+	require.NoError(t, err)
+	require.NotNil(t, signer)
+
+	signature, err := signer.Sign(message, crand.Reader)
+	require.NoError(t, err)
+
+	rBytes := signature.R.ToAffineCompressed()
+	sBytes := signature.S.Bytes()
+	slices.Reverse(sBytes)
+	nativeSignature := slices.Concat(rBytes, sBytes)
+	ok := ed25519.Verify(publicKey.A.ToAffineCompressed(), []byte("something else"), nativeSignature)
+	require.False(t, ok)
+}
+
+func testHappyPath[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](tb testing.TB, curve curves.Curve[P, F, S], hashFunc func() hash.Hash) {
+	tb.Helper()
+
 	prng := crand.Reader
 	message := []byte("something")
 
@@ -45,122 +125,25 @@ func testHappyPath[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fi
 	require.NoError(tb, err)
 }
 
-//func Test_HappyPath(t *testing.T) {
-//	t.Parallel()
-//	message := []byte("something")
-//	curveInstances := []curves.Curve{
-//		k256.NewCurve(),
-//		p256.NewCurve(),
-//		edwards25519.NewCurve(),
-//	}
-//	hs := []func() hash.Hash{
-//		sha3.New256,
-//		sha512.New,
-//	}
-//	for _, curve := range curveInstances {
-//		for i, h := range hs {
-//			boundedCurve := curve
-//			boundedH := h
-//			t.Run(fmt.Sprintf("running the test for curve %s and hash no %d", boundedCurve.Name(), i), func(t *testing.T) {
-//				t.Parallel()
-//				cipherSuite, err := testutils.MakeSigningSuite(boundedCurve, boundedH)
-//				require.NoError(t, err)
-//				publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve(), crand.Reader)
-//				require.NoError(t, err)
-//
-//				signer, err := schnorr.NewSigner(cipherSuite, privateKey)
-//				require.NoError(t, err)
-//				require.NotNil(t, signer)
-//
-//				signature, err := signer.Sign(message, crand.Reader)
-//				require.NoError(t, err)
-//
-//				err = schnorr.Verify(cipherSuite, publicKey, message, signature)
-//				require.NoError(t, err)
-//			})
-//		}
-//	}
-//}
+func testInvalidMessage[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](tb testing.TB, curve curves.Curve[P, F, S], hashFunc func() hash.Hash) {
+	tb.Helper()
 
-//func Test_HappyPathWithEd25519Verifier(t *testing.T) {
-//	t.Parallel()
-//	message := []byte("something")
-//
-//	curve := edwards25519.NewCurve()
-//	h := sha512.New
-//	cipherSuite, err := testutils.MakeSigningSuite(curve, h)
-//	require.NoError(t, err)
-//	publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve(), crand.Reader)
-//	require.NoError(t, err)
-//
-//	signer, err := schnorr.NewSigner(cipherSuite, privateKey)
-//	require.NoError(t, err)
-//	require.NotNil(t, signer)
-//
-//	signature, err := signer.Sign(message, crand.Reader)
-//	require.NoError(t, err)
-//
-//	nativeSignature := slices.Concat(signature.R.ToAffineCompressed(), bitstring.ReverseBytes(signature.S.Bytes()))
-//	ok := ed25519.Verify(publicKey.A.ToAffineCompressed(), message, nativeSignature)
-//	require.True(t, ok)
-//}
-//
-//func Test_InvalidMessageOrSignatureFailure(t *testing.T) {
-//	t.Parallel()
-//	message := []byte("something")
-//	curveInstances := []curves.Curve{
-//		k256.NewCurve(),
-//		p256.NewCurve(),
-//		edwards25519.NewCurve(),
-//	}
-//	hs := []func() hash.Hash{
-//		sha3.New256,
-//		sha512.New,
-//	}
-//	for _, curve := range curveInstances {
-//		for i, h := range hs {
-//			boundedCurve := curve
-//			boundedH := h
-//			t.Run(fmt.Sprintf("running the test for curve %s and hash no %d", boundedCurve.Name(), i), func(t *testing.T) {
-//				t.Parallel()
-//				cipherSuite, err := testutils.MakeSigningSuite(boundedCurve, boundedH)
-//				require.NoError(t, err)
-//				publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve(), crand.Reader)
-//				require.NoError(t, err)
-//
-//				signer, err := schnorr.NewSigner(cipherSuite, privateKey)
-//				require.NoError(t, err)
-//				require.NotNil(t, signer)
-//
-//				signature, err := signer.Sign(message, crand.Reader)
-//				require.NoError(t, err)
-//
-//				err = schnorr.Verify(cipherSuite, publicKey, slices.Concat(message, []byte("x")), signature)
-//				require.Error(t, err)
-//			})
-//		}
-//	}
-//}
-//
-//func Test_InvalidMessageOrSignatureWithEd25519Verifier(t *testing.T) {
-//	t.Parallel()
-//	message := []byte("something")
-//
-//	curve := edwards25519.NewCurve()
-//	h := sha512.New
-//	cipherSuite, err := testutils.MakeSigningSuite(curve, h)
-//	require.NoError(t, err)
-//	publicKey, privateKey, err := schnorr.KeyGen(cipherSuite.Curve(), crand.Reader)
-//	require.NoError(t, err)
-//
-//	signer, err := schnorr.NewSigner(cipherSuite, privateKey)
-//	require.NoError(t, err)
-//	require.NotNil(t, signer)
-//
-//	signature, err := signer.Sign(message, crand.Reader)
-//	require.NoError(t, err)
-//
-//	nativeSignature := slices.Concat(signature.R.ToAffineCompressed(), signature.S.Bytes())
-//	ok := ed25519.Verify(publicKey.A.ToAffineCompressed(), []byte("something else"), nativeSignature)
-//	require.False(t, ok)
-//}
+	prng := crand.Reader
+	message := []byte("something")
+
+	publicKey, secretKey, err := vanilla.KeyGen(curve, prng)
+	require.NotNil(tb, publicKey)
+	require.NotNil(tb, secretKey)
+	require.NoError(tb, err)
+
+	signer, err := vanilla.NewSigner(hashFunc, secretKey)
+	require.NoError(tb, err)
+	require.NotNil(tb, signer)
+
+	signature, err := signer.Sign(message, crand.Reader)
+	require.NoError(tb, err)
+	require.NotNil(tb, signature)
+
+	err = vanilla.Verify(hashFunc, publicKey, []byte("something else"), signature)
+	require.Error(tb, err)
+}

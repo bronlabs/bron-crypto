@@ -142,6 +142,10 @@ func (c *Curve) ScalarField() algebra.PrimeField[*Scalar] {
 	return NewScalarField()
 }
 
+func (c *Curve) BaseField() algebra.FiniteField[*BaseFieldElement] {
+	return NewBaseField()
+}
+
 type Point struct {
 	traits.Point[*edwards25519Impl.Fp, *edwards25519Impl.Point, edwards25519Impl.Point, *Point, Point]
 }
