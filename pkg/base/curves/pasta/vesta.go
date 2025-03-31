@@ -143,7 +143,11 @@ func (c *VestaCurve) BasePoints() ds.ImmutableMap[string, *VestaPoint] {
 }
 
 func (c *VestaCurve) ScalarField() algebra.PrimeField[*VestaScalar] {
-	return newFpField()
+	return NewVestaScalarField()
+}
+
+func (c *VestaCurve) BaseField() algebra.FiniteField[*VestaBaseFieldElement] {
+	return NewVestaBaseField()
 }
 
 type VestaPoint struct {

@@ -186,6 +186,10 @@ func (c *CurveG2) ScalarField() algebra.PrimeField[*Scalar] {
 	return NewScalarField()
 }
 
+func (c *CurveG2) BaseField() algebra.FiniteField[*BaseFieldElementG2] {
+	return NewG2BaseField()
+}
+
 type PointG2 struct {
 	traits.Point[*bls12381Impl.Fp2, *bls12381Impl.G2Point, bls12381Impl.G2Point, *PointG2, PointG2]
 }
