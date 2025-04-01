@@ -269,6 +269,10 @@ func (p *PointG2) ToAffineUncompressed() []byte {
 }
 
 func (p *PointG2) AffineX() (*BaseFieldElementG2, error) {
+	if p.IsZero() {
+		return NewG2BaseField().One(), nil
+	}
+
 	var x, y BaseFieldElementG2
 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
 		return nil, errs.NewFailed("failed to convert point to affine")
@@ -278,6 +282,10 @@ func (p *PointG2) AffineX() (*BaseFieldElementG2, error) {
 }
 
 func (p *PointG2) AffineY() (*BaseFieldElementG2, error) {
+	if p.IsZero() {
+		return NewG2BaseField().Zero(), nil
+	}
+
 	var x, y BaseFieldElementG2
 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
 		return nil, errs.NewFailed("failed to convert point to affine")

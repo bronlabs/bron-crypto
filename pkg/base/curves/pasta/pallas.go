@@ -220,7 +220,11 @@ func (p *PallasPoint) ToAffineUncompressed() []byte {
 }
 
 func (p *PallasPoint) AffineX() (*PallasBaseFieldElement, error) {
-	var x, y FpFieldElement
+	if p.IsZero() {
+		return NewPallasBaseField().One(), nil
+	}
+
+	var x, y PallasBaseFieldElement
 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
 		return nil, errs.NewFailed("failed to convert point to affine")
 	}
@@ -229,7 +233,11 @@ func (p *PallasPoint) AffineX() (*PallasBaseFieldElement, error) {
 }
 
 func (p *PallasPoint) AffineY() (*PallasBaseFieldElement, error) {
-	var x, y FpFieldElement
+	if p.IsZero() {
+		return NewPallasBaseField().Zero(), nil
+	}
+
+	var x, y PallasBaseFieldElement
 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
 		return nil, errs.NewFailed("failed to convert point to affine")
 	}

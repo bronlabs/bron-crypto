@@ -220,7 +220,11 @@ func (p *VestaPoint) ToAffineUncompressed() []byte {
 }
 
 func (p *VestaPoint) AffineX() (*VestaBaseFieldElement, error) {
-	var x, y FqFieldElement
+	if p.IsZero() {
+		return NewVestaBaseField().One(), nil
+	}
+
+	var x, y VestaBaseFieldElement
 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
 		return nil, errs.NewFailed("failed to convert point to affine")
 	}
@@ -229,7 +233,11 @@ func (p *VestaPoint) AffineX() (*VestaBaseFieldElement, error) {
 }
 
 func (p *VestaPoint) AffineY() (*VestaBaseFieldElement, error) {
-	var x, y FqFieldElement
+	if p.IsZero() {
+		return NewVestaBaseField().Zero(), nil
+	}
+
+	var x, y VestaBaseFieldElement
 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
 		return nil, errs.NewFailed("failed to convert point to affine")
 	}
