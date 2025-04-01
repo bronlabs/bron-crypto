@@ -219,30 +219,30 @@ func (p *PallasPoint) ToAffineUncompressed() []byte {
 	return slices.Concat(x.Bytes(), y.Bytes())
 }
 
-func (p *PallasPoint) AffineX() (*PallasBaseFieldElement, error) {
+func (p *PallasPoint) AffineX() *PallasBaseFieldElement {
 	if p.IsZero() {
-		return NewPallasBaseField().One(), nil
+		return NewPallasBaseField().One()
 	}
 
 	var x, y PallasBaseFieldElement
 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
-		return nil, errs.NewFailed("failed to convert point to affine")
+		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &x, nil
+	return &x
 }
 
-func (p *PallasPoint) AffineY() (*PallasBaseFieldElement, error) {
+func (p *PallasPoint) AffineY() *PallasBaseFieldElement {
 	if p.IsZero() {
-		return NewPallasBaseField().Zero(), nil
+		return NewPallasBaseField().Zero()
 	}
 
 	var x, y PallasBaseFieldElement
 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
-		return nil, errs.NewFailed("failed to convert point to affine")
+		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &y, nil
+	return &y
 }
 
 func (p *PallasPoint) ScalarMul(actor *PallasScalar) *PallasPoint {

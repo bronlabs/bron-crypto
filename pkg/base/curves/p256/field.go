@@ -18,6 +18,7 @@ const (
 )
 
 var (
+	// TODO(PrimeField)
 	_ fields.FiniteField[*BaseFieldElement]        = (*BaseField)(nil)
 	_ fields.FiniteFieldElement[*BaseFieldElement] = (*BaseFieldElement)(nil)
 

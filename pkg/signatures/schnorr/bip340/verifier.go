@@ -73,8 +73,7 @@ func (v *verifier) Verify(signature *schnorr.Signature[TaprootVariant, []byte, *
 	if challengePk == nil {
 		challengePk = v.publicKey.A
 	}
-	y, _ := challengePk.AffineY()
-	if y.IsOdd() {
+	if challengePk.AffineY().IsOdd() {
 		challengePk = challengePk.Neg()
 		bigP = bigP.Neg()
 	}
@@ -99,14 +98,11 @@ func (v *verifier) Verify(signature *schnorr.Signature[TaprootVariant, []byte, *
 	// 6. Fail if is_infinite(R).
 	// 7. Fail if not has_even_y(R).
 	// 8. Fail if x(R) ≠ r.
-	rl, _ := signature.R.AffineX()
-	rr, _ := bigR.AffineX()
-	if !rl.Equal(rr) || bigR.IsZero() {
+	if !signature.R.AffineX().Equal(bigR.AffineX()) || bigR.IsZero() {
 		return errs.NewVerification("signature is invalid")
 	}
 
-	y, _ = bigR.AffineY()
-	if challengeR.Equal(signature.R) && !y.IsEven() {
+	if challengeR.Equal(signature.R) && !bigR.AffineY().IsEven() {
 		return errs.NewVerification("signature is invalid")
 	}
 

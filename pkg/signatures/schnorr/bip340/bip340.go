@@ -241,8 +241,7 @@ func encodePoint(p *k256.Point) []byte {
 
 // negScalarIfPointYOdd negates point if point.y is even.
 func negPointIfPointYOdd(point *k256.Point) *k256.Point {
-	y, _ := point.AffineY()
-	if y.IsOdd() {
+	if point.AffineY().IsOdd() {
 		return point.Neg()
 	} else {
 		return point
@@ -251,8 +250,7 @@ func negPointIfPointYOdd(point *k256.Point) *k256.Point {
 
 // negScalarIfPointYOdd negates scalar x if point.y is even.
 func negScalarIfPointYOdd(x *k256.Scalar, point *k256.Point) *k256.Scalar {
-	y, _ := point.AffineY()
-	if y.IsOdd() {
+	if point.AffineY().IsOdd() {
 		return x.Neg()
 	} else {
 		return x

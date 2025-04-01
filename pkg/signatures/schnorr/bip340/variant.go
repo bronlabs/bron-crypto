@@ -20,8 +20,7 @@ func NewTaprootVariant() *TaprootVariant {
 }
 
 func (TaprootVariant) ComputeNonceCommitment(nonceCommitment, partialNonceCommitment *k256.Point) *k256.Point {
-	y, _ := nonceCommitment.AffineY()
-	if y.IsOdd() {
+	if nonceCommitment.AffineY().IsOdd() {
 		return partialNonceCommitment.Neg()
 	} else {
 		return partialNonceCommitment
@@ -44,14 +43,12 @@ func (TaprootVariant) ComputeChallenge(hashFunc func() hash.Hash, nonceCommitmen
 
 func (TaprootVariant) ComputeResponse(nonceCommitment, publicKey *k256.Point, partialNonce, partialSecretKey, challenge *k256.Scalar) *k256.Scalar {
 	k := partialNonce
-	y, _ := nonceCommitment.AffineY()
-	if y.IsOdd() {
+	if nonceCommitment.AffineY().IsOdd() {
 		k = partialNonce.Neg()
 	}
 
 	sk := partialSecretKey
-	y, _ = publicKey.AffineY()
-	if y.IsOdd() {
+	if publicKey.AffineY().IsOdd() {
 		sk = partialSecretKey.Neg()
 	}
 

@@ -94,7 +94,6 @@ func (fp *BaseFieldElement[FP, T, W, WT]) HashCode() uint64 {
 }
 
 func (fp *BaseFieldElement[FP, T, W, WT]) ComponentsBytes() [][]byte {
-	// TODO(aalireza): agree on big or little endian
 	cb := FP(&fp.V).ComponentsBytes()
 	for i := range cb {
 		slices.Reverse(cb[i])
