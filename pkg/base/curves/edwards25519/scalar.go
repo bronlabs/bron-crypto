@@ -3,7 +3,6 @@ package edwards25519
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
-	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -121,15 +120,6 @@ func (s *Scalar) Fq() *edwards25519Impl.Fq {
 
 func (s *Scalar) SetFq(v edwards25519Impl.Fq) {
 	s.Scalar.V.Set(&v)
-}
-
-// TODO: remove it, but too lazy to fix tests for now
-func (s *Scalar) IsOdd() bool {
-	return fieldsImpl.IsOdd(&s.Scalar.V) != 0
-}
-
-func (s *Scalar) IsEven() bool {
-	return fieldsImpl.IsOdd(&s.Scalar.V) == 0
 }
 
 func (s *Scalar) UnmarshalBinary(data []byte) error {

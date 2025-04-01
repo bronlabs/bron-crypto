@@ -268,22 +268,30 @@ func (p *PointG2) ToAffineUncompressed() []byte {
 	return out
 }
 
-func (p *PointG2) AffineX() (*BaseFieldElementG2, error) {
-	var x, y BaseFieldElementG2
-	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
-		return nil, errs.NewFailed("failed to convert point to affine")
+func (p *PointG2) AffineX() *BaseFieldElementG2 {
+	if p.IsZero() {
+		return NewG2BaseField().One()
 	}
 
-	return &x, nil
+	var x, y BaseFieldElementG2
+	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
+		panic("this should never happen - failed to convert point to affine")
+	}
+
+	return &x
 }
 
-func (p *PointG2) AffineY() (*BaseFieldElementG2, error) {
-	var x, y BaseFieldElementG2
-	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
-		return nil, errs.NewFailed("failed to convert point to affine")
+func (p *PointG2) AffineY() *BaseFieldElementG2 {
+	if p.IsZero() {
+		return NewG2BaseField().Zero()
 	}
 
-	return &y, nil
+	var x, y BaseFieldElementG2
+	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
+		panic("this should never happen - failed to convert point to affine")
+	}
+
+	return &y
 }
 
 func (p *PointG2) ScalarMul(actor *Scalar) *PointG2 {

@@ -30,8 +30,8 @@ type AlgebraicPoint[Point interface {
 	GroupElement[Point]
 	AffineElement[Point, Coordinate]
 
-	AffineX() (Coordinate, error)
-	AffineY() (Coordinate, error)
+	AffineX() Coordinate
+	AffineY() Coordinate
 }
 
 type GenericEllipticCurve[

@@ -219,22 +219,30 @@ func (p *VestaPoint) ToAffineUncompressed() []byte {
 	return slices.Concat(x.Bytes(), y.Bytes())
 }
 
-func (p *VestaPoint) AffineX() (*VestaBaseFieldElement, error) {
-	var x, y FqFieldElement
-	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
-		return nil, errs.NewFailed("failed to convert point to affine")
+func (p *VestaPoint) AffineX() *VestaBaseFieldElement {
+	if p.IsZero() {
+		return NewVestaBaseField().One()
 	}
 
-	return &x, nil
+	var x, y VestaBaseFieldElement
+	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
+		panic("this should never happen - failed to convert point to affine")
+	}
+
+	return &x
 }
 
-func (p *VestaPoint) AffineY() (*VestaBaseFieldElement, error) {
-	var x, y FqFieldElement
-	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
-		return nil, errs.NewFailed("failed to convert point to affine")
+func (p *VestaPoint) AffineY() *VestaBaseFieldElement {
+	if p.IsZero() {
+		return NewVestaBaseField().Zero()
 	}
 
-	return &y, nil
+	var x, y VestaBaseFieldElement
+	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
+		panic("this should never happen - failed to convert point to affine")
+	}
+
+	return &y
 }
 
 func (p *VestaPoint) ScalarMul(actor *VestaScalar) *VestaPoint {

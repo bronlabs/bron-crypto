@@ -186,5 +186,9 @@ type PrimeFieldElement[E interface {
 	FiniteFieldElement[E]
 	UintLike[E]
 
+	IsOdd() bool
+	IsEven() bool
+	IsNegative() bool
+	IsPositive() bool
 	Bytes() []byte
 }

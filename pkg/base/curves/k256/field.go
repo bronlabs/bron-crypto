@@ -4,10 +4,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/cronokirby/saferith"
 	"slices"
 	"sync"
@@ -18,8 +21,8 @@ const (
 )
 
 var (
-	_ fields.FiniteField[*BaseFieldElement]        = (*BaseField)(nil)
-	_ fields.FiniteFieldElement[*BaseFieldElement] = (*BaseFieldElement)(nil)
+	_ fields.PrimeField[*BaseFieldElement]        = (*BaseField)(nil)
+	_ fields.PrimeFieldElement[*BaseFieldElement] = (*BaseFieldElement)(nil)
 
 	baseFieldInstance *BaseField
 	baseFieldInitOnce sync.Once
@@ -48,10 +51,23 @@ func (f *BaseField) FromBytes(data []byte) (*BaseFieldElement, error) {
 	slices.Reverse(leData)
 
 	var e BaseFieldElement
-	if ok := e.V.SetBytes(data); ok == 0 {
+	if ok := e.V.SetBytes(leData); ok == 0 {
 		return nil, errs.NewFailed("invalid data")
 	}
 	return &e, nil
+}
+
+func (f *BaseField) FromWideBytes(data []byte) (*BaseFieldElement, error) {
+	var e BaseFieldElement
+	if ok := e.V.SetBytesWide(sliceutils.Reversed(data)); ok == 0 {
+		return nil, errs.NewFailed("invalid data")
+	}
+	return &e, nil
+}
+
+func (f *BaseField) FromNat(n *saferith.Nat) (*BaseFieldElement, error) {
+	data := sliceutils.Reverse(n.Bytes())
+	return f.FromWideBytes(data)
 }
 
 func (f *BaseField) Hash(bytes []byte) (*BaseFieldElement, error) {
@@ -69,6 +85,14 @@ func (f *BaseField) Name() string {
 
 func (f *BaseField) Order() algebra.Cardinal {
 	return baseFieldOrder.Nat()
+}
+
+func (f *BaseField) Compare(x, y *BaseFieldElement) algebra.Ordering {
+	return algebra.Ordering(ct.SliceCmpLE(x.V.Limbs(), y.V.Limbs()))
+}
+
+func (f *BaseField) PartialCompare(x, y *BaseFieldElement) algebra.PartialOrdering {
+	return algebra.PartialOrdering(f.Compare(x, y))
 }
 
 func (f *BaseField) Operator() algebra.BinaryOperator[*BaseFieldElement] {
@@ -99,6 +123,22 @@ type BaseFieldElement struct {
 	traits.BaseFieldElement[*k256Impl.Fp, k256Impl.Fp, *BaseFieldElement, BaseFieldElement]
 }
 
+func (fp *BaseFieldElement) IsOdd() bool {
+	return fieldsImpl.IsOdd(&fp.V) != 0
+}
+
+func (fp *BaseFieldElement) IsEven() bool {
+	return fieldsImpl.IsOdd(&fp.V) == 0
+}
+
+func (fp *BaseFieldElement) IsNegative() bool {
+	return fieldsImpl.IsNegative(&fp.V) != 0
+}
+
+func (fp *BaseFieldElement) IsPositive() bool {
+	return fieldsImpl.IsNegative(&fp.V) == 0
+}
+
 func (fp *BaseFieldElement) Structure() algebra.Structure[*BaseFieldElement] {
 	return NewBaseField()
 }
@@ -116,7 +156,16 @@ func (fp *BaseFieldElement) UnmarshalBinary(data []byte) error {
 }
 
 func (fp *BaseFieldElement) Bytes() []byte {
-	return fp.ComponentsBytes()[0]
+	return sliceutils.Reverse(fp.V.Bytes())
+}
+
+func (fp *BaseFieldElement) Nat() *saferith.Nat {
+	data := sliceutils.Reverse(fp.V.Bytes())
+	return new(saferith.Nat).SetBytes(data)
+}
+
+func (fp *BaseFieldElement) IsLessThanOrEqual(rhs *BaseFieldElement) bool {
+	panic("not implemented")
 }
 
 func (fp *BaseFieldElement) Fp() *k256Impl.Fp {
