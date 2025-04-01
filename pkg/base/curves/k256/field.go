@@ -4,6 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
@@ -97,6 +98,14 @@ func (f *BaseField) WideElementSize() int {
 
 type BaseFieldElement struct {
 	traits.BaseFieldElement[*k256Impl.Fp, k256Impl.Fp, *BaseFieldElement, BaseFieldElement]
+}
+
+func (fp *BaseFieldElement) IsOdd() bool {
+	return fieldsImpl.IsOdd(&fp.V) != 0
+}
+
+func (fp *BaseFieldElement) IsEven() bool {
+	return fieldsImpl.IsOdd(&fp.V) == 0
 }
 
 func (fp *BaseFieldElement) Structure() algebra.Structure[*BaseFieldElement] {

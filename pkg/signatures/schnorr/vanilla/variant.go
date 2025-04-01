@@ -32,7 +32,7 @@ func (EdDsaCompatibleVariant[P, B, S]) ComputeChallenge(hashFunc func() hash.Has
 	if err != nil {
 		return *new(S), err
 	}
-	e, err := schnorr.MakeGenericSchnorrChallenge(scalarField, hashFunc, roinput)
+	e, err := schnorr.MakeGenericSchnorrChallenge(scalarField, hashFunc, schnorr.LittleEndian, roinput)
 	if err != nil {
 		return *new(S), errs.WrapFailed(err, "cannot create challenge scalar")
 	}

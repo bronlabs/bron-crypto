@@ -7,7 +7,12 @@ import (
 	"slices"
 )
 
-func MakeGenericSchnorrChallenge[FE fields.PrimeFieldElement[FE]](field fields.PrimeField[FE], hashFunc func() hash.Hash, xs ...[]byte) (FE, error) {
+type ChallengeBytesEndianness bool
+
+const LittleEndian ChallengeBytesEndianness = true
+const BigEndian ChallengeBytesEndianness = false
+
+func MakeGenericSchnorrChallenge[FE fields.PrimeFieldElement[FE]](scalarField fields.PrimeField[FE], hashFunc func() hash.Hash, endianness ChallengeBytesEndianness, xs ...[]byte) (FE, error) {
 	for _, x := range xs {
 		if x == nil {
 			return *new(FE), errs.NewIsNil("an input is nil")
@@ -18,8 +23,11 @@ func MakeGenericSchnorrChallenge[FE fields.PrimeFieldElement[FE]](field fields.P
 	h := hashFunc()
 	_, _ = h.Write(slices.Concat(xs...))
 	digest := h.Sum(nil)
-	slices.Reverse(digest)
-	challenge, err := field.FromWideBytes(digest)
+	if endianness == LittleEndian {
+		slices.Reverse(digest)
+	}
+
+	challenge, err := scalarField.FromWideBytes(digest)
 	if err != nil {
 		return *new(FE), err
 	}
