@@ -229,11 +229,11 @@ func TestScalarSerialize(t *testing.T) {
 //	curve := edwards25519.NewCurve()
 //	sc, err := curve.Random(testutils.TestRng())
 //	require.NoError(t, err)
-//	s, ok := sc.(*edwards25519.Point)
+//	s, ok := sc.(*edwards25519.PointTrait)
 //	require.True(t, ok)
 //	expected, err := toRPt("c19a6e2ba66c82502a2ff276a6c3003b52e0aea83f4ce0355a3b50a3078982dc")
 //	require.NoError(t, err)
-//	if !s.Equal(&edwards25519.Point{V: expected.V}) {
+//	if !s.Equal(&edwards25519.PointTrait{V: expected.V}) {
 //		t.Errorf("\nGot : %s\nWant: %s",
 //			hex.EncodeToString(s.ToAffineCompressed()),
 //			hex.EncodeToString(expected.ToAffineCompressed()))
@@ -242,7 +242,7 @@ func TestScalarSerialize(t *testing.T) {
 //	for i := 0; i < 25; i++ {
 //		sc, err := curve.Random(crand.Reader)
 //		require.NoError(t, err)
-//		_, ok := sc.(*edwards25519.Point)
+//		_, ok := sc.(*edwards25519.PointTrait)
 //		require.True(t, ok)
 //		require.False(t, sc.IsAdditiveIdentity())
 //		pBytes := sc.ToAffineCompressed()
@@ -383,7 +383,7 @@ func TestPointSub(t *testing.T) {
 //	t.Parallel()
 //	curve := edwards25519.NewCurve()
 //	lhs := curve.Generator().ScalarMul(edwards25519.NewScalar(50))
-//	points := make([]curves.Point, 5)
+//	points := make([]curves.PointTrait, 5)
 //	for i := range points {
 //		points[i] = curve.Generator()
 //	}

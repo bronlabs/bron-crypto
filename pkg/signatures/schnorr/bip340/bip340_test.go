@@ -304,7 +304,7 @@ func doTestVerify(publicKeyString string, signatureString string, messageString 
 //
 //		err = bip340.VerifyBatch(
 //			[]*bip340.PublicKey{&aliceKey.PublicKey, &bobKey.PublicKey},
-//			[]*schnorr.Signature[bip340.TaprootVariant, []byte, *k256.Point, *k256.BaseFieldElement, *k256.Scalar]{signatureAlice, signatureBob},
+//			[]*schnorr.Signature[bip340.TaprootVariant, []byte, *k256.PointTrait, *k256.BaseFieldElement, *k256.Scalar]{signatureAlice, signatureBob},
 //			[][]byte{
 //				message1,
 //				message2,

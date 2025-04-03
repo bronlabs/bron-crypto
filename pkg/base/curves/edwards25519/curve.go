@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	CurveName             = "secp256k1"
-	Hash2CurveSuite       = "secp256k1_XMD:SHA-256_SSWU_RO_"
-	Hash2CurveScalarSuite = "secp256k1_XMD:SHA-256_SSWU_RO_SC_"
+	CurveName             = "edwards25519"
+	Hash2CurveSuite       = "edwards25519_XMD:SHA-512_ELL2_NU_"
+	Hash2CurveScalarSuite = "edwards25519_XMD:SHA-512_ELL2_NU_SC_"
 )
 
 var (
@@ -29,7 +29,7 @@ var (
 )
 
 type Curve struct {
-	traits.Curve[*edwards25519Impl.Fp, *edwards25519Impl.Point, *Point, Point]
+	traits.CurveTrait[*edwards25519Impl.Fp, *edwards25519Impl.Point, *Point, Point]
 }
 
 func NewCurve() *Curve {
@@ -147,11 +147,7 @@ func (c *Curve) BaseField() algebra.FiniteField[*BaseFieldElement] {
 }
 
 type Point struct {
-	traits.Point[*edwards25519Impl.Fp, *edwards25519Impl.Point, edwards25519Impl.Point, *Point, Point]
-}
-
-func (p *Point) P() *edwards25519Impl.Point {
-	return &p.V
+	traits.PointTrait[*edwards25519Impl.Fp, *edwards25519Impl.Point, edwards25519Impl.Point, *Point, Point]
 }
 
 func (p *Point) HashCode() uint64 {

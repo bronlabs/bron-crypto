@@ -196,8 +196,8 @@ func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
 //	// For i = 1 .. u:
 //	left := curve.ScalarField().Zero()
 //	ae := make([]*k256.Scalar, len(signatures))
-//	bigR := make([]*k256.Point, len(signatures))
-//	bigP := make([]*k256.Point, len(signatures))
+//	bigR := make([]*k256.PointTrait, len(signatures))
+//	bigP := make([]*k256.PointTrait, len(signatures))
 //	for i, sig := range signatures {
 //		// 2. Let P_i = lift_x(int(pki))
 //		// 3. (implicit) Let r_i = int(sigi[0:32]); fail if ri ≥ p.

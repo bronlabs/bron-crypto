@@ -28,7 +28,7 @@ var (
 )
 
 type PallasCurve struct {
-	traits.Curve[*pastaImpl.Fp, *pastaImpl.PallasPoint, *PallasPoint, PallasPoint]
+	traits.CurveTrait[*pastaImpl.Fp, *pastaImpl.PallasPoint, *PallasPoint, PallasPoint]
 }
 
 func NewPallasCurve() *PallasCurve {
@@ -151,11 +151,7 @@ func (c *PallasCurve) BaseField() algebra.FiniteField[*PallasBaseFieldElement] {
 }
 
 type PallasPoint struct {
-	traits.Point[*pastaImpl.Fp, *pastaImpl.PallasPoint, pastaImpl.PallasPoint, *PallasPoint, PallasPoint]
-}
-
-func (p *PallasPoint) P() *pastaImpl.PallasPoint {
-	return &p.V
+	traits.PointTrait[*pastaImpl.Fp, *pastaImpl.PallasPoint, pastaImpl.PallasPoint, *PallasPoint, PallasPoint]
 }
 
 func (p *PallasPoint) HashCode() uint64 {

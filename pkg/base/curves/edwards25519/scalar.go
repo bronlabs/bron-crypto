@@ -6,8 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"io"
-	"slices"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -29,15 +28,12 @@ var (
 )
 
 func scalarFieldInit() {
-	orderBytes := make([]byte, len(edwards25519Impl.FqModulus))
-	copy(orderBytes, edwards25519Impl.FqModulus[:])
-	slices.Reverse(orderBytes)
-	scalarFieldOrder = saferith.ModulusFromBytes(orderBytes)
+	scalarFieldOrder = saferith.ModulusFromBytes(sliceutils.Reversed(edwards25519Impl.FqModulus[:]))
 	scalarFieldInstance = &ScalarField{}
 }
 
 type ScalarField struct {
-	traits.ScalarField[*edwards25519Impl.Fq, *Scalar, Scalar]
+	traits.PrimeFieldTrait[*edwards25519Impl.Fq, *Scalar, Scalar]
 }
 
 func NewScalarField() *ScalarField {
@@ -45,86 +41,64 @@ func NewScalarField() *ScalarField {
 	return scalarFieldInstance
 }
 
-func (*ScalarField) Name() string {
+func (f *ScalarField) Name() string {
 	return ScalarFieldName
 }
 
-func (*ScalarField) Operator() algebra.BinaryOperator[*Scalar] {
-	return algebra.Add[*Scalar]
-}
-
-func (*ScalarField) OtherOperator() algebra.BinaryOperator[*Scalar] {
-	return algebra.Mul[*Scalar]
-}
-
-func (*ScalarField) ExtensionDegree() uint {
-	return 1
-}
-
-func (*ScalarField) ElementSize() int {
-	return edwards25519Impl.FqBytes
-}
-
-func (*ScalarField) WideElementSize() int {
-	return edwards25519Impl.FqWideBytes
-}
-
-func (f *ScalarField) Characteristic() algebra.Cardinal {
-	return f.Order()
-}
-
-func (*ScalarField) Order() algebra.Cardinal {
+func (f *ScalarField) Order() algebra.Cardinal {
 	return scalarFieldOrder.Nat()
 }
 
-func (*ScalarField) Random(prng io.Reader) (*Scalar, error) {
-	var e Scalar
-	ok := e.V.SetRandom(prng)
-	if ok == 0 {
-		return nil, errs.NewRandomSample("cannot sample scalar")
-	}
-
-	return &e, nil
+func (f *ScalarField) Characteristic() algebra.Cardinal {
+	return scalarFieldOrder.Nat()
 }
 
-func (*ScalarField) Hash(input []byte) (*Scalar, error) {
+func (f *ScalarField) Operator() algebra.BinaryOperator[*Scalar] {
+	return algebra.Add[*Scalar]
+}
+
+func (f *ScalarField) OtherOperator() algebra.BinaryOperator[*Scalar] {
+	return algebra.Mul[*Scalar]
+}
+
+func (f *ScalarField) Hash(bytes []byte) (*Scalar, error) {
 	var e [1]edwards25519Impl.Fq
-	h2c.HashToField(e[:], edwards25519Impl.CurveHasherParams{}, base.Hash2CurveAppTag+Hash2CurveScalarSuite, input)
+	h2c.HashToField(e[:], edwards25519Impl.CurveHasherParams{}, base.Hash2CurveAppTag+Hash2CurveScalarSuite, bytes)
 
 	var s Scalar
 	s.V.Set(&e[0])
 	return &s, nil
 }
 
-func (f *ScalarField) FromNat(v *saferith.Nat) (*Scalar, error) {
-	return traits.NewScalarFromNat[*edwards25519Impl.Fq, *Scalar, Scalar](v, scalarFieldOrder)
+func (f *ScalarField) ElementSize() int {
+	return edwards25519Impl.FqBytes
+}
+
+func (f *ScalarField) WideElementSize() int {
+	return edwards25519Impl.FqWideBytes
 }
 
 type Scalar struct {
-	traits.Scalar[*edwards25519Impl.Fq, edwards25519Impl.Fq, *Scalar, Scalar]
+	traits.PrimeFieldElementTrait[*edwards25519Impl.Fq, edwards25519Impl.Fq, *Scalar, Scalar]
 }
 
-func NewScalar(value uint64) *Scalar {
-	var sc Scalar
-	sc.V.SetUint64(value)
-	return &sc
+func NewScalar(v uint64) *Scalar {
+	var s Scalar
+	s.V.SetUint64(v)
+	return &s
 }
 
-func (s *Scalar) Structure() algebra.Structure[*Scalar] {
+func (fe *Scalar) Structure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 
-func (s *Scalar) Fq() *edwards25519Impl.Fq {
-	return &s.Scalar.V
+func (fe *Scalar) MarshalBinary() (data []byte, err error) {
+	return fe.V.Bytes(), nil
 }
 
-func (s *Scalar) SetFq(v edwards25519Impl.Fq) {
-	s.Scalar.V.Set(&v)
-}
-
-func (s *Scalar) UnmarshalBinary(data []byte) error {
-	if ok := s.V.SetBytes(data); ok == 0 {
-		return errs.NewSerialisation("cannot unmarshal scalar")
+func (fe *Scalar) UnmarshalBinary(data []byte) error {
+	if ok := fe.V.SetBytes(data); ok == 0 {
+		return errs.NewSerialisation("failed to unmarshal field element")
 	}
 
 	return nil

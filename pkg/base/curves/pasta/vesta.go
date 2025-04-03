@@ -28,7 +28,7 @@ var (
 )
 
 type VestaCurve struct {
-	traits.Curve[*pastaImpl.Fq, *pastaImpl.VestaPoint, *VestaPoint, VestaPoint]
+	traits.CurveTrait[*pastaImpl.Fq, *pastaImpl.VestaPoint, *VestaPoint, VestaPoint]
 }
 
 func NewVestaCurve() *VestaCurve {
@@ -151,11 +151,7 @@ func (c *VestaCurve) BaseField() algebra.FiniteField[*VestaBaseFieldElement] {
 }
 
 type VestaPoint struct {
-	traits.Point[*pastaImpl.Fq, *pastaImpl.VestaPoint, pastaImpl.VestaPoint, *VestaPoint, VestaPoint]
-}
-
-func (p *VestaPoint) P() *pastaImpl.VestaPoint {
-	return &p.V
+	traits.PointTrait[*pastaImpl.Fq, *pastaImpl.VestaPoint, pastaImpl.VestaPoint, *VestaPoint, VestaPoint]
 }
 
 func (p *VestaPoint) HashCode() uint64 {

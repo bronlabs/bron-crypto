@@ -96,7 +96,7 @@ func (sk *PrivateKey[P, B, S]) MarshalBinary() ([]byte, error) {
 //		return errs.NewSerialisation("couldn't set bytes")
 //	}
 //
-//	Y := sk.d.ScalarField().Curve().ScalarBaseMult(sk.d).(curves.PairingPoint)
+//	Y := sk.d.ScalarField().CurveTrait().ScalarBaseMult(sk.d).(curves.PairingPoint)
 //	sk.PublicKey = &PublicKey[K]{
 //		Y: Y,
 //	}

@@ -64,11 +64,11 @@ func (v *verifier[P, B, S]) Verify(signature *schnorr.Signature[EdDsaCompatibleV
 	//if err := types.ValidateSigningSuite(v.suite); err != nil {
 	//	return errs.WrapArgument(err, "invalid cipher suite")
 	//}
-	//if v.publicKey == nil || v.publicKey.A == nil || v.publicKey.A.IsAdditiveIdentity() || v.publicKey.A.Curve().Name() != v.suite.Curve().Name() {
+	//if v.publicKey == nil || v.publicKey.A == nil || v.publicKey.A.IsAdditiveIdentity() || v.publicKey.A.CurveTrait().Name() != v.suite.CurveTrait().Name() {
 	//	return errs.NewArgument("invalid signature")
 	//}
-	//if signature == nil || signature.R == nil || signature.R.Curve().Name() != v.suite.Curve().Name() ||
-	//	signature.S == nil || signature.S.ScalarField().Curve().Name() != v.suite.Curve().Name() {
+	//if signature == nil || signature.R == nil || signature.R.CurveTrait().Name() != v.suite.CurveTrait().Name() ||
+	//	signature.S == nil || signature.S.ScalarField().CurveTrait().Name() != v.suite.CurveTrait().Name() {
 	//
 	//	return errs.NewArgument("invalid signature")
 	//}
@@ -80,7 +80,7 @@ func (v *verifier[P, B, S]) Verify(signature *schnorr.Signature[EdDsaCompatibleV
 	//	return errs.NewValidation("Public Key not in the prime subgroup")
 	//}
 	challengeR := v.nonceCommitment
-	if reflect.ValueOf(challengeR).IsNil() { // TODO(aalireza): any idea how to work this around? (challenge.(Point[R,..]) == nil does not work neither)
+	if reflect.ValueOf(challengeR).IsNil() { // TODO(aalireza): any idea how to work this around? (challenge.(PointTrait[R,..]) == nil does not work neither)
 		challengeR = signature.R
 	}
 	challengePk := v.challengePublicKey
@@ -102,8 +102,8 @@ func (v *verifier[P, B, S]) Verify(signature *schnorr.Signature[EdDsaCompatibleV
 	}
 
 	// TODO(aalireza): what to do with cofactor?
-	//cofactorNat := v.suite.Curve().CoFactor()
-	//cofactor := v.suite.Curve().ScalarField().Element().SetNat(cofactorNat)
+	//cofactorNat := v.suite.CurveTrait().CoFactor()
+	//cofactor := v.suite.CurveTrait().ScalarField().Element().SetNat(cofactorNat)
 	left := curve.Generator().ScalarMul(signature.S)
 	right := signature.R.Op(v.publicKey.A.ScalarMul(e))
 	if !left.Equal(right) {

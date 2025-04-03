@@ -7,8 +7,7 @@ import (
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"io"
-	"slices"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -29,15 +28,12 @@ var (
 )
 
 func fqFieldInit() {
-	orderBytes := make([]byte, len(pastaImpl.FqModulus))
-	copy(orderBytes, pastaImpl.FqModulus[:])
-	slices.Reverse(orderBytes)
-	fqFieldOrder = saferith.ModulusFromBytes(orderBytes)
+	fqFieldOrder = saferith.ModulusFromBytes(sliceutils.Reversed(pastaImpl.FqModulus[:]))
 	fqFieldInstance = &FqField{}
 }
 
 type FqField struct {
-	traits.ScalarField[*pastaImpl.Fq, *FqFieldElement, FqFieldElement]
+	traits.PrimeFieldTrait[*pastaImpl.Fq, *FqFieldElement, FqFieldElement]
 }
 
 func newFqField() *FqField {
@@ -65,10 +61,6 @@ func (*FqField) OtherOperator() algebra.BinaryOperator[*FqFieldElement] {
 	return algebra.Mul[*FqFieldElement]
 }
 
-func (*FqField) ExtensionDegree() uint {
-	return 1
-}
-
 func (*FqField) ElementSize() int {
 	return pastaImpl.FqBytes
 }
@@ -85,16 +77,6 @@ func (*FqField) Order() algebra.Cardinal {
 	return fqFieldOrder.Nat()
 }
 
-func (*FqField) Random(prng io.Reader) (*FqFieldElement, error) {
-	var e FqFieldElement
-	ok := e.V.SetRandom(prng)
-	if ok == 0 {
-		return nil, errs.NewRandomSample("cannot sample scalar")
-	}
-
-	return &e, nil
-}
-
 func (*FqField) Hash(input []byte) (*FqFieldElement, error) {
 	var e [1]pastaImpl.Fq
 	h2c.HashToField(e[:], pastaImpl.VestaCurveHasherParams{}, base.Hash2CurveAppTag+VestaHash2CurveSuite, input)
@@ -104,20 +86,16 @@ func (*FqField) Hash(input []byte) (*FqFieldElement, error) {
 	return &s, nil
 }
 
-func (f *FqField) FromNat(v *saferith.Nat) (*FqFieldElement, error) {
-	return traits.NewScalarFromNat[*pastaImpl.Fq, *FqFieldElement, FqFieldElement](v, fqFieldOrder)
-}
-
 type FqFieldElement struct {
-	traits.Scalar[*pastaImpl.Fq, pastaImpl.Fq, *FqFieldElement, FqFieldElement]
+	traits.PrimeFieldElementTrait[*pastaImpl.Fq, pastaImpl.Fq, *FqFieldElement, FqFieldElement]
 }
 
 func (s *FqFieldElement) Structure() algebra.Structure[*FqFieldElement] {
 	return newFqField()
 }
 
-func (s *FqFieldElement) Fq() *pastaImpl.Fq {
-	return &s.Scalar.V
+func (s *FqFieldElement) MarshalBinary() ([]byte, error) {
+	return s.V.Bytes(), nil
 }
 
 func (s *FqFieldElement) UnmarshalBinary(data []byte) error {
