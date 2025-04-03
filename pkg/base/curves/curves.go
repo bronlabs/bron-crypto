@@ -38,11 +38,11 @@ func GetCurve[P Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFi
 func GetPointScalarField[P Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](p P) (fields.PrimeField[S], error) {
 	c, ok := p.Structure().(Curve[P, F, S])
 	if !ok {
-		return nil, errs.NewType("Point does not have a Curve structure")
+		return nil, errs.NewType("PointTrait does not have a CurveTrait structure")
 	}
 	sf, ok := c.ScalarField().(fields.PrimeField[S])
 	if !ok {
-		return nil, errs.NewType("ScalarField is not Curve's ScalarField")
+		return nil, errs.NewType("ScalarField is not CurveTrait's ScalarField")
 	}
 
 	return sf, nil

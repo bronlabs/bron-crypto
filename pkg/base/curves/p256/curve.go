@@ -28,7 +28,7 @@ var (
 )
 
 type Curve struct {
-	traits.Curve[*p256Impl.Fp, *p256Impl.Point, *Point, Point]
+	traits.CurveTrait[*p256Impl.Fp, *p256Impl.Point, *Point, Point]
 }
 
 func NewCurve() *Curve {
@@ -168,11 +168,7 @@ func (c *Curve) BaseField() algebra.FiniteField[*BaseFieldElement] {
 }
 
 type Point struct {
-	traits.Point[*p256Impl.Fp, *p256Impl.Point, p256Impl.Point, *Point, Point]
-}
-
-func (p *Point) P() *p256Impl.Point {
-	return &p.V
+	traits.PointTrait[*p256Impl.Fp, *p256Impl.Point, p256Impl.Point, *Point, Point]
 }
 
 func (p *Point) HashCode() uint64 {

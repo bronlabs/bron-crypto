@@ -4,9 +4,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
+	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"io"
 	"slices"
 	"sync"
 
@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	ScalarFieldName = "secp256k1Fq"
+	ScalarFieldName = "P256Fq"
 )
 
 var (
@@ -37,7 +37,7 @@ func scalarFieldInit() {
 }
 
 type ScalarField struct {
-	traits.ScalarField[*p256Impl.Fq, *Scalar, Scalar]
+	traits.PrimeFieldTrait[*p256Impl.Fq, *Scalar, Scalar]
 }
 
 func NewScalarField() *ScalarField {
@@ -45,80 +45,58 @@ func NewScalarField() *ScalarField {
 	return scalarFieldInstance
 }
 
-func (*ScalarField) Name() string {
+func (f *ScalarField) Name() string {
 	return ScalarFieldName
 }
 
-func (*ScalarField) Operator() algebra.BinaryOperator[*Scalar] {
-	return algebra.Add[*Scalar]
-}
-
-func (*ScalarField) OtherOperator() algebra.BinaryOperator[*Scalar] {
-	return algebra.Mul[*Scalar]
-}
-
-func (*ScalarField) ExtensionDegree() uint {
-	return 1
-}
-
-func (*ScalarField) ElementSize() int {
-	return p256Impl.FqBytes
-}
-
-func (*ScalarField) WideElementSize() int {
-	return p256Impl.FqWideBytes
-}
-
-func (f *ScalarField) Characteristic() algebra.Cardinal {
-	return f.Order()
-}
-
-func (*ScalarField) Order() algebra.Cardinal {
+func (f *ScalarField) Order() algebra.Cardinal {
 	return scalarFieldOrder.Nat()
 }
 
-func (*ScalarField) Random(prng io.Reader) (*Scalar, error) {
-	var e Scalar
-	ok := e.V.SetRandom(prng)
-	if ok == 0 {
-		return nil, errs.NewRandomSample("cannot sample scalar")
-	}
-
-	return &e, nil
+func (f *ScalarField) Characteristic() algebra.Cardinal {
+	return scalarFieldOrder.Nat()
 }
 
-func (*ScalarField) Hash(input []byte) (*Scalar, error) {
+func (f *ScalarField) Operator() algebra.BinaryOperator[*Scalar] {
+	return algebra.Add[*Scalar]
+}
+
+func (f *ScalarField) OtherOperator() algebra.BinaryOperator[*Scalar] {
+	return algebra.Mul[*Scalar]
+}
+
+func (f *ScalarField) Hash(bytes []byte) (*Scalar, error) {
 	var e [1]p256Impl.Fq
-	h2c.HashToField(e[:], p256Impl.CurveHasherParams{}, base.Hash2CurveAppTag+Hash2CurveScalarSuite, input)
+	h2c.HashToField(e[:], p256Impl.CurveHasherParams{}, base.Hash2CurveAppTag+Hash2CurveScalarSuite, bytes)
 
 	var s Scalar
 	s.V.Set(&e[0])
 	return &s, nil
 }
 
-func (f *ScalarField) FromNat(v *saferith.Nat) (*Scalar, error) {
-	return traits.NewScalarFromNat[*p256Impl.Fq, *Scalar, Scalar](v, scalarFieldOrder)
+func (f *ScalarField) ElementSize() int {
+	return k256Impl.FqBytes
+}
+
+func (f *ScalarField) WideElementSize() int {
+	return k256Impl.FqWideBytes
 }
 
 type Scalar struct {
-	traits.Scalar[*p256Impl.Fq, p256Impl.Fq, *Scalar, Scalar]
+	traits.PrimeFieldElementTrait[*p256Impl.Fq, p256Impl.Fq, *Scalar, Scalar]
 }
 
-func (s *Scalar) Structure() algebra.Structure[*Scalar] {
+func (fe *Scalar) Structure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 
-func (s *Scalar) Fq() *p256Impl.Fq {
-	return &s.Scalar.V
+func (fe *Scalar) MarshalBinary() (data []byte, err error) {
+	return fe.V.Bytes(), nil
 }
 
-func (s *Scalar) SetFq(v p256Impl.Fq) {
-	s.Scalar.V.Set(&v)
-}
-
-func (s *Scalar) UnmarshalBinary(data []byte) error {
-	if ok := s.V.SetBytes(data); ok == 0 {
-		return errs.NewSerialisation("cannot unmarshal scalar")
+func (fe *Scalar) UnmarshalBinary(data []byte) error {
+	if ok := fe.V.SetBytes(data); ok == 0 {
+		return errs.NewSerialisation("failed to unmarshal field element")
 	}
 
 	return nil

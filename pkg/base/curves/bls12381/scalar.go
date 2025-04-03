@@ -6,8 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"io"
-	"slices"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -30,15 +29,12 @@ var (
 )
 
 func scalarFieldInit() {
-	orderBytes := make([]byte, len(bls12381Impl.FqModulus))
-	copy(orderBytes, bls12381Impl.FqModulus[:])
-	slices.Reverse(orderBytes)
-	scalarFieldOrder = saferith.ModulusFromBytes(orderBytes)
+	scalarFieldOrder = saferith.ModulusFromBytes(sliceutils.Reversed(bls12381Impl.FqModulus[:]))
 	scalarFieldInstance = &ScalarField{}
 }
 
 type ScalarField struct {
-	traits.ScalarField[*bls12381Impl.Fq, *Scalar, Scalar]
+	traits.PrimeFieldTrait[*bls12381Impl.Fq, *Scalar, Scalar]
 }
 
 func NewScalarField() *ScalarField {
@@ -58,10 +54,6 @@ func (*ScalarField) OtherOperator() algebra.BinaryOperator[*Scalar] {
 	return algebra.Mul[*Scalar]
 }
 
-func (*ScalarField) ExtensionDegree() uint {
-	return 1
-}
-
 func (*ScalarField) ElementSize() int {
 	return bls12381Impl.FqBytes
 }
@@ -78,16 +70,6 @@ func (*ScalarField) Order() algebra.Cardinal {
 	return scalarFieldOrder.Nat()
 }
 
-func (*ScalarField) Random(prng io.Reader) (*Scalar, error) {
-	var e Scalar
-	ok := e.V.SetRandom(prng)
-	if ok == 0 {
-		return nil, errs.NewRandomSample("cannot sample scalar")
-	}
-
-	return &e, nil
-}
-
 func (*ScalarField) Hash(input []byte) (*Scalar, error) {
 	var e [1]bls12381Impl.Fq
 	h2c.HashToField(e[:], bls12381Impl.G1CurveHasherParams{}, base.Hash2CurveAppTag+Hash2CurveScalarSuite, input)
@@ -97,24 +79,16 @@ func (*ScalarField) Hash(input []byte) (*Scalar, error) {
 	return &s, nil
 }
 
-func (f *ScalarField) FromNat(v *saferith.Nat) (*Scalar, error) {
-	return traits.NewScalarFromNat[*bls12381Impl.Fq, *Scalar, Scalar](v, scalarFieldOrder)
-}
-
 type Scalar struct {
-	traits.Scalar[*bls12381Impl.Fq, bls12381Impl.Fq, *Scalar, Scalar]
+	traits.PrimeFieldElementTrait[*bls12381Impl.Fq, bls12381Impl.Fq, *Scalar, Scalar]
 }
 
 func (s *Scalar) Structure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 
-func (s *Scalar) Fq() *bls12381Impl.Fq {
-	return &s.Scalar.V
-}
-
-func (s *Scalar) SetFq(v bls12381Impl.Fq) {
-	s.Scalar.V.Set(&v)
+func (s *Scalar) MarshalBinary() ([]byte, error) {
+	return s.V.Bytes(), nil
 }
 
 func (s *Scalar) UnmarshalBinary(data []byte) error {

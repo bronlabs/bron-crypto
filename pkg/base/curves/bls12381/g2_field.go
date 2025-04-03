@@ -7,11 +7,14 @@ import (
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/cronokirby/saferith"
+	"slices"
 	"sync"
 )
 
 const (
-	BaseFieldName = "BLS12381Fp2"
+	BaseFieldNameG2 = "BLS12381Fp2"
 )
 
 var (
@@ -24,7 +27,7 @@ var (
 )
 
 type BaseFieldG2 struct {
-	traits.BaseField[*bls12381Impl.Fp2, *BaseFieldElementG2, BaseFieldElementG2]
+	traits.FiniteFieldTrait[*bls12381Impl.Fp2, *BaseFieldElementG2, BaseFieldElementG2]
 }
 
 func NewG2BaseField() *BaseFieldG2 {
@@ -33,10 +36,6 @@ func NewG2BaseField() *BaseFieldG2 {
 	})
 
 	return baseFieldInstanceG2
-}
-
-func (f *BaseFieldG2) FromBytes(data []byte) (*BaseFieldElementG2, error) {
-	panic("not implemented")
 }
 
 func (f *BaseFieldG2) Hash(bytes []byte) (*BaseFieldElementG2, error) {
@@ -49,57 +48,56 @@ func (f *BaseFieldG2) Hash(bytes []byte) (*BaseFieldElementG2, error) {
 }
 
 func (f *BaseFieldG2) Name() string {
-	return BaseFieldName
+	return BaseFieldNameG2
 }
 
 func (f *BaseFieldG2) Order() algebra.Cardinal {
-	panic("not implemented")
-}
-
-func (f *BaseFieldG2) Operator() algebra.BinaryOperator[*BaseFieldElementG2] {
-	return algebra.Add[*BaseFieldElementG2]
-}
-
-func (f *BaseFieldG2) OtherOperator() algebra.BinaryOperator[*BaseFieldElementG2] {
-	return algebra.Mul[*BaseFieldElementG2]
+	g1Order := NewG1BaseField().Order()
+	return new(saferith.Nat).Add(g1Order, g1Order, -1)
 }
 
 func (f *BaseFieldG2) Characteristic() algebra.Cardinal {
-	return NewG1BaseField().Order()
+	return NewG1BaseField().Characteristic()
 }
 
 func (f *BaseFieldG2) ExtensionDegree() uint {
 	return 2
 }
 
+func (f *BaseFieldG2) Operator() algebra.BinaryOperator[*BaseFieldElementG2] {
+	return algebra.Add[*BaseFieldElementG2]
+}
+
 func (f *BaseFieldG2) ElementSize() int {
-	return bls12381Impl.FpBytes * 2
+	return 2 * bls12381Impl.FpBytes
 }
 
 func (f *BaseFieldG2) WideElementSize() int {
-	return bls12381Impl.FpWideBytes * 2
+	return 2 * bls12381Impl.FpWideBytes
+}
+
+func (f *BaseFieldG2) OtherOperator() algebra.BinaryOperator[*BaseFieldElementG2] {
+	return algebra.Mul[*BaseFieldElementG2]
 }
 
 type BaseFieldElementG2 struct {
-	traits.BaseFieldElement[*bls12381Impl.Fp2, bls12381Impl.Fp2, *BaseFieldElementG2, BaseFieldElementG2]
+	traits.FiniteFieldElementTrait[*bls12381Impl.Fp2, bls12381Impl.Fp2, *BaseFieldElementG2, BaseFieldElementG2]
 }
 
-func (fp *BaseFieldElementG2) Structure() algebra.Structure[*BaseFieldElementG2] {
+func (fe *BaseFieldElementG2) Structure() algebra.Structure[*BaseFieldElementG2] {
 	return NewG2BaseField()
 }
 
-func (fp *BaseFieldElementG2) MarshalBinary() (data []byte, err error) {
-	panic("not implemented")
+func (fe *BaseFieldElementG2) MarshalBinary() ([]byte, error) {
+	return slices.Concat(fe.V.U1.Bytes(), fe.V.U0.Bytes()), nil
 }
 
-func (fp *BaseFieldElementG2) UnmarshalBinary(data []byte) error {
-	panic("not implemented")
-}
-
-func (fp *BaseFieldElementG2) Bytes() []byte {
-	panic("not implemented")
-}
-
-func (fp *BaseFieldElementG2) Fp() *bls12381Impl.Fp2 {
-	return &fp.V
+func (fe *BaseFieldElementG2) UnmarshalBinary(data []byte) error {
+	if ok := fe.V.U1.SetBytes(data[:bls12381Impl.FpBytes]); ok == 0 {
+		return errs.NewSerialisation("invalid data")
+	}
+	if ok := fe.V.U0.SetBytes(data[bls12381Impl.FpBytes:]); ok == 0 {
+		return errs.NewSerialisation("invalid data")
+	}
+	return nil
 }

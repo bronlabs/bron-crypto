@@ -6,21 +6,21 @@ type PartialOrdering int
 type Ordering uint
 
 const (
-	Incomparable PartialOrdering = -1
-	LessThan     PartialOrdering = 0
-	Equal        PartialOrdering = 1
-	GreaterThan  PartialOrdering = 2
+	Incomparable PartialOrdering = -2
+	LessThan     PartialOrdering = -1
+	Equal        PartialOrdering = 0
+	GreaterThan  PartialOrdering = 1
 )
 
 func orderString(o int) string {
 	switch o {
-	case -1:
+	case -2:
 		return "Incomparable"
 	case 0:
 		return "Equal"
-	case 1:
+	case -1:
 		return "LessThan"
-	case 2:
+	case 1:
 		return "GreaterThan"
 	default:
 		return "Invalid"

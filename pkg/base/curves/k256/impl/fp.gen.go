@@ -31,6 +31,8 @@ func init() {
 
 type Fp struct {
 	fiatFpMontgomeryDomainFieldElement
+
+	_ [0]func()
 }
 
 func (f *Fp) Set(v *Fp) {
