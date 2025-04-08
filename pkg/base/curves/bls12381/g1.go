@@ -20,8 +20,8 @@ const (
 )
 
 var (
-	_ curves.Curve[*PointG1, *BaseFieldElementG1, *Scalar] = (*CurveG1)(nil)
-	_ curves.Point[*PointG1, *BaseFieldElementG1, *Scalar] = (*PointG1)(nil)
+	_ curves.PairingFriendlyCurve[*PointG1, *BaseFieldElementG1, *Scalar, *PointG2, *BaseFieldElementG2] = (*CurveG1)(nil)
+	_ curves.Point[*PointG1, *BaseFieldElementG1, *Scalar]                                               = (*PointG1)(nil)
 
 	curveInstanceG1 *CurveG1
 	curveInitOnceG1 sync.Once
@@ -175,6 +175,10 @@ func (c *CurveG1) ScalarField() algebra.PrimeField[*Scalar] {
 
 func (c *CurveG1) BaseField() algebra.FiniteField[*BaseFieldElementG1] {
 	return NewG1BaseField()
+}
+
+func (c *CurveG1) OtherCurve() algebra.TorsionFreeEllipticCurve[*PointG2, *BaseFieldElementG2, *Scalar] {
+	return NewG2Curve()
 }
 
 type PointG1 struct {

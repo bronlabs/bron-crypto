@@ -4,6 +4,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/groups"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381/impl"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
+	"io"
 	"sync"
 )
 
@@ -12,8 +14,11 @@ const (
 )
 
 var (
-	_ groups.MultiplicativeGroup[*GtElement]        = (*Gt)(nil)
-	_ groups.MultiplicativeGroupElement[*GtElement] = (*GtElement)(nil)
+	_ groups.MultiplicativeGroup[*GtElement]         = (*Gt)(nil)
+	_ groups.FiniteAbelianGroup[*GtElement, *Scalar] = (*Gt)(nil)
+
+	_ groups.MultiplicativeGroupElement[*GtElement]         = (*GtElement)(nil)
+	_ groups.FiniteAbelianGroupElement[*GtElement, *Scalar] = (*GtElement)(nil)
 
 	gtInstance *Gt
 	gtInitOnce sync.Once
@@ -41,6 +46,10 @@ func (g *Gt) Operator() algebra.BinaryOperator[*GtElement] {
 	return algebra.Mul[*GtElement]
 }
 
+func (g *Gt) Random(prng io.Reader) (*GtElement, error) {
+	panic("implement me")
+}
+
 func (g *Gt) One() *GtElement {
 	var one GtElement
 	one.V.SetOne()
@@ -49,6 +58,18 @@ func (g *Gt) One() *GtElement {
 
 func (g *Gt) OpIdentity() *GtElement {
 	return g.One()
+}
+
+func (g *Gt) ElementSize() int {
+	return 12 * bls12381Impl.FqBytes
+}
+
+func (g *Gt) WideElementSize() int {
+	return 12 * bls12381Impl.FqWideBytes
+}
+
+func (g *Gt) Hash(data []byte) (*GtElement, error) {
+	panic("implement me")
 }
 
 type GtElement struct {
@@ -62,7 +83,7 @@ func (ge *GtElement) Clone() *GtElement {
 }
 
 func (ge *GtElement) Equal(rhs *GtElement) bool {
-	return ge.V.Equals(&rhs.V.Fp12) == 1
+	return ge.V.Equals(&rhs.V.Fp12) != 0
 }
 
 func (ge *GtElement) HashCode() uint64 {
@@ -110,6 +131,20 @@ func (ge *GtElement) Div(e *GtElement) *GtElement {
 	var quotient GtElement
 	_ = quotient.V.Div(&ge.V.Fp12, &e.V.Fp12)
 	return &quotient
+}
+
+// IsTorsionFree
+// TODO(aalireza): should we make it for curves only?
+func (ge *GtElement) IsTorsionFree() bool {
+	return true
+}
+
+// ScalarMul
+// TODO(aalireza): this is misleading, probably rename to OpScale?
+func (ge *GtElement) ScalarMul(s *Scalar) *GtElement {
+	var result GtElement
+	fieldsImpl.Pow[*bls12381Impl.Fp12](&result.V.Fp12, &ge.V.Fp12, s.V.Bytes())
+	return &result
 }
 
 func (ge *GtElement) TryInv() (*GtElement, error) {

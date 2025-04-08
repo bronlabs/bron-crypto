@@ -3,7 +3,6 @@ package bls
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
@@ -67,11 +66,11 @@ func (sk *PrivateKey[P, B, S]) Validate() error {
 	return nil
 }
 
-// MarshalBinary serialises a secret key to raw bytes.
-func (sk *PrivateKey[P, B, S]) MarshalBinary() ([]byte, error) {
-	bytes := sk.d.Bytes()
-	return sliceutils.Reverse(bytes), nil
-}
+//// MarshalBinary serialises a secret key to raw bytes.
+//func (sk *PrivateKey[P, B, S]) MarshalBinary() ([]byte, error) {
+//	bytes := sk.d.Bytes()
+//	return sliceutils.Reverse(bytes), nil
+//}
 
 // TODO(aalireza): how to compute public key if it's not serialized and no access to curve
 // TODO(aalireza): my two cents - we should not use Marshal/Unmarshal to match the format, marshal/unmarshal is, well... for marshalling only
@@ -154,14 +153,14 @@ func (pk *PublicKey[P, B, S]) Size() int {
 	return curve.BaseField().ElementSize()
 }
 
-// MarshalBinary Serialises a public key to a byte array in compressed form.
-// See
-// https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
-// https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
-func (pk *PublicKey[P, B, S]) MarshalBinary() ([]byte, error) {
-	out := pk.Y.ToAffineCompressed()
-	return out, nil
-}
+//// MarshalBinary Serialises a public key to a byte array in compressed form.
+//// See
+//// https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
+//// https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
+//func (pk *PublicKey[P, B, S]) MarshalBinary() ([]byte, error) {
+//	out := pk.Y.ToAffineCompressed()
+//	return out, nil
+//}
 
 // TODO(aalireza): same thing here, how to deserialize PK
 //// UnmarshalBinary Deserializes a public key from a byte array in compressed form.
@@ -228,57 +227,58 @@ func (sig *Signature[P, B, S]) MarshalBinary() ([]byte, error) {
 }
 
 // TODO(aalireza): how to deserialize it?
-//// UnmarshalBinary Deserializes a signature from a byte array in compressed form.
-//// See
-//// https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
-//// https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
-//// If successful, it will assign the Signature
-//// otherwise it will return an error.
-//func (sig *Signature[S]) UnmarshalBinary(data []byte) error {
-//	size := sig.Size()
-//	if len(data) != size {
-//		return errs.NewLength("signature must be %d bytes", size)
-//	}
-//	blob := make([]byte, size)
-//	copy(blob, data)
-//	g := bls12381.GetSourceSubGroup[S]()
-//	p, err := g.Element().FromAffineCompressed(blob)
-//	if err != nil {
-//		return errs.WrapSerialisation(err, "couldn't deserialize data in a point of G1")
-//	}
-//	if p.IsAdditiveIdentity() {
-//		return errs.NewIsZero("signatures cannot be zero")
+// // UnmarshalBinary Deserializes a signature from a byte array in compressed form.
+// // See
+// // https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
+// // https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
+// // If successful, it will assign the Signature
+// // otherwise it will return an error.
+//
+//	func (sig *Signature[S]) UnmarshalBinary(data []byte) error {
+//		size := sig.Size()
+//		if len(data) != size {
+//			return errs.NewLength("signature must be %d bytes", size)
+//		}
+//		blob := make([]byte, size)
+//		copy(blob, data)
+//		g := bls12381.GetSourceSubGroup[S]()
+//		p, err := g.Element().FromAffineCompressed(blob)
+//		if err != nil {
+//			return errs.WrapSerialisation(err, "couldn't deserialize data in a point of G1")
+//		}
+//		if p.IsAdditiveIdentity() {
+//			return errs.NewIsZero("signatures cannot be zero")
+//		}
+//
+//		sig.Value = p.(curves.PairingPoint)
+//		return nil
 //	}
 //
-//	sig.Value = p.(curves.PairingPoint)
-//	return nil
-//}
+//	func (*Signature[S]) inG1() bool {
+//		return bls12381.GetSourceSubGroup[S]().Name() == bls12381.NewG1().Name()
+//	}
 //
-//func (*Signature[S]) inG1() bool {
-//	return bls12381.GetSourceSubGroup[S]().Name() == bls12381.NewG1().Name()
-//}
+// // type aliasing of generic types is not supported. So, sitll have to copy identical stuff.
+// var (
 //
-//// type aliasing of generic types is not supported. So, sitll have to copy identical stuff.
-//var (
 //	_ encoding.BinaryMarshaler   = (*Signature[bls12381.G2])(nil)
 //	_ encoding.BinaryUnmarshaler = (*Signature[bls12381.G2])(nil)
 //
 //	_ encoding.BinaryMarshaler   = (*Signature[bls12381.G1])(nil)
 //	_ encoding.BinaryUnmarshaler = (*Signature[bls12381.G1])(nil)
-//)
 //
-//type ProofOfPossession[S SignatureSubGroup] struct {
-//	Value curves.PairingPoint
-//
-//	_ ds.Incomparable
-//}
-//
-//func (pop *ProofOfPossession[S]) Size() int {
-//	if pop.inG1() {
-//		return PublicKeySizeInG1
-//	}
-//	return PublicKeySizeInG2
-//}
+// )
+type ProofOfPossession[P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]] struct {
+	Value P
+
+	_ ds.Incomparable
+}
+
+func (pop *ProofOfPossession[P, B, S]) Size() int {
+	curve, _ := curves.GetCurve(pop.Value)
+	return curve.BaseField().ElementSize()
+}
+
 //
 //// Serialise a signature to a byte array in compressed form.
 //// See

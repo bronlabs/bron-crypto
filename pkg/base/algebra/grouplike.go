@@ -164,3 +164,19 @@ type PrimeGroupElement[E Vector[E, S], S PrimeFieldElement[S]] interface {
 	Vector[E, S]
 	CyclicSemiGroupElement[E]
 }
+
+type FiniteAbelianMultiplicativeGroup[GE interface {
+	FiniteAbelianGroupElement[GE, S]
+	MultiplicativeGroupElement[GE]
+}, S UintLike[S]] interface {
+	FiniteAbelianGroup[GE, S]
+	MultiplicativeGroup[GE]
+}
+
+type FiniteAbelianMultiplicativeGroupElement[GE interface {
+	FiniteAbelianGroupElement[GE, S]
+	MultiplicativeGroupElement[GE]
+}, S UintLike[S]] interface {
+	FiniteAbelianGroupElement[GE, S]
+	MultiplicativeGroupElement[GE]
+}

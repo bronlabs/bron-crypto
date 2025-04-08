@@ -21,6 +21,7 @@ type AlgebraicCurve[Point AlgebraicPoint[Point, Coordinate], Coordinate RingElem
 	AffineSystem[Point, Coordinate]
 
 	NewPoint(affineX, affineY Coordinate) (Point, error)
+	HashWithDst(dst string, message []byte) (Point, error)
 }
 
 type AlgebraicPoint[Point interface {
@@ -86,15 +87,15 @@ type PairingFriendlyCurve[P TorsionFreeEllipticCurvePoint[P, B, S], B FiniteFiel
 }
 
 type Pairing[
-	g1 TorsionFreeEllipticCurve[g1Point, g1Coordinate, g1Scalar], g1Point TorsionFreeEllipticCurvePoint[g1Point, g1Coordinate, g1Scalar], g1Coordinate FiniteFieldElement[g1Coordinate], g1Scalar PrimeFieldElement[g1Scalar],
-	g2 TorsionFreeEllipticCurve[g2Point, g2Coordinate, g2Scalar], g2Point TorsionFreeEllipticCurvePoint[g2Point, g2Coordinate, g2Scalar], g2Coordinate FiniteFieldElement[g2Coordinate], g2Scalar PrimeFieldElement[g2Scalar],
+	g1 TorsionFreeEllipticCurve[g1Point, g1Coordinate, Scalar], g1Point TorsionFreeEllipticCurvePoint[g1Point, g1Coordinate, Scalar], g1Coordinate FiniteFieldElement[g1Coordinate],
+	g2 TorsionFreeEllipticCurve[g2Point, g2Coordinate, Scalar], g2Point TorsionFreeEllipticCurvePoint[g2Point, g2Coordinate, Scalar], g2Coordinate FiniteFieldElement[g2Coordinate],
 	gt interface {
 		MultiplicativeGroup[gtElement]
-		AbelianGroup[gtElement, gtScalar]
+		FiniteAbelianGroup[gtElement, Scalar]
 	}, gtElement interface {
 		MultiplicativeGroupElement[gtElement]
-		FiniteAbelianGroupElement[gtElement, gtScalar]
-	}, gtScalar UintLike[gtScalar],
+		FiniteAbelianGroupElement[gtElement, Scalar]
+	}, Scalar PrimeFieldElement[Scalar],
 ] interface {
 	G1() g1
 	G2() g2

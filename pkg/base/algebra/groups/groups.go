@@ -23,6 +23,9 @@ type (
 
 	PrimeGroup[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]]        algebra.PrimeGroup[E, S]
 	PrimeGroupElement[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] algebra.PrimeGroupElement[E, S]
+
+	FiniteAbelianMultiplicativeGroup[E algebra.FiniteAbelianMultiplicativeGroupElement[E, S], S algebra.UintLike[S]]        algebra.FiniteAbelianMultiplicativeGroup[E, S]
+	FiniteAbelianMultiplicativeGroupElement[E algebra.FiniteAbelianMultiplicativeGroupElement[E, S], S algebra.UintLike[S]] algebra.FiniteAbelianMultiplicativeGroupElement[E, S]
 )
 
 func GetGroup[GE GroupElement[GE]](ge GE) (Group[GE], error) {

@@ -14,17 +14,19 @@ type (
 	Curve[P algebra.TorsionFreeEllipticCurvePoint[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]] algebra.TorsionFreeEllipticCurve[P, F, S]
 	Point[P algebra.TorsionFreeEllipticCurvePoint[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]] algebra.TorsionFreeEllipticCurvePoint[P, F, S]
 
+	PairingFriendlyCurve[P algebra.TorsionFreeEllipticCurvePoint[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S], P2 algebra.TorsionFreeEllipticCurvePoint[P2, F2, S], F2 algebra.FiniteFieldElement[F2]] algebra.PairingFriendlyCurve[P, F, S, P2, F2]
+
 	Pairing[
-		G1 Curve[G1Point, G1BaseFieldElement, G1Scalar], G1Point algebra.TorsionFreeEllipticCurvePoint[G1Point, G1BaseFieldElement, G1Scalar], G1BaseFieldElement algebra.FiniteFieldElement[G1BaseFieldElement], G1Scalar algebra.PrimeFieldElement[G1Scalar],
-		G2 Curve[G2Point, G2BaseFieldElement, G2Scalar], G2Point algebra.TorsionFreeEllipticCurvePoint[G2Point, G2BaseFieldElement, G2Scalar], G2BaseFieldElement algebra.FiniteFieldElement[G2BaseFieldElement], G2Scalar algebra.PrimeFieldElement[G2Scalar],
+		G1 Curve[G1Point, G1BaseFieldElement, Scalar], G1Point algebra.TorsionFreeEllipticCurvePoint[G1Point, G1BaseFieldElement, Scalar], G1BaseFieldElement algebra.FiniteFieldElement[G1BaseFieldElement],
+		G2 Curve[G2Point, G2BaseFieldElement, Scalar], G2Point algebra.TorsionFreeEllipticCurvePoint[G2Point, G2BaseFieldElement, Scalar], G2BaseFieldElement algebra.FiniteFieldElement[G2BaseFieldElement],
 		Gt interface {
 			groups.MultiplicativeGroup[GtElement]
-			groups.FiniteAbelianGroup[GtElement, GtScalar]
+			groups.FiniteAbelianGroup[GtElement, Scalar]
 		}, GtElement interface {
 			groups.MultiplicativeGroupElement[GtElement]
-			groups.FiniteAbelianGroupElement[GtElement, GtScalar]
-		}, GtScalar algebra.UintLike[GtScalar],
-	] algebra.Pairing[G1, G1Point, G1BaseFieldElement, G1Scalar, G2, G2Point, G2BaseFieldElement, G2Scalar, Gt, GtElement, GtScalar]
+			groups.FiniteAbelianGroupElement[GtElement, Scalar]
+		}, Scalar fields.PrimeFieldElement[Scalar],
+	] algebra.Pairing[G1, G1Point, G1BaseFieldElement, G2, G2Point, G2BaseFieldElement, Gt, GtElement, Scalar]
 )
 
 func GetCurve[P Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](p P) (Curve[P, F, S], error) {
