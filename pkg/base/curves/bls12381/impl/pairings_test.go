@@ -2,7 +2,6 @@ package impl_test
 
 import (
 	crand "crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"testing"
@@ -48,9 +47,8 @@ func Test_TestVectors(t *testing.T) {
 			AddPair(&vector.G1.V, &vector.G2.V).
 			Result()
 
-		//ok := gt.V.Equals(&vector.Gt.V)
-		println(hex.EncodeToString(gt.U0.U0.U0.Bytes()))
-		// b68917caaa0543a808c53908f694d1b6e7b38de90ce9d83d505ca1ef1b442d2727d7d06831d8b2a7920afc71d8eb5012
+		ok := gt.Equals(&vector.Gt.V)
+		require.Equal(t, uint64(1), ok)
 	}
 }
 
