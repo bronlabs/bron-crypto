@@ -21,6 +21,7 @@ type Element[E any] interface {
 
 	Structure() Structure[E]
 
+	// TODO: remove these
 	encoding.BinaryMarshaler
 	encoding.BinaryUnmarshaler
 }
