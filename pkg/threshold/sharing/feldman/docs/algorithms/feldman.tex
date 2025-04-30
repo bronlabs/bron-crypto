@@ -1,0 +1,52 @@
+
+\begin{scheme}[H]
+    \caption{$\quad$\fndef{Feldman}} \label{alg:feldman}
+    \begin{algorithmic}[1]
+    \begin{alginfo}
+        A VSS scheme based on the Feldman commitment scheme \cite{feldman} and the SSS scheme \cite{shamir}. The scheme is parametrized by a group $\G$ of prime order $q$ and generator $\g{G}$, the number of shares produced $n$, and the number of shares required to reconstruct $t$ (threshold).
+    \end{alginfo} 
+    \vspace{-10pt}
+    \AlgFnct{\hspace{4pt}\fndef[feldman]{Split}}{\g{G}}{$
+        s \ins \F_q
+    $}{$
+        (\vect{y} \equals \{\vecti{y}{1}, \dots \vecti{y}{n}\},\;
+        \g{\vect{C}}\equals\{\vecti{\g{C}}{1},\dots, \vecti{\g{C}}{t}\})
+    $}
+        \State Set $\assign{\coeff{p}{0}}{s}$ as the constant term of a polynomial $\polyx{p}{x}$ of degree $t-1$.
+        \State Set $\assign{\g{C}_1}{s\cdot \g{G}}$ as the commitment of the secret.
+        \For {$j \in \range{t-1}$}
+            \State Sample $\sample{\coeff{p}{j}}{\F^*_q}$ as the random coefficients of the polynomial $\poly{p}$.
+            \State $\assign{\vecti{\g{C}}{j+1}}{\coeff{p}{j}\cdot \g{G}}$ as a commitment of each coefficient.
+        \EndFor
+        \For {$i \in \range{n}$}
+            \State $\assign{\vecti{y}{i}}{\Sigma_{k=0}^{t-1} (\coeff{p}{k}\cdot i^{k})}$ as the evaluation of $\polyx{p}{x}$ in $x\equals i$.
+        \EndFor
+        \Statex \Return $(\vect{y} \equals \{\vecti{y}{i}\}_{i \in \range{n}},\;\vect{C}\equals\{\vecti{\g{C}}{j}\}_{j \in \range{t}})$ as  $n$ shares and $t$ commitments 
+
+    \vspace{-10pt}
+    \AlgFnct{\hspace{-2pt}\fndef[feldman]{Verify}}{\g{G}}{$
+        i \ins \range{n},\;
+        \vecti{y}{i} \ins \F_q,\;
+        \vect{C}\equals\{\vecti{\g{C}}{1},\dots, \vecti{\g{C}}{t}\}
+    $}{\textit{valid}}
+    \setalglineno{1}
+        \State $\assign{\g{R}}{\g{C}_1 + \sum_{j=1}^{t-1} (j\cdot i) \cdot \vecti{\g{C}}{j+1}}$ as the expected commitment.
+        \State $\assign{\g{L}}{\vecti{y}{i} \cdot G}$ as the actual commitment of the share $\vecti{y}{i}$.
+        \State Check if $\isequal{\g{L}}{\g{R}}$, $\ABORT$ if not.
+        \Statex \Return \textit{valid}
+        
+    \vspace{-10pt}
+    \AlgFnct{\hspace{-2pt}\fndef[feldman]{Combine}}{\g{G}}{$
+        \set{X'} \ins \subrange{t}{n},\;
+        \vect{y'}\equals\{\vecti{y}{i} \ins \F\}_{ i \in \set{X'}},\;
+        \vect{C}\equals\{\vecti{\g{C}}{1},\dots, \vecti{\g{C}}{t}\}
+    $}{$s$}
+    \setalglineno{1}
+        \State Run $\fn{Feldman.Verify}(i, \vecti{y}{i}, \vect{C}) \;\forall i\!\in\!\set{X'}$ to verify all the $t$ shares in $\vect{y'}$.
+        \State Run $\fn{SSS.Combine}(\set{X'}, \vect{y'})$ to reconstruct the secret $s$.
+        \Statex \Return $s$
+
+    \end{algorithmic}
+\end{scheme}
+
+

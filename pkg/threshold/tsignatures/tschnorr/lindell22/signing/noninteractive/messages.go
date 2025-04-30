@@ -1,0 +1,73 @@
+package noninteractive_signing
+
+import (
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	hashcommitments "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs/setup"
+)
+
+var _ network.Message[types.ThresholdProtocol] = (*Round1Broadcast)(nil)
+var _ network.Message[types.ThresholdProtocol] = (*Round2Broadcast)(nil)
+
+type Round1Broadcast struct {
+	BigRCommitment hashcommitments.Commitment
+
+	_ ds.Incomparable
+}
+
+type Round1P2P = setup.Round1P2P
+
+type Round2Broadcast struct {
+	BigR1       curves.Point
+	BigR2       curves.Point
+	BigROpening hashcommitments.Witness
+	BigR1Proof  compiler.NIZKPoKProof
+	BigR2Proof  compiler.NIZKPoKProof
+
+	_ ds.Incomparable
+}
+
+type Round2P2P = setup.Round2P2P
+
+func (*Round1Broadcast) Validate(protocol types.ThresholdProtocol) error {
+	// if err := r1b.BigRCommitment.Validate(); err != nil {
+	//	return errs.WrapValidation(err, "commitment validation failed")
+	//}
+	return nil
+}
+
+func (r2b *Round2Broadcast) Validate(protocol types.ThresholdProtocol) error {
+	if r2b.BigR1 == nil {
+		return errs.NewIsNil("big r1")
+	}
+	if r2b.BigR1.Curve() != protocol.Curve() {
+		return errs.NewCurve("big r1 curve %s does not match protocol curve %s", r2b.BigR1.Curve(), protocol.Curve())
+	}
+	if r2b.BigR1.IsAdditiveIdentity() {
+		return errs.NewIsIdentity("big r1")
+	}
+	if r2b.BigR2 == nil {
+		return errs.NewIsNil("big r2")
+	}
+	if r2b.BigR2.Curve() != protocol.Curve() {
+		return errs.NewCurve("big r2 curve %s does not match protocol curve %s", r2b.BigR2.Curve(), protocol.Curve())
+	}
+	if r2b.BigR2.IsAdditiveIdentity() {
+		return errs.NewIsIdentity("big r2")
+	}
+	// if err := r2b.BigROpening.Validate(); err != nil {
+	//	return errs.WrapValidation(err, "could not validate opening")
+	//}
+	if r2b.BigR1Proof == nil {
+		return errs.NewIsNil("big r1 proof")
+	}
+	if r2b.BigR2Proof == nil {
+		return errs.NewIsNil("big r2 proof")
+	}
+	return nil
+}

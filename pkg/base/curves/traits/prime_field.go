@@ -52,6 +52,12 @@ func (f *PrimeFieldTrait[FP, WP, W]) FromComponentsBytes(data [][]byte) (WP, err
 	return &e, nil
 }
 
+func (f *PrimeFieldTrait[FP, WP, W]) FromUint64(v uint64) WP {
+	var e W
+	WP(&e).Fp().SetUint64(v)
+	return &e
+}
+
 func (f *PrimeFieldTrait[FP, WP, W]) FromNat(nat *saferith.Nat) (WP, error) {
 	leData := sliceutils.Reverse(nat.Bytes())
 	var e W
