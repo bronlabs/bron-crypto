@@ -2,22 +2,13 @@ package elgamal
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/groups"
-	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/products"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 )
 
-func PublicKeySpace[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]]() groups.Group[E] {
-
-	return nil
-}
-
 type PublicKey[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
 	v E
-}
-
-func (pk *PublicKey[E, S]) Scheme() types.Scheme[encryption.Type] {
-	return nil
 }
 
 func (pk *PublicKey[E, S]) Value() E {
@@ -51,10 +42,6 @@ func (sk *PrivateKey[E, S]) Value() S {
 	return sk.v
 }
 
-func (sk *PrivateKey[E, S]) Scheme() types.Scheme[encryption.Type] {
-	return nil
-}
-
 func (sk *PrivateKey[E, S]) Public() *PublicKey[E, S] {
 	return &sk.pk
 }
@@ -76,6 +63,64 @@ func (sk *PrivateKey[E, S]) MarshalBinary() ([]byte, error) {
 
 func (sk *PrivateKey[E, S]) UnmarshalBinary(input []byte) error {
 	panic("implement me")
+}
+
+type Plaintext[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
+	v E
+}
+
+func (p *Plaintext[E, S]) Value() E {
+	return p.v
+}
+
+func (p *Plaintext[E, S]) Wrap(v E) (Plaintext[E, S], error) {
+	return Plaintext[E, S]{v}, nil
+}
+
+type Ciphertext[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
+	v *products.DirectProductGroupElement[E, E]
+}
+
+func (c *Ciphertext[E, S]) Value() *products.DirectProductGroupElement[E, E] {
+	return c.v
+}
+
+func (c *Ciphertext[E, S]) Wrap(v *products.DirectProductGroupElement[E, E]) (*Ciphertext[E, S], error) {
+	if v == nil {
+		return nil, errs.NewIsNil("ciphertext value")
+	}
+	if v.Left().IsOpIdentity() {
+		return nil, errs.NewValue("nonce component is identity")
+	}
+	return &Ciphertext[E, S]{v}, nil
+}
+
+func (c *Ciphertext[E, S]) ScalarOp(m *Plaintext[E, S]) *Ciphertext[E, S] {
+	if m == nil {
+		return c
+	}
+	outv := c.v.Clone()
+	outv.Set(c.v.Left(), c.v.Right().Op(m.Value()))
+	out, err := c.Wrap(outv)
+	if err != nil {
+		panic(err)
+	}
+	return out
+}
+
+type Nonce[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
+	v S
+}
+
+func (n *Nonce[E, S]) Value() S {
+	return n.v
+}
+
+func (n *Nonce[E, S]) Wrap(v S) (Nonce[E, S], error) {
+	if v.IsZero() {
+		return Nonce[E, S]{}, errs.NewValue("nonce is zero")
+	}
+	return Nonce[E, S]{v}, nil
 }
 
 func _[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]]() {

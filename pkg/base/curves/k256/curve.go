@@ -140,6 +140,10 @@ func (p *Point) AffineY() (*BaseFieldElement, error) {
 	return &y, nil
 }
 
+func (p *Point) ScalarOp(actor *Scalar) *Point {
+	return p.ScalarMul(actor)
+}
+
 func (p *Point) ScalarMul(actor *Scalar) *Point {
 	var result Point
 	pointsImpl.ScalarMul[*k256Impl.Fp](&result.V, &p.V, actor.V.Bytes())

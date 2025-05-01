@@ -11,7 +11,10 @@ import (
 type Multiplicity uint
 type Cardinal = *saferith.Nat
 
-var Infinite Cardinal = nil
+var (
+	Infinite Cardinal = nil
+	Unknown  Cardinal = nil
+)
 
 // === Interfaces
 
@@ -28,11 +31,6 @@ type Element[E any] interface {
 type Structure[E any] interface {
 	Name() string
 	Order() Cardinal
-}
-
-type OrderedPair[T, U any] struct {
-	First  T
-	Second U
 }
 
 type FiniteStructure[E any] interface {

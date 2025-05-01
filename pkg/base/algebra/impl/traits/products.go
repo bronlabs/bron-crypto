@@ -2,6 +2,7 @@ package traits
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/cronokirby/saferith"
 )
 
@@ -207,9 +208,9 @@ func (d *DirectProductModuleElement[L, SL, R, SR, S, W, WT]) IsTorsionFree() boo
 	return d.left.IsTorsionFree() && d.right.IsTorsionFree()
 }
 
-func (d *DirectProductModuleElement[L, SL, R, SR, S, W, WT]) ScalarMul(s S) W {
+func (d *DirectProductModuleElement[L, SL, R, SR, S, W, WT]) ScalarOp(s S) W {
 	var out WT
-	W(&out).Set(d.left.ScalarMul(s.Left()), d.right.ScalarMul(s.Right()))
+	W(&out).Set(d.left.ScalarOp(s.Left()), d.right.ScalarOp(s.Right()))
 	return W(&out)
 }
 
@@ -249,5 +250,337 @@ type DirectProductGroup[S1 algebra.Group[E1], E1 algebra.GroupElement[E1], S2 al
 func (s *DirectProductGroup[S1, E1, S2, E2, W, WT]) OpIdentity() W {
 	var out WT
 	W(&out).Set(s.left.OpIdentity(), s.right.OpIdentity())
+	return W(&out)
+}
+
+type DirectProductRing[S1 algebra.Ring[E1], E1 algebra.RingElement[E1], S2 algebra.Ring[E2], E2 algebra.RingElement[E2], W DirectProductInheriterPtrConstraint[E1, E2, WT], WT any] struct {
+	DirectProductGroup[S1, E1, S2, E2, W, WT]
+}
+
+func (s *DirectProductRing[S1, E1, S2, E2, W, WT]) Characteristic() algebra.Cardinal {
+	panic("not implemented") // LCM of the two characteristics
+}
+
+func (s *DirectProductRing[S1, E1, S2, E2, W, WT]) Zero() W {
+	var out WT
+	W(&out).Set(s.left.Zero(), s.right.Zero())
+	return W(&out)
+}
+
+func (s *DirectProductRing[S1, E1, S2, E2, W, WT]) One() W {
+	var out WT
+	W(&out).Set(s.left.One(), s.right.One())
+	return W(&out)
+}
+
+// *********** Variadic
+
+type VariadicDirectProduct[E algebra.SemiGroupElement[E]] interface {
+	Components() []E
+	Dimension() int
+}
+
+type VariadicDirectProductInheriter[E algebra.SemiGroupElement[E]] interface {
+	Set(components ...E) error
+	SetAt(i int, component E) error
+	VariadicDirectProduct[E]
+}
+
+type VariadicDirectProductInheriterPtrConstraint[E algebra.SemiGroupElement[E], T any] interface {
+	*T
+	VariadicDirectProductInheriter[E]
+}
+
+type VariadicDirectProductSemiGroupElement[E algebra.SemiGroupElement[E], W VariadicDirectProductInheriterPtrConstraint[E, WT], WT any] struct {
+	components []E
+}
+
+func (d *VariadicDirectProductSemiGroupElement[E, W, WT]) Dimension() int {
+	return len(d.components)
+}
+
+func (d *VariadicDirectProductSemiGroupElement[E, W, WT]) Set(components ...E) error {
+	if d.Dimension() != len(components) {
+		return errs.NewLength("incorrect component count")
+	}
+	d.components = components
+	return nil
+}
+
+func (d *VariadicDirectProductSemiGroupElement[E, W, WT]) SetAt(i int, component E) error {
+	if i < 0 || i >= d.Dimension() {
+		return errs.NewValue("index out of bounds")
+	}
+	d.components[i] = component
+	return nil
+}
+
+func (d *VariadicDirectProductSemiGroupElement[E, W, WT]) Components() []E {
+	return d.components
+}
+
+func (d *VariadicDirectProductSemiGroupElement[E, W, WT]) Op(x W) W {
+	if d.Dimension() != x.Dimension() {
+		panic("incorrect component count")
+	}
+	var out WT
+	for i, c := range d.components {
+		W(&out).SetAt(i, c.Op(x.Components()[i]))
+	}
+	return W(&out)
+}
+
+func (d *VariadicDirectProductSemiGroupElement[E, W, WT]) Equal(x W) bool {
+	if d.Dimension() != x.Dimension() {
+		return false
+	}
+	for i, c := range d.components {
+		if !c.Equal(x.Components()[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func (d *VariadicDirectProductSemiGroupElement[E, W, WT]) HashCode() uint64 {
+	var h uint64
+	for _, c := range d.components {
+		h ^= c.HashCode()
+	}
+	return h
+}
+
+type VariadicDirectProductGroupElement[E algebra.GroupElement[E], W VariadicDirectProductInheriterPtrConstraint[E, WT], WT any] struct {
+	VariadicDirectProductSemiGroupElement[E, W, WT]
+}
+
+func (d *VariadicDirectProductGroupElement[E, W, WT]) IsOpIdentity() bool {
+	for _, c := range d.components {
+		if !c.IsOpIdentity() {
+			return false
+		}
+	}
+	return true
+}
+
+func (d *VariadicDirectProductGroupElement[E, W, WT]) TryOpInv() (W, error) {
+	var out WT
+	for i, c := range d.components {
+		inv, err := c.TryOpInv()
+		if err != nil {
+			return nil, err
+		}
+		W(&out).SetAt(i, inv)
+	}
+	return W(&out), nil
+}
+
+func (d *VariadicDirectProductGroupElement[E, W, WT]) OpInv() W {
+	var out WT
+	for i, c := range d.components {
+		W(&out).SetAt(i, c.OpInv())
+	}
+	return W(&out)
+}
+
+type VariadicDirectProductRingElement[
+	E algebra.RingElement[E], W VariadicDirectProductInheriterPtrConstraint[E, WT], WT any] struct {
+	VariadicDirectProductGroupElement[E, W, WT]
+}
+
+func (d *VariadicDirectProductRingElement[E, W, WT]) OtherOp(x W) W {
+	return d.Mul(x)
+}
+
+func (d *VariadicDirectProductRingElement[E, W, WT]) IsZero() bool {
+	for _, c := range d.components {
+		if !c.IsZero() {
+			return false
+		}
+	}
+	return true
+}
+
+func (d *VariadicDirectProductRingElement[E, W, WT]) IsOne() bool {
+	for _, c := range d.components {
+		if !c.IsOne() {
+			return false
+		}
+	}
+	return true
+}
+
+func (d *VariadicDirectProductRingElement[E, W, WT]) Add(x W) W {
+	if d.Dimension() != x.Dimension() {
+		panic("incorrect component count")
+	}
+	var out WT
+	for i, c := range d.components {
+		W(&out).SetAt(i, c.Add(x.Components()[i]))
+	}
+	return W(&out)
+}
+
+func (d *VariadicDirectProductRingElement[E, W, WT]) TrySub(x W) (W, error) {
+	if d.Dimension() != x.Dimension() {
+		return nil, errs.NewLength("incorrect component count")
+	}
+	var out WT
+	for i, c := range d.components {
+		sub, err := c.TrySub(x.Components()[i])
+		if err != nil {
+			return nil, err
+		}
+		W(&out).SetAt(i, sub)
+	}
+	return W(&out), nil
+}
+
+func (d *VariadicDirectProductRingElement[E, W, WT]) Sub(x W) W {
+	if d.Dimension() != x.Dimension() {
+		panic("incorrect component count")
+	}
+	var out WT
+	for i, c := range d.components {
+		W(&out).SetAt(i, c.Sub(x.Components()[i]))
+	}
+	return W(&out)
+}
+
+func (d *VariadicDirectProductRingElement[E, W, WT]) Mul(x W) W {
+	if d.Dimension() != x.Dimension() {
+		panic("incorrect component count")
+	}
+	var out WT
+	for i, c := range d.components {
+		W(&out).SetAt(i, c.Mul(x.Components()[i]))
+	}
+	return W(&out)
+}
+
+func (d *VariadicDirectProductRingElement[E, W, WT]) TryDiv(x W) (W, error) {
+	if d.Dimension() != x.Dimension() {
+		return nil, errs.NewLength("incorrect component count")
+	}
+	var out WT
+	for i, c := range d.components {
+		div, err := c.TryDiv(x.Components()[i])
+		if err != nil {
+			return nil, err
+		}
+		W(&out).SetAt(i, div)
+	}
+	return W(&out), nil
+}
+
+func (d *VariadicDirectProductRingElement[E, W, WT]) TryInv() (W, error) {
+	var out WT
+	for i, c := range d.components {
+		inv, err := c.TryInv()
+		if err != nil {
+			return nil, err
+		}
+		W(&out).SetAt(i, inv)
+	}
+	return W(&out), nil
+}
+
+func (d *VariadicDirectProductRingElement[E, W, WT]) TryNeg() (W, error) {
+	var out WT
+	for i, c := range d.components {
+		neg, err := c.TryNeg()
+		if err != nil {
+			return nil, err
+		}
+		W(&out).SetAt(i, neg)
+	}
+	return W(&out), nil
+}
+
+func (d *VariadicDirectProductRingElement[E, W, WT]) Double() W {
+	var out WT
+	for i, c := range d.components {
+		W(&out).SetAt(i, c.Double())
+	}
+	return W(&out)
+}
+
+func (d *VariadicDirectProductRingElement[E, W, WT]) Square() W {
+	var out WT
+	for i, c := range d.components {
+		W(&out).SetAt(i, c.Square())
+	}
+	return W(&out)
+}
+
+func (d *VariadicDirectProductRingElement[E, W, WT]) Neg() W {
+	var out WT
+	for i, c := range d.components {
+		W(&out).SetAt(i, c.Neg())
+	}
+	return W(&out)
+}
+
+type VariadicDirectProductSemiGroup[S algebra.SemiGroup[E], E algebra.SemiGroupElement[E], W VariadicDirectProductInheriterPtrConstraint[E, WT], WT any] struct {
+	components []S
+}
+
+func (s *VariadicDirectProductSemiGroup[S, E, W, WT]) Dimension() int {
+	return len(s.components)
+}
+
+func (s *VariadicDirectProductSemiGroup[S, E, W, WT]) Set(components ...S) error {
+	if s.Dimension() != len(components) {
+		return errs.NewLength("incorrect component count")
+	}
+	s.components = components
+	return nil
+}
+
+func (s *VariadicDirectProductSemiGroup[S, E, W, WT]) SetAt(i int, component S) error {
+	if i < 0 || i >= s.Dimension() {
+		return errs.NewValue("index out of bounds")
+	}
+	s.components[i] = component
+	return nil
+}
+
+func (s *VariadicDirectProductSemiGroup[S, E, W, WT]) Components() []S {
+	return s.components
+}
+
+func (s *VariadicDirectProductSemiGroup[S, E, W, WT]) Order() algebra.Cardinal {
+	panic("implement me")
+}
+
+type VariadicDirectProductGroup[S algebra.Group[E], E algebra.GroupElement[E], W VariadicDirectProductInheriterPtrConstraint[E, WT], WT any] struct {
+	VariadicDirectProductSemiGroup[S, E, W, WT]
+}
+
+func (s *VariadicDirectProductGroup[S, E, W, WT]) OpIdentity() W {
+	var out WT
+	for i, c := range s.components {
+		W(&out).SetAt(i, c.OpIdentity())
+	}
+	return W(&out)
+}
+
+type VariadicDirectProductRing[S algebra.Ring[E], E algebra.RingElement[E], W VariadicDirectProductInheriterPtrConstraint[E, WT], WT any] struct {
+	VariadicDirectProductGroup[S, E, W, WT]
+}
+
+func (s *VariadicDirectProductRing[S, E, W, WT]) Zero() W {
+	var out WT
+	for i, c := range s.components {
+		W(&out).SetAt(i, c.Zero())
+	}
+	return W(&out)
+}
+
+func (s *VariadicDirectProductRing[S, E, W, WT]) One() W {
+	var out WT
+	for i, c := range s.components {
+		W(&out).SetAt(i, c.One())
+	}
 	return W(&out)
 }

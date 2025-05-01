@@ -23,6 +23,21 @@ type (
 
 	PrimeGroup[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]]        algebra.PrimeGroup[E, S]
 	PrimeGroupElement[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] algebra.PrimeGroupElement[E, S]
+
+	// UnknownOrderGroup[E UnknownOrderGroupElement[E]] interface {
+	// 	Group[E]
+	// 	algebra.FiniteStructure[E]
+	// }
+	// UnknownOrderGroupElement[E GroupElement[E]] GroupElement[E]
+
+	// AbelianUnknownOrderGroup[E AbelianUnknownOrderGroupElement[E, S], S algebra.IntLike[S]] interface {
+	// 	UnknownOrderGroup[E]
+	// 	AbelianGroup[E, S]
+	// }
+	// AbelianUnknownOrderGroupElement[E interface {
+	// 	UnknownOrderGroupElement[E]
+	// 	AbelianGroupElement[E, S]
+	// }, S algebra.IntLike[S]] AbelianGroupElement[E, S]
 )
 
 func GetGroup[GE GroupElement[GE]](ge GE) Group[GE] {

@@ -6,23 +6,34 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 )
 
-// ****************** Action
-
-type Actable[E Element[E], S SemiGroupElement[S]] interface {
-	Element[E]
-	ScalarMul(actor S) E
+type Actable[E, S any] interface {
+	ScalarOp(actor S) E
 }
-
-type RingActable[E Element[E], S RingElement[S]] Actable[E, S]
 
 // ****************** Module
 
-type Module[ME ModuleElement[ME, S], S RingElement[S]] Group[ME]
+type Module[ME ModuleElement[ME, S], S RingElement[S]] interface {
+	Group[ME]
+}
 
 type ModuleElement[ME GroupElement[ME], S RingElement[S]] interface {
 	GroupElement[ME]
-	RingActable[ME, S]
+	Actable[ME, S]
 	IsTorsionFree() bool
+}
+
+type AdditiveModule[ME AdditiveModuleElement[ME, S], S RingElement[S]] Module[ME, S]
+
+type AdditiveModuleElement[ME ModuleElement[ME, S], S RingElement[S]] interface {
+	ModuleElement[ME, S]
+	ScalarMul(S) ME
+}
+
+type MultiplicativeModule[ME MultiplicativeModuleElement[ME, S], S RingElement[S]] Module[ME, S]
+
+type MultiplicativeModuleElement[ME ModuleElement[ME, S], S RingElement[S]] interface {
+	ModuleElement[ME, S]
+	ScalarExp(S) ME
 }
 
 // ****************** Vector Space
@@ -73,7 +84,7 @@ type Polynomial[P interface {
 
 type Matrix[M Element[M], C RingElement[C]] interface {
 	ds.AbstractMatrix[M]
-	RingActable[M, C]
+	Actable[M, C]
 	TryInv() (M, error)
 }
 

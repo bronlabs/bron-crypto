@@ -26,7 +26,7 @@ func (kg *keyGenerator[E, S]) Generate(prng types.PRNG, _ any) (*PrivateKey[E, S
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "failed to generate private key value")
 	}
-	pkv := g.ScalarMul(skv)
+	pkv := g.ScalarOp(skv)
 	pk := &PublicKey[E, S]{pkv}
 	sk := &PrivateKey[E, S]{skv, *pk}
 	return sk, nil
@@ -68,8 +68,8 @@ func (e *encrypter[E, S]) EncryptWithNonce(plaintext *Plaintext[E, S], receiver 
 		return nil, errs.NewIsNil("nonce")
 	}
 	g := e.g.Generator()
-	c1 := g.ScalarMul(nonce.Value())
-	c2 := receiver.v.ScalarMul(nonce.Value())
+	c1 := g.ScalarOp(nonce.Value())
+	c2 := receiver.v.ScalarOp(nonce.Value())
 	c2.Op(plaintext.Value())
 	return &Ciphertext[E, S]{products.NewDirectProductGroupElement(c1, c2)}, nil
 }
@@ -93,31 +93,7 @@ func (d *decrypter[E, S]) Decrypt(ciphertext *Ciphertext[E, S], _ any) (*Plainte
 		return nil, errs.NewIsNil("ciphertext")
 	}
 	c1, c2 := ciphertext.Value().Components()
-	s := c1.ScalarMul(d.sk.v)
+	s := c1.ScalarOp(d.sk.v)
 	encoded := c2.Op(s.OpInv())
 	return &Plaintext[E, S]{encoded}, nil
-}
-
-type Plaintext[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
-	v E
-}
-
-func (p *Plaintext[E, S]) Value() E {
-	return p.v
-}
-
-type Ciphertext[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
-	v *products.DirectProductGroupElement[E, E]
-}
-
-func (c *Ciphertext[E, S]) Value() *products.DirectProductGroupElement[E, E] {
-	return c.v
-}
-
-type Nonce[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
-	v S
-}
-
-func (n *Nonce[E, S]) Value() S {
-	return n.v
 }

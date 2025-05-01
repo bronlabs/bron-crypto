@@ -1,8 +1,35 @@
 package algebra
 
 import (
+	"reflect"
+
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 )
+
+type Morphism[E1 Operand[E1], E2 Operand[E2]] func(E1) E2
+
+func (f Morphism[E1, E2]) IsHomomorphism(x, y E1) bool {
+	return f(x).Op(f(y)).Equal(f(x.Op(y)))
+}
+
+func (f Morphism[E1, E2]) IsEndomorphism() bool {
+	return reflect.TypeOf((*E1)(nil)) == reflect.TypeOf((*E2)(nil))
+}
+
+func (f Morphism[E1, E2]) IsIsomorphism(inv Morphism[E2, E1], x, y E1) bool {
+	return f.IsHomomorphism(x, y) && inv.IsHomomorphism(f(x), f(y)) && inv(f(x)).Equal(x)
+}
+
+type Hom[E1 MagmaElement[E1], E2 MagmaElement[E2]] = Morphism[E1, E2]
+
+type Endomorphism[E MagmaElement[E]] = Hom[E, E]
+
+type Isomorphism[E1 MagmaElement[E1], E2 MagmaElement[E2]] interface {
+	Mapping() Hom[E1, E2]
+	Inverse() Hom[E2, E1]
+}
+
+type Automorphism[E MagmaElement[E]] Isomorphism[E, E]
 
 type UnaryOperator[E ds.Equatable[E]] func(E) E
 
@@ -18,7 +45,7 @@ func (u UnaryOperator[E]) IsFixedPoint(x E) bool {
 	return x.Equal(u(x))
 }
 
-type BinaryOperator[E Operand[E]] func(E, E) E
+type BinaryOperator[E ds.Equatable[E]] func(E, E) E
 
 func (f BinaryOperator[E]) IsCommutative(a, b E) bool {
 	return f(a, b).Equal(f(b, a))
@@ -40,20 +67,36 @@ func (f BinaryOperator[E]) IsRightCancellative(e, b, c E) bool {
 	return implies(f(b, e).Equal(f(c, e)), b.Equal(c))
 }
 
-func (f BinaryOperator[E]) IsAborbing(e, a E) bool {
+func (f BinaryOperator[E]) IsAbsorbing(e, a E) bool {
 	return f(e, a).Equal(a) && f(a, e).Equal(a)
 }
 
-func IsLeftDistributive[E Operand[E]](op1, op2 BinaryOperator[E], x, y, z E) bool {
-	return op2(x, op1(y, z)).Equal(op1(op2(x, y), op2(x, z)))
+func (f BinaryOperator[E]) IsLeftDistributive(op BinaryOperator[E], x, y, z E) bool {
+	return f(x, op(y, z)).Equal(op(f(x, y), f(x, z)))
 }
 
-func IsRightDistributive[E Operand[E]](op1, op2 BinaryOperator[E], x, y, z E) bool {
-	return op2(op1(x, y), z).Equal(op1(op2(x, z), op2(y, z)))
+func (f BinaryOperator[E]) IsRightDistributive(op BinaryOperator[E], x, y, z E) bool {
+	return f(op(x, y), z).Equal(op(f(x, z), f(y, z)))
 }
 
-func IsDistributive[E Operand[E]](op1, op2 BinaryOperator[E], x, y, z E) bool {
-	return IsLeftDistributive(op1, op2, x, y, z) && IsRightDistributive(op1, op2, x, y, z)
+func (f BinaryOperator[E]) IsDistributive(op BinaryOperator[E], x, y, z E) bool {
+	return f.IsLeftDistributive(op, x, y, z) && f.IsRightDistributive(op, x, y, z)
+}
+
+type Composition[E ds.Equatable[E]] BinaryOperator[E]
+
+func Compose[F interface {
+	UnaryOperator[E]
+	ds.Equatable[F]
+}, E ds.Equatable[E]](a, b F) UnaryOperator[E] {
+	return func(x E) E { return a(b(x)) }
+}
+
+func Invert[E interface {
+	ds.Equatable[E]
+	Inv() E
+}](a E) E {
+	return a.Inv()
 }
 
 type Operand[E any] interface {

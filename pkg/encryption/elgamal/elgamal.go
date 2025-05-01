@@ -22,31 +22,23 @@ type UnderlyingGroupElement[E interface {
 	algebra.CyclicSemiGroupElement[E]
 }
 
-func NewScheme[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](g UnderlyingGroup[E, S], z algebra.ZnLike[S], codec *encryption.PlaintextCodec[*Plaintext[E, S]]) (encryption.Scheme[*PrivateKey[E, S], *PublicKey[E, S], *Plaintext[E, S], *Ciphertext[E, S], *Nonce[E, S]], error) {
+func NewScheme[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]](g UnderlyingGroup[E, S], z algebra.ZnLike[S]) (encryption.Scheme[*PrivateKey[E, S], *PublicKey[E, S], *Plaintext[E, S], *Ciphertext[E, S], *Nonce[E, S]], error) {
 	if g == nil {
 		return nil, errs.NewIsNil("group")
 	}
 	if z == nil {
 		return nil, errs.NewIsNil("z")
 	}
-	if codec == nil || codec.Encoder == nil {
-		return nil, errs.NewIsNil("codec")
-	}
-	return &scheme[E, S]{g, z, codec}, nil
+	return &scheme[E, S]{g, z}, nil
 }
 
 type scheme[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
-	g     UnderlyingGroup[E, S]
-	z     algebra.ZnLike[S]
-	codec *encryption.PlaintextCodec[*Plaintext[E, S]]
+	g UnderlyingGroup[E, S]
+	z algebra.ZnLike[S]
 }
 
 func (s *scheme[E, S]) Type() encryption.Type {
 	return Type
-}
-
-func (s *scheme[E, S]) IsInTheExponent() bool {
-	return s.codec.Decoder == nil
 }
 
 func (s *scheme[E, S]) Keygen() encryption.KeyGenerator[*PrivateKey[E, S], *PublicKey[E, S]] {

@@ -23,7 +23,7 @@ func NewDirectProductRingElement[E1 rings.RingElement[E1], E2 rings.RingElement[
 }
 
 type DirectProductRing[R1 rings.Ring[E1], E1 rings.RingElement[E1], R2 rings.Ring[E2], E2 rings.RingElement[E2]] struct {
-	traits.DirectProductGroup[R1, E1, R2, E2, *DirectProductRingElement[E1, E2], DirectProductRingElement[E1, E2]]
+	traits.DirectProductRing[R1, E1, R2, E2, *DirectProductRingElement[E1, E2], DirectProductRingElement[E1, E2]]
 }
 
 func (r *DirectProductRing[R1, E1, R2, E2]) Name() string {
@@ -36,22 +36,6 @@ func (r *DirectProductRing[R1, E1, R2, E2]) Operator() algebra.BinaryOperator[*D
 
 func (r *DirectProductRing[R1, E1, R2, E2]) OtherOperator() algebra.BinaryOperator[*DirectProductRingElement[E1, E2]] {
 	return algebra.Mul[*DirectProductRingElement[E1, E2]]
-}
-
-func (r *DirectProductRing[R1, E1, R2, E2]) Characteristic() algebra.Cardinal {
-	panic("not implemented") // LCM of the two characteristics
-}
-
-func (r *DirectProductRing[R1, E1, R2, E2]) Zero() *DirectProductRingElement[E1, E2] {
-	out := &DirectProductRingElement[E1, E2]{}
-	out.Set(r.Left().Zero(), r.Right().Zero())
-	return out
-}
-
-func (r *DirectProductRing[R1, E1, R2, E2]) One() *DirectProductRingElement[E1, E2] {
-	out := &DirectProductRingElement[E1, E2]{}
-	out.Set(r.Left().One(), r.Right().One())
-	return out
 }
 
 type DirectProductRingElement[E1 rings.RingElement[E1], E2 rings.RingElement[E2]] struct {

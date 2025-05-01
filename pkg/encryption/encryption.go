@@ -1,14 +1,15 @@
 package encryption
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/groups"
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 )
 
 type Type types.Type
 
-type PublicKey[PK types.SchemeElement[Type]] types.OpaquePublicKey[PK, Type]
-type PrivateKey[SK types.SchemeElement[Type], PK PublicKey[PK]] types.OpaquePrivateKey[SK, PK, Type]
+type PublicKey[PK any] types.PublicKey[PK]
+type PrivateKey[SK any, PK PublicKey[PK]] types.PrivateKey[SK, PK]
 
 type Plaintext any
 type PlaintextCodec[P Plaintext] struct {
@@ -19,8 +20,12 @@ type PlaintextCodec[P Plaintext] struct {
 type Ciphertext any
 type Nonce any
 
-func GetEncryptionScheme[SK PrivateKey[SK, PK], PK PublicKey[PK], P Plaintext, C Ciphertext, N Nonce](x types.SchemeElement[Type]) Scheme[SK, PK, P, C, N] {
-	out, ok := x.Scheme().(Scheme[SK, PK, P, C, N])
+type Rerandomisable[T any] interface {
+	Rerandomise(types.PRNG) (T, error)
+}
+
+func GetEncryptionScheme[SK PrivateKey[SK, PK], PK PublicKey[PK], P Plaintext, C Ciphertext, N Nonce](participant types.Participant[Type]) Scheme[SK, PK, P, C, N] {
+	out, ok := participant.Scheme().(Scheme[SK, PK, P, C, N])
 	if !ok {
 		panic("invalid encryption scheme object")
 	}
@@ -44,6 +49,13 @@ type Decrypter[SK PrivateKey[SK, PK], PK PublicKey[PK], P Plaintext, C Ciphertex
 	Decrypt(ciphertext C, opts any) (plaintext P, err error)
 }
 
+type LinearlyRandomisedDecrypter[SK PrivateKey[SK, PK], PK PublicKey[PK], P Plaintext, C interface {
+	Ciphertext
+	Rerandomisable[C]
+}, N Nonce] interface {
+	Decrypter[SK, PK, P, C]
+	DecryptWithNonce(ciphertext C, nonce N, opts any) (plaintext P, err error)
+}
 type Scheme[SK PrivateKey[SK, PK], PK PublicKey[PK], P Plaintext, C Ciphertext, N Nonce] interface {
 	types.Scheme[Type]
 	Keygen() KeyGenerator[SK, PK]
@@ -53,21 +65,26 @@ type Scheme[SK PrivateKey[SK, PK], PK PublicKey[PK], P Plaintext, C Ciphertext, 
 
 // ******** Homomorphic
 
-type Homomorphic[TV groups.GroupElement[TV]] types.Transparent[TV]
-type AdditivelyHomomorphic[TV groups.GroupElement[TV]] Homomorphic[TV]
-type MultiplicativelyHomomorphic[TV groups.GroupElement[TV]] Homomorphic[TV]
+type Homomorphic[T any, TV groups.GroupElement[TV]] interface {
+	types.Transparent[TV]
+	Wrap(TV) error
+}
+type AdditivelyHomomorphic[T any, TV groups.AdditiveGroupElement[TV]] Homomorphic[T, TV]
+type MultiplicativelyHomomorphic[T any, TV groups.MultiplicativeGroupElement[TV]] Homomorphic[T, TV]
 
 type HomomorphicScheme[
 	SK PrivateKey[SK, PK], PK PublicKey[PK],
 	P interface {
 		Plaintext
-		Homomorphic[PV]
+		Homomorphic[P, PV]
 	}, PV groups.GroupElement[PV],
 	C interface {
 		Ciphertext
-		Homomorphic[CV]
+		Homomorphic[C, CV]
+		algebra.Actable[C, P]
 	}, CV groups.GroupElement[CV],
 	N interface {
 		Nonce
-		Homomorphic[NV]
-	}, NV groups.GroupElement[NV]] Scheme[SK, PK, P, C, N]
+		Homomorphic[N, NV]
+	}, NV groups.GroupElement[NV],
+] Scheme[SK, PK, P, C, N]

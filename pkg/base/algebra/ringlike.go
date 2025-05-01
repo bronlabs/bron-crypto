@@ -1,30 +1,26 @@
 package algebra
 
-import (
-	"github.com/cronokirby/saferith"
-)
-
 // ******************** BiMagma
 
-type BiMagma[E BiMagmaElement[E]] interface {
+type DoubleMagma[E DoubleMagmaElement[E]] interface {
 	Magma[E]
 	OtherOperator() BinaryOperator[E]
 }
-type BiMagmaElement[E MagmaElement[E]] interface {
+type DoubleMagmaElement[E MagmaElement[E]] interface {
 	MagmaElement[E]
 	OtherOp(E) E
 }
 
 // ******************** HemiRing
 type HemiRing[E HemiRingElement[E]] interface {
-	BiMagma[E]
+	DoubleMagma[E]
 	AdditiveSemiGroup[E]
 	MultiplicativeSemiGroup[E]
 	Characteristic() Cardinal
 }
 
 type HemiRingElement[E SemiGroupElement[E]] interface {
-	BiMagmaElement[E]
+	DoubleMagmaElement[E]
 	AdditiveSemiGroupElement[E]
 	MultiplicativeSemiGroupElement[E]
 }
@@ -41,19 +37,6 @@ type SemiRingElement[RE HemiRingElement[RE]] interface {
 	MultiplicativeMonoidElement[RE]
 }
 
-// ******************** SemiDomain
-
-type EuclideanSemiDomain[RE EuclideanSemiDomainElement[RE]] interface {
-	SemiRing[RE]
-	UniqueFactorizationMonoid[RE]
-}
-
-type EuclideanSemiDomainElement[RE SemiRingElement[RE]] interface {
-	SemiRingElement[RE]
-	UniqueFactorizationMonoidElement[RE]
-	EuclideanDiv(rhs RE) (quot, rem RE, err error)
-}
-
 // ******************** Rig
 
 type Rig[RE RigElement[RE]] interface {
@@ -64,6 +47,19 @@ type Rig[RE RigElement[RE]] interface {
 type RigElement[RE SemiRingElement[RE]] interface {
 	SemiRingElement[RE]
 	AdditiveMonoidElement[RE]
+}
+
+// ******************** SemiDomain
+
+type EuclideanSemiDomain[RE EuclideanSemiDomainElement[RE]] interface {
+	Rig[RE]
+	UniqueFactorizationMonoid[RE]
+}
+
+type EuclideanSemiDomainElement[RE RigElement[RE]] interface {
+	RigElement[RE]
+	UniqueFactorizationMonoidElement[RE]
+	EuclideanDiv(rhs RE) (quot, rem RE, err error)
 }
 
 // ******************** Rng
@@ -123,9 +119,7 @@ type Field[FE FieldElement[FE]] interface {
 	SubFieldIdentity(i uint) (any, error)
 }
 
-type FieldElement[FE interface {
-	EuclideanDomainElement[FE]
-}] interface {
+type FieldElement[FE EuclideanDomainElement[FE]] interface {
 	EuclideanDomainElement[FE]
 }
 
@@ -134,45 +128,6 @@ type FiniteField[FE FiniteFieldElement[FE]] interface {
 	FiniteStructure[FE]
 }
 
-type FiniteFieldElement[FE FieldElement[FE]] FieldElement[FE]
-
-// ********************** Integers
-
-type ZLike[E IntLike[E]] interface {
-	Ring[E]
-	Chain[E]
-}
-
-type IntLike[E RingElement[E]] interface {
-	RingElement[E]
-	PartiallyComparable[E]
-}
-
-type ZnLike[E UintLike[E]] interface {
-	ZLike[E]
-	FiniteStructure[E]
-
-	FromNat(*saferith.Nat) (E, error)
-}
-
-type UintLike[E IntLike[E]] interface {
-	IntLike[E]
-
-	Nat() *saferith.Nat
-}
-
-type PrimeField[E interface {
-	FiniteFieldElement[E]
-	UintLike[E]
-}] interface {
-	FiniteField[E]
-	ZnLike[E]
-}
-
-type PrimeFieldElement[E interface {
-	FiniteFieldElement[E]
-	UintLike[E]
-}] interface {
-	FiniteFieldElement[E]
-	UintLike[E]
+type FiniteFieldElement[FE FieldElement[FE]] interface {
+	FieldElement[FE]
 }

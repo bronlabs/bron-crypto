@@ -3,7 +3,6 @@ package types
 import (
 	"encoding"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 )
 
@@ -16,6 +15,7 @@ type TransparentKey[V any] interface {
 	OpaqueKey
 	Transparent[V]
 }
+
 type Keychain[Name ~string, K TransparentKey[V], V any] ds.Map[Name, K]
 
 // type SymmetricKey[K any, T ~string] interface {
@@ -24,9 +24,8 @@ type Keychain[Name ~string, K TransparentKey[V], V any] ds.Map[Name, K]
 // 	Size() int
 // }
 
-type OpaquePrivateKey[SK SchemeElement[T], PK OpaquePublicKey[PK, T], T ~string] interface {
+type PrivateKey[SK any, PK PublicKey[PK]] interface {
 	OpaqueKey
-	SchemeElement[T]
 	ds.Clonable[SK]
 	ds.Equatable[SK]
 	Public() PK
@@ -34,23 +33,12 @@ type OpaquePrivateKey[SK SchemeElement[T], PK OpaquePublicKey[PK, T], T ~string]
 	encoding.BinaryUnmarshaler
 }
 
-type TransparentPrivateKey[SK OpaquePrivateKey[SK, PK, T], SKV algebra.Element[SKV], PK OpaquePublicKey[PK, T], T ~string] interface {
-	OpaquePrivateKey[SK, PK, T]
-	TransparentKey[SKV]
-}
-
-type OpaquePublicKey[PK SchemeElement[T], T ~string] interface {
+type PublicKey[PK any] interface {
 	OpaqueKey
-	SchemeElement[T]
 	ds.Clonable[PK]
 	ds.Equatable[PK]
 	encoding.BinaryMarshaler
 	encoding.BinaryUnmarshaler
-}
-
-type TransparentPublicKey[PK OpaquePublicKey[PK, T], PKV algebra.Element[PKV], T ~string] interface {
-	OpaquePublicKey[PK, T]
-	TransparentKey[PKV]
 }
 
 // type DerivablePrivateKey[SK PrivateKey[SK, PK, T], PK PublicKey[PK, T], T ~string, PATH any] interface {

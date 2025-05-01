@@ -11,10 +11,6 @@ type Scheme[T ~string] interface {
 	Type() T
 }
 
-type SchemeElement[T ~string] interface {
-	Scheme() Scheme[T]
-}
-
 type Participant[T ~string] interface {
 	Scheme() Scheme[T]
 }

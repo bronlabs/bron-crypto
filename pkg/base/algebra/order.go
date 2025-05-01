@@ -3,24 +3,27 @@ package algebra
 import "github.com/bronlabs/bron-crypto/pkg/base/errs"
 
 type PartialOrdering int
-type Ordering uint
+type Ordering int
 
 const (
-	Incomparable PartialOrdering = -1
-	LessThan     PartialOrdering = 0
-	Equal        PartialOrdering = 1
-	GreaterThan  PartialOrdering = 2
+	Incomparable              PartialOrdering = -2
+	LessThanOrIncomparable    PartialOrdering = -1
+	LessThan                  Ordering        = -1
+	EqualOrIncomparable       PartialOrdering = 0
+	Equal                     Ordering        = 0
+	GreaterThanOrIncomparable PartialOrdering = 1
+	GreaterThan               Ordering        = 1
 )
 
 func orderString(o int) string {
 	switch o {
-	case -1:
+	case -2:
 		return "Incomparable"
 	case 0:
 		return "Equal"
-	case 1:
+	case -1:
 		return "LessThan"
-	case 2:
+	case 1:
 		return "GreaterThan"
 	default:
 		return "Invalid"
@@ -35,44 +38,41 @@ func (o Ordering) String() string {
 	return orderString(int(o))
 }
 
-type PartiallyComparable[E any] interface {
+type Comparable[E any] interface {
 	IsLessThanOrEqual(rhs E) bool
 }
 
-func PartialCompare[E PartiallyComparable[E]](x, y E) PartialOrdering {
+type internalPartiallyComparable[E any] interface {
+	PartialCompare(rhs E) PartialOrdering
+}
+
+type internalComparable[E any] interface {
+	Compare(rhs E) Ordering
+}
+
+func PartialCompare[E Comparable[E]](x, y E) PartialOrdering {
+	if xx, okx := any(x).(internalPartiallyComparable[E]); okx {
+		return xx.PartialCompare(y)
+	}
 	if x.IsLessThanOrEqual(y) && y.IsLessThanOrEqual(x) {
-		return Equal
+		return EqualOrIncomparable
 	}
 	if x.IsLessThanOrEqual(y) {
-		return LessThan
+		return LessThanOrIncomparable
 	}
 	if y.IsLessThanOrEqual(x) {
-		return GreaterThan
+		return GreaterThanOrIncomparable
 	}
 	return Incomparable
 }
 
-func Compare[E PartiallyComparable[E]](x, y E) Ordering {
+func Compare[E Comparable[E]](x, y E) Ordering {
+	if xx, okx := any(x).(internalComparable[E]); okx {
+		return xx.Compare(y)
+	}
 	out := PartialCompare(x, y)
 	if out == Incomparable {
 		panic(errs.NewValue("Incomparable"))
 	}
 	return Ordering(out)
-}
-
-type Poset[E PartiallyComparableElement[E]] interface {
-	Structure[E]
-	PartialCompare(x, y E) PartialOrdering
-}
-
-type Chain[E PartiallyComparableElement[E]] interface {
-	Poset[E]
-	Compare(x, y E) Ordering
-}
-type PartiallyComparableElement[E interface {
-	Element[E]
-	PartiallyComparable[E]
-}] interface {
-	Element[E]
-	PartiallyComparable[E]
 }

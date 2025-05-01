@@ -37,15 +37,15 @@ type MultiplicativeSemiGroupElement[E SemiGroupElement[E]] interface {
 
 type CyclicSemiGroup[E CyclicSemiGroupElement[E]] interface {
 	SemiGroup[E]
-	NPointedSet[E]
+	// NPointedSet[E]
 	Generator() E
 }
 
 type CyclicSemiGroupElement[E SemiGroupElement[E]] interface {
 	SemiGroupElement[E]
-	NPointedSetElement[E]
+	// NPointedSetElement[E]
 	IsDesignatedGenerator() bool
-	CanBeGenerator() bool
+	// CanBeGenerator() bool
 }
 
 // ******************** Monoid
