@@ -11,7 +11,7 @@ import (
 type protocol[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] struct {
 	curve        C
 	hash         func() hash.Hash
-	participants ds.Set[IdentityKey[P, F, S]]
+	participants ds.Set[IdentityKey]
 	threshold    uint
 }
 
@@ -20,7 +20,7 @@ func (p *protocol[C, P, F, S]) Curve() C {
 }
 
 func (p *protocol[C, P, F, S]) Clone() Protocol[C, P, F, S] {
-	var clonedParticipants ds.Set[IdentityKey[P, F, S]]
+	var clonedParticipants ds.Set[IdentityKey]
 	if p.participants != nil {
 		clonedParticipants = p.participants.Clone()
 	}
@@ -37,7 +37,7 @@ func (p *protocol[C, P, F, S]) Hash() func() hash.Hash {
 	return p.hash
 }
 
-func (p *protocol[C, P, F, S]) Participants() ds.Set[IdentityKey[P, F, S]] {
+func (p *protocol[C, P, F, S]) Participants() ds.Set[IdentityKey] {
 	return p.participants
 }
 

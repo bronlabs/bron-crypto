@@ -15,9 +15,7 @@ import (
 )
 
 func Deal[
-C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S],
-IC curves.Curve[IP, IF, IS], IP curves.Point[P, F, S], IF fields.FiniteFieldElement[F], IS fields.PrimeFieldElement[S],
-](protocol types.ThresholdProtocol[C, P, F, S], secret S, prng io.Reader) (sks datastructures.Map[types.IdentityKey[P, F, S], *tsignatures.SigningKeyShare[C, P, F, S]], ppk datastructures.Map[types.IdentityKey[P, F, S], *tsignatures.PartialPublicKeys[C, P, F, S]], err error) {
+	C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](protocol types.ThresholdProtocol[C, P, F, S], secret S, prng io.Reader) (sks datastructures.Map[types.IdentityKey, *tsignatures.SigningKeyShare[C, P, F, S]], ppk datastructures.Map[types.IdentityKey, *tsignatures.PartialPublicKeys[C, P, F, S]], err error) {
 	//if secret == nil || prng == nil {
 	//	return nil, nil, errs.NewValidation("secret or prng is nil")
 	//}
@@ -40,7 +38,7 @@ IC curves.Curve[IP, IF, IS], IP curves.Point[P, F, S], IF fields.FiniteFieldElem
 		publicShares.Put(sharingId, polynomials.EvalInExponent(verification, types.SharingIDToScalar(sharingId, protocol.Curve().ScalarField())))
 	}
 
-	sks = hashmap.NewHashableHashMap[types.IdentityKey[P, F, S], *tsignatures.SigningKeyShare[C, P, F, S]]()
+	sks = hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.SigningKeyShare[C, P, F, S]]()
 	for sharingId, identityKey := range sharingConfig.Iter() {
 		sks.Put(identityKey, &tsignatures.SigningKeyShare[C, P, F, S]{
 			Share:     shares[sharingId].Value,
@@ -48,7 +46,7 @@ IC curves.Curve[IP, IF, IS], IP curves.Point[P, F, S], IF fields.FiniteFieldElem
 		})
 	}
 
-	ppk = hashmap.NewHashableHashMap[types.IdentityKey[P, F, S], *tsignatures.PartialPublicKeys[C, P, F, S]]()
+	ppk = hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys[C, P, F, S]]()
 	for _, identityKey := range sharingConfig.Iter() {
 		ppk.Put(identityKey, &tsignatures.PartialPublicKeys[C, P, F, S]{
 			PublicKey:               verification[0],

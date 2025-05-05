@@ -46,7 +46,7 @@ type SigningKeyShare[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.
 //	return nil
 //}
 
-func (s *SigningKeyShare[C, P, F, S]) ToAdditive(myIdentityKey types.IdentityKey[P, F, S], quorum ds.Set[types.IdentityKey[P, F, S]], protocol types.ThresholdProtocol[C, P, F, S]) (S, error) {
+func (s *SigningKeyShare[C, P, F, S]) ToAdditive(myIdentityKey types.IdentityKey, quorum ds.Set[types.IdentityKey], protocol types.ThresholdProtocol[C, P, F, S]) (S, error) {
 	var nilS S
 
 	if !quorum.IsSubSet(protocol.Participants()) {
@@ -116,9 +116,9 @@ type PartialPublicKeys[C curves.Curve[P, F, S], P curves.Point[P, F, S], F field
 	_ ds.Incomparable
 }
 
-func (p *PartialPublicKeys[C, P, F, S]) IdentityBasedMapping(participants ds.Set[types.IdentityKey[P, F, S]]) ds.Map[types.IdentityKey[P, F, S], P] {
+func (p *PartialPublicKeys[C, P, F, S]) IdentityBasedMapping(participants ds.Set[types.IdentityKey]) ds.Map[types.IdentityKey, P] {
 	sharingConfig := types.DeriveSharingConfig(participants)
-	identityBasedMap := hashmap.NewHashableHashMap[types.IdentityKey[P, F, S], P]()
+	identityBasedMap := hashmap.NewHashableHashMap[types.IdentityKey, P]()
 	for sharingId, partialPublicKey := range p.Shares.Iter() {
 		identityKey, exists := sharingConfig.Get(sharingId)
 		if !exists {
@@ -129,7 +129,7 @@ func (p *PartialPublicKeys[C, P, F, S]) IdentityBasedMapping(participants ds.Set
 	return identityBasedMap
 }
 
-func (p *PartialPublicKeys[C, P, F, S]) ToAdditive(protocol types.ThresholdSignatureProtocol[C, P, F, S], signers ds.Set[types.IdentityKey[P, F, S]]) (ds.Map[types.IdentityKey[P, F, S], P], error) {
+func (p *PartialPublicKeys[C, P, F, S]) ToAdditive(protocol types.ThresholdSignatureProtocol[C, P, F, S], signers ds.Set[types.IdentityKey]) (ds.Map[types.IdentityKey, P], error) {
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	signersSharingIds := make([]types.SharingID, signers.Size())
 	for i, signer := range signers.List() {
@@ -140,7 +140,7 @@ func (p *PartialPublicKeys[C, P, F, S]) ToAdditive(protocol types.ThresholdSigna
 		signersSharingIds[i] = sharingId
 	}
 
-	publicShares := hashmap.NewHashableHashMap[types.IdentityKey[P, F, S], P]()
+	publicShares := hashmap.NewHashableHashMap[types.IdentityKey, P]()
 	for signer := range signers.Iter() {
 		sharingId, exists := sharingConfig.Reverse().Get(signer)
 		if !exists {

@@ -1,62 +1,60 @@
 package types
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
 	"sort"
 
 	"github.com/cronokirby/saferith"
 	"golang.org/x/exp/constraints"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bimap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 )
 
-type IdentityKey[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] interface {
-	ds.Hashable[IdentityKey[P, F, S]]
+type IdentityKey interface {
+	ds.Hashable[IdentityKey]
 
 	String() string
-	PublicKey() P
+	PublicKeyBytes() []byte
 
 	Verify(signature []byte, message []byte) error
 
 	Encrypt(plaintext []byte, opts any) ([]byte, error)
-	EncryptFrom(sender AuthKey[P, F, S], plaintext []byte, opts any) ([]byte, error)
+	EncryptFrom(sender AuthKey, plaintext []byte, opts any) ([]byte, error)
 }
 
-type AuthKey[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] interface {
-	IdentityKey[P, F, S]
+type AuthKey interface {
+	IdentityKey
 	Sign(message []byte) ([]byte, error)
 
 	Decrypt(ciphertext []byte) ([]byte, error)
-	DecryptFrom(sender IdentityKey[P, F, S], ciphertext []byte) ([]byte, error)
+	DecryptFrom(sender IdentityKey, ciphertext []byte) ([]byte, error)
 }
 
-type ByPublicKey[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] []IdentityKey[P, F, S]
+type ByPublicKey []IdentityKey
 
-func (k ByPublicKey[P, F, S]) Len() int {
+func (k ByPublicKey) Len() int {
 	return len(k)
 }
 
-func (k ByPublicKey[P, F, S]) Less(i, j int) bool {
-	lhs := new(saferith.Nat).SetBytes(k[i].PublicKey().ToAffineCompressed())
-	rhs := new(saferith.Nat).SetBytes(k[j].PublicKey().ToAffineCompressed())
+func (k ByPublicKey) Less(i, j int) bool {
+	lhs := new(saferith.Nat).SetBytes(k[i].PublicKeyBytes())
+	rhs := new(saferith.Nat).SetBytes(k[j].PublicKeyBytes())
 	_, _, less := lhs.Cmp(rhs)
 	return less != 0
 }
 
-func (k ByPublicKey[P, F, S]) Swap(i, j int) {
+func (k ByPublicKey) Swap(i, j int) {
 	k[i], k[j] = k[j], k[i]
 }
 
-type AbstractIdentitySpace[Index constraints.Integer, P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] ds.BiMap[Index, IdentityKey[P, F, S]]
+type AbstractIdentitySpace[Index constraints.Integer] ds.BiMap[Index, IdentityKey]
 
-func NewAbstractIdentitySpace[Index constraints.Integer, P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](identityKeys ds.Set[IdentityKey[P, F, S]]) AbstractIdentitySpace[Index, P, F, S] {
-	sortedIdentityKeys := ByPublicKey[P, F, S](identityKeys.List())
+func NewAbstractIdentitySpace[Index constraints.Integer](identityKeys ds.Set[IdentityKey]) AbstractIdentitySpace[Index] {
+	sortedIdentityKeys := ByPublicKey(identityKeys.List())
 	sort.Sort(sortedIdentityKeys)
-	idToKey := hashmap.NewComparableHashMap[Index, IdentityKey[P, F, S]]()
-	keyToId := hashmap.NewHashableHashMap[IdentityKey[P, F, S], Index]()
+	idToKey := hashmap.NewComparableHashMap[Index, IdentityKey]()
+	keyToId := hashmap.NewHashableHashMap[IdentityKey, Index]()
 	indexedIdentities, _ := bimap.NewBiMap(idToKey, keyToId)
 
 	for indexMinusOne, identityKey := range sortedIdentityKeys {
@@ -66,8 +64,8 @@ func NewAbstractIdentitySpace[Index constraints.Integer, P curves.Point[P, F, S]
 	return indexedIdentities
 }
 
-type IdentitySpace[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] AbstractIdentitySpace[uint, P, F, S]
+type IdentitySpace AbstractIdentitySpace[uint]
 
-func NewIdentitySpace[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](identityKeys ds.Set[IdentityKey[P, F, S]]) IdentitySpace[P, F, S] {
-	return NewAbstractIdentitySpace[uint, P, F, S](identityKeys)
+func NewIdentitySpace(identityKeys ds.Set[IdentityKey]) IdentitySpace {
+	return NewAbstractIdentitySpace[uint](identityKeys)
 }

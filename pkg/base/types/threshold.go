@@ -16,7 +16,7 @@ func SharingIDToScalar[S fields.PrimeFieldElement[S]](id SharingID, scalarField 
 	return s
 }
 
-type SharingConfig[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] AbstractIdentitySpace[SharingID, P, F, S]
+type SharingConfig AbstractIdentitySpace[SharingID]
 
 type ThresholdParticipant[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] interface {
 	Participant[P, F, S]
@@ -29,7 +29,7 @@ type ThresholdProtocol[C curves.Curve[P, F, S], P curves.Point[P, F, S], F field
 	TotalParties() uint
 }
 
-func NewThresholdProtocol[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](curve C, participants ds.Set[IdentityKey[P, F, S]], threshold uint) (ThresholdProtocol[C, P, F, S], error) {
+func NewThresholdProtocol[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](curve C, participants ds.Set[IdentityKey], threshold uint) (ThresholdProtocol[C, P, F, S], error) {
 	protocol := &protocol[C, P, F, S]{
 		curve:        curve,
 		participants: participants,
@@ -39,6 +39,6 @@ func NewThresholdProtocol[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fi
 	return protocol, nil
 }
 
-func DeriveSharingConfig[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](identityKeys ds.Set[IdentityKey[P, F, S]]) SharingConfig[P, F, S] {
-	return NewAbstractIdentitySpace[SharingID, P, F, S](identityKeys)
+func DeriveSharingConfig(identityKeys ds.Set[IdentityKey]) SharingConfig {
+	return NewAbstractIdentitySpace[SharingID](identityKeys)
 }

@@ -8,7 +8,7 @@ import (
 
 type ThresholdSignatureParticipant[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] interface {
 	ThresholdParticipant[P, F, S]
-	Quorum() ds.Set[IdentityKey[P, F, S]]
+	Quorum() ds.Set[IdentityKey]
 }
 
 type ThresholdSignatureProtocol[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] interface {
@@ -16,7 +16,7 @@ type ThresholdSignatureProtocol[C curves.Curve[P, F, S], P curves.Point[P, F, S]
 	SigningSuite() SigningSuite[C, P, F, S]
 }
 
-func NewThresholdSignatureProtocol[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](signingSuite SigningSuite[C, P, F, S], participants ds.Set[IdentityKey[P, F, S]], threshold uint) (ThresholdSignatureProtocol[C, P, F, S], error) {
+func NewThresholdSignatureProtocol[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](signingSuite SigningSuite[C, P, F, S], participants ds.Set[IdentityKey], threshold uint) (ThresholdSignatureProtocol[C, P, F, S], error) {
 	protocol := &protocol[C, P, F, S]{
 		curve:        signingSuite.Curve(),
 		hash:         signingSuite.Hash(),

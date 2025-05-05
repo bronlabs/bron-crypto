@@ -4,42 +4,39 @@ import (
 	"crypto/ed25519"
 	crand "crypto/rand"
 	"crypto/subtle"
-	"encoding/binary"
-	"fmt"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
+	"encoding/hex"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	"github.com/stretchr/testify/require"
+	"hash/fnv"
 	"sort"
 	"testing"
 )
 
-var _ types.AuthKey[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar] = (*TestDeterministicAuthKey)(nil)
-var _ types.IdentityKey[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar] = (*TestDeterministicAuthKey)(nil)
+var _ types.AuthKey = (*TestDeterministicAuthKey)(nil)
+var _ types.IdentityKey = (*TestDeterministicAuthKey)(nil)
 
 type TestDeterministicAuthKey struct {
 	privateKey ed25519.PrivateKey
 	publicKey  ed25519.PublicKey
 }
 
-func (k *TestDeterministicAuthKey) PublicKey() *edwards25519.Point {
-	result, err := edwards25519.NewCurve().FromAffineCompressed(k.publicKey)
-	if err != nil {
-		panic(err)
-	}
-	return result
+func (k *TestDeterministicAuthKey) PublicKeyBytes() []byte {
+	return k.publicKey
 }
 
 func (k *TestDeterministicAuthKey) HashCode() uint64 {
-	return binary.BigEndian.Uint64(k.PublicKey().ToAffineCompressed())
+	h := fnv.New64a()
+	_, _ = h.Write(k.publicKey)
+	return h.Sum64()
 }
 
-func (k *TestDeterministicAuthKey) Equal(rhs types.IdentityKey[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar]) bool {
-	return subtle.ConstantTimeCompare(k.PublicKey().ToAffineCompressed(), rhs.PublicKey().ToAffineCompressed()) == 1
+func (k *TestDeterministicAuthKey) Equal(rhs types.IdentityKey) bool {
+	return subtle.ConstantTimeCompare(k.PublicKeyBytes(), rhs.PublicKeyBytes()) != 0
 }
 
 func (k *TestDeterministicAuthKey) String() string {
-	return fmt.Sprintf("%x", k.PublicKey().ToAffineCompressed())
+	return hex.EncodeToString(k.publicKey)
 }
 
 func (k *TestDeterministicAuthKey) Sign(message []byte) ([]byte, error) {
@@ -51,7 +48,7 @@ func (k *TestDeterministicAuthKey) Sign(message []byte) ([]byte, error) {
 }
 
 func (k *TestDeterministicAuthKey) Verify(signature, message []byte) error {
-	if ok := ed25519.Verify(k.PublicKey().ToAffineCompressed(), message, signature); !ok {
+	if ok := ed25519.Verify(k.publicKey, message, signature); !ok {
 		return errs.NewFailed("invalid signature")
 	}
 	return nil
@@ -61,7 +58,7 @@ func (k *TestDeterministicAuthKey) Encrypt(plaintext []byte, opts any) ([]byte, 
 	panic("not implemented")
 }
 
-func (k *TestDeterministicAuthKey) EncryptFrom(sender types.AuthKey[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar], plaintext []byte, opts any) ([]byte, error) {
+func (k *TestDeterministicAuthKey) EncryptFrom(sender types.AuthKey, plaintext []byte, opts any) ([]byte, error) {
 	panic("not implemented")
 }
 
@@ -69,11 +66,11 @@ func (k *TestDeterministicAuthKey) Decrypt(ciphertext []byte) ([]byte, error) {
 	panic("not implemented")
 }
 
-func (k *TestDeterministicAuthKey) DecryptFrom(sender types.IdentityKey[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar], ciphertext []byte) ([]byte, error) {
+func (k *TestDeterministicAuthKey) DecryptFrom(sender types.IdentityKey, ciphertext []byte) ([]byte, error) {
 	panic("not implemented")
 }
 
-func MakeTestIdentity(tb testing.TB) types.IdentityKey[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar] {
+func MakeTestIdentity(tb testing.TB) types.IdentityKey {
 	tb.Helper()
 
 	pk, sk, err := ed25519.GenerateKey(crand.Reader)
@@ -85,19 +82,19 @@ func MakeTestIdentity(tb testing.TB) types.IdentityKey[*edwards25519.Point, *edw
 	}
 }
 
-func MakeTestIdentities(tb testing.TB, n int) []types.IdentityKey[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar] {
+func MakeTestIdentities(tb testing.TB, n uint) []types.IdentityKey {
 	tb.Helper()
 
 	if n <= 0 {
 		tb.Fail()
 	}
 
-	identities := make([]types.IdentityKey[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar], n)
+	identities := make([]types.IdentityKey, n)
 	for i := 0; i < len(identities); i++ {
 		identities[i] = MakeTestIdentity(tb)
 	}
 
-	sortedIdentities := types.ByPublicKey[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar](identities)
+	sortedIdentities := types.ByPublicKey(identities)
 	sort.Sort(sortedIdentities)
 	return identities
 }

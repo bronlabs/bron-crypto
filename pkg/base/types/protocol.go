@@ -8,16 +8,16 @@ import (
 )
 
 type Participant[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] interface {
-	IdentityKey() IdentityKey[P, F, S]
+	IdentityKey() IdentityKey
 }
 
 type Protocol[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] interface {
 	Curve() C // Most supported protocols are algebraic.
-	Participants() ds.Set[IdentityKey[P, F, S]]
+	Participants() ds.Set[IdentityKey]
 	Clone() Protocol[C, P, F, S]
 }
 
-func NewProtocol[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](curve C, participants ds.Set[IdentityKey[P, F, S]]) (Protocol[C, P, F, S], error) {
+func NewProtocol[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](curve C, participants ds.Set[IdentityKey]) (Protocol[C, P, F, S], error) {
 	protocol := &protocol[C, P, F, S]{
 		curve:        curve,
 		participants: participants,
