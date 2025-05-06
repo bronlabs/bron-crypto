@@ -18,11 +18,11 @@ var compilers = map[compiler.Name]bool{
 	//randfischlin.Name: true,
 }
 
-//func RegisterNICompilersForGob() {
-//	fiatShamir.RegisterForGob()
-//	fischlin.RegisterForGob()
-//	randfischlin.RegisterForGob()
-//}
+func RegisterNICompilersForGob() {
+	fiatShamir.RegisterForGob()
+	//fischlin.RegisterForGob()
+	//randfischlin.RegisterForGob()
+}
 
 func MakeNonInteractive[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](compilerName compiler.Name, protocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NICompiler[X, W], error) {
 	if s := protocol.SoundnessError(); s < base.ComputationalSecurity {

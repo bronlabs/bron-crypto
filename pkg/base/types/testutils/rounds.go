@@ -43,7 +43,7 @@ func MapBroadcastO2I[P types.Participant, B any](
 				continue
 			}
 			msg := broadcastOutputs[sender]
-			broadcastInputs[receiver].Put(participants[sender].IdentityKey(), msg) // TODO: add gob roundtrip
+			broadcastInputs[receiver].Put(participants[sender].IdentityKey(), GobRoundTrip(tb, msg))
 		}
 	}
 	return broadcastInputs
@@ -70,7 +70,7 @@ func MapUnicastO2I[P types.Participant, U any,
 			if !exists {
 				continue
 			}
-			p2pInputs[receiver].Put(participants[sender].IdentityKey(), msg) // TODO: add gob roundtrip
+			p2pInputs[receiver].Put(participants[sender].IdentityKey(), GobRoundTrip(tb, msg)) // TODO: add gob roundtrip
 		}
 	}
 	return p2pInputs
