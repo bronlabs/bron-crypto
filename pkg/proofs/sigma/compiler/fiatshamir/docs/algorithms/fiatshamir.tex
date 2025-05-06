@@ -1,0 +1,24 @@
+
+\begin{scheme}[ht]
+    \caption{$\quad$\fn{Fiat\mhyphen Shamir}(\fndef{FS})} \label{alg:fiatshamir}
+    \begin{algorithmic}[1]
+    \begin{alginfo}
+        A transformation from a public-coin Interactive-Proof (IP) $\fn{IP}_\text{R}$ into a Non-Interactive proof system following \cite{fiatShamirTransform}, parametrized by a hash function $\fn{H}$.
+    \end{alginfo} 
+    
+    \Players {A prover $\mathcal{P}$ and a  verifier $\mathcal{V}$.}
+
+    \vspace{-8pt}
+    \AlgRound{$\mathcal{P}$}{\fndef[fs]{Prove}}{$x, w$}{$\pi$}
+        \State Run all steps of the prover in $\assign{\pi}{\fn{IP}_\text{R}.\fn{Prove}(x, w)}$, replacing\footnotemark the verifier's challenges with $\assign{e_i}{\fn{H}(x \concat m_0  \dots\concat m_i)}$ where $m_i$ is $\mathcal{P}$ message at step $i$.
+        \Statex \Return $\pi$
+        
+        
+    \vspace{-8pt}
+    \setalglineno{1}
+    \AlgRound{$\mathcal{V}$}{\fndef[fs]{Verify}}{$x , \pi$}{\textit{valid}}        
+        \State Run all steps of the verifier in $\fn{IP}_\text{R}.\fn{Verify}(x, \pi)$, replacing the verifier's challenges with $\assign{e_i}{\fn{H}(x \concat m_0  \dots\concat m_i)}$ where $m_i$ is $\mathcal{P}$ message at step $i$.
+        
+    \end{algorithmic}
+\end{scheme}
+\footnotetext{In practice we employ a transcript \fnref{T} (Section \ref{sec:mpc_transcript}), replacing message concatenation with $\fnref{T}.\fnref[t]{Append}$ and the final hashing with the hash-chaining of $\fnref{T}.\fnref[t]{Extract}$.}
