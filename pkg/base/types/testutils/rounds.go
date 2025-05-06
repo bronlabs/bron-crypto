@@ -75,11 +75,3 @@ func MapUnicastO2I[P types.Participant, U any,
 	}
 	return p2pInputs
 }
-
-//func GobRoundTripMessage[P types.Protocol, M network.Message[P]](t require.TestingT, message M) M {
-//	if reflect.ValueOf(message).IsNil() {
-//		return message
-//	}
-//
-//	return GobRoundTrip(t, message)
-//}

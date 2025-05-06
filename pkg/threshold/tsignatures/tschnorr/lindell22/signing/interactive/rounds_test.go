@@ -72,7 +72,7 @@ func Test_SanityCheck(t *testing.T) {
 	ok := nativeEddsa.Verify(publicKey.ToAffineCompressed(), message, nativeSignature)
 	require.True(t, ok)
 
-	// verify krypton
+	// verify bron
 	bronSignature := schnorr.NewSignature(vanillaSchnorr.NewEdDsaCompatibleVariant[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar](), nil, bigR, bigS)
 	bronPublicKey := &vanillaSchnorr.PublicKey[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar]{
 		A: publicKey,
