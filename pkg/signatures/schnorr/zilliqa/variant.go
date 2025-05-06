@@ -1,12 +1,10 @@
 package zilliqa
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"hash"
 	"slices"
-
-	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
 )
@@ -17,7 +15,7 @@ var (
 
 type ZilliqaVariant struct{} //nolint:revive // keep consistent naming
 
-func NewZilliqaVariant[P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]]() *ZilliqaVariant {
+func NewZilliqaVariant() *ZilliqaVariant {
 	return zilliqaVariantInstance
 }
 

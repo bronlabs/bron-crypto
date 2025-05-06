@@ -4,7 +4,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/simple"
 	"strings"
+	"testing"
 )
 
 type HexBytes []byte
@@ -56,4 +60,13 @@ func (h *HexBytesArray) UnmarshalJSON(b []byte) error {
 	}
 	*h = decoded
 	return nil
+}
+
+func MakeTranscripts(_ testing.TB, dst string, identities []types.IdentityKey) []transcripts.Transcript {
+	tape := simple.NewTranscript(dst)
+	tapes := make([]transcripts.Transcript, len(identities))
+	for i := range identities {
+		tapes[i] = tape.Clone()
+	}
+	return tapes
 }

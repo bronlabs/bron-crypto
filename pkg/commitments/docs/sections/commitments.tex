@@ -1,0 +1,23 @@
+%------------------------------------------------------------------------------%
+\subsubsection{Commitments}\label{sec:commitments}
+%------------------------------------------------------------------------------%
+A commitment scheme is a cryptographic primitive that allows a sender party to commit to a chosen value / statement while keeping it hidden to others, with the ability to reveal the committed value to all the receivers later. Interactions in a commitment scheme follow two steps, abstracted in Functionality \ref{alg:f_commitment}.
+
+\inputFunctionality{commitments}{commitments.tex}
+
+Commitment schemes possess two main properties: \textit{hiding}, as the committed value $m$ is kept secret from the receivers until the sender reveals it, and \textit{binding}, as the sender cannot change the value $m$ after sending the commit $c$. Commitment schemes are used in many cryptographic protocols, including zero-knowledge proofs, verifiable secret sharing, and secure multiparty computation. They can be instantiated from multiple assumptions (e.g., a CSPRNG, a one-way permutation, discrete log assumptions\dots) and they accept an optional input $sid$ to achieve UC-security. We adopt two commitment schemes:
+
+\begin{enumerate}
+    \item A folkloric \textit{hash-based commitment scheme} detailed in Scheme~\ref{alg:commitment}.
+    
+    \inputAlgorithm{commitments/hash}{hashcommitments.tex}
+
+    \item The \textit{discrete-log-based commitment scheme} from \cite{pedersen1991vss} over a group $\G$, detailed in Scheme~\ref{alg:pedersen_commitment}.
+    
+    \inputAlgorithm{commitments/pedersen}{pedersencommitments.tex}
+
+\end{enumerate}
+
+Both the broadcasting of $c$ at the end of the $\fn{Commit}$ step and the sending of $m$ prior to $\fn{Open}$ are implicit in our descriptions, as we delegate them to protocols using the schemes.
+
+

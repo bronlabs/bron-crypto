@@ -6,8 +6,8 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 )
 
-type ThresholdSignatureParticipant[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] interface {
-	ThresholdParticipant[P, F, S]
+type ThresholdSignatureParticipant interface {
+	ThresholdParticipant
 	Quorum() ds.Set[IdentityKey]
 }
 

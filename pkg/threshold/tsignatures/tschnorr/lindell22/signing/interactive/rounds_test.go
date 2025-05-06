@@ -5,29 +5,32 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	hashing_bip340 "github.com/bronlabs/bron-crypto/pkg/hashing/bip340"
+	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/bip340"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/mina"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/zilliqa"
+	"golang.org/x/crypto/blake2b"
+	"hash"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	ttu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/hashing"
-	hashing_bip340 "github.com/bronlabs/bron-crypto/pkg/hashing/bip340"
-	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/bip340"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/mina"
 	vanillaSchnorr "github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/vanilla"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/zilliqa"
-	gennaroTu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/lindell22/signing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/lindell22/signing/interactive/testutils"
@@ -38,8 +41,6 @@ func Test_SanityCheck(t *testing.T) {
 
 	hashFunc := sha512.New
 	curve := edwards25519.NewCurve()
-	suite, err := ttu.MakeSigningSuite(curve, hashFunc)
-	require.NoError(t, err)
 	prng := crand.Reader
 
 	message := []byte("Hello World!")
@@ -50,129 +51,182 @@ func Test_SanityCheck(t *testing.T) {
 	require.NoError(t, err)
 
 	schnorrPrivateKeyBytes := dHashed[:32]
-	schnorrPrivateKey, err := curve.Scalar().SetBytesWide(schnorrPrivateKeyBytes)
+	schnorrPrivateKey, err := curve.ScalarField().FromWideBytes(schnorrPrivateKeyBytes)
 	require.NoError(t, err)
-	publicKey := curve.ScalarBaseMult(schnorrPrivateKey)
+	publicKey := curve.Generator().ScalarMul(schnorrPrivateKey)
 
 	nonce, err := curve.ScalarField().Random(prng)
 	require.NoError(t, err)
-	bigR := curve.ScalarBaseMult(nonce)
+	bigR := curve.Generator().ScalarMul(nonce)
 
 	eBytes, err := hashing.Hash(hashFunc, bigR.ToAffineCompressed(), publicKey.ToAffineCompressed(), message)
 	require.NoError(t, err)
 
-	e, err := curve.Scalar().SetBytesWide(bitstring.ReverseBytes(eBytes)) // SetBytesWide expects big endian across all curves and it internally reverses it.
+	e, err := curve.ScalarField().FromWideBytes(sliceutils.Reversed(eBytes)) // SetBytesWide expects big endian across all curves and it internally reverses it.
 	require.NoError(t, err)
 
 	bigS := nonce.Add(e.Mul(schnorrPrivateKey))
 
 	// verify native
-	nativeSignature := append(bigR.ToAffineCompressed()[:], bitstring.ReverseBytes(bigS.Bytes())...)
+	nativeSignature := append(bigR.ToAffineCompressed()[:], sliceutils.Reverse(bigS.Bytes())...)
 	ok := nativeEddsa.Verify(publicKey.ToAffineCompressed(), message, nativeSignature)
 	require.True(t, ok)
 
 	// verify krypton
-	bronSignature := schnorr.NewSignature(vanillaSchnorr.NewEdDsaCompatibleVariant(), nil, bigR, bigS)
-	bronPublicKey := &vanillaSchnorr.PublicKey{
+	bronSignature := schnorr.NewSignature(vanillaSchnorr.NewEdDsaCompatibleVariant[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar](), nil, bigR, bigS)
+	bronPublicKey := &vanillaSchnorr.PublicKey[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar]{
 		A: publicKey,
 	}
 
-	err = vanillaSchnorr.Verify(suite, bronPublicKey, message, bronSignature)
+	err = vanillaSchnorr.Verify(hashFunc, bronPublicKey, message, bronSignature)
 	require.NoError(t, err)
+}
+
+func Test_HappyPathThresholdGeneric(t *testing.T) {
+	t.Parallel()
+
+	curve := bls12381.NewG1Curve()
+	hashFunc := func() hash.Hash { h, err := blake2b.New256(nil); require.NoError(t, err); return h }
+	testHappyPathThresholdGeneric(t, 2, 3, curve, hashFunc)
 }
 
 func Test_HappyPathThresholdEdDSA(t *testing.T) {
 	t.Parallel()
 
-	variant := vanillaSchnorr.NewEdDsaCompatibleVariant()
-	hashFunc := sha512.New
-	curve := edwards25519.NewCurve()
+	testHappyPathThresholdEdDSA(t, 2, 3)
+}
+
+func Test_HappyPathThresholdBIP340(t *testing.T) {
+	t.Parallel()
+
+	testHappyPathThresholdBIP340(t, 2, 3)
+}
+
+func Test_HappyPathThresholdMina(t *testing.T) {
+	t.Parallel()
+
+	testHappyPathThresholdMina(t, 2, 3)
+}
+
+func Test_HappyPathThresholdZilliqa(t *testing.T) {
+	t.Parallel()
+
+	testHappyPathThresholdZilliqa(t, 2, 3)
+}
+
+func testHappyPathThresholdGeneric[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](t *testing.T, th, n uint, curve C, hashFunc func() hash.Hash) {
+	t.Helper()
+
+	variant := vanillaSchnorr.NewEdDsaCompatibleVariant[P, F, S]()
 	prng := crand.Reader
 	message := []byte("Hello World!")
-	th := 2
-	n := 3
 	sid := []byte("sessionId")
 
-	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
-	require.NoError(t, err)
-
-	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
-	require.NoError(t, err)
-
-	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
-	require.NoError(t, err)
-
+	identities := ttu.MakeTestIdentities(t, n)
+	protocol := ttu.MakeThresholdSignatureProtocol(t, curve, hashFunc, th, identities...)
 	shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
 
-	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys]()
+	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys[C, P, F, S]]()
 	for identity, shard := range shards.Iter() {
 		publicKeyShares.Put(identity, shard.PublicKeyShares)
 	}
 	alicePublicKeyShares, _ := publicKeyShares.Get(identities[0])
 
-	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+	transcripts := ttu.MakeTranscripts(t, "Lindell 2022 Interactive Sign", identities)
 
 	participants := testutils.MakeParticipants(t, sid, protocol, identities[:th], shards, transcripts, variant)
 	partialSignatures := testutils.RunInteractiveSigning(t, participants, message)
 	require.NotNil(t, partialSignatures)
 
-	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature[P, F, S]]()
 	for i, partialSignature := range partialSignatures {
 		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
 	}
 
-	signature, err := signing.Aggregate(variant, protocol, message, alicePublicKeyShares, &schnorr.PublicKey{A: alicePublicKeyShares.PublicKey}, partialSignaturesMap)
+	signature, err := signing.Aggregate(variant, protocol, message, alicePublicKeyShares, &schnorr.PublicKey[P, F, S]{A: alicePublicKeyShares.PublicKey}, partialSignaturesMap)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
-	err = vanillaSchnorr.Verify(cipherSuite, &vanillaSchnorr.PublicKey{A: alicePublicKeyShares.PublicKey}, message, signature)
+	err = vanillaSchnorr.Verify(hashFunc, &vanillaSchnorr.PublicKey[P, F, S]{A: alicePublicKeyShares.PublicKey}, message, signature)
 	require.NoError(t, err)
 }
 
-func Test_HappyPathThresholdBIP340(t *testing.T) {
-	t.Parallel()
+func testHappyPathThresholdEdDSA(t *testing.T, th, n uint) {
+	t.Helper()
+
+	variant := vanillaSchnorr.NewEdDsaCompatibleVariant[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar]()
+	hashFunc := sha512.New
+	curve := edwards25519.NewCurve()
+	prng := crand.Reader
+	message := []byte("Hello World!")
+	sid := []byte("sessionId")
+
+	identities := ttu.MakeTestIdentities(t, n)
+	protocol := ttu.MakeThresholdSignatureProtocol(t, curve, hashFunc, th, identities...)
+	shards, err := trusted_dealer.Keygen(protocol, prng)
+	require.NoError(t, err)
+
+	publicKeyShares := hashmap.NewHashableHashMap[types.IdentityKey, *tsignatures.PartialPublicKeys[*edwards25519.Curve, *edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar]]()
+	for identity, shard := range shards.Iter() {
+		publicKeyShares.Put(identity, shard.PublicKeyShares)
+	}
+	alicePublicKeyShares, _ := publicKeyShares.Get(identities[0])
+
+	transcripts := ttu.MakeTranscripts(t, "Lindell 2022 Interactive Sign", identities)
+
+	participants := testutils.MakeParticipants(t, sid, protocol, identities[:th], shards, transcripts, variant)
+	partialSignatures := testutils.RunInteractiveSigning(t, participants, message)
+	require.NotNil(t, partialSignatures)
+
+	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar]]()
+	for i, partialSignature := range partialSignatures {
+		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
+	}
+
+	signature, err := signing.Aggregate(variant, protocol, message, alicePublicKeyShares, &schnorr.PublicKey[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar]{A: alicePublicKeyShares.PublicKey}, partialSignaturesMap)
+	require.NoError(t, err)
+	require.NotNil(t, signature)
+
+	err = vanillaSchnorr.Verify(hashFunc, &vanillaSchnorr.PublicKey[*edwards25519.Point, *edwards25519.BaseFieldElement, *edwards25519.Scalar]{A: alicePublicKeyShares.PublicKey}, message, signature)
+	require.NoError(t, err)
+}
+
+func testHappyPathThresholdBIP340(t *testing.T, th, n uint) {
+	t.Helper()
 
 	variant := bip340.NewTaprootVariant()
 	hashFunc := hashing_bip340.NewBip340HashChallenge
 	curve := k256.NewCurve()
 	prng := crand.Reader
 	message := []byte("Hello World!")
-	th := 2
-	n := 3
 	sid := []byte("sessionId")
 
-	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
-	require.NoError(t, err)
-
-	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
-	require.NoError(t, err)
-
-	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
-	require.NoError(t, err)
+	identities := ttu.MakeTestIdentities(t, n)
+	protocol := ttu.MakeThresholdSignatureProtocol(t, curve, hashFunc, th, identities...)
 
 	shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
 	aliceShard, exists := shards.Get(identities[0])
 	require.True(t, exists)
 	publicKey := aliceShard.SigningKeyShare.PublicKey
-	var publicKeyShares *tsignatures.PartialPublicKeys
+	var publicKeyShares *tsignatures.PartialPublicKeys[*k256.Curve, *k256.Point, *k256.BaseFieldElement, *k256.Scalar]
 	for _, shard := range shards.Iter() {
 		publicKeyShares = shard.PublicKeyShares
 		break
 	}
 
-	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+	transcripts := ttu.MakeTranscripts(t, "Lindell 2022 Interactive Sign", identities)
 	participants := testutils.MakeParticipants(t, sid, protocol, identities[:th], shards, transcripts, variant)
 	partialSignatures := testutils.RunInteractiveSigning(t, participants, message)
 	require.NotNil(t, partialSignatures)
 
-	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]]()
 	for i, partialSignature := range partialSignatures {
 		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
 	}
 
-	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey{A: publicKey}, partialSignaturesMap)
+	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]{A: publicKey}, partialSignaturesMap)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
@@ -180,165 +234,66 @@ func Test_HappyPathThresholdBIP340(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func Test_HappyPathThresholdMina(t *testing.T) {
-	t.Parallel()
+func testHappyPathThresholdMina(t *testing.T, th, n uint) {
+	t.Helper()
 
 	networkId := mina.TestNet
 	variant := mina.NewMinaVariant(networkId)
 	hashFunc := poseidon.NewLegacyHash
-	identitiesHashFunc := sha256.New
 	curve := pasta.NewPallasCurve()
 	prng := crand.Reader
 	message := new(mina.ROInput).Init()
 	message.AddString("Hello World!")
-	th := 2
-	n := 3
 	sid := []byte("sessionId")
 
-	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
-	require.NoError(t, err)
-
-	identityCipherSuite, err := ttu.MakeSigningSuite(curve, identitiesHashFunc)
-	require.NoError(t, err)
-
-	identities, err := ttu.MakeTestIdentities(identityCipherSuite, n)
-	require.NoError(t, err)
-
-	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
-	require.NoError(t, err)
-
+	identities := ttu.MakeTestIdentities(t, n)
+	protocol := ttu.MakeThresholdSignatureProtocol(t, curve, hashFunc, th, identities...)
 	shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
 	aliceShard, exists := shards.Get(identities[0])
 	require.True(t, exists)
 	publicKey := aliceShard.SigningKeyShare.PublicKey
-	var publicKeyShares *tsignatures.PartialPublicKeys
+	var publicKeyShares *tsignatures.PartialPublicKeys[*pasta.PallasCurve, *pasta.PallasPoint, *pasta.PallasBaseFieldElement, *pasta.PallasScalar]
 	for _, shard := range shards.Iter() {
 		publicKeyShares = shard.PublicKeyShares
 		break
 	}
 
-	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+	transcripts := ttu.MakeTranscripts(t, "Lindell 2022 Interactive Sign", identities)
 	participants := testutils.MakeParticipants(t, sid, protocol, identities[:th], shards, transcripts, variant)
 	partialSignatures := testutils.RunInteractiveSigning(t, participants, message)
 	require.NotNil(t, partialSignatures)
 
-	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature[*pasta.PallasPoint, *pasta.PallasBaseFieldElement, *pasta.PallasScalar]]()
 	for i, partialSignature := range partialSignatures {
 		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
 	}
 
-	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey{A: publicKey}, partialSignaturesMap)
+	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey[*pasta.PallasPoint, *pasta.PallasBaseFieldElement, *pasta.PallasScalar]{A: publicKey}, partialSignaturesMap)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
 	err = mina.Verify(&mina.PublicKey{A: publicKey}, signature, message, networkId)
 	require.NoError(t, err)
-
 }
 
-func Test_ThresholdMinaAgainstMinaSigner(t *testing.T) {
-	t.Parallel()
-
-	msg := "Hello World!"
-	networkId := mina.TestNet
-	variant := mina.NewMinaVariant(networkId)
-	hashFunc := poseidon.NewLegacyHash
-	identitiesHashFunc := sha256.New
-	curve := pasta.NewPallasCurve()
-	prng := crand.Reader
-	message := new(mina.ROInput).Init()
-	message.AddString(msg)
-	th := 2
-	n := 3
-	sid := []byte("sessionId")
-
-	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
-	require.NoError(t, err)
-
-	identityCipherSuite, err := ttu.MakeSigningSuite(curve, identitiesHashFunc)
-	require.NoError(t, err)
-
-	identities, err := ttu.MakeTestIdentities(identityCipherSuite, n)
-	require.NoError(t, err)
-
-	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
-	require.NoError(t, err)
-
-	shards, err := trusted_dealer.Keygen(protocol, prng)
-	require.NoError(t, err)
-	aliceShard, exists := shards.Get(identities[0])
-	require.True(t, exists)
-	publicKey := aliceShard.SigningKeyShare.PublicKey
-	var publicKeyShares *tsignatures.PartialPublicKeys
-	for _, shard := range shards.Iter() {
-		publicKeyShares = shard.PublicKeyShares
-		break
-	}
-
-	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
-	participants := testutils.MakeParticipants(t, sid, protocol, identities[:th], shards, transcripts, variant)
-	partialSignatures := testutils.RunInteractiveSigning(t, participants, message)
-	require.NotNil(t, partialSignatures)
-
-	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
-	for i, partialSignature := range partialSignatures {
-		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
-	}
-
-	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey{A: publicKey}, partialSignaturesMap)
-	require.NoError(t, err)
-	require.NotNil(t, signature)
-
-	err = mina.Verify(&mina.PublicKey{A: publicKey}, signature, message, networkId)
-	require.NoError(t, err)
-
-	// spit out data, so it can be verified with mina signer
-	println("r", signature.R.AffineX().Nat().Big().Text(10))
-	println("s", signature.S.Nat().Big().Text(10))
-	println("fields: []")
-	bitsStr := "["
-	for _, byte := range []byte(msg) {
-		for i := 0; i < 8; i++ {
-			bit := (byte & (1 << (7 - i))) != 0
-			bStr := "false,"
-			if bit {
-				bStr = "true,"
-			}
-			bitsStr = bitsStr + bStr
-		}
-	}
-	bitsStr = bitsStr + "]"
-	println("bits", bitsStr)
-	println("x", publicKey.AffineX().Nat().Big().Text(10))
-	println("isOdd", publicKey.AffineY().IsOdd())
-}
-
-func Test_HappyPathThresholdZilliqa(t *testing.T) {
-	t.Parallel()
+func testHappyPathThresholdZilliqa(t *testing.T, th, n uint) {
+	t.Helper()
 
 	variant := zilliqa.NewZilliqaVariant()
 	hashFunc := sha256.New
 	curve := k256.NewCurve()
 	prng := crand.Reader
 	message := []byte("Hello World!")
-	th := 2
-	n := 3
 	sid := []byte("sessionId")
 
-	cipherSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
-	require.NoError(t, err)
-
-	identities, err := ttu.MakeTestIdentities(cipherSuite, n)
-	require.NoError(t, err)
-
-	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
-	require.NoError(t, err)
+	identities := ttu.MakeTestIdentities(t, n)
+	protocol := ttu.MakeThresholdSignatureProtocol(t, curve, hashFunc, th, identities...)
 
 	shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
 
-	var publicKeyShares *tsignatures.PartialPublicKeys
+	var publicKeyShares *tsignatures.PartialPublicKeys[*k256.Curve, *k256.Point, *k256.BaseFieldElement, *k256.Scalar]
 	for _, shard := range shards.Iter() {
 		publicKeyShares = shard.PublicKeyShares
 		break
@@ -348,75 +303,20 @@ func Test_HappyPathThresholdZilliqa(t *testing.T) {
 	require.True(t, exists)
 	publicKey := aliceShard.SigningKeyShare.PublicKey
 
-	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
+	transcripts := ttu.MakeTranscripts(t, "Lindell 2022 Interactive Sign", identities)
 	participants := testutils.MakeParticipants(t, sid, protocol, identities[:th], shards, transcripts, variant)
 	partialSignatures := testutils.RunInteractiveSigning(t, participants, message)
 	require.NotNil(t, partialSignatures)
 
-	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
+	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]]()
 	for i, partialSignature := range partialSignatures {
 		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
 	}
 
-	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey{A: publicKey}, partialSignaturesMap)
+	signature, err := signing.Aggregate(variant, protocol, message, publicKeyShares, &schnorr.PublicKey[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]{A: publicKey}, partialSignaturesMap)
 	require.NoError(t, err)
 	require.NotNil(t, signature)
 
 	err = zilliqa.Verify(&zilliqa.PublicKey{A: publicKey}, signature, message)
-	require.NoError(t, err)
-}
-
-func Test_HappyPathWithDkg(t *testing.T) {
-	t.Parallel()
-
-	variant := vanillaSchnorr.NewEdDsaCompatibleVariant()
-	hashFunc := sha512.New
-	curve := edwards25519.NewCurve()
-	message := []byte("Hello World!")
-	th := 2
-	n := 3
-	sid := []byte("testSessionId")
-
-	signingSuite, err := ttu.MakeSigningSuite(curve, hashFunc)
-	require.NoError(t, err)
-
-	identities, err := ttu.MakeTestIdentities(signingSuite, n)
-	require.NoError(t, err)
-
-	thresholdSignatureProtocol, err := ttu.MakeThresholdSignatureProtocol(signingSuite, identities, th, identities)
-	require.NoError(t, err)
-
-	tapes := ttu.MakeTranscripts("testtest", identities)
-	signingKeyShares, partialPublicKeys := gennaroTu.DoDkgHappyPath(t, sid, thresholdSignatureProtocol, identities, tapes)
-
-	shards := hashmap.NewHashableHashMap[types.IdentityKey, *lindell22.Shard]()
-	for i, id := range identities {
-		shard, err := lindell22.NewShard(thresholdSignatureProtocol, signingKeyShares[i], partialPublicKeys[i])
-		require.NoError(t, err)
-		shards.Put(id, shard)
-	}
-
-	var publicKeyShares *tsignatures.PartialPublicKeys
-	for _, shard := range shards.Iter() {
-		publicKeyShares = shard.PublicKeyShares
-		break
-	}
-
-	transcripts := ttu.MakeTranscripts("Lindell 2022 Interactive Sign", identities)
-	participants := testutils.MakeParticipants(t, sid, thresholdSignatureProtocol, identities[:th], shards, transcripts, variant)
-	partialSignatures := testutils.RunInteractiveSigning(t, participants, message)
-	require.NotNil(t, partialSignatures)
-
-	partialSignaturesMap := hashmap.NewHashableHashMap[types.IdentityKey, *tschnorr.PartialSignature]()
-	for i, partialSignature := range partialSignatures {
-		partialSignaturesMap.Put(participants[i].IdentityKey(), partialSignature)
-	}
-
-	publicKey := &vanillaSchnorr.PublicKey{A: signingKeyShares[0].PublicKey}
-	signature, err := signing.Aggregate(variant, thresholdSignatureProtocol, message, publicKeyShares, (*schnorr.PublicKey)(publicKey), partialSignaturesMap)
-	require.NoError(t, err)
-	require.NotNil(t, signature)
-
-	err = vanillaSchnorr.Verify(signingSuite, publicKey, message, signature)
 	require.NoError(t, err)
 }

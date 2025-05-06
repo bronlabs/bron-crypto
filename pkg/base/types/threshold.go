@@ -18,8 +18,8 @@ func SharingIDToScalar[S fields.PrimeFieldElement[S]](id SharingID, scalarField 
 
 type SharingConfig AbstractIdentitySpace[SharingID]
 
-type ThresholdParticipant[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] interface {
-	Participant[P, F, S]
+type ThresholdParticipant interface {
+	Participant
 	SharingId() SharingID
 }
 

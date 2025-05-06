@@ -7,7 +7,7 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 )
 
-type Participant[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] interface {
+type Participant interface {
 	IdentityKey() IdentityKey
 }
 
