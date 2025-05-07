@@ -1,0 +1,18 @@
+% ---------------------------------------------------------------------------- %
+\subsection{Distributed Key Generation}\label{sec:key_generation}
+% ---------------------------------------------------------------------------- %
+
+All signature schemes presented in \autoref{sec:signatures} are based on the prior existence of a scalar private key $x \in \Z_{q^*}$, and its corresponding public key $ \g{Y} = x \cdot \g{G} \in \G$. In the standalone case, where one single party is to be the sole signer, the key generation is trivial, relying on a \textit{Trusted Dealer} such as the one in Algorithm \ref{alg:trusteddealer}. In this toy scenario, a single party generates the private key and distributes the \textit{shards}.
+
+
+\inputAlgorithm{threshold/trusted_dealer}{trusted_dealer.tex}
+
+In contrast, in the multi-party case known as Distributed Key Generation (\fndef{DKG}) with $n$ parties holding private key shares (a.k.a. \textit{shards}), the private key may not even exist in one place. The secret key ownership is distributed  over the participants of the \fn{DKG}, and public key needs to be derived from these \textit{shards}. 
+
+
+A DKG protocol should be used for almost all use cases. In contrast, the trusted dealer should only be used for debugging purposes, for specific legacy systems and for informed clients that explicitly require it. Trusted-dealer setup is strictly less secure, and careful thought should be given to the setup context (e.g., using a Trusted Execution Environment), to the erasure of secrets, and to the distribution of the shares. We leave the details out of this document, as they are highly context-dependent.
+
+We employ two main methods from the literature to generate the private key shares: The \fnref{PedersenDKG} and the \fn{Joint-Feldman} \fnref[gennarodkg]{DKG}. They are both protected against \textit{rogue key attacks}, whereby a \textit{rushing adversary} might wait until it receives all the public key shares from honest participants and construct its own share maliciously to bias the public key or even break the security of the scheme.
+
+\inputSection{threshold/dkg/gennaro}{jf.tex}
+
