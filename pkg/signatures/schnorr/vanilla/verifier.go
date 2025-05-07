@@ -97,7 +97,8 @@ func (v *verifier[P, B, S]) Verify(signature *schnorr.Signature[EdDsaCompatibleV
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create challenge scalar")
 	}
-	if fields.PrimeFieldElement[S](signature.E) != nil && !signature.E.Equal(e) {
+	// TODO: get rid of reflect
+	if !reflect.ValueOf(signature.E).IsNil() && !signature.E.Equal(e) {
 		return errs.NewFailed("incompatible schnorr signature")
 	}
 

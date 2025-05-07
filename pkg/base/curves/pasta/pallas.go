@@ -164,13 +164,16 @@ func (p *PallasPoint) Structure() algebra.Structure[*PallasPoint] {
 }
 
 func (p *PallasPoint) MarshalBinary() (data []byte, err error) {
-	//TODO implement me
-	panic("implement me")
+	return p.ToAffineCompressed(), nil
 }
 
 func (p *PallasPoint) UnmarshalBinary(data []byte) error {
-	//TODO implement me
-	panic("implement me")
+	pp, err := NewPallasCurve().FromAffineCompressed(data)
+	if err != nil {
+		return errs.WrapSerialisation(err, "cannot deserialize point")
+	}
+	p.V.Set(&pp.V)
+	return nil
 }
 
 // TODO(aalireza): not sure if this should always return affine coordinates or implementation defined coordinates

@@ -191,13 +191,16 @@ func (p *PointG1) Structure() algebra.Structure[*PointG1] {
 }
 
 func (p *PointG1) MarshalBinary() (data []byte, err error) {
-	//TODO implement me
-	panic("implement me")
+	return p.ToAffineCompressed(), nil
 }
 
 func (p *PointG1) UnmarshalBinary(data []byte) error {
-	//TODO implement me
-	panic("implement me")
+	pp, err := NewG1Curve().FromAffineCompressed(data)
+	if err != nil {
+		return errs.WrapSerialisation(err, "cannot deserialize point")
+	}
+	p.V.Set(&pp.V)
+	return nil
 }
 
 // TODO(aalireza): not sure if this should always return affine coordinates or implementation defined coordinates

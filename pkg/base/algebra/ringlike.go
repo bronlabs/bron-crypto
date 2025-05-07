@@ -169,11 +169,14 @@ type UintLike[E IntLike[E]] interface {
 }
 
 type PrimeField[E interface {
-	FiniteFieldElement[E]
+	FiniteFieldElement[E] // TODO(aalireza): shouldn't it be FiniteField[E]?
 	UintLike[E]
 }] interface {
 	FiniteField[E]
 	ZnLike[E]
+
+	// TODO(aalireza): add FromUint64()
+	FromUint64(value uint64) E
 
 	FromBytes([]byte) (E, error)
 	FromWideBytes([]byte) (E, error)

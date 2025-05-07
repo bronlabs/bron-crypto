@@ -1,10 +1,18 @@
 package testutils
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/hex"
 	"encoding/json"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/simple"
+	"github.com/stretchr/testify/require"
+	"reflect"
 	"strings"
+	"testing"
 )
 
 type HexBytes []byte
@@ -56,4 +64,29 @@ func (h *HexBytesArray) UnmarshalJSON(b []byte) error {
 	}
 	*h = decoded
 	return nil
+}
+
+func MakeTranscripts(_ testing.TB, dst string, identities []types.IdentityKey) []transcripts.Transcript {
+	tape := simple.NewTranscript(dst)
+	tapes := make([]transcripts.Transcript, len(identities))
+	for i := range identities {
+		tapes[i] = tape.Clone()
+	}
+	return tapes
+}
+
+func GobRoundTrip[M any](tb testing.TB, message M) M {
+	if reflect.ValueOf(message).IsNil() {
+		return message
+	}
+
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(message)
+	require.NoError(tb, err)
+	dec := gob.NewDecoder(&buf)
+	var out M
+	err = dec.Decode(&out)
+	require.NoError(tb, err)
+	return out
 }

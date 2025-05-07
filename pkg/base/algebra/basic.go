@@ -35,9 +35,11 @@ type Structure[E any] interface {
 type FiniteStructure[E any] interface {
 	Random(prng io.Reader) (E, error)
 	Hash(bytes []byte) (E, error)
-	// ElementSize returns the **exact** number of bytes required to represent an element, required for `SetBytes()`
+	// ElementSize returns the **exact** number of bytes required to represent an element required for `SetBytes()`
+	// TODO(aalireza): make uint?
 	ElementSize() int
 	// WideElementSize returns the **maximum** number of bytes used to map uniformly to an element, required for `SetBytesWide()`
+	// TODO(aalireza): make uint?
 	WideElementSize() int
 }
 
