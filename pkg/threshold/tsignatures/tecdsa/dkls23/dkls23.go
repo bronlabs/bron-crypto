@@ -1,6 +1,7 @@
 package dkls23
 
 import (
+	"bytes"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curveutils"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
@@ -52,12 +53,16 @@ func (ps *PartialSignature) Validate(protocol types.ThresholdSignatureProtocol) 
 	return nil
 }
 
-var _ tsignatures.Shard = (*Shard)(nil)
+var (
+	_ tsignatures.Shard = (*Shard)(nil)
+	_ tsignatures.Shard = (*DerivedShard)(nil)
+)
 
 type Shard struct {
 	SigningKeyShare *SigningKeyShare
 	PublicKeyShares *PublicKeyShares
-	_               ds.Incomparable
+
+	_ ds.Incomparable
 }
 
 func NewShard(protocol types.ThresholdProtocol, signingKeyShare *SigningKeyShare, partialPublicKeys *PublicKeyShares) (*Shard, error) {
@@ -107,6 +112,73 @@ func (s *Shard) PartialPublicKeys() ds.Map[types.SharingID, curves.Point] {
 
 func (s *Shard) FeldmanCommitmentVector() []curves.Point {
 	return s.PublicKeyShares.FeldmanCommitmentVector
+}
+
+func (s *Shard) Derive(chainCode [32]byte, i uint32) (*DerivedShard, error) {
+	shift, childChainCode, err := tsignatures.PublicChildKeyDerivation(s.PublicKey(), chainCode, i)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot derive")
+	}
+
+	derivedShard := &DerivedShard{
+		Shard: &Shard{
+			SigningKeyShare: s.SigningKeyShare.Shift(shift),
+			PublicKeyShares: s.PublicKeyShares.Shift(shift),
+		},
+		ChainCode: childChainCode,
+	}
+
+	return derivedShard, nil
+}
+
+type DerivedShard struct {
+	Shard     *Shard
+	ChainCode [32]byte
+}
+
+func (s *DerivedShard) Equal(other tsignatures.Shard) bool {
+	otherShard, ok := other.(*DerivedShard)
+	return ok && s.Shard.Equal(otherShard.Shard) && bytes.Equal(s.ChainCode[:], otherShard.ChainCode[:])
+}
+
+func (s *DerivedShard) Validate(protocol types.ThresholdProtocol) error {
+	if s == nil {
+		return errs.NewIsNil("receiver")
+	}
+	if err := s.Shard.Validate(protocol); err != nil {
+		return errs.WrapVerification(err, "invalid signing key share")
+	}
+
+	return nil
+}
+
+func (s *DerivedShard) SecretShare() curves.Scalar {
+	return s.Shard.SigningKeyShare.Share
+}
+
+func (s *DerivedShard) PublicKey() curves.Point {
+	return s.Shard.SigningKeyShare.PublicKey
+}
+
+func (s *DerivedShard) PartialPublicKeys() ds.Map[types.SharingID, curves.Point] {
+	return s.Shard.PublicKeyShares.Shares
+}
+
+func (s *DerivedShard) FeldmanCommitmentVector() []curves.Point {
+	return s.Shard.PublicKeyShares.FeldmanCommitmentVector
+}
+
+func (s *DerivedShard) Derive(i uint32) (*DerivedShard, error) {
+	derivedShard, err := s.Shard.Derive(s.ChainCode, i)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot derive")
+	}
+
+	return derivedShard, nil
+}
+
+func (s *DerivedShard) AsShard() *Shard {
+	return s.Shard
 }
 
 type PreProcessingMaterial tsignatures.PreProcessingMaterial[*PrivatePreProcessingMaterial, PreSignature]
