@@ -2,7 +2,12 @@ package lindell17
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/json"
+
+	"github.com/cronokirby/saferith"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
@@ -11,12 +16,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	"github.com/bronlabs/bron-crypto/pkg/indcpa/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures"
-	"github.com/cronokirby/saferith"
 )
 
 var (
 	_ tsignatures.Shard = (*Shard)(nil)
-	_ tsignatures.Shard = (*DerivedShard)(nil)
+	_ tsignatures.Shard = (*ExtendedShard)(nil)
 )
 
 func (s *Shard) Equal(other tsignatures.Shard) bool {
@@ -159,8 +163,8 @@ func (s *Shard) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (s *Shard) Derive(chainCode [32]byte, i uint32) (*DerivedShard, error) {
-	shift, childChainCode, err := tsignatures.PublicChildKeyDerivation(s.PublicKey(), chainCode, i)
+func (s *Shard) DeriveWithChainCode(chainCode []byte, i uint32) (*ExtendedShard, error) {
+	shift, childChainCode, err := tsignatures.ChildKeyDerivation(s.PublicKey(), chainCode, i)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot derive")
 	}
@@ -180,7 +184,7 @@ func (s *Shard) Derive(chainCode [32]byte, i uint32) (*DerivedShard, error) {
 		childPaillierEncryptedShares.Put(sharingId, childPaillierEncryptedShare)
 	}
 
-	return &DerivedShard{
+	return &ExtendedShard{
 		Shard: &Shard{
 			SigningKeyShare:         childSigningKeyShare,
 			PublicKeyShares:         childPublicKeyShares,
@@ -188,46 +192,62 @@ func (s *Shard) Derive(chainCode [32]byte, i uint32) (*DerivedShard, error) {
 			PaillierPublicKeys:      s.PaillierPublicKeys,
 			PaillierEncryptedShares: childPaillierEncryptedShares,
 		},
-		ChainCode: childChainCode,
+		ChainCodeBytes: childChainCode,
 	}, nil
 }
 
-type DerivedShard struct {
-	Shard     *Shard
-	ChainCode [32]byte
+func (s *Shard) ChainCode() []byte {
+	h := hmac.New(sha256.New, []byte("ChainCode"))
+	for _, coefficient := range s.PublicKeyShares.FeldmanCommitmentVector[1:] {
+		_, _ = h.Write(coefficient.ToAffineCompressed())
+	}
+	return h.Sum(nil)
 }
 
-func (s *DerivedShard) Equal(rhs tsignatures.Shard) bool {
-	other, ok := rhs.(*DerivedShard)
+func (s *Shard) Derive(i uint32) (*ExtendedShard, error) {
+	return s.DeriveWithChainCode(s.ChainCode(), i)
+}
+
+type ExtendedShard struct {
+	Shard          *Shard
+	ChainCodeBytes []byte
+}
+
+func (s *ExtendedShard) ChainCode() []byte {
+	return s.ChainCodeBytes
+}
+
+func (s *ExtendedShard) Equal(rhs tsignatures.Shard) bool {
+	other, ok := rhs.(*ExtendedShard)
 	if !ok {
 		return false
 	}
 
-	return s.Shard.Equal(other.Shard) && bytes.Equal(s.ChainCode[:], other.ChainCode[:])
+	return s.Shard.Equal(other.Shard) && bytes.Equal(s.ChainCodeBytes, other.ChainCodeBytes)
 }
 
-func (s *DerivedShard) SecretShare() curves.Scalar {
+func (s *ExtendedShard) SecretShare() curves.Scalar {
 	return s.Shard.SecretShare()
 }
 
-func (s *DerivedShard) PublicKey() curves.Point {
+func (s *ExtendedShard) PublicKey() curves.Point {
 	return s.Shard.PublicKey()
 }
 
-func (s *DerivedShard) PartialPublicKeys() ds.Map[types.SharingID, curves.Point] {
+func (s *ExtendedShard) PartialPublicKeys() ds.Map[types.SharingID, curves.Point] {
 	return s.Shard.PartialPublicKeys()
 }
 
-func (s *DerivedShard) FeldmanCommitmentVector() []curves.Point {
+func (s *ExtendedShard) FeldmanCommitmentVector() []curves.Point {
 	return s.Shard.FeldmanCommitmentVector()
 }
 
-func (s *DerivedShard) AsShard() *Shard {
+func (s *ExtendedShard) AsShard() *Shard {
 	return s.Shard
 }
 
-func (s *DerivedShard) Derive(i uint32) (*DerivedShard, error) {
-	derivedShard, err := s.Shard.Derive(s.ChainCode, i)
+func (s *ExtendedShard) Derive(i uint32) (*ExtendedShard, error) {
+	derivedShard, err := s.Shard.DeriveWithChainCode(s.ChainCodeBytes, i)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot derive")
 	}

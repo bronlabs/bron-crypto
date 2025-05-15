@@ -1,4 +1,4 @@
-package lindell17_test
+package lindell22_test
 
 import (
 	crand "crypto/rand"
@@ -13,8 +13,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	"github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/lindell17"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/lindell17/keygen/trusted_dealer"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/lindell22"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tschnorr/lindell22/keygen/trusted_dealer"
 )
 
 func Test_Bip32DeriveShardTestVector2(t *testing.T) {
@@ -47,14 +47,13 @@ func Test_Bip32DeriveShardTestVector2(t *testing.T) {
 	require.NotNil(t, parentShards)
 	require.Equal(t, parentShards.Size(), int(protocol.TotalParties()))
 
-	shards := hashmap.NewHashableHashMap[types.IdentityKey, *lindell17.ExtendedShard]()
+	shards := hashmap.NewHashableHashMap[types.IdentityKey, *lindell22.ExtendedShard]()
 	for id, parentShard := range parentShards.Iter() {
 		shard, err := parentShard.DeriveWithChainCode(chainCode, 0)
 		require.NoError(t, err)
 		shards.Put(id, shard)
 	}
 
-	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	expectedChildSecretKeyHex := "abe74a98f6c7eabee0428f53798f0ab8aa1bd37873999041703c742f15ac7e1e"
 	expectedChildPublicKeyHex := "02fc9e5af0ac8d9b3cecfe2a888e2117ba3d089d8585886c9c826b6b22a98d12ea"
 	expectedChildChainCodeHex := "f0909affaa7ee7abe5dd4e100598d4dc53cd709d5a5c2cac40e7412f232f7c9c"
@@ -62,7 +61,7 @@ func Test_Bip32DeriveShardTestVector2(t *testing.T) {
 	t.Run("all chain code are valid", func(t *testing.T) {
 		t.Parallel()
 		for _, value := range shards.Iter() {
-			require.Equal(t, expectedChildChainCodeHex, hex.EncodeToString(value.ChainCodeBytes))
+			require.Equal(t, expectedChildChainCodeHex, hex.EncodeToString(value.ChainCodeBytes[:]))
 		}
 	})
 
@@ -118,28 +117,5 @@ func Test_Bip32DeriveShardTestVector2(t *testing.T) {
 		aliceShard, exists := shards.Get(identities[0])
 		require.True(t, exists)
 		require.True(t, aliceShard.Shard.SigningKeyShare.PublicKey.Equal(derivedPublicKey))
-	})
-
-	t.Run("all encrypted shares decrypts to correct values", func(t *testing.T) {
-		t.Parallel()
-
-		for myIdentityKey, myShard := range shards.Iter() {
-			myShare := myShard.Shard.SigningKeyShare.Share
-			myPaillierPrivateKey := myShard.Shard.PaillierSecretKey
-			mySharingId, exists := sharingConfig.Reverse().Get(myIdentityKey)
-			require.True(t, exists)
-			for _, value := range shards.Iter() {
-				theirShard := value
-				if myShard.Shard.PaillierSecretKey.N.Nat().Eq(theirShard.Shard.PaillierSecretKey.N.Nat()) == 0 {
-					theirEncryptedShare, exists := theirShard.Shard.PaillierEncryptedShares.Get(mySharingId)
-					require.True(t, exists)
-					theirDecryptedShareInt, err := myPaillierPrivateKey.Decrypt(theirEncryptedShare)
-					require.NoError(t, err)
-					theirDecryptedShare, err := curve.ScalarField().Element().SetBytesWide(theirDecryptedShareInt.Abs().Big().Bytes())
-					require.NoError(t, err)
-					require.NotZero(t, theirDecryptedShare.Equal(myShare))
-				}
-			}
-		}
 	})
 }

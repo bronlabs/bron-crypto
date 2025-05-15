@@ -15,7 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	"github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
 	ttu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
+	fiatShamir "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	gennaroTu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures"
@@ -27,7 +27,7 @@ import (
 	_ "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 )
 
-const cn = fischlin.Name
+const cn = fiatShamir.Name
 
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()

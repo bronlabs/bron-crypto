@@ -5,6 +5,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/combinatorics"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381"
@@ -19,8 +23,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/trusted_dealer"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures"
-	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 var (
