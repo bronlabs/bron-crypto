@@ -2,10 +2,11 @@ package tsignatures
 
 import (
 	"bytes"
-	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/binary"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"io"
+	"slices"
 
 	"golang.org/x/crypto/blake2b"
 
@@ -26,10 +27,10 @@ func ChildKeyDerivation(publicKey curves.Point, chainCode []byte, i uint32) (cur
 }
 
 func bip32ChildKeyDerivation(publicKey *k256.Point, chainCode []byte, i uint32) (*k256.Scalar, []byte, error) {
-	hmacSha512 := hmac.New(sha512.New, chainCode)
-	hmacSha512.Write(publicKey.ToAffineCompressed())
-	hmacSha512.Write(binary.BigEndian.AppendUint32(nil, i))
-	digest := hmacSha512.Sum(nil)
+	digest, err := hashing.Hmac(chainCode, sha512.New, publicKey.ToAffineCompressed(), binary.BigEndian.AppendUint32(nil, i))
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot hash public key")
+	}
 
 	childChainCode := digest[32:]
 	shift, err := k256.NewCurve().ScalarField().Element().SetBytes(digest[:32])
@@ -54,17 +55,11 @@ func genericChildKeyDerivation(publicKey curves.Point, chainCode []byte, i uint3
 		return nil, nil, errs.WrapFailed(err, "cannot create blake2b xof")
 	}
 
-	_, err = xof.Write(publicKey.ToAffineCompressed())
-	if err != nil {
+	if _, err := xof.Write(slices.Concat(publicKey.ToAffineCompressed(), binary.BigEndian.AppendUint32(nil, i))); err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot hash public key")
 	}
-	_, err = xof.Write(binary.BigEndian.AppendUint32(nil, i))
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot write index")
-	}
 	digest := make([]byte, digestLen)
-	_, err = io.ReadFull(xof, digest)
-	if err != nil {
+	if _, err := io.ReadFull(xof, digest); err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot read digest")
 	}
 

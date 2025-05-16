@@ -2,8 +2,9 @@ package dkls23
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha256"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
@@ -91,11 +92,9 @@ func (s *Shard) DeriveWithChainCode(chainCode []byte, i uint32) (*ExtendedShard,
 }
 
 func (s *Shard) ChainCode() []byte {
-	h := hmac.New(sha256.New, []byte("ChainCode"))
-	for _, coefficient := range s.PublicKeyShares.FeldmanCommitmentVector[1:] {
-		_, _ = h.Write(coefficient.ToAffineCompressed())
-	}
-	return h.Sum(nil)
+	feldmanVectorBytes := sliceutils.Map(s.FeldmanCommitmentVector(), curves.Point.ToAffineCompressed)
+	chainCode, _ := hashing.HmacPrefixedLength([]byte("ChainCode"), sha3.New256, feldmanVectorBytes...)
+	return chainCode
 }
 
 func (s *Shard) Derive(i uint32) (*ExtendedShard, error) {

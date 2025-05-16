@@ -126,7 +126,7 @@ func Test_Regression(t *testing.T) {
 	err := json.Unmarshal([]byte(data), &shards)
 	require.NoError(t, err)
 
-	require.Equal(t, "a39da25e9c79dbb4847b740938ee2b5d0f2c6302746a67db11aacd4dcd006fd1", hex.EncodeToString(shards[0].ChainCode()))
-	require.Equal(t, "a39da25e9c79dbb4847b740938ee2b5d0f2c6302746a67db11aacd4dcd006fd1", hex.EncodeToString(shards[1].ChainCode()))
-	require.Equal(t, "a39da25e9c79dbb4847b740938ee2b5d0f2c6302746a67db11aacd4dcd006fd1", hex.EncodeToString(shards[2].ChainCode()))
+	require.Equal(t, "dc02983156a7f8d3529e80daa6ce58c72d811270d1ebf9e13ec814013a78fc7e", hex.EncodeToString(shards[0].ChainCode()))
+	require.Equal(t, "dc02983156a7f8d3529e80daa6ce58c72d811270d1ebf9e13ec814013a78fc7e", hex.EncodeToString(shards[1].ChainCode()))
+	require.Equal(t, "dc02983156a7f8d3529e80daa6ce58c72d811270d1ebf9e13ec814013a78fc7e", hex.EncodeToString(shards[2].ChainCode()))
 }
