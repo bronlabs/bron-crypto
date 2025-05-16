@@ -3,6 +3,7 @@ package dkls23_test
 import (
 	crand "crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -112,4 +113,20 @@ func Test_DerivedShardTestVector2(t *testing.T) {
 			require.True(t, aliceShard.PublicKey().Equal(derivedPublicKey))
 		}
 	})
+}
+
+func Test_Regression(t *testing.T) {
+	// If this test fails, it means the way chain code is computed had changed.
+	// This would be a breaking change rendering existing HD addresses unusable, leading potentially to loss of funds.
+	// This test is here to ensure that the change is intentional and not a bug.
+	t.Parallel()
+
+	data := "[{\"SigningKeyShare\":{\"Share\":{\"type\":\"secp256k1\",\"bytes\":\"azwsGdlt5NxUymfIZUGz2MMl4m3p0sbF2y3UTY1LyGc=\"},\"PublicKey\":{\"type\":\"secp256k1\",\"bytes\":\"AwndnGkR9IOSZTDalVXXty810tE47mcBA8VdRF7+dyqT\"}},\"PublicKeyShares\":{\"PublicKey\":{\"type\":\"secp256k1\",\"bytes\":\"AwndnGkR9IOSZTDalVXXty810tE47mcBA8VdRF7+dyqT\"},\"Shares\":{\"1\":{\"type\":\"secp256k1\",\"bytes\":\"At9i/gV/p57AeMV4HAzUi01pikbkZPObZWeYC7SUDiQR\"},\"2\":{\"type\":\"secp256k1\",\"bytes\":\"AuU17o208rsvH2B+fV0v8px1afRivDxNztVTeG0k3Ki5\"},\"3\":{\"type\":\"secp256k1\",\"bytes\":\"At0hrC5bIte8HTnPn7fub2/APNi8DXAFqCFaPJAW+zgo\"}},\"FeldmanCommitmentVector\":[{\"type\":\"secp256k1\",\"bytes\":\"AwndnGkR9IOSZTDalVXXty810tE47mcBA8VdRF7+dyqT\"},{\"type\":\"secp256k1\",\"bytes\":\"A7Uys917ntpKn8rHYZXO+/bFnnWfqC0WKnjxe9NqOfXI\"}]}},{\"SigningKeyShare\":{\"Share\":{\"type\":\"secp256k1\",\"bytes\":\"SA81MYyOKq4+gcUuw8Puh0K3SociVJE8Wbx0SKvRk4c=\"},\"PublicKey\":{\"type\":\"secp256k1\",\"bytes\":\"AwndnGkR9IOSZTDalVXXty810tE47mcBA8VdRF7+dyqT\"}},\"PublicKeyShares\":{\"PublicKey\":{\"type\":\"secp256k1\",\"bytes\":\"AwndnGkR9IOSZTDalVXXty810tE47mcBA8VdRF7+dyqT\"},\"Shares\":{\"1\":{\"type\":\"secp256k1\",\"bytes\":\"At9i/gV/p57AeMV4HAzUi01pikbkZPObZWeYC7SUDiQR\"},\"2\":{\"type\":\"secp256k1\",\"bytes\":\"AuU17o208rsvH2B+fV0v8px1afRivDxNztVTeG0k3Ki5\"},\"3\":{\"type\":\"secp256k1\",\"bytes\":\"At0hrC5bIte8HTnPn7fub2/APNi8DXAFqCFaPJAW+zgo\"}},\"FeldmanCommitmentVector\":[{\"type\":\"secp256k1\",\"bytes\":\"AwndnGkR9IOSZTDalVXXty810tE47mcBA8VdRF7+dyqT\"},{\"type\":\"secp256k1\",\"bytes\":\"A7Uys917ntpKn8rHYZXO+/bFnnWfqC0WKnjxe9NqOfXI\"}]}},{\"SigningKeyShare\":{\"Share\":{\"type\":\"secp256k1\",\"bytes\":\"jmkjAiZNnwprEwpiBr95KkOUelSxUPxPXJ80Um7F/Uc=\"},\"PublicKey\":{\"type\":\"secp256k1\",\"bytes\":\"AwndnGkR9IOSZTDalVXXty810tE47mcBA8VdRF7+dyqT\"}},\"PublicKeyShares\":{\"PublicKey\":{\"type\":\"secp256k1\",\"bytes\":\"AwndnGkR9IOSZTDalVXXty810tE47mcBA8VdRF7+dyqT\"},\"Shares\":{\"1\":{\"type\":\"secp256k1\",\"bytes\":\"At9i/gV/p57AeMV4HAzUi01pikbkZPObZWeYC7SUDiQR\"},\"2\":{\"type\":\"secp256k1\",\"bytes\":\"AuU17o208rsvH2B+fV0v8px1afRivDxNztVTeG0k3Ki5\"},\"3\":{\"type\":\"secp256k1\",\"bytes\":\"At0hrC5bIte8HTnPn7fub2/APNi8DXAFqCFaPJAW+zgo\"}},\"FeldmanCommitmentVector\":[{\"type\":\"secp256k1\",\"bytes\":\"AwndnGkR9IOSZTDalVXXty810tE47mcBA8VdRF7+dyqT\"},{\"type\":\"secp256k1\",\"bytes\":\"A7Uys917ntpKn8rHYZXO+/bFnnWfqC0WKnjxe9NqOfXI\"}]}}]"
+	var shards []*dkls23.Shard
+	err := json.Unmarshal([]byte(data), &shards)
+	require.NoError(t, err)
+
+	require.Equal(t, "a39da25e9c79dbb4847b740938ee2b5d0f2c6302746a67db11aacd4dcd006fd1", hex.EncodeToString(shards[0].ChainCode()))
+	require.Equal(t, "a39da25e9c79dbb4847b740938ee2b5d0f2c6302746a67db11aacd4dcd006fd1", hex.EncodeToString(shards[1].ChainCode()))
+	require.Equal(t, "a39da25e9c79dbb4847b740938ee2b5d0f2c6302746a67db11aacd4dcd006fd1", hex.EncodeToString(shards[2].ChainCode()))
 }

@@ -19,7 +19,7 @@ func ChildKeyDerivation(publicKey curves.Point, chainCode []byte, i uint32) (cur
 		return nil, nil, errs.NewFailed("unsupported derivation")
 	}
 	if publicKey.Curve().Name() == k256.NewCurve().Name() {
-		return bip32ChildKeyDerivation(publicKey.(*k256.Point), chainCode, i) //nolint:errcheck // never throw error
+		return bip32ChildKeyDerivation(publicKey.(*k256.Point), chainCode, i) //nolint:errcheck,forcetypeassert // never throw error
 	} else {
 		return genericChildKeyDerivation(publicKey, chainCode, i)
 	}
@@ -41,7 +41,7 @@ func bip32ChildKeyDerivation(publicKey *k256.Point, chainCode []byte, i uint32) 
 		return nil, nil, errs.NewFailed("invalid derivation")
 	}
 
-	//nolint:errcheck // never throws error
+	//nolint:errcheck,forcetypeassert // never throws error
 	return shift.(*k256.Scalar), childChainCode, nil
 }
 
