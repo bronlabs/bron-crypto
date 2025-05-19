@@ -3,11 +3,9 @@ package lindell17
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/hashing"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/cronokirby/saferith"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
@@ -15,6 +13,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/indcpa/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures"
 )

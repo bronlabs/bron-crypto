@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha512"
 	"encoding/binary"
-	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"io"
 	"slices"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
 func ChildKeyDerivation(publicKey curves.Point, chainCode []byte, i uint32) (curves.Scalar, []byte, error) {
