@@ -9,13 +9,16 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/rep23"
 )
 
-type Shard struct {
-	D1Share *rep23.IntShare
-	D2Share *rep23.IntShare
+type PublicShard struct {
+	N1 *saferith.Modulus
+	N2 *saferith.Modulus
+	E  uint64
+}
 
-	N1         *saferith.Modulus
-	N2         *saferith.Modulus
-	E          uint64
+type Shard struct {
+	PublicShard
+	D1Share    *rep23.IntShare
+	D2Share    *rep23.IntShare
 	PaddingKey [32]byte
 }
 

@@ -24,7 +24,7 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (shards ds.Map[typ
 
 	repDealer := rep23.NewIntScheme()
 
-	sk1, err := rsa.GenerateKey(prng, trsa.RsaBitLen)
+	sk1, err := rsa.GenerateKey(prng, trsa.RsaBitLen/2)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate RSA key")
 	}
@@ -37,7 +37,7 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (shards ds.Map[typ
 		return nil, errs.WrapFailed(err, "cannot deal shares")
 	}
 
-	sk2, err := rsa.GenerateKey(prng, trsa.RsaBitLen)
+	sk2, err := rsa.GenerateKey(prng, trsa.RsaBitLen/2)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate RSA key")
 	}
@@ -69,13 +69,14 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (shards ds.Map[typ
 		}
 
 		shards.Put(identityKey, &trsa.Shard{
-			D1Share: d1Share,
-			D2Share: d2Share,
-
-			N1:         saferith.ModulusFromBytes(sk1.N.Bytes()),
-			N2:         saferith.ModulusFromBytes(sk2.N.Bytes()),
-			E:          trsa.RsaE,
+			D1Share:    d1Share,
+			D2Share:    d2Share,
 			PaddingKey: paddingKey,
+			PublicShard: trsa.PublicShard{
+				N1: saferith.ModulusFromBytes(sk1.N.Bytes()),
+				N2: saferith.ModulusFromBytes(sk2.N.Bytes()),
+				E:  trsa.RsaE,
+			},
 		})
 	}
 
