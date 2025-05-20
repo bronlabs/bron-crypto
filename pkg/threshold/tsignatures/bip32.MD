@@ -5,8 +5,8 @@ If the shard curve is K-256 (aka secp256k1) we follow BIP-32 normal derivation e
 
 The function CKDpub((K<sub>par</sub>, c<sub>par</sub>), i) &rarr; (K<sub>i</sub>, c<sub>i</sub>) computes a child extended public key from the parent extended public key. It is only defined for non-hardened child keys.
 * Check whether i ≥ 2<sup>31</sup> (whether the child is a hardened key).
-  ** If so (hardened child): return failure
-  ** If not (normal child): let I = HMAC-SHA512(Key = c<sub>par</sub>, Data = ser<sub>P</sub>(K<sub>par</sub>) || ser<sub>32</sub>(i)).
+  * If so (hardened child): return failure 
+  * If not (normal child): let I = HMAC-SHA512(Key = c<sub>par</sub>, Data = ser<sub>P</sub>(K<sub>par</sub>) || ser<sub>32</sub>(i)).
 * Split I into two 32-byte sequences, I<sub>L</sub> and I<sub>R</sub>.
 * The returned child key K<sub>i</sub> is point(parse<sub>256</sub>(I<sub>L</sub>)) + K<sub>par</sub>.
 * The returned chain code c<sub>i</sub> is I<sub>R</sub>.
@@ -18,11 +18,11 @@ For the other curves the process is almost the same with the following changes:
   to avoid bias when reducing it.
 * point serialization depends on the curve and is chosen accordingly
 
-When these changes are incorporated, the procedure is as follows (q is the curve order):
+When these changes are incorporated, the procedure is as follows (q is the prime subgroup curve order):
 
-* Check whether i ≥ 2<sup>31</sup> (whether the child is a hardened key).
-  ** If so (hardened child): return failure
-  ** If not (normal child): let I = Blake2b(Key = c<sub>par</sub>, Len = 2*len(q) + 32, Data = ser<sub>P</sub>(K<sub>par</sub>) || ser<sub>32</sub>(i)).
+* Check whether i ≥ 2<sup>31</sup> (whether the child is a hardened key). 
+  * If so (hardened child): return failure 
+  * If not (normal child): let I = Blake2b(Key = c<sub>par</sub>, Len = 2*len(q) + 32, Data = ser<sub>P</sub>(K<sub>par</sub>) || ser<sub>32</sub>(i)).
 * Split I into two ((2*len(q))-byte and 32-byte) sequences, I<sub>L</sub> and I<sub>R</sub>.
 * The returned child key K<sub>i</sub> is point(parse<sub>2*len(q)</sub>(I<sub>L</sub>) mod q) + K<sub>par</sub>.
 * The returned chain code c<sub>i</sub> is I<sub>R</sub>.

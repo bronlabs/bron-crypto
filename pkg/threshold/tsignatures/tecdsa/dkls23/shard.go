@@ -88,6 +88,9 @@ func (s *Shard) DeriveWithChainCode(chainCode []byte, i uint32) (*ExtendedShard,
 		},
 		ChainCodeBytes: childChainCode,
 	}
+	if derivedShard.Shard.PublicKeyShares.PublicKey.IsAdditiveIdentity() {
+		return nil, errs.NewIsIdentity("cannot derive child")
+	}
 
 	return derivedShard, nil
 }

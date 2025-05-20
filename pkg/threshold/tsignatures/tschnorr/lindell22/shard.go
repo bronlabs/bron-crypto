@@ -91,6 +91,9 @@ func (s *Shard) DeriveWithChainCode(chainCode []byte, i uint32) (*ExtendedShard,
 	}
 	childSigningKeyShare := s.SigningKeyShare.Shift(shift)
 	childPublicKeyShares := s.PublicKeyShares.Shift(shift)
+	if childPublicKeyShares.PublicKey.IsAdditiveIdentity() {
+		return nil, errs.NewIsIdentity("cannot derive child")
+	}
 
 	derivedShard := &ExtendedShard{
 		Shard: &Shard{
