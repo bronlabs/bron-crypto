@@ -2,6 +2,7 @@ package trusted_dealer
 
 import (
 	"crypto/ecdsa"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"io"
 
 	"github.com/cronokirby/saferith"
@@ -35,7 +36,7 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[t
 
 	curve := protocol.Curve()
 	if curve.Name() != k256.Name && curve.Name() != p256.Name {
-		return nil, errs.NewArgument("curve should be K256 or P256 where as it is %s", protocol.Curve().Name())
+		return nil, errs.NewArgument("curve should be K256 or P256 whereas it is %s", protocol.Curve().Name())
 	}
 
 	eCurve, err := curveutils.ToGoEllipticCurve(curve)
@@ -114,7 +115,85 @@ func Keygen(protocol types.ThresholdSignatureProtocol, prng io.Reader) (ds.Map[t
 	return shards, nil
 }
 
-func validateShards(protocol types.ThresholdSignatureProtocol, shards ds.Map[types.IdentityKey, *lindell17.Shard], ecdsaPrivateKey *ecdsa.PrivateKey) error {
+func Deal(protocol types.ThresholdProtocol, secret curves.Scalar, prng io.Reader) (ds.Map[types.IdentityKey, *lindell17.Shard], error) {
+	if err := types.ValidateThresholdProtocolConfig(protocol); err != nil {
+		return nil, errs.WrapValidation(err, "could not validate protocol config")
+	}
+
+	curve := protocol.Curve()
+	if curve.Name() != k256.Name && curve.Name() != p256.Name {
+		return nil, errs.NewArgument("curve should be K256 or P256 whereas it is %s", protocol.Curve().Name())
+	}
+	if secret == nil || secret.ScalarField().Curve().Name() != curve.Name() {
+		return nil, errs.NewArgument("invalid secret key")
+	}
+
+	signingKeyShares, partialPublicKeys, err := trusted_dealer.Deal(protocol, secret, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not deal shares")
+	}
+
+	shards := hashmap.NewHashableHashMap[types.IdentityKey, *lindell17.Shard]()
+	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
+	for _, identityKey := range sharingConfig.Iter() {
+		sks, exists := signingKeyShares.Get(identityKey)
+		if !exists {
+			return nil, errs.NewFailed("signing key share is missing")
+		}
+		ppk, exists := partialPublicKeys.Get(identityKey)
+		if !exists {
+			return nil, errs.NewFailed("signing key share is missing")
+		}
+
+		shards.Put(identityKey, &lindell17.Shard{
+			SigningKeyShare:         sks,
+			PublicKeyShares:         ppk,
+			PaillierPublicKeys:      hashmap.NewComparableHashMap[types.SharingID, *paillier.PublicKey](),
+			PaillierEncryptedShares: hashmap.NewComparableHashMap[types.SharingID, *paillier.CipherText](),
+		})
+	}
+
+	// generate Paillier key pairs and encrypt share
+	for i, identityKey := range sharingConfig.Iter() {
+		sharingId, exists := sharingConfig.Reverse().Get(identityKey)
+		if !exists {
+			return nil, errs.NewMissing("sharing id of %s not found in sharing config", identityKey.String())
+		}
+		paillierPublicKey, paillierSecretKey, err := paillier.KeyGen(paillierPrimeBitLength, prng)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot generate paillier keys")
+		}
+		thisShard, exists := shards.Get(identityKey)
+		if !exists {
+			return nil, errs.NewMissing("couldn't find shard for sharing id %d", i)
+		}
+		thisShard.PaillierSecretKey = paillierSecretKey
+		for j, value := range sharingConfig.Iter() {
+			otherIdentityKey := value
+			if identityKey.Equal(otherIdentityKey) {
+				continue
+			}
+			otherShard, exists := shards.Get(otherIdentityKey)
+			if !exists {
+				return nil, errs.NewMissing("shard for sharing id %d is missing", j)
+			}
+			ct, _, err := paillierSecretKey.Encrypt(new(saferith.Int).SetNat(thisShard.SigningKeyShare.Share.Nat()), prng)
+			if err != nil {
+				return nil, errs.WrapFailed(err, "couldn't encrypt share of %d for %d", i, j)
+			}
+			otherShard.PaillierEncryptedShares.Put(sharingId, ct)
+			otherShard.PaillierPublicKeys.Put(sharingId, paillierPublicKey)
+		}
+	}
+
+	//if err := validateShards(protocol, shards, ecdsaPrivateKey); err != nil {
+	//	return nil, errs.WrapValidation(err, "failed to validate shards")
+	//}
+
+	return shards, nil
+}
+
+func validateShards(protocol types.ThresholdProtocol, shards ds.Map[types.IdentityKey, *lindell17.Shard], ecdsaPrivateKey *ecdsa.PrivateKey) error {
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 
 	for id, shard := range shards.Iter() {

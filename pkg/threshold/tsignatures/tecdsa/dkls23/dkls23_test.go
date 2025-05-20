@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	ttu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/dkls23"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/trusted_dealer"
+	dksl23_trusted_dealer "github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/dkls23/keygen/trusted_dealer"
 )
 
 func Test_ShardSerialisationToJSONRoundTrip(t *testing.T) {
@@ -32,7 +32,7 @@ func Test_ShardSerialisationToJSONRoundTrip(t *testing.T) {
 	protocol, err := ttu.MakeThresholdSignatureProtocol(cipherSuite, identities, th, identities)
 	require.NoError(t, err)
 
-	shards, err := trusted_dealer.Keygen(protocol, prng)
+	shards, err := dksl23_trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
 
 	shard, exists := shards.Get(identities[0])

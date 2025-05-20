@@ -52,63 +52,6 @@ func (ps *PartialSignature) Validate(protocol types.ThresholdSignatureProtocol) 
 	return nil
 }
 
-var _ tsignatures.Shard = (*Shard)(nil)
-
-type Shard struct {
-	SigningKeyShare *SigningKeyShare
-	PublicKeyShares *PublicKeyShares
-	_               ds.Incomparable
-}
-
-func NewShard(protocol types.ThresholdProtocol, signingKeyShare *SigningKeyShare, partialPublicKeys *PublicKeyShares) (*Shard, error) {
-	if err := signingKeyShare.Validate(protocol); err != nil {
-		return nil, errs.WrapVerification(err, "invalid signing key share")
-	}
-	if err := partialPublicKeys.Validate(protocol); err != nil {
-		return nil, errs.WrapVerification(err, "invalid public key share")
-	}
-
-	shard := &Shard{
-		SigningKeyShare: signingKeyShare,
-		PublicKeyShares: partialPublicKeys,
-	}
-	return shard, nil
-}
-
-func (s *Shard) Equal(other tsignatures.Shard) bool {
-	otherShard, ok := other.(*Shard)
-	return ok && s.SigningKeyShare.Equal(otherShard.SigningKeyShare) && s.PublicKeyShares.Equal(otherShard.PublicKeyShares)
-}
-
-func (s *Shard) Validate(protocol types.ThresholdProtocol) error {
-	if s == nil {
-		return errs.NewIsNil("receiver")
-	}
-	if err := s.SigningKeyShare.Validate(protocol); err != nil {
-		return errs.WrapVerification(err, "invalid signing key share")
-	}
-	if err := s.PublicKeyShares.Validate(protocol); err != nil {
-		return errs.WrapVerification(err, "invalid public key shares")
-	}
-	return nil
-}
-
-func (s *Shard) SecretShare() curves.Scalar {
-	return s.SigningKeyShare.Share
-}
-
-func (s *Shard) PublicKey() curves.Point {
-	return s.SigningKeyShare.PublicKey
-}
-
-func (s *Shard) PartialPublicKeys() ds.Map[types.SharingID, curves.Point] {
-	return s.PublicKeyShares.Shares
-}
-
-func (s *Shard) FeldmanCommitmentVector() []curves.Point {
-	return s.PublicKeyShares.FeldmanCommitmentVector
-}
-
 type PreProcessingMaterial tsignatures.PreProcessingMaterial[*PrivatePreProcessingMaterial, PreSignature]
 
 func (ppm *PreProcessingMaterial) Validate(myIdentityKey types.IdentityKey, protocol types.ThresholdSignatureProtocol) error {

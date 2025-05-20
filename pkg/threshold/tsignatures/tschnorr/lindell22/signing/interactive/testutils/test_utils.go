@@ -36,6 +36,23 @@ func MakeParticipants[V schnorr.Variant[V, M], M any](t require.TestingT, sid []
 	return participants
 }
 
+func MakeDerivedParticipants[V schnorr.Variant[V, M], M any](t require.TestingT, sid []byte, protocol types.ThresholdSignatureProtocol, identities []types.IdentityKey, shards ds.Map[types.IdentityKey, *lindell22.ExtendedShard], allTranscripts []transcripts.Transcript, variant schnorr.Variant[V, M]) (participants []*interactive_signing.Cosigner[V, M]) {
+	require.Len(t, identities, int(protocol.Threshold()), "invalid number of identities %d != %d", len(identities), protocol.Threshold())
+
+	var err error
+	prng := crand.Reader
+	participants = make([]*interactive_signing.Cosigner[V, M], protocol.Threshold())
+	for i, identity := range identities {
+		require.True(t, protocol.Participants().Contains(identity), "protocol config is missing identity")
+		thisShard, exists := shards.Get(identity)
+		require.True(t, exists, "shard for identity %x", identity)
+		participants[i], err = interactive_signing.NewCosigner[V, M](identity.(types.AuthKey), sid, hashset.NewHashableHashSet(identities...), thisShard.AsShard(), protocol, nizkCompilerName, allTranscripts[i], variant, prng)
+		require.NoError(t, err, "failed to create cosigner")
+	}
+
+	return participants
+}
+
 func DoRound1[V schnorr.Variant[V, M], M any](t require.TestingT, participants []*interactive_signing.Cosigner[V, M]) (round2BroadcastInputs []network.RoundMessages[types.ThresholdSignatureProtocol, *interactive_signing.Round1Broadcast]) {
 	var err error
 	round1BroadcastOutputs := make([]*interactive_signing.Round1Broadcast, len(participants))

@@ -106,6 +106,13 @@ func (s *SigningKeyShare) Equal(other *SigningKeyShare) bool {
 	return s.Share != nil && s.Share.Equal(other.Share) && s.PublicKey != nil && s.PublicKey.Equal(other.PublicKey)
 }
 
+func (s *SigningKeyShare) Shift(shift curves.Scalar) *SigningKeyShare {
+	return &SigningKeyShare{
+		Share:     s.Share.Add(shift),
+		PublicKey: s.PublicKey.Add(s.PublicKey.Curve().ScalarBaseMult(shift)),
+	}
+}
+
 type PartialPublicKeys struct {
 	PublicKey               curves.Point
 	Shares                  ds.Map[types.SharingID, curves.Point]
@@ -304,6 +311,28 @@ func (p *PartialPublicKeys) Equal(other *PartialPublicKeys) bool {
 		}
 	}
 	return true
+}
+
+func (p *PartialPublicKeys) Shift(shift curves.Scalar) *PartialPublicKeys {
+	newPublicKey := p.PublicKey.Add(p.PublicKey.Curve().ScalarBaseMult(shift))
+	newShares := hashmap.NewComparableHashMap[types.SharingID, curves.Point]()
+	for id, ppk := range p.Shares.Iter() {
+		newShares.Put(id, ppk.Add(ppk.Curve().ScalarBaseMult(shift)))
+	}
+	newFeldmanCommitmentVector := make([]curves.Point, len(p.FeldmanCommitmentVector))
+	for i, ce := range p.FeldmanCommitmentVector {
+		if i == 0 {
+			newFeldmanCommitmentVector[i] = ce.Add(ce.Curve().ScalarBaseMult(shift))
+		} else {
+			newFeldmanCommitmentVector[i] = ce.Clone()
+		}
+	}
+
+	return &PartialPublicKeys{
+		PublicKey:               newPublicKey,
+		Shares:                  newShares,
+		FeldmanCommitmentVector: newFeldmanCommitmentVector,
+	}
 }
 
 type PreProcessingMaterial[PrivateType any, PreSignatureType any] struct {

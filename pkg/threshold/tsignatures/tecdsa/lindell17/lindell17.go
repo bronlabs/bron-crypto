@@ -1,7 +1,6 @@
 package lindell17
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
@@ -20,8 +19,6 @@ const (
 	Threshold = 2
 )
 
-var _ tsignatures.Shard = (*Shard)(nil)
-
 type Shard struct {
 	SigningKeyShare         *tsignatures.SigningKeyShare
 	PublicKeyShares         *tsignatures.PartialPublicKeys
@@ -30,43 +27,6 @@ type Shard struct {
 	PaillierEncryptedShares ds.Map[types.SharingID, *paillier.CipherText]
 
 	_ ds.Incomparable
-}
-
-func (s *Shard) Equal(other tsignatures.Shard) bool {
-	otherShard, ok := other.(*Shard)
-	if !(ok &&
-		s.SigningKeyShare.Equal(otherShard.SigningKeyShare) &&
-		s.PublicKeyShares.Equal(otherShard.PublicKeyShares) &&
-		s.PaillierSecretKey.Equal(otherShard.PaillierSecretKey)) {
-
-		return false
-	}
-	for sharingId, pk := range s.PaillierPublicKeys.Iter() {
-		otherPk, exists := otherShard.PaillierPublicKeys.Get(sharingId)
-		if !exists || !pk.Equal(otherPk) {
-			return false
-		}
-	}
-	for sharingId, esk := range s.PaillierEncryptedShares.Iter() {
-		otherEsk, exists := otherShard.PaillierEncryptedShares.Get(sharingId)
-		if !exists || !esk.Equal(otherEsk) {
-			return false
-		}
-	}
-	return true
-}
-
-func (s *Shard) PaillierPublicKeysIdentityBased(protocol types.ThresholdProtocol) ds.Map[types.IdentityKey, *paillier.PublicKey] {
-	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	out := hashmap.NewHashableHashMap[types.IdentityKey, *paillier.PublicKey]()
-	for sharingId, ppk := range s.PaillierPublicKeys.Iter() {
-		identityKey, exists := sharingConfig.Get(sharingId)
-		if !exists {
-			panic("sharing id not found in sharing config")
-		}
-		out.Put(identityKey, ppk)
-	}
-	return out
 }
 
 func PaillierPublicKeysAsSharingIDMappedToPublicKeys(protocol types.ThresholdProtocol, ppkMap ds.Map[types.IdentityKey, *paillier.PublicKey]) ds.Map[types.SharingID, *paillier.PublicKey] {
@@ -82,19 +42,6 @@ func PaillierPublicKeysAsSharingIDMappedToPublicKeys(protocol types.ThresholdPro
 	return out
 }
 
-func (s *Shard) PaillierEncryptedSharesIdentityBased(protocol types.ThresholdProtocol) ds.Map[types.IdentityKey, *paillier.CipherText] {
-	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	out := hashmap.NewHashableHashMap[types.IdentityKey, *paillier.CipherText]()
-	for sharingId, esk := range s.PaillierEncryptedShares.Iter() {
-		identityKey, exists := sharingConfig.Get(sharingId)
-		if !exists {
-			panic("sharing id not found in sharing config")
-		}
-		out.Put(identityKey, esk)
-	}
-	return out
-}
-
 func PaillierEncryptedSharesAsSharingIDMappedToCiphertexts(protocol types.ThresholdProtocol, eskMap ds.Map[types.IdentityKey, *paillier.CipherText]) ds.Map[types.SharingID, *paillier.CipherText] {
 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
 	out := hashmap.NewComparableHashMap[types.SharingID, *paillier.CipherText]()
@@ -106,25 +53,6 @@ func PaillierEncryptedSharesAsSharingIDMappedToCiphertexts(protocol types.Thresh
 		out.Put(sharingId, esk)
 	}
 	return out
-}
-
-func (s *Shard) UnmarshalJSON(data []byte) error {
-	var temp struct {
-		SigningKeyShare         *tsignatures.SigningKeyShare
-		PublicKeyShares         *tsignatures.PartialPublicKeys
-		PaillierSecretKey       *paillier.SecretKey
-		PaillierPublicKeys      *hashmap.ComparableHashMap[types.SharingID, *paillier.PublicKey]
-		PaillierEncryptedShares *hashmap.ComparableHashMap[types.SharingID, *paillier.CipherText]
-	}
-	if err := json.Unmarshal(data, &temp); err != nil {
-		return errs.WrapSerialisation(err, "could not unmarshal shard")
-	}
-	s.SigningKeyShare = temp.SigningKeyShare
-	s.PublicKeyShares = temp.PublicKeyShares
-	s.PaillierSecretKey = temp.PaillierSecretKey
-	s.PaillierPublicKeys = temp.PaillierPublicKeys
-	s.PaillierEncryptedShares = temp.PaillierEncryptedShares
-	return nil
 }
 
 type PartialSignature struct {
@@ -218,75 +146,4 @@ func (ps *PreSignature) Validate(myIdentityKey types.IdentityKey, protocol types
 		return errs.NewMembership("not all big R values are unique")
 	}
 	return nil
-}
-
-func (s *Shard) Validate(protocol types.ThresholdSignatureProtocol, holderIdentityKey types.IdentityKey, recomputeCached bool) error {
-	if s == nil {
-		return errs.NewIsNil("receiver")
-	}
-	if err := s.SigningKeyShare.Validate(protocol); err != nil {
-		return errs.WrapValidation(err, "invalid signing key share")
-	}
-	if err := s.PublicKeyShares.Validate(protocol); err != nil {
-		return errs.WrapValidation(err, "invalid public key shares")
-	}
-	if err := s.PaillierSecretKey.Validate(); err != nil {
-		return errs.WrapValidation(err, "paillier secret key")
-	}
-	if s.PaillierPublicKeys == nil {
-		return errs.NewIsNil("paillier public keys")
-	}
-	paillierPublicKeyHolders := hashset.NewHashableHashSet(s.PaillierPublicKeysIdentityBased(protocol).Keys()...)
-	if !paillierPublicKeyHolders.IsSubSet(protocol.Participants()) {
-		return errs.NewMembership("paillier public keys holders must be subset of all participants")
-	}
-	if diff := protocol.Participants().Difference(paillierPublicKeyHolders); diff.Size() != 1 || !diff.Contains(holderIdentityKey) {
-		return errs.NewMembership("paillier public keys holders should contain all participants except myself")
-	}
-	if s.PaillierEncryptedShares == nil {
-		return errs.NewIsNil("paillier encrypted share")
-	}
-	paillierEncryptedShareHolders := hashset.NewHashableHashSet(s.PaillierEncryptedSharesIdentityBased(protocol).Keys()...)
-	if !paillierEncryptedShareHolders.IsSubSet(protocol.Participants()) {
-		return errs.NewMembership("paillier encrypted share holders must be subset of all participants")
-	}
-	if diff := protocol.Participants().Difference(paillierEncryptedShareHolders); diff.Size() != 1 || !diff.Contains(holderIdentityKey) {
-		return errs.NewMembership("paillier encrypted share holders should contain all participants except myself")
-	}
-	if !paillierEncryptedShareHolders.Equal(paillierPublicKeyHolders) {
-		return errs.NewMembership("number of paillier public keys != number of encrypted paillier ciphertexts")
-	}
-	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-	for sharingId, esk := range s.PaillierEncryptedShares.Iter() {
-		identityKey, exists := sharingConfig.Get(sharingId)
-		if !exists {
-			return errs.NewMissing("identity key for sharing id %d", sharingId)
-		}
-		pk, exists := s.PaillierPublicKeys.Get(sharingId)
-		if !exists {
-			return errs.NewMissing("paillier public key for %s", identityKey.String())
-		}
-		if err := pk.Validate(); err != nil {
-			return errs.WrapValidation(err, "invalid public key %s", identityKey.String())
-		}
-		if err := esk.Validate(pk); err != nil {
-			return errs.WrapValidation(err, "invalid public key %s", identityKey.String())
-		}
-	}
-	return nil
-}
-func (s *Shard) SecretShare() curves.Scalar {
-	return s.SigningKeyShare.Share
-}
-
-func (s *Shard) PublicKey() curves.Point {
-	return s.SigningKeyShare.PublicKey
-}
-
-func (s *Shard) PartialPublicKeys() ds.Map[types.SharingID, curves.Point] {
-	return s.PublicKeyShares.Shares
-}
-
-func (s *Shard) FeldmanCommitmentVector() []curves.Point {
-	return s.PublicKeyShares.FeldmanCommitmentVector
 }
