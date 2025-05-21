@@ -17,9 +17,8 @@ type PublicShard struct {
 
 type Shard struct {
 	PublicShard
-	D1Share    *rep23.IntShare
-	D2Share    *rep23.IntShare
-	PaddingKey [32]byte
+	D1Share *rep23.IntShare
+	D2Share *rep23.IntShare
 }
 
 func (s *Shard) PublicKey() *rsa.PublicKey {

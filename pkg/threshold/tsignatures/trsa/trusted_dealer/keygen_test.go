@@ -42,7 +42,7 @@ func Test_HappyPath(t *testing.T) {
 			if i > 0 {
 				require.Equal(t, shardValues[i-1].N1.Bytes(), s.N1.Bytes())
 				require.Equal(t, shardValues[i-1].N2.Bytes(), s.N2.Bytes())
-				require.Equal(t, shardValues[i-1].PaddingKey, s.PaddingKey)
+				require.True(t, shardValues[i-1].PublicKey().Equal(s.PublicKey()))
 			}
 		}
 	})

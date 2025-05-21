@@ -1,4 +1,4 @@
-package trsa
+package signing
 
 import (
 	"hash"
@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-func EmsaPSSEncode(mHash []byte, emBits int, salt []byte, hh hash.Hash) ([]byte, error) {
+func emsaPSSEncode(mHash []byte, emBits int, salt []byte, hh hash.Hash) ([]byte, error) {
 	// See RFC 8017, Section 9.1.1.
 
 	hLen := hh.Size()

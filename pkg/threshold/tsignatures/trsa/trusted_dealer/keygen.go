@@ -50,12 +50,6 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (shards ds.Map[typ
 		return nil, errs.WrapFailed(err, "cannot deal shares")
 	}
 
-	var paddingKey [32]byte
-	_, err = io.ReadFull(prng, paddingKey[:])
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot read padding key")
-	}
-
 	shards = hashmap.NewHashableHashMap[types.IdentityKey, *trsa.Shard]()
 	sharingCfg := types.DeriveSharingConfig(protocol.Participants())
 	for sharingId, identityKey := range sharingCfg.Iter() {
@@ -69,9 +63,8 @@ func Keygen(protocol types.ThresholdProtocol, prng io.Reader) (shards ds.Map[typ
 		}
 
 		shards.Put(identityKey, &trsa.Shard{
-			D1Share:    d1Share,
-			D2Share:    d2Share,
-			PaddingKey: paddingKey,
+			D1Share: d1Share,
+			D2Share: d2Share,
 			PublicShard: trsa.PublicShard{
 				N1: saferith.ModulusFromBytes(sk1.N.Bytes()),
 				N2: saferith.ModulusFromBytes(sk2.N.Bytes()),
