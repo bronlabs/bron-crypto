@@ -11,7 +11,6 @@ import (
 var (
 	_ network.Message[types.ThresholdProtocol] = (*Round1Broadcast)(nil)
 	_ network.Message[types.ThresholdProtocol] = (*Round1P2P)(nil)
-	_ network.Message[types.ThresholdProtocol] = (*Round2Broadcast)(nil)
 )
 
 type Round1Broadcast struct {
