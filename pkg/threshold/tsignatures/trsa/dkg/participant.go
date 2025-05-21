@@ -32,11 +32,9 @@ type Participant struct {
 type State struct {
 	N1        *saferith.Modulus
 	N2        *saferith.Modulus
-	DShare1   *rep23.IntShare
-	DShare2   *rep23.IntShare
+	DShares1  map[types.SharingID]*rep23.IntShare
+	DShares2  map[types.SharingID]*rep23.IntShare
 	Challenge *saferith.Nat
-	VShares1  map[types.SharingID]*rep23.IntExpShare
-	VShares2  map[types.SharingID]*rep23.IntExpShare
 }
 
 func NewParticipant(sid []byte, authKey types.AuthKey, protocol types.ThresholdProtocol, tape transcripts.Transcript, prng io.Reader) (*Participant, error) {

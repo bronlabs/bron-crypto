@@ -4,7 +4,6 @@ import (
 	"crypto/rsa"
 
 	"github.com/cronokirby/saferith"
-	"golang.org/x/exp/maps"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
@@ -14,9 +13,8 @@ import (
 )
 
 const (
-	n1Label        = "BRON_CRYPTO_TRSA_DKG-N1-"
-	n2Label        = "BRON_CRYPTO_TRSA_DKG-N1-"
-	challengeLabel = "BRON_CRYPTO_TRSA_DKG-CHALLENGE-"
+	n1Label = "BRON_CRYPTO_TRSA_DKG-N1-"
+	n2Label = "BRON_CRYPTO_TRSA_DKG-N2-"
 )
 
 func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.ThresholdProtocol, *Round1P2P], error) {
@@ -40,21 +38,25 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.Th
 	switch p.MySharingId {
 	case 1:
 		p.State.N1 = saferith.ModulusFromBytes(rsaKey.N.Bytes())
-		p.State.DShare1, ok = dShares[p.MySharingId]
-		if !ok {
-			return nil, nil, errs.NewFailed("share not found")
-		}
-
+		p.State.DShares1 = dShares
+		p.State.DShares2 = make(map[types.SharingID]*rep23.IntShare)
 		bOut.N = p.State.N1.Nat()
-
+		bOut.Pi, err = proveCD(p.Tape, p.State.DShares1, p.State.N1)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "failed to prove cd")
+		}
 	case 2:
 		p.State.N2 = saferith.ModulusFromBytes(rsaKey.N.Bytes())
-		p.State.DShare2, ok = dShares[p.MySharingId]
-		if !ok {
-			return nil, nil, errs.NewFailed("share not found")
-		}
-
+		p.State.DShares1 = make(map[types.SharingID]*rep23.IntShare)
+		p.State.DShares2 = dShares
 		bOut.N = p.State.N2.Nat()
+		bOut.Pi, err = proveCD(p.Tape, p.State.DShares2, p.State.N2)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "failed to prove cd")
+		}
+	default:
+		p.State.DShares1 = make(map[types.SharingID]*rep23.IntShare)
+		p.State.DShares2 = make(map[types.SharingID]*rep23.IntShare)
 	}
 
 	p2pOut := network.NewRoundMessages[types.ThresholdProtocol, *Round1P2P]()
@@ -76,7 +78,7 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.Th
 	return bOut, p2pOut, nil
 }
 
-func (p *Participant) Round2(bIn network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast], p2pIn network.RoundMessages[types.ThresholdProtocol, *Round1P2P]) (*Round2Broadcast, error) {
+func (p *Participant) Round2(bIn network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast], p2pIn network.RoundMessages[types.ThresholdProtocol, *Round1P2P]) (*trsa.Shard, error) {
 	for sharingId, id := range p.SharingCfg.Iter() {
 		if sharingId == p.MySharingId {
 			continue
@@ -93,65 +95,23 @@ func (p *Participant) Round2(bIn network.RoundMessages[types.ThresholdProtocol, 
 		switch sharingId {
 		case 1:
 			p.State.N1 = saferith.ModulusFromNat(b.N)
-			p.State.DShare1 = p2p.DShare
+			p.State.DShares1[p.MySharingId] = p2p.DShare
+			err := verifyCD(p.Tape, b.Pi, p.State.N1, p.State.DShares1[p.MySharingId])
+			if err != nil {
+				return nil, errs.WrapValidation(err, "invalid shares")
+			}
 		case 2:
 			p.State.N2 = saferith.ModulusFromNat(b.N)
-			p.State.DShare2 = p2p.DShare
+			p.State.DShares2[p.MySharingId] = p2p.DShare
+			err := verifyCD(p.Tape, b.Pi, p.State.N2, p.State.DShares2[p.MySharingId])
+			if err != nil {
+				return nil, errs.WrapValidation(err, "invalid shares")
+			}
 		}
 	}
 
 	p.Tape.AppendMessages(n1Label, p.State.N1.Bytes())
 	p.Tape.AppendMessages(n2Label, p.State.N2.Bytes())
-	challengeLen := trsa.RsaBitLen / 8
-	challengeBytes, err := p.Tape.ExtractBytes(challengeLabel, uint(challengeLen))
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to extract challenge")
-	}
-	p.State.Challenge = new(saferith.Nat).SetBytes(challengeBytes)
-	p.State.VShares1 = make(map[types.SharingID]*rep23.IntExpShare)
-	p.State.VShares1[p.MySharingId] = p.State.DShare1.InExponent(p.State.Challenge, p.State.N1)
-	p.State.VShares2 = make(map[types.SharingID]*rep23.IntExpShare)
-	p.State.VShares2[p.MySharingId] = p.State.DShare2.InExponent(p.State.Challenge, p.State.N2)
-
-	return &Round2Broadcast{
-		VShare1: p.State.VShares1[p.MySharingId],
-		VShare2: p.State.VShares2[p.MySharingId],
-	}, nil
-}
-
-func (p *Participant) Round3(bIn network.RoundMessages[types.ThresholdProtocol, *Round2Broadcast]) (*trsa.Shard, error) {
-	for sharingId, id := range p.SharingCfg.Iter() {
-		if sharingId == p.MySharingId {
-			continue
-		}
-
-		b, ok := bIn.Get(id)
-		if !ok {
-			return nil, errs.NewFailed("b message not found")
-		}
-		p.State.VShares1[sharingId] = b.VShare1
-		p.State.VShares2[sharingId] = b.VShare2
-	}
-
-	dealer1 := rep23.NewIntExpScheme(p.State.N1)
-	s1, err := dealer1.Open(maps.Values(p.State.VShares1)...)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to open s1")
-	}
-	c1 := new(saferith.Nat).Exp(s1, new(saferith.Nat).SetUint64(trsa.RsaE), p.State.N1)
-	if c1.Eq(new(saferith.Nat).Mod(p.State.Challenge, p.State.N1)) == 0 {
-		return nil, errs.NewFailed("inconsistent d1 shares")
-	}
-
-	dealer2 := rep23.NewIntExpScheme(p.State.N2)
-	s2, err := dealer2.Open(maps.Values(p.State.VShares2)...)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to open s2")
-	}
-	c2 := new(saferith.Nat).Exp(s2, new(saferith.Nat).SetUint64(trsa.RsaE), p.State.N2)
-	if c2.Eq(new(saferith.Nat).Mod(p.State.Challenge, p.State.N2)) == 0 {
-		return nil, errs.NewFailed("inconsistent d2 shares")
-	}
 
 	shard := &trsa.Shard{
 		PublicShard: trsa.PublicShard{
@@ -159,8 +119,8 @@ func (p *Participant) Round3(bIn network.RoundMessages[types.ThresholdProtocol, 
 			N2: p.State.N2,
 			E:  trsa.RsaE,
 		},
-		D1Share: p.State.DShare1,
-		D2Share: p.State.DShare2,
+		D1Share: p.State.DShares1[p.MySharingId],
+		D2Share: p.State.DShares2[p.MySharingId],
 	}
 
 	return shard, nil

@@ -51,16 +51,9 @@ func Test_HappyPath(t *testing.T) {
 	}
 
 	r2bi, r2ui := testutils.MapO2I(t, participants, r1bo, r1uo)
-	r2bo := make([]*dkg.Round2Broadcast, total)
-	for i, p := range participants {
-		r2bo[i], err = p.Round2(r2bi[i], r2ui[i])
-		require.NoError(t, err)
-	}
-
-	r3bi := testutils.MapBroadcastO2I(t, participants, r2bo)
 	shards := make([]*trsa.Shard, total)
 	for i, p := range participants {
-		shards[i], err = p.Round3(r3bi[i])
+		shards[i], err = p.Round2(r2bi[i], r2ui[i])
 		require.NoError(t, err)
 	}
 
