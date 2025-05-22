@@ -38,6 +38,10 @@ type State struct {
 }
 
 func NewParticipant(sid []byte, authKey types.AuthKey, shard *trsa.Shard, protocol types.ThresholdProtocol, tape transcripts.Transcript, prng io.Reader) (*Participant, error) {
+	if len(sid) == 0 || authKey == nil || shard == nil || protocol == nil || tape == nil || prng == nil {
+		return nil, errs.NewIsNil("argument")
+	}
+
 	tape.AppendMessages(transcriptLabel, sid)
 	sharingCfg := types.DeriveSharingConfig(protocol.Participants())
 	sharingId, ok := sharingCfg.Reverse().Get(authKey)
@@ -54,6 +58,9 @@ func NewParticipant(sid []byte, authKey types.AuthKey, shard *trsa.Shard, protoc
 		Tape:        tape,
 		Prng:        prng,
 		State:       &State{},
+	}
+	if err := types.ValidateThresholdProtocol(p, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "invalid threshold protocol")
 	}
 
 	return p, nil
