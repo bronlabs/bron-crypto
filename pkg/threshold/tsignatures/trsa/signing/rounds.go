@@ -45,3 +45,14 @@ func (c *Cosigner) ProducePKCS1v15PartialSignature(message []byte) (*trsa.Partia
 		S2Share: s2,
 	}, nil
 }
+
+func (c *Cosigner) ProducePartialDecryption(ciphertext []byte) *trsa.PartialDecryption {
+	ciphertextNat := new(saferith.Nat).SetBytes(ciphertext)
+	p1 := c.MyShard.D1Share.InExponent(ciphertextNat, c.MyShard.N1)
+	p2 := c.MyShard.D2Share.InExponent(ciphertextNat, c.MyShard.N2)
+
+	return &trsa.PartialDecryption{
+		P1Share: p1,
+		P2Share: p2,
+	}
+}

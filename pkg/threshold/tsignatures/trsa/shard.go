@@ -21,7 +21,7 @@ type Shard struct {
 	D2Share *rep23.IntShare
 }
 
-func (s *Shard) PublicKey() *rsa.PublicKey {
+func (s *PublicShard) PublicKey() *rsa.PublicKey {
 	return &rsa.PublicKey{
 		N: new(big.Int).Mul(s.N1.Big(), s.N2.Big()),
 		E: int(s.E),
