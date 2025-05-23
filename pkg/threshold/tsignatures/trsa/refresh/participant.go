@@ -41,6 +41,9 @@ func NewParticipant(sid []byte, authKey types.AuthKey, shard *trsa.Shard, protoc
 	if len(sid) == 0 || authKey == nil || shard == nil || protocol == nil || tape == nil || prng == nil {
 		return nil, errs.NewIsNil("argument")
 	}
+	if protocol.TotalParties() != 3 || protocol.Threshold() != 2 {
+		return nil, errs.NewValidation("unsupported access structure")
+	}
 
 	tape.AppendMessages(transcriptLabel, sid)
 	sharingCfg := types.DeriveSharingConfig(protocol.Participants())

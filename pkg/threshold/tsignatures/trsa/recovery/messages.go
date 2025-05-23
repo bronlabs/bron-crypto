@@ -3,6 +3,7 @@ package recovery
 import (
 	"github.com/cronokirby/saferith"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 )
@@ -20,6 +21,10 @@ type Round1P2P struct {
 	D2 *saferith.Int
 }
 
-func (*Round1P2P) Validate(_ types.ThresholdProtocol) error {
+func (m *Round1P2P) Validate(_ types.ThresholdProtocol) error {
+	if m.N1 == nil || m.N2 == nil || m.D1 == nil || m.D2 == nil {
+		return errs.NewValidation("invalid message")
+	}
+
 	return nil
 }

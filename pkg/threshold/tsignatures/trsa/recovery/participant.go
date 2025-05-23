@@ -34,6 +34,16 @@ type Recoverer struct {
 }
 
 func NewRecoverer(authKey types.AuthKey, protocol types.ThresholdProtocol, shard *trsa.Shard, mislayer types.IdentityKey) (*Recoverer, error) {
+	if authKey == nil || protocol == nil || shard == nil {
+		return nil, errs.NewIsNil("argument")
+	}
+	if !protocol.Participants().Contains(mislayer) {
+		return nil, errs.NewValidation("invalid mislayer")
+	}
+	if protocol.Threshold() != 2 || protocol.TotalParties() != 3 {
+		return nil, errs.NewValidation("unsupported access structure")
+	}
+
 	sharingCfg := types.DeriveSharingConfig(protocol.Participants())
 	sharingId, ok := sharingCfg.Reverse().Get(authKey)
 	if !ok {
@@ -55,6 +65,9 @@ func NewRecoverer(authKey types.AuthKey, protocol types.ThresholdProtocol, shard
 		MislayerSharingId:   mislayerSharingId,
 		MislayerIdentityKey: mislayer,
 	}
+	if err := types.ValidateThresholdProtocol(p, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "invalid protocol")
+	}
 
 	return p, nil
 }
@@ -64,10 +77,16 @@ type Mislayer struct {
 }
 
 func NewMislayer(authKey types.AuthKey, protocol types.ThresholdProtocol) (*Mislayer, error) {
+	if authKey == nil || protocol == nil {
+		return nil, errs.NewIsNil("argument")
+	}
 	sharingCfg := types.DeriveSharingConfig(protocol.Participants())
 	sharingId, ok := sharingCfg.Reverse().Get(authKey)
 	if !ok {
 		return nil, errs.NewFailed("invalid identity")
+	}
+	if protocol.Threshold() != 2 || protocol.TotalParties() != 3 {
+		return nil, errs.NewValidation("unsupported access structure")
 	}
 
 	p := &Mislayer{
@@ -77,6 +96,9 @@ func NewMislayer(authKey types.AuthKey, protocol types.ThresholdProtocol) (*Misl
 			Protocol:    protocol,
 			SharingCfg:  sharingCfg,
 		},
+	}
+	if err := types.ValidateThresholdProtocol(p, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "invalid protocol")
 	}
 
 	return p, nil

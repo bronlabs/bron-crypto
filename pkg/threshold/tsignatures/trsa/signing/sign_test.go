@@ -42,7 +42,8 @@ func Test_SignPSSHappyPath(t *testing.T) {
 	for i, id := range identities {
 		shard, exists := shards.Get(id)
 		require.True(t, exists)
-		cosigners[i] = signing.NewCosigner(id.(types.AuthKey), shard, protocol, cryptoHash)
+		cosigners[i], err = signing.NewCosigner(id.(types.AuthKey), shard, protocol, cryptoHash)
+		require.NoError(t, err)
 	}
 
 	message := []byte("hello world")
@@ -53,7 +54,7 @@ func Test_SignPSSHappyPath(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	signature, err := trsa.Aggregate(&shardValues[0].PublicShard, partialSignatures...)
+	signature, err := signing.Aggregate(&shardValues[0].PublicShard, partialSignatures...)
 	require.NoError(t, err)
 
 	signatureBytes := make([]byte, (trsa.RsaBitLen+7)/8)
@@ -84,7 +85,8 @@ func Test_SignPKCS1v15HappyPath(t *testing.T) {
 	for i, id := range identities {
 		shard, exists := shards.Get(id)
 		require.True(t, exists)
-		cosigners[i] = signing.NewCosigner(id.(types.AuthKey), shard, protocol, cryptoHash)
+		cosigners[i], err = signing.NewCosigner(id.(types.AuthKey), shard, protocol, cryptoHash)
+		require.NoError(t, err)
 	}
 
 	message := []byte("hello world")
@@ -94,7 +96,7 @@ func Test_SignPKCS1v15HappyPath(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	signature, err := trsa.Aggregate(&shardValues[0].PublicShard, partialSignatures...)
+	signature, err := signing.Aggregate(&shardValues[0].PublicShard, partialSignatures...)
 	require.NoError(t, err)
 
 	signatureBytes := make([]byte, (trsa.RsaBitLen+7)/8)

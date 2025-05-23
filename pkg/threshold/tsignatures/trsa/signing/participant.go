@@ -4,6 +4,7 @@ import (
 	"crypto"
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa"
 )
@@ -19,13 +20,25 @@ type Cosigner struct {
 	H         crypto.Hash
 }
 
-func NewCosigner(authKey types.AuthKey, shard *trsa.Shard, protocol types.ThresholdProtocol, h crypto.Hash) *Cosigner {
-	return &Cosigner{
+func NewCosigner(authKey types.AuthKey, shard *trsa.Shard, protocol types.ThresholdProtocol, h crypto.Hash) (*Cosigner, error) {
+	if authKey == nil || shard == nil || protocol == nil || !h.Available() {
+		return nil, errs.NewIsNil("argument")
+	}
+	if protocol.Threshold() != 2 || protocol.TotalParties() != 3 {
+		return nil, errs.NewValidation("unsupported protocol")
+	}
+
+	p := &Cosigner{
 		MyAuthKey: authKey,
 		MyShard:   shard,
 		Protocol:  protocol,
 		H:         h,
 	}
+	if err := types.ValidateThresholdProtocol(p, protocol); err != nil {
+		return nil, errs.WrapValidation(err, "invalid protocol")
+	}
+
+	return p, nil
 }
 
 func (c *Cosigner) IdentityKey() types.IdentityKey {
