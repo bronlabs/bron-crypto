@@ -5,6 +5,7 @@ import (
 
 	"github.com/cronokirby/saferith"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -12,7 +13,8 @@ import (
 )
 
 var (
-	_ sharing.Share = (*IntShare)(nil)
+	_ sharing.Share                       = (*IntShare)(nil)
+	_ datastructures.Equatable[*IntShare] = (*IntShare)(nil)
 )
 
 type IntShare struct {
@@ -135,4 +137,14 @@ func (s *IntShare) InExponent(base *saferith.Nat, modulus *saferith.Modulus) *In
 		Prev: prev,
 		Next: next,
 	}
+}
+
+func (s *IntShare) Equal(rhs *IntShare) bool {
+	if s == nil || rhs == nil {
+		return s == rhs
+	}
+
+	return s.Id == rhs.Id &&
+		s.Prev.Eq(rhs.Prev) != 0 &&
+		s.Next.Eq(rhs.Next) != 0
 }

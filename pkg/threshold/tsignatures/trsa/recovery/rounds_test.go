@@ -4,7 +4,6 @@ import (
 	crand "crypto/rand"
 	"testing"
 
-	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
@@ -40,7 +39,7 @@ func Test_HappyPath(t *testing.T) {
 		require.True(t, ok)
 	}
 
-	// pretend alice lost her shard
+	// pretend Alice lost her shard
 	alice, err := recovery.NewMislayer(identities[0].(types.AuthKey), protocol)
 	require.NoError(t, err)
 
@@ -58,17 +57,6 @@ func Test_HappyPath(t *testing.T) {
 	r2i := testutils.MapUnicastO2I(t, []types.Participant{alice, bob, charlie}, r1o)
 	recoveredShard, err := alice.Round2(r2i[0])
 	require.NoError(t, err)
+	require.True(t, recoveredShard.Equal(shardValues[0]))
 	require.NotNil(t, recoveredShard)
-
-	require.Equal(t, saferith.Choice(1), shardValues[0].N1.Nat().Eq(recoveredShard.N1.Nat()))
-	require.Equal(t, saferith.Choice(1), shardValues[0].N2.Nat().Eq(recoveredShard.N2.Nat()))
-	require.Equal(t, shardValues[0].E, recoveredShard.E)
-
-	require.Equal(t, shardValues[0].D1Share.Id, recoveredShard.D1Share.Id)
-	require.Equal(t, saferith.Choice(1), shardValues[0].D1Share.Next.Eq(recoveredShard.D1Share.Next))
-	require.Equal(t, saferith.Choice(1), shardValues[0].D1Share.Prev.Eq(recoveredShard.D1Share.Prev))
-
-	require.Equal(t, shardValues[0].D2Share.Id, recoveredShard.D2Share.Id)
-	require.Equal(t, saferith.Choice(1), shardValues[0].D2Share.Next.Eq(recoveredShard.D2Share.Next))
-	require.Equal(t, saferith.Choice(1), shardValues[0].D2Share.Prev.Eq(recoveredShard.D2Share.Prev))
 }

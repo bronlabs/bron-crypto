@@ -51,7 +51,7 @@ func verifyCD(tape transcripts.Transcript, proof map[types.SharingID]*rep23.IntE
 	if !ok {
 		return errs.NewValidation("invalid shares")
 	}
-	if shareInExp.Next.Eq(shareInExpCheck.Next) == 0 || shareInExp.Prev.Eq(shareInExpCheck.Prev) == 0 {
+	if !shareInExp.Equal(shareInExpCheck) {
 		return errs.NewValidation("invalid shares")
 	}
 

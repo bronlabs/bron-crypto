@@ -131,7 +131,7 @@ func verifyShare(challenge *saferith.Nat, pi map[types.SharingID]*rep23.IntExpSh
 	if !ok {
 		return errs.NewFailed("invalid share")
 	}
-	if shareInExp.Prev.Eq(shareInExpCheck.Prev) == 0 || shareInExp.Next.Eq(shareInExpCheck.Next) == 0 {
+	if !shareInExp.Equal(shareInExpCheck) {
 		return errs.NewFailed("invalid share")
 	}
 
