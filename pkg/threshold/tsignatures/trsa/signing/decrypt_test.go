@@ -28,7 +28,7 @@ func Test_DecryptPKCS1v15HappyPath(t *testing.T) {
 
 	shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
-	pk := &shards.Values()[0].PublicShard
+	pk := &testutils.JsonRoundTrip(t, shards.Values()[0]).PublicShard
 
 	plaintext := []byte("hello world")
 	ciphertext, err := rsa.EncryptPKCS1v15(prng, pk.PublicKey(), plaintext)
@@ -39,6 +39,7 @@ func Test_DecryptPKCS1v15HappyPath(t *testing.T) {
 	for i, id := range identities {
 		shard, exists := shards.Get(id)
 		require.True(t, exists)
+		shard = testutils.JsonRoundTrip(t, shard)
 		cosigners[i], err = signing.NewCosigner(id.(types.AuthKey), shard, protocol, protocol.Participants(), cryptoHash)
 		require.NoError(t, err)
 	}
@@ -65,7 +66,7 @@ func Test_DecryptOAEPHappyPath(t *testing.T) {
 
 	shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
-	pk := &shards.Values()[0].PublicShard
+	pk := &testutils.JsonRoundTrip(t, shards.Values()[0]).PublicShard
 
 	cryptoHash := crypto.SHA256
 	plaintext := []byte("hello world")
@@ -77,6 +78,7 @@ func Test_DecryptOAEPHappyPath(t *testing.T) {
 	for i, id := range identities {
 		shard, exists := shards.Get(id)
 		require.True(t, exists)
+		shard = testutils.JsonRoundTrip(t, shard)
 		cosigners[i], err = signing.NewCosigner(id.(types.AuthKey), shard, protocol, protocol.Participants(), cryptoHash)
 		require.NoError(t, err)
 	}

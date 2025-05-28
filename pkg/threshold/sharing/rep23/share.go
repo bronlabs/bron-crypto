@@ -1,6 +1,8 @@
 package rep23
 
 import (
+	"encoding/json"
+	"math/big"
 	"slices"
 
 	"github.com/cronokirby/saferith"
@@ -15,6 +17,8 @@ import (
 var (
 	_ sharing.Share                       = (*IntShare)(nil)
 	_ datastructures.Equatable[*IntShare] = (*IntShare)(nil)
+	_ json.Marshaler                      = (*IntShare)(nil)
+	_ json.Unmarshaler                    = (*IntShare)(nil)
 )
 
 type IntShare struct {
@@ -147,4 +151,36 @@ func (s *IntShare) Equal(rhs *IntShare) bool {
 	return s.Id == rhs.Id &&
 		s.Prev.Eq(rhs.Prev) != 0 &&
 		s.Next.Eq(rhs.Next) != 0
+}
+
+type intShareJson struct {
+	Id   uint64   `json:"id"`
+	Next *big.Int `json:"next"`
+	Prev *big.Int `json:"prev"`
+}
+
+func (s *IntShare) MarshalJSON() ([]byte, error) {
+	raw := &intShareJson{
+		Id:   uint64(s.Id),
+		Next: s.Next.Big(),
+		Prev: s.Prev.Big(),
+	}
+
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "cannot marshal share")
+	}
+	return data, nil
+}
+
+func (s *IntShare) UnmarshalJSON(b []byte) error {
+	var raw intShareJson
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return errs.WrapSerialisation(err, "cannot unmarshal share")
+	}
+
+	s.Id = types.SharingID(raw.Id)
+	s.Next = new(saferith.Int).SetBig(raw.Next, raw.Next.BitLen())
+	s.Prev = new(saferith.Int).SetBig(raw.Prev, raw.Prev.BitLen())
+	return nil
 }

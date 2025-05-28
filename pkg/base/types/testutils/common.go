@@ -16,6 +16,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/encryptions/hpke"
 
@@ -703,4 +704,16 @@ func GobRoundTrip[M any](t require.TestingT, message M) M {
 	err = dec.Decode(&out)
 	require.NoError(t, err)
 	return out
+}
+
+func JsonRoundTrip[M any](tb testing.TB, message M) M {
+	tb.Helper()
+
+	serialized, err := json.Marshal(message)
+	require.NoError(tb, err)
+
+	var deserializedMessage M
+	err = json.Unmarshal(serialized, &deserializedMessage)
+	require.NoError(tb, err)
+	return deserializedMessage
 }

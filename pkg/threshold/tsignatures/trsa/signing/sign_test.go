@@ -35,6 +35,7 @@ func Test_SignPSSHappyPath(t *testing.T) {
 	shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
 	shardValues := shards.Values()
+	shardValues = testutils.JsonRoundTrip(t, shardValues)
 
 	cryptoHash := crypto.SHA256
 
@@ -42,6 +43,8 @@ func Test_SignPSSHappyPath(t *testing.T) {
 	for i, id := range identities {
 		shard, exists := shards.Get(id)
 		require.True(t, exists)
+		shard = testutils.JsonRoundTrip(t, shard)
+
 		cosigners[i], err = signing.NewCosigner(id.(types.AuthKey), shard, protocol, protocol.Participants(), cryptoHash)
 		require.NoError(t, err)
 	}
