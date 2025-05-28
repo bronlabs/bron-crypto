@@ -17,21 +17,28 @@ type Cosigner struct {
 	MyAuthKey types.AuthKey
 	MyShard   *trsa.Shard
 	Protocol  types.ThresholdProtocol
+	TheQuorum ds.Set[types.IdentityKey]
 	H         crypto.Hash
 }
 
-func NewCosigner(authKey types.AuthKey, shard *trsa.Shard, protocol types.ThresholdProtocol, h crypto.Hash) (*Cosigner, error) {
+func NewCosigner(authKey types.AuthKey, shard *trsa.Shard, protocol types.ThresholdProtocol, quorum ds.Set[types.IdentityKey], h crypto.Hash) (*Cosigner, error) {
 	if authKey == nil || shard == nil || protocol == nil || !h.Available() {
 		return nil, errs.NewIsNil("argument")
 	}
 	if protocol.Threshold() != 2 || protocol.TotalParties() != 3 {
 		return nil, errs.NewValidation("unsupported protocol")
 	}
+	for signer := range quorum.Iter() {
+		if !protocol.Participants().Contains(signer) {
+			return nil, errs.NewValidation("invalid quorum")
+		}
+	}
 
 	p := &Cosigner{
 		MyAuthKey: authKey,
 		MyShard:   shard,
 		Protocol:  protocol,
+		TheQuorum: quorum,
 		H:         h,
 	}
 	if err := types.ValidateThresholdProtocol(p, protocol); err != nil {
@@ -50,5 +57,5 @@ func (c *Cosigner) SharingId() types.SharingID {
 }
 
 func (c *Cosigner) Quorum() ds.Set[types.IdentityKey] {
-	return c.Protocol.Participants()
+	return c.TheQuorum
 }

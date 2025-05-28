@@ -42,7 +42,7 @@ func Test_SignPSSHappyPath(t *testing.T) {
 	for i, id := range identities {
 		shard, exists := shards.Get(id)
 		require.True(t, exists)
-		cosigners[i], err = signing.NewCosigner(id.(types.AuthKey), shard, protocol, cryptoHash)
+		cosigners[i], err = signing.NewCosigner(id.(types.AuthKey), shard, protocol, protocol.Participants(), cryptoHash)
 		require.NoError(t, err)
 	}
 
@@ -85,7 +85,7 @@ func Test_SignPKCS1v15HappyPath(t *testing.T) {
 	for i, id := range identities {
 		shard, exists := shards.Get(id)
 		require.True(t, exists)
-		cosigners[i], err = signing.NewCosigner(id.(types.AuthKey), shard, protocol, cryptoHash)
+		cosigners[i], err = signing.NewCosigner(id.(types.AuthKey), shard, protocol, protocol.Participants(), cryptoHash)
 		require.NoError(t, err)
 	}
 
