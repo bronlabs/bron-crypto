@@ -59,9 +59,18 @@ func ConstructPrivateKey(prng io.Reader, shards ...*Shard) (*rsa.PrivateKey, err
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't construct primes")
 	}
+	pq1 := new(big.Int).Mul(p1, q1)
+	if n1.Cmp(pq1) != 0 {
+		return nil, errs.NewValidation("invalid primes")
+	}
+
 	p2, q2, err := constructPrimes(n2, d2, e, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't construct primes")
+	}
+	pq2 := new(big.Int).Mul(p2, q2)
+	if n2.Cmp(pq2) != 0 {
+		return nil, errs.NewValidation("invalid primes")
 	}
 
 	one := big.NewInt(1)
