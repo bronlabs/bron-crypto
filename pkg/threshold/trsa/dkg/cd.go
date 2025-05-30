@@ -23,8 +23,10 @@ func proveCD(tape transcripts.Transcript, shares map[types.SharingID]*rep23.IntS
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot derive challenge")
 	}
+
 	sharesInExp := make(map[types.SharingID]*rep23.IntExpShare)
 	for sid, share := range shares {
+		// steps: 1, 2, 3
 		sharesInExp[sid] = share.InExponent(challenge, n)
 	}
 	return sharesInExp, nil
@@ -36,6 +38,17 @@ func verifyCD(tape transcripts.Transcript, proof map[types.SharingID]*rep23.IntE
 		return errs.WrapFailed(err, "cannot derive challenge")
 	}
 
+	// steps: 1, 2
+	shareInExp := share.InExponent(challenge, n)
+	shareInExpCheck, ok := proof[share.SharingId()]
+	if !ok {
+		return errs.NewValidation("invalid shares")
+	}
+	if !shareInExp.Equal(shareInExpCheck) {
+		return errs.NewValidation("invalid shares")
+	}
+
+	// step 3
 	dealer := rep23.NewIntExpScheme(n)
 	s, err := dealer.Open(slices.Collect(maps.Values(proof))...)
 	if err != nil {
@@ -43,15 +56,6 @@ func verifyCD(tape transcripts.Transcript, proof map[types.SharingID]*rep23.IntE
 	}
 	c := new(saferith.Nat).Exp(s, new(saferith.Nat).SetUint64(trsa.RsaE), n)
 	if challenge.Eq(c) == 0 {
-		return errs.NewValidation("invalid shares")
-	}
-
-	shareInExp := share.InExponent(challenge, n)
-	shareInExpCheck, ok := proof[share.SharingId()]
-	if !ok {
-		return errs.NewValidation("invalid shares")
-	}
-	if !shareInExp.Equal(shareInExpCheck) {
 		return errs.NewValidation("invalid shares")
 	}
 

@@ -12,6 +12,7 @@ import (
 )
 
 func AggregateSignature(publicShard *trsa.PublicShard, partialSignatures ...*trsa_signatures.PartialSignature) (*saferith.Nat, error) {
+	// step 1
 	dealer1 := rep23.NewIntExpScheme(publicShard.N1)
 	s1Shares := sliceutils.Map(partialSignatures, func(s *trsa_signatures.PartialSignature) *rep23.IntExpShare { return s.S1Share })
 	s1, err := dealer1.Open(s1Shares...)
@@ -19,6 +20,7 @@ func AggregateSignature(publicShard *trsa.PublicShard, partialSignatures ...*trs
 		return nil, errs.WrapFailed(err, "cannot open s1 shares")
 	}
 
+	// step 2
 	dealer2 := rep23.NewIntExpScheme(publicShard.N2)
 	s2Shares := sliceutils.Map(partialSignatures, func(s *trsa_signatures.PartialSignature) *rep23.IntExpShare { return s.S2Share })
 	s2, err := dealer2.Open(s2Shares...)
@@ -26,6 +28,7 @@ func AggregateSignature(publicShard *trsa.PublicShard, partialSignatures ...*trs
 		return nil, errs.WrapFailed(err, "cannot open s1 shares")
 	}
 
+	// step 3
 	s := numutils.Crt(s1, s2, publicShard.N1, publicShard.N2.Nat())
 	return s, nil
 }

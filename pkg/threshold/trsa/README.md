@@ -11,6 +11,9 @@ The procedure to reconstruct a valid private RSA key is as follows:
 * return $k = (N, e, d)$ - this is effectively the valid multi-prime RSA private key.
 
 ## N factorization
+Source: [Modern Computer Algebra](https://cosec.bit.uni-bonn.de/fileadmin/user_upload/science/mca/solutions.pdf)
+(algorithm 18.16)
+
 Input: $(N, e, d)$ s.t. $d = e^{-1} \mod \phi(N)$, Output: $p$, $q$ s.t. $N = p \times q$.
 * Compute $f = ed-1$. What's interesting about $f$ is that $x^f = 1 \mod N$ for (almost) any $x$.
 * Write $f$ as $2^{s}g$ for an odd value $g$.

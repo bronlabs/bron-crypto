@@ -23,6 +23,7 @@ const (
 func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.ThresholdProtocol, *Round1P2P], error) {
 	var ok bool
 
+	// steps: 2, 3, 4
 	rsaKey, err := rsa.GenerateKey(p.Prng, trsa.RsaBitLen/2)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to generate RSA key")
@@ -31,12 +32,31 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.Th
 		return nil, nil, errs.NewValidation("wrong RSA E value")
 	}
 
+	// step 5
 	dealer := rep23.NewIntScheme()
 	dShares, err := dealer.Deal(new(saferith.Int).SetBig(rsaKey.D, trsa.RsaBitLen/2), p.Prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to deal shares")
 	}
 
+	// step 6
+	p2pOut := network.NewRoundMessages[types.ThresholdProtocol, *Round1P2P]()
+	for sharingId, id := range p.SharingCfg.Iter() {
+		if sharingId == p.MySharingId {
+			continue
+		}
+
+		p2p := &Round1P2P{}
+		if p.MySharingId == 1 || p.MySharingId == 2 {
+			p2p.DShare, ok = dShares[sharingId]
+			if !ok {
+				return nil, nil, errs.NewFailed("share not found")
+			}
+		}
+		p2pOut.Put(id, p2p)
+	}
+
+	// steps: 7, 8, 9
 	bOut := &Round1Broadcast{}
 	switch p.MySharingId {
 	case 1:
@@ -62,26 +82,11 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.Th
 		p.State.DShares2 = make(map[types.SharingID]*rep23.IntShare)
 	}
 
-	p2pOut := network.NewRoundMessages[types.ThresholdProtocol, *Round1P2P]()
-	for sharingId, id := range p.SharingCfg.Iter() {
-		if sharingId == p.MySharingId {
-			continue
-		}
-
-		p2p := &Round1P2P{}
-		if p.MySharingId == 1 || p.MySharingId == 2 {
-			p2p.DShare, ok = dShares[sharingId]
-			if !ok {
-				return nil, nil, errs.NewFailed("share not found")
-			}
-		}
-		p2pOut.Put(id, p2p)
-	}
-
 	return bOut, p2pOut, nil
 }
 
 func (p *Participant) Round2(bIn network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast], p2pIn network.RoundMessages[types.ThresholdProtocol, *Round1P2P]) (*rsa.PublicKey, *trsa.Shard, error) {
+	// step 1
 	for sharingId, id := range p.SharingCfg.Iter() {
 		if sharingId == p.MySharingId {
 			continue
@@ -95,6 +100,8 @@ func (p *Participant) Round2(bIn network.RoundMessages[types.ThresholdProtocol, 
 		if !ok {
 			return nil, nil, errs.NewFailed("b message not found")
 		}
+
+		// steps: 2, 3, 4, 5, 6, 7
 		switch sharingId {
 		case 1:
 			p.State.N1 = saferith.ModulusFromNat(b.N)
@@ -123,10 +130,12 @@ func (p *Participant) Round2(bIn network.RoundMessages[types.ThresholdProtocol, 
 	p.Tape.AppendMessages(n2Label, p.State.N2.Bytes())
 	p.Tape.AppendMessages(eLabel, binary.BigEndian.AppendUint64(nil, trsa.RsaE))
 
+	// step 8
 	publicKey := &rsa.PublicKey{
 		N: new(big.Int).Mul(p.State.N1.Big(), p.State.N2.Big()),
 		E: trsa.RsaE,
 	}
+
 	shard := &trsa.Shard{
 		PublicShard: trsa.PublicShard{
 			N1: p.State.N1,

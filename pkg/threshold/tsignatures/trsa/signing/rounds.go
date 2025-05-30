@@ -19,7 +19,11 @@ func (c *Cosigner) ProducePSSPartialSignature(message, salt []byte) (*trsa_signa
 		return nil, errs.WrapFailed(err, "cannot encode message")
 	}
 	m := new(saferith.Nat).SetBytes(mBytes)
+
+	// steps: 1, 2
 	s1 := c.MyShard.D1Share.InExponent(m, c.MyShard.N1)
+
+	// steps: 3, 4
 	s2 := c.MyShard.D2Share.InExponent(m, c.MyShard.N2)
 
 	return &trsa_signatures.PartialSignature{
@@ -38,7 +42,11 @@ func (c *Cosigner) ProducePKCS1v15PartialSignature(message []byte) (*trsa_signat
 		return nil, errs.WrapFailed(err, "cannot encode message")
 	}
 	m := new(saferith.Nat).SetBytes(mBytes)
+
+	// steps: 1, 2
 	s1 := c.MyShard.D1Share.InExponent(m, c.MyShard.N1)
+
+	// steps: 3, 4
 	s2 := c.MyShard.D2Share.InExponent(m, c.MyShard.N2)
 
 	return &trsa_signatures.PartialSignature{
