@@ -26,12 +26,12 @@ func Test_DecryptPKCS1v15HappyPath(t *testing.T) {
 	protocol, err := testutils.MakeThresholdProtocol(k256.NewCurve(), identities, threshold)
 	require.NoError(t, err)
 
-	shards, err := trusted_dealer.Keygen(protocol, prng)
+	publicKey, shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
 	pk := &testutils.JsonRoundTrip(t, shards.Values()[0]).PublicShard
 
 	plaintext := []byte("hello world")
-	ciphertext, err := rsa.EncryptPKCS1v15(prng, pk.PublicKey(), plaintext)
+	ciphertext, err := rsa.EncryptPKCS1v15(prng, publicKey, plaintext)
 	require.NoError(t, err)
 
 	cryptoHash := crypto.SHA256
@@ -64,14 +64,14 @@ func Test_DecryptOAEPHappyPath(t *testing.T) {
 	protocol, err := testutils.MakeThresholdProtocol(k256.NewCurve(), identities, threshold)
 	require.NoError(t, err)
 
-	shards, err := trusted_dealer.Keygen(protocol, prng)
+	publicKey, shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
 	pk := &testutils.JsonRoundTrip(t, shards.Values()[0]).PublicShard
 
 	cryptoHash := crypto.SHA256
 	plaintext := []byte("hello world")
 	label := []byte("test")
-	ciphertext, err := rsa.EncryptOAEP(cryptoHash.New(), prng, pk.PublicKey(), plaintext, label)
+	ciphertext, err := rsa.EncryptOAEP(cryptoHash.New(), prng, publicKey, plaintext, label)
 	require.NoError(t, err)
 
 	cosigners := make([]*signing.Cosigner, total)

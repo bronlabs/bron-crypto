@@ -30,7 +30,7 @@ func Test_HappyPath(t *testing.T) {
 	protocol, err := testutils.MakeThresholdProtocol(k256.NewCurve(), identities, threshold)
 	require.NoError(t, err)
 
-	shards, err := trusted_dealer.Keygen(protocol, prng)
+	publicKey, shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
 	shardValues := shards.Values()
 
@@ -39,10 +39,11 @@ func Test_HappyPath(t *testing.T) {
 		for i, s := range shardValues {
 			require.Equal(t, uint64(trsa.RsaE), s.E)
 			require.NotEqual(t, s.N1.Bytes(), s.N2.Bytes())
+			require.Equal(t, publicKey, s.PublicKey())
 			if i > 0 {
 				require.Equal(t, shardValues[i-1].N1.Bytes(), s.N1.Bytes())
 				require.Equal(t, shardValues[i-1].N2.Bytes(), s.N2.Bytes())
-				require.True(t, shardValues[i-1].PublicKey().Equal(s.PublicKey()))
+				require.Equal(t, shardValues[i-1].PublicKey(), s.PublicKey())
 			}
 		}
 	})

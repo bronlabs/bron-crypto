@@ -32,7 +32,7 @@ func Test_SignPSSHappyPath(t *testing.T) {
 	protocol, err := testutils.MakeThresholdProtocol(k256.NewCurve(), identities, threshold)
 	require.NoError(t, err)
 
-	shards, err := trusted_dealer.Keygen(protocol, prng)
+	publicKey, shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
 	shardValues := shards.Values()
 	shardValues = testutils.JsonRoundTrip(t, shardValues)
@@ -64,7 +64,7 @@ func Test_SignPSSHappyPath(t *testing.T) {
 	signature.FillBytes(signatureBytes)
 	digest, err := hashing.Hash(cryptoHash.New, message)
 	require.NoError(t, err)
-	err = rsa.VerifyPSS(shardValues[0].PublicKey(), cryptoHash, digest, signatureBytes, &rsa.PSSOptions{SaltLength: len(salt)})
+	err = rsa.VerifyPSS(publicKey, cryptoHash, digest, signatureBytes, &rsa.PSSOptions{SaltLength: len(salt)})
 	require.NoError(t, err)
 }
 
@@ -78,16 +78,17 @@ func Test_SignPKCS1v15HappyPath(t *testing.T) {
 	protocol, err := testutils.MakeThresholdProtocol(k256.NewCurve(), identities, threshold)
 	require.NoError(t, err)
 
-	shards, err := trusted_dealer.Keygen(protocol, prng)
+	publicKey, shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
 	shardValues := shards.Values()
+	shardValues = testutils.JsonRoundTrip(t, shardValues)
 
 	cryptoHash := crypto.SHA256
-
 	cosigners := make([]*signing.Cosigner, total)
 	for i, id := range identities {
 		shard, exists := shards.Get(id)
 		require.True(t, exists)
+		shard = testutils.JsonRoundTrip(t, shard)
 		cosigners[i], err = signing.NewCosigner(id.(types.AuthKey), shard, protocol, protocol.Participants(), cryptoHash)
 		require.NoError(t, err)
 	}
@@ -106,6 +107,6 @@ func Test_SignPKCS1v15HappyPath(t *testing.T) {
 	signature.FillBytes(signatureBytes)
 	digest, err := hashing.Hash(cryptoHash.New, message)
 	require.NoError(t, err)
-	err = rsa.VerifyPKCS1v15(shardValues[0].PublicKey(), cryptoHash, digest, signatureBytes)
+	err = rsa.VerifyPKCS1v15(publicKey, cryptoHash, digest, signatureBytes)
 	require.NoError(t, err)
 }

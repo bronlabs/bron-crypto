@@ -2,6 +2,7 @@ package dkg_test
 
 import (
 	crand "crypto/rand"
+	"crypto/rsa"
 	"testing"
 
 	"github.com/cronokirby/saferith"
@@ -51,9 +52,10 @@ func Test_HappyPath(t *testing.T) {
 	}
 
 	r2bi, r2ui := testutils.MapO2I(t, participants, r1bo, r1uo)
+	publicKeys := make([]*rsa.PublicKey, len(participants))
 	shards := make([]*trsa.Shard, total)
 	for i, p := range participants {
-		shards[i], err = p.Round2(r2bi[i], r2ui[i])
+		publicKeys[i], shards[i], err = p.Round2(r2bi[i], r2ui[i])
 		require.NoError(t, err)
 	}
 
@@ -62,10 +64,11 @@ func Test_HappyPath(t *testing.T) {
 		for i, s := range shards {
 			require.Equal(t, uint64(trsa.RsaE), s.E)
 			require.NotEqual(t, s.N1.Bytes(), s.N2.Bytes())
+			require.Equal(t, publicKeys[i], s.PublicKey())
 			if i > 0 {
 				require.Equal(t, shards[i-1].N1.Bytes(), s.N1.Bytes())
 				require.Equal(t, shards[i-1].N2.Bytes(), s.N2.Bytes())
-				require.True(t, shards[i-1].PublicKey().Equal(s.PublicKey()))
+				require.Equal(t, shards[i-1].PublicKey(), s.PublicKey())
 			}
 		}
 	})

@@ -53,11 +53,12 @@ func Test_ReconstructionHappyPath(t *testing.T) {
 
 	r2bi, r2ui := testutils.MapO2I(t, participants, r1bo, r1uo)
 	shards := make([]*trsa.Shard, total)
+	publicKeys := make([]*rsa.PublicKey, total)
 	for i, p := range participants {
-		shards[i], err = p.Round2(r2bi[i], r2ui[i])
+		publicKeys[i], shards[i], err = p.Round2(r2bi[i], r2ui[i])
 		require.NoError(t, err)
 	}
-	publicKey := shards[0].PublicKey()
+	publicKey := publicKeys[0]
 
 	for th := threshold; th <= total; th++ {
 		shardsSubsets, err := combinatorics.Combinations(shards, uint(th))

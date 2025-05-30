@@ -30,7 +30,7 @@ func Test_HappyPath(t *testing.T) {
 	protocol, err := testutils.MakeThresholdProtocol(k256.NewCurve(), identities, threshold)
 	require.NoError(t, err)
 
-	shards, err := trusted_dealer.Keygen(protocol, prng)
+	_, shards, err := trusted_dealer.Keygen(protocol, prng)
 	require.NoError(t, err)
 	shardValues := make([]*trsa.Shard, len(identities))
 	for i, id := range identities {

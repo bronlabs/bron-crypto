@@ -81,7 +81,7 @@ func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.Th
 	return bOut, p2pOut, nil
 }
 
-func (p *Participant) Round2(bIn network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast], p2pIn network.RoundMessages[types.ThresholdProtocol, *Round1P2P]) (*trsa.Shard, error) {
+func (p *Participant) Round2(bIn network.RoundMessages[types.ThresholdProtocol, *Round1Broadcast], p2pIn network.RoundMessages[types.ThresholdProtocol, *Round1P2P]) (*rsa.PublicKey, *trsa.Shard, error) {
 	for sharingId, id := range p.SharingCfg.Iter() {
 		if sharingId == p.MySharingId {
 			continue
@@ -89,11 +89,11 @@ func (p *Participant) Round2(bIn network.RoundMessages[types.ThresholdProtocol, 
 
 		p2p, ok := p2pIn.Get(id)
 		if !ok {
-			return nil, errs.NewFailed("p2p message not found")
+			return nil, nil, errs.NewFailed("p2p message not found")
 		}
 		b, ok := bIn.Get(id)
 		if !ok {
-			return nil, errs.NewFailed("b message not found")
+			return nil, nil, errs.NewFailed("b message not found")
 		}
 		switch sharingId {
 		case 1:
@@ -101,14 +101,14 @@ func (p *Participant) Round2(bIn network.RoundMessages[types.ThresholdProtocol, 
 			p.State.DShares1[p.MySharingId] = p2p.DShare
 			err := verifyCD(p.Tape, b.Pi, p.State.N1, p.State.DShares1[p.MySharingId])
 			if err != nil {
-				return nil, errs.WrapIdentifiableAbort(err, id.PublicKey().ToAffineCompressed(), "invalid shares")
+				return nil, nil, errs.WrapIdentifiableAbort(err, id.PublicKey().ToAffineCompressed(), "invalid shares")
 			}
 		case 2:
 			p.State.N2 = saferith.ModulusFromNat(b.N)
 			p.State.DShares2[p.MySharingId] = p2p.DShare
 			err := verifyCD(p.Tape, b.Pi, p.State.N2, p.State.DShares2[p.MySharingId])
 			if err != nil {
-				return nil, errs.WrapIdentifiableAbort(err, id.PublicKey().ToAffineCompressed(), "invalid shares")
+				return nil, nil, errs.WrapIdentifiableAbort(err, id.PublicKey().ToAffineCompressed(), "invalid shares")
 			}
 		}
 	}
@@ -116,13 +116,17 @@ func (p *Participant) Round2(bIn network.RoundMessages[types.ThresholdProtocol, 
 	one := big.NewInt(1)
 	gcd := new(big.Int).GCD(nil, nil, p.State.N1.Big(), p.State.N2.Big())
 	if gcd.Cmp(one) != 0 {
-		return nil, errs.NewFailed("invalid moduli")
+		return nil, nil, errs.NewFailed("invalid moduli")
 	}
 
 	p.Tape.AppendMessages(n1Label, p.State.N1.Bytes())
 	p.Tape.AppendMessages(n2Label, p.State.N2.Bytes())
 	p.Tape.AppendMessages(eLabel, binary.BigEndian.AppendUint64(nil, trsa.RsaE))
 
+	publicKey := &rsa.PublicKey{
+		N: new(big.Int).Mul(p.State.N1.Big(), p.State.N2.Big()),
+		E: trsa.RsaE,
+	}
 	shard := &trsa.Shard{
 		PublicShard: trsa.PublicShard{
 			N1: p.State.N1,
@@ -133,5 +137,5 @@ func (p *Participant) Round2(bIn network.RoundMessages[types.ThresholdProtocol, 
 		D2Share: p.State.DShares2[p.MySharingId],
 	}
 
-	return shard, nil
+	return publicKey, shard, nil
 }
