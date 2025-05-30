@@ -1,4 +1,4 @@
-package signing
+package trsa
 
 import (
 	"crypto/rsa"
@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-func pkcs1v15ConstructEM(pub *rsa.PublicKey, hash string, hashed []byte) ([]byte, error) {
+func Pkcs1v15ConstructEM(pub *rsa.PublicKey, hash string, hashed []byte) ([]byte, error) {
 	// Special case: "" is used to indicate that the data is signed directly.
 	var prefix []byte
 	if hash != "" {

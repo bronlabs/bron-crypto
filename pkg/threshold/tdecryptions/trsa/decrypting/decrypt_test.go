@@ -1,4 +1,4 @@
-package signing_test
+package decrypting_test
 
 import (
 	"crypto"
@@ -11,9 +11,14 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	"github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa/signing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa/trusted_dealer"
+	trsa_decryptions "github.com/bronlabs/bron-crypto/pkg/threshold/tdecryptions/trsa"
+	trsa_decrypting "github.com/bronlabs/bron-crypto/pkg/threshold/tdecryptions/trsa/decrypting"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trsa/trusted_dealer"
+)
+
+const (
+	threshold = 2
+	total     = 3
 )
 
 func Test_DecryptPKCS1v15HappyPath(t *testing.T) {
@@ -35,21 +40,21 @@ func Test_DecryptPKCS1v15HappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	cryptoHash := crypto.SHA256
-	cosigners := make([]*signing.Cosigner, total)
+	cosigners := make([]*trsa_decrypting.Codecryptor, total)
 	for i, id := range identities {
 		shard, exists := shards.Get(id)
 		require.True(t, exists)
 		shard = testutils.JsonRoundTrip(t, shard)
-		cosigners[i], err = signing.NewCosigner(id.(types.AuthKey), shard, protocol, protocol.Participants(), cryptoHash)
+		cosigners[i], err = trsa_decrypting.NewCodecryptor(id.(types.AuthKey), shard, protocol, protocol.Participants(), cryptoHash)
 		require.NoError(t, err)
 	}
 
-	partialDecryptions := make([]*trsa.PartialDecryption, len(cosigners))
+	partialDecryptions := make([]*trsa_decryptions.PartialDecryption, len(cosigners))
 	for i, cosigner := range cosigners {
 		partialDecryptions[i] = cosigner.ProducePartialDecryption(ciphertext)
 	}
 
-	decrypted, err := signing.AggregatePKCS1v15Decryption(pk, partialDecryptions...)
+	decrypted, err := trsa_decrypting.AggregatePKCS1v15Decryption(pk, partialDecryptions...)
 	require.NoError(t, err)
 	require.Equal(t, plaintext, decrypted)
 }
@@ -74,21 +79,21 @@ func Test_DecryptOAEPHappyPath(t *testing.T) {
 	ciphertext, err := rsa.EncryptOAEP(cryptoHash.New(), prng, publicKey, plaintext, label)
 	require.NoError(t, err)
 
-	cosigners := make([]*signing.Cosigner, total)
+	cosigners := make([]*trsa_decrypting.Codecryptor, total)
 	for i, id := range identities {
 		shard, exists := shards.Get(id)
 		require.True(t, exists)
 		shard = testutils.JsonRoundTrip(t, shard)
-		cosigners[i], err = signing.NewCosigner(id.(types.AuthKey), shard, protocol, protocol.Participants(), cryptoHash)
+		cosigners[i], err = trsa_decrypting.NewCodecryptor(id.(types.AuthKey), shard, protocol, protocol.Participants(), cryptoHash)
 		require.NoError(t, err)
 	}
 
-	partialDecryptions := make([]*trsa.PartialDecryption, len(cosigners))
+	partialDecryptions := make([]*trsa_decryptions.PartialDecryption, len(cosigners))
 	for i, cosigner := range cosigners {
 		partialDecryptions[i] = cosigner.ProducePartialDecryption(ciphertext)
 	}
 
-	decrypted, err := signing.AggregateOAEPDecryption(pk, cryptoHash, label, partialDecryptions...)
+	decrypted, err := trsa_decrypting.AggregateOAEPDecryption(pk, cryptoHash, label, partialDecryptions...)
 	require.NoError(t, err)
 	require.Equal(t, plaintext, decrypted)
 }

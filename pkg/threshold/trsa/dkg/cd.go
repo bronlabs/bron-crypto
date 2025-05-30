@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/rep23"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trsa"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
@@ -23,8 +23,10 @@ func proveCD(tape transcripts.Transcript, shares map[types.SharingID]*rep23.IntS
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot derive challenge")
 	}
+
 	sharesInExp := make(map[types.SharingID]*rep23.IntExpShare)
 	for sid, share := range shares {
+		// steps: 1, 2, 3
 		sharesInExp[sid] = share.InExponent(challenge, n)
 	}
 	return sharesInExp, nil
@@ -36,6 +38,17 @@ func verifyCD(tape transcripts.Transcript, proof map[types.SharingID]*rep23.IntE
 		return errs.WrapFailed(err, "cannot derive challenge")
 	}
 
+	// steps: 1, 2
+	shareInExp := share.InExponent(challenge, n)
+	shareInExpCheck, ok := proof[share.SharingId()]
+	if !ok {
+		return errs.NewValidation("invalid shares")
+	}
+	if !shareInExp.Equal(shareInExpCheck) {
+		return errs.NewValidation("invalid shares")
+	}
+
+	// step 3
 	dealer := rep23.NewIntExpScheme(n)
 	s, err := dealer.Open(slices.Collect(maps.Values(proof))...)
 	if err != nil {
@@ -46,22 +59,13 @@ func verifyCD(tape transcripts.Transcript, proof map[types.SharingID]*rep23.IntE
 		return errs.NewValidation("invalid shares")
 	}
 
-	shareInExp := share.InExponent(challenge, n)
-	shareInExpCheck, ok := proof[share.SharingId()]
-	if !ok {
-		return errs.NewValidation("invalid shares")
-	}
-	if !shareInExp.Equal(shareInExpCheck) {
-		return errs.NewValidation("invalid shares")
-	}
-
 	return nil
 }
 
 func deriveChallenge(tape transcripts.Transcript, n *saferith.Modulus) (*saferith.Nat, error) {
 	piTape := tape.Clone()
 	piTape.AppendMessages(cdNLabel, n.Bytes())
-	eBytes, err := piTape.ExtractBytes(cdELabel, trsa.RsaBitLen/8)
+	eBytes, err := piTape.ExtractBytes(cdELabel, (trsa.RsaBitLen+7)/8)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to extract challenge")
 	}

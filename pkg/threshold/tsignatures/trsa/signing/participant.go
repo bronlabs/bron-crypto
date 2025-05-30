@@ -6,7 +6,7 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trsa"
 )
 
 var (
