@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/rep23"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trsa"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
@@ -61,7 +61,7 @@ func verifyCD(tape transcripts.Transcript, proof map[types.SharingID]*rep23.IntE
 func deriveChallenge(tape transcripts.Transcript, n *saferith.Modulus) (*saferith.Nat, error) {
 	piTape := tape.Clone()
 	piTape.AppendMessages(cdNLabel, n.Bytes())
-	eBytes, err := piTape.ExtractBytes(cdELabel, trsa.RsaBitLen/8)
+	eBytes, err := piTape.ExtractBytes(cdELabel, (trsa.RsaBitLen+7)/8)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to extract challenge")
 	}

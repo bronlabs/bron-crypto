@@ -13,9 +13,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/rep23"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa/refresh"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa/trusted_dealer"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trsa"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trsa/refresh"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trsa/trusted_dealer"
 )
 
 const (

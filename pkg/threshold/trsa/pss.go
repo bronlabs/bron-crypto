@@ -1,4 +1,4 @@
-package signing
+package trsa
 
 import (
 	"hash"
@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-func emsaPSSEncode(mHash []byte, emBits int, salt []byte, hh hash.Hash) ([]byte, error) {
+func EmsaPSSEncode(mHash []byte, emBits int, salt []byte, hh hash.Hash) ([]byte, error) {
 	// See RFC 8017, Section 9.1.1.
 
 	hLen := hh.Size()
@@ -67,7 +67,7 @@ func emsaPSSEncode(mHash []byte, emBits int, salt []byte, hh hash.Hash) ([]byte,
 	//
 	// 10. Let maskedDB = DB \xor dbMask.
 
-	mgf1XOR(db, hh, h)
+	Mgf1XOR(db, hh, h)
 
 	// 11. Set the leftmost 8 * emLen - emBits bits of the leftmost octet in
 	//     maskedDB to zero.
@@ -81,9 +81,9 @@ func emsaPSSEncode(mHash []byte, emBits int, salt []byte, hh hash.Hash) ([]byte,
 	return em, nil
 }
 
-// mgf1XOR XORs the bytes in out with a mask generated using the MGF1 function
+// Mgf1XOR XORs the bytes in out with a mask generated using the MGF1 function
 // specified in PKCS #1 v2.1.
-func mgf1XOR(out []byte, h hash.Hash, seed []byte) {
+func Mgf1XOR(out []byte, h hash.Hash, seed []byte) {
 	var counter [4]byte
 	var digest []byte
 

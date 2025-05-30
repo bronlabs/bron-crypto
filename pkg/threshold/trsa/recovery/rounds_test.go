@@ -10,9 +10,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	"github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa/recovery"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa/trusted_dealer"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trsa"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trsa/recovery"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trsa/trusted_dealer"
 )
 
 const (

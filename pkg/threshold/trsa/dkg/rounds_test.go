@@ -14,8 +14,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/rep23"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa/dkg"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trsa"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trsa/dkg"
 )
 
 const (

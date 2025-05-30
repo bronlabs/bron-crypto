@@ -12,9 +12,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	"github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa/signing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa/trusted_dealer"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trsa"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/trsa/trusted_dealer"
+	trsa_signatures "github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa"
+	trsa_signing "github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/trsa/signing"
 )
 
 const (
@@ -39,25 +40,25 @@ func Test_SignPSSHappyPath(t *testing.T) {
 
 	cryptoHash := crypto.SHA256
 
-	cosigners := make([]*signing.Cosigner, total)
+	cosigners := make([]*trsa_signing.Cosigner, total)
 	for i, id := range identities {
 		shard, exists := shards.Get(id)
 		require.True(t, exists)
 		shard = testutils.JsonRoundTrip(t, shard)
 
-		cosigners[i], err = signing.NewCosigner(id.(types.AuthKey), shard, protocol, protocol.Participants(), cryptoHash)
+		cosigners[i], err = trsa_signing.NewCosigner(id.(types.AuthKey), shard, protocol, protocol.Participants(), cryptoHash)
 		require.NoError(t, err)
 	}
 
 	message := []byte("hello world")
 	salt := []byte{}
-	partialSignatures := make([]*trsa.PartialSignature, len(cosigners))
+	partialSignatures := make([]*trsa_signatures.PartialSignature, len(cosigners))
 	for i, cosigner := range cosigners {
 		partialSignatures[i], err = cosigner.ProducePSSPartialSignature(message, salt)
 		require.NoError(t, err)
 	}
 
-	signature, err := signing.AggregateSignature(&shardValues[0].PublicShard, partialSignatures...)
+	signature, err := trsa_signing.AggregateSignature(&shardValues[0].PublicShard, partialSignatures...)
 	require.NoError(t, err)
 
 	signatureBytes := make([]byte, (trsa.RsaBitLen+7)/8)
@@ -84,23 +85,23 @@ func Test_SignPKCS1v15HappyPath(t *testing.T) {
 	shardValues = testutils.JsonRoundTrip(t, shardValues)
 
 	cryptoHash := crypto.SHA256
-	cosigners := make([]*signing.Cosigner, total)
+	cosigners := make([]*trsa_signing.Cosigner, total)
 	for i, id := range identities {
 		shard, exists := shards.Get(id)
 		require.True(t, exists)
 		shard = testutils.JsonRoundTrip(t, shard)
-		cosigners[i], err = signing.NewCosigner(id.(types.AuthKey), shard, protocol, protocol.Participants(), cryptoHash)
+		cosigners[i], err = trsa_signing.NewCosigner(id.(types.AuthKey), shard, protocol, protocol.Participants(), cryptoHash)
 		require.NoError(t, err)
 	}
 
 	message := []byte("hello world")
-	partialSignatures := make([]*trsa.PartialSignature, len(cosigners))
+	partialSignatures := make([]*trsa_signatures.PartialSignature, len(cosigners))
 	for i, cosigner := range cosigners {
 		partialSignatures[i], err = cosigner.ProducePKCS1v15PartialSignature(message)
 		require.NoError(t, err)
 	}
 
-	signature, err := signing.AggregateSignature(&shardValues[0].PublicShard, partialSignatures...)
+	signature, err := trsa_signing.AggregateSignature(&shardValues[0].PublicShard, partialSignatures...)
 	require.NoError(t, err)
 
 	signatureBytes := make([]byte, (trsa.RsaBitLen+7)/8)
