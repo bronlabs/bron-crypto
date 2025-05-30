@@ -2,6 +2,8 @@ package dkg
 
 import (
 	"crypto/rsa"
+	"encoding/binary"
+	"math/big"
 
 	"github.com/cronokirby/saferith"
 
@@ -15,6 +17,7 @@ import (
 const (
 	n1Label = "BRON_CRYPTO_TRSA_DKG-N1-"
 	n2Label = "BRON_CRYPTO_TRSA_DKG-N2-"
+	eLabel  = "BRON_CRYPTO_TRSA_DKG-E-"
 )
 
 func (p *Participant) Round1() (*Round1Broadcast, network.RoundMessages[types.ThresholdProtocol, *Round1P2P], error) {
@@ -98,20 +101,27 @@ func (p *Participant) Round2(bIn network.RoundMessages[types.ThresholdProtocol, 
 			p.State.DShares1[p.MySharingId] = p2p.DShare
 			err := verifyCD(p.Tape, b.Pi, p.State.N1, p.State.DShares1[p.MySharingId])
 			if err != nil {
-				return nil, errs.WrapValidation(err, "invalid shares")
+				return nil, errs.WrapIdentifiableAbort(err, id.PublicKey().ToAffineCompressed(), "invalid shares")
 			}
 		case 2:
 			p.State.N2 = saferith.ModulusFromNat(b.N)
 			p.State.DShares2[p.MySharingId] = p2p.DShare
 			err := verifyCD(p.Tape, b.Pi, p.State.N2, p.State.DShares2[p.MySharingId])
 			if err != nil {
-				return nil, errs.WrapValidation(err, "invalid shares")
+				return nil, errs.WrapIdentifiableAbort(err, id.PublicKey().ToAffineCompressed(), "invalid shares")
 			}
 		}
 	}
 
+	one := big.NewInt(1)
+	gcd := new(big.Int).GCD(nil, nil, p.State.N1.Big(), p.State.N2.Big())
+	if gcd.Cmp(one) != 0 {
+		return nil, errs.NewFailed("invalid moduli")
+	}
+
 	p.Tape.AppendMessages(n1Label, p.State.N1.Bytes())
 	p.Tape.AppendMessages(n2Label, p.State.N2.Bytes())
+	p.Tape.AppendMessages(eLabel, binary.BigEndian.AppendUint64(nil, trsa.RsaE))
 
 	shard := &trsa.Shard{
 		PublicShard: trsa.PublicShard{

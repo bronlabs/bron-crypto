@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	nLabel = "BRON_CRYPTO_TRSA_DKG-CD-N-"
-	eLabel = "BRON_CRYPTO_TRSA_DKG-CD-E-"
+	cdNLabel = "BRON_CRYPTO_TRSA_DKG-CD-N-"
+	cdELabel = "BRON_CRYPTO_TRSA_DKG-CD-E-"
 )
 
 func proveCD(tape transcripts.Transcript, shares map[types.SharingID]*rep23.IntShare, n *saferith.Modulus) (map[types.SharingID]*rep23.IntExpShare, error) {
@@ -60,8 +60,8 @@ func verifyCD(tape transcripts.Transcript, proof map[types.SharingID]*rep23.IntE
 
 func deriveChallenge(tape transcripts.Transcript, n *saferith.Modulus) (*saferith.Nat, error) {
 	piTape := tape.Clone()
-	piTape.AppendMessages(nLabel, n.Bytes())
-	eBytes, err := piTape.ExtractBytes(eLabel, trsa.RsaBitLen/8)
+	piTape.AppendMessages(cdNLabel, n.Bytes())
+	eBytes, err := piTape.ExtractBytes(cdELabel, trsa.RsaBitLen/8)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to extract challenge")
 	}
