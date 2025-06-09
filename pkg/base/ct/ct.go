@@ -47,3 +47,8 @@ func Select[I constraints.Unsigned](choice uint64, x0, x1 I) I {
 	c := I(choice)
 	return ((c - 1) & x0) | ((^(c - 1)) & x1)
 }
+
+func Abs(x int64) (abs, sign uint64) {
+	s := uint64(x) >> 63
+	return Select(s, uint64(x), uint64(-x)), s
+}

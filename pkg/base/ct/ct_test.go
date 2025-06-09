@@ -3,6 +3,7 @@ package ct_test
 import (
 	"bytes"
 	"encoding/binary"
+	"math"
 	"math/rand"
 	"testing"
 
@@ -168,7 +169,7 @@ func Test_ConstantTimeSliceCmp(t *testing.T) {
 	}
 }
 
-func TestConstantTimeIsAllEqualNZero(t *testing.T) {
+func Test_ConstantTimeIsAllEqualNZero(t *testing.T) {
 	t.Parallel()
 	zero := make([]byte, 32)
 	require.Equal(t, ctTrue, ct.SliceEachEqual(zero, 0))
@@ -180,4 +181,27 @@ func TestConstantTimeIsAllEqualNZero(t *testing.T) {
 	require.Equal(t, ctTrue, ct.SliceEachEqual(nonZero[:], 0xF3))
 	require.Equal(t, ctFalse, ct.SliceEachEqual(nonZero[:], 0))
 	require.Equal(t, ctFalse, ct.SliceIsZero(nonZero))
+}
+
+func Test_Abs(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		x    int64
+		a, s uint64
+	}{
+		{0, 0, 0},
+		{-1, 1, 1},
+		{1, 1, 0},
+		{math.MaxInt64, math.MaxInt64, 0},
+		{math.MinInt64, 0x8000000000000000, 1},
+		{123456, 123456, 0},
+		{-987654, 987654, 1},
+	}
+
+	for _, c := range cases {
+		a, s := ct.Abs(c.x)
+		require.Equal(t, c.a, a)
+		require.Equal(t, c.s, s)
+	}
 }
