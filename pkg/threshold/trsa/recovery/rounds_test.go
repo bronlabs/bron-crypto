@@ -2,6 +2,7 @@ package recovery_test
 
 import (
 	crand "crypto/rand"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,6 +41,63 @@ func Test_HappyPath(t *testing.T) {
 	}
 
 	// pretend Alice lost her shard
+	alice, err := recovery.NewMislayer(identities[0].(types.AuthKey), protocol)
+	require.NoError(t, err)
+
+	bob, err := recovery.NewRecoverer(identities[1].(types.AuthKey), protocol, shardValues[1], alice.IdentityKey())
+	require.NoError(t, err)
+	charlie, err := recovery.NewRecoverer(identities[2].(types.AuthKey), protocol, shardValues[2], alice.IdentityKey())
+	require.NoError(t, err)
+
+	r1o := make([]network.RoundMessages[types.ThresholdProtocol, *recovery.Round1P2P], len(identities))
+	r1o[1], err = bob.Round1()
+	require.NoError(t, err)
+	r1o[2], err = charlie.Round1()
+	require.NoError(t, err)
+
+	r2i := testutils.MapUnicastO2I(t, []types.Participant{alice, bob, charlie}, r1o)
+	recoveredShard, err := alice.Round2(r2i[0])
+	require.NoError(t, err)
+	require.True(t, recoveredShard.Equal(shardValues[0]))
+	require.NotNil(t, recoveredShard)
+}
+
+func Test_HappyPathWithNewIdentity(t *testing.T) {
+	t.Parallel()
+	prng := crand.Reader
+
+	identities, err := testutils.MakeDeterministicTestIdentities(total)
+	sort.Sort(types.ByPublicKey(identities))
+	require.NoError(t, err)
+
+	protocol, err := testutils.MakeThresholdProtocol(k256.NewCurve(), identities, threshold)
+	require.NoError(t, err)
+
+	_, shards, err := trusted_dealer.Keygen(protocol, prng)
+	require.NoError(t, err)
+	shardValues := make([]*trsa.Shard, len(identities))
+	for i, id := range identities {
+		var ok bool
+		shardValues[i], ok = shards.Get(id)
+		require.True(t, ok)
+	}
+
+	// pretend Alice lost her shard and identity
+	var newIdentities []types.IdentityKey
+	for newIdentities == nil || !newIdentities[1].Equal(identities[1]) || !newIdentities[2].Equal(identities[2]) {
+		newIdentities = make([]types.IdentityKey, 3)
+		alice, err := testutils.MakeDeterministicTestIdentities(1)
+		require.NoError(t, err)
+
+		newIdentities[0] = alice[0]
+		newIdentities[1] = identities[1]
+		newIdentities[2] = identities[2]
+		sort.Sort(types.ByPublicKey(newIdentities))
+	}
+	identities = newIdentities
+	protocol, err = testutils.MakeThresholdProtocol(k256.NewCurve(), identities, 2)
+	require.NoError(t, err)
+
 	alice, err := recovery.NewMislayer(identities[0].(types.AuthKey), protocol)
 	require.NoError(t, err)
 
