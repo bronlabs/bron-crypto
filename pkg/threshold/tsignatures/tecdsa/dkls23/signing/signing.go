@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/bbot"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	mult "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23"
+	mult "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23_softspoken"
 	zeroSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs/setup"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/dkls23"
 )

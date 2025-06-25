@@ -9,7 +9,7 @@ import (
 	hashcommitments "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/bbot"
-	mult "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23"
+	mult "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23_softspoken"
 	zeroSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs/setup"
 )
 

@@ -1,4 +1,4 @@
-package dkls23_test
+package dkls23_softspoken_test
 
 import (
 	crand "crypto/rand"
@@ -19,8 +19,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	bbot_testutils "github.com/bronlabs/bron-crypto/pkg/ot/base/bbot/testutils"
 	vsot_testutils "github.com/bronlabs/bron-crypto/pkg/ot/base/vsot/testutils"
-	mult "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23/testutils"
+	mult "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23_softspoken"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23_softspoken/testutils"
 )
 
 func cipherSuites(t *testing.T) []types.SigningSuite {

@@ -14,7 +14,7 @@ import (
 	ttu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/csprng"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
-	mult "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23"
+	mult "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23_softspoken"
 )
 
 func MakeMult2Participants(t *testing.T, curve curves.Curve, baseOtReceiverOutput *ot.ReceiverRotOutput, baseOtSenderOutput *ot.SenderRotOutput, aliceTprng, bobTprng io.Reader, seededPrng csprng.CSPRNG, aliceSid, bobSid []byte) (alice *mult.Alice, bob *mult.Bob, err error) {

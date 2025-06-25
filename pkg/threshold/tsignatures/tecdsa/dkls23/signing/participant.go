@@ -14,7 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/csprng"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/bbot"
-	mult "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23"
+	mult "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23_softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs/sample"
 	zeroSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs/setup"

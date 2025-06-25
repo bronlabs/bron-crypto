@@ -1,4 +1,4 @@
-package dkls23
+package dkls23_softspoken
 
 import (
 	"crypto/subtle"
