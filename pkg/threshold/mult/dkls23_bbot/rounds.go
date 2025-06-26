@@ -11,16 +11,25 @@ import (
 )
 
 func (alice *Alice) Round1() (r1Out *Round1P2P, err error) {
+	if alice.Round != 1 {
+		return nil, errs.NewValidation("invalid round")
+	}
+
 	r1Out, err = alice.sender.Round1()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to call OT round 1")
 	}
 
+	alice.Round += 2
 	return r1Out, nil
 }
 
 func (bob *Bob) Round2(r1Out *Round1P2P) (r2Out *Round2P2P, b curves.Scalar, err error) {
-	beta := make([]byte, bob.Xi/8)
+	if bob.Round != 2 {
+		return nil, nil, errs.NewValidation("invalid round")
+	}
+
+	beta := make([]byte, bob.Protocol.Xi/8)
 	if _, err := io.ReadFull(bob.Prng, beta); err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "cannot sample choices")
 	}
@@ -33,7 +42,7 @@ func (bob *Bob) Round2(r1Out *Round1P2P) (r2Out *Round2P2P, b curves.Scalar, err
 	bob.gamma = receiverOutput.R
 
 	b = bob.Protocol.Curve().ScalarField().AdditiveIdentity()
-	for j := 0; j < bob.Xi; j++ {
+	for j := 0; j < bob.Protocol.Xi; j++ {
 		betaJ := bob.Protocol.Curve().ScalarField().AdditiveIdentity()
 		if bob.beta.Get(uint(j)) != 0 {
 			betaJ = bob.Protocol.Curve().ScalarField().MultiplicativeIdentity()
@@ -41,40 +50,45 @@ func (bob *Bob) Round2(r1Out *Round1P2P) (r2Out *Round2P2P, b curves.Scalar, err
 		b = b.Add(betaJ.Mul(bob.g[j]))
 	}
 
+	bob.Round += 2
 	return r2Out, b, nil
 }
 
 func (alice *Alice) Round3(r2Out *Round2P2P, a []curves.Scalar) (r3Out *Round3P2P, c []curves.Scalar, err error) {
+	if alice.Round != 3 {
+		return nil, nil, errs.NewValidation("invalid round")
+	}
+
 	senderOutput, err := alice.sender.Round3(r2Out)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot send round 3 of receiver")
 	}
 	alice.alpha = senderOutput.S
 
-	c = make([]curves.Scalar, alice.L)
-	for i := range alice.L {
+	c = make([]curves.Scalar, alice.Protocol.L)
+	for i := range alice.Protocol.L {
 		c[i] = alice.Protocol.Curve().ScalarField().AdditiveIdentity()
-		for j := range alice.Xi {
+		for j := range alice.Protocol.Xi {
 			c[i] = c[i].Sub(alice.g[j].Mul(alice.alpha[j][0][i]))
 		}
 	}
 
-	aHat := make([]curves.Scalar, alice.Rho)
-	for i := range alice.Rho {
+	aHat := make([]curves.Scalar, alice.Protocol.Rho)
+	for i := range alice.Protocol.Rho {
 		aHat[i], err = alice.Protocol.Curve().ScalarField().Random(alice.Prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot get random scalar")
 		}
 	}
 
-	aTilde := make([][]curves.Scalar, alice.Xi)
-	for j := range alice.Xi {
-		aTilde[j] = make([]curves.Scalar, alice.L+alice.Rho)
-		for i := range alice.L {
+	aTilde := make([][]curves.Scalar, alice.Protocol.Xi)
+	for j := range alice.Protocol.Xi {
+		aTilde[j] = make([]curves.Scalar, alice.Protocol.L+alice.Protocol.Rho)
+		for i := range alice.Protocol.L {
 			aTilde[j][i] = alice.alpha[j][0][i].Sub(alice.alpha[j][1][i]).Add(a[i])
 		}
-		for k := range alice.Rho {
-			aTilde[j][alice.L+k] = alice.alpha[j][0][alice.L+k].Sub(alice.alpha[j][1][alice.L+k]).Add(aHat[k])
+		for k := range alice.Protocol.Rho {
+			aTilde[j][alice.Protocol.L+k] = alice.alpha[j][0][alice.Protocol.L+k].Sub(alice.alpha[j][1][alice.Protocol.L+k]).Add(aHat[k])
 		}
 	}
 
@@ -83,20 +97,20 @@ func (alice *Alice) Round3(r2Out *Round2P2P, a []curves.Scalar) (r3Out *Round3P2
 		return nil, nil, errs.WrapFailed(err, "cannot get theta")
 	}
 
-	eta := make([]curves.Scalar, alice.Rho)
-	for k := range alice.Rho {
+	eta := make([]curves.Scalar, alice.Protocol.Rho)
+	for k := range alice.Protocol.Rho {
 		eta[k] = aHat[k]
-		for i := range alice.L {
+		for i := range alice.Protocol.L {
 			eta[k] = eta[k].Add(theta[i][k].Mul(a[i]))
 		}
 	}
 
-	muBold := make([][]curves.Scalar, alice.Xi)
-	for j := range alice.Xi {
-		muBold[j] = make([]curves.Scalar, alice.Rho)
-		for k := range alice.Rho {
-			muBold[j][k] = alice.alpha[j][0][alice.L+k]
-			for i := range alice.L {
+	muBold := make([][]curves.Scalar, alice.Protocol.Xi)
+	for j := range alice.Protocol.Xi {
+		muBold[j] = make([]curves.Scalar, alice.Protocol.Rho)
+		for k := range alice.Protocol.Rho {
+			muBold[j][k] = alice.alpha[j][0][alice.Protocol.L+k]
+			for i := range alice.Protocol.L {
 				muBold[j][k] = muBold[j][k].Add(theta[i][k].Mul(alice.alpha[j][0][i]))
 			}
 		}
@@ -112,49 +126,57 @@ func (alice *Alice) Round3(r2Out *Round2P2P, a []curves.Scalar) (r3Out *Round3P2
 		Eta:    eta,
 		Mu:     mu,
 	}
+	alice.Round += 2
 	return r3Out, c, nil
 }
 
 func (bob *Bob) Round4(r3Out *Round3P2P) (d []curves.Scalar, err error) {
+	if bob.Round != 4 {
+		return nil, errs.NewValidation("invalid round")
+	}
+	if err := r3Out.Validate(bob.Protocol); err != nil {
+		return nil, errs.WrapFailed(err, "invalid message")
+	}
+
 	theta, err := bob.roTheta(r3Out.ATilde)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get theta")
 	}
 
-	dDot := make([][]curves.Scalar, bob.Xi)
-	for j := range bob.Xi {
-		dDot[j] = make([]curves.Scalar, bob.L)
+	dDot := make([][]curves.Scalar, bob.Protocol.Xi)
+	for j := range bob.Protocol.Xi {
+		dDot[j] = make([]curves.Scalar, bob.Protocol.L)
 		betaJ := bob.Protocol.Curve().ScalarField().AdditiveIdentity()
 		if bob.beta.Get(uint(j)) != 0 {
 			betaJ = bob.Protocol.Curve().ScalarField().MultiplicativeIdentity()
 		}
-		for i := range bob.L {
+		for i := range bob.Protocol.L {
 			dDot[j][i] = bob.gamma[j][i].Add(betaJ.Mul(r3Out.ATilde[j][i]))
 		}
 	}
 
-	dHat := make([][]curves.Scalar, bob.Xi)
-	for j := range bob.Xi {
-		dHat[j] = make([]curves.Scalar, bob.Rho)
+	dHat := make([][]curves.Scalar, bob.Protocol.Xi)
+	for j := range bob.Protocol.Xi {
+		dHat[j] = make([]curves.Scalar, bob.Protocol.Rho)
 		betaJ := bob.Protocol.Curve().ScalarField().AdditiveIdentity()
 		if bob.beta.Get(uint(j)) != 0 {
 			betaJ = bob.Protocol.Curve().ScalarField().MultiplicativeIdentity()
 		}
-		for k := range bob.Rho {
-			dHat[j][k] = bob.gamma[j][bob.L+k].Add(betaJ.Mul(r3Out.ATilde[j][bob.L+k]))
+		for k := range bob.Protocol.Rho {
+			dHat[j][k] = bob.gamma[j][bob.Protocol.L+k].Add(betaJ.Mul(r3Out.ATilde[j][bob.Protocol.L+k]))
 		}
 	}
 
-	muPrimeBold := make([][]curves.Scalar, bob.Xi)
-	for j := range bob.Xi {
-		muPrimeBold[j] = make([]curves.Scalar, bob.Rho)
+	muPrimeBold := make([][]curves.Scalar, bob.Protocol.Xi)
+	for j := range bob.Protocol.Xi {
+		muPrimeBold[j] = make([]curves.Scalar, bob.Protocol.Rho)
 		betaJ := bob.Protocol.Curve().ScalarField().AdditiveIdentity()
 		if bob.beta.Get(uint(j)) != 0 {
 			betaJ = bob.Protocol.Curve().ScalarField().MultiplicativeIdentity()
 		}
-		for k := range bob.Rho {
+		for k := range bob.Protocol.Rho {
 			muPrimeBold[j][k] = dHat[j][k].Sub(betaJ.Mul(r3Out.Eta[k]))
-			for i := range bob.L {
+			for i := range bob.Protocol.L {
 				muPrimeBold[j][k] = muPrimeBold[j][k].Add(theta[i][k].Mul(dDot[j][i]))
 			}
 		}
@@ -168,14 +190,15 @@ func (bob *Bob) Round4(r3Out *Round3P2P) (d []curves.Scalar, err error) {
 		return nil, errs.NewTotalAbort("alice", "consistency check failed")
 	}
 
-	d = make([]curves.Scalar, bob.L)
-	for i := range bob.L {
+	d = make([]curves.Scalar, bob.Protocol.L)
+	for i := range bob.Protocol.L {
 		d[i] = bob.Protocol.Curve().ScalarField().AdditiveIdentity()
-		for j := range bob.Xi {
+		for j := range bob.Protocol.Xi {
 			d[i] = d[i].Add(bob.g[j].Mul(dDot[j][i]))
 		}
 	}
 
+	bob.Round += 2
 	return d, nil
 }
 
@@ -184,9 +207,9 @@ func (p *participant) roTheta(aTilde [][]curves.Scalar) (theta [][]curves.Scalar
 		p.Tape.AppendScalars(aTildeLabel, aTildeJ...)
 	}
 
-	theta = make([][]curves.Scalar, p.L)
+	theta = make([][]curves.Scalar, p.Protocol.L)
 	for i := range theta {
-		theta[i] = make([]curves.Scalar, p.Rho)
+		theta[i] = make([]curves.Scalar, p.Protocol.Rho)
 		for j := range theta[i] {
 			thetaBytes, err := p.Tape.ExtractBytes(thetaLabel, uint(p.Protocol.Curve().ScalarField().WideElementSize()))
 			if err != nil {

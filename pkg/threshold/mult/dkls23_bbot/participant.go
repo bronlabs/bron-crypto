@@ -27,24 +27,29 @@ const (
 var _ types.Participant = (*Alice)(nil)
 var _ types.Participant = (*Bob)(nil)
 
-type participant struct {
-	myAuthKey  types.AuthKey
-	Prng       io.Reader
-	Protocol   types.Protocol
-	Round      int
-	SessionId  []byte
-	Tape       transcripts.Transcript
+type mulProtocol struct {
+	types.Protocol
+
 	L, Xi, Rho int
+}
+
+type participant struct {
+	MyAuthKey types.AuthKey
+	Prng      io.Reader
+	Protocol  *mulProtocol
+	Round     int
+	SessionId []byte
+	Tape      transcripts.Transcript
 
 	_ ds.Incomparable
 }
 
 func (p *participant) IdentityKey() types.IdentityKey {
-	return p.myAuthKey
+	return p.MyAuthKey
 }
 
 type Alice struct {
-	*participant // Base Participant
+	participant // Base Participant
 
 	sender *ecbbot.Sender
 	g      []curves.Scalar
@@ -52,19 +57,15 @@ type Alice struct {
 }
 
 type Bob struct {
-	*participant // Base Participant
+	participant // Base Participant
 
 	receiver *ecbbot.Receiver
 	g        []curves.Scalar
 	beta     ot.PackedBits
 	gamma    [][]curves.Scalar
-	// gadget   *[Xi]curves.Scalar // g ∈ [ξ]ℤq is the gadget vector
-	//
-	// Beta  ot.PackedBits           // β ∈ [ξ]bits is a vector of random bits used as receiver choices in OTe
-	// Gamma [Xi][LOTe]curves.Scalar // γ ∈ [ξ]ℤq is the receiver output of OTe (chosen messages)
 }
 
-func newParticipant(myAuthKey types.AuthKey, protocol types.Protocol, sessionId []byte, L int, prng io.Reader, tape transcripts.Transcript, initialRound int) (*participant, error) {
+func newParticipant(myAuthKey types.AuthKey, protocol types.Protocol, sessionId []byte, l int, prng io.Reader, tape transcripts.Transcript, initialRound int) (*participant, error) {
 	// if err := validateParticipantInputs(myAuthKey, protocol, sessionId, prng); err != nil {
 	//	return nil, errs.WrapFailed(err, "invalid inputs")
 	//}
@@ -78,16 +79,20 @@ func newParticipant(myAuthKey types.AuthKey, protocol types.Protocol, sessionId 
 	xi := kappa + 2*base.StatisticalSecurity
 	rho := utils.CeilDiv(kappa, base.ComputationalSecurity)
 
+	proto := &mulProtocol{
+		Protocol: protocol,
+		L:        l,
+		Xi:       xi,
+		Rho:      rho,
+	}
+
 	return &participant{
-		myAuthKey: myAuthKey,
+		MyAuthKey: myAuthKey,
 		Prng:      prng,
-		Protocol:  protocol,
+		Protocol:  proto,
 		Round:     initialRound,
 		SessionId: boundSessionId,
 		Tape:      tape,
-		L:         L,
-		Xi:        xi,
-		Rho:       rho,
 	}, nil
 }
 
@@ -96,7 +101,7 @@ func NewAlice(myAuthKey types.AuthKey, protocol types.Protocol, sessionId []byte
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create participant / gadget vector")
 	}
-	sender, err := ecbbot.NewSender(myAuthKey, protocol, p.Xi, p.Rho+p.L, p.SessionId, transcript, prng)
+	sender, err := ecbbot.NewSender(myAuthKey, protocol, p.Protocol.Xi, p.Protocol.Rho+p.Protocol.L, p.SessionId, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create sender")
 	}
@@ -104,11 +109,14 @@ func NewAlice(myAuthKey types.AuthKey, protocol types.Protocol, sessionId []byte
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create gadget vector")
 	}
-	return &Alice{
-		participant: p,
+
+	alice := &Alice{
+		participant: *p,
 		sender:      sender,
 		g:           gadget,
-	}, nil
+	}
+	alice.Round = 1
+	return alice, nil
 }
 
 func NewBob(myAuthKey types.AuthKey, protocol types.Protocol, sessionId []byte, l int, prng io.Reader, transcript transcripts.Transcript) (*Bob, error) {
@@ -116,7 +124,7 @@ func NewBob(myAuthKey types.AuthKey, protocol types.Protocol, sessionId []byte, 
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create participant / gadget vector")
 	}
-	receiver, err := ecbbot.NewReceiver(myAuthKey, protocol, p.Xi, p.L+p.Rho, p.SessionId, transcript, prng)
+	receiver, err := ecbbot.NewReceiver(myAuthKey, protocol, p.Protocol.Xi, p.Protocol.L+p.Protocol.Rho, p.SessionId, transcript, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create receiver")
 	}
@@ -124,15 +132,18 @@ func NewBob(myAuthKey types.AuthKey, protocol types.Protocol, sessionId []byte, 
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create gadget vector")
 	}
-	return &Bob{
-		participant: p,
+
+	bob := &Bob{
+		participant: *p,
 		receiver:    receiver,
 		g:           gadget,
-	}, nil
+	}
+	bob.Round = 2
+	return bob, nil
 }
 
 func (p *participant) generateGadgetVector() ([]curves.Scalar, error) {
-	gadget := make([]curves.Scalar, p.Xi)
+	gadget := make([]curves.Scalar, p.Protocol.Xi)
 	for i := range gadget {
 		bytes, err := p.Tape.ExtractBytes(gadgetLabel, uint(p.Protocol.Curve().ScalarField().WideElementSize()))
 		if err != nil {
