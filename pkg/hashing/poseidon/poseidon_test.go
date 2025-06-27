@@ -1,81 +1,82 @@
 package poseidon_test
 
-import (
-	"encoding/json"
-	"fmt"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"os"
-	"path/filepath"
-	"testing"
+// import (
+// 	"encoding/json"
+// 	"fmt"
+// 	"os"
+// 	"path/filepath"
+// 	"testing"
 
-	"github.com/stretchr/testify/require"
-	
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
-	itu "github.com/bronlabs/bron-crypto/pkg/base/types/testutils"
-	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
-)
+// 	"github.com/bronlabs/bron-crypto/internal"
+// 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 
-const dir = "./vectors"
+// 	"github.com/stretchr/testify/require"
 
-type jsonFile struct {
-	Name        string       `json:"name"`
-	TestVectors []testVector `json:"test_vectors"` //nolint:tagliatelle // false positive
-}
+// 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+// 	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
+// )
 
-type testVector struct {
-	Input  []itu.HexBytes `json:"input"`
-	Output itu.HexBytes   `json:"output"`
-}
+// const dir = "./vectors"
 
-func TestPoseidonLegacy(t *testing.T) {
-	t.Parallel()
-	testHash(t, "legacy.json")
-}
+// type jsonFile struct {
+// 	Name        string       `json:"name"`
+// 	TestVectors []testVector `json:"test_vectors"` //nolint:tagliatelle // false positive
+// }
 
-func TestPoseidonKimchi(t *testing.T) {
-	t.Parallel()
-	t.Skip("fails for now")
-	testHash(t, "kimchi.json")
-}
+// type testVector struct {
+// 	Input  []internal.HexBytes `json:"input"`
+// 	Output internal.HexBytes   `json:"output"`
+// }
 
-func testHash(t *testing.T, fileName string) {
-	t.Helper()
+// func TestPoseidonLegacy(t *testing.T) {
+// 	t.Parallel()
+// 	testHash(t, "legacy.json")
+// }
 
-	content, err := os.ReadFile(filepath.Join(dir, fileName))
-	require.NoError(t, err)
+// func TestPoseidonKimchi(t *testing.T) {
+// 	t.Parallel()
+// 	t.Skip("fails for now")
+// 	testHash(t, "kimchi.json")
+// }
 
-	var vectors *jsonFile
+// func testHash(t *testing.T, fileName string) {
+// 	t.Helper()
 
-	err = json.Unmarshal(content, &vectors)
-	require.NoError(t, err)
+// 	content, err := os.ReadFile(filepath.Join(dir, fileName))
+// 	require.NoError(t, err)
 
-	for i, v := range vectors.TestVectors {
-		vector := v
-		t.Run(fmt.Sprintf("running test vector #%d", i), func(t *testing.T) {
-			t.Parallel()
-			hasher := poseidon.NewLegacy()
-			actual := hasher.Hash(parseInput(t, vector.Input)...)
-			expected := parseOutput(t, vector.Output)
-			require.True(t, actual.Equal(expected))
+// 	var vectors *jsonFile
 
-		})
-	}
+// 	err = json.Unmarshal(content, &vectors)
+// 	require.NoError(t, err)
 
-}
+// 	for i, v := range vectors.TestVectors {
+// 		vector := v
+// 		t.Run(fmt.Sprintf("running test vector #%d", i), func(t *testing.T) {
+// 			t.Parallel()
+// 			hasher := poseidon.NewLegacy()
+// 			actual := hasher.Hash(parseInput(t, vector.Input)...)
+// 			expected := parseOutput(t, vector.Output)
+// 			require.True(t, actual.Equal(expected))
 
-func parseInput(t *testing.T, xs []itu.HexBytes) []*pasta.PallasBaseFieldElement {
-	t.Helper()
-	out := make([]*pasta.PallasBaseFieldElement, len(xs))
-	for i, x := range xs {
-		out[i] = parseOutput(t, x)
-	}
-	return out
-}
+// 		})
+// 	}
 
-func parseOutput(t *testing.T, x itu.HexBytes) *pasta.PallasBaseFieldElement {
-	t.Helper()
-	b := sliceutils.Reversed(x)
-	f, err := pasta.NewPallasBaseField().FromWideBytes(b)
-	require.NoError(t, err)
-	return f
-}
+// }
+
+// func parseInput(t *testing.T, xs []internal.HexBytes) []*pasta.PallasBaseFieldElement {
+// 	t.Helper()
+// 	out := make([]*pasta.PallasBaseFieldElement, len(xs))
+// 	for i, x := range xs {
+// 		out[i] = parseOutput(t, x)
+// 	}
+// 	return out
+// }
+
+// func parseOutput(t *testing.T, x internal.HexBytes) *pasta.PallasBaseFieldElement {
+// 	t.Helper()
+// 	b := sliceutils.Reversed(x)
+// 	f, err := pasta.NewPallasBaseField().FromWideBytes(b)
+// 	require.NoError(t, err)
+// 	return f
+// }

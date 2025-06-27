@@ -1,320 +1,493 @@
 package bls
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"slices"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
 const (
-	PublicKeySizeInG1         = 48
-	SignatureSizeInG2         = 96
-	ProofOfPossessionSizeInG2 = 96
+	Name signatures.Name = "BLS"
 
-	PublicKeySizeInG2         = 96
-	SignatureSizeInG1         = 48
-	ProofOfPossessionSizeInG1 = 48
+	Basic               RogueKeyPreventionAlgorithm = 1
+	MessageAugmentation RogueKeyPreventionAlgorithm = 2
+	POP                 RogueKeyPreventionAlgorithm = 3
+
+	ShortKey Variant = 1
+	LongKey  Variant = 2
 )
 
-//type KeySubGroup = bls12381.SourceSubGroups
-//
-//var (
-//	_ encoding.BinaryMarshaler   = (*PrivateKey[bls12381.G1])(nil)
-//	_ encoding.BinaryUnmarshaler = (*PrivateKey[bls12381.G1])(nil)
-//
-//	_ encoding.BinaryMarshaler   = (*PrivateKey[bls12381.G2])(nil)
-//	_ encoding.BinaryUnmarshaler = (*PrivateKey[bls12381.G2])(nil)
-//)
+type (
+	RogueKeyPreventionAlgorithm int
+	Variant                     int
+	Message                     = []byte
+)
 
-type PrivateKey[P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]] struct {
-	d         S
-	PublicKey *PublicKey[P, B, S]
-
-	_ ds.Incomparable
+type CipherSuite struct {
+	FamilyName                      string
+	DstSignatureBasicInTwistedGroup string
+	DstSignatureAugInTwistedGroup   string
+	DstSignaturePopInTwistedGroup   string
+	DstPopProofInTwistedGroup       string
+	DstSignatureBasicInSourceGroup  string
+	DstSignatureAugInSourceGroup    string
+	DstSignaturePopInSourceGroup    string
+	DstPopProofInSourceGroup        string
 }
 
-func NewPrivateKey[P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]](curve curves.Curve[P, B, S], sk S) (*PrivateKey[P, B, S], error) {
-	Y := curve.Generator().ScalarMul(sk)
-	return &PrivateKey[P, B, S]{
-		d: sk,
-		PublicKey: &PublicKey[P, B, S]{
-			Y: Y,
+func (c *CipherSuite) GetDst(alg RogueKeyPreventionAlgorithm, variant Variant) (string, error) {
+	switch alg {
+	case Basic:
+		if variant == ShortKey {
+			return (c.DstSignatureBasicInTwistedGroup), nil
+		}
+		return (c.DstSignatureBasicInSourceGroup), nil
+	case MessageAugmentation:
+		if variant == ShortKey {
+			return (c.DstSignatureAugInTwistedGroup), nil
+		}
+		return (c.DstSignatureAugInSourceGroup), nil
+	case POP:
+		if variant == ShortKey {
+			return (c.DstSignaturePopInTwistedGroup), nil
+		}
+		return (c.DstSignaturePopInSourceGroup), nil
+	default:
+		return "", errs.NewType("algorithm type %v not implemented", alg)
+	}
+}
+
+func (c *CipherSuite) GetPopDst(variant Variant) string {
+	if variant == ShortKey {
+		return c.DstPopProofInSourceGroup
+	}
+	return c.DstPopProofInTwistedGroup
+}
+
+func BLS12381CipherSuite() *CipherSuite {
+	return &CipherSuite{
+		FamilyName: bls12381.FamilyName,
+		// Domain separation tag for basic signatures
+		// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.1
+		DstSignatureBasicInTwistedGroup: "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_",
+		// Domain separation tag for basic signatures
+		// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.2
+		DstSignatureAugInTwistedGroup: "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_AUG_",
+		// Domain separation tag for proof of possession signatures
+		// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.3
+		DstSignaturePopInTwistedGroup: "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_",
+		// Domain separation tag for proof of possession proofs
+		// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.3
+		DstPopProofInTwistedGroup: "BLS_POP_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_",
+		// Domain separation tag for basic signatures
+		// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.1
+		DstSignatureBasicInSourceGroup: "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_",
+		// Domain separation tag for basic signatures
+		// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.2
+		DstSignatureAugInSourceGroup: "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_AUG_",
+		// Domain separation tag for proof of possession signatures
+		// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.3
+		DstSignaturePopInSourceGroup: "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_POP_",
+		// Domain separation tag for proof of possession proofs
+		// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.3
+		DstPopProofInSourceGroup: "BLS_POP_BLS12381G1_XMD:SHA-256_SSWU_RO_POP_",
+	}
+}
+
+func RogueKeyPreventionAlgorithmIsSupported(alg RogueKeyPreventionAlgorithm) bool {
+	return alg == Basic || alg == MessageAugmentation || alg == POP
+}
+
+func NewPublicKey[
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+](v PK) (*PublicKey[PK, PKFE, Sig, SigFE, E, S], error) {
+	if v.IsOpIdentity() {
+		return nil, errs.NewFailed("cannot create public key from identity point")
+	}
+	if !v.IsTorsionFree() {
+		return nil, errs.NewFailed("cannot create public key from torsion point")
+	}
+	return &PublicKey[PK, PKFE, Sig, SigFE, E, S]{
+		PublicKeyTrait: signatures.PublicKeyTrait[PK, S]{V: v},
+	}, nil
+}
+
+func NewPublicKeyFromBytes[
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+](subGroup curves.PairingFriendlyCurve[PK, PKFE, Sig, SigFE, E, S], input []byte) (*PublicKey[PK, PKFE, Sig, SigFE, E, S], error) {
+	v, err := subGroup.FromBytes(input)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create public key from bytes")
+	}
+	return NewPublicKey(v)
+}
+
+type PublicKey[
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+] struct {
+	signatures.PublicKeyTrait[PK, S]
+}
+
+func (pk *PublicKey[P1, F1, P2, F2, E, S]) Group() curves.PairingFriendlyCurve[P1, F1, P2, F2, E, S] {
+	group, ok := pk.V.Structure().(curves.PairingFriendlyCurve[P1, F1, P2, F2, E, S])
+	if !ok {
+		panic(errs.NewType("public key value does not implement curves.Curve interface"))
+	}
+	return group
+}
+
+func (pk *PublicKey[P1, F1, P2, F2, E, S]) Name() signatures.Name {
+	return Name
+}
+
+func (pk *PublicKey[P1, F1, P2, F2, E, S]) Clone() *PublicKey[P1, F1, P2, F2, E, S] {
+	if pk == nil {
+		return nil
+	}
+	return &PublicKey[P1, F1, P2, F2, E, S]{PublicKeyTrait: *pk.PublicKeyTrait.Clone()}
+}
+
+func (pk *PublicKey[P1, F1, P2, F2, E, S]) Equal(other *PublicKey[P1, F1, P2, F2, E, S]) bool {
+	return pk != nil && other != nil && pk.PublicKeyTrait.Equal(&other.PublicKeyTrait)
+}
+
+func (pk *PublicKey[P1, F1, P2, F2, E, S]) HashCode() base.HashCode {
+	return pk.PublicKeyTrait.HashCode()
+}
+
+func (pk *PublicKey[P1, F1, P2, F2, E, S]) Bytes() []byte {
+	if pk == nil {
+		return nil
+	}
+	return pk.Value().ToCompressed()
+}
+
+func (pk *PublicKey[P1, F1, P2, F2, E, S]) IsShort() bool {
+	return pk.Value().InSourceGroup()
+}
+
+func (pk *PublicKey[P1, F1, P2, F2, E, S]) TryAdd(other *PublicKey[P1, F1, P2, F2, E, S]) (*PublicKey[P1, F1, P2, F2, E, S], error) {
+	if other == nil {
+		return nil, errs.NewIsNil("cannot add nil public key")
+	}
+	if other.Value().IsOpIdentity() {
+		return nil, errs.NewFailed("cannot add identity public key")
+	}
+	if !other.Value().IsTorsionFree() {
+		return nil, errs.NewFailed("cannot add public key with torsion point")
+	}
+	return &PublicKey[P1, F1, P2, F2, E, S]{
+		PublicKeyTrait: signatures.PublicKeyTrait[P1, S]{V: pk.Value().Add(other.Value())},
+	}, nil
+}
+
+func NewPrivateKey[
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+](subGroup curves.PairingFriendlyCurve[PK, PKFE, Sig, SigFE, E, S], v S) (*PrivateKey[PK, PKFE, Sig, SigFE, E, S], error) {
+	if v.IsOpIdentity() {
+		return nil, errs.NewFailed("cannot create private key from identity scalar")
+	}
+	publicKeyValue := subGroup.ScalarBaseMul(v)
+	return &PrivateKey[PK, PKFE, Sig, SigFE, E, S]{
+		PrivateKeyTrait: signatures.PrivateKeyTrait[PK, S]{
+			V: v,
+			PublicKeyTrait: signatures.PublicKeyTrait[PK, S]{
+				V: publicKeyValue,
+			},
 		},
 	}, nil
 }
 
-func (sk *PrivateKey[P, B, S]) D() S {
-	return sk.d
+func NewPrivateKeyFromBytes[
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+](subGroup curves.PairingFriendlyCurve[PK, PKFE, Sig, SigFE, E, S], input []byte) (*PrivateKey[PK, PKFE, Sig, SigFE, E, S], error) {
+	v, err := curves.GetScalarField(subGroup).FromBytes(input)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create private key from bytes")
+	}
+	return NewPrivateKey(subGroup, v)
 }
 
-func (sk *PrivateKey[P, B, S]) Validate() error {
+type PrivateKey[
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+] struct {
+	signatures.PrivateKeyTrait[PK, S]
+}
+
+func (sk *PrivateKey[PK, PKFE, Sig, SigFE, E, S]) Name() signatures.Name {
+	return Name
+}
+
+func (sk *PrivateKey[PK, PKFE, Sig, SigFE, E, S]) Group() curves.Curve[PK, PKFE, S] {
+	group, ok := sk.V.Structure().(curves.Curve[PK, PKFE, S])
+	if !ok {
+		panic(errs.NewType("private key value does not implement curves.Curve interface"))
+	}
+	return group
+}
+
+func (sk *PrivateKey[PK, PKFE, Sig, SigFE, E, S]) PublicKey() *PublicKey[PK, PKFE, Sig, SigFE, E, S] {
+	return &PublicKey[PK, PKFE, Sig, SigFE, E, S]{PublicKeyTrait: sk.PrivateKeyTrait.PublicKeyTrait}
+}
+
+func (sk *PrivateKey[PK, PKFE, Sig, SigFE, E, S]) Clone() *PrivateKey[PK, PKFE, Sig, SigFE, E, S] {
 	if sk == nil {
-		return errs.NewIsNil("receiver")
+		return nil
 	}
-	// TODO(aalireza): nil check somehow?
-	//if sk.d == nil {
-	//	return errs.NewIsNil("scalar is nil")
-	//}
-	if sk.d.IsZero() {
-		return errs.NewIsZero("secret key cannot be zero")
-	}
-	if err := sk.PublicKey.Validate(); err != nil {
-		return errs.WrapValidation(err, "public key validation failed")
-	}
-	return nil
+	return &PrivateKey[PK, PKFE, Sig, SigFE, E, S]{PrivateKeyTrait: *sk.PrivateKeyTrait.Clone()}
 }
 
-// MarshalBinary serialises a secret key to raw bytes.
-func (sk *PrivateKey[P, B, S]) MarshalBinary() ([]byte, error) {
-	bytes := sk.d.Bytes()
-	return sliceutils.Reverse(bytes), nil
+func (sk *PrivateKey[PK, PKFE, Sig, SigFE, E, S]) Equal(other *PrivateKey[PK, PKFE, Sig, SigFE, E, S]) bool {
+	if sk == nil || other == nil {
+		return sk == other
+	}
+	return sk.PrivateKeyTrait.Equal(&other.PrivateKeyTrait)
 }
 
-// TODO(aalireza): how to compute public key if it's not serialized and no access to curve
-// TODO(aalireza): my two cents - we should not use Marshal/Unmarshal to match the format, marshal/unmarshal is, well... for marshalling only
-// it can be unmarshalled later (e.g. cold storage) not to match the format.
-//// UnmarshalBinary deserializes a secret key from raw bytes
-//// Cannot be zero. Must be 32 bytes and cannot be all zeroes.
-//// https://tools.ietf.org/html/draft-irtf-cfrg-bls-signature-03#section-2.3
-//func (sk *PrivateKey[P, B, S]) UnmarshalBinary(data []byte) error {
-//	if len(data) != SecretKeySize {
-//		return errs.NewLength("secret key must be %d bytes", SecretKeySize)
-//	}
-//	zeros := make([]byte, len(data))
-//	if subtle.ConstantTimeCompare(data, zeros) == 1 {
-//		return errs.NewIsZero("secret key cannot be zero")
-//	}
-//	var bb [bls12381Impl.FqBytes]byte
-//	copy(bb[:], bitstring.ReverseBytes(data))
-//
-//	sk.d = &bls12381.Scalar{G: bls12381.GetSourceSubGroup[K]()}
-//	ok := sk.d.V.SetBytes(bb[:])
-//	if ok != 1 {
-//		return errs.NewSerialisation("couldn't set bytes")
-//	}
-//
-//	Y := sk.d.ScalarField().CurveTrait().ScalarBaseMult(sk.d).(curves.PairingPoint)
-//	sk.PublicKey = &PublicKey[K]{
-//		Y: Y,
-//	}
-//
-//	return nil
-//}
-
-//var (
-//	_ encoding.BinaryMarshaler   = (*PublicKey[bls12381.G1])(nil)
-//	_ encoding.BinaryUnmarshaler = (*PublicKey[bls12381.G1])(nil)
-//
-//	_ encoding.BinaryMarshaler   = (*PublicKey[bls12381.G2])(nil)
-//	_ encoding.BinaryUnmarshaler = (*PublicKey[bls12381.G2])(nil)
-//)
-
-type PublicKey[P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]] struct {
-	Y P
-
-	_ ds.Incomparable
+func (sk *PrivateKey[PK, PKFE, Sig, SigFE, E, S]) Bytes() []byte {
+	if sk == nil {
+		return nil
+	}
+	return sliceutils.Reversed(sk.Value().Bytes())
 }
 
-func (pk *PublicKey[P, B, S]) Equal(other *PublicKey[P, B, S]) bool {
+func NewSignature[
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+](v Sig, pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) (*Signature[Sig, SigFE, PK, PKFE, E, S], error) {
+	if v.IsOpIdentity() {
+		return nil, errs.NewFailed("cannot create signature from identity point")
+	}
+	if !v.IsTorsionFree() {
+		return nil, errs.NewFailed("cannot create signature from torsion point")
+	}
+	return &Signature[Sig, SigFE, PK, PKFE, E, S]{
+		v:   v,
+		pop: pop,
+	}, nil
+}
+
+func NewSignatureFromBytes[
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+](subGroup curves.PairingFriendlyCurve[Sig, SigFE, PK, PKFE, E, S], input []byte, pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) (*Signature[Sig, SigFE, PK, PKFE, E, S], error) {
+	if subGroup == nil {
+		return nil, errs.NewIsNil("subgroup cannot be nil")
+	}
+	v, err := subGroup.FromBytes(input)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create signature from bytes")
+	}
+	return NewSignature(v, pop)
+}
+
+type Signature[
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+] struct {
+	v   Sig
+	pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]
+}
+
+func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) Value() Sig {
+	return sig.v
+}
+
+func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) Bytes() []byte {
+	return sig.v.ToCompressed()
+}
+
+func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) IsLong() bool {
+	return !sig.v.InSourceGroup()
+}
+
+func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) Pop() *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S] {
+	if sig == nil {
+		return nil
+	}
+	return sig.pop
+}
+
+func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) TryAdd(other *Signature[Sig, SigFE, PK, PKFE, E, S]) (*Signature[Sig, SigFE, PK, PKFE, E, S], error) {
 	if other == nil {
-		return pk == other
+		return nil, errs.NewIsNil("cannot add nil signature with proof of possession")
 	}
-
-	return pk.Y.Equal(other.Y)
-}
-
-// The Validate algorithm ensures that a public key is valid. In particular, it ensures that a public key represents a valid, non-identity point that is in the correct subgroup.
-// Note that if the RogueKeyPreventionScheme is POP, this public key must be accompanied with a proof of possession.
-// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-keyvalidate
-func (pk *PublicKey[P, B, S]) Validate() error {
-	if pk == nil {
-		return errs.NewIsNil("public key is nil")
+	if other.v.IsOpIdentity() {
+		return nil, errs.NewFailed("cannot add identity signature")
 	}
-	// TODO(aalireza): nil check somehow?
-	//if pk.Y == nil {
-	//	return errs.NewIsNil("public key value is nil")
-	//}
-	if !pk.Y.IsTorsionFree() {
-		return errs.NewValidation("Public Key not in the prime subgroup")
+	if !other.v.IsTorsionFree() {
+		return nil, errs.NewFailed("cannot add signature with torsion point")
 	}
-	if pk.Y.IsOpIdentity() {
-		return errs.NewIsIdentity("public key value is identity")
+	out := &Signature[Sig, SigFE, PK, PKFE, E, S]{v: sig.v.Add(other.v)}
+	if sig.pop == nil && other.pop == nil {
+		return out, nil
 	}
-	return nil
-}
-
-func (pk *PublicKey[P, B, S]) Size() int {
-	curve, err := curves.GetCurve(pk.Y)
+	popAgg, err := sig.pop.TryAdd(other.pop)
 	if err != nil {
-		panic(err)
+		return nil, errs.WrapFailed(err, "could not add proofs of possession in signature with proof of possession")
 	}
-	return curve.BaseField().ElementSize()
-}
-
-// MarshalBinary Serialises a public key to a byte array in compressed form.
-// See
-// https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
-// https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
-func (pk *PublicKey[P, B, S]) MarshalBinary() ([]byte, error) {
-	out := pk.Y.ToAffineCompressed()
+	out.pop = popAgg
 	return out, nil
 }
 
-// TODO(aalireza): same thing here, how to deserialize PK
-//// UnmarshalBinary Deserializes a public key from a byte array in compressed form.
-//// See
-//// https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
-//// https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
-//// If successful, it will assign the public key
-//// otherwise it will return an error.
-//func (pk *PublicKey[K]) UnmarshalBinary(data []byte) error {
-//	size := pk.Size()
-//	if len(data) != size {
-//		return errs.NewLength("public key must be %d bytes", size)
-//	}
-//	blob := make([]byte, size)
-//	copy(blob, data)
-//	g := bls12381.GetSourceSubGroup[K]()
-//	p, err := g.Element().FromAffineCompressed(blob)
-//	if err != nil {
-//		return errs.WrapSerialisation(err, "couldn't deserialize data in a point of G1")
-//	}
-//	if p.IsAdditiveIdentity() {
-//		return errs.NewIsZero("public keys cannot be zero")
-//	}
-//	pk.Y = p.(curves.PairingPoint)
-//	return nil
-//}
-
-//func (*PublicKey[K]) InG1() bool {
-//	return bls12381.GetSourceSubGroup[K]().Name() == bls12381.NewG1().Name()
-//}
-//
-//type SignatureSubGroup = KeySubGroup
-//
-//var (
-//	_ encoding.BinaryMarshaler   = (*Signature[bls12381.G2])(nil)
-//	_ encoding.BinaryUnmarshaler = (*Signature[bls12381.G2])(nil)
-//
-//	_ encoding.BinaryMarshaler   = (*Signature[bls12381.G1])(nil)
-//	_ encoding.BinaryUnmarshaler = (*Signature[bls12381.G1])(nil)
-//)
-
-type Signature[P curves.Point[P, B, S], B fields.FiniteFieldElement[B], S fields.PrimeFieldElement[S]] struct {
-	Value P
-
-	_ ds.Incomparable
+func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) Equal(other *Signature[Sig, SigFE, PK, PKFE, E, S]) bool {
+	return sig != nil && other != nil && sig.v.Equal(other.v) && sig.pop.Equal(other.pop)
 }
 
-func (sig *Signature[P, B, S]) Size() int {
-	curve, err := curves.GetCurve(sig.Value)
-	if err != nil {
-		panic(err)
+func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) Clone() *Signature[Sig, SigFE, PK, PKFE, E, S] {
+	return &Signature[Sig, SigFE, PK, PKFE, E, S]{
+		v:   sig.v.Clone(),
+		pop: sig.pop.Clone(),
 	}
-	baseField := curve.BaseField()
-	return baseField.ElementSize()
 }
 
-// MarshalBinary Serialises a signature to a byte array in compressed form.
-// See
-// https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
-// https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
-func (sig *Signature[P, B, S]) MarshalBinary() ([]byte, error) {
-	out := sig.Value.ToAffineCompressed()
-	return out, nil
+func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) HashCode() base.HashCode {
+	return sig.v.HashCode()
 }
 
-// TODO(aalireza): how to deserialize it?
-//// UnmarshalBinary Deserializes a signature from a byte array in compressed form.
-//// See
-//// https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
-//// https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
-//// If successful, it will assign the Signature
-//// otherwise it will return an error.
-//func (sig *Signature[S]) UnmarshalBinary(data []byte) error {
-//	size := sig.Size()
-//	if len(data) != size {
-//		return errs.NewLength("signature must be %d bytes", size)
-//	}
-//	blob := make([]byte, size)
-//	copy(blob, data)
-//	g := bls12381.GetSourceSubGroup[S]()
-//	p, err := g.Element().FromAffineCompressed(blob)
-//	if err != nil {
-//		return errs.WrapSerialisation(err, "couldn't deserialize data in a point of G1")
-//	}
-//	if p.IsAdditiveIdentity() {
-//		return errs.NewIsZero("signatures cannot be zero")
-//	}
-//
-//	sig.Value = p.(curves.PairingPoint)
-//	return nil
-//}
-//
-//func (*Signature[S]) inG1() bool {
-//	return bls12381.GetSourceSubGroup[S]().Name() == bls12381.NewG1().Name()
-//}
-//
-//// type aliasing of generic types is not supported. So, sitll have to copy identical stuff.
-//var (
-//	_ encoding.BinaryMarshaler   = (*Signature[bls12381.G2])(nil)
-//	_ encoding.BinaryUnmarshaler = (*Signature[bls12381.G2])(nil)
-//
-//	_ encoding.BinaryMarshaler   = (*Signature[bls12381.G1])(nil)
-//	_ encoding.BinaryUnmarshaler = (*Signature[bls12381.G1])(nil)
-//)
-//
-//type ProofOfPossession[S SignatureSubGroup] struct {
-//	Value curves.PairingPoint
-//
-//	_ ds.Incomparable
-//}
-//
-//func (pop *ProofOfPossession[S]) Size() int {
-//	if pop.inG1() {
-//		return PublicKeySizeInG1
-//	}
-//	return PublicKeySizeInG2
-//}
-//
-//// Serialise a signature to a byte array in compressed form.
-//// See
-//// https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
-//// https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
-//func (pop *ProofOfPossession[S]) MarshalBinary() ([]byte, error) {
-//	out := pop.Value.ToAffineCompressed()
-//	return out, nil
-//}
-//
-//// Deserialize a signature from a byte array in compressed form.
-//// See
-//// https://github.com/zcash/librustzcash/blob/master/pairing/src/bls12_381/README.md#serialization
-//// https://docs.rs/bls12_381/0.1.1/bls12_381/notes/serialization/index.html
-//// If successful, it will assign the Signature
-//// otherwise it will return an error.
-//func (pop *ProofOfPossession[S]) UnmarshalBinary(data []byte) error {
-//	size := pop.Size()
-//	if len(data) != size {
-//		return errs.NewLength("signature must be %d bytes", size)
-//	}
-//	blob := make([]byte, size)
-//	copy(blob, data)
-//	g := bls12381.GetSourceSubGroup[S]()
-//	p, err := g.Element().FromAffineCompressed(blob)
-//	if err != nil {
-//		return errs.WrapSerialisation(err, "couldn't deserialize data in a point of G1")
-//	}
-//	if p.IsAdditiveIdentity() {
-//		return errs.NewIsZero("public keys cannot be zero")
-//	}
-//
-//	pop.Value = p.(curves.PairingPoint)
-//	return nil
-//}
-//
-//func (*ProofOfPossession[S]) inG1() bool {
-//	return bls12381.GetSourceSubGroup[S]().Name() == bls12381.NewG1().Name()
-//}
+func NewProofOfPossession[
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+](v Sig) (*ProofOfPossession[Sig, SigFE, PK, PKFE, E, S], error) {
+	if v.IsOpIdentity() {
+		return nil, errs.NewFailed("cannot create proof of possession from identity signature")
+	}
+	if !v.IsTorsionFree() {
+		return nil, errs.NewFailed("cannot create proof of possession from signature with torsion point")
+	}
+	sig, err := NewSignature(v, nil)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create proof of possession from signature")
+	}
+	return &ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]{
+		Signature: *sig,
+	}, nil
+}
+
+func NewProofOfPossessionFromBytes[
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+](subGroup curves.PairingFriendlyCurve[Sig, SigFE, PK, PKFE, E, S], input []byte) (*ProofOfPossession[Sig, SigFE, PK, PKFE, E, S], error) {
+	if subGroup == nil {
+		return nil, errs.NewIsNil("subgroup cannot be nil")
+	}
+	v, err := subGroup.FromBytes(input)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create proof of possession from bytes")
+	}
+	pop, err := NewProofOfPossession(v)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create proof of possession from signature")
+	}
+	return pop, nil
+}
+
+type ProofOfPossession[
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+] struct {
+	Signature[Sig, SigFE, PK, PKFE, E, S]
+}
+
+func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) Bytes() []byte {
+	if pop == nil {
+		return nil
+	}
+	return pop.Signature.Bytes()
+}
+
+func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) Value() Sig {
+	return pop.Signature.Value()
+}
+
+func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) Equal(other *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) bool {
+	if pop == nil || other == nil {
+		return pop == other
+	}
+	return pop.Signature.Equal(&other.Signature)
+}
+
+func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) Clone() *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S] {
+	if pop == nil {
+		return nil
+	}
+	return &ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]{Signature: *pop.Signature.Clone()}
+}
+
+func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) TryAdd(other *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) (*ProofOfPossession[Sig, SigFE, PK, PKFE, E, S], error) {
+	if other == nil {
+		return nil, errs.NewIsNil("cannot add nil proof of possession")
+	}
+	v, err := pop.Signature.TryAdd(&other.Signature)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not add signatures in proof of possession")
+	}
+	return &ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]{
+		Signature: *v,
+	}, nil
+}
+
+func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) HashCode() base.HashCode {
+	return pop.Signature.HashCode()
+}
+
+func AggregateAll[
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, ET, S], PKFE algebra.FiniteFieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, ET, S], SGFE algebra.FiniteFieldElement[SGFE],
+	ET algebra.MultiplicativeGroupElement[ET], S algebra.PrimeFieldElement[S],
+	Xs ~[]X, X interface {
+		TryAdd(other X) (X, error)
+	},
+](xs Xs) (X, error) {
+	if len(xs) == 0 {
+		return *new(X), errs.NewFailed("cannot aggregate empty slice of elements")
+	}
+	return iterutils.ReduceOrError(
+		slices.Values(xs[1:]),
+		xs[0],
+		func(acc X, pk X) (X, error) {
+			aggregated, err := acc.TryAdd(pk)
+			if err != nil {
+				return *new(X), errs.WrapFailed(err, "could not aggregate public keys")
+			}
+			return aggregated, nil
+		})
+}
+
+func _[
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+]() {
+	var (
+		_ signatures.AggregatablePublicKey[*PublicKey[PK, PKFE, Sig, SigFE, E, S]]                      = (*PublicKey[PK, PKFE, Sig, SigFE, E, S])(nil)
+		_ signatures.PrivateKey[*PrivateKey[PK, PKFE, Sig, SigFE, E, S]]                                = (*PrivateKey[PK, PKFE, Sig, SigFE, E, S])(nil)
+		_ signatures.IncrementallyAggregatableSignature[*Signature[PK, PKFE, Sig, SigFE, E, S]]         = (*Signature[PK, PKFE, Sig, SigFE, E, S])(nil)
+		_ signatures.IncrementallyAggregatableSignature[*ProofOfPossession[PK, PKFE, Sig, SigFE, E, S]] = (*ProofOfPossession[PK, PKFE, Sig, SigFE, E, S])(nil)
+	)
+}

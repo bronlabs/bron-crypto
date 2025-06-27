@@ -3,82 +3,28 @@ package hashmap
 import (
 	"encoding/json"
 	"iter"
+	"sync"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-type HashableHashMap[K ds.Hashable[K], V any] struct {
-	inner map[uint64][]*entry[K, V]
-}
+type HashableEntry[K base.Hashable[K], V any] ds.MapEntry[K, V]
 
-type entry[K ds.Hashable[K], V any] ds.MapEntry[K, V]
+type HashableMapping[K base.Hashable[K], V any] map[base.HashCode][]*HashableEntry[K, V]
 
-func NewHashableHashMap[K ds.Hashable[K], V any]() ds.Map[K, V] {
-	return &HashableHashMap[K, V]{
-		inner: make(map[uint64][]*entry[K, V]),
-	}
-}
-
-func (m *HashableHashMap[K, V]) Get(key K) (value V, exists bool) {
-	var nilValue V
-
+func (m HashableMapping[K, V]) TryPut(key K, newValue V) (replaced bool, oldValue V) {
 	hashCode := key.HashCode()
-	values, ok := m.inner[hashCode]
-	if !ok {
-		return nilValue, false
-	}
-	for _, e := range values {
-		if e.Key.Equal(key) {
-			return e.Value, true
-		}
-	}
-
-	return nilValue, false
-}
-
-func (m *HashableHashMap[K, V]) Retain(keys ds.Set[K]) ds.Map[K, V] {
-	return m.Filter(keys.Contains)
-}
-
-func (m *HashableHashMap[K, V]) Filter(predicate func(key K) bool) ds.Map[K, V] {
-	result := NewHashableHashMap[K, V]()
-	for _, entries := range m.inner {
-		for _, e := range entries {
-			if predicate(e.Key) {
-				result.Put(e.Key, e.Value)
-			}
-		}
-	}
-	return result
-}
-
-func (m *HashableHashMap[K, V]) ContainsKey(key K) bool {
-	for _, e := range m.inner[key.HashCode()] {
-		if key.Equal(e.Key) {
-			return true
-		}
-	}
-	return false
-}
-
-func (m *HashableHashMap[K, V]) Put(key K, value V) {
-	_, _ = m.TryPut(key, value)
-}
-
-func (m *HashableHashMap[K, V]) TryPut(key K, newValue V) (replaced bool, oldValue V) {
-	var nilValue V
-
-	hashCode := key.HashCode()
-	entries, ok := m.inner[hashCode]
-	if !ok {
-		m.inner[hashCode] = []*entry[K, V]{
+	entries, exists := m[hashCode]
+	if !exists {
+		m[hashCode] = []*HashableEntry[K, V]{
 			{
 				Key:   key,
 				Value: newValue,
 			},
 		}
-		return false, nilValue
+		return false, *new(V)
 	}
 
 	for _, v := range entries {
@@ -89,37 +35,16 @@ func (m *HashableHashMap[K, V]) TryPut(key K, newValue V) (replaced bool, oldVal
 		}
 	}
 
-	m.inner[hashCode] = append(m.inner[hashCode], &entry[K, V]{
+	m[hashCode] = append(m[hashCode], &HashableEntry[K, V]{
 		Key:   key,
 		Value: newValue,
 	})
-	return false, nilValue
+	return false, *new(V)
 }
-
-func (m *HashableHashMap[K, V]) Clear() {
-	m.inner = make(map[uint64][]*entry[K, V])
-}
-
-func (m *HashableHashMap[K, V]) IsEmpty() bool {
-	return len(m.inner) == 0
-}
-
-func (m *HashableHashMap[K, V]) Size() int {
-	size := 0
-	for _, v := range m.inner {
-		size += len(v)
-	}
-	return size
-}
-
-func (m *HashableHashMap[K, V]) Remove(key K) {
-	_, _ = m.TryRemove(key)
-}
-
-func (m *HashableHashMap[K, V]) TryRemove(key K) (removed bool, removedValue V) {
+func (m HashableMapping[K, V]) TryRemove(key K) (removed bool, removedValue V) {
 	var nilValue V
 
-	entries, ok := m.inner[key.HashCode()]
+	entries, ok := m[key.HashCode()]
 	if !ok {
 		return false, nilValue
 	}
@@ -139,14 +64,84 @@ func (m *HashableHashMap[K, V]) TryRemove(key K) (removed bool, removedValue V) 
 	entries[idx] = entries[len(entries)-1]
 	newEntries := entries[:len(entries)-1]
 	if len(newEntries) == 0 {
-		delete(m.inner, key.HashCode())
+		delete(m, key.HashCode())
 	} else {
-		m.inner[key.HashCode()] = newEntries
+		m[key.HashCode()] = newEntries
 	}
 	return true, removedValue
 }
 
-func (m *HashableHashMap[K, V]) Keys() []K {
+type HashMapTrait[K base.Hashable[K], V, T any] struct {
+	inner HashableMapping[K, V]
+}
+
+func (m HashMapTrait[K, V, _]) IsHashable() bool {
+	return true
+}
+
+func (m HashMapTrait[K, V, _]) Get(key K) (value V, exists bool) {
+	hashCode := key.HashCode()
+	values, ok := m.inner[hashCode]
+	if !ok {
+		return *new(V), false
+	}
+	for _, e := range values {
+		if e.Key.Equal(key) {
+			return e.Value, true
+		}
+	}
+
+	return *new(V), false
+}
+
+func (m HashMapTrait[K, V, T]) Retain(keys ...K) T {
+	return m.Filter(func(key K) bool {
+		for _, k := range keys {
+			if k.Equal(key) {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+func (m HashMapTrait[K, V, T]) Filter(predicate func(key K) bool) T {
+	inner := make(HashableMapping[K, V])
+	for _, entries := range m.inner {
+		for _, e := range entries {
+			if predicate(e.Key) {
+				inner.TryPut(e.Key, e.Value)
+			}
+		}
+	}
+	result := HashMapTrait[K, V, T]{
+		inner: inner,
+	}
+	return any(result).(T)
+}
+
+func (m HashMapTrait[K, V, _]) ContainsKey(key K) bool {
+	for _, e := range m.inner[key.HashCode()] {
+		if key.Equal(e.Key) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m HashMapTrait[K, V, _]) IsEmpty() bool {
+	return len(m.inner) == 0
+}
+
+func (m HashMapTrait[K, V, _]) Size() int {
+	size := 0
+	for _, v := range m.inner {
+		size += len(v)
+	}
+	return size
+}
+
+func (m HashMapTrait[K, V, _]) Keys() []K {
 	var keys []K
 	for _, entries := range m.inner {
 		for _, entry := range entries {
@@ -156,7 +151,7 @@ func (m *HashableHashMap[K, V]) Keys() []K {
 	return keys
 }
 
-func (m *HashableHashMap[K, V]) Values() []V {
+func (m HashMapTrait[K, V, _]) Values() []V {
 	result := make([]V, 0)
 	for _, value := range m.Iter() {
 		result = append(result, value)
@@ -164,21 +159,7 @@ func (m *HashableHashMap[K, V]) Values() []V {
 	return result
 }
 
-func (m *HashableHashMap[K, V]) Clone() ds.Map[K, V] {
-	result := NewHashableHashMap[K, V]().(*HashableHashMap[K, V]) //nolint:errcheck,forcetypeassert // trivial
-	for code, entries := range m.inner {
-		result.inner[code] = make([]*entry[K, V], len(entries))
-		for i, e := range entries {
-			result.inner[code][i] = &entry[K, V]{
-				Key:   e.Key,
-				Value: e.Value,
-			}
-		}
-	}
-	return result
-}
-
-func (m *HashableHashMap[K, V]) Iter() iter.Seq2[K, V] {
+func (m HashMapTrait[K, V, _]) Iter() iter.Seq2[K, V] {
 	keys := m.Keys()
 	return func(yield func(K, V) bool) {
 		for _, key := range keys {
@@ -190,7 +171,69 @@ func (m *HashableHashMap[K, V]) Iter() iter.Seq2[K, V] {
 	}
 }
 
-func (m *HashableHashMap[K, V]) MarshalJSON() ([]byte, error) {
+func (m HashMapTrait[K, V, _]) Enumerate() iter.Seq2[int, ds.MapEntry[K, V]] {
+	return func(yield func(int, ds.MapEntry[K, V]) bool) {
+		i := 0
+		for key, value := range m.Iter() {
+			if !yield(i, ds.MapEntry[K, V]{Key: key, Value: value}) {
+				return
+			}
+			i++
+		}
+	}
+}
+
+func NewImmutableHashable[K base.Hashable[K], V any]() ds.Map[K, V] {
+	return &ImmutableHashableHashMap[K, V]{
+		HashMapTrait[K, V, ds.Map[K, V]]{
+			inner: make(HashableMapping[K, V]),
+		},
+	}
+}
+
+func CollectToImmutableHashable[K base.Hashable[K], V any](xs []K, ys []V) (ds.Map[K, V], error) {
+	m, err := CollectToHashable[K, V](xs, ys)
+	if err != nil {
+		return nil, err
+	}
+	return m.Freeze(), nil
+}
+
+type ImmutableHashableHashMap[K base.Hashable[K], V any] struct {
+	HashMapTrait[K, V, ds.Map[K, V]]
+}
+
+func (m ImmutableHashableHashMap[K, V]) IsImmutable() bool {
+	return true
+}
+
+func (m ImmutableHashableHashMap[K, V]) Unfreeze() ds.MutableMap[K, V] {
+	return &MutableHashableHashMap[K, V]{
+		HashMapTrait[K, V, ds.MutableMap[K, V]]{
+			inner: m.inner,
+		},
+	}
+}
+
+func (m ImmutableHashableHashMap[K, V]) Clone() ds.Map[K, V] {
+	inner := make(HashableMapping[K, V])
+	for code, entries := range m.inner {
+		inner[code] = make([]*HashableEntry[K, V], len(entries))
+		for i, e := range entries {
+			inner[code][i] = &HashableEntry[K, V]{
+				Key:   e.Key,
+				Value: e.Value,
+			}
+		}
+	}
+	return &ImmutableHashableHashMap[K, V]{
+		HashMapTrait[K, V, ds.Map[K, V]]{
+			inner: inner,
+		},
+	}
+}
+
+func (m ImmutableHashableHashMap[K, V]) MarshalJSON() ([]byte, error) {
 	serialised, err := json.Marshal(m.inner)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "could not json marshal")
@@ -198,11 +241,112 @@ func (m *HashableHashMap[K, V]) MarshalJSON() ([]byte, error) {
 	return serialised, nil
 }
 
-func (m *HashableHashMap[K, V]) UnmarshalJSON(data []byte) error {
-	var temp map[uint64][]*entry[K, V]
+func (m *ImmutableHashableHashMap[K, V]) UnmarshalJSON(data []byte) error {
+	var temp HashableMapping[K, V]
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return errs.WrapSerialisation(err, "could not unmarshal hashable hashmap")
 	}
-	m.inner = temp
+	m.HashMapTrait = HashMapTrait[K, V, ds.Map[K, V]]{
+		inner: temp,
+	}
 	return nil
+}
+
+func NewHashable[K base.Hashable[K], V any]() ds.MutableMap[K, V] {
+	return &MutableHashableHashMap[K, V]{
+		HashMapTrait[K, V, ds.MutableMap[K, V]]{
+			inner: make(HashableMapping[K, V]),
+		},
+	}
+}
+
+func CollectToHashable[K base.Hashable[K], V any](xs []K, ys []V) (ds.MutableMap[K, V], error) {
+	if len(xs) != len(ys) {
+		return nil, errs.NewArgument("xs and ys must have the same length")
+	}
+	m := NewHashable[K, V]()
+	for i := 0; i < len(xs); i++ {
+		m.Put(xs[i], ys[i])
+	}
+	return m, nil
+}
+
+type MutableHashableHashMap[K base.Hashable[K], V any] struct {
+	HashMapTrait[K, V, ds.MutableMap[K, V]]
+}
+
+func (m MutableHashableHashMap[K, V]) IsImmutable() bool {
+	return false
+}
+
+func (m MutableHashableHashMap[K, V]) Freeze() ds.Map[K, V] {
+	return &ImmutableHashableHashMap[K, V]{
+		HashMapTrait[K, V, ds.Map[K, V]]{
+			inner: m.inner,
+		},
+	}
+}
+
+func (m MutableHashableHashMap[K, V]) ThreadSafe() ds.ConcurrentMap[K, V] {
+	return &ConcurrentMap[K, V]{
+		inner: m.Clone(),
+		mu:    sync.RWMutex{},
+	}
+}
+
+func (m MutableHashableHashMap[K, V]) Clone() ds.MutableMap[K, V] {
+	inner := make(HashableMapping[K, V])
+	for code, entries := range m.inner {
+		inner[code] = make([]*HashableEntry[K, V], len(entries))
+		for i, e := range entries {
+			inner[code][i] = &HashableEntry[K, V]{
+				Key:   e.Key,
+				Value: e.Value,
+			}
+		}
+	}
+	return &MutableHashableHashMap[K, V]{
+		HashMapTrait[K, V, ds.MutableMap[K, V]]{
+			inner: inner,
+		},
+	}
+}
+
+func (m MutableHashableHashMap[K, V]) MarshalJSON() ([]byte, error) {
+	serialised, err := json.Marshal(m.inner)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "could not json marshal")
+	}
+	return serialised, nil
+}
+
+func (m *MutableHashableHashMap[K, V]) UnmarshalJSON(data []byte) error {
+	var temp HashableMapping[K, V]
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return errs.WrapSerialisation(err, "could not unmarshal hashable hashmap")
+	}
+	m.HashMapTrait = HashMapTrait[K, V, ds.MutableMap[K, V]]{
+		inner: temp,
+	}
+	return nil
+}
+
+func (m MutableHashableHashMap[K, V]) Put(key K, value V) {
+	_, _ = m.TryPut(key, value)
+}
+
+func (m MutableHashableHashMap[K, V]) TryPut(key K, newValue V) (replaced bool, oldValue V) {
+	return m.inner.TryPut(key, newValue)
+}
+
+func (m MutableHashableHashMap[K, V]) Clear() {
+	m.inner = make(HashableMapping[K, V])
+}
+
+func (m MutableHashableHashMap[K, V]) Remove(key K) {
+	_, _ = m.TryRemove(key)
+}
+
+func (m MutableHashableHashMap[K, V]) TryRemove(key K) (removed bool, removedValue V) {
+	return m.inner.TryRemove(key)
 }

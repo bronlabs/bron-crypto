@@ -4,107 +4,115 @@ import (
 	"encoding/json"
 	"iter"
 
-	"github.com/cronokirby/saferith"
-	"golang.org/x/exp/maps"
-
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+	"golang.org/x/exp/maps"
 )
 
-type ComparableHashSet[E comparable] struct {
-	v map[E]bool
-}
+type comparableMapping[K comparable] = map[K]struct{}
 
-func NewComparableHashSet[E comparable](xs ...E) ds.Set[E] {
-	s := &ComparableHashSet[E]{
-		v: make(map[E]bool),
-	}
+func NewComparable[E comparable](xs ...E) ds.MutableSet[E] {
+	s := &MutableComparable[E]{v: make(comparableMapping[E])}
 	for _, x := range xs {
-		s.v[x] = true
+		s.v[x] = struct{}{}
 	}
 	return s
 }
 
-func (s *ComparableHashSet[E]) Contains(e E) bool {
+type MutableComparable[E comparable] struct {
+	v comparableMapping[E]
+}
+
+func (s *MutableComparable[E]) Add(e E) {
+	s.v[e] = struct{}{}
+}
+
+func (s *MutableComparable[E]) AddAll(es ...E) {
+	for _, e := range es {
+		s.v[e] = struct{}{}
+	}
+}
+
+func (s *MutableComparable[E]) Remove(e E) {
+	delete(s.v, e)
+}
+
+func (s *MutableComparable[E]) RemoveAll(es ...E) {
+	for _, e := range es {
+		delete(s.v, e)
+	}
+}
+
+func (s *MutableComparable[E]) Freeze() ds.Set[E] {
+	return &Immutable[E]{v: &MutableComparable[E]{v: maps.Clone(s.v)}}
+}
+
+func (s *MutableComparable[E]) Clear() {
+	maps.Clear(s.v)
+}
+
+func (s *MutableComparable[E]) Contains(e E) bool {
 	_, exists := s.v[e]
 	return exists
 }
 
-func (s *ComparableHashSet[E]) Add(e E) {
-	s.v[e] = true
+func (s *MutableComparable[E]) Clone() ds.MutableSet[E] {
+	return &MutableComparable[E]{v: maps.Clone(s.v)}
 }
 
-func (s *ComparableHashSet[E]) AddAll(es ...E) {
-	for _, e := range es {
-		s.v[e] = true
-	}
+func (t *MutableComparable[E]) Equal(other ds.MutableSet[E]) bool {
+	return t.IsSubSet(other) && other.IsSubSet(t)
 }
 
-func (s *ComparableHashSet[E]) Remove(e E) {
-	delete(s.v, e)
+func (t *MutableComparable[_]) Size() int {
+	return len(t.v)
 }
 
-func (s *ComparableHashSet[E]) Clear() {
-	clear(s.v)
+func (t *MutableComparable[_]) Cardinality() int {
+	return len(t.v)
 }
 
-func (s *ComparableHashSet[E]) Equal(other ds.Set[E]) bool {
-	return s.SymmetricDifference(other).IsEmpty()
+func (t *MutableComparable[_]) IsEmpty() bool {
+	return len(t.v) == 0
 }
 
-func (s *ComparableHashSet[_]) Size() int {
-	return len(s.v)
+func (t *MutableComparable[E]) Union(other ds.MutableSet[E]) ds.MutableSet[E] {
+	out := t.Clone()
+	out.AddAll(other.List()...)
+	return out
 }
 
-func (s *ComparableHashSet[_]) Cardinality() *saferith.Nat {
-	return new(saferith.Nat).SetUint64(uint64(len(s.v)))
-}
-
-func (s *ComparableHashSet[_]) IsEmpty() bool {
-	return len(s.v) == 0
-}
-
-func (s *ComparableHashSet[E]) Union(other ds.Set[E]) ds.Set[E] {
-	result := s.Clone()
-	result.AddAll(other.List()...)
-	return result
-}
-
-func (s *ComparableHashSet[E]) Intersection(other ds.Set[E]) ds.Set[E] {
-	result := NewComparableHashSet[E]()
-	for k1 := range s.v {
-		if other.Contains(k1) {
-			result.Add(k1)
+func (t *MutableComparable[E]) Intersection(other ds.MutableSet[E]) ds.MutableSet[E] {
+	out := &MutableComparable[E]{v: make(comparableMapping[E])}
+	for k := range t.Iter() {
+		if other.Contains(k) {
+			out.v[k] = struct{}{}
 		}
 	}
-	return result
+	return out
 }
 
-func (s *ComparableHashSet[E]) Difference(other ds.Set[E]) ds.Set[E] {
-	result := s.Clone()
-	for k := range s.v {
-		if !other.Contains(k) {
-			result.Add(k)
-		}
-	}
-	return result
+func (t *MutableComparable[E]) Difference(other ds.MutableSet[E]) ds.MutableSet[E] {
+	out := t.Clone()
+	out.RemoveAll(other.List()...)
+	return out
 }
 
-func (s *ComparableHashSet[E]) SymmetricDifference(other ds.Set[E]) ds.Set[E] {
-	return s.Difference(other).Union(other.Difference(s))
+func (t *MutableComparable[E]) SymmetricDifference(other ds.MutableSet[E]) ds.MutableSet[E] {
+	return t.Union(other).Difference(t.Intersection(other))
 }
 
-func (s *ComparableHashSet[E]) SubSets() []ds.Set[E] {
-	result := make([]ds.Set[E], 1<<s.Size())
+func (t *MutableComparable[E]) SubSets() []ds.MutableSet[E] {
+	result := make([]ds.MutableSet[E], 1<<t.Size())
 	i := 0
-	for subset := range s.IterSubSets() {
+	for subset := range t.IterSubSets() {
 		result[i] = subset
 		i++
 	}
 	return result
 }
 
-func (s *ComparableHashSet[E]) Iter() iter.Seq[E] {
+func (s *MutableComparable[E]) Iter() iter.Seq[E] {
 	return func(yield func(E) bool) {
 		for el := range s.v {
 			if !yield(el) {
@@ -114,73 +122,66 @@ func (s *ComparableHashSet[E]) Iter() iter.Seq[E] {
 	}
 }
 
-func (s *ComparableHashSet[E]) IsSubSet(other ds.Set[E]) bool {
-	return other.Intersection(s).Equal(s)
+func (s *MutableComparable[E]) Iter2() iter.Seq2[int, E] {
+	return func(yield func(int, E) bool) {
+		i := 0
+		for el := range s.v {
+			if !yield(i, el) {
+				return
+			}
+			i++
+		}
+	}
 }
 
-func (s *ComparableHashSet[E]) IsProperSubSet(other ds.Set[E]) bool {
-	return s.IsSubSet(other) && !s.Equal(other)
+func (s *MutableComparable[E]) IsSubSet(of ds.MutableSet[E]) bool {
+	for k := range s.Iter() {
+		if !of.Contains(k) {
+			return false
+		}
+	}
+	return true
 }
 
-func (s *ComparableHashSet[E]) IsSuperSet(other ds.Set[E]) bool {
-	return other.IsSubSet(s)
+func (s *MutableComparable[E]) IsProperSubSet(of ds.MutableSet[E]) bool {
+	return s.IsSubSet(of) && !s.Equal(of)
 }
 
-func (s *ComparableHashSet[E]) IsProperSuperSet(other ds.Set[E]) bool {
-	return other.IsProperSubSet(s)
+func (s *MutableComparable[E]) IsSuperSet(of ds.MutableSet[E]) bool {
+	for k := range of.Iter() {
+		if _, exists := s.v[k]; !exists {
+			return false
+		}
+	}
+	return true
 }
 
-func (s *ComparableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
-	ch := make(chan ds.Set[E], 1)
-	go func() {
-		defer close(ch)
-		elements := s.List()
-		n := s.Size()
-		totalSubSets := 1 << n
+func (s *MutableComparable[E]) IsProperSuperSet(of ds.MutableSet[E]) bool {
+	return s.IsSuperSet(of) && !s.Equal(of)
+}
 
-		for i := 0; i < totalSubSets; i++ {
-			var subset []E
-			for j := 0; j < n; j++ {
-				if i&(1<<j) != 0 {
-					subset = append(subset, elements[j])
+func (s *MutableComparable[E]) IterSubSets() iter.Seq[ds.MutableSet[E]] {
+	return func(yield func(ds.MutableSet[E]) bool) {
+		list := s.List()
+		for i := range s.Size() {
+			for comb := range sliceutils.Combinations(list, uint(i)) {
+				subset := NewComparable(comb...)
+				if !yield(subset) {
+					return
 				}
 			}
-			ch <- NewComparableHashSet(subset...)
 		}
-	}()
-	return ch
+	}
 }
 
-func (s *ComparableHashSet[E]) List() []E {
+func (s *MutableComparable[E]) List() []E {
 	return maps.Keys(s.v)
 }
 
-func (s *ComparableHashSet[E]) Clone() ds.Set[E] {
-	return &ComparableHashSet[E]{
-		v: maps.Clone(s.v),
+func (s *MutableComparable[E]) MarshalJSON() ([]byte, error) {
+	temp := make(map[E]struct{})
+	for k := range s.v {
+		temp[k] = struct{}{}
 	}
-}
-
-func (s *ComparableHashSet[E]) MarshalJSON() ([]byte, error) {
-	temp := make(map[E]bool)
-	for k, v := range s.v {
-		temp[k] = v
-	}
-	serialised, err := json.Marshal(temp)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not marshal json")
-	}
-	return serialised, nil
-}
-
-func (s *ComparableHashSet[E]) UnmarshalJSON(data []byte) error {
-	var temp map[E]bool
-	if err := json.Unmarshal(data, &temp); err != nil {
-		return errs.WrapSerialisation(err, "could not json marshal comparable hashset")
-	}
-	s.Clear()
-	for k, v := range temp {
-		s.v[k] = v
-	}
-	return nil
+	return json.Marshal(temp)
 }

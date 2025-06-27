@@ -2,101 +2,22 @@ package commitments
 
 import "github.com/bronlabs/bron-crypto/pkg/base/errs"
 
-type Opening[M Message, W Witness] struct {
-	M M
-	W W
+func NewGenericVerifier[T Committer[W, M, C], W Witness, M Message, C Commitment](committer T, commitmentsAreEqual func(c1, c2 C) bool) *GenericVerifier[T, W, M, C] {
+	return &GenericVerifier[T, W, M, C]{committer: committer, commitmentsAreEqual: commitmentsAreEqual}
 }
 
-func NewOpening[M Message, W Witness](message M, witness W) *Opening[M, W] {
-	return &Opening[M, W]{
-		M: message,
-		W: witness,
-	}
+type GenericVerifier[T Committer[W, M, C], W Witness, M Message, C Commitment] struct {
+	committer           T
+	commitmentsAreEqual func(c1, c2 C) bool
 }
 
-func (o *Opening[M, W]) Message() M {
-	return o.M
-}
-
-func (o *Opening[M, W]) Witness() W {
-	return o.W
-}
-
-func OpeningAdd[C Commitment, M Message, W Witness, S Scalar, CK HomomorphicCommittingKey[C, M, W, S]](ck CK, lhs, rhs *Opening[M, W]) (*Opening[M, W], error) {
-	m, err := ck.MessageAdd(lhs.Message(), rhs.Message())
+func (v *GenericVerifier[T, W, M, C]) Verify(commitment C, message M, witness W) error {
+	recomputed, err := v.committer.CommitWithWitness(message, witness)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot add messages")
+		return errs.WrapFailed(err, "cannot recompute commitment")
 	}
-	r, err := ck.WitnessAdd(lhs.Witness(), rhs.Witness())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot add witnesses")
+	if !v.commitmentsAreEqual(recomputed, commitment) {
+		return errs.NewValue("commitment does not match")
 	}
-
-	return NewOpening[M, W](m, r), nil
-}
-
-func OpeningAddMessage[C Commitment, M Message, W Witness, S Scalar, CK HomomorphicCommittingKey[C, M, W, S]](ck CK, lhs *Opening[M, W], rhs M) (*Opening[M, W], error) {
-	m, err := ck.MessageAdd(lhs.Message(), rhs)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot add messages")
-	}
-
-	return NewOpening[M, W](m, lhs.Witness()), nil
-}
-
-func OpeningSub[C Commitment, M Message, W Witness, S Scalar, CK HomomorphicCommittingKey[C, M, W, S]](ck CK, lhs, rhs *Opening[M, W]) (*Opening[M, W], error) {
-	m, err := ck.MessageSub(lhs.Message(), rhs.Message())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot add messages")
-	}
-	r, err := ck.WitnessSub(lhs.Witness(), rhs.Witness())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot add witnesses")
-	}
-
-	return NewOpening[M, W](m, r), nil
-}
-
-func OpeningSubMessage[C Commitment, M Message, W Witness, S Scalar, CK HomomorphicCommittingKey[C, M, W, S]](ck CK, lhs *Opening[M, W], rhs M) (*Opening[M, W], error) {
-	m, err := ck.MessageSub(lhs.Message(), rhs)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot add messages")
-	}
-
-	return NewOpening[M, W](m, lhs.Witness()), nil
-}
-
-func OpeningMul[C Commitment, M Message, W Witness, S Scalar, CK HomomorphicCommittingKey[C, M, W, S]](ck CK, lhs *Opening[M, W], rhs S) (*Opening[M, W], error) {
-	m, err := ck.MessageMul(lhs.Message(), rhs)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot add messages")
-	}
-	r, err := ck.WitnessMul(lhs.Witness(), rhs)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot add witnesses")
-	}
-
-	return NewOpening[M, W](m, r), nil
-}
-
-func OpeningNeg[C Commitment, M Message, W Witness, S Scalar, CK HomomorphicCommittingKey[C, M, W, S]](ck CK, x *Opening[M, W]) (*Opening[M, W], error) {
-	m, err := ck.MessageNeg(x.Message())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot add messages")
-	}
-	r, err := ck.WitnessNeg(x.Witness())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot add witnesses")
-	}
-
-	return NewOpening[M, W](m, r), nil
-}
-
-func Verify[C Commitment, M Message, W Witness, CK CommittingKey[C, M, W]](committingKey CK, commitment C, opening *Opening[M, W]) error {
-	err := committingKey.Verify(commitment, opening.Message(), opening.Witness())
-	if err != nil {
-		return errs.WrapVerification(err, "invalid commitment")
-	}
-
 	return nil
 }

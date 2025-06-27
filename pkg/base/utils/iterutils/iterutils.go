@@ -183,6 +183,28 @@ func Reduce[Accum, V any](seq iter.Seq[V], accum Accum, f func(Accum, V) Accum) 
 	return accum
 }
 
+func ReduceOrError[Accum, V any](seq iter.Seq[V], accum Accum, f func(Accum, V) (Accum, error)) (Accum, error) {
+	var err error
+	for v := range seq {
+		accum, err = f(accum, v)
+		if err != nil {
+			return accum, err
+		}
+	}
+	return accum, nil
+}
+
+func Reduce2OrError[Accum, K, V any](seq iter.Seq2[K, V], accum Accum, f func(Accum, K, V) (Accum, error)) (Accum, error) {
+	var err error
+	for k, v := range seq {
+		accum, err = f(accum, k, v)
+		if err != nil {
+			return accum, err
+		}
+	}
+	return accum, nil
+}
+
 func Reduce2[Accum, K, V any](seq iter.Seq2[K, V], accum Accum, f func(Accum, K, V) Accum) Accum {
 	for k, v := range seq {
 		accum = f(accum, k, v)

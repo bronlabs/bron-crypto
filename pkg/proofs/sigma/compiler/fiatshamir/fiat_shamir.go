@@ -1,11 +1,12 @@
 package fiatshamir
 
 import (
-	"encoding/hex"
 	"fmt"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -25,9 +26,12 @@ type Proof[A sigma.Commitment, Z sigma.Response] struct {
 	Z Z `json:"z"`
 }
 
-var _ compiler.NICompiler[sigma.Statement, sigma.Witness] = (*fs[
-	sigma.Statement, sigma.Witness, sigma.Statement, sigma.State, sigma.Response,
-])(nil)
+func (p *Proof[A, Z]) Bytes() []byte {
+	if p == nil {
+		return nil
+	}
+	return slices.Concat(p.A.Bytes(), p.Z.Bytes())
+}
 
 type fs[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
@@ -48,12 +52,12 @@ func NewCompiler[
 	}, nil
 }
 
-func (c *fs[X, W, A, S, Z]) NewProver(sessionId []byte, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
+func (c *fs[X, W, A, S, Z]) NewProver(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewArgument("sessionId is empty")
 	}
 
-	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sessionId), transcriptLabel, c.sigmaProtocol.Name())
+	dst := fmt.Sprintf("%s-%s-%s", sessionId, transcriptLabel, c.sigmaProtocol.Name())
 	transcript.AppendDomainSeparator(dst)
 
 	return &prover[X, W, A, S, Z]{
@@ -62,12 +66,12 @@ func (c *fs[X, W, A, S, Z]) NewProver(sessionId []byte, transcript transcripts.T
 	}, nil
 }
 
-func (c *fs[X, W, A, S, Z]) NewVerifier(sessionId []byte, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
+func (c *fs[X, W, A, S, Z]) NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X, W], error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewArgument("sessionId is empty")
 	}
 
-	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sessionId), transcriptLabel, c.sigmaProtocol.Name())
+	dst := fmt.Sprintf("%s-%s-%s", sessionId, transcriptLabel, c.sigmaProtocol.Name())
 	transcript.AppendDomainSeparator(dst)
 
 	return &verifier[X, W, A, S, Z]{

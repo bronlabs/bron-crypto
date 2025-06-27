@@ -1,95 +1,110 @@
 package algebra
 
 import (
-	"io"
-
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 )
 
-// ****************** Action
+type (
+	Actable[E, S any]                 aimpl.Actable[E, S]
+	AdditivelyActable[E, S any]       aimpl.AdditivelyActable[E, S]
+	MultiplicativelyActable[E, S any] aimpl.MultiplicativelyActable[E, S]
 
-type Actable[E Element[E], S SemiGroupElement[S]] interface {
-	Element[E]
-	ScalarMul(actor S) E
-}
+	Action[S SemiGroupElement[S], E Element[E]] func(actor S, element E) E
+)
 
-type RingActable[E Element[E], S RingElement[S]] Actable[E, S]
+type (
+	SemiModule[ME aimpl.SemiModuleElement[ME, S], S aimpl.SemiRingElement[S]]        = aimpl.SemiModule[ME, S]
+	SemiModuleElement[ME aimpl.SemiModuleElement[ME, S], S aimpl.SemiRingElement[S]] = aimpl.SemiModuleElement[ME, S]
 
-// ****************** Module
+	ZLikeSemiModule[E aimpl.SemiModuleElement[E, S], S aimpl.IntLike[S]]        = aimpl.ZLikeSemiModule[E, S]
+	ZLikeSemiModuleElement[E aimpl.SemiModuleElement[E, S], S aimpl.IntLike[S]] = aimpl.ZLikeSemiModuleElement[E, S]
+)
 
-type Module[ME ModuleElement[ME, S], S RingElement[S]] Group[ME]
+type (
+	Module[ME aimpl.ModuleElement[ME, S], S aimpl.RingElement[S]]        = aimpl.Module[ME, S]
+	ModuleElement[ME aimpl.ModuleElement[ME, S], S aimpl.RingElement[S]] = aimpl.ModuleElement[ME, S]
 
-type ModuleElement[ME GroupElement[ME], S RingElement[S]] interface {
-	GroupElement[ME]
-	RingActable[ME, S]
-	IsTorsionFree() bool
-}
+	AdditiveModule[ME aimpl.AdditiveModuleElement[ME, S], S aimpl.RingElement[S]]        aimpl.AdditiveModule[ME, S]
+	AdditiveModuleElement[ME aimpl.AdditiveModuleElement[ME, S], S aimpl.RingElement[S]] aimpl.AdditiveModuleElement[ME, S]
 
-// ****************** Vector Space
+	MultiplicativeModule[ME aimpl.MultiplicativeModuleElement[ME, S], S aimpl.RingElement[S]]        aimpl.MultiplicativeModule[ME, S]
+	MultiplicativeModuleElement[ME aimpl.MultiplicativeModuleElement[ME, S], S aimpl.RingElement[S]] aimpl.MultiplicativeModuleElement[ME, S]
 
-type VectorSpace[V Vector[V, S], S FieldElement[S]] Module[V, S]
+	FiniteModule[ME aimpl.FiniteModuleElement[ME, S], S aimpl.FiniteRingElement[S]]        aimpl.FiniteModule[ME, S]
+	FiniteModuleElement[ME aimpl.FiniteModuleElement[ME, S], S aimpl.FiniteRingElement[S]] aimpl.FiniteModuleElement[ME, S]
 
-type Vector[V ModuleElement[V, S], S FieldElement[S]] ModuleElement[V, S]
+	ZLikeModule[E aimpl.ModuleElement[E, S], S aimpl.IntLike[S]]        = aimpl.ZLikeModule[E, S]
+	ZLikeModuleElement[E aimpl.ModuleElement[E, S], S aimpl.IntLike[S]] = aimpl.ZLikeModuleElement[E, S]
+)
 
-// ****************** Algebra
+type (
+	VectorSpace[V aimpl.Vector[V, S], S aimpl.FieldElement[S]] aimpl.VectorSpace[V, S]
+	Vector[V aimpl.Vector[V, S], S aimpl.FieldElement[S]]      aimpl.Vector[V, S]
+)
 
-type Algebra[AE AlgebraElement[AE, S], S RingElement[S]] interface {
-	Module[AE, S]
-	Ring[AE]
-}
+type (
+	Algebra[AE aimpl.AlgebraElement[AE, S], S aimpl.RingElement[S]]        aimpl.Algebra[AE, S]
+	AlgebraElement[AE aimpl.AlgebraElement[AE, S], S aimpl.RingElement[S]] aimpl.AlgebraElement[AE, S]
 
-type AlgebraElement[AE interface {
-	ModuleElement[AE, S]
-	RingElement[AE]
-}, S RingElement[S]] interface {
-	ModuleElement[AE, S]
-	RingElement[AE]
-}
+	FiniteAlgebra[AE aimpl.FiniteAlgebraElement[AE, S], S aimpl.FiniteRingElement[S]]        aimpl.FiniteAlgebra[AE, S]
+	FiniteAlgebraElement[AE aimpl.FiniteAlgebraElement[AE, S], S aimpl.FiniteRingElement[S]] aimpl.FiniteAlgebraElement[AE, S]
+)
 
-// ******************* Polynomials
+type (
+	PolynomialLikeStructure[
+		P aimpl.PolynomialLike[P, S, C],
+		S aimpl.RingElement[S],
+		C aimpl.GroupElement[C],
+	] = aimpl.PolynomialLike[P, S, C]
 
-type PolynomialRing[P Polynomial[P, C], C RingElement[C]] interface {
-	Algebra[P, C]
-	EuclideanDomain[P]
+	PolynomialLike[
+		P aimpl.PolynomialLike[P, S, C],
+		S aimpl.RingElement[S],
+		C aimpl.GroupElement[C],
+	] = aimpl.PolynomialLike[P, S, C]
 
-	New(coeffs ...C) P
-	Random(degree int, freeCoeff C, prng io.Reader) (P, error)
-}
+	UnivariatePolynomialLikeStructure[
+		P aimpl.UnivariatePolynomialLike[P, S, C],
+		S aimpl.RingElement[S],
+		C aimpl.GroupElement[C],
+	] = aimpl.UnivariatePolynomialLikeStructure[P, S, C]
 
-type Polynomial[P interface {
-	AlgebraElement[P, S]
-	EuclideanDomainElement[P]
-}, S RingElement[S]] interface {
-	AlgebraElement[P, S]
-	EuclideanDomainElement[P]
+	UnivariatePolynomialLike[
+		P aimpl.UnivariatePolynomialLike[P, S, C],
+		S aimpl.RingElement[S],
+		C aimpl.GroupElement[C],
+	] = aimpl.UnivariatePolynomialLike[P, S, C]
 
-	Coefficients() []S
-	Derivative() Polynomial[P, S]
-	Degree() uint
-	Eval(S) S
-}
+	PolynomialModule[
+		MP aimpl.ModuleValuedPolynomial[MP, P, C, S],
+		P aimpl.Polynomial[P, S],
+		C aimpl.ModuleElement[C, S],
+		S aimpl.FiniteRingElement[S],
+	] = aimpl.PolynomialModule[MP, P, C, S]
+	ModuleValuedPolynomial[
+		MP aimpl.ModuleValuedPolynomial[MP, P, C, S],
+		P aimpl.Polynomial[P, S],
+		C aimpl.ModuleElement[C, S],
+		S aimpl.FiniteRingElement[S],
+	] = aimpl.ModuleValuedPolynomial[MP, P, C, S]
 
-// ******************* Matrices
+	PolynomialRing[
+		P aimpl.Polynomial[P, S],
+		S aimpl.FiniteRingElement[S],
+	] = aimpl.PolynomialRing[P, S]
+	Polynomial[
+		P aimpl.Polynomial[P, S],
+		S aimpl.FiniteRingElement[S],
+	] = aimpl.Polynomial[P, S]
 
-type Matrix[M Element[M], C RingElement[C]] interface {
-	ds.AbstractMatrix[M]
-	RingActable[M, C]
-	TryInv() (M, error)
-}
-
-type MatrixAlgebra[M SquareMatrix[M, C], C FieldElement[C]] interface {
-	Algebra[M, C]
-
-	New(n, m int) M
-	Random(n, m int, prng io.Reader) (M, error)
-}
-
-type SquareMatrix[M interface {
-	Matrix[M, S]
-	AlgebraElement[M, S]
-}, S FieldElement[S]] interface {
-	Matrix[M, S]
-	AlgebraElement[M, S]
-
-	Determinant() S
-}
+	MultiVariatePolynomialRing[
+		PP aimpl.MultivariatePolynomial[PP, P, S],
+		P aimpl.Polynomial[P, S],
+		S aimpl.FiniteRingElement[S],
+	] = aimpl.MultivariatePolynomialRing[PP, P, S]
+	MultivariatePolynomial[
+		MP aimpl.MultivariatePolynomial[MP, P, S],
+		P aimpl.Polynomial[P, S],
+		S aimpl.FiniteRingElement[S],
+	] = aimpl.MultivariatePolynomial[MP, P, S]
+)

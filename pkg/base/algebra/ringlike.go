@@ -1,197 +1,109 @@
 package algebra
 
 import (
-	"github.com/cronokirby/saferith"
+	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-// ******************** BiMagma
+type (
+	DoubleMagma[E aimpl.DoubleMagmaElement[E]]        aimpl.DoubleMagma[E]
+	DoubleMagmaElement[E aimpl.DoubleMagmaElement[E]] aimpl.DoubleMagmaElement[E]
+)
 
-type BiMagma[E BiMagmaElement[E]] interface {
-	Magma[E]
-	OtherOperator() BinaryOperator[E]
-}
-type BiMagmaElement[E MagmaElement[E]] interface {
-	MagmaElement[E]
-	OtherOp(E) E
-}
+type (
+	HemiRing[E aimpl.HemiRingElement[E]]        aimpl.HemiRing[E]
+	HemiRingElement[E aimpl.HemiRingElement[E]] aimpl.HemiRingElement[E]
+)
 
-// ******************** HemiRing
-type HemiRing[E HemiRingElement[E]] interface {
-	BiMagma[E]
-	AdditiveSemiGroup[E]
-	MultiplicativeSemiGroup[E]
-	Characteristic() Cardinal
-}
+type (
+	SemiRing[RE aimpl.SemiRingElement[RE]]        aimpl.SemiRing[RE]
+	SemiRingElement[RE aimpl.SemiRingElement[RE]] aimpl.SemiRingElement[RE]
+)
 
-type HemiRingElement[E SemiGroupElement[E]] interface {
-	BiMagmaElement[E]
-	AdditiveSemiGroupElement[E]
-	MultiplicativeSemiGroupElement[E]
-}
+type (
+	Rig[RE aimpl.RigElement[RE]]        aimpl.Rig[RE]
+	RigElement[RE aimpl.RigElement[RE]] aimpl.RigElement[RE]
+)
 
-// ******************** SemiRing
+type (
+	EuclideanSemiDomain[RE aimpl.EuclideanSemiDomainElement[RE]]        aimpl.EuclideanSemiDomain[RE]
+	EuclideanSemiDomainElement[RE aimpl.EuclideanSemiDomainElement[RE]] aimpl.EuclideanSemiDomainElement[RE]
+)
 
-type SemiRing[RE SemiRingElement[RE]] interface {
-	HemiRing[RE]
-	MultiplicativeMonoid[RE]
-}
+type (
+	Rng[RE aimpl.RngElement[RE]]        aimpl.Rng[RE]
+	RngElement[RE aimpl.RngElement[RE]] aimpl.RngElement[RE]
+)
 
-type SemiRingElement[RE HemiRingElement[RE]] interface {
-	HemiRingElement[RE]
-	MultiplicativeMonoidElement[RE]
-}
+type (
+	Ring[RE aimpl.RingElement[RE]]        = aimpl.Ring[RE]
+	RingElement[RE aimpl.RingElement[RE]] = aimpl.RingElement[RE]
 
-// ******************** SemiDomain
+	FiniteRing[RE aimpl.FiniteRingElement[RE]]        = aimpl.FiniteRing[RE]
+	FiniteRingElement[RE aimpl.FiniteRingElement[RE]] = aimpl.FiniteRingElement[RE]
+)
 
-type EuclideanSemiDomain[RE EuclideanSemiDomainElement[RE]] interface {
-	SemiRing[RE]
-	UniqueFactorizationMonoid[RE]
-}
+type (
+	EuclideanDomain[RE aimpl.EuclideanDomainElement[RE]]        aimpl.EuclideanDomain[RE]
+	EuclideanDomainElement[RE aimpl.EuclideanDomainElement[RE]] aimpl.EuclideanDomainElement[RE]
+)
 
-type EuclideanSemiDomainElement[RE SemiRingElement[RE]] interface {
-	SemiRingElement[RE]
-	UniqueFactorizationMonoidElement[RE]
-	EuclideanDiv(rhs RE) (quot, rem RE, err error)
-}
+type (
+	Field[FE aimpl.FieldElement[FE]]        = aimpl.Field[FE]
+	FieldElement[FE aimpl.FieldElement[FE]] = aimpl.FieldElement[FE]
 
-// ******************** Rig
+	FiniteField[FE aimpl.FiniteFieldElement[FE]]        = aimpl.FiniteField[FE]
+	FiniteFieldElement[FE aimpl.FiniteFieldElement[FE]] = aimpl.FiniteFieldElement[FE]
 
-type Rig[RE RigElement[RE]] interface {
-	SemiRing[RE]
-	AdditiveMonoid[RE]
-}
+	FiniteFieldExtension[FE aimpl.FiniteFieldExtensionElement[FE]]        = aimpl.FiniteFieldExtension[FE]
+	FiniteFieldExtensionElement[FE aimpl.FiniteFieldExtensionElement[FE]] = aimpl.FiniteFieldExtensionElement[FE]
+)
 
-type RigElement[RE SemiRingElement[RE]] interface {
-	SemiRingElement[RE]
-	AdditiveMonoidElement[RE]
+func IsRing[E any](s Structure[E]) bool {
+	_, ok := s.(aimpl.Ring[E])
+	return ok
 }
 
-// ******************** Rng
-
-type Rng[RE RngElement[RE]] interface {
-	HemiRing[RE]
-	AdditiveGroup[RE]
+func GetRing[RE aimpl.RingElement[RE]](re RE) Ring[RE] {
+	r, err := StructureAs[Ring[RE]](re.Structure())
+	if err != nil {
+		panic(err)
+	}
+	return r
 }
 
-type RngElement[RE interface {
-	HemiRingElement[RE]
-	AdditiveGroupElement[RE]
-}] interface {
-	HemiRingElement[RE]
-	AdditiveGroupElement[RE]
+func IsField[E any](s Structure[E]) bool {
+	return StructureIs[aimpl.Field[E]](s)
 }
 
-// ******************** Ring
-
-type Ring[RE RingElement[RE]] interface {
-	Rig[RE]
-	Rng[RE]
+func GetField[FE aimpl.FieldElement[FE]](fe FE) Field[FE] {
+	f, ok := fe.Structure().(Field[FE])
+	if !ok {
+		panic(errs.NewType("FieldElement does not have a Field structure"))
+	}
+	return f
 }
 
-type RingElement[RE interface {
-	RigElement[RE]
-	RngElement[RE]
-}] interface {
-	RigElement[RE]
-	RngElement[RE]
+func IsFiniteField[E any](s Structure[E]) bool {
+	return StructureIs[aimpl.FiniteField[E]](s)
 }
 
-// ******************** Domains
-
-type EuclideanDomain[RE EuclideanDomainElement[RE]] interface {
-	Ring[RE]
-	EuclideanSemiDomain[RE]
+func GetFiniteField[FE aimpl.FiniteFieldElement[FE]](fe FE) FiniteField[FE] {
+	f, ok := fe.Structure().(aimpl.FiniteField[FE])
+	if !ok {
+		panic(errs.NewType("FieldElement does not have a FiniteField structure"))
+	}
+	return f
 }
 
-type EuclideanDomainElement[RE interface {
-	RingElement[RE]
-	EuclideanSemiDomainElement[RE]
-}] interface {
-	RingElement[RE]
-	EuclideanSemiDomainElement[RE]
+func IsPrimeField[E any](s Structure[E]) bool {
+	return StructureIs[aimpl.PrimeField[E]](s)
 }
 
-// ******************** Fields
-
-type Field[FE FieldElement[FE]] interface {
-	EuclideanDomain[FE]
-
-	ExtensionDegree() uint
-	// SubFieldElement returns a field element in F_p, a subfield of F_{p^k} depending on its extension degree k:
-	//  - For k>1 (with subfields F_{p_1}, ..., F_{p_k}), the element of F_{p_((i+1)%k)}.
-	//  - For k=1, the element itself (in F_p already) regardless of i.
-	// TODO(aalireza): remove
-	SubFieldIdentity(i uint) (any, error)
-}
-
-type FieldElement[FE interface {
-	EuclideanDomainElement[FE]
-}] interface {
-	EuclideanDomainElement[FE]
-}
-
-type FiniteField[FE FiniteFieldElement[FE]] interface {
-	Field[FE]
-	FiniteStructure[FE]
-
-	FromComponentsBytes([][]byte) (FE, error)
-}
-
-type FiniteFieldElement[FE FieldElement[FE]] interface {
-	FieldElement[FE]
-
-	ComponentsBytes() [][]byte
-}
-
-// ********************** Integers
-
-type ZLike[E IntLike[E]] interface {
-	Ring[E]
-	Chain[E]
-}
-
-type IntLike[E RingElement[E]] interface {
-	RingElement[E]
-	PartiallyComparable[E]
-}
-
-type ZnLike[E UintLike[E]] interface {
-	ZLike[E]
-	FiniteStructure[E]
-
-	FromNat(*saferith.Nat) (E, error)
-}
-
-type UintLike[E IntLike[E]] interface {
-	IntLike[E]
-
-	Nat() *saferith.Nat
-}
-
-type PrimeField[E interface {
-	FiniteFieldElement[E] // TODO(aalireza): shouldn't it be FiniteField[E]?
-	UintLike[E]
-}] interface {
-	FiniteField[E]
-	ZnLike[E]
-
-	// TODO(aalireza): add FromUint64()
-	FromUint64(value uint64) E
-
-	FromBytes([]byte) (E, error)
-	FromWideBytes([]byte) (E, error)
-}
-
-type PrimeFieldElement[E interface {
-	FiniteFieldElement[E]
-	UintLike[E]
-}] interface {
-	FiniteFieldElement[E]
-	UintLike[E]
-
-	IsOdd() bool
-	IsEven() bool
-	IsNegative() bool
-	IsPositive() bool
-	Bytes() []byte
+func GetPrimeField[FE aimpl.PrimeFieldElement[FE]](fe FE) PrimeField[FE] {
+	f, ok := fe.Structure().(aimpl.PrimeField[FE])
+	if !ok {
+		panic(errs.NewType("FieldElement does not have a PrimeField structure"))
+	}
+	return f
 }

@@ -4,7 +4,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-func IsZero[I constraints.Unsigned](x I) uint64 {
+func IsZero[I constraints.Integer](x I) uint64 {
 	xx := uint64(x)
 	return ((xx | -xx) >> 63) ^ 1
 }
@@ -43,7 +43,8 @@ func GreaterOrEqual[I constraints.Unsigned](x, y I) uint64 {
 }
 
 // Select returns x0 if choice == 0 and x1 if choice == 1. Undefined for other values of choice.
-func Select[I constraints.Unsigned](choice uint64, x0, x1 I) I {
-	c := I(choice)
-	return ((c - 1) & x0) | ((^(c - 1)) & x1)
+// It supports both signed and unsigned integer types.
+func Select[I constraints.Integer](choice uint64, x0, x1 I) I {
+	mask := I(-int64(choice)) // 0 if choice == 0, -1 (all bits 1) if choice == 1
+	return (x0 &^ mask) | (x1 & mask)
 }

@@ -1,54 +1,32 @@
 package algebra
 
 import (
-	"encoding"
-	"io"
-
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/cronokirby/saferith"
+	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-type Multiplicity uint
-type Cardinal = *saferith.Nat
+type (
+	Element[E any]             = aimpl.Element[E]
+	Structure[E any]           = aimpl.Structure[E]
+	FiniteStructure[E any]     = aimpl.FiniteStructure[E]
+	NAry[C any]                = aimpl.NAry[C]
+	Mapping[F, C any]          = aimpl.Mapping[F, C]
+	Product[P, C any]          = aimpl.Product[P, C]
+	CoProduct[P, C any]        = aimpl.CoProduct[P, C]
+	Power[P, C any]            = aimpl.Power[P, C]
+	TensorProduct[E, C, S any] = aimpl.TensorProduct[E, C, S]
+	Tensor[E, S any]           = aimpl.Tensor[E, S]
+)
 
-var Infinite Cardinal = nil
-
-// === Interfaces
-
-type Element[E any] interface {
-	ds.Clonable[E]
-	ds.Hashable[E]
-
-	Structure() Structure[E]
-
-	encoding.BinaryMarshaler
-	encoding.BinaryUnmarshaler
+func StructureIs[S aimpl.Structure[E], E any](s Structure[E]) bool {
+	_, ok := s.(S)
+	return ok
 }
 
-type Structure[E any] interface {
-	Name() string
-	Order() Cardinal
-}
-
-// === Aspects
-
-type FiniteStructure[E any] interface {
-	Random(prng io.Reader) (E, error)
-	Hash(bytes []byte) (E, error)
-	// ElementSize returns the **exact** number of bytes required to represent an element required for `SetBytes()`
-	// TODO(aalireza): make uint?
-	ElementSize() int
-	// WideElementSize returns the **maximum** number of bytes used to map uniformly to an element, required for `SetBytesWide()`
-	// TODO(aalireza): make uint?
-	WideElementSize() int
-}
-
-type NPointedSet[E NPointedSetElement[E]] interface {
-	Structure[E]
-	BasePoints() ds.ImmutableMap[string, E]
-}
-
-type NPointedSetElement[E Element[E]] interface {
-	Element[E]
-	IsBasePoint(id string) bool
+func StructureAs[S aimpl.Structure[E], E any](s Structure[E]) (S, error) {
+	out, ok := s.(S)
+	if !ok {
+		return *new(S), errs.NewType("structure does not implement the expected type")
+	}
+	return out, nil
 }

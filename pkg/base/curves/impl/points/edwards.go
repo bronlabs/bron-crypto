@@ -64,7 +64,77 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Add(lhs, rhs *TwistedEdwardsPo
 	FP(&p.Z).Mul(&f, &g)
 }
 
+func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Op(lhs, rhs *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
+	var params C
+	var a, b, c, d, e, f, g, h, t0, t1, t2 F
+
+	//  A = X1 * X2
+	FP(&a).Mul(&lhs.X, &rhs.X)
+	//  B = Y1 * Y2
+	FP(&b).Mul(&lhs.Y, &rhs.Y)
+	//  C = T1 * d * T2
+	FP(&t0).Mul(&lhs.T, &rhs.T)
+	params.MulByD(&c, &t0)
+	//  D = Z1 * Z2
+	FP(&d).Mul(&lhs.Z, &rhs.Z)
+	//E = (X1+Y1)*(X2+Y2) - A - B
+	FP(&t0).Add(&lhs.X, &lhs.Y)
+	FP(&t1).Add(&rhs.X, &rhs.Y)
+	FP(&t2).Mul(&t0, &t1)
+	FP(&t0).Add(&a, &b)
+	FP(&e).Sub(&t2, &t0)
+	//  F = D - C
+	FP(&f).Sub(&d, &c)
+	//  G = D + C
+	FP(&g).Add(&d, &c)
+	//  H = B - a*A
+	params.MulByA(&t0, &a)
+	FP(&h).Sub(&b, &t0)
+	// X3 = E * F
+	FP(&p.X).Mul(&e, &f)
+	// Y3 = G * H
+	FP(&p.Y).Mul(&g, &h)
+	// T3 = E * H
+	FP(&p.T).Mul(&e, &h)
+	// Z3 = F * G
+	FP(&p.Z).Mul(&f, &g)
+}
+
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Double(v *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
+	var params C
+	var a, b, c, d, e, f, g, h, t0, t1 F
+
+	//  A = X1^2
+	FP(&a).Square(&v.X)
+	//  B = Y1^2
+	FP(&b).Square(&v.Y)
+	//  C = 2*Z1^2
+	FP(&t0).Square(&v.Z)
+	FP(&c).Add(&t0, &t0)
+	//  D = a*A
+	params.MulByA(&d, &a)
+	//  E = (X1+Y1)^2-A-B
+	FP(&t0).Add(&v.X, &v.Y)
+	FP(&t1).Square(&t0)
+	FP(&t0).Add(&a, &b)
+	FP(&e).Sub(&t1, &t0)
+	//  G = D+B
+	FP(&g).Add(&d, &b)
+	//  F = G-C
+	FP(&f).Sub(&g, &c)
+	//  H = D-B
+	FP(&h).Sub(&d, &b)
+	// X3 = E*F
+	FP(&p.X).Mul(&e, &f)
+	// Y3 = G*H
+	FP(&p.Y).Mul(&g, &h)
+	// T3 = E*H
+	FP(&p.T).Mul(&e, &h)
+	// Z3 = F*G
+	FP(&p.Z).Mul(&f, &g)
+}
+
+func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) OpOp(v *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
 	var params C
 	var a, b, c, d, e, f, g, h, t0, t1 F
 

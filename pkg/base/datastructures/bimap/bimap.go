@@ -8,14 +8,14 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-var _ ds.BiMap[int, any] = &BiMap[int, any]{}
+var _ ds.MutableBiMap[int, any] = &BiMap[int, any]{}
 
 type BiMap[K any, V any] struct {
-	internalMap ds.Map[K, V]
-	reverseMap  ds.Map[V, K]
+	internalMap ds.MutableMap[K, V]
+	reverseMap  ds.MutableMap[V, K]
 }
 
-func NewBiMap[K any, V any](emptyKey ds.Map[K, V], emptyValue ds.Map[V, K]) (ds.BiMap[K, V], error) {
+func NewBiMap[K any, V any](emptyKey ds.MutableMap[K, V], emptyValue ds.MutableMap[V, K]) (ds.MutableBiMap[K, V], error) {
 	if !emptyKey.IsEmpty() {
 		return nil, errs.NewSize("key is not empty")
 	}
@@ -28,7 +28,7 @@ func NewBiMap[K any, V any](emptyKey ds.Map[K, V], emptyValue ds.Map[V, K]) (ds.
 	}, nil
 }
 
-func (m *BiMap[K, V]) Reverse() ds.BiMap[V, K] {
+func (m *BiMap[K, V]) Reverse() ds.MutableBiMap[V, K] {
 	return &BiMap[V, K]{
 		internalMap: m.reverseMap,
 		reverseMap:  m.internalMap,
@@ -43,12 +43,31 @@ func (m *BiMap[K, V]) Get(l K) (V, bool) {
 	return m.internalMap.Get(l)
 }
 
-func (m *BiMap[K, V]) Retain(keys ds.Set[K]) ds.Map[K, V] {
-	return m.internalMap.Retain(keys)
+func (m *BiMap[K, V]) Retain(keys ...K) ds.MutableBiMap[K, V] {
+	retained := m.internalMap.Retain(keys...)
+	reverseMap := m.reverseMap.Clone()
+	reverseMap.Clear()
+	for key, value := range retained.Iter() {
+		reverseMap.Put(value, key)
+	}
+	return &BiMap[K, V]{
+		internalMap: retained,
+		reverseMap:  reverseMap,
+	}
 }
 
-func (m *BiMap[K, V]) Filter(predicate func(key K) bool) ds.Map[K, V] {
-	return m.internalMap.Filter(predicate)
+func (m *BiMap[K, V]) Filter(predicate func(key K) bool) ds.MutableBiMap[K, V] {
+	return &BiMap[K, V]{
+		internalMap: m.internalMap.Filter(predicate),
+		reverseMap: m.reverseMap.Filter(func(value V) bool {
+			for k := range m.internalMap.Iter() {
+				if predicate(k) {
+					return true
+				}
+			}
+			return false
+		}),
+	}
 }
 
 func (m *BiMap[K, V]) Put(l K, r V) {
@@ -95,18 +114,14 @@ func (m *BiMap[_, V]) Values() []V {
 }
 
 func (m *BiMap[K, V]) Iter() iter.Seq2[K, V] {
-	keys := m.Keys()
-	return func(yield func(K, V) bool) {
-		for _, key := range keys {
-			value, _ := m.Get(key)
-			if !yield(key, value) {
-				return
-			}
-		}
-	}
+	return m.internalMap.Iter()
 }
 
-func (m *BiMap[K, V]) Clone() ds.Map[K, V] {
+func (m *BiMap[K, V]) Enumerate() iter.Seq2[int, ds.MapEntry[K, V]] {
+	return m.internalMap.Enumerate()
+}
+
+func (m *BiMap[K, V]) Clone() ds.MutableBiMap[K, V] {
 	return &BiMap[K, V]{
 		internalMap: m.internalMap.Clone(),
 		reverseMap:  m.reverseMap.Clone(),

@@ -27,6 +27,10 @@ type point[FP fieldsImpl.FiniteFieldElement[FP], PP any] interface {
 	Equals(v PP) uint64
 
 	ToAffine(x, y FP) (ok uint64)
+
+	// === compatibility with algebra traits ===
+	Op(lhs, rhs PP) // Add
+	OpOp(out PP)    // Double
 }
 
 type Point[FP fieldsImpl.FiniteFieldElement[FP], PP point[FP, PP]] interface {

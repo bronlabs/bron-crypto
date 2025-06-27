@@ -4,125 +4,113 @@ import (
 	"encoding/json"
 	"iter"
 
-	"github.com/cronokirby/saferith"
-
+	base "github.com/bronlabs/bron-crypto/pkg/base"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
-type HashableHashSet[E ds.Hashable[E]] struct {
-	v ds.Map[E, bool]
-}
-
-func NewHashableHashSet[E ds.Hashable[E]](xs ...E) ds.Set[E] {
-	m := hashmap.NewHashableHashMap[E, bool]()
+func NewHashable[E base.Hashable[E]](xs ...E) ds.MutableSet[E] {
+	s := &MutableHashable[E]{v: hashmap.NewHashable[E, struct{}]()}
 	for _, x := range xs {
-		m.Put(x, true)
+		s.v.Put(x, struct{}{})
 	}
-	return &HashableHashSet[E]{
-		v: m,
-	}
+	return s
 }
 
-func (s *HashableHashSet[E]) Contains(e E) bool {
-	return s.v.ContainsKey(e)
+type MutableHashable[E base.Hashable[E]] struct {
+	v ds.MutableMap[E, struct{}]
 }
 
-func (s *HashableHashSet[E]) Add(e E) {
-	s.v.Put(e, true)
+func (s *MutableHashable[E]) Add(e E) {
+	s.v.Put(e, struct{}{})
 }
 
-func (s *HashableHashSet[E]) AddAll(es ...E) {
+func (s *MutableHashable[E]) AddAll(es ...E) {
 	for _, e := range es {
-		s.v.Put(e, true)
+		s.v.Put(e, struct{}{})
 	}
 }
 
-func (s *HashableHashSet[E]) Remove(e E) {
+func (s *MutableHashable[E]) Remove(e E) {
 	s.v.Remove(e)
 }
 
-func (s *HashableHashSet[E]) Clear() {
+func (s *MutableHashable[E]) RemoveAll(es ...E) {
+	for _, e := range es {
+		s.v.Remove(e)
+	}
+}
+
+func (s *MutableHashable[E]) Freeze() ds.Set[E] {
+	return &Immutable[E]{v: &MutableHashable[E]{v: s.v.Clone()}}
+}
+
+func (s *MutableHashable[E]) Clone() ds.MutableSet[E] {
+	return &MutableHashable[E]{v: s.v.Clone()}
+}
+
+func (s *MutableHashable[E]) Clear() {
 	s.v.Clear()
 }
 
-func (s *HashableHashSet[E]) Equal(other ds.Set[E]) bool {
-	return s.SymmetricDifference(other).IsEmpty()
+func (s *MutableHashable[E]) Contains(e E) bool {
+	return s.v.ContainsKey(e)
 }
 
-func (s *HashableHashSet[_]) Size() int {
+func (s *MutableHashable[E]) Equal(other ds.MutableSet[E]) bool {
+	return s.IsSubSet(other) && other.IsSubSet(s)
+}
+
+func (s *MutableHashable[_]) Size() int {
 	return s.v.Size()
 }
 
-func (s *HashableHashSet[_]) Cardinality() *saferith.Nat {
-	return new(saferith.Nat).SetUint64(uint64(s.v.Size()))
+func (s *MutableHashable[_]) Cardinality() int {
+	return s.v.Size()
 }
 
-func (s *HashableHashSet[_]) IsEmpty() bool {
+func (s *MutableHashable[_]) IsEmpty() bool {
 	return s.Size() == 0
 }
 
-func (s *HashableHashSet[E]) Union(other ds.Set[E]) ds.Set[E] {
-	result := s.Clone()
-	result.AddAll(other.List()...)
-	return result
+func (s *MutableHashable[E]) Union(other ds.MutableSet[E]) ds.MutableSet[E] {
+	out := s.Clone()
+	out.AddAll(other.List()...)
+	return out
 }
 
-func (s *HashableHashSet[E]) Intersection(other ds.Set[E]) ds.Set[E] {
-	result := NewHashableHashSet[E]()
-
-	for element := range s.Iter() {
-		if other.Contains(element) {
-			result.Add(element)
+func (s *MutableHashable[E]) Intersection(other ds.MutableSet[E]) ds.MutableSet[E] {
+	mapping := hashmap.NewHashable[E, struct{}]()
+	for k := range s.v.Iter() {
+		if other.Contains(k) {
+			mapping.Put(k, struct{}{})
 		}
 	}
-
-	return result
+	return &MutableHashable[E]{v: mapping}
 }
 
-func (s *HashableHashSet[E]) Difference(other ds.Set[E]) ds.Set[E] {
-	result := NewHashableHashSet[E]()
-
-	for element := range s.Iter() {
-		if !other.Contains(element) {
-			result.Add(element)
-		}
-	}
-	return result
+func (t *MutableHashable[E]) Difference(other ds.MutableSet[E]) ds.MutableSet[E] {
+	out := t.Clone()
+	out.RemoveAll(other.List()...)
+	return out
 }
 
-func (s *HashableHashSet[E]) SymmetricDifference(other ds.Set[E]) ds.Set[E] {
-	return s.Difference(other).Union(other.Difference(s))
+func (t *MutableHashable[E]) SymmetricDifference(other ds.MutableSet[E]) ds.MutableSet[E] {
+	return t.Union(other).Difference(t.Intersection(other))
 }
 
-func (s *HashableHashSet[E]) SubSets() []ds.Set[E] {
-	result := make([]ds.Set[E], 1<<s.Size())
+func (t *MutableHashable[E]) SubSets() []ds.MutableSet[E] {
+	result := make([]ds.MutableSet[E], 1<<t.Size())
 	i := 0
-	for subset := range s.IterSubSets() {
+	for subset := range t.IterSubSets() {
 		result[i] = subset
 		i++
 	}
 	return result
 }
 
-func (s *HashableHashSet[E]) IsSubSet(other ds.Set[E]) bool {
-	return other.Intersection(s).Equal(s)
-}
-
-func (s *HashableHashSet[E]) IsProperSubSet(other ds.Set[E]) bool {
-	return s.IsSubSet(other) && !s.Equal(other)
-}
-
-func (s *HashableHashSet[E]) IsSuperSet(other ds.Set[E]) bool {
-	return other.IsSubSet(s)
-}
-
-func (s *HashableHashSet[E]) IsProperSuperSet(other ds.Set[E]) bool {
-	return other.IsProperSubSet(s)
-}
-
-func (s *HashableHashSet[E]) Iter() iter.Seq[E] {
+func (s *MutableHashable[E]) Iter() iter.Seq[E] {
 	return func(yield func(E) bool) {
 		for el := range s.v.Iter() {
 			if !yield(el) {
@@ -132,61 +120,62 @@ func (s *HashableHashSet[E]) Iter() iter.Seq[E] {
 	}
 }
 
-func (s *HashableHashSet[E]) IterSubSets() <-chan ds.Set[E] {
-	ch := make(chan ds.Set[E], 1)
-	go func() {
-		defer close(ch)
-		elements := s.List()
-		n := s.Size()
-		totalSubSets := 1 << n
+func (s *MutableHashable[E]) Iter2() iter.Seq2[int, E] {
+	return func(yield func(int, E) bool) {
+		i := 0
+		for el := range s.v.Iter() {
+			if !yield(i, el) {
+				return
+			}
+			i++
+		}
+	}
+}
 
-		for i := 0; i < totalSubSets; i++ {
-			var subset []E
-			for j := 0; j < n; j++ {
-				if i&(1<<j) != 0 {
-					subset = append(subset, elements[j])
+func (s *MutableHashable[E]) IsSubSet(of ds.MutableSet[E]) bool {
+	for k := range s.Iter() {
+		if !of.Contains(k) {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *MutableHashable[E]) IsProperSubSet(of ds.MutableSet[E]) bool {
+	return s.IsSubSet(of) && !s.Equal(of)
+}
+
+func (s *MutableHashable[E]) IsSuperSet(of ds.MutableSet[E]) bool {
+	for k := range of.Iter() {
+		if _, exists := s.v.Get(k); !exists {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *MutableHashable[E]) IsProperSuperSet(of ds.MutableSet[E]) bool {
+	return s.IsSuperSet(of) && !s.Equal(of)
+}
+
+func (s *MutableHashable[E]) IterSubSets() iter.Seq[ds.MutableSet[E]] {
+	return func(yield func(ds.MutableSet[E]) bool) {
+		list := s.List()
+		for i := range s.Size() {
+			for comb := range sliceutils.Combinations(list, uint(i)) {
+				subset := NewHashable(comb...)
+				if !yield(subset) {
+					return
 				}
 			}
-			ch <- NewHashableHashSet(subset...)
 		}
-	}()
-	return ch
+	}
 }
 
-func (s *HashableHashSet[E]) List() []E {
-	results := make([]E, s.Size())
-	i := 0
-
-	for k := range s.Iter() {
-		results[i] = k
-		i++
-	}
-
-	return results
+func (s *MutableHashable[E]) List() []E {
+	return s.v.Keys()
 }
 
-func (s *HashableHashSet[E]) Clone() ds.Set[E] {
-	return NewHashableHashSet(s.List()...)
-}
-
-func (s *HashableHashSet[E]) MarshalJSON() ([]byte, error) {
-	serialised, err := json.Marshal(s.v)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not json marshal")
-	}
-	return serialised, nil
-}
-
-func (s *HashableHashSet[E]) UnmarshalJSON(data []byte) error {
-	result := HashableHashSet[E]{}
-	if err := json.Unmarshal(data, result.v); err != nil {
-		return errs.WrapSerialisation(err, "couldn't unmarshal hashable hash set")
-	}
-	s.Clear()
-
-	for x := range s.Iter() {
-		s.Add(x)
-	}
-
-	return nil
+func (s *MutableHashable[E]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.v)
 }

@@ -2,48 +2,87 @@ package curves
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/groups"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 type (
-	GenericCurve[P algebra.GenericEllipticCurvePoint[P, F, S, TFP, TFS], F algebra.FiniteFieldElement[F], S algebra.UintLike[S], TFP algebra.TorsionFreeEllipticCurvePoint[TFP, F, TFS], TFS algebra.PrimeFieldElement[TFS]] algebra.GenericEllipticCurve[P, F, S, TFP, TFS]
-	GenericPoint[P algebra.GenericEllipticCurvePoint[P, F, S, TFP, TFS], F algebra.FiniteFieldElement[F], S algebra.UintLike[S], TFP algebra.TorsionFreeEllipticCurvePoint[TFP, F, TFS], TFS algebra.PrimeFieldElement[TFS]] algebra.GenericEllipticCurvePoint[P, F, S, TFP, TFS]
+	EllipticCurve[P ECPoint[P, F, S], F algebra.FiniteFieldElement[F], S algebra.UintLike[S]] interface {
+		algebra.EllipticCurve[P, F, S]
+		PrimeSubGroupGenerator() P
+	}
+	ECPoint[P algebra.EllipticCurvePoint[P, F, S], F algebra.FiniteFieldElement[F], S algebra.UintLike[S]] interface {
+		algebra.EllipticCurvePoint[P, F, S]
+		IsPrimeSubGroupDesignatedGenerator() bool
+	}
 
-	Curve[P algebra.TorsionFreeEllipticCurvePoint[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]] algebra.TorsionFreeEllipticCurve[P, F, S]
-	Point[P algebra.TorsionFreeEllipticCurvePoint[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]] algebra.TorsionFreeEllipticCurvePoint[P, F, S]
+	Curve[P Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]] interface {
+		EllipticCurve[P, F, S]
+		algebra.PrimeOrderEllipticCurve[P, F, S]
+		HashWithDst(dst string, message []byte) (P, error)
+	}
 
-	Pairing[
-		G1 Curve[G1Point, G1BaseFieldElement, G1Scalar], G1Point algebra.TorsionFreeEllipticCurvePoint[G1Point, G1BaseFieldElement, G1Scalar], G1BaseFieldElement algebra.FiniteFieldElement[G1BaseFieldElement], G1Scalar algebra.PrimeFieldElement[G1Scalar],
-		G2 Curve[G2Point, G2BaseFieldElement, G2Scalar], G2Point algebra.TorsionFreeEllipticCurvePoint[G2Point, G2BaseFieldElement, G2Scalar], G2BaseFieldElement algebra.FiniteFieldElement[G2BaseFieldElement], G2Scalar algebra.PrimeFieldElement[G2Scalar],
-		Gt interface {
-			groups.MultiplicativeGroup[GtElement]
-			groups.FiniteAbelianGroup[GtElement, GtScalar]
-		}, GtElement interface {
-			groups.MultiplicativeGroupElement[GtElement]
-			groups.FiniteAbelianGroupElement[GtElement, GtScalar]
-		}, GtScalar algebra.UintLike[GtScalar],
-	] algebra.Pairing[G1, G1Point, G1BaseFieldElement, G1Scalar, G2, G2Point, G2BaseFieldElement, G2Scalar, Gt, GtElement, GtScalar]
+	Point[P algebra.EllipticCurvePoint[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]] interface {
+		algebra.PrimeOrderEllipticCurvePoint[P, F, S]
+		ECPoint[P, F, S]
+	}
+
+	PairingFriendlyCurve[
+		P1 PairingFriendlyPoint[P1, F1, P2, F2, E, S], F1 algebra.FiniteFieldElement[F1],
+		P2 PairingFriendlyPoint[P2, F2, P1, F1, E, S], F2 algebra.FiniteFieldElement[F2],
+		E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+	] interface {
+		algebra.PairingFriendlyCurve[P1, F1, P2, F2, E, S, PairingFriendlyCurve[P2, F2, P1, F1, E, S]]
+		Curve[P1, F1, S]
+	}
+
+	PairingFriendlyPoint[
+		P1 algebra.PairingFriendlyPoint[P1, F1, P2, F2, E, S], F1 algebra.FiniteFieldElement[F1],
+		P2 algebra.PairingFriendlyPoint[P2, F2, P1, F1, E, S], F2 algebra.FiniteFieldElement[F2],
+		E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+	] interface {
+		algebra.PairingFriendlyPoint[P1, F1, P2, F2, E, S]
+		Point[P1, F1, S]
+	}
+
+	PairingFriendlyFamily[
+		P1 PairingFriendlyPoint[P1, F1, P2, F2, E, S], F1 algebra.FiniteFieldElement[F1],
+		P2 PairingFriendlyPoint[P2, F2, P1, F1, E, S], F2 algebra.FiniteFieldElement[F2],
+		E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+	] interface {
+		Name() string
+		SourceSubGroup() PairingFriendlyCurve[P1, F1, P2, F2, E, S]
+		TwistedSubGroup() PairingFriendlyCurve[P2, F2, P1, F1, E, S]
+		TargetSubGroup() algebra.MultiplicativeGroup[E]
+		GetPPE(PairingAlgorithm) (out PPE[P1, F1, P2, F2, E, S], exists bool)
+	}
+
+	PairingType      = algebra.PairingType
+	PairingAlgorithm = algebra.PairingName
+
+	PPE[
+		P1 PairingFriendlyPoint[P1, F1, P2, F2, E, S], F1 algebra.FiniteFieldElement[F1],
+		P2 PairingFriendlyPoint[P2, F2, P1, F1, E, S], F2 algebra.FiniteFieldElement[F2],
+		E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+	] = algebra.PairingProductEvaluator[P1, F1, P2, F2, E, S]
 )
 
-func GetCurve[P Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](p P) (Curve[P, F, S], error) {
-	f, ok := p.Structure().(Curve[P, F, S])
-	if !ok {
-		return nil, errs.NewType("FieldElement does not have a Field structure")
+const (
+	TypeI   = algebra.TypeI
+	TypeII  = algebra.TypeII
+	TypeIII = algebra.TypeIII
+)
+
+func GetScalarField[P Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]](c Curve[P, F, S]) algebra.PrimeField[S] {
+	out, err := algebra.StructureAs[algebra.PrimeField[S]](c.ScalarStructure())
+	if err != nil {
+		panic("cannot get scalar field from curve: " + err.Error())
 	}
-	return f, nil
+	return out
 }
 
-func GetPointScalarField[P Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](p P) (fields.PrimeField[S], error) {
-	c, ok := p.Structure().(Curve[P, F, S])
-	if !ok {
-		return nil, errs.NewType("PointTrait does not have a CurveTrait structure")
+func GetBaseField[P Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]](c Curve[P, F, S]) algebra.FiniteField[F] {
+	out, err := algebra.StructureAs[algebra.FiniteField[F]](c.BaseStructure())
+	if err != nil {
+		panic("cannot get base field from curve: " + err.Error())
 	}
-	sf, ok := c.ScalarField().(fields.PrimeField[S])
-	if !ok {
-		return nil, errs.NewType("ScalarField is not CurveTrait's ScalarField")
-	}
-
-	return sf, nil
+	return out
 }

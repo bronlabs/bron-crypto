@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
-
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 )
 
 type ShortWeierstrassCurveParams[FP fieldsImpl.FiniteFieldElement[FP]] interface {
@@ -35,7 +34,7 @@ type ShortWeierstrassPointImpl[FP fieldsImpl.FiniteFieldElementPtrConstraint[FP,
 	Y F
 	Z F
 
-	_ ds.Incomparable
+	base.IncomparableTrait
 }
 
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Encode(dstPrefix string, message []byte) {
@@ -243,6 +242,73 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Add(lhs, rhs *ShortWeierstra
 	FP(&p.Z).Set(z3)
 }
 
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Op(lhs, rhs *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
+	var arith C
+	var t0f, t1f, t2f, t3f, t4f, t5f F
+	var x3f, y3f, z3f F
+
+	t0 := FP(&t0f)
+	t1 := FP(&t1f)
+	t2 := FP(&t2f)
+	t3 := FP(&t3f)
+	t4 := FP(&t4f)
+	t5 := FP(&t5f)
+	x1 := FP(&lhs.X)
+	y1 := FP(&lhs.Y)
+	z1 := FP(&lhs.Z)
+	x2 := FP(&rhs.X)
+	y2 := FP(&rhs.Y)
+	z2 := FP(&rhs.Z)
+	x3 := FP(&x3f)
+	y3 := FP(&y3f)
+	z3 := FP(&z3f)
+
+	t0.Mul(x1, x2)
+	t1.Mul(y1, y2)
+	t2.Mul(z1, z2)
+	t3.Add(x1, y1)
+	t4.Add(x2, y2)
+	t3.Mul(t3, t4)
+	t4.Add(t0, t1)
+	t3.Sub(t3, t4)
+	t4.Add(x1, z1)
+	t5.Add(x2, z2)
+	t4.Mul(t4, t5)
+	t5.Add(t0, t2)
+	t4.Sub(t4, t5)
+	t5.Add(y1, z1)
+	x3.Add(y2, z2)
+	t5.Mul(t5, x3)
+	x3.Add(t1, t2)
+	t5.Sub(t5, x3)
+	arith.MulByA(z3, t4)
+	arith.MulBy3B(x3, t2)
+	z3.Add(x3, z3)
+	x3.Sub(t1, z3)
+	z3.Add(t1, z3)
+	y3.Mul(x3, z3)
+	t1.Add(t0, t0)
+	t1.Add(t1, t0)
+	arith.MulByA(t2, t2)
+	arith.MulBy3B(t4, t4)
+	t1.Add(t1, t2)
+	t2.Sub(t0, t2)
+	arith.MulByA(t2, t2)
+	t4.Add(t4, t2)
+	t0.Mul(t1, t4)
+	y3.Add(y3, t0)
+	t0.Mul(t5, t4)
+	x3.Mul(t3, x3)
+	x3.Sub(x3, t0)
+	t0.Mul(t3, t1)
+	z3.Mul(t5, z3)
+	z3.Add(z3, t0)
+
+	FP(&p.X).Set(x3)
+	FP(&p.Y).Set(y3)
+	FP(&p.Z).Set(z3)
+}
+
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Sub(lhs, rhs *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
 	var rhsNeg ShortWeierstrassPointImpl[FP, C, H, M, F]
 	rhsNeg.Neg(rhs)
@@ -253,6 +319,58 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Sub(lhs, rhs *ShortWeierstra
 // Source: 2015 Renes–Costello–Batina "Complete addition formulas for prime order elliptic curves", Appendix A.1.
 // The Bernstein–Lange doubling might be slightly faster, but these are highly unified.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Double(v *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
+	var arith C
+	var t0f, t1f, t2f, t3f F
+	var x3f, y3f, z3f F
+
+	t0 := FP(&t0f)
+	t1 := FP(&t1f)
+	t2 := FP(&t2f)
+	t3 := FP(&t3f)
+	x1 := FP(&v.X)
+	y1 := FP(&v.Y)
+	z1 := FP(&v.Z)
+	x3 := FP(&x3f)
+	y3 := FP(&y3f)
+	z3 := FP(&z3f)
+
+	t0.Square(x1)
+	t1.Square(y1)
+	t2.Square(z1)
+	t3.Mul(x1, y1)
+	t3.Add(t3, t3)
+	z3.Mul(x1, z1)
+	z3.Add(z3, z3)
+	arith.MulByA(x3, z3)
+	arith.MulBy3B(y3, t2)
+	y3.Add(x3, y3)
+	x3.Sub(t1, y3)
+	y3.Add(t1, y3)
+	y3.Mul(x3, y3)
+	x3.Mul(t3, x3)
+	arith.MulBy3B(z3, z3)
+	arith.MulByA(t2, t2)
+	t3.Sub(t0, t2)
+	arith.MulByA(t3, t3)
+	t3.Add(t3, z3)
+	z3.Add(t0, t0)
+	t0.Add(z3, t0)
+	t0.Add(t0, t2)
+	t0.Mul(t0, t3)
+	y3.Add(y3, t0)
+	t2.Mul(y1, z1)
+	t2.Add(t2, t2)
+	t0.Mul(t2, t3)
+	x3.Sub(x3, t0)
+	z3.Mul(t2, t1)
+	z3.Add(z3, z3)
+	z3.Add(z3, z3)
+
+	p.X = *x3
+	p.Y = *y3
+	p.Z = *z3
+}
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) OpOp(v *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
 	var arith C
 	var t0f, t1f, t2f, t3f F
 	var x3f, y3f, z3f F

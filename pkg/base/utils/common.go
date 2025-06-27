@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"encoding/hex"
 	"math/bits"
+	"reflect"
 
 	"golang.org/x/exp/constraints"
 )
@@ -31,23 +31,8 @@ func CeilLog2(x int) int {
 	return 64 - bits.LeadingZeros64(uint64(x)-1)
 }
 
-// DecodeString decodes a hex string into a byte slice. It panics if the string is not a valid hex string.
-func DecodeString(s string) []byte {
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
-
-// Iter yields a generic iterator for slices.
-func Iter[T any](s []T) <-chan T {
-	ch := make(chan T, 1)
-	go func() {
-		defer close(ch)
-		for _, v := range s {
-			ch <- v
-		}
-	}()
-	return ch
+func IsNil[T any](v T) bool {
+	val := reflect.ValueOf(v)
+	kind := val.Kind()
+	return (kind == reflect.Ptr || kind == reflect.Interface) && val.IsNil()
 }

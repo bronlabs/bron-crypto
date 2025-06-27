@@ -33,16 +33,18 @@ func SliceIsZero[S ~[]E, E constraints.Unsigned](s S) uint64 {
 	return IsZero(v)
 }
 
-// SliceSelect yields x1 if v == 1, x0 if v == 0.
-// Its behaviour is undefined if v takes any other value.
-func SliceSelect[S ~[]E, E constraints.Unsigned](choice uint64, dst, x0, x1 S) {
-	if len(x0) != len(x1) || len(x0) != len(dst) {
+// SliceSelect yields x1 if choice == 1, x0 if choice == 0.
+// Its behaviour is undefined if choice takes any other value.
+func SliceSelect[S ~[]E, E constraints.Unsigned](choice uint64, x0, x1 S) S {
+	if len(x0) != len(x1) {
 		panic("ct: slices have different lengths")
 	}
 
-	for i := range dst {
-		dst[i] = Select(choice, x0[i], x1[i])
+	out := make(S, len(x0))
+	for i := range out {
+		out[i] = Select(choice, x0[i], x1[i])
 	}
+	return out
 }
 
 // SliceGreaterLE returns 1 if x > y and 0 otherwise,

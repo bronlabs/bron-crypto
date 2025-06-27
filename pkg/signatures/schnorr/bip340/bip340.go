@@ -2,257 +2,582 @@ package bip340
 
 import (
 	"crypto/subtle"
+	"hash"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/bip340"
+	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
+)
+
+type (
+	Group        = k256.Curve
+	GroupElement = k256.Point
+	ScalarField  = k256.ScalarField
+	Scalar       = k256.Scalar
+
+	Message    = []byte
+	PublicKey  = schnorr.PublicKey[*GroupElement, *Scalar]
+	PrivateKey = schnorr.PrivateKey[*GroupElement, *Scalar]
+	Signature  = schnorr.Signature[*GroupElement, *Scalar]
 )
 
 const (
-	auxSizeBytes = 32
+	VariantType  schnorr.VariantType = "bip340"
+	AuxSizeBytes int                 = 32
 )
 
 var (
-	curve    = k256.NewCurve()
-	hashFunc = bip340.NewBip340HashChallenge
+	_ schnorr.Scheme[*Variant, *k256.Point, *k256.Scalar, Message, *KeyGenerator, *Signer, *Verifier] = (*Scheme)(nil)
+	_ schnorr.Variant[*GroupElement, *Scalar, Message]                                                = (*Variant)(nil)
+	_ schnorr.KeyGenerator[*GroupElement, *Scalar]                                                    = (*KeyGenerator)(nil)
+	_ schnorr.Signer[*Variant, *GroupElement, *Scalar, Message]                                       = (*Signer)(nil)
+	_ schnorr.Verifier[*Variant, *GroupElement, *Scalar, Message]
+
+	_ tschnorr.MPCFriendlyScheme[*Variant, *GroupElement, *Scalar, Message, *KeyGenerator, *Signer, *Verifier] = (*Scheme)(nil)
+	_ tschnorr.MPCFriendlyVariant[*GroupElement, *Scalar, Message]                                             = (*Variant)(nil)
 )
 
-type PublicKey schnorr.PublicKey[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]
-
-type PrivateKey struct {
-	S *k256.Scalar
-	PublicKey
-
-	_ ds.Incomparable
+func NewPublicKey(point *GroupElement) (*PublicKey, error) {
+	return schnorr.NewPublicKey(point)
 }
 
-type Signature = schnorr.Signature[TaprootVariant, []byte, *k256.Point, *k256.BaseFieldElement, *k256.Scalar]
-
-func (pk *PublicKey) MarshalBinary() ([]byte, error) {
-	serializedPublicKey := pk.A.ToAffineCompressed()[1:]
-	return serializedPublicKey, nil
-}
-
-type Signer struct {
-	privateKey *PrivateKey
-
-	_ ds.Incomparable
-}
-
-func NewPrivateKey(scalar *k256.Scalar) (*PrivateKey, error) {
+func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 	if scalar == nil {
-		return nil, errs.NewIsNil("secret is nil")
+		return nil, errs.NewIsNil("scalar is nil")
 	}
-
-	// 1. (implicit) Let d' = int(sk)
-	dPrime := scalar
-
-	// 2. Fail if d' = 0 or d' ≥ n (implicit)
-	if dPrime.IsZero() {
-		return nil, errs.NewIsZero("secret is zero")
+	if scalar.IsZero() {
+		return nil, errs.NewValidation("scalar is zero")
 	}
-
-	// 3. Let P = d'⋅G
-	public := curve.Generator().ScalarMul(dPrime)
-
-	key := &PrivateKey{
-		PublicKey: PublicKey{
-			A: public.Clone(),
-		},
-		S: dPrime.Clone(),
+	pkv := k256.NewCurve().ScalarBaseMul(scalar)
+	pk, err := schnorr.NewPublicKey(pkv)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create public key")
 	}
-
-	return key, nil
+	return schnorr.NewPrivateKey(scalar, pk)
 }
-func NewSigner(privateKey *PrivateKey) (*Signer, error) {
-	if privateKey == nil {
-		return nil, errs.NewIsNil("private key")
+
+func NewSchemeWithAux(aux [AuxSizeBytes]byte) *Scheme {
+	return &Scheme{
+		aux: aux,
 	}
-	return &Signer{
-		privateKey: privateKey,
+}
+
+func NewScheme(prng io.Reader) (*Scheme, error) {
+	if prng == nil {
+		return nil, errs.NewArgument("prng is nil")
+	}
+
+	aux := [AuxSizeBytes]byte{}
+	_, err := io.ReadFull(prng, aux[:])
+	if err != nil {
+		return nil, errs.WrapRandomSample(err, "cannot generate nonce")
+	}
+	return &Scheme{
+		aux: aux,
 	}, nil
 }
 
-func (signer *Signer) Sign(message, aux []byte, prng io.Reader) (*Signature, error) {
-	if len(aux) == 0 && prng == nil {
-		return nil, errs.NewFailed("must provide aux or PRNG")
+func NewVariant(aux [AuxSizeBytes]byte, opts ...VariantOption) (*Variant, error) {
+	out := &Variant{
+		Aux: aux,
 	}
-	if len(aux) == 0 {
-		aux = make([]byte, auxSizeBytes)
-		_, err := io.ReadFull(prng, aux)
-		if err != nil {
-			return nil, errs.WrapRandomSample(err, "cannot generate nonce")
+	for i, opt := range opts {
+		if err := opt(out); err != nil {
+			return nil, errs.WrapFailed(err, "could not apply option %d", i)
 		}
 	}
-	if len(aux) != auxSizeBytes {
-		return nil, errs.NewArgument("aux must have 32 bytes")
+	return out, nil
+}
+
+type Scheme struct {
+	aux [AuxSizeBytes]byte
+}
+
+func (s Scheme) Name() signatures.Name {
+	return schnorr.Name
+}
+
+func (s *Scheme) Variant(opts ...VariantOption) (*Variant, error) {
+	return NewVariant(s.aux, opts...)
+}
+
+func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
+	out := &KeyGenerator{
+		KeyGeneratorTrait: schnorr.KeyGeneratorTrait[*GroupElement, *Scalar]{
+			Grp: k256.NewCurve(),
+			SF:  k256.NewScalarField(),
+		},
 	}
+	for _, opt := range opts {
+		if err := opt(out); err != nil {
+			return nil, errs.WrapFailed(err, "key generator option failed")
+		}
+	}
+	return out, nil
+}
 
-	// 4. Let d = d' if P.y even, otherwise let d = n - d'
-	bigP := curve.Generator().ScalarMul(signer.privateKey.S)
-	d := negScalarIfPointYOdd(signer.privateKey.S, bigP)
-
-	// 5. Let t be the byte-wise xor of bytes(d) and hashBIP0340/aux(a).
-	auxDigest, err := hashing.Hash(bip340.NewBip340HashAux, aux)
+func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, error) {
+	if privateKey == nil {
+		return nil, errs.NewArgument("private key is nil")
+	}
+	verifier, err := s.Verifier()
 	if err != nil {
-		return nil, errs.WrapHashing(err, "hash failed")
+		return nil, errs.WrapFailed(err, "verifier creation failed")
+	}
+	out := &Signer{
+		sg: schnorr.RandomisedSignerTrait[*Variant, *GroupElement, *Scalar, Message]{
+			Sk:       privateKey,
+			Verifier: verifier,
+		},
+		aux: s.aux,
+	}
+	for _, opt := range opts {
+		if err := opt(out); err != nil {
+			return nil, errs.WrapFailed(err, "signer option failed")
+		}
+	}
+	return out, nil
+}
+
+func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
+	variant, err := s.Variant()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not construct variant")
+	}
+	out := &Verifier{
+		variant: variant,
+	}
+	for _, opt := range opts {
+		if err := opt(out); err != nil {
+			return nil, errs.WrapFailed(err, "verifier option failed")
+		}
+	}
+	return out, nil
+}
+
+func (s *Scheme) PartialSignatureVerifier(
+	publicKey *PublicKey,
+	opts ...signatures.VerifierOption[*Verifier, *PublicKey, Message, *Signature],
+) (schnorr.Verifier[*Variant, *GroupElement, *Scalar, Message], error) {
+	if publicKey == nil || publicKey.Value() == nil {
+		return nil, errs.NewArgument("public key is nil or invalid")
+	}
+	verifier, err := s.Verifier(opts...)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "verifier creation failed")
+	}
+	verifier.challengePublicKey = publicKey
+	return verifier, nil
+}
+
+type VariantOption = schnorr.VariantOption[*Variant, *k256.Point, *k256.Scalar, Message]
+
+func VariantWithPrivateKey(privateKey *PrivateKey) VariantOption {
+	return func(variant *Variant) error {
+		variant.sk = privateKey
+		return nil
+	}
+}
+
+func VariantWithMessage(message Message) VariantOption {
+	return func(variant *Variant) error {
+		variant.msg = message
+		return nil
+	}
+}
+
+type Variant struct {
+	sk  *PrivateKey
+	Aux [AuxSizeBytes]byte
+	msg Message
+}
+
+func (*Variant) Type() schnorr.VariantType {
+	return VariantType
+}
+func (*Variant) HashFunc() func() hash.Hash {
+	return bip340.NewBip340HashChallenge
+}
+
+func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
+	if v.sk == nil || v.msg == nil {
+		return nil, nil, errs.NewIsNil("need both private key and message")
+	}
+	g := k256.NewCurve().Generator()
+	f := k256.NewScalarField()
+	// 1. Let d' = int(sk)
+	dPrime := v.sk.Value()
+	// 2. Fail if d' = 0 or d' ≥ n
+	if dPrime.IsZero() {
+		return nil, nil, errs.NewFailed("d' is invalid")
+	}
+	// 3. Let P = d'⋅G
+	bigP := g.ScalarMul(v.sk.Value())
+	// 4. Let d = d' if P.y even, otherwise let d = n - d'
+	d := dPrime
+	if bigP.AffineY().IsOdd() {
+		d = dPrime.Neg()
+	}
+	// 5. Let t be the byte-wise xor of bytes(d) and hashBIP0340/aux(a).
+	auxDigest, err := hashing.Hash(bip340.NewBip340HashAux, v.Aux[:])
+	if err != nil {
+		return nil, nil, errs.WrapHashing(err, "hash failed")
 	}
 	t := make([]byte, len(auxDigest))
 	if n := subtle.XORBytes(t, d.Bytes(), auxDigest); n != len(d.Bytes()) {
-		return nil, errs.NewFailed("invalid scalar bytes length")
+		return nil, nil, errs.NewFailed("invalid scalar bytes length")
 	}
 	// 6. Let rand = hashBIP0340/nonce(t || bytes(P) || m).
-	rand, err := hashing.Hash(bip340.NewBip340HashNonce, t, encodePoint(signer.privateKey.A), message)
+	rand, err := hashing.Hash(
+		bip340.NewBip340HashNonce, t, encodePoint(bigP), v.msg,
+	)
 	if err != nil {
-		return nil, errs.WrapHashing(err, "hash failed")
+		return nil, nil, errs.WrapHashing(err, "hash failed")
 	}
 
 	// 7. Let k' = int(rand) mod n.
-	kPrime, err := curve.ScalarField().FromWideBytes(rand)
+	kPrime, err := f.FromWideBytes(rand)
 	if err != nil {
-		return nil, errs.NewFailed("cannot set k'")
+		return nil, nil, errs.NewFailed("cannot set k'")
 	}
 
 	// 8. Fail if k' = 0
 	if kPrime.IsZero() {
-		return nil, errs.NewFailed("k' is invalid")
+		return nil, nil, errs.NewFailed("k' is invalid")
 	}
 
 	// 9. Let R = k'⋅G.
-	bigR := curve.Generator().ScalarMul(kPrime)
-
-	// 10. Let k = k' if R.x is even, otherwise let k = n - k', R = k ⋅ G
-	// 11. Let e = int(hashBIP0340/challenge(bytes(R) || bytes(P) || m)) mod n.
-	e, err := taprootVariant.ComputeChallenge(hashFunc, bigR, bigP, message)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to get e")
+	bigR := g.ScalarMul(kPrime)
+	// 10. Let k = k' if R.y is even, otherwise let k = n - k', R = k ⋅ G
+	k := kPrime
+	if bigR.AffineY().IsOdd() {
+		k = kPrime.Neg()
+		bigR = g.ScalarMul(k)
 	}
-
-	// 12. Let sig = (R, (k + ed) mod n)).
-	s := taprootVariant.ComputeResponse(bigR, bigP, kPrime, signer.privateKey.S, e)
-	signature := schnorr.NewSignature(taprootVariant, e, taprootVariant.ComputeNonceCommitment(bigR, bigR), s)
-
-	// 13. If Verify(bytes(P), m, sig) returns failure, abort.
-	verifier, err := taprootVariant.NewVerifierBuilder().
-		WithPublicKey((*schnorr.PublicKey[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])(&signer.privateKey.PublicKey)).
-		WithMessage(message).
-		Build()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not build the verifier")
-	}
-
-	if err := verifier.Verify(signature); err != nil {
-		return nil, errs.NewFailed("cannot create signature")
-	}
-
-	// 14. Return the signature sig.
-	return signature, nil
+	return bigR, k, nil
 }
 
-func Verify(publicKey *PublicKey, signature *Signature, message []byte) error {
-	if !publicKey.A.IsTorsionFree() {
+func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement, message Message) (*Scalar, error) {
+	// 11. Let e = int(hashBIP0340/challenge(bytes(R) || bytes(P) || m)) mod n.
+	roinput := slices.Concat(
+		nonceCommitment.ToCompressed()[1:],
+		publicKeyValue.ToCompressed()[1:],
+		message,
+	)
+
+	e, err := schnorr.MakeGenericChallenge(k256.NewScalarField(), v.HashFunc(), false, roinput)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "hash failed")
+	}
+	return e, nil
+}
+
+func (*Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
+	if privateKeyValue == nil || nonce == nil || challenge == nil {
+		return nil, errs.NewIsNil("arguments")
+	}
+	// 12. Let sig = (R, (k + ed) mod n)).
+	return nonce.Add(challenge.Mul(privateKeyValue)), nil
+}
+
+func (*Variant) SerializeSignature(signature *Signature) ([]byte, error) {
+	return SerializeSignature(signature)
+}
+
+func (*Variant) NonceIsFunctionOfMessage() bool {
+	return true
+}
+
+func (v *Variant) Clone() *Variant {
+	out := &Variant{
+		Aux: v.Aux,
+	}
+	if v.sk != nil {
+		out.sk = v.sk.Clone()
+	}
+	if v.msg != nil {
+		copy(out.msg, v.msg)
+	}
+	return out
+}
+
+type KeyGeneratorOption = signatures.KeyGeneratorOption[*KeyGenerator, *PrivateKey, *PublicKey]
+
+type KeyGenerator struct {
+	schnorr.KeyGeneratorTrait[*GroupElement, *Scalar]
+}
+
+type SignerOption = signatures.SignerOption[*Signer, Message, *Signature]
+
+type Signer struct {
+	sg  schnorr.RandomisedSignerTrait[*Variant, *GroupElement, *Scalar, Message]
+	aux [AuxSizeBytes]byte
+}
+
+func (s *Signer) Sign(message Message) (*Signature, error) {
+	// ComputeNonceCommitment requires a message
+	messageBoundedVariant, err := NewVariant(
+		s.aux, VariantWithMessage(message), VariantWithPrivateKey(s.sg.Sk),
+	)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not bound message to variant")
+	}
+	s.sg.V = messageBoundedVariant
+	return s.sg.Sign(message)
+}
+
+func (s *Signer) Variant() *Variant {
+	return s.sg.V
+}
+
+type VerifierOption = signatures.VerifierOption[*Verifier, *PublicKey, Message, *Signature]
+
+func VerifyWithPRNG(prng io.Reader) VerifierOption {
+	return func(v *Verifier) error {
+		if prng == nil {
+			return errs.NewArgument("prng is nil")
+		}
+		v.prng = prng
+		return nil
+	}
+}
+
+type Verifier struct {
+	variant            *Variant
+	prng               io.Reader
+	challengePublicKey *PublicKey
+}
+
+func (v *Verifier) Variant() *Variant {
+	return v.variant
+}
+
+func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Message) error {
+	if publicKey == nil || publicKey.Value() == nil {
+		return errs.NewArgument("curve not supported")
+	}
+	if signature == nil || signature.R == nil || signature.S == nil || signature.R.IsZero() || signature.S.IsZero() {
+		return errs.NewVerification("some signature elements are nil/zero")
+	}
+	if publicKey.Value().IsOpIdentity() {
+		return errs.NewVerification("public key is identity")
+	}
+	if !publicKey.Value().IsTorsionFree() {
 		return errs.NewValidation("Public Key not in the prime subgroup")
 	}
-	v, err := taprootVariant.NewVerifierBuilder().
-		WithPublicKey((*schnorr.PublicKey[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])(publicKey)).
-		WithMessage(message).
-		Build()
-	if err != nil {
-		return errs.WrapFailed(err, "could not build the verifier")
+
+	// 1. Let P = lift_x(int(pk)).
+	// 2. (implicit) Let r = int(sig[0:32]); fail if r ≥ p.
+	// 3. (implicit) Let s = int(sig[32:64]); fail if s ≥ n.
+	bigP := publicKey.Value()
+	if bigP.AffineY().IsOdd() {
+		bigP = bigP.Neg()
 	}
 
-	//nolint:wrapcheck // forward errors
-	return v.Verify(signature)
+	// 4. Let e = int(hashBIP0340/challenge(bytes(r) || bytes(P) || m)) mod n.
+	var err error
+	var e *k256.Scalar
+	if v.challengePublicKey == nil {
+		e, err = v.variant.ComputeChallenge(signature.R, publicKey.V, message)
+	} else {
+		e, err = v.variant.ComputeChallenge(signature.R, v.challengePublicKey.Value(), message)
+	}
+	if err != nil {
+		return errs.WrapFailed(err, "cannot create challenge scalar")
+	}
+
+	if signature.E != nil && !signature.E.Equal(e) {
+		return errs.NewFailed("incompatible signature")
+	}
+
+	// 5. Let R = s⋅G - e⋅P.
+	bigR := k256.NewCurve().ScalarBaseMul(signature.S).Sub(bigP.ScalarMul(e))
+
+	// 6. Fail if is_infinite(R).
+	if bigR.IsZero() {
+		return errs.NewVerification("signature is invalid")
+	}
+
+	// 7. Fail if not has_even_y(R).
+	if bigR.AffineY().IsOdd() {
+		return errs.NewVerification("signature is invalid")
+	}
+
+	// 8. Fail if x(R) ≠ r.
+	if !signature.R.AffineX().Equal(bigR.AffineX()) {
+		return errs.NewVerification("signature is invalid")
+	}
+	return nil
 }
 
-//func VerifyBatch(publicKeys []*PublicKey, signatures []*Signature, messages [][]byte, prng io.Reader) (err error) {
-//	if len(publicKeys) != len(signatures) || len(signatures) != len(messages) || len(signatures) == 0 {
-//		return errs.NewArgument("length of publickeys, messages and signatures must be equal and greater than zero")
-//	}
-//	for _, publicKey := range publicKeys {
-//		if !publicKey.A.IsTorsionFree() {
-//			return errs.NewValidation("Public Key not in the prime subgroup")
-//		}
-//	}
-//	// 1. Generate u-1 random integers a2...u in the range 1...n-1.
-//	a := make([]*k256.Scalar, len(signatures))
-//	a[0] = curve.ScalarField().One()
-//	for i := 1; i < len(signatures); i++ {
-//		for {
-//			a[i], err = curve.ScalarField().Random(prng)
-//			if err != nil {
-//				return errs.WrapRandomSample(err, "cannot generate random scalar")
-//			}
-//			if !a[i].IsZero() {
-//				break
-//			}
-//		}
-//	}
-//
-//	// For i = 1 .. u:
-//	left := curve.ScalarField().Zero()
-//	ae := make([]*k256.Scalar, len(signatures))
-//	bigR := make([]*k256.PointTrait, len(signatures))
-//	bigP := make([]*k256.PointTrait, len(signatures))
-//	for i, sig := range signatures {
-//		// 2. Let P_i = lift_x(int(pki))
-//		// 3. (implicit) Let r_i = int(sigi[0:32]); fail if ri ≥ p.
-//		// 4. (implicit) Let s_i = int(sigi[32:64]); fail if si ≥ n.
-//		bigP[i] = negPointIfPointYOdd(publicKeys[i].A)
-//
-//		// 5. Let ei = int(hashBIP0340/challenge(bytes(r_i) || bytes(P_i) || mi)) mod n.
-//		e, err := taprootVariant.ComputeChallenge(hashFunc, sig.R, publicKeys[i].A, messages[i])
-//		if err != nil {
-//			return errs.WrapFailed(err, "invalid signature")
-//		}
-//
-//		// 6. Let Ri = lift_x(ri); fail if lift_x(ri) fails.
-//		bigR[i] = signatures[i].R
-//
-//		ae[i] = a[i].Mul(e)
-//		left = left.Add(a[i].Mul(sig.S))
-//	}
-//
-//	// 7. Fail if (s1 + a2s2 + ... + ausu)⋅G ≠ R1 + a2⋅R2 + ... + au⋅Ru + e1⋅P1 + (a2e2)⋅P2 + ... + (aueu)⋅Pu.
-//	rightA, err := curve.MultiScalarMult(a, bigR)
-//	if err != nil {
-//		return errs.WrapFailed(err, "failed to multiply scalars and points")
-//	}
-//	rightB, err := curve.MultiScalarMult(ae, bigP)
-//	if err != nil {
-//		return errs.WrapFailed(err, "failed to multiply scalars and points")
-//	}
-//	right := rightA.Add(rightB)
-//	if !curve.Generator().ScalarMul(left).Equal(right) {
-//		return errs.NewVerification("signature is invalid")
-//	}
-//
-//	// Return success iff no failure occurred before reaching this point.
-//	return nil
-//}
+func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey, messages []Message, prng io.Reader) error {
+	if v.prng == nil {
+		return errs.NewIsNil("batch verification requires a prng. Initialise the verifier with the prng option")
+	}
+	if len(publicKeys) != len(signatures) || len(signatures) != len(messages) || len(signatures) == 0 {
+		return errs.NewArgument("length of publickeys, messages and signatures must be equal and greater than zero")
+	}
+	if sliceutils.Any(publicKeys, func(pk *PublicKey) bool {
+		return pk == nil || pk.Value() == nil || pk.Value().IsOpIdentity() || pk.Value().IsOpIdentity()
+	}) {
+		return errs.NewArgument("some public keys are nil or identity")
+	}
+	curve := k256.NewCurve()
+	sf := k256.NewScalarField()
+	var err error
+	// 1. Generate u-1 random integers a2...u in the range 1...n-1.
+	a := make([]*k256.Scalar, len(signatures))
+	a[0] = sf.One()
+	for i := 1; i < len(signatures); i++ {
+		a[i], err = algebrautils.RandomNonIdentity(sf, prng)
+		if err != nil {
+			return errs.WrapRandomSample(err, "cannot generate random scalar for i=%d", i)
+		}
+	}
+
+	// For i = 1 .. u:
+	left := sf.Zero()
+	ae := make([]*k256.Scalar, len(signatures))
+	bigR := make([]*k256.Point, len(signatures))
+	bigP := make([]*k256.Point, len(signatures))
+	for i, sig := range signatures {
+		// 2. Let P_i = lift_x(int(pki))
+		// 3. (implicit) Let r_i = int(sigi[0:32]); fail if ri ≥ p.
+		// 4. (implicit) Let s_i = int(sigi[32:64]); fail if si ≥ n.
+		bigP[i] = publicKeys[i].Value()
+		if bigP[i].AffineY().IsOdd() {
+			bigP[i] = bigP[i].Neg()
+		}
+
+		// 5. Let ei = int(hashBIP0340/challenge(bytes(r_i) || bytes(P_i) || mi)) mod n.
+		e, err := v.variant.ComputeChallenge(sig.R, publicKeys[i].V, messages[i])
+		if err != nil {
+			return errs.WrapFailed(err, "invalid signature")
+		}
+
+		// 6. Let Ri = lift_x(ri); fail if lift_x(ri) fails.
+		bigR[i] = signatures[i].R
+
+		ae[i] = a[i].Mul(e)
+		left = left.Add(a[i].Mul(sig.S))
+	}
+
+	// 7. Fail if (s1 + a2s2 + ... + ausu)⋅G ≠ R1 + a2⋅R2 + ... + au⋅Ru + e1⋅P1 + (a2e2)⋅P2 + ... + (aueu)⋅Pu.
+	rightA, err := curve.MultiScalarMul(a, bigR)
+	if err != nil {
+		return errs.WrapFailed(err, "failed to multiply scalars and points")
+	}
+	rightB, err := curve.MultiScalarMul(ae, bigP)
+	if err != nil {
+		return errs.WrapFailed(err, "failed to multiply scalars and points")
+	}
+	right := rightA.Add(rightB)
+	if !curve.Generator().ScalarMul(left).Equal(right) {
+		return errs.NewVerification("signature is invalid")
+	}
+
+	// Return success iff no failure occurred before reaching this point.
+	return nil
+}
+
+func NewSignatureFromBytes(input []byte) (*Signature, error) {
+	if len(input) != 64 {
+		return nil, errs.NewSerialisation("invalid length")
+	}
+
+	r, err := decodePoint(input[:32])
+	if err != nil {
+		return nil, errs.NewSerialisation("invalid signature")
+	}
+	s, err := k256.NewScalarField().FromBytes(input[32:])
+	if err != nil {
+		return nil, errs.NewSerialisation("invalid signature")
+	}
+	return &Signature{
+		R: r,
+		S: s,
+	}, nil
+}
+
+func SerializeSignature(signature *Signature) ([]byte, error) {
+	if signature == nil || signature.R == nil || signature.S == nil {
+		return nil, errs.NewArgument("signature is nil")
+	}
+	return slices.Concat(signature.R.ToCompressed()[1:], signature.S.Bytes()), nil
+}
+
+func NewPublicKeyFromBytes(input []byte) (*PublicKey, error) {
+	p, err := decodePoint(input)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot decode point")
+	}
+	pk, err := NewPublicKey(p)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create public key")
+	}
+	return pk, nil
+}
+
+func SerializePublicKey(publicKey *PublicKey) ([]byte, error) {
+	if publicKey == nil {
+		return nil, errs.NewArgument("public key is nil")
+	}
+	return publicKey.Value().ToCompressed()[1:], nil
+}
 
 func encodePoint(p *k256.Point) []byte {
-	return p.ToAffineCompressed()[1:]
+	return p.ToCompressed()[1:]
 }
 
-// negScalarIfPointYOdd negates point if point.y is even.
-func negPointIfPointYOdd(point *k256.Point) *k256.Point {
-	if point.AffineY().IsOdd() {
-		return point.Neg()
-	} else {
-		return point
+func decodePoint(data []byte) (*k256.Point, error) {
+	curve := k256.NewCurve()
+	p, err := curve.FromCompressed(slices.Concat([]byte{0x02}, data))
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot decode point")
 	}
+
+	return p, nil
 }
 
-// negScalarIfPointYOdd negates scalar x if point.y is even.
-func negScalarIfPointYOdd(x *k256.Scalar, point *k256.Point) *k256.Scalar {
-	if point.AffineY().IsOdd() {
-		return x.Neg()
-	} else {
-		return x
+// ============ MPC Methods ============
+
+var _ tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, Message] = (*Variant)(nil)
+
+func (v *Variant) DeriveAdditiveSecretShare(shard *tschnorr.Shard[*k256.Point, *k256.Scalar], ac *sharing.MinimalQualifiedAccessStructure) (*additive.Share[*k256.Scalar], error) {
+	if shard == nil {
+		return nil, errs.NewIsNil("secret share or access structure is nil")
 	}
+	additiveShare, err := shard.Share().ToAdditive(*ac)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot convert secret share to additive form")
+	}
+	if shard.PublicKey().Value().AffineY().IsOdd() {
+		// If the public key is odd, we need to negate the additive share
+		// to ensure that the parity of the nonce commitment is correct.
+		additiveShare, _ = additive.NewShare(shard.Share().ID(), additiveShare.Value().Neg(), nil)
+	}
+	return additiveShare, nil
+}
+
+func (v *Variant) CorrectPartialNonceParity(nonceCommitment *k256.Point, k *k256.Scalar) (*k256.Point, *k256.Scalar, error) {
+	if nonceCommitment == nil || k == nil {
+		return nil, nil, errs.NewIsNil("nonce commitment or k is nil")
+	}
+	correctedK := k.Clone()
+	if nonceCommitment.AffineY().IsOdd() {
+		// If the nonce commitment is odd, we need to negate k to ensure that the parity is correct.
+		correctedK = correctedK.Neg()
+	}
+	correctedR := k256.NewCurve().ScalarBaseOp(correctedK)
+	return correctedR, correctedK, nil
 }

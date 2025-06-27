@@ -3,6 +3,7 @@ package sigma
 import (
 	"encoding/hex"
 	"fmt"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -28,7 +29,7 @@ func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](sessio
 
 	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sessionId), transcriptLabel, sigmaProtocol.Name())
 	transcript.AppendDomainSeparator(dst)
-	transcript.AppendBytes(statementLabel, sigmaProtocol.SerializeStatement(statement))
+	transcript.AppendBytes(statementLabel, statement.Bytes())
 
 	return &Prover[X, W, A, S, Z]{
 		participant: participant[X, W, A, S, Z]{
@@ -54,7 +55,7 @@ func (p *Prover[X, W, A, S, Z]) Round1() (A, error) {
 		return zero, errs.WrapFailed(err, "cannot create commitment")
 	}
 
-	p.transcript.AppendBytes(commitmentLabel, p.sigmaProtocol.SerializeCommitment(commitment))
+	p.transcript.AppendBytes(commitmentLabel, commitment.Bytes())
 	p.commitment = commitment
 	p.state = state
 	p.round += 2 // prover doesn't send anything in round 2 (skip to round 3)
@@ -73,7 +74,7 @@ func (p *Prover[X, W, A, S, Z]) Round3(challengeBytes []byte) (Z, error) {
 	if err != nil {
 		return zero, errs.WrapFailed(err, "cannot generate response")
 	}
-	p.transcript.AppendBytes(responseLabel, p.sigmaProtocol.SerializeResponse(response))
+	p.transcript.AppendBytes(responseLabel, response.Bytes())
 
 	p.challengeBytes = challengeBytes
 	p.response = response

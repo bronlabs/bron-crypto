@@ -29,7 +29,7 @@ func NewVerifier[X Statement, W Witness, A Commitment, S State, Z Response](sess
 
 	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sessionId), transcriptLabel, sigmaProtocol.Name())
 	transcript.AppendDomainSeparator(dst)
-	transcript.AppendBytes(statementLabel, sigmaProtocol.SerializeStatement(statement))
+	transcript.AppendBytes(statementLabel, statement.Bytes())
 
 	return &Verifier[X, W, A, S, Z]{
 		participant: participant[X, W, A, S, Z]{
@@ -44,7 +44,7 @@ func NewVerifier[X Statement, W Witness, A Commitment, S State, Z Response](sess
 }
 
 func (v *Verifier[X, W, A, S, Z]) Round2(commitment A) ([]byte, error) {
-	v.transcript.AppendBytes(commitmentLabel, v.sigmaProtocol.SerializeCommitment(commitment))
+	v.transcript.AppendBytes(commitmentLabel, commitment.Bytes())
 
 	if v.round != 2 {
 		return nil, errs.NewRound("r != 2 (%d)", v.round)
@@ -65,7 +65,7 @@ func (v *Verifier[X, W, A, S, Z]) Round2(commitment A) ([]byte, error) {
 }
 
 func (v *Verifier[X, W, A, S, Z]) Verify(response Z) error {
-	v.transcript.AppendBytes(responseLabel, v.sigmaProtocol.SerializeResponse(response))
+	v.transcript.AppendBytes(responseLabel, response.Bytes())
 
 	if v.round != 4 {
 		return errs.NewRound("r != 4 (%d)", v.round)

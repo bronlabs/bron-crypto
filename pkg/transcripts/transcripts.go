@@ -1,6 +1,7 @@
 package transcripts
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -13,5 +14,5 @@ type Transcript interface {
 	AppendDomainSeparator(tag string)
 	AppendBytes(label string, message ...[]byte)
 	ExtractBytes(label string, outLen uint) ([]byte, error)
-	Clone() Transcript
+	base.Clonable[Transcript]
 }

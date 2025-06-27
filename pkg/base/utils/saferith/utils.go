@@ -10,6 +10,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
+type BigIntAdapter interface {
+	Big() *big.Int
+}
+
 var (
 	NatOne = new(saferith.Nat).SetUint64(1).Resize(1)
 
@@ -84,6 +88,9 @@ func NatFromBytesMod(x []byte, m *saferith.Modulus) *saferith.Nat {
 }
 
 func NatRandomRangeLH(prng io.Reader, lowInclusive, highExclusive *saferith.Nat) (*saferith.Nat, error) {
+	if lowInclusive == nil || highExclusive == nil || prng == nil {
+		return nil, errs.NewIsNil("lowInclusive, highExclusive and prng must not be nil")
+	}
 	maxVal := new(saferith.Nat).Sub(highExclusive, lowInclusive, highExclusive.AnnouncedLen())
 	if maxVal.EqZero() == 1 {
 		return nil, errs.NewArgument("max must be greater than zero")
@@ -97,6 +104,9 @@ func NatRandomRangeLH(prng io.Reader, lowInclusive, highExclusive *saferith.Nat)
 }
 
 func NatRandomRangeH(prng io.Reader, highExclusive *saferith.Nat) (*saferith.Nat, error) {
+	if highExclusive == nil || prng == nil {
+		return nil, errs.NewIsNil("highExclusive and prng must not be nil")
+	}
 	randBig, err := crand.Int(prng, highExclusive.Big())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to get random")
@@ -105,6 +115,9 @@ func NatRandomRangeH(prng io.Reader, highExclusive *saferith.Nat) (*saferith.Nat
 }
 
 func NatRandomBits(prng io.Reader, bits uint) (*saferith.Nat, error) {
+	if prng == nil {
+		return nil, errs.NewIsNil("prng must not be nil")
+	}
 	randBytes := make([]byte, (bits+7)/8)
 	_, err := io.ReadFull(prng, randBytes)
 	if err != nil {
@@ -129,4 +142,27 @@ func NatIsLess(l, r *saferith.Nat) bool {
 func NatIsOdd(x *saferith.Nat) bool {
 	lsb := x.Byte(0)
 	return lsb&0b1 == 1
+}
+
+func IntRandom(prng io.Reader, lowInclusive, highExclusive *saferith.Int) (*saferith.Int, error) {
+	if lowInclusive == nil || highExclusive == nil {
+		return nil, errs.NewIsNil("lowInclusive and highExclusive must not be nil")
+	}
+	if prng == nil {
+		return nil, errs.NewIsNil("prng must not be nil")
+	}
+	intRange := new(saferith.Int).Add(highExclusive, lowInclusive.Clone().Neg(1), -1)
+	if intRange.IsNegative() != 0 || lowInclusive.Eq(highExclusive) != 0 {
+		return nil, errs.NewArgument("max must be greater than zero")
+	}
+
+	randBi, err := crand.Int(prng, intRange.Big())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to get random")
+	}
+	return new(saferith.Int).Add(lowInclusive, new(saferith.Int).SetBig(randBi, randBi.BitLen()), -1), nil
+}
+
+func Stringer[T BigIntAdapter](n T) string {
+	return n.Big().String()
 }

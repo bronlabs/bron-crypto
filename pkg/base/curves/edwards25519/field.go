@@ -1,16 +1,17 @@
 package edwards25519
 
 import (
+	"sync"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/num/cardinal"
 	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/cronokirby/saferith"
-	"sync"
 )
 
 const (
@@ -19,8 +20,8 @@ const (
 
 var (
 	// TODO(PrimeField)
-	_ fields.PrimeField[*BaseFieldElement]        = (*BaseField)(nil)
-	_ fields.PrimeFieldElement[*BaseFieldElement] = (*BaseFieldElement)(nil)
+	_ algebra.PrimeField[*BaseFieldElement]        = (*BaseField)(nil)
+	_ algebra.PrimeFieldElement[*BaseFieldElement] = (*BaseFieldElement)(nil)
 
 	baseFieldInstance *BaseField
 	baseFieldInitOnce sync.Once
@@ -44,20 +45,12 @@ func (f *BaseField) Name() string {
 	return BaseFieldName
 }
 
-func (f *BaseField) Order() algebra.Cardinal {
-	return baseFieldOrder.Nat()
+func (f *BaseField) Order() cardinal.Cardinal {
+	return cardinal.FromNat(baseFieldOrder.Nat())
 }
 
-func (f *BaseField) Characteristic() algebra.Cardinal {
-	return baseFieldOrder.Nat()
-}
-
-func (f *BaseField) Operator() algebra.BinaryOperator[*BaseFieldElement] {
-	return algebra.Add[*BaseFieldElement]
-}
-
-func (f *BaseField) OtherOperator() algebra.BinaryOperator[*BaseFieldElement] {
-	return algebra.Mul[*BaseFieldElement]
+func (f *BaseField) Characteristic() cardinal.Cardinal {
+	return cardinal.FromNat(baseFieldOrder.Nat())
 }
 
 func (f *BaseField) Hash(bytes []byte) (*BaseFieldElement, error) {

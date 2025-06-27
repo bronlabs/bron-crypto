@@ -1,10 +1,12 @@
 package sliceutils
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/randutils"
 	"io"
 	"slices"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/randutils"
 )
 
 func MapErrFunc[SIn ~[]TIn, TIn, TOut any](in SIn, f func(TIn) (TOut, error)) (out []TOut, err error) {
@@ -16,6 +18,27 @@ func MapErrFunc[SIn ~[]TIn, TIn, TOut any](in SIn, f func(TIn) (TOut, error)) (o
 		}
 	}
 	return out, nil
+}
+
+func Map[SIn ~[]TIn, TIn any, SOut ~[]TOut, TOut any](in SIn, f func(TIn) TOut) SOut {
+	return slices.Collect(iterutils.Map(slices.Values(in), f))
+}
+
+func Filter[S ~[]T, T any](xs S, predicate func(T) bool) S {
+	return slices.Collect(iterutils.Filter(slices.Values(xs), predicate))
+}
+
+func Reduce[S ~[]T, T any](xs S, initial T, f func(T, T) T) T {
+	return iterutils.Reduce(slices.Values(xs), initial, f)
+}
+
+func Repeat[S ~[]T, T any](x T, n int) S {
+	out := make(S, n)
+	for i := range n {
+		out[i] = x
+	}
+	return out
+
 }
 
 func Reversed[S ~[]T, T any](xs S) S {
@@ -58,4 +81,89 @@ func Shuffled[S ~[]T, T any](xs S, prng io.Reader) (S, error) {
 	clone := make(S, len(xs))
 	copy(clone, xs)
 	return Shuffle(clone, prng)
+}
+
+func PadToLeft[S ~[]T, T any](xs S, padLength int) S {
+	if padLength < 0 {
+		return xs
+	}
+	out := make(S, len(xs)+padLength)
+	copy(out[padLength:], xs)
+	return out
+}
+
+func PadToLeftWith[S ~[]T, T any](xs S, padLength int, pad T) S {
+	out := PadToLeft(xs, padLength)
+	for i := range padLength {
+		out[i] = pad
+	}
+	return out
+}
+
+func PadToRight[S ~[]T, T any](xs S, padLength int) S {
+	if padLength < 0 {
+		return xs
+	}
+	out := make(S, len(xs)+padLength)
+	copy(out[:len(xs)], xs)
+	return out
+}
+
+func PadToRightWith[S ~[]T, T any](xs S, padLength int, pad T) S {
+	out := PadToRight(xs, padLength)
+	for i := len(xs); i < len(out); i++ {
+		out[i] = pad
+	}
+	return out
+}
+
+func Count[S ~[]T, T any](xs S, predicate func(T) bool) int {
+	count := 0
+	for _, x := range xs {
+		if predicate(x) {
+			count++
+		}
+	}
+	return count
+}
+
+func CountUnique[S ~[]T, T comparable](xs S) int {
+	seen := make(map[T]struct{})
+	count := 0
+	for _, x := range xs {
+		if _, exists := seen[x]; !exists {
+			seen[x] = struct{}{}
+			count++
+		}
+	}
+	return count
+}
+
+func CountUniqueFunc[S ~[]T, T any, K comparable](xs S, key func(T) K) int {
+	seen := make(map[K]struct{})
+	count := 0
+	for _, x := range xs {
+		k := key(x)
+		if _, exists := seen[k]; !exists {
+			seen[k] = struct{}{}
+			count++
+		}
+	}
+	return count
+}
+
+func Any[S ~[]T, T any](xs S, predicate func(T) bool) bool {
+	return Count(xs, predicate) > 0
+}
+
+func All[S ~[]T, T any](xs S, predicate func(T) bool) bool {
+	return Count(xs, predicate) == len(xs)
+}
+
+func IsUnique[S ~[]T, T comparable](xs S) bool {
+	return CountUnique(xs) == len(xs)
+}
+
+func IsUniqueFunc[S ~[]T, T any, K comparable](xs S, key func(T) K) bool {
+	return CountUniqueFunc(xs, key) == len(xs)
 }

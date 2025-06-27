@@ -5,6 +5,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
+// TODO: merge with algebra traits
 func ScalarMul[FP fieldsImpl.FiniteFieldElement[FP], PP PointPtrConstraint[FP, PP, P], P any](out, pp *P, s []byte) {
 	var precomputed [16]P
 

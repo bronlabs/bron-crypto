@@ -1,38 +1,55 @@
 package commitments
 
-import "io"
+import (
+	"io"
 
-type (
-	Commitment any
-	Message    any
-	Witness    any
-	Scalar     any
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 )
 
-type CommittingKey[C Commitment, M Message, W Witness] interface {
-	RandomWitness(prng io.Reader) (witness W, err error)
-	CommitWithWitness(message M, witness W) (commitment C, err error)
-	Commit(message M, prng io.Reader) (commitment C, witness W, err error)
-	Verify(commitment C, message M, witness W) (err error)
+type Name string
+
+type (
+	Key        any
+	Message    any
+	Witness    any
+	Commitment any
+
+	ReRandomisableCommitment[C Commitment, W Witness, K Key] interface {
+		Commitment
+		ReRandomiseWithWitness(K, W) (C, error)
+		ReRandomise(K, io.Reader) (C, W, error)
+	}
+)
+
+type Committer[W Witness, M Message, C Commitment] interface {
+	Commit(message M, prng io.Reader) (C, W, error)
+	CommitWithWitness(message M, W W) (C, error)
 }
 
-type HomomorphicCommittingKey[C Commitment, M Message, W Witness, S Scalar] interface {
-	CommittingKey[C, M, W]
-
-	MessageAdd(lhs, rhs M) (message M, err error)
-	MessageSub(lhs, rhs M) (message M, err error)
-	MessageNeg(x M) (message M, err error)
-	MessageMul(lhs M, rhs S) (message M, err error)
-
-	CommitmentAdd(lhs, rhs C) (commitment C, err error)
-	CommitmentAddMessage(lhs C, rhs M) (commitment C, err error)
-	CommitmentSub(lhs, rhs C) (commitment C, err error)
-	CommitmentSubMessage(lhs C, rhs M) (commitment C, err error)
-	CommitmentNeg(x C) (commitment C, err error)
-	CommitmentMul(lhs C, rhs S) (commitment C, err error)
-
-	WitnessAdd(lhs, rhs W) (witness W, err error)
-	WitnessSub(lhs, rhs W) (witness W, err error)
-	WitnessNeg(x W) (witness W, err error)
-	WitnessMul(lhs W, rhs S) (witness W, err error)
+type Verifier[W Witness, M Message, C Commitment] interface {
+	Verify(commitment C, message M, witness W) error
 }
+
+type Scheme[W Witness, M Message, C Commitment] interface {
+	Name() Name
+	Committer() Committer[W, M, C]
+	Verifier() Verifier[W, M, C]
+}
+
+// ******** Homomorphic
+
+type HomomorphicScheme[
+	W interface {
+		Witness
+		algebra.HomomorphicLike[W, WT]
+	}, WT algebra.GroupElement[WT],
+	M interface {
+		Message
+		algebra.HomomorphicLike[M, MT]
+	}, MT algebra.GroupElement[MT],
+	C interface {
+		Commitment
+		algebra.HomomorphicLike[C, CT]
+		algebra.Actable[C, M]
+	}, CT algebra.GroupElement[CT],
+] Scheme[W, M, C]

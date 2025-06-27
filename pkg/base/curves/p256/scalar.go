@@ -1,14 +1,15 @@
 package p256
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
-	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"slices"
 	"sync"
+
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/num/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
+	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	p256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/p256/impl"
@@ -20,8 +21,8 @@ const (
 )
 
 var (
-	_ fields.PrimeField[*Scalar]        = (*ScalarField)(nil)
-	_ fields.PrimeFieldElement[*Scalar] = (*Scalar)(nil)
+	_ algebra.PrimeField[*Scalar]        = (*ScalarField)(nil)
+	_ algebra.PrimeFieldElement[*Scalar] = (*Scalar)(nil)
 
 	scalarFieldInitOnce sync.Once
 	scalarFieldInstance *ScalarField
@@ -49,20 +50,12 @@ func (f *ScalarField) Name() string {
 	return ScalarFieldName
 }
 
-func (f *ScalarField) Order() algebra.Cardinal {
-	return scalarFieldOrder.Nat()
+func (f *ScalarField) Order() cardinal.Cardinal {
+	return cardinal.FromNat(scalarFieldOrder.Nat())
 }
 
-func (f *ScalarField) Characteristic() algebra.Cardinal {
-	return scalarFieldOrder.Nat()
-}
-
-func (f *ScalarField) Operator() algebra.BinaryOperator[*Scalar] {
-	return algebra.Add[*Scalar]
-}
-
-func (f *ScalarField) OtherOperator() algebra.BinaryOperator[*Scalar] {
-	return algebra.Mul[*Scalar]
+func (f *ScalarField) Characteristic() cardinal.Cardinal {
+	return cardinal.FromNat(scalarFieldOrder.Nat())
 }
 
 func (f *ScalarField) Hash(bytes []byte) (*Scalar, error) {
