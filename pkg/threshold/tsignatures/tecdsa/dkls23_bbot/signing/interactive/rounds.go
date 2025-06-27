@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"iter"
 	"maps"
 	"slices"
 
@@ -11,9 +12,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/csprng/fkechacha20"
-	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
+	bbotMul "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23_bbot"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	zeroSample "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs/sample"
 	zeroSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs/setup"
@@ -57,14 +57,12 @@ func (c *Cosigner) Round1() (r1bOut *Round1Broadcast, r1uOut network.RoundMessag
 
 	r1bOut = &Round1Broadcast{BigRCommitment: c.State.BigRCommitment[c.MySharingId]}
 	r1uOut = network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round1P2P]()
-	for id, key := range c.otherCosigners() {
-		r1u := new(Round1P2P)
-		r1u.MulR1, err = c.State.AliceMul[id].Round1()
+	for party, message := range outgoingP2PMessages(c, r1uOut) {
+		message.MulR1, err = c.State.AliceMul[party.id].Round1()
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot run Alice mul round1")
 		}
-		r1u.ZeroSetupR1, _ = zeroR1.Get(key)
-		r1uOut.Put(key, r1u)
+		message.ZeroSetupR1, _ = zeroR1.Get(party.key)
 	}
 
 	c.State.Round++
@@ -72,16 +70,17 @@ func (c *Cosigner) Round1() (r1bOut *Round1Broadcast, r1uOut network.RoundMessag
 }
 
 func (c *Cosigner) Round2(r1bOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round1Broadcast], r1uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round1P2P]) (r2bOut *Round2Broadcast, r2uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round2P2P], err error) {
-	if err := validateInput(c, 2, r1bOut, r1uOut); err != nil {
+	incomingMessages, err := validateInput(c, 2, r1bOut, r1uOut)
+	if err != nil {
 		return nil, nil, errs.NewFailed("invalid input or round mismatch")
 	}
 
 	zeroR1 := network.NewRoundMessages[types.Protocol, *zeroSetup.Round1P2P]()
-	for id, key := range c.otherCosigners() {
-		r1b, _ := r1bOut.Get(key)
-		r1u, _ := r1uOut.Get(key)
-		c.State.BigRCommitment[id] = r1b.BigRCommitment
-		zeroR1.Put(key, r1u.ZeroSetupR1)
+	mulR1 := make(map[types.SharingID]*bbotMul.Round1P2P)
+	for party, message := range incomingMessages {
+		c.State.BigRCommitment[party.id] = message.broadcast.BigRCommitment
+		zeroR1.Put(party.key, message.p2p.ZeroSetupR1)
+		mulR1[party.id] = message.p2p.MulR1
 	}
 
 	zeroR2, err := c.State.ZeroSetup.Round2(zeroR1)
@@ -95,15 +94,12 @@ func (c *Cosigner) Round2(r1bOut network.RoundMessages[types.ThresholdSignatureP
 		BigRWitness: c.State.BigRWitness,
 	}
 	r2uOut = network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round2P2P]()
-	for id, key := range c.otherCosigners() {
-		uIn, _ := r1uOut.Get(key)
-		uOut := new(Round2P2P)
-		uOut.MulR2, c.State.Chi[id], err = c.State.BobMul[id].Round2(uIn.MulR1)
+	for party, message := range outgoingP2PMessages(c, r2uOut) {
+		message.MulR2, c.State.Chi[party.id], err = c.State.BobMul[party.id].Round2(mulR1[party.id])
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot run bob mul round2")
 		}
-		uOut.ZeroSetupR2, _ = zeroR2.Get(key)
-		r2uOut.Put(key, uOut)
+		message.ZeroSetupR2, _ = zeroR2.Get(party.key)
 	}
 
 	c.State.Round++
@@ -111,19 +107,20 @@ func (c *Cosigner) Round2(r1bOut network.RoundMessages[types.ThresholdSignatureP
 }
 
 func (c *Cosigner) Round3(r2bOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round2Broadcast], r2uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round2P2P]) (r3bOut *Round3Broadcast, r3uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round3P2P], err error) {
-	if err := validateInput(c, 3, r2bOut, r2uOut); err != nil {
+	incomingMessages, err := validateInput(c, 3, r2bOut, r2uOut)
+	if err != nil {
 		return nil, nil, errs.NewFailed("invalid input or round mismatch")
 	}
 
 	zeroR2 := network.NewRoundMessages[types.Protocol, *zeroSetup.Round2P2P]()
-	for id, key := range c.otherCosigners() {
-		r2b, _ := r2bOut.Get(key)
-		r2u, _ := r2uOut.Get(key)
-		if err := c.State.Ck.Verify(c.State.BigRCommitment[id], r2b.BigR.ToAffineCompressed(), r2b.BigRWitness); err != nil {
-			return nil, nil, errs.WrapIdentifiableAbort(err, id, "invalid commitment")
+	mulR2 := make(map[types.SharingID]*bbotMul.Round2P2P)
+	for party, message := range incomingMessages {
+		if err := c.State.Ck.Verify(c.State.BigRCommitment[party.id], message.broadcast.BigR.ToAffineCompressed(), message.broadcast.BigRWitness); err != nil {
+			return nil, nil, errs.WrapIdentifiableAbort(err, party.id, "invalid commitment")
 		}
-		c.State.BigR[id] = r2b.BigR
-		zeroR2.Put(key, r2u.ZeroSetupR2)
+		c.State.BigR[party.id] = message.broadcast.BigR
+		zeroR2.Put(party.key, message.p2p.ZeroSetupR2)
+		mulR2[party.id] = message.p2p.MulR2
 	}
 
 	zeroSeeds, err := c.State.ZeroSetup.Round3(zeroR2)
@@ -159,17 +156,14 @@ func (c *Cosigner) Round3(r2bOut network.RoundMessages[types.ThresholdSignatureP
 
 	r3bOut = &Round3Broadcast{Pk: c.State.Pk[c.MySharingId]}
 	r3uOut = network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round3P2P]()
-	for id, key := range c.otherCosigners() {
-		r2u, _ := r2uOut.Get(key)
-		r3 := new(Round3P2P)
-		r3.MulR3, c.State.C[id], err = c.State.AliceMul[id].Round3(r2u.MulR2, []curves.Scalar{c.State.R, c.State.Sk})
+	for party, message := range outgoingP2PMessages(c, r3uOut) {
+		message.MulR3, c.State.C[party.id], err = c.State.AliceMul[party.id].Round3(mulR2[party.id], []curves.Scalar{c.State.R, c.State.Sk})
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot run alice mul round3")
 		}
-		r3.GammaU = c.Protocol.Curve().ScalarBaseMult(c.State.C[id][0])
-		r3.GammaV = c.Protocol.Curve().ScalarBaseMult(c.State.C[id][1])
-		r3.Psi = c.State.Phi.Sub(c.State.Chi[id])
-		r3uOut.Put(key, r3)
+		message.GammaU = c.Protocol.Curve().ScalarBaseMult(c.State.C[party.id][0])
+		message.GammaV = c.Protocol.Curve().ScalarBaseMult(c.State.C[party.id][1])
+		message.Psi = c.State.Phi.Sub(c.State.Chi[party.id])
 	}
 
 	c.State.Round++
@@ -177,32 +171,31 @@ func (c *Cosigner) Round3(r2bOut network.RoundMessages[types.ThresholdSignatureP
 }
 
 func (c *Cosigner) Round4(r3bOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round3Broadcast], r3uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round3P2P], message []byte) (partialSignature *dkls23.PartialSignature, err error) {
-	if err := validateInput(c, 4, r3bOut, r3uOut); err != nil {
+	incomingMessages, err := validateInput(c, 4, r3bOut, r3uOut)
+	if err != nil {
 		return nil, errs.WrapFailed(err, "invalid input or round mismatch")
 	}
 
 	psi := c.Protocol.Curve().ScalarField().Zero()
 	cudu := c.Protocol.Curve().ScalarField().Zero()
 	cvdv := c.Protocol.Curve().ScalarField().Zero()
-	for id, key := range c.otherCosigners() {
-		bIn, _ := r3bOut.Get(key)
-		uIn, _ := r3uOut.Get(key)
-		d, err := c.State.BobMul[id].Round4(uIn.MulR3)
+	for party, message := range incomingMessages {
+		d, err := c.State.BobMul[party.id].Round4(message.p2p.MulR3)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run bob mul round4")
 		}
-		c.State.Pk[id] = bIn.Pk
+		c.State.Pk[party.id] = message.broadcast.Pk
 
-		if !c.State.BigR[id].ScalarMul(c.State.Chi[id]).Sub(uIn.GammaU).Equal(c.Protocol.Curve().ScalarBaseMult(d[0])) {
+		if !c.State.BigR[party.id].ScalarMul(c.State.Chi[party.id]).Sub(message.p2p.GammaU).Equal(c.Protocol.Curve().ScalarBaseMult(d[0])) {
 			return nil, errs.NewFailed("consistency check failed")
 		}
-		if !bIn.Pk.ScalarMul(c.State.Chi[id]).Sub(uIn.GammaV).Equal(c.Protocol.Curve().ScalarBaseMult(d[1])) {
+		if !message.broadcast.Pk.ScalarMul(c.State.Chi[party.id]).Sub(message.p2p.GammaV).Equal(c.Protocol.Curve().ScalarBaseMult(d[1])) {
 			return nil, errs.NewFailed("consistency check failed")
 		}
 
-		psi = psi.Add(uIn.Psi)
-		cudu = cudu.Add(c.State.C[id][0].Add(d[0]))
-		cvdv = cvdv.Add(c.State.C[id][1].Add(d[1]))
+		psi = psi.Add(message.p2p.Psi)
+		cudu = cudu.Add(c.State.C[party.id][0].Add(d[0]))
+		cvdv = cvdv.Add(c.State.C[party.id][1].Add(d[1]))
 	}
 
 	bigR := sliceutils.Fold(func(x, y curves.Point) curves.Point { return x.Add(y) }, c.Protocol.Curve().AdditiveIdentity(), slices.Collect(maps.Values(c.State.BigR))...)
@@ -228,29 +221,74 @@ func (c *Cosigner) Round4(r3bOut network.RoundMessages[types.ThresholdSignatureP
 	return partialSignature, nil
 }
 
-func (c *Cosigner) messageToScalar(message []byte) (curves.Scalar, error) {
-	messageHash, err := hashing.Hash(c.Protocol.SigningSuite().Hash(), message)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "cannot hash message")
-	}
-	mPrimeUint := ecdsa.BitsToInt(messageHash, c.Protocol.Curve())
-	mPrime, err := c.Protocol.Curve().ScalarField().Element().SetBytes(mPrimeUint.Bytes())
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "cannot convert message to scalar")
-	}
-	return mPrime, nil
+type party struct {
+	id  types.SharingID
+	key types.IdentityKey
 }
 
-func validateInput[B network.Message[types.ThresholdSignatureProtocol], U network.Message[types.ThresholdSignatureProtocol]](c *Cosigner, rIn int, bIn network.RoundMessages[types.ThresholdSignatureProtocol, B], uIn network.RoundMessages[types.ThresholdSignatureProtocol, U]) error {
+type message[B network.Message[types.ThresholdSignatureProtocol], U network.Message[types.ThresholdSignatureProtocol]] struct {
+	broadcast B
+	p2p       U
+}
+
+func validateInput[B network.Message[types.ThresholdSignatureProtocol], U network.Message[types.ThresholdSignatureProtocol]](c *Cosigner, rIn int, bIn network.RoundMessages[types.ThresholdSignatureProtocol, B], uIn network.RoundMessages[types.ThresholdSignatureProtocol, U]) (iter.Seq2[party, message[B, U]], error) {
 	if rIn != c.State.Round {
-		return errs.NewFailed("invalid round")
+		return nil, errs.NewFailed("invalid round")
 	}
 	if err := network.ValidateMessages(c.Protocol, c.TheQuorum, c.MyAuthKey, bIn); err != nil {
-		return errs.WrapFailed(err, "invalid broadcast input")
+		return nil, errs.WrapFailed(err, "invalid broadcast input")
 	}
 	if err := network.ValidateMessages(c.Protocol, c.TheQuorum, c.MyAuthKey, uIn); err != nil {
-		return errs.WrapFailed(err, "invalid p2p input")
+		return nil, errs.WrapFailed(err, "invalid p2p input")
 	}
 
-	return nil
+	return func(yield func(p party, m message[B, U]) bool) {
+		keyToId := c.SharingCfg.Reverse()
+		for key := range c.TheQuorum.Iter() {
+			if key.PublicKey().Equal(c.MyAuthKey.PublicKey()) {
+				continue
+			}
+			id, ok := keyToId.Get(key)
+			if !ok {
+				panic("this should never happen: couldn't find identity in sharing config")
+			}
+			b, ok := bIn.Get(key)
+			if !ok {
+				panic("this should never happen: missing broadcast message")
+			}
+			u, ok := uIn.Get(key)
+			if !ok {
+				panic("this should never happen: missing broadcast message")
+			}
+			if !yield(party{id: id, key: key}, message[B, U]{broadcast: b, p2p: u}) {
+				return
+			}
+		}
+	}, nil
+}
+
+type messagePointerConstraint[MP network.Message[types.ThresholdSignatureProtocol], M any] interface {
+	*M
+	network.Message[types.ThresholdSignatureProtocol]
+}
+
+func outgoingP2PMessages[UPtr messagePointerConstraint[UPtr, U], U any](c *Cosigner, uOut network.RoundMessages[types.ThresholdSignatureProtocol, UPtr]) iter.Seq2[party, UPtr] {
+	return func(yield func(p party, out UPtr) bool) {
+		keyToId := c.SharingCfg.Reverse()
+		for key := range c.TheQuorum.Iter() {
+			if key.PublicKey().Equal(c.MyAuthKey.PublicKey()) {
+				continue
+			}
+			id, ok := keyToId.Get(key)
+			if !ok {
+				panic("this should never happen: couldn't find identity in sharing config")
+			}
+
+			u := new(U)
+			if !yield(party{id: id, key: key}, UPtr(u)) {
+				return
+			}
+			uOut.Put(key, UPtr(u))
+		}
+	}
 }

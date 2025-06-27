@@ -11,6 +11,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	bbotMul "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23_bbot"
 	zeroSample "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs/sample"
 	zeroSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs/setup"
@@ -154,6 +156,19 @@ func (c *Cosigner) otherCosigners() iter.Seq2[types.SharingID, types.IdentityKey
 			}
 		}
 	}
+}
+
+func (c *Cosigner) messageToScalar(message []byte) (curves.Scalar, error) {
+	messageHash, err := hashing.Hash(c.Protocol.SigningSuite().Hash(), message)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "cannot hash message")
+	}
+	mPrimeUint := ecdsa.BitsToInt(messageHash, c.Protocol.Curve())
+	mPrime, err := c.Protocol.Curve().ScalarField().Element().SetBytes(mPrimeUint.Bytes())
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "cannot convert message to scalar")
+	}
+	return mPrime, nil
 }
 
 func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, shard *dkls23.Shard, quorum ds.Set[types.IdentityKey]) error {
