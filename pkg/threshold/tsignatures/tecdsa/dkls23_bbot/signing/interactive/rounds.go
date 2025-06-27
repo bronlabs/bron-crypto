@@ -21,7 +21,9 @@ import (
 )
 
 func (c *Cosigner) Round1() (r1bOut *Round1Broadcast, r1uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round1P2P], err error) {
-	// todo validation
+	if c.State.Round != 1 {
+		return nil, nil, errs.NewFailed("invalid round")
+	}
 
 	var ck [32]byte
 	ckBytes, err := c.Tape.ExtractBytes(ckLabel, uint(len(ck)))
@@ -65,11 +67,14 @@ func (c *Cosigner) Round1() (r1bOut *Round1Broadcast, r1uOut network.RoundMessag
 		r1uOut.Put(key, r1u)
 	}
 
+	c.State.Round++
 	return r1bOut, r1uOut, nil
 }
 
 func (c *Cosigner) Round2(r1bOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round1Broadcast], r1uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round1P2P]) (r2bOut *Round2Broadcast, r2uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round2P2P], err error) {
-	// todo validation
+	if err := validateInput(c, 2, r1bOut, r1uOut); err != nil {
+		return nil, nil, errs.NewFailed("invalid input or round mismatch")
+	}
 
 	zeroR1 := network.NewRoundMessages[types.Protocol, *zeroSetup.Round1P2P]()
 	for id, key := range c.otherCosigners() {
@@ -101,10 +106,15 @@ func (c *Cosigner) Round2(r1bOut network.RoundMessages[types.ThresholdSignatureP
 		r2uOut.Put(key, uOut)
 	}
 
+	c.State.Round++
 	return r2bOut, r2uOut, nil
 }
 
 func (c *Cosigner) Round3(r2bOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round2Broadcast], r2uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round2P2P]) (r3bOut *Round3Broadcast, r3uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round3P2P], err error) {
+	if err := validateInput(c, 3, r2bOut, r2uOut); err != nil {
+		return nil, nil, errs.NewFailed("invalid input or round mismatch")
+	}
+
 	zeroR2 := network.NewRoundMessages[types.Protocol, *zeroSetup.Round2P2P]()
 	for id, key := range c.otherCosigners() {
 		r2b, _ := r2bOut.Get(key)
@@ -162,10 +172,15 @@ func (c *Cosigner) Round3(r2bOut network.RoundMessages[types.ThresholdSignatureP
 		r3uOut.Put(key, r3)
 	}
 
+	c.State.Round++
 	return r3bOut, r3uOut, nil
 }
 
 func (c *Cosigner) Round4(r3bOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round3Broadcast], r3uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round3P2P], message []byte) (partialSignature *dkls23.PartialSignature, err error) {
+	if err := validateInput(c, 4, r3bOut, r3uOut); err != nil {
+		return nil, errs.WrapFailed(err, "invalid input or round mismatch")
+	}
+
 	psi := c.Protocol.Curve().ScalarField().Zero()
 	cudu := c.Protocol.Curve().ScalarField().Zero()
 	cvdv := c.Protocol.Curve().ScalarField().Zero()
@@ -224,4 +239,18 @@ func (c *Cosigner) messageToScalar(message []byte) (curves.Scalar, error) {
 		return nil, errs.WrapSerialisation(err, "cannot convert message to scalar")
 	}
 	return mPrime, nil
+}
+
+func validateInput[B network.Message[types.ThresholdSignatureProtocol], U network.Message[types.ThresholdSignatureProtocol]](c *Cosigner, rIn int, bIn network.RoundMessages[types.ThresholdSignatureProtocol, B], uIn network.RoundMessages[types.ThresholdSignatureProtocol, U]) error {
+	if rIn != c.State.Round {
+		return errs.NewFailed("invalid round")
+	}
+	if err := network.ValidateMessages(c.Protocol, c.TheQuorum, c.MyAuthKey, bIn); err != nil {
+		return errs.WrapFailed(err, "invalid broadcast input")
+	}
+	if err := network.ValidateMessages(c.Protocol, c.TheQuorum, c.MyAuthKey, uIn); err != nil {
+		return errs.WrapFailed(err, "invalid p2p input")
+	}
+
+	return nil
 }

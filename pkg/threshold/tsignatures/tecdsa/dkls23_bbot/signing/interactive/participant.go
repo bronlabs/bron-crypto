@@ -47,6 +47,7 @@ type CosignerState struct {
 	AliceMul  map[types.SharingID]*bbotMul.Alice
 	BobMul    map[types.SharingID]*bbotMul.Bob
 
+	Round          int
 	Ck             *hash_comm.CommittingKey
 	R              curves.Scalar
 	BigR           map[types.SharingID]curves.Point
@@ -60,6 +61,10 @@ type CosignerState struct {
 }
 
 func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.IdentityKey], shard *dkls23.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader, tape transcripts.Transcript) (*Cosigner, error) {
+	if err := validateInputs(sessionId, authKey, protocol, shard, quorum); err != nil {
+		return nil, errs.WrapValidation(err, "invalid inputs")
+	}
+
 	sharingCfg := types.DeriveSharingConfig(protocol.Participants())
 	sharingId, ok := sharingCfg.Reverse().Get(authKey)
 	if !ok {
@@ -116,6 +121,7 @@ func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.Id
 		}
 	}
 
+	c.State.Round = 1
 	return c, nil
 }
 
@@ -140,6 +146,7 @@ func (c *Cosigner) otherCosigners() iter.Seq2[types.SharingID, types.IdentityKey
 			}
 			id, ok := keyToId.Get(key)
 			if !ok {
+				// the quorum is validated in the constructor so this should never happen
 				panic("couldn't find identity in sharing config")
 			}
 			if !yield(id, key) {
@@ -147,4 +154,33 @@ func (c *Cosigner) otherCosigners() iter.Seq2[types.SharingID, types.IdentityKey
 			}
 		}
 	}
+}
+
+func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, shard *dkls23.Shard, quorum ds.Set[types.IdentityKey]) error {
+	if len(sessionId) == 0 {
+		return errs.NewLength("invalid session id: %s", sessionId)
+	}
+	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
+		return errs.WrapValidation(err, "threshold signature protocol config")
+	}
+	if err := types.ValidateAuthKey(authKey); err != nil {
+		return errs.WrapValidation(err, "auth key")
+	}
+	if err := shard.Validate(protocol); err != nil {
+		return errs.WrapValidation(err, "could not validate shard")
+	}
+	if quorum == nil {
+		return errs.NewIsNil("invalid number of session participants")
+	}
+	if quorum.Size() < int(protocol.Threshold()) {
+		return errs.NewSize("not enough session participants: %d", quorum.Size())
+	}
+	if quorum.Difference(protocol.Participants()).Size() != 0 {
+		return errs.NewMembership("there are some present session participant that are not part of the protocol config")
+	}
+	if !quorum.Contains(authKey) {
+		return errs.NewMembership("session participants do not include me")
+	}
+
+	return nil
 }

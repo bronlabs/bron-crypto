@@ -27,7 +27,7 @@ func (m *Round1Broadcast) Validate(protocol types.ThresholdSignatureProtocol) er
 	if m == nil {
 		return errs.NewValidation("invalid message")
 	}
-	panic("implement me")
+	return nil
 }
 
 type Round1P2P struct {
@@ -36,10 +36,10 @@ type Round1P2P struct {
 }
 
 func (m *Round1P2P) Validate(protocol types.ThresholdSignatureProtocol) error {
-	if m == nil {
+	if m == nil || m.ZeroSetupR1 == nil || m.MulR1 == nil {
 		return errs.NewValidation("invalid message")
 	}
-	panic("implement me")
+	return nil
 }
 
 type Round2Broadcast struct {
@@ -48,10 +48,10 @@ type Round2Broadcast struct {
 }
 
 func (m *Round2Broadcast) Validate(protocol types.ThresholdSignatureProtocol) error {
-	if m == nil {
+	if m == nil || m.BigR == nil || m.BigR.Curve().Name() != protocol.Curve().Name() || m.BigR.IsAdditiveIdentity() {
 		return errs.NewValidation("invalid message")
 	}
-	panic("implement me")
+	return nil
 }
 
 type Round2P2P struct {
@@ -59,11 +59,11 @@ type Round2P2P struct {
 	MulR2       *bbotMul.Round2P2P
 }
 
-func (m *Round2P2P) Validate(protocol types.ThresholdSignatureProtocol) error {
-	if m == nil {
+func (m *Round2P2P) Validate(_ types.ThresholdSignatureProtocol) error {
+	if m == nil || m.ZeroSetupR2 == nil || m.MulR2 == nil {
 		return errs.NewValidation("invalid message")
 	}
-	panic("implement me")
+	return nil
 }
 
 type Round3Broadcast struct {
@@ -71,10 +71,10 @@ type Round3Broadcast struct {
 }
 
 func (m *Round3Broadcast) Validate(protocol types.ThresholdSignatureProtocol) error {
-	if m == nil {
+	if m == nil || m.Pk == nil || m.Pk.Curve().Name() != protocol.Curve().Name() || m.Pk.IsAdditiveIdentity() {
 		return errs.NewValidation("invalid message")
 	}
-	panic("implement me")
+	return nil
 }
 
 type Round3P2P struct {
@@ -82,13 +82,18 @@ type Round3P2P struct {
 
 	GammaU curves.Point
 	GammaV curves.Point
-	Pk     curves.Point
 	Psi    curves.Scalar
 }
 
 func (m *Round3P2P) Validate(protocol types.ThresholdSignatureProtocol) error {
-	if m == nil {
+	if m == nil || m.MulR3 == nil {
 		return errs.NewValidation("invalid message")
 	}
-	panic("implement me")
+	if m.Psi == nil || m.Psi.ScalarField().Curve().Name() != protocol.Curve().Name() ||
+		m.GammaU == nil || m.GammaU.Curve().Name() != protocol.Curve().Name() || m.GammaU.IsAdditiveIdentity() ||
+		m.GammaV == nil || m.GammaU.Curve().Name() != protocol.Curve().Name() || m.GammaV.IsAdditiveIdentity() {
+
+		return errs.NewValidation("invalid message")
+	}
+	return nil
 }
