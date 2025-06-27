@@ -11,7 +11,7 @@ import (
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22"
@@ -22,7 +22,7 @@ const (
 	transcriptLabel = "BRON_CRYPTO_TSCHNORR_LINDELL22_SIGNING-"
 )
 
-type Cosigner[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorr.Message] struct {
+type Cosigner[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message] struct {
 	sid     network.SID
 	shard   *lindell22.Shard[GE, S]
 	quorum  network.Quorum
@@ -94,7 +94,11 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create minimal qualified access structure for quorum %v", c.quorum)
 	}
-	myAdditiveShare, err := c.variant.DeriveAdditiveSecretShare(c.shard, mqac)
+	ashare, err := c.shard.Share().ToAdditive(*mqac)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot convert share %d to additive share", c.shard.Share().ID())
+	}
+	myAdditiveShare, err := c.variant.CorrectAdditiveSecretShareParity(c.shard.PublicKey(), ashare)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert share %d to additive share", c.shard.Share().ID())
 	}
@@ -108,7 +112,7 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 		return nil, errs.WrapFailed(err, "cannot compute response")
 	}
 	return &lindell22.PartialSignature[GE, S]{
-		Sig: schnorr.Signature[GE, S]{
+		Sig: schnorrlike.Signature[GE, S]{
 			E: challenge,
 			R: correctedR,
 			S: s,
@@ -117,7 +121,7 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 }
 
 func NewCosigner[
-	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorr.Message,
+	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](
 	sid network.SID,
 	shard *lindell22.Shard[GE, S],

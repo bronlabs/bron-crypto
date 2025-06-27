@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
@@ -17,14 +17,14 @@ import (
 )
 
 type Aggregator[
-	VR tschnorr.MPCFriendlyVariant[GE, S, M], GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorr.Message,
+	VR tschnorr.MPCFriendlyVariant[GE, S, M], GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ] struct {
 	pkm          *lindell22.PublicMaterial[GE, S]
 	group        algebra.PrimeGroup[GE, S]
 	sf           algebra.PrimeField[S]
 	variant      VR
-	verifier     schnorr.Verifier[VR, GE, S, M]
-	psigVerifier schnorr.Verifier[VR, GE, S, M]
+	verifier     schnorrlike.Verifier[VR, GE, S, M]
+	psigVerifier schnorrlike.Verifier[VR, GE, S, M]
 }
 
 func (a *Aggregator[VR, GE, S, M]) PublicMaterial() *lindell22.PublicMaterial[GE, S] {
@@ -37,8 +37,8 @@ func (a *Aggregator[VR, GE, S, M]) PublicMaterial() *lindell22.PublicMaterial[GE
 func NewAggregator[
 	SCH tschnorr.MPCFriendlyScheme[VR, GE, S, M, KG, SG, VF],
 	VR tschnorr.MPCFriendlyVariant[GE, S, M],
-	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorr.Message,
-	KG schnorr.KeyGenerator[GE, S], SG schnorr.Signer[VR, GE, S, M], VF schnorr.Verifier[VR, GE, S, M],
+	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
+	KG schnorrlike.KeyGenerator[GE, S], SG schnorrlike.Signer[VR, GE, S, M], VF schnorrlike.Verifier[VR, GE, S, M],
 ](
 	pk *lindell22.PublicMaterial[GE, S],
 	scheme SCH,
@@ -69,7 +69,7 @@ func NewAggregator[
 func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	partialSignatures network.RoundMessages[*lindell22.PartialSignature[GE, S]],
 	message M,
-) (*schnorr.Signature[GE, S], error) {
+) (*schnorrlike.Signature[GE, S], error) {
 	if a == nil {
 		return nil, errs.NewIsNil("aggregator cannot be nil")
 	}
@@ -95,7 +95,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 	}) {
 		return nil, errs.NewType("invalid partial signature")
 	}
-	aggregatedSignature, err := schnorr.NewSignature(e, R, s)
+	aggregatedSignature, err := schnorrlike.NewSignature(e, R, s)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create aggregated signature")
 	}
@@ -123,7 +123,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 		if err != nil {
 			return nil, errs.WrapFailed(err, "failed to convert lifted share to additive share for sender %d", sender)
 		}
-		senderAdditivePK, err := schnorr.NewPublicKey(senderAdditivePKShare.Value())
+		senderAdditivePK, err := schnorrlike.NewPublicKey(senderAdditivePKShare.Value())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "failed to create public key for sender %d", sender)
 		}

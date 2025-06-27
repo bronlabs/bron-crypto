@@ -1,4 +1,4 @@
-package schnorr
+package schnorrlike
 
 import (
 	"hash"
@@ -12,7 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
-const Name signatures.Name = "Schnorr"
+const Name signatures.Name = "SchnorrLike"
 
 type (
 	VariantType string
@@ -248,6 +248,7 @@ func (sg *RandomisedSignerTrait[VR, GE, S, M]) Sign(message M) (*Signature[GE, S
 
 type VerifierTrait[VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Message] struct {
 	V                          VR
+	ChallengePublicKey         *PublicKey[GE, S]
 	ResponseOperatorIsNegative bool
 }
 
@@ -259,7 +260,11 @@ func (v *VerifierTrait[VR, GE, S, M]) Verify(sigma *Signature[GE, S], publicKey 
 		return errs.NewIsNil("publicKey is identity")
 	}
 	challengeR := sigma.R
-	e, err := v.V.ComputeChallenge(challengeR, publicKey.V, message)
+	challengePublicKey := publicKey
+	if v.ChallengePublicKey != nil {
+		challengePublicKey = v.ChallengePublicKey
+	}
+	e, err := v.V.ComputeChallenge(challengeR, challengePublicKey.V, message)
 	if err != nil {
 		return errs.WrapFailed(err, "e")
 	}

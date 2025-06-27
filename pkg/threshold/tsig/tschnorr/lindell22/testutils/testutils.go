@@ -12,7 +12,7 @@ import (
 	dlogschnorr "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	gentu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -51,7 +51,7 @@ func DoLindell22DKG[
 
 // CreateLindell22Cosigners creates a set of cosigners for testing
 func CreateLindell22Cosigners[
-	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorr.Message,
+	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](
 	t *testing.T,
 	signingSID network.SID,
@@ -101,7 +101,7 @@ func CreateLindell22Cosigners[
 
 func DoLindell22Round1[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S],
-	M schnorr.Message,
+	M schnorrlike.Message,
 ](
 	participants []*signing.Cosigner[E, S, M],
 ) (
@@ -120,7 +120,7 @@ func DoLindell22Round1[
 
 func DoLindell22Round2[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S],
-	M schnorr.Message,
+	M schnorrlike.Message,
 ](
 	participants []*signing.Cosigner[E, S, M], r2bi map[sharing.ID]network.RoundMessages[*signing.Round1Broadcast],
 ) (
@@ -138,7 +138,7 @@ func DoLindell22Round2[
 
 func DoLindell22Round3[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S],
-	M schnorr.Message,
+	M schnorrlike.Message,
 ](
 	participants []*signing.Cosigner[E, S, M], r3bi map[sharing.ID]network.RoundMessages[*signing.Round2Broadcast[E, S]],
 	message M,
@@ -170,7 +170,7 @@ func CreateCorruptedPartialSignature[
 	corruptedS := validPsig.Sig.S.Add(sf.One())
 
 	return &lindell22.PartialSignature[GE, S]{
-		Sig: schnorr.Signature[GE, S]{
+		Sig: schnorrlike.Signature[GE, S]{
 			E: validPsig.Sig.E,
 			R: validPsig.Sig.R,
 			S: corruptedS,

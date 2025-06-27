@@ -13,8 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/bip340"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
 )
@@ -26,29 +25,29 @@ type (
 	Scalar       = k256.Scalar
 
 	Message    = []byte
-	PublicKey  = schnorr.PublicKey[*GroupElement, *Scalar]
-	PrivateKey = schnorr.PrivateKey[*GroupElement, *Scalar]
-	Signature  = schnorr.Signature[*GroupElement, *Scalar]
+	PublicKey  = schnorrlike.PublicKey[*GroupElement, *Scalar]
+	PrivateKey = schnorrlike.PrivateKey[*GroupElement, *Scalar]
+	Signature  = schnorrlike.Signature[*GroupElement, *Scalar]
 )
 
 const (
-	VariantType  schnorr.VariantType = "bip340"
-	AuxSizeBytes int                 = 32
+	VariantType  schnorrlike.VariantType = "bip340"
+	AuxSizeBytes int                     = 32
 )
 
 var (
-	_ schnorr.Scheme[*Variant, *k256.Point, *k256.Scalar, Message, *KeyGenerator, *Signer, *Verifier] = (*Scheme)(nil)
-	_ schnorr.Variant[*GroupElement, *Scalar, Message]                                                = (*Variant)(nil)
-	_ schnorr.KeyGenerator[*GroupElement, *Scalar]                                                    = (*KeyGenerator)(nil)
-	_ schnorr.Signer[*Variant, *GroupElement, *Scalar, Message]                                       = (*Signer)(nil)
-	_ schnorr.Verifier[*Variant, *GroupElement, *Scalar, Message]
+	_ schnorrlike.Scheme[*Variant, *k256.Point, *k256.Scalar, Message, *KeyGenerator, *Signer, *Verifier] = (*Scheme)(nil)
+	_ schnorrlike.Variant[*GroupElement, *Scalar, Message]                                                = (*Variant)(nil)
+	_ schnorrlike.KeyGenerator[*GroupElement, *Scalar]                                                    = (*KeyGenerator)(nil)
+	_ schnorrlike.Signer[*Variant, *GroupElement, *Scalar, Message]                                       = (*Signer)(nil)
+	_ schnorrlike.Verifier[*Variant, *GroupElement, *Scalar, Message]
 
 	_ tschnorr.MPCFriendlyScheme[*Variant, *GroupElement, *Scalar, Message, *KeyGenerator, *Signer, *Verifier] = (*Scheme)(nil)
 	_ tschnorr.MPCFriendlyVariant[*GroupElement, *Scalar, Message]                                             = (*Variant)(nil)
 )
 
 func NewPublicKey(point *GroupElement) (*PublicKey, error) {
-	return schnorr.NewPublicKey(point)
+	return schnorrlike.NewPublicKey(point)
 }
 
 func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
@@ -59,11 +58,11 @@ func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 		return nil, errs.NewValidation("scalar is zero")
 	}
 	pkv := k256.NewCurve().ScalarBaseMul(scalar)
-	pk, err := schnorr.NewPublicKey(pkv)
+	pk, err := schnorrlike.NewPublicKey(pkv)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create public key")
 	}
-	return schnorr.NewPrivateKey(scalar, pk)
+	return schnorrlike.NewPrivateKey(scalar, pk)
 }
 
 func NewSchemeWithAux(aux [AuxSizeBytes]byte) *Scheme {
@@ -104,7 +103,7 @@ type Scheme struct {
 }
 
 func (s Scheme) Name() signatures.Name {
-	return schnorr.Name
+	return schnorrlike.Name
 }
 
 func (s *Scheme) Variant(opts ...VariantOption) (*Variant, error) {
@@ -113,7 +112,7 @@ func (s *Scheme) Variant(opts ...VariantOption) (*Variant, error) {
 
 func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	out := &KeyGenerator{
-		KeyGeneratorTrait: schnorr.KeyGeneratorTrait[*GroupElement, *Scalar]{
+		KeyGeneratorTrait: schnorrlike.KeyGeneratorTrait[*GroupElement, *Scalar]{
 			Grp: k256.NewCurve(),
 			SF:  k256.NewScalarField(),
 		},
@@ -135,7 +134,7 @@ func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, 
 		return nil, errs.WrapFailed(err, "verifier creation failed")
 	}
 	out := &Signer{
-		sg: schnorr.RandomisedSignerTrait[*Variant, *GroupElement, *Scalar, Message]{
+		sg: schnorrlike.RandomisedSignerTrait[*Variant, *GroupElement, *Scalar, Message]{
 			Sk:       privateKey,
 			Verifier: verifier,
 		},
@@ -168,7 +167,7 @@ func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
 func (s *Scheme) PartialSignatureVerifier(
 	publicKey *PublicKey,
 	opts ...signatures.VerifierOption[*Verifier, *PublicKey, Message, *Signature],
-) (schnorr.Verifier[*Variant, *GroupElement, *Scalar, Message], error) {
+) (schnorrlike.Verifier[*Variant, *GroupElement, *Scalar, Message], error) {
 	if publicKey == nil || publicKey.Value() == nil {
 		return nil, errs.NewArgument("public key is nil or invalid")
 	}
@@ -180,7 +179,7 @@ func (s *Scheme) PartialSignatureVerifier(
 	return verifier, nil
 }
 
-type VariantOption = schnorr.VariantOption[*Variant, *k256.Point, *k256.Scalar, Message]
+type VariantOption = schnorrlike.VariantOption[*Variant, *k256.Point, *k256.Scalar, Message]
 
 func VariantWithPrivateKey(privateKey *PrivateKey) VariantOption {
 	return func(variant *Variant) error {
@@ -202,7 +201,7 @@ type Variant struct {
 	msg Message
 }
 
-func (*Variant) Type() schnorr.VariantType {
+func (*Variant) Type() schnorrlike.VariantType {
 	return VariantType
 }
 func (*Variant) HashFunc() func() hash.Hash {
@@ -275,7 +274,7 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 		message,
 	)
 
-	e, err := schnorr.MakeGenericChallenge(k256.NewScalarField(), v.HashFunc(), false, roinput)
+	e, err := schnorrlike.MakeGenericChallenge(k256.NewScalarField(), v.HashFunc(), false, roinput)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "hash failed")
 	}
@@ -314,13 +313,13 @@ func (v *Variant) Clone() *Variant {
 type KeyGeneratorOption = signatures.KeyGeneratorOption[*KeyGenerator, *PrivateKey, *PublicKey]
 
 type KeyGenerator struct {
-	schnorr.KeyGeneratorTrait[*GroupElement, *Scalar]
+	schnorrlike.KeyGeneratorTrait[*GroupElement, *Scalar]
 }
 
 type SignerOption = signatures.SignerOption[*Signer, Message, *Signature]
 
 type Signer struct {
-	sg  schnorr.RandomisedSignerTrait[*Variant, *GroupElement, *Scalar, Message]
+	sg  schnorrlike.RandomisedSignerTrait[*Variant, *GroupElement, *Scalar, Message]
 	aux [AuxSizeBytes]byte
 }
 
@@ -553,20 +552,17 @@ func decodePoint(data []byte) (*k256.Point, error) {
 
 var _ tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, Message] = (*Variant)(nil)
 
-func (v *Variant) DeriveAdditiveSecretShare(shard *tschnorr.Shard[*k256.Point, *k256.Scalar], ac *sharing.MinimalQualifiedAccessStructure) (*additive.Share[*k256.Scalar], error) {
-	if shard == nil {
-		return nil, errs.NewIsNil("secret share or access structure is nil")
+func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*k256.Scalar]) (*additive.Share[*k256.Scalar], error) {
+	if publicKey == nil || share == nil {
+		return nil, errs.NewIsNil("public key or secret share is nil")
 	}
-	additiveShare, err := shard.Share().ToAdditive(*ac)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot convert secret share to additive form")
-	}
-	if shard.PublicKey().Value().AffineY().IsOdd() {
+	out := share.Clone()
+	if publicKey.Value().AffineY().IsOdd() {
 		// If the public key is odd, we need to negate the additive share
 		// to ensure that the parity of the nonce commitment is correct.
-		additiveShare, _ = additive.NewShare(shard.Share().ID(), additiveShare.Value().Neg(), nil)
+		out, _ = additive.NewShare(share.ID(), share.Value().Neg(), nil)
 	}
-	return additiveShare, nil
+	return out, nil
 }
 
 func (v *Variant) CorrectPartialNonceParity(nonceCommitment *k256.Point, k *k256.Scalar) (*k256.Point, *k256.Scalar, error) {

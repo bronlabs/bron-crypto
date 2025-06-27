@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22"
@@ -122,7 +122,7 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 }
 
 func commitBigR[
-	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorr.Message,
+	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](c *Cosigner[E, S, M], bigR E) (lindell22.Commitment, lindell22.Opening, error) {
 	key, err := lindell22.NewCommitmentKey(c.sid, c.SharingID(), c.state.quorumBytes)
 	if err != nil {
@@ -141,7 +141,7 @@ func commitBigR[
 }
 
 func verifyBigRCommitment[
-	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorr.Message,
+	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](c *Cosigner[E, S, M], theirID sharing.ID, theirBigR E, theirOpening lindell22.Opening, theirCommitment lindell22.Commitment) error {
 	key, err := lindell22.NewCommitmentKey(c.sid, theirID, c.state.quorumBytes)
 	if err != nil {
@@ -158,7 +158,7 @@ func verifyBigRCommitment[
 }
 
 func dlogProve[
-	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorr.Message,
+	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](c *Cosigner[E, S, M], k S, bigR E, quorumBytes [][]byte) (compiler.NIZKPoKProof, *lindell22.PokProtocolStatement[E, S], error) {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(c.SharingID()))
 	c.tape.AppendBytes(transcriptDLogSLabel, quorumBytes...)

@@ -1,4 +1,4 @@
-package schnorr
+package schnorrlike
 
 import (
 	"hash"
@@ -26,11 +26,8 @@ func ComputeGenericNonceCommitment[GE GroupElement[GE, S], S Scalar[S]](group Gr
 	return group.ScalarBaseOp(k), k, nil
 }
 
-func ComputeGenericResponse[GE GroupElement[GE, S], S Scalar[S]](publicKey *PublicKey[GE, S], privateKey *PrivateKey[GE, S], nonce, challenge S, responseOperatorIsNegative bool) (S, error) {
-	if publicKey == nil {
-		return *new(S), errs.NewIsNil("public key")
-	}
-	if privateKey == nil {
+func ComputeGenericResponse[S Scalar[S]](privateKeyValue, nonce, challenge S, responseOperatorIsNegative bool) (S, error) {
+	if utils.IsNil(privateKeyValue) {
 		return *new(S), errs.NewIsNil("private key")
 	}
 	if utils.IsNil(nonce) {
@@ -39,11 +36,11 @@ func ComputeGenericResponse[GE GroupElement[GE, S], S Scalar[S]](publicKey *Publ
 	if utils.IsNil(challenge) {
 		return *new(S), errs.NewIsNil("challenge")
 	}
-	operand := privateKey.V.Op(challenge)
+	operand := challenge.Mul(privateKeyValue)
 	if responseOperatorIsNegative {
-		operand = operand.OpInv()
+		operand = operand.Neg()
 	}
-	return nonce.Op(operand), nil
+	return nonce.Add(operand), nil
 }
 
 func MakeGenericChallenge[S Scalar[S]](scalarField ScalarField[S], hashFunc func() hash.Hash, challengeElementsAreLittleEndian bool, xs ...[]byte) (S, error) {
