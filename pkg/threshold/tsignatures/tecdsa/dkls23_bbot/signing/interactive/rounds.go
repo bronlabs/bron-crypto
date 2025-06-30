@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"iter"
 	"maps"
 	"slices"
 
@@ -70,7 +69,7 @@ func (c *Cosigner) Round1() (r1bOut *Round1Broadcast, r1uOut network.RoundMessag
 }
 
 func (c *Cosigner) Round2(r1bOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round1Broadcast], r1uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round1P2P]) (r2bOut *Round2Broadcast, r2uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round2P2P], err error) {
-	incomingMessages, err := validateInput(c, 2, r1bOut, r1uOut)
+	incomingMessages, err := validateIncomingMessages(c, 2, r1bOut, r1uOut)
 	if err != nil {
 		return nil, nil, errs.NewFailed("invalid input or round mismatch")
 	}
@@ -107,7 +106,7 @@ func (c *Cosigner) Round2(r1bOut network.RoundMessages[types.ThresholdSignatureP
 }
 
 func (c *Cosigner) Round3(r2bOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round2Broadcast], r2uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round2P2P]) (r3bOut *Round3Broadcast, r3uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round3P2P], err error) {
-	incomingMessages, err := validateInput(c, 3, r2bOut, r2uOut)
+	incomingMessages, err := validateIncomingMessages(c, 3, r2bOut, r2uOut)
 	if err != nil {
 		return nil, nil, errs.NewFailed("invalid input or round mismatch")
 	}
@@ -171,7 +170,7 @@ func (c *Cosigner) Round3(r2bOut network.RoundMessages[types.ThresholdSignatureP
 }
 
 func (c *Cosigner) Round4(r3bOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round3Broadcast], r3uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round3P2P], message []byte) (partialSignature *dkls23.PartialSignature, err error) {
-	incomingMessages, err := validateInput(c, 4, r3bOut, r3uOut)
+	incomingMessages, err := validateIncomingMessages(c, 4, r3bOut, r3uOut)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "invalid input or round mismatch")
 	}
@@ -206,7 +205,7 @@ func (c *Cosigner) Round4(r3bOut network.RoundMessages[types.ThresholdSignatureP
 
 	u := c.State.R.Mul(c.State.Phi.Add(psi)).Add(cudu)
 	v := c.State.Sk.Mul(c.State.Phi.Add(psi)).Add(cvdv)
-	m, err := c.messageToScalar(message)
+	m, err := messageToScalar(c, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot compute message scalar")
 	}
@@ -219,76 +218,4 @@ func (c *Cosigner) Round4(r3bOut network.RoundMessages[types.ThresholdSignatureP
 		Wi: w,
 	}
 	return partialSignature, nil
-}
-
-type party struct {
-	id  types.SharingID
-	key types.IdentityKey
-}
-
-type message[B network.Message[types.ThresholdSignatureProtocol], U network.Message[types.ThresholdSignatureProtocol]] struct {
-	broadcast B
-	p2p       U
-}
-
-func validateInput[B network.Message[types.ThresholdSignatureProtocol], U network.Message[types.ThresholdSignatureProtocol]](c *Cosigner, rIn int, bIn network.RoundMessages[types.ThresholdSignatureProtocol, B], uIn network.RoundMessages[types.ThresholdSignatureProtocol, U]) (iter.Seq2[party, message[B, U]], error) {
-	if rIn != c.State.Round {
-		return nil, errs.NewFailed("invalid round")
-	}
-	if err := network.ValidateMessages(c.Protocol, c.TheQuorum, c.MyAuthKey, bIn); err != nil {
-		return nil, errs.WrapFailed(err, "invalid broadcast input")
-	}
-	if err := network.ValidateMessages(c.Protocol, c.TheQuorum, c.MyAuthKey, uIn); err != nil {
-		return nil, errs.WrapFailed(err, "invalid p2p input")
-	}
-
-	return func(yield func(p party, m message[B, U]) bool) {
-		keyToId := c.SharingCfg.Reverse()
-		for key := range c.TheQuorum.Iter() {
-			if key.PublicKey().Equal(c.MyAuthKey.PublicKey()) {
-				continue
-			}
-			id, ok := keyToId.Get(key)
-			if !ok {
-				panic("this should never happen: couldn't find identity in sharing config")
-			}
-			b, ok := bIn.Get(key)
-			if !ok {
-				panic("this should never happen: missing broadcast message")
-			}
-			u, ok := uIn.Get(key)
-			if !ok {
-				panic("this should never happen: missing broadcast message")
-			}
-			if !yield(party{id: id, key: key}, message[B, U]{broadcast: b, p2p: u}) {
-				return
-			}
-		}
-	}, nil
-}
-
-type messagePointerConstraint[MP network.Message[types.ThresholdSignatureProtocol], M any] interface {
-	*M
-	network.Message[types.ThresholdSignatureProtocol]
-}
-
-func outgoingP2PMessages[UPtr messagePointerConstraint[UPtr, U], U any](c *Cosigner, uOut network.RoundMessages[types.ThresholdSignatureProtocol, UPtr]) iter.Seq2[party, UPtr] {
-	return func(yield func(p party, out UPtr) bool) {
-		keyToId := c.SharingCfg.Reverse()
-		for key := range c.TheQuorum.Iter() {
-			if key.PublicKey().Equal(c.MyAuthKey.PublicKey()) {
-				continue
-			}
-			id, ok := keyToId.Get(key)
-			if !ok {
-				panic("this should never happen: couldn't find identity in sharing config")
-			}
-
-			u := new(U)
-			if !yield(party{id: id, key: key}, UPtr(u)) {
-				return
-			}
-			uOut.Put(key, UPtr(u))
-		}
-	}
 }

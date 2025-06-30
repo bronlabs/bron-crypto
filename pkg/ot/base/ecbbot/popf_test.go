@@ -26,8 +26,23 @@ func Test_PopfHappyPath(t *testing.T) {
 	require.NoError(t, err)
 	s0, s1, err := f.Program(x, y, prng)
 	require.NoError(t, err)
-
 	y2, err := f.Eval(s0, s1, x)
 	require.NoError(t, err)
 	require.True(t, y.Equal(y2))
+	y3, err := f.Eval(s0, s1, 1-x)
+	require.NoError(t, err)
+	require.False(t, y.Equal(y3))
+
+	x = byte(1)
+	y, err = curve.Random(prng)
+	require.NoError(t, err)
+	s0, s1, err = f.Program(x, y, prng)
+	require.NoError(t, err)
+	y2, err = f.Eval(s0, s1, x)
+	require.NoError(t, err)
+	require.True(t, y.Equal(y2))
+
+	y3, err = f.Eval(s0, s1, 1-x)
+	require.NoError(t, err)
+	require.False(t, y.Equal(y3))
 }

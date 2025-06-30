@@ -11,8 +11,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/types"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-	"github.com/bronlabs/bron-crypto/pkg/hashing"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	bbotMul "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23_bbot"
 	zeroSample "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs/sample"
 	zeroSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs/setup"
@@ -63,7 +61,7 @@ type CosignerState struct {
 }
 
 func NewCosigner(sessionId []byte, authKey types.AuthKey, quorum ds.Set[types.IdentityKey], shard *dkls23.Shard, protocol types.ThresholdSignatureProtocol, prng io.Reader, tape transcripts.Transcript) (*Cosigner, error) {
-	if err := validateInputs(sessionId, authKey, protocol, shard, quorum); err != nil {
+	if err := validateCosignerInputs(sessionId, authKey, protocol, shard, quorum); err != nil {
 		return nil, errs.WrapValidation(err, "invalid inputs")
 	}
 
@@ -148,54 +146,11 @@ func (c *Cosigner) otherCosigners() iter.Seq2[types.SharingID, types.IdentityKey
 			}
 			id, ok := keyToId.Get(key)
 			if !ok {
-				// the quorum is validated in the constructor so this should never happen
-				panic("couldn't find identity in sharing config")
+				panic("this should never happen: couldn't find identity in sharing config")
 			}
 			if !yield(id, key) {
 				return
 			}
 		}
 	}
-}
-
-func (c *Cosigner) messageToScalar(message []byte) (curves.Scalar, error) {
-	messageHash, err := hashing.Hash(c.Protocol.SigningSuite().Hash(), message)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "cannot hash message")
-	}
-	mPrimeUint := ecdsa.BitsToInt(messageHash, c.Protocol.Curve())
-	mPrime, err := c.Protocol.Curve().ScalarField().Element().SetBytes(mPrimeUint.Bytes())
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "cannot convert message to scalar")
-	}
-	return mPrime, nil
-}
-
-func validateInputs(sessionId []byte, authKey types.AuthKey, protocol types.ThresholdSignatureProtocol, shard *dkls23.Shard, quorum ds.Set[types.IdentityKey]) error {
-	if len(sessionId) == 0 {
-		return errs.NewLength("invalid session id: %s", sessionId)
-	}
-	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
-		return errs.WrapValidation(err, "threshold signature protocol config")
-	}
-	if err := types.ValidateAuthKey(authKey); err != nil {
-		return errs.WrapValidation(err, "auth key")
-	}
-	if err := shard.Validate(protocol); err != nil {
-		return errs.WrapValidation(err, "could not validate shard")
-	}
-	if quorum == nil {
-		return errs.NewIsNil("invalid number of session participants")
-	}
-	if quorum.Size() < int(protocol.Threshold()) {
-		return errs.NewSize("not enough session participants: %d", quorum.Size())
-	}
-	if quorum.Difference(protocol.Participants()).Size() != 0 {
-		return errs.NewMembership("there are some present session participant that are not part of the protocol config")
-	}
-	if !quorum.Contains(authKey) {
-		return errs.NewMembership("session participants do not include me")
-	}
-
-	return nil
 }
