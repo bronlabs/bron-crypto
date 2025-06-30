@@ -1,107 +1,100 @@
 package pasta
 
-// import (
-// 	"github.com/bronlabs/bron-crypto/pkg/base"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
-// 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-// 	"sync"
+import (
+	"sync"
 
-// 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-// 	"github.com/cronokirby/saferith"
-// )
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/num/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
+	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 
-// const (
-// 	FpFieldName = "PastaFp"
-// )
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/cronokirby/saferith"
+)
 
-// var (
-// 	_ fields.PrimeField[*FpFieldElement]        = (*FpField)(nil)
-// 	_ fields.PrimeFieldElement[*FpFieldElement] = (*FpFieldElement)(nil)
+const (
+	FpFieldName = "PastaFp"
+)
 
-// 	fpFieldInitOnce sync.Once
-// 	fpFieldInstance *FpField
-// 	fpFieldOrder    *saferith.Modulus
-// )
+var (
+	_ algebra.PrimeField[*FpFieldElement]        = (*FpField)(nil)
+	_ algebra.PrimeFieldElement[*FpFieldElement] = (*FpFieldElement)(nil)
 
-// func fpFieldInit() {
-// 	fpFieldOrder = saferith.ModulusFromBytes(sliceutils.Reversed(pastaImpl.FpModulus[:]))
-// 	fpFieldInstance = &FpField{}
-// }
+	fpFieldInitOnce sync.Once
+	fpFieldInstance *FpField
+	fpFieldOrder    *saferith.Modulus
+)
 
-// type FpField struct {
-// 	traits.PrimeFieldTrait[*pastaImpl.Fp, *FpFieldElement, FpFieldElement]
-// }
+func fpFieldInit() {
+	fpFieldOrder = saferith.ModulusFromBytes(sliceutils.Reversed(pastaImpl.FpModulus[:]))
+	fpFieldInstance = &FpField{}
+}
 
-// func newFpField() *FpField {
-// 	fpFieldInitOnce.Do(fpFieldInit)
-// 	return fpFieldInstance
-// }
+type FpField struct {
+	traits.PrimeFieldTrait[*pastaImpl.Fp, *FpFieldElement, FpFieldElement]
+}
 
-// func NewPallasBaseField() *FpField {
-// 	return newFpField()
-// }
+func newFpField() *FpField {
+	fpFieldInitOnce.Do(fpFieldInit)
+	return fpFieldInstance
+}
 
-// func NewVestaScalarField() *FpField {
-// 	return newFpField()
-// }
+func NewPallasBaseField() *FpField {
+	return newFpField()
+}
 
-// func (*FpField) Name() string {
-// 	return FpFieldName
-// }
+func NewVestaScalarField() *FpField {
+	return newFpField()
+}
 
-// func (*FpField) Operator() algebra.BinaryOperator[*FpFieldElement] {
-// 	return algebra.Add[*FpFieldElement]
-// }
+func (*FpField) Name() string {
+	return FpFieldName
+}
 
-// func (*FpField) OtherOperator() algebra.BinaryOperator[*FpFieldElement] {
-// 	return algebra.Mul[*FpFieldElement]
-// }
+func (*FpField) ElementSize() int {
+	return pastaImpl.FpBytes
+}
 
-// func (*FpField) ElementSize() int {
-// 	return pastaImpl.FpBytes
-// }
+func (*FpField) WideElementSize() int {
+	return pastaImpl.FpWideBytes
+}
 
-// func (*FpField) WideElementSize() int {
-// 	return pastaImpl.FpWideBytes
-// }
+func (f *FpField) Characteristic() cardinal.Cardinal {
+	return f.Order()
+}
 
-// func (f *FpField) Characteristic() algebra.Cardinal {
-// 	return f.Order()
-// }
+func (*FpField) Order() cardinal.Cardinal {
+	return cardinal.FromNat(fpFieldOrder.Nat())
+}
 
-// func (*FpField) Order() algebra.Cardinal {
-// 	return fpFieldOrder.Nat()
-// }
+func (*FpField) Hash(input []byte) (*FpFieldElement, error) {
+	var e [1]pastaImpl.Fp
+	h2c.HashToField(e[:], pastaImpl.PallasCurveHasherParams{}, base.Hash2CurveAppTag+PallasHash2CurveSuite, input)
 
-// func (*FpField) Hash(input []byte) (*FpFieldElement, error) {
-// 	var e [1]pastaImpl.Fp
-// 	h2c.HashToField(e[:], pastaImpl.PallasCurveHasherParams{}, base.Hash2CurveAppTag+PallasHash2CurveSuite, input)
+	var s FpFieldElement
+	s.V.Set(&e[0])
+	return &s, nil
+}
 
-// 	var s FpFieldElement
-// 	s.V.Set(&e[0])
-// 	return &s, nil
-// }
+type FpFieldElement struct {
+	traits.PrimeFieldElementTrait[*pastaImpl.Fp, pastaImpl.Fp, *FpFieldElement, FpFieldElement]
+}
 
-// type FpFieldElement struct {
-// 	traits.PrimeFieldElementTrait[*pastaImpl.Fp, pastaImpl.Fp, *FpFieldElement, FpFieldElement]
-// }
+func (s *FpFieldElement) Structure() algebra.Structure[*FpFieldElement] {
+	return newFpField()
+}
 
-// func (s *FpFieldElement) Structure() algebra.Structure[*FpFieldElement] {
-// 	return newFpField()
-// }
+func (s *FpFieldElement) MarshalBinary() ([]byte, error) {
+	return s.V.Bytes(), nil
+}
 
-// func (s *FpFieldElement) MarshalBinary() ([]byte, error) {
-// 	return s.V.Bytes(), nil
-// }
+func (s *FpFieldElement) UnmarshalBinary(data []byte) error {
+	if ok := s.V.SetBytes(data); ok == 0 {
+		return errs.NewSerialisation("cannot unmarshal scalar")
+	}
 
-// func (s *FpFieldElement) UnmarshalBinary(data []byte) error {
-// 	if ok := s.V.SetBytes(data); ok == 0 {
-// 		return errs.NewSerialisation("cannot unmarshal scalar")
-// 	}
-
-// 	return nil
-// }
+	return nil
+}

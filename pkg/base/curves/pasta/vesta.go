@@ -1,266 +1,279 @@
 package pasta
 
-// import (
-// 	"github.com/bronlabs/bron-crypto/pkg/base"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-// 	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
-// 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
-// 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-// 	"slices"
-// 	"sync"
-// )
+import (
+	"hash/fnv"
+	"slices"
+	"sync"
 
-// type (
-// 	VestaBaseFieldElement = FqFieldElement
-// 	VestaScalar           = FpFieldElement
-// )
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/num/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
+	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+)
 
-// const (
-// 	VestaName            = "vesta"
-// 	VestaHash2CurveSuite = "vesta_XMD:BLAKE2b_SSWU_RO_"
-// )
+type (
+	VestaBaseFieldElement = FqFieldElement
+	VestaScalar           = FpFieldElement
+)
 
-// var (
-// 	vestaInitOnce sync.Once
-// 	vestaInstance *VestaCurve
-// )
+const (
+	VestaName            = "vesta"
+	VestaHash2CurveSuite = "vesta_XMD:BLAKE2b_SSWU_RO_"
+)
 
-// type VestaCurve struct {
-// 	traits.CurveTrait[*pastaImpl.Fq, *pastaImpl.VestaPoint, *VestaPoint, VestaPoint]
-// }
+var (
+	vestaInitOnce sync.Once
+	vestaInstance *VestaCurve
 
-// func NewVestaCurve() *VestaCurve {
-// 	vestaInitOnce.Do(func() {
-// 		vestaInstance = &VestaCurve{}
-// 	})
+	_ curves.Curve[*VestaPoint, *VestaBaseFieldElement, *VestaScalar] = (*VestaCurve)(nil)
+	_ curves.Point[*VestaPoint, *VestaBaseFieldElement, *VestaScalar] = (*VestaPoint)(nil)
+)
 
-// 	return vestaInstance
-// }
+type VestaCurve struct {
+	traits.PrimeCurveTrait[*pastaImpl.Fq, *pastaImpl.VestaPoint, *VestaPoint, VestaPoint]
+	traits.MSMTrait[*VestaScalar, *VestaPoint]
+}
 
-// func (c *VestaCurve) Name() string {
-// 	return VestaName
-// }
+func NewVestaCurve() *VestaCurve {
+	vestaInitOnce.Do(func() {
+		vestaInstance = &VestaCurve{}
+	})
 
-// func (c *VestaCurve) Order() algebra.Cardinal {
-// 	return fpFieldOrder.Nat()
-// }
+	return vestaInstance
+}
 
-// func (c *VestaCurve) Operator() algebra.BinaryOperator[*VestaPoint] {
-// 	return algebra.Add[*VestaPoint]
-// }
+func (c *VestaCurve) Name() string {
+	return VestaName
+}
 
-// func (c *VestaCurve) FromAffineCompressed(input []byte) (*VestaPoint, error) {
-// 	if len(input) != pastaImpl.FqBytes {
-// 		return nil, errs.NewLength("invalid input")
-// 	}
+func (c *VestaCurve) Order() cardinal.Cardinal {
+	return cardinal.FromNat(fpFieldOrder.Nat())
+}
 
-// 	sign := input[31] >> 7
-// 	var buffer [pastaImpl.FqBytes]byte
-// 	copy(buffer[:], input)
-// 	buffer[31] &= 0x7f
+func (c *VestaCurve) Cofactor() cardinal.Cardinal {
+	return cardinal.New(1)
+}
 
-// 	var x, y pastaImpl.Fq
-// 	ok := x.SetBytes(buffer[:])
-// 	if ok != 1 {
-// 		return nil, errs.NewLength("invalid input")
-// 	}
-// 	if x.IsZero() == 1 && sign == 0 {
-// 		return c.OpIdentity(), nil
-// 	}
+func (c *VestaCurve) FromBytes(input []byte) (*VestaPoint, error) {
+	return c.FromCompressed(input)
+}
 
-// 	pp := new(VestaPoint)
-// 	ok = pp.V.SetFromAffineX(&x)
-// 	if ok != 1 {
-// 		return nil, errs.NewLength("invalid input")
-// 	}
-// 	ok = pp.V.ToAffine(&x, &y)
-// 	if ok != 1 {
-// 		panic("this should never happen")
-// 	}
+func (c *VestaCurve) FromCompressed(input []byte) (*VestaPoint, error) {
+	if len(input) != pastaImpl.FqBytes {
+		return nil, errs.NewLength("invalid input")
+	}
 
-// 	if (y.Bytes()[0] & 0b1) != sign {
-// 		pp.V.Neg(&pp.V)
-// 	}
-// 	return pp, nil
-// }
+	sign := input[31] >> 7
+	var buffer [pastaImpl.FqBytes]byte
+	copy(buffer[:], input)
+	buffer[31] &= 0x7f
 
-// func (c *VestaCurve) FromAffineUncompressed(input []byte) (*VestaPoint, error) {
-// 	if len(input) != 2*pastaImpl.FqBytes {
-// 		return nil, errs.NewLength("invalid input")
-// 	}
+	var x, y pastaImpl.Fq
+	ok := x.SetBytes(buffer[:])
+	if ok != 1 {
+		return nil, errs.NewLength("invalid input")
+	}
+	if x.IsZero() == 1 && sign == 0 {
+		return c.OpIdentity(), nil
+	}
 
-// 	var x, y pastaImpl.Fq
-// 	ok := x.SetBytes(input[:pastaImpl.FqBytes])
-// 	if ok != 1 {
-// 		return nil, errs.NewFailed("invalid input")
-// 	}
-// 	ok = y.SetBytes(input[pastaImpl.FqBytes:])
-// 	if ok != 1 {
-// 		return nil, errs.NewFailed("invalid input")
-// 	}
-// 	if x.IsZero() == 1 && y.IsZero() == 1 {
-// 		return c.OpIdentity(), nil
-// 	}
+	pp := new(VestaPoint)
+	ok = pp.V.SetFromAffineX(&x)
+	if ok != 1 {
+		return nil, errs.NewLength("invalid input")
+	}
+	ok = pp.V.ToAffine(&x, &y)
+	if ok != 1 {
+		panic("this should never happen")
+	}
 
-// 	pp := new(VestaPoint)
-// 	ok = pp.V.SetAffine(&x, &y)
-// 	if ok != 1 {
-// 		return nil, errs.NewFailed("invalid input")
-// 	}
-// 	return pp, nil
-// }
+	if (y.Bytes()[0] & 0b1) != sign {
+		pp.V.Neg(&pp.V)
+	}
+	return pp, nil
+}
 
-// func (c *VestaCurve) NewPoint(affineX, affineY *VestaBaseFieldElement) (*VestaPoint, error) {
-// 	//TODO implement me
-// 	panic("implement me")
-// }
+func (c *VestaCurve) FromUncompressed(input []byte) (*VestaPoint, error) {
+	if len(input) != 2*pastaImpl.FqBytes {
+		return nil, errs.NewLength("invalid input")
+	}
 
-// func (c *VestaCurve) Hash(bytes []byte) (*VestaPoint, error) {
-// 	return c.HashWithDst(base.Hash2CurveAppTag+VestaHash2CurveSuite, bytes)
-// }
+	var x, y pastaImpl.Fq
+	ok := x.SetBytes(input[:pastaImpl.FqBytes])
+	if ok != 1 {
+		return nil, errs.NewFailed("invalid input")
+	}
+	ok = y.SetBytes(input[pastaImpl.FqBytes:])
+	if ok != 1 {
+		return nil, errs.NewFailed("invalid input")
+	}
+	if x.IsZero() == 1 && y.IsZero() == 1 {
+		return c.OpIdentity(), nil
+	}
 
-// func (c *VestaCurve) HashWithDst(dst string, bytes []byte) (*VestaPoint, error) {
-// 	var p VestaPoint
-// 	p.V.Hash(dst, bytes)
-// 	return &p, nil
-// }
+	pp := new(VestaPoint)
+	ok = pp.V.SetAffine(&x, &y)
+	if ok != 1 {
+		return nil, errs.NewFailed("invalid input")
+	}
+	return pp, nil
+}
 
-// // TODO(aalireza): doesn't make sense of curve/point
-// func (c *VestaCurve) ElementSize() int {
-// 	//TODO implement me
-// 	panic("implement me")
-// }
+func (c *VestaCurve) Hash(bytes []byte) (*VestaPoint, error) {
+	return c.HashWithDst(base.Hash2CurveAppTag+VestaHash2CurveSuite, bytes)
+}
 
-// func (c *VestaCurve) WideElementSize() int {
-// 	//TODO implement me
-// 	panic("implement me")
-// }
+func (c *VestaCurve) HashWithDst(dst string, bytes []byte) (*VestaPoint, error) {
+	var p VestaPoint
+	p.V.Hash(dst, bytes)
+	return &p, nil
+}
 
-// func (c *VestaCurve) BasePoints() ds.ImmutableMap[string, *VestaPoint] {
-// 	panic("implement me")
-// }
+func (c *VestaCurve) ElementSize() int {
+	return pastaImpl.FqBytes
+}
 
-// func (c *VestaCurve) ScalarField() algebra.PrimeField[*VestaScalar] {
-// 	return NewVestaScalarField()
-// }
+func (c *VestaCurve) WideElementSize() int {
+	return int(^uint(0) >> 1)
+}
 
-// func (c *VestaCurve) BaseField() algebra.FiniteField[*VestaBaseFieldElement] {
-// 	return NewVestaBaseField()
-// }
+func (c *VestaCurve) ScalarStructure() algebra.Structure[*VestaScalar] {
+	return NewVestaScalarField()
+}
 
-// type VestaPoint struct {
-// 	traits.PointTrait[*pastaImpl.Fq, *pastaImpl.VestaPoint, pastaImpl.VestaPoint, *VestaPoint, VestaPoint]
-// }
+func (c *VestaCurve) BaseStructure() algebra.Structure[*VestaBaseFieldElement] {
+	return NewVestaBaseField()
+}
 
-// func (p *VestaPoint) HashCode() uint64 {
-// 	//TODO implement me
-// 	panic("implement me")
-// }
+func (c *VestaCurve) ScalarBaseOp(sc *VestaScalar) *VestaPoint {
+	if c == nil {
+		return nil
+	}
+	if sc == nil {
+		panic("scalar is nil")
+	}
+	if sc.IsZero() {
+		return c.OpIdentity()
+	}
+	return c.ScalarBaseMul(sc)
+}
 
-// func (p *VestaPoint) Structure() algebra.Structure[*VestaPoint] {
-// 	return NewVestaCurve()
-// }
+func (c *VestaCurve) ScalarBaseMul(sc *VestaScalar) *VestaPoint {
+	if c == nil {
+		return nil
+	}
+	if sc == nil {
+		panic("scalar is nil")
+	}
+	return c.Generator().ScalarMul(sc)
+}
 
-// func (p *VestaPoint) MarshalBinary() (data []byte, err error) {
-// 	return p.ToAffineCompressed(), nil
-// }
+type VestaPoint struct {
+	traits.PrimePointTrait[*pastaImpl.Fq, *pastaImpl.VestaPoint, pastaImpl.VestaPoint, *VestaPoint, VestaPoint]
+}
 
-// func (p *VestaPoint) UnmarshalBinary(data []byte) error {
-// 	pp, err := NewVestaCurve().FromAffineCompressed(data)
-// 	if err != nil {
-// 		return errs.WrapSerialisation(err, "cannot deserialize point")
-// 	}
-// 	p.V.Set(&pp.V)
-// 	return nil
-// }
+func (p *VestaPoint) HashCode() base.HashCode {
+	h := fnv.New64a()
+	_, _ = h.Write(p.ToCompressed())
+	return base.HashCode(h.Sum64())
+}
 
-// // TODO(aalireza): not sure if this should always return affine coordinates or implementation defined coordinates
-// func (p *VestaPoint) Coordinates() []*VestaBaseFieldElement {
-// 	var x, y FqFieldElement
-// 	p.V.ToAffine(&x.V, &y.V)
+func (p *VestaPoint) Structure() algebra.Structure[*VestaPoint] {
+	return NewVestaCurve()
+}
 
-// 	return []*FqFieldElement{&x, &y}
-// }
+func (p *VestaPoint) Coordinates() algebra.Coordinates[*VestaBaseFieldElement] {
+	var x, y VestaBaseFieldElement
+	p.V.ToAffine(&x.V, &y.V)
 
-// func (p *VestaPoint) ToAffineCompressed() []byte {
-// 	// Use ZCash encoding where infinity is all zeros and the top bit represents the sign of y
-// 	// and the remainder represent the x-coordinate
-// 	if p.IsOpIdentity() {
-// 		var zeros [pastaImpl.FqBytes]byte
-// 		return zeros[:]
-// 	}
+	return algebra.Coordinates[*VestaBaseFieldElement]{
+		Value: []*VestaBaseFieldElement{&x, &y},
+		Name:  algebra.AffineCoordinateSystem,
+	}
+}
 
-// 	var x, y pastaImpl.Fq
-// 	ok := p.V.ToAffine(&x, &y)
-// 	if ok != 1 {
-// 		panic("this should never happen")
-// 	}
-// 	sign := (y.Bytes()[0] & 0b1) << 7
-// 	result := x.Bytes()
-// 	result[31] |= sign
-// 	return result
-// }
+func (p *VestaPoint) ToCompressed() []byte {
+	// Use ZCash encoding where infinity is all zeros and the top bit represents the sign of y
+	// and the remainder represent the x-coordinate
+	if p.IsOpIdentity() {
+		var zeros [pastaImpl.FqBytes]byte
+		return zeros[:]
+	}
 
-// func (p *VestaPoint) ToAffineUncompressed() []byte {
-// 	if p.IsOpIdentity() {
-// 		var zeros [pastaImpl.FqBytes * 2]byte
-// 		return zeros[:]
-// 	}
+	var x, y pastaImpl.Fq
+	ok := p.V.ToAffine(&x, &y)
+	if ok != 1 {
+		panic("this should never happen")
+	}
+	sign := (y.Bytes()[0] & 0b1) << 7
+	result := x.Bytes()
+	result[31] |= sign
+	return result
+}
 
-// 	var x, y pastaImpl.Fq
-// 	ok := p.V.ToAffine(&x, &y)
-// 	if ok != 1 {
-// 		panic("this should never happen")
-// 	}
+func (p *VestaPoint) ToUncompressed() []byte {
+	if p.IsOpIdentity() {
+		var zeros [pastaImpl.FqBytes * 2]byte
+		return zeros[:]
+	}
 
-// 	return slices.Concat(x.Bytes(), y.Bytes())
-// }
+	var x, y pastaImpl.Fq
+	ok := p.V.ToAffine(&x, &y)
+	if ok != 1 {
+		panic("this should never happen")
+	}
 
-// func (p *VestaPoint) AffineX() *VestaBaseFieldElement {
-// 	if p.IsZero() {
-// 		return NewVestaBaseField().One()
-// 	}
+	return slices.Concat(x.Bytes(), y.Bytes())
+}
 
-// 	var x, y VestaBaseFieldElement
-// 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
-// 		panic("this should never happen - failed to convert point to affine")
-// 	}
+func (p *VestaPoint) Bytes() []byte {
+	return p.ToCompressed()
+}
 
-// 	return &x
-// }
+func (p *VestaPoint) AffineX() *VestaBaseFieldElement {
+	if p.IsZero() {
+		return NewVestaBaseField().One()
+	}
 
-// func (p *VestaPoint) AffineY() *VestaBaseFieldElement {
-// 	if p.IsZero() {
-// 		return NewVestaBaseField().Zero()
-// 	}
+	var x, y VestaBaseFieldElement
+	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
+		panic("this should never happen - failed to convert point to affine")
+	}
 
-// 	var x, y VestaBaseFieldElement
-// 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
-// 		panic("this should never happen - failed to convert point to affine")
-// 	}
+	return &x
+}
 
-// 	return &y
-// }
+func (p *VestaPoint) AffineY() *VestaBaseFieldElement {
+	if p.IsZero() {
+		return NewVestaBaseField().Zero()
+	}
 
-// func (p *VestaPoint) ScalarMul(actor *VestaScalar) *VestaPoint {
-// 	var result VestaPoint
-// 	pointsImpl.ScalarMul[*pastaImpl.Fq](&result.V, &p.V, actor.V.Bytes())
-// 	return &result
-// }
+	var x, y VestaBaseFieldElement
+	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
+		panic("this should never happen - failed to convert point to affine")
+	}
 
-// func (p *VestaPoint) IsTorsionFree() bool {
-// 	return true
-// }
+	return &y
+}
 
-// func (p *VestaPoint) IsBasePoint(id string) bool {
-// 	//TODO implement me
-// 	panic("implement me")
-// }
+func (p *VestaPoint) ScalarOp(sc *VestaScalar) *VestaPoint {
+	return p.ScalarMul(sc)
+}
 
-// // TODO(aalireza): no use of it
-// func (p *VestaPoint) CanBeGenerator() bool {
-// 	//TODO implement me
-// 	panic("implement me")
-// }
+func (p *VestaPoint) ScalarMul(actor *VestaScalar) *VestaPoint {
+	var result VestaPoint
+	pointsImpl.ScalarMul[*pastaImpl.Fq](&result.V, &p.V, actor.V.Bytes())
+	return &result
+}
+
+func (p *VestaPoint) IsTorsionFree() bool {
+	return true
+}
+
+func (p *VestaPoint) String() string {
+	return traits.StringifyPoint(p)
+}
