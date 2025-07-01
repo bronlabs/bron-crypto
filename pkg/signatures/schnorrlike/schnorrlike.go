@@ -41,7 +41,7 @@ type (
 		KG KeyGenerator[GE, S], SG Signer[VR, GE, S, M], VF Verifier[VR, GE, S, M],
 	] interface {
 		signatures.Scheme[*PrivateKey[GE, S], *PublicKey[GE, S], M, *Signature[GE, S], KG, SG, VF]
-		Variant(...VariantOption[VR, GE, S, M]) (VR, error)
+		Variant() VR
 	}
 )
 
@@ -52,10 +52,7 @@ type Variant[GE GroupElement[GE, S], S Scalar[S], M Message] interface {
 	ComputeChallenge(nonceCommitment GE, publicKeyValue GE, message M) (S, error)
 	ComputeResponse(privateKeyValue, nonce, challenge S) (S, error)
 	SerializeSignature(signature *Signature[GE, S]) ([]byte, error)
-	NonceIsFunctionOfMessage() bool
 }
-
-type VariantOption[VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Message] = func(VR) error
 
 type Message signatures.Message
 
@@ -182,13 +179,6 @@ func (sig *Signature[GE, S]) HashCode() base.HashCode {
 	return sig.E.HashCode() ^ sig.R.HashCode() ^ sig.S.HashCode()
 }
 
-func ComputeNonceCommitmentFromChallengeResponse[GE GroupElement[GE, S], S Scalar[S]](publicKey *PublicKey[GE, S], e, s S) (GE, error) {
-	if publicKey == nil || utils.IsNil(e) || utils.IsNil(s) {
-		return *new(GE), errs.NewIsNil("publicKey, e, or s")
-	}
-	return publicKey.Group().Generator().ScalarOp(s).Op((publicKey.Value().ScalarOp(e)).OpInv()), nil
-}
-
 type KeyGeneratorTrait[GE GroupElement[GE, S], S Scalar[S]] struct {
 	Grp Group[GE, S]
 	SF  ScalarField[S]
@@ -214,14 +204,13 @@ func (kg *KeyGeneratorTrait[GE, S]) Generate(prng io.Reader) (*PrivateKey[GE, S]
 	return sk, pk, nil
 }
 
-type RandomisedSignerTrait[VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Message] struct {
+type SignerTrait[VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Message] struct {
 	Sk       *PrivateKey[GE, S]
 	V        VR
 	Verifier signatures.Verifier[*PublicKey[GE, S], M, *Signature[GE, S]]
-	Prng     io.Reader
 }
 
-func (sg *RandomisedSignerTrait[VR, GE, S, M]) Sign(message M) (*Signature[GE, S], error) {
+func (sg *SignerTrait[VR, GE, S, M]) Sign(message M) (*Signature[GE, S], error) {
 	R, k, err := sg.V.ComputeNonceCommitment()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "R")
@@ -246,10 +235,18 @@ func (sg *RandomisedSignerTrait[VR, GE, S, M]) Sign(message M) (*Signature[GE, S
 	return sigma, nil
 }
 
+func (sg *SignerTrait[VR, GE, S, M]) Variant() VR {
+	return sg.V
+}
+
 type VerifierTrait[VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Message] struct {
 	V                          VR
 	ChallengePublicKey         *PublicKey[GE, S]
 	ResponseOperatorIsNegative bool
+}
+
+func (v *VerifierTrait[VR, GE, S, M]) Variant() VR {
+	return v.V
 }
 
 func (v *VerifierTrait[VR, GE, S, M]) Verify(sigma *Signature[GE, S], publicKey *PublicKey[GE, S], message M) error {

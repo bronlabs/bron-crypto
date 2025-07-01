@@ -14,16 +14,22 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorr/bip340"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/bip340"
 )
 
 func Test_Sanity(t *testing.T) {
 	t.Parallel()
 
+	aux := [32]byte{
+		92, 90, 88, 230, 198, 206, 122, 19,
+		2, 24, 77, 164, 96, 52, 14, 133,
+		131, 90, 250, 75, 100, 123, 249, 43,
+		234, 7, 159, 160, 102, 173, 109, 221,
+	}
+
 	message := []byte("something")
-	scheme, err := bip340.NewScheme(crand.Reader)
-	require.NoError(t, err)
+	scheme := bip340.NewSchemeWithAux(aux)
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(crand.Reader)
@@ -350,7 +356,7 @@ func Test_HappyPathBatchVerify(t *testing.T) {
 		require.NoError(t, err)
 
 		err = verifier.BatchVerify(
-			[]*schnorr.Signature[*k256.Point, *k256.Scalar]{signatureAlice, signatureBob},
+			[]*schnorrlike.Signature[*k256.Point, *k256.Scalar]{signatureAlice, signatureBob},
 			[]*bip340.PublicKey{aliceKey.PublicKey(), bobKey.PublicKey()},
 			[][]byte{
 				message1,

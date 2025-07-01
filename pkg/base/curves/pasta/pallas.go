@@ -55,7 +55,7 @@ func (c *PallasCurve) Cofactor() cardinal.Cardinal {
 }
 
 func (c *PallasCurve) Order() cardinal.Cardinal {
-	return cardinal.FromNat(fqFieldOrder.Nat())
+	return cardinal.NewFromNat(fqFieldOrder.Nat())
 }
 
 func (c *PallasCurve) FromBytes(input []byte) (*PallasPoint, error) {

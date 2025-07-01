@@ -104,8 +104,7 @@ func runTestWithBIP340(t *testing.T, threshold, total uint) {
 
 		// Create cosigners using testutils
 		signingSID := network.SID(sha3.Sum256([]byte("test-signing-session-bip340")))
-		variant, err := scheme.Variant()
-		require.NoError(t, err)
+		variant := scheme.Variant()
 
 		// Convert shards to map for testutils
 		shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
@@ -190,7 +189,7 @@ func runTestWithVanillaSchnorr(t *testing.T, threshold, total uint) {
 	prng := pcg.NewRandomised()
 
 	// Create Vanilla Schnorr scheme
-	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, prng)
+	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
 	require.NoError(t, err)
 
 	// Setup DKG participants
@@ -221,8 +220,7 @@ func runTestWithVanillaSchnorr(t *testing.T, threshold, total uint) {
 
 		// Create cosigners using testutils
 		signingSID := network.SID(sha3.Sum256([]byte("test-signing-session-vanilla")))
-		variant, err := scheme.Variant()
-		require.NoError(t, err)
+		variant := scheme.Variant()
 
 		// Convert shards to map for testutils
 		shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
@@ -351,8 +349,7 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 	}
 	quorum := quorumSet.Freeze()
 
-	variant, err := scheme.Variant()
-	require.NoError(t, err)
+	variant := scheme.Variant()
 
 	// Convert shards to map for testutils
 	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
@@ -441,7 +438,7 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 	prng := pcg.NewRandomised()
 
 	// Create scheme
-	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, prng)
+	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
 	require.NoError(t, err)
 
 	// Setup DKG
@@ -468,8 +465,7 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 	}
 	quorum := quorumSet.Freeze()
 
-	variant, err := scheme.Variant()
-	require.NoError(t, err)
+	variant := scheme.Variant()
 
 	// Convert shards to map for testutils
 	shardsMap := make(map[sharing.ID]*lindell22.Shard[*k256.Point, *k256.Scalar])
@@ -568,10 +564,7 @@ func TestLindell22ConcurrentSigning(t *testing.T) {
 			if err != nil {
 				return nil, nil, err
 			}
-			variant, err := scheme.Variant()
-			if err != nil {
-				return nil, nil, err
-			}
+			variant := scheme.Variant()
 			return scheme, variant, nil
 		})
 	})
@@ -580,14 +573,11 @@ func TestLindell22ConcurrentSigning(t *testing.T) {
 		t.Parallel()
 		testConcurrentSigningWithScheme(t, func(prng io.Reader) (interface{}, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
 			group := k256.NewCurve()
-			scheme, err := vanilla.NewScheme(group, sha256.New, false, true, prng)
+			scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
 			if err != nil {
 				return nil, nil, err
 			}
-			variant, err := scheme.Variant()
-			if err != nil {
-				return nil, nil, err
-			}
+			variant := scheme.Variant()
 			return scheme, variant, nil
 		})
 	})
@@ -700,7 +690,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 			// Aggregate based on scheme type
 			publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
 			var sig *schnorrlike.Signature[*k256.Point, *k256.Scalar]
-			
+
 			switch s := scheme.(type) {
 			case *bip340.Scheme:
 				aggregator, err := signing.NewAggregator(publicMaterial, s)
@@ -717,7 +707,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 				}
 				sig, err = aggregator.Aggregate(partialSigs.Freeze(), message)
 			}
-			
+
 			results <- result{index, sig, err}
 		}(i, messages[i])
 	}
@@ -727,7 +717,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 
 	// Collect and verify results
 	publicMaterial := shardsMap[0].PublicKeyMaterial()
-	
+
 	signatures := make([]*schnorrlike.Signature[*k256.Point, *k256.Scalar], numMessages)
 	for result := range results {
 		require.NoError(t, result.err, "signing message %d failed", result.index)
@@ -776,10 +766,7 @@ func TestLindell22DifferentQuorums(t *testing.T) {
 					if err != nil {
 						return nil, nil, err
 					}
-					variant, err := scheme.Variant()
-					if err != nil {
-						return nil, nil, err
-					}
+					variant := scheme.Variant()
 					return scheme, variant, nil
 				})
 			})
@@ -791,14 +778,11 @@ func TestLindell22DifferentQuorums(t *testing.T) {
 			t.Run(string(rune('A'+i)), func(t *testing.T) {
 				testDifferentQuorumsWithScheme(t, threshold, total, quorumIDs, func(prng io.Reader) (interface{}, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
 					group := k256.NewCurve()
-					scheme, err := vanilla.NewScheme(group, sha256.New, false, true, prng)
+					scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
 					if err != nil {
 						return nil, nil, err
 					}
-					variant, err := scheme.Variant()
-					if err != nil {
-						return nil, nil, err
-					}
+					variant := scheme.Variant()
 					return scheme, variant, nil
 				})
 			})
@@ -881,7 +865,7 @@ func testDifferentQuorumsWithScheme(t *testing.T, threshold, total uint, quorumI
 
 	// Aggregate
 	publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
-	
+
 	var sig *schnorrlike.Signature[*k256.Point, *k256.Scalar]
 	switch s := scheme.(type) {
 	case *bip340.Scheme:
@@ -940,10 +924,7 @@ func TestLindell22EdgeCases(t *testing.T) {
 					if err != nil {
 						return nil, nil, err
 					}
-					variant, err := scheme.Variant()
-					if err != nil {
-						return nil, nil, err
-					}
+					variant := scheme.Variant()
 					return scheme, variant, nil
 				})
 			})
@@ -955,14 +936,11 @@ func TestLindell22EdgeCases(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				testEdgeCasesWithScheme(t, tc.message, func(prng io.Reader) (interface{}, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
 					group := k256.NewCurve()
-					scheme, err := vanilla.NewScheme(group, sha256.New, false, true, prng)
+					scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
 					if err != nil {
 						return nil, nil, err
 					}
-					variant, err := scheme.Variant()
-					if err != nil {
-						return nil, nil, err
-					}
+					variant := scheme.Variant()
 					return scheme, variant, nil
 				})
 			})
@@ -1046,7 +1024,7 @@ func testEdgeCasesWithScheme(t *testing.T, message []byte, createScheme func(io.
 
 	// Aggregate
 	publicMaterial := cosigners[0].Shard().PublicKeyMaterial()
-	
+
 	var sig *schnorrlike.Signature[*k256.Point, *k256.Scalar]
 	switch s := scheme.(type) {
 	case *bip340.Scheme:
@@ -1138,8 +1116,7 @@ func TestLindell22DeterministicSigning(t *testing.T) {
 			}
 
 			// Get variant
-			variant, err := scheme.Variant()
-			require.NoError(t, err)
+			variant := scheme.Variant()
 
 			// Create cosigners
 			cosigners := ltu.CreateLindell22Cosigners(
@@ -1237,8 +1214,7 @@ func TestLindell22IdentifiableAbortRounds(t *testing.T) {
 		shardsMap[id] = shard
 	}
 
-	variant, err := scheme.Variant()
-	require.NoError(t, err)
+	variant := scheme.Variant()
 
 	t.Run("BadProofInRound3", func(t *testing.T) {
 		// Select quorum
@@ -1348,10 +1324,7 @@ func BenchmarkLindell22Signing(b *testing.B) {
 		shardsMap[id] = shard
 	}
 
-	variant, err := scheme.Variant()
-	if err != nil {
-		b.Fatal(err)
-	}
+	variant := scheme.Variant()
 
 	message := []byte("Benchmark message")
 

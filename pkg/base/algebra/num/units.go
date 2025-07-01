@@ -31,11 +31,11 @@ func NewUnitGroup[E algebra.UintLike[E]](zn algebra.ZnLike[E], factors *PrimeFac
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to compute order")
 	}
-	N := cardinal.FromNat(new(saferith.Nat).SetBytes(factors.N().Bytes()))
+	N := cardinal.NewFromNat(new(saferith.Nat).SetBytes(factors.N().Bytes()))
 	if zn.Characteristic().Equal(N) {
 		return nil, errs.WrapFailed(errs.NewFailed("characteristic of Zn does not match the modulus"), "Zn: %s", zn.Name())
 	}
-	v := cardinal.FromNat(&order.v)
+	v := cardinal.NewFromNat(&order.v)
 	return &UnitGroup[E]{zn: zn, order: v}, nil
 }
 

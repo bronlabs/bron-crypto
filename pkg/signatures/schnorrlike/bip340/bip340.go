@@ -1,8 +1,6 @@
 package bip340
 
 import (
-	"crypto/subtle"
-	"hash"
 	"io"
 	"slices"
 
@@ -10,11 +8,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/hashing"
-	"github.com/bronlabs/bron-crypto/pkg/hashing/bip340"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
 )
 
@@ -31,8 +26,7 @@ type (
 )
 
 const (
-	VariantType  schnorrlike.VariantType = "bip340"
-	AuxSizeBytes int                     = 32
+	AuxSizeBytes int = 32
 )
 
 var (
@@ -86,18 +80,6 @@ func NewScheme(prng io.Reader) (*Scheme, error) {
 	}, nil
 }
 
-func NewVariant(aux [AuxSizeBytes]byte, opts ...VariantOption) (*Variant, error) {
-	out := &Variant{
-		Aux: aux,
-	}
-	for i, opt := range opts {
-		if err := opt(out); err != nil {
-			return nil, errs.WrapFailed(err, "could not apply option %d", i)
-		}
-	}
-	return out, nil
-}
-
 type Scheme struct {
 	aux [AuxSizeBytes]byte
 }
@@ -106,8 +88,10 @@ func (s Scheme) Name() signatures.Name {
 	return schnorrlike.Name
 }
 
-func (s *Scheme) Variant(opts ...VariantOption) (*Variant, error) {
-	return NewVariant(s.aux, opts...)
+func (s *Scheme) Variant() *Variant {
+	return &Variant{
+		Aux: s.aux,
+	}
 }
 
 func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
@@ -129,16 +113,18 @@ func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, 
 	if privateKey == nil {
 		return nil, errs.NewArgument("private key is nil")
 	}
-	verifier, err := s.Verifier()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "verifier creation failed")
+	variant := &Variant{
+		Aux: s.aux,
+		sk:  privateKey,
 	}
 	out := &Signer{
-		sg: schnorrlike.RandomisedSignerTrait[*Variant, *GroupElement, *Scalar, Message]{
-			Sk:       privateKey,
-			Verifier: verifier,
+		sg: schnorrlike.SignerTrait[*Variant, *GroupElement, *Scalar, Message]{
+			Sk: privateKey,
+			V:  variant,
+			Verifier: &Verifier{
+				variant: variant,
+			},
 		},
-		aux: s.aux,
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
@@ -149,12 +135,8 @@ func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, 
 }
 
 func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
-	variant, err := s.Variant()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct variant")
-	}
 	out := &Verifier{
-		variant: variant,
+		variant: s.Variant(),
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
@@ -179,135 +161,23 @@ func (s *Scheme) PartialSignatureVerifier(
 	return verifier, nil
 }
 
-type VariantOption = schnorrlike.VariantOption[*Variant, *k256.Point, *k256.Scalar, Message]
-
-func VariantWithPrivateKey(privateKey *PrivateKey) VariantOption {
-	return func(variant *Variant) error {
-		variant.sk = privateKey
-		return nil
+func NewSignatureFromBytes(input []byte) (*Signature, error) {
+	if len(input) != 64 {
+		return nil, errs.NewSerialisation("invalid length")
 	}
-}
 
-func VariantWithMessage(message Message) VariantOption {
-	return func(variant *Variant) error {
-		variant.msg = message
-		return nil
-	}
-}
-
-type Variant struct {
-	sk  *PrivateKey
-	Aux [AuxSizeBytes]byte
-	msg Message
-}
-
-func (*Variant) Type() schnorrlike.VariantType {
-	return VariantType
-}
-func (*Variant) HashFunc() func() hash.Hash {
-	return bip340.NewBip340HashChallenge
-}
-
-func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
-	if v.sk == nil || v.msg == nil {
-		return nil, nil, errs.NewIsNil("need both private key and message")
-	}
-	g := k256.NewCurve().Generator()
-	f := k256.NewScalarField()
-	// 1. Let d' = int(sk)
-	dPrime := v.sk.Value()
-	// 2. Fail if d' = 0 or d' ≥ n
-	if dPrime.IsZero() {
-		return nil, nil, errs.NewFailed("d' is invalid")
-	}
-	// 3. Let P = d'⋅G
-	bigP := g.ScalarMul(v.sk.Value())
-	// 4. Let d = d' if P.y even, otherwise let d = n - d'
-	d := dPrime
-	if bigP.AffineY().IsOdd() {
-		d = dPrime.Neg()
-	}
-	// 5. Let t be the byte-wise xor of bytes(d) and hashBIP0340/aux(a).
-	auxDigest, err := hashing.Hash(bip340.NewBip340HashAux, v.Aux[:])
+	r, err := decodePoint(input[:32])
 	if err != nil {
-		return nil, nil, errs.WrapHashing(err, "hash failed")
+		return nil, errs.NewSerialisation("invalid signature")
 	}
-	t := make([]byte, len(auxDigest))
-	if n := subtle.XORBytes(t, d.Bytes(), auxDigest); n != len(d.Bytes()) {
-		return nil, nil, errs.NewFailed("invalid scalar bytes length")
-	}
-	// 6. Let rand = hashBIP0340/nonce(t || bytes(P) || m).
-	rand, err := hashing.Hash(
-		bip340.NewBip340HashNonce, t, encodePoint(bigP), v.msg,
-	)
+	s, err := k256.NewScalarField().FromBytes(input[32:])
 	if err != nil {
-		return nil, nil, errs.WrapHashing(err, "hash failed")
+		return nil, errs.NewSerialisation("invalid signature")
 	}
-
-	// 7. Let k' = int(rand) mod n.
-	kPrime, err := f.FromWideBytes(rand)
-	if err != nil {
-		return nil, nil, errs.NewFailed("cannot set k'")
-	}
-
-	// 8. Fail if k' = 0
-	if kPrime.IsZero() {
-		return nil, nil, errs.NewFailed("k' is invalid")
-	}
-
-	// 9. Let R = k'⋅G.
-	bigR := g.ScalarMul(kPrime)
-	// 10. Let k = k' if R.y is even, otherwise let k = n - k', R = k ⋅ G
-	k := kPrime
-	if bigR.AffineY().IsOdd() {
-		k = kPrime.Neg()
-		bigR = g.ScalarMul(k)
-	}
-	return bigR, k, nil
-}
-
-func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement, message Message) (*Scalar, error) {
-	// 11. Let e = int(hashBIP0340/challenge(bytes(R) || bytes(P) || m)) mod n.
-	roinput := slices.Concat(
-		nonceCommitment.ToCompressed()[1:],
-		publicKeyValue.ToCompressed()[1:],
-		message,
-	)
-
-	e, err := schnorrlike.MakeGenericChallenge(k256.NewScalarField(), v.HashFunc(), false, roinput)
-	if err != nil {
-		return nil, errs.WrapHashing(err, "hash failed")
-	}
-	return e, nil
-}
-
-func (*Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
-	if privateKeyValue == nil || nonce == nil || challenge == nil {
-		return nil, errs.NewIsNil("arguments")
-	}
-	// 12. Let sig = (R, (k + ed) mod n)).
-	return nonce.Add(challenge.Mul(privateKeyValue)), nil
-}
-
-func (*Variant) SerializeSignature(signature *Signature) ([]byte, error) {
-	return SerializeSignature(signature)
-}
-
-func (*Variant) NonceIsFunctionOfMessage() bool {
-	return true
-}
-
-func (v *Variant) Clone() *Variant {
-	out := &Variant{
-		Aux: v.Aux,
-	}
-	if v.sk != nil {
-		out.sk = v.sk.Clone()
-	}
-	if v.msg != nil {
-		copy(out.msg, v.msg)
-	}
-	return out
+	return &Signature{
+		R: r,
+		S: s,
+	}, nil
 }
 
 type KeyGeneratorOption = signatures.KeyGeneratorOption[*KeyGenerator, *PrivateKey, *PublicKey]
@@ -319,19 +189,12 @@ type KeyGenerator struct {
 type SignerOption = signatures.SignerOption[*Signer, Message, *Signature]
 
 type Signer struct {
-	sg  schnorrlike.RandomisedSignerTrait[*Variant, *GroupElement, *Scalar, Message]
-	aux [AuxSizeBytes]byte
+	sg schnorrlike.SignerTrait[*Variant, *GroupElement, *Scalar, Message]
 }
 
 func (s *Signer) Sign(message Message) (*Signature, error) {
 	// ComputeNonceCommitment requires a message
-	messageBoundedVariant, err := NewVariant(
-		s.aux, VariantWithMessage(message), VariantWithPrivateKey(s.sg.Sk),
-	)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not bound message to variant")
-	}
-	s.sg.V = messageBoundedVariant
+	s.sg.V.msg = message
 	return s.sg.Sign(message)
 }
 
@@ -489,25 +352,6 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 	return nil
 }
 
-func NewSignatureFromBytes(input []byte) (*Signature, error) {
-	if len(input) != 64 {
-		return nil, errs.NewSerialisation("invalid length")
-	}
-
-	r, err := decodePoint(input[:32])
-	if err != nil {
-		return nil, errs.NewSerialisation("invalid signature")
-	}
-	s, err := k256.NewScalarField().FromBytes(input[32:])
-	if err != nil {
-		return nil, errs.NewSerialisation("invalid signature")
-	}
-	return &Signature{
-		R: r,
-		S: s,
-	}, nil
-}
-
 func SerializeSignature(signature *Signature) ([]byte, error) {
 	if signature == nil || signature.R == nil || signature.S == nil {
 		return nil, errs.NewArgument("signature is nil")
@@ -546,34 +390,4 @@ func decodePoint(data []byte) (*k256.Point, error) {
 	}
 
 	return p, nil
-}
-
-// ============ MPC Methods ============
-
-var _ tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, Message] = (*Variant)(nil)
-
-func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*k256.Scalar]) (*additive.Share[*k256.Scalar], error) {
-	if publicKey == nil || share == nil {
-		return nil, errs.NewIsNil("public key or secret share is nil")
-	}
-	out := share.Clone()
-	if publicKey.Value().AffineY().IsOdd() {
-		// If the public key is odd, we need to negate the additive share
-		// to ensure that the parity of the nonce commitment is correct.
-		out, _ = additive.NewShare(share.ID(), share.Value().Neg(), nil)
-	}
-	return out, nil
-}
-
-func (v *Variant) CorrectPartialNonceParity(nonceCommitment *k256.Point, k *k256.Scalar) (*k256.Point, *k256.Scalar, error) {
-	if nonceCommitment == nil || k == nil {
-		return nil, nil, errs.NewIsNil("nonce commitment or k is nil")
-	}
-	correctedK := k.Clone()
-	if nonceCommitment.AffineY().IsOdd() {
-		// If the nonce commitment is odd, we need to negate k to ensure that the parity is correct.
-		correctedK = correctedK.Neg()
-	}
-	correctedR := k256.NewCurve().ScalarBaseOp(correctedK)
-	return correctedR, correctedK, nil
 }

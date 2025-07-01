@@ -45,11 +45,11 @@ func (f *BaseFieldG1) Name() string {
 }
 
 func (f *BaseFieldG1) Order() cardinal.Cardinal {
-	return cardinal.FromNat(baseFieldOrderG1.Nat())
+	return cardinal.NewFromNat(baseFieldOrderG1.Nat())
 }
 
 func (f *BaseFieldG1) Characteristic() cardinal.Cardinal {
-	return cardinal.FromNat(baseFieldOrderG1.Nat())
+	return cardinal.NewFromNat(baseFieldOrderG1.Nat())
 }
 
 func (f *BaseFieldG1) Hash(bytes []byte) (*BaseFieldElementG1, error) {

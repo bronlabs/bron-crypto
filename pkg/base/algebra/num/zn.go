@@ -44,11 +44,11 @@ func (zn *Zn) Name() string {
 }
 
 func (zn *Zn) Order() cardinal.Cardinal {
-	return cardinal.FromNat(zn.Top().Lift().Increment().v.Abs())
+	return cardinal.NewFromNat(zn.Top().Lift().Increment().v.Abs())
 }
 
 func (zn *Zn) Characteristic() cardinal.Cardinal {
-	return cardinal.FromNat(&zn.n.v)
+	return cardinal.NewFromNat(&zn.n.v)
 }
 
 func (zn *Zn) Modulus() *NatPlus {
@@ -442,7 +442,7 @@ func (u *Uint) SafeNat() *saferith.Nat {
 }
 
 func (u *Uint) Cardinal() cardinal.Cardinal {
-	return cardinal.FromNat(&u.v)
+	return cardinal.NewFromNat(&u.v)
 }
 
 func (u *Uint) Clone() *Uint {

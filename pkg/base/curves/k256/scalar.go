@@ -50,11 +50,11 @@ func (f *ScalarField) Name() string {
 }
 
 func (f *ScalarField) Order() cardinal.Cardinal {
-	return cardinal.FromNat(scalarFieldOrder.Nat())
+	return cardinal.NewFromNat(scalarFieldOrder.Nat())
 }
 
 func (f *ScalarField) Characteristic() cardinal.Cardinal {
-	return cardinal.FromNat(scalarFieldOrder.Nat())
+	return cardinal.NewFromNat(scalarFieldOrder.Nat())
 }
 
 func (f *ScalarField) Hash(bytes []byte) (*Scalar, error) {

@@ -15,6 +15,11 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
+type (
+	VestaBaseField    = FqField
+	PallasScalarField = FqField
+)
+
 const (
 	FqFieldName = "PastaFq"
 )
@@ -67,7 +72,7 @@ func (f *FqField) Characteristic() cardinal.Cardinal {
 }
 
 func (*FqField) Order() cardinal.Cardinal {
-	return cardinal.FromNat(fqFieldOrder.Nat())
+	return cardinal.NewFromNat(fqFieldOrder.Nat())
 }
 
 func (*FqField) Hash(input []byte) (*FqFieldElement, error) {

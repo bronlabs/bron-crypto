@@ -64,7 +64,7 @@ func (c Curve) Cofactor() cardinal.Cardinal {
 }
 
 func (c *Curve) Order() cardinal.Cardinal {
-	return cardinal.FromNat(scalarFieldOrder.Nat())
+	return cardinal.NewFromNat(scalarFieldOrder.Nat())
 }
 
 func (c *Curve) FromCompressed(input []byte) (*Point, error) {

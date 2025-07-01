@@ -65,13 +65,13 @@ func TestNewCardinal(t *testing.T) {
 
 func TestNewCardinalFromNat(t *testing.T) {
 	t.Run("Nil", func(t *testing.T) {
-		c := cardinal.FromNat(nil)
+		c := cardinal.NewFromNat(nil)
 		assert.True(t, c.Equal(cardinal.Unknown))
 	})
 
 	t.Run("Zero Nat", func(t *testing.T) {
 		n := new(saferith.Nat).SetUint64(0)
-		c := cardinal.FromNat(n)
+		c := cardinal.NewFromNat(n)
 		assert.True(t, c.IsFinite())
 		assert.False(t, c.IsUnknown())
 		assert.True(t, c.IsZero())
@@ -79,7 +79,7 @@ func TestNewCardinalFromNat(t *testing.T) {
 
 	t.Run("Non-zero Nat", func(t *testing.T) {
 		n := new(saferith.Nat).SetUint64(100)
-		c := cardinal.FromNat(n)
+		c := cardinal.NewFromNat(n)
 		assert.True(t, c.IsFinite())
 		assert.False(t, c.IsUnknown())
 		assert.Equal(t, uint64(100), c.Uint64())

@@ -51,7 +51,7 @@ func (c *VestaCurve) Name() string {
 }
 
 func (c *VestaCurve) Order() cardinal.Cardinal {
-	return cardinal.FromNat(fpFieldOrder.Nat())
+	return cardinal.NewFromNat(fpFieldOrder.Nat())
 }
 
 func (c *VestaCurve) Cofactor() cardinal.Cardinal {

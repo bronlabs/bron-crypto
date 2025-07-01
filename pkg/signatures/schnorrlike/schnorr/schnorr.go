@@ -35,6 +35,7 @@ func NewScheme[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[
 	f func() hash.Hash,
 	responseOperatorIsNegative bool,
 	challengeElementsAreLittleEndian bool,
+	shouldNegateNonce func(nonceCommitment GE) bool,
 	prng io.Reader,
 ) (*Scheme[GE, S], error) {
 	if group == nil {
@@ -51,71 +52,35 @@ func NewScheme[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[
 		return nil, errs.NewType("group")
 	}
 	return &Scheme[GE, S]{
-		group:                            group,
-		sf:                               sf,
-		h:                                f,
-		prng:                             prng,
-		responseOperatorIsNegative:       responseOperatorIsNegative,
-		challengeElementsAreLittleEndian: challengeElementsAreLittleEndian,
+		vr: &Variant[GE, S]{
+			g:                                group,
+			sf:                               sf,
+			h:                                f,
+			prng:                             prng,
+			shouldNegateNonce:                shouldNegateNonce,
+			responseOperatorIsNegative:       responseOperatorIsNegative,
+			challengeElementsAreLittleEndian: challengeElementsAreLittleEndian,
+		},
 	}, nil
 }
 
-func VariantWithHashFunc[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]](
-	f func() hash.Hash,
-) VariantOption[GE, S] {
-	return func(v *Variant[GE, S]) error {
-		if v == nil {
-			return errs.NewIsNil("variant")
-		}
-		if f == nil {
-			return errs.NewIsNil("hash function")
-		}
-		v.h = f
-		return nil
-	}
-}
-
 type Scheme[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] struct {
-	group                            algebra.PrimeGroup[GE, S]
-	sf                               algebra.PrimeField[S]
-	h                                func() hash.Hash
-	prng                             io.Reader // PRNG used to generate nonces
-	responseOperatorIsNegative       bool
-	challengeElementsAreLittleEndian bool
+	vr *Variant[GE, S]
 }
 
 func (*Scheme[GE, S]) Name() signatures.Name {
 	return schnorrlike.Name
 }
 
-func (s *Scheme[GE, S]) Variant(opts ...VariantOption[GE, S]) (*Variant[GE, S], error) {
-	if s.group == nil {
-		return nil, errs.NewIsNil("group")
-	}
-	if s.sf == nil {
-		return nil, errs.NewIsNil("scalar field")
-	}
-	variant := &Variant[GE, S]{
-		g:                                s.group,
-		sf:                               s.sf,
-		h:                                s.h,
-		prng:                             s.prng,
-		responseOperatorIsNegative:       s.responseOperatorIsNegative,
-		challengeElementsAreLittleEndian: s.challengeElementsAreLittleEndian,
-	}
-	for _, opt := range opts {
-		if err := opt(variant); err != nil {
-			return nil, errs.WrapFailed(err, "variant option failed")
-		}
-	}
-	return variant, nil
+func (s *Scheme[GE, S]) Variant() *Variant[GE, S] {
+	return s.vr
 }
 
 func (s *Scheme[GE, S]) Keygen(opts ...KeyGeneratorOption[GE, S]) (*KeyGenerator[GE, S], error) {
 	out := &KeyGenerator[GE, S]{
 		KeyGeneratorTrait: schnorrlike.KeyGeneratorTrait[GE, S]{
-			Grp: s.group,
-			SF:  s.sf,
+			Grp: s.vr.g,
+			SF:  s.vr.sf,
 		},
 	}
 	for _, opt := range opts {
@@ -134,14 +99,10 @@ func (s *Scheme[GE, S]) Signer(privateKey *PrivateKey[GE, S], opts ...SignerOpti
 	if err != nil {
 		return nil, errs.WrapFailed(err, "verifier creation failed")
 	}
-	variant, err := s.Variant()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct variant")
-	}
 	out := &Signer[GE, S]{
-		schnorrlike.RandomisedSignerTrait[*Variant[GE, S], GE, S, Message]{
+		schnorrlike.SignerTrait[*Variant[GE, S], GE, S, Message]{
 			Sk:       privateKey,
-			V:        variant,
+			V:        s.vr,
 			Verifier: verifier,
 		},
 	}
@@ -154,14 +115,10 @@ func (s *Scheme[GE, S]) Signer(privateKey *PrivateKey[GE, S], opts ...SignerOpti
 }
 
 func (s *Scheme[GE, S]) Verifier(opts ...VerifierOption[GE, S]) (*Verifier[GE, S], error) {
-	variant, err := s.Variant()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct variant")
-	}
 	out := &Verifier[GE, S]{
 		VerifierTrait: schnorrlike.VerifierTrait[*Variant[GE, S], GE, S, Message]{
-			V:                          variant,
-			ResponseOperatorIsNegative: s.responseOperatorIsNegative,
+			V:                          s.vr,
+			ResponseOperatorIsNegative: s.vr.responseOperatorIsNegative,
 		},
 	}
 	for _, opt := range opts {
@@ -196,7 +153,7 @@ type KeyGenerator[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldEleme
 type SignerOption[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] = signatures.SignerOption[*Signer[GE, S], Message, *Signature[GE, S]]
 
 type Signer[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] struct {
-	schnorrlike.RandomisedSignerTrait[*Variant[GE, S], GE, S, Message]
+	schnorrlike.SignerTrait[*Variant[GE, S], GE, S, Message]
 }
 
 func (sg *Signer[GE, S]) Variant() *Variant[GE, S] {
@@ -219,7 +176,6 @@ func (v *Verifier[GE, S]) Variant() *Variant[GE, S] {
 	return v.V
 }
 
-type VariantOption[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] = schnorrlike.VariantOption[*Variant[GE, S], GE, S, Message]
 type Variant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] struct {
 	g                                algebra.PrimeGroup[GE, S]
 	sf                               algebra.PrimeField[S]
@@ -227,6 +183,7 @@ type Variant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]
 	prng                             io.Reader
 	responseOperatorIsNegative       bool
 	challengeElementsAreLittleEndian bool
+	shouldNegateNonce                func(nonceCommitment GE) bool // Optional function to determine if nonce should be negated
 }
 
 func (v *Variant[GE, S]) Type() schnorrlike.VariantType {
@@ -244,7 +201,7 @@ func (v *Variant[GE, S]) ComputeNonceCommitment() (GE, S, error) {
 	if v == nil {
 		return *new(GE), *new(S), errs.NewIsNil("variant")
 	}
-	return schnorrlike.ComputeGenericNonceCommitment(v.g, v.prng)
+	return schnorrlike.ComputeGenericNonceCommitment(v.g, v.prng, v.shouldNegateNonce)
 }
 
 func (v *Variant[GE, S]) ComputeChallenge(nonceCommitment GE, publicKeyValue GE, message Message) (S, error) {

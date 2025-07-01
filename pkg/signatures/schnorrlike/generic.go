@@ -11,7 +11,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
-func ComputeGenericNonceCommitment[GE GroupElement[GE, S], S Scalar[S]](group Group[GE, S], prng io.Reader) (GE, S, error) {
+func ComputeGenericNonceCommitment[GE GroupElement[GE, S], S Scalar[S]](
+	group Group[GE, S], prng io.Reader, shouldNegateNonce func(nonceCommitment GE) bool,
+) (GE, S, error) {
 	if prng == nil {
 		return *new(GE), *new(S), errs.NewIsNil("prng")
 	}
@@ -23,7 +25,11 @@ func ComputeGenericNonceCommitment[GE GroupElement[GE, S], S Scalar[S]](group Gr
 	if err != nil {
 		return *new(GE), *new(S), errs.WrapRandomSample(err, "scalar")
 	}
-	return group.ScalarBaseOp(k), k, nil
+	if shouldNegateNonce != nil && shouldNegateNonce(group.ScalarBaseOp(k)) {
+		k = k.Neg()
+	}
+	R := group.ScalarBaseOp(k)
+	return R, k, nil
 }
 
 func ComputeGenericResponse[S Scalar[S]](privateKeyValue, nonce, challenge S, responseOperatorIsNegative bool) (S, error) {

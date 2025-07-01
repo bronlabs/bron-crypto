@@ -59,11 +59,7 @@ func NewAggregator[
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create partial signature verifier for scheme %s", scheme.Name())
 	}
-	variant, err := scheme.Variant()
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to get variant for scheme %s", scheme.Name())
-	}
-	return &Aggregator[VR, GE, S, M]{pkm: pk, group: group, sf: sf, variant: variant, verifier: verifier, psigVerifier: psigVerifier}, nil
+	return &Aggregator[VR, GE, S, M]{pkm: pk, group: group, sf: sf, variant: scheme.Variant(), verifier: verifier, psigVerifier: psigVerifier}, nil
 }
 
 func (a *Aggregator[VR, GE, S, M]) Aggregate(

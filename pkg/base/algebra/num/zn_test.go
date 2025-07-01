@@ -973,7 +973,7 @@ func TestZn_LargeModulus(t *testing.T) {
 	largeModBytes := bytes.Repeat([]byte{0xFF}, 32) // 256-bit modulus
 	// Create large cardinal from bytes
 	// Since we can't access the internal v field, we'll use FromBytes on the cardinal
-	largeCard := cardinal.FromNat(new(saferith.Nat).SetBytes(largeModBytes))
+	largeCard := cardinal.NewFromNat(new(saferith.Nat).SetBytes(largeModBytes))
 
 	zn, err := num.NewZn(largeCard)
 	require.NoError(t, err)

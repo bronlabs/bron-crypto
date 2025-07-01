@@ -2,6 +2,7 @@ package cardinal
 
 import (
 	"fmt"
+	"math/big"
 
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
@@ -40,12 +41,29 @@ func New(n uint64) Cardinal {
 	}
 }
 
-func FromNat(n *saferith.Nat) Cardinal {
+func NewFromNat(n *saferith.Nat) Cardinal {
 	if n == nil {
 		return Unknown
 	}
 	return &cardinal{
 		v:         n,
+		isUnknown: false,
+		isFinite:  true,
+	}
+}
+
+func NewFromBig(n *big.Int) Cardinal {
+	if n == nil {
+		return Unknown
+	}
+	if n.Sign() < 0 {
+		return Zero // Negative values are not valid for cardinal numbers
+	}
+	if n.IsUint64() {
+		return New(n.Uint64())
+	}
+	return &cardinal{
+		v:         new(saferith.Nat).SetBig(n, -1),
 		isUnknown: false,
 		isFinite:  true,
 	}
@@ -200,6 +218,16 @@ func (c *cardinal) Bytes() []byte {
 		return nil
 	}
 	return c.v.Bytes()
+}
+
+func (c *cardinal) Big() *big.Int {
+	if c.isUnknown || !c.isFinite {
+		return nil
+	}
+	if c.v == nil {
+		return big.NewInt(0)
+	}
+	return c.v.Big()
 }
 
 func (c *cardinal) String() string {

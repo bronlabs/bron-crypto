@@ -2,6 +2,7 @@ package impl
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/cronokirby/saferith"
@@ -19,6 +20,7 @@ type Cardinal interface {
 	Minuend[Cardinal]
 
 	Uint64() uint64
+	Big() *big.Int
 	IsZero() bool
 	IsFinite() bool
 	IsUnknown() bool

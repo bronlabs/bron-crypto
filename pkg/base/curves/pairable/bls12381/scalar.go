@@ -60,7 +60,7 @@ func (f *ScalarField) Characteristic() cardinal.Cardinal {
 }
 
 func (*ScalarField) Order() cardinal.Cardinal {
-	return cardinal.FromNat(scalarFieldOrder.Nat())
+	return cardinal.NewFromNat(scalarFieldOrder.Nat())
 }
 
 func (*ScalarField) Hash(input []byte) (*Scalar, error) {

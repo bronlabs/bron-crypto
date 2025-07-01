@@ -17,7 +17,7 @@ func Test_VanillaSchnorr_BasicSigning_k256(t *testing.T) {
 
 	message := []byte("test message for vanilla schnorr")
 	group := k256.NewCurve()
-	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, crand.Reader)
+	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, crand.Reader)
 	require.NoError(t, err)
 
 	// Generate key pair
@@ -44,7 +44,7 @@ func Test_VanillaSchnorr_BasicSigning_p256(t *testing.T) {
 
 	message := []byte("test message for vanilla schnorr on P256")
 	group := p256.NewCurve()
-	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, crand.Reader)
+	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, crand.Reader)
 	require.NoError(t, err)
 
 	// Generate key pair
@@ -72,7 +72,7 @@ func Test_VanillaSchnorr_InvalidSignature(t *testing.T) {
 	message := []byte("original message")
 	tampered := []byte("tampered message")
 	group := k256.NewCurve()
-	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, crand.Reader)
+	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, crand.Reader)
 	require.NoError(t, err)
 
 	// Generate key pair
@@ -103,7 +103,7 @@ func Test_VanillaSchnorr_DifferentKeys(t *testing.T) {
 
 	message := []byte("test message")
 	group := k256.NewCurve()
-	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, crand.Reader)
+	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, crand.Reader)
 	require.NoError(t, err)
 
 	// Generate first key pair
@@ -139,48 +139,48 @@ func Test_VanillaSchnorr_BatchVerify(t *testing.T) {
 	message1 := []byte("first message")
 	message2 := []byte("second message")
 	message3 := []byte("third message")
-	
+
 	group := k256.NewCurve()
-	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, crand.Reader)
+	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, crand.Reader)
 	require.NoError(t, err)
 
 	// Generate key pairs
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
-	
+
 	sk1, pk1, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
-	
+
 	sk2, pk2, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
-	
+
 	sk3, pk3, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
 
 	// Create signers
 	signer1, err := scheme.Signer(sk1)
 	require.NoError(t, err)
-	
+
 	signer2, err := scheme.Signer(sk2)
 	require.NoError(t, err)
-	
+
 	signer3, err := scheme.Signer(sk3)
 	require.NoError(t, err)
 
 	// Sign messages
 	sig1, err := signer1.Sign(message1)
 	require.NoError(t, err)
-	
+
 	sig2, err := signer2.Sign(message2)
 	require.NoError(t, err)
-	
+
 	sig3, err := signer3.Sign(message3)
 	require.NoError(t, err)
 
 	// Batch verify
 	verifier, err := scheme.Verifier()
 	require.NoError(t, err)
-	
+
 	err = verifier.BatchVerify(
 		[]*vanilla.Signature[*k256.Point, *k256.Scalar]{sig1, sig2, sig3},
 		[]*vanilla.PublicKey[*k256.Point, *k256.Scalar]{pk1, pk2, pk3},
@@ -202,7 +202,7 @@ func Test_VanillaSchnorr_EmptyMessage(t *testing.T) {
 
 	message := []byte{}
 	group := k256.NewCurve()
-	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, crand.Reader)
+	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, crand.Reader)
 	require.NoError(t, err)
 
 	// Generate key pair
@@ -229,9 +229,9 @@ func Test_VanillaSchnorr_ResponseOperatorNegative(t *testing.T) {
 
 	message := []byte("test with negative response operator")
 	group := k256.NewCurve()
-	
+
 	// Test with negative response operator (s = k - e*x)
-	scheme, err := vanilla.NewScheme(group, sha256.New, true, true, crand.Reader)
+	scheme, err := vanilla.NewScheme(group, sha256.New, true, true, nil, crand.Reader)
 	require.NoError(t, err)
 
 	// Generate key pair
@@ -258,7 +258,7 @@ func Test_VanillaSchnorr_SerializeSignature(t *testing.T) {
 
 	message := []byte("test serialization")
 	group := k256.NewCurve()
-	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, crand.Reader)
+	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, crand.Reader)
 	require.NoError(t, err)
 
 	// Generate key pair
@@ -274,13 +274,12 @@ func Test_VanillaSchnorr_SerializeSignature(t *testing.T) {
 	require.NoError(t, err)
 
 	// Get variant and serialize signature
-	variant, err := scheme.Variant()
-	require.NoError(t, err)
-	
+	variant := scheme.Variant()
+
 	serialized, err := variant.SerializeSignature(signature)
 	require.NoError(t, err)
 	require.NotNil(t, serialized)
-	
+
 	// The serialized signature should contain R followed by S
 	// For k256, R is a compressed point (33 bytes) and S is a scalar (32 bytes)
 	expectedLen := 33 + 32 // R + S
@@ -291,11 +290,10 @@ func Test_VanillaSchnorr_VariantProperties(t *testing.T) {
 	t.Parallel()
 
 	group := k256.NewCurve()
-	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, crand.Reader)
+	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, crand.Reader)
 	require.NoError(t, err)
 
-	variant, err := scheme.Variant()
-	require.NoError(t, err)
+	variant := scheme.Variant()
 
 	// Check variant type
 	require.Equal(t, vanilla.VariantType, variant.Type())

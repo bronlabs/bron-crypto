@@ -206,7 +206,7 @@ func (n *Nat) IsUnit(modulus *NatPlus) bool {
 }
 
 func (n *Nat) Cardinal() cardinal.Cardinal {
-	return cardinal.FromNat(&n.v)
+	return cardinal.NewFromNat(&n.v)
 }
 
 func (n *Nat) TryDiv(other *Nat) (*Nat, error) {
