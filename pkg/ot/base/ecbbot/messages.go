@@ -1,0 +1,85 @@
+package ecbbot
+
+import (
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+)
+
+type Round1P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] struct {
+	MS GE // mS ∈ Point
+}
+
+type Round2P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] struct {
+	Phi [][2][]GE // Φ ∈ [ξ][2][L]Point
+}
+
+//func (r1p2p *Round1P2P) Validate(protocol types.Protocol) error {
+//	if r1p2p.MS == nil {
+//		return errs.NewIsNil("mS")
+//	}
+//	if r1p2p.MS.Curve() != protocol.Curve() {
+//		return errs.NewCurve("mS curve %s is not protocol curve %s", r1p2p.MS.Curve().Name(), protocol.Curve().Name())
+//	}
+//	if r1p2p.MS.IsAdditiveIdentity() {
+//		return errs.NewIsNil("mS is identity")
+//	}
+//	return nil
+//}
+//
+//func (r2p2p *Round2P2P) Validate(protocol types.Protocol) error {
+//	otProtocol, ok := protocol.(*ot.Protocol)
+//	if !ok {
+//		return errs.NewArgument("protocol is not ot.Protocol")
+//	}
+//	L, Xi := otProtocol.L, otProtocol.Xi
+//	if len(r2p2p.Phi) == 0 {
+//		return errs.NewIsNil("phi")
+//	}
+//	if len(r2p2p.Phi) != Xi {
+//		return errs.NewLength("len(phi)=%d is not Xi=%d", len(r2p2p.Phi), Xi)
+//	}
+//	for i := 0; i < Xi; i++ {
+//		for j := 0; j < 2; j++ {
+//			if len(r2p2p.Phi[i][j]) != L {
+//				return errs.NewLength("len(phi[%d][%d])=%d is not L=%d", i, j, len(r2p2p.Phi[i][j]), L)
+//			}
+//			for l := 0; l < L; l++ {
+//				if r2p2p.Phi[i][j][l] == nil {
+//					return errs.NewIsNil("phi[%d][%d][%d]", i, j, l)
+//				}
+//				if r2p2p.Phi[i][j][l].Curve() != otProtocol.Curve() {
+//					return errs.NewCurve("phi[%d][%d][%d] curve %s is not protocol curve %s", i, j, l, r2p2p.Phi[i][j][l].Curve().Name(), otProtocol.Curve().Name())
+//				}
+//				if r2p2p.Phi[i][j][l].IsAdditiveIdentity() {
+//					return errs.NewIsNil("phi[%d][%d][%d] is identity", i, j, l)
+//				}
+//			}
+//		}
+//	}
+//	return nil
+//}
+
+type ReceiverOutput[SE algebra.PrimeFieldElement[SE]] struct {
+	Choices []byte
+	R       [][]SE
+}
+
+func NewReceiverOutput[SE algebra.PrimeFieldElement[SE]](chi, l int) *ReceiverOutput[SE] {
+	r := make([][]SE, chi)
+	for i := range r {
+		r[i] = make([]SE, l)
+	}
+	return &ReceiverOutput[SE]{R: r}
+}
+
+type SenderOutput[SE algebra.PrimeFieldElement[SE]] struct {
+	S [][2][]SE
+}
+
+func NewSenderOutput[SE algebra.PrimeFieldElement[SE]](chi, l int) *SenderOutput[SE] {
+	s := make([][2][]SE, chi)
+	for i := range s {
+		s[i][0] = make([]SE, l)
+		s[i][1] = make([]SE, l)
+	}
+	return &SenderOutput[SE]{S: s}
+}
