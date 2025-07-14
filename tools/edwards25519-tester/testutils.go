@@ -3,7 +3,7 @@ package edwards25519_tester
 import (
 	filippo "filippo.io/edwards25519"
 	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
-	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
 	"github.com/stretchr/testify/require"
 	"io"
 	"testing"

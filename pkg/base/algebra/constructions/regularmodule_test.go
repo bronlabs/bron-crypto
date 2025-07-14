@@ -6,8 +6,8 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/num"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/num/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/ase/nt"
+	"github.com/bronlabs/bron-crypto/pkg/ase/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

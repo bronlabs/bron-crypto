@@ -77,7 +77,7 @@ func (p *DirectSumOfPolynomials[S]) Structure() algebra.Structure[*DirectSumOfPo
 	return out
 }
 
-func (p *DirectSumOfPolynomials[S]) IsDomain() bool {
+func (p *DirectSumOfPolynomials[S]) IsSemiDomain() bool {
 	return false
 }
 

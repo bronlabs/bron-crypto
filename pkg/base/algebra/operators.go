@@ -2,66 +2,93 @@ package algebra
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 )
 
+const UnboundedCapacity crtp.Capacity = -1
+
 type (
-	Operand[E any]      aimpl.Operand[E]
-	MaybeOperand[E any] aimpl.MaybeOperand[E]
+	Capacity                    = crtp.Capacity
+	Operand[E any]              crtp.Operand[E]
+	FixedCapacityOperand[E any] crtp.FixedCapacityOperand[E]
 
-	DualOperand[E any]      aimpl.DualOperand[E]
-	MaybeDualOperand[E any] aimpl.MaybeDualOperand[E]
+	DualOperand[E any]              crtp.DualOperand[E]
+	FixedCapacityDualOperand[E any] crtp.FixedCapacityDualOperand[E]
 
-	Summand[E any]      aimpl.Summand[E]
-	MaybeSummand[E any] aimpl.MaybeSummand[E]
+	Summand[E any]                   crtp.Summand[E]
+	FixedCapacitySummand[E any]      crtp.FixedCapacitySummand[E]
+	MaybeSummand[E any]              crtp.MaybeSummand[E]
+	MaybeFixedCapacitySummand[E any] crtp.MaybeFixedCapacitySummand[E]
 
-	Minuend[E any]      aimpl.Minuend[E]
-	MaybeMinuend[E any] aimpl.MaybeMinuend[E]
+	Minuend[E any]                   crtp.Minuend[E]
+	FixedCapacityMinuend[E any]      crtp.FixedCapacityMinuend[E]
+	MaybeMinuend[E any]              crtp.MaybeMinuend[E]
+	MaybeFixedCapacityMinuend[E any] crtp.MaybeFixedCapacityMinuend[E]
 
-	Multiplicand[E any]      aimpl.Multiplicand[E]
-	MaybeMultiplicand[E any] aimpl.MaybeMultiplicand[E]
+	Multiplicand[E any]                   crtp.Multiplicand[E]
+	FixedCapacityMultiplicand[E any]      crtp.FixedCapacityMultiplicand[E]
+	MaybeMultiplicand[E any]              crtp.MaybeMultiplicand[E]
+	MaybeFixedCapacityMultiplicand[E any] crtp.MaybeFixedCapacityMultiplicand[E]
 
-	Dividend[E any]      aimpl.Dividend[E]
-	MaybeDividend[E any] aimpl.MaybeDividend[E]
+	Dividend[E any]                   crtp.Dividend[E]
+	FixedCapacityDividend[E any]      crtp.FixedCapacityDividend[E]
+	MaybeDividend[E any]              crtp.MaybeDividend[E]
+	MaybeFixedCapacityDividend[E any] crtp.MaybeFixedCapacityDividend[E]
 
-	ExponentiationBase[B, E any]      aimpl.ExponentiationBase[B, E]
-	MaybeExponentiationBase[B, E any] aimpl.MaybeExponentiationBase[B, E]
+	ExponentiationBase[B, E any]                   crtp.ExponentiationBase[B, E]
+	FixedCapacityExponentiationBase[B, E any]      crtp.FixedCapacityExponentiationBase[B, E]
+	MaybeExponentiationBase[B, E any]              crtp.MaybeExponentiationBase[B, E]
+	MaybeFixedCapacityExponentiationBase[B, E any] crtp.MaybeFixedCapacityExponentiationBase[B, E]
 
-	Conjunct[E any]      aimpl.Conjunct[E]
-	MaybeConjunct[E any] aimpl.MaybeConjunct[E]
+	Residue[M, Q any] crtp.Residue[M, Q]
 
-	Disjunct[E any]      aimpl.Disjunct[E]
-	MaybeDisjunct[E any] aimpl.MaybeDisjunct[E]
+	Conjunct[E any]      crtp.Conjunct[E]
+	MaybeConjunct[E any] crtp.MaybeConjunct[E]
 
-	ExclusiveDisjunct[E any]      aimpl.ExclusiveDisjunct[E]
-	MaybeExclusiveDisjunct[E any] aimpl.MaybeExclusiveDisjunct[E]
+	Disjunct[E any]      crtp.Disjunct[E]
+	MaybeDisjunct[E any] crtp.MaybeDisjunct[E]
 
-	ArithmeticNegand[E any]      aimpl.ArithmeticNegand[E]
-	MaybeArithmeticNegand[E any] aimpl.MaybeArithmeticNegand[E]
+	ExclusiveDisjunct[E any]      crtp.ExclusiveDisjunct[E]
+	MaybeExclusiveDisjunct[E any] crtp.MaybeExclusiveDisjunct[E]
 
-	Inversand[E any]      aimpl.Inversand[E]
-	MaybeInversand[E any] aimpl.MaybeInversand[E]
+	ArithmeticNegand[E any]      crtp.ArithmeticNegand[E]
+	MaybeArithmeticNegand[E any] crtp.MaybeArithmeticNegand[E]
 
-	BooleanNegand[E any]      aimpl.BooleanNegand[E]
-	MaybeBooleanNegand[E any] aimpl.MaybeBooleanNegand[E]
+	Inversand[E any]      crtp.Inversand[E]
+	MaybeInversand[E any] crtp.MaybeInversand[E]
+
+	BooleanNegand[E any]      crtp.BooleanNegand[E]
+	MaybeBooleanNegand[E any] crtp.MaybeBooleanNegand[E]
+
+	Shiftable[E, S any]      crtp.Shiftable[E, S]
+	MaybeShiftable[E, S any] crtp.MaybeShiftable[E, S]
+
+	LeftBitwiseShiftable[E any]            crtp.LeftBitwiseShiftable[E]
+	FixedLengthLeftBitwiseShiftable[E any] crtp.FixedLengthLeftBitwiseShiftable[E]
+
+	RightBitwiseShiftable[E any]            crtp.RightBitwiseShiftable[E]
+	FixedLengthRightBitwiseShiftable[E any] crtp.FixedLengthRightBitwiseShiftable[E]
+
+	Resizable[E, C any]      crtp.Resizable[E, C]
+	ResizableCapacity[E any] crtp.ResizableCapacity[E]
 )
 
 type Homomorphism[E1 SemiGroupElement[E1], E2 SemiGroupElement[E2]] func(E1) E2
 
 type HomomorphicLike[T any, TV GroupElement[TV]] interface {
 	base.Transparent[TV]
-	aimpl.Operand[T]
+	crtp.Operand[T]
 	base.Equatable[T]
 }
 
 type AdditivelyHomomorphicLike[T HomomorphicLike[T, TV], TV AdditiveGroupElement[TV]] interface {
 	HomomorphicLike[T, TV]
-	aimpl.Summand[T]
+	crtp.Summand[T]
 }
 
 type MultiplicativelyHomomorphicLike[T HomomorphicLike[T, TV], TV MultiplicativeGroupElement[TV]] interface {
 	HomomorphicLike[T, TV]
-	aimpl.Multiplicand[T]
+	crtp.Multiplicand[T]
 }
 
 func IsAdditiveObject[E any](e E) bool {

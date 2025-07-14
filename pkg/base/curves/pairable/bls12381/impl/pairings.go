@@ -1,8 +1,8 @@
 package impl
 
 import (
-	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
 )
 

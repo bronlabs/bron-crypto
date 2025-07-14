@@ -3,19 +3,20 @@ package points
 import (
 	"io"
 
-	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 type point[FP fieldsImpl.FiniteFieldElement[FP], PP any] interface {
+	ct.ConditionallyAssignable[PP]
 	Encode(dstPrefix string, message []byte)
 	Hash(dstPrefix string, message []byte)
 
 	Set(p PP)
-	SetRandom(prng io.Reader) (ok uint64)
+	SetRandom(prng io.Reader) (ok ct.Bool)
 	SetIdentity()
 	SetGenerator()
-	SetAffine(x, y FP) (ok uint64)
-	Select(choice uint64, z, nz PP)
+	SetAffine(x, y FP) (ok ct.Bool)
 	ClearCofactor(in PP)
 
 	Add(lhs, rhs PP)
@@ -23,21 +24,17 @@ type point[FP fieldsImpl.FiniteFieldElement[FP], PP any] interface {
 	Neg(v PP)
 	Double(v PP)
 
-	IsIdentity() uint64
-	Equals(v PP) uint64
+	IsIdentity() ct.Bool
+	Equals(v PP) ct.Bool
 
-	ToAffine(x, y FP) (ok uint64)
-
-	// === compatibility with algebra traits ===
-	Op(lhs, rhs PP) // Add
-	OpOp(out PP)    // Double
+	ToAffine(x, y FP) (ok ct.Bool)
 }
 
 type Point[FP fieldsImpl.FiniteFieldElement[FP], PP point[FP, PP]] interface {
 	point[FP, PP]
 }
 
-type PointPtrConstraint[FP fieldsImpl.FiniteFieldElement[FP], PP point[FP, PP], P any] interface {
+type PointPtr[FP fieldsImpl.FiniteFieldElement[FP], PP point[FP, PP], P any] interface {
 	*P
 	point[FP, PP]
 }

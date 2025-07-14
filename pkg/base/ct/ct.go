@@ -1,50 +1,30 @@
 package ct
 
-import (
-	"golang.org/x/exp/constraints"
+type (
+	Choice uint8
+	Bool   = Choice
 )
 
-func IsZero[I constraints.Integer](x I) uint64 {
-	xx := uint64(x)
-	return ((xx | -xx) >> 63) ^ 1
+const (
+	Zero Choice = 0
+	One  Choice = 1
+
+	False Bool = 0
+	True  Bool = 1
+)
+
+type Comparable[E any] interface {
+	Compare(rhs E) (lt, eq, gt Bool)
 }
 
-// Equal returns 1 if x == y and 0 otherwise. Based on the subtle package.
-func Equal[I constraints.Unsigned](x, y I) uint64 {
-	return IsZero(x ^ y)
+type Equatable[E any] interface {
+	Equal(rhs E) Bool
 }
 
-// Greater returns 1 if x > y and 0 otherwise.
-//
-//   - If both x < 2^63 and y < 2^63, then y-x will have its high bit set only if x > y.
-//   - If either x >= 2^63 or y >= 2^63 (but not both), then the result is the high bit of x.
-//   - If both x >= 2^63 and y >= 2^63, then we can virtually subtract 2^63 from both,
-//     and we are back to the first case. Since (y-2^63)-(x-2^63) = y-x, the direct subtraction is already fine.
-func Greater[I constraints.Unsigned](x, y I) uint64 {
-	xx := uint64(x)
-	yy := uint64(y)
-	zz := yy - xx
-	return (zz ^ ((xx ^ yy) & (xx ^ zz))) >> 63
+type ConditionallySelectable[E any] interface {
+	Select(choice Choice, x0, x1 E) E
 }
 
-// Less returns 1 if x < y and 0 otherwise.
-func Less[I constraints.Unsigned](x, y I) uint64 {
-	return Greater(y, x)
-}
-
-// LessOrEqual returns 1 if x <= y and 0 otherwise.
-func LessOrEqual[I constraints.Unsigned](x, y I) uint64 {
-	return Greater(x, y) ^ 1
-}
-
-// GreaterOrEqual returns 1 if x >= y and 0 otherwise.
-func GreaterOrEqual[I constraints.Unsigned](x, y I) uint64 {
-	return Greater(y, x) ^ 1
-}
-
-// Select returns x0 if choice == 0 and x1 if choice == 1. Undefined for other values of choice.
-// It supports both signed and unsigned integer types.
-func Select[I constraints.Integer](choice uint64, x0, x1 I) I {
-	mask := I(-int64(choice)) // 0 if choice == 0, -1 (all bits 1) if choice == 1
-	return (x0 &^ mask) | (x1 & mask)
+type ConditionallyAssignable[E any] interface {
+	CondAssign(choice Choice, x0, x1 E)
 }

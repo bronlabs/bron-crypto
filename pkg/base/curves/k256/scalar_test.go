@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/num/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/ase/nt/cardinal"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/stretchr/testify/require"

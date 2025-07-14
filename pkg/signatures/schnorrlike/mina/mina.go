@@ -29,6 +29,10 @@ var (
 	group    = pasta.NewPallasCurve()
 	sf       = pasta.NewPallasScalarField()
 
+	SignatureSize  = group.ElementSize() + sf.ElementSize()
+	PublicKeySize  = group.ElementSize()
+	PrivateKeySize = sf.ElementSize()
+
 	_ schnorrlike.Scheme[*Variant, *GroupElement, *Scalar, *Message, *KeyGenerator, *Signer, *Verifier]         = (*Scheme)(nil)
 	_ tschnorr.MPCFriendlyScheme[*Variant, *GroupElement, *Scalar, *Message, *KeyGenerator, *Signer, *Verifier] = (*Scheme)(nil)
 )
@@ -184,5 +188,31 @@ func SerializeSignature(signature *Signature) ([]byte, error) {
 	}
 	rx := signature.R.AffineX().Bytes()
 	s := signature.S.Bytes()
-	return slices.Concat(rx, s), nil
+	out := slices.Concat(rx, s)
+	if len(out) != SignatureSize {
+		return nil, errs.NewLength("invalid signature size. got :%d, need :%d", len(out), SignatureSize)
+	}
+	return out, nil
+}
+
+func DeserializeSignature(input []byte) (*Signature, error) {
+	if len(input) != SignatureSize {
+		return nil, errs.NewLength("invalid signature size. got :%d, need :%d", len(input), SignatureSize)
+	}
+
+	rxBytes := input[:group.ElementSize()]
+	sBytes := input[group.ElementSize():]
+
+	R, err := group.FromBytes(rxBytes)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to create group element from bytes")
+	}
+	s, err := sf.FromBytes(sBytes)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to create scalar from bytes")
+	}
+	return &Signature{
+		R: R,
+		S: s,
+	}, nil
 }

@@ -1,110 +1,107 @@
 package algebra
 
 import (
-	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 )
 
 type (
-	Actable[E, S any]                 aimpl.Actable[E, S]
-	AdditivelyActable[E, S any]       aimpl.AdditivelyActable[E, S]
-	MultiplicativelyActable[E, S any] aimpl.MultiplicativelyActable[E, S]
+	Actable[E, S any]                 crtp.Actable[E, S]
+	AdditivelyActable[E, S any]       crtp.AdditivelyActable[E, S]
+	MultiplicativelyActable[E, S any] crtp.MultiplicativelyActable[E, S]
 
-	Action[S SemiGroupElement[S], E Element[E]] func(actor S, element E) E
+	Action[S, E any] func(actor S, element E) E
 )
 
 type (
-	SemiModule[ME aimpl.SemiModuleElement[ME, S], S aimpl.SemiRingElement[S]]        = aimpl.SemiModule[ME, S]
-	SemiModuleElement[ME aimpl.SemiModuleElement[ME, S], S aimpl.SemiRingElement[S]] = aimpl.SemiModuleElement[ME, S]
+	SemiModule[ME crtp.SemiModuleElement[ME, S], S crtp.SemiRingElement[S]]        = crtp.SemiModule[ME, S]
+	SemiModuleElement[ME crtp.SemiModuleElement[ME, S], S crtp.SemiRingElement[S]] = crtp.SemiModuleElement[ME, S]
 
-	ZLikeSemiModule[E aimpl.SemiModuleElement[E, S], S aimpl.IntLike[S]]        = aimpl.ZLikeSemiModule[E, S]
-	ZLikeSemiModuleElement[E aimpl.SemiModuleElement[E, S], S aimpl.IntLike[S]] = aimpl.ZLikeSemiModuleElement[E, S]
+	AdditiveSemiModule[ME crtp.AdditiveSemiModuleElement[ME, S], S crtp.SemiRingElement[S]]        crtp.AdditiveSemiModule[ME, S]
+	AdditiveSemiModuleElement[ME crtp.AdditiveSemiModuleElement[ME, S], S crtp.SemiRingElement[S]] crtp.AdditiveSemiModuleElement[ME, S]
+
+	MultiplicativeSemiModule[ME crtp.MultiplicativeSemiModuleElement[ME, S], S crtp.SemiRingElement[S]]        crtp.MultiplicativeSemiModule[ME, S]
+	MultiplicativeSemiModuleElement[ME crtp.MultiplicativeSemiModuleElement[ME, S], S crtp.SemiRingElement[S]] crtp.MultiplicativeSemiModuleElement[ME, S]
 )
 
 type (
-	Module[ME aimpl.ModuleElement[ME, S], S aimpl.RingElement[S]]        = aimpl.Module[ME, S]
-	ModuleElement[ME aimpl.ModuleElement[ME, S], S aimpl.RingElement[S]] = aimpl.ModuleElement[ME, S]
+	Module[ME crtp.ModuleElement[ME, S], S crtp.RingElement[S]]        = crtp.Module[ME, S]
+	ModuleElement[ME crtp.ModuleElement[ME, S], S crtp.RingElement[S]] = crtp.ModuleElement[ME, S]
 
-	AdditiveModule[ME aimpl.AdditiveModuleElement[ME, S], S aimpl.RingElement[S]]        aimpl.AdditiveModule[ME, S]
-	AdditiveModuleElement[ME aimpl.AdditiveModuleElement[ME, S], S aimpl.RingElement[S]] aimpl.AdditiveModuleElement[ME, S]
+	AdditiveModule[ME crtp.AdditiveModuleElement[ME, S], S crtp.RingElement[S]]        crtp.AdditiveModule[ME, S]
+	AdditiveModuleElement[ME crtp.AdditiveModuleElement[ME, S], S crtp.RingElement[S]] crtp.AdditiveModuleElement[ME, S]
 
-	MultiplicativeModule[ME aimpl.MultiplicativeModuleElement[ME, S], S aimpl.RingElement[S]]        aimpl.MultiplicativeModule[ME, S]
-	MultiplicativeModuleElement[ME aimpl.MultiplicativeModuleElement[ME, S], S aimpl.RingElement[S]] aimpl.MultiplicativeModuleElement[ME, S]
+	MultiplicativeModule[ME crtp.MultiplicativeModuleElement[ME, S], S crtp.RingElement[S]]        crtp.MultiplicativeModule[ME, S]
+	MultiplicativeModuleElement[ME crtp.MultiplicativeModuleElement[ME, S], S crtp.RingElement[S]] crtp.MultiplicativeModuleElement[ME, S]
 
-	FiniteModule[ME aimpl.FiniteModuleElement[ME, S], S aimpl.FiniteRingElement[S]]        aimpl.FiniteModule[ME, S]
-	FiniteModuleElement[ME aimpl.FiniteModuleElement[ME, S], S aimpl.FiniteRingElement[S]] aimpl.FiniteModuleElement[ME, S]
-
-	ZLikeModule[E aimpl.ModuleElement[E, S], S aimpl.IntLike[S]]        = aimpl.ZLikeModule[E, S]
-	ZLikeModuleElement[E aimpl.ModuleElement[E, S], S aimpl.IntLike[S]] = aimpl.ZLikeModuleElement[E, S]
+	ZLikeModule[E crtp.ModuleElement[E, S], S crtp.IntLike[S]]        = crtp.ZLikeModule[E, S]
+	ZLikeModuleElement[E crtp.ModuleElement[E, S], S crtp.IntLike[S]] = crtp.ZLikeModuleElement[E, S]
 )
 
 type (
-	VectorSpace[V aimpl.Vector[V, S], S aimpl.FieldElement[S]] aimpl.VectorSpace[V, S]
-	Vector[V aimpl.Vector[V, S], S aimpl.FieldElement[S]]      aimpl.Vector[V, S]
+	VectorSpace[V crtp.Vector[V, S], S crtp.FieldElement[S]] crtp.VectorSpace[V, S]
+	Vector[V crtp.Vector[V, S], S crtp.FieldElement[S]]      crtp.Vector[V, S]
 )
 
 type (
-	Algebra[AE aimpl.AlgebraElement[AE, S], S aimpl.RingElement[S]]        aimpl.Algebra[AE, S]
-	AlgebraElement[AE aimpl.AlgebraElement[AE, S], S aimpl.RingElement[S]] aimpl.AlgebraElement[AE, S]
-
-	FiniteAlgebra[AE aimpl.FiniteAlgebraElement[AE, S], S aimpl.FiniteRingElement[S]]        aimpl.FiniteAlgebra[AE, S]
-	FiniteAlgebraElement[AE aimpl.FiniteAlgebraElement[AE, S], S aimpl.FiniteRingElement[S]] aimpl.FiniteAlgebraElement[AE, S]
+	Algebra[AE crtp.AlgebraElement[AE, S], S crtp.RingElement[S]]        crtp.Algebra[AE, S]
+	AlgebraElement[AE crtp.AlgebraElement[AE, S], S crtp.RingElement[S]] crtp.AlgebraElement[AE, S]
 )
 
 type (
 	PolynomialLikeStructure[
-		P aimpl.PolynomialLike[P, S, C],
-		S aimpl.RingElement[S],
-		C aimpl.GroupElement[C],
-	] = aimpl.PolynomialLike[P, S, C]
+		P crtp.PolynomialLike[P, S, C],
+		S crtp.RingElement[S],
+		C crtp.GroupElement[C],
+	] = crtp.PolynomialLike[P, S, C]
 
 	PolynomialLike[
-		P aimpl.PolynomialLike[P, S, C],
-		S aimpl.RingElement[S],
-		C aimpl.GroupElement[C],
-	] = aimpl.PolynomialLike[P, S, C]
+		P crtp.PolynomialLike[P, S, C],
+		S crtp.RingElement[S],
+		C crtp.GroupElement[C],
+	] = crtp.PolynomialLike[P, S, C]
 
 	UnivariatePolynomialLikeStructure[
-		P aimpl.UnivariatePolynomialLike[P, S, C],
-		S aimpl.RingElement[S],
-		C aimpl.GroupElement[C],
-	] = aimpl.UnivariatePolynomialLikeStructure[P, S, C]
+		P crtp.UnivariatePolynomialLike[P, S, C],
+		S crtp.RingElement[S],
+		C crtp.GroupElement[C],
+	] = crtp.UnivariatePolynomialLikeStructure[P, S, C]
 
 	UnivariatePolynomialLike[
-		P aimpl.UnivariatePolynomialLike[P, S, C],
-		S aimpl.RingElement[S],
-		C aimpl.GroupElement[C],
-	] = aimpl.UnivariatePolynomialLike[P, S, C]
+		P crtp.UnivariatePolynomialLike[P, S, C],
+		S crtp.RingElement[S],
+		C crtp.GroupElement[C],
+	] = crtp.UnivariatePolynomialLike[P, S, C]
 
 	PolynomialModule[
-		MP aimpl.ModuleValuedPolynomial[MP, P, C, S],
-		P aimpl.Polynomial[P, S],
-		C aimpl.ModuleElement[C, S],
-		S aimpl.FiniteRingElement[S],
-	] = aimpl.PolynomialModule[MP, P, C, S]
+		MP crtp.ModuleValuedPolynomial[MP, P, C, S],
+		P crtp.Polynomial[P, S],
+		C crtp.ModuleElement[C, S],
+		S crtp.RingElement[S],
+	] = crtp.PolynomialModule[MP, P, C, S]
 	ModuleValuedPolynomial[
-		MP aimpl.ModuleValuedPolynomial[MP, P, C, S],
-		P aimpl.Polynomial[P, S],
-		C aimpl.ModuleElement[C, S],
-		S aimpl.FiniteRingElement[S],
-	] = aimpl.ModuleValuedPolynomial[MP, P, C, S]
+		MP crtp.ModuleValuedPolynomial[MP, P, C, S],
+		P crtp.Polynomial[P, S],
+		C crtp.ModuleElement[C, S],
+		S crtp.RingElement[S],
+	] = crtp.ModuleValuedPolynomial[MP, P, C, S]
 
 	PolynomialRing[
-		P aimpl.Polynomial[P, S],
-		S aimpl.FiniteRingElement[S],
-	] = aimpl.PolynomialRing[P, S]
+		P crtp.Polynomial[P, S],
+		S crtp.RingElement[S],
+	] = crtp.PolynomialRing[P, S]
 	Polynomial[
-		P aimpl.Polynomial[P, S],
-		S aimpl.FiniteRingElement[S],
-	] = aimpl.Polynomial[P, S]
+		P crtp.Polynomial[P, S],
+		S crtp.RingElement[S],
+	] = crtp.Polynomial[P, S]
 
 	MultiVariatePolynomialRing[
-		PP aimpl.MultivariatePolynomial[PP, P, S],
-		P aimpl.Polynomial[P, S],
-		S aimpl.FiniteRingElement[S],
-	] = aimpl.MultivariatePolynomialRing[PP, P, S]
+		PP crtp.MultivariatePolynomial[PP, P, S],
+		P crtp.Polynomial[P, S],
+		S crtp.RingElement[S],
+	] = crtp.MultivariatePolynomialRing[PP, P, S]
 	MultivariatePolynomial[
-		MP aimpl.MultivariatePolynomial[MP, P, S],
-		P aimpl.Polynomial[P, S],
-		S aimpl.FiniteRingElement[S],
-	] = aimpl.MultivariatePolynomial[MP, P, S]
+		MP crtp.MultivariatePolynomial[MP, P, S],
+		P crtp.Polynomial[P, S],
+		S crtp.RingElement[S],
+	] = crtp.MultivariatePolynomial[MP, P, S]
 )

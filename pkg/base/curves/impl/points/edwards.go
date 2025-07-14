@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 )
 
 type TwistedEdwardsCurveParams[FP fields.FiniteFieldElement[FP]] interface {
@@ -21,7 +22,7 @@ type TwistedEdwardsCurveParams[FP fields.FiniteFieldElement[FP]] interface {
 	MulBy2D(out, in FP)
 }
 
-type TwistedEdwardsPointImpl[FP fields.FiniteFieldElementPtrConstraint[FP, F], C TwistedEdwardsCurveParams[FP], H h2c.HasherParams, M h2c.PointMapper[FP], F any] struct {
+type TwistedEdwardsPointImpl[FP fields.FiniteFieldElementPtr[FP, F], C TwistedEdwardsCurveParams[FP], H h2c.HasherParams, M h2c.PointMapper[FP], F any] struct {
 	X F
 	Y F
 	T F
@@ -214,7 +215,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Set(v *TwistedEdwardsPointImpl
 	FP(&p.T).Set(&v.T)
 }
 
-func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetRandom(prng io.Reader) (ok uint64) {
+func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetRandom(prng io.Reader) (ok ct.Bool) {
 	var curveParams C
 	var mapper M
 
@@ -235,7 +236,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetRandom(prng io.Reader) (ok 
 	q.Add(&q0, &q1)
 	curveParams.ClearCofactor(&q.X, &q.Y, &q.T, &q.Z, &q.X, &q.Y, &q.T, &q.Z)
 
-	p.Select(ok, p, &q)
+	p.CondAssign(ok, p, &q)
 	return ok
 }
 
@@ -252,7 +253,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetGenerator() {
 	FP(&p.Z).SetOne()
 }
 
-func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetAffine(x, y FP) (ok uint64) {
+func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetAffine(x, y FP) (ok ct.Bool) {
 	var params C
 	var out TwistedEdwardsPointImpl[FP, C, H, M, F]
 	FP(&out.X).Set(x)
@@ -269,13 +270,13 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetAffine(x, y FP) (ok uint64)
 	FP(&r).Mul(&xx, &yy)
 	params.MulByD(&r, &r)
 	FP(&r).Add(&r, &one)
-	ok = FP(&l).Equals(&r)
+	ok = FP(&l).Equal(&r)
 
-	p.Select(ok, p, &out)
+	p.CondAssign(ok, p, &out)
 	return ok
 }
 
-func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetFromAffineY(y FP) (ok uint64) {
+func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetFromAffineY(y FP) (ok ct.Bool) {
 	var params C
 	var one, a, x, yy, num, den F
 	var out TwistedEdwardsPointImpl[FP, C, H, M, F]
@@ -295,15 +296,15 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetFromAffineY(y FP) (ok uint6
 	FP(&out.Z).SetOne()
 
 	ok = ok1 & ok2
-	p.Select(ok, p, &out)
+	p.CondAssign(ok, p, &out)
 	return ok
 }
 
-func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Select(choice uint64, z, nz *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
-	FP(&p.X).Select(choice, &z.X, &nz.X)
-	FP(&p.Y).Select(choice, &z.Y, &nz.Y)
-	FP(&p.Z).Select(choice, &z.Z, &nz.Z)
-	FP(&p.T).Select(choice, &z.T, &nz.T)
+func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) CondAssign(choice ct.Choice, z, nz *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
+	FP(&p.X).CondAssign(choice, &z.X, &nz.X)
+	FP(&p.Y).CondAssign(choice, &z.Y, &nz.Y)
+	FP(&p.Z).CondAssign(choice, &z.Z, &nz.Z)
+	FP(&p.T).CondAssign(choice, &z.T, &nz.T)
 }
 
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) ClearCofactor(in *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
@@ -325,21 +326,21 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Neg(v *TwistedEdwardsPointImpl
 	FP(&p.T).Neg(&v.T)
 }
 
-func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) IsIdentity() uint64 {
-	return FP(&p.X).IsZero() & (FP(&p.Y).Equals(&p.Z))
+func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) IsIdentity() ct.Bool {
+	return FP(&p.X).IsZero() & (FP(&p.Y).Equal(&p.Z))
 }
 
-func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Equals(v *TwistedEdwardsPointImpl[FP, C, H, M, F]) uint64 {
+func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Equal(v *TwistedEdwardsPointImpl[FP, C, H, M, F]) ct.Bool {
 	var x1z2, x2z1, y1z2, y2z1 F
 	FP(&x1z2).Mul(&p.X, &v.Z)
 	FP(&x2z1).Mul(&v.X, &p.Z)
 	FP(&y1z2).Mul(&p.Y, &v.Z)
 	FP(&y2z1).Mul(&v.Y, &p.Z)
 
-	return FP(&x1z2).Equals(&x2z1) & FP(&y1z2).Equals(&y2z1)
+	return FP(&x1z2).Equal(&x2z1) & FP(&y1z2).Equal(&y2z1)
 }
 
-func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) ToAffine(x, y FP) (ok uint64) {
+func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) ToAffine(x, y FP) (ok ct.Bool) {
 	var xx, yy, zInv F
 	zInvPtr := FP(&zInv)
 	ok = zInvPtr.Inv(&p.Z)
@@ -347,8 +348,8 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) ToAffine(x, y FP) (ok uint64) 
 	FP(&xx).Mul(&p.X, zInvPtr)
 	FP(&yy).Mul(&p.Y, zInvPtr)
 
-	x.Select(ok, x, &xx)
-	y.Select(ok, y, &yy)
+	x.CondAssign(ok, x, &xx)
+	y.CondAssign(ok, y, &yy)
 	return ok
 }
 
@@ -357,9 +358,9 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) String() string {
 	FP(&one).SetOne()
 
 	ok := p.ToAffine(&x, &y)
-	FP(&x).Select(ok, &p.X, &x)
-	FP(&y).Select(ok, &p.Y, &y)
-	FP(&z).Select(ok, &p.Z, &one)
+	FP(&x).CondAssign(ok, &p.X, &x)
+	FP(&y).CondAssign(ok, &p.Y, &y)
+	FP(&z).CondAssign(ok, &p.Z, &one)
 
 	return fmt.Sprintf("(%s : %s : %s)", FP(&x), FP(&y), FP(&z))
 }

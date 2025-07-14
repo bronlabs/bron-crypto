@@ -7,10 +7,10 @@ import (
 	"math/big"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/num/cardinal"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/cronokirby/saferith"
 )
@@ -26,7 +26,7 @@ type PrimeFieldElementWrapperPtrConstraint[FP fieldsImpl.PrimeFieldElement[FP], 
 
 type PrimeFieldTrait[FP fieldsImpl.PrimeFieldElement[FP], WP PrimeFieldElementWrapperPtrConstraint[FP, W], W any] struct{}
 
-func (f *PrimeFieldTrait[FP, WP, W]) IsDomain() bool {
+func (f *PrimeFieldTrait[FP, WP, W]) IsSemiDomain() bool {
 	return true
 }
 
@@ -135,7 +135,7 @@ func (f *PrimeFieldTrait[FP, WP, W]) SubFieldIdentity(i uint) (any, error) {
 	panic("implement me")
 }
 
-type PrimeFieldElementTrait[FP fieldsImpl.PrimeFieldElementPtrConstraint[FP, F], F any, WP PrimeFieldElementWrapperPtrConstraint[FP, W], W any] struct {
+type PrimeFieldElementTrait[FP fieldsImpl.PrimeFieldElementPtr[FP, F], F any, WP PrimeFieldElementWrapperPtrConstraint[FP, W], W any] struct {
 	V F
 }
 
@@ -219,7 +219,7 @@ func (fe *PrimeFieldElementTrait[FP, F, WP, W]) IsOne() bool {
 }
 
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) Equal(rhs WP) bool {
-	return FP(&fe.V).Equals(rhs.Fp()) != 0
+	return FP(&fe.V).Equal(rhs.Fp()) != 0
 }
 
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) IsLessThanOrEqual(rhs WP) bool {

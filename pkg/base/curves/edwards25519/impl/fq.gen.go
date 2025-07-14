@@ -104,7 +104,7 @@ func (f *Fq) SetRandom(prng io.Reader) (ok uint64) {
 }
 
 func (f *Fq) Select(choice uint64, z, nz *Fq) {
-	fiatFqSelectznz((*[FqLimbs]uint64)(&f.fiatFqMontgomeryDomainFieldElement),fiatFqUint1(choice), (*[FqLimbs]uint64)(&z.fiatFqMontgomeryDomainFieldElement), (*[FqLimbs]uint64)(&nz.fiatFqMontgomeryDomainFieldElement))
+	fiatFqSelectznz((*[FqLimbs]uint64)(&f.fiatFqMontgomeryDomainFieldElement), fiatFqUint1(choice), (*[FqLimbs]uint64)(&z.fiatFqMontgomeryDomainFieldElement), (*[FqLimbs]uint64)(&nz.fiatFqMontgomeryDomainFieldElement))
 }
 
 func (f *Fq) Add(lhs, rhs *Fq) {

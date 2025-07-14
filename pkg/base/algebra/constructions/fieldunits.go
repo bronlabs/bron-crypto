@@ -5,13 +5,13 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/num/cardinal"
+	acrtp "github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
+	"github.com/bronlabs/bron-crypto/pkg/ase/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
-func NewFieldUnitSubGroup[F algebra.Field[FE], FE aimpl.FieldElement[FE]](f F) (*FieldUnitSubGroup[FE], error) {
+func NewFieldUnitSubGroup[F algebra.Field[FE], FE acrtp.FieldElement[FE]](f F) (*FieldUnitSubGroup[FE], error) {
 	if utils.IsNil(f) {
 		return nil, errs.NewIsNil("field is nil")
 	}
@@ -22,7 +22,7 @@ func NewFieldUnitSubGroup[F algebra.Field[FE], FE aimpl.FieldElement[FE]](f F) (
 	return out, nil
 }
 
-type FieldUnitSubGroup[FE aimpl.FieldElement[FE]] struct {
+type FieldUnitSubGroup[FE acrtp.FieldElement[FE]] struct {
 	f algebra.Field[FE]
 }
 
@@ -70,7 +70,7 @@ func (g FieldUnitSubGroup[FE]) FromBytes(x []byte) (*FieldUnitSubGroupElement[FE
 	return g.New(fe)
 }
 
-type FieldUnitSubGroupElement[FE aimpl.FieldElement[FE]] struct {
+type FieldUnitSubGroupElement[FE acrtp.FieldElement[FE]] struct {
 	fe FE
 }
 
@@ -183,7 +183,7 @@ func (ge FieldUnitSubGroupElement[FE]) String() string {
 	return fmt.Sprintf("U(%s)", ge.fe.String())
 }
 
-func _[FE aimpl.FiniteFieldElement[FE]]() {
+func _[FE acrtp.FiniteFieldElement[FE]]() {
 	var _ algebra.MultiplicativeGroup[*FieldUnitSubGroupElement[FE]] = &FieldUnitSubGroup[FE]{}
 	var _ algebra.MultiplicativeGroupElement[*FieldUnitSubGroupElement[FE]] = &FieldUnitSubGroupElement[FE]{}
 }

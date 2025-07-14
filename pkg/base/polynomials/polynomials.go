@@ -8,7 +8,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/num/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/ase/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
@@ -61,8 +61,8 @@ func (r *polynomialRing[S]) New(coeffs ...S) (Polynomial[S], error) {
 	}, nil
 }
 
-func (r *polynomialRing[S]) IsDomain() bool {
-	return r.coeffRing.IsDomain()
+func (r *polynomialRing[S]) IsSemiDomain() bool {
+	return r.coeffRing.IsSemiDomain()
 }
 
 func (r *polynomialRing[S]) FromBytes(inBytes []byte) (Polynomial[S], error) {
@@ -513,7 +513,7 @@ func (p *coefficientForm[S]) IsProbablyPrime() bool {
 }
 
 func (p *coefficientForm[S]) IsTorsionFree() bool {
-	// TODO: add IsDomain function
+	// TODO: add IsSemiDomain function
 	return true
 }
 

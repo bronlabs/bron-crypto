@@ -57,7 +57,7 @@ func (m *RegularAlgebraElement[E]) IsTorsionFree() bool {
 	}
 
 	out, _ := NewRegularAlgebra(ring)
-	return out.IsDomain()
+	return out.IsSemiDomain()
 }
 
 func (m *RegularAlgebraElement[E]) Structure() algebra.Structure[*RegularAlgebraElement[E]] {
@@ -86,7 +86,7 @@ func (m *FiniteRegularAlgebraElement[E]) IsTorsionFree() bool {
 	}
 
 	out, _ := NewRegularAlgebra(ring)
-	return out.IsDomain()
+	return out.IsSemiDomain()
 }
 
 func (m *FiniteRegularAlgebraElement[E]) Structure() algebra.Structure[*FiniteRegularAlgebraElement[E]] {

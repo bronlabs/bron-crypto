@@ -1,72 +1,63 @@
 package algebra
 
 import (
-	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 )
 
 type (
-	Magma[E aimpl.MagmaElement[E]]        = aimpl.Magma[E]
-	MagmaElement[E aimpl.MagmaElement[E]] = aimpl.MagmaElement[E]
+	Magma[E crtp.MagmaElement[E]]        = crtp.Magma[E]
+	MagmaElement[E crtp.MagmaElement[E]] = crtp.MagmaElement[E]
 )
 
 type (
-	SemiGroup[E aimpl.SemiGroupElement[E]]        = aimpl.SemiGroup[E]
-	SemiGroupElement[E aimpl.SemiGroupElement[E]] = aimpl.SemiGroupElement[E]
+	SemiGroup[E crtp.SemiGroupElement[E]]        = crtp.SemiGroup[E]
+	SemiGroupElement[E crtp.SemiGroupElement[E]] = crtp.SemiGroupElement[E]
 
-	AdditiveSemiGroup[E aimpl.AdditiveSemiGroupElement[E]]        = aimpl.AdditiveSemiGroup[E]
-	AdditiveSemiGroupElement[E aimpl.AdditiveSemiGroupElement[E]] = aimpl.AdditiveSemiGroupElement[E]
+	AdditiveSemiGroup[E crtp.AdditiveSemiGroupElement[E]]        = crtp.AdditiveSemiGroup[E]
+	AdditiveSemiGroupElement[E crtp.AdditiveSemiGroupElement[E]] = crtp.AdditiveSemiGroupElement[E]
 
-	MultiplicativeSemiGroup[E aimpl.MultiplicativeSemiGroupElement[E]]        = aimpl.MultiplicativeSemiGroup[E]
-	MultiplicativeSemiGroupElement[E aimpl.MultiplicativeSemiGroupElement[E]] = aimpl.MultiplicativeSemiGroupElement[E]
+	MultiplicativeSemiGroup[E crtp.MultiplicativeSemiGroupElement[E]]        = crtp.MultiplicativeSemiGroup[E]
+	MultiplicativeSemiGroupElement[E crtp.MultiplicativeSemiGroupElement[E]] = crtp.MultiplicativeSemiGroupElement[E]
 
-	CyclicSemiGroup[E aimpl.CyclicSemiGroupElement[E]]        = aimpl.CyclicSemiGroup[E]
-	CyclicSemiGroupElement[E aimpl.CyclicSemiGroupElement[E]] = aimpl.CyclicSemiGroupElement[E]
+	CyclicSemiGroup[E crtp.CyclicSemiGroupElement[E]]        = crtp.CyclicSemiGroup[E]
+	CyclicSemiGroupElement[E crtp.CyclicSemiGroupElement[E]] = crtp.CyclicSemiGroupElement[E]
 )
 
 type (
-	Monoid[ME aimpl.MonoidElement[ME]]        = aimpl.Monoid[ME]
-	MonoidElement[ME aimpl.MonoidElement[ME]] = aimpl.MonoidElement[ME]
+	Monoid[ME crtp.MonoidElement[ME]]        = crtp.Monoid[ME]
+	MonoidElement[ME crtp.MonoidElement[ME]] = crtp.MonoidElement[ME]
 
-	AdditiveMonoid[ME aimpl.AdditiveMonoidElement[ME]]        = aimpl.AdditiveMonoid[ME]
-	AdditiveMonoidElement[ME aimpl.AdditiveMonoidElement[ME]] = aimpl.AdditiveMonoidElement[ME]
+	AdditiveMonoid[ME crtp.AdditiveMonoidElement[ME]]        = crtp.AdditiveMonoid[ME]
+	AdditiveMonoidElement[ME crtp.AdditiveMonoidElement[ME]] = crtp.AdditiveMonoidElement[ME]
 
-	MultiplicativeMonoid[ME aimpl.MultiplicativeMonoidElement[ME]]        = aimpl.MultiplicativeMonoid[ME]
-	MultiplicativeMonoidElement[ME aimpl.MultiplicativeMonoidElement[ME]] = aimpl.MultiplicativeMonoidElement[ME]
+	MultiplicativeMonoid[ME crtp.MultiplicativeMonoidElement[ME]]        = crtp.MultiplicativeMonoid[ME]
+	MultiplicativeMonoidElement[ME crtp.MultiplicativeMonoidElement[ME]] = crtp.MultiplicativeMonoidElement[ME]
 
-	UniqueFactorizationMonoid[ME aimpl.UniqueFactorizationMonoidElement[ME]]        = aimpl.UniqueFactorizationMonoid[ME]
-	UniqueFactorizationMonoidElement[ME aimpl.UniqueFactorizationMonoidElement[ME]] = aimpl.UniqueFactorizationMonoidElement[ME]
+	UniqueFactorizationMonoid[ME crtp.UniqueFactorizationMonoidElement[ME]]        = crtp.UniqueFactorizationMonoid[ME]
+	UniqueFactorizationMonoidElement[ME crtp.UniqueFactorizationMonoidElement[ME]] = crtp.UniqueFactorizationMonoidElement[ME]
 )
 
 type (
-	Group[E aimpl.GroupElement[E]]        = aimpl.Group[E]
-	GroupElement[E aimpl.GroupElement[E]] = aimpl.GroupElement[E]
+	Group[E crtp.GroupElement[E]]        = crtp.Group[E]
+	GroupElement[E crtp.GroupElement[E]] = crtp.GroupElement[E]
 
-	AdditiveGroup[E aimpl.AdditiveGroupElement[E]]        = aimpl.AdditiveGroup[E]
-	AdditiveGroupElement[E aimpl.AdditiveGroupElement[E]] = aimpl.AdditiveGroupElement[E]
+	AdditiveGroup[E crtp.AdditiveGroupElement[E]]        = crtp.AdditiveGroup[E]
+	AdditiveGroupElement[E crtp.AdditiveGroupElement[E]] = crtp.AdditiveGroupElement[E]
 
-	MultiplicativeGroup[E aimpl.MultiplicativeGroupElement[E]]        = aimpl.MultiplicativeGroup[E]
-	MultiplicativeGroupElement[E aimpl.MultiplicativeGroupElement[E]] = aimpl.MultiplicativeGroupElement[E]
-
-	FiniteGroup[E aimpl.FiniteGroupElement[E]]        = aimpl.FiniteGroup[E]
-	FiniteGroupElement[E aimpl.FiniteGroupElement[E]] = aimpl.FiniteGroupElement[E]
+	MultiplicativeGroup[E crtp.MultiplicativeGroupElement[E]]        = crtp.MultiplicativeGroup[E]
+	MultiplicativeGroupElement[E crtp.MultiplicativeGroupElement[E]] = crtp.MultiplicativeGroupElement[E]
 )
 
 type (
-	AbelianMonoid[ME aimpl.AbelianMonoidElement[ME, S], S aimpl.NatLike[S]]        = aimpl.AbelianMonoid[ME, S]
-	AbelianMonoidElement[ME aimpl.AbelianMonoidElement[ME, S], S aimpl.NatLike[S]] = aimpl.AbelianMonoidElement[ME, S]
+	AbelianMonoid[ME crtp.AbelianMonoidElement[ME, S], S crtp.NatLike[S]]        = crtp.AbelianMonoid[ME, S]
+	AbelianMonoidElement[ME crtp.AbelianMonoidElement[ME, S], S crtp.NatLike[S]] = crtp.AbelianMonoidElement[ME, S]
 
-	FiniteAbelianMonoid[ME aimpl.FiniteAbelianMonoidElement[ME, S], S aimpl.UintLike[S]]        = aimpl.FiniteAbelianMonoid[ME, S]
-	FiniteAbelianMonoidElement[ME aimpl.FiniteAbelianMonoidElement[ME, S], S aimpl.UintLike[S]] = aimpl.FiniteAbelianMonoidElement[ME, S]
+	AbelianGroup[E crtp.AbelianGroupElement[E, S], S crtp.IntLike[S]]        = crtp.AbelianGroup[E, S]
+	AbelianGroupElement[E crtp.AbelianGroupElement[E, S], S crtp.IntLike[S]] = crtp.AbelianGroupElement[E, S]
 
-	AbelianGroup[E aimpl.AbelianGroupElement[E, S], S aimpl.IntLike[S]]        = aimpl.AbelianGroup[E, S]
-	AbelianGroupElement[E aimpl.AbelianGroupElement[E, S], S aimpl.IntLike[S]] = aimpl.AbelianGroupElement[E, S]
+	PrimeGroup[E crtp.PrimeGroupElement[E, S], S crtp.PrimeFieldElement[S]]        = crtp.PrimeGroup[E, S]
+	PrimeGroupElement[E crtp.PrimeGroupElement[E, S], S crtp.PrimeFieldElement[S]] = crtp.PrimeGroupElement[E, S]
 
-	FiniteAbelianGroup[E aimpl.FiniteAbelianGroupElement[E, S], S aimpl.UintLike[S]]        = aimpl.FiniteAbelianGroup[E, S]
-	FiniteAbelianGroupElement[E aimpl.FiniteAbelianGroupElement[E, S], S aimpl.UintLike[S]] = aimpl.FiniteAbelianGroupElement[E, S]
-
-	PrimeGroup[E aimpl.PrimeGroupElement[E, S], S aimpl.PrimeFieldElement[S]]        = aimpl.PrimeGroup[E, S]
-	PrimeGroupElement[E aimpl.PrimeGroupElement[E, S], S aimpl.PrimeFieldElement[S]] = aimpl.PrimeGroupElement[E, S]
-
-	AdditivePrimeGroup[E aimpl.AdditivePrimeGroupElement[E, S], S aimpl.PrimeFieldElement[S]]        = aimpl.AdditivePrimeGroup[E, S]
-	AdditivePrimeGroupElement[E aimpl.AdditivePrimeGroupElement[E, S], S aimpl.PrimeFieldElement[S]] = aimpl.AdditivePrimeGroupElement[E, S]
+	AdditivePrimeGroup[E crtp.AdditivePrimeGroupElement[E, S], S crtp.PrimeFieldElement[S]]        = crtp.AdditivePrimeGroup[E, S]
+	AdditivePrimeGroupElement[E crtp.AdditivePrimeGroupElement[E, S], S crtp.PrimeFieldElement[S]] = crtp.AdditivePrimeGroupElement[E, S]
 )

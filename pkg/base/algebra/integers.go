@@ -1,22 +1,22 @@
 package algebra
 
 import (
-	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 )
 
 type (
-	NPlusLike[E NatPlusLike[E]]         aimpl.NPlusLike[E]
-	NatPlusLike[E aimpl.NatPlusLike[E]] aimpl.NatPlusLike[E]
+	NPlusLike[E NatPlusLike[E]]        crtp.NPlusLike[E]
+	NatPlusLike[E crtp.NatPlusLike[E]] crtp.NatPlusLike[E]
 
-	NLike[E NatLike[E]]         aimpl.NLike[E]
-	NatLike[E aimpl.NatLike[E]] aimpl.NatLike[E]
+	NLike[E NatLike[E]]        crtp.NLike[E]
+	NatLike[E crtp.NatLike[E]] crtp.NatLike[E]
 
-	ZLike[E IntLike[E]]         aimpl.ZLike[E]
-	IntLike[E aimpl.IntLike[E]] aimpl.IntLike[E]
+	ZLike[E IntLike[E]]        crtp.ZLike[E]
+	IntLike[E crtp.IntLike[E]] crtp.IntLike[E]
 
-	ZnLike[E UintLike[E]]         aimpl.ZnLike[E]
-	UintLike[E aimpl.UintLike[E]] aimpl.UintLike[E]
+	ZnLike[E UintLike[E]]        crtp.ZnLike[E]
+	UintLike[E crtp.UintLike[E]] crtp.UintLike[E]
 
-	PrimeField[E PrimeFieldElement[E]]              aimpl.PrimeField[E]
-	PrimeFieldElement[E aimpl.PrimeFieldElement[E]] aimpl.PrimeFieldElement[E]
+	PrimeField[E PrimeFieldElement[E]]             crtp.PrimeField[E]
+	PrimeFieldElement[E crtp.PrimeFieldElement[E]] crtp.PrimeFieldElement[E]
 )

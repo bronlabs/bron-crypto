@@ -1,5 +1,7 @@
 package base
 
+import "io"
+
 type Transparent[V any] interface {
 	Value() V
 }
@@ -20,6 +22,10 @@ type Hashable[K any] interface {
 	HashCode() HashCode
 }
 
+type HashableStructure[E any] interface {
+	Hash([]byte) (E, error)
+}
+
 type BytesLike interface {
 	Bytes() []byte
 }
@@ -30,4 +36,8 @@ type BytesLikeFactory[E any] interface {
 	// If elements are collections of atomic elements, ElementSize returns the size of an individual element.
 	// If elements are variable size, ElementSize returns -1.
 	ElementSize() int
+}
+
+type SamplableStructure[S, E any] interface {
+	Random(prng io.Reader, opts ...func(S) error) (E, error)
 }

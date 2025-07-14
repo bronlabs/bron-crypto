@@ -241,10 +241,7 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 	// 1. Let P = lift_x(int(pk)).
 	// 2. (implicit) Let r = int(sig[0:32]); fail if r ≥ p.
 	// 3. (implicit) Let s = int(sig[32:64]); fail if s ≥ n.
-	bigP := publicKey.Value()
-	if bigP.AffineY().IsOdd() {
-		bigP = bigP.Neg()
-	}
+	bigP := liftX(publicKey.Value())
 
 	// 4. Let e = int(hashBIP0340/challenge(bytes(r) || bytes(P) || m)) mod n.
 	var err error
@@ -316,10 +313,7 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 		// 2. Let P_i = lift_x(int(pki))
 		// 3. (implicit) Let r_i = int(sigi[0:32]); fail if ri ≥ p.
 		// 4. (implicit) Let s_i = int(sigi[32:64]); fail if si ≥ n.
-		bigP[i] = publicKeys[i].Value()
-		if bigP[i].AffineY().IsOdd() {
-			bigP[i] = bigP[i].Neg()
-		}
+		bigP[i] = liftX(publicKeys[i].Value())
 
 		// 5. Let ei = int(hashBIP0340/challenge(bytes(r_i) || bytes(P_i) || mi)) mod n.
 		e, err := v.variant.ComputeChallenge(sig.R, publicKeys[i].V, messages[i])
@@ -328,7 +322,7 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 		}
 
 		// 6. Let Ri = lift_x(ri); fail if lift_x(ri) fails.
-		bigR[i] = signatures[i].R
+		bigR[i] = liftX(signatures[i].R)
 
 		ae[i] = a[i].Mul(e)
 		left = left.Add(a[i].Mul(sig.S))
@@ -350,6 +344,13 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 
 	// Return success iff no failure occurred before reaching this point.
 	return nil
+}
+
+func liftX(p *k256.Point) *k256.Point {
+	if p.AffineY().IsOdd() {
+		return p.Neg()
+	}
+	return p
 }
 
 func SerializeSignature(signature *Signature) ([]byte, error) {

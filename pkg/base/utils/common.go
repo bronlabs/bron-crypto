@@ -4,8 +4,35 @@ import (
 	"math/bits"
 	"reflect"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"golang.org/x/exp/constraints"
 )
+
+func ParseOrderingFromSign[T constraints.Signed](x T) base.PartialOrdering {
+	if x == 1 {
+		return base.GreaterThan
+	}
+	if x == 0 {
+		return base.Equal
+	}
+	if x == -1 {
+		return base.LessThan
+	}
+	return base.Incomparable
+}
+
+func ParseOrderingFromMasks[F constraints.Integer](gt, eq, lt F) base.PartialOrdering {
+	if gt != 0 {
+		return base.GreaterThan
+	}
+	if eq != 0 {
+		return base.Equal
+	}
+	if lt != 0 {
+		return base.LessThan
+	}
+	return base.Incomparable
+}
 
 // BoolTo casts a bool to any integer type.
 func BoolTo[T constraints.Integer](b bool) T {
@@ -35,4 +62,13 @@ func IsNil[T any](v T) bool {
 	val := reflect.ValueOf(v)
 	kind := val.Kind()
 	return (kind == reflect.Ptr || kind == reflect.Interface) && val.IsNil()
+}
+
+// LeadingZeroBytes returns the count of 0x00 prefix bytes.
+func LeadingZeroBytes(b []byte) int {
+	i := 0
+	for i < len(b) && b[i] == 0 {
+		i++
+	}
+	return i
 }

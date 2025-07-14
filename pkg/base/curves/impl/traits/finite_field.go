@@ -8,7 +8,7 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
@@ -79,7 +79,7 @@ func (f *FiniteFieldTrait[FP, WP, W]) OpIdentity() WP {
 	return f.Zero()
 }
 
-type FiniteFieldElementTrait[FP fieldsImpl.FiniteFieldElementPtrConstraint[FP, F], F any, WP FiniteFieldElementWrapperPtrConstraint[FP, W], W any] struct {
+type FiniteFieldElementTrait[FP fieldsImpl.FiniteFieldElementPtr[FP, F], F any, WP FiniteFieldElementWrapperPtrConstraint[FP, W], W any] struct {
 	V F
 }
 
@@ -154,7 +154,7 @@ func (fe *FiniteFieldElementTrait[FP, F, WP, W]) EuclideanDiv(rhs WP) (quot, rem
 }
 
 func (fe *FiniteFieldElementTrait[FP, F, WP, W]) Equal(rhs WP) bool {
-	return FP(&fe.V).Equals(rhs.Fp()) != 0
+	return FP(&fe.V).Equal(rhs.Fp()) != 0
 }
 
 func (fe *FiniteFieldElementTrait[FP, F, WP, W]) HashCode() base.HashCode {

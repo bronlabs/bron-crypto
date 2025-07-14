@@ -15,7 +15,8 @@ type BigIntAdapter interface {
 }
 
 var (
-	NatOne = new(saferith.Nat).SetUint64(1).Resize(1)
+	NatOne  = new(saferith.Nat).SetUint64(1).Resize(1)
+	NatZero = new(saferith.Nat).SetUint64(0).Resize(1)
 
 	// In 'tab', only odd-indexed entries are relevant:
 	// For any odd Nat n tab[n.Byte(0) & 0b111] is $(-1)^{(n^2-1)/8}$ (using TeX notation).

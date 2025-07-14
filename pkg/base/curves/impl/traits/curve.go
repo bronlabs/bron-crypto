@@ -6,7 +6,7 @@ import (
 	"iter"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
@@ -73,7 +73,7 @@ func (c *PrimeCurveTrait[FP, P, W, WT]) Generator() W {
 	return &gen
 }
 
-type MSMTrait[FE algebra.FiniteFieldElement[FE], P algebra.AdditiveModuleElement[P, FE]] struct {
+type MSMTrait[FE algebra.FieldElement[FE], P algebra.AdditiveModuleElement[P, FE]] struct {
 }
 
 func (t *MSMTrait[FE, P]) MultiScalarOp(scs []FE, ps []P) (P, error) {
@@ -99,7 +99,7 @@ func (*MSMTrait[FE, P]) MultiScalarMul(scs []FE, ps []P) (P, error) {
 	return result, nil
 }
 
-type PointTrait[FP fields.FiniteFieldElement[FP], P points.PointPtrConstraint[FP, P, T], T any, W PointWrapperPtrConstraint[FP, P, WT], WT any] struct {
+type PointTrait[FP fields.FiniteFieldElement[FP], P points.PointPtr[FP, P, T], T any, W PointWrapperPtrConstraint[FP, P, WT], WT any] struct {
 	V T
 }
 
@@ -185,7 +185,7 @@ func StringifyPoint[P algebra.AffinePoint[P, C], C algebra.RingElement[C]](obj P
 	return fmt.Sprintf("(%s, %s)", obj.AffineX().String(), obj.AffineY().String())
 }
 
-type PrimePointTrait[FP fields.FiniteFieldElement[FP], P points.PointPtrConstraint[FP, P, T], T any, W PointWrapperPtrConstraint[FP, P, WT], WT any] struct {
+type PrimePointTrait[FP fields.FiniteFieldElement[FP], P points.PointPtr[FP, P, T], T any, W PointWrapperPtrConstraint[FP, P, WT], WT any] struct {
 	PointTrait[FP, P, T, W, WT]
 }
 

@@ -2,6 +2,7 @@ package bip340
 
 import (
 	"crypto/subtle"
+	"fmt"
 	"hash"
 	"slices"
 
@@ -81,14 +82,20 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 		return nil, nil, errs.NewFailed("k' is invalid")
 	}
 
+	fmt.Println("k' = ", kPrime.String())
+
 	// 9. Let R = k'⋅G.
 	bigR := g.ScalarMul(kPrime)
+	fmt.Println("R = ", bigR.String())
 	// 10. Let k = k' if R.y is even, otherwise let k = n - k', R = k ⋅ G
 	k := kPrime
 	if bigR.AffineY().IsOdd() {
 		k = kPrime.Neg()
 		bigR = g.ScalarMul(k)
 	}
+
+	fmt.Println("new k = ", k.String())
+	fmt.Println("new R = ", bigR.String())
 	return bigR, k, nil
 }
 
@@ -112,15 +119,11 @@ func (*Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Sca
 		return nil, errs.NewIsNil("arguments")
 	}
 	// 12. Let sig = (R, (k + ed) mod n)).
-	return nonce.Add(challenge.Mul(privateKeyValue)), nil
+	return schnorrlike.ComputeGenericResponse(privateKeyValue, nonce, challenge, false)
 }
 
 func (*Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 	return SerializeSignature(signature)
-}
-
-func (*Variant) NonceIsFunctionOfMessage() bool {
-	return true
 }
 
 func (v *Variant) Clone() *Variant {

@@ -42,8 +42,7 @@ func Repeat[S ~[]T, T any](x T, n int) S {
 }
 
 func Reversed[S ~[]T, T any](xs S) S {
-	sx := make(S, len(xs))
-	copy(sx, xs)
+	sx := slices.Clone(xs)
 	slices.Reverse(sx)
 	return sx
 }

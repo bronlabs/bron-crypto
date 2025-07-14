@@ -29,11 +29,14 @@ func Test_Sanity(t *testing.T) {
 	}
 
 	message := []byte("something")
+
+	skBytes := [32]byte{3, 240, 43, 6, 236, 30, 155, 144, 117, 75, 107, 0, 184, 75, 184, 201, 176, 75, 105, 90, 23, 13, 156, 83, 0, 162, 202, 54, 155, 79, 222, 62}
+	skSc, err := k256.NewScalarField().FromBytes(skBytes[:])
+	require.NoError(t, err)
+	sk, err := bip340.NewPrivateKey(skSc)
+	require.NoError(t, err)
+
 	scheme := bip340.NewSchemeWithAux(aux)
-	kg, err := scheme.Keygen()
-	require.NoError(t, err)
-	sk, pk, err := kg.Generate(crand.Reader)
-	require.NoError(t, err)
 
 	signer, err := scheme.Signer(sk)
 	require.NoError(t, err)
@@ -42,7 +45,7 @@ func Test_Sanity(t *testing.T) {
 
 	verifier, err := scheme.Verifier()
 	require.NoError(t, err)
-	err = verifier.Verify(signature, pk, message)
+	err = verifier.Verify(signature, sk.PublicKey(), message)
 	require.NoError(t, err)
 }
 

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
-	fieldsTu "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields/testutils"
+	fieldsTu "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields/testutils"
 	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
 	pointsTu "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points/testutils"
 
