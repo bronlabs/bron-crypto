@@ -118,6 +118,7 @@ func (f *{{- .TypeName }}) Add(lhs, rhs *{{- .TypeName }}) {
 func (f *{{- .TypeName }}) Double(x *{{- .TypeName }}) {
 	{{ .FiatPrefix -}}Add(&f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, &x.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, &x.{{- .FiatPrefix -}}MontgomeryDomainFieldElement)
 }
+
 func (f *{{- .TypeName }}) Sub(lhs, rhs *{{- .TypeName }}) {
 	{{ .FiatPrefix -}}Sub(&f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, &lhs.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, &rhs.{{- .FiatPrefix -}}MontgomeryDomainFieldElement)
 }
@@ -160,7 +161,7 @@ func (f *{{- .TypeName }}) Inv(a *{{- .TypeName }}) (ok ct.Bool) {
 	{{ .FiatPrefix -}}Mul(&f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, (*{{- .FiatPrefix -}}MontgomeryDomainFieldElement)(&v), (*{{- .FiatPrefix -}}MontgomeryDomainFieldElement)(&precomp))
 	{{ .FiatPrefix -}}Nonzero(&inverted, (*[{{ .TypeName -}}Limbs]uint64)(&f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement))
 
-	return (inverted | -inverted) >> 63
+	return ct.Bool((inverted | -inverted) >> 63)
 }
 
 func (f *{{- .TypeName }}) Div(lhs, rhs *{{- .TypeName }}) (ok ct.Bool) {
@@ -171,7 +172,7 @@ func (f *{{- .TypeName }}) Div(lhs, rhs *{{- .TypeName }}) (ok ct.Bool) {
 }
 
 func (f *{{- .TypeName }}) Sqrt(x *{{- .TypeName }}) (ok ct.Bool) {
-	return {{ .SqrtCall -}}(f, x, &{{ .TypeName -}}RootOfUnity, {{ .TypeName -}}E, {{ .TypeName -}}ProgenitorExp[:])
+	return ct.Bool({{ .SqrtCall -}}(f, x, &{{ .TypeName -}}RootOfUnity, {{ .TypeName -}}E, {{ .TypeName -}}ProgenitorExp[:]))
 }
 
 func (f *{{- .TypeName }}) IsNonZero() ct.Bool {
@@ -181,7 +182,7 @@ func (f *{{- .TypeName }}) IsNonZero() ct.Bool {
 
 	var nonZero uint64
 	{{ .FiatPrefix -}}Nonzero(&nonZero, (*[{{ .TypeName -}}Limbs]uint64)(&nonMonty))
-	return (nonZero | -nonZero) >> 63
+	return ct.Bool((nonZero | -nonZero) >> 63)
 }
 
 func (f *{{- .TypeName }}) IsZero() ct.Bool {
@@ -191,7 +192,7 @@ func (f *{{- .TypeName }}) IsZero() ct.Bool {
 func (f *{{- .TypeName }}) IsOne() ct.Bool {
 	var one {{ .TypeName }}
 	one.SetOne()
-	return f.Equals(&one)
+	return f.Equal(&one)
 }
 
 func (f *{{- .TypeName }}) Equal(v *{{- .TypeName }}) ct.Bool {

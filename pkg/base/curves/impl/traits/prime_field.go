@@ -8,7 +8,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -123,7 +122,7 @@ func (f *PrimeFieldTrait[FP, WP, W]) PartialCompare(x, y WP) base.PartialOrderin
 }
 
 func (f *PrimeFieldTrait[FP, WP, W]) Compare(x, y WP) base.Ordering {
-	return base.Ordering(ct.SliceCmpLE(x.Fp().Limbs(), y.Fp().Limbs()))
+	return base.EvaluateConstantTimeComparison(fieldsImpl.SliceCmpLE(x.Fp().Limbs(), y.Fp().Limbs()))
 }
 
 func (f *PrimeFieldTrait[FP, WP, W]) OpIdentity() WP {
@@ -223,7 +222,7 @@ func (fe *PrimeFieldElementTrait[FP, F, WP, W]) Equal(rhs WP) bool {
 }
 
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) IsLessThanOrEqual(rhs WP) bool {
-	return ct.SliceCmpLE(FP(&fe.V).Limbs(), rhs.Fp().Limbs()) <= 0
+	return base.EvaluateConstantTimeComparison(fieldsImpl.SliceCmpLE(FP(&fe.V).Limbs(), rhs.Fp().Limbs())) == base.Ordering(base.LessThan)
 }
 
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) IsOdd() bool {
@@ -289,8 +288,7 @@ func (fe *PrimeFieldElementTrait[FP, F, WP, W]) TryNeg() (WP, error) {
 }
 
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) IsProbablyPrime() bool {
-	//TODO implement me
-	panic("implement me")
+	return new(big.Int).SetBytes(fe.Bytes()).ProbablyPrime(0)
 }
 
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) IsOpIdentity() bool {

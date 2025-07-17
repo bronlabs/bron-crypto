@@ -3,6 +3,7 @@ package points
 import (
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
@@ -65,77 +66,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Add(lhs, rhs *TwistedEdwardsPo
 	FP(&p.Z).Mul(&f, &g)
 }
 
-func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Op(lhs, rhs *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
-	var params C
-	var a, b, c, d, e, f, g, h, t0, t1, t2 F
-
-	//  A = X1 * X2
-	FP(&a).Mul(&lhs.X, &rhs.X)
-	//  B = Y1 * Y2
-	FP(&b).Mul(&lhs.Y, &rhs.Y)
-	//  C = T1 * d * T2
-	FP(&t0).Mul(&lhs.T, &rhs.T)
-	params.MulByD(&c, &t0)
-	//  D = Z1 * Z2
-	FP(&d).Mul(&lhs.Z, &rhs.Z)
-	//E = (X1+Y1)*(X2+Y2) - A - B
-	FP(&t0).Add(&lhs.X, &lhs.Y)
-	FP(&t1).Add(&rhs.X, &rhs.Y)
-	FP(&t2).Mul(&t0, &t1)
-	FP(&t0).Add(&a, &b)
-	FP(&e).Sub(&t2, &t0)
-	//  F = D - C
-	FP(&f).Sub(&d, &c)
-	//  G = D + C
-	FP(&g).Add(&d, &c)
-	//  H = B - a*A
-	params.MulByA(&t0, &a)
-	FP(&h).Sub(&b, &t0)
-	// X3 = E * F
-	FP(&p.X).Mul(&e, &f)
-	// Y3 = G * H
-	FP(&p.Y).Mul(&g, &h)
-	// T3 = E * H
-	FP(&p.T).Mul(&e, &h)
-	// Z3 = F * G
-	FP(&p.Z).Mul(&f, &g)
-}
-
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Double(v *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
-	var params C
-	var a, b, c, d, e, f, g, h, t0, t1 F
-
-	//  A = X1^2
-	FP(&a).Square(&v.X)
-	//  B = Y1^2
-	FP(&b).Square(&v.Y)
-	//  C = 2*Z1^2
-	FP(&t0).Square(&v.Z)
-	FP(&c).Add(&t0, &t0)
-	//  D = a*A
-	params.MulByA(&d, &a)
-	//  E = (X1+Y1)^2-A-B
-	FP(&t0).Add(&v.X, &v.Y)
-	FP(&t1).Square(&t0)
-	FP(&t0).Add(&a, &b)
-	FP(&e).Sub(&t1, &t0)
-	//  G = D+B
-	FP(&g).Add(&d, &b)
-	//  F = G-C
-	FP(&f).Sub(&g, &c)
-	//  H = D-B
-	FP(&h).Sub(&d, &b)
-	// X3 = E*F
-	FP(&p.X).Mul(&e, &f)
-	// Y3 = G*H
-	FP(&p.Y).Mul(&g, &h)
-	// T3 = E*H
-	FP(&p.T).Mul(&e, &h)
-	// Z3 = F*G
-	FP(&p.Z).Mul(&f, &g)
-}
-
-func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) OpOp(v *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
 	var params C
 	var a, b, c, d, e, f, g, h, t0, t1 F
 
@@ -240,7 +171,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetRandom(prng io.Reader) (ok 
 	return ok
 }
 
-func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetIdentity() {
+func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetZero() {
 	FP(&p.X).SetZero()
 	FP(&p.Y).SetOne()
 	FP(&p.Z).SetOne()
@@ -326,8 +257,12 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Neg(v *TwistedEdwardsPointImpl
 	FP(&p.T).Neg(&v.T)
 }
 
-func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) IsIdentity() ct.Bool {
+func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) IsZero() ct.Bool {
 	return FP(&p.X).IsZero() & (FP(&p.Y).Equal(&p.Z))
+}
+
+func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) IsNonZero() ct.Bool {
+	return FP(&p.X).IsNonZero()
 }
 
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Equal(v *TwistedEdwardsPointImpl[FP, C, H, M, F]) ct.Bool {
@@ -350,6 +285,30 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) ToAffine(x, y FP) (ok ct.Bool)
 
 	x.CondAssign(ok, x, &xx)
 	y.CondAssign(ok, y, &yy)
+	return ok
+}
+
+func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Bytes() []byte {
+	return slices.Concat(FP(&p.X).Bytes(), FP(&p.Y).Bytes(), FP(&p.Z).Bytes(), FP(&p.T).Bytes())
+}
+
+func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetBytes(input []byte) (ok ct.Bool) {
+	coordinateLen := len(input) / 4
+	x := input[:coordinateLen]
+	y := input[coordinateLen : 2*coordinateLen]
+	z := input[2*coordinateLen : 3*coordinateLen]
+	t := input[3*coordinateLen:]
+	var tmpX, tmpY, tmpZ, tmpT F
+	okX := FP(&tmpX).SetBytes(x)
+	okY := FP(&tmpY).SetBytes(y)
+	okZ := FP(&tmpZ).SetBytes(z)
+	okT := FP(&tmpT).SetBytes(t)
+	ok = okX & okY & okZ & okT
+
+	FP(&p.X).CondAssign(ok, &p.X, &tmpX)
+	FP(&p.Y).CondAssign(ok, &p.Y, &tmpY)
+	FP(&p.Z).CondAssign(ok, &p.Z, &tmpZ)
+	FP(&p.T).CondAssign(ok, &p.T, &tmpT)
 	return ok
 }
 

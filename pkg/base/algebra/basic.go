@@ -6,15 +6,10 @@ import (
 )
 
 type (
-	Element[E any]             = crtp.Element[E]
-	Structure[E any]           = crtp.Structure[E]
-	NAry[C any]                = crtp.NAry[C]
-	Mapping[F, C any]          = crtp.Mapping[F, C]
-	Product[P, C any]          = crtp.Product[P, C]
-	CoProduct[P, C any]        = crtp.CoProduct[P, C]
-	Power[P, C any]            = crtp.Power[P, C]
-	TensorProduct[E, C, S any] = crtp.TensorProduct[E, C, S]
-	Tensor[E, S any]           = crtp.Tensor[E, S]
+	Element[E any]   = crtp.Element[E]
+	Structure[E any] = crtp.Structure[E]
+	Quotient[E any]  = crtp.Quotient[E]
+	Residue[E any]   = crtp.Residue[E]
 )
 
 func StructureIs[S crtp.Structure[E], E any](s Structure[E]) bool {

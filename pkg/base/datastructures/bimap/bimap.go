@@ -128,6 +128,22 @@ func (m *BiMap[K, V]) Clone() ds.MutableBiMap[K, V] {
 	}
 }
 
+func (m *BiMap[K, V]) IsSubMap(other ds.MutableBiMap[K, V], eq func(a, b V) bool) bool {
+	return false
+}
+
+func (m *BiMap[K, V]) IsProperSubMap(other ds.MutableBiMap[K, V], eq func(a, b V) bool) bool {
+	return false
+}
+
+func (m *BiMap[K, V]) IsSuperMap(other ds.MutableBiMap[K, V], eq func(a, b V) bool) bool {
+	return other.IsSubMap(m, eq)
+}
+
+func (m *BiMap[K, V]) IsProperSuperMap(other ds.MutableBiMap[K, V], eq func(a, b V) bool) bool {
+	return other.IsProperSubMap(m, eq)
+}
+
 func (m *BiMap[K, V]) MarshalJSON() ([]byte, error) {
 	type temp struct {
 		Key   json.RawMessage

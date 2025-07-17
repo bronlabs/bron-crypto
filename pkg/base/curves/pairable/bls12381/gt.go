@@ -7,9 +7,9 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/ase/nt/cardinal"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
 const (
@@ -84,7 +84,7 @@ func (ge *GtElement) Clone() *GtElement {
 }
 
 func (ge *GtElement) Equal(rhs *GtElement) bool {
-	return ge.V.Equals(&rhs.V.Fp12) == 1
+	return ge.V.Equal(&rhs.V.Fp12) == 1
 }
 
 func (ge *GtElement) HashCode() base.HashCode {

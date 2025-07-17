@@ -23,6 +23,10 @@ type immutableMap[K, V, T any] interface {
 	Retain(keys ...K) T
 	Filter(predicate func(key K) bool) T
 	ContainsKey(key K) bool
+	IsSubMap(other T, eq func(a, b V) bool) bool
+	IsProperSubMap(other T, eq func(a, b V) bool) bool
+	IsSuperMap(other T, eq func(a, b V) bool) bool
+	IsProperSuperMap(other T, eq func(a, b V) bool) bool
 	IsEmpty() bool
 	Keys() []K
 	Values() []V

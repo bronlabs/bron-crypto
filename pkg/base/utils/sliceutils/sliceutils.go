@@ -20,7 +20,7 @@ func MapErrFunc[SIn ~[]TIn, TIn, TOut any](in SIn, f func(TIn) (TOut, error)) (o
 	return out, nil
 }
 
-func Map[SIn ~[]TIn, TIn any, SOut ~[]TOut, TOut any](in SIn, f func(TIn) TOut) SOut {
+func Map[SOut ~[]TOut, TOut any, SIn ~[]TIn, TIn any](in SIn, f func(TIn) TOut) SOut {
 	return slices.Collect(iterutils.Map(slices.Values(in), f))
 }
 
@@ -151,6 +151,25 @@ func CountUniqueFunc[S ~[]T, T any, K comparable](xs S, key func(T) K) int {
 	return count
 }
 
+func CountUniqueEqualFunc[S ~[]T, T any](xs S, equal func(T, T) bool) int {
+	seen := make([]T, 0, len(xs))
+	count := 0
+	for _, x := range xs {
+		found := false
+		for _, y := range seen {
+			if equal(x, y) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			seen = append(seen, x)
+			count++
+		}
+	}
+	return count
+}
+
 func Any[S ~[]T, T any](xs S, predicate func(T) bool) bool {
 	return Count(xs, predicate) > 0
 }
@@ -165,4 +184,51 @@ func IsUnique[S ~[]T, T comparable](xs S) bool {
 
 func IsUniqueFunc[S ~[]T, T any, K comparable](xs S, key func(T) K) bool {
 	return CountUniqueFunc(xs, key) == len(xs)
+}
+
+func IsSubList[SB, SP ~[]T, T comparable](sub SB, sup SP) bool {
+	if len(sub) > len(sup) {
+		return false
+	}
+	for _, x := range sub {
+		found := false
+		for _, y := range sup {
+			if x == y {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+func IsSubListFunc[SB, SP ~[]T, T any](sub SB, sup SP, equal func(T, T) bool) bool {
+	if len(sub) > len(sup) {
+		return false
+	}
+	for _, x := range sub {
+		found := false
+		for _, y := range sup {
+			if equal(x, y) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+func ContainsEqualFunc[S ~[]T, T any](xs S, x T, equal func(T, T) bool) bool {
+	for _, y := range xs {
+		if equal(x, y) {
+			return true
+		}
+	}
+	return false
 }

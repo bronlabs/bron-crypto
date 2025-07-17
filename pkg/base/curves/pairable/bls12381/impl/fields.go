@@ -4,6 +4,7 @@ package impl
 
 import (
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 var (
@@ -60,6 +61,6 @@ func (fp12Params) MulByQuadraticNonResidue(out, in *Fp6) {
 	out.Set(&c)
 }
 
-func sqrt[FP fieldsImpl.FiniteFieldElementPtrConstraint[FP, F], F any](out, x, rootOfUnity *F, e uint64, progenitorExp []uint8) (ok uint64) {
+func sqrt[FP fieldsImpl.FiniteFieldElementPtr[FP, F], F any](out, x, rootOfUnity *F, e uint64, progenitorExp []uint8) (ok ct.Bool) {
 	return fieldsImpl.TonelliShanks[FP, F](out, x, rootOfUnity, e, progenitorExp)
 }

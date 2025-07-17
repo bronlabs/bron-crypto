@@ -7,13 +7,14 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/ase/nt/cardinal"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
-	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
 const (
@@ -117,9 +118,9 @@ func (c *G2) FromCompressed(input []byte) (*PointG2, error) {
 	copy(buffer[:], input)
 
 	result := new(PointG2)
-	compressedFlag := uint64((buffer[0] >> 7) & 1)
-	infinityFlag := uint64((buffer[0] >> 6) & 1)
-	sortFlag := uint64((buffer[0] >> 5) & 1)
+	compressedFlag := ct.Bool((buffer[0] >> 7) & 1)
+	infinityFlag := ct.Bool((buffer[0] >> 6) & 1)
+	sortFlag := ct.Bool((buffer[0] >> 5) & 1)
 	if compressedFlag != 1 {
 		return nil, errs.NewFailed("compressed flag must be set")
 	}
@@ -137,7 +138,7 @@ func (c *G2) FromCompressed(input []byte) (*PointG2, error) {
 				return nil, errs.NewFailed("non-zero x coordinate with infinity flag set")
 			}
 		}
-		result.V.SetIdentity()
+		result.V.SetZero()
 		return result, nil
 	}
 
@@ -162,7 +163,7 @@ func (c *G2) FromCompressed(input []byte) (*PointG2, error) {
 	}
 	pp.V.ToAffine(&x, &y)
 	yNeg.Neg(&pp.V.Y)
-	pp.V.Y.Select(isNegative(&y)^sortFlag, &pp.V.Y, &yNeg)
+	pp.V.Y.CondAssign(isNegative(&y)^sortFlag, &pp.V.Y, &yNeg)
 
 	if !pp.IsTorsionFree() {
 		return nil, errs.NewFailed("point is not in correct subgroup")
@@ -181,7 +182,7 @@ func (c *G2) FromUncompressed(input []byte) (*PointG2, error) {
 
 	infinityFlag := uint64((input[0] >> 6) & 1)
 	if infinityFlag == 1 {
-		pp.V.SetIdentity()
+		pp.V.SetZero()
 		return pp, nil
 	}
 
@@ -333,7 +334,7 @@ func (p *PointG2) ToCompressed() []byte {
 	x.SetZero()
 	y.SetZero()
 	p.V.ToAffine(&x, &y)
-	isInfinity := p.V.IsIdentity()
+	isInfinity := p.V.IsZero()
 
 	x1Bytes := x.U1.Bytes()
 	slices.Reverse(x1Bytes)
@@ -354,7 +355,7 @@ func (p *PointG2) ToUncompreseed() []byte {
 	var x, y bls12381Impl.Fp2
 	x.SetZero()
 	y.SetZero()
-	isInfinity := p.V.IsIdentity()
+	isInfinity := p.V.IsZero()
 	p.V.ToAffine(&x, &y)
 
 	x1Bytes := x.U1.Bytes()
@@ -403,7 +404,7 @@ func (p *PointG2) ScalarOp(sc *Scalar) *PointG2 {
 
 func (p *PointG2) ScalarMul(actor *Scalar) *PointG2 {
 	var result PointG2
-	pointsImpl.ScalarMul[*bls12381Impl.Fp2](&result.V, &p.V, actor.V.Bytes())
+	aimpl.ScalarMul(&result.V, &p.V, actor.V.Bytes())
 	return &result
 }
 
@@ -413,11 +414,11 @@ func (p *PointG2) IsTorsionFree() bool {
 	orderBytes := scalarFieldOrder.Bytes()
 	slices.Reverse(orderBytes)
 	var e bls12381Impl.G2Point
-	pointsImpl.ScalarMul[*bls12381Impl.Fp2](&e, &p.V, orderBytes)
-	return e.IsIdentity() == 1
+	aimpl.ScalarMul(&e, &p.V, orderBytes)
+	return e.IsZero() == 1
 }
 
-func isNegative(v *bls12381Impl.Fp2) uint64 {
+func isNegative(v *bls12381Impl.Fp2) ct.Bool {
 	c1Neg := fieldsImpl.IsNegative(&v.U1)
 	c0Neg := fieldsImpl.IsNegative(&v.U0)
 	c1Zero := v.U1.IsZero()

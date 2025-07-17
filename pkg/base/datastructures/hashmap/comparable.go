@@ -9,6 +9,7 @@ import (
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 type NativeMap[K comparable, V, T any] map[K]V
@@ -106,6 +107,19 @@ func (m NativeMap[K, V, T]) Enumerate() iter.Seq2[int, ds.MapEntry[K, V]] {
 	}
 }
 
+func (m NativeMap[K, V, T]) IsSubMap(other NativeMap[K, V, T], eq func(a, b V) bool) bool {
+	if other == nil {
+		return false
+	}
+	if len(m) > len(other) {
+		return false
+	}
+	return sliceutils.All(m.Keys(), func(k K) bool {
+		v, exists := m.Get(k)
+		return exists && eq(other[k], v)
+	})
+}
+
 // Immutable
 type ImmutableComparableHashMap[K comparable, V any] struct {
 	inner NativeMap[K, V, ds.Map[K, V]]
@@ -143,6 +157,31 @@ func CollectToImmutableComparable[K comparable, V any](xs []K, ys []V) (ds.Map[K
 
 func (m ImmutableComparableHashMap[K, V]) IsImmutable() bool {
 	return true
+}
+
+func (m ImmutableComparableHashMap[K, V]) IsSubMap(other ds.Map[K, V], eq func(a, b V) bool) bool {
+	if other == nil {
+		return false
+	}
+	if m.Size() > other.Size() {
+		return false
+	}
+	return sliceutils.All(m.Keys(), func(k K) bool {
+		v, exists := m.Get(k)
+		return exists && eq(m.inner[k], v)
+	})
+}
+
+func (m ImmutableComparableHashMap[K, V]) IsProperSubMap(other ds.Map[K, V], eq func(a, b V) bool) bool {
+	return m.Size() < other.Size() && m.IsSubMap(other, eq)
+}
+
+func (m ImmutableComparableHashMap[K, V]) IsSuperMap(other ds.Map[K, V], eq func(a, b V) bool) bool {
+	return other.IsSubMap(m, eq)
+}
+
+func (m ImmutableComparableHashMap[K, V]) IsProperSuperMap(other ds.Map[K, V], eq func(a, b V) bool) bool {
+	return other.IsProperSubMap(m, eq)
 }
 
 func (m ImmutableComparableHashMap[K, V]) Unfreeze() ds.MutableMap[K, V] {
@@ -250,6 +289,31 @@ func (m ComparableHashMap[K, V]) Freeze() ds.Map[K, V] {
 	return &ImmutableComparableHashMap[K, V]{
 		inner: NativeMap[K, V, ds.Map[K, V]](maps.Clone(m.NativeMap)),
 	}
+}
+
+func (m ComparableHashMap[K, V]) IsSubMap(other ds.MutableMap[K, V], eq func(a, b V) bool) bool {
+	if other == nil {
+		return false
+	}
+	if m.Size() > other.Size() {
+		return false
+	}
+	return sliceutils.All(m.Keys(), func(k K) bool {
+		v, exists := other.Get(k)
+		return exists && eq(v, m.NativeMap[k])
+	})
+}
+
+func (m ComparableHashMap[K, V]) IsProperSubMap(other ds.MutableMap[K, V], eq func(a, b V) bool) bool {
+	return m.Size() < other.Size() && m.IsSubMap(other, eq)
+}
+
+func (m ComparableHashMap[K, V]) IsSuperMap(other ds.MutableMap[K, V], eq func(a, b V) bool) bool {
+	return other.IsSubMap(m, eq)
+}
+
+func (m ComparableHashMap[K, V]) IsProperSuperMap(other ds.MutableMap[K, V], eq func(a, b V) bool) bool {
+	return other.IsProperSubMap(m, eq)
 }
 
 func (m ComparableHashMap[K, V]) ThreadSafe() ds.ConcurrentMap[K, V] {

@@ -59,6 +59,10 @@ func (f *Fp) Add(lhs, rhs *Fp) {
 	fiatFpCarryAdd(&f.v, &lhs.v, &rhs.v)
 }
 
+func (f *Fp) Double(x *Fp) {
+	fiatFpCarryAdd(&f.v, &x.v, &x.v)
+}
+
 func (f *Fp) Sub(lhs, rhs *Fp) {
 	fiatFpCarrySub(&f.v, &lhs.v, &rhs.v)
 }

@@ -110,3 +110,26 @@ type PrimeFieldElementPtr[E PrimeFieldElement[E], T any] interface {
 	*T
 	PrimeFieldElement[E]
 }
+
+// *** Elliptic Curve Points
+
+type ellipticPoint[FP finiteFieldElement[FP], PP groupElement[PP]] interface {
+	GroupElement[PP]
+	Encode(dstPrefix string, message []byte)
+	Hash(dstPrefix string, message []byte)
+
+	SetRandom(prng io.Reader) (ok ct.Bool)
+	SetGenerator()
+	ClearCofactor(in PP)
+	SetAffine(x, y FP) (ok ct.Bool)
+	ToAffine(x, y FP) (ok ct.Bool)
+}
+
+type EllipticPoint[FP finiteFieldElement[FP], PP ellipticPoint[FP, PP]] interface {
+	ellipticPoint[FP, PP]
+}
+
+type EllipticPointPtr[FP finiteFieldElement[FP], PP ellipticPoint[FP, PP], P any] interface {
+	*P
+	ellipticPoint[FP, PP]
+}

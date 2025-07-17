@@ -9,10 +9,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	fieldsTu "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields/testutils"
-	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
 	pointsTu "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points/testutils"
+	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
 
 	_ "embed"
 )
@@ -73,8 +73,8 @@ func TestSinglePairing(t *testing.T) {
 	e.AddPairInvG1(&g, &h)
 	r := e.Result()
 
-	require.True(t, p.Equals(q) == 1)
-	require.True(t, q.Equals(r) == 1)
+	require.True(t, p.Equal(q) == 1)
+	require.True(t, q.Equal(r) == 1)
 }
 
 func TestMultiPairing(t *testing.T) {
@@ -100,9 +100,9 @@ func TestMultiPairing(t *testing.T) {
 		require.NoError(t, err)
 
 		if i&1 == 0 {
-			pointsImpl.ScalarMul[*bls12381Impl.Fp](g1s[i], g1s[i], sc[i])
+			impl.ScalarMul(g1s[i], g1s[i], sc[i])
 		} else {
-			pointsImpl.ScalarMul[*bls12381Impl.Fp2](g2s[i], g2s[i], sc[i])
+			impl.ScalarMul(g2s[i], g2s[i], sc[i])
 		}
 		e1.AddPair(g1s[i], g2s[i])
 		e2.AddPair(g1s[i], g2s[i])
@@ -112,5 +112,5 @@ func TestMultiPairing(t *testing.T) {
 	}
 
 	actual := e2.Result()
-	require.True(t, expected.Equals(actual) == 1)
+	require.True(t, expected.Equal(actual) == 1)
 }

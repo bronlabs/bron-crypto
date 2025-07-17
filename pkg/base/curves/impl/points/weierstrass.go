@@ -3,6 +3,7 @@ package points
 import (
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
@@ -83,7 +84,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Set(v *ShortWeierstrassPoint
 	FP(&p.Z).Set(&v.Z)
 }
 
-func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetIdentity() {
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetZero() {
 	FP(&p.X).SetZero()
 	FP(&p.Y).SetOne()
 	FP(&p.Z).SetZero()
@@ -311,8 +312,12 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Neg(v *ShortWeierstrassPoint
 	FP(&p.Z).Set(&v.Z)
 }
 
-func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) IsIdentity() ct.Bool {
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) IsZero() ct.Bool {
 	return FP(&p.Z).IsZero()
+}
+
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) IsNonZero() ct.Bool {
+	return FP(&p.Z).IsNonZero()
 }
 
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Equal(rhs *ShortWeierstrassPointImpl[FP, C, H, M, F]) ct.Bool {
@@ -360,4 +365,27 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) String() string {
 	FP(&z).CondAssign(ok, &p.Z, &one)
 
 	return fmt.Sprintf("(%s : %s : %s)", FP(&x), FP(&y), FP(&z))
+}
+
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Bytes() []byte {
+	return slices.Concat(FP(&p.X).Bytes(), FP(&p.Y).Bytes(), FP(&p.Z).Bytes())
+}
+
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetBytes(input []byte) (ok ct.Bool) {
+	coordinateLen := len(input) / 3
+	x := input[:coordinateLen]
+	y := input[coordinateLen : 2*coordinateLen]
+	z := input[2*coordinateLen:]
+
+	var tmpX, tmpY, tmpZ F
+	okX := FP(&tmpX).SetBytes(x)
+	okY := FP(&tmpY).SetBytes(y)
+	okZ := FP(&tmpZ).SetBytes(z)
+	ok = okX & okY & okZ
+
+	// Conditionally assign: keep current if failed
+	FP(&p.X).CondAssign(ok, &p.X, &tmpX)
+	FP(&p.Y).CondAssign(ok, &p.Y, &tmpY)
+	FP(&p.Z).CondAssign(ok, &p.Z, &tmpZ)
+	return ok
 }

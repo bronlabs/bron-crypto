@@ -7,6 +7,8 @@ import (
 	"io"
 	"math/big"
 	"slices"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 const (
@@ -31,6 +33,8 @@ func init() {
 
 type Fq struct {
 	fiatFqMontgomeryDomainFieldElement
+
+	_ [0]func()
 }
 
 func (f *Fq) Set(v *Fq) {
@@ -50,12 +54,12 @@ func (f *Fq) SetUint64(v uint64) {
 	f.SetLimbs(limbs[:])
 }
 
-func (f *Fq) SetLimbs(data []uint64) (ok uint64) {
+func (f *Fq) SetLimbs(data []uint64) (ok ct.Bool) {
 	fiatFqToMontgomery(&f.fiatFqMontgomeryDomainFieldElement, (*fiatFqNonMontgomeryDomainFieldElement)(data))
 	return 1
 }
 
-func (f *Fq) SetBytes(data []byte) (ok uint64) {
+func (f *Fq) SetBytes(data []byte) (ok ct.Bool) {
 	if len(data) != FqBytes {
 		return 0
 	}
@@ -66,7 +70,7 @@ func (f *Fq) SetBytes(data []byte) (ok uint64) {
 	return 1
 }
 
-func (f *Fq) SetBytesWide(data []byte) (ok uint64) {
+func (f *Fq) SetBytesWide(data []byte) (ok ct.Bool) {
 	if len(data) > FqWideBytes {
 		return 0
 	}
@@ -86,7 +90,7 @@ func (f *Fq) SetBytesWide(data []byte) (ok uint64) {
 	return 1
 }
 
-func (f *Fq) SetUniformBytes(componentsData ...[]byte) (ok uint64) {
+func (f *Fq) SetUniformBytes(componentsData ...[]byte) (ok ct.Bool) {
 	if len(componentsData) != 1 {
 		return 0
 	}
@@ -94,7 +98,7 @@ func (f *Fq) SetUniformBytes(componentsData ...[]byte) (ok uint64) {
 	return f.SetBytesWide(componentsData[0])
 }
 
-func (f *Fq) SetRandom(prng io.Reader) (ok uint64) {
+func (f *Fq) SetRandom(prng io.Reader) (ok ct.Bool) {
 	var uniformBytes [(FqBits + 128 + 7) / 8]byte
 	_, err := io.ReadFull(prng, uniformBytes[:])
 	if err != nil {
@@ -103,12 +107,16 @@ func (f *Fq) SetRandom(prng io.Reader) (ok uint64) {
 	return f.SetUniformBytes(uniformBytes[:])
 }
 
-func (f *Fq) Select(choice uint64, z, nz *Fq) {
-	fiatFqSelectznz((*[FqLimbs]uint64)(&f.fiatFqMontgomeryDomainFieldElement), fiatFqUint1(choice), (*[FqLimbs]uint64)(&z.fiatFqMontgomeryDomainFieldElement), (*[FqLimbs]uint64)(&nz.fiatFqMontgomeryDomainFieldElement))
+func (f *Fq) CondAssign(choice ct.Choice, z, nz *Fq) {
+	fiatFqSelectznz((*[FqLimbs]uint64)(&f.fiatFqMontgomeryDomainFieldElement),fiatFqUint1(choice), (*[FqLimbs]uint64)(&z.fiatFqMontgomeryDomainFieldElement), (*[FqLimbs]uint64)(&nz.fiatFqMontgomeryDomainFieldElement))
 }
 
 func (f *Fq) Add(lhs, rhs *Fq) {
 	fiatFqAdd(&f.fiatFqMontgomeryDomainFieldElement, &lhs.fiatFqMontgomeryDomainFieldElement, &rhs.fiatFqMontgomeryDomainFieldElement)
+}
+
+func (f *Fq) Double(x *Fq) {
+	fiatFqAdd(&f.fiatFqMontgomeryDomainFieldElement, &x.fiatFqMontgomeryDomainFieldElement, &x.fiatFqMontgomeryDomainFieldElement)
 }
 
 func (f *Fq) Sub(lhs, rhs *Fq) {
@@ -127,7 +135,7 @@ func (f *Fq) Square(v *Fq) {
 	fiatFqSquare(&f.fiatFqMontgomeryDomainFieldElement, &v.fiatFqMontgomeryDomainFieldElement)
 }
 
-func (f *Fq) Inv(a *Fq) (ok uint64) {
+func (f *Fq) Inv(a *Fq) (ok ct.Bool) {
 	var precomp, h, v, r, out4, out5 [FqLimbs]uint64
 	var ff, g, out2, out3 [FqSatLimbs]uint64
 	var out1, inverted uint64
@@ -153,41 +161,41 @@ func (f *Fq) Inv(a *Fq) (ok uint64) {
 	fiatFqMul(&f.fiatFqMontgomeryDomainFieldElement, (*fiatFqMontgomeryDomainFieldElement)(&v), (*fiatFqMontgomeryDomainFieldElement)(&precomp))
 	fiatFqNonzero(&inverted, (*[FqLimbs]uint64)(&f.fiatFqMontgomeryDomainFieldElement))
 
-	return (inverted | -inverted) >> 63
+	return ct.Bool((inverted | -inverted) >> 63)
 }
 
-func (f *Fq) Div(lhs, rhs *Fq) (ok uint64) {
+func (f *Fq) Div(lhs, rhs *Fq) (ok ct.Bool) {
 	var rhsInv Fq
 	ok = rhsInv.Inv(rhs)
 	f.Mul(lhs, &rhsInv)
 	return ok
 }
 
-func (f *Fq) Sqrt(x *Fq) (ok uint64) {
-	return fqSqrt(f, x, &FqRootOfUnity, FqE, FqProgenitorExp[:])
+func (f *Fq) Sqrt(x *Fq) (ok ct.Bool) {
+	return ct.Bool(fqSqrt(f, x, &FqRootOfUnity, FqE, FqProgenitorExp[:]))
 }
 
-func (f *Fq) IsNonZero() uint64 {
+func (f *Fq) IsNonZero() ct.Bool {
 	// montgomery form might not be "fully reduced"
 	var nonMonty fiatFqNonMontgomeryDomainFieldElement
 	fiatFqFromMontgomery(&nonMonty, &f.fiatFqMontgomeryDomainFieldElement)
 
 	var nonZero uint64
 	fiatFqNonzero(&nonZero, (*[FqLimbs]uint64)(&nonMonty))
-	return (nonZero | -nonZero) >> 63
+	return ct.Bool((nonZero | -nonZero) >> 63)
 }
 
-func (f *Fq) IsZero() uint64 {
+func (f *Fq) IsZero() ct.Bool {
 	return f.IsNonZero() ^ 1
 }
 
-func (f *Fq) IsOne() uint64 {
+func (f *Fq) IsOne() ct.Bool {
 	var one Fq
 	one.SetOne()
-	return f.Equals(&one)
+	return f.Equal(&one)
 }
 
-func (f *Fq) Equals(v *Fq) uint64 {
+func (f *Fq) Equal(v *Fq) ct.Bool {
 	var diff Fq
 	diff.Sub(f, v)
 	return diff.IsZero()

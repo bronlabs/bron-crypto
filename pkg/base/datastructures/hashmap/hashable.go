@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 type HashableEntry[K base.Hashable[K], V any] ds.MapEntry[K, V]
@@ -207,6 +208,32 @@ func (m ImmutableHashableHashMap[K, V]) IsImmutable() bool {
 	return true
 }
 
+func (m ImmutableHashableHashMap[K, V]) IsSubMap(other ds.Map[K, V], eq func(a, b V) bool) bool {
+	if other == nil {
+		return false
+	}
+	if m.Size() > other.Size() {
+		return false
+	}
+	return sliceutils.All(m.Keys(), func(k K) bool {
+		v1, _ := m.Get(k)
+		v2, exists := other.Get(k)
+		return exists && eq(v1, v2)
+	})
+}
+
+func (m ImmutableHashableHashMap[K, V]) IsProperSubMap(other ds.Map[K, V], eq func(a, b V) bool) bool {
+	return m.Size() < other.Size() && m.IsSubMap(other, eq)
+}
+
+func (m ImmutableHashableHashMap[K, V]) IsSuperMap(other ds.Map[K, V], eq func(a, b V) bool) bool {
+	return other.IsSubMap(m, eq)
+}
+
+func (m ImmutableHashableHashMap[K, V]) IsProperSuperMap(other ds.Map[K, V], eq func(a, b V) bool) bool {
+	return other.IsProperSubMap(m, eq)
+}
+
 func (m ImmutableHashableHashMap[K, V]) Unfreeze() ds.MutableMap[K, V] {
 	return &MutableHashableHashMap[K, V]{
 		HashMapTrait[K, V, ds.MutableMap[K, V]]{
@@ -277,6 +304,30 @@ type MutableHashableHashMap[K base.Hashable[K], V any] struct {
 
 func (m MutableHashableHashMap[K, V]) IsImmutable() bool {
 	return false
+}
+
+func (m MutableHashableHashMap[K, V]) IsSubMap(other ds.MutableMap[K, V], eq func(a, b V) bool) bool {
+	if other == nil {
+		return false
+	}
+	if m.Size() > other.Size() {
+		return false
+	}
+	return sliceutils.All(m.Keys(), func(k K) bool {
+		v1, _ := m.Get(k)
+		v2, exists := other.Get(k)
+		return exists && eq(v1, v2)
+	})
+}
+
+func (m MutableHashableHashMap[K, V]) IsProperSubMap(other ds.MutableMap[K, V], eq func(a, b V) bool) bool {
+	return m.Size() < other.Size() && m.IsSubMap(other, eq)
+}
+func (m MutableHashableHashMap[K, V]) IsSuperMap(other ds.MutableMap[K, V], eq func(a, b V) bool) bool {
+	return other.IsSubMap(m, eq)
+}
+func (m MutableHashableHashMap[K, V]) IsProperSuperMap(other ds.MutableMap[K, V], eq func(a, b V) bool) bool {
+	return other.IsProperSubMap(m, eq)
 }
 
 func (m MutableHashableHashMap[K, V]) Freeze() ds.Map[K, V] {

@@ -7,12 +7,12 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/ase/nt/cardinal"
+	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
 type (
@@ -266,7 +266,7 @@ func (p *PallasPoint) ScalarOp(sc *PallasScalar) *PallasPoint {
 
 func (p *PallasPoint) ScalarMul(actor *PallasScalar) *PallasPoint {
 	var result PallasPoint
-	pointsImpl.ScalarMul[*pastaImpl.Fp](&result.V, &p.V, actor.V.Bytes())
+	aimpl.ScalarMul(&result.V, &p.V, actor.V.Bytes())
 	return &result
 }
 

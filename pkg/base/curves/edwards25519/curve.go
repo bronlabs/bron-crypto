@@ -7,10 +7,11 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
-	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
-	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
@@ -89,7 +90,7 @@ func (c *Curve) FromCompressed(inBytes []byte) (*Point, error) {
 		return nil, errs.NewFailed("invalid point")
 	}
 
-	isOdd := uint64(inBytes[31] >> 7)
+	isOdd := ct.Bool(inBytes[31] >> 7)
 	if fieldsImpl.IsOdd(&x.V) != isOdd {
 		result = result.Neg()
 	}
@@ -229,7 +230,7 @@ func (p *Point) ScalarOp(sc *Scalar) *Point {
 
 func (p *Point) ScalarMul(actor *Scalar) *Point {
 	var result Point
-	pointsImpl.ScalarMul[*edwards25519Impl.Fp](&result.V, &p.V, actor.V.Bytes())
+	aimpl.ScalarMul(&result.V, &p.V, actor.V.Bytes())
 	return &result
 }
 
@@ -237,8 +238,8 @@ func (p *Point) IsTorsionFree() bool {
 	primeOrderBytes := scalarFieldOrder.Bytes()
 	slices.Reverse(primeOrderBytes)
 	var e edwards25519Impl.Point
-	pointsImpl.ScalarMul[*edwards25519Impl.Fp](&e, &p.V, primeOrderBytes)
-	return e.IsIdentity() == 1
+	aimpl.ScalarMul(&e, &p.V, primeOrderBytes)
+	return e.IsZero() == 1
 }
 
 func (p *Point) Bytes() []byte {

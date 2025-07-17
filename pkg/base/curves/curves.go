@@ -5,29 +5,29 @@ import (
 )
 
 type (
-	EllipticCurve[P ECPoint[P, F, S], F algebra.FiniteFieldElement[F], S algebra.UintLike[S]] interface {
+	EllipticCurve[P ECPoint[P, F, S], F algebra.FieldElement[F], S algebra.UintLike[S]] interface {
 		algebra.EllipticCurve[P, F, S]
 		PrimeSubGroupGenerator() P
 	}
-	ECPoint[P algebra.EllipticCurvePoint[P, F, S], F algebra.FiniteFieldElement[F], S algebra.UintLike[S]] interface {
+	ECPoint[P algebra.EllipticCurvePoint[P, F, S], F algebra.FieldElement[F], S algebra.UintLike[S]] interface {
 		algebra.EllipticCurvePoint[P, F, S]
 		IsPrimeSubGroupDesignatedGenerator() bool
 	}
 
-	Curve[P Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]] interface {
+	Curve[P Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]] interface {
 		EllipticCurve[P, F, S]
 		algebra.PrimeOrderEllipticCurve[P, F, S]
 		HashWithDst(dst string, message []byte) (P, error)
 	}
 
-	Point[P algebra.EllipticCurvePoint[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]] interface {
+	Point[P algebra.EllipticCurvePoint[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]] interface {
 		algebra.PrimeOrderEllipticCurvePoint[P, F, S]
 		ECPoint[P, F, S]
 	}
 
 	PairingFriendlyCurve[
-		P1 PairingFriendlyPoint[P1, F1, P2, F2, E, S], F1 algebra.FiniteFieldElement[F1],
-		P2 PairingFriendlyPoint[P2, F2, P1, F1, E, S], F2 algebra.FiniteFieldElement[F2],
+		P1 PairingFriendlyPoint[P1, F1, P2, F2, E, S], F1 algebra.FieldElement[F1],
+		P2 PairingFriendlyPoint[P2, F2, P1, F1, E, S], F2 algebra.FieldElement[F2],
 		E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 	] interface {
 		algebra.PairingFriendlyCurve[P1, F1, P2, F2, E, S, PairingFriendlyCurve[P2, F2, P1, F1, E, S]]
@@ -35,8 +35,8 @@ type (
 	}
 
 	PairingFriendlyPoint[
-		P1 algebra.PairingFriendlyPoint[P1, F1, P2, F2, E, S], F1 algebra.FiniteFieldElement[F1],
-		P2 algebra.PairingFriendlyPoint[P2, F2, P1, F1, E, S], F2 algebra.FiniteFieldElement[F2],
+		P1 algebra.PairingFriendlyPoint[P1, F1, P2, F2, E, S], F1 algebra.FieldElement[F1],
+		P2 algebra.PairingFriendlyPoint[P2, F2, P1, F1, E, S], F2 algebra.FieldElement[F2],
 		E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 	] interface {
 		algebra.PairingFriendlyPoint[P1, F1, P2, F2, E, S]
@@ -44,8 +44,8 @@ type (
 	}
 
 	PairingFriendlyFamily[
-		P1 PairingFriendlyPoint[P1, F1, P2, F2, E, S], F1 algebra.FiniteFieldElement[F1],
-		P2 PairingFriendlyPoint[P2, F2, P1, F1, E, S], F2 algebra.FiniteFieldElement[F2],
+		P1 PairingFriendlyPoint[P1, F1, P2, F2, E, S], F1 algebra.FieldElement[F1],
+		P2 PairingFriendlyPoint[P2, F2, P1, F1, E, S], F2 algebra.FieldElement[F2],
 		E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 	] interface {
 		Name() string
@@ -59,8 +59,8 @@ type (
 	PairingAlgorithm = algebra.PairingName
 
 	PPE[
-		P1 PairingFriendlyPoint[P1, F1, P2, F2, E, S], F1 algebra.FiniteFieldElement[F1],
-		P2 PairingFriendlyPoint[P2, F2, P1, F1, E, S], F2 algebra.FiniteFieldElement[F2],
+		P1 PairingFriendlyPoint[P1, F1, P2, F2, E, S], F1 algebra.FieldElement[F1],
+		P2 PairingFriendlyPoint[P2, F2, P1, F1, E, S], F2 algebra.FieldElement[F2],
 		E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 	] = algebra.PairingProductEvaluator[P1, F1, P2, F2, E, S]
 )
@@ -71,7 +71,7 @@ const (
 	TypeIII = algebra.TypeIII
 )
 
-func GetScalarField[P Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]](c Curve[P, F, S]) algebra.PrimeField[S] {
+func GetScalarField[P Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](c Curve[P, F, S]) algebra.PrimeField[S] {
 	out, err := algebra.StructureAs[algebra.PrimeField[S]](c.ScalarStructure())
 	if err != nil {
 		panic("cannot get scalar field from curve: " + err.Error())
@@ -79,8 +79,8 @@ func GetScalarField[P Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra
 	return out
 }
 
-func GetBaseField[P Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]](c Curve[P, F, S]) algebra.FiniteField[F] {
-	out, err := algebra.StructureAs[algebra.FiniteField[F]](c.BaseStructure())
+func GetBaseField[P Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](c Curve[P, F, S]) algebra.Field[F] {
+	out, err := algebra.StructureAs[algebra.Field[F]](c.BaseStructure())
 	if err != nil {
 		panic("cannot get base field from curve: " + err.Error())
 	}

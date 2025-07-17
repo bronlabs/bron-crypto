@@ -1,6 +1,9 @@
 package base
 
-import "io"
+import (
+	"hash/fnv"
+	"io"
+)
 
 type Transparent[V any] interface {
 	Value() V
@@ -9,6 +12,15 @@ type IncomparableTrait struct {
 	_ [0]func()
 }
 type HashCode uint64
+
+func (hc HashCode) Combine(xs ...HashCode) HashCode {
+	h := fnv.New64a()
+	h.Write([]byte{byte(hc)})
+	for _, x := range xs {
+		h.Write([]byte{byte(x)})
+	}
+	return HashCode(h.Sum64())
+}
 
 type Equatable[K any] interface {
 	Equal(rhs K) bool
@@ -40,4 +52,12 @@ type BytesLikeFactory[E any] interface {
 
 type SamplableStructure[S, E any] interface {
 	Random(prng io.Reader, opts ...func(S) error) (E, error)
+}
+
+func DeriveHashCode[T ~[]byte](xs ...T) HashCode {
+	h := fnv.New64a()
+	for _, x := range xs {
+		h.Write(x)
+	}
+	return HashCode(h.Sum64())
 }

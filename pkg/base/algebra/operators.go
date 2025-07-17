@@ -8,6 +8,16 @@ import (
 const UnboundedCapacity crtp.Capacity = -1
 
 type (
+	NAry[C any]                = crtp.NAry[C]
+	Mapping[F, C any]          = crtp.Mapping[F, C]
+	Product[P, C any]          = crtp.Product[P, C]
+	CoProduct[P, C any]        = crtp.CoProduct[P, C]
+	Power[P, C any]            = crtp.Power[P, C]
+	TensorProduct[E, C, S any] = crtp.TensorProduct[E, C, S]
+	Tensor[E, S any]           = crtp.Tensor[E, S]
+)
+
+type (
 	Capacity                    = crtp.Capacity
 	Operand[E any]              crtp.Operand[E]
 	FixedCapacityOperand[E any] crtp.FixedCapacityOperand[E]
@@ -40,7 +50,7 @@ type (
 	MaybeExponentiationBase[B, E any]              crtp.MaybeExponentiationBase[B, E]
 	MaybeFixedCapacityExponentiationBase[B, E any] crtp.MaybeFixedCapacityExponentiationBase[B, E]
 
-	Residue[M, Q any] crtp.Residue[M, Q]
+	Residual[M, Q any] crtp.Residual[M, Q]
 
 	Conjunct[E any]      crtp.Conjunct[E]
 	MaybeConjunct[E any] crtp.MaybeConjunct[E]

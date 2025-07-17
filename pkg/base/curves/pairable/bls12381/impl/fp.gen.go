@@ -7,6 +7,8 @@ import (
 	"io"
 	"math/big"
 	"slices"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 const (
@@ -52,12 +54,12 @@ func (f *Fp) SetUint64(v uint64) {
 	f.SetLimbs(limbs[:])
 }
 
-func (f *Fp) SetLimbs(data []uint64) (ok uint64) {
+func (f *Fp) SetLimbs(data []uint64) (ok ct.Bool) {
 	fiatFpToMontgomery(&f.fiatFpMontgomeryDomainFieldElement, (*fiatFpNonMontgomeryDomainFieldElement)(data))
 	return 1
 }
 
-func (f *Fp) SetBytes(data []byte) (ok uint64) {
+func (f *Fp) SetBytes(data []byte) (ok ct.Bool) {
 	if len(data) != FpBytes {
 		return 0
 	}
@@ -68,7 +70,7 @@ func (f *Fp) SetBytes(data []byte) (ok uint64) {
 	return 1
 }
 
-func (f *Fp) SetBytesWide(data []byte) (ok uint64) {
+func (f *Fp) SetBytesWide(data []byte) (ok ct.Bool) {
 	if len(data) > FpWideBytes {
 		return 0
 	}
@@ -88,7 +90,7 @@ func (f *Fp) SetBytesWide(data []byte) (ok uint64) {
 	return 1
 }
 
-func (f *Fp) SetUniformBytes(componentsData ...[]byte) (ok uint64) {
+func (f *Fp) SetUniformBytes(componentsData ...[]byte) (ok ct.Bool) {
 	if len(componentsData) != 1 {
 		return 0
 	}
@@ -96,7 +98,7 @@ func (f *Fp) SetUniformBytes(componentsData ...[]byte) (ok uint64) {
 	return f.SetBytesWide(componentsData[0])
 }
 
-func (f *Fp) SetRandom(prng io.Reader) (ok uint64) {
+func (f *Fp) SetRandom(prng io.Reader) (ok ct.Bool) {
 	var uniformBytes [(FpBits + 128 + 7) / 8]byte
 	_, err := io.ReadFull(prng, uniformBytes[:])
 	if err != nil {
@@ -105,12 +107,16 @@ func (f *Fp) SetRandom(prng io.Reader) (ok uint64) {
 	return f.SetUniformBytes(uniformBytes[:])
 }
 
-func (f *Fp) Select(choice uint64, z, nz *Fp) {
+func (f *Fp) CondAssign(choice ct.Choice, z, nz *Fp) {
 	fiatFpSelectznz((*[FpLimbs]uint64)(&f.fiatFpMontgomeryDomainFieldElement),fiatFpUint1(choice), (*[FpLimbs]uint64)(&z.fiatFpMontgomeryDomainFieldElement), (*[FpLimbs]uint64)(&nz.fiatFpMontgomeryDomainFieldElement))
 }
 
 func (f *Fp) Add(lhs, rhs *Fp) {
 	fiatFpAdd(&f.fiatFpMontgomeryDomainFieldElement, &lhs.fiatFpMontgomeryDomainFieldElement, &rhs.fiatFpMontgomeryDomainFieldElement)
+}
+
+func (f *Fp) Double(x *Fp) {
+	fiatFpAdd(&f.fiatFpMontgomeryDomainFieldElement, &x.fiatFpMontgomeryDomainFieldElement, &x.fiatFpMontgomeryDomainFieldElement)
 }
 
 func (f *Fp) Sub(lhs, rhs *Fp) {
@@ -129,7 +135,7 @@ func (f *Fp) Square(v *Fp) {
 	fiatFpSquare(&f.fiatFpMontgomeryDomainFieldElement, &v.fiatFpMontgomeryDomainFieldElement)
 }
 
-func (f *Fp) Inv(a *Fp) (ok uint64) {
+func (f *Fp) Inv(a *Fp) (ok ct.Bool) {
 	var precomp, h, v, r, out4, out5 [FpLimbs]uint64
 	var ff, g, out2, out3 [FpSatLimbs]uint64
 	var out1, inverted uint64
@@ -155,41 +161,41 @@ func (f *Fp) Inv(a *Fp) (ok uint64) {
 	fiatFpMul(&f.fiatFpMontgomeryDomainFieldElement, (*fiatFpMontgomeryDomainFieldElement)(&v), (*fiatFpMontgomeryDomainFieldElement)(&precomp))
 	fiatFpNonzero(&inverted, (*[FpLimbs]uint64)(&f.fiatFpMontgomeryDomainFieldElement))
 
-	return (inverted | -inverted) >> 63
+	return ct.Bool((inverted | -inverted) >> 63)
 }
 
-func (f *Fp) Div(lhs, rhs *Fp) (ok uint64) {
+func (f *Fp) Div(lhs, rhs *Fp) (ok ct.Bool) {
 	var rhsInv Fp
 	ok = rhsInv.Inv(rhs)
 	f.Mul(lhs, &rhsInv)
 	return ok
 }
 
-func (f *Fp) Sqrt(x *Fp) (ok uint64) {
-	return sqrt(f, x, &FpRootOfUnity, FpE, FpProgenitorExp[:])
+func (f *Fp) Sqrt(x *Fp) (ok ct.Bool) {
+	return ct.Bool(sqrt(f, x, &FpRootOfUnity, FpE, FpProgenitorExp[:]))
 }
 
-func (f *Fp) IsNonZero() uint64 {
+func (f *Fp) IsNonZero() ct.Bool {
 	// montgomery form might not be "fully reduced"
 	var nonMonty fiatFpNonMontgomeryDomainFieldElement
 	fiatFpFromMontgomery(&nonMonty, &f.fiatFpMontgomeryDomainFieldElement)
 
 	var nonZero uint64
 	fiatFpNonzero(&nonZero, (*[FpLimbs]uint64)(&nonMonty))
-	return (nonZero | -nonZero) >> 63
+	return ct.Bool((nonZero | -nonZero) >> 63)
 }
 
-func (f *Fp) IsZero() uint64 {
+func (f *Fp) IsZero() ct.Bool {
 	return f.IsNonZero() ^ 1
 }
 
-func (f *Fp) IsOne() uint64 {
+func (f *Fp) IsOne() ct.Bool {
 	var one Fp
 	one.SetOne()
-	return f.Equals(&one)
+	return f.Equal(&one)
 }
 
-func (f *Fp) Equals(v *Fp) uint64 {
+func (f *Fp) Equal(v *Fp) ct.Bool {
 	var diff Fp
 	diff.Sub(f, v)
 	return diff.IsZero()

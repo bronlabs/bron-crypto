@@ -23,6 +23,22 @@ func NewConcurrentMap[K any, V any](innerMap ds.MutableMap[K, V]) ds.ConcurrentM
 	}
 }
 
+func (m *ConcurrentMap[K, V]) IsSubMap(other ds.ConcurrentMap[K, V], eq func(a, b V) bool) bool {
+	return false
+}
+
+func (m *ConcurrentMap[K, V]) IsProperSubMap(other ds.ConcurrentMap[K, V], eq func(a, b V) bool) bool {
+	return false
+}
+
+func (m *ConcurrentMap[K, V]) IsSuperMap(other ds.ConcurrentMap[K, V], eq func(a, b V) bool) bool {
+	return other.IsSubMap(m, eq)
+}
+
+func (m *ConcurrentMap[K, V]) IsProperSuperMap(other ds.ConcurrentMap[K, V], eq func(a, b V) bool) bool {
+	return other.IsProperSubMap(m, eq)
+}
+
 func (m *ConcurrentMap[K, V]) Get(key K) (value V, exists bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

@@ -1,6 +1,39 @@
 package crtp
 
 type (
+	NAry[C any] interface {
+		Arity() Cardinal
+		Components() []C
+	}
+
+	Mapping[E, C any] interface {
+		NAry[C]
+		New(...C) (E, error)
+	}
+
+	Product[P, C any] interface {
+		NAry[C]
+		Diagonal(C) P
+	}
+
+	CoProduct[P, C any] interface {
+		NAry[C]
+		CoDiagonal() C
+	}
+	Power[P, C any] interface {
+		Product[P, C]
+		Factor() C
+	}
+
+	TensorProduct[E, C, S any] interface {
+		Module[E, S]
+		Mapping[E, C]
+	}
+
+	Tensor[E, S any] ModuleElement[E, S]
+)
+
+type (
 	Capacity = int
 
 	Operand[E any]              interface{ Op(E) E }
@@ -29,7 +62,7 @@ type (
 	MaybeDividend[E any]              interface{ TryDiv(E) (E, error) }
 	MaybeFixedCapacityDividend[E any] interface{ TryDivCap(E, Capacity) (E, error) }
 
-	Residue[M, Q any] interface{ Mod(M) (Q, error) }
+	Residual[M, Q any] interface{ Mod(M) (Q, error) }
 
 	ExponentiationBase[B, E any]                   interface{ Exp(E) B }
 	FixedCapacityExponentiationBase[B, E any]      interface{ ExpCap(E, Capacity) B }

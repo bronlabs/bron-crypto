@@ -25,7 +25,7 @@ type CurveTrait[FP fields.FiniteFieldElement[FP], P points.Point[FP, P], W Point
 
 func (c *CurveTrait[FP, P, W, WT]) Zero() W {
 	var zero WT
-	W(&zero).P().SetIdentity()
+	W(&zero).P().SetZero()
 	return &zero
 }
 
@@ -44,7 +44,7 @@ func (c *CurveTrait[FP, P, W, WT]) Iter() iter.Seq[W] {
 		var current WT
 		W(&current).P().Set(generator.P())
 
-		for W(&current).P().IsIdentity() != 1 {
+		for W(&current).P().IsZero() != 1 {
 			if !yield(W(&current)) {
 				break
 			}
@@ -152,7 +152,7 @@ func (p *PointTrait[FP, P, T, W, WT]) ClearCofactor() W {
 }
 
 func (p *PointTrait[FP, P, T, W, WT]) IsZero() bool {
-	return P(&p.V).IsIdentity() == 1
+	return P(&p.V).IsZero() == 1
 }
 
 func (p *PointTrait[FP, P, T, W, WT]) IsPrimeSubGroupDesignatedGenerator() bool {
@@ -162,7 +162,7 @@ func (p *PointTrait[FP, P, T, W, WT]) IsPrimeSubGroupDesignatedGenerator() bool 
 }
 
 func (p *PointTrait[FP, P, T, W, WT]) Equal(rhs W) bool {
-	return P(&p.V).Equals(rhs.P()) == 1
+	return P(&p.V).Equal(rhs.P()) == 1
 }
 
 func (p *PointTrait[FP, P, T, W, WT]) Op(e W) W {

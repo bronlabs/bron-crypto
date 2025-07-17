@@ -2,8 +2,9 @@ package impl
 
 import (
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
+	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 )
 
 const coefficientsG2 = 68
@@ -18,7 +19,7 @@ type pair struct {
 }
 
 type g2Prepared struct {
-	identity     uint64
+	identity     ct.Bool
 	coefficients []coefficients
 }
 
@@ -26,17 +27,17 @@ type coefficients struct {
 	a, b, c Fp2
 }
 
-func (c *coefficients) Select(choice uint64, arg0, arg1 *coefficients) *coefficients {
-	c.a.Select(choice, &arg0.a, &arg1.a)
-	c.b.Select(choice, &arg0.b, &arg1.b)
-	c.c.Select(choice, &arg0.c, &arg1.c)
+func (c *coefficients) Select(choice ct.Choice, arg0, arg1 *coefficients) *coefficients {
+	c.a.CondAssign(choice, &arg0.a, &arg1.a)
+	c.b.CondAssign(choice, &arg0.b, &arg1.b)
+	c.c.CondAssign(choice, &arg0.c, &arg1.c)
 	return c
 }
 
 // AddPair adds a pair of points to be paired.
 func (e *Engine) AddPair(g1 *G1Point, g2 *G2Point) *Engine {
 	var p pair
-	if g1.IsIdentity()|g2.IsIdentity() == 0 {
+	if g1.IsZero()|g2.IsZero() == 0 {
 		affinize(&p.g1, g1)
 		affinize(&p.g2, g2)
 		e.pairs = append(e.pairs, p)
@@ -98,30 +99,30 @@ func (e *Engine) millerLoop(f *Fp12, coeffs []g2Prepared) {
 
 		// doubling
 		for j, terms := range coeffs {
-			identity := e.pairs[j].g1.IsIdentity() | terms.identity
+			identity := e.pairs[j].g1.IsZero() | ct.Bool(terms.identity)
 			newF.Set(f)
 			ell(newF, &terms.coefficients[cIdx], &e.pairs[j].g1)
-			f.Select(identity, newF, f)
+			f.CondAssign(identity, newF, f)
 		}
 		cIdx++
 
 		if x == 1 {
 			// adding
 			for j, terms := range coeffs {
-				identity := e.pairs[j].g1.IsIdentity() | terms.identity
+				identity := e.pairs[j].g1.IsZero() | ct.Bool(terms.identity)
 				newF.Set(f)
 				ell(newF, &terms.coefficients[cIdx], &e.pairs[j].g1)
-				f.Select(identity, newF, f)
+				f.CondAssign(identity, newF, f)
 			}
 			cIdx++
 		}
 		f.Square(f)
 	}
 	for j, terms := range coeffs {
-		identity := e.pairs[j].g1.IsIdentity() | terms.identity
+		identity := e.pairs[j].g1.IsZero() | ct.Bool(terms.identity)
 		newF.Set(f)
 		ell(newF, &terms.coefficients[cIdx], &e.pairs[j].g1)
-		f.Select(identity, newF, f)
+		f.CondAssign(identity, newF, f)
 	}
 	Conjugate(f, f)
 }
@@ -130,10 +131,10 @@ func (e *Engine) computeCoeffs() []g2Prepared {
 	coeffs := make([]g2Prepared, len(e.pairs))
 	for i := 0; i < len(e.pairs); i++ {
 		p := e.pairs[i]
-		identity := p.g2.IsIdentity()
+		identity := p.g2.IsZero()
 		q := new(G2Point)
 		q.SetGenerator()
-		q.Select(identity, &p.g2, q)
+		q.CondAssign(identity, &p.g2, q)
 		c := new(G2Point)
 		c.Set(q)
 		cfs := make([]coefficients, coefficientsG2)
@@ -339,7 +340,7 @@ func mulByB(f, arg *Fp6, b *Fp2) {
 	f.U2.Set(&bB)
 }
 
-func affinize[FP fieldsImpl.FiniteFieldElementPtrConstraint[FP, F], C pointsImpl.ShortWeierstrassCurveParams[FP], H h2c.HasherParams, M h2c.PointMapper[FP], F any](out, in *pointsImpl.ShortWeierstrassPointImpl[FP, C, H, M, F]) {
+func affinize[FP fieldsImpl.FiniteFieldElementPtr[FP, F], C pointsImpl.ShortWeierstrassCurveParams[FP], H h2c.HasherParams, M h2c.PointMapper[FP], F any](out, in *pointsImpl.ShortWeierstrassPointImpl[FP, C, H, M, F]) {
 	var x, y, zInv F
 	FP(&zInv).Inv(&in.Z)
 	FP(&x).Mul(&in.X, &zInv)

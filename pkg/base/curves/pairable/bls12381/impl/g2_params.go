@@ -4,9 +4,11 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380/mappers/sswu"
+	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
+	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380/mappers/sswu"
 )
 
 var (
@@ -175,17 +177,17 @@ func (g2CurveMapperParams) SetZ(out *Fp2) {
 	out.Set(&g2SswuZ)
 }
 
-func (g2CurveMapperParams) SqrtRatio(out, u, v *Fp2) (ok uint64) {
+func (g2CurveMapperParams) SqrtRatio(out, u, v *Fp2) (ok ct.Bool) {
 	return sswu.SqrtRatio(out, g2SqrtRatioC1, g2SqrtRatioC3[:], g2SqrtRatioC4, g2SqrtRatioC5, &g2SqrtRatioC6, &g2SqrtRatioC7, u, v)
 }
 
-func (g2CurveMapperParams) Sgn0(v *Fp2) uint64 {
+func (g2CurveMapperParams) Sgn0(v *Fp2) ct.Bool {
 	// 1. sign_0 = x_0 mod 2
-	sign0 := uint64(v.U0.Bytes()[0] & 0b1)
+	sign0 := ct.Bool(v.U0.Bytes()[0] & 0b1)
 	// 2. zero_0 = x_0 == 0
 	zero0 := v.U0.IsZero()
 	// 3. sign_1 = x_1 mod 2
-	sign1 := uint64(v.U1.Bytes()[0] & 0b1)
+	sign1 := ct.Bool(v.U1.Bytes()[0] & 0b1)
 	// 4. s = sign_0 OR (zero_0 AND sign_1) # Avoid short-circuit logic ops
 	s := sign0 | (zero0 & sign1)
 	// 5. return s
@@ -255,7 +257,7 @@ func clearCofactorBls12381G2(out, in *G2Point) {
 	var t1, t2, t3, q G2Point
 
 	// 1.  t1 = c1 * P
-	pointsImpl.ScalarMul[*Fp2](&t1, in, binary.LittleEndian.AppendUint64(nil, X))
+	aimpl.ScalarMul(&t1, in, binary.LittleEndian.AppendUint64(nil, X))
 	t1.Neg(&t1)
 
 	// 2.  t2 = psi(P)
@@ -274,7 +276,7 @@ func clearCofactorBls12381G2(out, in *G2Point) {
 	t2.Add(&t1, &t2)
 
 	// 7.  t2 = c1 * t2
-	pointsImpl.ScalarMul[*Fp2](&t2, &t2, binary.LittleEndian.AppendUint64(nil, X))
+	aimpl.ScalarMul(&t2, &t2, binary.LittleEndian.AppendUint64(nil, X))
 	t2.Neg(&t2)
 
 	// 8.  t3 = t3 + t2

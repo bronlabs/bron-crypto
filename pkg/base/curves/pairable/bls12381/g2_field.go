@@ -6,11 +6,11 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/ase/nt/cardinal"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
+	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
 const (
@@ -18,8 +18,8 @@ const (
 )
 
 var (
-	_ algebra.FiniteField[*BaseFieldElementG2]        = (*BaseFieldG2)(nil)
-	_ algebra.FiniteFieldElement[*BaseFieldElementG2] = (*BaseFieldElementG2)(nil)
+	_ algebra.Field[*BaseFieldElementG2]        = (*BaseFieldG2)(nil)
+	_ algebra.FieldElement[*BaseFieldElementG2] = (*BaseFieldElementG2)(nil)
 
 	baseFieldInstanceG2 *BaseFieldG2
 	baseFieldInitOnceG2 sync.Once

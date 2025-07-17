@@ -5,8 +5,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-type PartialOrdering int8
-type Ordering PartialOrdering
+type (
+	PartialOrdering int8
+	Ordering        PartialOrdering
+)
 
 type ComparisonFlag interface {
 	bool | ct.Bool
@@ -64,26 +66,36 @@ type WithInternalCompareMethod[E any] interface {
 }
 
 func PartialCompare[E Comparable[E]](x, y E) PartialOrdering {
+	// If the type implements ct.Comparable, use it for constant-time comparison
+	if cmp, ok := any(x).(ct.Comparable[E]); ok {
+		lt, eq, gt := cmp.Compare(y)
+		return PartialOrdering(LessThan*PartialOrdering(lt) + Equal*PartialOrdering(eq) + GreaterThan*PartialOrdering(gt))
+	}
+	// Fallback: allow internal PartialCompare
 	if xx, okx := any(x).(WithInternalPartialCompareMethod[E]); okx {
 		return xx.PartialCompare(y)
 	}
-	if x.IsLessThanOrEqual(y) && y.IsLessThanOrEqual(x) {
+	// Constant-time-ish fallback: always evaluate both directions
+	xLeY := x.IsLessThanOrEqual(y)
+	yLeX := y.IsLessThanOrEqual(x)
+	switch {
+	case xLeY && yLeX:
 		return Equal
-	}
-	if x.IsLessThanOrEqual(y) {
+	case xLeY:
 		return LessThan
-	}
-	if y.IsLessThanOrEqual(x) {
+	case yLeX:
 		return GreaterThan
+	default:
+		return Incomparable
 	}
-	return Incomparable
 }
 
 func Compare[E Comparable[E]](x, y E) Ordering {
-	if xx, okx := any(x).(ct.Comparable[E]); okx {
-		lt, eq, gt := xx.Compare(y)
-		return Ordering(LessThan*PartialOrdering(lt) + Equal*PartialOrdering(eq) + GreaterThan*PartialOrdering(gt))
+	// Prefer ct.Comparable if available for constant-time
+	if cmp, ok := any(x).(ct.Comparable[E]); ok {
+		return EvaluateConstantTimeComparison(cmp.Compare(y))
 	}
+	// Fallback: allow internal Compare
 	if xx, okx := any(x).(WithInternalCompareMethod[E]); okx {
 		return xx.Compare(y)
 	}
@@ -99,4 +111,8 @@ func IsEqual[E Comparable[E]](x, y E) bool {
 		return xx.Equal(y) == ct.True
 	}
 	return PartialCompare(x, y) == Equal
+}
+
+func EvaluateConstantTimeComparison(lt, eq, gt ct.Bool) Ordering {
+	return Ordering(LessThan*PartialOrdering(lt) + Equal*PartialOrdering(eq) + GreaterThan*PartialOrdering(gt))
 }

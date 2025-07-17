@@ -2,6 +2,7 @@ package impl
 
 import (
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
@@ -46,9 +47,9 @@ func (gt *Gt) Bytes() []byte {
 
 // SetBytes attempts to convert a big-endian byte representation of
 // a scalar into a `Gt`, failing if the input is not canonical.
-func (gt *Gt) SetBytes(input []byte) (ok uint64) {
+func (gt *Gt) SetBytes(input []byte) (ok ct.Bool) {
 	var t [FpBytes]byte
-	var valid [12]uint64
+	var valid [12]ct.Bool
 	copy(t[:], sliceutils.Reversed(input[:FpBytes]))
 	valid[0] = gt.U0.U0.U0.SetBytes(t[:])
 	copy(t[:], sliceutils.Reversed(input[FpBytes:2*FpBytes]))
@@ -130,7 +131,7 @@ func (gt *Gt) FinalExponentiation(a *Gt) {
 	t3.Mul(&t3, &t6)
 	t.Mul(&t3, &t4)
 
-	gt.Select(wasInverted, &gt.Fp12, &t)
+	gt.CondAssign(wasInverted, &gt.Fp12, &t)
 }
 
 func Fp12FrobeniusAutomorphism(f, arg *Fp12) *Fp12 {
@@ -290,7 +291,7 @@ func CyclotomicSquare(f, a *Fp12) {
 	f.U1.U2.Set(&z5)
 }
 
-func Conjugate[BFP fieldsImpl.FiniteFieldElementPtrConstraint[BFP, BF], A fieldsImpl.QuadraticFieldExtensionArithmetic[BFP], BF any](f, arg *fieldsImpl.QuadraticFieldExtensionImpl[BFP, A, BF]) {
+func Conjugate[BFP fieldsImpl.FiniteFieldElementPtr[BFP, BF], A fieldsImpl.QuadraticFieldExtensionArithmetic[BFP], BF any](f, arg *fieldsImpl.QuadraticFieldExtensionImpl[BFP, A, BF]) {
 	BFP(&f.U0).Set(&arg.U0)
 	BFP(&f.U1).Neg(&arg.U1)
 }

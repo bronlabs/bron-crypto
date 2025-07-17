@@ -4,9 +4,11 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380/mappers/sswu"
+	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
+	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380/mappers/sswu"
 )
 
 var (
@@ -136,7 +138,7 @@ func (g1CurveParams) ClearCofactor(xOut, yOut, zOut, xIn, yIn, zIn *Fp) {
 	in.Z.Set(zIn)
 
 	var out G1Point
-	pointsImpl.ScalarMul[*Fp](&out, &in, binary.LittleEndian.AppendUint64(nil, X+1))
+	aimpl.ScalarMul(&out, &in, binary.LittleEndian.AppendUint64(nil, X+1))
 	xOut.Set(&out.X)
 	yOut.Set(&out.Y)
 	zOut.Set(&out.Z)
@@ -176,12 +178,12 @@ func (g1CurveMapperParams) SetZ(out *Fp) {
 	out.Set(&g1SswuZ)
 }
 
-func (g1CurveMapperParams) SqrtRatio(out, u, v *Fp) (ok uint64) {
+func (g1CurveMapperParams) SqrtRatio(out, u, v *Fp) (ok ct.Bool) {
 	return sswu.SqrtRatio3Mod4(out, g1SqrtRatioC1[:], &g1SqrtRationC2, u, v)
 }
 
-func (g1CurveMapperParams) Sgn0(v *Fp) uint64 {
-	return uint64(v.Bytes()[0] & 0b1)
+func (g1CurveMapperParams) Sgn0(v *Fp) ct.Bool {
+	return ct.Bool(uint64(v.Bytes()[0] & 0b1))
 }
 
 func (g1CurveMapperParams) XNum() []Fp {

@@ -22,33 +22,13 @@ type Structure[E any] interface {
 	base.BytesLikeFactory[E]
 }
 
-type NAry[C any] interface {
-	Arity() Cardinal
-	Components() []C
+type Quotient[E any] interface {
+	Structure[E]
+	Modulus() E
+	AmbientStructure() Structure[E]
 }
 
-type Mapping[E, C any] interface {
-	NAry[C]
-	New(...C) (E, error)
+type Residue[E any] interface {
+	Element[E]
+	Modulus() E
 }
-
-type Product[P, C any] interface {
-	NAry[C]
-	Diagonal(C) P
-}
-
-type CoProduct[P, C any] interface {
-	NAry[C]
-	CoDiagonal() C
-}
-type Power[P, C any] interface {
-	Product[P, C]
-	Factor() C
-}
-
-type TensorProduct[E, C, S any] interface {
-	Module[E, S]
-	Mapping[E, C]
-}
-
-type Tensor[E, S any] ModuleElement[E, S]

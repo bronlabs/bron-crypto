@@ -17,3 +17,15 @@ func Join[K comparable, VLIn, VRIn, VOut any](left map[K]VLIn, right map[K]VRIn,
 	}
 	return out
 }
+
+func IsSubMap[K comparable, V any](sub, super map[K]V, eq func(a, b V) bool) bool {
+	if len(sub) > len(super) {
+		return false
+	}
+	for k, v := range sub {
+		if sv, exists := super[k]; !exists || !eq(v, sv) {
+			return false
+		}
+	}
+	return true
+}
