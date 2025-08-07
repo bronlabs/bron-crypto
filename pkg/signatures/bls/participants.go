@@ -14,8 +14,8 @@ import (
 )
 
 type KeyGeneratorOption[
-	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FiniteFieldElement[SGFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] = signatures.KeyGeneratorOption[
 	*KeyGenerator[PK, PKFE, SG, SGFE, E, S],
@@ -23,8 +23,8 @@ type KeyGeneratorOption[
 	*PublicKey[PK, PKFE, SG, SGFE, E, S],
 ]
 
-func GenerateWithSeed[PK curves.PairingFriendlyPoint[PK, FE, Sig, SigFE, E, S], FE algebra.FiniteFieldElement[FE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, FE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+func GenerateWithSeed[PK curves.PairingFriendlyPoint[PK, FE, Sig, SigFE, E, S], FE algebra.FieldElement[FE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, FE, E, S], SigFE algebra.FieldElement[SigFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](seed []byte) KeyGeneratorOption[PK, FE, Sig, SigFE, E, S] {
 	return func(kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) error {
@@ -34,8 +34,8 @@ func GenerateWithSeed[PK curves.PairingFriendlyPoint[PK, FE, Sig, SigFE, E, S], 
 }
 
 type KeyGenerator[
-	PK curves.PairingFriendlyPoint[PK, FE, Sig, SigFE, E, S], FE algebra.FiniteFieldElement[FE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, FE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, FE, Sig, SigFE, E, S], FE algebra.FieldElement[FE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, FE, E, S], SigFE algebra.FieldElement[SigFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	group curves.PairingFriendlyCurve[PK, FE, Sig, SigFE, E, S]
@@ -56,7 +56,7 @@ func (kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) GenerateWithSeed(ikm []byte) (
 
 func (kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) Generate(prng io.Reader) (*PrivateKey[PK, FE, Sig, SigFE, E, S], *PublicKey[PK, FE, Sig, SigFE, E, S], error) {
 	if kg.seed == nil {
-		sf := curves.GetScalarField(kg.group)
+		sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](kg.group.ScalarStructure())
 		kg.seed = make([]byte, sf.ElementSize())
 		if _, err := io.ReadFull(prng, kg.seed); err != nil {
 			return nil, nil, errs.WrapRandomSample(err, "could not read from PRNG")
@@ -66,8 +66,8 @@ func (kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) Generate(prng io.Reader) (*Pri
 }
 
 type SignerOption[
-	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FiniteFieldElement[SGFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] = signatures.SignerOption[
 	*Signer[PK, PKFE, SG, SGFE, E, S],
@@ -76,8 +76,8 @@ type SignerOption[
 ]
 
 func SignWithCustomDST[
-	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FiniteFieldElement[SGFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](dst string) SignerOption[PK, PKFE, SG, SGFE, E, S] {
 	return func(s *Signer[PK, PKFE, SG, SGFE, E, S]) error {
@@ -90,8 +90,8 @@ func SignWithCustomDST[
 }
 
 type Signer[
-	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FiniteFieldElement[SGFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	privateKey        *PrivateKey[PK, PKFE, SG, SGFE, E, S]
@@ -246,8 +246,8 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) BatchSign(messages ...Message) ([]*Si
 }
 
 type VerifierOption[
-	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FiniteFieldElement[SGFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] = signatures.VerifierOption[
 	*Verifier[PK, PKFE, SG, SGFE, E, S],
@@ -257,8 +257,8 @@ type VerifierOption[
 ]
 
 func VerifyWithCustomDST[
-	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FiniteFieldElement[SGFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](dst string) VerifierOption[PK, PKFE, SG, SGFE, E, S] {
 	return func(s *Verifier[PK, PKFE, SG, SGFE, E, S]) error {
@@ -271,8 +271,8 @@ func VerifyWithCustomDST[
 }
 
 func VerifyWithProofsOfPossession[
-	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FiniteFieldElement[SGFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](pops ...*ProofOfPossession[SG, SGFE, PK, PKFE, E, S]) VerifierOption[PK, PKFE, SG, SGFE, E, S] {
 	return func(v *Verifier[PK, PKFE, SG, SGFE, E, S]) error {
@@ -287,8 +287,8 @@ func VerifyWithProofsOfPossession[
 }
 
 type Verifier[
-	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FiniteFieldElement[SGFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	signatureSubGroup curves.PairingFriendlyCurve[SG, SGFE, PK, PKFE, E, S]
@@ -449,8 +449,8 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signatur
 }
 
 func _[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ]() {
 	var (

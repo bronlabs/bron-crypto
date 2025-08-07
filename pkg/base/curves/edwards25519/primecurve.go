@@ -10,9 +10,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
@@ -24,8 +26,10 @@ var (
 	_ curves.Curve[*PrimeSubGroupPoint, *BaseFieldElement, *Scalar] = (*PrimeSubGroup)(nil)
 	_ curves.Point[*PrimeSubGroupPoint, *BaseFieldElement, *Scalar] = (*PrimeSubGroupPoint)(nil)
 
-	primeSubGroupInstance *PrimeSubGroup
-	primeSubGroupInitOnce sync.Once
+	primeSubGroupInstance      *PrimeSubGroup
+	primeSubGroupInitOnce      sync.Once
+	primeSubGroupModelInstance *universal.ThreeSortedModel[*PrimeSubGroupPoint, *Scalar, *BaseFieldElement]
+	primeSubGroupModelInitOnce sync.Once
 )
 
 func NewPrimeSubGroup() *PrimeSubGroup {
@@ -36,6 +40,20 @@ func NewPrimeSubGroup() *PrimeSubGroup {
 	return primeSubGroupInstance
 }
 
+func NewPrimeSubGroupModel() *universal.ThreeSortedModel[*PrimeSubGroupPoint, *Scalar, *BaseFieldElement] {
+	primeSubGroupModelInitOnce.Do(func() {
+		var err error
+		primeSubGroupModelInstance, err = impl.CurveModel(
+			NewPrimeSubGroup(), NewBaseField(), NewScalarField(),
+		)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	return primeSubGroupModelInstance
+}
+
 type PrimeSubGroup struct {
 	traits.PrimeCurveTrait[*edwards25519Impl.Fp, *edwards25519Impl.Point, *PrimeSubGroupPoint, PrimeSubGroupPoint]
 	traits.MSMTrait[*Scalar, *PrimeSubGroupPoint]
@@ -43,6 +61,10 @@ type PrimeSubGroup struct {
 
 func (c *PrimeSubGroup) Name() string {
 	return PrimeCurveName
+}
+
+func (c *PrimeSubGroup) Model() *universal.Model[*PrimeSubGroupPoint] {
+	return NewPrimeSubGroupModel().First()
 }
 
 func (c *PrimeSubGroup) ElementSize() int {
@@ -189,10 +211,10 @@ func (p PrimeSubGroupPoint) Coordinates() algebra.Coordinates[*BaseFieldElement]
 	var x, y BaseFieldElement
 	p.V.ToAffine(&x.V, &y.V)
 
-	return algebra.Coordinates[*BaseFieldElement]{
-		Value: []*BaseFieldElement{&x, &y},
-		Name:  algebra.AffineCoordinateSystem,
-	}
+	return algebra.NewCoordinates(
+		algebra.AffineCoordinateSystem,
+		&x, &y,
+	)
 }
 
 func (p *PrimeSubGroupPoint) ToCompressed() []byte {

@@ -8,7 +8,6 @@ import (
 	mrand "math/rand/v2"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
@@ -22,8 +21,7 @@ import (
 func TestSanity(t *testing.T) {
 	t.Parallel()
 
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	threshold := uint(2)
 	total := uint(5)
 	shareholders := sharing.NewOrdinalShareholderSet(total)
@@ -306,8 +304,7 @@ func TestDeal(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
-		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 
 		testConfigs := []struct {
 			name      string
@@ -337,8 +334,7 @@ func TestDeal(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
-		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 
 		testConfigs := []struct {
 			name      string
@@ -364,8 +360,7 @@ func TestDealRandom(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
-		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 
 		testConfigs := []struct {
 			name      string
@@ -388,8 +383,7 @@ func TestDealRandom(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
-		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 
 		shareholders := sharing.NewOrdinalShareholderSet(6)
 		scheme, err := shamir.NewScheme(field, 3, shareholders)
@@ -400,8 +394,7 @@ func TestDealRandom(t *testing.T) {
 
 // BenchmarkDeal benchmarks the Deal function
 func BenchmarkDeal(b *testing.B) {
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 
 	benchConfigs := []struct {
 		name      string
@@ -436,8 +429,7 @@ func BenchmarkDeal(b *testing.B) {
 
 // BenchmarkDealRandom benchmarks the DealRandom function
 func BenchmarkDealRandom(b *testing.B) {
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 
 	benchConfigs := []struct {
 		name      string
@@ -471,8 +463,7 @@ func BenchmarkDealRandom(b *testing.B) {
 func TestDealDeterministic(t *testing.T) {
 	t.Parallel()
 
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	shareholders := sharing.NewOrdinalShareholderSet(5)
 	scheme, err := shamir.NewScheme(field, 2, shareholders)
 	require.NoError(t, err)
@@ -507,8 +498,7 @@ func TestDealRandomDistribution(t *testing.T) {
 		t.Skip("skipping statistical test in short mode")
 	}
 
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
 	scheme, err := shamir.NewScheme(field, 2, shareholders)
 	require.NoError(t, err)
@@ -751,8 +741,7 @@ func TestHomomorphicOperations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
-		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 
 		testConfigs := []struct {
 			name      string
@@ -775,8 +764,7 @@ func TestHomomorphicOperations(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
-		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 
 		shareholders := sharing.NewOrdinalShareholderSet(4)
 		scheme, err := shamir.NewScheme(field, 2, shareholders)
@@ -787,8 +775,7 @@ func TestHomomorphicOperations(t *testing.T) {
 
 // BenchmarkHomomorphicOps benchmarks homomorphic operations
 func BenchmarkHomomorphicOps(b *testing.B) {
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	shareholders := sharing.NewOrdinalShareholderSet(5)
 	scheme, err := shamir.NewScheme(field, 3, shareholders)
 	require.NoError(b, err)
@@ -961,8 +948,7 @@ func TestToAdditive(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
-		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 
 		testConfigs := []struct {
 			name      string
@@ -986,8 +972,7 @@ func TestToAdditive(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
-		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 
 		testConfigs := []struct {
 			name      string
@@ -1013,8 +998,7 @@ func TestToAdditive(t *testing.T) {
 func TestToAdditiveEdgeCases(t *testing.T) {
 	t.Parallel()
 
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 
 	t.Run("zero secret conversion", func(t *testing.T) {
 		shareholders := sharing.NewOrdinalShareholderSet(3)
@@ -1103,8 +1087,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 
 // BenchmarkToAdditive benchmarks the ToAdditive conversion
 func BenchmarkToAdditive(b *testing.B) {
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 
 	benchConfigs := []struct {
 		name      string

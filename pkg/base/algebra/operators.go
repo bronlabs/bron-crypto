@@ -50,7 +50,7 @@ type (
 	MaybeExponentiationBase[B, E any]              crtp.MaybeExponentiationBase[B, E]
 	MaybeFixedCapacityExponentiationBase[B, E any] crtp.MaybeFixedCapacityExponentiationBase[B, E]
 
-	Residual[M, Q any] crtp.Residual[M, Q]
+	Residuand[M, Q any] crtp.Residuand[M, Q]
 
 	Conjunct[E any]      crtp.Conjunct[E]
 	MaybeConjunct[E any] crtp.MaybeConjunct[E]
@@ -101,12 +101,181 @@ type MultiplicativelyHomomorphicLike[T HomomorphicLike[T, TV], TV Multiplicative
 	crtp.Multiplicand[T]
 }
 
-func IsAdditiveObject[E any](e E) bool {
-	_, ok := any(e).(Summand[E])
-	return ok
+func Operator[E Operand[E]](a, b E) E {
+	return a.Op(b)
 }
 
-func IsMultiplicativeObject[E any](e E) bool {
-	_, ok := any(e).(Multiplicand[E])
-	return ok
+func FixedCapacityOperator[E FixedCapacityOperand[E]](a E, b E, cap Capacity) E {
+	return a.OpCap(b, cap)
+}
+
+func DualOperator[E DualOperand[E]](a, b E) E {
+	return a.OtherOp(b)
+}
+
+func FixedCapacityDualOperator[E FixedCapacityDualOperand[E]](a E, b E, cap Capacity) E {
+	return a.OtherOpCap(b, cap)
+}
+
+func Addition[E Summand[E]](a, b E) E {
+	return a.Add(b)
+}
+
+func FixedCapacityAddition[E FixedCapacitySummand[E]](a E, b E, cap Capacity) E {
+	return a.AddCap(b, cap)
+}
+
+func MaybeAddition[E MaybeSummand[E]](a, b E) (E, error) {
+	return a.TryAdd(b)
+}
+
+func MaybeFixedCapacityAddition[E MaybeFixedCapacitySummand[E]](a E, b E, cap Capacity) (E, error) {
+	return a.TryAddCap(b, cap)
+}
+
+func Subtraction[E Minuend[E]](a, b E) E {
+	return a.Sub(b)
+}
+
+func FixedCapacitySubtraction[E FixedCapacityMinuend[E]](a E, b E, cap Capacity) E {
+	return a.SubCap(b, cap)
+}
+func MaybeSubtraction[E MaybeMinuend[E]](a, b E) (E, error) {
+	return a.TrySub(b)
+}
+
+func MaybeFixedCapacitySubtraction[E MaybeFixedCapacityMinuend[E]](a E, b E, cap Capacity) (E, error) {
+	return a.TrySubCap(b, cap)
+}
+
+func Multiplication[E Multiplicand[E]](a, b E) E {
+	return a.Mul(b)
+}
+
+func FixedCapacityMultiplication[E FixedCapacityMultiplicand[E]](a E, b E, cap Capacity) E {
+	return a.MulCap(b, cap)
+}
+
+func MaybeMultiplication[E MaybeMultiplicand[E]](a, b E) (E, error) {
+	return a.TryMul(b)
+}
+
+func MaybeFixedCapacityMultiplication[E MaybeFixedCapacityMultiplicand[E]](a E, b E, cap Capacity) (E, error) {
+	return a.TryMulCap(b, cap)
+}
+
+func Division[E Dividend[E]](a, b E) E {
+	return a.Div(b)
+}
+
+func FixedCapacityDivision[E FixedCapacityDividend[E]](a E, b E, cap Capacity) E {
+	return a.DivCap(b, cap)
+}
+
+func MaybeDivision[E MaybeDividend[E]](a, b E) (E, error) {
+	return a.TryDiv(b)
+}
+
+func MaybeFixedCapacityDivision[E MaybeFixedCapacityDividend[E]](a E, b E, cap Capacity) (E, error) {
+	return a.TryDivCap(b, cap)
+}
+
+func Modulo[E Residuand[M, Q], M Element[M], Q Residue[Q]](x E, m M) (Q, error) {
+	return x.Mod(m)
+}
+
+func Exponentiate[A ExponentiationBase[A, E], E Element[E]](base A, exponent E) A {
+	return base.Exp(exponent)
+}
+
+func FixedCapacityExponentiate[A FixedCapacityExponentiationBase[A, E], E Element[E]](base A, exponent E, cap Capacity) A {
+	return base.ExpCap(exponent, cap)
+}
+
+func MaybeExponentiate[A MaybeExponentiationBase[A, E], E Element[E]](base A, exponent E) (A, error) {
+	return base.TryExp(exponent)
+}
+
+func MaybeFixedCapacityExponentiate[A MaybeFixedCapacityExponentiationBase[A, E], E Element[E]](base A, exponent E, cap Capacity) (A, error) {
+	return base.TryExpCap(exponent, cap)
+}
+
+func And[E Conjunct[E]](a, b E) E {
+	return a.And(b)
+}
+
+func MaybeAnd[E MaybeConjunct[E]](a, b E) (E, error) {
+	return a.TryAnd(b)
+}
+
+func Or[E Disjunct[E]](a, b E) E {
+	return a.Or(b)
+}
+
+func MaybeOr[E MaybeDisjunct[E]](a, b E) (E, error) {
+	return a.TryOr(b)
+}
+
+func Xor[E ExclusiveDisjunct[E]](a, b E) E {
+	return a.Xor(b)
+}
+
+func MaybeXor[E MaybeExclusiveDisjunct[E]](a, b E) (E, error) {
+	return a.TryXor(b)
+}
+
+func Negate[E ArithmeticNegand[E]](a E) E {
+	return a.Neg()
+}
+
+func MaybeNegate[E MaybeArithmeticNegand[E]](a E) (E, error) {
+	return a.TryNeg()
+}
+
+func Invert[E Inversand[E]](a E) E {
+	return a.Inv()
+}
+
+func MaybeInvert[E MaybeInversand[E]](a E) (E, error) {
+	return a.TryInv()
+}
+
+func Not[E BooleanNegand[E]](a E) E {
+	return a.Not()
+}
+
+func MaybeNot[E MaybeBooleanNegand[E]](a E) (E, error) {
+	return a.TryNot()
+}
+
+func Shift[E Shiftable[E, S], S any](a E, shift S) E {
+	return a.Shift(shift)
+}
+
+func MaybeShift[E MaybeShiftable[E, S], S any](a E, shift S) (E, error) {
+	return a.TryShift(shift)
+}
+
+func LeftBitwiseShift[E LeftBitwiseShiftable[E]](a E, shift int) E {
+	return a.Lsh(shift)
+}
+
+func FixedLengthLeftBitwiseShift[E FixedLengthLeftBitwiseShiftable[E]](a E, shift int, cap Capacity) E {
+	return a.LshCap(shift, cap)
+}
+
+func RightBitwiseShift[E RightBitwiseShiftable[E]](a E, shift int) E {
+	return a.Rsh(shift)
+}
+
+func FixedLengthRightBitwiseShift[E FixedLengthRightBitwiseShiftable[E]](a E, shift int, cap Capacity) E {
+	return a.RshCap(shift, cap)
+}
+
+func Resize[E Resizable[E, C], C any](a E, cap C) E {
+	return a.Resize(cap)
+}
+
+func ResizeCapacity[E ResizableCapacity[E]](a E, cap Capacity) E {
+	return a.Resize(cap)
 }

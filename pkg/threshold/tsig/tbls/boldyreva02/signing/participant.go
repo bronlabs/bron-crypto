@@ -16,8 +16,8 @@ import (
 const transcriptLabel = "BRON_CRYPTO_TBLS_BOLDYREVA-"
 
 type Cosigner[
-	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FiniteFieldElement[SGFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	sid               network.SID
@@ -58,8 +58,8 @@ func (c *Cosigner[PK, PKFE, SG, SGFE, E, S]) TargetRogueKeyPreventionAlgorithm()
 }
 
 func NewShortKeyCosigner[
-	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FiniteFieldElement[FE1],
-	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FiniteFieldElement[FE2],
+	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
+	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](
 	sid network.SID,
@@ -115,8 +115,8 @@ func NewShortKeyCosigner[
 }
 
 func NewLongKeyCosigner[
-	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FiniteFieldElement[FE1],
-	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FiniteFieldElement[FE2],
+	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
+	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](
 	sid network.SID,

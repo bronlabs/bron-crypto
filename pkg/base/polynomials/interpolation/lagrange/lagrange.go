@@ -12,7 +12,7 @@ func basisPolynomialTerms[S algebra.FieldElement[S]](
 ) ([]polynomials.Polynomial[S], []S, error) {
 	nums := make([]polynomials.Polynomial[S], len(xs))
 	dens := make([]S, len(xs))
-	one := polyRing.CoefficientStructure().(algebra.FiniteField[S]).One()
+	one := polyRing.CoefficientStructure().(algebra.Field[S]).One()
 
 	for i := range xs {
 		num := polyRing.One()
@@ -107,8 +107,11 @@ func NewBasis[S algebra.FieldElement[S]](
 	return basis, nil
 }
 
-func Interpolate[S algebra.FiniteFieldElement[S]](
-	field algebra.FiniteField[S],
+func Interpolate[S algebra.FieldElement[S]](
+	field interface {
+		algebra.Field[S]
+		algebra.FiniteStructure[S]
+	},
 	nodes, values []S,
 ) (polynomials.Polynomial[S], error) {
 	if len(nodes) != len(values) {
@@ -132,8 +135,11 @@ func Interpolate[S algebra.FiniteFieldElement[S]](
 	return L, nil
 }
 
-func InterpolateAt[S algebra.FiniteFieldElement[S]](
-	field algebra.FiniteField[S],
+func InterpolateAt[S algebra.FieldElement[S]](
+	field interface {
+		algebra.Field[S]
+		algebra.FiniteStructure[S]
+	},
 	nodes, values []S, at S,
 ) (S, error) {
 	if len(nodes) != len(values) {
@@ -153,8 +159,11 @@ func InterpolateAt[S algebra.FiniteFieldElement[S]](
 	return out, nil
 }
 
-func InterpolateInExponent[C algebra.ModuleElement[C, S], S algebra.FiniteFieldElement[S]](
-	module algebra.Module[C, S],
+func InterpolateInExponent[C algebra.ModuleElement[C, S], S algebra.FieldElement[S]](
+	module interface {
+		algebra.Module[C, S]
+		algebra.FiniteStructure[C]
+	},
 	nodes []S,
 	values []C,
 ) (polynomials.ModuleValuedPolynomial[C, S], error) {
@@ -173,7 +182,10 @@ func InterpolateInExponent[C algebra.ModuleElement[C, S], S algebra.FiniteFieldE
 		}
 	}
 
-	field, ok := module.ScalarStructure().(algebra.FiniteField[S])
+	field, ok := module.ScalarStructure().(interface {
+		algebra.Field[S]
+		algebra.FiniteStructure[S]
+	})
 	if !ok {
 		panic("module does not have a finite field scalar structure")
 	}
@@ -195,8 +207,11 @@ func InterpolateInExponent[C algebra.ModuleElement[C, S], S algebra.FiniteFieldE
 	return out, nil
 }
 
-func InterpolateInExponentAt[C algebra.ModuleElement[C, S], S algebra.FiniteFieldElement[S]](
-	module algebra.Module[C, S],
+func InterpolateInExponentAt[C algebra.ModuleElement[C, S], S algebra.FieldElement[S]](
+	module interface {
+		algebra.Module[C, S]
+		algebra.FiniteStructure[C]
+	},
 	nodes []S,
 	values []C,
 	at S,
@@ -208,7 +223,10 @@ func InterpolateInExponentAt[C algebra.ModuleElement[C, S], S algebra.FiniteFiel
 		return *new(C), errs.NewIsNil("module cannot be nil")
 	}
 
-	field, ok := module.ScalarStructure().(algebra.FiniteField[S])
+	field, ok := module.ScalarStructure().(interface {
+		algebra.Field[S]
+		algebra.FiniteStructure[S]
+	})
 	if !ok {
 		panic("module does not have a finite field scalar structure")
 	}

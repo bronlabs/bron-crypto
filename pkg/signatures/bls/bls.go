@@ -9,8 +9,8 @@ import (
 )
 
 func NewShortKeyScheme[
-	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FiniteFieldElement[FE1],
-	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FiniteFieldElement[FE2],
+	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
+	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](curveFamily curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S], rogueKeyAlg RogueKeyPreventionAlgorithm) (*Scheme[P1, FE1, P2, FE2, E, S], error) {
 	cipherSuite, err := newScheme(curveFamily, rogueKeyAlg)
@@ -29,8 +29,8 @@ func NewShortKeyScheme[
 }
 
 func NewLongKeyScheme[
-	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FiniteFieldElement[FE1],
-	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FiniteFieldElement[FE2],
+	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
+	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](curveFamily curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S], rogueKeyAlg RogueKeyPreventionAlgorithm) (*Scheme[P2, FE2, P1, FE1, E, S], error) {
 	cipherSuite, err := newScheme(curveFamily, rogueKeyAlg)
@@ -49,8 +49,8 @@ func NewLongKeyScheme[
 }
 
 func newScheme[
-	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FiniteFieldElement[FE1],
-	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FiniteFieldElement[FE2],
+	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
+	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](curveFamily curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S], rogueKeyAlg RogueKeyPreventionAlgorithm) (*CipherSuite, error) {
 	if curveFamily == nil {
@@ -70,8 +70,8 @@ func newScheme[
 }
 
 type Scheme[
-	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FiniteFieldElement[SGFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 
 ] struct {
@@ -169,8 +169,8 @@ func (*Scheme[PK, PKFE, SG, SGFE, E, S]) AggregateSignatures(sigs ...*Signature[
 }
 
 func _[
-	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FiniteFieldElement[FE1],
-	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FiniteFieldElement[FE2],
+	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
+	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ]() {
 	var (

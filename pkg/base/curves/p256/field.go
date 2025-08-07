@@ -5,6 +5,8 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	p256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/p256/impl"
@@ -22,9 +24,11 @@ var (
 	_ algebra.PrimeField[*BaseFieldElement]        = (*BaseField)(nil)
 	_ algebra.PrimeFieldElement[*BaseFieldElement] = (*BaseFieldElement)(nil)
 
-	baseFieldInstance *BaseField
-	baseFieldInitOnce sync.Once
-	baseFieldOrder    *saferith.Modulus
+	baseFieldInstance      *BaseField
+	baseFieldInitOnce      sync.Once
+	baseFieldModelInstance *universal.Model[*BaseFieldElement]
+	baseFieldModelInitOnce sync.Once
+	baseFieldOrder         *saferith.Modulus
 )
 
 type BaseField struct {
@@ -40,8 +44,26 @@ func NewBaseField() *BaseField {
 	return baseFieldInstance
 }
 
+func BaseFieldModel() *universal.Model[*BaseFieldElement] {
+	baseFieldModelInitOnce.Do(func() {
+		var err error
+		baseFieldModelInstance, err = impl.BaseFieldModel(
+			NewBaseField(),
+		)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	return baseFieldModelInstance
+}
+
 func (f *BaseField) Name() string {
 	return BaseFieldName
+}
+
+func (f *BaseField) Model() *universal.Model[*BaseFieldElement] {
+	return BaseFieldModel()
 }
 
 func (f *BaseField) Order() cardinal.Cardinal {

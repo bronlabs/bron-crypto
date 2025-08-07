@@ -179,3 +179,18 @@ func (s *MutableHashable[E]) List() []E {
 func (s *MutableHashable[E]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.v)
 }
+
+func (s *MutableHashable[E]) HashCode() base.HashCode {
+	if s.IsEmpty() {
+		return base.HashCode(0)
+	}
+	l := s.List()
+	if len(l) == 1 {
+		return l[0].HashCode()
+	}
+	return sliceutils.Reduce(
+		sliceutils.Map[[]base.HashCode](l[1:], func(e E) base.HashCode { return e.HashCode() }),
+		l[0].HashCode(),
+		func(a, b base.HashCode) base.HashCode { return a ^ b }, // must be commutative
+	)
+}

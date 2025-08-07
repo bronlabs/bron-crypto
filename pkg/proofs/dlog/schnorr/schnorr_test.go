@@ -106,7 +106,10 @@ func Test_Simulator(t *testing.T) {
 	})
 }
 
-func testHappyPath[P curves.Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]](t *testing.T, curve curves.Curve[P, F, S]) {
+func testHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](t *testing.T, curve interface {
+	curves.Curve[P, F, S]
+	algebra.FiniteStructure[P]
+}) {
 	t.Helper()
 
 	base, err := curve.Random(crand.Reader)
@@ -142,7 +145,10 @@ func testHappyPath[P curves.Point[P, F, S], F algebra.FiniteFieldElement[F], S a
 	require.NoError(t, err)
 }
 
-func testInvalidStatement[C curves.Curve[P, F, S], P curves.Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]](t *testing.T, curve C) {
+func testInvalidStatement[C interface {
+	curves.Curve[P, F, S]
+	algebra.FiniteStructure[P]
+}, P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](t *testing.T, curve C) {
 	t.Helper()
 
 	base, err := curve.Random(crand.Reader)
@@ -180,7 +186,10 @@ func testInvalidStatement[C curves.Curve[P, F, S], P curves.Point[P, F, S], F al
 	require.Error(t, err)
 }
 
-func testSimulator[P curves.Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]](t *testing.T, curve curves.Curve[P, F, S]) {
+func testSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](t *testing.T, curve interface {
+	curves.Curve[P, F, S]
+	algebra.FiniteStructure[P]
+}) {
 	t.Helper()
 
 	base, err := curve.Random(crand.Reader)

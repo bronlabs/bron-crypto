@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/stretchr/testify/require"
@@ -14,7 +13,7 @@ import (
 func TestLiftToExponent(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 
 	polyRing, err := polynomials.NewPolynomialRing(field)
@@ -34,7 +33,10 @@ func TestLiftToExponent(t *testing.T) {
 }
 
 // opCases tests addition of module-valued polynomials for various cases.
-func opCases[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](t *testing.T, coeffModule algebra.Module[C, S], g C) {
+func opCases[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](t *testing.T, coeffModule interface {
+	algebra.Module[C, S]
+	algebra.FiniteStructure[C]
+}, g C) {
 	t.Helper()
 	polyModule, err := polynomials.NewPolynomialModule(coeffModule)
 	require.NoError(t, err)
@@ -164,7 +166,10 @@ func TestModuleValuedPolynomialDegree(t *testing.T) {
 }
 
 // scalarOpCases tests scalar multiplication of module-valued polynomials
-func scalarOpCases[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](t *testing.T, coeffModule algebra.Module[C, S], g C, field algebra.Ring[S]) {
+func scalarOpCases[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](t *testing.T, coeffModule interface {
+	algebra.Module[C, S]
+	algebra.FiniteStructure[C]
+}, g C, field algebra.Ring[S]) {
 	t.Helper()
 	polyModule, err := polynomials.NewPolynomialModule(coeffModule)
 	require.NoError(t, err)
@@ -250,12 +255,15 @@ func scalarOpCases[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](t *t
 func TestModuleValuedPolynomialScalarOp(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	scalarOpCases(t, curve, curve.Generator(), field)
 }
 
 // evalCases tests evaluation of module-valued polynomials
-func evalCases[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](t *testing.T, coeffModule algebra.Module[C, S], g C, field algebra.Ring[S]) {
+func evalCases[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](t *testing.T, coeffModule interface {
+	algebra.Module[C, S]
+	algebra.FiniteStructure[C]
+}, g C, field algebra.Ring[S]) {
 	t.Helper()
 	polyModule, err := polynomials.NewPolynomialModule(coeffModule)
 	require.NoError(t, err)
@@ -345,7 +353,7 @@ func evalCases[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](t *testi
 func TestModuleValuedPolynomialEval(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	evalCases(t, curve, curve.Generator(), field)
 }
 
@@ -353,7 +361,7 @@ func TestModuleValuedPolynomialEval(t *testing.T) {
 func TestModuleValuedPolynomialCombinedOps(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 
 	polyModule, err := polynomials.NewPolynomialModule(curve)

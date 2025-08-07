@@ -8,8 +8,8 @@ import (
 )
 
 type PartialSignature[
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	SigmaI    *bls.Signature[Sig, SigFE, PK, PKFE, E, S]
@@ -33,14 +33,14 @@ func (ps *PartialSignature[Sig, SigFE, PK, PKFE, E, S]) Bytes() []byte {
 
 type (
 	Shard[
-		PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-		SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FiniteFieldElement[SGFE],
+		PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+		SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 		E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 	] = tbls.Shard[PK, PKFE, SG, SGFE, E, S]
 
 	PublicMaterial[
-		PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-		SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FiniteFieldElement[SGFE],
+		PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+		SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 		E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 	] = tbls.PublicMaterial[PK, PKFE, SG, SGFE, E, S]
 )

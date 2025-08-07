@@ -6,10 +6,11 @@ import (
 )
 
 type (
-	Element[E any]   = crtp.Element[E]
-	Structure[E any] = crtp.Structure[E]
-	Quotient[E any]  = crtp.Quotient[E]
-	Residue[E any]   = crtp.Residue[E]
+	Element[E any]         = crtp.Element[E]
+	Structure[E any]       = crtp.Structure[E]
+	FiniteStructure[E any] = crtp.FiniteStructure[E]
+	Quotient[E any]        = crtp.Quotient[E]
+	Residue[E any]         = crtp.Residue[E]
 )
 
 func StructureIs[S crtp.Structure[E], E any](s Structure[E]) bool {
@@ -23,4 +24,12 @@ func StructureAs[S crtp.Structure[E], E any](s Structure[E]) (S, error) {
 		return *new(S), errs.NewType("structure does not implement the expected type")
 	}
 	return out, nil
+}
+
+func StructureMustBeAs[S crtp.Structure[E], E any](s Structure[E]) S {
+	out, err := StructureAs[S](s)
+	if err != nil {
+		panic(err)
+	}
+	return out
 }

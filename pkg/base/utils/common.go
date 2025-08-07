@@ -34,6 +34,18 @@ func ParseOrderingFromMasks[F constraints.Integer](gt, eq, lt F) base.PartialOrd
 	return base.Incomparable
 }
 
+func Maybe[T any](f func(T) T) func(T) (T, error) {
+	return func(t T) (T, error) {
+		return f(t), nil
+	}
+}
+
+func Maybe2[O, T1, T2 any](f func(T1, T2) O) func(T1, T2) (O, error) {
+	return func(t1 T1, t2 T2) (O, error) {
+		return f(t1, t2), nil
+	}
+}
+
 // BoolTo casts a bool to any integer type.
 func BoolTo[T constraints.Integer](b bool) T {
 	if b {

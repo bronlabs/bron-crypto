@@ -2,7 +2,6 @@ package algebra
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 type (
@@ -53,39 +52,39 @@ type (
 	FieldExtensionElement[FE crtp.FieldExtensionElement[FE]] = crtp.FieldExtensionElement[FE]
 )
 
-func IsRing[E any](s Structure[E]) bool {
-	_, ok := s.(crtp.Ring[E])
-	return ok
-}
+// func IsRing[E any](s Structure[E]) bool {
+// 	_, ok := s.(crtp.Ring[E]) //nolint:staticcheck // SA5010: false positive.
+// 	return ok
+// }
 
-func GetRing[RE crtp.RingElement[RE]](re RE) Ring[RE] {
-	r, err := StructureAs[Ring[RE]](re.Structure())
-	if err != nil {
-		panic(err)
-	}
-	return r
-}
+// func GetRing[RE crtp.RingElement[RE]](re RE) Ring[RE] {
+// 	r, err := StructureAs[Ring[RE]](re.Structure())
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	return r
+// }
 
-func IsField[E any](s Structure[E]) bool {
-	return StructureIs[crtp.Field[E]](s)
-}
+// func IsField[E any](s Structure[E]) bool {
+// 	return StructureIs[crtp.Field[E]](s)
+// }
 
-func GetField[FE crtp.FieldElement[FE]](fe FE) Field[FE] {
-	f, ok := fe.Structure().(Field[FE])
-	if !ok {
-		panic(errs.NewType("FieldElement does not have a Field structure"))
-	}
-	return f
-}
+// func GetField[FE crtp.FieldElement[FE]](fe FE) Field[FE] {
+// 	f, ok := fe.Structure().(Field[FE])
+// 	if !ok {
+// 		panic(errs.NewType("FieldElement does not have a Field structure"))
+// 	}
+// 	return f
+// }
 
-func IsPrimeField[E any](s Structure[E]) bool {
-	return StructureIs[crtp.PrimeField[E]](s)
-}
+// func IsPrimeField[E any](s Structure[E]) bool {
+// 	return StructureIs[crtp.PrimeField[E]](s)
+// }
 
-func GetPrimeField[FE crtp.PrimeFieldElement[FE]](fe FE) PrimeField[FE] {
-	f, ok := fe.Structure().(crtp.PrimeField[FE])
-	if !ok {
-		panic(errs.NewType("FieldElement does not have a PrimeField structure"))
-	}
-	return f
-}
+// func GetPrimeField[FE crtp.PrimeFieldElement[FE]](fe FE) PrimeField[FE] {
+// 	f, ok := fe.Structure().(crtp.PrimeField[FE])
+// 	if !ok {
+// 		panic(errs.NewType("FieldElement does not have a PrimeField structure"))
+// 	}
+// 	return f
+// }

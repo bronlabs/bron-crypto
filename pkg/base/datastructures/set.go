@@ -10,11 +10,11 @@ import (
 type AbstractSet[E, C any] interface {
 	Cardinality() C
 	Iter() iter.Seq[E]
+	Contains(e E) bool
 }
 
 type immutableSet[E, T any] interface {
 	AbstractSet[E, int]
-	Contains(e E) bool
 	Iter2() iter.Seq2[int, E]
 
 	Size() int
@@ -32,8 +32,8 @@ type immutableSet[E, T any] interface {
 	IterSubSets() iter.Seq[T]
 	List() []E
 
-	base.Equatable[T]
 	base.Clonable[T]
+	base.Equatable[T]
 	json.Marshaler
 }
 

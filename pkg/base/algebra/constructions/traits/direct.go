@@ -8,6 +8,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
@@ -40,6 +41,10 @@ func (s *DirectPowerSemiGroup[S, E, W, WT]) Base() S {
 		return *new(S)
 	}
 	return s.base
+}
+
+func (s *DirectPowerSemiGroup[S, E, W, WT]) Model() *universal.Model[W] {
+	panic("Model is not implemented for DirectPowerSemiGroup")
 }
 
 func (s *DirectPowerSemiGroup[S, E, W, WT]) Arity() cardinal.Cardinal {
@@ -481,7 +486,7 @@ func EvalDirectProductOfPolynomialLikes[
 	Ps algebra.CoProduct[Ps, P],
 	P algebra.UnivariatePolynomialLike[P, S, C],
 	C algebra.GroupElement[C],
-	S algebra.FiniteRingElement[S],
+	S algebra.RingElement[S],
 ](product Ps, at S) ([]C, error) {
 	if utils.IsNil(product) {
 		return nil, errs.NewIsNil("product cannot be nil")

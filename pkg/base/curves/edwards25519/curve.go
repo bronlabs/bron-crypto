@@ -9,9 +9,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
@@ -28,8 +30,10 @@ var (
 	_ curves.EllipticCurve[*Point, *BaseFieldElement, *Scalar] = (*Curve)(nil)
 	_ curves.ECPoint[*Point, *BaseFieldElement, *Scalar]       = (*Point)(nil)
 
-	curveInstance *Curve
-	curveInitOnce sync.Once
+	curveInstance      *Curve
+	curveModelInstance *universal.ThreeSortedModel[*Point, *Scalar, *BaseFieldElement]
+	curveModelInitOnce sync.Once
+	curveInitOnce      sync.Once
 )
 
 type Curve struct {
@@ -45,8 +49,26 @@ func NewCurve() *Curve {
 	return curveInstance
 }
 
+func CurveModel() *universal.ThreeSortedModel[*Point, *Scalar, *BaseFieldElement] {
+	curveModelInitOnce.Do(func() {
+		var err error
+		curveModelInstance, err = impl.EllipticCurveModel(
+			NewCurve(), NewBaseField(), NewScalarField(),
+		)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	return curveModelInstance
+}
+
 func (c *Curve) Name() string {
 	return CurveName
+}
+
+func (c *Curve) Model() *universal.Model[*Point] {
+	return CurveModel().First()
 }
 
 func (c *Curve) ElementSize() int {
@@ -177,11 +199,10 @@ func (p *Point) UnmarshalBinary(data []byte) error {
 func (p Point) Coordinates() algebra.Coordinates[*BaseFieldElement] {
 	var x, y BaseFieldElement
 	p.V.ToAffine(&x.V, &y.V)
-
-	return algebra.Coordinates[*BaseFieldElement]{
-		Value: []*BaseFieldElement{&x, &y},
-		Name:  algebra.AffineCoordinateSystem,
-	}
+	return algebra.NewCoordinates(
+		algebra.AffineCoordinateSystem,
+		&x, &y,
+	)
 }
 
 func (p *Point) ToCompressed() []byte {

@@ -63,16 +63,22 @@ type ZLike[E any] interface {
 
 type IntLike[E any] interface {
 	EuclideanDomainElement[E]
-	base.Comparable[E]
-	IsNegative() bool
+	// base.Comparable[E]
+	// IsNegative() bool
+	ArithmeticNegand[E]
 }
 
 type ZnLike[E any] interface {
+	Ring[E]
 	NLike[E]
 	base.HashableStructure[E]
 }
 
-type UintLike[E any] NatLike[E]
+type UintLike[E any] interface {
+	RingElement[E]
+	NatLike[E]
+	ArithmeticNegand[E]
+}
 
 type PrimeField[E any] interface {
 	Field[E]
@@ -80,6 +86,7 @@ type PrimeField[E any] interface {
 	FromWideBytes([]byte) (E, error)
 	// WideElementSize returns the **maximum** number of bytes used to map uniformly to an element.
 	WideElementSize() int
+	FiniteStructure[E]
 }
 
 type PrimeFieldElement[E any] interface {

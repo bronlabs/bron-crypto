@@ -3,11 +3,11 @@ package polynomials
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/traits"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-func LiftDirectSumOfPolynomialsToExponent[C algebra.ModuleElement[C, S], S algebra.FiniteRingElement[S]](dsum *DirectSumOfPolynomials[S], basePoints ...C) (*DirectSumOfModuleValuedPolynomials[C, S], error) {
+func LiftDirectSumOfPolynomialsToExponent[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](dsum *DirectSumOfPolynomials[S], basePoints ...C) (*DirectSumOfModuleValuedPolynomials[C, S], error) {
 	if dsum == nil {
 		return nil, errs.NewIsNil("dsum is nil")
 	}
@@ -17,7 +17,10 @@ func LiftDirectSumOfPolynomialsToExponent[C algebra.ModuleElement[C, S], S algeb
 	if len(basePoints) == 0 {
 		return nil, errs.NewSize("base points must not be empty")
 	}
-	coefficientModule, ok := basePoints[0].Structure().(algebra.Module[C, S])
+	coefficientModule, ok := basePoints[0].Structure().(interface {
+		algebra.Module[C, S]
+		algebra.FiniteStructure[C]
+	})
 	if !ok {
 		return nil, errs.NewType("base point is not a module element")
 	}
@@ -36,7 +39,7 @@ func LiftDirectSumOfPolynomialsToExponent[C algebra.ModuleElement[C, S], S algeb
 	return out, nil
 }
 
-func NewDirectSumOfPolynomialRings[S algebra.FiniteRingElement[S]](polyRing PolynomialRing[S], arity uint) (*DirectSumOfPolynomialRings[S], error) {
+func NewDirectSumOfPolynomialRings[S algebra.RingElement[S]](polyRing PolynomialRing[S], arity uint) (*DirectSumOfPolynomialRings[S], error) {
 	if arity == 0 {
 		return nil, errs.NewIsZero("arity must be greater than 0")
 	}
@@ -46,12 +49,25 @@ func NewDirectSumOfPolynomialRings[S algebra.FiniteRingElement[S]](polyRing Poly
 	return out, nil
 }
 
-type DirectSumOfPolynomialRings[S algebra.FiniteRingElement[S]] struct {
+type DirectSumOfPolynomialRings[S algebra.RingElement[S]] struct {
 	traits.DirectSumModule[PolynomialRing[S], Polynomial[S], S, *DirectSumOfPolynomials[S], DirectSumOfPolynomials[S]]
 }
 
-func (r *DirectSumOfPolynomialRings[S]) CoefficientAlgebra() *constructions.DirectSumModule[*constructions.FiniteRegularAlgebra[algebra.FiniteRing[S], S], *constructions.FiniteRegularAlgebraElement[S], S] {
-	coeffRing, ok := r.Factor().CoefficientStructure().(algebra.FiniteRing[S])
+func (r *DirectSumOfPolynomialRings[S]) CoefficientAlgebra() *constructions.DirectSumModule[
+	*constructions.FiniteRegularAlgebra[
+		interface {
+			algebra.Ring[S]
+			algebra.FiniteStructure[S]
+		},
+		S,
+	],
+	*constructions.FiniteRegularAlgebraElement[S],
+	S,
+] {
+	coeffRing, ok := r.Factor().CoefficientStructure().(interface {
+		algebra.Ring[S]
+		algebra.FiniteStructure[S]
+	})
 	if !ok {
 		panic(errs.NewType("coefficient structure is not a finite ring"))
 	}
@@ -60,7 +76,7 @@ func (r *DirectSumOfPolynomialRings[S]) CoefficientAlgebra() *constructions.Dire
 	return out
 }
 
-type DirectSumOfPolynomials[S algebra.FiniteRingElement[S]] struct {
+type DirectSumOfPolynomials[S algebra.RingElement[S]] struct {
 	traits.DirectSumModuleElement[Polynomial[S], S, *DirectSumOfPolynomials[S], DirectSumOfPolynomials[S]]
 }
 
@@ -81,8 +97,14 @@ func (p *DirectSumOfPolynomials[S]) IsSemiDomain() bool {
 	return false
 }
 
-func (r *DirectSumOfPolynomials[S]) CoefficientAlgebra() *constructions.DirectSumModule[*constructions.FiniteRegularAlgebra[algebra.FiniteRing[S], S], *constructions.FiniteRegularAlgebraElement[S], S] {
-	coeffRing, ok := r.Components()[0].CoefficientStructure().(algebra.FiniteRing[S])
+func (r *DirectSumOfPolynomials[S]) CoefficientAlgebra() *constructions.DirectSumModule[*constructions.FiniteRegularAlgebra[interface {
+	algebra.Ring[S]
+	algebra.FiniteStructure[S]
+}, S], *constructions.FiniteRegularAlgebraElement[S], S] {
+	coeffRing, ok := r.Components()[0].CoefficientStructure().(interface {
+		algebra.Ring[S]
+		algebra.FiniteStructure[S]
+	})
 	if !ok {
 		panic(errs.NewType("coefficient structure is not a finite ring"))
 	}
@@ -125,7 +147,7 @@ func (p *DirectSumOfPolynomials[S]) Eval(at S) *constructions.DirectSumModuleEle
 	return out
 }
 
-func NewDirectSumOfPolynomialModules[C algebra.ModuleElement[C, S], S algebra.FiniteRingElement[S]](polyModule PolynomialModule[C, S], arity uint) (*DirectSumOfPolynomialModules[C, S], error) {
+func NewDirectSumOfPolynomialModules[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](polyModule PolynomialModule[C, S], arity uint) (*DirectSumOfPolynomialModules[C, S], error) {
 	if arity == 0 {
 		return nil, errs.NewIsZero("arity must be greater than 0")
 	}
@@ -135,7 +157,7 @@ func NewDirectSumOfPolynomialModules[C algebra.ModuleElement[C, S], S algebra.Fi
 	return out, nil
 }
 
-type DirectSumOfPolynomialModules[C algebra.ModuleElement[C, S], S algebra.FiniteRingElement[S]] struct {
+type DirectSumOfPolynomialModules[C algebra.ModuleElement[C, S], S algebra.RingElement[S]] struct {
 	traits.DirectSumModule[PolynomialModule[C, S], ModuleValuedPolynomial[C, S], S, *DirectSumOfModuleValuedPolynomials[C, S], DirectSumOfModuleValuedPolynomials[C, S]]
 }
 
@@ -166,13 +188,19 @@ func (m *DirectSumOfPolynomialModules[C, S]) CoefficientModule() *constructions.
 	return out
 }
 
-func (r *DirectSumOfPolynomialModules[C, S]) BaseAlgebra() *constructions.DirectSumModule[*constructions.FiniteRegularAlgebra[algebra.FiniteRing[S], S], *constructions.FiniteRegularAlgebraElement[S], S] {
-	alg, _ := constructions.NewFiniteRegularAlgebra(r.Factor().ScalarStructure().(algebra.FiniteRing[S]))
+func (r *DirectSumOfPolynomialModules[C, S]) BaseAlgebra() *constructions.DirectSumModule[*constructions.FiniteRegularAlgebra[interface {
+	algebra.Ring[S]
+	algebra.FiniteStructure[S]
+}, S], *constructions.FiniteRegularAlgebraElement[S], S] {
+	alg, _ := constructions.NewFiniteRegularAlgebra(r.Factor().ScalarStructure().(interface {
+		algebra.Ring[S]
+		algebra.FiniteStructure[S]
+	}))
 	out, _ := constructions.NewDirectSumModule(alg, uint(r.Arity().Uint64()))
 	return out
 }
 
-type DirectSumOfModuleValuedPolynomials[C algebra.ModuleElement[C, S], S algebra.FiniteRingElement[S]] struct {
+type DirectSumOfModuleValuedPolynomials[C algebra.ModuleElement[C, S], S algebra.RingElement[S]] struct {
 	traits.DirectSumModuleElement[ModuleValuedPolynomial[C, S], S, *DirectSumOfModuleValuedPolynomials[C, S], DirectSumOfModuleValuedPolynomials[C, S]]
 }
 
@@ -189,12 +217,12 @@ func (m *DirectSumOfModuleValuedPolynomials[C, S]) CoefficientModule() *construc
 	out, _ := constructions.NewDirectSumModule(m.Components()[0].CoefficientStructure().(algebra.Module[C, S]), uint(m.Arity().Uint64()))
 	return out
 }
-func (m *DirectSumOfModuleValuedPolynomials[C, S]) BaseRing() *constructions.DirectPowerRing[algebra.FiniteRing[S], S] {
+func (m *DirectSumOfModuleValuedPolynomials[C, S]) BaseRing() *constructions.DirectPowerRing[algebra.Ring[S], S] {
 	polyModule, ok := m.Components()[0].Structure().(PolynomialModule[C, S])
 	if !ok {
 		panic(errs.NewType("component is not a polynomial module"))
 	}
-	out, _ := constructions.NewDirectPowerRing(polyModule.ScalarStructure().(algebra.FiniteRing[S]), uint(m.Arity().Uint64()))
+	out, _ := constructions.NewDirectPowerRing(polyModule.ScalarStructure().(algebra.Ring[S]), uint(m.Arity().Uint64()))
 	return out
 }
 

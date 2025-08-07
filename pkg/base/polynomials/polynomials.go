@@ -8,27 +8,35 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/ase/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
 type (
-	PolynomialRing[S algebra.FiniteRingElement[S]] algebra.PolynomialRing[Polynomial[S], S]
-	Polynomial[S algebra.FiniteRingElement[S]]     algebra.Polynomial[Polynomial[S], S]
+	PolynomialRing[S algebra.RingElement[S]] algebra.PolynomialRing[Polynomial[S], S]
+	Polynomial[S algebra.RingElement[S]]     algebra.Polynomial[Polynomial[S], S]
 )
 
-func NewPolynomialRing[S algebra.FiniteRingElement[S]](coeffRing algebra.FiniteRing[S]) (PolynomialRing[S], error) {
+func NewPolynomialRing[S algebra.RingElement[S]](coeffRing interface {
+	algebra.Ring[S]
+	algebra.FiniteStructure[S]
+}) (PolynomialRing[S], error) {
 	if coeffRing == nil {
 		return nil, errs.NewIsNil("coeffRing")
 	}
 	return &polynomialRing[S]{coeffRing: coeffRing}, nil
 }
 
-func NewPolynomialFromCoefficients[S algebra.FiniteRingElement[S]](coeffs ...S) (Polynomial[S], error) {
+func NewPolynomialFromCoefficients[S algebra.RingElement[S]](coeffs ...S) (Polynomial[S], error) {
 	if len(coeffs) == 0 {
 		return nil, errs.NewSize("coefficients must not be empty")
 	}
-	coeffRing, ok := coeffs[0].Structure().(algebra.FiniteRing[S])
+	coeffRing, ok := coeffs[0].Structure().(interface {
+		algebra.Ring[S]
+		algebra.FiniteStructure[S]
+	})
 	if !ok {
 		return nil, errs.NewArgument("first coefficient must be a finite ring element")
 	}
@@ -39,11 +47,20 @@ func NewPolynomialFromCoefficients[S algebra.FiniteRingElement[S]](coeffs ...S) 
 }
 
 type polynomialRing[S algebra.RingElement[S]] struct {
-	coeffRing algebra.FiniteRing[S]
+	coeffRing interface {
+		algebra.Ring[S]
+		algebra.FiniteStructure[S]
+	}
 }
 
 func (r *polynomialRing[S]) Name() string {
-	return fmt.Sprintf("%s[x]", r.coeffRing.Name())
+	return string(r.Model().Sort())
+}
+
+func (r *polynomialRing[S]) Model() *universal.Model[Polynomial[S]] {
+	return PolynomialRingModel(
+		'X', r, r.coeffRing,
+	).First()
 }
 
 func (r *polynomialRing[S]) ElementSize() int {
@@ -151,7 +168,7 @@ func (r *polynomialRing[S]) MultiScalarMul(scs []S, ps []Polynomial[S]) (Polynom
 }
 
 func (r *polynomialRing[S]) Order() cardinal.Cardinal {
-	return cardinal.Infinite
+	return cardinal.Infinite()
 }
 
 func (r *polynomialRing[S]) OpIdentity() Polynomial[S] {
@@ -178,7 +195,10 @@ func (r *polynomialRing[S]) CoefficientStructure() algebra.Structure[S] {
 
 type coefficientForm[S algebra.RingElement[S]] struct {
 	coeffs    []S
-	coeffRing algebra.FiniteRing[S]
+	coeffRing interface {
+		algebra.Ring[S]
+		algebra.FiniteStructure[S]
+	}
 }
 
 func (r *coefficientForm[S]) ScalarStructure() algebra.Structure[S] {
@@ -232,6 +252,30 @@ func (p *coefficientForm[S]) Bytes() []byte {
 	return out
 }
 
+func (p *coefficientForm[S]) EuclideanValuation() Polynomial[S] {
+	return p
+}
+
+// makes this well ordered
+func (p *coefficientForm[S]) IsLessThanOrEqual(rhs Polynomial[S]) bool {
+	q := rhs.(*coefficientForm[S])
+
+	dp, dq := p.Degree(), q.Degree()
+	switch {
+	case dp < dq:
+		return true
+	case dp > dq:
+		return false
+	case dp == -1: // both are the zero polynomial
+		return true
+	default:
+		lt, eq, gt := ct.BytesCompare(p.Bytes(), q.Bytes())
+		ordering := base.EvaluateConstantTimeComparison(lt, eq, gt)
+		return ordering.Is(base.LessThan) || ordering.Is(base.Equal)
+	}
+
+}
+
 func (p *coefficientForm[S]) Derivative() Polynomial[S] {
 	if len(p.coeffs) <= 1 {
 		return &coefficientForm[S]{
@@ -270,7 +314,7 @@ func (p *coefficientForm[S]) Eval(x S) S {
 	return out
 }
 
-func (p *coefficientForm[S]) CoefficientRing() algebra.FiniteRing[S] {
+func (p *coefficientForm[S]) CoefficientRing() algebra.Ring[S] {
 	return p.coeffRing
 }
 
@@ -523,7 +567,7 @@ func (p *coefficientForm[S]) Equal(q Polynomial[S]) bool {
 		if i < len(p.coeffs) {
 			pi = p.coeffs[i]
 		}
-		qi := q.CoefficientStructure().(algebra.FiniteRing[S]).Zero()
+		qi := q.CoefficientStructure().(algebra.Ring[S]).Zero()
 		if i < len(q.Coefficients()) {
 			qi = q.Coefficients()[i]
 		}
@@ -535,7 +579,7 @@ func (p *coefficientForm[S]) Equal(q Polynomial[S]) bool {
 }
 
 func (p *coefficientForm[S]) HashCode() base.HashCode {
-	return base.HashCode(p.Degree()) ^ p.coeffs[0].HashCode()
+	return base.HashCode(p.Degree()).Combine(p.coeffs[0].HashCode())
 }
 
 func (p *coefficientForm[S]) Clone() Polynomial[S] {

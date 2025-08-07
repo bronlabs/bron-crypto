@@ -18,6 +18,7 @@ type (
 		EllipticCurve[P, F, S]
 		algebra.PrimeOrderEllipticCurve[P, F, S]
 		HashWithDst(dst string, message []byte) (P, error)
+		algebra.FiniteStructure[P]
 	}
 
 	Point[P algebra.EllipticCurvePoint[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]] interface {
@@ -70,19 +71,3 @@ const (
 	TypeII  = algebra.TypeII
 	TypeIII = algebra.TypeIII
 )
-
-func GetScalarField[P Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](c Curve[P, F, S]) algebra.PrimeField[S] {
-	out, err := algebra.StructureAs[algebra.PrimeField[S]](c.ScalarStructure())
-	if err != nil {
-		panic("cannot get scalar field from curve: " + err.Error())
-	}
-	return out
-}
-
-func GetBaseField[P Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](c Curve[P, F, S]) algebra.Field[F] {
-	out, err := algebra.StructureAs[algebra.Field[F]](c.BaseStructure())
-	if err != nil {
-		panic("cannot get base field from curve: " + err.Error())
-	}
-	return out
-}

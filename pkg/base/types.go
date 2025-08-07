@@ -15,11 +15,15 @@ type HashCode uint64
 
 func (hc HashCode) Combine(xs ...HashCode) HashCode {
 	h := fnv.New64a()
-	h.Write([]byte{byte(hc)})
+	h.Write(hc.Bytes())
 	for _, x := range xs {
-		h.Write([]byte{byte(x)})
+		h.Write(x.Bytes())
 	}
 	return HashCode(h.Sum64())
+}
+
+func (hc HashCode) Bytes() []byte {
+	return []byte{byte(hc)}
 }
 
 type Equatable[K any] interface {

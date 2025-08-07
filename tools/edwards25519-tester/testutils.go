@@ -1,12 +1,14 @@
 package edwards25519_tester
 
 import (
-	filippo "filippo.io/edwards25519"
-	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
-	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
-	"github.com/stretchr/testify/require"
 	"io"
 	"testing"
+
+	filippo "filippo.io/edwards25519"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
+	"github.com/stretchr/testify/require"
 )
 
 func GenerateRandomPoints(tb testing.TB, prng io.Reader) (*filippo.Point, *edwards25519Impl.Point) {
@@ -20,7 +22,7 @@ func GenerateRandomPoints(tb testing.TB, prng io.Reader) (*filippo.Point, *edwar
 		filippoPoint := new(filippo.Point)
 		_, filippoErr := filippoPoint.SetBytes(pointSerialization[:])
 
-		primitivesXSign := uint64(pointSerialization[31] >> 7)
+		primitivesXSign := ct.Bool(pointSerialization[31] >> 7)
 		primitivesYBytes := make([]byte, 32)
 		copy(primitivesYBytes[:], pointSerialization[:])
 		primitivesYBytes[31] &= 0x7f

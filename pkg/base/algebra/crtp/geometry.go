@@ -16,9 +16,21 @@ const (
 	JacobianCoordinateSystem            CoordinateSystem = "Jacobian"
 )
 
+func NewCoordinates[C any](t CoordinateSystem, v ...C) Coordinates[C] {
+	return Coordinates[C]{v: v, t: t}
+}
+
 type Coordinates[C any] struct {
-	Value []C
-	Name  CoordinateSystem
+	v []C
+	t CoordinateSystem
+}
+
+func (c Coordinates[C]) Value() []C {
+	return c.v
+}
+
+func (c Coordinates[C]) Type() CoordinateSystem {
+	return c.t
 }
 
 type Variety[E, C any] interface {

@@ -53,7 +53,7 @@ type PrivateKeyTrait[PKV algebra.PrimeGroupElement[PKV, S], S algebra.PrimeField
 }
 
 func (sk *PrivateKeyTrait[PKV, S]) ScalarField() algebra.PrimeField[S] {
-	return algebra.GetPrimeField(sk.V)
+	return algebra.StructureMustBeAs[algebra.PrimeField[S]](sk.V.Structure())
 }
 
 func (sk *PrivateKeyTrait[PKV, S]) Value() S {

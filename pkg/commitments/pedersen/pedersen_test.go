@@ -5,7 +5,6 @@ import (
 	crand "crypto/rand"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
@@ -16,7 +15,7 @@ func TestBasicCommitment(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("pedersen-test-h"))
 	require.NoError(t, err)
@@ -124,7 +123,7 @@ func TestCommitmentCreation(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("test-h-commitment"))
 	require.NoError(t, err)
@@ -160,7 +159,7 @@ func TestCommitmentCreation(t *testing.T) {
 		// Verify
 		verifier := scheme.Verifier()
 		err = verifier.Verify(commitment, message, witness)
-	verified := err == nil
+		verified := err == nil
 		require.True(t, verified)
 	})
 
@@ -182,7 +181,7 @@ func TestCommitmentCreation(t *testing.T) {
 
 	t.Run("deterministic commitment", func(t *testing.T) {
 		message := pedersen.NewMessage(field.FromUint64(42))
-		
+
 		// Use deterministic randomness
 		seed := []byte("deterministic seed for testing only!")
 		prng1 := bytes.NewReader(append(seed, make([]byte, 64)...))
@@ -203,8 +202,7 @@ func TestCommitmentCreation(t *testing.T) {
 func TestWitnessCreation(t *testing.T) {
 	t.Parallel()
 
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 
 	t.Run("valid witness", func(t *testing.T) {
 		witness, err := pedersen.NewWitness(field.FromUint64(123))
@@ -260,8 +258,7 @@ func TestWitnessCreation(t *testing.T) {
 func TestMessageOperations(t *testing.T) {
 	t.Parallel()
 
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 
 	t.Run("message creation and operations", func(t *testing.T) {
 		m1 := pedersen.NewMessage(field.FromUint64(10))
@@ -321,7 +318,7 @@ func TestHomomorphicProperties(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("test-h-homomorphic"))
 	require.NoError(t, err)
@@ -375,7 +372,7 @@ func TestHomomorphicProperties(t *testing.T) {
 
 		// Multiply message and witness by scalar
 		mScaled := pedersen.NewMessage(field.FromUint64(30)) // 10 * 3
-		wScaled := &pedersen.Witness[*k256.Scalar]{} // Can't directly multiply witness by scalar due to internal field
+		wScaled := &pedersen.Witness[*k256.Scalar]{}         // Can't directly multiply witness by scalar due to internal field
 		// We need to compute w * 3
 		wValue := w.Value()
 		wScaledValue := wValue.Mul(scalar.Value())
@@ -400,10 +397,10 @@ func TestHomomorphicProperties(t *testing.T) {
 		// Scale commitments
 		scalar1 := pedersen.NewMessage(field.FromUint64(2))
 		scalar2 := pedersen.NewMessage(field.FromUint64(3))
-		
+
 		c1Scaled := c1.ScalarOp(scalar1)
 		c2Scaled := c2.ScalarOp(scalar2)
-		
+
 		// Add scaled commitments
 		cCombined := c1Scaled.Op(c2Scaled)
 
@@ -427,7 +424,7 @@ func TestReRandomization(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("test-h-rerandom"))
 	require.NoError(t, err)
@@ -549,7 +546,7 @@ func TestCommitmentOperations(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("test-h-ops"))
 	require.NoError(t, err)
@@ -632,7 +629,7 @@ func TestEdgeCases(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("test-h-edge"))
 	require.NoError(t, err)
@@ -651,7 +648,7 @@ func TestEdgeCases(t *testing.T) {
 	t.Run("short random source", func(t *testing.T) {
 		committer := scheme.Committer()
 		message := pedersen.NewMessage(field.FromUint64(42))
-		
+
 		// Provide insufficient randomness
 		shortRandom := bytes.NewReader([]byte{1, 2, 3}) // Too short
 		_, _, err := committer.Commit(message, shortRandom)
@@ -662,12 +659,12 @@ func TestEdgeCases(t *testing.T) {
 	t.Run("commitment to zero message", func(t *testing.T) {
 		committer := scheme.Committer()
 		verifier := scheme.Verifier()
-		
+
 		// Commitment to zero is valid
 		zeroMessage := pedersen.NewMessage(field.Zero())
 		c, w, err := committer.Commit(zeroMessage, crand.Reader)
 		require.NoError(t, err)
-		
+
 		// Should verify
 		err = verifier.Verify(c, zeroMessage, w)
 		require.NoError(t, err)
@@ -679,7 +676,7 @@ func TestMultipleCurves(t *testing.T) {
 
 	t.Run("k256", func(t *testing.T) {
 		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		g := curve.Generator()
 		h, err := curve.Hash([]byte("test-k256"))
 		require.NoError(t, err)
@@ -693,19 +690,19 @@ func TestMultipleCurves(t *testing.T) {
 		// Test basic commitment
 		committer := scheme.Committer()
 		verifier := scheme.Verifier()
-		
+
 		message := pedersen.NewMessage(field.FromUint64(42))
 		commitment, witness, err := committer.Commit(message, crand.Reader)
 		require.NoError(t, err)
-		
+
 		err = verifier.Verify(commitment, message, witness)
-	verified := err == nil
+		verified := err == nil
 		require.True(t, verified)
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
 		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		g := curve.Generator()
 		h, err := curve.Hash([]byte("test-bls12381"))
 		require.NoError(t, err)
@@ -719,13 +716,13 @@ func TestMultipleCurves(t *testing.T) {
 		// Test basic commitment
 		committer := scheme.Committer()
 		verifier := scheme.Verifier()
-		
+
 		message := pedersen.NewMessage(field.FromUint64(42))
 		commitment, witness, err := committer.Commit(message, crand.Reader)
 		require.NoError(t, err)
-		
+
 		err = verifier.Verify(commitment, message, witness)
-	verified := err == nil
+		verified := err == nil
 		require.True(t, verified)
 	})
 }
@@ -734,7 +731,7 @@ func TestMultipleCurves(t *testing.T) {
 
 func BenchmarkCommit(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("bench-h"))
 	require.NoError(b, err)
@@ -758,7 +755,7 @@ func BenchmarkCommit(b *testing.B) {
 
 func BenchmarkVerify(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("bench-h-verify"))
 	require.NoError(b, err)
@@ -785,7 +782,7 @@ func BenchmarkVerify(b *testing.B) {
 
 func BenchmarkReRandomise(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("bench-h-rerandom"))
 	require.NoError(b, err)
@@ -811,7 +808,7 @@ func BenchmarkReRandomise(b *testing.B) {
 
 func BenchmarkHomomorphicOps(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("bench-h-homo"))
 	require.NoError(b, err)

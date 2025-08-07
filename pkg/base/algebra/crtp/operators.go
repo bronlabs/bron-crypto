@@ -62,7 +62,7 @@ type (
 	MaybeDividend[E any]              interface{ TryDiv(E) (E, error) }
 	MaybeFixedCapacityDividend[E any] interface{ TryDivCap(E, Capacity) (E, error) }
 
-	Residual[M, Q any] interface{ Mod(M) (Q, error) }
+	Residuand[M, Q any] interface{ Mod(M) (Q, error) }
 
 	ExponentiationBase[B, E any]                   interface{ Exp(E) B }
 	FixedCapacityExponentiationBase[B, E any]      interface{ ExpCap(E, Capacity) B }

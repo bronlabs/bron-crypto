@@ -145,8 +145,11 @@ func Test_BatchSchnorr_PartiallyCorrectWitness(t *testing.T) {
 	})
 }
 
-func testBatchHappyPath[P curves.Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]](
-	t *testing.T, curve curves.Curve[P, F, S], batchSize uint,
+func testBatchHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
+	t *testing.T, curve interface {
+		curves.Curve[P, F, S]
+		algebra.FiniteStructure[P]
+	}, batchSize uint,
 ) {
 	t.Helper()
 
@@ -202,7 +205,7 @@ func testBatchHappyPath[P curves.Point[P, F, S], F algebra.FiniteFieldElement[F]
 	require.NoError(t, err)
 }
 
-func testBatchInvalidStatement[P curves.Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]](
+func testBatchInvalidStatement[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
 	t *testing.T, curve curves.Curve[P, F, S], batchSize uint,
 ) {
 	t.Helper()
@@ -263,7 +266,7 @@ func testBatchInvalidStatement[P curves.Point[P, F, S], F algebra.FiniteFieldEle
 	require.Error(t, err)
 }
 
-func testBatchSimulator[P curves.Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]](
+func testBatchSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
 	t *testing.T, curve curves.Curve[P, F, S], batchSize uint,
 ) {
 	t.Helper()
@@ -305,7 +308,7 @@ func testBatchSimulator[P curves.Point[P, F, S], F algebra.FiniteFieldElement[F]
 	require.NoError(t, err)
 }
 
-func testBatchWithZeroCoefficients[P curves.Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]](
+func testBatchWithZeroCoefficients[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
 	t *testing.T, curve curves.Curve[P, F, S], batchSize uint,
 ) {
 	t.Helper()
@@ -363,7 +366,7 @@ func testBatchWithZeroCoefficients[P curves.Point[P, F, S], F algebra.FiniteFiel
 	require.NoError(t, err)
 }
 
-func testBatchPartiallyCorrectWitness[P curves.Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]](
+func testBatchPartiallyCorrectWitness[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
 	t *testing.T, curve curves.Curve[P, F, S], batchSize uint,
 ) {
 	t.Helper()
@@ -438,7 +441,7 @@ func Test_BatchSchnorr_ProtocolName(t *testing.T) {
 
 	name := protocol.Name()
 	require.Equal(t, batch_schnorr.Name, name)
-	require.Equal(t, "ZKPOK_BATCH_DLOG_SCHNORR-", string(name))
+	require.Contains(t, string(name), "BATCH_SCHNORR-dlog_pok-")
 }
 
 // Test_BatchSchnorr_ConsistencyAcrossBatchSizes tests that single proofs can be verified as batch proofs

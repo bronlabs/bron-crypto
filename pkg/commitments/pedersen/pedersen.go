@@ -16,7 +16,10 @@ type (
 	Group[E GroupElement[E, S], S Scalar[S]]                     = algebra.PrimeGroup[E, S]
 	GroupElement[E algebra.PrimeGroupElement[E, S], S Scalar[S]] = algebra.PrimeGroupElement[E, S]
 
-	ScalarField[S Scalar[S]]               algebra.PrimeField[S]
+	ScalarField[S Scalar[S]] interface {
+		algebra.PrimeField[S]
+		algebra.FiniteStructure[S]
+	}
 	Scalar[S algebra.PrimeFieldElement[S]] algebra.PrimeFieldElement[S]
 )
 

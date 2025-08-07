@@ -7,7 +7,6 @@ import (
 	mrand "math/rand/v2"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
@@ -21,8 +20,7 @@ import (
 func TestSanity(t *testing.T) {
 	t.Parallel()
 
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	total := 5
 	identities := sharing.NewOrdinalShareholderSet(uint(total))
 	scheme, err := additive.NewScheme(field, identities)
@@ -369,7 +367,7 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 				_, err := additive.NewShare(999, allShares[0].Value(), scheme.AccessStructure())
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "is not a valid shareholder")
-				
+
 				// Since we can't create an invalid share (NewShare validates),
 				// we'll test with shares that don't form a complete set
 				return allShares[:1] // Only one share - not authorized
@@ -552,8 +550,7 @@ func TestDeal(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
-		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 
 		testConfigs := []struct {
 			name  string
@@ -576,8 +573,7 @@ func TestDeal(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
-		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 
 		testConfigs := []struct {
 			name  string
@@ -602,8 +598,7 @@ func TestDealRandom(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
-		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 
 		testConfigs := []struct {
 			name  string
@@ -624,8 +619,7 @@ func TestDealRandom(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
-		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 
 		identities := sharing.NewOrdinalShareholderSet(6)
 		scheme, err := additive.NewScheme(field, identities)
@@ -638,8 +632,7 @@ func TestReconstruct(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
-		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 
 		testConfigs := []struct {
 			name  string
@@ -665,8 +658,7 @@ func TestHomomorphicOperations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
-		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 
 		identities := sharing.NewOrdinalShareholderSet(5)
 		scheme, err := additive.NewScheme(field, identities)
@@ -675,8 +667,7 @@ func TestHomomorphicOperations(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
-		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 
 		identities := sharing.NewOrdinalShareholderSet(4)
 		scheme, err := additive.NewScheme(field, identities)
@@ -688,8 +679,7 @@ func TestHomomorphicOperations(t *testing.T) {
 func TestShareValidation(t *testing.T) {
 	t.Parallel()
 
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 
 	identities := sharing.NewOrdinalShareholderSet(3)
 	scheme, err := additive.NewScheme(field, identities)
@@ -700,8 +690,7 @@ func TestShareValidation(t *testing.T) {
 func TestNewScheme(t *testing.T) {
 	t.Parallel()
 
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 
 	t.Run("valid construction", func(t *testing.T) {
 		identities := sharing.NewOrdinalShareholderSet(5)
@@ -753,8 +742,7 @@ func TestNewScheme(t *testing.T) {
 func TestAccessStructure(t *testing.T) {
 	t.Parallel()
 
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 
 	identities := sharing.NewOrdinalShareholderSet(5)
 	scheme, err := additive.NewScheme(field, identities)
@@ -782,8 +770,7 @@ func TestAccessStructure(t *testing.T) {
 func TestDealDeterministic(t *testing.T) {
 	t.Parallel()
 
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	identities := sharing.NewOrdinalShareholderSet(5)
 	scheme, err := additive.NewScheme(field, identities)
 	require.NoError(t, err)
@@ -816,8 +803,7 @@ func TestDealDeterministic(t *testing.T) {
 
 // BenchmarkDeal benchmarks the Deal function
 func BenchmarkDeal(b *testing.B) {
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 
 	benchConfigs := []struct {
 		name  string
@@ -851,8 +837,7 @@ func BenchmarkDeal(b *testing.B) {
 
 // BenchmarkDealRandom benchmarks the DealRandom function
 func BenchmarkDealRandom(b *testing.B) {
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 
 	benchConfigs := []struct {
 		name  string
@@ -883,8 +868,7 @@ func BenchmarkDealRandom(b *testing.B) {
 
 // BenchmarkReconstruct benchmarks the Reconstruct function
 func BenchmarkReconstruct(b *testing.B) {
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 
 	benchConfigs := []struct {
 		name  string

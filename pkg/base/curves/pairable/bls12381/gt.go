@@ -2,11 +2,14 @@ package bls12381
 
 import (
 	"hash/fnv"
+	"io"
 	"iter"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
@@ -20,8 +23,10 @@ var (
 	_ algebra.MultiplicativeGroup[*GtElement]        = (*Gt)(nil)
 	_ algebra.MultiplicativeGroupElement[*GtElement] = (*GtElement)(nil)
 
-	gtInstance *Gt
-	gtInitOnce sync.Once
+	gtInstance      *Gt
+	gtInitOnce      sync.Once
+	gtModelInstance *universal.Model[*GtElement]
+	gtModelInitOnce sync.Once
 )
 
 type Gt struct{}
@@ -33,8 +38,25 @@ func NewGt() *Gt {
 	return gtInstance
 }
 
+func GtModel() *universal.Model[*GtElement] {
+	gtModelInitOnce.Do(func() {
+		var err error
+		gtModelInstance, err = impl.PairingTargetModel(
+			NewGt(),
+		)
+		if err != nil {
+			panic(err)
+		}
+	})
+	return gtModelInstance
+}
+
 func (g *Gt) Name() string {
 	return GtName
+}
+
+func (g *Gt) Model() *universal.Model[*GtElement] {
+	return GtModel()
 }
 
 func (g *Gt) ElementSize() int {
@@ -44,6 +66,14 @@ func (g *Gt) ElementSize() int {
 func (g *Gt) Order() cardinal.Cardinal {
 	//TODO implement me
 	panic("implement me")
+}
+
+func (g *Gt) Hash(bytes []byte) (*GtElement, error) {
+	panic("Hashing not implemented for Gt")
+}
+
+func (g *Gt) Random(prng io.Reader) (*GtElement, error) {
+	panic("Random sampling not implemented for Gt")
 }
 
 func (g *Gt) Iter() iter.Seq[*GtElement] {
@@ -99,16 +129,6 @@ func (ge *GtElement) Bytes() []byte {
 
 func (ge *GtElement) Structure() algebra.Structure[*GtElement] {
 	return NewGt()
-}
-
-func (ge *GtElement) MarshalBinary() (data []byte, err error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ge *GtElement) UnmarshalBinary(data []byte) error {
-	//TODO implement me
-	panic("implement me")
 }
 
 func (ge *GtElement) Mul(e *GtElement) *GtElement {

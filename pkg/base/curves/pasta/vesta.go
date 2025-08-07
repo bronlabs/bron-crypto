@@ -8,7 +8,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -29,6 +31,9 @@ var (
 	vestaInitOnce sync.Once
 	vestaInstance *VestaCurve
 
+	vestaModelInstance *universal.ThreeSortedModel[*VestaPoint, *VestaScalar, *VestaBaseFieldElement]
+	vestaModelInitOnce sync.Once
+
 	_ curves.Curve[*VestaPoint, *VestaBaseFieldElement, *VestaScalar] = (*VestaCurve)(nil)
 	_ curves.Point[*VestaPoint, *VestaBaseFieldElement, *VestaScalar] = (*VestaPoint)(nil)
 )
@@ -46,8 +51,26 @@ func NewVestaCurve() *VestaCurve {
 	return vestaInstance
 }
 
+func NewVestaModel() *universal.ThreeSortedModel[*VestaPoint, *VestaScalar, *VestaBaseFieldElement] {
+	vestaModelInitOnce.Do(func() {
+		var err error
+		vestaModelInstance, err = impl.CurveModel(
+			NewVestaCurve(), NewVestaBaseField(), NewVestaScalarField(),
+		)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	return vestaModelInstance
+}
+
 func (c *VestaCurve) Name() string {
 	return VestaName
+}
+
+func (c *VestaCurve) Model() *universal.Model[*VestaPoint] {
+	return NewVestaModel().First()
 }
 
 func (c *VestaCurve) Order() cardinal.Cardinal {
@@ -190,10 +213,10 @@ func (p *VestaPoint) Coordinates() algebra.Coordinates[*VestaBaseFieldElement] {
 	var x, y VestaBaseFieldElement
 	p.V.ToAffine(&x.V, &y.V)
 
-	return algebra.Coordinates[*VestaBaseFieldElement]{
-		Value: []*VestaBaseFieldElement{&x, &y},
-		Name:  algebra.AffineCoordinateSystem,
-	}
+	return algebra.NewCoordinates(
+		algebra.AffineCoordinateSystem,
+		&x, &y,
+	)
 }
 
 func (p *VestaPoint) ToCompressed() []byte {

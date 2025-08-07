@@ -21,7 +21,7 @@ type AdditivelyDerivablePublicKey[
 		PublicKey[PK]
 		base.Transparent[PKV]
 	}, PKV interface {
-		algebra.FiniteAbelianGroupElement[PKV, SH]
+		algebra.AbelianGroupElement[PKV, SH]
 		algebra.AdditiveGroupElement[PKV]
 	}, SH algebra.PrimeFieldElement[SH],
 ] interface {
@@ -32,7 +32,7 @@ type AdditivelyDerivablePublicKey[
 func DeriveChildKeys[
 	PK AdditivelyDerivablePublicKey[PK, PKV, SH],
 	PKV interface {
-		algebra.FiniteAbelianGroupElement[PKV, SH]
+		algebra.AbelianGroupElement[PKV, SH]
 		algebra.AdditiveGroupElement[PKV]
 	}, SH algebra.PrimeFieldElement[SH],
 ](publicKey PK, chainCode []byte, i uint32) (shift SH, childChainCode []byte, err error) {
@@ -75,11 +75,11 @@ func bip32(publicKey *k256.Point, chainCode []byte, i uint32) (*k256.Scalar, []b
 func bip32Like[
 	PK AdditivelyDerivablePublicKey[PK, PKV, SH],
 	PKV interface {
-		algebra.FiniteAbelianGroupElement[PKV, SH]
+		algebra.AbelianGroupElement[PKV, SH]
 		algebra.AdditiveGroupElement[PKV]
 	}, SH algebra.PrimeFieldElement[SH],
 ](publicKey PK, chainCode []byte, i uint32) (SH, []byte, error) {
-	pkSpace, ok := publicKey.Value().Structure().(algebra.FiniteAbelianGroup[PKV, SH])
+	pkSpace, ok := publicKey.Value().Structure().(algebra.AbelianGroup[PKV, SH])
 	if !ok {
 		return *new(SH), nil, errs.NewFailed("public key does not implement FiniteAbelianGroup")
 	}

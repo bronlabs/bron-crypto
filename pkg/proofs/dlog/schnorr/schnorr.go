@@ -28,14 +28,15 @@ type (
 
 	Group[GE GroupElement[GE, S], S Scalar[S]] interface {
 		maurer09.ImageGroup[GE]
-		algebra.FiniteAbelianGroup[GE, S]
+		algebra.AbelianGroup[GE, S]
+		algebra.FiniteStructure[GE]
 	}
 	GroupElement[GE interface {
 		maurer09.ImageGroupElement[GE]
-		algebra.FiniteAbelianGroupElement[GE, S]
+		algebra.AbelianGroupElement[GE, S]
 	}, S Scalar[S]] interface {
 		maurer09.ImageGroupElement[GE]
-		algebra.FiniteAbelianGroupElement[GE, S]
+		algebra.AbelianGroupElement[GE, S]
 	}
 )
 

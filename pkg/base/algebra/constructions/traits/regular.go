@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
@@ -26,6 +27,10 @@ type RegularModule[R algebra.Ring[E], E algebra.RingElement[E], W RingElementInh
 
 func (m *RegularModule[R, E, W, WT]) Name() string {
 	return "RegularModule[" + m.Ring.Name() + "]"
+}
+
+func (m *RegularModule[R, E, W, WT]) Model() *universal.Model[W] {
+	panic("RegularModule does not have a model")
 }
 
 func (m *RegularModule[R, E, W, WT]) Characteristic() cardinal.Cardinal {
@@ -335,7 +340,10 @@ func (m *RegularAlgebraElement[E, W, WT]) Square() W {
 	return W(&out)
 }
 
-type FiniteRegularStructure[R algebra.FiniteRing[E], E algebra.FiniteRingElement[E], W RingElementInheritterPtrConstraint[E, WT], WT any] struct {
+type FiniteRegularStructure[R interface {
+	algebra.Ring[E]
+	algebra.FiniteStructure[E]
+}, E algebra.RingElement[E], W RingElementInheritterPtrConstraint[E, WT], WT any] struct {
 	R R
 }
 

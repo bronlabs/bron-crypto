@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
@@ -25,7 +24,7 @@ func Test_BasicSignature(t *testing.T) {
 	scheme, err := bls.NewShortKeyScheme(family, bls.Basic)
 	require.NoError(t, err)
 
-	sf := curves.GetScalarField(family.SourceSubGroup())
+	sf := bls12381.NewScalarField()
 	seed := make([]byte, sf.ElementSize())
 	_, err = io.ReadFull(crand.Reader, seed)
 	require.NoError(t, err)
@@ -142,6 +141,11 @@ func TestSignVectors(t *testing.T) {
 
 			// Create private key from bytes
 			privKey, err := bls.NewPrivateKeyFromBytes(family.SourceSubGroup(), privKeyBytes)
+			if strings.Contains(file.Name(), "zero_privkey") {
+				// Special case: zero private key should fail
+				require.Error(t, err)
+				return
+			}
 			require.NoError(t, err)
 			// Sign the message
 			signer, err := scheme.Signer(privKey, signerOpt)
@@ -158,6 +162,7 @@ func TestSignVectors(t *testing.T) {
 			// Verify signature matches expected
 			actualSig := signature.Bytes()
 			require.EqualValues(t, expectedSig, actualSig, "Signature mismatch for %s", file.Name())
+
 		})
 	}
 }
@@ -325,7 +330,7 @@ func TestAggregateVerifyVectors(t *testing.T) {
 			for _, pubKeyHex := range vector.Input.PubKeys {
 				pubKeyBytes, err := decodeHex(pubKeyHex)
 				require.NoError(t, err)
-				
+
 				pubKey, err := bls.NewPublicKeyFromBytes(g1, pubKeyBytes)
 				if err != nil {
 					// Some test vectors have invalid public keys
@@ -405,7 +410,7 @@ func TestBatchVerifyVectors(t *testing.T) {
 			for _, pubKeyHex := range vector.Input.PubKeys {
 				pubKeyBytes, err := decodeHex(pubKeyHex)
 				require.NoError(t, err)
-				
+
 				pubKey, err := bls.NewPublicKeyFromBytes(g1, pubKeyBytes)
 				if err != nil {
 					// Some test vectors have invalid public keys
@@ -431,7 +436,7 @@ func TestBatchVerifyVectors(t *testing.T) {
 			for _, sigHex := range vector.Input.Signatures {
 				sigBytes, err := decodeHex(sigHex)
 				require.NoError(t, err)
-				
+
 				sig, err := bls.NewSignatureFromBytes(g2, sigBytes, nil)
 				if err != nil {
 					// Some test vectors have invalid signatures
@@ -481,10 +486,10 @@ func TestBatchSign(t *testing.T) {
 	family := pairable.NewBLS12381()
 
 	testCases := []struct {
-		name         string
-		rogueKeyAlg  bls.RogueKeyPreventionAlgorithm
-		messages     [][]byte
-		expectError  bool
+		name        string
+		rogueKeyAlg bls.RogueKeyPreventionAlgorithm
+		messages    [][]byte
+		expectError bool
 	}{
 		{
 			name:        "Basic scheme - multiple messages",
@@ -569,9 +574,9 @@ func TestAggregateSign(t *testing.T) {
 	family := pairable.NewBLS12381()
 
 	testCases := []struct {
-		name         string
-		rogueKeyAlg  bls.RogueKeyPreventionAlgorithm
-		messages     [][]byte
+		name        string
+		rogueKeyAlg bls.RogueKeyPreventionAlgorithm
+		messages    [][]byte
 	}{
 		{
 			name:        "Basic scheme - aggregate multiple messages",
@@ -938,12 +943,12 @@ func TestPublicKeyOperations(t *testing.T) {
 
 	// Test Equal
 	require.True(t, pk1.Equal(pk1), "Public key should equal itself")
-	
+
 	// Verify they are actually different by checking bytes first
 	pk1Bytes := pk1.Bytes()
 	pk2Bytes := pk2.Bytes()
 	require.NotEqual(t, pk1Bytes, pk2Bytes, "Public key bytes should be different")
-	
+
 	// Now test Equal - if bytes are different, Equal should return false
 	isEqual := pk1.Equal(pk2)
 	if isEqual {
@@ -1004,12 +1009,12 @@ func TestPrivateKeyOperations(t *testing.T) {
 
 	// Test Equal
 	require.True(t, sk1.Equal(sk1), "Private key should equal itself")
-	
+
 	// Verify they are actually different
 	sk1Bytes := sk1.Bytes()
 	sk2Bytes := sk2.Bytes()
 	require.NotEqual(t, sk1Bytes, sk2Bytes, "Private key bytes should be different")
-	
+
 	// Now test Equal
 	isEqual := sk1.Equal(sk2)
 	require.False(t, isEqual, "Different private keys should not be equal")
@@ -1069,12 +1074,12 @@ func TestSignatureOperations(t *testing.T) {
 
 	// Test Equal
 	require.True(t, sig1.Equal(sig1), "Signature should equal itself")
-	
+
 	// Verify they are actually different
 	sig1Bytes := sig1.Bytes()
 	sig2Bytes := sig2.Bytes()
 	require.NotEqual(t, sig1Bytes, sig2Bytes, "Signature bytes should be different")
-	
+
 	// Now test Equal
 	isEqual := sig1.Equal(sig2)
 	require.False(t, isEqual, "Different signatures should not be equal")
@@ -1287,7 +1292,7 @@ func TestEdgeCases(t *testing.T) {
 		var nilPOP *bls.ProofOfPossession[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar]
 		clonedPOP := nilPOP.Clone()
 		require.Nil(t, clonedPOP)
-		
+
 		// Note: Signature.Clone() doesn't handle nil case, which is expected behavior
 	})
 }

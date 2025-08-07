@@ -74,3 +74,7 @@ const (
 	TypeII  = crtp.TypeII
 	TypeIII = crtp.TypeIII
 )
+
+func NewCoordinates[C crtp.RingElement[C]](t crtp.CoordinateSystem, v ...C) Coordinates[C] {
+	return crtp.NewCoordinates[C](t, v...)
+}

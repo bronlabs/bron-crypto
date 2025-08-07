@@ -35,6 +35,9 @@ type (
 
 	UniqueFactorizationMonoid[ME crtp.UniqueFactorizationMonoidElement[ME]]        = crtp.UniqueFactorizationMonoid[ME]
 	UniqueFactorizationMonoidElement[ME crtp.UniqueFactorizationMonoidElement[ME]] = crtp.UniqueFactorizationMonoidElement[ME]
+
+	CyclicMonoid[ME crtp.CyclicMonoidElement[ME]]        = crtp.CyclicMonoid[ME]
+	CyclicMonoidElement[ME crtp.CyclicMonoidElement[ME]] = crtp.CyclicMonoidElement[ME]
 )
 
 type (
@@ -46,6 +49,9 @@ type (
 
 	MultiplicativeGroup[E crtp.MultiplicativeGroupElement[E]]        = crtp.MultiplicativeGroup[E]
 	MultiplicativeGroupElement[E crtp.MultiplicativeGroupElement[E]] = crtp.MultiplicativeGroupElement[E]
+
+	CyclicGroup[E crtp.CyclicGroupElement[E]]        = crtp.CyclicGroup[E]
+	CyclicGroupElement[E crtp.CyclicGroupElement[E]] = crtp.CyclicGroupElement[E]
 )
 
 type (

@@ -8,7 +8,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	p256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/p256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -28,6 +30,9 @@ var (
 
 	curveInstance *Curve
 	curveInitOnce sync.Once
+
+	curveModelInstance *universal.ThreeSortedModel[*Point, *Scalar, *BaseFieldElement]
+	curveModelInitOnce sync.Once
 )
 
 type Curve struct {
@@ -43,8 +48,26 @@ func NewCurve() *Curve {
 	return curveInstance
 }
 
+func CurveModel() *universal.ThreeSortedModel[*Point, *Scalar, *BaseFieldElement] {
+	curveModelInitOnce.Do(func() {
+		var err error
+		curveModelInstance, err = impl.CurveModel(
+			NewCurve(), NewBaseField(), NewScalarField(),
+		)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	return curveModelInstance
+}
+
 func (c *Curve) Name() string {
 	return CurveName
+}
+
+func (c *Curve) Model() *universal.Model[*Point] {
+	return CurveModel().First()
 }
 
 func (c *Curve) ElementSize() int {
@@ -209,11 +232,9 @@ func (p Point) Coordinates() algebra.Coordinates[*BaseFieldElement] {
 	var x, y BaseFieldElement
 	p.V.ToAffine(&x.V, &y.V)
 
-	return algebra.Coordinates[*BaseFieldElement]{
-		Value: []*BaseFieldElement{&x, &y},
-		Name:  algebra.AffineCoordinateSystem,
-	}
+	return algebra.NewCoordinates(algebra.AffineCoordinateSystem, &x, &y)
 }
+
 func (p *Point) ToCompressed() []byte {
 	var compressedBytes [compressedPointBytes]byte
 	compressedBytes[0] = byte(2)

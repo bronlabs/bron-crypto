@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
@@ -15,7 +14,10 @@ import (
 )
 
 // lagrangeBasisCases tests the Lagrange basis polynomial L_i computation
-func lagrangeBasisCases[S algebra.FiniteFieldElement[S]](t *testing.T, field algebra.FiniteField[S]) {
+func lagrangeBasisCases[S algebra.FieldElement[S]](t *testing.T, field interface {
+	algebra.Field[S]
+	algebra.FiniteStructure[S]
+}) {
 	t.Helper()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
@@ -122,20 +124,21 @@ func TestLagrangeBasis(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
-		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		lagrangeBasisCases(t, field)
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
-		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		lagrangeBasisCases(t, field)
 	})
 }
 
 // basisSetCases tests the computation of complete Lagrange basis sets
-func basisSetCases[S algebra.FiniteFieldElement[S]](t *testing.T, field algebra.FiniteField[S]) {
+func basisSetCases[S algebra.FieldElement[S]](t *testing.T, field interface {
+	algebra.Field[S]
+	algebra.FiniteStructure[S]
+}) {
 	t.Helper()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
@@ -229,19 +232,17 @@ func TestBasisSet(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
-		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		basisSetCases(t, field)
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
-		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		basisSetCases(t, field)
 	})
 }
 
-func newPoly[S algebra.FiniteFieldElement[S]](t testing.TB, polyRing polynomials.PolynomialRing[S], coeffs ...S) polynomials.Polynomial[S] {
+func newPoly[S algebra.FieldElement[S]](t testing.TB, polyRing polynomials.PolynomialRing[S], coeffs ...S) polynomials.Polynomial[S] {
 	t.Helper()
 	poly, err := polyRing.New(coeffs...)
 	require.NoError(t, err)
@@ -249,7 +250,10 @@ func newPoly[S algebra.FiniteFieldElement[S]](t testing.TB, polyRing polynomials
 }
 
 // interpolationCases tests polynomial interpolation
-func interpolationCases[S algebra.FiniteFieldElement[S]](t *testing.T, field algebra.FiniteField[S]) {
+func interpolationCases[S algebra.FieldElement[S]](t *testing.T, field interface {
+	algebra.Field[S]
+	algebra.FiniteStructure[S]
+}) {
 	t.Helper()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
@@ -369,14 +373,12 @@ func TestInterpolation(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
-		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		interpolationCases(t, field)
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
-		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		interpolationCases(t, field)
 	})
 }
@@ -384,8 +386,7 @@ func TestInterpolation(t *testing.T) {
 // Test interpolation of higher degree polynomials
 func TestHigherDegreeInterpolation(t *testing.T) {
 	t.Parallel()
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
 
@@ -419,8 +420,7 @@ func TestHigherDegreeInterpolation(t *testing.T) {
 // Test interpolation with random points
 func TestRandomPointInterpolation(t *testing.T) {
 	t.Parallel()
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
 
@@ -471,7 +471,10 @@ func TestRandomPointInterpolation(t *testing.T) {
 }
 
 // interpolateAtCases tests the InterpolateAt function which evaluates interpolation at a specific point
-func interpolateAtCases[S algebra.FiniteFieldElement[S]](t *testing.T, field algebra.FiniteField[S]) {
+func interpolateAtCases[S algebra.FieldElement[S]](t *testing.T, field interface {
+	algebra.Field[S]
+	algebra.FiniteStructure[S]
+}) {
 	t.Helper()
 
 	zero := field.Zero()
@@ -603,14 +606,12 @@ func TestInterpolateAt(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
-		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		interpolateAtCases(t, field)
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
-		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		interpolateAtCases(t, field)
 	})
 }
@@ -618,8 +619,7 @@ func TestInterpolateAt(t *testing.T) {
 // Test InterpolateAt consistency with Interpolate
 func TestInterpolateAtConsistency(t *testing.T) {
 	t.Parallel()
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 
 	// Create test data
 	one := field.One()
@@ -667,8 +667,7 @@ func TestInterpolateAtConsistency(t *testing.T) {
 // Test InterpolateAt with random polynomials
 func TestInterpolateAtRandom(t *testing.T) {
 	t.Parallel()
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
 
@@ -707,8 +706,7 @@ func TestInterpolateAtRandom(t *testing.T) {
 
 // Benchmark InterpolateAt vs full interpolation
 func BenchmarkInterpolateAtVsInterpolate(b *testing.B) {
-	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 
 	degrees := []int{5, 10, 20, 50}
 
@@ -745,10 +743,16 @@ func BenchmarkInterpolateAtVsInterpolate(b *testing.B) {
 }
 
 // interpolateInExponentCases tests InterpolateInExponent function
-func interpolateInExponentCases[C algebra.ModuleElement[C, S], S algebra.FiniteFieldElement[S]](
+func interpolateInExponentCases[C algebra.ModuleElement[C, S], S algebra.FieldElement[S]](
 	t *testing.T,
-	module algebra.Module[C, S],
-	field algebra.FiniteField[S],
+	module interface {
+		algebra.Module[C, S]
+		algebra.FiniteStructure[C]
+	},
+	field interface {
+		algebra.Field[S]
+		algebra.FiniteStructure[S]
+	},
 	g C,
 ) {
 	t.Helper()
@@ -921,14 +925,14 @@ func TestInterpolateInExponent(t *testing.T) {
 
 	t.Run("k256", func(t *testing.T) {
 		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		g := curve.Generator()
 		interpolateInExponentCases(t, curve, field, g)
 	})
 
 	t.Run("bls12381_g1", func(t *testing.T) {
 		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		g := curve.Generator()
 		interpolateInExponentCases(t, curve, field, g)
 	})
@@ -938,7 +942,7 @@ func TestInterpolateInExponent(t *testing.T) {
 func TestInterpolateInExponentConsistency(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 
 	one := field.One()
@@ -992,7 +996,7 @@ func TestInterpolateInExponentConsistency(t *testing.T) {
 func TestInterpolateInExponentRandom(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
@@ -1042,7 +1046,7 @@ func TestInterpolateInExponentRandom(t *testing.T) {
 // Benchmark InterpolateInExponent
 func BenchmarkInterpolateInExponent(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 
 	degrees := []int{5, 10, 20, 50}
@@ -1073,8 +1077,14 @@ func BenchmarkInterpolateInExponent(b *testing.B) {
 // interpolateInExponentAtCases tests InterpolateInExponentAt function
 func interpolateInExponentAtCases[C algebra.ModuleElement[C, S], S algebra.PrimeFieldElement[S]](
 	t *testing.T,
-	module algebra.Module[C, S],
-	field algebra.PrimeField[S],
+	module interface {
+		algebra.Module[C, S]
+		algebra.FiniteStructure[C]
+	},
+	field interface {
+		algebra.PrimeField[S]
+		algebra.FiniteStructure[S]
+	},
 	g C,
 ) {
 	t.Helper()
@@ -1261,14 +1271,14 @@ func TestInterpolateInExponentAt(t *testing.T) {
 
 	t.Run("k256", func(t *testing.T) {
 		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		g := curve.Generator()
 		interpolateInExponentAtCases(t, curve, field, g)
 	})
 
 	t.Run("bls12381_g1", func(t *testing.T) {
 		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		g := curve.Generator()
 		interpolateInExponentAtCases(t, curve, field, g)
 	})
@@ -1278,7 +1288,7 @@ func TestInterpolateInExponentAt(t *testing.T) {
 func TestInterpolateInExponentAtConsistency(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 
 	one := field.One()
@@ -1332,7 +1342,7 @@ func TestInterpolateInExponentAtConsistency(t *testing.T) {
 func TestInterpolateInExponentAtRandom(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	polyRing, err := polynomials.NewPolynomialRing(field)
 	require.NoError(t, err)
@@ -1376,7 +1386,7 @@ func TestInterpolateInExponentAtRandom(t *testing.T) {
 func TestInterpolateInExponentAtVsInterpolateAt(t *testing.T) {
 	t.Parallel()
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 
 	one := field.One()
@@ -1427,7 +1437,7 @@ func TestInterpolateInExponentAtVsInterpolateAt(t *testing.T) {
 // Benchmark InterpolateInExponentAt vs full interpolation
 func BenchmarkInterpolateInExponentAtVsInterpolateInExponent(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 
 	degrees := []int{5, 10, 20, 50}

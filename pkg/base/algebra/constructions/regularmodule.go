@@ -2,7 +2,7 @@ package constructions
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/traits"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
@@ -23,7 +23,10 @@ func NewRegularAlgebra[R algebra.Ring[E], E algebra.RingElement[E]](r R) (*Regul
 	return out, nil
 }
 
-func NewFiniteRegularAlgebra[R algebra.FiniteRing[E], E algebra.FiniteRingElement[E]](r R) (*FiniteRegularAlgebra[R, E], error) {
+func NewFiniteRegularAlgebra[R interface {
+	algebra.Ring[E]
+	algebra.FiniteStructure[E]
+}, E algebra.RingElement[E]](r R) (*FiniteRegularAlgebra[R, E], error) {
 	if utils.IsNil(r) {
 		return nil, errs.NewIsNil("ring")
 	}
@@ -38,7 +41,7 @@ func NewFiniteRegularAlgebra[R algebra.FiniteRing[E], E algebra.FiniteRingElemen
 		},
 	}
 
-	var _ algebra.FiniteAlgebra[*FiniteRegularAlgebraElement[E], E] = out
+	var _ algebra.Algebra[*FiniteRegularAlgebraElement[E], E] = out
 	return out, nil
 }
 
@@ -70,12 +73,15 @@ func (m *RegularAlgebraElement[E]) Structure() algebra.Structure[*RegularAlgebra
 	return out
 }
 
-type FiniteRegularAlgebra[R algebra.FiniteRing[E], E algebra.FiniteRingElement[E]] struct {
+type FiniteRegularAlgebra[R interface {
+	algebra.Ring[E]
+	algebra.FiniteStructure[E]
+}, E algebra.RingElement[E]] struct {
 	traits.RegularAlgebra[R, E, *FiniteRegularAlgebraElement[E], FiniteRegularAlgebraElement[E]]
 	traits.FiniteRegularStructure[R, E, *FiniteRegularAlgebraElement[E], FiniteRegularAlgebraElement[E]]
 }
 
-type FiniteRegularAlgebraElement[E algebra.FiniteRingElement[E]] struct {
+type FiniteRegularAlgebraElement[E algebra.RingElement[E]] struct {
 	traits.RegularAlgebraElement[E, *FiniteRegularAlgebraElement[E], FiniteRegularAlgebraElement[E]]
 }
 
@@ -90,7 +96,10 @@ func (m *FiniteRegularAlgebraElement[E]) IsTorsionFree() bool {
 }
 
 func (m *FiniteRegularAlgebraElement[E]) Structure() algebra.Structure[*FiniteRegularAlgebraElement[E]] {
-	ring, ok := m.ScalarStructure().(algebra.FiniteRing[E])
+	ring, ok := m.ScalarStructure().(interface {
+		algebra.Ring[E]
+		algebra.FiniteStructure[E]
+	})
 	if !ok {
 		panic("RegularModuleElement must be based on a RingElement")
 	}
@@ -99,12 +108,9 @@ func (m *FiniteRegularAlgebraElement[E]) Structure() algebra.Structure[*FiniteRe
 	return out
 }
 
-func _[R algebra.FiniteRing[E], E algebra.FiniteRingElement[E]]() {
+func _[R algebra.Ring[E], E algebra.RingElement[E]]() {
 	var (
 		_ algebra.Algebra[*RegularAlgebraElement[E], E]        = (*RegularAlgebra[R, E])(nil)
 		_ algebra.AlgebraElement[*RegularAlgebraElement[E], E] = (*RegularAlgebraElement[E])(nil)
-
-		_ algebra.FiniteAlgebra[*FiniteRegularAlgebraElement[E], E]        = (*FiniteRegularAlgebra[R, E])(nil)
-		_ algebra.FiniteAlgebraElement[*FiniteRegularAlgebraElement[E], E] = (*FiniteRegularAlgebraElement[E])(nil)
 	)
 }

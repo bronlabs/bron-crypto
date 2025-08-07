@@ -4,6 +4,8 @@ import (
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -24,9 +26,11 @@ var (
 	_ algebra.PrimeField[*Scalar]        = (*ScalarField)(nil)
 	_ algebra.PrimeFieldElement[*Scalar] = (*Scalar)(nil)
 
-	scalarFieldInitOnce sync.Once
-	scalarFieldInstance *ScalarField
-	scalarFieldOrder    *saferith.Modulus
+	scalarFieldInitOnce      sync.Once
+	scalarFieldInstance      *ScalarField
+	scalarFieldModelOnce     sync.Once
+	scalarFieldModelInstance *universal.Model[*Scalar]
+	scalarFieldOrder         *saferith.Modulus
 )
 
 func scalarFieldInit() {
@@ -43,8 +47,26 @@ func NewScalarField() *ScalarField {
 	return scalarFieldInstance
 }
 
+func ScalarFieldModel() *universal.Model[*Scalar] {
+	scalarFieldModelOnce.Do(func() {
+		var err error
+		scalarFieldModelInstance, err = impl.ScalarFieldModel(
+			NewScalarField(),
+		)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	return scalarFieldModelInstance
+}
+
 func (*ScalarField) Name() string {
 	return ScalarFieldName
+}
+
+func (f *ScalarField) Model() *universal.Model[*Scalar] {
+	return ScalarFieldModel()
 }
 
 func (*ScalarField) ElementSize() int {

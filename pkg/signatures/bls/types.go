@@ -106,8 +106,8 @@ func RogueKeyPreventionAlgorithmIsSupported(alg RogueKeyPreventionAlgorithm) boo
 }
 
 func NewPublicKey[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](v PK) (*PublicKey[PK, PKFE, Sig, SigFE, E, S], error) {
 	if v.IsOpIdentity() {
@@ -122,8 +122,8 @@ func NewPublicKey[
 }
 
 func NewPublicKeyFromBytes[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](subGroup curves.PairingFriendlyCurve[PK, PKFE, Sig, SigFE, E, S], input []byte) (*PublicKey[PK, PKFE, Sig, SigFE, E, S], error) {
 	v, err := subGroup.FromBytes(input)
@@ -134,8 +134,8 @@ func NewPublicKeyFromBytes[
 }
 
 type PublicKey[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	signatures.PublicKeyTrait[PK, S]
@@ -195,8 +195,8 @@ func (pk *PublicKey[P1, F1, P2, F2, E, S]) TryAdd(other *PublicKey[P1, F1, P2, F
 }
 
 func NewPrivateKey[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](subGroup curves.PairingFriendlyCurve[PK, PKFE, Sig, SigFE, E, S], v S) (*PrivateKey[PK, PKFE, Sig, SigFE, E, S], error) {
 	if v.IsOpIdentity() {
@@ -214,11 +214,12 @@ func NewPrivateKey[
 }
 
 func NewPrivateKeyFromBytes[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](subGroup curves.PairingFriendlyCurve[PK, PKFE, Sig, SigFE, E, S], input []byte) (*PrivateKey[PK, PKFE, Sig, SigFE, E, S], error) {
-	v, err := curves.GetScalarField(subGroup).FromBytes(input)
+	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](subGroup.ScalarStructure())
+	v, err := sf.FromBytes(input)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create private key from bytes")
 	}
@@ -226,8 +227,8 @@ func NewPrivateKeyFromBytes[
 }
 
 type PrivateKey[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	signatures.PrivateKeyTrait[PK, S]
@@ -271,8 +272,8 @@ func (sk *PrivateKey[PK, PKFE, Sig, SigFE, E, S]) Bytes() []byte {
 }
 
 func NewSignature[
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](v Sig, pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) (*Signature[Sig, SigFE, PK, PKFE, E, S], error) {
 	if v.IsOpIdentity() {
@@ -288,8 +289,8 @@ func NewSignature[
 }
 
 func NewSignatureFromBytes[
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](subGroup curves.PairingFriendlyCurve[Sig, SigFE, PK, PKFE, E, S], input []byte, pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) (*Signature[Sig, SigFE, PK, PKFE, E, S], error) {
 	if subGroup == nil {
@@ -303,8 +304,8 @@ func NewSignatureFromBytes[
 }
 
 type Signature[
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	v   Sig
@@ -368,8 +369,8 @@ func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) HashCode() base.HashCode {
 }
 
 func NewProofOfPossession[
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](v Sig) (*ProofOfPossession[Sig, SigFE, PK, PKFE, E, S], error) {
 	if v.IsOpIdentity() {
@@ -388,8 +389,8 @@ func NewProofOfPossession[
 }
 
 func NewProofOfPossessionFromBytes[
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](subGroup curves.PairingFriendlyCurve[Sig, SigFE, PK, PKFE, E, S], input []byte) (*ProofOfPossession[Sig, SigFE, PK, PKFE, E, S], error) {
 	if subGroup == nil {
@@ -407,8 +408,8 @@ func NewProofOfPossessionFromBytes[
 }
 
 type ProofOfPossession[
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	Signature[Sig, SigFE, PK, PKFE, E, S]
@@ -457,8 +458,8 @@ func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) HashCode() base.HashCo
 }
 
 func AggregateAll[
-	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, ET, S], PKFE algebra.FiniteFieldElement[PKFE],
-	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, ET, S], SGFE algebra.FiniteFieldElement[SGFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, ET, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, ET, S], SGFE algebra.FieldElement[SGFE],
 	ET algebra.MultiplicativeGroupElement[ET], S algebra.PrimeFieldElement[S],
 	Xs ~[]X, X interface {
 		TryAdd(other X) (X, error)
@@ -480,8 +481,8 @@ func AggregateAll[
 }
 
 func _[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FiniteFieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FiniteFieldElement[SigFE],
+	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
+	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ]() {
 	var (

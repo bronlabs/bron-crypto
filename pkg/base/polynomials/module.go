@@ -8,20 +8,27 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/ase/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
 type (
-	PolynomialModule[C algebra.ModuleElement[C, S], S algebra.FiniteRingElement[S]]       algebra.PolynomialModule[ModuleValuedPolynomial[C, S], Polynomial[S], C, S]
-	ModuleValuedPolynomial[C algebra.ModuleElement[C, S], S algebra.FiniteRingElement[S]] algebra.ModuleValuedPolynomial[ModuleValuedPolynomial[C, S], Polynomial[S], C, S]
+	PolynomialModule[C algebra.ModuleElement[C, S], S algebra.RingElement[S]]       algebra.PolynomialModule[ModuleValuedPolynomial[C, S], Polynomial[S], C, S]
+	ModuleValuedPolynomial[C algebra.ModuleElement[C, S], S algebra.RingElement[S]] algebra.ModuleValuedPolynomial[ModuleValuedPolynomial[C, S], Polynomial[S], C, S]
 )
 
-func NewPolynomialModule[C algebra.ModuleElement[C, S], S algebra.FiniteRingElement[S]](coeffModule algebra.Module[C, S]) (PolynomialModule[C, S], error) {
+func NewPolynomialModule[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](coeffModule interface {
+	algebra.Module[C, S]
+	algebra.FiniteStructure[C]
+}) (PolynomialModule[C, S], error) {
 	if coeffModule == nil {
 		return nil, errs.NewIsNil("coeffModule")
 	}
-	baseRing, ok := coeffModule.ScalarStructure().(algebra.FiniteRing[S])
+	baseRing, ok := coeffModule.ScalarStructure().(interface {
+		algebra.Ring[S]
+		algebra.FiniteStructure[S]
+	})
 	if !ok {
 		return nil, errs.NewType("coeff module does not have a ring structure")
 	}
@@ -31,15 +38,21 @@ func NewPolynomialModule[C algebra.ModuleElement[C, S], S algebra.FiniteRingElem
 	}, nil
 }
 
-func NewModuleValuedPolynomialFromCoefficients[C algebra.ModuleElement[C, S], S algebra.FiniteRingElement[S]](coeffs ...C) (ModuleValuedPolynomial[C, S], error) {
+func NewModuleValuedPolynomialFromCoefficients[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](coeffs ...C) (ModuleValuedPolynomial[C, S], error) {
 	if len(coeffs) == 0 {
 		return nil, errs.NewValue("coefficients cannot be empty")
 	}
-	baseRing, ok := coeffs[0].Structure().(algebra.FiniteRing[S])
+	baseRing, ok := coeffs[0].Structure().(interface {
+		algebra.Ring[S]
+		algebra.FiniteStructure[S]
+	})
 	if !ok {
 		return nil, errs.NewType("coefficients do not have a ring structure")
 	}
-	coeffModule, ok := coeffs[0].Structure().(algebra.Module[C, S])
+	coeffModule, ok := coeffs[0].Structure().(interface {
+		algebra.Module[C, S]
+		algebra.FiniteStructure[C]
+	})
 	if !ok {
 		return nil, errs.NewType("coefficients do not have a module structure")
 	}
@@ -50,14 +63,17 @@ func NewModuleValuedPolynomialFromCoefficients[C algebra.ModuleElement[C, S], S 
 	}, nil
 }
 
-func LiftToExponent[C algebra.ModuleElement[C, S], S algebra.FiniteRingElement[S]](p Polynomial[S], basepoint C) (ModuleValuedPolynomial[C, S], error) {
+func LiftToExponent[C algebra.ModuleElement[C, S], S algebra.RingElement[S]](p Polynomial[S], basepoint C) (ModuleValuedPolynomial[C, S], error) {
 	if p == nil {
 		return nil, errs.NewIsNil("polynomial p")
 	}
 	if basepoint.IsOpIdentity() {
 		return nil, errs.NewIsZero("basepoint is operation identity")
 	}
-	coeffModule, ok := basepoint.Structure().(algebra.Module[C, S])
+	coeffModule, ok := basepoint.Structure().(interface {
+		algebra.Module[C, S]
+		algebra.FiniteStructure[C]
+	})
 	if !ok {
 		return nil, errs.NewType("basepoint does not have a module structure")
 	}
@@ -72,13 +88,25 @@ func LiftToExponent[C algebra.ModuleElement[C, S], S algebra.FiniteRingElement[S
 	return polyModule.New(liftedCoeffs...)
 }
 
-type polynomialModule[C algebra.ModuleElement[C, S], S algebra.FiniteRingElement[S]] struct {
-	baseRing    algebra.FiniteRing[S]
-	coeffModule algebra.Module[C, S]
+type polynomialModule[C algebra.ModuleElement[C, S], S algebra.RingElement[S]] struct {
+	baseRing interface {
+		algebra.Ring[S]
+		algebra.FiniteStructure[S]
+	}
+	coeffModule interface {
+		algebra.Module[C, S]
+		algebra.FiniteStructure[C]
+	}
 }
 
 func (m *polynomialModule[C, S]) Name() string {
-	return fmt.Sprintf("%s[%s[x]]", m.coeffModule.Name(), m.baseRing.Name())
+	return string(m.Model().Sort())
+}
+
+func (m *polynomialModule[C, S]) Model() *universal.Model[ModuleValuedPolynomial[C, S]] {
+	return PolynomialModuleModel(
+		'X', m, m.coeffModule, m.baseRing,
+	).First()
 }
 
 func (m *polynomialModule[C, S]) ElementSize() int {
@@ -169,10 +197,16 @@ func (m *polynomialModule[C, S]) Iter() iter.Seq[ModuleValuedPolynomial[C, S]] {
 	panic("Iter() is not implemented for polynomial modules")
 }
 
-type moduleValuedPolynomial[C algebra.ModuleElement[C, S], S algebra.FiniteRingElement[S]] struct {
-	coeffs      []C
-	baseRing    algebra.FiniteRing[S]
-	coeffModule algebra.Module[C, S]
+type moduleValuedPolynomial[C algebra.ModuleElement[C, S], S algebra.RingElement[S]] struct {
+	coeffs   []C
+	baseRing interface {
+		algebra.Ring[S]
+		algebra.FiniteStructure[S]
+	}
+	coeffModule interface {
+		algebra.Module[C, S]
+		algebra.FiniteStructure[C]
+	}
 }
 
 func (p *moduleValuedPolynomial[C, S]) IsConstant() bool {
@@ -331,7 +365,7 @@ func (p *moduleValuedPolynomial[C, S]) Eval(x S) C {
 	return out
 }
 
-func (p *moduleValuedPolynomial[C, S]) ScalarRing() algebra.FiniteRing[S] {
+func (p *moduleValuedPolynomial[C, S]) ScalarRing() algebra.Ring[S] {
 	return p.baseRing
 }
 

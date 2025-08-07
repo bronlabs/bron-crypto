@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
@@ -25,7 +24,7 @@ func TestSanity(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	basePoint := curve.Generator()
 	threshold := uint(2)
 	total := uint(5)
@@ -341,7 +340,7 @@ func TestDeal(t *testing.T) {
 
 	t.Run("k256", func(t *testing.T) {
 		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		basePoint := curve.Generator()
 
 		testConfigs := []struct {
@@ -373,7 +372,7 @@ func TestDeal(t *testing.T) {
 
 	t.Run("bls12381", func(t *testing.T) {
 		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		basePoint := curve.Generator()
 
 		testConfigs := []struct {
@@ -401,7 +400,7 @@ func TestDealRandom(t *testing.T) {
 
 	t.Run("k256", func(t *testing.T) {
 		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		basePoint := curve.Generator()
 
 		testConfigs := []struct {
@@ -426,7 +425,7 @@ func TestDealRandom(t *testing.T) {
 
 	t.Run("bls12381", func(t *testing.T) {
 		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		basePoint := curve.Generator()
 
 		shareholders := sharing.NewOrdinalShareholderSet(6)
@@ -439,7 +438,7 @@ func TestDealRandom(t *testing.T) {
 // BenchmarkDeal benchmarks the Deal function
 func BenchmarkDeal(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	basePoint := curve.Generator()
 
 	benchConfigs := []struct {
@@ -476,7 +475,7 @@ func BenchmarkDeal(b *testing.B) {
 // BenchmarkDealRandom benchmarks the DealRandom function
 func BenchmarkDealRandom(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	basePoint := curve.Generator()
 
 	benchConfigs := []struct {
@@ -512,7 +511,7 @@ func TestDealDeterministic(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	basePoint := curve.Generator()
 	shareholders := sharing.NewOrdinalShareholderSet(5)
 	scheme, err := feldman.NewScheme(field, basePoint, 2, shareholders)
@@ -549,7 +548,7 @@ func TestDealRandomDistribution(t *testing.T) {
 	}
 
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	basePoint := curve.Generator()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
 	scheme, err := feldman.NewScheme(field, basePoint, 2, shareholders)
@@ -675,7 +674,7 @@ func verificationCases[E feldman.BoundedElement[E, FE], FE feldman.FieldElement[
 		// Try to verify a share from shares2 against the original reference
 		// This should fail because the verification vectors are different
 		mismatchedShare := shares2.Shares().Values()[0]
-		
+
 		err = scheme.Verify(mismatchedShare, reference)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "verification vector does not match")
@@ -688,7 +687,7 @@ func TestVerification(t *testing.T) {
 
 	t.Run("k256", func(t *testing.T) {
 		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		basePoint := curve.Generator()
 
 		testConfigs := []struct {
@@ -713,7 +712,7 @@ func TestVerification(t *testing.T) {
 
 	t.Run("bls12381", func(t *testing.T) {
 		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		basePoint := curve.Generator()
 
 		shareholders := sharing.NewOrdinalShareholderSet(4)
@@ -951,7 +950,7 @@ func TestHomomorphicOperations(t *testing.T) {
 
 	t.Run("k256", func(t *testing.T) {
 		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		basePoint := curve.Generator()
 
 		testConfigs := []struct {
@@ -976,7 +975,7 @@ func TestHomomorphicOperations(t *testing.T) {
 
 	t.Run("bls12381", func(t *testing.T) {
 		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		basePoint := curve.Generator()
 
 		shareholders := sharing.NewOrdinalShareholderSet(4)
@@ -989,7 +988,7 @@ func TestHomomorphicOperations(t *testing.T) {
 // BenchmarkHomomorphicOps benchmarks homomorphic operations
 func BenchmarkHomomorphicOps(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	basePoint := curve.Generator()
 	shareholders := sharing.NewOrdinalShareholderSet(5)
 	scheme, err := feldman.NewScheme(field, basePoint, 3, shareholders)
@@ -1155,7 +1154,7 @@ func TestToAdditive(t *testing.T) {
 
 	t.Run("k256", func(t *testing.T) {
 		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		basePoint := curve.Generator()
 
 		testConfigs := []struct {
@@ -1181,7 +1180,7 @@ func TestToAdditive(t *testing.T) {
 
 	t.Run("bls12381", func(t *testing.T) {
 		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		basePoint := curve.Generator()
 
 		testConfigs := []struct {
@@ -1209,7 +1208,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	basePoint := curve.Generator()
 
 	t.Run("zero secret conversion", func(t *testing.T) {
@@ -1294,7 +1293,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 // BenchmarkToAdditive benchmarks the ToAdditive conversion
 func BenchmarkToAdditive(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	basePoint := curve.Generator()
 
 	benchConfigs := []struct {
@@ -1351,7 +1350,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 
 	// Create Feldman scheme
 	basePoint := curve.PrimeSubGroupGenerator()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	scheme, err := feldman.NewScheme(field, basePoint, threshold, shareholders)
 	require.NoError(t, err)
 
@@ -1516,7 +1515,7 @@ func TestLiftedShareCorrectnessWithManualCalculation(t *testing.T) {
 
 	// Setup
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	prng := pcg.NewRandomised()
 
 	// Create a simple 2-of-3 scheme
@@ -1579,7 +1578,7 @@ func TestLiftedShareCorrectnessWithManualCalculation(t *testing.T) {
 // BenchmarkVerification benchmarks the verification function
 func BenchmarkVerification(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	basePoint := curve.Generator()
 
 	benchConfigs := []struct {

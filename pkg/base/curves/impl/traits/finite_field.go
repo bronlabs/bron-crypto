@@ -216,6 +216,17 @@ func (fe *FiniteFieldElementTrait[FP, F, WP, W]) OpInv() WP {
 	return fe.Neg()
 }
 
+func (fe *FiniteFieldElementTrait[FP, F, WP, W]) EuclideanValuation() WP {
+	var out W
+	var zero W
+	var one W
+	WP(&out).Fp().Set(&fe.V)
+	WP(&zero).Fp().SetZero()
+	WP(&one).Fp().SetOne()
+	WP(&out).Fp().CondAssign(fe.Fp().IsZero(), WP(&zero).Fp(), WP(&one).Fp())
+	return &out
+}
+
 func (fe *FiniteFieldElementTrait[FP, F, WP, W]) IsProbablyPrime() bool {
 	//TODO implement me
 	panic("implement me")

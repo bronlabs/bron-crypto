@@ -1,5 +1,7 @@
 package maputils
 
+import "maps"
+
 func MapValues[K comparable, VIn, VOut any](input map[K]VIn, f func(K, VIn) VOut) map[K]VOut {
 	out := make(map[K]VOut)
 	for k, v := range input {
@@ -8,13 +10,25 @@ func MapValues[K comparable, VIn, VOut any](input map[K]VIn, f func(K, VIn) VOut
 	return out
 }
 
-func Join[K comparable, VLIn, VRIn, VOut any](left map[K]VLIn, right map[K]VRIn, f func(K, VLIn, VRIn) VOut) map[K]VOut {
-	out := make(map[K]VOut)
-	for k, l := range left {
-		if r, ok := right[k]; ok {
-			out[k] = f(k, l, r)
+func JoinError[K comparable, V any](left, right map[K]V, dup func(K, *V, *V) (V, error)) (map[K]V, error) {
+	out := maps.Clone(left)
+	var err error
+	for k, v := range right {
+		if existing, exists := out[k]; exists {
+			if out[k], err = dup(k, &existing, &v); err != nil {
+				return nil, err
+			}
+		} else {
+			out[k] = v
 		}
 	}
+	return out, nil
+}
+
+func Join[K comparable, V any](left, right map[K]V, dup func(K, *V, *V) V) map[K]V {
+	out, _ := JoinError(left, right, func(k K, v1, v2 *V) (V, error) {
+		return dup(k, v1, v2), nil
+	})
 	return out
 }
 

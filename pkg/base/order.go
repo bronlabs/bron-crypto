@@ -40,6 +40,14 @@ func (o PartialOrdering) String() string {
 	return orderString(int(o))
 }
 
+func (o PartialOrdering) Is(other Ordering) bool {
+	return o == PartialOrdering(other)
+}
+
+func (o Ordering) Is(other PartialOrdering) bool {
+	return PartialOrdering(o) == other
+}
+
 type BoundedFromBelow[E any] interface {
 	Bottom() E
 }

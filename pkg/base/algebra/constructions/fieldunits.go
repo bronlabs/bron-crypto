@@ -6,8 +6,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	acrtp "github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
-	"github.com/bronlabs/bron-crypto/pkg/ase/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal/models"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
@@ -41,13 +43,34 @@ func (g FieldUnitSubGroup[FE]) Name() string {
 	return fmt.Sprintf("U(%s)", g.f.Name())
 }
 
+func (g FieldUnitSubGroup[FE]) Model() *universal.Model[*FieldUnitSubGroupElement[FE]] {
+	sort := universal.Sort(g.Name())
+	mul, err := universal.NewBinaryOperator(sort, universal.TimesSymbol, utils.Maybe2(algebra.Multiplication[*FieldUnitSubGroupElement[FE]]))
+	if err != nil {
+		panic(errs.WrapFailed(err, "failed to create multiplication operator for field unit subgroup"))
+	}
+	inv, err := universal.NewUnaryOperator(sort, universal.InverseSymbol(""), utils.Maybe(algebra.Invert[*FieldUnitSubGroupElement[FE]]))
+	if err != nil {
+		panic(errs.WrapFailed(err, "failed to create inverse operator for field unit subgroup"))
+	}
+	one, err := universal.NewConstant(sort, universal.NullaryFunctionSymbol("1"), g.One())
+	if err != nil {
+		panic(errs.WrapFailed(err, "failed to create one constant for field unit subgroup"))
+	}
+	group, err := models.Group(sort, g, mul, one, inv)
+	if err != nil {
+		panic(errs.WrapFailed(err, "failed to create group model for field unit subgroup"))
+	}
+	return models.AsAbelian(group, mul)
+}
+
 func (g FieldUnitSubGroup[FE]) ElementSize() int {
 	return g.f.ElementSize()
 }
 
 func (g FieldUnitSubGroup[FE]) Order() cardinal.Cardinal {
 	if !g.f.Order().IsFinite() {
-		return cardinal.Infinite
+		return cardinal.Infinite()
 	}
 	return g.f.Order().Sub(cardinal.New(1))
 }
@@ -110,7 +133,7 @@ func (ge FieldUnitSubGroupElement[FE]) Op(rhs *FieldUnitSubGroupElement[FE]) *Fi
 
 func (ge FieldUnitSubGroupElement[FE]) Order() cardinal.Cardinal {
 	if !ge.fe.Structure().Order().IsFinite() {
-		return cardinal.Infinite
+		return cardinal.Infinite()
 	}
 	return ge.fe.Structure().Order().Sub(cardinal.New(1))
 }
@@ -183,7 +206,7 @@ func (ge FieldUnitSubGroupElement[FE]) String() string {
 	return fmt.Sprintf("U(%s)", ge.fe.String())
 }
 
-func _[FE acrtp.FiniteFieldElement[FE]]() {
+func _[FE acrtp.FieldElement[FE]]() {
 	var _ algebra.MultiplicativeGroup[*FieldUnitSubGroupElement[FE]] = &FieldUnitSubGroup[FE]{}
 	var _ algebra.MultiplicativeGroupElement[*FieldUnitSubGroupElement[FE]] = &FieldUnitSubGroupElement[FE]{}
 }

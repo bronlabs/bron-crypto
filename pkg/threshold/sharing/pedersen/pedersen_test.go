@@ -7,7 +7,6 @@ import (
 	mrand "math/rand/v2"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
@@ -100,7 +99,7 @@ func TestSanity(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("pedersen-test-h"))
 	require.NoError(t, err)
@@ -416,7 +415,7 @@ func TestDeal(t *testing.T) {
 
 	t.Run("k256", func(t *testing.T) {
 		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		g := curve.Generator()
 		h, err := curve.Hash([]byte("test-h-k256"))
 		require.NoError(t, err)
@@ -453,7 +452,7 @@ func TestDeal(t *testing.T) {
 
 	t.Run("bls12381", func(t *testing.T) {
 		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		g := curve.Generator()
 		h, err := curve.Hash([]byte("test-h-bls12381"))
 		require.NoError(t, err)
@@ -691,7 +690,7 @@ func TestVerification(t *testing.T) {
 
 	t.Run("k256", func(t *testing.T) {
 		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		g := curve.Generator()
 		h, err := curve.Hash([]byte("test-h-verification-k256"))
 		require.NoError(t, err)
@@ -721,7 +720,7 @@ func TestVerification(t *testing.T) {
 
 	t.Run("bls12381", func(t *testing.T) {
 		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		g := curve.Generator()
 		h, err := curve.Hash([]byte("test-h-verification-bls12381"))
 		require.NoError(t, err)
@@ -976,7 +975,7 @@ func TestHomomorphicOperations(t *testing.T) {
 
 	t.Run("k256", func(t *testing.T) {
 		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		g := curve.Generator()
 		h, err := curve.Hash([]byte("test-h-homomorphic-k256"))
 		require.NoError(t, err)
@@ -1006,7 +1005,7 @@ func TestHomomorphicOperations(t *testing.T) {
 
 	t.Run("bls12381", func(t *testing.T) {
 		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		g := curve.Generator()
 		h, err := curve.Hash([]byte("test-h-homomorphic-bls12381"))
 		require.NoError(t, err)
@@ -1153,7 +1152,7 @@ func TestToAdditive(t *testing.T) {
 
 	t.Run("k256", func(t *testing.T) {
 		curve := k256.NewCurve()
-		field := curves.GetScalarField(curve)
+		field := k256.NewScalarField()
 		g := curve.Generator()
 		h, err := curve.Hash([]byte("test-h-toadditive-k256"))
 		require.NoError(t, err)
@@ -1184,7 +1183,7 @@ func TestToAdditive(t *testing.T) {
 
 	t.Run("bls12381", func(t *testing.T) {
 		curve := bls12381.NewG1()
-		field := curves.GetScalarField(curve)
+		field := bls12381.NewScalarField()
 		g := curve.Generator()
 		h, err := curve.Hash([]byte("test-h-toadditive-bls12381"))
 		require.NoError(t, err)
@@ -1217,7 +1216,7 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("test-h-dealer-func"))
 	require.NoError(t, err)
@@ -1361,7 +1360,7 @@ func TestNewShare(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("test-h-newshare"))
 	require.NoError(t, err)
@@ -1522,7 +1521,7 @@ func TestPedersenCommitmentProperties(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("test-h-properties"))
 	require.NoError(t, err)
@@ -1616,7 +1615,7 @@ func TestPedersenCommitmentProperties(t *testing.T) {
 
 func BenchmarkDeal(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("bench-h"))
 	require.NoError(b, err)
@@ -1694,7 +1693,7 @@ func BenchmarkDealRandom(b *testing.B) {
 
 func BenchmarkReconstruct(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("bench-h-reconstruct"))
 	require.NoError(b, err)
@@ -1738,7 +1737,7 @@ func BenchmarkReconstruct(b *testing.B) {
 
 func BenchmarkVerification(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("bench-h-verification"))
 	require.NoError(b, err)
@@ -1783,7 +1782,7 @@ func BenchmarkVerification(b *testing.B) {
 
 func BenchmarkHomomorphicOps(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("bench-h-homomorphic"))
 	require.NoError(b, err)
@@ -1825,7 +1824,7 @@ func BenchmarkHomomorphicOps(b *testing.B) {
 
 func BenchmarkToAdditive(b *testing.B) {
 	curve := k256.NewCurve()
-	field := curves.GetScalarField(curve)
+	field := k256.NewScalarField()
 	g := curve.Generator()
 	h, err := curve.Hash([]byte("bench-h-toadditive"))
 	require.NoError(b, err)

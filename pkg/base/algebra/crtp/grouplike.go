@@ -95,6 +95,16 @@ type UniqueFactorizationMonoidElement[ME any] interface {
 	IsProbablyPrime() bool
 }
 
+type CyclicMonoid[ME any] interface {
+	Monoid[ME]
+	CyclicSemiGroup[ME]
+}
+
+type CyclicMonoidElement[ME any] interface {
+	MonoidElement[ME]
+	CyclicSemiGroupElement[ME]
+}
+
 // ******************** Group
 
 type Group[GE any] Monoid[GE]
@@ -128,6 +138,16 @@ type MultiplicativeGroupElement[E any] interface {
 	Inversand[E]
 }
 
+type CyclicGroup[E any] interface {
+	Group[E]
+	CyclicMonoid[E]
+}
+
+type CyclicGroupElement[E any] interface {
+	GroupElement[E]
+	CyclicMonoidElement[E]
+}
+
 // ************** Extra Monoids
 
 type AbelianMonoid[E, S any] SemiModule[E, S]
@@ -147,6 +167,7 @@ type AbelianGroupElement[E, S any] interface {
 }
 
 type PrimeGroup[E, S any] interface {
+	FiniteStructure[E]
 	base.HashableStructure[E]
 	AbelianGroup[E, S]
 	VectorSpace[E, S]
@@ -161,6 +182,7 @@ type PrimeGroupElement[E, S any] interface {
 }
 
 type AdditivePrimeGroup[E, S any] interface {
+	FiniteStructure[E]
 	PrimeGroup[E, S]
 	AdditiveModule[E, S]
 	ScalarBaseMul(S) E
