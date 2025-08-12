@@ -2,7 +2,6 @@ package bip340
 
 import (
 	"crypto/subtle"
-	"fmt"
 	"hash"
 	"slices"
 
@@ -23,9 +22,10 @@ var (
 )
 
 type Variant struct {
-	sk  *PrivateKey
-	Aux [AuxSizeBytes]byte
-	msg Message
+	sk         *PrivateKey
+	Aux        [AuxSizeBytes]byte
+	msg        Message
+	adjustedSk *Scalar // Stores the adjusted private key d (negated if P.y is odd)
 }
 
 func (*Variant) Type() schnorrlike.VariantType {
@@ -54,6 +54,8 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	if bigP.AffineY().IsOdd() {
 		d = dPrime.Neg()
 	}
+	// Store the adjusted private key for use in ComputeResponse
+	v.adjustedSk = d
 	// 5. Let t be the byte-wise xor of bytes(d) and hashBIP0340/aux(a).
 	auxDigest, err := hashing.Hash(bip340.NewBip340HashAux, v.Aux[:])
 	if err != nil {
@@ -82,20 +84,14 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 		return nil, nil, errs.NewFailed("k' is invalid")
 	}
 
-	fmt.Println("k' = ", kPrime.String())
-
 	// 9. Let R = k'⋅G.
 	bigR := g.ScalarMul(kPrime)
-	fmt.Println("R = ", bigR.String())
 	// 10. Let k = k' if R.y is even, otherwise let k = n - k', R = k ⋅ G
 	k := kPrime
 	if bigR.AffineY().IsOdd() {
 		k = kPrime.Neg()
 		bigR = g.ScalarMul(k)
 	}
-
-	fmt.Println("new k = ", k.String())
-	fmt.Println("new R = ", bigR.String())
 	return bigR, k, nil
 }
 
@@ -114,12 +110,19 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 	return e, nil
 }
 
-func (*Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
+func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
 	if privateKeyValue == nil || nonce == nil || challenge == nil {
 		return nil, errs.NewIsNil("arguments")
 	}
+	// Use the adjusted private key if available (from ComputeNonceCommitment)
+	// This ensures we use d (not d') when P.y is odd
+	adjustedPrivateKey := privateKeyValue
+	if v.adjustedSk != nil {
+		adjustedPrivateKey = v.adjustedSk
+	}
+	s, err := schnorrlike.ComputeGenericResponse(adjustedPrivateKey, nonce, challenge, false)
 	// 12. Let sig = (R, (k + ed) mod n)).
-	return schnorrlike.ComputeGenericResponse(privateKeyValue, nonce, challenge, false)
+	return s, err
 }
 
 func (*Variant) SerializeSignature(signature *Signature) ([]byte, error) {

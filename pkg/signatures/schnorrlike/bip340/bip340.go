@@ -238,19 +238,19 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 		return errs.NewValidation("Public Key not in the prime subgroup")
 	}
 
+	challengePublicKeyValue := LiftX(publicKey.Value())
+	if v.challengePublicKey != nil {
+		// TODO: should this be lifted?
+		challengePublicKeyValue = v.challengePublicKey.Value()
+	}
+
 	// 1. Let P = lift_x(int(pk)).
 	// 2. (implicit) Let r = int(sig[0:32]); fail if r ≥ p.
 	// 3. (implicit) Let s = int(sig[32:64]); fail if s ≥ n.
-	bigP := liftX(publicKey.Value())
+	bigP := LiftX(publicKey.Value())
 
 	// 4. Let e = int(hashBIP0340/challenge(bytes(r) || bytes(P) || m)) mod n.
-	var err error
-	var e *k256.Scalar
-	if v.challengePublicKey == nil {
-		e, err = v.variant.ComputeChallenge(signature.R, publicKey.V, message)
-	} else {
-		e, err = v.variant.ComputeChallenge(signature.R, v.challengePublicKey.Value(), message)
-	}
+	e, err := v.variant.ComputeChallenge(signature.R, challengePublicKeyValue, message)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create challenge scalar")
 	}
@@ -258,6 +258,7 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 	if signature.E != nil && !signature.E.Equal(e) {
 		return errs.NewFailed("incompatible signature")
 	}
+
 
 	// 5. Let R = s⋅G - e⋅P.
 	bigR := k256.NewCurve().ScalarBaseMul(signature.S).Sub(bigP.ScalarMul(e))
@@ -313,7 +314,7 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 		// 2. Let P_i = lift_x(int(pki))
 		// 3. (implicit) Let r_i = int(sigi[0:32]); fail if ri ≥ p.
 		// 4. (implicit) Let s_i = int(sigi[32:64]); fail if si ≥ n.
-		bigP[i] = liftX(publicKeys[i].Value())
+		bigP[i] = LiftX(publicKeys[i].Value())
 
 		// 5. Let ei = int(hashBIP0340/challenge(bytes(r_i) || bytes(P_i) || mi)) mod n.
 		e, err := v.variant.ComputeChallenge(sig.R, publicKeys[i].V, messages[i])
@@ -322,7 +323,7 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 		}
 
 		// 6. Let Ri = lift_x(ri); fail if lift_x(ri) fails.
-		bigR[i] = liftX(signatures[i].R)
+		bigR[i] = LiftX(signatures[i].R)
 
 		ae[i] = a[i].Mul(e)
 		left = left.Add(a[i].Mul(sig.S))
@@ -346,7 +347,7 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 	return nil
 }
 
-func liftX(p *k256.Point) *k256.Point {
+func LiftX(p *k256.Point) *k256.Point {
 	if p.AffineY().IsOdd() {
 		return p.Neg()
 	}

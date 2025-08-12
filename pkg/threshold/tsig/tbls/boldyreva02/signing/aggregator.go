@@ -100,7 +100,7 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 	if len(message) == 0 {
 		return nil, errs.NewArgument("message cannot be empty")
 	}
-	if A.publicMaterial.AccessStructure().IsAuthorized(partialSigs.Keys()...) {
+	if !A.publicMaterial.AccessStructure().IsAuthorized(partialSigs.Keys()...) {
 		return nil, errs.NewArgument("partial signatures are not authorized in the access structure")
 	}
 	partialSignatureVerifier, err := A.scheme.Verifier(bls.VerifyWithCustomDST[PK](A.targetDst))

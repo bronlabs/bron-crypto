@@ -605,7 +605,7 @@ func TestAggregationErrors(t *testing.T) {
 
 		_, err = aggregator.Aggregate(partialSigsMap.Freeze(), message)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "partial public key")
+		require.Contains(t, err.Error(), "not authorized")
 	})
 }
 
