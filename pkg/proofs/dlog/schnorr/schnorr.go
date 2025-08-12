@@ -2,224 +2,100 @@ package schnorr
 
 import (
 	crand "crypto/rand"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
-const Name sigma.Name = "ZKPOK_DLOG_SCHNORR"
+const Name sigma.Name = "SCHNORR" + dlog.Type
 
-type Statement[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] struct {
-	X P
+type (
+	ScalarField[S Scalar[S]] interface {
+		maurer09.PreImageGroup[S]
+		algebra.PrimeField[S]
+	}
+	Scalar[S interface {
+		maurer09.PreImageGroupElement[S]
+		algebra.PrimeFieldElement[S]
+	}] interface {
+		maurer09.PreImageGroupElement[S]
+		algebra.PrimeFieldElement[S]
+	}
+
+	Group[GE GroupElement[GE, S], S Scalar[S]] interface {
+		maurer09.ImageGroup[GE]
+		algebra.AbelianGroup[GE, S]
+		algebra.FiniteStructure[GE]
+	}
+	GroupElement[GE interface {
+		maurer09.ImageGroupElement[GE]
+		algebra.AbelianGroupElement[GE, S]
+	}, S Scalar[S]] interface {
+		maurer09.ImageGroupElement[GE]
+		algebra.AbelianGroupElement[GE, S]
+	}
+)
+
+type (
+	Statement[E GroupElement[E, S], S Scalar[S]]  = maurer09.Statement[S, E]
+	Witness[S Scalar[S]]                          = maurer09.Witness[S]
+	Commitment[E GroupElement[E, S], S Scalar[S]] = maurer09.Commitment[S, E]
+	State[S Scalar[S]]                            = maurer09.State[S]
+	Response[S Scalar[S]]                         = maurer09.Response[S]
+)
+
+func Phi[E GroupElement[E, S], S Scalar[S]](basePoint E) maurer09.GroupHomomorphism[S, E] {
+	return func(s S) E {
+		return basePoint.ScalarOp(s)
+	}
 }
 
-func NewStatement[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](x P) *Statement[P, F, S] {
-	return &Statement[P, F, S]{X: x}
+func ChallengeActionOnPreImage[S Scalar[S]](c, x S) S {
+	return x.Mul(c)
 }
 
-type Witness[S fields.PrimeFieldElement[S]] struct {
-	W S
+func ChallengeActionOnImage[E GroupElement[E, S], S Scalar[S]](c S, x E) E {
+	return x.ScalarOp(c)
 }
 
-func NewWitness[S fields.PrimeFieldElement[S]](w S) *Witness[S] {
-	return &Witness[S]{W: w}
+type Protocol[E GroupElement[E, S], S Scalar[S]] struct {
+	maurer09.Protocol[S, E, S]
 }
 
-type Commitment[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] struct {
-	A P
-}
-
-func NewCommitment[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](a P) *Commitment[P, F, S] {
-	return &Commitment[P, F, S]{A: a}
-}
-
-type State[S fields.PrimeFieldElement[S]] struct {
-	S S
-}
-
-func NewState[S fields.PrimeFieldElement[S]](s S) *State[S] {
-	return &State[S]{S: s}
-}
-
-type Response[S fields.PrimeFieldElement[S]] struct {
-	Z S
-}
-
-func NewResponse[S fields.PrimeFieldElement[S]](z S) *Response[S] {
-	return &Response[S]{Z: z}
-}
-
-type protocol[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]] struct {
-	base P
-	prng io.Reader
-}
-
-//var _ sigma.Protocol[Statement, Witness, Commitment, State, Response] = (*protocol)(nil)
-
-func NewSigmaProtocol[P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](base P, prng io.Reader) (sigma.Protocol[*Statement[P, F, S], *Witness[S], *Commitment[P, F, S], *State[S], *Response[S]], error) {
-	//if base == nil {
-	//	return nil, errs.NewIsNil("base")
-	//}
+func NewSigmaProtocol[E GroupElement[E, S], S Scalar[S]](basePoint E, prng io.Reader) (sigma.Protocol[*Statement[E, S], *Witness[S], *Commitment[E, S], *State[S], *Response[S]], error) {
 	if prng == nil {
 		prng = crand.Reader
 	}
+	group, ok := basePoint.Structure().(Group[E, S])
+	if !ok {
+		return nil, errs.NewArgument("base point does not have a group structure")
+	}
+	if group == nil {
+		return nil, errs.NewIsNil("group cannot be nil")
+	}
+	sf, ok := group.ScalarStructure().(ScalarField[S])
+	if !ok {
+		return nil, errs.NewArgument("group does not have a scalar field structure")
+	}
+	hom := Phi(basePoint)
+	subProtocol, err := maurer09.NewProtocol(hom, sf, group, sf, ChallengeActionOnPreImage, ChallengeActionOnImage, sf.Random, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create maurer09 protocol")
+	}
 
-	return &protocol[P, F, S]{
-		base: base,
-		prng: prng,
+	return &Protocol[E, S]{
+		Protocol: *subProtocol,
 	}, nil
 }
 
-func (s *protocol[P, F, S]) SoundnessError() int {
-	curve, err := curves.GetCurve(s.base)
-	if err != nil {
-		panic(err)
-	}
-
-	return curve.ScalarField().Order().TrueLen()
-}
-
-func (s *protocol[P, F, S]) ComputeProverCommitment(_ *Statement[P, F, S], _ *Witness[S]) (*Commitment[P, F, S], *State[S], error) {
-	curve, err := curves.GetCurve(s.base)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot get curve")
-	}
-
-	k, err := curve.ScalarField().Random(s.prng)
-	if err != nil {
-		return nil, nil, errs.WrapRandomSample(err, "cannot sample scalar")
-	}
-	a := s.base.ScalarMul(k)
-
-	return NewCommitment(a), NewState(k), nil
-}
-
-func (s *protocol[P, F, S]) ComputeProverResponse(_ *Statement[P, F, S], witness *Witness[S], _ *Commitment[P, F, S], state *State[S], challengeBytes sigma.ChallengeBytes) (*Response[S], error) {
-	//if witness == nil || witness.ScalarField().Curve().Name() != s.curve.Name() {
-	//	return nil, errs.NewArgument("invalid curve")
-	//}
-	//if state == nil || state.ScalarField().Curve().Name() != s.curve.Name() {
-	//	return nil, errs.NewArgument("invalid curve")
-	//}
-	if len(challengeBytes) != s.GetChallengeBytesLength() {
-		return nil, errs.NewIsNil("invalid challenge bytes length")
-	}
-	e, err := s.mapChallengeBytesToChallenge(challengeBytes)
-	if err != nil {
-		return nil, errs.WrapArgument(err, "cannot hash to scalar")
-	}
-
-	z := state.S.Add(witness.W.Mul(e))
-	return NewResponse(z), nil
-}
-
-func (s *protocol[P, F, S]) Verify(statement *Statement[P, F, S], commitment *Commitment[P, F, S], challengeBytes sigma.ChallengeBytes, response *Response[S]) error {
-	//if statement == nil || commitment == nil || challengeBytes == nil || response == nil {
-	//	return errs.NewIsNil("passed nil")
-	//}
-	//if statement.Curve().Name() != s.curve.Name() {
-	//	return errs.NewArgument("invalid curve")
-	//}
-	//if commitment.Curve().Name() != s.curve.Name() || response.ScalarField().Curve().Name() != s.curve.Name() {
-	//	return errs.NewArgument("invalid curve")
-	//}
-	if len(challengeBytes) != s.GetChallengeBytesLength() {
-		return errs.NewArgument("invalid challenge bytes length")
-	}
-	e, err := s.mapChallengeBytesToChallenge(challengeBytes)
-	if err != nil {
-		return errs.WrapArgument(err, "cannot hash to scalar")
-	}
-
-	left := s.base.ScalarMul(response.Z)
-	right := statement.X.ScalarMul(e).Op(commitment.A)
-	if !left.Equal(right) {
-		return errs.NewVerification("verification failed")
-	}
-
-	return nil
-}
-
-func (s *protocol[P, F, S]) RunSimulator(statement *Statement[P, F, S], challengeBytes sigma.ChallengeBytes) (*Commitment[P, F, S], *Response[S], error) {
-	//if statement == nil || statement.Curve().Name() != s.curve.Name() {
-	//	return nil, nil, errs.NewArgument("statement")
-	//}
-	if len(challengeBytes) != s.GetChallengeBytesLength() {
-		return nil, nil, errs.NewArgument("invalid challenge bytes length")
-	}
-
-	e, err := s.mapChallengeBytesToChallenge(challengeBytes)
-	if err != nil {
-		return nil, nil, errs.WrapSerialisation(err, "cannot map to scalar")
-	}
-
-	curve, err := curves.GetCurve(s.base)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot get curve")
-	}
-	z, err := curve.ScalarField().Random(s.prng)
-	if err != nil {
-		return nil, nil, errs.WrapRandomSample(err, "cannot sample scalar")
-	}
-
-	a := s.base.ScalarMul(z).Op(statement.X.ScalarMul(e).OpInv())
-	return NewCommitment(a), NewResponse(z), nil
-}
-
-func (*protocol[P, F, S]) SpecialSoundness() uint {
-	return 2
-}
-
-func (s *protocol[P, F, S]) ValidateStatement(statement *Statement[P, F, S], witness *Witness[S]) error {
-	//if statement == nil ||
-	//	witness == nil ||
-	//  statement.Curve().Name() != witness.ScalarField().Curve().Name() ||
-	if !s.base.ScalarMul(witness.W).Equal(statement.X) {
-		return errs.NewArgument("invalid statement")
-	}
-
-	return nil
-}
-
-func (s *protocol[P, F, S]) GetChallengeBytesLength() int {
-	curve, err := curves.GetCurve(s.base)
-	if err != nil {
-		panic(err)
-	}
-
-	return curve.ScalarField().WideElementSize()
-}
-
-func (*protocol[P, F, S]) SerializeStatement(statement *Statement[P, F, S]) []byte {
-	return statement.X.ToAffineCompressed()
-}
-
-func (*protocol[P, F, S]) SerializeCommitment(commitment *Commitment[P, F, S]) []byte {
-	return commitment.A.ToAffineCompressed()
-}
-
-func (*protocol[P, F, S]) SerializeResponse(response *Response[S]) []byte {
-	return response.Z.Bytes()
-}
-
-func (s *protocol[P, F, S]) mapChallengeBytesToChallenge(challengeBytes []byte) (S, error) {
-	var sNil S
-	curve, err := curves.GetCurve(s.base)
-	if err != nil {
-		return sNil, errs.WrapFailed(err, "cannot get curve")
-	}
-
-	e, err := curve.ScalarField().FromWideBytes(challengeBytes)
-	if err != nil {
-		return sNil, errs.WrapHashing(err, "cannot hash to scalar")
-	}
-
-	return e, nil
-}
-
-func (*protocol[P, F, S]) Name() sigma.Name {
+func (p *Protocol[E, S]) Name() sigma.Name {
 	return Name
+}
+
+func _[S Scalar[S]]() {
+	var _ maurer09.ChallengeActionOnPreImage[S, S] = ChallengeActionOnPreImage[S]
 }

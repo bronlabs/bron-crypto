@@ -1,17 +1,25 @@
 package pasta
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
-	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"sync"
+
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
+	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
+	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/cronokirby/saferith"
+)
+
+type (
+	VestaScalarField = FpField
+	PallasBaseField  = FpField
 )
 
 const (
@@ -19,12 +27,14 @@ const (
 )
 
 var (
-	_ fields.PrimeField[*FpFieldElement]        = (*FpField)(nil)
-	_ fields.PrimeFieldElement[*FpFieldElement] = (*FpFieldElement)(nil)
+	_ algebra.PrimeField[*FpFieldElement]        = (*FpField)(nil)
+	_ algebra.PrimeFieldElement[*FpFieldElement] = (*FpFieldElement)(nil)
 
-	fpFieldInitOnce sync.Once
-	fpFieldInstance *FpField
-	fpFieldOrder    *saferith.Modulus
+	fpFieldInitOnce      sync.Once
+	fpFieldInstance      *FpField
+	fpFieldModelOnce     sync.Once
+	fpFieldModelInstance *universal.Model[*FpFieldElement]
+	fpFieldOrder         *saferith.Modulus
 )
 
 func fpFieldInit() {
@@ -41,6 +51,20 @@ func newFpField() *FpField {
 	return fpFieldInstance
 }
 
+func FpFieldModel() *universal.Model[*FpFieldElement] {
+	fpFieldModelOnce.Do(func() {
+		var err error
+		fpFieldModelInstance, err = impl.BaseFieldModel(
+			newFpField(),
+		)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	return fpFieldModelInstance
+}
+
 func NewPallasBaseField() *FpField {
 	return newFpField()
 }
@@ -53,12 +77,8 @@ func (*FpField) Name() string {
 	return FpFieldName
 }
 
-func (*FpField) Operator() algebra.BinaryOperator[*FpFieldElement] {
-	return algebra.Add[*FpFieldElement]
-}
-
-func (*FpField) OtherOperator() algebra.BinaryOperator[*FpFieldElement] {
-	return algebra.Mul[*FpFieldElement]
+func (f *FpField) Model() *universal.Model[*FpFieldElement] {
+	return FpFieldModel()
 }
 
 func (*FpField) ElementSize() int {
@@ -69,12 +89,12 @@ func (*FpField) WideElementSize() int {
 	return pastaImpl.FpWideBytes
 }
 
-func (f *FpField) Characteristic() algebra.Cardinal {
+func (f *FpField) Characteristic() cardinal.Cardinal {
 	return f.Order()
 }
 
-func (*FpField) Order() algebra.Cardinal {
-	return fpFieldOrder.Nat()
+func (*FpField) Order() cardinal.Cardinal {
+	return cardinal.NewFromNat(fpFieldOrder.Nat())
 }
 
 func (*FpField) Hash(input []byte) (*FpFieldElement, error) {

@@ -8,6 +8,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/crypto v0.36.0
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
+	golang.org/x/sync v0.12.0
 )
 
 require (

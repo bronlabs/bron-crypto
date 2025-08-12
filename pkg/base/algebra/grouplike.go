@@ -1,166 +1,69 @@
 package algebra
 
-// ******************** Magma
+import (
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
+)
 
-type Magma[E MagmaElement[E]] interface {
-	Structure[E]
-	Operator() BinaryOperator[E]
-}
-type MagmaElement[E Element[E]] interface {
-	Element[E]
-	Operand[E]
+type (
+	Magma[E crtp.MagmaElement[E]]        = crtp.Magma[E]
+	MagmaElement[E crtp.MagmaElement[E]] = crtp.MagmaElement[E]
+)
 
-	// Order() Cardinal
-}
+type (
+	SemiGroup[E crtp.SemiGroupElement[E]]        = crtp.SemiGroup[E]
+	SemiGroupElement[E crtp.SemiGroupElement[E]] = crtp.SemiGroupElement[E]
 
-// ******************** SemiGroup
+	AdditiveSemiGroup[E crtp.AdditiveSemiGroupElement[E]]        = crtp.AdditiveSemiGroup[E]
+	AdditiveSemiGroupElement[E crtp.AdditiveSemiGroupElement[E]] = crtp.AdditiveSemiGroupElement[E]
 
-type SemiGroup[E SemiGroupElement[E]] Magma[E]
+	MultiplicativeSemiGroup[E crtp.MultiplicativeSemiGroupElement[E]]        = crtp.MultiplicativeSemiGroup[E]
+	MultiplicativeSemiGroupElement[E crtp.MultiplicativeSemiGroupElement[E]] = crtp.MultiplicativeSemiGroupElement[E]
 
-type SemiGroupElement[E Element[E]] MagmaElement[E]
+	CyclicSemiGroup[E crtp.CyclicSemiGroupElement[E]]        = crtp.CyclicSemiGroup[E]
+	CyclicSemiGroupElement[E crtp.CyclicSemiGroupElement[E]] = crtp.CyclicSemiGroupElement[E]
+)
 
-type AdditiveSemiGroup[E AdditiveSemiGroupElement[E]] SemiGroup[E]
+type (
+	Monoid[ME crtp.MonoidElement[ME]]        = crtp.Monoid[ME]
+	MonoidElement[ME crtp.MonoidElement[ME]] = crtp.MonoidElement[ME]
 
-type AdditiveSemiGroupElement[E SemiGroupElement[E]] interface {
-	SemiGroupElement[E]
-	Summand[E]
+	AdditiveMonoid[ME crtp.AdditiveMonoidElement[ME]]        = crtp.AdditiveMonoid[ME]
+	AdditiveMonoidElement[ME crtp.AdditiveMonoidElement[ME]] = crtp.AdditiveMonoidElement[ME]
 
-	Double() E
-}
+	MultiplicativeMonoid[ME crtp.MultiplicativeMonoidElement[ME]]        = crtp.MultiplicativeMonoid[ME]
+	MultiplicativeMonoidElement[ME crtp.MultiplicativeMonoidElement[ME]] = crtp.MultiplicativeMonoidElement[ME]
 
-type MultiplicativeSemiGroup[E MultiplicativeSemiGroupElement[E]] SemiGroup[E]
+	UniqueFactorizationMonoid[ME crtp.UniqueFactorizationMonoidElement[ME]]        = crtp.UniqueFactorizationMonoid[ME]
+	UniqueFactorizationMonoidElement[ME crtp.UniqueFactorizationMonoidElement[ME]] = crtp.UniqueFactorizationMonoidElement[ME]
 
-type MultiplicativeSemiGroupElement[E SemiGroupElement[E]] interface {
-	SemiGroupElement[E]
-	Multiplicand[E]
+	CyclicMonoid[ME crtp.CyclicMonoidElement[ME]]        = crtp.CyclicMonoid[ME]
+	CyclicMonoidElement[ME crtp.CyclicMonoidElement[ME]] = crtp.CyclicMonoidElement[ME]
+)
 
-	Square() E
-}
+type (
+	Group[E crtp.GroupElement[E]]        = crtp.Group[E]
+	GroupElement[E crtp.GroupElement[E]] = crtp.GroupElement[E]
 
-type CyclicSemiGroup[E CyclicSemiGroupElement[E]] interface {
-	SemiGroup[E]
-	NPointedSet[E]
-	Generator() E
-}
+	AdditiveGroup[E crtp.AdditiveGroupElement[E]]        = crtp.AdditiveGroup[E]
+	AdditiveGroupElement[E crtp.AdditiveGroupElement[E]] = crtp.AdditiveGroupElement[E]
 
-type CyclicSemiGroupElement[E SemiGroupElement[E]] interface {
-	SemiGroupElement[E]
-	NPointedSetElement[E]
-	IsDesignatedGenerator() bool
-	CanBeGenerator() bool
-}
+	MultiplicativeGroup[E crtp.MultiplicativeGroupElement[E]]        = crtp.MultiplicativeGroup[E]
+	MultiplicativeGroupElement[E crtp.MultiplicativeGroupElement[E]] = crtp.MultiplicativeGroupElement[E]
 
-// ******************** Monoid
+	CyclicGroup[E crtp.CyclicGroupElement[E]]        = crtp.CyclicGroup[E]
+	CyclicGroupElement[E crtp.CyclicGroupElement[E]] = crtp.CyclicGroupElement[E]
+)
 
-type Monoid[ME MonoidElement[ME]] interface {
-	SemiGroup[ME]
-	OpIdentity() ME
-}
+type (
+	AbelianMonoid[ME crtp.AbelianMonoidElement[ME, S], S crtp.NatLike[S]]        = crtp.AbelianMonoid[ME, S]
+	AbelianMonoidElement[ME crtp.AbelianMonoidElement[ME, S], S crtp.NatLike[S]] = crtp.AbelianMonoidElement[ME, S]
 
-type MonoidElement[ME SemiGroupElement[ME]] interface {
-	SemiGroupElement[ME]
-	IsOpIdentity() bool
+	AbelianGroup[E crtp.AbelianGroupElement[E, S], S crtp.IntLike[S]]        = crtp.AbelianGroup[E, S]
+	AbelianGroupElement[E crtp.AbelianGroupElement[E, S], S crtp.IntLike[S]] = crtp.AbelianGroupElement[E, S]
 
-	TryOpInv() (ME, error)
-}
+	PrimeGroup[E crtp.PrimeGroupElement[E, S], S crtp.PrimeFieldElement[S]]        = crtp.PrimeGroup[E, S]
+	PrimeGroupElement[E crtp.PrimeGroupElement[E, S], S crtp.PrimeFieldElement[S]] = crtp.PrimeGroupElement[E, S]
 
-type AdditiveMonoid[ME AdditiveMonoidElement[ME]] interface {
-	Monoid[ME]
-	AdditiveSemiGroup[ME]
-	Zero() ME
-}
-
-type AdditiveMonoidElement[ME MonoidElement[ME]] interface {
-	MonoidElement[ME]
-	AdditiveSemiGroupElement[ME]
-	IsZero() bool
-
-	TryNeg() (ME, error)
-	TrySub(ME) (ME, error)
-}
-
-type MultiplicativeMonoid[ME MultiplicativeMonoidElement[ME]] interface {
-	Monoid[ME]
-	MultiplicativeSemiGroup[ME]
-	One() ME
-}
-
-type MultiplicativeMonoidElement[E MultiplicativeSemiGroupElement[E]] interface {
-	MonoidElement[E]
-	MultiplicativeSemiGroupElement[E]
-	IsOne() bool
-
-	TryInv() (E, error)
-	TryDiv(E) (E, error)
-}
-
-type UniqueFactorizationMonoid[ME UniqueFactorizationMonoidElement[ME]] Monoid[ME]
-
-type UniqueFactorizationMonoidElement[ME MonoidElement[ME]] interface {
-	MonoidElement[ME]
-	IsProbablyPrime() bool
-}
-
-// ******************** Group
-
-type Group[GE GroupElement[GE]] Monoid[GE]
-
-type GroupElement[GE MonoidElement[GE]] interface {
-	MonoidElement[GE]
-	OpInv() GE
-}
-
-type AdditiveGroup[E AdditiveGroupElement[E]] interface {
-	Group[E]
-	AdditiveMonoid[E]
-}
-
-type AdditiveGroupElement[E GroupElement[E]] interface {
-	GroupElement[E]
-	AdditiveMonoidElement[E]
-	Neg() E
-
-	Sub(E) E
-}
-
-type MultiplicativeGroup[E MultiplicativeGroupElement[E]] interface {
-	Group[E]
-	MultiplicativeMonoid[E]
-}
-
-type MultiplicativeGroupElement[E interface {
-	GroupElement[E]
-	MultiplicativeMonoidElement[E]
-	Inv() E
-	Div(E) E
-}] interface {
-	GroupElement[E]
-	MultiplicativeMonoidElement[E]
-	Inv() E
-	Div(E) E
-}
-
-// ************** Extra
-
-type AbelianGroup[E AbelianGroupElement[E, S], S IntLike[S]] Module[E, S]
-
-type AbelianGroupElement[E ModuleElement[E, S], S IntLike[S]] ModuleElement[E, S]
-
-type FiniteAbelianGroup[E FiniteAbelianGroupElement[E, S], S UintLike[S]] interface {
-	AbelianGroup[E, S]
-	FiniteStructure[E]
-}
-
-type FiniteAbelianGroupElement[E AbelianGroupElement[E, S], S UintLike[S]] AbelianGroupElement[E, S]
-
-type PrimeGroup[E PrimeGroupElement[E, S], S PrimeFieldElement[S]] interface {
-	FiniteAbelianGroup[E, S]
-	VectorSpace[E, S]
-	CyclicSemiGroup[E]
-}
-
-type PrimeGroupElement[E Vector[E, S], S PrimeFieldElement[S]] interface {
-	FiniteAbelianGroupElement[E, S]
-	Vector[E, S]
-	CyclicSemiGroupElement[E]
-}
+	AdditivePrimeGroup[E crtp.AdditivePrimeGroupElement[E, S], S crtp.PrimeFieldElement[S]]        = crtp.AdditivePrimeGroup[E, S]
+	AdditivePrimeGroupElement[E crtp.AdditivePrimeGroupElement[E, S], S crtp.PrimeFieldElement[S]] = crtp.AdditivePrimeGroupElement[E, S]
+)

@@ -1,54 +1,35 @@
 package algebra
 
 import (
-	"encoding"
-	"io"
-
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/cronokirby/saferith"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-type Multiplicity uint
-type Cardinal = *saferith.Nat
+type (
+	Element[E any]         = crtp.Element[E]
+	Structure[E any]       = crtp.Structure[E]
+	FiniteStructure[E any] = crtp.FiniteStructure[E]
+	Quotient[E any]        = crtp.Quotient[E]
+	Residue[E any]         = crtp.Residue[E]
+)
 
-var Infinite Cardinal = nil
-
-// === Interfaces
-
-type Element[E any] interface {
-	ds.Clonable[E]
-	ds.Hashable[E]
-
-	Structure() Structure[E]
-
-	encoding.BinaryMarshaler
-	encoding.BinaryUnmarshaler
+func StructureIs[S crtp.Structure[E], E any](s Structure[E]) bool {
+	_, ok := s.(S)
+	return ok
 }
 
-type Structure[E any] interface {
-	Name() string
-	Order() Cardinal
+func StructureAs[S crtp.Structure[E], E any](s Structure[E]) (S, error) {
+	out, ok := s.(S)
+	if !ok {
+		return *new(S), errs.NewType("structure does not implement the expected type")
+	}
+	return out, nil
 }
 
-// === Aspects
-
-type FiniteStructure[E any] interface {
-	Random(prng io.Reader) (E, error)
-	Hash(bytes []byte) (E, error)
-	// ElementSize returns the **exact** number of bytes required to represent an element required for `SetBytes()`
-	// TODO(aalireza): make uint?
-	ElementSize() int
-	// WideElementSize returns the **maximum** number of bytes used to map uniformly to an element, required for `SetBytesWide()`
-	// TODO(aalireza): make uint?
-	WideElementSize() int
-}
-
-type NPointedSet[E NPointedSetElement[E]] interface {
-	Structure[E]
-	BasePoints() ds.ImmutableMap[string, E]
-}
-
-type NPointedSetElement[E Element[E]] interface {
-	Element[E]
-	IsBasePoint(id string) bool
+func StructureMustBeAs[S crtp.Structure[E], E any](s Structure[E]) S {
+	out, err := StructureAs[S](s)
+	if err != nil {
+		panic(err)
+	}
+	return out
 }

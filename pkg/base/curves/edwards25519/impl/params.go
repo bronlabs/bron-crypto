@@ -3,9 +3,9 @@ package impl
 import (
 	"crypto/sha512"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c/mappers/elligator2"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
+	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380/mappers/elligator2"
 )
 
 var (

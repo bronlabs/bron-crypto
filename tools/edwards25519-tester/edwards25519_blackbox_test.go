@@ -2,11 +2,12 @@ package edwards25519_tester_test
 
 import (
 	crand "crypto/rand"
-	filippo "filippo.io/edwards25519"
-	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
-	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
-	edwards25519Tester "github.com/bronlabs/bron-crypto/tools/edwards25519-tester"
 	"testing"
+
+	filippo "filippo.io/edwards25519"
+	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
+	edwards25519Tester "github.com/bronlabs/bron-crypto/tools/edwards25519-tester"
 )
 
 func Test_PointAdd(t *testing.T) {
@@ -96,7 +97,7 @@ func Test_PointScalarBaseMul(t *testing.T) {
 		primitiveGenerator := new(edwards25519Impl.Point)
 		primitiveGenerator.SetGenerator()
 		primitivePointC := new(edwards25519Impl.Point)
-		pointsImpl.ScalarMul[*edwards25519Impl.Fp](primitivePointC, primitiveGenerator, primitivesScalar.Bytes())
+		aimpl.ScalarMul(primitivePointC, primitiveGenerator, primitivesScalar.Bytes())
 		edwards25519Tester.RequirePointsEqual(t, filippoPointC, primitivePointC)
 	}
 }
@@ -113,7 +114,7 @@ func Test_PointScalarMul(t *testing.T) {
 
 		filippoPointC := new(filippo.Point).ScalarMult(filippoScalar, filippoPointA)
 		primitivePointC := new(edwards25519Impl.Point)
-		pointsImpl.ScalarMul[*edwards25519Impl.Fp](primitivePointC, primitivesPointA, primitivesScalar.Bytes())
+		aimpl.ScalarMul(primitivePointC, primitivesPointA, primitivesScalar.Bytes())
 		edwards25519Tester.RequirePointsEqual(t, filippoPointC, primitivePointC)
 	}
 }

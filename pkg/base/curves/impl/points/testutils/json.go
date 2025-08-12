@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
-	fieldsTu "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
+	fieldsTu "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields/testutils"
 	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
 )
 
-type PointJson[FP fields.FiniteFieldElementPtrConstraint[FP, F], PP pointsImpl.PointPtrConstraint[FP, PP, P], F, P any] struct {
+type PointJson[FP fields.FiniteFieldElementPtr[FP, F], PP pointsImpl.PointPtr[FP, PP, P], F, P any] struct {
 	V P
 }
 

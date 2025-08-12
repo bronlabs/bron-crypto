@@ -1,0 +1,208 @@
+package constructions
+
+import (
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions/traits"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+)
+
+// =========== Group ===========
+
+func NewDirectPowerGroup[G algebra.Group[E], E algebra.GroupElement[E]](g G, arity uint) (*DirectPowerGroup[G, E], error) {
+	out := &DirectPowerGroup[G, E]{}
+	if err := out.Set(g, arity); err != nil {
+		return nil, errs.WrapFailed(err, "failed to set group and arity")
+	}
+	var _ algebra.Group[*DirectPowerGroupElement[E]] = out
+	return out, nil
+}
+
+type DirectPowerGroup[G algebra.Group[E], E algebra.GroupElement[E]] struct {
+	traits.DirectPowerGroup[G, E, *DirectPowerGroupElement[E], DirectPowerGroupElement[E]]
+}
+
+func NewFiniteDirectPowerGroup[G interface {
+	algebra.Group[E]
+	algebra.FiniteStructure[E]
+}, E algebra.GroupElement[E]](g G, arity uint) (*FiniteDirectPowerGroup[G, E], error) {
+	out := &FiniteDirectPowerGroup[G, E]{}
+	if err := out.Set(g, arity); err != nil {
+		return nil, errs.WrapFailed(err, "failed to set group and arity")
+	}
+	if err := out.SetFiniteStructureAttributes(g, arity); err != nil {
+		return nil, errs.WrapFailed(err, "failed to set finite structure attributes")
+	}
+	var _ algebra.Group[*FiniteDirectPowerGroupElement[E]] = out
+	return out, nil
+}
+
+type FiniteDirectPowerGroup[G interface {
+	algebra.Group[E]
+	algebra.FiniteStructure[E]
+}, E algebra.GroupElement[E]] struct {
+	traits.DirectPowerGroup[G, E, *FiniteDirectPowerGroupElement[E], FiniteDirectPowerGroupElement[E]]
+	traits.DirectPowerOfFiniteStructures[G, E, *FiniteDirectPowerGroupElement[E], FiniteDirectPowerGroupElement[E]]
+}
+
+type DirectPowerGroupElement[E algebra.GroupElement[E]] struct {
+	traits.DirectPowerGroupElement[E, *DirectPowerGroupElement[E], DirectPowerGroupElement[E]]
+}
+
+func (g *DirectPowerGroupElement[E]) Structure() algebra.Structure[*DirectPowerGroupElement[E]] {
+	group, ok := g.Components()[0].Structure().(algebra.Group[E])
+	if !ok {
+		panic("component is not a group")
+	}
+	out, _ := NewDirectPowerGroup(group, uint(g.Arity().Uint64()))
+	return out
+}
+
+type FiniteDirectPowerGroupElement[E algebra.GroupElement[E]] struct {
+	traits.DirectPowerGroupElement[E, *FiniteDirectPowerGroupElement[E], FiniteDirectPowerGroupElement[E]]
+}
+
+func (g *FiniteDirectPowerGroupElement[E]) Structure() algebra.Structure[*FiniteDirectPowerGroupElement[E]] {
+	group, ok := g.Components()[0].Structure().(interface {
+		algebra.Group[E]
+		algebra.FiniteStructure[E]
+	})
+	if !ok {
+		panic("component is not a group")
+	}
+	out, _ := NewFiniteDirectPowerGroup(group, uint(g.Arity().Uint64()))
+	return out
+}
+
+// =========== Ring ===========
+
+func NewDirectPowerRing[R algebra.Ring[E], E algebra.RingElement[E]](r R, arity uint) (*DirectPowerRing[R, E], error) {
+	out := &DirectPowerRing[R, E]{}
+	if err := out.Set(r, arity); err != nil {
+		return nil, errs.WrapFailed(err, "failed to set ring and arity")
+	}
+	var _ algebra.Ring[*DirectPowerRingElement[E]] = out
+	return out, nil
+}
+
+func NewFiniteDirectPowerRing[R interface {
+	algebra.Ring[E]
+	algebra.FiniteStructure[E]
+}, E algebra.RingElement[E]](r R, arity uint) (*FiniteDirectPowerRing[R, E], error) {
+	out := &FiniteDirectPowerRing[R, E]{}
+	if err := out.Set(r, arity); err != nil {
+		return nil, errs.WrapFailed(err, "failed to set ring and arity")
+	}
+	if err := out.SetFiniteStructureAttributes(r, arity); err != nil {
+		return nil, errs.WrapFailed(err, "failed to set finite structure attributes")
+	}
+	var _ algebra.Ring[*FiniteDirectPowerRingElement[E]] = out
+	return out, nil
+}
+
+type DirectPowerRing[R algebra.Ring[E], E algebra.RingElement[E]] struct {
+	traits.DirectPowerRing[R, E, *DirectPowerRingElement[E], DirectPowerRingElement[E]]
+}
+
+type FiniteDirectPowerRing[R interface {
+	algebra.Ring[E]
+	algebra.FiniteStructure[E]
+}, E algebra.RingElement[E]] struct {
+	traits.DirectPowerRing[R, E, *FiniteDirectPowerRingElement[E], FiniteDirectPowerRingElement[E]]
+	traits.DirectPowerOfFiniteStructures[R, E, *FiniteDirectPowerRingElement[E], FiniteDirectPowerRingElement[E]]
+}
+
+type DirectPowerRingElement[E algebra.RingElement[E]] struct {
+	traits.DirectPowerRingElement[E, *DirectPowerRingElement[E], DirectPowerRingElement[E]]
+}
+
+func (r *DirectPowerRingElement[E]) Structure() algebra.Structure[*DirectPowerRingElement[E]] {
+	ring, ok := r.Components()[0].Structure().(algebra.Ring[E])
+	if !ok {
+		panic("component is not a ring")
+	}
+	out, _ := NewDirectPowerRing(ring, uint(r.Arity().Uint64()))
+	return out
+}
+
+type FiniteDirectPowerRingElement[E algebra.RingElement[E]] struct {
+	traits.DirectPowerRingElement[E, *FiniteDirectPowerRingElement[E], FiniteDirectPowerRingElement[E]]
+}
+
+func (r *FiniteDirectPowerRingElement[E]) Structure() algebra.Structure[*FiniteDirectPowerRingElement[E]] {
+	ring, ok := r.Components()[0].Structure().(interface {
+		algebra.Ring[E]
+		algebra.FiniteStructure[E]
+	})
+	if !ok {
+		panic("component is not a ring")
+	}
+	out, _ := NewFiniteDirectPowerRing(ring, uint(r.Arity().Uint64()))
+	return out
+}
+
+// =========== Module ===========
+
+func NewDirectSumModule[M algebra.Module[E, S], E algebra.ModuleElement[E, S], S algebra.RingElement[S]](m M, arity uint) (*DirectSumModule[M, E, S], error) {
+	out := &DirectSumModule[M, E, S]{}
+	if err := out.Set(m, arity); err != nil {
+		return nil, errs.WrapFailed(err, "failed to set module and arity")
+	}
+	var _ algebra.Module[*DirectSumModuleElement[E, S], S] = out
+	return out, nil
+}
+
+func NewFiniteDirectSumModule[M interface {
+	algebra.Module[E, S]
+	algebra.FiniteStructure[E]
+}, E algebra.ModuleElement[E, S], S algebra.RingElement[S]](m M, arity uint) (*FiniteDirectSumModule[M, E, S], error) {
+	out := &FiniteDirectSumModule[M, E, S]{}
+	if err := out.Set(m, arity); err != nil {
+		return nil, errs.WrapFailed(err, "failed to set module and arity")
+	}
+	if err := out.SetFiniteStructureAttributes(m, arity); err != nil {
+		return nil, errs.WrapFailed(err, "failed to set finite structure attributes")
+	}
+	var _ algebra.Module[*FiniteDirectSumModuleElement[E, S], S] = out
+	return out, nil
+}
+
+type DirectSumModule[M algebra.Module[E, S], E algebra.ModuleElement[E, S], S algebra.RingElement[S]] struct {
+	traits.DirectSumModule[M, E, S, *DirectSumModuleElement[E, S], DirectSumModuleElement[E, S]]
+}
+
+type FiniteDirectSumModule[M interface {
+	algebra.Module[E, S]
+	algebra.FiniteStructure[E]
+}, E algebra.ModuleElement[E, S], S algebra.RingElement[S]] struct {
+	traits.DirectSumModule[M, E, S, *FiniteDirectSumModuleElement[E, S], FiniteDirectSumModuleElement[E, S]]
+	traits.DirectPowerOfFiniteStructures[M, E, *FiniteDirectSumModuleElement[E, S], FiniteDirectSumModuleElement[E, S]]
+}
+
+type DirectSumModuleElement[E algebra.ModuleElement[E, S], S algebra.RingElement[S]] struct {
+	traits.DirectSumModuleElement[E, S, *DirectSumModuleElement[E, S], DirectSumModuleElement[E, S]]
+}
+
+func (m *DirectSumModuleElement[E, S]) Structure() algebra.Structure[*DirectSumModuleElement[E, S]] {
+	module, ok := m.Components()[0].Structure().(algebra.Module[E, S])
+	if !ok {
+		panic("component is not a module")
+	}
+	out, _ := NewDirectSumModule(module, uint(m.Arity().Uint64()))
+	return out
+}
+
+type FiniteDirectSumModuleElement[E algebra.ModuleElement[E, S], S algebra.RingElement[S]] struct {
+	traits.DirectSumModuleElement[E, S, *FiniteDirectSumModuleElement[E, S], FiniteDirectSumModuleElement[E, S]]
+}
+
+func (m *FiniteDirectSumModuleElement[E, S]) Structure() algebra.Structure[*FiniteDirectSumModuleElement[E, S]] {
+	module, ok := m.Components()[0].Structure().(interface {
+		algebra.Module[E, S]
+		algebra.FiniteStructure[E]
+	})
+	if !ok {
+		panic("component is not a module")
+	}
+	out, _ := NewFiniteDirectSumModule(module, uint(m.Arity().Uint64()))
+	return out
+}

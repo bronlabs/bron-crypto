@@ -33,6 +33,18 @@ func Combinations[S ~[]T, T any](s S, k uint) iter.Seq[S] {
 	}
 }
 
+func KCoveringCombinations[S ~[]T, T any](s S, k uint) iter.Seq[S] {
+	return func(yield func(S) bool) {
+		for i := k; i <= uint(len(s)); i++ {
+			for comb := range Combinations(s, i) {
+				if proceed := yield(comb); !proceed {
+					return
+				}
+			}
+		}
+	}
+}
+
 func binomial(n, k int) int {
 	// (n,k) = (n, n-k)
 	if k > n/2 {

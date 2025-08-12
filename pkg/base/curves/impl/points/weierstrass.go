@@ -3,11 +3,12 @@ package points
 import (
 	"fmt"
 	"io"
+	"slices"
 
-	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
-
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 )
 
 type ShortWeierstrassCurveParams[FP fieldsImpl.FiniteFieldElement[FP]] interface {
@@ -30,12 +31,12 @@ type ShortWeierstrassCurveParams[FP fieldsImpl.FiniteFieldElement[FP]] interface
 	MulBy3B(out FP, in FP)
 }
 
-type ShortWeierstrassPointImpl[FP fieldsImpl.FiniteFieldElementPtrConstraint[FP, F], C ShortWeierstrassCurveParams[FP], H h2c.HasherParams, M h2c.PointMapper[FP], F any] struct {
+type ShortWeierstrassPointImpl[FP fieldsImpl.FiniteFieldElementPtr[FP, F], C ShortWeierstrassCurveParams[FP], H h2c.HasherParams, M h2c.PointMapper[FP], F any] struct {
 	X F
 	Y F
 	Z F
 
-	_ ds.Incomparable
+	base.IncomparableTrait
 }
 
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Encode(dstPrefix string, message []byte) {
@@ -83,7 +84,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Set(v *ShortWeierstrassPoint
 	FP(&p.Z).Set(&v.Z)
 }
 
-func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetIdentity() {
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetZero() {
 	FP(&p.X).SetZero()
 	FP(&p.Y).SetOne()
 	FP(&p.Z).SetZero()
@@ -95,7 +96,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetGenerator() {
 	params.SetGenerator(&p.X, &p.Y, &p.Z)
 }
 
-func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetRandom(prng io.Reader) (ok uint64) {
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetRandom(prng io.Reader) (ok ct.Bool) {
 	var curveParams C
 	var mapper M
 
@@ -116,11 +117,11 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetRandom(prng io.Reader) (o
 	q.Add(&q0, &q1)
 	curveParams.ClearCofactor(&q.X, &q.Y, &q.Z, &q.X, &q.Y, &q.Z)
 
-	p.Select(ok, p, &q)
+	p.CondAssign(ok, p, &q)
 	return ok
 }
 
-func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetAffine(x, y FP) (ok uint64) {
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetAffine(x, y FP) (ok ct.Bool) {
 	var params C
 	var one, eql, eqr F
 	FP(&one).SetOne()
@@ -131,11 +132,11 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetAffine(x, y FP) (ok uint6
 	params.AddB(&eqr, &eqr)
 
 	FP(&eql).Square(y)
-	ok = FP(&eql).Equals(&eqr)
+	ok = FP(&eql).Equal(&eqr)
 
-	FP(&p.X).Select(ok, &p.X, x)
-	FP(&p.Y).Select(ok, &p.Y, y)
-	FP(&p.Z).Select(ok, &p.Z, &one)
+	FP(&p.X).CondAssign(ok, &p.X, x)
+	FP(&p.Y).CondAssign(ok, &p.Y, y)
+	FP(&p.Z).CondAssign(ok, &p.Z, &one)
 	return ok
 }
 
@@ -145,7 +146,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) setFractions(xn, xd, yn, yd 
 	FP(&p.Z).Mul(xd, yd)
 }
 
-func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetFromAffineX(x FP) (ok uint64) {
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetFromAffineX(x FP) (ok ct.Bool) {
 	var params C
 	var one, yy, y F
 	FP(&one).SetOne()
@@ -156,16 +157,16 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetFromAffineX(x FP) (ok uin
 	params.AddB(&yy, &yy)
 	ok = FP(&y).Sqrt(&yy)
 
-	FP(&p.X).Select(ok, &p.X, x)
-	FP(&p.Y).Select(ok, &p.Y, &y)
-	FP(&p.Z).Select(ok, &p.Z, &one)
+	FP(&p.X).CondAssign(ok, &p.X, x)
+	FP(&p.Y).CondAssign(ok, &p.Y, &y)
+	FP(&p.Z).CondAssign(ok, &p.Z, &one)
 	return ok
 }
 
-func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Select(choice uint64, z, nz *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
-	FP(&p.X).Select(choice, &z.X, &nz.X)
-	FP(&p.Y).Select(choice, &z.Y, &nz.Y)
-	FP(&p.Z).Select(choice, &z.Z, &nz.Z)
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) CondAssign(choice ct.Choice, z, nz *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
+	FP(&p.X).CondAssign(choice, &z.X, &nz.X)
+	FP(&p.Y).CondAssign(choice, &z.Y, &nz.Y)
+	FP(&p.Z).CondAssign(choice, &z.Z, &nz.Z)
 }
 
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) ClearCofactor(in *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
@@ -311,11 +312,15 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Neg(v *ShortWeierstrassPoint
 	FP(&p.Z).Set(&v.Z)
 }
 
-func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) IsIdentity() uint64 {
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) IsZero() ct.Bool {
 	return FP(&p.Z).IsZero()
 }
 
-func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Equals(rhs *ShortWeierstrassPointImpl[FP, C, H, M, F]) uint64 {
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) IsNonZero() ct.Bool {
+	return FP(&p.Z).IsNonZero()
+}
+
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Equal(rhs *ShortWeierstrassPointImpl[FP, C, H, M, F]) ct.Bool {
 	var x1z2f, y1z2f, x2z1f, y2z1f F
 	x1z2 := FP(&x1z2f)
 	y1z2 := FP(&y1z2f)
@@ -334,10 +339,10 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Equals(rhs *ShortWeierstrass
 	x2z1.Mul(x2, z1)
 	y2z1.Mul(y2, z1)
 
-	return x1z2.Equals(x2z1) & y1z2.Equals(y2z1)
+	return x1z2.Equal(x2z1) & y1z2.Equal(y2z1)
 }
 
-func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) ToAffine(xOut, yOut FP) (ok uint64) {
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) ToAffine(xOut, yOut FP) (ok ct.Bool) {
 	var x, y, zInv F
 	zInvPtr := FP(&zInv)
 	ok = zInvPtr.Inv(&p.Z)
@@ -345,8 +350,8 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) ToAffine(xOut, yOut FP) (ok 
 	FP(&x).Mul(&p.X, zInvPtr)
 	FP(&y).Mul(&p.Y, zInvPtr)
 
-	xOut.Select(ok, xOut, &x)
-	yOut.Select(ok, yOut, &y)
+	xOut.CondAssign(ok, xOut, &x)
+	yOut.CondAssign(ok, yOut, &y)
 	return ok
 }
 
@@ -355,9 +360,32 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) String() string {
 	FP(&one).SetOne()
 
 	ok := p.ToAffine(&x, &y)
-	FP(&x).Select(ok, &p.X, &x)
-	FP(&y).Select(ok, &p.Y, &y)
-	FP(&z).Select(ok, &p.Z, &one)
+	FP(&x).CondAssign(ok, &p.X, &x)
+	FP(&y).CondAssign(ok, &p.Y, &y)
+	FP(&z).CondAssign(ok, &p.Z, &one)
 
 	return fmt.Sprintf("(%s : %s : %s)", FP(&x), FP(&y), FP(&z))
+}
+
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Bytes() []byte {
+	return slices.Concat(FP(&p.X).Bytes(), FP(&p.Y).Bytes(), FP(&p.Z).Bytes())
+}
+
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetBytes(input []byte) (ok ct.Bool) {
+	coordinateLen := len(input) / 3
+	x := input[:coordinateLen]
+	y := input[coordinateLen : 2*coordinateLen]
+	z := input[2*coordinateLen:]
+
+	var tmpX, tmpY, tmpZ F
+	okX := FP(&tmpX).SetBytes(x)
+	okY := FP(&tmpY).SetBytes(y)
+	okZ := FP(&tmpZ).SetBytes(z)
+	ok = okX & okY & okZ
+
+	// Conditionally assign: keep current if failed
+	FP(&p.X).CondAssign(ok, &p.X, &tmpX)
+	FP(&p.Y).CondAssign(ok, &p.Y, &tmpY)
+	FP(&p.Z).CondAssign(ok, &p.Z, &tmpZ)
+	return ok
 }

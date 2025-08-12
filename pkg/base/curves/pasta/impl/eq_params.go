@@ -5,9 +5,10 @@ import (
 
 	"golang.org/x/crypto/blake2b"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c/mappers/sswu"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
+	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380/mappers/sswu"
 )
 
 var (
@@ -126,12 +127,12 @@ func (vestaCurveMapperParams) SetZ(out *Fq) {
 	out.Set(&vestaSswuZ)
 }
 
-func (vestaCurveMapperParams) SqrtRatio(y, u, v *Fq) (ok uint64) {
+func (vestaCurveMapperParams) SqrtRatio(y, u, v *Fq) (ok ct.Bool) {
 	return sswu.SqrtRatio(y, vestaSqrtRatioC1, vestaSqrtRatioC3[:], vestaSqrtRatioC4, vestaSqrtRatioC5, &vestaSqrtRatioC6, &vestaSqrtRatioC7, u, v)
 }
 
-func (vestaCurveMapperParams) Sgn0(v *Fq) uint64 {
-	return uint64(v.Bytes()[0] & 0b1)
+func (vestaCurveMapperParams) Sgn0(v *Fq) ct.Bool {
+	return ct.Bool(uint64(v.Bytes()[0] & 0b1))
 }
 
 func (vestaCurveMapperParams) XNum() []Fq {

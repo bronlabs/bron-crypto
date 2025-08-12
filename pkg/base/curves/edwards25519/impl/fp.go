@@ -7,7 +7,8 @@ import (
 	"math/big"
 	"slices"
 
-	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/fields"
+	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 const (
@@ -50,12 +51,16 @@ func (f *Fp) SetUint64(u uint64) {
 	f.v = fiatFpTightFieldElement{u & ((1 << 51) - 1), u >> 51}
 }
 
-func (f *Fp) Select(choice uint64, z, nz *Fp) {
+func (f *Fp) CondAssign(choice ct.Choice, z, nz *Fp) {
 	fiatFpSelectznz((*[5]uint64)(&f.v), fiatFpUint1(choice), (*[5]uint64)(&z.v), (*[5]uint64)(&nz.v))
 }
 
 func (f *Fp) Add(lhs, rhs *Fp) {
 	fiatFpCarryAdd(&f.v, &lhs.v, &rhs.v)
+}
+
+func (f *Fp) Double(x *Fp) {
+	fiatFpCarryAdd(&f.v, &x.v, &x.v)
 }
 
 func (f *Fp) Sub(lhs, rhs *Fp) {
@@ -74,7 +79,7 @@ func (f *Fp) Square(v *Fp) {
 	fiatFpCarrySquare(&f.v, (*fiatFpLooseFieldElement)(&v.v))
 }
 
-func (f *Fp) Inv(a *Fp) (ok uint64) {
+func (f *Fp) Inv(a *Fp) (ok ct.Bool) {
 	var _10, _11, _1100, _1111, _11110000, _11111111, x10, x20, x30, x60, x120, x240, x250, out Fp
 
 	// _10       = 2*1
@@ -143,47 +148,47 @@ func (f *Fp) Inv(a *Fp) (ok uint64) {
 	out.Mul(&out, &_11)
 
 	ok = a.IsNonZero()
-	f.Select(ok, f, &out)
+	f.CondAssign(ok, f, &out)
 	return ok
 }
 
-func (f *Fp) Div(lhs, rhs *Fp) (ok uint64) {
+func (f *Fp) Div(lhs, rhs *Fp) (ok ct.Bool) {
 	var rhsInv Fp
 	ok = rhsInv.Inv(rhs)
 	var out Fp
 	out.Mul(lhs, &rhsInv)
 
-	f.Select(ok, f, &out)
+	f.CondAssign(ok, f, &out)
 	return ok
 }
 
-func (f *Fp) Sqrt(v *Fp) (ok uint64) {
+func (f *Fp) Sqrt(v *Fp) (ok ct.Bool) {
 	return fieldsImpl.TonelliShanks(f, v, &FpRootOfUnity, FpE, FpProgenitorExp[:])
 }
 
-func (f *Fp) Equals(rhs *Fp) uint64 {
+func (f *Fp) Equal(rhs *Fp) ct.Bool {
 	var diff Fp
 	diff.Sub(f, rhs)
 	return diff.IsZero()
 }
 
-func (f *Fp) IsNonZero() uint64 {
+func (f *Fp) IsNonZero() ct.Bool {
 	var data [FpBytes]byte
 	fiatFpToBytes(&data, &f.v)
 	return anyNonZero(&data)
 }
 
-func (f *Fp) IsZero() uint64 {
+func (f *Fp) IsZero() ct.Bool {
 	return f.IsNonZero() ^ 1
 }
 
-func (f *Fp) IsOne() uint64 {
+func (f *Fp) IsOne() ct.Bool {
 	var one Fp
 	one.SetOne()
-	return f.Equals(&one)
+	return f.Equal(&one)
 }
 
-func (f *Fp) SetUniformBytes(componentsData ...[]byte) (ok uint64) {
+func (f *Fp) SetUniformBytes(componentsData ...[]byte) (ok ct.Bool) {
 	if len(componentsData) != 1 {
 		return 0
 	}
@@ -191,7 +196,7 @@ func (f *Fp) SetUniformBytes(componentsData ...[]byte) (ok uint64) {
 	return f.SetBytesWide(componentsData[0])
 }
 
-func (f *Fp) SetRandom(prng io.Reader) (ok uint64) {
+func (f *Fp) SetRandom(prng io.Reader) (ok ct.Bool) {
 	var data [FpWideBytes]byte
 	_, err := io.ReadFull(prng, data[:])
 	if err != nil {
@@ -209,7 +214,7 @@ func (*Fp) Degree() uint64 {
 	return 1
 }
 
-func (f *Fp) SetLimbs(data []uint64) (ok uint64) {
+func (f *Fp) SetLimbs(data []uint64) (ok ct.Bool) {
 	if len(data) != 4 {
 		return 0
 	}
@@ -223,7 +228,7 @@ func (f *Fp) SetLimbs(data []uint64) (ok uint64) {
 	return f.SetBytes(byteData[:])
 }
 
-func (f *Fp) SetBytes(data []byte) (ok uint64) {
+func (f *Fp) SetBytes(data []byte) (ok ct.Bool) {
 	if len(data) != int(FpBytes) || (data[FpBytes-1]&0x80 != 0) {
 		return 0
 	}
@@ -232,16 +237,16 @@ func (f *Fp) SetBytes(data []byte) (ok uint64) {
 	return 1
 }
 
-func (f *Fp) SetBytesWide(data []byte) (ok uint64) {
+func (f *Fp) SetBytesWide(data []byte) (ok ct.Bool) {
 	if len(data) > int(FpWideBytes) {
 		return 0
 	}
 
 	var wideData [FpWideBytes]byte
 	copy(wideData[:], data[:])
-	p255 := uint64(wideData[FpBytes-1] >> 7)
+	p255 := ct.Choice(wideData[FpBytes-1] >> 7)
 	wideData[FpBytes-1] &= 0x7f
-	p511 := uint64(wideData[FpWideBytes-1] >> 7)
+	p511 := ct.Choice(wideData[FpWideBytes-1] >> 7)
 	wideData[FpWideBytes-1] &= 0x7f
 
 	var zero, lo, hi, twoTo256, pLo, pHi Fp
@@ -252,15 +257,15 @@ func (f *Fp) SetBytesWide(data []byte) (ok uint64) {
 	hi.Mul(&hi, &twoTo256)
 	ok = okLo & okHi
 	pLo.SetUint64(19)
-	pLo.Select(p255, &zero, &pLo)
+	pLo.CondAssign(p255, &zero, &pLo)
 	lo.Add(&lo, &pLo)
 	pHi.SetUint64(19 * 19 * 2)
-	pHi.Select(p511, &zero, &pHi)
+	pHi.CondAssign(p511, &zero, &pHi)
 	hi.Add(&hi, &pHi)
 
 	var out Fp
 	out.Add(&lo, &hi)
-	f.Select(ok, f, &out)
+	f.CondAssign(ok, f, &out)
 	return ok
 }
 
@@ -306,12 +311,12 @@ func (f *Fp) GoString() string {
 	return "0x" + hex.EncodeToString(f.Bytes())
 }
 
-func anyNonZero(data *[FpBytes]byte) (ok uint64) {
+func anyNonZero(data *[FpBytes]byte) (ok ct.Bool) {
 	v := uint64(
 		data[0] | data[1] | data[2] | data[3] | data[4] | data[5] | data[6] | data[7] |
 			data[8] | data[9] | data[10] | data[11] | data[12] | data[13] | data[14] | data[15] |
 			data[16] | data[17] | data[18] | data[19] | data[20] | data[21] | data[22] | data[23] |
 			data[24] | data[25] | data[26] | data[27] | data[28] | data[29] | data[30] | data[31])
 
-	return (v | -v) >> 63
+	return ct.Bool((v | -v) >> 63)
 }

@@ -24,6 +24,18 @@ func ContainsFunc[In any](seq iter.Seq[In], v In, f func(In, In) bool) bool {
 	return false
 }
 
+func Empty[V any]() iter.Seq[V] {
+	return func(yield func(V) bool) {
+		// Do nothing, effectively yielding no values.
+	}
+}
+
+func Empty2[K, V any]() iter.Seq2[K, V] {
+	return func(yield func(K, V) bool) {
+		// Do nothing, effectively yielding no key-value pairs.
+	}
+}
+
 func Map[In, Out any](seq iter.Seq[In], f func(In) Out) iter.Seq[Out] {
 	return func(yield func(Out) bool) {
 		for in := range seq {
@@ -86,6 +98,66 @@ func Concat2[K, V any](seqs ...iter.Seq2[K, V]) iter.Seq2[K, V] {
 			}
 		}
 	}
+}
+
+func Flatten[V any](seq iter.Seq[iter.Seq[V]]) iter.Seq[V] {
+	return func(yield func(V) bool) {
+		for s := range seq {
+			for v := range s {
+				if !yield(v) {
+					return
+				}
+			}
+		}
+	}
+}
+
+func Flatten2[K, V any](seq iter.Seq[iter.Seq2[K, V]]) iter.Seq2[K, V] {
+	return func(yield func(K, V) bool) {
+		for s := range seq {
+			for k, v := range s {
+				if !yield(k, v) {
+					return
+				}
+			}
+		}
+	}
+}
+
+func Any[V any](seq iter.Seq[V], f func(V) bool) bool {
+	for v := range seq {
+		if f(v) {
+			return true
+		}
+	}
+	return false
+}
+
+func Any2[K, V any](seq iter.Seq2[K, V], f func(K, V) bool) bool {
+	for k, v := range seq {
+		if f(k, v) {
+			return true
+		}
+	}
+	return false
+}
+
+func All[V any](seq iter.Seq[V], f func(V) bool) bool {
+	for v := range seq {
+		if !f(v) {
+			return false
+		}
+	}
+	return true
+}
+
+func All2[K, V any](seq iter.Seq2[K, V], f func(K, V) bool) bool {
+	for k, v := range seq {
+		if !f(k, v) {
+			return false
+		}
+	}
+	return true
 }
 
 func Equal[V comparable](x, y iter.Seq[V]) bool {
@@ -181,6 +253,28 @@ func Reduce[Accum, V any](seq iter.Seq[V], accum Accum, f func(Accum, V) Accum) 
 		accum = f(accum, v)
 	}
 	return accum
+}
+
+func ReduceOrError[Accum, V any](seq iter.Seq[V], accum Accum, f func(Accum, V) (Accum, error)) (Accum, error) {
+	var err error
+	for v := range seq {
+		accum, err = f(accum, v)
+		if err != nil {
+			return accum, err
+		}
+	}
+	return accum, nil
+}
+
+func Reduce2OrError[Accum, K, V any](seq iter.Seq2[K, V], accum Accum, f func(Accum, K, V) (Accum, error)) (Accum, error) {
+	var err error
+	for k, v := range seq {
+		accum, err = f(accum, k, v)
+		if err != nil {
+			return accum, err
+		}
+	}
+	return accum, nil
 }
 
 func Reduce2[Accum, K, V any](seq iter.Seq2[K, V], accum Accum, f func(Accum, K, V) Accum) Accum {

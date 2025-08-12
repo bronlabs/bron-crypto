@@ -1,15 +1,20 @@
 package pasta
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
-	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"hash/fnv"
 	"slices"
 	"sync"
+
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
+	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
 type (
@@ -25,10 +30,17 @@ const (
 var (
 	pallasInitOnce sync.Once
 	pallasInstance *PallasCurve
+
+	pallasModelInstance *universal.ThreeSortedModel[*PallasPoint, *PallasScalar, *PallasBaseFieldElement]
+	pallasModelInitOnce sync.Once
+
+	_ curves.Curve[*PallasPoint, *PallasBaseFieldElement, *PallasScalar] = (*PallasCurve)(nil)
+	_ curves.Point[*PallasPoint, *PallasBaseFieldElement, *PallasScalar] = (*PallasPoint)(nil)
 )
 
 type PallasCurve struct {
-	traits.CurveTrait[*pastaImpl.Fp, *pastaImpl.PallasPoint, *PallasPoint, PallasPoint]
+	traits.PrimeCurveTrait[*pastaImpl.Fp, *pastaImpl.PallasPoint, *PallasPoint, PallasPoint]
+	traits.MSMTrait[*PallasScalar, *PallasPoint]
 }
 
 func NewPallasCurve() *PallasCurve {
@@ -39,19 +51,41 @@ func NewPallasCurve() *PallasCurve {
 	return pallasInstance
 }
 
+func NewPallasModel() *universal.ThreeSortedModel[*PallasPoint, *PallasScalar, *PallasBaseFieldElement] {
+	pallasModelInitOnce.Do(func() {
+		var err error
+		pallasModelInstance, err = impl.CurveModel(
+			NewPallasCurve(), NewPallasBaseField(), NewPallasScalarField(),
+		)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	return pallasModelInstance
+}
+
 func (c *PallasCurve) Name() string {
 	return PallasName
 }
 
-func (c *PallasCurve) Order() algebra.Cardinal {
-	return fqFieldOrder.Nat()
+func (c *PallasCurve) Model() *universal.Model[*PallasPoint] {
+	return NewPallasModel().First()
 }
 
-func (c *PallasCurve) Operator() algebra.BinaryOperator[*PallasPoint] {
-	return algebra.Add[*PallasPoint]
+func (c *PallasCurve) Cofactor() cardinal.Cardinal {
+	return cardinal.New(1)
 }
 
-func (c *PallasCurve) FromAffineCompressed(input []byte) (*PallasPoint, error) {
+func (c *PallasCurve) Order() cardinal.Cardinal {
+	return cardinal.NewFromNat(fqFieldOrder.Nat())
+}
+
+func (c *PallasCurve) FromBytes(input []byte) (*PallasPoint, error) {
+	return c.FromCompressed(input)
+}
+
+func (c *PallasCurve) FromCompressed(input []byte) (*PallasPoint, error) {
 	if len(input) != pastaImpl.FpBytes {
 		return nil, errs.NewLength("invalid input")
 	}
@@ -86,7 +120,7 @@ func (c *PallasCurve) FromAffineCompressed(input []byte) (*PallasPoint, error) {
 	return pp, nil
 }
 
-func (c *PallasCurve) FromAffineUncompressed(input []byte) (*PallasPoint, error) {
+func (c *PallasCurve) FromUncompressed(input []byte) (*PallasPoint, error) {
 	if len(input) != 2*pastaImpl.FpBytes {
 		return nil, errs.NewLength("invalid input")
 	}
@@ -112,11 +146,6 @@ func (c *PallasCurve) FromAffineUncompressed(input []byte) (*PallasPoint, error)
 	return pp, nil
 }
 
-func (c *PallasCurve) NewPoint(affineX, affineY *PallasBaseFieldElement) (*PallasPoint, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (c *PallasCurve) Hash(bytes []byte) (*PallasPoint, error) {
 	return c.HashWithDst(base.Hash2CurveAppTag+PallasHash2CurveSuite, bytes)
 }
@@ -127,64 +156,74 @@ func (c *PallasCurve) HashWithDst(dst string, bytes []byte) (*PallasPoint, error
 	return &p, nil
 }
 
-// TODO(aalireza): doesn't make sense of curve/point
 func (c *PallasCurve) ElementSize() int {
-	//TODO implement me
-	panic("implement me")
+	return pastaImpl.FpBytes
 }
 
 func (c *PallasCurve) WideElementSize() int {
-	//TODO implement me
-	panic("implement me")
+	return int(^uint(0) >> 1)
 }
 
-func (c *PallasCurve) BasePoints() ds.ImmutableMap[string, *PallasPoint] {
-	panic("implement me")
-}
-
-func (c *PallasCurve) ScalarField() algebra.PrimeField[*PallasScalar] {
+func (c *PallasCurve) ScalarStructure() algebra.Structure[*PallasScalar] {
 	return NewPallasScalarField()
 }
 
-func (c *PallasCurve) BaseField() algebra.FiniteField[*PallasBaseFieldElement] {
+func (c *PallasCurve) BaseStructure() algebra.Structure[*PallasBaseFieldElement] {
 	return NewPallasBaseField()
 }
 
-type PallasPoint struct {
-	traits.PointTrait[*pastaImpl.Fp, *pastaImpl.PallasPoint, pastaImpl.PallasPoint, *PallasPoint, PallasPoint]
+func (c *PallasCurve) ScalarBaseOp(sc *PallasScalar) *PallasPoint {
+	if c == nil {
+		return nil
+	}
+	if sc == nil {
+		panic("scalar is nil")
+	}
+	if sc.IsZero() {
+		return c.OpIdentity()
+	}
+	return c.ScalarBaseMul(sc)
 }
 
-func (p *PallasPoint) HashCode() uint64 {
-	//TODO implement me
-	panic("implement me")
+func (c *PallasCurve) ScalarBaseMul(sc *PallasScalar) *PallasPoint {
+	if c == nil {
+		return nil
+	}
+	if sc == nil {
+		panic("scalar is nil")
+	}
+	return c.Generator().ScalarMul(sc)
+}
+
+type PallasPoint struct {
+	traits.PrimePointTrait[*pastaImpl.Fp, *pastaImpl.PallasPoint, pastaImpl.PallasPoint, *PallasPoint, PallasPoint]
+}
+
+func (p *PallasPoint) HashCode() base.HashCode {
+	h := fnv.New64a()
+	_, _ = h.Write(p.ToCompressed())
+	return base.HashCode(h.Sum64())
+}
+
+func (p *PallasPoint) Bytes() []byte {
+	return p.ToCompressed()
 }
 
 func (p *PallasPoint) Structure() algebra.Structure[*PallasPoint] {
 	return NewPallasCurve()
 }
 
-func (p *PallasPoint) MarshalBinary() (data []byte, err error) {
-	return p.ToAffineCompressed(), nil
-}
-
-func (p *PallasPoint) UnmarshalBinary(data []byte) error {
-	pp, err := NewPallasCurve().FromAffineCompressed(data)
-	if err != nil {
-		return errs.WrapSerialisation(err, "cannot deserialize point")
-	}
-	p.V.Set(&pp.V)
-	return nil
-}
-
-// TODO(aalireza): not sure if this should always return affine coordinates or implementation defined coordinates
-func (p *PallasPoint) Coordinates() []*PallasBaseFieldElement {
-	var x, y FpFieldElement
+func (p *PallasPoint) Coordinates() algebra.Coordinates[*PallasBaseFieldElement] {
+	var x, y PallasBaseFieldElement
 	p.V.ToAffine(&x.V, &y.V)
 
-	return []*FpFieldElement{&x, &y}
+	return algebra.NewCoordinates(
+		algebra.AffineCoordinateSystem,
+		&x, &y,
+	)
 }
 
-func (p *PallasPoint) ToAffineCompressed() []byte {
+func (p *PallasPoint) ToCompressed() []byte {
 	// Use ZCash encoding where infinity is all zeros and the top bit represents the sign of y
 	// and the remainder represent the x-coordinate
 	if p.IsOpIdentity() {
@@ -203,7 +242,7 @@ func (p *PallasPoint) ToAffineCompressed() []byte {
 	return result
 }
 
-func (p *PallasPoint) ToAffineUncompressed() []byte {
+func (p *PallasPoint) ToUncompressed() []byte {
 	if p.IsOpIdentity() {
 		var zeros [pastaImpl.FpBytes * 2]byte
 		return zeros[:]
@@ -244,9 +283,13 @@ func (p *PallasPoint) AffineY() *PallasBaseFieldElement {
 	return &y
 }
 
+func (p *PallasPoint) ScalarOp(sc *PallasScalar) *PallasPoint {
+	return p.ScalarMul(sc)
+}
+
 func (p *PallasPoint) ScalarMul(actor *PallasScalar) *PallasPoint {
 	var result PallasPoint
-	pointsImpl.ScalarMul[*pastaImpl.Fp](&result.V, &p.V, actor.V.Bytes())
+	aimpl.ScalarMul(&result.V, &p.V, actor.V.Bytes())
 	return &result
 }
 
@@ -254,13 +297,6 @@ func (p *PallasPoint) IsTorsionFree() bool {
 	return true
 }
 
-func (p *PallasPoint) IsBasePoint(id string) bool {
-	//TODO implement me
-	panic("implement me")
-}
-
-// TODO(aalireza): no use of it
-func (p *PallasPoint) CanBeGenerator() bool {
-	//TODO implement me
-	panic("implement me")
+func (p *PallasPoint) String() string {
+	return traits.StringifyPoint(p)
 }

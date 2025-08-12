@@ -1,11 +1,50 @@
 package utils
 
 import (
-	"encoding/hex"
 	"math/bits"
+	"reflect"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"golang.org/x/exp/constraints"
 )
+
+func ParseOrderingFromSign[T constraints.Signed](x T) base.PartialOrdering {
+	if x == 1 {
+		return base.GreaterThan
+	}
+	if x == 0 {
+		return base.Equal
+	}
+	if x == -1 {
+		return base.LessThan
+	}
+	return base.Incomparable
+}
+
+func ParseOrderingFromMasks[F constraints.Integer](gt, eq, lt F) base.PartialOrdering {
+	if gt != 0 {
+		return base.GreaterThan
+	}
+	if eq != 0 {
+		return base.Equal
+	}
+	if lt != 0 {
+		return base.LessThan
+	}
+	return base.Incomparable
+}
+
+func Maybe[T any](f func(T) T) func(T) (T, error) {
+	return func(t T) (T, error) {
+		return f(t), nil
+	}
+}
+
+func Maybe2[O, T1, T2 any](f func(T1, T2) O) func(T1, T2) (O, error) {
+	return func(t1 T1, t2 T2) (O, error) {
+		return f(t1, t2), nil
+	}
+}
 
 // BoolTo casts a bool to any integer type.
 func BoolTo[T constraints.Integer](b bool) T {
@@ -31,23 +70,17 @@ func CeilLog2(x int) int {
 	return 64 - bits.LeadingZeros64(uint64(x)-1)
 }
 
-// DecodeString decodes a hex string into a byte slice. It panics if the string is not a valid hex string.
-func DecodeString(s string) []byte {
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		panic(err)
-	}
-	return b
+func IsNil[T any](v T) bool {
+	val := reflect.ValueOf(v)
+	kind := val.Kind()
+	return (kind == reflect.Ptr || kind == reflect.Interface) && val.IsNil()
 }
 
-// Iter yields a generic iterator for slices.
-func Iter[T any](s []T) <-chan T {
-	ch := make(chan T, 1)
-	go func() {
-		defer close(ch)
-		for _, v := range s {
-			ch <- v
-		}
-	}()
-	return ch
+// LeadingZeroBytes returns the count of 0x00 prefix bytes.
+func LeadingZeroBytes(b []byte) int {
+	i := 0
+	for i < len(b) && b[i] == 0 {
+		i++
+	}
+	return i
 }

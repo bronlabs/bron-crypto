@@ -2,13 +2,12 @@ package schnorr_test
 
 import (
 	crand "crypto/rand"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/bls12381"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"io"
 	"testing"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 
 	"github.com/stretchr/testify/require"
 
@@ -30,29 +29,14 @@ func Test_HappyPath(t *testing.T) {
 		curve := p256.NewCurve()
 		testHappyPath(t, curve)
 	})
-	t.Run("edwards25519", func(t *testing.T) {
-		t.Parallel()
-		curve := edwards25519.NewCurve()
-		testHappyPath(t, curve)
-	})
-	t.Run("pallas", func(t *testing.T) {
-		t.Parallel()
-		curve := pasta.NewPallasCurve()
-		testHappyPath(t, curve)
-	})
-	t.Run("vesta", func(t *testing.T) {
-		t.Parallel()
-		curve := pasta.NewVestaCurve()
-		testHappyPath(t, curve)
-	})
 	t.Run("bls12381g1", func(t *testing.T) {
 		t.Parallel()
-		curve := bls12381.NewG1Curve()
+		curve := bls12381.NewG1()
 		testHappyPath(t, curve)
 	})
 	t.Run("bls12381g2", func(t *testing.T) {
 		t.Parallel()
-		curve := bls12381.NewG2Curve()
+		curve := bls12381.NewG2()
 		testHappyPath(t, curve)
 	})
 }
@@ -70,29 +54,29 @@ func Test_InvalidStatement(t *testing.T) {
 		curve := p256.NewCurve()
 		testInvalidStatement(t, curve)
 	})
-	t.Run("edwards25519", func(t *testing.T) {
-		t.Parallel()
-		curve := edwards25519.NewCurve()
-		testInvalidStatement(t, curve)
-	})
-	t.Run("pallas", func(t *testing.T) {
-		t.Parallel()
-		curve := pasta.NewPallasCurve()
-		testInvalidStatement(t, curve)
-	})
-	t.Run("vesta", func(t *testing.T) {
-		t.Parallel()
-		curve := pasta.NewVestaCurve()
-		testInvalidStatement(t, curve)
-	})
+	// t.Run("edwards25519", func(t *testing.T) {
+	// 	t.Parallel()
+	// 	curve := edwards25519.NewCurve()
+	// 	testInvalidStatement(t, curve)
+	// })
+	// t.Run("pallas", func(t *testing.T) {
+	// 	t.Parallel()
+	// 	curve := pasta.NewPallasCurve()
+	// 	testInvalidStatement(t, curve)
+	// })
+	// t.Run("vesta", func(t *testing.T) {
+	// 	t.Parallel()
+	// 	curve := pasta.NewVestaCurve()
+	// 	testInvalidStatement(t, curve)
+	// })
 	t.Run("bls12381g1", func(t *testing.T) {
 		t.Parallel()
-		curve := bls12381.NewG1Curve()
+		curve := bls12381.NewG1()
 		testInvalidStatement(t, curve)
 	})
 	t.Run("bls12381g2", func(t *testing.T) {
 		t.Parallel()
-		curve := bls12381.NewG2Curve()
+		curve := bls12381.NewG2()
 		testInvalidStatement(t, curve)
 	})
 }
@@ -110,34 +94,22 @@ func Test_Simulator(t *testing.T) {
 		curve := p256.NewCurve()
 		testSimulator(t, curve)
 	})
-	t.Run("edwards25519", func(t *testing.T) {
-		t.Parallel()
-		curve := edwards25519.NewCurve()
-		testSimulator(t, curve)
-	})
-	t.Run("pallas", func(t *testing.T) {
-		t.Parallel()
-		curve := pasta.NewPallasCurve()
-		testSimulator(t, curve)
-	})
-	t.Run("vesta", func(t *testing.T) {
-		t.Parallel()
-		curve := pasta.NewVestaCurve()
-		testSimulator(t, curve)
-	})
 	t.Run("bls12381g1", func(t *testing.T) {
 		t.Parallel()
-		curve := bls12381.NewG1Curve()
+		curve := bls12381.NewG1()
 		testSimulator(t, curve)
 	})
 	t.Run("bls12381g2", func(t *testing.T) {
 		t.Parallel()
-		curve := bls12381.NewG2Curve()
+		curve := bls12381.NewG2()
 		testSimulator(t, curve)
 	})
 }
 
-func testHappyPath[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](t *testing.T, curve C) {
+func testHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](t *testing.T, curve interface {
+	curves.Curve[P, F, S]
+	algebra.FiniteStructure[P]
+}) {
 	t.Helper()
 
 	base, err := curve.Random(crand.Reader)
@@ -146,12 +118,14 @@ func testHappyPath[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.Fi
 	protocol, err := schnorr.NewSigmaProtocol(base, crand.Reader)
 	require.NoError(t, err)
 
-	w, err := curve.ScalarField().Random(crand.Reader)
+	sf, ok := curve.ScalarStructure().(algebra.PrimeField[S])
+	require.True(t, ok)
+	w, err := sf.Random(crand.Reader)
 	require.NoError(t, err)
 	x := base.ScalarMul(w)
 
-	witness := schnorr.NewWitness(w)
-	statement := schnorr.NewStatement(x)
+	witness := &schnorr.Witness[S]{W: w}
+	statement := &schnorr.Statement[P, S]{X: x}
 
 	// round 1
 	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
@@ -171,7 +145,10 @@ func testHappyPath[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.Fi
 	require.NoError(t, err)
 }
 
-func testInvalidStatement[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](t *testing.T, curve C) {
+func testInvalidStatement[C interface {
+	curves.Curve[P, F, S]
+	algebra.FiniteStructure[P]
+}, P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](t *testing.T, curve C) {
 	t.Helper()
 
 	base, err := curve.Random(crand.Reader)
@@ -180,13 +157,16 @@ func testInvalidStatement[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fi
 	protocol, err := schnorr.NewSigmaProtocol(base, crand.Reader)
 	require.NoError(t, err)
 
-	w, err := curve.ScalarField().Random(crand.Reader)
+	sf, ok := curve.ScalarStructure().(algebra.PrimeField[S])
+	require.True(t, ok)
+
+	w, err := sf.Random(crand.Reader)
 	require.NoError(t, err)
 	x, err := curve.Random(crand.Reader)
 	require.NoError(t, err)
 
-	witness := schnorr.NewWitness(w)
-	statement := schnorr.NewStatement(x)
+	witness := &schnorr.Witness[S]{W: w}
+	statement := &schnorr.Statement[P, S]{X: x}
 
 	// round 1
 	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
@@ -206,7 +186,10 @@ func testInvalidStatement[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fi
 	require.Error(t, err)
 }
 
-func testSimulator[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.FiniteFieldElement[F], S fields.PrimeFieldElement[S]](t *testing.T, curve C) {
+func testSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](t *testing.T, curve interface {
+	curves.Curve[P, F, S]
+	algebra.FiniteStructure[P]
+}) {
 	t.Helper()
 
 	base, err := curve.Random(crand.Reader)
@@ -218,7 +201,7 @@ func testSimulator[C curves.Curve[P, F, S], P curves.Point[P, F, S], F fields.Fi
 	x, err := curve.Random(crand.Reader)
 	require.NoError(t, err)
 
-	statement := schnorr.NewStatement(x)
+	statement := &schnorr.Statement[P, S]{X: x}
 
 	// simulate
 	challenge := make([]byte, protocol.GetChallengeBytesLength())

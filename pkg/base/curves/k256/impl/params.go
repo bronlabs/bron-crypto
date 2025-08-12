@@ -3,9 +3,10 @@ package impl
 import (
 	"crypto/sha256"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c/mappers/sswu"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
+	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380/mappers/sswu"
 )
 
 var (
@@ -118,12 +119,12 @@ func (curveMapperParams) SetZ(out *Fp) {
 	out.Set(&sswuZ)
 }
 
-func (curveMapperParams) SqrtRatio(y, u, v *Fp) (ok uint64) {
+func (curveMapperParams) SqrtRatio(y, u, v *Fp) (ok ct.Bool) {
 	return sswu.SqrtRatio3Mod4(y, sqrtRatioC1[:], &sqrtRatioC2, u, v)
 }
 
-func (curveMapperParams) Sgn0(v *Fp) uint64 {
-	return uint64(v.Bytes()[0] & 0b1)
+func (curveMapperParams) Sgn0(v *Fp) ct.Bool {
+	return ct.Bool(uint64(v.Bytes()[0] & 0b1))
 }
 
 func (curveMapperParams) XNum() []Fp {

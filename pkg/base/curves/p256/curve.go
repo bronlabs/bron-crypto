@@ -1,22 +1,27 @@
 package p256
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
-	p256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/p256/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"hash/fnv"
 	"slices"
 	"sync"
+
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
+	p256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/p256/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
 const (
 	CurveName             = "P256"
 	Hash2CurveSuite       = "P256_XMD:SHA-256_SSWU_RO_"
 	Hash2CurveScalarSuite = "P256_XMD:SHA-256_SSWU_RO_SC_"
+	compressedPointBytes  = p256Impl.FpBytes + 1 // 33 bytes for compressed point
 )
 
 var (
@@ -25,10 +30,14 @@ var (
 
 	curveInstance *Curve
 	curveInitOnce sync.Once
+
+	curveModelInstance *universal.ThreeSortedModel[*Point, *Scalar, *BaseFieldElement]
+	curveModelInitOnce sync.Once
 )
 
 type Curve struct {
-	traits.CurveTrait[*p256Impl.Fp, *p256Impl.Point, *Point, Point]
+	traits.PrimeCurveTrait[*p256Impl.Fp, *p256Impl.Point, *Point, Point]
+	traits.MSMTrait[*Scalar, *Point]
 }
 
 func NewCurve() *Curve {
@@ -39,20 +48,50 @@ func NewCurve() *Curve {
 	return curveInstance
 }
 
+func CurveModel() *universal.ThreeSortedModel[*Point, *Scalar, *BaseFieldElement] {
+	curveModelInitOnce.Do(func() {
+		var err error
+		curveModelInstance, err = impl.CurveModel(
+			NewCurve(), NewBaseField(), NewScalarField(),
+		)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	return curveModelInstance
+}
+
 func (c *Curve) Name() string {
 	return CurveName
 }
 
-func (c *Curve) Order() algebra.Cardinal {
-	return scalarFieldOrder.Nat()
+func (c *Curve) Model() *universal.Model[*Point] {
+	return CurveModel().First()
 }
 
-func (c *Curve) Operator() algebra.BinaryOperator[*Point] {
-	return algebra.Add[*Point]
+func (c *Curve) ElementSize() int {
+	return compressedPointBytes
 }
 
-func (c *Curve) FromAffineCompressed(input []byte) (*Point, error) {
-	if len(input) != 33 {
+func (c *Curve) WideElementSize() int {
+	return int(^uint(0) >> 1)
+}
+
+func (c *Curve) FromWideBytes(input []byte) (*Point, error) {
+	return c.Hash(input)
+}
+
+func (c Curve) Cofactor() cardinal.Cardinal {
+	return cardinal.New(1)
+}
+
+func (c *Curve) Order() cardinal.Cardinal {
+	return cardinal.NewFromNat(scalarFieldOrder.Nat())
+}
+
+func (c *Curve) FromCompressed(input []byte) (*Point, error) {
+	if len(input) != compressedPointBytes {
 		return nil, errs.NewLength("invalid byte sequence")
 	}
 
@@ -93,7 +132,11 @@ func (c *Curve) FromAffineCompressed(input []byte) (*Point, error) {
 	return &result, nil
 }
 
-func (c *Curve) FromAffineUncompressed(input []byte) (*Point, error) {
+func (c *Curve) FromBytes(input []byte) (*Point, error) {
+	return c.FromCompressed(input)
+}
+
+func (c *Curve) FromUncompressed(input []byte) (*Point, error) {
 	if len(input) != 65 {
 		return nil, errs.NewLength("invalid byte sequence")
 	}
@@ -129,11 +172,6 @@ func (c *Curve) FromAffineUncompressed(input []byte) (*Point, error) {
 	return &result, nil
 }
 
-func (c *Curve) NewPoint(affineX, affineY *BaseFieldElement) (*Point, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (c *Curve) Hash(bytes []byte) (*Point, error) {
 	return c.HashWithDst(base.Hash2CurveAppTag+Hash2CurveSuite, bytes)
 }
@@ -144,36 +182,33 @@ func (c *Curve) HashWithDst(dst string, bytes []byte) (*Point, error) {
 	return &p, nil
 }
 
-// TODO(aalireza): doesn't make sense of curve/point
-func (c *Curve) ElementSize() int {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *Curve) WideElementSize() int {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *Curve) BasePoints() ds.ImmutableMap[string, *Point] {
-	panic("implement me")
-}
-
-func (c *Curve) ScalarField() algebra.PrimeField[*Scalar] {
+func (c *Curve) ScalarStructure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 
-func (c *Curve) BaseField() algebra.FiniteField[*BaseFieldElement] {
+func (c *Curve) BaseStructure() algebra.Structure[*BaseFieldElement] {
 	return NewBaseField()
 }
 
-type Point struct {
-	traits.PointTrait[*p256Impl.Fp, *p256Impl.Point, p256Impl.Point, *Point, Point]
+func (c *Curve) ScalarBaseOp(sc *Scalar) *Point {
+	if sc.IsZero() {
+		return c.OpIdentity()
+	}
+	return c.ScalarBaseMul(sc)
 }
 
-func (p *Point) HashCode() uint64 {
-	//TODO implement me
-	panic("implement me")
+func (c *Curve) ScalarBaseMul(sc *Scalar) *Point {
+	return c.Generator().ScalarMul(sc)
+}
+
+type Point struct {
+	traits.PrimePointTrait[*p256Impl.Fp, *p256Impl.Point, p256Impl.Point, *Point, Point]
+}
+
+func (p *Point) HashCode() base.HashCode {
+	h := fnv.New64a()
+	_, _ = h.Write(p.ToCompressed())
+	return base.HashCode(h.Sum64())
 }
 
 func (p *Point) Structure() algebra.Structure[*Point] {
@@ -181,11 +216,11 @@ func (p *Point) Structure() algebra.Structure[*Point] {
 }
 
 func (p *Point) MarshalBinary() (data []byte, err error) {
-	return p.ToAffineCompressed(), nil
+	return p.ToCompressed(), nil
 }
 
 func (p *Point) UnmarshalBinary(data []byte) error {
-	pp, err := NewCurve().FromAffineCompressed(data)
+	pp, err := NewCurve().FromCompressed(data)
 	if err != nil {
 		return errs.WrapSerialisation(err, "cannot deserialize point")
 	}
@@ -193,16 +228,15 @@ func (p *Point) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// TODO(aalireza): not sure if this should always return affine coordinates or implementation defined coordinates
-func (p *Point) Coordinates() []*BaseFieldElement {
+func (p Point) Coordinates() algebra.Coordinates[*BaseFieldElement] {
 	var x, y BaseFieldElement
 	p.V.ToAffine(&x.V, &y.V)
 
-	return []*BaseFieldElement{&x, &y}
+	return algebra.NewCoordinates(algebra.AffineCoordinateSystem, &x, &y)
 }
 
-func (p *Point) ToAffineCompressed() []byte {
-	var compressedBytes [33]byte
+func (p *Point) ToCompressed() []byte {
+	var compressedBytes [compressedPointBytes]byte
 	compressedBytes[0] = byte(2)
 	if p.IsOpIdentity() {
 		return compressedBytes[:]
@@ -221,7 +255,11 @@ func (p *Point) ToAffineCompressed() []byte {
 	return compressedBytes[:]
 }
 
-func (p *Point) ToAffineUncompressed() []byte {
+func (p *Point) Bytes() []byte {
+	return p.ToCompressed()
+}
+
+func (p *Point) ToUncompressed() []byte {
 	var out [65]byte
 	out[0] = byte(4)
 	if p.IsOpIdentity() {
@@ -271,9 +309,13 @@ func (p *Point) AffineY() *BaseFieldElement {
 	return &y
 }
 
+func (p *Point) ScalarOp(sc *Scalar) *Point {
+	return p.ScalarMul(sc)
+}
+
 func (p *Point) ScalarMul(actor *Scalar) *Point {
 	var result Point
-	pointsImpl.ScalarMul[*p256Impl.Fp](&result.V, &p.V, actor.V.Bytes())
+	aimpl.ScalarMul(&result.V, &p.V, actor.V.Bytes())
 	return &result
 }
 
@@ -281,13 +323,6 @@ func (p *Point) IsTorsionFree() bool {
 	return true
 }
 
-func (p *Point) IsBasePoint(id string) bool {
-	//TODO implement me
-	panic("implement me")
-}
-
-// TODO(aalireza): no use of it
-func (p *Point) CanBeGenerator() bool {
-	//TODO implement me
-	panic("implement me")
+func (p *Point) String() string {
+	return traits.StringifyPoint(p)
 }

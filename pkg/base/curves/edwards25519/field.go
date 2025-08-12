@@ -1,16 +1,19 @@
 package edwards25519
 
 import (
+	"sync"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
+	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/cronokirby/saferith"
-	"sync"
 )
 
 const (
@@ -19,12 +22,14 @@ const (
 
 var (
 	// TODO(PrimeField)
-	_ fields.PrimeField[*BaseFieldElement]        = (*BaseField)(nil)
-	_ fields.PrimeFieldElement[*BaseFieldElement] = (*BaseFieldElement)(nil)
+	_ algebra.PrimeField[*BaseFieldElement]        = (*BaseField)(nil)
+	_ algebra.PrimeFieldElement[*BaseFieldElement] = (*BaseFieldElement)(nil)
 
-	baseFieldInstance *BaseField
-	baseFieldInitOnce sync.Once
-	baseFieldOrder    *saferith.Modulus
+	baseFieldInstance      *BaseField
+	baseFieldInitOnce      sync.Once
+	baseFieldModelOnce     sync.Once
+	baseFieldModelInstance *universal.Model[*BaseFieldElement]
+	baseFieldOrder         *saferith.Modulus
 )
 
 type BaseField struct {
@@ -40,24 +45,34 @@ func NewBaseField() *BaseField {
 	return baseFieldInstance
 }
 
+func BaseFieldModel() *universal.Model[*BaseFieldElement] {
+	baseFieldModelOnce.Do(func() {
+		var err error
+		baseFieldModelInstance, err = impl.BaseFieldModel(
+			NewBaseField(),
+		)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	return baseFieldModelInstance
+}
+
 func (f *BaseField) Name() string {
 	return BaseFieldName
 }
 
-func (f *BaseField) Order() algebra.Cardinal {
-	return baseFieldOrder.Nat()
+func (f *BaseField) Model() *universal.Model[*BaseFieldElement] {
+	return BaseFieldModel()
 }
 
-func (f *BaseField) Characteristic() algebra.Cardinal {
-	return baseFieldOrder.Nat()
+func (f *BaseField) Order() cardinal.Cardinal {
+	return cardinal.NewFromNat(baseFieldOrder.Nat())
 }
 
-func (f *BaseField) Operator() algebra.BinaryOperator[*BaseFieldElement] {
-	return algebra.Add[*BaseFieldElement]
-}
-
-func (f *BaseField) OtherOperator() algebra.BinaryOperator[*BaseFieldElement] {
-	return algebra.Mul[*BaseFieldElement]
+func (f *BaseField) Characteristic() cardinal.Cardinal {
+	return cardinal.NewFromNat(baseFieldOrder.Nat())
 }
 
 func (f *BaseField) Hash(bytes []byte) (*BaseFieldElement, error) {

@@ -1,95 +1,107 @@
 package algebra
 
 import (
-	"io"
-
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 )
 
-// ****************** Action
+type (
+	Actable[E, S any]                 crtp.Actable[E, S]
+	AdditivelyActable[E, S any]       crtp.AdditivelyActable[E, S]
+	MultiplicativelyActable[E, S any] crtp.MultiplicativelyActable[E, S]
 
-type Actable[E Element[E], S SemiGroupElement[S]] interface {
-	Element[E]
-	ScalarMul(actor S) E
-}
+	Action[S, E any] func(actor S, element E) E
+)
 
-type RingActable[E Element[E], S RingElement[S]] Actable[E, S]
+type (
+	SemiModule[ME crtp.SemiModuleElement[ME, S], S crtp.SemiRingElement[S]]        = crtp.SemiModule[ME, S]
+	SemiModuleElement[ME crtp.SemiModuleElement[ME, S], S crtp.SemiRingElement[S]] = crtp.SemiModuleElement[ME, S]
 
-// ****************** Module
+	AdditiveSemiModule[ME crtp.AdditiveSemiModuleElement[ME, S], S crtp.SemiRingElement[S]]        crtp.AdditiveSemiModule[ME, S]
+	AdditiveSemiModuleElement[ME crtp.AdditiveSemiModuleElement[ME, S], S crtp.SemiRingElement[S]] crtp.AdditiveSemiModuleElement[ME, S]
 
-type Module[ME ModuleElement[ME, S], S RingElement[S]] Group[ME]
+	MultiplicativeSemiModule[ME crtp.MultiplicativeSemiModuleElement[ME, S], S crtp.SemiRingElement[S]]        crtp.MultiplicativeSemiModule[ME, S]
+	MultiplicativeSemiModuleElement[ME crtp.MultiplicativeSemiModuleElement[ME, S], S crtp.SemiRingElement[S]] crtp.MultiplicativeSemiModuleElement[ME, S]
+)
 
-type ModuleElement[ME GroupElement[ME], S RingElement[S]] interface {
-	GroupElement[ME]
-	RingActable[ME, S]
-	IsTorsionFree() bool
-}
+type (
+	Module[ME crtp.ModuleElement[ME, S], S crtp.RingElement[S]]        = crtp.Module[ME, S]
+	ModuleElement[ME crtp.ModuleElement[ME, S], S crtp.RingElement[S]] = crtp.ModuleElement[ME, S]
 
-// ****************** Vector Space
+	AdditiveModule[ME crtp.AdditiveModuleElement[ME, S], S crtp.RingElement[S]]        crtp.AdditiveModule[ME, S]
+	AdditiveModuleElement[ME crtp.AdditiveModuleElement[ME, S], S crtp.RingElement[S]] crtp.AdditiveModuleElement[ME, S]
 
-type VectorSpace[V Vector[V, S], S FieldElement[S]] Module[V, S]
+	MultiplicativeModule[ME crtp.MultiplicativeModuleElement[ME, S], S crtp.RingElement[S]]        crtp.MultiplicativeModule[ME, S]
+	MultiplicativeModuleElement[ME crtp.MultiplicativeModuleElement[ME, S], S crtp.RingElement[S]] crtp.MultiplicativeModuleElement[ME, S]
 
-type Vector[V ModuleElement[V, S], S FieldElement[S]] ModuleElement[V, S]
+	ZLikeModule[E crtp.ModuleElement[E, S], S crtp.IntLike[S]]        = crtp.ZLikeModule[E, S]
+	ZLikeModuleElement[E crtp.ModuleElement[E, S], S crtp.IntLike[S]] = crtp.ZLikeModuleElement[E, S]
+)
 
-// ****************** Algebra
+type (
+	VectorSpace[V crtp.Vector[V, S], S crtp.FieldElement[S]] crtp.VectorSpace[V, S]
+	Vector[V crtp.Vector[V, S], S crtp.FieldElement[S]]      crtp.Vector[V, S]
+)
 
-type Algebra[AE AlgebraElement[AE, S], S RingElement[S]] interface {
-	Module[AE, S]
-	Ring[AE]
-}
+type (
+	Algebra[AE crtp.AlgebraElement[AE, S], S crtp.RingElement[S]]        crtp.Algebra[AE, S]
+	AlgebraElement[AE crtp.AlgebraElement[AE, S], S crtp.RingElement[S]] crtp.AlgebraElement[AE, S]
+)
 
-type AlgebraElement[AE interface {
-	ModuleElement[AE, S]
-	RingElement[AE]
-}, S RingElement[S]] interface {
-	ModuleElement[AE, S]
-	RingElement[AE]
-}
+type (
+	PolynomialLikeStructure[
+		P crtp.PolynomialLike[P, S, C],
+		S crtp.RingElement[S],
+		C crtp.GroupElement[C],
+	] = crtp.PolynomialLike[P, S, C]
 
-// ******************* Polynomials
+	PolynomialLike[
+		P crtp.PolynomialLike[P, S, C],
+		S crtp.RingElement[S],
+		C crtp.GroupElement[C],
+	] = crtp.PolynomialLike[P, S, C]
 
-type PolynomialRing[P Polynomial[P, C], C RingElement[C]] interface {
-	Algebra[P, C]
-	EuclideanDomain[P]
+	UnivariatePolynomialLikeStructure[
+		P crtp.UnivariatePolynomialLike[P, S, C],
+		S crtp.RingElement[S],
+		C crtp.GroupElement[C],
+	] = crtp.UnivariatePolynomialLikeStructure[P, S, C]
 
-	New(coeffs ...C) P
-	Random(degree int, freeCoeff C, prng io.Reader) (P, error)
-}
+	UnivariatePolynomialLike[
+		P crtp.UnivariatePolynomialLike[P, S, C],
+		S crtp.RingElement[S],
+		C crtp.GroupElement[C],
+	] = crtp.UnivariatePolynomialLike[P, S, C]
 
-type Polynomial[P interface {
-	AlgebraElement[P, S]
-	EuclideanDomainElement[P]
-}, S RingElement[S]] interface {
-	AlgebraElement[P, S]
-	EuclideanDomainElement[P]
+	PolynomialModule[
+		MP crtp.ModuleValuedPolynomial[MP, P, C, S],
+		P crtp.Polynomial[P, S],
+		C crtp.ModuleElement[C, S],
+		S crtp.RingElement[S],
+	] = crtp.PolynomialModule[MP, P, C, S]
+	ModuleValuedPolynomial[
+		MP crtp.ModuleValuedPolynomial[MP, P, C, S],
+		P crtp.Polynomial[P, S],
+		C crtp.ModuleElement[C, S],
+		S crtp.RingElement[S],
+	] = crtp.ModuleValuedPolynomial[MP, P, C, S]
 
-	Coefficients() []S
-	Derivative() Polynomial[P, S]
-	Degree() uint
-	Eval(S) S
-}
+	PolynomialRing[
+		P crtp.Polynomial[P, S],
+		S crtp.RingElement[S],
+	] = crtp.PolynomialRing[P, S]
+	Polynomial[
+		P crtp.Polynomial[P, S],
+		S crtp.RingElement[S],
+	] = crtp.Polynomial[P, S]
 
-// ******************* Matrices
-
-type Matrix[M Element[M], C RingElement[C]] interface {
-	ds.AbstractMatrix[M]
-	RingActable[M, C]
-	TryInv() (M, error)
-}
-
-type MatrixAlgebra[M SquareMatrix[M, C], C FieldElement[C]] interface {
-	Algebra[M, C]
-
-	New(n, m int) M
-	Random(n, m int, prng io.Reader) (M, error)
-}
-
-type SquareMatrix[M interface {
-	Matrix[M, S]
-	AlgebraElement[M, S]
-}, S FieldElement[S]] interface {
-	Matrix[M, S]
-	AlgebraElement[M, S]
-
-	Determinant() S
-}
+	MultiVariatePolynomialRing[
+		PP crtp.MultivariatePolynomial[PP, P, S],
+		P crtp.Polynomial[P, S],
+		S crtp.RingElement[S],
+	] = crtp.MultivariatePolynomialRing[PP, P, S]
+	MultivariatePolynomial[
+		MP crtp.MultivariatePolynomial[MP, P, S],
+		P crtp.Polynomial[P, S],
+		S crtp.RingElement[S],
+	] = crtp.MultivariatePolynomial[MP, P, S]
+)

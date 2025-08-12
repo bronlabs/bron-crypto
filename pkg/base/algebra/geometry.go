@@ -1,105 +1,80 @@
 package algebra
 
-type AffineSystem[E AffineElement[E, C], C RingElement[C]] interface {
-	Structure[E]
+import "github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 
-	FromAffineCompressed(b []byte) (E, error)
-	FromAffineUncompressed(b []byte) (E, error)
-}
+type (
+	CoordinateSystem                   = crtp.CoordinateSystem
+	Coordinates[C crtp.RingElement[C]] = crtp.Coordinates[C]
 
-type AffineElement[E Element[E], C RingElement[C]] interface {
-	Element[E]
-	Coordinates() []C
+	Variety[E crtp.RationalPoint[E, C], C crtp.RingElement[C]]       crtp.Variety[E, C]
+	RationalPoint[E crtp.RationalPoint[E, C], C crtp.RingElement[C]] crtp.RationalPoint[E, C]
 
-	// TODO(aalireza): we should probably rename these, technically they represent chosen method of serialisation (e.g. secg for Weierstrass curves, zcash for BLS12381, and RFCxxx for Edwards)
-	ToAffineCompressed() []byte
-	ToAffineUncompressed() []byte
-}
+	AlgebraicCurve[P crtp.AlgebraicPoint[P, C], C crtp.RingElement[C]] crtp.AlgebraicCurve[P, C]
+	AlgebraicPoint[P crtp.AlgebraicPoint[P, C], C crtp.RingElement[C]] crtp.AlgebraicPoint[P, C]
 
-type AlgebraicCurve[Point AlgebraicPoint[Point, Coordinate], Coordinate RingElement[Coordinate]] interface {
-	Group[Point]
-	AffineSystem[Point, Coordinate]
+	AffineCurve[P crtp.AffinePoint[P, C], C crtp.RingElement[C]] crtp.AffineCurve[P, C]
+	AffinePoint[P crtp.AffinePoint[P, C], C crtp.RingElement[C]] crtp.AffinePoint[P, C]
 
-	NewPoint(affineX, affineY Coordinate) (Point, error)
-}
+	ExtendedHomogeneousCurve[P crtp.ExtendedHomogeneousPoint[P, C], C crtp.RingElement[C]] crtp.ExtendedHomogeneousCurve[P, C]
+	ExtendedHomogeneousPoint[P crtp.ExtendedHomogeneousPoint[P, C], C crtp.RingElement[C]] crtp.ExtendedHomogeneousPoint[P, C]
 
-type AlgebraicPoint[Point interface {
-	GroupElement[Point]
-	AffineElement[Point, Coordinate]
-}, Coordinate RingElement[Coordinate]] interface {
-	GroupElement[Point]
-	AffineElement[Point, Coordinate]
+	ProjectiveCurve[P crtp.ProjectivePoint[P, C], C crtp.RingElement[C]] crtp.ProjectiveCurve[P, C]
+	ProjectivePoint[P crtp.ProjectivePoint[P, C], C crtp.RingElement[C]] crtp.ProjectivePoint[P, C]
 
-	AffineX() Coordinate
-	AffineY() Coordinate
-}
+	JacobianCurve[P crtp.JacobianPoint[P, C], C crtp.RingElement[C]] crtp.JacobianCurve[P, C]
+	JacobianPoint[P crtp.JacobianPoint[P, C], C crtp.RingElement[C]] crtp.JacobianPoint[P, C]
 
-type GenericEllipticCurve[
-	Point GenericEllipticCurvePoint[Point, BaseFieldElement, Scalar, TorsionFreePoint, TorsionFreeScalar], BaseFieldElement FiniteFieldElement[BaseFieldElement], Scalar UintLike[Scalar],
-	TorsionFreePoint TorsionFreeEllipticCurvePoint[TorsionFreePoint, BaseFieldElement, TorsionFreeScalar], TorsionFreeScalar PrimeFieldElement[TorsionFreeScalar],
-] interface {
-	AlgebraicCurve[Point, BaseFieldElement]
-	FiniteAbelianGroup[Point, Scalar]
-	TorsionFreeSubGroupGenerator() TorsionFreePoint
+	EllipticCurve[P crtp.EllipticCurvePoint[P, B, S], B crtp.FieldElement[B], S crtp.UintLike[S]]      crtp.EllipticCurve[P, B, S]
+	EllipticCurvePoint[P crtp.EllipticCurvePoint[P, B, S], B crtp.FieldElement[B], S crtp.UintLike[S]] crtp.EllipticCurvePoint[P, B, S]
 
-	ScalarField() PrimeField[TorsionFreeScalar]
-	BaseField() FiniteField[BaseFieldElement]
-}
+	PrimeOrderEllipticCurve[P crtp.EllipticCurvePoint[P, B, S], B crtp.FieldElement[B], S crtp.PrimeFieldElement[S]] interface {
+		crtp.EllipticCurve[P, B, S]
+		crtp.AdditivePrimeGroup[P, S]
+	}
+	PrimeOrderEllipticCurvePoint[P crtp.EllipticCurvePoint[P, B, S], B crtp.FieldElement[B], S crtp.PrimeFieldElement[S]] interface {
+		crtp.EllipticCurvePoint[P, B, S]
+		crtp.AdditivePrimeGroupElement[P, S]
+	}
 
-type GenericEllipticCurvePoint[Point interface {
-	AlgebraicPoint[Point, BaseFieldElement]
-	FiniteAbelianGroupElement[Point, Scalar]
-}, BaseFieldElement FiniteFieldElement[BaseFieldElement], Scalar UintLike[Scalar],
-	TorsionFreePoint TorsionFreeEllipticCurvePoint[TorsionFreePoint, BaseFieldElement, TorsionFreeScalar], TorsionFreeScalar PrimeFieldElement[TorsionFreeScalar],
-] interface {
-	AlgebraicPoint[Point, BaseFieldElement]
-	AbelianGroupElement[Point, Scalar]
+	PairingFriendlyCurve[
+		P1 PairingFriendlyPoint[P1, B1, P2, B2, E, S], B1 crtp.FieldElement[B1],
+		P2 PairingFriendlyPoint[P2, B2, P1, B1, E, S], B2 crtp.FieldElement[B2],
+		E crtp.MultiplicativeGroupElement[E], S crtp.PrimeFieldElement[S], DualStructureType any,
+	] interface {
+		crtp.PairingFriendlyCurve[P1, B1, P2, E, S, DualStructureType]
+		PrimeOrderEllipticCurve[P1, B1, S]
+	}
 
-	ClearCofactor() TorsionFreePoint
-}
+	PairingFriendlyPoint[
+		P1 crtp.PairingFriendlyPoint[P1, B1, P2, E, S], B1 crtp.FieldElement[B1],
+		P2 crtp.PairingFriendlyPoint[P2, B2, P1, E, S], B2 crtp.FieldElement[B2],
+		E crtp.MultiplicativeGroupElement[E], S crtp.PrimeFieldElement[S],
+	] interface {
+		crtp.PairingFriendlyPoint[P1, B1, P2, E, S]
+		PrimeOrderEllipticCurvePoint[P1, B1, S]
+	}
 
-type TorsionFreeEllipticCurve[Point TorsionFreeEllipticCurvePoint[Point, BaseFieldElement, Scalar],
-	BaseFieldElement FiniteFieldElement[BaseFieldElement], Scalar PrimeFieldElement[Scalar],
-] interface {
-	GenericEllipticCurve[Point, BaseFieldElement, Scalar, Point, Scalar]
-	PrimeGroup[Point, Scalar]
-	CyclicSemiGroup[Point]
-}
+	PairingName = crtp.PairingAlgorithm
+	PairingType = crtp.PairingType
 
-type TorsionFreeEllipticCurvePoint[Point interface {
-	AlgebraicPoint[Point, BaseFieldElement]
-	PrimeGroupElement[Point, Scalar]
-	CyclicSemiGroupElement[Point]
-	ClearCofactor() Point
-}, BaseFieldElement FiniteFieldElement[BaseFieldElement], Scalar PrimeFieldElement[Scalar]] interface {
-	AlgebraicPoint[Point, BaseFieldElement]
-	PrimeGroupElement[Point, Scalar]
-	CyclicSemiGroupElement[Point]
+	PairingProductEvaluator[
+		P1 PairingFriendlyPoint[P1, B1, P2, B2, E, S], B1 crtp.FieldElement[B1],
+		P2 PairingFriendlyPoint[P2, B2, P1, B1, E, S], B2 crtp.FieldElement[B2],
+		E crtp.MultiplicativeGroupElement[E], S crtp.PrimeFieldElement[S],
+	] = crtp.PairingProductEvaluator[P1, P2, E]
+)
 
-	ClearCofactor() Point
-}
+const (
+	AffineCoordinateSystem              = crtp.AffineCoordinateSystem
+	ExtendedHomogeneousCoordinateSystem = crtp.ExtendedHomogeneousCoordinateSystem
+	ProjectiveCoordinateSystem          = crtp.ProjectiveCoordinateSystem
+	JacobianCoordinateSystem            = crtp.JacobianCoordinateSystem
 
-type PairingFriendlyCurve[P TorsionFreeEllipticCurvePoint[P, B, S], B FiniteFieldElement[B], S PrimeFieldElement[S], P2 TorsionFreeEllipticCurvePoint[P2, B2, S], B2 FiniteFieldElement[B2]] interface {
-	TorsionFreeEllipticCurve[P, B, S]
+	TypeI   = crtp.TypeI
+	TypeII  = crtp.TypeII
+	TypeIII = crtp.TypeIII
+)
 
-	OtherCurve() TorsionFreeEllipticCurve[P2, B2, S]
-}
-
-type Pairing[
-	g1 TorsionFreeEllipticCurve[g1Point, g1Coordinate, g1Scalar], g1Point TorsionFreeEllipticCurvePoint[g1Point, g1Coordinate, g1Scalar], g1Coordinate FiniteFieldElement[g1Coordinate], g1Scalar PrimeFieldElement[g1Scalar],
-	g2 TorsionFreeEllipticCurve[g2Point, g2Coordinate, g2Scalar], g2Point TorsionFreeEllipticCurvePoint[g2Point, g2Coordinate, g2Scalar], g2Coordinate FiniteFieldElement[g2Coordinate], g2Scalar PrimeFieldElement[g2Scalar],
-	gt interface {
-		MultiplicativeGroup[gtElement]
-		AbelianGroup[gtElement, gtScalar]
-	}, gtElement interface {
-		MultiplicativeGroupElement[gtElement]
-		FiniteAbelianGroupElement[gtElement, gtScalar]
-	}, gtScalar UintLike[gtScalar],
-] interface {
-	G1() g1
-	G2() g2
-	Gt() gt
-
-	Pair(p g1Point, q g2Point) (gtElement, error)
-	MultiPair(ps []g1Point, qs []g2Point) (gtElement, error)
+func NewCoordinates[C crtp.RingElement[C]](t crtp.CoordinateSystem, v ...C) Coordinates[C] {
+	return crtp.NewCoordinates[C](t, v...)
 }

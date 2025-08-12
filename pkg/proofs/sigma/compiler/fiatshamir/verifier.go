@@ -7,10 +7,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
-var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
-	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.State, sigma.Response,
-])(nil)
-
 type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	transcript    transcripts.Transcript
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
@@ -25,10 +21,10 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proof compiler.NIZKPoKProof
 		return errs.NewType("input proof")
 	}
 
-	v.transcript.AppendBytes(statementLabel, v.sigmaProtocol.SerializeStatement(statement))
+	v.transcript.AppendBytes(statementLabel, statement.Bytes())
 
 	a := fsProof.A
-	v.transcript.AppendBytes(commitmentLabel, v.sigmaProtocol.SerializeCommitment(a))
+	v.transcript.AppendBytes(commitmentLabel, a.Bytes())
 
 	e, err := v.transcript.ExtractBytes(challengeLabel, uint(v.sigmaProtocol.GetChallengeBytesLength()))
 	if err != nil {

@@ -1,17 +1,25 @@
 package pasta
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
-	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"sync"
+
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
+	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
+	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/cronokirby/saferith"
+)
+
+type (
+	VestaBaseField    = FqField
+	PallasScalarField = FqField
 )
 
 const (
@@ -19,12 +27,14 @@ const (
 )
 
 var (
-	_ fields.PrimeField[*FqFieldElement]        = (*FqField)(nil)
-	_ fields.PrimeFieldElement[*FqFieldElement] = (*FqFieldElement)(nil)
+	_ algebra.PrimeField[*FqFieldElement]        = (*FqField)(nil)
+	_ algebra.PrimeFieldElement[*FqFieldElement] = (*FqFieldElement)(nil)
 
-	fqFieldInitOnce sync.Once
-	fqFieldInstance *FqField
-	fqFieldOrder    *saferith.Modulus
+	fqFieldInitOnce      sync.Once
+	fqFieldInstance      *FqField
+	fqFieldModelOnce     sync.Once
+	fqFieldModelInstance *universal.Model[*FqFieldElement]
+	fqFieldOrder         *saferith.Modulus
 )
 
 func fqFieldInit() {
@@ -41,6 +51,20 @@ func newFqField() *FqField {
 	return fqFieldInstance
 }
 
+func FqFieldModel() *universal.Model[*FqFieldElement] {
+	fqFieldModelOnce.Do(func() {
+		var err error
+		fqFieldModelInstance, err = impl.ScalarFieldModel(
+			newFqField(),
+		)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	return fqFieldModelInstance
+}
+
 func NewVestaBaseField() *FqField {
 	return newFqField()
 }
@@ -53,12 +77,8 @@ func (*FqField) Name() string {
 	return FqFieldName
 }
 
-func (*FqField) Operator() algebra.BinaryOperator[*FqFieldElement] {
-	return algebra.Add[*FqFieldElement]
-}
-
-func (*FqField) OtherOperator() algebra.BinaryOperator[*FqFieldElement] {
-	return algebra.Mul[*FqFieldElement]
+func (f *FqField) Model() *universal.Model[*FqFieldElement] {
+	return FqFieldModel()
 }
 
 func (*FqField) ElementSize() int {
@@ -69,12 +89,12 @@ func (*FqField) WideElementSize() int {
 	return pastaImpl.FqWideBytes
 }
 
-func (f *FqField) Characteristic() algebra.Cardinal {
+func (f *FqField) Characteristic() cardinal.Cardinal {
 	return f.Order()
 }
 
-func (*FqField) Order() algebra.Cardinal {
-	return fqFieldOrder.Nat()
+func (*FqField) Order() cardinal.Cardinal {
+	return cardinal.NewFromNat(fqFieldOrder.Nat())
 }
 
 func (*FqField) Hash(input []byte) (*FqFieldElement, error) {

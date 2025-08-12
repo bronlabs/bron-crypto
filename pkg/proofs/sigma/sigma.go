@@ -1,6 +1,7 @@
 package sigma
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
@@ -15,11 +16,11 @@ const (
 
 type (
 	Name       string
-	Statement  any
-	Witness    any
-	Commitment any
-	State      any
-	Response   any
+	Statement  base.BytesLike
+	Witness    base.BytesLike
+	Commitment base.BytesLike
+	State      base.BytesLike
+	Response   base.BytesLike
 
 	// ChallengeBytes
 	// Sigma protocols are defined on an arbitrary [enumerable] challenge space.
@@ -51,17 +52,12 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 	// are required for the existence of polynomial-time extractor of witness.
 	SpecialSoundness() uint
 
-	ValidateStatement(statement X, witness W) error
-	GetChallengeBytesLength() int
-	SerializeStatement(statement X) []byte
-	SerializeCommitment(commitment A) []byte
-	SerializeResponse(response Z) []byte
-
 	// SoundnessError returns the statistical soundness error `s` of the protocol,
 	// i.e., the probability that a cheating prover can succeed is ≤ 2^(-s).
 	// For interactive proofs it must be at least base.StatisticalSecurity,
 	// for non-interactive proofs it must be at least base.ComputationalSecurity.
 	SoundnessError() int
+	GetChallengeBytesLength() int
 }
 
 type participant[X Statement, W Witness, A Commitment, S State, Z Response] struct {

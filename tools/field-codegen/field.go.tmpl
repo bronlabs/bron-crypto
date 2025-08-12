@@ -7,6 +7,8 @@ import (
 	"io"
 	"math/big"
 	"slices"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 const (
@@ -52,12 +54,12 @@ func (f *{{- .TypeName }}) SetUint64(v uint64) {
 	f.SetLimbs(limbs[:])
 }
 
-func (f *{{- .TypeName }}) SetLimbs(data []uint64) (ok uint64) {
+func (f *{{- .TypeName }}) SetLimbs(data []uint64) (ok ct.Bool) {
 	{{ .FiatPrefix -}}ToMontgomery(&f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, (*{{- .FiatPrefix -}}NonMontgomeryDomainFieldElement)(data))
 	return 1
 }
 
-func (f *{{- .TypeName }}) SetBytes(data []byte) (ok uint64) {
+func (f *{{- .TypeName }}) SetBytes(data []byte) (ok ct.Bool) {
 	if len(data) != {{ .TypeName -}}Bytes {
 		return 0
 	}
@@ -68,7 +70,7 @@ func (f *{{- .TypeName }}) SetBytes(data []byte) (ok uint64) {
 	return 1
 }
 
-func (f *{{- .TypeName }}) SetBytesWide(data []byte) (ok uint64) {
+func (f *{{- .TypeName }}) SetBytesWide(data []byte) (ok ct.Bool) {
 	if len(data) > {{ .TypeName -}}WideBytes {
 		return 0
 	}
@@ -88,7 +90,7 @@ func (f *{{- .TypeName }}) SetBytesWide(data []byte) (ok uint64) {
 	return 1
 }
 
-func (f *{{- .TypeName }}) SetUniformBytes(componentsData ...[]byte) (ok uint64) {
+func (f *{{- .TypeName }}) SetUniformBytes(componentsData ...[]byte) (ok ct.Bool) {
 	if len(componentsData) != 1 {
 		return 0
 	}
@@ -96,7 +98,7 @@ func (f *{{- .TypeName }}) SetUniformBytes(componentsData ...[]byte) (ok uint64)
 	return f.SetBytesWide(componentsData[0])
 }
 
-func (f *{{- .TypeName }}) SetRandom(prng io.Reader) (ok uint64) {
+func (f *{{- .TypeName }}) SetRandom(prng io.Reader) (ok ct.Bool) {
 	var uniformBytes [({{ .TypeName -}}Bits + 128 + 7) / 8]byte
 	_, err := io.ReadFull(prng, uniformBytes[:])
 	if err != nil {
@@ -105,12 +107,16 @@ func (f *{{- .TypeName }}) SetRandom(prng io.Reader) (ok uint64) {
 	return f.SetUniformBytes(uniformBytes[:])
 }
 
-func (f *{{- .TypeName }}) Select(choice uint64, z, nz *{{- .TypeName }}) {
+func (f *{{- .TypeName }}) CondAssign(choice ct.Choice, z, nz *{{- .TypeName }}) {
 	{{ .FiatPrefix -}}Selectznz((*[{{ .TypeName -}}Limbs]uint64)(&f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement), {{- .FiatPrefix -}}Uint1(choice), (*[{{ .TypeName -}}Limbs]uint64)(&z.{{- .FiatPrefix -}}MontgomeryDomainFieldElement), (*[{{ .TypeName -}}Limbs]uint64)(&nz.{{- .FiatPrefix -}}MontgomeryDomainFieldElement))
 }
 
 func (f *{{- .TypeName }}) Add(lhs, rhs *{{- .TypeName }}) {
 	{{ .FiatPrefix -}}Add(&f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, &lhs.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, &rhs.{{- .FiatPrefix -}}MontgomeryDomainFieldElement)
+}
+
+func (f *{{- .TypeName }}) Double(x *{{- .TypeName }}) {
+	{{ .FiatPrefix -}}Add(&f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, &x.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, &x.{{- .FiatPrefix -}}MontgomeryDomainFieldElement)
 }
 
 func (f *{{- .TypeName }}) Sub(lhs, rhs *{{- .TypeName }}) {
@@ -129,7 +135,7 @@ func (f *{{- .TypeName }}) Square(v *{{- .TypeName }}) {
 	{{ .FiatPrefix -}}Square(&f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, &v.{{- .FiatPrefix -}}MontgomeryDomainFieldElement)
 }
 
-func (f *{{- .TypeName }}) Inv(a *{{- .TypeName }}) (ok uint64) {
+func (f *{{- .TypeName }}) Inv(a *{{- .TypeName }}) (ok ct.Bool) {
 	var precomp, h, v, r, out4, out5 [{{ .TypeName -}}Limbs]uint64
 	var ff, g, out2, out3 [{{ .TypeName -}}SatLimbs]uint64
 	var out1, inverted uint64
@@ -155,41 +161,41 @@ func (f *{{- .TypeName }}) Inv(a *{{- .TypeName }}) (ok uint64) {
 	{{ .FiatPrefix -}}Mul(&f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement, (*{{- .FiatPrefix -}}MontgomeryDomainFieldElement)(&v), (*{{- .FiatPrefix -}}MontgomeryDomainFieldElement)(&precomp))
 	{{ .FiatPrefix -}}Nonzero(&inverted, (*[{{ .TypeName -}}Limbs]uint64)(&f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement))
 
-	return (inverted | -inverted) >> 63
+	return ct.Bool((inverted | -inverted) >> 63)
 }
 
-func (f *{{- .TypeName }}) Div(lhs, rhs *{{- .TypeName }}) (ok uint64) {
+func (f *{{- .TypeName }}) Div(lhs, rhs *{{- .TypeName }}) (ok ct.Bool) {
 	var rhsInv {{ .TypeName }}
 	ok = rhsInv.Inv(rhs)
 	f.Mul(lhs, &rhsInv)
 	return ok
 }
 
-func (f *{{- .TypeName }}) Sqrt(x *{{- .TypeName }}) (ok uint64) {
-	return {{ .SqrtCall -}}(f, x, &{{ .TypeName -}}RootOfUnity, {{ .TypeName -}}E, {{ .TypeName -}}ProgenitorExp[:])
+func (f *{{- .TypeName }}) Sqrt(x *{{- .TypeName }}) (ok ct.Bool) {
+	return ct.Bool({{ .SqrtCall -}}(f, x, &{{ .TypeName -}}RootOfUnity, {{ .TypeName -}}E, {{ .TypeName -}}ProgenitorExp[:]))
 }
 
-func (f *{{- .TypeName }}) IsNonZero() uint64 {
+func (f *{{- .TypeName }}) IsNonZero() ct.Bool {
 	// montgomery form might not be "fully reduced"
 	var nonMonty {{ .FiatPrefix -}}NonMontgomeryDomainFieldElement
 	{{ .FiatPrefix -}}FromMontgomery(&nonMonty, &f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement)
 
 	var nonZero uint64
 	{{ .FiatPrefix -}}Nonzero(&nonZero, (*[{{ .TypeName -}}Limbs]uint64)(&nonMonty))
-	return (nonZero | -nonZero) >> 63
+	return ct.Bool((nonZero | -nonZero) >> 63)
 }
 
-func (f *{{- .TypeName }}) IsZero() uint64 {
+func (f *{{- .TypeName }}) IsZero() ct.Bool {
 	return f.IsNonZero() ^ 1
 }
 
-func (f *{{- .TypeName }}) IsOne() uint64 {
+func (f *{{- .TypeName }}) IsOne() ct.Bool {
 	var one {{ .TypeName }}
 	one.SetOne()
-	return f.Equals(&one)
+	return f.Equal(&one)
 }
 
-func (f *{{- .TypeName }}) Equals(v *{{- .TypeName }}) uint64 {
+func (f *{{- .TypeName }}) Equal(v *{{- .TypeName }}) ct.Bool {
 	var diff {{ .TypeName }}
 	diff.Sub(f, v)
 	return diff.IsZero()

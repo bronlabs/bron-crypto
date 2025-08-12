@@ -859,7 +859,7 @@ func dec(dec string) *pasta.PallasBaseFieldElement {
 		panic("invalid number")
 	}
 	bn := new(saferith.Nat).SetBig(bi, 256)
-	fe, err := pasta.NewPallasBaseField().FromNat(bn)
+	fe, err := pasta.NewPallasBaseField().FromBytes(bn.Bytes())
 	if err != nil {
 		panic(err)
 	}

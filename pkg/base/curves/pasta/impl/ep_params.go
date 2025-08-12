@@ -5,9 +5,10 @@ import (
 
 	"golang.org/x/crypto/blake2b"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c/mappers/sswu"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	pointsImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
+	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380/mappers/sswu"
 )
 
 var (
@@ -128,12 +129,12 @@ func (pallasCurveMapperParams) SetZ(out *Fp) {
 	out.Set(&pallasSswuZ)
 }
 
-func (pallasCurveMapperParams) SqrtRatio(y, u, v *Fp) (ok uint64) {
+func (pallasCurveMapperParams) SqrtRatio(y, u, v *Fp) (ok ct.Bool) {
 	return sswu.SqrtRatio(y, pallasSqrtRatioC1, pallasSqrtRatioC3[:], pallasSqrtRatioC4, pallasSqrtRatioC5, &pallasSqrtRatioC6, &pallasSqrtRatioC7, u, v)
 }
 
-func (pallasCurveMapperParams) Sgn0(v *Fp) uint64 {
-	return uint64(v.Bytes()[0] & 0b1)
+func (pallasCurveMapperParams) Sgn0(v *Fp) ct.Bool {
+	return ct.Bool(uint64(v.Bytes()[0] & 0b1))
 }
 
 func (pallasCurveMapperParams) XNum() []Fp {

@@ -1,141 +1,281 @@
 package algebra
 
 import (
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 )
 
-type UnaryOperator[E ds.Equatable[E]] func(E) E
+const UnboundedCapacity crtp.Capacity = -1
 
-func (u UnaryOperator[E]) IsIdempotent(x E) bool {
-	return u(u(x)).Equal(u(x))
+type (
+	NAry[C any]                = crtp.NAry[C]
+	Mapping[F, C any]          = crtp.Mapping[F, C]
+	Product[P, C any]          = crtp.Product[P, C]
+	CoProduct[P, C any]        = crtp.CoProduct[P, C]
+	Power[P, C any]            = crtp.Power[P, C]
+	TensorProduct[E, C, S any] = crtp.TensorProduct[E, C, S]
+	Tensor[E, S any]           = crtp.Tensor[E, S]
+)
+
+type (
+	Capacity                    = crtp.Capacity
+	Operand[E any]              crtp.Operand[E]
+	FixedCapacityOperand[E any] crtp.FixedCapacityOperand[E]
+
+	DualOperand[E any]              crtp.DualOperand[E]
+	FixedCapacityDualOperand[E any] crtp.FixedCapacityDualOperand[E]
+
+	Summand[E any]                   crtp.Summand[E]
+	FixedCapacitySummand[E any]      crtp.FixedCapacitySummand[E]
+	MaybeSummand[E any]              crtp.MaybeSummand[E]
+	MaybeFixedCapacitySummand[E any] crtp.MaybeFixedCapacitySummand[E]
+
+	Minuend[E any]                   crtp.Minuend[E]
+	FixedCapacityMinuend[E any]      crtp.FixedCapacityMinuend[E]
+	MaybeMinuend[E any]              crtp.MaybeMinuend[E]
+	MaybeFixedCapacityMinuend[E any] crtp.MaybeFixedCapacityMinuend[E]
+
+	Multiplicand[E any]                   crtp.Multiplicand[E]
+	FixedCapacityMultiplicand[E any]      crtp.FixedCapacityMultiplicand[E]
+	MaybeMultiplicand[E any]              crtp.MaybeMultiplicand[E]
+	MaybeFixedCapacityMultiplicand[E any] crtp.MaybeFixedCapacityMultiplicand[E]
+
+	Dividend[E any]                   crtp.Dividend[E]
+	FixedCapacityDividend[E any]      crtp.FixedCapacityDividend[E]
+	MaybeDividend[E any]              crtp.MaybeDividend[E]
+	MaybeFixedCapacityDividend[E any] crtp.MaybeFixedCapacityDividend[E]
+
+	ExponentiationBase[B, E any]                   crtp.ExponentiationBase[B, E]
+	FixedCapacityExponentiationBase[B, E any]      crtp.FixedCapacityExponentiationBase[B, E]
+	MaybeExponentiationBase[B, E any]              crtp.MaybeExponentiationBase[B, E]
+	MaybeFixedCapacityExponentiationBase[B, E any] crtp.MaybeFixedCapacityExponentiationBase[B, E]
+
+	Residuand[M, Q any] crtp.Residuand[M, Q]
+
+	Conjunct[E any]      crtp.Conjunct[E]
+	MaybeConjunct[E any] crtp.MaybeConjunct[E]
+
+	Disjunct[E any]      crtp.Disjunct[E]
+	MaybeDisjunct[E any] crtp.MaybeDisjunct[E]
+
+	ExclusiveDisjunct[E any]      crtp.ExclusiveDisjunct[E]
+	MaybeExclusiveDisjunct[E any] crtp.MaybeExclusiveDisjunct[E]
+
+	ArithmeticNegand[E any]      crtp.ArithmeticNegand[E]
+	MaybeArithmeticNegand[E any] crtp.MaybeArithmeticNegand[E]
+
+	Inversand[E any]      crtp.Inversand[E]
+	MaybeInversand[E any] crtp.MaybeInversand[E]
+
+	BooleanNegand[E any]      crtp.BooleanNegand[E]
+	MaybeBooleanNegand[E any] crtp.MaybeBooleanNegand[E]
+
+	Shiftable[E, S any]      crtp.Shiftable[E, S]
+	MaybeShiftable[E, S any] crtp.MaybeShiftable[E, S]
+
+	LeftBitwiseShiftable[E any]            crtp.LeftBitwiseShiftable[E]
+	FixedLengthLeftBitwiseShiftable[E any] crtp.FixedLengthLeftBitwiseShiftable[E]
+
+	RightBitwiseShiftable[E any]            crtp.RightBitwiseShiftable[E]
+	FixedLengthRightBitwiseShiftable[E any] crtp.FixedLengthRightBitwiseShiftable[E]
+
+	Resizable[E, C any]      crtp.Resizable[E, C]
+	ResizableCapacity[E any] crtp.ResizableCapacity[E]
+)
+
+type Homomorphism[E1 SemiGroupElement[E1], E2 SemiGroupElement[E2]] func(E1) E2
+
+type HomomorphicLike[T any, TV GroupElement[TV]] interface {
+	base.Transparent[TV]
+	crtp.Operand[T]
+	base.Equatable[T]
 }
 
-func (u UnaryOperator[E]) IsInvolution(x E) bool {
-	return x.Equal(u(u(x)))
+type AdditivelyHomomorphicLike[T HomomorphicLike[T, TV], TV AdditiveGroupElement[TV]] interface {
+	HomomorphicLike[T, TV]
+	crtp.Summand[T]
 }
 
-func (u UnaryOperator[E]) IsFixedPoint(x E) bool {
-	return x.Equal(u(x))
+type MultiplicativelyHomomorphicLike[T HomomorphicLike[T, TV], TV MultiplicativeGroupElement[TV]] interface {
+	HomomorphicLike[T, TV]
+	crtp.Multiplicand[T]
 }
 
-type BinaryOperator[E Operand[E]] func(E, E) E
-
-func (f BinaryOperator[E]) IsCommutative(a, b E) bool {
-	return f(a, b).Equal(f(b, a))
-}
-
-func (f BinaryOperator[E]) IsAssociative(a, b, c E) bool {
-	return f(f(a, b), c).Equal(f(a, f(b, c)))
-}
-
-func (f BinaryOperator[E]) IsIdempotent(x E) bool {
-	return f(x, x).Equal(x)
-}
-
-func (f BinaryOperator[E]) IsLeftCancellative(e, b, c E) bool {
-	return implies(f(e, b).Equal(f(e, c)), b.Equal(c))
-}
-
-func (f BinaryOperator[E]) IsRightCancellative(e, b, c E) bool {
-	return implies(f(b, e).Equal(f(c, e)), b.Equal(c))
-}
-
-func (f BinaryOperator[E]) IsAborbing(e, a E) bool {
-	return f(e, a).Equal(a) && f(a, e).Equal(a)
-}
-
-func IsLeftDistributive[E Operand[E]](op1, op2 BinaryOperator[E], x, y, z E) bool {
-	return op2(x, op1(y, z)).Equal(op1(op2(x, y), op2(x, z)))
-}
-
-func IsRightDistributive[E Operand[E]](op1, op2 BinaryOperator[E], x, y, z E) bool {
-	return op2(op1(x, y), z).Equal(op1(op2(x, z), op2(y, z)))
-}
-
-func IsDistributive[E Operand[E]](op1, op2 BinaryOperator[E], x, y, z E) bool {
-	return IsLeftDistributive(op1, op2, x, y, z) && IsRightDistributive(op1, op2, x, y, z)
-}
-
-type Operand[E any] interface {
-	ds.Equatable[E]
-	Op(E) E
-}
-
-type BiOperand[E any] interface {
-	Operand[E]
-	OtherOp(E) E
-}
-
-func Operate[E Operand[E]](a, b E) E {
+func Operator[E Operand[E]](a, b E) E {
 	return a.Op(b)
 }
 
-type Summand[E Operand[E]] interface {
-	Operand[E]
-	Add(E) E
+func FixedCapacityOperator[E FixedCapacityOperand[E]](a E, b E, cap Capacity) E {
+	return a.OpCap(b, cap)
 }
 
-type Addition[E Summand[E]] BinaryOperator[E]
+func DualOperator[E DualOperand[E]](a, b E) E {
+	return a.OtherOp(b)
+}
 
-func Add[E Summand[E]](a, b E) E {
+func FixedCapacityDualOperator[E FixedCapacityDualOperand[E]](a E, b E, cap Capacity) E {
+	return a.OtherOpCap(b, cap)
+}
+
+func Addition[E Summand[E]](a, b E) E {
 	return a.Add(b)
 }
 
-type Multiplicand[E Operand[E]] interface {
-	Operand[E]
-	Mul(E) E
+func FixedCapacityAddition[E FixedCapacitySummand[E]](a E, b E, cap Capacity) E {
+	return a.AddCap(b, cap)
 }
 
-type Multiplication[E Multiplicand[E]] BinaryOperator[E]
+func MaybeAddition[E MaybeSummand[E]](a, b E) (E, error) {
+	return a.TryAdd(b)
+}
 
-func Mul[E Multiplicand[E]](a, b E) E {
+func MaybeFixedCapacityAddition[E MaybeFixedCapacitySummand[E]](a E, b E, cap Capacity) (E, error) {
+	return a.TryAddCap(b, cap)
+}
+
+func Subtraction[E Minuend[E]](a, b E) E {
+	return a.Sub(b)
+}
+
+func FixedCapacitySubtraction[E FixedCapacityMinuend[E]](a E, b E, cap Capacity) E {
+	return a.SubCap(b, cap)
+}
+func MaybeSubtraction[E MaybeMinuend[E]](a, b E) (E, error) {
+	return a.TrySub(b)
+}
+
+func MaybeFixedCapacitySubtraction[E MaybeFixedCapacityMinuend[E]](a E, b E, cap Capacity) (E, error) {
+	return a.TrySubCap(b, cap)
+}
+
+func Multiplication[E Multiplicand[E]](a, b E) E {
 	return a.Mul(b)
 }
 
-type Conjunct[E Operand[E]] interface {
-	Operand[E]
-	And(E) E
+func FixedCapacityMultiplication[E FixedCapacityMultiplicand[E]](a E, b E, cap Capacity) E {
+	return a.MulCap(b, cap)
 }
 
-type Conjunction[E Conjunct[E]] BinaryOperator[E]
+func MaybeMultiplication[E MaybeMultiplicand[E]](a, b E) (E, error) {
+	return a.TryMul(b)
+}
+
+func MaybeFixedCapacityMultiplication[E MaybeFixedCapacityMultiplicand[E]](a E, b E, cap Capacity) (E, error) {
+	return a.TryMulCap(b, cap)
+}
+
+func Division[E Dividend[E]](a, b E) E {
+	return a.Div(b)
+}
+
+func FixedCapacityDivision[E FixedCapacityDividend[E]](a E, b E, cap Capacity) E {
+	return a.DivCap(b, cap)
+}
+
+func MaybeDivision[E MaybeDividend[E]](a, b E) (E, error) {
+	return a.TryDiv(b)
+}
+
+func MaybeFixedCapacityDivision[E MaybeFixedCapacityDividend[E]](a E, b E, cap Capacity) (E, error) {
+	return a.TryDivCap(b, cap)
+}
+
+func Modulo[E Residuand[M, Q], M Element[M], Q Residue[Q]](x E, m M) (Q, error) {
+	return x.Mod(m)
+}
+
+func Exponentiate[A ExponentiationBase[A, E], E Element[E]](base A, exponent E) A {
+	return base.Exp(exponent)
+}
+
+func FixedCapacityExponentiate[A FixedCapacityExponentiationBase[A, E], E Element[E]](base A, exponent E, cap Capacity) A {
+	return base.ExpCap(exponent, cap)
+}
+
+func MaybeExponentiate[A MaybeExponentiationBase[A, E], E Element[E]](base A, exponent E) (A, error) {
+	return base.TryExp(exponent)
+}
+
+func MaybeFixedCapacityExponentiate[A MaybeFixedCapacityExponentiationBase[A, E], E Element[E]](base A, exponent E, cap Capacity) (A, error) {
+	return base.TryExpCap(exponent, cap)
+}
 
 func And[E Conjunct[E]](a, b E) E {
 	return a.And(b)
 }
 
-type Disjunct[E Operand[E]] interface {
-	Operand[E]
-	Or(E) E
+func MaybeAnd[E MaybeConjunct[E]](a, b E) (E, error) {
+	return a.TryAnd(b)
 }
-
-type Disjunction[E Disjunct[E]] BinaryOperator[E]
 
 func Or[E Disjunct[E]](a, b E) E {
 	return a.Or(b)
 }
 
-type ExclusiveDisjunct[E Operand[E]] interface {
-	Operand[E]
-	Xor(E) E
+func MaybeOr[E MaybeDisjunct[E]](a, b E) (E, error) {
+	return a.TryOr(b)
 }
-
-type ExclusiveDisjunction[E ExclusiveDisjunct[E]] BinaryOperator[E]
 
 func Xor[E ExclusiveDisjunct[E]](a, b E) E {
 	return a.Xor(b)
 }
 
-type Negand[E Operand[E]] interface {
-	Operand[E]
-	Not() E
+func MaybeXor[E MaybeExclusiveDisjunct[E]](a, b E) (E, error) {
+	return a.TryXor(b)
 }
 
-type Negation[E Negand[E]] UnaryOperator[E]
+func Negate[E ArithmeticNegand[E]](a E) E {
+	return a.Neg()
+}
 
-func Not[E Negand[E]](a E) E {
+func MaybeNegate[E MaybeArithmeticNegand[E]](a E) (E, error) {
+	return a.TryNeg()
+}
+
+func Invert[E Inversand[E]](a E) E {
+	return a.Inv()
+}
+
+func MaybeInvert[E MaybeInversand[E]](a E) (E, error) {
+	return a.TryInv()
+}
+
+func Not[E BooleanNegand[E]](a E) E {
 	return a.Not()
 }
 
-func implies(p, q bool) bool {
-	return !p || q
+func MaybeNot[E MaybeBooleanNegand[E]](a E) (E, error) {
+	return a.TryNot()
+}
+
+func Shift[E Shiftable[E, S], S any](a E, shift S) E {
+	return a.Shift(shift)
+}
+
+func MaybeShift[E MaybeShiftable[E, S], S any](a E, shift S) (E, error) {
+	return a.TryShift(shift)
+}
+
+func LeftBitwiseShift[E LeftBitwiseShiftable[E]](a E, shift int) E {
+	return a.Lsh(shift)
+}
+
+func FixedLengthLeftBitwiseShift[E FixedLengthLeftBitwiseShiftable[E]](a E, shift int, cap Capacity) E {
+	return a.LshCap(shift, cap)
+}
+
+func RightBitwiseShift[E RightBitwiseShiftable[E]](a E, shift int) E {
+	return a.Rsh(shift)
+}
+
+func FixedLengthRightBitwiseShift[E FixedLengthRightBitwiseShiftable[E]](a E, shift int, cap Capacity) E {
+	return a.RshCap(shift, cap)
+}
+
+func Resize[E Resizable[E, C], C any](a E, cap C) E {
+	return a.Resize(cap)
+}
+
+func ResizeCapacity[E ResizableCapacity[E]](a E, cap Capacity) E {
+	return a.Resize(cap)
 }

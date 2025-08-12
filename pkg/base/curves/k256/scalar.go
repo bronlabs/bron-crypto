@@ -1,13 +1,16 @@
 package k256
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/h2c"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/traits"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"slices"
 	"sync"
+
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
+	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
@@ -19,12 +22,14 @@ const (
 )
 
 var (
-	_ fields.PrimeField[*Scalar]        = (*ScalarField)(nil)
-	_ fields.PrimeFieldElement[*Scalar] = (*Scalar)(nil)
+	_ algebra.PrimeField[*Scalar]        = (*ScalarField)(nil)
+	_ algebra.PrimeFieldElement[*Scalar] = (*Scalar)(nil)
 
-	scalarFieldInitOnce sync.Once
-	scalarFieldInstance *ScalarField
-	scalarFieldOrder    *saferith.Modulus
+	scalarFieldInitOnce      sync.Once
+	scalarFieldInstance      *ScalarField
+	scalarFieldModelInitOnce sync.Once
+	scalarFieldModelInstance *universal.Model[*Scalar]
+	scalarFieldOrder         *saferith.Modulus
 )
 
 func scalarFieldInit() {
@@ -44,24 +49,33 @@ func NewScalarField() *ScalarField {
 	return scalarFieldInstance
 }
 
+func ScalarFieldModel() *universal.Model[*Scalar] {
+	scalarFieldModelInitOnce.Do(func() {
+		var err error
+		scalarFieldModelInstance, err = impl.ScalarFieldModel(
+			NewScalarField(),
+		)
+		if err != nil {
+			panic(err)
+		}
+	})
+	return scalarFieldModelInstance
+}
+
 func (f *ScalarField) Name() string {
 	return ScalarFieldName
 }
 
-func (f *ScalarField) Order() algebra.Cardinal {
-	return scalarFieldOrder.Nat()
+func (f *ScalarField) Model() *universal.Model[*Scalar] {
+	return ScalarFieldModel()
 }
 
-func (f *ScalarField) Characteristic() algebra.Cardinal {
-	return scalarFieldOrder.Nat()
+func (f *ScalarField) Order() cardinal.Cardinal {
+	return cardinal.NewFromNat(scalarFieldOrder.Nat())
 }
 
-func (f *ScalarField) Operator() algebra.BinaryOperator[*Scalar] {
-	return algebra.Add[*Scalar]
-}
-
-func (f *ScalarField) OtherOperator() algebra.BinaryOperator[*Scalar] {
-	return algebra.Mul[*Scalar]
+func (f *ScalarField) Characteristic() cardinal.Cardinal {
+	return cardinal.NewFromNat(scalarFieldOrder.Nat())
 }
 
 func (f *ScalarField) Hash(bytes []byte) (*Scalar, error) {
