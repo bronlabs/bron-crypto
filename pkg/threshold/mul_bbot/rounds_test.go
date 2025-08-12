@@ -1,6 +1,7 @@
 package mul_bbot_test
 
 import (
+	"bytes"
 	crand "crypto/rand"
 	"io"
 	"testing"
@@ -24,10 +25,12 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	tape := hagrid.NewTranscript("test")
 
-	alice, err := mul_bbot.NewAlice(sessionID, curve, L, prng, tape.Clone())
+	aliceTape := tape.Clone()
+	alice, err := mul_bbot.NewAlice(sessionID, curve, L, prng, aliceTape)
 	require.NoError(t, err)
 
-	bob, err := mul_bbot.NewBob(sessionID, curve, L, prng, tape.Clone())
+	bobTape := tape.Clone()
+	bob, err := mul_bbot.NewBob(sessionID, curve, L, prng, bobTape)
 	require.NoError(t, err)
 
 	r1, err := alice.Round1()
@@ -57,12 +60,12 @@ func Test_HappyPath(t *testing.T) {
 		}
 	})
 
-	//t.Run("transcripts at the same state", func(t *testing.T) {
-	//	t.Parallel()
-	//	aliceBytes, err := tapes[0].ExtractBytes("test", 32)
-	//	require.NoError(t, err)
-	//	bobBytes, err := tapes[1].ExtractBytes("test", 32)
-	//	require.NoError(t, err)
-	//	require.True(t, bytes.Equal(aliceBytes, bobBytes))
-	//})
+	t.Run("transcripts at the same state", func(t *testing.T) {
+		t.Parallel()
+		aliceBytes, err := aliceTape.ExtractBytes("test", 32)
+		require.NoError(t, err)
+		bobBytes, err := bobTape.ExtractBytes("test", 32)
+		require.NoError(t, err)
+		require.True(t, bytes.Equal(aliceBytes, bobBytes))
+	})
 }
