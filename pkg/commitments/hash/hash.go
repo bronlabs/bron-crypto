@@ -13,11 +13,12 @@ import (
 )
 
 var (
-	_        commitments.Commitment = Commitment{}
-	_        commitments.Message    = Message(nil)
-	_        commitments.Witness    = Witness{}
-	_        commitments.Key        = Key{}
-	HmacFunc                        = blake2b.New256
+	_ commitments.Commitment = Commitment{}
+	_ commitments.Message    = Message(nil)
+	_ commitments.Witness    = Witness{}
+	_ commitments.Key        = Key{}
+
+	HmacFunc = blake2b.New256
 )
 
 const (
