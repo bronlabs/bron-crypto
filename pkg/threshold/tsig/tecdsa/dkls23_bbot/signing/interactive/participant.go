@@ -6,13 +6,16 @@ import (
 	"iter"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_bbot"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
@@ -26,19 +29,18 @@ const (
 //	_ types.ThresholdSignatureParticipant = (*Cosigner)(nil)
 //)
 
-type Cosigner[P algebra.PrimeOrderEllipticCurvePoint[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	Curve       algebra.PrimeOrderEllipticCurve[P, B, S]
-	ScalarField algebra.PrimeField[S]
+type Cosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	Suite       ecdsa.Suite[P, B, S]
 	SessionId   network.SID
 	MySharingId sharing.ID
-	//MyShard     *dkls23.Shard
-	TheQuorum network.Quorum
-	Prng      io.Reader
-	Tape      transcripts.Transcript
-	State     CosignerState[P, B, S]
+	MyShard     *tecdsa.Shard[P, B, S]
+	TheQuorum   network.Quorum
+	Prng        io.Reader
+	Tape        transcripts.Transcript
+	State       CosignerState[P, B, S]
 }
 
-type CosignerState[P algebra.PrimeOrderEllipticCurvePoint[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+type CosignerState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	ZeroSetup *przsSetup.Participant
 	Zero      *przs.Sampler[S]
 	AliceMul  map[sharing.ID]*mul_bbot.Alice[P, S]
@@ -57,7 +59,7 @@ type CosignerState[P algebra.PrimeOrderEllipticCurvePoint[P, B, S], B algebra.Fi
 	Pk             map[sharing.ID]P
 }
 
-func NewCosigner[P algebra.PrimeOrderEllipticCurvePoint[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, mySharingId sharing.ID, quorum network.Quorum /*shard *dkls23.Shard, */, curve algebra.PrimeOrderEllipticCurve[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
+func NewCosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, mySharingId sharing.ID, quorum network.Quorum, suite ecdsa.Suite[P, B, S], shard *tecdsa.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
 	//	//if err := validateCosignerInputs(sessionId, authKey, protocol, shard, quorum); err != nil {
 	//	//	return nil, errs.WrapValidation(err, "invalid inputs")
 	//	//}
@@ -68,17 +70,11 @@ func NewCosigner[P algebra.PrimeOrderEllipticCurvePoint[P, B, S], B algebra.Fiel
 	//	//	return nil, errs.NewFailed("couldn't find sharing identity in sharing config")
 	//	}
 
-	scalarField, ok := curve.ScalarStructure().(algebra.PrimeField[S])
-	if !ok {
-		return nil, errs.WrapFailed(nil, "curve scalar structure is not a prime field")
-	}
-
 	c := &Cosigner[P, B, S]{
 		MySharingId: mySharingId,
-		//MyShard:     shard,
+		MyShard:     shard,
 		TheQuorum:   quorum,
-		Curve:       curve,
-		ScalarField: scalarField,
+		Suite:       suite,
 		Prng:        prng,
 		Tape:        tape,
 	}
@@ -95,14 +91,14 @@ func NewCosigner[P algebra.PrimeOrderEllipticCurvePoint[P, B, S], B algebra.Fiel
 	for id := range c.otherCosigners() {
 		aliceTape := tape.Clone()
 		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.MySharingId)), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		c.State.AliceMul[id], err = mul_bbot.NewAlice(c.SessionId, c.Curve, 2, prng, aliceTape)
+		c.State.AliceMul[id], err = mul_bbot.NewAlice(c.SessionId, c.Suite.Curve(), 2, prng, aliceTape)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "couldn't initialise alice")
 		}
 
 		bobTape := tape.Clone()
 		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.MySharingId)))
-		c.State.BobMul[id], err = mul_bbot.NewBob(c.SessionId, c.Curve, 2, prng, bobTape)
+		c.State.BobMul[id], err = mul_bbot.NewBob(c.SessionId, c.Suite.Curve(), 2, prng, bobTape)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "couldn't initialise bob")
 		}
