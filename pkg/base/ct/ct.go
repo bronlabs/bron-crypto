@@ -13,6 +13,10 @@ const (
 	True  Bool = 1
 )
 
+func (c Choice) Not() Choice {
+	return c ^ One
+}
+
 type Comparable[E any] interface {
 	Compare(rhs E) (lt, eq, gt Bool)
 }

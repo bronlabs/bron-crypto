@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig"
 )
 
 type MPCFriendlyVariant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message] interface {
@@ -132,12 +133,13 @@ func (sh *Shard[E, S]) Share() *feldman.Share[S] {
 	return sh.share
 }
 
-func (sh *Shard[E, S]) Equal(other *Shard[E, S]) bool {
+func (sh *Shard[E, S]) Equal(other tsig.Shard[*schnorrlike.PublicKey[E, S], *feldman.Share[S], *feldman.AccessStructure]) bool {
 	if sh == nil || other == nil {
 		return sh == other
 	}
-	return sh.share.Equal(other.share) &&
-		sh.PublicMaterial.Equal(&other.PublicMaterial)
+	o, ok := other.(*Shard[E, S])
+	return ok && sh.share.Equal(o.share) &&
+		sh.PublicMaterial.Equal(&o.PublicMaterial)
 }
 
 func (sh *Shard[E, S]) PublicKeyMaterial() *PublicMaterial[E, S] {

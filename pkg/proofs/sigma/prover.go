@@ -23,8 +23,8 @@ func NewProver[X Statement, W Witness, A Commitment, S State, Z Response](sessio
 	if sigmaProtocol == nil {
 		return nil, errs.NewArgument("protocol, statement or witness is nil")
 	}
-	if s := sigmaProtocol.SoundnessError(); s < base.StatisticalSecurity {
-		return nil, errs.NewArgument("soundness of the interactive protocol (%d) is too low (below %d)", s, base.StatisticalSecurity)
+	if s := sigmaProtocol.SoundnessError(); s < base.StatisticalSecurityBits {
+		return nil, errs.NewArgument("soundness of the interactive protocol (%d) is too low (below %d)", s, base.StatisticalSecurityBits)
 	}
 
 	dst := fmt.Sprintf("%s-%s-%s", hex.EncodeToString(sessionId), transcriptLabel, sigmaProtocol.Name())
