@@ -1,4 +1,4 @@
-package interactive
+package sign_bbot
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"

@@ -1,4 +1,4 @@
-package interactive
+package sign_bbot
 
 import (
 	"encoding/binary"

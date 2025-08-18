@@ -4,6 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 )
 
+// TODO: get rid of non affine coordinates
 type (
 	CoordinateSystem string
 	PairingAlgorithm string

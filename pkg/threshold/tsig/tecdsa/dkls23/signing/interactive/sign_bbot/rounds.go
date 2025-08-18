@@ -1,36 +1,20 @@
-package interactive
+package sign_bbot
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_bbot"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 )
-
-// import (
-//
-//	"maps"
-//	"slices"
-//
-//	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-//	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-//	"github.com/bronlabs/bron-crypto/pkg/base/types"
-//	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
-//	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-//	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-//	"github.com/bronlabs/bron-crypto/pkg/csprng/fkechacha20"
-//	"github.com/bronlabs/bron-crypto/pkg/network"
-//	bbotMul "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23_bbot"
-//	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
-//	zeroSample "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs/sample"
-//	zeroSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs/setup"
-//	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/dkls23"
-//
-// )
 
 func (c *Cosigner[P, B, S]) Round1() (r1bOut *Round1Broadcast, r1uOut network.RoundMessages[*Round1P2P[P, B, S]], err error) {
 	if c.State.Round != 1 {
@@ -159,79 +143,85 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 	//	Value: c.MyShard.SecretShare(),
 	//}
 	//c.State.Sk, err = share.ToAdditive(quorumSharingIds)
-	//if err != nil {
-	//	return nil, nil, errs.WrapFailed(err, "to additive share failed")
-	//}
-	c.State.Sk = c.MyShard.Share().ToAdditive()
-	c.State.Sk = c.State.Sk.Add(zeta)
+
+	// TODO: this function doesn't make sense
+	quorum2, err := sharing.NewMinimalQualifiedAccessStructure(c.TheQuorum)
+	if err != nil {
+		panic(err)
+	}
+
+	sk, err := c.MyShard.Share().ToAdditive(*quorum2)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "to additive share failed")
+	}
+
+	c.State.Sk = sk.Value().Add(zeta)
 	c.State.Pk = make(map[sharing.ID]P)
 	c.State.Pk[c.MySharingId] = c.Suite.Curve().ScalarBaseMul(c.State.Sk)
 	c.State.C = make(map[sharing.ID][]S)
 
-	bOut := &Round3Broadcast{Pk: c.State.Pk[c.MySharingId]}
-	uOut = network.NewRoundMessages[types.ThresholdSignatureProtocol, *Round3P2P]()
-	for party, message := range outgoingP2PMessages(c, r3uOut) {
-		message.MulR3, c.State.C[party.id], err = c.State.AliceMul[party.id].Round3(mulR2[party.id], []curves.Scalar{c.State.R, c.State.Sk})
+	bOut := &Round3Broadcast[P, B, S]{Pk: c.State.Pk[c.MySharingId]}
+	uOut := hashmap.NewComparable[sharing.ID, *Round3P2P[P, B, S]]()
+	for id, message := range outgoingP2PMessages(c, uOut) {
+		message.MulR3, c.State.C[id], err = c.State.AliceMul[id].Round3(mulR2[id], []S{c.State.R, c.State.Sk})
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot run alice mul round3")
 		}
-		message.GammaU = c.Suite.Curve().ScalarBaseMult(c.State.C[party.id][0])
-		message.GammaV = c.Suite.Curve().ScalarBaseMult(c.State.C[party.id][1])
-		message.Psi = c.State.Phi.Sub(c.State.Chi[party.id])
+		message.GammaU = c.Suite.Curve().ScalarBaseMul(c.State.C[id][0])
+		message.GammaV = c.Suite.Curve().ScalarBaseMul(c.State.C[id][1])
+		message.Psi = c.State.Phi.Sub(c.State.Chi[id])
 	}
 
 	c.State.Round++
 	return bOut, uOut.Freeze(), nil
 }
 
-//
-//func (c *Cosigner) Round4(r3bOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round3Broadcast], r3uOut network.RoundMessages[types.ThresholdSignatureProtocol, *Round3P2P], message []byte) (partialSignature *dkls23.PartialSignature, err error) {
-//	incomingMessages, err := validateIncomingMessages(c, 4, r3bOut, r3uOut)
-//	if err != nil {
-//		return nil, errs.WrapFailed(err, "invalid input or round mismatch")
-//	}
-//
-//	psi := c.Protocol.Curve().ScalarField().Zero()
-//	cudu := c.Protocol.Curve().ScalarField().Zero()
-//	cvdv := c.Protocol.Curve().ScalarField().Zero()
-//	for party, message := range incomingMessages {
-//		d, err := c.State.BobMul[party.id].Round4(message.p2p.MulR3)
-//		if err != nil {
-//			return nil, errs.WrapFailed(err, "cannot run bob mul round4")
-//		}
-//		c.State.Pk[party.id] = message.broadcast.Pk
-//
-//		if !c.State.BigR[party.id].ScalarMul(c.State.Chi[party.id]).Sub(message.p2p.GammaU).Equal(c.Protocol.Curve().ScalarBaseMult(d[0])) {
-//			return nil, errs.NewFailed("consistency check failed")
-//		}
-//		if !message.broadcast.Pk.ScalarMul(c.State.Chi[party.id]).Sub(message.p2p.GammaV).Equal(c.Protocol.Curve().ScalarBaseMult(d[1])) {
-//			return nil, errs.NewFailed("consistency check failed")
-//		}
-//
-//		psi = psi.Add(message.p2p.Psi)
-//		cudu = cudu.Add(c.State.C[party.id][0].Add(d[0]))
-//		cvdv = cvdv.Add(c.State.C[party.id][1].Add(d[1]))
-//	}
-//
-//	bigR := sliceutils.Fold(func(x, y curves.Point) curves.Point { return x.Add(y) }, c.Protocol.Curve().AdditiveIdentity(), slices.Collect(maps.Values(c.State.BigR))...)
-//	pk := sliceutils.Fold(func(x, y curves.Point) curves.Point { return x.Add(y) }, c.Protocol.Curve().AdditiveIdentity(), slices.Collect(maps.Values(c.State.Pk))...)
-//	if !pk.Equal(c.MyShard.PublicKey()) {
-//		return nil, errs.NewFailed("consistency check failed")
-//	}
-//
-//	u := c.State.R.Mul(c.State.Phi.Add(psi)).Add(cudu)
-//	v := c.State.Sk.Mul(c.State.Phi.Add(psi)).Add(cvdv)
-//	m, err := messageToScalar(c, message)
-//	if err != nil {
-//		return nil, errs.WrapFailed(err, "cannot compute message scalar")
-//	}
-//	rx := c.Protocol.SigningSuite().Curve().ScalarField().Element().SetNat(bigR.AffineX().Nat())
-//	w := m.Mul(c.State.Phi).Add(rx.Mul(v))
-//
-//	partialSignature = &dkls23.PartialSignature{
-//		Ri: c.State.BigR[c.MySharingId],
-//		Ui: u,
-//		Wi: w,
-//	}
-//	return partialSignature, nil
-//}
+func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast[P, B, S]], r3uOut network.RoundMessages[*Round3P2P[P, B, S]], message []byte) (partialSignature *dkls23.PartialSignature[P, B, S], err error) {
+	incomingMessages, err := validateIncomingMessages(c, 4, r3bOut, r3uOut)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "invalid input or round mismatch")
+	}
+
+	psi := c.Suite.ScalarField().Zero()
+	cudu := c.Suite.ScalarField().Zero()
+	cvdv := c.Suite.ScalarField().Zero()
+	for id, message := range incomingMessages {
+		d, err := c.State.BobMul[id].Round4(message.p2p.MulR3)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot run bob mul round4")
+		}
+		c.State.Pk[id] = message.broadcast.Pk
+
+		if !c.State.BigR[id].ScalarMul(c.State.Chi[id]).Sub(message.p2p.GammaU).Equal(c.Suite.Curve().ScalarBaseMul(d[0])) {
+			return nil, errs.NewFailed("consistency check failed")
+		}
+		if !message.broadcast.Pk.ScalarMul(c.State.Chi[id]).Sub(message.p2p.GammaV).Equal(c.Suite.Curve().ScalarBaseMul(d[1])) {
+			return nil, errs.NewFailed("consistency check failed")
+		}
+
+		psi = psi.Add(message.p2p.Psi)
+		cudu = cudu.Add(c.State.C[id][0].Add(d[0]))
+		cvdv = cvdv.Add(c.State.C[id][1].Add(d[1]))
+	}
+
+	bigR := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.Suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.State.BigR))...)
+	pk := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.Suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.State.Pk))...)
+	if !pk.Equal(c.MyShard.PublicKey()) {
+		return nil, errs.NewFailed("consistency check failed")
+	}
+
+	u := c.State.R.Mul(c.State.Phi.Add(psi)).Add(cudu)
+	v := c.State.Sk.Mul(c.State.Phi.Add(psi)).Add(cvdv)
+	m, err := messageToScalar(c, message)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot compute message scalar")
+	}
+	rx, err := c.Suite.ScalarField().FromWideBytes(bigR.Coordinates().Value()[0].Bytes()) // TODO: fingers crossed it returns affine x
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot convert to scalar")
+	}
+	w := m.Mul(c.State.Phi).Add(rx.Mul(v))
+
+	partialSignature = dkls23.NewPartialSignature(c.State.BigR[c.MySharingId], u, w)
+	return partialSignature, nil
+}

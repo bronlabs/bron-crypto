@@ -1,4 +1,4 @@
-package interactive_test
+package sign_bbot_test
 
 //import (
 //	"bytes"

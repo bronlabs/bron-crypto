@@ -1,4 +1,4 @@
-package interactive
+package sign_bbot
 
 import (
 	"iter"
@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
@@ -55,19 +56,21 @@ import (
 //		return nil
 //	}
 //
-//	func messageToScalar(c *Cosigner, message []byte) (curves.Scalar, error) {
-//		messageHash, err := hashing.Hash(c.Protocol.SigningSuite().Hash(), message)
-//		if err != nil {
-//			return nil, errs.WrapHashing(err, "cannot hash message")
-//		}
-//		mPrimeUint := ecdsa.BitsToInt(messageHash, c.Protocol.Curve())
-//		mPrime, err := c.Protocol.Curve().ScalarField().Element().SetBytes(mPrimeUint.Bytes())
-//		if err != nil {
-//			return nil, errs.WrapSerialisation(err, "cannot convert message to scalar")
-//		}
-//		return mPrime, nil
-//	}
-//
+// TODO: make it valid, this is just quick and dirty to test
+func messageToScalar[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](c *Cosigner[P, B, S], message []byte) (S, error) {
+	var nilS S
+
+	messageHash, err := hashing.Hash(c.Suite.HashFunc(), message)
+	if err != nil {
+		return nilS, errs.WrapHashing(err, "cannot hash message")
+	}
+	mPrime, err := c.Suite.ScalarField().FromWideBytes(messageHash)
+	if err != nil {
+		return nilS, errs.WrapFailed(err, "cannot convert message hash to scalar")
+	}
+	return mPrime, nil
+}
+
 //	type party struct {
 //		id  types.SharingID
 //		key types.IdentityKey
