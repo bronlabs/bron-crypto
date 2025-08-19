@@ -22,8 +22,12 @@ func natFromUint64(v uint64) *impl.Nat {
 
 // Helper to create a ModulusOddPrime from uint64
 func modulusFromUint64(v uint64) *impl.ModulusOddPrime {
-	n := new(saferith.Nat).SetUint64(v)
-	return (*impl.ModulusOddPrime)(saferith.ModulusFromNat(n))
+	n := (*impl.Nat)(new(saferith.Nat).SetUint64(v))
+	m, ok := impl.NewModulusOddPrime(n)
+	if ok != ct.True {
+		panic("failed to create ModulusOddPrime")
+	}
+	return m
 }
 
 func TestCRTPrecompute(t *testing.T) {
@@ -36,13 +40,13 @@ func TestCRTPrecompute(t *testing.T) {
 		p := modulusFromUint64(7)
 		q := natFromUint64(11)
 
-		params, ok := crt.Precompute(p, q)
+		params, ok := crt.PrecomputePair(p, q)
 
 		assert.Equal(t, ct.True, ok, "CRTPrecompute should succeed for coprime p and q")
 		require.NotNil(t, params)
 
-		// Verify the precomputed values
-		assert.Equal(t, *p, params.P)
+		// Verify the precomputed values - compare the underlying Nat values
+		assert.Equal(t, p.Nat().Uint64(), params.P.Nat().Uint64())
 
 		// QInv should be q^{-1} mod p
 		// q mod p = 11 mod 7 = 4
@@ -57,7 +61,7 @@ func TestCRTPrecompute(t *testing.T) {
 		p := modulusFromUint64(97)
 		q := natFromUint64(101)
 
-		params, ok := crt.Precompute[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
+		params, ok := crt.PrecomputePair[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
 
 		assert.Equal(t, ct.True, ok)
 		require.NotNil(t, params)
@@ -84,17 +88,17 @@ func TestCRTDecompose(t *testing.T) {
 		q := natFromUint64(11)
 
 		// Use PrecomputeExtended for decomposition
-		prmx, ok := crt.PrecomputeExtended[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
+		prmx, ok := crt.PrecomputePairExtended[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
 		require.Equal(t, ct.True, ok)
 
-		// Test with value = 25 as a modulus
-		value := modulusFromUint64(25)
+		// Test with value = 23 as a modulus (23 is prime)
+		value := modulusFromUint64(23)
 		mp, mq := prmx.DecomposeSerial(value)
 
-		// 25 mod 7 = 4
-		// 25 mod 11 = 3
-		assert.Equal(t, uint64(4), mp.Uint64(), "25 mod 7 should be 4")
-		assert.Equal(t, uint64(3), mq.Uint64(), "25 mod 11 should be 3")
+		// 23 mod 7 = 2
+		// 23 mod 11 = 1
+		assert.Equal(t, uint64(2), mp.Uint64(), "23 mod 7 should be 2")
+		assert.Equal(t, uint64(1), mq.Uint64(), "23 mod 11 should be 1")
 	})
 
 	t.Run("larger values", func(t *testing.T) {
@@ -103,39 +107,37 @@ func TestCRTDecompose(t *testing.T) {
 		p := modulusFromUint64(97)
 		q := natFromUint64(101)
 
-		prmx, ok := crt.PrecomputeExtended[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
+		prmx, ok := crt.PrecomputePairExtended[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
 		require.Equal(t, ct.True, ok)
 
-		// Test with value = 1000
-		value := modulusFromUint64(1000)
+		// Test with value = 997 (which is prime)
+		value := modulusFromUint64(997)
 		mp, mq := prmx.DecomposeSerial(value)
 
-		// 1000 mod 97 = 30
-		// 1000 mod 101 = 91
-		assert.Equal(t, uint64(30), mp.Uint64(), "1000 mod 97 should be 30")
-		assert.Equal(t, uint64(91), mq.Uint64(), "1000 mod 101 should be 91")
+		// 997 mod 97 = 27
+		// 997 mod 101 = 88
+		assert.Equal(t, uint64(27), mp.Uint64(), "997 mod 97 should be 27")
+		assert.Equal(t, uint64(88), mq.Uint64(), "997 mod 101 should be 88")
 	})
 
-	t.Run("zero value", func(t *testing.T) {
+	t.Run("prime that gives specific residues", func(t *testing.T) {
 		t.Parallel()
 
 		p := modulusFromUint64(7)
 		q := natFromUint64(11)
 
-		prmx, ok := crt.PrecomputeExtended[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
+		prmx, ok := crt.PrecomputePairExtended[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
 		require.Equal(t, ct.True, ok)
 
-		// For zero, we need to use 77 (p*q) as the modulus since 0 can't be a modulus
-		pNat := natFromUint64(7)
-		mNat := new(saferith.Nat).Mul((*saferith.Nat)(pNat), (*saferith.Nat)(q), 128)
-		// Use the product as our value to decompose
-		value := (*impl.ModulusOddPrime)(saferith.ModulusFromNat(mNat))
+		// Use a prime that gives known residues
+		// 71 is prime, 71 mod 7 = 1, 71 mod 11 = 5
+		value := modulusFromUint64(71)
 		mp, mq := prmx.DecomposeSerial(value)
 
-		// 77 mod 7 = 0
-		// 77 mod 11 = 0
-		assert.Equal(t, uint64(0), mp.Uint64())
-		assert.Equal(t, uint64(0), mq.Uint64())
+		// 71 mod 7 = 1
+		// 71 mod 11 = 5
+		assert.Equal(t, uint64(1), mp.Uint64())
+		assert.Equal(t, uint64(5), mq.Uint64())
 	})
 
 	t.Run("parallel vs serial", func(t *testing.T) {
@@ -144,10 +146,10 @@ func TestCRTDecompose(t *testing.T) {
 		p := modulusFromUint64(97)
 		q := natFromUint64(101)
 
-		prmx, ok := crt.PrecomputeExtended[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
+		prmx, ok := crt.PrecomputePairExtended[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
 		require.Equal(t, ct.True, ok)
 
-		value := modulusFromUint64(5000)
+		value := modulusFromUint64(5003) // 5003 is prime
 
 		// Test both parallel and serial versions give same result
 		mpPar, mqPar := prmx.DecomposeParallel(value)
@@ -167,7 +169,7 @@ func TestCRTRecombinePrecomputed(t *testing.T) {
 		p := modulusFromUint64(7)
 		q := natFromUint64(11)
 
-		params, ok := crt.Precompute[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
+		params, ok := crt.PrecomputePair[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
 		require.Equal(t, ct.True, ok)
 
 		// Test recombining mp=4, mq=3
@@ -187,7 +189,7 @@ func TestCRTRecombinePrecomputed(t *testing.T) {
 		p := modulusFromUint64(97)
 		q := natFromUint64(101)
 
-		params, ok := crt.Precompute[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
+		params, ok := crt.PrecomputePair[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
 		require.Equal(t, ct.True, ok)
 
 		// Use residues from m = 1000
@@ -206,7 +208,7 @@ func TestCRTRecombinePrecomputed(t *testing.T) {
 		p := modulusFromUint64(13)
 		q := natFromUint64(17)
 
-		params, ok := crt.Precompute[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
+		params, ok := crt.PrecomputePair[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
 		require.Equal(t, ct.True, ok)
 
 		// Both residues are 0
@@ -231,7 +233,7 @@ func TestCRTRecombineOnce(t *testing.T) {
 		mp := natFromUint64(4)
 		mq := natFromUint64(3)
 
-		m, ok := crt.Recombine[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](mp, mq, pNat, qNat)
+		m, ok := crt.RecombinePair[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](mp, mq, pNat, qNat)
 		require.Equal(t, ct.True, ok)
 
 		assert.Equal(t, uint64(25), m.Uint64())
@@ -244,14 +246,14 @@ func TestCRTRoundTrip(t *testing.T) {
 	testCases := []struct {
 		name string
 		p, q uint64
-		m    uint64
+		m    uint64 // m should be prime for creating ModulusOddPrime
 	}{
-		{"small primes", 7, 11, 25},
-		{"larger primes", 13, 17, 100},
-		{"consecutive primes", 23, 29, 500},
-		{"with zero", 7, 11, 77}, // Use p*q for zero case
-		{"with one", 7, 11, 1},
-		{"max in range", 7, 11, 76}, // 77-1
+		{"small primes", 7, 11, 23},         // 23 is prime
+		{"larger primes", 13, 17, 101},      // 101 is prime
+		{"consecutive primes", 23, 29, 503}, // 503 is prime
+		{"with prime 5", 7, 11, 5},          // 5 is prime
+		{"with prime 3", 7, 11, 3},          // 3 is prime
+		{"with prime 73", 7, 11, 73},        // 73 is prime
 	}
 
 	for _, tc := range testCases {
@@ -263,7 +265,7 @@ func TestCRTRoundTrip(t *testing.T) {
 			q := natFromUint64(tc.q)
 
 			// Precompute CRT parameters with extended params for decomposition
-			prmx, ok := crt.PrecomputeExtended[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
+			prmx, ok := crt.PrecomputePairExtended[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
 			require.Equal(t, ct.True, ok)
 
 			// Original value as modulus
@@ -290,7 +292,7 @@ func TestCRTConsistency(t *testing.T) {
 	p := modulusFromUint64(31)
 	q := natFromUint64(37)
 
-	params, ok := crt.Precompute[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
+	params, ok := crt.PrecomputePair[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](p, q)
 	require.Equal(t, ct.True, ok)
 
 	testValues := []uint64{0, 1, 10, 100, 500, 1000}
@@ -303,7 +305,7 @@ func TestCRTConsistency(t *testing.T) {
 
 		pNat := natFromUint64(31)
 		qNat := natFromUint64(37)
-		mOnce, ok2 := crt.Recombine[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](mp, mq, pNat, qNat)
+		mOnce, ok2 := crt.RecombinePair[*impl.ModulusOddPrime, *impl.Nat, impl.ModulusOddPrime, impl.Nat](mp, mq, pNat, qNat)
 		require.Equal(t, ct.True, ok2)
 
 		assert.Equal(t, mPrecomputed.Uint64(), mOnce.Uint64(),
@@ -331,7 +333,7 @@ func TestCRTBasicRecombine(t *testing.T) {
 
 	// Perform CRT recombination using the correct signature
 	// Recombine expects: mp, mq (residues), p, q (moduli as Nats)
-	result, ok := crt.Recombine[*impl.ModulusOddPrime, *impl.Nat](rpNat, rqNat, pNat, qNat)
+	result, ok := crt.RecombinePair[*impl.ModulusOddPrime, *impl.Nat](rpNat, rqNat, pNat, qNat)
 	assert.Equal(t, ct.True, ok, "CRT recombination should succeed")
 
 	// Verify result
@@ -362,7 +364,7 @@ func TestCRTPrecomputedParams(t *testing.T) {
 	assert.Equal(t, ct.True, ok1, "Creating modulus should succeed")
 
 	// Precompute CRT parameters
-	params, ok := crt.Precompute[*impl.ModulusOddPrime, *impl.Nat](&pMod, q)
+	params, ok := crt.PrecomputePair[*impl.ModulusOddPrime, *impl.Nat](&pMod, q)
 	assert.Equal(t, ct.True, ok, "Precomputation should succeed")
 
 	// Test multiple recombinations with same parameters
@@ -416,7 +418,7 @@ func TestCRTMultiFactor(t *testing.T) {
 
 	// Precompute multi-factor CRT
 	// MM is for the composite modulus, MF is for the factors
-	params, ok := crt.PrecomputeMulti[*impl.ModulusOdd, *impl.ModulusOddPrime, *impl.Nat](factors...)
+	params, ok := crt.Precompute[*impl.ModulusOdd, *impl.ModulusOddPrime, *impl.Nat](factors...)
 	assert.Equal(t, ct.True, ok, "Multi-factor precomputation should succeed")
 
 	// Recombine
@@ -452,7 +454,7 @@ func BenchmarkCRTOperations(b *testing.B) {
 			pMod.SetNat(p)
 
 			// Precompute
-			params, _ := crt.Precompute[*impl.ModulusOddPrime, *impl.Nat](&pMod, q)
+			params, _ := crt.PrecomputePair[*impl.ModulusOddPrime, *impl.Nat](&pMod, q)
 
 			// Random residues
 			rpBig, _ := rand.Int(rand.Reader, pBig)

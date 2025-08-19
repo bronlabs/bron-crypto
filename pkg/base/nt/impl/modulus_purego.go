@@ -2,20 +2,27 @@
 
 package impl
 
-import "github.com/cronokirby/saferith"
+import (
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+)
 
-func (m *ModulusOddPrime) ModExp(out, base, exp *Nat) {
-	(*saferith.Nat)(out).Exp(
-		(*saferith.Nat)(base),
-		(*saferith.Nat)(exp),
-		(*saferith.Modulus)(m),
-	)
+type (
+	ModulusOddPrime = ModulusOddPrimeBasic
+	ModulusOdd      = ModulusOddBasic
+	Modulus         = ModulusBasic
+)
+
+func NewModulusOddPrime(m *Nat) (*ModulusOddPrime, ct.Bool) {
+	ok := m.IsNonZero() & m.IsOdd() & m.IsProbablyPrime()
+	return newModulusOddPrimeBasic(m), ok
 }
 
-func (m *ModulusOddPrime) ModMul(out, x, y *Nat) {
-	(*saferith.Nat)(out).ModMul(
-		(*saferith.Nat)(x),
-		(*saferith.Nat)(y),
-		(*saferith.Modulus)(m),
-	)
+func NewModulusOdd(m *Nat) (*ModulusOdd, ct.Bool) {
+	ok := m.IsNonZero() & m.IsOdd()
+	return newModulusOddBasic(m), ok
+}
+
+func NewModulus(m *Nat) (*Modulus, ct.Bool) {
+	ok := m.IsNonZero()
+	return newModulusBasic(m), ok
 }

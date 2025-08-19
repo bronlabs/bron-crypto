@@ -25,7 +25,7 @@ DOCS_DIR := $(BASE_DIR)/docs
 
 include ./scripts/scripts.mk
 include ./thirdparty/thirdparty.mk
-include ./docs/docs.mk
+# include ./docs/docs.mk
 
 GOENV=GO111MODULE=on CGO_CFLAGS="-I${BORINGSSL_SUBMODULE} -I${BORINGSSL_SUBMODULE}/include" CGO_LDFLAGS="-L${BORINGSSL_BUILD}/crypto -lcrypto ${LOCAL_LINKER}"
 GO=${GOENV} go

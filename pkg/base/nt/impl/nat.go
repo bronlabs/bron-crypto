@@ -16,6 +16,16 @@ var (
 	_ (internal.NatMutable[*Nat]) = (*Nat)(nil)
 )
 
+func NewNat(value uint64) *Nat {
+	n := new(Nat)
+	n.SetUint64(value)
+	return n
+}
+
+func NewNatSaferith(n *saferith.Nat) *Nat {
+	return (*Nat)(n)
+}
+
 type Nat saferith.Nat
 
 func (n *Nat) Set(v *Nat) {
@@ -67,7 +77,7 @@ func (n *Nat) DivCap(lhs, rhs *Nat, cap int) (ok ct.Bool) {
 	ok = rhs.IsNonZero()
 	effectiveDenominator := new(Nat)
 	fallback := (*Nat)(new(saferith.Nat).SetUint64(2).Resize(64))
-	effectiveDenominator.CondAssign(ok, fallback, rhs)  // when ok=true, use rhs; when ok=false, use fallback
+	effectiveDenominator.CondAssign(ok, fallback, rhs) // when ok=true, use rhs; when ok=false, use fallback
 
 	safeModulus := saferith.ModulusFromNat((*saferith.Nat)(effectiveDenominator))
 
@@ -89,7 +99,7 @@ func (n *Nat) Mod(a, m *Nat) (ok ct.Bool) {
 
 	effectiveModulus := new(Nat)
 	fallback := (*Nat)(new(saferith.Nat).SetUint64(2).Resize(64))
-	effectiveModulus.CondAssign(ok, fallback, m)  // when ok=true, use m; when ok=false, use fallback
+	effectiveModulus.CondAssign(ok, fallback, m) // when ok=true, use m; when ok=false, use fallback
 
 	safeModulus := saferith.ModulusFromNat((*saferith.Nat)(effectiveModulus))
 
@@ -106,7 +116,7 @@ func (n *Nat) DivModCap(outQuot, outRem, a, b *Nat, cap algebra.Capacity) (ok ct
 
 	effectiveDenominator := new(Nat)
 	fallback := (*Nat)(new(saferith.Nat).SetUint64(2).Resize(64))
-	effectiveDenominator.CondAssign(ok, fallback, b)  // when ok=true, use b; when ok=false, use fallback
+	effectiveDenominator.CondAssign(ok, fallback, b) // when ok=true, use b; when ok=false, use fallback
 
 	safeModulus := saferith.ModulusFromNat((*saferith.Nat)(effectiveDenominator))
 
@@ -151,6 +161,10 @@ func (n *Nat) IsZero() ct.Bool {
 
 func (n *Nat) IsNonZero() ct.Bool {
 	return n.IsZero().Not()
+}
+
+func (n *Nat) IsOne() ct.Bool {
+	return ct.Bool((*saferith.Nat)(n).Eq(SafeNatOne))
 }
 
 func (n *Nat) Coprime(x *Nat) ct.Bool {

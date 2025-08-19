@@ -37,7 +37,7 @@ func BenchmarkCrossoverPoint(b *testing.B) {
 		b.Run(ratio.name, func(b *testing.B) {
 			for _, primeBits := range primeSizes {
 				expBits := int(float64(primeBits) * ratio.ratio)
-				
+
 				b.Run(fmt.Sprintf("%d-bit-prime", primeBits), func(b *testing.B) {
 					// Generate prime
 					pBig, _ := rand.Prime(rand.Reader, primeBits)
@@ -45,11 +45,11 @@ func BenchmarkCrossoverPoint(b *testing.B) {
 
 					// Create p^2
 					p2Big := new(big.Int).Mul(pBig, pBig)
-					p2 := (*impl.Nat)(new(saferith.Nat).SetBig(p2Big, primeBits*2).Resize(primeBits*2))
+					p2 := (*impl.Nat)(new(saferith.Nat).SetBig(p2Big, primeBits*2).Resize(primeBits * 2))
 
 					// Generate base and exponent
 					baseBig, _ := rand.Int(rand.Reader, p2Big)
-					base := (*impl.Nat)(new(saferith.Nat).SetBig(baseBig, primeBits*2).Resize(primeBits*2))
+					base := (*impl.Nat)(new(saferith.Nat).SetBig(baseBig, primeBits*2).Resize(primeBits * 2))
 
 					expBig, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), uint(expBits)))
 					exp := (*impl.Nat)(new(saferith.Nat).SetBig(expBig, expBits).Resize(expBits))
@@ -143,10 +143,10 @@ func BenchmarkSpecificCases(b *testing.B) {
 			}
 
 			p := (*impl.Nat)(new(saferith.Nat).SetBig(pBig, tc.primeBits).Resize(tc.primeBits))
-			
+
 			// Create p^2
 			p2Big := new(big.Int).Mul(pBig, pBig)
-			p2 := (*impl.Nat)(new(saferith.Nat).SetBig(p2Big, tc.primeBits*2).Resize(tc.primeBits*2))
+			p2 := (*impl.Nat)(new(saferith.Nat).SetBig(p2Big, tc.primeBits*2).Resize(tc.primeBits * 2))
 
 			// Generate exponent using test case function
 			expBig := tc.setupExp(pBig, qBig)
@@ -155,7 +155,7 @@ func BenchmarkSpecificCases(b *testing.B) {
 
 			// Generate random base
 			baseBig, _ := rand.Int(rand.Reader, p2Big)
-			base := (*impl.Nat)(new(saferith.Nat).SetBig(baseBig, tc.primeBits*2).Resize(tc.primeBits*2))
+			base := (*impl.Nat)(new(saferith.Nat).SetBig(baseBig, tc.primeBits*2).Resize(tc.primeBits * 2))
 
 			// Create implementations
 			ops, _ := modular.NewOddPrimeSquareFactorSingle[*impl.Modulus, *impl.ModulusOdd, *impl.ModulusOddPrime, *impl.Nat](p)

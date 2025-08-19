@@ -10,26 +10,28 @@ import (
 )
 
 type modulusMutable[N NatMutable[N]] interface {
-	fmt.Stringer
-	Bytes() []byte
+	Nat() N
+	SetNat(N) ct.Bool
 
 	InRange(x N) ct.Bool
+	IsUnit(x N) ct.Bool
 
 	Mod(out, x N)
+	Quo(out, x N) // out = floor(x / m)  (Euclidean integer division)
+	QuoCap(out, x N, cap algebra.Capacity)
+
 	ModAdd(out, x, y N)
 	ModSub(out, x, y N)
 	ModMul(out, x, y N)
-	ModDiv(out, x, y N)
-
-	IsUnit(x N) ct.Bool
+	ModDiv(out, x, y N) ct.Bool
 	ModInv(out, x N) ct.Bool
-	Neg(out, x N)
+	ModNeg(out, x N)
 	ModExp(out, base, exp N)
 	ModSqrt(out, x N) ct.Bool
 
 	BitLen() uint
-	Nat() N
-	SetNat(N) ct.Bool
+	base.BytesLike
+	fmt.Stringer
 }
 
 type ModulusMutable[N NatMutable[N]] modulusMutable[N]
@@ -38,24 +40,28 @@ type ModulusMutablePtr[N NatMutable[N], MT any] interface {
 	*MT
 	ModulusMutable[N]
 	Set(*MT)
-	base.Clonable[*MT]
 }
 
 type natMutable[E aimpl.MonoidElement[E]] interface {
 	aimpl.MonoidElement[E]
 	ct.Comparable[E]
 	base.Clonable[E]
+	IsOne() ct.Bool
 	SetOne()
+
 	AddCap(lhs, rhs E, cap algebra.Capacity)
 	SubCap(lhs, rhs E, cap algebra.Capacity)
+
 	Mul(lhs, rhs E)
 	MulCap(lhs, rhs E, cap algebra.Capacity)
+
 	DivCap(lhs, rhs E, cap algebra.Capacity) (ok ct.Bool)
 	Mod(a, m E) (ok ct.Bool)
 	DivModCap(outQuot, outRem, lhs, rhs E, cap algebra.Capacity) (ok ct.Bool)
 
 	Increment()
 	Decrement()
+
 	Bit(i uint) byte
 
 	TrueLen() uint

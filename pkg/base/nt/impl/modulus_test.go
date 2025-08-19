@@ -1,14 +1,16 @@
 package impl_test
 
 import (
+	"crypto/rand"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/internal"
 	"github.com/cronokirby/saferith"
 )
 
@@ -20,7 +22,11 @@ func newNatFromBig(b *big.Int) *impl.Nat {
 
 func newModulusOddPrime(p *big.Int) *impl.ModulusOddPrime {
 	pNat := (*impl.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
-	return (*impl.ModulusOddPrime)(saferith.ModulusFromNat((*saferith.Nat)(pNat)))
+	m, ok := impl.NewModulusOddPrime(pNat)
+	if ok != ct.True {
+		panic("failed to create ModulusOddPrime")
+	}
+	return m
 }
 
 func TestNewModulusFromNat(t *testing.T) {
@@ -28,7 +34,8 @@ func TestNewModulusFromNat(t *testing.T) {
 
 	t.Run("odd prime", func(t *testing.T) {
 		p := newNatFromBig(big.NewInt(7))
-		m := impl.NewModulusFromNat(p)
+		m, err := impl.NewModulusFromNat(p)
+		assert.NoError(t, err)
 
 		// Should return ModulusOddPrime type
 		_, ok := m.(*impl.ModulusOddPrime)
@@ -37,7 +44,8 @@ func TestNewModulusFromNat(t *testing.T) {
 
 	t.Run("not odd prime", func(t *testing.T) {
 		p := newNatFromBig(big.NewInt(15)) // 3*5, not prime
-		m := impl.NewModulusFromNat(p)
+		m, err := impl.NewModulusFromNat(p)
+		assert.NoError(t, err)
 
 		// Should return ModulusOdd type (odd composite)
 		_, ok := m.(*impl.ModulusOdd)
@@ -46,9 +54,10 @@ func TestNewModulusFromNat(t *testing.T) {
 
 	t.Run("even number", func(t *testing.T) {
 		p := newNatFromBig(big.NewInt(10))
-		m := impl.NewModulusFromNat(p)
+		m, err := impl.NewModulusFromNat(p)
+		assert.NoError(t, err)
 
-		// Should return Modulus type (even, non-prime)
+		// Should return generic Modulus type (not ModulusOdd or ModulusOddPrime)
 		_, ok := m.(*impl.Modulus)
 		assert.True(t, ok, "Expected Modulus for even number 10")
 	})
@@ -177,7 +186,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 				x := newNatFromBig(big.NewInt(tt.x))
 				out := newNatFromBig(big.NewInt(0))
 
-				m.Neg(out, x)
+				m.ModNeg(out, x)
 				assert.Equal(t, uint64(tt.want), out.Uint64())
 			})
 		}
@@ -415,9 +424,10 @@ func TestModulusOddPrime_Exp(t *testing.T) {
 func TestModulus_Sqrt(t *testing.T) {
 	t.Parallel()
 
-	// Test with even number 10
+	// Test with even number 10 - use Modulus constructor directly
 	p := newNatFromBig(big.NewInt(10))
-	m := impl.NewModulusFromNat(p).(*impl.Modulus)
+	m, ok := impl.NewModulus(p)
+	assert.Equal(t, ct.True, ok, "Should be able to create Modulus for even number")
 
 	tests := []struct {
 		name     string
@@ -460,18 +470,88 @@ func TestModulus_Sqrt(t *testing.T) {
 func TestModulusInterfaces(t *testing.T) {
 	t.Parallel()
 
-	// Verify that both types implement the interface
-	t.Run("ModulusOddPrime implements ModulusMutable", func(t *testing.T) {
-		var _ internal.ModulusMutable[*impl.Nat] = (*impl.ModulusOddPrime)(nil)
+	// These interface checks are now done at compile time in modulus_cgo.go
+	// Just verify we can create instances
+	t.Run("Can create ModulusOddPrime", func(t *testing.T) {
+		p := newNatFromBig(big.NewInt(7))
+		m, ok := impl.NewModulusOddPrime(p)
+		assert.Equal(t, ct.True, ok)
+		assert.NotNil(t, m)
 	})
 
-	t.Run("ModulusOdd implements ModulusMutable", func(t *testing.T) {
-		var _ internal.ModulusMutable[*impl.Nat] = (*impl.ModulusOdd)(nil)
+	t.Run("Can create ModulusOdd", func(t *testing.T) {
+		p := newNatFromBig(big.NewInt(15)) // odd composite
+		m, ok := impl.NewModulusOdd(p)
+		assert.Equal(t, ct.True, ok)
+		assert.NotNil(t, m)
 	})
 
-	t.Run("Modulus implements ModulusMutable", func(t *testing.T) {
-		var _ internal.ModulusMutable[*impl.Nat] = (*impl.Modulus)(nil)
+	t.Run("Can create Modulus", func(t *testing.T) {
+		p := newNatFromBig(big.NewInt(10)) // even
+		m, ok := impl.NewModulus(p)
+		assert.Equal(t, ct.True, ok)
+		assert.NotNil(t, m)
 	})
+}
+
+// TestModulusCachingPerformance tests Montgomery context caching benefits
+func TestModulusCachingPerformance(t *testing.T) {
+	testCases := []struct {
+		name      string
+		primeBits int
+		ops       int
+	}{
+		{"512-bit prime, 100 ops", 512, 100},
+		{"1024-bit prime, 100 ops", 1024, 100},
+		{"2048-bit prime, 50 ops", 2048, 50},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Generate a prime
+			pBig, _ := rand.Prime(rand.Reader, tc.primeBits)
+			p := (*impl.Nat)(new(saferith.Nat).SetBig(pBig, tc.primeBits).Resize(tc.primeBits))
+			
+			// Create ModulusOddPrime with cached Montgomery context
+			pMod, ok := impl.NewModulusOddPrime(p)
+			require.Equal(t, ct.True, ok)
+
+			// Generate test data
+			bases := make([]*impl.Nat, tc.ops)
+			exps := make([]*impl.Nat, tc.ops)
+			for i := 0; i < tc.ops; i++ {
+				base, _ := rand.Int(rand.Reader, pBig)
+				bases[i] = (*impl.Nat)(new(saferith.Nat).SetBig(base, tc.primeBits).Resize(tc.primeBits))
+				
+				exp, _ := rand.Int(rand.Reader, pBig)
+				exps[i] = (*impl.Nat)(new(saferith.Nat).SetBig(exp, tc.primeBits).Resize(tc.primeBits))
+			}
+			
+			result := (*impl.Nat)(new(saferith.Nat))
+
+			// Test ModExp with reusing modulus (cached Montgomery context)
+			start := time.Now()
+			for i := 0; i < tc.ops; i++ {
+				pMod.ModExp(result, bases[i], exps[i])
+			}
+			reuseTime := time.Since(start)
+
+			// Test with recreating the modulus each time (no cache benefit)
+			start = time.Now()
+			for i := 0; i < tc.ops; i++ {
+				newPMod, _ := impl.NewModulusOddPrime(p)
+				newPMod.ModExp(result, bases[i], exps[i])
+			}
+			recreateTime := time.Since(start)
+
+			speedup := float64(recreateTime) / float64(reuseTime)
+
+			t.Logf("ModExp caching results for %s:", tc.name)
+			t.Logf("  Reusing modulus (cached):    %v", reuseTime)
+			t.Logf("  Recreating modulus each time: %v", recreateTime)
+			t.Logf("  Speedup from caching: %.2fx", speedup)
+		})
+	}
 }
 
 func BenchmarkModulusOperations(b *testing.B) {

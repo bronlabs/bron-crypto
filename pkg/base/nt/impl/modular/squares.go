@@ -88,7 +88,7 @@ func (m *OddPrimeSquareFactorSingle[M, MO, MOP, N, MT, MOT, MOPT, NT]) Exp(out N
 	// if e==1: out1 = p * w; else out1 = 0
 	vIsOne := ct.Equal(uint(vp), 1)
 	var out1, pTimesW NT
-	m.p2.ModMul(N(&pTimesW), m.pNat, N(&w))                            // p * w
+	m.p2.ModMul(N(&pTimesW), m.pNat, N(&w))                         // p * w
 	N(&out1).CondAssign(N(e).Equal(N(&one)), N(&zero), N(&pTimesW)) // if e==1 -> p*w else 0
 
 	// m==2: always 0 for e>0; we'll mask later with e==0 override.
@@ -146,11 +146,12 @@ func (mo *OddPrimeSquareFactorSingle[M, MO, MOP, N, MT, MOT, MOPT, NT]) Decompos
 	// t = ((q - 1)/p) (exact) in Z/pZ; if m==2, force t=0
 	var qm1 NT
 	N(&qm1).Set(N(&q))
-	N(&qm1).Decrement()               // q - 1
-	mo.p2.Mod(N(&qm1), N(&qm1))       // canonicalize
-	mo.p2.ModDiv(outT, N(&qm1), mo.pNat) // exact division by p
-	mo.p.Mod(outT, outT)              // <-- ensure t ∈ Z/pZ
-	outT.CondAssign(mIs2, N(&zero), outT)
+	N(&qm1).Decrement()         // q - 1
+	mo.p2.Mod(N(&qm1), N(&qm1)) // canonicalize
+	// Exact integer division: (q-1) / p
+	// Since q = 1 + p*t, we have q-1 = p*t, so this division is exact
+	mo.p.Quo(outT, N(&qm1)) // exact division by p
+	outT.CondAssign(mIs2, outT, N(&zero))
 
 	return m
 }
@@ -164,16 +165,16 @@ func NewOddPrimeSquareFactorsMulti[M internal.ModulusMutablePtr[N, MT], MO inter
 	factors := make([]*OddPrimeSquareFactorSingle[M, MO, MOP, N, MT, MOT, MOPT, NT], factorCount)
 	p2s := make([]N, factorCount)
 	for i, pi := range ps {
-		factor, ok := NewOddPrimeSquareFactorSingle[M, MO, MOP, N](pi)
+		factor, ok := NewOddPrimeSquareFactorSingle[M, MO, MOP](pi)
 		allOk &= ok
 		factors[i] = factor
 		p2s[i] = factor.p2.Nat()
 	}
 
-	crtModP, ok := crt.PrecomputeMulti[MO, MOP, N](ps...)
+	crtModP, ok := crt.Precompute[MO, MOP](ps...)
 	allOk &= ok
 
-	crtModP2, ok := crt.PrecomputeMulti[MO, MO](p2s...)
+	crtModP2, ok := crt.Precompute[MO, MO](p2s...)
 	allOk &= ok
 
 	// E_i = N mod (p_i - 1)
@@ -193,8 +194,8 @@ func NewOddPrimeSquareFactorsMulti[M internal.ModulusMutablePtr[N, MT], MO inter
 }
 
 type OddPrimeSquareFactorsMulti[M internal.ModulusMutablePtr[N, MT], MO internal.ModulusMutablePtr[N, MOT], MOP internal.ModulusMutablePtr[N, MOPT], N internal.NatMutablePtr[N, NT], MT, MOT, MOPT, NT any] struct {
-	crtModP  *crt.ParamsMulti[MO, MOP, N, MOT, MOPT, NT]
-	crtModP2 *crt.ParamsMulti[MO, MO, N, MOT, MOT, NT]
+	crtModP  *crt.Params[MO, MOP, N, MOT, MOPT, NT]
+	crtModP2 *crt.Params[MO, MO, N, MOT, MOT, NT]
 	factors  []*OddPrimeSquareFactorSingle[M, MO, MOP, N, MT, MOT, MOPT, NT]
 	nModPhis []N
 }

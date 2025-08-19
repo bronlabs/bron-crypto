@@ -223,7 +223,8 @@ func BenchmarkOddPrimeSquare(b *testing.B) {
 			})
 
 			// Create standard modulus for comparison
-			modulus := impl.NewModulusFromNat((*impl.Nat)(new(saferith.Nat).SetBig(p2, bits*2).Resize(bits*2)))
+			modulus, err := impl.NewModulusFromNat((*impl.Nat)(new(saferith.Nat).SetBig(p2, bits*2).Resize(bits*2)))
+			require.NoError(b, err)
 
 			// Benchmark standard exponentiation
 			b.Run("Standard", func(b *testing.B) {

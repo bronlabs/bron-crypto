@@ -11,8 +11,9 @@ import (
 
 // Helper to create a ModulusOddPrime from uint64
 func benchModulusFromUint64(v uint64) *impl.ModulusOddPrime {
-	n := new(saferith.Nat).SetUint64(v)
-	return (*impl.ModulusOddPrime)(saferith.ModulusFromNat(n))
+	n := (*impl.Nat)(new(saferith.Nat).SetUint64(v))
+	m, _ := impl.NewModulusOddPrime(n)
+	return m
 }
 
 // Helper to create a Nat from uint64
@@ -43,10 +44,10 @@ func BenchmarkDecompose(b *testing.B) {
 			// Compute m = p*q as the modulus
 			pNat := benchNatFromUint64(tc.pVal)
 			mNat := new(saferith.Nat).Mul((*saferith.Nat)(pNat), (*saferith.Nat)(qNat), 256)
-			m := (*impl.ModulusOddPrime)(saferith.ModulusFromNat(mNat))
+			m, _ := impl.NewModulusOddPrime((*impl.Nat)(mNat))
 
 			// Precompute extended CRT parameters
-			prmx, _ := crt.PrecomputeExtended(pMod, qNat)
+			prmx, _ := crt.PrecomputePairExtended(pMod, qNat)
 
 			b.ResetTimer()
 			for b.Loop() {
@@ -82,10 +83,10 @@ func BenchmarkDecomposeSerial(b *testing.B) {
 			// Compute m = p*q as the modulus
 			pNat := benchNatFromUint64(tc.pVal)
 			mNat := new(saferith.Nat).Mul((*saferith.Nat)(pNat), (*saferith.Nat)(qNat), 256)
-			m := (*impl.ModulusOddPrime)(saferith.ModulusFromNat(mNat))
+			m, _ := impl.NewModulusOddPrime((*impl.Nat)(mNat))
 
 			// Precompute extended CRT parameters
-			prmx, _ := crt.PrecomputeExtended(pMod, qNat)
+			prmx, _ := crt.PrecomputePairExtended(pMod, qNat)
 
 			b.ResetTimer()
 			for b.Loop() {
@@ -107,10 +108,10 @@ func BenchmarkDecomposeComparison(b *testing.B) {
 	// Compute m = p*q as the modulus
 	pNat := benchNatFromUint64(1009)
 	mNat := new(saferith.Nat).Mul((*saferith.Nat)(pNat), (*saferith.Nat)(qNat), 256)
-	m := (*impl.ModulusOddPrime)(saferith.ModulusFromNat(mNat))
+	m, _ := impl.NewModulusOddPrime((*impl.Nat)(mNat))
 
 	// Precompute extended CRT parameters
-	prmx, _ := crt.PrecomputeExtended(pMod, qNat)
+	prmx, _ := crt.PrecomputePairExtended(pMod, qNat)
 
 	b.Run("Parallel", func(b *testing.B) {
 		for b.Loop() {
@@ -139,15 +140,15 @@ func BenchmarkDecomposeLargeBitSize(b *testing.B) {
 	q256Nat := new(saferith.Nat)
 	q256Nat.SetHex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc47")
 
-	pMod := (*impl.ModulusOddPrime)(saferith.ModulusFromNat(p256Nat))
+	pMod, _ := impl.NewModulusOddPrime((*impl.Nat)(p256Nat))
 	qNat := (*impl.Nat)(q256Nat)
 
 	// Compute m = p*q as the modulus (will be ~512 bits)
 	mNat := new(saferith.Nat).Mul(p256Nat, q256Nat, 512)
-	m := (*impl.ModulusOddPrime)(saferith.ModulusFromNat(mNat))
+	m, _ := impl.NewModulusOddPrime((*impl.Nat)(mNat))
 
 	// Precompute extended CRT parameters
-	prmx, _ := crt.PrecomputeExtended(pMod, qNat)
+	prmx, _ := crt.PrecomputePairExtended(pMod, qNat)
 
 	b.Run("Parallel_256bit", func(b *testing.B) {
 		for b.Loop() {
@@ -180,10 +181,10 @@ func BenchmarkDecomposeWithGOMAXPROCS(b *testing.B) {
 	// Compute m = p*q as the modulus
 	pNat := benchNatFromUint64(10007)
 	mNat := new(saferith.Nat).Mul((*saferith.Nat)(pNat), (*saferith.Nat)(qNat), 256)
-	m := (*impl.ModulusOddPrime)(saferith.ModulusFromNat(mNat))
+	m, _ := impl.NewModulusOddPrime((*impl.Nat)(mNat))
 
 	// Precompute extended CRT parameters
-	prmx, _ := crt.PrecomputeExtended(pMod, qNat)
+	prmx, _ := crt.PrecomputePairExtended(pMod, qNat)
 
 	b.Run("Parallel", func(b *testing.B) {
 		for b.Loop() {
@@ -220,12 +221,11 @@ func BenchmarkDecomposePaillier2048(b *testing.B) {
 
 	// Generate a 4096-bit value m (since n = p*q is ~4096 bits)
 	mNat := new(saferith.Nat).Mul(p2048, q2048, 4096)
-	mModulus := saferith.ModulusFromNat(mNat)
-	m := (*impl.ModulusOddPrime)(mModulus)
+	m, _ := impl.NewModulusOddPrime((*impl.Nat)(mNat))
 
-	pModulus := (*impl.ModulusOddPrime)(saferith.ModulusFromNat(p2048))
+	pModulus, _ := impl.NewModulusOddPrime((*impl.Nat)(p2048))
 
-	prmx, _ := crt.PrecomputeExtended(pModulus, q)
+	prmx, _ := crt.PrecomputePairExtended(pModulus, q)
 
 	b.Run("Parallel_2048bit", func(b *testing.B) {
 		for b.Loop() {
@@ -263,13 +263,13 @@ func BenchmarkDecomposePaillierSizes(b *testing.B) {
 
 		// Compute modulus m = p*q
 		mNat := new(saferith.Nat).Mul(p, q, size.primeBits*2)
-		m := (*impl.ModulusOddPrime)(saferith.ModulusFromNat(mNat))
+		m, _ := impl.NewModulusOddPrime((*impl.Nat)(mNat))
 
-		pMod := (*impl.ModulusOddPrime)(saferith.ModulusFromNat(p))
+		pMod, _ := impl.NewModulusOddPrime((*impl.Nat)(p))
 		qNat := (*impl.Nat)(q)
 
 		// Precompute extended CRT parameters
-		prmx, _ := crt.PrecomputeExtended(pMod, qNat)
+		prmx, _ := crt.PrecomputePairExtended(pMod, qNat)
 
 		b.Run(size.name+"_Parallel", func(b *testing.B) {
 			for b.Loop() {
@@ -295,16 +295,16 @@ func BenchmarkCRTCompletePaillier(b *testing.B) {
 	p2048 := generatePrime(2048)
 	q2048 := generatePrime(2048)
 
-	pMod := (*impl.ModulusOddPrime)(saferith.ModulusFromNat(p2048))
+	pMod, _ := impl.NewModulusOddPrime((*impl.Nat)(p2048))
 	qNat := (*impl.Nat)(q2048)
 
 	// Precompute CRT parameters
-	params, _ := crt.Precompute(pMod, qNat)
-	prmx, _ := crt.PrecomputeExtended(pMod, qNat)
+	params, _ := crt.PrecomputePair(pMod, qNat)
+	prmx, _ := crt.PrecomputePairExtended(pMod, qNat)
 
 	// Generate test value m = p*q
 	mNat := new(saferith.Nat).Mul(p2048, q2048, 4096)
-	m := (*impl.ModulusOddPrime)(saferith.ModulusFromNat(mNat))
+	m, _ := impl.NewModulusOddPrime((*impl.Nat)(mNat))
 
 	b.Run("Decompose_Parallel", func(b *testing.B) {
 		for b.Loop() {
@@ -346,13 +346,13 @@ func BenchmarkDecomposePaillierGOMAXPROCS(b *testing.B) {
 
 	// Compute modulus m = p*q
 	mNat := new(saferith.Nat).Mul(p2048, q2048, 4096)
-	m := (*impl.ModulusOddPrime)(saferith.ModulusFromNat(mNat))
+	m, _ := impl.NewModulusOddPrime((*impl.Nat)(mNat))
 
-	pMod := (*impl.ModulusOddPrime)(saferith.ModulusFromNat(p2048))
+	pMod, _ := impl.NewModulusOddPrime((*impl.Nat)(p2048))
 	qNat := (*impl.Nat)(q2048)
 
 	// Precompute extended CRT parameters
-	prmx, _ := crt.PrecomputeExtended(pMod, qNat)
+	prmx, _ := crt.PrecomputePairExtended(pMod, qNat)
 
 	b.Run("Parallel", func(b *testing.B) {
 		for b.Loop() {

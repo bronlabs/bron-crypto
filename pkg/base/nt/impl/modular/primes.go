@@ -17,7 +17,7 @@ func NewOddPrimeFactors[MM internal.ModulusMutablePtr[N, MMT], MF internal.Modul
 	ok := MF(&pModulusT).SetNat(p)
 	allOk &= ok
 
-	params, ok := crt.PrecomputeExtended(MF(&pModulusT), q)
+	params, ok := crt.PrecomputePairExtended(MF(&pModulusT), q)
 	allOk &= ok
 
 	// Compute m = p * q for the modulus
@@ -43,7 +43,7 @@ func NewOddPrimeFactors[MM internal.ModulusMutablePtr[N, MMT], MF internal.Modul
 }
 
 type OddPrimeFactors[MM internal.ModulusMutablePtr[N, MMT], MF internal.ModulusMutablePtr[N, MFT], N internal.NatMutablePtr[N, NT], MMT, MFT, NT any] struct {
-	params  *crt.ParamsExtended[MF, N, MFT, NT]
+	params  *crt.ParamsPairExtended[MF, N, MFT, NT]
 	modulus MMT
 	phiP    NT // phi(p) = p-1 as Nat
 	phiQ    NT // phi(q) = q-1 as Nat
@@ -85,20 +85,20 @@ func NewOddPrimeFactorsMulti[MM internal.ModulusMutablePtr[N, MMT], MF internal.
 	ps ...N,
 ) (*OddPrimeFactorsMulti[MM, MF, N, MMT, MFT, NT], ct.Bool) {
 	k := len(ps)
-	params, allOk := crt.PrecomputeMulti[MM, MF](ps...)
+	params, allOk := crt.Precompute[MM, MF](ps...)
 
 	phis := make([]N, k)
 
-	var phi NT
 	for i := range k {
 		// must be odd prime
 		// allOk &= ps[i].IsProbablyPrime() & ps[i].IsOdd()
 		allOk &= ps[i].IsOdd()
 
 		// compute phi(p_i) = p_i - 1
+		var phi NT
 		N(&phi).Set(ps[i])
 		N(&phi).Decrement()
-		phis[i] = N(&phi)
+		phis[i] = N(&phi).Clone()
 
 		for j := i + 1; j < k; j++ {
 			allOk &= ps[i].Coprime(ps[j])
@@ -114,7 +114,7 @@ func NewOddPrimeFactorsMulti[MM internal.ModulusMutablePtr[N, MMT], MF internal.
 }
 
 type OddPrimeFactorsMulti[MM internal.ModulusMutablePtr[N, MMT], MF internal.ModulusMutablePtr[N, MFT], N internal.NatMutablePtr[N, NT], MMT, MFT, NT any] struct {
-	params  *crt.ParamsMulti[MM, MF, N, MMT, MFT, NT]
+	params  *crt.Params[MM, MF, N, MMT, MFT, NT]
 	modulus MM
 	phis    []N
 }
