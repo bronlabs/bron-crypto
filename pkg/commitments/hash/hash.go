@@ -61,7 +61,7 @@ func NewKeyFromCRSBytes(sid network.SID, dst string, crs ...[]byte) (Key, error)
 	return key, nil
 }
 
-func NewScheme(key Key) (commitments.Scheme[Witness, Message, Commitment], error) {
+func NewScheme(key Key) (*Scheme, error) {
 	if ct.SliceIsZero(key[:]) == 1 {
 		return nil, errs.NewArgument("key cannot be zero")
 	}
