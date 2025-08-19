@@ -198,9 +198,27 @@ func (m *ModulusOdd) SetNat(n *Nat) ct.Bool {
 		return ct.False
 	}
 
-	// Initialize embedded structs if they're zero-value
-	ok := m.ModulusOddPrime.SetNat(n)
-
+	// For ModulusOdd (non-prime), we need to set up the basic structure
+	// but NOT try to create a Montgomery context for non-primes
+	ok := n.IsNonZero()
+	
+	// Set the basic modulus structure
+	safeMod := (*ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(n)))
+	m.ModulusOddPrime.ModulusOddPrimeBasic = *safeMod
+	
+	// Set up the BigNum but NOT the Montgomery context (since n might not be prime)
+	mNum, err := boring.NewBigNum().SetBytes(safeMod.Bytes())
+	if err != nil {
+		panic(err)
+	}
+	m.ModulusOddPrime.mNum = mNum
+	
+	// Initialize once to non-nil so we don't panic
+	if m.ModulusOddPrime.once == nil {
+		m.ModulusOddPrime.once = &sync.Once{}
+	}
+	// Don't call cacheMont for non-primes - leave mont as nil
+	
 	// Initialize forSqrt if it's nil
 	if m.forSqrt == nil {
 		m.forSqrt = &ModulusOddBasic{
