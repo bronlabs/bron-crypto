@@ -30,7 +30,7 @@ const (
 //)
 
 type Cosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	Suite       ecdsa.Suite[P, B, S]
+	Suite       *ecdsa.Suite[P, B, S]
 	SessionId   network.SID
 	MySharingId sharing.ID
 	MyShard     *tecdsa.Shard[P, B, S]
@@ -59,7 +59,7 @@ type CosignerState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra
 	Pk             map[sharing.ID]P
 }
 
-func NewCosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, mySharingId sharing.ID, quorum network.Quorum, suite ecdsa.Suite[P, B, S], shard *tecdsa.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
+func NewCosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, mySharingId sharing.ID, quorum network.Quorum, suite *ecdsa.Suite[P, B, S], shard *tecdsa.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
 	//	//if err := validateCosignerInputs(sessionId, authKey, protocol, shard, quorum); err != nil {
 	//	//	return nil, errs.WrapValidation(err, "invalid inputs")
 	//	//}
