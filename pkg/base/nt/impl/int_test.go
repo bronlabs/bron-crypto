@@ -1782,3 +1782,214 @@ func TestInt_InterfaceCompliance(t *testing.T) {
 	// compliance is checked at compile time in int.go:14
 	require.NotNil(t, newInt(0))
 }
+
+// TestInt_CondAssign tests the CondAssign method that uses ct.CMOV
+func TestInt_CondAssign(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic positive integers", func(t *testing.T) {
+		a := newInt(42)
+		b := newInt(100)
+		
+		// Test no assignment when choice=0
+		dst := a.Clone()
+		dst.CondAssign(ct.Zero, b)
+		assert.Equal(t, ct.True, dst.Equal(a), "CondAssign(0) should not modify dst")
+		assert.Equal(t, ct.False, dst.Equal(b), "dst should not equal b")
+		
+		// Test assignment when choice=1
+		dst = a.Clone()
+		dst.CondAssign(ct.One, b)
+		assert.Equal(t, ct.True, dst.Equal(b), "CondAssign(1) should assign b to dst")
+		assert.Equal(t, ct.False, dst.Equal(a), "dst should no longer equal a")
+	})
+
+	t.Run("negative integers", func(t *testing.T) {
+		a := newInt(-42)
+		b := newInt(-100)
+		
+		// Test no assignment when choice=0
+		dst := a.Clone()
+		dst.CondAssign(ct.Zero, b)
+		assert.Equal(t, ct.True, dst.Equal(a), "CondAssign(0) should not modify dst")
+		
+		// Test assignment when choice=1
+		dst = a.Clone()
+		dst.CondAssign(ct.One, b)
+		assert.Equal(t, ct.True, dst.Equal(b), "CondAssign(1) should assign b to dst")
+	})
+
+	t.Run("mixed signs", func(t *testing.T) {
+		a := newInt(42)
+		b := newInt(-100)
+		
+		// Test no assignment when choice=0
+		dst := a.Clone()
+		dst.CondAssign(ct.Zero, b)
+		assert.Equal(t, ct.True, dst.Equal(a), "CondAssign(0) should not modify dst")
+		assert.Equal(t, ct.False, dst.IsNegative(), "dst should remain positive")
+		
+		// Test assignment when choice=1
+		dst = a.Clone()
+		dst.CondAssign(ct.One, b)
+		assert.Equal(t, ct.True, dst.Equal(b), "CondAssign(1) should assign b to dst")
+		assert.Equal(t, ct.True, dst.IsNegative(), "dst should now be negative")
+	})
+
+	t.Run("zero values", func(t *testing.T) {
+		zero := newInt(0)
+		nonZero := newInt(42)
+		
+		// Assign zero to non-zero
+		dst := nonZero.Clone()
+		dst.CondAssign(ct.One, zero)
+		assert.Equal(t, ct.True, dst.Equal(zero), "Should assign zero")
+		assert.Equal(t, ct.True, dst.IsZero(), "dst should be zero")
+		
+		// Assign non-zero to zero
+		dst = zero.Clone()
+		dst.CondAssign(ct.One, nonZero)
+		assert.Equal(t, ct.True, dst.Equal(nonZero), "Should assign non-zero")
+		assert.Equal(t, ct.False, dst.IsZero(), "dst should not be zero")
+	})
+
+	t.Run("large values", func(t *testing.T) {
+		// Test with large integers
+		bigA := new(big.Int).Lsh(big.NewInt(1), 256) // 2^256
+		bigA.Sub(bigA, big.NewInt(1))                 // 2^256 - 1
+		bigB := new(big.Int).Lsh(big.NewInt(1), 512) // 2^512
+		
+		a := newIntFromBigInt(bigA)
+		b := newIntFromBigInt(bigB)
+		
+		// Test no assignment when choice=0
+		dst := a.Clone()
+		dst.CondAssign(ct.Zero, b)
+		assert.Equal(t, ct.True, dst.Equal(a), "CondAssign(0) should not modify dst")
+		
+		// Test assignment when choice=1
+		dst = a.Clone()
+		dst.CondAssign(ct.One, b)
+		assert.Equal(t, ct.True, dst.Equal(b), "CondAssign(1) should assign b to dst")
+	})
+
+	t.Run("self assignment", func(t *testing.T) {
+		a := newInt(42)
+		original := a.Clone()
+		
+		// Self-assign with choice=0
+		a.CondAssign(ct.Zero, a)
+		assert.Equal(t, ct.True, a.Equal(original), "Self-assign with choice=0 should not change value")
+		
+		// Self-assign with choice=1
+		a.CondAssign(ct.One, a)
+		assert.Equal(t, ct.True, a.Equal(original), "Self-assign with choice=1 should not change value")
+	})
+
+	t.Run("constant time behavior", func(t *testing.T) {
+		// Test that the operation appears to be constant time
+		// by running it many times with different values
+		values := []*impl.Int{
+			newInt(0),
+			newInt(1),
+			newInt(-1),
+			newInt(1000000),
+			newInt(-1000000),
+		}
+		
+		for _, val1 := range values {
+			for _, val2 := range values {
+				for _, choice := range []ct.Choice{ct.Zero, ct.One} {
+					dst := val1.Clone()
+					dst.CondAssign(choice, val2)
+					
+					if choice == ct.Zero {
+						assert.Equal(t, ct.True, dst.Equal(val1), 
+							"CondAssign(0) should preserve original value")
+					} else {
+						assert.Equal(t, ct.True, dst.Equal(val2), 
+							"CondAssign(1) should assign new value")
+					}
+				}
+			}
+		}
+	})
+}
+
+// TestInt_CondNeg tests the CondNeg method
+func TestInt_CondNeg(t *testing.T) {
+	t.Parallel()
+
+	t.Run("positive to negative", func(t *testing.T) {
+		a := newInt(42)
+		
+		// No negation when choice=0
+		dst := a.Clone()
+		dst.CondNeg(ct.Zero)
+		assert.Equal(t, ct.True, dst.Equal(a), "CondNeg(0) should not modify value")
+		assert.Equal(t, ct.False, dst.IsNegative(), "Should remain positive")
+		
+		// Negate when choice=1
+		dst = a.Clone()
+		dst.CondNeg(ct.One)
+		expected := newInt(-42)
+		assert.Equal(t, ct.True, dst.Equal(expected), "CondNeg(1) should negate value")
+		assert.Equal(t, ct.True, dst.IsNegative(), "Should become negative")
+	})
+
+	t.Run("negative to positive", func(t *testing.T) {
+		a := newInt(-42)
+		
+		// No negation when choice=0
+		dst := a.Clone()
+		dst.CondNeg(ct.Zero)
+		assert.Equal(t, ct.True, dst.Equal(a), "CondNeg(0) should not modify value")
+		assert.Equal(t, ct.True, dst.IsNegative(), "Should remain negative")
+		
+		// Negate when choice=1
+		dst = a.Clone()
+		dst.CondNeg(ct.One)
+		expected := newInt(42)
+		assert.Equal(t, ct.True, dst.Equal(expected), "CondNeg(1) should negate value")
+		assert.Equal(t, ct.False, dst.IsNegative(), "Should become positive")
+	})
+
+	t.Run("zero negation", func(t *testing.T) {
+		zero := newInt(0)
+		
+		// Negating zero should still be zero
+		dst := zero.Clone()
+		dst.CondNeg(ct.One)
+		assert.Equal(t, ct.True, dst.Equal(zero), "Negating zero should still be zero")
+		assert.Equal(t, ct.True, dst.IsZero(), "Should still be zero")
+	})
+}
+
+// BenchmarkInt_CondAssign benchmarks the CondAssign operation
+func BenchmarkInt_CondAssign(b *testing.B) {
+	b.Run("small_int", func(b *testing.B) {
+		a := newInt(42)
+		x := newInt(100)
+		choice := ct.One
+		
+		b.ResetTimer()
+		for range b.N {
+			a.CondAssign(choice, x)
+		}
+	})
+	
+	b.Run("large_int_256bit", func(b *testing.B) {
+		bigA := new(big.Int).Lsh(big.NewInt(1), 256)
+		bigA.Sub(bigA, big.NewInt(1)) // 2^256 - 1
+		bigX := new(big.Int).Lsh(big.NewInt(1), 255)
+		
+		a := newIntFromBigInt(bigA)
+		x := newIntFromBigInt(bigX)
+		choice := ct.One
+		
+		b.ResetTimer()
+		for range b.N {
+			a.CondAssign(choice, x)
+		}
+	})
+}

@@ -10,7 +10,7 @@ import (
 
 type magmaElement[E any] interface {
 	Set(v E)
-	ct.ConditionallyAssignable[E]
+	ct.ConditionallySelectable[E]
 	ct.Equatable[E]
 	Add(lhs, rhs E)
 	Double(E)

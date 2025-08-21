@@ -44,7 +44,7 @@ func TestCSelect(t *testing.T) {
 		}
 		a := TestStruct{X: 1, Y: "hello"}
 		b := TestStruct{X: 2, Y: "world"}
-		
+
 		assert.Equal(t, b, ct.CSelect(ct.Zero, a, b))
 		assert.Equal(t, a, ct.CSelect(ct.One, a, b))
 	})
@@ -62,10 +62,10 @@ func TestCSelect(t *testing.T) {
 	t.Run("slices", func(t *testing.T) {
 		a := []int{1, 2, 3}
 		b := []int{4, 5, 6}
-		
+
 		got0 := ct.CSelect(ct.Zero, a, b)
 		assert.Equal(t, b, got0)
-		
+
 		got1 := ct.CSelect(ct.One, a, b)
 		assert.Equal(t, a, got1)
 	})
@@ -73,14 +73,14 @@ func TestCSelect(t *testing.T) {
 	t.Run("pointers", func(t *testing.T) {
 		x, y := 42, 100
 		a, b := &x, &y
-		
+
 		assert.Equal(t, b, ct.CSelect(ct.Zero, a, b))
 		assert.Equal(t, a, ct.CSelect(ct.One, a, b))
 	})
 
 	t.Run("interface", func(t *testing.T) {
 		var a, b any = 42, "hello"
-		
+
 		assert.Equal(t, b, ct.CSelect(ct.Zero, a, b))
 		assert.Equal(t, a, ct.CSelect(ct.One, a, b))
 	})
@@ -95,11 +95,11 @@ func TestCSelect(t *testing.T) {
 		b.ID = 2
 		a.Data[0] = 0xAA
 		b.Data[0] = 0xBB
-		
+
 		got0 := ct.CSelect(ct.Zero, a, b)
 		assert.Equal(t, b.ID, got0.ID)
 		assert.Equal(t, b.Data[0], got0.Data[0])
-		
+
 		got1 := ct.CSelect(ct.One, a, b)
 		assert.Equal(t, a.ID, got1.ID)
 		assert.Equal(t, a.Data[0], got1.Data[0])
@@ -111,16 +111,16 @@ func TestCMOV(t *testing.T) {
 	t.Run("int", func(t *testing.T) {
 		dst := 42
 		src := 100
-		
+
 		// Test no-op when choice=0
 		ct.CMOV(&dst, ct.Zero, &src)
 		assert.Equal(t, 42, dst, "CMOV(0) should not modify dst")
-		
+
 		// Test move when choice=1
 		ct.CMOV(&dst, ct.One, &src)
 		assert.Equal(t, 100, dst, "CMOV(1) should move src to dst")
 	})
-	
+
 	t.Run("struct", func(t *testing.T) {
 		type TestStruct struct {
 			X int
@@ -128,26 +128,26 @@ func TestCMOV(t *testing.T) {
 		}
 		dst := TestStruct{X: 1, Y: "hello"}
 		src := TestStruct{X: 2, Y: "world"}
-		
+
 		// Test no-op when choice=0
 		original := dst
 		ct.CMOV(&dst, ct.Zero, &src)
 		assert.Equal(t, original, dst)
-		
+
 		// Test move when choice=1
 		ct.CMOV(&dst, ct.One, &src)
 		assert.Equal(t, src, dst)
 	})
-	
+
 	t.Run("array", func(t *testing.T) {
 		dst := [4]int{1, 2, 3, 4}
 		src := [4]int{5, 6, 7, 8}
-		
+
 		// Test no-op when choice=0
 		original := dst
 		ct.CMOV(&dst, ct.Zero, &src)
 		assert.Equal(t, original, dst)
-		
+
 		// Test move when choice=1
 		ct.CMOV(&dst, ct.One, &src)
 		assert.Equal(t, src, dst)
@@ -168,18 +168,18 @@ func TestCMOV(t *testing.T) {
 func TestCSwap(t *testing.T) {
 	t.Run("int", func(t *testing.T) {
 		x, y := 42, 100
-		
+
 		// Test no-op when choice=0
 		ct.CSwap(&x, &y, ct.Zero)
 		assert.Equal(t, 42, x)
 		assert.Equal(t, 100, y)
-		
+
 		// Test swap when choice=1
 		ct.CSwap(&x, &y, ct.One)
 		assert.Equal(t, 100, x)
 		assert.Equal(t, 42, y)
 	})
-	
+
 	t.Run("struct", func(t *testing.T) {
 		type TestStruct struct {
 			X int
@@ -187,41 +187,41 @@ func TestCSwap(t *testing.T) {
 		}
 		a := TestStruct{X: 1, Y: "hello"}
 		b := TestStruct{X: 2, Y: "world"}
-		
+
 		// Test no-op when choice=0
 		origA, origB := a, b
 		ct.CSwap(&a, &b, ct.Zero)
 		assert.Equal(t, origA, a)
 		assert.Equal(t, origB, b)
-		
+
 		// Test swap when choice=1
 		ct.CSwap(&a, &b, ct.One)
 		assert.Equal(t, origB, a)
 		assert.Equal(t, origA, b)
 	})
-	
+
 	t.Run("self-swap", func(t *testing.T) {
 		x := 42
 		// Self-swap should work without issues (alias-safe)
 		ct.CSwap(&x, &x, ct.One)
 		assert.Equal(t, 42, x, "Self-swap should not change value")
 	})
-	
+
 	t.Run("large_array", func(t *testing.T) {
 		var a, b [256]byte
 		for i := range a {
 			a[i] = byte(i)
 			b[i] = byte(255 - i)
 		}
-		
+
 		// Save originals
 		origA, origB := a, b
-		
+
 		// Test no-op when choice=0
 		ct.CSwap(&a, &b, ct.Zero)
 		assert.Equal(t, origA, a)
 		assert.Equal(t, origB, b)
-		
+
 		// Test swap when choice=1
 		ct.CSwap(&a, &b, ct.One)
 		assert.Equal(t, origB, a)
@@ -451,7 +451,6 @@ func TestSelectInteger(t *testing.T) {
 	})
 }
 
-
 // TestMinMax tests the Min and Max functions
 func TestMinMax(t *testing.T) {
 	tests := []struct {
@@ -513,7 +512,7 @@ func TestIsSigned(t *testing.T) {
 	assert.Equal(t, ct.True, ct.IsSigned[int32]())
 	assert.Equal(t, ct.True, ct.IsSigned[int64]())
 	assert.Equal(t, ct.True, ct.IsSigned[int]())
-	
+
 	assert.Equal(t, ct.False, ct.IsSigned[uint8]())
 	assert.Equal(t, ct.False, ct.IsSigned[uint16]())
 	assert.Equal(t, ct.False, ct.IsSigned[uint32]())

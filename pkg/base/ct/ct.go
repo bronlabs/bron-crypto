@@ -32,7 +32,11 @@ type ConditionallySelectable[E any] interface {
 }
 
 type ConditionallyAssignable[E any] interface {
-	Select(choice Choice, x0, x1 E)
+	CondAssign(Choice, E)
+}
+
+type ConditionallyNegatable[E any] interface {
+	CondNeg(Choice)
 }
 
 // CSelect returns a if yes==1, else b. Works for any T. Branchless wrt data.

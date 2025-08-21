@@ -236,9 +236,9 @@ func (i *Int) Sqrt(x *Int) (ok ct.Bool) {
 			ge := gt | eq
 
 			// Apply updates branchlessly.
-			n.Select(ge, &nMinus)
+			n.CondAssign(ge, &nMinus)
 			y = yshr
-			y.Select(ge, &yPlus)
+			y.CondAssign(ge, &yPlus)
 
 			// b >>= 2
 			bshr.Rsh(&b, 2, algebra.Capacity(capBits))
@@ -343,6 +343,14 @@ func (i *Int) Select(choice ct.Choice, x0, x1 *Int) {
 	// Set the result
 	i.SetNat(&selectedAbs)
 	(*saferith.Int)(i).Neg(saferith.Choice(selectedNeg))
+}
+
+func (i *Int) CondAssign(choice ct.Choice, x *Int) {
+	ct.CMOV(i, choice, x)
+}
+
+func (i *Int) CondNeg(choice ct.Choice) {
+	(*saferith.Int)(i).Neg(saferith.Choice(choice))
 }
 
 func (i *Int) Equal(rhs *Int) ct.Bool {

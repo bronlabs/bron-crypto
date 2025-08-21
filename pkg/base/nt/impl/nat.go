@@ -9,7 +9,6 @@ import (
 )
 
 var (
-	SafeNatTwo  = new(saferith.Nat).SetUint64(2).Resize(64)
 	SafeNatOne  = new(saferith.Nat).SetUint64(1).Resize(1)
 	SafeNatZero = new(saferith.Nat).SetUint64(0).Resize(1)
 
@@ -76,20 +75,12 @@ func (n *Nat) MulCap(lhs, rhs *Nat, cap int) {
 func (n *Nat) DivCap(lhs, rhs *Nat, cap int) (ok ct.Bool) {
 	ok = rhs.IsNonZero()
 	effectiveDenominator := new(Nat)
-	fallback := (*Nat)(new(saferith.Nat).SetUint64(2).Resize(64))
-	effectiveDenominator.Select(ok, fallback, rhs) // when ok=true, use rhs; when ok=false, use fallback
+	effectiveDenominator.Select(ok, (*Nat)(SafeNatOne), rhs)
 
 	safeModulus := saferith.ModulusFromNat((*saferith.Nat)(effectiveDenominator))
 
 	quot := new(saferith.Nat).Div((*saferith.Nat)(lhs), safeModulus, cap)
-	// For exact division check, use sufficient capacity for the product
-	prodCap := cap
-	if cap < 0 {
-		prodCap = 256 // Use a reasonable default when cap is -1
-	} else {
-		prodCap = cap + safeModulus.BitLen()
-	}
-	ok &= ct.Choice(new(saferith.Nat).Mul((*saferith.Nat)(rhs), quot, prodCap).Eq((*saferith.Nat)(lhs))) // is exact
+	ok &= ct.Choice(new(saferith.Nat).Mul((*saferith.Nat)(rhs), quot, cap).Eq((*saferith.Nat)(lhs))) // is exact
 	n.Select(ok, n, (*Nat)(quot))
 	return ok
 }
@@ -185,7 +176,11 @@ func (n *Nat) AnnouncedLen() uint {
 
 func (n *Nat) Select(choice ct.Choice, x0, x1 *Nat) {
 	*n = *x0.Clone()
-	(*saferith.Nat)(n).Select(saferith.Choice(choice), (*saferith.Nat)(x1))
+	(*saferith.Nat)(n).CondAssign(saferith.Choice(choice), (*saferith.Nat)(x1))
+}
+
+func (n *Nat) CondAssign(choice ct.Choice, x *Nat) {
+	(*saferith.Nat)(n).CondAssign(saferith.Choice(choice), (*saferith.Nat)(x))
 }
 
 func (n *Nat) IsOdd() ct.Bool {
