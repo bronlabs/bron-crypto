@@ -232,3 +232,27 @@ func ContainsEqualFunc[S ~[]T, T any](xs S, x T, equal func(T, T) bool) bool {
 	}
 	return false
 }
+
+func Fold[T, U any](f func(acc U, x T) U, initial U, rest ...T) U {
+	accumulator := func(acc U, x T) (U, error) { return f(acc, x), nil }
+	out, err := FoldOrError(accumulator, initial, rest...)
+	if err != nil {
+		panic(errs.WrapFailed(err, "should not have had any errors"))
+	}
+	return out
+}
+
+func FoldOrError[T, U any](f func(acc U, x T) (U, error), initial U, rest ...T) (U, error) {
+	if len(rest) == 0 {
+		return initial, nil
+	}
+	out := initial
+	var err error
+	for i, x := range rest {
+		out, err = f(out, x)
+		if err != nil {
+			return *new(U), errs.WrapFailed(err, "could not fold at iteration %d", i)
+		}
+	}
+	return out, nil
+}
