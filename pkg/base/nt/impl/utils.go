@@ -15,7 +15,7 @@ func Vp[MF internal.ModulusMutablePtr[N, MFT], N internal.NatMutablePtr[N, NT], 
 		p.Mod(N(&rem), N(&temp))
 		isDiv := N(&rem).IsZero()
 		p.Quo(N(&quo), N(&temp))                      // exact division by p
-		N(&temp).CondAssign(isDiv, N(&temp), N(&quo)) // if divisible → take quo
+		N(&temp).Select(isDiv, N(&temp), N(&quo)) // if divisible → take quo
 		m += int(isDiv)
 	}
 	out.Set(N(&temp)) // u := a / p^m mod p^k

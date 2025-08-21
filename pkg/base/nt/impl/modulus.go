@@ -125,7 +125,7 @@ func (m *ModulusOddPrimeBasic) ModDiv(out, x, y *Nat) ct.Bool {
 	var prod Nat
 	m.ModMul(&prod, &xr, &yInv)
 
-	out.CondAssign(ok, out, &prod)
+	out.Select(ok, out, &prod)
 	return ok
 }
 
@@ -151,7 +151,7 @@ func (m *ModulusOddPrimeBasic) ModSqrt(out, x *Nat) ct.Bool {
 	m.ModMul(&rootSquared, root, root)
 
 	ok := rootSquared.Equal(xr)
-	out.CondAssign(ok, out, root)
+	out.Select(ok, out, root)
 	return ok
 }
 
@@ -215,7 +215,7 @@ func (m *ModulusOddBasic) SetNat(n *Nat) ct.Bool {
 	// Use a safe fallback value when n is zero to avoid panic
 	safeN := n.Clone()
 	one := (*Nat)(new(saferith.Nat).SetUint64(3).Resize(64)) // Use 3 as safe odd modulus
-	safeN.CondAssign(ok, one, n)
+	safeN.Select(ok, one, n)
 
 	v := (*ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(safeN)))
 	m.ModulusOddPrimeBasic = *v

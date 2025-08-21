@@ -1398,26 +1398,26 @@ func TestInt_UtilityOperations(t *testing.T) {
 func TestInt_ConditionalOperations(t *testing.T) {
 	t.Parallel()
 
-	t.Run("CondAssign", func(t *testing.T) {
+	t.Run("Select", func(t *testing.T) {
 		x0 := newInt(100)
 		x1 := newInt(-200)
 		result := newInt(0)
 
 		// Choose x0 (choice = 0)
-		result.CondAssign(ct.Choice(0), x0, x1)
+		result.Select(ct.Choice(0), x0, x1)
 		assert.Equal(t, int64(100), result.Int64())
 
 		// Choose x1 (choice = 1)
-		result.CondAssign(ct.Choice(1), x0, x1)
+		result.Select(ct.Choice(1), x0, x1)
 		assert.Equal(t, int64(-200), result.Int64())
 
 		// Test with both negative
 		x0.SetInt64(-100)
 		x1.SetInt64(-200)
-		result.CondAssign(ct.Choice(0), x0, x1)
+		result.Select(ct.Choice(0), x0, x1)
 		assert.Equal(t, int64(-100), result.Int64())
 
-		result.CondAssign(ct.Choice(1), x0, x1)
+		result.Select(ct.Choice(1), x0, x1)
 		assert.Equal(t, int64(-200), result.Int64())
 	})
 }

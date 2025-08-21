@@ -93,7 +93,7 @@ func (i *Int) Mod(a, m *Int) (ok ct.Bool) {
 	res := new(Int)
 	res.SetNat(absNat)
 	(*saferith.Int)(res).Neg(saferith.Choice(a.IsNegative() ^ m.IsNegative()))
-	i.CondAssign(ok, i, res)
+	i.Select(ok, i, res)
 	return ok
 }
 
@@ -104,14 +104,14 @@ func (i *Int) Div(lhs, rhs *Int) (ok ct.Bool) {
 func (i *Int) DivCap(lhs, rhs *Int, cap algebra.Capacity) (ok ct.Bool) {
 	absRes := new(Nat)
 	ok = absRes.DivCap(lhs.abs(), rhs.abs(), cap)
-	
+
 	// Create the result value
 	result := new(Int)
 	result.SetNat(absRes)
 	(*saferith.Int)(result).Neg(saferith.Choice(lhs.IsNegative() ^ rhs.IsNegative()))
-	
+
 	// Only update i if division was exact
-	i.CondAssign(ct.Choice(ok), i, result)
+	i.Select(ct.Choice(ok), i, result)
 	return ok
 }
 
@@ -128,15 +128,15 @@ func (i *Int) DivModCap(outQuot, outRem, a, b *Int, cap algebra.Capacity) (ok ct
 
 	dummy := new(Nat)
 	ok = dummy.DivModCap(outQuotNat, outRemNat, a.abs(), b.abs(), cap)
-	
+
 	// Set the absolute values
 	outQuot.SetNat(outQuotNat)
 	outRem.SetNat(outRemNat)
-	
+
 	// Apply signs: quotient is negative if signs differ, remainder has same sign as dividend
 	quotShouldNegate := saferith.Choice(a.IsNegative() ^ b.IsNegative())
 	remShouldNegate := saferith.Choice(a.IsNegative())
-	
+
 	(*saferith.Int)(outQuot).Neg(quotShouldNegate)
 	(*saferith.Int)(outRem).Neg(remShouldNegate)
 
@@ -236,9 +236,9 @@ func (i *Int) Sqrt(x *Int) (ok ct.Bool) {
 			ge := gt | eq
 
 			// Apply updates branchlessly.
-			n.CondAssign(ge, &nMinus)
+			n.Select(ge, &nMinus)
 			y = yshr
-			y.CondAssign(ge, &yPlus)
+			y.Select(ge, &yPlus)
 
 			// b >>= 2
 			bshr.Rsh(&b, 2, algebra.Capacity(capBits))
@@ -259,7 +259,7 @@ func (i *Int) Sqrt(x *Int) (ok ct.Bool) {
 	// Conditionally assign the root.
 	var root Int
 	(*saferith.Int)(&root).SetNat(&rootNat)
-	i.CondAssign(ok, i, &root)
+	i.Select(ok, i, &root)
 	return
 }
 
@@ -324,21 +324,21 @@ func (i *Int) IsProbablyPrime() ct.Bool {
 	return i.abs().IsProbablyPrime() & i.IsNegative().Not()
 }
 
-func (i *Int) CondAssign(choice ct.Choice, x0, x1 *Int) {
-	// CondAssign should set i = choice ? x1 : x0
-	// Since saferith.Int doesn't have CondAssign, we need to implement it ourselves
+func (i *Int) Select(choice ct.Choice, x0, x1 *Int) {
+	// Select should set i = choice ? x1 : x0
+	// Since saferith.Int doesn't have Select, we need to implement it ourselves
 
 	// Get absolute values
 	abs0 := x0.abs()
 	abs1 := x1.abs()
 
-	// Use Nat's CondAssign for the magnitude
+	// Use Nat's Select for the magnitude
 	var selectedAbs Nat
 	selectedAbs.Set(abs0)
-	selectedAbs.CondAssign(choice, &selectedAbs, abs1)
+	selectedAbs.Select(choice, &selectedAbs, abs1)
 
 	// Select the sign
-	selectedNeg := ct.Select(choice, x0.IsNegative(), x1.IsNegative())
+	selectedNeg := ct.SelectInteger(choice, x0.IsNegative(), x1.IsNegative())
 
 	// Set the result
 	i.SetNat(&selectedAbs)
@@ -363,8 +363,8 @@ func (i *Int) Compare(rhs *Int) (lt, eq, gt ct.Bool) {
 	bothNeg := same & aNeg
 
 	// If both negative, reverse magnitude ordering
-	ltSame := ct.Select(bothNeg, ltM, gtM) // when bothNeg==0 pick ltM, when bothNeg==1 pick gtM
-	gtSame := ct.Select(bothNeg, gtM, ltM) // when bothNeg==0 pick gtM, when bothNeg==1 pick ltM
+	ltSame := ct.SelectInteger(bothNeg, ltM, gtM) // when bothNeg==0 pick ltM, when bothNeg==1 pick gtM
+	gtSame := ct.SelectInteger(bothNeg, gtM, ltM) // when bothNeg==0 pick gtM, when bothNeg==1 pick ltM
 
 	// Only use magnitude comparison when signs are the same
 	ltSame = same & ltSame
@@ -394,7 +394,7 @@ func (i *Int) Int64() int64 {
 	negated := abs * -1
 	// When IsNegative() is 1 (true), select negated
 	// ct.Select returns x1 when choice is 1, x0 when choice is 0
-	return ct.Select(i.IsNegative(), abs, negated)
+	return ct.SelectInteger(i.IsNegative(), abs, negated)
 }
 
 func (i *Int) SetInt64(x int64) {

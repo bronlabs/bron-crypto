@@ -29,7 +29,7 @@ func NewModulusOddPrime(m *Nat) (*ModulusOddPrime, ct.Bool) {
 	ok := m.IsProbablyPrime() & m.IsOdd() & m.IsNonZero()
 
 	var mEff Nat
-	mEff.CondAssign(ok, NewNat(3), m)
+	mEff.Select(ok, NewNat(3), m)
 	safeMod := (*ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(m)))
 	mNum, err := boring.NewBigNum().SetBytes(safeMod.Bytes())
 	if err != nil {
@@ -237,6 +237,6 @@ type Modulus = ModulusBasic
 func NewModulus(m *Nat) (*Modulus, ct.Bool) {
 	ok := m.IsNonZero()
 	var mEff Nat
-	mEff.CondAssign(ok, NewNat(3), m)
+	mEff.Select(ok, NewNat(3), m)
 	return newModulusBasic(&mEff), ok
 }

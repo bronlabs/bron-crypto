@@ -58,9 +58,9 @@ func (f *QuadraticFieldExtensionImpl[BFP, A, BF]) SetRandom(prng io.Reader) (ok 
 	return ok0 & ok1
 }
 
-func (f *QuadraticFieldExtensionImpl[BFP, A, BF]) CondAssign(choice ct.Choice, z, nz *QuadraticFieldExtensionImpl[BFP, A, BF]) {
-	BFP(&f.U0).CondAssign(choice, &z.U0, &nz.U0)
-	BFP(&f.U1).CondAssign(choice, &z.U1, &nz.U1)
+func (f *QuadraticFieldExtensionImpl[BFP, A, BF]) Select(choice ct.Choice, z, nz *QuadraticFieldExtensionImpl[BFP, A, BF]) {
+	BFP(&f.U0).Select(choice, &z.U0, &nz.U0)
+	BFP(&f.U1).Select(choice, &z.U1, &nz.U1)
 }
 
 func (f *QuadraticFieldExtensionImpl[BFP, A, BF]) Add(lhs, rhs *QuadraticFieldExtensionImpl[BFP, A, BF]) {
@@ -165,8 +165,8 @@ func (f *QuadraticFieldExtensionImpl[BFP, A, BF]) Inv(v *QuadraticFieldExtension
 		}
 	}
 
-	BFP(&f.U0).CondAssign(ok, &f.U0, &c0)
-	BFP(&f.U1).CondAssign(ok, &f.U1, &c1)
+	BFP(&f.U0).Select(ok, &f.U0, &c0)
+	BFP(&f.U1).Select(ok, &f.U1, &c1)
 
 	return ok
 }
@@ -176,7 +176,7 @@ func (f *QuadraticFieldExtensionImpl[BFP, A, BF]) Div(lhs, rhs *QuadraticFieldEx
 	ok = rhsInv.Inv(rhs)
 	result.Mul(lhs, &rhsInv)
 
-	f.CondAssign(ok, f, &result)
+	f.Select(ok, f, &result)
 	return ok
 }
 
@@ -205,15 +205,15 @@ func (f *QuadraticFieldExtensionImpl[BFP, A, BF]) Sqrt(v *QuadraticFieldExtensio
 	okp := ok1 & ok2 & ok3p
 	okn := ok1 & ok2 & ok3n
 
-	BFP(&com).CondAssign(okp, &com, &pos)
-	BFP(&com).CondAssign(okn, &com, &neg)
+	BFP(&com).Select(okp, &com, &pos)
+	BFP(&com).Select(okn, &com, &neg)
 	BFP(&com).Add(&com, &com)
 	ok4 := BFP(&com).Inv(&com)
 	BFP(&com).Mul(&com, &v.U1)
 
-	BFP(&f.U0).CondAssign(okp&ok4, &f.U0, &pos)
-	BFP(&f.U0).CondAssign(okn&ok4, &f.U0, &neg)
-	BFP(&f.U1).CondAssign((okp|okn)&ok4, &f.U0, &com)
+	BFP(&f.U0).Select(okp&ok4, &f.U0, &pos)
+	BFP(&f.U0).Select(okn&ok4, &f.U0, &neg)
+	BFP(&f.U1).Select((okp|okn)&ok4, &f.U0, &com)
 
 	return (okp | okn) & ok4
 }

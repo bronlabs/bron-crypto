@@ -178,7 +178,7 @@ func (c *G1) FromCompressed(input []byte) (*PointG1, error) {
 	}
 
 	yNegFp.Neg(&pp.V.Y)
-	pp.V.Y.CondAssign(fieldsImpl.IsNegative(&yFp)^sortFlag, &pp.V.Y, &yNegFp)
+	pp.V.Y.Select(fieldsImpl.IsNegative(&yFp)^sortFlag, &pp.V.Y, &yNegFp)
 
 	if !pp.IsTorsionFree() {
 		return nil, errs.NewFailed("point is not in correct subgroup")

@@ -2,10 +2,14 @@ package main
 
 import (
 	_ "embed"
-	"flag"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"math/bits"
 	"os"
+	"path/filepath"
+	"strconv"
 	"text/template"
 )
 
@@ -15,55 +19,69 @@ const GenGoExt = ".gen.go"
 var templateString string
 
 type data struct {
-	Bits          uint
-	StatBits      uint
-	Log2Floor     int
-	Log2Ceil      int
-	BytesCeil     uint
-	StatBytesCeil uint
-	CRBytesCeil   uint
-	H2CTag        string
+	ComputationalBits      uint
+	ComputationalLog2Ceil  int
+	ComputationalBytesCeil uint
+
+	StatisticalBits      uint
+	StatisticalLog2Ceil  int
+	StatisticalBytesCeil uint
+
+	CollisionBytesCeil uint
 }
 
 func main() {
-	var (
-		bitsVal  uint
-		statBits uint
-		h2cTag   string
-	)
-
-	flag.UintVar(&bitsVal, "bits", 128, "computational security in bits (>= 2)")
-	flag.UintVar(&statBits, "stat", 80, "statistical security in bits (>= 0)")
-	flag.StringVar(&h2cTag, "h2c", "bron_crypto_hash2curve-", "hash-to-curve application tag")
-	flag.Parse()
-
-	if bitsVal%2 != 0 {
-		fail("-bits must be even")
+	// Get the package directory from working directory
+	wd, err := os.Getwd()
+	if err != nil {
+		fail("get working directory: %v", err)
 	}
-	if statBits%2 != 0 {
-		fail("-stat must be even")
+
+	// Read constants from constants.go
+	constantsFile := filepath.Join(wd, "constants.go")
+	constants, err := readConstants(constantsFile)
+	if err != nil {
+		fail("read constants: %v", err)
 	}
-	if bitsVal < 128 {
-		fail("-bits must be at least 128")
+
+	// Extract values
+	compBits, ok := constants["ComputationalSecurityBits"]
+	if !ok {
+		fail("ComputationalSecurityBits not found in constants.go")
+	}
+
+	statBits, ok := constants["StatisticalSecurityBits"]
+	if !ok {
+		fail("StatisticalSecurityBits not found in constants.go")
+	}
+
+	// Validate values
+	if compBits%8 != 0 {
+		fail("ComputationalSecurityBits must be multiple of 8")
+	}
+	if statBits%8 != 0 {
+		fail("StatisticalSecurityBits must be multiple of 8")
+	}
+	if compBits < 128 {
+		fail("ComputationalSecurityBits must be at least 128")
 	}
 	if statBits < 80 {
-		fail("-stat must be at least 80")
+		fail("StatisticalSecurityBits must be at least 80")
 	}
 
 	d := data{
-		Bits:          bitsVal,
-		StatBits:      statBits,
-		Log2Floor:     log2Floor(bitsVal),
-		Log2Ceil:      log2Ceil(bitsVal),
-		BytesCeil:     bytesCeil(bitsVal),
-		CRBytesCeil:   bytesCeil(2 * bitsVal),
-		StatBytesCeil: bytesCeil(statBits),
-		H2CTag:        h2cTag,
+		ComputationalBits:      compBits,
+		ComputationalLog2Ceil:  log2Ceil(compBits),
+		ComputationalBytesCeil: bytesCeil(compBits),
+		StatisticalBits:        statBits,
+		StatisticalLog2Ceil:    log2Ceil(statBits),
+		StatisticalBytesCeil:   bytesCeil(statBits),
+		CollisionBytesCeil:     bytesCeil(2 * compBits),
 	}
 
-	out := "constants" + GenGoExt
+	out := filepath.Join(wd, "constants.gen.go")
 
-	tpl, err := template.New("secparams").Parse(templateString)
+	tpl, err := template.New("constants").Parse(templateString)
 	if err != nil {
 		fail("parse template: %v", err)
 	}
@@ -77,6 +95,81 @@ func main() {
 	if err := tpl.Execute(f, d); err != nil {
 		fail("execute template: %v", err)
 	}
+}
+
+// readConstants parses constants.go and extracts const values
+func readConstants(filename string) (map[string]uint, error) {
+	src, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, filename, src, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	constants := make(map[string]uint)
+
+	// Walk through all declarations
+	for _, decl := range file.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if !ok || genDecl.Tok != token.CONST {
+			continue
+		}
+
+		for _, spec := range genDecl.Specs {
+			valueSpec, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+
+			for i, name := range valueSpec.Names {
+				if i < len(valueSpec.Values) {
+					if val := extractIntValue(valueSpec.Values[i], constants); val != nil {
+						constants[name.Name] = *val
+					}
+				}
+			}
+		}
+	}
+
+	return constants, nil
+}
+
+// extractIntValue extracts integer value from an expression
+func extractIntValue(expr ast.Expr, constants map[string]uint) *uint {
+	switch e := expr.(type) {
+	case *ast.BasicLit:
+		if e.Kind == token.INT {
+			val, err := strconv.ParseUint(e.Value, 0, 64)
+			if err == nil {
+				v := uint(val)
+				return &v
+			}
+		}
+	case *ast.BinaryExpr:
+		// Handle expressions like 2 * ComputationalSecurityBits
+		left := extractIntValue(e.X, constants)
+		right := extractIntValue(e.Y, constants)
+		if left != nil && right != nil {
+			switch e.Op {
+			case token.MUL:
+				v := *left * *right
+				return &v
+			case token.ADD:
+				v := *left + *right
+				return &v
+			}
+		}
+	case *ast.Ident:
+		// Reference to another constant
+		if val, ok := constants[e.Name]; ok {
+			return &val
+		}
+	}
+	return nil
 }
 
 func fail(f string, a ...any) {

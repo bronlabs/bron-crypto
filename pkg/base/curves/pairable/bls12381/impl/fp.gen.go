@@ -107,7 +107,7 @@ func (f *Fp) SetRandom(prng io.Reader) (ok ct.Bool) {
 	return f.SetUniformBytes(uniformBytes[:])
 }
 
-func (f *Fp) CondAssign(choice ct.Choice, z, nz *Fp) {
+func (f *Fp) Select(choice ct.Choice, z, nz *Fp) {
 	fiatFpSelectznz((*[FpLimbs]uint64)(&f.fiatFpMontgomeryDomainFieldElement),fiatFpUint1(choice), (*[FpLimbs]uint64)(&z.fiatFpMontgomeryDomainFieldElement), (*[FpLimbs]uint64)(&nz.fiatFpMontgomeryDomainFieldElement))
 }
 

@@ -67,5 +67,5 @@ func GCD[N internal.NatMutablePtr[N, NT], NT any](out, a, b N) {
 	formulaOk := lcmNonZero & divOk
 
 	// When formula works, use gcdFromFormula; otherwise use fallback
-	out.CondAssign(formulaOk, N(&fallback), N(&gcdFromFormula))
+	out.Select(formulaOk, N(&fallback), N(&gcdFromFormula))
 }

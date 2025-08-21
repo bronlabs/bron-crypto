@@ -23,7 +23,7 @@ func sswu[FP fieldsImpl.FiniteFieldElementPtr[FP, F], P NonZeroPointMapperParams
 	params.MulByB(&tv3, &tv3)
 	//  7.  tv4 = CMOV(Z, -tv2, tv2 != 0)
 	FP(&tv2n).Neg(&tv2)
-	FP(&tv4).CondAssign(FP(&tv2).IsNonZero(), &z, &tv2n)
+	FP(&tv4).Select(FP(&tv2).IsNonZero(), &z, &tv2n)
 	//  8.  tv4 = A * tv4
 	params.MulByA(&tv4, &tv4)
 	//  9.  tv2 = tv3^2
@@ -51,15 +51,15 @@ func sswu[FP fieldsImpl.FiniteFieldElementPtr[FP, F], P NonZeroPointMapperParams
 	// 20.   y = y * y1
 	FP(yOut).Mul(yOut, &y1)
 	// 21.   x = CMOV(x, tv3, is_gx1_square)
-	FP(xOut).CondAssign(isGx1Square, xOut, &tv3)
+	FP(xOut).Select(isGx1Square, xOut, &tv3)
 	// 22.   y = CMOV(y, y1, is_gx1_square)
-	FP(yOut).CondAssign(isGx1Square, yOut, &y1)
+	FP(yOut).Select(isGx1Square, yOut, &y1)
 	// 23.  e1 = sgn0(u) == sgn0(y)
 	e1 := (params.Sgn0(u) ^ params.Sgn0(yOut)) ^ 1
 	// 24.   y = CMOV(-y, y, e1)
 	FP(&yn).Neg(yOut)
 
-	FP(yOut).CondAssign(e1, &yn, yOut)
+	FP(yOut).Select(e1, &yn, yOut)
 	// 25.   x = x / tv4
 	_ = FP(xOut).Div(xOut, &tv4)
 }

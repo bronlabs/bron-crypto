@@ -61,8 +61,8 @@ func newParticipant[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldE
 		return nil, errs.NewFailed("couldn't initialise scalarField")
 	}
 	kappa := group.ScalarStructure().ElementSize() * 8
-	xi := kappa + 2*base.StatisticalSecurity
-	rho := utils.CeilDiv(kappa, base.ComputationalSecurity)
+	xi := kappa + 2*base.StatisticalSecurityBits
+	rho := utils.CeilDiv(kappa, base.ComputationalSecurityBits)
 
 	return &participant[GE, SE]{
 		Prng:        prng,

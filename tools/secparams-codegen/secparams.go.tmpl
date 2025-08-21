@@ -2,25 +2,20 @@
 
 package base
 
+// Derived constants from the base security parameters in constants.go
 const (
-	// ComputationalSecurity (λ) is the number of bits of computational security we want to achieve in most of our cryptographic primitives.
-	ComputationalSecurityBits = {{ .Bits }}
-	ComputationalSecurityLog2Floor = {{ .Log2Floor }}
-	ComputationalSecurityLog2Ceil  = {{ .Log2Ceil }}
-	ComputationalSecurityPow2Floor = 1 << ComputationalSecurityLog2Floor
+	// Computational security derived values
+	ComputationalSecurityLog2Ceil  = {{ .ComputationalLog2Ceil }}
 	ComputationalSecurityPow2Ceil  = 1 << ComputationalSecurityLog2Ceil
-	ComputationalSecurityBytesCeil = {{ .BytesCeil }} // ceil(bits/8)
+	ComputationalSecurityBytesCeil = {{ .ComputationalBytesCeil }} // ceil(ComputationalSecurityBits/8)
 
-	// StatisticalSecurity (λ_s) is the number of bits of statistical security we want to achieve in most of our cryptographic primitives, applicable mostly to soundness of interactive proofs.
-	StatisticalSecurityBits   = {{ .StatBits }}
-	StatisticalSecurityBytesCeil = {{ .StatBytesCeil }} // ceil(bits/8)
+	// Statistical security derived values
+	StatisticalSecurityLog2Ceil  = {{ .StatisticalLog2Ceil }}
+	StatisticalSecurityPower2Ceil  = 1 << StatisticalSecurityLog2Ceil
+	StatisticalSecurityBytesCeil = {{ .StatisticalBytesCeil }} // ceil(StatisticalSecurityBits/8)
 
-	// CollisionResistance is the hash digest length to achieve λ-bits of collision resistance (birthday paradox).
-	CollisionResistance = 2 * ComputationalSecurityBits
-	CollisionResistanceBytesCeil = {{ .CRBytesCeil }}
-
-	// Hash-to-curve application tag
-	Hash2CurveAppTag = {{ printf "%q" .H2CTag }}
+	// Collision resistance derived values
+	CollisionResistanceBytesCeil = {{ .CollisionBytesCeil }} // ceil(CollisionResistance/8)
 )
 
 // Compile-time assertions: 2^(ceil-1) < Bits ≤ 2^ceil

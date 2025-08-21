@@ -58,8 +58,8 @@ func (m *OddPrimeFactors[MM, MF, N, MMT, MFT, NT]) Exp(out, base, exp N) ct.Bool
 	var ep, eq NT
 	N(&ep).Mod(exp, N(&m.phiP))
 	N(&eq).Mod(exp, N(&m.phiQ))
-	N(&ep).CondAssign(base.Coprime(N(&m.params.PNat)), exp, N(&ep))
-	N(&eq).CondAssign(base.Coprime(N(&m.params.Q)), exp, N(&eq))
+	N(&ep).Select(base.Coprime(N(&m.params.PNat)), exp, N(&ep))
+	N(&eq).Select(base.Coprime(N(&m.params.Q)), exp, N(&eq))
 
 	// Compute base^ep mod p and base^eq mod q in parallel.
 	var mp, mq NT
@@ -127,7 +127,7 @@ func (m *OddPrimeFactorsMulti[MM, MF, N, MMT, MFT, NT]) Exp(out, base, exp N) ct
 	eps := make([]NT, m.params.NumFactors)
 	for i := range m.params.NumFactors {
 		N(&eps[i]).Mod(exp, m.phis[i])
-		N(&eps[i]).CondAssign(base.Coprime(m.params.Factors[i].Nat()), exp, N(&eps[i]))
+		N(&eps[i]).Select(base.Coprime(m.params.Factors[i].Nat()), exp, N(&eps[i]))
 	}
 	mpsT := make([]NT, m.params.NumFactors)
 	mps := make([]N, m.params.NumFactors)

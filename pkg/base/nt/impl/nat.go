@@ -77,7 +77,7 @@ func (n *Nat) DivCap(lhs, rhs *Nat, cap int) (ok ct.Bool) {
 	ok = rhs.IsNonZero()
 	effectiveDenominator := new(Nat)
 	fallback := (*Nat)(new(saferith.Nat).SetUint64(2).Resize(64))
-	effectiveDenominator.CondAssign(ok, fallback, rhs) // when ok=true, use rhs; when ok=false, use fallback
+	effectiveDenominator.Select(ok, fallback, rhs) // when ok=true, use rhs; when ok=false, use fallback
 
 	safeModulus := saferith.ModulusFromNat((*saferith.Nat)(effectiveDenominator))
 
@@ -90,7 +90,7 @@ func (n *Nat) DivCap(lhs, rhs *Nat, cap int) (ok ct.Bool) {
 		prodCap = cap + safeModulus.BitLen()
 	}
 	ok &= ct.Choice(new(saferith.Nat).Mul((*saferith.Nat)(rhs), quot, prodCap).Eq((*saferith.Nat)(lhs))) // is exact
-	n.CondAssign(ok, n, (*Nat)(quot))
+	n.Select(ok, n, (*Nat)(quot))
 	return ok
 }
 
@@ -99,13 +99,13 @@ func (n *Nat) Mod(a, m *Nat) (ok ct.Bool) {
 
 	effectiveModulus := new(Nat)
 	fallback := (*Nat)(new(saferith.Nat).SetUint64(2).Resize(64))
-	effectiveModulus.CondAssign(ok, fallback, m) // when ok=true, use m; when ok=false, use fallback
+	effectiveModulus.Select(ok, fallback, m) // when ok=true, use m; when ok=false, use fallback
 
 	safeModulus := saferith.ModulusFromNat((*saferith.Nat)(effectiveModulus))
 
 	rem := (*Nat)(new(saferith.Nat).Mod((*saferith.Nat)(a), safeModulus))
 
-	n.CondAssign(ok, n, rem)
+	n.Select(ok, n, rem)
 	return ok
 }
 
@@ -116,15 +116,15 @@ func (n *Nat) DivModCap(outQuot, outRem, a, b *Nat, cap algebra.Capacity) (ok ct
 
 	effectiveDenominator := new(Nat)
 	fallback := (*Nat)(new(saferith.Nat).SetUint64(2).Resize(64))
-	effectiveDenominator.CondAssign(ok, fallback, b) // when ok=true, use b; when ok=false, use fallback
+	effectiveDenominator.Select(ok, fallback, b) // when ok=true, use b; when ok=false, use fallback
 
 	safeModulus := saferith.ModulusFromNat((*saferith.Nat)(effectiveDenominator))
 
 	quot := new(saferith.Nat).Div((*saferith.Nat)(a), safeModulus, cap)
 	rem := new(saferith.Nat).Mod((*saferith.Nat)(a), safeModulus)
 
-	outQuot.CondAssign(ok, outQuot, (*Nat)(quot))
-	outRem.CondAssign(ok, outRem, (*Nat)(rem))
+	outQuot.Select(ok, outQuot, (*Nat)(quot))
+	outRem.Select(ok, outRem, (*Nat)(rem))
 	return ok
 }
 
@@ -183,9 +183,9 @@ func (n *Nat) AnnouncedLen() uint {
 	return uint((*saferith.Nat)(n).AnnouncedLen())
 }
 
-func (n *Nat) CondAssign(choice ct.Choice, x0, x1 *Nat) {
+func (n *Nat) Select(choice ct.Choice, x0, x1 *Nat) {
 	*n = *x0.Clone()
-	(*saferith.Nat)(n).CondAssign(saferith.Choice(choice), (*saferith.Nat)(x1))
+	(*saferith.Nat)(n).Select(saferith.Choice(choice), (*saferith.Nat)(x1))
 }
 
 func (n *Nat) IsOdd() ct.Bool {

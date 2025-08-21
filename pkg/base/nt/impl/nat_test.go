@@ -750,17 +750,17 @@ func TestNat_UtilityOperations(t *testing.T) {
 func TestNat_ConditionalOperations(t *testing.T) {
 	t.Parallel()
 
-	t.Run("CondAssign", func(t *testing.T) {
+	t.Run("Select", func(t *testing.T) {
 		x0 := newNat(100)
 		x1 := newNat(200)
 		result := newNat(0)
 
 		// Choose x0 (choice = 0)
-		result.CondAssign(ct.Choice(0), x0, x1)
+		result.Select(ct.Choice(0), x0, x1)
 		assert.Equal(t, uint64(100), result.Uint64())
 
 		// Choose x1 (choice = 1)
-		result.CondAssign(ct.Choice(1), x0, x1)
+		result.Select(ct.Choice(1), x0, x1)
 		assert.Equal(t, uint64(200), result.Uint64())
 	})
 }

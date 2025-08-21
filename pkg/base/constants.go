@@ -1,3 +1,22 @@
 package base
 
-//go:generate go run github.com/bronlabs/bron-crypto/tools/secparams-codegen -bits=128 -stat=80 -h2c=bron-crypto/hash2curve
+// Base security parameters - these are the source of truth
+const (
+	// ComputationalSecurityBits (λ) is the number of bits of computational security
+	// we want to achieve in most of our cryptographic primitives.
+	ComputationalSecurityBits = 128
+
+	// StatisticalSecurityBits (λ_s) is the number of bits of statistical security
+	// we want to achieve in most of our cryptographic primitives,
+	// applicable mostly to soundness of interactive proofs.
+	StatisticalSecurityBits = 80
+
+	// CollisionResistance is the hash digest length to achieve λ-bits of
+	// collision resistance (birthday paradox).
+	CollisionResistance = 2 * ComputationalSecurityBits
+
+	// Hash2CurveAppTag is the application tag for hash-to-curve operations
+	Hash2CurveAppTag = "bron-crypto/hash2curve"
+)
+
+//go:generate go run github.com/bronlabs/bron-crypto/tools/secparams-codegen

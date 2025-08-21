@@ -223,7 +223,7 @@ func (fe *FiniteFieldElementTrait[FP, F, WP, W]) EuclideanValuation() WP {
 	WP(&out).Fp().Set(&fe.V)
 	WP(&zero).Fp().SetZero()
 	WP(&one).Fp().SetOne()
-	WP(&out).Fp().CondAssign(fe.Fp().IsZero(), WP(&zero).Fp(), WP(&one).Fp())
+	WP(&out).Fp().Select(fe.Fp().IsZero(), WP(&zero).Fp(), WP(&one).Fp())
 	return &out
 }
 

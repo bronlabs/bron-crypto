@@ -89,7 +89,7 @@ func (m *OddPrimeSquareFactorSingle[M, MO, MOP, N, MT, MOT, MOPT, NT]) Exp(out N
 	vIsOne := ct.Equal(uint(vp), 1)
 	var out1, pTimesW NT
 	m.p2.ModMul(N(&pTimesW), m.pNat, N(&w))                         // p * w
-	N(&out1).CondAssign(N(e).Equal(N(&one)), N(&zero), N(&pTimesW)) // if e==1 -> p*w else 0
+	N(&out1).Select(N(e).Equal(N(&one)), N(&zero), N(&pTimesW)) // if e==1 -> p*w else 0
 
 	// m==2: always 0 for e>0; we'll mask later with e==0 override.
 	vIsTwo := ct.Equal(uint(vp), 2)
@@ -97,12 +97,12 @@ func (m *OddPrimeSquareFactorSingle[M, MO, MOP, N, MT, MOT, MOPT, NT]) Exp(out N
 
 	// Select by v (branchless)
 	var tmp NT
-	N(&tmp).CondAssign(vIsOne, N(&out0), N(&out1))
-	out.CondAssign(vIsTwo, N(&tmp), out2)
+	N(&tmp).Select(vIsOne, N(&out0), N(&out1))
+	out.Select(vIsTwo, N(&tmp), out2)
 
 	// e==0 override: a^0 == 1 mod p^2
 	condEIsZero := ct.Equal(e.Uint64(), 0)
-	out.CondAssign(condEIsZero, out, N(&one))
+	out.Select(condEIsZero, out, N(&one))
 	return vIsZero | vIsOne | vIsTwo
 }
 
@@ -134,14 +134,14 @@ func (mo *OddPrimeSquareFactorSingle[M, MO, MOP, N, MT, MOT, MOPT, NT]) Decompos
 	var wCalc NT
 	mo.p2.ModExp(N(&wCalc), N(&a0), mo.pNat)
 	// If m==2, force w=1
-	outW.CondAssign(mIs2, N(&wCalc), N(&one))
+	outW.Select(mIs2, N(&wCalc), N(&one))
 
 	// q = u * w^{-1} (mod p^2)  == principal unit 1 + p t
 	var q, wInv NT
 	mo.p2.ModInv(N(&wInv), outW)
 	mo.p2.ModMul(N(&q), N(&u), N(&wInv))
 	// u1 = q; if m==2, force u1 = 1
-	outU.CondAssign(mIs2, N(&q), N(&one))
+	outU.Select(mIs2, N(&q), N(&one))
 
 	// t = ((q - 1)/p) (exact) in Z/pZ; if m==2, force t=0
 	var qm1 NT
@@ -151,7 +151,7 @@ func (mo *OddPrimeSquareFactorSingle[M, MO, MOP, N, MT, MOT, MOPT, NT]) Decompos
 	// Exact integer division: (q-1) / p
 	// Since q = 1 + p*t, we have q-1 = p*t, so this division is exact
 	mo.p.Quo(outT, N(&qm1)) // exact division by p
-	outT.CondAssign(mIs2, outT, N(&zero))
+	outT.Select(mIs2, outT, N(&zero))
 
 	return m
 }
@@ -256,8 +256,8 @@ func (m *OddPrimeSquareFactorsMulti[M, MO, MOP, N, MT, MOT, MOPT, NT]) ExpToN(ou
 			fi.p2.ModExp(N(&riUnit), N(&b), fi.pNat)
 			N(&z).SetZero()
 
-			// ri = isZero ? 0 : riUnit   (your CondAssign is "backwards")
-			N(&ri).CondAssign(isZero, N(&riUnit), N(&z))
+			// ri = isZero ? 0 : riUnit   (your Select is "backwards")
+			N(&ri).Select(isZero, N(&riUnit), N(&z))
 			residues[i] = N(&ri)
 
 			unitOK[i] = isZero.Not() // ok flag: true iff a0 ≠ 0

@@ -117,7 +117,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetRandom(prng io.Reader) (o
 	q.Add(&q0, &q1)
 	curveParams.ClearCofactor(&q.X, &q.Y, &q.Z, &q.X, &q.Y, &q.Z)
 
-	p.CondAssign(ok, p, &q)
+	p.Select(ok, p, &q)
 	return ok
 }
 
@@ -134,9 +134,9 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetAffine(x, y FP) (ok ct.Bo
 	FP(&eql).Square(y)
 	ok = FP(&eql).Equal(&eqr)
 
-	FP(&p.X).CondAssign(ok, &p.X, x)
-	FP(&p.Y).CondAssign(ok, &p.Y, y)
-	FP(&p.Z).CondAssign(ok, &p.Z, &one)
+	FP(&p.X).Select(ok, &p.X, x)
+	FP(&p.Y).Select(ok, &p.Y, y)
+	FP(&p.Z).Select(ok, &p.Z, &one)
 	return ok
 }
 
@@ -157,16 +157,16 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetFromAffineX(x FP) (ok ct.
 	params.AddB(&yy, &yy)
 	ok = FP(&y).Sqrt(&yy)
 
-	FP(&p.X).CondAssign(ok, &p.X, x)
-	FP(&p.Y).CondAssign(ok, &p.Y, &y)
-	FP(&p.Z).CondAssign(ok, &p.Z, &one)
+	FP(&p.X).Select(ok, &p.X, x)
+	FP(&p.Y).Select(ok, &p.Y, &y)
+	FP(&p.Z).Select(ok, &p.Z, &one)
 	return ok
 }
 
-func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) CondAssign(choice ct.Choice, z, nz *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
-	FP(&p.X).CondAssign(choice, &z.X, &nz.X)
-	FP(&p.Y).CondAssign(choice, &z.Y, &nz.Y)
-	FP(&p.Z).CondAssign(choice, &z.Z, &nz.Z)
+func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Select(choice ct.Choice, z, nz *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
+	FP(&p.X).Select(choice, &z.X, &nz.X)
+	FP(&p.Y).Select(choice, &z.Y, &nz.Y)
+	FP(&p.Z).Select(choice, &z.Z, &nz.Z)
 }
 
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) ClearCofactor(in *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
@@ -350,8 +350,8 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) ToAffine(xOut, yOut FP) (ok 
 	FP(&x).Mul(&p.X, zInvPtr)
 	FP(&y).Mul(&p.Y, zInvPtr)
 
-	xOut.CondAssign(ok, xOut, &x)
-	yOut.CondAssign(ok, yOut, &y)
+	xOut.Select(ok, xOut, &x)
+	yOut.Select(ok, yOut, &y)
 	return ok
 }
 
@@ -360,9 +360,9 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) String() string {
 	FP(&one).SetOne()
 
 	ok := p.ToAffine(&x, &y)
-	FP(&x).CondAssign(ok, &p.X, &x)
-	FP(&y).CondAssign(ok, &p.Y, &y)
-	FP(&z).CondAssign(ok, &p.Z, &one)
+	FP(&x).Select(ok, &p.X, &x)
+	FP(&y).Select(ok, &p.Y, &y)
+	FP(&z).Select(ok, &p.Z, &one)
 
 	return fmt.Sprintf("(%s : %s : %s)", FP(&x), FP(&y), FP(&z))
 }
@@ -384,8 +384,8 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetBytes(input []byte) (ok c
 	ok = okX & okY & okZ
 
 	// Conditionally assign: keep current if failed
-	FP(&p.X).CondAssign(ok, &p.X, &tmpX)
-	FP(&p.Y).CondAssign(ok, &p.Y, &tmpY)
-	FP(&p.Z).CondAssign(ok, &p.Z, &tmpZ)
+	FP(&p.X).Select(ok, &p.X, &tmpX)
+	FP(&p.Y).Select(ok, &p.Y, &tmpY)
+	FP(&p.Z).Select(ok, &p.Z, &tmpZ)
 	return ok
 }

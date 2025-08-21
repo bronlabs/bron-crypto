@@ -40,9 +40,9 @@ func SqrtRatio[FP fieldsImpl.FiniteFieldElementPtr[FP, F], F any](yOut *F, c1 ui
 	// 14. tv5 = tv4 * tv1
 	FP(&tv5).Mul(&tv4, &tv1)
 	// 15. tv3 = CMOV(tv2, tv3, isQR)
-	FP(&tv3).CondAssign(isQr, &tv2, &tv3)
+	FP(&tv3).Select(isQr, &tv2, &tv3)
 	// 16. tv4 = CMOV(tv5, tv4, isQR)
-	FP(&tv4).CondAssign(isQr, &tv5, &tv4)
+	FP(&tv4).Select(isQr, &tv5, &tv4)
 	// 17. for i in (c1, c1 - 1, ..., 2):
 	for i := c1; i >= 2; i-- {
 		// 18. tv5 = i - 2
@@ -60,9 +60,9 @@ func SqrtRatio[FP fieldsImpl.FiniteFieldElementPtr[FP, F], F any](yOut *F, c1 ui
 		// 24. tv5 = tv4 * tv1
 		FP(&tv5).Mul(&tv4, &tv1)
 		// 25. tv3 = CMOV(tv2, tv3, e1)
-		FP(&tv3).CondAssign(e1, &tv2, &tv3)
+		FP(&tv3).Select(e1, &tv2, &tv3)
 		// 26. tv4 = CMOV(tv5, tv4, e1)
-		FP(&tv4).CondAssign(e1, &tv5, &tv4)
+		FP(&tv4).Select(e1, &tv5, &tv4)
 	}
 	// 27. return (isQR, tv3)
 	FP(yOut).Set(&tv3)
@@ -91,7 +91,7 @@ func SqrtRatio3Mod4[FP fieldsImpl.FiniteFieldElementPtr[FP, F], F any](yOut *F, 
 	//  9. isQR = tv3 == u
 	isQR := FP(u).Equal(&tv3)
 	// 10. y = CMOV(y2, y1, isQR)
-	FP(yOut).CondAssign(isQR, &y2, &y1)
+	FP(yOut).Select(isQR, &y2, &y1)
 	// 11. return (isQR, y)
 	return isQR
 }

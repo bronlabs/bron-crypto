@@ -2,25 +2,20 @@
 
 package base
 
+// Derived constants from the base security parameters in constants.go
 const (
-	// ComputationalSecurity (λ) is the number of bits of computational security we want to achieve in most of our cryptographic primitives.
-	ComputationalSecurityBits = 128
-	ComputationalSecurityLog2Floor = 7
+	// Computational security derived values
 	ComputationalSecurityLog2Ceil  = 7
-	ComputationalSecurityPow2Floor = 1 << ComputationalSecurityLog2Floor
 	ComputationalSecurityPow2Ceil  = 1 << ComputationalSecurityLog2Ceil
-	ComputationalSecurityBytesCeil = 16 // ceil(bits/8)
+	ComputationalSecurityBytesCeil = 16 // ceil(ComputationalSecurityBits/8)
 
-	// StatisticalSecurity (λ_s) is the number of bits of statistical security we want to achieve in most of our cryptographic primitives, applicable mostly to soundness of interactive proofs.
-	StatisticalSecurityBits   = 80
-	StatisticalSecurityBytesCeil = 10 // ceil(bits/8)
+	// Statistical security derived values
+	StatisticalSecurityLog2Ceil  = 7
+	StatisticalSecurityPower2Ceil  = 1 << StatisticalSecurityLog2Ceil
+	StatisticalSecurityBytesCeil = 10 // ceil(StatisticalSecurityBits/8)
 
-	// CollisionResistance is the hash digest length to achieve λ-bits of collision resistance (birthday paradox).
-	CollisionResistance = 2 * ComputationalSecurityBits
-	CollisionResistanceBytesCeil = 32
-
-	// Hash-to-curve application tag
-	Hash2CurveAppTag = "bron-crypto/hash2curve"
+	// Collision resistance derived values
+	CollisionResistanceBytesCeil = 32 // ceil(CollisionResistance/8)
 )
 
 // Compile-time assertions: 2^(ceil-1) < Bits ≤ 2^ceil

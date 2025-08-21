@@ -107,7 +107,7 @@ func (f *{{- .TypeName }}) SetRandom(prng io.Reader) (ok ct.Bool) {
 	return f.SetUniformBytes(uniformBytes[:])
 }
 
-func (f *{{- .TypeName }}) CondAssign(choice ct.Choice, z, nz *{{- .TypeName }}) {
+func (f *{{- .TypeName }}) Select(choice ct.Choice, z, nz *{{- .TypeName }}) {
 	{{ .FiatPrefix -}}Selectznz((*[{{ .TypeName -}}Limbs]uint64)(&f.{{- .FiatPrefix -}}MontgomeryDomainFieldElement), {{- .FiatPrefix -}}Uint1(choice), (*[{{ .TypeName -}}Limbs]uint64)(&z.{{- .FiatPrefix -}}MontgomeryDomainFieldElement), (*[{{ .TypeName -}}Limbs]uint64)(&nz.{{- .FiatPrefix -}}MontgomeryDomainFieldElement))
 }
 

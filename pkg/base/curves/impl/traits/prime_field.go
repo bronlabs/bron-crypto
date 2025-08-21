@@ -305,7 +305,7 @@ func (fe *PrimeFieldElementTrait[FP, F, WP, W]) EuclideanValuation() WP {
 	var one W
 	WP(&zero).Fp().SetZero()
 	WP(&one).Fp().SetOne()
-	WP(&out).Fp().CondAssign(fe.Fp().IsZero(), WP(&zero).Fp(), WP(&one).Fp())
+	WP(&out).Fp().Select(fe.Fp().IsZero(), WP(&zero).Fp(), WP(&one).Fp())
 	return &out
 }
 
