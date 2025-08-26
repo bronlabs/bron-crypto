@@ -43,6 +43,7 @@ func NewCompiler[
 	if sigmaProtocol == nil {
 		return nil, errs.NewIsNil("sigmaProtocol")
 	}
+	// TODO: I believe this should be StatisticalSecurity
 	if s := sigmaProtocol.SoundnessError(); s < base.ComputationalSecurity {
 		return nil, errs.NewArgument("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
 			s, base.ComputationalSecurity)
