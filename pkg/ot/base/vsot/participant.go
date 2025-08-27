@@ -1,7 +1,8 @@
 package vsot
 
 import (
-	"hash"
+	"encoding/hex"
+	"fmt"
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -12,18 +13,21 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
+const (
+	transcriptLabel = "BRON_CRYPTO_VSOT-"
+	aLabel          = "BRON_CRYPTO_VSOT-A-"
+)
+
 type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	sessionId network.SID
-	chi       int
-	curve     curves.Curve[P, B, S]
-	field     algebra.PrimeField[S]
-	hashFunc  func() hash.Hash
+	suite     *Suite[P, B, S]
 	tape      transcripts.Transcript
+	round     int
 	prng      io.Reader
 }
 
 func (p *participant[P, B, S]) hash(b, a P, data []byte) ([]byte, error) {
-	digest, err := hashing.HashPrefixedLength(p.hashFunc, p.sessionId[:], b.ToCompressed(), a.ToCompressed(), data)
+	digest, err := hashing.HashPrefixedLength(p.suite.HashFunc(), p.sessionId[:], b.ToCompressed(), a.ToCompressed(), data)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "cannot compute hash")
 	}
@@ -43,26 +47,18 @@ type senderState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 	rho0DigestDigest [][]byte
 }
 
-func NewSender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, chi int, curve curves.Curve[P, B, S], hashFunc func() hash.Hash, tape transcripts.Transcript, prng io.Reader) (*Sender[P, B, S], error) {
-	if hashFunc == nil || tape == nil || prng == nil {
+func NewSender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Sender[P, B, S], error) {
+	if suite == nil || tape == nil || prng == nil {
 		return nil, errs.NewValidation("invalid args")
 	}
-	if chi <= 0 || (chi%8) != 0 {
-		return nil, errs.NewValidation("invalid chi")
-	}
 
-	field, ok := curve.ScalarStructure().(algebra.PrimeField[S])
-	if !ok {
-		return nil, errs.NewFailed("invalid curve scalar structure")
-	}
+	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
 	s := &Sender[P, B, S]{
 		participant: participant[P, B, S]{
 			sessionId: sessionId,
-			chi:       chi,
-			curve:     curve,
-			hashFunc:  hashFunc,
-			field:     field,
+			suite:     suite,
 			tape:      tape,
+			round:     1,
 			prng:      prng,
 		},
 	}
@@ -85,26 +81,18 @@ type receiverState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra
 	xi             [][]byte
 }
 
-func NewReceiver[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, chi int, curve curves.Curve[P, B, S], hashFunc func() hash.Hash, tape transcripts.Transcript, prng io.Reader) (*Receiver[P, B, S], error) {
-	if hashFunc == nil || tape == nil || prng == nil {
+func NewReceiver[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Receiver[P, B, S], error) {
+	if suite == nil || tape == nil || prng == nil {
 		return nil, errs.NewValidation("invalid args")
 	}
-	if chi < 0 || (chi%8) != 0 {
-		return nil, errs.NewValidation("invalid chi")
-	}
 
-	field, ok := curve.ScalarStructure().(algebra.PrimeField[S])
-	if !ok {
-		return nil, errs.NewFailed("invalid curve scalar structure")
-	}
+	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
 	r := &Receiver[P, B, S]{
 		participant: participant[P, B, S]{
 			sessionId: sessionId,
-			chi:       chi,
-			curve:     curve,
-			field:     field,
-			hashFunc:  hashFunc,
+			suite:     suite,
 			tape:      tape,
+			round:     2,
 			prng:      prng,
 		},
 	}

@@ -15,12 +15,12 @@ import (
 )
 
 const (
-	transcriptLabel = "BRON_CRYPTO_DKLS_MULTIPLY-"
-	gadgetLabel     = "BRON_CRYPTO_DKLS_MULTIPLY-G-"
-	aTildeLabel     = "BRON_CRYPTO_DKLS_MULTIPLY-A_TILDE-"
-	thetaLabel      = "BRON_CRYPTO_DKLS_MULTIPLY-THETA-"
-	muVectorLabel   = "BRON_CRYPTO_DKLS_MULTIPLY-MU_VECTOR-"
-	muLabel         = "BRON_CRYPTO_DKLS_MULTIPLY-MU-"
+	transcriptLabel = "BRON_CRYPTO_BBOT_MULTIPLY-"
+	gadgetLabel     = "BRON_CRYPTO_BBOT_MULTIPLY-G-"
+	aTildeLabel     = "BRON_CRYPTO_BBOT_MULTIPLY-A_TILDE-"
+	thetaLabel      = "BRON_CRYPTO_BBOT_MULTIPLY-THETA-"
+	muVectorLabel   = "BRON_CRYPTO_BBOT_MULTIPLY-MU_VECTOR-"
+	muLabel         = "BRON_CRYPTO_BBOT_MULTIPLY-MU-"
 )
 
 type participant[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] struct {

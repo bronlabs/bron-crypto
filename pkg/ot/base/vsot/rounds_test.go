@@ -16,21 +16,26 @@ import (
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	const CHI = 8 * 32
+	const XI = 64
+	const L = 8
 	prng := crand.Reader
 	var sessionId network.SID
 	_, err := io.ReadFull(prng, sessionId[:])
 	require.NoError(t, err)
 	curve := k256.NewCurve()
-	choices := make([]byte, CHI/8)
+	hashFunc := sha256.New
+	suite, err := vsot.NewSuite(XI, L, curve, hashFunc)
+	require.NoError(t, err)
+
+	choices := make([]byte, XI/8)
 	_, err = io.ReadFull(prng, choices)
 	require.NoError(t, err)
 
 	senderTape := hagrid.NewTranscript("test")
-	sender, err := vsot.NewSender(sessionId, CHI, curve, sha256.New, senderTape, prng)
-	require.NoError(t, err)
 	receiverTape := senderTape.Clone()
-	receiver, err := vsot.NewReceiver(sessionId, CHI, curve, sha256.New, receiverTape, prng)
+	sender, err := vsot.NewSender(sessionId, suite, senderTape, prng)
+	require.NoError(t, err)
+	receiver, err := vsot.NewReceiver(sessionId, suite, receiverTape, prng)
 	require.NoError(t, err)
 
 	r1, err := sender.Round1()
@@ -49,24 +54,23 @@ func Test_HappyPath(t *testing.T) {
 	t.Run("messages match", func(t *testing.T) {
 		t.Parallel()
 		require.Equal(t, receiverOutput.Choices, choices)
-		require.Equal(t, len(receiverOutput.Choices)*8, CHI)
-		require.Len(t, receiverOutput.M, CHI)
-		require.Len(t, senderOutput.M, CHI)
-		for _, m := range receiverOutput.M {
-			require.True(t, len(m) >= 16)
-		}
-		require.Len(t, senderOutput.M, CHI)
-		for _, m := range senderOutput.M {
-			require.True(t, len(m[0]) >= 16)
-			require.True(t, len(m[1]) >= 16)
-		}
-		for i := range CHI {
+		require.Equal(t, len(receiverOutput.Choices)*8, XI)
+		require.Len(t, receiverOutput.Messages, XI)
+		require.Len(t, senderOutput.Messages, XI)
+
+		for i := range XI {
 			choice := (receiverOutput.Choices[i/8] >> (i % 8)) & 0b1
-			require.Equal(t, senderOutput.M[i][choice], receiverOutput.M[i])
-			require.NotEqual(t, senderOutput.M[i][1-choice], receiverOutput.M[i])
+			for j := range L {
+				require.Len(t, senderOutput.Messages[i][0][j], hashFunc().Size())
+				require.Len(t, senderOutput.Messages[i][1][j], hashFunc().Size())
+				require.Equal(t, senderOutput.Messages[i][choice][j], receiverOutput.Messages[i][j])
+				require.NotEqual(t, senderOutput.Messages[i][1-choice][j], receiverOutput.Messages[i][j])
+			}
 		}
 	})
+
 	t.Run("transcripts match", func(t *testing.T) {
+		t.Parallel()
 		senderBytes, err := senderTape.ExtractBytes("test", 32)
 		require.NoError(t, err)
 		receiverBytes, err := receiverTape.ExtractBytes("test", 32)

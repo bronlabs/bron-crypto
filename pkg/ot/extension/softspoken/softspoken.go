@@ -1,49 +1,36 @@
-/*
-Package softspoken implements a maliciously secure 1-out-of-2 Oblivious Transfer extension (OTe) protocol.
-
-We follow the designs from:
-- [SoftSpokenOT](https://eprint.iacr.org/2022/192) for the OT extension
-- [MR19](https://eprint.iacr.org/2019/706) for the Derandomization ("Correlated")
-We use the notation from ROT^{κ,l} from [KOS15](https://eprint.iacr.org/2015/546)
-for the protocol description (Figure 10). We apply the "Fiat-Shamir" heuristic,
-substituting the coin tossing required for the consistency check with the
-hash of the public transcript.
-
-OT EXTENSION (OTe, COTe)
-An "Extension" (both for OT and COT with Options of length κ) makes use of a
-PRG to expand each Base OT with κ-bit messages into η-bit message OTs.
-*/
 package softspoken
 
 import (
-	"github.com/copperexchange/krypton-primitives/pkg/ot"
+	"hash"
+
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
 const (
-	Sigma      = ot.Kappa      // σ, the statistical security parameter (Eta%σ=0). σ = κ for Fiat-Shamir.
-	SigmaBytes = ot.KappaBytes // σ, the statistical security parameter in bytes.
-
-	// SET DYNAMICALLY TO ALLOW VARIABLE-SIZE INPUTS
-	// - L is the number of OT elements per OT message.
-	// - Xi (ξ), the number of the OTe messages per OTe batch. ξ=(κ+2s) for DKLs23.
-	// - eta (η=L*ξ) is the total number of κ-bit OT elements after expansion, minus the statistical redundancy.
-	// - etaPrime (η'=η+σ) is the full OT expansion size (including the statistical redundancy).
-	// - M (= η/σ) is the number of σ-bit consistency check challenges.
+	Kappa      = base.ComputationalSecurity
+	Sigma      = base.StatisticalSecurity
+	SigmaBytes = (Sigma + 7) / 8
 )
 
-type (
-	/*.----------------------------- EXTENSION ------------------------------.*/
+type Suite struct {
+	ot.DefaultSuite
+	hashFunc func() hash.Hash
+}
 
-	ExtMessageBatch  = [ot.Kappa][]byte // ∈ [κ][η']bits, type for the OT messages, ∈ [κ][η]bits after the consistency check.
-	ExtPackedChoices = ot.PackedBits    // x_i ∈ [η']bits, L times the OTe choice bits || σ random values.
-
-	/*.------------------------- CONSISTENCY CHECK --------------------------.*/
-
-	Challenge = [][SigmaBytes]byte // χ_i ∈ [M=η/σ][σ]bits is the random challenge for the consistency check.
-
-	// ChallengeResponse (ẋ, ṫ) is the OTe challenge response from the receiver, to be verified by the Sender.
-	ChallengeResponse struct {
-		X_val [SigmaBytes]byte           // ẋ ∈ [σ]bits
-		T_val [ot.Kappa][SigmaBytes]byte // ṫ ∈ [κ][σ]bits
+func NewSuite(xi, l int, hashFunc func() hash.Hash) (*Suite, error) {
+	defaultSuite, err := ot.NewDefaultSuite(xi, l)
+	if err != nil {
+		return nil, err
 	}
-)
+	if (xi % 8) != 0 {
+		return nil, errs.NewValidation("invalid xi")
+	}
+
+	s := &Suite{*defaultSuite, hashFunc}
+	return s, nil
+}
+
+type ReceiverOutput = ot.ReceiverOutput[[]byte]
+type SenderOutput = ot.SenderOutput[[]byte]
