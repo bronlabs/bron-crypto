@@ -12,7 +12,10 @@ import (
 )
 
 const (
-	transcriptLabel = "BRON_CRYPTO_SOFTSPOKEN_OT-"
+	transcriptLabel         = "BRON_CRYPTO_SOFTSPOKEN_OT-"
+	expansionMaskLabel      = "BRON_CRYPTO_SOFTSPOKEN_OT_EXPANSION_MASK-"
+	challengeResponseXLabel = "BRON_CRYPTO_SOFTSPOKEN_OT_CHALLENGE_RESPONSE_X-"
+	challengeResponseTLabel = "BRON_CRYPTO_SOFTSPOKEN_OT_CHALLENGE_RESPONSE_T-"
 )
 
 type participant struct {

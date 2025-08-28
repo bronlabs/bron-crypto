@@ -57,7 +57,7 @@ func (alice *Alice[P, B, S]) Round2(r1 *Round1P2P, a []S) (*Round2P2P[S], []S, e
 
 	senderOutput, err := alice.sender.Round2(r1)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot send round 3 of receiver")
+		return nil, nil, errs.WrapFailed(err, "cannot run round 2 of receiver")
 	}
 	alice.alpha = make([][2][]S, len(senderOutput.Messages))
 	for xi, messages := range senderOutput.Messages {

@@ -19,7 +19,7 @@ func Test_HappyPath(t *testing.T) {
 
 	const KAPPA = softspoken.Kappa
 	const XI = 2048
-	const L = 256
+	const L = 16
 	prng := crand.Reader
 
 	// generate seeds

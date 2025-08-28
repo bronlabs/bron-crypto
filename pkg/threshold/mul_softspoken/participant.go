@@ -56,7 +56,7 @@ func newParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebr
 	}
 
 	kappa := suite.field.ElementSize() * 8
-	xi := kappa + 2*base.StatisticalSecurity
+	xi := kappa + 2*base.ComputationalSecurity // normally this should be statistical security, but then xi is an invalid parameter for softspoken
 	rho := utils.CeilDiv(kappa, base.ComputationalSecurity)
 
 	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
@@ -80,7 +80,8 @@ func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Prim
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create softspoken suite")
 	}
-	sender, err := softspoken.NewSender(sessionId, seeds, softspokenSuite, tape, prng)
+	// TODO: do not clone tape (temporary for debug)
+	sender, err := softspoken.NewSender(sessionId, seeds, softspokenSuite, tape.Clone(), prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create sender")
 	}
@@ -106,7 +107,9 @@ func NewBob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeF
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create softspoken suite")
 	}
-	receiver, err := softspoken.NewReceiver(sessionId, seeds, softspokenSuite, tape, prng)
+	// TODO: do not clone tape (temporary for debug)
+	println(p.xi, suite.l+p.rho)
+	receiver, err := softspoken.NewReceiver(sessionId, seeds, softspokenSuite, tape.Clone(), prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create receiver")
 	}

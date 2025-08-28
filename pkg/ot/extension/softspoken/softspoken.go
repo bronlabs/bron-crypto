@@ -3,14 +3,13 @@ package softspoken
 import (
 	"hash"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
 const (
-	Kappa      = base.ComputationalSecurity
-	Sigma      = base.StatisticalSecurity
+	Kappa      = 128
+	Sigma      = 128
 	SigmaBytes = (Sigma + 7) / 8
 )
 
@@ -26,6 +25,9 @@ func NewSuite(xi, l int, hashFunc func() hash.Hash) (*Suite, error) {
 	}
 	if (xi % 8) != 0 {
 		return nil, errs.NewValidation("invalid xi")
+	}
+	if ((xi * l) % Sigma) != 0 {
+		return nil, errs.NewValidation("invalid xi or l; (xi * l) must be multiple of %d for consistency check", Sigma)
 	}
 
 	s := &Suite{*defaultSuite, hashFunc}

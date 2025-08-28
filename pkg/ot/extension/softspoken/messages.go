@@ -13,8 +13,8 @@ type ChallengeResponse struct {
 }
 
 type Round1P2P struct {
-	u [Kappa][]byte // [κ][η']bits
-	//challengeResponse ChallengeResponse // [σ] + [κ][σ]bits
+	u                 [Kappa][]byte     // [κ][η']bits
+	challengeResponse ChallengeResponse // [σ] + [κ][σ]bits
 }
 
 func (r1 *Round1P2P) Validate(xi, l int) error {
