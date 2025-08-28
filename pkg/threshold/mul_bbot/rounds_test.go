@@ -24,13 +24,15 @@ func Test_HappyPath(t *testing.T) {
 	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)
 	tape := hagrid.NewTranscript("test")
+	suite, err := mul_bbot.NewSuite(L, curve)
+	require.NoError(t, err)
 
 	aliceTape := tape.Clone()
-	alice, err := mul_bbot.NewAlice(sessionID, curve, L, prng, aliceTape)
+	alice, err := mul_bbot.NewAlice(sessionID, suite, prng, aliceTape)
 	require.NoError(t, err)
 
 	bobTape := tape.Clone()
-	bob, err := mul_bbot.NewBob(sessionID, curve, L, prng, bobTape)
+	bob, err := mul_bbot.NewBob(sessionID, suite, prng, bobTape)
 	require.NoError(t, err)
 
 	r1, err := alice.Round1()

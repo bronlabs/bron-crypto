@@ -143,8 +143,8 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 
 	//// CONSISTENCY CHECK (Fiat-Shamir)
 	//// step 2.3: Generate the challenge (χ) using Fiat-Shamir heuristic
-	//for i := 0; i < ot.Kappa; i++ {
-	//	s.Transcript.AppendMessages("OTe_expansionMask", r1out.u[i])
+	//for i := 0; i < Kappa; i++ {
+	//	s.Transcript.AppendMessages("OTe_expansionMask", r1.u[i])
 	//}
 	//M := eta / Sigma
 	//challengeFiatShamir := generateChallenge(s.Transcript, M)
@@ -197,3 +197,79 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 	s.round += 2
 	return senderOutput, nil
 }
+
+// -------------------------------------------------------------------------- //
+// --------------------------  CONSISTENCY CHECK ---------------------------- //
+// -------------------------------------------------------------------------- //
+// This section contains the functions for the fiat-shamir consistency check:
+// 1. generateChallenge: the verifier generates the challenge (χ).
+// 2. computeResponse: the prover computes the challenge response (ẋ, ṫ^i)
+//    using the challenge (χ).
+// 3. verifyChallenge: the verifier verifies the challenge response (ẋ, ṫ^i)
+//    using the challenge (χ) and the commitment to the statement (u_i).
+//
+
+//func generateChallenge(transcript transcripts.Transcript, challengeLength int) (challenge Challenge) {
+//	challengeFiatShamir := make(Challenge, challengeLength)
+//	for i := 0; i < challengeLength; i++ {
+//		bytes, _ := transcript.ExtractBytes("OTe_challenge_Chi", SigmaBytes)
+//		copy(challengeFiatShamir[i][:], bytes)
+//	}
+//	return challengeFiatShamir
+//}
+//
+//// computeResponse Computes the challenge response ẋ, ṫ^i ∀i∈[κ].
+//func (r *Receiver) computeResponse(extOptions *[2]ExtMessageBatch, challenge Challenge, challengeResponse *ChallengeResponse) {
+//	M := len(challenge)
+//	etaBytes := (M * Sigma) / 8 // M = η/σ -> η = M*σ
+//	// ẋ = x_{mσ:(m+1)σ} + Σ{k=1}^{m} χ_k • x_{(k-1)σ:kσ}
+//	X_val := bf128.NewElementFromBytes(r.xPrime[etaBytes : etaBytes+SigmaBytes])
+//	Chi := make([]*bf128.FieldElement, M)
+//	for k := 0; k < M; k++ {
+//		x_hat_k := bf128.NewElementFromBytes(r.xPrime[k*SigmaBytes : (k+1)*SigmaBytes])
+//		Chi[k] = bf128.NewElementFromBytes(challenge[k][:])
+//		X_val = X_val.Add(x_hat_k.Mul(Chi[k]))
+//	}
+//	copy(challengeResponse.X_val[:], X_val.Bytes())
+//	// ṫ^i = t^i_{0,{mσ:(m+1)σ} + Σ{k=1}^{m} χ_k • t^i_{0,{(k-1)σ:kσ}}
+//	for i := 0; i < ot.Kappa; i++ {
+//		T_val := bf128.NewElementFromBytes(extOptions[0][i][etaBytes : etaBytes+SigmaBytes])
+//		copy(challengeResponse.T_val[i][:], extOptions[0][i][etaBytes:etaBytes+SigmaBytes])
+//		for k := 0; k < M; k++ {
+//			t_hat_k := bf128.NewElementFromBytes(extOptions[0][i][k*SigmaBytes : (k+1)*SigmaBytes])
+//			T_val = T_val.Add(t_hat_k.Mul(Chi[k]))
+//		}
+//		copy(challengeResponse.T_val[i][:], T_val.Bytes())
+//	}
+//}
+//
+//// verifyChallenge checks the consistency of the extension.
+//func (s *Sender) verifyChallenge(
+//	challenge Challenge,
+//	challengeResponse *ChallengeResponse,
+//	extCorrelations *ExtMessageBatch,
+//) error {
+//	// Compute sizes
+//	M := len(challenge)                                // M = η/σ
+//	etaBytes := (len(extCorrelations[0])) - SigmaBytes // η =  η' - σ
+//	isCorrect := true
+//	for i := 0; i < ot.Kappa; i++ {
+//		// q̇^i = q^i_hat_{m+1} + Σ{k=1}^{m} χ_k • q^i_hat_k
+//		qi_val := bf128.NewElementFromBytes(extCorrelations[i][etaBytes : etaBytes+SigmaBytes])
+//		for k := 0; k < M; k++ {
+//			qi_hat_k := bf128.NewElementFromBytes(extCorrelations[i][k*SigmaBytes : (k+1)*SigmaBytes])
+//			Chi_k := bf128.NewElementFromBytes(challenge[k][:])
+//			qi_val = qi_val.Add(qi_hat_k.Mul(Chi_k))
+//		}
+//		// ABORT if q̇^i != ṫ^i + Δ_i • ẋ  ∀ i ∈[κ]
+//		t_val := bf128.NewElementFromBytes(challengeResponse.T_val[i][:])
+//		x_val := bf128.NewElementFromBytes(challengeResponse.X_val[:])
+//		choice := uint64(s.baseOtSeeds.Choices.Get(uint(i)))
+//		qi_expected := bf128.NewField().Select(choice, t_val, t_val.Add(x_val))
+//		isCorrect = isCorrect && qi_expected.Equal(qi_val)
+//	}
+//	if !isCorrect {
+//		return errs.NewIdentifiableAbort(s.OtherParty().String(), "q_val != q_expected in SoftspokenOT. OTe consistency check failed")
+//	}
+//	return nil
+//}

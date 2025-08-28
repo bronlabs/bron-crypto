@@ -23,66 +23,63 @@ const (
 	muLabel         = "BRON_CRYPTO_BBOT_MULTIPLY-MU-"
 )
 
-type participant[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] struct {
-	SessionId   network.SID
-	Group       algebra.PrimeGroup[GE, SE]
-	ScalarField algebra.PrimeField[SE]
-	L, Xi, Rho  int
-	Tape        transcripts.Transcript
-	Prng        io.Reader
-	Round       int
+type participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
+	sessionId network.SID
+	suite     *Suite[G, S]
+	xi, rho   int
+	tape      transcripts.Transcript
+	prng      io.Reader
+	round     int
 }
 
-type Alice[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] struct {
-	participant[GE, SE] // Base Participant
+type Alice[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
+	participant[G, S] // Base Participant
 
-	sender *ecbbot.Sender[GE, SE]
-	g      []SE
-	alpha  [][2][]SE
+	sender *ecbbot.Sender[G, S]
+	g      []S
+	alpha  [][2][]S
 }
 
-type Bob[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] struct {
-	participant[GE, SE] // Base Participant
+type Bob[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
+	participant[G, S] // Base Participant
 
-	receiver *ecbbot.Receiver[GE, SE]
-	g        []SE
+	receiver *ecbbot.Receiver[G, S]
+	g        []S
 	beta     []byte
-	gamma    [][]SE
+	gamma    [][]S
 }
 
-func newParticipant[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]](sessionId network.SID, group algebra.PrimeGroup[GE, SE], l int, prng io.Reader, tape transcripts.Transcript, initialRound int) (*participant[GE, SE], error) {
-	// if err := validateParticipantInputs(myAuthKey, protocol, sessionId, prng); err != nil {
-	//	return nil, errs.WrapFailed(err, "invalid inputs")
-	//}
+func newParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[G, S], prng io.Reader, tape transcripts.Transcript, initialRound int) (*participant[G, S], error) {
+	if suite == nil || prng == nil || tape == nil || initialRound < 1 {
+		return nil, errs.NewIsNil("argument")
+	}
 
 	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
-	scalarField, ok := group.ScalarStructure().(algebra.PrimeField[SE])
-	if !ok {
-		return nil, errs.NewFailed("couldn't initialise scalarField")
-	}
-	kappa := group.ScalarStructure().ElementSize() * 8
+	kappa := suite.group.ScalarStructure().ElementSize() * 8
 	xi := kappa + 2*base.StatisticalSecurity
 	rho := utils.CeilDiv(kappa, base.ComputationalSecurity)
 
-	return &participant[GE, SE]{
-		Prng:        prng,
-		Round:       initialRound,
-		SessionId:   sessionId,
-		Group:       group,
-		ScalarField: scalarField,
-		Tape:        tape,
-		L:           l,
-		Xi:          xi,
-		Rho:         rho,
+	return &participant[G, S]{
+		prng:      prng,
+		round:     initialRound,
+		sessionId: sessionId,
+		suite:     suite,
+		tape:      tape,
+		xi:        xi,
+		rho:       rho,
 	}, nil
 }
 
-func NewAlice[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]](sessionId network.SID, group algebra.PrimeGroup[GE, SE], l int, prng io.Reader, tape transcripts.Transcript) (*Alice[GE, SE], error) {
-	p, err := newParticipant(sessionId, group, l, prng, tape, 2)
+func NewAlice[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[G, S], prng io.Reader, tape transcripts.Transcript) (*Alice[G, S], error) {
+	p, err := newParticipant(sessionId, suite, prng, tape, 2)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create participant / gadget vector")
 	}
-	sender, err := ecbbot.NewSender(p.SessionId, p.Group, p.Xi, p.L+p.Rho, tape, prng)
+	otSuite, err := ecbbot.NewSuite(p.xi, p.suite.l+p.rho, p.suite.Group())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create ecbbot suite")
+	}
+	sender, err := ecbbot.NewSender(p.sessionId, otSuite, tape, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create sender")
 	}
@@ -91,21 +88,25 @@ func NewAlice[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement
 		return nil, errs.WrapFailed(err, "could not create gadget vector")
 	}
 
-	alice := &Alice[GE, SE]{
+	alice := &Alice[G, S]{
 		participant: *p,
 		sender:      sender,
 		g:           gadget,
 	}
-	alice.Round = 1
+	alice.round = 1
 	return alice, nil
 }
 
-func NewBob[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]](sessionId network.SID, group algebra.PrimeGroup[GE, SE], l int, prng io.Reader, tape transcripts.Transcript) (*Bob[GE, SE], error) {
-	p, err := newParticipant(sessionId, group, l, prng, tape, 1)
+func NewBob[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[G, S], prng io.Reader, tape transcripts.Transcript) (*Bob[G, S], error) {
+	p, err := newParticipant(sessionId, suite, prng, tape, 1)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create participant / gadget vector")
 	}
-	receiver, err := ecbbot.NewReceiver(p.SessionId, group, p.Xi, p.L+p.Rho, tape, prng)
+	otSuite, err := ecbbot.NewSuite(p.xi, p.suite.l+p.rho, p.suite.group)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create ecbbot suite")
+	}
+	receiver, err := ecbbot.NewReceiver(p.sessionId, otSuite, tape, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create receiver")
 	}
@@ -114,23 +115,23 @@ func NewBob[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[S
 		return nil, errs.WrapFailed(err, "could not create gadget vector")
 	}
 
-	bob := &Bob[GE, SE]{
+	bob := &Bob[G, S]{
 		participant: *p,
 		receiver:    receiver,
 		g:           gadget,
 	}
-	bob.Round = 2
+	bob.round = 2
 	return bob, nil
 }
 
-func (p *participant[GE, SE]) generateGadgetVector() ([]SE, error) {
-	gadget := make([]SE, p.Xi)
+func (p *participant[G, S]) generateGadgetVector() ([]S, error) {
+	gadget := make([]S, p.xi)
 	for i := range gadget {
-		bytes, err := p.Tape.ExtractBytes(gadgetLabel, uint(p.ScalarField.WideElementSize()))
+		bytes, err := p.tape.ExtractBytes(gadgetLabel, uint(p.suite.field.WideElementSize()))
 		if err != nil {
 			return gadget, errs.WrapFailed(err, "extracting bytes from transcript")
 		}
-		gadget[i], err = p.ScalarField.FromWideBytes(bytes)
+		gadget[i], err = p.suite.field.FromWideBytes(bytes)
 		if err != nil {
 			return gadget, errs.WrapFailed(err, "creating gadget scalar from bytes")
 		}

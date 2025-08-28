@@ -1,4 +1,4 @@
-package sign_bbot
+package sign_softspoken
 
 import (
 	"iter"
@@ -27,10 +27,6 @@ func messageToScalar[P curves.Point[P, B, S], B algebra.FieldElement[B], S algeb
 	return mPrime, nil
 }
 
-//	type party struct {
-//		id  types.SharingID
-//		key types.IdentityKey
-//	}
 type message[B network.Message, U network.Message] struct {
 	broadcast B
 	p2p       U
@@ -53,7 +49,7 @@ func validateIncomingMessages[P curves.Point[P, B, S], B algebra.FieldElement[B]
 			}
 			u, ok := uIn.Get(id)
 			if !ok {
-				panic("this should never happen: missing broadcast message")
+				panic("this should never happen: missing unicast message")
 			}
 			if !yield(id, message[MB, MU]{broadcast: b, p2p: u}) {
 				return

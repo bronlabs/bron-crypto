@@ -59,7 +59,7 @@ func Aggregate[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Pri
 	sigma := ecdsa.NewSignature(rx, s, nil)
 	sigma.Normalise()
 
-	// TODO add verification
+	// TODO add verification when elliptic native is implemented
 	// step 4.7
 	//if err := ecdsa.Verify(sigma, cipherSuite.Hash(), publicKey, message); err != nil {
 	//	return nil, errs.WrapVerification(err, "sigma is invalid")
