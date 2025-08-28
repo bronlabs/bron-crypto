@@ -22,7 +22,9 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 	}
 
 	receiverOutput := &ReceiverOutput{
-		Choices: x,
+		ot.ReceiverOutput[[]byte]{
+			Choices: x,
+		},
 	}
 
 	eta := r.suite.L() * r.suite.Xi() // η = L*ξ
@@ -171,7 +173,9 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 		subtle.XORBytes(qjTransposedPlusDelta[j], qjTransposed[j], s.receiverSeeds.Choices)
 	}
 	senderOutput = &SenderOutput{
-		Messages: make([][2][][]byte, s.suite.Xi()),
+		ot.SenderOutput[[]byte]{
+			Messages: make([][2][][]byte, s.suite.Xi()),
+		},
 	}
 	for j := 0; j < s.suite.Xi(); j++ {
 		senderOutput.Messages[j][0] = make([][]byte, s.suite.L())

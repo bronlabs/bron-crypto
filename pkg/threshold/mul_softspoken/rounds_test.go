@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_softspoken"
@@ -77,11 +78,15 @@ func Test_HappyPath(t *testing.T) {
 
 func generateSeeds(tb testing.TB, prng io.Reader) (senderSeeds *vsot.SenderOutput, receiverSeeds *vsot.ReceiverOutput) {
 	receiverSeeds = &vsot.ReceiverOutput{
-		Choices:  make([]byte, softspoken.Kappa/8),
-		Messages: make([][][]byte, softspoken.Kappa),
+		ot.ReceiverOutput[[]byte]{
+			Choices:  make([]byte, softspoken.Kappa/8),
+			Messages: make([][][]byte, softspoken.Kappa),
+		},
 	}
 	senderSeeds = &vsot.SenderOutput{
-		Messages: make([][2][][]byte, softspoken.Kappa),
+		ot.SenderOutput[[]byte]{
+			Messages: make([][2][][]byte, softspoken.Kappa),
+		},
 	}
 	_, err := io.ReadFull(prng, receiverSeeds.Choices)
 	require.NoError(tb, err)

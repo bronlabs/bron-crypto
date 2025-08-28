@@ -20,7 +20,7 @@ func MapErrFunc[SIn ~[]TIn, TIn, TOut any](in SIn, f func(TIn) (TOut, error)) (o
 	return out, nil
 }
 
-func Map[SOut ~[]TOut, TOut any, SIn ~[]TIn, TIn any](in SIn, f func(TIn) TOut) SOut {
+func Map[TOut any, SIn ~[]TIn, TIn any](in SIn, f func(TIn) TOut) []TOut {
 	return slices.Collect(iterutils.Map(slices.Values(in), f))
 }
 

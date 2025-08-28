@@ -9,8 +9,54 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
-type SenderOutput = ot.SenderOutput[[]byte]
-type ReceiverOutput = ot.ReceiverOutput[[]byte]
+type SenderOutput struct {
+	ot.SenderOutput[[]byte]
+}
+
+func (so *SenderOutput) InferredMessageBytesLen() int {
+	if len(so.Messages) == 0 {
+		return 0
+	}
+	if len(so.Messages[0][0]) == 0 || len(so.Messages[0][1]) == 0 {
+		return 0
+	}
+	l := len(so.Messages[0][0][0])
+	for _, messages := range so.Messages {
+		for _, message := range messages[0] {
+			if len(message) != l {
+				return 0
+			}
+		}
+		for _, message := range messages[1] {
+			if len(message) != l {
+				return 0
+			}
+		}
+	}
+	return l
+}
+
+type ReceiverOutput struct {
+	ot.ReceiverOutput[[]byte]
+}
+
+func (ro *ReceiverOutput) InferredMessageBytesLen() int {
+	if len(ro.Messages) == 0 {
+		return 0
+	}
+	if len(ro.Messages[0]) == 0 {
+		return 0
+	}
+	l := len(ro.Messages[0][0])
+	for _, messages := range ro.Messages {
+		for _, message := range messages {
+			if len(message) != l {
+				return 0
+			}
+		}
+	}
+	return l
+}
 
 type Suite[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	ot.DefaultSuite

@@ -8,6 +8,9 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/ot"
+	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
+	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
@@ -34,9 +37,76 @@ func DealRandom[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Pr
 	}
 	public := generator.ScalarMul(secret.Value())
 
+	// create zero sharing seeds
+	zeroSeeds := make(map[sharing.ID]ds.MutableMap[sharing.ID, [32]byte])
+	for id, _ := range feldmanOutput.Shares().Iter() {
+		zeroSeeds[id] = hashmap.NewComparable[sharing.ID, [32]byte]()
+	}
+	for me, _ := range feldmanOutput.Shares().Iter() {
+		for they, _ := range feldmanOutput.Shares().Iter() {
+			if me >= they {
+				continue
+			}
+			var seed [32]byte
+			if _, err = io.ReadFull(prng, seed[:]); err != nil {
+				return nil, nilP, errs.WrapRandomSample(err, "cannot sample seed")
+			}
+			zeroSeeds[me].Put(they, seed)
+			zeroSeeds[they].Put(me, seed)
+		}
+	}
+
+	// create OT seeds
+	senderSeeds := make(map[sharing.ID]ds.MutableMap[sharing.ID, *vsot.SenderOutput])
+	receiverSeeds := make(map[sharing.ID]ds.MutableMap[sharing.ID, *vsot.ReceiverOutput])
+	for id, _ := range feldmanOutput.Shares().Iter() {
+		senderSeeds[id] = hashmap.NewComparable[sharing.ID, *vsot.SenderOutput]()
+		receiverSeeds[id] = hashmap.NewComparable[sharing.ID, *vsot.ReceiverOutput]()
+	}
+	for me, _ := range feldmanOutput.Shares().Iter() {
+		for they, _ := range feldmanOutput.Shares().Iter() {
+			if me == they {
+				continue
+			}
+
+			choices := make([]byte, softspoken.Kappa/8)
+			if _, err := io.ReadFull(prng, choices); err != nil {
+				return nil, nilP, errs.WrapRandomSample(err, "cannot sample choices")
+			}
+			sender := &vsot.SenderOutput{
+				ot.SenderOutput[[]byte]{
+					Messages: make([][2][][]byte, softspoken.Kappa),
+				},
+			}
+			receiver := &vsot.ReceiverOutput{
+				ot.ReceiverOutput[[]byte]{
+					Choices:  choices,
+					Messages: make([][][]byte, softspoken.Kappa),
+				},
+			}
+			for kappa := range softspoken.Kappa {
+				m0 := make([]byte, 32)
+				if _, err := io.ReadFull(prng, m0); err != nil {
+					return nil, nilP, errs.WrapRandomSample(err, "cannot sample m0")
+				}
+				m1 := make([]byte, 32)
+				if _, err := io.ReadFull(prng, m1); err != nil {
+					return nil, nilP, errs.WrapFailed(err, "cannot sample m1")
+				}
+				c := (choices[kappa/8] >> (kappa % 8)) & 0b1
+				sender.Messages[kappa][0] = [][]byte{m0}
+				sender.Messages[kappa][1] = [][]byte{m1}
+				receiver.Messages[kappa] = sender.Messages[kappa][c]
+			}
+
+			senderSeeds[me].Put(they, sender)
+			receiverSeeds[they].Put(me, receiver)
+		}
+	}
+
 	result := hashmap.NewComparable[sharing.ID, *tecdsa.Shard[P, B, S]]()
 	for id, feldmanShare := range feldmanOutput.Shares().Iter() {
-		shard := tecdsa.NewShard(feldmanShare, public)
+		shard := tecdsa.NewShard(feldmanShare, public, zeroSeeds[id].Freeze(), senderSeeds[id].Freeze(), receiverSeeds[id].Freeze())
 		result.Put(id, shard)
 	}
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/ot"
 	dlogschnorr "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 )
@@ -98,8 +99,10 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 	r.state.bigB = r1.bigB
 	r.state.bigA = make([]P, r.suite.Xi()*r.suite.L())
 	receiverOutput := &ReceiverOutput{
-		Choices:  choices,
-		Messages: make([][][]byte, r.suite.Xi()),
+		ot.ReceiverOutput[[]byte]{
+			Choices:  choices,
+			Messages: make([][][]byte, r.suite.Xi()),
+		},
 	}
 	for i := range r.suite.Xi() {
 		c := uint64((choices[i/8] >> (i % 8)) & 0b1)
@@ -146,7 +149,9 @@ func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P, *SenderOut
 	s.state.rho0DigestDigest = make([][]byte, s.suite.Xi()*s.suite.L())
 	xi := make([][]byte, s.suite.Xi()*s.suite.L())
 	senderOutput := &SenderOutput{
-		Messages: make([][2][][]byte, s.suite.Xi()),
+		ot.SenderOutput[[]byte]{
+			Messages: make([][2][][]byte, s.suite.Xi()),
+		},
 	}
 	for i := range s.suite.Xi() {
 		senderOutput.Messages[i][0] = make([][]byte, s.suite.L())

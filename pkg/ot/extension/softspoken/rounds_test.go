@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
@@ -16,18 +17,22 @@ import (
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	const KAPPA = 128
+	const KAPPA = softspoken.Kappa
 	const XI = 2048
 	const L = 256
 	prng := crand.Reader
 
 	// generate seeds
 	receiverSeeds := &vsot.ReceiverOutput{
-		Choices:  make([]byte, KAPPA/8),
-		Messages: make([][][]byte, KAPPA),
+		ot.ReceiverOutput[[]byte]{
+			Choices:  make([]byte, KAPPA/8),
+			Messages: make([][][]byte, KAPPA),
+		},
 	}
 	senderSeeds := &vsot.SenderOutput{
-		Messages: make([][2][][]byte, KAPPA),
+		ot.SenderOutput[[]byte]{
+			Messages: make([][2][][]byte, KAPPA),
+		},
 	}
 	_, err := io.ReadFull(prng, receiverSeeds.Choices)
 	require.NoError(t, err)
@@ -47,15 +52,16 @@ func Test_HappyPath(t *testing.T) {
 	// just in case, check
 	t.Run("seeds match", func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, len(receiverSeeds.Choices)*8, KAPPA)
-		require.Len(t, receiverSeeds.Messages, KAPPA)
-		require.Len(t, senderSeeds.Messages, KAPPA)
+		require.Equal(t, senderSeeds.InferredXi(), KAPPA)
+		require.Equal(t, senderSeeds.InferredL(), 1)
+		require.Equal(t, senderSeeds.InferredMessageBytesLen(), 32)
+		require.Equal(t, receiverSeeds.InferredXi(), KAPPA)
+		require.Equal(t, receiverSeeds.InferredL(), 1)
+		require.Equal(t, receiverSeeds.InferredMessageBytesLen(), 32)
 
 		for i := range KAPPA {
 			choice := (receiverSeeds.Choices[i/8] >> (i % 8)) & 0b1
 			for j := range 1 {
-				require.Len(t, senderSeeds.Messages[i][0][j], 32)
-				require.Len(t, senderSeeds.Messages[i][1][j], 32)
 				require.Equal(t, senderSeeds.Messages[i][choice][j], receiverSeeds.Messages[i][j])
 				require.NotEqual(t, senderSeeds.Messages[i][1-choice][j], receiverSeeds.Messages[i][j])
 			}

@@ -53,16 +53,19 @@ func Test_HappyPath(t *testing.T) {
 
 	t.Run("messages match", func(t *testing.T) {
 		t.Parallel()
+
+		require.Equal(t, senderOutput.InferredXi(), XI)
+		require.Equal(t, senderOutput.InferredL(), L)
+		require.Equal(t, senderOutput.InferredMessageBytesLen(), hashFunc().Size())
+
 		require.Equal(t, receiverOutput.Choices, choices)
-		require.Equal(t, len(receiverOutput.Choices)*8, XI)
-		require.Len(t, receiverOutput.Messages, XI)
-		require.Len(t, senderOutput.Messages, XI)
+		require.Equal(t, receiverOutput.InferredXi(), XI)
+		require.Equal(t, receiverOutput.InferredL(), L)
+		require.Equal(t, receiverOutput.InferredMessageBytesLen(), hashFunc().Size())
 
 		for i := range XI {
 			choice := (receiverOutput.Choices[i/8] >> (i % 8)) & 0b1
 			for j := range L {
-				require.Len(t, senderOutput.Messages[i][0][j], hashFunc().Size())
-				require.Len(t, senderOutput.Messages[i][1][j], hashFunc().Size())
 				require.Equal(t, senderOutput.Messages[i][choice][j], receiverOutput.Messages[i][j])
 				require.NotEqual(t, senderOutput.Messages[i][1-choice][j], receiverOutput.Messages[i][j])
 			}
