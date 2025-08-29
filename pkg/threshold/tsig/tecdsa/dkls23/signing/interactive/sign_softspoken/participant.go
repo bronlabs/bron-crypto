@@ -2,6 +2,7 @@ package sign_softspoken
 
 import (
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -10,9 +11,13 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/ot"
+	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -22,9 +27,11 @@ import (
 )
 
 const (
-	transcriptLabel = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN-"
-	mulLabel        = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN_MUL-"
-	ckLabel         = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN_CK-"
+	transcriptLabel     = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN-"
+	mulLabel            = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN_MUL-"
+	ckLabel             = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN_CK-"
+	przsRandomizerLabel = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN_PRZS_RANDOMIZER-"
+	otRandomizerLabel   = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN_OT_RANDOMIZER-"
 )
 
 type Cosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -32,6 +39,7 @@ type Cosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Prim
 	sessionId network.SID
 	sharingId sharing.ID
 	shard     *tecdsa.Shard[P, B, S]
+	zeroSeeds przs.Seeds
 	quorum    network.Quorum
 	prng      io.Reader
 	tape      transcripts.Transcript
@@ -68,11 +76,19 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 		return nil, errs.NewValidation("sharing id does not match the shard id")
 	}
 	// TODO: check more matches quorum vs shard?
-
 	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
+	zeroSeeds, err := randomizeZeroSeeds(shard.ZeroSeeds(), tape)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't randomize zero seeds")
+	}
+	otSenderSeeds, otReceiverSeeds, err := randomizeOTSeeds(shard.OTSenderSeeds(), shard.OTReceiverSeeds(), tape)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't randomize OT seeds")
+	}
 	c := &Cosigner[P, B, S]{
 		sharingId: mySharingId,
 		shard:     shard,
+		zeroSeeds: zeroSeeds,
 		quorum:    quorum,
 		suite:     suite,
 		prng:      prng,
@@ -86,7 +102,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 		return nil, errs.WrapFailed(err, "cannot create mul suite")
 	}
 	for id := range c.otherCosigners() {
-		aliceSeed, ok := shard.OTReceiverSeeds().Get(id)
+		aliceSeed, ok := otReceiverSeeds.Get(id)
 		if !ok {
 			return nil, errs.NewFailed("couldn't find alice seed")
 		}
@@ -97,7 +113,10 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 			return nil, errs.WrapFailed(err, "couldn't initialise Alice")
 		}
 
-		bobSeed, ok := shard.OTSenderSeeds().Get(id)
+		bobSeed, ok := otSenderSeeds.Get(id)
+		if !ok {
+			return nil, errs.NewFailed("couldn't find bob seed")
+		}
 		bobTape := tape.Clone()
 		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.sharingId)))
 		c.state.bobMul[id], err = mul_softspoken.NewBob(c.sessionId, mulSuite, bobSeed, prng, bobTape)
@@ -129,4 +148,75 @@ func (c *Cosigner[P, B, S]) otherCosigners() iter.Seq[sharing.ID] {
 			}
 		}
 	}
+}
+
+func randomizeZeroSeeds(seeds przs.Seeds, tape transcripts.Transcript) (przs.Seeds, error) {
+	randomizerBytes, err := tape.ExtractBytes(przsRandomizerLabel, przs.SeedLength)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot extract randomizer")
+	}
+
+	randomizedSeeds := hashmap.NewComparable[sharing.ID, [przs.SeedLength]byte]()
+	for id, seed := range seeds.Iter() {
+		var randomizedSeed [przs.SeedLength]byte
+		subtle.XORBytes(randomizedSeed[:], seed[:], randomizerBytes)
+		randomizedSeeds.Put(id, randomizedSeed)
+	}
+	return randomizedSeeds.Freeze(), nil
+}
+
+func randomizeOTSeeds(senderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], receiverSeeds ds.Map[sharing.ID, *vsot.ReceiverOutput], tape transcripts.Transcript) (ds.Map[sharing.ID, *vsot.SenderOutput], ds.Map[sharing.ID, *vsot.ReceiverOutput], error) {
+	randomizerBytes, err := tape.ExtractBytes(otRandomizerLabel, 32)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot extract randomizer")
+	}
+
+	randomizedSenderSeeds := hashmap.NewComparable[sharing.ID, *vsot.SenderOutput]()
+	for id, seed := range senderSeeds.Iter() {
+		if seed.InferredMessageBytesLen() != len(randomizerBytes) {
+			return nil, nil, errs.NewValidation("inferred message length does not match randomizer length")
+		}
+
+		randomizedSenderMessagePairs := make([][2][][]byte, seed.InferredXi())
+		for xi := range seed.InferredXi() {
+			randomizedSenderMessagePairs[xi][0] = make([][]byte, seed.InferredL())
+			randomizedSenderMessagePairs[xi][1] = make([][]byte, seed.InferredL())
+			for l := range seed.InferredL() {
+				randomizedSenderMessagePairs[xi][0][l] = make([]byte, len(seed.Messages[xi][0][l]))
+				subtle.XORBytes(randomizedSenderMessagePairs[xi][0][l], seed.Messages[xi][0][l], randomizerBytes)
+				randomizedSenderMessagePairs[xi][1][l] = make([]byte, len(seed.Messages[xi][1][l]))
+				subtle.XORBytes(randomizedSenderMessagePairs[xi][1][l], seed.Messages[xi][1][l], randomizerBytes)
+			}
+		}
+		randomizedSenderSeeds.Put(id, &vsot.SenderOutput{
+			SenderOutput: ot.SenderOutput[[]byte]{
+				Messages: randomizedSenderMessagePairs,
+			},
+		})
+	}
+
+	randomizedReceiverSeeds := hashmap.NewComparable[sharing.ID, *vsot.ReceiverOutput]()
+	for id, seed := range receiverSeeds.Iter() {
+		if seed.InferredMessageBytesLen() != len(randomizerBytes) {
+			return nil, nil, errs.NewValidation("inferred message length does not match randomizer length")
+		}
+
+		randomizedReceiverMessages := make([][][]byte, seed.InferredXi())
+		for xi := range seed.InferredXi() {
+			randomizedReceiverMessages[xi] = make([][]byte, seed.InferredL())
+			randomizedReceiverMessages[xi] = make([][]byte, seed.InferredL())
+			for l := range seed.InferredL() {
+				randomizedReceiverMessages[xi][l] = make([]byte, len(seed.Messages[xi][l]))
+				subtle.XORBytes(randomizedReceiverMessages[xi][l], seed.Messages[xi][l], randomizerBytes)
+			}
+		}
+		randomizedReceiverSeeds.Put(id, &vsot.ReceiverOutput{
+			ReceiverOutput: ot.ReceiverOutput[[]byte]{
+				Choices:  seed.Choices,
+				Messages: randomizedReceiverMessages,
+			},
+		})
+	}
+
+	return randomizedSenderSeeds.Freeze(), randomizedReceiverSeeds.Freeze(), nil
 }

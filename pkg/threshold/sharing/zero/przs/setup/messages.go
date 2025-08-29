@@ -4,6 +4,7 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 )
 
 type Round1Broadcast struct {
@@ -15,7 +16,7 @@ func (m *Round1Broadcast) Bytes() []byte {
 }
 
 type Round2P2P struct {
-	seedContribution [32]byte
+	seedContribution [przs.SeedLength]byte
 	witness          hash_comm.Witness
 }
 

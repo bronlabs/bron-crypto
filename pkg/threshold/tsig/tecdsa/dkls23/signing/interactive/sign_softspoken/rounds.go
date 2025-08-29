@@ -20,7 +20,7 @@ func (c *Cosigner[P, B, S]) Round1() (r1b *Round1Broadcast, r1u network.RoundMes
 		return nil, nil, errs.NewFailed("invalid round")
 	}
 
-	var ck [32]byte
+	var ck [hash_comm.KeySize]byte
 	ckBytes, err := c.tape.ExtractBytes(ckLabel, uint(len(ck)))
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to extract commitment key")
@@ -76,7 +76,7 @@ func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast], 
 		mulR1[id] = message.p2p.mulR1
 	}
 
-	c.state.zeroSampler, err = przs.NewSampler(c.sharingId, c.quorum, c.shard.ZeroSeeds(), c.suite.ScalarField())
+	c.state.zeroSampler, err = przs.NewSampler(c.sharingId, c.quorum, c.zeroSeeds, c.suite.ScalarField())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot run zero setup round3")
 	}

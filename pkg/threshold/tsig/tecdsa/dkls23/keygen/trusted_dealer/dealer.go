@@ -13,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 )
 
@@ -38,16 +39,16 @@ func DealRandom[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Pr
 	public := generator.ScalarMul(secret.Value())
 
 	// create zero sharing seeds
-	zeroSeeds := make(map[sharing.ID]ds.MutableMap[sharing.ID, [32]byte])
+	zeroSeeds := make(map[sharing.ID]ds.MutableMap[sharing.ID, [przs.SeedLength]byte])
 	for id, _ := range feldmanOutput.Shares().Iter() {
-		zeroSeeds[id] = hashmap.NewComparable[sharing.ID, [32]byte]()
+		zeroSeeds[id] = hashmap.NewComparable[sharing.ID, [przs.SeedLength]byte]()
 	}
 	for me, _ := range feldmanOutput.Shares().Iter() {
 		for they, _ := range feldmanOutput.Shares().Iter() {
 			if me >= they {
 				continue
 			}
-			var seed [32]byte
+			var seed [przs.SeedLength]byte
 			if _, err = io.ReadFull(prng, seed[:]); err != nil {
 				return nil, nilP, errs.WrapRandomSample(err, "cannot sample seed")
 			}

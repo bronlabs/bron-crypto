@@ -21,7 +21,7 @@ func (c *Cosigner[P, B, S]) Round1() (r1bOut *Round1Broadcast, r1uOut network.Ro
 		return nil, nil, errs.NewFailed("invalid round")
 	}
 
-	var ck [32]byte
+	var ck [hash_comm.KeySize]byte
 	ckBytes, err := c.tape.ExtractBytes(ckLabel, uint(len(ck)))
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to extract commitment key")
