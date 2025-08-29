@@ -80,8 +80,8 @@ func NewAlice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Prim
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create softspoken suite")
 	}
-	// TODO: do not clone tape (temporary for debug)
-	sender, err := softspoken.NewSender(sessionId, seeds, softspokenSuite, tape.Clone(), prng)
+
+	sender, err := softspoken.NewSender(sessionId, seeds, softspokenSuite, tape, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create sender")
 	}
@@ -107,9 +107,8 @@ func NewBob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeF
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create softspoken suite")
 	}
-	// TODO: do not clone tape (temporary for debug)
-	println(p.xi, suite.l+p.rho)
-	receiver, err := softspoken.NewReceiver(sessionId, seeds, softspokenSuite, tape.Clone(), prng)
+
+	receiver, err := softspoken.NewReceiver(sessionId, seeds, softspokenSuite, tape, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create receiver")
 	}
