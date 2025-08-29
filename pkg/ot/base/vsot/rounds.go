@@ -1,7 +1,6 @@
 package vsot
 
 import (
-	"bytes"
 	"crypto/subtle"
 	"fmt"
 
@@ -258,7 +257,7 @@ func (s *Sender[P, B, S]) Round5(r4 *Round4P2P) (*Round5P2P, error) {
 				return nil, errs.NewValidation("invalid message")
 			}
 
-			if !bytes.Equal(r4.rhoPrime[idx], s.state.rho0DigestDigest[idx]) {
+			if subtle.ConstantTimeCompare(r4.rhoPrime[idx], s.state.rho0DigestDigest[idx]) != 1 {
 				return nil, errs.NewTotalAbort("R", "verification failed")
 			}
 		}
@@ -291,11 +290,11 @@ func (r *Receiver[P, B, S]) Round6(r5 *Round5P2P) error {
 
 			switch r.state.omegaRaw[idx] {
 			case 0:
-				if !bytes.Equal(rho0Digest, r.state.rhoOmegaDigest[idx]) {
+				if subtle.ConstantTimeCompare(rho0Digest, r.state.rhoOmegaDigest[idx]) != 1 {
 					return errs.NewVerification("verification failed")
 				}
 			case 1:
-				if !bytes.Equal(rho1Digest, r.state.rhoOmegaDigest[idx]) {
+				if subtle.ConstantTimeCompare(rho1Digest, r.state.rhoOmegaDigest[idx]) != 1 {
 					return errs.NewVerification("verification failed")
 				}
 			default:
@@ -312,7 +311,7 @@ func (r *Receiver[P, B, S]) Round6(r5 *Round5P2P) error {
 			}
 			xi := make([]byte, len(rho0DigestDigest))
 			subtle.XORBytes(xi, rho0DigestDigest, rho1DigestDigest)
-			if !bytes.Equal(xi, r.state.xi[idx]) {
+			if subtle.ConstantTimeCompare(xi, r.state.xi[idx]) != 1 {
 				return errs.NewVerification("verification failed")
 			}
 		}

@@ -30,6 +30,7 @@ type (
 		share *feldman.Share[S]
 		DKGPublicOutput[E, S]
 	}
+
 	DKGPublicOutput[
 		E GroupElement[E, S], S Scalar[S],
 	] struct {
@@ -41,7 +42,7 @@ type (
 )
 
 const (
-	transcriptLabel = "BROM_CRYPTO_DKG_GENNARO-"
+	transcriptLabel = "BRON_CRYPTO_DKG_GENNARO-"
 )
 
 type Participant[E GroupElement[E, S], S Scalar[S]] struct {
