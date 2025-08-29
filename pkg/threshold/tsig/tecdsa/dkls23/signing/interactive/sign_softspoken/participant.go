@@ -176,7 +176,7 @@ func randomizeZeroSeeds(seeds przs.Seeds, tape transcripts.Transcript) (przs.See
 }
 
 func randomizeOTSeeds(senderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], receiverSeeds ds.Map[sharing.ID, *vsot.ReceiverOutput], tape transcripts.Transcript) (ds.Map[sharing.ID, *vsot.SenderOutput], ds.Map[sharing.ID, *vsot.ReceiverOutput], error) {
-	randomizerKey, err := tape.ExtractBytes(przsRandomizerLabel, (2*base.ComputationalSecurity+7)/8)
+	randomizerKey, err := tape.ExtractBytes(otRandomizerLabel, (2*base.ComputationalSecurity+7)/8)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot extract randomizer")
 	}
