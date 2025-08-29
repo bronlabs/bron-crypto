@@ -2,13 +2,13 @@ package sign_softspoken
 
 import (
 	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"iter"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
@@ -24,6 +24,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"golang.org/x/crypto/blake2b"
 )
 
 const (
@@ -151,41 +152,61 @@ func (c *Cosigner[P, B, S]) otherCosigners() iter.Seq[sharing.ID] {
 }
 
 func randomizeZeroSeeds(seeds przs.Seeds, tape transcripts.Transcript) (przs.Seeds, error) {
-	randomizerBytes, err := tape.ExtractBytes(przsRandomizerLabel, przs.SeedLength)
+	randomizerKey, err := tape.ExtractBytes(przsRandomizerLabel, (2*base.ComputationalSecurity+7)/8)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot extract randomizer")
 	}
 
 	randomizedSeeds := hashmap.NewComparable[sharing.ID, [przs.SeedLength]byte]()
 	for id, seed := range seeds.Iter() {
+		hasher, err := blake2b.New(przs.SeedLength, randomizerKey)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot create hasher")
+		}
+		_, err = hasher.Write(seed[:])
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot hash seed")
+		}
+		randomizedSeedBytes := hasher.Sum(nil)
 		var randomizedSeed [przs.SeedLength]byte
-		subtle.XORBytes(randomizedSeed[:], seed[:], randomizerBytes)
+		copy(randomizedSeed[:], randomizedSeedBytes)
 		randomizedSeeds.Put(id, randomizedSeed)
 	}
 	return randomizedSeeds.Freeze(), nil
 }
 
 func randomizeOTSeeds(senderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], receiverSeeds ds.Map[sharing.ID, *vsot.ReceiverOutput], tape transcripts.Transcript) (ds.Map[sharing.ID, *vsot.SenderOutput], ds.Map[sharing.ID, *vsot.ReceiverOutput], error) {
-	randomizerBytes, err := tape.ExtractBytes(otRandomizerLabel, 32)
+	randomizerKey, err := tape.ExtractBytes(przsRandomizerLabel, (2*base.ComputationalSecurity+7)/8)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot extract randomizer")
 	}
 
 	randomizedSenderSeeds := hashmap.NewComparable[sharing.ID, *vsot.SenderOutput]()
 	for id, seed := range senderSeeds.Iter() {
-		if seed.InferredMessageBytesLen() != len(randomizerBytes) {
-			return nil, nil, errs.NewValidation("inferred message length does not match randomizer length")
-		}
-
 		randomizedSenderMessagePairs := make([][2][][]byte, seed.InferredXi())
 		for xi := range seed.InferredXi() {
 			randomizedSenderMessagePairs[xi][0] = make([][]byte, seed.InferredL())
 			randomizedSenderMessagePairs[xi][1] = make([][]byte, seed.InferredL())
 			for l := range seed.InferredL() {
-				randomizedSenderMessagePairs[xi][0][l] = make([]byte, len(seed.Messages[xi][0][l]))
-				subtle.XORBytes(randomizedSenderMessagePairs[xi][0][l], seed.Messages[xi][0][l], randomizerBytes)
-				randomizedSenderMessagePairs[xi][1][l] = make([]byte, len(seed.Messages[xi][1][l]))
-				subtle.XORBytes(randomizedSenderMessagePairs[xi][1][l], seed.Messages[xi][1][l], randomizerBytes)
+				hasher, err := blake2b.New(len(seed.Messages[xi][0][l]), randomizerKey)
+				if err != nil {
+					return nil, nil, errs.WrapFailed(err, "cannot create hasher")
+				}
+				_, err = hasher.Write(seed.Messages[xi][0][l][:])
+				if err != nil {
+					return nil, nil, errs.WrapFailed(err, "cannot hash seed")
+				}
+				randomizedSenderMessagePairs[xi][0][l] = hasher.Sum(nil)
+
+				hasher, err = blake2b.New(len(seed.Messages[xi][1][l]), randomizerKey)
+				if err != nil {
+					return nil, nil, errs.WrapFailed(err, "cannot create hasher")
+				}
+				_, err = hasher.Write(seed.Messages[xi][1][l][:])
+				if err != nil {
+					return nil, nil, errs.WrapFailed(err, "cannot hash seed")
+				}
+				randomizedSenderMessagePairs[xi][1][l] = hasher.Sum(nil)
 			}
 		}
 		randomizedSenderSeeds.Put(id, &vsot.SenderOutput{
@@ -197,17 +218,20 @@ func randomizeOTSeeds(senderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], receiv
 
 	randomizedReceiverSeeds := hashmap.NewComparable[sharing.ID, *vsot.ReceiverOutput]()
 	for id, seed := range receiverSeeds.Iter() {
-		if seed.InferredMessageBytesLen() != len(randomizerBytes) {
-			return nil, nil, errs.NewValidation("inferred message length does not match randomizer length")
-		}
-
 		randomizedReceiverMessages := make([][][]byte, seed.InferredXi())
 		for xi := range seed.InferredXi() {
 			randomizedReceiverMessages[xi] = make([][]byte, seed.InferredL())
 			randomizedReceiverMessages[xi] = make([][]byte, seed.InferredL())
 			for l := range seed.InferredL() {
-				randomizedReceiverMessages[xi][l] = make([]byte, len(seed.Messages[xi][l]))
-				subtle.XORBytes(randomizedReceiverMessages[xi][l], seed.Messages[xi][l], randomizerBytes)
+				hasher, err := blake2b.New(len(seed.Messages[xi][l]), randomizerKey)
+				if err != nil {
+					return nil, nil, errs.WrapFailed(err, "cannot create hasher")
+				}
+				_, err = hasher.Write(seed.Messages[xi][l][:])
+				if err != nil {
+					return nil, nil, errs.WrapFailed(err, "cannot hash seed")
+				}
+				randomizedReceiverMessages[xi][l] = hasher.Sum(nil)
 			}
 		}
 		randomizedReceiverSeeds.Put(id, &vsot.ReceiverOutput{
