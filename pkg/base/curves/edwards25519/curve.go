@@ -1,6 +1,7 @@
 package edwards25519
 
 import (
+	"crypto/elliptic"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -166,6 +167,11 @@ func (c *Curve) ScalarStructure() algebra.Structure[*Scalar] {
 
 func (c *Curve) BaseStructure() algebra.Structure[*BaseFieldElement] {
 	return NewBaseField()
+}
+
+func (c *Curve) ToElliptic() elliptic.Curve {
+	// TODO: implement
+	panic("not implemented")
 }
 
 type Point struct {

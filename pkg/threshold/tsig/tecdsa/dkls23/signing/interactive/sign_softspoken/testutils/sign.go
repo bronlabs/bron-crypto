@@ -71,7 +71,7 @@ func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.FieldElement[B
 		require.NoError(tb, err)
 	}
 
-	signature, err := dkls23.Aggregate(ecdsaSuite, pk, slices.Collect(maps.Values(partialSignatures))...)
+	signature, err := dkls23.Aggregate(ecdsaSuite, pk, message, slices.Collect(maps.Values(partialSignatures))...)
 	require.NoError(tb, err)
 
 	// transcripts match

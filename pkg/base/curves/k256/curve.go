@@ -1,6 +1,7 @@
 package k256
 
 import (
+	"crypto/elliptic"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -214,6 +215,10 @@ func (c *Curve) FromBytes(data []byte) (*Point, error) {
 	return c.FromCompressed(data)
 }
 
+func (c *Curve) ToElliptic() elliptic.Curve {
+	return ellipticK256Instance
+}
+
 type Point struct {
 	traits.PrimePointTrait[*k256Impl.Fp, *k256Impl.Point, k256Impl.Point, *Point, Point]
 }
@@ -302,7 +307,7 @@ func (p *Point) ToUncompressed() []byte {
 
 func (p *Point) AffineX() *BaseFieldElement {
 	if p.IsZero() {
-		return NewBaseField().One()
+		return NewBaseField().Zero()
 	}
 
 	var x, y BaseFieldElement

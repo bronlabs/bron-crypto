@@ -2,14 +2,20 @@ package sign_softspoken_test
 
 import (
 	nativeEcdsa "crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/sha256"
 	"fmt"
+	"hash"
 	"maps"
+	"math/big"
+	"reflect"
+	"runtime"
 	"slices"
 	"strconv"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -19,29 +25,51 @@ import (
 	dkgTestutils "github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/keygen/dkg/testutils"
 	signTestutils "github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/signing/interactive/sign_softspoken/testutils"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
 )
 
 func Test_HappyPathWithDKG(t *testing.T) {
 	t.Parallel()
 
-	const THRESHOLD = 3
-	const TOTAL = 5
-
-	curve := p256.NewCurve()
-	shareholders := hashset.NewComparable[sharing.ID]()
-	for i := 1; i <= TOTAL; i++ {
-		shareholders.Add(sharing.ID(i))
+	for _, testHashFunc := range testHashFuncs {
+		testHashFuncName := runtime.FuncForPC(reflect.ValueOf(testHashFunc).Pointer()).Name()
+		t.Run(testHashFuncName, func(t *testing.T) {
+			t.Parallel()
+			for _, testAccessStructure := range testAccessStructures {
+				t.Run(fmt.Sprintf("(%d/%d)", testAccessStructure.Threshold(), testAccessStructure.Shareholders().Size()), func(t *testing.T) {
+					t.Parallel()
+					t.Run("P256", func(t *testing.T) {
+						t.Parallel()
+						testHappyPath(t, p256.NewCurve(), testHashFunc, testAccessStructure)
+					})
+					t.Run("secp256k1", func(t *testing.T) {
+						t.Parallel()
+						testHappyPath(t, k256.NewCurve(), testHashFunc, testAccessStructure)
+					})
+				})
+			}
+		})
 	}
-	accessStructure, err := shamir.NewAccessStructure(THRESHOLD, shareholders.Freeze())
-	require.NoError(t, err)
+}
 
-	// everything is checked inside testutils
+var testHashFuncs = []func() hash.Hash{
+	sha256.New,
+	sha3.New256,
+}
+
+var testAccessStructures = []*shamir.AccessStructure{
+	makeAccessStructure(2, 2),
+	makeAccessStructure(2, 3),
+	makeAccessStructure(3, 5),
+}
+
+func testHappyPath[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, curve curves.Curve[P, B, S], hashFunc func() hash.Hash, accessStructure *shamir.AccessStructure) {
+	t.Helper()
+
 	shards := dkgTestutils.RunDKLs23DKG(t, curve, accessStructure)
-
 	message := []byte("Hello World")
-	hashFunc := sha256.New
-	for th := THRESHOLD; th <= accessStructure.Shareholders().Size(); th++ {
-		for shareholdersSubset := range sliceutils.Combinations(slices.Collect(accessStructure.Shareholders().Iter()), uint(th)) {
+	for th := accessStructure.Threshold(); th <= uint(accessStructure.Shareholders().Size()); th++ {
+		for shareholdersSubset := range sliceutils.Combinations(slices.Collect(accessStructure.Shareholders().Iter()), th) {
 			signature := signTestutils.RunDKLs23SignSoftspokenOT(t, shards, hashset.NewComparable(shareholdersSubset...).Freeze(), message, hashFunc)
 			pk := slices.Collect(maps.Values(shards))[0].PublicKey()
 
@@ -49,12 +77,11 @@ func Test_HappyPathWithDKG(t *testing.T) {
 				t.Parallel()
 
 				nativePk := &nativeEcdsa.PublicKey{
-					Curve: elliptic.P256(),
+					Curve: curve.ToElliptic(),
 					// TODO: hope to return affine x and affine y
-					X: pk.Coordinates().Value()[0].Cardinal().Big(),
-					Y: pk.Coordinates().Value()[1].Cardinal().Big(),
+					X: new(big.Int).SetBytes(pk.Coordinates().Value()[0].Bytes()),
+					Y: new(big.Int).SetBytes(pk.Coordinates().Value()[1].Bytes()),
 				}
-
 				digest, err := hashing.Hash(hashFunc, message)
 				require.NoError(t, err)
 				ok := nativeEcdsa.Verify(nativePk, digest, signature.R().Cardinal().Big(), signature.S().Cardinal().Big())
@@ -74,4 +101,16 @@ func stringifyShareholders(sharingIds []sharing.ID) string {
 	}
 	s += ")"
 	return s
+}
+
+func makeAccessStructure(threshold, total uint) *shamir.AccessStructure {
+	shareholders := hashset.NewComparable[sharing.ID]()
+	for i := uint(1); i <= total; i++ {
+		shareholders.Add(sharing.ID(i))
+	}
+	accessStructure, err := shamir.NewAccessStructure(threshold, shareholders.Freeze())
+	if err != nil {
+		panic(err)
+	}
+	return accessStructure
 }

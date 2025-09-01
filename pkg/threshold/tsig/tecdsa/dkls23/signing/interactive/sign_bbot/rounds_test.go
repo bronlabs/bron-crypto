@@ -38,6 +38,7 @@ func Test_HappyPath(t *testing.T) {
 	shards, pk, err := trusted_dealer.DealRandom(curve, THRESHOLD, shareholders, prng)
 	require.Equal(t, shards.Size(), shareholders.Size())
 	require.NoError(t, err)
+	publicKey := slices.Collect(maps.Values(maps.Collect(shards.Iter())))[0].PublicKey()
 
 	var sessionId network.SID
 	_, err = io.ReadFull(prng, sessionId[:])
@@ -91,7 +92,7 @@ func Test_HappyPath(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	signature, err := dkls23.Aggregate(suite, nil, slices.Collect(maps.Values(partialSignatures))...)
+	signature, err := dkls23.Aggregate(suite, publicKey, message, slices.Collect(maps.Values(partialSignatures))...)
 	require.NoError(t, err)
 
 	t.Run("signature is valid", func(t *testing.T) {

@@ -1,6 +1,7 @@
 package bls12381
 
 import (
+	"crypto/elliptic"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -257,6 +258,11 @@ func (c *G1) ScalarBaseOp(sc *Scalar) *PointG1 {
 
 func (c *G1) ScalarBaseMul(sc *Scalar) *PointG1 {
 	return c.Generator().ScalarMul(sc)
+}
+
+func (c *G1) ToElliptic() elliptic.Curve {
+	// TODO: implement
+	panic("not implemented")
 }
 
 type PointG1 struct {

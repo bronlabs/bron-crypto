@@ -1,6 +1,7 @@
 package edwards25519
 
 import (
+	"crypto/elliptic"
 	"fmt"
 	"hash/fnv"
 	"slices"
@@ -177,6 +178,11 @@ func (c *PrimeSubGroup) ScalarBaseOp(sc *Scalar) *PrimeSubGroupPoint {
 
 func (c *PrimeSubGroup) ScalarBaseMul(sc *Scalar) *PrimeSubGroupPoint {
 	return c.Generator().ScalarMul(sc)
+}
+
+func (c *PrimeSubGroup) ToElliptic() elliptic.Curve {
+	// TODO: implement
+	panic("not implemented")
 }
 
 type PrimeSubGroupPoint struct {

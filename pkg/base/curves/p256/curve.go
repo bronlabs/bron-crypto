@@ -1,6 +1,7 @@
 package p256
 
 import (
+	"crypto/elliptic"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -82,7 +83,7 @@ func (c *Curve) FromWideBytes(input []byte) (*Point, error) {
 	return c.Hash(input)
 }
 
-func (c Curve) Cofactor() cardinal.Cardinal {
+func (c *Curve) Cofactor() cardinal.Cardinal {
 	return cardinal.New(1)
 }
 
@@ -180,6 +181,10 @@ func (c *Curve) HashWithDst(dst string, bytes []byte) (*Point, error) {
 	var p Point
 	p.V.Hash(dst, bytes)
 	return &p, nil
+}
+
+func (c *Curve) ToElliptic() elliptic.Curve {
+	return elliptic.P256()
 }
 
 func (c *Curve) ScalarStructure() algebra.Structure[*Scalar] {

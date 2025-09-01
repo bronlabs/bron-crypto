@@ -24,7 +24,7 @@ func NewPartialSignature[P curves.Point[P, B, S], B algebra.FieldElement[B], S a
 }
 
 // Aggregate computes the sum of partial signatures to get a valid signature. It also normalises the signature to the low-s form as well as attaches the recovery id to the final signature.
-func Aggregate[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](suite *ecdsa.Suite[P, B, S], publicKey P, partialSignatures ...*PartialSignature[P, B, S]) (*ecdsa.Signature[S], error) {
+func Aggregate[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](suite *ecdsa.Suite[P, B, S], publicKey P, message []byte, partialSignatures ...*PartialSignature[P, B, S]) (*ecdsa.Signature[S], error) {
 	w := suite.ScalarField().Zero()
 	u := suite.ScalarField().Zero()
 	R := suite.Curve().OpIdentity()
@@ -56,13 +56,12 @@ func Aggregate[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Pri
 	//}
 
 	// steps 4.4-4.6: s = min(s, -s mod q);    v = v + 2 · (s > -s mod q)
-	sigma := ecdsa.NewSignature(rx, s, nil)
-	sigma.Normalise()
+	signature := ecdsa.NewSignature(rx, s, nil)
+	signature.Normalise()
 
-	// TODO add verification when elliptic native is implemented
 	// step 4.7
-	//if err := ecdsa.Verify(sigma, cipherSuite.Hash(), publicKey, message); err != nil {
-	//	return nil, errs.WrapVerification(err, "sigma is invalid")
-	//}
-	return sigma, nil
+	if err := ecdsa.Verify(signature, suite, publicKey, message); err != nil {
+		return nil, errs.WrapVerification(err, "signature is invalid")
+	}
+	return signature, nil
 }

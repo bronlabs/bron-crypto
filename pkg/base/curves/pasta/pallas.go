@@ -1,6 +1,7 @@
 package pasta
 
 import (
+	"crypto/elliptic"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -193,6 +194,11 @@ func (c *PallasCurve) ScalarBaseMul(sc *PallasScalar) *PallasPoint {
 		panic("scalar is nil")
 	}
 	return c.Generator().ScalarMul(sc)
+}
+
+func (c *PallasCurve) ToElliptic() elliptic.Curve {
+	// TODO: implement this
+	panic("not implemented")
 }
 
 type PallasPoint struct {

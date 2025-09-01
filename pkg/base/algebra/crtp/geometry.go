@@ -1,6 +1,8 @@
 package crtp
 
 import (
+	"crypto/elliptic"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 )
 
@@ -108,6 +110,7 @@ type EllipticCurve[P, FE, S any] interface {
 	AlgebraicCurve[P, FE]
 	AbelianGroup[P, S]
 	AdditiveModule[P, S]
+	ToElliptic() elliptic.Curve
 	Cofactor() Cardinal
 }
 
