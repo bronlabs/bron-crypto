@@ -91,6 +91,10 @@ func (f *BaseFieldG1) WideElementSize() int {
 	return bls12381Impl.FpWideBytes
 }
 
+func (f *BaseFieldG1) BitLen() int {
+	return bls12381Impl.FpBits
+}
+
 type BaseFieldElementG1 struct {
 	traits.PrimeFieldElementTrait[*bls12381Impl.Fp, bls12381Impl.Fp, *BaseFieldElementG1, BaseFieldElementG1]
 }

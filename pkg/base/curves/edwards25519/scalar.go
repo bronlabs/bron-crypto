@@ -93,6 +93,10 @@ func (f *ScalarField) WideElementSize() int {
 	return edwards25519Impl.FqWideBytes
 }
 
+func (f *ScalarField) BitLen() int {
+	return edwards25519Impl.FqBits
+}
+
 type Scalar struct {
 	traits.PrimeFieldElementTrait[*edwards25519Impl.Fq, edwards25519Impl.Fq, *Scalar, Scalar]
 }

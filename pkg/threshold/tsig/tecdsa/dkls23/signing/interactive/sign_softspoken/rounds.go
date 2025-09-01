@@ -8,7 +8,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
@@ -159,7 +161,11 @@ func (c *Cosigner[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[P,
 
 	u := c.state.r.Mul(c.state.phi.Add(psi)).Add(cudu)
 	v := c.state.sk.Mul(c.state.phi.Add(psi)).Add(cvdv)
-	m, err := messageToScalar(c, message)
+	digest, err := hashing.Hash(c.suite.HashFunc(), message)
+	if err != nil {
+		return nil, errs.WrapHashing(err, "cannot hash message")
+	}
+	m, err := ecdsa.DigestToScalar(c.suite.ScalarField(), digest)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot compute message scalar")
 	}

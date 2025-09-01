@@ -92,6 +92,10 @@ func (f *BaseField) WideElementSize() int {
 	return int(edwards25519Impl.FpWideBytes)
 }
 
+func (f *BaseField) BitLen() int {
+	return int(edwards25519Impl.FpBits)
+}
+
 type BaseFieldElement struct {
 	traits.PrimeFieldElementTrait[*edwards25519Impl.Fp, edwards25519Impl.Fp, *BaseFieldElement, BaseFieldElement]
 }

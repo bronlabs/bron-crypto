@@ -4,6 +4,8 @@ import (
 	"crypto/elliptic"
 	"math/big"
 	"slices"
+
+	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 )
 
 var (
@@ -13,8 +15,8 @@ var (
 		B:       mustSetBigIntString("0000000000000000000000000000000000000000000000000000000000000007", 16),
 		Gx:      mustSetBigIntString("79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798", 16),
 		Gy:      mustSetBigIntString("483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8", 16),
-		BitSize: 256,
-		Name:    "secp256k1",
+		BitSize: k256Impl.FpBits,
+		Name:    CurveName,
 	}
 	ellipticK256Instance = &ellipticK256{}
 )
