@@ -2,6 +2,7 @@ package pasta
 
 import (
 	"crypto/elliptic"
+	"fmt"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -197,8 +198,7 @@ func (c *PallasCurve) ScalarBaseMul(sc *PallasScalar) *PallasPoint {
 }
 
 func (c *PallasCurve) ToElliptic() elliptic.Curve {
-	// TODO: implement this
-	panic("not implemented")
+	return ellipticPallasInstance
 }
 
 type PallasPoint struct {
@@ -263,9 +263,9 @@ func (p *PallasPoint) ToUncompressed() []byte {
 	return slices.Concat(x.Bytes(), y.Bytes())
 }
 
-func (p *PallasPoint) AffineX() *PallasBaseFieldElement {
+func (p *PallasPoint) AffineX() (*PallasBaseFieldElement, error) {
 	if p.IsZero() {
-		return NewPallasBaseField().One()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y PallasBaseFieldElement
@@ -273,12 +273,12 @@ func (p *PallasPoint) AffineX() *PallasBaseFieldElement {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &x
+	return &x, nil
 }
 
-func (p *PallasPoint) AffineY() *PallasBaseFieldElement {
+func (p *PallasPoint) AffineY() (*PallasBaseFieldElement, error) {
 	if p.IsZero() {
-		return NewPallasBaseField().Zero()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y PallasBaseFieldElement
@@ -286,7 +286,7 @@ func (p *PallasPoint) AffineY() *PallasBaseFieldElement {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &y
+	return &y, nil
 }
 
 func (p *PallasPoint) ScalarOp(sc *PallasScalar) *PallasPoint {
@@ -304,5 +304,9 @@ func (p *PallasPoint) IsTorsionFree() bool {
 }
 
 func (p *PallasPoint) String() string {
-	return traits.StringifyPoint(p)
+	if p.IsZero() {
+		return "(0, 1, 0)"
+	} else {
+		return fmt.Sprintf("(%s, %s, %s)", p.V.X.String(), p.V.Y.String(), p.V.Z.String())
+	}
 }

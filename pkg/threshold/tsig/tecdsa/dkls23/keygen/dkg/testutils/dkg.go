@@ -15,6 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
@@ -25,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, curve curves.Curve[P, B, S], accessStructure *shamir.AccessStructure) map[sharing.ID]*tecdsa.Shard[P, B, S] {
+func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, curve ecdsa.Curve[P, B, S], accessStructure *shamir.AccessStructure) map[sharing.ID]*tecdsa.Shard[P, B, S] {
 	tb.Helper()
 
 	prng := crand.Reader
@@ -34,13 +35,11 @@ func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.
 	require.NoError(tb, err)
 
 	tape := hagrid.NewTranscript(hex.EncodeToString(sessionId[:]))
-	suite := dkg.NewSuite(curve)
-
 	tapesMap := make(map[sharing.ID]transcripts.Transcript)
 	dkgParticipantsMap := make(map[sharing.ID]*dkg.Participant[P, B, S])
 	for id := range accessStructure.Shareholders().Iter() {
 		tapesMap[id] = tape.Clone()
-		dkgParticipantsMap[id], err = dkg.NewParticipant(sessionId, id, accessStructure, suite, tapesMap[id], prng)
+		dkgParticipantsMap[id], err = dkg.NewParticipant(sessionId, id, accessStructure, curve, tapesMap[id], prng)
 		require.NoError(tb, err)
 	}
 	dkgParticipants := slices.Collect(maps.Values(dkgParticipantsMap))

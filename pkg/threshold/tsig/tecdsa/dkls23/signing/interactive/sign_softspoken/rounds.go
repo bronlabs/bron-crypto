@@ -38,9 +38,9 @@ func (c *Cosigner[P, B, S]) Round1() (r1b *Round1Broadcast, r1u network.RoundMes
 		return nil, nil, errs.WrapRandomSample(err, "cannot sample r")
 	}
 	c.state.bigR = make(map[sharing.ID]P)
-	c.state.bigR[c.sharingId] = c.suite.Curve().ScalarBaseMul(c.state.r)
+	c.state.bigR[c.shard.Share().ID()] = c.suite.Curve().ScalarBaseMul(c.state.r)
 	c.state.bigRCommitment = make(map[sharing.ID]hash_comm.Commitment)
-	c.state.bigRCommitment[c.sharingId], c.state.bigRWitness, err = c.state.ck.Committer().Commit(c.state.bigR[c.sharingId].ToCompressed(), c.prng)
+	c.state.bigRCommitment[c.shard.Share().ID()], c.state.bigRWitness, err = c.state.ck.Committer().Commit(c.state.bigR[c.shard.Share().ID()].ToCompressed(), c.prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot commit to r")
 	}
@@ -52,7 +52,7 @@ func (c *Cosigner[P, B, S]) Round1() (r1b *Round1Broadcast, r1u network.RoundMes
 
 	c.state.chi = make(map[sharing.ID]S)
 	bOut := &Round1Broadcast{
-		bigRCommitment: c.state.bigRCommitment[c.sharingId],
+		bigRCommitment: c.state.bigRCommitment[c.shard.Share().ID()],
 	}
 	uOut := hashmap.NewComparable[sharing.ID, *Round1P2P]()
 	for id, message := range outgoingP2PMessages(c, uOut) {
@@ -78,7 +78,7 @@ func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast], 
 		mulR1[id] = message.p2p.mulR1
 	}
 
-	c.state.zeroSampler, err = przs.NewSampler(c.sharingId, c.quorum, c.zeroSeeds, c.suite.ScalarField())
+	c.state.zeroSampler, err = przs.NewSampler(c.shard.Share().ID(), c.quorum, c.zeroSeeds, c.suite.ScalarField())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot run zero setup round3")
 	}
@@ -98,13 +98,13 @@ func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast], 
 	}
 	c.state.sk = sk.Value().Add(zeta)
 	c.state.pk = make(map[sharing.ID]P)
-	c.state.pk[c.sharingId] = c.suite.Curve().ScalarBaseMul(c.state.sk)
+	c.state.pk[c.shard.Share().ID()] = c.suite.Curve().ScalarBaseMul(c.state.sk)
 	c.state.c = make(map[sharing.ID][]S)
 
 	bOut := &Round2Broadcast[P, B, S]{
-		bigR:        c.state.bigR[c.sharingId],
+		bigR:        c.state.bigR[c.shard.Share().ID()],
 		bigRWitness: c.state.bigRWitness,
-		pk:          c.state.pk[c.sharingId],
+		pk:          c.state.pk[c.shard.Share().ID()],
 	}
 	uOut := hashmap.NewComparable[sharing.ID, *Round2P2P[P, B, S]]()
 	for id, message := range outgoingP2PMessages(c, uOut) {
@@ -175,6 +175,6 @@ func (c *Cosigner[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[P,
 	}
 	w := m.Mul(c.state.phi).Add(rx.Mul(v))
 
-	partialSignature = dkls23.NewPartialSignature(c.state.bigR[c.sharingId], u, w)
+	partialSignature = dkls23.NewPartialSignature(c.state.bigR[c.shard.Share().ID()], u, w)
 	return partialSignature, nil
 }

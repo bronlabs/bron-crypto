@@ -64,7 +64,9 @@ func NewSender[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 
 // NewReceiver constructs a Random OT receiver.
 func NewReceiver[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[G, S], tape transcripts.Transcript, prng io.Reader) (*Receiver[G, S], error) {
-	// TODO input validation
+	if suite == nil || tape == nil || prng == nil {
+		return nil, errs.NewValidation("invalid args")
+	}
 
 	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
 	ka, err := NewTaggedKeyAgreement(suite.Group())

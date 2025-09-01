@@ -2,6 +2,7 @@ package k256
 
 import (
 	"crypto/elliptic"
+	"fmt"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -65,19 +66,19 @@ func CurveModel() *universal.ThreeSortedModel[*Point, *Scalar, *BaseFieldElement
 	return curveModelInstance
 }
 
-func (c Curve) Name() string {
+func (c *Curve) Name() string {
 	return CurveName
 }
 
-func (c Curve) Cofactor() cardinal.Cardinal {
+func (c *Curve) Cofactor() cardinal.Cardinal {
 	return cardinal.New(1)
 }
 
-func (c Curve) Order() cardinal.Cardinal {
+func (c *Curve) Order() cardinal.Cardinal {
 	return cardinal.NewFromNat(scalarFieldOrder.Nat())
 }
 
-func (c Curve) ElementSize() int {
+func (c *Curve) ElementSize() int {
 	return compressedPointBytes
 }
 func (c *Curve) WideElementSize() int {
@@ -88,7 +89,7 @@ func (c *Curve) FromWideBytes(input []byte) (*Point, error) {
 	return c.Hash(input)
 }
 
-func (c Curve) FromCompressed(input []byte) (*Point, error) {
+func (c *Curve) FromCompressed(input []byte) (*Point, error) {
 	if len(input) != compressedPointBytes {
 		return nil, errs.NewLength("invalid byte sequence")
 	}
@@ -130,7 +131,7 @@ func (c Curve) FromCompressed(input []byte) (*Point, error) {
 	return &result, nil
 }
 
-func (c Curve) FromUncompressed(input []byte) (*Point, error) {
+func (c *Curve) FromUncompressed(input []byte) (*Point, error) {
 	if len(input) != 65 {
 		return nil, errs.NewLength("invalid byte sequence")
 	}
@@ -305,9 +306,9 @@ func (p *Point) ToUncompressed() []byte {
 	return out[:]
 }
 
-func (p *Point) AffineX() *BaseFieldElement {
+func (p *Point) AffineX() (*BaseFieldElement, error) {
 	if p.IsZero() {
-		return NewBaseField().Zero()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y BaseFieldElement
@@ -315,12 +316,12 @@ func (p *Point) AffineX() *BaseFieldElement {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &x
+	return &x, nil
 }
 
-func (p *Point) AffineY() *BaseFieldElement {
+func (p *Point) AffineY() (*BaseFieldElement, error) {
 	if p.IsZero() {
-		return NewBaseField().Zero()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y BaseFieldElement
@@ -328,7 +329,7 @@ func (p *Point) AffineY() *BaseFieldElement {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &y
+	return &y, nil
 }
 
 func (p *Point) ScalarOp(sc *Scalar) *Point {
@@ -346,5 +347,9 @@ func (p *Point) IsTorsionFree() bool {
 }
 
 func (p *Point) String() string {
-	return traits.StringifyPoint(p)
+	if p.IsZero() {
+		return "(0, 1, 0)"
+	} else {
+		return fmt.Sprintf("(%s, %s, %s)", p.V.X.String(), p.V.Y.String(), p.V.Z.String())
+	}
 }

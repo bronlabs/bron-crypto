@@ -11,7 +11,7 @@ import (
 )
 
 // TODO: make a proper scheme
-func Verify[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](signature *Signature[S], suite *Suite[P, B, S], publicKey P, message []byte) error {
+func Verify[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](signature *Signature[S], suite *Suite[P, B, S], publicKey P, message []byte) error {
 	nativeCurve := suite.curve.ToElliptic()
 	// TODO: add AffineX, AffineY methods
 	nativeX := new(big.Int).SetBytes(publicKey.Coordinates().Value()[0].Bytes())

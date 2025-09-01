@@ -15,7 +15,7 @@ type message[B network.Message, U network.Message] struct {
 	p2p       U
 }
 
-func incomingMessages[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S], MB network.Message, MU network.Message](p *Participant[P, B, S], rIn network.Round, bIn network.RoundMessages[MB], uIn network.RoundMessages[MU]) iter.Seq2[sharing.ID, message[MB, MU]] {
+func incomingMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MB network.Message, MU network.Message](p *Participant[P, B, S], rIn network.Round, bIn network.RoundMessages[MB], uIn network.RoundMessages[MU]) iter.Seq2[sharing.ID, message[MB, MU]] {
 	return func(yield func(p sharing.ID, m message[MB, MU]) bool) {
 		for id := range p.ac.Shareholders().Iter() {
 			if id == p.sharingId {
@@ -38,7 +38,7 @@ func incomingMessages[P curves.Point[P, B, S], B algebra.FieldElement[B], S alge
 	}
 }
 
-func incomingP2PMessages[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S], MU network.Message](p *Participant[P, B, S], rIn network.Round, uIn network.RoundMessages[MU]) iter.Seq2[sharing.ID, MU] {
+func incomingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MU network.Message](p *Participant[P, B, S], rIn network.Round, uIn network.RoundMessages[MU]) iter.Seq2[sharing.ID, MU] {
 	return func(yield func(p sharing.ID, m MU) bool) {
 		for id := range p.ac.Shareholders().Iter() {
 			if id == p.sharingId {
@@ -61,7 +61,7 @@ type messagePointerConstraint[MP network.Message, M any] interface {
 	network.Message
 }
 
-func outgoingP2PMessages[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S], UPtr messagePointerConstraint[UPtr, U], U any](p *Participant[P, B, S], uOut ds.MutableMap[sharing.ID, UPtr]) iter.Seq2[sharing.ID, UPtr] {
+func outgoingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], UPtr messagePointerConstraint[UPtr, U], U any](p *Participant[P, B, S], uOut ds.MutableMap[sharing.ID, UPtr]) iter.Seq2[sharing.ID, UPtr] {
 	return func(yield func(p sharing.ID, out UPtr) bool) {
 		for id := range p.ac.Shareholders().Iter() {
 			if id == p.sharingId {

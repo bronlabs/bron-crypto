@@ -3,6 +3,7 @@ package sign_softspoken_test
 import (
 	nativeEcdsa "crypto/ecdsa"
 	"crypto/sha256"
+	"crypto/sha512"
 	"fmt"
 	"hash"
 	"maps"
@@ -17,9 +18,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	dkgTestutils "github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/keygen/dkg/testutils"
@@ -46,6 +50,18 @@ func Test_HappyPathWithDKG(t *testing.T) {
 						t.Parallel()
 						testHappyPath(t, k256.NewCurve(), testHashFunc, testAccessStructure)
 					})
+					t.Run("BLS12-381", func(t *testing.T) {
+						t.Parallel()
+						testHappyPath(t, bls12381.NewG1(), testHashFunc, testAccessStructure)
+					})
+					t.Run("pallas", func(t *testing.T) {
+						t.Parallel()
+						testHappyPath(t, pasta.NewPallasCurve(), testHashFunc, testAccessStructure)
+					})
+					t.Run("vesta", func(t *testing.T) {
+						t.Parallel()
+						testHappyPath(t, pasta.NewVestaCurve(), testHashFunc, testAccessStructure)
+					})
 				})
 			}
 		})
@@ -55,6 +71,7 @@ func Test_HappyPathWithDKG(t *testing.T) {
 var testHashFuncs = []func() hash.Hash{
 	sha256.New,
 	sha3.New256,
+	sha512.New,
 }
 
 var testAccessStructures = []*shamir.AccessStructure{
@@ -63,7 +80,7 @@ var testAccessStructures = []*shamir.AccessStructure{
 	makeAccessStructure(3, 5),
 }
 
-func testHappyPath[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, curve curves.Curve[P, B, S], hashFunc func() hash.Hash, accessStructure *shamir.AccessStructure) {
+func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, curve ecdsa.Curve[P, B, S], hashFunc func() hash.Hash, accessStructure *shamir.AccessStructure) {
 	t.Helper()
 
 	shards := dkgTestutils.RunDKLs23DKG(t, curve, accessStructure)
@@ -96,7 +113,7 @@ func stringifyShareholders(sharingIds []sharing.ID) string {
 	for i, id := range sharingIds {
 		s += strconv.Itoa(int(id))
 		if i < len(sharingIds)-1 {
-			s += ", "
+			s += ","
 		}
 	}
 	s += ")"

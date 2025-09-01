@@ -25,7 +25,7 @@ func (r1u *Round1P2P) Bytes() []byte {
 	panic("not implemented")
 }
 
-type Round2Broadcast[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	bigR        P
 	bigRWitness hash_comm.Witness
 	pk          P
@@ -36,7 +36,7 @@ func (r2b *Round2Broadcast[P, B, S]) Bytes() []byte {
 	panic("not implemented")
 }
 
-type Round2P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+type Round2P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	mulR2  *mul_softspoken.Round2P2P[S]
 	gammaU P
 	gammaV P

@@ -8,7 +8,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_bbot"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
@@ -37,9 +39,9 @@ func (c *Cosigner[P, B, S]) Round1() (r1bOut *Round1Broadcast, r1uOut network.Ro
 		return nil, nil, errs.WrapRandomSample(err, "cannot sample r")
 	}
 	c.state.bigR = make(map[sharing.ID]P)
-	c.state.bigR[c.sharingId] = c.suite.Curve().ScalarBaseMul(c.state.r)
+	c.state.bigR[c.shard.Share().ID()] = c.suite.Curve().ScalarBaseMul(c.state.r)
 	c.state.bigRCommitment = make(map[sharing.ID]hash_comm.Commitment)
-	c.state.bigRCommitment[c.sharingId], c.state.bigRWitness, err = c.state.ck.Committer().Commit(c.state.bigR[c.sharingId].ToCompressed(), c.prng)
+	c.state.bigRCommitment[c.shard.Share().ID()], c.state.bigRWitness, err = c.state.ck.Committer().Commit(c.state.bigR[c.shard.Share().ID()].ToCompressed(), c.prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot commit to r")
 	}
@@ -56,7 +58,7 @@ func (c *Cosigner[P, B, S]) Round1() (r1bOut *Round1Broadcast, r1uOut network.Ro
 
 	bOut := &Round1Broadcast{
 		ZeroSetupR1:    zeroR1,
-		BigRCommitment: c.state.bigRCommitment[c.sharingId],
+		BigRCommitment: c.state.bigRCommitment[c.shard.Share().ID()],
 	}
 	uOut := hashmap.NewComparable[sharing.ID, *Round1P2P[P, B, S]]()
 	for id, message := range outgoingP2PMessages(c, uOut) {
@@ -91,7 +93,7 @@ func (c *Cosigner[P, B, S]) Round2(r1bOut network.RoundMessages[*Round1Broadcast
 
 	c.state.chi = make(map[sharing.ID]S)
 	bOut := &Round2Broadcast[P, B, S]{
-		BigR:        c.state.bigR[c.sharingId],
+		BigR:        c.state.bigR[c.shard.Share().ID()],
 		BigRWitness: c.state.bigRWitness,
 	}
 	uOut := hashmap.NewComparable[sharing.ID, *Round2P2P[P, B, S]]()
@@ -128,7 +130,7 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot run zero setup round3")
 	}
-	c.state.zeroSampler, err = przs.NewSampler(c.sharingId, c.quorum, zeroSeeds, c.suite.ScalarField())
+	c.state.zeroSampler, err = przs.NewSampler(c.shard.Share().ID(), c.quorum, zeroSeeds, c.suite.ScalarField())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot run zero setup round3")
 	}
@@ -157,10 +159,10 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 
 	c.state.sk = sk.Value().Add(zeta)
 	c.state.pk = make(map[sharing.ID]P)
-	c.state.pk[c.sharingId] = c.suite.Curve().ScalarBaseMul(c.state.sk)
+	c.state.pk[c.shard.Share().ID()] = c.suite.Curve().ScalarBaseMul(c.state.sk)
 	c.state.c = make(map[sharing.ID][]S)
 
-	bOut := &Round3Broadcast[P, B, S]{Pk: c.state.pk[c.sharingId]}
+	bOut := &Round3Broadcast[P, B, S]{Pk: c.state.pk[c.shard.Share().ID()]}
 	uOut := hashmap.NewComparable[sharing.ID, *Round3P2P[P, B, S]]()
 	for id, message := range outgoingP2PMessages(c, uOut) {
 		message.MulR3, c.state.c[id], err = c.state.aliceMul[id].Round3(mulR2[id], []S{c.state.r, c.state.sk})
@@ -212,9 +214,13 @@ func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast
 
 	u := c.state.r.Mul(c.state.phi.Add(psi)).Add(cudu)
 	v := c.state.sk.Mul(c.state.phi.Add(psi)).Add(cvdv)
-	m, err := messageToScalar(c, message)
+	digest, err := hashing.Hash(c.suite.HashFunc(), message)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot compute message scalar")
+		return nil, errs.WrapFailed(err, "cannot hash message")
+	}
+	m, err := ecdsa.DigestToScalar(c.suite.ScalarField(), digest)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot convert digest to scalar")
 	}
 	rx, err := c.suite.ScalarField().FromWideBytes(bigR.Coordinates().Value()[0].Bytes()) // TODO: fingers crossed it returns affine x
 	if err != nil {
@@ -222,6 +228,6 @@ func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast
 	}
 	w := m.Mul(c.state.phi).Add(rx.Mul(v))
 
-	partialSignature = dkls23.NewPartialSignature(c.state.bigR[c.sharingId], u, w)
+	partialSignature = dkls23.NewPartialSignature(c.state.bigR[c.shard.Share().ID()], u, w)
 	return partialSignature, nil
 }

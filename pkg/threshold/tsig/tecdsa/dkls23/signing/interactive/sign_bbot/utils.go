@@ -7,43 +7,23 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
-// TODO: make it valid, this is just quick and dirty to test
-func messageToScalar[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](c *Cosigner[P, B, S], message []byte) (S, error) {
-	var nilS S
-
-	messageHash, err := hashing.Hash(c.suite.HashFunc(), message)
-	if err != nil {
-		return nilS, errs.WrapHashing(err, "cannot hash message")
-	}
-	mPrime, err := c.suite.ScalarField().FromWideBytes(messageHash)
-	if err != nil {
-		return nilS, errs.WrapFailed(err, "cannot convert message hash to scalar")
-	}
-	return mPrime, nil
-}
-
-//	type party struct {
-//		id  types.SharingID
-//		key types.IdentityKey
-//	}
 type message[B network.Message, U network.Message] struct {
 	broadcast B
 	p2p       U
 }
 
-func validateIncomingMessages[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S], MB network.Message, MU network.Message](c *Cosigner[P, B, S], rIn network.Round, bIn network.RoundMessages[MB], uIn network.RoundMessages[MU]) (iter.Seq2[sharing.ID, message[MB, MU]], error) {
+func validateIncomingMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MB network.Message, MU network.Message](c *Cosigner[P, B, S], rIn network.Round, bIn network.RoundMessages[MB], uIn network.RoundMessages[MU]) (iter.Seq2[sharing.ID, message[MB, MU]], error) {
 	if rIn != c.state.round {
 		return nil, errs.NewFailed("invalid round")
 	}
 
 	return func(yield func(p sharing.ID, m message[MB, MU]) bool) {
 		for id := range c.quorum.Iter() {
-			if id == c.sharingId {
+			if id == c.shard.Share().ID() {
 				continue
 			}
 
@@ -67,10 +47,10 @@ type messagePointerConstraint[MP network.Message, M any] interface {
 	network.Message
 }
 
-func outgoingP2PMessages[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S], UPtr messagePointerConstraint[UPtr, U], U any](c *Cosigner[P, B, S], uOut ds.MutableMap[sharing.ID, UPtr]) iter.Seq2[sharing.ID, UPtr] {
+func outgoingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], UPtr messagePointerConstraint[UPtr, U], U any](c *Cosigner[P, B, S], uOut ds.MutableMap[sharing.ID, UPtr]) iter.Seq2[sharing.ID, UPtr] {
 	return func(yield func(p sharing.ID, out UPtr) bool) {
 		for id := range c.quorum.Iter() {
-			if id == c.sharingId {
+			if id == c.shard.Share().ID() {
 				continue
 			}
 

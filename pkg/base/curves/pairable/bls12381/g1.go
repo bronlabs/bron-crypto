@@ -2,6 +2,7 @@ package bls12381
 
 import (
 	"crypto/elliptic"
+	"fmt"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -261,8 +262,7 @@ func (c *G1) ScalarBaseMul(sc *Scalar) *PointG1 {
 }
 
 func (c *G1) ToElliptic() elliptic.Curve {
-	// TODO: implement
-	panic("not implemented")
+	return ellipticBls12381g1Instance
 }
 
 type PointG1 struct {
@@ -383,9 +383,9 @@ func (p *PointG1) ToUncompreseed() []byte {
 	return result
 }
 
-func (p *PointG1) AffineX() *BaseFieldElementG1 {
+func (p *PointG1) AffineX() (*BaseFieldElementG1, error) {
 	if p.IsZero() {
-		return NewG1BaseField().One()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y BaseFieldElementG1
@@ -393,12 +393,12 @@ func (p *PointG1) AffineX() *BaseFieldElementG1 {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &x
+	return &x, nil
 }
 
-func (p *PointG1) AffineY() *BaseFieldElementG1 {
+func (p *PointG1) AffineY() (*BaseFieldElementG1, error) {
 	if p.IsZero() {
-		return NewG1BaseField().Zero()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y BaseFieldElementG1
@@ -406,7 +406,7 @@ func (p *PointG1) AffineY() *BaseFieldElementG1 {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &y
+	return &y, nil
 }
 
 func (p *PointG1) ScalarOp(sc *Scalar) *PointG1 {
@@ -434,5 +434,9 @@ func (p *PointG1) Bytes() []byte {
 }
 
 func (p *PointG1) String() string {
-	return traits.StringifyPoint(p)
+	if p.IsZero() {
+		return "(0, 1, 0)"
+	} else {
+		return fmt.Sprintf("(%s, %s, %s)", p.V.X.String(), p.V.Y.String(), p.V.Z.String())
+	}
 }

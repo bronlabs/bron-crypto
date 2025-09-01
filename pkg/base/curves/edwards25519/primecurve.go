@@ -1,7 +1,6 @@
 package edwards25519
 
 import (
-	"crypto/elliptic"
 	"fmt"
 	"hash/fnv"
 	"slices"
@@ -180,11 +179,6 @@ func (c *PrimeSubGroup) ScalarBaseMul(sc *Scalar) *PrimeSubGroupPoint {
 	return c.Generator().ScalarMul(sc)
 }
 
-func (c *PrimeSubGroup) ToElliptic() elliptic.Curve {
-	// TODO: implement
-	panic("not implemented")
-}
-
 type PrimeSubGroupPoint struct {
 	traits.PrimePointTrait[*edwards25519Impl.Fp, *edwards25519Impl.Point, edwards25519Impl.Point, *PrimeSubGroupPoint, PrimeSubGroupPoint]
 }
@@ -238,21 +232,21 @@ func (p *PrimeSubGroupPoint) ToUncompressed() []byte {
 	return slices.Concat(y.V.Bytes(), x.V.Bytes())
 }
 
-func (p *PrimeSubGroupPoint) AffineX() *BaseFieldElement {
+func (p *PrimeSubGroupPoint) AffineX() (*BaseFieldElement, error) {
 	if p.IsZero() {
-		return NewBaseField().Zero()
+		return nil, errs.NewFailed("point is identity")
 	}
 	var x, y BaseFieldElement
 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &x
+	return &x, nil
 }
 
-func (p *PrimeSubGroupPoint) AffineY() *BaseFieldElement {
+func (p *PrimeSubGroupPoint) AffineY() (*BaseFieldElement, error) {
 	if p.IsZero() {
-		return NewBaseField().One()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y BaseFieldElement
@@ -260,7 +254,7 @@ func (p *PrimeSubGroupPoint) AffineY() *BaseFieldElement {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &y
+	return &y, nil
 }
 
 func (p *PrimeSubGroupPoint) ScalarOp(sc *Scalar) *PrimeSubGroupPoint {
@@ -286,5 +280,9 @@ func (p *PrimeSubGroupPoint) Bytes() []byte {
 }
 
 func (p *PrimeSubGroupPoint) String() string {
-	return traits.StringifyPoint(p)
+	if p.IsZero() {
+		return "(0, 1, 0, 1)"
+	} else {
+		return fmt.Sprintf("(%s, %s, %s, %s)", p.V.X.String(), p.V.Y.String(), p.V.T.String(), p.V.Z.String())
+	}
 }

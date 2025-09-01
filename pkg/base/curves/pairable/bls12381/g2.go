@@ -1,7 +1,7 @@
 package bls12381
 
 import (
-	"crypto/elliptic"
+	"fmt"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -273,11 +273,6 @@ func (c *G2) ScalarBaseMul(sc *Scalar) *PointG2 {
 	return c.Generator().ScalarMul(sc)
 }
 
-func (c *G2) ToElliptic() elliptic.Curve {
-	// TODO: implement this
-	panic("not implemented")
-}
-
 type PointG2 struct {
 	traits.PrimePointTrait[*bls12381Impl.Fp2, *bls12381Impl.G2Point, bls12381Impl.G2Point, *PointG2, PointG2]
 }
@@ -400,9 +395,9 @@ func (p *PointG2) ToUncompreseed() []byte {
 	return out
 }
 
-func (p *PointG2) AffineX() *BaseFieldElementG2 {
+func (p *PointG2) AffineX() (*BaseFieldElementG2, error) {
 	if p.IsZero() {
-		return NewG2BaseField().One()
+		return nil, errs.NewFailed("point is at infinity")
 	}
 
 	var x, y BaseFieldElementG2
@@ -410,12 +405,12 @@ func (p *PointG2) AffineX() *BaseFieldElementG2 {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &x
+	return &x, nil
 }
 
-func (p *PointG2) AffineY() *BaseFieldElementG2 {
+func (p *PointG2) AffineY() (*BaseFieldElementG2, error) {
 	if p.IsZero() {
-		return NewG2BaseField().Zero()
+		return nil, errs.NewFailed("point is at infinity")
 	}
 
 	var x, y BaseFieldElementG2
@@ -423,7 +418,7 @@ func (p *PointG2) AffineY() *BaseFieldElementG2 {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &y
+	return &y, nil
 }
 
 func (p *PointG2) ScalarOp(sc *Scalar) *PointG2 {
@@ -458,5 +453,9 @@ func (p *PointG2) Bytes() []byte {
 }
 
 func (p *PointG2) String() string {
-	return traits.StringifyPoint(p)
+	if p.IsZero() {
+		return "(0x + 0, 0x + 1, 0x + 0)"
+	} else {
+		return fmt.Sprintf("(%sx + %s, %sx + %s, %sx + %s)", p.V.X.U1.String(), p.V.X.U0.String(), p.V.Y.U1.String(), p.V.Y.U0.String(), p.V.Z.U1.String(), p.V.Z.U0.String())
+	}
 }

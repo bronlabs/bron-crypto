@@ -53,7 +53,7 @@ func (ka *TaggedKeyAgreement[GE, SE]) Msg2(b SE, _ GE) (GE, error) {
 
 func (ka *TaggedKeyAgreement[GE, SE]) Key1(a SE, mr GE, tag []byte) (SE, error) {
 	var nilSE SE
-	raw := mr.ScalarOp(a) // TODO: clear cofactor?
+	raw := mr.ScalarOp(a)
 	k, err := ka.scalarField.Hash(slices.Concat(tag, raw.Bytes()))
 	if err != nil {
 		return nilSE, errs.WrapFailed(err, "hash to scalar")

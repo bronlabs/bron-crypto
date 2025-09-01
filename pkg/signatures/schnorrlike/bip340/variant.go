@@ -51,7 +51,11 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	bigP := g.ScalarMul(v.sk.Value())
 	// 4. Let d = d' if P.y even, otherwise let d = n - d'
 	d := dPrime
-	if bigP.AffineY().IsOdd() {
+	py, err := bigP.AffineY()
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot compute y")
+	}
+	if py.IsOdd() {
 		d = dPrime.Neg()
 	}
 	// Store the adjusted private key for use in ComputeResponse
@@ -88,7 +92,11 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	bigR := g.ScalarMul(kPrime)
 	// 10. Let k = k' if R.y is even, otherwise let k = n - k', R = k ⋅ G
 	k := kPrime
-	if bigR.AffineY().IsOdd() {
+	ry, err := bigR.AffineY()
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot compute y")
+	}
+	if ry.IsOdd() {
 		k = kPrime.Neg()
 		bigR = g.ScalarMul(k)
 	}
@@ -151,7 +159,11 @@ func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *
 		return nil, errs.NewIsNil("public key or secret share is nil")
 	}
 	out := share.Clone()
-	if publicKey.Value().AffineY().IsOdd() {
+	pky, err := publicKey.Value().AffineY()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot compute y")
+	}
+	if pky.IsOdd() {
 		// If the public key is odd, we need to negate the additive share
 		// to ensure that the parity of the nonce commitment is correct.
 		out, _ = additive.NewShare(share.ID(), share.Value().Neg(), nil)
@@ -164,7 +176,11 @@ func (v *Variant) CorrectPartialNonceParity(nonceCommitment *k256.Point, k *k256
 		return nil, nil, errs.NewIsNil("nonce commitment or k is nil")
 	}
 	correctedK := k.Clone()
-	if nonceCommitment.AffineY().IsOdd() {
+	y, err := nonceCommitment.AffineY()
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot compute y")
+	}
+	if y.IsOdd() {
 		// If the nonce commitment is odd, we need to negate k to ensure that the parity is correct.
 		correctedK = correctedK.Neg()
 	}

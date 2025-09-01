@@ -21,7 +21,6 @@ const (
 )
 
 var (
-	// TODO(PrimeField)
 	_ algebra.PrimeField[*BaseFieldElement]        = (*BaseField)(nil)
 	_ algebra.PrimeFieldElement[*BaseFieldElement] = (*BaseFieldElement)(nil)
 

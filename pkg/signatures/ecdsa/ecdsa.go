@@ -2,10 +2,17 @@ package ecdsa
 
 import (
 	"bytes"
+	"crypto/elliptic"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
+
+type Curve[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] interface {
+	curves.Curve[P, B, S]
+	ToElliptic() elliptic.Curve
+}
 
 // DigestToScalar sets scalar to the left-most bits of hash, according to
 // FIPS 186-5, Section 6.4.1, point 2 and Section 6.4.2, point 3.

@@ -35,10 +35,9 @@ const (
 	otRandomizerLabel   = "BRON_CRYPTO_TECDSA_DKLS23_SOFTSPOKEN_OT_RANDOMIZER-"
 )
 
-type Cosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	suite     *ecdsa.Suite[P, B, S]
 	sessionId network.SID
-	sharingId sharing.ID
 	shard     *tecdsa.Shard[P, B, S]
 	zeroSeeds przs.Seeds
 	quorum    network.Quorum
@@ -47,7 +46,7 @@ type Cosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Prim
 	state     CosignerState[P, B, S]
 }
 
-type CosignerState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+type CosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	zeroSampler *przs.Sampler[S]
 	aliceMul    map[sharing.ID]*mul_softspoken.Alice[P, B, S]
 	bobMul      map[sharing.ID]*mul_softspoken.Bob[P, B, S]
@@ -65,18 +64,14 @@ type CosignerState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra
 	pk             map[sharing.ID]P
 }
 
-func NewCosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, mySharingId sharing.ID, quorum network.Quorum, suite *ecdsa.Suite[P, B, S], shard *tecdsa.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
+func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, quorum network.Quorum, suite *ecdsa.Suite[P, B, S], shard *tecdsa.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
 	if quorum == nil || suite == nil || shard == nil || prng == nil || tape == nil {
 		return nil, errs.NewIsNil("argument")
 	}
-	if !quorum.Contains(mySharingId) {
+	if !quorum.Contains(shard.Share().ID()) {
 		return nil, errs.NewValidation("sharing id not part of the quorum")
 	}
-	// TODO: should we directly take sharing id from the shard?
-	if shard.Share().ID() != mySharingId {
-		return nil, errs.NewValidation("sharing id does not match the shard id")
-	}
-	// TODO: check more matches quorum vs shard?
+
 	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
 	zeroSeeds, err := randomizeZeroSeeds(shard.ZeroSeeds(), tape)
 	if err != nil {
@@ -87,7 +82,6 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 		return nil, errs.WrapFailed(err, "couldn't randomize OT seeds")
 	}
 	c := &Cosigner[P, B, S]{
-		sharingId: mySharingId,
 		shard:     shard,
 		zeroSeeds: zeroSeeds,
 		quorum:    quorum,
@@ -108,7 +102,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 			return nil, errs.NewFailed("couldn't find alice seed")
 		}
 		aliceTape := tape.Clone()
-		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.sharingId)), binary.LittleEndian.AppendUint64(nil, uint64(id)))
+		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
 		c.state.aliceMul[id], err = mul_softspoken.NewAlice(c.sessionId, mulSuite, aliceSeed, prng, aliceTape)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "couldn't initialise Alice")
@@ -119,7 +113,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 			return nil, errs.NewFailed("couldn't find bob seed")
 		}
 		bobTape := tape.Clone()
-		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.sharingId)))
+		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())))
 		c.state.bobMul[id], err = mul_softspoken.NewBob(c.sessionId, mulSuite, bobSeed, prng, bobTape)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "couldn't initialise Bob")
@@ -131,7 +125,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 }
 
 func (c *Cosigner[P, B, S]) SharingID() sharing.ID {
-	return c.sharingId
+	return c.shard.Share().ID()
 }
 
 func (c *Cosigner[P, B, S]) Quorum() network.Quorum {
@@ -141,7 +135,7 @@ func (c *Cosigner[P, B, S]) Quorum() network.Quorum {
 func (c *Cosigner[P, B, S]) otherCosigners() iter.Seq[sharing.ID] {
 	return func(yield func(id sharing.ID) bool) {
 		for id := range c.quorum.Iter() {
-			if id == c.sharingId {
+			if id == c.shard.Share().ID() {
 				continue
 			}
 			if !yield(id) {

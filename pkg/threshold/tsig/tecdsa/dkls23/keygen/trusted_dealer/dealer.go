@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
@@ -18,7 +19,7 @@ import (
 )
 
 // TODO: adjust to the rest of whatever
-func DealRandom[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](curve curves.Curve[P, B, S], threshold uint, shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *tecdsa.Shard[P, B, S]], P, error) {
+func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], threshold uint, shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *tecdsa.Shard[P, B, S]], P, error) {
 	var nilP P
 
 	field, ok := curve.ScalarStructure().(algebra.PrimeField[S])

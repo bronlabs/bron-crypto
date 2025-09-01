@@ -1,7 +1,7 @@
 package edwards25519
 
 import (
-	"crypto/elliptic"
+	"fmt"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -169,11 +169,6 @@ func (c *Curve) BaseStructure() algebra.Structure[*BaseFieldElement] {
 	return NewBaseField()
 }
 
-func (c *Curve) ToElliptic() elliptic.Curve {
-	// TODO: implement
-	panic("not implemented")
-}
-
 type Point struct {
 	traits.PointTrait[*edwards25519Impl.Fp, *edwards25519Impl.Point, edwards25519Impl.Point, *Point, Point]
 }
@@ -226,21 +221,21 @@ func (p *Point) ToUncompreseed() []byte {
 	return slices.Concat(y.V.Bytes(), x.V.Bytes())
 }
 
-func (p *Point) AffineX() *BaseFieldElement {
+func (p *Point) AffineX() (*BaseFieldElement, error) {
 	if p.IsZero() {
-		return NewBaseField().Zero()
+		return nil, errs.NewFailed("point is identity")
 	}
 	var x, y BaseFieldElement
 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &x
+	return &x, nil
 }
 
-func (p *Point) AffineY() *BaseFieldElement {
+func (p *Point) AffineY() (*BaseFieldElement, error) {
 	if p.IsZero() {
-		return NewBaseField().One()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y BaseFieldElement
@@ -248,7 +243,7 @@ func (p *Point) AffineY() *BaseFieldElement {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &y
+	return &y, nil
 }
 
 func (p *Point) ScalarOp(sc *Scalar) *Point {
@@ -274,5 +269,9 @@ func (p *Point) Bytes() []byte {
 }
 
 func (p *Point) String() string {
-	return traits.StringifyPoint(p)
+	if p.IsZero() {
+		return "(0, 1, 0, 1)"
+	} else {
+		return fmt.Sprintf("(%s, %s, %s, %s)", p.V.X.String(), p.V.Y.String(), p.V.T.String(), p.V.Z.String())
+	}
 }

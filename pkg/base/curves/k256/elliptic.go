@@ -94,7 +94,10 @@ func fromAffine(x *big.Int, y *big.Int) (*Point, error) {
 }
 
 func toAffine(p *Point) (*big.Int, *big.Int) {
-	x := p.AffineX().Cardinal().Big()
-	y := p.AffineY().Cardinal().Big()
-	return x, y
+	if p.IsZero() {
+		return new(big.Int), new(big.Int)
+	}
+	x, _ := p.AffineX()
+	y, _ := p.AffineY()
+	return x.Cardinal().Big(), y.Cardinal().Big()
 }

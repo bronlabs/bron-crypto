@@ -2,6 +2,7 @@ package pasta
 
 import (
 	"crypto/elliptic"
+	"fmt"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -197,8 +198,7 @@ func (c *VestaCurve) ScalarBaseMul(sc *VestaScalar) *VestaPoint {
 }
 
 func (c *VestaCurve) ToElliptic() elliptic.Curve {
-	// TODO: implement this
-	panic("not implemented")
+	return ellipticVestaInstance
 }
 
 type VestaPoint struct {
@@ -263,9 +263,9 @@ func (p *VestaPoint) Bytes() []byte {
 	return p.ToCompressed()
 }
 
-func (p *VestaPoint) AffineX() *VestaBaseFieldElement {
+func (p *VestaPoint) AffineX() (*VestaBaseFieldElement, error) {
 	if p.IsZero() {
-		return NewVestaBaseField().One()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y VestaBaseFieldElement
@@ -273,12 +273,12 @@ func (p *VestaPoint) AffineX() *VestaBaseFieldElement {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &x
+	return &x, nil
 }
 
-func (p *VestaPoint) AffineY() *VestaBaseFieldElement {
+func (p *VestaPoint) AffineY() (*VestaBaseFieldElement, error) {
 	if p.IsZero() {
-		return NewVestaBaseField().Zero()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y VestaBaseFieldElement
@@ -286,7 +286,7 @@ func (p *VestaPoint) AffineY() *VestaBaseFieldElement {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &y
+	return &y, nil
 }
 
 func (p *VestaPoint) ScalarOp(sc *VestaScalar) *VestaPoint {
@@ -304,5 +304,9 @@ func (p *VestaPoint) IsTorsionFree() bool {
 }
 
 func (p *VestaPoint) String() string {
-	return traits.StringifyPoint(p)
+	if p.IsZero() {
+		return "(0, 1, 0)"
+	} else {
+		return fmt.Sprintf("(%s, %s, %s)", p.V.X.String(), p.V.Y.String(), p.V.Z.String())
+	}
 }

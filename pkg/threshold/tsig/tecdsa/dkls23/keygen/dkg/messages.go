@@ -8,20 +8,20 @@ import (
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
 )
 
-type Round1Broadcast[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+type Round1Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	gennaroR1 *gennaro.Round1Broadcast[P, S]
 	zeroR1    *przsSetup.Round1Broadcast
 }
 
-type Round1P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+type Round1P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	otR1 *vsot.Round1P2P[P, B, S]
 }
 
-type Round2Broadcast[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	gennaroR2 *gennaro.Round2Broadcast[P, S]
 }
 
-type Round2P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+type Round2P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	gennaroR2 *gennaro.Round2Unicast[P, S]
 	zeroR2    *przsSetup.Round2P2P
 	otR2      *vsot.Round2P2P[P, B, S]

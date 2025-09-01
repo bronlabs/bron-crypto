@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
@@ -27,11 +28,10 @@ const (
 	vsotLabel       = "BRON_CRYPTO_DKLS23_DKG_VSOT-"
 )
 
-type Participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+type Participant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	sessionId network.SID
 	sharingId sharing.ID
 	ac        *shamir.AccessStructure
-	suite     *Suite[P, B, S]
 	tape      transcripts.Transcript
 	prng      io.Reader
 
@@ -42,18 +42,18 @@ type Participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 	state           state[P, B, S]
 }
 
-type state[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	senderSeeds   ds.MutableMap[sharing.ID, *vsot.SenderOutput]
 	receiverSeeds ds.MutableMap[sharing.ID, *vsot.ReceiverOutput]
 	dkgOutput     *gennaro.DKGOutput[P, S]
 	zeroSeeds     przs.Seeds
 }
 
-func NewParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, sharingId sharing.ID, ac *shamir.AccessStructure, suite *Suite[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Participant[P, B, S], error) {
+func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, sharingId sharing.ID, ac *shamir.AccessStructure, curve ecdsa.Curve[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Participant[P, B, S], error) {
 	// TODO: validation
 	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, sessionId))
 
-	gennaroParty, err := gennaro.NewParticipant(sessionId, suite.curve, sharingId, ac, tape, prng)
+	gennaroParty, err := gennaro.NewParticipant(sessionId, curve, sharingId, ac, tape, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to make gennaro participant")
 	}
@@ -63,7 +63,7 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebr
 		return nil, errs.WrapFailed(err, "error creating zero setup for participant")
 	}
 
-	otSuite, err := vsot.NewSuite(softspoken.Kappa, 1, suite.curve, sha256.New)
+	otSuite, err := vsot.NewSuite(softspoken.Kappa, 1, curve, sha256.New)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "error creating vsot suite for participant")
 	}
@@ -96,7 +96,6 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebr
 		sessionId:       sessionId,
 		sharingId:       sharingId,
 		ac:              ac,
-		suite:           suite,
 		tape:            tape,
 		prng:            prng,
 		gennaroParty:    gennaroParty,
