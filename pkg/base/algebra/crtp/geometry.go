@@ -109,6 +109,7 @@ type EllipticCurve[P, FE, S any] interface {
 	AbelianGroup[P, S]
 	AdditiveModule[P, S]
 	Cofactor() Cardinal
+	FromAffine(x, y FE) (P, error)
 }
 
 type EllipticCurvePoint[P, FE, S any] interface {

@@ -18,7 +18,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -48,10 +47,6 @@ func Test_HappyPathWithDKG(t *testing.T) {
 					t.Run("secp256k1", func(t *testing.T) {
 						t.Parallel()
 						testHappyPath(t, k256.NewCurve(), testHashFunc, testAccessStructure)
-					})
-					t.Run("BLS12-381", func(t *testing.T) {
-						t.Parallel()
-						testHappyPath(t, bls12381.NewG1(), testHashFunc, testAccessStructure)
 					})
 					t.Run("pallas", func(t *testing.T) {
 						t.Parallel()

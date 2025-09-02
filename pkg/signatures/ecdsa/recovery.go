@@ -4,6 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
 // ComputeRecoveryId calculates recoveryId
@@ -21,28 +22,26 @@ import (
 // Note that V here is the same as recovery Id is EIP-155.
 // Note that due to signature malleability, for us v is always either 0 or 1 (= we consider non-normalised signatures as invalid).
 func ComputeRecoveryId[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](bigR P) (int, error) {
-	rxField, err := bigR.AffineX()
+	rx, err := bigR.AffineX()
 	if err != nil {
 		return -1, errs.WrapFailed(err, "cannot compute x")
 	}
-	rx := rxField.Cardinal().Value()
-	ryField, err := bigR.AffineY()
+	ry, err := bigR.AffineY()
 	if err != nil {
 		return -1, errs.WrapFailed(err, "cannot compute y")
 	}
-	ry := ryField.Cardinal().Value()
 
 	curve := algebra.StructureMustBeAs[Curve[P, B, S]](bigR.Structure())
 	subGroupOrder := curve.Order().Value()
 
 	var recoveryId int
-	if ry.Byte(0)&0b1 == 0 {
+	if !ry.IsOdd() {
 		recoveryId = 0
 	} else {
 		recoveryId = 1
 	}
 
-	b, _, _ := rx.Cmp(subGroupOrder)
+	b, _, _ := rx.Cardinal().Value().Cmp(subGroupOrder)
 	if b != 0 {
 		recoveryId += 2
 	}
@@ -51,51 +50,47 @@ func ComputeRecoveryId[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 }
 
 // RecoverPublicKey recovers PublicKey (point on the curve) based od messageHash, public key and recovery id.
-//func RecoverPublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S], signature *Signature[S], message []byte) (P, error) {
-//	var nilP P
-//	if signature.V == nil {
-//		return nilP, errs.NewIsNil("no recovery id")
-//	}
-//
-//	// Calculate point R = (x1, x2) where
-//	//  x1 = r if (v & 2) == 0 or (r + n) if (v & 2) == 1
-//	//  y1 = value such that the curve equation is satisfied, y1 should be even when (v & 1) == 0, odd otherwise
-//	baseField := algebra.StructureMustBeAs[algebra.PrimeField[B]](suite.Curve().BaseStructure())
-//
-//	rx := signature.r.Cardinal().Value()
-//	if (*signature.v & 2) != 0 {
-//		rx = new(saferith.Nat).Add(rx, suite.curve.Order().Value(), baseField.BitLen())
-//	}
-//	rxBytes := rx.Bytes()
-//	if len(rxBytes) < 32 {
-//		rxBytes = append(make([]byte, 32-len(rxBytes)), rxBytes...)
-//	}
-//	ryCompressed := []byte{byte(2)}
-//	if (*signature.v & 1) != 0 {
-//		ryCompressed[0]++
-//	}
-//	affine := slices.Concat(ryCompressed, rxBytes)
-//	bigR, err := curve.Point().FromAffineCompressed(affine)
-//	if err != nil {
-//		return nilP, errs.WrapFailed(err, "cannot calculate R")
-//	}
-//
-//	// Calculate point Q (public key)
-//	//  Q = r^(-1)(sR - zG)
-//	messageHash, err := hashing.Hash(hashFunc, message)
-//	if err != nil {
-//		return nilP, errs.WrapHashing(err, "cannot hash message")
-//	}
-//	zInt := BitsToInt(messageHash, curve)
-//	z, err := curve.ScalarField().Element().SetBytes(zInt.Bytes())
-//	if err != nil {
-//		return nilP, errs.WrapFailed(err, "cannot calculate z")
-//	}
-//	rInv, err := signature.R.MultiplicativeInverse()
-//	if err != nil {
-//		return nilP, errs.WrapFailed(err, "cannot calculate inverse of r")
-//	}
-//	publicKey := (bigR.ScalarMul(signature.S).Sub(curve.ScalarBaseMult(z))).ScalarMul(rInv)
-//
-//	return publicKey, nil
-//}
+func RecoverPublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](signature *Signature[S], suite *Suite[P, B, S], message []byte) (P, error) {
+	var nilP P
+	if signature.v == nil {
+		return nilP, errs.NewIsNil("no recovery id")
+	}
+
+	// Calculate point R = (x1, x2) where
+	//  x1 = r if (v & 2) == 0 or (r + n) if (v & 2) == 1
+	//  y1 = value such that the curve equation is satisfied, y1 should be even when (v & 1) == 0, odd otherwise
+	rx, err := suite.baseField.FromWideBytes(signature.r.Bytes())
+	if err != nil {
+		return nilP, errs.WrapFailed(err, "cannot calculate r_x")
+	}
+	if (*signature.v & 0b10) != 0 {
+		n, err := suite.baseField.FromWideBytes(suite.curve.Order().Bytes())
+		if err != nil {
+			return nilP, errs.WrapFailed(err, "cannot calculate n")
+		}
+		rx = rx.Add(n)
+	}
+	r, err := suite.curve.FromAffineX(rx, (*signature.v&0b1) != 0)
+	if err != nil {
+		return nilP, errs.WrapFailed(err, "cannot calculate r")
+	}
+
+	// Calculate point Q (public key)
+	//  Q = r^(-1)(sR - zG)
+	digest, err := hashing.Hash(suite.hashFunc, message)
+	if err != nil {
+		return nilP, errs.WrapHashing(err, "cannot hash message")
+	}
+	z, err := DigestToScalar(suite.scalarField, digest)
+	if err != nil {
+		return nilP, errs.WrapFailed(err, "cannot calculate z")
+	}
+
+	rInv, err := signature.r.TryInv()
+	if err != nil {
+		return nilP, errs.WrapFailed(err, "cannot calculate inverse of r")
+	}
+	publicKey := (r.ScalarMul(signature.s).Sub(suite.curve.ScalarBaseMul(z))).ScalarMul(rInv)
+
+	return publicKey, nil
+}

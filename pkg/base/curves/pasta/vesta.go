@@ -148,6 +148,32 @@ func (c *VestaCurve) FromUncompressed(input []byte) (*VestaPoint, error) {
 	return pp, nil
 }
 
+func (c *VestaCurve) FromAffine(x, y *VestaBaseFieldElement) (*VestaPoint, error) {
+	var p VestaPoint
+	ok := p.V.SetAffine(&x.V, &y.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x/y")
+	}
+	return &p, nil
+}
+
+func (c *VestaCurve) FromAffineX(x *VestaBaseFieldElement, b bool) (*VestaPoint, error) {
+	var p VestaPoint
+	ok := p.V.SetFromAffineX(&x.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x")
+	}
+	y, err := p.AffineY()
+	if err != nil {
+		panic(err) // should never happen
+	}
+	if y.IsOdd() != b {
+		return p.Neg(), nil
+	} else {
+		return &p, nil
+	}
+}
+
 func (c *VestaCurve) Hash(bytes []byte) (*VestaPoint, error) {
 	return c.HashWithDst(base.Hash2CurveAppTag+VestaHash2CurveSuite, bytes)
 }

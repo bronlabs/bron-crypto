@@ -1,7 +1,6 @@
 package bls12381
 
 import (
-	"crypto/elliptic"
 	"fmt"
 	"hash/fnv"
 	"slices"
@@ -189,6 +188,23 @@ func (c *G1) FromCompressed(input []byte) (*PointG1, error) {
 	return pp, nil
 }
 
+func (c *G1) FromAffineX(x *BaseFieldElementG1, b bool) (*PointG1, error) {
+	var p PointG1
+	ok := p.V.SetFromAffineX(&x.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x")
+	}
+	y, err := p.AffineY()
+	if err != nil {
+		panic(err) // should never happen
+	}
+	if y.IsOdd() != b {
+		return p.Neg(), nil
+	} else {
+		return &p, nil
+	}
+}
+
 func (c *G1) FromBytes(input []byte) (*PointG1, error) {
 	return c.FromCompressed(input)
 }
@@ -232,6 +248,15 @@ func (c *G1) FromUncompressed(input []byte) (*PointG1, error) {
 	return pp, nil
 }
 
+func (c *G1) FromAffine(x, y *BaseFieldElementG1) (*PointG1, error) {
+	var p PointG1
+	ok := p.V.SetAffine(&x.V, &y.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x/y")
+	}
+	return &p, nil
+}
+
 func (c *G1) Hash(bytes []byte) (*PointG1, error) {
 	return c.HashWithDst(base.Hash2CurveAppTag+Hash2CurveSuiteG1, bytes)
 }
@@ -259,10 +284,6 @@ func (c *G1) ScalarBaseOp(sc *Scalar) *PointG1 {
 
 func (c *G1) ScalarBaseMul(sc *Scalar) *PointG1 {
 	return c.Generator().ScalarMul(sc)
-}
-
-func (c *G1) ToElliptic() elliptic.Curve {
-	return ellipticBls12381g1Instance
 }
 
 type PointG1 struct {

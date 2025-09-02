@@ -148,6 +148,32 @@ func (c *PallasCurve) FromUncompressed(input []byte) (*PallasPoint, error) {
 	return pp, nil
 }
 
+func (c *PallasCurve) FromAffine(x, y *PallasBaseFieldElement) (*PallasPoint, error) {
+	var p PallasPoint
+	ok := p.V.SetAffine(&x.V, &y.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x/y")
+	}
+	return &p, nil
+}
+
+func (c *PallasCurve) FromAffineX(x *PallasBaseFieldElement, b bool) (*PallasPoint, error) {
+	var p PallasPoint
+	ok := p.V.SetFromAffineX(&x.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x")
+	}
+	y, err := p.AffineY()
+	if err != nil {
+		panic(err) // should never happen
+	}
+	if y.IsOdd() != b {
+		return p.Neg(), nil
+	} else {
+		return &p, nil
+	}
+}
+
 func (c *PallasCurve) Hash(bytes []byte) (*PallasPoint, error) {
 	return c.HashWithDst(base.Hash2CurveAppTag+PallasHash2CurveSuite, bytes)
 }

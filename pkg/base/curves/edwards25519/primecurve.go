@@ -150,6 +150,20 @@ func (c *PrimeSubGroup) FromUncompressed(inBytes []byte) (*PrimeSubGroupPoint, e
 	return result, nil
 }
 
+func (c *PrimeSubGroup) FromAffine(x, y *BaseFieldElement) (*PrimeSubGroupPoint, error) {
+	var p Point
+	ok := p.V.SetAffine(&x.V, &y.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x/y")
+	}
+	if !p.IsTorsionFree() {
+		return nil, errs.NewFailed("point is not in the prime subgroup")
+	}
+	var subgroupP PrimeSubGroupPoint
+	subgroupP.V.Set(&p.V)
+	return &subgroupP, nil
+}
+
 func (c *PrimeSubGroup) Hash(bytes []byte) (*PrimeSubGroupPoint, error) {
 	return c.HashWithDst(base.Hash2CurveAppTag+Hash2CurveSuite, bytes)
 }

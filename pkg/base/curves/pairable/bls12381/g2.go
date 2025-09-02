@@ -244,6 +244,15 @@ func (c *G2) FromUncompressed(input []byte) (*PointG2, error) {
 	return pp, nil
 }
 
+func (c *G2) FromAffine(x, y *BaseFieldElementG2) (*PointG2, error) {
+	var p PointG2
+	ok := p.V.SetAffine(&x.V, &y.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x/y")
+	}
+	return &p, nil
+}
+
 func (c *G2) Hash(bytes []byte) (*PointG2, error) {
 	return c.HashWithDst(base.Hash2CurveAppTag+Hash2CurveSuiteG2, bytes)
 }

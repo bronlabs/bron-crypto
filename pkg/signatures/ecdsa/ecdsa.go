@@ -11,6 +11,7 @@ import (
 
 type Curve[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] interface {
 	curves.Curve[P, B, S]
+	FromAffineX(x B, b bool) (P, error)
 	ToElliptic() elliptic.Curve
 }
 
