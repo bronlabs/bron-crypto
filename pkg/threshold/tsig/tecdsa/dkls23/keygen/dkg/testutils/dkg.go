@@ -18,7 +18,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/keygen/dkg"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -26,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, curve ecdsa.Curve[P, B, S], accessStructure *shamir.AccessStructure) map[sharing.ID]*tecdsa.Shard[P, B, S] {
+func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, curve ecdsa.Curve[P, B, S], accessStructure *feldman.AccessStructure) map[sharing.ID]*tecdsa.Shard[P, B, S] {
 	tb.Helper()
 
 	prng := crand.Reader
@@ -98,7 +97,7 @@ func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 	require.True(tb, sliceutils.All(transcriptBytesSlice, func(b []byte) bool { return bytes.Equal(transcriptBytesSlice[0], b) }))
 
 	// public keys match
-	publicKeys := slices.Collect(maps.Values(maputils.MapValues(shards, func(_ sharing.ID, s *tecdsa.Shard[P, B, S]) P { return s.PublicKey() })))
+	publicKeys := slices.Collect(maps.Values(maputils.MapValues(shards, func(_ sharing.ID, s *tecdsa.Shard[P, B, S]) P { return s.PublicKey().Value() })))
 	for i := 1; i < accessStructure.Shareholders().Size(); i++ {
 		require.True(tb, publicKeys[0].Equal(publicKeys[i]))
 	}

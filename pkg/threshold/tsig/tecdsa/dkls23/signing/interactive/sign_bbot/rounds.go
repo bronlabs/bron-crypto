@@ -139,14 +139,6 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 		return nil, nil, errs.WrapFailed(err, "cannot run zero setup round3")
 	}
 
-	//quorumSharingIds := slices.Collect(iterutils.Map(c.TheQuorum.Iter(), func(key types.IdentityKey) types.SharingID { id, _ := c.SharingCfg.Reverse().Get(key); return id }))
-	//share := shamir.Share{
-	//	Id:    c.MySharingId,
-	//	Value: c.MyShard.SecretShare(),
-	//}
-	//c.State.Sk, err = share.ToAdditive(quorumSharingIds)
-
-	// TODO: this function doesn't make sense
 	quorum2, err := sharing.NewMinimalQualifiedAccessStructure(c.quorum)
 	if err != nil {
 		panic(err)
@@ -208,7 +200,7 @@ func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast
 
 	bigR := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.state.bigR))...)
 	pk := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.state.pk))...)
-	if !pk.Equal(c.shard.PublicKey()) {
+	if !pk.Equal(c.shard.PublicKey().Value()) {
 		return nil, errs.NewFailed("consistency check failed")
 	}
 
@@ -222,12 +214,19 @@ func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert digest to scalar")
 	}
-	rx, err := c.suite.ScalarField().FromWideBytes(bigR.Coordinates().Value()[0].Bytes()) // TODO: fingers crossed it returns affine x
+	rxi, err := bigR.AffineX()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot convert to affine x")
+	}
+	rx, err := c.suite.ScalarField().FromWideBytes(rxi.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert to scalar")
 	}
 	w := m.Mul(c.state.phi).Add(rx.Mul(v))
 
-	partialSignature = dkls23.NewPartialSignature(c.state.bigR[c.shard.Share().ID()], u, w)
+	partialSignature, err = dkls23.NewPartialSignature(c.state.bigR[c.shard.Share().ID()], u, w)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create partial signature")
+	}
 	return partialSignature, nil
 }

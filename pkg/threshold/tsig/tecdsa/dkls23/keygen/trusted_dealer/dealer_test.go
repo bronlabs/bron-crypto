@@ -41,7 +41,7 @@ func Test_HappyPath(t *testing.T) {
 				})
 				recoveredSk, err := feldmanScheme.Reconstruct(sharesSubset...)
 				recoveredPk := curve.ScalarBaseMul(recoveredSk.Value())
-				require.True(t, recoveredPk.Equal(pk))
+				require.True(t, recoveredPk.Equal(pk.Value()))
 			}
 		}
 	})

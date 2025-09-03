@@ -87,7 +87,6 @@ func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast], 
 		return nil, nil, errs.WrapFailed(err, "cannot run zero setup round3")
 	}
 
-	//	// TODO: this function doesn't make sense
 	quorum, err := sharing.NewMinimalQualifiedAccessStructure(c.quorum)
 	if err != nil {
 		panic(err)
@@ -155,7 +154,7 @@ func (c *Cosigner[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[P,
 
 	bigR := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.state.bigR))...)
 	pk := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.state.pk))...)
-	if !pk.Equal(c.shard.PublicKey()) {
+	if !pk.Equal(c.shard.PublicKey().Value()) {
 		return nil, errs.NewFailed("consistency check failed")
 	}
 
@@ -169,12 +168,19 @@ func (c *Cosigner[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[P,
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot compute message scalar")
 	}
-	rx, err := c.suite.ScalarField().FromWideBytes(bigR.Coordinates().Value()[0].Bytes()) // TODO: fingers crossed it returns affine x
+	rxi, err := bigR.AffineX()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot convert to affine x")
+	}
+	rx, err := c.suite.ScalarField().FromWideBytes(rxi.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert to scalar")
 	}
 	w := m.Mul(c.state.phi).Add(rx.Mul(v))
 
-	partialSignature = dkls23.NewPartialSignature(c.state.bigR[c.shard.Share().ID()], u, w)
+	partialSignature, err = dkls23.NewPartialSignature(c.state.bigR[c.shard.Share().ID()], u, w)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create partial signature")
+	}
 	return partialSignature, nil
 }

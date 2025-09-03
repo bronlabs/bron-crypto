@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"hash"
 	"maps"
-	"math/big"
 	"reflect"
 	"runtime"
 	"slices"
@@ -85,15 +84,11 @@ func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 			t.Run(fmt.Sprintf("signature is valid %s", stringifyShareholders(shareholdersSubset)), func(t *testing.T) {
 				t.Parallel()
 
-				nativePk := &nativeEcdsa.PublicKey{
-					Curve: curve.ToElliptic(),
-					// TODO: hope to return affine x and affine y
-					X: new(big.Int).SetBytes(pk.Coordinates().Value()[0].Bytes()),
-					Y: new(big.Int).SetBytes(pk.Coordinates().Value()[1].Bytes()),
-				}
+				nativePk := pk.ToElliptic()
+				nativeR, nativeS := signature.ToElliptic()
 				digest, err := hashing.Hash(hashFunc, message)
 				require.NoError(t, err)
-				ok := nativeEcdsa.Verify(nativePk, digest, signature.R().Cardinal().Big(), signature.S().Cardinal().Big())
+				ok := nativeEcdsa.Verify(nativePk, digest, nativeR, nativeS)
 				require.True(t, ok)
 			})
 		}

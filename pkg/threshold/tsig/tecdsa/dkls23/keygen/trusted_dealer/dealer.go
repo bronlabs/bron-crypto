@@ -18,24 +18,21 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 )
 
-// TODO: adjust to the rest of whatever
-func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], threshold uint, shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *tecdsa.Shard[P, B, S]], P, error) {
-	var nilP P
-
+func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], threshold uint, shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *tecdsa.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
 	field, ok := curve.ScalarStructure().(algebra.PrimeField[S])
 	if !ok {
-		return nil, nilP, errs.NewFailed("invalid scalar structure")
+		return nil, nil, errs.NewFailed("invalid scalar structure")
 	}
 
 	generator := curve.Generator()
 	feldmanDealer, err := feldman.NewScheme(field, generator, threshold, shareholder)
 	if err != nil {
-		return nil, nilP, errs.WrapFailed(err, "could not create shamir scheme")
+		return nil, nil, errs.WrapFailed(err, "could not create shamir scheme")
 	}
 
 	feldmanOutput, secret, err := feldmanDealer.DealRandom(prng)
 	if err != nil {
-		return nil, nilP, errs.WrapFailed(err, "could not deal shares")
+		return nil, nil, errs.WrapFailed(err, "could not deal shares")
 	}
 	public := generator.ScalarMul(secret.Value())
 
@@ -51,7 +48,7 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 			}
 			var seed [przs.SeedLength]byte
 			if _, err = io.ReadFull(prng, seed[:]); err != nil {
-				return nil, nilP, errs.WrapRandomSample(err, "cannot sample seed")
+				return nil, nil, errs.WrapRandomSample(err, "cannot sample seed")
 			}
 			zeroSeeds[me].Put(they, seed)
 			zeroSeeds[they].Put(me, seed)
@@ -73,7 +70,7 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 
 			choices := make([]byte, softspoken.Kappa/8)
 			if _, err := io.ReadFull(prng, choices); err != nil {
-				return nil, nilP, errs.WrapRandomSample(err, "cannot sample choices")
+				return nil, nil, errs.WrapRandomSample(err, "cannot sample choices")
 			}
 			sender := &vsot.SenderOutput{
 				ot.SenderOutput[[]byte]{
@@ -89,11 +86,11 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 			for kappa := range softspoken.Kappa {
 				m0 := make([]byte, 32)
 				if _, err := io.ReadFull(prng, m0); err != nil {
-					return nil, nilP, errs.WrapRandomSample(err, "cannot sample m0")
+					return nil, nil, errs.WrapRandomSample(err, "cannot sample m0")
 				}
 				m1 := make([]byte, 32)
 				if _, err := io.ReadFull(prng, m1); err != nil {
-					return nil, nilP, errs.WrapFailed(err, "cannot sample m1")
+					return nil, nil, errs.WrapFailed(err, "cannot sample m1")
 				}
 				c := (choices[kappa/8] >> (kappa % 8)) & 0b1
 				sender.Messages[kappa][0] = [][]byte{m0}
@@ -106,11 +103,15 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 		}
 	}
 
+	publicKey, err := ecdsa.NewPublicKey(public)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "invalid public key")
+	}
 	result := hashmap.NewComparable[sharing.ID, *tecdsa.Shard[P, B, S]]()
 	for id, feldmanShare := range feldmanOutput.Shares().Iter() {
-		shard := tecdsa.NewShard(feldmanShare, public, zeroSeeds[id].Freeze(), senderSeeds[id].Freeze(), receiverSeeds[id].Freeze())
+		shard := tecdsa.NewShard(feldmanShare, feldmanDealer.AccessStructure(), publicKey, zeroSeeds[id].Freeze(), senderSeeds[id].Freeze(), receiverSeeds[id].Freeze())
 		result.Put(id, shard)
 	}
 
-	return result.Freeze(), public, nil
+	return result.Freeze(), publicKey, nil
 }

@@ -17,7 +17,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -31,7 +31,7 @@ const (
 type Participant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	sessionId network.SID
 	sharingId sharing.ID
-	ac        *shamir.AccessStructure
+	ac        *feldman.AccessStructure
 	tape      transcripts.Transcript
 	prng      io.Reader
 
@@ -49,8 +49,14 @@ type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	zeroSeeds     przs.Seeds
 }
 
-func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, sharingId sharing.ID, ac *shamir.AccessStructure, curve ecdsa.Curve[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Participant[P, B, S], error) {
-	// TODO: validation
+func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, sharingId sharing.ID, ac *feldman.AccessStructure, curve ecdsa.Curve[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Participant[P, B, S], error) {
+	if ac == nil || tape == nil || prng == nil {
+		return nil, errs.NewIsNil("argument")
+	}
+	if !ac.Shareholders().Contains(sharingId) {
+		return nil, errs.NewValidation("sharing id not part of the access structure")
+	}
+
 	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, sessionId))
 
 	gennaroParty, err := gennaro.NewParticipant(sessionId, curve, sharingId, ac, tape, prng)

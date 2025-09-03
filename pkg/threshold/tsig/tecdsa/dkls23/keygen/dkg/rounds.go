@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
@@ -189,9 +190,14 @@ func (p *Participant[P, B, S]) Round6(r5u network.RoundMessages[*Round5P2P]) (*t
 		}
 	}
 
+	publicKey, err := ecdsa.NewPublicKey(p.state.dkgOutput.PublicMaterial().PublicKeyValue())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "invalid public key")
+	}
 	shard := tecdsa.NewShard(
 		p.state.dkgOutput.Share(),
-		p.state.dkgOutput.PublicMaterial().PublicKeyValue(),
+		p.ac,
+		publicKey,
 		p.state.zeroSeeds,
 		p.state.senderSeeds.Freeze(),
 		p.state.receiverSeeds.Freeze(),

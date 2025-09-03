@@ -27,6 +27,7 @@ func (a *MinimalQualifiedAccessStructure) IsAuthorized(ids ...ID) bool {
 	return a.ps.Size() == len(ids) && a.ps.Equal(hashset.NewComparable(ids...).Freeze())
 }
 
+// TODO: this function does not make sense
 func NewMinimalQualifiedAccessStructure(shareholders ds.Set[ID]) (*MinimalQualifiedAccessStructure, error) {
 	if shareholders == nil {
 		return nil, errs.NewIsNil("ids cannot be nil")

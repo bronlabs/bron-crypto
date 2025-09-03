@@ -35,7 +35,7 @@ func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElem
 	require.NoError(tb, err)
 	tape := hagrid.NewTranscript(hex.EncodeToString(sessionId[:]))
 	pk := slices.Collect(maps.Values(shards))[0].PublicKey()
-	curve := algebra.StructureMustBeAs[ecdsa.Curve[P, B, S]](pk.Structure())
+	curve := algebra.StructureMustBeAs[ecdsa.Curve[P, B, S]](pk.Value().Structure())
 	ecdsaSuite := ecdsa.NewSuite(curve, hashFunc)
 
 	tapesMap := make(map[sharing.ID]transcripts.Transcript)
