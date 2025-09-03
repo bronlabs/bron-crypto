@@ -3,13 +3,16 @@ package softspoken
 import (
 	"hash"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
 const (
-	Kappa      = 128
-	Sigma      = 128
+	Kappa = base.ComputationalSecurity
+	// Sigma should really be StatisticalSecurity but since we need (Xi * L) to be a multiple of Sigma,
+	// we can just use base.ComputationalSecurity which is bigger anyway
+	Sigma      = base.ComputationalSecurity
 	SigmaBytes = (Sigma + 7) / 8
 )
 
