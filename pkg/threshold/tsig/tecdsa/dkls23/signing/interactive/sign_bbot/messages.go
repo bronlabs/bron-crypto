@@ -4,7 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_bbot"
+	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/bbot"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
 )
 
@@ -19,7 +19,7 @@ func (m *Round1Broadcast) Bytes() []byte {
 }
 
 type Round1P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	MulR1 *mul_bbot.Round1P2P[P, S]
+	MulR1 *rvole_bbot.Round1P2P[P, S]
 }
 
 func (m *Round1P2P[P, B, S]) Bytes() []byte {
@@ -39,7 +39,7 @@ func (m *Round2Broadcast[P, B, S]) Bytes() []byte {
 
 type Round2P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	ZeroSetupR2 *przsSetup.Round2P2P
-	MulR2       *mul_bbot.Round2P2P[P, S]
+	MulR2       *rvole_bbot.Round2P2P[P, S]
 }
 
 func (m *Round2P2P[P, B, S]) Bytes() []byte {
@@ -57,7 +57,7 @@ func (m *Round3Broadcast[P, B, S]) Bytes() []byte {
 }
 
 type Round3P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	MulR3 *mul_bbot.Round3P2P[S]
+	MulR3 *rvole_bbot.Round3P2P[S]
 
 	GammaU P
 	GammaV P

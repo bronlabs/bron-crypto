@@ -1,4 +1,4 @@
-package mul_bbot
+package rvole_bbot
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"

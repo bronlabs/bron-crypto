@@ -1,4 +1,4 @@
-package mul_softspoken_test
+package rvole_softspoken_test
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_softspoken"
+	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 	"github.com/stretchr/testify/require"
 
@@ -29,17 +29,17 @@ func Test_HappyPath(t *testing.T) {
 
 	curve := k256.NewCurve()
 	hashFunc := sha256.New
-	suite, err := mul_softspoken.NewSuite(L, curve, hashFunc)
+	suite, err := rvole_softspoken.NewSuite(L, curve, hashFunc)
 	require.NoError(t, err)
 	tape := hagrid.NewTranscript("test")
 	senderSeeds, receiverSeeds := generateSeeds(t, prng)
 
 	aliceTape := tape.Clone()
-	alice, err := mul_softspoken.NewAlice(sessionID, suite, receiverSeeds, prng, aliceTape)
+	alice, err := rvole_softspoken.NewAlice(sessionID, suite, receiverSeeds, prng, aliceTape)
 	require.NoError(t, err)
 
 	bobTape := tape.Clone()
-	bob, err := mul_softspoken.NewBob(sessionID, suite, senderSeeds, prng, bobTape)
+	bob, err := rvole_softspoken.NewBob(sessionID, suite, senderSeeds, prng, bobTape)
 	require.NoError(t, err)
 
 	r1, b, err := bob.Round1()

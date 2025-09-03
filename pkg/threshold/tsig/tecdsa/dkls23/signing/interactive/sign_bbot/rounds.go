@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_bbot"
+	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/bbot"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
@@ -79,7 +79,7 @@ func (c *Cosigner[P, B, S]) Round2(r1bOut network.RoundMessages[*Round1Broadcast
 	}
 
 	zeroR1 := hashmap.NewComparable[sharing.ID, *przsSetup.Round1Broadcast]()
-	mulR1 := make(map[sharing.ID]*mul_bbot.Round1P2P[P, S])
+	mulR1 := make(map[sharing.ID]*rvole_bbot.Round1P2P[P, S])
 	for id, message := range incomingMessages {
 		c.state.bigRCommitment[id] = message.broadcast.BigRCommitment
 		zeroR1.Put(id, message.broadcast.ZeroSetupR1)
@@ -116,7 +116,7 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 	}
 
 	zeroR2 := hashmap.NewComparable[sharing.ID, *przsSetup.Round2P2P]()
-	mulR2 := make(map[sharing.ID]*mul_bbot.Round2P2P[P, S])
+	mulR2 := make(map[sharing.ID]*rvole_bbot.Round2P2P[P, S])
 	for id, message := range incomingMessages {
 		if err := c.state.ck.Verifier().Verify(c.state.bigRCommitment[id], message.broadcast.BigR.ToCompressed(), message.broadcast.BigRWitness); err != nil {
 			return nil, nil, errs.WrapIdentifiableAbort(err, id, "invalid commitment")

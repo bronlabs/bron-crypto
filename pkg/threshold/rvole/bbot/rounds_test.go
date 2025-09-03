@@ -1,4 +1,4 @@
-package mul_bbot_test
+package rvole_bbot_test
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_bbot"
+	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/bbot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 	"github.com/stretchr/testify/require"
 
@@ -24,15 +24,15 @@ func Test_HappyPath(t *testing.T) {
 	_, err := io.ReadFull(prng, sessionID[:])
 	require.NoError(t, err)
 	tape := hagrid.NewTranscript("test")
-	suite, err := mul_bbot.NewSuite(L, curve)
+	suite, err := rvole_bbot.NewSuite(L, curve)
 	require.NoError(t, err)
 
 	aliceTape := tape.Clone()
-	alice, err := mul_bbot.NewAlice(sessionID, suite, prng, aliceTape)
+	alice, err := rvole_bbot.NewAlice(sessionID, suite, prng, aliceTape)
 	require.NoError(t, err)
 
 	bobTape := tape.Clone()
-	bob, err := mul_bbot.NewBob(sessionID, suite, prng, bobTape)
+	bob, err := rvole_bbot.NewBob(sessionID, suite, prng, bobTape)
 	require.NoError(t, err)
 
 	r1, err := alice.Round1()

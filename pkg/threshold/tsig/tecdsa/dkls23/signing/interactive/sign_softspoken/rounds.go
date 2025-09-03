@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_softspoken"
+	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
@@ -72,7 +72,7 @@ func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast], 
 		return nil, nil, errs.NewFailed("invalid input or round mismatch")
 	}
 
-	mulR1 := make(map[sharing.ID]*mul_softspoken.Round1P2P)
+	mulR1 := make(map[sharing.ID]*rvole_softspoken.Round1P2P)
 	for id, message := range incomingMessages {
 		c.state.bigRCommitment[id] = message.broadcast.bigRCommitment
 		mulR1[id] = message.p2p.mulR1

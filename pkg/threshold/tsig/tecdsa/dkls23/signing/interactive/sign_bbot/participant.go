@@ -13,7 +13,7 @@ import (
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_bbot"
+	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/bbot"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
@@ -40,8 +40,8 @@ type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 type CosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	zeroSetup   *przsSetup.Participant
 	zeroSampler *przs.Sampler[S]
-	aliceMul    map[sharing.ID]*mul_bbot.Alice[P, S]
-	bobMul      map[sharing.ID]*mul_bbot.Bob[P, S]
+	aliceMul    map[sharing.ID]*rvole_bbot.Alice[P, S]
+	bobMul      map[sharing.ID]*rvole_bbot.Bob[P, S]
 
 	round          network.Round
 	ck             *hash_comm.Scheme
@@ -79,23 +79,23 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		return nil, errs.WrapFailed(err, "couldn't initialise zero setup protocol")
 	}
 
-	mulSuite, err := mul_bbot.NewSuite(2, suite.Curve())
+	mulSuite, err := rvole_bbot.NewSuite(2, suite.Curve())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create mul suite")
 	}
-	c.state.aliceMul = make(map[sharing.ID]*mul_bbot.Alice[P, S])
-	c.state.bobMul = make(map[sharing.ID]*mul_bbot.Bob[P, S])
+	c.state.aliceMul = make(map[sharing.ID]*rvole_bbot.Alice[P, S])
+	c.state.bobMul = make(map[sharing.ID]*rvole_bbot.Bob[P, S])
 	for id := range c.otherCosigners() {
 		aliceTape := tape.Clone()
 		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		c.state.aliceMul[id], err = mul_bbot.NewAlice(c.sessionId, mulSuite, prng, aliceTape)
+		c.state.aliceMul[id], err = rvole_bbot.NewAlice(c.sessionId, mulSuite, prng, aliceTape)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "couldn't initialise alice")
 		}
 
 		bobTape := tape.Clone()
 		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())))
-		c.state.bobMul[id], err = mul_bbot.NewBob(c.sessionId, mulSuite, prng, bobTape)
+		c.state.bobMul[id], err = rvole_bbot.NewBob(c.sessionId, mulSuite, prng, bobTape)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "couldn't initialise bob")
 		}

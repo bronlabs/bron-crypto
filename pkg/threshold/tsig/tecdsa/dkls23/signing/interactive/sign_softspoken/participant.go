@@ -19,7 +19,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_softspoken"
+	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
@@ -48,8 +48,8 @@ type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 
 type CosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	zeroSampler *przs.Sampler[S]
-	aliceMul    map[sharing.ID]*mul_softspoken.Alice[P, B, S]
-	bobMul      map[sharing.ID]*mul_softspoken.Bob[P, B, S]
+	aliceMul    map[sharing.ID]*rvole_softspoken.Alice[P, B, S]
+	bobMul      map[sharing.ID]*rvole_softspoken.Bob[P, B, S]
 
 	round          network.Round
 	ck             *hash_comm.Scheme
@@ -90,9 +90,9 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		tape:      tape,
 	}
 
-	c.state.aliceMul = make(map[sharing.ID]*mul_softspoken.Alice[P, B, S])
-	c.state.bobMul = make(map[sharing.ID]*mul_softspoken.Bob[P, B, S])
-	mulSuite, err := mul_softspoken.NewSuite(2, suite.Curve(), sha256.New)
+	c.state.aliceMul = make(map[sharing.ID]*rvole_softspoken.Alice[P, B, S])
+	c.state.bobMul = make(map[sharing.ID]*rvole_softspoken.Bob[P, B, S])
+	mulSuite, err := rvole_softspoken.NewSuite(2, suite.Curve(), sha256.New)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create mul suite")
 	}
@@ -103,7 +103,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		}
 		aliceTape := tape.Clone()
 		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		c.state.aliceMul[id], err = mul_softspoken.NewAlice(c.sessionId, mulSuite, aliceSeed, prng, aliceTape)
+		c.state.aliceMul[id], err = rvole_softspoken.NewAlice(c.sessionId, mulSuite, aliceSeed, prng, aliceTape)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "couldn't initialise Alice")
 		}
@@ -114,7 +114,7 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		}
 		bobTape := tape.Clone()
 		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())))
-		c.state.bobMul[id], err = mul_softspoken.NewBob(c.sessionId, mulSuite, bobSeed, prng, bobTape)
+		c.state.bobMul[id], err = rvole_softspoken.NewBob(c.sessionId, mulSuite, bobSeed, prng, bobTape)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "couldn't initialise Bob")
 		}

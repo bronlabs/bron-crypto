@@ -4,7 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_softspoken"
+	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/softspoken"
 )
 
 type Round1Broadcast struct {
@@ -17,7 +17,7 @@ func (r1b *Round1Broadcast) Bytes() []byte {
 }
 
 type Round1P2P struct {
-	mulR1 *mul_softspoken.Round1P2P
+	mulR1 *rvole_softspoken.Round1P2P
 }
 
 func (r1u *Round1P2P) Bytes() []byte {
@@ -37,7 +37,7 @@ func (r2b *Round2Broadcast[P, B, S]) Bytes() []byte {
 }
 
 type Round2P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	mulR2  *mul_softspoken.Round2P2P[S]
+	mulR2  *rvole_softspoken.Round2P2P[S]
 	gammaU P
 	gammaV P
 	psi    S

@@ -1,4 +1,4 @@
-package mul_softspoken
+package rvole_softspoken
 
 import (
 	"hash"
