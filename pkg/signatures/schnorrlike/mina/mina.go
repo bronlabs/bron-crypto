@@ -186,9 +186,12 @@ func SerializeSignature(signature *Signature) ([]byte, error) {
 	if signature == nil {
 		return nil, errs.NewIsNil("signature is nil")
 	}
-	rx := signature.R.AffineX().Bytes()
+	rx, err := signature.R.AffineX()
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to serialize signature")
+	}
 	s := signature.S.Bytes()
-	out := slices.Concat(rx, s)
+	out := slices.Concat(rx.Bytes(), s)
 	if len(out) != SignatureSize {
 		return nil, errs.NewLength("invalid signature size. got :%d, need :%d", len(out), SignatureSize)
 	}

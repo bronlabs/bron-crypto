@@ -113,7 +113,7 @@ func (o *OperationProfile) Equal(other *OperationProfile) bool {
 
 func (o *OperationProfile) HashCode() base.HashCode {
 	return base.DeriveHashCode(
-		sliceutils.Map[[][]byte](
+		sliceutils.Map(
 			slices.Concat(o.Sorts(), o.Inputs(), []Sort{o.Output()}),
 			func(s Sort) []byte { return []byte(s) },
 		)...,
@@ -125,13 +125,13 @@ func (o *OperationProfile) renamed(old, new Sort) *OperationProfile {
 		return o
 	}
 	return &OperationProfile{
-		sorts: sliceutils.Map[[]Sort](o.sorts, func(s Sort) Sort {
+		sorts: sliceutils.Map(o.sorts, func(s Sort) Sort {
 			if s == old {
 				return new
 			}
 			return s
 		}),
-		inputs: sliceutils.Map[[]Sort](o.inputs, func(s Sort) Sort {
+		inputs: sliceutils.Map(o.inputs, func(s Sort) Sort {
 			if s == old {
 				return new
 			}

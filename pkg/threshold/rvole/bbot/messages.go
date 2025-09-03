@@ -1,24 +1,18 @@
-package mul_bbot
+package rvole_bbot
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
 )
 
-//var (
-//	_ network.Message[types.Protocol] = (*Round1P2P)(nil)
-//	_ network.Message[types.Protocol] = (*Round2P2P)(nil)
-//	_ network.Message[types.Protocol] = (*Round3P2P)(nil)
-//)
-
 type Round1P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] = ecbbot.Round1P2P[GE, SE]
 
 type Round2P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] = ecbbot.Round2P2P[GE, SE]
 
 type Round3P2P[SE algebra.PrimeFieldElement[SE]] struct {
-	ATilde [][]SE
-	Eta    []SE
-	Mu     []byte
+	aTilde [][]SE
+	eta    []SE
+	mu     []byte
 }
 
 //func (m *Round3P2P) Validate(protocol types.Protocol) error {

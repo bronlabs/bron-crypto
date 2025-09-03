@@ -4,12 +4,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 )
 
-type Round1P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] struct {
-	MS GE // mS ∈ Point
+type Round1P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
+	ms G // mS ∈ Point
 }
 
-type Round2P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] struct {
-	Phi [][2][]GE // Φ ∈ [ξ][2][L]Point
+type Round2P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
+	phi [][2][]G // Φ ∈ [ξ][2][L]Point
 }
 
 //func (r1p2p *Round1P2P) Validate(protocol types.Protocol) error {
@@ -57,29 +57,3 @@ type Round2P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElemen
 //	}
 //	return nil
 //}
-
-type ReceiverOutput[SE algebra.PrimeFieldElement[SE]] struct {
-	Choices []byte
-	R       [][]SE
-}
-
-func NewReceiverOutput[SE algebra.PrimeFieldElement[SE]](chi, l int) *ReceiverOutput[SE] {
-	r := make([][]SE, chi)
-	for i := range r {
-		r[i] = make([]SE, l)
-	}
-	return &ReceiverOutput[SE]{R: r}
-}
-
-type SenderOutput[SE algebra.PrimeFieldElement[SE]] struct {
-	S [][2][]SE
-}
-
-func NewSenderOutput[SE algebra.PrimeFieldElement[SE]](chi, l int) *SenderOutput[SE] {
-	s := make([][2][]SE, chi)
-	for i := range s {
-		s[i][0] = make([]SE, l)
-		s[i][1] = make([]SE, l)
-	}
-	return &SenderOutput[SE]{S: s}
-}

@@ -1,6 +1,7 @@
 package bls12381
 
 import (
+	"fmt"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -243,6 +244,15 @@ func (c *G2) FromUncompressed(input []byte) (*PointG2, error) {
 	return pp, nil
 }
 
+func (c *G2) FromAffine(x, y *BaseFieldElementG2) (*PointG2, error) {
+	var p PointG2
+	ok := p.V.SetAffine(&x.V, &y.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x/y")
+	}
+	return &p, nil
+}
+
 func (c *G2) Hash(bytes []byte) (*PointG2, error) {
 	return c.HashWithDst(base.Hash2CurveAppTag+Hash2CurveSuiteG2, bytes)
 }
@@ -394,9 +404,9 @@ func (p *PointG2) ToUncompreseed() []byte {
 	return out
 }
 
-func (p *PointG2) AffineX() *BaseFieldElementG2 {
+func (p *PointG2) AffineX() (*BaseFieldElementG2, error) {
 	if p.IsZero() {
-		return NewG2BaseField().One()
+		return nil, errs.NewFailed("point is at infinity")
 	}
 
 	var x, y BaseFieldElementG2
@@ -404,12 +414,12 @@ func (p *PointG2) AffineX() *BaseFieldElementG2 {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &x
+	return &x, nil
 }
 
-func (p *PointG2) AffineY() *BaseFieldElementG2 {
+func (p *PointG2) AffineY() (*BaseFieldElementG2, error) {
 	if p.IsZero() {
-		return NewG2BaseField().Zero()
+		return nil, errs.NewFailed("point is at infinity")
 	}
 
 	var x, y BaseFieldElementG2
@@ -417,7 +427,7 @@ func (p *PointG2) AffineY() *BaseFieldElementG2 {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &y
+	return &y, nil
 }
 
 func (p *PointG2) ScalarOp(sc *Scalar) *PointG2 {
@@ -452,5 +462,9 @@ func (p *PointG2) Bytes() []byte {
 }
 
 func (p *PointG2) String() string {
-	return traits.StringifyPoint(p)
+	if p.IsZero() {
+		return "(0x + 0, 0x + 1, 0x + 0)"
+	} else {
+		return fmt.Sprintf("(%sx + %s, %sx + %s, %sx + %s)", p.V.X.U1.String(), p.V.X.U0.String(), p.V.Y.U1.String(), p.V.Y.U0.String(), p.V.Z.U1.String(), p.V.Z.U0.String())
+	}
 }

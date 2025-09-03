@@ -83,6 +83,7 @@ type UintLike[E any] interface {
 type PrimeField[E any] interface {
 	Field[E]
 	ZnLike[E]
+	BitLen() int
 	FromWideBytes([]byte) (E, error)
 	// WideElementSize returns the **maximum** number of bytes used to map uniformly to an element.
 	WideElementSize() int

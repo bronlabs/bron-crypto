@@ -21,7 +21,6 @@ const (
 )
 
 var (
-	// TODO(PrimeField)
 	_ algebra.PrimeField[*BaseFieldElement]        = (*BaseField)(nil)
 	_ algebra.PrimeFieldElement[*BaseFieldElement] = (*BaseFieldElement)(nil)
 
@@ -90,6 +89,10 @@ func (f *BaseField) ElementSize() int {
 
 func (f *BaseField) WideElementSize() int {
 	return int(edwards25519Impl.FpWideBytes)
+}
+
+func (f *BaseField) BitLen() int {
+	return int(edwards25519Impl.FpBits)
 }
 
 type BaseFieldElement struct {

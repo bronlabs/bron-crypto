@@ -94,6 +94,10 @@ func (*ScalarField) Hash(input []byte) (*Scalar, error) {
 	return &s, nil
 }
 
+func (*ScalarField) BitLen() int {
+	return bls12381Impl.FqBits
+}
+
 type Scalar struct {
 	traits.PrimeFieldElementTrait[*bls12381Impl.Fq, bls12381Impl.Fq, *Scalar, Scalar]
 }

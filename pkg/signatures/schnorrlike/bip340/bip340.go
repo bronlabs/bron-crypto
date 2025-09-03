@@ -259,7 +259,6 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 		return errs.NewFailed("incompatible signature")
 	}
 
-
 	// 5. Let R = s⋅G - e⋅P.
 	bigR := k256.NewCurve().ScalarBaseMul(signature.S).Sub(bigP.ScalarMul(e))
 
@@ -269,12 +268,24 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 	}
 
 	// 7. Fail if not has_even_y(R).
-	if bigR.AffineY().IsOdd() {
+	ry, err := bigR.AffineY()
+	if err != nil {
+		return errs.WrapFailed(err, "cannot compute y coordinate")
+	}
+	if ry.IsOdd() {
 		return errs.NewVerification("signature is invalid")
 	}
 
 	// 8. Fail if x(R) ≠ r.
-	if !signature.R.AffineX().Equal(bigR.AffineX()) {
+	sigRx, err := signature.R.AffineX()
+	if err != nil {
+		return errs.WrapFailed(err, "cannot compute x coordinate")
+	}
+	rx, err := bigR.AffineX()
+	if err != nil {
+		return errs.WrapFailed(err, "cannot compute x coordinate")
+	}
+	if !sigRx.Equal(rx) {
 		return errs.NewVerification("signature is invalid")
 	}
 	return nil
@@ -348,7 +359,15 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 }
 
 func LiftX(p *k256.Point) *k256.Point {
-	if p.AffineY().IsOdd() {
+	if p.IsZero() {
+		return p
+	}
+
+	py, err := p.AffineY()
+	if err != nil {
+		panic("this should never happen")
+	}
+	if py.IsOdd() {
 		return p.Neg()
 	}
 	return p

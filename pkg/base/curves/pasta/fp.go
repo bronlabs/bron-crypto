@@ -106,6 +106,10 @@ func (*FpField) Hash(input []byte) (*FpFieldElement, error) {
 	return &s, nil
 }
 
+func (*FpField) BitLen() int {
+	return pastaImpl.FpBits
+}
+
 type FpFieldElement struct {
 	traits.PrimeFieldElementTrait[*pastaImpl.Fp, pastaImpl.Fp, *FpFieldElement, FpFieldElement]
 }

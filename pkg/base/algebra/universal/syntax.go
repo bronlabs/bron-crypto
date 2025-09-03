@@ -153,7 +153,7 @@ func (t *Term) HashCode() base.HashCode {
 		return t.Var.HashCode()
 	}
 	return t.Op.HashCode().Combine(
-		sliceutils.Map[[]base.HashCode](t.Args, func(arg *Term) base.HashCode {
+		sliceutils.Map(t.Args, func(arg *Term) base.HashCode {
 			return arg.HashCode()
 		})...,
 	)

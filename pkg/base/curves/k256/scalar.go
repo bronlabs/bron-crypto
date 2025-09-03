@@ -95,6 +95,10 @@ func (f *ScalarField) WideElementSize() int {
 	return k256Impl.FqWideBytes
 }
 
+func (f *ScalarField) BitLen() int {
+	return k256Impl.FqBits
+}
+
 type Scalar struct {
 	traits.PrimeFieldElementTrait[*k256Impl.Fq, k256Impl.Fq, *Scalar, Scalar]
 }

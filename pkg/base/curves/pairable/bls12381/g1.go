@@ -1,6 +1,7 @@
 package bls12381
 
 import (
+	"fmt"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -187,6 +188,23 @@ func (c *G1) FromCompressed(input []byte) (*PointG1, error) {
 	return pp, nil
 }
 
+func (c *G1) FromAffineX(x *BaseFieldElementG1, b bool) (*PointG1, error) {
+	var p PointG1
+	ok := p.V.SetFromAffineX(&x.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x")
+	}
+	y, err := p.AffineY()
+	if err != nil {
+		panic(err) // should never happen
+	}
+	if y.IsOdd() != b {
+		return p.Neg(), nil
+	} else {
+		return &p, nil
+	}
+}
+
 func (c *G1) FromBytes(input []byte) (*PointG1, error) {
 	return c.FromCompressed(input)
 }
@@ -228,6 +246,15 @@ func (c *G1) FromUncompressed(input []byte) (*PointG1, error) {
 	}
 
 	return pp, nil
+}
+
+func (c *G1) FromAffine(x, y *BaseFieldElementG1) (*PointG1, error) {
+	var p PointG1
+	ok := p.V.SetAffine(&x.V, &y.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x/y")
+	}
+	return &p, nil
 }
 
 func (c *G1) Hash(bytes []byte) (*PointG1, error) {
@@ -377,9 +404,9 @@ func (p *PointG1) ToUncompreseed() []byte {
 	return result
 }
 
-func (p *PointG1) AffineX() *BaseFieldElementG1 {
+func (p *PointG1) AffineX() (*BaseFieldElementG1, error) {
 	if p.IsZero() {
-		return NewG1BaseField().One()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y BaseFieldElementG1
@@ -387,12 +414,12 @@ func (p *PointG1) AffineX() *BaseFieldElementG1 {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &x
+	return &x, nil
 }
 
-func (p *PointG1) AffineY() *BaseFieldElementG1 {
+func (p *PointG1) AffineY() (*BaseFieldElementG1, error) {
 	if p.IsZero() {
-		return NewG1BaseField().Zero()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y BaseFieldElementG1
@@ -400,7 +427,7 @@ func (p *PointG1) AffineY() *BaseFieldElementG1 {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &y
+	return &y, nil
 }
 
 func (p *PointG1) ScalarOp(sc *Scalar) *PointG1 {
@@ -428,5 +455,9 @@ func (p *PointG1) Bytes() []byte {
 }
 
 func (p *PointG1) String() string {
-	return traits.StringifyPoint(p)
+	if p.IsZero() {
+		return "(0, 1, 0)"
+	} else {
+		return fmt.Sprintf("(%s, %s, %s)", p.V.X.String(), p.V.Y.String(), p.V.Z.String())
+	}
 }

@@ -150,6 +150,20 @@ func (c *PrimeSubGroup) FromUncompressed(inBytes []byte) (*PrimeSubGroupPoint, e
 	return result, nil
 }
 
+func (c *PrimeSubGroup) FromAffine(x, y *BaseFieldElement) (*PrimeSubGroupPoint, error) {
+	var p Point
+	ok := p.V.SetAffine(&x.V, &y.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x/y")
+	}
+	if !p.IsTorsionFree() {
+		return nil, errs.NewFailed("point is not in the prime subgroup")
+	}
+	var subgroupP PrimeSubGroupPoint
+	subgroupP.V.Set(&p.V)
+	return &subgroupP, nil
+}
+
 func (c *PrimeSubGroup) Hash(bytes []byte) (*PrimeSubGroupPoint, error) {
 	return c.HashWithDst(base.Hash2CurveAppTag+Hash2CurveSuite, bytes)
 }
@@ -232,21 +246,21 @@ func (p *PrimeSubGroupPoint) ToUncompressed() []byte {
 	return slices.Concat(y.V.Bytes(), x.V.Bytes())
 }
 
-func (p *PrimeSubGroupPoint) AffineX() *BaseFieldElement {
+func (p *PrimeSubGroupPoint) AffineX() (*BaseFieldElement, error) {
 	if p.IsZero() {
-		return NewBaseField().Zero()
+		return nil, errs.NewFailed("point is identity")
 	}
 	var x, y BaseFieldElement
 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &x
+	return &x, nil
 }
 
-func (p *PrimeSubGroupPoint) AffineY() *BaseFieldElement {
+func (p *PrimeSubGroupPoint) AffineY() (*BaseFieldElement, error) {
 	if p.IsZero() {
-		return NewBaseField().One()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y BaseFieldElement
@@ -254,7 +268,7 @@ func (p *PrimeSubGroupPoint) AffineY() *BaseFieldElement {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &y
+	return &y, nil
 }
 
 func (p *PrimeSubGroupPoint) ScalarOp(sc *Scalar) *PrimeSubGroupPoint {
@@ -280,5 +294,9 @@ func (p *PrimeSubGroupPoint) Bytes() []byte {
 }
 
 func (p *PrimeSubGroupPoint) String() string {
-	return traits.StringifyPoint(p)
+	if p.IsZero() {
+		return "(0, 1, 0, 1)"
+	} else {
+		return fmt.Sprintf("(%s, %s, %s, %s)", p.V.X.String(), p.V.Y.String(), p.V.T.String(), p.V.Z.String())
+	}
 }

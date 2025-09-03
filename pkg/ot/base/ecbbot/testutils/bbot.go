@@ -13,17 +13,17 @@ import (
 )
 
 // RunBBOT runs the full batched base OT protocol.
-func RunBBOT[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]](chi, l int, group algebra.PrimeGroup[GE, SE], sessionId network.SID, tape transcripts.Transcript, prng io.Reader) (*ecbbot.SenderOutput[SE], *ecbbot.ReceiverOutput[SE], error) {
-	//protocol, err := types.NewProtocol(curve, hashset.NewHashableHashSet(senderAuthKey.(types.IdentityKey), receiverAuthKey.(types.IdentityKey)))
-	//if err != nil {
-	//	return nil, nil, errs.WrapFailed(err, "could not construct ot protocol config")
-	//}
-	// Create participants
-	sender, err := ecbbot.NewSender(sessionId, group, chi, l, tape.Clone(), prng)
+func RunBBOT[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]](xi, l int, group algebra.PrimeGroup[GE, SE], sessionId network.SID, tape transcripts.Transcript, prng io.Reader) (*ecbbot.SenderOutput[SE], *ecbbot.ReceiverOutput[SE], error) {
+	suite, err := ecbbot.NewSuite(xi, l, group)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "constructing OT suite in run BatchedBaseOT")
+	}
+
+	sender, err := ecbbot.NewSender(sessionId, suite, tape.Clone(), prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "constructing OT sender in run BatchedBaseOT")
 	}
-	receiver, err := ecbbot.NewReceiver(sessionId, group, chi, l, tape.Clone(), prng)
+	receiver, err := ecbbot.NewReceiver(sessionId, suite, tape.Clone(), prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "constructing OT receiver in run BatchedBaseOT")
 	}
@@ -36,7 +36,7 @@ func RunBBOT[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[
 	}
 
 	// R2
-	receiverInput := make([]byte, chi/8)
+	receiverInput := make([]byte, xi/8)
 	if _, err := io.ReadFull(prng, receiverInput); err != nil {
 		return nil, nil, errs.WrapFailed(err, "reading receiver input")
 	}
@@ -53,30 +53,30 @@ func RunBBOT[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[
 	return senderOutput, receiverOutput, nil
 }
 
-func ValidateOT[SE algebra.PrimeFieldElement[SE]](
+func ValidateOT[S algebra.PrimeFieldElement[S]](
 	tb testing.TB,
-	chi int, // number of OTe messages in the batch
+	xi int, // number of OTe messages in the batch
 	l int, // number of OTe elements per message
-	senderOutput *ecbbot.SenderOutput[SE],
-	receiverOutput *ecbbot.ReceiverOutput[SE],
+	senderOutput *ecbbot.SenderOutput[S],
+	receiverOutput *ecbbot.ReceiverOutput[S],
 ) {
 	tb.Helper()
 
 	// Check length matching
-	if len(receiverOutput.Choices) != chi/8 || len(receiverOutput.R) != chi || len(senderOutput.S) != chi {
+	if len(receiverOutput.Choices) != xi/8 || len(receiverOutput.Messages) != xi || len(senderOutput.Messages) != xi {
 		require.FailNow(tb, "length mismatch")
 	}
 
 	// Check baseOT results
-	for chii := 0; chii < chi; chii++ {
-		if len(receiverOutput.R[chii]) != l || len(senderOutput.S[chii][0]) != l || len(senderOutput.S[chii][1]) != l {
+	for xiI := 0; xiI < xi; xiI++ {
+		if len(receiverOutput.Messages[xiI]) != l || len(senderOutput.Messages[xiI][0]) != l || len(senderOutput.Messages[xiI][1]) != l {
 			require.FailNow(tb, "length mismatch")
 		}
-		choice := (receiverOutput.Choices[chii/8] >> (chii % 8)) & 0b1
+		choice := (receiverOutput.Choices[xiI/8] >> (xiI % 8)) & 0b1
 		for li := 0; li < l; li++ {
-			received := receiverOutput.R[chii][li]
-			sentChosen := senderOutput.S[chii][choice][li]
-			sentNotChosen := senderOutput.S[chii][1-choice][li]
+			received := receiverOutput.Messages[xiI][li]
+			sentChosen := senderOutput.Messages[xiI][choice][li]
+			sentNotChosen := senderOutput.Messages[xiI][1-choice][li]
 			require.True(tb, sentChosen.Equal(received))
 			require.False(tb, sentNotChosen.Equal(received))
 		}

@@ -46,6 +46,13 @@ func Maybe2[O, T1, T2 any](f func(T1, T2) O) func(T1, T2) (O, error) {
 	}
 }
 
+func Must[T any](t T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
+
 // BoolTo casts a bool to any integer type.
 func BoolTo[T constraints.Integer](b bool) T {
 	if b {
