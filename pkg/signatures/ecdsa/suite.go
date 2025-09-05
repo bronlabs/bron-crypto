@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 type Suite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -14,22 +15,20 @@ type Suite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	hashFunc    func() hash.Hash
 }
 
-func NewSuite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve Curve[P, B, S], hashFunc func() hash.Hash) *Suite[P, B, S] {
-	scalarField, ok := curve.ScalarStructure().(algebra.PrimeField[S])
-	if !ok {
-		panic("curve scalar field is not prime")
+func NewSuite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve Curve[P, B, S], hashFunc func() hash.Hash) (*Suite[P, B, S], error) {
+	if hashFunc == nil {
+		return nil, errs.NewIsNil("hash function")
 	}
-	baseField, ok := curve.BaseStructure().(algebra.PrimeField[B])
-	if !ok {
-		panic("curve base field is not prime")
-	}
+	scalarField := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
+	baseField := algebra.StructureMustBeAs[algebra.PrimeField[B]](curve.BaseStructure())
 
-	return &Suite[P, B, S]{
+	s := &Suite[P, B, S]{
 		curve,
 		baseField,
 		scalarField,
 		hashFunc,
 	}
+	return s, nil
 }
 
 func (s *Suite[P, B, S]) Curve() curves.Curve[P, B, S] {

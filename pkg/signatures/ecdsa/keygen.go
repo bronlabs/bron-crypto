@@ -5,13 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/signatures"
-)
-
-var (
-	_ signatures.KeyGenerator[*PrivateKey[*k256.Point, *k256.BaseFieldElement, *k256.Scalar], *PublicKey[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]] = (*KeyGenerator[*k256.Point, *k256.BaseFieldElement, *k256.Scalar])(nil)
 )
 
 type KeyGenerator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {

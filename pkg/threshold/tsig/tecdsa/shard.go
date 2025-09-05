@@ -1,6 +1,8 @@
 package tecdsa
 
 import (
+	"bytes"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
@@ -49,13 +51,49 @@ func (s *Shard[P, B, S]) Equal(rhs *Shard[P, B, S]) bool {
 		return s == rhs
 	}
 
-	// TODO implement me
-	panic("implement me")
+	if s.zeroSeeds.Size() != rhs.zeroSeeds.Size() {
+		return false
+	}
+	for id, l := range s.zeroSeeds.Iter() {
+		r, ok := rhs.zeroSeeds.Get(id)
+		if !ok {
+			return false
+		}
+		if l != r {
+			return false
+		}
+	}
+	if s.otSenderSeeds.Size() != rhs.otSenderSeeds.Size() {
+		return false
+	}
+	for id, l := range s.otSenderSeeds.Iter() {
+		r, ok := rhs.otSenderSeeds.Get(id)
+		if !ok {
+			return false
+		}
+		if l.InferredXi() != r.InferredXi() {
+			return false
+		}
+		if r.InferredL() != r.InferredL() {
+			return false
+		}
+		for xi := range l.InferredXi() {
+			for ell := range l.InferredL() {
+				if bytes.Equal(l.Messages[xi][0][ell], r.Messages[xi][0][ell]) == false {
+					return false
+				}
+				if bytes.Equal(l.Messages[xi][1][ell], r.Messages[xi][1][ell]) == false {
+					return false
+				}
+			}
+		}
+	}
+
+	return s.pk.Equal(rhs.pk) && s.ac.Equal(rhs.ac) && s.share.Equal(rhs.share)
 }
 
 func (s *Shard[P, B, S]) HashCode() base.HashCode {
-	//TODO implement me
-	panic("implement me")
+	return s.share.HashCode()
 }
 
 func (s *Shard[P, B, S]) ZeroSeeds() przs.Seeds {
