@@ -1,6 +1,7 @@
 package edwards25519
 
 import (
+	"encoding"
 	"fmt"
 	"hash/fnv"
 	"slices"
@@ -25,6 +26,8 @@ var (
 
 	_ curves.Curve[*PrimeSubGroupPoint, *BaseFieldElement, *Scalar] = (*PrimeSubGroup)(nil)
 	_ curves.Point[*PrimeSubGroupPoint, *BaseFieldElement, *Scalar] = (*PrimeSubGroupPoint)(nil)
+	_ encoding.BinaryMarshaler                                      = (*PrimeSubGroupPoint)(nil)
+	_ encoding.BinaryUnmarshaler                                    = (*PrimeSubGroupPoint)(nil)
 
 	primeSubGroupInstance      *PrimeSubGroup
 	primeSubGroupInitOnce      sync.Once

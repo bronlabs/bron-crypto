@@ -1,6 +1,7 @@
 package bls12381
 
 import (
+	"encoding"
 	"fmt"
 	"hash/fnv"
 	"slices"
@@ -29,6 +30,8 @@ var (
 	_ curves.Curve[*PointG2, *BaseFieldElementG2, *Scalar]                                                           = (*G2)(nil)
 	_ curves.PairingFriendlyCurve[*PointG2, *BaseFieldElementG2, *PointG1, *BaseFieldElementG1, *GtElement, *Scalar] = (*G2)(nil)
 	_ curves.Point[*PointG2, *BaseFieldElementG2, *Scalar]                                                           = (*PointG2)(nil)
+	_ encoding.BinaryMarshaler                                                                                       = (*PointG2)(nil)
+	_ encoding.BinaryUnmarshaler                                                                                     = (*PointG2)(nil)
 
 	curveInstanceG2 *G2
 	curveInitOnceG2 sync.Once

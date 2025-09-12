@@ -147,9 +147,9 @@ func Test_BatchSchnorr_PartiallyCorrectWitness(t *testing.T) {
 
 func testBatchHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra.PrimeFieldElement[S]](
 	t *testing.T, curve interface {
-		curves.Curve[P, F, S]
-		algebra.FiniteStructure[P]
-	}, batchSize uint,
+	curves.Curve[P, F, S]
+	algebra.FiniteStructure[P]
+}, batchSize uint,
 ) {
 	t.Helper()
 
@@ -180,8 +180,7 @@ func testBatchHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S al
 
 	witness := &batch_schnorr.Witness[S]{W: witnessPoly}
 	statement := &batch_schnorr.Statement[P, S]{
-		X:   statementPoly,
-		Phi: batch_schnorr.Phi(base),
+		X: statementPoly,
 	}
 
 	// Round 1: Prover commitment
@@ -244,8 +243,7 @@ func testBatchInvalidStatement[P curves.Point[P, F, S], F algebra.FieldElement[F
 
 	witness := &batch_schnorr.Witness[S]{W: witnessPoly}
 	statement := &batch_schnorr.Statement[P, S]{
-		X:   statementPoly,
-		Phi: batch_schnorr.Phi(base),
+		X: statementPoly,
 	}
 
 	// Round 1: Prover commitment
@@ -289,8 +287,7 @@ func testBatchSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S al
 	require.NoError(t, err)
 
 	statement := &batch_schnorr.Statement[P, S]{
-		X:   statementPoly,
-		Phi: batch_schnorr.Phi(base),
+		X: statementPoly,
 	}
 
 	// Simulate
@@ -347,8 +344,7 @@ func testBatchWithZeroCoefficients[P curves.Point[P, F, S], F algebra.FieldEleme
 
 	witness := &batch_schnorr.Witness[S]{W: witnessPoly}
 	statement := &batch_schnorr.Statement[P, S]{
-		X:   statementPoly,
-		Phi: batch_schnorr.Phi(base),
+		X: statementPoly,
 	}
 
 	// Complete protocol
@@ -410,8 +406,7 @@ func testBatchPartiallyCorrectWitness[P curves.Point[P, F, S], F algebra.FieldEl
 
 	witness := &batch_schnorr.Witness[S]{W: witnessPoly}
 	statement := &batch_schnorr.Statement[P, S]{
-		X:   incorrectStatementPoly,
-		Phi: batch_schnorr.Phi(base),
+		X: incorrectStatementPoly,
 	}
 
 	// Complete protocol
@@ -475,8 +470,7 @@ func Test_BatchSchnorr_ConsistencyAcrossBatchSizes(t *testing.T) {
 
 	batchWitness1 := &batch_schnorr.Witness[*p256.Scalar]{W: witnessPoly1}
 	batchStatement1 := &batch_schnorr.Statement[*p256.Point, *p256.Scalar]{
-		X:   statementPoly1,
-		Phi: batch_schnorr.Phi(base),
+		X: statementPoly1,
 	}
 
 	// Generate proof

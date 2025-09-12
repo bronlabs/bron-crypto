@@ -1,6 +1,7 @@
 package bls12381
 
 import (
+	"encoding"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -25,6 +26,8 @@ const (
 var (
 	_ algebra.PrimeField[*Scalar]        = (*ScalarField)(nil)
 	_ algebra.PrimeFieldElement[*Scalar] = (*Scalar)(nil)
+	_ encoding.BinaryMarshaler           = (*Scalar)(nil)
+	_ encoding.BinaryUnmarshaler         = (*Scalar)(nil)
 
 	scalarFieldInitOnce      sync.Once
 	scalarFieldInstance      *ScalarField

@@ -2,6 +2,7 @@ package pasta
 
 import (
 	"crypto/elliptic"
+	"encoding"
 	"fmt"
 	"hash/fnv"
 	"slices"
@@ -38,6 +39,8 @@ var (
 
 	_ curves.Curve[*VestaPoint, *VestaBaseFieldElement, *VestaScalar] = (*VestaCurve)(nil)
 	_ curves.Point[*VestaPoint, *VestaBaseFieldElement, *VestaScalar] = (*VestaPoint)(nil)
+	_ encoding.BinaryMarshaler                                        = (*VestaPoint)(nil)
+	_ encoding.BinaryUnmarshaler                                      = (*VestaPoint)(nil)
 )
 
 type VestaCurve struct {
@@ -327,6 +330,19 @@ func (p *VestaPoint) ScalarMul(actor *VestaScalar) *VestaPoint {
 
 func (p *VestaPoint) IsTorsionFree() bool {
 	return true
+}
+
+func (p *VestaPoint) MarshalBinary() ([]byte, error) {
+	return p.ToCompressed(), nil
+}
+
+func (p *VestaPoint) UnmarshalBinary(data []byte) error {
+	pp, err := NewVestaCurve().FromCompressed(data)
+	if err != nil {
+		return errs.WrapSerialisation(err, "cannot deserialize point")
+	}
+	p.V.Set(&pp.V)
+	return nil
 }
 
 func (p *VestaPoint) String() string {

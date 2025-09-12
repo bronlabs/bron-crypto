@@ -33,8 +33,7 @@ func (s *Sender[P, B, S]) Round1() (*Round1P2P[P, B, S], error) {
 	}
 	// TODO: would be nice to have dlogschnorr.NewStatement(G, P)
 	dlogStatement := &dlogschnorr.Statement[P, S]{
-		X:   s.state.bigB,
-		Phi: dlogschnorr.Phi(s.suite.Curve().Generator()),
+		X: s.state.bigB,
 	}
 	// TODO: would be nice to have dlogschnorr.NewWitness(s)
 	dlogWitness := &dlogschnorr.Witness[S]{
@@ -51,8 +50,8 @@ func (s *Sender[P, B, S]) Round1() (*Round1P2P[P, B, S], error) {
 	// TODO: a lot of lines (~24) just to do PoK :(
 
 	r1 := &Round1P2P[P, B, S]{
-		bigB:  s.state.bigB,
-		proof: dlogProof,
+		BigB:  s.state.bigB,
+		Proof: dlogProof,
 	}
 	s.round += 2
 	return r1, nil
@@ -80,14 +79,13 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 	}
 	// TODO: would be nice to have dlogschnorr.NewStatement(G, P)
 	dlogStatement := &dlogschnorr.Statement[P, S]{
-		X:   r1.bigB,
-		Phi: dlogschnorr.Phi(r.suite.Curve().Generator()),
+		X: r1.BigB,
 	}
 	dlogVerifier, err := dlogProtocolCompiler.NewVerifier(r.sessionId, r.tape)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create dlog verifier")
 	}
-	err = dlogVerifier.Verify(dlogStatement, r1.proof)
+	err = dlogVerifier.Verify(dlogStatement, r1.Proof)
 	if err != nil {
 		return nil, nil, errs.WrapVerification(err, "verification failed")
 	}
@@ -95,7 +93,7 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 	r.state.omegaRaw = make([]uint64, r.suite.Xi()*r.suite.L())
 	r.state.omega = make([]S, r.suite.Xi()*r.suite.L())
 	r.state.rhoOmega = make([][]byte, r.suite.Xi()*r.suite.L())
-	r.state.bigB = r1.bigB
+	r.state.bigB = r1.BigB
 	r.state.bigA = make([]P, r.suite.Xi()*r.suite.L())
 	receiverOutput := &ReceiverOutput{
 		ot.ReceiverOutput[[]byte]{
@@ -126,7 +124,7 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 	}
 
 	r2 := &Round2P2P[P, B, S]{
-		bigA: r.state.bigA,
+		BigA: r.state.bigA,
 	}
 	r.round += 2
 	return r2, receiverOutput, nil
@@ -157,7 +155,7 @@ func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P, *SenderOut
 		senderOutput.Messages[i][1] = make([][]byte, s.suite.L())
 		for j := range s.suite.L() {
 			idx := i*s.suite.L() + j
-			bigA := r2.bigA[idx]
+			bigA := r2.BigA[idx]
 			if bigA.IsOpIdentity() {
 				return nil, nil, errs.NewValidation("A is identity")
 			}
@@ -197,7 +195,7 @@ func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P, *SenderOut
 	}
 
 	r3 := &Round3P2P{
-		xi: xi,
+		Xi: xi,
 	}
 	s.round += 2
 	return r3, senderOutput, nil
@@ -212,13 +210,13 @@ func (r *Receiver[P, B, S]) Round4(r3 *Round3P2P) (*Round4P2P, error) {
 		return nil, errs.NewValidation("invalid message")
 	}
 
-	r.state.xi = r3.xi
+	r.state.xi = r3.Xi
 	rhoPrime := make([][]byte, r.suite.Xi()*r.suite.L())
 	r.state.rhoOmegaDigest = make([][]byte, r.suite.Xi()*r.suite.L())
 	for i := range r.suite.Xi() {
 		for j := range r.suite.L() {
 			idx := i*r.suite.L() + j
-			if len(r3.xi[idx]) != r.suite.hashFunc().Size() {
+			if len(r3.Xi[idx]) != r.suite.hashFunc().Size() {
 				return nil, errs.NewValidation("invalid message")
 			}
 
@@ -230,13 +228,13 @@ func (r *Receiver[P, B, S]) Round4(r3 *Round3P2P) (*Round4P2P, error) {
 			if err != nil {
 				return nil, errs.WrapHashing(err, "cannot hash rho_omega digest")
 			}
-			xi := ct.SliceSelect(ct.Choice(r.state.omegaRaw[idx]), make([]byte, len(r3.xi[idx])), r3.xi[idx])
+			xi := ct.SliceSelect(ct.Choice(r.state.omegaRaw[idx]), make([]byte, len(r3.Xi[idx])), r3.Xi[idx])
 			subtle.XORBytes(rhoPrime[idx], rhoPrime[idx], xi)
 		}
 	}
 
 	r4 := &Round4P2P{
-		rhoPrime: rhoPrime,
+		RhoPrime: rhoPrime,
 	}
 	r.round += 2
 	return r4, nil
@@ -253,19 +251,19 @@ func (s *Sender[P, B, S]) Round5(r4 *Round4P2P) (*Round5P2P, error) {
 	for i := range s.suite.Xi() {
 		for j := range s.suite.L() {
 			idx := i*s.suite.L() + j
-			if len(r4.rhoPrime[idx]) != s.suite.hashFunc().Size() {
+			if len(r4.RhoPrime[idx]) != s.suite.hashFunc().Size() {
 				return nil, errs.NewValidation("invalid message")
 			}
 
-			if subtle.ConstantTimeCompare(r4.rhoPrime[idx], s.state.rho0DigestDigest[idx]) != 1 {
+			if subtle.ConstantTimeCompare(r4.RhoPrime[idx], s.state.rho0DigestDigest[idx]) != 1 {
 				return nil, errs.NewTotalAbort("R", "verification failed")
 			}
 		}
 	}
 
 	r5 := &Round5P2P{
-		rho0Digest: s.state.rho0Digest,
-		rho1Digest: s.state.rho1Digest,
+		Rho0Digest: s.state.rho0Digest,
+		Rho1Digest: s.state.rho1Digest,
 	}
 	s.round += 2
 	return r5, nil
@@ -282,8 +280,8 @@ func (r *Receiver[P, B, S]) Round6(r5 *Round5P2P) error {
 	for i := range r.suite.Xi() {
 		for j := range r.suite.L() {
 			idx := i*r.suite.L() + j
-			rho0Digest := r5.rho0Digest[idx]
-			rho1Digest := r5.rho1Digest[idx]
+			rho0Digest := r5.Rho0Digest[idx]
+			rho1Digest := r5.Rho1Digest[idx]
 			if len(rho0Digest) != r.suite.hashFunc().Size() || len(rho1Digest) != r.suite.hashFunc().Size() {
 				return errs.NewValidation("invalid message")
 			}

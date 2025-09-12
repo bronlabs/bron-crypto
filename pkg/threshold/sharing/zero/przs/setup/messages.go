@@ -1,14 +1,13 @@
 package przsSetup
 
 import (
-	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 )
 
 type Round1Broadcast struct {
-	commitments ds.Map[sharing.ID, hash_comm.Commitment]
+	Commitments map[sharing.ID]hash_comm.Commitment `cbor:"1"`
 }
 
 func (m *Round1Broadcast) Bytes() []byte {
@@ -16,8 +15,8 @@ func (m *Round1Broadcast) Bytes() []byte {
 }
 
 type Round2P2P struct {
-	seedContribution [przs.SeedLength]byte
-	witness          hash_comm.Witness
+	SeedContribution [przs.SeedLength]byte `cbor:"1"`
+	Witness          hash_comm.Witness     `cbor:"2"`
 }
 
 func (m *Round2P2P) Bytes() []byte {

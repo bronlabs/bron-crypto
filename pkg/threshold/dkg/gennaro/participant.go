@@ -116,11 +116,7 @@ func NewParticipant[E GroupElement[E, S], S Scalar[S]](
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create pedersen VSS scheme")
 	}
-	sf, ok := group.ScalarStructure().(ScalarField[S])
-	if !ok {
-		return nil, errs.NewType("group scalar structure is not a scalar field")
-	}
-	feldmanVSS, err := feldman.NewScheme(sf, key.G(), ac.Threshold(), ac.Shareholders())
+	feldmanVSS, err := feldman.NewScheme(key.G(), ac.Threshold(), ac.Shareholders())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create feldman VSS scheme")
 	}

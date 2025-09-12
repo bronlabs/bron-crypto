@@ -1,10 +1,13 @@
 package utils
 
 import (
+	"bytes"
+	"encoding/gob"
 	"math/bits"
 	"reflect"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"golang.org/x/exp/constraints"
 )
 
@@ -90,4 +93,24 @@ func LeadingZeroBytes(b []byte) int {
 		i++
 	}
 	return i
+}
+
+func GobEncode[T any](v T) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(v)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "cannot encode value")
+	}
+	return buf.Bytes(), nil
+}
+
+func GobDecode[T any](data []byte) (T, error) {
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	var v T
+	err := dec.Decode(&v)
+	if err != nil {
+		return v, errs.WrapSerialisation(err, "cannot decode value")
+	}
+	return v, nil
 }

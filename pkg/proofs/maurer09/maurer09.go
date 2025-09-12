@@ -26,8 +26,7 @@ type (
 )
 
 type Statement[A PreImageGroupElement[A], B ImageGroupElement[B]] struct {
-	X   B
-	Phi GroupHomomorphism[A, B]
+	X B `cbor:"x"`
 }
 
 func (s *Statement[A, B]) Bytes() []byte {
@@ -38,7 +37,7 @@ func (s *Statement[A, B]) Bytes() []byte {
 }
 
 type Witness[A PreImageGroupElement[A]] struct {
-	W A
+	W A `cbor:"w"`
 }
 
 func (w *Witness[A]) Bytes() []byte {
@@ -49,7 +48,7 @@ func (w *Witness[A]) Bytes() []byte {
 }
 
 type Commitment[A PreImageGroupElement[A], B ImageGroupElement[B]] struct {
-	C B
+	C B `cbor:"c"`
 }
 
 func (c *Commitment[A, B]) Bytes() []byte {

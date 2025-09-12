@@ -2,7 +2,6 @@ package fiatshamir
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -10,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/fxamacker/cbor/v2"
 )
 
 const (
@@ -22,15 +22,31 @@ const (
 )
 
 type Proof[A sigma.Commitment, Z sigma.Response] struct {
-	A A `json:"a"`
-	Z Z `json:"z"`
+	a A
+	z Z
 }
 
-func (p *Proof[A, Z]) Bytes() []byte {
-	if p == nil {
-		return nil
+type proofDTO[A sigma.Commitment, Z sigma.Response] struct {
+	A A `cbor:"A"`
+	Z Z `cbor:"Z"`
+}
+
+func (p *Proof[A, Z]) MarshalCBOR() ([]byte, error) {
+	dto := &proofDTO[A, Z]{
+		A: p.a,
+		Z: p.z,
 	}
-	return slices.Concat(p.A.Bytes(), p.Z.Bytes())
+	return cbor.Marshal(dto)
+}
+
+func (p *Proof[A, Z]) UnmarshalCBOR(data []byte) error {
+	var dto proofDTO[A, Z]
+	if err := cbor.Unmarshal(data, &dto); err != nil {
+		return err
+	}
+	p.a = dto.A
+	p.z = dto.Z
+	return nil
 }
 
 type fs[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {

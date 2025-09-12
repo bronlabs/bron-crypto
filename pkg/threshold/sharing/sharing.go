@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials2"
 )
 
 type Name string
@@ -103,4 +103,4 @@ type LSSS[
 type PolynomialLSSS[
 	S LinearShare[S, SV, SA, WV, AC], SV algebra.PrimeFieldElement[SV], SA AdditiveShare[SA, SV, *MinimalQualifiedAccessStructure],
 	W LinearlyShareableSecret[W, WV], WV algebra.PrimeFieldElement[WV], DO DealerOutput[S], AC AccessStructure,
-] LSSS[S, SV, SA, W, WV, DO, AC, polynomials.Polynomial[SV]]
+] LSSS[S, SV, SA, W, WV, DO, AC, *polynomials2.Polynomial[SV]]

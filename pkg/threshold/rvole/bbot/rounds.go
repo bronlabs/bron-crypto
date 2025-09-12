@@ -123,9 +123,9 @@ func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2
 	}
 
 	r3Out = &Round3P2P[S]{
-		aTilde: aTilde,
-		eta:    eta,
-		mu:     mu,
+		ATilde: aTilde,
+		Eta:    eta,
+		Mu:     mu,
 	}
 	alice.round += 2
 	return r3Out, c, nil
@@ -139,7 +139,7 @@ func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[S]) (d []S, err error) {
 	//	return nil, errs.WrapFailed(err, "invalid message")
 	//}
 
-	theta, err := bob.roTheta(r3Out.aTilde)
+	theta, err := bob.roTheta(r3Out.ATilde)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get theta")
 	}
@@ -153,7 +153,7 @@ func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[S]) (d []S, err error) {
 			betaJ = bob.suite.field.One()
 		}
 		for i := range bob.suite.l {
-			dDot[j][i] = bob.gamma[j][i].Add(betaJ.Mul(r3Out.aTilde[j][i]))
+			dDot[j][i] = bob.gamma[j][i].Add(betaJ.Mul(r3Out.ATilde[j][i]))
 		}
 	}
 
@@ -166,7 +166,7 @@ func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[S]) (d []S, err error) {
 			betaJ = bob.suite.field.One()
 		}
 		for k := range bob.rho {
-			dHat[j][k] = bob.gamma[j][bob.suite.l+k].Add(betaJ.Mul(r3Out.aTilde[j][bob.suite.l+k]))
+			dHat[j][k] = bob.gamma[j][bob.suite.l+k].Add(betaJ.Mul(r3Out.ATilde[j][bob.suite.l+k]))
 		}
 	}
 
@@ -179,7 +179,7 @@ func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[S]) (d []S, err error) {
 			betaJ = bob.suite.field.One()
 		}
 		for k := range bob.rho {
-			muPrimeBold[j][k] = dHat[j][k].Sub(betaJ.Mul(r3Out.eta[k]))
+			muPrimeBold[j][k] = dHat[j][k].Sub(betaJ.Mul(r3Out.Eta[k]))
 			for i := range bob.suite.l {
 				muPrimeBold[j][k] = muPrimeBold[j][k].Add(theta[i][k].Mul(dDot[j][i]))
 			}
@@ -190,7 +190,7 @@ func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[S]) (d []S, err error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get mu")
 	}
-	if !bytes.Equal(r3Out.mu, mu) {
+	if !bytes.Equal(r3Out.Mu, mu) {
 		return nil, errs.NewTotalAbort("alice", "consistency check failed")
 	}
 

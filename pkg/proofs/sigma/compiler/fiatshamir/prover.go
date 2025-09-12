@@ -5,6 +5,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/fxamacker/cbor/v2"
 )
 
 type prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
@@ -32,8 +33,12 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKPr
 	}
 
 	proof := &Proof[A, Z]{
-		A: a,
-		Z: z,
+		a: a,
+		z: z,
 	}
-	return proof, nil
+	proofBytes, err := cbor.Marshal(proof)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "cannot serialize proof")
+	}
+	return proofBytes, nil
 }

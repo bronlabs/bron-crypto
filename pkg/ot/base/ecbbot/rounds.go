@@ -38,7 +38,7 @@ func (s *Sender[G, S]) Round1() (r1out *Round1P2P[G, S], err error) {
 
 	s.round = 3
 	r1out = &Round1P2P[G, S]{
-		ms: ms,
+		Ms: ms,
 	}
 	return r1out, nil
 }
@@ -53,7 +53,7 @@ func (r *Receiver[G, S]) Round2(r1out *Round1P2P[G, S], choices []byte) (r2out *
 	//}
 
 	// Setup ROs
-	r.tape.AppendBytes(TaggedKeyAgreementMs, r1out.ms.Bytes())
+	r.tape.AppendBytes(TaggedKeyAgreementMs, r1out.Ms.Bytes())
 	f, err := r.makeProgrammableOncePublicFunction()
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "creating popf")
@@ -74,14 +74,14 @@ func (r *Receiver[G, S]) Round2(r1out *Round1P2P[G, S], choices []byte) (r2out *
 			}
 
 			// step 2.3 (KA.msg_2)
-			mRi, err := r.ka.Msg2(bi, r1out.ms)
+			mRi, err := r.ka.Msg2(bi, r1out.Ms)
 			if err != nil {
 				return nil, nil, errs.WrapFailed(err, "creating msg2")
 			}
 
 			// step 2.4 (KA.key_2)
 			tag := r.makeKeyAgreementTag(i, l, ci)
-			receiverOut.Messages[i][l], err = r.ka.Key2(bi, r1out.ms, tag)
+			receiverOut.Messages[i][l], err = r.ka.Key2(bi, r1out.Ms, tag)
 			if err != nil {
 				return nil, nil, errs.WrapFailed(err, "computing shared bytes for KA.key_2")
 			}
@@ -95,7 +95,7 @@ func (r *Receiver[G, S]) Round2(r1out *Round1P2P[G, S], choices []byte) (r2out *
 	}
 
 	r.round++
-	r2out = &Round2P2P[G, S]{phi: phi}
+	r2out = &Round2P2P[G, S]{Phi: phi}
 	return r2out, receiverOut, nil
 }
 
@@ -119,7 +119,7 @@ func (s *Sender[G, S]) Round3(r2out *Round2P2P[G, S]) (senderOut *SenderOutput[S
 		for l := 0; l < s.suite.L(); l++ {
 			for j := byte(0); j < 2; j++ {
 				// step 3.2 (POPF.Eval)
-				p, err := f.Eval(r2out.phi[i][0][l], r2out.phi[i][1][l], j)
+				p, err := f.Eval(r2out.Phi[i][0][l], r2out.Phi[i][1][l], j)
 				if err != nil {
 					return nil, errs.WrapFailed(err, "popf eval")
 				}

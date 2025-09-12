@@ -8,12 +8,12 @@ import (
 )
 
 type Round1P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	bigB  P
-	proof compiler.NIZKPoKProof
+	BigB  P                     `cbor:"bigB"`
+	Proof compiler.NIZKPoKProof `cbor:"proof"`
 }
 
 func (r1 *Round1P2P[P, B, S]) Validate() error {
-	if r1 == nil || r1.bigB.IsOpIdentity() {
+	if r1 == nil || r1.BigB.IsOpIdentity() {
 		return errs.NewValidation("invalid message")
 	}
 
@@ -21,14 +21,14 @@ func (r1 *Round1P2P[P, B, S]) Validate() error {
 }
 
 type Round2P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	bigA []P
+	BigA []P `cbor:"bigA"`
 }
 
 func (r2 *Round2P2P[P, B, S]) Validate(xi, l int) error {
-	if r2 == nil || len(r2.bigA) != (xi*l) {
+	if r2 == nil || len(r2.BigA) != (xi*l) {
 		return errs.NewValidation("invalid message")
 	}
-	for _, a := range r2.bigA {
+	for _, a := range r2.BigA {
 		if a.IsOpIdentity() {
 			return errs.NewValidation("invalid message")
 		}
@@ -38,14 +38,14 @@ func (r2 *Round2P2P[P, B, S]) Validate(xi, l int) error {
 }
 
 type Round3P2P struct {
-	xi [][]byte
+	Xi [][]byte `cbor:"xi"`
 }
 
 func (r3 *Round3P2P) Validate(xi, l, h int) error {
-	if r3 == nil || len(r3.xi) != (xi*l) {
+	if r3 == nil || len(r3.Xi) != (xi*l) {
 		return errs.NewValidation("invalid message")
 	}
-	for _, x := range r3.xi {
+	for _, x := range r3.Xi {
 		if len(x) != h {
 			return errs.NewValidation("invalid message")
 		}
@@ -55,14 +55,14 @@ func (r3 *Round3P2P) Validate(xi, l, h int) error {
 }
 
 type Round4P2P struct {
-	rhoPrime [][]byte
+	RhoPrime [][]byte `cbor:"rhoPrime"`
 }
 
 func (r4 *Round4P2P) Validate(xi, l, h int) error {
-	if r4 == nil || len(r4.rhoPrime) != (xi*l) {
+	if r4 == nil || len(r4.RhoPrime) != (xi*l) {
 		return errs.NewValidation("invalid message")
 	}
-	for _, x := range r4.rhoPrime {
+	for _, x := range r4.RhoPrime {
 		if len(x) != h {
 			return errs.NewValidation("invalid message")
 		}
@@ -72,16 +72,16 @@ func (r4 *Round4P2P) Validate(xi, l, h int) error {
 }
 
 type Round5P2P struct {
-	rho0Digest [][]byte
-	rho1Digest [][]byte
+	Rho0Digest [][]byte `cbor:"rho0Digest"`
+	Rho1Digest [][]byte `cbor:"rho1Digest"`
 }
 
 func (r5 *Round5P2P) Validate(xi, l, h int) error {
-	if r5 == nil || len(r5.rho0Digest) != (xi*l) || len(r5.rho1Digest) != (xi*l) {
+	if r5 == nil || len(r5.Rho0Digest) != (xi*l) || len(r5.Rho1Digest) != (xi*l) {
 		return errs.NewValidation("invalid message")
 	}
 	for i := range xi * l {
-		if len(r5.rho0Digest[i]) != h || len(r5.rho1Digest[i]) != h {
+		if len(r5.Rho0Digest[i]) != h || len(r5.Rho1Digest[i]) != h {
 			return errs.NewValidation("invalid message")
 		}
 	}

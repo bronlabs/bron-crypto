@@ -21,7 +21,6 @@ func Test_HappyPath(t *testing.T) {
 	const TOTAL = 5
 	prng := crand.Reader
 	curve := k256.NewCurve()
-	field := k256.NewScalarField()
 	shareholders := hashset.NewComparable[sharing.ID]()
 	for i := 0; i < TOTAL; i++ {
 		shareholders.Add(sharing.ID(i + 1))
@@ -34,7 +33,7 @@ func Test_HappyPath(t *testing.T) {
 		t.Parallel()
 		for th := uint(THRESHOLD); th <= TOTAL; th++ {
 			for shardsSubset := range sliceutils.Combinations(shards.Values(), th) {
-				feldmanScheme, err := feldman.NewScheme(field, curve.Generator(), THRESHOLD, shareholders.Freeze())
+				feldmanScheme, err := feldman.NewScheme(curve.Generator(), THRESHOLD, shareholders.Freeze())
 				require.NoError(t, err)
 				sharesSubset := sliceutils.Map(shardsSubset, func(s *tecdsa.Shard[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]) *feldman.Share[*k256.Scalar] {
 					return s.Share()

@@ -2,6 +2,7 @@ package pasta
 
 import (
 	"crypto/elliptic"
+	"encoding"
 	"fmt"
 	"hash/fnv"
 	"slices"
@@ -38,6 +39,8 @@ var (
 
 	_ curves.Curve[*PallasPoint, *PallasBaseFieldElement, *PallasScalar] = (*PallasCurve)(nil)
 	_ curves.Point[*PallasPoint, *PallasBaseFieldElement, *PallasScalar] = (*PallasPoint)(nil)
+	_ encoding.BinaryMarshaler                                           = (*PallasPoint)(nil)
+	_ encoding.BinaryUnmarshaler                                         = (*PallasPoint)(nil)
 )
 
 type PallasCurve struct {
@@ -327,6 +330,19 @@ func (p *PallasPoint) ScalarMul(actor *PallasScalar) *PallasPoint {
 
 func (p *PallasPoint) IsTorsionFree() bool {
 	return true
+}
+
+func (p *PallasPoint) MarshalBinary() ([]byte, error) {
+	return p.ToCompressed(), nil
+}
+
+func (p *PallasPoint) UnmarshalBinary(data []byte) error {
+	pp, err := NewPallasCurve().FromCompressed(data)
+	if err != nil {
+		return errs.WrapSerialisation(err, "cannot deserialize point")
+	}
+	p.V.Set(&pp.V)
+	return nil
 }
 
 func (p *PallasPoint) String() string {

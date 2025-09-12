@@ -653,7 +653,7 @@ func TestEdgeCases(t *testing.T) {
 		shortRandom := bytes.NewReader([]byte{1, 2, 3}) // Too short
 		_, _, err := committer.Commit(message, shortRandom)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "cannot read random bytes")
+		require.Contains(t, err.Error(), "[RANDOM_SAMPLE_ERROR]")
 	})
 
 	t.Run("commitment to zero message", func(t *testing.T) {

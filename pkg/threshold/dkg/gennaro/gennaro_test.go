@@ -1,7 +1,6 @@
 package gennaro_test
 
 import (
-	"bytes"
 	"crypto/sha3"
 	"errors"
 	"fmt"
@@ -100,7 +99,7 @@ func Test_Sanity(t *testing.T) {
 	}
 	vv := outputs.Values()[0].VerificationVector()
 
-	feldmanScheme, err := feldman.NewScheme(k256.NewScalarField(), group.Generator(), ac.Threshold(), ac.Shareholders())
+	feldmanScheme, err := feldman.NewScheme(group.Generator(), ac.Threshold(), ac.Shareholders())
 	require.NoError(t, err)
 	secret, err := feldmanScheme.ReconstructAndVerify(vv, shares...)
 	require.NoError(t, err)
@@ -193,7 +192,7 @@ func TestDKGWithVariousThresholds(t *testing.T) {
 			}
 
 			// Create Feldman scheme for reconstruction
-			feldmanScheme, err := feldman.NewScheme(k256.NewScalarField(), group.Generator(), ac.Threshold(), ac.Shareholders())
+			feldmanScheme, err := feldman.NewScheme(group.Generator(), ac.Threshold(), ac.Shareholders())
 			require.NoError(t, err)
 
 			// Test reconstruction with all shares
@@ -355,7 +354,7 @@ func TestDKGShareProperties(t *testing.T) {
 	})
 
 	t.Run("share reconstruction subsets", func(t *testing.T) {
-		feldmanScheme, err := feldman.NewScheme(k256.NewScalarField(), group.Generator(), threshold, parties.Values()[0].AccessStructure().Shareholders())
+		feldmanScheme, err := feldman.NewScheme(group.Generator(), threshold, parties.Values()[0].AccessStructure().Shareholders())
 		require.NoError(t, err)
 
 		// Test different combinations of threshold shares
@@ -431,7 +430,7 @@ func TestDKGWithBLS12381(t *testing.T) {
 	}
 
 	// Test reconstruction
-	feldmanScheme, err := feldman.NewScheme(bls12381.NewScalarField(), group.Generator(), threshold, shareholders)
+	feldmanScheme, err := feldman.NewScheme(group.Generator(), threshold, shareholders)
 	require.NoError(t, err)
 
 	secret, err := feldmanScheme.ReconstructAndVerify(outputs.Values()[0].VerificationVector(), shares...)
@@ -611,7 +610,7 @@ func TestMultipleDKGSessions(t *testing.T) {
 			shares = append(shares, output.Share())
 		}
 
-		feldmanScheme, err := feldman.NewScheme(k256.NewScalarField(), group.Generator(), threshold, sharing.NewOrdinalShareholderSet(total))
+		feldmanScheme, err := feldman.NewScheme(group.Generator(), threshold, sharing.NewOrdinalShareholderSet(total))
 		require.NoError(t, err)
 
 		// Get verification vector from first output
@@ -849,7 +848,7 @@ func TestRoundProgression(t *testing.T) {
 		}
 
 		// Verify that shares can reconstruct a valid secret
-		feldmanScheme, err := feldman.NewScheme(k256.NewScalarField(), group.Generator(), threshold, parties.Values()[0].AccessStructure().Shareholders())
+		feldmanScheme, err := feldman.NewScheme(group.Generator(), threshold, parties.Values()[0].AccessStructure().Shareholders())
 		require.NoError(t, err)
 
 		secret, err := feldmanScheme.ReconstructAndVerify(referenceVV, shares...)
@@ -939,7 +938,7 @@ func TestMaliciousParticipants(t *testing.T) {
 				// TODO: Fix this test - the pedersen share interface has changed
 				// and we need to understand how to properly create a corrupted share
 				// with the new Message/Witness API
-				
+
 				// For now, just use the original share
 				maliciousUnicasts.Put(id, msg)
 			} else {
@@ -1003,7 +1002,7 @@ func TestDifferentThresholds(t *testing.T) {
 			}
 
 			// Test reconstruction with exact threshold
-			feldmanScheme, err := feldman.NewScheme(k256.NewScalarField(), group.Generator(), ac.Threshold(), ac.Shareholders())
+			feldmanScheme, err := feldman.NewScheme(group.Generator(), ac.Threshold(), ac.Shareholders())
 			require.NoError(t, err)
 
 			thresholdShares := shares[:tc.threshold]
@@ -1080,7 +1079,7 @@ func TestDifferentCurves(t *testing.T) {
 			shares = append(shares, output.Share())
 		}
 
-		feldmanScheme, err := feldman.NewScheme(bls12381.NewScalarField(), group.Generator(), threshold, shareholders)
+		feldmanScheme, err := feldman.NewScheme(group.Generator(), threshold, shareholders)
 		require.NoError(t, err)
 
 		// Get verification vector from first output
@@ -1157,7 +1156,7 @@ func TestShareCombination(t *testing.T) {
 		shareMap[id] = output.Share()
 	}
 
-	feldmanScheme, err := feldman.NewScheme(k256.NewScalarField(), group.Generator(), ac.Threshold(), ac.Shareholders())
+	feldmanScheme, err := feldman.NewScheme(group.Generator(), ac.Threshold(), ac.Shareholders())
 	require.NoError(t, err)
 
 	// Test reconstruction with different subsets
@@ -1260,68 +1259,6 @@ func (r *limitedRandomReader) Read(p []byte) (n int, err error) {
 	return n, nil
 }
 
-// TestMessageSerialization tests that messages are properly serialized
-func TestMessageSerialization(t *testing.T) {
-	t.Parallel()
-
-	threshold := uint(2)
-	total := uint(3)
-	group := k256.NewCurve()
-	sid := network.SID(sha3.Sum256([]byte("test-serialization")))
-	tape := hagrid.NewTranscript("TestSerialization")
-	prng := pcg.NewRandomised()
-
-	t.Run("round 1 broadcast serialization", func(t *testing.T) {
-		_, parties := setup(t, threshold, total, group, sid, tape, prng)
-		r1broadcasts, err := tu.DoGennaroRound1(parties.Values())
-		require.NoError(t, err)
-
-		for id1, broadcast := range r1broadcasts {
-			// Test Bytes() method
-			data := broadcast.Bytes()
-			require.NotNil(t, data)
-			require.NotEmpty(t, data)
-
-			// Different broadcasts should have different serializations
-			for id2, otherBroadcast := range r1broadcasts {
-				if id1 != id2 {
-					otherData := otherBroadcast.Bytes()
-					require.False(t, bytes.Equal(data, otherData),
-						"broadcasts %d and %d have identical serialization", id1, id2)
-				}
-			}
-		}
-	})
-
-	t.Run("round 2 message serialization", func(t *testing.T) {
-		_, parties := setup(t, threshold, total, group, sid, tape, prng)
-		// Execute round 1
-		r1broadcasts, err := tu.DoGennaroRound1(parties.Values())
-		require.NoError(t, err)
-		r2inputs := ntu.MapBroadcastO2I(t, parties.Values(), r1broadcasts)
-
-		// Execute round 2
-		r2broadcasts, r2unicasts, err := tu.DoGennaroRound2(parties.Values(), r2inputs)
-		require.NoError(t, err)
-
-		// Test broadcast serialization
-		for _, broadcast := range r2broadcasts {
-			data := broadcast.Bytes()
-			require.NotNil(t, data)
-			require.NotEmpty(t, data)
-		}
-
-		// Test unicast serialization
-		for _, unicasts := range r2unicasts {
-			for _, unicast := range unicasts.Values() {
-				data := unicast.Bytes()
-				require.NotNil(t, data)
-				require.NotEmpty(t, data)
-			}
-		}
-	})
-}
-
 // TestConcurrentDKGSessions tests multiple DKG sessions running concurrently
 func TestConcurrentDKGSessions(t *testing.T) {
 	t.Parallel()
@@ -1358,7 +1295,7 @@ func TestConcurrentDKGSessions(t *testing.T) {
 			shares = append(shares, output.Share())
 		}
 
-		feldmanScheme, err := feldman.NewScheme(k256.NewScalarField(), group.Generator(), threshold, sharing.NewOrdinalShareholderSet(total))
+		feldmanScheme, err := feldman.NewScheme(group.Generator(), threshold, sharing.NewOrdinalShareholderSet(total))
 		require.NoError(t, err)
 
 		// Get verification vector from first output
@@ -1561,7 +1498,7 @@ func BenchmarkShareReconstruction(b *testing.B) {
 		shares = append(shares, output.Share())
 	}
 
-	feldmanScheme, err := feldman.NewScheme(k256.NewScalarField(), group.Generator(), ac.Threshold(), ac.Shareholders())
+	feldmanScheme, err := feldman.NewScheme(group.Generator(), ac.Threshold(), ac.Shareholders())
 	if err != nil {
 		b.Fatal(err)
 	}

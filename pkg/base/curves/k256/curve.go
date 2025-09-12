@@ -2,6 +2,7 @@ package k256
 
 import (
 	"crypto/elliptic"
+	"encoding"
 	"fmt"
 	"hash/fnv"
 	"slices"
@@ -29,6 +30,8 @@ const (
 var (
 	_ curves.Curve[*Point, *BaseFieldElement, *Scalar] = (*Curve)(nil)
 	_ curves.Point[*Point, *BaseFieldElement, *Scalar] = (*Point)(nil)
+	_ encoding.BinaryMarshaler                         = (*Point)(nil)
+	_ encoding.BinaryUnmarshaler                       = (*Point)(nil)
 
 	// compressedPointSize = k256Impl.FqBytes + 1
 

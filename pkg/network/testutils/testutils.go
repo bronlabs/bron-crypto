@@ -56,7 +56,7 @@ func MapBroadcastO2I[
 				continue
 			}
 			msg := broadcastOutputs[sender.SharingID()]
-			inputs.Put(sender.SharingID(), msg)
+			inputs.Put(sender.SharingID(), CBORRoundTrip(t, msg))
 		}
 		broadcastInputs[receiver.SharingID()] = inputs.Freeze()
 	}
@@ -85,7 +85,7 @@ func MapUnicastO2I[
 			}
 			msg, exists := p2pOutputs[sender.SharingID()].Get(receiver.SharingID())
 			require.True(t, exists)
-			inputs.Put(sender.SharingID(), msg)
+			inputs.Put(sender.SharingID(), CBORRoundTrip(t, msg))
 		}
 		p2pInputs[receiver.SharingID()] = inputs.Freeze()
 

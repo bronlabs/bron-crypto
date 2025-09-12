@@ -9,34 +9,34 @@ import (
 )
 
 type Round1Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	gennaroR1 *gennaro.Round1Broadcast[P, S]
-	zeroR1    *przsSetup.Round1Broadcast
+	GennaroR1 *gennaro.Round1Broadcast[P, S] `cbor:"1"`
+	ZeroR1    *przsSetup.Round1Broadcast     `cbor:"2"`
 }
 
 type Round1P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	otR1 *vsot.Round1P2P[P, B, S]
+	OtR1 *vsot.Round1P2P[P, B, S] `cbor:"1"`
 }
 
 type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	gennaroR2 *gennaro.Round2Broadcast[P, S]
+	GennaroR2 *gennaro.Round2Broadcast[P, S] `cbor:"1"`
 }
 
 type Round2P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	gennaroR2 *gennaro.Round2Unicast[P, S]
-	zeroR2    *przsSetup.Round2P2P
-	otR2      *vsot.Round2P2P[P, B, S]
+	GennaroR2 *gennaro.Round2Unicast[P, S] `cbor:"1"`
+	ZeroR2    *przsSetup.Round2P2P         `cbor:"2"`
+	OtR2      *vsot.Round2P2P[P, B, S]     `cbor:"3"`
 }
 
 type Round3P2P struct {
-	otR3 *vsot.Round3P2P
+	OtR3 *vsot.Round3P2P `cbor:"1"`
 }
 
 type Round4P2P struct {
-	otR4 *vsot.Round4P2P
+	OtR4 *vsot.Round4P2P `cbor:"1"`
 }
 
 type Round5P2P struct {
-	otR5 *vsot.Round5P2P
+	OtR5 *vsot.Round5P2P `cbor:"1"`
 }
 
 func (r1b *Round1Broadcast[P, B, S]) Bytes() []byte {
