@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/fxamacker/cbor/v2"
 )
 
@@ -15,6 +16,15 @@ type ModuleValuedPolynomial[ME algebra.ModuleElement[ME, S], S algebra.RingEleme
 
 type moduleValuedPolynomialDTO[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]] struct {
 	Coeffs []ME `cbor:"coefficients"`
+}
+
+func NewModuleValuedPolynomial[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]](coeffs []ME) (*ModuleValuedPolynomial[ME, S], error) {
+	if len(coeffs) < 1 {
+		return nil, errs.NewFailed("coefficients cannot be < 1")
+	}
+	return &ModuleValuedPolynomial[ME, S]{
+		coeffs: coeffs,
+	}, nil
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) Structure() crtp.Structure[*ModuleValuedPolynomial[ME, S]] {

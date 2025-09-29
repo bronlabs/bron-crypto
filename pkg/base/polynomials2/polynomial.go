@@ -45,6 +45,16 @@ func (r *PolynomialRing[RE]) NewRandomWithConstantTerm(degree int, constantTerm 
 	return p, nil
 }
 
+func (r *PolynomialRing[RE]) New(coeffs []RE) *Polynomial[RE] {
+	if len(coeffs) == 0 {
+		coeffs = []RE{r.ring.Zero()}
+	}
+
+	return &Polynomial[RE]{
+		coeffs: coeffs,
+	}
+}
+
 func (r *PolynomialRing[RE]) Name() string {
 	return fmt.Sprintf("PolynomialRing[%s]", r.ring.Name())
 }
