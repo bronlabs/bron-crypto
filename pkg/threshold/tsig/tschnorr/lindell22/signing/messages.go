@@ -7,7 +7,7 @@ import (
 )
 
 type Round1Broadcast struct {
-	BigRCommitment lindell22.Commitment `cbor:"1"`
+	BigRCommitment lindell22.Commitment `cbor:"bigRCommitment"`
 }
 
 func (r *Round1Broadcast) Bytes() []byte {
@@ -18,9 +18,9 @@ func (r *Round1Broadcast) Bytes() []byte {
 }
 
 type Round2Broadcast[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
-	BigRProof   compiler.NIZKPoKProof                 `cbor:"1"`
-	BigROpening lindell22.Opening                     `cbor:"2"`
-	BigR        *lindell22.PokProtocolStatement[E, S] `cbor:"3"`
+	BigRProof   compiler.NIZKPoKProof                 `cbor:"bigRProof"`
+	BigROpening lindell22.Opening                     `cbor:"bigROpening"`
+	BigR        *lindell22.PokProtocolStatement[E, S] `cbor:"bigR"`
 }
 
 func (r *Round2Broadcast[E, S]) Bytes() []byte {

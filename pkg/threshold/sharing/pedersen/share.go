@@ -20,9 +20,9 @@ type Share[S algebra.PrimeFieldElement[S]] struct {
 }
 
 type shareDTO[S algebra.PrimeFieldElement[S]] struct {
-	ID       sharing.ID         `cbor:"1"`
-	Secret_  *pedcom.Message[S] `cbor:"2"`
-	Blinding *pedcom.Witness[S] `cbor:"3"`
+	ID       sharing.ID         `cbor:"sharingId"`
+	Secret_  *pedcom.Message[S] `cbor:"secret"`
+	Blinding *pedcom.Witness[S] `cbor:"blinding"`
 }
 
 func NewShare[S algebra.PrimeFieldElement[S]](id sharing.ID, secret *pedcom.Message[S], blinding *pedcom.Witness[S], ac *AccessStructure) (*Share[S], error) {

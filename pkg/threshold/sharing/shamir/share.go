@@ -17,8 +17,8 @@ type Share[FE algebra.PrimeFieldElement[FE]] struct {
 }
 
 type shareDTO[FE algebra.PrimeFieldElement[FE]] struct {
-	ID sharing.ID `cbor:"1"`
-	V  FE         `cbor:"2"`
+	ID sharing.ID `cbor:"sharingId"`
+	V  FE         `cbor:"value"`
 }
 
 func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, value FE, ac *AccessStructure) (*Share[FE], error) {

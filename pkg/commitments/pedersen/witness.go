@@ -12,7 +12,7 @@ type Witness[S algebra.PrimeFieldElement[S]] struct {
 }
 
 type witnessDTO[S algebra.PrimeFieldElement[S]] struct {
-	V S `cbor:"1"`
+	V S `cbor:"w"`
 }
 
 func NewWitness[S algebra.PrimeFieldElement[S]](v S) (*Witness[S], error) {

@@ -19,7 +19,7 @@ var (
 )
 
 type baseFieldElementG1DTO struct {
-	FieldBytes []byte `cbor:"1"`
+	FieldBytes []byte `cbor:"fieldBytes"`
 }
 
 func (fe *BaseFieldElementG1) MarshalCBOR() ([]byte, error) {
@@ -41,7 +41,7 @@ func (fe *BaseFieldElementG1) UnmarshalCBOR(data []byte) error {
 }
 
 type baseFieldElementG2DTO struct {
-	FieldBytes []byte `cbor:"1"`
+	FieldBytes []byte `cbor:"fieldBytes"`
 }
 
 func (fe *BaseFieldElementG2) MarshalCBOR() ([]byte, error) {
@@ -63,7 +63,7 @@ func (fe *BaseFieldElementG2) UnmarshalCBOR(data []byte) error {
 }
 
 type scalarDTO struct {
-	FieldBytes []byte `cbor:"1"`
+	FieldBytes []byte `cbor:"fieldBytes"`
 }
 
 func (s *Scalar) MarshalCBOR() ([]byte, error) {
@@ -85,7 +85,7 @@ func (s *Scalar) UnmarshalCBOR(data []byte) error {
 }
 
 type pointG1DTO struct {
-	AffineCompressedBytes []byte `cbor:"1"`
+	AffineCompressedBytes []byte `cbor:"compressedBytes"`
 }
 
 func (p *PointG1) MarshalCBOR() ([]byte, error) {
@@ -107,7 +107,7 @@ func (p *PointG1) UnmarshalCBOR(data []byte) error {
 }
 
 type pointG2DTO struct {
-	AffineCompressedBytes []byte `cbor:"1"`
+	AffineCompressedBytes []byte `cbor:"compressedBytes"`
 }
 
 func (p *PointG2) MarshalCBOR() ([]byte, error) {

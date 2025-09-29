@@ -6,7 +6,7 @@ import (
 )
 
 type Round1Broadcast[E GroupElement[E, S], S Scalar[S]] struct {
-	PedersenVerificationVector pedersenVSS.VerificationVector[E, S] `cbor:"1"`
+	PedersenVerificationVector pedersenVSS.VerificationVector[E, S] `cbor:"verificationVector"`
 }
 
 func (r *Round1Broadcast[E, S]) Bytes() []byte {
@@ -14,7 +14,7 @@ func (r *Round1Broadcast[E, S]) Bytes() []byte {
 }
 
 type Round2Unicast[E GroupElement[E, S], S Scalar[S]] struct {
-	Share *pedersenVSS.Share[S] `cbor:"1"`
+	Share *pedersenVSS.Share[S] `cbor:"share"`
 }
 
 func (r *Round2Unicast[E, S]) Bytes() []byte {

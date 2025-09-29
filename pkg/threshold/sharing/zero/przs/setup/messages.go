@@ -7,7 +7,7 @@ import (
 )
 
 type Round1Broadcast struct {
-	Commitments map[sharing.ID]hash_comm.Commitment `cbor:"1"`
+	Commitments map[sharing.ID]hash_comm.Commitment `cbor:"commitments"`
 }
 
 func (m *Round1Broadcast) Bytes() []byte {
@@ -15,8 +15,8 @@ func (m *Round1Broadcast) Bytes() []byte {
 }
 
 type Round2P2P struct {
-	SeedContribution [przs.SeedLength]byte `cbor:"1"`
-	Witness          hash_comm.Witness     `cbor:"2"`
+	SeedContribution [przs.SeedLength]byte `cbor:"seedContribution"`
+	Witness          hash_comm.Witness     `cbor:"witness"`
 }
 
 func (m *Round2P2P) Bytes() []byte {

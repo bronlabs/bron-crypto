@@ -26,8 +26,8 @@ type LiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElemen
 }
 
 type liftedShareDTO[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
-	ID sharing.ID `cbor:"1"`
-	V  E          `cbor:"2"`
+	ID sharing.ID `cbor:"sharingId"`
+	V  E          `cbor:"value"`
 }
 
 func NewLiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](id sharing.ID, v E) (*LiftedShare[E, FE], error) {

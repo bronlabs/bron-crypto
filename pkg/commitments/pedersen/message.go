@@ -14,7 +14,7 @@ type Message[S algebra.PrimeFieldElement[S]] struct {
 }
 
 type messageDTO[S algebra.PrimeFieldElement[S]] struct {
-	V S `cbor:"1"`
+	V S `cbor:"v"`
 }
 
 func NewMessage[S algebra.PrimeFieldElement[S]](v S) *Message[S] {

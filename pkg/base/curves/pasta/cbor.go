@@ -22,7 +22,7 @@ var (
 )
 
 type fpFieldElementDTO struct {
-	FieldBytes []byte `cbor:"1"`
+	FieldBytes []byte `cbor:"fieldBytes"`
 }
 
 func (fe *FpFieldElement) MarshalCBOR() ([]byte, error) {
@@ -45,7 +45,7 @@ func (fe *FpFieldElement) UnmarshalCBOR(data []byte) error {
 }
 
 type fqFieldElementDTO struct {
-	FieldBytes []byte `cbor:"1"`
+	FieldBytes []byte `cbor:"fieldBytes"`
 }
 
 func (fe *FqFieldElement) MarshalCBOR() ([]byte, error) {
@@ -68,7 +68,7 @@ func (fe *FqFieldElement) UnmarshalCBOR(data []byte) error {
 }
 
 type pallasPointDTO struct {
-	AffineCompressedBytes []byte `cbor:"1"`
+	AffineCompressedBytes []byte `cbor:"compressedBytes"`
 }
 
 func (p *PallasPoint) MarshalCBOR() ([]byte, error) {
@@ -91,7 +91,7 @@ func (p *PallasPoint) UnmarshalCBOR(data []byte) error {
 }
 
 type vestaPointDTO struct {
-	AffineCompressedBytes []byte `cbor:"1"`
+	AffineCompressedBytes []byte `cbor:"compressedBytes"`
 }
 
 func (p *VestaPoint) MarshalCBOR() ([]byte, error) {

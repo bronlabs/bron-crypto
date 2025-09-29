@@ -14,7 +14,7 @@ type Commitment[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S
 }
 
 type commitmentDTO[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
-	V E `cbor:"1"`
+	V E `cbor:"v"`
 }
 
 func NewCommitment[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](v E) (*Commitment[E, S], error) {
