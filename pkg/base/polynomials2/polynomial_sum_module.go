@@ -1,6 +1,8 @@
 package polynomials2
 
 import (
+	"fmt"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
@@ -10,7 +12,6 @@ import (
 var _ algebra.ModuleElement[*ModuleValuedDirectSumPolynomial[*k256.Point, *k256.Scalar], *k256.Scalar] = (*ModuleValuedDirectSumPolynomial[*k256.Point, *k256.Scalar])(nil)
 
 type ModuleValuedDirectSumPolynomial[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]] struct {
-	zero  ME
 	polys []*ModuleValuedPolynomial[ME, S]
 }
 
@@ -25,48 +26,84 @@ func (p *ModuleValuedDirectSumPolynomial[ME, S]) Bytes() []byte {
 }
 
 func (p *ModuleValuedDirectSumPolynomial[ME, S]) Clone() *ModuleValuedDirectSumPolynomial[ME, S] {
-	//TODO implement me
-	panic("implement me")
+	polys := make([]*ModuleValuedPolynomial[ME, S], len(p.polys))
+	for i, c := range p.polys {
+		polys[i] = c.Clone()
+	}
+	return &ModuleValuedDirectSumPolynomial[ME, S]{
+		polys: polys,
+	}
 }
 
 func (p *ModuleValuedDirectSumPolynomial[ME, S]) Equal(rhs *ModuleValuedDirectSumPolynomial[ME, S]) bool {
-	//TODO implement me
-	panic("implement me")
+	for i := range p.polys {
+		if !p.polys[i].Equal(rhs.polys[i]) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (p *ModuleValuedDirectSumPolynomial[ME, S]) HashCode() base.HashCode {
-	//TODO implement me
-	panic("implement me")
+	h := base.HashCode(0)
+	for i := range p.polys {
+		h ^= p.polys[i].HashCode()
+	}
+	return h
 }
 
 func (p *ModuleValuedDirectSumPolynomial[ME, S]) String() string {
-	//TODO implement me
-	panic("implement me")
+	repr := "["
+	for _, c := range p.polys {
+		repr += fmt.Sprintf("%s,", c.String())
+	}
+	repr += "]"
+	return repr
 }
 
 func (p *ModuleValuedDirectSumPolynomial[ME, S]) Op(e *ModuleValuedDirectSumPolynomial[ME, S]) *ModuleValuedDirectSumPolynomial[ME, S] {
-	//TODO implement me
-	panic("implement me")
+	polys := make([]*ModuleValuedPolynomial[ME, S], len(p.polys))
+	for i := range p.polys {
+		polys[i] = p.polys[i].Op(e.polys[i])
+	}
+	return &ModuleValuedDirectSumPolynomial[ME, S]{
+		polys: polys,
+	}
 }
 
 func (p *ModuleValuedDirectSumPolynomial[ME, S]) IsOpIdentity() bool {
-	//TODO implement me
-	panic("implement me")
+	for _, c := range p.polys {
+		if !c.IsOpIdentity() {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (p *ModuleValuedDirectSumPolynomial[ME, S]) TryOpInv() (*ModuleValuedDirectSumPolynomial[ME, S], error) {
-	//TODO implement me
-	panic("implement me")
+	return p.OpInv(), nil
 }
 
 func (p *ModuleValuedDirectSumPolynomial[ME, S]) OpInv() *ModuleValuedDirectSumPolynomial[ME, S] {
-	//TODO implement me
-	panic("implement me")
+	polys := make([]*ModuleValuedPolynomial[ME, S], len(p.polys))
+	for i, c := range p.polys {
+		polys[i] = c.OpInv()
+	}
+	return &ModuleValuedDirectSumPolynomial[ME, S]{
+		polys: polys,
+	}
 }
 
 func (p *ModuleValuedDirectSumPolynomial[ME, S]) ScalarOp(actor S) *ModuleValuedDirectSumPolynomial[ME, S] {
-	//TODO implement me
-	panic("implement me")
+	polys := make([]*ModuleValuedPolynomial[ME, S], len(p.polys))
+	for i, c := range p.polys {
+		polys[i] = c.ScalarOp(actor)
+	}
+	return &ModuleValuedDirectSumPolynomial[ME, S]{
+		polys: polys,
+	}
 }
 
 func (p *ModuleValuedDirectSumPolynomial[ME, S]) IsTorsionFree() bool {
@@ -79,7 +116,6 @@ func (p *ModuleValuedDirectSumPolynomial[ME, S]) CoDiagonal() *ModuleValuedPolyn
 }
 
 func LiftDirectSumPolynomial[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]](poly *DirectSumPolynomial[S], bases ...algebra.ModuleElement[ME, S]) (*ModuleValuedDirectSumPolynomial[ME, S], error) {
-	zero := algebra.StructureMustBeAs[algebra.Module[ME, S]](bases[0].Structure()).OpIdentity()
 	polys := make([]*ModuleValuedPolynomial[ME, S], len(poly.polys))
 	for i := 0; i < len(poly.polys); i++ {
 		var err error
@@ -90,7 +126,6 @@ func LiftDirectSumPolynomial[ME algebra.ModuleElement[ME, S], S algebra.RingElem
 	}
 
 	return &ModuleValuedDirectSumPolynomial[ME, S]{
-		zero:  zero,
 		polys: polys,
 	}, nil
 }

@@ -1,6 +1,7 @@
 package polynomials2
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -8,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 type FiniteRing[RE algebra.RingElement[RE]] interface {
@@ -23,6 +25,10 @@ type PolynomialRing[RE algebra.RingElement[RE]] struct {
 }
 
 func (r *PolynomialRing[RE]) NewRandomWithConstantTerm(degree int, constantTerm RE, prng io.Reader) (*Polynomial[RE], error) {
+	if degree < 0 {
+		return nil, errs.NewFailed("degree cannot be negative")
+	}
+
 	coeffs := make([]RE, degree+1)
 	coeffs[0] = constantTerm.Clone()
 	for i := 1; i <= degree; i++ {
@@ -40,8 +46,7 @@ func (r *PolynomialRing[RE]) NewRandomWithConstantTerm(degree int, constantTerm 
 }
 
 func (r *PolynomialRing[RE]) Name() string {
-	//TODO implement me
-	panic("implement me")
+	return fmt.Sprintf("PolynomialRing[%s]", r.ring.Name())
 }
 
 func (r *PolynomialRing[RE]) Order() crtp.Cardinal {
@@ -70,18 +75,19 @@ func (r *PolynomialRing[RE]) Characteristic() crtp.Cardinal {
 }
 
 func (r *PolynomialRing[RE]) OpIdentity() *Polynomial[RE] {
-	//TODO implement me
-	panic("implement me")
+	return r.Zero()
 }
 
 func (r *PolynomialRing[RE]) One() *Polynomial[RE] {
-	//TODO implement me
-	panic("implement me")
+	return &Polynomial[RE]{
+		coeffs: []RE{r.ring.One()},
+	}
 }
 
 func (r *PolynomialRing[RE]) Zero() *Polynomial[RE] {
-	//TODO implement me
-	panic("implement me")
+	return &Polynomial[RE]{
+		coeffs: []RE{r.ring.Zero()},
+	}
 }
 
 func (r *PolynomialRing[RE]) IsSemiDomain() bool {
@@ -101,10 +107,12 @@ type Polynomial[RE algebra.RingElement[RE]] struct {
 }
 
 func (p *Polynomial[RE]) Eval(at RE) RE {
-	ring := algebra.StructureMustBeAs[algebra.Ring[RE]](at.Structure())
+	ring := algebra.StructureMustBeAs[FiniteRing[RE]](at.Structure())
+	// although we always require a polynomial to have at least one coefficient (even if it's zero), we do not panic here
 	if len(p.coeffs) == 0 {
 		return ring.Zero()
 	}
+
 	out := p.coeffs[len(p.coeffs)-1].Clone()
 	for i := len(p.coeffs) - 2; i >= 0; i-- {
 		out = out.Mul(at).Add(p.coeffs[i])
@@ -113,8 +121,14 @@ func (p *Polynomial[RE]) Eval(at RE) RE {
 }
 
 func (p *Polynomial[RE]) Structure() crtp.Structure[*Polynomial[RE]] {
-	//TODO implement me
-	panic("implement me")
+	if len(p.coeffs) == 0 {
+		panic("internal error: empty coeffs")
+	}
+
+	underlyingRing := algebra.StructureMustBeAs[FiniteRing[RE]](p.coeffs[0].Structure())
+	return &PolynomialRing[RE]{
+		ring: underlyingRing,
+	}
 }
 
 func (p *Polynomial[RE]) Bytes() []byte {
@@ -123,113 +137,171 @@ func (p *Polynomial[RE]) Bytes() []byte {
 }
 
 func (p *Polynomial[RE]) Clone() *Polynomial[RE] {
-	//TODO implement me
-	panic("implement me")
+	clone := &Polynomial[RE]{
+		coeffs: make([]RE, len(p.coeffs)),
+	}
+	for i, c := range p.coeffs {
+		clone.coeffs[i] = c.Clone()
+	}
+	return clone
 }
 
 func (p *Polynomial[RE]) Equal(rhs *Polynomial[RE]) bool {
-	//TODO implement me
-	panic("implement me")
+	for i := 0; i < min(len(p.coeffs), len(rhs.coeffs)); i++ {
+		if !p.coeffs[i].Equal(rhs.coeffs[i]) {
+			return false
+		}
+	}
+	for i := len(p.coeffs); i < max(len(p.coeffs), len(rhs.coeffs)); i++ {
+		if !rhs.coeffs[i].IsZero() {
+			return false
+		}
+	}
+	for i := len(rhs.coeffs); i < max(len(p.coeffs), len(rhs.coeffs)); i++ {
+		if !p.coeffs[i].IsZero() {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (p *Polynomial[RE]) HashCode() base.HashCode {
-	//TODO implement me
-	panic("implement me")
+	h := base.HashCode(0)
+	for _, c := range p.coeffs {
+		h ^= c.HashCode()
+	}
+	return h
 }
 
 func (p *Polynomial[RE]) String() string {
-	//TODO implement me
-	panic("implement me")
+	repr := "["
+	for _, c := range p.coeffs {
+		repr += fmt.Sprintf("%s, ", c.String())
+	}
+	repr += "]"
+	return repr
 }
 
 func (p *Polynomial[RE]) Op(e *Polynomial[RE]) *Polynomial[RE] {
-	//TODO implement me
-	panic("implement me")
+	return p.Add(e)
 }
 
 func (p *Polynomial[RE]) OtherOp(e *Polynomial[RE]) *Polynomial[RE] {
-	//TODO implement me
-	panic("implement me")
+	return p.Mul(e)
 }
 
 func (p *Polynomial[RE]) Add(e *Polynomial[RE]) *Polynomial[RE] {
-	//TODO implement me
-	panic("implement me")
+	coeffs := make([]RE, max(len(p.coeffs), len(e.coeffs)))
+	for i := 0; i < min(len(p.coeffs), len(e.coeffs)); i++ {
+		coeffs[i] = p.coeffs[i].Add(e.coeffs[i])
+	}
+	for i := len(p.coeffs); i < max(len(p.coeffs), len(e.coeffs)); i++ {
+		coeffs[i] = e.coeffs[i].Clone()
+	}
+	for i := len(e.coeffs); i < max(len(p.coeffs), len(e.coeffs)); i++ {
+		coeffs[i] = p.coeffs[i].Clone()
+	}
+	return &Polynomial[RE]{
+		coeffs: coeffs,
+	}
 }
 
 func (p *Polynomial[RE]) Double() *Polynomial[RE] {
-	//TODO implement me
-	panic("implement me")
+	return p.Add(p)
 }
 
 func (p *Polynomial[RE]) Mul(e *Polynomial[RE]) *Polynomial[RE] {
-	//TODO implement me
-	panic("implement me")
+	ring := algebra.StructureMustBeAs[FiniteRing[RE]](p.coeffs[0].Structure())
+	coeffs := make([]RE, len(p.coeffs)+len(e.coeffs)-1)
+	for i := range coeffs {
+		coeffs[i] = ring.Zero()
+	}
+
+	for l := 0; l < len(p.coeffs); l++ {
+		for r := 0; r < len(p.coeffs); r++ {
+			coeffs[l+r] = coeffs[l+r].Add(p.coeffs[l].Mul(e.coeffs[r]))
+		}
+	}
+	return &Polynomial[RE]{
+		coeffs: coeffs,
+	}
 }
 
 func (p *Polynomial[RE]) Square() *Polynomial[RE] {
-	//TODO implement me
-	panic("implement me")
+	return p.Mul(p)
 }
 
 func (p *Polynomial[RE]) IsOpIdentity() bool {
-	//TODO implement me
-	panic("implement me")
+	return p.IsZero()
 }
 
 func (p *Polynomial[RE]) TryOpInv() (*Polynomial[RE], error) {
-	//TODO implement me
-	panic("implement me")
+	return p.Neg(), nil
 }
 
 func (p *Polynomial[RE]) IsOne() bool {
-	//TODO implement me
-	panic("implement me")
+	if len(p.coeffs) < 1 {
+		return false
+	}
+	for i := len(p.coeffs) - 1; i >= 1; i-- {
+		if !p.coeffs[i].IsZero() {
+			return false
+		}
+	}
+	return p.coeffs[0].IsOne()
 }
 
 func (p *Polynomial[RE]) TryInv() (*Polynomial[RE], error) {
-	//TODO implement me
-	panic("implement me")
+	return nil, errs.NewFailed("not supported")
 }
 
 func (p *Polynomial[RE]) TryDiv(e *Polynomial[RE]) (*Polynomial[RE], error) {
-	//TODO implement me
-	panic("implement me")
+	return nil, errs.NewFailed("not supported")
 }
 
 func (p *Polynomial[RE]) IsZero() bool {
-	//TODO implement me
-	panic("implement me")
+	if len(p.coeffs) == 0 {
+		return true
+	}
+	for _, c := range p.coeffs {
+		if !c.IsZero() {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (p *Polynomial[RE]) TryNeg() (*Polynomial[RE], error) {
-	//TODO implement me
-	panic("implement me")
+	return p.Neg(), nil
 }
 
 func (p *Polynomial[RE]) TrySub(e *Polynomial[RE]) (*Polynomial[RE], error) {
-	//TODO implement me
-	panic("implement me")
+	return p.Sub(e), nil
 }
 
 func (p *Polynomial[RE]) OpInv() *Polynomial[RE] {
-	//TODO implement me
-	panic("implement me")
+	return p.Neg()
 }
 
 func (p *Polynomial[RE]) Neg() *Polynomial[RE] {
-	//TODO implement me
-	panic("implement me")
+	coeffs := make([]RE, len(p.coeffs))
+	for i, c := range p.coeffs {
+		coeffs[i] = c.Neg()
+	}
+	return &Polynomial[RE]{
+		coeffs: coeffs,
+	}
 }
 
 func (p *Polynomial[RE]) Sub(e *Polynomial[RE]) *Polynomial[RE] {
-	//TODO implement me
-	panic("implement me")
+	return p.Add(e.Neg())
 }
 
 func (p *Polynomial[RE]) Degree() int {
 	for i := len(p.coeffs) - 1; i >= 0; i-- {
-		if !p.coeffs[i].IsOpIdentity() {
+		if !p.coeffs[i].IsZero() {
 			return i
 		}
 	}
