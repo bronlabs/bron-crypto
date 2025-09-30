@@ -8,7 +8,7 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials2"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
@@ -81,7 +81,7 @@ func (d *Scheme[E, FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Read
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not create shamir shares")
 	}
-	verificationVector, err := polynomials2.LiftPolynomial(poly, d.basePoint)
+	verificationVector, err := polynomials.LiftPolynomial(poly, d.basePoint)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not lift polynomial to exponent")
 	}

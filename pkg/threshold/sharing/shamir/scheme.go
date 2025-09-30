@@ -8,14 +8,14 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials2"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials2/interpolation2"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
 type Scheme[FE algebra.PrimeFieldElement[FE]] struct {
 	f        algebra.PrimeField[FE]
-	polyRing *polynomials2.PolynomialRing[FE]
+	polyRing *polynomials.PolynomialRing[FE]
 	ac       *AccessStructure
 }
 
@@ -36,7 +36,7 @@ func NewScheme[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeField[FE], thres
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create access structure")
 	}
-	ring, err := polynomials2.NewPolynomialRing(f)
+	ring, err := polynomials.NewPolynomialRing(f)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create polynomial ring")
 	}
@@ -60,7 +60,7 @@ func (d *Scheme[FE]) AccessStructure() *AccessStructure {
 	return d.ac
 }
 
-func (d *Scheme[FE]) PolynomialRing() *polynomials2.PolynomialRing[FE] {
+func (d *Scheme[FE]) PolynomialRing() *polynomials.PolynomialRing[FE] {
 	return d.polyRing
 }
 
@@ -133,7 +133,7 @@ func (d *Scheme[FE]) Reconstruct(shares ...*Share[FE]) (*Secret[FE], error) {
 		nodes[i] = d.SharingIDToLagrangeNode(share.ID())
 		values[i] = share.Value()
 	}
-	reconstructed, err := interpolation2.InterpolateAt(nodes, values, d.f.Zero())
+	reconstructed, err := interpolation.InterpolateAt(nodes, values, d.f.Zero())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not interpolate polynomial")
 	}

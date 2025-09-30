@@ -3,7 +3,7 @@ package gennaro
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials2"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
@@ -50,7 +50,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 			Share: shareForThisParty,
 		})
 	}
-	p.state.localFeldmanVerificationVector, err = polynomials2.LiftPolynomial(p.state.pedersenDealerFunc.Components()[0], p.state.key.G())
+	p.state.localFeldmanVerificationVector, err = polynomials.LiftPolynomial(p.state.pedersenDealerFunc.Components()[0], p.state.key.G())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to lift pedersen dealer function to exponent")
 	}

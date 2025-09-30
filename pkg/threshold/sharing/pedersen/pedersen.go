@@ -2,7 +2,7 @@ package pedersen
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials2"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
@@ -11,8 +11,8 @@ import (
 const Name sharing.Name = "Pedersen Verifiable Secret Sharing Scheme"
 
 type (
-	DealerFunc[S algebra.PrimeFieldElement[S]]                                            = *polynomials2.DirectSumPolynomial[S]
-	VerificationVector[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] = *polynomials2.ModuleValuedPolynomial[E, S]
+	DealerFunc[S algebra.PrimeFieldElement[S]]                                            = *polynomials.DirectSumPolynomial[S]
+	VerificationVector[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] = *polynomials.ModuleValuedPolynomial[E, S]
 	AccessStructure                                                                       = shamir.AccessStructure
 )
 

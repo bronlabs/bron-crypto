@@ -2,7 +2,7 @@ package feldman
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials2"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
@@ -10,7 +10,7 @@ import (
 
 type (
 	DealerFunc[FE algebra.PrimeFieldElement[FE]]                                             = shamir.DealerFunc[FE]
-	VerificationVector[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] = *polynomials2.ModuleValuedPolynomial[E, FE]
+	VerificationVector[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] = *polynomials.ModuleValuedPolynomial[E, FE]
 	AccessStructure                                                                          = shamir.AccessStructure
 )
 

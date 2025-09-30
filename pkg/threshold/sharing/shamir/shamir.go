@@ -6,14 +6,14 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials2"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials2/interpolation2"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 )
 
 type (
-	DealerFunc[FE algebra.PrimeFieldElement[FE]] = *polynomials2.Polynomial[FE]
+	DealerFunc[FE algebra.PrimeFieldElement[FE]] = *polynomials.Polynomial[FE]
 )
 
 const Name sharing.Name = "Shamir's Secret Sharing"
@@ -32,7 +32,7 @@ func LagrangeCoefficients[FE algebra.PrimeFieldElement[FE]](field algebra.PrimeF
 		sharingIdsScalar[i] = SharingIDToLagrangeNode(field, id)
 	}
 
-	basisPolynomials, err := interpolation2.BasisAt(sharingIdsScalar, field.Zero())
+	basisPolynomials, err := interpolation.BasisAt(sharingIdsScalar, field.Zero())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute all basis polynomials at x=0")
 	}

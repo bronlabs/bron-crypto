@@ -1,4 +1,4 @@
-package polynomials2
+package polynomials
 
 import (
 	"fmt"

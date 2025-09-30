@@ -8,7 +8,7 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials2"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
@@ -84,7 +84,7 @@ func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not deal blinding shares")
 	}
-	dealerFuncRing, err := polynomials2.NewDirectSumPolynomialRing(s.shamirSSS.PolynomialRing(), 2)
+	dealerFuncRing, err := polynomials.NewDirectSumPolynomialRing(s.shamirSSS.PolynomialRing(), 2)
 	if err != nil {
 		return nil, nil, errs.WrapSerialisation(err, "could not create direct sum polynomial ring")
 	}
@@ -92,7 +92,7 @@ func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader
 	if err != nil {
 		return nil, nil, errs.WrapSerialisation(err, "could not create direct sum polynomial")
 	}
-	dealerFuncInTheExponent, err := polynomials2.LiftDirectSumPolynomial(dealerFunc, s.key.G(), s.key.H())
+	dealerFuncInTheExponent, err := polynomials.LiftDirectSumPolynomial(dealerFunc, s.key.G(), s.key.H())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not lift direct sum of polynomials to exponent")
 	}

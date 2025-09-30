@@ -1,4 +1,4 @@
-package interpolation2
+package interpolation
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
