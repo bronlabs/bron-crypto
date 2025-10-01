@@ -36,7 +36,11 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKPr
 		a: a,
 		z: z,
 	}
-	proofBytes, err := cbor.Marshal(proof)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	proofBytes, err := enc.Marshal(proof)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "cannot serialize proof")
 	}

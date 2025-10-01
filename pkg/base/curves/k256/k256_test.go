@@ -23,7 +23,7 @@ func Test_BaseFieldElementCBORRoundTrip(t *testing.T) {
 	require.True(t, deserialized.Equal(e))
 }
 
-func Test_ScalarGobRoundTrip(t *testing.T) {
+func Test_ScalarCBORRoundTrip(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
 
@@ -37,7 +37,7 @@ func Test_ScalarGobRoundTrip(t *testing.T) {
 	require.True(t, deserialized.Equal(e))
 }
 
-func Test_PointGobRoundTrip(t *testing.T) {
+func Test_PointCBORRoundTrip(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
 

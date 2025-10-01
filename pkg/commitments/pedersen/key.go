@@ -71,7 +71,11 @@ func (k *Key[E, S]) MarshalCBOR() ([]byte, error) {
 		G: k.g,
 		H: k.h,
 	}
-	return cbor.Marshal(dto)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
 }
 
 func (k *Key[E, S]) UnmarshalCBOR(data []byte) error {
@@ -83,7 +87,7 @@ func (k *Key[E, S]) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return err
 	}
-	
+
 	*k = *k2
 	return nil
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
+	"github.com/fxamacker/cbor/v2"
 )
 
 type (
@@ -49,6 +50,11 @@ func LagrangeCoefficients[FE algebra.PrimeFieldElement[FE]](field algebra.PrimeF
 type AccessStructure struct {
 	t  uint
 	ps ds.Set[sharing.ID]
+}
+
+type accessStructureDTO struct {
+	T  uint                `cbor:"threshold"`
+	Ps map[sharing.ID]bool `cbor:"shareholders"`
 }
 
 func NewAccessStructure(t uint, ps ds.Set[sharing.ID]) (*AccessStructure, error) {
@@ -103,6 +109,42 @@ func (a *AccessStructure) Clone() *AccessStructure {
 		t:  a.t,
 		ps: a.ps.Clone(),
 	}
+}
+
+func (a *AccessStructure) MarshalCBOR() ([]byte, error) {
+	dto := &accessStructureDTO{
+		T:  a.t,
+		Ps: make(map[sharing.ID]bool),
+	}
+	for p := range a.ps.Iter() {
+		dto.Ps[p] = true
+	}
+
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
+}
+
+func (a *AccessStructure) UnmarshalCBOR(data []byte) error {
+	var dto accessStructureDTO
+	if err := cbor.Unmarshal(data, &dto); err != nil {
+		return err
+	}
+	ps := hashset.NewComparable[sharing.ID]()
+	for k, v := range dto.Ps {
+		if v {
+			ps.Add(k)
+		}
+	}
+	a2, err := NewAccessStructure(dto.T, ps.Freeze())
+	if err != nil {
+		return err
+	}
+
+	*a = *a2
+	return nil
 }
 
 func _[FE algebra.PrimeFieldElement[FE]]() {

@@ -84,7 +84,11 @@ func (m *Message[S]) MarshalCBOR() ([]byte, error) {
 	dto := &messageDTO[S]{
 		V: m.v,
 	}
-	return cbor.Marshal(dto)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
 }
 
 func (m *Message[S]) UnmarshalCBOR(data []byte) error {

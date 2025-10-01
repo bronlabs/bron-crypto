@@ -51,20 +51,19 @@ func Test_G1PointCBORRoundTrip(t *testing.T) {
 	require.True(t, deserialized.Equal(e))
 }
 
-// TODO: investigate why this test fails
-//func Test_G2BaseFieldElementCBORRoundTrip(t *testing.T) {
-//	t.Parallel()
-//	prng := crand.Reader
-//
-//	e, err := bls12381.NewG2BaseField().Random(prng)
-//	require.NoError(t, err)
-//	serialized, err := cbor.Marshal(e)
-//	require.NoError(t, err)
-//	deserialized := new(bls12381.BaseFieldElementG2)
-//	err = cbor.Unmarshal(serialized, &deserialized)
-//	require.NoError(t, err)
-//	require.True(t, deserialized.Equal(e))
-//}
+func Test_G2BaseFieldElementCBORRoundTrip(t *testing.T) {
+	t.Parallel()
+	prng := crand.Reader
+
+	e, err := bls12381.NewG2BaseField().Random(prng)
+	require.NoError(t, err)
+	serialized, err := cbor.Marshal(e)
+	require.NoError(t, err)
+	deserialized := new(bls12381.BaseFieldElementG2)
+	err = cbor.Unmarshal(serialized, &deserialized)
+	require.NoError(t, err)
+	require.True(t, deserialized.Equal(e))
+}
 
 func Test_G2PointCBORRoundTrip(t *testing.T) {
 	t.Parallel()

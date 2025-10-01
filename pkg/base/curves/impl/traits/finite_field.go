@@ -176,7 +176,7 @@ func (fe *FiniteFieldElementTrait[FP, F, WP, W]) IsZero() bool {
 }
 
 func (fe *FiniteFieldElementTrait[FP, F, WP, W]) Bytes() []byte {
-	return slices.Concat(FP(&fe.V).ComponentsBytes()...)
+	return slices.Concat(fe.ComponentsBytes()...)
 }
 
 func (fe *FiniteFieldElementTrait[FP, F, WP, W]) ComponentsBytes() [][]byte {

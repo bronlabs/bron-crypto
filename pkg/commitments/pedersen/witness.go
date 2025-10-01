@@ -79,7 +79,11 @@ func (w *Witness[S]) MarshalCBOR() ([]byte, error) {
 	dto := &witnessDTO[S]{
 		V: w.v,
 	}
-	return cbor.Marshal(dto)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
 }
 
 func (w *Witness[S]) UnmarshalCBOR(data []byte) error {

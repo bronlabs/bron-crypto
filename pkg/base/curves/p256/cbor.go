@@ -20,7 +20,11 @@ type baseFieldDTO struct {
 
 func (fe *BaseFieldElement) MarshalCBOR() ([]byte, error) {
 	dto := &baseFieldDTO{BaseFieldBytes: fe.Bytes()}
-	return cbor.Marshal(dto)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
 }
 
 func (fe *BaseFieldElement) UnmarshalCBOR(data []byte) error {
@@ -43,7 +47,11 @@ type scalarDTO struct {
 
 func (fe *Scalar) MarshalCBOR() ([]byte, error) {
 	dto := &scalarDTO{ScalarBytes: fe.Bytes()}
-	return cbor.Marshal(dto)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
 }
 
 func (fe *Scalar) UnmarshalCBOR(data []byte) error {
@@ -66,7 +74,11 @@ type pointDTO struct {
 
 func (p *Point) MarshalCBOR() ([]byte, error) {
 	dto := &pointDTO{AffineCompressedBytes: p.ToCompressed()}
-	return cbor.Marshal(dto)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
 }
 
 func (p *Point) UnmarshalCBOR(data []byte) error {

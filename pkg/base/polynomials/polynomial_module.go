@@ -153,7 +153,11 @@ func (p *ModuleValuedPolynomial[ME, S]) MarshalCBOR() ([]byte, error) {
 	dto := &moduleValuedPolynomialDTO[ME, S]{
 		Coeffs: p.coeffs,
 	}
-	return cbor.Marshal(dto)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) UnmarshalCBOR(data []byte) error {

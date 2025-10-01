@@ -36,7 +36,11 @@ func (p *Proof[A, Z]) MarshalCBOR() ([]byte, error) {
 		A: p.a,
 		Z: p.z,
 	}
-	return cbor.Marshal(dto)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
 }
 
 func (p *Proof[A, Z]) UnmarshalCBOR(data []byte) error {

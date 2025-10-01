@@ -27,7 +27,11 @@ type fpFieldElementDTO struct {
 
 func (fe *FpFieldElement) MarshalCBOR() ([]byte, error) {
 	dto := &fpFieldElementDTO{FieldBytes: fe.Bytes()}
-	return cbor.Marshal(dto)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
 }
 
 func (fe *FpFieldElement) UnmarshalCBOR(data []byte) error {
@@ -50,7 +54,11 @@ type fqFieldElementDTO struct {
 
 func (fe *FqFieldElement) MarshalCBOR() ([]byte, error) {
 	dto := &fqFieldElementDTO{FieldBytes: fe.Bytes()}
-	return cbor.Marshal(dto)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
 }
 
 func (fe *FqFieldElement) UnmarshalCBOR(data []byte) error {
@@ -73,7 +81,11 @@ type pallasPointDTO struct {
 
 func (p *PallasPoint) MarshalCBOR() ([]byte, error) {
 	dto := &pallasPointDTO{AffineCompressedBytes: p.ToCompressed()}
-	return cbor.Marshal(dto)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
 }
 
 func (p *PallasPoint) UnmarshalCBOR(data []byte) error {
@@ -96,7 +108,11 @@ type vestaPointDTO struct {
 
 func (p *VestaPoint) MarshalCBOR() ([]byte, error) {
 	dto := &vestaPointDTO{AffineCompressedBytes: p.ToCompressed()}
-	return cbor.Marshal(dto)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
 }
 
 func (p *VestaPoint) UnmarshalCBOR(data []byte) error {

@@ -75,7 +75,11 @@ func (s *LiftedShare[E, FE]) MarshalCBOR() ([]byte, error) {
 		ID: s.id,
 		V:  s.v,
 	}
-	return cbor.Marshal(dto)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
 }
 
 func (s *LiftedShare[E, FE]) UnmarshalCBOR(data []byte) error {

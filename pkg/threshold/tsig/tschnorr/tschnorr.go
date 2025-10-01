@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/fxamacker/cbor/v2"
 )
 
 type MPCFriendlyVariant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message] interface {
@@ -21,13 +22,13 @@ type MPCFriendlyVariant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFiel
 }
 
 type MPCFriendlyScheme[
-	VR MPCFriendlyVariant[GE, S, M],
-	GE algebra.PrimeGroupElement[GE, S],
-	S algebra.PrimeFieldElement[S],
-	M schnorrlike.Message,
-	KG signatures.KeyGenerator[*schnorrlike.PrivateKey[GE, S], *schnorrlike.PublicKey[GE, S]],
-	SG schnorrlike.Signer[VR, GE, S, M],
-	VF schnorrlike.Verifier[VR, GE, S, M],
+VR MPCFriendlyVariant[GE, S, M],
+GE algebra.PrimeGroupElement[GE, S],
+S algebra.PrimeFieldElement[S],
+M schnorrlike.Message,
+KG signatures.KeyGenerator[*schnorrlike.PrivateKey[GE, S], *schnorrlike.PublicKey[GE, S]],
+SG schnorrlike.Signer[VR, GE, S, M],
+VF schnorrlike.Verifier[VR, GE, S, M],
 ] interface {
 	schnorrlike.Scheme[VR, GE, S, M, KG, SG, VF]
 	PartialSignatureVerifier(
@@ -37,8 +38,8 @@ type MPCFriendlyScheme[
 }
 
 type PartialSignature[
-	GE algebra.PrimeGroupElement[GE, S],
-	S algebra.PrimeFieldElement[S],
+GE algebra.PrimeGroupElement[GE, S],
+S algebra.PrimeFieldElement[S],
 ] struct {
 	Sig schnorrlike.Signature[GE, S]
 }
@@ -65,6 +66,13 @@ type PublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEleme
 	accessStructure   *feldman.AccessStructure
 	fv                feldman.VerificationVector[E, S]
 	partialPublicKeys ds.Map[sharing.ID, *schnorrlike.PublicKey[E, S]]
+}
+
+type publicMaterialDTO[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
+	PublicKey         *schnorrlike.PublicKey[E, S]                `cbor:"publicKey"`
+	AccessStructure   *feldman.AccessStructure                    `cbor:"accessStructure"`
+	FV                feldman.VerificationVector[E, S]            `cbor:"verificationVector"`
+	PartialPublicKeys map[sharing.ID]*schnorrlike.PublicKey[E, S] `cbor:"partialPublicKeys"`
 }
 
 func (spm *PublicMaterial[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
@@ -117,12 +125,53 @@ func (spm *PublicMaterial[E, S]) HashCode() base.HashCode {
 	return spm.publicKey.HashCode()
 }
 
+func (spm *PublicMaterial[E, S]) MarshalCBOR() ([]byte, error) {
+	ppk := make(map[sharing.ID]*schnorrlike.PublicKey[E, S])
+	for k, v := range spm.partialPublicKeys.Iter() {
+		ppk[k] = v
+	}
+
+	dto := &publicMaterialDTO[E, S]{
+		PublicKey:         spm.publicKey,
+		AccessStructure:   spm.accessStructure,
+		FV:                spm.fv,
+		PartialPublicKeys: ppk,
+	}
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
+}
+
+func (spm *PublicMaterial[E, S]) UnmarshalCBOR(data []byte) error {
+	var dto publicMaterialDTO[E, S]
+	if err := cbor.Unmarshal(data, &dto); err != nil {
+		return err
+	}
+
+	ppk := hashmap.NewImmutableComparableFromNativeLike(dto.PartialPublicKeys)
+	spm2 := &PublicMaterial[E, S]{
+		publicKey:         dto.PublicKey,
+		accessStructure:   dto.AccessStructure,
+		fv:                dto.FV,
+		partialPublicKeys: ppk,
+	}
+	*spm = *spm2
+	return nil
+}
+
 type Shard[
-	E algebra.PrimeGroupElement[E, S],
-	S algebra.PrimeFieldElement[S],
+E algebra.PrimeGroupElement[E, S],
+S algebra.PrimeFieldElement[S],
 ] struct {
 	share *feldman.Share[S]
 	PublicMaterial[E, S]
+}
+
+type shardDTO[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
+	Share *feldman.Share[S]    `cbor:"share"`
+	PM    PublicMaterial[E, S] `cbor:"publicMaterial"`
 }
 
 func (sh *Shard[E, S]) Share() *feldman.Share[S] {
@@ -154,15 +203,42 @@ func (sh *Shard[E, S]) HashCode() base.HashCode {
 	return sh.PublicMaterial.HashCode()
 }
 
-func (s *Shard[E, S]) AsSchnorrPrivateKey() (*schnorrlike.PrivateKey[E, S], error) {
-	if s == nil || s.share == nil {
+func (sh *Shard[E, S]) AsSchnorrPrivateKey() (*schnorrlike.PrivateKey[E, S], error) {
+	if sh == nil || sh.share == nil {
 		return nil, errs.NewIsNil("shard or share is nil")
 	}
-	sk, err := schnorrlike.NewPrivateKey(s.share.Value(), s.publicKey)
+	sk, err := schnorrlike.NewPrivateKey(sh.share.Value(), sh.publicKey)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create schnorr private key from share")
 	}
 	return sk, nil
+}
+
+func (sh *Shard[E, S]) MarshalCBOR() ([]byte, error) {
+	dto := &shardDTO[E, S]{
+		Share: sh.share,
+		PM:    sh.PublicMaterial,
+	}
+
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
+}
+
+func (sh *Shard[E, S]) UnmarshalCBOR(data []byte) error {
+	var dto shardDTO[E, S]
+	if err := cbor.Unmarshal(data, &dto); err != nil {
+		return err
+	}
+
+	sh2, err := NewShard(dto.Share, dto.PM.PublicKey(), dto.PM.VerificationVector(), dto.PM.AccessStructure())
+	if err != nil {
+		return err
+	}
+	*sh = *sh2
+	return nil
 }
 
 func NewShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](

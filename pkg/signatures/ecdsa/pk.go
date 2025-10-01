@@ -8,10 +8,15 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/fxamacker/cbor/v2"
 )
 
 type PublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	pk P
+}
+
+type publicKeyDTO[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	PK P `cbor:"publicKey"`
 }
 
 func NewPublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](pk P) (*PublicKey[P, B, S], error) {
@@ -66,4 +71,30 @@ func (pk *PublicKey[P, B, S]) ToElliptic() *nativeEcdsa.PublicKey {
 		Y:     nativeY,
 	}
 	return nativePublicKey
+}
+
+func (pk *PublicKey[P, B, S]) MarshalCBOR() ([]byte, error) {
+	dto := &publicKeyDTO[P, B, S]{
+		PK: pk.pk,
+	}
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+
+	return enc.Marshal(dto)
+}
+
+func (pk *PublicKey[P, B, S]) UnmarshalCBOR(data []byte) error {
+	var dto publicKeyDTO[P, B, S]
+	if err := cbor.Unmarshal(data, &dto); err != nil {
+		return err
+	}
+
+	pk2, err := NewPublicKey(dto.PK)
+	if err != nil {
+		return err
+	}
+	*pk = *pk2
+	return nil
 }

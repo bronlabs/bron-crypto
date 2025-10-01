@@ -100,7 +100,11 @@ func (c *Commitment[E, S]) MarshalCBOR() ([]byte, error) {
 	dto := &commitmentDTO[E, S]{
 		V: c.v,
 	}
-	return cbor.Marshal(dto)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
 }
 
 func (c *Commitment[E, S]) UnmarshalCBOR(data []byte) error {

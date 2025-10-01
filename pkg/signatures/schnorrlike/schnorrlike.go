@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
+	"github.com/fxamacker/cbor/v2"
 )
 
 const Name signatures.Name = "SchnorrLike"
@@ -77,6 +78,10 @@ type PublicKey[PKV GroupElement[PKV, S], S Scalar[S]] struct {
 	signatures.PublicKeyTrait[PKV, S]
 }
 
+type publicKeyDTO[PKV GroupElement[PKV, S], S Scalar[S]] struct {
+	PK PKV `cbor:"publicKey"`
+}
+
 func (pk *PublicKey[PKV, S]) Equal(other *PublicKey[PKV, S]) bool {
 	if pk == nil || other == nil {
 		return pk == other
@@ -89,6 +94,30 @@ func (pk *PublicKey[PKV, S]) Clone() *PublicKey[PKV, S] {
 		return nil
 	}
 	return &PublicKey[PKV, S]{PublicKeyTrait: *pk.PublicKeyTrait.Clone()}
+}
+
+func (pk *PublicKey[PKV, S]) MarshalCBOR() ([]byte, error) {
+	dto := &publicKeyDTO[PKV, S]{
+		PK: pk.PublicKeyTrait.V,
+	}
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
+}
+
+func (pk *PublicKey[PKV, S]) UnmarshalCBOR(data []byte) error {
+	var dto publicKeyDTO[PKV, S]
+	if err := cbor.Unmarshal(data, &dto); err != nil {
+		return err
+	}
+	pk2, err := NewPublicKey(dto.PK)
+	if err != nil {
+		return err
+	}
+	*pk = *pk2
+	return nil
 }
 
 func NewPrivateKey[PKV GroupElement[PKV, SKV], SKV Scalar[SKV]](value SKV, publicKey *PublicKey[PKV, SKV]) (*PrivateKey[PKV, SKV], error) {

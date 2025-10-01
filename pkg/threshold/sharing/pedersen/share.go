@@ -131,7 +131,11 @@ func (s *Share[S]) MarshalCBOR() ([]byte, error) {
 		Secret_:  s.secret,
 		Blinding: s.blinding,
 	}
-	return cbor.Marshal(dto)
+	enc, err := cbor.CoreDetEncOptions().EncMode()
+	if err != nil {
+		return nil, err
+	}
+	return enc.Marshal(dto)
 }
 
 func (s *Share[S]) UnmarshalCBOR(data []byte) error {
