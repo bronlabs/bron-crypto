@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
 type FiniteRing[RE algebra.RingElement[RE]] interface {
@@ -17,8 +18,10 @@ type FiniteRing[RE algebra.RingElement[RE]] interface {
 	algebra.FiniteStructure[RE]
 }
 
-var _ algebra.Ring[*Polynomial[*k256.Scalar]] = (*PolynomialRing[*k256.Scalar])(nil)
-var _ algebra.RingElement[*Polynomial[*k256.Scalar]] = (*Polynomial[*k256.Scalar])(nil)
+var (
+	_ algebra.Ring[*Polynomial[*k256.Scalar]]        = (*PolynomialRing[*k256.Scalar])(nil)
+	_ algebra.RingElement[*Polynomial[*k256.Scalar]] = (*Polynomial[*k256.Scalar])(nil)
+)
 
 type PolynomialRing[RE algebra.RingElement[RE]] struct {
 	ring FiniteRing[RE]
@@ -60,8 +63,7 @@ func (r *PolynomialRing[RE]) Name() string {
 }
 
 func (r *PolynomialRing[RE]) Order() crtp.Cardinal {
-	//TODO implement me
-	panic("implement me")
+	return cardinal.Infinite()
 }
 
 func (r *PolynomialRing[RE]) Model() *universal.Model[*Polynomial[RE]] {
@@ -69,19 +71,35 @@ func (r *PolynomialRing[RE]) Model() *universal.Model[*Polynomial[RE]] {
 	panic("implement me")
 }
 
-func (r *PolynomialRing[RE]) FromBytes(bytes []byte) (*Polynomial[RE], error) {
-	//TODO implement me
-	panic("implement me")
+func (r *PolynomialRing[RE]) FromBytes(inBytes []byte) (*Polynomial[RE], error) {
+	if len(inBytes) == 0 {
+		return nil, errs.NewSize("input bytes must not be empty")
+	}
+
+	coeffSize := r.ring.ElementSize()
+	if len(inBytes)%coeffSize != 0 {
+		return nil, errs.NewSize("input bytes length must be a multiple of element size")
+	}
+	numCoeffs := len(inBytes) / coeffSize
+	coeffs := make([]RE, numCoeffs)
+	for i := 0; i < numCoeffs; i++ {
+		start := i * coeffSize
+		end := start + coeffSize
+		var err error
+		coeffs[i], err = r.ring.FromBytes(inBytes[start:end])
+		if err != nil {
+			return nil, errs.WrapFailed(err, "could not parse coefficient")
+		}
+	}
+	return r.New(coeffs), nil
 }
 
 func (r *PolynomialRing[RE]) ElementSize() int {
-	//TODO implement me
-	panic("implement me")
+	panic("variable size polynomials not supported")
 }
 
 func (r *PolynomialRing[RE]) Characteristic() crtp.Cardinal {
-	//TODO implement me
-	panic("implement me")
+	return r.ring.Characteristic()
 }
 
 func (r *PolynomialRing[RE]) OpIdentity() *Polynomial[RE] {
@@ -101,8 +119,7 @@ func (r *PolynomialRing[RE]) Zero() *Polynomial[RE] {
 }
 
 func (r *PolynomialRing[RE]) IsSemiDomain() bool {
-	//TODO implement me
-	panic("implement me")
+	return r.ring.IsSemiDomain()
 }
 
 func NewPolynomialRing[RE algebra.RingElement[RE]](ring FiniteRing[RE]) (*PolynomialRing[RE], error) {
@@ -142,8 +159,11 @@ func (p *Polynomial[RE]) Structure() crtp.Structure[*Polynomial[RE]] {
 }
 
 func (p *Polynomial[RE]) Bytes() []byte {
-	//TODO implement me
-	panic("implement me")
+	var out []byte
+	for _, coeff := range p.coeffs {
+		out = append(out, coeff.Bytes()...)
+	}
+	return out
 }
 
 func (p *Polynomial[RE]) Clone() *Polynomial[RE] {
