@@ -2,10 +2,10 @@ package fiatshamir
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/fxamacker/cbor/v2"
 )
 
 type prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
@@ -36,11 +36,8 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKPr
 		a: a,
 		z: z,
 	}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	proofBytes, err := enc.Marshal(proof)
+
+	proofBytes, err := serde.MarshalCBOR(proof)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "cannot serialize proof")
 	}

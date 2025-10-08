@@ -7,10 +7,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
-	"github.com/fxamacker/cbor/v2"
 )
 
 const Name signatures.Name = "SchnorrLike"
@@ -100,16 +100,12 @@ func (pk *PublicKey[PKV, S]) MarshalCBOR() ([]byte, error) {
 	dto := &publicKeyDTO[PKV, S]{
 		PK: pk.PublicKeyTrait.V,
 	}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (pk *PublicKey[PKV, S]) UnmarshalCBOR(data []byte) error {
-	var dto publicKeyDTO[PKV, S]
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*publicKeyDTO[PKV, S]](data)
+	if err != nil {
 		return err
 	}
 	pk2, err := NewPublicKey(dto.PK)

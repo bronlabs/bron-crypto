@@ -7,8 +7,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	"github.com/fxamacker/cbor/v2"
 )
 
 type PublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -77,17 +77,12 @@ func (pk *PublicKey[P, B, S]) MarshalCBOR() ([]byte, error) {
 	dto := &publicKeyDTO[P, B, S]{
 		PK: pk.pk,
 	}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (pk *PublicKey[P, B, S]) UnmarshalCBOR(data []byte) error {
-	var dto publicKeyDTO[P, B, S]
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*publicKeyDTO[P, B, S]](data)
+	if err != nil {
 		return err
 	}
 

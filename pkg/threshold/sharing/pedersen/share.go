@@ -6,11 +6,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
-	"github.com/fxamacker/cbor/v2"
 )
 
 type Share[S algebra.PrimeFieldElement[S]] struct {
@@ -131,16 +131,12 @@ func (s *Share[S]) MarshalCBOR() ([]byte, error) {
 		Secret_:  s.secret,
 		Blinding: s.blinding,
 	}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (s *Share[S]) UnmarshalCBOR(data []byte) error {
-	var dto shareDTO[S]
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*shareDTO[S]](data)
+	if err != nil {
 		return err
 	}
 

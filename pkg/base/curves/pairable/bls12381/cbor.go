@@ -2,6 +2,7 @@ package bls12381
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/fxamacker/cbor/v2"
 )
 
@@ -24,16 +25,12 @@ type baseFieldElementG1DTO struct {
 
 func (fe *BaseFieldElementG1) MarshalCBOR() ([]byte, error) {
 	dto := &baseFieldElementG1DTO{FieldBytes: fe.Bytes()}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (fe *BaseFieldElementG1) UnmarshalCBOR(data []byte) error {
-	var dto baseFieldElementG1DTO
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*baseFieldElementG1DTO](data)
+	if err != nil {
 		return err
 	}
 	e, err := NewG1BaseField().FromBytes(dto.FieldBytes)
@@ -50,16 +47,12 @@ type baseFieldElementG2DTO struct {
 
 func (fe *BaseFieldElementG2) MarshalCBOR() ([]byte, error) {
 	dto := &baseFieldElementG2DTO{FieldBytes: fe.Bytes()}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (fe *BaseFieldElementG2) UnmarshalCBOR(data []byte) error {
-	var dto baseFieldElementG2DTO
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*baseFieldElementG2DTO](data)
+	if err != nil {
 		return err
 	}
 	e, err := NewG2BaseField().FromBytes(dto.FieldBytes)
@@ -76,16 +69,12 @@ type scalarDTO struct {
 
 func (s *Scalar) MarshalCBOR() ([]byte, error) {
 	dto := &scalarDTO{FieldBytes: s.Bytes()}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (s *Scalar) UnmarshalCBOR(data []byte) error {
-	var dto scalarDTO
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*scalarDTO](data)
+	if err != nil {
 		return err
 	}
 	e, err := NewScalarField().FromBytes(dto.FieldBytes)
@@ -102,16 +91,12 @@ type pointG1DTO struct {
 
 func (p *PointG1) MarshalCBOR() ([]byte, error) {
 	dto := &pointG1DTO{AffineCompressedBytes: p.ToCompressed()}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (p *PointG1) UnmarshalCBOR(data []byte) error {
-	var dto pointG1DTO
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*pointG1DTO](data)
+	if err != nil {
 		return err
 	}
 	e, err := NewG1().FromCompressed(dto.AffineCompressedBytes)
@@ -128,16 +113,12 @@ type pointG2DTO struct {
 
 func (p *PointG2) MarshalCBOR() ([]byte, error) {
 	dto := &pointG2DTO{AffineCompressedBytes: p.ToCompressed()}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (p *PointG2) UnmarshalCBOR(data []byte) error {
-	var dto pointG2DTO
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*pointG2DTO](data)
+	if err != nil {
 		return err
 	}
 	e, err := NewG2().FromCompressed(dto.AffineCompressedBytes)

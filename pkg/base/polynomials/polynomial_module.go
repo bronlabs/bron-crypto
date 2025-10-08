@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
-	"github.com/fxamacker/cbor/v2"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
 // interface compliance
@@ -242,16 +242,12 @@ func (p *ModuleValuedPolynomial[ME, S]) MarshalCBOR() ([]byte, error) {
 	dto := &moduleValuedPolynomialDTO[ME, S]{
 		Coeffs: p.coeffs,
 	}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) UnmarshalCBOR(data []byte) error {
-	var dto moduleValuedPolynomialDTO[ME, S]
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*moduleValuedPolynomialDTO[ME, S]](data)
+	if err != nil {
 		return err
 	}
 	p.coeffs = dto.Coeffs

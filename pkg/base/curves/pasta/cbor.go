@@ -2,6 +2,7 @@ package pasta
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/fxamacker/cbor/v2"
 )
 
@@ -27,16 +28,12 @@ type fpFieldElementDTO struct {
 
 func (fe *FpFieldElement) MarshalCBOR() ([]byte, error) {
 	dto := &fpFieldElementDTO{FieldBytes: fe.Bytes()}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (fe *FpFieldElement) UnmarshalCBOR(data []byte) error {
-	var dto fpFieldElementDTO
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*fpFieldElementDTO](data)
+	if err != nil {
 		return err
 	}
 
@@ -54,16 +51,12 @@ type fqFieldElementDTO struct {
 
 func (fe *FqFieldElement) MarshalCBOR() ([]byte, error) {
 	dto := &fqFieldElementDTO{FieldBytes: fe.Bytes()}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (fe *FqFieldElement) UnmarshalCBOR(data []byte) error {
-	var dto fqFieldElementDTO
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*fqFieldElementDTO](data)
+	if err != nil {
 		return err
 	}
 
@@ -81,16 +74,12 @@ type pallasPointDTO struct {
 
 func (p *PallasPoint) MarshalCBOR() ([]byte, error) {
 	dto := &pallasPointDTO{AffineCompressedBytes: p.ToCompressed()}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (p *PallasPoint) UnmarshalCBOR(data []byte) error {
-	var dto pallasPointDTO
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*pallasPointDTO](data)
+	if err != nil {
 		return err
 	}
 
@@ -108,16 +97,12 @@ type vestaPointDTO struct {
 
 func (p *VestaPoint) MarshalCBOR() ([]byte, error) {
 	dto := &vestaPointDTO{AffineCompressedBytes: p.ToCompressed()}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (p *VestaPoint) UnmarshalCBOR(data []byte) error {
-	var dto vestaPointDTO
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*vestaPointDTO](data)
+	if err != nil {
 		return err
 	}
 

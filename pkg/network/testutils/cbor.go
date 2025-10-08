@@ -3,19 +3,17 @@ package testutils
 import (
 	"testing"
 
-	"github.com/fxamacker/cbor/v2"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/stretchr/testify/require"
 )
 
 func CBORRoundTrip[T any](tb testing.TB, v T) T {
 	tb.Helper()
 
-	enc, err := cbor.CoreDetEncOptions().EncMode()
+	data, err := serde.MarshalCBOR(v)
 	require.NoError(tb, err)
-	data, err := enc.Marshal(v)
-	require.NoError(tb, err)
-	var out T
-	err = cbor.Unmarshal(data, &out)
+
+	out, err := serde.UnmarshalCBOR[T](data)
 	require.NoError(tb, err)
 	return out
 }

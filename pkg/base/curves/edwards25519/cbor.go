@@ -2,6 +2,7 @@ package edwards25519
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/fxamacker/cbor/v2"
 )
 
@@ -20,16 +21,12 @@ type baseFieldDTO struct {
 
 func (fe *BaseFieldElement) MarshalCBOR() ([]byte, error) {
 	dto := &baseFieldDTO{BaseFieldBytes: fe.Bytes()}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (fe *BaseFieldElement) UnmarshalCBOR(data []byte) error {
-	var dto baseFieldDTO
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*baseFieldDTO](data)
+	if err != nil {
 		return err
 	}
 
@@ -47,16 +44,12 @@ type scalarDTO struct {
 
 func (fe *Scalar) MarshalCBOR() ([]byte, error) {
 	dto := &scalarDTO{ScalarBytes: fe.Bytes()}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (fe *Scalar) UnmarshalCBOR(data []byte) error {
-	var dto scalarDTO
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*scalarDTO](data)
+	if err != nil {
 		return err
 	}
 
@@ -74,16 +67,12 @@ type pointDTO struct {
 
 func (p *Point) MarshalCBOR() ([]byte, error) {
 	dto := &pointDTO{AffineCompressedBytes: p.ToCompressed()}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (p *Point) UnmarshalCBOR(data []byte) error {
-	var dto pointDTO
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*pointDTO](data)
+	if err != nil {
 		return err
 	}
 

@@ -8,9 +8,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
-	"github.com/fxamacker/cbor/v2"
 )
 
 type (
@@ -120,16 +120,12 @@ func (a *AccessStructure) MarshalCBOR() ([]byte, error) {
 		dto.Ps[p] = true
 	}
 
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (a *AccessStructure) UnmarshalCBOR(data []byte) error {
-	var dto accessStructureDTO
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*accessStructureDTO](data)
+	if err != nil {
 		return err
 	}
 	ps := hashset.NewComparable[sharing.ID]()

@@ -4,7 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/fxamacker/cbor/v2"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
 type Witness[S algebra.PrimeFieldElement[S]] struct {
@@ -79,18 +79,15 @@ func (w *Witness[S]) MarshalCBOR() ([]byte, error) {
 	dto := &witnessDTO[S]{
 		V: w.v,
 	}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (w *Witness[S]) UnmarshalCBOR(data []byte) error {
-	var dto witnessDTO[S]
-	if err := cbor.Unmarshal(data, &dto); err != nil {
-		return err
+	dto, err := serde.UnmarshalCBOR[*witnessDTO[S]](data)
+	if err != nil {
+		return errs.WrapSerialisation(err, "cannot unmarshal witness")
 	}
+
 	w2, err := NewWitness(dto.V)
 	if err != nil {
 		return err

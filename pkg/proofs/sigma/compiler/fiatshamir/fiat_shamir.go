@@ -5,11 +5,11 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/fxamacker/cbor/v2"
 )
 
 const (
@@ -36,16 +36,12 @@ func (p *Proof[A, Z]) MarshalCBOR() ([]byte, error) {
 		A: p.a,
 		Z: p.z,
 	}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (p *Proof[A, Z]) UnmarshalCBOR(data []byte) error {
-	var dto proofDTO[A, Z]
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*proofDTO[A, Z]](data)
+	if err != nil {
 		return err
 	}
 	p.a = dto.A

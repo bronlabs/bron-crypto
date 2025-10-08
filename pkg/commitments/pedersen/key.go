@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/fxamacker/cbor/v2"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
 type Key[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
@@ -71,16 +71,12 @@ func (k *Key[E, S]) MarshalCBOR() ([]byte, error) {
 		G: k.g,
 		H: k.h,
 	}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (k *Key[E, S]) UnmarshalCBOR(data []byte) error {
-	var dto keyDTO[E, S]
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*keyDTO[E, S]](data)
+	if err != nil {
 		return err
 	}
 	k2, err := NewCommitmentKey(dto.G, dto.H)

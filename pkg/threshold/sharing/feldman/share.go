@@ -6,12 +6,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
-	"github.com/fxamacker/cbor/v2"
 )
 
 type Share[FE algebra.PrimeFieldElement[FE]] = shamir.Share[FE]
@@ -75,16 +75,12 @@ func (s *LiftedShare[E, FE]) MarshalCBOR() ([]byte, error) {
 		ID: s.id,
 		V:  s.v,
 	}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (s *LiftedShare[E, FE]) UnmarshalCBOR(data []byte) error {
-	var dto liftedShareDTO[E, FE]
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*liftedShareDTO[E, FE]](data)
+	if err != nil {
 		return err
 	}
 	s2, err := NewLiftedShare(dto.ID, dto.V)

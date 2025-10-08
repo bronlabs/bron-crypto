@@ -6,13 +6,13 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
-	"github.com/fxamacker/cbor/v2"
 )
 
 type MPCFriendlyVariant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message] interface {
@@ -137,16 +137,12 @@ func (spm *PublicMaterial[E, S]) MarshalCBOR() ([]byte, error) {
 		FV:                spm.fv,
 		PartialPublicKeys: ppk,
 	}
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (spm *PublicMaterial[E, S]) UnmarshalCBOR(data []byte) error {
-	var dto publicMaterialDTO[E, S]
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*publicMaterialDTO[E, S]](data)
+	if err != nil {
 		return err
 	}
 
@@ -219,17 +215,12 @@ func (sh *Shard[E, S]) MarshalCBOR() ([]byte, error) {
 		Share: sh.share,
 		PM:    sh.PublicMaterial,
 	}
-
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, err
-	}
-	return enc.Marshal(dto)
+	return serde.MarshalCBOR(dto)
 }
 
 func (sh *Shard[E, S]) UnmarshalCBOR(data []byte) error {
-	var dto shardDTO[E, S]
-	if err := cbor.Unmarshal(data, &dto); err != nil {
+	dto, err := serde.UnmarshalCBOR[*shardDTO[E, S]](data)
+	if err != nil {
 		return err
 	}
 
