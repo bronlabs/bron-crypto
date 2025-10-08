@@ -8,7 +8,6 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
@@ -70,7 +69,7 @@ func (s *Scheme[E, S]) dealAllNonZeroShares(secret *Secret[S], prng io.Reader) (
 	return shamirShares, secret, secretPoly, nil
 }
 
-func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader) (*DealerOutput[E, S], DealerFunc[S], error) {
+func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader) (*DealerOutput[E, S], *DealerFunc[S], error) {
 	if secret == nil {
 		return nil, nil, errs.NewIsNil("secret is nil")
 	}
@@ -84,19 +83,12 @@ func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not deal blinding shares")
 	}
-	dealerFuncRing, err := polynomials.NewDirectSumPolynomialRing(s.shamirSSS.PolynomialRing(), 2)
-	if err != nil {
-		return nil, nil, errs.WrapSerialisation(err, "could not create direct sum polynomial ring")
-	}
-	dealerFunc, err := dealerFuncRing.New(secretPoly, blindingPoly)
-	if err != nil {
-		return nil, nil, errs.WrapSerialisation(err, "could not create direct sum polynomial")
-	}
-	dealerFuncInTheExponent, err := polynomials.LiftDirectSumPolynomial(dealerFunc, s.key.G(), s.key.H())
+	dealerFunc := NewDealerFunc(secretPoly, blindingPoly)
+	dealerFuncInTheExponent, err := liftDealerFuncToExp(dealerFunc, s.key.G(), s.key.H())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not lift direct sum of polynomials to exponent")
 	}
-	verificationVector := dealerFuncInTheExponent.CoDiagonal()
+	verificationVector := dealerFuncInTheExponent.VerificationVector()
 	shares := hashmap.NewComparableFromNativeLike(
 		maps.Collect(
 			iterutils.Map2(
@@ -125,7 +117,7 @@ func (s *Scheme[E, S]) Deal(secret *Secret[S], prng io.Reader) (*DealerOutput[E,
 	return shares, nil
 }
 
-func (s *Scheme[E, S]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[E, S], *Secret[S], DealerFunc[S], error) {
+func (s *Scheme[E, S]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[E, S], *Secret[S], *DealerFunc[S], error) {
 	if prng == nil {
 		return nil, nil, nil, errs.NewIsNil("prng is nil")
 	}

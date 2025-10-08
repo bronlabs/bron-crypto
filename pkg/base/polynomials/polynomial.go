@@ -6,22 +6,23 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
+
+// interface compliance
+func _[RE algebra.RingElement[RE]]() {
+	var (
+		_ algebra.Ring[*Polynomial[RE]]        = (*PolynomialRing[RE])(nil)
+		_ algebra.RingElement[*Polynomial[RE]] = (*Polynomial[RE])(nil)
+	)
+}
 
 type FiniteRing[RE algebra.RingElement[RE]] interface {
 	algebra.Ring[RE]
 	algebra.FiniteStructure[RE]
 }
-
-var (
-	_ algebra.Ring[*Polynomial[*k256.Scalar]]        = (*PolynomialRing[*k256.Scalar])(nil)
-	_ algebra.RingElement[*Polynomial[*k256.Scalar]] = (*Polynomial[*k256.Scalar])(nil)
-)
 
 type PolynomialRing[RE algebra.RingElement[RE]] struct {
 	ring FiniteRing[RE]
@@ -62,7 +63,7 @@ func (r *PolynomialRing[RE]) Name() string {
 	return fmt.Sprintf("PolynomialRing[%s]", r.ring.Name())
 }
 
-func (r *PolynomialRing[RE]) Order() crtp.Cardinal {
+func (r *PolynomialRing[RE]) Order() algebra.Cardinal {
 	return cardinal.Infinite()
 }
 
@@ -98,7 +99,7 @@ func (r *PolynomialRing[RE]) ElementSize() int {
 	panic("variable size polynomials not supported")
 }
 
-func (r *PolynomialRing[RE]) Characteristic() crtp.Cardinal {
+func (r *PolynomialRing[RE]) Characteristic() algebra.Cardinal {
 	return r.ring.Characteristic()
 }
 
@@ -147,7 +148,7 @@ func (p *Polynomial[RE]) Eval(at RE) RE {
 	return out
 }
 
-func (p *Polynomial[RE]) Structure() crtp.Structure[*Polynomial[RE]] {
+func (p *Polynomial[RE]) Structure() algebra.Structure[*Polynomial[RE]] {
 	if len(p.coeffs) == 0 {
 		panic("internal error: empty coeffs")
 	}

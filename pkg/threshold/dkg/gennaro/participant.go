@@ -72,7 +72,7 @@ type State[E GroupElement[E, S], S Scalar[S]] struct {
 	receivedFeldmanVerificationVectors  ds.MutableMap[sharing.ID, feldman.VerificationVector[E, S]]
 
 	localPedersenDealerOutput      *pedersen.DealerOutput[E, S]
-	pedersenDealerFunc             pedersen.DealerFunc[S]
+	pedersenDealerFunc             *pedersen.DealerFunc[S]
 	localFeldmanVerificationVector feldman.VerificationVector[E, S]
 	localSecret                    *pedersen.Secret[S]
 	localShare                     *pedersen.Share[S]

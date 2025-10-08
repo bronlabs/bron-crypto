@@ -6,16 +6,18 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/fxamacker/cbor/v2"
 )
 
-var (
-	_ algebra.Module[*ModuleValuedPolynomial[*k256.Point, *k256.Scalar], *k256.Scalar]        = (*PolynomialModule[*k256.Point, *k256.Scalar])(nil)
-	_ algebra.ModuleElement[*ModuleValuedPolynomial[*k256.Point, *k256.Scalar], *k256.Scalar] = (*ModuleValuedPolynomial[*k256.Point, *k256.Scalar])(nil)
-)
+// interface compliance
+func _[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]]() {
+	var (
+		_ algebra.Module[*ModuleValuedPolynomial[ME, S], S]        = (*PolynomialModule[ME, S])(nil)
+		_ algebra.ModuleElement[*ModuleValuedPolynomial[ME, S], S] = (*ModuleValuedPolynomial[ME, S])(nil)
+	)
+}
 
 type PolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]] struct {
 	module algebra.Module[ME, S]

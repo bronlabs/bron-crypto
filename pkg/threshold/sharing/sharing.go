@@ -68,9 +68,9 @@ type AdditivelyShareableSecret[W Secret[W], WV algebra.GroupElement[WV]] interfa
 }
 
 type AdditiveSSS[
-S AdditiveShare[S, SV, AC], SV algebra.GroupElement[SV],
-W AdditivelyShareableSecret[W, WV], WV algebra.GroupElement[WV],
-DO DealerOutput[S], AC AccessStructure,
+	S AdditiveShare[S, SV, AC], SV algebra.GroupElement[SV],
+	W AdditivelyShareableSecret[W, WV], WV algebra.GroupElement[WV],
+	DO DealerOutput[S], AC AccessStructure,
 ] SSS[S, W, DO, AC]
 
 // =========
@@ -81,7 +81,7 @@ type LinearShare[S interface {
 	algebra.AdditivelyActable[S, SV]
 	ToAdditive(MinimalQualifiedAccessStructure) (SA, error)
 }, SV algebra.AdditiveGroupElement[SV], SA AdditiveShare[SA, SV, *MinimalQualifiedAccessStructure], SC algebra.PrimeFieldElement[SC],
-AC AccessStructure,
+	AC AccessStructure,
 ] interface {
 	AdditiveShare[S, SV, AC]
 	algebra.AdditivelyHomomorphicLike[S, SV]
@@ -92,8 +92,8 @@ AC AccessStructure,
 type LinearlyShareableSecret[W Secret[W], WV algebra.PrimeFieldElement[WV]] AdditivelyShareableSecret[W, WV]
 
 type LSSS[
-S LinearShare[S, SV, SA, WV, AC], SV algebra.AdditiveGroupElement[SV], SA AdditiveShare[SA, SV, *MinimalQualifiedAccessStructure],
-W LinearlyShareableSecret[W, WV], WV algebra.PrimeFieldElement[WV], DO DealerOutput[S], AC AccessStructure, DF any,
+	S LinearShare[S, SV, SA, WV, AC], SV algebra.AdditiveGroupElement[SV], SA AdditiveShare[SA, SV, *MinimalQualifiedAccessStructure],
+	W LinearlyShareableSecret[W, WV], WV algebra.PrimeFieldElement[WV], DO DealerOutput[S], AC AccessStructure, DF any,
 ] interface {
 	AdditiveSSS[S, SV, W, WV, DO, AC]
 	DealAndRevealDealerFunc(secret W, prng io.Reader) (DO, DF, error)
@@ -101,6 +101,6 @@ W LinearlyShareableSecret[W, WV], WV algebra.PrimeFieldElement[WV], DO DealerOut
 }
 
 type PolynomialLSSS[
-S LinearShare[S, SV, SA, WV, AC], SV algebra.PrimeFieldElement[SV], SA AdditiveShare[SA, SV, *MinimalQualifiedAccessStructure],
-W LinearlyShareableSecret[W, WV], WV algebra.PrimeFieldElement[WV], DO DealerOutput[S], AC AccessStructure,
+	S LinearShare[S, SV, SA, WV, AC], SV algebra.PrimeFieldElement[SV], SA AdditiveShare[SA, SV, *MinimalQualifiedAccessStructure],
+	W LinearlyShareableSecret[W, WV], WV algebra.PrimeFieldElement[WV], DO DealerOutput[S], AC AccessStructure,
 ] LSSS[S, SV, SA, W, WV, DO, AC, *polynomials.Polynomial[SV]]

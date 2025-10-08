@@ -11,7 +11,6 @@ import (
 const Name sharing.Name = "Pedersen Verifiable Secret Sharing Scheme"
 
 type (
-	DealerFunc[S algebra.PrimeFieldElement[S]]                                            = *polynomials.DirectSumPolynomial[S]
 	VerificationVector[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] = *polynomials.ModuleValuedPolynomial[E, S]
 	AccessStructure                                                                       = shamir.AccessStructure
 )
@@ -24,8 +23,8 @@ func _[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]]() {
 		_ sharing.LinearShare[*Share[S], S, *additive.Share[S], S, *AccessStructure] = (*Share[S])(nil)
 		_ sharing.LinearlyShareableSecret[*Secret[S], S]                             = (*Secret[S])(nil)
 
-		_ sharing.ThresholdSSS[*Share[S], *Secret[S], *DealerOutput[E, S], *AccessStructure]                                  = (*Scheme[E, S])(nil)
-		_ sharing.VSSS[*Share[S], *Secret[S], VerificationVector[E, S], *DealerOutput[E, S], *AccessStructure]                = (*Scheme[E, S])(nil)
-		_ sharing.LSSS[*Share[S], S, *additive.Share[S], *Secret[S], S, *DealerOutput[E, S], *AccessStructure, DealerFunc[S]] = (*Scheme[E, S])(nil)
+		_ sharing.ThresholdSSS[*Share[S], *Secret[S], *DealerOutput[E, S], *AccessStructure]                                   = (*Scheme[E, S])(nil)
+		_ sharing.VSSS[*Share[S], *Secret[S], VerificationVector[E, S], *DealerOutput[E, S], *AccessStructure]                 = (*Scheme[E, S])(nil)
+		_ sharing.LSSS[*Share[S], S, *additive.Share[S], *Secret[S], S, *DealerOutput[E, S], *AccessStructure, *DealerFunc[S]] = (*Scheme[E, S])(nil)
 	)
 }

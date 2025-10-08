@@ -1237,16 +1237,12 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 		require.NotNil(t, dealerFunc)
 		require.Equal(t, 5, shares.Shares().Size())
 
-		// Verify dealer function has correct components
-		components := dealerFunc.Components()
-		require.Equal(t, 2, len(components)) // secret and blinding polynomials
-
 		// Verify polynomial degrees
-		require.Equal(t, 1, components[0].Degree()) // secret polynomial degree = threshold - 1
-		require.Equal(t, 1, components[1].Degree()) // blinding polynomial degree = threshold - 1
+		require.Equal(t, 1, dealerFunc.G.Degree()) // secret polynomial degree = threshold - 1
+		require.Equal(t, 1, dealerFunc.H.Degree()) // blinding polynomial degree = threshold - 1
 
 		// Verify that the constant term of the first polynomial is the secret
-		secretCoeff := components[0].ConstantTerm()
+		secretCoeff := dealerFunc.G.ConstantTerm()
 		require.True(t, secret.Value().Equal(secretCoeff))
 	})
 
@@ -1289,9 +1285,8 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 			x := shamir.SharingIDToLagrangeNode(field, id)
 
 			// Evaluate dealer function components at x
-			components := dealerFunc.Components()
-			secretValue := components[0].Eval(x)
-			blindingValue := components[1].Eval(x)
+			secretValue := dealerFunc.G.Eval(x)
+			blindingValue := dealerFunc.H.Eval(x)
 
 			// Check that share values match
 			require.True(t, secretValue.Equal(share.Value()))
@@ -1324,16 +1319,12 @@ func TestDealRandomAndRevealDealerFunc(t *testing.T) {
 		require.NotNil(t, dealerFunc)
 		require.Equal(t, 5, shares.Shares().Size())
 
-		// Verify dealer function has correct components
-		components := dealerFunc.Components()
-		require.Equal(t, 2, len(components)) // secret and blinding polynomials
-
 		// Verify polynomial degrees
-		require.Equal(t, 1, components[0].Degree()) // secret polynomial degree = threshold - 1
-		require.Equal(t, 1, components[1].Degree()) // blinding polynomial degree = threshold - 1
+		require.Equal(t, 1, dealerFunc.G.Degree()) // secret polynomial degree = threshold - 1
+		require.Equal(t, 1, dealerFunc.H.Degree()) // blinding polynomial degree = threshold - 1
 
 		// Verify that the constant term of the first polynomial is the secret
-		secretCoeff := components[0].ConstantTerm()
+		secretCoeff := dealerFunc.G.ConstantTerm()
 		require.True(t, secret.Value().Equal(secretCoeff))
 
 		// Verify reconstruction
