@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	pedersen_comm "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
@@ -12,7 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
-type Prover[X sigma.Statement, XV pedersen_comm.GroupElement[XV, WV], W sigma.Witness, WV pedersen_comm.Scalar[WV], A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
+type Prover[X sigma.Statement, XV algebra.PrimeGroupElement[XV, WV], W sigma.Witness, WV algebra.PrimeFieldElement[WV], A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	participant[X, XV, W, WV, A, S, Z]
 
 	challengeCommitment *pedersen_comm.Commitment[XV, WV]
@@ -20,7 +21,7 @@ type Prover[X sigma.Statement, XV pedersen_comm.GroupElement[XV, WV], W sigma.Wi
 	state               S
 }
 
-func NewProver[X sigma.Statement, XV pedersen_comm.GroupElement[XV, WV], W sigma.Witness, WV pedersen_comm.Scalar[WV], A sigma.Commitment, S sigma.State, Z sigma.Response](sessionId network.SID, tape transcripts.Transcript, sigmaProtocol sigma.Protocol[X, W, A, S, Z], pedersenGroup pedersen_comm.Group[XV, WV], statement X, witness W) (*Prover[X, XV, W, WV, A, S, Z], error) {
+func NewProver[X sigma.Statement, XV algebra.PrimeGroupElement[XV, WV], W sigma.Witness, WV algebra.PrimeFieldElement[WV], A sigma.Commitment, S sigma.State, Z sigma.Response](sessionId network.SID, tape transcripts.Transcript, sigmaProtocol sigma.Protocol[X, W, A, S, Z], pedersenGroup algebra.PrimeGroup[XV, WV], statement X, witness W) (*Prover[X, XV, W, WV, A, S, Z], error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewArgument("sessionId is empty")
 	}

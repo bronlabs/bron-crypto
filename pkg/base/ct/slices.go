@@ -34,3 +34,17 @@ func SliceIsZero[S ~[]E, E constraints.Integer](s S) Choice {
 	}
 	return IsZero(v)
 }
+
+// SelectIntegerSlices yields x1 if choice == 1, x0 if choice == 0.
+// Its behaviour is undefined if choice takes any other value.
+func SelectIntegerSlices[S ~[]E, E constraints.Unsigned](choice Choice, x0, x1 S) S {
+	if len(x0) != len(x1) {
+		panic("ct: slices have different lengths")
+	}
+
+	out := make(S, len(x0))
+	for i := range out {
+		out[i] = SelectInteger(choice, x0[i], x1[i])
+	}
+	return out
+}

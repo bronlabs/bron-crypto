@@ -236,11 +236,7 @@ func (p *participant[G, S]) roMu(muBold [][]S) (mu []byte, err error) {
 			p.tape.AppendBytes(muVectorLabel, e.Bytes())
 		}
 	}
-<<<<<<< HEAD:pkg/threshold/mul_bbot/rounds.go
-	mu, err = p.Tape.ExtractBytes(muLabel, uint(base.CollisionResistanceBytesCeil))
-=======
-	mu, err = p.tape.ExtractBytes(muLabel, uint(utils.CeilDiv(2*base.ComputationalSecurity, 8)))
->>>>>>> refactor:pkg/threshold/rvole/bbot/rounds.go
+	mu, err = p.tape.ExtractBytes(muLabel, uint(base.CollisionResistanceBytesCeil))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot extract mu")
 	}

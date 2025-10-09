@@ -115,7 +115,7 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	var yPrime []*numct.Nat
 	prover.paillierSecretKey.Arithmetic().CrtModN.MultiBaseExp(
 		yPrime,
-		sliceutils.Map[[]*numct.Nat](prover.state.x, func(s *nthroots.Statement) *numct.Nat { return s.X.Value().Value() }),
+		sliceutils.MapCast[[]*numct.Nat](prover.state.x, func(s *nthroots.Statement) *numct.Nat { return s.X.Value().Value() }),
 		&m,
 	)
 

@@ -35,7 +35,8 @@ func (f *Field) FromBytes(buf []byte) (*FieldElement, error) {
 }
 
 func (f *Field) Select(choice uint64, x, y *FieldElement) *FieldElement {
-	zSlice := ct.SliceSelect(ct.Choice(choice), x[:], y[:])
+	// TODO: bring back SliceSelect
+	zSlice := ct.SelectIntegerSlices(ct.Choice(choice), x[:], y[:])
 	return &FieldElement{
 		zSlice[0],
 		zSlice[1],

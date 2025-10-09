@@ -1,6 +1,7 @@
 package zkcompiler
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
@@ -19,7 +20,7 @@ const (
 	responseLabel            = "zkCompilerResponse"
 )
 
-type participant[X sigma.Statement, XV pedersen_comm.GroupElement[XV, WV], W sigma.Witness, WV pedersen_comm.Scalar[WV], A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
+type participant[X sigma.Statement, XV algebra.PrimeGroupElement[XV, WV], W sigma.Witness, WV algebra.PrimeFieldElement[WV], A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	sessionId network.SID
 	tape      transcripts.Transcript
 
@@ -29,12 +30,12 @@ type participant[X sigma.Statement, XV pedersen_comm.GroupElement[XV, WV], W sig
 	commitment      A
 	challengeScalar pedersen_comm.Message[WV]
 	response        Z
-	pedersenGroup   pedersen_comm.Group[XV, WV]
+	pedersenGroup   algebra.PrimeGroup[XV, WV]
 
 	round uint
 }
 
-func CommitmentScheme[XV pedersen_comm.GroupElement[XV, WV], WV pedersen_comm.Scalar[WV]](g pedersen_comm.Group[XV, WV], key *pedersen_comm.Key[XV, WV]) (commitments.Scheme[*pedersen_comm.Witness[WV], *pedersen_comm.Message[WV], *pedersen_comm.Commitment[XV, WV]], error) {
+func CommitmentScheme[XV algebra.PrimeGroupElement[XV, WV], WV algebra.PrimeFieldElement[WV]](g algebra.PrimeGroup[XV, WV], key *pedersen_comm.Key[XV, WV]) (commitments.Scheme[*pedersen_comm.Witness[WV], *pedersen_comm.Message[WV], *pedersen_comm.Commitment[XV, WV]], error) {
 	return pedersen_comm.NewScheme(key)
 }
 
@@ -53,6 +54,9 @@ func (p *participant[X, XV, W, WV, A, S, Z]) challengeBytesToPedersenMessage(cha
 }
 
 func (p *participant[X, XV, W, WV, A, S, Z]) pedersenMessageToChallengeBytes(message pedersen_comm.Message[WV]) []byte {
-	scalarBytes := message.Bytes()
+	scalarBytes, err := message.MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
 	return scalarBytes[k256Impl.FqBytes-p.protocol.GetChallengeBytesLength():]
 }

@@ -33,25 +33,18 @@ func NewCommitmentKey[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEle
 	return k, nil
 }
 
-func NewCommitmentKeyFromBytes[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](group algebra.PrimeGroup[E, S], input []byte) (*Key[E, S], error) {
+func NewCommitmentKeyFromHBytes[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](group algebra.PrimeGroup[E, S], hBytes []byte) (*Key[E, S], error) {
 	if group == nil {
 		return nil, errs.NewIsNil("group cannot be nil")
 	}
-
-	// TODO: this basically makes it useless
-	if len(input) != 2*group.ElementSize() {
+	if len(hBytes) != group.ElementSize() {
 		return nil, errs.NewArgument("input length must be twice the group element size")
 	}
-
-	g, err := group.FromBytes(input[:group.ElementSize()])
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "cannot deserialize g from bytes")
-	}
-	h, err := group.FromBytes(input[group.ElementSize():])
+	h, err := group.FromBytes(hBytes[group.ElementSize():])
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "cannot deserialize h from bytes")
 	}
-	return NewCommitmentKey(g, h)
+	return NewCommitmentKey(group.Generator(), h)
 }
 
 func (k *Key[E, S]) G() E {

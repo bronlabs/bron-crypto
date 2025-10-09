@@ -56,8 +56,8 @@ func newParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 
 	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
 	kappa := suite.group.ScalarStructure().ElementSize() * 8
-	xi := kappa + 2*base.StatisticalSecurity
-	rho := utils.CeilDiv(kappa, base.ComputationalSecurity)
+	xi := kappa + 2*base.StatisticalSecurityBits
+	rho := utils.CeilDiv(kappa, base.ComputationalSecurityBits)
 
 	return &participant[G, S]{
 		prng:      prng,

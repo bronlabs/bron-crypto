@@ -20,8 +20,12 @@ func MapErrFunc[SIn ~[]TIn, TIn, TOut any](in SIn, f func(TIn) (TOut, error)) (o
 	return out, nil
 }
 
-func Map[TOut any, SIn ~[]TIn, TIn any](in SIn, f func(TIn) TOut) []TOut {
+func MapCast[S ~[]TOut, TOut any, SIn ~[]TIn, TIn any](in SIn, f func(TIn) TOut) S {
 	return slices.Collect(iterutils.Map(slices.Values(in), f))
+}
+
+func Map[TOut any, SIn ~[]TIn, TIn any](in SIn, f func(TIn) TOut) []TOut {
+	return MapCast[[]TOut](in, f)
 }
 
 func Filter[S ~[]T, T any](xs S, predicate func(T) bool) S {

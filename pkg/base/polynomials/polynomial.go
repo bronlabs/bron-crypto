@@ -6,7 +6,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
@@ -65,11 +64,6 @@ func (r *PolynomialRing[RE]) Name() string {
 
 func (r *PolynomialRing[RE]) Order() algebra.Cardinal {
 	return cardinal.Infinite()
-}
-
-func (r *PolynomialRing[RE]) Model() *universal.Model[*Polynomial[RE]] {
-	//TODO implement me
-	panic("implement me")
 }
 
 func (r *PolynomialRing[RE]) FromBytes(inBytes []byte) (*Polynomial[RE], error) {

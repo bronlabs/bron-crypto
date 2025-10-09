@@ -1,7 +1,6 @@
 package network
 
 import (
-	"fmt"
 	"iter"
 	"slices"
 
@@ -51,16 +50,16 @@ func IterSorted[M Message](input RoundMessages[M]) iter.Seq2[sharing.ID, M] {
 	}
 }
 
-func WriteToTape[M Message](
-	sid SID,
-	party Party,
-	input RoundMessages[M],
-) {
-	dst := fmt.Sprintf("round-%d-of-%s-in-%s", party.Round(), party.ProtocolName(), sid)
-	party.Transcript().AppendDomainSeparator(dst)
-	for id, msg := range IterSorted(input) {
-		label := fmt.Sprintf("message-from-%d-in-round-%d", id, party.Round())
-		ts.Append(party.Transcript(), label, msg)
+// func WriteToTape[M Message](
+// 	sid SID,
+// 	party Party,
+// 	input RoundMessages[M],
+// ) {
+// 	dst := fmt.Sprintf("round-%d-of-%s-in-%s", party.Round(), party.ProtocolName(), sid)
+// 	party.Transcript().AppendDomainSeparator(dst)
+// 	for id, msg := range IterSorted(input) {
+// 		label := fmt.Sprintf("message-from-%d-in-round-%d", id, party.Round())
+// 		ts.Append(party.Transcript(), label, msg)
 
-	}
-}
+// 	}
+// }

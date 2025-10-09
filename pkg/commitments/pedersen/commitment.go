@@ -96,6 +96,10 @@ func (c *Commitment[E, S]) HashCode() base.HashCode {
 	return c.v.HashCode()
 }
 
+func (c *Commitment[E, S]) Bytes() []byte {
+	return c.v.Bytes()
+}
+
 func (c *Commitment[E, S]) MarshalCBOR() ([]byte, error) {
 	dto := &commitmentDTO[E, S]{
 		V: c.v,

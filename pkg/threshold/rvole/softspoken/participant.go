@@ -56,8 +56,8 @@ func newParticipant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebr
 	}
 
 	kappa := suite.field.ElementSize() * 8
-	xi := kappa + 2*base.ComputationalSecurity // normally this should be statistical security, but then xi is an invalid parameter for softspoken
-	rho := utils.CeilDiv(kappa, base.ComputationalSecurity)
+	xi := kappa + base.CollisionResistance // normally this should be statistical security, but then xi is an invalid parameter for softspoken
+	rho := utils.CeilDiv(kappa, base.ComputationalSecurityBits)
 
 	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
 	return &participant[P, B, S]{
