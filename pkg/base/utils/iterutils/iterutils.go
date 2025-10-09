@@ -46,6 +46,18 @@ func Map[In, Out any](seq iter.Seq[In], f func(In) Out) iter.Seq[Out] {
 	}
 }
 
+func MapOrError[In, Out any](seq iter.Seq[In], f func(In) (Out, error)) iter.Seq[Out] {
+	return func(yield func(Out) bool) {
+		for in := range seq {
+			if out, err := f(in); err == nil {
+				if !yield(out) {
+					return
+				}
+			}
+		}
+	}
+}
+
 func Map2[KIn, KOut, VIn, VOut any](seq iter.Seq2[KIn, VIn], f func(KIn, VIn) (KOut, VOut)) iter.Seq2[KOut, VOut] {
 	return func(yield func(KOut, VOut) bool) {
 		for k, v := range seq {

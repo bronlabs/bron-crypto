@@ -1,7 +1,7 @@
 package ct
 
 import (
-	"unsafe"
+	"reflect"
 
 	"golang.org/x/exp/constraints"
 )
@@ -21,7 +21,7 @@ func Equal[I constraints.Integer](x, y I) Choice {
 
 // Greater returns 1 iff x > y, using the natural order of I.
 func Greater[I constraints.Integer](x, y I) Choice {
-	if IsSigned[I]() == True {
+	if isSigned[I]() {
 		return LessI64(int64(y), int64(x))
 	}
 	return LessU64(uint64(y), uint64(x))
@@ -96,10 +96,16 @@ func Isqrt64(n uint64) uint64 {
 	return result
 }
 
-func IsSigned[I constraints.Integer]() Bool {
-	var z I
-	b := z-1 < z                               // true for signed, false for unsigned
-	return Bool(*(*uint8)(unsafe.Pointer(&b))) // 0 or 1, no branch
+func isSigned[I constraints.Integer]() bool {
+	var zero I
+	switch reflect.TypeOf(zero).Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return false
+	default:
+		panic("not an integer type")
+	}
 }
 
 func LessU64(x, y uint64) Choice {

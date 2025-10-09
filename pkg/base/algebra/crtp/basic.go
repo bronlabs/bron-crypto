@@ -5,7 +5,6 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 )
 
 // === Interfaces
@@ -21,7 +20,6 @@ type Element[E any] interface {
 type Structure[E any] interface {
 	Name() string
 	Order() Cardinal
-	Model() *universal.Model[E]
 	base.BytesLikeFactory[E]
 }
 
@@ -31,13 +29,14 @@ type FiniteStructure[E any] interface {
 	Hash(bytes []byte) (E, error)
 }
 
-type Quotient[E any] interface {
+type Quotient[E, M, A any] interface {
 	Structure[E]
-	Modulus() E
-	AmbientModel() *universal.Model[E]
+	Modulus() M
+	AmbientStructure() Structure[A]
 }
 
-type Residue[E any] interface {
+type Residue[E, M any] interface {
 	Element[E]
-	Modulus() E
+	Modulus() M
+	EqualModulus(other E) bool
 }

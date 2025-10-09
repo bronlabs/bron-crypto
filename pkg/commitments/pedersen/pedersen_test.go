@@ -105,7 +105,7 @@ func TestCommitmentKeyCreation(t *testing.T) {
 		require.Equal(t, 2*curve.ElementSize(), len(keyBytes))
 
 		// Deserialize
-		key2, err := pedersen.NewCommitmentKeyFromBytes(curve, keyBytes)
+		key2, err := pedersen.NewCommitmentKeyFromHBytes(curve, keyBytes)
 		require.NoError(t, err)
 		require.True(t, key.G().Equal(key2.G()))
 		require.True(t, key.H().Equal(key2.H()))
@@ -113,7 +113,7 @@ func TestCommitmentKeyCreation(t *testing.T) {
 
 	t.Run("key deserialization with wrong size", func(t *testing.T) {
 		wrongBytes := make([]byte, curve.ElementSize()) // Only one element instead of two
-		_, err := pedersen.NewCommitmentKeyFromBytes(curve, wrongBytes)
+		_, err := pedersen.NewCommitmentKeyFromHBytes(curve, wrongBytes)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "input length")
 	})

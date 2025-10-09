@@ -13,23 +13,26 @@ import (
 
 type LiftableToZ[I algebra.IntLike[I]] interface {
 	Lift() I
-	Abs() I
 }
 
 // **** Positive Natural Numbers ****
 
 type integerSetMethods[E algebra.Element[E]] interface {
 	FromCardinal(cardinal.Cardinal) (E, error)
-	Random(lowInclusive, highExclusive E, prng io.Reader) (E, error)
+	FromBig(*big.Int) (E, error)
 	Iter() iter.Seq[E]
 	IterRange(start, end E) iter.Seq[E]
 }
 
-type NPlus[E NatPlus[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ intMethods[EZ, ENP, EZ, EU], EU uintMethods[EU, ENP, EZ, EU]] interface {
+type nPlusMethods[E NatPlus[E, ENP, EN, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ intMethods[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
 	algebra.NPlusLike[E]
 	integerSetMethods[E]
-	algebra.MultiplicativeSemiModule[E, E]
 	base.BoundedFromBelow[E]
+	Random(lowInclusive, highExclusive E, prng io.Reader) (E, error)
+}
+
+type NPlus[E NatPlus[E, ENP, EN, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ intMethods[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
+	nPlusMethods[E, ENP, EN, EZ, EU]
 	FromUint64(uint64) (E, error)
 	FromNat(EN) (E, error)
 	FromInt(EZ) (E, error)
@@ -37,166 +40,202 @@ type NPlus[E NatPlus[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN n
 
 type natPlusMethods[E interface {
 	algebra.NatPlusLike[E]
-	algebra.MultiplicativeSemiModuleElement[E, E]
 }, ENP algebra.NatPlusLike[ENP], EZ algebra.IntLike[EZ], EU algebra.UintLike[EU]] interface {
 	algebra.NatPlusLike[E]
 	base.Comparable[E]
-	algebra.MultiplicativeSemiModuleElement[E, E]
 	LiftableToZ[EZ]
 
-	Mod(ENP) (EU, error)
-	IsUnit(ENP) bool
 	algebra.LeftBitwiseShiftable[E]
 	algebra.RightBitwiseShiftable[E]
-	algebra.Conjunct[E]
-	algebra.Disjunct[E]
-	algebra.ExclusiveDisjunct[E]
-	algebra.BooleanNegand[E]
 
-	IsInRange(ENP) bool
-	Increment()
+	Increment() E
 
 	Big() *big.Int
-	fmt.Stringer
-}
-
-type NatPlus[E natPlusMethods[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EZ intMethods[EZ, ENP, EZ, EU], EU uintMethods[EU, ENP, EZ, EU]] interface {
-	natPlusMethods[E, ENP, EZ, EU]
-	base.BoundedFromBelow[E]
-	Decrement() error
-}
-
-type natPlusCapMethods[E natPlusMethods[E, ENP, EZ, EU], ENP algebra.NatPlusLike[ENP], EZ algebra.IntLike[EZ], EU algebra.UintLike[EU]] interface {
-	natPlusMethods[E, ENP, EZ, EU]
-
-	algebra.ResizableCapacity[E]
-	algebra.FixedCapacityOperand[E]
-	algebra.FixedCapacityDualOperand[E]
-	algebra.FixedCapacitySummand[E]
-	algebra.MaybeFixedCapacityMinuend[E]
-	algebra.FixedCapacityMultiplicand[E]
-	algebra.MaybeFixedCapacityDividend[E]
+	Cardinal() cardinal.Cardinal
 
 	Bit(i uint) byte
 	TrueLen() uint
 	AnnouncedLen() uint
+
+	fmt.Stringer
 }
 
-type NatPlusCap[E natPlusCapMethods[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EZ intMethods[EZ, ENP, EZ, EU], EU uintMethods[EU, ENP, EZ, EU]] interface {
-	NatPlus[E, ENP, EZ, EU]
-	natPlusCapMethods[E, ENP, EZ, EU]
+type NatPlus[E natPlusMethods[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ intMethods[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
+	natPlusMethods[E, ENP, EZ, EU]
+	base.BoundedFromBelowElement
+	Decrement() (E, error)
+	Nat() EN
+	IsUnit(ENP) bool
+	Mod(ENP) EU
 }
+
+// type natPlusCapMethods[E natPlusMethods[E, ENP, EZ, EU], ENP algebra.NatPlusLike[ENP], EZ algebra.IntLike[EZ], EU algebra.UintLike[EU]] interface {
+// 	natPlusMethods[E, ENP, EZ, EU]
+
+// 	algebra.ResizableCapacity[E]
+// 	algebra.FixedCapacityOperand[E]
+// 	algebra.FixedCapacityDualOperand[E]
+// 	algebra.FixedCapacitySummand[E]
+// 	algebra.FixedCapacityMultiplicand[E]
+// 	algebra.MaybeFixedCapacityDividend[E]
+// 	algebra.FixedLengthLeftBitwiseShiftable[E]
+// 	algebra.FixedLengthRightBitwiseShiftable[E]
+
+// 	Bit(i uint) byte
+// 	TrueLen() uint
+// 	AnnouncedLen() uint
+// }
+
+// type NatPlusCap[E natPlusCapMethods[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ intMethods[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
+// 	NatPlus[E, ENP, EN, EZ, EU]
+// 	natPlusCapMethods[E, ENP, EZ, EU]
+// }
 
 // *** Natural Numbers ***
 
-type N[E natMethods[E, ENP, EZ, EU], ENP NatPlus[ENP, ENP, EZ, EU], EZ intMethods[EZ, ENP, EZ, EU], EU uintMethods[EU, ENP, EZ, EU]] interface {
+type nMethods[E Nat[E, ENP, EN, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ intMethods[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
 	algebra.NLike[E]
-	algebra.AdditiveSemiModule[E, E]
 	integerSetMethods[E]
 	base.BoundedFromBelow[E]
+	Random(lowInclusive, highExclusive E, prng io.Reader) (E, error)
+}
+
+type N[E Nat[E, ENP, EN, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ intMethods[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
+	nMethods[E, ENP, EN, EZ, EU]
+	FromUint64(uint64) E
 	FromNatPlus(ENP) (E, error)
 	FromInt(EZ) (E, error)
 }
 
 type natMethods[E interface {
 	algebra.NatLike[E]
-	algebra.AdditiveSemiModuleElement[E, E]
 	natPlusMethods[E, ENP, EZ, EU]
 }, ENP algebra.NatPlusLike[ENP], EZ algebra.IntLike[EZ], EU algebra.UintLike[EU]] interface {
 	algebra.NatLike[E]
 	natPlusMethods[E, ENP, EZ, EU]
-	algebra.AdditiveSemiModuleElement[E, E]
 	Coprime(E) bool
-	Sqrt() (E, error)
 }
 
-type Nat[E natMethods[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EZ intMethods[EZ, ENP, EZ, EU], EU uintMethods[EU, ENP, EZ, EU]] interface {
+type Nat[E natMethods[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ intMethods[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
 	natMethods[E, ENP, EZ, EU]
-	Decrement() error
+	Decrement() (E, error)
+	IsUnit(ENP) bool
+	Mod(ENP) EU
+	base.BoundedFromBelowElement
 }
 
-type natCapMethods[E interface {
-	natMethods[E, ENP, EZ, EU]
-	natPlusCapMethods[E, ENP, EZ, EU]
-}, ENP algebra.NatPlusLike[ENP], EZ algebra.IntLike[EZ], EU algebra.UintLike[EU]] interface {
-	natMethods[E, ENP, EZ, EU]
-	natPlusCapMethods[E, ENP, EZ, EU]
-	EuclideanDivCap(E, algebra.Capacity) (quot E, rem E, err error)
-}
+// type natCapMethods[E interface {
+// 	natMethods[E, ENP, EZ, EU]
+// 	natPlusCapMethods[E, ENP, EZ, EU]
+// }, ENP algebra.NatPlusLike[ENP], EZ algebra.IntLike[EZ], EU algebra.UintLike[EU]] interface {
+// 	natMethods[E, ENP, EZ, EU]
+// 	natPlusCapMethods[E, ENP, EZ, EU]
+// 	algebra.MaybeFixedCapacityMinuend[E]
+// 	EuclideanDivCap(E, algebra.Capacity) (quot E, rem E, err error)
+// }
 
-type NatCap[E natCapMethods[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EZ intMethods[EZ, ENP, EZ, EU], EU uintMethods[EU, ENP, EZ, EU]] interface {
-	Nat[E, ENP, EZ, EU]
-	base.BoundedFromBelow[E]
-	natCapMethods[E, ENP, EZ, EU]
-}
+// type NatCap[E natCapMethods[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ intMethods[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
+// 	Nat[E, ENP, EN, EZ, EU]
+// 	base.BoundedFromBelow[E]
+// 	natCapMethods[E, ENP, EZ, EU]
+// }
 
 // *** Integers ***
 
-type Z[E Int[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ Int[EZ, ENP, EZ, EU], EU uintMethods[EU, ENP, EZ, EU]] interface {
+type zMethods[E Int[E, ENP, EN, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ Int[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
 	algebra.ZLike[E]
-	algebra.Algebra[E, E]
 	integerSetMethods[E]
+	Random(lowInclusive, highExclusive E, prng io.Reader) (E, error)
+}
+
+type Z[E Int[E, ENP, EN, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ Int[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
+	zMethods[E, ENP, EN, EZ, EU]
+	FromUint64(uint64) E
+	FromInt64(int64) E
 	FromNatPlus(ENP) (E, error)
 	FromNat(EN) (E, error)
+	FromUint(EU) (E, error)
+	FromUintSymmetric(EU) (E, error)
 }
 
 type intMethods[E interface {
 	algebra.IntLike[E]
-	algebra.AlgebraElement[E, E]
 	natMethods[E, ENP, EZ, EU]
-	Decrement()
-}, ENP algebra.NatPlusLike[ENP], EZ algebra.IntLike[EZ], EU algebra.UintLike[EU]] interface {
+	Abs() EN
+	Decrement() E
+}, ENP algebra.NatPlusLike[ENP], EN algebra.NatLike[EN], EZ algebra.IntLike[EZ], EU algebra.UintLike[EU]] interface {
 	algebra.IntLike[E]
-	algebra.AlgebraElement[E, E]
 	natMethods[E, ENP, EZ, EU]
-	Decrement()
+	Abs() EN
+	Decrement() E
 }
 
-type Int[E intMethods[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EZ intMethods[EZ, ENP, EZ, EU], EU uintMethods[EU, ENP, EZ, EU]] intMethods[E, ENP, EZ, EU]
-
-type intCapMethods[E interface {
-	intMethods[E, ENP, EZ, EU]
-	natPlusCapMethods[E, ENP, EZ, EU]
-}, ENP algebra.NatPlusLike[ENP], EZ algebra.IntLike[EZ], EU algebra.UintLike[EU]] interface {
-	intMethods[E, ENP, EZ, EU]
-	natPlusCapMethods[E, ENP, EZ, EU]
+type Int[E intMethods[E, ENP, EN, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ intMethods[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
+	intMethods[E, ENP, EN, EZ, EU]
+	IsUnit(ENP) bool
+	Mod(ENP) EU
 }
 
-type IntCap[E intCapMethods[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EZ intMethods[EZ, ENP, EZ, EU], EU uintMethods[EU, ENP, EZ, EU]] interface {
-	Int[E, ENP, EZ, EU]
-	intCapMethods[E, ENP, EZ, EU]
-}
+// type intCapMethods[E interface {
+// 	intMethods[E, ENP, EN, EZ, EU]
+// 	natPlusCapMethods[E, ENP, EZ, EU]
+// }, ENP algebra.NatPlusLike[ENP], EN algebra.NatLike[EN], EZ algebra.IntLike[EZ], EU algebra.UintLike[EU]] interface {
+// 	intMethods[E, ENP, EN, EZ, EU]
+// 	natPlusCapMethods[E, ENP, EZ, EU]
+// }
+
+// type IntCap[E intCapMethods[E, ENP, EN, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ intMethods[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
+// 	Int[E, ENP, EN, EZ, EU]
+// 	intCapMethods[E, ENP, EN, EZ, EU]
+// }
 
 // *** Variable length Unsigned integers ***
 
-type ZModN[E Uint[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EZ intMethods[EZ, ENP, EZ, EU], EU uintMethods[EU, ENP, EZ, EU]] interface {
-	algebra.UintLike[E]
+type zModNMethods[E Uint[E, ENP, EN, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ intMethods[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
+	algebra.MultiplicativeSemiModule[E, EN]
+	algebra.ZModLike[E]
 	base.Bounded[E]
-	Modulus() ENP
+	algebra.Quotient[E, ENP, EZ]
+	algebra.FiniteStructure[E]
+	IsInRange(EN) bool
+}
+
+type ZModN[E Uint[E, ENP, EN, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ intMethods[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
+	zModNMethods[E, ENP, EN, EZ, EU]
+	FromUint64(uint64) (E, error)
+	FromInt64(int64) (E, error)
+	FromNatPlus(ENP) (E, error)
+	FromNat(EN) (E, error)
+	FromInt(EZ) (E, error)
 }
 
 type uintMethods[E interface {
 	algebra.UintLike[E]
-	intMethods[E, ENP, EZ, EU]
-}, ENP algebra.NatPlusLike[ENP], EZ algebra.IntLike[EZ], EU algebra.UintLike[EU]] interface {
+	algebra.MultiplicativeSemiModuleElement[E, EN]
+	intMethods[E, ENP, EN, EZ, EU]
+}, ENP algebra.NatPlusLike[ENP], EN algebra.NatLike[EN], EZ algebra.IntLike[EZ], EU algebra.UintLike[EU]] interface {
 	algebra.UintLike[E]
-	intMethods[E, ENP, EZ, EU]
-	EqualModulus(other E) bool
+	algebra.MultiplicativeSemiModuleElement[E, EN]
+	intMethods[E, ENP, EN, EZ, EU]
+	algebra.Residue[E, ENP]
 	IsQuadraticResidue() bool
-	Modulus() ENP
+	Sqrt() (E, error)
 }
 
-type Uint[E uintMethods[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EZ intMethods[EZ, ENP, EZ, EU], EU uintMethods[EU, ENP, EZ, EU]] uintMethods[E, ENP, EZ, EU]
-
-type uintCapMethods[E interface {
-	uintMethods[E, ENP, EZ, EU]
-	intCapMethods[E, ENP, EZ, EU]
-}, ENP algebra.NatPlusLike[ENP], EZ algebra.IntLike[EZ], EU algebra.UintLike[EU]] interface {
-	uintMethods[E, ENP, EZ, EU]
-	intCapMethods[E, ENP, EZ, EU]
+type Uint[E uintMethods[E, ENP, EN, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ intMethods[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
+	uintMethods[E, ENP, EN, EZ, EU]
+	base.BoundedElement
 }
 
-type UintCap[E uintCapMethods[E, ENP, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EZ intMethods[EZ, ENP, EZ, EU], EU uintMethods[EU, ENP, EZ, EU]] interface {
-	Uint[E, ENP, EZ, EU]
-	uintCapMethods[E, ENP, EZ, EU]
-}
+// type uintCapMethods[E interface {
+// 	uintMethods[E, ENP, EN, EZ, EU]
+// 	intCapMethods[E, ENP, EN, EZ, EU]
+// }, ENP algebra.NatPlusLike[ENP], EN algebra.NatLike[EN], EZ algebra.IntLike[EZ], EU algebra.UintLike[EU]] interface {
+// 	uintMethods[E, ENP, EN, EZ, EU]
+// 	intCapMethods[E, ENP, EN, EZ, EU]
+// }
+
+// type UintCap[E uintCapMethods[E, ENP, EN, EZ, EU], ENP natPlusMethods[ENP, ENP, EZ, EU], EN natMethods[EN, ENP, EZ, EU], EZ intMethods[EZ, ENP, EN, EZ, EU], EU uintMethods[EU, ENP, EN, EZ, EU]] interface {
+// 	Uint[E, ENP, EN, EZ, EU]
+// 	uintCapMethods[E, ENP, EN, EZ, EU]
+// }

@@ -5,7 +5,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
@@ -27,10 +26,6 @@ type RegularModule[R algebra.Ring[E], E algebra.RingElement[E], W RingElementInh
 
 func (m *RegularModule[R, E, W, WT]) Name() string {
 	return "RegularModule[" + m.Ring.Name() + "]"
-}
-
-func (m *RegularModule[R, E, W, WT]) Model() *universal.Model[W] {
-	panic("RegularModule does not have a model")
 }
 
 func (m *RegularModule[R, E, W, WT]) Characteristic() cardinal.Cardinal {

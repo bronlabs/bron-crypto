@@ -166,6 +166,10 @@ type AbelianGroupElement[E, S any] interface {
 	AbelianMonoidElement[E, S]
 }
 
+type PrimaryDecomposableAbelianGroup[E, S any] interface {
+	AbelianGroup[E, S]
+}
+
 type PrimeGroup[E, S any] interface {
 	FiniteStructure[E]
 	base.HashableStructure[E]

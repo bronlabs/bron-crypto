@@ -2,23 +2,29 @@ package internal
 
 import (
 	"fmt"
+	"io"
+	"math/big"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/cronokirby/saferith"
 )
 
-type modulusMutable[N NatMutable[N]] interface {
+type modulusMutable[I, N any] interface {
 	Nat() N
 	SetNat(N) ct.Bool
 
-	InRange(x N) ct.Bool
+	IsInRange(x N) ct.Bool
+	IsInRangeSymmetric(x I) ct.Bool
 	IsUnit(x N) ct.Bool
 
 	Mod(out, x N)
+	ModInt(out N, x I)
+	ModSymmetric(out I, x N)
+
 	Quo(out, x N) // out = floor(x / m)  (Euclidean integer division)
-	QuoCap(out, x N, cap algebra.Capacity)
 
 	ModAdd(out, x, y N)
 	ModSub(out, x, y N)
@@ -26,23 +32,30 @@ type modulusMutable[N NatMutable[N]] interface {
 	ModDiv(out, x, y N) ct.Bool
 	ModInv(out, x N) ct.Bool
 	ModNeg(out, x N)
-	ModExp(out, base, exp N)
 	ModSqrt(out, x N) ct.Bool
 
+	ModExp(out, base, exp N)
+	ModMultiBaseExp(out []N, bases []N, exp N)
+	ModExpInt(out, base N, exp I)
+
+	Random(io.Reader) (N, error)
 	BitLen() uint
+	HashCode() base.HashCode
+	Big() *big.Int
+	Saferith() *saferith.Modulus
 	base.BytesLike
 	fmt.Stringer
 }
 
-type ModulusMutable[N NatMutable[N]] modulusMutable[N]
+type ModulusMutable[I IntMutable[I, MI], N NatMutable[N, MI], MI any] modulusMutable[I, N]
 
-type ModulusMutablePtr[N NatMutable[N], MT any] interface {
+type ModulusMutablePtr[I IntMutable[I, MI], N NatMutable[N, MI], MI, MT any] interface {
 	*MT
-	ModulusMutable[N]
+	ModulusMutable[I, N, MI]
 	Set(*MT)
 }
 
-type natMutable[E aimpl.MonoidElement[E]] interface {
+type natMutable[E aimpl.MonoidElement[E], M any] interface {
 	aimpl.MonoidElement[E]
 	ct.Comparable[E]
 	base.Clonable[E]
@@ -55,9 +68,8 @@ type natMutable[E aimpl.MonoidElement[E]] interface {
 	Mul(lhs, rhs E)
 	MulCap(lhs, rhs E, cap algebra.Capacity)
 
-	DivCap(lhs, rhs E, cap algebra.Capacity) (ok ct.Bool)
-	Mod(a, m E) (ok ct.Bool)
-	DivModCap(outQuot, outRem, lhs, rhs E, cap algebra.Capacity) (ok ct.Bool)
+	DivCap(numerator E, denominator M, cap algebra.Capacity) (ok ct.Bool)
+	ExactDiv(numerator E, denominator M) (ok ct.Bool)
 
 	Increment()
 	Decrement()
@@ -83,27 +95,29 @@ type natMutable[E aimpl.MonoidElement[E]] interface {
 
 	Uint64() uint64
 	SetUint64(x uint64)
+	HashCode() base.HashCode
+	Big() *big.Int
 	fmt.Stringer
 }
 
-type NatMutable[E natMutable[E]] natMutable[E]
+type NatMutable[E natMutable[E, M], M any] natMutable[E, M]
 
-type NatMutablePtr[E NatMutable[E], T any] interface {
+type NatMutablePtr[E NatMutable[E, M], M, T any] interface {
 	*T
-	NatMutable[E]
+	NatMutable[E, M]
 }
 
-type intMutable[E aimpl.RingElement[E]] interface {
+type intMutable[E aimpl.RingElement[E], M any] interface {
 	aimpl.RingElement[E]
-	natMutable[E]
+	natMutable[E, M]
 	Int64() int64
 	SetInt64(x int64)
 	IsNegative() ct.Bool
 }
 
-type IntMutable[E intMutable[E]] intMutable[E]
+type IntMutable[E intMutable[E, M], M any] intMutable[E, M]
 
-type IntMutablePtr[E IntMutable[E], T any] interface {
+type IntMutablePtr[E IntMutable[E, M], M, T any] interface {
 	*T
-	IntMutable[E]
+	IntMutable[E, M]
 }

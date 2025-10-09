@@ -45,20 +45,33 @@ func (o PartialOrdering) Is(other Ordering) bool {
 }
 
 func (o Ordering) Is(other PartialOrdering) bool {
-	return PartialOrdering(o) == other
+	return other != Incomparable && PartialOrdering(o) == other
 }
 
 type BoundedFromBelow[E any] interface {
 	Bottom() E
 }
 
+type BoundedFromBelowElement interface {
+	IsBottom() bool
+}
+
 type BoundedFromAbove[E any] interface {
 	Top() E
+}
+
+type BoundedFromAboveElement interface {
+	IsTop() bool
 }
 
 type Bounded[E any] interface {
 	BoundedFromBelow[E]
 	BoundedFromAbove[E]
+}
+
+type BoundedElement interface {
+	BoundedFromBelowElement
+	BoundedFromAboveElement
 }
 
 type Comparable[E any] interface {

@@ -1099,9 +1099,9 @@ func interpolateInExponentAtCases[C algebra.ModuleElement[C, S], S algebra.Prime
 	seven := six.Add(one)
 	eight := seven.Add(one)
 	nine := eight.Add(one)
-	fifteen := field.FromUint64(15)
-	fourty := field.FromUint64(40)
-	eightyFive := field.FromUint64(85)
+	fifteen := nine.Add(six)
+	fourty := fifteen.Add(fifteen).Add(nine).Add(one)
+	eightyFive := fourty.Add(fourty).Add(five)
 
 	// Module elements
 	identity := module.OpIdentity()

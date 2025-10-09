@@ -5,8 +5,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 )
 
-const UnboundedCapacity crtp.Capacity = -1
-
 type (
 	NAry[C any]                = crtp.NAry[C]
 	Mapping[F, C any]          = crtp.Mapping[F, C]
@@ -85,18 +83,18 @@ type (
 
 type Homomorphism[E1 SemiGroupElement[E1], E2 SemiGroupElement[E2]] func(E1) E2
 
-type HomomorphicLike[T any, TV GroupElement[TV]] interface {
+type HomomorphicLike[T any, TV SemiGroupElement[TV]] interface {
 	base.Transparent[TV]
 	crtp.Operand[T]
 	base.Equatable[T]
 }
 
-type AdditivelyHomomorphicLike[T HomomorphicLike[T, TV], TV AdditiveGroupElement[TV]] interface {
+type AdditivelyHomomorphicLike[T HomomorphicLike[T, TV], TV AdditiveSemiGroupElement[TV]] interface {
 	HomomorphicLike[T, TV]
 	crtp.Summand[T]
 }
 
-type MultiplicativelyHomomorphicLike[T HomomorphicLike[T, TV], TV MultiplicativeGroupElement[TV]] interface {
+type MultiplicativelyHomomorphicLike[T HomomorphicLike[T, TV], TV MultiplicativeSemiGroupElement[TV]] interface {
 	HomomorphicLike[T, TV]
 	crtp.Multiplicand[T]
 }
@@ -180,7 +178,7 @@ func MaybeFixedCapacityDivision[E MaybeFixedCapacityDividend[E]](a E, b E, cap C
 	return a.TryDivCap(b, cap)
 }
 
-func Modulo[E Residuand[M, Q], M Element[M], Q Residue[Q]](x E, m M) (Q, error) {
+func Modulo[E Residuand[M, Q], M Element[M], Q Residue[Q, M]](x E, m M) (Q, error) {
 	return x.Mod(m)
 }
 
@@ -256,19 +254,19 @@ func MaybeShift[E MaybeShiftable[E, S], S any](a E, shift S) (E, error) {
 	return a.TryShift(shift)
 }
 
-func LeftBitwiseShift[E LeftBitwiseShiftable[E]](a E, shift int) E {
+func LeftBitwiseShift[E LeftBitwiseShiftable[E]](a E, shift uint) E {
 	return a.Lsh(shift)
 }
 
-func FixedLengthLeftBitwiseShift[E FixedLengthLeftBitwiseShiftable[E]](a E, shift int, cap Capacity) E {
+func FixedLengthLeftBitwiseShift[E FixedLengthLeftBitwiseShiftable[E]](a E, shift uint, cap Capacity) E {
 	return a.LshCap(shift, cap)
 }
 
-func RightBitwiseShift[E RightBitwiseShiftable[E]](a E, shift int) E {
+func RightBitwiseShift[E RightBitwiseShiftable[E]](a E, shift uint) E {
 	return a.Rsh(shift)
 }
 
-func FixedLengthRightBitwiseShift[E FixedLengthRightBitwiseShiftable[E]](a E, shift int, cap Capacity) E {
+func FixedLengthRightBitwiseShift[E FixedLengthRightBitwiseShiftable[E]](a E, shift uint, cap Capacity) E {
 	return a.RshCap(shift, cap)
 }
 
@@ -278,4 +276,16 @@ func Resize[E Resizable[E, C], C any](a E, cap C) E {
 
 func ResizeCapacity[E ResizableCapacity[E]](a E, cap Capacity) E {
 	return a.Resize(cap)
+}
+
+func IsLessthanOrEqual[E base.Comparable[E]](lhs, rhs E) bool {
+	return lhs.IsLessThanOrEqual(rhs)
+}
+
+func Compare[E base.WithInternalCompareMethod[E]](lhs, rhs E) base.Ordering {
+	return lhs.Compare(rhs)
+}
+
+func PartialCompare[E base.WithInternalPartialCompareMethod[E]](lhs, rhs E) base.PartialOrdering {
+	return lhs.PartialCompare(rhs)
 }

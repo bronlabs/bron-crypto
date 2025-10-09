@@ -9,8 +9,8 @@ type (
 	Element[E any]         = crtp.Element[E]
 	Structure[E any]       = crtp.Structure[E]
 	FiniteStructure[E any] = crtp.FiniteStructure[E]
-	Quotient[E any]        = crtp.Quotient[E]
-	Residue[E any]         = crtp.Residue[E]
+	Quotient[E, M, A any]  = crtp.Quotient[E, M, A]
+	Residue[E, M any]      = crtp.Residue[E, M]
 )
 
 func StructureIs[S crtp.Structure[E], E any](s Structure[E]) bool {

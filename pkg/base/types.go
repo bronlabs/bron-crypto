@@ -33,9 +33,13 @@ type Clonable[T any] interface {
 	Clone() T
 }
 
+type WithHashCode interface {
+	HashCode() HashCode
+}
+
 type Hashable[K any] interface {
 	Equatable[K]
-	HashCode() HashCode
+	WithHashCode
 }
 
 type HashableStructure[E any] interface {

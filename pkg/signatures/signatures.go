@@ -32,12 +32,20 @@ type (
 	}
 )
 
-type KeyGenerator[SK PrivateKey[SK], PK PublicKey[PK]] interface {
-	Generate(prng io.Reader) (SK, PK, error)
-}
-type KeyGeneratorOption[
-	KG KeyGenerator[SK, PK], SK PrivateKey[SK], PK PublicKey[PK],
-] = func(KG) error
+type (
+	KeyGenerator[SK PrivateKey[SK], PK PublicKey[PK]] interface {
+		Generate(prng io.Reader) (SK, PK, error)
+	}
+
+	ExtendedKeyGenerator[SK PrivateKey[SK], PK PublicKey[PK]] interface {
+		KeyGenerator[SK, PK]
+		GenerateWithSeed(ikm []byte) (SK, PK, error)
+	}
+
+	KeyGeneratorOption[
+		KG KeyGenerator[SK, PK], SK PrivateKey[SK], PK PublicKey[PK],
+	] = func(KG) error
+)
 
 type (
 	Signer[M Message, S Signature[S]] interface {

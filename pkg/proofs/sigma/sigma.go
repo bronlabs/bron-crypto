@@ -56,8 +56,10 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 	// i.e., the probability that a cheating prover can succeed is ≤ 2^(-s).
 	// For interactive proofs it must be at least base.StatisticalSecurity,
 	// for non-interactive proofs it must be at least base.ComputationalSecurity.
-	SoundnessError() int
+	SoundnessError() uint
 	GetChallengeBytesLength() int
+
+	ValidateStatement(statement X, witness W) error
 }
 
 type participant[X Statement, W Witness, A Commitment, S State, Z Response] struct {

@@ -264,7 +264,7 @@ func (fe *PrimeFieldElementTrait[FP, F, WP, W]) ComponentsBytes() [][]byte {
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) Cardinal() cardinal.Cardinal {
 	data := sliceutils.Reverse(FP(&fe.V).Bytes())
 	nat := new(saferith.Nat).SetBytes(data)
-	return cardinal.NewFromNat(nat)
+	return cardinal.NewFromSaferith(nat)
 }
 
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) Op(e WP) WP {

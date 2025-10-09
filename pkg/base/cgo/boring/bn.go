@@ -106,6 +106,35 @@ func (bn *BigNum) Lcm(a, b *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
 	return bn, nil
 }
 
+// Inv sets bn = a^{-1} mod n using BoringSSL's constant-time, blinded
+// modular inverse. The modulus n is taken from the provided Montgomery context
+// (montCtx). It returns the receiver (bn), a boolean noInverse which is true
+// iff a has no inverse modulo n, and an error for other failures.
+//
+// Requirements:
+//   - 0 <= a < n (callers should reduce a beforehand).
+//   - n > 1. The function is intended for moduli with few noninvertible
+//     residues (e.g., RSA moduli). See bn.h for details.
+//   - montCtx must be initialised for n. If n is secret, use a const‑time
+//     Montgomery context.
+func (bn *BigNum) Inv(a *BigNum, montCtx *BigNumMontCtx, bnCtx *BigNumCtx) (*BigNum, int32, error) {
+	bn.copyChecker.Check()
+	a.copyChecker.Check()
+	montCtx.copyChecker.Check()
+	bnCtx.copyChecker.Check()
+
+	var noInv C.int
+	ret := C.BN_mod_inverse_blinded(&bn.nativeBigNum, &noInv, &a.nativeBigNum, montCtx.nativeBnMontCtx, bnCtx.nativeBnCtx)
+	if ret != 1 {
+		return nil, int32(noInv), lastError()
+	}
+
+	runtime.KeepAlive(a)
+	runtime.KeepAlive(montCtx)
+	runtime.KeepAlive(bnCtx)
+	return bn, int32(noInv), nil
+}
+
 // Bytes serialises the value of bn as a big-endian integer.
 func (bn *BigNum) Bytes() ([]byte, error) {
 	bn.copyChecker.Check()

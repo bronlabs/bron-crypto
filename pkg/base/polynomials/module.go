@@ -5,10 +5,10 @@ import (
 	"iter"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
@@ -100,13 +100,8 @@ type polynomialModule[C algebra.ModuleElement[C, S], S algebra.RingElement[S]] s
 }
 
 func (m *polynomialModule[C, S]) Name() string {
-	return string(m.Model().Sort())
-}
-
-func (m *polynomialModule[C, S]) Model() *universal.Model[ModuleValuedPolynomial[C, S]] {
-	return PolynomialModuleModel(
-		'X', m, m.coeffModule, m.baseRing,
-	).First()
+	polyRing := fmt.Sprintf("%s[%c]", m.baseRing.Name(), unicode.ToUpper('X'))
+	return fmt.Sprintf("(%s_%s %s)", m.coeffModule.Name(), m.baseRing.Name(), polyRing)
 }
 
 func (m *polynomialModule[C, S]) ElementSize() int {

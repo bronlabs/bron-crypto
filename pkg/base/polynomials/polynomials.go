@@ -5,10 +5,10 @@ import (
 	"io"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
@@ -54,13 +54,7 @@ type polynomialRing[S algebra.RingElement[S]] struct {
 }
 
 func (r *polynomialRing[S]) Name() string {
-	return string(r.Model().Sort())
-}
-
-func (r *polynomialRing[S]) Model() *universal.Model[Polynomial[S]] {
-	return PolynomialRingModel(
-		'X', r, r.coeffRing,
-	).First()
+	return fmt.Sprintf("%s[%c]", r.coeffRing.Name(), unicode.ToUpper('X'))
 }
 
 func (r *polynomialRing[S]) ElementSize() int {
@@ -269,7 +263,7 @@ func (p *coefficientForm[S]) IsLessThanOrEqual(rhs Polynomial[S]) bool {
 	case dp == -1: // both are the zero polynomial
 		return true
 	default:
-		lt, eq, gt := ct.BytesCompare(p.Bytes(), q.Bytes())
+		lt, eq, gt := ct.CompareBytes(p.Bytes(), q.Bytes())
 		ordering := base.EvaluateConstantTimeComparison(lt, eq, gt)
 		return ordering.Is(base.LessThan) || ordering.Is(base.Equal)
 	}

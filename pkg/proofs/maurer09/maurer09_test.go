@@ -56,8 +56,7 @@ func TestMaurer09Protocol_BasicFunctionality(t *testing.T) {
 
 	w := &maurer09.Witness[*k256.Scalar]{W: witness}
 	s := &maurer09.Statement[*k256.Scalar, *k256.Point]{
-		X:   statement,
-		Phi: phi,
+		X: statement,
 	}
 
 	// Run protocol
@@ -119,8 +118,7 @@ func TestMaurer09Protocol_InvalidWitness(t *testing.T) {
 
 	w := &maurer09.Witness[*k256.Scalar]{W: witness}
 	s := &maurer09.Statement[*k256.Scalar, *k256.Point]{
-		X:   incorrectStatement,
-		Phi: phi,
+		X: incorrectStatement,
 	}
 
 	// Run protocol
@@ -177,8 +175,7 @@ func TestMaurer09Protocol_Simulator(t *testing.T) {
 	require.NoError(t, err)
 
 	s := &maurer09.Statement[*k256.Scalar, *k256.Point]{
-		X:   randomStatement,
-		Phi: phi,
+		X: randomStatement,
 	}
 
 	// Simulate
@@ -278,8 +275,7 @@ func TestMaurer09Protocol_BytesSerialization(t *testing.T) {
 
 	w := &maurer09.Witness[*k256.Scalar]{W: witness}
 	s := &maurer09.Statement[*k256.Scalar, *k256.Point]{
-		X:   statement,
-		Phi: phi,
+		X: statement,
 	}
 
 	// Test serialization

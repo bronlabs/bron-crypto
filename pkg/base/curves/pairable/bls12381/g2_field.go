@@ -6,8 +6,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
@@ -23,10 +21,8 @@ var (
 	_ algebra.Field[*BaseFieldElementG2]        = (*BaseFieldG2)(nil)
 	_ algebra.FieldElement[*BaseFieldElementG2] = (*BaseFieldElementG2)(nil)
 
-	baseFieldInstanceG2      *BaseFieldG2
-	baseFieldInitOnceG2      sync.Once
-	baseFieldModelG2Once     sync.Once
-	baseFieldModelInstanceG2 *universal.Model[*BaseFieldElementG2]
+	baseFieldInstanceG2 *BaseFieldG2
+	baseFieldInitOnceG2 sync.Once
 )
 
 type BaseFieldG2 struct {
@@ -41,18 +37,6 @@ func NewG2BaseField() *BaseFieldG2 {
 	return baseFieldInstanceG2
 }
 
-func BaseFieldModelG2() *universal.Model[*BaseFieldElementG2] {
-	baseFieldModelG2Once.Do(func() {
-		var err error
-		baseFieldModelInstanceG2, err = impl.BaseFieldModel(
-			NewG2BaseField(),
-		)
-		if err != nil {
-			panic(err)
-		}
-	})
-	return baseFieldModelInstanceG2
-}
 
 func (f *BaseFieldG2) Hash(bytes []byte) (*BaseFieldElementG2, error) {
 	var e [1]bls12381Impl.Fp2
@@ -67,9 +51,6 @@ func (f *BaseFieldG2) Name() string {
 	return BaseFieldNameG2
 }
 
-func (f *BaseFieldG2) Model() *universal.Model[*BaseFieldElementG2] {
-	return BaseFieldModelG2()
-}
 
 func (f *BaseFieldG2) IsSemiDomain() bool {
 	return true

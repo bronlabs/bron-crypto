@@ -4,8 +4,6 @@ import (
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
@@ -30,11 +28,9 @@ var (
 	_ algebra.PrimeField[*FqFieldElement]        = (*FqField)(nil)
 	_ algebra.PrimeFieldElement[*FqFieldElement] = (*FqFieldElement)(nil)
 
-	fqFieldInitOnce      sync.Once
-	fqFieldInstance      *FqField
-	fqFieldModelOnce     sync.Once
-	fqFieldModelInstance *universal.Model[*FqFieldElement]
-	fqFieldOrder         *saferith.Modulus
+	fqFieldInitOnce sync.Once
+	fqFieldInstance *FqField
+	fqFieldOrder    *saferith.Modulus
 )
 
 func fqFieldInit() {
@@ -51,19 +47,6 @@ func newFqField() *FqField {
 	return fqFieldInstance
 }
 
-func FqFieldModel() *universal.Model[*FqFieldElement] {
-	fqFieldModelOnce.Do(func() {
-		var err error
-		fqFieldModelInstance, err = impl.ScalarFieldModel(
-			newFqField(),
-		)
-		if err != nil {
-			panic(err)
-		}
-	})
-
-	return fqFieldModelInstance
-}
 
 func NewVestaBaseField() *FqField {
 	return newFqField()
@@ -77,9 +60,6 @@ func (*FqField) Name() string {
 	return FqFieldName
 }
 
-func (f *FqField) Model() *universal.Model[*FqFieldElement] {
-	return FqFieldModel()
-}
 
 func (*FqField) ElementSize() int {
 	return pastaImpl.FqBytes
@@ -94,7 +74,7 @@ func (f *FqField) Characteristic() cardinal.Cardinal {
 }
 
 func (*FqField) Order() cardinal.Cardinal {
-	return cardinal.NewFromNat(fqFieldOrder.Nat())
+	return cardinal.NewFromSaferith(fqFieldOrder.Nat())
 }
 
 func (*FqField) Hash(input []byte) (*FqFieldElement, error) {

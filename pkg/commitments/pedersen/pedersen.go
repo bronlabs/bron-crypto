@@ -13,7 +13,10 @@ import (
 const Name commitments.Name = "pedersen"
 
 type (
-	Group[E GroupElement[E, S], S Scalar[S]]                     = algebra.PrimeGroup[E, S]
+	Group[E GroupElement[E, S], S Scalar[S]] = interface {
+		algebra.PrimeGroup[E, S]
+		algebra.FiniteStructure[E]
+	}
 	GroupElement[E algebra.PrimeGroupElement[E, S], S Scalar[S]] = algebra.PrimeGroupElement[E, S]
 
 	ScalarField[S Scalar[S]] interface {
@@ -155,22 +158,18 @@ func (k *Key[E, S]) H() E {
 	return k.h
 }
 
-func NewCommitmentKeyFromBytes[E GroupElement[E, S], S Scalar[S]](group Group[E, S], input []byte) (*Key[E, S], error) {
+func NewCommitmentKeyFromHBytes[E GroupElement[E, S], S Scalar[S]](group Group[E, S], hBytes []byte) (*Key[E, S], error) {
 	if group == nil {
 		return nil, errs.NewIsNil("group cannot be nil")
 	}
-	if len(input) != 2*group.ElementSize() {
+	if len(hBytes) != group.ElementSize() {
 		return nil, errs.NewArgument("input length must be twice the group element size")
 	}
-	g, err := group.FromBytes(input[:group.ElementSize()])
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "cannot deserialize g from bytes")
-	}
-	h, err := group.FromBytes(input[group.ElementSize():])
+	h, err := group.FromBytes(hBytes[group.ElementSize():])
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "cannot deserialize h from bytes")
 	}
-	return NewCommitmentKey(g, h)
+	return NewCommitmentKey(group.Generator(), h)
 }
 
 func (k *Key[E, S]) Bytes() []byte {
@@ -253,6 +252,10 @@ func (c *Commitment[E, S]) HashCode() base.HashCode {
 	return c.v.HashCode()
 }
 
+func (c *Commitment[E, S]) Bytes() []byte {
+	return c.v.Bytes()
+}
+
 func NewMessage[S Scalar[S]](v S) *Message[S] {
 	return &Message[S]{v: v}
 }
@@ -298,6 +301,10 @@ func (m *Message[S]) Equal(other *Message[S]) bool {
 
 func (m *Message[S]) HashCode() base.HashCode {
 	return m.v.HashCode()
+}
+
+func (m *Message[S]) Bytes() []byte {
+	return m.v.Bytes()
 }
 
 func NewWitness[S Scalar[S]](v S) (*Witness[S], error) {

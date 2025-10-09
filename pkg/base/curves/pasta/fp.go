@@ -4,8 +4,6 @@ import (
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
@@ -30,11 +28,9 @@ var (
 	_ algebra.PrimeField[*FpFieldElement]        = (*FpField)(nil)
 	_ algebra.PrimeFieldElement[*FpFieldElement] = (*FpFieldElement)(nil)
 
-	fpFieldInitOnce      sync.Once
-	fpFieldInstance      *FpField
-	fpFieldModelOnce     sync.Once
-	fpFieldModelInstance *universal.Model[*FpFieldElement]
-	fpFieldOrder         *saferith.Modulus
+	fpFieldInitOnce sync.Once
+	fpFieldInstance *FpField
+	fpFieldOrder    *saferith.Modulus
 )
 
 func fpFieldInit() {
@@ -51,19 +47,6 @@ func newFpField() *FpField {
 	return fpFieldInstance
 }
 
-func FpFieldModel() *universal.Model[*FpFieldElement] {
-	fpFieldModelOnce.Do(func() {
-		var err error
-		fpFieldModelInstance, err = impl.BaseFieldModel(
-			newFpField(),
-		)
-		if err != nil {
-			panic(err)
-		}
-	})
-
-	return fpFieldModelInstance
-}
 
 func NewPallasBaseField() *FpField {
 	return newFpField()
@@ -77,9 +60,6 @@ func (*FpField) Name() string {
 	return FpFieldName
 }
 
-func (f *FpField) Model() *universal.Model[*FpFieldElement] {
-	return FpFieldModel()
-}
 
 func (*FpField) ElementSize() int {
 	return pastaImpl.FpBytes
@@ -94,7 +74,7 @@ func (f *FpField) Characteristic() cardinal.Cardinal {
 }
 
 func (*FpField) Order() cardinal.Cardinal {
-	return cardinal.NewFromNat(fpFieldOrder.Nat())
+	return cardinal.NewFromSaferith(fpFieldOrder.Nat())
 }
 
 func (*FpField) Hash(input []byte) (*FpFieldElement, error) {

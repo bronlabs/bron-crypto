@@ -69,7 +69,7 @@ func TestNewCardinal(t *testing.T) {
 
 func TestNewCardinalFromNat(t *testing.T) {
 	t.Run("Nil", func(t *testing.T) {
-		c := cardinal.NewFromNat(nil)
+		c := cardinal.NewFromSaferith(nil)
 		assert.True(t, c.IsUnknown())
 		assert.False(t, c.IsFinite())
 		// Unknown values are never equal, even to themselves
@@ -78,7 +78,7 @@ func TestNewCardinalFromNat(t *testing.T) {
 
 	t.Run("Zero Nat", func(t *testing.T) {
 		n := new(saferith.Nat).SetUint64(0)
-		c := cardinal.NewFromNat(n)
+		c := cardinal.NewFromSaferith(n)
 		assert.True(t, c.IsFinite())
 		assert.False(t, c.IsUnknown())
 		assert.True(t, c.IsZero())
@@ -86,7 +86,7 @@ func TestNewCardinalFromNat(t *testing.T) {
 
 	t.Run("Non-zero Nat", func(t *testing.T) {
 		n := new(saferith.Nat).SetUint64(100)
-		c := cardinal.NewFromNat(n)
+		c := cardinal.NewFromSaferith(n)
 		assert.True(t, c.IsFinite())
 		assert.False(t, c.IsUnknown())
 		assert.Equal(t, uint64(100), c.Uint64())
@@ -206,26 +206,6 @@ func TestCardinalArithmetic(t *testing.T) {
 		resultInf2 := c10.Sub(cardinal.Infinite())
 		assert.False(t, resultInf2.IsFinite())
 		assert.False(t, resultInf2.IsUnknown())
-	})
-}
-
-func TestCardinalValue(t *testing.T) {
-	c := cardinal.New(42)
-
-	t.Run("Finite cardinal", func(t *testing.T) {
-		val := c.Value()
-		require.NotNil(t, val)
-		assert.Equal(t, uint64(42), val.Uint64())
-	})
-
-	t.Run("Unknown cardinal", func(t *testing.T) {
-		val := cardinal.Unknown().Value()
-		assert.Nil(t, val)
-	})
-
-	t.Run("Infinite cardinal", func(t *testing.T) {
-		val := cardinal.Infinite().Value()
-		assert.Nil(t, val)
 	})
 }
 
@@ -369,7 +349,7 @@ func TestHashCode(t *testing.T) {
 		c1 := cardinal.New(42)
 		c2 := cardinal.New(42)
 		c3 := cardinal.New(43)
-		
+
 		// Same values should have same hash
 		assert.Equal(t, c1.HashCode(), c2.HashCode())
 		// Different values should have different hash (usually)
@@ -398,7 +378,6 @@ func TestCardinalInterfaces(t *testing.T) {
 		assert.NotNil(t, c.Add(cardinal.New(1)))
 		assert.NotNil(t, c.Mul(cardinal.New(2)))
 		assert.NotNil(t, c.Sub(cardinal.New(1)))
-		assert.NotNil(t, c.Value())
 		assert.NotNil(t, c.Bytes())
 		assert.NotEmpty(t, c.String())
 		assert.True(t, c.Equal(c))

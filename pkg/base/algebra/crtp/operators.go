@@ -90,11 +90,11 @@ type (
 	Shiftable[E, S any]      interface{ Shift(S) E }
 	MaybeShiftable[E, S any] interface{ TryShift(S) (E, error) }
 
-	LeftBitwiseShiftable[E any]            interface{ Lsh(int) E }
-	FixedLengthLeftBitwiseShiftable[E any] interface{ LshCap(int, Capacity) E }
+	LeftBitwiseShiftable[E any]            interface{ Lsh(uint) E }
+	FixedLengthLeftBitwiseShiftable[E any] interface{ LshCap(uint, Capacity) E }
 
-	RightBitwiseShiftable[E any]            interface{ Rsh(int) E }
-	FixedLengthRightBitwiseShiftable[E any] interface{ RshCap(int, Capacity) E }
+	RightBitwiseShiftable[E any]            interface{ Rsh(uint) E }
+	FixedLengthRightBitwiseShiftable[E any] interface{ RshCap(uint, Capacity) E }
 
 	Resizable[E, C any]      interface{ Resize(C) E }
 	ResizableCapacity[E any] Resizable[E, Capacity]

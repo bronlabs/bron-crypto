@@ -58,8 +58,8 @@ type (
 	AbelianMonoid[ME crtp.AbelianMonoidElement[ME, S], S crtp.NatLike[S]]        = crtp.AbelianMonoid[ME, S]
 	AbelianMonoidElement[ME crtp.AbelianMonoidElement[ME, S], S crtp.NatLike[S]] = crtp.AbelianMonoidElement[ME, S]
 
-	AbelianGroup[E crtp.AbelianGroupElement[E, S], S crtp.IntLike[S]]        = crtp.AbelianGroup[E, S]
-	AbelianGroupElement[E crtp.AbelianGroupElement[E, S], S crtp.IntLike[S]] = crtp.AbelianGroupElement[E, S]
+	AbelianGroup[E crtp.AbelianGroupElement[E, S], S crtp.NatLike[S]]        = crtp.AbelianGroup[E, S]
+	AbelianGroupElement[E crtp.AbelianGroupElement[E, S], S crtp.NatLike[S]] = crtp.AbelianGroupElement[E, S]
 
 	PrimeGroup[E crtp.PrimeGroupElement[E, S], S crtp.PrimeFieldElement[S]]        = crtp.PrimeGroup[E, S]
 	PrimeGroupElement[E crtp.PrimeGroupElement[E, S], S crtp.PrimeFieldElement[S]] = crtp.PrimeGroupElement[E, S]
