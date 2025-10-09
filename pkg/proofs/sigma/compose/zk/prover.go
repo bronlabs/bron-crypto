@@ -6,7 +6,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	pedersen_comm "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -89,24 +88,24 @@ func (p *Prover[X, XV, W, WV, A, S, Z]) Round2(eCommitment *pedersen_comm.Commit
 	return commitment, nil
 }
 
-func (p *Prover[X, XV, W, WV, A, S, Z]) Round4(challengeOpening *commitments.Opening[*pedersen_comm.Message, *pedersen_comm.Witness]) (Z, error) {
-	var zero Z
-	p.tape.AppendScalars(challengeLabel, challengeOpening.Message())
+// func (p *Prover[X, XV, W, WV, A, S, Z]) Round4(challengeOpening *commitments.Opening[*pedersen_comm.Message, *pedersen_comm.Witness]) (Z, error) {
+// 	var zero Z
+// 	p.tape.AppendScalars(challengeLabel, challengeOpening.Message())
 
-	if p.round != 4 {
-		return zero, errs.NewRound("r != 4 (%d)", p.round)
-	}
-	if err := p.ck.Verify(p.challengeCommitment, challengeOpening.Message(), challengeOpening.Witness()); err != nil {
-		return zero, errs.WrapVerification(err, "invalid challenge")
-	}
+// 	if p.round != 4 {
+// 		return zero, errs.NewRound("r != 4 (%d)", p.round)
+// 	}
+// 	if err := p.ck.Verify(p.challengeCommitment, challengeOpening.Message(), challengeOpening.Witness()); err != nil {
+// 		return zero, errs.WrapVerification(err, "invalid challenge")
+// 	}
 
-	response, err := p.protocol.ComputeProverResponse(p.statement, p.witness, p.commitment, p.state, p.pedersenMessageToChallengeBytes(challengeOpening.Message()))
-	if err != nil {
-		return zero, errs.WrapFailed(err, "cannot generate response")
-	}
-	p.tape.AppendMessages(responseLabel, p.protocol.SerializeResponse(response))
+// 	response, err := p.protocol.ComputeProverResponse(p.statement, p.witness, p.commitment, p.state, p.pedersenMessageToChallengeBytes(challengeOpening.Message()))
+// 	if err != nil {
+// 		return zero, errs.WrapFailed(err, "cannot generate response")
+// 	}
+// 	p.tape.AppendMessages(responseLabel, p.protocol.SerializeResponse(response))
 
-	p.response = response
-	p.round += 2
-	return response, nil
-}
+// 	p.response = response
+// 	p.round += 2
+// 	return response, nil
+// }
