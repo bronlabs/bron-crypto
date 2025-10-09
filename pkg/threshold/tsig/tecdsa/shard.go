@@ -7,6 +7,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -23,7 +25,18 @@ type Shard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	otReceiverSeeds ds.Map[sharing.ID, *vsot.ReceiverOutput]
 }
 
+type shardDTO[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	Share           *feldman.Share[S]         `cbor:"share"`
+	Ac              *feldman.AccessStructure  `cbor:"accessStructure"`
+	PK              *ecdsa.PublicKey[P, B, S] `cbor:"publicKey"`
+	ZeroSeeds       map[sharing.ID][przs.SeedLength]byte
+	OTSenderSeeds   map[sharing.ID]*vsot.SenderOutput   `cbor:"otSenderSeeds"`
+	OTReceiverSeeds map[sharing.ID]*vsot.ReceiverOutput `cbor:"otReceiverSeeds"`
+}
+
 func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](share *feldman.Share[S], ac *feldman.AccessStructure, pk *ecdsa.PublicKey[P, B, S], zeroSeeds przs.Seeds, otSenderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], otReceiverSeeds ds.Map[sharing.ID, *vsot.ReceiverOutput]) *Shard[P, B, S] {
+	// TODO: do some validation (e.g. pk is not identity etc.)
+
 	return &Shard[P, B, S]{
 		share:           share,
 		ac:              ac,
@@ -106,4 +119,43 @@ func (s *Shard[P, B, S]) OTSenderSeeds() ds.Map[sharing.ID, *vsot.SenderOutput] 
 
 func (s *Shard[P, B, S]) OTReceiverSeeds() ds.Map[sharing.ID, *vsot.ReceiverOutput] {
 	return s.otReceiverSeeds
+}
+
+func (s *Shard[P, B, S]) MarshalCBOR() ([]byte, error) {
+	zeroSeeds := make(map[sharing.ID][przs.SeedLength]byte)
+	for id, seed := range s.zeroSeeds.Iter() {
+		zeroSeeds[id] = seed
+	}
+	otSenderSeeds := make(map[sharing.ID]*vsot.SenderOutput)
+	for id, seed := range s.otSenderSeeds.Iter() {
+		otSenderSeeds[id] = seed
+	}
+	otReceiverSeeds := make(map[sharing.ID]*vsot.ReceiverOutput)
+	for id, seed := range s.otReceiverSeeds.Iter() {
+		otReceiverSeeds[id] = seed
+	}
+
+	dto := &shardDTO[P, B, S]{
+		Share:           s.share,
+		Ac:              s.ac,
+		PK:              s.pk,
+		ZeroSeeds:       zeroSeeds,
+		OTSenderSeeds:   otSenderSeeds,
+		OTReceiverSeeds: otReceiverSeeds,
+	}
+	return serde.MarshalCBOR(dto)
+}
+
+func (s *Shard[P, B, S]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*shardDTO[P, B, S]](data)
+	if err != nil {
+		return err
+	}
+
+	zeroSeeds := hashmap.NewImmutableComparableFromNativeLike(dto.ZeroSeeds)
+	otSenderSeeds := hashmap.NewImmutableComparableFromNativeLike(dto.OTSenderSeeds)
+	otReceiverSeeds := hashmap.NewImmutableComparableFromNativeLike(dto.OTReceiverSeeds)
+	s2 := NewShard(dto.Share, dto.Ac, dto.PK, zeroSeeds, otSenderSeeds, otReceiverSeeds)
+	*s = *s2
+	return nil
 }

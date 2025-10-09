@@ -10,9 +10,9 @@ type Round1P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElemen
 type Round2P2P[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] = ecbbot.Round2P2P[GE, SE]
 
 type Round3P2P[SE algebra.PrimeFieldElement[SE]] struct {
-	aTilde [][]SE
-	eta    []SE
-	mu     []byte
+	ATilde [][]SE `cbor:"aTilde"`
+	Eta    []SE   `cbor:"eta"`
+	Mu     []byte `cbor:"mu"`
 }
 
 //func (m *Round3P2P) Validate(protocol types.Protocol) error {

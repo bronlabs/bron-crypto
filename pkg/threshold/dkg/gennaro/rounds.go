@@ -50,7 +50,7 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 			Share: shareForThisParty,
 		})
 	}
-	p.state.localFeldmanVerificationVector, err = polynomials.LiftToExponent(p.state.pedersenDealerFunc.Components()[0], p.state.key.G())
+	p.state.localFeldmanVerificationVector, err = polynomials.LiftPolynomial(p.state.pedersenDealerFunc.G, p.state.key.G())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to lift pedersen dealer function to exponent")
 	}

@@ -7,6 +7,7 @@ import (
 	mrand "math/rand/v2"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
@@ -136,7 +137,7 @@ func TestSanity(t *testing.T) {
 }
 
 // dealCases tests the Deal function with various inputs
-func dealCases[E pedersen.GroupElement[E, S], S pedersen.Scalar[S]](t *testing.T, scheme *pedersen.Scheme[E, S], field pedersen.ScalarField[S]) {
+func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](t *testing.T, scheme *pedersen.Scheme[E, S], field algebra.PrimeField[S]) {
 	t.Helper()
 
 	// Create test secrets
@@ -285,7 +286,7 @@ func dealCases[E pedersen.GroupElement[E, S], S pedersen.Scalar[S]](t *testing.T
 }
 
 // dealRandomCases tests the DealRandom function
-func dealRandomCases[E pedersen.GroupElement[E, S], S pedersen.Scalar[S]](t *testing.T, scheme *pedersen.Scheme[E, S]) {
+func dealRandomCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](t *testing.T, scheme *pedersen.Scheme[E, S]) {
 	t.Helper()
 
 	threshold := scheme.AccessStructure().Threshold()
@@ -529,7 +530,7 @@ func TestDealRandom(t *testing.T) {
 }
 
 // verificationCases tests verification functionality
-func verificationCases[E pedersen.GroupElement[E, S], S pedersen.Scalar[S]](t *testing.T, scheme *pedersen.Scheme[E, S], field pedersen.ScalarField[S]) {
+func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](t *testing.T, scheme *pedersen.Scheme[E, S], field algebra.PrimeField[S]) {
 	t.Helper()
 
 	// Create valid shares
@@ -736,7 +737,7 @@ func TestVerification(t *testing.T) {
 }
 
 // homomorphicOpsCases tests homomorphic operations on shares
-func homomorphicOpsCases[E pedersen.GroupElement[E, S], S pedersen.Scalar[S]](t *testing.T, scheme *pedersen.Scheme[E, S], field pedersen.ScalarField[S]) {
+func homomorphicOpsCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](t *testing.T, scheme *pedersen.Scheme[E, S], field algebra.PrimeField[S]) {
 	t.Helper()
 
 	// Create two secrets and their shares
@@ -1021,7 +1022,7 @@ func TestHomomorphicOperations(t *testing.T) {
 }
 
 // toAdditiveCases tests the ToAdditive conversion method
-func toAdditiveCases[E pedersen.GroupElement[E, S], S pedersen.Scalar[S]](t *testing.T, scheme *pedersen.Scheme[E, S], field pedersen.ScalarField[S]) {
+func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](t *testing.T, scheme *pedersen.Scheme[E, S], field algebra.PrimeField[S]) {
 	t.Helper()
 
 	// Create test secrets and their shares
@@ -1236,16 +1237,12 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 		require.NotNil(t, dealerFunc)
 		require.Equal(t, 5, shares.Shares().Size())
 
-		// Verify dealer function has correct components
-		components := dealerFunc.Components()
-		require.Equal(t, 2, len(components)) // secret and blinding polynomials
-
 		// Verify polynomial degrees
-		require.Equal(t, 1, components[0].Degree()) // secret polynomial degree = threshold - 1
-		require.Equal(t, 1, components[1].Degree()) // blinding polynomial degree = threshold - 1
+		require.Equal(t, 1, dealerFunc.G.Degree()) // secret polynomial degree = threshold - 1
+		require.Equal(t, 1, dealerFunc.H.Degree()) // blinding polynomial degree = threshold - 1
 
 		// Verify that the constant term of the first polynomial is the secret
-		secretCoeff := components[0].ConstantTerm()
+		secretCoeff := dealerFunc.G.ConstantTerm()
 		require.True(t, secret.Value().Equal(secretCoeff))
 	})
 
@@ -1288,9 +1285,8 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 			x := shamir.SharingIDToLagrangeNode(field, id)
 
 			// Evaluate dealer function components at x
-			components := dealerFunc.Components()
-			secretValue := components[0].Eval(x)
-			blindingValue := components[1].Eval(x)
+			secretValue := dealerFunc.G.Eval(x)
+			blindingValue := dealerFunc.H.Eval(x)
 
 			// Check that share values match
 			require.True(t, secretValue.Equal(share.Value()))
@@ -1323,16 +1319,12 @@ func TestDealRandomAndRevealDealerFunc(t *testing.T) {
 		require.NotNil(t, dealerFunc)
 		require.Equal(t, 5, shares.Shares().Size())
 
-		// Verify dealer function has correct components
-		components := dealerFunc.Components()
-		require.Equal(t, 2, len(components)) // secret and blinding polynomials
-
 		// Verify polynomial degrees
-		require.Equal(t, 1, components[0].Degree()) // secret polynomial degree = threshold - 1
-		require.Equal(t, 1, components[1].Degree()) // blinding polynomial degree = threshold - 1
+		require.Equal(t, 1, dealerFunc.G.Degree()) // secret polynomial degree = threshold - 1
+		require.Equal(t, 1, dealerFunc.H.Degree()) // blinding polynomial degree = threshold - 1
 
 		// Verify that the constant term of the first polynomial is the secret
-		secretCoeff := components[0].ConstantTerm()
+		secretCoeff := dealerFunc.G.ConstantTerm()
 		require.True(t, secret.Value().Equal(secretCoeff))
 
 		// Verify reconstruction

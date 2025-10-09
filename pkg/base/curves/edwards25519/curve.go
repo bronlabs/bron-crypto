@@ -1,6 +1,7 @@
 package edwards25519
 
 import (
+	"encoding"
 	"fmt"
 	"hash/fnv"
 	"slices"
@@ -24,12 +25,14 @@ const (
 	CurveName             = "edwards25519"
 	Hash2CurveSuite       = "edwards25519_XMD:SHA-512_ELL2_NU_"
 	Hash2CurveScalarSuite = "edwards25519_XMD:SHA-512_ELL2_NU_SC_"
-	compressedPointBytes  = int(edwards25519Impl.FpBytes)
+	compressedPointBytes  = edwards25519Impl.FpBytes
 )
 
 var (
 	_ curves.EllipticCurve[*Point, *BaseFieldElement, *Scalar] = (*Curve)(nil)
 	_ curves.ECPoint[*Point, *BaseFieldElement, *Scalar]       = (*Point)(nil)
+	_ encoding.BinaryMarshaler                                 = (*Point)(nil)
+	_ encoding.BinaryUnmarshaler                               = (*Point)(nil)
 
 	curveInstance      *Curve
 	curveModelInstance *universal.ThreeSortedModel[*Point, *Scalar, *BaseFieldElement]

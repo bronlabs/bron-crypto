@@ -9,8 +9,8 @@ import (
 )
 
 type Round1Broadcast struct {
-	ZeroSetupR1    *przsSetup.Round1Broadcast
-	BigRCommitment hash_comm.Commitment
+	ZeroSetupR1    *przsSetup.Round1Broadcast `cbor:"zeroSetupR1"`
+	BigRCommitment hash_comm.Commitment       `cbor:"bigRCommitment"`
 }
 
 func (m *Round1Broadcast) Bytes() []byte {
@@ -19,7 +19,7 @@ func (m *Round1Broadcast) Bytes() []byte {
 }
 
 type Round1P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	MulR1 *rvole_bbot.Round1P2P[P, S]
+	MulR1 *rvole_bbot.Round1P2P[P, S] `cbor:"mulR1"`
 }
 
 func (m *Round1P2P[P, B, S]) Bytes() []byte {
@@ -28,8 +28,8 @@ func (m *Round1P2P[P, B, S]) Bytes() []byte {
 }
 
 type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	BigR        P
-	BigRWitness hash_comm.Witness
+	BigR        P                 `cbor:"bigR"`
+	BigRWitness hash_comm.Witness `cbor:"bigRWitness"`
 }
 
 func (m *Round2Broadcast[P, B, S]) Bytes() []byte {
@@ -38,8 +38,8 @@ func (m *Round2Broadcast[P, B, S]) Bytes() []byte {
 }
 
 type Round2P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	ZeroSetupR2 *przsSetup.Round2P2P
-	MulR2       *rvole_bbot.Round2P2P[P, S]
+	ZeroSetupR2 *przsSetup.Round2P2P        `cbor:"zeroSetupR2"`
+	MulR2       *rvole_bbot.Round2P2P[P, S] `cbor:"mulR2"`
 }
 
 func (m *Round2P2P[P, B, S]) Bytes() []byte {
@@ -48,7 +48,7 @@ func (m *Round2P2P[P, B, S]) Bytes() []byte {
 }
 
 type Round3Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	Pk P
+	Pk P `cbor:"pk"`
 }
 
 func (m *Round3Broadcast[P, B, S]) Bytes() []byte {
@@ -57,11 +57,11 @@ func (m *Round3Broadcast[P, B, S]) Bytes() []byte {
 }
 
 type Round3P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	MulR3 *rvole_bbot.Round3P2P[S]
+	MulR3 *rvole_bbot.Round3P2P[S] `cbor:"mulR3"`
 
-	GammaU P
-	GammaV P
-	Psi    S
+	GammaU P `cbor:"gammaU"`
+	GammaV P `cbor:"gammaV"`
+	Psi    S `cbor:"psi"`
 }
 
 func (m *Round3P2P[P, B, S]) Bytes() []byte {

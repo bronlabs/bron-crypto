@@ -10,7 +10,7 @@ import (
 )
 
 type SenderOutput struct {
-	ot.SenderOutput[[]byte]
+	ot.SenderOutput[[]byte] `cbor:"output"`
 }
 
 func (so *SenderOutput) InferredMessageBytesLen() int {
@@ -37,7 +37,7 @@ func (so *SenderOutput) InferredMessageBytesLen() int {
 }
 
 type ReceiverOutput struct {
-	ot.ReceiverOutput[[]byte]
+	ot.ReceiverOutput[[]byte] `cbor:"output"`
 }
 
 func (ro *ReceiverOutput) InferredMessageBytesLen() int {

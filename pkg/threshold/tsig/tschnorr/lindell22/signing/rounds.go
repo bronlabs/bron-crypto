@@ -91,7 +91,6 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 		}
 		received, _ := inb.Get(pid)
 		theirBigR := received.BigR
-		theirBigR.Phi = c.state.phi // ensure the phi is set in the statement
 		theirOpening := received.BigROpening
 		theirCommitment := c.state.theirBigRCommitments[pid]
 		// step 3.2: Open(sid || R_j || j || S)
@@ -168,8 +167,7 @@ func dlogProve[
 		return nil, nil, errs.WrapFailed(err, "cannot create dlog prover")
 	}
 	statement := &schnorrpok.Statement[E, S]{
-		X:   bigR,
-		Phi: c.state.phi,
+		X: bigR,
 	}
 	witness := &schnorrpok.Witness[S]{
 		W: k,

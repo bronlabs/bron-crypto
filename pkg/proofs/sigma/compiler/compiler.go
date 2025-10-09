@@ -1,7 +1,6 @@
 package compiler
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -9,7 +8,7 @@ import (
 
 type Name string
 
-type NIZKPoKProof base.BytesLike
+type NIZKPoKProof []byte
 
 type NIProver[X sigma.Statement, W sigma.Witness] interface {
 	Prove(statement X, witness W) (NIZKPoKProof, error)

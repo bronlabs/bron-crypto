@@ -28,7 +28,7 @@ func (s *DefaultSuite) L() int {
 }
 
 type SenderOutput[D any] struct {
-	Messages [][2][]D
+	Messages [][2][]D `cbor:"messages"`
 }
 
 func (so *SenderOutput[D]) InferredXi() int {
@@ -56,8 +56,8 @@ func (so *SenderOutput[D]) InferredL() int {
 }
 
 type ReceiverOutput[D any] struct {
-	Choices  []byte
-	Messages [][]D
+	Choices  []byte `cbor:"choices"`
+	Messages [][]D  `cbor:"messages"`
 }
 
 func (ro *ReceiverOutput[D]) InferredXi() int {

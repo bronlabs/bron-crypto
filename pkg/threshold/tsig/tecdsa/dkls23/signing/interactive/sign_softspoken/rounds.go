@@ -52,11 +52,11 @@ func (c *Cosigner[P, B, S]) Round1() (r1b *Round1Broadcast, r1u network.RoundMes
 
 	c.state.chi = make(map[sharing.ID]S)
 	bOut := &Round1Broadcast{
-		bigRCommitment: c.state.bigRCommitment[c.shard.Share().ID()],
+		BigRCommitment: c.state.bigRCommitment[c.shard.Share().ID()],
 	}
 	uOut := hashmap.NewComparable[sharing.ID, *Round1P2P]()
 	for id, message := range outgoingP2PMessages(c, uOut) {
-		message.mulR1, c.state.chi[id], err = c.state.bobMul[id].Round1()
+		message.MulR1, c.state.chi[id], err = c.state.bobMul[id].Round1()
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot run Bob mul round1")
 		}
@@ -74,8 +74,8 @@ func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast], 
 
 	mulR1 := make(map[sharing.ID]*rvole_softspoken.Round1P2P)
 	for id, message := range incomingMessages {
-		c.state.bigRCommitment[id] = message.broadcast.bigRCommitment
-		mulR1[id] = message.p2p.mulR1
+		c.state.bigRCommitment[id] = message.broadcast.BigRCommitment
+		mulR1[id] = message.p2p.MulR1
 	}
 
 	c.state.zeroSampler, err = przs.NewSampler(c.shard.Share().ID(), c.quorum, c.zeroSeeds, c.suite.ScalarField())
@@ -101,19 +101,19 @@ func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast], 
 	c.state.c = make(map[sharing.ID][]S)
 
 	bOut := &Round2Broadcast[P, B, S]{
-		bigR:        c.state.bigR[c.shard.Share().ID()],
-		bigRWitness: c.state.bigRWitness,
-		pk:          c.state.pk[c.shard.Share().ID()],
+		BigR:        c.state.bigR[c.shard.Share().ID()],
+		BigRWitness: c.state.bigRWitness,
+		Pk:          c.state.pk[c.shard.Share().ID()],
 	}
 	uOut := hashmap.NewComparable[sharing.ID, *Round2P2P[P, B, S]]()
 	for id, message := range outgoingP2PMessages(c, uOut) {
-		message.mulR2, c.state.c[id], err = c.state.aliceMul[id].Round2(mulR1[id], []S{c.state.r, c.state.sk})
+		message.MulR2, c.state.c[id], err = c.state.aliceMul[id].Round2(mulR1[id], []S{c.state.r, c.state.sk})
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot run alice mul round2")
 		}
-		message.gammaU = c.suite.Curve().ScalarBaseMul(c.state.c[id][0])
-		message.gammaV = c.suite.Curve().ScalarBaseMul(c.state.c[id][1])
-		message.psi = c.state.phi.Sub(c.state.chi[id])
+		message.GammaU = c.suite.Curve().ScalarBaseMul(c.state.c[id][0])
+		message.GammaV = c.suite.Curve().ScalarBaseMul(c.state.c[id][1])
+		message.Psi = c.state.phi.Sub(c.state.chi[id])
 	}
 
 	c.state.round++
@@ -130,24 +130,24 @@ func (c *Cosigner[P, B, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[P,
 	cudu := c.suite.ScalarField().Zero()
 	cvdv := c.suite.ScalarField().Zero()
 	for id, message := range incomingMessages {
-		if err := c.state.ck.Verifier().Verify(c.state.bigRCommitment[id], message.broadcast.bigR.ToCompressed(), message.broadcast.bigRWitness); err != nil {
+		if err := c.state.ck.Verifier().Verify(c.state.bigRCommitment[id], message.broadcast.BigR.ToCompressed(), message.broadcast.BigRWitness); err != nil {
 			return nil, errs.WrapIdentifiableAbort(err, id, "invalid commitment")
 		}
-		c.state.bigR[id] = message.broadcast.bigR
+		c.state.bigR[id] = message.broadcast.BigR
 
-		d, err := c.state.bobMul[id].Round3(message.p2p.mulR2)
+		d, err := c.state.bobMul[id].Round3(message.p2p.MulR2)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run Bob mul round3")
 		}
-		if !c.state.bigR[id].ScalarMul(c.state.chi[id]).Sub(message.p2p.gammaU).Equal(c.suite.Curve().ScalarBaseMul(d[0])) {
+		if !c.state.bigR[id].ScalarMul(c.state.chi[id]).Sub(message.p2p.GammaU).Equal(c.suite.Curve().ScalarBaseMul(d[0])) {
 			return nil, errs.NewFailed("consistency check failed")
 		}
-		if !message.broadcast.pk.ScalarMul(c.state.chi[id]).Sub(message.p2p.gammaV).Equal(c.suite.Curve().ScalarBaseMul(d[1])) {
+		if !message.broadcast.Pk.ScalarMul(c.state.chi[id]).Sub(message.p2p.GammaV).Equal(c.suite.Curve().ScalarBaseMul(d[1])) {
 			return nil, errs.NewFailed("consistency check failed")
 		}
-		c.state.pk[id] = message.broadcast.pk
+		c.state.pk[id] = message.broadcast.Pk
 
-		psi = psi.Add(message.p2p.psi)
+		psi = psi.Add(message.p2p.Psi)
 		cudu = cudu.Add(c.state.c[id][0].Add(d[0]))
 		cvdv = cvdv.Add(c.state.c[id][1].Add(d[1]))
 	}

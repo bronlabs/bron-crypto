@@ -103,10 +103,9 @@ func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 	}
 
 	// secret shares match
-	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
 	for th := accessStructure.Threshold(); th <= uint(accessStructure.Shareholders().Size()); th++ {
 		for shardsSubset := range sliceutils.Combinations(slices.Collect(maps.Values(shards)), th) {
-			feldmanScheme, err := feldman.NewScheme(field, curve.Generator(), accessStructure.Threshold(), accessStructure.Shareholders())
+			feldmanScheme, err := feldman.NewScheme(curve.Generator(), accessStructure.Threshold(), accessStructure.Shareholders())
 			require.NoError(tb, err)
 			sharesSubset := sliceutils.Map(shardsSubset, func(s *tecdsa.Shard[P, B, S]) *feldman.Share[S] {
 				return s.Share()

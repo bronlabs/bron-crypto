@@ -1,6 +1,7 @@
 package pasta
 
 import (
+	"encoding"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -29,6 +30,8 @@ const (
 var (
 	_ algebra.PrimeField[*FqFieldElement]        = (*FqField)(nil)
 	_ algebra.PrimeFieldElement[*FqFieldElement] = (*FqFieldElement)(nil)
+	_ encoding.BinaryMarshaler                   = (*FqFieldElement)(nil)
+	_ encoding.BinaryUnmarshaler                 = (*FqFieldElement)(nil)
 
 	fqFieldInitOnce      sync.Once
 	fqFieldInstance      *FqField

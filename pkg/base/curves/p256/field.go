@@ -1,6 +1,7 @@
 package p256
 
 import (
+	"encoding"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -23,6 +24,8 @@ const (
 var (
 	_ algebra.PrimeField[*BaseFieldElement]        = (*BaseField)(nil)
 	_ algebra.PrimeFieldElement[*BaseFieldElement] = (*BaseFieldElement)(nil)
+	_ encoding.BinaryMarshaler                     = (*BaseFieldElement)(nil)
+	_ encoding.BinaryUnmarshaler                   = (*BaseFieldElement)(nil)
 
 	baseFieldInstance      *BaseField
 	baseFieldInitOnce      sync.Once

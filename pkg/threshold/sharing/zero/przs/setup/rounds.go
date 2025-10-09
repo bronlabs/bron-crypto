@@ -41,7 +41,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	p.state.witnesses = witnesses.Freeze()
 	p.state.commitments = hashmap.NewComparable[sharing.ID, ds.Map[sharing.ID, hash_comm.Commitment]]()
 	p.state.commitments.Put(p.mySharingId, commitments.Freeze())
-	r1bo := &Round1Broadcast{commitments: commitments.Freeze()}
+	r1bo := &Round1Broadcast{Commitments: commitments.ToNative()}
 	return r1bo, nil
 }
 
@@ -55,7 +55,7 @@ func (p *Participant) Round2(r1bo network.RoundMessages[*Round1Broadcast]) (netw
 		if !ok {
 			return nil, errs.NewValidation("missing message from %d", sharingId)
 		}
-		p.state.commitments.Put(sharingId, msg.commitments)
+		p.state.commitments.Put(sharingId, hashmap.NewImmutableComparableFromNativeLike(msg.Commitments))
 	}
 
 	r2uo := hashmap.NewComparable[sharing.ID, *Round2P2P]()
@@ -75,8 +75,8 @@ func (p *Participant) Round2(r1bo network.RoundMessages[*Round1Broadcast]) (netw
 		}
 
 		r2uo.Put(sharingId, &Round2P2P{
-			seedContribution: seedContribution,
-			witness:          witness,
+			SeedContribution: seedContribution,
+			Witness:          witness,
 		})
 	}
 
@@ -94,8 +94,8 @@ func (p *Participant) Round3(r2uo network.RoundMessages[*Round2P2P]) (przs.Seeds
 		if !ok {
 			return nil, errs.NewValidation("missing message from %d", sharingId)
 		}
-		theirSeedContribution := msg.seedContribution
-		theirWitness := msg.witness
+		theirSeedContribution := msg.SeedContribution
+		theirWitness := msg.Witness
 		theirCommitments, ok := p.state.commitments.Get(sharingId)
 		if !ok {
 			return nil, errs.NewValidation("missing commitments from %d", sharingId)

@@ -19,13 +19,8 @@ import (
 )
 
 func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], threshold uint, shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *tecdsa.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
-	field, ok := curve.ScalarStructure().(algebra.PrimeField[S])
-	if !ok {
-		return nil, nil, errs.NewFailed("invalid scalar structure")
-	}
-
 	generator := curve.Generator()
-	feldmanDealer, err := feldman.NewScheme(field, generator, threshold, shareholder)
+	feldmanDealer, err := feldman.NewScheme(generator, threshold, shareholder)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not create shamir scheme")
 	}

@@ -8,7 +8,7 @@ import (
 )
 
 type Round1Broadcast struct {
-	bigRCommitment hash_comm.Commitment
+	BigRCommitment hash_comm.Commitment `cbor:"bigRCommitment"`
 }
 
 func (r1b *Round1Broadcast) Bytes() []byte {
@@ -17,7 +17,7 @@ func (r1b *Round1Broadcast) Bytes() []byte {
 }
 
 type Round1P2P struct {
-	mulR1 *rvole_softspoken.Round1P2P
+	MulR1 *rvole_softspoken.Round1P2P `cbor:"mulR1"`
 }
 
 func (r1u *Round1P2P) Bytes() []byte {
@@ -26,9 +26,9 @@ func (r1u *Round1P2P) Bytes() []byte {
 }
 
 type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	bigR        P
-	bigRWitness hash_comm.Witness
-	pk          P
+	BigR        P                 `cbor:"bigR"`
+	BigRWitness hash_comm.Witness `cbor:"bigRWitness"`
+	Pk          P                 `cbor:"pk"`
 }
 
 func (r2b *Round2Broadcast[P, B, S]) Bytes() []byte {
@@ -37,10 +37,10 @@ func (r2b *Round2Broadcast[P, B, S]) Bytes() []byte {
 }
 
 type Round2P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	mulR2  *rvole_softspoken.Round2P2P[S]
-	gammaU P
-	gammaV P
-	psi    S
+	MulR2  *rvole_softspoken.Round2P2P[S] `cbor:"mulR2"`
+	GammaU P                              `cbor:"gammaU"`
+	GammaV P                              `cbor:"gammaV"`
+	Psi    S                              `cbor:"psi"`
 }
 
 func (r2u *Round2P2P[P, B, S]) Bytes() []byte {

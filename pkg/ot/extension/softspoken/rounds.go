@@ -63,27 +63,27 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 	// step 1.4: Compute u_i = t_{0,i} ⊕ t_{1,i} ⊕ x'
 	r1 := new(Round1P2P)
 	for i := 0; i < Kappa; i++ {
-		r1.u[i] = make([]byte, etaPrimeBytes)
-		subtle.XORBytes(r1.u[i], t[0][i], t[1][i])
-		subtle.XORBytes(r1.u[i], r1.u[i], xPrime)
+		r1.U[i] = make([]byte, etaPrimeBytes)
+		subtle.XORBytes(r1.U[i], t[0][i], t[1][i])
+		subtle.XORBytes(r1.U[i], r1.U[i], xPrime)
 	}
 
 	// CONSISTENCY CHECK (Fiat-Shamir)
 	// step 1.5: Generate the challenge (χ) using Fiat-Shamir heuristic
 	for i := 0; i < Kappa; i++ {
-		r.tape.AppendBytes(expansionMaskLabel, r1.u[i])
+		r.tape.AppendBytes(expansionMaskLabel, r1.U[i])
 	}
 	m := eta / Sigma                                    // M = η/σ
 	challengeFiatShamir := generateChallenge(r.tape, m) // χ
 	// step 1.6: Compute the challenge response (ẋ, ṫ_i) using the challenge (χ)
-	err = r.computeResponse(xPrime, &t, challengeFiatShamir, &r1.challengeResponse)
+	err = r.computeResponse(xPrime, &t, challengeFiatShamir, &r1.ChallengeResponse)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot compute challenge")
 	}
 
-	r.tape.AppendBytes(challengeResponseXLabel, r1.challengeResponse.x[:])
+	r.tape.AppendBytes(challengeResponseXLabel, r1.ChallengeResponse.X[:])
 	for i := 0; i < Kappa; i++ {
-		r.tape.AppendBytes(challengeResponseTLabel, r1.challengeResponse.t[i][:])
+		r.tape.AppendBytes(challengeResponseTLabel, r1.ChallengeResponse.T[i][:])
 	}
 
 	// RANDOMISE
@@ -141,7 +141,7 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 	qiTemp := make([]byte, etaPrimeBytes)
 	for i := 0; i < Kappa; i++ {
 		extCorrelations[i] = tb[i]
-		subtle.XORBytes(qiTemp, r1.u[i], tb[i])
+		subtle.XORBytes(qiTemp, r1.U[i], tb[i])
 		c := s.receiverSeeds.Choices[i/8] >> (i % 8) & 0b1
 		subtle.ConstantTimeCopy(int(c), extCorrelations[i], qiTemp)
 	}
@@ -149,19 +149,19 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 	// CONSISTENCY CHECK (Fiat-Shamir)
 	// step 2.3: Generate the challenge (χ) using Fiat-Shamir heuristic
 	for i := 0; i < Kappa; i++ {
-		s.tape.AppendBytes(expansionMaskLabel, r1.u[i])
+		s.tape.AppendBytes(expansionMaskLabel, r1.U[i])
 	}
 	M := eta / Sigma
 	challengeFiatShamir := generateChallenge(s.tape, M)
 	// step 2.4: Verify the challenge response (ẋ, ṫ_i) using the challenge (χ)
-	err = s.verifyChallenge(challengeFiatShamir, &r1.challengeResponse, extCorrelations)
+	err = s.verifyChallenge(challengeFiatShamir, &r1.ChallengeResponse, extCorrelations)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bad consistency check for SoftSpoken COTe")
 	}
 
-	s.tape.AppendBytes(challengeResponseXLabel, r1.challengeResponse.x[:])
+	s.tape.AppendBytes(challengeResponseXLabel, r1.ChallengeResponse.X[:])
 	for i := 0; i < Kappa; i++ {
-		s.tape.AppendBytes(challengeResponseTLabel, r1.challengeResponse.t[i][:])
+		s.tape.AppendBytes(challengeResponseTLabel, r1.ChallengeResponse.T[i][:])
 	}
 
 	// RANDOMISE
@@ -244,14 +244,14 @@ func (r *Receiver) computeResponse(xPrime []byte, extOptions *[2][Kappa][]byte, 
 		}
 		x = x.Add(xHatK.Mul(chi[k]))
 	}
-	copy(challengeResponse.x[:], x.Bytes())
+	copy(challengeResponse.X[:], x.Bytes())
 	// ṫ^i = t^i_{0,{mσ:(m+1)σ} + Σ{k=1}^{m} χ_k • t^i_{0,{(k-1)σ:kσ}}
 	for i := 0; i < Kappa; i++ {
 		t, err := bf128.NewField().FromBytes(extOptions[0][i][etaBytes : etaBytes+SigmaBytes])
 		if err != nil {
 			return errs.NewFailed("cannot create field element")
 		}
-		copy(challengeResponse.t[i][:], extOptions[0][i][etaBytes:etaBytes+SigmaBytes])
+		copy(challengeResponse.T[i][:], extOptions[0][i][etaBytes:etaBytes+SigmaBytes])
 		for k := 0; k < m; k++ {
 			tHatK, err := bf128.NewField().FromBytes(extOptions[0][i][k*SigmaBytes : (k+1)*SigmaBytes])
 			if err != nil {
@@ -259,7 +259,7 @@ func (r *Receiver) computeResponse(xPrime []byte, extOptions *[2][Kappa][]byte, 
 			}
 			t = t.Add(tHatK.Mul(chi[k]))
 		}
-		copy(challengeResponse.t[i][:], t.Bytes())
+		copy(challengeResponse.T[i][:], t.Bytes())
 	}
 
 	return nil
@@ -293,11 +293,11 @@ func (s *Sender) verifyChallenge(
 			qi = qi.Add(qiHatK.Mul(chiK))
 		}
 		// ABORT if q̇^i != ṫ^i + Δ_i • ẋ  ∀ i ∈[κ]
-		t, err := bf128.NewField().FromBytes(challengeResponse.t[i][:])
+		t, err := bf128.NewField().FromBytes(challengeResponse.T[i][:])
 		if err != nil {
 			return errs.WrapFailed(err, "cannot create field element")
 		}
-		x, err := bf128.NewField().FromBytes(challengeResponse.x[:])
+		x, err := bf128.NewField().FromBytes(challengeResponse.X[:])
 		if err != nil {
 			return errs.WrapFailed(err, "cannot create field element")
 		}

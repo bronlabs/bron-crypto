@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
@@ -50,10 +51,10 @@ func Test_HappyPath(t *testing.T) {
 		a[i], err = k256.NewScalarField().Random(prng)
 		require.NoError(t, err)
 	}
-	r2, c, err := alice.Round2(r1, a)
+	r2, c, err := alice.Round2(testutils.CBORRoundTrip(t, r1), a)
 	require.NoError(t, err)
 
-	d, err := bob.Round3(r2)
+	d, err := bob.Round3(testutils.CBORRoundTrip(t, r2))
 	require.NoError(t, err)
 
 	t.Run("a_i * b = c_i + d_i", func(t *testing.T) {

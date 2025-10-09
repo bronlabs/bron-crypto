@@ -1,6 +1,7 @@
 package k256
 
 import (
+	"encoding"
 	"slices"
 	"sync"
 
@@ -24,6 +25,8 @@ const (
 var (
 	_ algebra.PrimeField[*Scalar]        = (*ScalarField)(nil)
 	_ algebra.PrimeFieldElement[*Scalar] = (*Scalar)(nil)
+	_ encoding.BinaryMarshaler           = (*Scalar)(nil)
+	_ encoding.BinaryUnmarshaler         = (*Scalar)(nil)
 
 	scalarFieldInitOnce      sync.Once
 	scalarFieldInstance      *ScalarField
