@@ -2,6 +2,8 @@ package sign_bbot
 
 import (
 	"encoding/binary"
+	"encoding/hex"
+	"fmt"
 	"io"
 	"iter"
 
@@ -11,7 +13,7 @@ import (
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_bbot"
+	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/bbot"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
@@ -25,101 +27,96 @@ const (
 	ckLabel         = "BRON_CRYPTO_TECDSA_DKLS23_BBOT_CK-"
 )
 
-//var (
-//	_ types.ThresholdSignatureParticipant = (*Cosigner)(nil)
-//)
-
-type Cosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	Suite       *ecdsa.Suite[P, B, S]
-	SessionId   network.SID
-	MySharingId sharing.ID
-	MyShard     *tecdsa.Shard[P, B, S]
-	TheQuorum   network.Quorum
-	Prng        io.Reader
-	Tape        transcripts.Transcript
-	State       CosignerState[P, B, S]
+type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	suite     *ecdsa.Suite[P, B, S]
+	sessionId network.SID
+	shard     *tecdsa.Shard[P, B, S]
+	quorum    network.Quorum
+	prng      io.Reader
+	tape      transcripts.Transcript
+	state     CosignerState[P, B, S]
 }
 
-type CosignerState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	ZeroSetup *przsSetup.Participant
-	Zero      *przs.Sampler[S]
-	AliceMul  map[sharing.ID]*mul_bbot.Alice[P, S]
-	BobMul    map[sharing.ID]*mul_bbot.Bob[P, S]
+type CosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	zeroSetup   *przsSetup.Participant
+	zeroSampler *przs.Sampler[S]
+	aliceMul    map[sharing.ID]*rvole_bbot.Alice[P, S]
+	bobMul      map[sharing.ID]*rvole_bbot.Bob[P, S]
 
-	Round          network.Round
-	Ck             *hash_comm.Scheme
-	R              S
-	BigR           map[sharing.ID]P
-	BigRCommitment map[sharing.ID]hash_comm.Commitment
-	BigRWitness    hash_comm.Witness
-	Phi            S
-	Chi            map[sharing.ID]S
-	C              map[sharing.ID][]S
-	Sk             S
-	Pk             map[sharing.ID]P
+	round          network.Round
+	ck             *hash_comm.Scheme
+	r              S
+	bigR           map[sharing.ID]P
+	bigRCommitment map[sharing.ID]hash_comm.Commitment
+	bigRWitness    hash_comm.Witness
+	phi            S
+	chi            map[sharing.ID]S
+	c              map[sharing.ID][]S
+	sk             S
+	pk             map[sharing.ID]P
 }
 
-func NewCosigner[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, mySharingId sharing.ID, quorum network.Quorum, suite *ecdsa.Suite[P, B, S], shard *tecdsa.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
-	//	//if err := validateCosignerInputs(sessionId, authKey, protocol, shard, quorum); err != nil {
-	//	//	return nil, errs.WrapValidation(err, "invalid inputs")
-	//	//}
-	//
-	//	//sharingCfg := types.DeriveSharingConfig(protocol.Participants())
-	//	//sharingId, ok := sharingCfg.Reverse().Get(authKey)
-	//	//if !ok {
-	//	//	return nil, errs.NewFailed("couldn't find sharing identity in sharing config")
-	//	}
-
-	c := &Cosigner[P, B, S]{
-		MySharingId: mySharingId,
-		MyShard:     shard,
-		TheQuorum:   quorum,
-		Suite:       suite,
-		Prng:        prng,
-		Tape:        tape,
+func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, quorum network.Quorum, suite *ecdsa.Suite[P, B, S], shard *tecdsa.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
+	if quorum == nil || suite == nil || shard == nil || prng == nil || tape == nil {
+		return nil, errs.NewIsNil("argument")
 	}
-	c.Tape.AppendBytes(transcriptLabel, sessionId[:])
+	if !quorum.Contains(shard.Share().ID()) {
+		return nil, errs.NewValidation("sharing id not part of the quorum")
+	}
+
+	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
+	c := &Cosigner[P, B, S]{
+		shard:  shard,
+		quorum: quorum,
+		suite:  suite,
+		prng:   prng,
+		tape:   tape,
+	}
 
 	var err error
-	c.State.ZeroSetup, err = przsSetup.NewParticipant(sessionId, mySharingId, quorum, tape, prng)
+	c.state.zeroSetup, err = przsSetup.NewParticipant(sessionId, shard.Share().ID(), quorum, tape, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't initialise zero setup protocol")
 	}
 
-	c.State.AliceMul = make(map[sharing.ID]*mul_bbot.Alice[P, S])
-	c.State.BobMul = make(map[sharing.ID]*mul_bbot.Bob[P, S])
+	mulSuite, err := rvole_bbot.NewSuite(2, suite.Curve())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create mul suite")
+	}
+	c.state.aliceMul = make(map[sharing.ID]*rvole_bbot.Alice[P, S])
+	c.state.bobMul = make(map[sharing.ID]*rvole_bbot.Bob[P, S])
 	for id := range c.otherCosigners() {
 		aliceTape := tape.Clone()
-		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.MySharingId)), binary.LittleEndian.AppendUint64(nil, uint64(id)))
-		c.State.AliceMul[id], err = mul_bbot.NewAlice(c.SessionId, c.Suite.Curve(), 2, prng, aliceTape)
+		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
+		c.state.aliceMul[id], err = rvole_bbot.NewAlice(c.sessionId, mulSuite, prng, aliceTape)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "couldn't initialise alice")
 		}
 
 		bobTape := tape.Clone()
-		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.MySharingId)))
-		c.State.BobMul[id], err = mul_bbot.NewBob(c.SessionId, c.Suite.Curve(), 2, prng, bobTape)
+		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())))
+		c.state.bobMul[id], err = rvole_bbot.NewBob(c.sessionId, mulSuite, prng, bobTape)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "couldn't initialise bob")
 		}
 	}
 
-	c.State.Round = 1
+	c.state.round = 1
 	return c, nil
 }
 
 func (c *Cosigner[P, B, S]) SharingID() sharing.ID {
-	return c.MySharingId
+	return c.shard.Share().ID()
 }
 
 func (c *Cosigner[P, B, S]) Quorum() network.Quorum {
-	return c.TheQuorum
+	return c.quorum
 }
 
 func (c *Cosigner[P, B, S]) otherCosigners() iter.Seq[sharing.ID] {
 	return func(yield func(id sharing.ID) bool) {
-		for id := range c.TheQuorum.Iter() {
-			if id == c.MySharingId {
+		for id := range c.quorum.Iter() {
+			if id == c.shard.Share().ID() {
 				continue
 			}
 			if !yield(id) {

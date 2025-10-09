@@ -8,8 +8,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_bbot"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
+	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/bbot"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
@@ -17,56 +19,56 @@ import (
 )
 
 func (c *Cosigner[P, B, S]) Round1() (r1bOut *Round1Broadcast, r1uOut network.RoundMessages[*Round1P2P[P, B, S]], err error) {
-	if c.State.Round != 1 {
+	if c.state.round != 1 {
 		return nil, nil, errs.NewFailed("invalid round")
 	}
 
-	var ck [32]byte
-	ckBytes, err := c.Tape.ExtractBytes(ckLabel, uint(len(ck)))
+	var ck [hash_comm.KeySize]byte
+	ckBytes, err := c.tape.ExtractBytes(ckLabel, uint(len(ck)))
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to extract commitment key")
 	}
 	copy(ck[:], ckBytes)
-	c.State.Ck, err = hash_comm.NewScheme(ck)
+	c.state.ck, err = hash_comm.NewScheme(ck)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create commitment scheme")
 	}
 
-	c.State.R, err = c.Suite.ScalarField().Random(c.Prng)
+	c.state.r, err = c.suite.ScalarField().Random(c.prng)
 	if err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "cannot sample r")
 	}
-	c.State.BigR = make(map[sharing.ID]P)
-	c.State.BigR[c.MySharingId] = c.Suite.Curve().ScalarBaseMul(c.State.R)
-	c.State.BigRCommitment = make(map[sharing.ID]hash_comm.Commitment)
-	c.State.BigRCommitment[c.MySharingId], c.State.BigRWitness, err = c.State.Ck.Committer().Commit(c.State.BigR[c.MySharingId].ToCompressed(), c.Prng)
+	c.state.bigR = make(map[sharing.ID]P)
+	c.state.bigR[c.shard.Share().ID()] = c.suite.Curve().ScalarBaseMul(c.state.r)
+	c.state.bigRCommitment = make(map[sharing.ID]hash_comm.Commitment)
+	c.state.bigRCommitment[c.shard.Share().ID()], c.state.bigRWitness, err = c.state.ck.Committer().Commit(c.state.bigR[c.shard.Share().ID()].ToCompressed(), c.prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot commit to r")
 	}
 
-	c.State.Phi, err = c.Suite.ScalarField().Random(c.Prng)
+	c.state.phi, err = c.suite.ScalarField().Random(c.prng)
 	if err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "cannot sample phi")
 	}
 
-	zeroR1, err := c.State.ZeroSetup.Round1()
+	zeroR1, err := c.state.zeroSetup.Round1()
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot round 1 of zero setup")
 	}
 
 	bOut := &Round1Broadcast{
 		ZeroSetupR1:    zeroR1,
-		BigRCommitment: c.State.BigRCommitment[c.MySharingId],
+		BigRCommitment: c.state.bigRCommitment[c.shard.Share().ID()],
 	}
 	uOut := hashmap.NewComparable[sharing.ID, *Round1P2P[P, B, S]]()
 	for id, message := range outgoingP2PMessages(c, uOut) {
-		message.MulR1, err = c.State.AliceMul[id].Round1()
+		message.MulR1, err = c.state.aliceMul[id].Round1()
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot run Alice mul round1")
 		}
 	}
 
-	c.State.Round++
+	c.state.round++
 	return bOut, uOut.Freeze(), nil
 }
 
@@ -77,33 +79,33 @@ func (c *Cosigner[P, B, S]) Round2(r1bOut network.RoundMessages[*Round1Broadcast
 	}
 
 	zeroR1 := hashmap.NewComparable[sharing.ID, *przsSetup.Round1Broadcast]()
-	mulR1 := make(map[sharing.ID]*mul_bbot.Round1P2P[P, S])
+	mulR1 := make(map[sharing.ID]*rvole_bbot.Round1P2P[P, S])
 	for id, message := range incomingMessages {
-		c.State.BigRCommitment[id] = message.broadcast.BigRCommitment
+		c.state.bigRCommitment[id] = message.broadcast.BigRCommitment
 		zeroR1.Put(id, message.broadcast.ZeroSetupR1)
 		mulR1[id] = message.p2p.MulR1
 	}
 
-	zeroR2, err := c.State.ZeroSetup.Round2(zeroR1.Freeze())
+	zeroR2, err := c.state.zeroSetup.Round2(zeroR1.Freeze())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot run zero setup round2")
 	}
 
-	c.State.Chi = make(map[sharing.ID]S)
+	c.state.chi = make(map[sharing.ID]S)
 	bOut := &Round2Broadcast[P, B, S]{
-		BigR:        c.State.BigR[c.MySharingId],
-		BigRWitness: c.State.BigRWitness,
+		BigR:        c.state.bigR[c.shard.Share().ID()],
+		BigRWitness: c.state.bigRWitness,
 	}
 	uOut := hashmap.NewComparable[sharing.ID, *Round2P2P[P, B, S]]()
 	for id, message := range outgoingP2PMessages(c, uOut) {
-		message.MulR2, c.State.Chi[id], err = c.State.BobMul[id].Round2(mulR1[id])
+		message.MulR2, c.state.chi[id], err = c.state.bobMul[id].Round2(mulR1[id])
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot run bob mul round2")
 		}
 		message.ZeroSetupR2, _ = zeroR2.Get(id)
 	}
 
-	c.State.Round++
+	c.state.round++
 	return bOut, uOut.Freeze(), nil
 }
 
@@ -114,65 +116,57 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 	}
 
 	zeroR2 := hashmap.NewComparable[sharing.ID, *przsSetup.Round2P2P]()
-	mulR2 := make(map[sharing.ID]*mul_bbot.Round2P2P[P, S])
+	mulR2 := make(map[sharing.ID]*rvole_bbot.Round2P2P[P, S])
 	for id, message := range incomingMessages {
-		if err := c.State.Ck.Verifier().Verify(c.State.BigRCommitment[id], message.broadcast.BigR.ToCompressed(), message.broadcast.BigRWitness); err != nil {
+		if err := c.state.ck.Verifier().Verify(c.state.bigRCommitment[id], message.broadcast.BigR.ToCompressed(), message.broadcast.BigRWitness); err != nil {
 			return nil, nil, errs.WrapIdentifiableAbort(err, id, "invalid commitment")
 		}
-		c.State.BigR[id] = message.broadcast.BigR
+		c.state.bigR[id] = message.broadcast.BigR
 		zeroR2.Put(id, message.p2p.ZeroSetupR2)
 		mulR2[id] = message.p2p.MulR2
 	}
 
-	zeroSeeds, err := c.State.ZeroSetup.Round3(zeroR2.Freeze())
+	zeroSeeds, err := c.state.zeroSetup.Round3(zeroR2.Freeze())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot run zero setup round3")
 	}
-	c.State.Zero, err = przs.NewSampler(c.MySharingId, c.TheQuorum, zeroSeeds, c.Suite.ScalarField())
+	c.state.zeroSampler, err = przs.NewSampler(c.shard.Share().ID(), c.quorum, zeroSeeds, c.suite.ScalarField())
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot run zero setup round3")
 	}
-	zeta, err := c.State.Zero.Sample()
+	zeta, err := c.state.zeroSampler.Sample()
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot run zero setup round3")
 	}
 
-	//quorumSharingIds := slices.Collect(iterutils.Map(c.TheQuorum.Iter(), func(key types.IdentityKey) types.SharingID { id, _ := c.SharingCfg.Reverse().Get(key); return id }))
-	//share := shamir.Share{
-	//	Id:    c.MySharingId,
-	//	Value: c.MyShard.SecretShare(),
-	//}
-	//c.State.Sk, err = share.ToAdditive(quorumSharingIds)
-
-	// TODO: this function doesn't make sense
-	quorum2, err := sharing.NewMinimalQualifiedAccessStructure(c.TheQuorum)
+	quorum2, err := sharing.NewMinimalQualifiedAccessStructure(c.quorum)
 	if err != nil {
 		panic(err)
 	}
 
-	sk, err := c.MyShard.Share().ToAdditive(*quorum2)
+	sk, err := c.shard.Share().ToAdditive(*quorum2)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "to additive share failed")
 	}
 
-	c.State.Sk = sk.Value().Add(zeta)
-	c.State.Pk = make(map[sharing.ID]P)
-	c.State.Pk[c.MySharingId] = c.Suite.Curve().ScalarBaseMul(c.State.Sk)
-	c.State.C = make(map[sharing.ID][]S)
+	c.state.sk = sk.Value().Add(zeta)
+	c.state.pk = make(map[sharing.ID]P)
+	c.state.pk[c.shard.Share().ID()] = c.suite.Curve().ScalarBaseMul(c.state.sk)
+	c.state.c = make(map[sharing.ID][]S)
 
-	bOut := &Round3Broadcast[P, B, S]{Pk: c.State.Pk[c.MySharingId]}
+	bOut := &Round3Broadcast[P, B, S]{Pk: c.state.pk[c.shard.Share().ID()]}
 	uOut := hashmap.NewComparable[sharing.ID, *Round3P2P[P, B, S]]()
 	for id, message := range outgoingP2PMessages(c, uOut) {
-		message.MulR3, c.State.C[id], err = c.State.AliceMul[id].Round3(mulR2[id], []S{c.State.R, c.State.Sk})
+		message.MulR3, c.state.c[id], err = c.state.aliceMul[id].Round3(mulR2[id], []S{c.state.r, c.state.sk})
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot run alice mul round3")
 		}
-		message.GammaU = c.Suite.Curve().ScalarBaseMul(c.State.C[id][0])
-		message.GammaV = c.Suite.Curve().ScalarBaseMul(c.State.C[id][1])
-		message.Psi = c.State.Phi.Sub(c.State.Chi[id])
+		message.GammaU = c.suite.Curve().ScalarBaseMul(c.state.c[id][0])
+		message.GammaV = c.suite.Curve().ScalarBaseMul(c.state.c[id][1])
+		message.Psi = c.state.phi.Sub(c.state.chi[id])
 	}
 
-	c.State.Round++
+	c.state.round++
 	return bOut, uOut.Freeze(), nil
 }
 
@@ -182,46 +176,57 @@ func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast
 		return nil, errs.WrapFailed(err, "invalid input or round mismatch")
 	}
 
-	psi := c.Suite.ScalarField().Zero()
-	cudu := c.Suite.ScalarField().Zero()
-	cvdv := c.Suite.ScalarField().Zero()
+	psi := c.suite.ScalarField().Zero()
+	cudu := c.suite.ScalarField().Zero()
+	cvdv := c.suite.ScalarField().Zero()
 	for id, message := range incomingMessages {
-		d, err := c.State.BobMul[id].Round4(message.p2p.MulR3)
+		d, err := c.state.bobMul[id].Round4(message.p2p.MulR3)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run bob mul round4")
 		}
-		c.State.Pk[id] = message.broadcast.Pk
+		c.state.pk[id] = message.broadcast.Pk
 
-		if !c.State.BigR[id].ScalarMul(c.State.Chi[id]).Sub(message.p2p.GammaU).Equal(c.Suite.Curve().ScalarBaseMul(d[0])) {
+		if !c.state.bigR[id].ScalarMul(c.state.chi[id]).Sub(message.p2p.GammaU).Equal(c.suite.Curve().ScalarBaseMul(d[0])) {
 			return nil, errs.NewFailed("consistency check failed")
 		}
-		if !message.broadcast.Pk.ScalarMul(c.State.Chi[id]).Sub(message.p2p.GammaV).Equal(c.Suite.Curve().ScalarBaseMul(d[1])) {
+		if !message.broadcast.Pk.ScalarMul(c.state.chi[id]).Sub(message.p2p.GammaV).Equal(c.suite.Curve().ScalarBaseMul(d[1])) {
 			return nil, errs.NewFailed("consistency check failed")
 		}
 
 		psi = psi.Add(message.p2p.Psi)
-		cudu = cudu.Add(c.State.C[id][0].Add(d[0]))
-		cvdv = cvdv.Add(c.State.C[id][1].Add(d[1]))
+		cudu = cudu.Add(c.state.c[id][0].Add(d[0]))
+		cvdv = cvdv.Add(c.state.c[id][1].Add(d[1]))
 	}
 
-	bigR := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.Suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.State.BigR))...)
-	pk := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.Suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.State.Pk))...)
-	if !pk.Equal(c.MyShard.PublicKey()) {
+	bigR := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.state.bigR))...)
+	pk := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.state.pk))...)
+	if !pk.Equal(c.shard.PublicKey().Value()) {
 		return nil, errs.NewFailed("consistency check failed")
 	}
 
-	u := c.State.R.Mul(c.State.Phi.Add(psi)).Add(cudu)
-	v := c.State.Sk.Mul(c.State.Phi.Add(psi)).Add(cvdv)
-	m, err := messageToScalar(c, message)
+	u := c.state.r.Mul(c.state.phi.Add(psi)).Add(cudu)
+	v := c.state.sk.Mul(c.state.phi.Add(psi)).Add(cvdv)
+	digest, err := hashing.Hash(c.suite.HashFunc(), message)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot compute message scalar")
+		return nil, errs.WrapFailed(err, "cannot hash message")
 	}
-	rx, err := c.Suite.ScalarField().FromWideBytes(bigR.Coordinates().Value()[0].Bytes()) // TODO: fingers crossed it returns affine x
+	m, err := ecdsa.DigestToScalar(c.suite.ScalarField(), digest)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot convert digest to scalar")
+	}
+	rxi, err := bigR.AffineX()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot convert to affine x")
+	}
+	rx, err := c.suite.ScalarField().FromWideBytes(rxi.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert to scalar")
 	}
-	w := m.Mul(c.State.Phi).Add(rx.Mul(v))
+	w := m.Mul(c.state.phi).Add(rx.Mul(v))
 
-	partialSignature = dkls23.NewPartialSignature(c.State.BigR[c.MySharingId], u, w)
+	partialSignature, err = dkls23.NewPartialSignature(c.state.bigR[c.shard.Share().ID()], u, w)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create partial signature")
+	}
 	return partialSignature, nil
 }

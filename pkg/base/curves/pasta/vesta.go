@@ -1,6 +1,9 @@
 package pasta
 
 import (
+	"crypto/elliptic"
+	"encoding"
+	"fmt"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -31,6 +34,8 @@ var (
 
 	_ curves.Curve[*VestaPoint, *VestaBaseFieldElement, *VestaScalar] = (*VestaCurve)(nil)
 	_ curves.Point[*VestaPoint, *VestaBaseFieldElement, *VestaScalar] = (*VestaPoint)(nil)
+	_ encoding.BinaryMarshaler                                        = (*VestaPoint)(nil)
+	_ encoding.BinaryUnmarshaler                                      = (*VestaPoint)(nil)
 )
 
 type VestaCurve struct {
@@ -125,6 +130,32 @@ func (c *VestaCurve) FromUncompressed(input []byte) (*VestaPoint, error) {
 	return pp, nil
 }
 
+func (c *VestaCurve) FromAffine(x, y *VestaBaseFieldElement) (*VestaPoint, error) {
+	var p VestaPoint
+	ok := p.V.SetAffine(&x.V, &y.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x/y")
+	}
+	return &p, nil
+}
+
+func (c *VestaCurve) FromAffineX(x *VestaBaseFieldElement, b bool) (*VestaPoint, error) {
+	var p VestaPoint
+	ok := p.V.SetFromAffineX(&x.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x")
+	}
+	y, err := p.AffineY()
+	if err != nil {
+		panic(err) // should never happen
+	}
+	if y.IsOdd() != b {
+		return p.Neg(), nil
+	} else {
+		return &p, nil
+	}
+}
+
 func (c *VestaCurve) Hash(bytes []byte) (*VestaPoint, error) {
 	return c.HashWithDst(base.Hash2CurveAppTag+VestaHash2CurveSuite, bytes)
 }
@@ -172,6 +203,10 @@ func (c *VestaCurve) ScalarBaseMul(sc *VestaScalar) *VestaPoint {
 		panic("scalar is nil")
 	}
 	return c.Generator().ScalarMul(sc)
+}
+
+func (c *VestaCurve) ToElliptic() elliptic.Curve {
+	return ellipticVestaInstance
 }
 
 type VestaPoint struct {
@@ -236,9 +271,9 @@ func (p *VestaPoint) Bytes() []byte {
 	return p.ToCompressed()
 }
 
-func (p *VestaPoint) AffineX() *VestaBaseFieldElement {
+func (p *VestaPoint) AffineX() (*VestaBaseFieldElement, error) {
 	if p.IsZero() {
-		return NewVestaBaseField().One()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y VestaBaseFieldElement
@@ -246,12 +281,12 @@ func (p *VestaPoint) AffineX() *VestaBaseFieldElement {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &x
+	return &x, nil
 }
 
-func (p *VestaPoint) AffineY() *VestaBaseFieldElement {
+func (p *VestaPoint) AffineY() (*VestaBaseFieldElement, error) {
 	if p.IsZero() {
-		return NewVestaBaseField().Zero()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y VestaBaseFieldElement
@@ -259,7 +294,7 @@ func (p *VestaPoint) AffineY() *VestaBaseFieldElement {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &y
+	return &y, nil
 }
 
 func (p *VestaPoint) ScalarOp(sc *VestaScalar) *VestaPoint {
@@ -276,6 +311,23 @@ func (p *VestaPoint) IsTorsionFree() bool {
 	return true
 }
 
+func (p *VestaPoint) MarshalBinary() ([]byte, error) {
+	return p.ToCompressed(), nil
+}
+
+func (p *VestaPoint) UnmarshalBinary(data []byte) error {
+	pp, err := NewVestaCurve().FromCompressed(data)
+	if err != nil {
+		return errs.WrapSerialisation(err, "cannot deserialize point")
+	}
+	p.V.Set(&pp.V)
+	return nil
+}
+
 func (p *VestaPoint) String() string {
-	return traits.StringifyPoint(p)
+	if p.IsZero() {
+		return "(0, 1, 0)"
+	} else {
+		return fmt.Sprintf("(%s, %s, %s)", p.V.X.String(), p.V.Y.String(), p.V.Z.String())
+	}
 }

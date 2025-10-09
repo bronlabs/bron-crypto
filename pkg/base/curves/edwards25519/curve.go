@@ -1,6 +1,8 @@
 package edwards25519
 
 import (
+	"encoding"
+	"fmt"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -21,12 +23,14 @@ const (
 	CurveName             = "edwards25519"
 	Hash2CurveSuite       = "edwards25519_XMD:SHA-512_ELL2_NU_"
 	Hash2CurveScalarSuite = "edwards25519_XMD:SHA-512_ELL2_NU_SC_"
-	compressedPointBytes  = int(edwards25519Impl.FpBytes)
+	compressedPointBytes  = edwards25519Impl.FpBytes
 )
 
 var (
 	_ curves.EllipticCurve[*Point, *BaseFieldElement, *Scalar] = (*Curve)(nil)
 	_ curves.ECPoint[*Point, *BaseFieldElement, *Scalar]       = (*Point)(nil)
+	_ encoding.BinaryMarshaler                                 = (*Point)(nil)
+	_ encoding.BinaryUnmarshaler                               = (*Point)(nil)
 
 	curveInstance *Curve
 	curveInitOnce sync.Once
@@ -128,6 +132,15 @@ func (c *Curve) FromUncompressed(inBytes []byte) (*Point, error) {
 	return result, nil
 }
 
+func (c *Curve) FromAffine(x, y *BaseFieldElement) (*Point, error) {
+	var p Point
+	ok := p.V.SetAffine(&x.V, &y.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x/y")
+	}
+	return &p, nil
+}
+
 func (c *Curve) Hash(bytes []byte) (*Point, error) {
 	return c.HashWithDst(base.Hash2CurveAppTag+Hash2CurveSuite, bytes)
 }
@@ -198,21 +211,21 @@ func (p *Point) ToUncompreseed() []byte {
 	return slices.Concat(y.V.Bytes(), x.V.Bytes())
 }
 
-func (p *Point) AffineX() *BaseFieldElement {
+func (p *Point) AffineX() (*BaseFieldElement, error) {
 	if p.IsZero() {
-		return NewBaseField().Zero()
+		return nil, errs.NewFailed("point is identity")
 	}
 	var x, y BaseFieldElement
 	if ok := p.V.ToAffine(&x.V, &y.V); ok == 0 {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &x
+	return &x, nil
 }
 
-func (p *Point) AffineY() *BaseFieldElement {
+func (p *Point) AffineY() (*BaseFieldElement, error) {
 	if p.IsZero() {
-		return NewBaseField().One()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y BaseFieldElement
@@ -220,7 +233,7 @@ func (p *Point) AffineY() *BaseFieldElement {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &y
+	return &y, nil
 }
 
 func (p *Point) ScalarOp(sc *Scalar) *Point {
@@ -246,5 +259,9 @@ func (p *Point) Bytes() []byte {
 }
 
 func (p *Point) String() string {
-	return traits.StringifyPoint(p)
+	if p.IsZero() {
+		return "(0, 1, 0, 1)"
+	} else {
+		return fmt.Sprintf("(%s, %s, %s, %s)", p.V.X.String(), p.V.Y.String(), p.V.T.String(), p.V.Z.String())
+	}
 }

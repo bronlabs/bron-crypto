@@ -8,6 +8,7 @@ import (
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
@@ -26,7 +27,7 @@ type Participant struct {
 type State struct {
 	commitmentScheme *hash_comm.Scheme
 
-	seedContributions ds.Map[sharing.ID, [32]byte]
+	seedContributions ds.Map[sharing.ID, [przs.SeedLength]byte]
 	witnesses         ds.Map[sharing.ID, hash_comm.Witness]
 	commitments       ds.MutableMap[sharing.ID, ds.Map[sharing.ID, hash_comm.Commitment]]
 }

@@ -5,4 +5,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
-type Seeds ds.Map[sharing.ID, [32]byte]
+const (
+	SeedLength = 32
+)
+
+type Seeds ds.Map[sharing.ID, [SeedLength]byte]

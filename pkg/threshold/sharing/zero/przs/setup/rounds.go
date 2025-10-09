@@ -14,7 +14,7 @@ import (
 )
 
 func (p *Participant) Round1() (*Round1Broadcast, error) {
-	seedContributions := hashmap.NewComparable[sharing.ID, [32]byte]()
+	seedContributions := hashmap.NewComparable[sharing.ID, [przs.SeedLength]byte]()
 	commitments := hashmap.NewComparable[sharing.ID, hash_comm.Commitment]()
 	witnesses := hashmap.NewComparable[sharing.ID, hash_comm.Witness]()
 	for sharingId := range p.quorum.Iter() {
@@ -22,7 +22,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 			continue
 		}
 
-		var seedContribution [32]byte
+		var seedContribution [przs.SeedLength]byte
 		if _, err := io.ReadFull(p.prng, seedContribution[:]); err != nil {
 			return nil, errs.WrapRandomSample(err, "cannot sample seed contribution")
 		}
@@ -41,7 +41,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	p.state.witnesses = witnesses.Freeze()
 	p.state.commitments = hashmap.NewComparable[sharing.ID, ds.Map[sharing.ID, hash_comm.Commitment]]()
 	p.state.commitments.Put(p.mySharingId, commitments.Freeze())
-	r1bo := &Round1Broadcast{commitments: commitments.Freeze()}
+	r1bo := &Round1Broadcast{Commitments: commitments.ToNative()}
 	return r1bo, nil
 }
 
@@ -55,7 +55,7 @@ func (p *Participant) Round2(r1bo network.RoundMessages[*Round1Broadcast]) (netw
 		if !ok {
 			return nil, errs.NewValidation("missing message from %d", sharingId)
 		}
-		p.state.commitments.Put(sharingId, msg.commitments)
+		p.state.commitments.Put(sharingId, hashmap.NewImmutableComparableFromNativeLike(msg.Commitments))
 	}
 
 	r2uo := hashmap.NewComparable[sharing.ID, *Round2P2P]()
@@ -75,8 +75,8 @@ func (p *Participant) Round2(r1bo network.RoundMessages[*Round1Broadcast]) (netw
 		}
 
 		r2uo.Put(sharingId, &Round2P2P{
-			seedContribution: seedContribution,
-			witness:          witness,
+			SeedContribution: seedContribution,
+			Witness:          witness,
 		})
 	}
 
@@ -84,7 +84,7 @@ func (p *Participant) Round2(r1bo network.RoundMessages[*Round1Broadcast]) (netw
 }
 
 func (p *Participant) Round3(r2uo network.RoundMessages[*Round2P2P]) (przs.Seeds, error) {
-	commonSeeds := hashmap.NewComparable[sharing.ID, [32]byte]()
+	commonSeeds := hashmap.NewComparable[sharing.ID, [przs.SeedLength]byte]()
 	for sharingId := range p.quorum.Iter() {
 		if sharingId == p.mySharingId {
 			continue
@@ -94,8 +94,8 @@ func (p *Participant) Round3(r2uo network.RoundMessages[*Round2P2P]) (przs.Seeds
 		if !ok {
 			return nil, errs.NewValidation("missing message from %d", sharingId)
 		}
-		theirSeedContribution := msg.seedContribution
-		theirWitness := msg.witness
+		theirSeedContribution := msg.SeedContribution
+		theirWitness := msg.Witness
 		theirCommitments, ok := p.state.commitments.Get(sharingId)
 		if !ok {
 			return nil, errs.NewValidation("missing commitments from %d", sharingId)
@@ -108,7 +108,7 @@ func (p *Participant) Round3(r2uo network.RoundMessages[*Round2P2P]) (przs.Seeds
 			return nil, errs.NewIdentifiableAbort(sharingId, "invalid seed contribution")
 		}
 		mySeedContribution, ok := p.state.seedContributions.Get(sharingId)
-		var seed [32]byte
+		var seed [przs.SeedLength]byte
 		subtle.XORBytes(seed[:], theirSeedContribution[:], mySeedContribution[:])
 		commonSeeds.Put(sharingId, seed)
 	}

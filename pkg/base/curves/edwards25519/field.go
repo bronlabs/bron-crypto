@@ -1,6 +1,7 @@
 package edwards25519
 
 import (
+	"encoding"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -19,9 +20,10 @@ const (
 )
 
 var (
-	// TODO(PrimeField)
 	_ algebra.PrimeField[*BaseFieldElement]        = (*BaseField)(nil)
 	_ algebra.PrimeFieldElement[*BaseFieldElement] = (*BaseFieldElement)(nil)
+	_ encoding.BinaryMarshaler                     = (*BaseFieldElement)(nil)
+	_ encoding.BinaryUnmarshaler                   = (*BaseFieldElement)(nil)
 
 	baseFieldInstance *BaseField
 	baseFieldInitOnce sync.Once
@@ -68,6 +70,10 @@ func (f *BaseField) ElementSize() int {
 
 func (f *BaseField) WideElementSize() int {
 	return int(edwards25519Impl.FpWideBytes)
+}
+
+func (f *BaseField) BitLen() int {
+	return int(edwards25519Impl.FpBits)
 }
 
 type BaseFieldElement struct {

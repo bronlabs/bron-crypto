@@ -8,6 +8,7 @@ import (
 	mrand "math/rand/v2"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
@@ -42,7 +43,7 @@ func TestSanity(t *testing.T) {
 }
 
 // dealCases tests the Deal function with various inputs
-func dealCases[FE shamir.FieldElement[FE]](t *testing.T, scheme *shamir.Scheme[FE], field shamir.PrimeField[FE]) {
+func dealCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *shamir.Scheme[FE], field algebra.PrimeField[FE]) {
 	t.Helper()
 
 	// Create test secrets
@@ -182,7 +183,7 @@ func dealCases[FE shamir.FieldElement[FE]](t *testing.T, scheme *shamir.Scheme[F
 }
 
 // dealRandomCases tests the DealRandom function
-func dealRandomCases[FE shamir.FieldElement[FE]](t *testing.T, scheme *shamir.Scheme[FE]) {
+func dealRandomCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *shamir.Scheme[FE]) {
 	t.Helper()
 
 	threshold := scheme.AccessStructure().Threshold()
@@ -526,7 +527,7 @@ func TestDealRandomDistribution(t *testing.T) {
 }
 
 // homomorphicOpsCases tests homomorphic operations on shares
-func homomorphicOpsCases[FE shamir.FieldElement[FE]](t *testing.T, scheme *shamir.Scheme[FE], field shamir.PrimeField[FE]) {
+func homomorphicOpsCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *shamir.Scheme[FE], field algebra.PrimeField[FE]) {
 	t.Helper()
 
 	// Create two secrets and their shares
@@ -810,7 +811,7 @@ func BenchmarkHomomorphicOps(b *testing.B) {
 }
 
 // toAdditiveCases tests the ToAdditive conversion method
-func toAdditiveCases[FE shamir.FieldElement[FE]](t *testing.T, scheme *shamir.Scheme[FE], field shamir.PrimeField[FE]) {
+func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *shamir.Scheme[FE], field algebra.PrimeField[FE]) {
 	t.Helper()
 
 	// Create test secrets and their shares

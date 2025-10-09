@@ -1,7 +1,6 @@
 package traits
 
 import (
-	"fmt"
 	"io"
 	"iter"
 
@@ -181,9 +180,9 @@ func (p *PointTrait[FP, P, T, W, WT]) TryOpInv() (W, error) {
 	return p.Neg(), nil
 }
 
-func StringifyPoint[P algebra.AffinePoint[P, C], C algebra.RingElement[C]](obj P) string {
-	return fmt.Sprintf("(%s, %s)", obj.AffineX().String(), obj.AffineY().String())
-}
+//func StringifyPoint[P algebra.AffinePoint[P, C], C algebra.RingElement[C]](obj P) string {
+//	return fmt.Sprintf("(%s, %s)", obj.AffineX().String(), obj.AffineY().String())
+//}
 
 type PrimePointTrait[FP fields.FiniteFieldElement[FP], P points.PointPtr[FP, P, T], T any, W PointWrapperPtrConstraint[FP, P, WT], WT any] struct {
 	PointTrait[FP, P, T, W, WT]

@@ -1,6 +1,7 @@
 package p256
 
 import (
+	"encoding"
 	"slices"
 	"sync"
 
@@ -23,6 +24,8 @@ const (
 var (
 	_ algebra.PrimeField[*Scalar]        = (*ScalarField)(nil)
 	_ algebra.PrimeFieldElement[*Scalar] = (*Scalar)(nil)
+	_ encoding.BinaryMarshaler           = (*Scalar)(nil)
+	_ encoding.BinaryUnmarshaler         = (*Scalar)(nil)
 
 	scalarFieldInitOnce sync.Once
 	scalarFieldInstance *ScalarField
@@ -75,6 +78,10 @@ func (f *ScalarField) ElementSize() int {
 
 func (f *ScalarField) WideElementSize() int {
 	return k256Impl.FqWideBytes
+}
+
+func (f *ScalarField) BitLen() int {
+	return p256Impl.FqBits
 }
 
 type Scalar struct {

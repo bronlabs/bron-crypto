@@ -1,6 +1,9 @@
 package pasta
 
 import (
+	"crypto/elliptic"
+	"encoding"
+	"fmt"
 	"hash/fnv"
 	"slices"
 	"sync"
@@ -31,6 +34,8 @@ var (
 
 	_ curves.Curve[*PallasPoint, *PallasBaseFieldElement, *PallasScalar] = (*PallasCurve)(nil)
 	_ curves.Point[*PallasPoint, *PallasBaseFieldElement, *PallasScalar] = (*PallasPoint)(nil)
+	_ encoding.BinaryMarshaler                                           = (*PallasPoint)(nil)
+	_ encoding.BinaryUnmarshaler                                         = (*PallasPoint)(nil)
 )
 
 type PallasCurve struct {
@@ -125,6 +130,32 @@ func (c *PallasCurve) FromUncompressed(input []byte) (*PallasPoint, error) {
 	return pp, nil
 }
 
+func (c *PallasCurve) FromAffine(x, y *PallasBaseFieldElement) (*PallasPoint, error) {
+	var p PallasPoint
+	ok := p.V.SetAffine(&x.V, &y.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x/y")
+	}
+	return &p, nil
+}
+
+func (c *PallasCurve) FromAffineX(x *PallasBaseFieldElement, b bool) (*PallasPoint, error) {
+	var p PallasPoint
+	ok := p.V.SetFromAffineX(&x.V)
+	if ok != 1 {
+		return nil, errs.NewCoordinates("x")
+	}
+	y, err := p.AffineY()
+	if err != nil {
+		panic(err) // should never happen
+	}
+	if y.IsOdd() != b {
+		return p.Neg(), nil
+	} else {
+		return &p, nil
+	}
+}
+
 func (c *PallasCurve) Hash(bytes []byte) (*PallasPoint, error) {
 	return c.HashWithDst(base.Hash2CurveAppTag+PallasHash2CurveSuite, bytes)
 }
@@ -172,6 +203,10 @@ func (c *PallasCurve) ScalarBaseMul(sc *PallasScalar) *PallasPoint {
 		panic("scalar is nil")
 	}
 	return c.Generator().ScalarMul(sc)
+}
+
+func (c *PallasCurve) ToElliptic() elliptic.Curve {
+	return ellipticPallasInstance
 }
 
 type PallasPoint struct {
@@ -236,9 +271,9 @@ func (p *PallasPoint) ToUncompressed() []byte {
 	return slices.Concat(x.Bytes(), y.Bytes())
 }
 
-func (p *PallasPoint) AffineX() *PallasBaseFieldElement {
+func (p *PallasPoint) AffineX() (*PallasBaseFieldElement, error) {
 	if p.IsZero() {
-		return NewPallasBaseField().One()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y PallasBaseFieldElement
@@ -246,12 +281,12 @@ func (p *PallasPoint) AffineX() *PallasBaseFieldElement {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &x
+	return &x, nil
 }
 
-func (p *PallasPoint) AffineY() *PallasBaseFieldElement {
+func (p *PallasPoint) AffineY() (*PallasBaseFieldElement, error) {
 	if p.IsZero() {
-		return NewPallasBaseField().Zero()
+		return nil, errs.NewFailed("point is identity")
 	}
 
 	var x, y PallasBaseFieldElement
@@ -259,7 +294,7 @@ func (p *PallasPoint) AffineY() *PallasBaseFieldElement {
 		panic("this should never happen - failed to convert point to affine")
 	}
 
-	return &y
+	return &y, nil
 }
 
 func (p *PallasPoint) ScalarOp(sc *PallasScalar) *PallasPoint {
@@ -276,6 +311,23 @@ func (p *PallasPoint) IsTorsionFree() bool {
 	return true
 }
 
+func (p *PallasPoint) MarshalBinary() ([]byte, error) {
+	return p.ToCompressed(), nil
+}
+
+func (p *PallasPoint) UnmarshalBinary(data []byte) error {
+	pp, err := NewPallasCurve().FromCompressed(data)
+	if err != nil {
+		return errs.WrapSerialisation(err, "cannot deserialize point")
+	}
+	p.V.Set(&pp.V)
+	return nil
+}
+
 func (p *PallasPoint) String() string {
-	return traits.StringifyPoint(p)
+	if p.IsZero() {
+		return "(0, 1, 0)"
+	} else {
+		return fmt.Sprintf("(%s, %s, %s)", p.V.X.String(), p.V.Y.String(), p.V.Z.String())
+	}
 }

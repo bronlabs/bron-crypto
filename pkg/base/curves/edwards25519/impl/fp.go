@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	FpE         uint64 = 2
-	FpBits      uint64 = 255
-	FpBytes     uint64 = 32
-	FpWideBytes uint64 = 64
+	FpE         = 2
+	FpBits      = 255
+	FpBytes     = 32
+	FpWideBytes = 64
 )
 
 var (

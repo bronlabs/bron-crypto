@@ -1,6 +1,7 @@
 package bls12381
 
 import (
+	"encoding"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -21,6 +22,8 @@ const (
 var (
 	_ algebra.PrimeField[*BaseFieldElementG1]        = (*BaseFieldG1)(nil)
 	_ algebra.PrimeFieldElement[*BaseFieldElementG1] = (*BaseFieldElementG1)(nil)
+	_ encoding.BinaryMarshaler                       = (*BaseFieldElementG1)(nil)
+	_ encoding.BinaryUnmarshaler                     = (*BaseFieldElementG1)(nil)
 
 	baseFieldInstanceG1 *BaseFieldG1
 	baseFieldInitOnceG1 sync.Once
@@ -69,6 +72,10 @@ func (f *BaseFieldG1) ElementSize() int {
 
 func (f *BaseFieldG1) WideElementSize() int {
 	return bls12381Impl.FpWideBytes
+}
+
+func (f *BaseFieldG1) BitLen() int {
+	return bls12381Impl.FpBits
 }
 
 type BaseFieldElementG1 struct {

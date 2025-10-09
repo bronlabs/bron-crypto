@@ -2,6 +2,7 @@ package fiatshamir
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -32,8 +33,13 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKPr
 	}
 
 	proof := &Proof[A, Z]{
-		A: a,
-		Z: z,
+		a: a,
+		z: z,
 	}
-	return proof, nil
+
+	proofBytes, err := serde.MarshalCBOR(proof)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "cannot serialize proof")
+	}
+	return proofBytes, nil
 }

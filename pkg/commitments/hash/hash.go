@@ -21,6 +21,7 @@ var (
 )
 
 const (
+	KeySize                     = 32
 	DigestSize                  = 32
 	Name       commitments.Name = "KMACBasedCommitmentScheme"
 )
@@ -29,7 +30,7 @@ type (
 	Commitment [DigestSize]byte
 	Message    []byte
 	Witness    [DigestSize]byte
-	Key        [DigestSize]byte
+	Key        [KeySize]byte
 )
 
 func (c Commitment) Bytes() []byte {
@@ -56,7 +57,7 @@ func NewKeyFromCRSBytes(sid network.SID, dst string, crs ...[]byte) (Key, error)
 	if err != nil {
 		return *new(Key), errs.WrapFailed(err, "cannot hash CRS")
 	}
-	var key [DigestSize]byte
+	var key Key
 	copy(key[:], out)
 	return key, nil
 }

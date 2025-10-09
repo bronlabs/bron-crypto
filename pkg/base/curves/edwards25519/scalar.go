@@ -1,6 +1,7 @@
 package edwards25519
 
 import (
+	"encoding"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -22,6 +23,8 @@ const (
 var (
 	_ algebra.PrimeField[*Scalar]        = (*ScalarField)(nil)
 	_ algebra.PrimeFieldElement[*Scalar] = (*Scalar)(nil)
+	_ encoding.BinaryMarshaler           = (*Scalar)(nil)
+	_ encoding.BinaryUnmarshaler         = (*Scalar)(nil)
 
 	scalarFieldInitOnce      sync.Once
 	scalarFieldInstance      *ScalarField
@@ -69,6 +72,10 @@ func (f *ScalarField) ElementSize() int {
 
 func (f *ScalarField) WideElementSize() int {
 	return edwards25519Impl.FqWideBytes
+}
+
+func (f *ScalarField) BitLen() int {
+	return edwards25519Impl.FqBits
 }
 
 type Scalar struct {

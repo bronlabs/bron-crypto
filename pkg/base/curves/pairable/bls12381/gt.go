@@ -1,6 +1,7 @@
 package bls12381
 
 import (
+	"encoding"
 	"hash/fnv"
 	"io"
 	"iter"
@@ -20,6 +21,8 @@ const (
 var (
 	_ algebra.MultiplicativeGroup[*GtElement]        = (*Gt)(nil)
 	_ algebra.MultiplicativeGroupElement[*GtElement] = (*GtElement)(nil)
+	_ encoding.BinaryMarshaler                       = (*GtElement)(nil)
+	_ encoding.BinaryUnmarshaler                     = (*GtElement)(nil)
 
 	gtInstance *Gt
 	gtInitOnce sync.Once
@@ -167,4 +170,17 @@ func (ge *GtElement) OpInv() *GtElement {
 func (ge *GtElement) String() string {
 	//TODO implement me
 	panic("implement me")
+}
+
+func (ge *GtElement) MarshalBinary() ([]byte, error) {
+	return ge.Bytes(), nil
+}
+
+func (ge *GtElement) UnmarshalBinary(data []byte) error {
+	pp, err := NewGt().FromBytes(data)
+	if err != nil {
+		return errs.WrapSerialisation(err, "cannot decode element")
+	}
+	ge.V.Set(&pp.V.Fp12)
+	return nil
 }

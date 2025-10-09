@@ -1,6 +1,7 @@
 package bls12381
 
 import (
+	"encoding"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -23,6 +24,8 @@ const (
 var (
 	_ algebra.PrimeField[*Scalar]        = (*ScalarField)(nil)
 	_ algebra.PrimeFieldElement[*Scalar] = (*Scalar)(nil)
+	_ encoding.BinaryMarshaler           = (*Scalar)(nil)
+	_ encoding.BinaryUnmarshaler         = (*Scalar)(nil)
 
 	scalarFieldInitOnce sync.Once
 	scalarFieldInstance *ScalarField
@@ -72,6 +75,10 @@ func (*ScalarField) Hash(input []byte) (*Scalar, error) {
 	var s Scalar
 	s.V.Set(&e[0])
 	return &s, nil
+}
+
+func (*ScalarField) BitLen() int {
+	return bls12381Impl.FqBits
 }
 
 type Scalar struct {

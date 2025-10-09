@@ -1,6 +1,7 @@
 package bls12381
 
 import (
+	"encoding"
 	"slices"
 	"sync"
 
@@ -20,6 +21,8 @@ const (
 var (
 	_ algebra.Field[*BaseFieldElementG2]        = (*BaseFieldG2)(nil)
 	_ algebra.FieldElement[*BaseFieldElementG2] = (*BaseFieldElementG2)(nil)
+	_ encoding.BinaryMarshaler                  = (*BaseFieldElementG2)(nil)
+	_ encoding.BinaryUnmarshaler                = (*BaseFieldElementG2)(nil)
 
 	baseFieldInstanceG2 *BaseFieldG2
 	baseFieldInitOnceG2 sync.Once

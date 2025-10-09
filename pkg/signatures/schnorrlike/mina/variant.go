@@ -63,7 +63,15 @@ func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
 	id, _ := getNetworkIdHashInput(v.nid)
 	idBits := bytesToBits(id.Bytes())
 	input := new(ROInput).Init()
-	input.AddFields(v.sk.PublicKey().V.AffineX(), v.sk.PublicKey().V.AffineY())
+	pkx, err := v.sk.PublicKey().V.AffineX()
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to create scalar from bytes")
+	}
+	pky, err := v.sk.PublicKey().V.AffineY()
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to create scalar from bytes")
+	}
+	input.AddFields(pkx, pky)
 	input.AddBits(scalarBits...)
 	input.AddBits(idBits...)
 	inputBytes := input.bits.Bytes()
@@ -99,7 +107,19 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 		return nil, errs.NewIsNil("nonceCommitment, publicKeyValue and message must not be nil")
 	}
 	input := message.Clone()
-	input.AddFields(publicKeyValue.AffineX(), publicKeyValue.AffineY(), nonceCommitment.AffineX())
+	pkx, err := publicKeyValue.AffineX()
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "cannot get x")
+	}
+	pky, err := publicKeyValue.AffineY()
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "cannot get y")
+	}
+	ncx, err := nonceCommitment.AffineX()
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "cannot get x")
+	}
+	input.AddFields(pkx, pky, ncx)
 	prefix := SignaturePrefix(v.nid)
 	e, err := hashWithPrefix(prefix, input.PackToFields()...)
 	if err != nil {
@@ -131,7 +151,11 @@ func (v *Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupEle
 		return nil, nil, errs.NewIsNil("nonce commitment or k is nil")
 	}
 	correctedK := localNonce.Clone()
-	if aggregatedNonceCommitments.AffineY().IsOdd() {
+	ancy, err := aggregatedNonceCommitments.AffineY()
+	if err != nil {
+		return nil, nil, errs.WrapSerialisation(err, "cannot get y")
+	}
+	if ancy.IsOdd() {
 		// If the nonce commitment is odd, we need to negate k to ensure that the parity is correct.
 		correctedK = correctedK.Neg()
 	}

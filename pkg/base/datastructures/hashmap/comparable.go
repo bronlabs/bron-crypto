@@ -246,7 +246,7 @@ func (m ImmutableComparableHashMap[K, V]) Enumerate() iter.Seq2[int, ds.MapEntry
 	return m.inner.Enumerate()
 }
 
-func NewComparable[K comparable, V any](xs ...ds.MapEntry[K, V]) ds.MutableMap[K, V] {
+func NewComparable[K comparable, V any](xs ...ds.MapEntry[K, V]) *ComparableHashMap[K, V] {
 	out := make(NativeMap[K, V, ds.MutableMap[K, V]])
 	for _, entry := range xs {
 		out[entry.Key] = entry.Value
@@ -339,4 +339,12 @@ func (m *ComparableHashMap[K, V]) UnmarshalJSON(data []byte) error {
 		return errs.WrapSerialisation(err, "could not json marshal comparable hash map")
 	}
 	return nil
+}
+
+func (m *ComparableHashMap[K, V]) ToNative() map[K]V {
+	out := make(map[K]V)
+	for k, v := range m.NativeMap {
+		out[k] = v
+	}
+	return out
 }

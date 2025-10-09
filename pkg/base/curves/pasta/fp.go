@@ -1,6 +1,7 @@
 package pasta
 
 import (
+	"encoding"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -27,6 +28,8 @@ const (
 var (
 	_ algebra.PrimeField[*FpFieldElement]        = (*FpField)(nil)
 	_ algebra.PrimeFieldElement[*FpFieldElement] = (*FpFieldElement)(nil)
+	_ encoding.BinaryMarshaler                   = (*FpFieldElement)(nil)
+	_ encoding.BinaryUnmarshaler                 = (*FpFieldElement)(nil)
 
 	fpFieldInitOnce sync.Once
 	fpFieldInstance *FpField
@@ -84,6 +87,10 @@ func (*FpField) Hash(input []byte) (*FpFieldElement, error) {
 	var s FpFieldElement
 	s.V.Set(&e[0])
 	return &s, nil
+}
+
+func (*FpField) BitLen() int {
+	return pastaImpl.FpBits
 }
 
 type FpFieldElement struct {

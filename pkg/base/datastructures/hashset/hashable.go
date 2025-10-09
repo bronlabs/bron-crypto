@@ -189,7 +189,7 @@ func (s *MutableHashable[E]) HashCode() base.HashCode {
 		return l[0].HashCode()
 	}
 	return sliceutils.Reduce(
-		sliceutils.Map[[]base.HashCode](l[1:], func(e E) base.HashCode { return e.HashCode() }),
+		sliceutils.Map(l[1:], func(e E) base.HashCode { return e.HashCode() }),
 		l[0].HashCode(),
 		func(a, b base.HashCode) base.HashCode { return a ^ b }, // must be commutative
 	)

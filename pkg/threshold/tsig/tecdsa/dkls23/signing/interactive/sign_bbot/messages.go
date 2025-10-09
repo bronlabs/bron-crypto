@@ -4,83 +4,67 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/mul_bbot"
+	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/bbot"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
 )
 
-// import (
-//
-//	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-//	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-//	"github.com/bronlabs/bron-crypto/pkg/base/types"
-//	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-//	"github.com/bronlabs/bron-crypto/pkg/network"
-//	bbotMul "github.com/bronlabs/bron-crypto/pkg/threshold/mult/dkls23_bbot"
-//	zeroSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/rprzs/setup"
-//
-// )
-//
-// var (
-//
-//	_ network.Message[types.ThresholdSignatureProtocol] = (*Round1Broadcast)(nil)
-//	_ network.Message[types.ThresholdSignatureProtocol] = (*Round1P2P)(nil)
-//	_ network.Message[types.ThresholdSignatureProtocol] = (*Round2Broadcast)(nil)
-//	_ network.Message[types.ThresholdSignatureProtocol] = (*Round2P2P)(nil)
-//	_ network.Message[types.ThresholdSignatureProtocol] = (*Round3Broadcast)(nil)
-//	_ network.Message[types.ThresholdSignatureProtocol] = (*Round3P2P)(nil)
-//
-// )
 type Round1Broadcast struct {
-	ZeroSetupR1    *przsSetup.Round1Broadcast
-	BigRCommitment hash_comm.Commitment
+	ZeroSetupR1    *przsSetup.Round1Broadcast `cbor:"zeroSetupR1"`
+	BigRCommitment hash_comm.Commitment       `cbor:"bigRCommitment"`
 }
 
 func (m *Round1Broadcast) Bytes() []byte {
+	// TODO
 	panic("not implemented")
 }
 
-type Round1P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	MulR1 *mul_bbot.Round1P2P[P, S]
+type Round1P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	MulR1 *rvole_bbot.Round1P2P[P, S] `cbor:"mulR1"`
 }
 
 func (m *Round1P2P[P, B, S]) Bytes() []byte {
+	// TODO
 	panic("not implemented")
 }
 
-type Round2Broadcast[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	BigR        P
-	BigRWitness hash_comm.Witness
+type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	BigR        P                 `cbor:"bigR"`
+	BigRWitness hash_comm.Witness `cbor:"bigRWitness"`
 }
 
 func (m *Round2Broadcast[P, B, S]) Bytes() []byte {
+	// TODO
 	panic("not implemented")
 }
 
-type Round2P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	ZeroSetupR2 *przsSetup.Round2P2P
-	MulR2       *mul_bbot.Round2P2P[P, S]
+type Round2P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	ZeroSetupR2 *przsSetup.Round2P2P        `cbor:"zeroSetupR2"`
+	MulR2       *rvole_bbot.Round2P2P[P, S] `cbor:"mulR2"`
 }
 
 func (m *Round2P2P[P, B, S]) Bytes() []byte {
+	// TODO
 	panic("not implemented")
 }
 
-type Round3Broadcast[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	Pk P
+type Round3Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	Pk P `cbor:"pk"`
 }
 
 func (m *Round3Broadcast[P, B, S]) Bytes() []byte {
+	// TODO
 	panic("not implemented")
 }
 
-type Round3P2P[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	MulR3 *mul_bbot.Round3P2P[S]
+type Round3P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	MulR3 *rvole_bbot.Round3P2P[S] `cbor:"mulR3"`
 
-	GammaU P
-	GammaV P
-	Psi    S
+	GammaU P `cbor:"gammaU"`
+	GammaV P `cbor:"gammaV"`
+	Psi    S `cbor:"psi"`
 }
 
 func (m *Round3P2P[P, B, S]) Bytes() []byte {
+	// TODO
 	panic("not implemented")
 }
