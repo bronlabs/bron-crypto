@@ -18,14 +18,14 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/keygen/dkg"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 	"github.com/stretchr/testify/require"
 )
 
-func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, curve ecdsa.Curve[P, B, S], accessStructure *feldman.AccessStructure) map[sharing.ID]*tecdsa.Shard[P, B, S] {
+func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, curve ecdsa.Curve[P, B, S], accessStructure *feldman.AccessStructure) map[sharing.ID]*dkls23.Shard[P, B, S] {
 	tb.Helper()
 
 	prng := crand.Reader
@@ -80,7 +80,7 @@ func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 	}
 
 	r6ui := testutils.MapUnicastO2I(tb, dkgParticipants, r5uo)
-	shards := make(map[sharing.ID]*tecdsa.Shard[P, B, S])
+	shards := make(map[sharing.ID]*dkls23.Shard[P, B, S])
 	for _, party := range dkgParticipants {
 		shards[party.SharingID()], err = party.Round6(r6ui[party.SharingID()])
 		require.NoError(tb, err)
@@ -97,7 +97,7 @@ func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 	require.True(tb, sliceutils.All(transcriptBytesSlice, func(b []byte) bool { return bytes.Equal(transcriptBytesSlice[0], b) }))
 
 	// public keys match
-	publicKeys := slices.Collect(maps.Values(maputils.MapValues(shards, func(_ sharing.ID, s *tecdsa.Shard[P, B, S]) P { return s.PublicKey().Value() })))
+	publicKeys := slices.Collect(maps.Values(maputils.MapValues(shards, func(_ sharing.ID, s *dkls23.Shard[P, B, S]) P { return s.PublicKey().Value() })))
 	for i := 1; i < accessStructure.Shareholders().Size(); i++ {
 		require.True(tb, publicKeys[0].Equal(publicKeys[i]))
 	}
@@ -107,7 +107,7 @@ func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 		for shardsSubset := range sliceutils.Combinations(slices.Collect(maps.Values(shards)), th) {
 			feldmanScheme, err := feldman.NewScheme(curve.Generator(), accessStructure.Threshold(), accessStructure.Shareholders())
 			require.NoError(tb, err)
-			sharesSubset := sliceutils.Map(shardsSubset, func(s *tecdsa.Shard[P, B, S]) *feldman.Share[S] {
+			sharesSubset := sliceutils.Map(shardsSubset, func(s *dkls23.Shard[P, B, S]) *feldman.Share[S] {
 				return s.Share()
 			})
 			recoveredSk, err := feldmanScheme.Reconstruct(sharesSubset...)

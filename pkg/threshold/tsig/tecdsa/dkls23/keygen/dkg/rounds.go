@@ -13,7 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 )
 
 func (p *Participant[P, B, S]) Round1() (*Round1Broadcast[P, B, S], ds.Map[sharing.ID, *Round1P2P[P, B, S]], error) {
@@ -182,7 +182,7 @@ func (p *Participant[P, B, S]) Round5(r4u network.RoundMessages[*Round4P2P]) (ne
 	return r5u.Freeze(), nil
 }
 
-func (p *Participant[P, B, S]) Round6(r5u network.RoundMessages[*Round5P2P]) (*tecdsa.Shard[P, B, S], error) {
+func (p *Participant[P, B, S]) Round6(r5u network.RoundMessages[*Round5P2P]) (*dkls23.Shard[P, B, S], error) {
 	for id, p2p := range incomingP2PMessages(p, 6, r5u) {
 		err := p.baseOTReceivers[id].Round6(p2p.OtR5)
 		if err != nil {
@@ -194,7 +194,7 @@ func (p *Participant[P, B, S]) Round6(r5u network.RoundMessages[*Round5P2P]) (*t
 	if err != nil {
 		return nil, errs.WrapFailed(err, "invalid public key")
 	}
-	shard := tecdsa.NewShard(
+	shard := dkls23.NewShard(
 		p.state.dkgOutput.Share(),
 		p.ac,
 		publicKey,

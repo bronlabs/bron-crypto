@@ -4,6 +4,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
+	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
+	"golang.org/x/crypto/blake2b"
 )
 
 type Suite[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
@@ -60,6 +62,33 @@ func NewReceiverOutput[S algebra.PrimeFieldElement[S]](xi, l int) *ReceiverOutpu
 	}
 }
 
+func (r *ReceiverOutput[S]) ToBitsOutput(b int) (*vsot.ReceiverOutput, error) {
+	if b < 16 {
+		return nil, errs.NewValidation("invalid hash size")
+	}
+	h, err := blake2b.New(b, nil)
+	if err != nil {
+		return nil, errs.NewFailed("failed to create hasher")
+	}
+
+	out := &vsot.ReceiverOutput{
+		ReceiverOutput: ot.ReceiverOutput[[]byte]{
+			Choices:  r.Choices,
+			Messages: make([][][]byte, len(r.Messages)),
+		},
+	}
+	for xi := range r.Messages {
+		out.Messages[xi] = make([][]byte, len(r.Messages[xi]))
+		for l, m := range r.Messages[xi] {
+			h.Reset()
+			h.Write(m.Bytes())
+			out.Messages[xi][l] = h.Sum(nil)
+		}
+	}
+
+	return out, nil
+}
+
 type SenderOutput[S algebra.PrimeFieldElement[S]] struct {
 	ot.SenderOutput[S]
 }
@@ -75,4 +104,34 @@ func NewSenderOutput[S algebra.PrimeFieldElement[S]](xi, l int) *SenderOutput[S]
 			Messages: s,
 		},
 	}
+}
+
+func (s *SenderOutput[S]) ToBitsOutput(b int) (*vsot.SenderOutput, error) {
+	if b < 16 {
+		return nil, errs.NewValidation("invalid hash size")
+	}
+	h, err := blake2b.New(b, nil)
+	if err != nil {
+		return nil, errs.NewFailed("failed to create hasher")
+	}
+
+	out := &vsot.SenderOutput{
+		SenderOutput: ot.SenderOutput[[]byte]{
+			Messages: make([][2][][]byte, len(s.Messages)),
+		},
+	}
+	for xi := range s.Messages {
+		out.Messages[xi][0] = make([][]byte, len(s.Messages[xi][0]))
+		out.Messages[xi][1] = make([][]byte, len(s.Messages[xi][1]))
+		for l := range s.Messages[xi][0] {
+			h.Reset()
+			h.Write(s.Messages[xi][0][l].Bytes())
+			out.Messages[xi][0][l] = h.Sum(nil)
+			h.Reset()
+			h.Write(s.Messages[xi][1][l].Bytes())
+			out.Messages[xi][1][l] = h.Sum(nil)
+		}
+	}
+
+	return out, nil
 }

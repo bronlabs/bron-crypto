@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/keygen/trusted_dealer"
 	"github.com/stretchr/testify/require"
 )
@@ -35,7 +35,7 @@ func Test_HappyPath(t *testing.T) {
 			for shardsSubset := range sliceutils.Combinations(shards.Values(), th) {
 				feldmanScheme, err := feldman.NewScheme(curve.Generator(), THRESHOLD, shareholders.Freeze())
 				require.NoError(t, err)
-				sharesSubset := sliceutils.Map(shardsSubset, func(s *tecdsa.Shard[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]) *feldman.Share[*k256.Scalar] {
+				sharesSubset := sliceutils.Map(shardsSubset, func(s *dkls23.Shard[*k256.Point, *k256.BaseFieldElement, *k256.Scalar]) *feldman.Share[*k256.Scalar] {
 					return s.Share()
 				})
 				recoveredSk, err := feldmanScheme.Reconstruct(sharesSubset...)
