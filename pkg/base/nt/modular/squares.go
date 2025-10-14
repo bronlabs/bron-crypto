@@ -3,7 +3,9 @@ package modular
 import (
 	"sync"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/crt"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
@@ -51,6 +53,10 @@ type OddPrimeSquare struct {
 
 func (m *OddPrimeSquare) Modulus() *numct.ModulusOdd {
 	return m.Squared
+}
+
+func (m *OddPrimeSquare) MultiplicativeOrder() algebra.Cardinal {
+	return cardinal.NewFromBig(m.PhiSquared.Big())
 }
 
 func NewOddPrimeSquareFactors(firstPrime, secondPrime *numct.Nat) (*OddPrimeSquareFactors, ct.Bool) {
@@ -131,6 +137,10 @@ func (m *OddPrimeSquareFactors) Modulus() numct.Modulus {
 	return m.N2
 }
 
+func (m *OddPrimeSquareFactors) MultiplicativeOrder() algebra.Cardinal {
+	return cardinal.NewFromBig(m.PhiN2.Big())
+}
+
 func (m *OddPrimeSquareFactors) ModExp(out, base, exp *numct.Nat) {
 	// Compute base^ep mod p and base^eq mod q in parallel.
 	var ep, eq, mp, mq numct.Nat
@@ -191,6 +201,14 @@ func (m *OddPrimeSquareFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Na
 		}(i)
 	}
 	wg.Wait()
+}
+
+func (m *OddPrimeSquareFactors) ModMul(out, a, b *numct.Nat) {
+	m.N2.ModMul(out, a, b)
+}
+
+func (m *OddPrimeSquareFactors) ModDiv(out, a, b *numct.Nat) ct.Bool {
+	return m.N2.ModDiv(out, a, b)
 }
 
 func (m *OddPrimeSquareFactors) ModInv(out, a *numct.Nat) ct.Bool {

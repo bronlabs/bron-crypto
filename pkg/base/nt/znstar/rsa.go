@@ -36,10 +36,15 @@ func NewRSAGroup(p, q *num.NatPlus) (RSAGroupKnownOrder, error) {
 	if ok == ct.False {
 		return nil, errs.NewValue("failed to create OddPrimeFactors")
 	}
+	// Order of (Z/nZ)* is φ(n) = (p-1)(q-1)
+	pMinus1 := p.Lift().Sub(num.Z().FromUint64(1))
+	qMinus1 := q.Lift().Sub(num.Z().FromUint64(1))
+	phi := pMinus1.Mul(qMinus1)
+	order := cardinal.NewFromBig(phi.Big())
 	return &rsaGroupKnownOrder{
 		rsaGroup: rsaGroup{
 			zMod:  zMod,
-			order: cardinal.Unknown(),
+			order: order,
 			arith: exp,
 		},
 	}, nil
@@ -69,4 +74,14 @@ func (rg *rsaGroupKnownOrder) ForgetOrder() RSAGroup {
 		order: cardinal.Unknown(),
 		arith: new(modular.OddPrimeFactors),
 	}
+}
+
+func (rg *rsaGroupKnownOrder) FromUint(input *num.Uint) (Unit, error) {
+	u, err := rg.rsaGroup.FromUint(input)
+	if err != nil {
+		return nil, err
+	}
+	// Fix the group pointer to point to the known order wrapper
+	u.(*unit).g = rg
+	return u, nil
 }

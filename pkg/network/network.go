@@ -1,16 +1,31 @@
 package network
 
 import (
+	"crypto/sha3"
 	"fmt"
+	"hash"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
+var sidHasher = func() hash.Hash { return sha3.New256() }
+
 type SID [32]byte
+
+func NewSID(xs ...[]byte) (SID, error) {
+	digest, err := hashing.Hash(sidHasher, xs...)
+	if err != nil {
+		return SID{}, errs.WrapHashing(err, "failed to create session ID")
+	}
+	var sid SID
+	copy(sid[:], digest)
+	return sid, nil
+}
 
 // TODO: remove
 type AddressingMethod uint64

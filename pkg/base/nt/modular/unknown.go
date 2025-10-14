@@ -1,0 +1,64 @@
+package modular
+
+import (
+	"sync"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+)
+
+func NewSimple(m numct.Modulus) (*SimpleModulus, error) {
+	if m == nil {
+		return nil, errs.NewIsNil("modulus")
+	}
+	return &SimpleModulus{m: m}, nil
+}
+
+type SimpleModulus struct {
+	m numct.Modulus
+}
+
+func (u *SimpleModulus) MultiplicativeOrder() algebra.Cardinal {
+	return cardinal.Unknown()
+}
+
+func (u *SimpleModulus) Modulus() numct.Modulus {
+	return u.m
+}
+
+func (u *SimpleModulus) ModMul(out, a, b *numct.Nat) {
+	u.m.ModMul(out, a, b)
+}
+
+func (u *SimpleModulus) ModExp(out, base, exp *numct.Nat) {
+	u.m.ModExp(out, base, exp)
+}
+
+func (u *SimpleModulus) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp *numct.Nat) {
+	if len(out) != len(bases) {
+		panic("out and bases must have the same length")
+	}
+	k := len(bases)
+
+	var wg sync.WaitGroup
+	wg.Add(k)
+	for i := range k {
+		go func(i int) {
+			defer wg.Done()
+			bi := bases[i]
+			u.m.ModExp(out[i], bi, exp)
+		}(i)
+	}
+	wg.Wait()
+}
+
+func (u *SimpleModulus) ModInv(out, a *numct.Nat) ct.Bool {
+	return u.m.ModInv(out, a)
+}
+
+func (u *SimpleModulus) ModDiv(out, a, b *numct.Nat) ct.Bool {
+	return u.m.ModDiv(out, a, b)
+}

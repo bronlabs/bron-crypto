@@ -10,6 +10,7 @@ import (
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/cronokirby/saferith"
+	"github.com/fxamacker/cbor/v2"
 )
 
 // TODO: change ModInt -> ModI
@@ -45,6 +46,8 @@ type modulusMutable[I, N any] interface {
 	Big() *big.Int
 	Saferith() *saferith.Modulus
 	base.BytesLike
+	cbor.Marshaler
+	cbor.Unmarshaler
 	fmt.Stringer
 }
 

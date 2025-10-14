@@ -19,8 +19,8 @@ func PaillierGroupsAreEqual[G PaillierGroup](a, b G) bool {
 type PaillierGroup interface {
 	UnitGroup
 	N() *num.NatPlus
-	EmbedRSA(*Unit) (*Unit, error)
-	LiftToNthResidues(rsaUnit *Unit) (*Unit, error)
+	EmbedRSA(Unit) (Unit, error)
+	LiftToNthResidues(rsaUnit Unit) (Unit, error)
 }
 
 type PaillierGroupKnownOrder interface {
@@ -61,11 +61,16 @@ func NewPaillierGroup(p, q *num.NatPlus) (PaillierGroupKnownOrder, error) {
 	if ok == ct.False {
 		return nil, errs.NewValue("failed to create OddPrimeFactors")
 	}
+	// Order of (Z/n²Z)* is n·φ(n) = n·(p-1)(q-1)
+	pMinus1 := p.Lift().Sub(num.Z().FromUint64(1))
+	qMinus1 := q.Lift().Sub(num.Z().FromUint64(1))
+	phi := pMinus1.Mul(qMinus1)
+	order := cardinal.NewFromBig(n.Lift().Mul(phi).Big())
 	return &paillierGroupKnownOrder{
 		paillierGroup: paillierGroup{
 			UZMod: UZMod[*modular.OddPrimeSquareFactors]{
 				zMod:  zMod,
-				order: cardinal.Unknown(),
+				order: order,
 				arith: exp,
 			},
 			n: n,
@@ -99,28 +104,28 @@ func (pg *paillierGroup) N() *num.NatPlus {
 	return pg.n
 }
 
-func (pg *paillierGroup) EmbedRSA(rsaUnit *Unit) (*Unit, error) {
+func (pg *paillierGroup) EmbedRSA(rsaUnit Unit) (Unit, error) {
 	if rsaUnit == nil {
 		return nil, errs.NewValue("rsaUnit must not be nil")
 	}
 	if rsaUnit.Modulus().Value().Equal(pg.N().Value()) == ct.False {
 		return nil, errs.NewValue("rsaUnit must be in the RSA group with modulus equal to the Paillier modulus")
 	}
-	v, err := num.NewUintGivenModulus(rsaUnit.v.Value(), pg.ModulusCT())
+	v, err := num.NewUintGivenModulus(rsaUnit.Value(), pg.ModulusCT())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create unit from rsaUnit")
 	}
-	return &Unit{v: v, g: pg}, nil
+	return &unit{v: v.Value(), g: pg}, nil
 }
 
-func (pg *paillierGroup) LiftToNthResidues(rsaUnit *Unit) (*Unit, error) {
+func (pg *paillierGroup) LiftToNthResidues(rsaUnit Unit) (Unit, error) {
 	if rsaUnit == nil {
 		return nil, errs.NewValue("rsaUnit must not be nil")
 	}
 	if rsaUnit.Modulus().Value().Equal(pg.Modulus().Value()) == ct.False {
 		return nil, errs.NewValue("rsaUnit must be in the RSA group with modulus equal to the Paillier modulus")
 	}
-	lifted, err := pg.FromUint(rsaUnit.v)
+	lifted, err := pg.FromNatCT(rsaUnit.Value())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to lift rsaUnit to Paillier group")
 	}
@@ -146,16 +151,26 @@ func (pg *paillierGroupKnownOrder) ForgetOrder() PaillierGroup {
 	}
 }
 
-func (pg *paillierGroupKnownOrder) EmbedRSA(rsaUnit *Unit) (*Unit, error) {
+func (pg *paillierGroupKnownOrder) FromUint(input *num.Uint) (Unit, error) {
+	u, err := pg.paillierGroup.FromUint(input)
+	if err != nil {
+		return nil, err
+	}
+	// Fix the group pointer to point to the known order wrapper
+	u.(*unit).g = pg
+	return u, nil
+}
+
+func (pg *paillierGroupKnownOrder) EmbedRSA(rsaUnit Unit) (Unit, error) {
 	out, err := pg.paillierGroup.EmbedRSA(rsaUnit)
 	if err != nil {
 		return nil, err
 	}
-	out.g = pg
+	out.(*unit).g = pg
 	return out, nil
 }
 
-func (pg *paillierGroupKnownOrder) LiftToNthResidues(rsaUnit *Unit) (*Unit, error) {
+func (pg *paillierGroupKnownOrder) LiftToNthResidues(rsaUnit Unit) (Unit, error) {
 	if rsaUnit == nil {
 		return nil, errs.NewValue("rsaUnit must not be nil")
 	}
@@ -163,10 +178,10 @@ func (pg *paillierGroupKnownOrder) LiftToNthResidues(rsaUnit *Unit) (*Unit, erro
 	// 	return nil, errs.NewValue("rsaUnit must be in the RSA group with modulus equal to the Paillier modulus")
 	// }
 	var rn numct.Nat
-	pg.arith.ExpToN(&rn, rsaUnit.v.Nat().Value())
+	pg.arith.ExpToN(&rn, rsaUnit.Value())
 	v, err := num.NewUintGivenModulus(&rn, pg.arith.N2)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create unit from rsaUnit")
 	}
-	return &Unit{v: v, g: pg}, nil
+	return &unit{v: v.Value(), g: pg}, nil
 }

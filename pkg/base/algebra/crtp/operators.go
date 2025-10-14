@@ -69,6 +69,11 @@ type (
 	MaybeExponentiationBase[B, E any]              interface{ TryExp(E) (B, error) }
 	MaybeFixedCapacityExponentiationBase[B, E any] interface{ TryExpCap(E, Capacity) (B, error) }
 
+	IntegerExponentiationBase[B, I any]                   interface{ ExpI(I) B }
+	FixedCapacityIntegerExponentiationBase[B, I any]      interface{ ExpICap(I, Capacity) B }
+	MaybeIntegerExponentiationBase[B, I any]              interface{ TryExpI(I) (B, error) }
+	MaybeFixedCapacityIntegerExponentiationBase[B, I any] interface{ TryExpICap(I, Capacity) (B, error) }
+
 	Conjunct[E any]      interface{ And(E) E }
 	MaybeConjunct[E any] interface{ TryAnd(E) (E, error) }
 

@@ -48,6 +48,11 @@ type (
 	MaybeExponentiationBase[B, E any]              crtp.MaybeExponentiationBase[B, E]
 	MaybeFixedCapacityExponentiationBase[B, E any] crtp.MaybeFixedCapacityExponentiationBase[B, E]
 
+	IntegerExponentiationBase[B, I any]                   crtp.IntegerExponentiationBase[B, I]
+	FixedCapacityIntegerExponentiationBase[B, I any]      crtp.FixedCapacityIntegerExponentiationBase[B, I]
+	MaybeIntegerExponentiationBase[B, I any]              crtp.MaybeIntegerExponentiationBase[B, I]
+	MaybeFixedCapacityIntegerExponentiationBase[B, I any] crtp.MaybeFixedCapacityIntegerExponentiationBase[B, I]
+
 	Residuand[M, Q any] crtp.Residuand[M, Q]
 
 	Conjunct[E any]      crtp.Conjunct[E]

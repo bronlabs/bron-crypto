@@ -2,6 +2,7 @@ package sigma
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
@@ -61,6 +62,39 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 	GetChallengeBytesLength() int
 
 	ValidateStatement(statement X, witness W) error
+}
+
+type MaurerProtocol[
+	X interface {
+		Statement
+		base.Transparent[I]
+	}, W interface {
+		Witness
+		base.Transparent[PI]
+	}, A interface {
+		Commitment
+		base.Transparent[I]
+	}, S State, Z interface {
+		Response
+		base.Transparent[PI]
+	},
+	PIG interface {
+		algebra.Group[PI]
+		algebra.FiniteStructure[PI]
+	}, PI algebra.GroupElement[PI],
+	IG interface {
+		algebra.Group[I]
+		algebra.FiniteStructure[I]
+	}, I algebra.GroupElement[I],
+] interface {
+	Protocol[X, W, A, S, Z]
+
+	PreImageGroup() PIG
+	ImageGroup() IG
+
+	Phi() algebra.Homomorphism[PI, I]
+	ChallengeActionOnPreImage(c ChallengeBytes, x PI) PI
+	ChallengeActionOnImage(c ChallengeBytes, x I) I
 }
 
 type participant[X Statement, W Witness, A Commitment, S State, Z Response] struct {

@@ -1,7 +1,8 @@
 package serde
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"reflect"
+
 	"github.com/fxamacker/cbor/v2"
 )
 
@@ -19,18 +20,42 @@ const (
 	MaxMaxNestedLevels     = 65535
 )
 
-// TODO: add the init
+var (
+	enc cbor.EncMode
+	dec cbor.DecMode
 
-func MarshalCBOR[T any](t T) ([]byte, error) {
-	enc, err := cbor.CoreDetEncOptions().EncMode()
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "cannot marshal to CBOR")
+	// Global TagSet for type registration
+	tags = cbor.NewTagSet()
+)
+
+// Register registers the concrete type parameter T with a fixed CBOR tag.
+func Register[T any](tag uint64) {
+	var zero T
+	typ := reflect.TypeOf(zero)
+	if typ == nil {
+		panic("serde.RegisterWithTag: nil type for generic parameter T")
 	}
-	return enc.Marshal(t)
+	if err := tags.Add(
+		cbor.TagOptions{DecTag: cbor.DecTagOptional, EncTag: cbor.EncTagRequired},
+		typ,
+		tag,
+	); err != nil {
+		panic(err)
+	}
+	// ensure enc/dec modes see the new tag
+	updateModes()
 }
 
-func UnmarshalCBOR[T any](data []byte) (T, error) {
-	var t T
+func init() {
+	updateModes()
+}
+
+func updateModes() {
+	var err error
+	enc, err = cbor.CoreDetEncOptions().EncModeWithTags(tags)
+	if err != nil {
+		panic(err)
+	}
 	decOptions := cbor.DecOptions{
 		DupMapKey:                cbor.DupMapKeyEnforcedAPF,
 		TimeTag:                  cbor.DecTagRequired,
@@ -57,11 +82,26 @@ func UnmarshalCBOR[T any](data []byte) (T, error) {
 		BinaryUnmarshaler:        cbor.BinaryUnmarshalerByteString,
 		TextUnmarshaler:          cbor.TextUnmarshalerNone,
 	}
-
-	dec, err := decOptions.DecMode()
+	dec, err = decOptions.DecModeWithTags(tags)
 	if err != nil {
-		return t, errs.WrapSerialisation(err, "cannot unmarshal from CBOR")
+		panic(err)
 	}
-	err = dec.Unmarshal(data, &t)
+}
+
+func MarshalCBOR[T any](t T) ([]byte, error) {
+	return enc.Marshal(t)
+}
+
+func MarshalCBORTagged[T any](t T, tag uint64) ([]byte, error) {
+	wrapped := cbor.Tag{
+		Number:  tag,
+		Content: t,
+	}
+	return enc.Marshal(wrapped)
+}
+
+func UnmarshalCBOR[T any](data []byte) (T, error) {
+	var t T
+	err := dec.Unmarshal(data, &t)
 	return t, err
 }
