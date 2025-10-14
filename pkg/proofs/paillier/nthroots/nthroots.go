@@ -24,27 +24,27 @@ type (
 var ChallengeSpace = num.N
 
 type (
-	Statement  = maurer09.Statement[*Scalar, *GroupElement]
-	Witness    = maurer09.Witness[*Scalar]
-	Commitment = maurer09.Commitment[*Scalar, *GroupElement]
-	State      = maurer09.State[*Scalar]
-	Response   = maurer09.Response[*Scalar]
+	Statement  = maurer09.Statement[Scalar, GroupElement]
+	Witness    = maurer09.Witness[Scalar]
+	Commitment = maurer09.Commitment[Scalar, GroupElement]
+	State      = maurer09.State[Scalar]
+	Response   = maurer09.Response[Scalar]
 )
 
-func NewStatement(x *GroupElement) *Statement {
+func NewStatement(x GroupElement) *Statement {
 	return &Statement{
 		X: x,
 	}
 }
 
-func NewWitness(w *Scalar) *Witness {
+func NewWitness(w Scalar) *Witness {
 	return &Witness{
 		W: w,
 	}
 }
 
-func Phi(g ScalarGroup) maurer09.GroupHomomorphism[*Scalar, *GroupElement] {
-	return func(s *Scalar) *GroupElement {
+func Phi(g ScalarGroup) maurer09.GroupHomomorphism[Scalar, GroupElement] {
+	return func(s Scalar) GroupElement {
 		out, err := g.LiftToNthResidues(s)
 		if err != nil {
 			panic(err)
@@ -53,16 +53,16 @@ func Phi(g ScalarGroup) maurer09.GroupHomomorphism[*Scalar, *GroupElement] {
 	}
 }
 
-func ChallengeActionOnPreImage(c *Challenge, x *Scalar) *Scalar {
+func ChallengeActionOnPreImage(c *Challenge, x Scalar) Scalar {
 	return x.ScalarExp(c)
 }
 
-func ChallengeActionOnImage(c *Challenge, x *GroupElement) *GroupElement {
+func ChallengeActionOnImage(c *Challenge, x GroupElement) GroupElement {
 	return x.Exp(c)
 }
 
 type Protocol struct {
-	maurer09.Protocol[*Scalar, *GroupElement, *Challenge]
+	maurer09.Protocol[Scalar, GroupElement, *Challenge]
 }
 
 func NewSigmaProtocol(g znstar.PaillierGroup, prng io.Reader) (sigma.Protocol[*Statement, *Witness, *Commitment, *State, *Response], error) {

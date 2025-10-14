@@ -31,15 +31,8 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		return nil, errs.WrapFailed(err, "encryption failed")
 	}
 
-	verifier.state.x = sigand.ComposeStatements(slices.Collect(iterutils.Map(slices.Values(ciphertexts), func(x *paillier.Ciphertext) *nthroots.Statement {
-		// TODO: simplify once Unit is an interface
-		el := nthroots.GroupElement(*x)
-		return nthroots.NewStatement(&el)
-	}))...)
-	verifier.state.y = sigand.ComposeWitnesses(slices.Collect(iterutils.Map(slices.Values(nonces), func(y *paillier.Nonce) *nthroots.Witness {
-		el := nthroots.Scalar(*y)
-		return nthroots.NewWitness(&el)
-	}))...)
+	verifier.state.x = sigand.ComposeStatements(slices.Collect(iterutils.Map(slices.Values(ciphertexts), func(x *paillier.Ciphertext) *nthroots.Statement { return nthroots.NewStatement(x.Value()) }))...)
+	verifier.state.y = sigand.ComposeWitnesses(slices.Collect(iterutils.Map(slices.Values(nonces), func(y *paillier.Nonce) *nthroots.Witness { return nthroots.NewWitness(y.Value()) }))...)
 	verifier.state.rootsProver, err = sigma.NewProver(verifier.SessionId, rootTranscript.Clone(), verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create sigma protocol prover")
@@ -115,7 +108,7 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	var yPrime []*numct.Nat
 	prover.paillierSecretKey.Arithmetic().CrtModN.MultiBaseExp(
 		yPrime,
-		sliceutils.MapCast[[]*numct.Nat](prover.state.x, func(s *nthroots.Statement) *numct.Nat { return s.X.Value().Value() }),
+		sliceutils.MapCast[[]*numct.Nat](prover.state.x, func(s *nthroots.Statement) *numct.Nat { return s.X.Value() }),
 		&m,
 	)
 
@@ -136,7 +129,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	}
 
 	for i := 0; i < verifier.k; i++ {
-		if input.YPrime[i].Equal(verifier.state.y[i].W.Value().Value()) == 0 {
+		if input.YPrime[i].Equal(verifier.state.y[i].W.Value()) == 0 {
 			// V rejects if y != y'
 			return errs.NewVerification("failed to verify Paillier public key")
 		}

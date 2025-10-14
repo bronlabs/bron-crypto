@@ -26,11 +26,11 @@ func (ns *NonceSpace) N() *num.NatPlus {
 }
 
 func (ns *NonceSpace) Sample(prng io.Reader) (*Nonce, error) {
-	v, err := ns.g.Random(prng)
+	u, err := ns.g.Random(prng)
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "failed to sample from nonce space")
 	}
-	return (*Nonce)(v), nil
+	return &Nonce{u: u}, nil
 }
 
 func (ns *NonceSpace) New(x *numct.Nat) (*Nonce, error) {
@@ -42,21 +42,23 @@ func (ns *NonceSpace) New(x *numct.Nat) (*Nonce, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create nonce from n")
 	}
-	return (*Nonce)(u), nil
+	return &Nonce{u: u}, nil
 }
 
 func (ns *NonceSpace) Contains(n *Nonce) bool {
 	return n != nil && ns.N().Equal(n.N())
 }
 
-type Nonce znstar.Unit
+type Nonce struct {
+	u znstar.Unit
+}
 
-func (n *Nonce) Value() *znstar.Unit {
-	return (*znstar.Unit)(n)
+func (n *Nonce) Value() znstar.Unit {
+	return n.u
 }
 
 func (n *Nonce) ValueCT() *numct.Nat {
-	return n.Value().Value().Value()
+	return n.Value().Value()
 }
 
 func (n *Nonce) N() *num.NatPlus {
@@ -78,5 +80,5 @@ func (n *Nonce) Op(other *Nonce) *Nonce {
 
 func (n *Nonce) Mul(other *Nonce) *Nonce {
 	n.isValid(other)
-	return (*Nonce)(n.Value().Mul(other.Value()))
+	return &Nonce{u: n.Value().Mul(other.Value())}
 }

@@ -52,7 +52,7 @@ func (e *Encrypter) EncryptWithNonce(plaintext *Plaintext, receiver *PublicKey, 
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to lift nonce to n-th residues")
 	}
-	return (*Ciphertext)(rn.Mul(Phi(receiver, plaintext))), nil
+	return &Ciphertext{u: rn.Mul(Phi(receiver, plaintext))}, nil
 }
 
 func (e *Encrypter) EncryptMany(plaintexts []*Plaintext, receiver *PublicKey, prng io.Reader) ([]*Ciphertext, []*Nonce, error) {
@@ -120,7 +120,7 @@ func (se *SelfEncrypter) SelfEncryptWithNonce(plaintext *Plaintext, nonce *Nonce
 		return nil, errs.WrapFailed(err, "failed to lift nonce to n-th residues")
 	}
 	gm := Phi(se.pk, plaintext)
-	ct, err := se.sk.PublicKey().CiphertextSpace().New(rn.Mul(gm).Value().Value())
+	ct, err := se.sk.PublicKey().CiphertextSpace().New(rn.Mul(gm).Value())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create ciphertext from nat")
 	}

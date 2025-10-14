@@ -66,7 +66,7 @@ func (s *Scheme) Decrypter(sk *PrivateKey, opts ...DecrypterOption) (*Decrypter,
 	return d, nil
 }
 
-func Phi(receiver *PublicKey, plaintext *Plaintext) *znstar.Unit {
+func Phi(receiver *PublicKey, plaintext *Plaintext) znstar.Unit {
 	var shiftedPlaintext numct.Nat
 	receiver.N().ModInt(&shiftedPlaintext, plaintext.ValueCT())
 	var out numct.Nat
