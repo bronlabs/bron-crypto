@@ -87,7 +87,8 @@ func (m *ModulusOddPrimeBasic) Mod(out, x *Nat) {
 }
 
 func (m *ModulusOddPrimeBasic) ModInt(out *Nat, x *Int) {
-	out = (*Nat)((*saferith.Int)(x).Mod((*saferith.Modulus)(m)))
+	result := (*saferith.Int)(x).Mod((*saferith.Modulus)(m))
+	*out = *(*Nat)(result)
 }
 
 func (m *ModulusOddPrimeBasic) ModSymmetric(out *Int, x *Nat) {

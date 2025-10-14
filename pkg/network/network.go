@@ -11,28 +11,36 @@ import (
 )
 
 type SID [32]byte
+
+// TODO: remove
 type AddressingMethod uint64
 
+// TODO: remove
 const (
 	Unicast AddressingMethod = iota
 	Broadcast
 )
 
+// TODO: remove
 type Identity interface {
 	signatures.PublicKey[Identity]
 	fmt.Stringer
 }
 
+// TODO: remove
 type Node interface {
 	// Identity() Identity
 }
 
+// TODO: remove
 type PKI[N Node] interface {
 	Nodes() ds.Set[N]
 }
 
+// TODO: remove
 type AuthenticationKey signatures.PrivateKey[AuthenticationKey]
 
+// TODO: remove
 func NewLocalConfig[P Node](myIdentity P, myAuthKey AuthenticationKey) (*LocalConfig[P], error) {
 	if utils.IsNil(myIdentity) {
 		return nil, errs.NewIsNil("identity is nil")
@@ -46,6 +54,7 @@ func NewLocalConfig[P Node](myIdentity P, myAuthKey AuthenticationKey) (*LocalCo
 	}, nil
 }
 
+// TODO: remove
 type LocalConfig[P Node] struct {
 	identity          P
 	authenticationKey AuthenticationKey
@@ -65,23 +74,28 @@ func (c *LocalConfig[P]) AuthenticationKey() AuthenticationKey {
 	return c.authenticationKey
 }
 
+// TODO: change to any (Mateusz)
 type Message base.BytesLike
 
+// TODO: remove
 type MessageDeliveryAlgorithm struct {
 	DeliveryProtocol string
 	IsAuthenticated  bool
 }
 
+// TODO: remove
 type AuthenticatedMessage[M Message, S signatures.Signature[S]] struct {
 	Message   M
 	Signature S
 }
 
+// TODO: remove
 type Network interface {
 	Connections() ds.Map[Identity, ds.Set[Identity]]
 	IsAuthenticated() bool
 }
 
+// TODO: remove
 func NewSession[PID Node](id SID, pki PKI[PID], presentParties ds.Set[PID]) (*Session[PID], error) {
 	if pki == nil {
 		return nil, errs.NewIsNil("pki is nil")
@@ -99,6 +113,7 @@ func NewSession[PID Node](id SID, pki PKI[PID], presentParties ds.Set[PID]) (*Se
 	}, nil
 }
 
+// TODO: remove
 type Session[PID Node] struct {
 	// TODO: add network
 	id             SID

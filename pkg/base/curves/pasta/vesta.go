@@ -51,11 +51,9 @@ func NewVestaCurve() *VestaCurve {
 	return vestaInstance
 }
 
-
 func (c *VestaCurve) Name() string {
 	return VestaName
 }
-
 
 func (c *VestaCurve) Order() cardinal.Cardinal {
 	return cardinal.NewFromSaferith(fpFieldOrder.Nat())
@@ -179,6 +177,14 @@ func (c *VestaCurve) ScalarStructure() algebra.Structure[*VestaScalar] {
 }
 
 func (c *VestaCurve) BaseStructure() algebra.Structure[*VestaBaseFieldElement] {
+	return NewVestaBaseField()
+}
+
+func (c *VestaCurve) ScalarField() algebra.PrimeField[*VestaScalar] {
+	return NewVestaScalarField()
+}
+
+func (c *VestaCurve) BaseField() algebra.FiniteField[*VestaBaseFieldElement] {
 	return NewVestaBaseField()
 }
 

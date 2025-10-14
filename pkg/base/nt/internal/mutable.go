@@ -12,6 +12,7 @@ import (
 	"github.com/cronokirby/saferith"
 )
 
+// TODO: change ModInt -> ModI
 type modulusMutable[I, N any] interface {
 	Nat() N
 	SetNat(N) ct.Bool
@@ -55,6 +56,8 @@ type ModulusMutablePtr[I IntMutable[I, MI], N NatMutable[N, MI], MI, MT any] int
 	Set(*MT)
 }
 
+// TODO: add fill bytes
+// TODO: set bit
 type natMutable[E aimpl.MonoidElement[E], M any] interface {
 	aimpl.MonoidElement[E]
 	ct.Comparable[E]

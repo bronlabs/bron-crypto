@@ -1,5 +1,7 @@
 package compiler
 
+// TODO: add fischlin/rfischlin compiler
+
 import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"

@@ -48,11 +48,9 @@ func NewCurve() *Curve {
 	return curveInstance
 }
 
-
 func (c *Curve) Name() string {
 	return CurveName
 }
-
 
 func (c *Curve) ElementSize() int {
 	return compressedPointBytes
@@ -201,6 +199,14 @@ func (c *Curve) ScalarStructure() algebra.Structure[*Scalar] {
 }
 
 func (c *Curve) BaseStructure() algebra.Structure[*BaseFieldElement] {
+	return NewBaseField()
+}
+
+func (c *Curve) ScalarField() algebra.PrimeField[*Scalar] {
+	return NewScalarField()
+}
+
+func (c *Curve) BaseField() algebra.FiniteField[*BaseFieldElement] {
 	return NewBaseField()
 }
 

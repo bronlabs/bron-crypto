@@ -138,6 +138,7 @@ type MultiplicativeGroupElement[E any] interface {
 	Inversand[E]
 }
 
+// TODO: add to abelian group
 type CyclicGroup[E any] interface {
 	Group[E]
 	CyclicMonoid[E]
@@ -150,12 +151,14 @@ type CyclicGroupElement[E any] interface {
 
 // ************** Extra Monoids
 
+// TODO: Move IsTorsion free to points
 type AbelianMonoid[E, S any] SemiModule[E, S]
 
 type AbelianMonoidElement[E, S any] SemiModuleElement[E, S]
 
 // **************** Extra Groups
 
+// TODO: move MultiScalar stuff out of the interface
 type AbelianGroup[E, S any] interface {
 	ZLikeModule[E, S]
 	AbelianMonoid[E, S]

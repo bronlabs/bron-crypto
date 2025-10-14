@@ -16,6 +16,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 )
 
+// TODO: move to dkls23
 type Shard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	share           *feldman.Share[S]
 	ac              *feldman.AccessStructure

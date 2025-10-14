@@ -6,6 +6,8 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+// TODO: Review Mateusz
+
 func IsZero[I constraints.Integer](x I) Choice {
 	// Handle all integer sizes properly
 	xx := uint64(x)
@@ -41,7 +43,7 @@ func LessOrEqual[I constraints.Integer](x, y I) Choice {
 func GreaterOrEqual[I constraints.Integer](x, y I) Choice {
 	return Less(x, y) ^ 1
 }
-func Cmp[I constraints.Integer](x, y I) (gt, eq, lt Bool) {
+func CompareInteger[I constraints.Integer](x, y I) (gt, eq, lt Bool) {
 	// Equal: 1 if x == y, else 0
 	eq = Bool(Equal(x, y))
 

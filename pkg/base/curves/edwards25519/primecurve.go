@@ -159,6 +159,14 @@ func (c *PrimeSubGroup) ScalarStructure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 
+func (c *PrimeSubGroup) ScalarField() algebra.PrimeField[*Scalar] {
+	return NewScalarField()
+}
+
+func (c *PrimeSubGroup) BaseField() algebra.FiniteField[*BaseFieldElement] {
+	return NewBaseField()
+}
+
 func (c *PrimeSubGroup) BaseStructure() algebra.Structure[*BaseFieldElement] {
 	return NewBaseField()
 }

@@ -76,36 +76,6 @@ func ComposeWitnesses[W sigma.Witness](witnesses ...W) Witness[W] {
 
 type protocol[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] []sigma.Protocol[X, W, A, S, Z]
 
-// func Compose[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](
-// 	protocols ...sigma.Protocol[X, W, A, S, Z],
-// ) (sigma.Protocol[Statement[X], Witness[W], Commitment[A], State[S], Response[Z]], error) {
-// 	if len(protocols) == 0 {
-// 		return nil, errs.NewArgument("at least one protocol is required")
-// 	}
-// 	name := protocols[0].Name()
-// 	cb := protocols[0].GetChallengeBytesLength()
-// 	ss := protocols[0].SpecialSoundness()
-// 	se := protocols[0].SoundnessError()
-// 	for i, p := range protocols {
-// 		if p == nil {
-// 			return nil, errs.NewArgument("protocol at index %d is nil", i)
-// 		}
-// 		if p.Name() != name {
-// 			return nil, errs.NewArgument("all protocols must have the same name, but protocol at index 0 has name %q and protocol at index %d has name %q", name, i, p.Name())
-// 		}
-// 		if p.GetChallengeBytesLength() != cb {
-// 			return nil, errs.NewArgument("all protocols must have the same challenge bytes length, but protocol at index 0 has length %d and protocol at index %d has length %d", cb, i, p.GetChallengeBytesLength())
-// 		}
-// 		if p.SpecialSoundness() != ss {
-// 			return nil, errs.NewArgument("all protocols must have the same special soundness, but protocol at index 0 has %d-special soundness and protocol at index %d has %d-special soundness", ss, i, p.SpecialSoundness())
-// 		}
-// 		if p.SoundnessError() != se {
-// 			return nil, errs.NewArgument("all protocols must have the same soundness error, but protocol at index 0 has soundness error %d and protocol at index %d has soundness error %d", se, i, p.SoundnessError())
-// 		}
-// 	}
-// 	return protocol[X, W, A, S, Z](protocols), nil
-// }
-
 func Compose[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](
 	p sigma.Protocol[X, W, A, S, Z], count uint,
 ) (sigma.Protocol[Statement[X], Witness[W], Commitment[A], State[S], Response[Z]], error) {

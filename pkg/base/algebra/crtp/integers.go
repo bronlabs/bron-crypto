@@ -25,7 +25,7 @@ type Cardinal interface {
 	IsInfinite() bool
 	IsUnknown() bool
 	IsProbablyPrime() bool
-	BitLen() uint
+	BitLen() Capacity
 }
 
 type NPlusLike[E any] interface {
@@ -81,7 +81,7 @@ type UintLike[E any] interface {
 }
 
 type PrimeField[E any] interface {
-	Field[E]
+	FiniteField[E]
 	ZModLike[E]
 	BitLen() int
 	FromWideBytes([]byte) (E, error)
@@ -92,6 +92,6 @@ type PrimeField[E any] interface {
 }
 
 type PrimeFieldElement[E any] interface {
-	FieldElement[E]
+	FiniteFieldElement[E]
 	UintLike[E]
 }

@@ -30,15 +30,17 @@ type Verifier[W Witness, M Message, C Commitment] interface {
 	Verify(commitment C, message M, witness W) error
 }
 
-type Scheme[W Witness, M Message, C Commitment] interface {
+type Scheme[K Key, W Witness, M Message, C Commitment, CO Committer[W, M, C], VF Verifier[W, M, C]] interface {
 	Name() Name
-	Committer() Committer[W, M, C]
-	Verifier() Verifier[W, M, C]
+	Committer() CO
+	Verifier() VF
+	Key() K
 }
 
 // ******** Homomorphic
 
 type HomomorphicScheme[
+	K Key,
 	W interface {
 		Witness
 		algebra.HomomorphicLike[W, WT]
@@ -52,4 +54,27 @@ type HomomorphicScheme[
 		algebra.HomomorphicLike[C, CT]
 		algebra.Actable[C, M]
 	}, CT algebra.GroupElement[CT],
-] Scheme[W, M, C]
+	CO Committer[W, M, C], VF Verifier[W, M, C],
+] Scheme[K, W, M, C, CO, VF]
+
+type GroupHomomorphicScheme[
+	K Key,
+	W interface {
+		Witness
+		algebra.HomomorphicLike[W, WT]
+	}, WT algebra.UintLike[WT],
+	M interface {
+		Message
+		algebra.HomomorphicLike[M, MT]
+	}, MT algebra.UintLike[MT],
+	C interface {
+		Commitment
+		algebra.HomomorphicLike[C, CT]
+		algebra.Actable[C, M]
+	}, CT algebra.AbelianGroupElement[CT, WT],
+	CO Committer[W, M, C], VF Verifier[W, M, C],
+	G algebra.AbelianGroup[CT, WT],
+] interface {
+	HomomorphicScheme[K, W, WT, M, MT, C, CT, CO, VF]
+	Group() G
+}

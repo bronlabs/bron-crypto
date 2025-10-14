@@ -54,7 +54,6 @@ type Set[E any] interface {
 type MutableSet[E any] interface {
 	mutableSet[E, MutableSet[E]]
 	Freeze() Set[E]
-	// ThreadSafe() ConcurrentSet[E]
 }
 
 type setThreadSafetyMixin[E any] interface {

@@ -31,6 +31,8 @@ func GenerateSafePrime[N algebra.UniqueFactorizationMonoidElement[N]](set PrimeS
 	var err error
 	checks := int(math.Max(float64(bits)/16, 8))
 	for {
+		// TODO: generate the number of checks via sage.
+
 		// rand.Prime throws an error if bits < 2
 		// -1 so the Sophie-Germain prime is 1023 bits
 		// and the Safe prime is 1024

@@ -91,32 +91,33 @@ func NotBytes[T ~[]byte](dst, x T) int {
 	return n
 }
 
+// TODO: remove
 // PadLeft pads a byte slice with zeros on the left (for big-endian numbers) in constant time.
 // The destination slice must have the target length.
 // This is useful for big-endian integers where padding goes on the left.
 func PadLeft[T ~[]byte](dst, src T) {
 	dstLen := len(dst)
 	srcLen := len(src)
-	
+
 	// Clear dst first
 	for i := range dst {
 		dst[i] = 0
 	}
-	
+
 	// If src is empty or dst is empty, we're done
 	if srcLen == 0 || dstLen == 0 {
 		return
 	}
-	
+
 	// Calculate how many bytes to copy
 	copyLen := Min(srcLen, dstLen)
-	
+
 	// Calculate offsets
-	dstOffset := Max(0, dstLen - srcLen)
-	srcOffset := Max(0, srcLen - dstLen)
-	
+	dstOffset := Max(0, dstLen-srcLen)
+	srcOffset := Max(0, srcLen-dstLen)
+
 	// Copy the bytes
 	for i := 0; i < copyLen; i++ {
-		dst[dstOffset + i] = src[srcOffset + i]
+		dst[dstOffset+i] = src[srcOffset+i]
 	}
 }

@@ -3,6 +3,7 @@ package ct
 import "unsafe"
 
 type (
+	// TODO: remove Bool
 	Choice uint64
 	Bool   = Choice
 )
@@ -39,6 +40,7 @@ type ConditionallyNegatable[E any] interface {
 	CondNeg(Choice)
 }
 
+// TODO: remove
 // CSelect returns a if yes==1, else b. Works for any T. Branchless wrt data.
 func CSelect[T any](yes Choice, a, b T) T {
 	out := b
@@ -46,6 +48,7 @@ func CSelect[T any](yes Choice, a, b T) T {
 	return out
 }
 
+// TODO: remove
 // CMOV: *dst = *src if yes==1; otherwise unchanged. Works for any T. Branchless.
 func CMOV[T any](dst *T, yes Choice, src *T) {
 	n := int(unsafe.Sizeof(*dst))
@@ -58,6 +61,7 @@ func CMOV[T any](dst *T, yes Choice, src *T) {
 	}
 }
 
+// TODO: remove
 // CSwap swaps *x and *y iff yes==1. Any T. Alias-safe.
 func CSwap[T any](x, y *T, yes Choice) {
 	ax := CSelect(yes, *y, *x)

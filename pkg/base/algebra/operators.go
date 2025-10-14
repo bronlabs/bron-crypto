@@ -99,6 +99,7 @@ type MultiplicativelyHomomorphicLike[T HomomorphicLike[T, TV], TV Multiplicative
 	crtp.Multiplicand[T]
 }
 
+// TODO: remove all below
 func Operator[E Operand[E]](a, b E) E {
 	return a.Op(b)
 }

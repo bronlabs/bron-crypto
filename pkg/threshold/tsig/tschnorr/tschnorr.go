@@ -23,13 +23,13 @@ type MPCFriendlyVariant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFiel
 }
 
 type MPCFriendlyScheme[
-VR MPCFriendlyVariant[GE, S, M],
-GE algebra.PrimeGroupElement[GE, S],
-S algebra.PrimeFieldElement[S],
-M schnorrlike.Message,
-KG signatures.KeyGenerator[*schnorrlike.PrivateKey[GE, S], *schnorrlike.PublicKey[GE, S]],
-SG schnorrlike.Signer[VR, GE, S, M],
-VF schnorrlike.Verifier[VR, GE, S, M],
+	VR MPCFriendlyVariant[GE, S, M],
+	GE algebra.PrimeGroupElement[GE, S],
+	S algebra.PrimeFieldElement[S],
+	M schnorrlike.Message,
+	KG signatures.KeyGenerator[*schnorrlike.PrivateKey[GE, S], *schnorrlike.PublicKey[GE, S]],
+	SG schnorrlike.Signer[VR, GE, S, M],
+	VF schnorrlike.Verifier[VR, GE, S, M],
 ] interface {
 	schnorrlike.Scheme[VR, GE, S, M, KG, SG, VF]
 	PartialSignatureVerifier(
@@ -39,8 +39,8 @@ VF schnorrlike.Verifier[VR, GE, S, M],
 }
 
 type PartialSignature[
-GE algebra.PrimeGroupElement[GE, S],
-S algebra.PrimeFieldElement[S],
+	GE algebra.PrimeGroupElement[GE, S],
+	S algebra.PrimeFieldElement[S],
 ] struct {
 	Sig schnorrlike.Signature[GE, S]
 }
@@ -159,8 +159,8 @@ func (spm *PublicMaterial[E, S]) UnmarshalCBOR(data []byte) error {
 }
 
 type Shard[
-E algebra.PrimeGroupElement[E, S],
-S algebra.PrimeFieldElement[S],
+	E algebra.PrimeGroupElement[E, S],
+	S algebra.PrimeFieldElement[S],
 ] struct {
 	share *feldman.Share[S]
 	PublicMaterial[E, S]

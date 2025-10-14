@@ -41,6 +41,14 @@ func (w Witness) Bytes() []byte {
 	return w[:]
 }
 
+func (k Key) hmacInit() hash.Hash {
+	hmac, err := HmacFunc(k[:])
+	if err != nil {
+		panic(errs.WrapFailed(err, "cannot create HMAC hash function"))
+	}
+	return hmac
+}
+
 func NewKeyFromCRSBytes(sid network.SID, dst string, crs ...[]byte) (Key, error) {
 	if ct.SliceIsZero(sid[:]) == 1 {
 		return *new(Key), errs.NewArgument("SID cannot be zero")
@@ -66,30 +74,31 @@ func NewScheme(key Key) (*Scheme, error) {
 	if ct.SliceIsZero(key[:]) == 1 {
 		return nil, errs.NewArgument("key cannot be zero")
 	}
-	hmac, err := HmacFunc(key[:])
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create HMAC hash function")
-	}
-	return &Scheme{hmac: hmac}, nil
+	return &Scheme{key: key}, nil
 }
 
 type Scheme struct {
-	hmac hash.Hash
+	key Key
 }
 
 func (s *Scheme) Name() commitments.Name {
 	return Name
 }
-func (s *Scheme) Committer() commitments.Committer[Witness, Message, Commitment] {
-	return &Committer{s.hmac}
+func (s *Scheme) Committer() *Committer {
+	return &Committer{s.key.hmacInit()}
 }
-func (s *Scheme) Verifier() commitments.Verifier[Witness, Message, Commitment] {
-	committingParty := &Committer{s.hmac}
+
+func (s *Scheme) Verifier() *Verifier {
+	committingParty := &Committer{s.key.hmacInit()}
 	generic := commitments.NewGenericVerifier(committingParty, func(c1, c2 Commitment) bool {
 		return ct.SliceEqual(c1[:], c2[:]) == 1
 	})
 	out := &Verifier{GenericVerifier: *generic}
 	return out
+}
+
+func (s *Scheme) Key() Key {
+	return s.key
 }
 
 type Committer struct {

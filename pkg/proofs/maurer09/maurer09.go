@@ -1,5 +1,8 @@
 package maurer09
 
+// TODO: add Maurer09 interface
+// TODO: keep this implementation internal and not usable outside proofs
+
 import (
 	"io"
 
@@ -198,7 +201,7 @@ func (p *Protocol[A, B, C]) RunSimulator(statement *Statement[A, B], challengeBy
 }
 
 func (s *Protocol[_, _, _]) SoundnessError() uint {
-	return s.preImage.Order().BitLen()
+	return uint(s.preImage.Order().BitLen())
 }
 
 func (*Protocol[_, _, _]) SpecialSoundness() uint {

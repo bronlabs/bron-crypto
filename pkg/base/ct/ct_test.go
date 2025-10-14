@@ -420,7 +420,7 @@ func TestCmp(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gt, eq, lt := ct.Cmp(tt.x, tt.y)
+			gt, eq, lt := ct.CompareInteger(tt.x, tt.y)
 			assert.Equal(t, tt.gt, gt, "gt")
 			assert.Equal(t, tt.eq, eq, "eq")
 			assert.Equal(t, tt.lt, lt, "lt")

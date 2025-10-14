@@ -87,6 +87,11 @@ func (ct *Ciphertext) Div(other *Ciphertext) *Ciphertext {
 }
 
 func (ct *Ciphertext) ScalarOp(scalar *num.Nat) *Ciphertext {
+	return ct.ScalarExp(scalar)
+}
+
+func (ct *Ciphertext) ScalarExp(scalar *num.Nat) *Ciphertext {
+	// TODO: ensure it works for integer
 	return (*Ciphertext)(ct.Value().Exp(scalar))
 }
 
@@ -115,10 +120,10 @@ func (ct *Ciphertext) Equal(other *Ciphertext) bool {
 	return ct.Value().Equal(other.Value())
 }
 
-// func (ct *Ciphertext) Shift(message *Plaintext) *Ciphertext {
-// 	Phi()
-// 	var out numct.Nat
-// 	receiver.n2.ModMul(&out, plaintext.ValueCT(), receiver.nNat)
-// 	out.Increment()
-// 	return nil
-// }
+func (ct *Ciphertext) Shift(message *Plaintext) *Ciphertext {
+	// Phi()
+	// var out numct.Nat
+	// receiver.n2.ModMul(&out, plaintext.ValueCT(), receiver.nNat)
+	// out.Increment()
+	return nil
+}

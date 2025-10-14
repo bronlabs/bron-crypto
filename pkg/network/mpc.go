@@ -10,8 +10,10 @@ import (
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
+// TODO: rename to fmt.Stringer
 type Round = uint64
 
+// TODO: remove
 type Party interface {
 	Node
 	ProtocolName() string
@@ -20,11 +22,13 @@ type Party interface {
 	Round() Round
 }
 
+// TODO: remove
 type (
 	MPCSession     = Session[Party]
 	MPCLocalConfig = LocalConfig[Party]
 )
 
+// TODO: remove
 func NewMPCSession(id SID, pki PKI[Party], presentParties ds.Set[Party]) (*MPCSession, error) {
 	return NewSession(id, pki, presentParties)
 }
@@ -37,6 +41,7 @@ func NewQuorum(ids ...sharing.ID) Quorum {
 	return hashset.NewComparable(ids...).Freeze()
 }
 
+// TODO: remove
 func IterSorted[M Message](input RoundMessages[M]) iter.Seq2[sharing.ID, M] {
 	return func(yield func(sharing.ID, M) bool) {
 		keys := input.Keys()
@@ -49,17 +54,3 @@ func IterSorted[M Message](input RoundMessages[M]) iter.Seq2[sharing.ID, M] {
 		}
 	}
 }
-
-// func WriteToTape[M Message](
-// 	sid SID,
-// 	party Party,
-// 	input RoundMessages[M],
-// ) {
-// 	dst := fmt.Sprintf("round-%d-of-%s-in-%s", party.Round(), party.ProtocolName(), sid)
-// 	party.Transcript().AppendDomainSeparator(dst)
-// 	for id, msg := range IterSorted(input) {
-// 		label := fmt.Sprintf("message-from-%d-in-round-%d", id, party.Round())
-// 		ts.Append(party.Transcript(), label, msg)
-
-// 	}
-// }

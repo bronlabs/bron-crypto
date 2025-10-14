@@ -175,6 +175,7 @@ func (d *Decrypter) Decrypt(ciphertext *Ciphertext) (*Plaintext, error) {
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
+		// TODO: put p.Squared and alike into a variable, everywhere here.
 		d.sk.Arithmetic().P.Squared.ModExp(&mp, ciphertext.ValueCT(), d.sk.Arithmetic().P.PhiFactor.Nat())
 		lp(d.sk, &mp)
 		d.sk.Arithmetic().P.Factor.ModMul(&mp, &mp, d.sk.hp)

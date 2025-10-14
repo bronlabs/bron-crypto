@@ -195,6 +195,14 @@ func (c *Curve) BaseStructure() algebra.Structure[*BaseFieldElement] {
 	return NewBaseField()
 }
 
+func (c *Curve) ScalarField() algebra.PrimeField[*Scalar] {
+	return NewScalarField()
+}
+
+func (c *Curve) BaseField() algebra.FiniteField[*BaseFieldElement] {
+	return NewBaseField()
+}
+
 func (c *Curve) ScalarBaseOp(sc *Scalar) *Point {
 	if c == nil {
 		return nil

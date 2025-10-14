@@ -51,11 +51,9 @@ func NewPallasCurve() *PallasCurve {
 	return pallasInstance
 }
 
-
 func (c *PallasCurve) Name() string {
 	return PallasName
 }
-
 
 func (c *PallasCurve) Cofactor() cardinal.Cardinal {
 	return cardinal.New(1)
@@ -179,6 +177,14 @@ func (c *PallasCurve) ScalarStructure() algebra.Structure[*PallasScalar] {
 }
 
 func (c *PallasCurve) BaseStructure() algebra.Structure[*PallasBaseFieldElement] {
+	return NewPallasBaseField()
+}
+
+func (c *PallasCurve) ScalarField() algebra.PrimeField[*PallasScalar] {
+	return NewPallasScalarField()
+}
+
+func (c *PallasCurve) BaseField() algebra.FiniteField[*PallasBaseFieldElement] {
 	return NewPallasBaseField()
 }
 

@@ -1,8 +1,8 @@
 package base
 
 import (
+	"encoding/binary"
 	"hash/fnv"
-	"io"
 )
 
 type Transparent[V any] interface {
@@ -14,6 +14,7 @@ type IncomparableTrait struct {
 type HashCode uint64
 
 func (hc HashCode) Combine(xs ...HashCode) HashCode {
+	// TODO: change to XOR, maybe measure its difference
 	h := fnv.New64a()
 	h.Write(hc.Bytes())
 	for _, x := range xs {
@@ -23,7 +24,7 @@ func (hc HashCode) Combine(xs ...HashCode) HashCode {
 }
 
 func (hc HashCode) Bytes() []byte {
-	return []byte{byte(hc)}
+	return binary.LittleEndian.AppendUint64(nil, uint64(hc))
 }
 
 type Equatable[K any] interface {
@@ -33,6 +34,7 @@ type Clonable[T any] interface {
 	Clone() T
 }
 
+// TODO: remove embed in Hashable
 type WithHashCode interface {
 	HashCode() HashCode
 }
@@ -46,21 +48,26 @@ type HashableStructure[E any] interface {
 	Hash([]byte) (E, error)
 }
 
+// TODO: move to transcripts package
 type BytesLike interface {
 	Bytes() []byte
 }
 
+// TODO: move back to algebra, and only keep element size
 type BytesLikeFactory[E any] interface {
 	FromBytes([]byte) (E, error)
-	// If elemnts are atomic, ElementSize returns the **exact** number of bytes required to represent an element.
+	// TODO: review below (Mateusz) and prove in no where this would be used at a generic level.
+
+	// If elemnts are atomic, ElementSize returns the **exact** number of bytes (implementation-dependent) required to represent an element.
 	// If elements are collections of atomic elements, ElementSize returns the size of an individual element.
 	// If elements are variable size, ElementSize returns -1.
 	ElementSize() int
 }
 
-type SamplableStructure[S, E any] interface {
-	Random(prng io.Reader, opts ...func(S) error) (E, error)
-}
+// TODO: remove. Maybe move to experimental.
+// type SamplableStructure[S, E any] interface {
+// 	Random(prng io.Reader, opts ...func(S) error) (E, error)
+// }
 
 func DeriveHashCode[T ~[]byte](xs ...T) HashCode {
 	h := fnv.New64a()

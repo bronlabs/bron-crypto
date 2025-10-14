@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	acrtp "github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	saferith_utils "github.com/bronlabs/bron-crypto/pkg/base/utils/saferith"
@@ -265,8 +266,8 @@ func (c *cardinal) HashCode() base.HashCode {
 	return base.HashCode(c.v.Uint64())
 }
 
-func (c *cardinal) BitLen() uint {
-	return uint(c.v.TrueLen())
+func (c *cardinal) BitLen() algebra.Capacity {
+	return algebra.Capacity(c.v.TrueLen())
 }
 
 func (c *cardinal) String() string {

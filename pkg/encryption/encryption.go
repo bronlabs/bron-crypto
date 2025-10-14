@@ -16,7 +16,8 @@ type (
 		base.Clonable[PK]
 		base.Hashable[PK]
 	}
-	Plaintext                   any
+	Plaintext any
+	// TODO: remove
 	PlaintextCodec[P Plaintext] struct {
 		Encoder func([]byte) (P, error)
 		Decoder func(P) ([]byte, error)
@@ -50,6 +51,7 @@ type (
 		EncryptWithNonce(plaintext M, receiver PK, nonce N) (ciphertext C, err error)
 	}
 
+	// TODO: maybe remove
 	SelfEncrypter[SK PrivateKey[SK], M Plaintext, C Ciphertext, X any] interface {
 		PrivateKey() SK
 		SelfEncrypt(plaintext M, prng io.Reader) (ciphertext C, nonceOrCapsuleEtc X, err error)

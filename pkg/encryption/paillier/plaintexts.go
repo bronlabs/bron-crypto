@@ -82,6 +82,10 @@ type Plaintext struct {
 	n *num.NatPlus
 }
 
+func (cp *Plaintext) Normalize() *num.Uint {
+	return cp.v.Mod(cp.n)
+}
+
 func (cp *Plaintext) Value() *num.Int {
 	return cp.v
 }

@@ -81,6 +81,7 @@ func (m *OddPrimeFactors) ModExp(out, base, exp *numct.Nat) {
 	out.Set(m.Params.Recombine(&mp, &mq))
 }
 
+// TODO: change the loop
 func (m *OddPrimeFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp *numct.Nat) {
 	if len(out) != len(bases) {
 		panic("out and bases must have the same length")

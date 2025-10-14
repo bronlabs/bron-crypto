@@ -25,15 +25,13 @@ func (s *Scheme[_, _]) Name() commitments.Name {
 	return Name
 }
 
-// TODO: add committer to CRTP so it doesn't return interface
-func (s *Scheme[E, S]) Committer() commitments.Committer[*Witness[S], *Message[S], *Commitment[E, S]] {
+func (s *Scheme[E, S]) Committer() *Committer[E, S] {
 	return &Committer[E, S]{
 		key: s.key,
 	}
 }
 
-// TODO: add verifier to CRTP so it doesn't return interface
-func (s *Scheme[E, S]) Verifier() commitments.Verifier[*Witness[S], *Message[S], *Commitment[E, S]] {
+func (s *Scheme[E, S]) Verifier() *Verifier[E, S] {
 	committingParty := &Committer[E, S]{
 		key: s.key,
 	}
@@ -44,4 +42,12 @@ func (s *Scheme[E, S]) Verifier() commitments.Verifier[*Witness[S], *Message[S],
 		GenericVerifier: *generic,
 	}
 	return v
+}
+
+func (s *Scheme[E, S]) Key() *Key[E, S] {
+	return s.key
+}
+
+func (s *Scheme[E, S]) Group() algebra.PrimeGroup[E, S] {
+	return s.key.Group()
 }

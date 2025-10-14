@@ -16,7 +16,7 @@ import (
 const (
 	appTranscriptLabel       = "BRON_CRYPTO_PAILLIER_LP-"
 	sessionIdTranscriptLabel = "BRON_CRYPTO_PAILLIER_LP_SESSION_ID"
-	// PaillierBitSize TODO: Should we bump it to 3072 to comply with NIST recommendations?
+	// TODO: Should we bump it to 3072 to comply with NIST recommendations?
 	PaillierBitSize = 2048
 )
 

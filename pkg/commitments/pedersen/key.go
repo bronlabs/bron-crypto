@@ -59,6 +59,10 @@ func (k *Key[E, S]) Bytes() []byte {
 	return slices.Concat(k.g.Bytes(), k.h.Bytes())
 }
 
+func (k *Key[E, S]) Group() algebra.PrimeGroup[E, S] {
+	return algebra.StructureMustBeAs[algebra.PrimeGroup[E, S]](k.g.Structure())
+}
+
 func (k *Key[E, S]) MarshalCBOR() ([]byte, error) {
 	dto := &keyDTO[E, S]{
 		G: k.g,

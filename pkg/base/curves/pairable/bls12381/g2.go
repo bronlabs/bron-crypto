@@ -48,11 +48,9 @@ func NewG2() *G2 {
 	return curveInstanceG2
 }
 
-
 func (c *G2) Name() string {
 	return CurveNameG2
 }
-
 
 func (c *G2) ElementSize() int {
 	return 2 * bls12381Impl.FpBytes
@@ -250,6 +248,14 @@ func (c *G2) ScalarStructure() algebra.Structure[*Scalar] {
 }
 
 func (c *G2) BaseStructure() algebra.Structure[*BaseFieldElementG2] {
+	return NewG2BaseField()
+}
+
+func (c *G2) ScalarField() algebra.PrimeField[*Scalar] {
+	return NewScalarField()
+}
+
+func (c *G2) BaseField() algebra.FiniteField[*BaseFieldElementG2] {
 	return NewG2BaseField()
 }
 

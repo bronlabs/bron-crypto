@@ -1,249 +1,299 @@
 package lpdl
 
-// import (
-// 	"fmt"
-// 	"io"
+import (
+	"fmt"
+	"io"
 
-// 	"github.com/cronokirby/saferith"
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	hashcommitments "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lp"
+	paillierrange "github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
+	zkcompiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/zk"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
+)
 
-// 	"github.com/bronlabs/bron-crypto/pkg/base"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-// 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-// 	hashcommitments "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-// 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
-// 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lp"
-// 	paillierrange "github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
-// 	zkcompiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/zk"
-// 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-// 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
-// )
+const (
+	appTranscriptLabel       = "BRON_CRYPTO_PAILLIER_LPDL-"
+	sessionIdTranscriptLabel = "BRON_CRYPTO_PAILLIER_LPDL_SESSION_ID"
+)
 
-// const (
-// 	transcriptLabel = "BRON_CRYPTO_PAILLIER_LPDL-"
-// )
+type Participant[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	pk         *paillier.PublicKey
+	bigQ       P
+	round      int
+	sessionId  network.SID
+	transcript transcripts.Transcript
+	prng       io.Reader
 
-// type Participant struct {
-// 	pk         *paillier.PublicKey
-// 	bigQ       curves.Point
-// 	round      int
-// 	sessionId  []byte
-// 	transcript transcripts.Transcript
-// 	prng       io.Reader
+	base.IncomparableTrait
+}
 
-// 	_ ds.Incomparable
-// }
+type State[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	curve  curves.Curve[P, B, S]
+	zModQ  *num.ZMod
+	zModQ2 *num.ZMod
+	a      *num.Uint
+	b      *num.Uint
 
-// type State struct {
-// 	curve curves.Curve
-// 	q     *saferith.Modulus
-// 	q2    *saferith.Modulus
-// 	a     *saferith.Nat
-// 	b     *saferith.Nat
+	base.IncomparableTrait
+}
 
-// 	_ ds.Incomparable
-// }
+type VerifierState[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	State[P, B, S]
+	cDoublePrimeWitness hashcommitments.Witness
+	bigQPrime           P
+	cHat                hashcommitments.Commitment
 
-// type VerifierState struct {
-// 	State
-// 	cDoublePrimeWitness hashcommitments.Witness
-// 	bigQPrime           curves.Point
-// 	cHat                hashcommitments.Commitment
+	base.IncomparableTrait
+}
 
-// 	_ ds.Incomparable
-// }
+type Verifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	Participant[P, B, S]
+	rangeVerifier     *zkcompiler.Verifier[*paillierrange.Statement, *paillierrange.Witness, *paillierrange.Commitment, *paillierrange.State, *paillierrange.Response]
+	paillierEncrypter *paillier.Encrypter
+	c                 *paillier.Ciphertext
+	state             *VerifierState[P, B, S]
+	commitmentScheme  *hash_comm.Scheme
 
-// type Verifier struct {
-// 	Participant
-// 	rangeVerifier *zkcompiler.Verifier[*paillierrange.Statement, *paillierrange.Witness, *paillierrange.Commitment, *paillierrange.State, *paillierrange.Response]
-// 	c             *paillier.CipherText
-// 	state         *VerifierState
+	base.IncomparableTrait
+}
 
-// 	_ ds.Incomparable
-// }
+type ProverState[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	State[P, B, S]
+	alpha                  *paillier.Plaintext
+	bigQHat                P
+	bigQHatWitness         hashcommitments.Witness
+	cDoublePrimeCommitment hashcommitments.Commitment
 
-// type ProverState struct {
-// 	State
-// 	alpha                  *saferith.Int
-// 	bigQHat                curves.Point
-// 	bigQHatWitness         hashcommitments.Witness
-// 	cDoublePrimeCommitment hashcommitments.Commitment
+	base.IncomparableTrait
+}
 
-// 	_ ds.Incomparable
-// }
+type Prover[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	Participant[P, B, S]
+	rangeProver       *zkcompiler.Prover[*paillierrange.Statement, *paillierrange.Witness, *paillierrange.Commitment, *paillierrange.State, *paillierrange.Response]
+	paillierDecrypter *paillier.Decrypter
+	sk                *paillier.PrivateKey
+	x                 S
+	state             *ProverState[P, B, S]
+	commitmentScheme  *hash_comm.Scheme
 
-// type Prover struct {
-// 	Participant
-// 	rangeProver *zkcompiler.Prover[*paillierrange.Statement, *paillierrange.Witness, *paillierrange.Commitment, *paillierrange.State, *paillierrange.Response]
-// 	sk          *paillier.SecretKey
-// 	x           curves.Scalar
-// 	state       *ProverState
+	base.IncomparableTrait
+}
 
-// 	_ ds.Incomparable
-// }
+func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, publicKey *paillier.PublicKey, bigQ P, xEncrypted *paillier.Ciphertext, tape transcripts.Transcript, prng io.Reader) (verifier *Verifier[P, B, S], err error) {
+	err = validateVerifierInputs(sessionId, publicKey, bigQ, xEncrypted, prng)
+	if err != nil {
+		return nil, errs.WrapArgument(err, "invalid input arguments")
+	}
 
-// func NewVerifier(publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *paillier.CipherText, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
-// 	err = validateVerifierInputs(publicKey, bigQ, xEncrypted, sessionId, prng)
-// 	if err != nil {
-// 		return nil, errs.WrapArgument(err, "invalid input arguments")
-// 	}
+	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](bigQ.Structure())
 
-// 	curve := bigQ.Curve()
-// 	dst := fmt.Sprintf("%s-%s", transcriptLabel, curve.Name())
-// 	if transcript == nil {
-// 		transcript = hagrid.NewTranscript(dst, prng)
-// 	}
-// 	boundSessionId, err := transcript.Bind(sessionId, dst)
-// 	if err != nil {
-// 		return nil, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
-// 	}
+	if tape == nil {
+		tape = hagrid.NewTranscript(appTranscriptLabel)
+	}
+	dst := fmt.Sprintf("%s-%d", sessionIdTranscriptLabel, sessionId)
+	tape.AppendDomainSeparator(dst)
 
-// 	q := curve.Order()
-// 	q2 := saferith.ModulusFromNat(new(saferith.Nat).Mul(q.Nat(), q.Nat(), 2*q.BitLen()))
-// 	qThird := new(saferith.Nat).Div(q.Nat(), saferith.ModulusFromUint64(3), q.BitLen())
+	rangeProofTranscript := tape.Clone()
+	rangeProtocol, q, q2, qThirdNat, err := initRangeProtocol(curve, publicKey, rangeProofTranscript, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't initialise range protocol")
+	}
 
-// 	rangeProofTranscript := transcript.Clone()
-// 	rangeProtocol, err := paillierrange.NewPaillierRange(base.ComputationalSecurity, prng)
-// 	if err != nil {
-// 		return nil, errs.WrapFailed(err, "couldn't create range protocol")
-// 	}
-// 	rangeCipherText, err := publicKey.CipherTextSubPlainText(xEncrypted, new(saferith.Int).SetNat(qThird))
-// 	if err != nil {
-// 		return nil, errs.WrapFailed(err, "couldn't create range statement")
-// 	}
-// 	rangeStatement := paillierrange.NewStatement(publicKey, rangeCipherText, qThird)
-// 	rangeVerifier, err := zkcompiler.NewVerifier(boundSessionId, rangeProofTranscript, rangeProtocol, rangeStatement, prng)
-// 	if err != nil {
-// 		return nil, errs.WrapFailed(err, "cannot create Paillier range verifier")
-// 	}
+	qThird, err := publicKey.CiphertextSpace().New(qThirdNat)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create ciphertext from q/3")
+	}
 
-// 	return &Verifier{
-// 		Participant: Participant{
-// 			pk:         publicKey,
-// 			bigQ:       bigQ,
-// 			round:      1,
-// 			sessionId:  boundSessionId,
-// 			transcript: transcript,
-// 			prng:       prng,
-// 		},
-// 		rangeVerifier: rangeVerifier,
-// 		c:             xEncrypted,
-// 		state: &VerifierState{
-// 			State: State{
-// 				curve: curve,
-// 				q:     q,
-// 				q2:    q2,
-// 			},
-// 		},
-// 	}, nil
-// }
+	rangeCiphertext := xEncrypted.Div(qThird)
+	rangeStatement := paillierrange.NewStatement(publicKey, rangeCiphertext, qThirdNat)
+	rangeVerifier, err := zkcompiler.NewVerifier(sessionId, rangeProofTranscript, rangeProtocol, rangeStatement, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create Paillier range verifier")
+	}
 
-// func validateVerifierInputs(publicKey *paillier.PublicKey, bigQ curves.Point, xEncrypted *paillier.CipherText, sessionId []byte, prng io.Reader) error {
-// 	if len(sessionId) == 0 {
-// 		return errs.NewIsNil("sessionId is nil")
-// 	}
-// 	if publicKey == nil {
-// 		return errs.NewIsNil("public key is nil")
-// 	}
-// 	if publicKey.N.BitLen() < lp.PaillierBitSize {
-// 		return errs.NewArgument("invalid paillier public key: modulus is too small")
-// 	}
-// 	if bigQ == nil {
-// 		return errs.NewIsNil("bigQ is nil")
-// 	}
-// 	if xEncrypted == nil {
-// 		return errs.NewIsNil("xEncrypted is nil")
-// 	}
-// 	if xEncrypted.C.EqZero() != 0 {
-// 		return errs.NewArgument("xEncrypted is zero")
-// 	}
-// 	if prng == nil {
-// 		return errs.NewIsNil("prng is nil")
-// 	}
-// 	return nil
-// }
+	ck, err := hash_comm.NewKeyFromCRSBytes(sessionId, appTranscriptLabel)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot instantiate committer")
+	}
+	commitmentScheme, err := hash_comm.NewScheme(ck)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot instantiate commitment scheme")
+	}
 
-// func NewProver(secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, sessionId []byte, transcript transcripts.Transcript, prng io.Reader) (verifier *Prover, err error) {
-// 	err = validateProverInputs(secretKey, x, r, sessionId, prng)
-// 	if err != nil {
-// 		return nil, errs.WrapArgument(err, "invalid input arguments")
-// 	}
+	return &Verifier[P, B, S]{
+		Participant: Participant[P, B, S]{
+			pk:         publicKey,
+			bigQ:       bigQ,
+			round:      1,
+			sessionId:  sessionId,
+			transcript: tape,
+			prng:       prng,
+		},
+		rangeVerifier:    rangeVerifier,
+		c:                xEncrypted,
+		commitmentScheme: commitmentScheme,
+		state: &VerifierState[P, B, S]{
+			State: State[P, B, S]{
+				curve:  curve,
+				zModQ:  q,
+				zModQ2: q2,
+			},
+		},
+	}, nil
+}
 
-// 	curve := x.ScalarField().Curve()
-// 	dst := fmt.Sprintf("%s-%s", transcriptLabel, curve.Name())
-// 	if transcript == nil {
-// 		transcript = hagrid.NewTranscript(dst, prng)
-// 	}
-// 	boundSessionId, err := transcript.Bind(sessionId, dst)
-// 	if err != nil {
-// 		return nil, errs.WrapHashing(err, "couldn't initialise participant transcript/sessionId")
-// 	}
+func validateVerifierInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, publicKey *paillier.PublicKey, bigQ P, xEncrypted *paillier.Ciphertext, prng io.Reader) error {
+	if len(sessionId) == 0 {
+		return errs.NewIsNil("sessionId is nil")
+	}
+	if publicKey == nil {
+		return errs.NewIsNil("public key is nil")
+	}
+	if publicKey.N().BitLen() < lp.PaillierBitSize {
+		return errs.NewArgument("invalid paillier public key: modulus is too small")
+	}
+	if xEncrypted == nil {
+		return errs.NewIsNil("xEncrypted is nil")
+	}
+	if v := xEncrypted.ValueCT(); v.IsZero()&v.Equal(numct.NatOne()) == ct.True {
+		return errs.NewArgument("xEncrypted is invalid: %s", v.String())
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
+}
 
-// 	q := curve.Order()
-// 	qSquared := saferith.ModulusFromNat(new(saferith.Nat).Mul(q.Nat(), q.Nat(), -1))
-// 	qThird := new(saferith.Nat).Div(q.Nat(), saferith.ModulusFromUint64(3), q.BitLen())
+func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, curve curves.Curve[P, B, S], secretKey *paillier.PrivateKey, x S, r *paillier.Nonce, tape transcripts.Transcript, prng io.Reader) (verifier *Prover[P, B, S], err error) {
+	if err = validateProverInputs(sessionId, curve, secretKey, x, r, prng); err != nil {
+		return nil, errs.WrapArgument(err, "invalid input arguments")
+	}
 
-// 	rangeProofTranscript := transcript.Clone()
+	if tape == nil {
+		tape = hagrid.NewTranscript(appTranscriptLabel)
+	}
+	dst := fmt.Sprintf("%s-%d", sessionIdTranscriptLabel, sessionId)
+	tape.AppendDomainSeparator(dst)
 
-// 	rangeProtocol, err := paillierrange.NewPaillierRange(base.ComputationalSecurity, prng)
-// 	if err != nil {
-// 		return nil, errs.WrapFailed(err, "couldn't create range protocol")
-// 	}
-// 	rangePlainText, err := secretKey.PlainTextSub(new(saferith.Int).SetNat(x.Nat()), new(saferith.Int).SetNat(qThird))
-// 	if err != nil {
-// 		return nil, errs.WrapFailed(err, "couldn't create range witness")
-// 	}
-// 	rangeCipherText, err := secretKey.EncryptWithNonce(rangePlainText, r)
-// 	if err != nil {
-// 		return nil, errs.WrapFailed(err, "couldn't create range statement")
-// 	}
-// 	rangeWitness := paillierrange.NewWitness(secretKey, rangePlainText, r)
-// 	rangeStatement := paillierrange.NewStatement(&secretKey.PublicKey, rangeCipherText, qThird)
-// 	rangeProver, err := zkcompiler.NewProver(boundSessionId, rangeProofTranscript, rangeProtocol, rangeStatement, rangeWitness)
-// 	if err != nil {
-// 		return nil, errs.WrapFailed(err, "couldn't initialise prover")
-// 	}
+	rangeProofTranscript := tape.Clone()
+	rangeProtocol, q, qSquared, qThirdNat, err := initRangeProtocol(curve, secretKey.PublicKey(), rangeProofTranscript, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't initialise range protocol")
+	}
 
-// 	return &Prover{
-// 		Participant: Participant{
-// 			pk:         &secretKey.PublicKey,
-// 			bigQ:       curve.ScalarBaseMult(x),
-// 			round:      2,
-// 			sessionId:  boundSessionId,
-// 			transcript: transcript,
-// 			prng:       prng,
-// 		},
-// 		rangeProver: rangeProver,
-// 		sk:          secretKey,
-// 		x:           x,
-// 		state: &ProverState{
-// 			State: State{
-// 				curve: curve,
-// 				q:     q,
-// 				q2:    qSquared,
-// 			},
-// 		},
-// 	}, nil
-// }
+	qThirdAsPlaintext, err := secretKey.PublicKey().PlaintextSpace().New(qThirdNat)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't convert q/3 to plaintext")
+	}
 
-// func validateProverInputs(secretKey *paillier.SecretKey, x curves.Scalar, r *saferith.Nat, sessionId []byte, prng io.Reader) error {
-// 	if len(sessionId) == 0 {
-// 		return errs.NewIsNil("sessionId is nil")
-// 	}
-// 	if secretKey == nil {
-// 		return errs.NewIsNil("secret key is nil")
-// 	}
-// 	if secretKey.N.BitLen() < lp.PaillierBitSize {
-// 		return errs.NewSize("invalid paillier public key: modulus is too small")
-// 	}
-// 	if x == nil {
-// 		return errs.NewIsNil("x is nil")
-// 	}
-// 	if r == nil {
-// 		return errs.NewIsNil("r is nil")
-// 	}
-// 	if prng == nil {
-// 		return errs.NewIsNil("prng is nil")
-// 	}
-// 	return nil
-// }
+	xNat := numct.NewNatFromBytes(x.Bytes())
+	xAsPlaintext, err := secretKey.PublicKey().PlaintextSpace().New(xNat)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't convert x to plaintext")
+	}
+	rangePlainText := xAsPlaintext.Sub(qThirdAsPlaintext)
+
+	senc, err := paillier.NewScheme().SelfEncrypter(secretKey)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't create self-encrypter")
+	}
+
+	rangeCipherText, err := senc.SelfEncryptWithNonce(rangePlainText, r)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't create range statement")
+	}
+	rangeWitness := paillierrange.NewWitness(secretKey, rangePlainText, r)
+	rangeStatement := paillierrange.NewStatement(secretKey.PublicKey(), rangeCipherText, qThirdNat)
+	rangeProver, err := zkcompiler.NewProver(sessionId, rangeProofTranscript, rangeProtocol, rangeStatement, rangeWitness)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't initialise prover")
+	}
+
+	return &Prover[P, B, S]{
+		Participant: Participant[P, B, S]{
+			pk:         secretKey.PublicKey(),
+			bigQ:       curve.ScalarBaseMul(x),
+			round:      2,
+			sessionId:  sessionId,
+			transcript: tape,
+			prng:       prng,
+		},
+		rangeProver: rangeProver,
+		sk:          secretKey,
+		x:           x,
+		state: &ProverState[P, B, S]{
+			State: State[P, B, S]{
+				curve:  curve,
+				zModQ:  q,
+				zModQ2: qSquared,
+			},
+		},
+	}, nil
+}
+
+func validateProverInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, curve curves.Curve[P, B, S], secretKey *paillier.PrivateKey, x S, r *paillier.Nonce, prng io.Reader) error {
+	if len(sessionId) == 0 {
+		return errs.NewIsNil("sessionId is nil")
+	}
+	if secretKey == nil {
+		return errs.NewIsNil("secret key is nil")
+	}
+	if secretKey.Group().N().AnnouncedLen() < lp.PaillierBitSize {
+		return errs.NewSize("invalid paillier public key: modulus is too small")
+	}
+	if curve == nil {
+		return errs.NewIsNil("curve is nil")
+	}
+	if utils.IsNil(x) {
+		return errs.NewIsNil("x is nil")
+	}
+	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](x.Structure())
+	if curve.ScalarField().Name() != sf.Name() {
+		return errs.NewArgument("x is not an element of the scalar field of the curve")
+	}
+	if r == nil {
+		return errs.NewIsNil("r is nil")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
+}
+
+func initRangeProtocol[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](curve curves.Curve[P, B, S], publicKey *paillier.PublicKey, tape transcripts.Transcript, prng io.Reader) (rangeProtocol *paillierrange.Protocol, zModQ, zModQ2 *num.ZMod, qThird *numct.Nat, err error) {
+	q := curve.Order()
+	q2 := q.Mul(q)
+
+	zModQ, err = num.NewZModFromCardinal(q)
+	if err != nil {
+		return nil, nil, nil, nil, errs.WrapFailed(err, "cannot create ZMod from q")
+	}
+	zModQ2, err = num.NewZModFromCardinal(q2)
+	if err != nil {
+		return nil, nil, nil, nil, errs.WrapFailed(err, "cannot create ZMod from q^2")
+	}
+
+	three, ok := numct.NewModulus(numct.NewNat(3))
+	if ok == ct.False {
+		panic("cannot create modulus 3")
+	}
+	qThird.DivCap(numct.NewNatFromBig(q.Big(), q.BitLen()), three, q.BitLen())
+
+	rangeProtocol, err = paillierrange.NewPaillierRange(base.ComputationalSecurityBits, prng)
+	if err != nil {
+		return nil, nil, nil, nil, errs.WrapFailed(err, "couldn't create range protocol")
+	}
+	return rangeProtocol, zModQ, zModQ2, qThird, nil
+}

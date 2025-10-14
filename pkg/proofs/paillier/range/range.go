@@ -21,7 +21,7 @@ var (
 	_ sigma.Commitment                                                     = (*Commitment)(nil)
 	_ sigma.Statement                                                      = (*State)(nil)
 	_ sigma.Response                                                       = (*Response)(nil)
-	_ sigma.Protocol[*Statement, *Witness, *Commitment, *State, *Response] = (*PaillierRange)(nil)
+	_ sigma.Protocol[*Statement, *Witness, *Commitment, *State, *Response] = (*Protocol)(nil)
 )
 
 type Witness struct {
@@ -146,12 +146,12 @@ func (r *Response) Bytes() []byte {
 	return buf.Bytes()
 }
 
-type PaillierRange struct {
+type Protocol struct {
 	t    uint
 	prng io.Reader
 }
 
-func NewPaillierRange(t uint, prng io.Reader) (*PaillierRange, error) {
+func NewPaillierRange(t uint, prng io.Reader) (*Protocol, error) {
 	if t < base.StatisticalSecurityBits {
 		return nil, errs.NewValidation("insufficient statistical security")
 	}
@@ -159,17 +159,17 @@ func NewPaillierRange(t uint, prng io.Reader) (*PaillierRange, error) {
 		return nil, errs.NewIsNil("nil prng")
 	}
 
-	return &PaillierRange{
+	return &Protocol{
 		t:    t,
 		prng: prng,
 	}, nil
 }
 
-func (*PaillierRange) Name() sigma.Name {
+func (*Protocol) Name() sigma.Name {
 	return Name
 }
 
-func (p *PaillierRange) ComputeProverCommitment(statement *Statement, witness *Witness) (*Commitment, *State, error) {
+func (p *Protocol) ComputeProverCommitment(statement *Statement, witness *Witness) (*Commitment, *State, error) {
 	ps := statement.Pk.PlaintextSpace()
 	lowBound, err := ps.New(statement.L)
 	if err != nil {
@@ -220,7 +220,7 @@ func (p *PaillierRange) ComputeProverCommitment(statement *Statement, witness *W
 	return a, s, nil
 }
 
-func (p *PaillierRange) ComputeProverResponse(statement *Statement, witness *Witness, _ *Commitment, state *State, challenge sigma.ChallengeBytes) (*Response, error) {
+func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness, _ *Commitment, state *State, challenge sigma.ChallengeBytes) (*Response, error) {
 	ps := statement.Pk.PlaintextSpace()
 	lowBound, err := ps.New(statement.L)
 	if err != nil {
@@ -277,7 +277,7 @@ func (p *PaillierRange) ComputeProverResponse(statement *Statement, witness *Wit
 	return z, nil
 }
 
-func (p *PaillierRange) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
+func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
 	ps := statement.Pk.PlaintextSpace()
 	lowBound, err := ps.New(statement.L)
 	if err != nil {
@@ -347,7 +347,7 @@ func (p *PaillierRange) Verify(statement *Statement, commitment *Commitment, cha
 	return nil
 }
 
-func (p *PaillierRange) RunSimulator(statement *Statement, challenge sigma.ChallengeBytes) (*Commitment, *Response, error) {
+func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeBytes) (*Commitment, *Response, error) {
 	ps := statement.Pk.PlaintextSpace()
 	lowBound, err := ps.New(statement.L)
 	if err != nil {
@@ -441,11 +441,11 @@ func (p *PaillierRange) RunSimulator(statement *Statement, challenge sigma.Chall
 	return a, z, nil
 }
 
-func (*PaillierRange) SpecialSoundness() uint {
+func (*Protocol) SpecialSoundness() uint {
 	return 2
 }
 
-func (*PaillierRange) ValidateStatement(statement *Statement, witness *Witness) error {
+func (*Protocol) ValidateStatement(statement *Statement, witness *Witness) error {
 	if !statement.Pk.Equal(witness.Sk.PublicKey()) {
 		return errs.NewValidation("paillier keys mismatch")
 	}
@@ -478,11 +478,11 @@ func (*PaillierRange) ValidateStatement(statement *Statement, witness *Witness) 
 	return nil
 }
 
-func (p *PaillierRange) GetChallengeBytesLength() int {
+func (p *Protocol) GetChallengeBytesLength() int {
 	return int((p.t + 7) / 8)
 }
 
-func (*PaillierRange) SerializeStatement(statement *Statement) []byte {
+func (*Protocol) SerializeStatement(statement *Statement) []byte {
 	return slices.Concat(
 		statement.Pk.N().Big().Bytes(), []byte(":"),
 		statement.C.ValueCT().Big().Bytes(), []byte(":"),
@@ -490,7 +490,7 @@ func (*PaillierRange) SerializeStatement(statement *Statement) []byte {
 	)
 }
 
-func (p *PaillierRange) SerializeCommitment(commitment *Commitment) []byte {
+func (p *Protocol) SerializeCommitment(commitment *Commitment) []byte {
 	var a []byte
 	for i := range p.t {
 		a = append(a, commitment.C1[i].ValueCT().Big().Bytes()...)
@@ -502,7 +502,7 @@ func (p *PaillierRange) SerializeCommitment(commitment *Commitment) []byte {
 	return a
 }
 
-func (p *PaillierRange) SerializeResponse(response *Response) []byte {
+func (p *Protocol) SerializeResponse(response *Response) []byte {
 	var a []byte
 
 	for i := range p.t {
@@ -523,7 +523,7 @@ func (p *PaillierRange) SerializeResponse(response *Response) []byte {
 	return a
 }
 
-func (p *PaillierRange) SoundnessError() uint {
+func (p *Protocol) SoundnessError() uint {
 	return p.t
 }
 

@@ -14,6 +14,7 @@ const (
 	responseLabel   = "responseLabel-"
 )
 
+// TODO: change to transcript writable
 type (
 	Name       string
 	Statement  base.BytesLike

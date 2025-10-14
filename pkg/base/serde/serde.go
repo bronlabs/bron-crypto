@@ -19,6 +19,8 @@ const (
 	MaxMaxNestedLevels     = 65535
 )
 
+// TODO: add the init
+
 func MarshalCBOR[T any](t T) ([]byte, error) {
 	enc, err := cbor.CoreDetEncOptions().EncMode()
 	if err != nil {
@@ -29,7 +31,6 @@ func MarshalCBOR[T any](t T) ([]byte, error) {
 
 func UnmarshalCBOR[T any](data []byte) (T, error) {
 	var t T
-	// TODO: decide on the options
 	decOptions := cbor.DecOptions{
 		DupMapKey:                cbor.DupMapKeyEnforcedAPF,
 		TimeTag:                  cbor.DecTagRequired,

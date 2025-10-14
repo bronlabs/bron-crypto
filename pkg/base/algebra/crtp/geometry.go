@@ -20,6 +20,7 @@ func NewCoordinates[C any](t CoordinateSystem, v ...C) Coordinates[C] {
 	return Coordinates[C]{v: v, t: t}
 }
 
+// TODO: remove
 type Coordinates[C any] struct {
 	v []C
 	t CoordinateSystem

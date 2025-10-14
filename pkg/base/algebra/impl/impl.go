@@ -42,6 +42,8 @@ type MonoidElementPtr[E MonoidElement[E], T any] interface {
 	MonoidElement[E]
 }
 
+//TODO: remove above and embed below
+// TODO: rename to additive group
 // *** Group
 
 type groupElement[E any] interface {

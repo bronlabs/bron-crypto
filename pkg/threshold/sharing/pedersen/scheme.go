@@ -35,7 +35,7 @@ func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 
 type Scheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
 	key              *pedcom.Key[E, S]
-	commitmentScheme commitments.Scheme[*pedcom.Witness[S], *pedcom.Message[S], *pedcom.Commitment[E, S]]
+	commitmentScheme commitments.Scheme[*pedcom.Key[E, S], *pedcom.Witness[S], *pedcom.Message[S], *pedcom.Commitment[E, S], *pedcom.Committer[E, S], *pedcom.Verifier[E, S]]
 	shamirSSS        *shamir.Scheme[S]
 }
 
