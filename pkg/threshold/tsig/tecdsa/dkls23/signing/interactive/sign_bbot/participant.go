@@ -17,7 +17,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
@@ -30,7 +30,7 @@ const (
 type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	suite     *ecdsa.Suite[P, B, S]
 	sessionId network.SID
-	shard     *tecdsa.Shard[P, B, S]
+	shard     *dkls23.Shard[P, B, S]
 	quorum    network.Quorum
 	prng      io.Reader
 	tape      transcripts.Transcript
@@ -56,7 +56,7 @@ type CosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 	pk             map[sharing.ID]P
 }
 
-func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, quorum network.Quorum, suite *ecdsa.Suite[P, B, S], shard *tecdsa.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
+func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, quorum network.Quorum, suite *ecdsa.Suite[P, B, S], shard *dkls23.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
 	if quorum == nil || suite == nil || shard == nil || prng == nil || tape == nil {
 		return nil, errs.NewIsNil("argument")
 	}

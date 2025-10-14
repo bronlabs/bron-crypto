@@ -19,7 +19,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/signing/interactive/sign_softspoken"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/signing/interactive/sign"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 	"github.com/stretchr/testify/require"
@@ -39,35 +39,48 @@ func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElem
 	require.NoError(tb, err)
 
 	tapesMap := make(map[sharing.ID]transcripts.Transcript)
-	consignersMap := make(map[sharing.ID]*sign_softspoken.Cosigner[P, B, S])
+	consignersMap := make(map[sharing.ID]*sign.Cosigner[P, B, S])
 	for id := range quorum.Iter() {
 		shard, ok := shards[id]
 		require.True(tb, ok)
 		tapesMap[id] = tape.Clone()
-		consignersMap[id], err = sign_softspoken.NewCosigner(sessionId, quorum, ecdsaSuite, testutils.CBORRoundTrip(tb, shard), prng, tapesMap[id])
+		consignersMap[id], err = sign.NewCosigner(sessionId, quorum, ecdsaSuite, testutils.CBORRoundTrip(tb, shard), prng, tapesMap[id])
 		require.NoError(tb, err)
 	}
 	cosigners := slices.Collect(maps.Values(consignersMap))
 
-	r1bo := make(map[sharing.ID]*sign_softspoken.Round1Broadcast)
-	r1uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign_softspoken.Round1P2P])
+	r1uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign.Round1P2P[P, B, S]])
 	for _, cosigner := range cosigners {
-		r1bo[cosigner.SharingID()], r1uo[cosigner.SharingID()], err = cosigner.Round1()
+		r1uo[cosigner.SharingID()], err = cosigner.Round1()
 		require.NoError(tb, err)
 	}
 
-	r2bi, r2ui := testutils.MapO2I(tb, cosigners, r1bo, r1uo)
-	r2bo := make(map[sharing.ID]*sign_softspoken.Round2Broadcast[P, B, S])
-	r2uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign_softspoken.Round2P2P[P, B, S]])
+	r2ui := testutils.MapUnicastO2I(tb, cosigners, r1uo)
+	r2uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign.Round2P2P[P, B, S]])
 	for _, cosigner := range cosigners {
-		r2bo[cosigner.SharingID()], r2uo[cosigner.SharingID()], err = cosigner.Round2(r2bi[cosigner.SharingID()], r2ui[cosigner.SharingID()])
+		r2uo[cosigner.SharingID()], err = cosigner.Round2(r2ui[cosigner.SharingID()])
+	}
+
+	r3ui := testutils.MapUnicastO2I(tb, cosigners, r2uo)
+	r3bo := make(map[sharing.ID]*sign.Round3Broadcast)
+	r3uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign.Round3P2P])
+	for _, cosigner := range cosigners {
+		r3bo[cosigner.SharingID()], r3uo[cosigner.SharingID()], err = cosigner.Round3(r3ui[cosigner.SharingID()])
 		require.NoError(tb, err)
 	}
 
-	r3bi, r3ui := testutils.MapO2I(tb, cosigners, r2bo, r2uo)
+	r4bi, r4ui := testutils.MapO2I(tb, cosigners, r3bo, r3uo)
+	r4bo := make(map[sharing.ID]*sign.Round4Broadcast[P, B, S])
+	r4uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign.Round4P2P[P, B, S]])
+	for _, cosigner := range cosigners {
+		r4bo[cosigner.SharingID()], r4uo[cosigner.SharingID()], err = cosigner.Round4(r4bi[cosigner.SharingID()], r4ui[cosigner.SharingID()])
+		require.NoError(tb, err)
+	}
+
+	r5bi, r5ui := testutils.MapO2I(tb, cosigners, r4bo, r4uo)
 	partialSignatures := make(map[sharing.ID]*dkls23.PartialSignature[P, B, S])
 	for _, cosigner := range cosigners {
-		partialSignatures[cosigner.SharingID()], err = cosigner.Round3(r3bi[cosigner.SharingID()], r3ui[cosigner.SharingID()], message)
+		partialSignatures[cosigner.SharingID()], err = cosigner.Round5(r5bi[cosigner.SharingID()], r5ui[cosigner.SharingID()], message)
 		require.NoError(tb, err)
 	}
 

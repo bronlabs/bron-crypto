@@ -1,35 +1,27 @@
 package serde
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/fxamacker/cbor/v2"
 )
 
 const (
 	DefaultMaxArrayElements = 131072
-	MinMaxArrayElements     = 16
-	MaxMaxArrayElements     = 2147483647
-
-	DefaultMaxMapPairs = 131072
-	MinMaxMapPairs     = 16
-	MaxMaxMapPairs     = 2147483647
-
-	DefaultMaxNestedLevels = 32
-	MinMaxNestedLevels     = 4
-	MaxMaxNestedLevels     = 65535
+	DefaultMaxMapPairs      = 131072
+	DefaultMaxNestedLevels  = 32
 )
 
-func MarshalCBOR[T any](t T) ([]byte, error) {
+var (
+	encMode cbor.EncMode
+	decMode cbor.DecMode
+)
+
+func init() {
 	enc, err := cbor.CoreDetEncOptions().EncMode()
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "cannot marshal to CBOR")
+		panic(err)
 	}
-	return enc.Marshal(t)
-}
+	encMode = enc
 
-func UnmarshalCBOR[T any](data []byte) (T, error) {
-	var t T
-	// TODO: decide on the options
 	decOptions := cbor.DecOptions{
 		DupMapKey:                cbor.DupMapKeyEnforcedAPF,
 		TimeTag:                  cbor.DecTagRequired,
@@ -56,11 +48,19 @@ func UnmarshalCBOR[T any](data []byte) (T, error) {
 		BinaryUnmarshaler:        cbor.BinaryUnmarshalerByteString,
 		TextUnmarshaler:          cbor.TextUnmarshalerNone,
 	}
-
 	dec, err := decOptions.DecMode()
 	if err != nil {
-		return t, errs.WrapSerialisation(err, "cannot unmarshal from CBOR")
+		panic(err)
 	}
-	err = dec.Unmarshal(data, &t)
+	decMode = dec
+}
+
+func MarshalCBOR[T any](t T) ([]byte, error) {
+	return encMode.Marshal(t)
+}
+
+func UnmarshalCBOR[T any](data []byte) (T, error) {
+	var t T
+	err := decMode.Unmarshal(data, &t)
 	return t, err
 }

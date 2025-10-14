@@ -16,8 +16,8 @@ import (
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	const XI = 64
-	const L = 8
+	const XI = 128
+	const L = 1
 	prng := crand.Reader
 	var sessionId network.SID
 	_, err := io.ReadFull(prng, sessionId[:])

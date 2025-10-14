@@ -9,11 +9,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-const (
-	h2cPrefix0 = "popf-tag0-"
-	h2cPrefix1 = "popf-tag1-"
-)
-
 type Popf[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] struct {
 	group algebra.PrimeGroup[GE, SE]
 	tag0  []byte

@@ -8,10 +8,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-const (
-	kaH2cPrefix = "bron_crypto_tagged_key_agreement_"
-)
-
 type TaggedKeyAgreement[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]] struct {
 	group       algebra.PrimeGroup[GE, SE]
 	scalarField algebra.PrimeField[SE]
