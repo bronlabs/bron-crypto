@@ -13,10 +13,19 @@ import (
 
 type KeyGeneratorOption = encryption.KeyGeneratorOption[*KeyGenerator, *PrivateKey, *PublicKey]
 
-type KeyGenerator struct{}
+func WithEachPrimeBitLen(bits uint) KeyGeneratorOption {
+	return func(kg *KeyGenerator) error {
+		kg.bits = bits
+		return nil
+	}
+}
+
+type KeyGenerator struct {
+	bits uint
+}
 
 func (kg *KeyGenerator) Generate(prng io.Reader) (*PrivateKey, *PublicKey, error) {
-	group, err := znstar.SamplePaillierGroup(2048, prng)
+	group, err := znstar.SamplePaillierGroup(kg.bits, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to create paillier group")
 	}

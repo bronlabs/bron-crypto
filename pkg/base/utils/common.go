@@ -91,3 +91,16 @@ func LeadingZeroBytes(b []byte) int {
 	}
 	return i
 }
+
+func ImplementsX[X, T any](v T) (X, bool) {
+	// try value
+	if x, ok := any(v).(X); ok {
+		return x, true
+	}
+	// try pointer (covers methods with pointer receivers)
+	vv := v
+	if x, ok := any(&vv).(X); ok {
+		return x, true
+	}
+	return *new(X), false
+}

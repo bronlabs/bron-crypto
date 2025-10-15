@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/stretchr/testify/require"
@@ -30,8 +29,8 @@ func TestNewUnitGroupOfUnknownOrder(t *testing.T) {
 			m, err := num.NPlus().FromUint64(tc.modulus)
 			require.NoError(t, err)
 
-			// Use OddPrimeFactors as the arithmetic type
-			uzmod, err := znstar.NewUnitGroupOfUnknownOrder[*modular.OddPrimeFactors](m)
+			// Create unknown order group
+			uzmod, err := znstar.NewUnitGroupOfUnknownOrder(m)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -50,7 +49,7 @@ func TestNewUnit(t *testing.T) {
 	m, err := num.NPlus().FromUint64(15)
 	require.NoError(t, err)
 
-	uzmod, err := znstar.NewUnitGroupOfUnknownOrder[*modular.OddPrimeFactors](m)
+	uzmod, err := znstar.NewUnitGroupOfUnknownOrder(m)
 	require.NoError(t, err)
 
 	zmod, err := num.NewZMod(m)
@@ -75,7 +74,7 @@ func TestNewUnit(t *testing.T) {
 			u, err := zmod.FromUint64(tt.value)
 			require.NoError(t, err)
 
-			unit, err := znstar.NewUnit(u, uzmod)
+			unit, err := uzmod.FromUint(u)
 			if tt.wantErr {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "not coprime")
@@ -134,7 +133,7 @@ func TestUnitGroupOperations(t *testing.T) {
 	m, err := num.NPlus().FromUint64(15)
 	require.NoError(t, err)
 
-	uzmod, err := znstar.NewUnitGroupOfUnknownOrder[*modular.OddPrimeFactors](m)
+	uzmod, err := znstar.NewUnitGroupOfUnknownOrder(m)
 	require.NoError(t, err)
 
 	// Test One
@@ -163,7 +162,7 @@ func TestUnitArithmetic(t *testing.T) {
 	m, err := num.NPlus().FromUint64(15)
 	require.NoError(t, err)
 
-	uzmod, err := znstar.NewUnitGroupOfUnknownOrder[*modular.OddPrimeFactors](m)
+	uzmod, err := znstar.NewUnitGroupOfUnknownOrder(m)
 	require.NoError(t, err)
 
 	zmod, err := num.NewZMod(m)
@@ -172,12 +171,12 @@ func TestUnitArithmetic(t *testing.T) {
 	// Create units
 	u2, err := zmod.FromUint64(2)
 	require.NoError(t, err)
-	unit2, err := znstar.NewUnit(u2, uzmod)
+	unit2, err := uzmod.FromUint(u2)
 	require.NoError(t, err)
 
 	u4, err := zmod.FromUint64(4)
 	require.NoError(t, err)
-	unit4, err := znstar.NewUnit(u4, uzmod)
+	unit4, err := uzmod.FromUint(u4)
 	require.NoError(t, err)
 
 	// Test multiplication
@@ -206,7 +205,7 @@ func TestUnitExponentiation(t *testing.T) {
 	m, err := num.NPlus().FromUint64(15)
 	require.NoError(t, err)
 
-	uzmod, err := znstar.NewUnitGroupOfUnknownOrder[*modular.OddPrimeFactors](m)
+	uzmod, err := znstar.NewUnitGroupOfUnknownOrder(m)
 	require.NoError(t, err)
 
 	zmod, err := num.NewZMod(m)
@@ -215,7 +214,7 @@ func TestUnitExponentiation(t *testing.T) {
 	// Create a unit
 	u2, err := zmod.FromUint64(2)
 	require.NoError(t, err)
-	unit2, err := znstar.NewUnit(u2, uzmod)
+	unit2, err := uzmod.FromUint(u2)
 	require.NoError(t, err)
 
 	// Test exponentiation: 2^3 = 8 (mod 15)
@@ -284,7 +283,7 @@ func TestUnitGroupFromUint(t *testing.T) {
 	m, err := num.NPlus().FromUint64(15)
 	require.NoError(t, err)
 
-	uzmod, err := znstar.NewUnitGroupOfUnknownOrder[*modular.OddPrimeFactors](m)
+	uzmod, err := znstar.NewUnitGroupOfUnknownOrder(m)
 	require.NoError(t, err)
 
 	zmod, err := num.NewZMod(m)

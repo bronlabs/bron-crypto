@@ -1,10 +1,12 @@
 package modular
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/crt"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
@@ -143,17 +145,21 @@ func (m *OddPrimeSquareFactors) MultiplicativeOrder() algebra.Cardinal {
 
 func (m *OddPrimeSquareFactors) ModExp(out, base, exp *numct.Nat) {
 	// Compute base^ep mod p and base^eq mod q in parallel.
-	var ep, eq, mp, mq numct.Nat
+	var mp, mq numct.Nat
 	var wg sync.WaitGroup
 	wg.Add(2)
+	fmt.Println(m.Q)
+	panic(errs.NewFailed("something"))
 	go func() {
 		defer wg.Done()
+		var ep numct.Nat
 		m.P.PhiFactor.Mod(&ep, exp)
 		ep.Select(base.Coprime(m.P.Factor.Nat()), exp, &ep)
 		(m.CrtModN2.P).ModExp(&mp, base, &ep)
 	}()
 	go func() {
 		defer wg.Done()
+		var eq numct.Nat
 		m.Q.PhiFactor.Mod(&eq, exp)
 		eq.Select(base.Coprime(m.Q.Factor.Nat()), exp, &eq)
 		m.CrtModN2.Q.ModExp(&mq, base, &eq)

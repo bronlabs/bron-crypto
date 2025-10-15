@@ -2,76 +2,79 @@
 //go:debug rsa1024min=0
 package paillierrange_test
 
-// import (
-// 	crand "crypto/rand"
-// 	"io"
-// 	"math/big"
-// 	"testing"
+import (
+	crand "crypto/rand"
+	"io"
+	"math/big"
+	"testing"
 
-// 	"github.com/cronokirby/saferith"
-// 	"github.com/stretchr/testify/require"
+	"github.com/cronokirby/saferith"
+	"github.com/stretchr/testify/require"
 
-// 	"github.com/bronlabs/bron-crypto/pkg/base"
-// 	"github.com/bronlabs/bron-crypto/pkg/indcpa/paillier"
-// 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
-// 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
-// 	fiatShamir "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-// 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
-// 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
-// 	zkcompiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/zk"
-// 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
-// )
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
+	paillierrange "github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
+)
 
-// const primeLen = 512
-// const logRange = 256
+const primeLen = 512
+const logRange = 256
 
-// func Test_HappyPath(t *testing.T) {
-// 	t.Parallel()
+func Test_HappyPath(t *testing.T) {
+	t.Parallel()
 
-// 	prng := crand.Reader
-// 	pk, sk, err := paillier.KeyGen(primeLen, prng)
-// 	require.NoError(t, err)
+	prng := crand.Reader
+	scheme := paillier.NewScheme()
+	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(primeLen))
+	require.NoError(t, err)
+	sk, pk, err := keyGenerator.Generate(prng)
+	require.NoError(t, err)
 
-// 	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
-// 	l := new(saferith.Nat).SetBig(lBig, lBig.BitLen())
-// 	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurity, prng)
-// 	require.NoError(t, err)
+	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
+	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
+	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, prng)
+	require.NoError(t, err)
 
-// 	for range 128 {
-// 		xBig, err := crand.Int(prng, lBig)
-// 		require.NoError(t, err)
-// 		x := new(saferith.Int).SetBig(xBig, xBig.BitLen())
-// 		c, r, err := pk.Encrypt(x, prng)
-// 		require.NoError(t, err)
+	enc, err := scheme.Encrypter()
+	require.NoError(t, err)
 
-// 		statement := &paillierrange.Statement{
-// 			Pk: pk,
-// 			C:  c,
-// 			L:  l,
-// 		}
-// 		witness := &paillierrange.Witness{
-// 			Sk: sk,
-// 			X:  x,
-// 			R:  r,
-// 		}
+	ps := sk.PublicKey().PlaintextSpace()
+	for range 128 {
+		xBig, err := crand.Int(prng, lBig)
+		require.NoError(t, err)
+		x, err := ps.New(numct.NewNatFromSaferith((new(saferith.Nat).SetBig(xBig, xBig.BitLen()))))
+		require.NoError(t, err)
+		c, r, err := enc.Encrypt(x, pk, prng)
+		require.NoError(t, err)
 
-// 		err = protocol.ValidateStatement(statement, witness)
-// 		require.NoError(t, err)
+		statement := &paillierrange.Statement{
+			Pk: pk,
+			C:  c,
+			L:  l,
+		}
+		witness := &paillierrange.Witness{
+			Sk: sk,
+			X:  x,
+			R:  r,
+		}
 
-// 		a, s, err := protocol.ComputeProverCommitment(statement, witness)
-// 		require.NoError(t, err)
+		err = protocol.ValidateStatement(statement, witness)
+		require.NoError(t, err)
 
-// 		e := make([]byte, protocol.GetChallengeBytesLength())
-// 		_, err = io.ReadFull(prng, e)
-// 		require.NoError(t, err)
+		a, s, err := protocol.ComputeProverCommitment(statement, witness)
+		require.NoError(t, err)
 
-// 		z, err := protocol.ComputeProverResponse(statement, witness, a, s, e)
-// 		require.NoError(t, err)
+		e := make([]byte, protocol.GetChallengeBytesLength())
+		_, err = io.ReadFull(prng, e)
+		require.NoError(t, err)
 
-// 		err = protocol.Verify(statement, a, e, z)
-// 		require.NoError(t, err)
-// 	}
-// }
+		z, err := protocol.ComputeProverResponse(statement, witness, a, s, e)
+		require.NoError(t, err)
+
+		err = protocol.Verify(statement, a, e, z)
+		require.NoError(t, err)
+	}
+}
 
 // func Test_CheatingProverBelowRange(t *testing.T) {
 // 	t.Parallel()

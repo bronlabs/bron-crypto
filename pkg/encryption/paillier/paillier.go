@@ -20,7 +20,10 @@ func (s *Scheme) Name() encryption.Name {
 }
 
 func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
-	kg := &KeyGenerator{}
+	kg := &KeyGenerator{
+		// TODO: correspond to constants in base package
+		bits: 2048,
+	}
 	for _, opt := range opts {
 		if err := opt(kg); err != nil {
 			return nil, errs.WrapFailed(err, "failed to apply key generator option")
