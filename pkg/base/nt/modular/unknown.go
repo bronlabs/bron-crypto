@@ -5,16 +5,13 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
-func NewSimple(m numct.Modulus) (*SimpleModulus, error) {
-	if m == nil {
-		return nil, errs.NewIsNil("modulus")
-	}
-	return &SimpleModulus{m: m}, nil
+func NewSimple(m numct.Modulus) (*SimpleModulus, ct.Bool) {
+	return &SimpleModulus{m: m}, utils.BoolTo[ct.Bool](m != nil)
 }
 
 type SimpleModulus struct {

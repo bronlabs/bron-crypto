@@ -128,7 +128,7 @@ func (se *SelfEncrypter) SelfEncryptWithNonce(plaintext *Plaintext, nonce *Nonce
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to lift nonce to n-th residues")
 	}
-	gm := Phi(se.pk, plaintext)
+	gm := Phi(se.pk, plaintext).LearnOrder(rn.Group())
 	ct, err := se.sk.PublicKey().CiphertextSpace().New(rn.Mul(gm).Value())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create ciphertext from nat")

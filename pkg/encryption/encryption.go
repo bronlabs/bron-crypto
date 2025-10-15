@@ -17,11 +17,6 @@ type (
 		base.Hashable[PK]
 	}
 	Plaintext any
-	// TODO: remove
-	PlaintextCodec[P Plaintext] struct {
-		Encoder func([]byte) (P, error)
-		Decoder func(P) ([]byte, error)
-	}
 
 	Ciphertext any
 	Nonce      any

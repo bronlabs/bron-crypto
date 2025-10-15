@@ -3,8 +3,6 @@ package znstar
 import (
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt"
@@ -12,32 +10,22 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar/internal"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
+func PaillierGroupsAreEqual[G PaillierGroup](a, b G) bool {
+	return (a.N().Value().Equal(b.N().Value()))&a.ModulusCT().Nat().Equal(b.ModulusCT().Nat()) == ct.True
+}
+
 type PaillierGroup interface {
-	UnitGroup[PaillierUnit]
+	UnitGroup
 	N() *num.NatPlus
-	EmbedRSA(PaillierUnit) (PaillierUnit, error)
-	LiftToNthResidues(RSAUnit) (PaillierUnit, error)
+	EmbedRSA(Unit) (Unit, error)
+	LiftToNthResidues(rsaUnit Unit) (Unit, error)
 }
 
 type PaillierGroupKnownOrder interface {
 	PaillierGroup
-	KnowledgeOfOrder[*modular.OddPrimeSquareFactors, PaillierGroup, PaillierUnit]
-}
-
-type PaillierUnit Unit[PaillierUnit]
-
-// ====================
-
-func AsPaillierGroup[G UnitGroup[U], U Unit[U]](g G) (PaillierGroup, bool) {
-	return utils.ImplementsX[PaillierGroup](g)
-}
-
-func PaillierGroupsAreEqual[G PaillierGroup](a, b G) bool {
-	return a.Order().Equal(b.Order()) && (a.N().Value().Equal(b.N().Value()))&a.ModulusCT().Nat().Equal(b.ModulusCT().Nat()) == ct.True
+	KnowledgeOfOrder[*modular.OddPrimeSquareFactors, PaillierGroup]
 }
 
 func SamplePaillierGroup(factorBits uint, prng io.Reader) (PaillierGroupKnownOrder, error) {
@@ -69,15 +57,16 @@ func NewPaillierGroup(p, q *num.NatPlus) (PaillierGroupKnownOrder, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create ZMod")
 	}
-	arith, ok := modular.NewOddPrimeSquareFactors(p.Value(), q.Value())
+	exp, ok := modular.NewOddPrimeSquareFactors(p.Value(), q.Value())
 	if ok == ct.False {
 		return nil, errs.NewValue("failed to create OddPrimeFactors")
 	}
 	return &paillierGroupKnownOrder{
-		UnitGroupKnownOrderTrait: UnitGroupKnownOrderTrait[*modular.OddPrimeSquareFactors]{
+		UZMod: UZMod[*modular.OddPrimeSquareFactors]{
 			zMod:  zMod,
-			arith: arith,
+			arith: exp,
 		},
+		n: n,
 	}, nil
 }
 
@@ -89,21 +78,87 @@ func NewPaillierGroupOfUnknownOrder(n2, n *num.NatPlus) (PaillierGroup, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create ZMod")
 	}
+	arith, ok := modular.NewSimple(zMod.Modulus().ModulusCT())
+	if ok == ct.False {
+		return nil, errs.NewFailed("failed to create SimpleModulus")
+	}
+
 	return &paillierGroup{
-		UnitGroupTrait: UnitGroupTrait{
-			zMod: zMod,
+		UZMod: UZMod[*modular.SimpleModulus]{
+			zMod:  zMod,
+			arith: arith,
 		},
 		n: n,
 	}, nil
 }
 
 type paillierGroup struct {
-	UnitGroupTrait
+	UZMod[*modular.SimpleModulus]
 	n *num.NatPlus
 }
 
 func (pg *paillierGroup) N() *num.NatPlus {
 	return pg.n
+}
+
+func (pg *paillierGroup) FromUint(input *num.Uint) (Unit, error) {
+	u, err := pg.UZMod.FromUint(input)
+	if err != nil {
+		return nil, err
+	}
+	u.(*unit).g = pg
+	return u, nil
+}
+
+func (pg *paillierGroup) FromNatCT(input *numct.Nat) (Unit, error) {
+	u, err := pg.UZMod.FromNatCT(input)
+	if err != nil {
+		return nil, err
+	}
+	u.(*unit).g = pg
+	return u, nil
+}
+
+func (pg *paillierGroup) One() Unit {
+	u := pg.UZMod.One()
+	u.(*unit).g = pg
+	return u
+}
+
+func (pg *paillierGroup) Random(prng io.Reader) (Unit, error) {
+	u, err := pg.UZMod.Random(prng)
+	if err != nil {
+		return nil, err
+	}
+	u.(*unit).g = pg
+	return u, nil
+}
+
+func (pg *paillierGroup) FromBytes(input []byte) (Unit, error) {
+	u, err := pg.UZMod.FromBytes(input)
+	if err != nil {
+		return nil, err
+	}
+	u.(*unit).g = pg
+	return u, nil
+}
+
+func (pg *paillierGroup) FromCardinal(input cardinal.Cardinal) (Unit, error) {
+	u, err := pg.UZMod.FromCardinal(input)
+	if err != nil {
+		return nil, err
+	}
+	u.(*unit).g = pg
+	return u, nil
+}
+
+func (pg *paillierGroup) FromUint64(value uint64) (Unit, error) {
+	u, err := pg.UZMod.FromUint64(value)
+	if err != nil {
+		return nil, err
+	}
+	u.(*unit).g = pg
+	return u, nil
 }
 
 func (pg *paillierGroup) EmbedRSA(rsaUnit Unit) (Unit, error) {
@@ -117,7 +172,7 @@ func (pg *paillierGroup) EmbedRSA(rsaUnit Unit) (Unit, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create unit from rsaUnit")
 	}
-	return &UnitTrait{v: v.Value(), g: pg}, nil
+	return &unit{v: v.Value(), g: pg}, nil
 }
 
 func (pg *paillierGroup) LiftToNthResidues(rsaUnit Unit) (Unit, error) {
@@ -135,11 +190,12 @@ func (pg *paillierGroup) LiftToNthResidues(rsaUnit Unit) (Unit, error) {
 }
 
 type paillierGroupKnownOrder struct {
-	UnitGroupKnownOrderTrait[*modular.OddPrimeSquareFactors]
+	UZMod[*modular.OddPrimeSquareFactors]
+	n *num.NatPlus
 }
 
 func (pg *paillierGroupKnownOrder) N() *num.NatPlus {
-	return num.NPlus().FromModulus(pg.Arithmetic().CrtModN.N)
+	return pg.n
 }
 
 func (pg *paillierGroupKnownOrder) EmbedRSA(rsaUnit Unit) (Unit, error) {
@@ -153,10 +209,10 @@ func (pg *paillierGroupKnownOrder) EmbedRSA(rsaUnit Unit) (Unit, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create unit from rsaUnit")
 	}
-	return &UnitKnownOrderTrait{v: v.Value(), g: pg}, nil
+	return &unit{v: v.Value(), g: pg}, nil
 }
 
-func (pg *paillierGroup) LiftToNthResidues(rsaUnit Unit) (Unit, error) {
+func (pg *paillierGroupKnownOrder) LiftToNthResidues(rsaUnit Unit) (Unit, error) {
 	if rsaUnit == nil {
 		return nil, errs.NewValue("rsaUnit must not be nil")
 	}
@@ -167,54 +223,88 @@ func (pg *paillierGroup) LiftToNthResidues(rsaUnit Unit) (Unit, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to lift rsaUnit to Paillier group")
 	}
-	return lifted.Exp(pg.n.Nat()), nil
+	var v numct.Nat
+	pg.arith.ExpToN(&v, lifted.Value())
+	return &unit{v: &v, g: pg}, nil
 }
 
 func (pg *paillierGroupKnownOrder) Arithmetic() *modular.OddPrimeSquareFactors {
 	return pg.arith
 }
 
-func (pg *paillierGroupKnownOrder) ForgetOrder() PaillierGroup {
-	return &paillierGroup{
-		uZModKnownOrder: UnitGroupKnownOrderTrait[*modular.OddPrimeSquareFactors]{
-			zMod:  pg.zMod,
-			arith: new(modular.OddPrimeSquareFactors),
-		},
-		n: pg.n,
-	}
-}
-
 func (pg *paillierGroupKnownOrder) FromUint(input *num.Uint) (Unit, error) {
-	u, err := pg.paillierGroup.FromUint(input)
+	u, err := pg.UZMod.FromUint(input)
 	if err != nil {
 		return nil, err
 	}
-	// Fix the group pointer to point to the known order wrapper
-	u.(*unitKnownOrder[*modular.OddPrimeSquareFactors]).g = pg
+	// Fix the group pointer to point to the wrapper
+	u.(*unit).g = pg
 	return u, nil
 }
 
-func (pg *paillierGroupKnownOrder) EmbedRSA(rsaUnit Unit) (Unit, error) {
-	out, err := pg.paillierGroup.EmbedRSA(rsaUnit)
+func (pg *paillierGroupKnownOrder) FromNatCT(input *numct.Nat) (Unit, error) {
+	u, err := pg.UZMod.FromNatCT(input)
 	if err != nil {
 		return nil, err
 	}
-	out.(*unitKnownOrder[*modular.OddPrimeSquareFactors]).g = pg
-	return out, nil
+	// Fix the group pointer to point to the wrapper
+	u.(*unit).g = pg
+	return u, nil
 }
 
-func (pg *paillierGroupKnownOrder) LiftToNthResidues(rsaUnit Unit) (Unit, error) {
-	if rsaUnit == nil {
-		return nil, errs.NewValue("rsaUnit must not be nil")
-	}
-	if rsaUnit.Modulus().Value().Equal(pg.Modulus().Value()) == ct.False {
-		return nil, errs.NewValue("rsaUnit must be in the RSA group with modulus equal to the Paillier modulus")
-	}
-	var rn numct.Nat
-	pg.arith.ExpToN(&rn, rsaUnit.Value())
-	v, err := num.NewUintGivenModulus(&rn, pg.arith.N2)
+func (pg *paillierGroupKnownOrder) One() Unit {
+	u := pg.UZMod.One()
+	u.(*unit).g = pg
+	return u
+}
+
+func (pg *paillierGroupKnownOrder) Random(prng io.Reader) (Unit, error) {
+	u, err := pg.UZMod.Random(prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create unit from rsaUnit")
+		return nil, err
 	}
-	return &UnitKnownOrderTrait[*modular.OddPrimeSquareFactors]{v: v.Value(), g: pg}, nil
+	u.(*unit).g = pg
+	return u, nil
+}
+
+func (pg *paillierGroupKnownOrder) FromBytes(input []byte) (Unit, error) {
+	u, err := pg.UZMod.FromBytes(input)
+	if err != nil {
+		return nil, err
+	}
+	u.(*unit).g = pg
+	return u, nil
+}
+
+func (pg *paillierGroupKnownOrder) FromCardinal(input cardinal.Cardinal) (Unit, error) {
+	u, err := pg.UZMod.FromCardinal(input)
+	if err != nil {
+		return nil, err
+	}
+	u.(*unit).g = pg
+	return u, nil
+}
+
+func (pg *paillierGroupKnownOrder) FromUint64(value uint64) (Unit, error) {
+	u, err := pg.UZMod.FromUint64(value)
+	if err != nil {
+		return nil, err
+	}
+	u.(*unit).g = pg
+	return u, nil
+}
+
+func (pg *paillierGroupKnownOrder) ForgetOrder() PaillierGroup {
+	arith, ok := modular.NewSimple(pg.ModulusCT())
+	if ok == ct.False {
+		panic(errs.NewFailed("failed to create SimpleModulus"))
+	}
+
+	return &paillierGroup{
+		UZMod: UZMod[*modular.SimpleModulus]{
+			zMod:  pg.zMod,
+			arith: arith,
+		},
+		n: pg.n,
+	}
 }

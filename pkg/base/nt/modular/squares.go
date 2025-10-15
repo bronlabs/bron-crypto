@@ -6,7 +6,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/crt"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
@@ -149,7 +148,6 @@ func (m *OddPrimeSquareFactors) ModExp(out, base, exp *numct.Nat) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 	fmt.Println(m.Q)
-	panic(errs.NewFailed("something"))
 	go func() {
 		defer wg.Done()
 		var ep numct.Nat

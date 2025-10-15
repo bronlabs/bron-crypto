@@ -29,8 +29,8 @@ func TestNewUnitGroupOfUnknownOrder(t *testing.T) {
 			m, err := num.NPlus().FromUint64(tc.modulus)
 			require.NoError(t, err)
 
-			// Create unknown order group
-			uzmod, err := znstar.NewUnitGroupOfUnknownOrder(m)
+			// Use OddPrimeFactors as the arithmetic type
+			uzmod, err := znstar.NewRSAGroupOfUnknownOrder(m)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -49,7 +49,7 @@ func TestNewUnit(t *testing.T) {
 	m, err := num.NPlus().FromUint64(15)
 	require.NoError(t, err)
 
-	uzmod, err := znstar.NewUnitGroupOfUnknownOrder(m)
+	uzmod, err := znstar.NewRSAGroupOfUnknownOrder(m)
 	require.NoError(t, err)
 
 	zmod, err := num.NewZMod(m)
@@ -133,7 +133,7 @@ func TestUnitGroupOperations(t *testing.T) {
 	m, err := num.NPlus().FromUint64(15)
 	require.NoError(t, err)
 
-	uzmod, err := znstar.NewUnitGroupOfUnknownOrder(m)
+	uzmod, err := znstar.NewRSAGroupOfUnknownOrder(m)
 	require.NoError(t, err)
 
 	// Test One
@@ -162,7 +162,7 @@ func TestUnitArithmetic(t *testing.T) {
 	m, err := num.NPlus().FromUint64(15)
 	require.NoError(t, err)
 
-	uzmod, err := znstar.NewUnitGroupOfUnknownOrder(m)
+	uzmod, err := znstar.NewRSAGroupOfUnknownOrder(m)
 	require.NoError(t, err)
 
 	zmod, err := num.NewZMod(m)
@@ -205,7 +205,7 @@ func TestUnitExponentiation(t *testing.T) {
 	m, err := num.NPlus().FromUint64(15)
 	require.NoError(t, err)
 
-	uzmod, err := znstar.NewUnitGroupOfUnknownOrder(m)
+	uzmod, err := znstar.NewRSAGroupOfUnknownOrder(m)
 	require.NoError(t, err)
 
 	zmod, err := num.NewZMod(m)
@@ -283,7 +283,7 @@ func TestUnitGroupFromUint(t *testing.T) {
 	m, err := num.NPlus().FromUint64(15)
 	require.NoError(t, err)
 
-	uzmod, err := znstar.NewUnitGroupOfUnknownOrder(m)
+	uzmod, err := znstar.NewRSAGroupOfUnknownOrder(m)
 	require.NoError(t, err)
 
 	zmod, err := num.NewZMod(m)

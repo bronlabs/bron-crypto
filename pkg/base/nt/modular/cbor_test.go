@@ -20,8 +20,8 @@ func TestSimpleModulus_CBOR(t *testing.T) {
 	require.Equal(t, ct.True, ok)
 
 	// Create SimpleModulus
-	simple, err := modular.NewSimple(m)
-	require.NoError(t, err)
+	simple, ok2 := modular.NewSimple(m)
+	require.Equal(t, ct.True, ok2)
 	require.NotNil(t, simple)
 
 	// Marshal to CBOR
@@ -151,8 +151,8 @@ func TestArithmetic_InterfaceSerialization_SimpleModulus(t *testing.T) {
 	m, ok := numct.NewModulusOdd(n)
 	require.Equal(t, ct.True, ok)
 
-	original, err := modular.NewSimple(m)
-	require.NoError(t, err)
+	original, ok2 := modular.NewSimple(m)
+	require.Equal(t, ct.True, ok2)
 
 	// Test serializing through the Arithmetic interface
 	var arith modular.Arithmetic = original
@@ -168,8 +168,8 @@ func TestArithmetic_InterfaceSerialization_SimpleModulus(t *testing.T) {
 	require.NotNil(t, decoded)
 
 	// Verify it's a SimpleModulus
-	decodedSimple, ok2 := decoded.(*modular.SimpleModulus)
-	require.True(t, ok2, "decoded should be *SimpleModulus")
+	decodedSimple, okType := decoded.(*modular.SimpleModulus)
+	require.True(t, okType, "decoded should be *SimpleModulus")
 	require.NotNil(t, decodedSimple)
 
 	// Verify the modulus matches
@@ -211,8 +211,8 @@ func TestArithmetic_InterfaceSerialization_OddPrimeFactors(t *testing.T) {
 	require.NotNil(t, decoded)
 
 	// Verify it's an OddPrimeFactors
-	decodedOPF, ok2 := decoded.(*modular.OddPrimeFactors)
-	require.True(t, ok2, "decoded should be *OddPrimeFactors")
+	decodedOPF, okType := decoded.(*modular.OddPrimeFactors)
+	require.True(t, okType, "decoded should be *OddPrimeFactors")
 	require.NotNil(t, decodedOPF)
 
 	// Verify the modulus matches
@@ -254,8 +254,8 @@ func TestArithmetic_InterfaceSerialization_OddPrimeSquareFactors(t *testing.T) {
 	require.NotNil(t, decoded)
 
 	// Verify it's an OddPrimeSquareFactors
-	decodedOPSF, ok2 := decoded.(*modular.OddPrimeSquareFactors)
-	require.True(t, ok2, "decoded should be *OddPrimeSquareFactors")
+	decodedOPSF, okType := decoded.(*modular.OddPrimeSquareFactors)
+	require.True(t, okType, "decoded should be *OddPrimeSquareFactors")
 	require.NotNil(t, decodedOPSF)
 
 	// Verify the modulus matches

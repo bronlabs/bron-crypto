@@ -80,12 +80,15 @@ func Test_HappyPath(t *testing.T) {
 // 	t.Parallel()
 
 // 	prng := crand.Reader
-// 	pk, sk, err := paillier.KeyGen(primeLen, prng)
+// 	scheme := paillier.NewScheme()
+// 	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(primeLen))
+// 	require.NoError(t, err)
+// 	sk, pk, err := keyGenerator.Generate(prng)
 // 	require.NoError(t, err)
 
 // 	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
-// 	l := new(saferith.Nat).SetBig(lBig, lBig.BitLen())
-// 	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurity, prng)
+// 	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
+// 	protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, prng)
 // 	require.NoError(t, err)
 
 // 	lowBound := new(big.Int).Neg(lBig)

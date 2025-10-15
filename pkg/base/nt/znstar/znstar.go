@@ -1,19 +1,44 @@
 package znstar
 
 import (
+	"io"
+
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar/internal"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
-type (
-	UnitGroup[U unitCrtp[U]]                                          = internal.UnitGroup[U]
-	KnowledgeOfOrder[A modular.Arithmetic, G UnitGroup[U], U Unit[U]] = internal.KnowledgeOfOrder[A, G, U]
-	unitCrtp[U interface {
-		algebra.MultiplicativeGroupElement[U]
-		algebra.MultiplicativeSemiModuleElement[U, *num.Nat]
-	}] = internal.UnitCrtp[U]
+type UnitGroup interface {
+	algebra.MultiplicativeGroup[Unit]
+	algebra.MultiplicativeSemiModule[Unit, *num.Nat]
+	algebra.Quotient[Unit, *num.NatPlus, *num.Uint]
 
-	Unit[U unitCrtp[U]] = internal.Unit[U]
-)
+	ModulusCT() numct.Modulus
+	Random(io.Reader) (Unit, error)
+	AmbientGroup() *num.ZMod
+	FromUint(*num.Uint) (Unit, error)
+	FromNatCT(*numct.Nat) (Unit, error)
+}
+
+type KnowledgeOfOrder[A modular.Arithmetic, G UnitGroup] interface {
+	Arithmetic() A
+	ForgetOrder() G
+}
+
+type Unit interface {
+	algebra.MultiplicativeGroupElement[Unit]
+	algebra.MultiplicativeSemiModuleElement[Unit, *num.Nat]
+	algebra.Residue[Unit, *num.NatPlus]
+
+	IsUnknownOrder() bool
+	Group() UnitGroup
+	ModulusCT() numct.Modulus
+	ForgetOrder() Unit
+	LearnOrder(UnitGroup) Unit
+	algebra.ExponentiationBase[Unit, *num.Nat]
+	algebra.IntegerExponentiationBase[Unit, *num.Int]
+	base.Transparent[*numct.Nat]
+	base.Clonable[Unit]
+}
