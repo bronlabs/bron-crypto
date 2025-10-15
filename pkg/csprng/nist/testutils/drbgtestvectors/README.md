@@ -1,0 +1,2 @@
+# Official Nist Test Vectors for RNG Validation
+Downloaded from https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/drbg/drbgtestvectors.zip and unzipped in this folder.
