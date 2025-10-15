@@ -1,0 +1,66 @@
+package hjky
+
+import (
+	"encoding/hex"
+	"fmt"
+	"io"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+)
+
+const (
+	transcriptLabel  = "BRON_CRYPTO_HJKY-"
+	coefficientLabel = "BRON_CRYPTO_HJKY_COEFFICIENT-"
+)
+
+type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
+	sessionId       network.SID
+	sharingId       sharing.ID
+	accessStructure sharing.ThresholdAccessStructure
+	group           algebra.PrimeGroup[G, S]
+	field           algebra.PrimeField[S]
+	scheme          *feldman.Scheme[G, S]
+	round           network.Round
+	prng            io.Reader
+	tape            transcripts.Transcript
+	state           State[G, S]
+}
+
+type State[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
+	verificationVectors map[sharing.ID]feldman.VerificationVector[G, S]
+	share               *feldman.Share[S]
+}
+
+func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sid network.SID, id sharing.ID, as sharing.ThresholdAccessStructure, g algebra.PrimeGroup[G, S], tape transcripts.Transcript, prng io.Reader) (*Participant[G, S], error) {
+	if tape == nil || prng == nil || !as.Shareholders().Contains(id) {
+		return nil, errs.NewValidation("invalid arguments")
+	}
+
+	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](g.ScalarStructure())
+	scheme, err := feldman.NewScheme(g.Generator(), as.Threshold(), as.Shareholders())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create feldman scheme")
+	}
+	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sid[:])))
+
+	return &Participant[G, S]{
+		sessionId:       sid,
+		sharingId:       id,
+		accessStructure: as,
+		group:           g,
+		field:           field,
+		scheme:          scheme,
+		tape:            tape,
+		round:           1,
+		prng:            prng,
+	}, nil
+}
+
+func (p *Participant[G, S]) SharingID() sharing.ID {
+	return p.sharingId
+}

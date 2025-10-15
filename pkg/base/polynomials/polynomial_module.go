@@ -238,6 +238,10 @@ func (p *ModuleValuedPolynomial[ME, S]) Eval(at S) ME {
 	return out
 }
 
+func (p *ModuleValuedPolynomial[ME, S]) Coefficients() []ME {
+	return p.coeffs
+}
+
 func (p *ModuleValuedPolynomial[ME, S]) MarshalCBOR() ([]byte, error) {
 	dto := &moduleValuedPolynomialDTO[ME, S]{
 		Coeffs: p.coeffs,
