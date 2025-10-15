@@ -1,0 +1,42 @@
+package aor
+
+import (
+	"iter"
+	"slices"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+)
+
+func validateIncomingBroadcastMessages[MB network.Message](p *Participant, rIn network.Round, uIn network.RoundMessages[MB]) (iter.Seq2[sharing.ID, MB], error) {
+	if rIn != p.round {
+		return nil, errs.NewFailed("invalid round")
+	}
+
+	incomingParties := uIn.Keys()
+	for id := range p.quorum.Iter() {
+		if id == p.id {
+			continue
+		}
+		if !slices.Contains(incomingParties, id) {
+			return nil, errs.NewFailed("missing broadcast message from %d", id)
+		}
+	}
+
+	return func(yield func(p sharing.ID, m MB) bool) {
+		for id := range p.quorum.Iter() {
+			if id == p.id {
+				continue
+			}
+
+			u, ok := uIn.Get(id)
+			if !ok {
+				panic("this should never happen: missing broadcast message")
+			}
+			if !yield(id, u) {
+				return
+			}
+		}
+	}, nil
+}
