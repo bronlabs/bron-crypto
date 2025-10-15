@@ -38,38 +38,3 @@ type Round4P2P struct {
 type Round5P2P struct {
 	OtR5 *vsot.Round5P2P `cbor:"otR5"`
 }
-
-func (r1b *Round1Broadcast[P, B, S]) Bytes() []byte {
-	// TODO
-	panic("not implemented")
-}
-
-func (r1u *Round1P2P[P, B, S]) Bytes() []byte {
-	// TODO
-	panic("not implemented")
-}
-
-func (r2b *Round2Broadcast[P, B, S]) Bytes() []byte {
-	// TODO
-	panic("not implemented")
-}
-
-func (r2u *Round2P2P[P, B, S]) Bytes() []byte {
-	// TODO
-	panic("not implemented")
-}
-
-func (r3u *Round3P2P) Bytes() []byte {
-	// TODO
-	panic("not implemented")
-}
-
-func (r4u *Round4P2P) Bytes() []byte {
-	// TODO
-	panic("not implemented")
-}
-
-func (r5u *Round5P2P) Bytes() []byte {
-	// TODO
-	panic("not implemented")
-}
