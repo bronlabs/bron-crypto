@@ -47,7 +47,7 @@ func (p *Participant) Round2(r1 network.RoundMessages[*Round1Broadcast]) (*Round
 	for id, m := range incomingMessages {
 		p.state.rCommitments[id] = m.Commitment
 	}
-	//p.writeCommitmentsToTranscript()
+	p.writeCommitmentsToTranscript()
 
 	// step 2.1: broadcast your witness and your sample r_i
 	p.round++
