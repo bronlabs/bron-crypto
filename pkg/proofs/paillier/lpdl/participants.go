@@ -193,13 +193,13 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 		return nil, errs.WrapFailed(err, "couldn't initialise range protocol")
 	}
 
-	qThirdAsPlaintext, err := secretKey.PublicKey().PlaintextSpace().New(qThirdNat)
+	qThirdAsPlaintext, err := secretKey.PublicKey().PlaintextSpace().FromNat(qThirdNat)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't convert q/3 to plaintext")
 	}
 
 	xNat := numct.NewNatFromBytes(x.Bytes())
-	xAsPlaintext, err := secretKey.PublicKey().PlaintextSpace().New(xNat)
+	xAsPlaintext, err := secretKey.PublicKey().PlaintextSpace().FromNat(xNat)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't convert x to plaintext")
 	}

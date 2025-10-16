@@ -1,4 +1,4 @@
-package zkcompiler
+package zk
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/commitments"

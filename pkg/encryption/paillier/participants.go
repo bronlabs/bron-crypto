@@ -129,11 +129,7 @@ func (se *SelfEncrypter) SelfEncryptWithNonce(plaintext *Plaintext, nonce *Nonce
 		return nil, errs.WrapFailed(err, "failed to lift nonce to n-th residues")
 	}
 	gm := Phi(se.pk, plaintext).LearnOrder(rn.Group())
-	ct, err := se.sk.PublicKey().CiphertextSpace().New(rn.Mul(gm).Value())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create ciphertext from nat")
-	}
-	return ct, nil
+	return &Ciphertext{u: rn.Mul(gm)}, nil
 }
 
 func (se *SelfEncrypter) SelfEncryptMany(plaintexts []*Plaintext, prng io.Reader) ([]*Ciphertext, []*Nonce, error) {
@@ -196,7 +192,7 @@ func (d *Decrypter) Decrypt(ciphertext *Ciphertext) (*Plaintext, error) {
 		d.sk.Arithmetic().Q.Factor.ModMul(&mq, &mq, d.sk.hq)
 	}()
 	wg.Wait()
-	out, err := d.sk.PublicKey().PlaintextSpace().New(d.sk.Arithmetic().CrtModN.Params.Recombine(&mp, &mq))
+	out, err := d.sk.PublicKey().PlaintextSpace().FromNat(d.sk.Arithmetic().CrtModN.Params.Recombine(&mp, &mq))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create plaintext from recombined nat")
 	}

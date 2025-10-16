@@ -78,8 +78,10 @@ func (us *UZMod[X]) One() Unit {
 }
 
 func (us *UZMod[X]) Random(prng io.Reader) (Unit, error) {
-	r := us.zMod.Zero()
-	var err error
+	r, err := us.zMod.Random(prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to generate random element")
+	}
 	for !r.IsUnit() {
 		r, err = us.zMod.Random(prng)
 		if err != nil {

@@ -86,6 +86,20 @@ func (*Integers) FromNat(value *Nat) (*Int, error) {
 	return &Int{v: numct.NewIntFromBytes(value.Bytes())}, nil
 }
 
+func (*Integers) FromNatCT(value *numct.Nat) (*Int, error) {
+	if value == nil {
+		return nil, errs.NewIsNil("value must not be nil")
+	}
+	return &Int{v: numct.NewIntFromBytes(value.Bytes())}, nil
+}
+
+func (*Integers) FromIntCT(value *numct.Int) (*Int, error) {
+	if value == nil {
+		return nil, errs.NewIsNil("value must not be nil")
+	}
+	return &Int{v: value.Clone()}, nil
+}
+
 func (*Integers) FromInt64(value int64) *Int {
 	return &Int{v: numct.NewInt(value)}
 }
@@ -308,11 +322,7 @@ func (i *Int) IsInRange(modulus *NatPlus) bool {
 	if modulus == nil {
 		panic("argument is nil")
 	}
-	m, ok := numct.NewModulus(modulus.v)
-	if ok == ct.False {
-		panic(errs.NewFailed("modulus is not valid"))
-	}
-	return m.IsInRange(i.Abs().v) == ct.True
+	return modulus.ModulusCT().IsInRange(i.Abs().v) == ct.True
 }
 
 func (i *Int) Mod(modulus *NatPlus) *Uint {

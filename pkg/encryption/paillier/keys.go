@@ -14,17 +14,14 @@ func NewPrivateKey(group znstar.PaillierGroupKnownOrder) (*PrivateKey, error) {
 	if group == nil {
 		return nil, errs.NewIsNil("m")
 	}
-	var hp, hq numct.Nat
-	group.Arithmetic().P.Factor.ModInv(&hp, group.Arithmetic().Q.Factor.Nat())
-	group.Arithmetic().P.Factor.ModNeg(&hp, &hp)
-	group.Arithmetic().Q.Factor.ModInv(&hq, group.Arithmetic().P.Factor.Nat())
-	group.Arithmetic().Q.Factor.ModNeg(&hq, &hq)
 
-	return &PrivateKey{
+	sk := &PrivateKey{
 		group: group,
-		hp:    &hp,
-		hq:    &hq,
-	}, nil
+		hp:    numct.NewNat(0),
+		hq:    numct.NewNat(0),
+	}
+	sk.precompute()
+	return sk, nil
 }
 
 type PrivateKey struct {
@@ -37,14 +34,19 @@ type PrivateKey struct {
 	once sync.Once
 }
 
-func (sk *PrivateKey) Group() znstar.PaillierGroupKnownOrder {
-	return sk.group
-}
-
-func (sk *PrivateKey) cachePublicKey() {
+func (sk *PrivateKey) precompute() {
 	sk.once.Do(func() {
+		sk.group.Arithmetic().P.Factor.ModInv(sk.hp, sk.group.Arithmetic().Q.Factor.Nat())
+		sk.group.Arithmetic().P.Factor.ModNeg(sk.hp, sk.hp)
+		sk.group.Arithmetic().Q.Factor.ModInv(sk.hq, sk.group.Arithmetic().P.Factor.Nat())
+		sk.group.Arithmetic().Q.Factor.ModNeg(sk.hq, sk.hq)
 		sk.pk = &PublicKey{group: sk.group.ForgetOrder()}
 	})
+
+}
+
+func (sk *PrivateKey) Group() znstar.PaillierGroupKnownOrder {
+	return sk.group
 }
 
 func (sk *PrivateKey) Arithmetic() *modular.OddPrimeSquareFactors {
@@ -52,7 +54,7 @@ func (sk *PrivateKey) Arithmetic() *modular.OddPrimeSquareFactors {
 }
 
 func (sk *PrivateKey) PublicKey() *PublicKey {
-	sk.cachePublicKey()
+	sk.precompute()
 	return sk.pk
 }
 

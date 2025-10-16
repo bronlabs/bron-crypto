@@ -23,7 +23,7 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}
 
-	bAsPlaintext, err := verifier.pk.PlaintextSpace().New(verifier.state.b.Value())
+	bAsPlaintext, err := verifier.pk.PlaintextSpace().FromNat(verifier.state.b.Value())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create plaintext from nat")
 	}

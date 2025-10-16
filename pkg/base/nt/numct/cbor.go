@@ -104,8 +104,10 @@ func (m *ModulusOddPrime) UnmarshalCBOR(data []byte) error {
 	if ok == ct.False {
 		return errs.NewValue("not a valid odd prime modulus")
 	}
-	m.Set(mod)
-	m.cacheMont()
+	// Copy all fields including mSub2 and once from the newly created modulus
+	*m = *mod
+	// Ensure montgomery parameters are computed
+	m.ensureMont()
 	return nil
 }
 
@@ -147,7 +149,10 @@ func (m *ModulusOdd) UnmarshalCBOR(data []byte) error {
 	if ok == ct.False {
 		return errs.NewValue("not a valid odd modulus")
 	}
-	m.Set(mod)
+	// Copy all fields including mSub2, mNum, and once from the newly created modulus
+	*m = *mod
+	// Ensure montgomery parameters are computed
+	m.ensureMont()
 	return nil
 }
 

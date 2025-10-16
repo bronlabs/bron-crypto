@@ -20,7 +20,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 
 	rootTranscript := verifier.Transcript.Clone()
 
-	zero, err := verifier.paillierPublicKey.PlaintextSpace().New(numct.NatZero())
+	zero, err := verifier.paillierPublicKey.PlaintextSpace().FromNat(numct.NatZero())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create plaintext zero")
 	}
@@ -33,7 +33,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 
 	verifier.state.x = sigand.ComposeStatements(slices.Collect(iterutils.Map(slices.Values(ciphertexts), func(x *paillier.Ciphertext) *nthroots.Statement { return nthroots.NewStatement(x.Value()) }))...)
 	verifier.state.y = sigand.ComposeWitnesses(slices.Collect(iterutils.Map(slices.Values(nonces), func(y *paillier.Nonce) *nthroots.Witness { return nthroots.NewWitness(y.Value()) }))...)
-	verifier.state.rootsProver, err = sigma.NewProver(verifier.SessionId, rootTranscript.Clone(), verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
+	verifier.state.rootsProver, err = sigma.NewProver([]byte(verifier.SessionId[:]), rootTranscript.Clone(), verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create sigma protocol prover")
 	}
@@ -60,7 +60,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 
 	prover.state.x = input.X
 	rootTranscript := prover.Transcript.Clone()
-	prover.state.rootsVerifier, err = sigma.NewVerifier(prover.SessionId, rootTranscript.Clone(), prover.multiNthRootsProtocol, prover.state.x, prover.Prng)
+	prover.state.rootsVerifier, err = sigma.NewVerifier(prover.SessionId[:], rootTranscript.Clone(), prover.multiNthRootsProtocol, prover.state.x, prover.Prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Nth root verifier")
 	}
@@ -101,11 +101,16 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	}
 
 	// P calculates a y', the Nth root of x
+	// Computing in (Z/NZ)* using CrtModN, with exponent = N^(-1) mod φ(N)
 	// see: Yehuda Lindell's answer (https://crypto.stackexchange.com/a/46745) for reference
 	var m numct.Nat
 	prover.paillierSecretKey.Arithmetic().CrtModN.Phi.ModInv(&m, prover.paillierSecretKey.Group().N().Value())
 
-	var yPrime []*numct.Nat
+	// TODO: clean up and put in a helper
+	yPrime := make([]*numct.Nat, prover.k)
+	for i := range yPrime {
+		yPrime[i] = numct.NewNat(0)
+	}
 	prover.paillierSecretKey.Arithmetic().CrtModN.MultiBaseExp(
 		yPrime,
 		sliceutils.MapCast[[]*numct.Nat](prover.state.x, func(s *nthroots.Statement) *numct.Nat { return s.X.Value() }),
@@ -129,7 +134,10 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	}
 
 	for i := 0; i < verifier.k; i++ {
-		if input.YPrime[i].Equal(verifier.state.y[i].W.Value()) == 0 {
+		// Reduce y mod N for comparison (yPrime is computed mod N, but y is in (Z/N²Z)*)
+		var yModN numct.Nat
+		verifier.paillierPublicKey.N().Mod(&yModN, verifier.state.y[i].W.Value())
+		if input.YPrime[i].Equal(&yModN) == 0 {
 			// V rejects if y != y'
 			return errs.NewVerification("failed to verify Paillier public key")
 		}

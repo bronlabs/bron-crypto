@@ -98,13 +98,13 @@ func (m *OddPrimeFactors) ModExp(out, base, exp *numct.Nat) {
 	go func() {
 		defer wg.Done()
 		m.PhiP.Mod(&ep, exp)
-		ep.Select(base.Coprime(m.Params.PNat), exp, &ep)
+		ep.Select(base.Coprime(m.Params.PNat), &ep, exp)
 		(m.Params.P).ModExp(&mp, base, &ep)
 	}()
 	go func() {
 		defer wg.Done()
 		m.PhiQ.Mod(&eq, exp)
-		eq.Select(base.Coprime(m.Params.QNat), exp, &eq)
+		eq.Select(base.Coprime(m.Params.QNat), &eq, exp)
 		m.Params.Q.ModExp(&mq, base, &eq)
 	}()
 	wg.Wait()
@@ -124,10 +124,6 @@ func (m *OddPrimeFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp
 	}
 	k := len(bases)
 
-	var ep, eq numct.Nat
-	m.PhiP.Mod(&ep, exp)
-	m.PhiQ.Mod(&eq, exp)
-
 	var wg sync.WaitGroup
 	wg.Add(k)
 	for i := range k {
@@ -139,14 +135,16 @@ func (m *OddPrimeFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp
 			wgInner.Add(2)
 			go func() {
 				defer wgInner.Done()
-				var epi numct.Nat
-				epi.Select(bi.Coprime(m.Params.PNat), exp, &ep)
+				var ep, epi numct.Nat
+				m.PhiP.Mod(&ep, exp)
+				epi.Select(bi.Coprime(m.Params.PNat), &ep, exp)
 				m.Params.P.ModExp(&mp, bi, &epi)
 			}()
 			go func() {
 				defer wgInner.Done()
-				var eqi numct.Nat
-				eqi.Select(bi.Coprime(m.Params.QNat), exp, &eq)
+				var eq, eqi numct.Nat
+				m.PhiQ.Mod(&eq, exp)
+				eqi.Select(bi.Coprime(m.Params.QNat), &eq, exp)
 				m.Params.Q.ModExp(&mq, bi, &eqi)
 			}()
 			wgInner.Wait()

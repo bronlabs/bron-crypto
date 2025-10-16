@@ -70,17 +70,11 @@ func (s *Scheme) Decrypter(sk *PrivateKey, opts ...DecrypterOption) (*Decrypter,
 }
 
 func Phi(receiver *PublicKey, plaintext *Plaintext) znstar.Unit {
-	var shiftedPlaintext numct.Nat
-	receiver.N().ModInt(&shiftedPlaintext, plaintext.ValueCT())
-	var out numct.Nat
-	receiver.group.ModulusCT().ModMul(&out, &shiftedPlaintext, receiver.N().Nat())
-	out.Increment()
-
-	u, err := receiver.CiphertextSpace().New(&out)
+	out, err := receiver.group.Phi(plaintext.ValueCT())
 	if err != nil {
 		panic(err)
 	}
-	return u.Value()
+	return out
 }
 
 func lp(sk *PrivateKey, x *numct.Nat) {

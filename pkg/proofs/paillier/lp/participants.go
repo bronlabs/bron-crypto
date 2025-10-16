@@ -6,6 +6,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroots"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
@@ -25,7 +26,7 @@ type Participant struct {
 	multiNthRootsProtocol sigma.Protocol[sigand.Statement[*nthroots.Statement], sigand.Witness[*nthroots.Witness], sigand.Commitment[*nthroots.Commitment], sigand.State[*nthroots.State], sigand.Response[*nthroots.Response]]
 	Prng                  io.Reader
 	Round                 int
-	SessionId             []byte
+	SessionId             network.SID
 	Transcript            transcripts.Transcript
 
 	k int // security parameter - cheating prover can succeed with probability < 2^(-k)
@@ -62,9 +63,9 @@ type Prover struct {
 	state             *ProverState
 }
 
-func NewVerifier(k int, pk *paillier.PublicKey, sessionId []byte, tape transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
-	if err := validateVerifierInputs(k, pk, sessionId, prng); err != nil {
-		return nil, errs.NewArgument("invalid input arguments")
+func NewVerifier(sessionId network.SID, k int, pk *paillier.PublicKey, tape transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
+	if err := validateVerifierInputs(sessionId, k, pk, prng); err != nil {
+		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
 	if tape == nil {
@@ -101,16 +102,16 @@ func NewVerifier(k int, pk *paillier.PublicKey, sessionId []byte, tape transcrip
 	}, nil
 }
 
-func validateVerifierInputs(k int, pk *paillier.PublicKey, sessionId []byte, prng io.Reader) error {
+func validateVerifierInputs(sessionId network.SID, k int, pk *paillier.PublicKey, prng io.Reader) error {
 	if len(sessionId) == 0 {
 		return errs.NewIsNil("invalid session id: %s", sessionId)
 	}
 	if pk == nil {
 		return errs.NewIsNil("invalid paillier public key")
 	}
-	if pk.N().BitLen() < PaillierBitSize {
-		return errs.NewSize("invalid paillier public key: modulus is too small")
-	}
+	// if pk.N().BitLen() < PaillierBitSize {
+	// 	return errs.NewSize("invalid paillier public key: modulus is too small")
+	// }
 	if k < 1 {
 		return errs.NewValue("invalid k: %d", k)
 	}
@@ -120,9 +121,9 @@ func validateVerifierInputs(k int, pk *paillier.PublicKey, sessionId []byte, prn
 	return nil
 }
 
-func NewProver(k int, sk *paillier.PrivateKey, sessionId []byte, tape transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
-	if err := validateProverInputs(k, sk, sessionId, prng); err != nil {
-		return nil, errs.NewArgument("invalid input arguments")
+func NewProver(sessionId network.SID, k int, sk *paillier.PrivateKey, tape transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
+	if err := validateProverInputs(sessionId, k, sk, prng); err != nil {
+		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
 	if tape == nil {
@@ -154,7 +155,7 @@ func NewProver(k int, sk *paillier.PrivateKey, sessionId []byte, tape transcript
 	}, nil
 }
 
-func validateProverInputs(k int, sk *paillier.PrivateKey, sessionId []byte, prng io.Reader) error {
+func validateProverInputs(sessionId network.SID, k int, sk *paillier.PrivateKey, prng io.Reader) error {
 	if len(sessionId) == 0 {
 		return errs.NewIsNil("invalid session id: %s", sessionId)
 	}

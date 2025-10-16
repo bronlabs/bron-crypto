@@ -62,7 +62,7 @@ func (pts *PlaintextSpace) Contains(m *Plaintext) bool {
 	return m != nil && pts.N().Equal(m.N())
 }
 
-func (pts *PlaintextSpace) New(x *numct.Nat) (*Plaintext, error) {
+func (pts *PlaintextSpace) FromNat(x *numct.Nat) (*Plaintext, error) {
 	y, err := num.NewUintGivenModulus(x, pts.N().ModulusCT())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create plaintext from nat")
@@ -73,6 +73,20 @@ func (pts *PlaintextSpace) New(x *numct.Nat) (*Plaintext, error) {
 	}
 	return &Plaintext{
 		v: z,
+		n: pts.N(),
+	}, nil
+}
+
+func (pts *PlaintextSpace) FromInt(x *numct.Int) (*Plaintext, error) {
+	y, err := num.Z().FromIntCT(x)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to create centered plaintext from int")
+	}
+	if !y.IsInRange(pts.N()) {
+		return nil, errs.NewFailed("int is out of range for plaintext space")
+	}
+	return &Plaintext{
+		v: y,
 		n: pts.N(),
 	}, nil
 }

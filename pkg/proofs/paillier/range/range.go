@@ -77,10 +77,18 @@ type Commitment struct {
 func (c *Commitment) Bytes() []byte {
 	var buf bytes.Buffer
 	for _, ci := range c.C1 {
-		buf.Write(ci.Value().Bytes())
+		if ci.Value() == nil {
+			buf.Write([]byte{0})
+		} else {
+			buf.Write(ci.Value().Bytes())
+		}
 	}
 	for _, ci := range c.C2 {
-		buf.Write(ci.Value().Bytes())
+		if ci.Value() == nil {
+			buf.Write([]byte{0})
+		} else {
+			buf.Write(ci.Value().Bytes())
+		}
 	}
 	return buf.Bytes()
 }
@@ -122,22 +130,46 @@ type Response struct {
 func (r *Response) Bytes() []byte {
 	var buf bytes.Buffer
 	for _, wi := range r.W1 {
-		buf.Write(wi.Value().Bytes())
+		if wi.Value() == nil {
+			buf.Write([]byte{0})
+		} else {
+			buf.Write(wi.Value().Bytes())
+		}
 	}
 	for _, ri := range r.R1 {
-		buf.Write(ri.Value().Bytes())
+		if ri.Value() == nil {
+			buf.Write([]byte{0})
+		} else {
+			buf.Write(ri.Value().Bytes())
+		}
 	}
 	for _, wi := range r.W2 {
-		buf.Write(wi.Value().Bytes())
+		if wi.Value() == nil {
+			buf.Write([]byte{0})
+		} else {
+			buf.Write(wi.Value().Bytes())
+		}
 	}
 	for _, ri := range r.R2 {
-		buf.Write(ri.Value().Bytes())
+		if ri.Value() == nil {
+			buf.Write([]byte{0})
+		} else {
+			buf.Write(ri.Value().Bytes())
+		}
 	}
 	for _, wi := range r.Wj {
-		buf.Write(wi.Value().Bytes())
+		if wi.Value() == nil {
+			buf.Write([]byte{0})
+		} else {
+			buf.Write(wi.Value().Bytes())
+		}
 	}
 	for _, ri := range r.Rj {
-		buf.Write(ri.Value().Bytes())
+		if ri.Value() == nil {
+			buf.Write([]byte{0})
+		} else {
+			buf.Write(ri.Value().Bytes())
+		}
 	}
 	for _, ji := range r.J {
 		jib := make([]byte, 8)
@@ -172,7 +204,7 @@ func (*Protocol) Name() sigma.Name {
 
 func (p *Protocol) ComputeProverCommitment(statement *Statement, witness *Witness) (*Commitment, *State, error) {
 	ps := statement.Pk.PlaintextSpace()
-	lowBound, err := ps.New(statement.L)
+	lowBound, err := ps.FromNat(statement.L)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create new plaintext")
 	}
@@ -223,7 +255,7 @@ func (p *Protocol) ComputeProverCommitment(statement *Statement, witness *Witnes
 
 func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness, _ *Commitment, state *State, challenge sigma.ChallengeBytes) (*Response, error) {
 	ps := statement.Pk.PlaintextSpace()
-	lowBound, err := ps.New(statement.L)
+	lowBound, err := ps.FromNat(statement.L)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create new plaintext")
 	}
@@ -280,7 +312,7 @@ func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness,
 
 func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
 	ps := statement.Pk.PlaintextSpace()
-	lowBound, err := ps.New(statement.L)
+	lowBound, err := ps.FromNat(statement.L)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot create new plaintext")
 	}
@@ -350,7 +382,7 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 
 func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeBytes) (*Commitment, *Response, error) {
 	ps := statement.Pk.PlaintextSpace()
-	lowBound, err := ps.New(statement.L)
+	lowBound, err := ps.FromNat(statement.L)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create new plaintext")
 	}
@@ -461,22 +493,23 @@ func (*Protocol) ValidateStatement(statement *Statement, witness *Witness) error
 		return errs.NewValidation("plaintext/ciphertext mismatch")
 	}
 
-	// var negL, intL *numct.Int
-	// intL.SetNat(statement.L)
-	// negL.Neg(intL)
+	var negL, twoL, L numct.Int
+	L.SetNat(statement.L)
+	negL.Neg(&L)
+	twoL.Double(&L)
 
-	// lowBound, err := statement.Pk.PlainTextNeg(new(saferith.Int).SetNat(statement.L))
-	// if err != nil {
-	// 	return errs.NewValidation("cannot compute low bound")
-	// }
-	// highBound, err := statement.Pk.PlainTextAdd(new(saferith.Int).SetNat(statement.L), new(saferith.Int).SetNat(statement.L))
-	// if err != nil {
-	// 	return errs.NewValidation("cannot compute high bound")
-	// }
+	lowBound, err := statement.Pk.PlaintextSpace().FromInt(&negL)
+	if err != nil {
+		return errs.NewValidation("cannot compute low bound")
+	}
+	highBound, err := statement.Pk.PlaintextSpace().FromInt(&twoL)
+	if err != nil {
+		return errs.NewValidation("cannot compute high bound")
+	}
 
-	// if !isInRange(lowBound, highBound, witness.X) {
-	// 	return errs.NewValidation("witness out of range")
-	// }
+	if !isInRange(lowBound, highBound, witness.X) {
+		return errs.NewValidation("witness out of range")
+	}
 
 	return nil
 }

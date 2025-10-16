@@ -21,6 +21,7 @@ type PaillierGroup interface {
 	N() *num.NatPlus
 	EmbedRSA(Unit) (Unit, error)
 	LiftToNthResidues(rsaUnit Unit) (Unit, error)
+	Phi(*numct.Int) (Unit, error)
 }
 
 type PaillierGroupKnownOrder interface {
@@ -189,6 +190,15 @@ func (pg *paillierGroup) LiftToNthResidues(rsaUnit Unit) (Unit, error) {
 	return lifted.Exp(pg.n.Nat()), nil
 }
 
+func (pg *paillierGroup) Phi(x *numct.Int) (Unit, error) {
+	var shiftedPlaintext numct.Nat
+	pg.N().ModulusCT().ModInt(&shiftedPlaintext, x)
+	var out numct.Nat
+	pg.ModulusCT().ModMul(&out, &shiftedPlaintext, pg.N().Value())
+	out.Increment()
+	return &unit{v: &out, g: pg}, nil
+}
+
 type paillierGroupKnownOrder struct {
 	UZMod[*modular.OddPrimeSquareFactors]
 	n *num.NatPlus
@@ -307,4 +317,13 @@ func (pg *paillierGroupKnownOrder) ForgetOrder() PaillierGroup {
 		},
 		n: pg.n,
 	}
+}
+
+func (pg *paillierGroupKnownOrder) Phi(x *numct.Int) (Unit, error) {
+	var shiftedPlaintext numct.Nat
+	pg.N().ModulusCT().ModInt(&shiftedPlaintext, x)
+	var out numct.Nat
+	pg.ModulusCT().ModMul(&out, &shiftedPlaintext, pg.N().Value())
+	out.Increment()
+	return &unit{v: &out, g: pg}, nil
 }

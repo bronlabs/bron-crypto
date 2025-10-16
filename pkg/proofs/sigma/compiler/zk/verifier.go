@@ -1,4 +1,4 @@
-package zkcompiler
+package zk
 
 import (
 	"fmt"

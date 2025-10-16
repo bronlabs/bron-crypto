@@ -1,4 +1,4 @@
-package zkcompiler
+package zk
 
 import (
 	"fmt"
@@ -86,7 +86,6 @@ func (p *Prover[X, W, A, S, Z]) Round2(eCommitment hash_comm.Commitment) (A, err
 
 func (p *Prover[X, W, A, S, Z]) Round4(challenge hash_comm.Message, witness hash_comm.Witness) (Z, error) {
 	var zero Z
-	transcripts.Append(p.tape, commitmentLabel, p.commitment)
 	p.tape.AppendBytes(challengeLabel, challenge)
 
 	if p.round != 4 {

@@ -61,7 +61,7 @@ func (i *Int) Set(v *Int) {
 }
 
 func (i *Int) SetNat(v *Nat) {
-	(*saferith.Int)(i).SetNat((*saferith.Nat)(v))
+	i.Set((*Int)(new(saferith.Int).SetNat((*saferith.Nat)(v))))
 }
 
 func (i *Int) Clone() *Int {

@@ -84,7 +84,8 @@ func (ct *Ciphertext) Op(other *Ciphertext) *Ciphertext {
 
 func (ct *Ciphertext) Mul(other *Ciphertext) *Ciphertext {
 	ct.isValid(other)
-	v := ct.Value().Mul(other.Value())
+	// TODO: handle forget order better
+	v := ct.Value().ForgetOrder().Mul(other.Value().ForgetOrder())
 	return &Ciphertext{u: v}
 }
 
