@@ -186,6 +186,12 @@ func (p *ModuleValuedPolynomial[ME, S]) Op(e *ModuleValuedPolynomial[ME, S]) *Mo
 	}
 }
 
+func (p *ModuleValuedPolynomial[ME, S]) OpElement(e ME) *ModuleValuedPolynomial[ME, S] {
+	clone := p.Clone()
+	clone.coeffs[0] = clone.coeffs[0].Op(e)
+	return clone
+}
+
 func (p *ModuleValuedPolynomial[ME, S]) IsOpIdentity() bool {
 	for _, c := range p.coeffs {
 		if !c.IsOpIdentity() {

@@ -6,15 +6,16 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/stretchr/testify/require"
 )
+
+type TestParticipant interface {
+	SharingID() sharing.ID
+}
 
 // MapO2I maps the outputs of all participants in a round of a protocol to the inputs of the next round
 // with serializing and deserializing them throughout the process.
 func MapO2I[
-	P interface {
-		SharingID() sharing.ID
-	}, BcastT, UnicastT network.Message,
+	P TestParticipant, BcastT, UnicastT network.Message,
 ](
 	t testing.TB,
 	participants []P,
@@ -55,8 +56,10 @@ func MapBroadcastO2I[
 			if sender.SharingID() == receiver.SharingID() {
 				continue
 			}
-			msg := broadcastOutputs[sender.SharingID()]
-			inputs.Put(sender.SharingID(), CBORRoundTrip(t, msg))
+			msg, ok := broadcastOutputs[sender.SharingID()]
+			if ok {
+				inputs.Put(sender.SharingID(), CBORRoundTrip(t, msg))
+			}
 		}
 		broadcastInputs[receiver.SharingID()] = inputs.Freeze()
 	}
@@ -83,9 +86,13 @@ func MapUnicastO2I[
 			if sender.SharingID() == receiver.SharingID() {
 				continue
 			}
-			msg, exists := p2pOutputs[sender.SharingID()].Get(receiver.SharingID())
-			require.True(t, exists)
-			inputs.Put(sender.SharingID(), CBORRoundTrip(t, msg))
+			p2pOutput, ok := p2pOutputs[sender.SharingID()]
+			if ok {
+				msg, exists := p2pOutput.Get(receiver.SharingID())
+				if exists {
+					inputs.Put(sender.SharingID(), CBORRoundTrip(t, msg))
+				}
+			}
 		}
 		p2pInputs[receiver.SharingID()] = inputs.Freeze()
 

@@ -57,6 +57,7 @@ type accessStructureDTO struct {
 	Ps map[sharing.ID]bool `cbor:"shareholders"`
 }
 
+// TODO: this should be NewThresholdAccessStructure and should be in sharing package
 func NewAccessStructure(t uint, ps ds.Set[sharing.ID]) (*AccessStructure, error) {
 	if ps == nil {
 		return nil, errs.NewIsNil("party set is nil")

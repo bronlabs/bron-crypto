@@ -74,6 +74,13 @@ func (s *Share[FE]) Add(other *Share[FE]) *Share[FE] {
 	}
 }
 
+func (s *Share[FE]) SubPlain(other FE) *Share[FE] {
+	return &Share[FE]{
+		id: s.id,
+		v:  s.v.Sub(other),
+	}
+}
+
 func (s *Share[FE]) ScalarOp(scalar FE) *Share[FE] {
 	return s.ScalarMul(scalar)
 }
