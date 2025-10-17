@@ -125,7 +125,7 @@ func Test_NistPrng(t *testing.T) {
 		prngGenerator := func(seed, salt []byte) (*nist.PrngNist, error) {
 			return nist.NewNistPRNG(keySize, nil, seed, salt, nil)
 		}
-		csprng_testutils.PrngTester(t, prngGenerator)
+		csprng_testutils.PrngTester(t, 32, 32, prngGenerator)
 	}
 }
 
