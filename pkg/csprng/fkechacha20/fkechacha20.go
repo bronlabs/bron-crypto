@@ -1,9 +1,7 @@
 package fkechacha20
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/bitstring"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/csprng"
 	"github.com/bronlabs/bron-crypto/thirdparty/golang/crypto/chacha20"
 )
 
@@ -15,7 +13,7 @@ type Prng struct {
 
 // NewPrng generates a Fast-erasure PRNG using Chacha20 from a
 // seed of 256 bits of length and an optional salt.
-func NewPrng(seed, salt []byte) (csprng.CSPRNG, error) {
+func NewPrng(seed, salt []byte) (*Prng, error) {
 	chachaPrng := new(Prng)
 	if err := chachaPrng.Reseed(seed, salt); err != nil {
 		return nil, errs.WrapFailed(err, "Could not create ChachaPRNG")
@@ -24,7 +22,7 @@ func NewPrng(seed, salt []byte) (csprng.CSPRNG, error) {
 }
 
 // New returns a new ChachaPRNG with the provided seed and salt.
-func (*Prng) New(seed, salt []byte) (csprng.CSPRNG, error) {
+func (*Prng) New(seed, salt []byte) (*Prng, error) {
 	return NewPrng(seed, salt)
 }
 
@@ -48,32 +46,20 @@ func (c *Prng) Read(buffer []byte) (n int, err error) {
 
 // Reseed refreshes the PRNG with the provided seed material. For ChachaPRNG, it is equivalent to `ResetState`.
 func (c *Prng) Reseed(seed, salt []byte) (err error) {
-	switch seedLen := len(seed); {
-	case seedLen == 0:
-		c.chacha = nil
-		c.seeded = false
-		return nil
-	case seedLen < chacha20.KeySize:
-		seed = bitstring.PadToRight(seed, chacha20.KeySize-len(seed))
-		fallthrough
-	default:
-		switch saltLen := len(salt); {
-		case saltLen == 0:
-			salt = make([]byte, chacha20.NonceSize)
-		case saltLen < chacha20.NonceSize:
-			return errs.NewArgument("invalid chacha salt length (%d, should be >=%d)", len(salt), chacha20.NonceSize)
-		case saltLen < chacha20.NonceSizeX:
-			salt = salt[:chacha20.NonceSize]
-		default:
-			salt = salt[:chacha20.NonceSizeX]
-		}
-		c.chacha, err = chacha20.NewFastErasureCipher(seed, salt)
-		if err != nil {
-			return errs.WrapFailed(err, "Could not create ChachaPRNG")
-		}
-		c.seeded = true
-		return nil
+	if len(seed) > chacha20.KeySize || len(salt) > chacha20.NonceSizeX {
+		return errs.NewArgument("invalid chacha seed or salt length (%d, %d)", len(seed), len(salt))
 	}
+
+	var key [chacha20.KeySize]byte
+	copy(key[:], seed)
+	var nonce [chacha20.NonceSizeX]byte
+	copy(nonce[:], salt)
+	c.chacha, err = chacha20.NewFastErasureCipher(key[:], nonce[:])
+	if err != nil {
+		return errs.WrapFailed(err, "Could not create ChachaPRNG")
+	}
+	c.seeded = true
+	return nil
 }
 
 // Seed re-initialises the prng.

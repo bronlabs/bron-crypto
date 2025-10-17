@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/csprng/nist"
+	"github.com/bronlabs/bron-crypto/pkg/csprng"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
@@ -52,22 +52,22 @@ func Sha256Sum(input string) []byte {
 	return res[:]
 }
 
-func PrngTester(t *testing.T, prngGenerator func(seed, salt []byte) (*nist.PrngNist, error)) {
+func PrngTester[P csprng.CSPRNG](t *testing.T, keyLength, seedLength int, prngGenerator func(seed, salt []byte) (P, error)) {
 	t.Helper()
 
-	// hardoded random 32B keys
+	// hardcoded random 32B keys
 	keys := [][]byte{
-		Sha256Sum("One Ring to rule them all."),
-		Sha256Sum("One Ring to find them,"),
-		Sha256Sum("One Ring to bring them all"),
-		Sha256Sum("and in the darkness bind them."),
+		Sha256Sum("One Ring to rule them all.")[:keyLength],
+		Sha256Sum("One Ring to find them,")[:keyLength],
+		Sha256Sum("One Ring to bring them all")[:keyLength],
+		Sha256Sum("and in the darkness bind them.")[:keyLength],
 	}
-	// hardoded random 32B nonces
+	// hardcoded random 32B nonces
 	nonces := [][]byte{
-		Sha256Sum("The world has changed. I see it in the water."),
-		Sha256Sum("I feel it in the Earth. I smell it in the air."),
-		Sha256Sum("Much that once was is lost,"),
-		Sha256Sum("For none now live who remember it. -- Galadriel"),
+		Sha256Sum("The world has changed. I see it in the water.")[:seedLength],
+		Sha256Sum("I feel it in the Earth. I smell it in the air.")[:seedLength],
+		Sha256Sum("Much that once was is lost,")[:seedLength],
+		Sha256Sum("For none now live who remember it. -- Galadriel")[:seedLength],
 	}
 	for i := range keys {
 		// create a new PRNG
