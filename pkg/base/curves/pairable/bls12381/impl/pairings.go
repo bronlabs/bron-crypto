@@ -28,9 +28,9 @@ type coefficients struct {
 }
 
 func (c *coefficients) Select(choice ct.Choice, arg0, arg1 *coefficients) *coefficients {
-	c.a.CondAssign(choice, &arg0.a, &arg1.a)
-	c.b.CondAssign(choice, &arg0.b, &arg1.b)
-	c.c.CondAssign(choice, &arg0.c, &arg1.c)
+	c.a.Select(choice, &arg0.a, &arg1.a)
+	c.b.Select(choice, &arg0.b, &arg1.b)
+	c.c.Select(choice, &arg0.c, &arg1.c)
 	return c
 }
 
@@ -102,7 +102,7 @@ func (e *Engine) millerLoop(f *Fp12, coeffs []g2Prepared) {
 			identity := e.pairs[j].g1.IsZero() | ct.Bool(terms.identity)
 			newF.Set(f)
 			ell(newF, &terms.coefficients[cIdx], &e.pairs[j].g1)
-			f.CondAssign(identity, newF, f)
+			f.Select(identity, newF, f)
 		}
 		cIdx++
 
@@ -112,7 +112,7 @@ func (e *Engine) millerLoop(f *Fp12, coeffs []g2Prepared) {
 				identity := e.pairs[j].g1.IsZero() | ct.Bool(terms.identity)
 				newF.Set(f)
 				ell(newF, &terms.coefficients[cIdx], &e.pairs[j].g1)
-				f.CondAssign(identity, newF, f)
+				f.Select(identity, newF, f)
 			}
 			cIdx++
 		}
@@ -122,7 +122,7 @@ func (e *Engine) millerLoop(f *Fp12, coeffs []g2Prepared) {
 		identity := e.pairs[j].g1.IsZero() | ct.Bool(terms.identity)
 		newF.Set(f)
 		ell(newF, &terms.coefficients[cIdx], &e.pairs[j].g1)
-		f.CondAssign(identity, newF, f)
+		f.Select(identity, newF, f)
 	}
 	Conjugate(f, f)
 }
@@ -134,7 +134,7 @@ func (e *Engine) computeCoeffs() []g2Prepared {
 		identity := p.g2.IsZero()
 		q := new(G2Point)
 		q.SetGenerator()
-		q.CondAssign(identity, &p.g2, q)
+		q.Select(identity, &p.g2, q)
 		c := new(G2Point)
 		c.Set(q)
 		cfs := make([]coefficients, coefficientsG2)

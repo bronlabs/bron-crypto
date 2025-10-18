@@ -50,4 +50,7 @@ type (
 
 	FieldExtension[FE crtp.FieldExtensionElement[FE]]        = crtp.FieldExtension[FE]
 	FieldExtensionElement[FE crtp.FieldExtensionElement[FE]] = crtp.FieldExtensionElement[FE]
+
+	FiniteField[FE crtp.FiniteFieldElement[FE]]        = crtp.FiniteField[FE]
+	FiniteFieldElement[FE crtp.FiniteFieldElement[FE]] = crtp.FiniteFieldElement[FE]
 )

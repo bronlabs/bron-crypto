@@ -51,7 +51,7 @@ func (f *Fp) SetUint64(u uint64) {
 	f.v = fiatFpTightFieldElement{u & ((1 << 51) - 1), u >> 51}
 }
 
-func (f *Fp) CondAssign(choice ct.Choice, z, nz *Fp) {
+func (f *Fp) Select(choice ct.Choice, z, nz *Fp) {
 	fiatFpSelectznz((*[5]uint64)(&f.v), fiatFpUint1(choice), (*[5]uint64)(&z.v), (*[5]uint64)(&nz.v))
 }
 
@@ -148,7 +148,7 @@ func (f *Fp) Inv(a *Fp) (ok ct.Bool) {
 	out.Mul(&out, &_11)
 
 	ok = a.IsNonZero()
-	f.CondAssign(ok, f, &out)
+	f.Select(ok, f, &out)
 	return ok
 }
 
@@ -158,7 +158,7 @@ func (f *Fp) Div(lhs, rhs *Fp) (ok ct.Bool) {
 	var out Fp
 	out.Mul(lhs, &rhsInv)
 
-	f.CondAssign(ok, f, &out)
+	f.Select(ok, f, &out)
 	return ok
 }
 
@@ -257,15 +257,15 @@ func (f *Fp) SetBytesWide(data []byte) (ok ct.Bool) {
 	hi.Mul(&hi, &twoTo256)
 	ok = okLo & okHi
 	pLo.SetUint64(19)
-	pLo.CondAssign(p255, &zero, &pLo)
+	pLo.Select(p255, &zero, &pLo)
 	lo.Add(&lo, &pLo)
 	pHi.SetUint64(19 * 19 * 2)
-	pHi.CondAssign(p511, &zero, &pHi)
+	pHi.Select(p511, &zero, &pHi)
 	hi.Add(&hi, &pHi)
 
 	var out Fp
 	out.Add(&lo, &hi)
-	f.CondAssign(ok, f, &out)
+	f.Select(ok, f, &out)
 	return ok
 }
 

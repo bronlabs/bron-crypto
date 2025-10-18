@@ -54,7 +54,7 @@ func New(n uint64) Cardinal {
 	}
 }
 
-func NewFromNat(n *saferith.Nat) Cardinal {
+func NewFromSaferith(n *saferith.Nat) Cardinal {
 	if n == nil {
 		return unknown
 	}
@@ -226,13 +226,6 @@ func (c *cardinal) IsZero() bool {
 	return c.v.EqZero() == 1
 }
 
-func (c *cardinal) Value() *saferith.Nat {
-	if c == nil || c.isUnknown || !c.isFinite {
-		return nil
-	}
-	return c.v
-}
-
 func (c *cardinal) Bytes() []byte {
 	if c == nil || c.isUnknown || !c.isFinite {
 		return nil
@@ -270,6 +263,10 @@ func (c *cardinal) HashCode() base.HashCode {
 		return base.HashCode(0)
 	}
 	return base.HashCode(c.v.Uint64())
+}
+
+func (c *cardinal) BitLen() uint {
+	return uint(c.v.TrueLen())
 }
 
 func (c *cardinal) String() string {

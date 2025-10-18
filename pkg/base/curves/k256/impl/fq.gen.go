@@ -107,7 +107,7 @@ func (f *Fq) SetRandom(prng io.Reader) (ok ct.Bool) {
 	return f.SetUniformBytes(uniformBytes[:])
 }
 
-func (f *Fq) CondAssign(choice ct.Choice, z, nz *Fq) {
+func (f *Fq) Select(choice ct.Choice, z, nz *Fq) {
 	fiatFqSelectznz((*[FqLimbs]uint64)(&f.fiatFqMontgomeryDomainFieldElement),fiatFqUint1(choice), (*[FqLimbs]uint64)(&z.fiatFqMontgomeryDomainFieldElement), (*[FqLimbs]uint64)(&nz.fiatFqMontgomeryDomainFieldElement))
 }
 

@@ -11,11 +11,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
@@ -34,10 +32,8 @@ var (
 	_ encoding.BinaryMarshaler                                 = (*Point)(nil)
 	_ encoding.BinaryUnmarshaler                               = (*Point)(nil)
 
-	curveInstance      *Curve
-	curveModelInstance *universal.ThreeSortedModel[*Point, *Scalar, *BaseFieldElement]
-	curveModelInitOnce sync.Once
-	curveInitOnce      sync.Once
+	curveInstance *Curve
+	curveInitOnce sync.Once
 )
 
 type Curve struct {
@@ -53,26 +49,8 @@ func NewCurve() *Curve {
 	return curveInstance
 }
 
-func CurveModel() *universal.ThreeSortedModel[*Point, *Scalar, *BaseFieldElement] {
-	curveModelInitOnce.Do(func() {
-		var err error
-		curveModelInstance, err = impl.EllipticCurveModel(
-			NewCurve(), NewBaseField(), NewScalarField(),
-		)
-		if err != nil {
-			panic(err)
-		}
-	})
-
-	return curveModelInstance
-}
-
 func (c *Curve) Name() string {
 	return CurveName
-}
-
-func (c *Curve) Model() *universal.Model[*Point] {
-	return CurveModel().First()
 }
 
 func (c *Curve) ElementSize() int {
@@ -91,7 +69,7 @@ func (c *Curve) Cofactor() cardinal.Cardinal {
 }
 
 func (c *Curve) Order() cardinal.Cardinal {
-	return cardinal.NewFromNat(scalarFieldOrder.Nat())
+	return NewScalarField().Order()
 }
 
 func (c *Curve) FromCompressed(inBytes []byte) (*Point, error) {

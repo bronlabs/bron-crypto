@@ -59,7 +59,7 @@ func (fp *TestFp) SetRandom(prng io.Reader) (ok ct.Bool) {
 	return 1
 }
 
-func (fp *TestFp) CondAssign(choice ct.Choice, z, nz *TestFp) {
+func (fp *TestFp) Select(choice ct.Choice, z, nz *TestFp) {
 	switch choice {
 	case 0:
 		*fp = *z

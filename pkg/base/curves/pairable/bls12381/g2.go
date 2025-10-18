@@ -11,10 +11,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -35,9 +33,6 @@ var (
 
 	curveInstanceG2 *G2
 	curveInitOnceG2 sync.Once
-
-	g2ModelInstance *universal.ThreeSortedModel[*PointG2, *Scalar, *BaseFieldElementG2]
-	g2ModelInitOnce sync.Once
 )
 
 type G2 struct {
@@ -53,26 +48,8 @@ func NewG2() *G2 {
 	return curveInstanceG2
 }
 
-func G2Model() *universal.ThreeSortedModel[*PointG2, *Scalar, *BaseFieldElementG2] {
-	g2ModelInitOnce.Do(func() {
-		var err error
-		g2ModelInstance, err = impl.CurveModel(
-			NewG2(), NewG2BaseField(), NewScalarField(),
-		)
-		if err != nil {
-			panic(err)
-		}
-	})
-
-	return g2ModelInstance
-}
-
 func (c *G2) Name() string {
 	return CurveNameG2
-}
-
-func (c *G2) Model() *universal.Model[*PointG2] {
-	return G2Model().First()
 }
 
 func (c *G2) ElementSize() int {
@@ -133,7 +110,7 @@ func (c *G2) Cofactor() cardinal.Cardinal {
 }
 
 func (c *G2) Order() cardinal.Cardinal {
-	return cardinal.NewFromNat(scalarFieldOrder.Nat())
+	return cardinal.NewFromSaferith(scalarFieldOrder.Nat())
 }
 
 func (c *G2) FromCompressed(input []byte) (*PointG2, error) {
@@ -190,7 +167,7 @@ func (c *G2) FromCompressed(input []byte) (*PointG2, error) {
 	}
 	pp.V.ToAffine(&x, &y)
 	yNeg.Neg(&pp.V.Y)
-	pp.V.Y.CondAssign(isNegative(&y)^sortFlag, &pp.V.Y, &yNeg)
+	pp.V.Y.Select(isNegative(&y)^sortFlag, &pp.V.Y, &yNeg)
 
 	if !pp.IsTorsionFree() {
 		return nil, errs.NewFailed("point is not in correct subgroup")
@@ -271,6 +248,14 @@ func (c *G2) ScalarStructure() algebra.Structure[*Scalar] {
 }
 
 func (c *G2) BaseStructure() algebra.Structure[*BaseFieldElementG2] {
+	return NewG2BaseField()
+}
+
+func (c *G2) ScalarField() algebra.PrimeField[*Scalar] {
+	return NewScalarField()
+}
+
+func (c *G2) BaseField() algebra.FiniteField[*BaseFieldElementG2] {
 	return NewG2BaseField()
 }
 

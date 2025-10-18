@@ -2,15 +2,16 @@ package bls12381
 
 import (
 	"encoding"
+	"slices"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -29,11 +30,9 @@ var (
 	_ encoding.BinaryMarshaler           = (*Scalar)(nil)
 	_ encoding.BinaryUnmarshaler         = (*Scalar)(nil)
 
-	scalarFieldInitOnce      sync.Once
-	scalarFieldInstance      *ScalarField
-	scalarFieldModelOnce     sync.Once
-	scalarFieldModelInstance *universal.Model[*Scalar]
-	scalarFieldOrder         *saferith.Modulus
+	scalarFieldInitOnce sync.Once
+	scalarFieldInstance *ScalarField
+	scalarFieldOrder    *saferith.Modulus
 )
 
 func scalarFieldInit() {
@@ -50,26 +49,8 @@ func NewScalarField() *ScalarField {
 	return scalarFieldInstance
 }
 
-func ScalarFieldModel() *universal.Model[*Scalar] {
-	scalarFieldModelOnce.Do(func() {
-		var err error
-		scalarFieldModelInstance, err = impl.ScalarFieldModel(
-			NewScalarField(),
-		)
-		if err != nil {
-			panic(err)
-		}
-	})
-
-	return scalarFieldModelInstance
-}
-
 func (*ScalarField) Name() string {
 	return ScalarFieldName
-}
-
-func (f *ScalarField) Model() *universal.Model[*Scalar] {
-	return ScalarFieldModel()
 }
 
 func (*ScalarField) ElementSize() int {
@@ -85,7 +66,7 @@ func (f *ScalarField) Characteristic() cardinal.Cardinal {
 }
 
 func (*ScalarField) Order() cardinal.Cardinal {
-	return cardinal.NewFromNat(scalarFieldOrder.Nat())
+	return cardinal.NewFromSaferith(scalarFieldOrder.Nat())
 }
 
 func (*ScalarField) Hash(input []byte) (*Scalar, error) {
@@ -94,6 +75,22 @@ func (*ScalarField) Hash(input []byte) (*Scalar, error) {
 
 	var s Scalar
 	s.V.Set(&e[0])
+	return &s, nil
+}
+
+func (f *ScalarField) FromNat(n *numct.Nat) (*Scalar, error) {
+	var v numct.Nat
+	m, ok := numct.NewModulusOddPrime((*numct.Nat)(scalarFieldOrder.Nat()))
+	if ok == ct.False {
+		return nil, errs.NewFailed("failed to create modulus")
+	}
+	m.Mod(&v, n)
+	vBytes := v.Bytes()
+	slices.Reverse(vBytes)
+	var s Scalar
+	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
+		return nil, errs.NewFailed("failed to set scalar from nat")
+	}
 	return &s, nil
 }
 

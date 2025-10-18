@@ -1,25 +1,23 @@
 package base
 
-import (
-	"golang.org/x/crypto/sha3"
+// Base security parameters - these are the source of truth
+const (
+	// ComputationalSecurityBits (λ) is the number of bits of computational security
+	// we want to achieve in most of our cryptographic primitives.
+	ComputationalSecurityBits = 128
+
+	// StatisticalSecurityBits (λ_s) is the number of bits of statistical security
+	// we want to achieve in most of our cryptographic primitives,
+	// applicable mostly to soundness of interactive proofs.
+	StatisticalSecurityBits = 80
+
+	// CollisionResistance is the hash digest length to achieve λ-bits of
+	// collision resistance (birthday paradox).
+	CollisionResistance = 2 * ComputationalSecurityBits
+
+	// TODO: rename the value to something that Mateusz will send later
+	// Hash2CurveAppTag is the application tag for hash-to-curve operations
+	Hash2CurveAppTag = "bron_crypto_with-"
 )
 
-// ComputationalSecurity (λ) is the number of bits of computational security we want to achieve in most of our cryptographic primitives.
-const ComputationalSecurity = 128
-const ComputationalSecurityLog2 = 7
-
-// StatisticalSecurity (λ_s) is the number of bits of statistical security we want to achieve in most of our cryptographic primitives, applicable mostly to soundness of interactive proofs.
-const StatisticalSecurity = 80
-
-// CollisionResistance is the hash digest length to achieve λ-bits of collision resistance (birthday paradox).
-const CollisionResistance = 2 * ComputationalSecurity
-const CollisionResistanceBytes = CollisionResistance / 8
-
-// Hash2CurveAppTag is a library-wide tag for Hash2Curve hashing as Random Oracle.
-const Hash2CurveAppTag = "bron-crypto-with-"
-
-// Choices of hash functions.
-var (
-	// RandomOracleHashFunction is used as a Random Oracle in most of the cryptographic primitives. Output length MUST be >= CollisionResistanceBytes.
-	RandomOracleHashFunction = sha3.New256
-)
+//go:generate go run github.com/bronlabs/bron-crypto/tools/secparams-codegen

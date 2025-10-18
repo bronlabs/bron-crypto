@@ -11,9 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -37,9 +35,6 @@ var (
 
 	curveInstance *Curve
 	curveInitOnce sync.Once
-
-	curveModelInstance *universal.ThreeSortedModel[*Point, *Scalar, *BaseFieldElement]
-	curveModelInitOnce sync.Once
 )
 
 type Curve struct {
@@ -55,20 +50,6 @@ func NewCurve() *Curve {
 	return curveInstance
 }
 
-func CurveModel() *universal.ThreeSortedModel[*Point, *Scalar, *BaseFieldElement] {
-	curveModelInitOnce.Do(func() {
-		var err error
-		curveModelInstance, err = impl.CurveModel(
-			NewCurve(), NewBaseField(), NewScalarField(),
-		)
-		if err != nil {
-			panic(err)
-		}
-	})
-
-	return curveModelInstance
-}
-
 func (c *Curve) Name() string {
 	return CurveName
 }
@@ -78,7 +59,7 @@ func (c *Curve) Cofactor() cardinal.Cardinal {
 }
 
 func (c *Curve) Order() cardinal.Cardinal {
-	return cardinal.NewFromNat(scalarFieldOrder.Nat())
+	return NewScalarField().Order()
 }
 
 func (c *Curve) ElementSize() int {
@@ -206,15 +187,19 @@ func (c *Curve) HashWithDst(dst string, bytes []byte) (*Point, error) {
 	return &p, nil
 }
 
-func (c *Curve) Model() *universal.Model[*Point] {
-	return CurveModel().First()
-}
-
 func (c *Curve) ScalarStructure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 
 func (c *Curve) BaseStructure() algebra.Structure[*BaseFieldElement] {
+	return NewBaseField()
+}
+
+func (c *Curve) ScalarField() algebra.PrimeField[*Scalar] {
+	return NewScalarField()
+}
+
+func (c *Curve) BaseField() algebra.FiniteField[*BaseFieldElement] {
 	return NewBaseField()
 }
 

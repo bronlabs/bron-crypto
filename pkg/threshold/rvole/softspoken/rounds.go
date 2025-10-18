@@ -6,7 +6,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 func (bob *Bob[P, B, S]) Round1() (*Round1P2P, S, error) {
@@ -248,7 +247,7 @@ func (p *participant[P, B, S]) roMu(muBold [][]S) (mu []byte, err error) {
 			p.tape.AppendBytes(muVectorLabel, e.Bytes())
 		}
 	}
-	mu, err = p.tape.ExtractBytes(muLabel, uint(utils.CeilDiv(2*base.ComputationalSecurity, 8)))
+	mu, err = p.tape.ExtractBytes(muLabel, base.CollisionResistanceBytesCeil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot extract mu")
 	}

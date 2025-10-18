@@ -69,10 +69,10 @@ func (f *CubicFieldExtensionImpl[BFP, A, BF]) SetRandom(prng io.Reader) (ok ct.B
 	return ok0 & ok1 & ok2
 }
 
-func (f *CubicFieldExtensionImpl[BFP, A, BF]) CondAssign(choice ct.Choice, z, nz *CubicFieldExtensionImpl[BFP, A, BF]) {
-	BFP(&f.U0).CondAssign(choice, &z.U0, &nz.U0)
-	BFP(&f.U1).CondAssign(choice, &z.U1, &nz.U1)
-	BFP(&f.U2).CondAssign(choice, &z.U2, &nz.U2)
+func (f *CubicFieldExtensionImpl[BFP, A, BF]) Select(choice ct.Choice, z, nz *CubicFieldExtensionImpl[BFP, A, BF]) {
+	BFP(&f.U0).Select(choice, &z.U0, &nz.U0)
+	BFP(&f.U1).Select(choice, &z.U1, &nz.U1)
+	BFP(&f.U2).Select(choice, &z.U2, &nz.U2)
 }
 
 func (f *CubicFieldExtensionImpl[BFP, A, BF]) Add(lhs, rhs *CubicFieldExtensionImpl[BFP, A, BF]) {
@@ -218,9 +218,9 @@ func (f *CubicFieldExtensionImpl[BFP, A, BF]) Inv(arg *CubicFieldExtensionImpl[B
 	// c2 = c' * t^-1
 	BFP(&c2).Mul(&c, &t)
 
-	BFP(&f.U0).CondAssign(ok, &f.U0, &c0)
-	BFP(&f.U1).CondAssign(ok, &f.U1, &c1)
-	BFP(&f.U2).CondAssign(ok, &f.U2, &c2)
+	BFP(&f.U0).Select(ok, &f.U0, &c0)
+	BFP(&f.U1).Select(ok, &f.U1, &c1)
+	BFP(&f.U2).Select(ok, &f.U2, &c2)
 
 	//if ok == 1 {
 	//	var sanityCheck CubicFieldExtensionImpl[BFPtr, A, BF]
@@ -238,7 +238,7 @@ func (f *CubicFieldExtensionImpl[BFP, A, BF]) Div(lhs, rhs *CubicFieldExtensionI
 	ok = rhsInv.Inv(rhs)
 	result.Mul(lhs, &rhsInv)
 
-	f.CondAssign(ok, f, &result)
+	f.Select(ok, f, &result)
 	return ok
 }
 

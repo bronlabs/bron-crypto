@@ -13,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig"
 )
 
 type MPCFriendlyVariant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message] interface {
@@ -22,13 +23,13 @@ type MPCFriendlyVariant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFiel
 }
 
 type MPCFriendlyScheme[
-VR MPCFriendlyVariant[GE, S, M],
-GE algebra.PrimeGroupElement[GE, S],
-S algebra.PrimeFieldElement[S],
-M schnorrlike.Message,
-KG signatures.KeyGenerator[*schnorrlike.PrivateKey[GE, S], *schnorrlike.PublicKey[GE, S]],
-SG schnorrlike.Signer[VR, GE, S, M],
-VF schnorrlike.Verifier[VR, GE, S, M],
+	VR MPCFriendlyVariant[GE, S, M],
+	GE algebra.PrimeGroupElement[GE, S],
+	S algebra.PrimeFieldElement[S],
+	M schnorrlike.Message,
+	KG signatures.KeyGenerator[*schnorrlike.PrivateKey[GE, S], *schnorrlike.PublicKey[GE, S]],
+	SG schnorrlike.Signer[VR, GE, S, M],
+	VF schnorrlike.Verifier[VR, GE, S, M],
 ] interface {
 	schnorrlike.Scheme[VR, GE, S, M, KG, SG, VF]
 	PartialSignatureVerifier(
@@ -38,8 +39,8 @@ VF schnorrlike.Verifier[VR, GE, S, M],
 }
 
 type PartialSignature[
-GE algebra.PrimeGroupElement[GE, S],
-S algebra.PrimeFieldElement[S],
+	GE algebra.PrimeGroupElement[GE, S],
+	S algebra.PrimeFieldElement[S],
 ] struct {
 	Sig schnorrlike.Signature[GE, S]
 }
@@ -158,8 +159,8 @@ func (spm *PublicMaterial[E, S]) UnmarshalCBOR(data []byte) error {
 }
 
 type Shard[
-E algebra.PrimeGroupElement[E, S],
-S algebra.PrimeFieldElement[S],
+	E algebra.PrimeGroupElement[E, S],
+	S algebra.PrimeFieldElement[S],
 ] struct {
 	share *feldman.Share[S]
 	PublicMaterial[E, S]
@@ -177,12 +178,13 @@ func (sh *Shard[E, S]) Share() *feldman.Share[S] {
 	return sh.share
 }
 
-func (sh *Shard[E, S]) Equal(other *Shard[E, S]) bool {
+func (sh *Shard[E, S]) Equal(other tsig.Shard[*schnorrlike.PublicKey[E, S], *feldman.Share[S], *feldman.AccessStructure]) bool {
 	if sh == nil || other == nil {
 		return sh == other
 	}
-	return sh.share.Equal(other.share) &&
-		sh.PublicMaterial.Equal(&other.PublicMaterial)
+	o, ok := other.(*Shard[E, S])
+	return ok && sh.share.Equal(o.share) &&
+		sh.PublicMaterial.Equal(&o.PublicMaterial)
 }
 
 func (sh *Shard[E, S]) PublicKeyMaterial() *PublicMaterial[E, S] {

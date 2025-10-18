@@ -11,9 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -34,9 +32,6 @@ var (
 	pallasInitOnce sync.Once
 	pallasInstance *PallasCurve
 
-	pallasModelInstance *universal.ThreeSortedModel[*PallasPoint, *PallasScalar, *PallasBaseFieldElement]
-	pallasModelInitOnce sync.Once
-
 	_ curves.Curve[*PallasPoint, *PallasBaseFieldElement, *PallasScalar] = (*PallasCurve)(nil)
 	_ curves.Point[*PallasPoint, *PallasBaseFieldElement, *PallasScalar] = (*PallasPoint)(nil)
 	_ encoding.BinaryMarshaler                                           = (*PallasPoint)(nil)
@@ -56,26 +51,8 @@ func NewPallasCurve() *PallasCurve {
 	return pallasInstance
 }
 
-func NewPallasModel() *universal.ThreeSortedModel[*PallasPoint, *PallasScalar, *PallasBaseFieldElement] {
-	pallasModelInitOnce.Do(func() {
-		var err error
-		pallasModelInstance, err = impl.CurveModel(
-			NewPallasCurve(), NewPallasBaseField(), NewPallasScalarField(),
-		)
-		if err != nil {
-			panic(err)
-		}
-	})
-
-	return pallasModelInstance
-}
-
 func (c *PallasCurve) Name() string {
 	return PallasName
-}
-
-func (c *PallasCurve) Model() *universal.Model[*PallasPoint] {
-	return NewPallasModel().First()
 }
 
 func (c *PallasCurve) Cofactor() cardinal.Cardinal {
@@ -83,7 +60,7 @@ func (c *PallasCurve) Cofactor() cardinal.Cardinal {
 }
 
 func (c *PallasCurve) Order() cardinal.Cardinal {
-	return cardinal.NewFromNat(fqFieldOrder.Nat())
+	return NewPallasScalarField().Order()
 }
 
 func (c *PallasCurve) FromBytes(input []byte) (*PallasPoint, error) {
@@ -200,6 +177,14 @@ func (c *PallasCurve) ScalarStructure() algebra.Structure[*PallasScalar] {
 }
 
 func (c *PallasCurve) BaseStructure() algebra.Structure[*PallasBaseFieldElement] {
+	return NewPallasBaseField()
+}
+
+func (c *PallasCurve) ScalarField() algebra.PrimeField[*PallasScalar] {
+	return NewPallasScalarField()
+}
+
+func (c *PallasCurve) BaseField() algebra.FiniteField[*PallasBaseFieldElement] {
 	return NewPallasBaseField()
 }
 

@@ -35,6 +35,7 @@ type ThresholdAccessStructure interface {
 	Threshold() uint
 }
 
+// TODO: remove parametrization of access structure
 type SSS[S Share[S], W Secret[W], DO DealerOutput[S], AC AccessStructure] interface {
 	Name() Name
 	Deal(secret W, prng io.Reader) (DO, error)

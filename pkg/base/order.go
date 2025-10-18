@@ -5,11 +5,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
+// TODO: define methods for IsLess, IsGreater, IsEqual, IsIncomparable
 type (
 	PartialOrdering int8
-	Ordering        PartialOrdering
+	Ordering        int8
 )
 
+// TODO: remove
 type ComparisonFlag interface {
 	bool | ct.Bool
 }
@@ -45,20 +47,39 @@ func (o PartialOrdering) Is(other Ordering) bool {
 }
 
 func (o Ordering) Is(other PartialOrdering) bool {
-	return PartialOrdering(o) == other
+	return other != Incomparable && PartialOrdering(o) == other
 }
 
+// TODO: remove
 type BoundedFromBelow[E any] interface {
 	Bottom() E
 }
 
+// TODO: remove
+type BoundedFromBelowElement interface {
+	IsBottom() bool
+}
+
+// TODO: remove
 type BoundedFromAbove[E any] interface {
 	Top() E
 }
 
+// TODO: remove
+type BoundedFromAboveElement interface {
+	IsTop() bool
+}
+
+// TODO: remove
 type Bounded[E any] interface {
 	BoundedFromBelow[E]
 	BoundedFromAbove[E]
+}
+
+// TODO: remove
+type BoundedElement interface {
+	BoundedFromBelowElement
+	BoundedFromAboveElement
 }
 
 type Comparable[E any] interface {
@@ -114,6 +135,7 @@ func Compare[E Comparable[E]](x, y E) Ordering {
 	return Ordering(out)
 }
 
+// TODO: remove
 func IsEqual[E Comparable[E]](x, y E) bool {
 	if xx, okx := any(x).(ct.Equatable[E]); okx {
 		return xx.Equal(y) == ct.True

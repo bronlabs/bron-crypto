@@ -1,0 +1,151 @@
+package paillier
+
+import (
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/fxamacker/cbor/v2"
+)
+
+var (
+	_ cbor.Marshaler   = (*Plaintext)(nil)
+	_ cbor.Unmarshaler = (*Plaintext)(nil)
+	_ cbor.Marshaler   = (*Nonce)(nil)
+	_ cbor.Unmarshaler = (*Nonce)(nil)
+	_ cbor.Marshaler   = (*Ciphertext)(nil)
+	_ cbor.Unmarshaler = (*Ciphertext)(nil)
+	_ cbor.Marshaler   = (*PublicKey)(nil)
+	_ cbor.Unmarshaler = (*PublicKey)(nil)
+	_ cbor.Marshaler   = (*PrivateKey)(nil)
+	_ cbor.Unmarshaler = (*PrivateKey)(nil)
+)
+
+const (
+	PlaintextTag  = 6001
+	NonceTag      = 6002
+	CiphertextTag = 6003
+	PublicKeyTag  = 6004
+	PrivateKeyTag = 6005
+)
+
+func init() {
+	serde.Register[*Plaintext](PlaintextTag)
+	serde.Register[*Nonce](NonceTag)
+	serde.Register[*Ciphertext](CiphertextTag)
+	serde.Register[*PublicKey](PublicKeyTag)
+	serde.Register[*PrivateKey](PrivateKeyTag)
+}
+
+// Plaintext serialization - reuse num.Int and num.NatPlus CBOR
+type plaintextDTO struct {
+	V *num.Int     `cbor:"v"`
+	N *num.NatPlus `cbor:"n"`
+}
+
+func (p *Plaintext) MarshalCBOR() ([]byte, error) {
+	dto := &plaintextDTO{
+		V: p.v,
+		N: p.n,
+	}
+	return serde.MarshalCBORTagged(dto, PlaintextTag)
+}
+
+func (p *Plaintext) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[plaintextDTO](data)
+	if err != nil {
+		return err
+	}
+	p.v = dto.V
+	p.n = dto.N
+	return nil
+}
+
+// Nonce serialization - reuse znstar.Unit CBOR
+type nonceDTO struct {
+	U znstar.Unit `cbor:"u"`
+}
+
+func (n *Nonce) MarshalCBOR() ([]byte, error) {
+	dto := &nonceDTO{
+		U: n.u,
+	}
+	return serde.MarshalCBORTagged(dto, NonceTag)
+}
+
+func (n *Nonce) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[nonceDTO](data)
+	if err != nil {
+		return err
+	}
+	n.u = dto.U
+	return nil
+}
+
+// Ciphertext serialization - reuse znstar.Unit CBOR
+type ciphertextDTO struct {
+	U znstar.Unit `cbor:"u"`
+}
+
+func (c *Ciphertext) MarshalCBOR() ([]byte, error) {
+	dto := &ciphertextDTO{
+		U: c.u,
+	}
+	return serde.MarshalCBORTagged(dto, CiphertextTag)
+}
+
+func (c *Ciphertext) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[ciphertextDTO](data)
+	if err != nil {
+		return err
+	}
+	c.u = dto.U
+	return nil
+}
+
+// PublicKey serialization - reuse znstar.PaillierGroup CBOR
+type publicKeyDTO struct {
+	Group znstar.PaillierGroup `cbor:"group"`
+}
+
+func (pk *PublicKey) MarshalCBOR() ([]byte, error) {
+	dto := &publicKeyDTO{
+		Group: pk.group,
+	}
+	return serde.MarshalCBORTagged(dto, PublicKeyTag)
+}
+
+func (pk *PublicKey) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[publicKeyDTO](data)
+	if err != nil {
+		return err
+	}
+	pk.group = dto.Group
+	// Spaces will be lazily initialized via cacheSpaces when accessed
+	return nil
+}
+
+// PrivateKey serialization - reuse znstar.PaillierGroupKnownOrder and numct.Nat CBOR
+type privateKeyDTO struct {
+	Group znstar.PaillierGroupKnownOrder `cbor:"group"`
+}
+
+func (sk *PrivateKey) MarshalCBOR() ([]byte, error) {
+	dto := &privateKeyDTO{
+		Group: sk.group,
+	}
+	return serde.MarshalCBORTagged(dto, PrivateKeyTag)
+}
+
+func (sk *PrivateKey) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[privateKeyDTO](data)
+	if err != nil {
+		return err
+	}
+	sk.group = dto.Group
+	// Initialize hp and hq before calling precompute
+	sk.hp = numct.NewNat(0)
+	sk.hq = numct.NewNat(0)
+	sk.precompute()
+	return nil
+}

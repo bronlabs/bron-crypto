@@ -4,7 +4,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 )
 
@@ -43,7 +42,7 @@ func (r2 *Round2P2P[S]) Validate(xi, l, rho int) error {
 		}
 	}
 
-	if len(r2.Mu) != (utils.CeilDiv(2*base.ComputationalSecurity, 8)) {
+	if len(r2.Mu) != (base.CollisionResistanceBytesCeil) {
 		return errs.NewValidation("invalid message")
 	}
 

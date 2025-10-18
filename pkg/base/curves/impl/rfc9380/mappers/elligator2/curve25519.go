@@ -62,7 +62,7 @@ func mapToCurveElligator2Curve25519[FP fieldsImpl.PrimeFieldElementPtr[FP, F], F
 	// 21.  e1 = tv2 == gx1
 	e1 := FP(&tv2).Equal(&gx1)
 	// 22.  y1 = CMOV(y12, y11, e1)  # If g(x1) is square, this is its sqrt
-	FP(&y1).CondAssign(e1, &y12, &y11)
+	FP(&y1).Select(e1, &y12, &y11)
 	// 23. x2n = x1n * tv1           # x2 = x2n / xd = 2 * u^2 * x1n / xd
 	FP(&x2n).Mul(&x1n, &tv1)
 	// 24. y21 = y11 * u
@@ -80,7 +80,7 @@ func mapToCurveElligator2Curve25519[FP fieldsImpl.PrimeFieldElementPtr[FP, F], F
 	// 30.  e2 = tv2 == gx2
 	e2 := FP(&tv2).Equal(&gx2)
 	// 31.  y2 = CMOV(y22, y21, e2)  # If g(x2) is square, this is its sqrt
-	FP(&y2).CondAssign(e2, &y22, &y21)
+	FP(&y2).Select(e2, &y22, &y21)
 	// 32. tv2 = y1^2
 	FP(&tv2).Square(&y1)
 	// 33. tv2 = tv2 * gxd
@@ -88,14 +88,14 @@ func mapToCurveElligator2Curve25519[FP fieldsImpl.PrimeFieldElementPtr[FP, F], F
 	// 34.  e3 = tv2 == gx1
 	e3 := FP(&tv2).Equal(&gx1)
 	// 35.  xn = CMOV(x2n, x1n, e3)  # If e3, x = x1, else x = x2
-	FP(&xn).CondAssign(e3, &x2n, &x1n)
+	FP(&xn).Select(e3, &x2n, &x1n)
 	// 36.   y = CMOV(y2, y1, e3)    # If e3, y = y1, else y = y2
-	FP(&y).CondAssign(e3, &y2, &y1)
+	FP(&y).Select(e3, &y2, &y1)
 	// 37.  e4 = sgn0(y) == 1        # Fix sign of y
 	e4 := sgn0(FP(&y))
 	// 38.   y = CMOV(y, -y, e3 XOR e4)
 	FP(&yn).Neg(&y)
-	FP(&y).CondAssign(e3^e4, &y, &yn)
+	FP(&y).Select(e3^e4, &y, &yn)
 	// 39. return (xn, xd, y, 1)
 	FP(xnOut).Set(&xn)
 	FP(xdOut).Set(&xd)

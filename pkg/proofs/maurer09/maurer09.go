@@ -1,5 +1,8 @@
 package maurer09
 
+// TODO: add Maurer09 interface
+// TODO: keep this implementation internal and not usable outside proofs
+
 import (
 	"io"
 
@@ -197,12 +200,25 @@ func (p *Protocol[A, B, C]) RunSimulator(statement *Statement[A, B], challengeBy
 	return &Commitment[A, B]{C: a}, &Response[A]{Z: z}, nil
 }
 
-func (s *Protocol[_, _, _]) SoundnessError() int {
-	return s.preImage.Order().Value().TrueLen()
+func (s *Protocol[_, _, _]) SoundnessError() uint {
+	return uint(s.preImage.ElementSize())
 }
 
 func (*Protocol[_, _, _]) SpecialSoundness() uint {
 	return 2
+}
+
+func (s *Protocol[A, B, C]) ValidateStatement(statement *Statement[A, B], witness *Witness[A]) error {
+	if statement == nil {
+		return errs.NewIsNil("statement is nil")
+	}
+	if witness == nil {
+		return errs.NewIsNil("witness is nil")
+	}
+	if !s.phi(witness.W).Equal(statement.X) {
+		return errs.NewValidation("invalid statement")
+	}
+	return nil
 }
 
 func (s *Protocol[A, B, C]) GetChallengeBytesLength() int {

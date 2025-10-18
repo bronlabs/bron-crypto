@@ -5,14 +5,13 @@ import (
 	"math/big"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/cronokirby/saferith"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
 type Cardinal interface {
 	base.Comparable[Cardinal]
 	base.Clonable[Cardinal]
 	base.Hashable[Cardinal]
-	base.Transparent[*saferith.Nat]
 	base.BytesLike
 	fmt.Stringer
 
@@ -27,14 +26,18 @@ type Cardinal interface {
 	IsInfinite() bool
 	IsUnknown() bool
 	IsProbablyPrime() bool
+	BitLen() uint
 }
 
 type NPlusLike[E any] interface {
 	SemiRing[E]
+	UniqueFactorizationMonoid[E]
+	FromCardinal(Cardinal) (E, error)
 }
 
 type NatPlusLike[E any] interface {
 	SemiRingElement[E]
+	UniqueFactorizationMonoidElement[E]
 
 	IsOdd() bool
 	IsEven() bool
@@ -43,8 +46,6 @@ type NatPlusLike[E any] interface {
 type NLike[E any] interface {
 	NPlusLike[E]
 	EuclideanSemiDomain[E]
-	FromUint64(uint64) E
-	FromCardinal(Cardinal) (E, error)
 }
 
 type NatLike[E any] interface {
@@ -68,7 +69,7 @@ type IntLike[E any] interface {
 	ArithmeticNegand[E]
 }
 
-type ZnLike[E any] interface {
+type ZModLike[E any] interface {
 	Ring[E]
 	NLike[E]
 	base.HashableStructure[E]
@@ -81,16 +82,19 @@ type UintLike[E any] interface {
 }
 
 type PrimeField[E any] interface {
-	Field[E]
-	ZnLike[E]
+	FiniteField[E]
+	ZModLike[E]
 	BitLen() int
 	FromWideBytes([]byte) (E, error)
 	// WideElementSize returns the **maximum** number of bytes used to map uniformly to an element.
 	WideElementSize() int
 	FiniteStructure[E]
+	// FromNat expects a *numct.Nat value (using any to avoid import cycle)
+	FromNat(*numct.Nat) (E, error)
+	FromUint64(uint64) E
 }
 
 type PrimeFieldElement[E any] interface {
-	FieldElement[E]
+	FiniteFieldElement[E]
 	UintLike[E]
 }

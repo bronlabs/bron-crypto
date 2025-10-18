@@ -127,7 +127,9 @@ type PolynomialLike[P, S, C any] interface {
 	IsMonic() bool
 	Derivative() P
 	Degree() int
+	// TODO: this one as well
 	ScalarStructure() Structure[S]
+	// TODO: remove this from here and move it to PolynomialRing and ModuleValuedPolynomial and change type
 	CoefficientStructure() Structure[C]
 }
 
@@ -162,6 +164,7 @@ type PolynomialRing[P, S any] interface {
 	RandomPolynomialWithConstantTerm(degree int, constantTerm S, prng io.Reader) (P, error)
 }
 
+// TODO: remove IsProbablyPrime from UniqueFactorizationMonoid
 type Polynomial[P, S any] interface {
 	UnivariatePolynomialLike[P, S, S]
 	AlgebraElement[P, S]

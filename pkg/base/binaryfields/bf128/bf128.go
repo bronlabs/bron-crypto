@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-// TODO: make to implement algera field, field element etc.
+// TODO: have this implement the low level field interface
 
 const (
 	FieldElementSize  = 16
@@ -35,7 +35,7 @@ func (f *Field) FromBytes(buf []byte) (*FieldElement, error) {
 }
 
 func (f *Field) Select(choice uint64, x, y *FieldElement) *FieldElement {
-	zSlice := ct.SliceSelect(ct.Choice(choice), x[:], y[:])
+	zSlice := ct.SelectIntegerSlices(ct.Choice(choice), x[:], y[:])
 	return &FieldElement{
 		zSlice[0],
 		zSlice[1],

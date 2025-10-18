@@ -29,6 +29,8 @@ func NatJacobi(a, b *saferith.Nat) (int, error) {
 		return 0, errs.NewValue("called with even modulus")
 	}
 
+	// 2 * Bitlen - 1
+
 	// Adapted from logic to compute the Kronecker symbol, originally implemented according to Henri Cohen,
 	// "A Course in Computational Algebraic Number Theory" (algorithm 1.4.10).
 	ret := 1

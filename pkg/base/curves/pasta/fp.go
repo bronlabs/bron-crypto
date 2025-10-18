@@ -2,16 +2,17 @@ package pasta
 
 import (
 	"encoding"
+	"slices"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -33,11 +34,9 @@ var (
 	_ encoding.BinaryMarshaler                   = (*FpFieldElement)(nil)
 	_ encoding.BinaryUnmarshaler                 = (*FpFieldElement)(nil)
 
-	fpFieldInitOnce      sync.Once
-	fpFieldInstance      *FpField
-	fpFieldModelOnce     sync.Once
-	fpFieldModelInstance *universal.Model[*FpFieldElement]
-	fpFieldOrder         *saferith.Modulus
+	fpFieldInitOnce sync.Once
+	fpFieldInstance *FpField
+	fpFieldOrder    *saferith.Modulus
 )
 
 func fpFieldInit() {
@@ -54,20 +53,6 @@ func newFpField() *FpField {
 	return fpFieldInstance
 }
 
-func FpFieldModel() *universal.Model[*FpFieldElement] {
-	fpFieldModelOnce.Do(func() {
-		var err error
-		fpFieldModelInstance, err = impl.BaseFieldModel(
-			newFpField(),
-		)
-		if err != nil {
-			panic(err)
-		}
-	})
-
-	return fpFieldModelInstance
-}
-
 func NewPallasBaseField() *FpField {
 	return newFpField()
 }
@@ -78,10 +63,6 @@ func NewVestaScalarField() *FpField {
 
 func (*FpField) Name() string {
 	return FpFieldName
-}
-
-func (f *FpField) Model() *universal.Model[*FpFieldElement] {
-	return FpFieldModel()
 }
 
 func (*FpField) ElementSize() int {
@@ -97,7 +78,7 @@ func (f *FpField) Characteristic() cardinal.Cardinal {
 }
 
 func (*FpField) Order() cardinal.Cardinal {
-	return cardinal.NewFromNat(fpFieldOrder.Nat())
+	return cardinal.NewFromSaferith(fpFieldOrder.Nat())
 }
 
 func (*FpField) Hash(input []byte) (*FpFieldElement, error) {
@@ -111,6 +92,22 @@ func (*FpField) Hash(input []byte) (*FpFieldElement, error) {
 
 func (*FpField) BitLen() int {
 	return pastaImpl.FpBits
+}
+
+func (f *FpField) FromNat(n *numct.Nat) (*FpFieldElement, error) {
+	var v numct.Nat
+	m, ok := numct.NewModulusOddPrime((*numct.Nat)(fpFieldOrder.Nat()))
+	if ok == ct.False {
+		return nil, errs.NewFailed("failed to create modulus")
+	}
+	m.Mod(&v, n)
+	vBytes := v.Bytes()
+	slices.Reverse(vBytes)
+	var s FpFieldElement
+	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
+		return nil, errs.NewFailed("failed to set scalar from nat")
+	}
+	return &s, nil
 }
 
 type FpFieldElement struct {

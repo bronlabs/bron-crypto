@@ -16,73 +16,118 @@ type (
 		base.Clonable[PK]
 		base.Hashable[PK]
 	}
-	Plaintext                   any
-	PlaintextCodec[P Plaintext] struct {
-		Encoder func([]byte) (P, error)
-		Decoder func(P) ([]byte, error)
-	}
+	Plaintext any
 
 	Ciphertext any
 	Nonce      any
-
-	ReRandomisableCiphertext[C Ciphertext, N Nonce, PK PublicKey[PK]] interface {
-		ReRandomiseWithNonce(PK, N) (C, error)
-		ReRandomise(PK, io.Reader) (C, N, error)
-	}
 )
 
-type KeyGenerator[SK PrivateKey[SK], PK PublicKey[PK]] interface {
-	Generate(prng io.Reader) (SK, PK, error)
-}
+type (
+	KeyGenerator[SK PrivateKey[SK], PK PublicKey[PK]] interface {
+		Generate(prng io.Reader) (SK, PK, error)
+	}
+	ExtendedKeyGenerator[SK PrivateKey[SK], PK PublicKey[PK]] interface {
+		KeyGenerator[SK, PK]
+		GenerateWithSeed(ikm []byte) (SK, PK, error)
+	}
 
-type ExtendedKeyGenerator[SK PrivateKey[SK], PK PublicKey[PK]] interface {
-	KeyGenerator[SK, PK]
-	GenerateWithSeed(ikm []byte) (SK, PK, error)
-}
+	KeyGeneratorOption[
+		KG KeyGenerator[SK, PK], SK PrivateKey[SK], PK PublicKey[PK],
+	] = func(KG) error
+)
 
-type Encrypter[PK PublicKey[PK], M Plaintext, C Ciphertext, X any] interface {
-	Encrypt(plaintext M, receiver PK, prng io.Reader) (ciphertext C, nonceOrCapsuleEtc X, err error)
-}
+type (
+	Encrypter[PK PublicKey[PK], M Plaintext, C Ciphertext, X any] interface {
+		Encrypt(plaintext M, receiver PK, prng io.Reader) (ciphertext C, nonceOrCapsuleEtc X, err error)
+	}
 
-type LinearlyRandomisedEncrypter[PK PublicKey[PK], M Plaintext, C ReRandomisableCiphertext[C, N, PK], N Nonce] interface {
-	Encrypter[PK, M, C, N]
-	EncryptWithNonce(plaintext M, receiver PK, nonce N, prng io.Reader) (ciphertext C, err error)
-}
+	LinearlyRandomisedEncrypter[PK PublicKey[PK], M Plaintext, C ReRandomisableCiphertext[C, N, PK], N Nonce] interface {
+		Encrypter[PK, M, C, N]
+		EncryptWithNonce(plaintext M, receiver PK, nonce N) (ciphertext C, err error)
+	}
 
-type Decrypter[M Plaintext, C Ciphertext] interface {
-	Decrypt(ciphertext C) (plaintext M, err error)
-}
+	// TODO: maybe remove
+	SelfEncrypter[SK PrivateKey[SK], M Plaintext, C Ciphertext, X any] interface {
+		PrivateKey() SK
+		SelfEncrypt(plaintext M, prng io.Reader) (ciphertext C, nonceOrCapsuleEtc X, err error)
+	}
 
-type LinearlyRandomisedDecrypter[PK PublicKey[PK], M Plaintext, C ReRandomisableCiphertext[C, N, PK], N Nonce] interface {
-	Decrypter[M, C]
-	DecryptWithNonce(ciphertext C, nonce N) (plaintext M, err error)
-}
+	LinearlyRandomisedSelfEncrypter[SK PrivateKey[SK], PK PublicKey[PK], M Plaintext, C ReRandomisableCiphertext[C, N, PK], N Nonce] interface {
+		SelfEncrypter[SK, M, C, N]
+		SelfEncryptWithNonce(plaintext M, nonce N) (ciphertext C, err error)
+	}
+
+	EncrypterOption[
+		ENC Encrypter[PK, M, C, X], PK PublicKey[PK], M Plaintext, C Ciphertext, X any,
+	] = func(ENC) error
+)
+
+type (
+	Decrypter[M Plaintext, C Ciphertext] interface {
+		Decrypt(ciphertext C) (plaintext M, err error)
+	}
+
+	DecrypterOption[
+		DEC Decrypter[M, C], M Plaintext, C Ciphertext,
+	] = func(DEC) error
+)
+
 type Scheme[
 	SK PrivateKey[SK], PK PublicKey[PK], M Plaintext, C Ciphertext, N Nonce,
 	KG KeyGenerator[SK, PK], ENC Encrypter[PK, M, C, N], DEC Decrypter[M, C],
 ] interface {
 	Name() Name
-	Keygen(...func(KG) error) (KG, error)
-	Encrypter(...func(ENC) error) (ENC, error)
-	Decrypter(SK, ...func(DEC) error) (DEC, error)
+	Keygen(...KeyGeneratorOption[KG, SK, PK]) (KG, error)
+	Encrypter(...EncrypterOption[ENC, PK, M, C, N]) (ENC, error)
+	Decrypter(SK, ...DecrypterOption[DEC, M, C]) (DEC, error)
 }
 
 // ******** Homomorphic
 
+type ReRandomisableCiphertext[C Ciphertext, N Nonce, PK PublicKey[PK]] interface {
+	Ciphertext
+	ReRandomise(PK, io.Reader) (C, N, error)
+}
+
+type HomomorphicCiphertext[C Ciphertext, CV algebra.MonoidElement[CV], S algebra.NatLike[S]] interface {
+	Ciphertext
+	algebra.HomomorphicLike[C, CV]
+	algebra.Actable[C, S]
+}
+
+type ShiftTypeCiphertext[
+	C Ciphertext, CV algebra.GroupElement[CV],
+	M Plaintext, PK PublicKey[PK], N Nonce, S algebra.NatLike[S],
+] interface {
+	HomomorphicCiphertext[C, CV, S]
+	ReRandomisableCiphertext[C, N, PK]
+	ReRandomiseWithNonce(PK, N) (C, N, error)
+	algebra.Shiftable[C, M]
+}
+
+type HomomorphicPlaintext[M Plaintext, MV algebra.SemiGroupElement[MV]] interface {
+	Plaintext
+	algebra.HomomorphicLike[M, MV]
+}
+
 type HomomorphicScheme[
 	SK PrivateKey[SK], PK PublicKey[PK],
-	M interface {
-		Plaintext
-		algebra.HomomorphicLike[M, MV]
-	}, MV algebra.GroupElement[MV],
-	C interface {
-		Ciphertext
-		algebra.HomomorphicLike[C, CV]
-		algebra.Actable[C, M]
-	}, CV algebra.GroupElement[CV],
+	M HomomorphicPlaintext[M, MV], MV algebra.SemiGroupElement[MV],
+	C HomomorphicCiphertext[C, CV, S], CV algebra.MonoidElement[CV],
+	N interface {
+		Nonce
+		algebra.HomomorphicLike[N, NV]
+	}, NV algebra.SemiGroupElement[NV],
+	KG KeyGenerator[SK, PK], ENC Encrypter[PK, M, C, N], DEC Decrypter[M, C], S algebra.NatLike[S],
+] Scheme[SK, PK, M, C, N, KG, ENC, DEC]
+
+type GroupHomomorphicScheme[
+	SK PrivateKey[SK], PK PublicKey[PK],
+	M HomomorphicPlaintext[M, MV], MV algebra.GroupElement[MV],
+	C ShiftTypeCiphertext[C, CV, M, PK, N, S], CV algebra.GroupElement[CV],
 	N interface {
 		Nonce
 		algebra.HomomorphicLike[N, NV]
 	}, NV algebra.GroupElement[NV],
-	KG KeyGenerator[SK, PK], ENC Encrypter[PK, M, C, N], DEC Decrypter[M, C],
-] Scheme[SK, PK, M, C, N, KG, ENC, DEC]
+	KG KeyGenerator[SK, PK], ENC LinearlyRandomisedEncrypter[PK, M, C, N], DEC Decrypter[M, C], S algebra.NatLike[S],
+] HomomorphicScheme[SK, PK, M, MV, C, CV, N, NV, KG, ENC, DEC, S]

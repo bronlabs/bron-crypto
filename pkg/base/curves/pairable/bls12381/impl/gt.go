@@ -131,7 +131,7 @@ func (gt *Gt) FinalExponentiation(a *Gt) {
 	t3.Mul(&t3, &t6)
 	t.Mul(&t3, &t4)
 
-	gt.CondAssign(wasInverted, &gt.Fp12, &t)
+	gt.Select(wasInverted, &gt.Fp12, &t)
 }
 
 func Fp12FrobeniusAutomorphism(f, arg *Fp12) *Fp12 {

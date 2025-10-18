@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/elliptic"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -44,7 +45,7 @@ func ComputeRecoveryId[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 	}
 
 	curve := algebra.StructureMustBeAs[Curve[P, B, S]](bigR.Structure())
-	subGroupOrder := curve.Order().Value()
+	subGroupOrder := curve.Order()
 
 	var recoveryId int
 	if !ry.IsOdd() {
@@ -53,8 +54,7 @@ func ComputeRecoveryId[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 		recoveryId = 1
 	}
 
-	b, _, _ := rx.Cardinal().Value().Cmp(subGroupOrder)
-	if b != 0 {
+	if base.PartialCompare(rx.Cardinal(), subGroupOrder).Is(base.Ordering(base.GreaterThan)) {
 		recoveryId += 2
 	}
 

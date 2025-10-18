@@ -11,10 +11,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -35,9 +33,6 @@ var (
 
 	curveInstanceG1 *G1
 	curveInitOnceG1 sync.Once
-
-	g1ModelInstance *universal.ThreeSortedModel[*PointG1, *Scalar, *BaseFieldElementG1]
-	g1ModelInitOnce sync.Once
 )
 
 type G1 struct {
@@ -53,26 +48,8 @@ func NewG1() *G1 {
 	return curveInstanceG1
 }
 
-func G1Model() *universal.ThreeSortedModel[*PointG1, *Scalar, *BaseFieldElementG1] {
-	g1ModelInitOnce.Do(func() {
-		var err error
-		g1ModelInstance, err = impl.CurveModel(
-			NewG1(), NewG1BaseField(), NewScalarField(),
-		)
-		if err != nil {
-			panic(err)
-		}
-	})
-
-	return g1ModelInstance
-}
-
 func (c *G1) Name() string {
 	return CurveNameG1
-}
-
-func (c *G1) Model() *universal.Model[*PointG1] {
-	return G1Model().First()
 }
 
 func (c *G1) ElementSize() int {
@@ -129,7 +106,7 @@ func (c *G1) Cofactor() cardinal.Cardinal {
 }
 
 func (c *G1) Order() cardinal.Cardinal {
-	return cardinal.NewFromNat(scalarFieldOrder.Nat())
+	return cardinal.NewFromSaferith(scalarFieldOrder.Nat())
 }
 
 func (c *G1) FromCompressed(input []byte) (*PointG1, error) {
@@ -182,7 +159,7 @@ func (c *G1) FromCompressed(input []byte) (*PointG1, error) {
 	}
 
 	yNegFp.Neg(&pp.V.Y)
-	pp.V.Y.CondAssign(fieldsImpl.IsNegative(&yFp)^sortFlag, &pp.V.Y, &yNegFp)
+	pp.V.Y.Select(fieldsImpl.IsNegative(&yFp)^sortFlag, &pp.V.Y, &yNegFp)
 
 	if !pp.IsTorsionFree() {
 		return nil, errs.NewFailed("point is not in correct subgroup")
@@ -275,6 +252,14 @@ func (c *G1) ScalarStructure() algebra.Structure[*Scalar] {
 }
 
 func (c *G1) BaseStructure() algebra.Structure[*BaseFieldElementG1] {
+	return NewG1BaseField()
+}
+
+func (c *G1) ScalarField() algebra.PrimeField[*Scalar] {
+	return NewScalarField()
+}
+
+func (c *G1) BaseField() algebra.FiniteField[*BaseFieldElementG1] {
 	return NewG1BaseField()
 }
 

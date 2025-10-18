@@ -72,6 +72,10 @@ func (m *Message[S]) HashCode() base.HashCode {
 	return m.v.HashCode()
 }
 
+func (m *Message[S]) Bytes() []byte {
+	return m.v.Bytes()
+}
+
 func (m *Message[S]) MarshalBinary() ([]byte, error) {
 	scalarMarshaler, ok := any(m.v).(encoding.BinaryMarshaler)
 	if !ok {

@@ -1,6 +1,8 @@
 package serde
 
 import (
+	"reflect"
+
 	"github.com/fxamacker/cbor/v2"
 )
 
@@ -11,17 +13,41 @@ const (
 )
 
 var (
-	encMode cbor.EncMode
-	decMode cbor.DecMode
+	enc cbor.EncMode
+	dec cbor.DecMode
+
+	// Global TagSet for type registration
+	tags = cbor.NewTagSet()
 )
 
+// Register registers the concrete type parameter T with a fixed CBOR tag.
+func Register[T any](tag uint64) {
+	var zero T
+	typ := reflect.TypeOf(zero)
+	if typ == nil {
+		panic("serde.RegisterWithTag: nil type for generic parameter T")
+	}
+	if err := tags.Add(
+		cbor.TagOptions{DecTag: cbor.DecTagOptional, EncTag: cbor.EncTagRequired},
+		typ,
+		tag,
+	); err != nil {
+		panic(err)
+	}
+	// ensure enc/dec modes see the new tag
+	updateModes()
+}
+
 func init() {
-	enc, err := cbor.CoreDetEncOptions().EncMode()
+	updateModes()
+}
+
+func updateModes() {
+	var err error
+	enc, err = cbor.CoreDetEncOptions().EncModeWithTags(tags)
 	if err != nil {
 		panic(err)
 	}
-	encMode = enc
-
 	decOptions := cbor.DecOptions{
 		DupMapKey:                cbor.DupMapKeyEnforcedAPF,
 		TimeTag:                  cbor.DecTagRequired,
@@ -48,19 +74,26 @@ func init() {
 		BinaryUnmarshaler:        cbor.BinaryUnmarshalerByteString,
 		TextUnmarshaler:          cbor.TextUnmarshalerNone,
 	}
-	dec, err := decOptions.DecMode()
+	dec, err = decOptions.DecModeWithTags(tags)
 	if err != nil {
 		panic(err)
 	}
-	decMode = dec
 }
 
 func MarshalCBOR[T any](t T) ([]byte, error) {
-	return encMode.Marshal(t)
+	return enc.Marshal(t)
+}
+
+func MarshalCBORTagged[T any](t T, tag uint64) ([]byte, error) {
+	wrapped := cbor.Tag{
+		Number:  tag,
+		Content: t,
+	}
+	return enc.Marshal(wrapped)
 }
 
 func UnmarshalCBOR[T any](data []byte) (T, error) {
 	var t T
-	err := decMode.Unmarshal(data, &t)
+	err := dec.Unmarshal(data, &t)
 	return t, err
 }

@@ -2,16 +2,17 @@ package pasta
 
 import (
 	"encoding"
+	"slices"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -33,11 +34,9 @@ var (
 	_ encoding.BinaryMarshaler                   = (*FqFieldElement)(nil)
 	_ encoding.BinaryUnmarshaler                 = (*FqFieldElement)(nil)
 
-	fqFieldInitOnce      sync.Once
-	fqFieldInstance      *FqField
-	fqFieldModelOnce     sync.Once
-	fqFieldModelInstance *universal.Model[*FqFieldElement]
-	fqFieldOrder         *saferith.Modulus
+	fqFieldInitOnce sync.Once
+	fqFieldInstance *FqField
+	fqFieldOrder    *saferith.Modulus
 )
 
 func fqFieldInit() {
@@ -54,20 +53,6 @@ func newFqField() *FqField {
 	return fqFieldInstance
 }
 
-func FqFieldModel() *universal.Model[*FqFieldElement] {
-	fqFieldModelOnce.Do(func() {
-		var err error
-		fqFieldModelInstance, err = impl.ScalarFieldModel(
-			newFqField(),
-		)
-		if err != nil {
-			panic(err)
-		}
-	})
-
-	return fqFieldModelInstance
-}
-
 func NewVestaBaseField() *FqField {
 	return newFqField()
 }
@@ -78,10 +63,6 @@ func NewPallasScalarField() *FqField {
 
 func (*FqField) Name() string {
 	return FqFieldName
-}
-
-func (f *FqField) Model() *universal.Model[*FqFieldElement] {
-	return FqFieldModel()
 }
 
 func (*FqField) ElementSize() int {
@@ -97,7 +78,7 @@ func (f *FqField) Characteristic() cardinal.Cardinal {
 }
 
 func (*FqField) Order() cardinal.Cardinal {
-	return cardinal.NewFromNat(fqFieldOrder.Nat())
+	return cardinal.NewFromSaferith(fqFieldOrder.Nat())
 }
 
 func (*FqField) Hash(input []byte) (*FqFieldElement, error) {
@@ -111,6 +92,22 @@ func (*FqField) Hash(input []byte) (*FqFieldElement, error) {
 
 func (*FqField) BitLen() int {
 	return pastaImpl.FqBits
+}
+
+func (f *FqField) FromNat(n *numct.Nat) (*FqFieldElement, error) {
+	var v numct.Nat
+	m, ok := numct.NewModulusOddPrime((*numct.Nat)(fqFieldOrder.Nat()))
+	if ok == ct.False {
+		return nil, errs.NewFailed("failed to create modulus")
+	}
+	m.Mod(&v, n)
+	vBytes := v.Bytes()
+	slices.Reverse(vBytes)
+	var s FqFieldElement
+	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
+		return nil, errs.NewFailed("failed to set scalar from nat")
+	}
+	return &s, nil
 }
 
 type FqFieldElement struct {

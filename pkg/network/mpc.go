@@ -6,8 +6,10 @@ import (
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
+// TODO: rename to fmt.Stringer
 type Round = uint64
 
+// TODO: remove
 type Party interface {
 	Node
 	ProtocolName() string

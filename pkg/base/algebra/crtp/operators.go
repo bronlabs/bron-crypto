@@ -34,40 +34,43 @@ type (
 )
 
 type (
-	Capacity = int
-
 	Operand[E any]              interface{ Op(E) E }
-	FixedCapacityOperand[E any] interface{ OpCap(E, Capacity) E }
+	FixedCapacityOperand[E any] interface{ OpCap(E, int) E }
 
 	DualOperand[E any]              interface{ OtherOp(E) E }
-	FixedCapacityDualOperand[E any] interface{ OtherOpCap(E, Capacity) E }
+	FixedCapacityDualOperand[E any] interface{ OtherOpCap(E, int) E }
 
 	Summand[E any]                   interface{ Add(E) E }
-	FixedCapacitySummand[E any]      interface{ AddCap(E, Capacity) E }
+	FixedCapacitySummand[E any]      interface{ AddCap(E, int) E }
 	MaybeSummand[E any]              interface{ TryAdd(E) (E, error) }
-	MaybeFixedCapacitySummand[E any] interface{ TryAddCap(E, Capacity) (E, error) }
+	MaybeFixedCapacitySummand[E any] interface{ TryAddCap(E, int) (E, error) }
 
 	Minuend[E any]                   interface{ Sub(E) E }
-	FixedCapacityMinuend[E any]      interface{ SubCap(E, Capacity) E }
+	FixedCapacityMinuend[E any]      interface{ SubCap(E, int) E }
 	MaybeMinuend[E any]              interface{ TrySub(E) (E, error) }
-	MaybeFixedCapacityMinuend[E any] interface{ TrySubCap(E, Capacity) (E, error) }
+	MaybeFixedCapacityMinuend[E any] interface{ TrySubCap(E, int) (E, error) }
 
 	Multiplicand[E any]                   interface{ Mul(E) E }
-	FixedCapacityMultiplicand[E any]      interface{ MulCap(E, Capacity) E }
+	FixedCapacityMultiplicand[E any]      interface{ MulCap(E, int) E }
 	MaybeMultiplicand[E any]              interface{ TryMul(E) (E, error) }
-	MaybeFixedCapacityMultiplicand[E any] interface{ TryMulCap(E, Capacity) (E, error) }
+	MaybeFixedCapacityMultiplicand[E any] interface{ TryMulCap(E, int) (E, error) }
 
 	Dividend[E any]                   interface{ Div(E) E }
-	FixedCapacityDividend[E any]      interface{ DivCap(E, Capacity) E }
+	FixedCapacityDividend[E any]      interface{ DivCap(E, int) E }
 	MaybeDividend[E any]              interface{ TryDiv(E) (E, error) }
-	MaybeFixedCapacityDividend[E any] interface{ TryDivCap(E, Capacity) (E, error) }
+	MaybeFixedCapacityDividend[E any] interface{ TryDivCap(E, int) (E, error) }
 
 	Residuand[M, Q any] interface{ Mod(M) (Q, error) }
 
 	ExponentiationBase[B, E any]                   interface{ Exp(E) B }
-	FixedCapacityExponentiationBase[B, E any]      interface{ ExpCap(E, Capacity) B }
+	FixedCapacityExponentiationBase[B, E any]      interface{ ExpCap(E, int) B }
 	MaybeExponentiationBase[B, E any]              interface{ TryExp(E) (B, error) }
-	MaybeFixedCapacityExponentiationBase[B, E any] interface{ TryExpCap(E, Capacity) (B, error) }
+	MaybeFixedCapacityExponentiationBase[B, E any] interface{ TryExpCap(E, int) (B, error) }
+
+	IntegerExponentiationBase[B, I any]                   interface{ ExpI(I) B }
+	FixedCapacityIntegerExponentiationBase[B, I any]      interface{ ExpICap(I, int) B }
+	MaybeIntegerExponentiationBase[B, I any]              interface{ TryExpI(I) (B, error) }
+	MaybeFixedCapacityIntegerExponentiationBase[B, I any] interface{ TryExpICap(I, int) (B, error) }
 
 	Conjunct[E any]      interface{ And(E) E }
 	MaybeConjunct[E any] interface{ TryAnd(E) (E, error) }
@@ -90,12 +93,12 @@ type (
 	Shiftable[E, S any]      interface{ Shift(S) E }
 	MaybeShiftable[E, S any] interface{ TryShift(S) (E, error) }
 
-	LeftBitwiseShiftable[E any]            interface{ Lsh(int) E }
-	FixedLengthLeftBitwiseShiftable[E any] interface{ LshCap(int, Capacity) E }
+	LeftBitwiseShiftable[E any]            interface{ Lsh(uint) E }
+	FixedLengthLeftBitwiseShiftable[E any] interface{ LshCap(uint, int) E }
 
-	RightBitwiseShiftable[E any]            interface{ Rsh(int) E }
-	FixedLengthRightBitwiseShiftable[E any] interface{ RshCap(int, Capacity) E }
+	RightBitwiseShiftable[E any]            interface{ Rsh(uint) E }
+	FixedLengthRightBitwiseShiftable[E any] interface{ RshCap(uint, int) E }
 
 	Resizable[E, C any]      interface{ Resize(C) E }
-	ResizableCapacity[E any] Resizable[E, Capacity]
+	ResizableCapacity[E any] Resizable[E, int]
 )

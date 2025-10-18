@@ -13,7 +13,7 @@ func Append[T base.BytesLike](tape Transcript, label string, xs ...T) {
 }
 
 func Extract[T base.BytesLike](tape Transcript, label string, f algebra.FiniteStructure[T]) (T, error) {
-	buf, err := tape.ExtractBytes(label, uint(f.ElementSize()+(base.StatisticalSecurity/8)))
+	buf, err := tape.ExtractBytes(label, uint(f.ElementSize()+(base.StatisticalSecurityBytesCeil)))
 	if err != nil {
 		return *new(T), errs.WrapFailed(err, "could not extract bytes from transcript")
 	}

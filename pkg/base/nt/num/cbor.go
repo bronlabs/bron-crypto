@@ -1,0 +1,145 @@
+package num
+
+import (
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/fxamacker/cbor/v2"
+)
+
+var (
+	_ cbor.Marshaler   = (*NatPlus)(nil)
+	_ cbor.Unmarshaler = (*NatPlus)(nil)
+	_ cbor.Marshaler   = (*Nat)(nil)
+	_ cbor.Unmarshaler = (*Nat)(nil)
+	_ cbor.Marshaler   = (*Int)(nil)
+	_ cbor.Unmarshaler = (*Int)(nil)
+	_ cbor.Marshaler   = (*Uint)(nil)
+	_ cbor.Unmarshaler = (*Uint)(nil)
+
+	_ cbor.Marshaler   = (*ZMod)(nil)
+	_ cbor.Unmarshaler = (*ZMod)(nil)
+)
+
+type natPlusDTO struct {
+	NatPlus *numct.Nat `cbor:"natPlus"`
+}
+
+func (n *NatPlus) MarshalCBOR() ([]byte, error) {
+	dto := &natPlusDTO{NatPlus: n.v}
+	return serde.MarshalCBOR(dto)
+}
+
+func (n *NatPlus) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*natPlusDTO](data)
+	if err != nil {
+		return err
+	}
+	if dto.NatPlus.IsZero() == ct.True {
+		return errs.NewValue("NatPlus must be greater than 0")
+	}
+	n.v = dto.NatPlus
+	return nil
+}
+
+type natDTO struct {
+	Nat *numct.Nat `cbor:"nat"`
+}
+
+func (n *Nat) MarshalCBOR() ([]byte, error) {
+	dto := &natDTO{Nat: n.v}
+	return serde.MarshalCBOR(dto)
+}
+
+func (n *Nat) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*natDTO](data)
+	if err != nil {
+		return err
+	}
+	n.v = dto.Nat
+	return nil
+}
+
+type intDTO struct {
+	Int *numct.Int `cbor:"int"`
+}
+
+func (i *Int) MarshalCBOR() ([]byte, error) {
+	dto := &intDTO{Int: i.v}
+	return serde.MarshalCBOR(dto)
+}
+
+func (i *Int) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*intDTO](data)
+	if err != nil {
+		return err
+	}
+	i.v = dto.Int
+	return nil
+}
+
+type uintDTO struct {
+	Value        *numct.Nat `cbor:"value"`
+	ModulusBytes []byte     `cbor:"modulusBytes"`
+}
+
+func (u *Uint) MarshalCBOR() ([]byte, error) {
+	modulusBytes, err := serde.MarshalCBOR(u.m)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to marshal modulus")
+	}
+
+	dto := &uintDTO{
+		Value:        u.v,
+		ModulusBytes: modulusBytes,
+	}
+	return serde.MarshalCBOR(dto)
+}
+
+func (u *Uint) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*uintDTO](data)
+	if err != nil {
+		return err
+	}
+	if dto.ModulusBytes == nil {
+		return errs.NewIsNil("modulus bytes")
+	}
+	if dto.Value == nil {
+		return errs.NewIsNil("value")
+	}
+
+	// Deserialize the modulus interface directly - tags handle type preservation
+	modulus, err := serde.UnmarshalCBOR[numct.Modulus](dto.ModulusBytes)
+	if err != nil {
+		return errs.WrapFailed(err, "failed to unmarshal modulus")
+	}
+
+	if lt, _, _ := dto.Value.Compare(modulus.Nat()); lt == ct.False {
+		return errs.NewValue("value must be in [0, modulus)")
+	}
+	u.v = dto.Value
+	u.m = modulus
+	return nil
+}
+
+type zmodDTO struct {
+	Modulus *NatPlus `cbor:"modulus"`
+}
+
+func (z *ZMod) MarshalCBOR() ([]byte, error) {
+	dto := &zmodDTO{Modulus: z.n}
+	return serde.MarshalCBOR(dto)
+}
+
+func (z *ZMod) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*zmodDTO](data)
+	if err != nil {
+		return err
+	}
+	if dto.Modulus == nil {
+		return errs.NewIsNil("modulus")
+	}
+	z.n = dto.Modulus
+	return nil
+}

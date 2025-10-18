@@ -16,7 +16,7 @@ type (
 	ZLike[E IntLike[E]]        crtp.ZLike[E]
 	IntLike[E crtp.IntLike[E]] crtp.IntLike[E]
 
-	ZnLike[E UintLike[E]]        crtp.ZnLike[E]
+	ZModLike[E UintLike[E]]      crtp.ZModLike[E]
 	UintLike[E crtp.UintLike[E]] crtp.UintLike[E]
 
 	PrimeField[E PrimeFieldElement[E]]             crtp.PrimeField[E]

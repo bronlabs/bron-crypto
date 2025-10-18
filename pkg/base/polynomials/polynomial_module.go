@@ -5,7 +5,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
@@ -39,10 +38,6 @@ func (m *PolynomialModule[ME, S]) Name() string {
 
 func (m *PolynomialModule[ME, S]) Order() algebra.Cardinal {
 	return cardinal.Infinite()
-}
-
-func (m *PolynomialModule[ME, S]) Model() *universal.Model[*ModuleValuedPolynomial[ME, S]] {
-	panic("internal error: not supported")
 }
 
 func (m *PolynomialModule[ME, S]) FromBytes(bytes []byte) (*ModuleValuedPolynomial[ME, S], error) {

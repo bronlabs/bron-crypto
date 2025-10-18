@@ -11,11 +11,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
@@ -29,10 +27,8 @@ var (
 	_ encoding.BinaryMarshaler                                      = (*PrimeSubGroupPoint)(nil)
 	_ encoding.BinaryUnmarshaler                                    = (*PrimeSubGroupPoint)(nil)
 
-	primeSubGroupInstance      *PrimeSubGroup
-	primeSubGroupInitOnce      sync.Once
-	primeSubGroupModelInstance *universal.ThreeSortedModel[*PrimeSubGroupPoint, *Scalar, *BaseFieldElement]
-	primeSubGroupModelInitOnce sync.Once
+	primeSubGroupInstance *PrimeSubGroup
+	primeSubGroupInitOnce sync.Once
 )
 
 func NewPrimeSubGroup() *PrimeSubGroup {
@@ -43,20 +39,6 @@ func NewPrimeSubGroup() *PrimeSubGroup {
 	return primeSubGroupInstance
 }
 
-func NewPrimeSubGroupModel() *universal.ThreeSortedModel[*PrimeSubGroupPoint, *Scalar, *BaseFieldElement] {
-	primeSubGroupModelInitOnce.Do(func() {
-		var err error
-		primeSubGroupModelInstance, err = impl.CurveModel(
-			NewPrimeSubGroup(), NewBaseField(), NewScalarField(),
-		)
-		if err != nil {
-			panic(err)
-		}
-	})
-
-	return primeSubGroupModelInstance
-}
-
 type PrimeSubGroup struct {
 	traits.PrimeCurveTrait[*edwards25519Impl.Fp, *edwards25519Impl.Point, *PrimeSubGroupPoint, PrimeSubGroupPoint]
 	traits.MSMTrait[*Scalar, *PrimeSubGroupPoint]
@@ -64,10 +46,6 @@ type PrimeSubGroup struct {
 
 func (c *PrimeSubGroup) Name() string {
 	return PrimeCurveName
-}
-
-func (c *PrimeSubGroup) Model() *universal.Model[*PrimeSubGroupPoint] {
-	return NewPrimeSubGroupModel().First()
 }
 
 func (c *PrimeSubGroup) ElementSize() int {
@@ -86,7 +64,7 @@ func (c *PrimeSubGroup) Cofactor() cardinal.Cardinal {
 }
 
 func (c *PrimeSubGroup) Order() cardinal.Cardinal {
-	return cardinal.NewFromNat(scalarFieldOrder.Nat())
+	return NewScalarField().Order()
 }
 
 func (c *PrimeSubGroup) FromCompressed(inBytes []byte) (*PrimeSubGroupPoint, error) {
@@ -179,6 +157,14 @@ func (c *PrimeSubGroup) HashWithDst(dst string, bytes []byte) (*PrimeSubGroupPoi
 
 func (c *PrimeSubGroup) ScalarStructure() algebra.Structure[*Scalar] {
 	return NewScalarField()
+}
+
+func (c *PrimeSubGroup) ScalarField() algebra.PrimeField[*Scalar] {
+	return NewScalarField()
+}
+
+func (c *PrimeSubGroup) BaseField() algebra.FiniteField[*BaseFieldElement] {
+	return NewBaseField()
 }
 
 func (c *PrimeSubGroup) BaseStructure() algebra.Structure[*BaseFieldElement] {

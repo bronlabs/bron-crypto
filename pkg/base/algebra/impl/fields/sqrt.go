@@ -21,15 +21,15 @@ func TonelliShanks[FP impl.FiniteFieldElementPtr[FP, F], F any](out, x, ethRootO
 		}
 		var sz, tz F
 		FP(&sz).Mul(&s, &z)
-		FP(&s).CondAssign(FP(&b).IsOne(), &sz, &s)
+		FP(&s).Select(FP(&b).IsOne(), &sz, &s)
 		FP(&z).Square(&z)
 		FP(&tz).Mul(&t, &z)
-		FP(&t).CondAssign(FP(&b).IsOne(), &tz, &t)
+		FP(&t).Select(FP(&b).IsOne(), &tz, &t)
 	}
 
 	var ss F
 	FP(&ss).Square(&s)
 	ok = FP(x).Equal(&ss)
-	FP(out).CondAssign(ok, out, &s)
+	FP(out).Select(ok, out, &s)
 	return ok
 }

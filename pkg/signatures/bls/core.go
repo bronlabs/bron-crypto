@@ -4,15 +4,18 @@ import (
 	"io"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"golang.org/x/crypto/hkdf"
+	"golang.org/x/crypto/sha3"
 	"golang.org/x/sync/errgroup"
 )
+
+// TODO: redo
+var RandomOracleHashFunction = sha3.New256
 
 // The salt used with generating secret keys
 // See section 2.3 from https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-keygen
@@ -26,7 +29,7 @@ func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S a
 	d := sf.Zero()
 	// We assume h models a random oracle, so we don't parametrize salt.
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#choosesalt
-	salt, err := hashing.Hash(base.RandomOracleHashFunction, []byte(HKDFKeyGenSalt))
+	salt, err := hashing.Hash(RandomOracleHashFunction, []byte(HKDFKeyGenSalt))
 	if err != nil {
 		return *new(S), *new(K), errs.WrapHashing(err, "could not produce salt")
 	}
@@ -34,7 +37,7 @@ func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S a
 	for d.IsZero() {
 		ikm = append(ikm, 0)
 		// step 2.3.2
-		kdf := hkdf.New(base.RandomOracleHashFunction, ikm, salt, []byte{0, 48}) // TODO: make sure this is correct
+		kdf := hkdf.New(RandomOracleHashFunction, ikm, salt, []byte{0, 48}) // TODO: make sure this is correct
 		okm := make([]byte, sf.WideElementSize())
 		// Leaves key_info parameter as the default empty string
 		// step 2.3.3
@@ -48,7 +51,7 @@ func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S a
 		if err != nil {
 			return *new(S), *new(K), errs.WrapSerialisation(err, "could not convert to scalar")
 		}
-		salt, err = hashing.Hash(base.RandomOracleHashFunction, salt)
+		salt, err = hashing.Hash(RandomOracleHashFunction, salt)
 		if err != nil {
 			return *new(S), *new(K), errs.WrapHashing(err, "could not rehash salt")
 		}

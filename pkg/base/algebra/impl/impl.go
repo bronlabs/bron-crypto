@@ -10,7 +10,7 @@ import (
 
 type magmaElement[E any] interface {
 	Set(v E)
-	ct.ConditionallyAssignable[E]
+	ct.ConditionallySelectable[E]
 	ct.Equatable[E]
 	Add(lhs, rhs E)
 	Double(E)
@@ -42,6 +42,8 @@ type MonoidElementPtr[E MonoidElement[E], T any] interface {
 	MonoidElement[E]
 }
 
+//TODO: remove above and embed below
+// TODO: rename to additive group
 // *** Group
 
 type groupElement[E any] interface {
@@ -109,27 +111,4 @@ type PrimeFieldElement[E primeFieldElement[E]] primeFieldElement[E]
 type PrimeFieldElementPtr[E PrimeFieldElement[E], T any] interface {
 	*T
 	PrimeFieldElement[E]
-}
-
-// *** Elliptic Curve Points
-
-type ellipticPoint[FP finiteFieldElement[FP], PP groupElement[PP]] interface {
-	GroupElement[PP]
-	Encode(dstPrefix string, message []byte)
-	Hash(dstPrefix string, message []byte)
-
-	SetRandom(prng io.Reader) (ok ct.Bool)
-	SetGenerator()
-	ClearCofactor(in PP)
-	SetAffine(x, y FP) (ok ct.Bool)
-	ToAffine(x, y FP) (ok ct.Bool)
-}
-
-type EllipticPoint[FP finiteFieldElement[FP], PP ellipticPoint[FP, PP]] interface {
-	ellipticPoint[FP, PP]
-}
-
-type EllipticPointPtr[FP finiteFieldElement[FP], PP ellipticPoint[FP, PP], P any] interface {
-	*P
-	ellipticPoint[FP, PP]
 }

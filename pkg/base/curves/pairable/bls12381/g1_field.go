@@ -2,17 +2,18 @@ package bls12381
 
 import (
 	"encoding"
+	"slices"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/universal"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/cronokirby/saferith"
 )
@@ -27,11 +28,9 @@ var (
 	_ encoding.BinaryMarshaler                       = (*BaseFieldElementG1)(nil)
 	_ encoding.BinaryUnmarshaler                     = (*BaseFieldElementG1)(nil)
 
-	baseFieldInstanceG1      *BaseFieldG1
-	baseFieldInitOnceG1      sync.Once
-	baseFieldG1ModelOnce     sync.Once
-	baseFieldModelInstanceG1 *universal.Model[*BaseFieldElementG1]
-	baseFieldOrderG1         *saferith.Modulus
+	baseFieldInstanceG1 *BaseFieldG1
+	baseFieldInitOnceG1 sync.Once
+	baseFieldOrderG1    *saferith.Modulus
 )
 
 type BaseFieldG1 struct {
@@ -47,34 +46,16 @@ func NewG1BaseField() *BaseFieldG1 {
 	return baseFieldInstanceG1
 }
 
-func BaseFieldModelG1() *universal.Model[*BaseFieldElementG1] {
-	baseFieldG1ModelOnce.Do(func() {
-		var err error
-		baseFieldModelInstanceG1, err = impl.BaseFieldModel(
-			NewG1BaseField(),
-		)
-		if err != nil {
-			panic(err)
-		}
-	})
-
-	return baseFieldModelInstanceG1
-}
-
 func (f *BaseFieldG1) Name() string {
 	return BaseFieldNameG1
 }
 
-func (f *BaseFieldG1) Model() *universal.Model[*BaseFieldElementG1] {
-	return BaseFieldModelG1()
-}
-
 func (f *BaseFieldG1) Order() cardinal.Cardinal {
-	return cardinal.NewFromNat(baseFieldOrderG1.Nat())
+	return cardinal.NewFromSaferith(baseFieldOrderG1.Nat())
 }
 
 func (f *BaseFieldG1) Characteristic() cardinal.Cardinal {
-	return cardinal.NewFromNat(baseFieldOrderG1.Nat())
+	return cardinal.NewFromSaferith(baseFieldOrderG1.Nat())
 }
 
 func (f *BaseFieldG1) Hash(bytes []byte) (*BaseFieldElementG1, error) {
@@ -96,6 +77,22 @@ func (f *BaseFieldG1) WideElementSize() int {
 
 func (f *BaseFieldG1) BitLen() int {
 	return bls12381Impl.FpBits
+}
+
+func (f *BaseFieldG1) FromNat(n *numct.Nat) (*BaseFieldElementG1, error) {
+	var v numct.Nat
+	m, ok := numct.NewModulusOddPrime((*numct.Nat)(baseFieldOrderG1.Nat()))
+	if ok == ct.False {
+		return nil, errs.NewFailed("failed to create modulus")
+	}
+	m.Mod(&v, n)
+	vBytes := v.Bytes()
+	slices.Reverse(vBytes)
+	var s BaseFieldElementG1
+	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
+		return nil, errs.NewFailed("failed to set scalar from nat")
+	}
+	return &s, nil
 }
 
 type BaseFieldElementG1 struct {

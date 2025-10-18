@@ -9,7 +9,7 @@ const Name commitments.Name = "pedersen"
 
 func _[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]]() {
 	var (
-		_ commitments.HomomorphicScheme[*Witness[S], S, *Message[S], S, *Commitment[E, S], E] = (*Scheme[E, S])(nil)
-		_ algebra.Actable[*Commitment[E, S], *Message[S]]                                     = (*Commitment[E, S])(nil)
+		_ commitments.GroupHomomorphicScheme[*Key[E, S], *Witness[S], S, *Message[S], S, *Commitment[E, S], E, *Committer[E, S], *Verifier[E, S], algebra.PrimeGroup[E, S]] = &Scheme[E, S]{}
+		_ algebra.Actable[*Commitment[E, S], *Message[S]]                                                                                                                   = (*Commitment[E, S])(nil)
 	)
 }
