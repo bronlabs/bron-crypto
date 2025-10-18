@@ -17,7 +17,7 @@ const (
 
 	// TODO: rename the value to something that Mateusz will send later
 	// Hash2CurveAppTag is the application tag for hash-to-curve operations
-	Hash2CurveAppTag = "bron-crypto/hash2curve"
+	Hash2CurveAppTag = "bron_crypto_with-"
 )
 
 //go:generate go run github.com/bronlabs/bron-crypto/tools/secparams-codegen
