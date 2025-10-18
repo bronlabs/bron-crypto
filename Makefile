@@ -27,7 +27,7 @@ include ./scripts/scripts.mk
 include ./thirdparty/thirdparty.mk
 # include ./docs/docs.mk
 
-GOENV=GO111MODULE=on CGO_CFLAGS="-I${BORINGSSL_SUBMODULE} -I${BORINGSSL_SUBMODULE}/include" CGO_LDFLAGS="-L${BORINGSSL_BUILD}/crypto -lcrypto ${LOCAL_LINKER}"
+GOENV=GO111MODULE=on CGO_CFLAGS="-I${BORINGSSL_DIR} -I${BORINGSSL_DIR}/include" CGO_LDFLAGS="-L${BORINGSSL_BUILD_DIR}/crypto -lcrypto ${LOCAL_LINKER}"
 GO=${GOENV} go
 
 BUILD_TAGS= $(if ${TAGS}, -tags=${TAGS})
