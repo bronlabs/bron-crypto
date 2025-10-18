@@ -1,18 +1,43 @@
+version: "2"
 run:
-  tests: true
   build-tags:
     - nobignum
     - purego
+  tests: true
 
-output:
-  formats: colored-line-number
-  sort-results: true
-  show-stats: true
-
-# https://golangci-lint.run/usage/linters
+formatters:
+  enable:
+    # Gci control golang package import order and make it always deterministic.
+    - gci
+    # Gofmt checks whether code was gofmt-ed. By default this tool runs with -s option to check for code simplification.
+    - gofmt
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/bronlabs)
+        - blank
+        - dot
+      custom-order: true
+    gofmt:
+      simplify: true
+      rewrite-rules:
+        - pattern: interface{}
+          replacement: any
+    gofumpt:
+      extra-rules: true
+  exclusions:
+    generated: lax
+    paths:
+      - gen
+      - testutils
+      - thirdparty
+      - third_party$
+      - builtin$
+      - examples$
 linters:
-  disable-all: true
-  fast: false
+  default: none
   enable:
     # Check for pass []any as any in variadic func(...any).
     - asasalint
@@ -20,12 +45,6 @@ linters:
     - asciicheck
     # Checks for dangerous unicode character sequences.
     - bidichk
-    # bodyclose	Checks whether HTTP response body is closed successfully.
-    - bodyclose
-    # Containedctx is a linter that detects struct contained context.Context field.
-    - containedctx
-    # Check whether the function uses a non-inherited context.
-    - contextcheck
     # Copyloopvar is a linter detects places where loop variables are copied.
     - copyloopvar
     # Go linter that checks if package imports are in a list of acceptable
@@ -37,24 +56,27 @@ linters:
     - dupl
     # Checks for duplicate words in the source code.
     - dupword
-    # check for two durations multiplied together
-    - durationcheck
-    # Checks types passed to the json encoding functions. Reports unsupported types and optionally reports occasions, where the check for the returned error can be omitted.
-    - errchkjson
-    # Checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error.
-    - errname
+    # Embedded types should be at the top of the field list of a struct, and there must be an empty line separating embedded fields from regular fields.
+    - embeddedstructfieldcheck
+    # Golang linter to check the errors handling expressions
+    - err113
     # Errcheck is a program for checking for unchecked errors in go programs. These unchecked errors can be critical bugs in some cases
     - errcheck
+    # # TODO: add when sentinel errors are used
+    # # Checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error.
+    # - errname
     # errorlint is a linter for that can be used to find code that will cause problems with the error wrapping scheme introduced in Go 1.13.
     - errorlint
     # check exhaustiveness of enum switch statements
     - exhaustive
+    # Checks if all structure fields are initialized.
+    - exhaustruct
+    # Detects functions from golang.org/x/exp/ that can be replaced by std functions.
+    - exptostd
     # Forbids identifiers
     - forbidigo
     # finds forced type assertions
     - forcetypeassert
-    # Gci control golang package import order and make it always deterministic.
-    - gci
     # Checks that go compiler directive comments (//go:) are valid.
     - gocheckcompilerdirectives
     # Checks that no init functions are present in Go code
@@ -63,17 +85,10 @@ linters:
     - gochecksumtype
     # Finds repeated strings that could be replaced by a constant
     - goconst
-    #  Provides many diagnostics that check for bugs, performance and style issues. Extensible without recompilation through dynamic rules. Dynamic rules are written declaratively with AST patterns, filters, report message and optional suggestion.
+    # Provides many diagnostics that check for bugs, performance and style issues. Extensible without recompilation through dynamic rules. Dynamic rules are written declaratively with AST patterns, filters, report message and optional suggestion.
     - gocritic
     # Check if comments end in a period
     - godot
-    # Golang linter to check the errors handling expressions
-    - err113
-    # Gofmt checks whether code was gofmt-ed. By default this tool runs with -s option to check for code simplification.
-    - gofmt
-    # Gofumpt checks whether code was gofumpt-ed. This would have been nice to
-    # have, but it has a bug when combined with gci sections.
-    # - gofumpt
     # Manage the use of 'replace', 'retract', and 'excludes' directives in go.mod.
     - gomoddirectives
     # Checks that printf-like functions are named with f at the end
@@ -82,12 +97,8 @@ linters:
     - gosec
     # Report certain i18n/l10n anti-patterns in your Go codebase.
     - gosmopolitan
-    # Checks key value pairs for common logger libraries (kitlog,klog,logr,zap).
-    - loggercheck
     # Reports wrong mirror patterns of bytes/strings usage.
     - mirror
-    # Linter for Go source code that specializes in simplifying a code
-    - gosimple
     # Vet examines Go source code and reports suspicious constructs, such as Printf calls whose arguments do not align with the format string
     - govet
     # # Checks that your code uses short syntax for if-statements whenever possible
@@ -115,10 +126,6 @@ linters:
     - nolintlint
     # Checks that there is no simultaneous return of nil error and an invalid value.
     - nilnil
-    # Noctx finds sending http request without context.Context.
-    - noctx
-    # Checks for misuse of Sprintf to construct a host with port in a URL.
-    - nosprintfhostport
     # Paralleltest detects missing usage of t.Parallel() method in your Go test.
     - paralleltest
     # Finds slice declarations that could potentially be preallocated
@@ -127,10 +134,6 @@ linters:
     - predeclared
     # Check Prometheus metrics naming via promlint.
     - promlinter
-    # Checks whether Err of sql rows is checked successfully.
-    - rowserrcheck
-    # Checks that sql.Rows and sql.Stmt are closed.
-    - sqlclosecheck
     # Check that struct tags are well aligned.
     - tagalign
     # Checks the struct tags.
@@ -149,8 +152,6 @@ linters:
     - thelper
     # tparallel detects inappropriate usage of t.Parallel() method in your Go test codes
     - tparallel
-    # Like the front-end of a Go compiler, parses and type-checks Go code
-    - typecheck
     # Remove unnecessary type conversions
     - unconvert
     # Reports unused function parameters
@@ -168,920 +169,362 @@ linters:
     # Detects the wrong usage of zerolog that a user forgets to dispatch with Send or Msg.
     - zerologlint
 
-linters-settings:
-  paralleltest:
-    # Ignore missing calls to `t.Parallel()` and only report incorrect uses of it.
-    # Default: false
-    ignore-missing: false
-    # Ignore missing calls to `t.Parallel()` in subtests. Top-level tests are
-    # still required to have `t.Parallel`, but subtests are allowed to skip it.
-    # Default: false
-    ignore-missing-subtests: false
-  asasalint:
-    # To specify a set of function names to exclude.
-    # The values are merged with the builtin exclusions.
-    # The builtin exclusions can be disabled by setting `use-builtin-exclusions` to `false`.
-    # Default: ["^(fmt|log|logger|t|)\.(Print|Fprint|Sprint|Fatal|Panic|Error|Warn|Warning|Info|Debug|Log)(|f|ln)$"]
-    exclude:
-      - \.Wrapf
-    # To enable/disable the asasalint builtin exclusions of function names.
-    # See the default value of `exclude` to get the builtin exclusions.
-    use-builtin-exclusions: false
-    # Ignore *_test.go files.
-    ignore-test: true
-  depguard:
-    # Rules to apply.
-    #
-    # Variables:
-    # - File Variables
-    #   you can still use and exclamation mark ! in front of a variable to say not to use it.
-    #   Example !$test will match any file that is not a go test file.
-    #
-    #   `$all` - matches all go files
-    #   `$test` - matches all go test files
-    #
-    # - Package Variables
-    #
-    #  `$gostd` - matches all of go's standard library (Pulled from `GOROOT`)
-    #
-    # Default: Only allow $gostd in all files.
-    rules:
-      # Name of a rule.
-      main:
-        # List of file globs that will match this list of settings to compare against.
-        # Default: $all
-        # files:
-        #   - "!**/*_a _file.go"
-        # # List of allowed packages.
-        # allow:
-        #   - $gostd
-        #   - github.com/OpenPeeDeeP
-        # # Packages that are not allowed where the value is a suggestion.
-        deny:
-          - pkg: "github.com/pkg/errors"
-            desc: Use custom error types from the errs package
-  dupword:
-    # Keywords for detecting duplicate words.
-    # If this list is not empty, only the words defined in this list will be detected.
-    # Default: []
-    keywords:
-      - "the"
-      - "and"
-      - "a"
-  importas:
-    no-unaliased: true
-    alias:
-      - pkg: "crypto/rand"
-        alias: crand
-      - pkg: "filippo.io/edwards25519"
-        alias: filippo
-  errchkjson:
-    # With check-error-free-encoding set to true, errchkjson does warn about errors
-    # from json encoding functions that are safe to be ignored,
-    # because they are not possible to happen.
-    #
-    # if check-error-free-encoding is set to true and errcheck linter is enabled,
-    # it is recommended to add the following exceptions to prevent from false positives:
-    #
-    #     linters-settings:
-    #       errcheck:
-    #         exclude-functions:
-    #           - encoding/json.Marshal
-    #           - encoding/json.MarshalIndent
-    #
-    # Default: false
-    check-error-free-encoding: true
-    # Issue on struct encoding that doesn't have exported fields.
-    # Default: false
-    report-no-exported: false
-  errcheck:
-    #     # report about not checking of errors in type assertions: `a := b.(MyStruct)`;
-    #     # default is false: such cases aren't reported by default.
-    check-type-assertions: true
-    #     # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`;
-    #     # default is false: such cases aren't reported by default.
-    check-blank: false
-    # # List of functions to exclude from checking, where each entry is a single
-    # function to exclude.
-    # we exclude the following because errchkjson is on
-    exclude-functions:
-      - encoding/json.Marshal
-      - encoding/json.MarshalIndent
-  goconst:
-    # minimal length of string constant, 3 by default
-    min-len: 3
-    # minimal occurrences count to trigger, 3 by default
-    min-occurrences: 3
-  gosec:
-    excludes:
-      - G115 # Potential integer overflow when converting between integer types TODO: enable this back and revisit the code
-    # To select a subset of rules to run.
-    # Available rules: https://github.com/securego/gosec#available-rules
-    # Default: [] - means include all rules
-    # Exclude generated files
-    exclude-generated: false
-    # Filter out the issues with a lower severity than the given value.
-    # Valid options are: low, medium, high.
-    severity: low
-    # Filter out the issues with a lower confidence than the given value.
-    # Valid options are: low, medium, high.
-    confidence: low
-    # Concurrency value.
-    # Default: the number of logical CPUs usable by the current process.
-    concurrency: 12
-    # To specify the configuration of rules.
-    config:
-      # Globals are applicable to all rules.
-      global:
-        # If true, ignore #nosec in comments (and an alternative as well).
-        # Default: false
-        nosec: true
-        # Add an alternative comment prefix to #nosec (both will work at the same time).
-        # Default: ""
-        "#nosec": "#my-custom-nosec"
-        # Define whether nosec issues are counted as finding or not.
-        # Default: false
-        show-ignored: true
-        # Audit mode enables addition checks that for normal code analysis might be too nosy.
-        # Default: false
-        audit: true
-      G101: # Look for hard coded credentials
-        # Regexp pattern for variables and constants to find.
-        # Default: "(?i)passwd|pass|password|pwd|secret|token|pw|apiKey|bearer|cred"
-        pattern: "(?i)example"
-        # If true, complain about all cases (even with low entropy).
-        # Default: false
-        ignore_entropy: false
-        # Maximum allowed entropy of the string.
-        # Default: "80.0"
-        entropy_threshold: "80.0"
-        # Maximum allowed value of entropy/string length.
-        # Is taken into account if entropy >= entropy_threshold/2.
-        # Default: "3.0"
-        per_char_threshold: "3.0"
-        # Calculate entropy for first N chars of the string.
-        # Default: "16"
-        truncate: "32"
-      # Additional functions to ignore while checking unhandled errors.
-      # Following functions always ignored:
-      #   bytes.Buffer:
-      #     - Write
-      #     - WriteByte
-      #     - WriteRune
-      #     - WriteString
-      #   fmt:
-      #     - Print
-      #     - Printf
-      #     - Println
-      #     - Fprint
-      #     - Fprintf
-      #     - Fprintln
-      #   strings.Builder:
-      #     - Write
-      #     - WriteByte
-      #     - WriteRune
-      #     - WriteString
-      #   io.PipeWriter:
-      #     - CloseWithError
-      #   hash.Hash:
-      #     - Write
-      #   os:
-      #     - Unsetenv
-      # Default: {}
-      G104: # Audit errors not checked
-        fmt:
-          - Fscanf
-      G111:
-        # Regexp pattern to find potential directory traversal.
-        # Default: "http\\.Dir\\(\"\\/\"\\)|http\\.Dir\\('\\/'\\)"
-        pattern: "custom\\.Dir\\(\\)"
-      # Maximum allowed permissions mode for os.Mkdir and os.MkdirAll
-      # Default: "0750"
-      G301: "0750"
-      # Maximum allowed permissions mode for os.OpenFile and os.Chmod
-      # Default: "0600"
-      G302: "0600"
-      # Maximum allowed permissions mode for os.WriteFile and ioutil.WriteFile
-      # Default: "0600"
-      G306: "0600"
-  gosimple:
-    # https://staticcheck.io/docs/configuration/options/#checks
-    checks: [ "all" ]
-  predeclared:
-    # include method names and field names (i.e., qualified names) in checks
-    q: true
-  staticcheck:
-    # https://staticcheck.io/docs/options#checks
-    checks: [ "all" ]
-  unused:
-    go: "1.22"
-  # testpackage:
-  #   # regexp pattern to skip files
-  #   # We're skipping securechannel tests - and keep them as internal tests
-  #   # because other wise we'd have to export a lot of unnecessary things out of
-  #   # the package.
-  #   skip-regexp: (groupchannel|peerchannel)_test\.go
-  misspell:
-    # Correct spellings using locale preferences for US or UK.
-    # Default is to use a neutral variety of English.
-    # Setting locale to US will correct the British spelling of 'colour' to 'color'.
-    locale: UK
-    extra-words:
-      - typo: "quorom"
-        correction: "quorum"
-      - typo: "sharign"
-        correction: "sharing"
-  tagliatelle:
-    # Check the struct tag name case.
-    case:
-      # Use the struct field name to check the name of the struct tag.
-      use-field-name: false
-      # `camel` is used for `json` and `yaml`, and `header` is used for `header` (can be overridden)
-      # Default: {}
+  settings:
+    asasalint:
+      # To specify a set of function names to exclude.
+      # The values are merged with the builtin exclusions.
+      # The builtin exclusions can be disabled by setting `use-builtin-exclusions` to `false`.
+      # Default: ["^(fmt|log|logger|t|)\.(Print|Fprint|Sprint|Fatal|Panic|Error|Warn|Warning|Info|Debug|Log)(|f|ln)$"]
+      exclude:
+        - \.Wrapf
+      # To enable/disable the asasalint builtin exclusions of function names.
+      # See the default value of `exclude` to get the builtin exclusions.
+      use-builtin-exclusions: false
+    depguard:
       rules:
-        # Any struct tag type can be used.
-        # Support string case: `camel`, `pascal`, `kebab`, `snake`, `upperSnake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`, `header`
-        json: camel
-        yaml: camel
-        xml: camel
-        bson: camel
-        avro: snake
-        mapstructure: kebab
-        env: upperSnake
-        envconfig: upperSnake
-  godot:
-    # comments to be checked: `declarations`, `toplevel`, or `all`
-    scope: toplevel
-    # list of regexps for excluding particular comment lines from check
-    exclude:
-      - '^ [=-_]+$'   # contain line comments eg '// ============'
-      - '^ [A-Za-z-_]+$' # contains only a single word eg '// Cosigners'
-      - '^ [A-Za-z-_]+ [A-Za-z-_]+$' # contains only two words eg '// Server Sage'
-      - '[TODO|FIXME]:' # contains TODO or FIXME keywords
-      - '[:]+' # contain a column eg. comments like '// Usage: ...' or comments containing an emoji
-    # don't enforce comments starting with capital letters because the first word might be
-    # referring to an argument within the function or alike
-    capital: false
-  whitespace:
-    multi-if: true # Enforces newlines (or comments) after every multi-line if statement
-    multi-func: false # Enforces newlines (or comments) after every multi-line function signature
-  prealloc:
-    # Report preallocation suggestions only on simple loops that have no returns/breaks/continues/gotos in them. true by default
-    simple: true
-    range-loops: true # Report preallocation suggestions on range loops, true by default
-    for-loops: true # Report preallocation suggestions on for loops, false by default
-  errorlint:
-    # Check whether fmt.Errorf uses the %w verb for formatting errors. keep in mind that any errors wrapped by fmt.Errorf implicitly become part of the API as according to Hyrum's Law.
-    errorf: true
-    # Permit more than 1 %w verb, valid per Go 1.20 (Requires errorf:true)
-    errorf-multi: false
-    # Check for plain type assertions and type switches
-    asserts: true
-    # Check for plain error comparisons
-    comparison: true
-  exhaustive:
-    check:
-      - switch
-      - map
-    # indicates that switch statements are to be considered exhaustive if a
-    # 'default' case is present, even if all enum members aren't listed in the
-    # switch
-    default-signifies-exhaustive: false
-  gci:
-    # Section configuration to compare against.
-    # Section names are case-insensitive and may contain parameters in ().
-    # The default order of sections is `standard > default > custom > blank > dot`,
-    # If `custom-order` is `true`, it follows the order of `sections` option.
-    # Default: ["standard", "default"]
-    sections:
-      - standard # Standard section: captures all standard packages.
-      - default # Default section: contains all imports that could not be matched to another section type.
-      - prefix(github.com/bronlabs) # Custom section: groups all imports with the specified Prefix.
-      - blank # Blank section: contains all blank imports. This section is not present unless explicitly enabled.
-      - dot # Dot section: contains all dot imports. This section is not present unless explicitly enabled.
-    # Skip generated files.
-    skip-generated: true
-    # Enable custom order of sections.
-    # If `true`, make the section order the same as the order of `sections`.
-    custom-order: true
-  gofumpt:
-    # Choose whether or not to use the extra rules that are disabled
-    # by default
-    # list of rules: https://github.com/mvdan/gofumpt
-    extra-rules: true
-  forbidigo:
-    # Forbid the following identifiers (identifiers are written using regexp):
-    forbid:
-      - 'fmt\.Print.*'
-      - 'fmt\.Println.*'
-      - 'fmt\.Errorf.*'
-      - 'assert\.*'
-      - 'pubkey'
-      - 'Pubkey'
-      - 'PubKey'
-      - 'privkey'
-      - 'Privkey'
-    # Exclude godoc examples from forbidigo checks.  Default is true.
-    exclude_godoc_examples: true
-  dogsled:
-    # checks assignments with too many blank identifiers; default is 2
-    max-blank-identifiers: 3
-  dupl:
-    # tokens count to trigger issue, 150 by default
-    threshold: 175
-  gomoddirectives:
-    # Allow local `replace` directives.
-    # Default: false
-    replace-local: false
-    # List of allowed `replace` directives.
-    # Default: []
-    # replace-allow-list:
-    #   - []
-    # Allow to not explain why the version has been retracted in the `retract` directives.
-    retract-allow-no-explanation: false
-    # Forbid the use of the `exclude` directives.
-    exclude-forbidden: false
-  gosmopolitan:
-    # Allow and ignore `time.Local` usages.
-    #
-    allow-time-local: false
-    # List of fully qualified names in the `full/pkg/path.name` form, to act as "i18n escape hatches".
-    # String literals inside call-like expressions to, or struct literals of those names,
-    # are exempt from the writing system check.
-    #
-    # Default: []
-    # escape-hatches:
-    #   -
-    # Ignore test files.
-    ignore-tests: false
-    # List of Unicode scripts to watch for any usage in string literals.
-    # https://pkg.go.dev/unicode#pkg-variables
-    #
-    # Default: ["Han"]
-    watch-for-scripts:
-      - Devanagari
-      - Han
-      - Hangul
-      - Hiragana
-      - Katakana
-  gofmt:
-    # Simplify code: gofmt with `-s` option.
-    simplify: true
-    # Apply the rewrite rules to the source before reformatting.
-    # https://pkg.go.dev/cmd/gofmt
-    # Default: []
-    rewrite-rules:
-      - pattern: 'interface{}'
-        replacement: 'any'
-  revive:
+        main:
+          deny:
+            - pkg: github.com/pkg/errors
+              desc: Use custom error types from the errs package
+    dogsled:
+      max-blank-identifiers: 3
+    dupl:
+      threshold: 175
+    dupword:
+      keywords:
+        - the
+        - and
+        - a
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+      exclude-functions:
+        - encoding/json.Marshal
+        - encoding/json.MarshalIndent
+    errchkjson:
+      check-error-free-encoding: true
+      report-no-exported: false
+    errorlint:
+      errorf: true
+      errorf-multi: false
+      asserts: true
+      comparison: true
+    exhaustive:
+      check:
+        - switch
+        - map
+      default-signifies-exhaustive: false
+    forbidigo:
+      forbid:
+        - pattern: fmt\.Print.*
+        - pattern: fmt\.Println.*
+        - pattern: fmt\.Errorf.*
+        - pattern: assert\.*
+        - pattern: pubkey
+        - pattern: Pubkey
+        - pattern: PubKey
+        - pattern: privkey
+        - pattern: Privkey
+    gochecksumtype:
+      default-signifies-exhaustive: false
+      include-shared-interfaces: false
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    gocritic:
+      disable-all: true
+      enabled-checks:
+        - argOrder
+        - badCall
+        - badCond
+        - badLock
+        - badRegexp
+        - badSorting
+        - builtinShadowDecl
+        - caseOrder
+        - codegenComment
+        - deferInLoop
+        - deprecatedComment
+        - dupArg
+        - dupBranchBody
+        - dupCase
+        - dupSubExpr
+        - dynamicFmtString
+        - emptyDecl
+        - evalOrder
+        - exitAfterDefer
+        - externalErrorReassign
+        - filepathJoin
+        - flagDeref
+        - flagName
+        - mapKey
+        - nilValReturn
+        - offBy1
+        - regexpPattern
+        - returnAfterHttpError
+        - sloppyReassign
+        - sloppyTypeAssert
+        - sortSlice
+        - sprintfQuotedString
+        - sqlQuery
+        - syncMapLoadAndDelete
+        - truncateCmp
+        - uncheckedInlineErr
+        - unnecessaryDefer
+        - weakCond
+        - assignOp
+        - boolExprSimplify
+        - builtinShadow
+        - commentFormatting
+        - commentedOutImport
+        - defaultCaseOrder
+        - deferUnlambda
+        - docStub
+        - dupImport
+        - elseif
+        - emptyFallthrough
+        - emptyStringTest
+        - exposedSyncMutex
+        - hexLiteral
+        - httpNoBody
+        - ifElseChain
+        - importShadow
+        - initClause
+        - methodExprCall
+        - nestingReduce
+        - newDeref
+        - octalLiteral
+        - paramTypeCombine
+        - preferFilepathJoin
+        - ptrToRefParam
+        - redundantSprint
+        - regexpMust
+        - regexpSimplify
+        - ruleguard
+        - singleCaseSwitch
+        - sloppyLen
+        - stringConcatSimplify
+        - stringsCompare
+        - switchTrue
+        - timeExprSimplify
+        - todoCommentWithoutDetail
+        - tooManyResultsChecker
+        - typeAssertChain
+        - typeDefFirst
+        - typeSwitchVar
+        - typeUnparen
+        - underef
+        - unlabelStmt
+        - unlambda
+        - unnamedResult
+        - unnecessaryBlock
+        - unslice
+        - valSwap
+        - whyNoLint
+        - wrapperFunc
+        - yodaStyleExpr
+        - appendCombine
+        - equalFold
+        - hugeParam
+        - indexAlloc
+        - preferDecodeRune
+        - preferFprint
+        - preferStringWriter
+        - preferWriteByte
+        - rangeExprCopy
+        - rangeValCopy
+        - sliceClear
+        - stringXbytes
+      settings:
+        hugeParam:
+          sizeThreshold: 80
+        nestingReduce:
+          bodyWidth: 5
+        rangeExprCopy:
+          sizeThreshold: 512
+          skipTestFuncs: true
+        rangeValCopy:
+          sizeThreshold: 128
+          skipTestFuncs: true
+        truncateCmp:
+          skipArchDependent: true
+        underef:
+          skipRecvDeref: false
+    godot:
+      scope: toplevel
+      exclude:
+        - ^ [=-_]+$
+        - ^ [A-Za-z-_]+$
+        - ^ [A-Za-z-_]+ [A-Za-z-_]+$
+        - '[TODO|FIXME]:'
+        - '[:]+'
+      capital: false
+    gomoddirectives:
+      replace-local: false
+      exclude-forbidden: false
+      retract-allow-no-explanation: false
+    gosec:
+      excludes:
+        - G115
+      severity: low
+      confidence: low
+      config:
+        G101:
+          entropy_threshold: "80.0"
+          ignore_entropy: false
+          pattern: (?i)example
+          per_char_threshold: "3.0"
+          truncate: "32"
+        G104:
+          fmt:
+            - Fscanf
+        G111:
+          pattern: custom\.Dir\(\)
+        G301: "0750"
+        G302: "0600"
+        G306: "0600"
+        global:
+          '#nosec': '#my-custom-nosec'
+          audit: true
+          nosec: true
+          show-ignored: true
+      concurrency: 12
+    gosmopolitan:
+      allow-time-local: false
+      watch-for-scripts:
+        - Devanagari
+        - Han
+        - Hangul
+        - Hiragana
+        - Katakana
+    govet:
+      disable:
+        - fieldalignment
+      enable-all: true
+    importas:
+      alias:
+        - pkg: crypto/rand
+          alias: crand
+        - pkg: filippo.io/edwards25519
+          alias: filippo
+      no-unaliased: true
+    misspell:
+      locale: UK
+      extra-words:
+        - typo: quorom
+          correction: quorum
+        - typo: sharign
+          correction: sharing
+    paralleltest:
+      ignore-missing: false
+      ignore-missing-subtests: false
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: true
+    predeclared:
+      qualified-name: true
+    revive:
+      rules:
+        - name: context-keys-type
+        - name: time-equal
+        - name: time-naming
+        - name: var-declaration
+        - name: unexported-return
+        - name: blank-imports
+        - name: context-as-argument
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+        - name: if-return
+        - name: increment-decrement
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: empty-block
+        - name: deep-exit
+        - name: superfluous-else
+        - name: get-return
+        - name: modifies-parameter
+        - name: optimize-operands-order
+        - name: string-format
+        - name: confusing-results
+        - name: datarace
+        - name: unreachable-code
+        - name: unnecessary-stmt
+        - name: struct-tag
+        - name: atomic
+        - name: modifies-value-receiver
+        - name: constant-logical-expr
+        - name: bool-literal-in-expr
+        - name: redefines-builtin-id
+        - name: range-val-in-closure
+        - name: range-val-address
+        - name: waitgroup-by-value
+        - name: call-to-gc
+        - name: duplicated-imports
+        - name: import-shadowing
+        - name: bare-return
+        - name: unused-receiver
+        - name: string-of-int
+        - name: early-return
+        - name: unconditional-recursion
+        - name: identical-branches
+        - name: defer
+          arguments:
+            - - call-chain
+              - method-call
+              - recover
+              - return
+    staticcheck:
+      checks:
+        - all
+    tagliatelle:
+      case:
+        rules:
+          avro: snake
+          bson: camel
+          env: upperSnake
+          envconfig: upperSnake
+          json: camel
+          mapstructure: kebab
+          xml: camel
+          yaml: camel
+        use-field-name: false
+    testifylint:
+      enable-all: true
+      disable:
+        - compares
+      suite-extra-assert-call:
+        mode: require
+    whitespace:
+      multi-if: true
+      multi-func: false
+    wrapcheck:
+      ignore-sigs:
+        - errs.
+      ignore-package-globs:
+        - google.golang.org/grpc/status
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
     rules:
-      # Disallows the usage of basic types in context.WithValue.
-      - name: context-keys-type
-      # Suggests to use time.Time.Equal instead of == and != for equality check time.
-      - name: time-equal
-      # Conventions around the naming of time variables.
-      - name: time-naming
-      # # whitelist & blacklist of initialisms
-      # # TODO: enable this once field elements are exported
-      # - name: var-naming
-      #   arguments:
-      #     # whitelist - we do not enforce consistent capitalization in naming of the following initialisms
-      #     - ["ID", "RHS"]
-      #     # Blacklist - opposite of whitelist
-      #     - ["KMS", "RSA", "HSM", "ECDH", "ECIES", "JSON", "URL", "PublicKey", "PrivateKey", "UUID", "HKDF", "TLS", "SQS", "SNS", "S2S", "DKLs"]
-      # Reduces redundancies around variable declaration.
-      - name: var-declaration
-      # # Warns when a public return is from unexported type.
-      - name: unexported-return
-      # Disallows blank imports
-      - name: blank-imports
-      # context.Context should be the first argument of a function.
-      - name: context-as-argument
-      # Forbids . imports.
-      - name: dot-imports
-      # The error return parameter should be last.
-      - name: error-return
-      # Conventions around error strings.
-      - name: error-strings
-      # Naming of error variables.
-      - name: error-naming
-      # Naming and commenting conventions on exported symbols.
-      - name: exported
-      # Redundant if when returning an error.
-      - name: if-return
-      # Use i++ and i-- instead of i += 1 and i -= 1.
-      - name: increment-decrement
-      # Package commenting conventions.
-      - name: package-comments
-      # Prevents redundant variables when iterating over a collection.
-      - name: range
-      # Conventions around the naming of receivers.
-      - name: receiver-naming
-      # Warns on empty code blocks
-      - name: empty-block
-      # Looks for program exits in funcs other than main() or init()
-      - name: deep-exit
-      # Prevents redundant else statements (extends indent-error-flow)
-      - name: superfluous-else
-      # Warns on getters that do not yield any result
-      - name: get-return
-      # Warns on assignments to function parameters
-      - name: modifies-parameter
-      # Checks inefficient conditional expressions
-      - name: optimize-operands-order
-      # Warns on specific string literals that fail one or more user-configured regular expressions
-      - name: string-format
-      # Suggests to name potentially confusing function results
-      - name: confusing-results
-      # Spots potential dataraces
-      - name: datarace
-      # # Warns on boolean parameters that create a control coupling
-      # # TODO: enable this in bron mpc-sdk
-      # - name: flag-parameter
-      # Warns on unreachable code
-      - name: unreachable-code
-      # Suggests removing or simplifying unnecessary statements
-      - name: unnecessary-stmt
-      # Checks common struct tags like json,xml,yaml
-      - name: struct-tag
-      # Check for common mistaken usages of the sync/atomic package
-      - name: atomic
-      # Warns on assignments to value-passed method receivers
-      - name: modifies-value-receiver
-      # Warns on constant logical expressions
-      - name: constant-logical-expr
-      # Suggests removing Boolean literals from logic expressions
-      - name: bool-literal-in-expr
-      # Warns on redefinitions of builtin identifiers
-      - name: redefines-builtin-id
-      # Warns if range value is used in a closure dispatched as goroutine
-      - name: range-val-in-closure
-      # Warns if address of range value is used dangerously
-      - name: range-val-address
-      # Warns on functions taking sync.WaitGroup as a by-value parameter
-      - name: waitgroup-by-value
-      # Warns on explicit call to the garbage collector
-      - name: call-to-gc
-      # Looks for packages that are imported two or more times
-      - name: duplicated-imports
-      # Spots identifiers that shadow an import
-      - name: import-shadowing
-      # Warns on bare returns
-      - name: bare-return
-      # Suggests to rename or remove unused method receivers
-      - name: unused-receiver
-      # Warns on suspicious casts from int to string
-      - name: string-of-int
-      # Spots if-then-else statements that can be refactored to simplify code reading
-      - name: early-return
-      # Warns on function calls that will lead to (direct) infinite recursion
-      - name: unconditional-recursion
-      # Spots if-then-else statements with identical then and else branches
-      - name: identical-branches
-      # Warns on some defer gotchas: https://blog.learngoprogramming.com/5-gotchas-of-defer-in-go-golang-part-iii-36a1ab3d6ef1
-      - name: defer
-        arguments:
-          # call-chain:	even if deferring call-chains of the form foo()() is valid, it does not helps code understanding (only the last call is deferred)
-          # loop: deferring inside loops can be misleading (deferred functions are not executed at the end of the loop iteration but of the current function) and it could lead to exhausting the execution stack
-          # method-call: deferring a call to a method can lead to subtle bugs if the method does not have a pointer receiver
-          # recover: calling recover outside a deferred function has no effect
-          # return: returning values form a deferred function has no effect
-          - [ "call-chain", "method-call", "recover", "return" ]
-  govet:
-    # run `go tool vet help` to see all analyzers. This is a standard Go's
-    # linter. We'll enable all of it to keep up to date.
-    enable-all: true
-    disable:
-      # TODO: enable this, manually. Or wait for proper solution
-      # The fact that the compiler doesn't already do this is idiotic.
-      # the fact that the tool to fix it, removes the comments we have above
-      # fields, is doubly idiotic.
-      - fieldalignment
-  gocritic:
-    disable-all: true
-    # Which checks should be enabled; can't be combined with 'disabled-checks';
-    # See https://go-critic.github.io/overview#checks-overview
-    # To check which checks are enabled run `GL_DEBUG=gocritic golangci-lint run`
-    # By default list o stable checks is used.
-    enabled-checks:
-      #### Diagnostic
-      # Detects suspicious arguments order
-      - argOrder
-      # Detects suspicious function calls
-      - badCall
-      # Detects suspicious condition expressions
-      - badCond
-      # Detects suspicious mutex lock/unlock operations
-      - badLock
-      # Detects suspicious regexp patterns
-      - badRegexp
-      # Detects bad usage of sort package
-      - badSorting
-      # Detects top-level declarations that shadow the predeclared identifiers
-      - builtinShadowDecl
-      # Detects erroneous case order inside switch statements
-      - caseOrder
-      # Detects malformed ‘code generated’ file comments
-      - codegenComment
-      # Detects loops inside functions that use defer
-      - deferInLoop
-      # Detects malformed ‘deprecated’ doc-comments
-      - deprecatedComment
-      # Detects suspicious duplicated arguments
-      - dupArg
-      # Detects duplicated branch bodies inside conditional statements
-      - dupBranchBody
-      # Detects duplicated case clauses inside switch or select statements
-      - dupCase
-      # Detects suspicious duplicated sub-expressions
-      - dupSubExpr
-      # Detects suspicious formatting strings usage
-      - dynamicFmtString
-      # Detects suspicious empty declarations blocks
-      - emptyDecl
-      # Detects unwanted dependencies on the evaluation order
-      - evalOrder
-      # Detects calls to exit/fatal inside functions that use defer
-      - exitAfterDefer
-      # Detects suspicious reassigment of error from another package
-      - externalErrorReassign
-      # Detects problems in filepath.Join() function calls
-      - filepathJoin
-      # Detects immediate dereferencing of flag package pointers
-      - flagDeref
-      # Detects suspicious flag names
-      - flagName
-      # Detects suspicious map literal keys
-      - mapKey
-      # Detects return statements those results evaluate to nil
-      - nilValReturn
-      # Detects various off-by-one kind of errors
-      - offBy1
-      # Detects suspicious regexp patterns
-      - regexpPattern
-      # Detects suspicious http.Error call without following return
-      - returnAfterHttpError
-      # Detects suspicious/confusing re-assignments
-      - sloppyReassign
-      # Detects redundant type assertions
-      - sloppyTypeAssert
-      # Detects suspicious sort.Slice calls
-      - sortSlice
-      # Detects “%s” formatting directives that can be replaced with %q
-      - sprintfQuotedString
-      # Detects issue in Query() and Exec() calls
-      - sqlQuery
-      # Detects sync.Map load+delete operations that can be replaced with LoadAndDelete
-      - syncMapLoadAndDelete
-      # Detects potential truncation issues when comparing ints of different sizes
-      - truncateCmp
-      # Detects unchecked errors in if statements
-      - uncheckedInlineErr
-      # Detects redundantly deferred calls
-      - unnecessaryDefer
-      # Detects conditions that are unsafe due to not being exhaustive
-      - weakCond
-      #### Style
-      # Detects assignments that can be simplified by using assignment operators
-      - assignOp
-      # Detects bool expressions that can be simplified
-      - boolExprSimplify
-      # Detects when predeclared identifiers are shadowed in assignments
-      - builtinShadow
-      # Detects comments with non-idiomatic formatting
-      - commentFormatting
-      # Detects commented-out imports
-      - commentedOutImport
-      # Detects when default case in switch isn’t on 1st or last position
-      - defaultCaseOrder
-      # Detects deferred function literals that can be simplified
-      - deferUnlambda
-      # Detects comments that silence go lint complaints about doc-comment
-      - docStub
-      # Detects multiple imports of the same package under different aliases
-      - dupImport
-      # Detects else with nested if statement that can be replaced with else-if
-      - elseif
-      # Detects fallthrough that can be avoided by using multi case values
-      - emptyFallthrough
-      # Detects empty string checks that can be written more idiomatically
-      - emptyStringTest
-      # Detects exposed methods from sync.Mutex and sync.RWMutex
-      - exposedSyncMutex
-      # Detects hex literals that have mixed case letter digits
-      - hexLiteral
-      # Detects nil usages in http.NewRequest calls, suggesting http.NoBody as an alternative
-      - httpNoBody
-      # Detects repeated if-else statements and suggests to replace them with switch statement
-      - ifElseChain
-      # Detects when imported package names shadowed in the assignments
-      - importShadow
-      # Detects non-assignment statements inside if/switch init clause
-      - initClause
-      # Detects method expression call that can be replaced with a method call
-      - methodExprCall
-      # Finds where nesting level could be reduced
-      - nestingReduce
-      # Detects immediate dereferencing of new expressions
-      - newDeref
-      # Detects old-style octal literals
-      - octalLiteral
-      # Detects if function parameters could be combined by type and suggest the way to do it
-      - paramTypeCombine
-      # Detects concatenation with os.PathSeparator which can be replaced with filepath.Join
-      - preferFilepathJoin
-      # Detects input and output parameters that have a type of pointer to referential type
-      - ptrToRefParam
-      # Detects redundant fmt.Sprint calls
-      - redundantSprint
-      # Detects regexp.Compile* that can be replaced with regexp.MustCompile*
-      - regexpMust
-      # Detects regexp patterns that can be simplified
-      - regexpSimplify
-      # Runs user-defined rules using ruleguard linter
-      # https://github.com/quasilyte/go-ruleguard
-      - ruleguard
-      # Detects switch statements that could be better written as if statement
-      - singleCaseSwitch
-      # Detects usage of len when result is obvious or doesn’t make sense
-      - sloppyLen
-      # Detects string concat operations that can be simplified
-      - stringConcatSimplify
-      # Detects strings.Compare usage
-      - stringsCompare
-      # Detects switch-over-bool statements that use explicit true tag value
-      - switchTrue
-      # Detects manual conversion to milli- or microseconds
-      - timeExprSimplify
-      # Detects TODO comments without detail/assignee
-      - todoCommentWithoutDetail
-      # Detects function with too many results
-      - tooManyResultsChecker
-      # Detects repeated type assertions and suggests to replace them with type switch statement
-      - typeAssertChain
-      # Detects method declarations preceding the type definition itself
-      - typeDefFirst
-      # Detects type switches that can benefit from type guard clause with variable
-      - typeSwitchVar
-      # Detects unneded parenthesis inside type expressions and suggests to remove them
-      - typeUnparen
-      # Detects dereference expressions that can be omitted
-      - underef
-      # Detects redundant statement labels
-      - unlabelStmt
-      # Detects function literals that can be simplified
-      - unlambda
-      # Detects unnamed results that may benefit from names
-      - unnamedResult
-      # Detects unnecessary braced statement blocks
-      - unnecessaryBlock
-      # Detects slice expressions that can be simplified to sliced expression itself
-      - unslice
-      # Detects value swapping code that are not using parallel assignment
-      - valSwap
-      # Ensures that //nolint comments include an explanation
-      - whyNoLint
-      # Detects function calls that can be replaced with convenience wrappers
-      - wrapperFunc
-      # Detects Yoda style expressions and suggests to replace them
-      - yodaStyleExpr
-      ### Performance
-      # Detects append chains to the same slice that can be done in a single append call
-      - appendCombine
-      # Detects unoptimal strings/bytes case-insensitive comparison
-      - equalFold
-      # Detects params that incur excessive amount of copying
-      - hugeParam
-      # Detects strings.Index calls that may cause unwanted allocs
-      - indexAlloc
-      # Detects expressions like []rune(s)[0] that may cause unwanted rune slice allocation
-      - preferDecodeRune
-      # Detects fmt.Sprint(f/ln) calls which can be replaced with fmt.Fprint(f/ln)
-      - preferFprint
-      # Detects w.Write or io.WriteString calls which can be replaced with w.WriteString
-      - preferStringWriter
-      # Detects WriteRune calls with rune literal argument that is single byte and reports to use WriteByte instead
-      - preferWriteByte
-      # Detects expensive copies of for loop range expressions
-      - rangeExprCopy
-      # Detects loops that copy big objects during each iteration
-      - rangeValCopy
-      # Detects slice clear loops, suggests an idiom that is recognized by the Go compiler
-      - sliceClear
-      # Detects redundant conversions between string and []byte
-      - stringXbytes
-
-
-    # Settings passed to gocritic.
-    # The settings key is the name of a supported gocritic checker.
-    # The list of supported checkers can be find in https://go-critic.github.io/overview.
-    settings:
-      hugeParam:
-        # size in bytes that makes the warning trigger (default 80)
-        sizeThreshold: 80
-      nestingReduce:
-        # min number of statements inside a branch to trigger a warning (default 5)
-        bodyWidth: 5
-      rangeExprCopy:
-        # size in bytes that makes the warning trigger (default 512)
-        sizeThreshold: 512
-        # whether to check test functions (default true)
-        skipTestFuncs: true
-      rangeValCopy:
-        # size in bytes that makes the warning trigger (default 128)
-        sizeThreshold: 128
-        # whether to check test functions (default true)
-        skipTestFuncs: true
-      truncateCmp:
-        # whether to skip int/uint/uintptr types (default true)
-        skipArchDependent: true
-      underef:
-        # whether to skip (*x).method() calls where x is a pointer receiver (default true)
-        skipRecvDeref: false
-  testifylint:
-    enable-all: true
-    disable:
-      - compares # screws up equality checks etc.
-    # To require or remove extra Assert() call?
-    suite-extra-assert-call:
-      # Default: remove
-      mode: require
-  wrapcheck:
-    # An array of strings that specify substrings of signatures to ignore.
-    # If this set, it will override the default set of ignored signatures.
-    # See https://github.com/tomarrell/wrapcheck#configuration for more information.
-    # Default: [".Errorf(", "errors.New(", "errors.Unwrap(", ".Wrap(", ".Wrapf(", ".WithMessage(", ".WithMessagef(", ".WithStack("]
-    ignoreSigs:
-      - errs. # we have a custom package for errors that we wrap errors through
-    ignorePackageGlobs:
-      - google.golang.org/grpc/status
-
+      - linters:
+          - asasalint
+        path: (.+)_test\.go
+    paths:
+      - gen
+      - testutils
+      - thirdparty
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude-dirs:
-    - gen
-    - testutils
-    - thirdparty
-  # Excluding configuration per-path, per-linter, per-text and per-source
-  exclude-rules:
-    # Exclude some linters from running on tests files.
-    - path: pkg/base/fuzzutils
-      linters:
-        - gosec
-    - path: _test\.go
-      linters:
-        # We're disabling `goconst` in tests, because there are a lot of
-        # repeated non-constant strings in the tests that we don't want to
-        # change eg. `cosigner id` as the cosigner id etc.
-        - goconst
-        # We're only enabling `godot` for library and internal code to make documentation
-        # generation and/or text-editor's job prettier.
-        - godot
-        # It's unnecessary to have a hard wrapping requirement for tests.
-        - wrapcheck
-        # It's unnecessary to enforce errors are not defined dynamically
-        - err113
-        # Ignore revive results for tests because there a lot of conflicting
-        # suggestions eg. `var-naming` says we shouldn't use underscores in
-        # function names but that's a common pattern that we use.
-        - revive
-        # In tests we disable the check that prevents assigning errors to _
-        - errcheck
-        # duplicate code detection tends to break the subtesting pattern that we use.
-        - dupl
-        - gocritic
-        - dogsled
-        - errorlint
-        - asciicheck
-        - decorder
-        - depguard
-        - forbidigo
-        - forcetypeassert
-        - gochecknoinits
-        - gosec # mostly weak prng
-        - nilnil
-        - prealloc
-        - whitespace
-        - govet
-        - copyloopvar # TODO: enable later
-    - path: testutils/
-      linters:
-        - depguard
-        - wrapcheck
-        - dupl
-        - forbidigo
-        - forcetypeassert
-        - err113
-        - gosec # mostly weak prng
-        - nilnil
-        - prealloc
-        - whitespace
-        - govet
-    # too much work for now
-    - path: curves/
-      linters:
-        - errcheck
-        - gocritic
-        - forbidigo
-        - forcetypeassert
-        - err113
-        - nakedret
-        # TODO: ENABLE THIS
-        - wrapcheck
-
-    - path: signatures/bls/
-      linters:
-        # so many castings to pairing point would then need redundant checks.
-        # fix when we move to actual algebraic interfaces
-        - errcheck
-        - forcetypeassert
-
-    # linter thinks value is unused if we type cast the interface and panic if not ok
-    - path: curves/
-      text: "SA4006"
-      linters:
-        staticcheck
-
-    # big portions of `aes` trigger duplicated code (encrypt vs devrypt, constants) and
-    # unused constants (poly).
-    - path: thirdparty/
-      linters:
-        - dupl
-        - unused
-
-    # a lot of false positives for cselect
-    - path: curves/
-      text: "nilness: nil dereference in field selection"
-      linters:
-        govet
-
-    # contents of impl are not supposed to be used by outside libraries, its constants
-    - path: impl/
-      text: "unexported-return"
-      linters:
-        - revive
-
-    - path: impl/
-      linters:
-        - dupl
-
-    - path: pkg/cgo
-      linters:
-        - gocritic
-
-    # Exclude some revive messages
-    - linters:
-        - revive
-      text: "var-naming: don't use ALL_CAPS in Go names; use CamelCase"
-
-    # We don't want to check whether statements like `x, err := ...` shadows `err`
-    - linters:
-        - govet
-      text: 'shadow: declaration of "err" shadows declaration at line'
-
-    - linters:
-        - govet
-      text: 'shadow: declaration of "ok" shadows declaration at line'
-
-    - linters:
-        - gocritic
-      text: "captLocal: `G1' should not be capitalized"
-
-    - linters:
-        - gocritic
-      text: "captLocal: `G2' should not be capitalized"
-
-    - linters:
-        - gocritic
-      text: "captLocal: `Gt' should not be capitalized"
-
-    - path: ot/
-      text: "captLocal"
-      linters:
-        - gocritic
-
-    - path: key_agreement/
-      text: "captLocal"
-      linters:
-        - gocritic
-
-    - path: encryptions/
-      text: "captLocal: `AD' should not be capitalized"
-      linters:
-        - gocritic
-
-    - path: hpke/
-      text: "captLocal: `L' should not be capitalized"
-      linters:
-        - gocritic
-
-    # this has a collision with wrapcheck. We care about wrapcheck more, but
-    # errchkjson is also important because it reports unsafe marshaling
-    - linters:
-        - errchkjson
-      text: 'Error return value of `encoding/json.Marshal` is checked but passed argument is safe'
-
-  # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
   max-same-issues: 0
-  # Fix found issues (if it's supported by the linter). To prevent any problems
-  # with CI, this is disabled. Use `make lint-fix` instead.
   fix: false

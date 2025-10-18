@@ -161,7 +161,7 @@ func (c *Cosigner[P, B, S]) otherCosigners() iter.Seq[sharing.ID] {
 }
 
 func randomizeZeroSeeds(seeds przs.Seeds, tape transcripts.Transcript) (przs.Seeds, error) {
-	randomizerKey, err := tape.ExtractBytes(przsRandomizerLabel, (2*base.ComputationalSecurity+7)/8)
+	randomizerKey, err := tape.ExtractBytes(przsRandomizerLabel, (2*base.ComputationalSecurityBits+7)/8)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot extract randomizer")
 	}

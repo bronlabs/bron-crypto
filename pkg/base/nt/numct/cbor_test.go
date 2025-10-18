@@ -1,3 +1,5 @@
+//go:build !purego && !nobignum
+
 package numct_test
 
 import (
@@ -182,32 +184,6 @@ func TestModulusOddPrime_CBOR(t *testing.T) {
 	}
 }
 
-func TestModulusOddPrimeBasic_CBOR(t *testing.T) {
-	t.Parallel()
-
-	// Create original modulus
-	n := numct.NewNat(97) // prime
-	original, ok := numct.NewModulusOddPrime(n)
-	require.True(t, ok == ct.True)
-
-	// Get the basic version
-	basicOriginal := &original.ModulusOddPrimeBasic
-
-	// Marshal to CBOR
-	data, err := basicOriginal.MarshalCBOR()
-	require.NoError(t, err)
-	require.NotEmpty(t, data)
-
-	// Unmarshal from CBOR
-	var recovered numct.ModulusOddPrimeBasic
-	err = recovered.UnmarshalCBOR(data)
-	require.NoError(t, err)
-
-	// Compare values
-	require.Equal(t, basicOriginal.Bytes(), recovered.Bytes())
-	require.Equal(t, basicOriginal.Big().Uint64(), recovered.Big().Uint64())
-}
-
 func TestModulusOdd_CBOR(t *testing.T) {
 	t.Parallel()
 
@@ -240,45 +216,6 @@ func TestModulusOdd_CBOR(t *testing.T) {
 			require.Equal(t, original.Bytes(), recovered.Bytes())
 			require.Equal(t, original.Big().Uint64(), recovered.Big().Uint64())
 			require.Equal(t, original.BitLen(), recovered.BitLen())
-		})
-	}
-}
-
-func TestModulusOddBasic_CBOR(t *testing.T) {
-	t.Parallel()
-
-	// Test with various odd values (not necessarily prime)
-	// Note: We use prime values here since ModulusOddPrime is the public way
-	// to create these structures
-	oddPrimes := []uint64{3, 5, 7, 11, 13, 17, 19, 23, 29, 31}
-
-	for _, v := range oddPrimes {
-		t.Run("odd_"+string(rune(v)), func(t *testing.T) {
-			// Create a ModulusOddPrime and extract its basic component
-			n := numct.NewNat(v)
-			mod, ok := numct.NewModulusOddPrime(n)
-			require.True(t, ok == ct.True)
-
-			// Get the ModulusOddPrimeBasic inside it
-			// Then cast to ModulusOddBasic which wraps it
-			originalPrimeBasic := &mod.ModulusOddPrimeBasic
-			original := &numct.ModulusOddBasic{
-				ModulusOddPrimeBasic: *originalPrimeBasic,
-			}
-
-			// Marshal to CBOR
-			data, err := original.MarshalCBOR()
-			require.NoError(t, err)
-			require.NotEmpty(t, data)
-
-			// Unmarshal from CBOR
-			var recovered numct.ModulusOddBasic
-			err = recovered.UnmarshalCBOR(data)
-			require.NoError(t, err)
-
-			// Compare values
-			require.Equal(t, original.Bytes(), recovered.Bytes())
-			require.Equal(t, original.Big().Uint64(), recovered.Big().Uint64())
 		})
 	}
 }

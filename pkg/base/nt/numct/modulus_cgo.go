@@ -7,13 +7,12 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/cgo/boring"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/internal"
 )
 
 var (
-	_ (internal.ModulusMutable[*Int, *Nat, Modulus]) = (*ModulusOddPrime)(nil)
-	_ (internal.ModulusMutable[*Int, *Nat, Modulus]) = (*ModulusOdd)(nil)
-	_ (internal.ModulusMutable[*Int, *Nat, Modulus]) = (*ModulusNonZero)(nil)
+	_ (Modulus) = (*ModulusOddPrime)(nil)
+	_ (Modulus) = (*ModulusOdd)(nil)
+	_ (Modulus) = (*ModulusBasic)(nil)
 )
 
 var bnCtxPool = sync.Pool{
@@ -266,10 +265,6 @@ func (m *ModulusOdd) ModSqrt(out, x *Nat) ct.Bool {
 	return (&ModulusOddBasic{
 		ModulusOddPrimeBasic: m.ModulusOddPrimeBasic,
 	}).ModSqrt(out, x)
-}
-
-func (m *ModulusOdd) ModInvBlinded(out, x *Nat) ct.Bool {
-	return m.ModulusOddPrime.ModInv(out, x)
 }
 
 func (m *ModulusOdd) ModInv(out, x *Nat) ct.Bool {

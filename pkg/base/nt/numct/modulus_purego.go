@@ -12,6 +12,12 @@ type (
 	ModulusNonZero  = ModulusBasic
 )
 
+var (
+	_ (Modulus) = (*ModulusOddPrimeBasic)(nil)
+	_ (Modulus) = (*ModulusOddBasic)(nil)
+	_ (Modulus) = (*ModulusBasic)(nil)
+)
+
 func NewModulusOddPrime(m *Nat) (*ModulusOddPrime, ct.Bool) {
 	ok := m.IsNonZero() & m.IsOdd() & m.IsProbablyPrime()
 	return newModulusOddPrimeBasic(m), ok

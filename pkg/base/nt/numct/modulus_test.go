@@ -740,47 +740,6 @@ func TestModInv_Comprehensive(t *testing.T) {
 	})
 }
 
-// Test ModInvBlinded for large RSA-like moduli
-func TestModInvBlinded_RSAModuli(t *testing.T) {
-	t.Parallel()
-
-	// Generate RSA-like modulus (product of two primes)
-	p1, _ := rand.Prime(rand.Reader, 512)
-	p2, _ := rand.Prime(rand.Reader, 512)
-	n := new(big.Int).Mul(p1, p2) // 1024-bit RSA modulus
-	nNat := (*numct.Nat)(new(saferith.Nat).SetBig(n, n.BitLen()))
-
-	m, ok := numct.NewModulusOdd(nNat)
-	require.Equal(t, ct.True, ok, "Failed to create modulus")
-
-	// Test several random coprime values
-	for i := 0; i < 10; i++ {
-		// Generate a random value less than n
-		testVal, _ := rand.Int(rand.Reader, n)
-
-		// Make sure it's coprime to n
-		gcd := new(big.Int).GCD(nil, nil, testVal, n)
-		if gcd.Cmp(big.NewInt(1)) != 0 {
-			i-- // Try again
-			continue
-		}
-
-		testNat := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
-		var inv numct.Nat
-
-		// Use ModInvBlinded for large moduli
-		ok := m.ModInvBlinded(&inv, testNat)
-		assert.Equal(t, ct.True, ok, "ModInvBlinded should succeed for coprime value")
-
-		// Verify the inverse is correct
-		var product numct.Nat
-		m.ModMul(&product, testNat, &inv)
-		one := (*numct.Nat)(new(saferith.Nat).SetUint64(1))
-		assert.Equal(t, ct.True, product.Equal(one),
-			"Product of value and inverse should be 1 mod n")
-	}
-}
-
 // Benchmark different ModInv implementations
 func BenchmarkModInv_Comparison(b *testing.B) {
 	// Generate a large prime for testing

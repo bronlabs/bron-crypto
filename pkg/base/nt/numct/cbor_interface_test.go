@@ -39,20 +39,6 @@ func TestModulusInterface_TagBasedCBOR(t *testing.T) {
 			expectType: "*numct.ModulusOdd",
 		},
 		{
-			name: "ModulusOddPrimeBasic",
-			createMod: func() Modulus {
-				return newModulusOddPrimeBasic(n)
-			},
-			expectType: "*numct.ModulusOddPrimeBasic",
-		},
-		{
-			name: "ModulusOddBasic",
-			createMod: func() Modulus {
-				return newModulusOddBasic(n)
-			},
-			expectType: "*numct.ModulusOddBasic",
-		},
-		{
 			name: "ModulusBasic",
 			createMod: func() Modulus {
 				return newModulusBasic(n)
@@ -99,8 +85,8 @@ func TestModulusInterface_SliceOfInterfaces(t *testing.T) {
 	mod2, _ := NewModulusOdd(n2)
 	moduli = append(moduli, mod2)
 
-	n3 := NewNat(107)
-	mod3 := newModulusOddPrimeBasic(n3)
+	n3 := NewNat(108)
+	mod3, _ := NewModulus(n3)
 	moduli = append(moduli, mod3)
 
 	// Serialize the slice of interfaces directly

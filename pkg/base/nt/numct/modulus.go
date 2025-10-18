@@ -13,12 +13,6 @@ import (
 
 type Modulus internal.ModulusMutable[*Int, *Nat, Modulus]
 
-var (
-	_ (Modulus) = (*ModulusOddPrimeBasic)(nil)
-	_ (Modulus) = (*ModulusOddBasic)(nil)
-	_ (Modulus) = (*ModulusBasic)(nil)
-)
-
 func NewModulus(m *Nat) (Modulus, ct.Bool) {
 	mIsPrime := m.IsProbablyPrime()
 	mIsOdd := m.IsOdd()

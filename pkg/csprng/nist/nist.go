@@ -56,8 +56,8 @@ func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, pers
 		return nil, errs.NewArgument("keySize must be one of {16 (AES128), 24 (AES192), 32 (AES256)}")
 	}
 	securityStrength := keySize
-	if securityStrength*8 < base.ComputationalSecurity {
-		return nil, errs.NewArgument("security strength (%d) below %d bits", securityStrength*8, base.ComputationalSecurity)
+	if securityStrength*8 < base.ComputationalSecurityBits {
+		return nil, errs.NewArgument("security strength (%d) below %d bits", securityStrength*8, base.ComputationalSecurityBits)
 	}
 	// 5. Nil step.
 	if entropySource != nil {

@@ -12,14 +12,6 @@ var (
 	_ cbor.Unmarshaler = (*Nat)(nil)
 	_ cbor.Marshaler   = (*Int)(nil)
 	_ cbor.Unmarshaler = (*Int)(nil)
-	_ cbor.Marshaler   = (*ModulusOddPrime)(nil)
-	_ cbor.Unmarshaler = (*ModulusOddPrime)(nil)
-	_ cbor.Marshaler   = (*ModulusOddPrimeBasic)(nil)
-	_ cbor.Unmarshaler = (*ModulusOddPrimeBasic)(nil)
-	_ cbor.Marshaler   = (*ModulusOdd)(nil)
-	_ cbor.Unmarshaler = (*ModulusOdd)(nil)
-	_ cbor.Marshaler   = (*ModulusOddBasic)(nil)
-	_ cbor.Unmarshaler = (*ModulusOddBasic)(nil)
 	_ cbor.Marshaler   = (*ModulusBasic)(nil)
 	_ cbor.Unmarshaler = (*ModulusBasic)(nil)
 )
@@ -85,96 +77,6 @@ func (i *Int) UnmarshalCBOR(data []byte) error {
 
 type modulusDTO struct {
 	N *Nat `cbor:"modulus"`
-}
-
-func (m *ModulusOddPrime) MarshalCBOR() ([]byte, error) {
-	serial := &modulusDTO{N: m.Nat()}
-	return serde.MarshalCBORTagged(serial, ModulusOddPrimeTag)
-}
-
-func (m *ModulusOddPrime) UnmarshalCBOR(data []byte) error {
-	serial, err := serde.UnmarshalCBOR[*modulusDTO](data)
-	if err != nil {
-		return err
-	}
-	if serial.N == nil {
-		return errs.NewIsNil("modulus data")
-	}
-	mod, ok := NewModulusOddPrime(serial.N)
-	if ok == ct.False {
-		return errs.NewValue("not a valid odd prime modulus")
-	}
-	// Copy all fields including mSub2 and once from the newly created modulus
-	*m = *mod
-	// Ensure montgomery parameters are computed
-	m.ensureMont()
-	return nil
-}
-
-func (m *ModulusOddPrimeBasic) MarshalCBOR() ([]byte, error) {
-	serial := &modulusDTO{N: m.Nat()}
-	return serde.MarshalCBORTagged(serial, ModulusOddPrimeBasicTag)
-}
-
-func (m *ModulusOddPrimeBasic) UnmarshalCBOR(data []byte) error {
-	serial, err := serde.UnmarshalCBOR[*modulusDTO](data)
-	if err != nil {
-		return err
-	}
-	if serial.N == nil {
-		return errs.NewIsNil("modulus data")
-	}
-	if serial.N.IsEven() == ct.True || serial.N.IsProbablyPrime() == ct.False {
-		return errs.NewValue("not a valid odd prime modulus")
-	}
-	mod := newModulusOddPrimeBasic(serial.N)
-	m.Set(mod)
-	return nil
-}
-
-func (m *ModulusOdd) MarshalCBOR() ([]byte, error) {
-	serial := &modulusDTO{N: m.Nat()}
-	return serde.MarshalCBORTagged(serial, ModulusOddTag)
-}
-
-func (m *ModulusOdd) UnmarshalCBOR(data []byte) error {
-	serial, err := serde.UnmarshalCBOR[*modulusDTO](data)
-	if err != nil {
-		return err
-	}
-	if serial.N == nil {
-		return errs.NewIsNil("modulus data")
-	}
-	mod, ok := NewModulusOdd(serial.N)
-	if ok == ct.False {
-		return errs.NewValue("not a valid odd modulus")
-	}
-	// Copy all fields including mSub2, mNum, and once from the newly created modulus
-	*m = *mod
-	// Ensure montgomery parameters are computed
-	m.ensureMont()
-	return nil
-}
-
-func (m *ModulusOddBasic) MarshalCBOR() ([]byte, error) {
-	serial := &modulusDTO{N: m.Nat()}
-	return serde.MarshalCBORTagged(serial, ModulusOddBasicTag)
-}
-
-func (m *ModulusOddBasic) UnmarshalCBOR(data []byte) error {
-	serial, err := serde.UnmarshalCBOR[*modulusDTO](data)
-	if err != nil {
-		return err
-	}
-	if serial.N == nil {
-		return errs.NewIsNil("modulus data")
-	}
-	if serial.N.IsEven() == ct.True {
-		return errs.NewValue("not an odd modulus")
-	}
-	mod := newModulusOddBasic(serial.N)
-	m.Set(mod)
-	return nil
 }
 
 func (m *ModulusBasic) MarshalCBOR() ([]byte, error) {
