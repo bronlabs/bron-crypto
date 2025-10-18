@@ -1,4 +1,4 @@
-package tecdsa
+package dkls23
 
 import (
 	"bytes"

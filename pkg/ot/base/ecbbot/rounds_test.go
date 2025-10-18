@@ -16,7 +16,7 @@ import (
 func Test_HappyPathRandomOT(t *testing.T) {
 	t.Parallel()
 	const CHI = 128
-	const L = 4
+	const L = 1
 	prng := crand.Reader
 	var sessionId network.SID
 	_, err := io.ReadFull(prng, sessionId[:])

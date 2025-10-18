@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"hash"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
@@ -89,8 +88,7 @@ func (c *LocalConfig[P]) AuthenticationKey() AuthenticationKey {
 	return c.authenticationKey
 }
 
-// TODO: change to any (Mateusz)
-type Message base.BytesLike
+type Message any
 
 // TODO: remove
 type MessageDeliveryAlgorithm struct {

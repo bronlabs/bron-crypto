@@ -8,16 +8,8 @@ import (
 
 const (
 	DefaultMaxArrayElements = 131072
-	MinMaxArrayElements     = 16
-	MaxMaxArrayElements     = 2147483647
-
-	DefaultMaxMapPairs = 131072
-	MinMaxMapPairs     = 16
-	MaxMaxMapPairs     = 2147483647
-
-	DefaultMaxNestedLevels = 32
-	MinMaxNestedLevels     = 4
-	MaxMaxNestedLevels     = 65535
+	DefaultMaxMapPairs      = 131072
+	DefaultMaxNestedLevels  = 32
 )
 
 var (

@@ -15,10 +15,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 )
 
-func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], threshold uint, shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *tecdsa.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
+func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], threshold uint, shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *dkls23.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
 	generator := curve.Generator()
 	feldmanDealer, err := feldman.NewScheme(generator, threshold, shareholder)
 	if err != nil {
@@ -102,9 +102,9 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "invalid public key")
 	}
-	result := hashmap.NewComparable[sharing.ID, *tecdsa.Shard[P, B, S]]()
+	result := hashmap.NewComparable[sharing.ID, *dkls23.Shard[P, B, S]]()
 	for id, feldmanShare := range feldmanOutput.Shares().Iter() {
-		shard := tecdsa.NewShard(feldmanShare, feldmanDealer.AccessStructure(), publicKey, zeroSeeds[id].Freeze(), senderSeeds[id].Freeze(), receiverSeeds[id].Freeze())
+		shard := dkls23.NewShard(feldmanShare, feldmanDealer.AccessStructure(), publicKey, zeroSeeds[id].Freeze(), senderSeeds[id].Freeze(), receiverSeeds[id].Freeze())
 		result.Put(id, shard)
 	}
 

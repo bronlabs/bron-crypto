@@ -9,22 +9,13 @@ import (
 )
 
 type Round1Broadcast struct {
-	ZeroSetupR1    *przsSetup.Round1Broadcast `cbor:"zeroSetupR1"`
-	BigRCommitment hash_comm.Commitment       `cbor:"bigRCommitment"`
-}
+	ZeroSetupR1 *przsSetup.Round1Broadcast `cbor:"zeroSetupR1"`
 
-func (m *Round1Broadcast) Bytes() []byte {
-	// TODO
-	panic("not implemented")
+	BigRCommitment hash_comm.Commitment `cbor:"bigRCommitment"`
 }
 
 type Round1P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	MulR1 *rvole_bbot.Round1P2P[P, S] `cbor:"mulR1"`
-}
-
-func (m *Round1P2P[P, B, S]) Bytes() []byte {
-	// TODO
-	panic("not implemented")
 }
 
 type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -32,28 +23,13 @@ type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	BigRWitness hash_comm.Witness `cbor:"bigRWitness"`
 }
 
-func (m *Round2Broadcast[P, B, S]) Bytes() []byte {
-	// TODO
-	panic("not implemented")
-}
-
 type Round2P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	ZeroSetupR2 *przsSetup.Round2P2P        `cbor:"zeroSetupR2"`
 	MulR2       *rvole_bbot.Round2P2P[P, S] `cbor:"mulR2"`
 }
 
-func (m *Round2P2P[P, B, S]) Bytes() []byte {
-	// TODO
-	panic("not implemented")
-}
-
 type Round3Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	Pk P `cbor:"pk"`
-}
-
-func (m *Round3Broadcast[P, B, S]) Bytes() []byte {
-	// TODO
-	panic("not implemented")
 }
 
 type Round3P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -62,9 +38,4 @@ type Round3P2P[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 	GammaU P `cbor:"gammaU"`
 	GammaV P `cbor:"gammaV"`
 	Psi    S `cbor:"psi"`
-}
-
-func (m *Round3P2P[P, B, S]) Bytes() []byte {
-	// TODO
-	panic("not implemented")
 }

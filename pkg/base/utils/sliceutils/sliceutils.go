@@ -260,3 +260,9 @@ func FoldOrError[T, U any](f func(acc U, x T) (U, error), initial U, rest ...T) 
 	}
 	return out, nil
 }
+
+func Fill[T any](s []T, x T) {
+	for i := range s {
+		s[i] = x
+	}
+}

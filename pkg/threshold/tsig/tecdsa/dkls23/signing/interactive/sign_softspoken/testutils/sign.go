@@ -18,7 +18,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/signing/interactive/sign_softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -26,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, shards map[sharing.ID]*tecdsa.Shard[P, B, S], quorum ds.Set[sharing.ID], message []byte, hashFunc func() hash.Hash) *ecdsa.Signature[S] {
+func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, shards map[sharing.ID]*dkls23.Shard[P, B, S], quorum ds.Set[sharing.ID], message []byte, hashFunc func() hash.Hash) *ecdsa.Signature[S] {
 	tb.Helper()
 
 	prng := crand.Reader
