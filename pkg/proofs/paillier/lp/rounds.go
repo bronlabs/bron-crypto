@@ -3,6 +3,7 @@ package lp
 import (
 	"slices"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
@@ -133,14 +134,15 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 		return errs.WrapValidation(err, "invalid round 5 input")
 	}
 
-	for i := 0; i < verifier.k; i++ {
+	ok := ct.True
+	for i := range verifier.k {
 		// Reduce y mod N for comparison (yPrime is computed mod N, but y is in (Z/N²Z)*)
 		var yModN numct.Nat
 		verifier.paillierPublicKey.N().Mod(&yModN, verifier.state.y[i].W.Value())
-		if input.YPrime[i].Equal(&yModN) == 0 {
-			// V rejects if y != y'
-			return errs.NewVerification("failed to verify Paillier public key")
-		}
+		ok &= input.YPrime[i].Equal(&yModN)
+	}
+	if ok == ct.False {
+		return errs.NewVerification("failed to verify Paillier public key")
 	}
 
 	// V accepts if every y_i == y'_i

@@ -2,15 +2,18 @@ package k256
 
 import (
 	"encoding"
+	"slices"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/cronokirby/saferith"
 )
@@ -43,7 +46,6 @@ func NewBaseField() *BaseField {
 	return baseFieldInstance
 }
 
-
 func (f *BaseField) Name() string {
 	return BaseFieldName
 }
@@ -51,7 +53,6 @@ func (f *BaseField) Name() string {
 func (f *BaseField) Order() cardinal.Cardinal {
 	return cardinal.NewFromSaferith(baseFieldOrder.Nat())
 }
-
 
 func (f *BaseField) Characteristic() cardinal.Cardinal {
 	return cardinal.NewFromSaferith(baseFieldOrder.Nat())
@@ -76,6 +77,22 @@ func (f *BaseField) WideElementSize() int {
 
 func (f *BaseField) BitLen() int {
 	return k256Impl.FpBits
+}
+
+func (f *BaseField) FromNat(n *numct.Nat) (*BaseFieldElement, error) {
+	var v numct.Nat
+	m, ok := numct.NewModulusOddPrime((*numct.Nat)(baseFieldOrder.Nat()))
+	if ok == ct.False {
+		return nil, errs.NewFailed("failed to create modulus")
+	}
+	m.Mod(&v, n)
+	vBytes := v.Bytes()
+	slices.Reverse(vBytes)
+	var s BaseFieldElement
+	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
+		return nil, errs.NewFailed("failed to set scalar from nat")
+	}
+	return &s, nil
 }
 
 type BaseFieldElement struct {

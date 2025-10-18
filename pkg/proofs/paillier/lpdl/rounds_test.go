@@ -45,7 +45,10 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	sf := curve.ScalarField()
-	x, err := sf.FromBytes(xNat.Bytes())
+
+	qSlice := make([]byte, sf.ElementSize())
+
+	x, err := sf.FromBytes(xNat.FillBytes(qSlice))
 	require.NoError(t, err)
 
 	senc, err := scheme.SelfEncrypter(sk)

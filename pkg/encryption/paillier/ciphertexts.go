@@ -49,6 +49,10 @@ func (cts *CiphertextSpace) New(x *numct.Nat) (*Ciphertext, error) {
 	return &Ciphertext{u: u}, nil
 }
 
+func NewCiphertextFromUnit(u znstar.Unit) *Ciphertext {
+	return &Ciphertext{u: u}
+}
+
 func (cts *CiphertextSpace) Contains(ct *Ciphertext) bool {
 	return ct != nil && cts.N2().Equal(ct.N2())
 }

@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/cronokirby/saferith"
@@ -68,13 +67,13 @@ type natMutable[E aimpl.MonoidElement[E], M any] interface {
 	IsOne() ct.Bool
 	SetOne()
 
-	AddCap(lhs, rhs E, cap algebra.Capacity)
-	SubCap(lhs, rhs E, cap algebra.Capacity)
+	AddCap(lhs, rhs E, cap int)
+	SubCap(lhs, rhs E, cap int)
 
 	Mul(lhs, rhs E)
-	MulCap(lhs, rhs E, cap algebra.Capacity)
+	MulCap(lhs, rhs E, cap int)
 
-	DivCap(numerator E, denominator M, cap algebra.Capacity) (ok ct.Bool)
+	DivCap(numerator E, denominator M, cap int) (ok ct.Bool)
 	ExactDiv(numerator E, denominator M) (ok ct.Bool)
 
 	Increment()
@@ -88,13 +87,13 @@ type natMutable[E aimpl.MonoidElement[E], M any] interface {
 
 	Coprime(x E) ct.Bool
 
-	Resize(cap algebra.Capacity)
+	Resize(cap int)
 
 	Rsh(x E, shift uint)
-	RshCap(x E, shift uint, cap algebra.Capacity)
+	RshCap(x E, shift uint, cap int)
 
 	Lsh(x E, shift uint)
-	LshCap(x E, shift uint, cap algebra.Capacity)
+	LshCap(x E, shift uint, cap int)
 
 	IsOdd() ct.Bool
 	IsEven() ct.Bool

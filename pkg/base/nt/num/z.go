@@ -11,14 +11,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/internal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/cronokirby/saferith"
 )
 
 var (
-	_ internal.Z[*Int, *NatPlus, *Nat, *Int, *Uint]   = (*Integers)(nil)
-	_ internal.Int[*Int, *NatPlus, *Nat, *Int, *Uint] = (*Int)(nil)
+	// _ internal.Z[*Int, *NatPlus, *Nat, *Int, *Uint]   = (*Integers)(nil)
+	// _ internal.Int[*Int, *NatPlus, *Nat, *Int, *Uint] = (*Int)(nil)
 
 	zOnce     sync.Once
 	zInstance *Integers

@@ -16,7 +16,6 @@ type (
 )
 
 type (
-	Capacity                    = crtp.Capacity
 	Operand[E any]              crtp.Operand[E]
 	FixedCapacityOperand[E any] crtp.FixedCapacityOperand[E]
 
@@ -109,7 +108,7 @@ func Operator[E Operand[E]](a, b E) E {
 	return a.Op(b)
 }
 
-func FixedCapacityOperator[E FixedCapacityOperand[E]](a E, b E, cap Capacity) E {
+func FixedCapacityOperator[E FixedCapacityOperand[E]](a E, b E, cap int) E {
 	return a.OpCap(b, cap)
 }
 
@@ -117,7 +116,7 @@ func DualOperator[E DualOperand[E]](a, b E) E {
 	return a.OtherOp(b)
 }
 
-func FixedCapacityDualOperator[E FixedCapacityDualOperand[E]](a E, b E, cap Capacity) E {
+func FixedCapacityDualOperator[E FixedCapacityDualOperand[E]](a E, b E, cap int) E {
 	return a.OtherOpCap(b, cap)
 }
 
@@ -125,7 +124,7 @@ func Addition[E Summand[E]](a, b E) E {
 	return a.Add(b)
 }
 
-func FixedCapacityAddition[E FixedCapacitySummand[E]](a E, b E, cap Capacity) E {
+func FixedCapacityAddition[E FixedCapacitySummand[E]](a E, b E, cap int) E {
 	return a.AddCap(b, cap)
 }
 
@@ -133,7 +132,7 @@ func MaybeAddition[E MaybeSummand[E]](a, b E) (E, error) {
 	return a.TryAdd(b)
 }
 
-func MaybeFixedCapacityAddition[E MaybeFixedCapacitySummand[E]](a E, b E, cap Capacity) (E, error) {
+func MaybeFixedCapacityAddition[E MaybeFixedCapacitySummand[E]](a E, b E, cap int) (E, error) {
 	return a.TryAddCap(b, cap)
 }
 
@@ -141,14 +140,14 @@ func Subtraction[E Minuend[E]](a, b E) E {
 	return a.Sub(b)
 }
 
-func FixedCapacitySubtraction[E FixedCapacityMinuend[E]](a E, b E, cap Capacity) E {
+func FixedCapacitySubtraction[E FixedCapacityMinuend[E]](a E, b E, cap int) E {
 	return a.SubCap(b, cap)
 }
 func MaybeSubtraction[E MaybeMinuend[E]](a, b E) (E, error) {
 	return a.TrySub(b)
 }
 
-func MaybeFixedCapacitySubtraction[E MaybeFixedCapacityMinuend[E]](a E, b E, cap Capacity) (E, error) {
+func MaybeFixedCapacitySubtraction[E MaybeFixedCapacityMinuend[E]](a E, b E, cap int) (E, error) {
 	return a.TrySubCap(b, cap)
 }
 
@@ -156,7 +155,7 @@ func Multiplication[E Multiplicand[E]](a, b E) E {
 	return a.Mul(b)
 }
 
-func FixedCapacityMultiplication[E FixedCapacityMultiplicand[E]](a E, b E, cap Capacity) E {
+func FixedCapacityMultiplication[E FixedCapacityMultiplicand[E]](a E, b E, cap int) E {
 	return a.MulCap(b, cap)
 }
 
@@ -164,7 +163,7 @@ func MaybeMultiplication[E MaybeMultiplicand[E]](a, b E) (E, error) {
 	return a.TryMul(b)
 }
 
-func MaybeFixedCapacityMultiplication[E MaybeFixedCapacityMultiplicand[E]](a E, b E, cap Capacity) (E, error) {
+func MaybeFixedCapacityMultiplication[E MaybeFixedCapacityMultiplicand[E]](a E, b E, cap int) (E, error) {
 	return a.TryMulCap(b, cap)
 }
 
@@ -172,7 +171,7 @@ func Division[E Dividend[E]](a, b E) E {
 	return a.Div(b)
 }
 
-func FixedCapacityDivision[E FixedCapacityDividend[E]](a E, b E, cap Capacity) E {
+func FixedCapacityDivision[E FixedCapacityDividend[E]](a E, b E, cap int) E {
 	return a.DivCap(b, cap)
 }
 
@@ -180,7 +179,7 @@ func MaybeDivision[E MaybeDividend[E]](a, b E) (E, error) {
 	return a.TryDiv(b)
 }
 
-func MaybeFixedCapacityDivision[E MaybeFixedCapacityDividend[E]](a E, b E, cap Capacity) (E, error) {
+func MaybeFixedCapacityDivision[E MaybeFixedCapacityDividend[E]](a E, b E, cap int) (E, error) {
 	return a.TryDivCap(b, cap)
 }
 
@@ -192,7 +191,7 @@ func Exponentiate[A ExponentiationBase[A, E], E Element[E]](base A, exponent E) 
 	return base.Exp(exponent)
 }
 
-func FixedCapacityExponentiate[A FixedCapacityExponentiationBase[A, E], E Element[E]](base A, exponent E, cap Capacity) A {
+func FixedCapacityExponentiate[A FixedCapacityExponentiationBase[A, E], E Element[E]](base A, exponent E, cap int) A {
 	return base.ExpCap(exponent, cap)
 }
 
@@ -200,7 +199,7 @@ func MaybeExponentiate[A MaybeExponentiationBase[A, E], E Element[E]](base A, ex
 	return base.TryExp(exponent)
 }
 
-func MaybeFixedCapacityExponentiate[A MaybeFixedCapacityExponentiationBase[A, E], E Element[E]](base A, exponent E, cap Capacity) (A, error) {
+func MaybeFixedCapacityExponentiate[A MaybeFixedCapacityExponentiationBase[A, E], E Element[E]](base A, exponent E, cap int) (A, error) {
 	return base.TryExpCap(exponent, cap)
 }
 
@@ -264,7 +263,7 @@ func LeftBitwiseShift[E LeftBitwiseShiftable[E]](a E, shift uint) E {
 	return a.Lsh(shift)
 }
 
-func FixedLengthLeftBitwiseShift[E FixedLengthLeftBitwiseShiftable[E]](a E, shift uint, cap Capacity) E {
+func FixedLengthLeftBitwiseShift[E FixedLengthLeftBitwiseShiftable[E]](a E, shift uint, cap int) E {
 	return a.LshCap(shift, cap)
 }
 
@@ -272,7 +271,7 @@ func RightBitwiseShift[E RightBitwiseShiftable[E]](a E, shift uint) E {
 	return a.Rsh(shift)
 }
 
-func FixedLengthRightBitwiseShift[E FixedLengthRightBitwiseShiftable[E]](a E, shift uint, cap Capacity) E {
+func FixedLengthRightBitwiseShift[E FixedLengthRightBitwiseShiftable[E]](a E, shift uint, cap int) E {
 	return a.RshCap(shift, cap)
 }
 
@@ -280,11 +279,11 @@ func Resize[E Resizable[E, C], C any](a E, cap C) E {
 	return a.Resize(cap)
 }
 
-func ResizeCapacity[E ResizableCapacity[E]](a E, cap Capacity) E {
+func ResizeCapacity[E ResizableCapacity[E]](a E, cap int) E {
 	return a.Resize(cap)
 }
 
-func IsLessthanOrEqual[E base.Comparable[E]](lhs, rhs E) bool {
+func IsLessThanOrEqual[E base.Comparable[E]](lhs, rhs E) bool {
 	return lhs.IsLessThanOrEqual(rhs)
 }
 

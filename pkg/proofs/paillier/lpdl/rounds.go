@@ -13,12 +13,12 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 		return nil, errs.NewRound("%d != 1", verifier.round)
 	}
 
-	// 1. choose random a, b
+	// 1. choose random a, b (both from Z/qZ since they're used as curve scalars)
 	verifier.state.a, err = verifier.state.zModQ.Random(verifier.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}
-	verifier.state.b, err = verifier.state.zModQ2.Random(verifier.prng)
+	verifier.state.b, err = verifier.state.zModQ.Random(verifier.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}
@@ -31,9 +31,6 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 	// 1.i. compute a (*) c (+) Enc(b, r) for random r
 	// acEnc, err := verifier.pk.CipherTextMul(verifier.c, new(saferith.Int).SetNat(verifier.state.a))
 	acEnc := verifier.c.ScalarExp(verifier.state.a.Nat())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot perform homomorphic multiplication")
-	}
 	bEnc, _, err := verifier.paillierEncrypter.Encrypt(bAsPlaintext, verifier.pk, verifier.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt value")
@@ -49,11 +46,11 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 
 	// 1.iii. compute Q' = aQ + bQ
 	// TODO: add SetNatCT to ScalarField etc.
-	aScalar, err := verifier.state.curve.ScalarField().FromBytes(verifier.state.a.Bytes())
+	aScalar, err := verifier.state.curve.ScalarField().FromNat(verifier.state.a.Value())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert a to scalar")
 	}
-	bScalar, err := verifier.state.curve.ScalarField().FromBytes(verifier.state.b.Bytes())
+	bScalar, err := verifier.state.curve.ScalarField().FromNat(verifier.state.b.Value())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert b to scalar")
 	}
@@ -91,7 +88,7 @@ func (prover *Prover[P, B, S]) Round2(r1out *Round1Output) (r2out *Round2Output,
 		return nil, errs.WrapFailed(err, "cannot decrypt cipher text")
 	}
 
-	alphaScalar, err := prover.state.curve.ScalarField().FromBytes(prover.state.alpha.Normalize().Bytes())
+	alphaScalar, err := prover.state.curve.ScalarField().FromNat(prover.state.alpha.Normalize().Value())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert alpha to scalar")
 	}

@@ -2,15 +2,18 @@ package edwards25519
 
 import (
 	"encoding"
+	"slices"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	edwards25519Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519/impl"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/cronokirby/saferith"
 )
@@ -74,6 +77,22 @@ func (f *BaseField) WideElementSize() int {
 
 func (f *BaseField) BitLen() int {
 	return int(edwards25519Impl.FpBits)
+}
+
+func (f *BaseField) FromNat(n *numct.Nat) (*BaseFieldElement, error) {
+	var v numct.Nat
+	m, ok := numct.NewModulusOddPrime((*numct.Nat)(baseFieldOrder.Nat()))
+	if ok == ct.False {
+		return nil, errs.NewFailed("failed to create modulus")
+	}
+	m.Mod(&v, n)
+	vBytes := v.Bytes()
+	slices.Reverse(vBytes)
+	var s BaseFieldElement
+	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
+		return nil, errs.NewFailed("failed to set scalar from nat")
+	}
+	return &s, nil
 }
 
 type BaseFieldElement struct {

@@ -2,14 +2,17 @@ package pasta
 
 import (
 	"encoding"
+	"slices"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -50,7 +53,6 @@ func newFqField() *FqField {
 	return fqFieldInstance
 }
 
-
 func NewVestaBaseField() *FqField {
 	return newFqField()
 }
@@ -62,7 +64,6 @@ func NewPallasScalarField() *FqField {
 func (*FqField) Name() string {
 	return FqFieldName
 }
-
 
 func (*FqField) ElementSize() int {
 	return pastaImpl.FqBytes
@@ -91,6 +92,22 @@ func (*FqField) Hash(input []byte) (*FqFieldElement, error) {
 
 func (*FqField) BitLen() int {
 	return pastaImpl.FqBits
+}
+
+func (f *FqField) FromNat(n *numct.Nat) (*FqFieldElement, error) {
+	var v numct.Nat
+	m, ok := numct.NewModulusOddPrime((*numct.Nat)(fqFieldOrder.Nat()))
+	if ok == ct.False {
+		return nil, errs.NewFailed("failed to create modulus")
+	}
+	m.Mod(&v, n)
+	vBytes := v.Bytes()
+	slices.Reverse(vBytes)
+	var s FqFieldElement
+	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
+		return nil, errs.NewFailed("failed to set scalar from nat")
+	}
+	return &s, nil
 }
 
 type FqFieldElement struct {

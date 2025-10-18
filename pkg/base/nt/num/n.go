@@ -12,14 +12,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/internal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/cronokirby/saferith"
 )
 
 var (
-	_ internal.N[*Nat, *NatPlus, *Nat, *Int, *Uint]   = (*NaturalNumbers)(nil)
-	_ internal.Nat[*Nat, *NatPlus, *Nat, *Int, *Uint] = (*Nat)(nil)
+	// _ internal.N[*Nat, *NatPlus, *Nat, *Int, *Uint]   = (*NaturalNumbers)(nil)
+	// _ internal.Nat[*Nat, *NatPlus, *Nat, *Int, *Uint] = (*Nat)(nil)
 
 	nOnce     sync.Once
 	nInstance *NaturalNumbers

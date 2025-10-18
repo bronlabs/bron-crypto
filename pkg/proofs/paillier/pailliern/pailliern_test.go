@@ -10,7 +10,6 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
@@ -28,7 +27,7 @@ func Test_pIsCorrect(t *testing.T) {
 	for i := uint64(2); i < pailliern.Alpha; i++ {
 		if isPrime(i) {
 			// TODO: either remove capacity or fix the type of announced len
-			pCheck.MulCap(pCheck, numct.NewNat(i), algebra.Capacity(pailliern.P.AnnouncedLen()))
+			pCheck.MulCap(pCheck, numct.NewNat(i), int(pailliern.P.AnnouncedLen()))
 		}
 	}
 

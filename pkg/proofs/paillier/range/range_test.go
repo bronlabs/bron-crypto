@@ -394,8 +394,7 @@ func Test_NonInteractiveFiatShamir(t *testing.T) {
 
 	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
 	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
-	// TODO: (Mateusz) 80 < 128 error
-	// protocol, err := paillierrange.NewPaillierRange(base.StatisticalSecurityBits, prng)
+	// TODO: 80 < 128 error
 	protocol, err := paillierrange.NewPaillierRange(base.ComputationalSecurityBits, prng)
 	require.NoError(t, err)
 

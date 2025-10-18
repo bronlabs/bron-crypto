@@ -60,7 +60,7 @@ func (c *PallasCurve) Cofactor() cardinal.Cardinal {
 }
 
 func (c *PallasCurve) Order() cardinal.Cardinal {
-	return cardinal.NewFromSaferith(fqFieldOrder.Nat())
+	return NewPallasScalarField().Order()
 }
 
 func (c *PallasCurve) FromBytes(input []byte) (*PallasPoint, error) {

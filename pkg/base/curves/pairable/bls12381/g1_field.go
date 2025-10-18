@@ -2,15 +2,18 @@ package bls12381
 
 import (
 	"encoding"
+	"slices"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/cronokirby/saferith"
 )
@@ -43,11 +46,9 @@ func NewG1BaseField() *BaseFieldG1 {
 	return baseFieldInstanceG1
 }
 
-
 func (f *BaseFieldG1) Name() string {
 	return BaseFieldNameG1
 }
-
 
 func (f *BaseFieldG1) Order() cardinal.Cardinal {
 	return cardinal.NewFromSaferith(baseFieldOrderG1.Nat())
@@ -76,6 +77,22 @@ func (f *BaseFieldG1) WideElementSize() int {
 
 func (f *BaseFieldG1) BitLen() int {
 	return bls12381Impl.FpBits
+}
+
+func (f *BaseFieldG1) FromNat(n *numct.Nat) (*BaseFieldElementG1, error) {
+	var v numct.Nat
+	m, ok := numct.NewModulusOddPrime((*numct.Nat)(baseFieldOrderG1.Nat()))
+	if ok == ct.False {
+		return nil, errs.NewFailed("failed to create modulus")
+	}
+	m.Mod(&v, n)
+	vBytes := v.Bytes()
+	slices.Reverse(vBytes)
+	var s BaseFieldElementG1
+	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
+		return nil, errs.NewFailed("failed to set scalar from nat")
+	}
+	return &s, nil
 }
 
 type BaseFieldElementG1 struct {

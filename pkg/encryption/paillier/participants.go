@@ -1,6 +1,7 @@
 package paillier
 
 import (
+	"fmt"
 	"io"
 	"sync"
 
@@ -181,12 +182,14 @@ func (d *Decrypter) Decrypt(ciphertext *Ciphertext) (*Plaintext, error) {
 	go func() {
 		defer wg.Done()
 		// TODO: put p.Squared and alike into a variable, everywhere here.
+		fmt.Println("d1", d)
 		d.sk.Arithmetic().P.Squared.ModExp(&mp, ciphertext.ValueCT(), d.sk.Arithmetic().P.PhiFactor.Nat())
 		lp(d.sk, &mp)
 		d.sk.Arithmetic().P.Factor.ModMul(&mp, &mp, d.sk.hp)
 	}()
 	go func() {
 		defer wg.Done()
+		fmt.Println("d2", d)
 		d.sk.Arithmetic().Q.Squared.ModExp(&mq, ciphertext.ValueCT(), d.sk.Arithmetic().Q.PhiFactor.Nat())
 		lq(d.sk, &mq)
 		d.sk.Arithmetic().Q.Factor.ModMul(&mq, &mq, d.sk.hq)

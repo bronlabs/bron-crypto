@@ -4,7 +4,6 @@ import (
 	"math/big"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/internal"
 	"github.com/cronokirby/saferith"
@@ -42,7 +41,7 @@ func NewIntFromBytes(n []byte) *Int {
 	return (*Int)(new(saferith.Int).SetBytes(n))
 }
 
-func NewIntFromBig(n *big.Int, cap algebra.Capacity) *Int {
+func NewIntFromBig(n *big.Int, cap int) *Int {
 	return (*Int)(new(saferith.Int).SetBig(n, cap))
 }
 
@@ -80,7 +79,7 @@ func (i *Int) Add(lhs, rhs *Int) {
 	i.AddCap(lhs, rhs, -1)
 }
 
-func (i *Int) AddCap(lhs, rhs *Int, cap algebra.Capacity) {
+func (i *Int) AddCap(lhs, rhs *Int, cap int) {
 	(*saferith.Int)(i).Add((*saferith.Int)(lhs), (*saferith.Int)(rhs), cap)
 }
 
@@ -92,7 +91,7 @@ func (i *Int) Sub(lhs, rhs *Int) {
 	i.SubCap(lhs, rhs, -1)
 }
 
-func (i *Int) SubCap(lhs, rhs *Int, cap algebra.Capacity) {
+func (i *Int) SubCap(lhs, rhs *Int, cap int) {
 	rhsNeg := rhs.Clone()
 	rhsNeg.Neg(rhs)
 	i.AddCap(lhs, rhsNeg, cap)
@@ -102,7 +101,7 @@ func (i *Int) Mul(lhs, rhs *Int) {
 	i.MulCap(lhs, rhs, -1)
 }
 
-func (i *Int) MulCap(lhs, rhs *Int, cap algebra.Capacity) {
+func (i *Int) MulCap(lhs, rhs *Int, cap int) {
 	(*saferith.Int)(i).Mul((*saferith.Int)(lhs), (*saferith.Int)(rhs), cap)
 }
 
@@ -118,7 +117,7 @@ func (i *Int) Div(numerator, denominator *Int) (ok ct.Bool) {
 	return ok
 }
 
-func (i *Int) DivCap(numerator *Int, denominator Modulus, cap algebra.Capacity) (ok ct.Bool) {
+func (i *Int) DivCap(numerator *Int, denominator Modulus, cap int) (ok ct.Bool) {
 	var outNat Nat
 	ok = outNat.DivCap(numerator.abs(), denominator, cap)
 
@@ -215,14 +214,14 @@ func (i *Int) Sqrt(x *Int) (ok ct.Bool) {
 
 		for range pairs {
 			// m = y + b
-			m.Add(&y, &b, algebra.Capacity(capBits))
+			m.Add(&y, &b, int(capBits))
 
 			// yshr = y >> 1 (computed unconditionally)
-			yshr.Rsh(&y, 1, algebra.Capacity(capBits))
+			yshr.Rsh(&y, 1, int(capBits))
 
 			// Candidates (computed unconditionally)
-			nMinus.Sub(&n, &m, algebra.Capacity(capBits))   // n - m
-			yPlus.Add(&yshr, &b, algebra.Capacity(capBits)) // (y>>1) + b
+			nMinus.Sub(&n, &m, int(capBits))   // n - m
+			yPlus.Add(&yshr, &b, int(capBits)) // (y>>1) + b
 
 			// ge := (n >= m) in constant time.
 			gt, eq, _ := n.Cmp(&m)
@@ -234,7 +233,7 @@ func (i *Int) Sqrt(x *Int) (ok ct.Bool) {
 			y.CondAssign(ge, &yPlus)
 
 			// b >>= 2
-			bshr.Rsh(&b, 2, algebra.Capacity(capBits))
+			bshr.Rsh(&b, 2, int(capBits))
 			b = bshr
 		}
 
@@ -285,7 +284,7 @@ func (i *Int) Lsh(x *Int, shift uint) {
 	i.LshCap(x, shift, -1)
 }
 
-func (i *Int) LshCap(x *Int, shift uint, cap algebra.Capacity) {
+func (i *Int) LshCap(x *Int, shift uint, cap int) {
 	out := i.abs()
 	out.LshCap(x.abs(), shift, cap)
 	i.SetNat(out)
@@ -297,7 +296,7 @@ func (i *Int) Rsh(x *Int, shift uint) {
 	i.RshCap(x, shift, -1)
 }
 
-func (i *Int) RshCap(x *Int, shift uint, cap algebra.Capacity) {
+func (i *Int) RshCap(x *Int, shift uint, cap int) {
 	out := i.abs()
 	out.RshCap(x.abs(), shift, cap)
 	i.SetNat(out)
@@ -305,7 +304,7 @@ func (i *Int) RshCap(x *Int, shift uint, cap algebra.Capacity) {
 	(*saferith.Int)(i).Neg(saferith.Choice(x.IsNegative()))
 }
 
-func (i *Int) Resize(cap algebra.Capacity) {
+func (i *Int) Resize(cap int) {
 	// When cap < 0, use the current announced length
 	// When cap >= 0, use the provided cap
 	effectiveCap := ct.CSelect(ct.GreaterOrEqual(cap, 0), cap, int(i.AnnouncedLen()))
@@ -455,7 +454,7 @@ func (i *Int) And(x, y *Int) {
 
 // AndCap sets i = x & y with capacity cap and returns i.
 // For signed integers, this operates on the two's complement representation.
-func (i *Int) AndCap(x, y *Int, cap algebra.Capacity) {
+func (i *Int) AndCap(x, y *Int, cap int) {
 	// Two's complement AND logic:
 	// pos & pos = pos (magnitude AND)
 	// pos & neg = pos & ~(|neg|-1) = pos - (pos & (|neg|-1))
@@ -527,7 +526,7 @@ func (i *Int) Or(x, y *Int) {
 
 // OrCap sets i = x | y with capacity cap and returns i.
 // For signed integers, this operates on the two's complement representation.
-func (i *Int) OrCap(x, y *Int, cap algebra.Capacity) {
+func (i *Int) OrCap(x, y *Int, cap int) {
 	// Two's complement OR logic:
 	// pos | pos = pos (magnitude OR)
 	// pos | neg = ~((|neg|-1) & ~pos) = -(((|neg|-1) & ~pos) + 1)
@@ -603,7 +602,7 @@ func (i *Int) Xor(x, y *Int) {
 
 // XorCap sets i = x ^ y with capacity cap and returns i.
 // For signed integers, this operates on the two's complement representation.
-func (i *Int) XorCap(x, y *Int, cap algebra.Capacity) {
+func (i *Int) XorCap(x, y *Int, cap int) {
 	// XOR truth table for two's complement:
 	// x >= 0, y >= 0: x ^ y (always positive)
 	// x < 0,  y >= 0: ~(~x ^ y) = -((x-1) ^ y + 1)
@@ -679,7 +678,7 @@ func (i *Int) Not(x *Int) {
 
 // NotCap sets i = ^x with capacity cap and returns i.
 // For signed integers, this is equivalent to -(x+1) due to two's complement.
-func (i *Int) NotCap(x *Int, cap algebra.Capacity) {
+func (i *Int) NotCap(x *Int, cap int) {
 	// In two's complement, NOT(x) = -(x+1)
 	// This is because ~x = -x - 1 in two's complement
 

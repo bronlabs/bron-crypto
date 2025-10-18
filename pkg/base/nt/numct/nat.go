@@ -4,7 +4,6 @@ import (
 	"math/big"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/internal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
@@ -17,7 +16,7 @@ var (
 
 // DivModCap computes a / b and a % b, storing the results into outQuot and outRem.
 // The cap parameter sets the announced capacity (in bits) for the quotient.
-func DivModCap(outQuot, outRem, a *Nat, b Modulus, cap algebra.Capacity) (ok ct.Bool) {
+func DivModCap(outQuot, outRem, a *Nat, b Modulus, cap int) (ok ct.Bool) {
 	ok = outQuot.DivCap(a, b, cap)
 	b.Mod(outRem, a)
 	return ok
@@ -53,8 +52,8 @@ func NewNatFromBytes(n []byte) *Nat {
 	return (*Nat)(new(saferith.Nat).SetBytes(n))
 }
 
-func NewNatFromBig(n *big.Int, cap algebra.Capacity) *Nat {
-	return (*Nat)(new(saferith.Nat).SetBig(n, cap))
+func NewNatFromBig(n *big.Int, cap int) *Nat {
+	return (*Nat)(new(saferith.Nat).SetBig(n, int(cap)))
 }
 
 type Nat saferith.Nat
@@ -83,11 +82,11 @@ func (n *Nat) Add(lhs, rhs *Nat) {
 	n.AddCap(lhs, rhs, -1)
 }
 
-func (n *Nat) AddCap(lhs, rhs *Nat, cap algebra.Capacity) {
+func (n *Nat) AddCap(lhs, rhs *Nat, cap int) {
 	(*saferith.Nat)(n).Add((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), cap)
 }
 
-func (n *Nat) SubCap(lhs, rhs *Nat, cap algebra.Capacity) {
+func (n *Nat) SubCap(lhs, rhs *Nat, cap int) {
 	(*saferith.Nat)(n).Sub((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), cap)
 }
 
@@ -95,11 +94,11 @@ func (n *Nat) Mul(lhs, rhs *Nat) {
 	n.MulCap(lhs, rhs, -1)
 }
 
-func (n *Nat) MulCap(lhs, rhs *Nat, cap algebra.Capacity) {
+func (n *Nat) MulCap(lhs, rhs *Nat, cap int) {
 	(*saferith.Nat)(n).Mul((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), cap)
 }
 
-func (n *Nat) DivCap(numerator *Nat, denominator Modulus, cap algebra.Capacity) (ok ct.Bool) {
+func (n *Nat) DivCap(numerator *Nat, denominator Modulus, cap int) (ok ct.Bool) {
 	ok = utils.BoolTo[ct.Bool](denominator != nil)
 	n.Set((*Nat)(new(saferith.Nat).Div(
 		(*saferith.Nat)(numerator),
@@ -114,7 +113,7 @@ func (n *Nat) ExactDiv(numerator *Nat, denominator Modulus) (ok ct.Bool) {
 	ok = DivModCap(&q, &r, numerator, denominator, -1)
 	isExact := r.IsZero()
 	// Only update n if division was exact
-	n.CondAssign(ct.Choice(ok & isExact), &q)
+	n.CondAssign(ct.Choice(ok&isExact), &q)
 	return ok & isExact
 }
 
@@ -192,7 +191,7 @@ func (n *Nat) IsEven() ct.Bool {
 	return n.IsOdd().Not()
 }
 
-func (n *Nat) Resize(cap algebra.Capacity) {
+func (n *Nat) Resize(cap int) {
 	// When cap < 0, use the current announced length
 	// When cap >= 0, use the provided cap
 	(*saferith.Nat)(n).Resize(ct.CSelect(ct.GreaterOrEqual(cap, 0), cap, int(n.AnnouncedLen())))
@@ -206,7 +205,7 @@ func (n *Nat) IsProbablyPrime() ct.Bool {
 	return utils.BoolTo[ct.Bool]((*saferith.Nat)(n).Big().ProbablyPrime(0))
 }
 
-func (n *Nat) LshCap(x *Nat, shift uint, cap algebra.Capacity) {
+func (n *Nat) LshCap(x *Nat, shift uint, cap int) {
 	(*saferith.Nat)(n).Lsh((*saferith.Nat)(x), shift, cap)
 }
 
@@ -214,7 +213,7 @@ func (n *Nat) Rsh(x *Nat, shift uint) {
 	n.RshCap(x, shift, -1)
 }
 
-func (n *Nat) RshCap(x *Nat, shift uint, cap algebra.Capacity) {
+func (n *Nat) RshCap(x *Nat, shift uint, cap int) {
 	(*saferith.Nat)(n).Rsh((*saferith.Nat)(x), shift, cap)
 }
 
@@ -235,6 +234,10 @@ func (n *Nat) SetBytes(data []byte) (ok ct.Bool) {
 	return ct.True
 }
 
+func (n *Nat) FillBytes(buf []byte) []byte {
+	return (*saferith.Nat)(n).FillBytes(buf)
+}
+
 func (n *Nat) HashCode() base.HashCode {
 	return base.DeriveHashCode(n.Bytes())
 }
@@ -249,7 +252,7 @@ func (n *Nat) And(x, y *Nat) {
 }
 
 // AndCap sets n = x & y with capacity cap and returns n.
-func (n *Nat) AndCap(x, y *Nat, cap algebra.Capacity) {
+func (n *Nat) AndCap(x, y *Nat, cap int) {
 	// Get byte representations
 	xBytes := x.Bytes()
 	yBytes := y.Bytes()
@@ -281,7 +284,7 @@ func (n *Nat) Or(x, y *Nat) {
 }
 
 // OrCap sets n = x | y with capacity cap and returns n.
-func (n *Nat) OrCap(x, y *Nat, cap algebra.Capacity) {
+func (n *Nat) OrCap(x, y *Nat, cap int) {
 	xBytes := x.Bytes()
 	yBytes := y.Bytes()
 
@@ -311,7 +314,7 @@ func (n *Nat) Xor(x, y *Nat) {
 }
 
 // XorCap sets n = x ^ y with capacity cap and returns n.
-func (n *Nat) XorCap(x, y *Nat, cap algebra.Capacity) {
+func (n *Nat) XorCap(x, y *Nat, cap int) {
 	xBytes := x.Bytes()
 	yBytes := y.Bytes()
 
@@ -343,7 +346,7 @@ func (n *Nat) Not(x *Nat) {
 // NotCap sets n = ^x with capacity cap and returns n.
 // Note: The result depends on the capacity as it determines the bit width.
 // For compatibility with big.Int.Not, use the announced capacity of x.
-func (n *Nat) NotCap(x *Nat, cap algebra.Capacity) {
+func (n *Nat) NotCap(x *Nat, cap int) {
 	xBytes := x.Bytes()
 
 	// Determine the bit capacity to use

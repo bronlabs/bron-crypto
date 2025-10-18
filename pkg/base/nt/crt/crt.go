@@ -3,7 +3,6 @@ package crt
 import (
 	"sync"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
@@ -36,7 +35,7 @@ func Precompute[M numct.Modulus](p, q *numct.Nat) (*Params[M], ct.Bool) {
 		P:    pModulus,
 		QNat: q.Clone(),
 		QInv: qInv,
-		Cap:  algebra.Capacity(pModulus.BitLen() + q.AnnouncedLen()),
+		Cap:  int(pModulus.BitLen() + q.AnnouncedLen()),
 	}, allOk
 }
 
@@ -45,7 +44,7 @@ type Params[M numct.Modulus] struct {
 	P    M
 	QNat *numct.Nat
 	QInv *numct.Nat
-	Cap  algebra.Capacity
+	Cap  int
 }
 
 // Recombine reconstructs m (mod p*q) from residues (mp, mq),
@@ -108,7 +107,7 @@ func NewParamsExtended[F numct.Modulus](p, q F) (*ParamsExtended[F], ct.Bool) {
 			P:    p,
 			QNat: qNat,
 			QInv: qInv,
-			Cap:  algebra.Capacity(p.BitLen() + qNat.TrueLen()),
+			Cap:  int(p.BitLen() + qNat.TrueLen()),
 		},
 		PNat: pNat,
 		Q:    q,

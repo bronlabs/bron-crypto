@@ -64,7 +64,7 @@ func (c *PrimeSubGroup) Cofactor() cardinal.Cardinal {
 }
 
 func (c *PrimeSubGroup) Order() cardinal.Cardinal {
-	return cardinal.NewFromSaferith(scalarFieldOrder.Nat())
+	return NewScalarField().Order()
 }
 
 func (c *PrimeSubGroup) FromCompressed(inBytes []byte) (*PrimeSubGroupPoint, error) {

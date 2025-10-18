@@ -3,7 +3,6 @@ package crt
 import (
 	"sync"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
@@ -42,7 +41,7 @@ func NewParamsMulti[F numct.Modulus](factors ...F) (*ParamsMulti[F], ct.Bool) {
 	prod := numct.NatOne()
 	for i := range k {
 		params.Factors[i] = factors[i]
-		capMul := algebra.Capacity(prod.AnnouncedLen() + factors[i].BitLen())
+		capMul := int(prod.AnnouncedLen() + factors[i].BitLen())
 		prod.MulCap(prod, factors[i].Nat(), capMul)
 	}
 	modulus, ok := numct.NewModulus(prod)
@@ -51,7 +50,7 @@ func NewParamsMulti[F numct.Modulus](factors ...F) (*ParamsMulti[F], ct.Bool) {
 
 	// For each i: M_i = N / p_i; inv_i = (M_i)^{-1} mod p_i; Lift_i = M_i * inv_i mod N
 	var Mi, MiModPi, inv, lift numct.Nat
-	divCap := algebra.Capacity(modulus.BitLen())
+	divCap := int(modulus.BitLen())
 	for i := range k {
 		// M_i = N / p_i
 		allOk &= Mi.DivCap(prod, factors[i], divCap)
@@ -64,7 +63,7 @@ func NewParamsMulti[F numct.Modulus](factors ...F) (*ParamsMulti[F], ct.Bool) {
 		params.Inverses[i] = inv.Clone()
 
 		// Lift_i = (M_i * inv_i) mod N
-		capMul := algebra.Capacity(Mi.AnnouncedLen() + inv.AnnouncedLen())
+		capMul := int(Mi.AnnouncedLen() + inv.AnnouncedLen())
 		lift.MulCap(&Mi, &inv, capMul)
 		params.Modulus.Mod(&lift, &lift)
 		params.Lifts[i] = lift.Clone()
@@ -80,7 +79,7 @@ func NewParamsMulti[F numct.Modulus](factors ...F) (*ParamsMulti[F], ct.Bool) {
 		pProd := numct.NatOne()
 		for j := range i {
 			// pProd = p_0 * ... * p_j
-			capMul := algebra.Capacity(pProd.AnnouncedLen() + factors[j].BitLen())
+			capMul := int(pProd.AnnouncedLen() + factors[j].BitLen())
 			pProd.MulCap(pProd, factors[j].Nat(), capMul)
 
 			// Compute pProd^{-1} mod p_i
@@ -147,7 +146,7 @@ func (params *ParamsMulti[F]) RecombineSerial(residues ...*numct.Nat) *numct.Nat
 	pProd := numct.NatOne()
 	for i := 1; i < params.NumFactors; i++ {
 		// Update pProd = p_0 * ... * p_{i-1}
-		capMul := algebra.Capacity(pProd.AnnouncedLen() + params.Factors[i-1].Nat().AnnouncedLen())
+		capMul := int(pProd.AnnouncedLen() + params.Factors[i-1].Nat().AnnouncedLen())
 		(pProd).MulCap(pProd, params.Factors[i-1].Nat(), capMul)
 
 		// Compute c_i = (a_i - x) * (p_0 * ... * p_{i-1})^{-1} mod p_i
@@ -158,9 +157,9 @@ func (params *ParamsMulti[F]) RecombineSerial(residues ...*numct.Nat) *numct.Nat
 
 		// x = x + c_i * pProd
 		var term numct.Nat
-		capMul = algebra.Capacity(term.AnnouncedLen() + pProd.AnnouncedLen())
+		capMul = int(term.AnnouncedLen() + pProd.AnnouncedLen())
 		term.MulCap(&ci, pProd, capMul)
-		capAdd := algebra.Capacity(result.AnnouncedLen() + term.AnnouncedLen())
+		capAdd := int(result.AnnouncedLen() + term.AnnouncedLen())
 		result.AddCap(result, &term, capAdd)
 	}
 

@@ -111,12 +111,19 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 		return nil, errs.WrapFailed(err, "couldn't initialise range protocol")
 	}
 
-	qThird, err := publicKey.CiphertextSpace().New(qThirdNat)
+	// Create Phi(q/3) for homomorphic division
+	var qThirdInt numct.Int
+	qThirdInt.SetNat(qThirdNat)
+	qThirdUnit, err := publicKey.Group().Phi(&qThirdInt)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create ciphertext from q/3")
+		return nil, errs.WrapFailed(err, "cannot compute Phi(q/3)")
 	}
+	qThird := paillier.NewCiphertextFromUnit(qThirdUnit)
 
-	rangeCiphertext := xEncrypted.Div(qThird)
+	// xEncrypted has known order, qThird has unknown order from Phi
+	// Need to forget order on xEncrypted for the division
+	xUnknown := paillier.NewCiphertextFromUnit(xEncrypted.Value().ForgetOrder())
+	rangeCiphertext := xUnknown.Div(qThird)
 	rangeStatement := paillierrange.NewStatement(publicKey, rangeCiphertext, qThirdNat)
 	rangeVerifier, err := zkcompiler.NewVerifier(sessionId, rangeProofTranscript, rangeProtocol, rangeStatement, prng)
 	if err != nil {
@@ -132,6 +139,11 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 		return nil, errs.WrapFailed(err, "cannot instantiate commitment scheme")
 	}
 
+	paillierEncrypter, err := paillier.NewScheme().Encrypter()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create paillier encrypter")
+	}
+
 	return &Verifier[P, B, S]{
 		Participant: Participant[P, B, S]{
 			pk:         publicKey,
@@ -141,9 +153,10 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 			transcript: tape,
 			prng:       prng,
 		},
-		rangeVerifier:    rangeVerifier,
-		c:                xEncrypted,
-		commitmentScheme: commitmentScheme,
+		rangeVerifier:     rangeVerifier,
+		c:                 xEncrypted,
+		commitmentScheme:  commitmentScheme,
+		paillierEncrypter: paillierEncrypter,
 		state: &VerifierState[P, B, S]{
 			State: State[P, B, S]{
 				curve:  curve,
@@ -205,6 +218,15 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	}
 	rangePlainText := xAsPlaintext.Sub(qThirdAsPlaintext)
 
+	ck, err := hash_comm.NewKeyFromCRSBytes(sessionId, appTranscriptLabel)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot instantiate committer")
+	}
+	commitmentScheme, err := hash_comm.NewScheme(ck)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot instantiate commitment scheme")
+	}
+
 	senc, err := paillier.NewScheme().SelfEncrypter(secretKey)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't create self-encrypter")
@@ -221,6 +243,11 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 		return nil, errs.WrapFailed(err, "couldn't initialise prover")
 	}
 
+	dec, err := paillier.NewScheme().Decrypter(secretKey)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create paillier decrypter")
+	}
+
 	return &Prover[P, B, S]{
 		Participant: Participant[P, B, S]{
 			pk:         secretKey.PublicKey(),
@@ -230,9 +257,11 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 			transcript: tape,
 			prng:       prng,
 		},
-		rangeProver: rangeProver,
-		sk:          secretKey,
-		x:           x,
+		rangeProver:       rangeProver,
+		paillierDecrypter: dec,
+		commitmentScheme:  commitmentScheme,
+		sk:                secretKey,
+		x:                 x,
 		state: &ProverState[P, B, S]{
 			State: State[P, B, S]{
 				curve:  curve,
@@ -289,7 +318,9 @@ func initRangeProtocol[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B],
 	if ok == ct.False {
 		panic("cannot create modulus 3")
 	}
-	qThird.DivCap(numct.NewNatFromBig(q.Big(), q.BitLen()), three, q.BitLen())
+	qNat := numct.NewNatFromBytes(q.Bytes())
+	qThird = numct.NewNat(0)
+	qThird.DivCap(qNat, three, int(q.BitLen()))
 
 	rangeProtocol, err = paillierrange.NewPaillierRange(base.ComputationalSecurityBits, prng)
 	if err != nil {

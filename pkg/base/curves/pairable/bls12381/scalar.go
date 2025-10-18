@@ -2,13 +2,16 @@ package bls12381
 
 import (
 	"encoding"
+	"slices"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -46,11 +49,9 @@ func NewScalarField() *ScalarField {
 	return scalarFieldInstance
 }
 
-
 func (*ScalarField) Name() string {
 	return ScalarFieldName
 }
-
 
 func (*ScalarField) ElementSize() int {
 	return bls12381Impl.FqBytes
@@ -74,6 +75,22 @@ func (*ScalarField) Hash(input []byte) (*Scalar, error) {
 
 	var s Scalar
 	s.V.Set(&e[0])
+	return &s, nil
+}
+
+func (f *ScalarField) FromNat(n *numct.Nat) (*Scalar, error) {
+	var v numct.Nat
+	m, ok := numct.NewModulusOddPrime((*numct.Nat)(scalarFieldOrder.Nat()))
+	if ok == ct.False {
+		return nil, errs.NewFailed("failed to create modulus")
+	}
+	m.Mod(&v, n)
+	vBytes := v.Bytes()
+	slices.Reverse(vBytes)
+	var s Scalar
+	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
+		return nil, errs.NewFailed("failed to set scalar from nat")
+	}
 	return &s, nil
 }
 

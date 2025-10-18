@@ -4,7 +4,6 @@ import (
 	crand "crypto/rand"
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
@@ -41,7 +40,7 @@ func NatRandomRangeLH(prng io.Reader, lowInclusive, highExclusive *Nat) (*Nat, e
 	}
 
 	out := new(Nat)
-	out.AddCap(lowInclusive, NewNatFromBig(randBig, algebra.Capacity(highExclusive.AnnouncedLen())), algebra.Capacity(highExclusive.AnnouncedLen()))
+	out.AddCap(lowInclusive, NewNatFromBig(randBig, int(highExclusive.AnnouncedLen())), int(highExclusive.AnnouncedLen()))
 	return out, nil
 }
 
@@ -53,7 +52,7 @@ func NatRandomRangeH(prng io.Reader, highExclusive *Nat) (*Nat, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to get random")
 	}
-	return NewNatFromBig(randBig, algebra.Capacity(highExclusive.AnnouncedLen())), nil
+	return NewNatFromBig(randBig, int(highExclusive.AnnouncedLen())), nil
 }
 
 func NatRandomBits(prng io.Reader, bits uint) (*Nat, error) {
@@ -66,7 +65,7 @@ func NatRandomBits(prng io.Reader, bits uint) (*Nat, error) {
 		return nil, errs.WrapFailed(err, "failed to get random")
 	}
 	out := NewNatFromBytes(randBytes)
-	out.Resize(algebra.Capacity(bits))
+	out.Resize(int(bits))
 	return out, nil
 }
 
@@ -88,6 +87,6 @@ func IntRandom(prng io.Reader, lowInclusive, highExclusive *Int) (*Int, error) {
 		return nil, errs.WrapFailed(err, "failed to get random")
 	}
 	out := new(Int)
-	out.Add(lowInclusive, NewIntFromBig(randBig, algebra.Capacity(randBig.BitLen())))
+	out.Add(lowInclusive, NewIntFromBig(randBig, randBig.BitLen()))
 	return out, nil
 }
