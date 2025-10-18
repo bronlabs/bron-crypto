@@ -206,9 +206,7 @@ func (s *state) mds() {
 			state2.v[row] = state2.v[row].Add(s.v[col].Mul(s.parameters.mds[row][col]))
 		}
 	}
-	for i, v2 := range state2.v { //nolint:gosimple // false positive
-		s.v[i] = v2
-	}
+	copy(s.v, state2.v)
 }
 
 func (s *state) ark(round, offset int) {
