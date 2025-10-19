@@ -565,6 +565,7 @@ linters:
           - whitespace
           - govet
           - unused
+          - wastedassign
       - path: testutils/
         linters:
           - depguard
