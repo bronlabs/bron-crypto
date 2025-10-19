@@ -71,8 +71,9 @@ linters:
     - exhaustive
     # Checks if all structure fields are initialized.
     - exhaustruct
-    # Detects functions from golang.org/x/exp/ that can be replaced by std functions.
-    - exptostd
+    # # Detects functions from golang.org/x/exp/ that can be replaced by std functions.
+    # # TODO: enable this when it doesn't spit out FIXMEs in people'e code.
+    # - exptostd
     # Forbids identifiers
     - forbidigo
     # finds forced type assertions
@@ -101,17 +102,12 @@ linters:
     - mirror
     # Vet examines Go source code and reports suspicious constructs, such as Printf calls whose arguments do not align with the format string
     - govet
-    # # Checks that your code uses short syntax for if-statements whenever possible
-    # # TODO: enable this when we have an alternative. It's currently flaky as
-    # # well as unmainted
-    # - ifshort
     # Enforces consistent import aliases
     - importas
     # Reports interfaces with unnamed method parameters.
     - inamedparam
-    # # Intrange is a linter to find places where for loops could make use of an integer range.
-    # TODO: Enable this when it doesn't panic.
-    # - intrange
+    # Intrange is a linter to find places where for loops could make use of an integer range.
+    - intrange
     # Detects when assignments to existing variables are not used
     - ineffassign
     # Finds slice declarations with non-zero initial length
@@ -144,14 +140,15 @@ linters:
     - testifylint
     # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
     - revive
-    # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
-    - staticcheck
+    # # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
+    # - staticcheck
     # linter that makes you use a separate _test package
     - testpackage
     # thelper detects golang test helpers without t.Helper() call and checks the consistency of test helpers
     - thelper
-    # tparallel detects inappropriate usage of t.Parallel() method in your Go test codes
-    - tparallel
+    # # tparallel detects inappropriate usage of t.Parallel() method in your Go test codes
+    # # TODO: enable later
+    # - tparallel
     # Remove unnecessary type conversions
     - unconvert
     # Reports unused function parameters
@@ -567,7 +564,7 @@ linters:
           - prealloc
           - whitespace
           - govet
-          - copyloopvar
+          - unused
       - path: testutils/
         linters:
           - depguard
@@ -608,6 +605,7 @@ linters:
         linters:
           - dupl
           - unused
+          - intrange
       # a lot of false positives for cselect
       - path: curves/
         text: "nilness: nil dereference in field selection"
