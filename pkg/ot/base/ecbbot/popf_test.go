@@ -26,6 +26,7 @@ func Test_PopfHappyPath(t *testing.T) {
 }
 
 func popfHappyHapy[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]](tb testing.TB, curve algebra.PrimeGroup[GE, SE]) {
+	tb.Helper()
 	prng := crand.Reader
 	tag0 := []byte("tag0")
 	tag1 := []byte("tag1")

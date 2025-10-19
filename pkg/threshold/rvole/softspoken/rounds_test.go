@@ -78,6 +78,7 @@ func Test_HappyPath(t *testing.T) {
 }
 
 func generateSeeds(tb testing.TB, prng io.Reader) (senderSeeds *vsot.SenderOutput, receiverSeeds *vsot.ReceiverOutput) {
+	tb.Helper()
 	receiverSeeds = &vsot.ReceiverOutput{
 		ot.ReceiverOutput[[]byte]{
 			Choices:  make([]byte, softspoken.Kappa/8),

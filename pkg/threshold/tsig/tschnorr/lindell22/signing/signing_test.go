@@ -437,6 +437,7 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 }
 
 func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
+	t.Helper()
 	// Setup
 	threshold := uint(3)
 	total := uint(5)
@@ -592,6 +593,7 @@ func TestLindell22ConcurrentSigning(t *testing.T) {
 }
 
 func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
+	t.Helper()
 	threshold := uint(3)
 	total := uint(5)
 	numMessages := 5
@@ -803,6 +805,7 @@ func TestLindell22DifferentQuorums(t *testing.T) {
 }
 
 func testDifferentQuorumsWithScheme(t *testing.T, threshold, total uint, quorumIDs []sharing.ID, createScheme func(io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
+	t.Helper()
 	// Setup
 	group := k256.NewCurve()
 	sid := network.SID(sha3.Sum256([]byte("test-different-quorums")))
@@ -965,6 +968,7 @@ func TestLindell22EdgeCases(t *testing.T) {
 }
 
 func testEdgeCasesWithScheme(t *testing.T, message []byte, createScheme func(io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
+	t.Helper()
 	threshold := uint(2)
 	total := uint(3)
 

@@ -71,6 +71,7 @@ func TestBinaryOp[FP impl.FiniteFieldElementPtr[FP, F], F any](tb testing.TB, a,
 }
 
 func TestBinaryOpWithOk[FP impl.FiniteFieldElementPtr[FP, F], F any](tb testing.TB, a, b, c *F, ok ct.Bool, op func(c, a, b *F) ct.Bool) {
+	tb.Helper()
 	var actualC F
 	actualOk := op(&actualC, a, b)
 	require.True(tb, FP(&actualC).Equal(c) == 1)
