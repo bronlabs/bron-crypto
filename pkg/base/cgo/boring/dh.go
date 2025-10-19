@@ -2,12 +2,13 @@
 
 package boring
 
-// #include <openssl/dh.h>
-// #include <openssl/bn.h>
+// #include "openssl/dh.h"
+// #include "openssl/bn.h"
 import "C"
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/nocopy"
 	"runtime"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/nocopy"
 )
 
 type nativeDh = *C.DH
