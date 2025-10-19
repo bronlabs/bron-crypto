@@ -3,6 +3,7 @@ package fiatshamir
 import (
 	"fmt"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -62,11 +63,10 @@ func NewCompiler[
 	if sigmaProtocol == nil {
 		return nil, errs.NewIsNil("sigmaProtocol")
 	}
-	// TODO: re-enable this check once base.ComputationalSecurityBits is actually customisable.
-	// if s := sigmaProtocol.SoundnessError(); s < base.ComputationalSecurityBits {
-	// 	return nil, errs.NewArgument("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
-	// 		s, base.ComputationalSecurityBits)
-	// }
+	if s := sigmaProtocol.SoundnessError(); s < base.ComputationalSecurityBits {
+		return nil, errs.NewArgument("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
+			s, base.ComputationalSecurityBits)
+	}
 	return &fs[X, W, A, S, Z]{
 		sigmaProtocol: sigmaProtocol,
 	}, nil
