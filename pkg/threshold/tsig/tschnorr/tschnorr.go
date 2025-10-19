@@ -166,8 +166,9 @@ type Shard[
 	E algebra.PrimeGroupElement[E, S],
 	S algebra.PrimeFieldElement[S],
 ] struct {
-	share *feldman.Share[S]
 	PublicMaterial[E, S]
+
+	share *feldman.Share[S]
 }
 
 type shardDTO[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {

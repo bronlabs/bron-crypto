@@ -38,9 +38,9 @@ func CompareBytes[T ~[]byte](x, y T) (lt, eq, gt Bool) {
 	yShorter := Less(lenY, lenX)
 	allEqual := done ^ 1
 
-	lt |= Bool(xShorter & allEqual)
-	gt |= Bool(yShorter & allEqual)
-	eq = Bool(Equal(lenX, lenY) & allEqual)
+	lt |= xShorter & allEqual
+	gt |= yShorter & allEqual
+	eq = Equal(lenX, lenY) & allEqual
 
 	return lt, eq, gt
 }

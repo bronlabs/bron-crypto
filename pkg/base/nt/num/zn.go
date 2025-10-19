@@ -178,7 +178,9 @@ func (zn *ZMod) Hash(input []byte) (*Uint, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create blake2b XOF")
 	}
-	xof.Write(input)
+	if _, err := xof.Write(input); err != nil {
+		return nil, errs.WrapHashing(err, "failed to write input to blake2b XOF")
+	}
 	digest := make([]byte, zn.WideElementSize())
 	if _, err = io.ReadFull(xof, digest); err != nil {
 		return nil, errs.WrapSerialisation(err, "failed to read full blake2b XOF output")

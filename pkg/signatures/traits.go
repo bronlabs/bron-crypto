@@ -47,8 +47,9 @@ func (pk *PublicKeyTrait[PKV, S]) HashCode() base.HashCode {
 }
 
 type PrivateKeyTrait[PKV algebra.PrimeGroupElement[PKV, S], S algebra.PrimeFieldElement[S]] struct {
-	V S
 	PublicKeyTrait[PKV, S]
+
+	V S
 }
 
 func (sk *PrivateKeyTrait[PKV, S]) ScalarField() algebra.PrimeField[S] {

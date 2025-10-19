@@ -55,11 +55,28 @@ func CompareInteger[I constraints.Integer](x, y I) (gt, eq, lt Bool) {
 	return
 }
 
-// SelectInteger returns x0 if choice == 0 and x1 if choice == 1. Undefined for other values of choice.
+// CSelectInt returns x0 if choice == 0 and x1 if choice == 1. Undefined for other values of choice.
 // It supports both signed and unsigned integer types.
-func SelectInteger[I constraints.Integer](choice Choice, x0, x1 I) I {
+func CSelectInt[I constraints.Integer](choice Choice, x0, x1 I) I {
 	mask := I(-int64(choice)) // 0 if choice == 0, -1 (all bits 1) if choice == 1
 	return (x0 &^ mask) | (x1 & mask)
+}
+
+// CMOVInt sets *dst = *src iff yes==1; otherwise leaves *dst unchanged.
+// Branch-free, alias-safe, works for signed or unsigned integers.
+func CMOVInt[I constraints.Integer](dst *I, yes Choice, src *I) {
+	// mask = 0 if yes==0, all-ones if yes==1
+	mask := I(-int64(yes & 1))
+	*dst = (*dst &^ mask) | (*src & mask)
+}
+
+// CSwapInt swaps *x and *y iff yes==1; otherwise leaves them unchanged.
+// Branch-free, alias-safe.
+func CSwapInt[I constraints.Integer](x, y *I, yes Choice) {
+	mask := I(-int64(yes & 1))
+	d := (*x ^ *y) & mask
+	*x ^= d
+	*y ^= d
 }
 
 // Min returns the smaller of a and b in constant time.
@@ -68,7 +85,7 @@ func Min[T constraints.Integer](a, b T) T {
 	// Less(a, b) returns 1 if a < b, 0 otherwise
 	// If a < b (Less=1), we want a
 	// If a >= b (Less=0), we want b
-	return SelectInteger(Less(a, b), b, a)
+	return CSelectInt(Less(a, b), b, a)
 }
 
 // Max returns the larger of a and b in constant time.
@@ -77,7 +94,7 @@ func Max[T constraints.Integer](a, b T) T {
 	// Greater(a, b) returns 1 if a > b, 0 otherwise
 	// If a > b (Greater=1), we want a
 	// If a <= b (Greater=0), we want b
-	return SelectInteger(Greater(a, b), b, a)
+	return CSelectInt(Greater(a, b), b, a)
 }
 
 // Isqrt64 computes floor(sqrt(n)) for a 64-bit n in constant time.
@@ -92,7 +109,7 @@ func Isqrt64(n uint64) uint64 {
 		square := temp * temp
 		// Keep the bit if temp^2 <= n (no overflow for temp < 2^32)
 		le := LessOrEqual(square, n)
-		result = SelectInteger(le, result, temp)
+		result = CSelectInt(le, result, temp)
 		bit >>= 1
 	}
 	return result

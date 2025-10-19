@@ -138,8 +138,8 @@ linters:
     - testableexamples
     # Checks usage of github.com/stretchr/testify.
     - testifylint
-    # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
-    - revive
+    # # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
+    # - revive
     # # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
     # - staticcheck
     # linter that makes you use a separate _test package
@@ -601,6 +601,8 @@ linters:
           - govet
           - unused
           - wastedassign
+          - exhaustruct
+          - predeclared
       - path: utils.go
         linters:
           # TODO: enable this when round based stuff is here
@@ -618,6 +620,7 @@ linters:
           - prealloc
           - whitespace
           - govet
+          - exhaustive
       - path: curves/
         linters:
           - errcheck

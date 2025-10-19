@@ -78,8 +78,8 @@ type Shard[
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
-	share *feldman.Share[S]
 	PublicMaterial[PK, PKFE, SG, SGFE, E, S]
+	share *feldman.Share[S]
 }
 
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) Share() *feldman.Share[S] {

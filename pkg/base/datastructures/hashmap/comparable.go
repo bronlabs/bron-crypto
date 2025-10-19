@@ -37,7 +37,11 @@ func (m NativeMap[K, V, T]) Filter(predicate func(key K) bool) T {
 			result[k] = v
 		}
 	}
-	return any(result).(T)
+	out, ok := any(result).(T)
+	if !ok {
+		panic("could not convert filtered map to target type")
+	}
+	return out
 }
 
 func (m NativeMap[K, V, T]) ContainsKey(key K) bool {
@@ -324,7 +328,11 @@ func (m ComparableHashMap[K, V]) ThreadSafe() ds.ConcurrentMap[K, V] {
 }
 
 func (m ComparableHashMap[K, V]) Clone() ds.MutableMap[K, V] {
-	return any(maps.Clone(m.NativeMap)).(ds.MutableMap[K, V])
+	out, ok := any(maps.Clone(m.NativeMap)).(ds.MutableMap[K, V])
+	if !ok {
+		panic("could not clone comparable hash map")
+	}
+	return out
 }
 
 func (m ComparableHashMap[K, V]) MarshalJSON() ([]byte, error) {

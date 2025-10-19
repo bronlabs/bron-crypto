@@ -308,7 +308,7 @@ func (i *Int) RshCap(x *Int, shift uint, cap int) {
 func (i *Int) Resize(cap int) {
 	// When cap < 0, use the current announced length
 	// When cap >= 0, use the provided cap
-	effectiveCap := ct.CSelect(ct.GreaterOrEqual(cap, 0), cap, int(i.AnnouncedLen()))
+	effectiveCap := ct.CSelectInt(ct.GreaterOrEqual(cap, 0), cap, int(i.AnnouncedLen()))
 	(*saferith.Int)(i).Resize(effectiveCap)
 }
 
@@ -334,7 +334,7 @@ func (i *Int) Select(choice ct.Choice, x0, x1 *Int) {
 	selectedAbs.Select(choice, &selectedAbs, abs1)
 
 	// Select the sign
-	selectedNeg := ct.SelectInteger(choice, x0.IsNegative(), x1.IsNegative())
+	selectedNeg := ct.CSelectInt(choice, x0.IsNegative(), x1.IsNegative())
 
 	// Set the result
 	i.SetNat(&selectedAbs)
@@ -342,7 +342,10 @@ func (i *Int) Select(choice ct.Choice, x0, x1 *Int) {
 }
 
 func (i *Int) CondAssign(choice ct.Choice, x *Int) {
-	ct.CMOV(i, choice, x)
+	outNat := i.abs()
+	outNat.CondAssign(choice, x.abs())
+	i.SetNat(outNat)
+	i.CondNeg(x.IsNegative())
 }
 
 func (i *Int) CondNeg(choice ct.Choice) {
@@ -367,8 +370,8 @@ func (i *Int) Compare(rhs *Int) (lt, eq, gt ct.Bool) {
 	bothNeg := same & aNeg
 
 	// If both negative, reverse magnitude ordering
-	ltSame := ct.SelectInteger(bothNeg, ltM, gtM) // when bothNeg==0 pick ltM, when bothNeg==1 pick gtM
-	gtSame := ct.SelectInteger(bothNeg, gtM, ltM) // when bothNeg==0 pick gtM, when bothNeg==1 pick ltM
+	ltSame := ct.CSelectInt(bothNeg, ltM, gtM) // when bothNeg==0 pick ltM, when bothNeg==1 pick gtM
+	gtSame := ct.CSelectInt(bothNeg, gtM, ltM) // when bothNeg==0 pick gtM, when bothNeg==1 pick ltM
 
 	// Only use magnitude comparison when signs are the same
 	ltSame = same & ltSame
@@ -398,7 +401,7 @@ func (i *Int) Int64() int64 {
 	negated := abs * -1
 	// When IsNegative() is 1 (true), select negated
 	// ct.Select returns x1 when choice is 1, x0 when choice is 0
-	return ct.SelectInteger(i.IsNegative(), abs, negated)
+	return ct.CSelectInt(i.IsNegative(), abs, negated)
 }
 
 func (i *Int) SetInt64(x int64) {

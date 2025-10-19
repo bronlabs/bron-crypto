@@ -27,8 +27,9 @@ type (
 	DKGOutput[
 		E GroupElement[E, S], S Scalar[S],
 	] struct {
-		share *feldman.Share[S]
 		DKGPublicOutput[E, S]
+
+		share *feldman.Share[S]
 	}
 
 	DKGPublicOutput[

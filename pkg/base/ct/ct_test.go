@@ -32,224 +32,6 @@ func TestChoice(t *testing.T) {
 	}
 }
 
-// TestCSelect tests the generic CSelect function
-func TestCSelect(t *testing.T) {
-	t.Parallel()
-	t.Run("int", func(t *testing.T) {
-		t.Parallel()
-		a, b := 42, 100
-		assert.Equal(t, b, ct.CSelect(ct.Zero, a, b), "CSelect(0) should return b")
-		assert.Equal(t, a, ct.CSelect(ct.One, a, b), "CSelect(1) should return a")
-	})
-
-	t.Run("struct", func(t *testing.T) {
-		t.Parallel()
-		type TestStruct struct {
-			X int
-			Y string
-		}
-		a := TestStruct{X: 1, Y: "hello"}
-		b := TestStruct{X: 2, Y: "world"}
-
-		assert.Equal(t, b, ct.CSelect(ct.Zero, a, b))
-		assert.Equal(t, a, ct.CSelect(ct.One, a, b))
-	})
-
-	t.Run("zero-sized", func(t *testing.T) {
-		t.Parallel()
-		type Empty struct{}
-		a, b := Empty{}, Empty{}
-		// Should not panic for zero-sized types
-		assert.NotPanics(t, func() {
-			_ = ct.CSelect(ct.Zero, a, b)
-			_ = ct.CSelect(ct.One, a, b)
-		})
-	})
-
-	t.Run("slices", func(t *testing.T) {
-		t.Parallel()
-		a := []int{1, 2, 3}
-		b := []int{4, 5, 6}
-
-		got0 := ct.CSelect(ct.Zero, a, b)
-		assert.Equal(t, b, got0)
-
-		got1 := ct.CSelect(ct.One, a, b)
-		assert.Equal(t, a, got1)
-	})
-
-	t.Run("pointers", func(t *testing.T) {
-		t.Parallel()
-		x, y := 42, 100
-		a, b := &x, &y
-
-		assert.Equal(t, b, ct.CSelect(ct.Zero, a, b))
-		assert.Equal(t, a, ct.CSelect(ct.One, a, b))
-	})
-
-	t.Run("interface", func(t *testing.T) {
-		t.Parallel()
-		var a, b any = 42, "hello"
-
-		assert.Equal(t, b, ct.CSelect(ct.Zero, a, b))
-		assert.Equal(t, a, ct.CSelect(ct.One, a, b))
-	})
-
-	t.Run("large_struct", func(t *testing.T) {
-		t.Parallel()
-		type LargeStruct struct {
-			Data [1024]byte
-			ID   int
-		}
-		var a, b LargeStruct
-		a.ID = 1
-		b.ID = 2
-		a.Data[0] = 0xAA
-		b.Data[0] = 0xBB
-
-		got0 := ct.CSelect(ct.Zero, a, b)
-		assert.Equal(t, b.ID, got0.ID)
-		assert.Equal(t, b.Data[0], got0.Data[0])
-
-		got1 := ct.CSelect(ct.One, a, b)
-		assert.Equal(t, a.ID, got1.ID)
-		assert.Equal(t, a.Data[0], got1.Data[0])
-	})
-}
-
-// TestCMOV tests the CMOV function
-func TestCMOV(t *testing.T) {
-	t.Parallel()
-	t.Run("int", func(t *testing.T) {
-		t.Parallel()
-		dst := 42
-		src := 100
-
-		// Test no-op when choice=0
-		ct.CMOV(&dst, ct.Zero, &src)
-		assert.Equal(t, 42, dst, "CMOV(0) should not modify dst")
-
-		// Test move when choice=1
-		ct.CMOV(&dst, ct.One, &src)
-		assert.Equal(t, 100, dst, "CMOV(1) should move src to dst")
-	})
-
-	t.Run("struct", func(t *testing.T) {
-		t.Parallel()
-		type TestStruct struct {
-			X int
-			Y string
-		}
-		dst := TestStruct{X: 1, Y: "hello"}
-		src := TestStruct{X: 2, Y: "world"}
-
-		// Test no-op when choice=0
-		original := dst
-		ct.CMOV(&dst, ct.Zero, &src)
-		assert.Equal(t, original, dst)
-
-		// Test move when choice=1
-		ct.CMOV(&dst, ct.One, &src)
-		assert.Equal(t, src, dst)
-	})
-
-	t.Run("array", func(t *testing.T) {
-		t.Parallel()
-		dst := [4]int{1, 2, 3, 4}
-		src := [4]int{5, 6, 7, 8}
-
-		// Test no-op when choice=0
-		original := dst
-		ct.CMOV(&dst, ct.Zero, &src)
-		assert.Equal(t, original, dst)
-
-		// Test move when choice=1
-		ct.CMOV(&dst, ct.One, &src)
-		assert.Equal(t, src, dst)
-	})
-
-	t.Run("zero-sized", func(t *testing.T) {
-		t.Parallel()
-		type Empty struct{}
-		var dst, src Empty
-		// Should not panic
-		assert.NotPanics(t, func() {
-			ct.CMOV(&dst, ct.Zero, &src)
-			ct.CMOV(&dst, ct.One, &src)
-		})
-	})
-}
-
-// TestCSwap tests the CSwap function
-func TestCSwap(t *testing.T) {
-	t.Parallel()
-	t.Run("int", func(t *testing.T) {
-		t.Parallel()
-		x, y := 42, 100
-
-		// Test no-op when choice=0
-		ct.CSwap(&x, &y, ct.Zero)
-		assert.Equal(t, 42, x)
-		assert.Equal(t, 100, y)
-
-		// Test swap when choice=1
-		ct.CSwap(&x, &y, ct.One)
-		assert.Equal(t, 100, x)
-		assert.Equal(t, 42, y)
-	})
-
-	t.Run("struct", func(t *testing.T) {
-		t.Parallel()
-		type TestStruct struct {
-			X int
-			Y string
-		}
-		a := TestStruct{X: 1, Y: "hello"}
-		b := TestStruct{X: 2, Y: "world"}
-
-		// Test no-op when choice=0
-		origA, origB := a, b
-		ct.CSwap(&a, &b, ct.Zero)
-		assert.Equal(t, origA, a)
-		assert.Equal(t, origB, b)
-
-		// Test swap when choice=1
-		ct.CSwap(&a, &b, ct.One)
-		assert.Equal(t, origB, a)
-		assert.Equal(t, origA, b)
-	})
-
-	t.Run("self-swap", func(t *testing.T) {
-		t.Parallel()
-		x := 42
-		// Self-swap should work without issues (alias-safe)
-		ct.CSwap(&x, &x, ct.One)
-		assert.Equal(t, 42, x, "Self-swap should not change value")
-	})
-
-	t.Run("large_array", func(t *testing.T) {
-		t.Parallel()
-		var a, b [256]byte
-		for i := range a {
-			a[i] = byte(i)
-			b[i] = byte(255 - i)
-		}
-
-		// Save originals
-		origA, origB := a, b
-
-		// Test no-op when choice=0
-		ct.CSwap(&a, &b, ct.Zero)
-		assert.Equal(t, origA, a)
-		assert.Equal(t, origB, b)
-
-		// Test swap when choice=1
-		ct.CSwap(&a, &b, ct.One)
-		assert.Equal(t, origB, a)
-		assert.Equal(t, origA, b)
-	})
-}
-
 // TestIsZero tests the IsZero function for various integer types
 func TestIsZero(t *testing.T) {
 	t.Parallel()
@@ -465,23 +247,23 @@ func TestSelectInteger(t *testing.T) {
 	t.Run("uint8", func(t *testing.T) {
 		t.Parallel()
 		var a, b uint8 = 42, 100
-		assert.Equal(t, a, ct.SelectInteger(ct.Zero, a, b))
-		assert.Equal(t, b, ct.SelectInteger(ct.One, a, b))
+		assert.Equal(t, a, ct.CSelectInt(ct.Zero, a, b))
+		assert.Equal(t, b, ct.CSelectInt(ct.One, a, b))
 	})
 
 	t.Run("int64", func(t *testing.T) {
 		t.Parallel()
 		var a, b int64 = -42, 100
-		assert.Equal(t, a, ct.SelectInteger(ct.Zero, a, b))
-		assert.Equal(t, b, ct.SelectInteger(ct.One, a, b))
+		assert.Equal(t, a, ct.CSelectInt(ct.Zero, a, b))
+		assert.Equal(t, b, ct.CSelectInt(ct.One, a, b))
 	})
 
 	t.Run("boundary", func(t *testing.T) {
 		t.Parallel()
 		// Test with boundary values
 		var a, b int64 = math.MinInt64, math.MaxInt64
-		assert.Equal(t, a, ct.SelectInteger(ct.Zero, a, b))
-		assert.Equal(t, b, ct.SelectInteger(ct.One, a, b))
+		assert.Equal(t, a, ct.CSelectInt(ct.Zero, a, b))
+		assert.Equal(t, b, ct.CSelectInt(ct.One, a, b))
 	})
 }
 
@@ -723,8 +505,8 @@ func TestConstantTime(t *testing.T) {
 		t.Parallel()
 		for i := range 1000 {
 			a, b := uint64(i), uint64(i+1000)
-			assert.Equal(t, a, ct.SelectInteger(ct.Zero, a, b))
-			assert.Equal(t, b, ct.SelectInteger(ct.One, a, b))
+			assert.Equal(t, a, ct.CSelectInt(ct.Zero, a, b))
+			assert.Equal(t, b, ct.CSelectInt(ct.One, a, b))
 		}
 	})
 
@@ -1287,7 +1069,7 @@ func BenchmarkConstantTime(b *testing.B) {
 	b.Run("SelectInteger", func(b *testing.B) {
 		var result uint64
 		for range b.N {
-			result = ct.SelectInteger(ct.Choice(b.N&1), uint64(b.N), uint64(b.N+1))
+			result = ct.CSelectInt(ct.Choice(b.N&1), uint64(b.N), uint64(b.N+1))
 		}
 		_ = result
 	})

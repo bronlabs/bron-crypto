@@ -1,7 +1,5 @@
 package ct
 
-import "unsafe"
-
 type (
 	// TODO: remove Bool
 	Choice uint64
@@ -38,33 +36,4 @@ type ConditionallyAssignable[E any] interface {
 
 type ConditionallyNegatable[E any] interface {
 	CondNeg(Choice)
-}
-
-// TODO: remove
-// CSelect returns a if yes==1, else b. Works for any T. Branchless wrt data.
-func CSelect[T any](yes Choice, a, b T) T {
-	out := b
-	CMOV(&out, yes, &a)
-	return out
-}
-
-// TODO: remove
-// CMOV: *dst = *src if yes==1; otherwise unchanged. Works for any T. Branchless.
-func CMOV[T any](dst *T, yes Choice, src *T) {
-	n := int(unsafe.Sizeof(*dst))
-	m := byte(0 - byte(yes&1))
-	d := unsafe.Slice((*byte)(unsafe.Pointer(dst)), n)
-	s := unsafe.Slice((*byte)(unsafe.Pointer(src)), n)
-	for i := range n {
-		di := d[i]
-		d[i] = di ^ ((di ^ s[i]) & m)
-	}
-}
-
-// TODO: remove
-// CSwap swaps *x and *y iff yes==1. Any T. Alias-safe.
-func CSwap[T any](x, y *T, yes Choice) {
-	ax := CSelect(yes, *y, *x)
-	ay := CSelect(yes, *x, *y)
-	*x, *y = ax, ay
 }

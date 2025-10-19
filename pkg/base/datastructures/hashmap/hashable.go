@@ -118,7 +118,11 @@ func (m HashMapTrait[K, V, T]) Filter(predicate func(key K) bool) T {
 	result := HashMapTrait[K, V, T]{
 		inner: inner,
 	}
-	return any(result).(T)
+	out, ok := any(result).(T)
+	if !ok {
+		panic("could not convert filtered map to target type")
+	}
+	return out
 }
 
 func (m HashMapTrait[K, V, _]) ContainsKey(key K) bool {

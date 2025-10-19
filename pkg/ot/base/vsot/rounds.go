@@ -228,7 +228,7 @@ func (r *Receiver[P, B, S]) Round4(r3 *Round3P2P) (*Round4P2P, error) {
 			if err != nil {
 				return nil, errs.WrapHashing(err, "cannot hash rho_omega digest")
 			}
-			xi := ct.SelectIntegerSlices(ct.Choice(r.state.omegaRaw[idx]), make([]byte, len(r3.Xi[idx])), r3.Xi[idx])
+			xi := ct.CSelectInts(ct.Choice(r.state.omegaRaw[idx]), make([]byte, len(r3.Xi[idx])), r3.Xi[idx])
 			subtle.XORBytes(rhoPrime[idx], rhoPrime[idx], xi)
 		}
 	}

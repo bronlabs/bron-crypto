@@ -1,7 +1,6 @@
 package num
 
 import (
-	"errors"
 	"io"
 	"iter"
 	"math/big"
@@ -123,7 +122,7 @@ func (*PositiveNaturalNumbers) FromBytes(input []byte) (*NatPlus, error) {
 
 func (nps *PositiveNaturalNumbers) Random(lowInclusive, highExclusive *NatPlus, prng io.Reader) (*NatPlus, error) {
 	if highExclusive == nil {
-		return nil, errors.New("highExclusive must not be nil")
+		return nil, errs.NewIsNil("highExclusive must not be nil")
 	}
 	if lowInclusive == nil {
 		lowInclusive = nps.Bottom()

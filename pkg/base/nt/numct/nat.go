@@ -195,7 +195,7 @@ func (n *Nat) IsEven() ct.Bool {
 func (n *Nat) Resize(cap int) {
 	// When cap < 0, use the current announced length
 	// When cap >= 0, use the provided cap
-	(*saferith.Nat)(n).Resize(ct.CSelect(ct.GreaterOrEqual(cap, 0), cap, int(n.AnnouncedLen())))
+	(*saferith.Nat)(n).Resize(ct.CSelectInt(ct.GreaterOrEqual(cap, 0), cap, int(n.AnnouncedLen())))
 }
 
 func (n *Nat) Lsh(x *Nat, shift uint) {
@@ -352,7 +352,7 @@ func (n *Nat) NotCap(x *Nat, cap int) {
 
 	// Determine the bit capacity to use
 	// When cap < 0, use x's announced capacity
-	bitCap := ct.CSelect(ct.GreaterOrEqual(cap, 0), int(x.AnnouncedLen()), cap)
+	bitCap := ct.CSelectInt(ct.GreaterOrEqual(cap, 0), int(x.AnnouncedLen()), cap)
 
 	// Calculate byte length from bit capacity
 	byteLen := (bitCap + 7) / 8

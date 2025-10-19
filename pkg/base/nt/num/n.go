@@ -1,7 +1,6 @@
 package num
 
 import (
-	"errors"
 	"io"
 	"iter"
 	"math/big"
@@ -119,7 +118,7 @@ func (ns *NaturalNumbers) FromCardinal(value cardinal.Cardinal) (*Nat, error) {
 
 func (ns *NaturalNumbers) Random(lowInclusive, highExclusive *Nat, prng io.Reader) (*Nat, error) {
 	if highExclusive == nil {
-		return nil, errors.New("highExclusive must not be nil")
+		return nil, errs.NewIsNil("highExclusive must not be nil")
 	}
 	if lowInclusive == nil {
 		lowInclusive = ns.Bottom()
