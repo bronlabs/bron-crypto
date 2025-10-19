@@ -87,23 +87,23 @@ githooks:
 	chmod +x .githooks/*
 
 test:
-	${RUN_IN_CLAUSE} '${GOENV} gotestsum ${BUILD_TAGS} -- ./...'
+	${RUN_IN_CLAUSE} '${GOENV} go test -tags=${BUILD_TAGS} ./...'
 
 test-edwards25519:
-	${RUN_IN_CLAUSE} '${GOENV} gotestsum ${BUILD_TAGS} -- github.com/bronlabs/bron-crypto/tools/edwards25519-tester'
+	${RUN_IN_CLAUSE} '${GOENV} go test -tags=${BUILD_TAGS} github.com/bronlabs/bron-crypto/tools/edwards25519-tester'
 
 test-long: ## Runs all tests, including long-running tests
-	${RUN_IN_CLAUSE} '${GOENV} gotestsum ${BUILD_TAGS} -- -timeout 120m ./...'
-	${RUN_IN_CLAUSE} '${GOENV} gotestsum ${BUILD_TAGS} -- -timeout 120m github.com/bronlabs/bron-crypto/tools/edwards25519-tester'
+	${RUN_IN_CLAUSE} '${GOENV} go test -tags=${BUILD_TAGS} -timeout 120m ./...'
+	${RUN_IN_CLAUSE} '${GOENV} go test -tags=${BUILD_TAGS} -timeout 120m github.com/bronlabs/bron-crypto/tools/edwards25519-tester'
 
 check-thirdparty:
 	@${SCRIPTS_DIR}/check_thirdparty.sh ${THIRDPARTY_DIR}/manifest.txt
 
 deflake: ## Runs short tests many times to detect flakes
-	${RUN_IN_CLAUSE} 'DEFLAKE_TIME_TEST=1 ${GO} test ${BUILD_TAGS} -count=100 -short -timeout 0 ${TEST_CLAUSE} ./...'
+	${RUN_IN_CLAUSE} 'DEFLAKE_TIME_TEST=1 ${GO} test -tags=${BUILD_TAGS} -count=100 -short -timeout 0 ${TEST_CLAUSE} ./...'
 
 deflake-long: ## Runs tests many times to detect flakes
-	${RUN_IN_CLAUSE} 'DEFLAKE_TIME_TEST=1 ${GO} test ${BUILD_TAGS} -count=50 -timeout 0 ${TEST_CLAUSE} ./...'
+	${RUN_IN_CLAUSE} 'DEFLAKE_TIME_TEST=1 ${GO} test -tags=${BUILD_TAGS} -count=50 -timeout 0 ${TEST_CLAUSE} ./...'
 
 fuzz:
 	${RUN_IN_CLAUSE} 'make fuzz-test-pkg'
