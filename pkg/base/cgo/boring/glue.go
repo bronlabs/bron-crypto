@@ -2,9 +2,10 @@
 
 package boring
 
-// #include "crypto/fipsmodule/bn/internal.h"
-// #include <openssl/err.h>
+// #include "openssl/bn.h"
+// #include "openssl/err.h"
 //
+// extern int bn_jacobi(const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx);
 // OPENSSL_EXPORT int BN_jacobi(const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx);
 //
 // int BN_jacobi(const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx) {

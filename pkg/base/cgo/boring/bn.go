@@ -4,7 +4,7 @@ package boring
 
 // TODO: do below in glue.go
 
-// #include <openssl/bn.h>
+// #include "openssl/bn.h"
 // // Forward-declare BoringSSL’s exported symbol (not in public headers).
 // int bn_lcm_consttime(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx);
 import (
