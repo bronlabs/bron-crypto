@@ -658,12 +658,16 @@ linters:
         text: "captLocal: `L' should not be capitalized"
         linters:
           - gocritic
+      # Exclude algebra package from wrapcheck - lots of interface method calls
+      - path: pkg/base/algebra/
+        linters:
+          - wrapcheck
       # this has a collision with wrapcheck. We care about wrapcheck more, but
       # errchkjson is also important because it reports unsafe marshaling
       - linters:
           - errchkjson
         text: 'Error return value of `encoding/json.Marshal` is checked but passed argument is safe'
-      
+
   issues:
     max-same-issues: 0
     fix: false
