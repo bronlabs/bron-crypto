@@ -184,7 +184,7 @@ func (zn *ZMod) Hash(input []byte) (*Uint, error) {
 		return nil, errs.WrapSerialisation(err, "failed to read full blake2b XOF output")
 	}
 	x := new(numct.Nat)
-	if ok := x.SetBytes(digest[:]); ok == ct.False {
+	if ok := x.SetBytes(digest); ok == ct.False {
 		return nil, errs.NewSerialisation("failed to interpret hash digest as Nat")
 	}
 	v := new(numct.Nat)

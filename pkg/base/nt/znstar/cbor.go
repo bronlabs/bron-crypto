@@ -13,7 +13,7 @@ import (
 
 // Wrapper types for unit to support dual-tag registration
 // These wrappers allow us to register different CBOR tags for the same underlying type
-// Both will unmarshal to the Unit interface
+// Both will unmarshal to the Unit interface.
 type unitUnknownOrder struct {
 	*unit
 }
@@ -63,12 +63,12 @@ func init() {
 	serde.Register[*rsaGroupKnownOrder](RSAGroupKnownOrderTag)
 }
 
-// MarshalCBOR for unitUnknownOrder - delegates to embedded unit
+// MarshalCBOR for unitUnknownOrder - delegates to embedded unit.
 func (u *unitUnknownOrder) MarshalCBOR() ([]byte, error) {
 	return u.unit.MarshalCBOR()
 }
 
-// UnmarshalCBOR for unitUnknownOrder - deserializes unknown order unit
+// UnmarshalCBOR for unitUnknownOrder - deserializes unknown order unit.
 func (u *unitUnknownOrder) UnmarshalCBOR(data []byte) error {
 	// When called by serde, the tag has already been stripped
 	// We know this is an unknown order unit because of the tag that was registered
@@ -100,12 +100,12 @@ func (u *unitUnknownOrder) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// MarshalCBOR for unitKnownOrder - delegates to embedded unit
+// MarshalCBOR for unitKnownOrder - delegates to embedded unit.
 func (u *unitKnownOrder) MarshalCBOR() ([]byte, error) {
 	return u.unit.MarshalCBOR()
 }
 
-// UnmarshalCBOR for unitKnownOrder - deserializes known order unit
+// UnmarshalCBOR for unitKnownOrder - deserializes known order unit.
 func (u *unitKnownOrder) UnmarshalCBOR(data []byte) error {
 	// When called by serde, the tag has already been stripped
 	// We know this is a known order unit because of the tag that was registered
@@ -248,7 +248,7 @@ func (us *UZMod[X]) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// Group serialisation DTOs and methods
+// Group serialisation DTOs and methods.
 
 type paillierGroupUnknownDTO struct {
 	UZMod *UZMod[*modular.SimpleModulus] `cbor:"uzmod"`

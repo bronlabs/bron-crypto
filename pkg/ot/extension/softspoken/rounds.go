@@ -166,7 +166,7 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 
 	// RANDOMISE
 	// step 2.5: Transpose q_{i,j} -> q_{j,i}  ∀i∈[κ], j∈[η']
-	qjTransposed, err := ot.TransposePackedBits(extCorrelations[:])
+	qjTransposed, err := ot.TransposePackedBits(extCorrelations)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "bad transposing q_{i,j} for SoftSpoken COTe")
 	}

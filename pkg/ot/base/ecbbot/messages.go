@@ -12,7 +12,7 @@ type Round2P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 	Phi [][2][]G `cbor:"phi"` // Φ ∈ [ξ][2][L]Point
 }
 
-//func (r1p2p *Round1P2P) Validate(protocol types.Protocol) error {
+// func (r1p2p *Round1P2P) Validate(protocol types.Protocol) error {
 //	if r1p2p.MS == nil {
 //		return errs.NewIsNil("mS")
 //	}

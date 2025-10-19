@@ -15,7 +15,7 @@ type Round3P2P[SE algebra.PrimeFieldElement[SE]] struct {
 	Mu     []byte `cbor:"mu"`
 }
 
-//func (m *Round3P2P) Validate(protocol types.Protocol) error {
+// func (m *Round3P2P) Validate(protocol types.Protocol) error {
 //	if m == nil {
 //		return errs.NewValidation("missing message")
 //	}

@@ -55,15 +55,15 @@ func updateModes() {
 		MaxArrayElements:         DefaultMaxArrayElements,
 		MaxMapPairs:              DefaultMaxMapPairs,
 		IndefLength:              cbor.IndefLengthForbidden,
-		TagsMd:                   cbor.TagsAllowed,       //default
-		IntDec:                   cbor.IntDecConvertNone, //default
+		TagsMd:                   cbor.TagsAllowed,       // default
+		IntDec:                   cbor.IntDecConvertNone, // default
 		MapKeyByteString:         cbor.MapKeyByteStringForbidden,
 		ExtraReturnErrors:        cbor.ExtraDecErrorUnknownField,
-		UTF8:                     cbor.UTF8RejectInvalid, //default
+		UTF8:                     cbor.UTF8RejectInvalid, // default
 		FieldNameMatching:        cbor.FieldNameMatchingCaseSensitive,
 		BigIntDec:                cbor.BigIntDecodePointer,
-		ByteStringToString:       cbor.ByteStringToStringForbidden,  //default
-		FieldNameByteString:      cbor.FieldNameByteStringForbidden, //default
+		ByteStringToString:       cbor.ByteStringToStringForbidden,  // default
+		FieldNameByteString:      cbor.FieldNameByteStringForbidden, // default
 		UnrecognizedTagToAny:     cbor.UnrecognizedTagContentToAny,
 		TimeTagToAny:             cbor.TimeTagToRFC3339,
 		NaN:                      cbor.NaNDecodeForbidden,

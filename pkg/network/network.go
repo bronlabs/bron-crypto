@@ -44,7 +44,7 @@ type Identity interface {
 // TODO: remove
 type Node any
 
-// Identity() Identity
+// Identity() Identity.
 
 // TODO: remove
 type PKI[N Node] interface {

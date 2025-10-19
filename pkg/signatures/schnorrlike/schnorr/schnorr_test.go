@@ -256,7 +256,7 @@ func Test_VanillaSchnorr_ResponseOperatorNegative(t *testing.T) {
 func Test_VanillaSchnorr_SerializeSignature(t *testing.T) {
 	t.Parallel()
 
-	message := []byte("test serialization")
+	message := []byte("test serialisation")
 	group := k256.NewCurve()
 	scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, crand.Reader)
 	require.NoError(t, err)
@@ -273,17 +273,17 @@ func Test_VanillaSchnorr_SerializeSignature(t *testing.T) {
 	signature, err := signer.Sign(message)
 	require.NoError(t, err)
 
-	// Get variant and serialize signature
+	// Get variant and serialise signature
 	variant := scheme.Variant()
 
-	serialized, err := variant.SerializeSignature(signature)
+	serialised, err := variant.SerializeSignature(signature)
 	require.NoError(t, err)
-	require.NotNil(t, serialized)
+	require.NotNil(t, serialised)
 
-	// The serialized signature should contain R followed by S
+	// The serialised signature should contain R followed by S
 	// For k256, R is a compressed point (33 bytes) and S is a scalar (32 bytes)
 	expectedLen := 33 + 32 // R + S
-	require.Len(t, serialized, expectedLen)
+	require.Len(t, serialised, expectedLen)
 }
 
 func Test_VanillaSchnorr_VariantProperties(t *testing.T) {
@@ -298,7 +298,7 @@ func Test_VanillaSchnorr_VariantProperties(t *testing.T) {
 	// Check variant type
 	require.Equal(t, vanilla.VariantType, variant.Type())
 
-	// Check that nonce is not a function of message (randomized)
+	// Check that nonce is not a function of message (randomised)
 	require.False(t, variant.NonceIsFunctionOfMessage())
 
 	// Check hash function

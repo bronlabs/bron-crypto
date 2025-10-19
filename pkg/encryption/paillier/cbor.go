@@ -38,7 +38,7 @@ func init() {
 	serde.Register[*PrivateKey](PrivateKeyTag)
 }
 
-// Plaintext serialisation - reuse num.Int and num.NatPlus CBOR
+// Plaintext serialisation - reuse num.Int and num.NatPlus CBOR.
 type plaintextDTO struct {
 	V *num.Int     `cbor:"v"`
 	N *num.NatPlus `cbor:"n"`
@@ -62,7 +62,7 @@ func (p *Plaintext) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// Nonce serialisation - reuse znstar.Unit CBOR
+// Nonce serialisation - reuse znstar.Unit CBOR.
 type nonceDTO struct {
 	U znstar.Unit `cbor:"u"`
 }
@@ -83,7 +83,7 @@ func (n *Nonce) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// Ciphertext serialisation - reuse znstar.Unit CBOR
+// Ciphertext serialisation - reuse znstar.Unit CBOR.
 type ciphertextDTO struct {
 	U znstar.Unit `cbor:"u"`
 }
@@ -104,7 +104,7 @@ func (c *Ciphertext) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// PublicKey serialisation - reuse znstar.PaillierGroup CBOR
+// PublicKey serialisation - reuse znstar.PaillierGroup CBOR.
 type publicKeyDTO struct {
 	Group znstar.PaillierGroup `cbor:"group"`
 }
@@ -126,7 +126,7 @@ func (pk *PublicKey) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// PrivateKey serialisation - reuse znstar.PaillierGroupKnownOrder and numct.Nat CBOR
+// PrivateKey serialisation - reuse znstar.PaillierGroupKnownOrder and numct.Nat CBOR.
 type privateKeyDTO struct {
 	Group znstar.PaillierGroupKnownOrder `cbor:"group"`
 }

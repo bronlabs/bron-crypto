@@ -222,7 +222,7 @@ func (f *CubicFieldExtensionImpl[BFP, A, BF]) Inv(arg *CubicFieldExtensionImpl[B
 	BFP(&f.U1).Select(ok, &f.U1, &c1)
 	BFP(&f.U2).Select(ok, &f.U2, &c2)
 
-	//if ok == 1 {
+	// if ok == 1 {
 	//	var sanityCheck CubicFieldExtensionImpl[BFPtr, A, BF]
 	//	sanityCheck.Mul(f, arg)
 	//	if sanityCheck.IsOne() != 1 {

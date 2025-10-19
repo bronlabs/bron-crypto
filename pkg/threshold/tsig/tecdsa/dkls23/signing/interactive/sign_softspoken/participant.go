@@ -187,7 +187,7 @@ func randomizeOTSeeds(senderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], receiv
 				if err != nil {
 					return nil, nil, errs.WrapFailed(err, "cannot create hasher")
 				}
-				_, err = hasher.Write(seed.Messages[xi][0][l][:])
+				_, err = hasher.Write(seed.Messages[xi][0][l])
 				if err != nil {
 					return nil, nil, errs.WrapFailed(err, "cannot hash seed")
 				}
@@ -197,7 +197,7 @@ func randomizeOTSeeds(senderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], receiv
 				if err != nil {
 					return nil, nil, errs.WrapFailed(err, "cannot create hasher")
 				}
-				_, err = hasher.Write(seed.Messages[xi][1][l][:])
+				_, err = hasher.Write(seed.Messages[xi][1][l])
 				if err != nil {
 					return nil, nil, errs.WrapFailed(err, "cannot hash seed")
 				}
@@ -222,7 +222,7 @@ func randomizeOTSeeds(senderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], receiv
 				if err != nil {
 					return nil, nil, errs.WrapFailed(err, "cannot create hasher")
 				}
-				_, err = hasher.Write(seed.Messages[xi][l][:])
+				_, err = hasher.Write(seed.Messages[xi][l])
 				if err != nil {
 					return nil, nil, errs.WrapFailed(err, "cannot hash seed")
 				}
