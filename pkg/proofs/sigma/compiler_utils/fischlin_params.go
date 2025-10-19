@@ -16,7 +16,7 @@ var simplifiedFischlinRho = map[sigma.Name]uint64{
 	schnorr.Name: 16, // b = 8, t = 13
 	// chaum.Name:         16, // b = 8, t = 13
 	// nthroots.Name:      32, // b = 4, t = 11
-	//batch_schnorr.Name: 32, // b = 4, t = 11
+	// batch_schnorr.Name: 32, // b = 4, t = 11
 	//paillierrange.Name: 16,
 }
 

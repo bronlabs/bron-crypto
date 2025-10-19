@@ -81,7 +81,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			tt := tt
+
 			t.Run(tt.name, func(t *testing.T) {
 				x := newNatFromBig(big.NewInt(tt.x))
 				out := newNatFromBig(big.NewInt(0))
@@ -105,7 +105,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			tt := tt
+
 			t.Run(tt.name, func(t *testing.T) {
 				x := newNatFromBig(big.NewInt(tt.x))
 				y := newNatFromBig(big.NewInt(tt.y))
@@ -130,7 +130,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			tt := tt
+
 			t.Run(tt.name, func(t *testing.T) {
 				x := newNatFromBig(big.NewInt(tt.x))
 				y := newNatFromBig(big.NewInt(tt.y))
@@ -155,7 +155,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			tt := tt
+
 			t.Run(tt.name, func(t *testing.T) {
 				x := newNatFromBig(big.NewInt(tt.x))
 				y := newNatFromBig(big.NewInt(tt.y))
@@ -180,7 +180,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			tt := tt
+
 			t.Run(tt.name, func(t *testing.T) {
 				x := newNatFromBig(big.NewInt(tt.x))
 				out := newNatFromBig(big.NewInt(0))
@@ -212,7 +212,7 @@ func TestModulusOddPrime_Inv(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.name, func(t *testing.T) {
 			x := newNatFromBig(big.NewInt(tt.x))
 			out := newNatFromBig(big.NewInt(0))
@@ -255,7 +255,7 @@ func TestModulusOddPrime_Sqrt(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.name, func(t *testing.T) {
 			x := newNatFromBig(big.NewInt(tt.x))
 			out := newNatFromBig(big.NewInt(0))
@@ -294,7 +294,7 @@ func TestModulusOddPrime_Div(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.name, func(t *testing.T) {
 			x := newNatFromBig(big.NewInt(tt.x))
 			y := newNatFromBig(big.NewInt(tt.y))
@@ -352,7 +352,7 @@ func TestModulusOddPrime_Properties(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			tt := tt
+
 			t.Run(tt.name, func(t *testing.T) {
 				x := newNatFromBig(big.NewInt(tt.x))
 				got := m.IsInRange(x)
@@ -375,7 +375,7 @@ func TestModulusOddPrime_Properties(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-			tt := tt
+
 			t.Run(tt.name, func(t *testing.T) {
 				x := newNatFromBig(big.NewInt(tt.x))
 				got := m.IsUnit(x)
@@ -408,7 +408,7 @@ func TestModulusOddPrime_Exp(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.name, func(t *testing.T) {
 			base := newNatFromBig(big.NewInt(tt.base))
 			exp := newNatFromBig(big.NewInt(tt.exp))
@@ -444,7 +444,7 @@ func TestModulus_Sqrt(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
+
 		t.Run(tt.name, func(t *testing.T) {
 			x := newNatFromBig(big.NewInt(tt.x))
 			out := newNatFromBig(big.NewInt(0))
