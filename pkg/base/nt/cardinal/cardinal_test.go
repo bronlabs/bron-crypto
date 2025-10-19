@@ -395,25 +395,25 @@ func BenchmarkCardinalOperations(b *testing.B) {
 	c200 := cardinal.New(200)
 
 	b.Run("Add", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = c100.Add(c200)
 		}
 	})
 
 	b.Run("Mul", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = c100.Mul(c200)
 		}
 	})
 
 	b.Run("Equal", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = c100.Equal(c200)
 		}
 	})
 
 	b.Run("IsLessThanOrEqual", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = c100.IsLessThanOrEqual(c200)
 		}
 	})

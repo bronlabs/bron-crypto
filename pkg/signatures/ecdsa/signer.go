@@ -48,7 +48,7 @@ func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 		return nil, errs.WrapFailed(err, "cannot convert s")
 	}
 
-	for i := 0; i <= 4; i++ {
+	for i := range 5 {
 		v := i
 		signature, err := NewSignature(rr, ss, &v)
 		if err != nil {

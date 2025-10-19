@@ -518,7 +518,7 @@ func TestModulusCachingPerformance(t *testing.T) {
 			// Generate test data
 			bases := make([]*numct.Nat, tc.ops)
 			exps := make([]*numct.Nat, tc.ops)
-			for i := 0; i < tc.ops; i++ {
+			for i := range tc.ops {
 				base, _ := crand.Int(crand.Reader, pBig)
 				bases[i] = (*numct.Nat)(new(saferith.Nat).SetBig(base, tc.primeBits).Resize(tc.primeBits))
 
@@ -530,14 +530,14 @@ func TestModulusCachingPerformance(t *testing.T) {
 
 			// Test ModExp with reusing modulus (cached Montgomery context)
 			start := time.Now()
-			for i := 0; i < tc.ops; i++ {
+			for i := range tc.ops {
 				pMod.ModExp(result, bases[i], exps[i])
 			}
 			reuseTime := time.Since(start)
 
 			// Test with recreating the modulus each time (no cache benefit)
 			start = time.Now()
-			for i := 0; i < tc.ops; i++ {
+			for i := range tc.ops {
 				newPMod, _ := numct.NewModulusOddPrime(p)
 				newPMod.ModExp(result, bases[i], exps[i])
 			}
@@ -562,19 +562,19 @@ func BenchmarkModulusOperations(b *testing.B) {
 	out := newNatFromBig(big.NewInt(0))
 
 	b.Run("Add", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			m.ModAdd(out, x, y)
 		}
 	})
 
 	b.Run("Mul", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			m.ModMul(out, x, y)
 		}
 	})
 
 	b.Run("Inv", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			m.ModInv(out, x)
 		}
 	})
@@ -582,14 +582,14 @@ func BenchmarkModulusOperations(b *testing.B) {
 	b.Run("Sqrt", func(b *testing.B) {
 		// Use a quadratic residue
 		qr := newNatFromBig(big.NewInt(4))
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			m.ModSqrt(out, qr)
 		}
 	})
 
 	b.Run("Exp", func(b *testing.B) {
 		exp := newNatFromBig(big.NewInt(100))
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			m.ModExp(out, x, exp)
 		}
 	})
@@ -764,14 +764,14 @@ func BenchmarkModInv_Comparison(b *testing.B) {
 
 	b.Run("ModulusOddPrime_FermatLittleTheorem", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mPrime.ModInv(&out, x)
 		}
 	})
 
 	b.Run("ModulusOddPrimeBasic_Saferith", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mBasic.ModInv(&out, x)
 		}
 	})
@@ -798,14 +798,14 @@ func BenchmarkModInv_Comparison(b *testing.B) {
 
 	b.Run("ModulusOdd_BoringSSL", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mComposite.ModInv(&out, x)
 		}
 	})
 
 	b.Run("ModulusBasic_Saferith", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mCompositeBasic.ModInv(&out, x)
 		}
 	})
@@ -832,7 +832,7 @@ func BenchmarkModInv_BitSizes(b *testing.B) {
 			var out numct.Nat
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				m.ModInv(&out, x)
 			}
 		})
@@ -868,7 +868,7 @@ func BenchmarkModInv_RSA_Paillier(b *testing.B) {
 				}
 
 				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for range b.N {
 					m.ModInv(&out, x)
 				}
 			})
@@ -878,7 +878,7 @@ func BenchmarkModInv_RSA_Paillier(b *testing.B) {
 				m := (*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(pNat)))
 
 				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for range b.N {
 					m.ModInv(&out, x)
 				}
 			})
@@ -913,7 +913,7 @@ func BenchmarkModInv_RSA_Paillier(b *testing.B) {
 				}
 
 				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for range b.N {
 					m.ModInv(&out, x)
 				}
 			})
@@ -927,7 +927,7 @@ func BenchmarkModInv_RSA_Paillier(b *testing.B) {
 				}
 
 				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for range b.N {
 					m.ModInv(&out, x)
 				}
 			})
@@ -960,7 +960,7 @@ func BenchmarkModInv_SaferithOnly(b *testing.B) {
 			m := (*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(pNat)))
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				m.ModInv(&out, x)
 			}
 		})
@@ -994,7 +994,7 @@ func BenchmarkModInv_SaferithOnly(b *testing.B) {
 			}
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				m.ModInv(&out, x)
 			}
 		})
@@ -1013,7 +1013,7 @@ func BenchmarkModInv_Prime_1024_BoringSSL(b *testing.B) {
 	var out numct.Nat
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		m.ModInv(&out, x)
 	}
 }
@@ -1028,7 +1028,7 @@ func BenchmarkModInv_Prime_1024_Saferith(b *testing.B) {
 	var out numct.Nat
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		m.ModInv(&out, x)
 	}
 }
@@ -1043,7 +1043,7 @@ func BenchmarkModInv_Prime_2048_BoringSSL(b *testing.B) {
 	var out numct.Nat
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		m.ModInv(&out, x)
 	}
 }
@@ -1058,7 +1058,7 @@ func BenchmarkModInv_Prime_2048_Saferith(b *testing.B) {
 	var out numct.Nat
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		m.ModInv(&out, x)
 	}
 }
@@ -1073,7 +1073,7 @@ func BenchmarkModInv_Prime_3072_BoringSSL(b *testing.B) {
 	var out numct.Nat
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		m.ModInv(&out, x)
 	}
 }
@@ -1088,7 +1088,7 @@ func BenchmarkModInv_Prime_3072_Saferith(b *testing.B) {
 	var out numct.Nat
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		m.ModInv(&out, x)
 	}
 }
@@ -1112,7 +1112,7 @@ func BenchmarkModInv_Composite_1024_BoringSSL(b *testing.B) {
 	var out numct.Nat
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		m.ModInv(&out, x)
 	}
 }
@@ -1140,7 +1140,7 @@ func BenchmarkModInv_Composite_1024_Saferith(b *testing.B) {
 	var out numct.Nat
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		m.ModInv(&out, x)
 	}
 }
@@ -1164,7 +1164,7 @@ func BenchmarkModInv_Composite_2048_BoringSSL(b *testing.B) {
 	var out numct.Nat
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		m.ModInv(&out, x)
 	}
 }
@@ -1192,7 +1192,7 @@ func BenchmarkModInv_Composite_2048_Saferith(b *testing.B) {
 	var out numct.Nat
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		m.ModInv(&out, x)
 	}
 }

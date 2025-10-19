@@ -1967,7 +1967,7 @@ func BenchmarkInt_Add(b *testing.B) {
 	result := newInt(0)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		result.Add(i1, i2)
 	}
 }
@@ -1978,7 +1978,7 @@ func BenchmarkInt_Mul(b *testing.B) {
 	result := newInt(0)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		result.Mul(i1, i2)
 	}
 }
@@ -1988,7 +1988,7 @@ func BenchmarkInt_Compare(b *testing.B) {
 	i2 := newInt(-0x7FFFFFFE)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _, _ = i1.Compare(i2)
 	}
 }
@@ -1998,7 +1998,7 @@ func BenchmarkInt_Sqrt(b *testing.B) {
 	result := newInt(0)
 
 	b.ResetTimer()
-	for idx := 0; idx < b.N; idx++ {
+	for range b.N {
 		result.Sqrt(i)
 	}
 }

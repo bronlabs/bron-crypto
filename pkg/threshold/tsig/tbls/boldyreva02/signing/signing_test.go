@@ -80,7 +80,7 @@ func TestBoldyrevaDKGAndSign(t *testing.T) {
 		// Select a quorum (threshold participants)
 		quorumSet := hashset.NewComparable[sharing.ID]()
 		// Sharing IDs start from 0
-		for i := uint(0); i < threshold; i++ {
+		for i := range threshold {
 			quorumSet.Add(sharing.ID(i))
 		}
 		quorum := quorumSet.Freeze()
@@ -189,7 +189,7 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 
 		// Select a quorum
 		quorumSet := hashset.NewComparable[sharing.ID]()
-		for i := uint(0); i < threshold; i++ {
+		for i := range threshold {
 			quorumSet.Add(sharing.ID(i))
 		}
 		quorum := quorumSet.Freeze()
@@ -235,7 +235,7 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 
 		// Select a quorum
 		quorumSet := hashset.NewComparable[sharing.ID]()
-		for i := uint(0); i < threshold; i++ {
+		for i := range threshold {
 			quorumSet.Add(sharing.ID(i))
 		}
 		quorum := quorumSet.Freeze()

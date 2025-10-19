@@ -793,7 +793,7 @@ func TestMessageAugmentationScheme(t *testing.T) {
 	var privateKeys []*bls.PrivateKey[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar]
 	var publicKeys []*bls.PublicKey[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar]
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		sk, pk, err := keyGen.Generate(crand.Reader)
 		require.NoError(t, err)
 		privateKeys = append(privateKeys, sk)
@@ -878,7 +878,7 @@ func TestPOPScheme(t *testing.T) {
 	var publicKeys []*bls.PublicKey[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar]
 	var pops []*bls.ProofOfPossession[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar]
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		sk, pk, err := keyGen.Generate(crand.Reader)
 		require.NoError(t, err)
 		privateKeys = append(privateKeys, sk)

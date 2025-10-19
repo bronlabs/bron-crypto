@@ -36,7 +36,7 @@ func (bob *Bob[P, B, S]) Round1() (*Round1P2P, S, error) {
 	}
 
 	b := bob.suite.field.Zero()
-	for j := 0; j < bob.xi; j++ {
+	for j := range bob.xi {
 		betaJ := bob.suite.field.Zero()
 		ci := (bob.beta[j/8] >> (j % 8)) & 0b1
 		if ci != 0 {

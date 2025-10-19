@@ -86,7 +86,7 @@ func sqrtMinusOne(prng io.Reader, p *saferith.Nat) (bool, *saferith.Nat, error) 
 	}
 
 	pQuarter := new(saferith.Nat).Rsh(pMinusOne, uint(2), -1)
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		uSqrt := new(saferith.Nat).Exp(rand, pQuarter, pModulus)
 		u := new(saferith.Nat).ModMul(uSqrt, uSqrt, pModulus)
 		if u.Eq(pMinusOne) == 1 {

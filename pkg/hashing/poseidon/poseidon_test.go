@@ -94,7 +94,7 @@ func parseFieldElement(t *testing.T, hexStr string) *pasta.PallasBaseFieldElemen
 
 func reverseBytes(b []byte) []byte {
 	result := make([]byte, len(b))
-	for i := 0; i < len(b); i++ {
+	for i := range len(b) {
 		result[i] = b[len(b)-1-i]
 	}
 	return result
@@ -182,7 +182,7 @@ func benchmarkPoseidon(b *testing.B, hasherFactory func() *poseidon.Poseidon) {
 
 		b.Run(fmt.Sprintf("inputs_%d", size), func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				hasher := hasherFactory()
 				_ = hasher.Hash(inputs...)
 			}

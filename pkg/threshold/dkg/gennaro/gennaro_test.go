@@ -7,6 +7,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
@@ -22,7 +24,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
-	"github.com/stretchr/testify/require"
 )
 
 func setup[
@@ -597,7 +598,7 @@ func TestMultipleDKGSessions(t *testing.T) {
 	numSessions := 3
 	allSecrets := make([]*feldman.Secret[*k256.Scalar], numSessions)
 
-	for i := 0; i < numSessions; i++ {
+	for i := range numSessions {
 		sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("session-%d", i))))
 
 		_, parties := setup(t, threshold, total, group, sid, tape, prng)
@@ -621,7 +622,7 @@ func TestMultipleDKGSessions(t *testing.T) {
 	}
 
 	// Verify all sessions produced different secrets
-	for i := 0; i < numSessions; i++ {
+	for i := range numSessions {
 		for j := i + 1; j < numSessions; j++ {
 			require.False(t, allSecrets[i].Equal(allSecrets[j]),
 				"sessions %d and %d should produce different secrets", i, j)
@@ -1272,7 +1273,7 @@ func TestConcurrentDKGSessions(t *testing.T) {
 	// Create multiple sessions with different SIDs
 	numSessions := 3
 	sessions := make([]network.SID, numSessions)
-	for i := 0; i < numSessions; i++ {
+	for i := range numSessions {
 		sessions[i] = network.SID(sha3.Sum256([]byte(fmt.Sprintf("session-%d", i))))
 	}
 
@@ -1306,7 +1307,7 @@ func TestConcurrentDKGSessions(t *testing.T) {
 	}
 
 	// Different sessions should produce different secrets
-	for i := 0; i < numSessions; i++ {
+	for i := range numSessions {
 		for j := i + 1; j < numSessions; j++ {
 			require.False(t, reconstructedSecrets[i].Equal(reconstructedSecrets[j]),
 				"sessions %d and %d produced the same secret", i, j)
@@ -1375,7 +1376,7 @@ func BenchmarkGennaroDKG(b *testing.B) {
 			prng := pcg.NewRandomised()
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, parties := setupBench(b, bm.threshold, bm.total, group, sid, tape, prng)
 				_, err := tu.DoGennaroDKG(b, parties.Values())
 				if err != nil {
@@ -1397,7 +1398,7 @@ func BenchmarkGennaroRounds(b *testing.B) {
 
 	b.Run("Round1", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			b.StopTimer()
 			_, parties := setupBench(b, threshold, total, group, sid, tape, prng)
 			b.StartTimer()
@@ -1411,7 +1412,7 @@ func BenchmarkGennaroRounds(b *testing.B) {
 
 	b.Run("Round2", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			b.StopTimer()
 			_, parties := setupBench(b, threshold, total, group, sid, tape, prng)
 			r1broadcasts, _ := tu.DoGennaroRound1(parties.Values())
@@ -1427,7 +1428,7 @@ func BenchmarkGennaroRounds(b *testing.B) {
 
 	b.Run("Round3", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			b.StopTimer()
 			_, parties := setupBench(b, threshold, total, group, sid, tape, prng)
 			r1broadcasts, _ := tu.DoGennaroRound1(parties.Values())
@@ -1465,7 +1466,7 @@ func BenchmarkDKGScaling(b *testing.B) {
 			prng := pcg.NewRandomised()
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, parties := setupBench(b, config.threshold, config.total, group, sid, tape, prng)
 				_, err := tu.DoGennaroDKG(b, parties.Values())
 				if err != nil {
@@ -1507,7 +1508,7 @@ func BenchmarkShareReconstruction(b *testing.B) {
 	referenceVV := outputs.Values()[0].VerificationVector()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, err := feldmanScheme.ReconstructAndVerify(referenceVV, shares[:threshold]...)
 		if err != nil {
 			b.Fatal(err)

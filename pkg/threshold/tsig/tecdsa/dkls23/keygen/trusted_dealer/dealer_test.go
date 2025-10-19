@@ -4,6 +4,8 @@ import (
 	crand "crypto/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -12,7 +14,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/keygen/trusted_dealer"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -22,7 +23,7 @@ func Test_HappyPath(t *testing.T) {
 	prng := crand.Reader
 	curve := k256.NewCurve()
 	shareholders := hashset.NewComparable[sharing.ID]()
-	for i := 0; i < TOTAL; i++ {
+	for i := range TOTAL {
 		shareholders.Add(sharing.ID(i + 1))
 	}
 

@@ -136,8 +136,8 @@ func extractRhos(transcript transcripts.Transcript, n numct.Modulus) ([]*numct.N
 	excessBits := n.BitLen() % 8
 
 	result := make([]*numct.Nat, M)
-	for i := 0; i < M; i++ {
-		for k := 0; k < 128; k++ {
+	for i := range M {
+		for k := range 128 {
 			label := fmt.Sprintf("rho_%d_%d", i, k)
 			candidateBytes, err := transcript.ExtractBytes(label, byteSize)
 			if err != nil {

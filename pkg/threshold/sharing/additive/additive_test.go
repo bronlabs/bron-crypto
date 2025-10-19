@@ -223,7 +223,7 @@ func dealRandomCases[E additive.GroupElement[E]](t *testing.T, scheme *additive.
 		t.Run(tc.name, func(t *testing.T) {
 			secrets := make([]*additive.Secret[E], 0, tc.iterations)
 
-			for i := 0; i < tc.iterations; i++ {
+			for i := range tc.iterations {
 				// Reset reader if using deterministic prng
 				if reader, ok := tc.prng.(*bytes.Reader); ok && i > 0 {
 					reader.Seek(0, 0)
@@ -826,7 +826,7 @@ func BenchmarkDeal(b *testing.B) {
 			secret := additive.NewSecret(field.FromUint64(42))
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, err := scheme.Deal(secret, crand.Reader)
 				if err != nil {
 					b.Fatal(err)
@@ -857,7 +857,7 @@ func BenchmarkDealRandom(b *testing.B) {
 			require.NoError(b, err)
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, _, err := scheme.DealRandom(crand.Reader)
 				if err != nil {
 					b.Fatal(err)
@@ -893,7 +893,7 @@ func BenchmarkReconstruct(b *testing.B) {
 			shareSlice := shares.Shares().Values()
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, err := scheme.Reconstruct(shareSlice...)
 				if err != nil {
 					b.Fatal(err)

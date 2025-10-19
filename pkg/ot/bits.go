@@ -100,7 +100,7 @@ func TransposePackedBits(inputMatrix [][]byte) ([][]byte, error) {
 		return nil, errs.NewArgument("input matrix must have a number of rows divisible by 8")
 	}
 	// check if array is a matrix
-	for i := 0; i < nRowsInput; i++ {
+	for i := range nRowsInput {
 		if len(inputMatrix[i]) != len(inputMatrix[0]) {
 			return nil, errs.NewArgument("input matrix must be a 2D matrix")
 		}
@@ -110,14 +110,14 @@ func TransposePackedBits(inputMatrix [][]byte) ([][]byte, error) {
 	nRowsOutput := nColsInputBytes << 3
 	nColsOutputBytes := nRowsInput >> 3
 	transposedMatrix := make([][]byte, nRowsOutput)
-	for i := 0; i < nRowsOutput; i++ {
+	for i := range nRowsOutput {
 		transposedMatrix[i] = make([]byte, nColsOutputBytes)
 	}
 	// transpose the matrix bits, one bit at a time
-	for rowByte := 0; rowByte < nColsOutputBytes; rowByte++ {
-		for rowBitWithinByte := 0; rowBitWithinByte < 8; rowBitWithinByte++ {
-			for columnByte := 0; columnByte < nColsInputBytes; columnByte++ {
-				for columnBitWithinByte := 0; columnBitWithinByte < 8; columnBitWithinByte++ {
+	for rowByte := range nColsOutputBytes {
+		for rowBitWithinByte := range 8 {
+			for columnByte := range nColsInputBytes {
+				for columnBitWithinByte := range 8 {
 					rowBit := rowByte<<3 + rowBitWithinByte
 					columnBit := columnByte<<3 + columnBitWithinByte
 					// Grab the corresponding  bit at input[rowBit][columnBit]

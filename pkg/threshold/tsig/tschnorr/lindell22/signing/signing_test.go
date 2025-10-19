@@ -98,7 +98,7 @@ func runTestWithBIP340(t *testing.T, threshold, total uint) {
 	t.Run("threshold_signing", func(t *testing.T) {
 		// Select a quorum (threshold participants)
 		quorumSet := hashset.NewComparable[sharing.ID]()
-		for i := uint(0); i < threshold; i++ {
+		for i := range threshold {
 			quorumSet.Add(sharing.ID(i))
 		}
 		quorum := quorumSet.Freeze()
@@ -214,7 +214,7 @@ func runTestWithVanillaSchnorr(t *testing.T, threshold, total uint) {
 	t.Run("threshold_signing", func(t *testing.T) {
 		// Select a quorum (threshold participants)
 		quorumSet := hashset.NewComparable[sharing.ID]()
-		for i := uint(0); i < threshold; i++ {
+		for i := range threshold {
 			quorumSet.Add(sharing.ID(i))
 		}
 		quorum := quorumSet.Freeze()
@@ -345,7 +345,7 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 	// Create signing session
 	signingSID := network.SID(sha3.Sum256([]byte("test-signing-abort-bip340")))
 	quorumSet := hashset.NewComparable[sharing.ID]()
-	for i := uint(0); i < threshold; i++ {
+	for i := range threshold {
 		quorumSet.Add(sharing.ID(i))
 	}
 	quorum := quorumSet.Freeze()
@@ -461,7 +461,7 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 	// Create signing session
 	signingSID := network.SID(sha3.Sum256([]byte("test-signing-abort-vanilla")))
 	quorumSet := hashset.NewComparable[sharing.ID]()
-	for i := uint(0); i < threshold; i++ {
+	for i := range threshold {
 		quorumSet.Add(sharing.ID(i))
 	}
 	quorum := quorumSet.Freeze()
@@ -617,7 +617,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 
 	// Select quorum
 	quorumSet := hashset.NewComparable[sharing.ID]()
-	for i := uint(0); i < threshold; i++ {
+	for i := range threshold {
 		quorumSet.Add(sharing.ID(i))
 	}
 	quorum := quorumSet.Freeze()
@@ -630,7 +630,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 
 	// Generate multiple messages
 	messages := make([][]byte, numMessages)
-	for i := 0; i < numMessages; i++ {
+	for i := range numMessages {
 		messages[i] = []byte(string(rune('A' + i)))
 	}
 
@@ -643,7 +643,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 	}
 	results := make(chan result, numMessages)
 
-	for i := 0; i < numMessages; i++ {
+	for i := range numMessages {
 		wg.Add(1)
 		go func(index int, message []byte) {
 			defer wg.Done()
@@ -981,7 +981,7 @@ func testEdgeCasesWithScheme(t *testing.T, message []byte, createScheme func(io.
 
 	// Select quorum
 	quorumSet := hashset.NewComparable[sharing.ID]()
-	for i := uint(0); i < threshold; i++ {
+	for i := range threshold {
 		quorumSet.Add(sharing.ID(i))
 	}
 	quorum := quorumSet.Freeze()
@@ -1105,7 +1105,7 @@ func TestLindell22DeterministicSigning(t *testing.T) {
 
 			// Select same quorum
 			quorumSet := hashset.NewComparable[sharing.ID]()
-			for i := uint(0); i < threshold; i++ {
+			for i := range threshold {
 				quorumSet.Add(sharing.ID(i))
 			}
 			quorum := quorumSet.Freeze()
@@ -1220,7 +1220,7 @@ func TestLindell22IdentifiableAbortRounds(t *testing.T) {
 	t.Run("BadProofInRound3", func(t *testing.T) {
 		// Select quorum
 		quorumSet := hashset.NewComparable[sharing.ID]()
-		for i := uint(0); i < threshold; i++ {
+		for i := range threshold {
 			quorumSet.Add(sharing.ID(i))
 		}
 		quorum := quorumSet.Freeze()
@@ -1314,7 +1314,7 @@ func BenchmarkLindell22Signing(b *testing.B) {
 
 	// Select quorum
 	quorumSet := hashset.NewComparable[sharing.ID]()
-	for i := uint(0); i < threshold; i++ {
+	for i := range threshold {
 		quorumSet.Add(sharing.ID(i))
 	}
 	quorum := quorumSet.Freeze()
@@ -1330,7 +1330,7 @@ func BenchmarkLindell22Signing(b *testing.B) {
 	message := []byte("Benchmark message")
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		// Create cosigners
 		signingSID := network.SID(sha3.Sum256(append([]byte("bench-"), byte(i))))
 		cosigners := ltu.CreateLindell22Cosigners(

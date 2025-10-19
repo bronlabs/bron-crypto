@@ -56,11 +56,11 @@ func (el *FieldElement) Mul(rhs *FieldElement) *FieldElement {
 	// the irreducible polynomial f(X) = X^128 + X^7 + X^2 + X + 1. (from Table A.1).
 	var z [4]uint64
 	var b = [3]uint64{rhs[0], rhs[1], 0}
-	for k := 0; k < 64; k++ {
-		for j := 0; j < FieldElementLimbs; j++ {
+	for k := range 64 {
+		for j := range FieldElementLimbs {
 			// conditionally add a copy of shifted B to C, depending on the appropriate bit of A
 			mask := -(el[j] >> k & 0x01) // if A[j] >> k & 0x01 == 1 then 0xFFF... else 0x000...
-			for i := 0; i < FieldElementLimbs+1; i++ {
+			for i := range FieldElementLimbs + 1 {
 				z[j+i] ^= b[i] & mask
 			}
 		}

@@ -54,16 +54,16 @@ func MultiScalarMul[PP GroupElementPtr[PP, P], P any](out *P, points []P, scalar
 		PP(&windows[i]).SetZero()
 	}
 
-	for i := 0; i < bucketSize; i++ {
+	for i := range bucketSize {
 		PP(&buckets[i]).SetZero()
 	}
 
-	for j := 0; j < len(windows); j++ {
-		for i := 0; i < bucketSize; i++ {
+	for j := range len(windows) {
+		for i := range bucketSize {
 			PP(&buckets[i]).SetZero()
 		}
 
-		for i := 0; i < len(scalars); i++ {
+		for i := range len(scalars) {
 			// j*W to get the nibble
 			// >> 3 to convert to byte, / 8
 			// (W * j & W) gets the nibble, mod W
@@ -83,7 +83,7 @@ func MultiScalarMul[PP GroupElementPtr[PP, P], P any](out *P, points []P, scalar
 
 	PP(out).SetZero()
 	for i := len(windows) - 1; i >= 0; i-- {
-		for j := 0; j < W; j++ {
+		for range W {
 			PP(out).Double(out)
 		}
 

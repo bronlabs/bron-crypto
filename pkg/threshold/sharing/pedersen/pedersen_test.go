@@ -340,7 +340,7 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 		t.Run(tc.name, func(t *testing.T) {
 			secrets := make([]*pedersen.Secret[S], 0, tc.iterations)
 
-			for i := 0; i < tc.iterations; i++ {
+			for i := range tc.iterations {
 				// Reset reader if using deterministic prng
 				if reader, ok := tc.prng.(*bytes.Reader); ok && i > 0 {
 					reader.Seek(0, 0)
@@ -1637,7 +1637,7 @@ func BenchmarkDeal(b *testing.B) {
 			secret := pedersen.NewSecret(field.FromUint64(42))
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, err := scheme.Deal(secret, crand.Reader)
 				if err != nil {
 					b.Fatal(err)
@@ -1674,7 +1674,7 @@ func BenchmarkDealRandom(b *testing.B) {
 			require.NoError(b, err)
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, _, err := scheme.DealRandom(crand.Reader)
 				if err != nil {
 					b.Fatal(err)
@@ -1718,7 +1718,7 @@ func BenchmarkReconstruct(b *testing.B) {
 			shareSlice := shares.Shares().Values()[:config.threshold]
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, err := scheme.Reconstruct(shareSlice...)
 				if err != nil {
 					b.Fatal(err)
@@ -1763,7 +1763,7 @@ func BenchmarkVerification(b *testing.B) {
 			reference := shares.VerificationVector()
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				err := scheme.Verify(share, reference)
 				if err != nil {
 					b.Fatal(err)
@@ -1797,19 +1797,19 @@ func BenchmarkHomomorphicOps(b *testing.B) {
 	scalar := field.FromUint64(7)
 
 	b.Run("Add", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = share1.Add(share2)
 		}
 	})
 
 	b.Run("ScalarMul", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = share1.ScalarMul(scalar)
 		}
 	})
 
 	b.Run("Combined", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = share1.ScalarMul(scalar).Add(share2)
 		}
 	})
@@ -1853,7 +1853,7 @@ func BenchmarkToAdditive(b *testing.B) {
 			require.True(b, exists)
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, err := share.ToAdditive(*qualifiedSet)
 				if err != nil {
 					b.Fatal(err)

@@ -746,7 +746,7 @@ func BenchmarkCommit(b *testing.B) {
 	message := pedersen.NewMessage(field.FromUint64(42))
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _, err := committer.Commit(message, crand.Reader)
 		if err != nil {
 			b.Fatal(err)
@@ -773,7 +773,7 @@ func BenchmarkVerify(b *testing.B) {
 	require.NoError(b, err)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		err := verifier.Verify(commitment, message, witness)
 		if err != nil {
 			b.Fatal("verification failed")
@@ -799,7 +799,7 @@ func BenchmarkReRandomise(b *testing.B) {
 	require.NoError(b, err)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _, err := commitment.ReRandomise(key, crand.Reader)
 		if err != nil {
 			b.Fatal(err)
@@ -828,14 +828,14 @@ func BenchmarkHomomorphicOps(b *testing.B) {
 	require.NoError(b, err)
 
 	b.Run("Add", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = c1.Op(c2)
 		}
 	})
 
 	b.Run("ScalarMul", func(b *testing.B) {
 		scalar := pedersen.NewMessage(field.FromUint64(3))
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = c1.ScalarOp(scalar)
 		}
 	})

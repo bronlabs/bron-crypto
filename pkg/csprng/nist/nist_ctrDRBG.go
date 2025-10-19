@@ -95,7 +95,7 @@ func (ctrDrbg *CtrDRBG) Update(providedData []byte) (err error) {
 	tempBlocks := utils.CeilDiv(ctrDrbg.SeedSize(), aes.BlockSize)
 	temp := make([]byte, tempBlocks*aes.BlockSize)
 	// 2. WHILE (len(temp) < seedLen) DO
-	for i := 0; i < tempBlocks; i++ {
+	for i := range tempBlocks {
 		// 2.1. V = (V+1) mod 2^blocklen
 		var c uint64
 		ctrDrbg.vLo, c = bits.Add64(ctrDrbg.vLo, 1, 0)
@@ -207,7 +207,7 @@ func (ctrDrbg *CtrDRBG) Generate(outputBuffer, additionalInput []byte) (err erro
 	// +. Allocate space for all the requested blocks.
 	temp := make([]byte, requestedNumberOfBlocks*aes.BlockSize)
 	// 4. WHILE(len(temp) < requested_number_of_bits) DO
-	for i := 0; i < requestedNumberOfBlocks; i++ {
+	for i := range requestedNumberOfBlocks {
 		// 4.1. V = (V+1) mod 2^blocklen.
 		var c uint64
 		ctrDrbg.vLo, c = bits.Add64(ctrDrbg.vLo, 1, 0)
@@ -266,7 +266,7 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	// +. Copy the `S` in the BCC input only once. It remains static.
 	ivNs := make([]byte, aes.BlockSize, aes.BlockSize+len(s))
 	ivNs = append(ivNs, s...) // (IV || S), with uninitialized IV.
-	for i := 0; i < tempBlocks; i++ {
+	for i := range tempBlocks {
 		// 9.1. IV = i || 0^(outlen - len(i)).
 		if i > 0 {
 			clear(ivNs[:aes.BlockSize])
@@ -289,7 +289,7 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	requestedBlocks := utils.CeilDiv(noOfBytesToReturn, aes.BlockSize)
 	requestedBytes = make([]byte, requestedBlocks*aes.BlockSize)
 	// 13. WHILE (len(temp) < number_of_bits_to_return) DO
-	for i := 0; i < requestedBlocks; i++ {
+	for i := range requestedBlocks {
 		// 13.1. X = Block_Encrypt (K, X).
 		// 13.2. temp = temp || X.
 		xOut = requestedBytes[i*aes.BlockSize : (i+1)*aes.BlockSize]
@@ -318,11 +318,11 @@ func BCC(aesCipher cipher.Block, data, outputBlock []byte) {
 	// 2. n = len(data)/outlen.
 	n := len(data) / aes.BlockSize
 	// 4. For i = 1 to n do
-	for i := 0; i < n; i++ {
+	for i := range n {
 		// 3. Split data into n blocks of outlen bits each, from left to right.
 		dataBlock = data[i*aes.BlockSize : (i+1)*aes.BlockSize]
 		// 4.1. input_block = chaining_value ⊕ block[i].
-		for j := 0; j < aes.BlockSize; j++ {
+		for j := range aes.BlockSize {
 			inputBlock[j] = outputBlock[j] ^ dataBlock[j]
 		}
 		// 4.2. chaining_value = Block_Encrypt(Key, input_block).

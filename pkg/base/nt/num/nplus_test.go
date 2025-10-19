@@ -511,7 +511,7 @@ func TestNatPlus_Random(t *testing.T) {
 	low := mustNatPlus(num.NPlus().FromUint64(10))
 	high := mustNatPlus(num.NPlus().FromUint64(20))
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		result, err := num.NPlus().Random(low, high, crand.Reader)
 		require.NoError(t, err)
 		require.NotNil(t, result)
@@ -527,7 +527,7 @@ func TestNatPlus_RandomWithNilLow(t *testing.T) {
 
 	high := mustNatPlus(num.NPlus().FromUint64(10))
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		result, err := num.NPlus().Random(nil, high, crand.Reader)
 		require.NoError(t, err)
 		require.NotNil(t, result)

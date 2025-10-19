@@ -200,7 +200,7 @@ dataGeneration:
 // error otherwise.
 func (prg *PrngNist) Read(buffer []byte) (n int, err error) {
 	numRequests := utils.CeilDiv(len(buffer), maxNumberOfBytesRequest)
-	for i := 0; i < numRequests; i++ {
+	for i := range numRequests {
 		end := min((i+1)*maxNumberOfBytesRequest, len(buffer))
 		requestBuffer := buffer[i*maxNumberOfBytesRequest : end]
 		if err := prg.Generate(requestBuffer, nil); err != nil {

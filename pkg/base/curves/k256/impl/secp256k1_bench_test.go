@@ -21,35 +21,35 @@ func Benchmark_K256(b *testing.B) {
 
 		b.Run("add", func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				x.Add(&x, &y)
 			}
 		})
 
 		b.Run("mul", func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				x.Mul(&x, &y)
 			}
 		})
 
 		b.Run("square", func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				x.Square(&x)
 			}
 		})
 
 		b.Run("inv", func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_ = x.Inv(&x)
 			}
 		})
 
 		b.Run("sqrt", func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_ = y.Sqrt(&y)
 			}
 		})
@@ -64,35 +64,35 @@ func Benchmark_K256(b *testing.B) {
 
 		b.Run("add", func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				x.Add(&x, &y)
 			}
 		})
 
 		b.Run("mul", func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				x.Mul(&x, &y)
 			}
 		})
 
 		b.Run("square", func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				x.Square(&x)
 			}
 		})
 
 		b.Run("inv", func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_ = x.Inv(&x)
 			}
 		})
 
 		b.Run("sqrt", func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_ = y.Sqrt(&y)
 			}
 		})
@@ -107,14 +107,14 @@ func Benchmark_K256(b *testing.B) {
 
 		b.Run("add", func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				x.Add(&x, &y)
 			}
 		})
 
 		b.Run("double", func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				x.Double(&x)
 			}
 		})

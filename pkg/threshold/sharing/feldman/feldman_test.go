@@ -263,7 +263,7 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 		t.Run(tc.name, func(t *testing.T) {
 			secrets := make([]*feldman.Secret[FE], 0, tc.iterations)
 
-			for i := 0; i < tc.iterations; i++ {
+			for i := range tc.iterations {
 				// Reset reader if using deterministic prng
 				if reader, ok := tc.prng.(*bytes.Reader); ok && i > 0 {
 					reader.Seek(0, 0)
@@ -462,7 +462,7 @@ func BenchmarkDeal(b *testing.B) {
 			secret := feldman.NewSecret(field.FromUint64(42))
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, err := scheme.Deal(secret, crand.Reader)
 				if err != nil {
 					b.Fatal(err)
@@ -495,7 +495,7 @@ func BenchmarkDealRandom(b *testing.B) {
 			require.NoError(b, err)
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, _, err := scheme.DealRandom(crand.Reader)
 				if err != nil {
 					b.Fatal(err)
@@ -555,7 +555,7 @@ func TestDealRandomDistribution(t *testing.T) {
 	iterations := 1000
 	secrets := make(map[string]int)
 
-	for i := 0; i < iterations; i++ {
+	for range iterations {
 		_, secret, err := scheme.DealRandom(crand.Reader)
 		require.NoError(t, err)
 
@@ -1002,19 +1002,19 @@ func BenchmarkHomomorphicOps(b *testing.B) {
 	scalar := field.FromUint64(7)
 
 	b.Run("Add", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = share1.Add(share2)
 		}
 	})
 
 	b.Run("ScalarMul", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = share1.ScalarMul(scalar)
 		}
 	})
 
 	b.Run("Combined", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = share1.ScalarMul(scalar).Add(share2)
 		}
 	})
@@ -1322,7 +1322,7 @@ func BenchmarkToAdditive(b *testing.B) {
 			require.True(b, exists)
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, err := share.ToAdditive(*qualifiedSet)
 				if err != nil {
 					b.Fatal(err)
@@ -1460,7 +1460,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 		// Try with only 2 shares (below threshold)
 		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, 2)
 
-		for i := 0; i < 2; i++ {
+		for i := range 2 {
 			share, _ := shares.Shares().Get(sharing.ID(i))
 			shareInExponent := basePoint.ScalarOp(share.Value())
 			lifted, _ := feldman.NewLiftedShare(sharing.ID(i), shareInExponent)
@@ -1603,7 +1603,7 @@ func BenchmarkVerification(b *testing.B) {
 			reference := shares.VerificationMaterial()
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				err := scheme.Verify(share, reference)
 				if err != nil {
 					b.Fatal(err)

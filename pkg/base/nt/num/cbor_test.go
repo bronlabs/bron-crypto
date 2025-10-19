@@ -521,7 +521,7 @@ func BenchmarkNat_CBOR(b *testing.B) {
 
 	b.Run("Marshal", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_, err := n.MarshalCBOR()
 			if err != nil {
 				b.Fatal(err)
@@ -534,7 +534,7 @@ func BenchmarkNat_CBOR(b *testing.B) {
 	b.Run("Unmarshal", func(b *testing.B) {
 		var recovered num.Nat
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			err := recovered.UnmarshalCBOR(data)
 			if err != nil {
 				b.Fatal(err)
@@ -548,7 +548,7 @@ func BenchmarkInt_CBOR(b *testing.B) {
 
 	b.Run("Marshal", func(b *testing.B) {
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_, err := intVal.MarshalCBOR()
 			if err != nil {
 				b.Fatal(err)
@@ -561,7 +561,7 @@ func BenchmarkInt_CBOR(b *testing.B) {
 	b.Run("Unmarshal", func(b *testing.B) {
 		var recovered num.Int
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			err := recovered.UnmarshalCBOR(data)
 			if err != nil {
 				b.Fatal(err)

@@ -117,7 +117,7 @@ func PadLeft[T ~[]byte](dst, src T) {
 	srcOffset := Max(0, srcLen-dstLen)
 
 	// Copy the bytes
-	for i := 0; i < copyLen; i++ {
+	for i := range copyLen {
 		dst[dstOffset+i] = src[srcOffset+i]
 	}
 }

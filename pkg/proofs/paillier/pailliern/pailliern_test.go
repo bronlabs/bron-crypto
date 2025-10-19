@@ -47,7 +47,7 @@ func Test_HappyPath(t *testing.T) {
 
 	scheme := paillier.NewScheme()
 
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		sid, err := network.NewSID([]byte(fmt.Sprintf("%s_%d", sessionId, i)))
 		require.NoError(t, err)
 

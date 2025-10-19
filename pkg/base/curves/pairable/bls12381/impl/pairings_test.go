@@ -90,7 +90,7 @@ func TestMultiPairing(t *testing.T) {
 	expected := new(bls12381Impl.Gt)
 	expected.SetOne()
 
-	for i := 0; i < tests; i++ {
+	for i := range tests {
 		g1s[i] = new(bls12381Impl.G1Point)
 		g1s[i].SetGenerator()
 		g2s[i] = new(bls12381Impl.G2Point)

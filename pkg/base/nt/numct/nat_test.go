@@ -1256,7 +1256,7 @@ func BenchmarkNat_Add(b *testing.B) {
 	result := newNat(0)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		result.Add(n1, n2)
 	}
 }
@@ -1267,7 +1267,7 @@ func BenchmarkNat_Mul(b *testing.B) {
 	result := newNat(0)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		result.Mul(n1, n2)
 	}
 }
@@ -1277,7 +1277,7 @@ func BenchmarkNat_Compare(b *testing.B) {
 	n2 := newNat(0xFFFFFFFE)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _, _ = n1.Compare(n2)
 	}
 }

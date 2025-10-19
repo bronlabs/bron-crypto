@@ -4,12 +4,13 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/stretchr/testify/require"
 )
 
 // RunBBOT runs the full batched base OT protocol.
@@ -68,12 +69,12 @@ func ValidateOT[S algebra.PrimeFieldElement[S]](
 	}
 
 	// Check baseOT results
-	for xiI := 0; xiI < xi; xiI++ {
+	for xiI := range xi {
 		if len(receiverOutput.Messages[xiI]) != l || len(senderOutput.Messages[xiI][0]) != l || len(senderOutput.Messages[xiI][1]) != l {
 			require.FailNow(tb, "length mismatch")
 		}
 		choice := (receiverOutput.Choices[xiI/8] >> (xiI % 8)) & 0b1
-		for li := 0; li < l; li++ {
+		for li := range l {
 			received := receiverOutput.Messages[xiI][li]
 			sentChosen := senderOutput.Messages[xiI][choice][li]
 			sentNotChosen := senderOutput.Messages[xiI][1-choice][li]

@@ -1398,7 +1398,7 @@ func TestNaturalNumbers_Random_Success(t *testing.T) {
 				t.Parallel()
 
 				// Generate multiple random values to verify they're in range
-				for i := 0; i < 10; i++ {
+				for range 10 {
 					result, err := num.N().Random(tt.lowInclusive, tt.highExclusive, prng)
 					require.NoError(t, err)
 
@@ -1422,14 +1422,14 @@ func TestNaturalNumbers_Random_Success(t *testing.T) {
 		counts := make(map[string]int)
 		iterations := 100
 
-		for i := 0; i < iterations; i++ {
+		for range iterations {
 			result, err := num.N().Random(low, high, prng)
 			require.NoError(t, err)
 			counts[result.String()]++
 		}
 
 		// We should see all values 0-4 at least once with high probability
-		for i := uint64(0); i < 5; i++ {
+		for i := range uint64(5) {
 			val := num.N().FromUint64(i).String()
 			require.Positive(t, counts[val], "Value %s should appear at least once", val)
 		}

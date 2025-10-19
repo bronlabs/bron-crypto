@@ -107,7 +107,7 @@ func networkIdOfString(n string) (*big.Int, int) {
 func bytesToBits(bytes []byte) []bool {
 	bits := make([]bool, 0, len(bytes)*8)
 	for _, b := range bytes {
-		for i := 0; i < 8; i++ {
+		for range 8 {
 			bits = append(bits, b&1 == 1)
 			b >>= 1
 		}

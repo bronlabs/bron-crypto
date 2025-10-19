@@ -1283,7 +1283,7 @@ func TestIntegers_Random(t *testing.T) {
 		lower := num.Z().FromInt64(10)
 		upper := num.Z().FromInt64(20)
 
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			result, err := num.Z().Random(lower, upper, pcg.NewRandomised())
 			require.NoError(t, err)
 			require.True(t, (result).Compare(lower) >= 0)

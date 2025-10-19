@@ -77,7 +77,7 @@ func (r *PolynomialRing[RE]) FromBytes(inBytes []byte) (*Polynomial[RE], error) 
 	}
 	numCoeffs := len(inBytes) / coeffSize
 	coeffs := make([]RE, numCoeffs)
-	for i := 0; i < numCoeffs; i++ {
+	for i := range numCoeffs {
 		start := i * coeffSize
 		end := start + coeffSize
 		var err error
@@ -243,8 +243,8 @@ func (p *Polynomial[RE]) Mul(e *Polynomial[RE]) *Polynomial[RE] {
 		coeffs[i] = ring.Zero()
 	}
 
-	for l := 0; l < len(p.coeffs); l++ {
-		for r := 0; r < len(p.coeffs); r++ {
+	for l := range len(p.coeffs) {
+		for r := range len(p.coeffs) {
 			coeffs[l+r] = coeffs[l+r].Add(p.coeffs[l].Mul(e.coeffs[r]))
 		}
 	}

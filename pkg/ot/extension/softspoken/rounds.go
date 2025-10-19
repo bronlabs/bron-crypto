@@ -44,7 +44,7 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 
 	// step 1.3: Extend the baseOT seeds
 	var t [2][Kappa][]byte
-	for i := 0; i < Kappa; i++ {
+	for i := range Kappa {
 		t[0][i] = make([]byte, etaPrimeBytes) // k_{0,i} --(PRG)--> t_{0,i}
 		t[1][i] = make([]byte, etaPrimeBytes) // k_{1,i} --(PRG)--> t_{1,i}
 		var prngSeed [32]byte
@@ -62,7 +62,7 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 
 	// step 1.4: Compute u_i = t_{0,i} ⊕ t_{1,i} ⊕ x'
 	r1 := new(Round1P2P)
-	for i := 0; i < Kappa; i++ {
+	for i := range Kappa {
 		r1.U[i] = make([]byte, etaPrimeBytes)
 		subtle.XORBytes(r1.U[i], t[0][i], t[1][i])
 		subtle.XORBytes(r1.U[i], r1.U[i], xPrime)
@@ -70,7 +70,7 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 
 	// CONSISTENCY CHECK (Fiat-Shamir)
 	// step 1.5: Generate the challenge (χ) using Fiat-Shamir heuristic
-	for i := 0; i < Kappa; i++ {
+	for i := range Kappa {
 		r.tape.AppendBytes(expansionMaskLabel, r1.U[i])
 	}
 	m := eta / Sigma                                    // M = η/σ
@@ -82,7 +82,7 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 	}
 
 	r.tape.AppendBytes(challengeResponseXLabel, r1.ChallengeResponse.X[:])
-	for i := 0; i < Kappa; i++ {
+	for i := range Kappa {
 		r.tape.AppendBytes(challengeResponseTLabel, r1.ChallengeResponse.T[i][:])
 	}
 
@@ -127,7 +127,7 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 	// EXTENSION
 	// step 2.1: Extend the baseOT seeds
 	var tb [Kappa][]byte
-	for i := 0; i < Kappa; i++ {
+	for i := range Kappa {
 		tb[i] = make([]byte, etaPrimeBytes)
 		var prngSeed [32]byte
 		subtle.XORBytes(prngSeed[:], s.receiverSeeds.Messages[i][0], s.sessionId[:])
@@ -139,7 +139,7 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 	// step 2.2: Compute q_i = b_i • u_i + tb_i  ∀i∈[κ]
 	extCorrelations := make([][]byte, Kappa)
 	qiTemp := make([]byte, etaPrimeBytes)
-	for i := 0; i < Kappa; i++ {
+	for i := range Kappa {
 		extCorrelations[i] = tb[i]
 		subtle.XORBytes(qiTemp, r1.U[i], tb[i])
 		c := s.receiverSeeds.Choices[i/8] >> (i % 8) & 0b1
@@ -148,7 +148,7 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 
 	// CONSISTENCY CHECK (Fiat-Shamir)
 	// step 2.3: Generate the challenge (χ) using Fiat-Shamir heuristic
-	for i := 0; i < Kappa; i++ {
+	for i := range Kappa {
 		s.tape.AppendBytes(expansionMaskLabel, r1.U[i])
 	}
 	M := eta / Sigma
@@ -160,7 +160,7 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 	}
 
 	s.tape.AppendBytes(challengeResponseXLabel, r1.ChallengeResponse.X[:])
-	for i := 0; i < Kappa; i++ {
+	for i := range Kappa {
 		s.tape.AppendBytes(challengeResponseTLabel, r1.ChallengeResponse.T[i][:])
 	}
 
@@ -172,7 +172,7 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 	}
 	// step 2.6: Randomise by hashing q_{j,i} and q_{j,i}+Δ_i  j∈[η], ∀i∈[κ]
 	qjTransposedPlusDelta := make([][]byte, eta)
-	for j := 0; j < eta; j++ {
+	for j := range eta {
 		qjTransposedPlusDelta[j] = make([]byte, Kappa/8)
 		// drop last η'-η rows, they are used only for the consistency check
 		subtle.XORBytes(qjTransposedPlusDelta[j], qjTransposed[j], s.receiverSeeds.Choices)
@@ -216,7 +216,7 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 
 func generateChallenge(transcript transcripts.Transcript, challengeLength int) (challenge Challenge) {
 	challengeFiatShamir := make(Challenge, challengeLength)
-	for i := 0; i < challengeLength; i++ {
+	for i := range challengeLength {
 		bytes, _ := transcript.ExtractBytes("OTe_challenge_Chi", SigmaBytes)
 		copy(challengeFiatShamir[i][:], bytes)
 	}
@@ -233,7 +233,7 @@ func (r *Receiver) computeResponse(xPrime []byte, extOptions *[2][Kappa][]byte, 
 		return errs.NewFailed("cannot create field element")
 	}
 	chi := make([]*bf128.FieldElement, m)
-	for k := 0; k < m; k++ {
+	for k := range m {
 		xHatK, err := bf128.NewField().FromBytes(xPrime[k*SigmaBytes : (k+1)*SigmaBytes])
 		if err != nil {
 			return errs.NewFailed("cannot create field element")
@@ -246,13 +246,13 @@ func (r *Receiver) computeResponse(xPrime []byte, extOptions *[2][Kappa][]byte, 
 	}
 	copy(challengeResponse.X[:], x.Bytes())
 	// ṫ^i = t^i_{0,{mσ:(m+1)σ} + Σ{k=1}^{m} χ_k • t^i_{0,{(k-1)σ:kσ}}
-	for i := 0; i < Kappa; i++ {
+	for i := range Kappa {
 		t, err := bf128.NewField().FromBytes(extOptions[0][i][etaBytes : etaBytes+SigmaBytes])
 		if err != nil {
 			return errs.NewFailed("cannot create field element")
 		}
 		copy(challengeResponse.T[i][:], extOptions[0][i][etaBytes:etaBytes+SigmaBytes])
-		for k := 0; k < m; k++ {
+		for k := range m {
 			tHatK, err := bf128.NewField().FromBytes(extOptions[0][i][k*SigmaBytes : (k+1)*SigmaBytes])
 			if err != nil {
 				return errs.NewFailed("cannot create field element")
@@ -275,13 +275,13 @@ func (s *Sender) verifyChallenge(
 	m := len(challenge)                                // M = η/σ
 	etaBytes := (len(extCorrelations[0])) - SigmaBytes // η =  η' - σ
 	isCorrect := true
-	for i := 0; i < Kappa; i++ {
+	for i := range Kappa {
 		// q̇^i = q^i_hat_{m+1} + Σ{k=1}^{m} χ_k • q^i_hat_k
 		qi, err := bf128.NewField().FromBytes(extCorrelations[i][etaBytes : etaBytes+SigmaBytes])
 		if err != nil {
 			return errs.NewFailed("cannot create field element")
 		}
-		for k := 0; k < m; k++ {
+		for k := range m {
 			qiHatK, err := bf128.NewField().FromBytes(extCorrelations[i][k*SigmaBytes : (k+1)*SigmaBytes])
 			if err != nil {
 				return errs.NewFailed("cannot create field element")
