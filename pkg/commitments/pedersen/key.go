@@ -68,7 +68,11 @@ func (k *Key[E, S]) MarshalCBOR() ([]byte, error) {
 		G: k.g,
 		H: k.h,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal Pedersen key")
+	}
+	return data, nil
 }
 
 func (k *Key[E, S]) UnmarshalCBOR(data []byte) error {

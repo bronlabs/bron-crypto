@@ -51,13 +51,12 @@ func (t *transcript) ExtractBytes(label string, outLen uint) ([]byte, error) {
 	hClone := t.h.Clone()
 
 	buf := make([]byte, outLen)
-	_, err := io.ReadFull(t.h, buf)
-	if err != nil {
+	if _, err := io.ReadFull(t.h, buf); err != nil {
 		return nil, errs.WrapFailed(err, "could not read from transcript")
 	}
 
 	t.h = hClone
-	return buf, err
+	return buf, nil
 }
 
 func (t *transcript) Clone() transcripts.Transcript {

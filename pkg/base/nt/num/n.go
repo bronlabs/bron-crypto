@@ -126,7 +126,7 @@ func (ns *NaturalNumbers) Random(lowInclusive, highExclusive *Nat, prng io.Reade
 	}
 	v, err := numct.NatRandomRangeLH(prng, lowInclusive.v, highExclusive.v)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapRandomSample(err, "failed to sample random Nat")
 	}
 	return &Nat{v: v}, nil
 }

@@ -38,7 +38,7 @@ func (r *PolynomialRing[RE]) NewRandomWithConstantTerm(degree int, constantTerm 
 		var err error
 		coeffs[i], err = r.ring.Random(prng)
 		if err != nil {
-			return nil, err
+			return nil, errs.WrapRandomSample(err, "failed to sample random coefficient")
 		}
 	}
 

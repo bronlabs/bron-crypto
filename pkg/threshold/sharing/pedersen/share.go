@@ -122,7 +122,11 @@ func (s *Share[S]) ToAdditive(qualifiedSet sharing.MinimalQualifiedAccessStructu
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create shamir share from share")
 	}
-	return ss.ToAdditive(qualifiedSet)
+	additiveShare, err := ss.ToAdditive(qualifiedSet)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to convert Pedersen share to additive")
+	}
+	return additiveShare, nil
 }
 
 func (s *Share[S]) MarshalCBOR() ([]byte, error) {
@@ -131,7 +135,11 @@ func (s *Share[S]) MarshalCBOR() ([]byte, error) {
 		Secret_:  s.secret,
 		Blinding: s.blinding,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal Pedersen Share")
+	}
+	return data, nil
 }
 
 func (s *Share[S]) UnmarshalCBOR(data []byte) error {

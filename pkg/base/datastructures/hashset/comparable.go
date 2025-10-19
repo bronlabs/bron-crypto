@@ -7,6 +7,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
@@ -184,5 +185,9 @@ func (s *MutableComparable[E]) MarshalJSON() ([]byte, error) {
 	for k := range s.v {
 		temp[k] = struct{}{}
 	}
-	return json.Marshal(temp)
+	data, err := json.Marshal(temp)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal hashset")
+	}
+	return data, nil
 }

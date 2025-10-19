@@ -79,7 +79,11 @@ func (w *Witness[S]) MarshalCBOR() ([]byte, error) {
 	dto := &witnessDTO[S]{
 		V: w.v,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal Pedersen Witness")
+	}
+	return data, nil
 }
 
 func (w *Witness[S]) UnmarshalCBOR(data []byte) error {

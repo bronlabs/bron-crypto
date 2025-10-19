@@ -247,7 +247,11 @@ func (p *ModuleValuedPolynomial[ME, S]) MarshalCBOR() ([]byte, error) {
 	dto := &moduleValuedPolynomialDTO[ME, S]{
 		Coeffs: p.coeffs,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal polynomial")
+	}
+	return data, nil
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) UnmarshalCBOR(data []byte) error {

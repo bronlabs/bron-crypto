@@ -104,7 +104,11 @@ func (c *Commitment[E, S]) MarshalCBOR() ([]byte, error) {
 	dto := &commitmentDTO[E, S]{
 		V: c.v,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal Pedersen commitment")
+	}
+	return data, nil
 }
 
 func (c *Commitment[E, S]) UnmarshalCBOR(data []byte) error {

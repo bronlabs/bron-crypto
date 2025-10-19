@@ -100,7 +100,11 @@ func (pk *PublicKey[PKV, S]) MarshalCBOR() ([]byte, error) {
 	dto := &publicKeyDTO[PKV, S]{
 		PK: pk.V,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal schnorrlike PublicKey")
+	}
+	return data, nil
 }
 
 func (pk *PublicKey[PKV, S]) UnmarshalCBOR(data []byte) error {

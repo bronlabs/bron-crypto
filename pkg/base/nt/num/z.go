@@ -142,7 +142,7 @@ func (*Integers) Random(lowInclusive, highExclusive *Int, prng io.Reader) (*Int,
 	}
 	v, err := numct.IntRandom(prng, lowInclusive.v, highExclusive.v)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapRandomSample(err, "failed to sample random Int")
 	}
 	return &Int{v: v}, nil
 }

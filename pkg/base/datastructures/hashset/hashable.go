@@ -7,6 +7,7 @@ import (
 	base "github.com/bronlabs/bron-crypto/pkg/base"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
@@ -177,7 +178,11 @@ func (s *MutableHashable[E]) List() []E {
 }
 
 func (s *MutableHashable[E]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.v)
+	data, err := json.Marshal(s.v)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal hashset")
+	}
+	return data, nil
 }
 
 func (s *MutableHashable[E]) HashCode() base.HashCode {

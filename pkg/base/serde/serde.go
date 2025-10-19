@@ -3,6 +3,7 @@ package serde
 import (
 	"reflect"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/fxamacker/cbor/v2"
 )
 
@@ -81,7 +82,11 @@ func updateModes() {
 }
 
 func MarshalCBOR[T any](t T) ([]byte, error) {
-	return enc.Marshal(t)
+	data, err := enc.Marshal(t)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal CBOR")
+	}
+	return data, nil
 }
 
 func MarshalCBORTagged[T any](t T, tag uint64) ([]byte, error) {
@@ -89,11 +94,18 @@ func MarshalCBORTagged[T any](t T, tag uint64) ([]byte, error) {
 		Number:  tag,
 		Content: t,
 	}
-	return enc.Marshal(wrapped)
+	data, err := enc.Marshal(wrapped)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal tagged CBOR")
+	}
+	return data, nil
 }
 
 func UnmarshalCBOR[T any](data []byte) (T, error) {
 	var t T
 	err := dec.Unmarshal(data, &t)
-	return t, err
+	if err != nil {
+		return t, errs.WrapSerialisation(err, "failed to unmarshal CBOR")
+	}
+	return t, nil
 }

@@ -129,8 +129,11 @@ func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*S
 		adjustedPrivateKey = v.adjustedSk
 	}
 	s, err := schnorrlike.ComputeGenericResponse(adjustedPrivateKey, nonce, challenge, false)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to compute BIP340 response")
+	}
 	// 12. Let sig = (R, (k + ed) mod n)).
-	return s, err
+	return s, nil
 }
 
 func (*Variant) SerializeSignature(signature *Signature) ([]byte, error) {

@@ -17,7 +17,11 @@ import (
 type Share[FE algebra.PrimeFieldElement[FE]] = shamir.Share[FE]
 
 func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, v FE, ac *AccessStructure) (*Share[FE], error) {
-	return shamir.NewShare(id, v, ac)
+	s, err := shamir.NewShare(id, v, ac)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to create Feldman share")
+	}
+	return s, nil
 }
 
 type LiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
@@ -67,7 +71,11 @@ func (s *LiftedShare[E, FE]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAc
 		return nil, errs.NewMembership("share ID %d is not a valid shareholder", s.id)
 	}
 	converted := s.v.ScalarOp(lambda_i)
-	return additive.NewShare(s.id, converted, qualifiedSet)
+	additiveShare, err := additive.NewShare(s.id, converted, qualifiedSet)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to convert Feldman share to additive")
+	}
+	return additiveShare, nil
 }
 
 func (s *LiftedShare[E, FE]) MarshalCBOR() ([]byte, error) {
@@ -75,7 +83,11 @@ func (s *LiftedShare[E, FE]) MarshalCBOR() ([]byte, error) {
 		ID: s.id,
 		V:  s.v,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal Feldman LiftedShare")
+	}
+	return data, nil
 }
 
 func (s *LiftedShare[E, FE]) UnmarshalCBOR(data []byte) error {

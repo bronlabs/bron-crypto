@@ -88,7 +88,7 @@ func (u *unitUnknownOrder) UnmarshalCBOR(data []byte) error {
 	}
 	zMod, err := num.NewZModFromModulus(dto.Mod)
 	if err != nil {
-		return err
+		return errs.WrapFailed(err, "failed to create ZMod from modulus")
 	}
 
 	// For RSA unknown order, create rsaGroup
@@ -124,7 +124,7 @@ func (u *unitKnownOrder) UnmarshalCBOR(data []byte) error {
 		// This is an RSA group with known order
 		zMod, err := num.NewZModFromModulus(arith.Modulus())
 		if err != nil {
-			return err
+			return errs.WrapFailed(err, "failed to create ZMod from RSA modulus")
 		}
 		u.g = &rsaGroupKnownOrder{
 			UZMod: UZMod[*modular.OddPrimeFactors]{
@@ -136,7 +136,7 @@ func (u *unitKnownOrder) UnmarshalCBOR(data []byte) error {
 		// This is a Paillier group with known order
 		zMod, err := num.NewZModFromModulus(arith.Modulus())
 		if err != nil {
-			return err
+			return errs.WrapFailed(err, "failed to create ZMod from Paillier modulus")
 		}
 		// Extract N from CrtModN which contains the modulus n (not n²)
 		n := num.NPlus().FromModulus(arith.CrtModN.Modulus())
@@ -166,10 +166,18 @@ type unitDTOKnownOrder struct {
 func (u *unit) MarshalCBOR() ([]byte, error) {
 	if u.IsUnknownOrder() {
 		dto := &unitDTO{V: u.v, Mod: u.g.ModulusCT()}
-		return serde.MarshalCBORTagged(dto, UnitTag)
+		data, err := serde.MarshalCBORTagged(dto, UnitTag)
+		if err != nil {
+			return nil, errs.WrapSerialisation(err, "failed to marshal unknown order unit")
+		}
+		return data, nil
 	}
 	dto := &unitDTOKnownOrder{V: u.v, X: arithmeticOf(u)}
-	return serde.MarshalCBORTagged(dto, UnitKnownOrderTag)
+	data, err := serde.MarshalCBORTagged(dto, UnitKnownOrderTag)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal known order unit")
+	}
+	return data, nil
 }
 
 func (u *unit) UnmarshalCBOR(data []byte) error {
@@ -188,7 +196,7 @@ func (u *unit) UnmarshalCBOR(data []byte) error {
 	}
 	zMod, err := num.NewZModFromModulus(dto.Mod)
 	if err != nil {
-		return err
+		return errs.WrapFailed(err, "failed to create ZMod from modulus in unit unmarshal")
 	}
 
 	u.g = &UZMod[*modular.SimpleModulus]{
@@ -222,7 +230,11 @@ func (us *UZMod[X]) MarshalCBOR() ([]byte, error) {
 
 	// Serialise the arithmetic object (carries modulus and order)
 	dto := &uZModDTO{Arith: us.arith}
-	return serde.MarshalCBORTagged(dto, tag)
+	data, err := serde.MarshalCBORTagged(dto, tag)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal UZMod")
+	}
+	return data, nil
 }
 
 func (us *UZMod[X]) UnmarshalCBOR(data []byte) error {
@@ -265,7 +277,11 @@ func (pg *paillierGroup) MarshalCBOR() ([]byte, error) {
 		UZMod: &pg.UZMod,
 		N:     pg.n,
 	}
-	return serde.MarshalCBORTagged(dto, PaillierGroupTag)
+	data, err := serde.MarshalCBORTagged(dto, PaillierGroupTag)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal paillierGroup")
+	}
+	return data, nil
 }
 
 func (pg *paillierGroup) UnmarshalCBOR(data []byte) error {
@@ -283,7 +299,11 @@ func (pg *paillierGroupKnownOrder) MarshalCBOR() ([]byte, error) {
 		UZMod: &pg.UZMod,
 		N:     pg.n,
 	}
-	return serde.MarshalCBORTagged(dto, PaillierGroupKnownOrderTag)
+	data, err := serde.MarshalCBORTagged(dto, PaillierGroupKnownOrderTag)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal paillierGroupKnownOrder")
+	}
+	return data, nil
 }
 
 func (pg *paillierGroupKnownOrder) UnmarshalCBOR(data []byte) error {
@@ -304,7 +324,11 @@ func (rg *rsaGroupKnownOrder) MarshalCBOR() ([]byte, error) {
 	dto := &rsaGroupDTO{
 		UZMod: &rg.UZMod,
 	}
-	return serde.MarshalCBORTagged(dto, RSAGroupKnownOrderTag)
+	data, err := serde.MarshalCBORTagged(dto, RSAGroupKnownOrderTag)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal rsaGroupKnownOrder")
+	}
+	return data, nil
 }
 
 func (rg *rsaGroupKnownOrder) UnmarshalCBOR(data []byte) error {

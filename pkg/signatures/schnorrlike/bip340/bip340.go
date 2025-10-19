@@ -41,7 +41,11 @@ var (
 )
 
 func NewPublicKey(point *GroupElement) (*PublicKey, error) {
-	return schnorrlike.NewPublicKey(point)
+	pk, err := schnorrlike.NewPublicKey(point)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to create BIP340 public key")
+	}
+	return pk, nil
 }
 
 func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
@@ -56,7 +60,11 @@ func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create public key")
 	}
-	return schnorrlike.NewPrivateKey(scalar, pk)
+	sk, err := schnorrlike.NewPrivateKey(scalar, pk)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to create BIP340 private key")
+	}
+	return sk, nil
 }
 
 func NewSchemeWithAux(aux [AuxSizeBytes]byte) *Scheme {
@@ -195,7 +203,11 @@ type Signer struct {
 func (s *Signer) Sign(message Message) (*Signature, error) {
 	// ComputeNonceCommitment requires a message
 	s.sg.V.msg = message
-	return s.sg.Sign(message)
+	sig, err := s.sg.Sign(message)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to sign message")
+	}
+	return sig, nil
 }
 
 func (s *Signer) Variant() *Variant {

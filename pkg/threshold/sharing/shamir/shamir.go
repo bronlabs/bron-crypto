@@ -121,7 +121,11 @@ func (a *AccessStructure) MarshalCBOR() ([]byte, error) {
 		dto.Ps[p] = true
 	}
 
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal AccessStructure")
+	}
+	return data, nil
 }
 
 func (a *AccessStructure) UnmarshalCBOR(data []byte) error {

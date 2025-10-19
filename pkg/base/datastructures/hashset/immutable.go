@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 )
 
@@ -110,5 +111,9 @@ func (s *Immutable[E]) Cardinality() int {
 	return s.v.Cardinality()
 }
 func (s *Immutable[E]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.v)
+	data, err := json.Marshal(s.v)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal hashset")
+	}
+	return data, nil
 }

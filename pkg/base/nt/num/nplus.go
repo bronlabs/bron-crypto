@@ -130,7 +130,7 @@ func (nps *PositiveNaturalNumbers) Random(lowInclusive, highExclusive *NatPlus, 
 	}
 	v, err := numct.NatRandomRangeLH(prng, lowInclusive.v, highExclusive.v)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapRandomSample(err, "failed to sample random NatPlus")
 	}
 	return &NatPlus{v: v}, nil
 }

@@ -25,7 +25,7 @@ type Suite struct {
 func NewSuite(xi, l int, hashFunc func() hash.Hash) (*Suite, error) {
 	defaultSuite, err := ot.NewDefaultSuite(xi, l)
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "failed to create default OT suite")
 	}
 	if (xi % 8) != 0 {
 		return nil, errs.NewValidation("invalid xi")

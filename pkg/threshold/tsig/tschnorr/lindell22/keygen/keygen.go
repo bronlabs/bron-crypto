@@ -2,6 +2,7 @@ package keygen
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
@@ -17,12 +18,16 @@ func NewShard[
 ) (*lindell22.Shard[GE, S], error) {
 	pk, err := schnorrlike.NewPublicKey(output.PublicKeyValue())
 	if err != nil {
-		return nil, err
+		return nil, errs.WrapFailed(err, "failed to create public key from DKG output")
 	}
-	return tschnorr.NewShard(
+	shard, err := tschnorr.NewShard(
 		output.Share(),
 		pk,
 		output.VerificationVector(),
 		output.AccessStructure(),
 	)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to create tSchnorr shard from DKG output")
+	}
+	return shard, nil
 }

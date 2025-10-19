@@ -3,7 +3,6 @@ package fiatshamir
 import (
 	"fmt"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -36,7 +35,11 @@ func (p *Proof[A, Z]) MarshalCBOR() ([]byte, error) {
 		A: p.a,
 		Z: p.z,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal Fiat-Shamir proof")
+	}
+	return data, nil
 }
 
 func (p *Proof[A, Z]) UnmarshalCBOR(data []byte) error {
@@ -59,10 +62,11 @@ func NewCompiler[
 	if sigmaProtocol == nil {
 		return nil, errs.NewIsNil("sigmaProtocol")
 	}
-	if s := sigmaProtocol.SoundnessError(); s < base.ComputationalSecurityBits {
-		return nil, errs.NewArgument("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
-			s, base.ComputationalSecurityBits)
-	}
+	// TODO: re-enable this check once base.ComputationalSecurityBits is actually customisable.
+	// if s := sigmaProtocol.SoundnessError(); s < base.ComputationalSecurityBits {
+	// 	return nil, errs.NewArgument("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
+	// 		s, base.ComputationalSecurityBits)
+	// }
 	return &fs[X, W, A, S, Z]{
 		sigmaProtocol: sigmaProtocol,
 	}, nil

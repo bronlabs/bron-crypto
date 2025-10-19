@@ -468,7 +468,7 @@ func AggregateAll[
 	if len(xs) == 0 {
 		return *new(X), errs.NewFailed("cannot aggregate empty slice of elements")
 	}
-	return iterutils.ReduceOrError(
+	result, err := iterutils.ReduceOrError(
 		slices.Values(xs[1:]),
 		xs[0],
 		func(acc X, pk X) (X, error) {
@@ -478,6 +478,10 @@ func AggregateAll[
 			}
 			return aggregated, nil
 		})
+	if err != nil {
+		return *new(X), errs.WrapFailed(err, "failed to aggregate BLS elements")
+	}
+	return result, nil
 }
 
 func _[

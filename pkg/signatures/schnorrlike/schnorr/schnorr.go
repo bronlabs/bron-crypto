@@ -23,11 +23,19 @@ type (
 const VariantType schnorrlike.VariantType = "Schnorr"
 
 func NewPublicKey[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]](point GE) (*PublicKey[GE, S], error) {
-	return schnorrlike.NewPublicKey(point)
+	pk, err := schnorrlike.NewPublicKey(point)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to create Schnorr public key")
+	}
+	return pk, nil
 }
 
 func NewPrivateKey[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]](scalar S, pk *PublicKey[GE, S]) (*PrivateKey[GE, S], error) {
-	return schnorrlike.NewPrivateKey(scalar, pk)
+	sk, err := schnorrlike.NewPrivateKey(scalar, pk)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to create Schnorr private key")
+	}
+	return sk, nil
 }
 
 func NewScheme[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]](
@@ -201,7 +209,11 @@ func (v *Variant[GE, S]) ComputeNonceCommitment() (GE, S, error) {
 	if v == nil {
 		return *new(GE), *new(S), errs.NewIsNil("variant")
 	}
-	return schnorrlike.ComputeGenericNonceCommitment(v.g, v.prng, v.shouldNegateNonce)
+	ge, s, err := schnorrlike.ComputeGenericNonceCommitment(v.g, v.prng, v.shouldNegateNonce)
+	if err != nil {
+		return *new(GE), *new(S), errs.WrapFailed(err, "failed to compute nonce commitment")
+	}
+	return ge, s, nil
 }
 
 func (v *Variant[GE, S]) ComputeChallenge(nonceCommitment GE, publicKeyValue GE, message Message) (S, error) {
@@ -217,7 +229,11 @@ func (v *Variant[GE, S]) ComputeChallenge(nonceCommitment GE, publicKeyValue GE,
 	if utils.IsNil(message) {
 		return *new(S), errs.NewIsNil("message")
 	}
-	return schnorrlike.MakeGenericChallenge(v.sf, v.h, v.challengeElementsAreLittleEndian, nonceCommitment.Bytes(), publicKeyValue.Bytes(), message)
+	challenge, err := schnorrlike.MakeGenericChallenge(v.sf, v.h, v.challengeElementsAreLittleEndian, nonceCommitment.Bytes(), publicKeyValue.Bytes(), message)
+	if err != nil {
+		return *new(S), errs.WrapFailed(err, "failed to compute Schnorr challenge")
+	}
+	return challenge, nil
 }
 
 func (v *Variant[GE, S]) ComputeResponse(privateKeyValue, nonce, challenge S) (S, error) {
@@ -233,7 +249,11 @@ func (v *Variant[GE, S]) ComputeResponse(privateKeyValue, nonce, challenge S) (S
 	if utils.IsNil(challenge) {
 		return *new(S), errs.NewIsNil("challenge")
 	}
-	return schnorrlike.ComputeGenericResponse(privateKeyValue, nonce, challenge, v.responseOperatorIsNegative)
+	response, err := schnorrlike.ComputeGenericResponse(privateKeyValue, nonce, challenge, v.responseOperatorIsNegative)
+	if err != nil {
+		return *new(S), errs.WrapFailed(err, "failed to compute Schnorr response")
+	}
+	return response, nil
 }
 
 func (v *Variant[GE, S]) SerializeSignature(signature *Signature[GE, S]) ([]byte, error) {

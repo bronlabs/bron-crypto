@@ -29,7 +29,11 @@ type natPlusDTO struct {
 
 func (n *NatPlus) MarshalCBOR() ([]byte, error) {
 	dto := &natPlusDTO{NatPlus: n.v}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal NatPlus")
+	}
+	return data, nil
 }
 
 func (n *NatPlus) UnmarshalCBOR(data []byte) error {
@@ -50,7 +54,11 @@ type natDTO struct {
 
 func (n *Nat) MarshalCBOR() ([]byte, error) {
 	dto := &natDTO{Nat: n.v}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal Nat")
+	}
+	return data, nil
 }
 
 func (n *Nat) UnmarshalCBOR(data []byte) error {
@@ -68,7 +76,11 @@ type intDTO struct {
 
 func (i *Int) MarshalCBOR() ([]byte, error) {
 	dto := &intDTO{Int: i.v}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal Int")
+	}
+	return data, nil
 }
 
 func (i *Int) UnmarshalCBOR(data []byte) error {

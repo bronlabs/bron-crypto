@@ -7,7 +7,11 @@ import (
 )
 
 func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnicasts[*Round1P2P[G, S]], error) {
-	return p.zeroParticipant.Round1()
+	bc, uu, err := p.zeroParticipant.Round1()
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "failed to execute zero sharing Round1")
+	}
+	return bc, uu, nil
 }
 
 func (p *Participant[G, S]) Round2(r2b network.RoundMessages[*Round1Broadcast[G, S]], r2u network.RoundMessages[*Round1P2P[G, S]]) (*feldman.Share[S], feldman.VerificationVector[G, S], error) {

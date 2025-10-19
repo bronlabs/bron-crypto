@@ -38,7 +38,11 @@ var (
 )
 
 func NewPublicKey(point *GroupElement) (*PublicKey, error) {
-	return schnorrlike.NewPublicKey(point)
+	pk, err := schnorrlike.NewPublicKey(point)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to create Mina public key")
+	}
+	return pk, nil
 }
 
 func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
@@ -53,7 +57,11 @@ func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create public key")
 	}
-	return schnorrlike.NewPrivateKey(scalar, pk)
+	sk, err := schnorrlike.NewPrivateKey(scalar, pk)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to create Mina private key")
+	}
+	return sk, nil
 }
 
 func NewScheme(nid NetworkId, privateKey *PrivateKey) (*Scheme, error) {

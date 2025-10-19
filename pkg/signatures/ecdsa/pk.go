@@ -77,7 +77,11 @@ func (pk *PublicKey[P, B, S]) MarshalCBOR() ([]byte, error) {
 	dto := &publicKeyDTO[P, B, S]{
 		PK: pk.pk,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal ECDSA PublicKey")
+	}
+	return data, nil
 }
 
 func (pk *PublicKey[P, B, S]) UnmarshalCBOR(data []byte) error {

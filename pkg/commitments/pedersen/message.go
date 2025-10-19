@@ -81,14 +81,22 @@ func (m *Message[S]) MarshalBinary() ([]byte, error) {
 	if !ok {
 		return nil, errs.NewType("cannot marshal underlying scalar message")
 	}
-	return scalarMarshaler.MarshalBinary()
+	data, err := scalarMarshaler.MarshalBinary()
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal scalar message to binary")
+	}
+	return data, nil
 }
 
 func (m *Message[S]) MarshalCBOR() ([]byte, error) {
 	dto := &messageDTO[S]{
 		V: m.v,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal Pedersen message")
+	}
+	return data, nil
 }
 
 func (m *Message[S]) UnmarshalCBOR(data []byte) error {

@@ -138,7 +138,11 @@ func (spm *PublicMaterial[E, S]) MarshalCBOR() ([]byte, error) {
 		FV:                spm.fv,
 		PartialPublicKeys: ppk,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal tSchnorr PublicMaterial")
+	}
+	return data, nil
 }
 
 func (spm *PublicMaterial[E, S]) UnmarshalCBOR(data []byte) error {
@@ -217,7 +221,11 @@ func (sh *Shard[E, S]) MarshalCBOR() ([]byte, error) {
 		Share: sh.share,
 		PM:    sh.PublicMaterial,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal tSchnorr Shard")
+	}
+	return data, nil
 }
 
 func (sh *Shard[E, S]) UnmarshalCBOR(data []byte) error {

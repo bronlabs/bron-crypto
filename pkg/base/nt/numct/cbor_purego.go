@@ -19,7 +19,11 @@ var (
 
 func (m *ModulusOddPrimeBasic) MarshalCBOR() ([]byte, error) {
 	serial := &modulusDTO{N: m.Nat()}
-	return serde.MarshalCBORTagged(serial, ModulusOddPrimeBasicTag)
+	data, err := serde.MarshalCBORTagged(serial, ModulusOddPrimeBasicTag)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal ModulusOddPrimeBasic")
+	}
+	return data, nil
 }
 
 func (m *ModulusOddPrimeBasic) UnmarshalCBOR(data []byte) error {
@@ -40,7 +44,11 @@ func (m *ModulusOddPrimeBasic) UnmarshalCBOR(data []byte) error {
 
 func (m *ModulusOddBasic) MarshalCBOR() ([]byte, error) {
 	serial := &modulusDTO{N: m.Nat()}
-	return serde.MarshalCBORTagged(serial, ModulusOddBasicTag)
+	data, err := serde.MarshalCBORTagged(serial, ModulusOddBasicTag)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal ModulusOddBasic")
+	}
+	return data, nil
 }
 
 func (m *ModulusOddBasic) UnmarshalCBOR(data []byte) error {

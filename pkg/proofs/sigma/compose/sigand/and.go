@@ -104,7 +104,10 @@ func (p protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X],
 		eg.Go(func() error {
 			var err error
 			a[i], s[i], err = sigmai.ComputeProverCommitment(statement[i], witness[i])
-			return err
+			if err != nil {
+				return errs.WrapFailed(err, "failed to compute prover commitment")
+			}
+			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -132,7 +135,10 @@ func (p protocol[X, W, A, S, Z]) ComputeProverResponse(statement Statement[X], w
 		eg.Go(func() error {
 			var err error
 			z[i], err = sigmai.ComputeProverResponse(statement[i], witness[i], commitment[i], state[i], challengeBytes)
-			return err
+			if err != nil {
+				return errs.WrapFailed(err, "failed to compute prover response")
+			}
+			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -174,7 +180,10 @@ func (p protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challengeB
 		eg.Go(func() error {
 			var err error
 			a[i], s[i], err = sigmai.RunSimulator(statement[i], challengeBytes)
-			return err
+			if err != nil {
+				return errs.WrapFailed(err, "failed to run simulator")
+			}
+			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {

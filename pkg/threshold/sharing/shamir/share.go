@@ -45,7 +45,11 @@ func (s *Share[FE]) ToAdditive(qualifiedSet sharing.MinimalQualifiedAccessStruct
 		return nil, errs.NewMembership("share ID %d is not a valid shareholder", s.id)
 	}
 	converted := lambda_i.Mul(s.v)
-	return additive.NewShare(s.id, converted, &qualifiedSet)
+	additiveShare, err := additive.NewShare(s.id, converted, &qualifiedSet)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to convert Shamir share to additive")
+	}
+	return additiveShare, nil
 }
 
 func (s *Share[_]) ID() sharing.ID {
@@ -114,7 +118,11 @@ func (s *Share[FE]) MarshalCBOR() ([]byte, error) {
 		ID: s.id,
 		V:  s.v,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal Shamir Share")
+	}
+	return data, nil
 }
 
 func (s *Share[FE]) UnmarshalCBOR(data []byte) error {

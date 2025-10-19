@@ -3,6 +3,7 @@ package paillier
 import (
 	"github.com/fxamacker/cbor/v2"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
@@ -49,7 +50,11 @@ func (p *Plaintext) MarshalCBOR() ([]byte, error) {
 		V: p.v,
 		N: p.n,
 	}
-	return serde.MarshalCBORTagged(dto, PlaintextTag)
+	data, err := serde.MarshalCBORTagged(dto, PlaintextTag)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal Plaintext")
+	}
+	return data, nil
 }
 
 func (p *Plaintext) UnmarshalCBOR(data []byte) error {
@@ -71,7 +76,11 @@ func (n *Nonce) MarshalCBOR() ([]byte, error) {
 	dto := &nonceDTO{
 		U: n.u,
 	}
-	return serde.MarshalCBORTagged(dto, NonceTag)
+	data, err := serde.MarshalCBORTagged(dto, NonceTag)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal Nonce")
+	}
+	return data, nil
 }
 
 func (n *Nonce) UnmarshalCBOR(data []byte) error {
@@ -92,7 +101,11 @@ func (c *Ciphertext) MarshalCBOR() ([]byte, error) {
 	dto := &ciphertextDTO{
 		U: c.u,
 	}
-	return serde.MarshalCBORTagged(dto, CiphertextTag)
+	data, err := serde.MarshalCBORTagged(dto, CiphertextTag)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal Ciphertext")
+	}
+	return data, nil
 }
 
 func (c *Ciphertext) UnmarshalCBOR(data []byte) error {
@@ -113,7 +126,11 @@ func (pk *PublicKey) MarshalCBOR() ([]byte, error) {
 	dto := &publicKeyDTO{
 		Group: pk.group,
 	}
-	return serde.MarshalCBORTagged(dto, PublicKeyTag)
+	data, err := serde.MarshalCBORTagged(dto, PublicKeyTag)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal PublicKey")
+	}
+	return data, nil
 }
 
 func (pk *PublicKey) UnmarshalCBOR(data []byte) error {
@@ -135,7 +152,11 @@ func (sk *PrivateKey) MarshalCBOR() ([]byte, error) {
 	dto := &privateKeyDTO{
 		Group: sk.group,
 	}
-	return serde.MarshalCBORTagged(dto, PrivateKeyTag)
+	data, err := serde.MarshalCBORTagged(dto, PrivateKeyTag)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal PrivateKey")
+	}
+	return data, nil
 }
 
 func (sk *PrivateKey) UnmarshalCBOR(data []byte) error {

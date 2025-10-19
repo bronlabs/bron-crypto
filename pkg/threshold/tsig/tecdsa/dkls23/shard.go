@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
@@ -144,7 +145,11 @@ func (s *Shard[P, B, S]) MarshalCBOR() ([]byte, error) {
 		OTSenderSeeds:   otSenderSeeds,
 		OTReceiverSeeds: otReceiverSeeds,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal ECDSA Shard")
+	}
+	return data, nil
 }
 
 func (s *Shard[P, B, S]) UnmarshalCBOR(data []byte) error {

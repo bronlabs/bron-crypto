@@ -36,7 +36,11 @@ type simpleDTO struct {
 
 func (s *SimpleModulus) MarshalCBOR() ([]byte, error) {
 	dto := &simpleDTO{Modulus: s.m}
-	return serde.MarshalCBORTagged(dto, SimpleModulusTag)
+	data, err := serde.MarshalCBORTagged(dto, SimpleModulusTag)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal SimpleModulus")
+	}
+	return data, nil
 }
 
 func (s *SimpleModulus) UnmarshalCBOR(data []byte) error {
@@ -58,7 +62,11 @@ func (o *OddPrimeFactors) MarshalCBOR() ([]byte, error) {
 		P: o.Params.P.Nat(),
 		Q: o.Params.Q.Nat(),
 	}
-	return serde.MarshalCBORTagged(dto, OddPrimeFactorsTag)
+	data, err := serde.MarshalCBORTagged(dto, OddPrimeFactorsTag)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal OddPrimeFactors")
+	}
+	return data, nil
 }
 
 func (o *OddPrimeFactors) UnmarshalCBOR(data []byte) error {
@@ -79,7 +87,11 @@ func (s *OddPrimeSquareFactors) MarshalCBOR() ([]byte, error) {
 		P: s.P.Factor.Nat(),
 		Q: s.Q.Factor.Nat(),
 	}
-	return serde.MarshalCBORTagged(dto, OddPrimeSquareFactorsTag)
+	data, err := serde.MarshalCBORTagged(dto, OddPrimeSquareFactorsTag)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal OddPrimeSquareFactors")
+	}
+	return data, nil
 }
 
 func (s *OddPrimeSquareFactors) UnmarshalCBOR(data []byte) error {
