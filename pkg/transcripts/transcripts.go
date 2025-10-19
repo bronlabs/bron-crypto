@@ -1,8 +1,9 @@
 package transcripts
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/bronlabs/bron-crypto/pkg/base"
 )
 
 var (

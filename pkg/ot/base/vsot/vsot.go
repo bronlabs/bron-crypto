@@ -60,6 +60,7 @@ func (ro *ReceiverOutput) InferredMessageBytesLen() int {
 
 type Suite[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	ot.DefaultSuite
+
 	curve    curves.Curve[P, B, S]
 	field    algebra.PrimeField[S]
 	hashFunc func() hash.Hash

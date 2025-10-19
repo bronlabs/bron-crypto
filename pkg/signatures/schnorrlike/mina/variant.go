@@ -4,12 +4,13 @@ import (
 	"hash"
 	"io"
 
+	"golang.org/x/crypto/blake2b"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
-	"golang.org/x/crypto/blake2b"
 )
 
 const VariantType schnorrlike.VariantType = "mina"
@@ -139,7 +140,7 @@ func (v *Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 	return SerializeSignature(signature)
 }
 
-// ============ MPC Methods ============
+// ============ MPC Methods ============.
 
 func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*Scalar]) (*additive.Share[*Scalar], error) {
 	// no changes needed

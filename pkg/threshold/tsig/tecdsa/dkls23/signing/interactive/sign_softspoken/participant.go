@@ -8,6 +8,8 @@ import (
 	"io"
 	"iter"
 
+	"golang.org/x/crypto/blake2b"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
@@ -24,7 +26,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"golang.org/x/crypto/blake2b"
 )
 
 const (
@@ -75,11 +76,11 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
 	zeroSeeds, err := randomizeZeroSeeds(shard.ZeroSeeds(), tape)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't randomize zero seeds")
+		return nil, errs.WrapFailed(err, "couldn't randomise zero seeds")
 	}
 	otSenderSeeds, otReceiverSeeds, err := randomizeOTSeeds(shard.OTSenderSeeds(), shard.OTReceiverSeeds(), tape)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't randomize OT seeds")
+		return nil, errs.WrapFailed(err, "couldn't randomise OT seeds")
 	}
 	c := &Cosigner[P, B, S]{
 		shard:     shard,

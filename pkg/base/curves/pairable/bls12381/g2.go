@@ -429,7 +429,7 @@ func (p *PointG2) ScalarMul(actor *Scalar) *PointG2 {
 }
 
 func (p *PointG2) IsTorsionFree() bool {
-	// Ensure scalar field is initialized
+	// Ensure scalar field is initialised
 	_ = NewScalarField()
 	orderBytes := scalarFieldOrder.Bytes()
 	slices.Reverse(orderBytes)

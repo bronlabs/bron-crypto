@@ -178,7 +178,6 @@ func (p *Protocol[A, B, C]) Verify(statement *Statement[A, B], commitment *Commi
 	}
 
 	return nil
-
 }
 
 func (p *Protocol[A, B, C]) RunSimulator(statement *Statement[A, B], challengeBytes sigma.ChallengeBytes) (*Commitment[A, B], *Response[A], error) {

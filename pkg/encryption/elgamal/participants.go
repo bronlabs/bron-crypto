@@ -7,14 +7,14 @@ package elgamal
 // 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/constructions"
 // 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 // 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
-// )
+// ).
 
-// type KeyGeneratorOption[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] = func(*KeyGenerator[E, S]) error
+// type KeyGeneratorOption[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] = func(*KeyGenerator[E, S]) error.
 
 // type KeyGenerator[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
 // 	g UnderlyingGroup[E, S]
 // 	z algebra.ZnLike[S]
-// }
+// }.
 
 // func (kg *KeyGenerator[E, S]) Generate(prng io.Reader) (*PrivateKey[E, S], *PublicKey[E, S], error) {
 // 	if kg == nil {
@@ -32,15 +32,15 @@ package elgamal
 // 	pk := &PublicKey[E, S]{pkv}
 // 	sk := &PrivateKey[E, S]{skv, *pk}
 // 	return sk, pk, nil
-// }
+// }.
 
-// type EncrypterOption[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] = func(*Encrypter[E, S]) error
+// type EncrypterOption[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] = func(*Encrypter[E, S]) error.
 
 // type Encrypter[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
 // 	g       UnderlyingGroup[E, S]
 // 	z       algebra.ZnLike[S]
 // 	ctSpace *constructions.FiniteDirectSumModule[UnderlyingGroup[E, S], E, S]
-// }
+// }.
 
 // func (e *Encrypter[E, S]) Encrypt(plaintext *Plaintext[E, S], receiver *PublicKey[E, S], prng io.Reader) (*Ciphertext[E, S], *Nonce[E, S], error) {
 // 	if e == nil {
@@ -65,7 +65,7 @@ package elgamal
 // 		return nil, nil, errs.WrapFailed(err, "failed to encrypt plaintext")
 // 	}
 // 	return ciphertext, nonce, nil
-// }
+// }.
 
 // func (e *Encrypter[E, S]) EncryptWithNonce(plaintext *Plaintext[E, S], receiver *PublicKey[E, S], nonce *Nonce[E, S]) (*Ciphertext[E, S], error) {
 // 	if e == nil {
@@ -89,13 +89,13 @@ package elgamal
 // 		return nil, errs.WrapFailed(err, "failed to create ciphertext space")
 // 	}
 // 	return &Ciphertext[E, S]{out}, nil
-// }
+// }.
 
-// type DecrypterOption[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] = func(*Decrypter[E, S]) error
+// type DecrypterOption[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] = func(*Decrypter[E, S]) error.
 
 // type Decrypter[E UnderlyingGroupElement[E, S], S algebra.UintLike[S]] struct {
 // 	sk *PrivateKey[E, S]
-// }
+// }.
 
 // func (d *Decrypter[E, S]) Decrypt(ciphertext *Ciphertext[E, S]) (*Plaintext[E, S], error) {
 // 	if d == nil {
@@ -109,7 +109,7 @@ package elgamal
 // 	s := c1.ScalarOp(d.sk.v)
 // 	encoded := c2.Op(s.OpInv())
 // 	return &Plaintext[E, S]{encoded}, nil
-// }
+// }.
 
 // func (d *Decrypter[E, S]) DecryptWithNonce(ciphertext *Ciphertext[E, S], nonce *Nonce[E, S]) (*Plaintext[E, S], error) {
 // 	if d == nil {
@@ -132,4 +132,4 @@ package elgamal
 // 	m := c2.Op(hr.OpInv())
 
 // 	return &Plaintext[E, S]{m}, nil
-// }
+// }.

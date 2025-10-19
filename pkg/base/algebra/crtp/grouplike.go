@@ -2,7 +2,7 @@ package crtp
 
 import "github.com/bronlabs/bron-crypto/pkg/base"
 
-// ******************** Magma
+// ******************** Magma.
 
 type Magma[E any] Structure[E]
 type MagmaElement[E any] interface {
@@ -10,7 +10,7 @@ type MagmaElement[E any] interface {
 	Operand[E]
 }
 
-// ******************** SemiGroup
+// ******************** SemiGroup.
 
 type SemiGroup[E any] Magma[E]
 
@@ -44,7 +44,7 @@ type CyclicSemiGroupElement[E any] interface {
 	IsDesignatedGenerator() bool
 }
 
-// ******************** Monoid
+// ******************** Monoid.
 
 type Monoid[ME any] interface {
 	SemiGroup[ME]
@@ -105,7 +105,7 @@ type CyclicMonoidElement[ME any] interface {
 	CyclicSemiGroupElement[ME]
 }
 
-// ******************** Group
+// ******************** Group.
 
 type Group[GE any] Monoid[GE]
 
@@ -149,14 +149,14 @@ type CyclicGroupElement[E any] interface {
 	CyclicMonoidElement[E]
 }
 
-// ************** Extra Monoids
+// ************** Extra Monoids.
 
 // TODO: Move IsTorsion free to points
 type AbelianMonoid[E, S any] SemiModule[E, S]
 
 type AbelianMonoidElement[E, S any] SemiModuleElement[E, S]
 
-// **************** Extra Groups
+// **************** Extra Groups.
 
 // TODO: move MultiScalar stuff out of the interface
 type AbelianGroup[E, S any] interface {

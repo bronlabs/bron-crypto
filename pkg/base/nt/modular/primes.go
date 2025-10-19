@@ -205,16 +205,16 @@ func (m *OddPrimeFactors) ModInv(out, a *numct.Nat) ct.Bool {
 // 		params: params,
 // 		phis:   phis,
 // 	}, allOk
-// }
+// }.
 
 // type OddPrimeFactorsMulti struct {
 // 	params *crt.ParamsMulti[*numct.ModulusOddPrime]
 // 	phis   []numct.Modulus
-// }
+// }.
 
 // func (m *OddPrimeFactorsMulti) Modulus() numct.Modulus {
 // 	return m.params.Modulus
-// }
+// }.
 
 // func (m *OddPrimeFactorsMulti) ModExp(out, base, exp *numct.Nat) {
 // 	eps := make([]*numct.Nat, m.params.NumFactors)
@@ -234,7 +234,7 @@ func (m *OddPrimeFactors) ModInv(out, a *numct.Nat) ct.Bool {
 // 	wg.Wait()
 // 	res, _ := m.params.Recombine(mps...)
 // 	out.Set(res)
-// }
+// }.
 
 // func (m *OddPrimeFactorsMulti) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp *numct.Nat) {
 // 	if len(out) != len(bases) {
@@ -267,7 +267,7 @@ func (m *OddPrimeFactors) ModInv(out, a *numct.Nat) ct.Bool {
 // 		}(i)
 // 	}
 // 	wg.Wait()
-// }
+// }.
 
 // func (m *OddPrimeFactorsMulti) ModInv(out, a *numct.Nat) ct.Bool {
 // 	mps := make([]*numct.Nat, m.params.NumFactors)
@@ -283,4 +283,4 @@ func (m *OddPrimeFactors) ModInv(out, a *numct.Nat) ct.Bool {
 // 	res, ok := m.params.Recombine(mps...)
 // 	out.Set(res)
 // 	return ok
-// }
+// }.

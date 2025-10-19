@@ -283,7 +283,7 @@ func Test_VanillaSchnorr_SerializeSignature(t *testing.T) {
 	// The serialized signature should contain R followed by S
 	// For k256, R is a compressed point (33 bytes) and S is a scalar (32 bytes)
 	expectedLen := 33 + 32 // R + S
-	require.Equal(t, expectedLen, len(serialized))
+	require.Len(t, serialized, expectedLen)
 }
 
 func Test_VanillaSchnorr_VariantProperties(t *testing.T) {

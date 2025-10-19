@@ -2,10 +2,12 @@ package sliceutils_test
 
 import (
 	"fmt"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/stretchr/testify/require"
 	"slices"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 func TestCombinations(t *testing.T) {
@@ -83,7 +85,7 @@ func TestCombinations(t *testing.T) {
 				input[i] = i
 			}
 			actual := slices.Collect(sliceutils.Combinations(input, tc.k))
-			require.EqualValues(t, tc.data, actual)
+			require.Equal(t, tc.data, actual)
 		})
 	}
 }

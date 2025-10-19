@@ -3,9 +3,10 @@ package znstar_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
-	"github.com/stretchr/testify/require"
 )
 
 func TestForgetOrder(t *testing.T) {
@@ -189,9 +190,9 @@ func TestRoundTrip_ForgetAndLearn(t *testing.T) {
 	require.False(t, learned.IsUnknownOrder())
 
 	// All should have the same value
-	require.True(t, original.Value().Equal(forgotten.Value()) == 0x01)   // ct.True
-	require.True(t, original.Value().Equal(learned.Value()) == 0x01)     // ct.True
-	require.True(t, forgotten.Value().Equal(learned.Value()) == 0x01)    // ct.True
+	require.True(t, original.Value().Equal(forgotten.Value()) == 0x01) // ct.True
+	require.True(t, original.Value().Equal(learned.Value()) == 0x01)   // ct.True
+	require.True(t, forgotten.Value().Equal(learned.Value()) == 0x01)  // ct.True
 
 	// Operations should work on compatible units
 	result := original.Op(learned)

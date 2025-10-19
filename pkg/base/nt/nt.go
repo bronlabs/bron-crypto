@@ -7,10 +7,11 @@ import (
 	"math"
 	"math/big"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/internal"
-	"golang.org/x/sync/errgroup"
 )
 
 type LiftableToZ[I algebra.IntLike[I]] = internal.LiftableToZ[I]

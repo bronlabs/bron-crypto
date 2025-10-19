@@ -6,10 +6,11 @@ import (
 	"math/rand/v2"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	paillier "github.com/bronlabs/bron-crypto/pkg/encryption/paillier_ct"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_Sanity(t *testing.T) {

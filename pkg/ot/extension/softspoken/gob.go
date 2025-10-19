@@ -30,7 +30,7 @@ func (r1 *Round1P2P) GobEncode() ([]byte, error) {
 	enc := gob.NewEncoder(&buf)
 	err := enc.Encode(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "cannot serialize Round1P2P message")
+		return nil, errs.WrapSerialisation(err, "cannot serialise Round1P2P message")
 	}
 	return buf.Bytes(), nil
 }

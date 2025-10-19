@@ -86,19 +86,19 @@ func (p *OptimalAtePPE) Type() curves.PairingType {
 // 	return &Pairing{
 // 		core: NewOptimalAtePPE().(*OptimalAtePPE),
 // 	}
-// }
+// }.
 
 // type Pairing struct {
 // 	core *OptimalAtePPE
-// }
+// }.
 
 // func (p *Pairing) Name() curves.PairingAlgorithm {
 // 	return OptimalAteAlgorithm
-// }
+// }.
 
 // func (p *Pairing) Type() curves.PairingType {
 // 	return curves.TypeIII
-// }
+// }.
 
 // func (p *Pairing) Pair(g1 *PointG1, g2 *PointG2) (*GtElement, error) {
 // 	defer p.core.Reset()
@@ -106,7 +106,7 @@ func (p *OptimalAtePPE) Type() curves.PairingType {
 // 		return nil, err
 // 	}
 // 	return p.core.Result(), nil
-// }
+// }.
 
 // func (p *Pairing) MultiPair(g1 []*PointG1, g2 []*PointG2) (*GtElement, error) {
 // 	defer p.core.Reset()
@@ -121,7 +121,7 @@ func (p *OptimalAtePPE) Type() curves.PairingType {
 // 	}
 
 // 	return p.core.Result(), nil
-// }
+// }.
 
 // func (p *Pairing) Equal(other curves.Pairing[*PointG1, *BaseFieldElementG1, *PointG2, *BaseFieldElementG2, *GtElement, *Scalar]) bool {
 // 	if other == nil {
@@ -132,4 +132,4 @@ func (p *OptimalAtePPE) Type() curves.PairingType {
 // 		return false
 // 	}
 // 	return p.Name() == o.Name()
-// }
+// }.

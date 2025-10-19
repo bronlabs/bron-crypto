@@ -18,7 +18,7 @@ type MultiplicativelyActable[E, S any] interface {
 	ScalarExp(actor S) E
 }
 
-// ****************** SemiModule
+// ****************** SemiModule.
 
 type SemiModule[SME, S any] interface {
 	Monoid[SME]
@@ -55,7 +55,7 @@ type MultiplicativeSemiModuleElement[SME, S any] interface {
 	MultiplicativelyActable[SME, S]
 }
 
-// ****************** Module
+// ****************** Module.
 
 type Module[ME, S any] interface {
 	Group[ME]
@@ -94,13 +94,13 @@ type MultiplicativeModuleElement[ME, S any] interface {
 type ZLikeModule[E, R any] Module[E, R]
 type ZLikeModuleElement[E, R any] ModuleElement[E, R]
 
-// ****************** Vector Space
+// ****************** Vector Space.
 
 type VectorSpace[V, S any] Module[V, S]
 
 type Vector[V, S any] ModuleElement[V, S]
 
-// ****************** Algebra
+// ****************** Algebra.
 
 type Algebra[AE, S any] interface {
 	AdditiveModule[AE, S]
@@ -112,7 +112,7 @@ type AlgebraElement[AE, S any] interface {
 	RingElement[AE]
 }
 
-// ******************* Polynomials
+// ******************* Polynomials.
 
 type PolynomialLikeStructure[P, S, C any] interface {
 	Module[P, S]

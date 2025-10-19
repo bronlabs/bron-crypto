@@ -4,11 +4,12 @@ import (
 	crand "crypto/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
-	"github.com/stretchr/testify/require"
 )
 
 func TestPlaintext_CBOR(t *testing.T) {
@@ -24,8 +25,8 @@ func TestPlaintext_CBOR(t *testing.T) {
 
 	// Test with several different plaintexts
 	testCases := []struct {
-		name      string
-		createPt  func() *paillier.Plaintext
+		name     string
+		createPt func() *paillier.Plaintext
 	}{
 		{
 			name: "zero",
@@ -236,19 +237,19 @@ func TestRoundTrip_EncryptDecrypt_WithSerialization(t *testing.T) {
 	ciphertext, nonce, err := enc.Encrypt(original, pk, crand.Reader)
 	require.NoError(t, err)
 
-	// Serialize plaintext
+	// Serialise plaintext
 	plaintextData, err := serde.MarshalCBOR(original)
 	require.NoError(t, err)
 
-	// Serialize ciphertext
+	// Serialise ciphertext
 	ciphertextData, err := serde.MarshalCBOR(ciphertext)
 	require.NoError(t, err)
 
-	// Serialize nonce
+	// Serialise nonce
 	nonceData, err := serde.MarshalCBOR(nonce)
 	require.NoError(t, err)
 
-	// Serialize keys
+	// Serialise keys
 	skData, err := serde.MarshalCBOR(sk)
 	require.NoError(t, err)
 	pkData, err := serde.MarshalCBOR(pk)
@@ -336,7 +337,7 @@ func TestHomomorphicOperations_AfterDeserialization(t *testing.T) {
 	ct2, _, err := enc.Encrypt(pt2, pk, crand.Reader)
 	require.NoError(t, err)
 
-	// Serialize the ciphertexts
+	// Serialise the ciphertexts
 	ct1Data, err := serde.MarshalCBOR(ct1)
 	require.NoError(t, err)
 	ct2Data, err := serde.MarshalCBOR(ct2)
@@ -376,7 +377,7 @@ func TestSelfEncryption_AfterDeserialization(t *testing.T) {
 	plaintext, err := ps.Sample(nil, nil, crand.Reader)
 	require.NoError(t, err)
 
-	// Serialize the private key
+	// Serialise the private key
 	skData, err := serde.MarshalCBOR(sk)
 	require.NoError(t, err)
 
@@ -413,7 +414,7 @@ func TestPublicKey_DerivedFields_AfterDeserialization(t *testing.T) {
 	_ = original.NonceSpace()
 	_ = original.CiphertextSpace()
 
-	// Serialize
+	// Serialise
 	data, err := serde.MarshalCBOR(original)
 	require.NoError(t, err)
 
@@ -455,7 +456,7 @@ func TestPrivateKey_Precomputation_AfterDeserialization(t *testing.T) {
 	original, _, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
 
-	// Serialize
+	// Serialise
 	data, err := serde.MarshalCBOR(original)
 	require.NoError(t, err)
 
@@ -485,7 +486,7 @@ func TestPrivateKey_Precomputation_AfterDeserialization(t *testing.T) {
 func TestZeroValuedPlaintext_CBOR(t *testing.T) {
 	t.Parallel()
 
-	// Test that new(paillier.Plaintext) can be serialized/deserialized
+	// Test that new(paillier.Plaintext) can be serialised/deserialized
 	// This is important for the range proof which uses dummy plaintexts
 	original := new(paillier.Plaintext)
 
@@ -509,7 +510,7 @@ func TestZeroValuedPlaintext_CBOR(t *testing.T) {
 func TestZeroValuedNonce_CBOR(t *testing.T) {
 	t.Parallel()
 
-	// Test that new(paillier.Nonce) can be serialized/deserialized
+	// Test that new(paillier.Nonce) can be serialised/deserialized
 	original := new(paillier.Nonce)
 
 	// Marshal

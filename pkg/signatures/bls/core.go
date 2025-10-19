@@ -4,14 +4,15 @@ import (
 	"io"
 	"slices"
 
+	"golang.org/x/crypto/hkdf"
+	"golang.org/x/crypto/sha3"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
-	"golang.org/x/crypto/hkdf"
-	"golang.org/x/crypto/sha3"
-	"golang.org/x/sync/errgroup"
 )
 
 // TODO: redo

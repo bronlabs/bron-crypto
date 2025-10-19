@@ -13,7 +13,7 @@ type TestParticipant interface {
 }
 
 // MapO2I maps the outputs of all participants in a round of a protocol to the inputs of the next round
-// with serializing and deserializing them throughout the process.
+// with serialising and deserializing them throughout the process.
 func MapO2I[
 	P TestParticipant, BcastT, UnicastT network.Message,
 ](
@@ -36,7 +36,7 @@ func MapO2I[
 }
 
 // MapBroadcastO2I maps the broadcasts of all participants in a round of a protocol to the inputs of the next round
-// with serializing and deserializing them throughout the process.
+// with serialising and deserializing them throughout the process.
 func MapBroadcastO2I[
 	P interface {
 		SharingID() sharing.ID
@@ -67,7 +67,7 @@ func MapBroadcastO2I[
 }
 
 // MapUnicastO2I maps the P2P messages of all participants in a round of a protocol to the inputs of the next round
-// with serializing and deserializing them throughout the process.
+// with serialising and deserializing them throughout the process.
 func MapUnicastO2I[
 	P interface {
 		SharingID() sharing.ID

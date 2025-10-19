@@ -2,13 +2,15 @@ package signing_test
 
 import (
 	"bytes"
-	"crypto/rand"
+	crand "crypto/rand"
 	"crypto/sha256"
 	"crypto/sha3"
 	"io"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
@@ -27,7 +29,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22/signing"
 	ltu "github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
-	"github.com/stretchr/testify/require"
 )
 
 // TestLindell22DKGAndSign tests the complete DKG and signing flow for all variants
@@ -559,7 +560,7 @@ func TestLindell22ConcurrentSigning(t *testing.T) {
 
 	t.Run("BIP340", func(t *testing.T) {
 		t.Parallel()
-		testConcurrentSigningWithScheme(t, func(prng io.Reader) (interface{}, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
+		testConcurrentSigningWithScheme(t, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
 			scheme, err := bip340.NewScheme(prng)
 			if err != nil {
 				return nil, nil, err
@@ -571,7 +572,7 @@ func TestLindell22ConcurrentSigning(t *testing.T) {
 
 	t.Run("VanillaSchnorr", func(t *testing.T) {
 		t.Parallel()
-		testConcurrentSigningWithScheme(t, func(prng io.Reader) (interface{}, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
+		testConcurrentSigningWithScheme(t, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
 			group := k256.NewCurve()
 			scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
 			if err != nil {
@@ -583,7 +584,7 @@ func TestLindell22ConcurrentSigning(t *testing.T) {
 	})
 }
 
-func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) (interface{}, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
+func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
 	threshold := uint(3)
 	total := uint(5)
 	numMessages := 5
@@ -761,7 +762,7 @@ func TestLindell22DifferentQuorums(t *testing.T) {
 	t.Run("BIP340", func(t *testing.T) {
 		for i, quorumIDs := range quorumCombinations {
 			t.Run(string(rune('A'+i)), func(t *testing.T) {
-				testDifferentQuorumsWithScheme(t, threshold, total, quorumIDs, func(prng io.Reader) (interface{}, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
+				testDifferentQuorumsWithScheme(t, threshold, total, quorumIDs, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
 					scheme, err := bip340.NewScheme(prng)
 					if err != nil {
 						return nil, nil, err
@@ -776,7 +777,7 @@ func TestLindell22DifferentQuorums(t *testing.T) {
 	t.Run("VanillaSchnorr", func(t *testing.T) {
 		for i, quorumIDs := range quorumCombinations {
 			t.Run(string(rune('A'+i)), func(t *testing.T) {
-				testDifferentQuorumsWithScheme(t, threshold, total, quorumIDs, func(prng io.Reader) (interface{}, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
+				testDifferentQuorumsWithScheme(t, threshold, total, quorumIDs, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
 					group := k256.NewCurve()
 					scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
 					if err != nil {
@@ -790,7 +791,7 @@ func TestLindell22DifferentQuorums(t *testing.T) {
 	})
 }
 
-func testDifferentQuorumsWithScheme(t *testing.T, threshold, total uint, quorumIDs []sharing.ID, createScheme func(io.Reader) (interface{}, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
+func testDifferentQuorumsWithScheme(t *testing.T, threshold, total uint, quorumIDs []sharing.ID, createScheme func(io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
 	// Setup
 	group := k256.NewCurve()
 	sid := network.SID(sha3.Sum256([]byte("test-different-quorums")))
@@ -914,12 +915,12 @@ func TestLindell22EdgeCases(t *testing.T) {
 	}
 
 	// Fill large message with random data
-	rand.Read(testCases[4].message)
+	crand.Read(testCases[4].message)
 
 	t.Run("BIP340", func(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				testEdgeCasesWithScheme(t, tc.message, func(prng io.Reader) (interface{}, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
+				testEdgeCasesWithScheme(t, tc.message, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
 					scheme, err := bip340.NewScheme(prng)
 					if err != nil {
 						return nil, nil, err
@@ -934,7 +935,7 @@ func TestLindell22EdgeCases(t *testing.T) {
 	t.Run("VanillaSchnorr", func(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				testEdgeCasesWithScheme(t, tc.message, func(prng io.Reader) (interface{}, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
+				testEdgeCasesWithScheme(t, tc.message, func(prng io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error) {
 					group := k256.NewCurve()
 					scheme, err := vanilla.NewScheme(group, sha256.New, false, true, nil, prng)
 					if err != nil {
@@ -948,7 +949,7 @@ func TestLindell22EdgeCases(t *testing.T) {
 	})
 }
 
-func testEdgeCasesWithScheme(t *testing.T, message []byte, createScheme func(io.Reader) (interface{}, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
+func testEdgeCasesWithScheme(t *testing.T, message []byte, createScheme func(io.Reader) (any, tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, []byte], error)) {
 	threshold := uint(2)
 	total := uint(3)
 
@@ -1068,8 +1069,8 @@ func TestLindell22DeterministicSigning(t *testing.T) {
 	sid := network.SID(sha3.Sum256([]byte("test-deterministic")))
 	tape := hagrid.NewTranscript("TestDeterministic")
 
-	// Note: BIP340 is deterministic, vanilla Schnorr is randomized
-	// So we only test BIP340 here for deterministic behavior
+	// Note: BIP340 is deterministic, vanilla Schnorr is randomised
+	// So we only test BIP340 here for deterministic behaviour
 	t.Run("BIP340", func(t *testing.T) {
 		// Create two identical PRNGs with same seed
 		seed := uint64(12345)

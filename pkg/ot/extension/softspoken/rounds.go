@@ -92,7 +92,7 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "bad transposing t_0 for SoftSpoken COTe")
 	}
-	// step 1.9: Randomize by hashing t_{0,j,i}  j∈[η'], ∀i∈[κ]
+	// step 1.9: Randomise by hashing t_{0,j,i}  j∈[η'], ∀i∈[κ]
 
 	receiverOutput.Messages = make([][][]byte, r.suite.Xi())
 	for j := 0; j < r.suite.Xi(); j++ {

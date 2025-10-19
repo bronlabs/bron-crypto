@@ -179,6 +179,7 @@ func VerifyWithPRNG(prng io.Reader) VerifierOption {
 
 type Verifier struct {
 	schnorrlike.VerifierTrait[*Variant, *GroupElement, *Scalar, *Message]
+
 	prng io.Reader
 }
 
@@ -188,7 +189,7 @@ func SerializeSignature(signature *Signature) ([]byte, error) {
 	}
 	rx, err := signature.R.AffineX()
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to serialize signature")
+		return nil, errs.WrapSerialisation(err, "failed to serialise signature")
 	}
 	s := signature.S.Bytes()
 	out := slices.Concat(rx.Bytes(), s)

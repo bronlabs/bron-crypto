@@ -37,6 +37,7 @@ type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 
 type Alice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	participant[P, B, S]
+
 	sender *softspoken.Sender
 	g      []S
 	alpha  [][2][]S
@@ -44,6 +45,7 @@ type Alice[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFi
 
 type Bob[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	participant[P, B, S]
+
 	receiver *softspoken.Receiver
 	g        []S
 	beta     []byte

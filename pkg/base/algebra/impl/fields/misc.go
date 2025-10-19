@@ -1,9 +1,10 @@
 package fields
 
 import (
+	"golang.org/x/exp/constraints"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"golang.org/x/exp/constraints"
 )
 
 func IsNegative[FP impl.PrimeFieldElementPtr[FP, F], F any](v *F) (neg ct.Bool) {

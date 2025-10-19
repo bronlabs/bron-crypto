@@ -6,11 +6,12 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -54,13 +55,13 @@ func Test_HappyPath(t *testing.T) {
 	t.Run("messages match", func(t *testing.T) {
 		t.Parallel()
 
-		require.Equal(t, senderOutput.InferredXi(), XI)
-		require.Equal(t, senderOutput.InferredL(), L)
+		require.Equal(t, XI, senderOutput.InferredXi())
+		require.Equal(t, L, senderOutput.InferredL())
 		require.Equal(t, senderOutput.InferredMessageBytesLen(), hashFunc().Size())
 
 		require.Equal(t, receiverOutput.Choices, choices)
-		require.Equal(t, receiverOutput.InferredXi(), XI)
-		require.Equal(t, receiverOutput.InferredL(), L)
+		require.Equal(t, XI, receiverOutput.InferredXi())
+		require.Equal(t, L, receiverOutput.InferredL())
 		require.Equal(t, receiverOutput.InferredMessageBytesLen(), hashFunc().Size())
 
 		for i := range XI {

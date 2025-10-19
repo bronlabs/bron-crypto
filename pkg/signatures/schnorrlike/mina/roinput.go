@@ -6,7 +6,6 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/bitvec"
-
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )

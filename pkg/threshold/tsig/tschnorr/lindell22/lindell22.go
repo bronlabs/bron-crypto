@@ -47,7 +47,7 @@ func NewCommitmentKey(sid network.SID, pid sharing.ID, quorumBytes [][]byte) (Co
 	return key, nil
 }
 
-// sorted quorum IDs in big-endian format, used for commitment scheme CRS and dlog proofs
+// sorted quorum IDs in big-endian format, used for commitment scheme CRS and dlog proofs.
 func QuorumBytes(quorum ds.Set[sharing.ID]) [][]byte {
 	if quorum == nil || quorum.Size() == 0 {
 		return nil

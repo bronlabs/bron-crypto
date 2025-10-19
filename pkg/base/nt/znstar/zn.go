@@ -23,7 +23,7 @@ import (
 // 		zMod:  zMod,
 // 		order: cardinal.Unknown(),
 // 	}, nil
-// }
+// }.
 
 // func NewUnitGroup[X modular.Arithmetic](arith X) (*UZMod[X], error) {
 // 	if utils.IsNil(arith) {
@@ -38,7 +38,7 @@ import (
 // 		order: arith.MultiplicativeOrder(),
 // 		arith: arith,
 // 	}, nil
-// }
+// }.
 
 // func NewUnit[X modular.Arithmetic](v *num.Uint, g *UZMod[X]) (Unit, error) {
 // 	if v == nil {
@@ -54,7 +54,7 @@ import (
 // 		return nil, errs.NewValue("v is not in the same modulus as g")
 // 	}
 // 	return &unit{v: v.Clone().Value(), g: g}, nil
-// }
+// }.
 
 type UZMod[X modular.Arithmetic] struct {
 	zMod  *num.ZMod
@@ -194,7 +194,7 @@ func (us *UZMod[X]) AmbientGroup() *num.ZMod {
 	return us.zMod
 }
 
-// ======= Units =======
+// ======= Units =======.
 
 func operandsAreValid(x, y Unit) error {
 	if x == nil {

@@ -4,6 +4,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
@@ -22,10 +24,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22/keygen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22/signing"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/stretchr/testify/require"
 )
 
-// DoLindell22DKG runs a complete DKG process and returns Lindell22 shards
+// DoLindell22DKG runs a complete DKG process and returns Lindell22 shards.
 func DoLindell22DKG[
 	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S],
 ](
@@ -50,7 +51,7 @@ func DoLindell22DKG[
 	return shards, nil
 }
 
-// CreateLindell22Cosigners creates a set of cosigners for testing
+// CreateLindell22Cosigners creates a set of cosigners for testing.
 func CreateLindell22Cosigners[
 	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](
@@ -157,7 +158,7 @@ func DoLindell22Round3[
 	return psigs, nil
 }
 
-// CreateCorruptedPartialSignature creates an invalid partial signature for testing
+// CreateCorruptedPartialSignature creates an invalid partial signature for testing.
 func CreateCorruptedPartialSignature[
 	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S],
 ](
@@ -179,7 +180,7 @@ func CreateCorruptedPartialSignature[
 	}
 }
 
-// NewFiatShamirCompiler creates a new Fiat-Shamir compiler for the given protocol
+// NewFiatShamirCompiler creates a new Fiat-Shamir compiler for the given protocol.
 func NewFiatShamirCompiler[
 	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S],
 ](

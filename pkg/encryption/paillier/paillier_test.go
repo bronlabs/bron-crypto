@@ -5,8 +5,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 )
 
 func Test_Sanity(t *testing.T) {

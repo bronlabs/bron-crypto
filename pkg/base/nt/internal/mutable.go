@@ -5,11 +5,12 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/cronokirby/saferith"
+	"github.com/fxamacker/cbor/v2"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	aimpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/cronokirby/saferith"
-	"github.com/fxamacker/cbor/v2"
 )
 
 // TODO: change ModInt -> ModI

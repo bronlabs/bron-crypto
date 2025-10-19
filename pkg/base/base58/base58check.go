@@ -6,29 +6,29 @@ package base58
 
 // 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 // 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-// )
+// ).
 
 // const (
 // 	ChecksumLen          int = 4
 // 	VersionLen           int = 1
 // 	minimumDecodedLength     = VersionLen + ChecksumLen
-// )
+// ).
 
 // type (
 // 	VersionPrefix byte
 // 	Checksum      [ChecksumLen]byte
-// )
+// ).
 
 // func (c Checksum) Equal(other Checksum) bool {
 // 	return ct.SliceEqual(c[:], other[:]) == 1
-// }
+// }.
 
 // func DeriveChecksum(input []byte) (cksum Checksum) {
 // 	h := sha256.Sum256(input)
 // 	h2 := sha256.Sum256(h[:])
 // 	copy(cksum[:], h2[:ChecksumLen])
 // 	return
-// }
+// }.
 
 // func CheckEncode(input []byte, version VersionPrefix) Base58 {
 // 	b := make([]byte, 0, VersionLen+len(input)+ChecksumLen)
@@ -37,7 +37,7 @@ package base58
 // 	cksum := DeriveChecksum(b)
 // 	b = append(b, cksum[:]...)
 // 	return Encode(b)
-// }
+// }.
 
 // func CheckDecode(input Base58) (result []byte, version VersionPrefix, err error) {
 // 	decoded := Decode(input)
@@ -58,4 +58,4 @@ package base58
 // 	}
 // 	result = versionAndPayload[VersionLen:]
 // 	return
-// }
+// }.

@@ -1,13 +1,14 @@
 package znstar
 
 import (
+	"github.com/fxamacker/cbor/v2"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/fxamacker/cbor/v2"
 )
 
 // Wrapper types for unit to support dual-tag registration
@@ -216,10 +217,10 @@ func (us *UZMod[X]) MarshalCBOR() ([]byte, error) {
 	case *UZMod[*modular.OddPrimeSquareFactors]:
 		tag = UZModOddPrimeSquareTag
 	default:
-		return nil, errs.NewValue("unsupported UZMod specialization in MarshalCBOR")
+		return nil, errs.NewValue("unsupported UZMod specialisation in MarshalCBOR")
 	}
 
-	// Serialize the arithmetic object (carries modulus and order)
+	// Serialise the arithmetic object (carries modulus and order)
 	dto := &uZModDTO{Arith: us.arith}
 	return serde.MarshalCBORTagged(dto, tag)
 }
@@ -247,7 +248,7 @@ func (us *UZMod[X]) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// Group serialization DTOs and methods
+// Group serialisation DTOs and methods
 
 type paillierGroupUnknownDTO struct {
 	UZMod *UZMod[*modular.SimpleModulus] `cbor:"uzmod"`

@@ -13,6 +13,7 @@ const (
 
 type Hasher struct {
 	hash.Hash
+
 	tag string
 }
 

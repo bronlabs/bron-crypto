@@ -150,7 +150,7 @@ func (v *Variant) Clone() *Variant {
 	return out
 }
 
-// ============ MPC Methods ============
+// ============ MPC Methods ============.
 
 var _ tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, Message] = (*Variant)(nil)
 

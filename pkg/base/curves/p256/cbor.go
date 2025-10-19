@@ -1,9 +1,10 @@
 package p256
 
 import (
+	"github.com/fxamacker/cbor/v2"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/fxamacker/cbor/v2"
 )
 
 var (

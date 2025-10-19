@@ -10,10 +10,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_BasicSignature(t *testing.T) {
@@ -94,7 +95,7 @@ func decodeHex(s string) ([]byte, error) {
 }
 
 // Helper function to read test vector file
-func readTestVector(t *testing.T, filename string, v interface{}) {
+func readTestVector(t *testing.T, filename string, v any) {
 	t.Helper()
 	data, err := os.ReadFile(filename)
 	require.NoError(t, err, "Failed to read test vector file: %s", filename)
@@ -161,7 +162,7 @@ func TestSignVectors(t *testing.T) {
 
 			// Verify signature matches expected
 			actualSig := signature.Bytes()
-			require.EqualValues(t, expectedSig, actualSig, "Signature mismatch for %s", file.Name())
+			require.Equal(t, expectedSig, actualSig, "Signature mismatch for %s", file.Name())
 
 		})
 	}
@@ -282,7 +283,7 @@ func TestAggregateVectors(t *testing.T) {
 				signatures = append(signatures, sig)
 			}
 			if strings.Contains(file.Name(), "na_signatures") {
-				require.Len(t, signatures, 0)
+				require.Empty(t, signatures)
 				return
 			}
 			// Aggregate signatures
@@ -1293,7 +1294,7 @@ func TestEdgeCases(t *testing.T) {
 		clonedPOP := nilPOP.Clone()
 		require.Nil(t, clonedPOP)
 
-		// Note: Signature.Clone() doesn't handle nil case, which is expected behavior
+		// Note: Signature.Clone() doesn't handle nil case, which is expected behaviour
 	})
 }
 

@@ -1,15 +1,17 @@
 package ecbbot
 
 import (
+	"golang.org/x/crypto/blake2b"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
-	"golang.org/x/crypto/blake2b"
 )
 
 type Suite[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	ot.DefaultSuite
+
 	group       algebra.PrimeGroup[G, S]
 	scalarField algebra.PrimeField[S]
 }

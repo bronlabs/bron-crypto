@@ -38,7 +38,7 @@ func (pts *PlaintextSpace) Sample(lowInclusive, highExclusive *Plaintext, prng i
 		}
 		v, err := num.Z().FromUintSymmetric(sampled)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "failed to create centered plaintext from nat")
+			return nil, errs.WrapFailed(err, "failed to create centred plaintext from nat")
 		}
 		return &Plaintext{
 			v: v,
@@ -69,7 +69,7 @@ func (pts *PlaintextSpace) FromNat(x *numct.Nat) (*Plaintext, error) {
 	}
 	z, err := num.Z().FromUintSymmetric(y)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create centered plaintext from nat")
+		return nil, errs.WrapFailed(err, "failed to create centred plaintext from nat")
 	}
 	return &Plaintext{
 		v: z,
@@ -80,7 +80,7 @@ func (pts *PlaintextSpace) FromNat(x *numct.Nat) (*Plaintext, error) {
 func (pts *PlaintextSpace) FromInt(x *numct.Int) (*Plaintext, error) {
 	y, err := num.Z().FromIntCT(x)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create centered plaintext from int")
+		return nil, errs.WrapFailed(err, "failed to create centred plaintext from int")
 	}
 	if !y.IsInRange(pts.N()) {
 		return nil, errs.NewFailed("int is out of range for plaintext space")
@@ -96,7 +96,7 @@ type Plaintext struct {
 	n *num.NatPlus
 }
 
-func (cp *Plaintext) Normalize() *num.Uint {
+func (cp *Plaintext) Normalise() *num.Uint {
 	return cp.v.Mod(cp.n)
 }
 
@@ -114,13 +114,13 @@ func (cp *Plaintext) N() *num.NatPlus {
 
 func (cp *Plaintext) isValid(x *Plaintext) {
 	if x == nil {
-		panic("cannot operate on nil centered plaintexts")
+		panic("cannot operate on nil centred plaintexts")
 	}
 	if !cp.n.Equal(x.n) {
-		panic("cannot operate on centered plaintexts with different moduli")
+		panic("cannot operate on centred plaintexts with different moduli")
 	}
 	if !x.v.IsInRange(cp.n) {
-		panic("cannot operate on centered plaintexts with values out of range")
+		panic("cannot operate on centred plaintexts with values out of range")
 	}
 }
 

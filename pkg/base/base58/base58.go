@@ -7,18 +7,18 @@ package base58
 // 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 // 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 // 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-// )
+// ).
 
 // const (
 // 	Alphabet     string = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 // 	alphabetIdx0 byte   = '1'
-// )
+// ).
 
-// type Base58 string
+// type Base58 string.
 
 // func (b Base58) Equal(other Base58) bool {
 // 	return ct.SliceEqual([]byte(b), []byte(other)) == 1
-// }
+// }.
 
 // var (
 // 	radix58 = num.N().FromUint64(58)
@@ -28,7 +28,7 @@ package base58
 // 	// Initialise once in init().
 // 	b58      [256]byte
 // 	digitNat [58]*num.Nat // tiny Nat values 0…57
-// )
+// ).
 
 // func init() {
 // 	for i := range b58 {
@@ -41,7 +41,7 @@ package base58
 // 	if alphabetIdx0 != Alphabet[0] {
 // 		panic(errs.NewArgument("alphabetIdx0 must be the first character of the alphabet"))
 // 	}
-// }
+// }.
 
 // func Encode(data []byte) Base58 {
 // 	x, err := num.N().FromBytes(data)
@@ -62,7 +62,7 @@ package base58
 // 	}
 // 	sliceutils.Reverse(answer)
 // 	return Base58(string(answer))
-// }
+// }.
 
 // func Decode(s Base58) []byte {
 // 	answer := zero
@@ -88,4 +88,4 @@ package base58
 // 	val := make([]byte, flen)
 // 	copy(val[leadingZerosCount:], tmpval)
 // 	return val
-// }
+// }.

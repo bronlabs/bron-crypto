@@ -67,7 +67,7 @@ type BytesLikeFactory[E any] interface {
 // TODO: remove. Maybe move to experimental.
 // type SamplableStructure[S, E any] interface {
 // 	Random(prng io.Reader, opts ...func(S) error) (E, error)
-// }
+// }.
 
 func DeriveHashCode[T ~[]byte](xs ...T) HashCode {
 	h := fnv.New64a()

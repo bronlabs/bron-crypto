@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
-// *** Magma
+// *** Magma.
 
 type magmaElement[E any] interface {
 	Set(v E)
@@ -26,7 +26,7 @@ type MagmaElementPtr[E MagmaElement[E], T any] interface {
 	MagmaElement[E]
 }
 
-// *** Monoid
+// *** Monoid.
 
 type monoidElement[E any] interface {
 	magmaElement[E]
@@ -44,7 +44,7 @@ type MonoidElementPtr[E MonoidElement[E], T any] interface {
 
 //TODO: remove above and embed below
 // TODO: rename to additive group
-// *** Group
+// *** Group.
 
 type groupElement[E any] interface {
 	monoidElement[E]
@@ -59,7 +59,7 @@ type GroupElementPtr[E GroupElement[E], T any] interface {
 	GroupElement[E]
 }
 
-// *** Ring
+// *** Ring.
 
 type ringElement[E any] interface {
 	groupElement[E]
@@ -79,7 +79,7 @@ type RingElementPtr[E RingElement[E], T any] interface {
 	RingElement[E]
 }
 
-// *** Finite Field
+// *** Finite Field.
 
 type finiteFieldElement[E any] interface {
 	ringElement[E]
@@ -96,7 +96,7 @@ type FiniteFieldElementPtr[E FiniteFieldElement[E], T any] interface {
 	FiniteFieldElement[E]
 }
 
-// *** Prime field
+// *** Prime field.
 
 type primeFieldElement[E any] interface {
 	finiteFieldElement[E]

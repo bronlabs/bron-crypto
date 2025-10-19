@@ -3,11 +3,12 @@ package numct
 import (
 	"math/big"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/internal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	"github.com/cronokirby/saferith"
 )
 
 var (

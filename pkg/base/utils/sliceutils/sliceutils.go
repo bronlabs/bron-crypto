@@ -42,7 +42,6 @@ func Repeat[S ~[]T, T any](x T, n int) S {
 		out[i] = x
 	}
 	return out
-
 }
 
 func Reversed[S ~[]T, T any](xs S) S {

@@ -1,6 +1,6 @@
 package crtp
 
-// ******************** BiMagma
+// ******************** BiMagma.
 
 type DoubleMagma[E any] Magma[E]
 type DoubleMagmaElement[E any] interface {
@@ -8,7 +8,7 @@ type DoubleMagmaElement[E any] interface {
 	OtherOp(E) E
 }
 
-// ******************** HemiRing
+// ******************** HemiRing.
 type HemiRing[E any] interface {
 	DoubleMagma[E]
 	AdditiveSemiGroup[E]
@@ -22,7 +22,7 @@ type HemiRingElement[E any] interface {
 	MultiplicativeSemiGroupElement[E]
 }
 
-// ******************** SemiRing
+// ******************** SemiRing.
 
 type SemiRing[RE any] interface {
 	HemiRing[RE]
@@ -34,7 +34,7 @@ type SemiRingElement[RE any] interface {
 	MultiplicativeMonoidElement[RE]
 }
 
-// ******************** Rig
+// ******************** Rig.
 
 type Rig[RE any] interface {
 	SemiRing[RE]
@@ -46,7 +46,7 @@ type RigElement[RE any] interface {
 	AdditiveMonoidElement[RE]
 }
 
-// ******************** SemiDomain
+// ******************** SemiDomain.
 
 type EuclideanSemiDomain[RE any] interface {
 	Rig[RE]
@@ -60,7 +60,7 @@ type EuclideanSemiDomainElement[RE any] interface {
 	EuclideanValuation() RE
 }
 
-// ******************** Rng
+// ******************** Rng.
 
 type Rng[RE any] interface {
 	HemiRing[RE]
@@ -72,7 +72,7 @@ type RngElement[RE any] interface {
 	AdditiveGroupElement[RE]
 }
 
-// ******************** Ring
+// ******************** Ring.
 
 type Ring[RE any] interface {
 	Rig[RE]
@@ -85,7 +85,7 @@ type RingElement[RE any] interface {
 	RngElement[RE]
 }
 
-// ******************** Domains
+// ******************** Domains.
 
 type EuclideanDomain[RE any] interface {
 	Ring[RE]
@@ -97,7 +97,7 @@ type EuclideanDomainElement[RE any] interface {
 	EuclideanSemiDomainElement[RE]
 }
 
-// ******************** Fields
+// ******************** Fields.
 
 // TODO: add finite field back
 type Field[FE any] interface {

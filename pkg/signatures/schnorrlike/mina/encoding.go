@@ -5,14 +5,14 @@ package mina
 
 // 	"github.com/bronlabs/bron-crypto/pkg/base/base58"
 // 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-// )
+// ).
 
 // // https://github.com/MinaProtocol/mina/blob/develop/src/lib/base58_check/version_bytes.ml
 // const (
 // 	PrivateKeyBase58VersionPrefix                  base58.VersionPrefix = 0x5A
 // 	NonZeroCurvePointCompressedBase58VersionPrefix base58.VersionPrefix = 0xCB
 // 	SignatureBase58VersionPrefix                   base58.VersionPrefix = 0x9A
-// )
+// ).
 
 // func EncodePublicKey(publicKey *PublicKey) (base58.Base58, error) {
 // 	if publicKey == nil {
@@ -20,7 +20,7 @@ package mina
 // 	}
 // 	enc := base58.NewEncoder(NonZeroCurvePointCompressedBase58VersionPrefix)
 // 	return enc.Encode(publicKey.V.Bytes()), nil
-// }
+// }.
 
 // func DecodePublicKey(s base58.Base58) (*PublicKey, error) {
 // 	dec := base58.NewEncoder(NonZeroCurvePointCompressedBase58VersionPrefix)
@@ -43,7 +43,7 @@ package mina
 // 		return nil, errs.WrapFailed(err, "failed to create public key")
 // 	}
 // 	return publicKey, nil
-// }
+// }.
 
 // func EncodePrivateKey(privateKey *PrivateKey) (base58.Base58, error) {
 // 	if privateKey == nil {
@@ -51,7 +51,7 @@ package mina
 // 	}
 // 	enc := base58.NewEncoder(PrivateKeyBase58VersionPrefix)
 // 	return enc.Encode(privateKey.V.Bytes()), nil
-// }
+// }.
 
 // func DecodePrivateKey(s base58.Base58) (*PrivateKey, error) {
 // 	dec := base58.NewEncoder(PrivateKeyBase58VersionPrefix)
@@ -73,7 +73,7 @@ package mina
 // 		return nil, errs.WrapFailed(err, "failed to create private key")
 // 	}
 // 	return privateKey, nil
-// }
+// }.
 
 // func EncodeSignature(signature *Signature) (base58.Base58, error) {
 // 	if signature == nil {
@@ -81,11 +81,11 @@ package mina
 // 	}
 // 	data, err := SerializeSignature(signature)
 // 	if err != nil {
-// 		return "", errs.WrapSerialisation(err, "failed to serialize signature")
+// 		return "", errs.WrapSerialisation(err, "failed to serialise signature")
 // 	}
 // 	enc := base58.NewEncoder(SignatureBase58VersionPrefix)
 // 	return enc.Encode(data), nil
-// }
+// }.
 
 // func DecodeSignature(s base58.Base58) (*Signature, error) {
 // 	dec := base58.NewEncoder(SignatureBase58VersionPrefix)
@@ -101,4 +101,4 @@ package mina
 // 		return nil, errs.WrapSerialisation(err, "failed to deserialize signature")
 // 	}
 // 	return sig, nil
-// }
+// }.

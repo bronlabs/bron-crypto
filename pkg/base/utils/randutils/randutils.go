@@ -2,8 +2,9 @@ package randutils
 
 import (
 	"encoding/binary"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"io"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 func RandomUint64(prng io.Reader) (uint64, error) {

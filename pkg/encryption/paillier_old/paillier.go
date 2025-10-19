@@ -10,9 +10,9 @@ package paillier
 // 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 // 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 // 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-// )
+// ).
 
-// type KeyGenerator struct{}
+// type KeyGenerator struct{}.
 
 // func (kg *KeyGenerator) Generate(prng io.Reader) (*PrivateKey, *PublicKey, error) {
 // 	if prng == nil {
@@ -69,9 +69,9 @@ package paillier
 // 	}
 // 	pk := &PublicKey{NN: exp.N2, N: exp.N, NNat: exp.N.Nat()}
 // 	return sk, pk, nil
-// }
+// }.
 
-// type Encrypter struct{}
+// type Encrypter struct{}.
 
 // func (e *Encrypter) Encrypt(plaintext *Plaintext, receiver *PublicKey, prng io.Reader) (*Ciphertext, *Nonce, error) {
 // 	nonceValue, err := receiver.N.Random(prng)
@@ -84,7 +84,7 @@ package paillier
 // 		return nil, nil, errs.WrapFailed(err, "failed to encrypt with nonce")
 // 	}
 // 	return ciphertext, nonce, nil
-// }
+// }.
 
 // func (e *Encrypter) EncryptWithNonce(plaintext *Plaintext, receiver *PublicKey, nonce *Nonce) (*Ciphertext, error) {
 // 	var rn numct.Nat
@@ -100,7 +100,7 @@ package paillier
 // 	receiver.NN.Mod(&out, &out)
 
 // 	return &Ciphertext{V: &out}, nil
-// }
+// }.
 
 // func (e *Encrypter) EncryptAdic(plaintext *Plaintext, receiver *PublicKey, prng io.Reader) (*Ciphertext, *Nonce, error) {
 // 	nonceValue, err := receiver.N.Random(prng)
@@ -113,7 +113,7 @@ package paillier
 // 		return nil, nil, errs.WrapFailed(err, "failed to encrypt with nonce")
 // 	}
 // 	return ciphertext, nonce, nil
-// }
+// }.
 
 // func (e *Encrypter) EncryptWithNonceAdic(plaintext *Plaintext, receiver *PublicKey, nonce *Nonce) (*Ciphertext, error) {
 // 	var rn numct.Nat
@@ -128,11 +128,11 @@ package paillier
 // 	receiver.NN.Mod(&out, &out)
 
 // 	return &Ciphertext{V: &out}, nil
-// }
+// }.
 
 // type Decrypter struct {
 // 	sk *PrivateKey
-// }
+// }.
 
 // func (d *Decrypter) VanillaDecrypt(ciphertext *Ciphertext) (*Plaintext, error) {
 // 	// Compute c^λ mod n²
@@ -152,7 +152,7 @@ package paillier
 // 	d.sk.N.ModMul(&plaintext, &LcLambda, d.sk.Mu)
 
 // 	return &Plaintext{V: &plaintext}, nil
-// }
+// }.
 
 // func (d *Decrypter) Decrypt(ciphertext *Ciphertext) (*Plaintext, error) {
 // 	var mp, mq numct.Nat
@@ -174,17 +174,17 @@ package paillier
 
 // 	// CRT recombine into modulo n = p*q.
 // 	return &Plaintext{V: d.sk.M.CrtModN.Recombine(&mp, &mq)}, nil
-// }
+// }.
 
 // func (d *Decrypter) lp(x *numct.Nat) {
 // 	d.sk.M.P.Squared.ModSub(x, x, numct.NatOne())
 // 	d.sk.M.P.Factor.Quo(x, x)
-// }
+// }.
 
 // func (d *Decrypter) lq(x *numct.Nat) {
 // 	d.sk.M.Q.Squared.ModSub(x, x, numct.NatOne())
 // 	d.sk.M.Q.Factor.Quo(x, x)
-// }
+// }.
 
 // type PrivateKey struct {
 // 	M      *modular.OddPrimeSquareFactors
@@ -195,42 +195,42 @@ package paillier
 // 	N2     *numct.ModulusOdd
 // 	Hp     *numct.Nat
 // 	Hq     *numct.Nat
-// }
+// }.
 
 // func (sk *PrivateKey) PublicKey() *PublicKey {
 // 	return &PublicKey{NN: sk.N2, N: sk.N, EXP: sk.M, NNat: sk.NNat}
-// }
+// }.
 
 // type PublicKey struct {
 // 	NN   numct.Modulus
 // 	N    numct.Modulus
 // 	NNat *numct.Nat
 // 	EXP  *modular.OddPrimeSquareFactors
-// }
+// }.
 
 // func (pk *PublicKey) Phi(plaintext *Plaintext) *numct.Nat {
 // 	var out numct.Nat
 // 	pk.NN.ModMul(&out, plaintext.V, pk.NNat)
 // 	out.Increment()
 // 	return &out
-// }
+// }.
 
 // func (pk *PublicKey) PhiInto(out *numct.Nat, plaintext *Plaintext) {
 // 	pk.NN.ModMul(out, plaintext.V, pk.NNat)
 // 	out.Increment()
-// }
+// }.
 
 // type Ciphertext struct {
 // 	V *numct.Nat
-// }
+// }.
 
 // type Nonce struct {
 // 	V *numct.Nat
-// }
+// }.
 
 // type Plaintext struct {
 // 	V *numct.Nat
-// }
+// }.
 
 // func rToN(out *numct.Nat, receiver *PublicKey, nonce *Nonce, adic bool) {
 // 	if receiver.EXP != nil {
@@ -242,4 +242,4 @@ package paillier
 // 	}
 // 	// Compute r^n mod n²
 // 	receiver.NN.ModExp(out, nonce.V, receiver.NNat)
-// }
+// }.

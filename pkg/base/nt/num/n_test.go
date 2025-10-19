@@ -693,7 +693,7 @@ func TestNaturalNumbers_Bit(t *testing.T) {
 	require.Equal(t, uint8(1), n.Bit(8)) // bit 8 (first bit of second byte 0x07)
 
 	// Test with single byte number
-	small := num.N().FromUint64(13) // 0x0D = 0b00001101
+	small := num.N().FromUint64(13)          // 0x0D = 0b00001101
 	require.Equal(t, uint8(1), small.Bit(0)) // bit 0
 	require.Equal(t, uint8(0), small.Bit(1)) // bit 1
 	require.Equal(t, uint8(1), small.Bit(2)) // bit 2
@@ -1431,7 +1431,7 @@ func TestNaturalNumbers_Random_Success(t *testing.T) {
 		// We should see all values 0-4 at least once with high probability
 		for i := uint64(0); i < 5; i++ {
 			val := num.N().FromUint64(i).String()
-			require.Greater(t, counts[val], 0, "Value %s should appear at least once", val)
+			require.Positive(t, counts[val], "Value %s should appear at least once", val)
 		}
 	})
 }
@@ -1444,7 +1444,7 @@ func TestNaturalNumbers_FromNatPlus(t *testing.T) {
 	t.Run("Valid NatPlus", func(t *testing.T) {
 		np, err := num.NPlus().FromUint64(42)
 		require.NoError(t, err)
-		
+
 		n, err := num.N().FromNatPlus(np)
 		require.NoError(t, err)
 		require.Equal(t, "42", n.String())
@@ -1544,7 +1544,7 @@ func TestNat_Lsh(t *testing.T) {
 	t.Parallel()
 
 	n := num.N().FromUint64(5) // 101 in binary
-	result := n.Lsh(2)          // Shift left by 2: 10100 = 20
+	result := n.Lsh(2)         // Shift left by 2: 10100 = 20
 	require.Equal(t, "20", result.String())
 }
 

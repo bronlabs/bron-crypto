@@ -7,12 +7,12 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"github.com/cronokirby/saferith"
 )
 
 func newInt(val int64) *numct.Int {
@@ -59,9 +59,9 @@ func TestInt_BitwiseAnd(t *testing.T) {
 			x := newInt(tt.x)
 			y := newInt(tt.y)
 			result := new(numct.Int)
-			
+
 			result.And(x, y)
-			
+
 			assert.Equal(t, tt.expected, result.Int64(), "And result mismatch")
 		})
 	}
@@ -90,9 +90,9 @@ func TestInt_BitwiseOr(t *testing.T) {
 			x := newInt(tt.x)
 			y := newInt(tt.y)
 			result := new(numct.Int)
-			
+
 			result.Or(x, y)
-			
+
 			assert.Equal(t, tt.expected, result.Int64(), "Or result mismatch")
 		})
 	}
@@ -121,9 +121,9 @@ func TestInt_BitwiseXor(t *testing.T) {
 			x := newInt(tt.x)
 			y := newInt(tt.y)
 			result := new(numct.Int)
-			
+
 			result.Xor(x, y)
-			
+
 			assert.Equal(t, tt.expected, result.Int64(), "Xor result mismatch")
 		})
 	}
@@ -149,9 +149,9 @@ func TestInt_BitwiseNot(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			x := newInt(tt.x)
 			result := new(numct.Int)
-			
+
 			result.Not(x)
-			
+
 			assert.Equal(t, tt.expected, result.Int64(), "Not result mismatch")
 		})
 	}
@@ -163,10 +163,10 @@ func TestInt_BitwiseAndCap(t *testing.T) {
 	x := newInt(0xFFFF)
 	y := newInt(0xFF00)
 	result := new(numct.Int)
-	
+
 	// Test with specific capacity
 	result.AndCap(x, y, 32)
-	
+
 	assert.Equal(t, int64(0xFF00), result.Int64(), "AndCap result mismatch")
 	assert.LessOrEqual(t, result.AnnouncedLen(), uint(32), "Capacity should be respected")
 }
@@ -177,10 +177,10 @@ func TestInt_BitwiseOrCap(t *testing.T) {
 	x := newInt(0xFF00)
 	y := newInt(0x00FF)
 	result := new(numct.Int)
-	
+
 	// Test with specific capacity
 	result.OrCap(x, y, 32)
-	
+
 	assert.Equal(t, int64(0xFFFF), result.Int64(), "OrCap result mismatch")
 	assert.LessOrEqual(t, result.AnnouncedLen(), uint(32), "Capacity should be respected")
 }
@@ -191,10 +191,10 @@ func TestInt_BitwiseXorCap(t *testing.T) {
 	x := newInt(0xFFFF)
 	y := newInt(0xFF00)
 	result := new(numct.Int)
-	
+
 	// Test with specific capacity
 	result.XorCap(x, y, 32)
-	
+
 	assert.Equal(t, int64(0x00FF), result.Int64(), "XorCap result mismatch")
 	assert.LessOrEqual(t, result.AnnouncedLen(), uint(32), "Capacity should be respected")
 }
@@ -204,10 +204,10 @@ func TestInt_BitwiseNotCap(t *testing.T) {
 
 	x := newInt(7)
 	result := new(numct.Int)
-	
+
 	// Test with specific capacity
 	result.NotCap(x, 32)
-	
+
 	assert.Equal(t, int64(-8), result.Int64(), "NotCap result mismatch")
 	assert.LessOrEqual(t, result.AnnouncedLen(), uint(32), "Capacity should be respected")
 }
@@ -218,23 +218,23 @@ func TestInt_BitwiseWithBigInts(t *testing.T) {
 	// Test with larger numbers using big.Int
 	x := newIntFromBigInt(big.NewInt(0).SetBytes([]byte{0xFF, 0xFF, 0xFF, 0xFF}))
 	y := newIntFromBigInt(big.NewInt(0).SetBytes([]byte{0xAA, 0xAA, 0xAA, 0xAA}))
-	
+
 	resultAnd := new(numct.Int)
 	resultOr := new(numct.Int)
 	resultXor := new(numct.Int)
-	
+
 	resultAnd.And(x, y)
 	resultOr.Or(x, y)
 	resultXor.Xor(x, y)
-	
+
 	// Verify using big.Int operations
 	bigX := x.Big()
 	bigY := y.Big()
-	
+
 	expectedAnd := new(big.Int).And(bigX, bigY)
 	expectedOr := new(big.Int).Or(bigX, bigY)
 	expectedXor := new(big.Int).Xor(bigX, bigY)
-	
+
 	// Compare using big.Int values since internal byte representation may differ
 	assert.Equal(t, 0, expectedAnd.Cmp(resultAnd.Big()), "And with big ints")
 	assert.Equal(t, 0, expectedOr.Cmp(resultOr.Big()), "Or with big ints")
@@ -569,7 +569,7 @@ func TestInt_DivisionOperations(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				lhs := newInt(tc.lhs)
 				rhs := newInt(tc.rhs)
-				quot := newInt(999) // Initialize with non-zero to verify it gets updated
+				quot := newInt(999) // Initialise with non-zero to verify it gets updated
 				rem := newInt(999)
 				// Since DivModCap doesn't exist for Int, we compute quotient and remainder separately
 				// First compute quotient using integer division
@@ -577,7 +577,7 @@ func TestInt_DivisionOperations(t *testing.T) {
 				if ok == ct.False && tc.rhs != 0 {
 					t.Fatalf("Division failed unexpectedly for %d/%d", tc.lhs, tc.rhs)
 				}
-				
+
 				// Compute remainder: rem = lhs - rhs * quot
 				if ok == ct.True {
 					temp := newInt(0)
@@ -613,7 +613,7 @@ func TestInt_DivisionOperations(t *testing.T) {
 		a.SetInt64(17)
 		result.SetInt64(999) // Set to a known value
 		ok = result.Div(a, b)
-		assert.Equal(t, ct.True, ok) // Now returns true for integer division
+		assert.Equal(t, ct.True, ok)              // Now returns true for integer division
 		assert.Equal(t, int64(3), result.Int64()) // 17/5 = 3 (truncated)
 	})
 
@@ -634,7 +634,7 @@ func TestInt_DivisionOperations(t *testing.T) {
 		bNat := (*numct.Nat)(new(saferith.Nat).SetUint64(5))
 		bMod, modOk := numct.NewModulus(bNat)
 		assert.Equal(t, ct.True, modOk)
-		
+
 		// Test exact division
 		a.SetInt64(20)
 		result.SetInt64(0)
@@ -648,7 +648,7 @@ func TestInt_DivisionOperations(t *testing.T) {
 		ok = result.ExactDiv(a, bMod)
 		assert.Equal(t, ct.False, ok)
 		// Note: ExactDiv may modify the result even on failure
-		// The exact behavior depends on the implementation
+		// The exact behaviour depends on the implementation
 	})
 
 	t.Run("DivCap", func(t *testing.T) {
@@ -659,7 +659,7 @@ func TestInt_DivisionOperations(t *testing.T) {
 		bNat := (*numct.Nat)(new(saferith.Nat).SetUint64(5))
 		bMod, modOk := numct.NewModulus(bNat)
 		assert.Equal(t, ct.True, modOk)
-		
+
 		ok := result.DivCap(a, bMod, 8)
 		assert.Equal(t, ct.True, ok)
 		assert.Equal(t, int64(4), result.Int64())
@@ -715,7 +715,7 @@ func TestInt_Sqrt(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("sqrt_%d", tc.square), func(t *testing.T) {
 				i := newInt(tc.square)
-				result := newInt(999) // Initialize with non-zero to test it gets updated
+				result := newInt(999) // Initialise with non-zero to test it gets updated
 
 				ok := result.Sqrt(i)
 				assert.Equal(t, ct.True, ok, "Should return true for perfect square %d", tc.square)
@@ -733,7 +733,7 @@ func TestInt_Sqrt(t *testing.T) {
 		for _, val := range testCases {
 			t.Run(fmt.Sprintf("sqrt_%d", val), func(t *testing.T) {
 				i := newInt(val)
-				result := newInt(999) // Initialize with non-zero
+				result := newInt(999) // Initialise with non-zero
 
 				ok := result.Sqrt(i)
 				assert.Equal(t, ct.False, ok, "Should return false for non-perfect square %d", val)
@@ -750,7 +750,7 @@ func TestInt_Sqrt(t *testing.T) {
 		for _, val := range negatives {
 			t.Run(fmt.Sprintf("sqrt_%d", val), func(t *testing.T) {
 				i := newInt(val)
-				result := newInt(888) // Initialize with known value
+				result := newInt(888) // Initialise with known value
 
 				ok := result.Sqrt(i)
 				assert.Equal(t, ct.False, ok, "Sqrt of negative %d should return false", val)
@@ -1635,10 +1635,10 @@ func TestInt_UtilityOperations(t *testing.T) {
 		assert.Equal(t, uint(0), zero.TrueLen())
 
 		small := newInt(255)
-		assert.Greater(t, small.TrueLen(), uint(0))
+		assert.Positive(t, small.TrueLen())
 
 		negative := newInt(-255)
-		assert.Greater(t, negative.TrueLen(), uint(0))
+		assert.Positive(t, negative.TrueLen())
 	})
 
 	t.Run("AnnouncedLen", func(t *testing.T) {
@@ -2139,7 +2139,7 @@ func TestInt_CondAssign(t *testing.T) {
 		assert.Equal(t, ct.True, a.Equal(original), "Self-assign with choice=1 should not change value")
 	})
 
-	t.Run("constant time behavior", func(t *testing.T) {
+	t.Run("constant time behaviour", func(t *testing.T) {
 		// Test that the operation appears to be constant time
 		// by running it many times with different values
 		values := []*numct.Int{

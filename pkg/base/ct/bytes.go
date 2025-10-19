@@ -42,7 +42,7 @@ func CompareBytes[T ~[]byte](x, y T) (lt, eq, gt Bool) {
 	gt |= Bool(yShorter & allEqual)
 	eq = Bool(Equal(lenX, lenY) & allEqual)
 
-	return
+	return lt, eq, gt
 }
 
 func XorBytes[T ~[]byte](dst, x, y T) int {

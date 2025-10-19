@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-// n must already be reduced mod p^k
+// n must already be reduced mod p^k.
 func Vp(out *Nat, p Modulus, n *Nat, k int) int {
 	temp := n.Clone()
 	var quo, rem Nat

@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"slices"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
-	"golang.org/x/sync/errgroup"
 )
 
 type Statement[X sigma.Statement] []X

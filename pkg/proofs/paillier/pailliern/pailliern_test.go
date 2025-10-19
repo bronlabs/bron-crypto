@@ -32,7 +32,7 @@ func Test_pIsCorrect(t *testing.T) {
 	}
 
 	eq := pCheck.Equal(pailliern.P)
-	require.Equal(t, eq, ct.True)
+	require.Equal(t, ct.True, eq)
 }
 
 func Test_HappyPath(t *testing.T) {

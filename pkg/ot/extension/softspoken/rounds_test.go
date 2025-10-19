@@ -6,12 +6,13 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -52,12 +53,12 @@ func Test_HappyPath(t *testing.T) {
 	// just in case, check
 	t.Run("seeds match", func(t *testing.T) {
 		t.Parallel()
-		require.Equal(t, senderSeeds.InferredXi(), KAPPA)
-		require.Equal(t, senderSeeds.InferredL(), 1)
-		require.Equal(t, senderSeeds.InferredMessageBytesLen(), 32)
-		require.Equal(t, receiverSeeds.InferredXi(), KAPPA)
-		require.Equal(t, receiverSeeds.InferredL(), 1)
-		require.Equal(t, receiverSeeds.InferredMessageBytesLen(), 32)
+		require.Equal(t, KAPPA, senderSeeds.InferredXi())
+		require.Equal(t, 1, senderSeeds.InferredL())
+		require.Equal(t, 32, senderSeeds.InferredMessageBytesLen())
+		require.Equal(t, KAPPA, receiverSeeds.InferredXi())
+		require.Equal(t, 1, receiverSeeds.InferredL())
+		require.Equal(t, 32, receiverSeeds.InferredMessageBytesLen())
 
 		for i := range KAPPA {
 			choice := (receiverSeeds.Choices[i/8] >> (i % 8)) & 0b1
@@ -94,7 +95,7 @@ func Test_HappyPath(t *testing.T) {
 	t.Run("messages match", func(t *testing.T) {
 		t.Parallel()
 		require.Equal(t, receiverOutput.Choices, choices)
-		require.Equal(t, len(receiverOutput.Choices)*8, XI)
+		require.Equal(t, XI, len(receiverOutput.Choices)*8)
 		require.Len(t, receiverOutput.Messages, XI)
 		require.Len(t, senderOutput.Messages, XI)
 

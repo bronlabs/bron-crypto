@@ -28,11 +28,13 @@ type participant struct {
 
 type Sender struct {
 	participant
+
 	receiverSeeds *vsot.ReceiverOutput
 }
 
 type Receiver struct {
 	participant
+
 	senderSeeds *vsot.SenderOutput
 }
 

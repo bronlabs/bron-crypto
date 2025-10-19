@@ -584,7 +584,7 @@ func (p *Protocol) SoundnessError() uint {
 // 	default:
 // 		return false
 // 	}
-// }
+// }.
 
 func isInRange(lowInclusive, highExclusive, v *paillier.Plaintext) bool {
 	return lowInclusive.IsLessThanOrEqual(v) && v.IsLessThanOrEqual(highExclusive) && !highExclusive.Equal(v)

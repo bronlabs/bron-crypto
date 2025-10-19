@@ -31,7 +31,7 @@ var (
 	_ encoding.BinaryMarshaler                         = (*Point)(nil)
 	_ encoding.BinaryUnmarshaler                       = (*Point)(nil)
 
-	// compressedPointSize = k256Impl.FqBytes + 1
+	// compressedPointSize = k256Impl.FqBytes + 1.
 
 	curveInstance *Curve
 	curveInitOnce sync.Once

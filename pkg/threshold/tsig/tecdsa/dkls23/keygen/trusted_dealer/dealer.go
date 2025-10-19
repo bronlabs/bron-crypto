@@ -33,11 +33,11 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 
 	// create zero sharing seeds
 	zeroSeeds := make(map[sharing.ID]ds.MutableMap[sharing.ID, [przs.SeedLength]byte])
-	for id, _ := range feldmanOutput.Shares().Iter() {
+	for id := range feldmanOutput.Shares().Iter() {
 		zeroSeeds[id] = hashmap.NewComparable[sharing.ID, [przs.SeedLength]byte]()
 	}
-	for me, _ := range feldmanOutput.Shares().Iter() {
-		for they, _ := range feldmanOutput.Shares().Iter() {
+	for me := range feldmanOutput.Shares().Iter() {
+		for they := range feldmanOutput.Shares().Iter() {
 			if me >= they {
 				continue
 			}
@@ -53,12 +53,12 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 	// create OT seeds
 	senderSeeds := make(map[sharing.ID]ds.MutableMap[sharing.ID, *vsot.SenderOutput])
 	receiverSeeds := make(map[sharing.ID]ds.MutableMap[sharing.ID, *vsot.ReceiverOutput])
-	for id, _ := range feldmanOutput.Shares().Iter() {
+	for id := range feldmanOutput.Shares().Iter() {
 		senderSeeds[id] = hashmap.NewComparable[sharing.ID, *vsot.SenderOutput]()
 		receiverSeeds[id] = hashmap.NewComparable[sharing.ID, *vsot.ReceiverOutput]()
 	}
-	for me, _ := range feldmanOutput.Shares().Iter() {
-		for they, _ := range feldmanOutput.Shares().Iter() {
+	for me := range feldmanOutput.Shares().Iter() {
+		for they := range feldmanOutput.Shares().Iter() {
 			if me == they {
 				continue
 			}
@@ -68,12 +68,12 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 				return nil, nil, errs.WrapRandomSample(err, "cannot sample choices")
 			}
 			sender := &vsot.SenderOutput{
-				ot.SenderOutput[[]byte]{
+				SenderOutput: ot.SenderOutput[[]byte]{
 					Messages: make([][2][][]byte, softspoken.Kappa),
 				},
 			}
 			receiver := &vsot.ReceiverOutput{
-				ot.ReceiverOutput[[]byte]{
+				ReceiverOutput: ot.ReceiverOutput[[]byte]{
 					Choices:  choices,
 					Messages: make([][][]byte, softspoken.Kappa),
 				},

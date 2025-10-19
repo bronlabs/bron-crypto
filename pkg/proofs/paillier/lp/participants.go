@@ -46,6 +46,7 @@ type VerifierState struct {
 
 type Verifier struct {
 	Participant
+
 	paillierPublicKey *paillier.PublicKey
 	enc               *paillier.Encrypter
 	state             *VerifierState
@@ -59,6 +60,7 @@ type ProverState struct {
 
 type Prover struct {
 	Participant
+
 	paillierSecretKey *paillier.PrivateKey
 	state             *ProverState
 }

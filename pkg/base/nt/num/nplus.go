@@ -7,18 +7,19 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"github.com/cronokirby/saferith"
 )
 
 var (
 	// _ internal.NPlus[*NatPlus, *NatPlus, *Nat, *Int, *Uint]   = (*PositiveNaturalNumbers)(nil)
-	// _ internal.NatPlus[*NatPlus, *NatPlus, *Nat, *Int, *Uint] = (*NatPlus)(nil)
+	// _ internal.NatPlus[*NatPlus, *NatPlus, *Nat, *Int, *Uint] = (*NatPlus)(nil).
 
 	nplusInstance *PositiveNaturalNumbers
 	nplusOnce     sync.Once

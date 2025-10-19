@@ -5,10 +5,11 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/internal"
-	"github.com/cronokirby/saferith"
 )
 
 type Modulus internal.ModulusMutable[*Int, *Nat, Modulus]
@@ -235,7 +236,7 @@ func (m *ModulusOddPrimeBasic) String() string {
 	return (*saferith.Modulus)(m).String()
 }
 
-// ********* Odd Composite Modulus ************
+// ********* Odd Composite Modulus ************.
 
 func (m *ModulusOddBasic) Set(v *ModulusOddBasic) {
 	*m = *v
@@ -264,7 +265,7 @@ func (m *ModulusOddBasic) ModSqrt(out, x *Nat) ct.Bool {
 	return ct.True
 }
 
-// ********* Generic Modulus *****************
+// ********* Generic Modulus *****************.
 
 // ModDiv solves y * u ≡ x (mod m) and writes one solution u into out.
 // Works for even/composite moduli. Variable-time (uses big.Int.GCD).
@@ -302,7 +303,6 @@ func (m *ModulusBasic) ModDiv(out, x, y *Nat) ct.Bool {
 	outNat := new(saferith.Nat).SetBig(u0, u0.BitLen())
 	out.Set((*Nat)(outNat))
 	return ct.True
-
 }
 
 func (m *ModulusBasic) ModInv(out, x *Nat) ct.Bool {

@@ -40,7 +40,6 @@ func NewG2BaseField() *BaseFieldG2 {
 	return baseFieldInstanceG2
 }
 
-
 func (f *BaseFieldG2) Hash(bytes []byte) (*BaseFieldElementG2, error) {
 	var e [1]bls12381Impl.Fp2
 	h2c.HashToField(e[:], bls12381Impl.G2CurveHasherParams{}, base.Hash2CurveAppTag+Hash2CurveSuiteG2, bytes)
@@ -53,7 +52,6 @@ func (f *BaseFieldG2) Hash(bytes []byte) (*BaseFieldElementG2, error) {
 func (f *BaseFieldG2) Name() string {
 	return BaseFieldNameG2
 }
-
 
 func (f *BaseFieldG2) IsSemiDomain() bool {
 	return true

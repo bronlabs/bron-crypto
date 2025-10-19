@@ -10,19 +10,19 @@ package compilerUtils
 // 	fiatShamir "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 // 	//"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
 // 	//"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
-// )
+// ).
 
 // var compilers = map[compiler.Name]bool{
 // 	fiatShamir.Name: true,
 // 	//fischlin.Name:     true,
 // 	//randfischlin.Name: true,
-// }
+// }.
 
 // func RegisterNICompilersForGob() {
 // 	fiatShamir.RegisterForGob()
 // 	//fischlin.RegisterForGob()
 // 	//randfischlin.RegisterForGob()
-// }
+// }.
 
 // func MakeNonInteractive[X sigma.Statement[W], W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](compilerName compiler.Name, protocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NICompiler[X, W], error) {
 // 	if s := protocol.SoundnessError(); s < base.ComputationalSecurity {
@@ -52,9 +52,9 @@ package compilerUtils
 // 	default:
 // 		return nil, errs.NewFailed("no such compiler %s", compilerName)
 // 	}
-// }
+// }.
 
 // func CompilerIsSupported(name compiler.Name) bool {
 // 	_, exists := compilers[name]
 // 	return exists
-// }
+// }.

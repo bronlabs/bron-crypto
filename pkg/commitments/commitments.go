@@ -37,7 +37,7 @@ type Scheme[K Key, W Witness, M Message, C Commitment, CO Committer[W, M, C], VF
 	Key() K
 }
 
-// ******** Homomorphic
+// ******** Homomorphic.
 
 type HomomorphicScheme[
 	K Key,

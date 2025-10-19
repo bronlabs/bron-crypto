@@ -82,7 +82,7 @@ type Scheme[
 	Decrypter(SK, ...DecrypterOption[DEC, M, C]) (DEC, error)
 }
 
-// ******** Homomorphic
+// ******** Homomorphic.
 
 type ReRandomisableCiphertext[C Ciphertext, N Nonce, PK PublicKey[PK]] interface {
 	Ciphertext

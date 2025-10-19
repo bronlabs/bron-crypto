@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	acrtp "github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	saferith_utils "github.com/bronlabs/bron-crypto/pkg/base/utils/saferith"
-	"github.com/cronokirby/saferith"
 )
 
 type Cardinal = acrtp.Cardinal

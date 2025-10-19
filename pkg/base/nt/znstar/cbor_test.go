@@ -3,14 +3,15 @@ package znstar_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/stretchr/testify/require"
 )
 
-// Test Unit serialization with unknown order
+// Test Unit serialisation with unknown order
 func TestUnit_CBOR_UnknownOrder(t *testing.T) {
 	t.Parallel()
 
@@ -52,7 +53,7 @@ func TestUnit_CBOR_UnknownOrder(t *testing.T) {
 	require.True(t, result1.Value().Equal(result2.Value()) == ct.True)
 }
 
-// Test Unit serialization with known order (RSA)
+// Test Unit serialisation with known order (RSA)
 func TestUnit_CBOR_KnownOrder_RSA(t *testing.T) {
 	t.Parallel()
 
@@ -101,7 +102,7 @@ func TestUnit_CBOR_KnownOrder_RSA(t *testing.T) {
 	require.True(t, result1.Value().Equal(result2.Value()) == ct.True)
 }
 
-// Test Unit serialization with known order (Paillier)
+// Test Unit serialisation with known order (Paillier)
 func TestUnit_CBOR_KnownOrder_Paillier(t *testing.T) {
 	t.Parallel()
 
@@ -145,7 +146,7 @@ func TestUnit_CBOR_KnownOrder_Paillier(t *testing.T) {
 	require.True(t, result1.Value().Equal(result2.Value()) == ct.True)
 }
 
-// Test UnitGroup interface serialization - RSA unknown order
+// Test UnitGroup interface serialisation - RSA unknown order
 func TestUnitGroup_InterfaceSerialization_RSAUnknown(t *testing.T) {
 	t.Parallel()
 
@@ -156,7 +157,7 @@ func TestUnitGroup_InterfaceSerialization_RSAUnknown(t *testing.T) {
 	original, err := znstar.NewRSAGroupOfUnknownOrder(n)
 	require.NoError(t, err)
 
-	// Serialize through UnitGroup interface
+	// Serialise through UnitGroup interface
 	var group znstar.UnitGroup = original
 
 	data, err := serde.MarshalCBOR(group)
@@ -189,7 +190,7 @@ func TestUnitGroup_InterfaceSerialization_RSAUnknown(t *testing.T) {
 	require.True(t, unit1.Value().Equal(unit2.Value()) == ct.True)
 }
 
-// Test RSAGroup interface serialization - known order
+// Test RSAGroup interface serialisation - known order
 func TestRSAGroupKnownOrder_InterfaceSerialization(t *testing.T) {
 	t.Parallel()
 
@@ -202,7 +203,7 @@ func TestRSAGroupKnownOrder_InterfaceSerialization(t *testing.T) {
 	original, err := znstar.NewRSAGroup(p, q)
 	require.NoError(t, err)
 
-	// Serialize through RSAGroupKnownOrder interface
+	// Serialise through RSAGroupKnownOrder interface
 	var group znstar.RSAGroupKnownOrder = original
 
 	data, err := serde.MarshalCBOR(group)
@@ -244,7 +245,7 @@ func TestRSAGroupKnownOrder_InterfaceSerialization(t *testing.T) {
 	require.True(t, result1.Value().Equal(result2.Value()) == ct.True)
 }
 
-// Test PaillierGroupKnownOrder interface serialization
+// Test PaillierGroupKnownOrder interface serialisation
 func TestPaillierGroupKnownOrder_InterfaceSerialization(t *testing.T) {
 	t.Parallel()
 
@@ -257,7 +258,7 @@ func TestPaillierGroupKnownOrder_InterfaceSerialization(t *testing.T) {
 	original, err := znstar.NewPaillierGroup(p, q)
 	require.NoError(t, err)
 
-	// Serialize through PaillierGroupKnownOrder interface
+	// Serialise through PaillierGroupKnownOrder interface
 	var group znstar.PaillierGroupKnownOrder = original
 
 	data, err := serde.MarshalCBOR(group)
@@ -301,7 +302,7 @@ func TestPaillierGroupKnownOrder_InterfaceSerialization(t *testing.T) {
 	require.True(t, result1.Value().Equal(result2.Value()) == ct.True)
 }
 
-// Test PaillierGroup (unknown order) interface serialization
+// Test PaillierGroup (unknown order) interface serialisation
 func TestPaillierGroup_InterfaceSerialization_Unknown(t *testing.T) {
 	t.Parallel()
 
@@ -313,7 +314,7 @@ func TestPaillierGroup_InterfaceSerialization_Unknown(t *testing.T) {
 	original, err := znstar.NewPaillierGroupOfUnknownOrder(n2, n)
 	require.NoError(t, err)
 
-	// Serialize through PaillierGroup interface
+	// Serialise through PaillierGroup interface
 	var group znstar.PaillierGroup = original
 
 	data, err := serde.MarshalCBOR(group)
@@ -332,7 +333,7 @@ func TestPaillierGroup_InterfaceSerialization_Unknown(t *testing.T) {
 	require.True(t, decoded.Order().IsUnknown())
 }
 
-// Test round-trip serialization for all Unit types
+// Test round-trip serialisation for all Unit types
 func TestUnit_RoundTrip_AllTypes(t *testing.T) {
 	t.Parallel()
 
@@ -433,7 +434,7 @@ func TestCBOR_InvalidData_znstar(t *testing.T) {
 	})
 }
 
-// Test ForgetOrder/LearnOrder round-trip with serialization
+// Test ForgetOrder/LearnOrder round-trip with serialisation
 func TestUnit_CBOR_OrderConversion(t *testing.T) {
 	t.Parallel()
 
@@ -454,7 +455,7 @@ func TestUnit_CBOR_OrderConversion(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, unitKnown.IsUnknownOrder())
 
-	// Serialize known order unit
+	// Serialise known order unit
 	dataKnown, err := serde.MarshalCBOR(unitKnown)
 	require.NoError(t, err)
 
@@ -462,7 +463,7 @@ func TestUnit_CBOR_OrderConversion(t *testing.T) {
 	unitUnknown := unitKnown.ForgetOrder()
 	require.True(t, unitUnknown.IsUnknownOrder())
 
-	// Serialize unknown order unit
+	// Serialise unknown order unit
 	dataUnknown, err := serde.MarshalCBOR(unitUnknown)
 	require.NoError(t, err)
 

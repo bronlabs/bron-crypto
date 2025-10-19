@@ -1,7 +1,7 @@
 package num_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -512,13 +512,13 @@ func TestNatPlus_Random(t *testing.T) {
 	high := mustNatPlus(num.NPlus().FromUint64(20))
 
 	for i := 0; i < 10; i++ {
-		result, err := num.NPlus().Random(low, high, rand.Reader)
+		result, err := num.NPlus().Random(low, high, crand.Reader)
 		require.NoError(t, err)
 		require.NotNil(t, result)
 		// Note: Random returns *Nat, not *NatPlus
 		// We need to check that the result is within range
 		require.True(t, result.Compare(low) >= 0)
-		require.True(t, result.Compare(high) < 0)
+		require.Negative(t, result.Compare(high))
 	}
 }
 
@@ -528,12 +528,12 @@ func TestNatPlus_RandomWithNilLow(t *testing.T) {
 	high := mustNatPlus(num.NPlus().FromUint64(10))
 
 	for i := 0; i < 10; i++ {
-		result, err := num.NPlus().Random(nil, high, rand.Reader)
+		result, err := num.NPlus().Random(nil, high, crand.Reader)
 		require.NoError(t, err)
 		require.NotNil(t, result)
 		// When low is nil, it defaults to One()
 		require.True(t, result.Compare(num.NPlus().One()) >= 0)
-		require.True(t, result.Compare(high) < 0)
+		require.Negative(t, result.Compare(high))
 	}
 }
 
@@ -918,7 +918,7 @@ func TestNatPlus_ErrorHandling(t *testing.T) {
 	})
 
 	t.Run("Random_Nil_HighExclusive", func(t *testing.T) {
-		_, err := num.NPlus().Random(nil, nil, rand.Reader)
+		_, err := num.NPlus().Random(nil, nil, crand.Reader)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "must not be nil")
 	})

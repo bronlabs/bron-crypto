@@ -69,7 +69,7 @@ func runTestVectors(t *testing.T, fileName string, hasherFactory func() *poseido
 
 			// Verify result
 			require.True(t, actual.Equal(expected),
-				"hash mismatch for test vector %d: expected %s, got %s", 
+				"hash mismatch for test vector %d: expected %s, got %s",
 				i, vector.Output, hex.EncodeToString(reverseBytes(actual.Bytes())))
 		})
 	}
@@ -77,18 +77,18 @@ func runTestVectors(t *testing.T, fileName string, hasherFactory func() *poseido
 
 func parseFieldElement(t *testing.T, hexStr string) *pasta.PallasBaseFieldElement {
 	t.Helper()
-	
+
 	// Decode hex string
 	bytes, err := hex.DecodeString(hexStr)
 	require.NoError(t, err, "failed to decode hex string: %s", hexStr)
-	
+
 	// Reverse bytes for little-endian encoding
 	reversed := reverseBytes(bytes)
-	
+
 	// Create field element from bytes
 	fe, err := pasta.NewPallasBaseField().FromWideBytes(reversed)
 	require.NoError(t, err, "failed to create field element from bytes")
-	
+
 	return fe
 }
 
@@ -105,25 +105,25 @@ func TestPoseidonHashInterface(t *testing.T) {
 	t.Parallel()
 
 	h := poseidon.NewLegacy()
-	
+
 	// Test size methods
 	require.Equal(t, 32, h.Size())
 	require.Equal(t, 32, h.BlockSize())
-	
+
 	// Test Write method with valid data
 	data := make([]byte, 32)
 	n, err := h.Write(data)
 	require.NoError(t, err)
 	require.Equal(t, 32, n)
-	
+
 	// Test Write method with invalid data length
 	invalidData := make([]byte, 31)
 	_, err = h.Write(invalidData)
 	require.Error(t, err)
-	
+
 	// Test Reset
 	h.Reset()
-	
+
 	// Test Sum
 	sum := h.Sum(nil)
 	require.Len(t, sum, 32)
@@ -145,7 +145,7 @@ func TestPoseidonEmptyInput(t *testing.T) {
 		},
 		// Kimchi test commented out due to known issue with round constants count
 		// {
-		// 	name:     "Kimchi empty input", 
+		// 	name:     "Kimchi empty input",
 		// 	hasher:   poseidon.NewKimchi,
 		// 	expected: "a8eb9ee0f30046308abbfa5d20af73c81bbdabc25b459785024d045228bead2f",
 		// },
@@ -173,13 +173,13 @@ func BenchmarkPoseidonKimchi(b *testing.B) {
 func benchmarkPoseidon(b *testing.B, hasherFactory func() *poseidon.Poseidon) {
 	// Create test inputs of different sizes
 	sizes := []int{1, 2, 3, 4, 5, 10}
-	
+
 	for _, size := range sizes {
 		inputs := make([]*pasta.PallasBaseFieldElement, size)
 		for i := range inputs {
 			inputs[i] = pasta.NewPallasBaseField().One()
 		}
-		
+
 		b.Run(fmt.Sprintf("inputs_%d", size), func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {

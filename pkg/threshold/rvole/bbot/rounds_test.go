@@ -6,12 +6,12 @@ import (
 	"io"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/bbot"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	rvole_bbot "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/bbot"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 func Test_HappyPath(t *testing.T) {

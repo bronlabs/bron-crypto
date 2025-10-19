@@ -1,4 +1,3 @@
-//nolint:gocheckcompilerdirectives // not supported
 //go:debug rsa1024min=0
 package paillierrange_test
 

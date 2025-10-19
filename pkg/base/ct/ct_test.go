@@ -4,9 +4,10 @@ import (
 	"math"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 // TestChoice tests the Choice/Bool type and its Not() method
@@ -664,7 +665,7 @@ func TestBytesCompare(t *testing.T) {
 // TestConstantTime is a basic smoke test for constant-time properties
 func TestConstantTime(t *testing.T) {
 	// This is a basic smoke test - true constant-time verification requires
-	// specialized tools like dudect or manual assembly inspection
+	// specialised tools like dudect or manual assembly inspection
 
 	// Test that SelectInteger returns consistent results
 	t.Run("SelectInteger consistency", func(t *testing.T) {

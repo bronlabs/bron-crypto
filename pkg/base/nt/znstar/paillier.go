@@ -95,6 +95,7 @@ func NewPaillierGroupOfUnknownOrder(n2, n *num.NatPlus) (PaillierGroup, error) {
 
 type paillierGroup struct {
 	UZMod[*modular.SimpleModulus]
+
 	n *num.NatPlus
 }
 
@@ -201,6 +202,7 @@ func (pg *paillierGroup) Phi(x *numct.Int) (Unit, error) {
 
 type paillierGroupKnownOrder struct {
 	UZMod[*modular.OddPrimeSquareFactors]
+
 	n *num.NatPlus
 }
 

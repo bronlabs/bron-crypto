@@ -88,7 +88,7 @@ func (prover *Prover[P, B, S]) Round2(r1out *Round1Output) (r2out *Round2Output,
 		return nil, errs.WrapFailed(err, "cannot decrypt cipher text")
 	}
 
-	alphaScalar, err := prover.state.curve.ScalarField().FromNat(prover.state.alpha.Normalize().Value())
+	alphaScalar, err := prover.state.curve.ScalarField().FromNat(prover.state.alpha.Normalise().Value())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert alpha to scalar")
 	}

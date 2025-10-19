@@ -404,7 +404,6 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signatur
 			if err := popVerify(publicKeys[i].Value(), pop.Value(), v.signatureSubGroup, popDst); err != nil {
 				return errs.WrapVerification(err, "pop %d is invalid", i)
 			}
-
 		}
 	// case 3.2.3 https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-aggregateverify-2
 	case MessageAugmentation:

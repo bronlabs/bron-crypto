@@ -3,10 +3,11 @@ package numct
 import (
 	"math/big"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/internal"
-	"github.com/cronokirby/saferith"
 )
 
 var (
@@ -252,7 +253,7 @@ func (i *Int) Sqrt(x *Int) (ok ct.Bool) {
 	var root Int
 	(*saferith.Int)(&root).SetNat(&rootNat)
 	i.Select(ok, i, &root)
-	return
+	return ok
 }
 
 func (i *Int) Square(x *Int) {

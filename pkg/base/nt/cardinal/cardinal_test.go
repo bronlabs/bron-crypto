@@ -3,12 +3,13 @@ package cardinal_test
 import (
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
 func TestCardinalConstants(t *testing.T) {
@@ -306,9 +307,9 @@ func TestCardinalSubtractionUnderflow(t *testing.T) {
 	require.True(t, c5.Sub(c10).IsZero())
 }
 
-// TestCardinalImplementationNotes documents known issues and behaviors
+// TestCardinalImplementationNotes documents known issues and behaviours
 func TestCardinalImplementationNotes(t *testing.T) {
-	t.Run("Zero value behavior", func(t *testing.T) {
+	t.Run("Zero value behaviour", func(t *testing.T) {
 		// Creating a cardinal with value 0 returns the singleton Zero
 		c1 := cardinal.New(0)
 		c2 := cardinal.New(0)

@@ -18,8 +18,9 @@ const (
 var _ hash.Hash = (*kmac)(nil)
 
 type kmac struct {
-	sha3.ShakeHash     // cSHAKE context and Read/Write operations
-	tagSize        int // tag size
+	sha3.ShakeHash // cSHAKE context and Read/Write operations
+
+	tagSize int // tag size
 
 	// initBlock is the KMAC specific initialization set of bytes. It is initialised
 	// by newKMAC function and stores the key, encoded by the method specified in 3.3 of [1].

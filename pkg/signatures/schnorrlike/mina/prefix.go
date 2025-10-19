@@ -90,7 +90,7 @@ func numberToBytePadded(b byte) string {
 }
 
 // https://github.com/o1-labs/o1js/blob/fdc94dd8d3735d01c232d7d7af49763e044b738b/src/mina-signer/src/signature.ts#L294
-// networkIdOfString replicates the JS logic exactly, returning (bigint, bitlength)
+// networkIdOfString replicates the JS logic exactly, returning (bigint, bitlength).
 func networkIdOfString(n string) (*big.Int, int) {
 	acc := ""
 	for i := len(n) - 1; i >= 0; i-- {

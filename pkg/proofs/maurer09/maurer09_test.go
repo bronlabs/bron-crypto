@@ -5,10 +5,11 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/maurer09"
-	"github.com/stretchr/testify/require"
 )
 
 // TestMaurer09Protocol_BasicFunctionality tests the basic protocol flow
@@ -256,7 +257,7 @@ func TestMaurer09Protocol_Simulator(t *testing.T) {
 // 	require.NoError(t, err)
 // }
 
-// TestMaurer09Protocol_BytesSerialization tests that all protocol elements can be serialized
+// TestMaurer09Protocol_BytesSerialization tests that all protocol elements can be serialised
 func TestMaurer09Protocol_BytesSerialization(t *testing.T) {
 	curve := k256.NewCurve()
 	basePoint, err := curve.Random(crand.Reader)
@@ -278,7 +279,7 @@ func TestMaurer09Protocol_BytesSerialization(t *testing.T) {
 		X: statement,
 	}
 
-	// Test serialization
+	// Test serialisation
 	witnessBytes := w.Bytes()
 	require.NotEmpty(t, witnessBytes)
 	require.Equal(t, witness.Bytes(), witnessBytes)
@@ -422,7 +423,7 @@ func TestMaurer09Protocol_NilHandling(t *testing.T) {
 	)
 	require.Error(t, err)
 
-	// Test nil serialization
+	// Test nil serialisation
 	var nilWitness *maurer09.Witness[*k256.Scalar]
 	require.Nil(t, nilWitness.Bytes())
 

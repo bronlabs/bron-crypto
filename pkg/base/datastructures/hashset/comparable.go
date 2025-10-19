@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"iter"
 
+	"golang.org/x/exp/maps"
+
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"golang.org/x/exp/maps"
 )
 
 type comparableMapping[K comparable] = map[K]struct{}

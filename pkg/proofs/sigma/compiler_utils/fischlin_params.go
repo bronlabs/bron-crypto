@@ -2,10 +2,10 @@ package compilerUtils
 
 import (
 	//"github.com/bronlabs/bron-crypto/pkg/proofs/dleq/chaum"
-	//"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
+	//"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr".
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	//"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroots"
-	//"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
+	//"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range".
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 

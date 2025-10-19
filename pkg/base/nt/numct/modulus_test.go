@@ -1,18 +1,18 @@
 package numct_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"fmt"
 	"math/big"
 	"testing"
 	"time"
 
+	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"github.com/cronokirby/saferith"
 )
 
 func newNatFromBig(b *big.Int) *numct.Nat {
@@ -508,7 +508,7 @@ func TestModulusCachingPerformance(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Generate a prime
-			pBig, _ := rand.Prime(rand.Reader, tc.primeBits)
+			pBig, _ := crand.Prime(crand.Reader, tc.primeBits)
 			p := (*numct.Nat)(new(saferith.Nat).SetBig(pBig, tc.primeBits).Resize(tc.primeBits))
 
 			// Create ModulusOddPrime with cached Montgomery context
@@ -519,10 +519,10 @@ func TestModulusCachingPerformance(t *testing.T) {
 			bases := make([]*numct.Nat, tc.ops)
 			exps := make([]*numct.Nat, tc.ops)
 			for i := 0; i < tc.ops; i++ {
-				base, _ := rand.Int(rand.Reader, pBig)
+				base, _ := crand.Int(crand.Reader, pBig)
 				bases[i] = (*numct.Nat)(new(saferith.Nat).SetBig(base, tc.primeBits).Resize(tc.primeBits))
 
-				exp, _ := rand.Int(rand.Reader, pBig)
+				exp, _ := crand.Int(crand.Reader, pBig)
 				exps[i] = (*numct.Nat)(new(saferith.Nat).SetBig(exp, tc.primeBits).Resize(tc.primeBits))
 			}
 
@@ -743,7 +743,7 @@ func TestModInv_Comprehensive(t *testing.T) {
 // Benchmark different ModInv implementations
 func BenchmarkModInv_Comparison(b *testing.B) {
 	// Generate a large prime for testing
-	p, _ := rand.Prime(rand.Reader, 2048)
+	p, _ := crand.Prime(crand.Reader, 2048)
 
 	// Create different modulus types
 	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
@@ -778,8 +778,8 @@ func BenchmarkModInv_Comparison(b *testing.B) {
 
 	// Test with composite odd modulus
 	// Use a large RSA-like composite: product of two large primes
-	p1, _ := rand.Prime(rand.Reader, 1024)
-	p2, _ := rand.Prime(rand.Reader, 1024)
+	p1, _ := crand.Prime(crand.Reader, 1024)
+	p2, _ := crand.Prime(crand.Reader, 1024)
 	composite := new(big.Int).Mul(p1, p2)
 	compositeNat := (*numct.Nat)(new(saferith.Nat).SetBig(composite, composite.BitLen()))
 
@@ -818,7 +818,7 @@ func BenchmarkModInv_BitSizes(b *testing.B) {
 	for _, bits := range bitSizes {
 		b.Run(fmt.Sprintf("%d_bits", bits), func(b *testing.B) {
 			// Generate prime of specified bit size
-			p, _ := rand.Prime(rand.Reader, bits)
+			p, _ := crand.Prime(crand.Reader, bits)
 			pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
 
 			m, ok := numct.NewModulusOddPrime(pNat)
@@ -852,11 +852,11 @@ func BenchmarkModInv_RSA_Paillier(b *testing.B) {
 	for _, bits := range bitSizes {
 		b.Run(fmt.Sprintf("Prime_%d_bits", bits), func(b *testing.B) {
 			// Generate a prime of specified bit size
-			p, _ := rand.Prime(rand.Reader, bits)
+			p, _ := crand.Prime(crand.Reader, bits)
 			pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
 
 			// Create test value that's coprime to p
-			testVal, _ := rand.Prime(rand.Reader, bits/2)
+			testVal, _ := crand.Prime(crand.Reader, bits/2)
 			x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
 			var out numct.Nat
 
@@ -889,15 +889,15 @@ func BenchmarkModInv_RSA_Paillier(b *testing.B) {
 	for _, bits := range bitSizes {
 		b.Run(fmt.Sprintf("Composite_%d_bits", bits), func(b *testing.B) {
 			// Generate two primes for RSA-like composite
-			p1, _ := rand.Prime(rand.Reader, bits/2)
-			p2, _ := rand.Prime(rand.Reader, bits/2)
+			p1, _ := crand.Prime(crand.Reader, bits/2)
+			p2, _ := crand.Prime(crand.Reader, bits/2)
 			n := new(big.Int).Mul(p1, p2)
 			nNat := (*numct.Nat)(new(saferith.Nat).SetBig(n, n.BitLen()))
 
 			// Create test value coprime to n
 			var testVal *big.Int
 			for {
-				testVal, _ = rand.Prime(rand.Reader, bits/3)
+				testVal, _ = crand.Prime(crand.Reader, bits/3)
 				if new(big.Int).GCD(nil, nil, testVal, n).Cmp(big.NewInt(1)) == 0 {
 					break
 				}
@@ -948,11 +948,11 @@ func BenchmarkModInv_SaferithOnly(b *testing.B) {
 	for _, bits := range bitSizes {
 		b.Run(fmt.Sprintf("Prime_%d_bits", bits), func(b *testing.B) {
 			// Generate a prime of specified bit size
-			p, _ := rand.Prime(rand.Reader, bits)
+			p, _ := crand.Prime(crand.Reader, bits)
 			pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
 
 			// Create test value that's coprime to p
-			testVal, _ := rand.Prime(rand.Reader, bits/2)
+			testVal, _ := crand.Prime(crand.Reader, bits/2)
 			x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
 			var out numct.Nat
 
@@ -970,15 +970,15 @@ func BenchmarkModInv_SaferithOnly(b *testing.B) {
 	for _, bits := range bitSizes {
 		b.Run(fmt.Sprintf("Composite_%d_bits", bits), func(b *testing.B) {
 			// Generate two primes for RSA-like composite
-			p1, _ := rand.Prime(rand.Reader, bits/2)
-			p2, _ := rand.Prime(rand.Reader, bits/2)
+			p1, _ := crand.Prime(crand.Reader, bits/2)
+			p2, _ := crand.Prime(crand.Reader, bits/2)
 			n := new(big.Int).Mul(p1, p2)
 			nNat := (*numct.Nat)(new(saferith.Nat).SetBig(n, n.BitLen()))
 
 			// Create test value coprime to n
 			var testVal *big.Int
 			for {
-				testVal, _ = rand.Prime(rand.Reader, bits/3)
+				testVal, _ = crand.Prime(crand.Reader, bits/3)
 				if new(big.Int).GCD(nil, nil, testVal, n).Cmp(big.NewInt(1)) == 0 {
 					break
 				}
@@ -1004,11 +1004,11 @@ func BenchmarkModInv_SaferithOnly(b *testing.B) {
 // Separate focused benchmarks for ModInv
 
 func BenchmarkModInv_Prime_1024_BoringSSL(b *testing.B) {
-	p, _ := rand.Prime(rand.Reader, 1024)
+	p, _ := crand.Prime(crand.Reader, 1024)
 	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
 	m, _ := numct.NewModulusOddPrime(pNat)
 
-	testVal, _ := rand.Prime(rand.Reader, 512)
+	testVal, _ := crand.Prime(crand.Reader, 512)
 	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
 	var out numct.Nat
 
@@ -1019,11 +1019,11 @@ func BenchmarkModInv_Prime_1024_BoringSSL(b *testing.B) {
 }
 
 func BenchmarkModInv_Prime_1024_Saferith(b *testing.B) {
-	p, _ := rand.Prime(rand.Reader, 1024)
+	p, _ := crand.Prime(crand.Reader, 1024)
 	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
 	m := (*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(pNat)))
 
-	testVal, _ := rand.Prime(rand.Reader, 512)
+	testVal, _ := crand.Prime(crand.Reader, 512)
 	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
 	var out numct.Nat
 
@@ -1034,11 +1034,11 @@ func BenchmarkModInv_Prime_1024_Saferith(b *testing.B) {
 }
 
 func BenchmarkModInv_Prime_2048_BoringSSL(b *testing.B) {
-	p, _ := rand.Prime(rand.Reader, 2048)
+	p, _ := crand.Prime(crand.Reader, 2048)
 	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
 	m, _ := numct.NewModulusOddPrime(pNat)
 
-	testVal, _ := rand.Prime(rand.Reader, 1024)
+	testVal, _ := crand.Prime(crand.Reader, 1024)
 	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
 	var out numct.Nat
 
@@ -1049,11 +1049,11 @@ func BenchmarkModInv_Prime_2048_BoringSSL(b *testing.B) {
 }
 
 func BenchmarkModInv_Prime_2048_Saferith(b *testing.B) {
-	p, _ := rand.Prime(rand.Reader, 2048)
+	p, _ := crand.Prime(crand.Reader, 2048)
 	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
 	m := (*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(pNat)))
 
-	testVal, _ := rand.Prime(rand.Reader, 1024)
+	testVal, _ := crand.Prime(crand.Reader, 1024)
 	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
 	var out numct.Nat
 
@@ -1064,11 +1064,11 @@ func BenchmarkModInv_Prime_2048_Saferith(b *testing.B) {
 }
 
 func BenchmarkModInv_Prime_3072_BoringSSL(b *testing.B) {
-	p, _ := rand.Prime(rand.Reader, 3072)
+	p, _ := crand.Prime(crand.Reader, 3072)
 	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
 	m, _ := numct.NewModulusOddPrime(pNat)
 
-	testVal, _ := rand.Prime(rand.Reader, 1536)
+	testVal, _ := crand.Prime(crand.Reader, 1536)
 	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
 	var out numct.Nat
 
@@ -1079,11 +1079,11 @@ func BenchmarkModInv_Prime_3072_BoringSSL(b *testing.B) {
 }
 
 func BenchmarkModInv_Prime_3072_Saferith(b *testing.B) {
-	p, _ := rand.Prime(rand.Reader, 3072)
+	p, _ := crand.Prime(crand.Reader, 3072)
 	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
 	m := (*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(pNat)))
 
-	testVal, _ := rand.Prime(rand.Reader, 1536)
+	testVal, _ := crand.Prime(crand.Reader, 1536)
 	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
 	var out numct.Nat
 
@@ -1094,8 +1094,8 @@ func BenchmarkModInv_Prime_3072_Saferith(b *testing.B) {
 }
 
 func BenchmarkModInv_Composite_1024_BoringSSL(b *testing.B) {
-	p1, _ := rand.Prime(rand.Reader, 512)
-	p2, _ := rand.Prime(rand.Reader, 512)
+	p1, _ := crand.Prime(crand.Reader, 512)
+	p2, _ := crand.Prime(crand.Reader, 512)
 	n := new(big.Int).Mul(p1, p2)
 	nNat := (*numct.Nat)(new(saferith.Nat).SetBig(n, n.BitLen()))
 	m, _ := numct.NewModulusOdd(nNat)
@@ -1103,7 +1103,7 @@ func BenchmarkModInv_Composite_1024_BoringSSL(b *testing.B) {
 	// Find coprime value
 	var testVal *big.Int
 	for {
-		testVal, _ = rand.Prime(rand.Reader, 341)
+		testVal, _ = crand.Prime(crand.Reader, 341)
 		if new(big.Int).GCD(nil, nil, testVal, n).Cmp(big.NewInt(1)) == 0 {
 			break
 		}
@@ -1118,8 +1118,8 @@ func BenchmarkModInv_Composite_1024_BoringSSL(b *testing.B) {
 }
 
 func BenchmarkModInv_Composite_1024_Saferith(b *testing.B) {
-	p1, _ := rand.Prime(rand.Reader, 512)
-	p2, _ := rand.Prime(rand.Reader, 512)
+	p1, _ := crand.Prime(crand.Reader, 512)
+	p2, _ := crand.Prime(crand.Reader, 512)
 	n := new(big.Int).Mul(p1, p2)
 	nNat := (*numct.Nat)(new(saferith.Nat).SetBig(n, n.BitLen()))
 	m := &numct.ModulusBasic{
@@ -1131,7 +1131,7 @@ func BenchmarkModInv_Composite_1024_Saferith(b *testing.B) {
 	// Find coprime value
 	var testVal *big.Int
 	for {
-		testVal, _ = rand.Prime(rand.Reader, 341)
+		testVal, _ = crand.Prime(crand.Reader, 341)
 		if new(big.Int).GCD(nil, nil, testVal, n).Cmp(big.NewInt(1)) == 0 {
 			break
 		}
@@ -1146,8 +1146,8 @@ func BenchmarkModInv_Composite_1024_Saferith(b *testing.B) {
 }
 
 func BenchmarkModInv_Composite_2048_BoringSSL(b *testing.B) {
-	p1, _ := rand.Prime(rand.Reader, 1024)
-	p2, _ := rand.Prime(rand.Reader, 1024)
+	p1, _ := crand.Prime(crand.Reader, 1024)
+	p2, _ := crand.Prime(crand.Reader, 1024)
 	n := new(big.Int).Mul(p1, p2)
 	nNat := (*numct.Nat)(new(saferith.Nat).SetBig(n, n.BitLen()))
 	m, _ := numct.NewModulusOdd(nNat)
@@ -1155,7 +1155,7 @@ func BenchmarkModInv_Composite_2048_BoringSSL(b *testing.B) {
 	// Find coprime value
 	var testVal *big.Int
 	for {
-		testVal, _ = rand.Prime(rand.Reader, 683)
+		testVal, _ = crand.Prime(crand.Reader, 683)
 		if new(big.Int).GCD(nil, nil, testVal, n).Cmp(big.NewInt(1)) == 0 {
 			break
 		}
@@ -1170,8 +1170,8 @@ func BenchmarkModInv_Composite_2048_BoringSSL(b *testing.B) {
 }
 
 func BenchmarkModInv_Composite_2048_Saferith(b *testing.B) {
-	p1, _ := rand.Prime(rand.Reader, 1024)
-	p2, _ := rand.Prime(rand.Reader, 1024)
+	p1, _ := crand.Prime(crand.Reader, 1024)
+	p2, _ := crand.Prime(crand.Reader, 1024)
 	n := new(big.Int).Mul(p1, p2)
 	nNat := (*numct.Nat)(new(saferith.Nat).SetBig(n, n.BitLen()))
 	m := &numct.ModulusBasic{
@@ -1183,7 +1183,7 @@ func BenchmarkModInv_Composite_2048_Saferith(b *testing.B) {
 	// Find coprime value
 	var testVal *big.Int
 	for {
-		testVal, _ = rand.Prime(rand.Reader, 683)
+		testVal, _ = crand.Prime(crand.Reader, 683)
 		if new(big.Int).GCD(nil, nil, testVal, n).Cmp(big.NewInt(1)) == 0 {
 			break
 		}

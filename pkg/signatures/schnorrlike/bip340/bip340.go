@@ -301,6 +301,7 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 	if sliceutils.Any(publicKeys, func(pk *PublicKey) bool {
 		return pk == nil || pk.Value() == nil || pk.Value().IsOpIdentity() || pk.Value().IsOpIdentity()
 	}) {
+
 		return errs.NewArgument("some public keys are nil or identity")
 	}
 	curve := k256.NewCurve()

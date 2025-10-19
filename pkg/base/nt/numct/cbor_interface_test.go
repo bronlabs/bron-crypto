@@ -4,12 +4,13 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/stretchr/testify/require"
 )
 
-// TestModulusInterface_TagBasedCBOR tests that we can serialize/deserialize
+// TestModulusInterface_TagBasedCBOR tests that we can serialise/deserialize
 // Modulus interfaces directly using CBOR tags
 func TestModulusInterface_TagBasedCBOR(t *testing.T) {
 	// Create various modulus types
@@ -71,7 +72,7 @@ func TestModulusInterface_TagBasedCBOR(t *testing.T) {
 	}
 }
 
-// TestModulusInterface_SliceOfInterfaces tests serializing slices of interfaces
+// TestModulusInterface_SliceOfInterfaces tests serialising slices of interfaces
 func TestModulusInterface_SliceOfInterfaces(t *testing.T) {
 	// Create a slice of different modulus types
 	var moduli []Modulus
@@ -89,7 +90,7 @@ func TestModulusInterface_SliceOfInterfaces(t *testing.T) {
 	mod3, _ := NewModulus(n3)
 	moduli = append(moduli, mod3)
 
-	// Serialize the slice of interfaces directly
+	// Serialise the slice of interfaces directly
 	data, err := serde.MarshalCBOR(moduli)
 	require.NoError(t, err)
 

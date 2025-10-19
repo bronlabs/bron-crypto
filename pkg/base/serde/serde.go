@@ -16,7 +16,7 @@ var (
 	enc cbor.EncMode
 	dec cbor.DecMode
 
-	// Global TagSet for type registration
+	// Global TagSet for type registration.
 	tags = cbor.NewTagSet()
 )
 

@@ -1287,7 +1287,7 @@ func TestIntegers_Random(t *testing.T) {
 			result, err := num.Z().Random(lower, upper, pcg.NewRandomised())
 			require.NoError(t, err)
 			require.True(t, (result).Compare(lower) >= 0)
-			require.True(t, (result).Compare(upper) < 0)
+			require.Negative(t, (result).Compare(upper))
 		}
 	})
 
@@ -1447,7 +1447,7 @@ func TestIntegers_MissingMethods(t *testing.T) {
 	})
 
 	t.Run("Negative_Bytes", func(t *testing.T) {
-		// Test that negative numbers produce empty bytes (big.Int behavior)
+		// Test that negative numbers produce empty bytes (big.Int behaviour)
 		neg := num.Z().FromInt64(-42)
 		bytes := neg.Bytes()
 		// In Go's big.Int, Bytes() returns the absolute value

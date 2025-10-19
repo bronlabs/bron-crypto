@@ -11,7 +11,7 @@ import (
 // ParamsMulti holds precomputed values for multi-factor CRT with k pairwise coprime factors.
 // For factors p_1, p_2, ..., p_k, we precompute:
 // - M_i = N / p_i where N = p_1 * p_2 * ... * p_k
-// - M_i^{-1} mod p_i for each i
+// - M_i^{-1} mod p_i for each i.
 type ParamsMulti[F numct.Modulus] struct {
 	Factors    []F           // p_i as moduli
 	Products   []*numct.Nat  // M_i = N / p_i
@@ -112,7 +112,7 @@ func PrecomputeMulti[F numct.Modulus](factors ...*numct.Nat) (*ParamsMulti[F], c
 }
 
 // RecombineParallel reconstructs x (mod N) from residues[i] = x mod p_i using precomputed lifts.
-// x ≡ Σ residues[i] * Lift_i (mod N)
+// x ≡ Σ residues[i] * Lift_i (mod N).
 func (params *ParamsMulti[F]) RecombineParallel(residues ...*numct.Nat) *numct.Nat {
 	var wg sync.WaitGroup
 	wg.Add(params.NumFactors)

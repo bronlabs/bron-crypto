@@ -42,7 +42,6 @@ func (sk *PrivateKey) precompute() {
 		sk.group.Arithmetic().Q.Factor.ModNeg(sk.hq, sk.hq)
 		sk.pk = &PublicKey{group: sk.group.ForgetOrder()}
 	})
-
 }
 
 func (sk *PrivateKey) Group() znstar.PaillierGroupKnownOrder {

@@ -1,13 +1,14 @@
 package znstar_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewUnitGroupOfUnknownOrder(t *testing.T) {
@@ -146,7 +147,7 @@ func TestUnitGroupOperations(t *testing.T) {
 	require.True(t, one.Equal(identity))
 
 	// Test Random
-	unit, err := uzmod.Random(rand.Reader)
+	unit, err := uzmod.Random(crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, unit)
 
@@ -256,7 +257,7 @@ func TestPaillierGroup(t *testing.T) {
 	require.Equal(t, uint64(1), one.Value().Big().Uint64())
 
 	// Test Random unit
-	unit, err := paillierGroup.Random(rand.Reader)
+	unit, err := paillierGroup.Random(crand.Reader)
 	require.NoError(t, err)
 	require.NotNil(t, unit)
 }

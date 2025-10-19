@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 )
 
 func TestNatPlus_CBOR(t *testing.T) {
@@ -293,7 +294,7 @@ func TestUint_CBOR_InvalidValue(t *testing.T) {
 	// Since 15 > 10, this will be reduced to 15 % 10 = 5
 	// So let's test that the value is properly reduced
 	largeValue, err := zmod.FromUint64(15)
-	require.NoError(t, err) // This should succeed with reduction
+	require.NoError(t, err)                                // This should succeed with reduction
 	require.Equal(t, uint64(5), largeValue.Big().Uint64()) // 15 % 10 = 5
 }
 
@@ -361,7 +362,7 @@ func TestZMod_CBOR(t *testing.T) {
 func TestNat_CBOR_Deterministic(t *testing.T) {
 	t.Parallel()
 
-	// Test that serialization is deterministic
+	// Test that serialisation is deterministic
 	n := num.N().FromUint64(42)
 
 	data1, err1 := n.MarshalCBOR()
@@ -371,13 +372,13 @@ func TestNat_CBOR_Deterministic(t *testing.T) {
 	require.NoError(t, err2)
 
 	// Should produce identical bytes
-	require.True(t, bytes.Equal(data1, data2), "CBOR serialization should be deterministic")
+	require.True(t, bytes.Equal(data1, data2), "CBOR serialisation should be deterministic")
 }
 
 func TestInt_CBOR_Deterministic(t *testing.T) {
 	t.Parallel()
 
-	// Test that serialization is deterministic
+	// Test that serialisation is deterministic
 	i := num.Z().FromInt64(-42)
 
 	data1, err1 := i.MarshalCBOR()
@@ -387,13 +388,13 @@ func TestInt_CBOR_Deterministic(t *testing.T) {
 	require.NoError(t, err2)
 
 	// Should produce identical bytes
-	require.True(t, bytes.Equal(data1, data2), "CBOR serialization should be deterministic")
+	require.True(t, bytes.Equal(data1, data2), "CBOR serialisation should be deterministic")
 }
 
 func TestNatPlus_CBOR_Deterministic(t *testing.T) {
 	t.Parallel()
 
-	// Test that serialization is deterministic
+	// Test that serialisation is deterministic
 	n, err := num.NPlus().FromUint64(42)
 	require.NoError(t, err)
 
@@ -404,7 +405,7 @@ func TestNatPlus_CBOR_Deterministic(t *testing.T) {
 	require.NoError(t, err2)
 
 	// Should produce identical bytes
-	require.True(t, bytes.Equal(data1, data2), "CBOR serialization should be deterministic")
+	require.True(t, bytes.Equal(data1, data2), "CBOR serialisation should be deterministic")
 }
 
 func TestUint_CBOR_Deterministic(t *testing.T) {
@@ -417,7 +418,7 @@ func TestUint_CBOR_Deterministic(t *testing.T) {
 	zmod, err := num.NewZMod(modulus)
 	require.NoError(t, err)
 
-	// Test that serialization is deterministic
+	// Test that serialisation is deterministic
 	u, err := zmod.FromUint64(42)
 	require.NoError(t, err)
 
@@ -428,13 +429,13 @@ func TestUint_CBOR_Deterministic(t *testing.T) {
 	require.NoError(t, err2)
 
 	// Should produce identical bytes
-	require.True(t, bytes.Equal(data1, data2), "CBOR serialization should be deterministic")
+	require.True(t, bytes.Equal(data1, data2), "CBOR serialisation should be deterministic")
 }
 
 func TestZMod_CBOR_Deterministic(t *testing.T) {
 	t.Parallel()
 
-	// Test that serialization is deterministic
+	// Test that serialisation is deterministic
 	n, err := num.NPlus().FromUint64(97)
 	require.NoError(t, err)
 
@@ -448,7 +449,7 @@ func TestZMod_CBOR_Deterministic(t *testing.T) {
 	require.NoError(t, err2)
 
 	// Should produce identical bytes
-	require.True(t, bytes.Equal(data1, data2), "CBOR serialization should be deterministic")
+	require.True(t, bytes.Equal(data1, data2), "CBOR serialisation should be deterministic")
 }
 
 func TestCBOR_EdgeCases(t *testing.T) {

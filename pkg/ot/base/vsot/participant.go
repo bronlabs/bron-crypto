@@ -36,6 +36,7 @@ func (p *participant[P, B, S]) hash(b, a P, data []byte) ([]byte, error) {
 
 type Sender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	participant[P, B, S]
+
 	state senderState[P, B, S]
 }
 
@@ -68,6 +69,7 @@ func NewSender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Pri
 
 type Receiver[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	participant[P, B, S]
+
 	state receiverState[P, B, S]
 }
 

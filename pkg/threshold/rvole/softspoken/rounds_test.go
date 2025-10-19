@@ -7,6 +7,9 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
@@ -14,9 +17,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	rvole_softspoken "github.com/bronlabs/bron-crypto/pkg/threshold/rvole/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
-	"github.com/stretchr/testify/require"
-
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 )
 
 func Test_HappyPath(t *testing.T) {

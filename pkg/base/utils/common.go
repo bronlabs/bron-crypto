@@ -4,8 +4,9 @@ import (
 	"math/bits"
 	"reflect"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	"golang.org/x/exp/constraints"
+
+	"github.com/bronlabs/bron-crypto/pkg/base"
 )
 
 func ParseOrderingFromSign[T constraints.Signed](x T) base.PartialOrdering {

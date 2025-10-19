@@ -273,18 +273,18 @@ func (m *OddPrimeSquareFactors) ExpToN(out, a *numct.Nat) {
 // 		Factors:  factors,
 // 		NModPhis: nModPhis,
 // 	}, ok
-// }
+// }.
 
 // type OddPrimeSquareFactorsMulti struct {
 // 	CrtModP  *crt.ParamsMulti[*numct.ModulusOddPrime]
 // 	CrtModP2 *crt.ParamsMulti[*numct.ModulusOdd]
 // 	Factors  []*OddPrimeSquare
 // 	NModPhis []*numct.Nat
-// }
+// }.
 
 // func (m *OddPrimeSquareFactorsMulti) Modulus() numct.Modulus {
 // 	return m.CrtModP2.Modulus
-// }
+// }.
 
 // func (m *OddPrimeSquareFactorsMulti) Exp(out, base, exp *numct.Nat) ct.Bool {
 // 	residues := make([]*numct.Nat, m.CrtModP.NumFactors)
@@ -306,7 +306,7 @@ func (m *OddPrimeSquareFactors) ExpToN(out, a *numct.Nat) {
 // 		ok &= oki
 // 	}
 // 	return ok
-// }
+// }.
 
 // // ExpToN computes a^N mod N^2 using one mod-p^2 exponent per prime.
 // // If a ≡ 0 mod p_i for any factor, the residue is 0 for that i and ok becomes ct.False.
@@ -355,4 +355,4 @@ func (m *OddPrimeSquareFactors) ExpToN(out, a *numct.Nat) {
 // 		ok &= unitOK[i]
 // 	}
 // 	return ok
-// }
+// }.

@@ -39,7 +39,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKPr
 
 	proofBytes, err := serde.MarshalCBOR(proof)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "cannot serialize proof")
+		return nil, errs.WrapSerialisation(err, "cannot serialise proof")
 	}
 	return proofBytes, nil
 }

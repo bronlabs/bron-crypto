@@ -4,9 +4,10 @@ import (
 	"encoding/binary"
 	"io"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"golang.org/x/crypto/sha3"
 )
 
 const (

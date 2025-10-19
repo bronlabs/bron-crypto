@@ -1,11 +1,12 @@
 package paillier
 
 import (
+	"github.com/fxamacker/cbor/v2"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/fxamacker/cbor/v2"
 )
 
 var (
@@ -37,7 +38,7 @@ func init() {
 	serde.Register[*PrivateKey](PrivateKeyTag)
 }
 
-// Plaintext serialization - reuse num.Int and num.NatPlus CBOR
+// Plaintext serialisation - reuse num.Int and num.NatPlus CBOR
 type plaintextDTO struct {
 	V *num.Int     `cbor:"v"`
 	N *num.NatPlus `cbor:"n"`
@@ -61,7 +62,7 @@ func (p *Plaintext) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// Nonce serialization - reuse znstar.Unit CBOR
+// Nonce serialisation - reuse znstar.Unit CBOR
 type nonceDTO struct {
 	U znstar.Unit `cbor:"u"`
 }
@@ -82,7 +83,7 @@ func (n *Nonce) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// Ciphertext serialization - reuse znstar.Unit CBOR
+// Ciphertext serialisation - reuse znstar.Unit CBOR
 type ciphertextDTO struct {
 	U znstar.Unit `cbor:"u"`
 }
@@ -103,7 +104,7 @@ func (c *Ciphertext) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// PublicKey serialization - reuse znstar.PaillierGroup CBOR
+// PublicKey serialisation - reuse znstar.PaillierGroup CBOR
 type publicKeyDTO struct {
 	Group znstar.PaillierGroup `cbor:"group"`
 }
@@ -121,11 +122,11 @@ func (pk *PublicKey) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 	pk.group = dto.Group
-	// Spaces will be lazily initialized via cacheSpaces when accessed
+	// Spaces will be lazily initialised via cacheSpaces when accessed
 	return nil
 }
 
-// PrivateKey serialization - reuse znstar.PaillierGroupKnownOrder and numct.Nat CBOR
+// PrivateKey serialisation - reuse znstar.PaillierGroupKnownOrder and numct.Nat CBOR
 type privateKeyDTO struct {
 	Group znstar.PaillierGroupKnownOrder `cbor:"group"`
 }
@@ -143,7 +144,7 @@ func (sk *PrivateKey) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 	sk.group = dto.Group
-	// Initialize hp and hq before calling precompute
+	// Initialise hp and hq before calling precompute
 	sk.hp = numct.NewNat(0)
 	sk.hq = numct.NewNat(0)
 	sk.precompute()

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
@@ -19,7 +21,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tbls/boldyreva02/signing"
 	tu "github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tbls/boldyreva02/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
-	"github.com/stretchr/testify/require"
 )
 
 // TestBoldyrevaDKGAndSign tests the complete DKG and signing flow
@@ -346,7 +347,7 @@ func TestPartialSignatureVerification(t *testing.T) {
 	message := []byte("Test partial signatures")
 	partialSigs, err := tu.ProducePartialSignatures(cosigners, message)
 	require.NoError(t, err)
-	require.Equal(t, int(total), len(partialSigs))
+	require.Len(t, partialSigs, int(total))
 
 	// Verify we can aggregate them to get a valid signature
 	// Note: The aggregator will verify the partial signatures internally

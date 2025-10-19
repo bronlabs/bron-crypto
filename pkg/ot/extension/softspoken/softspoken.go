@@ -11,13 +11,14 @@ import (
 const (
 	Kappa = base.ComputationalSecurityBits
 	// Sigma should really be StatisticalSecurity but since we need (Xi * L) to be a multiple of Sigma,
-	// we can just use base.ComputationalSecurity which is bigger anyway
+	// we can just use base.ComputationalSecurity which is bigger anyway.
 	Sigma      = base.ComputationalSecurityBits
 	SigmaBytes = (Sigma + 7) / 8
 )
 
 type Suite struct {
 	ot.DefaultSuite
+
 	hashFunc func() hash.Hash
 }
 

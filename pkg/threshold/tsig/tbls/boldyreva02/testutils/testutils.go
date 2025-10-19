@@ -19,12 +19,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tbls/boldyreva02/signing"
 )
 
-// Type aliases for convenience
+// Type aliases for convenience.
 type ShortKeyShard = boldyreva02.Shard[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar]
 type LongKeyShard = boldyreva02.Shard[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar]
 
 // DoBoldyrevaDKG runs the complete DKG process for Boldyreva02 threshold BLS
-// It uses Gennaro DKG under the hood and converts the output to BLS shards
+// It uses Gennaro DKG under the hood and converts the output to BLS shards.
 func DoBoldyrevaDKG[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -60,7 +60,7 @@ func DoBoldyrevaDKG[
 	return shards, nil
 }
 
-// ProducePartialSignatures produces partial signatures from all cosigners
+// ProducePartialSignatures produces partial signatures from all cosigners.
 func ProducePartialSignatures[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -80,7 +80,7 @@ func ProducePartialSignatures[
 	return partialSigs, nil
 }
 
-// DoThresholdSign performs the complete threshold signing process
+// DoThresholdSign performs the complete threshold signing process.
 func DoThresholdSign[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -118,7 +118,7 @@ func DoThresholdSign[
 	return signature, nil
 }
 
-// VerifyPartialSignatures verifies all partial signatures
+// VerifyPartialSignatures verifies all partial signatures.
 func VerifyPartialSignatures[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],

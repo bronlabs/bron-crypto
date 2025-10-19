@@ -6,19 +6,20 @@ import (
 	"iter"
 	"math/big"
 
+	"github.com/cronokirby/saferith"
+	"golang.org/x/crypto/blake2b"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"github.com/cronokirby/saferith"
-	"golang.org/x/crypto/blake2b"
 )
 
 var (
 // _ internal.ZModN[*Uint, *NatPlus, *Nat, *Int, *Uint] = (*ZMod)(nil)
-// _ internal.Uint[*Uint, *NatPlus, *Nat, *Int, *Uint]  = (*Uint)(nil)
+// _ internal.Uint[*Uint, *NatPlus, *Nat, *Int, *Uint]  = (*Uint)(nil).
 )
 
 func NewZMod(modulus *NatPlus) (*ZMod, error) {

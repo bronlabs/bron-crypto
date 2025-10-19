@@ -50,7 +50,7 @@ type Params[M numct.Modulus] struct {
 // Recombine reconstructs m (mod p*q) from residues (mp, mq),
 // using precomputed q^{-1} (mod p).
 //
-// m = mq + q * ((mp - mq) * qInv mod p)
+// m = mq + q * ((mp - mq) * qInv mod p).
 func (prm *Params[M]) Recombine(mp, mq *numct.Nat) *numct.Nat {
 	// h = (mp - mq) mod p
 	h := new(numct.Nat)
@@ -117,6 +117,7 @@ func NewParamsExtended[F numct.Modulus](p, q F) (*ParamsExtended[F], ct.Bool) {
 
 type ParamsExtended[F numct.Modulus] struct {
 	Params[F]
+
 	PNat *numct.Nat
 	Q    F
 	M    numct.Modulus

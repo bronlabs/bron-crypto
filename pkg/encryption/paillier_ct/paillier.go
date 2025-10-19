@@ -134,7 +134,6 @@ func (e *Encrypter) EncryptWithNonce(plaintext *Plaintext, receiver *PublicKey, 
 		return nil, errs.WrapFailed(err, "failed to create ciphertext from nat")
 	}
 	return ct, nil
-
 }
 
 type SelfEncrypterOption = func(*SelfEncrypter) error
@@ -423,7 +422,7 @@ func (c *Ciphertext) Equal(other *Ciphertext) bool {
 
 // func (ct *Ciphertext) ScalarOp(scalar *numct.Nat) *Ciphertext {
 // 	return (*Ciphertext)(ct.Value().Exp(scalar))
-// }
+// }.
 
 // func (ct *Ciphertext) ReRandomise(pk *PublicKey, prng io.Reader) (*Ciphertext, *Nonce, error) {
 // 	nonce, err := pk.NonceSpace().Sample(prng)
@@ -435,7 +434,7 @@ func (c *Ciphertext) Equal(other *Ciphertext) bool {
 // 		return nil, nil, errs.WrapFailed(err, "failed to re-randomise with nonce")
 // 	}
 // 	return ciphertext, nonce, nil
-// }
+// }.
 
 // func (ct *Ciphertext) ReRandomiseWithNonce(pk *PublicKey, nonce *Nonce) (*Ciphertext, error) {
 // 	rn, err := pk.CiphertextSpace().PaillierGroup.LiftToNthResidues(nonce.Value())
@@ -444,14 +443,14 @@ func (c *Ciphertext) Equal(other *Ciphertext) bool {
 // 	}
 // 	// c' = c * r^n mod n^2
 // 	return ct.Op((*Ciphertext)(rn)), nil
-// }
+// }.
 
 // func (ct *Ciphertext) Shift(message *Plaintext) *Ciphertext {
 // 	var out numct.Nat
 // 	receiver.n2.ModMul(&out, plaintext.ValueCT(), receiver.nNat)
 // 	out.Increment()
 // 	return nil
-// }
+// }.
 
 func NewNonceSpace(n *numct.Nat) (*NonceSpace, error) {
 	g, ok := numct.NewModulus(n)
@@ -540,15 +539,15 @@ func (pts *PlaintextSpace) CenterAtZero(m *Plaintext) (*numct.Int, error) {
 	return &out, nil
 }
 
-func (pts *PlaintextSpace) Normalize(centered *numct.Int) (*Plaintext, error) {
-	if centered == nil {
-		return nil, errs.NewIsNil("centered")
+func (pts *PlaintextSpace) Normalise(centred *numct.Int) (*Plaintext, error) {
+	if centred == nil {
+		return nil, errs.NewIsNil("centred")
 	}
-	if pts.n.IsInRangeSymmetric(centered) == ct.False {
+	if pts.n.IsInRangeSymmetric(centred) == ct.False {
 		return nil, errs.NewValue("not in range of plaintext space")
 	}
 	var out numct.Nat
-	pts.n.ModInt(&out, centered)
+	pts.n.ModInt(&out, centred)
 	return (*Plaintext)(&out), nil
 }
 

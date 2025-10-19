@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"github.com/cronokirby/saferith"
 )
 
 func newNat(val uint64) *numct.Nat {
@@ -261,7 +261,7 @@ func TestNat_DivCap_NonZeroDivisor(t *testing.T) {
 			if modOk == ct.False && tt.wantOk == ct.True {
 				t.Fatal("Failed to create modulus from divisor")
 			}
-			
+
 			var ok ct.Bool
 			if modOk == ct.True {
 				ok = result.DivCap(a, bMod, -1)
@@ -279,7 +279,7 @@ func TestNat_DivCap_NonZeroDivisor(t *testing.T) {
 	}
 }
 
-// TestNat_ExactDivCap tests the exact division behavior
+// TestNat_ExactDivCap tests the exact division behaviour
 func TestNat_ExactDivCap(t *testing.T) {
 	t.Parallel()
 
@@ -312,7 +312,7 @@ func TestNat_ExactDivCap(t *testing.T) {
 			if modOk == ct.False && tt.wantOk == ct.True {
 				t.Fatal("Failed to create modulus from divisor")
 			}
-			
+
 			var ok ct.Bool
 			if modOk == ct.True {
 				ok = result.ExactDiv(a, bMod)
@@ -375,7 +375,7 @@ func TestNat_Mod_NonZeroModulus(t *testing.T) {
 			// Create modulus and perform Mod operation
 			mod, ok := numct.NewModulus(m)
 			assert.Equal(t, ct.True, ok, "NewModulus should succeed for non-zero value")
-			
+
 			mod.Mod(result, a)
 			assert.Equal(t, tt.want, result.Uint64(), "Mod result")
 		})
@@ -394,7 +394,7 @@ func TestNat_DivModCap_ZeroDivisor(t *testing.T) {
 	// Create modulus from zero (should fail)
 	zeroMod, modOk := numct.NewModulus(zero)
 	_ = zeroMod // avoid unused variable
-	
+
 	var ok ct.Bool
 	if modOk == ct.True {
 		// This shouldn't happen, but if it does, try DivModCap
@@ -442,7 +442,7 @@ func TestNat_DivModCap_NonZeroDivisor(t *testing.T) {
 			// Create modulus from b
 			bMod, modOk := numct.NewModulus(b)
 			assert.Equal(t, ct.True, modOk, "NewModulus should succeed for non-zero divisor")
-			
+
 			ok := numct.DivModCap(quot, rem, a, bMod, -1)
 
 			assert.Equal(t, ct.True, ok, "DivModCap ok result")
@@ -696,7 +696,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 				if modOk == ct.False {
 					t.Fatal("Failed to create modulus from divisor")
 				}
-				
+
 				ok := numct.DivModCap(quot, rem, a, bMod, tc.cap)
 				assert.Equal(t, ct.True, ok, "DivModCap should succeed")
 				assert.Equal(t, tc.expectedQuot, quot.Uint64(), "quotient")
@@ -1005,11 +1005,11 @@ func TestNat_UtilityOperations(t *testing.T) {
 
 		// Small numbers
 		small := newNat(255) // fits in 1 limb
-		assert.Greater(t, small.TrueLen(), uint(0))
+		assert.Positive(t, small.TrueLen())
 
 		// Larger numbers
 		large := newNat(0xFFFFFFFF)
-		assert.Greater(t, large.TrueLen(), uint(0))
+		assert.Positive(t, large.TrueLen())
 	})
 
 	t.Run("AnnouncedLen", func(t *testing.T) {

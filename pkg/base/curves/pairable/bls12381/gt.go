@@ -37,11 +37,9 @@ func NewGt() *Gt {
 	return gtInstance
 }
 
-
 func (g *Gt) Name() string {
 	return GtName
 }
-
 
 func (g *Gt) ElementSize() int {
 	return 96

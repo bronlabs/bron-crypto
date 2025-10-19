@@ -6,12 +6,13 @@ import (
 	"iter"
 	"math/big"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/cronokirby/saferith"
 )
 
 type PrimeFieldElementWrapper[FP fieldsImpl.PrimeFieldElement[FP]] interface {

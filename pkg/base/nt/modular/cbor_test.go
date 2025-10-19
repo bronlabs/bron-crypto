@@ -3,12 +3,13 @@ package modular_test
 import (
 	"testing"
 
+	"github.com/fxamacker/cbor/v2"
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/fxamacker/cbor/v2"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSimpleModulus_CBOR(t *testing.T) {
@@ -154,10 +155,10 @@ func TestArithmetic_InterfaceSerialization_SimpleModulus(t *testing.T) {
 	original, ok2 := modular.NewSimple(m)
 	require.Equal(t, ct.True, ok2)
 
-	// Test serializing through the Arithmetic interface
+	// Test serialising through the Arithmetic interface
 	var arith modular.Arithmetic = original
 
-	// Marshal using serde which handles interface serialization
+	// Marshal using serde which handles interface serialisation
 	data, err := serde.MarshalCBOR(arith)
 	require.NoError(t, err)
 	require.NotEmpty(t, data)
@@ -197,10 +198,10 @@ func TestArithmetic_InterfaceSerialization_OddPrimeFactors(t *testing.T) {
 	original, ok := modular.NewOddPrimeFactors(p, q)
 	require.Equal(t, ct.True, ok)
 
-	// Test serializing through the Arithmetic interface
+	// Test serialising through the Arithmetic interface
 	var arith modular.Arithmetic = original
 
-	// Marshal using serde which handles interface serialization
+	// Marshal using serde which handles interface serialisation
 	data, err := serde.MarshalCBOR(arith)
 	require.NoError(t, err)
 	require.NotEmpty(t, data)
@@ -240,10 +241,10 @@ func TestArithmetic_InterfaceSerialization_OddPrimeSquareFactors(t *testing.T) {
 	original, ok := modular.NewOddPrimeSquareFactors(p, q)
 	require.Equal(t, ct.True, ok)
 
-	// Test serializing through the Arithmetic interface
+	// Test serialising through the Arithmetic interface
 	var arith modular.Arithmetic = original
 
-	// Marshal using serde which handles interface serialization
+	// Marshal using serde which handles interface serialisation
 	data, err := serde.MarshalCBOR(arith)
 	require.NoError(t, err)
 	require.NotEmpty(t, data)
@@ -277,7 +278,7 @@ func TestArithmetic_RoundTrip_AllTypes(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name string
+		name  string
 		arith modular.Arithmetic
 	}{
 		{

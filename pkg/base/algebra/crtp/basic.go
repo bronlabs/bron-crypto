@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 )
 
-// === Interfaces
+// === Interfaces.
 
 type Element[E any] interface {
 	Structure() Structure[E]

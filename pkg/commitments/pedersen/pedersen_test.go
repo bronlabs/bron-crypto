@@ -5,10 +5,11 @@ import (
 	crand "crypto/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
-	"github.com/stretchr/testify/require"
 )
 
 func TestBasicCommitment(t *testing.T) {
@@ -96,11 +97,11 @@ func TestCommitmentKeyCreation(t *testing.T) {
 		require.Contains(t, err.Error(), "cannot be equal")
 	})
 
-	// t.Run("key serialization", func(t *testing.T) {
+	// t.Run("key serialisation", func(t *testing.T) {
 	// 	key, err := pedersen.NewCommitmentKey(g, h)
 	// 	require.NoError(t, err)
 
-	// 	// Serialize
+	// 	// Serialise
 	// 	keyBytes := key.Bytes()
 	// 	require.Equal(t, 2*curve.ElementSize(), len(keyBytes))
 
@@ -443,19 +444,19 @@ func TestReRandomization(t *testing.T) {
 		c1, w1, err := committer.Commit(message, crand.Reader)
 		require.NoError(t, err)
 
-		// Re-randomize
+		// Re-randomise
 		c2, r, err := c1.ReRandomise(key, crand.Reader)
 		require.NoError(t, err)
 		require.NotNil(t, c2)
 		require.NotNil(t, r)
-		require.False(t, c1.Equal(c2), "re-randomized commitment should be different")
+		require.False(t, c1.Equal(c2), "re-randomised commitment should be different")
 
 		// The new witness is w1 + r
 		w2 := w1.Add(r)
 
 		// Verify with new commitment and witness
 		err = verifier.Verify(c2, message, w2)
-		require.NoError(t, err, "re-randomized commitment should verify")
+		require.NoError(t, err, "re-randomised commitment should verify")
 
 		// Original commitment should still verify with original witness
 		err = verifier.Verify(c1, message, w1)
@@ -473,7 +474,7 @@ func TestReRandomization(t *testing.T) {
 		r, err := pedersen.NewWitness(field.FromUint64(777))
 		require.NoError(t, err)
 
-		// Re-randomize with specific witness
+		// Re-randomise with specific witness
 		c2, err := c1.ReRandomiseWith(key, r)
 		require.NoError(t, err)
 
@@ -520,7 +521,7 @@ func TestReRandomization(t *testing.T) {
 		c0, w0, err := committer.Commit(message, crand.Reader)
 		require.NoError(t, err)
 
-		// Re-randomize multiple times
+		// Re-randomise multiple times
 		c1, r1, err := c0.ReRandomise(key, crand.Reader)
 		require.NoError(t, err)
 		c2, r2, err := c1.ReRandomise(key, crand.Reader)

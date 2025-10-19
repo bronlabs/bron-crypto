@@ -381,7 +381,7 @@ func TestUint_Properties(t *testing.T) {
 	})
 }
 
-func TestUint_Serialization(t *testing.T) {
+func TestUint_Serialisation(t *testing.T) {
 	t.Parallel()
 
 	zn, err := num.NewZModFromCardinal(cardinal.New(256))
@@ -815,7 +815,7 @@ func TestZn_Properties(t *testing.T) {
 
 	t.Run("ElementSize", func(t *testing.T) {
 		size := zn.ElementSize()
-		require.Greater(t, size, 0)
+		require.Positive(t, size)
 	})
 
 	t.Run("WideElementSize", func(t *testing.T) {
@@ -883,7 +883,7 @@ func TestUint_LengthMethods(t *testing.T) {
 
 	t.Run("TrueLen", func(t *testing.T) {
 		trueLen := a.TrueLen()
-		require.Greater(t, trueLen, uint(0))
+		require.Positive(t, trueLen)
 	})
 
 	t.Run("AnnouncedLen", func(t *testing.T) {
