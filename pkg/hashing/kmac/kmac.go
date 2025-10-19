@@ -110,7 +110,7 @@ func (k *kmac) Size() int {
 }
 
 func (k *kmac) Sum(b []byte) []byte {
-	clone := k.ShakeHash.Clone()
+	clone := k.Clone()
 	// absorb right_encode(L)
 	clone.Write(RightEncode(uint64(k.tagSize * 8)))
 

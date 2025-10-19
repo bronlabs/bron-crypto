@@ -370,7 +370,7 @@ func TestCardinalInterfaces(t *testing.T) {
 
 	t.Run("Implements required interfaces", func(t *testing.T) {
 		// These assertions verify compile-time interface satisfaction
-		var _ cardinal.Cardinal = c
+		var _ = c
 		var _ algebra.Summand[cardinal.Cardinal] = c
 		var _ algebra.Multiplicand[cardinal.Cardinal] = c
 		var _ algebra.Minuend[cardinal.Cardinal] = c

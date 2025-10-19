@@ -79,7 +79,7 @@ func (u *unitUnknownOrder) UnmarshalCBOR(data []byte) error {
 	if u.unit == nil {
 		u.unit = &unit{}
 	}
-	u.unit.v = dto.V
+	u.v = dto.V
 
 	// Create simple modulus arithmetic for unknown order
 	arith, ok := modular.NewSimple(dto.Mod)
@@ -93,7 +93,7 @@ func (u *unitUnknownOrder) UnmarshalCBOR(data []byte) error {
 
 	// For RSA unknown order, create rsaGroup
 	// For now, just create a generic UZMod with SimpleModulus
-	u.unit.g = &UZMod[*modular.SimpleModulus]{
+	u.g = &UZMod[*modular.SimpleModulus]{
 		zMod:  zMod,
 		arith: arith,
 	}
@@ -116,7 +116,7 @@ func (u *unitKnownOrder) UnmarshalCBOR(data []byte) error {
 	if u.unit == nil {
 		u.unit = &unit{}
 	}
-	u.unit.v = dto.V
+	u.v = dto.V
 
 	// Create the appropriate group type based on the arithmetic type
 	switch arith := dto.X.(type) {
@@ -126,7 +126,7 @@ func (u *unitKnownOrder) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return err
 		}
-		u.unit.g = &rsaGroupKnownOrder{
+		u.g = &rsaGroupKnownOrder{
 			UZMod: UZMod[*modular.OddPrimeFactors]{
 				zMod:  zMod,
 				arith: arith,
@@ -140,7 +140,7 @@ func (u *unitKnownOrder) UnmarshalCBOR(data []byte) error {
 		}
 		// Extract N from CrtModN which contains the modulus n (not n²)
 		n := num.NPlus().FromModulus(arith.CrtModN.Modulus())
-		u.unit.g = &paillierGroupKnownOrder{
+		u.g = &paillierGroupKnownOrder{
 			UZMod: UZMod[*modular.OddPrimeSquareFactors]{
 				zMod:  zMod,
 				arith: arith,

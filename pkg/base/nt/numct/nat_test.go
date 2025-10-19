@@ -1233,19 +1233,19 @@ func TestNat_ConstantTime(t *testing.T) {
 		assert.Equal(t, ct.False, gtResult)
 
 		// Equal operation returns ct.Bool
-		var equalResult ct.Bool = n1.Equal(n2)
+		var equalResult = n1.Equal(n2)
 		assert.Equal(t, ct.False, equalResult)
 
 		// IsZero returns ct.Bool
-		var zeroResult ct.Bool = n1.IsZero()
+		var zeroResult = n1.IsZero()
 		assert.Equal(t, ct.False, zeroResult)
 
 		// IsNonZero returns ct.Bool
-		var nonZeroResult ct.Bool = n1.IsNonZero()
+		var nonZeroResult = n1.IsNonZero()
 		assert.Equal(t, ct.True, nonZeroResult)
 
 		// Coprime returns ct.Bool
-		var coprimeResult ct.Bool = n1.Coprime(n2)
+		var coprimeResult = n1.Coprime(n2)
 		assert.Equal(t, ct.True, coprimeResult)
 	})
 }

@@ -25,7 +25,7 @@ type Round2P2P[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 //	return nil
 //}
 //
-//func (r2p2p *Round2P2P) Validate(protocol types.Protocol) error {
+// func (r2p2p *Round2P2P) Validate(protocol types.Protocol) error {
 //	otProtocol, ok := protocol.(*ot.Protocol)
 //	if !ok {
 //		return errs.NewArgument("protocol is not ot.Protocol")

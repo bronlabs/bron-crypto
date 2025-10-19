@@ -247,7 +247,7 @@ func (sk *PrivateKey[PK, PKFE, Sig, SigFE, E, S]) Group() curves.Curve[PK, PKFE,
 }
 
 func (sk *PrivateKey[PK, PKFE, Sig, SigFE, E, S]) PublicKey() *PublicKey[PK, PKFE, Sig, SigFE, E, S] {
-	return &PublicKey[PK, PKFE, Sig, SigFE, E, S]{PublicKeyTrait: sk.PrivateKeyTrait.PublicKeyTrait}
+	return &PublicKey[PK, PKFE, Sig, SigFE, E, S]{PublicKeyTrait: sk.PublicKeyTrait}
 }
 
 func (sk *PrivateKey[PK, PKFE, Sig, SigFE, E, S]) Clone() *PrivateKey[PK, PKFE, Sig, SigFE, E, S] {

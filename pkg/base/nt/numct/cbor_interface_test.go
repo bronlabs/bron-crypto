@@ -51,7 +51,7 @@ func TestModulusInterface_TagBasedCBOR(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create the modulus as an interface
-			var original Modulus = tc.createMod()
+			var original = tc.createMod()
 
 			data, err := serde.MarshalCBOR(original)
 			require.NoError(t, err)

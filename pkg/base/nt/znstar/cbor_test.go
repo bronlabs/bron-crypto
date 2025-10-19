@@ -204,7 +204,7 @@ func TestRSAGroupKnownOrder_InterfaceSerialization(t *testing.T) {
 	require.NoError(t, err)
 
 	// Serialise through RSAGroupKnownOrder interface
-	var group znstar.RSAGroupKnownOrder = original
+	var group = original
 
 	data, err := serde.MarshalCBOR(group)
 	require.NoError(t, err)
@@ -259,7 +259,7 @@ func TestPaillierGroupKnownOrder_InterfaceSerialization(t *testing.T) {
 	require.NoError(t, err)
 
 	// Serialise through PaillierGroupKnownOrder interface
-	var group znstar.PaillierGroupKnownOrder = original
+	var group = original
 
 	data, err := serde.MarshalCBOR(group)
 	require.NoError(t, err)
@@ -315,7 +315,7 @@ func TestPaillierGroup_InterfaceSerialization_Unknown(t *testing.T) {
 	require.NoError(t, err)
 
 	// Serialise through PaillierGroup interface
-	var group znstar.PaillierGroup = original
+	var group = original
 
 	data, err := serde.MarshalCBOR(group)
 	require.NoError(t, err)

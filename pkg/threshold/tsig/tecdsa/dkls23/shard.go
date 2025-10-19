@@ -93,10 +93,10 @@ func (s *Shard[P, B, S]) Equal(rhs *Shard[P, B, S]) bool {
 		}
 		for xi := range l.InferredXi() {
 			for ell := range l.InferredL() {
-				if bytes.Equal(l.Messages[xi][0][ell], r.Messages[xi][0][ell]) == false {
+				if !bytes.Equal(l.Messages[xi][0][ell], r.Messages[xi][0][ell]) {
 					return false
 				}
-				if bytes.Equal(l.Messages[xi][1][ell], r.Messages[xi][1][ell]) == false {
+				if !bytes.Equal(l.Messages[xi][1][ell], r.Messages[xi][1][ell]) {
 					return false
 				}
 			}

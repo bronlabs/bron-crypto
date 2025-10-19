@@ -165,8 +165,7 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 	threshold := uint(3)
 	total := uint(5)
 
-	var curveFamily curves.PairingFriendlyFamily[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar]
-	curveFamily = &bls12381.FamilyTrait{}
+	var curveFamily curves.PairingFriendlyFamily[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar] = &bls12381.FamilyTrait{}
 
 	sid := network.SID(sha3.Sum256([]byte(fmt.Sprintf("test-rogue-key-%d", rogueKeyAlg))))
 	tape := hagrid.NewTranscript("TestRogueKey")

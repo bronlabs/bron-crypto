@@ -140,7 +140,7 @@ func (s *Scheme[GE, S]) PartialSignatureVerifier(
 	if err != nil {
 		return nil, errs.WrapFailed(err, "verifier creation failed")
 	}
-	verifier.VerifierTrait.ChallengePublicKey = publicKey
+	verifier.ChallengePublicKey = publicKey
 	return verifier, nil
 }
 

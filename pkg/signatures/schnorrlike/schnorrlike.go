@@ -98,7 +98,7 @@ func (pk *PublicKey[PKV, S]) Clone() *PublicKey[PKV, S] {
 
 func (pk *PublicKey[PKV, S]) MarshalCBOR() ([]byte, error) {
 	dto := &publicKeyDTO[PKV, S]{
-		PK: pk.PublicKeyTrait.V,
+		PK: pk.V,
 	}
 	return serde.MarshalCBOR(dto)
 }
@@ -139,7 +139,7 @@ type PrivateKey[PKV GroupElement[PKV, SKV], SKV Scalar[SKV]] struct {
 }
 
 func (sk *PrivateKey[PKV, SKV]) PublicKey() *PublicKey[PKV, SKV] {
-	return &PublicKey[PKV, SKV]{PublicKeyTrait: sk.PrivateKeyTrait.PublicKeyTrait}
+	return &PublicKey[PKV, SKV]{PublicKeyTrait: sk.PublicKeyTrait}
 }
 
 func (sk *PrivateKey[PKV, SKV]) Name() signatures.Name {

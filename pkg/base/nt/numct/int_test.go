@@ -1936,27 +1936,27 @@ func TestInt_ConstantTime(t *testing.T) {
 		assert.Equal(t, ct.True, gtResult)
 
 		// Equal operation returns ct.Bool
-		var equalResult ct.Bool = i1.Equal(i2)
+		var equalResult = i1.Equal(i2)
 		assert.Equal(t, ct.False, equalResult)
 
 		// IsZero returns ct.Bool
-		var zeroResult ct.Bool = i1.IsZero()
+		var zeroResult = i1.IsZero()
 		assert.Equal(t, ct.False, zeroResult)
 
 		// IsNonZero returns ct.Bool
-		var nonZeroResult ct.Bool = i1.IsNonZero()
+		var nonZeroResult = i1.IsNonZero()
 		assert.Equal(t, ct.True, nonZeroResult)
 
 		// IsNegative returns ct.Bool
-		var negResult ct.Bool = i2.IsNegative()
+		var negResult = i2.IsNegative()
 		assert.Equal(t, ct.True, negResult)
 
 		// IsOne returns ct.Bool
-		var oneResult ct.Bool = i1.IsOne()
+		var oneResult = i1.IsOne()
 		assert.Equal(t, ct.False, oneResult)
 
 		// Coprime returns ct.Bool
-		var coprimeResult ct.Bool = i1.Coprime(i2)
+		var coprimeResult = i1.Coprime(i2)
 		assert.Equal(t, ct.True, coprimeResult)
 	})
 }

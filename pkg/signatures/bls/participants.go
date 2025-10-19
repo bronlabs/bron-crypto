@@ -132,7 +132,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) Sign(message []byte) (*Signature[SG, 
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not produce proof of possession")
 		}
-		pop.Signature.v = popv
+		pop.v = popv
 	default:
 		return nil, errs.NewType("rogue key prevention algorithm %d is not supported", s.rogueKeyAlg)
 	}
@@ -176,7 +176,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) AggregateSign(messages ...Message) (*
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not produce proof of possession")
 		}
-		pop.Signature.v = popv
+		pop.v = popv
 	default:
 		return nil, errs.NewType("rogue key prevention algorithm %d is not supported", s.rogueKeyAlg)
 	}
@@ -220,7 +220,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) BatchSign(messages ...Message) ([]*Si
 		if err != nil {
 			return nil, errs.WrapFailed(err, "could not produce proof of possession")
 		}
-		pop.Signature.v = popv
+		pop.v = popv
 	default:
 		return nil, errs.NewType("rogue key prevention algorithm %d is not supported", s.rogueKeyAlg)
 	}

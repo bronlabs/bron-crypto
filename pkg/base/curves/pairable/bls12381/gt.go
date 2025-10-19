@@ -78,7 +78,7 @@ func (g *Gt) FromBytes(inBytes []byte) (*GtElement, error) {
 	}
 
 	var element GtElement
-	if ok := element.V.Fp12.SetUniformBytes(inBytes); ok == 0 {
+	if ok := element.V.SetUniformBytes(inBytes); ok == 0 {
 		return nil, errs.NewFailed("failed to set bytes")
 	}
 
