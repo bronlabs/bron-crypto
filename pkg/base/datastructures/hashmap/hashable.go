@@ -292,7 +292,7 @@ func CollectToHashable[K base.Hashable[K], V any](xs []K, ys []V) (ds.MutableMap
 		return nil, errs.NewArgument("xs and ys must have the same length")
 	}
 	m := NewHashable[K, V]()
-	for i := range len(xs) {
+	for i := range xs {
 		m.Put(xs[i], ys[i])
 	}
 	return m, nil

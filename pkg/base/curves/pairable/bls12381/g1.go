@@ -130,7 +130,7 @@ func (c *G1) FromCompressed(input []byte) (*PointG1, error) {
 			return nil, errs.NewFailed("infinity flag and sort flag are both set")
 		}
 		// Check that all other bytes are zero when infinity flag is set
-		for i := range len(input) {
+		for i := range input {
 			mask := byte(0xff)
 			if i == 0 {
 				mask = 0x1f // Ignore the flag bits

@@ -94,7 +94,7 @@ func parseFieldElement(t *testing.T, hexStr string) *pasta.PallasBaseFieldElemen
 
 func reverseBytes(b []byte) []byte {
 	result := make([]byte, len(b))
-	for i := range len(b) {
+	for i := range b {
 		result[i] = b[len(b)-1-i]
 	}
 	return result
