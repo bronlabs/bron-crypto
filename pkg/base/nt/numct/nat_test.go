@@ -44,6 +44,7 @@ func TestNat_BitwiseAnd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			x := newNat(tt.x)
 			y := newNat(tt.y)
 			result := new(numct.Nat)
@@ -74,6 +75,7 @@ func TestNat_BitwiseOr(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			x := newNat(tt.x)
 			y := newNat(tt.y)
 			result := new(numct.Nat)
@@ -104,6 +106,7 @@ func TestNat_BitwiseXor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			x := newNat(tt.x)
 			y := newNat(tt.y)
 			result := new(numct.Nat)
@@ -152,6 +155,7 @@ func TestNat_BitwiseNot(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			x := newNat(tt.x)
 			x.Resize(tt.bitCap)
 			result := new(numct.Nat)
@@ -456,6 +460,7 @@ func TestNat_BasicOperations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Set", func(t *testing.T) {
+		t.Parallel()
 		n1 := newNat(42)
 		n2 := newNat(0)
 
@@ -465,6 +470,7 @@ func TestNat_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("SetZero", func(t *testing.T) {
+		t.Parallel()
 		n := newNat(12345)
 		n.SetZero()
 
@@ -478,6 +484,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Add", func(t *testing.T) {
+		t.Parallel()
 		testCases := []struct {
 			name     string
 			a, b     uint64
@@ -493,6 +500,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				a := newNat(tc.a)
 				b := newNat(tc.b)
 				result := newNat(0)
@@ -504,6 +512,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("AddCap", func(t *testing.T) {
+		t.Parallel()
 		// cap is bit-capacity, so AddCap(a, b, cap) = (a + b) mod 2^cap
 		testCases := []struct {
 			name     string
@@ -519,6 +528,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				a := newNat(tc.a)
 				b := newNat(tc.b)
 				result := newNat(0)
@@ -530,6 +540,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("SubCap", func(t *testing.T) {
+		t.Parallel()
 		testCases := []struct {
 			name     string
 			a, b     uint64
@@ -542,6 +553,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				a := newNat(tc.a)
 				b := newNat(tc.b)
 				result := newNat(0)
@@ -553,6 +565,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("Mul", func(t *testing.T) {
+		t.Parallel()
 		testCases := []struct {
 			name     string
 			a, b     uint64
@@ -567,6 +580,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				a := newNat(tc.a)
 				b := newNat(tc.b)
 				result := newNat(0)
@@ -578,6 +592,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("MulCap", func(t *testing.T) {
+		t.Parallel()
 		// cap is bit-capacity, so MulCap(a, b, cap) = (a * b) mod 2^cap
 		testCases := []struct {
 			name     string
@@ -593,6 +608,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				a := newNat(tc.a)
 				b := newNat(tc.b)
 				result := newNat(0)
@@ -604,6 +620,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("Double", func(t *testing.T) {
+		t.Parallel()
 		testCases := []struct {
 			input    uint64
 			expected uint64
@@ -616,6 +633,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
+				t.Parallel()
 				n := newNat(tc.input)
 				result := newNat(0)
 
@@ -626,6 +644,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("Increment", func(t *testing.T) {
+		t.Parallel()
 		testCases := []struct {
 			input    uint64
 			expected uint64
@@ -638,6 +657,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
+				t.Parallel()
 				n := newNat(tc.input)
 				n.Increment()
 				assert.Equal(t, tc.expected, n.Uint64())
@@ -646,6 +666,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("Decrement", func(t *testing.T) {
+		t.Parallel()
 		testCases := []struct {
 			input    uint64
 			expected uint64
@@ -658,6 +679,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
+				t.Parallel()
 				n := newNat(tc.input)
 				n.Decrement()
 				assert.Equal(t, tc.expected, n.Uint64())
@@ -666,6 +688,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("DivModCap", func(t *testing.T) {
+		t.Parallel()
 		testCases := []struct {
 			name         string
 			a, b         uint64
@@ -686,6 +709,7 @@ func TestNat_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				a := newNat(tc.a)
 				b := newNat(tc.b)
 				quot := newNat(0)
@@ -717,6 +741,7 @@ func TestNat_BitOperations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Bit", func(t *testing.T) {
+		t.Parallel()
 		// The Bit function returns individual bits like big.Int.Bit
 		// Number 170 = 0xAA = 10101010 binary
 		n := newNat(170)
@@ -752,6 +777,7 @@ func TestNat_BitOperations(t *testing.T) {
 	})
 
 	t.Run("Lsh", func(t *testing.T) {
+		t.Parallel()
 		testCases := []struct {
 			name     string
 			input    uint64
@@ -766,6 +792,7 @@ func TestNat_BitOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				n := newNat(tc.input)
 				result := newNat(0)
 
@@ -776,6 +803,7 @@ func TestNat_BitOperations(t *testing.T) {
 	})
 
 	t.Run("LshCap", func(t *testing.T) {
+		t.Parallel()
 		// cap specifies the number of bits to produce in the output
 		testCases := []struct {
 			name     string
@@ -792,6 +820,7 @@ func TestNat_BitOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				n := newNat(tc.x)
 				result := newNat(0)
 
@@ -804,6 +833,7 @@ func TestNat_BitOperations(t *testing.T) {
 	})
 
 	t.Run("Rsh", func(t *testing.T) {
+		t.Parallel()
 		testCases := []struct {
 			name     string
 			input    uint64
@@ -818,6 +848,7 @@ func TestNat_BitOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				n := newNat(tc.input)
 				result := newNat(0)
 
@@ -828,6 +859,7 @@ func TestNat_BitOperations(t *testing.T) {
 	})
 
 	t.Run("RshCap", func(t *testing.T) {
+		t.Parallel()
 		// cap specifies the number of bits to produce in the output
 		testCases := []struct {
 			name     string
@@ -844,6 +876,7 @@ func TestNat_BitOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				n := newNat(tc.x)
 				result := newNat(0)
 
@@ -860,6 +893,7 @@ func TestNat_ComparisonOperations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Compare", func(t *testing.T) {
+		t.Parallel()
 		testCases := []struct {
 			name     string
 			a, b     uint64
@@ -875,6 +909,7 @@ func TestNat_ComparisonOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				a := newNat(tc.a)
 				b := newNat(tc.b)
 
@@ -899,6 +934,7 @@ func TestNat_ComparisonOperations(t *testing.T) {
 	})
 
 	t.Run("Equal", func(t *testing.T) {
+		t.Parallel()
 		testCases := []struct {
 			a, b     uint64
 			expected bool
@@ -912,6 +948,7 @@ func TestNat_ComparisonOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
+				t.Parallel()
 				a := newNat(tc.a)
 				b := newNat(tc.b)
 
@@ -926,6 +963,7 @@ func TestNat_ComparisonOperations(t *testing.T) {
 	})
 
 	t.Run("IsZero", func(t *testing.T) {
+		t.Parallel()
 		zero := newNat(0)
 		assert.Equal(t, ct.True, zero.IsZero())
 
@@ -937,6 +975,7 @@ func TestNat_ComparisonOperations(t *testing.T) {
 	})
 
 	t.Run("IsNonZero", func(t *testing.T) {
+		t.Parallel()
 		zero := newNat(0)
 		assert.Equal(t, ct.False, zero.IsNonZero())
 
@@ -952,6 +991,7 @@ func TestNat_UtilityOperations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Coprime", func(t *testing.T) {
+		t.Parallel()
 		testCases := []struct {
 			name     string
 			a, b     uint64
@@ -966,6 +1006,7 @@ func TestNat_UtilityOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
 				a := newNat(tc.a)
 				b := newNat(tc.b)
 
@@ -980,6 +1021,7 @@ func TestNat_UtilityOperations(t *testing.T) {
 	})
 
 	t.Run("String", func(t *testing.T) {
+		t.Parallel()
 		testCases := []struct {
 			input    uint64
 			expected string
@@ -992,6 +1034,7 @@ func TestNat_UtilityOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.expected, func(t *testing.T) {
+				t.Parallel()
 				n := newNat(tc.input)
 				assert.Equal(t, tc.expected, n.String())
 			})
@@ -999,6 +1042,7 @@ func TestNat_UtilityOperations(t *testing.T) {
 	})
 
 	t.Run("TrueLen", func(t *testing.T) {
+		t.Parallel()
 		// Zero has length 0
 		zero := newNat(0)
 		assert.Equal(t, uint(0), zero.TrueLen())
@@ -1013,6 +1057,7 @@ func TestNat_UtilityOperations(t *testing.T) {
 	})
 
 	t.Run("AnnouncedLen", func(t *testing.T) {
+		t.Parallel()
 		n := newNat(42)
 		announcedLen := n.AnnouncedLen()
 		assert.GreaterOrEqual(t, announcedLen, n.TrueLen())
@@ -1023,6 +1068,7 @@ func TestNat_ConditionalOperations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Select", func(t *testing.T) {
+		t.Parallel()
 		x0 := newNat(100)
 		x1 := newNat(200)
 		result := newNat(0)
@@ -1041,10 +1087,12 @@ func TestNat_ConversionOperations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Uint64", func(t *testing.T) {
+		t.Parallel()
 		testCases := []uint64{0, 1, 42, 0xFFFFFFFF, 0xFFFFFFFFFFFFFFFF}
 
 		for _, val := range testCases {
 			t.Run("", func(t *testing.T) {
+				t.Parallel()
 				n := newNat(val)
 				assert.Equal(t, val, n.Uint64())
 			})
@@ -1052,6 +1100,7 @@ func TestNat_ConversionOperations(t *testing.T) {
 	})
 
 	t.Run("SetUint64", func(t *testing.T) {
+		t.Parallel()
 		n := newNat(0)
 
 		testCases := []uint64{0, 1, 42, 0xFFFFFFFF, 0xFFFFFFFFFFFFFFFF}
@@ -1062,10 +1111,12 @@ func TestNat_ConversionOperations(t *testing.T) {
 	})
 
 	t.Run("Bytes", func(t *testing.T) {
+		t.Parallel()
 		testCases := []uint64{0, 0xFF, 0x1234, 0xDEADBEEF}
 
 		for _, input := range testCases {
 			t.Run("", func(t *testing.T) {
+				t.Parallel()
 				n := newNat(input)
 				result := n.Bytes()
 
@@ -1078,6 +1129,7 @@ func TestNat_ConversionOperations(t *testing.T) {
 	})
 
 	t.Run("SetBytes", func(t *testing.T) {
+		t.Parallel()
 		testCases := []struct {
 			input    []byte
 			expected uint64
@@ -1090,6 +1142,7 @@ func TestNat_ConversionOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
+				t.Parallel()
 				n := newNat(0)
 				ok := n.SetBytes(tc.input)
 
@@ -1100,10 +1153,12 @@ func TestNat_ConversionOperations(t *testing.T) {
 	})
 
 	t.Run("Bytes_SetBytes_Roundtrip", func(t *testing.T) {
+		t.Parallel()
 		testValues := []uint64{0, 1, 255, 0x1234, 0xDEADBEEF, 0xFFFFFFFFFFFFFFFF}
 
 		for _, val := range testValues {
 			t.Run("", func(t *testing.T) {
+				t.Parallel()
 				original := newNat(val)
 				bytes := original.Bytes()
 
@@ -1121,6 +1176,7 @@ func TestNat_CapacityOperations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Resize", func(t *testing.T) {
+		t.Parallel()
 		n := newNat(42)
 
 		// Resize changes the announced capacity of the number
@@ -1146,6 +1202,7 @@ func TestNat_EdgeCases(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Operations_With_Zero", func(t *testing.T) {
+		t.Parallel()
 		zero := newNat(0)
 		nonZero := newNat(42)
 		result := newNat(0)
@@ -1170,6 +1227,7 @@ func TestNat_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("Self_Assignment", func(t *testing.T) {
+		t.Parallel()
 		n := newNat(42)
 
 		// Self add
@@ -1188,6 +1246,7 @@ func TestNat_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("Large_Numbers", func(t *testing.T) {
+		t.Parallel()
 		// Test with numbers larger than uint64
 		// Use little-endian format for large numbers
 		largeBytes := []byte{
@@ -1217,6 +1276,7 @@ func TestNat_ConstantTime(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Comparison_Constant_Time", func(t *testing.T) {
+		t.Parallel()
 		// This test verifies that comparison operations return ct.Bool
 		// which ensures constant-time execution
 		n1 := newNat(42)
@@ -1288,6 +1348,7 @@ func TestNat_SaferithCompatibility(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Type_Conversion", func(t *testing.T) {
+		t.Parallel()
 		// Verify that Nat can be converted to/from saferith.Nat
 		saferithNat := new(saferith.Nat).SetUint64(42)
 		implNat := (*numct.Nat)(saferithNat)

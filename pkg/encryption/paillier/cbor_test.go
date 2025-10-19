@@ -53,6 +53,7 @@ func TestPlaintext_CBOR(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			original := tc.createPt()
 
 			// Marshal
@@ -287,26 +288,31 @@ func TestCBOR_InvalidData(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Plaintext_InvalidData", func(t *testing.T) {
+		t.Parallel()
 		_, err := serde.UnmarshalCBOR[*paillier.Plaintext]([]byte{0x00})
 		require.Error(t, err)
 	})
 
 	t.Run("Nonce_InvalidData", func(t *testing.T) {
+		t.Parallel()
 		_, err := serde.UnmarshalCBOR[*paillier.Nonce]([]byte{0x00})
 		require.Error(t, err)
 	})
 
 	t.Run("Ciphertext_InvalidData", func(t *testing.T) {
+		t.Parallel()
 		_, err := serde.UnmarshalCBOR[*paillier.Ciphertext]([]byte{0x00})
 		require.Error(t, err)
 	})
 
 	t.Run("PublicKey_InvalidData", func(t *testing.T) {
+		t.Parallel()
 		_, err := serde.UnmarshalCBOR[*paillier.PublicKey]([]byte{0x00})
 		require.Error(t, err)
 	})
 
 	t.Run("PrivateKey_InvalidData", func(t *testing.T) {
+		t.Parallel()
 		_, err := serde.UnmarshalCBOR[*paillier.PrivateKey]([]byte{0x00})
 		require.Error(t, err)
 	})

@@ -118,6 +118,7 @@ func dealCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *shamir.Sc
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			out, err := scheme.Deal(tc.secret, tc.prng)
 
 			if tc.expectError {
@@ -236,6 +237,7 @@ func dealRandomCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			secrets := make([]*shamir.Secret[FE], 0, tc.iterations)
 
 			for i := range tc.iterations {
@@ -306,6 +308,7 @@ func TestDeal(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		field := k256.NewScalarField()
 
 		testConfigs := []struct {
@@ -323,6 +326,7 @@ func TestDeal(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := shamir.NewScheme(field, config.threshold, shareholders)
 				if config.errors {
@@ -336,6 +340,7 @@ func TestDeal(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		field := bls12381.NewScalarField()
 
 		testConfigs := []struct {
@@ -349,6 +354,7 @@ func TestDeal(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := shamir.NewScheme(field, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -362,6 +368,7 @@ func TestDealRandom(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		field := k256.NewScalarField()
 
 		testConfigs := []struct {
@@ -376,6 +383,7 @@ func TestDealRandom(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := shamir.NewScheme(field, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -385,6 +393,7 @@ func TestDealRandom(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		field := bls12381.NewScalarField()
 
 		shareholders := sharing.NewOrdinalShareholderSet(6)
@@ -567,6 +576,7 @@ func homomorphicOpsCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme 
 
 	for _, tc := range addTests {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			// Perform addition
 			sumShare := tc.share1.Add(tc.share2)
 
@@ -650,6 +660,7 @@ func homomorphicOpsCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme 
 
 	for _, tc := range scalarMulTests {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			// Perform scalar multiplication
 			scaledShare := tc.share.ScalarMul(tc.scalar)
 
@@ -687,6 +698,7 @@ func homomorphicOpsCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme 
 
 	// Test combined operations
 	t.Run("combined add and scalar multiply", func(t *testing.T) {
+		t.Parallel()
 		// Compute (s1 * 3) + (s2 * 2)
 		scalar1 := field.FromUint64(3)
 		scalar2 := field.FromUint64(2)
@@ -713,6 +725,7 @@ func homomorphicOpsCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme 
 
 	// Test Share methods
 	t.Run("share methods", func(t *testing.T) {
+		t.Parallel()
 		share, _ := shares1.Get(sharing.ID(1))
 
 		// Test Set method
@@ -743,6 +756,7 @@ func TestHomomorphicOperations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		field := k256.NewScalarField()
 
 		testConfigs := []struct {
@@ -757,6 +771,7 @@ func TestHomomorphicOperations(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := shamir.NewScheme(field, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -766,6 +781,7 @@ func TestHomomorphicOperations(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		field := bls12381.NewScalarField()
 
 		shareholders := sharing.NewOrdinalShareholderSet(4)
@@ -825,6 +841,7 @@ func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 	threshold := scheme.AccessStructure().Threshold()
 
 	t.Run("valid conversion with full qualified set", func(t *testing.T) {
+		t.Parallel()
 		// Create a qualified set with all shareholders
 		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(
 			scheme.AccessStructure().Shareholders(),
@@ -853,6 +870,7 @@ func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 	})
 
 	t.Run("valid conversion with threshold qualified set", func(t *testing.T) {
+		t.Parallel()
 		// Create a qualified set with exactly threshold shareholders
 		thresholdIds := allIds[:threshold]
 		qualifiedIds := hashset.NewComparable[sharing.ID]()
@@ -888,6 +906,7 @@ func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 	})
 
 	t.Run("error when share not in qualified set", func(t *testing.T) {
+		t.Parallel()
 		// Create a qualified set that doesn't include share ID 1
 		qualifiedIds := hashset.NewComparable[sharing.ID]()
 
@@ -912,6 +931,7 @@ func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 	})
 
 	t.Run("multiple conversions produce consistent results", func(t *testing.T) {
+		t.Parallel()
 		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(
 			scheme.AccessStructure().Shareholders(),
 		)
@@ -933,6 +953,7 @@ func toAdditiveCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 	})
 
 	t.Run("lagrange coefficients verification", func(t *testing.T) {
+		t.Parallel()
 		// Test that the Lagrange coefficients sum to 1
 		lambdas, err := shamir.LagrangeCoefficients(field, allIds...)
 		require.NoError(t, err)
@@ -950,6 +971,7 @@ func TestToAdditive(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		field := k256.NewScalarField()
 
 		testConfigs := []struct {
@@ -965,6 +987,7 @@ func TestToAdditive(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := shamir.NewScheme(field, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -974,6 +997,7 @@ func TestToAdditive(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		field := bls12381.NewScalarField()
 
 		testConfigs := []struct {
@@ -987,6 +1011,7 @@ func TestToAdditive(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := shamir.NewScheme(field, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -1003,6 +1028,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 	field := k256.NewScalarField()
 
 	t.Run("zero secret conversion", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(3)
 		scheme, err := shamir.NewScheme(field, 2, shareholders)
 		require.NoError(t, err)
@@ -1035,6 +1061,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 	})
 
 	t.Run("single shareholder qualified set", func(t *testing.T) {
+		t.Parallel()
 		// This should fail as minimal qualified set needs at least 2 shareholders
 		singleId := hashset.NewComparable[sharing.ID]()
 		singleId.Add(sharing.ID(1))
@@ -1047,6 +1074,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 	})
 
 	t.Run("share with modified value", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(3)
 		scheme, err := shamir.NewScheme(field, 2, shareholders)
 		require.NoError(t, err)

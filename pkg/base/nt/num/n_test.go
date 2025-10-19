@@ -309,6 +309,7 @@ func TestNaturalNumbers_NotSupported(t *testing.T) {
 	t.Parallel()
 
 	t.Run("TryOpInv", func(t *testing.T) {
+		t.Parallel()
 		// Natural numbers don't have additive inverses
 		values := []*num.Nat{
 			num.N().Zero(),
@@ -323,6 +324,7 @@ func TestNaturalNumbers_NotSupported(t *testing.T) {
 	})
 
 	t.Run("TryNeg", func(t *testing.T) {
+		t.Parallel()
 		// Natural numbers can't be negated
 		values := []*num.Nat{
 			num.N().Zero(),
@@ -337,6 +339,7 @@ func TestNaturalNumbers_NotSupported(t *testing.T) {
 	})
 
 	t.Run("TryInv", func(t *testing.T) {
+		t.Parallel()
 		// Natural numbers don't have multiplicative inverses
 		values := []*num.Nat{
 			num.N().One(),
@@ -815,24 +818,28 @@ func TestNaturalNumbers_ErrorHandling(t *testing.T) {
 	t.Parallel()
 
 	t.Run("FromBytes_Nil", func(t *testing.T) {
+		t.Parallel()
 		_, err := num.N().FromBytes(nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "must not be nil")
 	})
 
 	t.Run("FromInt_Nil", func(t *testing.T) {
+		t.Parallel()
 		_, err := num.N().FromInt(nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "must not be nil")
 	})
 
 	t.Run("Random_Nil_HighExclusive", func(t *testing.T) {
+		t.Parallel()
 		_, err := num.N().Random(nil, nil, pcg.NewRandomised())
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "must not be nil")
 	})
 
 	t.Run("Random_Nil_PRNG", func(t *testing.T) {
+		t.Parallel()
 		lower := num.N().FromUint64(10)
 		upper := num.N().FromUint64(20)
 		_, err := num.N().Random(lower, upper, nil)
@@ -1442,6 +1449,7 @@ func TestNaturalNumbers_FromNatPlus(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Valid NatPlus", func(t *testing.T) {
+		t.Parallel()
 		np, err := num.NPlus().FromUint64(42)
 		require.NoError(t, err)
 
@@ -1451,6 +1459,7 @@ func TestNaturalNumbers_FromNatPlus(t *testing.T) {
 	})
 
 	t.Run("Nil NatPlus", func(t *testing.T) {
+		t.Parallel()
 		_, err := num.N().FromNatPlus(nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "nil")
@@ -1488,6 +1497,7 @@ func TestNaturalNumbers_MultiScalarMul(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Valid inputs", func(t *testing.T) {
+		t.Parallel()
 		scalars := []*num.Nat{
 			num.N().FromUint64(2),
 			num.N().FromUint64(3),
@@ -1504,6 +1514,7 @@ func TestNaturalNumbers_MultiScalarMul(t *testing.T) {
 	})
 
 	t.Run("Mismatched lengths", func(t *testing.T) {
+		t.Parallel()
 		scalars := []*num.Nat{num.N().FromUint64(2)}
 		elements := []*num.Nat{
 			num.N().FromUint64(5),
@@ -1516,6 +1527,7 @@ func TestNaturalNumbers_MultiScalarMul(t *testing.T) {
 	})
 
 	t.Run("Empty inputs", func(t *testing.T) {
+		t.Parallel()
 		result, err := num.N().MultiScalarMul([]*num.Nat{}, []*num.Nat{})
 		require.NoError(t, err)
 		require.True(t, result.IsZero())
@@ -1580,6 +1592,7 @@ func TestNat_Decrement(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Positive", func(t *testing.T) {
+		t.Parallel()
 		n := num.N().FromUint64(5)
 		result, err := n.Decrement()
 		require.NoError(t, err)
@@ -1587,6 +1600,7 @@ func TestNat_Decrement(t *testing.T) {
 	})
 
 	t.Run("One to Zero", func(t *testing.T) {
+		t.Parallel()
 		n := num.N().One()
 		result, err := n.Decrement()
 		require.NoError(t, err)
@@ -1594,6 +1608,7 @@ func TestNat_Decrement(t *testing.T) {
 	})
 
 	t.Run("Zero fails", func(t *testing.T) {
+		t.Parallel()
 		n := num.N().Zero()
 		_, err := n.Decrement()
 		require.Error(t, err)

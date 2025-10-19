@@ -34,6 +34,7 @@ var fpSquareVectors string
 var fpSqrtVectors string
 
 func Test_FpAdd(t *testing.T) {
+	t.Parallel()
 	var vectors testutils.BinaryOpVectors[*testutils.TestFp, testutils.TestFp]
 	err := json.Unmarshal([]byte(fpAddVectors), &vectors)
 	require.NoError(t, err)
@@ -44,6 +45,7 @@ func Test_FpAdd(t *testing.T) {
 }
 
 func Test_FpSub(t *testing.T) {
+	t.Parallel()
 	var vectors testutils.BinaryOpVectors[*testutils.TestFp, testutils.TestFp]
 	err := json.Unmarshal([]byte(fpSubVectors), &vectors)
 	require.NoError(t, err)
@@ -54,6 +56,7 @@ func Test_FpSub(t *testing.T) {
 }
 
 func Test_FpNeg(t *testing.T) {
+	t.Parallel()
 	var vectors testutils.UnaryOpVectors[*testutils.TestFp, testutils.TestFp]
 	err := json.Unmarshal([]byte(fpNegVectors), &vectors)
 	require.NoError(t, err)
@@ -64,6 +67,7 @@ func Test_FpNeg(t *testing.T) {
 }
 
 func Test_FpMul(t *testing.T) {
+	t.Parallel()
 	var vectors testutils.BinaryOpVectors[*testutils.TestFp, testutils.TestFp]
 	err := json.Unmarshal([]byte(fpMulVectors), &vectors)
 	require.NoError(t, err)
@@ -74,6 +78,7 @@ func Test_FpMul(t *testing.T) {
 }
 
 func Test_FpDiv(t *testing.T) {
+	t.Parallel()
 	var vectors testutils.BinaryOpVectorsWithOk[*testutils.TestFp, testutils.TestFp]
 	err := json.Unmarshal([]byte(fpDivVectors), &vectors)
 	require.NoError(t, err)
@@ -84,6 +89,7 @@ func Test_FpDiv(t *testing.T) {
 }
 
 func Test_FpInv(t *testing.T) {
+	t.Parallel()
 	var vectors testutils.UnaryOpVectorsWithOk[*testutils.TestFp, testutils.TestFp]
 	err := json.Unmarshal([]byte(fpInvVectors), &vectors)
 	require.NoError(t, err)
@@ -94,6 +100,7 @@ func Test_FpInv(t *testing.T) {
 }
 
 func Test_FpSquare(t *testing.T) {
+	t.Parallel()
 	var vectors testutils.UnaryOpVectors[*testutils.TestFp, testutils.TestFp]
 	err := json.Unmarshal([]byte(fpSquareVectors), &vectors)
 	require.NoError(t, err)
@@ -104,6 +111,7 @@ func Test_FpSquare(t *testing.T) {
 }
 
 func Test_FpSqrt(t *testing.T) {
+	t.Parallel()
 	var vectors testutils.UnaryOpVectorsWithOk[*testutils.TestFp, testutils.TestFp]
 	err := json.Unmarshal([]byte(fpSqrtVectors), &vectors)
 	require.NoError(t, err)

@@ -32,6 +32,7 @@ func TestNewModulusFromNat(t *testing.T) {
 	t.Parallel()
 
 	t.Run("odd prime", func(t *testing.T) {
+		t.Parallel()
 		p := newNatFromBig(big.NewInt(7))
 		m, ok := numct.NewModulus(p)
 		assert.Equal(t, ct.True, ok, "Failed to create modulus")
@@ -42,6 +43,7 @@ func TestNewModulusFromNat(t *testing.T) {
 	})
 
 	t.Run("not odd prime", func(t *testing.T) {
+		t.Parallel()
 		p := newNatFromBig(big.NewInt(15)) // 3*5, not prime
 		m, ok := numct.NewModulus(p)
 		assert.Equal(t, ct.True, ok, "Failed to create modulus")
@@ -52,6 +54,7 @@ func TestNewModulusFromNat(t *testing.T) {
 	})
 
 	t.Run("even number", func(t *testing.T) {
+		t.Parallel()
 		p := newNatFromBig(big.NewInt(10))
 		m, ok := numct.NewModulus(p)
 		assert.Equal(t, ct.True, ok, "Failed to create modulus")
@@ -68,6 +71,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 	m := newModulusOddPrime(big.NewInt(7))
 
 	t.Run("Mod", func(t *testing.T) {
+		t.Parallel()
 		tests := []struct {
 			name string
 			x    int64
@@ -83,6 +87,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		for _, tt := range tests {
 
 			t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 				x := newNatFromBig(big.NewInt(tt.x))
 				out := newNatFromBig(big.NewInt(0))
 
@@ -93,6 +98,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("Add", func(t *testing.T) {
+		t.Parallel()
 		tests := []struct {
 			name string
 			x, y int64
@@ -107,6 +113,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		for _, tt := range tests {
 
 			t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 				x := newNatFromBig(big.NewInt(tt.x))
 				y := newNatFromBig(big.NewInt(tt.y))
 				out := newNatFromBig(big.NewInt(0))
@@ -118,6 +125,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("Sub", func(t *testing.T) {
+		t.Parallel()
 		tests := []struct {
 			name string
 			x, y int64
@@ -132,6 +140,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		for _, tt := range tests {
 
 			t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 				x := newNatFromBig(big.NewInt(tt.x))
 				y := newNatFromBig(big.NewInt(tt.y))
 				out := newNatFromBig(big.NewInt(0))
@@ -143,6 +152,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("Mul", func(t *testing.T) {
+		t.Parallel()
 		tests := []struct {
 			name string
 			x, y int64
@@ -157,6 +167,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		for _, tt := range tests {
 
 			t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 				x := newNatFromBig(big.NewInt(tt.x))
 				y := newNatFromBig(big.NewInt(tt.y))
 				out := newNatFromBig(big.NewInt(0))
@@ -168,6 +179,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("Neg", func(t *testing.T) {
+		t.Parallel()
 		tests := []struct {
 			name string
 			x    int64
@@ -182,6 +194,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		for _, tt := range tests {
 
 			t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 				x := newNatFromBig(big.NewInt(tt.x))
 				out := newNatFromBig(big.NewInt(0))
 
@@ -214,6 +227,7 @@ func TestModulusOddPrime_Inv(t *testing.T) {
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			x := newNatFromBig(big.NewInt(tt.x))
 			out := newNatFromBig(big.NewInt(0))
 
@@ -257,6 +271,7 @@ func TestModulusOddPrime_Sqrt(t *testing.T) {
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			x := newNatFromBig(big.NewInt(tt.x))
 			out := newNatFromBig(big.NewInt(0))
 
@@ -296,6 +311,7 @@ func TestModulusOddPrime_Div(t *testing.T) {
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			x := newNatFromBig(big.NewInt(tt.x))
 			y := newNatFromBig(big.NewInt(tt.y))
 			out := newNatFromBig(big.NewInt(0))
@@ -318,27 +334,32 @@ func TestModulusOddPrime_Properties(t *testing.T) {
 	m := newModulusOddPrime(p)
 
 	t.Run("BitLen", func(t *testing.T) {
+		t.Parallel()
 		// 97 in binary is 1100001, which is 7 bits
 		assert.Equal(t, uint(7), m.BitLen())
 	})
 
 	t.Run("Nat", func(t *testing.T) {
+		t.Parallel()
 		n := m.Nat()
 		assert.Equal(t, uint64(97), n.Uint64())
 	})
 
 	t.Run("Bytes", func(t *testing.T) {
+		t.Parallel()
 		bytes := m.Bytes()
 		expected := p.Bytes()
 		assert.Equal(t, expected, bytes)
 	})
 
 	t.Run("String", func(t *testing.T) {
+		t.Parallel()
 		str := m.String()
 		assert.Contains(t, str, "61") // 97 in hex is 0x61
 	})
 
 	t.Run("InRange", func(t *testing.T) {
+		t.Parallel()
 		tests := []struct {
 			name string
 			x    int64
@@ -354,6 +375,7 @@ func TestModulusOddPrime_Properties(t *testing.T) {
 		for _, tt := range tests {
 
 			t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 				x := newNatFromBig(big.NewInt(tt.x))
 				got := m.IsInRange(x)
 				assert.Equal(t, tt.want, got)
@@ -362,6 +384,7 @@ func TestModulusOddPrime_Properties(t *testing.T) {
 	})
 
 	t.Run("IsUnit", func(t *testing.T) {
+		t.Parallel()
 		tests := []struct {
 			name string
 			x    int64
@@ -377,6 +400,7 @@ func TestModulusOddPrime_Properties(t *testing.T) {
 		for _, tt := range tests {
 
 			t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 				x := newNatFromBig(big.NewInt(tt.x))
 				got := m.IsUnit(x)
 				assert.Equal(t, tt.want, got)
@@ -410,6 +434,7 @@ func TestModulusOddPrime_Exp(t *testing.T) {
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			base := newNatFromBig(big.NewInt(tt.base))
 			exp := newNatFromBig(big.NewInt(tt.exp))
 			out := newNatFromBig(big.NewInt(0))
@@ -446,6 +471,7 @@ func TestModulus_Sqrt(t *testing.T) {
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			x := newNatFromBig(big.NewInt(tt.x))
 			out := newNatFromBig(big.NewInt(0))
 
@@ -472,6 +498,7 @@ func TestModulusInterfaces(t *testing.T) {
 	// These interface checks are now done at compile time in modulus_cgo.go
 	// Just verify we can create instances
 	t.Run("Can create ModulusOddPrime", func(t *testing.T) {
+		t.Parallel()
 		p := newNatFromBig(big.NewInt(7))
 		m, ok := numct.NewModulusOddPrime(p)
 		assert.Equal(t, ct.True, ok)
@@ -479,6 +506,7 @@ func TestModulusInterfaces(t *testing.T) {
 	})
 
 	t.Run("Can create ModulusOdd", func(t *testing.T) {
+		t.Parallel()
 		p := newNatFromBig(big.NewInt(15)) // odd composite
 		m, ok := numct.NewModulusOdd(p)
 		assert.Equal(t, ct.True, ok)
@@ -486,6 +514,7 @@ func TestModulusInterfaces(t *testing.T) {
 	})
 
 	t.Run("Can create Modulus", func(t *testing.T) {
+		t.Parallel()
 		p := newNatFromBig(big.NewInt(10)) // even
 		m, ok := numct.NewModulusNonZero(p)
 		assert.Equal(t, ct.True, ok)
@@ -507,6 +536,7 @@ func TestModulusCachingPerformance(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			// Generate a prime
 			pBig, _ := crand.Prime(crand.Reader, tc.primeBits)
 			p := (*numct.Nat)(new(saferith.Nat).SetBig(pBig, tc.primeBits).Resize(tc.primeBits))
@@ -618,6 +648,7 @@ func TestModSymmetric(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			input := newNatFromBig(big.NewInt(tc.input))
 			var output numct.Int
 			m.ModSymmetric(&output, input)
@@ -644,6 +675,7 @@ func TestModInv_Comprehensive(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Prime modulus", func(t *testing.T) {
+		t.Parallel()
 		// Test with prime modulus 13
 		p := big.NewInt(13)
 		m := newModulusOddPrime(p)
@@ -665,6 +697,7 @@ func TestModInv_Comprehensive(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 				a := newNatFromBig(big.NewInt(tc.input))
 				var inv numct.Nat
 				ok := m.ModInv(&inv, a)
@@ -694,6 +727,7 @@ func TestModInv_Comprehensive(t *testing.T) {
 	})
 
 	t.Run("Composite odd modulus", func(t *testing.T) {
+		t.Parallel()
 		// Test with composite modulus 15 = 3 * 5
 		n := big.NewInt(15)
 		m, ok := numct.NewModulus(newNatFromBig(n))
@@ -719,6 +753,7 @@ func TestModInv_Comprehensive(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 				a := newNatFromBig(big.NewInt(tc.input))
 				var inv numct.Nat
 				ok := m.ModInv(&inv, a)

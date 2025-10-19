@@ -842,23 +842,6 @@ func TestIntegers_TryInv(t *testing.T) {
 	}
 }
 
-func TestIntegers_NotImplemented(t *testing.T) {
-	t.Parallel()
-
-	// TODO: Exp method not yet implemented
-	// t.Run("Exp_Panics", func(t *testing.T) {
-	// 	defer func() {
-	// 		if r := recover(); r == nil {
-	// 			t.Errorf("Expected Exp to panic")
-	// 		}
-	// 	}()
-
-	// 	base := num.Z().FromInt64(2)
-	// 	exponent := num.Z().FromInt64(3)
-	// 	base.Exp(exponent)
-	// })
-}
-
 func TestIntegers_Structure(t *testing.T) {
 	t.Parallel()
 
@@ -1280,6 +1263,7 @@ func TestIntegers_Random(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Random_InRange", func(t *testing.T) {
+		t.Parallel()
 		lower := num.Z().FromInt64(10)
 		upper := num.Z().FromInt64(20)
 
@@ -1292,6 +1276,7 @@ func TestIntegers_Random(t *testing.T) {
 	})
 
 	t.Run("Random_SingleValue", func(t *testing.T) {
+		t.Parallel()
 		lower := num.Z().FromInt64(42)
 		upper := num.Z().FromInt64(43)
 
@@ -1305,11 +1290,13 @@ func TestIntegers_MissingMethods(t *testing.T) {
 	t.Parallel()
 
 	t.Run("IsSemiDomain", func(t *testing.T) {
+		t.Parallel()
 		// Integers form an integral domain
 		require.True(t, num.Z().IsSemiDomain())
 	})
 
 	t.Run("IsTorsionFree", func(t *testing.T) {
+		t.Parallel()
 		// Any integer should be torsion-free
 		values := []*num.Int{
 			num.Z().Zero(),
@@ -1324,6 +1311,7 @@ func TestIntegers_MissingMethods(t *testing.T) {
 	})
 
 	t.Run("ScalarStructure", func(t *testing.T) {
+		t.Parallel()
 		// Scalar structure should be Z itself
 		scalarStruct := num.Z().ScalarStructure()
 		require.NotNil(t, scalarStruct)
@@ -1344,6 +1332,7 @@ func TestIntegers_MissingMethods(t *testing.T) {
 	// })
 
 	t.Run("IsOpIdentity", func(t *testing.T) {
+		t.Parallel()
 		// Zero is the additive identity
 		require.True(t, num.Z().Zero().IsOpIdentity())
 		require.False(t, num.Z().One().IsOpIdentity())
@@ -1352,12 +1341,14 @@ func TestIntegers_MissingMethods(t *testing.T) {
 	})
 
 	t.Run("FromCardinal_Error", func(t *testing.T) {
+		t.Parallel()
 		// FromCardinal with nil should error
 		_, err := num.Z().FromCardinal(nil)
 		require.Error(t, err)
 	})
 
 	t.Run("FromNat_Error", func(t *testing.T) {
+		t.Parallel()
 		// FromNat with nil should error
 		_, err := num.Z().FromNat(nil)
 		require.Error(t, err)
@@ -1365,6 +1356,7 @@ func TestIntegers_MissingMethods(t *testing.T) {
 	})
 
 	t.Run("FromBytes_Nil", func(t *testing.T) {
+		t.Parallel()
 		// FromBytes with nil should error
 		_, err := num.Z().FromBytes(nil)
 		require.Error(t, err)
@@ -1391,12 +1383,14 @@ func TestIntegers_MissingMethods(t *testing.T) {
 	// })
 
 	t.Run("IterRange_NilStart", func(t *testing.T) {
+		t.Parallel()
 		// IterRange with nil start should return nil
 		iter := num.Z().IterRange(nil, num.Z().FromInt64(10))
 		require.Nil(t, iter)
 	})
 
 	t.Run("IterRange_NilStop_Positive", func(t *testing.T) {
+		t.Parallel()
 		// IterRange with nil stop and positive start should iterate forward
 		start := num.Z().FromInt64(5)
 		var collected []string
@@ -1413,6 +1407,7 @@ func TestIntegers_MissingMethods(t *testing.T) {
 	})
 
 	t.Run("IterRange_NilStop_Negative", func(t *testing.T) {
+		t.Parallel()
 		// IterRange with nil stop and negative start should iterate backward
 		start := num.Z().FromInt64(-5)
 		var collected []string
@@ -1429,6 +1424,7 @@ func TestIntegers_MissingMethods(t *testing.T) {
 	})
 
 	t.Run("MultiScalarMul_Errors", func(t *testing.T) {
+		t.Parallel()
 		// Test mismatched lengths
 		values := []*num.Int{num.Z().FromInt64(1), num.Z().FromInt64(2)}
 		scalars := []*num.Int{num.Z().FromInt64(3)}
@@ -1447,6 +1443,7 @@ func TestIntegers_MissingMethods(t *testing.T) {
 	})
 
 	t.Run("Negative_Bytes", func(t *testing.T) {
+		t.Parallel()
 		// Test that negative numbers produce empty bytes (big.Int behaviour)
 		neg := num.Z().FromInt64(-42)
 		bytes := neg.Bytes()
@@ -1462,6 +1459,7 @@ func TestIntegers_FromNatPlus(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Valid NatPlus", func(t *testing.T) {
+		t.Parallel()
 		np, err := num.NPlus().FromUint64(42)
 		require.NoError(t, err)
 
@@ -1471,6 +1469,7 @@ func TestIntegers_FromNatPlus(t *testing.T) {
 	})
 
 	t.Run("Nil NatPlus", func(t *testing.T) {
+		t.Parallel()
 		_, err := num.Z().FromNatPlus(nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "nil")
@@ -1488,6 +1487,7 @@ func TestIntegers_FromUintSymmetric(t *testing.T) {
 	// Test symmetric range conversion
 	// For modulus 10, symmetric range is [-5, 4]
 	t.Run("In symmetric range positive", func(t *testing.T) {
+		t.Parallel()
 		u, err := zn.FromUint64(3)
 		require.NoError(t, err)
 
@@ -1497,6 +1497,7 @@ func TestIntegers_FromUintSymmetric(t *testing.T) {
 	})
 
 	t.Run("In symmetric range negative", func(t *testing.T) {
+		t.Parallel()
 		u, err := zn.FromUint64(7) // 7 mod 10 = -3 in symmetric range
 		require.NoError(t, err)
 
@@ -1554,11 +1555,13 @@ func TestInt_IsUnit(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Unit", func(t *testing.T) {
+		t.Parallel()
 		i := num.Z().FromInt64(3) // gcd(3, 11) = 1
 		require.True(t, i.IsUnit(modulus))
 	})
 
 	t.Run("Not unit", func(t *testing.T) {
+		t.Parallel()
 		modulus2, err := num.NPlus().FromUint64(12)
 		require.NoError(t, err)
 		i := num.Z().FromInt64(6) // gcd(6, 12) = 6

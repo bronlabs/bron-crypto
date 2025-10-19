@@ -77,6 +77,7 @@ func TestBoldyrevaDKGAndSign(t *testing.T) {
 
 	// Test threshold signing with a quorum
 	t.Run("threshold signing", func(t *testing.T) {
+		t.Parallel()
 		// Select a quorum (threshold participants)
 		quorumSet := hashset.NewComparable[sharing.ID]()
 		// Sharing IDs start from 0
@@ -153,6 +154,7 @@ func TestAllRogueKeyPreventionModes(t *testing.T) {
 	for _, variant := range keyVariants {
 		for _, alg := range rogueKeyAlgs {
 			t.Run(variant.name+"_"+alg.name, func(t *testing.T) {
+		t.Parallel()
 				testThresholdSigningWithAlgorithm(t, variant.shortKey, alg.alg)
 			})
 		}
@@ -403,30 +405,35 @@ func TestCosignerCreationErrors(t *testing.T) {
 	quorum := quorumSet.Freeze()
 
 	t.Run("NilCurveFamily", func(t *testing.T) {
+		t.Parallel()
 		_, err := signing.NewShortKeyCosigner(sid, nil, shard, quorum, bls.Basic, tape)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "curveFamily")
 	})
 
 	t.Run("NilTranscript", func(t *testing.T) {
+		t.Parallel()
 		_, err := signing.NewShortKeyCosigner(sid, curveFamily, shard, quorum, bls.Basic, nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "transcript")
 	})
 
 	t.Run("NilShard", func(t *testing.T) {
+		t.Parallel()
 		_, err := signing.NewShortKeyCosigner(sid, curveFamily, nil, quorum, bls.Basic, tape)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "shard")
 	})
 
 	t.Run("UnsupportedRogueKeyAlgorithm", func(t *testing.T) {
+		t.Parallel()
 		_, err := signing.NewShortKeyCosigner(sid, curveFamily, shard, quorum, bls.RogueKeyPreventionAlgorithm(99), tape)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "not supported")
 	})
 
 	t.Run("UnauthorizedQuorum", func(t *testing.T) {
+		t.Parallel()
 		// Create a quorum that doesn't meet the threshold
 		invalidQuorum := hashset.NewComparable[sharing.ID]()
 		invalidQuorum.Add(sharing.ID(0)) // Only 1 member, but threshold is 2
@@ -471,12 +478,14 @@ func TestProducePartialSignatureErrors(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("EmptyMessage", func(t *testing.T) {
+		t.Parallel()
 		_, err := cosigner.ProducePartialSignature([]byte{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "message cannot be empty")
 	})
 
 	t.Run("WrongRound", func(t *testing.T) {
+		t.Parallel()
 		// First produce a signature to advance the round
 		_, err := cosigner.ProducePartialSignature([]byte("first message"))
 		require.NoError(t, err)
@@ -521,12 +530,14 @@ func TestAggregatorCreationErrors(t *testing.T) {
 	quorumSet.Add(sharing.ID(1))
 
 	t.Run("NilCurveFamily", func(t *testing.T) {
+		t.Parallel()
 		_, err := signing.NewShortKeyAggregator(nil, &publicMaterial, bls.Basic)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "curveFamily")
 	})
 
 	t.Run("UnsupportedRogueKeyAlgorithm", func(t *testing.T) {
+		t.Parallel()
 		_, err := signing.NewShortKeyAggregator(curveFamily, &publicMaterial, bls.RogueKeyPreventionAlgorithm(99))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "not supported")
@@ -577,12 +588,14 @@ func TestAggregationErrors(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("NilPartialSignatures", func(t *testing.T) {
+		t.Parallel()
 		_, err := aggregator.Aggregate(nil, []byte("message"))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "partialSigs")
 	})
 
 	t.Run("EmptyMessage", func(t *testing.T) {
+		t.Parallel()
 		partialSigsMap := hashmap.NewComparable[sharing.ID, *boldyreva02.PartialSignature[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar]]()
 		_, err := aggregator.Aggregate(partialSigsMap.Freeze(), []byte{})
 		require.Error(t, err)
@@ -590,6 +603,7 @@ func TestAggregationErrors(t *testing.T) {
 	})
 
 	t.Run("MissingPublicKey", func(t *testing.T) {
+		t.Parallel()
 		// Create a partial signature from a non-existent participant
 		message := []byte("test message")
 		partialSigs, err := tu.ProducePartialSignatures(cosigners, message)
@@ -627,6 +641,7 @@ func TestDifferentQuorumConfigurations(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			sid := network.SID(sha3.Sum256([]byte("test-quorum-" + tc.name)))
 			curveFamily := &bls12381.FamilyTrait{}
 			tape := hagrid.NewTranscript("TestQuorum")
@@ -719,10 +734,12 @@ func TestCosignerGetters(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("SharingID", func(t *testing.T) {
+		t.Parallel()
 		require.Equal(t, sharing.ID(1), cosigner.SharingID())
 	})
 
 	t.Run("Quorum", func(t *testing.T) {
+		t.Parallel()
 		q := cosigner.Quorum()
 		require.Equal(t, 2, q.Size())
 		require.True(t, q.Contains(sharing.ID(0)))
@@ -730,20 +747,24 @@ func TestCosignerGetters(t *testing.T) {
 	})
 
 	t.Run("Shard", func(t *testing.T) {
+		t.Parallel()
 		s := cosigner.Shard()
 		require.NotNil(t, s)
 		require.Equal(t, shard, s)
 	})
 
 	t.Run("Variant", func(t *testing.T) {
+		t.Parallel()
 		require.Equal(t, bls.ShortKey, cosigner.Variant())
 	})
 
 	t.Run("TargetRogueKeyPreventionAlgorithm", func(t *testing.T) {
+		t.Parallel()
 		require.Equal(t, rogueKeyAlg, cosigner.TargetRogueKeyPreventionAlgorithm())
 	})
 
 	t.Run("NilCosigner", func(t *testing.T) {
+		t.Parallel()
 		var nilCosigner *signing.Cosigner[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar]
 		require.Nil(t, nilCosigner.Quorum())
 		require.Nil(t, nilCosigner.Shard())

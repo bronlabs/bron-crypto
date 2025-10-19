@@ -14,6 +14,7 @@ import (
 
 func TestCardinalConstants(t *testing.T) {
 	t.Run("Zero", func(t *testing.T) {
+		t.Parallel()
 		z := cardinal.Zero()
 		assert.True(t, z.IsFinite())
 		assert.False(t, z.IsUnknown())
@@ -24,6 +25,7 @@ func TestCardinalConstants(t *testing.T) {
 	})
 
 	t.Run("Infinite", func(t *testing.T) {
+		t.Parallel()
 		inf := cardinal.Infinite()
 		assert.False(t, inf.IsFinite())
 		assert.False(t, inf.IsUnknown())
@@ -34,6 +36,7 @@ func TestCardinalConstants(t *testing.T) {
 	})
 
 	t.Run("Unknown", func(t *testing.T) {
+		t.Parallel()
 		unk := cardinal.Unknown()
 		assert.False(t, unk.IsFinite())
 		assert.True(t, unk.IsUnknown())
@@ -46,12 +49,14 @@ func TestCardinalConstants(t *testing.T) {
 
 func TestNewCardinal(t *testing.T) {
 	t.Run("Zero", func(t *testing.T) {
+		t.Parallel()
 		c := cardinal.New(0)
 		assert.True(t, c.Equal(cardinal.Zero()))
 		assert.True(t, c.IsZero())
 	})
 
 	t.Run("Non-zero", func(t *testing.T) {
+		t.Parallel()
 		c := cardinal.New(42)
 		assert.True(t, c.IsFinite())
 		assert.False(t, c.IsUnknown())
@@ -62,6 +67,7 @@ func TestNewCardinal(t *testing.T) {
 	})
 
 	t.Run("Large value", func(t *testing.T) {
+		t.Parallel()
 		c := cardinal.New(^uint64(0)) // max uint64
 		assert.True(t, c.IsFinite())
 		assert.Equal(t, ^uint64(0), c.Uint64())
@@ -70,6 +76,7 @@ func TestNewCardinal(t *testing.T) {
 
 func TestNewCardinalFromNat(t *testing.T) {
 	t.Run("Nil", func(t *testing.T) {
+		t.Parallel()
 		c := cardinal.NewFromSaferith(nil)
 		assert.True(t, c.IsUnknown())
 		assert.False(t, c.IsFinite())
@@ -78,6 +85,7 @@ func TestNewCardinalFromNat(t *testing.T) {
 	})
 
 	t.Run("Zero Nat", func(t *testing.T) {
+		t.Parallel()
 		n := new(saferith.Nat).SetUint64(0)
 		c := cardinal.NewFromSaferith(n)
 		assert.True(t, c.IsFinite())
@@ -86,6 +94,7 @@ func TestNewCardinalFromNat(t *testing.T) {
 	})
 
 	t.Run("Non-zero Nat", func(t *testing.T) {
+		t.Parallel()
 		n := new(saferith.Nat).SetUint64(100)
 		c := cardinal.NewFromSaferith(n)
 		assert.True(t, c.IsFinite())
@@ -100,6 +109,7 @@ func TestCardinalComparison(t *testing.T) {
 	c3 := cardinal.New(10)
 
 	t.Run("Equal", func(t *testing.T) {
+		t.Parallel()
 		assert.True(t, c1.Equal(c1))
 		assert.True(t, c1.Equal(c3))
 		assert.False(t, c1.Equal(c2))
@@ -108,6 +118,7 @@ func TestCardinalComparison(t *testing.T) {
 	})
 
 	t.Run("IsLessThanOrEqual", func(t *testing.T) {
+		t.Parallel()
 		assert.True(t, c1.IsLessThanOrEqual(c1))
 		assert.True(t, c1.IsLessThanOrEqual(c2))
 		assert.False(t, c2.IsLessThanOrEqual(c1))
@@ -115,6 +126,7 @@ func TestCardinalComparison(t *testing.T) {
 	})
 
 	t.Run("Special values comparison", func(t *testing.T) {
+		t.Parallel()
 		// // Unknown comparisons always return false
 		assert.False(t, cardinal.Unknown().IsLessThanOrEqual(cardinal.Unknown()))
 		assert.False(t, cardinal.Unknown().IsLessThanOrEqual(c1))
@@ -136,6 +148,7 @@ func TestCardinalArithmetic(t *testing.T) {
 	c50 := cardinal.New(50)
 
 	t.Run("Add", func(t *testing.T) {
+		t.Parallel()
 		// Basic addition
 		sum := c5.Add(c10)
 		assert.True(t, sum.Equal(c15))
@@ -161,6 +174,7 @@ func TestCardinalArithmetic(t *testing.T) {
 	})
 
 	t.Run("Mul", func(t *testing.T) {
+		t.Parallel()
 		// Basic multiplication
 		product := c5.Mul(c10)
 		assert.True(t, product.Equal(c50))
@@ -186,6 +200,7 @@ func TestCardinalArithmetic(t *testing.T) {
 	})
 
 	t.Run("Sub", func(t *testing.T) {
+		t.Parallel()
 		// Basic subtraction
 		diff := c15.Sub(c5)
 		assert.True(t, diff.Equal(c10))
@@ -214,6 +229,7 @@ func TestCardinalBytes(t *testing.T) {
 	c := cardinal.New(256) // 0x100
 
 	t.Run("Finite cardinal", func(t *testing.T) {
+		t.Parallel()
 		bytes := c.Bytes()
 		require.NotNil(t, bytes)
 		// The exact byte representation depends on saferith.Nat
@@ -221,11 +237,13 @@ func TestCardinalBytes(t *testing.T) {
 	})
 
 	t.Run("Unknown cardinal", func(t *testing.T) {
+		t.Parallel()
 		bytes := cardinal.Unknown().Bytes()
 		assert.Nil(t, bytes)
 	})
 
 	t.Run("Infinite cardinal", func(t *testing.T) {
+		t.Parallel()
 		bytes := cardinal.Infinite().Bytes()
 		assert.Nil(t, bytes)
 	})
@@ -246,6 +264,7 @@ func TestCardinalString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			if tt.name == "Zero" || tt.name == "Finite" {
 				assert.Contains(t, tt.cardinal.String(), tt.expected)
 			} else {
@@ -257,6 +276,7 @@ func TestCardinalString(t *testing.T) {
 
 func TestCardinalEdgeCases(t *testing.T) {
 	t.Run("Large number operations", func(t *testing.T) {
+		t.Parallel()
 		// Test with large numbers
 		large1 := cardinal.New(1 << 60)
 		large2 := cardinal.New(1 << 61)
@@ -270,6 +290,7 @@ func TestCardinalEdgeCases(t *testing.T) {
 	})
 
 	t.Run("Mixed operations", func(t *testing.T) {
+		t.Parallel()
 		c10 := cardinal.New(10)
 		c5 := cardinal.New(5)
 		c2 := cardinal.New(2)
@@ -284,6 +305,7 @@ func TestCardinalEdgeCases(t *testing.T) {
 	})
 
 	t.Run("Special value interactions", func(t *testing.T) {
+		t.Parallel()
 		// Unknown + Infinite = Unknown (Unknown takes precedence)
 		result1 := cardinal.Unknown().Add(cardinal.Infinite())
 		assert.True(t, result1.IsUnknown())
@@ -310,6 +332,7 @@ func TestCardinalSubtractionUnderflow(t *testing.T) {
 // TestCardinalImplementationNotes documents known issues and behaviours
 func TestCardinalImplementationNotes(t *testing.T) {
 	t.Run("Zero value behaviour", func(t *testing.T) {
+		t.Parallel()
 		// Creating a cardinal with value 0 returns the singleton Zero
 		c1 := cardinal.New(0)
 		c2 := cardinal.New(0)
@@ -321,6 +344,7 @@ func TestCardinalImplementationNotes(t *testing.T) {
 
 func TestIsProbablyPrime(t *testing.T) {
 	t.Run("Finite primes", func(t *testing.T) {
+		t.Parallel()
 		// Test some known primes
 		primes := []uint64{2, 3, 5, 7, 11, 13, 17, 19, 23, 29}
 		for _, p := range primes {
@@ -330,6 +354,7 @@ func TestIsProbablyPrime(t *testing.T) {
 	})
 
 	t.Run("Finite non-primes", func(t *testing.T) {
+		t.Parallel()
 		// Test some known non-primes
 		nonPrimes := []uint64{0, 1, 4, 6, 8, 9, 10, 12, 14, 15}
 		for _, n := range nonPrimes {
@@ -339,6 +364,7 @@ func TestIsProbablyPrime(t *testing.T) {
 	})
 
 	t.Run("Special values", func(t *testing.T) {
+		t.Parallel()
 		// These should not panic and should return false
 		assert.False(t, cardinal.Unknown().IsProbablyPrime())
 		assert.False(t, cardinal.Infinite().IsProbablyPrime())
@@ -347,6 +373,7 @@ func TestIsProbablyPrime(t *testing.T) {
 
 func TestHashCode(t *testing.T) {
 	t.Run("Finite cardinals", func(t *testing.T) {
+		t.Parallel()
 		c1 := cardinal.New(42)
 		c2 := cardinal.New(42)
 		c3 := cardinal.New(43)
@@ -358,6 +385,7 @@ func TestHashCode(t *testing.T) {
 	})
 
 	t.Run("Special values", func(t *testing.T) {
+		t.Parallel()
 		// These should not panic and should return 0
 		assert.Equal(t, base.HashCode(0), cardinal.Unknown().HashCode())
 		assert.Equal(t, base.HashCode(0), cardinal.Infinite().HashCode())
@@ -369,6 +397,7 @@ func TestCardinalInterfaces(t *testing.T) {
 	c := cardinal.New(42)
 
 	t.Run("Implements required interfaces", func(t *testing.T) {
+		t.Parallel()
 		// These assertions verify compile-time interface satisfaction
 		var _ = c
 		var _ algebra.Summand[cardinal.Cardinal] = c

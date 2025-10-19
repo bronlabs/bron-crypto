@@ -34,6 +34,7 @@ func TestSchemeCreation(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid scheme creation", func(t *testing.T) {
+		t.Parallel()
 		testCases := []struct {
 			name      string
 			threshold uint
@@ -47,6 +48,7 @@ func TestSchemeCreation(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(tc.total)
 				scheme, err := pedersen.NewScheme(key, tc.threshold, shareholders)
 				require.NoError(t, err)
@@ -58,6 +60,7 @@ func TestSchemeCreation(t *testing.T) {
 	})
 
 	t.Run("invalid threshold", func(t *testing.T) {
+		t.Parallel()
 		// Threshold of 0
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		_, err := pedersen.NewScheme(key, 0, shareholders)
@@ -76,6 +79,7 @@ func TestSchemeCreation(t *testing.T) {
 	})
 
 	t.Run("invalid total", func(t *testing.T) {
+		t.Parallel()
 		// Total of 0
 		shareholders := sharing.NewOrdinalShareholderSet(0)
 		_, err := pedersen.NewScheme(key, 2, shareholders)
@@ -90,6 +94,7 @@ func TestSchemeCreation(t *testing.T) {
 	})
 
 	t.Run("nil key", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		_, err := pedersen.NewScheme[*k256.Point](nil, 2, shareholders)
 		require.Error(t, err)
@@ -212,6 +217,7 @@ func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			shares, err := scheme.Deal(tc.secret, tc.prng)
 
 			if tc.expectError {
@@ -338,6 +344,7 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			secrets := make([]*pedersen.Secret[S], 0, tc.iterations)
 
 			for i := range tc.iterations {
@@ -416,6 +423,7 @@ func TestDeal(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		curve := k256.NewCurve()
 		field := k256.NewScalarField()
 		g := curve.Generator()
@@ -440,6 +448,7 @@ func TestDeal(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
 				if config.errors {
@@ -453,6 +462,7 @@ func TestDeal(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		curve := bls12381.NewG1()
 		field := bls12381.NewScalarField()
 		g := curve.Generator()
@@ -473,6 +483,7 @@ func TestDeal(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -486,6 +497,7 @@ func TestDealRandom(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		curve := k256.NewCurve()
 		g := curve.Generator()
 		h, err := curve.Hash([]byte("test-h-k256-random"))
@@ -506,6 +518,7 @@ func TestDealRandom(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -515,6 +528,7 @@ func TestDealRandom(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		curve := bls12381.NewG1()
 		g := curve.Generator()
 		h, err := curve.Hash([]byte("test-h-bls12381-random"))
@@ -543,6 +557,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 	reference := shares.VerificationVector()
 
 	t.Run("valid shares pass verification", func(t *testing.T) {
+		t.Parallel()
 		for _, share := range shares.Shares().Values() {
 			err := scheme.Verify(share, reference)
 			require.NoError(t, err, "valid share should pass verification")
@@ -550,6 +565,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 	})
 
 	t.Run("ReconstructAndVerify with valid shares", func(t *testing.T) {
+		t.Parallel()
 		reconstructed, err := scheme.ReconstructAndVerify(reference, shares.Shares().Values()...)
 		require.NoError(t, err)
 		require.True(t, secret.Equal(reconstructed))
@@ -565,6 +581,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 	})
 
 	t.Run("tampered share value fails verification", func(t *testing.T) {
+		t.Parallel()
 		// Get a share and modify its value
 		originalShare := shares.Shares().Values()[0]
 		tamperedValue := field.FromUint64(999)
@@ -586,6 +603,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 	})
 
 	t.Run("tampered blinding factor fails verification", func(t *testing.T) {
+		t.Parallel()
 		// Get a share and modify its blinding factor
 		originalShare := shares.Shares().Values()[0]
 		tamperedBlinding := field.FromUint64(888)
@@ -609,6 +627,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 	})
 
 	t.Run("ReconstructAndVerify fails with tampered share", func(t *testing.T) {
+		t.Parallel()
 		// Create a tampered share with slightly modified value
 		originalShare := shares.Shares().Values()[0]
 		originalValue := originalShare.Value()
@@ -640,6 +659,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 	})
 
 	t.Run("different verification vectors", func(t *testing.T) {
+		t.Parallel()
 		// Create shares with different secret to get different verification vector
 		secret2 := pedersen.NewSecret(field.FromUint64(100))
 		shares2, err := scheme.Deal(secret2, crand.Reader)
@@ -656,12 +676,14 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 	})
 
 	t.Run("nil verification vector", func(t *testing.T) {
+		t.Parallel()
 		share := shares.Shares().Values()[0]
 		err := scheme.Verify(share, nil)
 		require.Error(t, err)
 	})
 
 	t.Run("nil blinding witness", func(t *testing.T) {
+		t.Parallel()
 		originalShare := shares.Shares().Values()[0]
 		_, err := pedersen.NewShare[S](
 			originalShare.ID(),
@@ -674,6 +696,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 	})
 
 	t.Run("nil secret message", func(t *testing.T) {
+		t.Parallel()
 		originalShare := shares.Shares().Values()[0]
 		_, err := pedersen.NewShare[S](
 			originalShare.ID(),
@@ -691,6 +714,7 @@ func TestVerification(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		curve := k256.NewCurve()
 		field := k256.NewScalarField()
 		g := curve.Generator()
@@ -712,6 +736,7 @@ func TestVerification(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -721,6 +746,7 @@ func TestVerification(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		curve := bls12381.NewG1()
 		field := bls12381.NewScalarField()
 		g := curve.Generator()
@@ -775,6 +801,7 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeField
 
 	for _, tc := range addTests {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			// Perform addition
 			sumShare := tc.share1.Add(tc.share2)
 
@@ -860,6 +887,7 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeField
 
 	for _, tc := range scalarMulTests {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			// Special case: multiplying by zero should panic
 			if tc.scalar.IsZero() {
 				require.Panics(t, func() {
@@ -906,6 +934,7 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeField
 
 	// Test combined operations
 	t.Run("combined add and scalar multiply", func(t *testing.T) {
+		t.Parallel()
 		// Compute (s1 * 3) + (s2 * 2)
 		scalar1 := field.FromUint64(3)
 		scalar2 := field.FromUint64(2)
@@ -932,6 +961,7 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeField
 
 	// Test Share methods
 	t.Run("share methods", func(t *testing.T) {
+		t.Parallel()
 		share, _ := shares1.Shares().Get(sharing.ID(1))
 
 		// Test creating new share with different value
@@ -976,6 +1006,7 @@ func TestHomomorphicOperations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		curve := k256.NewCurve()
 		field := k256.NewScalarField()
 		g := curve.Generator()
@@ -997,6 +1028,7 @@ func TestHomomorphicOperations(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -1006,6 +1038,7 @@ func TestHomomorphicOperations(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		curve := bls12381.NewG1()
 		field := bls12381.NewScalarField()
 		g := curve.Generator()
@@ -1036,6 +1069,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 	threshold := scheme.AccessStructure().Threshold()
 
 	t.Run("valid conversion with full qualified set", func(t *testing.T) {
+		t.Parallel()
 		// Create a qualified set with all shareholders
 		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(scheme.AccessStructure().Shareholders())
 		require.NoError(t, err)
@@ -1062,6 +1096,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 	})
 
 	t.Run("valid conversion with threshold qualified set", func(t *testing.T) {
+		t.Parallel()
 		// Create a qualified set with exactly threshold shareholders
 		thresholdIds := allIds[:threshold]
 		qualifiedIds := hashset.NewComparable[sharing.ID]()
@@ -1095,6 +1130,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 	})
 
 	t.Run("error when share not in qualified set", func(t *testing.T) {
+		t.Parallel()
 		// Create a qualified set that doesn't include share ID 1
 		qualifiedIds := hashset.NewComparable[sharing.ID]()
 
@@ -1117,6 +1153,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 	})
 
 	t.Run("multiple conversions produce consistent results", func(t *testing.T) {
+		t.Parallel()
 		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(scheme.AccessStructure().Shareholders())
 		require.NoError(t, err)
 
@@ -1136,6 +1173,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 	})
 
 	t.Run("lagrange coefficients verification", func(t *testing.T) {
+		t.Parallel()
 		// Test that the Lagrange coefficients sum to 1
 		lambdas, err := shamir.LagrangeCoefficients(field, allIds...)
 		require.NoError(t, err)
@@ -1153,6 +1191,7 @@ func TestToAdditive(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		curve := k256.NewCurve()
 		field := k256.NewScalarField()
 		g := curve.Generator()
@@ -1175,6 +1214,7 @@ func TestToAdditive(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -1184,6 +1224,7 @@ func TestToAdditive(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		curve := bls12381.NewG1()
 		field := bls12381.NewScalarField()
 		g := curve.Generator()
@@ -1204,6 +1245,7 @@ func TestToAdditive(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -1227,6 +1269,7 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid dealer function", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		scheme, err := pedersen.NewScheme(key, 2, shareholders)
 		require.NoError(t, err)
@@ -1248,6 +1291,7 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 	})
 
 	t.Run("nil prng", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		scheme, err := pedersen.NewScheme(key, 2, shareholders)
 		require.NoError(t, err)
@@ -1261,6 +1305,7 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 	})
 
 	t.Run("nil secret", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		scheme, err := pedersen.NewScheme(key, 2, shareholders)
 		require.NoError(t, err)
@@ -1273,6 +1318,7 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 	})
 
 	t.Run("verify shares from dealer function", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(7)
 		scheme, err := pedersen.NewScheme(key, 3, shareholders)
 		require.NoError(t, err)
@@ -1309,6 +1355,7 @@ func TestDealRandomAndRevealDealerFunc(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid random dealer function", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		scheme, err := pedersen.NewScheme(key, 2, shareholders)
 		require.NoError(t, err)
@@ -1335,6 +1382,7 @@ func TestDealRandomAndRevealDealerFunc(t *testing.T) {
 	})
 
 	t.Run("nil prng", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		scheme, err := pedersen.NewScheme(key, 2, shareholders)
 		require.NoError(t, err)
@@ -1366,6 +1414,7 @@ func TestNewShare(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid share creation", func(t *testing.T) {
+		t.Parallel()
 		value := field.FromUint64(100)
 		blinding := field.FromUint64(200)
 
@@ -1387,6 +1436,7 @@ func TestNewShare(t *testing.T) {
 	})
 
 	t.Run("nil secret message", func(t *testing.T) {
+		t.Parallel()
 		blinding := field.FromUint64(200)
 		witness, err := pedcom.NewWitness(blinding)
 		require.NoError(t, err)
@@ -1402,6 +1452,7 @@ func TestNewShare(t *testing.T) {
 	})
 
 	t.Run("nil blinding witness", func(t *testing.T) {
+		t.Parallel()
 		value := field.FromUint64(100)
 		message := pedcom.NewMessage(value)
 
@@ -1416,6 +1467,7 @@ func TestNewShare(t *testing.T) {
 	})
 
 	t.Run("invalid shareholder ID", func(t *testing.T) {
+		t.Parallel()
 		value := field.FromUint64(100)
 		blinding := field.FromUint64(200)
 
@@ -1435,6 +1487,7 @@ func TestNewShare(t *testing.T) {
 	})
 
 	t.Run("nil access structure allowed", func(t *testing.T) {
+		t.Parallel()
 		value := field.FromUint64(100)
 		blinding := field.FromUint64(200)
 
@@ -1455,6 +1508,7 @@ func TestNewShare(t *testing.T) {
 	})
 
 	t.Run("share methods", func(t *testing.T) {
+		t.Parallel()
 		value1 := field.FromUint64(100)
 		blinding1 := field.FromUint64(200)
 		value2 := field.FromUint64(300)
@@ -1527,6 +1581,7 @@ func TestPedersenCommitmentProperties(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("blinding factor provides perfect hiding", func(t *testing.T) {
+		t.Parallel()
 		// Same secret, different blinding factors should produce different commitments
 		secret := pedersen.NewSecret(field.FromUint64(42))
 
@@ -1553,6 +1608,7 @@ func TestPedersenCommitmentProperties(t *testing.T) {
 	})
 
 	t.Run("commitment binding property", func(t *testing.T) {
+		t.Parallel()
 		// Once committed, changing the value should fail verification
 		shares, _, err := scheme.DealAndRevealDealerFunc(pedersen.NewSecret(field.FromUint64(42)), crand.Reader)
 		require.NoError(t, err)
@@ -1578,6 +1634,7 @@ func TestPedersenCommitmentProperties(t *testing.T) {
 	})
 
 	t.Run("homomorphic commitment property", func(t *testing.T) {
+		t.Parallel()
 		// Pedersen commitments are homomorphic: Com(m1) * Com(m2) = Com(m1 + m2)
 		secret1 := pedersen.NewSecret(field.FromUint64(10))
 		secret2 := pedersen.NewSecret(field.FromUint64(20))

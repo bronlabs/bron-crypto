@@ -61,6 +61,7 @@ func TestZn_Creation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			zn, err := num.NewZModFromCardinal(tt.modulus)
 			if tt.expectError {
 				require.Error(t, err)
@@ -82,6 +83,7 @@ func TestZn_BasicOperations(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Zero and One", func(t *testing.T) {
+		t.Parallel()
 		zero := zn.Zero()
 		one := zn.One()
 
@@ -94,6 +96,7 @@ func TestZn_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("FromUint64", func(t *testing.T) {
+		t.Parallel()
 		// Test values that should be reduced modulo 7
 		testCases := []struct {
 			input    uint64
@@ -116,6 +119,7 @@ func TestZn_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("FromInt64", func(t *testing.T) {
+		t.Parallel()
 		// Test positive and negative values
 		testCases := []struct {
 			input    int64
@@ -138,6 +142,7 @@ func TestZn_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("Top element", func(t *testing.T) {
+		t.Parallel()
 		top := zn.Top()
 		require.Equal(t, uint64(6), top.Big().Uint64())
 	})
@@ -151,6 +156,7 @@ func TestUint_Arithmetic(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Addition", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(7)
 		require.NoError(t, err)
 		b, err := zn.FromUint64(5)
@@ -160,6 +166,7 @@ func TestUint_Arithmetic(t *testing.T) {
 	})
 
 	t.Run("Subtraction", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(5)
 		require.NoError(t, err)
 		b, err := zn.FromUint64(7)
@@ -174,6 +181,7 @@ func TestUint_Arithmetic(t *testing.T) {
 	})
 
 	t.Run("Multiplication", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(3)
 		require.NoError(t, err)
 		b, err := zn.FromUint64(4)
@@ -183,6 +191,7 @@ func TestUint_Arithmetic(t *testing.T) {
 	})
 
 	t.Run("Square", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(4)
 		require.NoError(t, err)
 		b := a.Square()
@@ -190,6 +199,7 @@ func TestUint_Arithmetic(t *testing.T) {
 	})
 
 	t.Run("Double", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(6)
 		require.NoError(t, err)
 		b := a.Double()
@@ -197,6 +207,7 @@ func TestUint_Arithmetic(t *testing.T) {
 	})
 
 	t.Run("Negation", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(3)
 		require.NoError(t, err)
 		b := a.Neg()
@@ -208,6 +219,7 @@ func TestUint_Arithmetic(t *testing.T) {
 	})
 
 	t.Run("Exponentiation", func(t *testing.T) {
+		t.Parallel()
 		base, err := zn.FromUint64(2)
 		require.NoError(t, err)
 		exp, err := zn.FromUint64(5)
@@ -225,6 +237,7 @@ func TestUint_Inversion(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Invertible elements", func(t *testing.T) {
+		t.Parallel()
 		// All non-zero elements should be invertible in Z/13Z
 		for i := uint64(1); i < 13; i++ {
 			a, err := zn.FromUint64(i)
@@ -242,6 +255,7 @@ func TestUint_Inversion(t *testing.T) {
 	})
 
 	t.Run("Zero is not invertible", func(t *testing.T) {
+		t.Parallel()
 		zero := zn.Zero()
 		require.False(t, zero.IsUnit())
 
@@ -252,6 +266,7 @@ func TestUint_Inversion(t *testing.T) {
 	})
 
 	t.Run("Division", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(8)
 		require.NoError(t, err)
 		b, err := zn.FromUint64(3)
@@ -273,6 +288,7 @@ func TestUint_Comparison(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Equal", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(5)
 		require.NoError(t, err)
 		b, err := zn.FromUint64(5)
@@ -285,6 +301,7 @@ func TestUint_Comparison(t *testing.T) {
 	})
 
 	t.Run("Compare", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(3)
 		require.NoError(t, err)
 		b, err := zn.FromUint64(7)
@@ -298,6 +315,7 @@ func TestUint_Comparison(t *testing.T) {
 	})
 
 	t.Run("PartialCompare", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(3)
 		require.NoError(t, err)
 		b, err := zn.FromUint64(7)
@@ -314,6 +332,7 @@ func TestUint_Comparison(t *testing.T) {
 	})
 
 	t.Run("IsLessThanOrEqual", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(3)
 		require.NoError(t, err)
 		b, err := zn.FromUint64(7)
@@ -334,6 +353,7 @@ func TestUint_Properties(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("IsEven and IsOdd", func(t *testing.T) {
+		t.Parallel()
 		even, err := zn.FromUint64(8)
 		require.NoError(t, err)
 		odd, err := zn.FromUint64(7)
@@ -346,6 +366,7 @@ func TestUint_Properties(t *testing.T) {
 	})
 
 	t.Run("IsPositive and IsNegative", func(t *testing.T) {
+		t.Parallel()
 		zero := zn.Zero()
 		nonZero, err := zn.FromUint64(5)
 		require.NoError(t, err)
@@ -359,6 +380,7 @@ func TestUint_Properties(t *testing.T) {
 	})
 
 	t.Run("Coprime", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(6)
 		require.NoError(t, err)
 		b, err := zn.FromUint64(7)
@@ -371,6 +393,7 @@ func TestUint_Properties(t *testing.T) {
 	})
 
 	t.Run("IsProbablyPrime", func(t *testing.T) {
+		t.Parallel()
 		prime, err := zn.FromUint64(7)
 		require.NoError(t, err)
 		notPrime, err := zn.FromUint64(8)
@@ -388,6 +411,7 @@ func TestUint_Serialisation(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Bytes", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(42)
 		require.NoError(t, err)
 		bytes := a.Bytes()
@@ -400,6 +424,7 @@ func TestUint_Serialisation(t *testing.T) {
 	})
 
 	t.Run("String", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(123)
 		require.NoError(t, err)
 		str := a.String()
@@ -407,6 +432,7 @@ func TestUint_Serialisation(t *testing.T) {
 	})
 
 	t.Run("Cardinal", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(42)
 		require.NoError(t, err)
 		card := a.Cardinal()
@@ -421,6 +447,7 @@ func TestUint_Iterator(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Full iteration", func(t *testing.T) {
+		t.Parallel()
 		var values []uint64
 		for elem := range zn.Iter() {
 			values = append(values, elem.Big().Uint64())
@@ -430,6 +457,7 @@ func TestUint_Iterator(t *testing.T) {
 	})
 
 	t.Run("Range iteration", func(t *testing.T) {
+		t.Parallel()
 		start, err := zn.FromUint64(2)
 		require.NoError(t, err)
 		stop, err := zn.FromUint64(4)
@@ -452,6 +480,7 @@ func TestUint_Random(t *testing.T) {
 	prng := pcg.NewRandomised()
 
 	t.Run("Random element", func(t *testing.T) {
+		t.Parallel()
 		elem, err := zn.Random(prng)
 		require.NoError(t, err)
 		require.NotNil(t, elem)
@@ -469,6 +498,7 @@ func TestUint_Hash(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Hash consistency", func(t *testing.T) {
+		t.Parallel()
 		input := []byte("test input")
 
 		h1, err := zn.Hash(input)
@@ -481,6 +511,7 @@ func TestUint_Hash(t *testing.T) {
 	})
 
 	t.Run("Different inputs give different hashes", func(t *testing.T) {
+		t.Parallel()
 		h1, err := zn.Hash([]byte("input1"))
 		require.NoError(t, err)
 
@@ -498,6 +529,7 @@ func TestUint_ModulusOperations(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Modulus retrieval", func(t *testing.T) {
+		t.Parallel()
 		elem, err := zn.FromUint64(10)
 		require.NoError(t, err)
 		mod := elem.Modulus()
@@ -506,6 +538,7 @@ func TestUint_ModulusOperations(t *testing.T) {
 	})
 
 	t.Run("Structure", func(t *testing.T) {
+		t.Parallel()
 		elem, err := zn.FromUint64(10)
 		require.NoError(t, err)
 		structure := elem.Structure()
@@ -521,6 +554,7 @@ func TestUint_Increment_Decrement(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Increment", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(5)
 		require.NoError(t, err)
 		b := a.Increment()
@@ -534,6 +568,7 @@ func TestUint_Increment_Decrement(t *testing.T) {
 	})
 
 	t.Run("Decrement", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(5)
 		require.NoError(t, err)
 		b := a.Decrement()
@@ -554,6 +589,7 @@ func TestUint_Sqrt(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Perfect squares", func(t *testing.T) {
+		t.Parallel()
 		// 4^2 = 16 ≡ 16 (mod 17)
 		// 5^2 = 25 ≡ 8 (mod 17)
 		testCases := []struct {
@@ -600,6 +636,7 @@ func TestZn_IsSemiDomain(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(string(rune(tt.modulus)), func(t *testing.T) {
+			t.Parallel()
 			zn, err := num.NewZModFromCardinal(cardinal.New(tt.modulus))
 			require.NoError(t, err)
 			require.Equal(t, tt.isDomain, zn.IsSemiDomain())
@@ -666,6 +703,7 @@ func TestUint_NotImplemented(t *testing.T) {
 
 	// EuclideanDiv now works for prime modulus (IsSemiDomain returns true for primes)
 	t.Run("EuclideanDiv works for prime modulus", func(t *testing.T) {
+		t.Parallel()
 		quot, rem, err := a.EuclideanDiv(b)
 		require.NoError(t, err)
 		require.NotNil(t, quot)
@@ -721,18 +759,21 @@ func TestUint_PanicsOnDifferentModulus(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Add panics", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			_ = a.Add(b)
 		})
 	})
 
 	t.Run("Sub panics", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			_ = a.Sub(b)
 		})
 	})
 
 	t.Run("Mul panics", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			_ = a.Mul(b)
 		})
@@ -742,22 +783,26 @@ func TestUint_PanicsOnDifferentModulus(t *testing.T) {
 	// The test for Exp panicking has been removed as it no longer applies
 
 	t.Run("TryDiv panics", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			_, _ = a.TryDiv(b)
 		})
 	})
 
 	t.Run("Equal returns false for different moduli", func(t *testing.T) {
+		t.Parallel()
 		require.False(t, a.Equal(b))
 	})
 
 	t.Run("Compare panics", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			_ = a.Compare(b)
 		})
 	})
 
 	t.Run("Coprime panics", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			_ = a.Coprime(b)
 		})
@@ -782,6 +827,7 @@ func TestUint_ScalarOperations(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ScalarExp", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(2)
 		require.NoError(t, err)
 		b, err := zn.FromUint64(4)
@@ -798,33 +844,39 @@ func TestZn_Properties(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Name", func(t *testing.T) {
+		t.Parallel()
 		name := zn.Name()
 		require.Equal(t, "Z\\17Z", name)
 	})
 
 	t.Run("Characteristic", func(t *testing.T) {
+		t.Parallel()
 		char := zn.Characteristic()
 		require.Equal(t, cardinal.New(17), char)
 	})
 
 	t.Run("Modulus", func(t *testing.T) {
+		t.Parallel()
 		mod := zn.Modulus()
 		// Verify modulus through string representation
 		require.Equal(t, "17", mod.String())
 	})
 
 	t.Run("ElementSize", func(t *testing.T) {
+		t.Parallel()
 		size := zn.ElementSize()
 		require.Positive(t, size)
 	})
 
 	t.Run("WideElementSize", func(t *testing.T) {
+		t.Parallel()
 		wideSize := zn.WideElementSize()
 		elemSize := zn.ElementSize()
 		require.Equal(t, 2*elemSize, wideSize)
 	})
 
 	t.Run("OpIdentity", func(t *testing.T) {
+		t.Parallel()
 		identity := zn.OpIdentity()
 		require.True(t, identity.IsZero())
 	})
@@ -861,6 +913,7 @@ func TestUint_BitOperations(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Bit", func(t *testing.T) {
+		t.Parallel()
 		// 170 = 10101010 in binary
 		a, err := zn.FromUint64(170)
 		require.NoError(t, err)
@@ -882,11 +935,13 @@ func TestUint_LengthMethods(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("TrueLen", func(t *testing.T) {
+		t.Parallel()
 		trueLen := a.TrueLen()
 		require.Positive(t, trueLen)
 	})
 
 	t.Run("AnnouncedLen", func(t *testing.T) {
+		t.Parallel()
 		announcedLen := a.AnnouncedLen()
 		require.GreaterOrEqual(t, announcedLen, a.TrueLen())
 	})
@@ -902,36 +957,42 @@ func TestUint_NilPanics(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Op with nil panics", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			_ = a.Op(nil)
 		})
 	})
 
 	t.Run("OtherOp with nil panics", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			_ = a.OtherOp(nil)
 		})
 	})
 
 	t.Run("Coprime with nil panics", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			_ = a.Coprime(nil)
 		})
 	})
 
 	t.Run("PartialCompare with nil returns Incomparable", func(t *testing.T) {
+		t.Parallel()
 		// PartialCompare returns Incomparable for nil, doesn't panic
 		result := a.PartialCompare(nil)
 		require.Equal(t, base.Incomparable, result)
 	})
 
 	t.Run("Compare with nil panics", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			_ = a.Compare(nil)
 		})
 	})
 
 	t.Run("EqualModulus with nil returns false", func(t *testing.T) {
+		t.Parallel()
 		require.False(t, a.EqualModulus(nil))
 	})
 
@@ -945,6 +1006,7 @@ func TestZn_CompositeModulus(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Non-coprime elements are not units", func(t *testing.T) {
+		t.Parallel()
 		// 3 and 5 are not coprime to 15
 		three, err := zn.FromUint64(3)
 		require.NoError(t, err)
@@ -962,6 +1024,7 @@ func TestZn_CompositeModulus(t *testing.T) {
 	})
 
 	t.Run("Coprime elements are units", func(t *testing.T) {
+		t.Parallel()
 		// 2, 4, 7, 8, 11, 13, 14 are coprime to 15
 		coprime := []uint64{2, 4, 7, 8, 11, 13, 14}
 
@@ -992,6 +1055,7 @@ func TestZn_LargeModulus(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Basic operations with large modulus", func(t *testing.T) {
+		t.Parallel()
 		a, err := zn.FromUint64(12345)
 		require.NoError(t, err)
 		b, err := zn.FromUint64(67890)
@@ -1005,6 +1069,7 @@ func TestZn_LargeModulus(t *testing.T) {
 	})
 
 	t.Run("Random with large modulus", func(t *testing.T) {
+		t.Parallel()
 		prng := pcg.NewRandomised()
 		elem, err := zn.Random(prng)
 		require.NoError(t, err)
@@ -1037,6 +1102,7 @@ func TestZn_FromNatPlus(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Valid NatPlus", func(t *testing.T) {
+		t.Parallel()
 		np, err := num.NPlus().FromUint64(7)
 		require.NoError(t, err)
 
@@ -1046,6 +1112,7 @@ func TestZn_FromNatPlus(t *testing.T) {
 	})
 
 	t.Run("Nil NatPlus", func(t *testing.T) {
+		t.Parallel()
 		_, err := zn.FromNatPlus(nil)
 		require.Error(t, err)
 	})
@@ -1061,21 +1128,25 @@ func TestZn_IsInRange(t *testing.T) {
 
 	// Check if a Nat is in range [0, modulus)
 	t.Run("In range", func(t *testing.T) {
+		t.Parallel()
 		n := num.N().FromUint64(5)
 		require.True(t, zn.IsInRange(n))
 	})
 
 	t.Run("At modulus", func(t *testing.T) {
+		t.Parallel()
 		n := num.N().FromUint64(10) // Equal to modulus
 		require.False(t, zn.IsInRange(n))
 	})
 
 	t.Run("Above modulus", func(t *testing.T) {
+		t.Parallel()
 		n := num.N().FromUint64(15)
 		require.False(t, zn.IsInRange(n))
 	})
 
 	t.Run("Nil panics", func(t *testing.T) {
+		t.Parallel()
 		require.Panics(t, func() {
 			_ = zn.IsInRange(nil)
 		})

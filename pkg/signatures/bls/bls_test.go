@@ -125,6 +125,7 @@ func TestSignVectors(t *testing.T) {
 		}
 
 		t.Run(file.Name(), func(t *testing.T) {
+		t.Parallel()
 			var vector signTestVector
 			readTestVector(t, filepath.Join(vectorsDir, file.Name()), &vector)
 
@@ -189,6 +190,7 @@ func TestVerifyVectors(t *testing.T) {
 		}
 
 		t.Run(file.Name(), func(t *testing.T) {
+		t.Parallel()
 			var vector verifyTestVector
 			readTestVector(t, filepath.Join(vectorsDir, file.Name()), &vector)
 
@@ -257,6 +259,7 @@ func TestAggregateVectors(t *testing.T) {
 		}
 
 		t.Run(file.Name(), func(t *testing.T) {
+		t.Parallel()
 			var vector aggregateTestVector
 			readTestVector(t, filepath.Join(vectorsDir, file.Name()), &vector)
 
@@ -318,6 +321,7 @@ func TestAggregateVerifyVectors(t *testing.T) {
 		}
 
 		t.Run(file.Name(), func(t *testing.T) {
+		t.Parallel()
 			var vector aggregateVerifyTestVector
 			readTestVector(t, filepath.Join(vectorsDir, file.Name()), &vector)
 
@@ -402,6 +406,7 @@ func TestBatchVerifyVectors(t *testing.T) {
 		}
 
 		t.Run(file.Name(), func(t *testing.T) {
+		t.Parallel()
 			var vector batchVerifyTestVector
 			readTestVector(t, filepath.Join(vectorsDir, file.Name()), &vector)
 
@@ -517,6 +522,7 @@ func TestBatchSign(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			// Create scheme
 			scheme, err := bls.NewShortKeyScheme(family, tc.rogueKeyAlg)
 			require.NoError(t, err)
@@ -598,6 +604,7 @@ func TestAggregateSign(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			// Create scheme
 			scheme, err := bls.NewShortKeyScheme(family, tc.rogueKeyAlg)
 			require.NoError(t, err)
@@ -670,6 +677,7 @@ func TestKeyGeneratorWithSeed(t *testing.T) {
 
 	for _, s := range schemes {
 		t.Run(s.name, func(t *testing.T) {
+		t.Parallel()
 			scheme, err := bls.NewShortKeyScheme(family, s.rogueKeyAlg)
 			require.NoError(t, err)
 
@@ -725,6 +733,7 @@ func TestLongKeyVariant(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			// Create long key scheme
 			scheme, err := bls.NewLongKeyScheme(family, tc.rogueKeyAlg)
 			require.NoError(t, err)
@@ -1120,6 +1129,7 @@ func TestErrorCases(t *testing.T) {
 	family := pairable.NewBLS12381()
 
 	t.Run("Invalid public key bytes", func(t *testing.T) {
+		t.Parallel()
 		g1 := family.SourceSubGroup()
 		invalidBytes := make([]byte, 48) // Wrong size or invalid point
 		_, err := bls.NewPublicKeyFromBytes(g1, invalidBytes)
@@ -1127,6 +1137,7 @@ func TestErrorCases(t *testing.T) {
 	})
 
 	t.Run("Invalid private key bytes", func(t *testing.T) {
+		t.Parallel()
 		g1 := family.SourceSubGroup()
 		invalidBytes := make([]byte, 32) // All zeros
 		_, err := bls.NewPrivateKeyFromBytes(g1, invalidBytes)
@@ -1134,6 +1145,7 @@ func TestErrorCases(t *testing.T) {
 	})
 
 	t.Run("Invalid signature bytes", func(t *testing.T) {
+		t.Parallel()
 		g2 := family.TwistedSubGroup()
 		invalidBytes := make([]byte, 96) // Wrong size or invalid point
 		_, err := bls.NewSignatureFromBytes(g2, invalidBytes, nil)
@@ -1141,18 +1153,21 @@ func TestErrorCases(t *testing.T) {
 	})
 
 	t.Run("Empty signature aggregation", func(t *testing.T) {
+		t.Parallel()
 		var sigs []*bls.Signature[*bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.GtElement, *bls12381.Scalar]
 		_, err := bls.AggregateAll[*bls12381.PointG2](sigs)
 		require.Error(t, err)
 	})
 
 	t.Run("Empty public key aggregation", func(t *testing.T) {
+		t.Parallel()
 		var pks []*bls.PublicKey[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar]
 		_, err := bls.AggregateAll[*bls12381.PointG1](pks)
 		require.Error(t, err)
 	})
 
 	t.Run("Mismatched public keys and messages in aggregate verify", func(t *testing.T) {
+		t.Parallel()
 		scheme, err := bls.NewShortKeyScheme(family, bls.Basic)
 		require.NoError(t, err)
 
@@ -1226,6 +1241,7 @@ func TestEdgeCases(t *testing.T) {
 	family := pairable.NewBLS12381()
 
 	t.Run("Sign empty message", func(t *testing.T) {
+		t.Parallel()
 		scheme, err := bls.NewShortKeyScheme(family, bls.Basic)
 		require.NoError(t, err)
 
@@ -1250,6 +1266,7 @@ func TestEdgeCases(t *testing.T) {
 	})
 
 	t.Run("Sign very long message", func(t *testing.T) {
+		t.Parallel()
 		scheme, err := bls.NewShortKeyScheme(family, bls.Basic)
 		require.NoError(t, err)
 
@@ -1279,6 +1296,7 @@ func TestEdgeCases(t *testing.T) {
 	})
 
 	t.Run("Nil checks", func(t *testing.T) {
+		t.Parallel()
 		// Test nil private key clone
 		var nilSK *bls.PrivateKey[*bls12381.PointG1, *bls12381.BaseFieldElementG1, *bls12381.PointG2, *bls12381.BaseFieldElementG2, *bls12381.GtElement, *bls12381.Scalar]
 		cloned := nilSK.Clone()

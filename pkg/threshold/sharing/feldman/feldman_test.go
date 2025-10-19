@@ -133,6 +133,7 @@ func dealCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			shares, err := scheme.Deal(tc.secret, tc.prng)
 
 			if tc.expectError {
@@ -261,6 +262,7 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			secrets := make([]*feldman.Secret[FE], 0, tc.iterations)
 
 			for i := range tc.iterations {
@@ -341,6 +343,7 @@ func TestDeal(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		curve := k256.NewCurve()
 		field := k256.NewScalarField()
 		basePoint := curve.Generator()
@@ -360,6 +363,7 @@ func TestDeal(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
 				if config.errors {
@@ -373,6 +377,7 @@ func TestDeal(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		curve := bls12381.NewG1()
 		field := bls12381.NewScalarField()
 		basePoint := curve.Generator()
@@ -388,6 +393,7 @@ func TestDeal(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -401,6 +407,7 @@ func TestDealRandom(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		curve := k256.NewCurve()
 		basePoint := curve.Generator()
 
@@ -416,6 +423,7 @@ func TestDealRandom(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -425,6 +433,7 @@ func TestDealRandom(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		curve := bls12381.NewG1()
 		basePoint := curve.Generator()
 
@@ -587,6 +596,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeField
 	reference := shares.VerificationMaterial()
 
 	t.Run("valid shares pass verification", func(t *testing.T) {
+		t.Parallel()
 		for _, share := range shares.Shares().Values() {
 			err := scheme.Verify(share, reference)
 			require.NoError(t, err, "valid share should pass verification")
@@ -594,6 +604,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeField
 	})
 
 	t.Run("ReconstructAndVerify with valid shares", func(t *testing.T) {
+		t.Parallel()
 		reconstructed, err := scheme.ReconstructAndVerify(reference, shares.Shares().Values()...)
 		require.NoError(t, err)
 		require.True(t, secret.Equal(reconstructed))
@@ -609,6 +620,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeField
 	})
 
 	t.Run("tampered share fails verification", func(t *testing.T) {
+		t.Parallel()
 		// Get a share and modify its value
 		originalShare := shares.Shares().Values()[0]
 		tamperedValue := field.FromUint64(999)
@@ -625,6 +637,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeField
 	})
 
 	t.Run("ReconstructAndVerify fails with tampered share", func(t *testing.T) {
+		t.Parallel()
 		// Create a tampered share with slightly modified value
 		originalShare := shares.Shares().Values()[0]
 		originalValue := originalShare.Value()
@@ -661,6 +674,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeField
 	// The feldman.NewShare function requires explicit type parameters which makes this test complex
 
 	t.Run("different verification vectors", func(t *testing.T) {
+		t.Parallel()
 		// Create shares with different secret to get different verification vector
 		secret2 := feldman.NewSecret(field.FromUint64(100))
 		shares2, err := scheme.Deal(secret2, crand.Reader)
@@ -684,6 +698,7 @@ func TestVerification(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		curve := k256.NewCurve()
 		field := k256.NewScalarField()
 		basePoint := curve.Generator()
@@ -700,6 +715,7 @@ func TestVerification(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -709,6 +725,7 @@ func TestVerification(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		curve := bls12381.NewG1()
 		field := bls12381.NewScalarField()
 		basePoint := curve.Generator()
@@ -758,6 +775,7 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFie
 
 	for _, tc := range addTests {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			// Perform addition
 			sumShare := tc.share1.Add(tc.share2)
 
@@ -849,6 +867,7 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFie
 
 	for _, tc := range scalarMulTests {
 		t.Run(tc.name, func(t *testing.T) {
+		t.Parallel()
 			// Perform scalar multiplication
 			scaledShare := tc.share.ScalarMul(tc.scalar)
 
@@ -891,6 +910,7 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFie
 
 	// Test combined operations
 	t.Run("combined add and scalar multiply", func(t *testing.T) {
+		t.Parallel()
 		// Compute (s1 * 3) + (s2 * 2)
 		scalar1 := field.FromUint64(3)
 		scalar2 := field.FromUint64(2)
@@ -917,6 +937,7 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFie
 
 	// Test Share methods
 	t.Run("share methods", func(t *testing.T) {
+		t.Parallel()
 		share, _ := shares1.Shares().Get(sharing.ID(1))
 
 		// Test creating new share with different value
@@ -947,6 +968,7 @@ func TestHomomorphicOperations(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		curve := k256.NewCurve()
 		field := k256.NewScalarField()
 		basePoint := curve.Generator()
@@ -963,6 +985,7 @@ func TestHomomorphicOperations(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -972,6 +995,7 @@ func TestHomomorphicOperations(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		curve := bls12381.NewG1()
 		field := bls12381.NewScalarField()
 		basePoint := curve.Generator()
@@ -1034,6 +1058,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 	threshold := scheme.AccessStructure().Threshold()
 
 	t.Run("valid conversion with full qualified set", func(t *testing.T) {
+		t.Parallel()
 		// Create a qualified set with all shareholders
 		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(scheme.AccessStructure().Shareholders())
 		require.NoError(t, err)
@@ -1060,6 +1085,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 	})
 
 	t.Run("valid conversion with threshold qualified set", func(t *testing.T) {
+		t.Parallel()
 		// Create a qualified set with exactly threshold shareholders
 		thresholdIds := allIds[:threshold]
 		qualifiedIds := hashset.NewComparable[sharing.ID]()
@@ -1093,6 +1119,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 	})
 
 	t.Run("error when share not in qualified set", func(t *testing.T) {
+		t.Parallel()
 		// Create a qualified set that doesn't include share ID 1
 		qualifiedIds := hashset.NewComparable[sharing.ID]()
 
@@ -1115,6 +1142,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 	})
 
 	t.Run("multiple conversions produce consistent results", func(t *testing.T) {
+		t.Parallel()
 		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(scheme.AccessStructure().Shareholders())
 		require.NoError(t, err)
 
@@ -1134,6 +1162,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 	})
 
 	t.Run("lagrange coefficients verification", func(t *testing.T) {
+		t.Parallel()
 		// Test that the Lagrange coefficients sum to 1
 		lambdas, err := shamir.LagrangeCoefficients(field, allIds...)
 		require.NoError(t, err)
@@ -1151,6 +1180,7 @@ func TestToAdditive(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		curve := k256.NewCurve()
 		field := k256.NewScalarField()
 		basePoint := curve.Generator()
@@ -1168,6 +1198,7 @@ func TestToAdditive(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -1177,6 +1208,7 @@ func TestToAdditive(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		curve := bls12381.NewG1()
 		field := bls12381.NewScalarField()
 		basePoint := curve.Generator()
@@ -1192,6 +1224,7 @@ func TestToAdditive(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
+		t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -1210,6 +1243,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 	basePoint := curve.Generator()
 
 	t.Run("zero secret conversion", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(3)
 		scheme, err := feldman.NewScheme(basePoint, 2, shareholders)
 		require.NoError(t, err)
@@ -1240,6 +1274,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 	})
 
 	t.Run("single shareholder qualified set", func(t *testing.T) {
+		t.Parallel()
 		// This should fail as minimal qualified set needs at least 2 shareholders
 		singleId := hashset.NewComparable[sharing.ID]()
 		singleId.Add(sharing.ID(1))
@@ -1250,6 +1285,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 	})
 
 	t.Run("share with modified value", func(t *testing.T) {
+		t.Parallel()
 		shareholders := sharing.NewOrdinalShareholderSet(3)
 		scheme, err := feldman.NewScheme(basePoint, 2, shareholders)
 		require.NoError(t, err)
@@ -1356,6 +1392,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("lift shares and reconstruct", func(t *testing.T) {
+		t.Parallel()
 		// Lift all shares to the exponent
 		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, total)
 		for id, share := range shares.Shares().Iter() {
@@ -1376,6 +1413,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 	})
 
 	t.Run("reconstruct from threshold shares", func(t *testing.T) {
+		t.Parallel()
 		// Select threshold shares (IDs 0, 1, 2)
 		selectedIDs := []sharing.ID{0, 1, 2}
 		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, threshold)
@@ -1401,6 +1439,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 	})
 
 	t.Run("different threshold sets yield same result", func(t *testing.T) {
+		t.Parallel()
 		// First set: IDs 0, 1, 2
 		set1IDs := []sharing.ID{0, 1, 2}
 		liftedSet1 := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, threshold)
@@ -1438,6 +1477,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 	})
 
 	t.Run("share lift method", func(t *testing.T) {
+		t.Parallel()
 		// Skip this test due to an issue with the Lift() method implementation
 		// The verification vector's Structure() returns a polynomial module, not a prime group
 		t.Skip("Skipping due to Lift() method implementation issue")
@@ -1457,6 +1497,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 	})
 
 	t.Run("insufficient shares error", func(t *testing.T) {
+		t.Parallel()
 		// Try with only 2 shares (below threshold)
 		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, 2)
 
@@ -1475,6 +1516,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 	})
 
 	t.Run("empty shares error", func(t *testing.T) {
+		t.Parallel()
 		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0)
 		_, err := liftedShares.ReconstructAsAdditive()
 		require.Error(t, err)
@@ -1482,6 +1524,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 	})
 
 	t.Run("ToAdditive conversion", func(t *testing.T) {
+		t.Parallel()
 		// Create a qualified set
 		selectedIDs := hashset.NewComparable[sharing.ID](0, 1, 2).Freeze()
 		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(selectedIDs)

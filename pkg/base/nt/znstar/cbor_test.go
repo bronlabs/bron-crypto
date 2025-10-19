@@ -390,6 +390,7 @@ func TestUnit_RoundTrip_AllTypes(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			// Create unit
 			original, err := tc.createUnit()
 			require.NoError(t, err)
@@ -424,11 +425,13 @@ func TestCBOR_InvalidData_znstar(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Unit_InvalidData", func(t *testing.T) {
+		t.Parallel()
 		_, err := serde.UnmarshalCBOR[znstar.Unit]([]byte{0x00})
 		require.Error(t, err)
 	})
 
 	t.Run("UnitGroup_InvalidData", func(t *testing.T) {
+		t.Parallel()
 		_, err := serde.UnmarshalCBOR[znstar.UnitGroup]([]byte{0x00})
 		require.Error(t, err)
 	})

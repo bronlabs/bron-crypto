@@ -70,6 +70,7 @@ func TestCommitmentKeyCreation(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid key creation", func(t *testing.T) {
+		t.Parallel()
 		key, err := pedersen.NewCommitmentKey(g, h)
 		require.NoError(t, err)
 		require.NotNil(t, key)
@@ -78,6 +79,7 @@ func TestCommitmentKeyCreation(t *testing.T) {
 	})
 
 	t.Run("g is identity", func(t *testing.T) {
+		t.Parallel()
 		identity := curve.OpIdentity()
 		_, err := pedersen.NewCommitmentKey(identity, h)
 		require.Error(t, err)
@@ -85,6 +87,7 @@ func TestCommitmentKeyCreation(t *testing.T) {
 	})
 
 	t.Run("h is identity", func(t *testing.T) {
+		t.Parallel()
 		identity := curve.OpIdentity()
 		_, err := pedersen.NewCommitmentKey(g, identity)
 		require.Error(t, err)
@@ -92,6 +95,7 @@ func TestCommitmentKeyCreation(t *testing.T) {
 	})
 
 	t.Run("g equals h", func(t *testing.T) {
+		t.Parallel()
 		_, err := pedersen.NewCommitmentKey(g, g)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "cannot be equal")
@@ -136,12 +140,14 @@ func TestCommitmentCreation(t *testing.T) {
 	committer := scheme.Committer()
 
 	t.Run("nil message", func(t *testing.T) {
+		t.Parallel()
 		_, _, err := committer.Commit(nil, crand.Reader)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "message cannot be nil")
 	})
 
 	t.Run("nil prng", func(t *testing.T) {
+		t.Parallel()
 		message := pedersen.NewMessage(field.FromUint64(42))
 		_, _, err := committer.Commit(message, nil)
 		require.Error(t, err)
@@ -149,6 +155,7 @@ func TestCommitmentCreation(t *testing.T) {
 	})
 
 	t.Run("commit with witness", func(t *testing.T) {
+		t.Parallel()
 		message := pedersen.NewMessage(field.FromUint64(42))
 		witness, err := pedersen.NewWitness(field.FromUint64(123))
 		require.NoError(t, err)
@@ -165,6 +172,7 @@ func TestCommitmentCreation(t *testing.T) {
 	})
 
 	t.Run("commit with witness nil message", func(t *testing.T) {
+		t.Parallel()
 		witness, err := pedersen.NewWitness(field.FromUint64(123))
 		require.NoError(t, err)
 
@@ -174,6 +182,7 @@ func TestCommitmentCreation(t *testing.T) {
 	})
 
 	t.Run("commit with witness nil witness", func(t *testing.T) {
+		t.Parallel()
 		message := pedersen.NewMessage(field.FromUint64(42))
 		_, err := committer.CommitWithWitness(message, nil)
 		require.Error(t, err)
@@ -181,6 +190,7 @@ func TestCommitmentCreation(t *testing.T) {
 	})
 
 	t.Run("deterministic commitment", func(t *testing.T) {
+		t.Parallel()
 		message := pedersen.NewMessage(field.FromUint64(42))
 
 		// Use deterministic randomness
@@ -206,6 +216,7 @@ func TestWitnessCreation(t *testing.T) {
 	field := k256.NewScalarField()
 
 	t.Run("valid witness", func(t *testing.T) {
+		t.Parallel()
 		witness, err := pedersen.NewWitness(field.FromUint64(123))
 		require.NoError(t, err)
 		require.NotNil(t, witness)
@@ -213,12 +224,14 @@ func TestWitnessCreation(t *testing.T) {
 	})
 
 	t.Run("zero witness", func(t *testing.T) {
+		t.Parallel()
 		_, err := pedersen.NewWitness(field.Zero())
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "witness value cannot be zero")
 	})
 
 	t.Run("witness operations", func(t *testing.T) {
+		t.Parallel()
 		w1, err := pedersen.NewWitness(field.FromUint64(10))
 		require.NoError(t, err)
 		w2, err := pedersen.NewWitness(field.FromUint64(20))
@@ -262,6 +275,7 @@ func TestMessageOperations(t *testing.T) {
 	field := k256.NewScalarField()
 
 	t.Run("message creation and operations", func(t *testing.T) {
+		t.Parallel()
 		m1 := pedersen.NewMessage(field.FromUint64(10))
 		m2 := pedersen.NewMessage(field.FromUint64(20))
 
@@ -299,6 +313,7 @@ func TestMessageOperations(t *testing.T) {
 	})
 
 	t.Run("nil operations", func(t *testing.T) {
+		t.Parallel()
 		m1 := pedersen.NewMessage(field.FromUint64(10))
 
 		// Operations with nil
@@ -332,6 +347,7 @@ func TestHomomorphicProperties(t *testing.T) {
 	verifier := scheme.Verifier()
 
 	t.Run("additive homomorphism", func(t *testing.T) {
+		t.Parallel()
 		// Create two messages
 		m1 := pedersen.NewMessage(field.FromUint64(10))
 		m2 := pedersen.NewMessage(field.FromUint64(20))
@@ -360,6 +376,7 @@ func TestHomomorphicProperties(t *testing.T) {
 	})
 
 	t.Run("scalar multiplication", func(t *testing.T) {
+		t.Parallel()
 		// Create a message and scalar
 		m := pedersen.NewMessage(field.FromUint64(10))
 		scalar := pedersen.NewMessage(field.FromUint64(3))
@@ -386,6 +403,7 @@ func TestHomomorphicProperties(t *testing.T) {
 	})
 
 	t.Run("combined operations", func(t *testing.T) {
+		t.Parallel()
 		// Test: 2*C(m1) + 3*C(m2) = C(2*m1 + 3*m2)
 		m1 := pedersen.NewMessage(field.FromUint64(10))
 		m2 := pedersen.NewMessage(field.FromUint64(20))
@@ -438,6 +456,7 @@ func TestReRandomization(t *testing.T) {
 	verifier := scheme.Verifier()
 
 	t.Run("re-randomization preserves message", func(t *testing.T) {
+		t.Parallel()
 		message := pedersen.NewMessage(field.FromUint64(42))
 
 		// Initial commitment
@@ -464,6 +483,7 @@ func TestReRandomization(t *testing.T) {
 	})
 
 	t.Run("re-randomization with specific witness", func(t *testing.T) {
+		t.Parallel()
 		message := pedersen.NewMessage(field.FromUint64(42))
 
 		// Initial commitment
@@ -487,6 +507,7 @@ func TestReRandomization(t *testing.T) {
 	})
 
 	t.Run("re-randomization errors", func(t *testing.T) {
+		t.Parallel()
 		message := pedersen.NewMessage(field.FromUint64(42))
 		c, _, err := committer.Commit(message, crand.Reader)
 		require.NoError(t, err)
@@ -515,6 +536,7 @@ func TestReRandomization(t *testing.T) {
 	})
 
 	t.Run("multiple re-randomizations", func(t *testing.T) {
+		t.Parallel()
 		message := pedersen.NewMessage(field.FromUint64(42))
 
 		// Initial commitment
@@ -559,6 +581,7 @@ func TestCommitmentOperations(t *testing.T) {
 	committer := scheme.Committer()
 
 	t.Run("commitment creation", func(t *testing.T) {
+		t.Parallel()
 		// Create from group element
 		elem := g.ScalarOp(field.FromUint64(123))
 		c, err := pedersen.NewCommitment(elem)
@@ -572,6 +595,7 @@ func TestCommitmentOperations(t *testing.T) {
 	})
 
 	t.Run("commitment operations", func(t *testing.T) {
+		t.Parallel()
 		m1 := pedersen.NewMessage(field.FromUint64(10))
 		m2 := pedersen.NewMessage(field.FromUint64(20))
 
@@ -611,6 +635,7 @@ func TestCommitmentOperations(t *testing.T) {
 	})
 
 	t.Run("scalar operation", func(t *testing.T) {
+		t.Parallel()
 		m := pedersen.NewMessage(field.FromUint64(10))
 		c, _, err := committer.Commit(m, crand.Reader)
 		require.NoError(t, err)
@@ -641,12 +666,14 @@ func TestEdgeCases(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("nil scheme creation", func(t *testing.T) {
+		t.Parallel()
 		_, err := pedersen.NewScheme[*k256.Point, *k256.Scalar](nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "key cannot be nil")
 	})
 
 	t.Run("short random source", func(t *testing.T) {
+		t.Parallel()
 		committer := scheme.Committer()
 		message := pedersen.NewMessage(field.FromUint64(42))
 
@@ -658,6 +685,7 @@ func TestEdgeCases(t *testing.T) {
 	})
 
 	t.Run("commitment to zero message", func(t *testing.T) {
+		t.Parallel()
 		committer := scheme.Committer()
 		verifier := scheme.Verifier()
 
@@ -676,6 +704,7 @@ func TestMultipleCurves(t *testing.T) {
 	t.Parallel()
 
 	t.Run("k256", func(t *testing.T) {
+		t.Parallel()
 		curve := k256.NewCurve()
 		field := k256.NewScalarField()
 		g := curve.Generator()
@@ -702,6 +731,7 @@ func TestMultipleCurves(t *testing.T) {
 	})
 
 	t.Run("bls12381", func(t *testing.T) {
+		t.Parallel()
 		curve := bls12381.NewG1()
 		field := bls12381.NewScalarField()
 		g := curve.Generator()

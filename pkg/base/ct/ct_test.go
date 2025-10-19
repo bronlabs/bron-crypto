@@ -12,6 +12,7 @@ import (
 
 // TestChoice tests the Choice/Bool type and its Not() method
 func TestChoice(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		choice   ct.Choice
@@ -25,6 +26,7 @@ func TestChoice(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tt.expected, tt.choice.Not())
 		})
 	}
@@ -32,13 +34,16 @@ func TestChoice(t *testing.T) {
 
 // TestCSelect tests the generic CSelect function
 func TestCSelect(t *testing.T) {
+	t.Parallel()
 	t.Run("int", func(t *testing.T) {
+		t.Parallel()
 		a, b := 42, 100
 		assert.Equal(t, b, ct.CSelect(ct.Zero, a, b), "CSelect(0) should return b")
 		assert.Equal(t, a, ct.CSelect(ct.One, a, b), "CSelect(1) should return a")
 	})
 
 	t.Run("struct", func(t *testing.T) {
+		t.Parallel()
 		type TestStruct struct {
 			X int
 			Y string
@@ -51,6 +56,7 @@ func TestCSelect(t *testing.T) {
 	})
 
 	t.Run("zero-sized", func(t *testing.T) {
+		t.Parallel()
 		type Empty struct{}
 		a, b := Empty{}, Empty{}
 		// Should not panic for zero-sized types
@@ -61,6 +67,7 @@ func TestCSelect(t *testing.T) {
 	})
 
 	t.Run("slices", func(t *testing.T) {
+		t.Parallel()
 		a := []int{1, 2, 3}
 		b := []int{4, 5, 6}
 
@@ -72,6 +79,7 @@ func TestCSelect(t *testing.T) {
 	})
 
 	t.Run("pointers", func(t *testing.T) {
+		t.Parallel()
 		x, y := 42, 100
 		a, b := &x, &y
 
@@ -80,6 +88,7 @@ func TestCSelect(t *testing.T) {
 	})
 
 	t.Run("interface", func(t *testing.T) {
+		t.Parallel()
 		var a, b any = 42, "hello"
 
 		assert.Equal(t, b, ct.CSelect(ct.Zero, a, b))
@@ -87,6 +96,7 @@ func TestCSelect(t *testing.T) {
 	})
 
 	t.Run("large_struct", func(t *testing.T) {
+		t.Parallel()
 		type LargeStruct struct {
 			Data [1024]byte
 			ID   int
@@ -109,7 +119,9 @@ func TestCSelect(t *testing.T) {
 
 // TestCMOV tests the CMOV function
 func TestCMOV(t *testing.T) {
+	t.Parallel()
 	t.Run("int", func(t *testing.T) {
+		t.Parallel()
 		dst := 42
 		src := 100
 
@@ -123,6 +135,7 @@ func TestCMOV(t *testing.T) {
 	})
 
 	t.Run("struct", func(t *testing.T) {
+		t.Parallel()
 		type TestStruct struct {
 			X int
 			Y string
@@ -141,6 +154,7 @@ func TestCMOV(t *testing.T) {
 	})
 
 	t.Run("array", func(t *testing.T) {
+		t.Parallel()
 		dst := [4]int{1, 2, 3, 4}
 		src := [4]int{5, 6, 7, 8}
 
@@ -155,6 +169,7 @@ func TestCMOV(t *testing.T) {
 	})
 
 	t.Run("zero-sized", func(t *testing.T) {
+		t.Parallel()
 		type Empty struct{}
 		var dst, src Empty
 		// Should not panic
@@ -167,7 +182,9 @@ func TestCMOV(t *testing.T) {
 
 // TestCSwap tests the CSwap function
 func TestCSwap(t *testing.T) {
+	t.Parallel()
 	t.Run("int", func(t *testing.T) {
+		t.Parallel()
 		x, y := 42, 100
 
 		// Test no-op when choice=0
@@ -182,6 +199,7 @@ func TestCSwap(t *testing.T) {
 	})
 
 	t.Run("struct", func(t *testing.T) {
+		t.Parallel()
 		type TestStruct struct {
 			X int
 			Y string
@@ -202,6 +220,7 @@ func TestCSwap(t *testing.T) {
 	})
 
 	t.Run("self-swap", func(t *testing.T) {
+		t.Parallel()
 		x := 42
 		// Self-swap should work without issues (alias-safe)
 		ct.CSwap(&x, &x, ct.One)
@@ -209,6 +228,7 @@ func TestCSwap(t *testing.T) {
 	})
 
 	t.Run("large_array", func(t *testing.T) {
+		t.Parallel()
 		var a, b [256]byte
 		for i := range a {
 			a[i] = byte(i)
@@ -232,6 +252,7 @@ func TestCSwap(t *testing.T) {
 
 // TestIsZero tests the IsZero function for various integer types
 func TestIsZero(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		value    any
@@ -271,6 +292,7 @@ func TestIsZero(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			var result ct.Choice
 			switch v := tt.value.(type) {
 			case uint8:
@@ -303,6 +325,7 @@ func TestIsZero(t *testing.T) {
 
 // TestEqual tests the Equal function
 func TestEqual(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		x, y     any
@@ -329,6 +352,7 @@ func TestEqual(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			var result ct.Choice
 			switch x := tt.x.(type) {
 			case uint8:
@@ -349,8 +373,10 @@ func TestEqual(t *testing.T) {
 
 // TestComparison tests Greater, Less, GreaterOrEqual, LessOrEqual
 func TestComparison(t *testing.T) {
+	t.Parallel()
 	// Test unsigned comparisons
 	t.Run("unsigned", func(t *testing.T) {
+		t.Parallel()
 		tests := []struct {
 			x, y             uint64
 			gt, lt, gte, lte ct.Choice
@@ -375,6 +401,7 @@ func TestComparison(t *testing.T) {
 
 	// Test signed comparisons
 	t.Run("signed", func(t *testing.T) {
+		t.Parallel()
 		tests := []struct {
 			x, y             int64
 			gt, lt, gte, lte ct.Choice
@@ -404,6 +431,7 @@ func TestComparison(t *testing.T) {
 
 // TestCmp tests the Cmp function
 func TestCmp(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		x, y       int64
@@ -421,6 +449,7 @@ func TestCmp(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			gt, eq, lt := ct.CompareInteger(tt.x, tt.y)
 			assert.Equal(t, tt.gt, gt, "gt")
 			assert.Equal(t, tt.eq, eq, "eq")
@@ -431,20 +460,24 @@ func TestCmp(t *testing.T) {
 
 // TestSelectInteger tests the SelectInteger function for integers
 func TestSelectInteger(t *testing.T) {
+	t.Parallel()
 	// Test with various integer types
 	t.Run("uint8", func(t *testing.T) {
+		t.Parallel()
 		var a, b uint8 = 42, 100
 		assert.Equal(t, a, ct.SelectInteger(ct.Zero, a, b))
 		assert.Equal(t, b, ct.SelectInteger(ct.One, a, b))
 	})
 
 	t.Run("int64", func(t *testing.T) {
+		t.Parallel()
 		var a, b int64 = -42, 100
 		assert.Equal(t, a, ct.SelectInteger(ct.Zero, a, b))
 		assert.Equal(t, b, ct.SelectInteger(ct.One, a, b))
 	})
 
 	t.Run("boundary", func(t *testing.T) {
+		t.Parallel()
 		// Test with boundary values
 		var a, b int64 = math.MinInt64, math.MaxInt64
 		assert.Equal(t, a, ct.SelectInteger(ct.Zero, a, b))
@@ -454,6 +487,7 @@ func TestSelectInteger(t *testing.T) {
 
 // TestMinMax tests the Min and Max functions
 func TestMinMax(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		a, b     int64
@@ -469,6 +503,7 @@ func TestMinMax(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			assert.Equal(t, tt.min, ct.Min(tt.a, tt.b), "Min(%d, %d)", tt.a, tt.b)
 			assert.Equal(t, tt.max, ct.Max(tt.a, tt.b), "Max(%d, %d)", tt.a, tt.b)
 		})
@@ -477,6 +512,7 @@ func TestMinMax(t *testing.T) {
 
 // TestIsqrt64 tests the constant-time integer square root
 func TestIsqrt64(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		n        uint64
 		expected uint64
@@ -501,6 +537,7 @@ func TestIsqrt64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
+		t.Parallel()
 			assert.Equal(t, tt.expected, ct.Isqrt64(tt.n), "Isqrt64(%d)", tt.n)
 		})
 	}
@@ -508,6 +545,7 @@ func TestIsqrt64(t *testing.T) {
 
 // TestLessU64 tests unsigned 64-bit comparison
 func TestLessU64(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		x, y     uint64
 		expected ct.Choice
@@ -525,6 +563,7 @@ func TestLessU64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
+		t.Parallel()
 			assert.Equal(t, tt.expected, ct.LessU64(tt.x, tt.y), "LessU64(%d, %d)", tt.x, tt.y)
 		})
 	}
@@ -532,6 +571,7 @@ func TestLessU64(t *testing.T) {
 
 // TestLessI64 tests signed 64-bit comparison
 func TestLessI64(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		x, y     int64
 		expected ct.Choice
@@ -551,6 +591,7 @@ func TestLessI64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
+		t.Parallel()
 			assert.Equal(t, tt.expected, ct.LessI64(tt.x, tt.y), "LessI64(%d, %d)", tt.x, tt.y)
 		})
 	}
@@ -558,6 +599,7 @@ func TestLessI64(t *testing.T) {
 
 // TestSliceEachEqual tests the SliceEachEqual function
 func TestSliceEachEqual(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		s        []uint8
@@ -575,6 +617,7 @@ func TestSliceEachEqual(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			assert.Equal(t, tt.expected, ct.SliceEachEqual(tt.s, tt.e))
 		})
 	}
@@ -582,6 +625,7 @@ func TestSliceEachEqual(t *testing.T) {
 
 // TestSliceEqual tests the SliceEqual function
 func TestSliceEqual(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		x, y     []uint8
@@ -597,11 +641,13 @@ func TestSliceEqual(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			assert.Equal(t, tt.expected, ct.SliceEqual(tt.x, tt.y))
 		})
 	}
 
 	t.Run("panic on different lengths", func(t *testing.T) {
+		t.Parallel()
 		assert.Panics(t, func() {
 			ct.SliceEqual([]uint8{1, 2}, []uint8{1, 2, 3})
 		})
@@ -610,6 +656,7 @@ func TestSliceEqual(t *testing.T) {
 
 // TestSliceIsZero tests the SliceIsZero function
 func TestSliceIsZero(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		s        []uint8
@@ -625,6 +672,7 @@ func TestSliceIsZero(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			assert.Equal(t, tt.expected, ct.SliceIsZero(tt.s))
 		})
 	}
@@ -632,6 +680,7 @@ func TestSliceIsZero(t *testing.T) {
 
 // TestBytesCompare tests the BytesCompare function
 func TestBytesCompare(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		x, y       []byte
@@ -654,6 +703,7 @@ func TestBytesCompare(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			lt, eq, gt := ct.CompareBytes(tt.x, tt.y)
 			assert.Equal(t, tt.lt, lt, "lt")
 			assert.Equal(t, tt.eq, eq, "eq")
@@ -664,11 +714,13 @@ func TestBytesCompare(t *testing.T) {
 
 // TestConstantTime is a basic smoke test for constant-time properties
 func TestConstantTime(t *testing.T) {
+	t.Parallel()
 	// This is a basic smoke test - true constant-time verification requires
 	// specialised tools like dudect or manual assembly inspection
 
 	// Test that SelectInteger returns consistent results
 	t.Run("SelectInteger consistency", func(t *testing.T) {
+		t.Parallel()
 		for i := range 1000 {
 			a, b := uint64(i), uint64(i+1000)
 			assert.Equal(t, a, ct.SelectInteger(ct.Zero, a, b))
@@ -678,6 +730,7 @@ func TestConstantTime(t *testing.T) {
 
 	// Test that comparisons are consistent
 	t.Run("Comparison consistency", func(t *testing.T) {
+		t.Parallel()
 		for i := int64(-500); i < 500; i++ {
 			for j := int64(-500); j < 500; j++ {
 				gt := ct.Greater(i, j)
@@ -700,6 +753,7 @@ func TestConstantTime(t *testing.T) {
 
 // TestAndBytes tests the AndBytes function
 func TestAndBytes(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		x, y     []byte
@@ -773,6 +827,7 @@ func TestAndBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			dst := make([]byte, len(tt.expected))
 			n := ct.AndBytes(dst, tt.x, tt.y)
 			assert.Equal(t, tt.n, n, "returned length should match")
@@ -782,6 +837,7 @@ func TestAndBytes(t *testing.T) {
 
 	// Test panic on short dst
 	t.Run("panic on short dst", func(t *testing.T) {
+		t.Parallel()
 		x := []byte{0xFF, 0xFF, 0xFF}
 		y := []byte{0x00, 0x00, 0x00}
 		dst := make([]byte, 2) // Too short
@@ -793,6 +849,7 @@ func TestAndBytes(t *testing.T) {
 
 // TestOrBytes tests the OrBytes function
 func TestOrBytes(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		x, y     []byte
@@ -866,6 +923,7 @@ func TestOrBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			dst := make([]byte, len(tt.expected))
 			n := ct.OrBytes(dst, tt.x, tt.y)
 			assert.Equal(t, tt.n, n, "returned length should match")
@@ -875,6 +933,7 @@ func TestOrBytes(t *testing.T) {
 
 	// Test panic on short dst
 	t.Run("panic on short dst", func(t *testing.T) {
+		t.Parallel()
 		x := []byte{0xFF, 0xFF, 0xFF}
 		y := []byte{0x00, 0x00, 0x00}
 		dst := make([]byte, 2) // Too short
@@ -938,6 +997,7 @@ func TestNotBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			dst := make([]byte, len(tt.expected))
 			n := ct.NotBytes(dst, tt.x)
 			assert.Equal(t, tt.n, n, "returned length should match")
@@ -947,6 +1007,7 @@ func TestNotBytes(t *testing.T) {
 
 	// Test panic on short dst
 	t.Run("panic on short dst", func(t *testing.T) {
+		t.Parallel()
 		x := []byte{0xFF, 0xFF, 0xFF}
 		dst := make([]byte, 2) // Too short
 		assert.Panics(t, func() {
@@ -956,6 +1017,7 @@ func TestNotBytes(t *testing.T) {
 
 	// Test involution property: NOT(NOT(x)) = x
 	t.Run("involution property", func(t *testing.T) {
+		t.Parallel()
 		original := []byte{0x12, 0x34, 0x56, 0x78, 0x9A}
 		tmp := make([]byte, len(original))
 		result := make([]byte, len(original))
@@ -1011,6 +1073,7 @@ func TestPadLeft(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			dst := make([]byte, tt.dstLen)
 			ct.PadLeft(dst, tt.src)
 			assert.Equal(t, tt.expected, dst)
@@ -1085,6 +1148,7 @@ func TestXorBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+		t.Parallel()
 			dst := make([]byte, len(tt.expected))
 			n := ct.XorBytes(dst, tt.x, tt.y)
 			assert.Equal(t, tt.n, n, "returned length should match")
@@ -1094,6 +1158,7 @@ func TestXorBytes(t *testing.T) {
 
 	// Test XOR properties
 	t.Run("XOR properties", func(t *testing.T) {
+		t.Parallel()
 		x := []byte{0x12, 0x34, 0x56, 0x78}
 		y := []byte{0x9A, 0xBC, 0xDE, 0xF0}
 		zeros := []byte{0x00, 0x00, 0x00, 0x00}
@@ -1132,6 +1197,7 @@ func TestXorBytes(t *testing.T) {
 // TestByteOperationsCombined tests combinations of byte operations
 func TestByteOperationsCombined(t *testing.T) {
 	t.Run("De Morgan's Law: NOT(A AND B) = NOT(A) OR NOT(B)", func(t *testing.T) {
+		t.Parallel()
 		a := []byte{0xF0, 0x0F, 0xAA, 0x55}
 		b := []byte{0x0F, 0xF0, 0x55, 0xAA}
 
@@ -1153,6 +1219,7 @@ func TestByteOperationsCombined(t *testing.T) {
 	})
 
 	t.Run("De Morgan's Law: NOT(A OR B) = NOT(A) AND NOT(B)", func(t *testing.T) {
+		t.Parallel()
 		a := []byte{0xF0, 0x0F, 0xAA, 0x55}
 		b := []byte{0x0F, 0xF0, 0x55, 0xAA}
 
@@ -1174,6 +1241,7 @@ func TestByteOperationsCombined(t *testing.T) {
 	})
 
 	t.Run("XOR using AND, OR, NOT: A XOR B = (A OR B) AND NOT(A AND B)", func(t *testing.T) {
+		t.Parallel()
 		a := []byte{0xF0, 0x0F, 0xAA, 0x55}
 		b := []byte{0x0F, 0xF0, 0x55, 0xAA}
 

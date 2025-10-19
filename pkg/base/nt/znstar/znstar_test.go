@@ -27,6 +27,7 @@ func TestNewUnitGroupOfUnknownOrder(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			m, err := num.NPlus().FromUint64(tc.modulus)
 			require.NoError(t, err)
 
@@ -72,6 +73,7 @@ func TestNewUnit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			u, err := zmod.FromUint64(tt.value)
 			require.NoError(t, err)
 

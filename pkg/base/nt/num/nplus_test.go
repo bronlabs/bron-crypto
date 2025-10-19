@@ -906,24 +906,28 @@ func TestNatPlus_ErrorHandling(t *testing.T) {
 	t.Parallel()
 
 	t.Run("FromNat_Nil", func(t *testing.T) {
+		t.Parallel()
 		_, err := num.NPlus().FromNat(nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "must not be nil")
 	})
 
 	t.Run("FromInt_Nil", func(t *testing.T) {
+		t.Parallel()
 		_, err := num.NPlus().FromInt(nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "must not be nil")
 	})
 
 	t.Run("Random_Nil_HighExclusive", func(t *testing.T) {
+		t.Parallel()
 		_, err := num.NPlus().Random(nil, nil, crand.Reader)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "must not be nil")
 	})
 
 	t.Run("Random_Nil_PRNG", func(t *testing.T) {
+		t.Parallel()
 		lower := num.NPlus().One()
 		upper := mustNatPlus(num.NPlus().FromUint64(20))
 		_, err := num.NPlus().Random(lower, upper, nil)

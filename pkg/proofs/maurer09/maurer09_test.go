@@ -259,6 +259,7 @@ func TestMaurer09Protocol_Simulator(t *testing.T) {
 
 // TestMaurer09Protocol_BytesSerialization tests that all protocol elements can be serialised
 func TestMaurer09Protocol_BytesSerialization(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	basePoint, err := curve.Random(crand.Reader)
 	require.NoError(t, err)
@@ -330,6 +331,7 @@ func TestMaurer09Protocol_BytesSerialization(t *testing.T) {
 
 // TestMaurer09Protocol_NilHandling tests proper error handling for nil inputs
 func TestMaurer09Protocol_NilHandling(t *testing.T) {
+	t.Parallel()
 	curve := k256.NewCurve()
 	basePoint, err := curve.Random(crand.Reader)
 	require.NoError(t, err)
