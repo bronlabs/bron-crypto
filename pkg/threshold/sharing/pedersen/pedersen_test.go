@@ -48,7 +48,7 @@ func TestSchemeCreation(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(tc.total)
 				scheme, err := pedersen.NewScheme(key, tc.threshold, shareholders)
 				require.NoError(t, err)
@@ -217,7 +217,7 @@ func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			shares, err := scheme.Deal(tc.secret, tc.prng)
 
 			if tc.expectError {
@@ -344,7 +344,7 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			secrets := make([]*pedersen.Secret[S], 0, tc.iterations)
 
 			for i := range tc.iterations {
@@ -448,7 +448,7 @@ func TestDeal(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
 				if config.errors {
@@ -483,7 +483,7 @@ func TestDeal(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -518,7 +518,7 @@ func TestDealRandom(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -736,7 +736,7 @@ func TestVerification(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -801,7 +801,7 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeField
 
 	for _, tc := range addTests {
 		t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			// Perform addition
 			sumShare := tc.share1.Add(tc.share2)
 
@@ -887,7 +887,7 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeField
 
 	for _, tc := range scalarMulTests {
 		t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			// Special case: multiplying by zero should panic
 			if tc.scalar.IsZero() {
 				require.Panics(t, func() {
@@ -1028,7 +1028,7 @@ func TestHomomorphicOperations(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -1214,7 +1214,7 @@ func TestToAdditive(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -1245,7 +1245,7 @@ func TestToAdditive(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := pedersen.NewScheme(key, config.threshold, shareholders)
 				require.NoError(t, err)

@@ -292,7 +292,7 @@ func TestIsZero(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			var result ct.Choice
 			switch v := tt.value.(type) {
 			case uint8:
@@ -352,7 +352,7 @@ func TestEqual(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			var result ct.Choice
 			switch x := tt.x.(type) {
 			case uint8:
@@ -449,7 +449,7 @@ func TestCmp(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			gt, eq, lt := ct.CompareInteger(tt.x, tt.y)
 			assert.Equal(t, tt.gt, gt, "gt")
 			assert.Equal(t, tt.eq, eq, "eq")
@@ -503,7 +503,7 @@ func TestMinMax(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			assert.Equal(t, tt.min, ct.Min(tt.a, tt.b), "Min(%d, %d)", tt.a, tt.b)
 			assert.Equal(t, tt.max, ct.Max(tt.a, tt.b), "Max(%d, %d)", tt.a, tt.b)
 		})
@@ -537,7 +537,7 @@ func TestIsqrt64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			assert.Equal(t, tt.expected, ct.Isqrt64(tt.n), "Isqrt64(%d)", tt.n)
 		})
 	}
@@ -563,7 +563,7 @@ func TestLessU64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			assert.Equal(t, tt.expected, ct.LessU64(tt.x, tt.y), "LessU64(%d, %d)", tt.x, tt.y)
 		})
 	}
@@ -591,7 +591,7 @@ func TestLessI64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			assert.Equal(t, tt.expected, ct.LessI64(tt.x, tt.y), "LessI64(%d, %d)", tt.x, tt.y)
 		})
 	}
@@ -617,7 +617,7 @@ func TestSliceEachEqual(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			assert.Equal(t, tt.expected, ct.SliceEachEqual(tt.s, tt.e))
 		})
 	}
@@ -641,7 +641,7 @@ func TestSliceEqual(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			assert.Equal(t, tt.expected, ct.SliceEqual(tt.x, tt.y))
 		})
 	}
@@ -672,7 +672,7 @@ func TestSliceIsZero(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			assert.Equal(t, tt.expected, ct.SliceIsZero(tt.s))
 		})
 	}
@@ -703,7 +703,7 @@ func TestBytesCompare(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			lt, eq, gt := ct.CompareBytes(tt.x, tt.y)
 			assert.Equal(t, tt.lt, lt, "lt")
 			assert.Equal(t, tt.eq, eq, "eq")
@@ -827,7 +827,7 @@ func TestAndBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			dst := make([]byte, len(tt.expected))
 			n := ct.AndBytes(dst, tt.x, tt.y)
 			assert.Equal(t, tt.n, n, "returned length should match")
@@ -923,7 +923,7 @@ func TestOrBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			dst := make([]byte, len(tt.expected))
 			n := ct.OrBytes(dst, tt.x, tt.y)
 			assert.Equal(t, tt.n, n, "returned length should match")
@@ -997,7 +997,7 @@ func TestNotBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			dst := make([]byte, len(tt.expected))
 			n := ct.NotBytes(dst, tt.x)
 			assert.Equal(t, tt.n, n, "returned length should match")
@@ -1073,7 +1073,7 @@ func TestPadLeft(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			dst := make([]byte, tt.dstLen)
 			ct.PadLeft(dst, tt.src)
 			assert.Equal(t, tt.expected, dst)
@@ -1148,7 +1148,7 @@ func TestXorBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			dst := make([]byte, len(tt.expected))
 			n := ct.XorBytes(dst, tt.x, tt.y)
 			assert.Equal(t, tt.n, n, "returned length should match")

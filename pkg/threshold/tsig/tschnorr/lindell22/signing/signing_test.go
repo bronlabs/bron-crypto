@@ -69,6 +69,7 @@ func TestLindell22DKGAndSign(t *testing.T) {
 }
 
 func runTestWithBIP340(t *testing.T, threshold, total uint) {
+	t.Helper()
 	// Setup
 	group := k256.NewCurve()
 	sid := network.SID(sha3.Sum256([]byte("test-lindell22-bip340")))
@@ -186,6 +187,7 @@ func runTestWithBIP340(t *testing.T, threshold, total uint) {
 }
 
 func runTestWithVanillaSchnorr(t *testing.T, threshold, total uint) {
+	t.Helper()
 	// Setup
 	group := k256.NewCurve()
 	sid := network.SID(sha3.Sum256([]byte("test-lindell22-vanilla")))
@@ -318,6 +320,7 @@ func TestIdentifiableAbort(t *testing.T) {
 }
 
 func testIdentifiableAbortWithBIP340(t *testing.T) {
+	t.Helper()
 	// Setup
 	threshold := uint(3)
 	total := uint(5)

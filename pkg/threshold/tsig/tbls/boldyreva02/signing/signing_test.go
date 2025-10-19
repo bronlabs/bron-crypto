@@ -154,7 +154,7 @@ func TestAllRogueKeyPreventionModes(t *testing.T) {
 	for _, variant := range keyVariants {
 		for _, alg := range rogueKeyAlgs {
 			t.Run(variant.name+"_"+alg.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				testThresholdSigningWithAlgorithm(t, variant.shortKey, alg.alg)
 			})
 		}
@@ -641,7 +641,7 @@ func TestDifferentQuorumConfigurations(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			sid := network.SID(sha3.Sum256([]byte("test-quorum-" + tc.name)))
 			curveFamily := &bls12381.FamilyTrait{}
 			tape := hagrid.NewTranscript("TestQuorum")

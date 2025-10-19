@@ -1,6 +1,7 @@
 package bls12381
 
 import (
+	"crypto/elliptic"
 	"encoding"
 	"fmt"
 	"hash/fnv"
@@ -272,6 +273,10 @@ func (c *G1) ScalarBaseOp(sc *Scalar) *PointG1 {
 
 func (c *G1) ScalarBaseMul(sc *Scalar) *PointG1 {
 	return c.Generator().ScalarMul(sc)
+}
+
+func (c *G1) ToElliptic() elliptic.Curve {
+	return ellipticBls12381g1Instance
 }
 
 type PointG1 struct {

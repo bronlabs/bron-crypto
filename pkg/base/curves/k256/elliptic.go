@@ -10,11 +10,11 @@ import (
 
 var (
 	ellipticK256Params = &elliptic.CurveParams{
-		P:       mustSetBigIntString("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f", 16),
-		N:       mustSetBigIntString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16),
-		B:       mustSetBigIntString("0000000000000000000000000000000000000000000000000000000000000007", 16),
-		Gx:      mustSetBigIntString("79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798", 16),
-		Gy:      mustSetBigIntString("483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8", 16),
+		P:       mustSetBigIntString("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f"),
+		N:       mustSetBigIntString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141"),
+		B:       mustSetBigIntString("0000000000000000000000000000000000000000000000000000000000000007"),
+		Gx:      mustSetBigIntString("79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"),
+		Gy:      mustSetBigIntString("483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"),
 		BitSize: k256Impl.FpBits,
 		Name:    CurveName,
 	}
@@ -78,8 +78,8 @@ func (c *ellipticK256) ScalarBaseMult(k []byte) (x, y *big.Int) {
 	return toAffine(NewCurve().ScalarBaseMul(s))
 }
 
-func mustSetBigIntString(s string, base int) *big.Int {
-	bi, ok := new(big.Int).SetString(s, base)
+func mustSetBigIntString(s string) *big.Int {
+	bi, ok := new(big.Int).SetString(s, 16)
 	if !ok {
 		panic("cannot set Int string")
 	}

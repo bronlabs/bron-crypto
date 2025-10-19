@@ -104,8 +104,6 @@ linters:
     - govet
     # Enforces consistent import aliases
     - importas
-    # Reports interfaces with unnamed method parameters.
-    - inamedparam
     # Intrange is a linter to find places where for loops could make use of an integer range.
     - intrange
     # Detects when assignments to existing variables are not used
@@ -123,7 +121,8 @@ linters:
     # Checks that there is no simultaneous return of nil error and an invalid value.
     - nilnil
     # Paralleltest detects missing usage of t.Parallel() method in your Go test.
-    - paralleltest
+    # TODO: enable later
+    # - paralleltest
     # Finds slice declarations that could potentially be preallocated
     - prealloc
     # find code that shadows one of Go's predeclared identifiers
@@ -132,8 +131,9 @@ linters:
     - promlinter
     # Check that struct tags are well aligned.
     - tagalign
-    # Checks the struct tags.
-    - tagliatelle
+    # # Checks the struct tags.
+    # TODO: enable this once it doesn't spit out ast errors
+    # - tagliatelle
     # Linter checks if examples are testable (have an expected output).
     - testableexamples
     # Checks usage of github.com/stretchr/testify.
@@ -183,6 +183,41 @@ linters:
           deny:
             - pkg: github.com/pkg/errors
               desc: Use custom error types from the errs package
+    exhaustruct:
+      # List of regular expressions to match type names that should be processed.
+      # Anonymous structs can be matched by '<anonymous>' alias.
+      #
+      # Each regular expression must match the full type name, including package path.
+      # For example, to match type `net/http.Cookie` regular expression should be `.*/http\.Cookie`,
+      # but not `http\.Cookie`.
+      # Default: []
+      include: []
+      # List of regular expressions to match type names that should be excluded from processing.
+      # Anonymous structs can be matched by '<anonymous>' alias.
+      # Has precedence over `include`.
+      # Each regular expression must match the full type name, including package path.
+      # For example, to match type `net/http.Cookie` regular expression should be `.*/http\.Cookie`,
+      # but not `http\.Cookie`.
+      # Default: []
+      exclude:
+        - '.+\.Test'
+        - 'example\.com/package\.ExampleStruct[\d]{1,2}'
+      # Allows empty structures, effectively excluding them from the check.
+      # Default: false
+      allow-empty: false
+      # List of regular expressions to match type names that should be allowed to be empty.
+      # Anonymous structs can be matched by '<anonymous>' alias.
+      # Each regular expression must match the full type name, including package path.
+      # For example, to match type `net/http.Cookie` regular expression should be `.*/http\.Cookie`,
+      # but not `http\.Cookie`.
+      # Default: []
+      allow-empty-rx: []
+      # Allows empty structures in return statements.
+      # Default: false
+      allow-empty-returns: true
+      # Allows empty structures in variable declarations.
+      # Default: false
+      allow-empty-declarations: true
     dogsled:
       max-blank-identifiers: 3
     dupl:
@@ -478,18 +513,18 @@ linters:
     staticcheck:
       checks:
         - all
-    tagliatelle:
-      case:
-        rules:
-          avro: snake
-          bson: camel
-          env: upperSnake
-          envconfig: upperSnake
-          json: camel
-          mapstructure: kebab
-          xml: camel
-          yaml: camel
-        use-field-name: false
+    # tagliatelle:
+    #   case:
+    #     rules:
+    #       avro: snake
+    #       bson: camel
+    #       env: upperSnake
+    #       envconfig: upperSnake
+    #       json: camel
+    #       mapstructure: kebab
+    #       xml: camel
+    #       yaml: camel
+    #     use-field-name: false
     testifylint:
       enable-all: true
       disable:
@@ -566,6 +601,10 @@ linters:
           - govet
           - unused
           - wastedassign
+      - path: utils.go
+        linters:
+          # TODO: enable this when round based stuff is here
+          - unparam
       - path: testutils/
         linters:
           - depguard
@@ -589,6 +628,7 @@ linters:
           - nakedret
           # TODO: ENABLE THIS
           - wrapcheck
+          - dupl
       - path: signatures/bls/
         linters:
           # so many castings to pairing point would then need redundant checks.

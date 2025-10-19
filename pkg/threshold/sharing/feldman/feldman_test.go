@@ -133,7 +133,7 @@ func dealCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			shares, err := scheme.Deal(tc.secret, tc.prng)
 
 			if tc.expectError {
@@ -262,7 +262,7 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			secrets := make([]*feldman.Secret[FE], 0, tc.iterations)
 
 			for i := range tc.iterations {
@@ -363,7 +363,7 @@ func TestDeal(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
 				if config.errors {
@@ -393,7 +393,7 @@ func TestDeal(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -423,7 +423,7 @@ func TestDealRandom(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -715,7 +715,7 @@ func TestVerification(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -775,7 +775,7 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFie
 
 	for _, tc := range addTests {
 		t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			// Perform addition
 			sumShare := tc.share1.Add(tc.share2)
 
@@ -867,7 +867,7 @@ func homomorphicOpsCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFie
 
 	for _, tc := range scalarMulTests {
 		t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			// Perform scalar multiplication
 			scaledShare := tc.share.ScalarMul(tc.scalar)
 
@@ -985,7 +985,7 @@ func TestHomomorphicOperations(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -1198,7 +1198,7 @@ func TestToAdditive(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)
@@ -1224,7 +1224,7 @@ func TestToAdditive(t *testing.T) {
 
 		for _, config := range testConfigs {
 			t.Run(config.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				shareholders := sharing.NewOrdinalShareholderSet(config.total)
 				scheme, err := feldman.NewScheme(basePoint, config.threshold, shareholders)
 				require.NoError(t, err)

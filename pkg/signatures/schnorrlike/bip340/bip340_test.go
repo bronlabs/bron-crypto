@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -59,8 +58,6 @@ func Test_BIP340TestVectors(t *testing.T) {
 		message    string
 		signature  string
 		valid      bool
-
-		base.IncomparableTrait
 	}
 	vectorData := []testVectorData{
 		{ // 0

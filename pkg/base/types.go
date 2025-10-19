@@ -8,9 +8,6 @@ import (
 type Transparent[V any] interface {
 	Value() V
 }
-type IncomparableTrait struct {
-	_ [0]func()
-}
 type HashCode uint64
 
 func (hc HashCode) Combine(xs ...HashCode) HashCode {

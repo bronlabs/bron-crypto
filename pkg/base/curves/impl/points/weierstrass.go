@@ -5,7 +5,6 @@ import (
 	"io"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
@@ -35,8 +34,6 @@ type ShortWeierstrassPointImpl[FP fieldsImpl.FiniteFieldElementPtr[FP, F], C Sho
 	X F
 	Y F
 	Z F
-
-	base.IncomparableTrait
 }
 
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Encode(dstPrefix string, message []byte) {

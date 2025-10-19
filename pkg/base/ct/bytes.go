@@ -27,8 +27,8 @@ func CompareBytes[T ~[]byte](x, y T) (lt, eq, gt Bool) {
 		greater := LessU64(uint64(by), uint64(bx))
 
 		mask := done ^ 1
-		lt |= Bool(less & mask)
-		gt |= Bool(greater & mask)
+		lt |= less & mask
+		gt |= greater & mask
 		done |= less | greater
 	}
 

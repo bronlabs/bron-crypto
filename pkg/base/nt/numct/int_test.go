@@ -56,7 +56,7 @@ func TestInt_BitwiseAnd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			x := newInt(tt.x)
 			y := newInt(tt.y)
 			result := new(numct.Int)
@@ -88,7 +88,7 @@ func TestInt_BitwiseOr(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			x := newInt(tt.x)
 			y := newInt(tt.y)
 			result := new(numct.Int)
@@ -120,7 +120,7 @@ func TestInt_BitwiseXor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			x := newInt(tt.x)
 			y := newInt(tt.y)
 			result := new(numct.Int)
@@ -150,7 +150,7 @@ func TestInt_BitwiseNot(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			x := newInt(tt.x)
 			result := new(numct.Int)
 
@@ -301,7 +301,7 @@ func TestInt_BasicOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(tc.input)
 				i.Abs()
 				assert.Equal(t, tc.expected, i.Uint64())
@@ -330,7 +330,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				a := newInt(tc.a)
 				b := newInt(tc.b)
 				result := newInt(0)
@@ -365,7 +365,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(tc.input)
 				result := newInt(0)
 				result.Neg(i)
@@ -390,7 +390,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				a := newInt(tc.a)
 				b := newInt(tc.b)
 				result := newInt(0)
@@ -428,7 +428,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				a := newInt(tc.a)
 				b := newInt(tc.b)
 				result := newInt(0)
@@ -469,7 +469,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(tc.input)
 				result := newInt(0)
 
@@ -494,7 +494,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(tc.input)
 				result := newInt(0)
 
@@ -519,7 +519,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(tc.input)
 				i.Increment()
 				assert.Equal(t, tc.expected, i.Int64())
@@ -542,7 +542,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(tc.input)
 				i.Decrement()
 				assert.Equal(t, tc.expected, i.Int64())
@@ -597,7 +597,7 @@ func TestInt_DivisionOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				lhs := newInt(tc.lhs)
 				rhs := newInt(tc.rhs)
 				quot := newInt(999) // Initialise with non-zero to verify it gets updated
@@ -750,7 +750,7 @@ func TestInt_Sqrt(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("sqrt_%d", tc.square), func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(tc.square)
 				result := newInt(999) // Initialise with non-zero to test it gets updated
 
@@ -770,7 +770,7 @@ func TestInt_Sqrt(t *testing.T) {
 
 		for _, val := range testCases {
 			t.Run(fmt.Sprintf("sqrt_%d", val), func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(val)
 				result := newInt(999) // Initialise with non-zero
 
@@ -789,7 +789,7 @@ func TestInt_Sqrt(t *testing.T) {
 
 		for _, val := range negatives {
 			t.Run(fmt.Sprintf("sqrt_%d", val), func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(val)
 				result := newInt(888) // Initialise with known value
 
@@ -851,7 +851,7 @@ func TestInt_Sqrt(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("boundary_%d", tc.value), func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(tc.value)
 				result := newInt(777)
 
@@ -930,7 +930,7 @@ func TestInt_Sqrt_SingleLimb(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("sqrt_%d", tc.square), func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := (*numct.Int)(new(saferith.Int))
 				(*saferith.Int)(i).SetUint64(tc.square)
 				(*saferith.Int)(i).Resize(64) // Ensure we use single-limb path
@@ -956,7 +956,7 @@ func TestInt_Sqrt_SingleLimb(t *testing.T) {
 
 		for _, val := range testCases {
 			t.Run(fmt.Sprintf("sqrt_%d", val), func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := (*numct.Int)(new(saferith.Int))
 				(*saferith.Int)(i).SetUint64(val)
 				(*saferith.Int)(i).Resize(64)
@@ -1026,7 +1026,7 @@ func TestInt_Sqrt_MultiLimb(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				// Create the root
 				root := new(big.Int)
 				root.SetString(tc.rootStr, 10)
@@ -1077,7 +1077,7 @@ func TestInt_Sqrt_MultiLimb(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				value := new(big.Int)
 				value.SetString(tc.valueStr, 10)
 				require.NotNil(t, value)
@@ -1127,7 +1127,7 @@ func TestInt_Sqrt_MultiLimb(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				value := new(big.Int)
 				value.SetString(tc.value, 10)
 				require.NotNil(t, value)
@@ -1166,7 +1166,7 @@ func TestInt_Sqrt_MultiLimb(t *testing.T) {
 
 		for _, cap := range capacities {
 			t.Run(fmt.Sprintf("capacity_%d", cap), func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newIntFromBigInt(square)
 				(*saferith.Int)(i).Resize(cap)
 
@@ -1196,7 +1196,7 @@ func TestInt_Sqrt_MultiLimb(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				// Generate a random-ish large number as root
 				root := new(big.Int).Lsh(big.NewInt(1), uint(tc.rootBits-1))
 				root.Add(root, big.NewInt(12345)) // Make it not just a power of 2
@@ -1230,7 +1230,7 @@ func TestInt_Sqrt_EdgeCases(t *testing.T) {
 
 		for _, cap := range capacities {
 			t.Run(fmt.Sprintf("cap_%d", cap), func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := (*numct.Int)(new(saferith.Int))
 				(*saferith.Int)(i).SetUint64(0)
 				(*saferith.Int)(i).Resize(cap)
@@ -1250,7 +1250,7 @@ func TestInt_Sqrt_EdgeCases(t *testing.T) {
 
 		for _, cap := range capacities {
 			t.Run(fmt.Sprintf("cap_%d", cap), func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := (*numct.Int)(new(saferith.Int))
 				(*saferith.Int)(i).SetUint64(1)
 				(*saferith.Int)(i).Resize(cap)
@@ -1280,7 +1280,7 @@ func TestInt_Sqrt_EdgeCases(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("neg_%d_cap_%d", tc.value, tc.capacity), func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := (*numct.Int)(new(saferith.Int))
 				i.SetInt64(tc.value)
 				(*saferith.Int)(i).Resize(tc.capacity)
@@ -1333,7 +1333,7 @@ func TestInt_Sqrt_EdgeCases(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("bits_%d", tc.bits), func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				// For very small capacities, use 1 or 0 as test value
 				var testVal int64
 				var expectedRoot uint64
@@ -1389,7 +1389,7 @@ func TestInt_Sqrt_Correctness(t *testing.T) {
 
 		for _, valStr := range testValues {
 			t.Run(fmt.Sprintf("value_%s", valStr[:min(20, len(valStr))]), func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				value := new(big.Int)
 				value.SetString(valStr, 10)
 
@@ -1461,7 +1461,7 @@ func TestInt_BitOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(tc.input)
 				result := newInt(0)
 
@@ -1500,7 +1500,7 @@ func TestInt_BitOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(tc.input)
 				result := newInt(0)
 
@@ -1552,7 +1552,7 @@ func TestInt_ComparisonOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				a := newInt(tc.a)
 				b := newInt(tc.b)
 
@@ -1595,7 +1595,7 @@ func TestInt_ComparisonOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				a := newInt(tc.a)
 				b := newInt(tc.b)
 
@@ -1624,7 +1624,7 @@ func TestInt_ComparisonOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(tc.input)
 				result := i.IsNegative()
 				if tc.expected {
@@ -1697,7 +1697,7 @@ func TestInt_UtilityOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				a := newInt(tc.a)
 				b := newInt(tc.b)
 
@@ -1787,7 +1787,7 @@ func TestInt_ConversionOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(tc.input)
 				assert.Equal(t, tc.expected, i.Uint64())
 			})
@@ -1812,7 +1812,7 @@ func TestInt_ConversionOperations(t *testing.T) {
 
 		for _, val := range testCases {
 			t.Run("", func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(val)
 				assert.Equal(t, val, i.Int64())
 			})
@@ -1852,7 +1852,7 @@ func TestInt_ConversionOperations(t *testing.T) {
 
 		for _, input := range testCases {
 			t.Run("", func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(input)
 				result := i.Bytes()
 
@@ -1885,7 +1885,7 @@ func TestInt_ConversionOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				i := newInt(0)
 				ok := i.SetBytes(tc.input)
 

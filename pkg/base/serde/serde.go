@@ -3,8 +3,9 @@ package serde
 import (
 	"reflect"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/fxamacker/cbor/v2"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 const (

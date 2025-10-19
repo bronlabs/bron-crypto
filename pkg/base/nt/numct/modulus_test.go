@@ -87,7 +87,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		for _, tt := range tests {
 
 			t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				x := newNatFromBig(big.NewInt(tt.x))
 				out := newNatFromBig(big.NewInt(0))
 
@@ -113,7 +113,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		for _, tt := range tests {
 
 			t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				x := newNatFromBig(big.NewInt(tt.x))
 				y := newNatFromBig(big.NewInt(tt.y))
 				out := newNatFromBig(big.NewInt(0))
@@ -140,7 +140,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		for _, tt := range tests {
 
 			t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				x := newNatFromBig(big.NewInt(tt.x))
 				y := newNatFromBig(big.NewInt(tt.y))
 				out := newNatFromBig(big.NewInt(0))
@@ -167,7 +167,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		for _, tt := range tests {
 
 			t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				x := newNatFromBig(big.NewInt(tt.x))
 				y := newNatFromBig(big.NewInt(tt.y))
 				out := newNatFromBig(big.NewInt(0))
@@ -194,7 +194,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		for _, tt := range tests {
 
 			t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				x := newNatFromBig(big.NewInt(tt.x))
 				out := newNatFromBig(big.NewInt(0))
 
@@ -227,7 +227,7 @@ func TestModulusOddPrime_Inv(t *testing.T) {
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			x := newNatFromBig(big.NewInt(tt.x))
 			out := newNatFromBig(big.NewInt(0))
 
@@ -271,7 +271,7 @@ func TestModulusOddPrime_Sqrt(t *testing.T) {
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			x := newNatFromBig(big.NewInt(tt.x))
 			out := newNatFromBig(big.NewInt(0))
 
@@ -311,7 +311,7 @@ func TestModulusOddPrime_Div(t *testing.T) {
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			x := newNatFromBig(big.NewInt(tt.x))
 			y := newNatFromBig(big.NewInt(tt.y))
 			out := newNatFromBig(big.NewInt(0))
@@ -375,7 +375,7 @@ func TestModulusOddPrime_Properties(t *testing.T) {
 		for _, tt := range tests {
 
 			t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				x := newNatFromBig(big.NewInt(tt.x))
 				got := m.IsInRange(x)
 				assert.Equal(t, tt.want, got)
@@ -400,7 +400,7 @@ func TestModulusOddPrime_Properties(t *testing.T) {
 		for _, tt := range tests {
 
 			t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				x := newNatFromBig(big.NewInt(tt.x))
 				got := m.IsUnit(x)
 				assert.Equal(t, tt.want, got)
@@ -434,7 +434,7 @@ func TestModulusOddPrime_Exp(t *testing.T) {
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			base := newNatFromBig(big.NewInt(tt.base))
 			exp := newNatFromBig(big.NewInt(tt.exp))
 			out := newNatFromBig(big.NewInt(0))
@@ -471,7 +471,7 @@ func TestModulus_Sqrt(t *testing.T) {
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			x := newNatFromBig(big.NewInt(tt.x))
 			out := newNatFromBig(big.NewInt(0))
 
@@ -536,7 +536,7 @@ func TestModulusCachingPerformance(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			// Generate a prime
 			pBig, _ := crand.Prime(crand.Reader, tc.primeBits)
 			p := (*numct.Nat)(new(saferith.Nat).SetBig(pBig, tc.primeBits).Resize(tc.primeBits))
@@ -648,7 +648,7 @@ func TestModSymmetric(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			input := newNatFromBig(big.NewInt(tc.input))
 			var output numct.Int
 			m.ModSymmetric(&output, input)
@@ -697,7 +697,7 @@ func TestModInv_Comprehensive(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				a := newNatFromBig(big.NewInt(tc.input))
 				var inv numct.Nat
 				ok := m.ModInv(&inv, a)
@@ -753,7 +753,7 @@ func TestModInv_Comprehensive(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+				t.Parallel()
 				a := newNatFromBig(big.NewInt(tc.input))
 				var inv numct.Nat
 				ok := m.ModInv(&inv, a)

@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"iter"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
@@ -114,17 +113,4 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 
 func (p *Participant[P, B, S]) SharingID() sharing.ID {
 	return p.sharingId
-}
-
-func (p *Participant[P, B, S]) otherParties() iter.Seq[sharing.ID] {
-	return func(yield func(sharing.ID) bool) {
-		for id := range p.ac.Shareholders().Iter() {
-			if id == p.sharingId {
-				continue
-			}
-			if !yield(id) {
-				return
-			}
-		}
-	}
 }

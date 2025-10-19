@@ -35,8 +35,6 @@ type Participant[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 	sessionId  network.SID
 	transcript transcripts.Transcript
 	prng       io.Reader
-
-	base.IncomparableTrait
 }
 
 type State[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -45,50 +43,44 @@ type State[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.P
 	zModQ2 *num.ZMod
 	a      *num.Uint
 	b      *num.Uint
-
-	base.IncomparableTrait
 }
 
 type VerifierState[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	State[P, B, S]
+
 	cDoublePrimeWitness hashcommitments.Witness
 	bigQPrime           P
 	cHat                hashcommitments.Commitment
-
-	base.IncomparableTrait
 }
 
 type Verifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	Participant[P, B, S]
+
 	rangeVerifier     *zkcompiler.Verifier[*paillierrange.Statement, *paillierrange.Witness, *paillierrange.Commitment, *paillierrange.State, *paillierrange.Response]
 	paillierEncrypter *paillier.Encrypter
 	c                 *paillier.Ciphertext
 	state             *VerifierState[P, B, S]
 	commitmentScheme  *hash_comm.Scheme
-
-	base.IncomparableTrait
 }
 
 type ProverState[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	State[P, B, S]
+
 	alpha                  *paillier.Plaintext
 	bigQHat                P
 	bigQHatWitness         hashcommitments.Witness
 	cDoublePrimeCommitment hashcommitments.Commitment
-
-	base.IncomparableTrait
 }
 
 type Prover[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	Participant[P, B, S]
+
 	rangeProver       *zkcompiler.Prover[*paillierrange.Statement, *paillierrange.Witness, *paillierrange.Commitment, *paillierrange.State, *paillierrange.Response]
 	paillierDecrypter *paillier.Decrypter
 	sk                *paillier.PrivateKey
 	x                 S
 	state             *ProverState[P, B, S]
 	commitmentScheme  *hash_comm.Scheme
-
-	base.IncomparableTrait
 }
 
 func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, publicKey *paillier.PublicKey, bigQ P, xEncrypted *paillier.Ciphertext, tape transcripts.Transcript, prng io.Reader) (verifier *Verifier[P, B, S], err error) {
@@ -106,7 +98,7 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 	tape.AppendDomainSeparator(dst)
 
 	rangeProofTranscript := tape.Clone()
-	rangeProtocol, q, q2, qThirdNat, err := initRangeProtocol(curve, publicKey, rangeProofTranscript, prng)
+	rangeProtocol, q, q2, qThirdNat, err := initRangeProtocol(curve, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't initialise range protocol")
 	}
@@ -168,7 +160,7 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 }
 
 func validateVerifierInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, publicKey *paillier.PublicKey, bigQ P, xEncrypted *paillier.Ciphertext, prng io.Reader) error {
-	if len(sessionId) == 0 {
+	if ct.SliceIsZero(sessionId[:]) == ct.True {
 		return errs.NewIsNil("sessionId is nil")
 	}
 	if publicKey == nil {
@@ -179,6 +171,9 @@ func validateVerifierInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElemen
 	}
 	if xEncrypted == nil {
 		return errs.NewIsNil("xEncrypted is nil")
+	}
+	if utils.IsNil(bigQ) {
+		return errs.NewIsNil("bigQ is nil")
 	}
 	if v := xEncrypted.ValueCT(); v.IsZero()&v.Equal(numct.NatOne()) == ct.True {
 		return errs.NewArgument("xEncrypted is invalid: %s", v.String())
@@ -201,7 +196,7 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	tape.AppendDomainSeparator(dst)
 
 	rangeProofTranscript := tape.Clone()
-	rangeProtocol, q, qSquared, qThirdNat, err := initRangeProtocol(curve, secretKey.PublicKey(), rangeProofTranscript, prng)
+	rangeProtocol, q, qSquared, qThirdNat, err := initRangeProtocol(curve, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't initialise range protocol")
 	}
@@ -273,7 +268,7 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 }
 
 func validateProverInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, curve curves.Curve[P, B, S], secretKey *paillier.PrivateKey, x S, r *paillier.Nonce, prng io.Reader) error {
-	if len(sessionId) == 0 {
+	if ct.SliceIsZero(sessionId[:]) == ct.True {
 		return errs.NewIsNil("sessionId is nil")
 	}
 	if secretKey == nil {
@@ -301,7 +296,7 @@ func validateProverInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[
 	return nil
 }
 
-func initRangeProtocol[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](curve curves.Curve[P, B, S], publicKey *paillier.PublicKey, tape transcripts.Transcript, prng io.Reader) (rangeProtocol *paillierrange.Protocol, zModQ, zModQ2 *num.ZMod, qThird *numct.Nat, err error) {
+func initRangeProtocol[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](curve curves.Curve[P, B, S], prng io.Reader) (rangeProtocol *paillierrange.Protocol, zModQ, zModQ2 *num.ZMod, qThird *numct.Nat, err error) {
 	q := curve.Order()
 	q2 := q.Mul(q)
 

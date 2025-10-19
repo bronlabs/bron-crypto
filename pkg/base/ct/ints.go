@@ -45,13 +45,13 @@ func GreaterOrEqual[I constraints.Integer](x, y I) Choice {
 }
 func CompareInteger[I constraints.Integer](x, y I) (gt, eq, lt Bool) {
 	// Equal: 1 if x == y, else 0
-	eq = Bool(Equal(x, y))
+	eq = Equal(x, y)
 
 	// Greater: 1 if x > y, else 0
-	gt = Bool(Greater(x, y))
+	gt = Greater(x, y)
 
 	// Less: 1 if x < y, else 0
-	lt = Bool(Less(x, y))
+	lt = Less(x, y)
 	return
 }
 

@@ -171,6 +171,7 @@ func BenchmarkPoseidonKimchi(b *testing.B) {
 }
 
 func benchmarkPoseidon(b *testing.B, hasherFactory func() *poseidon.Poseidon) {
+	b.Helper()
 	// Create test inputs of different sizes
 	sizes := []int{1, 2, 3, 4, 5, 10}
 

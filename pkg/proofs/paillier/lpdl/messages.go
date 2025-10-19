@@ -1,7 +1,6 @@
 package lpdl
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
@@ -18,8 +17,6 @@ type Round1Output struct {
 	RangeVerifierOutput    hash_comm.Commitment
 	CPrime                 *paillier.Ciphertext
 	CDoublePrimeCommitment hashcommitments.Commitment
-
-	base.IncomparableTrait
 }
 
 func (r1out *Round1Output) Validate() error {
@@ -36,7 +33,6 @@ func (r1out *Round1Output) Validate() error {
 type Round2Output struct {
 	RangeProverOutput *paillierrange.Commitment
 	CHat              hashcommitments.Commitment
-	base.IncomparableTrait
 }
 
 func (r2out *Round2Output) Validate() error {
@@ -56,8 +52,6 @@ type Round3Output struct {
 	A                    *num.Uint
 	B                    *num.Uint
 	CDoublePrimeWitness  hashcommitments.Witness
-
-	base.IncomparableTrait
 }
 
 func (r3out *Round3Output) Validate() error {
@@ -84,8 +78,6 @@ type Round4Output[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S al
 	RangeProverOutput *paillierrange.Response
 	BigQHat           P
 	BigQHatWitness    hashcommitments.Witness
-
-	base.IncomparableTrait
 }
 
 func (r4out *Round4Output[P, B, S]) Validate() error {

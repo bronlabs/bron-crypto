@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"iter"
 
 	"golang.org/x/crypto/blake2b"
 
@@ -146,19 +145,6 @@ func (c *Cosigner[P, B, S]) SharingID() sharing.ID {
 
 func (c *Cosigner[P, B, S]) Quorum() network.Quorum {
 	return c.quorum
-}
-
-func (c *Cosigner[P, B, S]) otherCosigners() iter.Seq[sharing.ID] {
-	return func(yield func(id sharing.ID) bool) {
-		for id := range c.quorum.Iter() {
-			if id == c.sharingId {
-				continue
-			}
-			if !yield(id) {
-				return
-			}
-		}
-	}
 }
 
 func randomizeZeroSeeds(seeds przs.Seeds, tape transcripts.Transcript) (przs.Seeds, error) {

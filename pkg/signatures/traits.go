@@ -7,7 +7,6 @@ import (
 
 type PublicKeyTrait[PKV algebra.PrimeGroupElement[PKV, S], S algebra.PrimeFieldElement[S]] struct {
 	V PKV
-	base.IncomparableTrait
 }
 
 func (pk *PublicKeyTrait[PKV, S]) Group() algebra.PrimeGroup[PKV, S] {

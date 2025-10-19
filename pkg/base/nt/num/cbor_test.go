@@ -50,7 +50,7 @@ func TestNatPlus_CBOR_EdgeCases(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero_not_allowed", func(t *testing.T) {
-			t.Parallel()
+		t.Parallel()
 		// Create a NatPlus with value 1, then marshal it
 		n, err := num.NPlus().FromUint64(1)
 		require.NoError(t, err)
@@ -70,14 +70,14 @@ func TestNatPlus_CBOR_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("empty_bytes", func(t *testing.T) {
-			t.Parallel()
+		t.Parallel()
 		var n num.NatPlus
 		err := n.UnmarshalCBOR([]byte{})
 		require.Error(t, err)
 	})
 
 	t.Run("corrupted_data", func(t *testing.T) {
-			t.Parallel()
+		t.Parallel()
 		var n num.NatPlus
 		err := n.UnmarshalCBOR([]byte{0xFF, 0xFF, 0xFF, 0xFF})
 		require.Error(t, err)
@@ -464,70 +464,70 @@ func TestCBOR_EdgeCases(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Nat_empty_bytes", func(t *testing.T) {
-			t.Parallel()
+		t.Parallel()
 		var n num.Nat
 		err := n.UnmarshalCBOR([]byte{})
 		require.Error(t, err)
 	})
 
 	t.Run("Int_empty_bytes", func(t *testing.T) {
-			t.Parallel()
+		t.Parallel()
 		var i num.Int
 		err := i.UnmarshalCBOR([]byte{})
 		require.Error(t, err)
 	})
 
 	t.Run("NatPlus_empty_bytes", func(t *testing.T) {
-			t.Parallel()
+		t.Parallel()
 		var n num.NatPlus
 		err := n.UnmarshalCBOR([]byte{})
 		require.Error(t, err)
 	})
 
 	t.Run("Uint_empty_bytes", func(t *testing.T) {
-			t.Parallel()
+		t.Parallel()
 		var u num.Uint
 		err := u.UnmarshalCBOR([]byte{})
 		require.Error(t, err)
 	})
 
 	t.Run("ZMod_empty_bytes", func(t *testing.T) {
-			t.Parallel()
+		t.Parallel()
 		var z num.ZMod
 		err := z.UnmarshalCBOR([]byte{})
 		require.Error(t, err)
 	})
 
 	t.Run("Nat_corrupted_data", func(t *testing.T) {
-			t.Parallel()
+		t.Parallel()
 		var n num.Nat
 		err := n.UnmarshalCBOR([]byte{0xFF, 0xFF, 0xFF, 0xFF})
 		require.Error(t, err)
 	})
 
 	t.Run("Int_corrupted_data", func(t *testing.T) {
-			t.Parallel()
+		t.Parallel()
 		var i num.Int
 		err := i.UnmarshalCBOR([]byte{0xFF, 0xFF, 0xFF, 0xFF})
 		require.Error(t, err)
 	})
 
 	t.Run("NatPlus_corrupted_data", func(t *testing.T) {
-			t.Parallel()
+		t.Parallel()
 		var n num.NatPlus
 		err := n.UnmarshalCBOR([]byte{0xFF, 0xFF, 0xFF, 0xFF})
 		require.Error(t, err)
 	})
 
 	t.Run("Uint_corrupted_data", func(t *testing.T) {
-			t.Parallel()
+		t.Parallel()
 		var u num.Uint
 		err := u.UnmarshalCBOR([]byte{0xFF, 0xFF, 0xFF, 0xFF})
 		require.Error(t, err)
 	})
 
 	t.Run("ZMod_corrupted_data", func(t *testing.T) {
-			t.Parallel()
+		t.Parallel()
 		var z num.ZMod
 		err := z.UnmarshalCBOR([]byte{0xFF, 0xFF, 0xFF, 0xFF})
 		require.Error(t, err)

@@ -125,7 +125,7 @@ func TestSignVectors(t *testing.T) {
 		}
 
 		t.Run(file.Name(), func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			var vector signTestVector
 			readTestVector(t, filepath.Join(vectorsDir, file.Name()), &vector)
 
@@ -190,7 +190,7 @@ func TestVerifyVectors(t *testing.T) {
 		}
 
 		t.Run(file.Name(), func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			var vector verifyTestVector
 			readTestVector(t, filepath.Join(vectorsDir, file.Name()), &vector)
 
@@ -259,7 +259,7 @@ func TestAggregateVectors(t *testing.T) {
 		}
 
 		t.Run(file.Name(), func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			var vector aggregateTestVector
 			readTestVector(t, filepath.Join(vectorsDir, file.Name()), &vector)
 
@@ -321,7 +321,7 @@ func TestAggregateVerifyVectors(t *testing.T) {
 		}
 
 		t.Run(file.Name(), func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			var vector aggregateVerifyTestVector
 			readTestVector(t, filepath.Join(vectorsDir, file.Name()), &vector)
 
@@ -406,7 +406,7 @@ func TestBatchVerifyVectors(t *testing.T) {
 		}
 
 		t.Run(file.Name(), func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			var vector batchVerifyTestVector
 			readTestVector(t, filepath.Join(vectorsDir, file.Name()), &vector)
 
@@ -522,7 +522,7 @@ func TestBatchSign(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			// Create scheme
 			scheme, err := bls.NewShortKeyScheme(family, tc.rogueKeyAlg)
 			require.NoError(t, err)
@@ -604,7 +604,7 @@ func TestAggregateSign(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			// Create scheme
 			scheme, err := bls.NewShortKeyScheme(family, tc.rogueKeyAlg)
 			require.NoError(t, err)
@@ -677,7 +677,7 @@ func TestKeyGeneratorWithSeed(t *testing.T) {
 
 	for _, s := range schemes {
 		t.Run(s.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			scheme, err := bls.NewShortKeyScheme(family, s.rogueKeyAlg)
 			require.NoError(t, err)
 
@@ -733,7 +733,7 @@ func TestLongKeyVariant(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-		t.Parallel()
+			t.Parallel()
 			// Create long key scheme
 			scheme, err := bls.NewLongKeyScheme(family, tc.rogueKeyAlg)
 			require.NoError(t, err)

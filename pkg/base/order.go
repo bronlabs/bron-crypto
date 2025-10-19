@@ -98,7 +98,7 @@ func PartialCompare[E Comparable[E]](x, y E) PartialOrdering {
 	// If the type implements ct.Comparable, use it for constant-time comparison
 	if cmp, ok := any(x).(ct.Comparable[E]); ok {
 		lt, eq, gt := cmp.Compare(y)
-		return PartialOrdering(LessThan*PartialOrdering(lt) + Equal*PartialOrdering(eq) + GreaterThan*PartialOrdering(gt))
+		return PartialOrdering(EvaluateConstantTimeComparison(lt, eq, gt))
 	}
 	// Fallback: allow internal PartialCompare
 	if xx, okx := any(x).(WithInternalPartialCompareMethod[E]); okx {

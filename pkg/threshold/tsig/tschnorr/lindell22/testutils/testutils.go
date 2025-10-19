@@ -30,13 +30,13 @@ import (
 func DoLindell22DKG[
 	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S],
 ](
-	tb *testing.T,
+	t *testing.T,
 	participants []*gennaro.Participant[GE, S],
 ) (shards ds.MutableMap[sharing.ID, *lindell22.Shard[GE, S]], err error) {
-	tb.Helper()
+	t.Helper()
 
 	// Run Gennaro DKG
-	dkgOutputs, err := gentu.DoGennaroDKG(tb, participants)
+	dkgOutputs, err := gentu.DoGennaroDKG(t, participants)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to run Gennaro DKG")
 	}

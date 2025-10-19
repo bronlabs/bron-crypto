@@ -210,10 +210,6 @@ type uZModDTO struct {
 	Arith modular.Arithmetic `cbor:"arithmetic"`
 }
 
-type uZModDTOUnknown struct {
-	Mod numct.Modulus `cbor:"modulus"`
-}
-
 func (us *UZMod[X]) MarshalCBOR() ([]byte, error) {
 	// Choose tag based on the concrete instantiation of UZMod[X].
 	var tag uint64

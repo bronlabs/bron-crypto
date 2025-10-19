@@ -17,7 +17,7 @@ type TestParticipant interface {
 func MapO2I[
 	P TestParticipant, BcastT, UnicastT network.Message,
 ](
-	t testing.TB,
+	tb testing.TB,
 	participants []P,
 	broadcastOutputs map[sharing.ID]BcastT,
 	UnicastOutputs map[sharing.ID]network.RoundMessages[UnicastT],
@@ -25,12 +25,12 @@ func MapO2I[
 	broadcastInputs map[sharing.ID]network.RoundMessages[BcastT],
 	UnicastInputs map[sharing.ID]network.RoundMessages[UnicastT],
 ) {
-	t.Helper()
+	tb.Helper()
 	if len(broadcastOutputs) != 0 {
-		broadcastInputs = MapBroadcastO2I(t, participants, broadcastOutputs)
+		broadcastInputs = MapBroadcastO2I(tb, participants, broadcastOutputs)
 	}
 	if len(UnicastOutputs) != 0 {
-		UnicastInputs = MapUnicastO2I(t, participants, UnicastOutputs)
+		UnicastInputs = MapUnicastO2I(tb, participants, UnicastOutputs)
 	}
 	return broadcastInputs, UnicastInputs
 }
@@ -42,13 +42,13 @@ func MapBroadcastO2I[
 		SharingID() sharing.ID
 	}, BcastT network.Message,
 ](
-	t testing.TB,
+	tb testing.TB,
 	participants []P,
 	broadcastOutputs map[sharing.ID]BcastT,
 ) (
 	broadcastInputs map[sharing.ID]network.RoundMessages[BcastT],
 ) {
-	t.Helper()
+	tb.Helper()
 	broadcastInputs = make(map[sharing.ID]network.RoundMessages[BcastT], len(participants))
 	for _, receiver := range participants {
 		inputs := hashmap.NewComparable[sharing.ID, BcastT]()
@@ -58,7 +58,7 @@ func MapBroadcastO2I[
 			}
 			msg, ok := broadcastOutputs[sender.SharingID()]
 			if ok {
-				inputs.Put(sender.SharingID(), CBORRoundTrip(t, msg))
+				inputs.Put(sender.SharingID(), CBORRoundTrip(tb, msg))
 			}
 		}
 		broadcastInputs[receiver.SharingID()] = inputs.Freeze()
@@ -73,12 +73,13 @@ func MapUnicastO2I[
 		SharingID() sharing.ID
 	}, UnicastT network.Message,
 ](
-	t testing.TB,
+	tb testing.TB,
 	participants []P,
 	p2pOutputs map[sharing.ID]network.RoundMessages[UnicastT],
 ) (
 	p2pInputs map[sharing.ID]network.RoundMessages[UnicastT],
 ) {
+	tb.Helper()
 	p2pInputs = make(map[sharing.ID]network.RoundMessages[UnicastT], len(participants))
 	for _, receiver := range participants {
 		inputs := hashmap.NewComparable[sharing.ID, UnicastT]()
@@ -90,7 +91,7 @@ func MapUnicastO2I[
 			if ok {
 				msg, exists := p2pOutput.Get(receiver.SharingID())
 				if exists {
-					inputs.Put(sender.SharingID(), CBORRoundTrip(t, msg))
+					inputs.Put(sender.SharingID(), CBORRoundTrip(tb, msg))
 				}
 			}
 		}

@@ -49,12 +49,14 @@ type UnaryOpVectorWithOk[FP impl.FiniteFieldElementPtr[FP, F], F any] struct {
 }
 
 func TestUnaryOp[FP impl.FiniteFieldElementPtr[FP, F], F any](tb testing.TB, a, c *F, op func(c, a *F)) {
+	tb.Helper()
 	var actualC F
 	op(&actualC, a)
 	require.True(tb, FP(&actualC).Equal(c) == 1)
 }
 
 func TestUnaryOpWithOk[FP impl.FiniteFieldElementPtr[FP, F], F any](tb testing.TB, a, c *F, ok ct.Bool, op func(c, a *F) ct.Bool) {
+	tb.Helper()
 	var actualC F
 	actualOk := op(&actualC, a)
 	require.True(tb, FP(&actualC).Equal(c) == 1)
@@ -62,6 +64,7 @@ func TestUnaryOpWithOk[FP impl.FiniteFieldElementPtr[FP, F], F any](tb testing.T
 }
 
 func TestBinaryOp[FP impl.FiniteFieldElementPtr[FP, F], F any](tb testing.TB, a, b, c *F, op func(c, a, b *F)) {
+	tb.Helper()
 	var actualC F
 	op(&actualC, a, b)
 	require.True(tb, FP(&actualC).Equal(c) == 1)
