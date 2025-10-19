@@ -107,7 +107,11 @@ func (u *Uint) MarshalCBOR() ([]byte, error) {
 		Value:        u.v,
 		ModulusBytes: modulusBytes,
 	}
-	return serde.MarshalCBOR(dto)
+	out, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal Uint")
+	}
+	return out, nil
 }
 
 func (u *Uint) UnmarshalCBOR(data []byte) error {
@@ -142,7 +146,11 @@ type zmodDTO struct {
 
 func (z *ZMod) MarshalCBOR() ([]byte, error) {
 	dto := &zmodDTO{Modulus: z.n}
-	return serde.MarshalCBOR(dto)
+	out, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal ZMod")
+	}
+	return out, nil
 }
 
 func (z *ZMod) UnmarshalCBOR(data []byte) error {
