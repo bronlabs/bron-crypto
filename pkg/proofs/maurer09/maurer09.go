@@ -200,7 +200,7 @@ func (p *Protocol[A, B, C]) RunSimulator(statement *Statement[A, B], challengeBy
 }
 
 func (s *Protocol[_, _, _]) SoundnessError() uint {
-	return uint(s.preImage.ElementSize())
+	return uint(s.GetChallengeBytesLength()) * 8
 }
 
 func (*Protocol[_, _, _]) SpecialSoundness() uint {
