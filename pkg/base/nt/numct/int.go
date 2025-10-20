@@ -308,7 +308,11 @@ func (i *Int) RshCap(x *Int, shift uint, cap int) {
 func (i *Int) Resize(cap int) {
 	// When cap < 0, use the current announced length
 	// When cap >= 0, use the provided cap
-	effectiveCap := ct.CSelectInt(ct.GreaterOrEqual(cap, 0), cap, int(i.AnnouncedLen()))
+	// CSelectInt(choice, x0, x1): returns x0 when choice=0, x1 when choice=1
+	// GreaterOrEqual(cap, 0): returns 1 when cap >= 0
+	// So: when cap >= 0 (choice=1), select cap (x1)
+	//     when cap < 0 (choice=0), select announcedLen (x0)
+	effectiveCap := ct.CSelectInt(ct.GreaterOrEqual(cap, 0), int(i.AnnouncedLen()), cap)
 	(*saferith.Int)(i).Resize(effectiveCap)
 }
 
@@ -342,10 +346,17 @@ func (i *Int) Select(choice ct.Choice, x0, x1 *Int) {
 }
 
 func (i *Int) CondAssign(choice ct.Choice, x *Int) {
+	// Save i's original sign before modifying
+	iNeg := i.IsNegative()
+
+	// Conditionally assign magnitude
 	outNat := i.abs()
 	outNat.CondAssign(choice, x.abs())
-	i.SetNat(outNat)
-	i.CondNeg(x.IsNegative())
+	i.SetNat(outNat) // Now i is positive with conditionally updated magnitude
+
+	// Conditionally set sign: use i's original sign when choice=0, x's sign when choice=1
+	finalSign := ct.CSelectInt(choice, iNeg, x.IsNegative())
+	i.CondNeg(finalSign)
 }
 
 func (i *Int) CondNeg(choice ct.Choice) {
@@ -519,7 +530,9 @@ func (i *Int) AndCap(x, y *Int, cap int) {
 	// Set the result with appropriate sign
 	i.SetNat(resultMag)
 	i.CondNeg(bothNeg)
-	i.Resize(cap)
+	if cap >= 0 {
+		i.Resize(cap)
+	}
 }
 
 // Or sets i = x | y and returns i.
@@ -595,7 +608,9 @@ func (i *Int) OrCap(x, y *Int, cap int) {
 	// Set sign - negative unless both positive
 	i.SetNat(resultMag)
 	i.CondNeg(bothPos.Not())
-	i.Resize(cap)
+	if cap >= 0 {
+		i.Resize(cap)
+	}
 }
 
 // Xor sets i = x ^ y and returns i.
@@ -671,7 +686,9 @@ func (i *Int) XorCap(x, y *Int, cap int) {
 	// Set the result
 	i.SetNat(resultMag)
 	i.CondNeg(ct.Choice(resultNeg))
-	i.Resize(cap)
+	if cap >= 0 {
+		i.Resize(cap)
+	}
 }
 
 // Not sets i = ^x and returns i.
@@ -693,5 +710,7 @@ func (i *Int) NotCap(x *Int, cap int) {
 
 	// Negate the result
 	i.Neg(xPlusOne)
-	i.Resize(cap)
+	if cap >= 0 {
+		i.Resize(cap)
+	}
 }

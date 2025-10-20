@@ -195,7 +195,11 @@ func (n *Nat) IsEven() ct.Bool {
 func (n *Nat) Resize(cap int) {
 	// When cap < 0, use the current announced length
 	// When cap >= 0, use the provided cap
-	(*saferith.Nat)(n).Resize(ct.CSelectInt(ct.GreaterOrEqual(cap, 0), cap, int(n.AnnouncedLen())))
+	// CSelectInt(choice, x0, x1): returns x0 when choice=0, x1 when choice=1
+	// GreaterOrEqual(cap, 0): returns 1 when cap >= 0
+	// So: when cap >= 0 (choice=1), select cap (x1)
+	//     when cap < 0 (choice=0), select announcedLen (x0)
+	(*saferith.Nat)(n).Resize(ct.CSelectInt(ct.GreaterOrEqual(cap, 0), int(n.AnnouncedLen()), cap))
 }
 
 func (n *Nat) Lsh(x *Nat, shift uint) {
@@ -276,7 +280,9 @@ func (n *Nat) AndCap(x, y *Nat, cap int) {
 
 	// Set the result
 	(*saferith.Nat)(n).SetBytes(result)
-	n.Resize(cap)
+	if cap >= 0 {
+		n.Resize(cap)
+	}
 }
 
 // Or sets n = x | y and returns n.
@@ -306,7 +312,9 @@ func (n *Nat) OrCap(x, y *Nat, cap int) {
 	ct.OrBytes(result, xPadded, yPadded)
 
 	(*saferith.Nat)(n).SetBytes(result)
-	n.Resize(cap)
+	if cap >= 0 {
+		n.Resize(cap)
+	}
 }
 
 // Xor sets n = x ^ y and returns n.
@@ -336,7 +344,9 @@ func (n *Nat) XorCap(x, y *Nat, cap int) {
 	ct.XorBytes(result, xPadded, yPadded)
 
 	(*saferith.Nat)(n).SetBytes(result)
-	n.Resize(cap)
+	if cap >= 0 {
+		n.Resize(cap)
+	}
 }
 
 // Not sets n = ^x and returns n.
@@ -366,5 +376,7 @@ func (n *Nat) NotCap(x *Nat, cap int) {
 	ct.NotBytes(result, xPadded)
 
 	(*saferith.Nat)(n).SetBytes(result)
-	n.Resize(cap)
+	if cap >= 0 {
+		n.Resize(cap)
+	}
 }

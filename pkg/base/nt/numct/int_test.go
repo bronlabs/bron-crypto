@@ -37,7 +37,7 @@ func newIntFromBigInt(b *big.Int) *numct.Int {
 }
 
 func TestInt_BitwiseAnd(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	tests := []struct {
 		name     string
@@ -56,7 +56,7 @@ func TestInt_BitwiseAnd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+
 			x := newInt(tt.x)
 			y := newInt(tt.y)
 			result := new(numct.Int)
@@ -69,7 +69,7 @@ func TestInt_BitwiseAnd(t *testing.T) {
 }
 
 func TestInt_BitwiseOr(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	tests := []struct {
 		name     string
@@ -88,7 +88,7 @@ func TestInt_BitwiseOr(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+
 			x := newInt(tt.x)
 			y := newInt(tt.y)
 			result := new(numct.Int)
@@ -101,7 +101,7 @@ func TestInt_BitwiseOr(t *testing.T) {
 }
 
 func TestInt_BitwiseXor(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	tests := []struct {
 		name     string
@@ -120,7 +120,7 @@ func TestInt_BitwiseXor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+
 			x := newInt(tt.x)
 			y := newInt(tt.y)
 			result := new(numct.Int)
@@ -133,7 +133,7 @@ func TestInt_BitwiseXor(t *testing.T) {
 }
 
 func TestInt_BitwiseNot(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	tests := []struct {
 		name     string
@@ -150,7 +150,7 @@ func TestInt_BitwiseNot(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+
 			x := newInt(tt.x)
 			result := new(numct.Int)
 
@@ -162,7 +162,6 @@ func TestInt_BitwiseNot(t *testing.T) {
 }
 
 func TestInt_BitwiseAndCap(t *testing.T) {
-	t.Parallel()
 
 	x := newInt(0xFFFF)
 	y := newInt(0xFF00)
@@ -176,7 +175,6 @@ func TestInt_BitwiseAndCap(t *testing.T) {
 }
 
 func TestInt_BitwiseOrCap(t *testing.T) {
-	t.Parallel()
 
 	x := newInt(0xFF00)
 	y := newInt(0x00FF)
@@ -190,7 +188,6 @@ func TestInt_BitwiseOrCap(t *testing.T) {
 }
 
 func TestInt_BitwiseXorCap(t *testing.T) {
-	t.Parallel()
 
 	x := newInt(0xFFFF)
 	y := newInt(0xFF00)
@@ -204,7 +201,6 @@ func TestInt_BitwiseXorCap(t *testing.T) {
 }
 
 func TestInt_BitwiseNotCap(t *testing.T) {
-	t.Parallel()
 
 	x := newInt(7)
 	result := new(numct.Int)
@@ -217,7 +213,7 @@ func TestInt_BitwiseNotCap(t *testing.T) {
 }
 
 func TestInt_BitwiseWithBigInts(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	// Test with larger numbers using big.Int
 	x := newIntFromBigInt(big.NewInt(0).SetBytes([]byte{0xFF, 0xFF, 0xFF, 0xFF}))
@@ -246,10 +242,10 @@ func TestInt_BitwiseWithBigInts(t *testing.T) {
 }
 
 func TestInt_BasicOperations(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	t.Run("Set", func(t *testing.T) {
-		t.Parallel()
+
 		i1 := newInt(42)
 		i2 := newInt(0)
 
@@ -259,7 +255,7 @@ func TestInt_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("SetNat", func(t *testing.T) {
-		t.Parallel()
+
 		n := (*numct.Nat)(new(saferith.Nat))
 		n.SetUint64(42)
 
@@ -270,7 +266,7 @@ func TestInt_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("SetZero", func(t *testing.T) {
-		t.Parallel()
+
 		i := newInt(12345)
 		i.SetZero()
 
@@ -279,7 +275,7 @@ func TestInt_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("SetOne", func(t *testing.T) {
-		t.Parallel()
+
 		i := newInt(12345)
 		i.SetOne()
 
@@ -288,7 +284,7 @@ func TestInt_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("Abs", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			input    int64
 			expected uint64
@@ -301,7 +297,7 @@ func TestInt_BasicOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(tc.input)
 				i.Abs()
 				assert.Equal(t, tc.expected, i.Uint64())
@@ -312,10 +308,10 @@ func TestInt_BasicOperations(t *testing.T) {
 }
 
 func TestInt_ArithmeticOperations(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	t.Run("Add", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			name     string
 			a, b     int64
@@ -330,7 +326,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
+
 				a := newInt(tc.a)
 				b := newInt(tc.b)
 				result := newInt(0)
@@ -342,7 +338,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("AddCap", func(t *testing.T) {
-		t.Parallel()
+
 		// cap is bit-capacity, so AddCap(a, b, cap) = (a + b) mod 2^cap with sign preservation
 		a := newInt(100)
 		b := newInt(200)
@@ -353,7 +349,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("Neg", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			input    int64
 			expected int64
@@ -365,7 +361,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(tc.input)
 				result := newInt(0)
 				result.Neg(i)
@@ -375,7 +371,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("Sub", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			name     string
 			a, b     int64
@@ -390,7 +386,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
+
 				a := newInt(tc.a)
 				b := newInt(tc.b)
 				result := newInt(0)
@@ -402,7 +398,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("SubCap", func(t *testing.T) {
-		t.Parallel()
+
 		a := newInt(50)
 		b := newInt(100)
 		result := newInt(0)
@@ -413,7 +409,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("Mul", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			name     string
 			a, b     int64
@@ -428,7 +424,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
+
 				a := newInt(tc.a)
 				b := newInt(tc.b)
 				result := newInt(0)
@@ -440,7 +436,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("MulCap", func(t *testing.T) {
-		t.Parallel()
+
 		a := newInt(10)
 		b := newInt(20)
 		result := newInt(0)
@@ -455,7 +451,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("Double", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			input    int64
 			expected int64
@@ -469,7 +465,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(tc.input)
 				result := newInt(0)
 
@@ -480,7 +476,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("Square", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			input    int64
 			expected int64
@@ -494,7 +490,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(tc.input)
 				result := newInt(0)
 
@@ -505,7 +501,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("Increment", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			input    int64
 			expected int64
@@ -519,7 +515,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(tc.input)
 				i.Increment()
 				assert.Equal(t, tc.expected, i.Int64())
@@ -528,7 +524,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 	})
 
 	t.Run("Decrement", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			input    int64
 			expected int64
@@ -542,7 +538,7 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(tc.input)
 				i.Decrement()
 				assert.Equal(t, tc.expected, i.Int64())
@@ -552,10 +548,10 @@ func TestInt_ArithmeticOperations(t *testing.T) {
 }
 
 func TestInt_DivisionOperations(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	t.Run("DivModCap", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			name     string
 			lhs, rhs int64
@@ -597,7 +593,7 @@ func TestInt_DivisionOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
+
 				lhs := newInt(tc.lhs)
 				rhs := newInt(tc.rhs)
 				quot := newInt(999) // Initialise with non-zero to verify it gets updated
@@ -631,7 +627,7 @@ func TestInt_DivisionOperations(t *testing.T) {
 	})
 
 	t.Run("Div", func(t *testing.T) {
-		t.Parallel()
+
 		// Test exact division
 		a := newInt(20)
 		b := newInt(5)
@@ -650,7 +646,7 @@ func TestInt_DivisionOperations(t *testing.T) {
 	})
 
 	t.Run("ExactDiv", func(t *testing.T) {
-		t.Parallel()
+
 		// Note: ExactDiv for Int requires a Modulus argument
 		// For testing purposes, we'll use regular Div which internally handles conversion
 		// Test exact division using regular Div
@@ -685,7 +681,7 @@ func TestInt_DivisionOperations(t *testing.T) {
 	})
 
 	t.Run("DivCap", func(t *testing.T) {
-		t.Parallel()
+
 		a := newInt(20)
 		result := newInt(0)
 
@@ -700,7 +696,7 @@ func TestInt_DivisionOperations(t *testing.T) {
 	})
 
 	t.Run("Inv", func(t *testing.T) {
-		t.Parallel()
+
 		// Inv always returns false for integers (no multiplicative inverse in Z)
 		i := newInt(2)
 		result := newInt(0)
@@ -711,10 +707,10 @@ func TestInt_DivisionOperations(t *testing.T) {
 }
 
 func TestInt_Sqrt(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	t.Run("PerfectSquares", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			square int64
 			root   int64
@@ -750,7 +746,7 @@ func TestInt_Sqrt(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("sqrt_%d", tc.square), func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(tc.square)
 				result := newInt(999) // Initialise with non-zero to test it gets updated
 
@@ -762,7 +758,7 @@ func TestInt_Sqrt(t *testing.T) {
 	})
 
 	t.Run("NonPerfectSquares", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []int64{2, 3, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20,
 			24, 26, 27, 28, 30, 35, 40, 45, 48, 50, 60, 63, 72, 80, 88, 90, 95, 99,
 			101, 122, 143, 145, 168, 170, 195, 200, 223, 224, 226, 255, 257, 288, 290,
@@ -770,7 +766,7 @@ func TestInt_Sqrt(t *testing.T) {
 
 		for _, val := range testCases {
 			t.Run(fmt.Sprintf("sqrt_%d", val), func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(val)
 				result := newInt(999) // Initialise with non-zero
 
@@ -783,13 +779,13 @@ func TestInt_Sqrt(t *testing.T) {
 	})
 
 	t.Run("NegativeNumbers", func(t *testing.T) {
-		t.Parallel()
+
 		// Sqrt of negative numbers should always return false
 		negatives := []int64{-1, -4, -9, -16, -25, -100, -144}
 
 		for _, val := range negatives {
 			t.Run(fmt.Sprintf("sqrt_%d", val), func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(val)
 				result := newInt(888) // Initialise with known value
 
@@ -801,7 +797,7 @@ func TestInt_Sqrt(t *testing.T) {
 	})
 
 	t.Run("EdgeCases", func(t *testing.T) {
-		t.Parallel()
+
 		// Test edge case: very large perfect square
 		// 46340^2 = 2147395600 (fits in int32)
 		i := newInt(2147395600)
@@ -828,7 +824,7 @@ func TestInt_Sqrt(t *testing.T) {
 	})
 
 	t.Run("BoundaryValues", func(t *testing.T) {
-		t.Parallel()
+
 		// Test boundary values around perfect squares
 		testCases := []struct {
 			value     int64
@@ -851,7 +847,7 @@ func TestInt_Sqrt(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("boundary_%d", tc.value), func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(tc.value)
 				result := newInt(777)
 
@@ -868,7 +864,7 @@ func TestInt_Sqrt(t *testing.T) {
 	})
 
 	t.Run("SelfAssignment", func(t *testing.T) {
-		t.Parallel()
+
 		// Test sqrt where result overwrites input
 		i := newInt(16)
 		ok := i.Sqrt(i)
@@ -883,7 +879,7 @@ func TestInt_Sqrt(t *testing.T) {
 	})
 
 	t.Run("ConstantTimeProperty", func(t *testing.T) {
-		t.Parallel()
+
 		// Test that the function returns ct.Bool for constant-time property
 		var ok ct.Bool
 		i := newInt(16)
@@ -896,10 +892,10 @@ func TestInt_Sqrt(t *testing.T) {
 }
 
 func TestInt_Sqrt_SingleLimb(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	t.Run("SmallPerfectSquares_Under64Bits", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			square uint64
 			root   uint64
@@ -930,7 +926,7 @@ func TestInt_Sqrt_SingleLimb(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("sqrt_%d", tc.square), func(t *testing.T) {
-				t.Parallel()
+
 				i := (*numct.Int)(new(saferith.Int))
 				(*saferith.Int)(i).SetUint64(tc.square)
 				(*saferith.Int)(i).Resize(64) // Ensure we use single-limb path
@@ -945,7 +941,7 @@ func TestInt_Sqrt_SingleLimb(t *testing.T) {
 	})
 
 	t.Run("NonPerfectSquares_Under64Bits", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []uint64{
 			2, 3, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15,
 			17, 18, 19, 20, 24, 26, 27, 28, 30, 35,
@@ -956,7 +952,7 @@ func TestInt_Sqrt_SingleLimb(t *testing.T) {
 
 		for _, val := range testCases {
 			t.Run(fmt.Sprintf("sqrt_%d", val), func(t *testing.T) {
-				t.Parallel()
+
 				i := (*numct.Int)(new(saferith.Int))
 				(*saferith.Int)(i).SetUint64(val)
 				(*saferith.Int)(i).Resize(64)
@@ -972,7 +968,7 @@ func TestInt_Sqrt_SingleLimb(t *testing.T) {
 	})
 
 	t.Run("MaxUint32_Perfect", func(t *testing.T) {
-		t.Parallel()
+
 		// Test largest perfect square that fits in 64 bits
 		// (2^32 - 1)^2 would overflow, so test 2^31 = (2^15.5)^2 which isn't perfect
 		// Largest is 2^32 = (2^16)^2 = 4294967296
@@ -989,10 +985,10 @@ func TestInt_Sqrt_SingleLimb(t *testing.T) {
 }
 
 func TestInt_Sqrt_MultiLimb(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	t.Run("PerfectSquares_MultiLimb", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			name     string
 			rootStr  string
@@ -1026,7 +1022,7 @@ func TestInt_Sqrt_MultiLimb(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
+
 				// Create the root
 				root := new(big.Int)
 				root.SetString(tc.rootStr, 10)
@@ -1054,7 +1050,7 @@ func TestInt_Sqrt_MultiLimb(t *testing.T) {
 	})
 
 	t.Run("NonPerfectSquares_MultiLimb", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			name     string
 			valueStr string
@@ -1077,7 +1073,7 @@ func TestInt_Sqrt_MultiLimb(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
+
 				value := new(big.Int)
 				value.SetString(tc.valueStr, 10)
 				require.NotNil(t, value)
@@ -1097,7 +1093,7 @@ func TestInt_Sqrt_MultiLimb(t *testing.T) {
 	})
 
 	t.Run("BoundaryBetweenSingleAndMultiLimb", func(t *testing.T) {
-		t.Parallel()
+
 		// Test values right at the boundary between single-limb and multi-limb paths
 		// The boundary is at 64 bits
 
@@ -1127,7 +1123,7 @@ func TestInt_Sqrt_MultiLimb(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
+
 				value := new(big.Int)
 				value.SetString(tc.value, 10)
 				require.NotNil(t, value)
@@ -1153,7 +1149,7 @@ func TestInt_Sqrt_MultiLimb(t *testing.T) {
 	})
 
 	t.Run("DifferentCapacities_SameValue", func(t *testing.T) {
-		t.Parallel()
+
 		// Test the same value with different announced capacities
 		// This tests that the algorithm correctly handles the capacity parameter
 
@@ -1166,7 +1162,7 @@ func TestInt_Sqrt_MultiLimb(t *testing.T) {
 
 		for _, cap := range capacities {
 			t.Run(fmt.Sprintf("capacity_%d", cap), func(t *testing.T) {
-				t.Parallel()
+
 				i := newIntFromBigInt(square)
 				(*saferith.Int)(i).Resize(cap)
 
@@ -1183,7 +1179,7 @@ func TestInt_Sqrt_MultiLimb(t *testing.T) {
 	})
 
 	t.Run("VeryLargePerfectSquares", func(t *testing.T) {
-		t.Parallel()
+
 		// Test with extremely large perfect squares to stress the multi-limb algorithm
 		testCases := []struct {
 			name     string
@@ -1196,7 +1192,7 @@ func TestInt_Sqrt_MultiLimb(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
+
 				// Generate a random-ish large number as root
 				root := new(big.Int).Lsh(big.NewInt(1), uint(tc.rootBits-1))
 				root.Add(root, big.NewInt(12345)) // Make it not just a power of 2
@@ -1222,15 +1218,15 @@ func TestInt_Sqrt_MultiLimb(t *testing.T) {
 }
 
 func TestInt_Sqrt_EdgeCases(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	t.Run("Zero_MultipleCapacities", func(t *testing.T) {
-		t.Parallel()
+
 		capacities := []int{1, 8, 16, 32, 64, 65, 128, 256, 512}
 
 		for _, cap := range capacities {
 			t.Run(fmt.Sprintf("cap_%d", cap), func(t *testing.T) {
-				t.Parallel()
+
 				i := (*numct.Int)(new(saferith.Int))
 				(*saferith.Int)(i).SetUint64(0)
 				(*saferith.Int)(i).Resize(cap)
@@ -1245,12 +1241,12 @@ func TestInt_Sqrt_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("One_MultipleCapacities", func(t *testing.T) {
-		t.Parallel()
+
 		capacities := []int{1, 8, 16, 32, 64, 65, 128, 256}
 
 		for _, cap := range capacities {
 			t.Run(fmt.Sprintf("cap_%d", cap), func(t *testing.T) {
-				t.Parallel()
+
 				i := (*numct.Int)(new(saferith.Int))
 				(*saferith.Int)(i).SetUint64(1)
 				(*saferith.Int)(i).Resize(cap)
@@ -1265,7 +1261,7 @@ func TestInt_Sqrt_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("NegativeNumbers_AllPaths", func(t *testing.T) {
-		t.Parallel()
+
 		// Test negative numbers with different capacities to ensure both paths handle them
 		testCases := []struct {
 			value    int64
@@ -1280,7 +1276,7 @@ func TestInt_Sqrt_EdgeCases(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("neg_%d_cap_%d", tc.value, tc.capacity), func(t *testing.T) {
-				t.Parallel()
+
 				i := (*numct.Int)(new(saferith.Int))
 				i.SetInt64(tc.value)
 				(*saferith.Int)(i).Resize(tc.capacity)
@@ -1296,7 +1292,7 @@ func TestInt_Sqrt_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("SelfAssignment_MultiLimb", func(t *testing.T) {
-		t.Parallel()
+
 		// Test self-assignment with multi-limb values
 		root := new(big.Int)
 		root.SetString("1099511627776", 10) // 2^40
@@ -1314,7 +1310,7 @@ func TestInt_Sqrt_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("PairsCalculation", func(t *testing.T) {
-		t.Parallel()
+
 		// Test that pairs calculation works correctly for various bit sizes
 		// pairs = (capBits + 1) / 2
 		testCases := []struct {
@@ -1333,7 +1329,7 @@ func TestInt_Sqrt_EdgeCases(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("bits_%d", tc.bits), func(t *testing.T) {
-				t.Parallel()
+
 				// For very small capacities, use 1 or 0 as test value
 				var testVal int64
 				var expectedRoot uint64
@@ -1368,10 +1364,10 @@ func TestInt_Sqrt_EdgeCases(t *testing.T) {
 }
 
 func TestInt_Sqrt_Correctness(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	t.Run("CompareWithBigInt", func(t *testing.T) {
-		t.Parallel()
+
 		// Compare our implementation with Go's big.Int.Sqrt for various values
 		testValues := []string{
 			"0",
@@ -1389,7 +1385,7 @@ func TestInt_Sqrt_Correctness(t *testing.T) {
 
 		for _, valStr := range testValues {
 			t.Run(fmt.Sprintf("value_%s", valStr[:min(20, len(valStr))]), func(t *testing.T) {
-				t.Parallel()
+
 				value := new(big.Int)
 				value.SetString(valStr, 10)
 
@@ -1422,10 +1418,10 @@ func TestInt_Sqrt_Correctness(t *testing.T) {
 }
 
 func TestInt_BitOperations(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	t.Run("Bit", func(t *testing.T) {
-		t.Parallel()
+
 		// Test positive number: 170 = 0xAA = 10101010 binary
 		i := newInt(170)
 
@@ -1447,7 +1443,7 @@ func TestInt_BitOperations(t *testing.T) {
 	})
 
 	t.Run("Lsh", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			name     string
 			input    int64
@@ -1461,7 +1457,7 @@ func TestInt_BitOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(tc.input)
 				result := newInt(0)
 
@@ -1472,7 +1468,7 @@ func TestInt_BitOperations(t *testing.T) {
 	})
 
 	t.Run("LshCap", func(t *testing.T) {
-		t.Parallel()
+
 		i := newInt(3)
 		result := newInt(0)
 
@@ -1486,7 +1482,7 @@ func TestInt_BitOperations(t *testing.T) {
 	})
 
 	t.Run("Rsh", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			name     string
 			input    int64
@@ -1500,7 +1496,7 @@ func TestInt_BitOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(tc.input)
 				result := newInt(0)
 
@@ -1511,7 +1507,7 @@ func TestInt_BitOperations(t *testing.T) {
 	})
 
 	t.Run("RshCap", func(t *testing.T) {
-		t.Parallel()
+
 		i := newInt(48)
 		result := newInt(0)
 
@@ -1526,10 +1522,10 @@ func TestInt_BitOperations(t *testing.T) {
 }
 
 func TestInt_ComparisonOperations(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	t.Run("Compare", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			name     string
 			a, b     int64
@@ -1552,7 +1548,7 @@ func TestInt_ComparisonOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
+
 				a := newInt(tc.a)
 				b := newInt(tc.b)
 
@@ -1577,7 +1573,7 @@ func TestInt_ComparisonOperations(t *testing.T) {
 	})
 
 	t.Run("Equal", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			a, b     int64
 			expected bool
@@ -1595,7 +1591,7 @@ func TestInt_ComparisonOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-				t.Parallel()
+
 				a := newInt(tc.a)
 				b := newInt(tc.b)
 
@@ -1610,7 +1606,7 @@ func TestInt_ComparisonOperations(t *testing.T) {
 	})
 
 	t.Run("IsNegative", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			input    int64
 			expected bool
@@ -1624,7 +1620,7 @@ func TestInt_ComparisonOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(tc.input)
 				result := i.IsNegative()
 				if tc.expected {
@@ -1637,7 +1633,7 @@ func TestInt_ComparisonOperations(t *testing.T) {
 	})
 
 	t.Run("IsZero", func(t *testing.T) {
-		t.Parallel()
+
 		zero := newInt(0)
 		assert.Equal(t, ct.True, zero.IsZero())
 
@@ -1649,7 +1645,7 @@ func TestInt_ComparisonOperations(t *testing.T) {
 	})
 
 	t.Run("IsNonZero", func(t *testing.T) {
-		t.Parallel()
+
 		zero := newInt(0)
 		assert.Equal(t, ct.False, zero.IsNonZero())
 
@@ -1661,7 +1657,7 @@ func TestInt_ComparisonOperations(t *testing.T) {
 	})
 
 	t.Run("IsOne", func(t *testing.T) {
-		t.Parallel()
+
 		one := newInt(1)
 		assert.Equal(t, ct.True, one.IsOne())
 
@@ -1677,10 +1673,10 @@ func TestInt_ComparisonOperations(t *testing.T) {
 }
 
 func TestInt_UtilityOperations(t *testing.T) {
-	t.Parallel()
+	// Note:  removed to avoid race condition in test execution
 
 	t.Run("Coprime", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			name     string
 			a, b     int64
@@ -1697,7 +1693,7 @@ func TestInt_UtilityOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				t.Parallel()
+
 				a := newInt(tc.a)
 				b := newInt(tc.b)
 
@@ -1712,7 +1708,7 @@ func TestInt_UtilityOperations(t *testing.T) {
 	})
 
 	t.Run("String", func(t *testing.T) {
-		t.Parallel()
+
 		// String format depends on saferith.Int implementation
 		i := newInt(42)
 		assert.NotEmpty(t, i.String())
@@ -1722,7 +1718,7 @@ func TestInt_UtilityOperations(t *testing.T) {
 	})
 
 	t.Run("TrueLen", func(t *testing.T) {
-		t.Parallel()
+
 		zero := newInt(0)
 		assert.Equal(t, uint(0), zero.TrueLen())
 
@@ -1734,7 +1730,7 @@ func TestInt_UtilityOperations(t *testing.T) {
 	})
 
 	t.Run("AnnouncedLen", func(t *testing.T) {
-		t.Parallel()
+
 		i := newInt(42)
 		announcedLen := i.AnnouncedLen()
 		assert.GreaterOrEqual(t, announcedLen, i.TrueLen())
@@ -1742,10 +1738,9 @@ func TestInt_UtilityOperations(t *testing.T) {
 }
 
 func TestInt_ConditionalOperations(t *testing.T) {
-	t.Parallel()
 
 	t.Run("Select", func(t *testing.T) {
-		t.Parallel()
+
 		x0 := newInt(100)
 		x1 := newInt(-200)
 		result := newInt(0)
@@ -1770,10 +1765,9 @@ func TestInt_ConditionalOperations(t *testing.T) {
 }
 
 func TestInt_ConversionOperations(t *testing.T) {
-	t.Parallel()
 
 	t.Run("Uint64", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			input    int64
 			expected uint64
@@ -1787,7 +1781,7 @@ func TestInt_ConversionOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(tc.input)
 				assert.Equal(t, tc.expected, i.Uint64())
 			})
@@ -1795,7 +1789,7 @@ func TestInt_ConversionOperations(t *testing.T) {
 	})
 
 	t.Run("SetUint64", func(t *testing.T) {
-		t.Parallel()
+
 		i := newInt(0)
 
 		testCases := []uint64{0, 1, 42, 0xFFFFFFFF, 0xFFFFFFFFFFFFFFFF}
@@ -1807,12 +1801,12 @@ func TestInt_ConversionOperations(t *testing.T) {
 	})
 
 	t.Run("Int64", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []int64{0, 1, -1, 42, -42, 100, -100}
 
 		for _, val := range testCases {
 			t.Run("", func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(val)
 				assert.Equal(t, val, i.Int64())
 			})
@@ -1820,7 +1814,7 @@ func TestInt_ConversionOperations(t *testing.T) {
 	})
 
 	t.Run("SetInt64", func(t *testing.T) {
-		t.Parallel()
+
 		i := newInt(0)
 
 		testCases := []int64{
@@ -1836,7 +1830,7 @@ func TestInt_ConversionOperations(t *testing.T) {
 	})
 
 	t.Run("SetInt64_MinInt64", func(t *testing.T) {
-		t.Parallel()
+
 		// Special test for MinInt64 edge case
 		i := newInt(0)
 		i.SetInt64(math.MinInt64)
@@ -1847,12 +1841,12 @@ func TestInt_ConversionOperations(t *testing.T) {
 	})
 
 	t.Run("Bytes", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []int64{0, 42, -42, 0x1234, -0x1234}
 
 		for _, input := range testCases {
 			t.Run("", func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(input)
 				result := i.Bytes()
 
@@ -1872,7 +1866,7 @@ func TestInt_ConversionOperations(t *testing.T) {
 	})
 
 	t.Run("SetBytes", func(t *testing.T) {
-		t.Parallel()
+
 		testCases := []struct {
 			input    []byte
 			expected int64
@@ -1885,7 +1879,7 @@ func TestInt_ConversionOperations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run("", func(t *testing.T) {
-				t.Parallel()
+
 				i := newInt(0)
 				ok := i.SetBytes(tc.input)
 
@@ -1898,10 +1892,9 @@ func TestInt_ConversionOperations(t *testing.T) {
 }
 
 func TestInt_CapacityOperations(t *testing.T) {
-	t.Parallel()
 
 	t.Run("Resize", func(t *testing.T) {
-		t.Parallel()
+
 		i := newInt(42)
 
 		// Resize changes the announced capacity of the number
@@ -1923,10 +1916,9 @@ func TestInt_CapacityOperations(t *testing.T) {
 }
 
 func TestInt_EdgeCases(t *testing.T) {
-	t.Parallel()
 
 	t.Run("Operations_With_Zero", func(t *testing.T) {
-		t.Parallel()
+
 		zero := newInt(0)
 		nonZero := newInt(42)
 		negNonZero := newInt(-42)
@@ -1955,7 +1947,7 @@ func TestInt_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("Self_Assignment", func(t *testing.T) {
-		t.Parallel()
+
 		i := newInt(42)
 
 		// Self add
@@ -1974,7 +1966,7 @@ func TestInt_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("Large_Numbers", func(t *testing.T) {
-		t.Parallel()
+
 		// Test with numbers larger than int64 can handle
 		largeBytes := []byte{
 			0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -1999,7 +1991,7 @@ func TestInt_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("Mixed_Sign_Operations", func(t *testing.T) {
-		t.Parallel()
+
 		pos := newInt(10)
 		neg := newInt(-10)
 		result := newInt(0)
@@ -2027,10 +2019,9 @@ func TestInt_EdgeCases(t *testing.T) {
 }
 
 func TestInt_ConstantTime(t *testing.T) {
-	t.Parallel()
 
 	t.Run("Comparison_Constant_Time", func(t *testing.T) {
-		t.Parallel()
+
 		// This test verifies that comparison operations return ct.Bool
 		// which ensures constant-time execution
 		i1 := newInt(42)
@@ -2117,10 +2108,9 @@ func BenchmarkInt_Sqrt(b *testing.B) {
 // TestInt_SaferithCompatibility ensures that our Int type
 // correctly wraps saferith.Int functionality
 func TestInt_SaferithCompatibility(t *testing.T) {
-	t.Parallel()
 
 	t.Run("Type_Conversion", func(t *testing.T) {
-		t.Parallel()
+
 		// Verify that Int can be converted to/from saferith.Int
 		implInt := newInt(42)
 		saferithInt := (*saferith.Int)(implInt)
@@ -2141,7 +2131,6 @@ func TestInt_SaferithCompatibility(t *testing.T) {
 // TestInt_InterfaceCompliance verifies that Int implements
 // the required internal.IntMutable interface
 func TestInt_InterfaceCompliance(t *testing.T) {
-	t.Parallel()
 
 	// This test passes if the code compiles, as the interface
 	// compliance is checked at compile time in int.go:14
@@ -2150,10 +2139,9 @@ func TestInt_InterfaceCompliance(t *testing.T) {
 
 // TestInt_CondAssign tests the CondAssign method that uses ct.CMOV
 func TestInt_CondAssign(t *testing.T) {
-	t.Parallel()
 
 	t.Run("basic positive integers", func(t *testing.T) {
-		t.Parallel()
+
 		a := newInt(42)
 		b := newInt(100)
 
@@ -2171,7 +2159,7 @@ func TestInt_CondAssign(t *testing.T) {
 	})
 
 	t.Run("negative integers", func(t *testing.T) {
-		t.Parallel()
+
 		a := newInt(-42)
 		b := newInt(-100)
 
@@ -2187,7 +2175,7 @@ func TestInt_CondAssign(t *testing.T) {
 	})
 
 	t.Run("mixed signs", func(t *testing.T) {
-		t.Parallel()
+
 		a := newInt(42)
 		b := newInt(-100)
 
@@ -2205,7 +2193,7 @@ func TestInt_CondAssign(t *testing.T) {
 	})
 
 	t.Run("zero values", func(t *testing.T) {
-		t.Parallel()
+
 		zero := newInt(0)
 		nonZero := newInt(42)
 
@@ -2223,7 +2211,7 @@ func TestInt_CondAssign(t *testing.T) {
 	})
 
 	t.Run("large values", func(t *testing.T) {
-		t.Parallel()
+
 		// Test with large integers
 		bigA := new(big.Int).Lsh(big.NewInt(1), 256) // 2^256
 		bigA.Sub(bigA, big.NewInt(1))                // 2^256 - 1
@@ -2244,7 +2232,7 @@ func TestInt_CondAssign(t *testing.T) {
 	})
 
 	t.Run("self assignment", func(t *testing.T) {
-		t.Parallel()
+
 		a := newInt(42)
 		original := a.Clone()
 
@@ -2258,7 +2246,7 @@ func TestInt_CondAssign(t *testing.T) {
 	})
 
 	t.Run("constant time behaviour", func(t *testing.T) {
-		t.Parallel()
+
 		// Test that the operation appears to be constant time
 		// by running it many times with different values
 		values := []*numct.Int{
@@ -2290,10 +2278,9 @@ func TestInt_CondAssign(t *testing.T) {
 
 // TestInt_CondNeg tests the CondNeg method
 func TestInt_CondNeg(t *testing.T) {
-	t.Parallel()
 
 	t.Run("positive to negative", func(t *testing.T) {
-		t.Parallel()
+
 		a := newInt(42)
 
 		// No negation when choice=0
@@ -2311,7 +2298,7 @@ func TestInt_CondNeg(t *testing.T) {
 	})
 
 	t.Run("negative to positive", func(t *testing.T) {
-		t.Parallel()
+
 		a := newInt(-42)
 
 		// No negation when choice=0
@@ -2329,7 +2316,7 @@ func TestInt_CondNeg(t *testing.T) {
 	})
 
 	t.Run("zero negation", func(t *testing.T) {
-		t.Parallel()
+
 		zero := newInt(0)
 
 		// Negating zero should still be zero

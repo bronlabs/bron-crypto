@@ -1367,8 +1367,6 @@ func TestNaturalNumbers_Lift(t *testing.T) {
 func TestNaturalNumbers_Random_Success(t *testing.T) {
 	t.Parallel()
 
-	prng := pcg.NewRandomised()
-
 	t.Run("Random_Range", func(t *testing.T) {
 		t.Parallel()
 
@@ -1404,6 +1402,9 @@ func TestNaturalNumbers_Random_Success(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				t.Parallel()
 
+				// Create a separate PRNG for each parallel test to avoid race conditions
+				prng := pcg.NewRandomised()
+
 				// Generate multiple random values to verify they're in range
 				for range 10 {
 					result, err := num.N().Random(tt.lowInclusive, tt.highExclusive, prng)
@@ -1421,6 +1422,9 @@ func TestNaturalNumbers_Random_Success(t *testing.T) {
 
 	t.Run("Random_Distribution", func(t *testing.T) {
 		t.Parallel()
+
+		// Create a separate PRNG for this test to avoid race conditions
+		prng := pcg.NewRandomised()
 
 		// Test that random values are distributed across the range
 		low := num.N().Zero()

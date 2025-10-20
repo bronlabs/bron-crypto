@@ -1048,6 +1048,314 @@ func TestByteOperationsCombined(t *testing.T) {
 	})
 }
 
+// TestCMOVInt tests the conditional move for integers
+func TestCMOVInt(t *testing.T) {
+	t.Parallel()
+
+	t.Run("uint64", func(t *testing.T) {
+		t.Parallel()
+
+		// Test move when yes=1
+		dst := uint64(100)
+		src := uint64(200)
+		ct.CMOVInt(&dst, ct.One, &src)
+		assert.Equal(t, uint64(200), dst, "dst should be updated when yes=1")
+
+		// Test no move when yes=0
+		dst = uint64(100)
+		src = uint64(200)
+		ct.CMOVInt(&dst, ct.Zero, &src)
+		assert.Equal(t, uint64(100), dst, "dst should be unchanged when yes=0")
+	})
+
+	t.Run("int64", func(t *testing.T) {
+		t.Parallel()
+
+		// Test with negative values
+		dst := int64(-100)
+		src := int64(200)
+		ct.CMOVInt(&dst, ct.One, &src)
+		assert.Equal(t, int64(200), dst, "dst should be updated when yes=1")
+
+		// Test no move
+		dst = int64(-100)
+		src = int64(200)
+		ct.CMOVInt(&dst, ct.Zero, &src)
+		assert.Equal(t, int64(-100), dst, "dst should be unchanged when yes=0")
+	})
+
+	t.Run("boundary values", func(t *testing.T) {
+		t.Parallel()
+
+		dst := uint64(0)
+		src := uint64(math.MaxUint64)
+		ct.CMOVInt(&dst, ct.One, &src)
+		assert.Equal(t, uint64(math.MaxUint64), dst)
+
+		dst = uint64(math.MaxUint64)
+		src = uint64(0)
+		ct.CMOVInt(&dst, ct.Zero, &src)
+		assert.Equal(t, uint64(math.MaxUint64), dst)
+	})
+
+	t.Run("alias safety", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that it works when dst == src (same pointer)
+		val := uint64(100)
+		ct.CMOVInt(&val, ct.One, &val)
+		assert.Equal(t, uint64(100), val, "should work when dst and src are same")
+	})
+}
+
+// TestCSwapInt tests the conditional swap for integers
+func TestCSwapInt(t *testing.T) {
+	t.Parallel()
+
+	t.Run("uint64 swap", func(t *testing.T) {
+		t.Parallel()
+
+		// Test swap when yes=1
+		x := uint64(100)
+		y := uint64(200)
+		ct.CSwapInt(&x, &y, ct.One)
+		assert.Equal(t, uint64(200), x, "x should be swapped when yes=1")
+		assert.Equal(t, uint64(100), y, "y should be swapped when yes=1")
+
+		// Test no swap when yes=0
+		x = uint64(100)
+		y = uint64(200)
+		ct.CSwapInt(&x, &y, ct.Zero)
+		assert.Equal(t, uint64(100), x, "x should be unchanged when yes=0")
+		assert.Equal(t, uint64(200), y, "y should be unchanged when yes=0")
+	})
+
+	t.Run("int64 swap", func(t *testing.T) {
+		t.Parallel()
+
+		// Test with negative values
+		x := int64(-100)
+		y := int64(200)
+		ct.CSwapInt(&x, &y, ct.One)
+		assert.Equal(t, int64(200), x, "x should be swapped")
+		assert.Equal(t, int64(-100), y, "y should be swapped")
+	})
+
+	t.Run("boundary values", func(t *testing.T) {
+		t.Parallel()
+
+		x := uint64(0)
+		y := uint64(math.MaxUint64)
+		ct.CSwapInt(&x, &y, ct.One)
+		assert.Equal(t, uint64(math.MaxUint64), x)
+		assert.Equal(t, uint64(0), y)
+	})
+
+	t.Run("same values", func(t *testing.T) {
+		t.Parallel()
+
+		x := uint64(42)
+		y := uint64(42)
+		ct.CSwapInt(&x, &y, ct.One)
+		assert.Equal(t, uint64(42), x, "swapping same values should work")
+		assert.Equal(t, uint64(42), y)
+	})
+
+	t.Run("alias safety", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that it works when x == y (same pointer)
+		val := uint64(100)
+		ct.CSwapInt(&val, &val, ct.One)
+		assert.Equal(t, uint64(100), val, "should work when x and y are same pointer")
+	})
+}
+
+// TestCSelectInts tests the conditional select for slices
+func TestCSelectInts(t *testing.T) {
+	t.Parallel()
+
+	t.Run("select x0 when choice=0", func(t *testing.T) {
+		t.Parallel()
+		x0 := []uint64{1, 2, 3, 4}
+		x1 := []uint64{5, 6, 7, 8}
+		result := ct.CSelectInts(ct.Zero, x0, x1)
+		assert.Equal(t, x0, result)
+	})
+
+	t.Run("select x1 when choice=1", func(t *testing.T) {
+		t.Parallel()
+		x0 := []uint64{1, 2, 3, 4}
+		x1 := []uint64{5, 6, 7, 8}
+		result := ct.CSelectInts(ct.One, x0, x1)
+		assert.Equal(t, x1, result)
+	})
+
+	t.Run("empty slices", func(t *testing.T) {
+		t.Parallel()
+		x0 := []uint64{}
+		x1 := []uint64{}
+		result := ct.CSelectInts(ct.Zero, x0, x1)
+		assert.Equal(t, x0, result)
+	})
+
+	t.Run("single element", func(t *testing.T) {
+		t.Parallel()
+		x0 := []int64{-42}
+		x1 := []int64{42}
+		assert.Equal(t, x0, ct.CSelectInts(ct.Zero, x0, x1))
+		assert.Equal(t, x1, ct.CSelectInts(ct.One, x0, x1))
+	})
+
+	t.Run("panic on different lengths", func(t *testing.T) {
+		t.Parallel()
+		x0 := []uint64{1, 2}
+		x1 := []uint64{1, 2, 3}
+		assert.Panics(t, func() {
+			ct.CSelectInts(ct.Zero, x0, x1)
+		})
+	})
+}
+
+// TestCMOVInts tests the conditional move for slices
+func TestCMOVInts(t *testing.T) {
+	t.Parallel()
+
+	t.Run("move when yes=1", func(t *testing.T) {
+		t.Parallel()
+		dst := []uint64{1, 2, 3, 4}
+		src := []uint64{5, 6, 7, 8}
+		ct.CMOVInts(dst, src, ct.One)
+		assert.Equal(t, []uint64{5, 6, 7, 8}, dst, "dst should be updated when yes=1")
+	})
+
+	t.Run("no move when yes=0", func(t *testing.T) {
+		t.Parallel()
+		dst := []uint64{1, 2, 3, 4}
+		src := []uint64{5, 6, 7, 8}
+		original := append([]uint64{}, dst...)
+		ct.CMOVInts(dst, src, ct.Zero)
+		assert.Equal(t, original, dst, "dst should be unchanged when yes=0")
+	})
+
+	t.Run("signed integers", func(t *testing.T) {
+		t.Parallel()
+		dst := []int64{-1, -2, -3}
+		src := []int64{10, 20, 30}
+		ct.CMOVInts(dst, src, ct.One)
+		assert.Equal(t, []int64{10, 20, 30}, dst)
+	})
+
+	t.Run("empty slices", func(t *testing.T) {
+		t.Parallel()
+		dst := []uint64{}
+		src := []uint64{}
+		ct.CMOVInts(dst, src, ct.One) // Should not panic
+		assert.Equal(t, []uint64{}, dst)
+	})
+
+	t.Run("panic on different lengths", func(t *testing.T) {
+		t.Parallel()
+		dst := []uint64{1, 2}
+		src := []uint64{1, 2, 3}
+		assert.Panics(t, func() {
+			ct.CMOVInts(dst, src, ct.One)
+		})
+	})
+
+	t.Run("alias safety", func(t *testing.T) {
+		t.Parallel()
+		// Test when dst and src point to same slice
+		slice := []uint64{1, 2, 3}
+		ct.CMOVInts(slice, slice, ct.One)
+		assert.Equal(t, []uint64{1, 2, 3}, slice)
+	})
+}
+
+// TestCSwapInts tests the conditional swap for slices
+func TestCSwapInts(t *testing.T) {
+	t.Parallel()
+
+	t.Run("swap when yes=1", func(t *testing.T) {
+		t.Parallel()
+		x := []uint64{1, 2, 3, 4}
+		y := []uint64{5, 6, 7, 8}
+		ct.CSwapInts(x, y, ct.One)
+		assert.Equal(t, []uint64{5, 6, 7, 8}, x, "x should be swapped when yes=1")
+		assert.Equal(t, []uint64{1, 2, 3, 4}, y, "y should be swapped when yes=1")
+	})
+
+	t.Run("no swap when yes=0", func(t *testing.T) {
+		t.Parallel()
+		x := []uint64{1, 2, 3, 4}
+		y := []uint64{5, 6, 7, 8}
+		origX := append([]uint64{}, x...)
+		origY := append([]uint64{}, y...)
+		ct.CSwapInts(x, y, ct.Zero)
+		assert.Equal(t, origX, x, "x should be unchanged when yes=0")
+		assert.Equal(t, origY, y, "y should be unchanged when yes=0")
+	})
+
+	t.Run("signed integers", func(t *testing.T) {
+		t.Parallel()
+		x := []int64{-1, -2, -3}
+		y := []int64{10, 20, 30}
+		ct.CSwapInts(x, y, ct.One)
+		assert.Equal(t, []int64{10, 20, 30}, x)
+		assert.Equal(t, []int64{-1, -2, -3}, y)
+	})
+
+	t.Run("empty slices", func(t *testing.T) {
+		t.Parallel()
+		x := []uint64{}
+		y := []uint64{}
+		ct.CSwapInts(x, y, ct.One)
+		assert.Equal(t, []uint64{}, x)
+		assert.Equal(t, []uint64{}, y)
+	})
+
+	t.Run("single element", func(t *testing.T) {
+		t.Parallel()
+		x := []uint64{42}
+		y := []uint64{84}
+		ct.CSwapInts(x, y, ct.One)
+		assert.Equal(t, []uint64{84}, x)
+		assert.Equal(t, []uint64{42}, y)
+	})
+
+	t.Run("panic on different lengths", func(t *testing.T) {
+		t.Parallel()
+		x := []uint64{1, 2}
+		y := []uint64{1, 2, 3}
+		assert.Panics(t, func() {
+			ct.CSwapInts(x, y, ct.One)
+		})
+	})
+
+	t.Run("alias safety", func(t *testing.T) {
+		t.Parallel()
+		// Test when x and y point to same slice
+		slice := []uint64{1, 2, 3}
+		ct.CSwapInts(slice, slice, ct.One)
+		assert.Equal(t, []uint64{1, 2, 3}, slice, "swapping with self should be no-op")
+	})
+
+	t.Run("double swap returns to original", func(t *testing.T) {
+		t.Parallel()
+		x := []uint64{1, 2, 3}
+		y := []uint64{4, 5, 6}
+		origX := append([]uint64{}, x...)
+		origY := append([]uint64{}, y...)
+
+		// Swap twice
+		ct.CSwapInts(x, y, ct.One)
+		ct.CSwapInts(x, y, ct.One)
+
+		assert.Equal(t, origX, x, "double swap should return to original")
+		assert.Equal(t, origY, y, "double swap should return to original")
+	})
+}
+
 // Benchmark functions
 func BenchmarkConstantTime(b *testing.B) {
 	b.Run("IsZero", func(b *testing.B) {

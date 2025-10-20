@@ -150,7 +150,7 @@ func TestInt_CBOR_LargeValue(t *testing.T) {
 }
 
 func TestModulusOddPrime_CBOR(t *testing.T) {
-	t.Parallel()
+	// Note: t.Parallel() removed to avoid race condition in test execution
 
 	// Test with various odd prime moduli (note: 2 is excluded as it's even)
 	primes := []uint64{
@@ -185,7 +185,7 @@ func TestModulusOddPrime_CBOR(t *testing.T) {
 }
 
 func TestModulusOdd_CBOR(t *testing.T) {
-	t.Parallel()
+	// Note: t.Parallel() removed to avoid race condition in test execution
 
 	// Test with various odd moduli (not necessarily prime)
 	oddValues := []uint64{
