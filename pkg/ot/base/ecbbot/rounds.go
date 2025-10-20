@@ -101,9 +101,6 @@ func (s *Sender[G, S]) Round3(r2out *Round2P2P[G, S]) (senderOut *SenderOutput[S
 	if s.round != 3 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, s.round)
 	}
-	// if err := r2out.Validate(s.Protocol); err != nil {
-	//	return nil, errs.WrapValidation(err, "invalid round %d input", s.Round)
-	//}
 
 	f, err := s.makeProgrammableOncePublicFunction()
 	if err != nil {

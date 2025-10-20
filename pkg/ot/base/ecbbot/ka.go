@@ -49,6 +49,10 @@ func (ka *TaggedKeyAgreement[GE, SE]) Msg2(b SE, _ GE) (GE, error) {
 
 func (ka *TaggedKeyAgreement[GE, SE]) Key1(a SE, mr GE, tag []byte) (SE, error) {
 	var nilSE SE
+
+	if a.IsZero() || !mr.IsTorsionFree() {
+		return nilSE, errs.NewTotalAbort(nil, "invalid arguments")
+	}
 	raw := mr.ScalarOp(a)
 	k, err := ka.scalarField.Hash(slices.Concat(tag, raw.Bytes()))
 	if err != nil {
