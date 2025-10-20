@@ -68,7 +68,6 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 		return nil, nil, errs.NewValidation("invalid choices length")
 	}
 
-	// TODO: generator is passed twice
 	dlogProtocol, err := dlogschnorr.NewSigmaProtocol(r.suite.curve.Generator(), r.prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create dlog protocol")

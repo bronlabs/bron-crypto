@@ -19,7 +19,6 @@ type Sampler[FE algebra.PrimeFieldElement[FE]] struct {
 }
 
 func NewSampler[FE algebra.PrimeFieldElement[FE]](sharingId sharing.ID, quorum network.Quorum, seeds Seeds, field algebra.PrimeField[FE]) (*Sampler[FE], error) {
-	// TODO: add validation
 	prngs := hashmap.NewComparable[sharing.ID, io.Reader]()
 	for id := range quorum.Iter() {
 		if id == sharingId {
