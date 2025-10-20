@@ -76,11 +76,11 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 		inU, _ := r3ui.Get(pid)
 		feldmanShare, _ := feldman.NewShare(inU.Share.ID(), inU.Share.Value(), nil)
 		if err := p.state.feldmanVSS.Verify(feldmanShare, inB.FeldmanVerificationVector); err != nil {
-			return nil, errs.WrapFailed(err, "failed to verify feldman share from party %d", pid)
+			return nil, errs.WrapIdentifiableAbort(err, pid, "failed to verify feldman share from party %d", pid)
 		}
 		referencePedersenVector, _ := p.state.receivedPedersenVerificationVectors.Get(pid)
 		if err := p.state.pedersenVSS.Verify(inU.Share, referencePedersenVector); err != nil {
-			return nil, errs.WrapFailed(err, "failed to verify pedersen share from party %d", pid)
+			return nil, errs.WrapIdentifiableAbort(err, pid, "failed to verify pedersen share from party %d", pid)
 		}
 		summedShareValue = summedShareValue.Add(inU.Share.Value())
 		summedFeldmanVerificationVector = summedFeldmanVerificationVector.Op(inB.FeldmanVerificationVector)

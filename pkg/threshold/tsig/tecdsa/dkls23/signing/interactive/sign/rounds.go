@@ -255,7 +255,7 @@ func (c *Cosigner[P, B, S]) Round5(r4b network.RoundMessages[*Round4Broadcast[P,
 	bigR := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.state.bigR))...)
 	pk := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.state.pk))...)
 	if !pk.Equal(c.shard.PublicKey().Value()) {
-		return nil, errs.NewFailed("consistency check failed")
+		return nil, errs.NewTotalAbort(nil, "consistency check failed")
 	}
 
 	u := c.state.r.Mul(c.state.phi.Add(psi)).Add(cudu)

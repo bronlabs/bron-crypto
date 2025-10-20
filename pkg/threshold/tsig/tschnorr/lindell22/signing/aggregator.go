@@ -1,6 +1,7 @@
 package signing
 
 import (
+	"errors"
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -103,6 +104,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 
 	// aggregated signature verification failed, now doing identifiable abort
 
+	identityAborts := []error{}
 	quorumAsMinimalQualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(quorum)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create minimal qualified access structure")
@@ -125,8 +127,12 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 			return nil, errs.WrapFailed(err, "failed to create public key for sender %d", sender)
 		}
 		if err := a.psigVerifier.Verify(&psig.Sig, senderAdditivePK, message); err != nil {
-			return nil, errs.WrapIdentifiableAbort(err, sender, "failed to verify partial signature")
+			identityAborts = append(identityAborts, errs.WrapIdentifiableAbort(err, sender, "failed to verify partial signature"))
 		}
 	}
+	if len(identityAborts) != 0 {
+		return nil, errs.WrapTotalAbort(errors.Join(identityAborts...), nil, "verification failed")
+	}
+
 	panic("should not reach here: not all partial signatures should have been valid")
 }

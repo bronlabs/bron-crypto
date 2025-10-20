@@ -306,7 +306,7 @@ func (s *Sender) verifyChallenge(
 		isCorrect = isCorrect && qiExpected.Equal(qi)
 	}
 	if !isCorrect {
-		return errs.NewIdentifiableAbort("R", "expected q != q in SoftspokenOT, consistency check failed")
+		return errs.NewTotalAbort(nil, "expected q != q in SoftspokenOT, consistency check failed")
 	}
 	return nil
 }

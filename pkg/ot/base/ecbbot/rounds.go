@@ -48,9 +48,6 @@ func (r *Receiver[G, S]) Round2(r1out *Round1P2P[G, S], choices []byte) (r2out *
 	if r.round != 2 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 2, r.round)
 	}
-	// if err := r1out.Validate(r.Protocol); err != nil {
-	//	return nil, nil, errs.WrapValidation(err, "invalid round %d input", r.Round)
-	//}
 
 	// Setup ROs
 	r.tape.AppendBytes(TaggedKeyAgreementMs, r1out.Ms.Bytes())
@@ -104,9 +101,6 @@ func (s *Sender[G, S]) Round3(r2out *Round2P2P[G, S]) (senderOut *SenderOutput[S
 	if s.round != 3 {
 		return nil, errs.NewRound("Running round %d but participant expected round %d", 3, s.round)
 	}
-	// if err := r2out.Validate(s.Protocol); err != nil {
-	//	return nil, errs.WrapValidation(err, "invalid round %d input", s.Round)
-	//}
 
 	f, err := s.makeProgrammableOncePublicFunction()
 	if err != nil {

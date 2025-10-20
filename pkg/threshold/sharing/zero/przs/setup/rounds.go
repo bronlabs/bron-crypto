@@ -53,7 +53,7 @@ func (p *Participant) Round2(r1bo network.RoundMessages[*Round1Broadcast]) (netw
 
 		msg, ok := r1bo.Get(sharingId)
 		if !ok {
-			return nil, errs.NewValidation("missing message from %d", sharingId)
+			return nil, errs.NewMissing("missing message from %d", sharingId)
 		}
 		p.state.commitments.Put(sharingId, hashmap.NewImmutableComparableFromNativeLike(msg.Commitments))
 	}
@@ -66,12 +66,12 @@ func (p *Participant) Round2(r1bo network.RoundMessages[*Round1Broadcast]) (netw
 
 		seedContribution, ok := p.state.seedContributions.Get(sharingId)
 		if !ok {
-			return nil, errs.NewValidation("missing seed contribution to %d", sharingId)
+			return nil, errs.NewMissing("missing seed contribution to %d", sharingId)
 		}
 
 		witness, ok := p.state.witnesses.Get(sharingId)
 		if !ok {
-			return nil, errs.NewValidation("missing seed witness to %d", sharingId)
+			return nil, errs.NewMissing("missing seed witness to %d", sharingId)
 		}
 
 		r2uo.Put(sharingId, &Round2P2P{
@@ -92,22 +92,25 @@ func (p *Participant) Round3(r2uo network.RoundMessages[*Round2P2P]) (przs.Seeds
 
 		msg, ok := r2uo.Get(sharingId)
 		if !ok {
-			return nil, errs.NewValidation("missing message from %d", sharingId)
+			return nil, errs.NewMissing("missing message from %d", sharingId)
 		}
 		theirSeedContribution := msg.SeedContribution
 		theirWitness := msg.Witness
 		theirCommitments, ok := p.state.commitments.Get(sharingId)
 		if !ok {
-			return nil, errs.NewValidation("missing commitments from %d", sharingId)
+			return nil, errs.NewMissing("missing commitments from %d", sharingId)
 		}
 		theirCommitment, ok := theirCommitments.Get(p.mySharingId)
 		if !ok {
-			return nil, errs.NewValidation("missing commitment for %d", sharingId)
+			return nil, errs.NewMissing("missing commitment for %d", sharingId)
 		}
 		if p.state.commitmentScheme.Verifier().Verify(theirCommitment, theirSeedContribution[:], theirWitness) != nil {
 			return nil, errs.NewIdentifiableAbort(sharingId, "invalid seed contribution")
 		}
 		mySeedContribution, ok := p.state.seedContributions.Get(sharingId)
+		if !ok {
+			return nil, errs.NewMissing("missing seed for %d", sharingId)
+		}
 		var seed [przs.SeedLength]byte
 		subtle.XORBytes(seed[:], theirSeedContribution[:], mySeedContribution[:])
 		commonSeeds.Put(sharingId, seed)

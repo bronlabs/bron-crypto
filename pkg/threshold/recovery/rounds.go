@@ -107,7 +107,7 @@ func (m *Mislayer[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G, S]
 			verificationVector = b.VerificationVector
 		} else {
 			if !verificationVector.Equal(b.VerificationVector) {
-				return nil, nil, errs.NewFailed("mislayer verification vector does not match")
+				return nil, nil, errs.NewTotalAbort(nil, "mislayer verification vector does not match")
 			}
 		}
 
@@ -121,7 +121,7 @@ func (m *Mislayer[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G, S]
 
 	shareValue, err := interpolation.InterpolateAt(xs, ys, m.field.FromUint64(uint64(m.sharingId)))
 	if err != nil {
-		return nil, nil, errs.NewFailed("cannot interpolate")
+		return nil, nil, errs.NewTotalAbort(nil, "cannot interpolate")
 	}
 	share, err := feldman.NewShare(m.sharingId, shareValue, nil)
 	if err != nil {
@@ -129,7 +129,7 @@ func (m *Mislayer[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G, S]
 	}
 	err = m.scheme.Verify(share, verificationVector)
 	if err != nil {
-		return nil, nil, errs.NewValidation("cannot verify share")
+		return nil, nil, errs.NewTotalAbort(nil, "cannot verify share")
 	}
 
 	return share, verificationVector, nil

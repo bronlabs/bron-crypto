@@ -133,13 +133,13 @@ func (A *Aggregator[PK, PKFE, SG, SGFE, E, S]) Aggregate(
 				return nil, errs.WrapFailed(err, "failed to create verifier for POP")
 			}
 			if err := popVerifier.Verify(psig.SigmaPopI, partialPublicKey, internalPopMessage); err != nil {
-				return nil, errs.WrapVerification(err, "failed to verify POP signature for sender %d", sender)
+				return nil, errs.WrapIdentifiableAbort(err, sender, "failed to verify POP signature")
 			}
 		default:
 			return nil, errs.NewType("unsupported rogue key prevention algorithm: %d", A.scheme.RogueKeyPreventionAlgorithm())
 		}
 		if err := partialSignatureVerifier.Verify(psig.SigmaI, partialPublicKey, internalMessage); err != nil {
-			return nil, errs.WrapVerification(err, "failed to verify partial signature for sender %d", sender)
+			return nil, errs.WrapIdentifiableAbort(err, sender, "failed to verify partial signature")
 		}
 		shareInExponent, err := feldman.NewLiftedShare(sender, psig.SigmaI.Value())
 		if err != nil {
