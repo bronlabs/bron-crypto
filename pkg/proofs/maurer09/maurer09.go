@@ -8,6 +8,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
@@ -20,7 +21,7 @@ type (
 	ImageGroup[B ImageGroupElement[B]]           algebra.Group[B]
 	ImageGroupElement[B algebra.GroupElement[B]] algebra.GroupElement[B]
 
-	GroupHomomorphism[A PreImageGroupElement[A], B ImageGroupElement[B]] algebra.Homomorphism[A, B]
+	GroupHomomorphism[A PreImageGroupElement[A], B ImageGroupElement[B]] = algebra.Homomorphism[A, B]
 
 	ChallengeSpace[C Challenge[C]]                                       algebra.NLike[C]
 	Challenge[C algebra.NatLike[C]]                                      algebra.NatLike[C]
@@ -30,6 +31,10 @@ type (
 
 type Statement[A PreImageGroupElement[A], B ImageGroupElement[B]] struct {
 	X B `cbor:"x"`
+}
+
+func (s *Statement[A, B]) Value() B {
+	return s.X
 }
 
 func (s *Statement[A, B]) Bytes() []byte {
@@ -43,6 +48,10 @@ type Witness[A PreImageGroupElement[A]] struct {
 	W A `cbor:"w"`
 }
 
+func (w *Witness[A]) Value() A {
+	return w.W
+}
+
 func (w *Witness[A]) Bytes() []byte {
 	if w == nil {
 		return nil
@@ -52,6 +61,10 @@ func (w *Witness[A]) Bytes() []byte {
 
 type Commitment[A PreImageGroupElement[A], B ImageGroupElement[B]] struct {
 	C B `cbor:"c"`
+}
+
+func (c *Commitment[A, B]) Value() B {
+	return c.C
 }
 
 func (c *Commitment[A, B]) Bytes() []byte {
@@ -65,6 +78,10 @@ type State[A PreImageGroupElement[A]] struct {
 	K A
 }
 
+func (s *State[A]) Value() A {
+	return s.K
+}
+
 func (s *State[A]) Bytes() []byte {
 	if s == nil {
 		return nil
@@ -76,6 +93,10 @@ type Response[A PreImageGroupElement[A]] struct {
 	Z A
 }
 
+func (r *Response[A]) Value() A {
+	return r.Z
+}
+
 func (r *Response[A]) Bytes() []byte {
 	if r == nil {
 		return nil
@@ -83,10 +104,10 @@ func (r *Response[A]) Bytes() []byte {
 	return r.Z.Bytes()
 }
 
-type Protocol[A PreImageGroupElement[A], B ImageGroupElement[B], C Challenge[C]] struct {
+type Protocol[A PreImageGroupElement[A], B ImageGroupElement[B], C Challenge[C], PIG PreImageGroup[A], IG ImageGroup[B]] struct {
 	phi                   GroupHomomorphism[A, B]
-	preImage              PreImageGroup[A]
-	image                 ImageGroup[B]
+	preImage              PIG
+	image                 IG
 	preImageRandomSampler func(io.Reader) (A, error)
 	challengeSpace        ChallengeSpace[C]
 	preImageScMul         ChallengeActionOnPreImage[C, A]
@@ -94,23 +115,23 @@ type Protocol[A PreImageGroupElement[A], B ImageGroupElement[B], C Challenge[C]]
 	prng                  io.Reader
 }
 
-func NewProtocol[A PreImageGroupElement[A], B ImageGroupElement[B], C Challenge[C]](
+func NewProtocol[A PreImageGroupElement[A], B ImageGroupElement[B], C Challenge[C], PIG PreImageGroup[A], IG ImageGroup[B]](
 	phi GroupHomomorphism[A, B],
-	preImage PreImageGroup[A],
-	image ImageGroup[B],
+	preImage PIG,
+	image IG,
 	challengeSpace ChallengeSpace[C],
 	preImageScMul ChallengeActionOnPreImage[C, A],
 	imageScMul ChallengeActionOnImage[C, B],
 	preImageRandomSampler func(io.Reader) (A, error),
 	prng io.Reader,
-) (*Protocol[A, B, C], error) {
+) (*Protocol[A, B, C, PIG, IG], error) {
 	if phi == nil {
 		return nil, errs.NewIsNil("phi")
 	}
-	if preImage == nil {
+	if utils.IsNil(preImage) {
 		return nil, errs.NewIsNil("preImage")
 	}
-	if image == nil {
+	if utils.IsNil(image) {
 		return nil, errs.NewIsNil("image")
 	}
 	if prng == nil {
@@ -128,7 +149,7 @@ func NewProtocol[A PreImageGroupElement[A], B ImageGroupElement[B], C Challenge[
 	if preImageRandomSampler == nil {
 		return nil, errs.NewIsNil("preImageRandomSampler")
 	}
-	return &Protocol[A, B, C]{
+	return &Protocol[A, B, C, PIG, IG]{
 		phi:                   phi,
 		preImage:              preImage,
 		image:                 image,
@@ -140,7 +161,7 @@ func NewProtocol[A PreImageGroupElement[A], B ImageGroupElement[B], C Challenge[
 	}, nil
 }
 
-func (p *Protocol[A, B, C]) ComputeProverCommitment(_ *Statement[A, B], _ *Witness[A]) (*Commitment[A, B], *State[A], error) {
+func (p *Protocol[A, B, C, PIG, IG]) ComputeProverCommitment(_ *Statement[A, B], _ *Witness[A]) (*Commitment[A, B], *State[A], error) {
 	k, err := p.preImageRandomSampler(p.prng)
 	if err != nil {
 		return nil, nil, errs.WrapRandomSample(err, "cannot sample scalar")
@@ -150,7 +171,7 @@ func (p *Protocol[A, B, C]) ComputeProverCommitment(_ *Statement[A, B], _ *Witne
 	return &Commitment[A, B]{C: K}, &State[A]{K: k}, nil
 }
 
-func (p *Protocol[A, B, C]) ComputeProverResponse(_ *Statement[A, B], witness *Witness[A], _ *Commitment[A, B], state *State[A], challengeBytes sigma.ChallengeBytes) (*Response[A], error) {
+func (p *Protocol[A, B, C, PIG, IG]) ComputeProverResponse(_ *Statement[A, B], witness *Witness[A], _ *Commitment[A, B], state *State[A], challengeBytes sigma.ChallengeBytes) (*Response[A], error) {
 	if len(challengeBytes) != p.GetChallengeBytesLength() {
 		return nil, errs.NewIsNil("invalid challenge bytes length")
 	}
@@ -162,7 +183,7 @@ func (p *Protocol[A, B, C]) ComputeProverResponse(_ *Statement[A, B], witness *W
 	return &Response[A]{Z: s}, nil
 }
 
-func (p *Protocol[A, B, C]) Verify(statement *Statement[A, B], commitment *Commitment[A, B], challengeBytes sigma.ChallengeBytes, response *Response[A]) error {
+func (p *Protocol[A, B, C, PIG, IG]) Verify(statement *Statement[A, B], commitment *Commitment[A, B], challengeBytes sigma.ChallengeBytes, response *Response[A]) error {
 	if len(challengeBytes) != p.GetChallengeBytesLength() {
 		return errs.NewArgument("invalid challenge bytes length")
 	}
@@ -180,7 +201,7 @@ func (p *Protocol[A, B, C]) Verify(statement *Statement[A, B], commitment *Commi
 	return nil
 }
 
-func (p *Protocol[A, B, C]) RunSimulator(statement *Statement[A, B], challengeBytes sigma.ChallengeBytes) (*Commitment[A, B], *Response[A], error) {
+func (p *Protocol[A, B, C, PIG, IG]) RunSimulator(statement *Statement[A, B], challengeBytes sigma.ChallengeBytes) (*Commitment[A, B], *Response[A], error) {
 	if len(challengeBytes) != p.GetChallengeBytesLength() {
 		return nil, nil, errs.NewArgument("invalid challenge bytes length")
 	}
@@ -199,15 +220,15 @@ func (p *Protocol[A, B, C]) RunSimulator(statement *Statement[A, B], challengeBy
 	return &Commitment[A, B]{C: a}, &Response[A]{Z: z}, nil
 }
 
-func (s *Protocol[_, _, _]) SoundnessError() uint {
+func (s *Protocol[_, _, _, _, _]) SoundnessError() uint {
 	return uint(s.GetChallengeBytesLength()) * 8
 }
 
-func (*Protocol[_, _, _]) SpecialSoundness() uint {
+func (*Protocol[_, _, _, _, _]) SpecialSoundness() uint {
 	return 2
 }
 
-func (s *Protocol[A, B, C]) ValidateStatement(statement *Statement[A, B], witness *Witness[A]) error {
+func (s *Protocol[A, B, C, PIG, IG]) ValidateStatement(statement *Statement[A, B], witness *Witness[A]) error {
 	if statement == nil {
 		return errs.NewIsNil("statement is nil")
 	}
@@ -220,14 +241,42 @@ func (s *Protocol[A, B, C]) ValidateStatement(statement *Statement[A, B], witnes
 	return nil
 }
 
-func (s *Protocol[A, B, C]) GetChallengeBytesLength() int {
-	return s.preImage.ElementSize()
+func (p *Protocol[A, B, C, PIG, IG]) GetChallengeBytesLength() int {
+	return p.preImage.ElementSize()
 }
 
-func (p *Protocol[A, B, C]) mapChallengeBytesToChallenge(challengeBytes []byte) (C, error) {
+func (p *Protocol[A, B, C, PIG, IG]) mapChallengeBytesToChallenge(challengeBytes []byte) (C, error) {
 	c, err := p.challengeSpace.FromBytes(challengeBytes)
 	if err != nil {
 		return *new(C), errs.WrapHashing(err, "cannot hash to scalar")
 	}
 	return c, nil
+}
+
+func (p *Protocol[A, B, C, PIG, IG]) Phi() GroupHomomorphism[A, B] {
+	return p.phi
+}
+
+func (p *Protocol[A, B, C, PIG, IG]) PreImageGroup() PIG {
+	return p.preImage
+}
+
+func (p *Protocol[A, B, C, PIG, IG]) ImageGroup() IG {
+	return p.image
+}
+
+func (p *Protocol[A, B, C, PIG, IG]) ChallengeActionOnPreImage(c sigma.ChallengeBytes, x A) (A, error) {
+	ch, err := p.mapChallengeBytesToChallenge(c)
+	if err != nil {
+		return *new(A), errs.WrapArgument(err, "cannot map challenge bytes to challenge")
+	}
+	return p.preImageScMul(ch, x), nil
+}
+
+func (p *Protocol[A, B, C, PIG, IG]) ChallengeActionOnImage(c sigma.ChallengeBytes, x B) (B, error) {
+	ch, err := p.mapChallengeBytesToChallenge(c)
+	if err != nil {
+		return *new(B), errs.WrapArgument(err, "cannot map challenge bytes to challenge")
+	}
+	return p.imageScMul(ch, x), nil
 }

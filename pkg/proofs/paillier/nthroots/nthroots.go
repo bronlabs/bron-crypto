@@ -62,7 +62,7 @@ func ChallengeActionOnImage(c *Challenge, x GroupElement) GroupElement {
 }
 
 type Protocol struct {
-	maurer09.Protocol[Scalar, GroupElement, *Challenge]
+	maurer09.Protocol[Scalar, GroupElement, *Challenge, ScalarGroup, Group]
 }
 
 func NewSigmaProtocol(g znstar.PaillierGroup, prng io.Reader) (sigma.Protocol[*Statement, *Witness, *Commitment, *State, *Response], error) {

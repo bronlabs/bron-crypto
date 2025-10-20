@@ -115,6 +115,39 @@ func bytesToBits(bytes []byte) []bool {
 	return bits
 }
 
+// networkIdToBits converts a big.Int to the specified number of bits in LSB-first order
+func networkIdToBits(id *big.Int, bitLength int) []bool {
+	bits := make([]bool, bitLength)
+	for i := 0; i < bitLength; i++ {
+		bits[i] = id.Bit(i) == 1
+	}
+	return bits
+}
+
+// reversedBytes reverses a byte slice
+func reversedBytes(b []byte) []byte {
+	result := make([]byte, len(b))
+	for i := range b {
+		result[i] = b[len(b)-1-i]
+	}
+	return result
+}
+
+// fieldToBits converts a field element to 255 bits in LSB-first order
+// Reference: Field.toBits() returns 255 bits
+func fieldToBits(field *pasta.PallasBaseFieldElement) []bool {
+	bytes := field.Bytes()
+	bits := make([]bool, 255) // Field elements use 255 bits, not 256
+	for i := 0; i < 255; i++ {
+		byteIdx := i / 8
+		bitIdx := i % 8
+		if byteIdx < len(bytes) {
+			bits[i] = (bytes[byteIdx]>>(bitIdx))&1 == 1
+		}
+	}
+	return bits
+}
+
 // https://github.com/o1-labs/o1js/blob/885b50e60ead596cdcd8dc944df55fd3a4467a0a/src/lib/provable/crypto/hash-generic.ts#L23
 func hashWithPrefix(prefix Prefix, inputs ...*pasta.PallasBaseFieldElement) (*Scalar, error) {
 	h := poseidon.NewLegacy()

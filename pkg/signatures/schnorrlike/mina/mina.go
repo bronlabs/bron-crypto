@@ -195,12 +195,27 @@ func SerializeSignature(signature *Signature) ([]byte, error) {
 	if signature == nil {
 		return nil, errs.NewIsNil("signature is nil")
 	}
+	// Mina uses LITTLE-ENDIAN for field elements
 	rx, err := signature.R.AffineX()
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "failed to serialise signature")
 	}
-	s := signature.S.Bytes()
-	out := slices.Concat(rx.Bytes(), s)
+
+	// Convert R.x from big-endian to little-endian
+	rxBytesBE := rx.Bytes()
+	rxBytesLE := make([]byte, len(rxBytesBE))
+	for i := range rxBytesBE {
+		rxBytesLE[i] = rxBytesBE[len(rxBytesBE)-1-i]
+	}
+
+	// Convert S from big-endian to little-endian
+	sBytesBE := signature.S.Bytes()
+	sBytesLE := make([]byte, len(sBytesBE))
+	for i := range sBytesBE {
+		sBytesLE[i] = sBytesBE[len(sBytesBE)-1-i]
+	}
+
+	out := slices.Concat(rxBytesLE, sBytesLE)
 	if len(out) != SignatureSize {
 		return nil, errs.NewLength("invalid signature size. got :%d, need :%d", len(out), SignatureSize)
 	}
@@ -212,19 +227,43 @@ func DeserializeSignature(input []byte) (*Signature, error) {
 		return nil, errs.NewLength("invalid signature size. got :%d, need :%d", len(input), SignatureSize)
 	}
 
-	rxBytes := input[:group.ElementSize()]
-	sBytes := input[group.ElementSize():]
+	rxBytesLE := input[:group.ElementSize()]
+	sBytesLE := input[group.ElementSize():]
 
-	R, err := group.FromBytes(rxBytes)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create group element from bytes")
+	// Mina uses LITTLE-ENDIAN for field elements
+	// Convert R.x from little-endian to big-endian
+	rxBytesBE := make([]byte, len(rxBytesLE))
+	for i := range rxBytesLE {
+		rxBytesBE[i] = rxBytesLE[len(rxBytesLE)-1-i]
 	}
-	s, err := sf.FromBytes(sBytes)
+
+	// Parse R.x as a base field element
+	rx, err := group.BaseField().FromBytes(rxBytesBE)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to parse R.x")
+	}
+
+	// Reconstruct R from x-coordinate
+	// Mina signatures always have R with even y-coordinate (parity=0)
+	R, err := group.FromAffineX(rx, false)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to reconstruct R from x-coordinate")
+	}
+
+	// Convert S from little-endian to big-endian
+	sBytesBE := make([]byte, len(sBytesLE))
+	for i := range sBytesLE {
+		sBytesBE[i] = sBytesLE[len(sBytesLE)-1-i]
+	}
+
+	s, err := sf.FromBytes(sBytesBE)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "failed to create scalar from bytes")
 	}
+
 	return &Signature{
 		R: R,
 		S: s,
+		// E is not stored in Mina signatures, it will be recomputed during verification
 	}, nil
 }

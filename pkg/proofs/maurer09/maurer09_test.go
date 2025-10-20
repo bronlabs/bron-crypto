@@ -362,31 +362,6 @@ func TestMaurer09Protocol_NilHandling(t *testing.T) {
 	)
 	require.Error(t, err)
 
-	// Test nil groups
-	_, err = maurer09.NewProtocol(
-		phi,
-		nil,
-		curve,
-		scalarField,
-		challengeActionOnPreImage,
-		challengeActionOnImage,
-		scalarField.Random,
-		crand.Reader,
-	)
-	require.Error(t, err)
-
-	_, err = maurer09.NewProtocol(
-		phi,
-		scalarField,
-		nil,
-		scalarField,
-		challengeActionOnPreImage,
-		challengeActionOnImage,
-		scalarField.Random,
-		crand.Reader,
-	)
-	require.Error(t, err)
-
 	// Test nil challenge actions
 	_, err = maurer09.NewProtocol(
 		phi,

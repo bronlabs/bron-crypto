@@ -63,7 +63,7 @@ func ChallengeActionOnImage[E GroupElement[E, S], S Scalar[S]](c S, x E) E {
 }
 
 type Protocol[E GroupElement[E, S], S Scalar[S]] struct {
-	maurer09.Protocol[S, E, S]
+	maurer09.Protocol[S, E, S, ScalarField[S], Group[E, S]]
 }
 
 func NewSigmaProtocol[E GroupElement[E, S], S Scalar[S]](basePoint E, prng io.Reader) (sigma.Protocol[*Statement[E, S], *Witness[S], *Commitment[E, S], *State[S], *Response[S]], error) {
@@ -98,4 +98,13 @@ func (p *Protocol[E, S]) Name() sigma.Name {
 
 func _[S Scalar[S]]() {
 	var _ maurer09.ChallengeActionOnPreImage[S, S] = ChallengeActionOnPreImage[S]
+}
+
+func _[E GroupElement[E, S], S Scalar[S]]() {
+	var _ (sigma.MaurerProtocol[
+		*Statement[E, S], *Witness[S], *Commitment[E, S], *State[S], *Response[S],
+
+		ScalarField[S], S,
+		Group[E, S], E,
+	]) = &Protocol[E, S]{}
 }

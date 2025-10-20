@@ -102,3 +102,19 @@ func (r *ROInput) PackToFields() []*pasta.PallasBaseFieldElement {
 
 	return fields
 }
+
+// BitsLength returns the number of bits currently stored
+func (r *ROInput) BitsLength() int {
+	if r.bits == nil {
+		return 0
+	}
+	return r.bits.Length()
+}
+
+// BitsBytes returns the raw bytes of the bit vector
+func (r *ROInput) BitsBytes() []byte {
+	if r.bits == nil {
+		return nil
+	}
+	return r.bits.Bytes()
+}

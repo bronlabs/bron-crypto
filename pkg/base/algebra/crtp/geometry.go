@@ -117,6 +117,7 @@ type EllipticCurvePoint[P, FE, S any] interface {
 	AlgebraicPoint[P, FE]
 	AbelianGroupElement[P, S]
 	AdditiveModuleElement[P, S]
+	IsTorsionFree() bool
 	ClearCofactor() P
 	AffineX() (FE, error)
 	AffineY() (FE, error)

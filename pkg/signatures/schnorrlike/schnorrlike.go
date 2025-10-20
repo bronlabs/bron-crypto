@@ -294,7 +294,9 @@ func (v *VerifierTrait[VR, GE, S, M]) Verify(sigma *Signature[GE, S], publicKey 
 	if err != nil {
 		return errs.WrapFailed(err, "e")
 	}
-	if !sigma.E.Equal(e) {
+	// If sigma.E is provided, verify it matches the computed challenge
+	// (Mina signatures don't store E, so this may be nil)
+	if !utils.IsNil(sigma.E) && !sigma.E.Equal(e) {
 		return errs.NewFailed("e")
 	}
 	generator := publicKey.Group().Generator()

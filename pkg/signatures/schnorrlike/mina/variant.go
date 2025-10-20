@@ -60,26 +60,44 @@ func (v *Variant) IsDeterministic() bool {
 
 // https://github.com/o1-labs/o1js/blob/fdc94dd8d3735d01c232d7d7af49763e044b738b/src/mina-signer/src/signature.ts#L249
 func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
-	scalarBits := bytesToBits(v.sk.Value().Bytes())
-	id, _ := getNetworkIdHashInput(v.nid)
-	idBits := bytesToBits(id.Bytes())
-	input := new(ROInput).Init()
 	pkx, err := v.sk.PublicKey().V.AffineX()
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to create scalar from bytes")
+		return nil, errs.WrapSerialisation(err, "failed to get public key X coordinate")
 	}
 	pky, err := v.sk.PublicKey().V.AffineY()
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to create scalar from bytes")
+		return nil, errs.WrapSerialisation(err, "failed to get public key Y coordinate")
 	}
+
+	// Get scalar and network ID in LE format
+	scalarBytesLE := reversedBytes(v.sk.Value().Bytes())
+	scalarBits := bytesToBits(scalarBytesLE)
+
+	id, bitLength := getNetworkIdHashInput(v.nid)
+	idBits := networkIdToBits(id, bitLength)
+
+	// Use ROInput to properly structure the data
+	input := new(ROInput).Init()
 	input.AddFields(pkx, pky)
 	input.AddBits(scalarBits...)
 	input.AddBits(idBits...)
-	inputBytes := input.bits.Bytes()
-	digest := blake2b.Sum256(inputBytes)
-	// drop the top two bits to convert into a scalar field element
-	// (creates negligible bias because q = 2^254 + eps, eps << q)
-	digest[31] &= 0x3f
+
+	// Pack to fields
+	packed := input.PackToFields()
+
+	// Convert packed fields to LE bytes for blake2b
+	var allBytes []byte
+	for _, field := range packed {
+		fieldBytesLE := reversedBytes(field.Bytes())
+		allBytes = append(allBytes, fieldBytesLE...)
+	}
+
+	digest := blake2b.Sum256(allBytes)
+
+	// Blake2b digest as BE (interpret as-is)
+	// Drop top two bits
+	digest[0] &= 0x3f
+
 	k, err := sf.FromBytes(digest[:])
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "failed to create scalar from bytes")
@@ -99,6 +117,18 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 		return nil, nil, errs.WrapSerialisation(err, "failed to create scalar from bytes")
 	}
 	R := group.ScalarBaseMul(k)
+
+	// Ensure R has an even y-coordinate (same as BIP340)
+	ry, err := R.AffineY()
+	if err != nil {
+		return nil, nil, errs.WrapSerialisation(err, "cannot get y coordinate")
+	}
+	if ry.IsOdd() {
+		// Negate k to flip the y-coordinate parity
+		k = k.Neg()
+		R = group.ScalarBaseMul(k)
+	}
+
 	return R, k, nil
 }
 
