@@ -151,11 +151,19 @@ func (c *Curve) HashWithDst(dst string, bytes []byte) (*Point, error) {
 	return &p, nil
 }
 
+func (c *Curve) ScalarRing() algebra.ZModLike[*Scalar] {
+	return NewScalarField()
+}
+
 func (c *Curve) ScalarStructure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 
 func (c *Curve) BaseStructure() algebra.Structure[*BaseFieldElement] {
+	return NewBaseField()
+}
+
+func (c *Curve) BaseField() algebra.FiniteField[*BaseFieldElement] {
 	return NewBaseField()
 }
 
@@ -204,7 +212,7 @@ func (p *Point) ToCompressed() []byte {
 	return yBytes
 }
 
-func (p *Point) ToUncompreseed() []byte {
+func (p *Point) ToUncompressed() []byte {
 	var x, y BaseFieldElement
 	_ = p.V.ToAffine(&x.V, &y.V)
 

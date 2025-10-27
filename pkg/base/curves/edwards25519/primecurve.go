@@ -159,6 +159,10 @@ func (c *PrimeSubGroup) ScalarStructure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 
+func (c *PrimeSubGroup) ScalarRing() algebra.ZModLike[*Scalar] {
+	return NewScalarField()
+}
+
 func (c *PrimeSubGroup) ScalarField() algebra.PrimeField[*Scalar] {
 	return NewScalarField()
 }

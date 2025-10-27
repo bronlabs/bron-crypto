@@ -8,6 +8,9 @@ type (
 	EllipticCurve[P ECPoint[P, F, S], F algebra.FiniteFieldElement[F], S algebra.UintLike[S]] interface {
 		algebra.EllipticCurve[P, F, S]
 		PrimeSubGroupGenerator() P
+
+		ScalarRing() algebra.ZModLike[S]
+		BaseField() algebra.FiniteField[F]
 	}
 	ECPoint[P algebra.EllipticCurvePoint[P, F, S], F algebra.FiniteFieldElement[F], S algebra.UintLike[S]] interface {
 		algebra.EllipticCurvePoint[P, F, S]
@@ -22,7 +25,6 @@ type (
 		algebra.FiniteStructure[P]
 
 		ScalarField() algebra.PrimeField[S]
-		BaseField() algebra.FiniteField[F]
 	}
 
 	Point[P algebra.EllipticCurvePoint[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]] interface {

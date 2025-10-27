@@ -46,6 +46,7 @@ type RationalPoint[E, C any] interface {
 
 	Coordinates() Coordinates[C]
 	ToCompressed() []byte
+	ToUncompressed() []byte
 }
 
 type AlgebraicCurve[P, C any] interface {

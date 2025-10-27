@@ -180,6 +180,10 @@ func (c *VestaCurve) BaseStructure() algebra.Structure[*VestaBaseFieldElement] {
 	return NewVestaBaseField()
 }
 
+func (c *VestaCurve) ScalarRing() algebra.ZModLike[*VestaScalar] {
+	return NewVestaScalarField()
+}
+
 func (c *VestaCurve) ScalarField() algebra.PrimeField[*VestaScalar] {
 	return NewVestaScalarField()
 }

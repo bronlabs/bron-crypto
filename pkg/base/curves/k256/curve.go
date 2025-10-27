@@ -195,6 +195,10 @@ func (c *Curve) BaseStructure() algebra.Structure[*BaseFieldElement] {
 	return NewBaseField()
 }
 
+func (c *Curve) ScalarRing() algebra.ZModLike[*Scalar] {
+	return NewScalarField()
+}
+
 func (c *Curve) ScalarField() algebra.PrimeField[*Scalar] {
 	return NewScalarField()
 }
