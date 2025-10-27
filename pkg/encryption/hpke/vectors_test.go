@@ -1870,8 +1870,8 @@ func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.P
 		senderPrivateKey, senderPublicKey, err = kem.DeriveKeyPair(s.ikmS)
 		require.NoError(t, err)
 
-		require.EqualValues(t, s.skEm, ephemeralPrivateKey.Value().Bytes())
-		require.EqualValues(t, s.pkEm, senderPublicKey.Value().ToUncompressed())
+		require.EqualValues(t, s.skSm, senderPrivateKey.Value().Bytes())
+		require.EqualValues(t, s.pkSm, senderPublicKey.Value().ToUncompressed())
 
 		sharedSecret, ephemeralPublicKey, err = kem.AuthEncapWithIKM(receiverPublicKey, senderPrivateKey, s.ikmE)
 		require.NoError(t, err)
