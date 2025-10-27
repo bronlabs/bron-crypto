@@ -1,4 +1,4 @@
-package hpke
+package internal
 
 import (
 	"crypto/aes"
@@ -44,6 +44,14 @@ var (
 		AEAD_CHACHA_20_POLY_1305: NewAEADChaCha20Poly1305Scheme(),
 	}
 )
+
+func NewAEAD(id AEADID) (*AEADScheme, error) {
+	aead, exists := aeads[id]
+	if !exists {
+		return nil, errs.NewType("AEAD with ID %d is not supported", id)
+	}
+	return aead, nil
+}
 
 type AEADScheme struct {
 	id AEADID

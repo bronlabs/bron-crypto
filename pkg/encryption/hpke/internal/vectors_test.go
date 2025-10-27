@@ -1,5 +1,5 @@
 //nolint:testpackage // Allow testing of unexported functions
-package hpke
+package internal
 
 import (
 	"crypto"
@@ -1843,13 +1843,13 @@ var tests = []*suite{
 	},
 }
 
-func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, s *setupInfo, kem *DHKEMScheme[P, B, S]) (*ReceiverContext[S], *SenderContext[S]) {
+func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, s *setupInfo, kem *DHKEMScheme[P, B, S]) (*ReceiverContext, *SenderContext) {
 	t.Helper()
 
 	cipherSuite := &CipherSuite{
-		KDF:  s.kdfId,
-		KEM:  s.kemId,
-		AEAD: s.aeadId,
+		kdf:  s.kdfId,
+		kem:  s.kemId,
+		aead: s.aeadId,
 	}
 
 	ephemeralPrivateKey, ephemeralPublicKey, err := kem.DeriveKeyPair(s.ikmE)
@@ -1897,23 +1897,21 @@ func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.P
 	require.EqualValues(t, s.key, ctx.key)
 	require.EqualValues(t, s.exporter_secret, ctx.exporterSecret)
 
-	receiverContext := &ReceiverContext[S]{
-		myPrivateKey: &PrivateKey[S]{},
-		c:            ctx,
+	receiverContext := &ReceiverContext{
+		c: ctx,
 	}
-	var senderContext *SenderContext[S]
+	var senderContext *SenderContext
 	if senderPrivateKey != nil {
 		ctx, _, err := keySchedule(SenderRole, cipherSuite, s.mode, sharedSecret, s.info, s.psk, s.psk_id)
 		require.NoError(t, err)
-		senderContext = &SenderContext[S]{
-			myPrivateKey: &PrivateKey[S]{},
-			c:            ctx,
+		senderContext = &SenderContext{
+			c: ctx,
 		}
 	}
 	return receiverContext, senderContext
 }
 
-func openCiphertext[S algebra.PrimeFieldElement[S]](t *testing.T, receiver *ReceiverContext[S], tt *encryptionInfo) {
+func openCiphertext(t *testing.T, receiver *ReceiverContext, tt *encryptionInfo) {
 	t.Helper()
 	receiver.c.sequence = tt.seq
 	require.False(t, receiver.c.nonces.Contains(tt.nonce))
@@ -1924,7 +1922,7 @@ func openCiphertext[S algebra.PrimeFieldElement[S]](t *testing.T, receiver *Rece
 	require.True(t, receiver.c.nonces.Contains(tt.nonce))
 }
 
-func sealPlaintext[S algebra.PrimeFieldElement[S]](t *testing.T, sender *SenderContext[S], tt *encryptionInfo) {
+func sealPlaintext(t *testing.T, sender *SenderContext, tt *encryptionInfo) {
 	t.Helper()
 	sender.c.sequence = tt.seq
 	require.False(t, sender.c.nonces.Contains(tt.nonce))
