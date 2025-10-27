@@ -73,10 +73,6 @@ func NewCompiler[
 }
 
 func (c *fs[X, W, A, S, Z]) NewProver(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
-	if len(sessionId) == 0 {
-		return nil, errs.NewArgument("sessionId is empty")
-	}
-
 	dst := fmt.Sprintf("%s-%s-%s", sessionId, transcriptLabel, c.sigmaProtocol.Name())
 	transcript.AppendDomainSeparator(dst)
 
@@ -87,10 +83,6 @@ func (c *fs[X, W, A, S, Z]) NewProver(sessionId network.SID, transcript transcri
 }
 
 func (c *fs[X, W, A, S, Z]) NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X, W], error) {
-	if len(sessionId) == 0 {
-		return nil, errs.NewArgument("sessionId is empty")
-	}
-
 	dst := fmt.Sprintf("%s-%s-%s", sessionId, transcriptLabel, c.sigmaProtocol.Name())
 	transcript.AppendDomainSeparator(dst)
 
