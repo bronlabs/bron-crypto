@@ -1,7 +1,6 @@
 package schnorr
 
 import (
-	crand "crypto/rand"
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -68,8 +67,9 @@ type Protocol[E GroupElement[E, S], S Scalar[S]] struct {
 
 func NewSigmaProtocol[E GroupElement[E, S], S Scalar[S]](basePoint E, prng io.Reader) (sigma.Protocol[*Statement[E, S], *Witness[S], *Commitment[E, S], *State[S], *Response[S]], error) {
 	if prng == nil {
-		prng = crand.Reader
+		return nil, errs.NewIsNil("prng")
 	}
+
 	group, ok := basePoint.Structure().(Group[E, S])
 	if !ok {
 		return nil, errs.NewArgument("base point does not have a group structure")

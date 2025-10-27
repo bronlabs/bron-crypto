@@ -1,7 +1,6 @@
 package randfischlin
 
 import (
-	crand "crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -53,12 +52,10 @@ type rf[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z 
 }
 
 func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NICompiler[X, W], error) {
-	if sigmaProtocol == nil {
-		return nil, errs.NewIsNil("sigmaProtocol")
+	if sigmaProtocol == nil || prng == nil {
+		return nil, errs.NewIsNil("sigmaProtocol or prng")
 	}
-	if prng == nil {
-		prng = crand.Reader
-	}
+
 	if s := sigmaProtocol.SoundnessError(); s < base.ComputationalSecurityBits {
 		return nil, errs.NewArgument("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
 			s, base.ComputationalSecurityBits)

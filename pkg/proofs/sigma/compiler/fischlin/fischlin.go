@@ -1,7 +1,6 @@
 package fischlin
 
 import (
-	crand "crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -53,11 +52,8 @@ type simplifiedFischlin[X sigma.Statement, W sigma.Witness, A sigma.Statement, S
 }
 
 func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NICompiler[X, W], error) {
-	if sigmaProtocol == nil {
-		return nil, errs.NewIsNil("sigmaProtocol")
-	}
-	if prng == nil {
-		prng = crand.Reader
+	if sigmaProtocol == nil || prng == nil {
+		return nil, errs.NewIsNil("sigmaProtocol or prng")
 	}
 
 	// For rho, b, t parameters a target soundness error is 2^(-128). For more information how they should be chosen, refer to

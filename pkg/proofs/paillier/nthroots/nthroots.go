@@ -1,7 +1,6 @@
 package nthroots
 
 import (
-	crand "crypto/rand"
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -66,12 +65,10 @@ type Protocol struct {
 }
 
 func NewSigmaProtocol(g znstar.PaillierGroup, prng io.Reader) (sigma.Protocol[*Statement, *Witness, *Commitment, *State, *Response], error) {
-	if prng == nil {
-		prng = crand.Reader
+	if prng == nil || g == nil {
+		return nil, errs.NewIsNil("g or prng")
 	}
-	if g == nil {
-		return nil, errs.NewIsNil("g")
-	}
+
 	hom := Phi(g)
 	subProtocol, err := maurer09.NewProtocol(hom, g, g, ChallengeSpace(), ChallengeActionOnPreImage, ChallengeActionOnImage, g.Random, prng)
 	if err != nil {
