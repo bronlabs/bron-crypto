@@ -75,13 +75,7 @@ func CreateLindell22Cosigners[
 			group = shard.PublicKey().Group()
 		}
 
-		dlogProtocol, err := dlogschnorr.NewSigmaProtocol(group.Generator(), prng)
-		require.NoError(t, err)
-		schnorrDlogProtocol, ok := dlogProtocol.(*dlogschnorr.Protocol[GE, S])
-		require.True(t, ok)
-		niDlogScheme, err := newCompilerMaker(schnorrDlogProtocol)
-		require.NoError(t, err)
-
+		niCompilerName := fiatshamir.Name
 		cosigner, err := signing.NewCosigner[
 			GE, S, M,
 		](
@@ -89,7 +83,7 @@ func CreateLindell22Cosigners[
 			testutils.CBORRoundTrip(t, shard),
 			quorum,
 			group,
-			niDlogScheme,
+			niCompilerName,
 			variant,
 			prng,
 			transcript.Clone(),

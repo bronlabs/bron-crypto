@@ -99,7 +99,7 @@ func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(sessionId network.SID, tra
 	}, nil
 }
 
-func (c *simplifiedFischlin[X, W, A, S, Z]) NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X, W], error) {
+func (c *simplifiedFischlin[X, W, A, S, Z]) NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
 	if transcript == nil {
 		return nil, errs.NewIsNil("transcript")
 	}

@@ -83,7 +83,7 @@ func (c *rf[X, W, A, S, Z]) NewProver(sessionId network.SID, transcript transcri
 	}, nil
 }
 
-func (c *rf[X, W, A, S, Z]) NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X, W], error) {
+func (c *rf[X, W, A, S, Z]) NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
 	if transcript == nil {
 		return nil, errs.NewIsNil("transcript")
 	}

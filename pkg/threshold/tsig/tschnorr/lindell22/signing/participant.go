@@ -7,10 +7,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compilerutils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
@@ -33,7 +33,7 @@ type Cosigner[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S
 	round   network.Round
 	variant tschnorr.MPCFriendlyVariant[GE, S, M]
 
-	niDlogScheme compiler.NICompiler[*lindell22.PokProtocolStatement[GE, S], *lindell22.PokProtocolWitness[S]]
+	niDlogScheme compiler.NICompiler[*schnorrpok.Statement[GE, S], *schnorrpok.Witness[S]]
 	state        *State[GE, S]
 }
 
@@ -127,7 +127,7 @@ func NewCosigner[
 	shard *lindell22.Shard[GE, S],
 	quorum network.Quorum,
 	group algebra.PrimeGroup[GE, S],
-	niDlogScheme compiler.NICompiler[*lindell22.PokProtocolStatement[GE, S], *lindell22.PokProtocolWitness[S]],
+	niCompilerName compiler.Name,
 	variant tschnorr.MPCFriendlyVariant[GE, S, M],
 	prng io.Reader,
 	tape ts.Transcript,
@@ -154,18 +154,21 @@ func NewCosigner[
 	if !shard.AccessStructure().IsAuthorized(quorum.List()...) {
 		return nil, errs.NewMembership("shard %d access structure is not authorized for quorum %s", shard.Share().ID(), quorum)
 	}
-	if niDlogScheme == nil {
-		return nil, errs.NewIsNil("niDlogProver cannot be nil")
-	}
-	if !dlog.IsProvingKnowledgeOfDiscreteLog(niDlogScheme.SigmaProtocolName()) {
-		return nil, errs.NewType("niDlogScheme %s is not a proving knowledge of discrete log scheme", niDlogScheme.SigmaProtocolName())
-	}
 	if prng == nil {
 		return nil, errs.NewIsNil("prng cannot be nil")
 	}
 	if !group.Order().IsProbablyPrime() {
 		return nil, errs.NewType("group %s order is not prime", group.Name())
 	}
+	schnorrProtocol, err := schnorrpok.NewSigmaProtocol(group.Generator(), prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to create schnorr protocol")
+	}
+	niDlogScheme, err := compilerutils.Compile(niCompilerName, schnorrProtocol, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to compile niDlogProver")
+	}
+
 	phi := schnorrpok.Phi(group.Generator())
 	dst := fmt.Sprintf("%s-%d-%s", transcriptLabel, sid, group.Name())
 	tape.AppendDomainSeparator(dst)

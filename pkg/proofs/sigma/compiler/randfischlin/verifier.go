@@ -13,7 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
-var _ compiler.NIVerifier[sigma.Statement, sigma.Witness] = (*verifier[
+var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
 	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.State, sigma.Response,
 ])(nil)
 

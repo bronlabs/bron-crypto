@@ -58,7 +58,7 @@ type fs[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z 
 }
 
 func NewCompiler[
-	X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response,
+X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response,
 ](sigmaProtocol sigma.Protocol[X, W, A, S, Z]) (compiler.NICompiler[X, W], error) {
 	if sigmaProtocol == nil {
 		return nil, errs.NewIsNil("sigmaProtocol")
@@ -82,7 +82,7 @@ func (c *fs[X, W, A, S, Z]) NewProver(sessionId network.SID, transcript transcri
 	}, nil
 }
 
-func (c *fs[X, W, A, S, Z]) NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X, W], error) {
+func (c *fs[X, W, A, S, Z]) NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
 	dst := fmt.Sprintf("%s-%s-%s", sessionId, transcriptLabel, c.sigmaProtocol.Name())
 	transcript.AppendDomainSeparator(dst)
 
