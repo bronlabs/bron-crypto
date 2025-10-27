@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
+	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
@@ -58,7 +58,7 @@ type fs[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z 
 }
 
 func NewCompiler[
-X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response,
+	X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response,
 ](sigmaProtocol sigma.Protocol[X, W, A, S, Z]) (compiler.NICompiler[X, W], error) {
 	if sigmaProtocol == nil {
 		return nil, errs.NewIsNil("sigmaProtocol")

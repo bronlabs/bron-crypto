@@ -10,7 +10,6 @@ import (
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compilerutils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
@@ -121,7 +120,7 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 }
 
 func NewCosigner[
-	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
+GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](
 	sid network.SID,
 	shard *lindell22.Shard[GE, S],
@@ -164,7 +163,7 @@ func NewCosigner[
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create schnorr protocol")
 	}
-	niDlogScheme, err := compilerutils.Compile(niCompilerName, schnorrProtocol, prng)
+	niDlogScheme, err := compiler.Compile(niCompilerName, schnorrProtocol, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to compile niDlogProver")
 	}

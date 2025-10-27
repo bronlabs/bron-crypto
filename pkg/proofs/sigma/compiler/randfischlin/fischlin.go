@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
+	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"golang.org/x/crypto/sha3"
 )
