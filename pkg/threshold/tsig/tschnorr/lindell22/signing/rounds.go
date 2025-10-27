@@ -159,7 +159,7 @@ func verifyBigRCommitment[
 
 func dlogProve[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
-](c *Cosigner[E, S, M], k S, bigR E, quorumBytes [][]byte) (compiler.NIZKPoKProof, *lindell22.PokProtocolStatement[E, S], error) {
+](c *Cosigner[E, S, M], k S, bigR E, quorumBytes [][]byte) (compiler.NIZKPoKProof, *schnorrpok.Statement[E, S], error) {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(c.SharingID()))
 	c.tape.AppendBytes(transcriptDLogSLabel, quorumBytes...)
 	c.tape.AppendBytes("prover", proverIDBytes)
@@ -169,7 +169,6 @@ func dlogProve[
 	}
 	statement := &schnorrpok.Statement[E, S]{
 		X: bigR,
-		// Phi: c.state.phi,
 	}
 	witness := &schnorrpok.Witness[S]{
 		W: k,
@@ -183,7 +182,7 @@ func dlogProve[
 
 func dlogVerify[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S],
-](tape ts.Transcript, niDlogScheme compiler.NICompiler[*lindell22.PokProtocolStatement[E, S], *lindell22.PokProtocolWitness[S]], proverID sharing.ID, sid network.SID, proof compiler.NIZKPoKProof, theirBigR *lindell22.PokProtocolStatement[E, S], quorumBytes [][]byte) error {
+](tape ts.Transcript, niDlogScheme compiler.NICompiler[*schnorrpok.Statement[E, S], *schnorrpok.Witness[S]], proverID sharing.ID, sid network.SID, proof compiler.NIZKPoKProof, theirBigR *schnorrpok.Statement[E, S], quorumBytes [][]byte) error {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(proverID))
 	tape.AppendBytes(transcriptDLogSLabel, quorumBytes...)
 	tape.AppendBytes("prover", proverIDBytes)
