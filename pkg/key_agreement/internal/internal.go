@@ -36,12 +36,6 @@ func (pk *PublicKey[V, T]) Value() V {
 	return pk.v
 }
 
-// func NewSharedKey[V interface {
-// 	Bytes() []byte
-// }, T ~string](v V, t T) *SharedKey[V, T] {
-// 	return &SharedKey[V, T]{v: v, t: t}
-// }
-
 func NewSharedKey[T ~string](v []byte, t T) *SharedKey[T] {
 	return &SharedKey[T]{v: v, t: t}
 }

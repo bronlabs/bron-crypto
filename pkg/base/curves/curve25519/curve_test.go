@@ -39,7 +39,7 @@ func Test_UncompressedRoundTrip(t *testing.T) {
 	for range 128 {
 		p, err := curve25519.NewCurve().Random(prng)
 		require.NoError(t, err)
-		uncompressed := p.ToUncompreseed()
+		uncompressed := p.ToUncompressed()
 		p2, err := curve25519.NewCurve().FromUncompressed(uncompressed)
 		require.NoError(t, err)
 		require.True(t, p.Equal(p2))
