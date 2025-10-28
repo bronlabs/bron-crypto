@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="true" type="GoTestRunConfiguration" factoryName="Go Test">
+    <module name="krypton-primitives" />
+    <working_directory value="$PROJECT_DIR$" />
+    <envs>
+      <env name="CGO_CFLAGS" value="-I/Users/mateusz/work/krypton-primitives/thirdparty/boringssl -I/Users/mateusz/work/krypton-primitives/thirdparty/boringssl/include" />
+      <env name="CGO_LDFLAGS" value="-L/Users/mateusz/work/krypton-primitives/thirdparty/boringssl/build-local/crypto -lcrypto  -Xlinker -no_warn_duplicate_libraries" />
+    </envs>
+    <kind value="DIRECTORY" />
+    <package value="github.com/bronlabs/bron-crypto" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$" />
+    <framework value="gotest" />
+    <method v="2" />
+  </configuration>
+</component>
