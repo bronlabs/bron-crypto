@@ -38,7 +38,7 @@ type HybridEncrypter[
 	U Capsule,
 ] interface {
 	Encrypter[PK, M, C, U]
-	Seal(pk PK, plaintext M, aad []byte, prng io.Reader) (C, error)
+	Seal(plaintext M, receiver PK, aad []byte, prng io.Reader) (C, U, error)
 }
 
 type HybridDecrypter[

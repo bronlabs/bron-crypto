@@ -22,9 +22,9 @@ type (
 	Capsule[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] = internal.PublicKey[P, B, S]
 	Ciphertext                                                                                        []byte
 
-	CipherSuite     = internal.CipherSuite
-	SenderContext   = internal.SenderContext
-	ReceiverContext = internal.ReceiverContext
+	CipherSuite                                                                                             = internal.CipherSuite
+	SenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] = internal.SenderContext[P, B, S]
+	ReceiverContext                                                                                         = internal.ReceiverContext
 )
 
 const (

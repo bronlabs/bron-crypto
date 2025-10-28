@@ -56,8 +56,7 @@ func WithAuth[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebr
 }
 
 type Encrypter[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	senderContext    *SenderContext
-	capsule          *Capsule[P, B, S]
+	senderContext    *SenderContext[P, B, S]
 	senderPrivateKey *PrivateKey[S]
 	info             []byte
 	pskId            []byte
@@ -78,18 +77,19 @@ func (e *Encrypter[P, B, S]) Mode() ModeID {
 }
 
 func (e *Encrypter[P, B, S]) Encrypt(plaintext []byte, receiver *PublicKey[P, B, S], prng io.Reader) (Ciphertext, *Capsule[P, B, S], error) {
+	return e.Seal(receiver, plaintext, nil, prng)
+}
+
+func (e *Encrypter[P, B, S]) Seal(receiver *PublicKey[P, B, S], plaintext []byte, aad []byte, prng io.Reader) (Ciphertext, *Capsule[P, B, S], error) {
 	if receiver == nil {
 		return nil, nil, errs.NewIsNil("receiver public key")
 	}
 	if prng == nil {
 		return nil, nil, errs.NewIsNil("prng")
 	}
-	var ct []byte
-	var err error
-	switch e.Mode() {
-	case Base:
-		ct, err = e.senderContext.Seal(plaintext, nil)
-	case PSk:
-		ct, err = e.senderContext.Seal(plaintext, nil)
+	ct, err := e.senderContext.Seal(plaintext, aad)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "could not seal plaintext")
 	}
+	return Ciphertext(ct), e.senderContext.Capsule, nil
 }

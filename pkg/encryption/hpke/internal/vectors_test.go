@@ -1843,7 +1843,7 @@ var tests = []*suite{
 	},
 }
 
-func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, s *setupInfo, kem *DHKEMScheme[P, B, S]) (*ReceiverContext, *SenderContext) {
+func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, s *setupInfo, kem *DHKEMScheme[P, B, S]) (*ReceiverContext, *SenderContext[P, B, S]) {
 	t.Helper()
 
 	cipherSuite := &CipherSuite{
@@ -1900,12 +1900,13 @@ func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.P
 	receiverContext := &ReceiverContext{
 		c: ctx,
 	}
-	var senderContext *SenderContext
+	var senderContext *SenderContext[P, B, S]
 	if senderPrivateKey != nil {
 		ctx, _, err := keySchedule(SenderRole, cipherSuite, s.mode, sharedSecret, s.info, s.psk, s.psk_id)
 		require.NoError(t, err)
-		senderContext = &SenderContext{
-			c: ctx,
+		senderContext = &SenderContext[P, B, S]{
+			Capsule: ephemeralPublicKey,
+			c:       ctx,
 		}
 	}
 	return receiverContext, senderContext
@@ -1922,7 +1923,7 @@ func openCiphertext(t *testing.T, receiver *ReceiverContext, tt *encryptionInfo)
 	require.True(t, receiver.c.nonces.Contains(tt.nonce))
 }
 
-func sealPlaintext(t *testing.T, sender *SenderContext, tt *encryptionInfo) {
+func sealPlaintext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, sender *SenderContext[P, B, S], tt *encryptionInfo) {
 	t.Helper()
 	sender.c.sequence = tt.seq
 	require.False(t, sender.c.nonces.Contains(tt.nonce))

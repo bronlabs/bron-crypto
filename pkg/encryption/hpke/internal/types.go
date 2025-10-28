@@ -257,23 +257,24 @@ func verifyPSKInputs(mode ModeID, psk, pskId []byte) error {
 	return nil
 }
 
-type SenderContext struct {
-	c *context
+type SenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	Capsule *PublicKey[P, B, S]
+	c       *context
 }
 
-func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](mode ModeID, suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], info, psk, pskId []byte, prng io.Reader) (*SenderContext, *PublicKey[P, B, S], error) {
+func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](mode ModeID, suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], info, psk, pskId []byte, prng io.Reader) (*SenderContext[P, B, S], error) {
 	if suite == nil {
-		return nil, nil, errs.NewIsNil("ciphersuite is nil")
+		return nil, errs.NewIsNil("ciphersuite is nil")
 	}
 
 	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](receiverPublicKey.Value().Structure())
 	kdf, err := NewKDF(suite.kdf)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot create KDF scheme")
+		return nil, errs.WrapFailed(err, "cannot create KDF scheme")
 	}
 	kem, err := NewDHKEM(curve, kdf)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot create DHKEM scheme")
+		return nil, errs.WrapFailed(err, "cannot create DHKEM scheme")
 	}
 	var sharedSecret []byte
 	var ephemeralPublicKey *PublicKey[P, B, S]
@@ -281,26 +282,27 @@ func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], 
 		sharedSecret, ephemeralPublicKey, err = kem.AuthEncap(receiverPublicKey, senderPrivateKey, prng)
 	} else {
 		if senderPrivateKey != nil {
-			return nil, nil, errs.NewFailed("sender private key unsupported")
+			return nil, errs.NewFailed("sender private key unsupported")
 		}
 
 		sharedSecret, ephemeralPublicKey, err = kem.Encap(receiverPublicKey, prng)
 	}
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not finish kem.Encap")
+		return nil, errs.WrapFailed(err, "could not finish kem.Encap")
 	}
 
 	ctx, _, err := keySchedule(SenderRole, suite, mode, sharedSecret, info, psk, pskId)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "key scheduling failed")
+		return nil, errs.WrapFailed(err, "key scheduling failed")
 	}
 
-	return &SenderContext{
-		c: ctx,
-	}, ephemeralPublicKey, nil
+	return &SenderContext[P, B, S]{
+		Capsule: ephemeralPublicKey,
+		c:       ctx,
+	}, nil
 }
 
-func (s *SenderContext) Seal(plaintext, additionalData []byte) (ciphertext []byte, err error) {
+func (s *SenderContext[P, B, S]) Seal(plaintext, additionalData []byte) (ciphertext []byte, err error) {
 	nonce, err := s.c.computeNonce()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute nonce")
@@ -316,7 +318,7 @@ func (s *SenderContext) Seal(plaintext, additionalData []byte) (ciphertext []byt
 
 // Export takes as input a context string exporter_context and a desired length L in bytes, and produces a secret derived from the internal exporter secret using the corresponding KDF Expand function. This is an interface for exporting secrets from the encryption context using a variable-length pseudorandom function (PRF), similar to the TLS 1.3 exporter interface
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-secret-export
-func (s *SenderContext) Export(exporterContext []byte, L int) ([]byte, error) {
+func (s *SenderContext[P, B, S]) Export(exporterContext []byte, L int) ([]byte, error) {
 	return s.c.export(exporterContext, L)
 }
 
