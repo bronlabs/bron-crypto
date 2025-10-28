@@ -2,12 +2,20 @@ package hpke
 
 import (
 	"io"
+	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 )
+
+func EncryptingWhileCachingRecentContextualInfo[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]]() encryption.EncrypterOption[*Encrypter[P, B, S], *PublicKey[P, B, S], Message, Ciphertext, *Capsule[P, B, S]] {
+	return func(e *Encrypter[P, B, S]) error {
+		e.shouldCacheCtx = true
+		return nil
+	}
+}
 
 func EncryptingWithApplicationInfo[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](info []byte) encryption.EncrypterOption[*Encrypter[P, B, S], *PublicKey[P, B, S], Message, Ciphertext, *Capsule[P, B, S]] {
 	return func(e *Encrypter[P, B, S]) error {
@@ -46,6 +54,10 @@ type Encrypter[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	info             []byte
 	pskId            []byte
 	psk              *encryption.SymmetricKey
+
+	shouldCacheCtx bool
+	cachedCtx      *SenderContext[P, B, S]
+	mu             sync.Mutex
 }
 
 func (e *Encrypter[P, B, S]) Mode() ModeID {
@@ -66,6 +78,10 @@ func (e *Encrypter[P, B, S]) Encrypt(plaintext Message, receiver *PublicKey[P, B
 }
 
 func (e *Encrypter[P, B, S]) Seal(plaintext Message, receiver *PublicKey[P, B, S], aad []byte, prng io.Reader) (Ciphertext, *Capsule[P, B, S], error) {
+	if e.shouldCacheCtx {
+		e.mu.Lock()
+		defer e.mu.Unlock()
+	}
 	if receiver == nil {
 		return nil, nil, errs.NewIsNil("receiver public key")
 	}
@@ -90,12 +106,29 @@ func (e *Encrypter[P, B, S]) Seal(plaintext Message, receiver *PublicKey[P, B, S
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not setup sender context")
 	}
+	if e.shouldCacheCtx {
+		e.cachedCtx = ctx
+	}
 
 	ct, err := ctx.Seal(plaintext, aad)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not seal plaintext")
 	}
 	return Ciphertext(ct), ctx.Capsule, nil
+}
+
+func (e *Encrypter[P, B, S]) Export(context []byte, length uint) (*encryption.SymmetricKey, error) {
+	if length == 0 {
+		return nil, errs.NewIsZero("length")
+	}
+	if !e.shouldCacheCtx || e.cachedCtx == nil {
+		return nil, errs.NewFailed("cannot export key without cached context")
+	}
+	out, err := e.cachedCtx.Export(context, int(length))
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not export key")
+	}
+	return encryption.NewSymmetricKey(out)
 }
 
 func DecryptingWithApplicationInfo[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](info []byte) encryption.DecrypterOption[*Decrypter[P, B, S], Message, Ciphertext] {
@@ -165,4 +198,15 @@ func (d *Decrypter[P, B, S]) Open(ciphertext Ciphertext, aad []byte) (Message, e
 		return nil, errs.WrapFailed(err, "could not get plaintext")
 	}
 	return Message(pt), nil
+}
+
+func (d *Decrypter[P, B, S]) Export(context []byte, length uint) (*encryption.SymmetricKey, error) {
+	if length == 0 {
+		return nil, errs.NewIsZero("length")
+	}
+	out, err := d.ctx.Export(context, int(length))
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not export key")
+	}
+	return encryption.NewSymmetricKey(out)
 }
