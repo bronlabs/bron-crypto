@@ -2,7 +2,6 @@
 package internal
 
 import (
-	"crypto"
 	"fmt"
 	"testing"
 
@@ -113,15 +112,13 @@ func TestRFCTestVectors(t *testing.T) {
 				for _, test := range authSuiteCase.Encryptions {
 					t.Run(fmt.Sprintf("running encryption test for seq %d", test.Seq), func(t *testing.T) {
 						t.Parallel()
-						if authSuiteCase.Setup.KEMID != DHKEM_P256_HKDF_SHA256 {
-							t.Skip()
-						}
-						kdf, err := NewKDF(authSuiteCase.Setup.KDFID)
-						require.NoError(t, err)
-						if kdf.hash != crypto.SHA256 {
-							t.Skip()
-						}
-						kem, err := NewDHKEM(p256.NewCurve(), kdf)
+						// if authSuiteCase.Setup.KEMID != DHKEM_P256_HKDF_SHA256 {
+						// 	t.Skip()
+						// }
+						// KEM uses its own KDF (SHA256 for DHKEM_P256_HKDF_SHA256)
+						// The cipher suite's KDFID is separate and used for key scheduling
+						kemKDF := NewKDFSHA256()
+						kem, err := NewDHKEM(p256.NewCurve(), kemKDF)
 						require.NoError(t, err)
 						receiver, sender := setup(t, authSuiteCase.Setup, kem)
 						openCiphertext(t, receiver, test)
@@ -135,15 +132,13 @@ func TestRFCTestVectors(t *testing.T) {
 				for i, test := range authSuiteCase.Exports {
 					t.Run(fmt.Sprintf("running export test for iteration %d", i), func(t *testing.T) {
 						t.Parallel()
-						if authSuiteCase.Setup.KEMID != DHKEM_P256_HKDF_SHA256 {
-							t.Skip()
-						}
-						kdf, err := NewKDF(authSuiteCase.Setup.KDFID)
-						require.NoError(t, err)
-						if kdf.hash != crypto.SHA256 {
-							t.Skip()
-						}
-						kem, err := NewDHKEM(p256.NewCurve(), kdf)
+						// if authSuiteCase.Setup.KEMID != DHKEM_P256_HKDF_SHA256 {
+						// 	t.Skip()
+						// }
+						// KEM uses its own KDF (SHA256 for DHKEM_P256_HKDF_SHA256)
+						// The cipher suite's KDFID is separate and used for key scheduling
+						kemKDF := NewKDFSHA256()
+						kem, err := NewDHKEM(p256.NewCurve(), kemKDF)
 						require.NoError(t, err)
 						receiver, sender := setup(t, authSuiteCase.Setup, kem)
 						secret, err := receiver.Export(test.ExporterContext, test.L)

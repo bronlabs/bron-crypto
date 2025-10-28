@@ -8,20 +8,20 @@ import (
 
 type Type string
 
-func NewPrivateKey[SKV algebra.UintLike[SKV]](v SKV, t Type) PrivateKey[SKV] {
+func NewPrivateKey[SKV algebra.PrimeFieldElement[SKV]](v SKV, t Type) PrivateKey[SKV] {
 	return internal.NewPrivateKey(v, t)
 }
 
-type PrivateKey[SKV algebra.UintLike[SKV]] interface {
+type PrivateKey[SKV algebra.PrimeFieldElement[SKV]] interface {
 	Type() Type
 	base.Transparent[SKV]
 }
 
-func NewPublicKey[PKV algebra.AbelianGroupElement[PKV, SKV], SKV algebra.UintLike[SKV]](v PKV, t Type) PublicKey[PKV, SKV] {
+func NewPublicKey[PKV algebra.PrimeGroupElement[PKV, SKV], SKV algebra.PrimeFieldElement[SKV]](v PKV, t Type) PublicKey[PKV, SKV] {
 	return internal.NewPublicKey(v, t)
 }
 
-type PublicKey[PKV algebra.AbelianGroupElement[PKV, SKV], SKV algebra.UintLike[SKV]] interface {
+type PublicKey[PKV algebra.PrimeGroupElement[PKV, SKV], SKV algebra.PrimeFieldElement[SKV]] interface {
 	Type() Type
 	base.Transparent[PKV]
 }

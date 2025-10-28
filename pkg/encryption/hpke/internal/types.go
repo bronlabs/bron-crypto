@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -19,7 +20,8 @@ import (
 const version = "HPKE-v1"
 
 type PrivateKey[S algebra.PrimeFieldElement[S]] struct {
-	v S
+	ikm []byte // ikm will be set during KEM's DeriveKeyPair
+	v   S
 }
 
 func NewPrivateKey[S algebra.PrimeFieldElement[S]](v S) *PrivateKey[S] {
@@ -43,6 +45,34 @@ type PublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 
 func NewPublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](v P) *PublicKey[P, B, S] {
 	return &PublicKey[P, B, S]{v: v}
+}
+
+func NewPublicKeyFromBytes[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](curve curves.Curve[P, B, S], data []byte) (*PublicKey[P, B, S], error) {
+	if curve == nil {
+		return nil, errs.NewIsNil("curve")
+	}
+	var pkv P
+	var err error
+	if curve.Name() == curve25519.NewPrimeSubGroup().Name() {
+		pkv, err = curve.FromCompressed(data)
+	} else {
+		pkv, err = algebra.StructureMustBeAs[interface {
+			curves.Curve[P, B, S]
+			FromUncompressed([]byte) (P, error)
+		}](curve).FromUncompressed(data)
+	}
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not deserialize public key")
+	}
+	return &PublicKey[P, B, S]{v: pkv}, nil
+}
+
+func (pk *PublicKey[P, B, S]) Bytes() []byte {
+	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](pk.v.Structure())
+	if curve.Name() == curve25519.NewPrimeSubGroup().Name() {
+		return pk.v.ToCompressed()
+	}
+	return pk.v.ToUncompressed()
 }
 
 func (pk *PublicKey[P, B, S]) Value() P {

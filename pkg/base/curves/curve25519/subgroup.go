@@ -106,6 +106,10 @@ func (c *PrimeSubGroup) ScalarStructure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 
+func (c *PrimeSubGroup) ScalarRing() algebra.ZModLike[*Scalar] {
+	return NewScalarField()
+}
+
 func (c *PrimeSubGroup) ScalarField() algebra.PrimeField[*Scalar] {
 	return NewScalarField()
 }
@@ -147,7 +151,7 @@ func (p *PrimeSubGroupPoint) ToCompressed() []byte {
 }
 
 func (p *PrimeSubGroupPoint) ToUncompressed() []byte {
-	return p.AsPoint().ToUncompreseed()
+	return p.AsPoint().ToUncompressed()
 }
 
 func (p *PrimeSubGroupPoint) AffineX() (*BaseFieldElement, error) {

@@ -17,7 +17,7 @@ type (
 	SharedKey[B algebra.FiniteFieldElement[B]]                                                          = key_agreement.SharedKey
 )
 
-func DeriveSharedSecretValue[
+func DeriveSharedSecret[
 	P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S],
 ](myPrivateKey PrivateKey[S], otherPartyPublicKey PublicKey[P, B, S]) (SharedKey[B], error) {
 	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](otherPartyPublicKey.Value().Structure())

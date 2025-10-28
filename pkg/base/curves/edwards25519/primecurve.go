@@ -154,7 +154,7 @@ func (p *PrimeSubGroupPoint) ToCompressed() []byte {
 }
 
 func (p *PrimeSubGroupPoint) ToUncompressed() []byte {
-	return p.AsPoint().ToUncompreseed()
+	return p.AsPoint().ToUncompressed()
 }
 
 func (p *PrimeSubGroupPoint) AffineX() (*BaseFieldElement, error) {

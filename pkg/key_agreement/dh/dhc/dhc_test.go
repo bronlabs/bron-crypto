@@ -46,11 +46,11 @@ func tester[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.
 	bobPublicKey, err := dhc.NewPublicKey(bobPublicKeyValue)
 	require.NoError(tb, err)
 
-	aliceDerivation, err := dhc.DeriveSharedSecretValue(alicePrivateKey, bobPublicKey)
+	aliceDerivation, err := dhc.DeriveSharedSecret(alicePrivateKey, bobPublicKey)
 	require.NoError(tb, err)
 	require.NotNil(tb, aliceDerivation)
 	require.False(tb, ct.SliceIsZero(aliceDerivation.Bytes()) == ct.True)
-	bobDerivation, err := dhc.DeriveSharedSecretValue(bobPrivateKey, alicePublicKey)
+	bobDerivation, err := dhc.DeriveSharedSecret(bobPrivateKey, alicePublicKey)
 	require.NoError(tb, err)
 	require.False(tb, ct.SliceIsZero(bobDerivation.Bytes()) == ct.True)
 
