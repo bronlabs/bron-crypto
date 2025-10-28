@@ -21,6 +21,7 @@ type (
 
 	Capsule[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] = internal.PublicKey[P, B, S]
 	Ciphertext                                                                                        []byte
+	Message                                                                                           = []byte
 
 	CipherSuite                                                                                             = internal.CipherSuite
 	SenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] = internal.SenderContext[P, B, S]
@@ -135,4 +136,50 @@ func (s *Scheme[P, B, S]) AEAD(key *encryption.SymmetricKey) (cipher.AEAD, error
 
 func (s *Scheme[P, B, S]) CipherSuite() *CipherSuite {
 	return s.cipherSuite
+}
+
+func (s *Scheme[P, B, S]) Encrypter(opts ...encryption.EncrypterOption[*Encrypter[P, B, S], *PublicKey[P, B, S], Message, Ciphertext, *Capsule[P, B, S]]) (*Encrypter[P, B, S], error) {
+	encrypter := &Encrypter[P, B, S]{
+		suite: s.cipherSuite,
+	}
+	for _, opt := range opts {
+		if err := opt(encrypter); err != nil {
+			return nil, errs.WrapFailed(err, "could not apply Encrypter option")
+		}
+	}
+	return encrypter, nil
+}
+
+func (s *Scheme[P, B, S]) Decrypter(receiverPrivateKey *PrivateKey[S], opts ...encryption.DecrypterOption[*Decrypter[P, B, S], Message, Ciphertext]) (*Decrypter[P, B, S], error) {
+	if receiverPrivateKey == nil {
+		return nil, errs.NewIsNil("receiverPrivateKey")
+	}
+	decrypter := &Decrypter[P, B, S]{
+		suite:      s.cipherSuite,
+		privateKey: receiverPrivateKey,
+	}
+	for _, opt := range opts {
+		if err := opt(decrypter); err != nil {
+			return nil, errs.WrapFailed(err, "could not apply Decrypter option")
+		}
+	}
+	var ctx *ReceiverContext
+	var err error
+	switch decrypter.Mode() {
+	case Base:
+		ctx, err = SetupBaseR(s.cipherSuite, receiverPrivateKey, decrypter.senderPublicKey, decrypter.info)
+	case PSk:
+		ctx, err = SetupPSKR(s.cipherSuite, receiverPrivateKey, decrypter.senderPublicKey, decrypter.psk.Bytes(), decrypter.pskId, decrypter.info)
+	case Auth:
+		ctx, err = SetupAuthR(s.cipherSuite, receiverPrivateKey, decrypter.senderPublicKey, decrypter.senderPublicKey, decrypter.info)
+	case AuthPSk:
+		ctx, err = SetupAuthPSKR(s.cipherSuite, receiverPrivateKey, decrypter.senderPublicKey, decrypter.senderPublicKey, decrypter.psk.Bytes(), decrypter.pskId, decrypter.info)
+	default:
+		return nil, errs.NewType("unsupported HPKE mode")
+	}
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not setup receiver context")
+	}
+	decrypter.ctx = ctx
+	return decrypter, nil
 }

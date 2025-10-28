@@ -31,13 +31,13 @@ import (
 
 // SetupBaseS establishes a context for the sender that can be used to encrypt.
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key
-func SetupBaseS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], info []byte, prng io.Reader) (enc *PublicKey[P, B, S], sender *SenderContext, err error) {
+func SetupBaseS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
 	sender, err = internal.NewSenderContext(Base, suite, receiverPublicKey, nil, info, nil, nil, prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "failed to construct sender context")
+		return nil, errs.WrapFailed(err, "failed to construct sender context")
 	}
 
-	return enc, sender, nil
+	return sender, nil
 }
 
 // SetupBaseR establishes a context for the receiver that can be used to decrypt
@@ -53,16 +53,16 @@ func SetupBaseR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alge
 
 // SetupPSKS establishes a context for the sender that can be used to encrypt. This variant extends the base mechanism by allowing the recipient to authenticate that the sender possessed a given PSK. We assume that both parties have been provisioned with both the PSK value psk and another byte string psk_id that is used to identify which PSK should be used.
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-a-pre-
-func SetupPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], psk, pskId, info []byte, prng io.Reader) (enc *PublicKey[P, B, S], sender *SenderContext, err error) {
+func SetupPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], psk, pskId, info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
 	sender, err = internal.NewSenderContext(PSk, suite, receiverPublicKey, nil, info, psk, pskId, prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "failed to construct sender context")
+		return nil, errs.WrapFailed(err, "failed to construct sender context")
 	}
 
-	return enc, sender, nil
+	return sender, nil
 }
 
-func SealPSK[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *SenderContext, additionalData, plaintext []byte) (ciphertext []byte, err error) {
+func SealPSK[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *SenderContext[P, B, S], additionalData, plaintext []byte) (ciphertext []byte, err error) {
 	ct, err := ctx.Seal(plaintext, additionalData)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not seal plaintext")
@@ -84,13 +84,13 @@ func SetupPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 
 // SetupAuthS establishes a context for the sender that can be used to encrypt.This variant extends the base mechanism by allowing the recipient to authenticate that the sender possessed a given KEM private key.
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy
-func SetupAuthS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], info []byte, prng io.Reader) (enc *PublicKey[P, B, S], sender *SenderContext, err error) {
+func SetupAuthS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
 	sender, err = internal.NewSenderContext(Auth, suite, receiverPublicKey, senderPrivateKey, info, nil, nil, prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "failed to construct sender context")
+		return nil, errs.WrapFailed(err, "failed to construct sender context")
 	}
 
-	return enc, sender, nil
+	return sender, nil
 }
 
 // SetupAuthR establishes a context for the receiver that can be used to decrypt.This variant extends the base mechanism by allowing the recipient to authenticate that the sender possessed a given KEM private key.
@@ -106,13 +106,13 @@ func SetupAuthR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alge
 
 // SetupAuthPSKS establishes a context for the sender that can be used to encrypt. This mode is a straightforward combination of the PSK and authenticated modes. Like the PSK mode, a PSK is provided as input to the key schedule, and like the authenticated mode, authenticated KEM variants are used.
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-both-a
-func SetupAuthPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], psk, pskId, info []byte, prng io.Reader) (enc *PublicKey[P, B, S], sender *SenderContext, err error) {
+func SetupAuthPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], psk, pskId, info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
 	sender, err = internal.NewSenderContext(AuthPSk, suite, receiverPublicKey, senderPrivateKey, info, psk, pskId, prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "failed to construct sender context")
+		return nil, errs.WrapFailed(err, "failed to construct sender context")
 	}
 
-	return enc, sender, nil
+	return sender, nil
 }
 
 // SetupAuthPSKR establishes a context for the receiver that can be used to decrypt. This mode is a straightforward combination of the PSK and authenticated modes. Like the PSK mode, a PSK is provided as input to the key schedule, and like the authenticated mode, authenticated KEM variants are used.
