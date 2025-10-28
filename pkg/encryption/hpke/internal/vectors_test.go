@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, s *SetupInfo_Testing, kem *DHKEMScheme[P, B, S]) (*ReceiverContext, *SenderContext[P, B, S]) {
+func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, s *SetupInfo_Testing, kem *DHKEMScheme[P, B, S]) (*ReceiverContext[P, B, S], *SenderContext[P, B, S]) {
 	t.Helper()
 
 	cipherSuite := &CipherSuite{
@@ -66,8 +66,8 @@ func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.P
 	require.EqualValues(t, s.Key, ctx.key)
 	require.EqualValues(t, s.ExporterSecret, ctx.exporterSecret)
 
-	receiverContext := &ReceiverContext{
-		c: ctx,
+	receiverContext := &ReceiverContext[P, B, S]{
+		ctx: ctx,
 	}
 	var senderContext *SenderContext[P, B, S]
 	if senderPrivateKey != nil {
@@ -75,32 +75,32 @@ func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.P
 		require.NoError(t, err)
 		senderContext = &SenderContext[P, B, S]{
 			Capsule: ephemeralPublicKey,
-			c:       ctx,
+			ctx:     ctx,
 		}
 	}
 	return receiverContext, senderContext
 }
 
-func openCiphertext(t *testing.T, receiver *ReceiverContext, tt *EncryptionInfo_Testing) {
+func openCiphertext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, receiver *ReceiverContext[P, B, S], tt *EncryptionInfo_Testing) {
 	t.Helper()
-	receiver.c.sequence = tt.Seq
-	require.False(t, receiver.c.nonces.Contains(tt.Nonce))
+	receiver.ctx.sequence = tt.Seq
+	require.False(t, receiver.ctx.nonces.Contains(tt.Nonce))
 	decrypted, err := receiver.Open(tt.Ct, tt.Aad)
 	require.NoError(t, err)
 	require.EqualValues(t, tt.Pt, decrypted)
-	require.Equal(t, tt.Seq+1, receiver.c.sequence)
-	require.True(t, receiver.c.nonces.Contains(tt.Nonce))
+	require.Equal(t, tt.Seq+1, receiver.ctx.sequence)
+	require.True(t, receiver.ctx.nonces.Contains(tt.Nonce))
 }
 
 func sealPlaintext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, sender *SenderContext[P, B, S], tt *EncryptionInfo_Testing) {
 	t.Helper()
-	sender.c.sequence = tt.Seq
-	require.False(t, sender.c.nonces.Contains(tt.Nonce))
+	sender.ctx.sequence = tt.Seq
+	require.False(t, sender.ctx.nonces.Contains(tt.Nonce))
 	ciphertext, err := sender.Seal(tt.Pt, tt.Aad)
 	require.NoError(t, err)
 	require.EqualValues(t, tt.Ct, ciphertext)
-	require.Equal(t, tt.Seq+1, sender.c.sequence)
-	require.True(t, sender.c.nonces.Contains(tt.Nonce))
+	require.Equal(t, tt.Seq+1, sender.ctx.sequence)
+	require.True(t, sender.ctx.nonces.Contains(tt.Nonce))
 }
 
 // Test https://www.rfc-editor.org/rfc/rfc9180.html#appendix-A

@@ -138,6 +138,15 @@ func DecryptingWithApplicationInfo[P curves.Point[P, B, S], B algebra.FiniteFiel
 	}
 }
 
+func DecryptingWithCapsule[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](capsule *Capsule[P, B, S]) encryption.DecrypterOption[*Decrypter[P, B, S], Message, Ciphertext] {
+	return func(d *Decrypter[P, B, S]) error {
+		// For Base/PSK modes, the capsule is the ephemeral public key
+		// For Auth modes, it will be overridden by DecryptingWithAuthentication
+		d.ephemeralPublicKey = capsule
+		return nil
+	}
+}
+
 func DecryptingWithAuthentication[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](pk *PublicKey[P, B, S]) encryption.DecrypterOption[*Decrypter[P, B, S], Message, Ciphertext] {
 	return func(d *Decrypter[P, B, S]) error {
 		d.senderPublicKey = pk
@@ -164,12 +173,13 @@ type Decrypter[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	suite      *CipherSuite
 	privateKey *PrivateKey[S]
 
-	senderPublicKey *PublicKey[P, B, S]
-	info            []byte
-	pskId           []byte
-	psk             *encryption.SymmetricKey
+	senderPublicKey    *PublicKey[P, B, S] // For Auth modes - sender's static public key
+	ephemeralPublicKey *Capsule[P, B, S]   // Ephemeral public key
+	info               []byte
+	pskId              []byte
+	psk                *encryption.SymmetricKey
 
-	ctx *ReceiverContext
+	ctx *ReceiverContext[P, B, S]
 }
 
 func (e *Decrypter[P, B, S]) Mode() ModeID {

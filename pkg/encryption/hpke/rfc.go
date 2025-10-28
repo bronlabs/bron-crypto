@@ -42,7 +42,7 @@ func SetupBaseS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alge
 
 // SetupBaseR establishes a context for the receiver that can be used to decrypt
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key
-func SetupBaseR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], info []byte) (*ReceiverContext, error) {
+func SetupBaseR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], info []byte) (*ReceiverContext[P, B, S], error) {
 	receiver, err := internal.NewReceiverContext(Base, suite, receiverPrivatekey, ephemeralPublicKey, nil, info, nil, nil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to construct receiver context")
@@ -73,7 +73,7 @@ func SealPSK[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra
 
 // SetupPSKR establishes a context for the receiver that can be used to decrypt. This variant extends the base mechanism by allowing the recipient to authenticate that the sender possessed a given PSK. We assume that both parties have been provisioned with both the PSK value psk and another byte string psk_id that is used to identify which PSK should be used.
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-a-pre-
-func SetupPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], psk, pskId, info []byte) (*ReceiverContext, error) {
+func SetupPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], psk, pskId, info []byte) (*ReceiverContext[P, B, S], error) {
 	receiver, err := internal.NewReceiverContext(PSk, suite, receiverPrivatekey, ephemeralPublicKey, nil, info, psk, pskId)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to construct receiver context")
@@ -95,7 +95,7 @@ func SetupAuthS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alge
 
 // SetupAuthR establishes a context for the receiver that can be used to decrypt.This variant extends the base mechanism by allowing the recipient to authenticate that the sender possessed a given KEM private key.
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-an-asy
-func SetupAuthR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], senderPublicKey *PublicKey[P, B, S], info []byte) (*ReceiverContext, error) {
+func SetupAuthR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], senderPublicKey *PublicKey[P, B, S], info []byte) (*ReceiverContext[P, B, S], error) {
 	receiver, err := internal.NewReceiverContext(Auth, suite, receiverPrivatekey, ephemeralPublicKey, senderPublicKey, info, nil, nil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to construct receiver context")
@@ -117,7 +117,7 @@ func SetupAuthPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S a
 
 // SetupAuthPSKR establishes a context for the receiver that can be used to decrypt. This mode is a straightforward combination of the PSK and authenticated modes. Like the PSK mode, a PSK is provided as input to the key schedule, and like the authenticated mode, authenticated KEM variants are used.
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-authentication-using-both-a
-func SetupAuthPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], senderPublicKey *PublicKey[P, B, S], psk, pskId, info []byte) (*ReceiverContext, error) {
+func SetupAuthPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], senderPublicKey *PublicKey[P, B, S], psk, pskId, info []byte) (*ReceiverContext[P, B, S], error) {
 	receiver, err := internal.NewReceiverContext(AuthPSk, suite, receiverPrivatekey, ephemeralPublicKey, senderPublicKey, info, psk, pskId)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to construct receiver context")

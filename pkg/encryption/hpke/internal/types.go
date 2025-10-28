@@ -22,6 +22,10 @@ type PrivateKey[S algebra.PrimeFieldElement[S]] struct {
 	v S
 }
 
+func NewPrivateKey[S algebra.PrimeFieldElement[S]](v S) *PrivateKey[S] {
+	return &PrivateKey[S]{v: v}
+}
+
 func (sk *PrivateKey[S]) Value() S {
 	return sk.v
 }
@@ -35,6 +39,10 @@ func (sk *PrivateKey[S]) Equal(other *PrivateKey[S]) bool {
 
 type PublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	v P
+}
+
+func NewPublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](v P) *PublicKey[P, B, S] {
+	return &PublicKey[P, B, S]{v: v}
 }
 
 func (pk *PublicKey[P, B, S]) Value() P {
@@ -259,7 +267,7 @@ func verifyPSKInputs(mode ModeID, psk, pskId []byte) error {
 
 type SenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	Capsule *PublicKey[P, B, S]
-	c       *context
+	ctx     *context
 }
 
 func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](mode ModeID, suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], info, psk, pskId []byte, prng io.Reader) (*SenderContext[P, B, S], error) {
@@ -298,18 +306,18 @@ func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], 
 
 	return &SenderContext[P, B, S]{
 		Capsule: ephemeralPublicKey,
-		c:       ctx,
+		ctx:     ctx,
 	}, nil
 }
 
 func (s *SenderContext[P, B, S]) Seal(plaintext, additionalData []byte) (ciphertext []byte, err error) {
-	nonce, err := s.c.computeNonce()
+	nonce, err := s.ctx.computeNonce()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute nonce")
 	}
 
-	ciphertext = s.c.aead.Seal(nil, nonce, plaintext, additionalData)
-	if err := s.c.incrementSeq(); err != nil {
+	ciphertext = s.ctx.aead.Seal(nil, nonce, plaintext, additionalData)
+	if err := s.ctx.incrementSeq(); err != nil {
 		return nil, errs.WrapFailed(err, "increment sequence failed")
 	}
 
@@ -319,14 +327,15 @@ func (s *SenderContext[P, B, S]) Seal(plaintext, additionalData []byte) (ciphert
 // Export takes as input a context string exporter_context and a desired length L in bytes, and produces a secret derived from the internal exporter secret using the corresponding KDF Expand function. This is an interface for exporting secrets from the encryption context using a variable-length pseudorandom function (PRF), similar to the TLS 1.3 exporter interface
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-secret-export
 func (s *SenderContext[P, B, S]) Export(exporterContext []byte, L int) ([]byte, error) {
-	return s.c.export(exporterContext, L)
+	return s.ctx.export(exporterContext, L)
 }
 
-type ReceiverContext struct {
-	c *context
+type ReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	ctx     *context
+	capsule *PublicKey[P, B, S]
 }
 
-func NewReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](mode ModeID, suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey, senderPublicKey *PublicKey[P, B, S], info, psk, pskId []byte) (*ReceiverContext, error) {
+func NewReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](mode ModeID, suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey, senderPublicKey *PublicKey[P, B, S], info, psk, pskId []byte) (*ReceiverContext[P, B, S], error) {
 	if suite == nil {
 		return nil, errs.NewIsNil("ciphersuite is nil")
 	}
@@ -360,23 +369,24 @@ func NewReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B]
 		return nil, errs.WrapFailed(err, "key scheduling failed")
 	}
 
-	return &ReceiverContext{
-		c: ctx,
+	return &ReceiverContext[P, B, S]{
+		ctx:     ctx,
+		capsule: ephemeralPublicKey,
 	}, nil
 }
 
-func (r *ReceiverContext) Open(ciphertext, additionalData []byte) (plaintext []byte, err error) {
-	nonce, err := r.c.computeNonce()
+func (r *ReceiverContext[P, B, S]) Open(ciphertext, additionalData []byte) (plaintext []byte, err error) {
+	nonce, err := r.ctx.computeNonce()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute nonce")
 	}
 
-	plaintext, err = r.c.aead.Open(nil, nonce, ciphertext, additionalData)
+	plaintext, err = r.ctx.aead.Open(nil, nonce, ciphertext, additionalData)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not open ciphertext")
 	}
 
-	if err := r.c.incrementSeq(); err != nil {
+	if err := r.ctx.incrementSeq(); err != nil {
 		return nil, errs.WrapFailed(err, "increment sequence failed")
 	}
 
@@ -385,6 +395,10 @@ func (r *ReceiverContext) Open(ciphertext, additionalData []byte) (plaintext []b
 
 // Export takes as input a context string exporter_context and a desired length L in bytes, and produces a secret derived from the internal exporter secret using the corresponding KDF Expand function. This is an interface for exporting secrets from the encryption context using a variable-length pseudorandom function (PRF), similar to the TLS 1.3 exporter interface
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-secret-export
-func (r *ReceiverContext) Export(exporterContext []byte, L int) ([]byte, error) {
-	return r.c.export(exporterContext, L)
+func (r *ReceiverContext[P, B, S]) Export(exporterContext []byte, L int) ([]byte, error) {
+	return r.ctx.export(exporterContext, L)
+}
+
+func (r *ReceiverContext[P, B, S]) Capsule() *PublicKey[P, B, S] {
+	return r.capsule
 }
