@@ -1,4 +1,4 @@
-package edwards25519
+package curve25519
 
 import (
 	"sync"
@@ -43,7 +43,7 @@ func (c *PrimeSubGroup) Name() string {
 }
 
 func (c *PrimeSubGroup) ElementSize() int {
-	return compressedPointBytes
+	return 32
 }
 
 func (c *PrimeSubGroup) Cofactor() cardinal.Cardinal {
@@ -54,24 +54,24 @@ func (c *PrimeSubGroup) Order() cardinal.Cardinal {
 	return NewScalarField().Order()
 }
 
-func (c *PrimeSubGroup) FromCompressed(inBytes []byte) (*PrimeSubGroupPoint, error) {
-	p, err := NewCurve().FromCompressed(inBytes)
+func (c *PrimeSubGroup) FromCompressed(data []byte) (*PrimeSubGroupPoint, error) {
+	p, err := NewCurve().FromCompressed(data)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "cannot deserialize point")
 	}
 	return p.AsPrimeSubGroupPoint()
 }
 
-func (c *PrimeSubGroup) FromBytes(inBytes []byte) (*PrimeSubGroupPoint, error) {
-	p, err := NewCurve().FromBytes(inBytes)
+func (c *PrimeSubGroup) FromBytes(data []byte) (*PrimeSubGroupPoint, error) {
+	p, err := NewCurve().FromBytes(data)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "cannot deserialize point")
 	}
 	return p.AsPrimeSubGroupPoint()
 }
 
-func (c *PrimeSubGroup) FromUncompressed(inBytes []byte) (*PrimeSubGroupPoint, error) {
-	p, err := NewCurve().FromUncompressed(inBytes)
+func (c *PrimeSubGroup) FromUncompressed(data []byte) (*PrimeSubGroupPoint, error) {
+	p, err := NewCurve().FromUncompressed(data)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "cannot deserialize point")
 	}
@@ -106,10 +106,6 @@ func (c *PrimeSubGroup) ScalarStructure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 
-func (c *PrimeSubGroup) ScalarRing() algebra.ZModLike[*Scalar] {
-	return NewScalarField()
-}
-
 func (c *PrimeSubGroup) ScalarField() algebra.PrimeField[*Scalar] {
 	return NewScalarField()
 }
@@ -123,9 +119,6 @@ func (c *PrimeSubGroup) BaseStructure() algebra.Structure[*BaseFieldElement] {
 }
 
 func (c *PrimeSubGroup) ScalarBaseOp(sc *Scalar) *PrimeSubGroupPoint {
-	if sc.IsZero() {
-		return c.OpIdentity()
-	}
 	return c.ScalarBaseMul(sc)
 }
 
@@ -180,7 +173,7 @@ func (p *PrimeSubGroupPoint) IsTorsionFree() bool {
 }
 
 func (p *PrimeSubGroupPoint) Bytes() []byte {
-	return p.AsPoint().Bytes()
+	return p.AsPoint().ToCompressed()
 }
 
 func (p *PrimeSubGroupPoint) String() string {

@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
+	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
@@ -73,10 +73,6 @@ func NewCompiler[
 }
 
 func (c *fs[X, W, A, S, Z]) NewProver(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
-	if len(sessionId) == 0 {
-		return nil, errs.NewArgument("sessionId is empty")
-	}
-
 	dst := fmt.Sprintf("%s-%s-%s", sessionId, transcriptLabel, c.sigmaProtocol.Name())
 	transcript.AppendDomainSeparator(dst)
 
@@ -86,11 +82,7 @@ func (c *fs[X, W, A, S, Z]) NewProver(sessionId network.SID, transcript transcri
 	}, nil
 }
 
-func (c *fs[X, W, A, S, Z]) NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X, W], error) {
-	if len(sessionId) == 0 {
-		return nil, errs.NewArgument("sessionId is empty")
-	}
-
+func (c *fs[X, W, A, S, Z]) NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
 	dst := fmt.Sprintf("%s-%s-%s", sessionId, transcriptLabel, c.sigmaProtocol.Name())
 	transcript.AppendDomainSeparator(dst)
 

@@ -273,3 +273,13 @@ func (p *Point) String() string {
 		return fmt.Sprintf("(%s, %s, %s, %s)", p.V.X.String(), p.V.Y.String(), p.V.T.String(), p.V.Z.String())
 	}
 }
+
+func (p *Point) AsPrimeSubGroupPoint() (*PrimeSubGroupPoint, error) {
+	if !p.IsTorsionFree() {
+		return nil, errs.NewFailed("point is not in the prime subgroup")
+	}
+
+	var pp PrimeSubGroupPoint
+	pp.V.Set(&p.V)
+	return &pp, nil
+}

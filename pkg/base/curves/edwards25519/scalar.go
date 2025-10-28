@@ -97,6 +97,24 @@ func (f *ScalarField) BitLen() int {
 	return edwards25519Impl.FqBits
 }
 
+func (f *ScalarField) FromClampedBytes(data []byte) (*Scalar, error) {
+	if len(data) != edwards25519Impl.FqBytes {
+		return nil, errs.NewLength("invalid input")
+	}
+
+	var clone [32]byte
+	copy(clone[:], data)
+	clone[0] &= 248
+	clone[31] &= 127
+	clone[31] |= 64
+
+	var s Scalar
+	if ok := s.V.SetBytesWide(clone[:]); ok == ct.False {
+		return nil, errs.NewFailed("failed to set scalar from bytes")
+	}
+	return &s, nil
+}
+
 type Scalar struct {
 	traits.PrimeFieldElementTrait[*edwards25519Impl.Fq, edwards25519Impl.Fq, *Scalar, Scalar]
 }

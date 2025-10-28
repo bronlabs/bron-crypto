@@ -9,7 +9,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
 )
@@ -30,10 +29,6 @@ type (
 	Commitment       = hash_comm.Commitment
 	Opening          = hash_comm.Witness
 	CommitmentKey    = hash_comm.Key
-
-	// we are hardcoding the usage of the schnorr dlog protocol to lower number of type parameters.
-	PokProtocolStatement[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] = schnorrpok.Statement[GE, S]
-	PokProtocolWitness[S algebra.PrimeFieldElement[S]]                                        = schnorrpok.Witness[S]
 )
 
 var NewCommitmentScheme = hash_comm.NewScheme
