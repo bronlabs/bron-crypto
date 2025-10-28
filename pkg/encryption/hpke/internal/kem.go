@@ -84,7 +84,7 @@ func NewP256HKDFSha256KEM() *DHKEMScheme[*p256.Point, *p256.BaseFieldElement, *p
 	}
 }
 
-func NewX25519HKDFLSha256KEM() *DHKEMScheme[*curve25519.PrimeSubGroupPoint, *curve25519.BaseFieldElement, *curve25519.Scalar] {
+func NewX25519HKDFSha256KEM() *DHKEMScheme[*curve25519.PrimeSubGroupPoint, *curve25519.BaseFieldElement, *curve25519.Scalar] {
 	return &DHKEMScheme[*curve25519.PrimeSubGroupPoint, *curve25519.BaseFieldElement, *curve25519.Scalar]{
 		curve: curve25519.NewPrimeSubGroup(),
 		kdf:   NewKDFSHA256(),

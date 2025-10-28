@@ -64,7 +64,7 @@ func TestHighLevelAPI_WithTestVectors_BaseMode(t *testing.T) {
 	curve := p256.NewCurve()
 
 	for _, suiteVectors := range internal.TestVectors {
-		for _, authSuite := range suiteVectors.Auths {
+		for _, authSuite := range suiteVectors.Info {
 			if authSuite.Mode != hpke.Base {
 				continue
 			}
@@ -140,7 +140,7 @@ func TestHighLevelAPI_AuthMode_WithTestVectors(t *testing.T) {
 	curve := p256.NewCurve()
 
 	for _, suiteVectors := range internal.TestVectors {
-		for _, authSuite := range suiteVectors.Auths {
+		for _, authSuite := range suiteVectors.Info {
 			if authSuite.Mode != hpke.Auth {
 				continue
 			}

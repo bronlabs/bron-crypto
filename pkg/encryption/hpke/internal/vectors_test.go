@@ -7,7 +7,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,14 +21,14 @@ func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.P
 
 	ephemeralPrivateKey, ephemeralPublicKey, err := kem.DeriveKeyPair(s.IkmE)
 	require.NoError(t, err)
-	require.EqualValues(t, s.SkEm, ephemeralPrivateKey.Value().Bytes())
-	require.EqualValues(t, s.PkEm, ephemeralPublicKey.Value().ToUncompressed())
+	require.EqualValues(t, s.SkEm, ephemeralPrivateKey.Bytes(), "ephemeral private key mismatch")
+	require.EqualValues(t, s.PkEm, ephemeralPublicKey.Bytes(), "ephemeral public key mismatch")
 
 	receiverPrivateKey, receiverPublicKey, err := kem.DeriveKeyPair(s.IkmR)
 	require.NoError(t, err)
 
-	require.EqualValues(t, s.SkRm, receiverPrivateKey.Value().Bytes())
-	require.EqualValues(t, s.PkRm, receiverPublicKey.Value().ToUncompressed())
+	require.EqualValues(t, s.SkRm, receiverPrivateKey.Bytes(), "receiver private key mismatch")
+	require.EqualValues(t, s.PkRm, receiverPublicKey.Bytes(), "receiver public key mismatch")
 
 	var sharedSecret []byte
 	var senderPrivateKey *PrivateKey[S]
@@ -38,8 +37,8 @@ func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.P
 		senderPrivateKey, senderPublicKey, err = kem.DeriveKeyPair(s.IkmS)
 		require.NoError(t, err)
 
-		require.EqualValues(t, s.SkSm, senderPrivateKey.Value().Bytes())
-		require.EqualValues(t, s.PkSm, senderPublicKey.Value().ToUncompressed())
+		require.EqualValues(t, s.SkSm, senderPrivateKey.Bytes(), "sender private key mismatch")
+		require.EqualValues(t, s.PkSm, senderPublicKey.Bytes(), "sender public key mismatch")
 
 		sharedSecret, ephemeralPublicKey, err = kem.AuthEncapWithIKM(receiverPublicKey, senderPrivateKey, s.IkmE)
 		require.NoError(t, err)
@@ -54,7 +53,7 @@ func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.P
 		require.NoError(t, err)
 		require.EqualValues(t, sharedSecret, sharedSecretDecap)
 	}
-	require.EqualValues(t, s.Enc, ephemeralPublicKey.Value().ToUncompressed())
+	require.EqualValues(t, s.Enc, ephemeralPublicKey.Bytes(), "encapsulated public key mismatch")
 	require.EqualValues(t, s.SharedSecret, sharedSecret)
 
 	ctx, keyScheduleCtx, err := keySchedule(ReceiverRole, cipherSuite, s.Mode, sharedSecret, s.Info, s.PSk, s.PSkID)
@@ -102,53 +101,67 @@ func sealPlaintext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S a
 	require.True(t, sender.ctx.nonces.Contains(tt.Nonce))
 }
 
+func runnerEncryption[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, suiteInfo *SuiteInfo_Testing, kem *DHKEMScheme[P, B, S], test *EncryptionInfo_Testing) {
+	t.Helper()
+	receiver, sender := setup(t, suiteInfo.Setup, kem)
+	openCiphertext(t, receiver, test)
+	if suiteInfo.Mode == Auth || suiteInfo.Mode == AuthPSk {
+		require.NotNil(t, sender)
+		sealPlaintext(t, sender, test)
+	}
+}
+
+func runnerExport[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, suiteInfo *SuiteInfo_Testing, kem *DHKEMScheme[P, B, S], test *ExportInfo_Testing) {
+	t.Helper()
+	receiver, sender := setup(t, suiteInfo.Setup, kem)
+	secret, err := receiver.Export(test.ExporterContext, test.L)
+	require.NoError(t, err)
+	require.EqualValues(t, test.ExportedValue, secret)
+	if suiteInfo.Mode == Auth || suiteInfo.Mode == AuthPSk {
+		require.NotNil(t, sender)
+		secret, err := sender.Export(test.ExporterContext, test.L)
+		require.NoError(t, err)
+		require.EqualValues(t, test.ExportedValue, secret)
+	}
+}
+
 // Test https://www.rfc-editor.org/rfc/rfc9180.html#appendix-A
 func TestRFCTestVectors(t *testing.T) {
 	t.Parallel()
 	for _, suiteCase := range TestVectors {
-		for _, authSuiteCase := range suiteCase.Auths {
-			t.Run(fmt.Sprintf("%s | mode: %v", suiteCase.Name, authSuiteCase.Mode), func(t *testing.T) {
+		for _, suiteInfo := range suiteCase.Info {
+			t.Run(fmt.Sprintf("%s | mode: %v", suiteCase.Name, suiteInfo.Mode), func(t *testing.T) {
 				t.Parallel()
-				for _, test := range authSuiteCase.Encryptions {
+				for _, test := range suiteInfo.Encryptions {
 					t.Run(fmt.Sprintf("running encryption test for seq %d", test.Seq), func(t *testing.T) {
 						t.Parallel()
-						// if authSuiteCase.Setup.KEMID != DHKEM_P256_HKDF_SHA256 {
-						// 	t.Skip()
-						// }
-						// KEM uses its own KDF (SHA256 for DHKEM_P256_HKDF_SHA256)
-						// The cipher suite's KDFID is separate and used for key scheduling
-						kemKDF := NewKDFSHA256()
-						kem, err := NewDHKEM(p256.NewCurve(), kemKDF)
-						require.NoError(t, err)
-						receiver, sender := setup(t, authSuiteCase.Setup, kem)
-						openCiphertext(t, receiver, test)
-						if authSuiteCase.Mode == Auth || authSuiteCase.Mode == AuthPSk {
-							require.NotNil(t, sender)
-							sealPlaintext(t, sender, test)
+
+						switch {
+						case suiteInfo.Setup.KEMID == DHKEM_P256_HKDF_SHA256:
+							kem := NewP256HKDFSha256KEM()
+							runnerEncryption(t, suiteInfo, kem, test)
+						case suiteInfo.Setup.KEMID == DHKEM_X25519_HKDF_SHA256:
+							kem := NewX25519HKDFSha256KEM()
+							runnerEncryption(t, suiteInfo, kem, test)
+						default:
+							require.Fail(t, "KEM ID not supported", suiteInfo.Setup.KEMID)
 						}
 					})
 				}
 
-				for i, test := range authSuiteCase.Exports {
+				for i, test := range suiteInfo.Exports {
 					t.Run(fmt.Sprintf("running export test for iteration %d", i), func(t *testing.T) {
 						t.Parallel()
-						// if authSuiteCase.Setup.KEMID != DHKEM_P256_HKDF_SHA256 {
-						// 	t.Skip()
-						// }
-						// KEM uses its own KDF (SHA256 for DHKEM_P256_HKDF_SHA256)
-						// The cipher suite's KDFID is separate and used for key scheduling
-						kemKDF := NewKDFSHA256()
-						kem, err := NewDHKEM(p256.NewCurve(), kemKDF)
-						require.NoError(t, err)
-						receiver, sender := setup(t, authSuiteCase.Setup, kem)
-						secret, err := receiver.Export(test.ExporterContext, test.L)
-						require.NoError(t, err)
-						require.EqualValues(t, test.ExportedValue, secret)
-						if authSuiteCase.Mode == Auth || authSuiteCase.Mode == AuthPSk {
-							require.NotNil(t, sender)
-							secret, err := sender.Export(test.ExporterContext, test.L)
-							require.NoError(t, err)
-							require.EqualValues(t, test.ExportedValue, secret)
+
+						switch {
+						case suiteInfo.Setup.KEMID == DHKEM_P256_HKDF_SHA256:
+							kem := NewP256HKDFSha256KEM()
+							runnerExport(t, suiteInfo, kem, test)
+						case suiteInfo.Setup.KEMID == DHKEM_X25519_HKDF_SHA256:
+							kem := NewX25519HKDFSha256KEM()
+							runnerExport(t, suiteInfo, kem, test)
+						default:
+							require.Fail(t, "KEM ID not supported", suiteInfo.Setup.KEMID)
 						}
 					})
 				}

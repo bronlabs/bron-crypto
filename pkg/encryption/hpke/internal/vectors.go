@@ -52,7 +52,7 @@ type ExportInfo_Testing struct {
 	ExportedValue   []byte
 }
 
-type AuthSuite_Testing struct {
+type SuiteInfo_Testing struct {
 	Mode        ModeID
 	Setup       *SetupInfo_Testing
 	Encryptions []*EncryptionInfo_Testing
@@ -60,14 +60,14 @@ type AuthSuite_Testing struct {
 }
 
 type Suite_Testing struct {
-	Name  string
-	Auths []*AuthSuite_Testing
+	Name string
+	Info []*SuiteInfo_Testing
 }
 
 var TestVectors = []*Suite_Testing{
 	{
 		Name: "DHKEM(P-256, HKDF-SHA256), HKDF-SHA256, AES-128-GCM",
-		Auths: []*AuthSuite_Testing{
+		Info: []*SuiteInfo_Testing{
 			// https://www.rfc-editor.org/rfc/rfc9180.html#appendix-A.3.1
 			{
 				Mode: Base,
@@ -431,7 +431,7 @@ var TestVectors = []*Suite_Testing{
 	},
 	{
 		Name: "DHKEM(P-256, HKDF-SHA256), HKDF-SHA512, AES-128-GCM",
-		Auths: []*AuthSuite_Testing{
+		Info: []*SuiteInfo_Testing{
 			// https://www.rfc-editor.org/rfc/rfc9180.html#appendix-A.4.1
 			{
 				Mode: Base,
@@ -788,7 +788,7 @@ var TestVectors = []*Suite_Testing{
 	},
 	{
 		Name: "DHKEM(P-256, HKDF-SHA256), HKDF-SHA256, ChaCha20Poly1305",
-		Auths: []*AuthSuite_Testing{
+		Info: []*SuiteInfo_Testing{
 			// https://www.rfc-editor.org/rfc/rfc9180.html#appendix-A.5.1
 			{
 				Mode: Base,
@@ -1143,7 +1143,7 @@ var TestVectors = []*Suite_Testing{
 	},
 	{
 		Name: "DHKEM(X25519, HKDF-SHA256), HKDF-SHA256, AES-128-GCM",
-		Auths: []*AuthSuite_Testing{
+		Info: []*SuiteInfo_Testing{
 			{
 				Mode: Base,
 				Setup: &SetupInfo_Testing{
@@ -1488,7 +1488,7 @@ var TestVectors = []*Suite_Testing{
 	},
 	{
 		Name: "DHKEM(X25519, HKDF-SHA256), HKDF-SHA256, ChaCha20Poly1305",
-		Auths: []*AuthSuite_Testing{
+		Info: []*SuiteInfo_Testing{
 			{
 				Mode: Base,
 				Setup: &SetupInfo_Testing{

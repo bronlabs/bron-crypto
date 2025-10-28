@@ -20,12 +20,12 @@ import (
 const version = "HPKE-v1"
 
 type PrivateKey[S algebra.PrimeFieldElement[S]] struct {
-	ikm []byte // ikm will be set during KEM's DeriveKeyPair
+	ikm []byte // ikm may be set during KEM's DeriveKeyPair, and in that case ikm != v.Bytes()
 	v   S
 }
 
 func NewPrivateKey[S algebra.PrimeFieldElement[S]](v S) *PrivateKey[S] {
-	return &PrivateKey[S]{v: v}
+	return &PrivateKey[S]{v: v, ikm: v.Bytes()}
 }
 
 func (sk *PrivateKey[S]) Value() S {
@@ -37,6 +37,10 @@ func (sk *PrivateKey[S]) Equal(other *PrivateKey[S]) bool {
 		return sk == other
 	}
 	return sk.v.Equal(other.v)
+}
+
+func (sk *PrivateKey[S]) Bytes() []byte {
+	return sk.ikm
 }
 
 type PublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
