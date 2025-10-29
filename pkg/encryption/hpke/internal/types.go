@@ -10,6 +10,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
@@ -24,8 +25,11 @@ type PrivateKey[S algebra.PrimeFieldElement[S]] struct {
 	v   S
 }
 
-func NewPrivateKey[S algebra.PrimeFieldElement[S]](v S) *PrivateKey[S] {
-	return &PrivateKey[S]{v: v, ikm: v.Bytes()}
+func NewPrivateKey[S algebra.PrimeFieldElement[S]](v S) (*PrivateKey[S], error) {
+	if v.IsZero() {
+		return nil, errs.NewIsZero("invalid private key")
+	}
+	return &PrivateKey[S]{v: v, ikm: v.Bytes()}, nil
 }
 
 func (sk *PrivateKey[S]) Value() S {
@@ -47,13 +51,19 @@ type PublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 	v P
 }
 
-func NewPublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](v P) *PublicKey[P, B, S] {
-	return &PublicKey[P, B, S]{v: v}
+func NewPublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](v P) (*PublicKey[P, B, S], error) {
+	if v.IsOpIdentity() || !v.IsTorsionFree() {
+		return nil, errs.NewIsIdentity("invalid public key")
+	}
+	return &PublicKey[P, B, S]{v: v}, nil
 }
 
 func NewPublicKeyFromBytes[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](curve curves.Curve[P, B, S], data []byte) (*PublicKey[P, B, S], error) {
 	if curve == nil {
 		return nil, errs.NewIsNil("curve")
+	}
+	if ct.SliceIsZero(data) == ct.True {
+		return nil, errs.NewIsZero("invalid public key")
 	}
 	var pkv P
 	var err error

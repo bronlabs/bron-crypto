@@ -5,13 +5,11 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/key_agreement"
 	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
-	"github.com/bronlabs/bron-crypto/pkg/key_agreement/internal"
 )
 
 type (
@@ -27,24 +25,22 @@ const (
 
 func DeriveSharedSecret[
 	P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S],
-](rawPrivateKey []byte, publicKey PublicKey[P, B, S]) (sharedSecretValue SharedKey[B], err error) {
+](rawPrivateKey []byte, publicKey *PublicKey[P, B, S]) (sharedSecretValue *SharedKey[B], err error) {
 	if publicKey == nil {
 		return nil, errs.NewIsNil("publicKey")
 	}
 	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](publicKey.Value().Structure())
 	switch curve.Name() {
 	case curve25519.NewPrimeSubGroup().Name():
-		pk, ok := publicKey.(key_agreement.PublicKey[*curve25519.PrimeSubGroupPoint, *curve25519.Scalar])
-		if !ok {
-			return nil, errs.NewValidation("public key is not of type X25519")
-		}
-		return doX25519(rawPrivateKey, pk)
+		return doX25519(rawPrivateKey, publicKey)
 	default:
 		return doIEEE(curve, rawPrivateKey, publicKey)
 	}
 }
 
-func doX25519(ikm []byte, publicKey key_agreement.PublicKey[*curve25519.PrimeSubGroupPoint, *curve25519.Scalar]) (SharedKey[*curve25519.BaseFieldElement], error) {
+func doX25519[ // Because Go doesn't allow casting a generic struct to another generic struct with fixed type parameters, this function has to be generic even though it only works for Curve25519.
+	P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S],
+](ikm []byte, publicKey *PublicKey[P, B, S]) (*SharedKey[B], error) {
 	if publicKey.Type() != X25519 {
 		return nil, errs.NewValidation("public key is not of type X25519")
 	}
@@ -74,7 +70,7 @@ func doX25519(ikm []byte, publicKey key_agreement.PublicKey[*curve25519.PrimeSub
 
 func doIEEE[
 	P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S],
-](curve curves.Curve[P, B, S], rawPrivateKey []byte, publicKey PublicKey[P, B, S]) (SharedKey[B], error) {
+](curve curves.Curve[P, B, S], rawPrivateKey []byte, publicKey *PublicKey[P, B, S]) (*SharedKey[B], error) {
 	if publicKey.Type() == X25519 {
 		return nil, errs.NewValidation("public key is of type X25519, cannot use IEEE method")
 	}
@@ -102,44 +98,19 @@ func typ(name string) key_agreement.Type {
 	}
 }
 
-func NewPrivateKey[S algebra.PrimeFieldElement[S]](v S) (PrivateKey[S], error) {
-	if v.IsZero() {
-		return nil, errs.NewIsZero("invalid private key")
+func NewPrivateKey[S algebra.PrimeFieldElement[S]](v S) (*PrivateKey[S], error) {
+	return key_agreement.NewPrivateKey(v, typ(v.Structure().Name()))
+}
+
+func NewPublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](v P) (*PublicKey[P, B, S], error) {
+	return key_agreement.NewPublicKey(v, typ(v.Structure().Name()))
+}
+
+func NewSharedKey[B algebra.FiniteFieldElement[B]](v B) (*SharedKey[B], error) {
+	t := typ(v.Structure().Name())
+	b := v.Bytes()
+	if t == X25519 {
+		slices.Reverse(b) // go x25519 expects little-endian
 	}
-	return key_agreement.NewPrivateKey(v, typ(v.Structure().Name())), nil
-}
-
-func NewPublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](v P) (PublicKey[P, B, S], error) {
-	if v.IsOpIdentity() || !v.IsTorsionFree() {
-		return nil, errs.NewIsIdentity("invalid public key")
-	}
-	return key_agreement.NewPublicKey(v, typ(v.Structure().Name())), nil
-}
-
-func NewSharedKey[B algebra.FiniteFieldElement[B]](v B) (SharedKey[B], error) {
-	if ct.SliceIsZero(v.Bytes()) == ct.True {
-		return nil, errs.NewIsZero("invalid shared key")
-	}
-	internalSharedKey := internal.NewSharedKey(v.Bytes(), typ(v.Structure().Name()))
-	return &sharedKey[B]{
-		SharedKey: *internalSharedKey,
-		v:         v,
-	}, nil
-}
-
-type sharedKey[B algebra.FiniteFieldElement[B]] struct {
-	internal.SharedKey[key_agreement.Type]
-	v algebra.FiniteFieldElement[B]
-}
-
-func (k *sharedKey[B]) Value() algebra.FiniteFieldElement[B] {
-	return k.v
-}
-
-func (k *sharedKey[B]) Bytes() []byte {
-	out := k.SharedKey.Bytes()
-	if k.Type() == X25519 {
-		slices.Reverse(out) // convert back to little-endian for X25519
-	}
-	return out
+	return key_agreement.NewSharedKey(b, typ(v.Structure().Name()))
 }

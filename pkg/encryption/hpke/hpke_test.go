@@ -26,8 +26,10 @@ func TestHighLevelAPI_BaseMode_BasicFlow(t *testing.T) {
 	require.NoError(t, err)
 	receiverPK := curve.ScalarBaseMul(receiverSK)
 
-	receiverPrivateKey := internal.NewPrivateKey(receiverSK)
-	receiverPublicKey := internal.NewPublicKey(receiverPK)
+	receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
+	require.NoError(t, err)
+	receiverPublicKey, err := internal.NewPublicKey(receiverPK)
+	require.NoError(t, err)
 
 	// Test message
 	plaintext := []byte("Hello, HPKE!")
@@ -90,12 +92,14 @@ func TestHighLevelAPI_WithTestVectors_BaseMode(t *testing.T) {
 				receiverSK, err := curve.ScalarField().FromBytes(authSuite.Setup.SkRm)
 				require.NoError(t, err)
 
-				receiverPrivateKey := internal.NewPrivateKey(receiverSK)
+				receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
+				require.NoError(t, err)
 
 				// Parse capsule from test vector
 				ephemeralPK, err := curve.FromUncompressed(authSuite.Setup.Enc)
 				require.NoError(t, err)
-				capsule := internal.NewPublicKey(ephemeralPK)
+				capsule, err := internal.NewPublicKey(ephemeralPK)
+				require.NoError(t, err)
 
 				// Test only first encryption (seq 0) since high-level API doesn't expose sequence control
 				if len(authSuite.Encryptions) > 0 {
@@ -165,17 +169,20 @@ func TestHighLevelAPI_AuthMode_WithTestVectors(t *testing.T) {
 				// Derive receiver keys
 				receiverSK, err := curve.ScalarField().FromBytes(authSuite.Setup.SkRm)
 				require.NoError(t, err)
-				receiverPrivateKey := internal.NewPrivateKey(receiverSK)
+				receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
+				require.NoError(t, err)
 
 				// Parse sender's static public key
 				senderPK, err := curve.FromUncompressed(authSuite.Setup.PkSm)
 				require.NoError(t, err)
-				senderPublicKey := internal.NewPublicKey(senderPK)
+				senderPublicKey, err := internal.NewPublicKey(senderPK)
+				require.NoError(t, err)
 
 				// Parse capsule
 				ephemeralPK, err := curve.FromUncompressed(authSuite.Setup.Enc)
 				require.NoError(t, err)
-				capsule := internal.NewPublicKey(ephemeralPK)
+				capsule, err := internal.NewPublicKey(ephemeralPK)
+				require.NoError(t, err)
 
 				// Test only first encryption (seq 0) since high-level API doesn't expose sequence control
 				if len(authSuite.Encryptions) > 0 {
@@ -212,8 +219,10 @@ func TestHighLevelAPI_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	receiverPK := curve.ScalarBaseMul(receiverSK)
 
-	receiverPrivateKey := internal.NewPrivateKey(receiverSK)
-	receiverPublicKey := internal.NewPublicKey(receiverPK)
+	receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
+	require.NoError(t, err)
+	receiverPublicKey, err := internal.NewPublicKey(receiverPK)
+	require.NoError(t, err)
 
 	tests := []struct {
 		name      string
@@ -264,8 +273,10 @@ func TestHighLevelAPI_Export(t *testing.T) {
 	require.NoError(t, err)
 	receiverPK := curve.ScalarBaseMul(receiverSK)
 
-	receiverPrivateKey := internal.NewPrivateKey(receiverSK)
-	receiverPublicKey := internal.NewPublicKey(receiverPK)
+	receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
+	require.NoError(t, err)
+	receiverPublicKey, err := internal.NewPublicKey(receiverPK)
+	require.NoError(t, err)
 
 	// Create encrypter with caching enabled
 	encrypter, err := scheme.Encrypter(
@@ -315,8 +326,10 @@ func TestHighLevelAPI_PSKMode(t *testing.T) {
 	require.NoError(t, err)
 	receiverPK := curve.ScalarBaseMul(receiverSK)
 
-	receiverPrivateKey := internal.NewPrivateKey(receiverSK)
-	receiverPublicKey := internal.NewPublicKey(receiverPK)
+	receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
+	require.NoError(t, err)
+	receiverPublicKey, err := internal.NewPublicKey(receiverPK)
+	require.NoError(t, err)
 
 	// Shared PSK
 	psk, err := encryption.NewSymmetricKey([]byte("pre-shared-key-32-bytes-long!!!"))
@@ -373,16 +386,20 @@ func TestHighLevelAPI_AuthMode(t *testing.T) {
 	require.NoError(t, err)
 	senderPK := curve.ScalarBaseMul(senderSK)
 
-	senderPrivateKey := internal.NewPrivateKey(senderSK)
-	senderPublicKey := internal.NewPublicKey(senderPK)
+	senderPrivateKey, err := internal.NewPrivateKey(senderSK)
+	require.NoError(t, err)
+	senderPublicKey, err := internal.NewPublicKey(senderPK)
+	require.NoError(t, err)
 
 	// Generate receiver key pair
 	receiverSK, err := curve.ScalarField().Random(rand.Reader)
 	require.NoError(t, err)
 	receiverPK := curve.ScalarBaseMul(receiverSK)
 
-	receiverPrivateKey := internal.NewPrivateKey(receiverSK)
-	receiverPublicKey := internal.NewPublicKey(receiverPK)
+	receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
+	require.NoError(t, err)
+	receiverPublicKey, err := internal.NewPublicKey(receiverPK)
+	require.NoError(t, err)
 
 	plaintext := []byte("Authenticated message")
 
@@ -410,7 +427,8 @@ func TestHighLevelAPI_AuthMode(t *testing.T) {
 	wrongSK, err := curve.ScalarField().Random(rand.Reader)
 	require.NoError(t, err)
 	wrongPK := curve.ScalarBaseMul(wrongSK)
-	wrongSenderPublicKey := internal.NewPublicKey(wrongPK)
+	wrongSenderPublicKey, err := internal.NewPublicKey(wrongPK)
+	require.NoError(t, err)
 
 	decrypterWrong, err := scheme.Decrypter(receiverPrivateKey,
 		hpke.DecryptingWithCapsule(capsule),
@@ -435,8 +453,10 @@ func TestHighLevelAPI_MultipleMessages(t *testing.T) {
 	require.NoError(t, err)
 	receiverPK := curve.ScalarBaseMul(receiverSK)
 
-	receiverPrivateKey := internal.NewPrivateKey(receiverSK)
-	receiverPublicKey := internal.NewPublicKey(receiverPK)
+	receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
+	require.NoError(t, err)
+	receiverPublicKey, err := internal.NewPublicKey(receiverPK)
+	require.NoError(t, err)
 
 	messages := [][]byte{
 		[]byte("First message"),
@@ -502,7 +522,8 @@ func TestHighLevelAPI_ErrorCases(t *testing.T) {
 		receiverSK, err := curve.ScalarField().Random(rand.Reader)
 		require.NoError(t, err)
 		receiverPK := curve.ScalarBaseMul(receiverSK)
-		receiverPublicKey := internal.NewPublicKey(receiverPK)
+		receiverPublicKey, err := internal.NewPublicKey(receiverPK)
+		require.NoError(t, err)
 
 		_, _, err = encrypter.Encrypt([]byte("msg"), receiverPublicKey, rand.Reader)
 		require.NoError(t, err)
@@ -516,8 +537,10 @@ func TestHighLevelAPI_ErrorCases(t *testing.T) {
 		require.NoError(t, err)
 		receiverPK := curve.ScalarBaseMul(receiverSK)
 
-		receiverPrivateKey := internal.NewPrivateKey(receiverSK)
-		receiverPublicKey := internal.NewPublicKey(receiverPK)
+		receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
+		require.NoError(t, err)
+		receiverPublicKey, err := internal.NewPublicKey(receiverPK)
+		require.NoError(t, err)
 
 		encrypter, err := scheme.Encrypter()
 		require.NoError(t, err)

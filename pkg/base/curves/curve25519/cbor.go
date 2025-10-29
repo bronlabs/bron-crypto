@@ -19,7 +19,7 @@ type pointDTO struct {
 }
 
 func (p *Point) MarshalCBOR() ([]byte, error) {
-	dto := &pointDTO{AffineCompressedBytes: p.ToCompressed()}
+	dto := &pointDTO{AffineCompressedBytes: p.ToUncompressed()}
 	return serde.MarshalCBOR(dto)
 }
 
@@ -29,7 +29,7 @@ func (p *Point) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 
-	pp, err := NewCurve().FromCompressed(dto.AffineCompressedBytes)
+	pp, err := NewCurve().FromUncompressed(dto.AffineCompressedBytes)
 	if err != nil {
 		return errs.WrapSerialisation(err, "cannot deserialize point")
 	}
@@ -38,7 +38,7 @@ func (p *Point) UnmarshalCBOR(data []byte) error {
 }
 
 func (p *PrimeSubGroupPoint) MarshalCBOR() ([]byte, error) {
-	dto := &pointDTO{AffineCompressedBytes: p.ToCompressed()}
+	dto := &pointDTO{AffineCompressedBytes: p.ToUncompressed()}
 	return serde.MarshalCBOR(dto)
 }
 
@@ -48,7 +48,7 @@ func (p *PrimeSubGroupPoint) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 
-	pp, err := NewPrimeSubGroup().FromCompressed(dto.AffineCompressedBytes)
+	pp, err := NewPrimeSubGroup().FromUncompressed(dto.AffineCompressedBytes)
 	if err != nil {
 		return errs.WrapSerialisation(err, "cannot deserialize point")
 	}
