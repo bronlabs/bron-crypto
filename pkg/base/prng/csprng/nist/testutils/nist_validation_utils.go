@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/csprng/nist"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng/nist"
 )
 
 const (

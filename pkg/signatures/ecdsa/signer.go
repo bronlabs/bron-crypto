@@ -10,6 +10,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
@@ -43,12 +44,14 @@ type Signer[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.P
 	prng  io.Reader
 }
 
-func NewDeterministicSigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S], sk *PrivateKey[P, B, S]) (*Signer[P, B, S], error) {
+type DeterministicSigner = Signer[*p256.Point, *p256.BaseFieldElement, *p256.Scalar]
+
+func NewDeterministicSigner(suite *Suite[*p256.Point, *p256.BaseFieldElement, *p256.Scalar], sk *PrivateKey[*p256.Point, *p256.BaseFieldElement, *p256.Scalar]) (*Signer[*p256.Point, *p256.BaseFieldElement, *p256.Scalar], error) {
 	if suite == nil || sk == nil {
 		return nil, errs.NewIsNil("suite or secret key is nil")
 	}
 
-	s := &Signer[P, B, S]{
+	s := &Signer[*p256.Point, *p256.BaseFieldElement, *p256.Scalar]{
 		suite: suite,
 		sk:    sk,
 		prng:  nil,

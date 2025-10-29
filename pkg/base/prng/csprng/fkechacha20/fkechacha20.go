@@ -2,6 +2,7 @@ package fkechacha20
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng"
 	"github.com/bronlabs/bron-crypto/thirdparty/golang/crypto/chacha20"
 )
 
@@ -22,7 +23,7 @@ func NewPrng(seed, salt []byte) (*Prng, error) {
 }
 
 // New returns a new ChachaPRNG with the provided seed and salt.
-func (*Prng) New(seed, salt []byte) (*Prng, error) {
+func (*Prng) New(seed, salt []byte) (csprng.CSPRNG, error) {
 	return NewPrng(seed, salt)
 }
 

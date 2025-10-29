@@ -56,17 +56,11 @@ func (s *Scheme[P, B, S]) Keygen(_ ...signatures.KeyGeneratorOption[*KeyGenerato
 }
 
 func (s *Scheme[P, B, S]) Signer(sk *PrivateKey[P, B, S], _ ...signatures.SignerOption[*Signer[P, B, S], []byte, *Signature[S]]) (*Signer[P, B, S], error) {
-	var sg *Signer[P, B, S]
-	var err error
-	if s.IsDeterministic() {
-		sg, err = NewDeterministicSigner(s.suite, sk)
-	} else {
-		sg, err = NewSigner(s.suite, sk, s.prng)
-	}
-	if err != nil {
-		return nil, errs.WrapFailed(err, "signer creation failed")
-	}
-	return sg, nil
+	return &Signer[P, B, S]{
+		suite: s.suite,
+		sk:    sk,
+		prng:  s.prng,
+	}, nil
 }
 
 func (s *Scheme[P, B, S]) Verifier(_ ...signatures.VerifierOption[*Verifier[P, B, S], *PublicKey[P, B, S], []byte, *Signature[S]]) (*Verifier[P, B, S], error) {

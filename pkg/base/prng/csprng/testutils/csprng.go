@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/csprng"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
@@ -52,7 +52,7 @@ func Sha256Sum(input string) []byte {
 	return res[:]
 }
 
-func PrngTester[P csprng.CSPRNG](t *testing.T, keyLength, seedLength int, prngGenerator func(seed, salt []byte) (P, error)) {
+func PrngTester(t *testing.T, keyLength, seedLength int, prngGenerator func(seed, salt []byte) (csprng.CSPRNG, error)) {
 	t.Helper()
 
 	// hardcoded random 32B keys

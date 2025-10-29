@@ -17,8 +17,8 @@ It is possible that the CSPRNG is faulty due to hardware or other reasons. To mi
 
 ### Remarks:
 - L >= n - L' for each value of tag2
-- Re tag1: Constant string bound to a specific device and protocol in use. This allows caching of Sig(sk, tag1). Device-specific information may include, for example, a Media Access Control (MAC) address. To provide security in the cases of usage of CSPRNGs in virtual environments, it is RECOMMENDED to incorporate all available information specific to the process that would ensure the uniqueness of each tag1 value among different instances of virtual machines (including ones that were cloned or recovered from snapshots). This is needed to address the problem of CSPRNG state cloning (see [RY2010])
-- Re tag2: A nonce, that is, a value that is unique for each use of the same combination of G(L), tag1, and sk values. The tag2 value can be implemented using a counter or a timer, provided that the timer is guaranteed to be different for each invocation of G'(n).
+- Re tag1: Constant string bound to a specific device and protocol in use. This allows caching of Sig(sk, tag1). Device-specific information may include, for example, a Media Access Control (MAC) address. To provide security in the cases of usage of CSPRNGs in virtual environments, it is RECOMMENDED to incorporate all available information specific to the process that would ensure the uniqueness of each tag1 value among different instances of virtual machines (including ones that were cloned or recovered from snapshots). This is needed to address the problem of CSPRNG state cloning (see [RY2010]). We relay this responsability to the user and instead require them to provide a unique "keyID".
+- Re tag2: A nonce, that is, a value that is unique for each use of the same combination of G(L), tag1, and sk values. The tag2 value can be implemented using a counter or a timer, provided that the timer is guaranteed to be different for each invocation of G'(n). We use a timer.
 
 
 ### Presets
