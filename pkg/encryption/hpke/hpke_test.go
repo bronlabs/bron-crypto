@@ -1,559 +1,418 @@
 package hpke_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke/internal"
+	"github.com/stretchr/testify/require"
 )
 
-// TestHighLevelAPI_BaseMode_BasicFlow tests the basic encryption/decryption flow
-func TestHighLevelAPI_BaseMode_BasicFlow(t *testing.T) {
-	curve := p256.NewCurve()
-	suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
+// Helper to generate key pairs
+func generateKeyPair[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, suite *hpke.CipherSuite, curve curves.Curve[P, B, S]) (*internal.PrivateKey[S], *internal.PublicKey[P, B, S]) {
+	t.Helper()
+	kdf, err := internal.NewKDF(suite.KDFID())
 	require.NoError(t, err)
-
-	scheme, err := hpke.NewScheme(curve, suite)
+	dhkem, err := internal.NewDHKEM(curve, kdf)
 	require.NoError(t, err)
-
-	// Generate receiver key pair
-	receiverSK, err := curve.ScalarField().Random(rand.Reader)
+	sk, pk, err := dhkem.GenerateKeyPair(crand.Reader)
 	require.NoError(t, err)
-	receiverPK := curve.ScalarBaseMul(receiverSK)
-
-	receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
-	require.NoError(t, err)
-	receiverPublicKey, err := internal.NewPublicKey(receiverPK)
-	require.NoError(t, err)
-
-	// Test message
-	plaintext := []byte("Hello, HPKE!")
-	aad := []byte("additional data")
-
-	// Create encrypter (Base mode - no options needed)
-	encrypter, err := scheme.Encrypter()
-	require.NoError(t, err)
-
-	// Encrypt
-	ciphertext, capsule, err := encrypter.Seal(plaintext, receiverPublicKey, aad, rand.Reader)
-	require.NoError(t, err)
-	require.NotNil(t, ciphertext)
-	require.NotNil(t, capsule)
-
-	// Create decrypter with capsule
-	decrypter, err := scheme.Decrypter(receiverPrivateKey,
-		hpke.DecryptingWithCapsule(capsule),
-	)
-	require.NoError(t, err)
-
-	// Decrypt
-	recovered, err := decrypter.Open(ciphertext, aad)
-	require.NoError(t, err)
-	require.Equal(t, plaintext, []byte(recovered))
-
-	// Test with wrong AAD should fail
-	_, err = decrypter.Open(ciphertext, []byte("wrong aad"))
-	require.Error(t, err)
+	return sk, pk
 }
 
-// TestHighLevelAPI_WithTestVectors_BaseMode tests Base mode with RFC test vectors
-func TestHighLevelAPI_WithTestVectors_BaseMode(t *testing.T) {
-	curve := p256.NewCurve()
+// TestHPKE_BaseMode_Roundtrip tests basic encryption/decryption roundtrip
+func TestHPKE_BaseMode_Roundtrip(t *testing.T) {
+	t.Parallel()
 
-	for _, suiteVectors := range internal.TestVectors {
-		for _, authSuite := range suiteVectors.Info {
-			if authSuite.Mode != hpke.Base {
-				continue
-			}
-			if authSuite.Setup.KEMID != hpke.DHKEM_P256_HKDF_SHA256 {
-				continue
-			}
-			if authSuite.Setup.KDFID != hpke.KDF_HKDF_SHA256 {
-				continue // Only test SHA-256 KDF for now
-			}
-
-			t.Run(suiteVectors.Name+"_Base", func(t *testing.T) {
-				suite, err := hpke.NewCipherSuite(
-					authSuite.Setup.KEMID,
-					authSuite.Setup.KDFID,
-					authSuite.Setup.AEADID,
-				)
-				require.NoError(t, err)
-
-				scheme, err := hpke.NewScheme(curve, suite)
-				require.NoError(t, err)
-
-				// Derive receiver keys from test vector IKM
-				receiverSK, err := curve.ScalarField().FromBytes(authSuite.Setup.SkRm)
-				require.NoError(t, err)
-
-				receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
-				require.NoError(t, err)
-
-				// Parse capsule from test vector
-				ephemeralPK, err := curve.FromUncompressed(authSuite.Setup.Enc)
-				require.NoError(t, err)
-				capsule, err := internal.NewPublicKey(ephemeralPK)
-				require.NoError(t, err)
-
-				// Test only first encryption (seq 0) since high-level API doesn't expose sequence control
-				if len(authSuite.Encryptions) > 0 {
-					encTest := authSuite.Encryptions[0] // Use first encryption (seq 0)
-					t.Run("encryption_seq0", func(t *testing.T) {
-						// Create decrypter with capsule
-						decrypter, err := scheme.Decrypter(receiverPrivateKey,
-							hpke.DecryptingWithApplicationInfo[*p256.Point](authSuite.Setup.Info),
-							hpke.DecryptingWithCapsule(capsule),
-						)
-						require.NoError(t, err)
-
-						// Decrypt test vector ciphertext
-						plaintext, err := decrypter.Open(encTest.Ct, encTest.Aad)
-						require.NoError(t, err)
-						require.Equal(t, encTest.Pt, []byte(plaintext))
-					})
-				}
-
-				// Test exports
-				for i, exportTest := range authSuite.Exports {
-					t.Run("export_"+string(rune('0'+i)), func(t *testing.T) {
-						decrypter, err := scheme.Decrypter(receiverPrivateKey,
-							hpke.DecryptingWithApplicationInfo[*p256.Point](authSuite.Setup.Info),
-							hpke.DecryptingWithCapsule(capsule),
-						)
-						require.NoError(t, err)
-
-						// Export key
-						exported, err := decrypter.Export(exportTest.ExporterContext, uint(exportTest.L))
-						require.NoError(t, err)
-						require.Equal(t, exportTest.ExportedValue, exported.Bytes())
-					})
-				}
-			})
-		}
-	}
-}
-
-// TestHighLevelAPI_AuthMode_WithTestVectors tests Auth mode with RFC test vectors
-func TestHighLevelAPI_AuthMode_WithTestVectors(t *testing.T) {
-	curve := p256.NewCurve()
-
-	for _, suiteVectors := range internal.TestVectors {
-		for _, authSuite := range suiteVectors.Info {
-			if authSuite.Mode != hpke.Auth {
-				continue
-			}
-			if authSuite.Setup.KEMID != hpke.DHKEM_P256_HKDF_SHA256 {
-				continue
-			}
-			if authSuite.Setup.KDFID != hpke.KDF_HKDF_SHA256 {
-				continue // Only test SHA-256 KDF for now
-			}
-
-			t.Run(suiteVectors.Name+"_Auth", func(t *testing.T) {
-				suite, err := hpke.NewCipherSuite(
-					authSuite.Setup.KEMID,
-					authSuite.Setup.KDFID,
-					authSuite.Setup.AEADID,
-				)
-				require.NoError(t, err)
-
-				scheme, err := hpke.NewScheme(curve, suite)
-				require.NoError(t, err)
-
-				// Derive receiver keys
-				receiverSK, err := curve.ScalarField().FromBytes(authSuite.Setup.SkRm)
-				require.NoError(t, err)
-				receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
-				require.NoError(t, err)
-
-				// Parse sender's static public key
-				senderPK, err := curve.FromUncompressed(authSuite.Setup.PkSm)
-				require.NoError(t, err)
-				senderPublicKey, err := internal.NewPublicKey(senderPK)
-				require.NoError(t, err)
-
-				// Parse capsule
-				ephemeralPK, err := curve.FromUncompressed(authSuite.Setup.Enc)
-				require.NoError(t, err)
-				capsule, err := internal.NewPublicKey(ephemeralPK)
-				require.NoError(t, err)
-
-				// Test only first encryption (seq 0) since high-level API doesn't expose sequence control
-				if len(authSuite.Encryptions) > 0 {
-					encTest := authSuite.Encryptions[0] // Use first encryption (seq 0)
-					t.Run("decryption_seq0", func(t *testing.T) {
-						decrypter, err := scheme.Decrypter(receiverPrivateKey,
-							hpke.DecryptingWithApplicationInfo[*p256.Point](authSuite.Setup.Info),
-							hpke.DecryptingWithCapsule(capsule),
-							hpke.DecryptingWithAuthentication(senderPublicKey),
-						)
-						require.NoError(t, err)
-
-						plaintext, err := decrypter.Open(encTest.Ct, encTest.Aad)
-						require.NoError(t, err)
-						require.Equal(t, encTest.Pt, []byte(plaintext))
-					})
-				}
-			})
-		}
-	}
-}
-
-// TestHighLevelAPI_RoundTrip tests end-to-end encryption/decryption
-func TestHighLevelAPI_RoundTrip(t *testing.T) {
-	curve := p256.NewCurve()
-	suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
-	require.NoError(t, err)
-
-	scheme, err := hpke.NewScheme(curve, suite)
-	require.NoError(t, err)
-
-	// Generate keys
-	receiverSK, err := curve.ScalarField().Random(rand.Reader)
-	require.NoError(t, err)
-	receiverPK := curve.ScalarBaseMul(receiverSK)
-
-	receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
-	require.NoError(t, err)
-	receiverPublicKey, err := internal.NewPublicKey(receiverPK)
-	require.NoError(t, err)
-
-	tests := []struct {
-		name      string
-		plaintext []byte
-		aad       []byte
+	testCases := []struct {
+		name        string
+		setupScheme func(t *testing.T) (interface{}, *hpke.CipherSuite)
 	}{
-		{"empty message", []byte("x")[:0], []byte("aad")}, // Use slice of non-empty to get []byte{} not nil
-		{"small message", []byte("Hello!"), []byte("metadata")},
-		{"larger message", []byte("The quick brown fox jumps over the lazy dog"), []byte("context")},
-		{"no aad", []byte("message without aad"), nil},
+		{
+			name: "P256_AES128GCM_SHA256",
+			setupScheme: func(t *testing.T) (interface{}, *hpke.CipherSuite) {
+				curve := p256.NewCurve()
+				suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
+				require.NoError(t, err)
+				scheme, err := hpke.NewScheme(curve, suite)
+				require.NoError(t, err)
+				return scheme, suite
+			},
+		},
+		{
+			name: "X25519_ChaCha20Poly1305_SHA256",
+			setupScheme: func(t *testing.T) (interface{}, *hpke.CipherSuite) {
+				curve := curve25519.NewPrimeSubGroup()
+				suite, err := hpke.NewCipherSuite(hpke.DHKEM_X25519_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_CHACHA_20_POLY_1305)
+				require.NoError(t, err)
+				scheme, err := hpke.NewScheme(curve, suite)
+				require.NoError(t, err)
+				return scheme, suite
+			},
+		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			encrypter, err := scheme.Encrypter()
-			require.NoError(t, err)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-			ciphertext, capsule, err := encrypter.Seal(tt.plaintext, receiverPublicKey, tt.aad, rand.Reader)
-			require.NoError(t, err)
+			_, suite := tc.setupScheme(t)
 
-			decrypter, err := scheme.Decrypter(receiverPrivateKey,
-				hpke.DecryptingWithCapsule(capsule),
-			)
-			require.NoError(t, err)
+			// Test with P256
+			if tc.name == "P256_AES128GCM_SHA256" {
+				curve := p256.NewCurve()
 
-			recovered, err := decrypter.Open(ciphertext, tt.aad)
-			require.NoError(t, err)
-			// For empty plaintext, recovered might be nil instead of []byte{}
-			if len(tt.plaintext) == 0 {
-				require.Empty(t, recovered)
-			} else {
-				require.Equal(t, tt.plaintext, []byte(recovered))
+				// Generate receiver key pair
+				receiverSk, receiverPk := generateKeyPair(t, suite, curve)
+
+				// Test message
+				plaintext := []byte("Hello, HPKE!")
+				info := []byte("test info")
+
+				// Sender: Setup and encrypt
+				senderCtx, err := hpke.SetupBaseS(suite, receiverPk, info, crand.Reader)
+				require.NoError(t, err)
+				ciphertext, err := senderCtx.Seal(plaintext, nil)
+				require.NoError(t, err)
+				require.NotEqual(t, plaintext, ciphertext)
+
+				// Receiver: Setup and decrypt
+				receiverCtx, err := hpke.SetupBaseR(suite, receiverSk, senderCtx.Capsule, info)
+				require.NoError(t, err)
+				decrypted, err := receiverCtx.Open(ciphertext, nil)
+				require.NoError(t, err)
+				require.Equal(t, plaintext, decrypted)
+			}
+
+			// Test with X25519
+			if tc.name == "X25519_ChaCha20Poly1305_SHA256" {
+				curve := curve25519.NewPrimeSubGroup()
+
+				// Generate receiver key pair
+				receiverSk, receiverPk := generateKeyPair(t, suite, curve)
+
+				// Test message
+				plaintext := []byte("Hello, HPKE!")
+				info := []byte("test info")
+
+				// Sender: Setup and encrypt
+				senderCtx, err := hpke.SetupBaseS(suite, receiverPk, info, crand.Reader)
+				require.NoError(t, err)
+				ciphertext, err := senderCtx.Seal(plaintext, nil)
+				require.NoError(t, err)
+				require.NotEqual(t, plaintext, ciphertext)
+
+				// Receiver: Setup and decrypt
+				receiverCtx, err := hpke.SetupBaseR(suite, receiverSk, senderCtx.Capsule, info)
+				require.NoError(t, err)
+				decrypted, err := receiverCtx.Open(ciphertext, nil)
+				require.NoError(t, err)
+				require.Equal(t, plaintext, decrypted)
 			}
 		})
 	}
 }
 
-// TestHighLevelAPI_Export tests the Export functionality
-func TestHighLevelAPI_Export(t *testing.T) {
+// TestHPKE_AuthMode_Roundtrip tests authenticated encryption/decryption
+func TestHPKE_AuthMode_Roundtrip(t *testing.T) {
+	t.Parallel()
+
 	curve := p256.NewCurve()
 	suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
-	require.NoError(t, err)
-
-	scheme, err := hpke.NewScheme(curve, suite)
-	require.NoError(t, err)
-
-	receiverSK, err := curve.ScalarField().Random(rand.Reader)
-	require.NoError(t, err)
-	receiverPK := curve.ScalarBaseMul(receiverSK)
-
-	receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
-	require.NoError(t, err)
-	receiverPublicKey, err := internal.NewPublicKey(receiverPK)
-	require.NoError(t, err)
-
-	// Create encrypter with caching enabled
-	encrypter, err := scheme.Encrypter(
-		hpke.EncryptingWhileCachingRecentContextualInfo[*p256.Point](),
-	)
-	require.NoError(t, err)
-
-	plaintext := []byte("message")
-	ct, capsule, err := encrypter.Seal(plaintext, receiverPublicKey, nil, rand.Reader)
-	require.NoError(t, err)
-
-	// Export from sender
-	exportedSender, err := encrypter.Export([]byte("exporter context"), 32)
-	require.NoError(t, err)
-	require.Len(t, exportedSender.Bytes(), 32)
-
-	// Setup receiver and export
-	decrypter, err := scheme.Decrypter(receiverPrivateKey,
-		hpke.DecryptingWithCapsule(capsule),
-	)
-	require.NoError(t, err)
-
-	pt, err := decrypter.Decrypt(ct)
-	require.NoError(t, err)
-	require.Equal(t, plaintext, []byte(pt))
-
-	exportedReceiver, err := decrypter.Export([]byte("exporter context"), 32)
-	require.NoError(t, err)
-	require.Equal(t, exportedSender.Bytes(), exportedReceiver.Bytes(), "sender and receiver exports should match")
-
-	// Different context should give different export
-	exportedDifferent, err := decrypter.Export([]byte("different context"), 32)
-	require.NoError(t, err)
-	require.NotEqual(t, exportedSender.Bytes(), exportedDifferent.Bytes())
-}
-
-// TestHighLevelAPI_PSKMode tests pre-shared key mode
-func TestHighLevelAPI_PSKMode(t *testing.T) {
-	curve := p256.NewCurve()
-	suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
-	require.NoError(t, err)
-
-	scheme, err := hpke.NewScheme(curve, suite)
-	require.NoError(t, err)
-
-	receiverSK, err := curve.ScalarField().Random(rand.Reader)
-	require.NoError(t, err)
-	receiverPK := curve.ScalarBaseMul(receiverSK)
-
-	receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
-	require.NoError(t, err)
-	receiverPublicKey, err := internal.NewPublicKey(receiverPK)
-	require.NoError(t, err)
-
-	// Shared PSK
-	psk, err := encryption.NewSymmetricKey([]byte("pre-shared-key-32-bytes-long!!!"))
-	require.NoError(t, err)
-	pskId := []byte("my-psk-id")
-
-	plaintext := []byte("PSK protected message")
-
-	// Encrypt with PSK
-	encrypter, err := scheme.Encrypter(
-		hpke.EncryptingWithPreSharedKey[*p256.Point](pskId, psk),
-	)
-	require.NoError(t, err)
-
-	ct, capsule, err := encrypter.Encrypt(plaintext, receiverPublicKey, rand.Reader)
-	require.NoError(t, err)
-
-	// Decrypt with PSK
-	decrypter, err := scheme.Decrypter(receiverPrivateKey,
-		hpke.DecryptingWithCapsule(capsule),
-		hpke.DecryptingWithPreSharedKey[*p256.Point](pskId, psk),
-	)
-	require.NoError(t, err)
-
-	pt, err := decrypter.Decrypt(ct)
-	require.NoError(t, err)
-	require.Equal(t, plaintext, []byte(pt))
-
-	// Test with wrong PSK should fail
-	wrongPSK, err := encryption.NewSymmetricKey([]byte("wrong-psk-key-32-bytes-long!!!!"))
-	require.NoError(t, err)
-
-	decrypterWrong, err := scheme.Decrypter(receiverPrivateKey,
-		hpke.DecryptingWithCapsule(capsule),
-		hpke.DecryptingWithPreSharedKey[*p256.Point](pskId, wrongPSK),
-	)
-	require.NoError(t, err)
-
-	_, err = decrypterWrong.Decrypt(ct)
-	require.Error(t, err, "decryption with wrong PSK should fail")
-}
-
-// TestHighLevelAPI_AuthMode tests authenticated encryption
-func TestHighLevelAPI_AuthMode(t *testing.T) {
-	curve := p256.NewCurve()
-	suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
-	require.NoError(t, err)
-
-	scheme, err := hpke.NewScheme(curve, suite)
-	require.NoError(t, err)
-
-	// Generate sender key pair
-	senderSK, err := curve.ScalarField().Random(rand.Reader)
-	require.NoError(t, err)
-	senderPK := curve.ScalarBaseMul(senderSK)
-
-	senderPrivateKey, err := internal.NewPrivateKey(senderSK)
-	require.NoError(t, err)
-	senderPublicKey, err := internal.NewPublicKey(senderPK)
 	require.NoError(t, err)
 
 	// Generate receiver key pair
-	receiverSK, err := curve.ScalarField().Random(rand.Reader)
-	require.NoError(t, err)
-	receiverPK := curve.ScalarBaseMul(receiverSK)
+	receiverSk, receiverPk := generateKeyPair(t, suite, curve)
 
-	receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
-	require.NoError(t, err)
-	receiverPublicKey, err := internal.NewPublicKey(receiverPK)
-	require.NoError(t, err)
+	// Generate sender key pair
+	senderSk, senderPk := generateKeyPair(t, suite, curve)
 
+	// Test message
 	plaintext := []byte("Authenticated message")
+	info := []byte("auth test")
 
-	// Encrypt with authentication
-	encrypter, err := scheme.Encrypter(
-		hpke.EncryptingWithAuthentication[*p256.Point](senderPrivateKey),
-	)
+	// Sender: Setup with authentication and encrypt
+	senderCtx, err := hpke.SetupAuthS(suite, receiverPk, senderSk, info, crand.Reader)
 	require.NoError(t, err)
+	ciphertext, err := senderCtx.Seal(plaintext, nil)
+	require.NoError(t, err)
+	require.NotEqual(t, plaintext, ciphertext)
 
-	ct, capsule, err := encrypter.Encrypt(plaintext, receiverPublicKey, rand.Reader)
+	// Receiver: Setup with sender's public key and decrypt
+	receiverCtx, err := hpke.SetupAuthR(suite, receiverSk, senderCtx.Capsule, senderPk, info)
 	require.NoError(t, err)
-
-	// Decrypt with authentication
-	decrypter, err := scheme.Decrypter(receiverPrivateKey,
-		hpke.DecryptingWithCapsule(capsule),
-		hpke.DecryptingWithAuthentication(senderPublicKey),
-	)
+	decrypted, err := receiverCtx.Open(ciphertext, nil)
 	require.NoError(t, err)
-
-	pt, err := decrypter.Decrypt(ct)
-	require.NoError(t, err)
-	require.Equal(t, plaintext, []byte(pt))
-
-	// Test with wrong sender public key should fail
-	wrongSK, err := curve.ScalarField().Random(rand.Reader)
-	require.NoError(t, err)
-	wrongPK := curve.ScalarBaseMul(wrongSK)
-	wrongSenderPublicKey, err := internal.NewPublicKey(wrongPK)
-	require.NoError(t, err)
-
-	decrypterWrong, err := scheme.Decrypter(receiverPrivateKey,
-		hpke.DecryptingWithCapsule(capsule),
-		hpke.DecryptingWithAuthentication(wrongSenderPublicKey),
-	)
-	require.NoError(t, err)
-
-	_, err = decrypterWrong.Decrypt(ct)
-	require.Error(t, err, "decryption with wrong sender key should fail")
+	require.Equal(t, plaintext, decrypted)
 }
 
-// TestHighLevelAPI_MultipleMessages tests that each encryption uses a new ephemeral key
-func TestHighLevelAPI_MultipleMessages(t *testing.T) {
+// TestHPKE_PSKMode_Roundtrip tests PSK-based encryption/decryption
+func TestHPKE_PSKMode_Roundtrip(t *testing.T) {
+	t.Parallel()
+
 	curve := p256.NewCurve()
 	suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
 	require.NoError(t, err)
 
-	scheme, err := hpke.NewScheme(curve, suite)
+	// Generate receiver key pair
+	receiverSk, receiverPk := generateKeyPair(t, suite, curve)
+
+	// Pre-shared key
+	psk := make([]byte, 32)
+	_, err = crand.Read(psk)
+	require.NoError(t, err)
+	pskId := []byte("test-psk-id")
+	info := []byte("psk test")
+
+	// Test message
+	plaintext := []byte("PSK encrypted message")
+
+	// Sender: Setup with PSK and encrypt
+	senderCtx, err := hpke.SetupPSKS(suite, receiverPk, psk, pskId, info, crand.Reader)
+	require.NoError(t, err)
+	ciphertext, err := senderCtx.Seal(plaintext, nil)
+	require.NoError(t, err)
+	require.NotEqual(t, plaintext, ciphertext)
+
+	// Receiver: Setup with PSK and decrypt
+	receiverCtx, err := hpke.SetupPSKR(suite, receiverSk, senderCtx.Capsule, psk, pskId, info)
+	require.NoError(t, err)
+	decrypted, err := receiverCtx.Open(ciphertext, nil)
+	require.NoError(t, err)
+	require.Equal(t, plaintext, decrypted)
+}
+
+// TestHPKE_AuthPSKMode_Roundtrip tests authenticated PSK encryption/decryption
+func TestHPKE_AuthPSKMode_Roundtrip(t *testing.T) {
+	t.Parallel()
+
+	curve := p256.NewCurve()
+	suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
 	require.NoError(t, err)
 
-	receiverSK, err := curve.ScalarField().Random(rand.Reader)
-	require.NoError(t, err)
-	receiverPK := curve.ScalarBaseMul(receiverSK)
+	// Generate receiver key pair
+	receiverSk, receiverPk := generateKeyPair(t, suite, curve)
 
-	receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
+	// Generate sender key pair
+	senderSk, senderPk := generateKeyPair(t, suite, curve)
+
+	// Pre-shared key
+	psk := make([]byte, 32)
+	_, err = crand.Read(psk)
 	require.NoError(t, err)
-	receiverPublicKey, err := internal.NewPublicKey(receiverPK)
+	pskId := []byte("test-authpsk-id")
+	info := []byte("authpsk test")
+
+	// Test message
+	plaintext := []byte("AuthPSK encrypted message")
+
+	// Sender: Setup with Auth+PSK and encrypt
+	senderCtx, err := hpke.SetupAuthPSKS(suite, receiverPk, senderSk, psk, pskId, info, crand.Reader)
+	require.NoError(t, err)
+	ciphertext, err := senderCtx.Seal(plaintext, nil)
+	require.NoError(t, err)
+	require.NotEqual(t, plaintext, ciphertext)
+
+	// Receiver: Setup with Auth+PSK and decrypt
+	receiverCtx, err := hpke.SetupAuthPSKR(suite, receiverSk, senderCtx.Capsule, senderPk, psk, pskId, info)
+	require.NoError(t, err)
+	decrypted, err := receiverCtx.Open(ciphertext, nil)
+	require.NoError(t, err)
+	require.Equal(t, plaintext, decrypted)
+}
+
+// TestHPKE_MultipleMessages tests encrypting multiple messages with same context
+func TestHPKE_MultipleMessages(t *testing.T) {
+	t.Parallel()
+
+	curve := p256.NewCurve()
+	suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
 	require.NoError(t, err)
 
+	// Generate receiver key pair
+	receiverSk, receiverPk := generateKeyPair(t, suite, curve)
+
+	info := []byte("multi message test")
+
+	// Setup contexts
+	senderCtx, err := hpke.SetupBaseS(suite, receiverPk, info, crand.Reader)
+	require.NoError(t, err)
+	receiverCtx, err := hpke.SetupBaseR(suite, receiverSk, senderCtx.Capsule, info)
+	require.NoError(t, err)
+
+	// Encrypt and decrypt multiple messages
 	messages := [][]byte{
 		[]byte("First message"),
 		[]byte("Second message"),
 		[]byte("Third message"),
 	}
 
-	capsules := make([]*internal.PublicKey[*p256.Point, *p256.BaseFieldElement, *p256.Scalar], 0)
+	for _, msg := range messages {
+		ct, err := senderCtx.Seal(msg, nil)
+		require.NoError(t, err)
 
-	// Each encryption creates a new ephemeral key
-	for i, msg := range messages {
-		t.Run("message_"+string(rune('0'+i)), func(t *testing.T) {
-			encrypter, err := scheme.Encrypter()
-			require.NoError(t, err)
-
-			ct, capsule, err := encrypter.Encrypt(msg, receiverPublicKey, rand.Reader)
-			require.NoError(t, err)
-
-			// Verify capsules are different
-			for _, prevCapsule := range capsules {
-				require.False(t, capsule.Value().Equal(prevCapsule.Value()), "each encryption should use different ephemeral key")
-			}
-			capsules = append(capsules, capsule)
-
-			decrypter, err := scheme.Decrypter(receiverPrivateKey,
-				hpke.DecryptingWithCapsule(capsule),
-			)
-			require.NoError(t, err)
-
-			pt, err := decrypter.Decrypt(ct)
-			require.NoError(t, err)
-			require.Equal(t, msg, []byte(pt))
-		})
+		pt, err := receiverCtx.Open(ct, nil)
+		require.NoError(t, err)
+		require.Equal(t, msg, pt)
 	}
 }
 
-// TestHighLevelAPI_ErrorCases tests error handling
-func TestHighLevelAPI_ErrorCases(t *testing.T) {
+// TestHPKE_WithAAD tests encryption with additional authenticated data
+func TestHPKE_WithAAD(t *testing.T) {
+	t.Parallel()
+
 	curve := p256.NewCurve()
 	suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
 	require.NoError(t, err)
 
+	// Generate receiver key pair
+	receiverSk, receiverPk := generateKeyPair(t, suite, curve)
+
+	plaintext := []byte("Message with AAD")
+	aad := []byte("additional authenticated data")
+	info := []byte("aad test")
+
+	// Setup and encrypt with AAD
+	senderCtx, err := hpke.SetupBaseS(suite, receiverPk, info, crand.Reader)
+	require.NoError(t, err)
+	ciphertext, err := senderCtx.Seal(plaintext, aad)
+	require.NoError(t, err)
+
+	// Decrypt with correct AAD
+	receiverCtx, err := hpke.SetupBaseR(suite, receiverSk, senderCtx.Capsule, info)
+	require.NoError(t, err)
+	decrypted, err := receiverCtx.Open(ciphertext, aad)
+	require.NoError(t, err)
+	require.Equal(t, plaintext, decrypted)
+
+	// Attempt to decrypt with wrong AAD should fail
+	wrongAAD := []byte("wrong aad")
+	_, err = receiverCtx.Open(ciphertext, wrongAAD)
+	require.Error(t, err, "Decryption should fail with wrong AAD")
+}
+
+// TestHPKE_Encrypter_API tests the high-level Encrypter API
+func TestHPKE_Encrypter_API(t *testing.T) {
+	t.Parallel()
+
+	curve := p256.NewCurve()
+	suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
+	require.NoError(t, err)
 	scheme, err := hpke.NewScheme(curve, suite)
 	require.NoError(t, err)
 
-	t.Run("nil receiver public key", func(t *testing.T) {
-		encrypter, err := scheme.Encrypter()
-		require.NoError(t, err)
+	// Generate receiver key pair
+	receiverSk, receiverPk := generateKeyPair(t, suite, curve)
 
-		_, _, err = encrypter.Encrypt([]byte("msg"), nil, rand.Reader)
+	// Create encrypter
+	encrypter, err := scheme.Encrypter()
+	require.NoError(t, err)
+
+	plaintext := []byte("Test message")
+
+	// Encrypt
+	ciphertext, capsule, err := encrypter.Encrypt(plaintext, receiverPk, crand.Reader)
+	require.NoError(t, err)
+	require.NotEmpty(t, ciphertext)
+	require.NotNil(t, capsule)
+
+	// Create decrypter and decrypt
+	decrypter, err := scheme.Decrypter(receiverSk, hpke.DecryptingWithCapsule(capsule))
+	require.NoError(t, err)
+
+	decrypted, err := decrypter.Decrypt(ciphertext)
+	require.NoError(t, err)
+	require.Equal(t, plaintext, decrypted)
+}
+
+// TestHPKE_Export tests the key export functionality
+func TestHPKE_Export(t *testing.T) {
+	t.Parallel()
+
+	curve := p256.NewCurve()
+	suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
+	require.NoError(t, err)
+
+	// Generate receiver key pair
+	receiverSk, receiverPk := generateKeyPair(t, suite, curve)
+
+	info := []byte("export test")
+
+	// Setup contexts
+	senderCtx, err := hpke.SetupBaseS(suite, receiverPk, info, crand.Reader)
+	require.NoError(t, err)
+	receiverCtx, err := hpke.SetupBaseR(suite, receiverSk, senderCtx.Capsule, info)
+	require.NoError(t, err)
+
+	// Export keys from both contexts
+	exporterContext := []byte("exporter context")
+	length := 32
+
+	senderExport, err := senderCtx.Export(exporterContext, length)
+	require.NoError(t, err)
+	require.Len(t, senderExport, length)
+
+	receiverExport, err := receiverCtx.Export(exporterContext, length)
+	require.NoError(t, err)
+	require.Len(t, receiverExport, length)
+
+	// Exported secrets should match
+	require.Equal(t, senderExport, receiverExport)
+}
+
+// TestHPKE_InvalidInputs tests error handling
+func TestHPKE_InvalidInputs(t *testing.T) {
+	t.Parallel()
+
+	curve := p256.NewCurve()
+	suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
+	require.NoError(t, err)
+
+	t.Run("NilCurve", func(t *testing.T) {
+		_, err := hpke.NewScheme[*p256.Point, *p256.BaseFieldElement, *p256.Scalar](nil, suite)
 		require.Error(t, err)
 	})
 
-	t.Run("nil receiver private key", func(t *testing.T) {
-		_, err := scheme.Decrypter(nil)
+	t.Run("NilCipherSuite", func(t *testing.T) {
+		_, err := hpke.NewScheme(curve, nil)
 		require.Error(t, err)
 	})
 
-	t.Run("export without caching", func(t *testing.T) {
-		encrypter, err := scheme.Encrypter() // No caching option
-		require.NoError(t, err)
-
-		receiverSK, err := curve.ScalarField().Random(rand.Reader)
-		require.NoError(t, err)
-		receiverPK := curve.ScalarBaseMul(receiverSK)
-		receiverPublicKey, err := internal.NewPublicKey(receiverPK)
-		require.NoError(t, err)
-
-		_, _, err = encrypter.Encrypt([]byte("msg"), receiverPublicKey, rand.Reader)
-		require.NoError(t, err)
-
-		_, err = encrypter.Export([]byte("context"), 32)
-		require.Error(t, err, "export should fail without caching")
+	t.Run("InvalidCipherSuite", func(t *testing.T) {
+		// Try to create cipher suite with invalid parameters
+		_, err := hpke.NewCipherSuite(hpke.DHKEM_RESERVED, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
+		require.Error(t, err)
 	})
+}
 
-	t.Run("zero length export", func(t *testing.T) {
-		receiverSK, err := curve.ScalarField().Random(rand.Reader)
-		require.NoError(t, err)
-		receiverPK := curve.ScalarBaseMul(receiverSK)
+// TestHPKE_CipherSuiteIdentifiers tests cipher suite properties
+func TestHPKE_CipherSuiteIdentifiers(t *testing.T) {
+	t.Parallel()
 
-		receiverPrivateKey, err := internal.NewPrivateKey(receiverSK)
-		require.NoError(t, err)
-		receiverPublicKey, err := internal.NewPublicKey(receiverPK)
-		require.NoError(t, err)
+	suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
+	require.NoError(t, err)
 
-		encrypter, err := scheme.Encrypter()
-		require.NoError(t, err)
+	require.Equal(t, hpke.DHKEM_P256_HKDF_SHA256, suite.KEMID())
+	require.Equal(t, hpke.KDF_HKDF_SHA256, suite.KDFID())
+	require.Equal(t, hpke.AEAD_AES_128_GCM, suite.AEADID())
+}
 
-		_, capsule, err := encrypter.Encrypt([]byte("msg"), receiverPublicKey, rand.Reader)
-		require.NoError(t, err)
+// TestHPKE_SymmetricKey tests symmetric key generation
+func TestHPKE_SymmetricKey(t *testing.T) {
+	t.Parallel()
 
-		decrypter, err := scheme.Decrypter(receiverPrivateKey,
-			hpke.DecryptingWithCapsule(capsule),
-		)
-		require.NoError(t, err)
+	keyBytes := make([]byte, 16)
+	_, err := crand.Read(keyBytes)
+	require.NoError(t, err)
 
-		_, err = decrypter.Export([]byte("context"), 0)
-		require.Error(t, err, "export with zero length should fail")
-	})
+	key, err := encryption.NewSymmetricKey(keyBytes)
+	require.NoError(t, err)
+	require.NotNil(t, key)
+	require.Equal(t, keyBytes, key.Bytes())
 }

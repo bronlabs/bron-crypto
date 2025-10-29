@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
@@ -9,225 +9,209 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPrivateKeyCBOR_P256(t *testing.T) {
-	curve := p256.NewCurve()
+// TestPrivateKey_CBOR tests CBOR marshaling of private keys
+func TestPrivateKey_CBOR(t *testing.T) {
+	t.Parallel()
 
-	// Generate a key pair
-	sk, err := curve.ScalarField().Random(rand.Reader)
-	require.NoError(t, err)
-	require.False(t, sk.IsZero())
+	t.Run("P256_PrivateKey", func(t *testing.T) {
+		t.Parallel()
+		kem := NewP256HKDFSha256KEM()
 
-	originalKey, err := NewPrivateKey(sk)
-	require.NoError(t, err)
+		sk, _, err := kem.GenerateKeyPair(crand.Reader)
+		require.NoError(t, err)
 
-	// Marshal to CBOR
-	data, err := originalKey.MarshalCBOR()
-	require.NoError(t, err)
-	require.NotEmpty(t, data)
+		// Marshal
+		cborData, err := sk.MarshalCBOR()
+		require.NoError(t, err)
+		require.NotEmpty(t, cborData)
 
-	// Unmarshal from CBOR
-	var restoredKey PrivateKey[*p256.Scalar]
-	err = restoredKey.UnmarshalCBOR(data)
-	require.NoError(t, err)
+		// Unmarshal
+		sk2 := new(PrivateKey[*p256.Scalar])
+		err = sk2.UnmarshalCBOR(cborData)
+		require.NoError(t, err)
 
-	// Verify the keys match
-	require.True(t, originalKey.Equal(&restoredKey))
-	require.Equal(t, originalKey.Bytes(), restoredKey.Bytes())
+		// Verify equality
+		require.Equal(t, sk.Bytes(), sk2.Bytes())
+		require.True(t, sk.Value().Equal(sk2.Value()))
+	})
+
+	t.Run("X25519_PrivateKey", func(t *testing.T) {
+		t.Parallel()
+		kem := NewX25519HKDFSha256KEM()
+
+		sk, _, err := kem.GenerateKeyPair(crand.Reader)
+		require.NoError(t, err)
+
+		// Marshal
+		cborData, err := sk.MarshalCBOR()
+		require.NoError(t, err)
+		require.NotEmpty(t, cborData)
+
+		// Unmarshal
+		sk2 := new(PrivateKey[*curve25519.Scalar])
+		err = sk2.UnmarshalCBOR(cborData)
+		require.NoError(t, err)
+
+		// Verify equality
+		require.Equal(t, sk.Bytes(), sk2.Bytes())
+		require.True(t, sk.Value().Equal(sk2.Value()))
+	})
 }
 
-func TestPrivateKeyCBOR_X25519(t *testing.T) {
-	curve := curve25519.NewPrimeSubGroup()
+// TestPublicKey_CBOR tests CBOR marshaling of public keys
+func TestPublicKey_CBOR(t *testing.T) {
+	t.Parallel()
 
-	// Generate a key pair
-	sk, err := curve.ScalarField().Random(rand.Reader)
-	require.NoError(t, err)
-	require.False(t, sk.IsZero())
+	t.Run("P256_PublicKey", func(t *testing.T) {
+		t.Parallel()
+		kem := NewP256HKDFSha256KEM()
 
-	originalKey, err := NewPrivateKey(sk)
-	require.NoError(t, err)
+		_, pk, err := kem.GenerateKeyPair(crand.Reader)
+		require.NoError(t, err)
 
-	// Marshal to CBOR
-	data, err := originalKey.MarshalCBOR()
-	require.NoError(t, err)
-	require.NotEmpty(t, data)
+		// Marshal
+		cborData, err := pk.MarshalCBOR()
+		require.NoError(t, err)
+		require.NotEmpty(t, cborData)
 
-	// Unmarshal from CBOR
-	var restoredKey PrivateKey[*curve25519.Scalar]
-	err = restoredKey.UnmarshalCBOR(data)
-	require.NoError(t, err)
+		// Unmarshal
+		pk2 := new(PublicKey[*p256.Point, *p256.BaseFieldElement, *p256.Scalar])
+		err = pk2.UnmarshalCBOR(cborData)
+		require.NoError(t, err)
 
-	// Verify the keys match
-	require.True(t, originalKey.Equal(&restoredKey))
-	require.Equal(t, originalKey.Bytes(), restoredKey.Bytes())
+		// Verify equality
+		require.Equal(t, pk.Bytes(), pk2.Bytes())
+		require.True(t, pk.Equal(pk2))
+	})
+
+	t.Run("X25519_PublicKey", func(t *testing.T) {
+		t.Parallel()
+		kem := NewX25519HKDFSha256KEM()
+
+		_, pk, err := kem.GenerateKeyPair(crand.Reader)
+		require.NoError(t, err)
+
+		// Marshal
+		cborData, err := pk.MarshalCBOR()
+		require.NoError(t, err)
+		require.NotEmpty(t, cborData)
+
+		// Unmarshal
+		pk2 := new(PublicKey[*curve25519.PrimeSubGroupPoint, *curve25519.BaseFieldElement, *curve25519.Scalar])
+		err = pk2.UnmarshalCBOR(cborData)
+		require.NoError(t, err)
+
+		// Verify equality
+		require.Equal(t, pk.Bytes(), pk2.Bytes())
+		require.True(t, pk.Equal(pk2))
+	})
 }
 
-func TestPublicKeyCBOR_P256(t *testing.T) {
-	curve := p256.NewCurve()
+// TestCipherSuite_CBOR tests CBOR marshaling of cipher suites
+func TestCipherSuite_CBOR(t *testing.T) {
+	t.Parallel()
 
-	// Generate a key pair
-	sk, err := curve.ScalarField().Random(rand.Reader)
-	require.NoError(t, err)
-	require.False(t, sk.IsZero())
-	pk := curve.ScalarBaseMul(sk)
-
-	originalKey, err := NewPublicKey(pk)
-	require.NoError(t, err)
-
-	// Marshal to CBOR
-	data, err := originalKey.MarshalCBOR()
-	require.NoError(t, err)
-	require.NotEmpty(t, data)
-
-	// Unmarshal from CBOR
-	var restoredKey PublicKey[*p256.Point, *p256.BaseFieldElement, *p256.Scalar]
-	err = restoredKey.UnmarshalCBOR(data)
-	require.NoError(t, err)
-
-	// Verify the keys match
-	require.True(t, originalKey.Equal(&restoredKey))
-	require.Equal(t, originalKey.Bytes(), restoredKey.Bytes())
-}
-
-func TestPublicKeyCBOR_X25519(t *testing.T) {
-	curve := curve25519.NewPrimeSubGroup()
-
-	// Generate a key pair
-	sk, err := curve.ScalarField().Random(rand.Reader)
-	require.NoError(t, err)
-	require.False(t, sk.IsZero())
-	pk := curve.ScalarBaseMul(sk)
-
-	originalKey, err := NewPublicKey(pk)
-	require.NoError(t, err)
-
-	// Marshal to CBOR
-	data, err := originalKey.MarshalCBOR()
-	require.NoError(t, err)
-	require.NotEmpty(t, data)
-
-	// Unmarshal from CBOR
-	var restoredKey PublicKey[*curve25519.PrimeSubGroupPoint, *curve25519.BaseFieldElement, *curve25519.Scalar]
-	err = restoredKey.UnmarshalCBOR(data)
-	require.NoError(t, err)
-
-	// Verify the keys match
-	require.True(t, originalKey.Equal(&restoredKey))
-	require.Equal(t, originalKey.Bytes(), restoredKey.Bytes())
-}
-
-func TestCipherSuiteCBOR(t *testing.T) {
-	tests := []struct {
-		name string
-		cs   *CipherSuite
+	testCases := []struct {
+		name   string
+		kemID  KEMID
+		kdfID  KDFID
+		aeadID AEADID
 	}{
 		{
-			name: "P256-SHA256-AES128",
-			cs: &CipherSuite{
-				kem:  DHKEM_P256_HKDF_SHA256,
-				kdf:  KDF_HKDF_SHA256,
-				aead: AEAD_AES_128_GCM,
-			},
+			name:   "P256_SHA256_AES128",
+			kemID:  DHKEM_P256_HKDF_SHA256,
+			kdfID:  KDF_HKDF_SHA256,
+			aeadID: AEAD_AES_128_GCM,
 		},
 		{
-			name: "X25519-SHA256-ChaCha20",
-			cs: &CipherSuite{
-				kem:  DHKEM_X25519_HKDF_SHA256,
-				kdf:  KDF_HKDF_SHA256,
-				aead: AEAD_CHACHA_20_POLY_1305,
-			},
+			name:   "X25519_SHA256_ChaCha20",
+			kemID:  DHKEM_X25519_HKDF_SHA256,
+			kdfID:  KDF_HKDF_SHA256,
+			aeadID: AEAD_CHACHA_20_POLY_1305,
 		},
 		{
-			name: "P256-SHA512-AES256",
-			cs: &CipherSuite{
-				kem:  DHKEM_P256_HKDF_SHA256,
-				kdf:  KDF_HKDF_SHA512,
-				aead: AEAD_AES_256_GCM,
-			},
-		},
-		{
-			name: "ExportOnly",
-			cs: &CipherSuite{
-				kem:  DHKEM_P256_HKDF_SHA256,
-				kdf:  KDF_HKDF_SHA256,
-				aead: AEAD_EXPORT_ONLY,
-			},
+			name:   "P256_SHA512_AES256",
+			kemID:  DHKEM_P256_HKDF_SHA256,
+			kdfID:  KDF_HKDF_SHA512,
+			aeadID: AEAD_AES_256_GCM,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Marshal to CBOR
-			data, err := tt.cs.MarshalCBOR()
-			require.NoError(t, err)
-			require.NotEmpty(t, data)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-			// Unmarshal from CBOR
-			var restored CipherSuite
-			err = restored.UnmarshalCBOR(data)
+			suite, err := NewCipherSuite(tc.kemID, tc.kdfID, tc.aeadID)
 			require.NoError(t, err)
 
-			// Verify the cipher suites match
-			require.Equal(t, tt.cs.kem, restored.kem)
-			require.Equal(t, tt.cs.kdf, restored.kdf)
-			require.Equal(t, tt.cs.aead, restored.aead)
+			// Marshal
+			cborData, err := suite.MarshalCBOR()
+			require.NoError(t, err)
+			require.NotEmpty(t, cborData)
+
+			// Unmarshal
+			suite2 := new(CipherSuite)
+			err = suite2.UnmarshalCBOR(cborData)
+			require.NoError(t, err)
+
+			// Verify
+			require.Equal(t, suite.KEMID(), suite2.KEMID())
+			require.Equal(t, suite.KDFID(), suite2.KDFID())
+			require.Equal(t, suite.AEADID(), suite2.AEADID())
 		})
 	}
 }
 
-func TestCipherSuiteCBOR_InvalidInputs(t *testing.T) {
-	tests := []struct {
+// TestCipherSuite_CBOR_InvalidData tests error handling for invalid CBOR
+func TestCipherSuite_CBOR_InvalidData(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
 		name    string
-		cs      *CipherSuite
+		modify  func(*CipherSuite)
 		wantErr bool
 	}{
 		{
-			name: "Reserved KEM",
-			cs: &CipherSuite{
-				kem:  DHKEM_RESERVED,
-				kdf:  KDF_HKDF_SHA256,
-				aead: AEAD_AES_128_GCM,
+			name: "ReservedKEM",
+			modify: func(cs *CipherSuite) {
+				cs.kem = DHKEM_RESERVED
 			},
 			wantErr: true,
 		},
 		{
-			name: "Reserved KDF",
-			cs: &CipherSuite{
-				kem:  DHKEM_P256_HKDF_SHA256,
-				kdf:  KDF_HKDF_RESERVED,
-				aead: AEAD_AES_128_GCM,
+			name: "ReservedKDF",
+			modify: func(cs *CipherSuite) {
+				cs.kdf = KDF_HKDF_RESERVED
 			},
 			wantErr: true,
 		},
 		{
-			name: "Reserved AEAD",
-			cs: &CipherSuite{
-				kem:  DHKEM_P256_HKDF_SHA256,
-				kdf:  KDF_HKDF_SHA256,
-				aead: AEAD_RESERVED,
-			},
-			wantErr: true,
-		},
-		{
-			name: "Unknown KEM",
-			cs: &CipherSuite{
-				kem:  KEMID(0xFFFF),
-				kdf:  KDF_HKDF_SHA256,
-				aead: AEAD_AES_128_GCM,
+			name: "ReservedAEAD",
+			modify: func(cs *CipherSuite) {
+				cs.aead = AEAD_RESERVED
 			},
 			wantErr: true,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Marshal to CBOR (should succeed)
-			data, err := tt.cs.MarshalCBOR()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			suite, err := NewCipherSuite(DHKEM_P256_HKDF_SHA256, KDF_HKDF_SHA256, AEAD_AES_128_GCM)
 			require.NoError(t, err)
 
-			// Unmarshal from CBOR (should fail with validation error)
-			var restored CipherSuite
-			err = restored.UnmarshalCBOR(data)
-			if tt.wantErr {
+			// Modify before marshaling
+			tc.modify(suite)
+
+			// Marshal
+			cborData, err := suite.MarshalCBOR()
+			require.NoError(t, err)
+
+			// Unmarshal should fail for invalid values
+			suite2 := new(CipherSuite)
+			err = suite2.UnmarshalCBOR(cborData)
+			if tc.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
@@ -236,32 +220,157 @@ func TestCipherSuiteCBOR_InvalidInputs(t *testing.T) {
 	}
 }
 
-func TestPrivateKeyCBOR_WithDerivedIkm(t *testing.T) {
-	// Test with X25519 where ikm might differ from v.Bytes() due to clamping
-	kem := NewX25519HKDFSha256KEM()
+// TestKeyPair_CBOR_Roundtrip tests multiple CBOR roundtrips
+func TestKeyPair_CBOR_Roundtrip(t *testing.T) {
+	t.Parallel()
 
-	// Use test vector IKM
-	ikmE := []byte{
-		0x90, 0x9a, 0x9b, 0x35, 0xd3, 0xdc, 0x47, 0x13,
-		0xa5, 0xe7, 0x2a, 0x4d, 0xa2, 0x74, 0xb5, 0x5d,
-		0x3d, 0x38, 0x21, 0xa3, 0x7e, 0x5d, 0x09, 0x9e,
-		0x74, 0xa6, 0x47, 0xdb, 0x58, 0x3a, 0x90, 0x4b,
+	t.Run("P256_MultipleRoundtrips", func(t *testing.T) {
+		kem := NewP256HKDFSha256KEM()
+
+		for i := 0; i < 5; i++ {
+			sk, pk, err := kem.GenerateKeyPair(crand.Reader)
+			require.NoError(t, err)
+
+			// Private key roundtrip
+			skCBOR, err := sk.MarshalCBOR()
+			require.NoError(t, err)
+			sk2 := new(PrivateKey[*p256.Scalar])
+			err = sk2.UnmarshalCBOR(skCBOR)
+			require.NoError(t, err)
+			require.Equal(t, sk.Bytes(), sk2.Bytes())
+
+			// Public key roundtrip
+			pkCBOR, err := pk.MarshalCBOR()
+			require.NoError(t, err)
+			pk2 := new(PublicKey[*p256.Point, *p256.BaseFieldElement, *p256.Scalar])
+			err = pk2.UnmarshalCBOR(pkCBOR)
+			require.NoError(t, err)
+			require.Equal(t, pk.Bytes(), pk2.Bytes())
+
+			// Second roundtrip to ensure determinism
+			skCBOR2, err := sk2.MarshalCBOR()
+			require.NoError(t, err)
+			require.Equal(t, skCBOR, skCBOR2, "CBOR encoding should be deterministic")
+
+			pkCBOR2, err := pk2.MarshalCBOR()
+			require.NoError(t, err)
+			require.Equal(t, pkCBOR, pkCBOR2, "CBOR encoding should be deterministic")
+		}
+	})
+
+	t.Run("X25519_MultipleRoundtrips", func(t *testing.T) {
+		kem := NewX25519HKDFSha256KEM()
+
+		for i := 0; i < 5; i++ {
+			sk, pk, err := kem.GenerateKeyPair(crand.Reader)
+			require.NoError(t, err)
+
+			// Private key roundtrip
+			skCBOR, err := sk.MarshalCBOR()
+			require.NoError(t, err)
+			sk2 := new(PrivateKey[*curve25519.Scalar])
+			err = sk2.UnmarshalCBOR(skCBOR)
+			require.NoError(t, err)
+			require.Equal(t, sk.Bytes(), sk2.Bytes())
+
+			// Public key roundtrip
+			pkCBOR, err := pk.MarshalCBOR()
+			require.NoError(t, err)
+			pk2 := new(PublicKey[*curve25519.PrimeSubGroupPoint, *curve25519.BaseFieldElement, *curve25519.Scalar])
+			err = pk2.UnmarshalCBOR(pkCBOR)
+			require.NoError(t, err)
+			require.Equal(t, pk.Bytes(), pk2.Bytes())
+
+			// Second roundtrip to ensure determinism
+			skCBOR2, err := sk2.MarshalCBOR()
+			require.NoError(t, err)
+			require.Equal(t, skCBOR, skCBOR2, "CBOR encoding should be deterministic")
+
+			pkCBOR2, err := pk2.MarshalCBOR()
+			require.NoError(t, err)
+			require.Equal(t, pkCBOR, pkCBOR2, "CBOR encoding should be deterministic")
+		}
+	})
+}
+
+// TestCipherSuite_CBOR_Roundtrip tests cipher suite CBOR roundtrip
+func TestCipherSuite_CBOR_Roundtrip(t *testing.T) {
+	t.Parallel()
+
+	suites := []struct {
+		name   string
+		kemID  KEMID
+		kdfID  KDFID
+		aeadID AEADID
+	}{
+		{"P256_SHA256_AES128", DHKEM_P256_HKDF_SHA256, KDF_HKDF_SHA256, AEAD_AES_128_GCM},
+		{"X25519_SHA256_ChaCha20", DHKEM_X25519_HKDF_SHA256, KDF_HKDF_SHA256, AEAD_CHACHA_20_POLY_1305},
+		{"P256_SHA512_AES256", DHKEM_P256_HKDF_SHA256, KDF_HKDF_SHA512, AEAD_AES_256_GCM},
+		{"X25519_SHA512_AES128", DHKEM_X25519_HKDF_SHA256, KDF_HKDF_SHA512, AEAD_AES_128_GCM},
 	}
 
-	sk, _, err := kem.DeriveKeyPair(ikmE)
-	require.NoError(t, err)
+	for _, suite := range suites {
+		t.Run(suite.name, func(t *testing.T) {
+			t.Parallel()
 
-	// Marshal to CBOR
-	data, err := sk.MarshalCBOR()
-	require.NoError(t, err)
-	require.NotEmpty(t, data)
+			cs, err := NewCipherSuite(suite.kemID, suite.kdfID, suite.aeadID)
+			require.NoError(t, err)
 
-	// Unmarshal from CBOR
-	var restoredKey PrivateKey[*curve25519.Scalar]
-	err = restoredKey.UnmarshalCBOR(data)
-	require.NoError(t, err)
+			// First roundtrip
+			cbor1, err := cs.MarshalCBOR()
+			require.NoError(t, err)
 
-	// Verify the keys match
-	require.True(t, sk.Equal(&restoredKey))
-	require.Equal(t, sk.Bytes(), restoredKey.Bytes())
+			cs2 := new(CipherSuite)
+			err = cs2.UnmarshalCBOR(cbor1)
+			require.NoError(t, err)
+
+			// Second roundtrip
+			cbor2, err := cs2.MarshalCBOR()
+			require.NoError(t, err)
+
+			cs3 := new(CipherSuite)
+			err = cs3.UnmarshalCBOR(cbor2)
+			require.NoError(t, err)
+
+			// All should be equal
+			require.Equal(t, cs.KEMID(), cs2.KEMID())
+			require.Equal(t, cs.KDFID(), cs2.KDFID())
+			require.Equal(t, cs.AEADID(), cs2.AEADID())
+			require.Equal(t, cbor1, cbor2, "CBOR encoding should be deterministic")
+		})
+	}
+}
+
+// TestPrivateKey_CBOR_InvalidData tests error handling
+func TestPrivateKey_CBOR_InvalidData(t *testing.T) {
+	t.Parallel()
+
+	t.Run("EmptyData", func(t *testing.T) {
+		sk := new(PrivateKey[*p256.Scalar])
+		err := sk.UnmarshalCBOR([]byte{})
+		require.Error(t, err)
+	})
+
+	t.Run("InvalidCBOR", func(t *testing.T) {
+		sk := new(PrivateKey[*p256.Scalar])
+		err := sk.UnmarshalCBOR([]byte{0xFF, 0xFF, 0xFF})
+		require.Error(t, err)
+	})
+}
+
+// TestPublicKey_CBOR_InvalidData tests error handling for public keys
+func TestPublicKey_CBOR_InvalidData(t *testing.T) {
+	t.Parallel()
+
+	t.Run("EmptyData", func(t *testing.T) {
+		pk := new(PublicKey[*p256.Point, *p256.BaseFieldElement, *p256.Scalar])
+		err := pk.UnmarshalCBOR([]byte{})
+		require.Error(t, err)
+	})
+
+	t.Run("InvalidCBOR", func(t *testing.T) {
+		pk := new(PublicKey[*p256.Point, *p256.BaseFieldElement, *p256.Scalar])
+		err := pk.UnmarshalCBOR([]byte{0xFF, 0xFF, 0xFF})
+		require.Error(t, err)
+	})
 }

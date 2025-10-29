@@ -1,64 +1,52 @@
 package internal
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
 )
 
-// type privateKeyDTO[V algebra.PrimeFieldElement[V]] struct {
-// 	V   V      `cbor:"v"`
-// 	Ikm []byte `cbor:"ikm"`
-// }
+type privateKeyDTO[S algebra.PrimeFieldElement[S]] struct {
+	SK dhc.ExtendedPrivateKey[S] `cbor:"sk"`
+}
 
-// func (sk *PrivateKey[S]) MarshalCBOR() ([]byte, error) {
-// 	dto := &privateKeyDTO[S]{
-// 		V:   sk.v,
-// 		Ikm: sk.ikm,
-// 	}
-// 	return serde.MarshalCBOR(dto)
-// }
+func (sk *PrivateKey[S]) MarshalCBOR() ([]byte, error) {
+	dto := &privateKeyDTO[S]{
+		SK: sk.ExtendedPrivateKey,
+	}
+	return serde.MarshalCBOR(dto)
+}
 
-// func (sk *PrivateKey[S]) UnmarshalCBOR(data []byte) error {
-// 	dto, err := serde.UnmarshalCBOR[privateKeyDTO[S]](data)
-// 	if err != nil {
-// 		return errs.WrapSerialisation(err, "could not serialise private key")
-// 	}
-// 	if _, err := NewPrivateKey(dto.V); err != nil {
-// 		return errs.WrapValidation(err, "invalid private key")
-// 	}
-// 	// Note: ikm may differ from dto.V.Bytes() for curves like X25519 where
-// 	// ikm stores unclamped bytes while v stores the clamped scalar.
-// 	// This is intentional and valid behavior.
-// 	if !slices.Equal(dto.Ikm, dto.V.Bytes()) && ct.SliceIsZero(dto.Ikm) == ct.True {
-// 		return errs.NewValidation("invalid ikm")
-// 	}
-// 	sk.v = dto.V
-// 	sk.ikm = dto.Ikm
-// 	return nil
-// }
+func (sk *PrivateKey[S]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[privateKeyDTO[S]](data)
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not serialise private key")
+	}
+	sk.ExtendedPrivateKey = dto.SK
+	return nil
+}
 
-// type publicKeyDTO[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-// 	V P
-// }
+type publicKeyDTO[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	PK dhc.PublicKey[P, B, S] `cbor:"pk"`
+}
 
-// func (pk *PublicKey[P, B, S]) MarshalCBOR() ([]byte, error) {
-// 	dto := &publicKeyDTO[P, B, S]{
-// 		V: pk.v,
-// 	}
-// 	return serde.MarshalCBOR(dto)
-// }
+func (pk *PublicKey[P, B, S]) MarshalCBOR() ([]byte, error) {
+	dto := &publicKeyDTO[P, B, S]{
+		PK: pk.PublicKey,
+	}
+	return serde.MarshalCBOR(dto)
+}
 
-// func (pk *PublicKey[P, B, S]) UnmarshalCBOR(data []byte) error {
-// 	dto, err := serde.UnmarshalCBOR[publicKeyDTO[P, B, S]](data)
-// 	if err != nil {
-// 		return errs.WrapSerialisation(err, "could not serialise public key")
-// 	}
-// 	if _, err := NewPublicKey(dto.V); err != nil {
-// 		return errs.WrapValidation(err, "invalid public key")
-// 	}
-// 	pk.v = dto.V
-// 	return nil
-// }
+func (pk *PublicKey[P, B, S]) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[publicKeyDTO[P, B, S]](data)
+	if err != nil {
+		return errs.WrapSerialisation(err, "could not serialise public key")
+	}
+	pk.PublicKey = dto.PK
+	return nil
+}
 
 type cipherSuiteDTO struct {
 	KDF  KDFID  `cbor:"kdf"`

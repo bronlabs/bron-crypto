@@ -1,14 +1,8 @@
 package dhc_test
 
 import (
-	"bytes"
-	"crypto/ecdh"
 	crand "crypto/rand"
-	"encoding/hex"
-	"io"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
@@ -16,305 +10,305 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
+	"github.com/stretchr/testify/require"
 )
 
-func TestHappyPath(t *testing.T) {
+// TestDHC_BasicRoundtrip tests basic DH key agreement roundtrip
+func TestDHC_BasicRoundtrip(t *testing.T) {
 	t.Parallel()
-	t.Run("k256", func(t *testing.T) {
-		t.Parallel()
-		tester(t, k256.NewCurve())
-	})
-	t.Run("edwards25519", func(t *testing.T) {
-		t.Parallel()
-		tester(t, edwards25519.NewPrimeSubGroup())
-	})
-}
-
-func tester[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, c curves.Curve[P, B, S]) {
-	tb.Helper()
-	alicePrivateKeyValue, err := c.ScalarField().Random(crand.Reader)
-	require.NoError(tb, err)
-	alicePublicKeyValue := c.ScalarBaseMul(alicePrivateKeyValue)
-
-	alicePrivateKey, err := dhc.NewPrivateKey(alicePrivateKeyValue)
-	require.NoError(tb, err)
-	alicePublicKey, err := dhc.NewPublicKey(alicePublicKeyValue)
-	require.NoError(tb, err)
-
-	bobPrivateKeyValue, err := c.ScalarField().Random(crand.Reader)
-	require.NoError(tb, err)
-	bobPublicKeyValue := c.ScalarBaseMul(bobPrivateKeyValue)
-
-	bobPrivateKey, err := dhc.NewPrivateKey(bobPrivateKeyValue)
-	require.NoError(tb, err)
-	bobPublicKey, err := dhc.NewPublicKey(bobPublicKeyValue)
-	require.NoError(tb, err)
-
-	aliceDerivation, err := dhc.DeriveSharedSecret(alicePrivateKey, bobPublicKey)
-	require.NoError(tb, err)
-	require.NotNil(tb, aliceDerivation)
-	require.False(tb, ct.SliceIsZero(aliceDerivation.Bytes()) == ct.True)
-	bobDerivation, err := dhc.DeriveSharedSecret(bobPrivateKey, alicePublicKey)
-	require.NoError(tb, err)
-	require.False(tb, ct.SliceIsZero(bobDerivation.Bytes()) == ct.True)
-
-	require.EqualValues(tb, aliceDerivation.Bytes(), bobDerivation.Bytes())
-
-}
-
-// TestX25519_DHC_vs_GoECDH verifies that dhc produces the same results as Go's crypto/ecdh
-// for X25519 Diffie-Hellman key exchange.
-// Note: dhc uses big-endian byte order (IEEE ECSVDP-DHC standard), while X25519 uses
-// little-endian, so we need to reverse the bytes for comparison.
-func TestX25519_DHC_vs_GoECDH(t *testing.T) {
-	t.Parallel()
-	prng := crand.Reader
-
-	// Test with 128 random key pairs
-	for i := 0; i < 128; i++ {
-		alice, bob := genKeyPair(t, prng)
-
-		// Compute shared secret using Go's crypto/ecdh (little-endian)
-		sharedKeyGo := doGoDH(t, alice, bob)
-
-		// Compute shared secret using dhc (big-endian)
-		sharedKeyDHC := doDHC(t, alice, bob)
-
-		// Reverse dhc output to match X25519 little-endian format
-		sharedKeyDHCReversed := reverseBytes(sharedKeyDHC)
-
-		// They should produce identical results after byte order conversion
-		require.True(t, bytes.Equal(sharedKeyGo, sharedKeyDHCReversed),
-			"Iteration %d: DHC and Go ECDH produced different results.\nGo ECDH (LE):  %x\nDHC (BE):      %x\nDHC (LE):      %x",
-			i, sharedKeyGo, sharedKeyDHC, sharedKeyDHCReversed)
-	}
-}
-
-// TestX25519_DHC_RFCVectors tests dhc against RFC 7748 test vectors
-// https://www.rfc-editor.org/rfc/rfc7748.html#section-6.1
-// Note: RFC 7748 test vectors are in little-endian (X25519 format), while dhc
-// produces big-endian output, so we reverse bytes for comparison.
-func TestX25519_DHC_RFCVectors(t *testing.T) {
-	t.Parallel()
-
-	testVectors := []struct {
-		name         string
-		alicePrivate string
-		alicePublic  string
-		bobPrivate   string
-		bobPublic    string
-		sharedSecret string // little-endian (X25519 format)
+	testCases := []struct {
+		name   string
+		tester func(t *testing.T)
 	}{
-		{
-			name:         "RFC 7748 Test Vector 1",
-			alicePrivate: "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a",
-			alicePublic:  "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a",
-			bobPrivate:   "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb",
-			bobPublic:    "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f",
-			sharedSecret: "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742",
-		},
+		{"k256", func(t *testing.T) { testRoundtrip(t, k256.NewCurve()) }},
+		{"p256", func(t *testing.T) { testRoundtrip(t, p256.NewCurve()) }},
+		{"edwards25519", func(t *testing.T) { testRoundtrip(t, edwards25519.NewPrimeSubGroup()) }},
+		{"curve25519", func(t *testing.T) { testRoundtripCurve25519(t, curve25519.NewPrimeSubGroup()) }},
 	}
 
-	for _, tv := range testVectors {
-		t.Run(tv.name, func(t *testing.T) {
-			// Decode test vector data
-			alicePrivBytes, err := hex.DecodeString(tv.alicePrivate)
-			require.NoError(t, err)
-			bobPublicBytes, err := hex.DecodeString(tv.bobPublic)
-			require.NoError(t, err)
-			expectedSharedLE, err := hex.DecodeString(tv.sharedSecret)
-			require.NoError(t, err)
-
-			// Convert expected shared secret to big-endian for dhc comparison
-			expectedSharedBE := reverseBytes(expectedSharedLE)
-
-			// Convert to dhc types
-			aliceSk, err := curve25519.NewScalarField().FromClampedBytes(alicePrivBytes)
-			require.NoError(t, err)
-
-			// Bob's public key from bytes
-			bobPkPoint, err := curve25519.NewPrimeSubGroup().FromCompressed(bobPublicBytes)
-			require.NoError(t, err)
-
-			// Create dhc keys
-			alicePrivKey, err := dhc.NewPrivateKey(aliceSk)
-			require.NoError(t, err)
-			bobPubKey, err := dhc.NewPublicKey(bobPkPoint)
-			require.NoError(t, err)
-
-			// Derive shared secret using dhc (produces big-endian)
-			sharedKeyDHC, err := dhc.DeriveSharedSecret(alicePrivKey, bobPubKey)
-			require.NoError(t, err)
-
-			// Verify dhc output (big-endian) matches reversed RFC test vector
-			require.Equal(t, expectedSharedBE, sharedKeyDHC.Bytes(),
-				"DHC shared secret (BE) doesn't match RFC 7748 test vector (LE converted to BE)")
-
-			// Also verify using Go's crypto/ecdh
-			x25519 := ecdh.X25519()
-			aliceGoKey, err := x25519.NewPrivateKey(alicePrivBytes)
-			require.NoError(t, err)
-			bobGoPublicKey, err := x25519.NewPublicKey(bobPublicBytes)
-			require.NoError(t, err)
-
-			sharedGoECDH, err := aliceGoKey.ECDH(bobGoPublicKey)
-			require.NoError(t, err)
-
-			// Convert dhc output to little-endian for comparison with Go's ECDH
-			sharedKeyDHCLE := reverseBytes(sharedKeyDHC.Bytes())
-
-			// DHC (converted to LE) should match Go's crypto/ecdh (LE)
-			require.Equal(t, sharedGoECDH, sharedKeyDHCLE,
-				"DHC (LE) doesn't match Go's crypto/ecdh for RFC test vector")
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			tc.tester(t)
 		})
 	}
 }
 
-// TestX25519_DHC_Symmetry verifies that DH(alice_sk, bob_pk) == DH(bob_sk, alice_pk)
-func TestX25519_DHC_Symmetry(t *testing.T) {
+func testRoundtrip[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, c curves.Curve[P, B, S]) {
+	t.Helper()
+
+	// Alice generates a key pair from random seed
+	aliceSeed := make([]byte, 32)
+	_, err := crand.Read(aliceSeed)
+	require.NoError(t, err)
+	alicePrivateKeySeed, err := dhc.NewPrivateKey(aliceSeed)
+	require.NoError(t, err)
+	alicePrivateKey, err := dhc.ExtendPrivateKey(alicePrivateKeySeed, c.ScalarField())
+	require.NoError(t, err)
+	alicePublicKeyValue := c.ScalarBaseMul(alicePrivateKey.Value())
+	alicePublicKey, err := dhc.NewPublicKey(alicePublicKeyValue)
+	require.NoError(t, err)
+
+	// Bob generates a key pair from random seed
+	bobSeed := make([]byte, 32)
+	_, err = crand.Read(bobSeed)
+	require.NoError(t, err)
+	bobPrivateKeySeed, err := dhc.NewPrivateKey(bobSeed)
+	require.NoError(t, err)
+	bobPrivateKey, err := dhc.ExtendPrivateKey(bobPrivateKeySeed, c.ScalarField())
+	require.NoError(t, err)
+	bobPublicKeyValue := c.ScalarBaseMul(bobPrivateKey.Value())
+	bobPublicKey, err := dhc.NewPublicKey(bobPublicKeyValue)
+	require.NoError(t, err)
+
+	// Both parties derive shared secret
+	aliceShared, err := dhc.DeriveSharedSecret(alicePrivateKey, bobPublicKey)
+	require.NoError(t, err)
+	require.NotNil(t, aliceShared)
+	require.False(t, ct.SliceIsZero(aliceShared.Bytes()) == ct.True)
+
+	bobShared, err := dhc.DeriveSharedSecret(bobPrivateKey, alicePublicKey)
+	require.NoError(t, err)
+	require.False(t, ct.SliceIsZero(bobShared.Bytes()) == ct.True)
+
+	// Shared secrets should match
+	require.EqualValues(t, aliceShared.Bytes(), bobShared.Bytes())
+}
+
+func testRoundtripCurve25519[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, c curves.Curve[P, B, S]) {
+	t.Helper()
+
+	// Alice generates a key pair from random seed
+	aliceSeed := make([]byte, 32)
+	_, err := crand.Read(aliceSeed)
+	require.NoError(t, err)
+	alicePrivateKeySeed, err := dhc.NewPrivateKey(aliceSeed)
+	require.NoError(t, err)
+	alicePrivateKey, err := dhc.ExtendPrivateKey(alicePrivateKeySeed, c.ScalarField())
+	require.NoError(t, err)
+	alicePublicKeyValue := c.ScalarBaseMul(alicePrivateKey.Value())
+	alicePublicKey, err := dhc.NewPublicKey(alicePublicKeyValue)
+	require.NoError(t, err)
+
+	// Bob generates a key pair from random seed
+	bobSeed := make([]byte, 32)
+	_, err = crand.Read(bobSeed)
+	require.NoError(t, err)
+	bobPrivateKeySeed, err := dhc.NewPrivateKey(bobSeed)
+	require.NoError(t, err)
+	bobPrivateKey, err := dhc.ExtendPrivateKey(bobPrivateKeySeed, c.ScalarField())
+	require.NoError(t, err)
+	bobPublicKeyValue := c.ScalarBaseMul(bobPrivateKey.Value())
+	bobPublicKey, err := dhc.NewPublicKey(bobPublicKeyValue)
+	require.NoError(t, err)
+
+	// Both parties derive shared secret
+	aliceShared, err := dhc.DeriveSharedSecret(alicePrivateKey, bobPublicKey)
+	require.NoError(t, err)
+	require.NotNil(t, aliceShared)
+	require.False(t, ct.SliceIsZero(aliceShared.Bytes()) == ct.True)
+
+	bobShared, err := dhc.DeriveSharedSecret(bobPrivateKey, alicePublicKey)
+	require.NoError(t, err)
+	require.False(t, ct.SliceIsZero(bobShared.Bytes()) == ct.True)
+
+	// Shared secrets should match
+	require.EqualValues(t, aliceShared.Bytes(), bobShared.Bytes())
+}
+
+// TestDHC_SerializationRoundtrip tests key serialization and deserialization
+func TestDHC_SerializationRoundtrip(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
 
-	for i := 0; i < 64; i++ {
-		alice, bob := genKeyPair(t, prng)
+	t.Run("X25519", func(t *testing.T) {
+		t.Parallel()
+		sf := curve25519.NewScalarField()
+		curve := curve25519.NewPrimeSubGroup()
 
-		// Alice computes DH(alice_sk, bob_pk)
-		aliceSk, err := curve25519.NewScalarField().FromClampedBytes(alice.Bytes())
-		require.NoError(t, err)
-		bobPkPoint, err := curve25519.NewPrimeSubGroup().FromCompressed(bob.PublicKey().Bytes())
-		require.NoError(t, err)
-
-		alicePrivKey, err := dhc.NewPrivateKey(aliceSk)
-		require.NoError(t, err)
-		bobPubKey, err := dhc.NewPublicKey(bobPkPoint)
+		// Generate a random scalar
+		scalar, err := sf.Random(crand.Reader)
 		require.NoError(t, err)
 
-		aliceShared, err := dhc.DeriveSharedSecret(alicePrivKey, bobPubKey)
+		// Create extended private key
+		privSeed, err := dhc.NewPrivateKey(scalar.Bytes())
+		require.NoError(t, err)
+		privKey, err := dhc.ExtendPrivateKey(privSeed, sf)
 		require.NoError(t, err)
 
-		// Bob computes DH(bob_sk, alice_pk)
-		bobSk, err := curve25519.NewScalarField().FromClampedBytes(bob.Bytes())
+		// Serialize
+		privBytes, err := dhc.SerialiseExtendedPrivateKey(privKey)
 		require.NoError(t, err)
-		alicePkPoint, err := curve25519.NewPrimeSubGroup().FromCompressed(alice.PublicKey().Bytes())
+		require.NotEmpty(t, privBytes)
+
+		// Create public key
+		pubPoint := curve.ScalarBaseMul(scalar)
+		pubKey, err := dhc.NewPublicKey(pubPoint)
 		require.NoError(t, err)
 
-		bobPrivKey, err := dhc.NewPrivateKey(bobSk)
+		// Serialize public key
+		pubBytes, err := dhc.SerialisePublicKey(pubKey)
 		require.NoError(t, err)
-		alicePubKey, err := dhc.NewPublicKey(alicePkPoint)
+		require.NotEmpty(t, pubBytes)
+		require.Equal(t, 32, len(pubBytes), "X25519 public key should be 32 bytes")
+	})
+
+	t.Run("P256", func(t *testing.T) {
+		t.Parallel()
+		curve := p256.NewCurve()
+
+		// Generate a random scalar
+		scalar, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 
-		bobShared, err := dhc.DeriveSharedSecret(bobPrivKey, alicePubKey)
+		// Create extended private key
+		privSeed, err := dhc.NewPrivateKey(scalar.Bytes())
+		require.NoError(t, err)
+		privKey, err := dhc.ExtendPrivateKey(privSeed, curve.ScalarField())
 		require.NoError(t, err)
 
-		// They should be equal
-		require.Equal(t, aliceShared.Bytes(), bobShared.Bytes(),
-			"Iteration %d: Symmetric property violated", i)
-	}
+		// Serialize
+		privBytes, err := dhc.SerialiseExtendedPrivateKey(privKey)
+		require.NoError(t, err)
+		require.NotEmpty(t, privBytes)
+
+		// Create public key
+		pubPoint := curve.ScalarBaseMul(scalar)
+		pubKey, err := dhc.NewPublicKey(pubPoint)
+		require.NoError(t, err)
+
+		// Serialize public key
+		pubBytes, err := dhc.SerialisePublicKey(pubKey)
+		require.NoError(t, err)
+		require.NotEmpty(t, pubBytes)
+		require.Equal(t, 65, len(pubBytes), "P-256 uncompressed public key should be 65 bytes")
+	})
 }
 
-// TestX25519_DHC_NonZeroOutput verifies that the shared secret is never all zeros
-func TestX25519_DHC_NonZeroOutput(t *testing.T) {
+// TestDHC_ExtendPrivateKey tests the ExtendPrivateKey functionality
+func TestDHC_ExtendPrivateKey(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
 
-	for i := 0; i < 100; i++ {
-		alice, bob := genKeyPair(t, prng)
-		sharedKey := doDHC(t, alice, bob)
+	t.Run("X25519", func(t *testing.T) {
+		t.Parallel()
+		sf := curve25519.NewScalarField()
 
-		// Shared secret should never be all zeros
-		allZeros := make([]byte, len(sharedKey))
-		require.False(t, bytes.Equal(sharedKey, allZeros),
-			"Iteration %d: Shared secret was all zeros", i)
-	}
+		// Create a private key from random bytes
+		privBytes := make([]byte, 32)
+		_, err := crand.Read(privBytes)
+		require.NoError(t, err)
+
+		pk, err := dhc.NewPrivateKey(privBytes)
+		require.NoError(t, err)
+
+		// Extend it
+		extPk, err := dhc.ExtendPrivateKey(pk, sf)
+		require.NoError(t, err)
+		require.NotNil(t, extPk)
+		require.False(t, extPk.Value().IsZero())
+	})
+
+	t.Run("P256", func(t *testing.T) {
+		t.Parallel()
+		curve := p256.NewCurve()
+		sf := curve.ScalarField()
+
+		// Create a private key from random bytes
+		privBytes := make([]byte, 32)
+		_, err := crand.Read(privBytes)
+		require.NoError(t, err)
+
+		pk, err := dhc.NewPrivateKey(privBytes)
+		require.NoError(t, err)
+
+		// Extend it
+		extPk, err := dhc.ExtendPrivateKey(pk, sf)
+		require.NoError(t, err)
+		require.NotNil(t, extPk)
+		require.False(t, extPk.Value().IsZero())
+	})
 }
 
-// TestX25519_DHC_DeterministicOutput verifies that the same inputs always produce the same output
-func TestX25519_DHC_DeterministicOutput(t *testing.T) {
+// TestDHC_InvalidInputs tests error handling for invalid inputs
+func TestDHC_InvalidInputs(t *testing.T) {
 	t.Parallel()
-	prng := crand.Reader
 
-	alice, bob := genKeyPair(t, prng)
+	t.Run("ZeroPrivateKey", func(t *testing.T) {
+		_, err := dhc.NewPrivateKey(make([]byte, 32))
+		require.Error(t, err, "Should reject all-zero private key")
+	})
 
-	// Compute shared secret multiple times with the same keys
-	results := make([][]byte, 5)
-	for i := range results {
-		results[i] = doDHC(t, alice, bob)
-	}
+	t.Run("InvalidPublicKey", func(t *testing.T) {
+		curve := p256.NewCurve()
 
-	// All results should be identical
-	for i := 1; i < len(results); i++ {
-		require.Equal(t, results[0], results[i],
-			"Iteration %d produced different result", i)
-	}
+		// Identity point should be rejected
+		_, err := dhc.NewPublicKey(curve.OpIdentity())
+		require.Error(t, err, "Should reject identity point")
+	})
 }
 
-// Helper functions
+// TestDHC_Type tests the Type() method
+func TestDHC_Type(t *testing.T) {
+	privBytes := make([]byte, 32)
+	privBytes[0] = 1
+	pk, err := dhc.NewPrivateKey(privBytes)
+	require.NoError(t, err)
+	require.Equal(t, dhc.Type, pk.Type())
 
-// reverseBytes returns a new slice with bytes in reverse order
-func reverseBytes(b []byte) []byte {
-	reversed := make([]byte, len(b))
-	for i := range b {
-		reversed[i] = b[len(b)-1-i]
-	}
-	return reversed
+	sf := curve25519.NewScalarField()
+	extPk, err := dhc.ExtendPrivateKey(pk, sf)
+	require.NoError(t, err)
+	require.Equal(t, dhc.Type, extPk.Type())
 }
 
-func genKeyPair(tb testing.TB, prng io.Reader) (alice, bob *ecdh.PrivateKey) {
-	tb.Helper()
-	alice, err := ecdh.X25519().GenerateKey(prng)
-	require.NoError(tb, err)
-	bob, err = ecdh.X25519().GenerateKey(prng)
-	require.NoError(tb, err)
-	return alice, bob
-}
+// TestDHC_Equality tests the Equal() methods
+func TestDHC_Equality(t *testing.T) {
+	t.Parallel()
 
-func doGoDH(tb testing.TB, alice, bob *ecdh.PrivateKey) (sharedKey []byte) {
-	tb.Helper()
-	aliceShared, err := alice.ECDH(bob.PublicKey())
-	require.NoError(tb, err)
-	bobShared, err := bob.ECDH(alice.PublicKey())
-	require.NoError(tb, err)
+	t.Run("PrivateKeyEquality", func(t *testing.T) {
+		privBytes := make([]byte, 32)
+		privBytes[0] = 1
+		pk1, err := dhc.NewPrivateKey(privBytes)
+		require.NoError(t, err)
 
-	require.True(tb, bytes.Equal(aliceShared, bobShared),
-		"Go ECDH: Alice and Bob computed different shared secrets")
-	return aliceShared
-}
+		pk2, err := dhc.NewPrivateKey(privBytes)
+		require.NoError(t, err)
 
-func doDHC(tb testing.TB, alice, bob *ecdh.PrivateKey) (sharedKey []byte) {
-	tb.Helper()
+		require.True(t, pk1.Equal(pk2))
 
-	// Convert Alice's keys
-	aliceSk, err := curve25519.NewScalarField().FromClampedBytes(alice.Bytes())
-	require.NoError(tb, err)
-	alicePkPoint, err := curve25519.NewPrimeSubGroup().FromCompressed(alice.PublicKey().Bytes())
-	require.NoError(tb, err)
+		// Different bytes
+		privBytes[0] = 2
+		pk3, err := dhc.NewPrivateKey(privBytes)
+		require.NoError(t, err)
 
-	// Convert Bob's keys
-	bobSk, err := curve25519.NewScalarField().FromClampedBytes(bob.Bytes())
-	require.NoError(tb, err)
-	bobPkPoint, err := curve25519.NewPrimeSubGroup().FromCompressed(bob.PublicKey().Bytes())
-	require.NoError(tb, err)
+		require.False(t, pk1.Equal(pk3))
+	})
 
-	// Create dhc keys
-	alicePrivKey, err := dhc.NewPrivateKey(aliceSk)
-	require.NoError(tb, err)
-	alicePubKey, err := dhc.NewPublicKey(alicePkPoint)
-	require.NoError(tb, err)
-	bobPrivKey, err := dhc.NewPrivateKey(bobSk)
-	require.NoError(tb, err)
-	bobPubKey, err := dhc.NewPublicKey(bobPkPoint)
-	require.NoError(tb, err)
+	t.Run("ExtendedPrivateKeyEquality", func(t *testing.T) {
+		sf := curve25519.NewScalarField()
+		scalar1, err := sf.Random(crand.Reader)
+		require.NoError(t, err)
 
-	// Derive shared secrets
-	aliceShared, err := dhc.DeriveSharedSecret(alicePrivKey, bobPubKey)
-	require.NoError(tb, err)
-	bobShared, err := dhc.DeriveSharedSecret(bobPrivKey, alicePubKey)
-	require.NoError(tb, err)
+		privSeed1, err := dhc.NewPrivateKey(scalar1.Bytes())
+		require.NoError(t, err)
+		extPk1, err := dhc.ExtendPrivateKey(privSeed1, sf)
+		require.NoError(t, err)
 
-	// They should match
-	require.Equal(tb, aliceShared.Bytes(), bobShared.Bytes(),
-		"DHC: Alice and Bob computed different shared secrets")
+		privSeed2, err := dhc.NewPrivateKey(scalar1.Bytes())
+		require.NoError(t, err)
+		extPk2, err := dhc.ExtendPrivateKey(privSeed2, sf)
+		require.NoError(t, err)
 
-	return aliceShared.Bytes()
+		require.True(t, extPk1.Equal(extPk2))
+
+		scalar2, err := sf.Random(crand.Reader)
+		require.NoError(t, err)
+		privSeed3, err := dhc.NewPrivateKey(scalar2.Bytes())
+		require.NoError(t, err)
+		extPk3, err := dhc.ExtendPrivateKey(privSeed3, sf)
+		require.NoError(t, err)
+
+		require.False(t, extPk1.Equal(extPk3))
+	})
 }

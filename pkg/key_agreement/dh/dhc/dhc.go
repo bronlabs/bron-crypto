@@ -133,7 +133,7 @@ func ExtendPrivateKey[S algebra.PrimeFieldElement[S]](sk *PrivateKey, sf algebra
 			algebra.PrimeField[S]
 			FromClampedBytes([]byte) (S, error)
 		}](sf)
-		s, err = sf.FromClampedBytes(sliceutils.Reversed(sk.Value())) // X25519 would have expected little-endian
+		s, err = sf.FromClampedBytes(sk.Value()) // Note that the input to FromClampedBytes is little-endian
 	} else {
 		s, err = sf.FromBytes(sk.Value())
 	}
@@ -146,23 +146,19 @@ func ExtendPrivateKey[S algebra.PrimeFieldElement[S]](sk *PrivateKey, sf algebra
 	return &ExtendedPrivateKey[S]{PrivateKey: *sk, s: s}, nil
 }
 
-func NewExtendedPrivateKey[S algebra.PrimeFieldElement[S]](s S) (*ExtendedPrivateKey[S], error) {
-	return &ExtendedPrivateKey[S]{PrivateKey: PrivateKey{v: s.Bytes()}, s: s}, nil
+func (esk *ExtendedPrivateKey[S]) Value() S {
+	return esk.s
 }
 
-func (sk *ExtendedPrivateKey[S]) Value() S {
-	return sk.s
+func (esk *ExtendedPrivateKey[S]) Bytes() []byte {
+	return esk.v // this may be little-endian if from X25519
 }
 
-func (sk *ExtendedPrivateKey[S]) Bytes() []byte {
-	return sk.v // this may be little-endian if from X25519
-}
-
-func (sk *ExtendedPrivateKey[S]) Equal(other *ExtendedPrivateKey[S]) bool {
-	if sk == nil && other == nil {
-		return sk == other
+func (esk *ExtendedPrivateKey[S]) Equal(other *ExtendedPrivateKey[S]) bool {
+	if esk == nil && other == nil {
+		return esk == other
 	}
-	return ct.SliceEqual(sk.v, other.v) == ct.True && sk.s.Equal(other.s)
+	return ct.SliceEqual(esk.v, other.v) == ct.True && esk.s.Equal(other.s)
 }
 
 func NewPublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](v P) (*PublicKey[P, B, S], error) {

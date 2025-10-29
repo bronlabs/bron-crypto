@@ -120,7 +120,7 @@ func (s *KDFScheme) Nh() int {
 // https://www.rfc-editor.org/rfc/rfc9180.html#section-4-10
 func (s *KDFScheme) labeledExtract(suiteId, salt, label, ikm []byte) []byte {
 	labeledIkm := slices.Concat(
-		[]byte(version), suiteId, label, ikm,
+		[]byte(version), suiteId, label, ikm[:],
 	)
 	return s.Extract(salt, labeledIkm)
 }
@@ -134,7 +134,7 @@ func (s *KDFScheme) labeledExpand(suiteId, prk, label, info []byte, L int) []byt
 	lengthBuffer := make([]byte, 2)
 	binary.BigEndian.PutUint16(lengthBuffer, uint16(L))
 	labeledInfo := slices.Concat(
-		lengthBuffer, []byte(version), suiteId, label, info,
+		lengthBuffer, []byte(version), suiteId, label, info[:],
 	)
 	return s.Expand(prk, labeledInfo, L)
 }

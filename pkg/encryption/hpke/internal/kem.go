@@ -124,13 +124,10 @@ func (s *DHKEMScheme[P, B, S]) DeriveKeyPair(ikm []byte) (*PrivateKey[S], *Publi
 	switch s.curve.Name() {
 	case p256.NewCurve().Name():
 		dpkPrk := s.kdf.labeledExtract(s.suiteID(), nil, []byte("dkp_prk"), ikm)
-		counter := 0
+		counter := uint8(0)
 		skv = s.curve.ScalarField().Zero()
 		for skv.IsZero() || err != nil {
-			if counter > 255 {
-				return nil, nil, errs.NewFailed("DeriveKeyPairError")
-			}
-			skBytes = s.kdf.labeledExpand(s.suiteID(), dpkPrk, []byte("candidate"), []byte{uint8(counter)}, s.NSk())
+			skBytes = s.kdf.labeledExpand(s.suiteID(), dpkPrk, []byte("candidate"), []byte{counter}, s.NSk())
 			skBytes[0] &= P256BitMask
 
 			skv, err = s.curve.ScalarField().FromBytes(skBytes)
@@ -138,7 +135,7 @@ func (s *DHKEMScheme[P, B, S]) DeriveKeyPair(ikm []byte) (*PrivateKey[S], *Publi
 		}
 	case curve25519.NewPrimeSubGroup().Name():
 		dkpPrk := s.kdf.labeledExtract(s.suiteID(), nil, []byte("dkp_prk"), ikm)
-		skBytes := s.kdf.labeledExpand(s.suiteID(), dkpPrk, []byte("sk"), nil, s.NSk())
+		skBytes = s.kdf.labeledExpand(s.suiteID(), dkpPrk, []byte("sk"), nil, s.NSk())
 		skv, err = algebra.StructureMustBeAs[interface {
 			algebra.PrimeField[S]
 			FromClampedBytes([]byte) (S, error)
@@ -240,6 +237,9 @@ func (s *DHKEMScheme[P, B, S]) Decap(receiverPrivateKey *PrivateKey[S], ephemera
 	}
 
 	receiverPublicKey, err := NewPublicKey(curve.ScalarBaseMul(receiverPrivateKey.Value()))
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create receiver public key")
+	}
 	pkRm := receiverPublicKey.Bytes()
 	kemContext := make([]byte, len(enc)+len(pkRm))
 	copy(kemContext, enc)
