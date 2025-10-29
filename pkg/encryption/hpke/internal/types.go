@@ -10,105 +10,160 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
 )
 
 const version = "HPKE-v1"
 
-type PrivateKey[S algebra.PrimeFieldElement[S]] struct {
-	ikm []byte // ikm may be set during KEM's DeriveKeyPair, and in that case ikm != v.Bytes()
-	v   S
-}
-
-func NewPrivateKey[S algebra.PrimeFieldElement[S]](v S) (*PrivateKey[S], error) {
-	if v.IsZero() {
-		return nil, errs.NewIsZero("invalid private key")
+type (
+	PrivateKey[S algebra.PrimeFieldElement[S]] struct {
+		dhc.ExtendedPrivateKey[S]
 	}
-	return &PrivateKey[S]{v: v, ikm: v.Bytes()}, nil
-}
-
-func (sk *PrivateKey[S]) Value() S {
-	return sk.v
-}
-
-func (sk *PrivateKey[S]) Equal(other *PrivateKey[S]) bool {
-	if sk == nil || other == nil {
-		return sk == other
+	PublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+		dhc.PublicKey[P, B, S]
 	}
-	return sk.v.Equal(other.v)
-}
+)
 
 func (sk *PrivateKey[S]) Bytes() []byte {
-	return sk.ikm
-}
-
-type PublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	v P
-}
-
-func NewPublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](v P) (*PublicKey[P, B, S], error) {
-	if v.IsOpIdentity() || !v.IsTorsionFree() {
-		return nil, errs.NewIsIdentity("invalid public key")
-	}
-	return &PublicKey[P, B, S]{v: v}, nil
-}
-
-func NewPublicKeyFromBytes[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](curve curves.Curve[P, B, S], data []byte) (*PublicKey[P, B, S], error) {
-	if curve == nil {
-		return nil, errs.NewIsNil("curve")
-	}
-	if ct.SliceIsZero(data) == ct.True {
-		return nil, errs.NewIsZero("invalid public key")
-	}
-	var pkv P
-	var err error
-	if curve.Name() == curve25519.NewPrimeSubGroup().Name() {
-		pkv, err = curve.FromCompressed(data)
-	} else {
-		pkv, err = algebra.StructureMustBeAs[interface {
-			curves.Curve[P, B, S]
-			FromUncompressed([]byte) (P, error)
-		}](curve).FromUncompressed(data)
-	}
+	out, err := dhc.SerialiseExtendedPrivateKey(&sk.ExtendedPrivateKey)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not deserialize public key")
+		panic(errs.WrapFailed(err, "this should not happen"))
 	}
-	return &PublicKey[P, B, S]{v: pkv}, nil
+	return out
 }
 
 func (pk *PublicKey[P, B, S]) Bytes() []byte {
-	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](pk.v.Structure())
-	if curve.Name() == curve25519.NewPrimeSubGroup().Name() {
-		return pk.v.ToCompressed()
+	out, err := dhc.SerialisePublicKey(&pk.PublicKey)
+	if err != nil {
+		panic(errs.WrapFailed(err, "this should not happen"))
 	}
-	return pk.v.ToUncompressed()
+	return out
 }
 
-func (pk *PublicKey[P, B, S]) Value() P {
-	return pk.v
+func (pk *PublicKey[P, B, S]) Clone() *PublicKey[P, B, S] {
+	return &PublicKey[P, B, S]{PublicKey: *pk.PublicKey.Clone()}
 }
 
 func (pk *PublicKey[P, B, S]) Equal(other *PublicKey[P, B, S]) bool {
 	if pk == nil || other == nil {
 		return pk == other
 	}
-	return pk.v.Equal(other.v)
+	return pk.PublicKey.Equal(&other.PublicKey)
 }
 
-func (pk *PublicKey[P, B, S]) HashCode() base.HashCode {
-	return pk.v.HashCode()
-}
-
-func (pk *PublicKey[P, B, S]) Clone() *PublicKey[P, B, S] {
-	return &PublicKey[P, B, S]{
-		v: pk.v.Clone(),
+func NewPrivateKey[S algebra.PrimeFieldElement[S]](sf algebra.PrimeField[S], ikm []byte) (*PrivateKey[S], error) {
+	seed, err := dhc.NewPrivateKey(ikm)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create private key")
 	}
+	sk, err := dhc.ExtendPrivateKey(seed, sf)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not extend private key")
+	}
+	return &PrivateKey[S]{ExtendedPrivateKey: *sk}, nil
 }
+
+func NewPublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](v P) (*PublicKey[P, B, S], error) {
+	out, err := dhc.NewPublicKey(v)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create public key")
+	}
+	return &PublicKey[P, B, S]{PublicKey: *out}, nil
+}
+
+// type PrivateKey[S algebra.PrimeFieldElement[S]] struct {
+// 	ikm []byte // ikm may be set during KEM's DeriveKeyPair, and in that case ikm != v.Bytes()
+// 	v   S
+// }
+
+// func NewPrivateKey[S algebra.PrimeFieldElement[S]](v S) (*PrivateKey[S], error) {
+// 	if v.IsZero() {
+// 		return nil, errs.NewIsZero("invalid private key")
+// 	}
+// 	return &PrivateKey[S]{v: v, ikm: v.Bytes()}, nil
+// }
+
+// func (sk *PrivateKey[S]) Value() S {
+// 	return sk.v
+// }
+
+// func (sk *PrivateKey[S]) Equal(other *PrivateKey[S]) bool {
+// 	if sk == nil || other == nil {
+// 		return sk == other
+// 	}
+// 	return sk.v.Equal(other.v)
+// }
+
+// func (sk *PrivateKey[S]) Bytes() []byte {
+// 	return sk.ikm
+// }
+
+// type PublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+// 	v P
+// }
+
+// func NewPublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](v P) (*PublicKey[P, B, S], error) {
+// 	if v.IsOpIdentity() || !v.IsTorsionFree() {
+// 		return nil, errs.NewIsIdentity("invalid public key")
+// 	}
+// 	return &PublicKey[P, B, S]{v: v}, nil
+// }
+
+// func NewPublicKeyFromBytes[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](curve curves.Curve[P, B, S], data []byte) (*PublicKey[P, B, S], error) {
+// 	if curve == nil {
+// 		return nil, errs.NewIsNil("curve")
+// 	}
+// 	if ct.SliceIsZero(data) == ct.True {
+// 		return nil, errs.NewIsZero("invalid public key")
+// 	}
+// 	var pkv P
+// 	var err error
+// 	if curve.Name() == curve25519.NewPrimeSubGroup().Name() {
+// 		pkv, err = curve.FromCompressed(data)
+// 	} else {
+// 		pkv, err = algebra.StructureMustBeAs[interface {
+// 			curves.Curve[P, B, S]
+// 			FromUncompressed([]byte) (P, error)
+// 		}](curve).FromUncompressed(data)
+// 	}
+// 	if err != nil {
+// 		return nil, errs.WrapFailed(err, "could not deserialize public key")
+// 	}
+// 	return &PublicKey[P, B, S]{v: pkv}, nil
+// }
+
+// func (pk *PublicKey[P, B, S]) Bytes() []byte {
+// 	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](pk.v.Structure())
+// 	if curve.Name() == curve25519.NewPrimeSubGroup().Name() {
+// 		return pk.v.ToCompressed()
+// 	}
+// 	return pk.v.ToUncompressed()
+// }
+
+// func (pk *PublicKey[P, B, S]) Value() P {
+// 	return pk.v
+// }
+
+// func (pk *PublicKey[P, B, S]) Equal(other *PublicKey[P, B, S]) bool {
+// 	if pk == nil || other == nil {
+// 		return pk == other
+// 	}
+// 	return pk.v.Equal(other.v)
+// }
+
+// func (pk *PublicKey[P, B, S]) HashCode() base.HashCode {
+// 	return pk.v.HashCode()
+// }
+
+// func (pk *PublicKey[P, B, S]) Clone() *PublicKey[P, B, S] {
+// 	return &PublicKey[P, B, S]{
+// 		v: pk.v.Clone(),
+// 	}
+// }
 
 type ModeID byte
 

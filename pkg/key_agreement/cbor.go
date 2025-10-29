@@ -63,15 +63,15 @@ type sharedKeyDTO struct {
 	T Type   `cbor:"t"`
 }
 
-func (sk *SharedKey) MarshalCBOR() ([]byte, error) {
+func (k *SharedKey) MarshalCBOR() ([]byte, error) {
 	dto := &sharedKeyDTO{
-		V: sk.v,
-		T: sk.t,
+		V: k.v,
+		T: k.t,
 	}
 	return serde.MarshalCBOR(dto)
 }
 
-func (sk *SharedKey) UnmarshalCBOR(data []byte) error {
+func (k *SharedKey) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[sharedKeyDTO](data)
 	if err != nil {
 		return errs.WrapSerialisation(err, "couldn't serialize shared key")
@@ -79,7 +79,7 @@ func (sk *SharedKey) UnmarshalCBOR(data []byte) error {
 	if _, err := NewSharedKey(dto.V, dto.T); err != nil {
 		return errs.WrapValidation(err, "invalid shared key")
 	}
-	sk.v = dto.V
-	sk.t = dto.T
+	k.v = dto.V
+	k.t = dto.T
 	return nil
 }

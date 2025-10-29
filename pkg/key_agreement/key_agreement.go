@@ -1,6 +1,7 @@
 package key_agreement
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -62,6 +63,14 @@ func (pk *PublicKey[V, S]) Equal(other *PublicKey[V, S]) bool {
 		return pk == other
 	}
 	return pk.v.Equal(other.v) && pk.t == other.t
+}
+
+func (pk *PublicKey[V, S]) HashCode() base.HashCode {
+	return pk.v.HashCode()
+}
+
+func (pk *PublicKey[V, S]) Clone() *PublicKey[V, S] {
+	return &PublicKey[V, S]{v: pk.v.Clone(), t: pk.t}
 }
 
 func NewSharedKey(v []byte, t Type) (*SharedKey, error) {
