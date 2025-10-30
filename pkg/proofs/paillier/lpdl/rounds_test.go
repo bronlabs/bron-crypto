@@ -64,65 +64,89 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// // xEncrypted is not a dlog of Q
-// func Test_FailVerificationOnFalseClaim(t *testing.T) {
-// 	t.Parallel()
-// 	if testing.Short() {
-// 		t.Skip("Skipping test in short mode")
-// 	}
+// xEncrypted is not a dlog of Q
+func Test_FailVerificationOnFalseClaim(t *testing.T) {
+	t.Parallel()
 
-// 	pk, sk, err := paillier.KeyGen(1024, crand.Reader)
-// 	require.NoError(t, err)
-// 	prng := crand.Reader
-// 	curve := p256.NewCurve()
-// 	q := curve.SubGroupOrder()
+	prng := crand.Reader
+	scheme := paillier.NewScheme()
+	keygen, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	require.NoError(t, err)
 
-// 	x1Nat, err := randomIntInRange(q.Nat(), prng)
-// 	require.NoError(t, err)
-// 	x1 := curve.Scalar().SetNat(x1Nat)
+	sk, pk, err := keygen.Generate(prng)
+	require.NoError(t, err)
+	curve := p256.NewCurve()
+	q := curve.Order()
 
-// 	x2Nat, err := randomIntInRange(q.Nat(), prng)
-// 	require.NoError(t, err)
-// 	x2 := curve.Scalar().SetNat(x2Nat)
+	x1Nat, err := randomIntInRange(q.Big(), prng)
+	require.NoError(t, err)
 
-// 	bigQ2 := curve.ScalarBaseMult(x2)
-// 	x1Encrypted, r, err := pk.Encrypt(new(saferith.Int).SetNat(x1Nat), prng)
-// 	require.NoError(t, err)
+	x1, err := curve.ScalarField().FromNat(x1Nat)
+	require.NoError(t, err)
 
-// 	sid := []byte("sessionId")
-// 	err = doProof(x1, bigQ2, x1Encrypted, r, pk, sk, sid, prng)
-// 	require.Error(t, err)
-// }
+	ps := pk.PlaintextSpace()
+	x1Message, err := ps.FromNat(x1Nat)
+	require.NoError(t, err)
 
-// // xEncrypted is not encryption of x
-// func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
-// 	t.Parallel()
-// 	if testing.Short() {
-// 		t.Skip("Skipping test in short mode")
-// 	}
+	x2Nat, err := randomIntInRange(q.Big(), prng)
+	require.NoError(t, err)
+	x2, err := curve.ScalarField().FromNat(x2Nat)
+	require.NoError(t, err)
 
-// 	pk, sk, err := paillier.KeyGen(1024, crand.Reader)
-// 	require.NoError(t, err)
-// 	prng := crand.Reader
-// 	curve := p256.NewCurve()
-// 	q := curve.SubGroupOrder()
+	enc, err := scheme.Encrypter()
+	require.NoError(t, err)
 
-// 	xNat, err := randomIntInRange(q.Nat(), prng)
-// 	require.NoError(t, err)
-// 	x := curve.Scalar().SetNat(xNat)
-// 	require.NoError(t, err)
-// 	bigQ := curve.ScalarBaseMult(x)
+	bigQ2 := curve.ScalarBaseMul(x2)
+	x1Encrypted, r, err := enc.Encrypt(x1Message, pk, prng)
+	require.NoError(t, err)
 
-// 	x2Int, err := curve.ScalarField().Random(prng)
-// 	require.NoError(t, err)
-// 	x2IntNat := x2Int.Nat()
-// 	x2Encrypted, r, err := pk.Encrypt(new(saferith.Int).SetNat(x2IntNat), prng)
-// 	require.NoError(t, err)
+	sid, err := network.NewSID([]byte("sessionId"))
+	require.NoError(t, err)
+	err = doProof(x1, bigQ2, curve, x1Encrypted, r, pk, sk, sid, prng)
+	require.Error(t, err)
+}
 
-// 	sid := []byte("sessionId")
-// 	err = doProof(x, bigQ, x2Encrypted, r, pk, sk, sid, prng)
-// 	require.Error(t, err)
-// }
+// xEncrypted is not encryption of x
+func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
+	t.Parallel()
+
+	prng := crand.Reader
+	scheme := paillier.NewScheme()
+	keygen, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	require.NoError(t, err)
+
+	sk, pk, err := keygen.Generate(prng)
+	require.NoError(t, err)
+	curve := p256.NewCurve()
+	q := curve.Order()
+
+	xNat, err := randomIntInRange(q.Big(), prng)
+	require.NoError(t, err)
+
+	x, err := curve.ScalarField().FromNat(xNat)
+	require.NoError(t, err)
+	require.NoError(t, err)
+	bigQ := curve.ScalarBaseMul(x)
+
+	enc, err := scheme.Encrypter()
+	require.NoError(t, err)
+
+	ps := pk.PlaintextSpace()
+	x2Int, err := curve.ScalarField().Random(prng)
+	require.NoError(t, err)
+	x2IntNat := numct.NewNatFromBig(x2Int.Cardinal().Big(), -1)
+	require.NoError(t, err)
+	x2Message, err := ps.FromNat(x2IntNat)
+	require.NoError(t, err)
+
+	x2Encrypted, r, err := enc.Encrypt(x2Message, pk, prng)
+	require.NoError(t, err)
+
+	sid, err := network.NewSID([]byte("sessionId"))
+	require.NoError(t, err)
+	err = doProof(x, bigQ, curve, x2Encrypted, r, pk, sk, sid, prng)
+	require.Error(t, err)
+}
 
 func randomIntInRange(qBig *big.Int, prng io.Reader) (*numct.Nat, error) {
 	q := new(saferith.Nat).SetBig(qBig, 2048)

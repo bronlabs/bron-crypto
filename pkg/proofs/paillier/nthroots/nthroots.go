@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/maurer09"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/internal/meta/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
