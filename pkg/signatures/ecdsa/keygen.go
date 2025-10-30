@@ -9,11 +9,11 @@ import (
 )
 
 type KeyGenerator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-	curve       Curve[P, B, S]
+	curve       EcdsaCurve[P, B, S]
 	scalarField algebra.PrimeField[S]
 }
 
-func NewKeyGenerator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve Curve[P, B, S]) *KeyGenerator[P, B, S] {
+func NewKeyGenerator[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve EcdsaCurve[P, B, S]) *KeyGenerator[P, B, S] {
 	scalarField := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
 	kg := &KeyGenerator[P, B, S]{
 		curve:       curve,

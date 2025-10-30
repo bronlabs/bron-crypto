@@ -17,30 +17,34 @@ type (
 )
 
 // Hash iteratively writes all the inputs to the given hash function and returns the result.
-func Hash(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
-	H := h()
+func Hash[H hash.Hash](hashFunc func() H, xs ...[]byte) ([]byte, error) {
+	h := hashFunc()
 	for i, x := range xs {
-		if _, err := H.Write(x); err != nil {
+		if _, err := h.Write(x); err != nil {
 			return nil, errs.WrapFailed(err, "could not write to H for input %d", i)
 		}
 	}
-	digest := H.Sum(nil)
+	digest := h.Sum(nil)
 	return digest, nil
 }
 
-func HashPrefixedLength(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
-	H := h()
-	H.Write(encodePrefixedLength(xs...))
-	digest := H.Sum(nil)
+func HashPrefixedLength[H hash.Hash](hashFunc func() H, xs ...[]byte) ([]byte, error) {
+	h := hashFunc()
+	_, err := h.Write(encodePrefixedLength(xs...))
+	if err != nil {
+		return nil, errs.WrapHashing(err, "could not hash input")
+	}
+
+	digest := h.Sum(nil)
 	return digest, nil
 }
 
-func HashChain(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
-	H := h()
+func HashChain[H hash.Hash](hashFunc func() H, xs ...[]byte) ([]byte, error) {
+	h := hashFunc()
 	var err error
-	out := make([]byte, H.Size())
+	out := make([]byte, h.Size())
 	for i, x := range xs {
-		out, err = Hash(h, out, x)
+		out, err = Hash(hashFunc, out, x)
 		if err != nil {
 			return nil, errs.WrapHashing(err, "could not compute hash for input %d", i)
 		}
@@ -49,8 +53,8 @@ func HashChain(h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 }
 
 // Hmac iteratively writes all the inputs to an hmac (defined by the hash function and the key) and returns the result.
-func Hmac(key []byte, h func() hash.Hash, xs ...[]byte) ([]byte, error) {
-	hmacFunc := func() hash.Hash { return hmac.New(h, key) }
+func Hmac[H hash.Hash](key []byte, hashFunc func() H, xs ...[]byte) ([]byte, error) {
+	hmacFunc := func() hash.Hash { return hmac.New(HashFuncTypeErase(hashFunc), key) }
 	out, err := Hash(hmacFunc, xs...)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "computing hmac")
@@ -58,9 +62,9 @@ func Hmac(key []byte, h func() hash.Hash, xs ...[]byte) ([]byte, error) {
 	return out, nil
 }
 
-// Same as Hmac but applies encodedPrefixLength to the inputs.
-func HmacPrefixedLength(key []byte, h func() hash.Hash, xs ...[]byte) ([]byte, error) {
-	hmacFunc := func() hash.Hash { return hmac.New(h, key) }
+// HmacPrefixedLength is the same as Hmac but applies encodedPrefixLength to the inputs.
+func HmacPrefixedLength[H hash.Hash](key []byte, hashFunc func() H, xs ...[]byte) ([]byte, error) {
+	hmacFunc := func() hash.Hash { return hmac.New(HashFuncTypeErase(hashFunc), key) }
 	out, err := HashPrefixedLength(hmacFunc, xs...)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "computing hmac")
@@ -97,6 +101,12 @@ func KmacPrefixedLength(key, customizationString []byte, h func(n, s []byte) sha
 		return nil, errs.WrapHashing(err, "could not write into internal state successfully")
 	}
 	return k.Sum(nil), nil
+}
+
+func HashFuncTypeErase[H hash.Hash](hashFunc func() H) func() hash.Hash {
+	return func() hash.Hash {
+		return hashFunc()
+	}
 }
 
 func encodePrefixedLength(messages ...[]byte) []byte {

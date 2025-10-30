@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, curve ecdsa.Curve[P, B, S], accessStructure *feldman.AccessStructure) map[sharing.ID]*dkls23.Shard[P, B, S] {
+func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](tb testing.TB, curve ecdsa.EcdsaCurve[P, B, S], accessStructure *feldman.AccessStructure) map[sharing.ID]*dkls23.Shard[P, B, S] {
 	tb.Helper()
 
 	prng := crand.Reader

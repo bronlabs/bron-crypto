@@ -13,9 +13,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/bron-crypto/pkg/csprng/nist"
-	nist_testutils "github.com/bronlabs/bron-crypto/pkg/csprng/nist/testutils"
-	csprng_testutils "github.com/bronlabs/bron-crypto/pkg/csprng/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng/nist"
+	nist_testutils "github.com/bronlabs/bron-crypto/pkg/base/prng/csprng/nist/testutils"
+	csprng_testutils "github.com/bronlabs/bron-crypto/pkg/base/prng/csprng/testutils"
 )
 
 // decode_or_panic decodes a hex string into a byte slice, or panics if the string is invalid.
@@ -122,7 +123,7 @@ func Test_AES256_ReadnResetState(t *testing.T) {
 func Test_NistPrng(t *testing.T) {
 	t.Parallel()
 	for _, keySize := range []int{16, 32} {
-		prngGenerator := func(seed, salt []byte) (*nist.PrngNist, error) {
+		prngGenerator := func(seed, salt []byte) (csprng.CSPRNG, error) {
 			return nist.NewNistPRNG(keySize, nil, seed, salt, nil)
 		}
 		csprng_testutils.PrngTester(t, 32, 32, prngGenerator)

@@ -15,7 +15,7 @@ type Scheme[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.P
 }
 
 func NewScheme[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S], prng io.Reader) (*Scheme[P, B, S], error) {
-	if suite == nil || prng == nil {
+	if suite == nil || (!suite.IsDeterministic() && prng == nil) {
 		return nil, errs.NewIsNil("suite or prng")
 	}
 

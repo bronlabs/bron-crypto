@@ -1,11 +1,11 @@
 package bls
 
 import (
+	"crypto/sha3"
 	"io"
 	"slices"
 
 	"golang.org/x/crypto/hkdf"
-	"golang.org/x/crypto/sha3"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -38,7 +38,7 @@ func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S a
 	for d.IsZero() {
 		ikm = append(ikm, 0)
 		// step 2.3.2
-		kdf := hkdf.New(RandomOracleHashFunction, ikm, salt, []byte{0, 48}) // TODO: make sure this is correct
+		kdf := hkdf.New(hashing.HashFuncTypeErase(RandomOracleHashFunction), ikm, salt, []byte{0, 48}) // TODO: make sure this is correct
 		okm := make([]byte, sf.WideElementSize())
 		// Leaves key_info parameter as the default empty string
 		// step 2.3.3

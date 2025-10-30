@@ -6,6 +6,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
@@ -242,7 +243,7 @@ func (prg *PrngNist) Seed(entropyInput, nonce []byte) (err error) {
 }
 
 // New returns a new NistPRNG with the provided seed and salt.
-func (prg *PrngNist) New(seed, salt []byte) (*PrngNist, error) {
+func (prg *PrngNist) New(seed, salt []byte) (csprng.CSPRNG, error) {
 	return NewNistPRNG(prg.SecurityStrength(), prg.entropySource, seed, salt, nil)
 }
 

@@ -3,6 +3,7 @@ package sign_softspoken_test
 import (
 	nativeEcdsa "crypto/ecdsa"
 	"crypto/sha256"
+	"crypto/sha3"
 	"crypto/sha512"
 	"fmt"
 	"hash"
@@ -14,7 +15,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
@@ -65,7 +65,7 @@ func Test_HappyPathWithDKG(t *testing.T) {
 
 var testHashFuncs = []func() hash.Hash{
 	sha256.New,
-	sha3.New256,
+	hashing.HashFuncTypeErase(sha3.New256),
 	sha512.New,
 }
 
@@ -75,7 +75,7 @@ var testAccessStructures = []*shamir.AccessStructure{
 	makeAccessStructure(3, 5),
 }
 
-func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, curve ecdsa.Curve[P, B, S], hashFunc func() hash.Hash, accessStructure *shamir.AccessStructure) {
+func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, curve ecdsa.EcdsaCurve[P, B, S], hashFunc func() hash.Hash, accessStructure *shamir.AccessStructure) {
 	t.Helper()
 
 	shards := dkgTestutils.RunDKLs23DKG(t, curve, accessStructure)
