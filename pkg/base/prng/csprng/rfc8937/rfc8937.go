@@ -2,6 +2,7 @@ package rfc8937
 
 import (
 	"crypto/hkdf"
+	"crypto/sha3"
 	"fmt"
 	"io"
 	"slices"
@@ -12,7 +13,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"golang.org/x/crypto/sha3"
 )
 
 // hashFunc implies L = 32 bytes
