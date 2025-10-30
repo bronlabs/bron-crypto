@@ -72,7 +72,7 @@ var testAccessStructures = []*shamir.AccessStructure{
 	makeAccessStructure(2, 3),
 }
 
-func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, curve ecdsa.EcdsaCurve[P, B, S], hashFunc func() hash.Hash, accessStructure *shamir.AccessStructure) {
+func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, curve ecdsa.Curve[P, B, S], hashFunc func() hash.Hash, accessStructure *shamir.AccessStructure) {
 	t.Helper()
 
 	shards := dkgTestutils.RunDKLs23DKG(t, curve, accessStructure)

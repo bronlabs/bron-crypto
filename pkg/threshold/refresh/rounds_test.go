@@ -17,6 +17,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
@@ -26,7 +27,7 @@ func Test_HappyPath(t *testing.T) {
 
 	prng := crand.Reader
 	ids := []sharing.ID{1, 2, 3}
-	sharingIds := hashset.NewComparable[sharing.ID](ids...).Freeze()
+	sharingIds := hashset.NewComparable(ids...).Freeze()
 	as, err := shamir.NewAccessStructure(2, sharingIds)
 	require.NoError(t, err)
 	curve := k256.NewCurve()
@@ -47,17 +48,27 @@ func Test_HappyPath(t *testing.T) {
 	tapes[2] = hagrid.NewTranscript("test")
 
 	participants := make([]*refresh.Participant[*k256.Point, *k256.Scalar], 3)
+
 	s0, ok := dealerOut.Shares().Get(1)
 	require.True(t, ok)
-	participants[0], err = refresh.NewParticipant(sid, s0, dealerOut.VerificationMaterial(), as, tapes[0], prng)
+	sh0, err := tsig.NewBaseShard(s0, dealerOut.VerificationMaterial(), as)
+	require.NoError(t, err)
+	participants[0], err = refresh.NewParticipant(sid, sh0, tapes[0], prng)
+	require.NoError(t, err)
 
 	s1, ok := dealerOut.Shares().Get(2)
 	require.True(t, ok)
-	participants[1], err = refresh.NewParticipant(sid, s1, dealerOut.VerificationMaterial(), as, tapes[1], prng)
+	sh1, err := tsig.NewBaseShard(s1, dealerOut.VerificationMaterial(), as)
+	require.NoError(t, err)
+	participants[1], err = refresh.NewParticipant(sid, sh1, tapes[1], prng)
+	require.NoError(t, err)
 
 	s2, ok := dealerOut.Shares().Get(3)
 	require.True(t, ok)
-	participants[2], err = refresh.NewParticipant(sid, s2, dealerOut.VerificationMaterial(), as, tapes[2], prng)
+	sh2, err := tsig.NewBaseShard(s2, dealerOut.VerificationMaterial(), as)
+	require.NoError(t, err)
+	participants[2], err = refresh.NewParticipant(sid, sh2, tapes[2], prng)
+	require.NoError(t, err)
 
 	r1bo := make(map[sharing.ID]*refresh.Round1Broadcast[*k256.Point, *k256.Scalar])
 	r1uo := make(map[sharing.ID]network.RoundMessages[*refresh.Round1P2P[*k256.Point, *k256.Scalar]])

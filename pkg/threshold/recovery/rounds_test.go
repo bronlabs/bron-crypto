@@ -13,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/recovery"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig"
 )
 
 func Test_HappyPath(t *testing.T) {
@@ -21,29 +22,38 @@ func Test_HappyPath(t *testing.T) {
 	const THRESHOLD = 2
 	const TOTAL = 4
 	prng := crand.Reader
-	shareholdersList := []sharing.ID{1, 2, 3, 4}
-	shareholders := hashset.NewComparable(shareholdersList...).Freeze()
+
+	shareholdersList := [TOTAL]sharing.ID{}
+	for i := 1; i <= TOTAL; i++ {
+		shareholdersList[i-1] = sharing.ID(i)
+	}
+	shareholders := hashset.NewComparable(shareholdersList[:]...).Freeze()
 	group := k256.NewCurve()
-	as, err := feldman.NewAccessStructure(THRESHOLD, hashset.NewComparable(shareholdersList...).Freeze())
+	as, err := feldman.NewAccessStructure(THRESHOLD, hashset.NewComparable(shareholdersList[:]...).Freeze())
 	require.NoError(t, err)
 	scheme, err := feldman.NewScheme(group.Generator(), THRESHOLD, shareholders)
 	require.NoError(t, err)
 	dealerOutput, _, err := scheme.DealRandom(prng)
+	require.NoError(t, err)
 	verificationVector := dealerOutput.VerificationMaterial()
 
 	const MISLAYER_ID = 3
 	quroumList := []sharing.ID{2, 3, 4}
-	quorum := hashset.NewComparable[sharing.ID](quroumList...).Freeze()
+	quorum := hashset.NewComparable(quroumList...).Freeze()
 
 	recoverers := make([]*recovery.Recoverer[*k256.Point, *k256.Scalar], 2)
 	s2, ok := dealerOutput.Shares().Get(2)
 	require.True(t, ok)
-	recoverers[0], err = recovery.NewRecoverer(MISLAYER_ID, quorum, as, s2, verificationVector, prng)
+	sh2, err := tsig.NewBaseShard(s2, verificationVector, as)
+	require.NoError(t, err)
+	recoverers[0], err = recovery.NewRecoverer(MISLAYER_ID, quorum, sh2, prng)
 	require.NoError(t, err)
 	s4, ok := dealerOutput.Shares().Get(4)
 	require.True(t, ok)
-	recoverers[1], err = recovery.NewRecoverer(MISLAYER_ID, quorum, as, s4, verificationVector, prng)
-	require.True(t, ok)
+	sh4, err := tsig.NewBaseShard(s4, verificationVector, as)
+	require.NoError(t, err)
+	recoverers[1], err = recovery.NewRecoverer(MISLAYER_ID, quorum, sh4, prng)
+	require.NoError(t, err)
 
 	mislayer, err := recovery.NewMislayer(MISLAYER_ID, quorum, as, group)
 	require.NoError(t, err)
@@ -61,6 +71,7 @@ func Test_HappyPath(t *testing.T) {
 	r2uo := make(map[sharing.ID]network.RoundMessages[*recovery.Round2P2P[*k256.Point, *k256.Scalar]])
 	for _, r := range recoverers {
 		r2bo[r.SharingID()], r2uo[r.SharingID()], err = r.Round2(r2bi[r.SharingID()], r2ui[r.SharingID()])
+		require.NoError(t, err)
 	}
 	r3bi, r3ui := testutils.MapO2I(t, participants, r2bo, r2uo)
 

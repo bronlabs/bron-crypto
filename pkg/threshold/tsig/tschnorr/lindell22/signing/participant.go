@@ -8,7 +8,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -43,7 +42,7 @@ type State[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] 
 	opening                   lindell22.Opening
 	theirBigRCommitments      map[sharing.ID]lindell22.Commitment
 	tapeFrozenBeforeDlogProof ts.Transcript
-	phi                       maurer09.GroupHomomorphism[S, GE]
+	phi                       algebra.Homomorphism[S, GE]
 }
 
 func (c *Cosigner[GE, S, M]) SessionID() network.SID {
@@ -120,7 +119,7 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 }
 
 func NewCosigner[
-GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
+	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](
 	sid network.SID,
 	shard *lindell22.Shard[GE, S],

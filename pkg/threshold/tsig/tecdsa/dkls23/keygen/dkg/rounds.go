@@ -9,10 +9,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
-	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 )
 
@@ -190,17 +190,17 @@ func (p *Participant[P, B, S]) Round6(r5u network.RoundMessages[*Round5P2P]) (*d
 		}
 	}
 
-	publicKey, err := ecdsa.NewPublicKey(p.state.dkgOutput.PublicMaterial().PublicKeyValue())
+	baseShard, err := tecdsa.NewShard(p.state.dkgOutput.Share(), p.state.dkgOutput.VerificationVector(), p.ac)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "invalid public key")
+		return nil, errs.WrapFailed(err, "cannot create tECDSA DKLSS23 shard")
 	}
-	shard := dkls23.NewShard(
-		p.state.dkgOutput.Share(),
-		p.ac,
-		publicKey,
-		p.state.zeroSeeds,
-		p.state.senderSeeds.Freeze(),
-		p.state.receiverSeeds.Freeze(),
-	)
+	auxInfo, err := dkls23.NewAuxiliaryInfo(p.state.zeroSeeds, p.state.senderSeeds.Freeze(), p.state.receiverSeeds.Freeze())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create auxiliary info")
+	}
+	shard, err := dkls23.NewShard(baseShard, auxInfo)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create tECDSA DKLSS23 shard")
+	}
 	return shard, nil
 }
