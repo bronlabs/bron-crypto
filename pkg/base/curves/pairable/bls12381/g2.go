@@ -251,6 +251,10 @@ func (c *G2) BaseStructure() algebra.Structure[*BaseFieldElementG2] {
 	return NewG2BaseField()
 }
 
+func (c *G2) ScalarRing() algebra.ZModLike[*Scalar] {
+	return NewScalarField()
+}
+
 func (c *G2) ScalarField() algebra.PrimeField[*Scalar] {
 	return NewScalarField()
 }
@@ -371,7 +375,7 @@ func (p *PointG2) ToCompressed() []byte {
 	return out
 }
 
-func (p *PointG2) ToUncompreseed() []byte {
+func (p *PointG2) ToUncompressed() []byte {
 	var x, y bls12381Impl.Fp2
 	x.SetZero()
 	y.SetZero()

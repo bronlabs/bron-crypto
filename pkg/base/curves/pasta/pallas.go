@@ -180,6 +180,10 @@ func (c *PallasCurve) BaseStructure() algebra.Structure[*PallasBaseFieldElement]
 	return NewPallasBaseField()
 }
 
+func (c *PallasCurve) ScalarRing() algebra.ZModLike[*PallasScalar] {
+	return NewPallasScalarField()
+}
+
 func (c *PallasCurve) ScalarField() algebra.PrimeField[*PallasScalar] {
 	return NewPallasScalarField()
 }

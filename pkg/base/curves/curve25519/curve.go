@@ -165,7 +165,15 @@ func (c *Curve) ScalarStructure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 
+func (c *Curve) ScalarRing() algebra.ZModLike[*Scalar] {
+	return NewScalarField()
+}
+
 func (c *Curve) BaseStructure() algebra.Structure[*BaseFieldElement] {
+	return NewBaseField()
+}
+
+func (c *Curve) BaseField() algebra.FiniteField[*BaseFieldElement] {
 	return NewBaseField()
 }
 
@@ -209,7 +217,7 @@ func (p *Point) ToCompressed() []byte {
 
 	x, err := p.AffineX()
 	if err != nil {
-		panic("this should never happen")
+		panic(errs.WrapFailed(err, "this should never happen"))
 	}
 
 	return x.V.Bytes()
@@ -229,18 +237,18 @@ func (p *Point) Coordinates() algebra.Coordinates[*BaseFieldElement] {
 	panic("not supported")
 }
 
-func (p *Point) ToUncompreseed() []byte {
+func (p *Point) ToUncompressed() []byte {
 	if p.IsOpIdentity() {
 		return make([]byte, 64)
 	}
 
 	x, err := p.AffineX()
 	if err != nil {
-		panic("this should never happen")
+		panic(errs.WrapFailed(err, "this should never happen"))
 	}
 	y, err := p.AffineY()
 	if err != nil {
-		panic("this should never happen")
+		panic(errs.WrapFailed(err, "this should never happen"))
 	}
 
 	return append(x.V.Bytes(), y.V.Bytes()...)
