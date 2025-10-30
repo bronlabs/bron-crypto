@@ -3,6 +3,7 @@ package sign_softspoken_test
 import (
 	nativeEcdsa "crypto/ecdsa"
 	"crypto/sha256"
+	"crypto/sha3"
 	"crypto/sha512"
 	"fmt"
 	"hash"
@@ -13,8 +14,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
@@ -65,7 +66,7 @@ func Test_HappyPathWithDKG(t *testing.T) {
 
 var testHashFuncs = []func() hash.Hash{
 	sha256.New,
-	sha3.New256,
+	utils.HashFuncTypeErase(sha3.New256),
 	sha512.New,
 }
 

@@ -1,11 +1,12 @@
 package bls
 
 import (
+	"crypto/sha3"
 	"io"
 	"slices"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"golang.org/x/crypto/hkdf"
-	"golang.org/x/crypto/sha3"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -38,7 +39,7 @@ func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S a
 	for d.IsZero() {
 		ikm = append(ikm, 0)
 		// step 2.3.2
-		kdf := hkdf.New(RandomOracleHashFunction, ikm, salt, []byte{0, 48}) // TODO: make sure this is correct
+		kdf := hkdf.New(utils.HashFuncTypeErase(RandomOracleHashFunction), ikm, salt, []byte{0, 48}) // TODO: make sure this is correct
 		okm := make([]byte, sf.WideElementSize())
 		// Leaves key_info parameter as the default empty string
 		// step 2.3.3
@@ -65,7 +66,7 @@ func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S a
 // Warning: this is an internal method. We don't check if key and signature subgroups are different.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-coresign
 func coreSign[
-	Sig curves.Point[Sig, SigFE, S], SigFE algebra.FieldElement[SigFE], S algebra.PrimeFieldElement[S],
+Sig curves.Point[Sig, SigFE, S], SigFE algebra.FieldElement[SigFE], S algebra.PrimeFieldElement[S],
 ](signatureSubGroup curves.Curve[Sig, SigFE, S], privateKey S, message []byte, dst string) (Sig, error) {
 	if signatureSubGroup == nil || message == nil || dst == "" {
 		return *new(Sig), errs.NewArgument("signature subgroup, private key, message or dst cannot be nil or zero")
@@ -87,7 +88,7 @@ func coreSign[
 }
 
 func coreAggregateSign[
-	Sig curves.Point[Sig, SigFE, S], SigFE algebra.FieldElement[SigFE], S algebra.PrimeFieldElement[S],
+Sig curves.Point[Sig, SigFE, S], SigFE algebra.FieldElement[SigFE], S algebra.PrimeFieldElement[S],
 ](signatureSubGroup curves.Curve[Sig, SigFE, S], privateKey S, messages [][]byte, dst string) (Sig, error) {
 	if signatureSubGroup == nil || dst == "" {
 		return *new(Sig), errs.NewArgument("signature subgroup or dst cannot be nil or zero")
@@ -113,7 +114,7 @@ func coreAggregateSign[
 }
 
 func coreBatchSign[
-	Sig curves.Point[Sig, SigFE, S], SigFE algebra.FieldElement[SigFE], S algebra.PrimeFieldElement[S],
+Sig curves.Point[Sig, SigFE, S], SigFE algebra.FieldElement[SigFE], S algebra.PrimeFieldElement[S],
 ](signatureSubGroup curves.Curve[Sig, SigFE, S], privateKey S, messages [][]byte, dst string) ([]Sig, error) {
 	if signatureSubGroup == nil || dst == "" {
 		return nil, errs.NewArgument("signature subgroup or dst cannot be nil or zero")
@@ -142,9 +143,9 @@ func coreBatchSign[
 // Warning: this is an internal method. We don't check if key and signature subgroups are different.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-coreverify
 func coreVerify[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, ET, S], PKFE algebra.FieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, ET, S], SigFE algebra.FieldElement[SigFE],
-	ET algebra.MultiplicativeGroupElement[ET], S algebra.PrimeFieldElement[S],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, ET, S], PKFE algebra.FieldElement[PKFE],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, ET, S], SigFE algebra.FieldElement[SigFE],
+ET algebra.MultiplicativeGroupElement[ET], S algebra.PrimeFieldElement[S],
 ](publicKey PK, message []byte, signature Sig, dst string, signatureSubGroup curves.PairingFriendlyCurve[Sig, SigFE, PK, PKFE, ET, S]) error {
 	// step 2.7.2
 	if message == nil || signatureSubGroup == nil || dst == "" {
@@ -194,9 +195,9 @@ func coreVerify[
 // Warning: this is an internal method. We don't check if K and S are different subgroups.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-coreaggregateverify
 func coreAggregateVerify[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, ET, S], PKFE algebra.FieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, ET, S], SigFE algebra.FieldElement[SigFE],
-	ET algebra.MultiplicativeGroupElement[ET], S algebra.PrimeFieldElement[S],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, ET, S], PKFE algebra.FieldElement[PKFE],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, ET, S], SigFE algebra.FieldElement[SigFE],
+ET algebra.MultiplicativeGroupElement[ET], S algebra.PrimeFieldElement[S],
 ](publicKeys []PK, messages [][]byte, aggregatedSignature Sig, dst string, signatureSubGroup curves.PairingFriendlyCurve[Sig, SigFE, PK, PKFE, ET, S]) error {
 	if len(publicKeys) == 0 {
 		return errs.NewValidation("at least one public key is required")
@@ -258,9 +259,9 @@ func coreAggregateVerify[
 // PopProve(SK) -> (proof, error): an algorithm that generates a proof of possession for the public key corresponding to secret key SK.
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-popprove
 func popProve[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, ET, S], PKFE algebra.FieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, ET, S], SigFE algebra.FieldElement[SigFE],
-	ET algebra.MultiplicativeGroupElement[ET], S algebra.PrimeFieldElement[S],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, ET, S], PKFE algebra.FieldElement[PKFE],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, ET, S], SigFE algebra.FieldElement[SigFE],
+ET algebra.MultiplicativeGroupElement[ET], S algebra.PrimeFieldElement[S],
 ](privateKey S, publicKey PK, signatureSubGroup curves.Curve[Sig, SigFE, S], dst string) (Sig, error) {
 	message := publicKey.Bytes()
 	pop, err := coreSign(signatureSubGroup, privateKey, message, dst)
@@ -273,9 +274,9 @@ func popProve[
 // PopVerify verifies proof of possession of public key
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-popverify
 func popVerify[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, ET, S], PKFE algebra.FieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, ET, S], SigFE algebra.FieldElement[SigFE],
-	ET algebra.MultiplicativeGroupElement[ET], S algebra.PrimeFieldElement[S],
+PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, ET, S], PKFE algebra.FieldElement[PKFE],
+Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, ET, S], SigFE algebra.FieldElement[SigFE],
+ET algebra.MultiplicativeGroupElement[ET], S algebra.PrimeFieldElement[S],
 ](publicKey PK, pop Sig, signatureSubGroup curves.PairingFriendlyCurve[Sig, SigFE, PK, PKFE, ET, S], popDst string) error {
 	if publicKey.IsOpIdentity() {
 		return errs.NewIsIdentity("public key is identity")
@@ -290,7 +291,7 @@ func popVerify[
 // See section 3.2.1 from
 // https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-sign
 func AugmentMessage[
-	PK curves.Point[PK, PKFE, S], PKFE algebra.FieldElement[PKFE], S algebra.PrimeFieldElement[S],
+PK curves.Point[PK, PKFE, S], PKFE algebra.FieldElement[PKFE], S algebra.PrimeFieldElement[S],
 ](message []byte, publicKey PK) ([]byte, error) {
 	if publicKey.IsOpIdentity() {
 		return nil, errs.NewIsIdentity("public key is identity")

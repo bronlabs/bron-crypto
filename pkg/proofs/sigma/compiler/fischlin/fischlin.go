@@ -1,6 +1,7 @@
 package fischlin
 
 import (
+	"crypto/sha3"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -12,7 +13,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"golang.org/x/crypto/sha3"
 )
 
 const (
