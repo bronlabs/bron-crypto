@@ -2,7 +2,9 @@ package ecdsa
 
 import (
 	nativeEcdsa "crypto/ecdsa"
+	"encoding/asn1"
 	"io"
+	"math/big"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
@@ -35,10 +37,30 @@ func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 		return nil, errs.WrapFailed(err, "hashing failed")
 	}
 	nativeSk := s.sk.ToElliptic()
-	nativeR, nativeS, err := nativeEcdsa.Sign(s.prng, nativeSk, digest)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "signing failed")
+
+	var nativeR, nativeS *big.Int
+	if s.suite.IsDeterministic() {
+		asn1Sig, err := nativeSk.Sign(nil, digest, s.suite.hashId)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "signing failed")
+		}
+
+		// Parse ASN.1 DER-encoded signature to extract r and s
+		var nativeEcdsaSig struct {
+			R, S *big.Int
+		}
+		_, err = asn1.Unmarshal(asn1Sig, &nativeEcdsaSig)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "failed to parse ASN.1 signature")
+		}
+		nativeR, nativeS = nativeEcdsaSig.R, nativeEcdsaSig.S
+	} else {
+		nativeR, nativeS, err = nativeEcdsa.Sign(s.prng, nativeSk, digest)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "signing failed")
+		}
 	}
+
 	rr, err := s.suite.scalarField.FromWideBytes(nativeR.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert r")
