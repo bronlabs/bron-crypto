@@ -18,7 +18,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 )
 
-func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], threshold uint, shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *dkls23.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
+func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.EcdsaCurve[P, B, S], threshold uint, shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *dkls23.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
 	generator := curve.Generator()
 	feldmanDealer, err := feldman.NewScheme(generator, threshold, shareholder)
 	if err != nil {

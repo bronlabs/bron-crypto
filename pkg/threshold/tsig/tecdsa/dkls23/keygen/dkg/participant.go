@@ -48,7 +48,7 @@ type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	zeroSeeds     przs.Seeds
 }
 
-func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, sharingId sharing.ID, ac *feldman.AccessStructure, curve ecdsa.Curve[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Participant[P, B, S], error) {
+func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, sharingId sharing.ID, ac *feldman.AccessStructure, curve ecdsa.EcdsaCurve[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Participant[P, B, S], error) {
 	if ac == nil || tape == nil || prng == nil {
 		return nil, errs.NewIsNil("argument")
 	}

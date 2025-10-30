@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"hash"
 	"math/bits"
 	"reflect"
 
@@ -104,4 +105,10 @@ func ImplementsX[X, T any](v T) (X, bool) {
 		return x, true
 	}
 	return *new(X), false
+}
+
+func HashFuncTypeErase[H hash.Hash](hashFunc func() H) func() hash.Hash {
+	return func() hash.Hash {
+		return hashFunc()
+	}
 }

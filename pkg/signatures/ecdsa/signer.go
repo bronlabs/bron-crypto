@@ -1,42 +1,16 @@
 package ecdsa
 
 import (
-	"crypto"
 	nativeEcdsa "crypto/ecdsa"
 	"encoding/asn1"
-	"hash"
 	"io"
 	"math/big"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
-
-// signerOpts implements crypto.SignerOpts for deterministic signing
-type signerOpts struct {
-	hash hash.Hash
-}
-
-func (s signerOpts) HashFunc() crypto.Hash {
-	// Map hash.Hash to crypto.Hash based on output size
-	switch s.hash.Size() {
-	case 20:
-		return crypto.SHA1
-	case 28:
-		return crypto.SHA224
-	case 32:
-		return crypto.SHA256
-	case 48:
-		return crypto.SHA384
-	case 64:
-		return crypto.SHA512
-	default:
-		return 0 // Unknown hash
-	}
-}
 
 type Signer[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	suite *Suite[P, B, S]
@@ -44,23 +18,8 @@ type Signer[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.P
 	prng  io.Reader
 }
 
-type DeterministicSigner = Signer[*p256.Point, *p256.BaseFieldElement, *p256.Scalar]
-
-func NewDeterministicSigner(suite *Suite[*p256.Point, *p256.BaseFieldElement, *p256.Scalar], sk *PrivateKey[*p256.Point, *p256.BaseFieldElement, *p256.Scalar]) (*Signer[*p256.Point, *p256.BaseFieldElement, *p256.Scalar], error) {
-	if suite == nil || sk == nil {
-		return nil, errs.NewIsNil("suite or secret key is nil")
-	}
-
-	s := &Signer[*p256.Point, *p256.BaseFieldElement, *p256.Scalar]{
-		suite: suite,
-		sk:    sk,
-		prng:  nil,
-	}
-	return s, nil
-}
-
 func NewSigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S], sk *PrivateKey[P, B, S], prng io.Reader) (*Signer[P, B, S], error) {
-	if suite == nil || prng == nil || sk == nil {
+	if suite == nil || (prng == nil && !suite.IsDeterministic()) || sk == nil {
 		return nil, errs.NewIsNil("suite or prng pr secret key is nil")
 	}
 
@@ -80,28 +39,22 @@ func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 	nativeSk := s.sk.ToElliptic()
 
 	var nativeR, nativeS *big.Int
-
-	// Use the appropriate signing method based on whether deterministic mode is enabled
-	if s.prng == nil {
-		// Deterministic signing (RFC 6979) using the (*PrivateKey).Sign method
-		// This method requires passing the hash function as SignerOpts
-		opts := signerOpts{hash: s.suite.hashFunc()}
-		asn1Sig, err := nativeSk.Sign(nil, digest, opts)
+	if s.suite.IsDeterministic() {
+		asn1Sig, err := nativeSk.Sign(nil, digest, s.suite.hashId)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "deterministic signing failed")
+			return nil, errs.WrapFailed(err, "signing failed")
 		}
 
 		// Parse ASN.1 DER-encoded signature to extract r and s
-		var ecdsaSig struct {
+		var nativeEcdsaSig struct {
 			R, S *big.Int
 		}
-		_, err = asn1.Unmarshal(asn1Sig, &ecdsaSig)
+		_, err = asn1.Unmarshal(asn1Sig, &nativeEcdsaSig)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "failed to parse ASN.1 signature")
 		}
-		nativeR, nativeS = ecdsaSig.R, ecdsaSig.S
+		nativeR, nativeS = nativeEcdsaSig.R, nativeEcdsaSig.S
 	} else {
-		// Non-deterministic signing using the legacy Sign function
 		nativeR, nativeS, err = nativeEcdsa.Sign(s.prng, nativeSk, digest)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "signing failed")
@@ -136,5 +89,5 @@ func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 }
 
 func (s *Signer[P, B, S]) IsDeterministic() bool {
-	return s.prng == nil
+	return s.suite.IsDeterministic()
 }
