@@ -23,7 +23,7 @@ func NewPublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 	if pk.IsZero() {
 		return nil, errs.NewFailed("public key is zero")
 	}
-	if _, err := algebra.StructureAs[EcdsaCurve[P, B, S]](pk.Structure()); err != nil {
+	if _, err := algebra.StructureAs[Curve[P, B, S]](pk.Structure()); err != nil {
 		return nil, errs.WrapFailed(err, "curve structure is not supported")
 	}
 
@@ -61,7 +61,7 @@ func (pk *PublicKey[P, B, S]) HashCode() base.HashCode {
 }
 
 func (pk *PublicKey[P, B, S]) ToElliptic() *nativeEcdsa.PublicKey {
-	curve := algebra.StructureMustBeAs[EcdsaCurve[P, B, S]](pk.pk.Structure())
+	curve := algebra.StructureMustBeAs[Curve[P, B, S]](pk.pk.Structure())
 	nativeCurve := curve.ToElliptic()
 	nativeX := utils.Must(pk.Value().AffineX()).Cardinal().Big()
 	nativeY := utils.Must(pk.Value().AffineY()).Cardinal().Big()

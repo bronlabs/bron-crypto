@@ -20,7 +20,7 @@ func NewPrivateKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 	if sk.IsZero() {
 		return nil, errs.NewFailed("secret key is zero")
 	}
-	curve, err := algebra.StructureAs[EcdsaCurve[P, B, S]](pk.Value().Structure())
+	curve, err := algebra.StructureAs[Curve[P, B, S]](pk.Value().Structure())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "curve structure is not supported")
 	}
