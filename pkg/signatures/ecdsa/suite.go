@@ -12,14 +12,14 @@ import (
 
 type Suite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	deterministic bool
-	curve         EcdsaCurve[P, B, S]
+	curve         Curve[P, B, S]
 	baseField     algebra.PrimeField[B]
 	scalarField   algebra.PrimeField[S]
 	hashFunc      func() hash.Hash
 	hashId        crypto.Hash
 }
 
-func NewSuite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], H hash.Hash](curve EcdsaCurve[P, B, S], hashFunc func() H) (*Suite[P, B, S], error) {
+func NewSuite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], H hash.Hash](curve Curve[P, B, S], hashFunc func() H) (*Suite[P, B, S], error) {
 	if hashFunc == nil {
 		return nil, errs.NewIsNil("hash function")
 	}
@@ -37,7 +37,7 @@ func NewSuite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 	return s, nil
 }
 
-func NewDeterministicSuite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve EcdsaCurve[P, B, S], h crypto.Hash) (*Suite[P, B, S], error) {
+func NewDeterministicSuite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve Curve[P, B, S], h crypto.Hash) (*Suite[P, B, S], error) {
 	if !h.Available() {
 		return nil, errs.NewFailed("hash function not available")
 	}

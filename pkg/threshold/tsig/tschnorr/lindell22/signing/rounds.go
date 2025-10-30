@@ -2,6 +2,7 @@ package signing
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -108,6 +109,7 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 		summedR = summedR.Op(theirBigR.X)
 	}
 	// step 3.7.2: compute e
+	fmt.Println(c.shard.PublicKey())
 	e, err := c.variant.ComputeChallenge(summedR, c.shard.PublicKey().Value(), message)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create digest scalar")

@@ -22,7 +22,7 @@ func (r *Recoverer[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnic
 	blindShares := make(map[sharing.ID]*feldman.Share[S])
 	for id, s := range blindOutput.Shares().Iter() {
 		blindShares[id] = s.SubPlain(shift.Value())
-		if id == r.sharingId {
+		if id == r.SharingID() {
 			r.state.blindShare = blindShares[id]
 		}
 	}
@@ -33,7 +33,7 @@ func (r *Recoverer[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnic
 	}
 	r1u := hashmap.NewComparable[sharing.ID, *Round1P2P[G, S]]()
 	for id := range r.quorum.Iter() {
-		if id == r.mislayerId || id == r.sharingId {
+		if id == r.mislayerId || id == r.SharingID() {
 			continue
 		}
 		s, ok := blindShares[id]
@@ -51,9 +51,9 @@ func (r *Recoverer[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnic
 func (r *Recoverer[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S]], r1u network.RoundMessages[*Round1P2P[G, S]]) (*Round2Broadcast[G, S], network.OutgoingUnicasts[*Round2P2P[G, S]], error) {
 	// TODO add share verification
 
-	blindedShare := r.state.blindShare.Add(r.share)
+	blindedShare := r.state.blindShare.Add(r.shard.Share())
 	for id := range r.quorum.Iter() {
-		if id == r.mislayerId || id == r.sharingId {
+		if id == r.mislayerId || id == r.SharingID() {
 			continue
 		}
 		u, ok := r1u.Get(id)
@@ -80,7 +80,7 @@ func (r *Recoverer[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S
 	}
 
 	r2b := &Round2Broadcast[G, S]{
-		VerificationVector: r.verificationVector,
+		VerificationVector: r.shard.VerificationVector(),
 	}
 	r2u := hashmap.NewComparable[sharing.ID, *Round2P2P[G, S]]()
 	r2u.Put(r.mislayerId, &Round2P2P[G, S]{

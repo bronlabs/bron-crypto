@@ -9,7 +9,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/maurer09"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/internal/meta/maurer09"
 )
 
 // TestMaurer09Protocol_BasicFunctionality tests the basic protocol flow

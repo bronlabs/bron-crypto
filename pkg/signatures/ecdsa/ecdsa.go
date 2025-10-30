@@ -14,7 +14,7 @@ import (
 
 const Name signatures.Name = "ECDSA"
 
-type EcdsaCurve[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] interface {
+type Curve[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] interface {
 	curves.Curve[P, B, S]
 	FromAffineX(x B, b bool) (P, error)
 	ToElliptic() elliptic.Curve
@@ -44,7 +44,7 @@ func ComputeRecoveryId[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 		return -1, errs.WrapFailed(err, "cannot compute y")
 	}
 
-	curve := algebra.StructureMustBeAs[EcdsaCurve[P, B, S]](bigR.Structure())
+	curve := algebra.StructureMustBeAs[Curve[P, B, S]](bigR.Structure())
 	subGroupOrder := curve.Order()
 
 	var recoveryId int

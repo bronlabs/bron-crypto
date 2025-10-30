@@ -20,8 +20,8 @@ func (p *Participant[G, S]) Round2(r2b network.RoundMessages[*Round1Broadcast[G,
 		return nil, nil, errs.WrapFailed(err, "failed to run round 2 of zero participant")
 	}
 
-	share = share.Add(p.share)
-	verification = verification.Op(p.verificationVector)
+	share = share.Add(p.shard.Share())
+	verification = verification.Op(p.shard.VerificationVector())
 
 	return share, verification, nil
 }

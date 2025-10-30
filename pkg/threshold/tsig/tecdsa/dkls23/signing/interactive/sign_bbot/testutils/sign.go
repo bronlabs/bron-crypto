@@ -34,7 +34,7 @@ func RunDKLs23SignBBOT[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 	require.NoError(tb, err)
 	tape := hagrid.NewTranscript(hex.EncodeToString(sessionId[:]))
 	pk := slices.Collect(maps.Values(shards))[0].PublicKey()
-	curve := algebra.StructureMustBeAs[ecdsa.EcdsaCurve[P, B, S]](pk.Value().Structure())
+	curve := algebra.StructureMustBeAs[ecdsa.Curve[P, B, S]](pk.Value().Structure())
 	ecdsaSuite, err := ecdsa.NewSuite(curve, hashFunc)
 	require.NoError(tb, err)
 
