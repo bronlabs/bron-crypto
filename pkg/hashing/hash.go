@@ -6,7 +6,6 @@ import (
 	"hash"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -55,7 +54,7 @@ func HashChain[H hash.Hash](hashFunc func() H, xs ...[]byte) ([]byte, error) {
 
 // Hmac iteratively writes all the inputs to an hmac (defined by the hash function and the key) and returns the result.
 func Hmac[H hash.Hash](key []byte, hashFunc func() H, xs ...[]byte) ([]byte, error) {
-	hmacFunc := func() hash.Hash { return hmac.New(utils.HashFuncTypeErase(hashFunc), key) }
+	hmacFunc := func() hash.Hash { return hmac.New(HashFuncTypeErase(hashFunc), key) }
 	out, err := Hash(hmacFunc, xs...)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "computing hmac")
@@ -65,7 +64,7 @@ func Hmac[H hash.Hash](key []byte, hashFunc func() H, xs ...[]byte) ([]byte, err
 
 // HmacPrefixedLength is the same as Hmac but applies encodedPrefixLength to the inputs.
 func HmacPrefixedLength[H hash.Hash](key []byte, hashFunc func() H, xs ...[]byte) ([]byte, error) {
-	hmacFunc := func() hash.Hash { return hmac.New(utils.HashFuncTypeErase(hashFunc), key) }
+	hmacFunc := func() hash.Hash { return hmac.New(HashFuncTypeErase(hashFunc), key) }
 	out, err := HashPrefixedLength(hmacFunc, xs...)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "computing hmac")
@@ -102,6 +101,12 @@ func KmacPrefixedLength(key, customizationString []byte, h func(n, s []byte) sha
 		return nil, errs.WrapHashing(err, "could not write into internal state successfully")
 	}
 	return k.Sum(nil), nil
+}
+
+func HashFuncTypeErase[H hash.Hash](hashFunc func() H) func() hash.Hash {
+	return func() hash.Hash {
+		return hashFunc()
+	}
 }
 
 func encodePrefixedLength(messages ...[]byte) []byte {

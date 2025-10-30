@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
 type Suite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -31,7 +31,7 @@ func NewSuite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 		curve,
 		baseField,
 		scalarField,
-		utils.HashFuncTypeErase(hashFunc),
+		hashing.HashFuncTypeErase(hashFunc),
 		0,
 	}
 	return s, nil

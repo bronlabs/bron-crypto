@@ -14,7 +14,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -66,7 +65,7 @@ func Test_HappyPathWithDKG(t *testing.T) {
 
 var testHashFuncs = []func() hash.Hash{
 	sha256.New,
-	utils.HashFuncTypeErase(sha3.New256),
+	hashing.HashFuncTypeErase(sha3.New256),
 	sha512.New,
 }
 
