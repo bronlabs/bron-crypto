@@ -532,6 +532,20 @@ func TestCBOR_EdgeCases(t *testing.T) {
 		err := z.UnmarshalCBOR([]byte{0xFF, 0xFF, 0xFF, 0xFF})
 		require.Error(t, err)
 	})
+
+	t.Run("Rat_empty_bytes", func(t *testing.T) {
+		t.Parallel()
+		var r num.Rat
+		err := r.UnmarshalCBOR([]byte{})
+		require.Error(t, err)
+	})
+
+	t.Run("Rat_corrupted_data", func(t *testing.T) {
+		t.Parallel()
+		var r num.Rat
+		err := r.UnmarshalCBOR([]byte{0xFF, 0xFF, 0xFF, 0xFF})
+		require.Error(t, err)
+	})
 }
 
 func BenchmarkNat_CBOR(b *testing.B) {
@@ -578,6 +592,187 @@ func BenchmarkInt_CBOR(b *testing.B) {
 
 	b.Run("Unmarshal", func(b *testing.B) {
 		var recovered num.Int
+		b.ResetTimer()
+		for range b.N {
+			err := recovered.UnmarshalCBOR(data)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+}
+
+func TestRat_CBOR(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		numerator   int64
+		denominator uint64
+	}{
+		{"zero", 0, 1},
+		{"one", 1, 1},
+		{"positive_simple", 3, 4},
+		{"negative_simple", -3, 4},
+		{"large_numerator", 1234567890, 1},
+		{"large_denominator", 1, 9876543210},
+		{"both_large", 999999999, 888888888},
+		{"negative_large", -999999999, 888888888},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Create original Rat
+			a := num.Z().FromInt64(tt.numerator)
+			b, err := num.NPlus().FromUint64(tt.denominator)
+			require.NoError(t, err)
+
+			original, err := num.Q().New(a, b)
+			require.NoError(t, err)
+
+			// Marshal to CBOR
+			data, err := original.MarshalCBOR()
+			require.NoError(t, err)
+			require.NotEmpty(t, data)
+
+			// Unmarshal from CBOR
+			var recovered num.Rat
+			err = recovered.UnmarshalCBOR(data)
+			require.NoError(t, err)
+
+			// Compare values
+			require.True(t, original.Equal(&recovered))
+			require.Equal(t, original.String(), recovered.String())
+			require.Equal(t, original.Numerator().String(), recovered.Numerator().String())
+			require.Equal(t, original.Denominator().String(), recovered.Denominator().String())
+		})
+	}
+}
+
+func TestRat_CBOR_EdgeCases(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil_numerator", func(t *testing.T) {
+		t.Parallel()
+		var r num.Rat
+		// Create a Rat with proper values first
+		a := num.Z().FromInt64(1)
+		b, err := num.NPlus().FromUint64(1)
+		require.NoError(t, err)
+		validRat, err := num.Q().New(a, b)
+		require.NoError(t, err)
+
+		// Marshal and unmarshal
+		data, err := validRat.MarshalCBOR()
+		require.NoError(t, err)
+
+		err = r.UnmarshalCBOR(data)
+		require.NoError(t, err)
+		require.True(t, validRat.Equal(&r))
+	})
+
+	t.Run("empty_bytes", func(t *testing.T) {
+		t.Parallel()
+		var r num.Rat
+		err := r.UnmarshalCBOR([]byte{})
+		require.Error(t, err)
+	})
+
+	t.Run("corrupted_data", func(t *testing.T) {
+		t.Parallel()
+		var r num.Rat
+		err := r.UnmarshalCBOR([]byte{0xFF, 0xFF, 0xFF, 0xFF})
+		require.Error(t, err)
+	})
+}
+
+func TestRat_CBOR_Deterministic(t *testing.T) {
+	t.Parallel()
+
+	// Test that serialization is deterministic
+	a := num.Z().FromInt64(22)
+	b, err := num.NPlus().FromUint64(7)
+	require.NoError(t, err)
+
+	r, err := num.Q().New(a, b)
+	require.NoError(t, err)
+
+	data1, err1 := r.MarshalCBOR()
+	require.NoError(t, err1)
+
+	data2, err2 := r.MarshalCBOR()
+	require.NoError(t, err2)
+
+	// Should produce identical bytes
+	require.True(t, bytes.Equal(data1, data2), "CBOR serialization should be deterministic")
+}
+
+func TestRat_CBOR_Operations(t *testing.T) {
+	t.Parallel()
+
+	// Test that operations work correctly after deserialization
+	a1 := num.Z().FromInt64(3)
+	b1, err := num.NPlus().FromUint64(4)
+	require.NoError(t, err)
+	r1, err := num.Q().New(a1, b1)
+	require.NoError(t, err)
+
+	a2 := num.Z().FromInt64(1)
+	b2, err := num.NPlus().FromUint64(2)
+	require.NoError(t, err)
+	r2, err := num.Q().New(a2, b2)
+	require.NoError(t, err)
+
+	// Marshal and unmarshal r1
+	data1, err := r1.MarshalCBOR()
+	require.NoError(t, err)
+	var recovered1 num.Rat
+	err = recovered1.UnmarshalCBOR(data1)
+	require.NoError(t, err)
+
+	// Marshal and unmarshal r2
+	data2, err := r2.MarshalCBOR()
+	require.NoError(t, err)
+	var recovered2 num.Rat
+	err = recovered2.UnmarshalCBOR(data2)
+	require.NoError(t, err)
+
+	// Test addition: 3/4 + 1/2 = 5/4
+	sumOrig := r1.Add(r2)
+	sumRecov := recovered1.Add(&recovered2)
+	require.True(t, sumOrig.Equal(sumRecov))
+
+	// Test multiplication: 3/4 * 1/2 = 3/8
+	prodOrig := r1.Mul(r2)
+	prodRecov := recovered1.Mul(&recovered2)
+	require.True(t, prodOrig.Equal(prodRecov))
+
+	// Test subtraction: 3/4 - 1/2 = 1/4
+	diffOrig := r1.Sub(r2)
+	diffRecov := recovered1.Sub(&recovered2)
+	require.True(t, diffOrig.Equal(diffRecov))
+}
+
+func BenchmarkRat_CBOR(b *testing.B) {
+	a := num.Z().FromInt64(1234567890)
+	denom, _ := num.NPlus().FromUint64(9876543210)
+	r, _ := num.Q().New(a, denom)
+
+	b.Run("Marshal", func(b *testing.B) {
+		b.ResetTimer()
+		for range b.N {
+			_, err := r.MarshalCBOR()
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+
+	data, _ := r.MarshalCBOR()
+
+	b.Run("Unmarshal", func(b *testing.B) {
+		var recovered num.Rat
 		b.ResetTimer()
 		for range b.N {
 			err := recovered.UnmarshalCBOR(data)
