@@ -69,7 +69,19 @@ func (zs *Integers) FromBig(value *big.Int) (*Int, error) {
 	if value == nil {
 		return nil, errs.NewIsNil("value must not be nil")
 	}
-	return zs.FromBytes(value.Bytes())
+	// Create Int from big.Int preserving sign
+	// We can't use Bytes() since that would create a circular dependency
+	// So we check sign and create from absolute value
+	sign := value.Sign()
+	if sign == 0 {
+		return zs.Zero(), nil
+	}
+	absValue := new(big.Int).Abs(value)
+	absInt := &Int{v: numct.NewIntFromBytes(absValue.Bytes())}
+	if sign < 0 {
+		return absInt.Neg(), nil
+	}
+	return absInt, nil
 }
 
 func (*Integers) FromNatPlus(value *NatPlus) (*Int, error) {
@@ -113,10 +125,38 @@ func (zs *Integers) FromCardinal(value cardinal.Cardinal) (*Int, error) {
 }
 
 func (*Integers) FromBytes(input []byte) (*Int, error) {
-	if input == nil {
+	if input == nil || len(input) == 0 {
 		return nil, errs.NewIsNil("input must not be empty")
 	}
 
+	// Handle sign-magnitude encoding:
+	// - [0x00] is zero
+	// - [0x00, bytes...] is positive
+	// - [0x01, bytes...] is negative
+
+	if len(input) == 1 && input[0] == 0x00 {
+		// Zero
+		return &Int{v: numct.NewIntFromUint64(0)}, nil
+	}
+
+	if len(input) == 1 {
+		// Single byte that's not 0x00 - treat as legacy unsigned encoding
+		return &Int{v: numct.NewIntFromBytes(input)}, nil
+	}
+
+	signByte := input[0]
+	absBytes := input[1:]
+
+	if signByte == 0x00 {
+		// Positive
+		return &Int{v: numct.NewIntFromBytes(absBytes)}, nil
+	} else if signByte == 0x01 {
+		// Negative
+		abs := &Int{v: numct.NewIntFromBytes(absBytes)}
+		return abs.Neg(), nil
+	}
+
+	// Legacy format: no sign byte, treat as unsigned
 	return &Int{v: numct.NewIntFromBytes(input)}, nil
 }
 
@@ -329,40 +369,6 @@ func (i *Int) Mod(modulus *NatPlus) *Uint {
 	out := new(numct.Nat)
 	modulus.ModulusCT().ModInt(out, i.v)
 	return &Uint{v: out, m: modulus.ModulusCT()}
-
-	// if modulus == nil {
-	// 	panic("modulus is nil")
-	// }
-	// // For proper modular arithmetic, we need to ensure the result is in [0, modulus)
-	// // If i is negative, we need to add modulus repeatedly until positive
-	// m, ok := numct.NewModulus(modulus.v)
-	// if ok == ct.False {
-	// 	panic(errs.NewFailed("modulus is not valid"))
-	// }
-
-	// // Convert to Nat, handling negative values properly
-	// result := new(numct.Nat)
-	// absVal := i.Abs() // This returns *Nat
-	// remainder := new(numct.Nat)
-	// // Mod operation is already available through the modulus m created above
-	// m.Mod(remainder, absVal.v)
-
-	// if i.IsNegative() {
-	// 	// For negative numbers, if remainder is non-zero, we need modulus - remainder
-	// 	// Otherwise result is 0
-	// 	isZero := remainder.IsZero()
-	// 	if isZero == ct.False {
-	// 		// Compute modulus - remainder
-	// 		m.ModSub(result, modulus.v, remainder)
-	// 	} else {
-	// 		result.Set(remainder) // which is 0
-	// 	}
-	// } else {
-	// 	// For positive numbers, just use the remainder
-	// 	result.Set(remainder)
-	// }
-
-	// return &Uint{v: result, m: m}
 }
 
 func (i *Int) IsPositive() bool {
@@ -516,13 +522,30 @@ func (i *Int) Decrement() *Int {
 }
 
 func (i *Int) Bytes() []byte {
-	// Use Big().Bytes() to get compact representation without padding
-	bytes := i.v.Big().Bytes()
-	// big.Int.Bytes() returns empty slice for zero, but we want [0x0]
-	if len(bytes) == 0 {
-		return []byte{0x0}
+	// Sign-magnitude encoding:
+	// - For zero: [0x00]
+	// - For positive: [0x00, ...absolute value bytes...]
+	// - For negative: [0x01, ...absolute value bytes...]
+
+	if i.IsZero() {
+		return []byte{0x00}
 	}
-	return bytes
+
+	absBytes := new(big.Int).Abs(i.v.Big()).Bytes()
+
+	if i.IsNegative() {
+		// Negative: prefix with 0x01
+		result := make([]byte, len(absBytes)+1)
+		result[0] = 0x01
+		copy(result[1:], absBytes)
+		return result
+	}
+
+	// Positive: prefix with 0x00
+	result := make([]byte, len(absBytes)+1)
+	result[0] = 0x00
+	copy(result[1:], absBytes)
+	return result
 }
 
 func (n *Int) Bit(i uint) byte {
