@@ -200,7 +200,6 @@ func Test_CheatingProverAboveRange(t *testing.T) {
 	}
 }
 
-// TODO: profile to fix slowness (Mateusz)
 func Test_Simulator(t *testing.T) {
 	t.Parallel()
 
