@@ -31,12 +31,11 @@ func Test_ExpandMessageXOFShake128(t *testing.T) {
 	require.NoError(t, err)
 
 	dst := testCases.Dst
-	hash := sha3.NewShake128()
-	messageExpander := h2c.NewXOFMessageExpander(hash, testCases.K)
 	for _, vector := range testCases.Cases {
 		t.Run(fmt.Sprintf("%d:%s", vector.LenInBytes, vector.Msg), func(t *testing.T) {
 			t.Parallel()
 
+			messageExpander := h2c.NewXOFMessageExpander(sha3.NewShake128(), testCases.K)
 			expectedUniformBytes, err := hex.DecodeString(vector.UniformBytes)
 			require.NoError(t, err)
 			uniformBytes := messageExpander.ExpandMessage([]byte(dst), []byte(vector.Msg), vector.LenInBytes)
@@ -53,12 +52,11 @@ func Test_ExpandMessageXOFShake128LongDST(t *testing.T) {
 	require.NoError(t, err)
 
 	dst := testCases.Dst
-	hash := sha3.NewShake128()
-	messageExpander := h2c.NewXOFMessageExpander(hash, testCases.K)
 	for _, vector := range testCases.Cases {
 		t.Run(fmt.Sprintf("%d:%s", vector.LenInBytes, vector.Msg), func(t *testing.T) {
 			t.Parallel()
 
+			messageExpander := h2c.NewXOFMessageExpander(sha3.NewShake128(), testCases.K)
 			expectedUniformBytes, err := hex.DecodeString(vector.UniformBytes)
 			require.NoError(t, err)
 			uniformBytes := messageExpander.ExpandMessage([]byte(dst), []byte(vector.Msg), vector.LenInBytes)
@@ -75,12 +73,11 @@ func Test_ExpandMessageXOFShake256(t *testing.T) {
 	require.NoError(t, err)
 
 	dst := testCases.Dst
-	hash := sha3.NewShake256()
-	messageExpander := h2c.NewXOFMessageExpander(hash, testCases.K)
 	for _, vector := range testCases.Cases {
 		t.Run(fmt.Sprintf("%d:%s", vector.LenInBytes, vector.Msg), func(t *testing.T) {
 			t.Parallel()
 
+			messageExpander := h2c.NewXOFMessageExpander(sha3.NewShake256(), testCases.K)
 			expectedUniformBytes, err := hex.DecodeString(vector.UniformBytes)
 			require.NoError(t, err)
 			uniformBytes := messageExpander.ExpandMessage([]byte(dst), []byte(vector.Msg), vector.LenInBytes)

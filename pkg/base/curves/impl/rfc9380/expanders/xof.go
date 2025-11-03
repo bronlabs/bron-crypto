@@ -1,18 +1,17 @@
 package expanders
 
 import (
+	"hash"
 	"slices"
-
-	"golang.org/x/crypto/sha3"
 )
 
 type Xof struct {
-	XofHash sha3.ShakeHash
+	XofHash hash.XOF
 	K       uint
 }
 
 func (e *Xof) ExpandMessage(dst, msg []byte, lenInBytes uint) []byte {
-	h := e.XofHash.Clone()
+	h := e.XofHash
 
 	if len(dst) > 255 {
 		// 0. DST = H("H2C-OVERSIZE-DST-" || a_very_long_DST, ceil(2 * k / 8))

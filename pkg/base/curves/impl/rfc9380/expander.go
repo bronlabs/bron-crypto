@@ -3,8 +3,6 @@ package rfc9380
 import (
 	"hash"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380/expanders"
 )
 
@@ -12,13 +10,13 @@ type MessageExpander interface {
 	ExpandMessage(dst, msg []byte, outLen uint) []byte
 }
 
-func NewXMDMessageExpander(hashFunc func() hash.Hash) MessageExpander {
-	return &expanders.Xmd{HashFunc: hashFunc}
+func NewXMDMessageExpander[H hash.Hash](hashFunc func() H) MessageExpander {
+	return &expanders.Xmd{HashFunc: func() hash.Hash { return hashFunc() }}
 }
 
-func NewXOFMessageExpander(shakeHash sha3.ShakeHash, k uint) MessageExpander {
+func NewXOFMessageExpander(shakeHash hash.XOF, k uint) MessageExpander {
 	return &expanders.Xof{
-		XofHash: shakeHash.Clone(),
+		XofHash: shakeHash,
 		K:       k,
 	}
 }

@@ -1,8 +1,6 @@
 module github.com/bronlabs/bron-crypto/tools/dudect
 
-go 1.24
-
-toolchain go1.24.5
+go 1.25.3
 
 require github.com/bronlabs/bron-crypto v0.0.0
 
