@@ -112,7 +112,7 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 			r.state.omegaRaw[idx] = c
 			r.state.omega[idx] = r.suite.field.FromUint64(r.state.omegaRaw[idx])
 			r.state.bigA[idx] = r.suite.curve.ScalarBaseMul(a).Add(r.state.bigB.ScalarMul(r.state.omega[idx]))
-			r.state.rhoOmega[idx], err = r.hash(r.state.bigB, r.state.bigA[idx], r.state.bigB.ScalarMul(a).ToCompressed())
+			r.state.rhoOmega[idx], err = r.hash(idx, r.state.bigB, r.state.bigA[idx], r.state.bigB.ScalarMul(a).ToCompressed())
 			if err != nil {
 				return nil, nil, errs.WrapHashing(err, "cannot hash B * a_i")
 			}
@@ -159,30 +159,30 @@ func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P, *SenderOut
 				return nil, nil, errs.NewValidation("A is identity")
 			}
 
-			rho0[idx], err = s.hash(s.state.bigB, bigA, bigA.ScalarMul(s.state.b).ToCompressed())
+			rho0[idx], err = s.hash(idx, s.state.bigB, bigA, bigA.ScalarMul(s.state.b).ToCompressed())
 			if err != nil {
 				return nil, nil, errs.WrapHashing(err, "cannot hash A * b_i")
 			}
-			rho1[idx], err = s.hash(s.state.bigB, bigA, (bigA.Sub(s.state.bigB)).ScalarMul(s.state.b).ToCompressed())
+			rho1[idx], err = s.hash(idx, s.state.bigB, bigA, (bigA.Sub(s.state.bigB)).ScalarMul(s.state.b).ToCompressed())
 			if err != nil {
 				return nil, nil, errs.WrapHashing(err, "cannot hash (A - B_i) * b_i")
 			}
 			senderOutput.Messages[i][0][j] = rho0[idx]
 			senderOutput.Messages[i][1][j] = rho1[idx]
 
-			s.state.rho0Digest[idx], err = s.hash(s.state.bigB, bigA, rho0[idx])
+			s.state.rho0Digest[idx], err = s.hash(idx, s.state.bigB, bigA, rho0[idx])
 			if err != nil {
 				return nil, nil, errs.WrapHashing(err, "cannot hash rho_0")
 			}
-			s.state.rho0DigestDigest[idx], err = s.hash(s.state.bigB, bigA, s.state.rho0Digest[idx])
+			s.state.rho0DigestDigest[idx], err = s.hash(idx, s.state.bigB, bigA, s.state.rho0Digest[idx])
 			if err != nil {
 				return nil, nil, errs.WrapHashing(err, "cannot hash rho_0 digest")
 			}
-			s.state.rho1Digest[idx], err = s.hash(s.state.bigB, bigA, rho1[idx])
+			s.state.rho1Digest[idx], err = s.hash(idx, s.state.bigB, bigA, rho1[idx])
 			if err != nil {
 				return nil, nil, errs.WrapHashing(err, "cannot hash rho_1")
 			}
-			rho1DigestDigest, err := s.hash(s.state.bigB, bigA, s.state.rho1Digest[idx])
+			rho1DigestDigest, err := s.hash(idx, s.state.bigB, bigA, s.state.rho1Digest[idx])
 			if err != nil {
 				return nil, nil, errs.WrapHashing(err, "cannot hash rho_1 digest")
 			}
@@ -219,11 +219,11 @@ func (r *Receiver[P, B, S]) Round4(r3 *Round3P2P) (*Round4P2P, error) {
 				return nil, errs.NewValidation("invalid message")
 			}
 
-			r.state.rhoOmegaDigest[idx], err = r.hash(r.state.bigB, r.state.bigA[idx], r.state.rhoOmega[idx])
+			r.state.rhoOmegaDigest[idx], err = r.hash(idx, r.state.bigB, r.state.bigA[idx], r.state.rhoOmega[idx])
 			if err != nil {
 				return nil, errs.WrapHashing(err, "cannot hash rho_omega")
 			}
-			rhoPrime[idx], err = r.hash(r.state.bigB, r.state.bigA[idx], r.state.rhoOmegaDigest[idx])
+			rhoPrime[idx], err = r.hash(idx, r.state.bigB, r.state.bigA[idx], r.state.rhoOmegaDigest[idx])
 			if err != nil {
 				return nil, errs.WrapHashing(err, "cannot hash rho_omega digest")
 			}
@@ -298,11 +298,11 @@ func (r *Receiver[P, B, S]) Round6(r5 *Round5P2P) error {
 				panic("invalid internal state - this should never happen")
 			}
 
-			rho0DigestDigest, err := r.hash(r.state.bigB, r.state.bigA[idx], rho0Digest)
+			rho0DigestDigest, err := r.hash(idx, r.state.bigB, r.state.bigA[idx], rho0Digest)
 			if err != nil {
 				return errs.WrapHashing(err, "cannot hash rho_0 digest")
 			}
-			rho1DigestDigest, err := r.hash(r.state.bigB, r.state.bigA[idx], rho1Digest)
+			rho1DigestDigest, err := r.hash(idx, r.state.bigB, r.state.bigA[idx], rho1Digest)
 			if err != nil {
 				return errs.WrapHashing(err, "cannot hash rho_1 digest")
 			}
