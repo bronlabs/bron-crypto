@@ -1,8 +1,9 @@
-go 1.24.0
+go 1.25.3
 
 use (
 	.
 	./tools/edwards25519-tester
 	./tools/field-codegen
 	./tools/secparams-codegen
+	./tools/dudect
 )
