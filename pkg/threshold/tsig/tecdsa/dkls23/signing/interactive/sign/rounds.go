@@ -47,17 +47,16 @@ func (c *Cosigner[P, B, S]) Round2(r1u network.RoundMessages[*Round1P2P[P, B, S]
 		otR1.Put(id, m.OtR1)
 	}
 
-	choices := make([]byte, (softspoken.Kappa+7)/8)
-	_, err = io.ReadFull(c.prng, choices)
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "cannot sample choices")
-	}
-
 	r2u := hashmap.NewComparable[sharing.ID, *Round2P2P[P, B, S]]()
 	for id, u := range outgoingP2PMessages(c, r2u) {
 		otR1u, ok := otR1.Get(id)
 		if !ok {
 			return nil, errs.NewFailed("cannot run round 2 of VSOT setup party")
+		}
+		choices := make([]byte, (softspoken.Kappa+7)/8)
+		_, err = io.ReadFull(c.prng, choices)
+		if err != nil {
+			return nil, errs.WrapRandomSample(err, "cannot sample choices")
 		}
 		var seed *ecbbot.ReceiverOutput[S]
 		u.OtR2, seed, err = c.baseOtReceivers[id].Round2(otR1u, choices)
