@@ -155,9 +155,6 @@ func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P, *SenderOut
 		for j := range s.suite.L() {
 			idx := i*s.suite.L() + j
 			bigA := r2.BigA[idx]
-			if bigA.IsOpIdentity() {
-				return nil, nil, errs.NewValidation("A is identity")
-			}
 
 			rho0[idx], err = s.hash(idx, s.state.bigB, bigA, bigA.ScalarMul(s.state.b).ToCompressed())
 			if err != nil {
