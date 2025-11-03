@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
 func TestRationals_Creation(t *testing.T) {
@@ -660,6 +661,381 @@ func TestRationals_HashCode(t *testing.T) {
 	// Different values likely have different hash codes (not guaranteed but probable)
 	// We just test that HashCode doesn't panic
 	_ = r3.HashCode()
+}
+
+func TestRationals_Random(t *testing.T) {
+	t.Parallel()
+
+	prng := pcg.NewRandomised()
+
+	t.Run("Random_InRange", func(t *testing.T) {
+		t.Parallel()
+		lower := createRat(t, 1, 10)  // 1/10
+		upper := createRat(t, 9, 10)  // 9/10
+
+		for range 20 {
+			result, err := num.Q().Random(lower, upper, prng)
+			require.NoError(t, err)
+			require.NotNil(t, result)
+
+			// Check result is in [lower, upper)
+			require.True(t, result.IsLessThanOrEqual(upper) || result.Equal(upper),
+				"result %s should be <= upper %s", result.String(), upper.String())
+			require.True(t, lower.IsLessThanOrEqual(result),
+				"lower %s should be <= result %s", lower.String(), result.String())
+		}
+	})
+
+	t.Run("Random_NegativeRange", func(t *testing.T) {
+		t.Parallel()
+		lower := createRat(t, -5, 2)  // -5/2
+		upper := createRat(t, -1, 2)  // -1/2
+
+		for range 10 {
+			result, err := num.Q().Random(lower, upper, prng)
+			require.NoError(t, err)
+			require.True(t, result.IsLessThanOrEqual(upper) || result.Equal(upper))
+			require.True(t, lower.IsLessThanOrEqual(result))
+		}
+	})
+
+	t.Run("Random_CrossingZero", func(t *testing.T) {
+		t.Parallel()
+		lower := createRat(t, -1, 2)  // -1/2
+		upper := createRat(t, 1, 2)   // 1/2
+
+		for range 10 {
+			result, err := num.Q().Random(lower, upper, prng)
+			require.NoError(t, err)
+			require.True(t, result.IsLessThanOrEqual(upper) || result.Equal(upper))
+			require.True(t, lower.IsLessThanOrEqual(result))
+		}
+	})
+
+	t.Run("Random_EmptyInterval", func(t *testing.T) {
+		t.Parallel()
+		value := createRat(t, 1, 2)
+		_, err := num.Q().Random(value, value, prng)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "empty")
+	})
+
+	t.Run("Random_InvalidRange", func(t *testing.T) {
+		t.Parallel()
+		lower := createRat(t, 5, 2)
+		upper := createRat(t, 1, 2)
+		_, err := num.Q().Random(lower, upper, prng)
+		require.Error(t, err)
+	})
+
+	t.Run("Random_NilPRNG", func(t *testing.T) {
+		t.Parallel()
+		lower := createRat(t, 1, 10)
+		upper := createRat(t, 9, 10)
+		_, err := num.Q().Random(lower, upper, nil)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "nil")
+	})
+
+	t.Run("Random_SmallInterval", func(t *testing.T) {
+		t.Parallel()
+		lower := createRat(t, 1, 100)
+		upper := createRat(t, 2, 100)
+
+		result, err := num.Q().Random(lower, upper, prng)
+		require.NoError(t, err)
+		require.True(t, result.IsLessThanOrEqual(upper) || result.Equal(upper))
+		require.True(t, lower.IsLessThanOrEqual(result))
+	})
+}
+
+func TestIntegers_FromRat(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		input       *num.Rat
+		expected    string
+		expectError bool
+	}{
+		{
+			name:     "Integer_Positive",
+			input:    createRat(t, 42, 1),
+			expected: "42",
+		},
+		{
+			name:     "Integer_Negative",
+			input:    createRat(t, -42, 1),
+			expected: "-42",
+		},
+		{
+			name:     "Integer_Zero",
+			input:    num.Q().Zero(),
+			expected: "0",
+		},
+		{
+			name:     "Reducible_To_Integer",
+			input:    createRat(t, 12, 3), // 12/3 = 4
+			expected: "4",
+		},
+		{
+			name:     "Reducible_To_Negative_Integer",
+			input:    createRat(t, -15, 5), // -15/5 = -3
+			expected: "-3",
+		},
+		{
+			name:        "Non_Integer_Fails",
+			input:       createRat(t, 3, 4),
+			expectError: true,
+		},
+		{
+			name:        "Non_Integer_Negative_Fails",
+			input:       createRat(t, -5, 7),
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result, err := num.Z().FromRat(tt.input)
+			if tt.expectError {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "non-integer")
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result.String())
+			}
+		})
+	}
+}
+
+func TestNaturalNumbers_FromRat(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		input       *num.Rat
+		expected    string
+		expectError bool
+	}{
+		{
+			name:     "Positive_Integer",
+			input:    createRat(t, 42, 1),
+			expected: "42",
+		},
+		{
+			name:     "Zero",
+			input:    num.Q().Zero(),
+			expected: "0",
+		},
+		{
+			name:     "Reducible_To_Natural",
+			input:    createRat(t, 12, 3), // 12/3 = 4
+			expected: "4",
+		},
+		{
+			name:        "Negative_Integer_Fails",
+			input:       createRat(t, -42, 1),
+			expectError: true,
+		},
+		{
+			name:        "Non_Integer_Fails",
+			input:       createRat(t, 3, 4),
+			expectError: true,
+		},
+		{
+			name:        "Reducible_To_Negative_Fails",
+			input:       createRat(t, -15, 5),
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result, err := num.N().FromRat(tt.input)
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result.String())
+			}
+		})
+	}
+}
+
+func TestPositiveNaturalNumbers_FromRat(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		input       *num.Rat
+		expected    string
+		expectError bool
+	}{
+		{
+			name:     "Positive_Integer",
+			input:    createRat(t, 42, 1),
+			expected: "42",
+		},
+		{
+			name:     "Reducible_To_Positive",
+			input:    createRat(t, 12, 3), // 12/3 = 4
+			expected: "4",
+		},
+		{
+			name:        "Zero_Fails",
+			input:       num.Q().Zero(),
+			expectError: true,
+		},
+		{
+			name:        "Negative_Integer_Fails",
+			input:       createRat(t, -42, 1),
+			expectError: true,
+		},
+		{
+			name:        "Non_Integer_Fails",
+			input:       createRat(t, 3, 4),
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result, err := num.NPlus().FromRat(tt.input)
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result.String())
+			}
+		})
+	}
+}
+
+func TestZMod_FromRat(t *testing.T) {
+	t.Parallel()
+
+	// Create a modulus for testing
+	modulus, err := num.NPlus().FromUint64(100)
+	require.NoError(t, err)
+	zmod, err := num.NewZMod(modulus)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name        string
+		input       *num.Rat
+		expected    uint64
+		expectError bool
+	}{
+		{
+			name:     "Small_Positive",
+			input:    createRat(t, 42, 1),
+			expected: 42,
+		},
+		{
+			name:     "Zero",
+			input:    num.Q().Zero(),
+			expected: 0,
+		},
+		{
+			name:     "Reducible_Integer",
+			input:    createRat(t, 12, 3), // 12/3 = 4
+			expected: 4,
+		},
+		{
+			name:     "Large_Gets_Reduced",
+			input:    createRat(t, 150, 1), // 150 mod 100 = 50
+			expected: 50,
+		},
+		{
+			name:     "Negative_Integer",
+			input:    createRat(t, -10, 1), // -10 mod 100 = 90
+			expected: 90,
+		},
+		{
+			name:        "Non_Integer_Fails",
+			input:       createRat(t, 3, 4),
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result, err := zmod.FromRat(tt.input)
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result.Big().Uint64())
+			}
+		})
+	}
+}
+
+func TestRationals_IsLessThanOrEqual(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		a        *num.Rat
+		b        *num.Rat
+		expected bool
+	}{
+		{
+			name:     "Equal_Values",
+			a:        createRat(t, 1, 2),
+			b:        createRat(t, 1, 2),
+			expected: true,
+		},
+		{
+			name:     "Equivalent_Fractions",
+			a:        createRat(t, 1, 2),
+			b:        createRat(t, 2, 4),
+			expected: true,
+		},
+		{
+			name:     "Less_Than",
+			a:        createRat(t, 1, 3),
+			b:        createRat(t, 1, 2),
+			expected: true,
+		},
+		{
+			name:     "Greater_Than",
+			a:        createRat(t, 1, 2),
+			b:        createRat(t, 1, 3),
+			expected: false,
+		},
+		{
+			name:     "Negative_Less_Than_Positive",
+			a:        createRat(t, -1, 2),
+			b:        createRat(t, 1, 2),
+			expected: true,
+		},
+		{
+			name:     "Negative_Comparison",
+			a:        createRat(t, -3, 4),
+			b:        createRat(t, -1, 4),
+			expected: true,
+		},
+		{
+			name:     "Zero_LTE_Positive",
+			a:        num.Q().Zero(),
+			b:        num.Q().One(),
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := tt.a.IsLessThanOrEqual(tt.b)
+			require.Equal(t, tt.expected, result)
+		})
+	}
 }
 
 // Helper function to create a Rat for testing

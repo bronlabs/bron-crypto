@@ -64,8 +64,6 @@ type ZLike[E any] interface {
 
 type IntLike[E any] interface {
 	EuclideanDomainElement[E]
-	// base.Comparable[E]
-	// IsNegative() bool
 	ArithmeticNegand[E]
 }
 

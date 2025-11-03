@@ -1,6 +1,7 @@
 package num
 
 import (
+	"io"
 	"math/big"
 	"sync"
 
@@ -136,7 +137,6 @@ func (q *Rationals) FromBigRat(n *big.Rat) (*Rat, error) {
 	if n == nil {
 		return nil, errs.NewIsNil("cannot convert nil big.Rat to Rat")
 	}
-	// In big.Rat, the denominator is always positive and sign is in numerator
 	a, err := Z().FromBig(n.Num())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "couldn't convert big.Rat numerator to Int")
@@ -149,6 +149,60 @@ func (q *Rationals) FromBigRat(n *big.Rat) (*Rat, error) {
 		a: a,
 		b: b,
 	}, nil
+}
+
+func (q *Rationals) Random(lowInclusive, highExclusive *Rat, prng io.Reader) (*Rat, error) {
+	if prng == nil || lowInclusive == nil || highExclusive == nil {
+		return nil, errs.NewIsNil("prng is nil or lowInclusive is nil or highExclusive is nil")
+	}
+	// Validate interval [lowInclusive, highExclusive)
+	if !lowInclusive.IsLessThanOrEqual(highExclusive) {
+		return nil, errs.NewValue("lowInclusive is greater than highExclusive")
+	}
+	if lowInclusive.Equal(highExclusive) {
+		return nil, errs.NewValue("interval is empty")
+	}
+
+	// Sample on the lattice with common denominator D = b1*b2.
+	// Any rational n/D with n in [a1*b2, a2*b1) lies in [lowInclusive, highExclusive).
+	D := lowInclusive.b.Mul(highExclusive.b)
+	lowN := lowInclusive.a.Mul(highExclusive.b.Lift())  // a1*b2
+	highN := highExclusive.a.Mul(lowInclusive.b.Lift()) // a2*b1
+
+	n, err := Z().Random(lowN, highN, prng)
+	if err != nil {
+		return nil, errs.WrapRandomSample(err, "failed to sample random numerator for Rat")
+	}
+
+	return (&Rat{a: n, b: D}).Canonical(), nil
+}
+
+func (q *Rationals) RandomInt(lowInclusive, highExclusive *Rat, prng io.Reader) (*Int, error) {
+	if prng == nil || lowInclusive == nil || highExclusive == nil {
+		return nil, errs.NewIsNil("prng is nil or lowInclusive is nil or highExclusive is nil")
+	}
+
+	// Validate [lowInclusive, highExclusive)
+	if !lowInclusive.IsLessThanOrEqual(highExclusive) {
+		return nil, errs.NewValue("lowInclusive is greater than highExclusive")
+	}
+
+	// ceil(a/b) with b > 0
+	lowInt, err := lowInclusive.Ceil()
+	if err != nil {
+		return nil, err
+	}
+	highInt, err := highExclusive.Ceil()
+	if err != nil {
+		return nil, err
+	}
+
+	// No integers if ceil(low) >= ceil(high)
+	if lowInt.Compare(highInt) >= 0 {
+		return nil, errs.NewValue("interval contains no integers")
+	}
+
+	return Z().Random(lowInt, highInt, prng)
 }
 
 func (q *Rationals) IsSemiDomain() bool {
@@ -184,6 +238,17 @@ func (r *Rat) Numerator() *Int {
 
 func (r *Rat) Denominator() *NatPlus {
 	return r.b
+}
+
+func (r *Rat) Ceil() (*Int, error) {
+	quot, rem, err := r.a.EuclideanDiv(r.b.Lift())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't compute division for ceil")
+	}
+	if rem.IsZero() || r.a.IsNegative() {
+		return quot, nil
+	}
+	return quot.Increment(), nil
 }
 
 func (r *Rat) Structure() algebra.Structure[*Rat] {
@@ -366,6 +431,12 @@ func (r *Rat) Clone() *Rat {
 		a: r.a.Clone(),
 		b: r.b.Clone(),
 	}
+}
+
+func (r *Rat) IsLessThanOrEqual(rhs *Rat) bool {
+	left := r.a.Mul(rhs.b.Lift())
+	right := rhs.a.Mul(r.b.Lift())
+	return left.IsLessThanOrEqual(right)
 }
 
 func (r *Rat) IsNegative() bool {

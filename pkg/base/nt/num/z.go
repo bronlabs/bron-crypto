@@ -125,7 +125,7 @@ func (zs *Integers) FromCardinal(value cardinal.Cardinal) (*Int, error) {
 }
 
 func (*Integers) FromBytes(input []byte) (*Int, error) {
-	if input == nil || len(input) == 0 {
+	if len(input) == 0 {
 		return nil, errs.NewIsNil("input must not be empty")
 	}
 
@@ -165,6 +165,17 @@ func (*Integers) FromUint(input *Uint) (*Int, error) {
 		return nil, errs.NewIsNil("input must not be nil")
 	}
 	return &Int{v: numct.NewIntFromBytes(input.Bytes())}, nil
+}
+
+func (*Integers) FromRat(input *Rat) (*Int, error) {
+	if input == nil {
+		return nil, errs.NewIsNil("input must not be nil")
+	}
+	canonical := input.Canonical()
+	if !canonical.b.IsOne() {
+		return nil, errs.NewFailed("cannot convert non-integer rational to integer")
+	}
+	return canonical.a.Clone(), nil
 }
 
 func (*Integers) FromUintSymmetric(input *Uint) (*Int, error) {
@@ -519,6 +530,10 @@ func (i *Int) Increment() *Int {
 
 func (i *Int) Decrement() *Int {
 	return i.Sub(Z().One())
+}
+
+func (i *Int) Rat() *Rat {
+	return &Rat{a: i.Clone(), b: NPlus().One()}
 }
 
 func (i *Int) Bytes() []byte {
