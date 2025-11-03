@@ -49,3 +49,7 @@ func (s *Scheme[P, B, S]) Verifier(_ ...signatures.VerifierOption[*Verifier[P, B
 	}
 	return vr, nil
 }
+
+func (s *Scheme[P, B, S]) Suite() *Suite[P, B, S] {
+	return s.suite
+}

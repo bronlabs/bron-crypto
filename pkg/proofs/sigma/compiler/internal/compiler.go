@@ -18,7 +18,7 @@ type NIVerifier[X sigma.Statement] interface {
 	Verify(statement X, proof NIZKPoKProof) error
 }
 
-type NICompiler[X sigma.Statement, W sigma.Witness] interface {
+type NonInteractiveProtocol[X sigma.Statement, W sigma.Witness] interface {
 	Name() Name
 	SigmaProtocolName() sigma.Name
 	NewProver(sessionId network.SID, transcript transcripts.Transcript) (NIProver[X, W], error)

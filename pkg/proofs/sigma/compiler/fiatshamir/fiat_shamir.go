@@ -59,7 +59,7 @@ type fs[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z 
 
 func NewCompiler[
 	X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response,
-](sigmaProtocol sigma.Protocol[X, W, A, S, Z]) (compiler.NICompiler[X, W], error) {
+](sigmaProtocol sigma.Protocol[X, W, A, S, Z]) (compiler.NonInteractiveProtocol[X, W], error) {
 	if sigmaProtocol == nil {
 		return nil, errs.NewIsNil("sigmaProtocol")
 	}
