@@ -1300,6 +1300,63 @@ func TestIntegers_Bytes_SignPreservation(t *testing.T) {
 	}
 }
 
+func TestIntegers_Rat(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *num.Int
+		expected string
+	}{
+		{
+			name:     "Zero_To_Rat",
+			input:    num.Z().Zero(),
+			expected: "0/1",
+		},
+		{
+			name:     "One_To_Rat",
+			input:    num.Z().One(),
+			expected: "1/1",
+		},
+		{
+			name:     "Positive_To_Rat",
+			input:    num.Z().FromInt64(42),
+			expected: "42/1",
+		},
+		{
+			name:     "Negative_To_Rat",
+			input:    num.Z().FromInt64(-42),
+			expected: "-42/1",
+		},
+		{
+			name:     "Large_Positive_To_Rat",
+			input:    num.Z().FromInt64(1234567890),
+			expected: "1234567890/1",
+		},
+		{
+			name:     "Large_Negative_To_Rat",
+			input:    num.Z().FromInt64(-1234567890),
+			expected: "-1234567890/1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := tt.input.Rat()
+			require.Equal(t, tt.expected, result.String())
+
+			// Verify it's an integer rational
+			require.True(t, result.IsInt())
+
+			// Verify round-trip
+			recovered, err := num.Z().FromRat(result)
+			require.NoError(t, err)
+			require.True(t, tt.input.Equal(recovered))
+		})
+	}
+}
+
 func TestIntegers_Random(t *testing.T) {
 	t.Parallel()
 

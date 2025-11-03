@@ -79,6 +79,14 @@ func (ns *NaturalNumbers) FromBig(value *big.Int) (*Nat, error) {
 	return ns.FromBytes(value.Bytes())
 }
 
+func (ns *NaturalNumbers) FromRat(value *Rat) (*Nat, error) {
+	vInt, err := Z().FromRat(value)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not convert Rat to Int")
+	}
+	return ns.FromInt(vInt)
+}
+
 func (ns *NaturalNumbers) FromNatCT(value *numct.Nat) (*Nat, error) {
 	if value == nil {
 		return nil, errs.NewValue("value must not be nil")

@@ -105,6 +105,14 @@ func (zn *ZMod) FromInt(v *Int) (*Uint, error) {
 	return v.Mod(zn.n), nil
 }
 
+func (zn *ZMod) FromRat(v *Rat) (*Uint, error) {
+	vInt, err := Z().FromRat(v)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not convert Rat to Int")
+	}
+	return zn.FromInt(vInt)
+}
+
 func (zn *ZMod) FromBytes(input []byte) (*Uint, error) {
 	v, err := N().FromBytes(input)
 	if err != nil {

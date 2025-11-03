@@ -73,6 +73,14 @@ func (nps *PositiveNaturalNumbers) FromModulus(m numct.Modulus) *NatPlus {
 	return &NatPlus{v: m.Nat(), m: m}
 }
 
+func (nps *PositiveNaturalNumbers) FromRat(v *Rat) (*NatPlus, error) {
+	vInt, err := Z().FromRat(v)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not convert Rat to Int")
+	}
+	return nps.FromInt(vInt)
+}
+
 func (*PositiveNaturalNumbers) FromUint64(value uint64) (*NatPlus, error) {
 	if value == 0 {
 		return nil, errs.NewValue("value must be greater than 0")
