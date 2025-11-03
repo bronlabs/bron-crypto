@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
@@ -75,6 +76,14 @@ func (pts *PlaintextSpace) FromNat(x *numct.Nat) (*Plaintext, error) {
 		v: z,
 		n: pts.N(),
 	}, nil
+}
+
+func (pts *PlaintextSpace) FromBytes(b []byte) (*Plaintext, error) {
+	var x numct.Nat
+	if ok := x.SetBytes(b); ok == ct.False {
+		return nil, errs.NewFailed("failed to create nat from bytes")
+	}
+	return pts.FromNat(&x)
 }
 
 func (pts *PlaintextSpace) FromInt(x *numct.Int) (*Plaintext, error) {
@@ -171,4 +180,8 @@ func (cp *Plaintext) PartialCompare(other *Plaintext) base.PartialOrdering {
 		return base.Incomparable
 	}
 	return base.PartialOrdering(cp.v.Compare(other.v))
+}
+
+func (cp *Plaintext) Bytes() []byte {
+	return cp.Value().Bytes()
 }

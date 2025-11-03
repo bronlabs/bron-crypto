@@ -19,5 +19,5 @@ type Party interface {
 }
 
 type RoundMessages[M Message] = ds.Map[sharing.ID, M]
-type OutgoingUnicasts[M Message] ds.Map[sharing.ID, M]
+type OutgoingUnicasts[M Message] = ds.Map[sharing.ID, M]
 type Quorum = ds.Set[sharing.ID]

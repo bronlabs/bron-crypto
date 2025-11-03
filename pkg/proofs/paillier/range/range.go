@@ -3,7 +3,6 @@ package paillierrange
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"slices"
 
@@ -480,8 +479,6 @@ func (*Protocol) SpecialSoundness() uint {
 
 func (*Protocol) ValidateStatement(statement *Statement, witness *Witness) error {
 	if !statement.Pk.Equal(witness.Sk.PublicKey()) {
-		fmt.Println(statement.Pk)
-		fmt.Println(witness.Sk.PublicKey())
 		return errs.NewValidation("paillier keys mismatch")
 	}
 	senc, err := paillier.NewScheme().SelfEncrypter(witness.Sk)

@@ -184,7 +184,7 @@ func dlogProve[
 
 func dlogVerify[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S],
-](tape ts.Transcript, niDlogScheme compiler.NICompiler[*schnorrpok.Statement[E, S], *schnorrpok.Witness[S]], proverID sharing.ID, sid network.SID, proof compiler.NIZKPoKProof, theirBigR *schnorrpok.Statement[E, S], quorumBytes [][]byte) error {
+](tape ts.Transcript, niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[E, S], *schnorrpok.Witness[S]], proverID sharing.ID, sid network.SID, proof compiler.NIZKPoKProof, theirBigR *schnorrpok.Statement[E, S], quorumBytes [][]byte) error {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(proverID))
 	tape.AppendBytes(transcriptDLogSLabel, quorumBytes...)
 	tape.AppendBytes("prover", proverIDBytes)
