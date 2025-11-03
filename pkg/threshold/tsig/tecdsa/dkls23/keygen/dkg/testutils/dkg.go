@@ -16,8 +16,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
+	gennaroTU "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/keygen/dkg"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -35,10 +38,25 @@ func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 
 	tape := hagrid.NewTranscript(hex.EncodeToString(sessionId[:]))
 	tapesMap := make(map[sharing.ID]transcripts.Transcript)
+
+	ids := slices.Collect(accessStructure.Shareholders().Iter())
+	gennaroDkgParticipants := make([]*gennaro.Participant[P, S], accessStructure.Shareholders().Size())
+	for i, id := range ids {
+		tapesMap[id] = tape.Clone()
+		gennaroDkgParticipants[i], err = gennaro.NewParticipant(sessionId, curve, id, accessStructure, tapesMap[id], prng)
+		require.NoError(tb, err)
+	}
+	dkgOutputs, err := gennaroTU.DoGennaroDKG(tb, gennaroDkgParticipants)
+	require.NoError(tb, err)
+
 	dkgParticipantsMap := make(map[sharing.ID]*dkg.Participant[P, B, S])
 	for id := range accessStructure.Shareholders().Iter() {
-		tapesMap[id] = tape.Clone()
-		dkgParticipantsMap[id], err = dkg.NewParticipant(sessionId, id, accessStructure, curve, tapesMap[id], prng)
+		dkgOutput, ok := dkgOutputs.Get(id)
+		require.True(tb, ok)
+		ecdsaShard, err := tecdsa.NewShard(dkgOutput.Share(), dkgOutput.VerificationVector(), accessStructure)
+		require.NoError(tb, err)
+
+		dkgParticipantsMap[id], err = dkg.NewParticipant(sessionId, id, ecdsaShard, tapesMap[id], prng)
 		require.NoError(tb, err)
 	}
 	dkgParticipants := slices.Collect(maps.Values(dkgParticipantsMap))
@@ -51,17 +69,16 @@ func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 	}
 
 	r2bi, r2ui := testutils.MapO2I(tb, dkgParticipants, r1bo, r1uo)
-	r2bo := make(map[sharing.ID]*dkg.Round2Broadcast[P, B, S])
 	r2uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round2P2P[P, B, S]])
 	for _, party := range dkgParticipants {
-		r2bo[party.SharingID()], r2uo[party.SharingID()], err = party.Round2(r2bi[party.SharingID()], r2ui[party.SharingID()])
+		r2uo[party.SharingID()], err = party.Round2(r2bi[party.SharingID()], r2ui[party.SharingID()])
 		require.NoError(tb, err)
 	}
 
-	r3bi, r3ui := testutils.MapO2I(tb, dkgParticipants, r2bo, r2uo)
+	r3ui := testutils.MapUnicastO2I(tb, dkgParticipants, r2uo)
 	r3uo := make(map[sharing.ID]network.RoundMessages[*dkg.Round3P2P])
 	for _, party := range dkgParticipants {
-		r3uo[party.SharingID()], err = party.Round3(r3bi[party.SharingID()], r3ui[party.SharingID()])
+		r3uo[party.SharingID()], err = party.Round3(r3ui[party.SharingID()])
 		require.NoError(tb, err)
 	}
 

@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
@@ -15,10 +16,14 @@ type message[B network.Message, U network.Message] struct {
 	p2p       U
 }
 
-func incomingMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MB network.Message, MU network.Message](p *Participant[P, B, S], rIn network.Round, bIn network.RoundMessages[MB], uIn network.RoundMessages[MU]) iter.Seq2[sharing.ID, message[MB, MU]] {
+func incomingMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MB network.Message, MU network.Message](p *Participant[P, B, S], rIn network.Round, bIn network.RoundMessages[MB], uIn network.RoundMessages[MU]) (iter.Seq2[sharing.ID, message[MB, MU]], error) {
+	if rIn != p.round {
+		return nil, errs.NewRound("invalid round")
+	}
+
 	return func(yield func(p sharing.ID, m message[MB, MU]) bool) {
-		for id := range p.ac.Shareholders().Iter() {
-			if id == p.sharingId {
+		for id := range p.baseShard.AccessStructure().Shareholders().Iter() {
+			if id == p.baseShard.Share().ID() {
 				continue
 			}
 
@@ -35,13 +40,17 @@ func incomingMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S
 				return
 			}
 		}
-	}
+	}, nil
 }
 
-func incomingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MU network.Message](p *Participant[P, B, S], rIn network.Round, uIn network.RoundMessages[MU]) iter.Seq2[sharing.ID, MU] {
+func incomingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MU network.Message](p *Participant[P, B, S], rIn network.Round, uIn network.RoundMessages[MU]) (iter.Seq2[sharing.ID, MU], error) {
+	if rIn != p.round {
+		return nil, errs.NewRound("invalid round")
+	}
+
 	return func(yield func(p sharing.ID, m MU) bool) {
-		for id := range p.ac.Shareholders().Iter() {
-			if id == p.sharingId {
+		for id := range p.baseShard.AccessStructure().Shareholders().Iter() {
+			if id == p.baseShard.Share().ID() {
 				continue
 			}
 
@@ -53,7 +62,7 @@ func incomingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B]
 				return
 			}
 		}
-	}
+	}, nil
 }
 
 type messagePointerConstraint[MP network.Message, M any] interface {
@@ -63,8 +72,8 @@ type messagePointerConstraint[MP network.Message, M any] interface {
 
 func outgoingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], UPtr messagePointerConstraint[UPtr, U], U any](p *Participant[P, B, S], uOut ds.MutableMap[sharing.ID, UPtr]) iter.Seq2[sharing.ID, UPtr] {
 	return func(yield func(p sharing.ID, out UPtr) bool) {
-		for id := range p.ac.Shareholders().Iter() {
-			if id == p.sharingId {
+		for id := range p.baseShard.AccessStructure().Shareholders().Iter() {
+			if id == p.baseShard.Share().ID() {
 				continue
 			}
 

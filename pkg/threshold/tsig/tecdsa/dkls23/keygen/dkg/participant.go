@@ -16,9 +16,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
@@ -29,12 +29,11 @@ const (
 
 type Participant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	sessionId network.SID
-	sharingId sharing.ID
-	ac        *feldman.AccessStructure
+	baseShard *tecdsa.Shard[P, B, S]
 	tape      transcripts.Transcript
 	prng      io.Reader
+	round     network.Round
 
-	gennaroParty    *gennaro.Participant[P, S]
 	zeroSetup       *przsSetup.Participant
 	baseOTSenders   map[sharing.ID]*vsot.Sender[P, B, S]
 	baseOTReceivers map[sharing.ID]*vsot.Receiver[P, B, S]
@@ -48,33 +47,25 @@ type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	zeroSeeds     przs.Seeds
 }
 
-func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, sharingId sharing.ID, ac *feldman.AccessStructure, curve ecdsa.Curve[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Participant[P, B, S], error) {
-	if ac == nil || tape == nil || prng == nil {
+func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, sharingId sharing.ID, baseShard *tecdsa.Shard[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Participant[P, B, S], error) {
+	if baseShard == nil || tape == nil || prng == nil {
 		return nil, errs.NewIsNil("argument")
 	}
-	if !ac.Shareholders().Contains(sharingId) {
-		return nil, errs.NewValidation("sharing id not part of the access structure")
-	}
-
 	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, sessionId))
 
-	gennaroParty, err := gennaro.NewParticipant(sessionId, curve, sharingId, ac, tape, prng)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to make gennaro participant")
-	}
-
-	zeroSetup, err := przsSetup.NewParticipant(sessionId, sharingId, ac.Shareholders(), tape, prng)
+	zeroSetup, err := przsSetup.NewParticipant(sessionId, sharingId, baseShard.AccessStructure().Shareholders(), tape, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "error creating zero setup for participant")
 	}
 
+	curve := algebra.StructureMustBeAs[ecdsa.Curve[P, B, S]](baseShard.PublicKey().Value().Structure())
 	otSuite, err := vsot.NewSuite(softspoken.Kappa, 1, curve, sha256.New)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "error creating vsot suite for participant")
 	}
 	otSenders := make(map[sharing.ID]*vsot.Sender[P, B, S])
 	otReceivers := make(map[sharing.ID]*vsot.Receiver[P, B, S])
-	for id := range ac.Shareholders().Iter() {
+	for id := range baseShard.AccessStructure().Shareholders().Iter() {
 		if id == sharingId {
 			continue
 		}
@@ -99,11 +90,10 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 
 	p := &Participant[P, B, S]{
 		sessionId:       sessionId,
-		sharingId:       sharingId,
-		ac:              ac,
+		baseShard:       baseShard,
 		tape:            tape,
 		prng:            prng,
-		gennaroParty:    gennaroParty,
+		round:           1,
 		zeroSetup:       zeroSetup,
 		baseOTSenders:   otSenders,
 		baseOTReceivers: otReceivers,
@@ -112,5 +102,5 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 }
 
 func (p *Participant[P, B, S]) SharingID() sharing.ID {
-	return p.sharingId
+	return p.baseShard.Share().ID()
 }
