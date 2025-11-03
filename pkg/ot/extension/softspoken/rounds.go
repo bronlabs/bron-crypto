@@ -1,16 +1,13 @@
 package softspoken
 
 import (
-	"crypto/sha256"
 	"crypto/subtle"
-	"encoding/binary"
 	"io"
 	"math/rand/v2"
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/binaryfields/bf128"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
@@ -99,7 +96,7 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 		receiverOutput.Messages[j] = make([][]byte, r.suite.L())
 		for l := 0; l < r.suite.L(); l++ {
 			//
-			digest, err := hashing.Hash(sha256.New, r.sessionId[:], binary.LittleEndian.AppendUint32(nil, uint32(j)), tj[j*r.suite.L()+l])
+			digest, err := r.hash(j, l, tj[j*r.suite.L()+l])
 			if err != nil {
 				return nil, nil, errs.WrapHashing(err, "bad hashing t_j for SoftSpoken COTe")
 			}
@@ -186,12 +183,12 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 		senderOutput.Messages[j][0] = make([][]byte, s.suite.L())
 		senderOutput.Messages[j][1] = make([][]byte, s.suite.L())
 		for l := 0; l < s.suite.L(); l++ {
-			digest, err := hashing.Hash(sha256.New, s.sessionId[:], binary.LittleEndian.AppendUint32(nil, uint32(j)), qjTransposed[j*s.suite.L()+l])
+			digest, err := s.hash(j, l, qjTransposed[j*s.suite.L()+l])
 			if err != nil {
 				return nil, errs.WrapHashing(err, "bad hashing q_j for SoftSpoken COTe (T&R.2)")
 			}
 			senderOutput.Messages[j][0][l] = digest
-			digest, err = hashing.Hash(sha256.New, s.sessionId[:], binary.LittleEndian.AppendUint32(nil, uint32(j)), qjTransposedPlusDelta[j*s.suite.L()+l])
+			digest, err = s.hash(j, l, qjTransposedPlusDelta[j*s.suite.L()+l])
 			if err != nil {
 				return nil, errs.WrapHashing(err, "bad hashing q_j_pDelta for SoftSpoken COTe (T&R.2)")
 			}

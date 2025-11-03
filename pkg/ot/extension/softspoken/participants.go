@@ -1,11 +1,14 @@
 package softspoken
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -82,4 +85,12 @@ func NewReceiver(sessionId network.SID, senderSeeds *vsot.SenderOutput, suite *S
 	}
 
 	return r, nil
+}
+
+func (p *participant) hash(j, l int, data ...[]byte) ([]byte, error) {
+	preimage := slices.Concat(p.sessionId[:], binary.LittleEndian.AppendUint32(nil, uint32(j)), binary.LittleEndian.AppendUint32(nil, uint32(l)))
+	for _, d := range data {
+		preimage = slices.Concat(preimage, d)
+	}
+	return hashing.Hash(p.suite.hashFunc, preimage)
 }
