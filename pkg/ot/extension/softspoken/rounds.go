@@ -3,7 +3,6 @@ package softspoken
 import (
 	"crypto/subtle"
 	"io"
-	"math/rand/v2"
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/binaryfields/bf128"
@@ -42,18 +41,13 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 	// step 1.3: Extend the baseOT seeds
 	var t [2][Kappa][]byte
 	for i := range Kappa {
-		t[0][i] = make([]byte, etaPrimeBytes) // k_{0,i} --(PRG)--> t_{0,i}
-		t[1][i] = make([]byte, etaPrimeBytes) // k_{1,i} --(PRG)--> t_{1,i}
-		var prngSeed [32]byte
-		subtle.XORBytes(prngSeed[:], r.senderSeeds.Messages[i][0][0], r.sessionId[:])
-		prng := rand.NewChaCha8(prngSeed)
-		if _, err = io.ReadFull(prng, t[0][i]); err != nil {
-			return nil, nil, errs.WrapFailed(err, "bad PRG reading for SoftSpoken OTe")
+		t[0][i], err = r.expand(etaPrimeBytes, i, r.senderSeeds.Messages[i][0][0], 0)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "bad PRG writing for SoftSpoken OTe")
 		}
-		subtle.XORBytes(prngSeed[:], r.senderSeeds.Messages[i][1][0], r.sessionId[:])
-		prng = rand.NewChaCha8(prngSeed)
-		if _, err = io.ReadFull(prng, t[1][i]); err != nil {
-			return nil, nil, errs.WrapFailed(err, "bad PRG for SoftSpoken OTe")
+		t[1][i], err = r.expand(etaPrimeBytes, i, r.senderSeeds.Messages[i][1][0], 1)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "bad PRG writing for SoftSpoken OTe")
 		}
 	}
 
@@ -125,11 +119,8 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 	// step 2.1: Extend the baseOT seeds
 	var tb [Kappa][]byte
 	for i := range Kappa {
-		tb[i] = make([]byte, etaPrimeBytes)
-		var prngSeed [32]byte
-		subtle.XORBytes(prngSeed[:], s.receiverSeeds.Messages[i][0], s.sessionId[:])
-		prng := rand.NewChaCha8(prngSeed)
-		if _, err = io.ReadFull(prng, tb[i]); err != nil {
+		tb[i], err = s.expand(etaPrimeBytes, i, s.receiverSeeds.Messages[i][0], int(s.receiverSeeds.Choices[i/8]>>(i%8)&0b1))
+		if err != nil {
 			return nil, errs.WrapFailed(err, "bad PRG write for SoftSpoken OTe")
 		}
 	}
