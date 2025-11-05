@@ -63,3 +63,17 @@ func (u *SimpleModulus) ModInv(out, a *numct.Nat) ct.Bool {
 func (u *SimpleModulus) ModDiv(out, a, b *numct.Nat) ct.Bool {
 	return u.m.ModDiv(out, a, b)
 }
+
+func (u *SimpleModulus) Lift() (*SimpleModulus, ct.Bool) {
+	m := u.m.Nat()
+	var m2 numct.Nat
+	m2.Mul(m, m)
+	var m2Modulus numct.Modulus
+	var ok ct.Bool
+	if m2.IsOdd() == ct.True {
+		m2Modulus, ok = numct.NewModulusOdd(&m2)
+	} else {
+		m2Modulus, ok = numct.NewModulusNonZero(&m2)
+	}
+	return &SimpleModulus{m: m2Modulus}, ok
+}

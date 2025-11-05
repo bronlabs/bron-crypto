@@ -186,6 +186,15 @@ func (m *OddPrimeFactors) ModInv(out, a *numct.Nat) ct.Bool {
 	return ok
 }
 
+func (m *OddPrimeFactors) Lift() (*OddPrimeSquareFactors, ct.Bool) {
+	// TODO: optimize
+	out, ok := NewOddPrimeSquareFactors(
+		m.Params.PNat,
+		m.Params.QNat,
+	)
+	return out, ok
+}
+
 // func NewOddPrimeFactorsMulti(ps ...*numct.Nat) (*OddPrimeFactorsMulti, ct.Bool) {
 // 	k := len(ps)
 // 	params, allOk := crt.PrecomputeMulti[*numct.ModulusOddPrime](ps...)
