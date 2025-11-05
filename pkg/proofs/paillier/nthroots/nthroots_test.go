@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
@@ -41,7 +42,7 @@ func Test_HappyPathInteractive(t *testing.T) {
 	require.NoError(t, err)
 	y := numct.NewNatFromBig(yInt, 256)
 	var x numct.Nat
-	g.Arithmetic().ExpToN(&x, y)
+	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x, y)
 
 	err = doInteractiveProof(&x, y, g, prng)
 	require.NoError(t, err)
@@ -69,13 +70,13 @@ func Test_InvalidRootInteractive(t *testing.T) {
 	require.NoError(t, err)
 	y1 := numct.NewNatFromBig(y1Int, 256)
 	var x1 numct.Nat
-	g.Arithmetic().ExpToN(&x1, y1)
+	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x1, y1)
 
 	y2Int, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
 	y2 := numct.NewNatFromBig(y2Int, 256)
 	var x2 numct.Nat
-	g.Arithmetic().ExpToN(&x2, y2)
+	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x2, y2)
 
 	err = doInteractiveProof(&x1, y2, g, prng)
 	require.Error(t, err)
@@ -114,7 +115,7 @@ func Test_HappyPathNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	y := numct.NewNatFromBig(yInt, 256)
 	var x numct.Nat
-	g.Arithmetic().ExpToN(&x, y)
+	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x, y)
 
 	xx, err := g.FromNatCT(&x)
 	require.NoError(t, err)
@@ -169,13 +170,13 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	y1 := numct.NewNatFromBig(y1Int, 256)
 	var x1 numct.Nat
-	g.Arithmetic().ExpToN(&x1, y1)
+	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x1, y1)
 
 	y2Int, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
 	y2 := numct.NewNatFromBig(y2Int, 256)
 	var x2 numct.Nat
-	g.Arithmetic().ExpToN(&x2, y2)
+	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x2, y2)
 
 	xx1, err := g.FromNatCT(&x1)
 	require.NoError(t, err)
@@ -253,7 +254,7 @@ func Test_Simulator(t *testing.T) {
 	require.NoError(t, err)
 	y := numct.NewNatFromBig(yInt, 256)
 	var x numct.Nat
-	g.Arithmetic().ExpToN(&x, y)
+	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x, y)
 
 	xx, err := g.FromNatCT(&x)
 	require.NoError(t, err)
@@ -273,7 +274,7 @@ func Test_Simulator(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func doInteractiveProof(x, y *numct.Nat, g znstar.PaillierGroup, prng io.Reader) (err error) {
+func doInteractiveProof[A znstar.ArithmeticPaillier](x, y *numct.Nat, g *znstar.PaillierGroup[A], prng io.Reader) (err error) {
 	sessionId := []byte("nthRootsSession")
 	appLabel := "NthRoot"
 	protocol, err := nthroots.NewSigmaProtocol(g, prng)

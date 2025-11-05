@@ -5,6 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -32,8 +33,12 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		return nil, errs.WrapFailed(err, "encryption failed")
 	}
 
-	verifier.state.x = sigand.ComposeStatements(slices.Collect(iterutils.Map(slices.Values(ciphertexts), func(x *paillier.Ciphertext) *nthroots.Statement { return nthroots.NewStatement(x.Value()) }))...)
-	verifier.state.y = sigand.ComposeWitnesses(slices.Collect(iterutils.Map(slices.Values(nonces), func(y *paillier.Nonce) *nthroots.Witness { return nthroots.NewWitness(y.Value()) }))...)
+	verifier.state.x = sigand.ComposeStatements(slices.Collect(iterutils.Map(slices.Values(ciphertexts), func(x *paillier.Ciphertext) *nthroots.Statement[*modular.SimpleModulus] {
+		return nthroots.NewStatement(x.Value())
+	}))...)
+	verifier.state.y = sigand.ComposeWitnesses(slices.Collect(iterutils.Map(slices.Values(nonces), func(y *paillier.Nonce) *nthroots.Witness[*modular.SimpleModulus] {
+		return nthroots.NewWitness(y.Value())
+	}))...)
 	verifier.state.rootsProver, err = sigma.NewProver([]byte(verifier.SessionId[:]), rootTranscript.Clone(), verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create sigma protocol prover")
@@ -59,14 +64,28 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 		return nil, errs.WrapValidation(err, "invalid round 2 input")
 	}
 
-	prover.state.x = input.X
+	// prover.state.x = input.X
+	prover.state.x = make([]*nthroots.Statement[*modular.OddPrimeSquareFactors], prover.k)
+	for i, stmti := range input.X {
+		prover.state.x[i], err = nthroots.NewStatementKnownOrder(stmti.X, prover.paillierSecretKey.Group())
+		if err != nil {
+			return nil, errs.WrapFailed(err, "failed to create statement with known order")
+		}
+	}
 	rootTranscript := prover.Transcript.Clone()
 	prover.state.rootsVerifier, err = sigma.NewVerifier(prover.SessionId[:], rootTranscript.Clone(), prover.multiNthRootsProtocol, prover.state.x, prover.Prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Nth root verifier")
 	}
 
-	nthRootVerifierRound2Output, err := prover.state.rootsVerifier.Round2(input.NthRootsProverOutput)
+	commitments := make([]*nthroots.Commitment[*modular.OddPrimeSquareFactors], prover.k)
+	for i, comi := range input.NthRootsProverOutput {
+		commitments[i], err = nthroots.NewCommitmentKnownOrder(comi.C, prover.paillierSecretKey.Group())
+		if err != nil {
+			return nil, errs.WrapFailed(err, "failed to create commitment with known order")
+		}
+	}
+	nthRootVerifierRound2Output, err := prover.state.rootsVerifier.Round2(commitments)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot run round 2 of Nth root verifier")
 	}
@@ -97,7 +116,14 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 		return nil, errs.NewRound("%d != 4", prover.Round)
 	}
 	// round 4 of proving the knowledge of y
-	if err := prover.state.rootsVerifier.Verify(input.NthRootsProverOutput); err != nil {
+	responses := make([]*nthroots.Response[*modular.OddPrimeSquareFactors], prover.k)
+	for i, respi := range input.NthRootsProverOutput {
+		responses[i], err = nthroots.NewResponseKnownOrder(respi.Z, prover.paillierSecretKey.Group())
+		if err != nil {
+			return nil, errs.WrapFailed(err, "failed to create response with known order")
+		}
+	}
+	if err := prover.state.rootsVerifier.Verify(responses); err != nil {
 		return nil, errs.WrapVerification(err, "cannot verify knowledge of Nth root from Verifier")
 	}
 
@@ -114,7 +140,7 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	}
 	prover.paillierSecretKey.Arithmetic().CrtModN.MultiBaseExp(
 		yPrime,
-		sliceutils.MapCast[[]*numct.Nat](prover.state.x, func(s *nthroots.Statement) *numct.Nat { return s.X.Value() }),
+		sliceutils.MapCast[[]*numct.Nat](prover.state.x, func(s *nthroots.Statement[*modular.OddPrimeSquareFactors]) *numct.Nat { return s.X.Value().Value() }),
 		&m,
 	)
 
@@ -138,7 +164,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	for i := range verifier.k {
 		// Reduce y mod N for comparison (yPrime is computed mod N, but y is in (Z/N²Z)*)
 		var yModN numct.Nat
-		verifier.paillierPublicKey.N().Mod(&yModN, verifier.state.y[i].W.Value())
+		verifier.paillierPublicKey.N().Mod(&yModN, verifier.state.y[i].W.Value().Value())
 		ok &= input.YPrime[i].Equal(&yModN)
 	}
 	if ok == ct.False {

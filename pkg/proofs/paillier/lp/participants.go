@@ -5,6 +5,8 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroots"
@@ -21,9 +23,9 @@ const (
 	PaillierBitSize = 2048
 )
 
-type Participant struct {
+type Participant[A znstar.ArithmeticPaillier] struct {
 	// Base participant
-	multiNthRootsProtocol sigma.Protocol[sigand.Statement[*nthroots.Statement], sigand.Witness[*nthroots.Witness], sigand.Commitment[*nthroots.Commitment], sigand.State[*nthroots.State], sigand.Response[*nthroots.Response]]
+	multiNthRootsProtocol sigma.Protocol[sigand.Statement[*nthroots.Statement[A]], sigand.Witness[*nthroots.Witness[A]], sigand.Commitment[*nthroots.Commitment[A]], sigand.State[*nthroots.State[A]], sigand.Response[*nthroots.Response[A]]]
 	Prng                  io.Reader
 	Round                 int
 	SessionId             network.SID
@@ -32,20 +34,24 @@ type Participant struct {
 	k int // security parameter - cheating prover can succeed with probability < 2^(-k)
 }
 
-func (p *Participant) SoundnessError() int {
+func (p *Participant[A]) SoundnessError() int {
 	return p.k
 }
 
 type VerifierState struct {
-	rootsProver *sigma.Prover[sigand.Statement[*nthroots.Statement], sigand.Witness[*nthroots.Witness], sigand.Commitment[*nthroots.Commitment], sigand.State[*nthroots.State], sigand.Response[*nthroots.Response]]
-	// x           []*paillier.Ciphertext
-	// y           []*paillier.Nonce
-	x sigand.Statement[*nthroots.Statement]
-	y sigand.Witness[*nthroots.Witness]
+	rootsProver *sigma.Prover[
+		sigand.Statement[*nthroots.Statement[*modular.SimpleModulus]],
+		sigand.Witness[*nthroots.Witness[*modular.SimpleModulus]],
+		sigand.Commitment[*nthroots.Commitment[*modular.SimpleModulus]],
+		sigand.State[*nthroots.State[*modular.SimpleModulus]],
+		sigand.Response[*nthroots.Response[*modular.SimpleModulus]],
+	]
+	x sigand.Statement[*nthroots.Statement[*modular.SimpleModulus]]
+	y sigand.Witness[*nthroots.Witness[*modular.SimpleModulus]]
 }
 
 type Verifier struct {
-	Participant
+	Participant[*modular.SimpleModulus]
 
 	paillierPublicKey *paillier.PublicKey
 	enc               *paillier.Encrypter
@@ -53,13 +59,18 @@ type Verifier struct {
 }
 
 type ProverState struct {
-	rootsVerifier *sigma.Verifier[sigand.Statement[*nthroots.Statement], sigand.Witness[*nthroots.Witness], sigand.Commitment[*nthroots.Commitment], sigand.State[*nthroots.State], sigand.Response[*nthroots.Response]]
-	// x             []*paillier.Ciphertext
-	x sigand.Statement[*nthroots.Statement]
+	rootsVerifier *sigma.Verifier[
+		sigand.Statement[*nthroots.Statement[*modular.OddPrimeSquareFactors]],
+		sigand.Witness[*nthroots.Witness[*modular.OddPrimeSquareFactors]],
+		sigand.Commitment[*nthroots.Commitment[*modular.OddPrimeSquareFactors]],
+		sigand.State[*nthroots.State[*modular.OddPrimeSquareFactors]],
+		sigand.Response[*nthroots.Response[*modular.OddPrimeSquareFactors]],
+	]
+	x sigand.Statement[*nthroots.Statement[*modular.OddPrimeSquareFactors]]
 }
 
 type Prover struct {
-	Participant
+	Participant[*modular.OddPrimeSquareFactors]
 
 	paillierSecretKey *paillier.PrivateKey
 	state             *ProverState
@@ -90,7 +101,7 @@ func NewVerifier(sessionId network.SID, k int, pk *paillier.PublicKey, tape tran
 	}
 
 	return &Verifier{
-		Participant: Participant{
+		Participant: Participant[*modular.SimpleModulus]{
 			k:                     k,
 			Round:                 1,
 			SessionId:             sessionId,
@@ -144,7 +155,7 @@ func NewProver(sessionId network.SID, k int, sk *paillier.PrivateKey, tape trans
 	}
 
 	return &Prover{
-		Participant: Participant{
+		Participant: Participant[*modular.OddPrimeSquareFactors]{
 			k:                     k,
 			Round:                 2,
 			SessionId:             sessionId,

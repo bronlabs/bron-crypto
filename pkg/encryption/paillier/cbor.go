@@ -69,7 +69,7 @@ func (p *Plaintext) UnmarshalCBOR(data []byte) error {
 
 // Nonce serialisation - reuse znstar.Unit CBOR.
 type nonceDTO struct {
-	U znstar.Unit `cbor:"u"`
+	U *znstar.PaillierGroupUnknownOrderElement `cbor:"u"`
 }
 
 func (n *Nonce) MarshalCBOR() ([]byte, error) {
@@ -94,7 +94,7 @@ func (n *Nonce) UnmarshalCBOR(data []byte) error {
 
 // Ciphertext serialisation - reuse znstar.Unit CBOR.
 type ciphertextDTO struct {
-	U znstar.Unit `cbor:"u"`
+	U *znstar.PaillierGroupUnknownOrderElement `cbor:"u"`
 }
 
 func (c *Ciphertext) MarshalCBOR() ([]byte, error) {
@@ -119,7 +119,7 @@ func (c *Ciphertext) UnmarshalCBOR(data []byte) error {
 
 // PublicKey serialisation - reuse znstar.PaillierGroup CBOR.
 type publicKeyDTO struct {
-	Group znstar.PaillierGroup `cbor:"group"`
+	Group *znstar.PaillierGroupUnknownOrder `cbor:"group"`
 }
 
 func (pk *PublicKey) MarshalCBOR() ([]byte, error) {
@@ -145,7 +145,7 @@ func (pk *PublicKey) UnmarshalCBOR(data []byte) error {
 
 // PrivateKey serialisation - reuse znstar.PaillierGroupKnownOrder and numct.Nat CBOR.
 type privateKeyDTO struct {
-	Group znstar.PaillierGroupKnownOrder `cbor:"group"`
+	Group *znstar.PaillierGroupKnownOrder `cbor:"group"`
 }
 
 func (sk *PrivateKey) MarshalCBOR() ([]byte, error) {

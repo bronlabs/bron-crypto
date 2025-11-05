@@ -1,337 +1,319 @@
 package znstar
 
 import (
-	"github.com/fxamacker/cbor/v2"
-
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/fxamacker/cbor/v2"
 )
 
-// Wrapper types for unit to support dual-tag registration
-// These wrappers allow us to register different CBOR tags for the same underlying type
-// Both will unmarshal to the Unit interface.
-type unitUnknownOrder struct {
-	*unit
-}
-
-type unitKnownOrder struct {
-	*unit
-}
-
 var (
-	_ cbor.Marshaler   = (*unit)(nil)
-	_ cbor.Unmarshaler = (*unit)(nil)
-	_ cbor.Marshaler   = (*unitUnknownOrder)(nil)
-	_ cbor.Unmarshaler = (*unitUnknownOrder)(nil)
-	_ cbor.Marshaler   = (*unitKnownOrder)(nil)
-	_ cbor.Unmarshaler = (*unitKnownOrder)(nil)
-	_ cbor.Marshaler   = (*UZMod[*modular.SimpleModulus])(nil)
-	_ cbor.Unmarshaler = (*UZMod[*modular.SimpleModulus])(nil)
-	_ cbor.Marshaler   = (*UZMod[*modular.OddPrimeFactors])(nil)
-	_ cbor.Unmarshaler = (*UZMod[*modular.OddPrimeFactors])(nil)
-	_ cbor.Marshaler   = (*UZMod[*modular.OddPrimeSquareFactors])(nil)
-	_ cbor.Unmarshaler = (*UZMod[*modular.OddPrimeSquareFactors])(nil)
+	_ cbor.Marshaler   = (*RSAGroupKnownOrder)(nil)
+	_ cbor.Unmarshaler = (*RSAGroupKnownOrder)(nil)
+
+	_ cbor.Marshaler   = (*RSAGroupKnownOrderElement)(nil)
+	_ cbor.Unmarshaler = (*RSAGroupKnownOrderElement)(nil)
+
+	_ cbor.Marshaler   = (*RSAGroupUnknownOrder)(nil)
+	_ cbor.Unmarshaler = (*RSAGroupUnknownOrder)(nil)
+
+	_ cbor.Marshaler   = (*RSAGroupUnknownOrderElement)(nil)
+	_ cbor.Unmarshaler = (*RSAGroupUnknownOrderElement)(nil)
+
+	_ cbor.Marshaler   = (*PaillierGroupKnownOrder)(nil)
+	_ cbor.Unmarshaler = (*PaillierGroupKnownOrder)(nil)
+
+	_ cbor.Marshaler   = (*PaillierGroupKnownOrderElement)(nil)
+	_ cbor.Unmarshaler = (*PaillierGroupKnownOrderElement)(nil)
+
+	_ cbor.Marshaler   = (*PaillierGroupUnknownOrder)(nil)
+	_ cbor.Unmarshaler = (*PaillierGroupUnknownOrder)(nil)
+
+	_ cbor.Marshaler   = (*PaillierGroupUnknownOrderElement)(nil)
+	_ cbor.Unmarshaler = (*PaillierGroupUnknownOrderElement)(nil)
 )
 
 const (
-	UnitTag                    = 5010
-	UnitKnownOrderTag          = 5011
-	UZModSimpleTag             = 5012
-	UZModOddPrimeTag           = 5013
-	UZModOddPrimeSquareTag     = 5014
-	PaillierGroupTag           = 5015
-	PaillierGroupKnownOrderTag = 5016
-	RSAGroupTag                = 5017
-	RSAGroupKnownOrderTag      = 5018
+	RSAGroupKnownOrderTag = 5010 + iota
+	RSAGroupKnownOrderElementTag
+	RSAGroupUnknownOrderTag
+	RSAGroupUnknownOrderElementTag
+	PaillierGroupKnownOrderTag
+	PaillierGroupKnownOrderElementTag
+	PaillierGroupUnknownOrderTag
+	PaillierGroupUnknownOrderElementTag
 )
 
 func init() {
-	// Register both wrapper types to handle dual tags for units
-	serde.Register[*unitUnknownOrder](UnitTag)
-	serde.Register[*unitKnownOrder](UnitKnownOrderTag)
-	serde.Register[*UZMod[*modular.SimpleModulus]](UZModSimpleTag)
-	serde.Register[*UZMod[*modular.OddPrimeFactors]](UZModOddPrimeTag)
-	serde.Register[*UZMod[*modular.OddPrimeSquareFactors]](UZModOddPrimeSquareTag)
-	serde.Register[*paillierGroup](PaillierGroupTag)
-	serde.Register[*paillierGroupKnownOrder](PaillierGroupKnownOrderTag)
-	// RSA Group for now is just alias of UZMod
-	// serde.Register[*rsaGroup](RSAGroupTag)
-	serde.Register[*rsaGroupKnownOrder](RSAGroupKnownOrderTag)
+	serde.Register[*RSAGroupKnownOrder](RSAGroupKnownOrderTag)
+	serde.Register[*RSAGroupKnownOrderElement](RSAGroupKnownOrderElementTag)
+	serde.Register[*RSAGroupUnknownOrder](RSAGroupUnknownOrderTag)
+	serde.Register[*RSAGroupUnknownOrderElement](RSAGroupUnknownOrderElementTag)
+	serde.Register[*PaillierGroupKnownOrder](PaillierGroupKnownOrderTag)
+	serde.Register[*PaillierGroupKnownOrderElement](PaillierGroupKnownOrderElementTag)
+	serde.Register[*PaillierGroupUnknownOrder](PaillierGroupUnknownOrderTag)
+	serde.Register[*PaillierGroupUnknownOrderElement](PaillierGroupUnknownOrderElementTag)
 }
 
-// MarshalCBOR for unitUnknownOrder - delegates to embedded unit.
-func (u *unitUnknownOrder) MarshalCBOR() ([]byte, error) {
-	return u.unit.MarshalCBOR()
+type rsaGroupKnownOrderDTO struct {
+	P *num.NatPlus `cbor:"p"`
+	Q *num.NatPlus `cbor:"q"`
 }
 
-// UnmarshalCBOR for unitUnknownOrder - deserializes unknown order unit.
-func (u *unitUnknownOrder) UnmarshalCBOR(data []byte) error {
-	// When called by serde, the tag has already been stripped
-	// We know this is an unknown order unit because of the tag that was registered
-	dto, err := serde.UnmarshalCBOR[unitDTO](data)
-	if err != nil {
-		return err
-	}
-	if u.unit == nil {
-		u.unit = &unit{}
-	}
-	u.v = dto.V
-
-	// Create simple modulus arithmetic for unknown order
-	arith, ok := modular.NewSimple(dto.Mod)
-	if ok == ct.False {
-		return errs.NewFailed("failed to create SimpleModulus")
-	}
-	zMod, err := num.NewZModFromModulus(dto.Mod)
-	if err != nil {
-		return errs.WrapFailed(err, "failed to create ZMod from modulus")
-	}
-
-	// For RSA unknown order, create rsaGroup
-	// For now, just create a generic UZMod with SimpleModulus
-	u.g = &UZMod[*modular.SimpleModulus]{
-		zMod:  zMod,
-		arith: arith,
-	}
-	return nil
+type rsaGroupUnknownOrderDTO struct {
+	Modulus *num.NatPlus `cbor:"modulus"`
 }
 
-// MarshalCBOR for unitKnownOrder - delegates to embedded unit.
-func (u *unitKnownOrder) MarshalCBOR() ([]byte, error) {
-	return u.unit.MarshalCBOR()
+type rsaGroupUnknownOrderElementDTO struct {
+	V          *num.Uint              `cbor:"v"`
+	Arithmetic *modular.SimpleModulus `cbor:"arithmetic"`
 }
 
-// UnmarshalCBOR for unitKnownOrder - deserializes known order unit.
-func (u *unitKnownOrder) UnmarshalCBOR(data []byte) error {
-	// When called by serde, the tag has already been stripped
-	// We know this is a known order unit because of the tag that was registered
-	dto, err := serde.UnmarshalCBOR[unitDTOKnownOrder](data)
-	if err != nil {
-		return err
-	}
-	if u.unit == nil {
-		u.unit = &unit{}
-	}
-	u.v = dto.V
-
-	// Create the appropriate group type based on the arithmetic type
-	switch arith := dto.X.(type) {
-	case *modular.OddPrimeFactors:
-		// This is an RSA group with known order
-		zMod, err := num.NewZModFromModulus(arith.Modulus())
-		if err != nil {
-			return errs.WrapFailed(err, "failed to create ZMod from RSA modulus")
-		}
-		u.g = &rsaGroupKnownOrder{
-			UZMod: UZMod[*modular.OddPrimeFactors]{
-				zMod:  zMod,
-				arith: arith,
-			},
-		}
-	case *modular.OddPrimeSquareFactors:
-		// This is a Paillier group with known order
-		zMod, err := num.NewZModFromModulus(arith.Modulus())
-		if err != nil {
-			return errs.WrapFailed(err, "failed to create ZMod from Paillier modulus")
-		}
-		// Extract N from CrtModN which contains the modulus n (not n²)
-		n := num.NPlus().FromModulus(arith.CrtModN.Modulus())
-		u.g = &paillierGroupKnownOrder{
-			UZMod: UZMod[*modular.OddPrimeSquareFactors]{
-				zMod:  zMod,
-				arith: arith,
-			},
-			n: n,
-		}
-	default:
-		return errs.NewType("unknown arithmetic type in unit deserialization")
-	}
-	return nil
+type rsaGroupKnownOrderElementDTO struct {
+	V          *num.Uint                `cbor:"v"`
+	Arithmetic *modular.OddPrimeFactors `cbor:"arithmetic"`
 }
 
-type unitDTO struct {
-	V   *numct.Nat    `cbor:"value"`
-	Mod numct.Modulus `cbor:"modulus"`
+type paillierGroupKnownOrderDTO struct {
+	P *num.NatPlus `cbor:"p"`
+	Q *num.NatPlus `cbor:"q"`
 }
 
-type unitDTOKnownOrder struct {
-	V *numct.Nat         `cbor:"value"`
-	X modular.Arithmetic `cbor:"group"`
+type paillierGroupUnknownOrderDTO struct {
+	N *num.NatPlus `cbor:"n"`
 }
 
-func (u *unit) MarshalCBOR() ([]byte, error) {
-	if u.IsUnknownOrder() {
-		dto := &unitDTO{V: u.v, Mod: u.g.ModulusCT()}
-		data, err := serde.MarshalCBORTagged(dto, UnitTag)
-		if err != nil {
-			return nil, errs.WrapSerialisation(err, "failed to marshal unknown order unit")
-		}
-		return data, nil
-	}
-	dto := &unitDTOKnownOrder{V: u.v, X: arithmeticOf(u)}
-	data, err := serde.MarshalCBORTagged(dto, UnitKnownOrderTag)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal known order unit")
-	}
-	return data, nil
+type paillierGroupKnownOrderElementDTO struct {
+	V          *num.Uint                      `cbor:"v"`
+	Arithmetic *modular.OddPrimeSquareFactors `cbor:"arithmetic"`
 }
 
-func (u *unit) UnmarshalCBOR(data []byte) error {
-	// This method is only used for direct unmarshaling, not through serde
-	// For serde interface unmarshaling, the wrapper types are used
-	dto, err := serde.UnmarshalCBOR[unitDTO](data)
-	if err != nil {
-		return err
-	}
-	u.v = dto.V
-
-	// Create simple modulus arithmetic for unknown order
-	arith, ok := modular.NewSimple(dto.Mod)
-	if ok == ct.False {
-		return errs.NewFailed("failed to create SimpleModulus")
-	}
-	zMod, err := num.NewZModFromModulus(dto.Mod)
-	if err != nil {
-		return errs.WrapFailed(err, "failed to create ZMod from modulus in unit unmarshal")
-	}
-
-	u.g = &UZMod[*modular.SimpleModulus]{
-		zMod:  zMod,
-		arith: arith,
-	}
-	return nil
+type paillierGroupUnknownOrderElementDTO struct {
+	V          *num.Uint              `cbor:"v"`
+	Arithmetic *modular.SimpleModulus `cbor:"arithmetic"`
+	N          *num.NatPlus           `cbor:"n"`
 }
 
-type uZModDTO struct {
-	Arith modular.Arithmetic `cbor:"arithmetic"`
-}
+// ========== CBOR Serialization ==========
 
-func (us *UZMod[X]) MarshalCBOR() ([]byte, error) {
-	// Choose tag based on the concrete instantiation of UZMod[X].
+func (pg *PaillierGroup[X]) MarshalCBOR() ([]byte, error) {
 	var tag uint64
-	switch any(us).(type) {
-	case *UZMod[*modular.SimpleModulus]:
-		tag = UZModSimpleTag
-	case *UZMod[*modular.OddPrimeFactors]:
-		tag = UZModOddPrimeTag
-	case *UZMod[*modular.OddPrimeSquareFactors]:
-		tag = UZModOddPrimeSquareTag
+	switch any(pg.arith).(type) {
+	case *modular.OddPrimeSquareFactors:
+		tag = PaillierGroupKnownOrderTag
+		dto := &paillierGroupKnownOrderDTO{
+			P: num.NPlus().FromModulus(any(pg.arith).(*modular.OddPrimeSquareFactors).P.Factor),
+			Q: num.NPlus().FromModulus(any(pg.arith).(*modular.OddPrimeSquareFactors).Q.Factor),
+		}
+		return serde.MarshalCBORTagged(dto, tag)
+	case *modular.SimpleModulus:
+		tag = PaillierGroupUnknownOrderTag
+		dto := &paillierGroupUnknownOrderDTO{
+			N: pg.n,
+		}
+		return serde.MarshalCBORTagged(dto, tag)
 	default:
-		return nil, errs.NewValue("unsupported UZMod specialisation in MarshalCBOR")
+		panic("unknown arithmetic type for PaillierGroup")
 	}
-
-	// Serialise the arithmetic object (carries modulus and order)
-	dto := &uZModDTO{Arith: us.arith}
-	data, err := serde.MarshalCBORTagged(dto, tag)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal UZMod")
-	}
-	return data, nil
 }
 
-func (us *UZMod[X]) UnmarshalCBOR(data []byte) error {
-	// When called by serde, the tag has already been stripped
-	dto, err := serde.UnmarshalCBOR[uZModDTO](data)
-	if err != nil {
-		return err
+func (pg *PaillierGroup[X]) UnmarshalCBOR(data []byte) error {
+	switch any(pg.arith).(type) {
+	case *modular.OddPrimeSquareFactors:
+		dto, err := serde.UnmarshalCBOR[paillierGroupKnownOrderDTO](data)
+		if err != nil {
+			return err
+		}
+		reconstructed, err := NewPaillierGroup(dto.P, dto.Q)
+		if err != nil {
+			return err
+		}
+		*pg = *any(reconstructed).(*PaillierGroup[X])
+		return nil
+	case *modular.SimpleModulus:
+		dto, err := serde.UnmarshalCBOR[paillierGroupUnknownOrderDTO](data)
+		if err != nil {
+			return err
+		}
+		n2 := dto.N.Square()
+		reconstructed, err := NewPaillierGroupOfUnknownOrder(n2, dto.N)
+		if err != nil {
+			return err
+		}
+		*pg = *any(reconstructed).(*PaillierGroup[X])
+		return nil
+	default:
+		panic("unknown arithmetic type in UnmarshalCBOR")
 	}
-
-	// Create ZMod from arithmetic modulus
-	z, err := num.NewZModFromModulus(dto.Arith.Modulus())
-	if err != nil {
-		return errs.WrapFailed(err, "failed to construct ZMod from arithmetic modulus")
-	}
-	us.zMod = z
-
-	// Type assertion is safe because we're inside the correct generic monomorphization
-	if arith, ok := dto.Arith.(X); ok {
-		us.arith = arith
-	} else {
-		return errs.NewType("decoded arithmetic doesn't match UZMod type parameter")
-	}
-	return nil
 }
 
-// Group serialisation DTOs and methods.
-
-type paillierGroupUnknownDTO struct {
-	UZMod *UZMod[*modular.SimpleModulus] `cbor:"uzmod"`
-	N     *num.NatPlus                   `cbor:"n"`
+func (u *PaillierGroupElement[X]) MarshalCBOR() ([]byte, error) {
+	var tag uint64
+	switch any(u.arith).(type) {
+	case *modular.OddPrimeSquareFactors:
+		tag = PaillierGroupKnownOrderElementTag
+		dto := &paillierGroupKnownOrderElementDTO{
+			V:          u.v,
+			Arithmetic: any(u.arith).(*modular.OddPrimeSquareFactors),
+		}
+		return serde.MarshalCBORTagged(dto, tag)
+	case *modular.SimpleModulus:
+		tag = PaillierGroupUnknownOrderElementTag
+		dto := &paillierGroupUnknownOrderElementDTO{
+			V:          u.v,
+			Arithmetic: any(u.arith).(*modular.SimpleModulus),
+			N:          u.n,
+		}
+		return serde.MarshalCBORTagged(dto, tag)
+	default:
+		panic("unknown arithmetic type for PaillierGroupElement")
+	}
 }
 
-type paillierGroupKnownDTO struct {
-	UZMod *UZMod[*modular.OddPrimeSquareFactors] `cbor:"uzmod"`
-	N     *num.NatPlus                           `cbor:"n"`
+func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
+	switch any(u.arith).(type) {
+	case *modular.OddPrimeSquareFactors:
+		dto, err := serde.UnmarshalCBOR[paillierGroupKnownOrderElementDTO](data)
+		if err != nil {
+			return err
+		}
+		u.v = dto.V
+		u.arith = any(dto.Arithmetic).(X)
+		u.n = num.NPlus().FromModulus(dto.Arithmetic.CrtModN.Modulus())
+		return nil
+	case *modular.SimpleModulus:
+		dto, err := serde.UnmarshalCBOR[paillierGroupUnknownOrderElementDTO](data)
+		if err != nil {
+			return err
+		}
+		u.v = dto.V
+		u.arith = any(dto.Arithmetic).(X)
+		u.n = dto.N
+		return nil
+	default:
+		// For initial unmarshal when arith is zero value, try both
+		if dtoKnown, err := serde.UnmarshalCBOR[paillierGroupKnownOrderElementDTO](data); err == nil {
+			u.v = dtoKnown.V
+			u.arith = any(dtoKnown.Arithmetic).(X)
+			u.n = num.NPlus().FromModulus(dtoKnown.Arithmetic.CrtModN.Modulus())
+			return nil
+		}
+		dto, err := serde.UnmarshalCBOR[paillierGroupUnknownOrderElementDTO](data)
+		if err != nil {
+			return err
+		}
+		u.v = dto.V
+		u.arith = any(dto.Arithmetic).(X)
+		u.n = dto.N
+		return nil
+	}
 }
 
-func (pg *paillierGroup) MarshalCBOR() ([]byte, error) {
-	dto := &paillierGroupUnknownDTO{
-		UZMod: &pg.UZMod,
-		N:     pg.n,
+func (rg *RSAGroup[X]) MarshalCBOR() ([]byte, error) {
+	// Determine tag based on arithmetic type
+	var tag uint64
+	switch any(rg.arith).(type) {
+	case *modular.OddPrimeFactors:
+		tag = RSAGroupKnownOrderTag
+		dto := &rsaGroupKnownOrderDTO{
+			P: num.NPlus().FromModulus(any(rg.arith).(*modular.OddPrimeFactors).Params.P),
+			Q: num.NPlus().FromModulus(any(rg.arith).(*modular.OddPrimeFactors).Params.Q),
+		}
+		return serde.MarshalCBORTagged(dto, tag)
+	case *modular.SimpleModulus:
+		tag = RSAGroupUnknownOrderTag
+		dto := &rsaGroupUnknownOrderDTO{
+			Modulus: rg.Modulus(),
+		}
+		return serde.MarshalCBORTagged(dto, tag)
+	default:
+		panic("unknown arithmetic type for RSAGroup")
 	}
-	data, err := serde.MarshalCBORTagged(dto, PaillierGroupTag)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal paillierGroup")
-	}
-	return data, nil
 }
 
-func (pg *paillierGroup) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[paillierGroupUnknownDTO](data)
-	if err != nil {
-		return err
+func (rg *RSAGroup[X]) UnmarshalCBOR(data []byte) error {
+	// Determine which type based on X
+	switch any(rg.arith).(type) {
+	case *modular.OddPrimeFactors:
+		dto, err := serde.UnmarshalCBOR[rsaGroupKnownOrderDTO](data)
+		if err != nil {
+			return err
+		}
+		reconstructed, err := NewRSAGroup(dto.P, dto.Q)
+		if err != nil {
+			return err
+		}
+		*rg = *any(reconstructed).(*RSAGroup[X])
+		return nil
+	case *modular.SimpleModulus:
+		dto, err := serde.UnmarshalCBOR[rsaGroupUnknownOrderDTO](data)
+		if err != nil {
+			return err
+		}
+		reconstructed, err := NewRSAGroupOfUnknownOrder(dto.Modulus)
+		if err != nil {
+			return err
+		}
+		*rg = *any(reconstructed).(*RSAGroup[X])
+		return nil
+	default:
+		panic("unknown arithmetic type in UnmarshalCBOR")
 	}
-	pg.UZMod = *dto.UZMod
-	pg.n = dto.N
-	return nil
 }
 
-func (pg *paillierGroupKnownOrder) MarshalCBOR() ([]byte, error) {
-	dto := &paillierGroupKnownDTO{
-		UZMod: &pg.UZMod,
-		N:     pg.n,
+func (u *RSAGroupElement[X]) MarshalCBOR() ([]byte, error) {
+	var tag uint64
+	switch any(u.arith).(type) {
+	case *modular.OddPrimeFactors:
+		tag = RSAGroupKnownOrderElementTag
+		dto := &rsaGroupKnownOrderElementDTO{
+			V:          u.v,
+			Arithmetic: any(u.arith).(*modular.OddPrimeFactors),
+		}
+		return serde.MarshalCBORTagged(dto, tag)
+	case *modular.SimpleModulus:
+		tag = RSAGroupUnknownOrderElementTag
+		dto := &rsaGroupUnknownOrderElementDTO{
+			V:          u.v,
+			Arithmetic: any(u.arith).(*modular.SimpleModulus),
+		}
+		return serde.MarshalCBORTagged(dto, tag)
+	default:
+		panic("unknown arithmetic type for RSAGroupElement")
 	}
-	data, err := serde.MarshalCBORTagged(dto, PaillierGroupKnownOrderTag)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal paillierGroupKnownOrder")
-	}
-	return data, nil
 }
 
-func (pg *paillierGroupKnownOrder) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[paillierGroupKnownDTO](data)
-	if err != nil {
-		return err
+func (u *RSAGroupElement[X]) UnmarshalCBOR(data []byte) error {
+	switch any(u.arith).(type) {
+	case *modular.OddPrimeFactors:
+		dto, err := serde.UnmarshalCBOR[rsaGroupKnownOrderElementDTO](data)
+		if err != nil {
+			return err
+		}
+		u.v = dto.V
+		u.arith = any(dto.Arithmetic).(X)
+		return nil
+	case *modular.SimpleModulus:
+		dto, err := serde.UnmarshalCBOR[rsaGroupUnknownOrderElementDTO](data)
+		if err != nil {
+			return err
+		}
+		u.v = dto.V
+		u.arith = any(dto.Arithmetic).(X)
+		return nil
+	default:
+		// For initial unmarshal when arith is zero value, try both
+		if dtoKnown, err := serde.UnmarshalCBOR[rsaGroupKnownOrderElementDTO](data); err == nil {
+			u.v = dtoKnown.V
+			u.arith = any(dtoKnown.Arithmetic).(X)
+			return nil
+		}
+		dto, err := serde.UnmarshalCBOR[rsaGroupUnknownOrderElementDTO](data)
+		if err != nil {
+			return err
+		}
+		u.v = dto.V
+		u.arith = any(dto.Arithmetic).(X)
+		return nil
 	}
-	pg.UZMod = *dto.UZMod
-	pg.n = dto.N
-	return nil
-}
-
-type rsaGroupDTO struct {
-	UZMod *UZMod[*modular.OddPrimeFactors] `cbor:"uzmod"`
-}
-
-func (rg *rsaGroupKnownOrder) MarshalCBOR() ([]byte, error) {
-	dto := &rsaGroupDTO{
-		UZMod: &rg.UZMod,
-	}
-	data, err := serde.MarshalCBORTagged(dto, RSAGroupKnownOrderTag)
-	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal rsaGroupKnownOrder")
-	}
-	return data, nil
-}
-
-func (rg *rsaGroupKnownOrder) UnmarshalCBOR(data []byte) error {
-	dto, err := serde.UnmarshalCBOR[rsaGroupDTO](data)
-	if err != nil {
-		return err
-	}
-	rg.UZMod = *dto.UZMod
-	return nil
 }

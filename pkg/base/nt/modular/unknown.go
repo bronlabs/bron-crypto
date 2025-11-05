@@ -34,6 +34,10 @@ func (u *SimpleModulus) ModExp(out, base, exp *numct.Nat) {
 	u.m.ModExp(out, base, exp)
 }
 
+func (u *SimpleModulus) ModExpInt(out, base *numct.Nat, exp *numct.Int) {
+	u.m.ModExpInt(out, base, exp)
+}
+
 func (u *SimpleModulus) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp *numct.Nat) {
 	if len(out) != len(bases) {
 		panic("out and bases must have the same length")
