@@ -85,7 +85,7 @@ type (
 	ResizableCapacity[E any] crtp.ResizableCapacity[E]
 )
 
-type Homomorphism[E1 SemiGroupElement[E1], E2 SemiGroupElement[E2]] func(E1) E2
+type Homomorphism[E2 SemiGroupElement[E2], E1 SemiGroupElement[E1]] func(E1) E2
 
 type HomomorphicLike[T any, TV SemiGroupElement[TV]] interface {
 	base.Transparent[TV]

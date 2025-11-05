@@ -3,6 +3,7 @@ package znstar
 import (
 	"io"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt"
@@ -17,6 +18,7 @@ func PaillierGroupsAreEqual[G PaillierGroup](a, b G) bool {
 }
 
 type PaillierGroup interface {
+	algebra.FiniteStructure[Unit]
 	UnitGroup
 	N() *num.NatPlus
 	EmbedRSA(Unit) (Unit, error)
@@ -200,6 +202,10 @@ func (pg *paillierGroup) Phi(x *numct.Int) (Unit, error) {
 	return &unit{v: &out, g: pg}, nil
 }
 
+func (pg *paillierGroup) Hash(data []byte) (Unit, error) {
+	return nil, nil
+}
+
 type paillierGroupKnownOrder struct {
 	UZMod[*modular.OddPrimeSquareFactors]
 
@@ -328,4 +334,8 @@ func (pg *paillierGroupKnownOrder) Phi(x *numct.Int) (Unit, error) {
 	pg.ModulusCT().ModMul(&out, &shiftedPlaintext, pg.N().Value())
 	out.Increment()
 	return &unit{v: &out, g: pg}, nil
+}
+
+func (pg *paillierGroupKnownOrder) Hash(data []byte) (Unit, error) {
+	return nil, nil
 }
