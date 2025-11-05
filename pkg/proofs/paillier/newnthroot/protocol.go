@@ -43,7 +43,23 @@ func NewProtocol(group znstar.PaillierGroup, prng io.Reader) (*Protocol, error) 
 	challengeBitLen := 256
 	challengeByteLen := 256 / 8
 	soundnessError := uint(challengeBitLen / 2)
-	proto, err := newmaurer09.NewProtocol(challengeByteLen, soundnessError, Name, group, group, oneWayHomomorphism, anc, prng)
+	scalarMul := func(unit znstar.Unit, eBytes []byte) znstar.Unit {
+		e, _ := num.N().FromBytes(eBytes)
+		return unit.Exp(e)
+	}
+
+	proto, err := newmaurer09.NewProtocol(
+		challengeByteLen,
+		soundnessError,
+		Name,
+		group,
+		group,
+		oneWayHomomorphism,
+		anc,
+		prng,
+		newmaurer09.WithImageScalarMul[znstar.Unit, znstar.Unit](scalarMul),
+		newmaurer09.WithPreImageScalarMul[znstar.Unit, znstar.Unit](scalarMul),
+	)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create underlying Maurer09 protocol")
 	}

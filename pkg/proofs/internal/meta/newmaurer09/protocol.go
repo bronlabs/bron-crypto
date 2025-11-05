@@ -75,6 +75,20 @@ func (c *Response[P]) Value() P {
 	return c.Z
 }
 
+type MaurerOption[I algebra.GroupElement[I], P algebra.GroupElement[P]] func(protocol *Protocol[I, P])
+
+func WithImageScalarMul[I algebra.GroupElement[I], P algebra.GroupElement[P]](scalarMul func(I, []byte) I) MaurerOption[I, P] {
+	return func(protocol *Protocol[I, P]) {
+		protocol.imageScalarMul = scalarMul
+	}
+}
+
+func WithPreImageScalarMul[I algebra.GroupElement[I], P algebra.GroupElement[P]](scalarMul func(P, []byte) P) MaurerOption[I, P] {
+	return func(protocol *Protocol[I, P]) {
+		protocol.preImageScalarMul = scalarMul
+	}
+}
+
 type Protocol[I algebra.GroupElement[I], P algebra.GroupElement[P]] struct {
 	imageGroup         sigma.FiniteGroup[I]
 	preImageGroup      sigma.FiniteGroup[P]
@@ -83,6 +97,8 @@ type Protocol[I algebra.GroupElement[I], P algebra.GroupElement[P]] struct {
 	name               sigma.Name
 	oneWayHomomorphism sigma.OneWayHomomorphism[I, P]
 	anchor             sigma.Anchor[I, P]
+	imageScalarMul     func(I, []byte) I
+	preImageScalarMul  func(P, []byte) P
 	prng               io.Reader
 }
 
@@ -95,6 +111,7 @@ func NewProtocol[I algebra.GroupElement[I], P algebra.GroupElement[P]](
 	oneWayHomomorphism sigma.OneWayHomomorphism[I, P],
 	anchor sigma.Anchor[I, P],
 	prng io.Reader,
+	options ...MaurerOption[I, P],
 ) (*Protocol[I, P], error) {
 	if challengeByteLen <= 0 || soundnessError < 1 || imageGroup == nil || preImageGroup == nil || oneWayHomomorphism == nil || anchor == nil || prng == nil {
 		return nil, errs.NewArgument("invalid arguments")
@@ -108,7 +125,12 @@ func NewProtocol[I algebra.GroupElement[I], P algebra.GroupElement[P]](
 		name:               name,
 		oneWayHomomorphism: oneWayHomomorphism,
 		anchor:             anchor,
+		imageScalarMul:     defaultScalarMul[I],
+		preImageScalarMul:  defaultScalarMul[P],
 		prng:               prng,
+	}
+	for _, option := range options {
+		option(p)
 	}
 	return p, nil
 }
@@ -124,20 +146,12 @@ func (p *Protocol[I, P]) ComputeProverCommitment(_ *Statement[I], _ *Witness[P])
 }
 
 func (p *Protocol[I, P]) ComputeProverResponse(_ *Statement[I], witness *Witness[P], _ *Commitment[I], state *State[P], challengeBytes sigma.ChallengeBytes) (*Response[P], error) {
-	e, err := num.N().FromBytes(challengeBytes)
-	if err != nil {
-		return nil, err
-	}
-	z := state.S.Op(algebrautils.ScalarMul(witness.W, e))
+	z := state.S.Op(p.preImageScalarMul(witness.W, challengeBytes))
 	return &Response[P]{Z: z}, nil
 }
 
 func (p *Protocol[I, P]) Verify(statement *Statement[I], commitment *Commitment[I], challengeBytes sigma.ChallengeBytes, response *Response[P]) error {
-	e, err := num.N().FromBytes(challengeBytes)
-	if err != nil {
-		return err
-	}
-	if !p.oneWayHomomorphism(response.Z).Equal(commitment.A.Op(algebrautils.ScalarMul(statement.X, e))) {
+	if !p.oneWayHomomorphism(response.Z).Equal(commitment.A.Op(p.imageScalarMul(statement.X, challengeBytes))) {
 		return errs.NewVerification("invalid response")
 	}
 
@@ -145,15 +159,11 @@ func (p *Protocol[I, P]) Verify(statement *Statement[I], commitment *Commitment[
 }
 
 func (p *Protocol[I, P]) RunSimulator(statement *Statement[I], challengeBytes sigma.ChallengeBytes) (*Commitment[I], *Response[P], error) {
-	e, err := num.N().FromBytes(challengeBytes)
-	if err != nil {
-		return nil, nil, err
-	}
 	z, err := p.preImageGroup.Random(p.prng)
 	if err != nil {
 		return nil, nil, err
 	}
-	a := p.oneWayHomomorphism(z).Op(algebrautils.ScalarMul(statement.X.OpInv(), e))
+	a := p.oneWayHomomorphism(z).Op(p.imageScalarMul(statement.X.OpInv(), challengeBytes))
 
 	return &Commitment[I]{A: a}, &Response[P]{Z: z}, nil
 }
@@ -181,7 +191,7 @@ func (p *Protocol[I, P]) Extract(x *Statement[I], a *Commitment[I], ei []sigma.C
 		return nil, errs.NewValidation("BUG: this should never happen")
 	}
 
-	w := scalarMul(u, &alpha).Op(scalarMul(zi[1].Z.OpInv().Op(zi[0].Z), &beta))
+	w := p.preImageScalarMulI(u, &alpha).Op(p.preImageScalarMulI(zi[1].Z.OpInv().Op(zi[0].Z), &beta))
 	return &Witness[P]{W: w}, nil
 }
 
@@ -225,11 +235,16 @@ func (p *Protocol[I, P]) Anchor() sigma.Anchor[I, P] {
 	return p.anchor
 }
 
-func scalarMul[G algebra.GroupElement[G]](base G, e *big.Int) G {
-	absE, _ := num.N().FromBytes(e.Bytes())
+func (p *Protocol[I, P]) preImageScalarMulI(base P, e *big.Int) P {
+	absE := e.Bytes()
 	if e.Sign() < 0 {
-		return algebrautils.ScalarMul(base.OpInv(), absE)
+		return p.preImageScalarMul(base.OpInv(), absE)
 	} else {
-		return algebrautils.ScalarMul(base, absE)
+		return p.preImageScalarMul(base, absE)
 	}
+}
+
+func defaultScalarMul[G algebra.GroupElement[G]](base G, eBytes []byte) G {
+	e, _ := num.N().FromBytes(eBytes)
+	return algebrautils.ScalarMul(base, e)
 }

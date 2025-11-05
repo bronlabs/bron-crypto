@@ -53,7 +53,8 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 	// are required for the existence of polynomial-time extractor of witness.
 	SpecialSoundness() uint
 
-	Extract(statement X, commitment A, challenges []ChallengeBytes, responses []Z) (W, error)
+	// TODO: implement for other protocols and uncomment
+	//Extract(statement X, commitment A, challenges []ChallengeBytes, responses []Z) (W, error)
 
 	// SoundnessError returns the statistical soundness error `s` of the protocol,
 	// i.e., the probability that a cheating prover can succeed is ≤ 2^(-s).
