@@ -2,7 +2,6 @@ package sigma
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
@@ -54,6 +53,8 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 	// are required for the existence of polynomial-time extractor of witness.
 	SpecialSoundness() uint
 
+	Extract(statement X, commitment A, challenges []ChallengeBytes, responses []Z) (W, error)
+
 	// SoundnessError returns the statistical soundness error `s` of the protocol,
 	// i.e., the probability that a cheating prover can succeed is ≤ 2^(-s).
 	// For interactive proofs it must be at least base.StatisticalSecurity,
@@ -62,33 +63,6 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 	GetChallengeBytesLength() int
 
 	ValidateStatement(statement X, witness W) error
-}
-
-type MaurerProtocol[
-	X interface {
-		Statement
-		base.Transparent[I]
-	}, W interface {
-		Witness
-		base.Transparent[PI]
-	}, A interface {
-		Commitment
-		base.Transparent[I]
-	}, S State, Z interface {
-		Response
-		base.Transparent[PI]
-	},
-	PIG algebra.Group[PI], PI algebra.GroupElement[PI],
-	IG algebra.Group[I], I algebra.GroupElement[I],
-] interface {
-	Protocol[X, W, A, S, Z]
-
-	PreImageGroup() PIG
-	ImageGroup() IG
-
-	Phi() algebra.Homomorphism[I, PI]
-	ChallengeActionOnPreImage(c ChallengeBytes, x PI) (PI, error)
-	ChallengeActionOnImage(c ChallengeBytes, x I) (I, error)
 }
 
 type participant[X Statement, W Witness, A Commitment, S State, Z Response] struct {

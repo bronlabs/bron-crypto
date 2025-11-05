@@ -21,11 +21,11 @@ type (
 )
 
 func NewWitness(w znstar.Unit) *Witness {
-	return &Witness{PreImage: w}
+	return &Witness{W: w}
 }
 
 func NewStatement(x znstar.Unit) *Statement {
-	return &Statement{Image: x}
+	return &Statement{X: x}
 }
 
 type Protocol struct {

@@ -21,30 +21,16 @@ type (
 	Response[S algebra.PrimeFieldElement[S]]                                      = newmaurer09.Response[S]
 )
 
+func NewWitness[S algebra.PrimeFieldElement[S]](w S) *Witness[S] {
+	return &Witness[S]{W: w}
+}
+
+func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](x G) *Statement[G, S] {
+	return &Statement[G, S]{X: x}
+}
+
 type Protocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	newmaurer09.Protocol[G, S]
-}
-
-type anchor[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	l  *num.Nat
-	id S
-}
-
-func newAnchor[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](group algebra.PrimeGroup[G, S], scalarField algebra.PrimeField[S]) *anchor[G, S] {
-	l, _ := num.N().FromBytes(group.Order().Bytes())
-	id := scalarField.Zero()
-	return &anchor[G, S]{
-		l:  l,
-		id: id,
-	}
-}
-
-func (a *anchor[G, S]) L() *num.Nat {
-	return a.l
-}
-
-func (a *anchor[G, S]) PreImage(_ G) (w S) {
-	return a.id
 }
 
 func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](generator G, prng io.Reader) (*Protocol[G, S], error) {
@@ -53,7 +39,11 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	challengeByteLen := 16
 	soundnessError := uint(challengeByteLen * 8)
 	homomorphism := func(s S) G { return generator.ScalarOp(s) }
-	anc := newAnchor(group, scalarField)
+	l, err := num.N().FromBytes(group.Order().Bytes())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create anchor")
+	}
+	anc := &anchor[G, S]{l, scalarField.Zero()}
 
 	maurerProto, err := newmaurer09.NewProtocol(
 		challengeByteLen,
@@ -70,4 +60,21 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	}
 
 	return &Protocol[G, S]{*maurerProto}, nil
+}
+
+type anchor[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
+	l  *num.Nat
+	id S
+}
+
+func (a *anchor[G, S]) L() *num.Nat {
+	return a.l
+}
+
+func (a *anchor[G, S]) PreImage(_ G) (w S) {
+	return a.id
+}
+
+func _[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](proto *Protocol[G, S]) {
+	var _ sigma.MaurerProtocol[G, S, *Statement[G, S], *Witness[S], *Commitment[G, S], *State[S], *Response[S]] = proto
 }

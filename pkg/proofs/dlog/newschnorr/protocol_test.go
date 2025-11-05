@@ -108,8 +108,8 @@ func testHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	require.NoError(tb, err)
 	x := base.ScalarMul(w)
 
-	witness := &schnorr.Witness[S]{PreImage: w}
-	statement := &schnorr.Statement[P, S]{Image: x}
+	witness := schnorr.NewWitness(w)
+	statement := schnorr.NewStatement(x)
 
 	// round 1
 	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
@@ -141,7 +141,7 @@ func testSimulator[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	x, err := curve.Random(crand.Reader)
 	require.NoError(tb, err)
 
-	statement := &schnorr.Statement[P, S]{Image: x}
+	statement := schnorr.NewStatement(x)
 
 	// simulate
 	challenge := make([]byte, protocol.GetChallengeBytesLength())
@@ -171,8 +171,8 @@ func testExtractor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 	require.NoError(tb, err)
 	x := base.ScalarMul(w)
 
-	witness := &schnorr.Witness[S]{PreImage: w}
-	statement := &schnorr.Statement[P, S]{Image: x}
+	witness := schnorr.NewWitness(w)
+	statement := schnorr.NewStatement(x)
 
 	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
 	require.NoError(tb, err)
@@ -195,5 +195,5 @@ func testExtractor[P curves.Point[P, F, S], F algebra.FieldElement[F], S algebra
 
 	wExtracted, err := protocol.Extract(statement, commitment, ei, zi)
 	require.NoError(tb, err)
-	require.True(tb, wExtracted.PreImage.Equal(witness.PreImage))
+	require.True(tb, wExtracted.Value().Equal(witness.Value()))
 }

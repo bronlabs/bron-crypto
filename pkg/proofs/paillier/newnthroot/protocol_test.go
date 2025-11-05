@@ -321,7 +321,7 @@ func Test_Extractor(t *testing.T) {
 	zi := []*nthroot.Response{response1, response2}
 	extractedWitness, err := protocol.Extract(statement, commitment, ei, zi)
 	require.NoError(t, err)
-	require.True(t, witness.PreImage.Equal(extractedWitness.PreImage))
+	require.True(t, witness.Value().Equal(extractedWitness.Value()))
 }
 
 func doInteractiveProof(xNatCt, yNatCt *numct.Nat, g znstar.PaillierGroup, prng io.Reader) (err error) {
