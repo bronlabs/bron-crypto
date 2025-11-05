@@ -39,6 +39,6 @@ type Unit interface {
 	LearnOrder(UnitGroup) Unit
 	algebra.ExponentiationBase[Unit, *num.Nat]
 	algebra.IntegerExponentiationBase[Unit, *num.Int]
-	base.Transparent[*numct.Nat]
+	base.Transparent[*num.Uint]
 	base.Clonable[Unit]
 }

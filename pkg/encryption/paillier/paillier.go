@@ -3,7 +3,6 @@ package paillier
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 )
 
@@ -69,13 +68,13 @@ func (s *Scheme) Decrypter(sk *PrivateKey, opts ...DecrypterOption) (*Decrypter,
 	return d, nil
 }
 
-func Phi(receiver *PublicKey, plaintext *Plaintext) znstar.Unit {
-	out, err := receiver.group.Phi(plaintext.ValueCT())
-	if err != nil {
-		panic(err)
-	}
-	return out
-}
+// func Phi(receiver *PublicKey, plaintext *Plaintext) *znstar.Unit {
+// 	out, err := receiver.group.Phi(plaintext.ValueCT())
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	return out
+// }
 
 func lp(sk *PrivateKey, x *numct.Nat) {
 	sk.Arithmetic().P.Squared.ModSub(x, x, numct.NatOne())
