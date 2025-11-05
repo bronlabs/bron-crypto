@@ -296,26 +296,24 @@ func Test_Extractor(t *testing.T) {
 	var x numct.Nat
 	g.Arithmetic().ExpToN(&x, y)
 
-	protocol, err := nthroot.NewProtocol(g, prng)
+	w, err := g.FromNatCT(y)
 	require.NoError(t, err)
 	xx, err := g.FromNatCT(&x)
 	require.NoError(t, err)
-	yy, err := g.FromNatCT(y)
+	witness := nthroot.NewWitness(w)
+	statement := nthroot.NewStatement(xx)
+	protocol, err := nthroot.NewProtocol(g, prng)
 	require.NoError(t, err)
 
-	witness := nthroot.NewWitness(yy)
-	statement := nthroot.NewStatement(xx)
 	commitment, state, err := protocol.ComputeProverCommitment(statement, witness)
 	require.NoError(t, err)
-
-	challenge1 := make([]byte, protocol.GetChallengeBytesLength())
+	challenge1 := make(sigma.ChallengeBytes, protocol.GetChallengeBytesLength())
 	_, err = io.ReadFull(prng, challenge1)
 	require.NoError(t, err)
 	response1, err := protocol.ComputeProverResponse(statement, witness, commitment, state, challenge1)
 	require.NoError(t, err)
-	challenge2 := make([]byte, protocol.GetChallengeBytesLength())
+	challenge2 := make(sigma.ChallengeBytes, protocol.GetChallengeBytesLength())
 	_, err = io.ReadFull(prng, challenge2)
-	require.NoError(t, err)
 	response2, err := protocol.ComputeProverResponse(statement, witness, commitment, state, challenge2)
 	require.NoError(t, err)
 
@@ -324,7 +322,6 @@ func Test_Extractor(t *testing.T) {
 	extractedWitness, err := protocol.Extract(statement, commitment, ei, zi)
 	require.NoError(t, err)
 	require.True(t, witness.PreImage.Equal(extractedWitness.PreImage))
-
 }
 
 func doInteractiveProof(x, y *numct.Nat, g znstar.PaillierGroup, prng io.Reader) (err error) {
