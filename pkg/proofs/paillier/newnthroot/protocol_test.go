@@ -21,66 +21,66 @@ import (
 func Test_HappyPathInteractive(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
-	pInt, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	p := numct.NewNatFromBig(pInt, 128)
-	qInt, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, 128)
+	qBig, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	q := numct.NewNatFromBig(qInt, 128)
+	gNatCt := numct.NewNatFromBig(qBig, 128)
 
-	xNatPlus, err := num.NPlus().FromNatCT(p)
+	xNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
-	yNatPlus, err := num.NPlus().FromNatCT(q)
+	yNatPlus, err := num.NPlus().FromNatCT(gNatCt)
 	require.NoError(t, err)
 
 	g, err := znstar.NewPaillierGroup(xNatPlus, yNatPlus)
 	require.NoError(t, err)
 
-	yInt, err := crand.Int(prng, g.N().Big())
+	yBig, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	y := numct.NewNatFromBig(yInt, 256)
-	var x numct.Nat
-	g.Arithmetic().ExpToN(&x, y)
+	yNatCt := numct.NewNatFromBig(yBig, 256)
+	var xNatCt numct.Nat
+	g.Arithmetic().ExpToN(&xNatCt, yNatCt)
 
-	err = doInteractiveProof(&x, y, g, prng)
+	err = doInteractiveProof(&xNatCt, yNatCt, g, prng)
 	require.NoError(t, err)
 }
 
 func Test_InvalidRootInteractive(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
-	pInt, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	p := numct.NewNatFromBig(pInt, 128)
-	qInt, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, 128)
+	qBig, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	q := numct.NewNatFromBig(qInt, 128)
+	qNatCt := numct.NewNatFromBig(qBig, 128)
 
-	xNatPlus, err := num.NPlus().FromNatCT(p)
+	xNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
-	yNatPlus, err := num.NPlus().FromNatCT(q)
+	yNatPlus, err := num.NPlus().FromNatCT(qNatCt)
 	require.NoError(t, err)
 
 	g, err := znstar.NewPaillierGroup(xNatPlus, yNatPlus)
 	require.NoError(t, err)
 
-	y1Int, err := crand.Int(prng, g.N().Big())
+	y1Big, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	y1 := numct.NewNatFromBig(y1Int, 256)
-	var x1 numct.Nat
-	g.Arithmetic().ExpToN(&x1, y1)
+	y1NatCt := numct.NewNatFromBig(y1Big, 256)
+	var x1NatCt numct.Nat
+	g.Arithmetic().ExpToN(&x1NatCt, y1NatCt)
 
-	y2Int, err := crand.Int(prng, g.N().Big())
+	y2Big, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	y2 := numct.NewNatFromBig(y2Int, 256)
-	var x2 numct.Nat
-	g.Arithmetic().ExpToN(&x2, y2)
+	y2NatCt := numct.NewNatFromBig(y2Big, 256)
+	var x2NatCt numct.Nat
+	g.Arithmetic().ExpToN(&x2NatCt, y2NatCt)
 
-	err = doInteractiveProof(&x1, y2, g, prng)
+	err = doInteractiveProof(&x1NatCt, y2NatCt, g, prng)
 	require.Error(t, err)
 	require.True(t, errs.IsVerification(err))
 
-	err = doInteractiveProof(&x2, y1, g, prng)
+	err = doInteractiveProof(&x2NatCt, y1NatCt, g, prng)
 	require.Error(t, err)
 	require.True(t, errs.IsVerification(err))
 }
@@ -91,16 +91,16 @@ func Test_HappyPathNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	appLabel := "NthRoot"
 	prng := crand.Reader
-	pInt, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	p := numct.NewNatFromBig(pInt, 128)
-	qInt, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, 128)
+	qBig, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	q := numct.NewNatFromBig(qInt, 128)
+	gNatCt := numct.NewNatFromBig(qBig, 128)
 
-	xNatPlus, err := num.NPlus().FromNatCT(p)
+	xNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
-	yNatPlus, err := num.NPlus().FromNatCT(q)
+	yNatPlus, err := num.NPlus().FromNatCT(gNatCt)
 	require.NoError(t, err)
 
 	g, err := znstar.NewPaillierGroup(xNatPlus, yNatPlus)
@@ -109,18 +109,18 @@ func Test_HappyPathNonInteractive(t *testing.T) {
 	protocol, err := nthroot.NewProtocol(g, prng)
 	require.NoError(t, err)
 
-	yInt, err := crand.Int(prng, g.N().Big())
+	yBig, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	y := numct.NewNatFromBig(yInt, 256)
-	var x numct.Nat
-	g.Arithmetic().ExpToN(&x, y)
+	yNatCt := numct.NewNatFromBig(yBig, 256)
+	var xNatCt numct.Nat
+	g.Arithmetic().ExpToN(&xNatCt, yNatCt)
 
-	xx, err := g.FromNatCT(&x)
+	x, err := g.FromNatCT(&xNatCt)
 	require.NoError(t, err)
-	yy, err := g.FromNatCT(y)
+	w, err := g.FromNatCT(yNatCt)
 	require.NoError(t, err)
-	statement := nthroot.NewStatement(xx)
-	witness := nthroot.NewWitness(yy)
+	statement := nthroot.NewStatement(x)
+	witness := nthroot.NewWitness(w)
 
 	fsProtocol, err := fiatshamir.NewCompiler(protocol)
 	require.NoError(t, err)
@@ -146,16 +146,16 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	appLabel := "NthRoot"
 	prng := crand.Reader
-	pInt, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	p := numct.NewNatFromBig(pInt, 128)
-	qInt, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, 128)
+	qBig, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	q := numct.NewNatFromBig(qInt, 128)
+	qNatCt := numct.NewNatFromBig(qBig, 128)
 
-	xNatPlus, err := num.NPlus().FromNatCT(p)
+	xNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
-	yNatPlus, err := num.NPlus().FromNatCT(q)
+	yNatPlus, err := num.NPlus().FromNatCT(qNatCt)
 	require.NoError(t, err)
 
 	g, err := znstar.NewPaillierGroup(xNatPlus, yNatPlus)
@@ -164,25 +164,25 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	protocol, err := nthroot.NewProtocol(g, prng)
 	require.NoError(t, err)
 
-	y1Int, err := crand.Int(prng, g.N().Big())
+	y1Big, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	y1 := numct.NewNatFromBig(y1Int, 256)
-	var x1 numct.Nat
-	g.Arithmetic().ExpToN(&x1, y1)
+	y1NatCt := numct.NewNatFromBig(y1Big, 256)
+	var x1NatCt numct.Nat
+	g.Arithmetic().ExpToN(&x1NatCt, y1NatCt)
 
-	y2Int, err := crand.Int(prng, g.N().Big())
+	y2Big, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	y2 := numct.NewNatFromBig(y2Int, 256)
-	var x2 numct.Nat
-	g.Arithmetic().ExpToN(&x2, y2)
+	y2NatCt := numct.NewNatFromBig(y2Big, 256)
+	var x2NatCt numct.Nat
+	g.Arithmetic().ExpToN(&x2NatCt, y2NatCt)
 
-	xx1, err := g.FromNatCT(&x1)
+	x1, err := g.FromNatCT(&x1NatCt)
 	require.NoError(t, err)
-	yy1, err := g.FromNatCT(y1)
+	w1, err := g.FromNatCT(y1NatCt)
 	require.NoError(t, err)
-	xx2, err := g.FromNatCT(&x2)
+	x2, err := g.FromNatCT(&x2NatCt)
 	require.NoError(t, err)
-	yy2, err := g.FromNatCT(y2)
+	y2, err := g.FromNatCT(y2NatCt)
 	require.NoError(t, err)
 
 	fsProtocol, err := fiatshamir.NewCompiler(protocol)
@@ -196,33 +196,33 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	verifier, err := fsProtocol.NewVerifier(sessionId, verifierTranscript)
 	require.NoError(t, err)
 
-	statement1 := nthroot.NewStatement(xx1)
-	witness2 := nthroot.NewWitness(yy2)
+	statement1 := nthroot.NewStatement(x1)
+	witness2 := nthroot.NewWitness(y2)
 	proof1, err := prover.Prove(statement1, witness2)
 	require.NoError(t, err)
 	err = verifier.Verify(statement1, proof1)
 	require.Error(t, err)
 	require.True(t, errs.IsVerification(err))
 
-	statement1 = nthroot.NewStatement(xx1)
-	witness1 := nthroot.NewWitness(yy1)
-	statement2 := nthroot.NewStatement(xx2)
+	statement1 = nthroot.NewStatement(x1)
+	witness1 := nthroot.NewWitness(w1)
+	statement2 := nthroot.NewStatement(x2)
 	proof2, err := prover.Prove(statement1, witness1)
 	require.NoError(t, err)
 	err = verifier.Verify(statement2, proof2)
 	require.Error(t, err)
 	require.True(t, errs.IsVerification(err))
 
-	statement2 = nthroot.NewStatement(xx2)
-	witness2 = nthroot.NewWitness(yy2)
+	statement2 = nthroot.NewStatement(x2)
+	witness2 = nthroot.NewWitness(y2)
 	proof3, err := prover.Prove(statement2, witness2)
 	require.NoError(t, err)
 	err = verifier.Verify(statement1, proof3)
 	require.Error(t, err)
 	require.True(t, errs.IsVerification(err))
 
-	statement2 = nthroot.NewStatement(xx2)
-	witness1 = nthroot.NewWitness(yy1)
+	statement2 = nthroot.NewStatement(x2)
+	witness1 = nthroot.NewWitness(w1)
 	proof4, err := prover.Prove(statement2, witness1)
 	require.NoError(t, err)
 	err = verifier.Verify(statement2, proof4)
@@ -233,28 +233,28 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 func Test_Simulator(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
-	pInt, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	p := numct.NewNatFromBig(pInt, 128)
-	qInt, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, 128)
+	qBig, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	q := numct.NewNatFromBig(qInt, 128)
+	qNatCt := numct.NewNatFromBig(qBig, 128)
 
-	xNatPlus, err := num.NPlus().FromNatCT(p)
+	xNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
-	yNatPlus, err := num.NPlus().FromNatCT(q)
+	yNatPlus, err := num.NPlus().FromNatCT(qNatCt)
 	require.NoError(t, err)
 
 	g, err := znstar.NewPaillierGroup(xNatPlus, yNatPlus)
 	require.NoError(t, err)
 
-	yInt, err := crand.Int(prng, g.N().Big())
+	yBig, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	y := numct.NewNatFromBig(yInt, 256)
-	var x numct.Nat
-	g.Arithmetic().ExpToN(&x, y)
+	yNatCt := numct.NewNatFromBig(yBig, 256)
+	var xNatCt numct.Nat
+	g.Arithmetic().ExpToN(&xNatCt, yNatCt)
 
-	xx, err := g.FromNatCT(&x)
+	xUnit, err := g.FromNatCT(&xNatCt)
 	require.NoError(t, err)
 
 	protocol, err := nthroot.NewProtocol(g, prng)
@@ -264,44 +264,44 @@ func Test_Simulator(t *testing.T) {
 	_, err = io.ReadFull(prng, e)
 	require.NoError(t, err)
 
-	statement := nthroot.NewStatement(xx)
-	a, z, err := protocol.RunSimulator(statement, e)
+	x := nthroot.NewStatement(xUnit)
+	a, z, err := protocol.RunSimulator(x, e)
 	require.NoError(t, err)
 
-	err = protocol.Verify(statement, a, e, z)
+	err = protocol.Verify(x, a, e, z)
 	require.NoError(t, err)
 }
 
 func Test_Extractor(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
-	pInt, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	p := numct.NewNatFromBig(pInt, 128)
-	qInt, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, 128)
+	qBig, err := crand.Prime(prng, 128)
 	require.NoError(t, err)
-	q := numct.NewNatFromBig(qInt, 128)
+	qNatCt := numct.NewNatFromBig(qBig, 128)
 
-	xNatPlus, err := num.NPlus().FromNatCT(p)
+	pNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
-	yNatPlus, err := num.NPlus().FromNatCT(q)
-	require.NoError(t, err)
-
-	g, err := znstar.NewPaillierGroup(xNatPlus, yNatPlus)
+	qNatPlus, err := num.NPlus().FromNatCT(qNatCt)
 	require.NoError(t, err)
 
-	yInt, err := crand.Int(prng, g.N().Big())
+	g, err := znstar.NewPaillierGroup(pNatPlus, qNatPlus)
 	require.NoError(t, err)
-	y := numct.NewNatFromBig(yInt, 256)
-	var x numct.Nat
-	g.Arithmetic().ExpToN(&x, y)
 
-	w, err := g.FromNatCT(y)
+	yBig, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	xx, err := g.FromNatCT(&x)
+	yNatCt := numct.NewNatFromBig(yBig, 256)
+	var xNatCt numct.Nat
+	g.Arithmetic().ExpToN(&xNatCt, yNatCt)
+
+	w, err := g.FromNatCT(yNatCt)
+	require.NoError(t, err)
+	x, err := g.FromNatCT(&xNatCt)
 	require.NoError(t, err)
 	witness := nthroot.NewWitness(w)
-	statement := nthroot.NewStatement(xx)
+	statement := nthroot.NewStatement(x)
 	protocol, err := nthroot.NewProtocol(g, prng)
 	require.NoError(t, err)
 
@@ -324,23 +324,23 @@ func Test_Extractor(t *testing.T) {
 	require.True(t, witness.PreImage.Equal(extractedWitness.PreImage))
 }
 
-func doInteractiveProof(x, y *numct.Nat, g znstar.PaillierGroup, prng io.Reader) (err error) {
+func doInteractiveProof(xNatCt, yNatCt *numct.Nat, g znstar.PaillierGroup, prng io.Reader) (err error) {
 	sessionId := []byte("nthRootsSession")
 	appLabel := "NthRoot"
 	protocol, err := nthroot.NewProtocol(g, prng)
 	if err != nil {
 		return err
 	}
-	xx, err := g.FromNatCT(x)
+	xUnit, err := g.FromNatCT(xNatCt)
 	if err != nil {
 		return err
 	}
-	yy, err := g.FromNatCT(y)
+	yUnit, err := g.FromNatCT(yNatCt)
 	if err != nil {
 		return err
 	}
-	proverStatement := nthroot.NewStatement(xx)
-	proverWitness := nthroot.NewWitness(yy)
+	proverStatement := nthroot.NewStatement(xUnit)
+	proverWitness := nthroot.NewWitness(yUnit)
 	proverTranscript := hagrid.NewTranscript(appLabel)
 	prover, err := sigma.NewProver(sessionId, proverTranscript, protocol, proverStatement, proverWitness)
 	if err != nil {
