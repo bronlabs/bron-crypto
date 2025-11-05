@@ -640,7 +640,7 @@ func TestPaillierGroup_InvalidNSquared_ShouldFail(t *testing.T) {
 	p, q, _ := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
 	n := p.Mul(q)
 	one, _ := num.NPlus().FromUint64(1)
-	notNSquared := n.Add(one)  // n + 1 is not n²
+	notNSquared := n.Add(one) // n + 1 is not n²
 
 	_, err := znstar.NewPaillierGroupOfUnknownOrder(notNSquared, n)
 	require.Error(t, err)
@@ -656,4 +656,231 @@ func TestRSAGroup_CompositeFactors_ShouldFail(t *testing.T) {
 	_, err := znstar.NewRSAGroup(composite1, composite2)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "prime")
+}
+
+// BenchmarkPaillierGroup_NthResidue_KnownOrder benchmarks NthResidue with known order group.
+// This should use optimized ExpToN from OddPrimeSquareFactors.
+func BenchmarkPaillierGroup_NthResidue_KnownOrder(b *testing.B) {
+	// Generate prime pair
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// Create Paillier group with known order
+	paillierKnown, err := znstar.NewPaillierGroup(p, q)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// Create Paillier group with unknown order (same modulus)
+	n := p.Mul(q)
+	n2 := n.Square()
+	paillierUnknown, err := znstar.NewPaillierGroupOfUnknownOrder(n2, n)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// Pre-generate random nonces to lift
+	nonces := make([]*znstar.PaillierGroupUnknownOrderElement, b.N)
+	for i := 0; i < b.N; i++ {
+		nonces[i], err = paillierUnknown.Random(rand.Reader)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := paillierKnown.NthResidue(nonces[i])
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkPaillierGroup_NthResidue_UnknownOrder benchmarks NthResidue with unknown order group.
+// This cannot use ExpToN and falls back to regular exponentiation.
+func BenchmarkPaillierGroup_NthResidue_UnknownOrder(b *testing.B) {
+	// Generate prime pair
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// Create Paillier group with unknown order (as receiver)
+	n := p.Mul(q)
+	n2 := n.Square()
+	paillierUnknown, err := znstar.NewPaillierGroupOfUnknownOrder(n2, n)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// Pre-generate random nonces to lift
+	nonces := make([]*znstar.PaillierGroupUnknownOrderElement, b.N)
+	for i := 0; i < b.N; i++ {
+		nonces[i], err = paillierUnknown.Random(rand.Reader)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := paillierUnknown.NthResidue(nonces[i])
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkPaillierGroup_RandomSampling_KnownOrder benchmarks random sampling with known order.
+func BenchmarkPaillierGroup_RandomSampling_KnownOrder(b *testing.B) {
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	group, err := znstar.NewPaillierGroup(p, q)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := group.Random(rand.Reader)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkPaillierGroup_RandomSampling_UnknownOrder benchmarks random sampling with unknown order.
+func BenchmarkPaillierGroup_RandomSampling_UnknownOrder(b *testing.B) {
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	n := p.Mul(q)
+	n2 := n.Square()
+	group, err := znstar.NewPaillierGroupOfUnknownOrder(n2, n)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := group.Random(rand.Reader)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkPaillierGroup_Multiplication_KnownOrder benchmarks multiplication with known order.
+func BenchmarkPaillierGroup_Multiplication_KnownOrder(b *testing.B) {
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	group, err := znstar.NewPaillierGroup(p, q)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	u1, _ := group.Random(rand.Reader)
+	u2, _ := group.Random(rand.Reader)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = u1.Mul(u2)
+	}
+}
+
+// BenchmarkPaillierGroup_Exponentiation_KnownOrder benchmarks exponentiation with known order.
+func BenchmarkPaillierGroup_Exponentiation_KnownOrder(b *testing.B) {
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	group, err := znstar.NewPaillierGroup(p, q)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	u, _ := group.Random(rand.Reader)
+	exp := num.N().FromUint64(12345)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = u.Exp(exp)
+	}
+}
+
+// BenchmarkPaillierGroup_Phi benchmarks the Phi function.
+func BenchmarkPaillierGroup_Phi(b *testing.B) {
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	group, err := znstar.NewPaillierGroup(p, q)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	x := num.Z().FromInt64(42)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := group.Phi(x.Value())
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkRSAGroup_RandomSampling_KnownOrder benchmarks RSA random sampling.
+func BenchmarkRSAGroup_RandomSampling_KnownOrder(b *testing.B) {
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	group, err := znstar.NewRSAGroup(p, q)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := group.Random(rand.Reader)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkRSAGroup_Multiplication_KnownOrder benchmarks RSA multiplication.
+func BenchmarkRSAGroup_Multiplication_KnownOrder(b *testing.B) {
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	group, err := znstar.NewRSAGroup(p, q)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	u1, _ := group.Random(rand.Reader)
+	u2, _ := group.Random(rand.Reader)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = u1.Mul(u2)
+	}
 }
