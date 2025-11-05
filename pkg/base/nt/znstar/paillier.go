@@ -136,7 +136,7 @@ func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupUnknownOrderElement) (*Pai
 	if u == nil {
 		return nil, errs.NewValue("argument must not be nil")
 	}
-	if u.Modulus().Equal(g.Modulus()) {
+	if !u.Modulus().Equal(g.Modulus()) {
 		return nil, errs.NewValue("argument must be in the paillier group with modulus equal to the Paillier modulus")
 	}
 	pu, err := g.FromNatCT(u.Value().Value())
