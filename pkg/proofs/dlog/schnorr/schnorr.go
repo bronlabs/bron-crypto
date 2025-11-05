@@ -47,7 +47,7 @@ type (
 	Response[S Scalar[S]]                         = maurer09.Response[S]
 )
 
-func Phi[E GroupElement[E, S], S Scalar[S]](basePoint E) maurer09.GroupHomomorphism[S, E] {
+func Phi[E GroupElement[E, S], S Scalar[S]](basePoint E) maurer09.GroupHomomorphism[E, S] {
 	return func(s S) E {
 		return basePoint.ScalarOp(s)
 	}

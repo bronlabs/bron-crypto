@@ -42,7 +42,7 @@ type State[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] 
 	opening                   lindell22.Opening
 	theirBigRCommitments      map[sharing.ID]lindell22.Commitment
 	tapeFrozenBeforeDlogProof ts.Transcript
-	phi                       algebra.Homomorphism[S, GE]
+	phi                       algebra.Homomorphism[GE, S]
 }
 
 func (c *Cosigner[GE, S, M]) SessionID() network.SID {

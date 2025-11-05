@@ -86,7 +86,7 @@ type MaurerProtocol[
 	PreImageGroup() PIG
 	ImageGroup() IG
 
-	Phi() algebra.Homomorphism[PI, I]
+	Phi() algebra.Homomorphism[I, PI]
 	ChallengeActionOnPreImage(c ChallengeBytes, x PI) (PI, error)
 	ChallengeActionOnImage(c ChallengeBytes, x I) (I, error)
 }
