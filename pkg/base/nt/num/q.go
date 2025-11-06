@@ -1,468 +1,356 @@
 package num
 
 import (
+	"encoding/binary"
 	"io"
 	"math/big"
-	"sync"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/cronokirby/saferith"
 )
 
-var _ algebra.Field[*Rat] = (*Rationals)(nil)
+const (
+	Name = "Q"
+)
 
 var (
-	qOnce     sync.Once
-	qInstance *Rationals
-)
+	qInstance = &Rationals{}
 
-func Q() *Rationals {
-	qOnce.Do(func() {
-		qInstance = &Rationals{}
-	})
-	return qInstance
-}
+	_ algebra.Field[*Rat]        = (*Rationals)(nil)
+	_ algebra.FieldElement[*Rat] = (*Rat)(nil)
+)
 
 type Rationals struct{}
 
+func (q *Rationals) New(n *Int, d *NatPlus) (*Rat, error) {
+	if n == nil || d == nil {
+		return nil, errs.NewIsNil("n or d is nil")
+	}
+	return &Rat{n, d}, nil
+}
+
+func (q *Rationals) FromInt64(value int64) *Rat {
+	n := Z().FromInt64(value)
+	d := NPlus().One()
+	return &Rat{n, d}
+}
+
+func (q *Rationals) FromUint64(value uint64) *Rat {
+	n := Z().FromUint64(value)
+	d := NPlus().One()
+	return &Rat{n, d}
+}
+
+func (q *Rationals) FromInt(value *Int) (*Rat, error) {
+	if value == nil {
+		return nil, errs.NewIsNil("value")
+	}
+	return &Rat{n: value, d: NPlus().One()}, nil
+}
+
+func (q *Rationals) FromNat(value *Nat) (*Rat, error) {
+	if value == nil {
+		return nil, errs.NewIsNil("value")
+	}
+	return &Rat{n: value.Lift(), d: NPlus().One()}, nil
+}
+
+func (q *Rationals) FromNatPlus(value *NatPlus) (*Rat, error) {
+	if value == nil {
+		return nil, errs.NewIsNil("value")
+	}
+	return &Rat{n: value.Lift(), d: NPlus().One()}, nil
+}
+
+func (q *Rationals) FromBigRat(value *big.Rat) (*Rat, error) {
+	if value == nil {
+		return nil, errs.NewIsNil("value")
+	}
+	n, err := Z().FromBig(value.Num())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not convert big.Int to Int")
+	}
+	d, err := NPlus().FromBig(value.Denom())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not convert big.Int to NatPlus")
+	}
+	return &Rat{n, d}, nil
+}
+
+func (q *Rationals) RandomRange(l, h *Rat, prng io.Reader) (*Rat, error) {
+	if l == nil || h == nil || prng == nil {
+		return nil, errs.NewIsNil("l, h or prng is nil")
+	}
+	if h.IsLessThanOrEqual(l) {
+		return nil, errs.NewFailed("empty range")
+	}
+
+	d := l.d.Mul(h.d)
+	ln := l.n.Mul(h.d.Lift())
+	hn := h.n.Mul(l.d.Lift())
+	n, err := Z().Random(ln, hn, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not generate random number")
+	}
+	return &Rat{n, d}, nil
+}
+
+func (q *Rationals) RandomRangeInt(l, h *Rat, prng io.Reader) (*Int, error) {
+	randomQ, err := q.RandomRange(l, h, prng)
+	if err != nil {
+		return nil, errs.WrapRandomSample(err, "failed to sample random element in Q")
+	}
+	randomZ, _, err := randomQ.n.EuclideanDiv(randomQ.d.Lift())
+	if err != nil {
+		return nil, errs.WrapRandomSample(err, "failed to sample random element in Z")
+	}
+	return randomZ, nil
+}
+
 func (q *Rationals) Name() string {
-	return "Q"
+	return Name
 }
 
-func (q *Rationals) Characteristic() algebra.Cardinal {
-	return cardinal.New(0)
-}
-
-func (q *Rationals) Order() algebra.Cardinal {
+func (q *Rationals) Order() cardinal.Cardinal {
 	return cardinal.Infinite()
 }
 
-func (q *Rationals) ElementSize() int {
-	return -1
-}
-
-func (q *Rationals) ExtensionDegree() uint {
-	return 1
-}
-
-func (q *Rationals) New(a *Int, b *NatPlus) (*Rat, error) {
-	if a == nil || b == nil {
-		return nil, errs.NewIsNil("cannot create Rat with nil numerator or denominator")
-	}
-	return &Rat{
-		a: a,
-		b: b,
-	}, nil
-}
-
 func (q *Rationals) FromBytes(data []byte) (*Rat, error) {
-	var r Rat
-	if err := r.UnmarshalCBOR(data); err != nil {
-		return nil, errs.WrapSerialisation(err, "couldn't unmarshal Rat from bytes")
-	}
-	return &r, nil
+	panic("not implemented (yet?)")
 }
 
-func (q *Rationals) FromUint64(n uint64) *Rat {
+func (q *Rationals) ElementSize() int {
+	panic("not implemented for infinite domains")
+}
+
+func (q *Rationals) Characteristic() cardinal.Cardinal {
+	return cardinal.Zero()
+}
+
+func (q *Rationals) OpIdentity() *Rat {
+	return q.Zero()
+}
+
+func (q *Rationals) One() *Rat {
 	return &Rat{
-		a: Z().FromUint64(n),
-		b: NPlus().One(),
+		n: Z().One(),
+		d: NPlus().One(),
 	}
 }
 
-func (q *Rationals) FromInt64(n int64) *Rat {
+func (q *Rationals) Zero() *Rat {
 	return &Rat{
-		a: Z().FromInt64(n),
-		b: NPlus().One(),
+		n: Z().Zero(),
+		d: NPlus().One(),
 	}
-}
-
-func (q *Rationals) FromNatPlus(n *NatPlus) (*Rat, error) {
-	if n == nil {
-		return nil, errs.NewIsNil("cannot convert nil NatPlus to Rat")
-	}
-	return &Rat{
-		a: n.Lift(),
-		b: n.Clone(),
-	}, nil
-}
-
-func (q *Rationals) FromNat(n *Nat) (*Rat, error) {
-	if n == nil {
-		return nil, errs.NewIsNil("cannot convert nil Nat to Rat")
-	}
-	return &Rat{
-		a: n.Lift(),
-		b: NPlus().One(),
-	}, nil
-}
-
-func (q *Rationals) FromInt(n *Int) (*Rat, error) {
-	if n == nil {
-		return nil, errs.NewIsNil("cannot convert nil Int to Rat")
-	}
-	return &Rat{
-		a: n.Clone(),
-		b: NPlus().One(),
-	}, nil
-}
-
-func (q *Rationals) FromUint(n *Uint) (*Rat, error) {
-	if n == nil {
-		return nil, errs.NewIsNil("cannot convert nil Uint to Rat")
-	}
-	return &Rat{
-		a: n.Lift(),
-		b: NPlus().One(),
-	}, nil
-}
-
-func (q *Rationals) FromBig(n *big.Int) (*Rat, error) {
-	if n == nil {
-		return nil, errs.NewIsNil("cannot convert nil big.Int to Rat")
-	}
-	a, err := Z().FromBig(n)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't convert big.Int to Int")
-	}
-	return &Rat{
-		a: a,
-		b: NPlus().One(),
-	}, nil
-}
-
-func (q *Rationals) FromBigRat(n *big.Rat) (*Rat, error) {
-	if n == nil {
-		return nil, errs.NewIsNil("cannot convert nil big.Rat to Rat")
-	}
-	a, err := Z().FromBig(n.Num())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't convert big.Rat numerator to Int")
-	}
-	b, err := NPlus().FromBig(n.Denom())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't convert big.Rat denominator to NatPlus")
-	}
-	return &Rat{
-		a: a,
-		b: b,
-	}, nil
-}
-
-func (q *Rationals) Random(lowInclusive, highExclusive *Rat, prng io.Reader) (*Rat, error) {
-	if prng == nil || lowInclusive == nil || highExclusive == nil {
-		return nil, errs.NewIsNil("prng is nil or lowInclusive is nil or highExclusive is nil")
-	}
-	// Validate interval [lowInclusive, highExclusive)
-	if !lowInclusive.IsLessThanOrEqual(highExclusive) {
-		return nil, errs.NewValue("lowInclusive is greater than highExclusive")
-	}
-	if lowInclusive.Equal(highExclusive) {
-		return nil, errs.NewValue("interval is empty")
-	}
-
-	// Sample on the lattice with common denominator D = b1*b2.
-	// Any rational n/D with n in [a1*b2, a2*b1) lies in [lowInclusive, highExclusive).
-	D := lowInclusive.b.Mul(highExclusive.b)
-	lowN := lowInclusive.a.Mul(highExclusive.b.Lift())  // a1*b2
-	highN := highExclusive.a.Mul(lowInclusive.b.Lift()) // a2*b1
-
-	n, err := Z().Random(lowN, highN, prng)
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "failed to sample random numerator for Rat")
-	}
-
-	return (&Rat{a: n, b: D}).Canonical(), nil
-}
-
-func (q *Rationals) RandomInt(lowInclusive, highExclusive *Rat, prng io.Reader) (*Int, error) {
-	if prng == nil || lowInclusive == nil || highExclusive == nil {
-		return nil, errs.NewIsNil("prng is nil or lowInclusive is nil or highExclusive is nil")
-	}
-
-	// Validate [lowInclusive, highExclusive)
-	if !lowInclusive.IsLessThanOrEqual(highExclusive) {
-		return nil, errs.NewValue("lowInclusive is greater than highExclusive")
-	}
-
-	// ceil(a/b) with b > 0
-	lowInt, err := lowInclusive.Ceil()
-	if err != nil {
-		return nil, err
-	}
-	highInt, err := highExclusive.Ceil()
-	if err != nil {
-		return nil, err
-	}
-
-	// No integers if ceil(low) >= ceil(high)
-	if lowInt.Compare(highInt) >= 0 {
-		return nil, errs.NewValue("interval contains no integers")
-	}
-
-	return Z().Random(lowInt, highInt, prng)
 }
 
 func (q *Rationals) IsSemiDomain() bool {
 	return true
 }
 
-func (q *Rationals) OpIdentity() *Rat {
-	return q.One()
+func (q *Rationals) ExtensionDegree() uint {
+	return 1
 }
 
-func (q *Rationals) Zero() *Rat {
-	return &Rat{
-		a: Z().Zero(),
-		b: NPlus().One(),
-	}
-}
-
-func (q *Rationals) One() *Rat {
-	return &Rat{
-		a: Z().One(),
-		b: NPlus().One(),
-	}
+func Q() *Rationals {
+	return qInstance
 }
 
 type Rat struct {
-	a *Int
-	b *NatPlus
+	n *Int
+	d *NatPlus
 }
 
-func (r *Rat) Numerator() *Int {
-	return r.a
-}
-
-func (r *Rat) Denominator() *NatPlus {
-	return r.b
-}
-
-func (r *Rat) Ceil() (*Int, error) {
-	quot, rem, err := r.a.EuclideanDiv(r.b.Lift())
-	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't compute division for ceil")
-	}
-	if rem.IsZero() || r.a.IsNegative() {
-		return quot, nil
-	}
-	return quot.Increment(), nil
-}
-
-func (r *Rat) Structure() algebra.Structure[*Rat] {
+func (r *Rat) Structure() crtp.Structure[*Rat] {
 	return Q()
 }
 
-func (r *Rat) Op(rhs *Rat) *Rat {
-	return r.Add(rhs)
+func (r *Rat) Bytes() []byte {
+	// this never return error
+	nBytes, _ := ((*saferith.Int)(r.n.v)).MarshalBinary()
+	dBytes := ((*saferith.Nat)(r.d.v)).Bytes()
+	return slices.Concat(binary.BigEndian.AppendUint64(nil, uint64(len(nBytes))), nBytes, dBytes)
 }
 
-func (r *Rat) Add(rhs *Rat) *Rat {
+func (r *Rat) Clone() *Rat {
 	return &Rat{
-		a: r.a.Mul(rhs.b.Lift()).Add(rhs.a.Mul(r.b.Lift())),
-		b: r.b.Mul(rhs.b),
+		n: r.n.Clone(),
+		d: r.d.Clone(),
 	}
+}
+
+func (r *Rat) Equal(rhs *Rat) bool {
+	if r == nil || rhs == nil {
+		return r == rhs
+	}
+	rd := r.d.Lift()
+	rhsD := rhs.d.Lift()
+
+	return r.n.Mul(rhsD).Equal(rhs.n.Mul(rd))
+}
+
+func (r *Rat) HashCode() base.HashCode {
+	// We have to normalize to be consistent with Equal
+	rNormalized := r.Normalize()
+	return rNormalized.n.HashCode() ^ rNormalized.d.HashCode()
+}
+
+func (r *Rat) String() string {
+	return r.n.String() + "/" + r.d.String()
+}
+
+func (r *Rat) Op(e *Rat) *Rat {
+	return r.Add(e)
+}
+
+func (r *Rat) OtherOp(e *Rat) *Rat {
+	return r.Mul(e)
+}
+
+func (r *Rat) Add(e *Rat) *Rat {
+	rn := r.n.Mul(e.d.Lift())
+	en := e.n.Mul(r.d.Lift())
+	n := rn.Add(en)
+	d := r.d.Mul(e.d)
+
+	return &Rat{n, d}
 }
 
 func (r *Rat) Double() *Rat {
-	return r.Add(r)
+	return &Rat{r.n.Double(), r.d}
 }
 
-func (r *Rat) TrySub(rhs *Rat) (*Rat, error) {
-	return r.Sub(rhs), nil
-}
+func (r *Rat) Mul(e *Rat) *Rat {
+	n := r.n.Mul(e.n)
+	d := r.d.Mul(e.d)
 
-func (r *Rat) Sub(rhs *Rat) *Rat {
-	return &Rat{
-		a: r.a.Mul(rhs.b.Lift()).Sub(rhs.a.Mul(r.b.Lift())),
-		b: r.b.Mul(rhs.b),
-	}
-}
-
-func (r *Rat) OtherOp(rhs *Rat) *Rat {
-	return r.Mul(rhs)
-}
-
-func (r *Rat) Mul(rhs *Rat) *Rat {
-	return &Rat{
-		a: r.a.Mul(rhs.a),
-		b: r.b.Mul(rhs.b),
-	}
+	return &Rat{n, d}
 }
 
 func (r *Rat) Square() *Rat {
-	return r.Mul(r)
+	n := r.n.Square()
+	d := r.d.Square()
+
+	return &Rat{n, d}
 }
 
-func (r *Rat) EuclideanDiv(rhs *Rat) (quo *Rat, rem *Rat, err error) {
-	quo, err = r.TryDiv(rhs)
-	return quo, Q().Zero(), err
-}
-
-func (r *Rat) EuclideanValuation() *Rat {
-	return r.Clone()
-}
-
-func (r *Rat) TryDiv(rhs *Rat) (*Rat, error) {
-	if rhs.IsZero() {
-		return nil, errs.NewValue("division by zero")
-	}
-	numerator := r.a.Mul(rhs.b.Lift())
-	// Handle sign: if rhs.a is negative, negate the numerator
-	absRhsA := rhs.a
-	if rhs.a.IsNegative() {
-		numerator = numerator.Neg()
-		absRhsA = rhs.a.Neg()
-	}
-	rhsANP, err := NPlus().FromInt(absRhsA)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't convert abs(rhs.a) to NatPlus")
-	}
-	return &Rat{
-		a: numerator,
-		b: r.b.Mul(rhsANP),
-	}, nil
+func (r *Rat) IsOpIdentity() bool {
+	return r.IsZero()
 }
 
 func (r *Rat) TryOpInv() (*Rat, error) {
-	return r.TryNeg()
+	return r.Neg(), nil
 }
 
-func (r *Rat) OpInv() *Rat {
-	return r.Neg()
+func (r *Rat) IsOne() bool {
+	return r.n.Equal(r.d.Lift())
+}
+
+func (r *Rat) TryInv() (*Rat, error) {
+	if r.n.IsZero() {
+		return nil, errs.NewIsZero("division by zero")
+	}
+
+	neg := r.n.IsNegative()
+	// this never returns error
+	d, _ := NPlus().FromNat(r.n.Abs())
+	n := r.d.Lift()
+	if neg {
+		n = n.Neg()
+	}
+	return &Rat{n, d}, nil
+}
+
+func (r *Rat) TryDiv(rhs *Rat) (*Rat, error) {
+	rhsInv, err := rhs.TryInv()
+	if err != nil {
+		return nil, errs.WrapIsZero(err, "division by zero")
+	}
+	return r.Mul(rhsInv), nil
+}
+
+func (r *Rat) IsZero() bool {
+	return r.n.IsZero()
 }
 
 func (r *Rat) TryNeg() (*Rat, error) {
 	return r.Neg(), nil
 }
 
+func (r *Rat) TrySub(e *Rat) (*Rat, error) {
+	return r.Sub(e), nil
+}
+
+func (r *Rat) OpInv() *Rat {
+	return r.Neg()
+}
+
 func (r *Rat) Neg() *Rat {
-	return &Rat{
-		a: r.a.Neg(),
-		b: r.b,
-	}
+	n := r.n.Neg()
+	d := r.d
+
+	return &Rat{n, d}
 }
 
-func (r *Rat) TryInv() (*Rat, error) {
-	if r.IsZero() {
-		return nil, errs.NewValue("inversion of zero")
-	}
-	// Swap numerator and denominator: a/b becomes b/a
-	// Handle sign: if a is negative, result should have negative numerator
-	absA := r.a
-	sign := false
-	if r.a.IsNegative() {
-		absA = r.a.Neg()
-		sign = true
-	}
-	bAsNP, err := NPlus().FromInt(absA)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't convert abs(a) to NatPlus for inversion")
-	}
-	numerator := r.b.Lift()
-	if sign {
-		numerator = numerator.Neg()
-	}
-	return &Rat{
-		a: numerator,
-		b: bAsNP,
-	}, nil
-}
-
-func (r *Rat) Inv() *Rat {
-	out, err := r.TryInv()
-	if err != nil {
-		panic(err)
-	}
-	return out
-}
-
-func (r *Rat) IsOpIdentity() bool {
-	return r.a.IsZero()
-}
-
-func (r *Rat) IsZero() bool {
-	return r.a.IsZero()
-}
-
-func (r *Rat) IsOne() bool {
-	return r.a.Equal(r.b.Lift())
-}
-
-func (r *Rat) Canonical() *Rat {
-	// If numerator is zero, canonical form is 0/1
-	if r.a.IsZero() {
-		return &Rat{a: Z().Zero(), b: NPlus().One()}
-	}
-
-	// Compute gcd(|a|, b) - use absolute value of numerator for GCD
-	bBig := new(big.Int).Set(r.b.Lift().Big())
-	absA := new(big.Int).Abs(new(big.Int).Set(r.a.Big()))
-	g := new(big.Int).GCD(nil, nil, absA, bBig)
-
-	// Reduce a and b by gcd, preserving the sign of a
-	aRed := new(big.Int).Quo(new(big.Int).Set(r.a.Big()), g)
-	bRed := new(big.Int).Quo(bBig, g)
-
-	aInt, err := Z().FromBig(aRed)
-	if err != nil {
-		return r.Clone()
-	}
-	bNP, err := NPlus().FromBig(bRed)
-	if err != nil {
-		return r.Clone()
-	}
-	return &Rat{a: aInt, b: bNP}
-}
-
-func (r *Rat) IsInt() bool {
-	return r.Canonical().Denominator().IsOne()
+func (r *Rat) Sub(e *Rat) *Rat {
+	return r.Add(e.Neg())
 }
 
 func (r *Rat) IsProbablyPrime() bool {
-	canonical := r.Canonical()
-	return canonical.Denominator().IsOne() && canonical.Numerator().IsProbablyPrime()
+	return false
 }
 
-func (r *Rat) Clone() *Rat {
-	return &Rat{
-		a: r.a.Clone(),
-		b: r.b.Clone(),
-	}
+func (r *Rat) EuclideanDiv(rhs *Rat) (quot, rem *Rat, err error) {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (r *Rat) IsLessThanOrEqual(rhs *Rat) bool {
-	left := r.a.Mul(rhs.b.Lift())
-	right := rhs.a.Mul(r.b.Lift())
-	return left.IsLessThanOrEqual(right)
+func (r *Rat) EuclideanValuation() *Rat {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r *Rat) Normalize() *Rat {
+	rnBig := r.n.Big()
+	rdBig := r.d.Big()
+	g := new(big.Int).GCD(nil, nil, rnBig, rdBig)
+	nBig := new(big.Int).Div(rnBig, g)
+	dBig := new(big.Int).Div(rdBig, g)
+
+	// never returns error
+	n, _ := Z().FromBig(nBig)
+	d, _ := NPlus().FromBig(dBig)
+	return &Rat{n, d}
+}
+
+func (r *Rat) Numerator() *Int {
+	return r.n
+}
+
+func (r *Rat) Denominator() *NatPlus {
+	return r.d
 }
 
 func (r *Rat) IsNegative() bool {
-	return r.a.IsNegative()
+	return r.n.IsNegative()
 }
 
 func (r *Rat) IsPositive() bool {
-	return !r.IsNegative() && !r.IsZero()
+	return r.n.IsPositive()
 }
 
-func (r *Rat) Equal(rhs *Rat) bool {
-	return r.a.Mul(rhs.b.Lift()).Equal(r.b.Lift().Mul(rhs.a))
+func (r *Rat) IsInt() bool {
+	return r.Normalize().d.IsOne()
 }
 
-func (r *Rat) Bytes() []byte {
-	out, err := r.MarshalCBOR()
-	if err != nil {
-		panic(errs.WrapSerialisation(err, "couldn't marshal cbor"))
-	}
-	return out
-}
-
-func (r *Rat) HashCode() base.HashCode {
-	return r.a.HashCode().Combine(r.b.HashCode())
-}
-
-func (r *Rat) String() string {
-	return r.a.String() + "/" + r.b.String()
+func (r *Rat) IsLessThanOrEqual(e *Rat) bool {
+	lhs := r.n.Mul(e.d.Lift())
+	rhs := e.n.Mul(r.d.Lift())
+	return lhs.IsLessThanOrEqual(rhs)
 }

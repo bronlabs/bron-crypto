@@ -87,7 +87,7 @@ func TestRationals_Creation(t *testing.T) {
 				}
 				return num.Q().FromNatPlus(n)
 			},
-			expected: "789/789",
+			expected: "789/1",
 		},
 		{
 			name: "FromBigRat_Simple",
@@ -169,9 +169,9 @@ func TestRationals_Addition(t *testing.T) {
 		},
 		{
 			name:     "Simple_Addition",
-			a:        createRat(t, 1, 2),  // 1/2
-			b:        createRat(t, 1, 3),  // 1/3
-			expected: "5/6",               // 1/2 + 1/3 = 5/6
+			a:        createRat(t, 1, 2), // 1/2
+			b:        createRat(t, 1, 3), // 1/3
+			expected: "5/6",              // 1/2 + 1/3 = 5/6
 		},
 		{
 			name:     "Negative_Plus_Positive",
@@ -462,7 +462,7 @@ func TestRationals_Canonical(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			result := tt.input.Canonical()
+			result := tt.input.Normalize()
 			require.Equal(t, tt.expected, result.String())
 		})
 	}
@@ -551,9 +551,9 @@ func TestRationals_Comparison(t *testing.T) {
 		t.Parallel()
 		require.True(t, num.Q().Zero().IsInt())
 		require.True(t, num.Q().One().IsInt())
-		require.True(t, createRat(t, 8, 4).IsInt())     // 2
+		require.True(t, createRat(t, 8, 4).IsInt()) // 2
 		require.False(t, createRat(t, 3, 4).IsInt())
-		require.True(t, createRat(t, -12, 3).IsInt())   // -4
+		require.True(t, createRat(t, -12, 3).IsInt()) // -4
 	})
 }
 
@@ -578,12 +578,12 @@ func TestRationals_Double(t *testing.T) {
 		{
 			name:     "Double_Simple",
 			input:    createRat(t, 3, 4),
-			expected: "24/16", // 3/4 + 3/4 = (3*4 + 3*4)/(4*4) = 24/16 (not reduced)
+			expected: "6/4", // 3/4 + 3/4 = (3+3)/4 = 6/4
 		},
 		{
 			name:     "Double_Negative",
 			input:    createRat(t, -5, 6),
-			expected: "-60/36", // -5/6 + -5/6 = (-5*6 + -5*6)/(6*6) = -60/36 (not reduced)
+			expected: "-10/6", // -5/6 + -5/6 = (-5 + (-5))/6 = -10/6 (not reduced)
 		},
 	}
 
@@ -670,11 +670,11 @@ func TestRationals_Random(t *testing.T) {
 
 	t.Run("Random_InRange", func(t *testing.T) {
 		t.Parallel()
-		lower := createRat(t, 1, 10)  // 1/10
-		upper := createRat(t, 9, 10)  // 9/10
+		lower := createRat(t, 1, 10) // 1/10
+		upper := createRat(t, 9, 10) // 9/10
 
 		for range 20 {
-			result, err := num.Q().Random(lower, upper, prng)
+			result, err := num.Q().RandomRange(lower, upper, prng)
 			require.NoError(t, err)
 			require.NotNil(t, result)
 
@@ -688,11 +688,11 @@ func TestRationals_Random(t *testing.T) {
 
 	t.Run("Random_NegativeRange", func(t *testing.T) {
 		t.Parallel()
-		lower := createRat(t, -5, 2)  // -5/2
-		upper := createRat(t, -1, 2)  // -1/2
+		lower := createRat(t, -5, 2) // -5/2
+		upper := createRat(t, -1, 2) // -1/2
 
 		for range 10 {
-			result, err := num.Q().Random(lower, upper, prng)
+			result, err := num.Q().RandomRange(lower, upper, prng)
 			require.NoError(t, err)
 			require.True(t, result.IsLessThanOrEqual(upper) || result.Equal(upper))
 			require.True(t, lower.IsLessThanOrEqual(result))
@@ -701,11 +701,11 @@ func TestRationals_Random(t *testing.T) {
 
 	t.Run("Random_CrossingZero", func(t *testing.T) {
 		t.Parallel()
-		lower := createRat(t, -1, 2)  // -1/2
-		upper := createRat(t, 1, 2)   // 1/2
+		lower := createRat(t, -1, 2) // -1/2
+		upper := createRat(t, 1, 2)  // 1/2
 
 		for range 10 {
-			result, err := num.Q().Random(lower, upper, prng)
+			result, err := num.Q().RandomRange(lower, upper, prng)
 			require.NoError(t, err)
 			require.True(t, result.IsLessThanOrEqual(upper) || result.Equal(upper))
 			require.True(t, lower.IsLessThanOrEqual(result))
@@ -715,7 +715,7 @@ func TestRationals_Random(t *testing.T) {
 	t.Run("Random_EmptyInterval", func(t *testing.T) {
 		t.Parallel()
 		value := createRat(t, 1, 2)
-		_, err := num.Q().Random(value, value, prng)
+		_, err := num.Q().RandomRange(value, value, prng)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "empty")
 	})
@@ -724,7 +724,7 @@ func TestRationals_Random(t *testing.T) {
 		t.Parallel()
 		lower := createRat(t, 5, 2)
 		upper := createRat(t, 1, 2)
-		_, err := num.Q().Random(lower, upper, prng)
+		_, err := num.Q().RandomRange(lower, upper, prng)
 		require.Error(t, err)
 	})
 
@@ -732,7 +732,7 @@ func TestRationals_Random(t *testing.T) {
 		t.Parallel()
 		lower := createRat(t, 1, 10)
 		upper := createRat(t, 9, 10)
-		_, err := num.Q().Random(lower, upper, nil)
+		_, err := num.Q().RandomRange(lower, upper, nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "nil")
 	})
@@ -742,7 +742,7 @@ func TestRationals_Random(t *testing.T) {
 		lower := createRat(t, 1, 100)
 		upper := createRat(t, 2, 100)
 
-		result, err := num.Q().Random(lower, upper, prng)
+		result, err := num.Q().RandomRange(lower, upper, prng)
 		require.NoError(t, err)
 		require.True(t, result.IsLessThanOrEqual(upper) || result.Equal(upper))
 		require.True(t, lower.IsLessThanOrEqual(result))
