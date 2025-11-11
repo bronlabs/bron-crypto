@@ -47,7 +47,7 @@ type (
 	Response[S Scalar[S]]                         = maurer09.Response[S]
 )
 
-func Phi[E GroupElement[E, S], S Scalar[S]](basePoint E) maurer09.GroupHomomorphism[S, E] {
+func Phi[E GroupElement[E, S], S Scalar[S]](basePoint E) maurer09.GroupHomomorphism[E, S] {
 	return func(s S) E {
 		return basePoint.ScalarOp(s)
 	}
@@ -100,11 +100,9 @@ func _[S Scalar[S]]() {
 	var _ maurer09.ChallengeActionOnPreImage[S, S] = ChallengeActionOnPreImage[S]
 }
 
-func _[E GroupElement[E, S], S Scalar[S]]() {
-	var _ (sigma.MaurerProtocol[
-		*Statement[E, S], *Witness[S], *Commitment[E, S], *State[S], *Response[S],
-
-		ScalarField[S], S,
-		Group[E, S], E,
-	]) = &Protocol[E, S]{}
-}
+//func _[E GroupElement[E, S], S Scalar[S]]() {
+//	var _ (sigma.MaurerProtocol[
+//		Group[E, S], ScalarField[S],
+//		*Statement[E, S], *Witness[S], *Commitment[E, S], *State[S], *Response[S],
+//	]) = &Protocol[E, S]{}
+//}

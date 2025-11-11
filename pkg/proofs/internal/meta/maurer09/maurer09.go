@@ -21,7 +21,7 @@ type (
 	ImageGroup[B ImageGroupElement[B]]           algebra.Group[B]
 	ImageGroupElement[B algebra.GroupElement[B]] algebra.GroupElement[B]
 
-	GroupHomomorphism[A PreImageGroupElement[A], B ImageGroupElement[B]] = algebra.Homomorphism[A, B]
+	GroupHomomorphism[B ImageGroupElement[B], A PreImageGroupElement[A]] = algebra.Homomorphism[B, A]
 
 	ChallengeSpace[C Challenge[C]]                                       algebra.NLike[C]
 	Challenge[C algebra.NatLike[C]]                                      algebra.NatLike[C]
@@ -105,7 +105,7 @@ func (r *Response[A]) Bytes() []byte {
 }
 
 type Protocol[A PreImageGroupElement[A], B ImageGroupElement[B], C Challenge[C], PIG PreImageGroup[A], IG ImageGroup[B]] struct {
-	phi                   GroupHomomorphism[A, B]
+	phi                   GroupHomomorphism[B, A]
 	preImage              PIG
 	image                 IG
 	preImageRandomSampler func(io.Reader) (A, error)
@@ -116,7 +116,7 @@ type Protocol[A PreImageGroupElement[A], B ImageGroupElement[B], C Challenge[C],
 }
 
 func NewProtocol[A PreImageGroupElement[A], B ImageGroupElement[B], C Challenge[C], PIG PreImageGroup[A], IG ImageGroup[B]](
-	phi GroupHomomorphism[A, B],
+	phi GroupHomomorphism[B, A],
 	preImage PIG,
 	image IG,
 	challengeSpace ChallengeSpace[C],
@@ -253,7 +253,7 @@ func (p *Protocol[A, B, C, PIG, IG]) mapChallengeBytesToChallenge(challengeBytes
 	return c, nil
 }
 
-func (p *Protocol[A, B, C, PIG, IG]) Phi() GroupHomomorphism[A, B] {
+func (p *Protocol[A, B, C, PIG, IG]) Phi() GroupHomomorphism[B, A] {
 	return p.phi
 }
 
