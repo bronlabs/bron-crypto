@@ -38,6 +38,8 @@ type (
 
 	CyclicMonoid[ME crtp.CyclicMonoidElement[ME]]        = crtp.CyclicMonoid[ME]
 	CyclicMonoidElement[ME crtp.CyclicMonoidElement[ME]] = crtp.CyclicMonoidElement[ME]
+
+	FiniteGroup[GE crtp.GroupElement[GE]] = crtp.FiniteGroup[GE]
 )
 
 type (

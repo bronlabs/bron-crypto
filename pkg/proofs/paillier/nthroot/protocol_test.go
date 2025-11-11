@@ -1,4 +1,4 @@
-package newnthroot_test
+package nthroot_test
 
 import (
 	"bytes"
@@ -7,11 +7,12 @@ import (
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	nthroot "github.com/bronlabs/bron-crypto/pkg/proofs/paillier/newnthroot"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroot"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
@@ -40,7 +41,7 @@ func Test_HappyPathInteractive(t *testing.T) {
 	require.NoError(t, err)
 	yNatCt := numct.NewNatFromBig(yBig, 256)
 	var xNatCt numct.Nat
-	g.Arithmetic().ExpToN(&xNatCt, yNatCt)
+	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&xNatCt, yNatCt)
 
 	err = doInteractiveProof(&xNatCt, yNatCt, g, prng)
 	require.NoError(t, err)
@@ -68,13 +69,13 @@ func Test_InvalidRootInteractive(t *testing.T) {
 	require.NoError(t, err)
 	y1NatCt := numct.NewNatFromBig(y1Big, 256)
 	var x1NatCt numct.Nat
-	g.Arithmetic().ExpToN(&x1NatCt, y1NatCt)
+	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x1NatCt, y1NatCt)
 
 	y2Big, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
 	y2NatCt := numct.NewNatFromBig(y2Big, 256)
 	var x2NatCt numct.Nat
-	g.Arithmetic().ExpToN(&x2NatCt, y2NatCt)
+	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x2NatCt, y2NatCt)
 
 	err = doInteractiveProof(&x1NatCt, y2NatCt, g, prng)
 	require.Error(t, err)
@@ -113,7 +114,7 @@ func Test_HappyPathNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	yNatCt := numct.NewNatFromBig(yBig, 256)
 	var xNatCt numct.Nat
-	g.Arithmetic().ExpToN(&xNatCt, yNatCt)
+	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&xNatCt, yNatCt)
 
 	x, err := g.FromNatCT(&xNatCt)
 	require.NoError(t, err)
@@ -168,13 +169,13 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	y1NatCt := numct.NewNatFromBig(y1Big, 256)
 	var x1NatCt numct.Nat
-	g.Arithmetic().ExpToN(&x1NatCt, y1NatCt)
+	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x1NatCt, y1NatCt)
 
 	y2Big, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
 	y2NatCt := numct.NewNatFromBig(y2Big, 256)
 	var x2NatCt numct.Nat
-	g.Arithmetic().ExpToN(&x2NatCt, y2NatCt)
+	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x2NatCt, y2NatCt)
 
 	x1, err := g.FromNatCT(&x1NatCt)
 	require.NoError(t, err)
@@ -252,7 +253,7 @@ func Test_Simulator(t *testing.T) {
 	require.NoError(t, err)
 	yNatCt := numct.NewNatFromBig(yBig, 256)
 	var xNatCt numct.Nat
-	g.Arithmetic().ExpToN(&xNatCt, yNatCt)
+	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&xNatCt, yNatCt)
 
 	xUnit, err := g.FromNatCT(&xNatCt)
 	require.NoError(t, err)
@@ -294,7 +295,7 @@ func Test_Extractor(t *testing.T) {
 	require.NoError(t, err)
 	yNatCt := numct.NewNatFromBig(yBig, 256)
 	var xNatCt numct.Nat
-	g.Arithmetic().ExpToN(&xNatCt, yNatCt)
+	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&xNatCt, yNatCt)
 
 	w, err := g.FromNatCT(yNatCt)
 	require.NoError(t, err)
@@ -314,17 +315,18 @@ func Test_Extractor(t *testing.T) {
 	require.NoError(t, err)
 	challenge2 := make(sigma.ChallengeBytes, protocol.GetChallengeBytesLength())
 	_, err = io.ReadFull(prng, challenge2)
+	require.NoError(t, err)
 	response2, err := protocol.ComputeProverResponse(statement, witness, commitment, state, challenge2)
 	require.NoError(t, err)
 
 	ei := []sigma.ChallengeBytes{challenge1, challenge2}
-	zi := []*nthroot.Response{response1, response2}
+	zi := []*nthroot.Response[*modular.OddPrimeSquareFactors]{response1, response2}
 	extractedWitness, err := protocol.Extract(statement, commitment, ei, zi)
 	require.NoError(t, err)
 	require.True(t, witness.Value().Equal(extractedWitness.Value()))
 }
 
-func doInteractiveProof(xNatCt, yNatCt *numct.Nat, g znstar.PaillierGroup, prng io.Reader) (err error) {
+func doInteractiveProof[A znstar.ArithmeticPaillier](xNatCt, yNatCt *numct.Nat, g *znstar.PaillierGroup[A], prng io.Reader) (err error) {
 	sessionId := []byte("nthRootsSession")
 	appLabel := "NthRoot"
 	protocol, err := nthroot.NewProtocol(g, prng)

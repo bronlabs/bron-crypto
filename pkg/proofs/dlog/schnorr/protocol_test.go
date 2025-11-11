@@ -1,4 +1,4 @@
-package newschnorr_test
+package schnorr_test
 
 import (
 	crand "crypto/rand"
@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
-	schnorr "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/newschnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/stretchr/testify/require"
 )

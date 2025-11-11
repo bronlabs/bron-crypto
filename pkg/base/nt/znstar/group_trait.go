@@ -59,6 +59,10 @@ func (g *DenseUnitGroupTrait[A, W, WT]) Random(prng io.Reader) (W, error) {
 	return W(&u), nil
 }
 
+func (g *DenseUnitGroupTrait[A, W, WT]) Hash(input []byte) (W, error) {
+	panic("not implemented")
+}
+
 func (g *DenseUnitGroupTrait[A, W, WT]) Modulus() *num.NatPlus {
 	return g.zMod.Modulus()
 }
@@ -147,6 +151,18 @@ func (g *DenseUnitGroupTrait[A, W, WT]) Arithmetic() modular.Arithmetic {
 
 type UnitGroupTrait[A modular.Arithmetic, W unitWrapperPtrConstraint[A, WT], WT any] struct {
 	DenseUnitGroupTrait[A, W, WT]
+}
+
+func (g *UnitGroupTrait[A, W, WT]) Random(prng io.Reader) (W, error) {
+	for {
+		u, err := g.DenseUnitGroupTrait.Random(prng)
+		if err != nil {
+			return nil, errs.WrapRandomSample(err, "could not sample random unit")
+		}
+		if u.Value().Lift().Coprime(g.Modulus().Lift()) {
+			return u, nil
+		}
+	}
 }
 
 func (g *UnitGroupTrait[A, W, WT]) FromNatCT(input *numct.Nat) (W, error) {

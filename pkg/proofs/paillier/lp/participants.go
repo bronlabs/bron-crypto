@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroots"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroot"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -25,7 +25,7 @@ const (
 
 type Participant[A znstar.ArithmeticPaillier] struct {
 	// Base participant
-	multiNthRootsProtocol sigma.Protocol[sigand.Statement[*nthroots.Statement[A]], sigand.Witness[*nthroots.Witness[A]], sigand.Commitment[*nthroots.Commitment[A]], sigand.State[*nthroots.State[A]], sigand.Response[*nthroots.Response[A]]]
+	multiNthRootsProtocol sigma.Protocol[sigand.Statement[*nthroot.Statement[A]], sigand.Witness[*nthroot.Witness[A]], sigand.Commitment[*nthroot.Commitment[A]], sigand.State[*nthroot.State[A]], sigand.Response[*nthroot.Response[A]]]
 	Prng                  io.Reader
 	Round                 int
 	SessionId             network.SID
@@ -40,14 +40,14 @@ func (p *Participant[A]) SoundnessError() int {
 
 type VerifierState struct {
 	rootsProver *sigma.Prover[
-		sigand.Statement[*nthroots.Statement[*modular.SimpleModulus]],
-		sigand.Witness[*nthroots.Witness[*modular.SimpleModulus]],
-		sigand.Commitment[*nthroots.Commitment[*modular.SimpleModulus]],
-		sigand.State[*nthroots.State[*modular.SimpleModulus]],
-		sigand.Response[*nthroots.Response[*modular.SimpleModulus]],
+		sigand.Statement[*nthroot.Statement[*modular.SimpleModulus]],
+		sigand.Witness[*nthroot.Witness[*modular.SimpleModulus]],
+		sigand.Commitment[*nthroot.Commitment[*modular.SimpleModulus]],
+		sigand.State[*nthroot.State[*modular.SimpleModulus]],
+		sigand.Response[*nthroot.Response[*modular.SimpleModulus]],
 	]
-	x sigand.Statement[*nthroots.Statement[*modular.SimpleModulus]]
-	y sigand.Witness[*nthroots.Witness[*modular.SimpleModulus]]
+	x sigand.Statement[*nthroot.Statement[*modular.SimpleModulus]]
+	y sigand.Witness[*nthroot.Witness[*modular.SimpleModulus]]
 }
 
 type Verifier struct {
@@ -60,13 +60,13 @@ type Verifier struct {
 
 type ProverState struct {
 	rootsVerifier *sigma.Verifier[
-		sigand.Statement[*nthroots.Statement[*modular.OddPrimeSquareFactors]],
-		sigand.Witness[*nthroots.Witness[*modular.OddPrimeSquareFactors]],
-		sigand.Commitment[*nthroots.Commitment[*modular.OddPrimeSquareFactors]],
-		sigand.State[*nthroots.State[*modular.OddPrimeSquareFactors]],
-		sigand.Response[*nthroots.Response[*modular.OddPrimeSquareFactors]],
+		sigand.Statement[*nthroot.Statement[*modular.OddPrimeSquareFactors]],
+		sigand.Witness[*nthroot.Witness[*modular.OddPrimeSquareFactors]],
+		sigand.Commitment[*nthroot.Commitment[*modular.OddPrimeSquareFactors]],
+		sigand.State[*nthroot.State[*modular.OddPrimeSquareFactors]],
+		sigand.Response[*nthroot.Response[*modular.OddPrimeSquareFactors]],
 	]
-	x sigand.Statement[*nthroots.Statement[*modular.OddPrimeSquareFactors]]
+	x sigand.Statement[*nthroot.Statement[*modular.OddPrimeSquareFactors]]
 }
 
 type Prover struct {
@@ -87,7 +87,7 @@ func NewVerifier(sessionId network.SID, k int, pk *paillier.PublicKey, tape tran
 	dst := fmt.Sprintf("%s-%d", sessionIdTranscriptLabel, sessionId)
 	tape.AppendDomainSeparator(dst)
 
-	nthRootsSigmaProtocol, err := nthroots.NewSigmaProtocol(pk.Group(), prng)
+	nthRootsSigmaProtocol, err := nthroot.NewProtocol(pk.Group(), prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Nth root protocol")
 	}
@@ -145,7 +145,7 @@ func NewProver(sessionId network.SID, k int, sk *paillier.PrivateKey, tape trans
 	dst := fmt.Sprintf("%s-%d", sessionIdTranscriptLabel, sessionId)
 	tape.AppendDomainSeparator(dst)
 
-	nthRootsSigmaProtocol, err := nthroots.NewSigmaProtocol(sk.Group(), prng)
+	nthRootsSigmaProtocol, err := nthroot.NewProtocol(sk.Group(), prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create Nth root protocol")
 	}

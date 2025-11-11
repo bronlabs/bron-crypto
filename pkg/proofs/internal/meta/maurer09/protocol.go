@@ -1,4 +1,4 @@
-package newmaurer09
+package maurer09
 
 import (
 	"io"
@@ -90,8 +90,8 @@ func WithPreImageScalarMul[I algebra.GroupElement[I], P algebra.GroupElement[P]]
 }
 
 type Protocol[I algebra.GroupElement[I], P algebra.GroupElement[P]] struct {
-	imageGroup         sigma.FiniteGroup[I]
-	preImageGroup      sigma.FiniteGroup[P]
+	imageGroup         algebra.FiniteGroup[I]
+	preImageGroup      algebra.FiniteGroup[P]
 	challengeByteLen   int
 	soundnessError     uint
 	name               sigma.Name
@@ -106,8 +106,8 @@ func NewProtocol[I algebra.GroupElement[I], P algebra.GroupElement[P]](
 	challengeByteLen int,
 	soundnessError uint,
 	name sigma.Name,
-	imageGroup sigma.FiniteGroup[I],
-	preImageGroup sigma.FiniteGroup[P],
+	imageGroup algebra.FiniteGroup[I],
+	preImageGroup algebra.FiniteGroup[P],
 	oneWayHomomorphism sigma.OneWayHomomorphism[I, P],
 	anchor sigma.Anchor[I, P],
 	prng io.Reader,
@@ -219,11 +219,11 @@ func (p *Protocol[G, S]) SoundnessError() uint {
 	return p.soundnessError
 }
 
-func (p *Protocol[I, P]) ImageGroup() sigma.FiniteGroup[I] {
+func (p *Protocol[I, P]) ImageGroup() algebra.FiniteGroup[I] {
 	return p.imageGroup
 }
 
-func (p *Protocol[I, P]) PreImageGroup() sigma.FiniteGroup[P] {
+func (p *Protocol[I, P]) PreImageGroup() algebra.FiniteGroup[P] {
 	return p.preImageGroup
 }
 

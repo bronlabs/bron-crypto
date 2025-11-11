@@ -1,4 +1,4 @@
-package newschnorr
+package schnorr
 
 import (
 	"io"
@@ -7,18 +7,18 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/internal/meta/newmaurer09"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/internal/meta/maurer09"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
 const Name sigma.Name = "SCHNORR" + dlog.Type
 
 type (
-	Witness[S algebra.PrimeFieldElement[S]]                                       = newmaurer09.Witness[S]
-	Statement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]  = newmaurer09.Statement[G]
-	State[S algebra.PrimeFieldElement[S]]                                         = newmaurer09.State[S]
-	Commitment[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] = newmaurer09.Commitment[G]
-	Response[S algebra.PrimeFieldElement[S]]                                      = newmaurer09.Response[S]
+	Witness[S algebra.PrimeFieldElement[S]]                                       = maurer09.Witness[S]
+	Statement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]  = maurer09.Statement[G]
+	State[S algebra.PrimeFieldElement[S]]                                         = maurer09.State[S]
+	Commitment[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] = maurer09.Commitment[G]
+	Response[S algebra.PrimeFieldElement[S]]                                      = maurer09.Response[S]
 )
 
 func NewWitness[S algebra.PrimeFieldElement[S]](w S) *Witness[S] {
@@ -30,7 +30,7 @@ func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement
 }
 
 type Protocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	newmaurer09.Protocol[G, S]
+	maurer09.Protocol[G, S]
 }
 
 func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](generator G, prng io.Reader) (*Protocol[G, S], error) {
@@ -45,7 +45,7 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	}
 	anc := &anchor[G, S]{l, scalarField.Zero()}
 
-	maurerProto, err := newmaurer09.NewProtocol(
+	maurerProto, err := maurer09.NewProtocol(
 		challengeByteLen,
 		soundnessError,
 		Name,

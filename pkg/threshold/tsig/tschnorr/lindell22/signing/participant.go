@@ -42,7 +42,7 @@ type State[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] 
 	opening                   lindell22.Opening
 	theirBigRCommitments      map[sharing.ID]lindell22.Commitment
 	tapeFrozenBeforeDlogProof ts.Transcript
-	phi                       algebra.Homomorphism[GE, S]
+	// phi                       algebra.Homomorphism[GE, S]
 }
 
 func (c *Cosigner[GE, S, M]) SessionID() network.SID {
@@ -158,7 +158,7 @@ func NewCosigner[
 	if !group.Order().IsProbablyPrime() {
 		return nil, errs.NewType("group %s order is not prime", group.Name())
 	}
-	schnorrProtocol, err := schnorrpok.NewSigmaProtocol(group.Generator(), prng)
+	schnorrProtocol, err := schnorrpok.NewProtocol(group.Generator(), prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create schnorr protocol")
 	}
@@ -167,7 +167,7 @@ func NewCosigner[
 		return nil, errs.WrapFailed(err, "failed to compile niDlogProver")
 	}
 
-	phi := schnorrpok.Phi(group.Generator())
+	// phi := schnorrpok.Phi(group.Generator())
 	dst := fmt.Sprintf("%s-%d-%s", transcriptLabel, sid, group.Name())
 	tape.AppendDomainSeparator(dst)
 	quorumBytes := lindell22.QuorumBytes(quorum)
@@ -186,7 +186,7 @@ func NewCosigner[
 		state: &State[GE, S]{
 			quorumBytes:          quorumBytes,
 			theirBigRCommitments: make(map[sharing.ID]lindell22.Commitment, quorum.Size()-1),
-			phi:                  phi,
+			// phi:                  phi,
 		},
 	}, nil
 }
