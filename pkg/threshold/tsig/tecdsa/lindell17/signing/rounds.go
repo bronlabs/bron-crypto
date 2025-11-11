@@ -90,9 +90,13 @@ func (pc *PrimaryCosigner[P, B, S]) Round3(r2out *Round2OutputP2P[P, B, S]) (r3o
 	}
 
 	pc.state.bigR = r2out.BigR2.ScalarMul(pc.state.k1)
-	pc.state.r, err = pc.state.bigR.AffineX()
+	rx, err := pc.state.bigR.AffineX()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not get bigR x-coordinate")
+	}
+	pc.state.r, err = pc.suite.Curve().ScalarField().FromBytes(rx.Bytes())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not convert bigR x-coordinate to scalar")
 	}
 
 	pc.round += 2
@@ -118,9 +122,13 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 	}
 
 	bigR := r3out.BigR1.ScalarMul(sc.state.k2)
-	r, err := bigR.AffineX()
+	rx, err := bigR.AffineX()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not get bigR x-coordinate")
+	}
+	r, err := sc.suite.Curve().ScalarField().FromBytes(rx.Bytes())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not convert bigR x-coordinate to scalar")
 	}
 
 	k2 := sc.state.k2
@@ -152,14 +160,13 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 		return nil, errs.NewMissing("could not get primary Lagrange coefficient")
 	}
 
-	q := sc.suite.Curve().Order()
 	mPrime, err := MessageToScalar(sc.suite, message)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get scalar from message")
 	}
 
 	// c3 = Enc(ρq + k2^(-1)(m' + r * (y1 * λ1 + y2 * λ2)))
-	c3, err := CalcC3(primaryLagrangeCoefficient, k2, mPrime, r, additiveShare, q.Nat(), paillierPublicKey, cKey, sc.Prng)
+	c3, err := CalcC3(primaryLagrangeCoefficient, k2, mPrime, r, additiveShare.Value(), sc.suite.Curve().Order(), paillierPublicKey, cKey, sc.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot calculate c3")
 	}
@@ -204,10 +211,19 @@ func (pc *PrimaryCosigner[P, B, S]) Round5(r4out *lindell17.PartialSignature, me
 		return nil, errs.WrapFailed(err, "could not create signature")
 	}
 	signature.Normalise()
-	if err := ecdsa.Verify(signature, pc.Protocol.SigningSuite().Hash(), pc.myShard.SigningKeyShare.PublicKey, message); err != nil {
-		return nil, errs.WrapIdentifiableAbort(err, pc.secondaryIdentityKey.String(), "could not verify produced signature")
+
+	ecdsaScheme, err := ecdsa.NewScheme(pc.suite, pc.prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create ecdsa scheme")
 	}
-	pc.Round++
+	verifier, err := ecdsaScheme.Verifier()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create ecdsa verifier")
+	}
+	if err := verifier.Verify(signature, pc.shard.PublicKey(), message); err != nil {
+		return nil, errs.WrapIdentifiableAbort(err, pc.secondarySharingId, "could not verify produced signature")
+	}
+	pc.round += 2
 	return signature, nil
 }
 

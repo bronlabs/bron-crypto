@@ -40,7 +40,7 @@ type PrimaryCosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B
 	k1           S
 	bigR1Opening hash_comm.Witness
 	bigR         P
-	r            B
+	r            S
 	bigR1        P
 }
 
