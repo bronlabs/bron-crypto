@@ -142,6 +142,19 @@ func (c *cardinal) IsLessThanOrEqual(other Cardinal) bool {
 }
 
 func (c *cardinal) Equal(other Cardinal) bool {
+	o := other.(*cardinal)
+
+	// Special case: Unknown == Unknown
+	if c.isUnknown && o.isUnknown {
+		return true
+	}
+
+	// Special case: Infinite == Infinite
+	if !c.isFinite && !c.isUnknown && !o.isFinite && !o.isUnknown {
+		return true
+	}
+
+	// Otherwise use the comparison logic
 	return c.IsLessThanOrEqual(other) && other.IsLessThanOrEqual(c)
 }
 

@@ -168,6 +168,13 @@ func (m *OddPrimeSquareFactors) ModExp(out, base, exp *numct.Nat) {
 	out.Set(m.CrtModN2.Recombine(&mp, &mq))
 }
 
+func (m *OddPrimeSquareFactors) ModExpInt(out, base *numct.Nat, exp *numct.Int) {
+	var out2 numct.Nat
+	m.ModExp(out, base, exp.AbsNat())
+	m.ModInv(&out2, out)
+	out.CondAssign(exp.IsNegative(), &out2)
+}
+
 func (m *OddPrimeSquareFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp *numct.Nat) {
 	if len(out) != len(bases) {
 		panic("out and bases must have the same length")

@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 )
 
-func NewPrivateKey(group znstar.PaillierGroupKnownOrder) (*PrivateKey, error) {
+func NewPrivateKey(group *znstar.PaillierGroupKnownOrder) (*PrivateKey, error) {
 	if group == nil {
 		return nil, errs.NewIsNil("m")
 	}
@@ -25,7 +25,7 @@ func NewPrivateKey(group znstar.PaillierGroupKnownOrder) (*PrivateKey, error) {
 }
 
 type PrivateKey struct {
-	group znstar.PaillierGroupKnownOrder
+	group *znstar.PaillierGroupKnownOrder
 
 	hp *numct.Nat
 	hq *numct.Nat
@@ -36,20 +36,20 @@ type PrivateKey struct {
 
 func (sk *PrivateKey) precompute() {
 	sk.once.Do(func() {
-		sk.group.Arithmetic().P.Factor.ModInv(sk.hp, sk.group.Arithmetic().Q.Factor.Nat())
-		sk.group.Arithmetic().P.Factor.ModNeg(sk.hp, sk.hp)
-		sk.group.Arithmetic().Q.Factor.ModInv(sk.hq, sk.group.Arithmetic().P.Factor.Nat())
-		sk.group.Arithmetic().Q.Factor.ModNeg(sk.hq, sk.hq)
+		sk.Arithmetic().P.Factor.ModInv(sk.hp, sk.Arithmetic().Q.Factor.Nat())
+		sk.Arithmetic().P.Factor.ModNeg(sk.hp, sk.hp)
+		sk.Arithmetic().Q.Factor.ModInv(sk.hq, sk.Arithmetic().P.Factor.Nat())
+		sk.Arithmetic().Q.Factor.ModNeg(sk.hq, sk.hq)
 		sk.pk = &PublicKey{group: sk.group.ForgetOrder()}
 	})
 }
 
-func (sk *PrivateKey) Group() znstar.PaillierGroupKnownOrder {
+func (sk *PrivateKey) Group() *znstar.PaillierGroupKnownOrder {
 	return sk.group
 }
 
 func (sk *PrivateKey) Arithmetic() *modular.OddPrimeSquareFactors {
-	return sk.group.Arithmetic()
+	return sk.group.Arithmetic().(*modular.OddPrimeSquareFactors)
 }
 
 func (sk *PrivateKey) PublicKey() *PublicKey {
@@ -61,10 +61,10 @@ func (sk *PrivateKey) Equal(other *PrivateKey) bool {
 	if sk == nil || other == nil {
 		return sk == other
 	}
-	return znstar.PaillierGroupsAreEqual(sk.group, other.group)
+	return sk.group.Equal(other.group)
 }
 
-func NewPublicKey(group znstar.PaillierGroup) (*PublicKey, error) {
+func NewPublicKey(group *znstar.PaillierGroupUnknownOrder) (*PublicKey, error) {
 	if group == nil {
 		return nil, errs.NewIsNil("group")
 	}
@@ -74,7 +74,7 @@ func NewPublicKey(group znstar.PaillierGroup) (*PublicKey, error) {
 }
 
 type PublicKey struct {
-	group znstar.PaillierGroup
+	group *znstar.PaillierGroupUnknownOrder
 
 	plaintextSpace  *PlaintextSpace
 	nonceSpace      *NonceSpace
@@ -82,7 +82,7 @@ type PublicKey struct {
 	once            sync.Once
 }
 
-func (pk *PublicKey) Group() znstar.PaillierGroup {
+func (pk *PublicKey) Group() *znstar.PaillierGroupUnknownOrder {
 	return pk.group
 }
 
@@ -90,7 +90,7 @@ func (pk *PublicKey) Equal(other *PublicKey) bool {
 	if pk == nil || other == nil {
 		return pk == other
 	}
-	return znstar.PaillierGroupsAreEqual(pk.group, other.group)
+	return pk.group.Equal(other.group)
 }
 
 func (pk *PublicKey) Modulus() numct.Modulus {
@@ -121,7 +121,7 @@ func (pk *PublicKey) cacheSpaces() {
 		n := pk.group.N()
 		nn := pk.group.Modulus()
 		pk.plaintextSpace, errPlaintext = NewPlaintextSpace(n)
-		pk.nonceSpace, errNonce = NewNonceSpace(nn)
+		pk.nonceSpace, errNonce = NewNonceSpace(nn, n)
 		pk.ciphertextSpace, errCiphertext = NewCiphertextSpace(nn, n)
 		if errPlaintext != nil {
 			panic(errPlaintext)

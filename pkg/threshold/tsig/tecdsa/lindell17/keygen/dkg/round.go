@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"slices"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
@@ -19,7 +21,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"golang.org/x/sync/errgroup"
 )
 
 const transcriptDLogSLabel = "Lindell2027DKGDLogS-"
@@ -183,11 +184,12 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 
 	// 3.vi. prove pairwise iz ZK that pk was generated correctly (LP)
 	//       and that (ckey', ckey'') encrypt dlogs of (Q', Q'') (LPDL)
+	// Note: Share single transcript clone across all proofs to preserve state
+	paillierProofsTranscript := p.tape.Clone()
 	for id := range p.shard.AccessStructure().Shareholders().Iter() {
 		if id == p.shard.Share().ID() {
 			continue
 		}
-		paillierProofsTranscript := p.tape.Clone()
 		p.state.lpProvers[id], err = lp.NewProver(p.sid, base.ComputationalSecurityBits, p.state.myPaillierSk, paillierProofsTranscript, p.prng)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot create LP prover")
@@ -235,6 +237,7 @@ func (p *Participant[P, B, S]) Round4(input network.RoundMessages[*Round3Broadca
 		p.state.theirPaillierEncryptedShares[id] = ((theirCKeyPrime.ScalarExp(num.N().FromUint64(3))).Mul(theirCKeyDoublePrime))
 
 		// 4.ii. LP and LPDL continue
+		// Share single transcript clone across all verifiers to preserve state
 		paillierProofsTranscript := p.tape.Clone()
 		p.state.lpVerifiers[id], err = lp.NewVerifier(p.sid, base.ComputationalSecurityBits, theirPaillierPublicKey, paillierProofsTranscript, p.prng)
 		if err != nil {
@@ -314,18 +317,6 @@ func (p *Participant[P, B, S]) Round5(input network.RoundMessages[*Round4P2P]) (
 		if err := errGroup.Wait(); err != nil {
 			return nil, errs.WrapFailed(err, "round 5")
 		}
-		// outgoingMessage.LpRound2Output, err = p.state.lpProvers[id].Round2(message.LpRound1Output)
-		// if err != nil {
-		// 	return nil, errs.WrapFailed(err, "cannot run round 2 of LP prover")
-		// }
-		// outgoingMessage.LpdlPrimeRound2Output, err = p.state.lpdlPrimeProvers[id].Round2(message.LpdlPrimeRound1Output)
-		// if err != nil {
-		// 	return nil, errs.WrapFailed(err, "cannot run round 2 of LPDL prover")
-		// }
-		// outgoingMessage.LpdlDoublePrimeRound2Output, err = p.state.lpdlDoublePrimeProvers[id].Round2(message.LpdlDoublePrimeRound1Output)
-		// if err != nil {
-		// 	return nil, errs.WrapFailed(err, "cannot run round 2 of LPDL prover")
-		// }
 		r5o.Put(id, outgoingMessage)
 	}
 

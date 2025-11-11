@@ -1,24 +1,14 @@
 package znstar
 
 import (
-	"io"
-
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
-type RSAGroup UnitGroup
-
-type RSAGroupKnownOrder interface {
-	RSAGroup
-	KnowledgeOfOrder[*modular.OddPrimeFactors, RSAGroup]
-}
-
-func NewRSAGroup(p, q *num.NatPlus) (RSAGroupKnownOrder, error) {
+func NewRSAGroup(p, q *num.NatPlus) (*RSAGroupKnownOrder, error) {
 	if p == nil || q == nil {
 		return nil, errs.NewValue("p and q must not be nil")
 	}
@@ -39,175 +29,121 @@ func NewRSAGroup(p, q *num.NatPlus) (RSAGroupKnownOrder, error) {
 	if ok == ct.False {
 		return nil, errs.NewValue("failed to create OddPrimeFactors")
 	}
-	return &rsaGroupKnownOrder{
-		UZMod: UZMod[*modular.OddPrimeFactors]{
+	return &RSAGroupKnownOrder{
+		DenseUnitGroupTrait: DenseUnitGroupTrait[*modular.OddPrimeFactors, *RSAGroupElement[*modular.OddPrimeFactors], RSAGroupElement[*modular.OddPrimeFactors]]{
 			zMod:  zMod,
 			arith: arith,
 		},
 	}, nil
 }
 
-func NewRSAGroupOfUnknownOrder(m *num.NatPlus) (RSAGroup, error) {
+func NewRSAGroupOfUnknownOrder(m *num.NatPlus) (*RSAGroupUnknownOrder, error) {
+	if m.AnnouncedLen() < 2048 {
+		return nil, errs.NewValue("modulus must be at least 2048 bits")
+	}
 	zMod, err := num.NewZMod(m)
-
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create ZMod")
 	}
-
 	arith, ok := modular.NewSimple(zMod.Modulus().ModulusCT())
 	if ok == ct.False {
 		return nil, errs.NewFailed("failed to create SimpleModulus")
 	}
-	return &rsaGroup{
-		UZMod: UZMod[*modular.SimpleModulus]{
+	return &RSAGroupUnknownOrder{
+		DenseUnitGroupTrait: DenseUnitGroupTrait[*modular.SimpleModulus, *RSAGroupElement[*modular.SimpleModulus], RSAGroupElement[*modular.SimpleModulus]]{
 			zMod:  zMod,
 			arith: arith,
 		},
 	}, nil
 }
 
-type rsaGroup struct {
-	UZMod[*modular.SimpleModulus]
+type ArithmeticRSA interface {
+	*modular.SimpleModulus | *modular.OddPrimeFactors
+	modular.Arithmetic
 }
 
-func (rg *rsaGroup) FromUint(input *num.Uint) (Unit, error) {
-	u, err := rg.UZMod.FromUint(input)
-	if err != nil {
-		return nil, err
-	}
-	u.(*unit).g = rg
-	return u, nil
+type (
+	RSAGroupKnownOrder   = RSAGroup[*modular.OddPrimeFactors]
+	RSAGroupUnknownOrder = RSAGroup[*modular.SimpleModulus]
+
+	RSAGroupKnownOrderElement   = RSAGroupElement[*modular.OddPrimeFactors]
+	RSAGroupUnknownOrderElement = RSAGroupElement[*modular.SimpleModulus]
+)
+
+type RSAGroup[X ArithmeticRSA] struct {
+	DenseUnitGroupTrait[X, *RSAGroupElement[X], RSAGroupElement[X]]
 }
 
-func (rg *rsaGroup) FromNatCT(input *numct.Nat) (Unit, error) {
-	u, err := rg.UZMod.FromNatCT(input)
-	if err != nil {
-		return nil, err
-	}
-	u.(*unit).g = rg
-	return u, nil
+func (g *RSAGroup[X]) AmbientStructure() algebra.Structure[*num.Uint] {
+	return g.zMod
 }
 
-func (rg *rsaGroup) One() Unit {
-	u := rg.UZMod.One()
-	u.(*unit).g = rg
-	return u
+func (g *RSAGroup[X]) ScalarStructure() algebra.Structure[*num.Nat] {
+	return num.N()
 }
 
-func (rg *rsaGroup) Random(prng io.Reader) (Unit, error) {
-	u, err := rg.UZMod.Random(prng)
-	if err != nil {
-		return nil, err
-	}
-	u.(*unit).g = rg
-	return u, nil
+func (g *RSAGroup[X]) Equal(other *RSAGroup[X]) bool {
+	return g.zMod.Modulus().Equal(other.zMod.Modulus()) && g.Order().Equal(other.Order())
 }
 
-func (rg *rsaGroup) FromBytes(input []byte) (Unit, error) {
-	u, err := rg.UZMod.FromBytes(input)
-	if err != nil {
-		return nil, err
-	}
-	u.(*unit).g = rg
-	return u, nil
-}
-
-func (rg *rsaGroup) FromCardinal(input cardinal.Cardinal) (Unit, error) {
-	u, err := rg.UZMod.FromCardinal(input)
-	if err != nil {
-		return nil, err
-	}
-	u.(*unit).g = rg
-	return u, nil
-}
-
-func (rg *rsaGroup) FromUint64(value uint64) (Unit, error) {
-	u, err := rg.UZMod.FromUint64(value)
-	if err != nil {
-		return nil, err
-	}
-	u.(*unit).g = rg
-	return u, nil
-}
-
-type rsaGroupKnownOrder struct {
-	UZMod[*modular.OddPrimeFactors]
-}
-
-func (rg *rsaGroupKnownOrder) Arithmetic() *modular.OddPrimeFactors {
-	return rg.arith
-}
-
-func (rg *rsaGroupKnownOrder) FromUint(input *num.Uint) (Unit, error) {
-	u, err := rg.UZMod.FromUint(input)
-	if err != nil {
-		return nil, err
-	}
-	// Fix the group pointer to point to the wrapper
-	u.(*unit).g = rg
-	return u, nil
-}
-
-func (rg *rsaGroupKnownOrder) FromNatCT(input *numct.Nat) (Unit, error) {
-	u, err := rg.UZMod.FromNatCT(input)
-	if err != nil {
-		return nil, err
-	}
-	// Fix the group pointer to point to the wrapper
-	u.(*unit).g = rg
-	return u, nil
-}
-
-func (rg *rsaGroupKnownOrder) One() Unit {
-	u := rg.UZMod.One()
-	u.(*unit).g = rg
-	return u
-}
-
-func (rg *rsaGroupKnownOrder) Random(prng io.Reader) (Unit, error) {
-	u, err := rg.UZMod.Random(prng)
-	if err != nil {
-		return nil, err
-	}
-	u.(*unit).g = rg
-	return u, nil
-}
-
-func (rg *rsaGroupKnownOrder) FromBytes(input []byte) (Unit, error) {
-	u, err := rg.UZMod.FromBytes(input)
-	if err != nil {
-		return nil, err
-	}
-	u.(*unit).g = rg
-	return u, nil
-}
-
-func (rg *rsaGroupKnownOrder) FromCardinal(input cardinal.Cardinal) (Unit, error) {
-	u, err := rg.UZMod.FromCardinal(input)
-	if err != nil {
-		return nil, err
-	}
-	u.(*unit).g = rg
-	return u, nil
-}
-
-func (rg *rsaGroupKnownOrder) FromUint64(value uint64) (Unit, error) {
-	u, err := rg.UZMod.FromUint64(value)
-	if err != nil {
-		return nil, err
-	}
-	u.(*unit).g = rg
-	return u, nil
-}
-
-func (rg *rsaGroupKnownOrder) ForgetOrder() RSAGroup {
-	arith, ok := modular.NewSimple(rg.ModulusCT())
+func (g *RSAGroup[X]) ForgetOrder() *RSAGroupUnknownOrder {
+	arith, ok := modular.NewSimple(g.zMod.Modulus().ModulusCT())
 	if ok == ct.False {
 		panic(errs.NewFailed("failed to create SimpleModulus"))
 	}
-	return &rsaGroup{
-		UZMod: UZMod[*modular.SimpleModulus]{
-			zMod:  rg.zMod,
+	return &RSAGroupUnknownOrder{
+		DenseUnitGroupTrait: DenseUnitGroupTrait[*modular.SimpleModulus, *RSAGroupElement[*modular.SimpleModulus], RSAGroupElement[*modular.SimpleModulus]]{
+			zMod:  g.zMod,
+			arith: arith,
+		},
+	}
+}
+
+type RSAGroupElement[X ArithmeticRSA] struct {
+	UnitTrait[X, *RSAGroupElement[X], RSAGroupElement[X]]
+}
+
+func (u *RSAGroupElement[X]) Clone() *RSAGroupElement[X] {
+	return &RSAGroupElement[X]{
+		UnitTrait: UnitTrait[X, *RSAGroupElement[X], RSAGroupElement[X]]{
+			v:     u.v.Clone(),
+			arith: u.arith,
+		},
+	}
+}
+
+func (u *RSAGroupElement[X]) Structure() algebra.Structure[*RSAGroupElement[X]] {
+	return &RSAGroup[X]{
+		DenseUnitGroupTrait: DenseUnitGroupTrait[X, *RSAGroupElement[X], RSAGroupElement[X]]{
+			zMod:  u.v.Group(),
+			arith: u.arith,
+		},
+	}
+}
+
+func (u *RSAGroupElement[X]) LearnOrder(g *RSAGroupKnownOrder) (*RSAGroupKnownOrderElement, error) {
+	if g == nil {
+		return nil, errs.NewIsNil("g")
+	}
+	if !u.v.Group().Modulus().Equal(g.zMod.Modulus()) {
+		return nil, errs.NewValue("unit is not in the correct RSA group")
+	}
+	return &RSAGroupKnownOrderElement{
+		UnitTrait: UnitTrait[*modular.OddPrimeFactors, *RSAGroupKnownOrderElement, RSAGroupKnownOrderElement]{
+			v:     u.v.Clone(),
+			arith: g.arith,
+		},
+	}, nil
+}
+
+func (u *RSAGroupElement[X]) ForgetOrder() *RSAGroupUnknownOrderElement {
+	arith, ok := modular.NewSimple(u.v.Group().Modulus().ModulusCT())
+	if ok == ct.False {
+		panic(errs.NewFailed("failed to create SimpleModulus"))
+	}
+	return &RSAGroupUnknownOrderElement{
+		UnitTrait: UnitTrait[*modular.SimpleModulus, *RSAGroupUnknownOrderElement, RSAGroupUnknownOrderElement]{
+			v:     u.v.Clone(),
 			arith: arith,
 		},
 	}

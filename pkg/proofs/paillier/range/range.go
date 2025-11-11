@@ -402,7 +402,7 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 		return nil, nil, errs.WrapFailed(err, "cannot create encrypter")
 	}
 
-	// TODO(mkk): refactor to use EncryptMany
+	toBeEncrypted := make([]*paillier.Plaintext, p.t*2)
 	for i := range p.t {
 		ei := (challenge[i/8] >> (i % 8)) % 2
 		switch ei {
@@ -411,29 +411,39 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 			if err != nil {
 				return nil, nil, errs.WrapFailed(err, "cannot compute w1i")
 			}
-			c1[i], r1[i], err = enc.Encrypt(w1[i], statement.Pk, p.prng)
-			if err != nil {
-				return nil, nil, errs.WrapFailed(err, "cannot encrypt w1i")
-			}
 			w2[i] = w1[i].Sub(lowBound)
-			c2[i], r2[i], err = enc.Encrypt(w2[i], statement.Pk, p.prng)
-			if err != nil {
-				return nil, nil, errs.WrapFailed(err, "cannot encrypt w2i")
-			}
+			toBeEncrypted[i] = w1[i]
+			toBeEncrypted[i+p.t] = w2[i]
 		case 1:
 			wj[i], err = ps.Sample(lowBound, highBound, p.prng)
 			if err != nil {
 				return nil, nil, errs.WrapFailed(err, "cannot compute w1i")
 			}
-			cji, rji, err := enc.Encrypt(wj[i], statement.Pk, p.prng)
-			if err != nil {
-				return nil, nil, errs.WrapFailed(err, "cannot encrypt wji")
-			}
-			cZero, _, err := enc.Encrypt(ps.Zero(), statement.Pk, p.prng)
-			if err != nil {
-				return nil, nil, errs.WrapFailed(err, "cannot encrypt zero")
-			}
+			toBeEncrypted[i] = wj[i]
+			toBeEncrypted[i+p.t] = ps.Zero()
+		default:
+			panic("this should never happen")
+		}
+	}
 
+	ctxs, rs, err := enc.EncryptMany(toBeEncrypted, statement.Pk, p.prng)
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "cannot encrypt many")
+	}
+
+	for i := range p.t {
+		ei := (challenge[i/8] >> (i % 8)) % 2
+		switch ei {
+		case 0:
+			// Extract encrypted values for w1 and w2
+			c1[i] = ctxs[i]
+			r1[i] = rs[i]
+			c2[i] = ctxs[i+p.t]
+			r2[i] = rs[i+p.t]
+		case 1:
+			cji := ctxs[i]
+			rji := rs[i]
+			cZero := ctxs[i+p.t]
 			var ji [1]byte
 			_, err = io.ReadFull(p.prng, ji[:])
 			if err != nil {

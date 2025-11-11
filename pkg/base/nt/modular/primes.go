@@ -113,6 +113,13 @@ func (m *OddPrimeFactors) ModExp(out, base, exp *numct.Nat) {
 	out.Set(m.Params.Recombine(&mp, &mq))
 }
 
+func (m *OddPrimeFactors) ModExpInt(out, base *numct.Nat, exp *numct.Int) {
+	var out2 numct.Nat
+	m.ModExp(out, base, exp.AbsNat())
+	m.ModInv(&out2, out)
+	out.CondAssign(exp.IsNegative(), &out2)
+}
+
 func (m *OddPrimeFactors) ModDiv(out, a, b *numct.Nat) ct.Bool {
 	return m.N.ModDiv(out, a, b)
 }
@@ -177,6 +184,15 @@ func (m *OddPrimeFactors) ModInv(out, a *numct.Nat) ct.Bool {
 	// CRT recombine inverse residues to get a^{-1} mod n
 	out.Set(m.Params.Recombine(&ip, &iq))
 	return ok
+}
+
+func (m *OddPrimeFactors) Lift() (*OddPrimeSquareFactors, ct.Bool) {
+	// TODO: optimize
+	out, ok := NewOddPrimeSquareFactors(
+		m.Params.PNat,
+		m.Params.QNat,
+	)
+	return out, ok
 }
 
 // func NewOddPrimeFactorsMulti(ps ...*numct.Nat) (*OddPrimeFactorsMulti, ct.Bool) {

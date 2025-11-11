@@ -18,10 +18,10 @@ func NewCiphertextSpace(n2, n *num.NatPlus) (*CiphertextSpace, error) {
 }
 
 type CiphertextSpace struct {
-	g znstar.PaillierGroup
+	g *znstar.PaillierGroupUnknownOrder
 }
 
-func (cts *CiphertextSpace) Group() znstar.PaillierGroup {
+func (cts *CiphertextSpace) Group() *znstar.PaillierGroupUnknownOrder {
 	return cts.g
 }
 
@@ -49,7 +49,7 @@ func (cts *CiphertextSpace) New(x *numct.Nat) (*Ciphertext, error) {
 	return &Ciphertext{u: u}, nil
 }
 
-func NewCiphertextFromUnit(u znstar.Unit) *Ciphertext {
+func NewCiphertextFromUnit(u *znstar.PaillierGroupUnknownOrderElement) *Ciphertext {
 	return &Ciphertext{u: u}
 }
 
@@ -58,15 +58,15 @@ func (cts *CiphertextSpace) Contains(ct *Ciphertext) bool {
 }
 
 type Ciphertext struct {
-	u znstar.Unit
+	u *znstar.PaillierGroupUnknownOrderElement
 }
 
-func (ct *Ciphertext) Value() znstar.Unit {
+func (ct *Ciphertext) Value() *znstar.PaillierGroupUnknownOrderElement {
 	return ct.u
 }
 
 func (ct *Ciphertext) ValueCT() *numct.Nat {
-	return ct.Value().Value()
+	return ct.Value().Value().Value()
 }
 
 func (ct *Ciphertext) N2() *num.NatPlus {
@@ -120,7 +120,7 @@ func (ct *Ciphertext) ReRandomise(pk *PublicKey, prng io.Reader) (*Ciphertext, *
 }
 
 func (ct *Ciphertext) ReRandomiseWithNonce(pk *PublicKey, nonce *Nonce) (*Ciphertext, error) {
-	rn, err := pk.CiphertextSpace().g.LiftToNthResidues(nonce.Value())
+	rn, err := pk.CiphertextSpace().g.NthResidue(nonce.Value())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to lift nonce to n-th residues")
 	}
