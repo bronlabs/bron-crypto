@@ -19,7 +19,9 @@ func TestDecomposeTwoThirds_K256(t *testing.T) {
 	t.Parallel()
 
 	curve := k256.NewCurve()
-	testDecomposeTwoThirds(t, curve)
+	for range 1024 {
+		testDecomposeTwoThirds(t, curve)
+	}
 }
 
 func TestDecomposeTwoThirds_P256(t *testing.T) {

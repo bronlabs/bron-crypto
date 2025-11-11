@@ -233,11 +233,12 @@ func (m *OddPrimeSquareFactors) ExpToN(out, a *numct.Nat) {
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		m.P.Squared.ModExp(&yp, a, m.NExpP2) // BoringSSL-backed modexp
+		m.P.Squared.ModExp(&yp, a, m.NExpP2) //  Ep2 = p * (N mod (p-1))
+
 	}()
 	go func() {
 		defer wg.Done()
-		m.Q.Squared.ModExp(&yq, a, m.NExpQ2)
+		m.Q.Squared.ModExp(&yq, a, m.NExpQ2) // Eq2 = q * (N mod (q-1))
 	}()
 	wg.Wait()
 

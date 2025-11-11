@@ -192,7 +192,7 @@ func (q *Rationals) RandomInt(lowInclusive, highExclusive *Rat, prng io.Reader) 
 	if err != nil {
 		return nil, err
 	}
-	highInt, err := highExclusive.Ceil()
+	highInt, err := highExclusive.Floor()
 	if err != nil {
 		return nil, err
 	}
@@ -249,6 +249,17 @@ func (r *Rat) Ceil() (*Int, error) {
 		return quot, nil
 	}
 	return quot.Increment(), nil
+}
+
+func (r *Rat) Floor() (*Int, error) {
+	quot, rem, err := r.a.EuclideanDiv(r.b.Lift())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "couldn't compute division for floor")
+	}
+	if rem.IsZero() || r.a.IsPositive() {
+		return quot, nil
+	}
+	return quot.Decrement(), nil
 }
 
 func (r *Rat) Structure() algebra.Structure[*Rat] {
@@ -392,29 +403,36 @@ func (r *Rat) IsOne() bool {
 }
 
 func (r *Rat) Canonical() *Rat {
-	// If numerator is zero, canonical form is 0/1
-	if r.a.IsZero() {
+	// Normalize 0 to 0/1
+	if r.IsZero() {
 		return &Rat{a: Z().Zero(), b: NPlus().One()}
 	}
-
-	// Compute gcd(|a|, b) - use absolute value of numerator for GCD
-	bBig := new(big.Int).Set(r.b.Lift().Big())
-	absA := new(big.Int).Abs(new(big.Int).Set(r.a.Big()))
-	g := new(big.Int).GCD(nil, nil, absA, bBig)
-
-	// Reduce a and b by gcd, preserving the sign of a
-	aRed := new(big.Int).Quo(new(big.Int).Set(r.a.Big()), g)
-	bRed := new(big.Int).Quo(bBig, g)
-
-	aInt, err := Z().FromBig(aRed)
-	if err != nil {
-		return r.Clone()
+	// gcd(a, b) via Euclidean algorithm
+	a := r.a.Lift()
+	b := r.b.Lift()
+	for !b.IsZero() {
+		_, rem, err := a.EuclideanDiv(b)
+		if err != nil {
+			panic(errs.WrapFailed(err, "could not compute gcd for canonical fraction"))
+		}
+		a, b = b, rem
 	}
-	bNP, err := NPlus().FromBig(bRed)
-	if err != nil {
-		return r.Clone()
+	gcd := a
+	// Already reduced?
+	if gcd.IsOne() {
+		return &Rat{a: r.a.Clone(), b: r.b.Clone()}
 	}
-	return &Rat{a: aInt, b: bNP}
+	// Divide numerator and denominator by gcd
+	num, r1, err := r.a.EuclideanDiv(gcd)
+	if err != nil || !r1.IsZero() {
+		return &Rat{a: r.a.Clone(), b: r.b.Clone()}
+	}
+	den, r2, err := r.b.Lift().EuclideanDiv(gcd)
+	if err != nil || !r2.IsZero() {
+		return &Rat{a: r.a.Clone(), b: r.b.Clone()}
+	}
+	den2, _ := NPlus().FromInt(den)
+	return &Rat{a: num, b: den2}
 }
 
 func (r *Rat) IsInt() bool {

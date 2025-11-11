@@ -12,7 +12,9 @@ import (
 
 var (
 	three       = num.Z().FromUint64(3)
+	four        = num.Z().FromUint64(4)
 	nine        = num.Z().FromUint64(9)
+	ten         = num.Z().FromUint64(10)
 	eighteen, _ = num.NPlus().FromUint64(18)
 )
 
@@ -67,21 +69,21 @@ func inEighteenth(k uint, q, x *num.Int) bool {
 	if err != nil {
 		panic(err)
 	}
-	h, err := num.Q().New(three.Mul(kInt.Add(num.Z().One())).Mul(q), eighteen)
+	h, err := num.Q().New(three.Mul(kInt.Increment()).Mul(q), eighteen)
 	if err != nil {
 		panic(err)
 	}
 	return l.IsLessThanOrEqual(x.Rat()) && x.Rat().IsLessThanOrEqual(h) && !x.Rat().Equal(h)
 }
 
-// Case1: [\frac{9+k}{18} q, \frac{9+k+1}{18} q)]
+// Case1: [\frac{9+k}{18} q, \frac{9+(k+1)}{18} q)]
 func sampleCase1(k uint, q *num.Int, prng io.Reader) (*num.Nat, error) {
 	kInt := num.Z().FromUint64(uint64(k))
 	l, err := num.Q().New((nine.Add(kInt)).Mul(q), eighteen)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct lower bound")
 	}
-	h, err := num.Q().New((nine.Add(kInt.Add(num.Z().One()))).Mul(q), eighteen)
+	h, err := num.Q().New((ten.Add(kInt)).Mul(q), eighteen)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct upper bound")
 	}
@@ -97,14 +99,14 @@ func sampleCase1(k uint, q *num.Int, prng io.Reader) (*num.Nat, error) {
 	return xNat, nil
 }
 
-// Case2: [\frac{3k}{18} q, \frac{3(k+1)}{18} q)]
+// Case2: [\frac{3+k}{18} q, \frac{3+(k+1)}{18} q)]
 func sampleCase2(k uint, q *num.Int, prng io.Reader) (*num.Nat, error) {
 	kInt := num.Z().FromUint64(uint64(k))
-	l, err := num.Q().New((three.Mul(kInt)).Mul(q), eighteen)
+	l, err := num.Q().New((three.Add(kInt)).Mul(q), eighteen)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct lower bound")
 	}
-	h, err := num.Q().New((three.Mul(kInt.Add(num.Z().One()))).Mul(q), eighteen)
+	h, err := num.Q().New((four.Add(kInt)).Mul(q), eighteen)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not construct upper bound")
 	}
