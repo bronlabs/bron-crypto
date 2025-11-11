@@ -10,6 +10,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
+const Threshold = 2
+
 type PartialSignature struct {
 	C3 *paillier.Ciphertext
 }

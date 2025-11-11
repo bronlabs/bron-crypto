@@ -1,175 +1,165 @@
 package signing
 
-// import (
-// 	"fmt"
-// 	"io"
+import (
+	"fmt"
+	"io"
 
-// 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/types"
-// 	hashcommitments "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-// 	"github.com/bronlabs/bron-crypto/pkg/network"
-// 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
-// 	compilerUtils "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler_utils"
-// 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-// 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-// 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsignatures/tecdsa/lindell17"
-// 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-// 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
-// )
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
+	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+)
 
-// const (
-// 	transcriptLabel = "BRON_CRYPTO_LINDELL17_SIGN-"
-// )
+const (
+	transcriptLabel = "BRON_CRYPTO_LINDELL17_SIGN-"
+)
 
-// type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-// 	round uint
-// 	// Base participant
-// 	prng  io.Reader
-// 	curve ecdsa.Curve[P, B, S]
-// 	sid   network.SID
-// 	tape  transcripts.Transcript
+type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	round uint
+	// Base participant
+	prng  io.Reader
+	sid   network.SID
+	tape  transcripts.Transcript
+	suite *ecdsa.Suite[P, B, S]
 
-// 	// Threshold participant
-// 	shard       *lindell17.Shard[P, B, S]
-// 	nic         compiler.Name
-// 	quorumBytes network.Quorum
-// }
+	// Threshold participant
+	shard *lindell17.Shard[P, B, S]
 
-// type PrimaryCosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-// 	k1           S
-// 	bigR1Opening hashcommitments.Witness
-// 	bigR         P
-// 	r            S
-// 	bigR1        P
-// }
+	commitmentScheme *hash_comm.Scheme
+	niDlogScheme     compiler.NonInteractiveProtocol[*schnorrpok.Statement[P, S], *schnorrpok.Witness[S]]
+}
 
-// type PrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-// 	Cosigner[P, B, S]
+type PrimaryCosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	k1           S
+	bigR1Opening hash_comm.Witness
+	bigR         P
+	r            B
+	bigR1        P
+}
 
-// 	secondarySharingId sharing.ID
-// 	state              *PrimaryCosignerState[P, B, S]
-// }
+type PrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	Cosigner[P, B, S]
 
-// type SecondaryCosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-// 	bigR1Commitment hashcommitments.Commitment
-// 	k2              S
-// 	bigR2           P
-// }
+	secondarySharingId sharing.ID
+	state              *PrimaryCosignerState[P, B, S]
+}
 
-// type SecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
-// 	Cosigner[P, B, S]
+type SecondaryCosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	bigR1Commitment hash_comm.Commitment
+	k2              S
+	bigR2           P
+}
 
-// 	primarySharingId sharing.ID
-// 	state            *SecondaryCosignerState[P, B, S]
-// }
+type SecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	Cosigner[P, B, S]
 
-// func (cosigner *Cosigner[P, B, S]) SharingID() sharing.ID {
-// 	return cosigner.shard.Share().ID()
-// }
+	primarySharingId sharing.ID
+	state            *SecondaryCosignerState[P, B, S]
+}
 
-// func newCosigner(sessionId []byte, myAuthKey types.AuthKey, hisIdentityKey types.IdentityKey, myShard *lindell17.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader, roundNo int) (cosigner *Cosigner, hisSharingId types.SharingID, err error) {
-// 	err = validateInputs(sessionId, myAuthKey, hisIdentityKey, myShard, protocol, niCompiler, prng)
-// 	if err != nil {
-// 		return nil, 0, errs.WrapArgument(err, "invalid input arguments")
-// 	}
+func (cosigner *Cosigner[P, B, S]) SharingID() sharing.ID {
+	return cosigner.shard.Share().ID()
+}
 
-// 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, protocol.Curve().Name(), niCompiler)
-// 	if transcript == nil {
-// 		transcript = hagrid.NewTranscript(dst, prng)
-// 	}
-// 	boundSessionId, err := transcript.Bind(sessionId, dst)
-// 	if err != nil {
-// 		return nil, 0, errs.WrapHashing(err, "couldn't initialise transcript/sessionId")
-// 	}
+func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *ecdsa.Suite[P, B, S], hisSharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader, roundNo uint) (cosigner *Cosigner[P, B, S], hisSharingId sharing.ID, err error) {
+	err = validateInputs(sessionId, suite, hisSharingID, myShard, niCompiler, tape, prng)
+	if err != nil {
+		return nil, 0, errs.WrapArgument(err, "invalid input arguments")
+	}
 
-// 	sharingConfig := types.DeriveSharingConfig(protocol.Participants())
-// 	mySharingId, exists := sharingConfig.Reverse().Get(myAuthKey)
-// 	if !exists {
-// 		return nil, 0, errs.NewMissing("could not find my sharing id")
-// 	}
-// 	hisSharingId, exists = sharingConfig.Reverse().Get(hisIdentityKey)
-// 	if !exists {
-// 		return nil, 0, errs.NewMissing("could not find the other party sharing id")
-// 	}
-// 	return &Cosigner{
-// 		myAuthKey:   myAuthKey,
-// 		Prng:        prng,
-// 		Protocol:    protocol,
-// 		Round:       roundNo,
-// 		SessionId:   boundSessionId,
-// 		Transcript:  transcript,
-// 		mySharingId: mySharingId,
-// 		myShard:     myShard,
-// 		nic:         niCompiler,
-// 	}, hisSharingId, nil
-// }
+	dst := fmt.Sprintf("%s_%s_%s_%s", transcriptLabel, sessionId, niCompiler, suite.Curve().Name())
+	tape.AppendDomainSeparator(dst)
 
-// func NewPrimaryCosigner(sessionId []byte, myAuthKey types.AuthKey, secondaryIdentityKey types.IdentityKey, myShard *lindell17.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner, err error) {
-// 	cosigner, hisSharingId, err := newCosigner(sessionId, myAuthKey, secondaryIdentityKey, myShard, protocol, niCompiler, transcript, prng, 1)
-// 	if err != nil {
-// 		return nil, errs.WrapValidation(err, "could not construct primary cosigner")
-// 	}
-// 	primaryCosigner = &PrimaryCosigner{
-// 		Cosigner:             *cosigner,
-// 		secondaryIdentityKey: secondaryIdentityKey,
-// 		secondarySharingId:   hisSharingId,
-// 		state:                &PrimaryCosignerState{},
-// 	}
-// 	primaryCosigner.quorum = hashset.NewHashableHashSet[types.IdentityKey](myAuthKey, secondaryIdentityKey)
-// 	if err := types.ValidateThresholdSignatureProtocol(primaryCosigner, protocol); err != nil {
-// 		return nil, errs.WrapValidation(err, "could not validate primary cosigner")
-// 	}
-// 	return primaryCosigner, nil
-// }
+	ck, err := hash_comm.NewKeyFromCRSBytes(sessionId, dst, myShard.PublicKey().Value().ToCompressed())
+	if err != nil {
+		return nil, 0, errs.WrapFailed(err, "could not create commitment key from CRS")
+	}
+	commitmentScheme, err := hash_comm.NewScheme(ck)
+	if err != nil {
+		return nil, 0, errs.WrapFailed(err, "could not create commitment scheme")
+	}
+	schnorrProtocol, err := schnorrpok.NewProtocol(suite.Curve().Generator(), prng)
+	if err != nil {
+		return nil, 0, errs.WrapFailed(err, "failed to create schnorr protocol")
+	}
 
-// func NewSecondaryCosigner(sessionId []byte, myAuthKey types.AuthKey, primaryIdentityKey types.IdentityKey, myShard *lindell17.Shard, protocol types.ThresholdSignatureProtocol, niCompiler compiler.Name, transcript transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner, err error) {
-// 	cosigner, hisSharingId, err := newCosigner(sessionId, myAuthKey, primaryIdentityKey, myShard, protocol, niCompiler, transcript, prng, 2)
-// 	if err != nil {
-// 		return nil, errs.WrapValidation(err, "could not construct secondary cosigner")
-// 	}
-// 	secondaryCosigner = &SecondaryCosigner{
-// 		Cosigner:           *cosigner,
-// 		primaryIdentityKey: primaryIdentityKey,
-// 		primarySharingId:   hisSharingId,
-// 		state:              &SecondaryCosignerState{},
-// 	}
-// 	secondaryCosigner.quorum = hashset.NewHashableHashSet[types.IdentityKey](myAuthKey, primaryIdentityKey)
-// 	if err := types.ValidateThresholdSignatureProtocol(secondaryCosigner, protocol); err != nil {
-// 		return nil, errs.WrapValidation(err, "could not validate secondary cosigner")
-// 	}
-// 	return secondaryCosigner, nil
-// }
+	niDlogScheme, err := compiler.Compile(niCompiler, schnorrProtocol, prng)
+	if err != nil {
+		return nil, 0, errs.WrapFailed(err, "failed to compile niDlogProver")
+	}
 
-// func validateInputs(sessionId []byte, myAuthKey types.AuthKey, other types.IdentityKey, myShard *lindell17.Shard, protocol types.ThresholdSignatureProtocol, nic compiler.Name, prng io.Reader) error {
-// 	if len(sessionId) == 0 {
-// 		return errs.NewArgument("invalid session id: %s", sessionId)
-// 	}
-// 	if err := types.ValidateThresholdSignatureProtocolConfig(protocol); err != nil {
-// 		return errs.WrapValidation(err, "threshold signature protocol config")
-// 	}
-// 	if err := types.ValidateAuthKey(myAuthKey); err != nil {
-// 		return errs.WrapValidation(err, "auth key")
-// 	}
-// 	if err := types.ValidateIdentityKey(other); err != nil {
-// 		return errs.WrapValidation(err, "secondary identity key")
-// 	}
-// 	if err := myShard.Validate(protocol, myAuthKey, true); err != nil {
-// 		return errs.WrapValidation(err, "my shard")
-// 	}
-// 	if !protocol.Participants().Contains(other) {
-// 		return errs.NewMembership("secondary is not a participant")
-// 	}
-// 	if other.Equal(myAuthKey) {
-// 		return errs.NewArgument("other and me are the same")
-// 	}
-// 	if !compilerUtils.CompilerIsSupported(nic) {
-// 		return errs.NewType("compiler is not supported %s", nic)
-// 	}
-// 	if prng == nil {
-// 		return errs.NewIsNil("prng is nil")
-// 	}
-// 	return nil
-// }
+	return &Cosigner[P, B, S]{
+		round:            roundNo,
+		prng:             prng,
+		suite:            suite,
+		sid:              sessionId,
+		tape:             tape,
+		shard:            myShard,
+		commitmentScheme: commitmentScheme,
+		niDlogScheme:     niDlogScheme,
+	}, hisSharingId, nil
+}
+
+func NewPrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *ecdsa.Suite[P, B, S], secondarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner[P, B, S], err error) {
+	cosigner, hisSharingId, err := newCosigner(sessionId, suite, secondarySharingID, myShard, niCompiler, tape, prng, 1)
+	if err != nil {
+		return nil, errs.WrapValidation(err, "could not construct primary cosigner")
+	}
+	primaryCosigner = &PrimaryCosigner[P, B, S]{
+		Cosigner:           *cosigner,
+		secondarySharingId: hisSharingId,
+		state:              &PrimaryCosignerState[P, B, S]{},
+	}
+	return primaryCosigner, nil
+}
+
+func NewSecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *ecdsa.Suite[P, B, S], primarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner[P, B, S], err error) {
+	cosigner, hisSharingId, err := newCosigner(sessionId, suite, primarySharingID, myShard, niCompiler, tape, prng, 2)
+	if err != nil {
+		return nil, errs.WrapValidation(err, "could not construct secondary cosigner")
+	}
+	secondaryCosigner = &SecondaryCosigner[P, B, S]{
+		Cosigner:         *cosigner,
+		primarySharingId: hisSharingId,
+		state:            &SecondaryCosignerState[P, B, S]{},
+	}
+	return secondaryCosigner, nil
+}
+
+func validateInputs[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *ecdsa.Suite[P, B, S], other sharing.ID, myShard *lindell17.Shard[P, B, S], nic compiler.Name, tape transcripts.Transcript, prng io.Reader) error {
+	if len(sessionId) == 0 {
+		return errs.NewArgument("invalid session id: %s", sessionId)
+	}
+	if suite == nil {
+		return errs.NewIsNil("suite is nil")
+	}
+	if suite.IsDeterministic() {
+		return errs.NewArgument("suite cannot be deterministic for MPC signing")
+	}
+	if myShard == nil {
+		return errs.NewArgument("myShard is nil")
+	}
+	if other == myShard.Share().ID() {
+		return errs.NewArgument("other sharing ID %d is equal to my sharing ID", other)
+	}
+	if !myShard.AccessStructure().Shareholders().Contains(other) {
+		return errs.NewArgument("other sharing ID %d not in my shard access structure", other)
+	}
+	if !compiler.IsSupported(nic) {
+		return errs.NewArgument("unsupported NI compiler: %s", nic)
+	}
+	if tape == nil {
+		return errs.NewIsNil("tape is nil")
+	}
+	if prng == nil {
+		return errs.NewIsNil("prng is nil")
+	}
+	return nil
+}

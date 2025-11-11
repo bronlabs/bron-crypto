@@ -73,44 +73,6 @@ func Test_Lindell17DKG_P256_2of3(t *testing.T) {
 	}
 }
 
-func Test_Lindell17DKG_K256_3of5(t *testing.T) {
-	t.Parallel()
-
-	const THRESHOLD = 3
-	const TOTAL = 5
-
-	curve := k256.NewCurve()
-	shareholders := hashset.NewComparable[sharing.ID]()
-	for i := sharing.ID(0); i < TOTAL; i++ {
-		shareholders.Add(i)
-	}
-	accessStructure, err := shamir.NewAccessStructure(THRESHOLD, shareholders.Freeze())
-	require.NoError(t, err)
-
-	// Run DKG
-	shards := testutils.RunLindell17DKG(t, curve, accessStructure)
-	require.Len(t, shards, TOTAL)
-}
-
-func Test_Lindell17DKG_P256_3of5(t *testing.T) {
-	t.Parallel()
-
-	const THRESHOLD = 3
-	const TOTAL = 5
-
-	curve := p256.NewCurve()
-	shareholders := hashset.NewComparable[sharing.ID]()
-	for i := sharing.ID(0); i < TOTAL; i++ {
-		shareholders.Add(i)
-	}
-	accessStructure, err := shamir.NewAccessStructure(THRESHOLD, shareholders.Freeze())
-	require.NoError(t, err)
-
-	// Run DKG
-	shards := testutils.RunLindell17DKG(t, curve, accessStructure)
-	require.Len(t, shards, TOTAL)
-}
-
 func Test_Lindell17DKG_K256_2of2(t *testing.T) {
 	t.Parallel()
 
@@ -118,25 +80,6 @@ func Test_Lindell17DKG_K256_2of2(t *testing.T) {
 	const TOTAL = 2
 
 	curve := k256.NewCurve()
-	shareholders := hashset.NewComparable[sharing.ID]()
-	for i := sharing.ID(0); i < TOTAL; i++ {
-		shareholders.Add(i)
-	}
-	accessStructure, err := shamir.NewAccessStructure(THRESHOLD, shareholders.Freeze())
-	require.NoError(t, err)
-
-	// Run DKG
-	shards := testutils.RunLindell17DKG(t, curve, accessStructure)
-	require.Len(t, shards, TOTAL)
-}
-
-func Test_Lindell17DKG_P256_5of7(t *testing.T) {
-	t.Parallel()
-
-	const THRESHOLD = 5
-	const TOTAL = 7
-
-	curve := p256.NewCurve()
 	shareholders := hashset.NewComparable[sharing.ID]()
 	for i := sharing.ID(0); i < TOTAL; i++ {
 		shareholders.Add(i)

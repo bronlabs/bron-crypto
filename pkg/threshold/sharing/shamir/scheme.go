@@ -119,7 +119,7 @@ func (d *Scheme[FE]) Deal(secret *Secret[FE], prng io.Reader) (*DealerOutput[FE]
 }
 
 func (d *Scheme[FE]) Reconstruct(shares ...*Share[FE]) (*Secret[FE], error) {
-	sharesSet := hashset.NewHashable[*Share[FE]](shares...)
+	sharesSet := hashset.NewHashable(shares...)
 	ids, err := sharing.CollectIDs(sharesSet.List()...)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not collect IDs from shares")

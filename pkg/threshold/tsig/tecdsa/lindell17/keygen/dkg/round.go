@@ -32,7 +32,7 @@ func (p *Participant[P, B, S]) Round1() (output *Round1Broadcast, err error) {
 	}
 
 	// 1.i. choose randomly x' and x'' such that x = 3x' + x'' and both x' and x'' are in (q/3, 2q/3) range
-	xPrime, xDoublePrime, err := lindell17.DecomposeTwoThirds(p.curve, p.shard.Share().Value(), p.prng)
+	xPrime, xDoublePrime, err := lindell17.DecomposeTwoThirds(p.shard.Share().Value(), p.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot split share")
 	}
@@ -149,7 +149,7 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 	}
 
 	// 3.iii. generate a Paillier key pair
-	keyGenerator, err := p.state.paillierScheme.Keygen(paillier.WithEachPrimeBitLen(lp.PaillierBitSize))
+	keyGenerator, err := p.state.paillierScheme.Keygen(paillier.WithEachPrimeBitLen(lp.PaillierBitSizeN / 2))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate Paillier key generator")
 	}

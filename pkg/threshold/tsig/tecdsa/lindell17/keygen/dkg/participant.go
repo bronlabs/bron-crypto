@@ -91,7 +91,7 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 		return nil, errs.NewArgument("unsupported NIC: %s", nic)
 	}
 
-	dst := fmt.Sprintf("%s%s", transcriptLabel, sid)
+	dst := fmt.Sprintf("%s_%s_%s_%s", transcriptLabel, sid, nic, curve.Name())
 	tape.AppendDomainSeparator(dst)
 
 	commitmentSchemes := make(map[sharing.ID]*hash_comm.Scheme)

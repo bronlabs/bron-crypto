@@ -42,7 +42,7 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 	paillierPublicKeys := make(map[sharing.ID]*paillier.PublicKey)
 	paillierEncryptedShares := make(map[sharing.ID]*paillier.Ciphertext)
 
-	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(lp.PaillierBitSize))
+	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(lp.PaillierBitSizeN))
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create paillier key generator")
 	}
