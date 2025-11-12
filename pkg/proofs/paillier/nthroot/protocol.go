@@ -4,7 +4,6 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/internal/meta/maurer09"
@@ -21,79 +20,15 @@ type (
 	Response[A znstar.ArithmeticPaillier]   = maurer09.Response[*znstar.PaillierGroupElement[A]]
 )
 
-func NewStatementKnownOrder(x *znstar.PaillierGroupElement[*modular.SimpleModulus], g *znstar.PaillierGroupKnownOrder) (*Statement[*modular.OddPrimeSquareFactors], error) {
-	if x == nil || g == nil {
-		return nil, errs.NewIsNil("x or g")
-	}
-	learnedX, err := x.LearnOrder(g)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to learn order of x")
-	}
-	return &Statement[*modular.OddPrimeSquareFactors]{
-		X: learnedX,
-	}, nil
-}
-
 func NewStatement[X znstar.ArithmeticPaillier](x *znstar.PaillierGroupElement[X]) *Statement[X] {
 	return &Statement[X]{
 		X: x,
 	}
 }
 
-func NewWitnessKnownOrder[X znstar.ArithmeticPaillier](w *znstar.PaillierGroupElement[*modular.SimpleModulus], g *znstar.PaillierGroupKnownOrder) (*Witness[*modular.OddPrimeSquareFactors], error) {
-	if w == nil || g == nil {
-		return nil, errs.NewIsNil("w or g")
-	}
-	learnedW, err := w.LearnOrder(g)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to learn order of w")
-	}
-	return &Witness[*modular.OddPrimeSquareFactors]{
-		W: learnedW,
-	}, nil
-}
-
 func NewWitness[X znstar.ArithmeticPaillier](w *znstar.PaillierGroupElement[X]) *Witness[X] {
 	return &Witness[X]{
 		W: w,
-	}
-}
-
-func NewCommitmentKnownOrder(c *znstar.PaillierGroupElement[*modular.SimpleModulus], g *znstar.PaillierGroupKnownOrder) (*Commitment[*modular.OddPrimeSquareFactors], error) {
-	if c == nil || g == nil {
-		return nil, errs.NewIsNil("c or g")
-	}
-	learnedA, err := c.LearnOrder(g)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to learn order of c")
-	}
-	return &Commitment[*modular.OddPrimeSquareFactors]{
-		A: learnedA,
-	}, nil
-}
-
-func NewCommitment[X znstar.ArithmeticPaillier](a *znstar.PaillierGroupElement[X]) *Commitment[X] {
-	return &Commitment[X]{
-		A: a,
-	}
-}
-
-func NewResponseKnownOrder(r *znstar.PaillierGroupElement[*modular.SimpleModulus], g *znstar.PaillierGroupKnownOrder) (*Response[*modular.OddPrimeSquareFactors], error) {
-	if r == nil || g == nil {
-		return nil, errs.NewIsNil("r or g")
-	}
-	learnedR, err := r.LearnOrder(g)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to learn order of r")
-	}
-	return &Response[*modular.OddPrimeSquareFactors]{
-		Z: learnedR,
-	}, nil
-}
-
-func NewResponse[X znstar.ArithmeticPaillier](r *znstar.PaillierGroupElement[X]) *Response[X] {
-	return &Response[X]{
-		Z: r,
 	}
 }
 

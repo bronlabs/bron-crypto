@@ -22,12 +22,12 @@ import (
 func Test_HappyPathInteractive(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
-	pBig, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, 1024)
 	require.NoError(t, err)
-	pNatCt := numct.NewNatFromBig(pBig, 128)
-	qBig, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, pBig.BitLen())
+	qBig, err := crand.Prime(prng, 1024)
 	require.NoError(t, err)
-	gNatCt := numct.NewNatFromBig(qBig, 128)
+	gNatCt := numct.NewNatFromBig(qBig, qBig.BitLen())
 
 	xNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func Test_HappyPathInteractive(t *testing.T) {
 
 	yBig, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	yNatCt := numct.NewNatFromBig(yBig, 256)
+	yNatCt := numct.NewNatFromBig(yBig, yBig.BitLen())
 	var xNatCt numct.Nat
 	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&xNatCt, yNatCt)
 
