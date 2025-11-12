@@ -105,7 +105,7 @@ func (g *PaillierGroup[X]) ScalarStructure() algebra.Structure[*num.Nat] {
 }
 
 func (g *PaillierGroup[X]) Equal(other *PaillierGroup[X]) bool {
-	return g.zMod.Modulus().Equal(other.zMod.Modulus()) && g.Order().Equal(other.Order())
+	return g.zMod.Modulus().Equal(other.zMod.Modulus())
 }
 
 func (g *PaillierGroup[X]) N() *num.NatPlus {
