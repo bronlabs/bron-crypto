@@ -144,7 +144,7 @@ func (c *Cosigner[P, B, S]) Round3(r2bOut network.RoundMessages[*Round2Broadcast
 		panic(err)
 	}
 
-	sk, err := c.shard.Share().ToAdditive(*quorum2)
+	sk, err := c.shard.Share().ToAdditive(quorum2)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "to additive share failed")
 	}

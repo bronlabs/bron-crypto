@@ -137,26 +137,28 @@ func validateInputs[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 	if suite == nil {
 		return errs.NewIsNil("suite is nil")
 	}
-	if suite.IsDeterministic() {
-		return errs.NewArgument("suite cannot be deterministic for MPC signing")
-	}
-	if myShard == nil {
-		return errs.NewArgument("myShard is nil")
-	}
-	if other == myShard.Share().ID() {
-		return errs.NewArgument("other sharing ID %d is equal to my sharing ID", other)
-	}
-	if !myShard.AccessStructure().Shareholders().Contains(other) {
-		return errs.NewArgument("other sharing ID %d not in my shard access structure", other)
-	}
-	if !compiler.IsSupported(nic) {
-		return errs.NewArgument("unsupported NI compiler: %s", nic)
-	}
 	if tape == nil {
 		return errs.NewIsNil("tape is nil")
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")
 	}
+	if myShard == nil {
+		return errs.NewArgument("myShard is nil")
+	}
+
+	if suite.IsDeterministic() {
+		return errs.NewArgument("suite cannot be deterministic for MPC signing")
+	}
+	if other == myShard.Share().ID() {
+		return errs.NewArgument("other sharing ID %d is equal to my sharing ID", other)
+	}
+	if !myShard.AccessStructure().Shareholders().Contains(other) || !myShard.AccessStructure().Shareholders().Contains(myShard.Share().ID()) {
+		return errs.NewArgument("sharing ID %d not in my shard access structure", other)
+	}
+	if !compiler.IsSupported(nic) {
+		return errs.NewArgument("unsupported NI compiler: %s", nic)
+	}
+
 	return nil
 }

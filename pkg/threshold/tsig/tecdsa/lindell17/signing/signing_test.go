@@ -2,8 +2,8 @@ package signing_test
 
 import (
 	"bytes"
+	"crypto"
 	crand "crypto/rand"
-	"crypto/sha256"
 	"fmt"
 	"io"
 	"testing"
@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -24,7 +25,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var testAccessStructure = []int{2, 3, 5, 8}
+var testAccessStructure = []int{2, 3, 4, 5}
+var testHashFuncs = []crypto.Hash{crypto.SHA256, crypto.SHA3_256, crypto.BLAKE2b_256}
 
 func TestHappyPath(t *testing.T) {
 	t.Parallel()
@@ -32,19 +34,40 @@ func TestHappyPath(t *testing.T) {
 	for _, total := range testAccessStructure {
 		t.Run(fmt.Sprintf("total=%d", total), func(t *testing.T) {
 			t.Parallel()
-			t.Run("secp256k1", func(t *testing.T) {
-				t.Parallel()
-				curve := k256.NewCurve()
-				suite, err := ecdsa.NewSuite(curve, sha256.New)
-				require.NoError(t, err)
-				testHappyPath(t, total, suite)
-			})
-			t.Run("P256", func(t *testing.T) {
-				curve := p256.NewCurve()
-				suite, err := ecdsa.NewSuite(curve, sha256.New)
-				require.NoError(t, err)
-				testHappyPath(t, total, suite)
-			})
+			for _, ch := range testHashFuncs {
+				t.Run(fmt.Sprintf("hash func=%s", ch.String()), func(t *testing.T) {
+					t.Parallel()
+					hashFunc := ch.New
+					t.Run("secp256k1", func(t *testing.T) {
+						t.Parallel()
+						curve := k256.NewCurve()
+						suite, err := ecdsa.NewSuite(curve, hashFunc)
+						require.NoError(t, err)
+						testHappyPath(t, total, suite)
+					})
+					t.Run("P256", func(t *testing.T) {
+						t.Parallel()
+						curve := p256.NewCurve()
+						suite, err := ecdsa.NewSuite(curve, hashFunc)
+						require.NoError(t, err)
+						testHappyPath(t, total, suite)
+					})
+					t.Run("pallas", func(t *testing.T) {
+						t.Parallel()
+						curve := pasta.NewPallasCurve()
+						suite, err := ecdsa.NewSuite(curve, hashFunc)
+						require.NoError(t, err)
+						testHappyPath(t, total, suite)
+					})
+					t.Run("vesta", func(t *testing.T) {
+						t.Parallel()
+						curve := pasta.NewVestaCurve()
+						suite, err := ecdsa.NewSuite(curve, hashFunc)
+						require.NoError(t, err)
+						testHappyPath(t, total, suite)
+					})
+				})
+			}
 		})
 	}
 }
@@ -61,13 +84,13 @@ func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 	shards, publicKey, err := trusted_dealer.DealRandom(suite.Curve(), hashset.NewComparable[sharing.ID](shareholders...).Freeze(), prng)
 	require.NoError(t, err)
 
-	for subShareHolder := range sliceutils.KCoveringCombinations(shareholders, 2) {
+	for subShareHolders := range sliceutils.KCoveringCombinations(shareholders, 2) {
 		var sessionId network.SID
 		_, err := io.ReadFull(prng, sessionId[:])
 		require.NoError(t, err)
 
-		primaryId := subShareHolder[0]
-		secondaryId := subShareHolder[1]
+		primaryId := subShareHolders[0]
+		secondaryId := subShareHolders[1]
 		primaryShard, ok := shards.Get(primaryId)
 		require.True(t, ok)
 		secondaryShard, ok := shards.Get(secondaryId)

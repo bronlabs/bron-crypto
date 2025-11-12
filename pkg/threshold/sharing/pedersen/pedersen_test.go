@@ -1077,7 +1077,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 		// Convert each share to additive
 		additiveShares := make([]*additive.Share[S], 0)
 		for _, share := range shares.Shares().Values() {
-			additiveShare, err := share.ToAdditive(*qualifiedSet)
+			additiveShare, err := share.ToAdditive(qualifiedSet)
 			require.NoError(t, err)
 			require.NotNil(t, additiveShare)
 			require.Equal(t, share.ID(), additiveShare.ID())
@@ -1114,7 +1114,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 			share, exists := shares.Shares().Get(id)
 			require.True(t, exists)
 
-			additiveShare, err := share.ToAdditive(*qualifiedSet)
+			additiveShare, err := share.ToAdditive(qualifiedSet)
 			require.NoError(t, err)
 			require.NotNil(t, additiveShare)
 			additiveShares = append(additiveShares, additiveShare)
@@ -1146,7 +1146,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 		share, exists := shares.Shares().Get(allIds[0])
 		require.True(t, exists)
 
-		additiveShare, err := share.ToAdditive(*qualifiedSet)
+		additiveShare, err := share.ToAdditive(qualifiedSet)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "is not a valid shareholder")
 		require.Nil(t, additiveShare)
@@ -1161,10 +1161,10 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 		require.True(t, exists)
 
 		// Convert multiple times
-		additiveShare1, err := share.ToAdditive(*qualifiedSet)
+		additiveShare1, err := share.ToAdditive(qualifiedSet)
 		require.NoError(t, err)
 
-		additiveShare2, err := share.ToAdditive(*qualifiedSet)
+		additiveShare2, err := share.ToAdditive(qualifiedSet)
 		require.NoError(t, err)
 
 		// Results should be identical
@@ -1911,7 +1911,7 @@ func BenchmarkToAdditive(b *testing.B) {
 
 			b.ResetTimer()
 			for range b.N {
-				_, err := share.ToAdditive(*qualifiedSet)
+				_, err := share.ToAdditive(qualifiedSet)
 				if err != nil {
 					b.Fatal(err)
 				}

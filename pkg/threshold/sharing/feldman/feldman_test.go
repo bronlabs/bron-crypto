@@ -1066,7 +1066,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 		// Convert each share to additive
 		additiveShares := make([]*additive.Share[FE], 0)
 		for _, share := range shares.Shares().Values() {
-			additiveShare, err := share.ToAdditive(*qualifiedSet)
+			additiveShare, err := share.ToAdditive(qualifiedSet)
 			require.NoError(t, err)
 			require.NotNil(t, additiveShare)
 			require.Equal(t, share.ID(), additiveShare.ID())
@@ -1103,7 +1103,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 			share, exists := shares.Shares().Get(id)
 			require.True(t, exists)
 
-			additiveShare, err := share.ToAdditive(*qualifiedSet)
+			additiveShare, err := share.ToAdditive(qualifiedSet)
 			require.NoError(t, err)
 			require.NotNil(t, additiveShare)
 			additiveShares = append(additiveShares, additiveShare)
@@ -1135,7 +1135,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 		share, exists := shares.Shares().Get(allIds[0])
 		require.True(t, exists)
 
-		additiveShare, err := share.ToAdditive(*qualifiedSet)
+		additiveShare, err := share.ToAdditive(qualifiedSet)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "is not a valid shareholder")
 		require.Nil(t, additiveShare)
@@ -1150,10 +1150,10 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 		require.True(t, exists)
 
 		// Convert multiple times
-		additiveShare1, err := share.ToAdditive(*qualifiedSet)
+		additiveShare1, err := share.ToAdditive(qualifiedSet)
 		require.NoError(t, err)
 
-		additiveShare2, err := share.ToAdditive(*qualifiedSet)
+		additiveShare2, err := share.ToAdditive(qualifiedSet)
 		require.NoError(t, err)
 
 		// Results should be identical
@@ -1259,7 +1259,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		// Convert all shares
 		additiveShares := make([]*additive.Share[*k256.Scalar], 0)
 		for _, share := range shares.Shares().Values() {
-			additiveShare, err := share.ToAdditive(*qualifiedSet)
+			additiveShare, err := share.ToAdditive(qualifiedSet)
 			require.NoError(t, err)
 			additiveShares = append(additiveShares, additiveShare)
 		}
@@ -1307,7 +1307,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		require.NoError(t, err)
 
 		// Convert with modified value
-		additiveShare, err := share.ToAdditive(*qualifiedSet)
+		additiveShare, err := share.ToAdditive(qualifiedSet)
 		require.NoError(t, err)
 
 		// The additive share should use the modified value
@@ -1359,7 +1359,7 @@ func BenchmarkToAdditive(b *testing.B) {
 
 			b.ResetTimer()
 			for range b.N {
-				_, err := share.ToAdditive(*qualifiedSet)
+				_, err := share.ToAdditive(qualifiedSet)
 				if err != nil {
 					b.Fatal(err)
 				}

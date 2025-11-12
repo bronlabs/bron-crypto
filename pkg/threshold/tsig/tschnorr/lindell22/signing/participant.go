@@ -92,7 +92,7 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create minimal qualified access structure for quorum %v", c.quorum)
 	}
-	ashare, err := c.shard.Share().ToAdditive(*mqac)
+	ashare, err := c.shard.Share().ToAdditive(mqac)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert share %d to additive share", c.shard.Share().ID())
 	}

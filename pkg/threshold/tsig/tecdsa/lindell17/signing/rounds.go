@@ -138,7 +138,7 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create access structure for additive sharing")
 	}
-	additiveShare, err := sc.shard.Share().ToAdditive(*ac)
+	additiveShare, err := sc.shard.Share().ToAdditive(ac)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not convert Shamir share to additive share")
 	}
@@ -151,7 +151,7 @@ func (sc *SecondaryCosigner[P, B, S]) Round4(r3out *Round3OutputP2P[P, B, S], me
 		return nil, errs.NewMissing("couldn't get primary encrypted signing key share")
 	}
 
-	coefficients, err := shamir.LagrangeCoefficients(sc.suite.Curve().ScalarField(), sc.shard.AccessStructure().Shareholders().List()...)
+	coefficients, err := shamir.LagrangeCoefficients(sc.suite.Curve().ScalarField(), ac.Shareholders().List()...)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot get Lagrange coefficients")
 	}
