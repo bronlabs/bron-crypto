@@ -2,7 +2,6 @@ package signing
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -109,7 +108,6 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 		summedR = summedR.Op(theirBigR.X)
 	}
 	// step 3.7.2: compute e
-	fmt.Println(c.shard.PublicKey())
 	e, err := c.variant.ComputeChallenge(summedR, c.shard.PublicKey().Value(), message)
 	if err != nil {
 		return nil, errs.NewFailed("cannot create digest scalar")
@@ -184,7 +182,7 @@ func dlogProve[
 
 func dlogVerify[
 	E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S],
-](tape ts.Transcript, niDlogScheme compiler.NICompiler[*schnorrpok.Statement[E, S], *schnorrpok.Witness[S]], proverID sharing.ID, sid network.SID, proof compiler.NIZKPoKProof, theirBigR *schnorrpok.Statement[E, S], quorumBytes [][]byte) error {
+](tape ts.Transcript, niDlogScheme compiler.NonInteractiveProtocol[*schnorrpok.Statement[E, S], *schnorrpok.Witness[S]], proverID sharing.ID, sid network.SID, proof compiler.NIZKPoKProof, theirBigR *schnorrpok.Statement[E, S], quorumBytes [][]byte) error {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(proverID))
 	tape.AppendBytes(transcriptDLogSLabel, quorumBytes...)
 	tape.AppendBytes("prover", proverIDBytes)

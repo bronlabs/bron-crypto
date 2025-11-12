@@ -21,7 +21,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
-const primeLen = 512
+const primeLen = 1024
 const logRange = 256
 
 func Test_HappyPath(t *testing.T) {
@@ -200,7 +200,6 @@ func Test_CheatingProverAboveRange(t *testing.T) {
 	}
 }
 
-// TODO: profile to fix slowness (Mateusz)
 func Test_Simulator(t *testing.T) {
 	t.Parallel()
 

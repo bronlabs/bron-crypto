@@ -91,7 +91,7 @@ func (c *Cosigner[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast], 
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "cannot create minimal qualified access structure")
 	}
-	sk, err := c.shard.Share().ToAdditive(*quorum)
+	sk, err := c.shard.Share().ToAdditive(quorum)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "to additive share failed")
 	}

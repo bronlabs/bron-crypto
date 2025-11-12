@@ -1066,7 +1066,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 		// Convert each share to additive
 		additiveShares := make([]*additive.Share[FE], 0)
 		for _, share := range shares.Shares().Values() {
-			additiveShare, err := share.ToAdditive(*qualifiedSet)
+			additiveShare, err := share.ToAdditive(qualifiedSet)
 			require.NoError(t, err)
 			require.NotNil(t, additiveShare)
 			require.Equal(t, share.ID(), additiveShare.ID())
@@ -1103,7 +1103,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 			share, exists := shares.Shares().Get(id)
 			require.True(t, exists)
 
-			additiveShare, err := share.ToAdditive(*qualifiedSet)
+			additiveShare, err := share.ToAdditive(qualifiedSet)
 			require.NoError(t, err)
 			require.NotNil(t, additiveShare)
 			additiveShares = append(additiveShares, additiveShare)
@@ -1135,7 +1135,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 		share, exists := shares.Shares().Get(allIds[0])
 		require.True(t, exists)
 
-		additiveShare, err := share.ToAdditive(*qualifiedSet)
+		additiveShare, err := share.ToAdditive(qualifiedSet)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "is not a valid shareholder")
 		require.Nil(t, additiveShare)
@@ -1150,10 +1150,10 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 		require.True(t, exists)
 
 		// Convert multiple times
-		additiveShare1, err := share.ToAdditive(*qualifiedSet)
+		additiveShare1, err := share.ToAdditive(qualifiedSet)
 		require.NoError(t, err)
 
-		additiveShare2, err := share.ToAdditive(*qualifiedSet)
+		additiveShare2, err := share.ToAdditive(qualifiedSet)
 		require.NoError(t, err)
 
 		// Results should be identical
@@ -1259,7 +1259,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		// Convert all shares
 		additiveShares := make([]*additive.Share[*k256.Scalar], 0)
 		for _, share := range shares.Shares().Values() {
-			additiveShare, err := share.ToAdditive(*qualifiedSet)
+			additiveShare, err := share.ToAdditive(qualifiedSet)
 			require.NoError(t, err)
 			additiveShares = append(additiveShares, additiveShare)
 		}
@@ -1307,7 +1307,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 		require.NoError(t, err)
 
 		// Convert with modified value
-		additiveShare, err := share.ToAdditive(*qualifiedSet)
+		additiveShare, err := share.ToAdditive(qualifiedSet)
 		require.NoError(t, err)
 
 		// The additive share should use the modified value
@@ -1359,7 +1359,7 @@ func BenchmarkToAdditive(b *testing.B) {
 
 			b.ResetTimer()
 			for range b.N {
-				_, err := share.ToAdditive(*qualifiedSet)
+				_, err := share.ToAdditive(qualifiedSet)
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -1415,7 +1415,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 	t.Run("reconstruct from threshold shares", func(t *testing.T) {
 		t.Parallel()
 		// Select threshold shares (IDs 0, 1, 2)
-		selectedIDs := []sharing.ID{0, 1, 2}
+		selectedIDs := []sharing.ID{1, 2, 3}
 		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, threshold)
 
 		for _, id := range selectedIDs {
@@ -1441,7 +1441,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 	t.Run("different threshold sets yield same result", func(t *testing.T) {
 		t.Parallel()
 		// First set: IDs 0, 1, 2
-		set1IDs := []sharing.ID{0, 1, 2}
+		set1IDs := []sharing.ID{1, 2, 3}
 		liftedSet1 := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, threshold)
 
 		for _, id := range set1IDs {
@@ -1502,9 +1502,9 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, 2)
 
 		for i := range 2 {
-			share, _ := shares.Shares().Get(sharing.ID(i))
+			share, _ := shares.Shares().Get(sharing.ID(i + 1))
 			shareInExponent := basePoint.ScalarOp(share.Value())
-			lifted, _ := feldman.NewLiftedShare(sharing.ID(i), shareInExponent)
+			lifted, _ := feldman.NewLiftedShare(sharing.ID(i+1), shareInExponent)
 			liftedShares = append(liftedShares, lifted)
 		}
 
@@ -1526,21 +1526,21 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 	t.Run("ToAdditive conversion", func(t *testing.T) {
 		t.Parallel()
 		// Create a qualified set
-		selectedIDs := hashset.NewComparable[sharing.ID](0, 1, 2).Freeze()
+		selectedIDs := hashset.NewComparable[sharing.ID](1, 2, 3).Freeze()
 		qualifiedSet, err := sharing.NewMinimalQualifiedAccessStructure(selectedIDs)
 		require.NoError(t, err)
 
 		// Get a share and lift it
-		share1, _ := shares.Shares().Get(sharing.ID(0))
+		share1, _ := shares.Shares().Get(sharing.ID(1))
 		shareInExponent := basePoint.ScalarOp(share1.Value())
-		lifted, err := feldman.NewLiftedShare(sharing.ID(0), shareInExponent)
+		lifted, err := feldman.NewLiftedShare(sharing.ID(1), shareInExponent)
 		require.NoError(t, err)
 
 		// Convert to additive share
 		additiveShare, err := lifted.ToAdditive(qualifiedSet)
 		require.NoError(t, err)
 		require.NotNil(t, additiveShare)
-		require.Equal(t, sharing.ID(0), additiveShare.ID())
+		require.Equal(t, sharing.ID(1), additiveShare.ID())
 
 		// The value should be λ_1 * g^s_1 where λ_1 is the Lagrange coefficient
 		// We can't easily verify the exact value without computing Lagrange coefficients
@@ -1583,7 +1583,7 @@ func TestLiftedShareCorrectnessWithManualCalculation(t *testing.T) {
 	// We have f(1), f(2), f(3) as our shares
 
 	// Lift shares for participants 0 and 2
-	selectedIDs := []sharing.ID{0, 2}
+	selectedIDs := []sharing.ID{1, 3}
 	liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, len(selectedIDs))
 
 	for _, id := range selectedIDs {

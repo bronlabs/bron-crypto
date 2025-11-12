@@ -142,6 +142,19 @@ func (c *cardinal) IsLessThanOrEqual(other Cardinal) bool {
 }
 
 func (c *cardinal) Equal(other Cardinal) bool {
+	o := other.(*cardinal)
+
+	// Special case: Unknown == Unknown
+	if c.isUnknown && o.isUnknown {
+		return false
+	}
+
+	// Special case: Infinite == Infinite
+	if c.IsInfinite() || o.IsInfinite() {
+		return false
+	}
+
+	// Otherwise use the comparison logic
 	return c.IsLessThanOrEqual(other) && other.IsLessThanOrEqual(c)
 }
 
@@ -165,7 +178,7 @@ func (c *cardinal) Add(other Cardinal) Cardinal {
 		return unknown
 	}
 
-	if !c.isFinite || !o.isFinite {
+	if c.IsInfinite() || o.IsInfinite() {
 		return infinite
 	}
 
@@ -185,7 +198,7 @@ func (c *cardinal) Mul(other Cardinal) Cardinal {
 		return unknown
 	}
 
-	if !c.isFinite || !o.isFinite {
+	if c.IsInfinite() || o.IsInfinite() {
 		return infinite
 	}
 
@@ -205,7 +218,7 @@ func (c *cardinal) Sub(other Cardinal) Cardinal {
 		return unknown
 	}
 
-	if !c.isFinite || !o.isFinite {
+	if c.IsInfinite() || o.IsInfinite() {
 		return infinite
 	}
 

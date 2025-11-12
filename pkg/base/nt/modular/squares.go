@@ -1,7 +1,6 @@
 package modular
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -147,7 +146,6 @@ func (m *OddPrimeSquareFactors) ModExp(out, base, exp *numct.Nat) {
 	var mp, mq numct.Nat
 	var wg sync.WaitGroup
 	wg.Add(2)
-	fmt.Println(m.Q)
 	go func() {
 		defer wg.Done()
 		var ep numct.Nat
@@ -166,6 +164,13 @@ func (m *OddPrimeSquareFactors) ModExp(out, base, exp *numct.Nat) {
 
 	// CRT recombine into modulo n = p*q.
 	out.Set(m.CrtModN2.Recombine(&mp, &mq))
+}
+
+func (m *OddPrimeSquareFactors) ModExpInt(out, base *numct.Nat, exp *numct.Int) {
+	var out2 numct.Nat
+	m.ModExp(out, base, exp.AbsNat())
+	m.ModInv(&out2, out)
+	out.CondAssign(exp.IsNegative(), &out2)
 }
 
 func (m *OddPrimeSquareFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp *numct.Nat) {
@@ -226,11 +231,12 @@ func (m *OddPrimeSquareFactors) ExpToN(out, a *numct.Nat) {
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		m.P.Squared.ModExp(&yp, a, m.NExpP2) // BoringSSL-backed modexp
+		m.P.Squared.ModExp(&yp, a, m.NExpP2) //  Ep2 = p * (N mod (p-1))
+
 	}()
 	go func() {
 		defer wg.Done()
-		m.Q.Squared.ModExp(&yq, a, m.NExpQ2)
+		m.Q.Squared.ModExp(&yq, a, m.NExpQ2) // Eq2 = q * (N mod (q-1))
 	}()
 	wg.Wait()
 

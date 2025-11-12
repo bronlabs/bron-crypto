@@ -1,7 +1,6 @@
 package paillier
 
 import (
-	"fmt"
 	"io"
 	"sync"
 
@@ -59,11 +58,15 @@ func (e *Encrypter) Encrypt(plaintext *Plaintext, receiver *PublicKey, prng io.R
 }
 
 func (e *Encrypter) EncryptWithNonce(plaintext *Plaintext, receiver *PublicKey, nonce *Nonce) (*Ciphertext, error) {
-	rn, err := receiver.group.LiftToNthResidues(nonce.Value())
+	rn, err := receiver.group.NthResidue(nonce.Value())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to lift nonce to n-th residues")
 	}
-	return &Ciphertext{u: rn.Mul(Phi(receiver, plaintext))}, nil
+	gm, err := receiver.group.Phi(plaintext.ValueCT())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to compute Phi of plaintext")
+	}
+	return &Ciphertext{u: rn.Mul(gm)}, nil
 }
 
 func (e *Encrypter) EncryptMany(plaintexts []*Plaintext, receiver *PublicKey, prng io.Reader) ([]*Ciphertext, []*Nonce, error) {
@@ -126,12 +129,15 @@ func (se *SelfEncrypter) SelfEncrypt(plaintext *Plaintext, prng io.Reader) (*Cip
 }
 
 func (se *SelfEncrypter) SelfEncryptWithNonce(plaintext *Plaintext, nonce *Nonce) (*Ciphertext, error) {
-	rn, err := se.sk.group.LiftToNthResidues(nonce.Value())
+	rn, err := se.sk.group.NthResidue(nonce.Value())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to lift nonce to n-th residues")
 	}
-	gm := Phi(se.pk, plaintext).LearnOrder(rn.Group())
-	return &Ciphertext{u: rn.Mul(gm)}, nil
+	gm, err := se.sk.group.Phi(plaintext.ValueCT())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to compute Phi of plaintext")
+	}
+	return &Ciphertext{u: rn.Mul(gm).ForgetOrder()}, nil
 }
 
 func (se *SelfEncrypter) SelfEncryptMany(plaintexts []*Plaintext, prng io.Reader) ([]*Ciphertext, []*Nonce, error) {
@@ -183,14 +189,12 @@ func (d *Decrypter) Decrypt(ciphertext *Ciphertext) (*Plaintext, error) {
 	go func() {
 		defer wg.Done()
 		// TODO: put p.Squared and alike into a variable, everywhere here.
-		fmt.Println("d1", d)
 		d.sk.Arithmetic().P.Squared.ModExp(&mp, ciphertext.ValueCT(), d.sk.Arithmetic().P.PhiFactor.Nat())
 		lp(d.sk, &mp)
 		d.sk.Arithmetic().P.Factor.ModMul(&mp, &mp, d.sk.hp)
 	}()
 	go func() {
 		defer wg.Done()
-		fmt.Println("d2", d)
 		d.sk.Arithmetic().Q.Squared.ModExp(&mq, ciphertext.ValueCT(), d.sk.Arithmetic().Q.PhiFactor.Nat())
 		lq(d.sk, &mq)
 		d.sk.Arithmetic().Q.Factor.ModMul(&mq, &mq, d.sk.hq)

@@ -67,7 +67,7 @@ func testSchnorrHappyPath[P curves.Point[P, B, S], B algebra.FieldElement[B], S 
 	var sessionId network.SID
 	_, err := io.ReadFull(prng, sessionId[:])
 
-	schnorrProtocol, err := schnorr.NewSigmaProtocol(curve.Generator(), prng)
+	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
 	require.NoError(tb, err)
 
 	nizk, err := fischlin.NewCompiler(schnorrProtocol, prng)

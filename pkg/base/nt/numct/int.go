@@ -52,7 +52,7 @@ func (i *Int) Abs() {
 	(*saferith.Int)(i).Neg(saferith.Choice(i.IsNegative()))
 }
 
-func (i *Int) abs() *Nat {
+func (i *Int) AbsNat() *Nat {
 	return (*Nat)((*saferith.Int)(i).Abs())
 }
 
@@ -107,7 +107,7 @@ func (i *Int) MulCap(lhs, rhs *Int, cap int) {
 }
 
 func (i *Int) Div(numerator, denominator *Int) (ok ct.Bool) {
-	dm, ok := NewModulus(denominator.abs())
+	dm, ok := NewModulus(denominator.AbsNat())
 	if ok == ct.False {
 		return ct.False
 	}
@@ -120,7 +120,7 @@ func (i *Int) Div(numerator, denominator *Int) (ok ct.Bool) {
 
 func (i *Int) DivCap(numerator *Int, denominator Modulus, cap int) (ok ct.Bool) {
 	var outNat Nat
-	ok = outNat.DivCap(numerator.abs(), denominator, cap)
+	ok = outNat.DivCap(numerator.AbsNat(), denominator, cap)
 
 	i.SetNat(&outNat)
 	// Result is already positive from DivCap on absolute values
@@ -130,7 +130,7 @@ func (i *Int) DivCap(numerator *Int, denominator Modulus, cap int) (ok ct.Bool) 
 
 func (i *Int) ExactDiv(lhs *Int, rhs Modulus) (ok ct.Bool) {
 	var outNat Nat
-	ok = outNat.ExactDiv(lhs.abs(), rhs)
+	ok = outNat.ExactDiv(lhs.AbsNat(), rhs)
 	i.SetNat(&outNat)
 	i.CondNeg(lhs.IsNegative())
 	return ok
@@ -149,7 +149,7 @@ func (i *Int) IsNegative() ct.Bool {
 }
 
 func (i *Int) IsZero() ct.Bool {
-	return i.abs().IsZero()
+	return i.AbsNat().IsZero()
 }
 
 func (i *Int) IsNonZero() ct.Bool {
@@ -168,7 +168,7 @@ func (i *Int) Sqrt(x *Int) (ok ct.Bool) {
 	nonNeg := x.IsNegative().Not()
 
 	// Magnitude and (public) capacity.
-	a := x.abs()
+	a := x.AbsNat()
 	capBits := int(a.AnnouncedLen())
 
 	var rootNat saferith.Nat
@@ -261,11 +261,11 @@ func (i *Int) Square(x *Int) {
 }
 
 func (i *Int) Bit(index uint) byte {
-	return i.abs().Bit(index)
+	return i.AbsNat().Bit(index)
 }
 
 func (i *Int) Bytes() []byte {
-	return i.abs().Bytes()
+	return i.AbsNat().Bytes()
 }
 
 func (i *Int) SetBytes(b []byte) (ok ct.Bool) {
@@ -286,8 +286,8 @@ func (i *Int) Lsh(x *Int, shift uint) {
 }
 
 func (i *Int) LshCap(x *Int, shift uint, cap int) {
-	out := i.abs()
-	out.LshCap(x.abs(), shift, cap)
+	out := i.AbsNat()
+	out.LshCap(x.AbsNat(), shift, cap)
 	i.SetNat(out)
 	// Preserve sign
 	(*saferith.Int)(i).Neg(saferith.Choice(x.IsNegative()))
@@ -298,8 +298,8 @@ func (i *Int) Rsh(x *Int, shift uint) {
 }
 
 func (i *Int) RshCap(x *Int, shift uint, cap int) {
-	out := i.abs()
-	out.RshCap(x.abs(), shift, cap)
+	out := i.AbsNat()
+	out.RshCap(x.AbsNat(), shift, cap)
 	i.SetNat(out)
 	// Preserve sign
 	(*saferith.Int)(i).Neg(saferith.Choice(x.IsNegative()))
@@ -317,11 +317,11 @@ func (i *Int) Resize(cap int) {
 }
 
 func (i *Int) Coprime(rhs *Int) ct.Bool {
-	return i.abs().Coprime(rhs.abs())
+	return i.AbsNat().Coprime(rhs.AbsNat())
 }
 
 func (i *Int) IsProbablyPrime() ct.Bool {
-	return i.abs().IsProbablyPrime() & i.IsNegative().Not()
+	return i.AbsNat().IsProbablyPrime() & i.IsNegative().Not()
 }
 
 func (i *Int) Select(choice ct.Choice, x0, x1 *Int) {
@@ -329,8 +329,8 @@ func (i *Int) Select(choice ct.Choice, x0, x1 *Int) {
 	// Since saferith.Int doesn't have Select, we need to implement it ourselves
 
 	// Get absolute values
-	abs0 := x0.abs()
-	abs1 := x1.abs()
+	abs0 := x0.AbsNat()
+	abs1 := x1.AbsNat()
 
 	// Use Nat's Select for the magnitude
 	var selectedAbs Nat
@@ -350,8 +350,8 @@ func (i *Int) CondAssign(choice ct.Choice, x *Int) {
 	iNeg := i.IsNegative()
 
 	// Conditionally assign magnitude
-	outNat := i.abs()
-	outNat.CondAssign(choice, x.abs())
+	outNat := i.AbsNat()
+	outNat.CondAssign(choice, x.AbsNat())
 	i.SetNat(outNat) // Now i is positive with conditionally updated magnitude
 
 	// Conditionally set sign: use i's original sign when choice=0, x's sign when choice=1
@@ -373,7 +373,7 @@ func (i *Int) Compare(rhs *Int) (lt, eq, gt ct.Bool) {
 	bNeg := rhs.IsNegative()
 
 	// Magnitude compare on |i| and |rhs|
-	ltM, eqM, gtM := i.abs().Compare(rhs.abs())
+	ltM, eqM, gtM := i.AbsNat().Compare(rhs.AbsNat())
 
 	// same = 1 iff signs are equal
 	same := (aNeg ^ bNeg).Not()
@@ -400,7 +400,7 @@ func (i *Int) Compare(rhs *Int) (lt, eq, gt ct.Bool) {
 }
 
 func (i *Int) Uint64() uint64 {
-	return i.abs().Uint64()
+	return i.AbsNat().Uint64()
 }
 
 func (i *Int) SetUint64(x uint64) {
@@ -408,7 +408,7 @@ func (i *Int) SetUint64(x uint64) {
 }
 
 func (i *Int) Int64() int64 {
-	abs := int64(i.abs().Uint64())
+	abs := int64(i.AbsNat().Uint64())
 	negated := abs * -1
 	// When IsNegative() is 1 (true), select negated
 	// ct.Select returns x1 when choice is 1, x0 when choice is 0
@@ -442,7 +442,7 @@ func (i *Int) AnnouncedLen() uint {
 }
 
 func (i *Int) IsOdd() ct.Bool {
-	return i.abs().IsOdd()
+	return i.AbsNat().IsOdd()
 }
 
 func (i *Int) IsEven() ct.Bool {
@@ -478,8 +478,8 @@ func (i *Int) AndCap(x, y *Int, cap int) {
 
 	xNeg := x.IsNegative()
 	yNeg := y.IsNegative()
-	xAbs := x.abs()
-	yAbs := y.abs()
+	xAbs := x.AbsNat()
+	yAbs := y.AbsNat()
 
 	// Calculate all four cases
 	bothPos := (xNeg | yNeg).Not()
@@ -552,8 +552,8 @@ func (i *Int) OrCap(x, y *Int, cap int) {
 
 	xNeg := x.IsNegative()
 	yNeg := y.IsNegative()
-	xAbs := x.abs()
-	yAbs := y.abs()
+	xAbs := x.AbsNat()
+	yAbs := y.AbsNat()
 
 	// Calculate all four cases
 	bothPos := (xNeg | yNeg).Not()
@@ -637,8 +637,8 @@ func (i *Int) XorCap(x, y *Int, cap int) {
 	bothNeg := xNeg & yNeg
 
 	// Get magnitudes
-	xMag := x.abs()
-	yMag := y.abs()
+	xMag := x.AbsNat()
+	yMag := y.AbsNat()
 
 	// Case 1: Both positive - simple XOR
 	case1 := new(Nat)

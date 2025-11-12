@@ -31,7 +31,7 @@ func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, value FE, ac *Acc
 	}, nil
 }
 
-func (s *Share[FE]) ToAdditive(qualifiedSet sharing.MinimalQualifiedAccessStructure) (*additive.Share[FE], error) {
+func (s *Share[FE]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAccessStructure) (*additive.Share[FE], error) {
 	field, ok := s.v.Structure().(algebra.PrimeField[FE])
 	if !ok {
 		return nil, errs.NewType("share value does not implement Field interface")
@@ -45,7 +45,7 @@ func (s *Share[FE]) ToAdditive(qualifiedSet sharing.MinimalQualifiedAccessStruct
 		return nil, errs.NewMembership("share ID %d is not a valid shareholder", s.id)
 	}
 	converted := lambda_i.Mul(s.v)
-	additiveShare, err := additive.NewShare(s.id, converted, &qualifiedSet)
+	additiveShare, err := additive.NewShare(s.id, converted, qualifiedSet)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to convert Shamir share to additive")
 	}

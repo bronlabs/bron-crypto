@@ -149,6 +149,11 @@ type CyclicGroupElement[E any] interface {
 	CyclicMonoidElement[E]
 }
 
+type FiniteGroup[GE any] interface {
+	Group[GE]
+	FiniteStructure[GE]
+}
+
 // ************** Extra Monoids.
 
 // TODO: Move IsTorsion free to points
@@ -174,7 +179,7 @@ type PrimaryDecomposableAbelianGroup[E, S any] interface {
 }
 
 type PrimeGroup[E, S any] interface {
-	FiniteStructure[E]
+	FiniteGroup[E]
 	base.HashableStructure[E]
 	AbelianGroup[E, S]
 	VectorSpace[E, S]
@@ -189,7 +194,6 @@ type PrimeGroupElement[E, S any] interface {
 }
 
 type AdditivePrimeGroup[E, S any] interface {
-	FiniteStructure[E]
 	PrimeGroup[E, S]
 	AdditiveModule[E, S]
 	ScalarBaseMul(S) E

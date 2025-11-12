@@ -60,7 +60,7 @@ func CreateLindell22Cosigners[
 	shards map[sharing.ID]*lindell22.Shard[GE, S],
 	quorum network.Quorum,
 	variant tschnorr.MPCFriendlyVariant[GE, S, M],
-	newCompilerMaker func(protocol *dlogschnorr.Protocol[GE, S]) (compiler.NICompiler[*dlogschnorr.Statement[GE, S], *dlogschnorr.Witness[S]], error),
+	newCompilerMaker func(protocol *dlogschnorr.Protocol[GE, S]) (compiler.NonInteractiveProtocol[*dlogschnorr.Statement[GE, S], *dlogschnorr.Witness[S]], error),
 	transcript ts.Transcript,
 	prng io.Reader,
 ) []*signing.Cosigner[GE, S, M] {
@@ -179,6 +179,6 @@ func NewFiatShamirCompiler[
 	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S],
 ](
 	protocol *dlogschnorr.Protocol[GE, S],
-) (compiler.NICompiler[*dlogschnorr.Statement[GE, S], *dlogschnorr.Witness[S]], error) {
+) (compiler.NonInteractiveProtocol[*dlogschnorr.Statement[GE, S], *dlogschnorr.Witness[S]], error) {
 	return fiatshamir.NewCompiler(protocol)
 }

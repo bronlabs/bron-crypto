@@ -751,11 +751,11 @@ func TestAccessStructure(t *testing.T) {
 
 	t.Run("IsAuthorized", func(t *testing.T) {
 		// Should be authorized only with all shareholders
-		require.True(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4), sharing.ID(0)))
+		require.True(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4), sharing.ID(5)))
 		require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4)))                               // Missing one
 		require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2)))                                                             // Missing many
 		require.False(t, scheme.AccessStructure().IsAuthorized())                                                                                         // No shareholders
-		require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4), sharing.ID(5), sharing.ID(0))) // Too many
+		require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4), sharing.ID(5), sharing.ID(6))) // Too many
 		require.False(t, scheme.AccessStructure().IsAuthorized(sharing.ID(1), sharing.ID(2), sharing.ID(3), sharing.ID(4), sharing.ID(99)))               // Invalid ID
 	})
 
@@ -763,7 +763,7 @@ func TestAccessStructure(t *testing.T) {
 		shareholders := scheme.AccessStructure().Shareholders()
 		require.Equal(t, 5, shareholders.Size())
 		for i := range 5 {
-			require.True(t, shareholders.Contains(sharing.ID(i)))
+			require.True(t, shareholders.Contains(sharing.ID(i+1)))
 		}
 	})
 }

@@ -11,7 +11,7 @@ import (
 func NewOrdinalShareholderSet(count uint) ds.Set[ID] {
 	out := hashset.NewComparable[ID]()
 	for i := range count {
-		out.Add(ID(i))
+		out.Add(ID(i + 1))
 	}
 	return out.Freeze()
 }

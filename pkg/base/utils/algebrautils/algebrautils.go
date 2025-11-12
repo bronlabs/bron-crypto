@@ -6,6 +6,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 )
@@ -56,4 +57,36 @@ func Prod[M algebra.Multiplicand[M]](first M, rest ...M) M {
 	return iterutils.Reduce(slices.Values(rest), first, func(acc M, e M) M {
 		return acc.Mul(e)
 	})
+}
+
+func ScalarMul[E algebra.MonoidElement[E]](base E, exponent *num.Nat) E {
+	monoid := algebra.StructureMustBeAs[algebra.Monoid[E]](base.Structure())
+
+	precomputed := make([]E, 16)
+	precomputed[0] = monoid.OpIdentity()
+	precomputed[1] = base
+	for i := 2; i < 16; i += 2 {
+		precomputed[i] = precomputed[i/2].Op(precomputed[i/2])
+		precomputed[i+1] = precomputed[i].Op(base)
+	}
+
+	res := monoid.OpIdentity()
+	exponentBigEndianBytes := exponent.Bytes()
+	for _, si := range exponentBigEndianBytes {
+		res = res.Op(res)
+		res = res.Op(res)
+		res = res.Op(res)
+		res = res.Op(res)
+		w := (si >> 4) & 0b1111
+		res = res.Op(precomputed[w])
+
+		res = res.Op(res)
+		res = res.Op(res)
+		res = res.Op(res)
+		res = res.Op(res)
+		w = si & 0b1111
+		res = res.Op(precomputed[w])
+	}
+
+	return res
 }

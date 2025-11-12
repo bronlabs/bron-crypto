@@ -18,6 +18,8 @@ var (
 	_ cbor.Unmarshaler = (*Int)(nil)
 	_ cbor.Marshaler   = (*Uint)(nil)
 	_ cbor.Unmarshaler = (*Uint)(nil)
+	_ cbor.Marshaler   = (*Rat)(nil)
+	_ cbor.Unmarshaler = (*Rat)(nil)
 
 	_ cbor.Marshaler   = (*ZMod)(nil)
 	_ cbor.Unmarshaler = (*ZMod)(nil)
@@ -137,6 +139,39 @@ func (u *Uint) UnmarshalCBOR(data []byte) error {
 	}
 	u.v = dto.Value
 	u.m = modulus
+	return nil
+}
+
+type ratDTO struct {
+	A *Int     `cbor:"a"`
+	B *NatPlus `cbor:"b"`
+}
+
+func (r *Rat) MarshalCBOR() ([]byte, error) {
+	dto := &ratDTO{
+		A: r.a,
+		B: r.b,
+	}
+	out, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to marshal Rat")
+	}
+	return out, nil
+}
+
+func (r *Rat) UnmarshalCBOR(data []byte) error {
+	dto, err := serde.UnmarshalCBOR[*ratDTO](data)
+	if err != nil {
+		return errs.WrapSerialisation(err, "couldn't unmarshal input to Rat")
+	}
+	if dto.A == nil {
+		return errs.NewIsNil("numerator")
+	}
+	if dto.B == nil {
+		return errs.NewIsNil("denominator")
+	}
+	r.a = dto.A
+	r.b = dto.B
 	return nil
 }
 

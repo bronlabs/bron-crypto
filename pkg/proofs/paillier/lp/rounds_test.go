@@ -21,12 +21,12 @@ import (
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
-	pInt, err := crand.Prime(prng, 512)
+	pInt, err := crand.Prime(prng, 1024)
 	require.NoError(t, err)
-	pNat := numct.NewNatFromSaferith(new(saferith.Nat).SetBig(pInt, 512))
-	qInt, err := crand.Prime(prng, 512)
+	pNat := numct.NewNatFromSaferith(new(saferith.Nat).SetBig(pInt, pInt.BitLen()))
+	qInt, err := crand.Prime(prng, 1024)
 	require.NoError(t, err)
-	qNat := numct.NewNatFromSaferith(new(saferith.Nat).SetBig(qInt, 512))
+	qNat := numct.NewNatFromSaferith(new(saferith.Nat).SetBig(qInt, qInt.BitLen()))
 
 	p, err := num.NPlus().FromNatCT(pNat)
 	require.NoError(t, err)

@@ -117,7 +117,7 @@ func (s *Share[S]) Bytes() []byte {
 	)
 }
 
-func (s *Share[S]) ToAdditive(qualifiedSet sharing.MinimalQualifiedAccessStructure) (*additive.Share[S], error) {
+func (s *Share[S]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAccessStructure) (*additive.Share[S], error) {
 	ss, err := shamir.NewShare(s.id, s.secret.Value(), nil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create shamir share from share")

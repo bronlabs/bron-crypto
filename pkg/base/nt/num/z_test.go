@@ -71,7 +71,8 @@ func TestIntegers_Creation(t *testing.T) {
 		{
 			name: "FromBytes_Positive",
 			createFunc: func() (*num.Int, error) {
-				return num.Z().FromBytes([]byte{0x0, 0x0, 0x0, 0x01, 0x02, 0x03})
+				// Sign-magnitude: [0x00, 0x01, 0x02, 0x03] = positive 66051
+				return num.Z().FromBytes([]byte{0x00, 0x01, 0x02, 0x03})
 			},
 			expected: "66051", // 0x010203 = 66051
 		},
@@ -80,7 +81,8 @@ func TestIntegers_Creation(t *testing.T) {
 			createFunc: func() (*num.Int, error) {
 				return num.Z().FromBytes([]byte{})
 			},
-			expected: "0",
+			expected:    "",
+			expectError: true,
 		},
 		{
 			name: "FromNat",
@@ -1241,21 +1243,117 @@ func TestIntegers_Bytes(t *testing.T) {
 		value    *num.Int
 		expected []byte
 	}{
+		// Sign-magnitude encoding: [sign_byte, ...abs_bytes]
+		// sign_byte: 0x00 = zero/positive, 0x01 = negative
 		{num.Z().Zero(), []byte{0x00}},
-		{num.Z().One(), []byte{0x01}},
-		{num.Z().FromInt64(255), []byte{0xff}},
-		{num.Z().FromInt64(256), []byte{0x01, 0x00}},
-		{num.Z().FromInt64(66051), []byte{0x01, 0x02, 0x03}},
+		{num.Z().One(), []byte{0x00, 0x01}},
+		{num.Z().FromInt64(255), []byte{0x00, 0xff}},
+		{num.Z().FromInt64(256), []byte{0x00, 0x01, 0x00}},
+		{num.Z().FromInt64(66051), []byte{0x00, 0x01, 0x02, 0x03}},
+		{num.Z().FromInt64(-1), []byte{0x01, 0x01}},
+		{num.Z().FromInt64(-42), []byte{0x01, 0x2a}},
+		{num.Z().FromInt64(-255), []byte{0x01, 0xff}},
+		{num.Z().FromInt64(-256), []byte{0x01, 0x01, 0x00}},
+		{num.Z().FromInt64(-66051), []byte{0x01, 0x01, 0x02, 0x03}},
 	}
 
 	for _, tc := range testCases {
 		result := (tc.value).Bytes()
 		require.Equal(t, tc.expected, result, "Value %s", tc.value.String())
 
-		// Test round-trip
+		// Test round-trip: Bytes() -> FromBytes() should recover original value
 		recovered, err := num.Z().FromBytes(result)
 		require.NoError(t, err)
-		require.True(t, (tc.value).Equal(recovered))
+		require.True(t, (tc.value).Equal(recovered), "Round-trip failed for %s", tc.value.String())
+	}
+}
+
+func TestIntegers_Bytes_SignPreservation(t *testing.T) {
+	t.Parallel()
+
+	// Comprehensive test for sign preservation across Bytes() round-trips
+	testValues := []int64{
+		-1000000, -65536, -256, -255, -42, -1,
+		0,
+		1, 42, 255, 256, 65536, 1000000,
+	}
+
+	for _, val := range testValues {
+		t.Run(num.Z().FromInt64(val).String(), func(t *testing.T) {
+			t.Parallel()
+			original := num.Z().FromInt64(val)
+
+			// Serialize
+			bytes := original.Bytes()
+			require.NotEmpty(t, bytes)
+
+			// Deserialize
+			recovered, err := num.Z().FromBytes(bytes)
+			require.NoError(t, err)
+
+			// Verify equality and sign preservation
+			require.True(t, original.Equal(recovered), "Value mismatch: expected %s, got %s", original.String(), recovered.String())
+			require.Equal(t, original.IsNegative(), recovered.IsNegative(), "Sign not preserved for %d", val)
+			require.Equal(t, original.IsZero(), recovered.IsZero(), "Zero status not preserved")
+			require.Equal(t, original.IsPositive(), recovered.IsPositive(), "Positive status not preserved")
+		})
+	}
+}
+
+func TestIntegers_Rat(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *num.Int
+		expected string
+	}{
+		{
+			name:     "Zero_To_Rat",
+			input:    num.Z().Zero(),
+			expected: "0/1",
+		},
+		{
+			name:     "One_To_Rat",
+			input:    num.Z().One(),
+			expected: "1/1",
+		},
+		{
+			name:     "Positive_To_Rat",
+			input:    num.Z().FromInt64(42),
+			expected: "42/1",
+		},
+		{
+			name:     "Negative_To_Rat",
+			input:    num.Z().FromInt64(-42),
+			expected: "-42/1",
+		},
+		{
+			name:     "Large_Positive_To_Rat",
+			input:    num.Z().FromInt64(1234567890),
+			expected: "1234567890/1",
+		},
+		{
+			name:     "Large_Negative_To_Rat",
+			input:    num.Z().FromInt64(-1234567890),
+			expected: "-1234567890/1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := tt.input.Rat()
+			require.Equal(t, tt.expected, result.String())
+
+			// Verify it's an integer rational
+			require.True(t, result.IsInt())
+
+			// Verify round-trip
+			recovered, err := num.Z().FromRat(result)
+			require.NoError(t, err)
+			require.True(t, tt.input.Equal(recovered))
+		})
 	}
 }
 
@@ -1444,12 +1542,16 @@ func TestIntegers_MissingMethods(t *testing.T) {
 
 	t.Run("Negative_Bytes", func(t *testing.T) {
 		t.Parallel()
-		// Test that negative numbers produce empty bytes (big.Int behaviour)
+		// Test that negative numbers properly encode sign
 		neg := num.Z().FromInt64(-42)
 		bytes := neg.Bytes()
-		// In Go's big.Int, Bytes() returns the absolute value
-		// For -42, we should get the bytes of 42
-		require.Equal(t, []byte{0x2a}, bytes) // 42 = 0x2a
+		// Sign-magnitude encoding: [0x01, 0x2a] for -42
+		require.Equal(t, []byte{0x01, 0x2a}, bytes)
+
+		// Test round-trip
+		recovered, err := num.Z().FromBytes(bytes)
+		require.NoError(t, err)
+		require.True(t, neg.Equal(recovered))
 	})
 }
 

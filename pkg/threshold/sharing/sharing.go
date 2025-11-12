@@ -80,14 +80,14 @@ type LinearShare[S interface {
 	AdditiveShare[S, SV, AC]
 	algebra.AdditivelyHomomorphicLike[S, SV]
 	algebra.AdditivelyActable[S, SV]
-	ToAdditive(MinimalQualifiedAccessStructure) (SA, error)
+	ToAdditive(*MinimalQualifiedAccessStructure) (SA, error)
 }, SV algebra.AdditiveGroupElement[SV], SA AdditiveShare[SA, SV, *MinimalQualifiedAccessStructure], SC algebra.PrimeFieldElement[SC],
 	AC AccessStructure,
 ] interface {
 	AdditiveShare[S, SV, AC]
 	algebra.AdditivelyHomomorphicLike[S, SV]
 	algebra.AdditivelyActable[S, SV]
-	ToAdditive(MinimalQualifiedAccessStructure) (SA, error)
+	ToAdditive(*MinimalQualifiedAccessStructure) (SA, error)
 }
 
 type LinearlyShareableSecret[W Secret[W], WV algebra.PrimeFieldElement[WV]] AdditivelyShareableSecret[W, WV]

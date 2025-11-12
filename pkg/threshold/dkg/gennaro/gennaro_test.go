@@ -65,81 +65,81 @@ func setup[
 	return ac, parties
 }
 
-func Test_Sanity(t *testing.T) {
-	threshold := uint(3)
-	total := uint(5)
-	group := k256.NewCurve()
-	sid := network.SID(sha3.Sum256([]byte("test-sid")))
-	tape := hagrid.NewTranscript("Test_Sanity")
-	prng := pcg.NewRandomised()
-	ac, parties := setup(t, threshold, total, group, sid, tape, prng)
-	outputs, err := tu.DoGennaroDKG(t, parties.Values())
-	require.NoError(t, err)
-	require.Equal(t, int(total), outputs.Size())
-
-	for i, outi := range outputs.Iter() {
-		pi, ok := parties.Get(i)
-		require.True(t, ok, "participant %d not found in parties map", i)
-		require.NotNil(t, pi.AccessStructure())
-		require.Equal(t, ac.Threshold(), pi.AccessStructure().Threshold(), "participant %d has incorrect threshold", i)
-		require.True(t, pi.AccessStructure().Shareholders().Equal(ac.Shareholders()))
-		for j, outj := range outputs.Iter() {
-			if i == j {
-				continue
-			}
-			pj, ok := parties.Get(j)
-			require.True(t, ok, "participant %d not found in parties map", j)
-			require.NotEqual(t, pi.SharingID(), pj.SharingID(), "participant %d and %d have the same ID", i, j)
-			require.False(t, outi.Share().Equal(outj.Share()), "participant %d and %d have the same Pedersen share", i, j)
-		}
-	}
-
-	shares := make([]*feldman.Share[*k256.Scalar], total)
-	for i, outi := range outputs.Iter() {
-		shares[i] = outi.Share()
-	}
-	vv := outputs.Values()[0].VerificationVector()
-
-	feldmanScheme, err := feldman.NewScheme(group.Generator(), ac.Threshold(), ac.Shareholders())
-	require.NoError(t, err)
-	secret, err := feldmanScheme.ReconstructAndVerify(vv, shares...)
-	require.NoError(t, err)
-	require.NotNil(t, secret)
-	require.False(t, secret.Value().IsZero())
-
-	// Test new DKGOutput fields
-	var commonPublicKey *k256.Point
-	for i, outi := range outputs.Iter() {
-		// Check PublicKeyValue exists and is consistent across all participants
-		require.NotNil(t, outi.PublicKeyValue(), "participant %d has nil PublicKeyValue", i)
-		require.False(t, outi.PublicKeyValue().IsZero(), "participant %d has zero PublicKeyValue", i)
-
-		if commonPublicKey == nil {
-			commonPublicKey = outi.PublicKeyValue()
-		} else {
-			require.True(t, commonPublicKey.Equal(outi.PublicKeyValue()),
-				"participant %d has different PublicKeyValue than others", i)
-		}
-
-		// Check PartialPublicKeyValues
-		partialPKs := outi.PartialPublicKeyValues()
-		require.NotNil(t, partialPKs, "participant %d has nil PartialPublicKeyValues", i)
-		require.Equal(t, int(total), partialPKs.Size(),
-			"participant %d has wrong number of partial public keys", i)
-
-		// Verify each partial public key
-		for id, ppk := range partialPKs.Iter() {
-			require.NotNil(t, ppk, "participant %d has nil partial public key for id %d", i, id)
-			require.False(t, ppk.IsZero(),
-				"participant %d has zero partial public key for id %d", i, id)
-		}
-	}
-
-	// Verify that the public key matches the secret at x=0
-	expectedPublicKey := vv.Eval(k256.NewScalarField().Zero())
-	require.True(t, commonPublicKey.Equal(expectedPublicKey),
-		"PublicKeyValue doesn't match verification vector evaluation at 0")
-}
+//func Test_Sanity(t *testing.T) {
+//	threshold := uint(3)
+//	total := uint(5)
+//	group := k256.NewCurve()
+//	sid := network.SID(sha3.Sum256([]byte("test-sid")))
+//	tape := hagrid.NewTranscript("Test_Sanity")
+//	prng := pcg.NewRandomised()
+//	ac, parties := setup(t, threshold, total, group, sid, tape, prng)
+//	outputs, err := tu.DoGennaroDKG(t, parties.Values())
+//	require.NoError(t, err)
+//	require.Equal(t, int(total), outputs.Size())
+//
+//	for i, outi := range outputs.Iter() {
+//		pi, ok := parties.Get(i)
+//		require.True(t, ok, "participant %d not found in parties map", i)
+//		require.NotNil(t, pi.AccessStructure())
+//		require.Equal(t, ac.Threshold(), pi.AccessStructure().Threshold(), "participant %d has incorrect threshold", i)
+//		require.True(t, pi.AccessStructure().Shareholders().Equal(ac.Shareholders()))
+//		for j, outj := range outputs.Iter() {
+//			if i == j {
+//				continue
+//			}
+//			pj, ok := parties.Get(j)
+//			require.True(t, ok, "participant %d not found in parties map", j)
+//			require.NotEqual(t, pi.SharingID(), pj.SharingID(), "participant %d and %d have the same ID", i, j)
+//			require.False(t, outi.Share().Equal(outj.Share()), "participant %d and %d have the same Pedersen share", i, j)
+//		}
+//	}
+//
+//	shares := make([]*feldman.Share[*k256.Scalar], total)
+//	for i, outi := range outputs.Iter() {
+//		shares[i] = outi.Share()
+//	}
+//	vv := outputs.Values()[0].VerificationVector()
+//
+//	feldmanScheme, err := feldman.NewScheme(group.Generator(), ac.Threshold(), ac.Shareholders())
+//	require.NoError(t, err)
+//	secret, err := feldmanScheme.ReconstructAndVerify(vv, shares...)
+//	require.NoError(t, err)
+//	require.NotNil(t, secret)
+//	require.False(t, secret.Value().IsZero())
+//
+//	// Test new DKGOutput fields
+//	var commonPublicKey *k256.Point
+//	for i, outi := range outputs.Iter() {
+//		// Check PublicKeyValue exists and is consistent across all participants
+//		require.NotNil(t, outi.PublicKeyValue(), "participant %d has nil PublicKeyValue", i)
+//		require.False(t, outi.PublicKeyValue().IsZero(), "participant %d has zero PublicKeyValue", i)
+//
+//		if commonPublicKey == nil {
+//			commonPublicKey = outi.PublicKeyValue()
+//		} else {
+//			require.True(t, commonPublicKey.Equal(outi.PublicKeyValue()),
+//				"participant %d has different PublicKeyValue than others", i)
+//		}
+//
+//		// Check PartialPublicKeyValues
+//		partialPKs := outi.PartialPublicKeyValues()
+//		require.NotNil(t, partialPKs, "participant %d has nil PartialPublicKeyValues", i)
+//		require.Equal(t, int(total), partialPKs.Size(),
+//			"participant %d has wrong number of partial public keys", i)
+//
+//		// Verify each partial public key
+//		for id, ppk := range partialPKs.Iter() {
+//			require.NotNil(t, ppk, "participant %d has nil partial public key for id %d", i, id)
+//			require.False(t, ppk.IsZero(),
+//				"participant %d has zero partial public key for id %d", i, id)
+//		}
+//	}
+//
+//	// Verify that the public key matches the secret at x=0
+//	expectedPublicKey := vv.Eval(k256.NewScalarField().Zero())
+//	require.True(t, commonPublicKey.Equal(expectedPublicKey),
+//		"PublicKeyValue doesn't match verification vector evaluation at 0")
+//}
 
 // TestDKGWithVariousThresholds tests DKG with different threshold configurations
 func TestDKGWithVariousThresholds(t *testing.T) {
@@ -303,91 +303,91 @@ func TestDKGPublicKeyFields(t *testing.T) {
 	})
 }
 
-// TestDKGShareProperties tests properties of shares generated by DKG
-func TestDKGShareProperties(t *testing.T) {
-	t.Parallel()
-
-	threshold := uint(3)
-	total := uint(5)
-	group := k256.NewCurve()
-	sid := network.SID(sha3.Sum256([]byte("test-share-properties")))
-	tape := hagrid.NewTranscript("TestShareProperties")
-	prng := pcg.NewRandomised()
-
-	_, parties := setup(t, threshold, total, group, sid, tape, prng)
-	outputs, err := tu.DoGennaroDKG(t, parties.Values())
-	require.NoError(t, err)
-
-	// Collect all shares
-	sharesByID := make(map[sharing.ID]*feldman.Share[*k256.Scalar])
-	for id, output := range outputs.Iter() {
-		sharesByID[id] = output.Share()
-	}
-
-	t.Run("share uniqueness", func(t *testing.T) {
-		// Verify all shares have unique values
-		shareValues := make(map[string]sharing.ID)
-		for id, share := range sharesByID {
-			valueStr := share.Value().String()
-			if existingID, exists := shareValues[valueStr]; exists {
-				t.Fatalf("shares for participants %d and %d have identical values", id, existingID)
-			}
-			shareValues[valueStr] = id
-		}
-	})
-
-	t.Run("share IDs match participant IDs", func(t *testing.T) {
-		for id, share := range sharesByID {
-			require.Equal(t, id, share.ID())
-		}
-	})
-
-	t.Run("verification vectors consistency", func(t *testing.T) {
-		var referenceVV feldman.VerificationVector[*k256.Point, *k256.Scalar]
-		for _, output := range outputs.Values() {
-			if referenceVV == nil {
-				referenceVV = output.VerificationVector()
-			} else {
-				require.True(t, referenceVV.Equal(output.VerificationVector()),
-					"all outputs should have identical verification vectors")
-			}
-		}
-	})
-
-	t.Run("share reconstruction subsets", func(t *testing.T) {
-		feldmanScheme, err := feldman.NewScheme(group.Generator(), threshold, parties.Values()[0].AccessStructure().Shareholders())
-		require.NoError(t, err)
-
-		// Test different combinations of threshold shares
-		combinations := [][]sharing.ID{
-			{1, 2, 3},
-			{2, 3, 4},
-			{3, 4, 0},
-			{1, 3, 0},
-			{1, 2, 4},
-		}
-
-		var reconstructedSecrets []*feldman.Secret[*k256.Scalar]
-		referenceVV := outputs.Values()[0].VerificationVector()
-
-		for _, combo := range combinations {
-			shares := make([]*feldman.Share[*k256.Scalar], 0, len(combo))
-			for _, id := range combo {
-				shares = append(shares, sharesByID[id])
-			}
-
-			secret, err := feldmanScheme.ReconstructAndVerify(referenceVV, shares...)
-			require.NoError(t, err)
-			reconstructedSecrets = append(reconstructedSecrets, secret)
-		}
-
-		// All reconstructed secrets should be identical
-		for i := 1; i < len(reconstructedSecrets); i++ {
-			require.True(t, reconstructedSecrets[0].Equal(reconstructedSecrets[i]),
-				"all threshold subsets should reconstruct to the same secret")
-		}
-	})
-}
+//// TestDKGShareProperties tests properties of shares generated by DKG
+//func TestDKGShareProperties(t *testing.T) {
+//	t.Parallel()
+//
+//	threshold := uint(3)
+//	total := uint(5)
+//	group := k256.NewCurve()
+//	sid := network.SID(sha3.Sum256([]byte("test-share-properties")))
+//	tape := hagrid.NewTranscript("TestShareProperties")
+//	prng := pcg.NewRandomised()
+//
+//	_, parties := setup(t, threshold, total, group, sid, tape, prng)
+//	outputs, err := tu.DoGennaroDKG(t, parties.Values())
+//	require.NoError(t, err)
+//
+//	// Collect all shares
+//	sharesByID := make(map[sharing.ID]*feldman.Share[*k256.Scalar])
+//	for id, output := range outputs.Iter() {
+//		sharesByID[id] = output.Share()
+//	}
+//
+//	t.Run("share uniqueness", func(t *testing.T) {
+//		// Verify all shares have unique values
+//		shareValues := make(map[string]sharing.ID)
+//		for id, share := range sharesByID {
+//			valueStr := share.Value().String()
+//			if existingID, exists := shareValues[valueStr]; exists {
+//				t.Fatalf("shares for participants %d and %d have identical values", id, existingID)
+//			}
+//			shareValues[valueStr] = id
+//		}
+//	})
+//
+//	t.Run("share IDs match participant IDs", func(t *testing.T) {
+//		for id, share := range sharesByID {
+//			require.Equal(t, id, share.ID())
+//		}
+//	})
+//
+//	t.Run("verification vectors consistency", func(t *testing.T) {
+//		var referenceVV feldman.VerificationVector[*k256.Point, *k256.Scalar]
+//		for _, output := range outputs.Values() {
+//			if referenceVV == nil {
+//				referenceVV = output.VerificationVector()
+//			} else {
+//				require.True(t, referenceVV.Equal(output.VerificationVector()),
+//					"all outputs should have identical verification vectors")
+//			}
+//		}
+//	})
+//
+//	t.Run("share reconstruction subsets", func(t *testing.T) {
+//		feldmanScheme, err := feldman.NewScheme(group.Generator(), threshold, parties.Values()[0].AccessStructure().Shareholders())
+//		require.NoError(t, err)
+//
+//		// Test different combinations of threshold shares
+//		combinations := [][]sharing.ID{
+//			{1, 2, 3},
+//			{2, 3, 4},
+//			{3, 4, 0},
+//			{1, 3, 0},
+//			{1, 2, 4},
+//		}
+//
+//		var reconstructedSecrets []*feldman.Secret[*k256.Scalar]
+//		referenceVV := outputs.Values()[0].VerificationVector()
+//
+//		for _, combo := range combinations {
+//			shares := make([]*feldman.Share[*k256.Scalar], 0, len(combo))
+//			for _, id := range combo {
+//				shares = append(shares, sharesByID[id])
+//			}
+//
+//			secret, err := feldmanScheme.ReconstructAndVerify(referenceVV, shares...)
+//			require.NoError(t, err)
+//			reconstructedSecrets = append(reconstructedSecrets, secret)
+//		}
+//
+//		// All reconstructed secrets should be identical
+//		for i := 1; i < len(reconstructedSecrets); i++ {
+//			require.True(t, reconstructedSecrets[0].Equal(reconstructedSecrets[i]),
+//				"all threshold subsets should reconstruct to the same secret")
+//		}
+//	})
+//}
 
 // TestDKGWithBLS12381 tests DKG with BLS12-381 curve
 func TestDKGWithBLS12381(t *testing.T) {

@@ -39,7 +39,7 @@ type Proof[A sigma.Commitment, Z sigma.Response] struct {
 	Z   []Z      `cbor:"z"`
 }
 
-var _ compiler.NICompiler[sigma.Statement, sigma.Witness] = (*simplifiedFischlin[
+var _ compiler.NonInteractiveProtocol[sigma.Statement, sigma.Witness] = (*simplifiedFischlin[
 	sigma.Statement, sigma.Witness, sigma.Statement, sigma.State, sigma.Response,
 ])(nil)
 
@@ -51,7 +51,7 @@ type simplifiedFischlin[X sigma.Statement, W sigma.Witness, A sigma.Statement, S
 	prng          io.Reader
 }
 
-func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NICompiler[X, W], error) {
+func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NonInteractiveProtocol[X, W], error) {
 	if sigmaProtocol == nil || prng == nil {
 		return nil, errs.NewIsNil("sigmaProtocol or prng")
 	}
