@@ -1,4 +1,4 @@
-package trusteddealer
+package trusted_dealer
 
 import (
 	"io"
@@ -18,11 +18,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/lindell17"
 )
 
-func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], threshold uint, shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *lindell17.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
+func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *lindell17.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
 	if curve == nil || shareholder == nil || shareholder.Size() == 0 || prng == nil {
 		return nil, nil, errs.NewIsNil("invalid input to trusted dealer")
 	}
-	feldmanDealer, err := feldman.NewScheme(curve.Generator(), threshold, shareholder)
+	feldmanDealer, err := feldman.NewScheme(curve.Generator(), 2, shareholder)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not create shamir scheme")
 	}
@@ -40,7 +40,7 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 
 	paillierPrivateKeys := make(map[sharing.ID]*paillier.PrivateKey)
 	paillierPublicKeys := make(map[sharing.ID]*paillier.PublicKey)
-	paillierEncryptedShares := make(map[sharing.ID]*paillier.Ciphertext)
+	shareCiphertexts := make(map[sharing.ID]*paillier.Ciphertext)
 
 	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(lp.PaillierBitSizeN))
 	if err != nil {
@@ -57,12 +57,12 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 			return nil, nil, errs.WrapFailed(err, "cannot create paillier plaintext from share bytes")
 		}
 
-		senc, err := scheme.SelfEncrypter(paillierPrivateKeys[id])
+		encrypter, err := scheme.SelfEncrypter(paillierPrivateKeys[id])
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot create paillier encrypter")
 		}
 
-		paillierEncryptedShares[id], _, err = senc.SelfEncrypt(sharePlaintext, prng)
+		shareCiphertexts[id], _, err = encrypter.SelfEncrypt(sharePlaintext, prng)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot encrypt share under paillier public key")
 		}
@@ -72,7 +72,7 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 	for id := range feldmanOutput.Shares().Iter() {
 		ppks := maps.Clone(paillierPublicKeys)
 		delete(ppks, id)
-		encs := maps.Clone(paillierEncryptedShares)
+		encs := maps.Clone(shareCiphertexts)
 		delete(encs, id)
 
 		auxInfo, err := lindell17.NewAuxiliaryInfo(

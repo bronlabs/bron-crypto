@@ -59,7 +59,7 @@ func (s *Suite[P, B, S]) IsDeterministic() bool {
 	return s.deterministic
 }
 
-func (s *Suite[P, B, S]) Curve() curves.Curve[P, B, S] {
+func (s *Suite[P, B, S]) Curve() Curve[P, B, S] {
 	return s.curve
 }
 

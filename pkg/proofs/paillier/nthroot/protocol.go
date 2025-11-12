@@ -109,9 +109,9 @@ func NewProtocol[A znstar.ArithmeticPaillier](group *znstar.PaillierGroup[A], pr
 	anc := &anchor[A]{
 		n: group.N().Nat(),
 	}
-	challengeBitLen := 256
-	challengeByteLen := 256 / 8
-	soundnessError := uint(challengeBitLen / 2)
+	challengeBitLen := 128
+	challengeByteLen := (challengeBitLen + 7) / 8
+	soundnessError := uint(challengeBitLen)
 	scalarMul := func(unit *znstar.PaillierGroupElement[A], eBytes []byte) *znstar.PaillierGroupElement[A] {
 		e, _ := num.N().FromBytes(eBytes)
 		return unit.Exp(e)

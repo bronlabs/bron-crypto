@@ -1,7 +1,6 @@
 package modular
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -147,7 +146,6 @@ func (m *OddPrimeSquareFactors) ModExp(out, base, exp *numct.Nat) {
 	var mp, mq numct.Nat
 	var wg sync.WaitGroup
 	wg.Add(2)
-	fmt.Println(m.Q)
 	go func() {
 		defer wg.Done()
 		var ep numct.Nat

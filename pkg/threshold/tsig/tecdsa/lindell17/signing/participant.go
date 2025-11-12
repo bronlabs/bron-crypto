@@ -68,10 +68,10 @@ func (cosigner *Cosigner[P, B, S]) SharingID() sharing.ID {
 	return cosigner.shard.Share().ID()
 }
 
-func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *ecdsa.Suite[P, B, S], hisSharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader, roundNo uint) (cosigner *Cosigner[P, B, S], hisSharingId sharing.ID, err error) {
-	err = validateInputs(sessionId, suite, hisSharingID, myShard, niCompiler, tape, prng)
+func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *ecdsa.Suite[P, B, S], hisSharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader, roundNo uint) (cosigner *Cosigner[P, B, S], err error) {
+	err = validateInputs(suite, hisSharingID, myShard, niCompiler, tape, prng)
 	if err != nil {
-		return nil, 0, errs.WrapArgument(err, "invalid input arguments")
+		return nil, errs.WrapArgument(err, "invalid input arguments")
 	}
 
 	dst := fmt.Sprintf("%s_%s_%s_%s", transcriptLabel, sessionId, niCompiler, suite.Curve().Name())
@@ -79,20 +79,20 @@ func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 
 	ck, err := hash_comm.NewKeyFromCRSBytes(sessionId, dst, myShard.PublicKey().Value().ToCompressed())
 	if err != nil {
-		return nil, 0, errs.WrapFailed(err, "could not create commitment key from CRS")
+		return nil, errs.WrapFailed(err, "could not create commitment key from CRS")
 	}
 	commitmentScheme, err := hash_comm.NewScheme(ck)
 	if err != nil {
-		return nil, 0, errs.WrapFailed(err, "could not create commitment scheme")
+		return nil, errs.WrapFailed(err, "could not create commitment scheme")
 	}
 	schnorrProtocol, err := schnorrpok.NewProtocol(suite.Curve().Generator(), prng)
 	if err != nil {
-		return nil, 0, errs.WrapFailed(err, "failed to create schnorr protocol")
+		return nil, errs.WrapFailed(err, "failed to create schnorr protocol")
 	}
 
 	niDlogScheme, err := compiler.Compile(niCompiler, schnorrProtocol, prng)
 	if err != nil {
-		return nil, 0, errs.WrapFailed(err, "failed to compile niDlogProver")
+		return nil, errs.WrapFailed(err, "failed to compile niDlogProver")
 	}
 
 	return &Cosigner[P, B, S]{
@@ -104,39 +104,36 @@ func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		shard:            myShard,
 		commitmentScheme: commitmentScheme,
 		niDlogScheme:     niDlogScheme,
-	}, hisSharingId, nil
+	}, nil
 }
 
 func NewPrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *ecdsa.Suite[P, B, S], secondarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner[P, B, S], err error) {
-	cosigner, hisSharingId, err := newCosigner(sessionId, suite, secondarySharingID, myShard, niCompiler, tape, prng, 1)
+	cosigner, err := newCosigner(sessionId, suite, secondarySharingID, myShard, niCompiler, tape, prng, 1)
 	if err != nil {
 		return nil, errs.WrapValidation(err, "could not construct primary cosigner")
 	}
 	primaryCosigner = &PrimaryCosigner[P, B, S]{
 		Cosigner:           *cosigner,
-		secondarySharingId: hisSharingId,
+		secondarySharingId: secondarySharingID,
 		state:              &PrimaryCosignerState[P, B, S]{},
 	}
 	return primaryCosigner, nil
 }
 
 func NewSecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *ecdsa.Suite[P, B, S], primarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner[P, B, S], err error) {
-	cosigner, hisSharingId, err := newCosigner(sessionId, suite, primarySharingID, myShard, niCompiler, tape, prng, 2)
+	cosigner, err := newCosigner(sessionId, suite, primarySharingID, myShard, niCompiler, tape, prng, 2)
 	if err != nil {
 		return nil, errs.WrapValidation(err, "could not construct secondary cosigner")
 	}
 	secondaryCosigner = &SecondaryCosigner[P, B, S]{
 		Cosigner:         *cosigner,
-		primarySharingId: hisSharingId,
+		primarySharingId: primarySharingID,
 		state:            &SecondaryCosignerState[P, B, S]{},
 	}
 	return secondaryCosigner, nil
 }
 
-func validateInputs[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *ecdsa.Suite[P, B, S], other sharing.ID, myShard *lindell17.Shard[P, B, S], nic compiler.Name, tape transcripts.Transcript, prng io.Reader) error {
-	if len(sessionId) == 0 {
-		return errs.NewArgument("invalid session id: %s", sessionId)
-	}
+func validateInputs[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *ecdsa.Suite[P, B, S], other sharing.ID, myShard *lindell17.Shard[P, B, S], nic compiler.Name, tape transcripts.Transcript, prng io.Reader) error {
 	if suite == nil {
 		return errs.NewIsNil("suite is nil")
 	}
