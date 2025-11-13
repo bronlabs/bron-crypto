@@ -45,7 +45,7 @@ func (m *PolynomialModule[ME, S]) FromBytes(bytes []byte) (*ModuleValuedPolynomi
 	if len(bytes) == 0 {
 		return m.OpIdentity(), nil
 	}
-	if len(bytes)&coeffSize != 0 {
+	if (len(bytes) % coeffSize) != 0 {
 		return nil, errs.NewLength("bytes length must be a multiple of coefficient module element size")
 	}
 
