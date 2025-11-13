@@ -39,7 +39,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	verifier.state.y = sigand.ComposeWitnesses(slices.Collect(iterutils.Map(slices.Values(nonces), func(y *paillier.Nonce) *nthroot.Witness[*modular.SimpleModulus] {
 		return nthroot.NewWitness(y.Value())
 	}))...)
-	verifier.state.rootsProver, err = sigma.NewProver([]byte(verifier.SessionId[:]), rootTranscript.Clone(), verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
+	verifier.state.rootsProver, err = sigma.NewProver(verifier.SessionId[:], rootTranscript.Clone(), verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create sigma protocol prover")
 	}
@@ -66,8 +66,8 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 
 	// prover.state.x = input.X
 	prover.state.x = make([]*nthroot.Statement[*modular.OddPrimeSquareFactors], prover.k)
-	for i, stmti := range input.X {
-		prover.state.x[i], err = nthroot.NewStatementKnownOrder(stmti.X, prover.paillierSecretKey.Group())
+	for i, x := range input.X {
+		prover.state.x[i], err = nthRootStatementLearnOrder(x, prover.paillierSecretKey.Group())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "failed to create statement with known order")
 		}
@@ -79,8 +79,8 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 	}
 
 	commitments := make([]*nthroot.Commitment[*modular.OddPrimeSquareFactors], prover.k)
-	for i, comi := range input.NthRootsProverOutput {
-		commitments[i], err = nthroot.NewCommitmentKnownOrder(comi.A, prover.paillierSecretKey.Group())
+	for i, a := range input.NthRootsProverOutput {
+		commitments[i], err = nthRootCommitmentLearnOrder(a, prover.paillierSecretKey.Group())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "failed to create commitment with known order")
 		}
@@ -117,8 +117,8 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	}
 	// round 4 of proving the knowledge of y
 	responses := make([]*nthroot.Response[*modular.OddPrimeSquareFactors], prover.k)
-	for i, respi := range input.NthRootsProverOutput {
-		responses[i], err = nthroot.NewResponseKnownOrder(respi.Z, prover.paillierSecretKey.Group())
+	for i, z := range input.NthRootsProverOutput {
+		responses[i], err = nthRootResponseLearnOrder(z, prover.paillierSecretKey.Group())
 		if err != nil {
 			return nil, errs.WrapFailed(err, "failed to create response with known order")
 		}
