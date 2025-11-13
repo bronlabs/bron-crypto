@@ -7,8 +7,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/nthroot"
 )
 
-// TODO: I don't think this is secure
-
 func nthRootStatementLearnOrder[A znstar.ArithmeticPaillier](x *nthroot.Statement[A], g *znstar.PaillierGroupKnownOrder) (*nthroot.Statement[*modular.OddPrimeSquareFactors], error) {
 	if x == nil || g == nil {
 		return nil, errs.NewIsNil("x or g")
