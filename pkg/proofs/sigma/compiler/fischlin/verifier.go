@@ -86,6 +86,10 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 
 		// 4.a. Halt and output 'reject' if VerifyProof(x, m_i, e_i, z_i) == 0
 		eBytes := make([]byte, v.sigmaProtocol.GetChallengeBytesLength())
+		if (len(eBytes) - len(fischlinProof.E[i])) < 0 {
+			return errs.NewVerification("invalid challenge")
+		}
+
 		copy(eBytes[len(eBytes)-len(fischlinProof.E[i]):], fischlinProof.E[i])
 		err = v.sigmaProtocol.Verify(statement, fischlinProof.A[i], eBytes, fischlinProof.Z[i])
 		if err != nil {
