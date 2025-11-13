@@ -30,6 +30,10 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 func (p *prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
 	p.transcript.AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, p.rho))
 	p.transcript.AppendBytes(statementLabel, statement.Bytes())
+	commonHKey, err := p.transcript.ExtractBytes(commitmentLabel, 32)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot extract h")
+	}
 
 	a := make([]byte, 0)
 	aI := make([]A, p.rho)
@@ -54,7 +58,7 @@ redo:
 
 		// 3. common-h ← H(x, m, sid)
 		// (This is a full hash, with output length 2*κc)
-		commonH, err := hashing.Hash(randomOracle, statement.Bytes(), a, p.sessionId[:])
+		commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, p.sessionId[:])
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot generate commitment")
 		}

@@ -49,6 +49,10 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 
 	v.transcript.AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, fischlinProof.Rho))
 	v.transcript.AppendBytes(statementLabel, statement.Bytes())
+	commonHKey, err := v.transcript.ExtractBytes(commitmentLabel, 32)
+	if err != nil {
+		return errs.WrapFailed(err, "cannot extract h")
+	}
 
 	commitmentSerialized := make([][]byte, 0)
 	for i := uint64(0); i < fischlinProof.Rho; i++ {
@@ -63,7 +67,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	}
 
 	// 3. common-h ← H(x, m, sid)
-	commonH, err := hashing.Hash(randomOracle, statement.Bytes(), a, v.sessionId[:])
+	commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, v.sessionId[:])
 	if err != nil {
 		return errs.WrapHashing(err, "cannot serialise statement")
 	}
