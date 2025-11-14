@@ -110,6 +110,24 @@ func (f *FpField) FromNat(n *numct.Nat) (*FpFieldElement, error) {
 	return &s, nil
 }
 
+func (f *FpField) FromNumeric(n algebra.Numeric) (*FpFieldElement, error) {
+	var v numct.Nat
+	m, ok := numct.NewModulusOddPrime((*numct.Nat)(fpFieldOrder.Nat()))
+	if ok == ct.False {
+		return nil, errs.NewFailed("failed to create modulus")
+	}
+	var nNat numct.Nat
+	nNat.SetBytes(n.BytesBE())
+	m.Mod(&v, &nNat)
+	vBytes := v.Bytes()
+	slices.Reverse(vBytes)
+	var fe FpFieldElement
+	if ok := fe.V.SetBytesWide(vBytes); ok == ct.False {
+		return nil, errs.NewFailed("failed to set scalar from numeric")
+	}
+	return &fe, nil
+}
+
 type FpFieldElement struct {
 	traits.PrimeFieldElementTrait[*pastaImpl.Fp, pastaImpl.Fp, *FpFieldElement, FpFieldElement]
 }

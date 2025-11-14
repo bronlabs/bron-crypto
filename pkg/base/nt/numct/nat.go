@@ -234,6 +234,10 @@ func (n *Nat) Bytes() []byte {
 	return (*saferith.Nat)(n).Bytes()
 }
 
+func (n *Nat) BytesBE() []byte {
+	return n.Bytes()
+}
+
 func (n *Nat) SetBytes(data []byte) (ok ct.Bool) {
 	(*saferith.Nat)(n).SetBytes(data)
 	return ct.True

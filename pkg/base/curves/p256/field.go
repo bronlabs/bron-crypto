@@ -96,6 +96,24 @@ func (f *BaseField) FromNat(n *numct.Nat) (*BaseFieldElement, error) {
 	return &s, nil
 }
 
+func (f *BaseField) FromNumeric(n algebra.Numeric) (*BaseFieldElement, error) {
+	var v numct.Nat
+	m, ok := numct.NewModulusOddPrime((*numct.Nat)(baseFieldOrder.Nat()))
+	if ok == ct.False {
+		return nil, errs.NewFailed("failed to create modulus")
+	}
+	var nNat numct.Nat
+	nNat.SetBytes(n.BytesBE())
+	m.Mod(&v, &nNat)
+	vBytes := v.Bytes()
+	slices.Reverse(vBytes)
+	var fe BaseFieldElement
+	if ok := fe.V.SetBytesWide(vBytes); ok == ct.False {
+		return nil, errs.NewFailed("failed to set scalar from numeric")
+	}
+	return &fe, nil
+}
+
 type BaseFieldElement struct {
 	traits.PrimeFieldElementTrait[*p256Impl.Fp, p256Impl.Fp, *BaseFieldElement, BaseFieldElement]
 }

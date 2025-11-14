@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
 type Cardinal interface {
@@ -27,6 +26,10 @@ type Cardinal interface {
 	IsUnknown() bool
 	IsProbablyPrime() bool
 	BitLen() uint
+}
+
+type Numeric interface {
+	BytesBE() []byte
 }
 
 type NPlusLike[E any] interface {
@@ -87,8 +90,8 @@ type PrimeField[E any] interface {
 	// WideElementSize returns the **maximum** number of bytes used to map uniformly to an element.
 	WideElementSize() int
 	FiniteStructure[E]
-	// FromNat expects a *numct.Nat value (using any to avoid import cycle)
-	FromNat(*numct.Nat) (E, error)
+	// FromNat(*numct.Nat) (E, error)
+	FromNumeric(Numeric) (E, error)
 	FromUint64(uint64) E
 }
 

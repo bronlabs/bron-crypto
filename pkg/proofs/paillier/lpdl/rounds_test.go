@@ -81,7 +81,7 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 	x1Nat, err := randomIntInRange(q.Big(), prng)
 	require.NoError(t, err)
 
-	x1, err := curve.ScalarField().FromNat(x1Nat)
+	x1, err := curve.ScalarField().FromNumeric(x1Nat)
 	require.NoError(t, err)
 
 	ps := pk.PlaintextSpace()
@@ -90,7 +90,7 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 
 	x2Nat, err := randomIntInRange(q.Big(), prng)
 	require.NoError(t, err)
-	x2, err := curve.ScalarField().FromNat(x2Nat)
+	x2, err := curve.ScalarField().FromNumeric(x2Nat)
 	require.NoError(t, err)
 
 	enc, err := scheme.Encrypter()
@@ -123,7 +123,7 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 	xNat, err := randomIntInRange(q.Big(), prng)
 	require.NoError(t, err)
 
-	x, err := curve.ScalarField().FromNat(xNat)
+	x, err := curve.ScalarField().FromNumeric(xNat)
 	require.NoError(t, err)
 	require.NoError(t, err)
 	bigQ := curve.ScalarBaseMul(x)

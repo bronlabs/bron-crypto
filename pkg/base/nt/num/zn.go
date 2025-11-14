@@ -593,6 +593,10 @@ func (u *Uint) Bytes() []byte {
 	return u.v.Bytes()
 }
 
+func (u *Uint) BytesBE() []byte {
+	return u.Bytes()
+}
+
 func (u *Uint) Bit(i uint) byte {
 	return u.v.Bit(i)
 }

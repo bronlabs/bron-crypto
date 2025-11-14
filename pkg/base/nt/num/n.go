@@ -424,6 +424,10 @@ func (n *Nat) Bytes() []byte {
 	return bytes
 }
 
+func (n *Nat) BytesBE() []byte {
+	return n.Bytes()
+}
+
 func (n *Nat) Uint64() uint64 {
 	return n.v.Uint64()
 }

@@ -383,6 +383,10 @@ func (np *NatPlus) Bytes() []byte {
 	return bytes
 }
 
+func (np *NatPlus) BytesBE() []byte {
+	return np.Bytes()
+}
+
 func (np *NatPlus) IsBottom() bool {
 	return np.IsOne()
 }
