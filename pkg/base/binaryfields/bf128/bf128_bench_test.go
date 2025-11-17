@@ -21,3 +21,14 @@ func BenchmarkMul(b *testing.B) {
 		z = z.Mul(x)
 	}
 }
+
+func BenchmarkInv(b *testing.B) {
+	prng := crand.Reader
+	field := bf128.NewField()
+
+	z, err := field.Random(prng)
+	require.NoError(b, err)
+	for range b.N {
+		z, _ = z.TryInv()
+	}
+}
