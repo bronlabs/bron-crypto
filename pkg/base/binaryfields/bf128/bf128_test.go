@@ -36,7 +36,7 @@ func TestOne(t *testing.T) {
 	require.False(t, one.IsZero())
 	require.True(t, one.IsOne())
 	for range reps {
-		x, err := bf128.NewField().Random(prng)
+		x, err := bf128.NewField().RandomNonZero(prng)
 		require.NoError(t, err)
 		require.True(t, x.Mul(one).Equal(x))
 	}
@@ -47,7 +47,7 @@ func TestInv(t *testing.T) {
 	prng := crand.Reader
 
 	for range reps {
-		x, err := bf128.NewField().Random(prng)
+		x, err := bf128.NewField().RandomNonZero(prng)
 		require.NoError(t, err)
 		xInv, err := x.TryInv()
 		if x.IsZero() {

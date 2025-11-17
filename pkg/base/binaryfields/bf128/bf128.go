@@ -46,6 +46,20 @@ func (f *Field) Random(prng io.Reader) (*FieldElement, error) {
 	return f.FromBytes(data[:])
 }
 
+func (f *Field) RandomNonZero(prng io.Reader) (*FieldElement, error) {
+	e, err := f.Random(prng)
+	if err != nil {
+		return nil, errs.WrapRandomSample(err, "failed to generate random element")
+	}
+	for e.IsZero() {
+		e, err = f.Random(prng)
+		if err != nil {
+			return nil, errs.WrapRandomSample(err, "failed to generate random element")
+		}
+	}
+	return e, nil
+}
+
 func (f *Field) Hash(data []byte) (*FieldElement, error) {
 	h, err := blake2b.New(FieldElementSize, nil)
 	if err != nil {
