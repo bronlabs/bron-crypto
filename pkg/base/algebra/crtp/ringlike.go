@@ -57,7 +57,7 @@ type EuclideanSemiDomainElement[RE any] interface {
 	RigElement[RE]
 	UniqueFactorizationMonoidElement[RE]
 	EuclideanDiv(rhs RE) (quot, rem RE, err error)
-	EuclideanValuation() RE
+	EuclideanValuation() Cardinal
 }
 
 // ******************** Rng.

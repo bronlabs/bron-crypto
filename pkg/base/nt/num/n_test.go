@@ -1589,7 +1589,7 @@ func TestNat_EuclideanValuation(t *testing.T) {
 	val := n.EuclideanValuation()
 	require.NotNil(t, val)
 	// EuclideanValuation returns a clone of the number
-	require.Equal(t, "42", val.String())
+	require.Equal(t, "Cardinal(42)", val.String())
 }
 
 func TestNat_Decrement(t *testing.T) {

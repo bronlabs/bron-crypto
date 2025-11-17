@@ -365,8 +365,8 @@ func (n *Nat) EuclideanDiv(other *Nat) (quot, rem *Nat, err error) {
 	return &Nat{v: vq}, &Nat{v: vr}, nil
 }
 
-func (n *Nat) EuclideanValuation() *Nat {
-	return n.Clone()
+func (n *Nat) EuclideanValuation() cardinal.Cardinal {
+	return cardinal.NewFromSaferith(((*saferith.Nat)(n.Value())))
 }
 
 func (n *Nat) Mod(modulus *NatPlus) *Uint {

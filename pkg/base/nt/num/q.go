@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/cronokirby/saferith"
 )
 
 var _ algebra.Field[*Rat] = (*Rationals)(nil)
@@ -309,11 +310,15 @@ func (r *Rat) Square() *Rat {
 
 func (r *Rat) EuclideanDiv(rhs *Rat) (quo *Rat, rem *Rat, err error) {
 	quo, err = r.TryDiv(rhs)
-	return quo, Q().Zero(), err
+	if err != nil {
+		return nil, nil, errs.WrapFailed(err, "division by zero")
+	}
+	return quo, Q().Zero(), nil
 }
 
-func (r *Rat) EuclideanValuation() *Rat {
-	return r.Clone()
+func (r *Rat) EuclideanValuation() cardinal.Cardinal {
+	n := r.Canonical().a.Abs()
+	return cardinal.NewFromSaferith((*saferith.Nat)(n.Value()))
 }
 
 func (r *Rat) TryDiv(rhs *Rat) (*Rat, error) {

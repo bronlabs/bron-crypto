@@ -13,6 +13,9 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# Preprocessed file by sage
+*.sage.py
+
 # Dependency directories (remove the comment below to include it)
 vendor/
 venv/
