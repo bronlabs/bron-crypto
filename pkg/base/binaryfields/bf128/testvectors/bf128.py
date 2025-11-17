@@ -17,6 +17,8 @@ def int_repr(fe):
 
 vector = {
     "mul": [],
+    "div": [],
+    "inv": [],
     "add": [],
     "sub": [],
     "neg": [],
@@ -30,6 +32,22 @@ for i in range(16):
     vector["mul"].append({
         "x": int_repr(x).to_bytes(16, "big").hex(),
         "y": int_repr(y).to_bytes(16, "big").hex(),
+        "z": int_repr(z).to_bytes(16, "big").hex(),
+    })
+
+    x = bf128.random_element()
+    y = bf128.random_element()
+    z = x / y
+    vector["div"].append({
+        "x": int_repr(x).to_bytes(16, "big").hex(),
+        "y": int_repr(y).to_bytes(16, "big").hex(),
+        "z": int_repr(z).to_bytes(16, "big").hex(),
+    })
+
+    x = bf128.random_element()
+    z = x.inverse()
+    vector["inv"].append({
+        "x": int_repr(x).to_bytes(16, "big").hex(),
         "z": int_repr(z).to_bytes(16, "big").hex(),
     })
 

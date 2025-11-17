@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
@@ -216,15 +217,12 @@ func (fe *FiniteFieldElementTrait[FP, F, WP, W]) OpInv() WP {
 	return fe.Neg()
 }
 
-func (fe *FiniteFieldElementTrait[FP, F, WP, W]) EuclideanValuation() WP {
-	var out W
-	var zero W
-	var one W
-	WP(&out).Fp().Set(&fe.V)
-	WP(&zero).Fp().SetZero()
-	WP(&one).Fp().SetOne()
-	WP(&out).Fp().Select(fe.Fp().IsZero(), WP(&zero).Fp(), WP(&one).Fp())
-	return &out
+func (fe *FiniteFieldElementTrait[FP, F, WP, W]) EuclideanValuation() cardinal.Cardinal {
+	if fe.IsZero() {
+		return cardinal.Zero()
+	} else {
+		return cardinal.New(1)
+	}
 }
 
 func (fe *FiniteFieldElementTrait[FP, F, WP, W]) IsProbablyPrime() bool {

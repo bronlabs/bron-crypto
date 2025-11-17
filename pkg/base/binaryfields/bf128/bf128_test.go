@@ -39,3 +39,20 @@ func TestOne(t *testing.T) {
 		require.True(t, x.Mul(one).Equal(x))
 	}
 }
+
+func TestInv(t *testing.T) {
+	t.Parallel()
+	prng := crand.Reader
+
+	for range reps {
+		x, err := bf128.NewField().Random(prng)
+		require.NoError(t, err)
+		xInv, err := x.TryInv()
+		if x.IsZero() {
+			require.Error(t, err)
+		} else {
+			y := x.Mul(xInv)
+			require.True(t, y.IsOne())
+		}
+	}
+}

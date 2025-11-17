@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"math/bits"
 
 	"golang.org/x/crypto/blake2b"
 
@@ -95,7 +96,7 @@ func (f *Field) ExtensionDegree() uint {
 	return 128
 }
 
-func (f *Field) FromComponentsBytes(i [][]byte) (*FieldElement, error) {
+func (f *Field) FromComponentsBytes(data [][]byte) (*FieldElement, error) {
 	return nil, errs.NewFailed("not implemented")
 }
 
@@ -167,7 +168,29 @@ func (el *FieldElement) IsOne() bool {
 }
 
 func (el *FieldElement) TryInv() (*FieldElement, error) {
-	return nil, errs.NewFailed("not implemented")
+	if el.IsZero() {
+		return nil, errs.NewFailed("division by zero")
+	}
+
+	b := NewField().Zero()
+	c := NewField().One()
+	u := &FieldElement{(1 << 7) | (1 << 2) | (1 << 1) | (1 << 0), 0}
+	v := el.Clone()
+	j := 128 - v.degree()
+	u = u.Sub(v.shiftLeft(j))
+	b = b.Sub(c.shiftLeft(j))
+
+	for u.degree() > 0 {
+		if u.degree() < v.degree() {
+			u, v = v, u
+			b, c = c, b
+		}
+		j = u.degree() - v.degree()
+		u = u.Sub(v.shiftLeft(j))
+		b = b.Sub(c.shiftLeft(j))
+	}
+
+	return b, nil
 }
 
 func (el *FieldElement) TryDiv(e *FieldElement) (*FieldElement, error) {
@@ -207,11 +230,20 @@ func (el *FieldElement) IsProbablyPrime() bool {
 }
 
 func (el *FieldElement) EuclideanDiv(rhs *FieldElement) (quot, rem *FieldElement, err error) {
-	return nil, nil, errs.NewFailed("not implemented")
+	quot, err = el.TryDiv(rhs)
+	if err != nil {
+		return nil, nil, errs.WrapSerialisation(err, "division by zero")
+	}
+	return quot, NewField().Zero(), nil
 }
 
-func (el *FieldElement) EuclideanValuation() *FieldElement {
-	panic("not implemented")
+func (el *FieldElement) EuclideanValuation() cardinal.Cardinal {
+	if el.IsZero() {
+		// TODO: does not exists for zero element
+		return cardinal.New(0)
+	} else {
+		return cardinal.New(1)
+	}
 }
 
 func (el *FieldElement) ComponentsBytes() [][]byte {
@@ -263,4 +295,22 @@ func (el *FieldElement) Bytes() []byte {
 
 func (el *FieldElement) Equal(rhs *FieldElement) bool {
 	return ((el[0] ^ rhs[0]) | (el[1] ^ rhs[1])) == 0
+}
+
+func (el *FieldElement) shiftLeft(k int) *FieldElement {
+	return &FieldElement{el[0] << k, (el[1] << k) | (el[0] >> (64 - k))}
+}
+
+func (el *FieldElement) degree() int {
+	z := bits.LeadingZeros64(el[1])
+	if z == 64 {
+		z += bits.LeadingZeros64(el[0])
+	}
+
+	d := 127 - z
+	if d < 0 {
+		return 0
+	} else {
+		return d
+	}
 }
