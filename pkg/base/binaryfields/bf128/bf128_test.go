@@ -18,6 +18,8 @@ func TestZero(t *testing.T) {
 	zero := bf128.NewField().Zero()
 	require.True(t, zero.IsZero())
 	require.False(t, zero.IsOne())
+	_, err := zero.TryInv()
+	require.Error(t, err)
 	for range reps {
 		x, err := bf128.NewField().Random(prng)
 		require.NoError(t, err)
