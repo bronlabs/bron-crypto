@@ -253,7 +253,6 @@ func (el *FieldElement) EuclideanDiv(rhs *FieldElement) (quot, rem *FieldElement
 
 func (el *FieldElement) EuclideanValuation() cardinal.Cardinal {
 	if el.IsZero() {
-		// TODO: does not exists for zero element
 		return cardinal.New(0)
 	} else {
 		return cardinal.New(1)

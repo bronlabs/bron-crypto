@@ -50,6 +50,7 @@ func TestInv(t *testing.T) {
 		x, err := bf128.NewField().RandomNonZero(prng)
 		require.NoError(t, err)
 		xInv, err := x.TryInv()
+		require.NoError(t, err)
 		y := x.Mul(xInv)
 		require.True(t, y.IsOne())
 	}

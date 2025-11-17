@@ -1,12 +1,6 @@
 import json
 
-from sage.all import *
-
-f2 = GF(2)['u']
-(u,) = f2._first_ngens(1)
-
-bf128 = GF((2, 128), name='v', modulus=u**128 + u**7 + u**2 + u + 1, names=('v',))
-(v,) = bf128._first_ngens(1)
+bf128 = GF((2, 128), name='u', modulus=x^128 + x^7 + x^2 + x + 1)
 
 def int_repr(fe):
     value = 0
