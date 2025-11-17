@@ -2,26 +2,116 @@ package bf128
 
 import (
 	"encoding/binary"
+	"fmt"
+	"io"
+	"math/big"
+	"math/bits"
 
+	"golang.org/x/crypto/blake2b"
+
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
-// TODO: have this implement the low level field interface
-
 const (
+	Name              = "F_{2^128}"
 	FieldElementSize  = 16
 	FieldElementLimbs = 2
 )
 
 var (
 	instance = &Field{}
+
+	_ algebra.FieldExtension[*FieldElement]        = (*Field)(nil)
+	_ algebra.FiniteField[*FieldElement]           = (*Field)(nil)
+	_ algebra.FieldExtensionElement[*FieldElement] = (*FieldElement)(nil)
+	_ algebra.FiniteFieldElement[*FieldElement]    = (*FieldElement)(nil)
 )
 
 type Field struct{}
 
 func NewField() *Field {
 	return instance
+}
+
+func (f *Field) Random(prng io.Reader) (*FieldElement, error) {
+	var data [16]byte
+	_, err := io.ReadFull(prng, data[:])
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to read random bytes")
+	}
+	return f.FromBytes(data[:])
+}
+
+func (f *Field) RandomNonZero(prng io.Reader) (*FieldElement, error) {
+	e, err := f.Random(prng)
+	if err != nil {
+		return nil, errs.WrapRandomSample(err, "failed to generate random element")
+	}
+	for e.IsZero() {
+		e, err = f.Random(prng)
+		if err != nil {
+			return nil, errs.WrapRandomSample(err, "failed to generate random element")
+		}
+	}
+	return e, nil
+}
+
+func (f *Field) Hash(data []byte) (*FieldElement, error) {
+	h, err := blake2b.New(FieldElementSize, nil)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to create hasher")
+	}
+	_, err = h.Write(data)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to write to hasher")
+	}
+	return f.FromBytes(h.Sum(nil))
+}
+
+func (f *Field) Name() string {
+	return Name
+}
+
+func (f *Field) Order() cardinal.Cardinal {
+	orderBig := new(big.Int)
+	orderBig.SetBit(orderBig, 128, 1)
+	return cardinal.NewFromBig(orderBig)
+}
+
+func (f *Field) ElementSize() int {
+	return FieldElementSize
+}
+
+func (f *Field) Characteristic() cardinal.Cardinal {
+	return cardinal.New(2)
+}
+
+func (f *Field) OpIdentity() *FieldElement {
+	return f.Zero()
+}
+
+func (f *Field) One() *FieldElement {
+	return &FieldElement{1, 0}
+}
+
+func (f *Field) Zero() *FieldElement {
+	return &FieldElement{0, 0}
+}
+
+func (f *Field) IsSemiDomain() bool {
+	return true
+}
+
+func (f *Field) ExtensionDegree() uint {
+	return 128
+}
+
+func (f *Field) FromComponentsBytes(data [][]byte) (*FieldElement, error) {
+	return nil, errs.NewFailed("not implemented")
 }
 
 func (f *Field) FromBytes(buf []byte) (*FieldElement, error) {
@@ -44,11 +134,137 @@ func (f *Field) Select(choice uint64, x, y *FieldElement) *FieldElement {
 
 type FieldElement [2]uint64
 
-func (el *FieldElement) Add(y *FieldElement) *FieldElement {
-	return &FieldElement{
-		el[0] ^ y[0],
-		el[1] ^ y[1],
+func (el *FieldElement) Structure() algebra.Structure[*FieldElement] {
+	return NewField()
+}
+
+func (el *FieldElement) Clone() *FieldElement {
+	var clone FieldElement
+	copy(clone[:], el[:])
+	return &clone
+}
+
+func (el *FieldElement) HashCode() base.HashCode {
+	return base.HashCode(el[0] ^ el[1])
+}
+
+func (el *FieldElement) String() string {
+	return fmt.Sprintf("F2e128(%08x%08x)", el[1], el[0])
+}
+
+func (el *FieldElement) Op(e *FieldElement) *FieldElement {
+	return el.Add(e)
+}
+
+func (el *FieldElement) OtherOp(e *FieldElement) *FieldElement {
+	return el.Mul(e)
+}
+
+func (el *FieldElement) Double() *FieldElement {
+	return NewField().Zero()
+}
+
+func (el *FieldElement) Square() *FieldElement {
+	return el.Mul(el)
+}
+
+func (el *FieldElement) IsOpIdentity() bool {
+	return el.IsZero()
+}
+
+func (el *FieldElement) TryOpInv() (*FieldElement, error) {
+	x := el.Neg()
+	return x, nil
+}
+
+func (el *FieldElement) IsOne() bool {
+	return (el[1] | (el[0] ^ 1)) == 0
+}
+
+func (el *FieldElement) TryInv() (*FieldElement, error) {
+	if el.IsZero() {
+		return nil, errs.NewFailed("division by zero")
 	}
+
+	b := NewField().Zero()
+	c := NewField().One()
+	u := &FieldElement{(1 << 7) | (1 << 2) | (1 << 1) | (1 << 0), 0}
+	v := el.Clone()
+	j := 128 - v.degree()
+	u = u.Sub(v.shiftLeft(j))
+	b = b.Sub(c.shiftLeft(j))
+
+	for u.degree() > 0 {
+		if u.degree() < v.degree() {
+			u, v = v, u
+			b, c = c, b
+		}
+		j = u.degree() - v.degree()
+		u = u.Sub(v.shiftLeft(j))
+		b = b.Sub(c.shiftLeft(j))
+	}
+
+	return b, nil
+}
+
+func (el *FieldElement) TryDiv(e *FieldElement) (*FieldElement, error) {
+	eInv, err := e.TryInv()
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot invert element")
+	}
+	return el.Mul(eInv), nil
+}
+
+func (el *FieldElement) IsZero() bool {
+	return (el[1] | el[0]) == 0
+}
+
+func (el *FieldElement) TryNeg() (*FieldElement, error) {
+	return el.Neg(), nil
+}
+
+func (el *FieldElement) TrySub(e *FieldElement) (*FieldElement, error) {
+	return el.Sub(e), nil
+}
+
+func (el *FieldElement) OpInv() *FieldElement {
+	return el.Neg()
+}
+
+func (el *FieldElement) Neg() *FieldElement {
+	return el.Clone()
+}
+
+func (el *FieldElement) Sub(e *FieldElement) *FieldElement {
+	return el.Add(e)
+}
+
+func (el *FieldElement) IsProbablyPrime() bool {
+	return false
+}
+
+func (el *FieldElement) EuclideanDiv(rhs *FieldElement) (quot, rem *FieldElement, err error) {
+	quot, err = el.TryDiv(rhs)
+	if err != nil {
+		return nil, nil, errs.WrapSerialisation(err, "division by zero")
+	}
+	return quot, NewField().Zero(), nil
+}
+
+func (el *FieldElement) EuclideanValuation() cardinal.Cardinal {
+	if el.IsZero() {
+		return cardinal.New(0)
+	} else {
+		return cardinal.New(1)
+	}
+}
+
+func (el *FieldElement) ComponentsBytes() [][]byte {
+	panic("not implemented")
+}
+
+func (el *FieldElement) Add(y *FieldElement) *FieldElement {
+	return &FieldElement{el[0] ^ y[0], el[1] ^ y[1]}
 }
 
 func (el *FieldElement) Mul(rhs *FieldElement) *FieldElement {
@@ -92,4 +308,22 @@ func (el *FieldElement) Bytes() []byte {
 
 func (el *FieldElement) Equal(rhs *FieldElement) bool {
 	return ((el[0] ^ rhs[0]) | (el[1] ^ rhs[1])) == 0
+}
+
+func (el *FieldElement) shiftLeft(k int) *FieldElement {
+	return &FieldElement{el[0] << k, (el[1] << k) | (el[0] >> (64 - k))}
+}
+
+func (el *FieldElement) degree() int {
+	z := bits.LeadingZeros64(el[1])
+	if z == 64 {
+		z += bits.LeadingZeros64(el[0])
+	}
+
+	d := 127 - z
+	if d < 0 {
+		return 0
+	} else {
+		return d
+	}
 }

@@ -300,14 +300,12 @@ func (fe *PrimeFieldElementTrait[FP, F, WP, W]) TryOpInv() (WP, error) {
 	return fe.Neg(), nil
 }
 
-func (fe *PrimeFieldElementTrait[FP, F, WP, W]) EuclideanValuation() WP {
-	var out W
-	var zero W
-	var one W
-	WP(&zero).Fp().SetZero()
-	WP(&one).Fp().SetOne()
-	WP(&out).Fp().Select(fe.Fp().IsZero(), WP(&zero).Fp(), WP(&one).Fp())
-	return &out
+func (fe *PrimeFieldElementTrait[FP, F, WP, W]) EuclideanValuation() cardinal.Cardinal {
+	if fe.IsZero() {
+		return cardinal.Zero()
+	} else {
+		return cardinal.New(1)
+	}
 }
 
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) String() string {
