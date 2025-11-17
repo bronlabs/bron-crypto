@@ -2,7 +2,6 @@ package pasta
 
 import (
 	"encoding"
-	"slices"
 	"sync"
 
 	"github.com/cronokirby/saferith"
@@ -94,38 +93,17 @@ func (*FpField) BitLen() int {
 	return pastaImpl.FpBits
 }
 
-func (f *FpField) FromNat(n *numct.Nat) (*FpFieldElement, error) {
-	var v numct.Nat
-	m, ok := numct.NewModulusOddPrime((*numct.Nat)(fpFieldOrder.Nat()))
-	if ok == ct.False {
-		return nil, errs.NewFailed("failed to create modulus")
-	}
-	m.Mod(&v, n)
-	vBytes := v.Bytes()
-	slices.Reverse(vBytes)
-	var s FpFieldElement
-	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
-		return nil, errs.NewFailed("failed to set scalar from nat")
-	}
-	return &s, nil
-}
-
-func (f *FpField) FromNumeric(n algebra.Numeric) (*FpFieldElement, error) {
+func (f *FpField) FromBytesBEReduce(input []byte) (*FpFieldElement, error) {
 	var v numct.Nat
 	m, ok := numct.NewModulusOddPrime((*numct.Nat)(fpFieldOrder.Nat()))
 	if ok == ct.False {
 		return nil, errs.NewFailed("failed to create modulus")
 	}
 	var nNat numct.Nat
-	nNat.SetBytes(n.BytesBE())
+	nNat.SetBytes(input)
 	m.Mod(&v, &nNat)
 	vBytes := v.Bytes()
-	slices.Reverse(vBytes)
-	var fe FpFieldElement
-	if ok := fe.V.SetBytesWide(vBytes); ok == ct.False {
-		return nil, errs.NewFailed("failed to set scalar from numeric")
-	}
-	return &fe, nil
+	return f.FromBytesBE(vBytes)
 }
 
 type FpFieldElement struct {

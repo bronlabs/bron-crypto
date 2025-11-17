@@ -18,8 +18,10 @@ import (
 )
 
 var (
-// _ internal.ZModN[*Uint, *NatPlus, *Nat, *Int, *Uint] = (*ZMod)(nil)
-// _ internal.Uint[*Uint, *NatPlus, *Nat, *Int, *Uint]  = (*Uint)(nil).
+	_ algebra.ZModLike[*Uint]                = (*ZMod)(nil)
+	_ algebra.UintLike[*Uint]                = (*Uint)(nil)
+	_ algebra.SemiModule[*Uint, *Nat]        = (*ZMod)(nil)
+	_ algebra.SemiModuleElement[*Uint, *Nat] = (*Uint)(nil)
 )
 
 func NewZMod(modulus *NatPlus) (*ZMod, error) {
@@ -118,7 +120,19 @@ func (zn *ZMod) FromBytes(input []byte) (*Uint, error) {
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "failed to deserialize Nat from bytes")
 	}
-	return zn.FromNat(v)
+	return zn.FromNatCTReduced(v.Value())
+}
+
+func (zn *ZMod) FromBytesBE(input []byte) (*Uint, error) {
+	return zn.FromBytes(input)
+}
+
+func (zn *ZMod) FromBytesBEReduce(input []byte) (*Uint, error) {
+	v, err := N().FromBytes(input)
+	if err != nil {
+		return nil, errs.WrapSerialisation(err, "failed to deserialize Nat from bytes")
+	}
+	return zn.FromNatCT(v.Value())
 }
 
 func (zn *ZMod) FromNat(v *Nat) (*Uint, error) {
@@ -414,11 +428,11 @@ func (u *Uint) EuclideanDiv(other *Uint) (quot, rem *Uint, err error) {
 	return &Uint{v: vq, m: u.m}, &Uint{v: vr, m: u.m}, nil
 }
 
-func (u *Uint) EuclideanValuation() *Uint {
+func (u *Uint) EuclideanValuation() algebra.Cardinal {
 	if !u.Group().IsSemiDomain() {
 		panic(errs.NewType("not a euclidean domain"))
 	}
-	return u.Clone()
+	return cardinal.NewFromSaferith((*saferith.Nat)(u.v))
 }
 
 func (u *Uint) TryNeg() (*Uint, error) {

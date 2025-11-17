@@ -17,9 +17,8 @@ import (
 )
 
 var (
-	// _ internal.NPlus[*NatPlus, *NatPlus, *Nat, *Int, *Uint]   = (*PositiveNaturalNumbers)(nil)
-	// _ internal.NatPlus[*NatPlus, *NatPlus, *Nat, *Int, *Uint] = (*NatPlus)(nil).
-
+	_             algebra.NPlusLike[*NatPlus]   = (*PositiveNaturalNumbers)(nil)
+	_             algebra.NatPlusLike[*NatPlus] = (*NatPlus)(nil)
 	nplusInstance *PositiveNaturalNumbers
 	nplusOnce     sync.Once
 )
@@ -126,6 +125,17 @@ func (*PositiveNaturalNumbers) FromBytes(input []byte) (*NatPlus, error) {
 		return nil, errs.NewValue("input must not be empty")
 	}
 	return &NatPlus{v: numct.NewNatFromBytes(input)}, nil
+}
+
+func (nps *PositiveNaturalNumbers) FromBytesBE(input []byte) (*NatPlus, error) {
+	out, err := nps.FromBytes(input)
+	if err != nil {
+		return nil, errs.WrapArgument(err, "failed to create NatPlus from bytes BE")
+	}
+	if out.v.IsZero() == ct.True {
+		return nil, errs.NewValue("input must represent a positive natural number")
+	}
+	return out, nil
 }
 
 func (nps *PositiveNaturalNumbers) Random(lowInclusive, highExclusive *NatPlus, prng io.Reader) (*NatPlus, error) {

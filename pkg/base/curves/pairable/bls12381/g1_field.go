@@ -2,7 +2,6 @@ package bls12381
 
 import (
 	"encoding"
-	"slices"
 	"sync"
 
 	"github.com/cronokirby/saferith"
@@ -80,38 +79,17 @@ func (f *BaseFieldG1) BitLen() int {
 	return bls12381Impl.FpBits
 }
 
-func (f *BaseFieldG1) FromNat(n *numct.Nat) (*BaseFieldElementG1, error) {
-	var v numct.Nat
-	m, ok := numct.NewModulusOddPrime((*numct.Nat)(baseFieldOrderG1.Nat()))
-	if ok == ct.False {
-		return nil, errs.NewFailed("failed to create modulus")
-	}
-	m.Mod(&v, n)
-	vBytes := v.Bytes()
-	slices.Reverse(vBytes)
-	var s BaseFieldElementG1
-	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
-		return nil, errs.NewFailed("failed to set scalar from nat")
-	}
-	return &s, nil
-}
-
-func (f *BaseFieldG1) FromNumeric(n algebra.Numeric) (*BaseFieldElementG1, error) {
+func (f *BaseFieldG1) FromBytesBEReduce(input []byte) (*BaseFieldElementG1, error) {
 	var v numct.Nat
 	m, ok := numct.NewModulusOddPrime((*numct.Nat)(baseFieldOrderG1.Nat()))
 	if ok == ct.False {
 		return nil, errs.NewFailed("failed to create modulus")
 	}
 	var nNat numct.Nat
-	nNat.SetBytes(n.BytesBE())
+	nNat.SetBytes(input)
 	m.Mod(&v, &nNat)
 	vBytes := v.Bytes()
-	slices.Reverse(vBytes)
-	var fe BaseFieldElementG1
-	if ok := fe.V.SetBytesWide(vBytes); ok == ct.False {
-		return nil, errs.NewFailed("failed to set scalar from numeric")
-	}
-	return &fe, nil
+	return f.FromBytesBE(vBytes)
 }
 
 type BaseFieldElementG1 struct {

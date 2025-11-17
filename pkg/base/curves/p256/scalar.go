@@ -72,38 +72,17 @@ func (f *ScalarField) Hash(bytes []byte) (*Scalar, error) {
 	return &s, nil
 }
 
-func (f *ScalarField) FromNat(n *numct.Nat) (*Scalar, error) {
-	var v numct.Nat
-	m, ok := numct.NewModulusOddPrime((*numct.Nat)(scalarFieldOrder.Nat()))
-	if ok == ct.False {
-		return nil, errs.NewFailed("failed to create modulus")
-	}
-	m.Mod(&v, n)
-	vBytes := v.Bytes()
-	slices.Reverse(vBytes)
-	var s Scalar
-	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
-		return nil, errs.NewFailed("failed to set scalar from nat")
-	}
-	return &s, nil
-}
-
-func (f *ScalarField) FromNumeric(n algebra.Numeric) (*Scalar, error) {
+func (f *ScalarField) FromBytesBEReduce(input []byte) (*Scalar, error) {
 	var v numct.Nat
 	m, ok := numct.NewModulusOddPrime((*numct.Nat)(scalarFieldOrder.Nat()))
 	if ok == ct.False {
 		return nil, errs.NewFailed("failed to create modulus")
 	}
 	var nNat numct.Nat
-	nNat.SetBytes(n.BytesBE())
+	nNat.SetBytes(input)
 	m.Mod(&v, &nNat)
 	vBytes := v.Bytes()
-	slices.Reverse(vBytes)
-	var s Scalar
-	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
-		return nil, errs.NewFailed("failed to set scalar from numeric")
-	}
-	return &s, nil
+	return f.FromBytesBE(vBytes)
 }
 
 func (f *ScalarField) ElementSize() int {

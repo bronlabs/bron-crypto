@@ -17,8 +17,10 @@ import (
 )
 
 var (
-	// _ internal.Z[*Int, *NatPlus, *Nat, *Int, *Uint]   = (*Integers)(nil)
-	// _ internal.Int[*Int, *NatPlus, *Nat, *Int, *Uint] = (*Int)(nil).
+	_ algebra.ZLike[*Int]               = (*Integers)(nil)
+	_ algebra.IntLike[*Int]             = (*Int)(nil)
+	_ algebra.Module[*Int, *Int]        = (*Integers)(nil)
+	_ algebra.ModuleElement[*Int, *Int] = (*Int)(nil)
 
 	zOnce     sync.Once
 	zInstance *Integers
@@ -410,8 +412,8 @@ func (i *Int) EuclideanDiv(other *Int) (quot, rem *Int, err error) {
 	return &Int{v: vq}, &Int{v: vr}, nil
 }
 
-func (i *Int) EuclideanValuation() *Int {
-	return i.Abs().Lift()
+func (i *Int) EuclideanValuation() algebra.Cardinal {
+	return cardinal.NewFromSaferith((*saferith.Nat)(i.Abs().Value()))
 }
 
 func (i *Int) Abs() *Nat {

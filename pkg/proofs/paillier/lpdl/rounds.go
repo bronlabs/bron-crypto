@@ -46,11 +46,11 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 
 	// 1.iii. compute Q' = aQ + bQ
 	// TODO: add SetNatCT to ScalarField etc.
-	aScalar, err := verifier.state.curve.ScalarField().FromNumeric(verifier.state.a)
+	aScalar, err := verifier.state.curve.ScalarField().FromBytesBE(verifier.state.a.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert a to scalar")
 	}
-	bScalar, err := verifier.state.curve.ScalarField().FromNumeric(verifier.state.b)
+	bScalar, err := verifier.state.curve.ScalarField().FromBytesBE(verifier.state.b.Bytes())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert b to scalar")
 	}
@@ -88,7 +88,7 @@ func (prover *Prover[P, B, S]) Round2(r1out *Round1Output) (r2out *Round2Output,
 		return nil, errs.WrapFailed(err, "cannot decrypt cipher text")
 	}
 
-	alphaScalar, err := prover.state.curve.ScalarField().FromNumeric(prover.state.alpha.Normalise())
+	alphaScalar, err := prover.state.curve.ScalarField().FromBytesBE(prover.state.alpha.Normalise().BytesBE())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert alpha to scalar")
 	}
