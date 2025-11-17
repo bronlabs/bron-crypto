@@ -7,8 +7,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 type PublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -63,8 +63,8 @@ func (pk *PublicKey[P, B, S]) HashCode() base.HashCode {
 func (pk *PublicKey[P, B, S]) ToElliptic() *nativeEcdsa.PublicKey {
 	curve := algebra.StructureMustBeAs[Curve[P, B, S]](pk.pk.Structure())
 	nativeCurve := curve.ToElliptic()
-	nativeX := utils.Must(pk.Value().AffineX()).Cardinal().Big()
-	nativeY := utils.Must(pk.Value().AffineY()).Cardinal().Big()
+	nativeX := errs2.Must1(pk.Value().AffineX).Cardinal().Big()
+	nativeY := errs2.Must1(pk.Value().AffineY).Cardinal().Big()
 	nativePublicKey := &nativeEcdsa.PublicKey{
 		Curve: nativeCurve,
 		X:     nativeX,

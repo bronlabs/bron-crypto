@@ -5,5 +5,4 @@ use (
 	./tools/edwards25519-tester
 	./tools/field-codegen
 	./tools/secparams-codegen
-	./tools/dudect
 )
