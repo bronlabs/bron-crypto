@@ -95,7 +95,10 @@ type testVectors struct {
 }
 
 func testBinaryOp(t *testing.T, vectors []binaryOpVector, op func(*bf128.FieldElement, *bf128.FieldElement) *bf128.FieldElement) {
+	t.Helper()
+
 	t.Run(runtime.FuncForPC(reflect.ValueOf(op).Pointer()).Name(), func(t *testing.T) {
+		t.Parallel()
 		for _, v := range vectors {
 			x := v.getX()
 			y := v.getY()
@@ -107,7 +110,9 @@ func testBinaryOp(t *testing.T, vectors []binaryOpVector, op func(*bf128.FieldEl
 }
 
 func testBinaryTryOp(t *testing.T, vectors []binaryOpVector, op func(*bf128.FieldElement, *bf128.FieldElement) (*bf128.FieldElement, error)) {
+	t.Helper()
 	t.Run(runtime.FuncForPC(reflect.ValueOf(op).Pointer()).Name(), func(t *testing.T) {
+		t.Parallel()
 		for _, v := range vectors {
 			x := v.getX()
 			y := v.getY()
@@ -120,7 +125,9 @@ func testBinaryTryOp(t *testing.T, vectors []binaryOpVector, op func(*bf128.Fiel
 }
 
 func testUnaryOp(t *testing.T, vectors []binaryOpVector, op func(*bf128.FieldElement) *bf128.FieldElement) {
+	t.Helper()
 	t.Run(runtime.FuncForPC(reflect.ValueOf(op).Pointer()).Name(), func(t *testing.T) {
+		t.Parallel()
 		for _, v := range vectors {
 			x := v.getX()
 			expectedZ := v.getZ()
@@ -131,7 +138,9 @@ func testUnaryOp(t *testing.T, vectors []binaryOpVector, op func(*bf128.FieldEle
 }
 
 func testUnaryTryOp(t *testing.T, vectors []unaryOpVector, op func(*bf128.FieldElement) (*bf128.FieldElement, error)) {
+	t.Helper()
 	t.Run(runtime.FuncForPC(reflect.ValueOf(op).Pointer()).Name(), func(t *testing.T) {
+		t.Parallel()
 		for _, v := range vectors {
 			x := v.getX()
 			expectedZ := v.getZ()
