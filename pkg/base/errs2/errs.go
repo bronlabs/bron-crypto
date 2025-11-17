@@ -10,7 +10,7 @@ import (
 
 type Tag string
 
-type WithStackTrace interface {
+type TraceableError interface {
 	error
 	Unwrap() error
 	StackTrace() StackTrace
@@ -30,22 +30,31 @@ var (
 )
 
 func New(format string, args ...any) error {
-	return &Error[error]{
+	if format == "" {
+		return nil
+	}
+	return &errorWithStack{
 		v:     fmt.Errorf(format, args...),
 		stack: callers(),
 	}
 }
 
-func WrapWithMessage[E error](err E, format string, args ...any) error {
-	return &Error[E]{
+func WrapWithMessage(err error, format string, args ...any) error {
+	if err == nil {
+		return nil
+	}
+	return &errorWithStack{
 		v:       err,
 		stack:   callers(),
 		context: fmt.Sprintf(format, args...),
 	}
 }
 
-func Wrap[E error](err E) error {
-	return &Error[E]{
+func Wrap(err error) error {
+	if err == nil {
+		return nil
+	}
+	return &errorWithStack{
 		v:     err,
 		stack: callers(),
 	}
@@ -55,14 +64,19 @@ func AttachTag(err error, tag Tag, format string, args ...any) error {
 	if err == nil {
 		return nil
 	}
-	alreadyTaggedErr, ok := err.(*taggedError)
-	if ok {
+	if alreadyTaggedErr, ok := err.(*taggedError); ok {
 		alreadyTaggedErr.t[tag] = fmt.Sprintf(format, args...)
 		return alreadyTaggedErr
 	}
+	if unwrappedErrorWithStack, ok := err.(*errorWithStack); ok {
+		return &taggedError{
+			errorWithStack: unwrappedErrorWithStack,
+			t:              map[Tag]string{tag: fmt.Sprintf(format, args...)},
+		}
+	}
 	return &taggedError{
-		error: err,
-		t:     map[Tag]string{tag: fmt.Sprintf(format, args...)},
+		errorWithStack: New(err.Error(), nil).(*errorWithStack),
+		t:              map[Tag]string{tag: fmt.Sprintf(format, args...)},
 	}
 }
 
@@ -81,7 +95,7 @@ func HasTag(err error, tag Tag) (string, bool) {
 func StackTraces(err error) CombinedStackTrace {
 	var traces []StackTrace
 	for err != nil {
-		if wst, ok := err.(WithStackTrace); ok {
+		if wst, ok := err.(TraceableError); ok {
 			traces = append(traces, wst.StackTrace())
 		}
 		err = Unwrap(err)
@@ -111,36 +125,32 @@ func Must2[T1, T2 any](f func() (T1, T2, error)) (T1, T2) {
 	return v1, v2
 }
 
-type Error[E error] struct {
-	v       E
+type errorWithStack struct {
+	v       error
 	stack   Stack
 	context string
 }
 
-func (e *Error[E]) Error() string {
+func (e *errorWithStack) Error() string {
 	if e.context == "" {
 		return e.v.Error()
 	}
 	return fmt.Sprintf("%s (%s)", e.v.Error(), e.context)
 }
 
-func (e *Error[E]) Context() string {
+func (e *errorWithStack) Context() string {
 	return e.context
 }
 
-func (e *Error[E]) Unwrap() error {
+func (e *errorWithStack) Unwrap() error {
 	return e.v
 }
 
-func (e *Error[E]) StackTrace() StackTrace {
+func (e *errorWithStack) StackTrace() StackTrace {
 	return e.stack.StackTrace()
 }
 
-func (e *Error[E]) Unwrapped() E {
-	return e.v
-}
-
-func (e *Error[E]) Format(s fmt.State, verb rune) {
+func (e *errorWithStack) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('+') {
@@ -158,16 +168,16 @@ func (e *Error[E]) Format(s fmt.State, verb rune) {
 }
 
 type taggedError struct {
-	error
+	*errorWithStack
 	t map[Tag]string
 }
 
 func (e *taggedError) Error() string {
-	return e.error.Error()
+	return e.errorWithStack.Error()
 }
 
 func (e *taggedError) Unwrap() error {
-	return e.error
+	return e.errorWithStack
 }
 
 func (e *taggedError) Tags() []Tag {
@@ -243,7 +253,7 @@ func formatErrorChain(s fmt.State, err error) {
 		}
 
 		// Stack trace, if available
-		if wst, ok := err.(WithStackTrace); ok {
+		if wst, ok := err.(TraceableError); ok {
 			st := wst.StackTrace()
 			if len(st) > 0 {
 				if _, errw := io.WriteString(s, "\n\tStack:"); errw != nil {

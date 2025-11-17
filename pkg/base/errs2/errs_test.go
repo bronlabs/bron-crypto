@@ -57,5 +57,5 @@ func TestSanity(t *testing.T) {
 	// require.Fail(t, "%+v", e)
 	// require.Fail(t, "%+v", e2)
 	// require.Fail(t, "%+v", e3)
-	require.Fail(t, "%+v", e4)
+	// require.Fail(t, "%+v", e4)
 }
