@@ -2,80 +2,134 @@ package proptest
 
 import (
 	"io"
-	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 )
 
 type Property[V any] interface {
-	Check(t *testing.T, generator Generator[V], prng io.Reader) bool
+	Check(prng io.Reader) bool
 }
 
-func NewBinaryOpAssociative[V base.Equatable[V]](op func(V, V) V) Property[V] {
-	return &binaryOpAssociativeProperty[V]{op}
+func NewBinaryOpAssociative[V base.Equatable[V]](generator Generator[V], op func(V, V) V) Property[V] {
+	return &binaryOpAssociativeProperty[V]{
+		generator,
+		op,
+	}
 }
 
-func NewBinaryOpCommutativity[V base.Equatable[V]](op func(V, V) V) Property[V] {
-	return &binaryOpCommutativeProperty[V]{op}
+func NewBinaryOpCommutativity[V base.Equatable[V]](generator Generator[V], op func(V, V) V) Property[V] {
+	return &binaryOpCommutativeProperty[V]{
+		generator,
+		op,
+	}
 }
 
-func NewBinaryOpIdentity[V base.Equatable[V]](id V, op func(V, V) V) Property[V] {
-	ret
+func NewBinaryOpIdentity[V base.Equatable[V]](generator Generator[V], id V, op func(V, V) V) Property[V] {
+	return &binaryOpIdentityProperty[V]{
+		generator,
+		id,
+		op,
+	}
+}
+
+func NewOpInverse[V base.Equatable[V]](generator Generator[V], id V, opInv func(V) V, op func(V, V) V) Property[V] {
+	return &opInverseProperty[V]{
+		generator,
+		id,
+		opInv,
+		op,
+	}
+}
+
+func NewOpTryInverse[V base.Equatable[V]](generator Generator[V], id V, opInv func(V) (V, error), op func(V, V) V) Property[V] {
+	return &opTryInverseProperty[V]{
+		generator,
+		id,
+		opInv,
+		op,
+	}
+}
+
+func NewOpDistributivity[V base.Equatable[V]](generator Generator[V], mulOp func(V, V) V, addOp func(V, V) V) Property[V] {
+	return &opDistributivityProperty[V]{
+		generator,
+		mulOp,
+		addOp,
+	}
 }
 
 type binaryOpAssociativeProperty[V base.Equatable[V]] struct {
-	op func(V, V) V
+	generator Generator[V]
+	op        func(V, V) V
 }
 
-func (p *binaryOpAssociativeProperty[V]) Check(t *testing.T, generator Generator[V], prng io.Reader) bool {
-	a := generator.Generate(t, prng)
-	b := generator.Generate(t, prng)
-	c := generator.Generate(t, prng)
+func (p *binaryOpAssociativeProperty[V]) Check(prng io.Reader) bool {
+	a := p.generator.Generate(prng)
+	b := p.generator.Generate(prng)
+	c := p.generator.Generate(prng)
 	return p.op(p.op(a, b), c).Equal(p.op(a, p.op(b, c)))
 }
 
 type binaryOpCommutativeProperty[V base.Equatable[V]] struct {
-	op func(V, V) V
+	generator Generator[V]
+	op        func(V, V) V
 }
 
-func (p *binaryOpCommutativeProperty[V]) Check(t *testing.T, generator Generator[V], prng io.Reader) bool {
-	a := generator.Generate(t, prng)
-	b := generator.Generate(t, prng)
+func (p *binaryOpCommutativeProperty[V]) Check(prng io.Reader) bool {
+	a := p.generator.Generate(prng)
+	b := p.generator.Generate(prng)
 	return p.op(a, b).Equal(p.op(b, a))
 }
 
 type binaryOpIdentityProperty[V base.Equatable[V]] struct {
-	id V
-	op func(V, V) V
+	generator Generator[V]
+	id        V
+	op        func(V, V) V
 }
 
-func (p *binaryOpIdentityProperty[V]) Check(t *testing.T, generator Generator[V], prng io.Reader) bool {
-	a := generator.Generate(t, prng)
+func (p *binaryOpIdentityProperty[V]) Check(prng io.Reader) bool {
+	a := p.generator.Generate(prng)
 	return p.op(a, p.id).Equal(a)
 }
 
-type fieldProperty[V algebra.FieldElement[V]] struct {
-	fieldProperties []Property[V]
+type opTryInverseProperty[V base.Equatable[V]] struct {
+	generator Generator[V]
+	id        V
+	opInv     func(V) (V, error)
+	op        func(V, V) V
 }
 
-func NewFieldProperty[V algebra.FieldElement[V]]() Property[V] {
-	var props []Property[V]
-	props = append(props, NewBinaryOpAssociative(func(a, b V) V { return a.Add(b) }))
-	props = append(props, NewBinaryOpAssociative(func(a, b V) V { return a.Mul(b) }))
-	props = append(props, NewBinaryOpCommutativity(func(a, b V) V { return a.Add(b) }))
-	props = append(props, NewBinaryOpCommutativity(func(a, b V) V { return a.Mul(b) }))
-	props = append(props)
-
-	return &fieldProperty[V]{props}
-}
-
-func (p *fieldProperty[V]) Check(t *testing.T, generator Generator[V], prng io.Reader) bool {
-	for _, prop := range p.fieldProperties {
-		if !prop.Check(t, generator, prng) {
-			return false
-		}
+func (p *opTryInverseProperty[V]) Check(prng io.Reader) bool {
+	a := p.generator.Generate(prng)
+	aInv, ok := p.opInv(a)
+	if ok != nil {
+		return false
 	}
+	return p.op(a, aInv).Equal(p.id)
+}
 
-	return true
+type opInverseProperty[V base.Equatable[V]] struct {
+	generator Generator[V]
+	id        V
+	opInv     func(V) V
+	op        func(V, V) V
+}
+
+func (p *opInverseProperty[V]) Check(prng io.Reader) bool {
+	a := p.generator.Generate(prng)
+	aInv := p.opInv(a)
+	return p.op(a, aInv).Equal(p.id)
+}
+
+type opDistributivityProperty[V base.Equatable[V]] struct {
+	generator Generator[V]
+	mulOp     func(V, V) V
+	addOp     func(V, V) V
+}
+
+func (p *opDistributivityProperty[V]) Check(prng io.Reader) bool {
+	a := p.generator.Generate(prng)
+	b := p.generator.Generate(prng)
+	c := p.generator.Generate(prng)
+	return p.mulOp(a, p.addOp(b, c)).Equal(p.addOp(p.mulOp(a, b), p.mulOp(a, c)))
 }
