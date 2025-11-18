@@ -30,7 +30,7 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 
 	// 1.i. compute a (*) c (+) Enc(b, r) for random r
 	// acEnc, err := verifier.pk.CipherTextMul(verifier.c, new(saferith.Int).SetNat(verifier.state.a))
-	acEnc := verifier.c.ScalarExp(verifier.state.a.Nat())
+	acEnc := verifier.c.ScalarMul(verifier.state.a.Nat())
 	bEnc, _, err := verifier.paillierEncrypter.Encrypt(bAsPlaintext, verifier.pk, verifier.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt value")

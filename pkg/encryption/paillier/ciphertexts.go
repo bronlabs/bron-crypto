@@ -111,7 +111,7 @@ func (ct *Ciphertext) ScalarOp(scalar *num.Nat) *Ciphertext {
 	return &Ciphertext{u: ct.Value().Exp(scalar)}
 }
 
-func (ct *Ciphertext) ScalarExp(scalar *num.Nat) *Ciphertext {
+func (ct *Ciphertext) ScalarMul(scalar *num.Nat) *Ciphertext {
 	return ct.ScalarOp(scalar)
 }
 

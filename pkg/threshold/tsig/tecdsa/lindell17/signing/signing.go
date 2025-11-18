@@ -64,7 +64,7 @@ func CalcC3[S algebra.PrimeFieldElement[S]](lambda1, k2, mPrime, r, additiveShar
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert c2 left exponent to Nat")
 	}
-	c2Left := cKey.ScalarExp(c2LeftExponent)
+	c2Left := cKey.ScalarMul(c2LeftExponent)
 
 	c2RightMessage, err := pk.PlaintextSpace().FromBytes(k2Inv.Mul(r).Mul(additiveShare).Bytes())
 	if err != nil {
