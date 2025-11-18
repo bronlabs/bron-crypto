@@ -4,13 +4,18 @@ import (
 	"crypto/sha256"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
 
 const (
 	ChecksumLen          int = 4
 	VersionLen           int = 1
 	minimumDecodedLength     = VersionLen + ChecksumLen
+)
+
+var (
+	ErrChecksumMismatch = errs2.New("checksum mismatch")
+	ErrInvalidLength    = errs2.New("decoded input too short for Base58")
 )
 
 type (
@@ -41,7 +46,7 @@ func CheckEncode(input []byte, version VersionPrefix) Base58 {
 func CheckDecode(input Base58) (result []byte, version VersionPrefix, err error) {
 	decoded := Decode(input)
 	if len(decoded) < minimumDecodedLength {
-		return nil, 0, errs.NewLength("decoded input too short for Base58")
+		return nil, 0, ErrInvalidLength.WithStackTrace()
 	}
 	version = VersionPrefix(decoded[0])
 
@@ -52,7 +57,7 @@ func CheckDecode(input Base58) (result []byte, version VersionPrefix, err error)
 	recomputedChecksum := DeriveChecksum(versionAndPayload)
 
 	if !recomputedChecksum.Equal(decodedChecksum) {
-		return nil, 0, errs.NewVerification("checksum mismatch")
+		return nil, 0, ErrChecksumMismatch.WithStackTrace()
 	}
 	result = versionAndPayload[VersionLen:]
 	return
