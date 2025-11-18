@@ -67,7 +67,7 @@ func (g *DenseUnitGroupTrait[A, W, WT]) Modulus() *num.NatPlus {
 	return g.zMod.Modulus()
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) ModulusCT() numct.Modulus {
+func (g *DenseUnitGroupTrait[A, W, WT]) ModulusCT() *numct.Modulus {
 	return g.zMod.Modulus().ModulusCT()
 }
 

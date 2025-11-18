@@ -95,19 +95,14 @@ func (i *Int) UnmarshalCBOR(data []byte) error {
 }
 
 type uintDTO struct {
-	Value        *numct.Nat `cbor:"value"`
-	ModulusBytes []byte     `cbor:"modulusBytes"`
+	Value   *numct.Nat     `cbor:"value"`
+	Modulus *numct.Modulus `cbor:"modulus"`
 }
 
 func (u *Uint) MarshalCBOR() ([]byte, error) {
-	modulusBytes, err := serde.MarshalCBOR(u.m)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to marshal modulus")
-	}
-
 	dto := &uintDTO{
-		Value:        u.v,
-		ModulusBytes: modulusBytes,
+		Value:   u.v,
+		Modulus: u.m,
 	}
 	out, err := serde.MarshalCBOR(dto)
 	if err != nil {
@@ -121,7 +116,7 @@ func (u *Uint) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return err
 	}
-	if dto.ModulusBytes == nil {
+	if dto.Modulus == nil {
 		return errs.NewIsNil("modulus bytes")
 	}
 	if dto.Value == nil {
@@ -129,16 +124,11 @@ func (u *Uint) UnmarshalCBOR(data []byte) error {
 	}
 
 	// Deserialize the modulus interface directly - tags handle type preservation
-	modulus, err := serde.UnmarshalCBOR[numct.Modulus](dto.ModulusBytes)
-	if err != nil {
-		return errs.WrapFailed(err, "failed to unmarshal modulus")
-	}
-
-	if lt, _, _ := dto.Value.Compare(modulus.Nat()); lt == ct.False {
+	if lt, _, _ := dto.Value.Compare(dto.Modulus.Nat()); lt == ct.False {
 		return errs.NewValue("value must be in [0, modulus)")
 	}
 	u.v = dto.Value
-	u.m = modulus
+	u.m = dto.Modulus
 	return nil
 }
 

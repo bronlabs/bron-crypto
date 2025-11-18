@@ -17,7 +17,7 @@ func TestSimpleModulus_CBOR(t *testing.T) {
 
 	// Create a modulus n = 143 = 11 * 13
 	n := numct.NewNat(143)
-	m, ok := numct.NewModulusOdd(n)
+	m, ok := numct.NewModulus(n)
 	require.Equal(t, ct.True, ok)
 
 	// Create SimpleModulus
@@ -149,7 +149,7 @@ func TestArithmetic_InterfaceSerialization_SimpleModulus(t *testing.T) {
 
 	// Create a SimpleModulus
 	n := numct.NewNat(143)
-	m, ok := numct.NewModulusOdd(n)
+	m, ok := numct.NewModulus(n)
 	require.Equal(t, ct.True, ok)
 
 	original, ok2 := modular.NewSimple(m)
@@ -285,7 +285,7 @@ func TestArithmetic_RoundTrip_AllTypes(t *testing.T) {
 			name: "SimpleModulus",
 			arith: func() modular.Arithmetic {
 				n := numct.NewNat(143)
-				m, _ := numct.NewModulusOdd(n)
+				m, _ := numct.NewModulus(n)
 				s, _ := modular.NewSimple(m)
 				return s
 			}(),

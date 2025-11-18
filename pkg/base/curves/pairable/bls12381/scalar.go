@@ -4,11 +4,8 @@ import (
 	"encoding"
 	"sync"
 
-	"github.com/cronokirby/saferith"
-
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
@@ -31,11 +28,11 @@ var (
 
 	scalarFieldInitOnce sync.Once
 	scalarFieldInstance *ScalarField
-	scalarFieldOrder    *saferith.Modulus
+	scalarFieldOrder    *numct.Modulus
 )
 
 func scalarFieldInit() {
-	scalarFieldOrder = saferith.ModulusFromBytes(sliceutils.Reversed(bls12381Impl.FqModulus[:]))
+	scalarFieldOrder, _ = numct.NewModulusFromBytesBE(sliceutils.Reversed(bls12381Impl.FqModulus[:]))
 	scalarFieldInstance = &ScalarField{}
 }
 
@@ -65,7 +62,7 @@ func (f *ScalarField) Characteristic() cardinal.Cardinal {
 }
 
 func (*ScalarField) Order() cardinal.Cardinal {
-	return cardinal.NewFromSaferith(scalarFieldOrder.Nat())
+	return cardinal.NewFromNatCT(scalarFieldOrder.Nat())
 }
 
 func (*ScalarField) Hash(input []byte) (*Scalar, error) {
@@ -79,13 +76,9 @@ func (*ScalarField) Hash(input []byte) (*Scalar, error) {
 
 func (f *ScalarField) FromBytesBEReduce(input []byte) (*Scalar, error) {
 	var v numct.Nat
-	m, ok := numct.NewModulusOddPrime((*numct.Nat)(scalarFieldOrder.Nat()))
-	if ok == ct.False {
-		return nil, errs.NewFailed("failed to create modulus")
-	}
 	var nNat numct.Nat
 	nNat.SetBytes(input)
-	m.Mod(&v, &nNat)
+	scalarFieldOrder.Mod(&v, &nNat)
 	vBytes := v.Bytes()
 	return f.FromBytesBE(vBytes)
 }

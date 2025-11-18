@@ -131,7 +131,7 @@ func Verify(sessionId network.SID, tape transcripts.Transcript, statement *paill
 	return nil
 }
 
-func extractRhos(transcript transcripts.Transcript, n numct.Modulus) ([]*numct.Nat, error) {
+func extractRhos(transcript transcripts.Transcript, n *numct.Modulus) ([]*numct.Nat, error) {
 	byteSize := uint((n.BitLen() + 7) / 8)
 	excessBits := n.BitLen() % 8
 

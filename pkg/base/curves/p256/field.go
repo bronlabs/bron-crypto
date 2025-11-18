@@ -4,8 +4,6 @@ import (
 	"encoding"
 	"sync"
 
-	"github.com/cronokirby/saferith"
-
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
@@ -30,7 +28,7 @@ var (
 
 	baseFieldInstance *BaseField
 	baseFieldInitOnce sync.Once
-	baseFieldOrder    *saferith.Modulus
+	baseFieldOrder    *numct.Modulus
 )
 
 type BaseField struct {
@@ -39,7 +37,12 @@ type BaseField struct {
 
 func NewBaseField() *BaseField {
 	baseFieldInitOnce.Do(func() {
-		baseFieldOrder = saferith.ModulusFromBytes(sliceutils.Reversed(p256Impl.FpModulus[:]))
+		var ok ct.Bool
+		v := numct.NewNatFromBytes(sliceutils.Reversed(p256Impl.FpModulus[:]))
+		baseFieldOrder, ok = numct.NewModulus(v)
+		if ok == ct.False {
+			panic("failed to create base field modulus")
+		}
 		baseFieldInstance = &BaseField{}
 	})
 
@@ -51,11 +54,11 @@ func (f *BaseField) Name() string {
 }
 
 func (f *BaseField) Order() cardinal.Cardinal {
-	return cardinal.NewFromSaferith(baseFieldOrder.Nat())
+	return cardinal.NewFromNatCT(baseFieldOrder.Nat())
 }
 
 func (f *BaseField) Characteristic() cardinal.Cardinal {
-	return cardinal.NewFromSaferith(baseFieldOrder.Nat())
+	return cardinal.NewFromNatCT(baseFieldOrder.Nat())
 }
 
 func (f *BaseField) Hash(bytes []byte) (*BaseFieldElement, error) {
@@ -81,13 +84,9 @@ func (f *BaseField) BitLen() int {
 
 func (f *BaseField) FromBytesBEReduce(input []byte) (*BaseFieldElement, error) {
 	var v numct.Nat
-	m, ok := numct.NewModulusOddPrime((*numct.Nat)(baseFieldOrder.Nat()))
-	if ok == ct.False {
-		return nil, errs.NewFailed("failed to create modulus")
-	}
 	var nNat numct.Nat
 	nNat.SetBytes(input)
-	m.Mod(&v, &nNat)
+	baseFieldOrder.Mod(&v, &nNat)
 	vBytes := v.Bytes()
 	return f.FromBytesBE(vBytes)
 }

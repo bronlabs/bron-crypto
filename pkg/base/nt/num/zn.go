@@ -40,14 +40,14 @@ func NewZModFromCardinal(n cardinal.Cardinal) (*ZMod, error) {
 	return &ZMod{n: nn}, nil
 }
 
-func NewZModFromModulus(m numct.Modulus) (*ZMod, error) {
+func NewZModFromModulus(m *numct.Modulus) (*ZMod, error) {
 	if m.Nat() == nil {
 		return nil, errs.NewIsNil("modulus Nat")
 	}
 	return &ZMod{n: NPlus().FromModulus(m)}, nil
 }
 
-func NewUintGivenModulus(value *numct.Nat, m numct.Modulus) (*Uint, error) {
+func NewUintGivenModulus(value *numct.Nat, m *numct.Modulus) (*Uint, error) {
 	if m.Nat() == nil {
 		return nil, errs.NewIsNil("modulus Nat")
 	}
@@ -285,7 +285,7 @@ func (zn *ZMod) AmbientStructure() algebra.Structure[*Int] {
 
 type Uint struct {
 	v *numct.Nat
-	m numct.Modulus
+	m *numct.Modulus
 }
 
 func (u *Uint) isValid(x *Uint) (*Uint, error) {
@@ -387,6 +387,16 @@ func (u *Uint) Exp(exponent *Nat) *Uint {
 	return &Uint{v: v, m: u.m}
 }
 
+func (u *Uint) ExpBounded(exponent *Nat, bits uint) *Uint {
+	if exponent == nil {
+		panic(errs.NewIsNil("argument is nil"))
+	}
+	v := exponent.v.Clone()
+	v.Resize(int(bits))
+	u.m.ModExp(v, u.v, exponent.v)
+	return &Uint{v: v, m: u.m}
+}
+
 func (u *Uint) ExpI(exponent *Int) *Uint {
 	if exponent == nil {
 		panic(errs.NewIsNil("argument is nil"))
@@ -394,6 +404,18 @@ func (u *Uint) ExpI(exponent *Int) *Uint {
 	v := new(numct.Nat)
 	u.m.ModExpInt(v, u.v, exponent.v)
 	return &Uint{v: v, m: u.m}
+}
+
+func (u *Uint) ExpIBounded(exponent *Int, bits uint) *Uint {
+	if exponent == nil {
+		panic(errs.NewIsNil("argument is nil"))
+	}
+	v := exponent.v.Clone()
+	v.Resize(int(bits))
+	var vNat numct.Nat
+	u.m.ModExpInt(&vNat, u.v, exponent.v)
+	return &Uint{v: &vNat, m: u.m}
+
 }
 
 func (u *Uint) IsUnit() bool {
@@ -587,7 +609,7 @@ func (u *Uint) Modulus() *NatPlus {
 	return out
 }
 
-func (u *Uint) ModulusCT() numct.Modulus {
+func (u *Uint) ModulusCT() *numct.Modulus {
 	return u.m
 }
 

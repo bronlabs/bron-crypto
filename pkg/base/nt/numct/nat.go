@@ -12,12 +12,12 @@ import (
 )
 
 var (
-	_ (internal.NatMutable[*Nat, Modulus]) = (*Nat)(nil)
+	_ (internal.NatMutable[*Nat, *Modulus]) = (*Nat)(nil)
 )
 
 // DivModCap computes a / b and a % b, storing the results into outQuot and outRem.
 // The cap parameter sets the announced capacity (in bits) for the quotient.
-func DivModCap(outQuot, outRem, a *Nat, b Modulus, cap int) (ok ct.Bool) {
+func DivModCap(outQuot, outRem, a *Nat, b *Modulus, cap int) (ok ct.Bool) {
 	ok = outQuot.DivCap(a, b, cap)
 	b.Mod(outRem, a)
 	return ok
@@ -99,7 +99,7 @@ func (n *Nat) MulCap(lhs, rhs *Nat, cap int) {
 	(*saferith.Nat)(n).Mul((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), cap)
 }
 
-func (n *Nat) DivCap(numerator *Nat, denominator Modulus, cap int) (ok ct.Bool) {
+func (n *Nat) DivCap(numerator *Nat, denominator *Modulus, cap int) (ok ct.Bool) {
 	ok = utils.BoolTo[ct.Bool](denominator != nil)
 	n.Set((*Nat)(new(saferith.Nat).Div(
 		(*saferith.Nat)(numerator),
@@ -109,7 +109,7 @@ func (n *Nat) DivCap(numerator *Nat, denominator Modulus, cap int) (ok ct.Bool) 
 	return ok
 }
 
-func (n *Nat) ExactDiv(numerator *Nat, denominator Modulus) (ok ct.Bool) {
+func (n *Nat) ExactDiv(numerator *Nat, denominator *Modulus) (ok ct.Bool) {
 	var q, r Nat
 	ok = DivModCap(&q, &r, numerator, denominator, -1)
 	isExact := r.IsZero()

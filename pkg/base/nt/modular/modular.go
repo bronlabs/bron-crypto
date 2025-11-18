@@ -7,7 +7,7 @@ import (
 )
 
 type Arithmetic interface {
-	Modulus() numct.Modulus
+	Modulus() *numct.Modulus
 	MultiplicativeOrder() algebra.Cardinal
 	ModMul(out, a, b *numct.Nat)
 	ModDiv(out, a, b *numct.Nat) ct.Bool

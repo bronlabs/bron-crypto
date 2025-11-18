@@ -16,7 +16,7 @@ type unitGroup[U any] interface {
 	crtp.MultiplicativeSemiModule[U, *num.Nat]
 	crtp.Quotient[U, *num.NatPlus, *num.Uint]
 
-	ModulusCT() numct.Modulus
+	ModulusCT() *numct.Modulus
 	Random(io.Reader) (U, error)
 	AmbientGroup() *num.ZMod
 	FromUint(*num.Uint) (U, error)
@@ -35,7 +35,7 @@ type unit[U any] interface {
 	crtp.Residue[U, *num.NatPlus]
 
 	IsUnknownOrder() bool
-	ModulusCT() numct.Modulus
+	ModulusCT() *numct.Modulus
 	algebra.ExponentiationBase[U, *num.Nat]
 	algebra.IntegerExponentiationBase[U, *num.Int]
 	base.Transparent[*num.Uint]

@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	_ (internal.IntMutable[*Int, Modulus]) = (*Int)(nil)
+	_ (internal.IntMutable[*Int, *Modulus]) = (*Int)(nil)
 )
 
 func IntOne() *Int {
@@ -118,7 +118,7 @@ func (i *Int) Div(numerator, denominator *Int) (ok ct.Bool) {
 	return ok
 }
 
-func (i *Int) DivCap(numerator *Int, denominator Modulus, cap int) (ok ct.Bool) {
+func (i *Int) DivCap(numerator *Int, denominator *Modulus, cap int) (ok ct.Bool) {
 	var outNat Nat
 	ok = outNat.DivCap(numerator.AbsNat(), denominator, cap)
 
@@ -128,7 +128,7 @@ func (i *Int) DivCap(numerator *Int, denominator Modulus, cap int) (ok ct.Bool) 
 	return ok
 }
 
-func (i *Int) ExactDiv(lhs *Int, rhs Modulus) (ok ct.Bool) {
+func (i *Int) ExactDiv(lhs *Int, rhs *Modulus) (ok ct.Bool) {
 	var outNat Nat
 	ok = outNat.ExactDiv(lhs.AbsNat(), rhs)
 	i.SetNat(&outNat)

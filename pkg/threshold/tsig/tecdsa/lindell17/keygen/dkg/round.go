@@ -11,7 +11,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
@@ -234,7 +233,9 @@ func (p *Participant[P, B, S]) Round4(input network.RoundMessages[*Round3Broadca
 		theirCKeyDoublePrime := message.CKeyDoublePrime
 
 		// 4.i. calculate and store ckey_j = 3 (*) ckey'_j (+) ckey''_j
-		p.state.theirPaillierEncryptedShares[id] = ((theirCKeyPrime.ScalarMul(num.N().FromUint64(3))).HomAdd(theirCKeyDoublePrime))
+		// p.state.theirPaillierEncryptedShares[id] = ((theirCKeyPrime.ScalarMul(num.N().FromUint64(3))).HomAdd(theirCKeyDoublePrime))
+		// p.state.theirPaillierEncryptedShares[id] = (theirCKeyPrime.ScalarMulBounded(num.N().FromUint64(3), 2)).HomAdd(theirCKeyDoublePrime)
+		p.state.theirPaillierEncryptedShares[id] = theirCKeyPrime.HomAdd(theirCKeyDoublePrime).HomAdd(theirCKeyDoublePrime).HomAdd(theirCKeyDoublePrime)
 
 		// 4.ii. LP and LPDL continue
 		// Share single transcript clone across all verifiers to preserve state

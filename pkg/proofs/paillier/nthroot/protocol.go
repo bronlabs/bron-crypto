@@ -62,7 +62,7 @@ func NewProtocol[A znstar.ArithmeticPaillier](group *znstar.PaillierGroup[A], pr
 		anc,
 		prng,
 		maurer09.WithImageScalarMul[*znstar.PaillierGroupElement[A], *znstar.PaillierGroupElement[A]](scalarMul),
-		maurer09.WithPreImageScalarMul[*znstar.PaillierGroupElement[A], *znstar.PaillierGroupElement[A]](scalarMul),
+		maurer09.WithPreImageScalarMul[*znstar.PaillierGroupElement[A]](scalarMul),
 	)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create underlying Maurer09 protocol")

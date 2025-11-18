@@ -36,7 +36,7 @@ func (u *UnitTrait[A, W, WT]) Modulus() *num.NatPlus {
 	return u.v.Modulus()
 }
 
-func (u *UnitTrait[A, W, WT]) ModulusCT() numct.Modulus {
+func (u *UnitTrait[A, W, WT]) ModulusCT() *numct.Modulus {
 	return u.arith.Modulus()
 }
 
@@ -86,6 +86,21 @@ func (u *UnitTrait[A, W, WT]) Exp(exponent *num.Nat) W {
 	return W(&out)
 }
 
+func (u *UnitTrait[A, W, WT]) ExpBounded(exponent *num.Nat, bits uint) W {
+	ex := exponent.Value().Clone()
+	ex.Resize(int(bits))
+	var outCt numct.Nat
+	u.arith.ModExp(&outCt, u.v.Value(), ex)
+	v, err := num.NewUintGivenModulus(&outCt, u.ModulusCT())
+	if err != nil {
+		panic(err)
+	}
+	var out WT
+	W(&out).set(v, u.arith, u.n)
+	return W(&out)
+
+}
+
 func (u *UnitTrait[A, W, WT]) ExpI(exponent *num.Int) W {
 	var outCt numct.Nat
 	u.arith.ModExpInt(&outCt, u.v.Value(), exponent.Value())
@@ -96,6 +111,21 @@ func (u *UnitTrait[A, W, WT]) ExpI(exponent *num.Int) W {
 	var out WT
 	W(&out).set(v, u.arith, u.n)
 	return W(&out)
+}
+
+func (u *UnitTrait[A, W, WT]) ExpIBounded(exponent *num.Int, bits uint) W {
+	ex := exponent.Value().Clone()
+	ex.Resize(int(bits))
+	var outCt numct.Nat
+	u.arith.ModExpInt(&outCt, u.v.Value(), ex)
+	v, err := num.NewUintGivenModulus(&outCt, u.ModulusCT())
+	if err != nil {
+		panic(err)
+	}
+	var out WT
+	W(&out).set(v, u.arith, u.n)
+	return W(&out)
+
 }
 
 func (u *UnitTrait[A, W, WT]) Square() W {

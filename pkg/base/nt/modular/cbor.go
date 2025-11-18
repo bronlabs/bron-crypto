@@ -31,7 +31,7 @@ func init() {
 }
 
 type simpleDTO struct {
-	Modulus numct.Modulus `cbor:"modulus"`
+	Modulus *numct.Modulus `cbor:"modulus"`
 }
 
 func (s *SimpleModulus) MarshalCBOR() ([]byte, error) {

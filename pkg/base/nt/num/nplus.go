@@ -68,7 +68,7 @@ func (nps *PositiveNaturalNumbers) FromBig(b *big.Int) (*NatPlus, error) {
 	return nps.FromBytes(b.Bytes())
 }
 
-func (nps *PositiveNaturalNumbers) FromModulus(m numct.Modulus) *NatPlus {
+func (nps *PositiveNaturalNumbers) FromModulus(m *numct.Modulus) *NatPlus {
 	return &NatPlus{v: m.Nat(), m: m}
 }
 
@@ -196,7 +196,7 @@ func (nps *PositiveNaturalNumbers) Bottom() *NatPlus {
 
 type NatPlus struct {
 	v *numct.Nat
-	m numct.Modulus
+	m *numct.Modulus
 }
 
 func (*NatPlus) isValid(x *NatPlus) (*NatPlus, error) {
@@ -218,14 +218,11 @@ func (*NatPlus) ensureValid(x *NatPlus) *NatPlus {
 	return x
 }
 
-func (np *NatPlus) cacheMont(m numct.Modulus) *NatPlus {
+func (np *NatPlus) cacheMont(m *numct.Modulus) *NatPlus {
 	if np.m == nil {
-		if m == nil {
-			var ok ct.Bool
-			m, ok = numct.NewModulus(np.v)
-			if ok == ct.False {
-				panic(errs.NewFailed("modulus is not valid"))
-			}
+		m, ok := numct.NewModulus(np.v)
+		if ok == ct.False {
+			panic(errs.NewFailed("modulus is not valid"))
 		}
 		np.m = m
 	}
@@ -440,7 +437,7 @@ func (np *NatPlus) IsProbablyPrime() bool {
 	return np.v.IsProbablyPrime() == ct.True
 }
 
-func (np *NatPlus) ModulusCT() numct.Modulus {
+func (np *NatPlus) ModulusCT() *numct.Modulus {
 	np.cacheMont(nil)
 	return np.m
 }

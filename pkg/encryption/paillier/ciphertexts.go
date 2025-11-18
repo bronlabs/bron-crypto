@@ -93,26 +93,26 @@ func (ct *Ciphertext) HomAdd(other *Ciphertext) *Ciphertext {
 	return ct.Op(other)
 }
 
-// func (ct *Ciphertext) Mul(other *Ciphertext) *Ciphertext {
-// 	return ct.Op(other)
-// }
-
 func (ct *Ciphertext) HomSub(other *Ciphertext) *Ciphertext {
 	ct.isValid(other)
 	return &Ciphertext{u: ct.Value().Div(other.Value())}
 }
-
-// func (ct *Ciphertext) Div(other *Ciphertext) *Ciphertext {
-// 	return ct.HomSub(other)
-// }
 
 func (ct *Ciphertext) ScalarOp(scalar *num.Nat) *Ciphertext {
 	// TODO: ensure it works for integer
 	return &Ciphertext{u: ct.Value().Exp(scalar)}
 }
 
+func (ct *Ciphertext) ScalarOpBounded(scalar *num.Nat, bits uint) *Ciphertext {
+	return &Ciphertext{u: ct.Value().ExpBounded(scalar, bits)}
+}
+
 func (ct *Ciphertext) ScalarMul(scalar *num.Nat) *Ciphertext {
 	return ct.ScalarOp(scalar)
+}
+
+func (ct *Ciphertext) ScalarMulBounded(scalar *num.Nat, bits uint) *Ciphertext {
+	return ct.ScalarOpBounded(scalar, bits)
 }
 
 func (ct *Ciphertext) ReRandomise(pk *PublicKey, prng io.Reader) (*Ciphertext, *Nonce, error) {

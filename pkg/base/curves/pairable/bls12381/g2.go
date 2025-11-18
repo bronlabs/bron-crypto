@@ -110,7 +110,7 @@ func (c *G2) Cofactor() cardinal.Cardinal {
 }
 
 func (c *G2) Order() cardinal.Cardinal {
-	return cardinal.NewFromSaferith(scalarFieldOrder.Nat())
+	return cardinal.NewFromNatCT(scalarFieldOrder.Nat())
 }
 
 func (c *G2) FromCompressed(input []byte) (*PointG2, error) {

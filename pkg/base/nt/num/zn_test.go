@@ -13,14 +13,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
-// Helper function for tests that need to ignore the error
-func mustFromUint64(u *num.Uint, err error) *num.Uint {
-	if err != nil {
-		panic(err)
-	}
-	return u
-}
-
 func TestZn_Creation(t *testing.T) {
 	t.Parallel()
 

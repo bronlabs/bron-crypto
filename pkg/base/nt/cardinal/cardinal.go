@@ -8,6 +8,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	acrtp "github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	saferith_utils "github.com/bronlabs/bron-crypto/pkg/base/utils/saferith"
 )
@@ -64,6 +65,18 @@ func NewFromSaferith(n *saferith.Nat) Cardinal {
 		isUnknown: false,
 		isFinite:  true,
 	}
+}
+
+func NewFromNatCT(nat *numct.Nat) Cardinal {
+	if nat == nil {
+		return unknown
+	}
+	return &cardinal{
+		v:         (*saferith.Nat)(nat),
+		isUnknown: false,
+		isFinite:  true,
+	}
+
 }
 
 func NewFromBig(n *big.Int) Cardinal {

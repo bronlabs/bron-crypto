@@ -13,13 +13,13 @@ import (
 func NewOddPrimeFactors(p, q *numct.Nat) (*OddPrimeFactors, ct.Bool) {
 	allOk := p.Equal(q).Not() & p.IsProbablyPrime() & q.IsProbablyPrime() & p.IsOdd() & q.IsOdd()
 
-	params, ok := crt.PrecomputePairExtended[*numct.ModulusOddPrime](p, q)
+	params, ok := crt.PrecomputePairExtended(p, q)
 	allOk &= ok
 
 	// Compute m = p * q for the modulus
 	var mNat numct.Nat
 	mNat.Mul(p, q)
-	m, ok := numct.NewModulusOdd(&mNat)
+	m, ok := numct.NewModulus(&mNat)
 	allOk &= ok
 
 	// Compute phi(p) = p-1 and phi(q) = q-1
@@ -36,7 +36,7 @@ func NewOddPrimeFactors(p, q *numct.Nat) (*OddPrimeFactors, ct.Bool) {
 
 	var phiNat numct.Nat
 	phiNat.Mul(&phiPnat, &phiQnat)
-	phi, ok := numct.NewModulusNonZero(&phiNat)
+	phi, ok := numct.NewModulus(&phiNat)
 	allOk &= ok
 
 	return &OddPrimeFactors{
@@ -49,14 +49,14 @@ func NewOddPrimeFactors(p, q *numct.Nat) (*OddPrimeFactors, ct.Bool) {
 }
 
 type OddPrimeFactors struct {
-	Params *crt.ParamsExtended[*numct.ModulusOddPrime]
-	N      *numct.ModulusOdd
-	PhiP   numct.Modulus
-	PhiQ   numct.Modulus
-	Phi    numct.Modulus
+	Params *crt.ParamsExtended
+	N      *numct.Modulus
+	PhiP   *numct.Modulus
+	PhiQ   *numct.Modulus
+	Phi    *numct.Modulus
 }
 
-func (m *OddPrimeFactors) Modulus() numct.Modulus {
+func (m *OddPrimeFactors) Modulus() *numct.Modulus {
 	return m.N
 }
 
