@@ -50,10 +50,7 @@ func (r *seededReader) validateSeedInputs(seed, salt []byte) error {
 	if len(salt) != 8 {
 		validationErrs = append(validationErrs, ErrInvalidSaltLength)
 	}
-	if len(validationErrs) > 0 {
-		return errs2.Join(validationErrs...)
-	}
-	return nil
+	return errs2.Join(validationErrs...)
 }
 
 func (r *seededReader) New(seed, salt []byte) (prng.SeedablePRNG, error) {
