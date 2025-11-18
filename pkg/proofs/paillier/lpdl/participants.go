@@ -115,7 +115,7 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 	// xEncrypted has known order, qThird has unknown order from Phi
 	// Need to forget order on xEncrypted for the division
 	xUnknown := paillier.NewCiphertextFromUnit(xEncrypted.Value().ForgetOrder())
-	rangeCiphertext := xUnknown.Div(qThird)
+	rangeCiphertext := xUnknown.HomSub(qThird)
 	rangeStatement := paillierrange.NewStatement(publicKey, rangeCiphertext, qThirdNat)
 	rangeVerifier, err := zkcompiler.NewVerifier(sessionId, rangeProofTranscript, rangeProtocol, rangeStatement, prng)
 	if err != nil {

@@ -234,7 +234,7 @@ func (p *Participant[P, B, S]) Round4(input network.RoundMessages[*Round3Broadca
 		theirCKeyDoublePrime := message.CKeyDoublePrime
 
 		// 4.i. calculate and store ckey_j = 3 (*) ckey'_j (+) ckey''_j
-		p.state.theirPaillierEncryptedShares[id] = ((theirCKeyPrime.ScalarExp(num.N().FromUint64(3))).Mul(theirCKeyDoublePrime))
+		p.state.theirPaillierEncryptedShares[id] = ((theirCKeyPrime.ScalarExp(num.N().FromUint64(3))).HomAdd(theirCKeyDoublePrime))
 
 		// 4.ii. LP and LPDL continue
 		// Share single transcript clone across all verifiers to preserve state

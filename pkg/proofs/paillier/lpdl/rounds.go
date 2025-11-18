@@ -35,7 +35,7 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt value")
 	}
-	cPrime := acEnc.Mul(bEnc)
+	cPrime := acEnc.HomAdd(bEnc)
 
 	// 1.ii. compute c'' = commit(a, b)
 	cDoublePrimeCommitment, cDoublePrimeWitness, err := verifier.commitmentScheme.Committer().Commit(slices.Concat(verifier.state.a.Bytes(), verifier.state.b.Bytes()), verifier.prng)
