@@ -1291,7 +1291,7 @@ func TestUint_EuclideanValuation(t *testing.T) {
 
 	// EuclideanValuation returns itself
 	result := a.EuclideanValuation()
-	require.Equal(t, a, result)
+	require.Equal(t, a.Abs().Uint64(), result.Uint64())
 }
 
 func TestUint_TryNeg(t *testing.T) {

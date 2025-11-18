@@ -120,7 +120,7 @@ func (zn *ZMod) FromBytes(input []byte) (*Uint, error) {
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "failed to deserialize Nat from bytes")
 	}
-	return zn.FromNatCTReduced(v.Value())
+	return zn.FromNatCT(v.Value())
 }
 
 func (zn *ZMod) FromBytesBE(input []byte) (*Uint, error) {
