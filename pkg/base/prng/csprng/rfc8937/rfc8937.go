@@ -26,16 +26,16 @@ type WrappedReader struct {
 
 func Wrap[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](prng io.Reader, signer *ecdsa.Signer[P, B, S], uniqueDeviceId []byte) (*WrappedReader, error) {
 	if !signer.IsDeterministic() {
-		return nil, errs2.Wrap(ErrSignerDeterminism)
+		return nil, ErrSignerDeterminism.WithStackTrace()
 	}
 
 	sig, err := signer.Sign(uniqueDeviceId)
 	if err != nil {
-		return nil, errs2.Wrap(ErrUniqueDeviceIDSignature)
+		return nil, ErrUniqueDeviceIDSignature.WithStackTrace()
 	}
 	salt, err := hashing.Hash(hashFunc, slices.Concat(sig.R().Bytes(), sig.S().Bytes()))
 	if err != nil {
-		return nil, errs2.Wrap(ErrHashingUniqueDeviceID)
+		return nil, ErrHashingUniqueDeviceID.WithStackTrace()
 	}
 
 	return &WrappedReader{
@@ -49,17 +49,17 @@ func (r *WrappedReader) Read(p []byte) (n int, err error) {
 	g := make([]byte, l)
 	_, err = io.ReadFull(r.wrapee, g)
 	if err != nil {
-		return n, errs2.Wrap(ErrRandomSample)
+		return n, ErrRandomSample.WithStackTrace()
 	}
 	key, err := hkdf.Extract(hashFunc, g, r.salt)
 	if err != nil {
-		return 0, errs2.Wrap(ErrExtractKey)
+		return 0, ErrExtractKey.WithStackTrace()
 	}
 
 	tag2 := r.counter.Add(1)
 	gPrime, err := hkdf.Expand(hashFunc, key, fmt.Sprintf("%d", tag2), len(p))
 	if err != nil {
-		return 0, errs2.Wrap(ErrExpandKey)
+		return 0, ErrExpandKey.WithStackTrace()
 	}
 	copy(p, gPrime)
 	return len(gPrime), nil

@@ -22,6 +22,11 @@ type TaggedError interface {
 	TagValue(tag Tag) (string, bool)
 }
 
+type ContextualError interface {
+	error
+	Context() string
+}
+
 var (
 	Unwrap = errors.Unwrap
 	Is     = errors.Is
@@ -29,54 +34,53 @@ var (
 	Join   = errors.Join
 )
 
-func New(format string, args ...any) error {
+func New(format string, args ...any) *Error {
 	if format == "" {
 		return nil
 	}
-	return &errorWithStack{
-		v:     fmt.Errorf(format, args...),
-		stack: callers(),
+	return &Error{
+		v: fmt.Errorf(format, args...),
 	}
 }
 
-func WrapWithMessage(err error, format string, args ...any) error {
+func AttachStackTrace(err error) *Error {
 	if err == nil {
 		return nil
 	}
-	return &errorWithStack{
-		v:       err,
-		stack:   callers(),
-		context: fmt.Sprintf(format, args...),
+	if er, ok := err.(*Error); ok {
+		return er.WithStackTrace()
 	}
-}
-
-func Wrap(err error) error {
-	if err == nil {
-		return nil
-	}
-	return &errorWithStack{
+	return &Error{
 		v:     err,
 		stack: callers(),
 	}
 }
 
-func AttachTag(err error, tag Tag, format string, args ...any) error {
+func AttachMessage(err error, format string, args ...any) *Error {
 	if err == nil {
 		return nil
 	}
-	if alreadyTaggedErr, ok := err.(*taggedError); ok {
-		alreadyTaggedErr.t[tag] = fmt.Sprintf(format, args...)
-		return alreadyTaggedErr
+	if er, ok := err.(*Error); ok {
+		return er.WithMessage(format, args...)
 	}
-	if unwrappedErrorWithStack, ok := err.(*errorWithStack); ok {
-		return &taggedError{
-			errorWithStack: unwrappedErrorWithStack,
-			t:              map[Tag]string{tag: fmt.Sprintf(format, args...)},
-		}
+	return &Error{
+		v:       err,
+		context: fmt.Sprintf(format, args...),
 	}
-	return &taggedError{
-		errorWithStack: New(err.Error(), nil).(*errorWithStack),
-		t:              map[Tag]string{tag: fmt.Sprintf(format, args...)},
+}
+
+func AttachTag(err error, tag Tag, value string) *Error {
+	if err == nil {
+		return nil
+	}
+	if er, ok := err.(*Error); ok {
+		return er.WithTag(tag, value)
+	}
+	return &Error{
+		v: err,
+		t: map[Tag]string{
+			tag: value,
+		},
 	}
 }
 
@@ -90,17 +94,6 @@ func HasTag(err error, tag Tag) (string, bool) {
 		err = Unwrap(err)
 	}
 	return "", false
-}
-
-func StackTraces(err error) CombinedStackTrace {
-	var traces []StackTrace
-	for err != nil {
-		if wst, ok := err.(TraceableError); ok {
-			traces = append(traces, wst.StackTrace())
-		}
-		err = Unwrap(err)
-	}
-	return traces
 }
 
 func Must(f func() error) {
@@ -125,32 +118,34 @@ func Must2[T1, T2 any](f func() (T1, T2, error)) (T1, T2) {
 	return v1, v2
 }
 
-type errorWithStack struct {
+type Error struct {
 	v       error
 	stack   Stack
 	context string
+	t       map[Tag]string
 }
 
-func (e *errorWithStack) Error() string {
-	if e.context == "" {
-		return e.v.Error()
-	}
-	return fmt.Sprintf("%s (%s)", e.v.Error(), e.context)
+func (e *Error) Error() string {
+	return e.v.Error()
+	// if e.context == "" {
+	// 	return e.v.Error()
+	// }
+	// return fmt.Sprintf("%s (%s)", e.v.Error(), e.context)
 }
 
-func (e *errorWithStack) Context() string {
+func (e *Error) Context() string {
 	return e.context
 }
 
-func (e *errorWithStack) Unwrap() error {
+func (e *Error) Unwrap() error {
 	return e.v
 }
 
-func (e *errorWithStack) StackTrace() StackTrace {
+func (e *Error) StackTrace() StackTrace {
 	return e.stack.StackTrace()
 }
 
-func (e *errorWithStack) Format(s fmt.State, verb rune) {
+func (e *Error) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('+') {
@@ -162,46 +157,19 @@ func (e *errorWithStack) Format(s fmt.State, verb rune) {
 		if _, err := io.WriteString(s, e.Error()); err != nil {
 			panic(err)
 		}
-	case 'q':
-		fmt.Fprintf(s, "%q", e.Error())
-	}
-}
 
-type taggedError struct {
-	*errorWithStack
-	t map[Tag]string
-}
-
-func (e *taggedError) Error() string {
-	return e.errorWithStack.Error()
-}
-
-func (e *taggedError) Unwrap() error {
-	return e.errorWithStack
-}
-
-func (e *taggedError) Tags() []Tag {
-	return slices.Collect(maps.Keys(e.t))
-}
-
-func (e *taggedError) TagValue(tag Tag) (string, bool) {
-	v, ok := e.t[tag]
-	return v, ok
-}
-
-func (e *taggedError) Format(s fmt.State, verb rune) {
-	switch verb {
-	case 'v':
-		if s.Flag('+') {
-			formatErrorChain(s, e)
-			return
+		if len(e.context) > 0 {
+			if _, err := io.WriteString(s, " ("); err != nil {
+				panic(err)
+			}
+			if _, err := io.WriteString(s, e.context); err != nil {
+				panic(err)
+			}
+			if _, err := io.WriteString(s, ")"); err != nil {
+				panic(err)
+			}
 		}
-		fallthrough
-	case 's':
-		// Base message
-		if _, err := io.WriteString(s, e.Error()); err != nil {
-			panic(err)
-		}
+
 		// Inline tags, single line
 		if len(e.t) > 0 {
 			if _, err := io.WriteString(s, " ["); err != nil {
@@ -224,6 +192,47 @@ func (e *taggedError) Format(s fmt.State, verb rune) {
 	case 'q':
 		fmt.Fprintf(s, "%q", e.Error())
 	}
+}
+
+func (e *Error) WithStackTrace() *Error {
+	return &Error{
+		v:       e,
+		stack:   callers(),
+		context: e.context,
+		t:       maps.Clone(e.t),
+	}
+}
+
+func (e *Error) WithMessage(format string, args ...any) *Error {
+	return &Error{
+		v:       e,
+		stack:   e.stack,
+		context: fmt.Sprintf(format, args...),
+		t:       maps.Clone(e.t),
+	}
+}
+
+func (e *Error) WithTag(tag Tag, value string) *Error {
+	out := &Error{
+		v:       e,
+		stack:   e.stack,
+		context: e.context,
+		t:       maps.Clone(e.t),
+	}
+	if out.t == nil {
+		out.t = make(map[Tag]string)
+	}
+	out.t[tag] = value
+	return out
+}
+
+func (e *Error) Tags() []Tag {
+	return slices.Collect(maps.Keys(e.t))
+}
+
+func (e *Error) TagValue(tag Tag) (string, bool) {
+	v, ok := e.t[tag]
+	return v, ok
 }
 
 func formatErrorChain(s fmt.State, err error) {
@@ -267,4 +276,15 @@ func formatErrorChain(s fmt.State, err error) {
 		err = Unwrap(err)
 		idx++
 	}
+}
+
+func StackTraces(err error) CombinedStackTrace {
+	var traces []StackTrace
+	for err != nil {
+		if wst, ok := err.(TraceableError); ok {
+			traces = append(traces, wst.StackTrace())
+		}
+		err = Unwrap(err)
+	}
+	return traces
 }

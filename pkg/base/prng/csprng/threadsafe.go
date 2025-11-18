@@ -34,7 +34,7 @@ func (tsp *ThreadSafePrng) Read(p []byte) (n int, err error) {
 	defer tsp.mu.Unlock()
 	n, err = tsp.prng.Read(p)
 	if err != nil {
-		return 0, errs2.Wrap(ErrReadFailed)
+		return 0, ErrReadFailed.WithStackTrace()
 	}
 	return n, nil
 }
@@ -44,7 +44,7 @@ func (tsp *ThreadSafePrng) Generate(buffer, readSalt []byte) error {
 	tsp.mu.Lock()
 	defer tsp.mu.Unlock()
 	if err := tsp.prng.Generate(buffer, readSalt); err != nil {
-		return errs2.Wrap(ErrGenerateFailed)
+		return ErrGenerateFailed.WithStackTrace()
 	}
 	return nil
 }
@@ -54,7 +54,7 @@ func (tsp *ThreadSafePrng) Reseed(seed, salt []byte) error {
 	tsp.mu.Lock()
 	defer tsp.mu.Unlock()
 	if err := tsp.prng.Reseed(seed, salt); err != nil {
-		return errs2.Wrap(ErrReseedFailed)
+		return ErrReseedFailed.WithStackTrace()
 	}
 	return nil
 }
@@ -69,7 +69,7 @@ func (tsp *ThreadSafePrng) Seed(seed, salt []byte) error {
 	tsp.mu.Lock()
 	defer tsp.mu.Unlock()
 	if err := tsp.prng.Seed(seed, salt); err != nil {
-		return errs2.Wrap(ErrSeedFailed)
+		return ErrSeedFailed.WithStackTrace()
 	}
 	return nil
 }
@@ -80,7 +80,7 @@ func (tsp *ThreadSafePrng) New(seed, salt []byte) (CSPRNG, error) {
 	defer tsp.mu.Unlock()
 	prng, err := tsp.prng.New(seed, salt)
 	if err != nil {
-		return nil, errs2.Wrap(ErrConstructionFailed)
+		return nil, ErrConstructionFailed.WithStackTrace()
 	}
 	return NewThreadSafePrng(prng), nil
 }

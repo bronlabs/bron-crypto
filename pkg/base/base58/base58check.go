@@ -46,7 +46,7 @@ func CheckEncode(input []byte, version VersionPrefix) Base58 {
 func CheckDecode(input Base58) (result []byte, version VersionPrefix, err error) {
 	decoded := Decode(input)
 	if len(decoded) < minimumDecodedLength {
-		return nil, 0, errs2.Wrap(ErrInvalidLength)
+		return nil, 0, ErrInvalidLength.WithStackTrace()
 	}
 	version = VersionPrefix(decoded[0])
 
@@ -57,7 +57,7 @@ func CheckDecode(input Base58) (result []byte, version VersionPrefix, err error)
 	recomputedChecksum := DeriveChecksum(versionAndPayload)
 
 	if !recomputedChecksum.Equal(decodedChecksum) {
-		return nil, 0, errs2.Wrap(ErrChecksumMismatch)
+		return nil, 0, ErrChecksumMismatch.WithStackTrace()
 	}
 	result = versionAndPayload[VersionLen:]
 	return

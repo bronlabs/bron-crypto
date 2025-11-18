@@ -34,7 +34,7 @@ func (r *seededReader) Read(p []byte) (int, error) {
 
 func (r *seededReader) Seed(seed, salt []byte) error {
 	if err := r.validateSeedInputs(seed, salt); err != nil {
-		return errs2.Wrap(err)
+		return errs2.AttachStackTrace(err)
 	}
 	seedUint64 := binary.LittleEndian.Uint64(seed)
 	saltUint64 := binary.LittleEndian.Uint64(salt)

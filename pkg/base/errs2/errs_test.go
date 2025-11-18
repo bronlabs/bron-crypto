@@ -1,6 +1,7 @@
 package errs2_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
@@ -14,20 +15,18 @@ func TestSanity(t *testing.T) {
 	require.Error(t, e1)
 	require.Equal(t, "an error occurred", e1.Error())
 
-	e2 := errs2.WrapWithMessage(e1, "additional context is %d", 42)
+	e2 := e1.WithMessage("additional context is %d", 42)
 	require.Error(t, e2)
-	require.Equal(t, "an error occurred (additional context is 42)", e2.Error())
+	require.Equal(t, "an error occurred (additional context is 42)", fmt.Sprintf("%s", e2))
 
 	tag := errs2.Tag("code")
-	e3 := errs2.AttachTag(e2, tag, "E123")
+	e3 := e2.WithTag(tag, "E123")
 	require.Error(t, e3)
-	require.Equal(t, "an error occurred (additional context is 42)", e3.Error())
+	require.Equal(t, "an error occurred (additional context is 42) [code=E123]", fmt.Sprintf("%s", e3))
 
-	taggedErr, ok := e3.(errs2.TaggedError)
-	require.True(t, ok)
-	tags := taggedErr.Tags()
+	tags := e3.Tags()
 	require.Contains(t, tags, tag)
-	value, found := taggedErr.TagValue(tag)
+	value, found := e3.TagValue(tag)
 	require.True(t, found)
 	require.Equal(t, "E123", value)
 
@@ -38,7 +37,7 @@ func TestSanity(t *testing.T) {
 	require.True(t, errs2.Is(e3, e1))
 	require.True(t, errs2.Is(e3, e2))
 
-	e4 := errs2.Wrap(e3)
+	e4 := e3.WithStackTrace()
 	v4, exists4 := errs2.HasTag(e4, tag)
 	require.True(t, exists4)
 	require.Equal(t, "E123", v4)
