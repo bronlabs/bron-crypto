@@ -81,7 +81,7 @@ func Test_Lindell17DKG_K256_2of2(t *testing.T) {
 
 	curve := k256.NewCurve()
 	shareholders := hashset.NewComparable[sharing.ID]()
-	for i := sharing.ID(0); i < TOTAL; i++ {
+	for i := sharing.ID(1); i <= TOTAL; i++ {
 		shareholders.Add(i)
 	}
 	accessStructure, err := shamir.NewAccessStructure(THRESHOLD, shareholders.Freeze())
