@@ -3,9 +3,8 @@ package serde
 import (
 	"reflect"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/fxamacker/cbor/v2"
-
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 const (
@@ -20,6 +19,9 @@ var (
 
 	// Global TagSet for type registration.
 	tags = cbor.NewTagSet()
+
+	ErrSerialisation   = errs2.New("serialisation error")
+	ErrDeserialisation = errs2.New("deserialisation error")
 )
 
 // Register registers the concrete type parameter T with a fixed CBOR tag.
@@ -85,7 +87,7 @@ func updateModes() {
 func MarshalCBOR[T any](t T) ([]byte, error) {
 	data, err := enc.Marshal(t)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal CBOR")
+		return nil, ErrSerialisation
 	}
 	return data, nil
 }
@@ -97,7 +99,7 @@ func MarshalCBORTagged[T any](t T, tag uint64) ([]byte, error) {
 	}
 	data, err := enc.Marshal(wrapped)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal tagged CBOR")
+		return nil, ErrSerialisation
 	}
 	return data, nil
 }
@@ -106,7 +108,7 @@ func UnmarshalCBOR[T any](data []byte) (T, error) {
 	var t T
 	err := dec.Unmarshal(data, &t)
 	if err != nil {
-		return t, errs.WrapSerialisation(err, "failed to unmarshal CBOR")
+		return t, ErrDeserialisation
 	}
 	return t, nil
 }
