@@ -4,11 +4,14 @@ import (
 	"encoding/binary"
 	mrand "math/rand/v2"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng"
 )
 
-var _ prng.SeedablePRNG = (*seededReader)(nil)
+var (
+	ErrInvalidSeedLength = errs2.New("seed length is not 8 bytes")
+	ErrInvalidSaltLength = errs2.New("salt length is not 8 bytes")
+)
 
 type seededReader struct {
 	v *mrand.PCG
@@ -30,8 +33,11 @@ func (r *seededReader) Read(p []byte) (int, error) {
 }
 
 func (r *seededReader) Seed(seed, salt []byte) error {
-	if len(seed) != 8 || len(salt) != 8 {
-		return errs.NewValue("seed and salt must be 8 bytes each")
+	if len(seed) != 8 {
+		return errs2.Wrap(ErrInvalidSeedLength)
+	}
+	if len(salt) != 8 {
+		return errs2.Wrap(ErrInvalidSaltLength)
 	}
 	seedUint64 := binary.LittleEndian.Uint64(seed)
 	saltUint64 := binary.LittleEndian.Uint64(salt)

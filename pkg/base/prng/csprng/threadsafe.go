@@ -3,7 +3,15 @@ package csprng
 import (
 	"sync"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+)
+
+var (
+	ErrConstructionFailed = errs2.New("failed to construct new prng")
+	ErrReadFailed         = errs2.New("failed to read from prng")
+	ErrGenerateFailed     = errs2.New("failed to generate from prng")
+	ErrSeedFailed         = errs2.New("failed to seed prng")
+	ErrReseedFailed       = errs2.New("failed to reseed prng")
 )
 
 // Provide a thread-safe version for PRNGs.
@@ -26,7 +34,7 @@ func (tsp *ThreadSafePrng) Read(p []byte) (n int, err error) {
 	defer tsp.mu.Unlock()
 	n, err = tsp.prng.Read(p)
 	if err != nil {
-		return 0, errs.WrapFailed(err, "failed to read from thread-safe prng")
+		return 0, errs2.Wrap(ErrReadFailed)
 	}
 	return n, nil
 }
@@ -36,7 +44,7 @@ func (tsp *ThreadSafePrng) Generate(buffer, readSalt []byte) error {
 	tsp.mu.Lock()
 	defer tsp.mu.Unlock()
 	if err := tsp.prng.Generate(buffer, readSalt); err != nil {
-		return errs.WrapFailed(err, "failed to generate from thread-safe prng")
+		return errs2.Wrap(ErrGenerateFailed)
 	}
 	return nil
 }
@@ -46,7 +54,7 @@ func (tsp *ThreadSafePrng) Reseed(seed, salt []byte) error {
 	tsp.mu.Lock()
 	defer tsp.mu.Unlock()
 	if err := tsp.prng.Reseed(seed, salt); err != nil {
-		return errs.WrapFailed(err, "failed to reseed thread-safe prng")
+		return errs2.Wrap(ErrReseedFailed)
 	}
 	return nil
 }
@@ -61,7 +69,7 @@ func (tsp *ThreadSafePrng) Seed(seed, salt []byte) error {
 	tsp.mu.Lock()
 	defer tsp.mu.Unlock()
 	if err := tsp.prng.Seed(seed, salt); err != nil {
-		return errs.WrapFailed(err, "failed to seed thread-safe prng")
+		return errs2.Wrap(ErrSeedFailed)
 	}
 	return nil
 }
@@ -72,7 +80,7 @@ func (tsp *ThreadSafePrng) New(seed, salt []byte) (CSPRNG, error) {
 	defer tsp.mu.Unlock()
 	prng, err := tsp.prng.New(seed, salt)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create new thread-safe prng")
+		return nil, errs2.Wrap(ErrConstructionFailed)
 	}
 	return NewThreadSafePrng(prng), nil
 }
