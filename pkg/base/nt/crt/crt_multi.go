@@ -110,7 +110,11 @@ func PrecomputeMulti(factors ...*numct.Nat) (*ParamsMulti, ct.Bool) {
 
 // RecombineParallel reconstructs x (mod N) from residues[i] = x mod p_i using precomputed lifts.
 // x ≡ Σ residues[i] * Lift_i (mod N).
-func (params *ParamsMulti) RecombineParallel(residues ...*numct.Nat) *numct.Nat {
+func (params *ParamsMulti) RecombineParallel(residues ...*numct.Nat) (*numct.Nat, ct.Bool) {
+	eqLen := ct.Equal(len(residues), params.NumFactors)
+	if eqLen == ct.False {
+		return nil, eqLen
+	}
 	var wg sync.WaitGroup
 	wg.Add(params.NumFactors)
 
@@ -128,11 +132,15 @@ func (params *ParamsMulti) RecombineParallel(residues ...*numct.Nat) *numct.Nat 
 	for i := range terms {
 		params.Modulus.ModAdd(result, result, terms[i])
 	}
-	return result
+	return result, eqLen
 }
 
 // Recombine reconstructs x (mod N) from residues[i] = x mod p_i using Garner's algorithm.
-func (params *ParamsMulti) RecombineSerial(residues ...*numct.Nat) *numct.Nat {
+func (params *ParamsMulti) RecombineSerial(residues ...*numct.Nat) (*numct.Nat, ct.Bool) {
+	eqLen := ct.Equal(len(residues), params.NumFactors)
+	if eqLen == ct.False {
+		return nil, eqLen
+	}
 	// Garner's algorithm:
 	// Start with x = a_0
 	// For i = 1 to k-1:
@@ -161,15 +169,14 @@ func (params *ParamsMulti) RecombineSerial(residues ...*numct.Nat) *numct.Nat {
 	}
 
 	// Clone to return a properly typed value
-	return result
+	return result, eqLen
 }
 
 func (params *ParamsMulti) Recombine(residues ...*numct.Nat) (*numct.Nat, ct.Bool) {
-	eqLen := ct.Equal(len(residues), params.NumFactors)
 	if params.NumFactors <= 4 {
-		return params.RecombineSerial(residues...), eqLen
+		return params.RecombineSerial(residues...)
 	}
-	return params.RecombineParallel(residues...), eqLen
+	return params.RecombineParallel(residues...)
 }
 
 // DecomposeMultiSerial decomposes m into residues mod each prime.
