@@ -4,6 +4,9 @@ import (
 	"sync"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"

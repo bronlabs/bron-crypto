@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
@@ -56,14 +57,11 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) Equal(other *PublicMaterial
 	if spm == nil || other == nil {
 		return spm == other
 	}
-	for id, pk := range spm.partialPublicKeys.Iter() {
-		otherPk, exists := other.partialPublicKeys.Get(id)
-		if !exists || !pk.Equal(otherPk) {
-			return false
-		}
-	}
+	lhs := hashset.NewHashable(spm.partialPublicKeys.Values()...)
+	rhs := hashset.NewHashable(other.partialPublicKeys.Values()...)
 	return spm.publicKey.Equal(other.publicKey) &&
-		spm.accessStructure.Equal(other.accessStructure)
+		spm.accessStructure.Equal(other.accessStructure) &&
+		lhs.Equal(rhs)
 }
 
 func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) HashCode() base.HashCode {
