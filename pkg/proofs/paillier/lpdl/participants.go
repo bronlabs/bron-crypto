@@ -174,9 +174,6 @@ func validateVerifierInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElemen
 	if utils.IsNil(bigQ) {
 		return errs.NewIsNil("bigQ is nil")
 	}
-	if v := xEncrypted.ValueCT(); v.IsZero()&v.Equal(numct.NatOne()) == ct.True {
-		return errs.NewArgument("xEncrypted is invalid: %s", v.String())
-	}
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")
 	}
