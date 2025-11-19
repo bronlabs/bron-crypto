@@ -63,8 +63,8 @@ func (pk *PublicKey[P, B, S]) HashCode() base.HashCode {
 func (pk *PublicKey[P, B, S]) ToElliptic() *nativeEcdsa.PublicKey {
 	curve := algebra.StructureMustBeAs[Curve[P, B, S]](pk.pk.Structure())
 	nativeCurve := curve.ToElliptic()
-	nativeX := errs2.Must1(pk.Value().AffineX).Cardinal().Big()
-	nativeY := errs2.Must1(pk.Value().AffineY).Cardinal().Big()
+	nativeX := errs2.Must1(pk.Value().AffineX()).Cardinal().Big()
+	nativeY := errs2.Must1(pk.Value().AffineY()).Cardinal().Big()
 	nativePublicKey := &nativeEcdsa.PublicKey{
 		Curve: nativeCurve,
 		X:     nativeX,

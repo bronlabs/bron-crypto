@@ -1,26 +1,29 @@
 package proptest
 
 import (
-	"io"
+	"fmt"
 	"testing"
 )
 
 type Context struct {
 	iters int
-	prng  io.Reader
 }
 
-func NewContext(iters int, prng io.Reader) *Context {
+func NewContext(iters int) *Context {
 	return &Context{
 		iters,
-		prng,
 	}
 }
 
-func RunPropertyCheck[V any](t *testing.T, ctx *Context, property Property[V]) {
-	for range ctx.iters {
-		if !property.Check(ctx.prng) {
-			t.FailNow()
-		}
+func Run[V any](t *testing.T, ctx *Context, properties ...Property[V]) {
+	t.Parallel()
+	for iter := range ctx.iters {
+		t.Run(fmt.Sprintf("iter-%d", iter), func(t *testing.T) {
+			for i, prop := range properties {
+				t.Run(fmt.Sprintf("property-%d", i), func(t *testing.T) {
+					prop.Check()
+				})
+			}
+		})
 	}
 }

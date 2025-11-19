@@ -96,22 +96,20 @@ func HasTag(err error, tag Tag) (string, bool) {
 	return "", false
 }
 
-func Must(f func() error) {
-	if err := f(); err != nil {
+func Must(err error) {
+	if err != nil {
 		panic(err)
 	}
 }
 
-func Must1[T any](f func() (T, error)) T {
-	v, err := f()
+func Must1[T any](v T, err error) T {
 	if err != nil {
 		panic(err)
 	}
 	return v
 }
 
-func Must2[T1, T2 any](f func() (T1, T2, error)) (T1, T2) {
-	v1, v2, err := f()
+func Must2[T1, T2 any](v1 T1, v2 T2, err error) (T1, T2) {
 	if err != nil {
 		panic(err)
 	}
