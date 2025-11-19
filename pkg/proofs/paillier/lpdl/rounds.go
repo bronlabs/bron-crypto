@@ -18,7 +18,7 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}
-	verifier.state.b, err = verifier.state.zModQ.Random(verifier.prng)
+	verifier.state.b, err = verifier.state.zModQ2.Random(verifier.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")
 	}
