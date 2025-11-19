@@ -128,7 +128,12 @@ func (ct *Ciphertext) ReRandomise(pk *PublicKey, prng io.Reader) (*Ciphertext, *
 }
 
 func (ct *Ciphertext) ReRandomiseWithNonce(pk *PublicKey, nonce *Nonce) (*Ciphertext, error) {
-	rn, err := pk.CiphertextSpace().g.NthResidue(nonce.Value())
+	g := pk.CiphertextSpace().g
+	embeddedNonce, err := g.EmbedRSA(nonce.Value())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to embed nonce in the paillier group")
+	}
+	rn, err := g.NthResidue(embeddedNonce)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to lift nonce to n-th residues")
 	}

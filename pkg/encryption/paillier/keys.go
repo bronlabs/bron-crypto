@@ -121,7 +121,7 @@ func (pk *PublicKey) cacheSpaces() {
 		n := pk.group.N()
 		nn := pk.group.Modulus()
 		pk.plaintextSpace, errPlaintext = NewPlaintextSpace(n)
-		pk.nonceSpace, errNonce = NewNonceSpace(nn, n)
+		pk.nonceSpace, errNonce = NewNonceSpace(n)
 		pk.ciphertextSpace, errCiphertext = NewCiphertextSpace(nn, n)
 		if errPlaintext != nil {
 			panic(errPlaintext)
