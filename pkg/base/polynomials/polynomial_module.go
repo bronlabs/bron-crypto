@@ -239,6 +239,15 @@ func (p *ModuleValuedPolynomial[ME, S]) Eval(at S) ME {
 	return out
 }
 
+func (p *ModuleValuedPolynomial[ME, S]) Degree() int {
+	for i := len(p.coeffs) - 1; i >= 0; i-- {
+		if !p.coeffs[i].IsOpIdentity() {
+			return i
+		}
+	}
+	return -1
+}
+
 func (p *ModuleValuedPolynomial[ME, S]) Coefficients() []ME {
 	return p.coeffs
 }
