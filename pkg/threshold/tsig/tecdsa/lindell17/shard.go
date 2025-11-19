@@ -5,6 +5,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
@@ -40,19 +41,14 @@ func (a *AuxiliaryInfo) Equal(rhs *AuxiliaryInfo) bool {
 	if !a.paillierPrivateKey.Equal(rhs.paillierPrivateKey) {
 		return false
 	}
-	for id, pki := range a.paillierPublicKeys.Iter() {
-		pkr, ok := rhs.paillierPublicKeys.Get(id)
-		if !ok || !pki.Equal(pkr) {
-			return false
-		}
-	}
-	for id, ci := range a.encryptedShares.Iter() {
-		cr, ok := rhs.encryptedShares.Get(id)
-		if !ok || !ci.Equal(cr) {
-			return false
-		}
-	}
-	return true
+
+	lpk := hashset.NewHashable(a.paillierPublicKeys.Values()...)
+	rpk := hashset.NewHashable(rhs.paillierPublicKeys.Values()...)
+
+	lc := hashset.NewHashable(a.encryptedShares.Values()...)
+	rc := hashset.NewHashable(rhs.encryptedShares.Values()...)
+
+	return lpk.Equal(rpk) && lc.Equal(rc)
 }
 
 func (a *AuxiliaryInfo) MarshalCBOR() ([]byte, error) {

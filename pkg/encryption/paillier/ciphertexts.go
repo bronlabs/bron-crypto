@@ -3,6 +3,7 @@ package paillier
 import (
 	"io"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
@@ -151,4 +152,8 @@ func (ct *Ciphertext) Shift(message *Plaintext) *Ciphertext {
 	// receiver.n2.ModMul(&out, plaintext.ValueCT(), receiver.nNat)
 	// out.Increment()
 	return nil
+}
+
+func (ct *Ciphertext) HashCode() base.HashCode {
+	return ct.Value().HashCode()
 }
