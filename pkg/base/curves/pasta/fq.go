@@ -2,14 +2,10 @@ package pasta
 
 import (
 	"encoding"
-	"slices"
 	"sync"
-
-	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
@@ -36,11 +32,11 @@ var (
 
 	fqFieldInitOnce sync.Once
 	fqFieldInstance *FqField
-	fqFieldOrder    *saferith.Modulus
+	fqFieldOrder    *numct.Modulus
 )
 
 func fqFieldInit() {
-	fqFieldOrder = saferith.ModulusFromBytes(sliceutils.Reversed(pastaImpl.FqModulus[:]))
+	fqFieldOrder, _ = numct.NewModulusFromBytesBE(sliceutils.Reversed(pastaImpl.FqModulus[:]))
 	fqFieldInstance = &FqField{}
 }
 
@@ -78,7 +74,7 @@ func (f *FqField) Characteristic() cardinal.Cardinal {
 }
 
 func (*FqField) Order() cardinal.Cardinal {
-	return cardinal.NewFromSaferith(fqFieldOrder.Nat())
+	return cardinal.NewFromNatCT(fqFieldOrder.Nat())
 }
 
 func (*FqField) Hash(input []byte) (*FqFieldElement, error) {
@@ -94,20 +90,13 @@ func (*FqField) BitLen() int {
 	return pastaImpl.FqBits
 }
 
-func (f *FqField) FromNat(n *numct.Nat) (*FqFieldElement, error) {
+func (f *FqField) FromBytesBEReduce(input []byte) (*FqFieldElement, error) {
 	var v numct.Nat
-	m, ok := numct.NewModulusOddPrime((*numct.Nat)(fqFieldOrder.Nat()))
-	if ok == ct.False {
-		return nil, errs.NewFailed("failed to create modulus")
-	}
-	m.Mod(&v, n)
+	var nNat numct.Nat
+	nNat.SetBytes(input)
+	fqFieldOrder.Mod(&v, &nNat)
 	vBytes := v.Bytes()
-	slices.Reverse(vBytes)
-	var s FqFieldElement
-	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
-		return nil, errs.NewFailed("failed to set scalar from nat")
-	}
-	return &s, nil
+	return f.FromBytesBE(vBytes)
 }
 
 type FqFieldElement struct {

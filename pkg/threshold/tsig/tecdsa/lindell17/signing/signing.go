@@ -64,7 +64,7 @@ func CalcC3[S algebra.PrimeFieldElement[S]](lambda1, k2, mPrime, r, additiveShar
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert c2 left exponent to Nat")
 	}
-	c2Left := cKey.ScalarExp(c2LeftExponent)
+	c2Left := cKey.ScalarMul(c2LeftExponent)
 
 	c2RightMessage, err := pk.PlaintextSpace().FromBytes(k2Inv.Mul(r).Mul(additiveShare).Bytes())
 	if err != nil {
@@ -74,10 +74,10 @@ func CalcC3[S algebra.PrimeFieldElement[S]](lambda1, k2, mPrime, r, additiveShar
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt c2")
 	}
-	c2 := c2Left.Mul(c2Right)
+	c2 := c2Left.HomAdd(c2Right)
 
 	// c3 = c1 + c2 = Enc(ρq + k2^(-1)(m' + r * (y1 * λ1 + y2 * λ2)))
-	c3 = c1.Mul(c2)
+	c3 = c1.HomAdd(c2)
 
 	return c3, nil
 }

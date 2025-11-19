@@ -2,10 +2,7 @@ package p256
 
 import (
 	"encoding"
-	"slices"
 	"sync"
-
-	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -31,7 +28,7 @@ var (
 
 	baseFieldInstance *BaseField
 	baseFieldInitOnce sync.Once
-	baseFieldOrder    *saferith.Modulus
+	baseFieldOrder    *numct.Modulus
 )
 
 type BaseField struct {
@@ -40,7 +37,12 @@ type BaseField struct {
 
 func NewBaseField() *BaseField {
 	baseFieldInitOnce.Do(func() {
-		baseFieldOrder = saferith.ModulusFromBytes(sliceutils.Reversed(p256Impl.FpModulus[:]))
+		var ok ct.Bool
+		v := numct.NewNatFromBytes(sliceutils.Reversed(p256Impl.FpModulus[:]))
+		baseFieldOrder, ok = numct.NewModulus(v)
+		if ok == ct.False {
+			panic("failed to create base field modulus")
+		}
 		baseFieldInstance = &BaseField{}
 	})
 
@@ -52,11 +54,11 @@ func (f *BaseField) Name() string {
 }
 
 func (f *BaseField) Order() cardinal.Cardinal {
-	return cardinal.NewFromSaferith(baseFieldOrder.Nat())
+	return cardinal.NewFromNatCT(baseFieldOrder.Nat())
 }
 
 func (f *BaseField) Characteristic() cardinal.Cardinal {
-	return cardinal.NewFromSaferith(baseFieldOrder.Nat())
+	return cardinal.NewFromNatCT(baseFieldOrder.Nat())
 }
 
 func (f *BaseField) Hash(bytes []byte) (*BaseFieldElement, error) {
@@ -80,20 +82,13 @@ func (f *BaseField) BitLen() int {
 	return p256Impl.FpBits
 }
 
-func (f *BaseField) FromNat(n *numct.Nat) (*BaseFieldElement, error) {
+func (f *BaseField) FromBytesBEReduce(input []byte) (*BaseFieldElement, error) {
 	var v numct.Nat
-	m, ok := numct.NewModulusOddPrime((*numct.Nat)(baseFieldOrder.Nat()))
-	if ok == ct.False {
-		return nil, errs.NewFailed("failed to create modulus")
-	}
-	m.Mod(&v, n)
+	var nNat numct.Nat
+	nNat.SetBytes(input)
+	baseFieldOrder.Mod(&v, &nNat)
 	vBytes := v.Bytes()
-	slices.Reverse(vBytes)
-	var s BaseFieldElement
-	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
-		return nil, errs.NewFailed("failed to set scalar from nat")
-	}
-	return &s, nil
+	return f.FromBytesBE(vBytes)
 }
 
 type BaseFieldElement struct {

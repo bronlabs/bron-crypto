@@ -13,7 +13,7 @@ import (
 func NewOddPrimeSquare(oddPrimeFactor *numct.Nat) (*OddPrimeSquare, ct.Bool) {
 	allOk := oddPrimeFactor.IsProbablyPrime() & oddPrimeFactor.IsOdd()
 
-	p, ok := numct.NewModulusOddPrime(oddPrimeFactor)
+	p, ok := numct.NewModulus(oddPrimeFactor)
 	allOk &= ok
 
 	// Compute φ(p) = p - 1
@@ -24,16 +24,16 @@ func NewOddPrimeSquare(oddPrimeFactor *numct.Nat) (*OddPrimeSquare, ct.Bool) {
 	var phiP2Nat numct.Nat
 	phiP2Nat.Mul(phiPNat, oddPrimeFactor) // φ(p^2) = p * (p - 1)
 
-	phiP, ok := numct.NewModulusNonZero(phiPNat)
+	phiP, ok := numct.NewModulus(phiPNat)
 	allOk &= ok
-	phiP2, ok := numct.NewModulusNonZero(&phiP2Nat)
+	phiP2, ok := numct.NewModulus(&phiP2Nat)
 	allOk &= ok
 
 	// Compute p^2
 	var p2Nat numct.Nat
 	p2Nat.Mul(oddPrimeFactor, oddPrimeFactor) // p^2
 
-	p2, ok := numct.NewModulusOdd(&p2Nat)
+	p2, ok := numct.NewModulus(&p2Nat)
 	allOk &= ok
 
 	return &OddPrimeSquare{
@@ -45,13 +45,13 @@ func NewOddPrimeSquare(oddPrimeFactor *numct.Nat) (*OddPrimeSquare, ct.Bool) {
 }
 
 type OddPrimeSquare struct {
-	Factor     *numct.ModulusOddPrime
-	Squared    *numct.ModulusOdd
-	PhiFactor  *numct.ModulusNonZero
-	PhiSquared *numct.ModulusNonZero
+	Factor     *numct.Modulus
+	Squared    *numct.Modulus
+	PhiFactor  *numct.Modulus
+	PhiSquared *numct.Modulus
 }
 
-func (m *OddPrimeSquare) Modulus() *numct.ModulusOdd {
+func (m *OddPrimeSquare) Modulus() *numct.Modulus {
 	return m.Squared
 }
 
@@ -81,9 +81,9 @@ func NewOddPrimeSquareFactors(firstPrime, secondPrime *numct.Nat) (*OddPrimeSqua
 	nNat.Mul(p.Factor.Nat(), q.Factor.Nat())
 	nnNat.Mul(&nNat, &nNat)
 
-	n, ok := numct.NewModulusOdd(&nNat)
+	n, ok := numct.NewModulus(&nNat)
 	allOk &= ok
-	nn, ok := numct.NewModulusOdd(&nnNat)
+	nn, ok := numct.NewModulus(&nnNat)
 	allOk &= ok
 
 	var nModPhiP, nModPhiQ numct.Nat
@@ -99,9 +99,9 @@ func NewOddPrimeSquareFactors(firstPrime, secondPrime *numct.Nat) (*OddPrimeSqua
 	phiNNat.Mul(p.PhiFactor.Nat(), q.PhiFactor.Nat())
 	phiN2Nat.Mul(p.PhiSquared.Nat(), q.PhiSquared.Nat())
 
-	phiN, ok := numct.NewModulusNonZero(&phiNNat)
+	phiN, ok := numct.NewModulus(&phiNNat)
 	allOk &= ok
-	phiN2, ok := numct.NewModulusNonZero(&phiN2Nat)
+	phiN2, ok := numct.NewModulus(&phiN2Nat)
 	allOk &= ok
 
 	return &OddPrimeSquareFactors{
@@ -124,16 +124,16 @@ func NewOddPrimeSquareFactors(firstPrime, secondPrime *numct.Nat) (*OddPrimeSqua
 
 type OddPrimeSquareFactors struct {
 	CrtModN  *OddPrimeFactors
-	CrtModN2 *crt.ParamsExtended[*numct.ModulusOdd]
+	CrtModN2 *crt.ParamsExtended
 	P        *OddPrimeSquare
 	Q        *OddPrimeSquare
-	N2       *numct.ModulusOdd
+	N2       *numct.Modulus
 	NExpP2   *numct.Nat // Ep2 = p * (N mod (p-1))
 	NExpQ2   *numct.Nat // Eq2 = q * (N mod (q-1))
-	PhiN2    *numct.ModulusNonZero
+	PhiN2    *numct.Modulus
 }
 
-func (m *OddPrimeSquareFactors) Modulus() numct.Modulus {
+func (m *OddPrimeSquareFactors) Modulus() *numct.Modulus {
 	return m.N2
 }
 

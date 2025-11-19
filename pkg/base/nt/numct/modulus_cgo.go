@@ -7,12 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/cgo/boring"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-)
-
-var (
-	_ (Modulus) = (*ModulusOddPrime)(nil)
-	_ (Modulus) = (*ModulusOdd)(nil)
-	_ (Modulus) = (*ModulusBasic)(nil)
+	"github.com/cronokirby/saferith"
 )
 
 var bnCtxPool = sync.Pool{
@@ -29,10 +24,16 @@ var bnPool = sync.Pool{
 
 // **************** Modulus Odd Prime ********************
 
-func NewModulusOddPrime(m *Nat) (*ModulusOddPrime, ct.Bool) {
-	ok := m.IsProbablyPrime() & m.IsOdd() & m.IsNonZero()
+func NewModulus(m *Nat) (*Modulus, ct.Bool) {
+	ok := m.IsNonZero()
 
-	safeMod := newModulusOddPrimeBasic(m)
+	defer func() {
+		if r := recover(); r != nil {
+			ok &= ct.False
+		}
+	}()
+
+	safeMod := saferith.ModulusFromNat((*saferith.Nat)(m))
 	mNum, err := boring.NewBigNum().SetBytes(safeMod.Bytes())
 	if err != nil {
 		panic(err)
@@ -40,23 +41,23 @@ func NewModulusOddPrime(m *Nat) (*ModulusOddPrime, ct.Bool) {
 
 	var mSub2 Nat
 	mSub2.SubCap(m, NewNat(2), -1)
-	return &ModulusOddPrime{
-		ModulusOddPrimeBasic: *safeMod,
-		mSub2:                &mSub2,
-		mNum:                 mNum,
-		once:                 &sync.Once{},
+	return &Modulus{
+		ModulusBasic: (*ModulusBasic)(safeMod),
+		mSub2:        &mSub2,
+		mNum:         mNum,
+		once:         &sync.Once{},
 	}, ok
 }
 
-type ModulusOddPrime struct {
-	ModulusOddPrimeBasic
+type Modulus struct {
+	*ModulusBasic
 	mSub2 *Nat
 	mNum  *boring.BigNum
 	mont  *boring.BigNumMontCtx
 	once  *sync.Once
 }
 
-func (c *ModulusOddPrime) cacheMont() {
+func (c *Modulus) cacheMont() {
 	// use a temporary BN_CTX to build the mont ctx
 	tmp := bnCtxPool.Get().(*boring.BigNumCtx)
 	defer bnCtxPool.Put(tmp)
@@ -67,14 +68,14 @@ func (c *ModulusOddPrime) cacheMont() {
 	c.mont = mont
 }
 
-func (c *ModulusOddPrime) ensureMont() {
+func (c *Modulus) ensureMont() {
 	if c.mont != nil {
 		return
 	}
 	c.once.Do(func() { c.cacheMont() })
 }
 
-func (m *ModulusOddPrime) ModExp(out, base, exp *Nat) {
+func (m *Modulus) modExpOdd(out, base, exp *Nat) {
 	m.ensureMont()
 	m.Mod(out, base)
 
@@ -109,10 +110,15 @@ func (m *ModulusOddPrime) ModExp(out, base, exp *Nat) {
 	out.SetBytes(rBytes)
 }
 
-func (m *ModulusOddPrime) ModMultiBaseExp(out, bases []*Nat, exp *Nat) {
-	if len(bases) != len(out) {
-		panic("len(bases) != len(out)")
+func (m *Modulus) ModExp(out, base, exp *Nat) {
+	if m.Nat().IsOdd() == ct.True {
+		m.modExpOdd(out, base, exp)
+	} else {
+		m.ModulusBasic.modExpEven(out, base, exp.Big())
 	}
+}
+
+func (m *Modulus) modMultiBaseExpOdd(out, bases []*Nat, exp *Nat) {
 	m.ensureMont()
 
 	eBytes := exp.Bytes()
@@ -153,15 +159,25 @@ func (m *ModulusOddPrime) ModMultiBaseExp(out, bases []*Nat, exp *Nat) {
 	wg.Wait()
 }
 
-func (m *ModulusOddPrime) ModInv(out, a *Nat) ct.Bool {
-	// mm := newModulusOddBasic(m.Nat())
-	// return mm.ModInv(out, a)
+func (m *Modulus) ModMultiBaseExp(out, bases []*Nat, exp *Nat) {
+	if len(bases) != len(out) {
+		panic("len(bases) != len(out)")
+	}
+	if m.Nat().IsOdd() == ct.True {
+		m.modMultiBaseExpOdd(out, bases, exp)
+	} else {
+		m.ModulusBasic.ModMultiBaseExp(out, bases, exp)
+	}
+}
 
+func (m *Modulus) modInvOddPrime(out, a *Nat) ct.Bool {
 	m.ensureMont()
 
 	// Reduce a modulo m
 	var aReduced Nat
 	m.Mod(&aReduced, a)
+
+	ok := aReduced.IsNonZero()
 
 	aNum := bnPool.Get().(*boring.BigNum)
 	defer bnPool.Put(aNum)
@@ -187,14 +203,33 @@ func (m *ModulusOddPrime) ModInv(out, a *Nat) ct.Bool {
 	if err != nil {
 		panic(err)
 	}
-	out.SetBytes(invBytes)
-	return ct.True
+	var outCandidate Nat
+	outCandidate.SetBytes(invBytes)
+
+	var shouldBeOne Nat
+	m.ModMul(&shouldBeOne, &outCandidate, a)
+
+	ok &= shouldBeOne.IsOne()
+
+	out.CondAssign(ok, &outCandidate)
+	return ok
 }
 
-func (m *ModulusOddPrime) ModMul(out, x, y *Nat) {
-	// m.ModulusOddPrimeBasic.ModMul(out, x, y)
-	// return
+func (m *Modulus) ModInv(out, a *Nat) ct.Bool {
+	ok := a.IsNonZero()
+	if m.Nat().IsOdd() == ct.True {
+		ok &= m.modInvOddPrime(out, a)
+		// This should work only for groups whose almost all of its elements are units. This property of the modulus is not secret.
+		if ok == ct.False {
+			ok = m.ModulusBasic.modInvOdd(out, a)
+		}
+	} else {
+		ok = m.ModulusBasic.modInvEven(out, a)
+	}
+	return ok
+}
 
+func (m *Modulus) ModMul(out, x, y *Nat) {
 	xBytes, yBytes := x.Bytes(), y.Bytes()
 
 	xNum := bnPool.Get().(*boring.BigNum)
@@ -225,58 +260,18 @@ func (m *ModulusOddPrime) ModMul(out, x, y *Nat) {
 	out.SetBytes(outBytes)
 }
 
-func (m *ModulusOddPrime) Set(v *ModulusOddPrime) {
-	m.ModulusOddPrimeBasic.Set(&v.ModulusOddPrimeBasic)
+func (m *Modulus) Set(v *Modulus) {
+	m.ModulusBasic.Set(v.ModulusBasic)
+	m.mSub2 = v.mSub2
 	m.mNum = v.mNum
 	m.mont = v.mont
+	m.once = v.once
 }
 
-func (m *ModulusOddPrime) SetNat(n *Nat) ct.Bool {
-	mm, ok := NewModulusOddPrime(n)
-	m.Set(mm)
+func (m *Modulus) SetNat(n *Nat) ct.Bool {
+	mm, ok := NewModulus(n)
+	if mm != nil {
+		*m = *mm
+	}
 	return ok
-}
-
-// ********************* Modulus Odd
-
-func NewModulusOdd(m *Nat) (*ModulusOdd, ct.Bool) {
-	mm, _ := NewModulusOddPrime(m)  // Always creates the structure
-	ok := m.IsOdd() & m.IsNonZero() // Check if it's odd and non-zero
-	return &ModulusOdd{
-		ModulusOddPrime: *mm,
-	}, ok
-}
-
-type ModulusOdd struct {
-	ModulusOddPrime
-}
-
-func (m *ModulusOdd) Set(v *ModulusOdd) {
-	m.ModulusOddPrime.Set(&v.ModulusOddPrime)
-}
-
-func (m *ModulusOdd) SetNat(n *Nat) ct.Bool {
-	mm, ok := NewModulusOdd(n)
-	m.Set(mm)
-	return ok
-}
-
-func (m *ModulusOdd) ModSqrt(out, x *Nat) ct.Bool {
-	return (&ModulusOddBasic{
-		ModulusOddPrimeBasic: m.ModulusOddPrimeBasic,
-	}).ModSqrt(out, x)
-}
-
-func (m *ModulusOdd) ModInv(out, x *Nat) ct.Bool {
-	mm := newModulusOddBasic(m.Nat())
-	return mm.ModInv(out, x)
-}
-
-// ******************** Generic Modulus
-
-type ModulusNonZero = ModulusBasic
-
-func NewModulusNonZero(m *Nat) (*ModulusNonZero, ct.Bool) {
-	ok := m.IsNonZero()
-	return newModulusBasic(m), ok
 }

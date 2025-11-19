@@ -1642,12 +1642,12 @@ func TestInt_EuclideanValuation(t *testing.T) {
 	val := i.EuclideanValuation()
 	require.NotNil(t, val)
 	// EuclideanValuation returns the absolute value
-	require.Equal(t, "42", val.String())
+	require.Equal(t, uint64(42), val.Uint64())
 
 	// Test with negative
 	neg := num.Z().FromInt64(-42)
 	val2 := neg.EuclideanValuation()
-	require.Equal(t, "42", val2.String())
+	require.Equal(t, uint64(42), val2.Uint64())
 }
 
 func TestInt_IsUnit(t *testing.T) {

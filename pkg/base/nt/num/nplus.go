@@ -17,9 +17,8 @@ import (
 )
 
 var (
-	// _ internal.NPlus[*NatPlus, *NatPlus, *Nat, *Int, *Uint]   = (*PositiveNaturalNumbers)(nil)
-	// _ internal.NatPlus[*NatPlus, *NatPlus, *Nat, *Int, *Uint] = (*NatPlus)(nil).
-
+	_             algebra.NPlusLike[*NatPlus]   = (*PositiveNaturalNumbers)(nil)
+	_             algebra.NatPlusLike[*NatPlus] = (*NatPlus)(nil)
 	nplusInstance *PositiveNaturalNumbers
 	nplusOnce     sync.Once
 )
@@ -69,7 +68,7 @@ func (nps *PositiveNaturalNumbers) FromBig(b *big.Int) (*NatPlus, error) {
 	return nps.FromBytes(b.Bytes())
 }
 
-func (nps *PositiveNaturalNumbers) FromModulus(m numct.Modulus) *NatPlus {
+func (nps *PositiveNaturalNumbers) FromModulus(m *numct.Modulus) *NatPlus {
 	return &NatPlus{v: m.Nat(), m: m}
 }
 
@@ -126,6 +125,17 @@ func (*PositiveNaturalNumbers) FromBytes(input []byte) (*NatPlus, error) {
 		return nil, errs.NewValue("input must not be empty")
 	}
 	return &NatPlus{v: numct.NewNatFromBytes(input)}, nil
+}
+
+func (nps *PositiveNaturalNumbers) FromBytesBE(input []byte) (*NatPlus, error) {
+	out, err := nps.FromBytes(input)
+	if err != nil {
+		return nil, errs.WrapArgument(err, "failed to create NatPlus from bytes BE")
+	}
+	if out.v.IsZero() == ct.True {
+		return nil, errs.NewValue("input must represent a positive natural number")
+	}
+	return out, nil
 }
 
 func (nps *PositiveNaturalNumbers) Random(lowInclusive, highExclusive *NatPlus, prng io.Reader) (*NatPlus, error) {
@@ -186,7 +196,7 @@ func (nps *PositiveNaturalNumbers) Bottom() *NatPlus {
 
 type NatPlus struct {
 	v *numct.Nat
-	m numct.Modulus
+	m *numct.Modulus
 }
 
 func (*NatPlus) isValid(x *NatPlus) (*NatPlus, error) {
@@ -208,14 +218,11 @@ func (*NatPlus) ensureValid(x *NatPlus) *NatPlus {
 	return x
 }
 
-func (np *NatPlus) cacheMont(m numct.Modulus) *NatPlus {
+func (np *NatPlus) cacheMont(m *numct.Modulus) *NatPlus {
 	if np.m == nil {
-		if m == nil {
-			var ok ct.Bool
-			m, ok = numct.NewModulus(np.v)
-			if ok == ct.False {
-				panic(errs.NewFailed("modulus is not valid"))
-			}
+		m, ok := numct.NewModulus(np.v)
+		if ok == ct.False {
+			panic(errs.NewFailed("modulus is not valid"))
 		}
 		np.m = m
 	}
@@ -383,6 +390,10 @@ func (np *NatPlus) Bytes() []byte {
 	return bytes
 }
 
+func (np *NatPlus) BytesBE() []byte {
+	return np.Bytes()
+}
+
 func (np *NatPlus) IsBottom() bool {
 	return np.IsOne()
 }
@@ -426,7 +437,7 @@ func (np *NatPlus) IsProbablyPrime() bool {
 	return np.v.IsProbablyPrime() == ct.True
 }
 
-func (np *NatPlus) ModulusCT() numct.Modulus {
+func (np *NatPlus) ModulusCT() *numct.Modulus {
 	np.cacheMont(nil)
 	return np.m
 }

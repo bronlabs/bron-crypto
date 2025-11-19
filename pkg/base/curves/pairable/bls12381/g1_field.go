@@ -2,14 +2,10 @@ package bls12381
 
 import (
 	"encoding"
-	"slices"
 	"sync"
-
-	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
@@ -31,7 +27,7 @@ var (
 
 	baseFieldInstanceG1 *BaseFieldG1
 	baseFieldInitOnceG1 sync.Once
-	baseFieldOrderG1    *saferith.Modulus
+	baseFieldOrderG1    *numct.Modulus
 )
 
 type BaseFieldG1 struct {
@@ -40,7 +36,7 @@ type BaseFieldG1 struct {
 
 func NewG1BaseField() *BaseFieldG1 {
 	baseFieldInitOnceG1.Do(func() {
-		baseFieldOrderG1 = saferith.ModulusFromBytes(sliceutils.Reversed(bls12381Impl.FpModulus[:]))
+		baseFieldOrderG1, _ = numct.NewModulusFromBytesBE(sliceutils.Reversed(bls12381Impl.FpModulus[:]))
 		baseFieldInstanceG1 = &BaseFieldG1{}
 	})
 
@@ -52,11 +48,11 @@ func (f *BaseFieldG1) Name() string {
 }
 
 func (f *BaseFieldG1) Order() cardinal.Cardinal {
-	return cardinal.NewFromSaferith(baseFieldOrderG1.Nat())
+	return cardinal.NewFromNatCT(baseFieldOrderG1.Nat())
 }
 
 func (f *BaseFieldG1) Characteristic() cardinal.Cardinal {
-	return cardinal.NewFromSaferith(baseFieldOrderG1.Nat())
+	return cardinal.NewFromNatCT(baseFieldOrderG1.Nat())
 }
 
 func (f *BaseFieldG1) Hash(bytes []byte) (*BaseFieldElementG1, error) {
@@ -80,20 +76,13 @@ func (f *BaseFieldG1) BitLen() int {
 	return bls12381Impl.FpBits
 }
 
-func (f *BaseFieldG1) FromNat(n *numct.Nat) (*BaseFieldElementG1, error) {
+func (f *BaseFieldG1) FromBytesBEReduce(input []byte) (*BaseFieldElementG1, error) {
 	var v numct.Nat
-	m, ok := numct.NewModulusOddPrime((*numct.Nat)(baseFieldOrderG1.Nat()))
-	if ok == ct.False {
-		return nil, errs.NewFailed("failed to create modulus")
-	}
-	m.Mod(&v, n)
+	var nNat numct.Nat
+	nNat.SetBytes(input)
+	baseFieldOrderG1.Mod(&v, &nNat)
 	vBytes := v.Bytes()
-	slices.Reverse(vBytes)
-	var s BaseFieldElementG1
-	if ok := s.V.SetBytesWide(vBytes); ok == ct.False {
-		return nil, errs.NewFailed("failed to set scalar from nat")
-	}
-	return &s, nil
+	return f.FromBytesBE(vBytes)
 }
 
 type BaseFieldElementG1 struct {

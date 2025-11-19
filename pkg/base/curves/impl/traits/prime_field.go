@@ -39,6 +39,10 @@ func (f *PrimeFieldTrait[FP, WP, W]) FromBytes(bytes []byte) (WP, error) {
 	return &e, nil
 }
 
+func (f *PrimeFieldTrait[FP, WP, W]) FromBytesBE(input []byte) (WP, error) {
+	return f.FromBytes(input)
+}
+
 func (f *PrimeFieldTrait[FP, WP, W]) FromWideBytes(bytes []byte) (WP, error) {
 	leBytes := sliceutils.Reversed(bytes)
 	var e W
@@ -249,6 +253,10 @@ func (fe *PrimeFieldElementTrait[FP, F, WP, W]) HashCode() base.HashCode {
 }
 
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) Bytes() []byte {
+	return sliceutils.Reverse(FP(&fe.V).Bytes())
+}
+
+func (fe *PrimeFieldElementTrait[FP, F, WP, W]) BytesBE() []byte {
 	return sliceutils.Reverse(FP(&fe.V).Bytes())
 }
 

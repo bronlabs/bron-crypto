@@ -16,5 +16,5 @@ func CBORRoundTrip[T any](tb testing.TB, v T) T {
 	out, err := serde.UnmarshalCBOR[T](data)
 	require.NoError(tb, err)
 	return out
-	//return v
+	// return v
 }

@@ -17,8 +17,11 @@ import (
 )
 
 var (
-	// _ internal.N[*Nat, *NatPlus, *Nat, *Int, *Uint]   = (*NaturalNumbers)(nil)
-	// _ internal.Nat[*Nat, *NatPlus, *Nat, *Int, *Uint] = (*Nat)(nil).
+	_ algebra.NLike[*Nat]   = (*NaturalNumbers)(nil)
+	_ algebra.NatLike[*Nat] = (*Nat)(nil)
+
+	_ algebra.SemiModule[*Nat, *Nat]        = (*NaturalNumbers)(nil)
+	_ algebra.SemiModuleElement[*Nat, *Nat] = (*Nat)(nil)
 
 	nOnce     sync.Once
 	nInstance *NaturalNumbers
@@ -112,6 +115,10 @@ func (ns *NaturalNumbers) FromBytes(input []byte) (*Nat, error) {
 		return nil, errs.NewValue("input must not be nil")
 	}
 	return &Nat{v: numct.NewNatFromBytes(input)}, nil
+}
+
+func (ns *NaturalNumbers) FromBytesBE(input []byte) (*Nat, error) {
+	return ns.FromBytes(input)
 }
 
 func (ns *NaturalNumbers) FromCardinal(value cardinal.Cardinal) (*Nat, error) {
@@ -422,6 +429,10 @@ func (n *Nat) Bytes() []byte {
 		return []byte{0x0}
 	}
 	return bytes
+}
+
+func (n *Nat) BytesBE() []byte {
+	return n.Bytes()
 }
 
 func (n *Nat) Uint64() uint64 {

@@ -356,7 +356,7 @@ func TestHomomorphicOperations_AfterDeserialization(t *testing.T) {
 	require.NoError(t, err)
 
 	// Perform homomorphic addition on deserialized ciphertexts
-	ctSum := decodedCt1.Mul(decodedCt2)
+	ctSum := decodedCt1.HomAdd(decodedCt2)
 
 	// Decrypt and verify
 	dec, err := scheme.Decrypter(sk)

@@ -10,19 +10,19 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
-func NewSimple(m numct.Modulus) (*SimpleModulus, ct.Bool) {
+func NewSimple(m *numct.Modulus) (*SimpleModulus, ct.Bool) {
 	return &SimpleModulus{m: m}, utils.BoolTo[ct.Bool](m != nil)
 }
 
 type SimpleModulus struct {
-	m numct.Modulus
+	m *numct.Modulus
 }
 
 func (u *SimpleModulus) MultiplicativeOrder() algebra.Cardinal {
 	return cardinal.Unknown()
 }
 
-func (u *SimpleModulus) Modulus() numct.Modulus {
+func (u *SimpleModulus) Modulus() *numct.Modulus {
 	return u.m
 }
 
@@ -68,12 +68,6 @@ func (u *SimpleModulus) Lift() (*SimpleModulus, ct.Bool) {
 	m := u.m.Nat()
 	var m2 numct.Nat
 	m2.Mul(m, m)
-	var m2Modulus numct.Modulus
-	var ok ct.Bool
-	if m2.IsOdd() == ct.True {
-		m2Modulus, ok = numct.NewModulusOdd(&m2)
-	} else {
-		m2Modulus, ok = numct.NewModulusNonZero(&m2)
-	}
+	m2Modulus, ok := numct.NewModulus(&m2)
 	return &SimpleModulus{m: m2Modulus}, ok
 }

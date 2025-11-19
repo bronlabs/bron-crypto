@@ -93,9 +93,26 @@ type HomomorphicLike[T any, TV SemiGroupElement[TV]] interface {
 	base.Equatable[T]
 }
 
+type HomomorphicSummand[T any] interface {
+	HomAdd(T) T
+}
+
+type HomomorphicMinued[T any] interface {
+	HomSub(T) T
+}
+
+type HomomorphicNegand[T any] interface {
+	HomNeg() T
+}
+
 type AdditivelyHomomorphicLike[T HomomorphicLike[T, TV], TV AdditiveSemiGroupElement[TV]] interface {
 	HomomorphicLike[T, TV]
 	crtp.Summand[T]
+}
+
+type AdditivelyHomomorphicLikeInCoDomain[T HomomorphicLike[T, TV], TV GroupElement[TV]] interface {
+	HomomorphicLike[T, TV]
+	HomomorphicSummand[T]
 }
 
 type MultiplicativelyHomomorphicLike[T HomomorphicLike[T, TV], TV MultiplicativeSemiGroupElement[TV]] interface {

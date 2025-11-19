@@ -5,22 +5,18 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 // Recombine is a one-shot variant that computes q^{-1} (mod p) on the fly.
-func Recombine[M numct.Modulus](mp, mq, p, q *numct.Nat) (*numct.Nat, ct.Bool) {
-	params, ok := Precompute[M](p, q)
+func Recombine(mp, mq, p, q *numct.Nat) (*numct.Nat, ct.Bool) {
+	params, ok := Precompute(p, q)
 	return params.Recombine(mp, mq), ok
 }
 
-func Precompute[M numct.Modulus](p, q *numct.Nat) (*Params[M], ct.Bool) {
+func Precompute(p, q *numct.Nat) (*Params, ct.Bool) {
 	allOk := p.Coprime(q)
-	pM, ok := numct.NewModulus(p)
+	pModulus, ok := numct.NewModulus(p)
 	allOk &= ok
-
-	pModulus, okT := pM.(M)
-	allOk &= utils.BoolTo[ct.Bool](okT)
 
 	// qModP := q mod p
 	qModP := new(numct.Nat)
@@ -31,7 +27,7 @@ func Precompute[M numct.Modulus](p, q *numct.Nat) (*Params[M], ct.Bool) {
 	// q must be a unit modulo p (i.e., gcd(p,q)=1)
 	allOk &= pModulus.ModInv(qInv, qModP)
 
-	return &Params[M]{
+	return &Params{
 		P:    pModulus,
 		QNat: q.Clone(),
 		QInv: qInv,
@@ -40,8 +36,8 @@ func Precompute[M numct.Modulus](p, q *numct.Nat) (*Params[M], ct.Bool) {
 }
 
 // Params holds reusable data for CRT recombination mod N = p*q.
-type Params[M numct.Modulus] struct {
-	P    M
+type Params struct {
+	P    *numct.Modulus
 	QNat *numct.Nat
 	QInv *numct.Nat
 	Cap  int
@@ -51,7 +47,7 @@ type Params[M numct.Modulus] struct {
 // using precomputed q^{-1} (mod p).
 //
 // m = mq + q * ((mp - mq) * qInv mod p).
-func (prm *Params[M]) Recombine(mp, mq *numct.Nat) *numct.Nat {
+func (prm *Params) Recombine(mp, mq *numct.Nat) *numct.Nat {
 	// h = (mp - mq) mod p
 	h := new(numct.Nat)
 	prm.P.ModSub(h, mp, mq)
@@ -65,24 +61,22 @@ func (prm *Params[M]) Recombine(mp, mq *numct.Nat) *numct.Nat {
 	return m
 }
 
-func (prm *Params[M]) Extended() (*ParamsExtended[M], ct.Bool) {
-	qM, ok := numct.NewModulus(prm.QNat)
-	qModulus, okT := qM.(M)
-	ok &= utils.BoolTo[ct.Bool](okT)
-	return &ParamsExtended[M]{
+func (prm *Params) Extended() (*ParamsExtended, ct.Bool) {
+	qModulus, ok := numct.NewModulus(prm.QNat)
+	return &ParamsExtended{
 		Params: *prm,
 		PNat:   prm.P.Nat(),
 		Q:      qModulus,
 	}, ok
 }
 
-func PrecomputePairExtended[M numct.Modulus](p, q *numct.Nat) (*ParamsExtended[M], ct.Bool) {
-	prm, ok1 := Precompute[M](p, q)
+func PrecomputePairExtended(p, q *numct.Nat) (*ParamsExtended, ct.Bool) {
+	prm, ok1 := Precompute(p, q)
 	prmx, ok2 := prm.Extended()
 	return prmx, ok1 & ok2
 }
 
-func NewParamsExtended[F numct.Modulus](p, q F) (*ParamsExtended[F], ct.Bool) {
+func NewParamsExtended(p, q *numct.Modulus) (*ParamsExtended, ct.Bool) {
 	qNat := q.Nat()
 	pNat := p.Nat()
 
@@ -102,8 +96,8 @@ func NewParamsExtended[F numct.Modulus](p, q F) (*ParamsExtended[F], ct.Bool) {
 	m, okT := numct.NewModulus(&mNat)
 	ok &= okT
 
-	return &ParamsExtended[F]{
-		Params: Params[F]{
+	return &ParamsExtended{
+		Params: Params{
 			P:    p,
 			QNat: qNat,
 			QInv: qInv,
@@ -115,19 +109,19 @@ func NewParamsExtended[F numct.Modulus](p, q F) (*ParamsExtended[F], ct.Bool) {
 	}, ok
 }
 
-type ParamsExtended[F numct.Modulus] struct {
-	Params[F]
+type ParamsExtended struct {
+	Params
 
 	PNat *numct.Nat
-	Q    F
-	M    numct.Modulus
+	Q    *numct.Modulus
+	M    *numct.Modulus
 }
 
-func (prmx *ParamsExtended[F]) Modulus() numct.Modulus {
+func (prmx *ParamsExtended) Modulus() *numct.Modulus {
 	return prmx.M
 }
 
-func (prmx *ParamsExtended[M]) Decompose(m M) (mp, mq *numct.Nat) {
+func (prmx *ParamsExtended) Decompose(m *numct.Modulus) (mp, mq *numct.Nat) {
 	if m.BitLen() <= 4096 {
 		return prmx.DecomposeSerial(m)
 	}
@@ -135,7 +129,7 @@ func (prmx *ParamsExtended[M]) Decompose(m M) (mp, mq *numct.Nat) {
 }
 
 // DecomposeParallel returns (m mod p, m mod q).
-func (prmx *ParamsExtended[M]) DecomposeParallel(m M) (mp, mq *numct.Nat) {
+func (prmx *ParamsExtended) DecomposeParallel(m *numct.Modulus) (mp, mq *numct.Nat) {
 	mpt := new(numct.Nat)
 	mqt := new(numct.Nat)
 	var wg sync.WaitGroup
@@ -154,7 +148,7 @@ func (prmx *ParamsExtended[M]) DecomposeParallel(m M) (mp, mq *numct.Nat) {
 	return mpt, mqt
 }
 
-func (prmx *ParamsExtended[M]) DecomposeSerial(m M) (mp, mq *numct.Nat) {
+func (prmx *ParamsExtended) DecomposeSerial(m *numct.Modulus) (mp, mq *numct.Nat) {
 	mpt := new(numct.Nat)
 	mqt := new(numct.Nat)
 	// Compute m.Nat() mod p

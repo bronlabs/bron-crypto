@@ -93,15 +93,15 @@ func (pk *PublicKey) Equal(other *PublicKey) bool {
 	return pk.group.Equal(other.group)
 }
 
-func (pk *PublicKey) Modulus() numct.Modulus {
+func (pk *PublicKey) Modulus() *numct.Modulus {
 	return pk.group.ModulusCT()
 }
 
-func (pk *PublicKey) N() numct.Modulus {
+func (pk *PublicKey) N() *numct.Modulus {
 	return pk.group.N().ModulusCT()
 }
 
-func (pk *PublicKey) N2() numct.Modulus {
+func (pk *PublicKey) N2() *numct.Modulus {
 	return pk.group.ModulusCT()
 }
 

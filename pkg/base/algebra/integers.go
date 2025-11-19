@@ -6,6 +6,7 @@ import (
 
 type (
 	Cardinal = crtp.Cardinal
+	Numeric  = crtp.Numeric
 
 	NPlusLike[E NatPlusLike[E]]        crtp.NPlusLike[E]
 	NatPlusLike[E crtp.NatPlusLike[E]] crtp.NatPlusLike[E]

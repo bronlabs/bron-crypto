@@ -190,7 +190,7 @@ func (pc *PrimaryCosigner[P, B, S]) Round5(r4out *lindell17.PartialSignature, me
 	if err != nil {
 		return nil, errs.WrapIdentifiableAbort(err, pc.secondarySharingId, "cannot decrypt c3")
 	}
-	sPrime, err := pc.suite.Curve().ScalarField().FromNat(sPrimeInt.Normalise().Value())
+	sPrime, err := pc.suite.Curve().ScalarField().FromBytesBEReduce(sPrimeInt.Normalise().BytesBE())
 	if err != nil {
 		return nil, errs.WrapIdentifiableAbort(err, pc.secondarySharingId, "cannot convert decrypted c3 to scalar")
 	}

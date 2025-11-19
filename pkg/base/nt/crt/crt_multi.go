@@ -5,31 +5,30 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 // ParamsMulti holds precomputed values for multi-factor CRT with k pairwise coprime factors.
 // For factors p_1, p_2, ..., p_k, we precompute:
 // - M_i = N / p_i where N = p_1 * p_2 * ... * p_k
 // - M_i^{-1} mod p_i for each i.
-type ParamsMulti[F numct.Modulus] struct {
-	Factors    []F           // p_i as moduli
-	Products   []*numct.Nat  // M_i = N / p_i
-	Inverses   []*numct.Nat  // inv_i = (M_i)^{-1} mod p_i
-	Lifts      []*numct.Nat  // Lift_i = M_i * inv_i mod N
-	Modulus    numct.Modulus // N as a modulus object (for Mod reductions)
-	NumFactors int           // number of factors (pairwise coprime, not necessarily prime)
+type ParamsMulti struct {
+	Factors    []*numct.Modulus // p_i as moduli
+	Products   []*numct.Nat     // M_i = N / p_i
+	Inverses   []*numct.Nat     // inv_i = (M_i)^{-1} mod p_i
+	Lifts      []*numct.Nat     // Lift_i = M_i * inv_i mod N
+	Modulus    *numct.Modulus   // N as a modulus object (for Mod reductions)
+	NumFactors int              // number of factors (pairwise coprime, not necessarily prime)
 	// Garner's algorithm precomputed values:
 	// GarnerCoeffs[i][j] = (p_1 * ... * p_j)^{-1} mod p_{i+1} for j < i
 	GarnerCoeffs [][]*numct.Nat
 }
 
-func NewParamsMulti[F numct.Modulus](factors ...F) (*ParamsMulti[F], ct.Bool) {
+func NewParamsMulti(factors ...*numct.Modulus) (*ParamsMulti, ct.Bool) {
 	k := len(factors)
 	allOk := ct.GreaterOrEqual(k, 2)
 
-	params := &ParamsMulti[F]{
-		Factors:      make([]F, k),
+	params := &ParamsMulti{
+		Factors:      make([]*numct.Modulus, k),
 		Products:     make([]*numct.Nat, k),
 		Inverses:     make([]*numct.Nat, k),
 		Lifts:        make([]*numct.Nat, k),
@@ -96,15 +95,13 @@ func NewParamsMulti[F numct.Modulus](factors ...F) (*ParamsMulti[F], ct.Bool) {
 // PrecomputeMulti precomputes CRT parameters for k primes.
 // All operations are constant-time with respect to the prime values.
 // Returns nil if any prime is not coprime to the others.
-func PrecomputeMulti[F numct.Modulus](factors ...*numct.Nat) (*ParamsMulti[F], ct.Bool) {
+func PrecomputeMulti(factors ...*numct.Nat) (*ParamsMulti, ct.Bool) {
 	allOk := ct.True
-	var okT bool
-	fs := make([]F, len(factors))
+	fs := make([]*numct.Modulus, len(factors))
 	for i, f := range factors {
 		fi, ok := numct.NewModulus(f)
 		allOk &= ok
-		fs[i], okT = fi.(F)
-		allOk &= utils.BoolTo[ct.Bool](okT)
+		fs[i] = fi
 	}
 	out, ok := NewParamsMulti(fs...)
 	allOk &= ok
@@ -113,7 +110,7 @@ func PrecomputeMulti[F numct.Modulus](factors ...*numct.Nat) (*ParamsMulti[F], c
 
 // RecombineParallel reconstructs x (mod N) from residues[i] = x mod p_i using precomputed lifts.
 // x ≡ Σ residues[i] * Lift_i (mod N).
-func (params *ParamsMulti[F]) RecombineParallel(residues ...*numct.Nat) *numct.Nat {
+func (params *ParamsMulti) RecombineParallel(residues ...*numct.Nat) *numct.Nat {
 	var wg sync.WaitGroup
 	wg.Add(params.NumFactors)
 
@@ -135,7 +132,7 @@ func (params *ParamsMulti[F]) RecombineParallel(residues ...*numct.Nat) *numct.N
 }
 
 // Recombine reconstructs x (mod N) from residues[i] = x mod p_i using Garner's algorithm.
-func (params *ParamsMulti[F]) RecombineSerial(residues ...*numct.Nat) *numct.Nat {
+func (params *ParamsMulti) RecombineSerial(residues ...*numct.Nat) *numct.Nat {
 	// Garner's algorithm:
 	// Start with x = a_0
 	// For i = 1 to k-1:
@@ -167,7 +164,7 @@ func (params *ParamsMulti[F]) RecombineSerial(residues ...*numct.Nat) *numct.Nat
 	return result
 }
 
-func (params *ParamsMulti[F]) Recombine(residues ...*numct.Nat) (*numct.Nat, ct.Bool) {
+func (params *ParamsMulti) Recombine(residues ...*numct.Nat) (*numct.Nat, ct.Bool) {
 	eqLen := ct.Equal(len(residues), params.NumFactors)
 	if params.NumFactors <= 4 {
 		return params.RecombineSerial(residues...), eqLen
@@ -177,7 +174,7 @@ func (params *ParamsMulti[F]) Recombine(residues ...*numct.Nat) (*numct.Nat, ct.
 
 // DecomposeMultiSerial decomposes m into residues mod each prime.
 // Constant-time with respect to values (not the number of primes).
-func (params *ParamsMulti[F]) DecomposeSerial(m *numct.ModulusOdd) []*numct.Nat {
+func (params *ParamsMulti) DecomposeSerial(m *numct.Modulus) []*numct.Nat {
 	residues := make([]*numct.Nat, params.NumFactors)
 
 	// Process all primes to maintain constant time
@@ -192,7 +189,7 @@ func (params *ParamsMulti[F]) DecomposeSerial(m *numct.ModulusOdd) []*numct.Nat 
 
 // DecomposeMultiParallel decomposes m into residues mod each prime in parallel.
 // Constant-time with respect to values (not the number of primes).
-func (params *ParamsMulti[F]) DecomposeParallel(m *numct.ModulusOdd) []*numct.Nat {
+func (params *ParamsMulti) DecomposeParallel(m *numct.Modulus) []*numct.Nat {
 	residues := make([]*numct.Nat, params.NumFactors)
 
 	var wg sync.WaitGroup
@@ -212,7 +209,7 @@ func (params *ParamsMulti[F]) DecomposeParallel(m *numct.ModulusOdd) []*numct.Na
 
 // Decompose chooses between serial and parallel based on size.
 // The choice is deterministic based on modulus size and prime count.
-func (params *ParamsMulti[F]) Decompose(m *numct.ModulusOdd) []*numct.Nat {
+func (params *ParamsMulti) Decompose(m *numct.Modulus) []*numct.Nat {
 	// Use parallel for larger moduli or more primes
 	// This is a deterministic choice, not data-dependent
 	if m.BitLen() > 4096 || params.NumFactors > 3 {

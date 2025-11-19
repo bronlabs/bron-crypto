@@ -3,32 +3,14 @@
 package numct
 
 import (
+	"github.com/cronokirby/saferith"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
-type (
-	ModulusOddPrime = ModulusOddPrimeBasic
-	ModulusOdd      = ModulusOddBasic
-	ModulusNonZero  = ModulusBasic
-)
+type Modulus = ModulusBasic
 
-var (
-	_ (Modulus) = (*ModulusOddPrimeBasic)(nil)
-	_ (Modulus) = (*ModulusOddBasic)(nil)
-	_ (Modulus) = (*ModulusBasic)(nil)
-)
-
-func NewModulusOddPrime(m *Nat) (*ModulusOddPrime, ct.Bool) {
-	ok := m.IsNonZero() & m.IsOdd() & m.IsProbablyPrime()
-	return newModulusOddPrimeBasic(m), ok
-}
-
-func NewModulusOdd(m *Nat) (*ModulusOdd, ct.Bool) {
-	ok := m.IsNonZero() & m.IsOdd()
-	return newModulusOddBasic(m), ok
-}
-
-func NewModulusNonZero(m *Nat) (*ModulusNonZero, ct.Bool) {
+func NewModulus(m *Nat) (*Modulus, ct.Bool) {
 	ok := m.IsNonZero()
-	return newModulusBasic(m), ok
+	return (*ModulusBasic)(saferith.ModulusFromNat((*saferith.Nat)(m))), ok
 }

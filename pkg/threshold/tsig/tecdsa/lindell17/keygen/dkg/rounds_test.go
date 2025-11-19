@@ -79,7 +79,7 @@ func Test_Lindell17DKG_K256_2of2(t *testing.T) {
 	const THRESHOLD = 2
 	const TOTAL = 2
 
-	curve := k256.NewCurve()
+	curve := p256.NewCurve()
 	shareholders := hashset.NewComparable[sharing.ID]()
 	for i := sharing.ID(1); i <= TOTAL; i++ {
 		shareholders.Add(i)

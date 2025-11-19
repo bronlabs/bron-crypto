@@ -349,10 +349,10 @@ func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challeng
 
 			switch response.J[i] {
 			case 1:
-				ci := statement.C.Mul(commitment.C1[i])
+				ci := statement.C.HomAdd(commitment.C1[i])
 				c = append(c, ci)
 			case 2:
-				ci := statement.C.Mul(commitment.C2[i])
+				ci := statement.C.HomAdd(commitment.C2[i])
 				c = append(c, ci)
 			default:
 				return errs.NewVerification("verification failed")
@@ -452,11 +452,11 @@ func (p *Protocol) RunSimulator(statement *Statement, challenge sigma.ChallengeB
 			j[i] = uint(1 + (ji[0] % 2))
 			switch j[i] {
 			case 1:
-				c1[i] = cji.Div(statement.C)
+				c1[i] = cji.HomSub(statement.C)
 				c2[i] = cZero
 				rj[i] = rji
 			case 2:
-				c2[i] = cji.Div(statement.C)
+				c2[i] = cji.HomSub(statement.C)
 				c1[i] = cZero
 				rj[i] = rji
 			default:

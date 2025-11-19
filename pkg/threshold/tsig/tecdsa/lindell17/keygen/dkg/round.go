@@ -11,7 +11,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
@@ -138,7 +137,7 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 		p.state.theirBigQDoublePrime[id] = message.BigQDoublePrime
 
 		// 3.ii. verify that y_j == 3Q'_j + Q''_j and abort if not
-		theirBigQ := p.state.theirBigQPrime[id].ScalarMul(p.curve.ScalarField().FromUint64(3)).Add(message.BigQDoublePrime)
+		theirBigQ := message.BigQPrime.Add(message.BigQPrime).Add(message.BigQPrime).Add(message.BigQDoublePrime)
 		partialPublicKey, exists := p.shard.PartialPublicKeys().Get(id)
 		if !exists {
 			return nil, errs.NewMissing("could not find participant partial publickey (sharing id=%d)", id)
@@ -234,7 +233,7 @@ func (p *Participant[P, B, S]) Round4(input network.RoundMessages[*Round3Broadca
 		theirCKeyDoublePrime := message.CKeyDoublePrime
 
 		// 4.i. calculate and store ckey_j = 3 (*) ckey'_j (+) ckey''_j
-		p.state.theirPaillierEncryptedShares[id] = ((theirCKeyPrime.ScalarExp(num.N().FromUint64(3))).Mul(theirCKeyDoublePrime))
+		p.state.theirPaillierEncryptedShares[id] = theirCKeyPrime.HomAdd(theirCKeyDoublePrime).HomAdd(theirCKeyDoublePrime).HomAdd(theirCKeyDoublePrime)
 
 		// 4.ii. LP and LPDL continue
 		// Share single transcript clone across all verifiers to preserve state

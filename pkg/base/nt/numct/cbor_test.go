@@ -149,99 +149,22 @@ func TestInt_CBOR_LargeValue(t *testing.T) {
 	require.True(t, recoveredNeg.IsNegative() == ct.True)
 }
 
-func TestModulusOddPrime_CBOR(t *testing.T) {
-	// Note: t.Parallel() removed to avoid race condition in test execution
+func TestModulus_CBOR(t *testing.T) {
+	t.Parallel()
 
-	// Test with various odd prime moduli (note: 2 is excluded as it's even)
-	primes := []uint64{
+	// Test with various moduli values
+	values := []uint64{
 		3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47,
 		53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
 		65537, // Fermat prime F4
 	}
 
-	for _, p := range primes {
-		t.Run("prime_"+string(rune(p)), func(t *testing.T) {
-			// Create original modulus
-			n := numct.NewNat(p)
-			original, ok := numct.NewModulusOddPrime(n)
-			require.True(t, ok == ct.True, "Failed to create modulus for prime %d", p)
-
-			// Marshal to CBOR
-			data, err := original.MarshalCBOR()
-			require.NoError(t, err)
-			require.NotEmpty(t, data)
-
-			// Unmarshal from CBOR
-			var recovered numct.ModulusOddPrime
-			err = recovered.UnmarshalCBOR(data)
-			require.NoError(t, err)
-
-			// Compare values
-			require.Equal(t, original.Bytes(), recovered.Bytes())
-			require.Equal(t, original.Big().Uint64(), recovered.Big().Uint64())
-			require.Equal(t, original.BitLen(), recovered.BitLen())
-		})
-	}
-}
-
-func TestModulusOdd_CBOR(t *testing.T) {
-	// Note: t.Parallel() removed to avoid race condition in test execution
-
-	// Test with various odd moduli (not necessarily prime)
-	oddValues := []uint64{
-		3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31,
-		33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59,
-		61, 63, 65, 67, 69, 71, 73, 75, 77, 79, 81, 83, 85, 87,
-		89, 91, 93, 95, 97, 99,
-	}
-
-	for _, v := range oddValues {
-		t.Run("odd_"+string(rune(v)), func(t *testing.T) {
-			// Create original modulus
-			n := numct.NewNat(v)
-			original, ok := numct.NewModulusOdd(n)
-			require.True(t, ok == ct.True, "Failed to create modulus for odd value %d", v)
-
-			// Marshal to CBOR
-			data, err := original.MarshalCBOR()
-			require.NoError(t, err)
-			require.NotEmpty(t, data)
-
-			// Unmarshal from CBOR
-			var recovered numct.ModulusOdd
-			err = recovered.UnmarshalCBOR(data)
-			require.NoError(t, err)
-
-			// Compare values
-			require.Equal(t, original.Bytes(), recovered.Bytes())
-			require.Equal(t, original.Big().Uint64(), recovered.Big().Uint64())
-			require.Equal(t, original.BitLen(), recovered.BitLen())
-		})
-	}
-}
-
-func TestModulusBasic_CBOR(t *testing.T) {
-	t.Parallel()
-
-	// Test with various odd prime values
-	// Note: ModulusBasic can handle any non-zero value, but we use primes
-	// since that's the public way to create the underlying structures
-	values := []uint64{3, 5, 7, 11, 13, 17, 19, 23, 29, 31}
-
 	for _, v := range values {
 		t.Run("value_"+string(rune(v)), func(t *testing.T) {
-			// Create a ModulusOddPrime and extract its basic component
+			// Create original modulus
 			n := numct.NewNat(v)
-			mod, ok := numct.NewModulusOddPrime(n)
-			require.True(t, ok == ct.True)
-
-			// Build ModulusBasic from ModulusOddPrimeBasic
-			originalPrimeBasic := &mod.ModulusOddPrimeBasic
-			original := &numct.ModulusBasic{
-				ModulusOddBasic: numct.ModulusOddBasic{
-					ModulusOddPrimeBasic: *originalPrimeBasic,
-				},
-			}
+			original, ok := numct.NewModulus(n)
+			require.True(t, ok == ct.True, "Failed to create modulus for value %d", v)
 
 			// Marshal to CBOR
 			data, err := original.MarshalCBOR()
@@ -249,13 +172,45 @@ func TestModulusBasic_CBOR(t *testing.T) {
 			require.NotEmpty(t, data)
 
 			// Unmarshal from CBOR
-			var recovered numct.ModulusBasic
+			var recovered numct.Modulus
 			err = recovered.UnmarshalCBOR(data)
 			require.NoError(t, err)
 
 			// Compare values
 			require.Equal(t, original.Bytes(), recovered.Bytes())
 			require.Equal(t, original.Big().Uint64(), recovered.Big().Uint64())
+			require.Equal(t, original.BitLen(), recovered.BitLen())
+		})
+	}
+}
+
+func TestModulus_CBOR_EvenModulus(t *testing.T) {
+	t.Parallel()
+
+	// Test with even moduli
+	evenValues := []uint64{2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 100, 1000}
+
+	for _, v := range evenValues {
+		t.Run("even_value_"+string(rune(v)), func(t *testing.T) {
+			// Create original modulus
+			n := numct.NewNat(v)
+			original, ok := numct.NewModulus(n)
+			require.True(t, ok == ct.True, "Failed to create modulus for even value %d", v)
+
+			// Marshal to CBOR
+			data, err := original.MarshalCBOR()
+			require.NoError(t, err)
+			require.NotEmpty(t, data)
+
+			// Unmarshal from CBOR
+			var recovered numct.Modulus
+			err = recovered.UnmarshalCBOR(data)
+			require.NoError(t, err)
+
+			// Compare values
+			require.Equal(t, original.Bytes(), recovered.Bytes())
+			require.Equal(t, original.Big().Uint64(), recovered.Big().Uint64())
+			require.Equal(t, original.BitLen(), recovered.BitLen())
 		})
 	}
 }
@@ -265,14 +220,14 @@ func TestModulus_CBOR_RoundTrip_Operations(t *testing.T) {
 
 	// Create a modulus and test operations after serialization
 	n := numct.NewNat(97)
-	original, ok := numct.NewModulusOddPrime(n)
+	original, ok := numct.NewModulus(n)
 	require.True(t, ok == ct.True)
 
 	// Marshal and unmarshal
 	data, err := original.MarshalCBOR()
 	require.NoError(t, err)
 
-	var recovered numct.ModulusOddPrime
+	var recovered numct.Modulus
 	err = recovered.UnmarshalCBOR(data)
 	require.NoError(t, err)
 
@@ -351,54 +306,26 @@ func TestInt_CBOR_EdgeCases(t *testing.T) {
 	})
 }
 
-func TestModulus_CBOR_Polymorphic(t *testing.T) {
+func TestModulus_CBOR_InvalidData(t *testing.T) {
 	t.Parallel()
 
-	// Test that we can serialize different modulus types and recover them
-	t.Run("interface_serialization", func(t *testing.T) {
-		// Create different modulus types
-		prime := numct.NewNat(97)
-		modPrime, okPrime := numct.NewModulusOddPrime(prime)
-		require.True(t, okPrime == ct.True)
+	t.Run("empty_bytes", func(t *testing.T) {
+		var m numct.Modulus
+		err := m.UnmarshalCBOR([]byte{})
+		require.Error(t, err)
+	})
 
-		odd := numct.NewNat(15) // 3*5, odd but not prime
-		modOdd, okOdd := numct.NewModulusOdd(odd)
-		require.True(t, okOdd == ct.True)
+	t.Run("corrupted_data", func(t *testing.T) {
+		var m numct.Modulus
+		err := m.UnmarshalCBOR([]byte{0xFF, 0xFF, 0xFF, 0xFF})
+		require.Error(t, err)
+	})
 
-		// Test that each can be serialized and deserialized
-		testModulusRoundTrip := func(name string, mod numct.Modulus) {
-			t.Run(name, func(t *testing.T) {
-				// We need type-specific serialization for interface types
-				// This is a limitation - interfaces need wrapper types for proper CBOR
-				switch m := mod.(type) {
-				case *numct.ModulusOddPrime:
-					data, err := m.MarshalCBOR()
-					require.NoError(t, err)
-
-					var recovered numct.ModulusOddPrime
-					err = recovered.UnmarshalCBOR(data)
-					require.NoError(t, err)
-
-					require.Equal(t, m.Bytes(), recovered.Bytes())
-
-				case *numct.ModulusOdd:
-					data, err := m.MarshalCBOR()
-					require.NoError(t, err)
-
-					var recovered numct.ModulusOdd
-					err = recovered.UnmarshalCBOR(data)
-					require.NoError(t, err)
-
-					require.Equal(t, m.Bytes(), recovered.Bytes())
-
-				default:
-					t.Fatalf("Unknown modulus type: %T", mod)
-				}
-			})
-		}
-
-		testModulusRoundTrip("ModulusOddPrime", modPrime)
-		testModulusRoundTrip("ModulusOdd", modOdd)
+	t.Run("zero_modulus", func(t *testing.T) {
+		// Creating a modulus with zero should fail
+		zero := numct.NewNat(0)
+		_, ok := numct.NewModulus(zero)
+		require.Equal(t, ct.False, ok, "Should not be able to create modulus from zero")
 	})
 }
 
@@ -434,6 +361,23 @@ func TestInt_CBOR_Deterministic(t *testing.T) {
 	require.True(t, bytes.Equal(data1, data2), "CBOR serialization should be deterministic")
 }
 
+func TestModulus_CBOR_Deterministic(t *testing.T) {
+	t.Parallel()
+
+	// Test that serialization is deterministic
+	n := numct.NewNat(97)
+	m, _ := numct.NewModulus(n)
+
+	data1, err1 := m.MarshalCBOR()
+	require.NoError(t, err1)
+
+	data2, err2 := m.MarshalCBOR()
+	require.NoError(t, err2)
+
+	// Should produce identical bytes
+	require.True(t, bytes.Equal(data1, data2), "CBOR serialization should be deterministic")
+}
+
 func BenchmarkNat_CBOR(b *testing.B) {
 	n := numct.NewNat(1234567890)
 
@@ -451,6 +395,34 @@ func BenchmarkNat_CBOR(b *testing.B) {
 
 	b.Run("Unmarshal", func(b *testing.B) {
 		var recovered numct.Nat
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			err := recovered.UnmarshalCBOR(data)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+}
+
+func BenchmarkModulus_CBOR(b *testing.B) {
+	n := numct.NewNat(65537)
+	m, _ := numct.NewModulus(n)
+
+	b.Run("Marshal", func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, err := m.MarshalCBOR()
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+
+	data, _ := m.MarshalCBOR()
+
+	b.Run("Unmarshal", func(b *testing.B) {
+		var recovered numct.Modulus
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			err := recovered.UnmarshalCBOR(data)

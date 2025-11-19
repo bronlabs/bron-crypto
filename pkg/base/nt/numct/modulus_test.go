@@ -19,57 +19,48 @@ func newNatFromBig(b *big.Int) *numct.Nat {
 	return (*numct.Nat)(new(saferith.Nat).SetBig(b, b.BitLen()))
 }
 
-func newModulusOddPrime(p *big.Int) *numct.ModulusOddPrime {
+func newModulus(p *big.Int) *numct.Modulus {
 	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
-	m, ok := numct.NewModulusOddPrime(pNat)
+	m, ok := numct.NewModulus(pNat)
 	if ok != ct.True {
-		panic("failed to create ModulusOddPrime")
+		panic("failed to create Modulus")
 	}
 	return m
 }
 
 func TestNewModulusFromNat(t *testing.T) {
-
 	t.Run("odd prime", func(t *testing.T) {
-
 		p := newNatFromBig(big.NewInt(7))
 		m, ok := numct.NewModulus(p)
 		assert.Equal(t, ct.True, ok, "Failed to create modulus")
-
-		// Should return ModulusOddPrime type
-		_, isOddPrime := m.(*numct.ModulusOddPrime)
-		assert.True(t, isOddPrime, "Expected ModulusOddPrime for prime 7")
+		assert.NotNil(t, m)
 	})
 
-	t.Run("not odd prime", func(t *testing.T) {
-
+	t.Run("odd composite", func(t *testing.T) {
 		p := newNatFromBig(big.NewInt(15)) // 3*5, not prime
 		m, ok := numct.NewModulus(p)
 		assert.Equal(t, ct.True, ok, "Failed to create modulus")
-
-		// Should return ModulusOdd type (odd composite)
-		_, isOdd := m.(*numct.ModulusOdd)
-		assert.True(t, isOdd, "Expected ModulusOdd for 15 (odd composite)")
+		assert.NotNil(t, m)
 	})
 
 	t.Run("even number", func(t *testing.T) {
-
 		p := newNatFromBig(big.NewInt(10))
 		m, ok := numct.NewModulus(p)
 		assert.Equal(t, ct.True, ok, "Failed to create modulus")
+		assert.NotNil(t, m)
+	})
 
-		// Should return generic Modulus type (not ModulusOdd or ModulusOddPrime)
-		_, isNonZero := m.(*numct.ModulusNonZero)
-		assert.True(t, isNonZero, "Expected Modulus for even number 10")
+	t.Run("zero should fail", func(t *testing.T) {
+		p := newNatFromBig(big.NewInt(0))
+		_, ok := numct.NewModulus(p)
+		assert.Equal(t, ct.False, ok, "Should not create modulus for zero")
 	})
 }
 
-func TestModulusOddPrime_BasicOperations(t *testing.T) {
-
-	m := newModulusOddPrime(big.NewInt(7))
+func TestModulus_BasicOperations(t *testing.T) {
+	m := newModulus(big.NewInt(7))
 
 	t.Run("Mod", func(t *testing.T) {
-
 		tests := []struct {
 			name string
 			x    int64
@@ -83,9 +74,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-
 			t.Run(tt.name, func(t *testing.T) {
-
 				x := newNatFromBig(big.NewInt(tt.x))
 				out := newNatFromBig(big.NewInt(0))
 
@@ -96,7 +85,6 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("Add", func(t *testing.T) {
-
 		tests := []struct {
 			name string
 			x, y int64
@@ -109,9 +97,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-
 			t.Run(tt.name, func(t *testing.T) {
-
 				x := newNatFromBig(big.NewInt(tt.x))
 				y := newNatFromBig(big.NewInt(tt.y))
 				out := newNatFromBig(big.NewInt(0))
@@ -123,7 +109,6 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("Sub", func(t *testing.T) {
-
 		tests := []struct {
 			name string
 			x, y int64
@@ -136,9 +121,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-
 			t.Run(tt.name, func(t *testing.T) {
-
 				x := newNatFromBig(big.NewInt(tt.x))
 				y := newNatFromBig(big.NewInt(tt.y))
 				out := newNatFromBig(big.NewInt(0))
@@ -150,7 +133,6 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("Mul", func(t *testing.T) {
-
 		tests := []struct {
 			name string
 			x, y int64
@@ -163,9 +145,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-
 			t.Run(tt.name, func(t *testing.T) {
-
 				x := newNatFromBig(big.NewInt(tt.x))
 				y := newNatFromBig(big.NewInt(tt.y))
 				out := newNatFromBig(big.NewInt(0))
@@ -177,7 +157,6 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 	})
 
 	t.Run("Neg", func(t *testing.T) {
-
 		tests := []struct {
 			name string
 			x    int64
@@ -190,9 +169,7 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-
 			t.Run(tt.name, func(t *testing.T) {
-
 				x := newNatFromBig(big.NewInt(tt.x))
 				out := newNatFromBig(big.NewInt(0))
 
@@ -203,9 +180,8 @@ func TestModulusOddPrime_BasicOperations(t *testing.T) {
 	})
 }
 
-func TestModulusOddPrime_Inv(t *testing.T) {
-
-	m := newModulusOddPrime(big.NewInt(7))
+func TestModulus_Inv(t *testing.T) {
+	m := newModulus(big.NewInt(7))
 
 	tests := []struct {
 		name string
@@ -218,13 +194,11 @@ func TestModulusOddPrime_Inv(t *testing.T) {
 		{"inv of 4", 4, 2}, // 4 * 2 = 8 ≡ 1 mod 7
 		{"inv of 5", 5, 3}, // 5 * 3 = 15 ≡ 1 mod 7
 		{"inv of 6", 6, 6}, // 6 * 6 = 36 ≡ 1 mod 7
-		{"inv of 0", 0, 0}, // Special case, but saferith returns ok=true for odd moduli
+		{"inv of 0", 0, 0}, // Special case
 	}
 
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
-
 			x := newNatFromBig(big.NewInt(tt.x))
 			out := newNatFromBig(big.NewInt(0))
 
@@ -245,51 +219,85 @@ func TestModulusOddPrime_Inv(t *testing.T) {
 	}
 }
 
-func TestModulusOddPrime_Sqrt(t *testing.T) {
+func TestModulus_Sqrt(t *testing.T) {
+	t.Run("prime modulus", func(t *testing.T) {
+		m := newModulus(big.NewInt(7))
 
-	m := newModulusOddPrime(big.NewInt(7))
+		tests := []struct {
+			name     string
+			x        int64
+			wantOk   ct.Bool
+		}{
+			{"sqrt of 0", 0, ct.True},
+			{"sqrt of 1", 1, ct.True},
+			{"sqrt of 2", 2, ct.True},     // 3^2 = 9 ≡ 2 mod 7 or 4^2 = 16 ≡ 2 mod 7
+			{"sqrt of 4", 4, ct.True},     // 2^2 = 4
+			{"no sqrt of 3", 3, ct.False}, // 3 is not a quadratic residue mod 7
+			{"no sqrt of 5", 5, ct.False}, // 5 is not a quadratic residue mod 7
+			{"no sqrt of 6", 6, ct.False}, // 6 is not a quadratic residue mod 7
+		}
 
-	tests := []struct {
-		name     string
-		x        int64
-		wantRoot int64
-		wantOk   ct.Bool
-	}{
-		{"sqrt of 0", 0, 0, ct.True},
-		{"sqrt of 1", 1, 1, ct.True},     // 1^2 = 1
-		{"sqrt of 2", 2, 3, ct.True},     // 3^2 = 9 ≡ 2 mod 7 or 4^2 = 16 ≡ 2 mod 7
-		{"sqrt of 4", 4, 2, ct.True},     // 2^2 = 4
-		{"no sqrt of 3", 3, 0, ct.False}, // 3 is not a quadratic residue mod 7
-		{"no sqrt of 5", 5, 0, ct.False}, // 5 is not a quadratic residue mod 7
-		{"no sqrt of 6", 6, 0, ct.False}, // 6 is not a quadratic residue mod 7
-	}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				x := newNatFromBig(big.NewInt(tt.x))
+				out := newNatFromBig(big.NewInt(0))
 
-	for _, tt := range tests {
+				ok := m.ModSqrt(out, x)
+				assert.Equal(t, tt.wantOk, ok)
 
-		t.Run(tt.name, func(t *testing.T) {
+				if ok == ct.True {
+					// Verify that out^2 ≡ x mod 7
+					squared := newNatFromBig(big.NewInt(0))
+					m.ModMul(squared, out, out)
+					assert.Equal(t, uint64(tt.x), squared.Uint64(), "sqrt(x)^2 should equal x mod p")
+				}
+			})
+		}
+	})
 
-			x := newNatFromBig(big.NewInt(tt.x))
-			out := newNatFromBig(big.NewInt(0))
+	t.Run("composite modulus", func(t *testing.T) {
+		m := newModulus(big.NewInt(10))
 
-			ok := m.ModSqrt(out, x)
-			assert.Equal(t, tt.wantOk, ok)
+		tests := []struct {
+			name     string
+			x        int64
+			wantRoot int64
+			wantOk   ct.Bool
+		}{
+			{"sqrt of 0", 0, 0, ct.True},
+			{"sqrt of 1", 1, 1, ct.True},
+			{"sqrt of 4", 4, 2, ct.True},
+			{"sqrt of 9", 9, 3, ct.True},
+			{"no sqrt of 2", 2, 0, ct.False},
+			{"no sqrt of 3", 3, 0, ct.False},
+			{"no sqrt of 5", 5, 0, ct.False},
+		}
 
-			if ok == ct.True {
-				// Verify that out^2 ≡ x mod 7
-				squared := newNatFromBig(big.NewInt(0))
-				m.ModMul(squared, out, out)
-				assert.Equal(t, uint64(tt.x), squared.Uint64(), "sqrt(x)^2 should equal x mod p")
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				x := newNatFromBig(big.NewInt(tt.x))
+				out := newNatFromBig(big.NewInt(0))
 
-				// The actual root might be different from expected (e.g., 3 or 4 for sqrt(2))
-				// So we just verify the property, not the exact value
-			}
-		})
-	}
+				ok := m.ModSqrt(out, x)
+				assert.Equal(t, tt.wantOk, ok)
+
+				if ok == ct.True {
+					assert.Equal(t, uint64(tt.wantRoot), out.Uint64())
+
+					// Verify that out^2 ≡ x mod 10
+					squared := newNatFromBig(big.NewInt(0))
+					m.ModMul(squared, out, out)
+					xMod := newNatFromBig(big.NewInt(0))
+					m.Mod(xMod, x)
+					assert.Equal(t, xMod.Uint64(), squared.Uint64(), "sqrt(x)^2 should equal x mod m")
+				}
+			})
+		}
+	})
 }
 
-func TestModulusOddPrime_Div(t *testing.T) {
-
-	m := newModulusOddPrime(big.NewInt(7))
+func TestModulus_Div(t *testing.T) {
+	m := newModulus(big.NewInt(7))
 
 	tests := []struct {
 		name string
@@ -304,9 +312,7 @@ func TestModulusOddPrime_Div(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
-
 			x := newNatFromBig(big.NewInt(tt.x))
 			y := newNatFromBig(big.NewInt(tt.y))
 			out := newNatFromBig(big.NewInt(0))
@@ -322,38 +328,32 @@ func TestModulusOddPrime_Div(t *testing.T) {
 	}
 }
 
-func TestModulusOddPrime_Properties(t *testing.T) {
-
+func TestModulus_Properties(t *testing.T) {
 	p := big.NewInt(97)
-	m := newModulusOddPrime(p)
+	m := newModulus(p)
 
 	t.Run("BitLen", func(t *testing.T) {
-
 		// 97 in binary is 1100001, which is 7 bits
 		assert.Equal(t, uint(7), m.BitLen())
 	})
 
 	t.Run("Nat", func(t *testing.T) {
-
 		n := m.Nat()
 		assert.Equal(t, uint64(97), n.Uint64())
 	})
 
 	t.Run("Bytes", func(t *testing.T) {
-
 		bytes := m.Bytes()
 		expected := p.Bytes()
 		assert.Equal(t, expected, bytes)
 	})
 
 	t.Run("String", func(t *testing.T) {
-
 		str := m.String()
 		assert.Contains(t, str, "61") // 97 in hex is 0x61
 	})
 
 	t.Run("InRange", func(t *testing.T) {
-
 		tests := []struct {
 			name string
 			x    int64
@@ -367,9 +367,7 @@ func TestModulusOddPrime_Properties(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-
 			t.Run(tt.name, func(t *testing.T) {
-
 				x := newNatFromBig(big.NewInt(tt.x))
 				got := m.IsInRange(x)
 				assert.Equal(t, tt.want, got)
@@ -378,7 +376,6 @@ func TestModulusOddPrime_Properties(t *testing.T) {
 	})
 
 	t.Run("IsUnit", func(t *testing.T) {
-
 		tests := []struct {
 			name string
 			x    int64
@@ -392,9 +389,7 @@ func TestModulusOddPrime_Properties(t *testing.T) {
 		}
 
 		for _, tt := range tests {
-
 			t.Run(tt.name, func(t *testing.T) {
-
 				x := newNatFromBig(big.NewInt(tt.x))
 				got := m.IsUnit(x)
 				assert.Equal(t, tt.want, got)
@@ -403,9 +398,8 @@ func TestModulusOddPrime_Properties(t *testing.T) {
 	})
 }
 
-func TestModulusOddPrime_Exp(t *testing.T) {
-
-	m := newModulusOddPrime(big.NewInt(7))
+func TestModulus_Exp(t *testing.T) {
+	m := newModulus(big.NewInt(7))
 
 	tests := []struct {
 		name string
@@ -425,9 +419,7 @@ func TestModulusOddPrime_Exp(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
-
 			base := newNatFromBig(big.NewInt(tt.base))
 			exp := newNatFromBig(big.NewInt(tt.exp))
 			out := newNatFromBig(big.NewInt(0))
@@ -438,78 +430,50 @@ func TestModulusOddPrime_Exp(t *testing.T) {
 	}
 }
 
-func TestModulus_Sqrt(t *testing.T) {
+func TestModulus_EvenModulus(t *testing.T) {
+	// Test operations with even modulus
+	m := newModulus(big.NewInt(10))
 
-	// Test with even number 10 - use Modulus constructor directly
-	p := newNatFromBig(big.NewInt(10))
-	m, ok := numct.NewModulusNonZero(p)
-	assert.Equal(t, ct.True, ok, "Should be able to create Modulus for even number")
+	t.Run("ModExp", func(t *testing.T) {
+		base := newNatFromBig(big.NewInt(3))
+		exp := newNatFromBig(big.NewInt(4))
+		out := newNatFromBig(big.NewInt(0))
 
-	tests := []struct {
-		name     string
-		x        int64
-		wantRoot int64
-		wantOk   ct.Bool
-	}{
-		{"sqrt of 0", 0, 0, ct.True},
-		{"sqrt of 1", 1, 1, ct.True},
-		{"sqrt of 4", 4, 2, ct.True},
-		{"sqrt of 9", 9, 3, ct.True},
-		{"no sqrt of 2", 2, 0, ct.False},
-		{"no sqrt of 3", 3, 0, ct.False},
-		{"no sqrt of 5", 5, 0, ct.False},
-	}
-
-	for _, tt := range tests {
-
-		t.Run(tt.name, func(t *testing.T) {
-
-			x := newNatFromBig(big.NewInt(tt.x))
-			out := newNatFromBig(big.NewInt(0))
-
-			ok := m.ModSqrt(out, x)
-			assert.Equal(t, tt.wantOk, ok)
-
-			if ok == ct.True {
-				assert.Equal(t, uint64(tt.wantRoot), out.Uint64())
-
-				// Verify that out^2 ≡ x mod 15
-				squared := newNatFromBig(big.NewInt(0))
-				m.ModMul(squared, out, out)
-				xMod := newNatFromBig(big.NewInt(0))
-				m.Mod(xMod, x)
-				assert.Equal(t, xMod.Uint64(), squared.Uint64(), "sqrt(x)^2 should equal x mod p")
-			}
-		})
-	}
-}
-
-func TestModulusInterfaces(t *testing.T) {
-
-	// These interface checks are now done at compile time in modulus_cgo.go
-	// Just verify we can create instances
-	t.Run("Can create ModulusOddPrime", func(t *testing.T) {
-
-		p := newNatFromBig(big.NewInt(7))
-		m, ok := numct.NewModulusOddPrime(p)
-		assert.Equal(t, ct.True, ok)
-		assert.NotNil(t, m)
+		m.ModExp(out, base, exp)
+		// 3^4 = 81, 81 mod 10 = 1
+		assert.Equal(t, uint64(1), out.Uint64())
 	})
 
-	t.Run("Can create ModulusOdd", func(t *testing.T) {
+	t.Run("ModInv", func(t *testing.T) {
+		// 3 is coprime to 10, should have an inverse
+		x := newNatFromBig(big.NewInt(3))
+		out := newNatFromBig(big.NewInt(0))
 
-		p := newNatFromBig(big.NewInt(15)) // odd composite
-		m, ok := numct.NewModulusOdd(p)
+		ok := m.ModInv(out, x)
 		assert.Equal(t, ct.True, ok)
-		assert.NotNil(t, m)
+
+		// Verify 3 * inv ≡ 1 mod 10
+		// 3 * 7 = 21 ≡ 1 mod 10
+		product := newNatFromBig(big.NewInt(0))
+		m.ModMul(product, x, out)
+		assert.Equal(t, uint64(1), product.Uint64())
 	})
 
-	t.Run("Can create Modulus", func(t *testing.T) {
+	t.Run("ModDiv even modulus", func(t *testing.T) {
+		// Test division with even modulus using extended GCD
+		x := newNatFromBig(big.NewInt(6))
+		y := newNatFromBig(big.NewInt(3))
+		out := newNatFromBig(big.NewInt(0))
 
-		p := newNatFromBig(big.NewInt(10)) // even
-		m, ok := numct.NewModulusNonZero(p)
+		ok := m.ModDiv(out, x, y)
 		assert.Equal(t, ct.True, ok)
-		assert.NotNil(t, m)
+
+		// Verify out * y ≡ x mod 10
+		product := newNatFromBig(big.NewInt(0))
+		m.ModMul(product, out, y)
+		xMod := newNatFromBig(big.NewInt(0))
+		m.Mod(xMod, x)
+		assert.Equal(t, xMod.Uint64(), product.Uint64())
 	})
 }
 
@@ -527,13 +491,12 @@ func TestModulusCachingPerformance(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			// Generate a prime
 			pBig, _ := crand.Prime(crand.Reader, tc.primeBits)
 			p := (*numct.Nat)(new(saferith.Nat).SetBig(pBig, tc.primeBits).Resize(tc.primeBits))
 
-			// Create ModulusOddPrime with cached Montgomery context
-			pMod, ok := numct.NewModulusOddPrime(p)
+			// Create Modulus with cached Montgomery context
+			pMod, ok := numct.NewModulus(p)
 			require.Equal(t, ct.True, ok)
 
 			// Generate test data
@@ -559,7 +522,7 @@ func TestModulusCachingPerformance(t *testing.T) {
 			// Test with recreating the modulus each time (no cache benefit)
 			start = time.Now()
 			for i := range tc.ops {
-				newPMod, _ := numct.NewModulusOddPrime(p)
+				newPMod, _ := numct.NewModulus(p)
 				newPMod.ModExp(result, bases[i], exps[i])
 			}
 			recreateTime := time.Since(start)
@@ -576,7 +539,7 @@ func TestModulusCachingPerformance(t *testing.T) {
 
 func BenchmarkModulusOperations(b *testing.B) {
 	p := big.NewInt(997) // Large prime
-	m := newModulusOddPrime(p)
+	m := newModulus(p)
 
 	x := newNatFromBig(big.NewInt(123))
 	y := newNatFromBig(big.NewInt(456))
@@ -617,10 +580,9 @@ func BenchmarkModulusOperations(b *testing.B) {
 }
 
 func TestModSymmetric(t *testing.T) {
-
 	// Test with prime modulus 11
 	p := big.NewInt(11)
-	m := newModulusOddPrime(p)
+	m := newModulus(p)
 
 	testCases := []struct {
 		name     string
@@ -638,7 +600,6 @@ func TestModSymmetric(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			input := newNatFromBig(big.NewInt(tc.input))
 			var output numct.Int
 			m.ModSymmetric(&output, input)
@@ -662,12 +623,10 @@ func TestModSymmetric(t *testing.T) {
 }
 
 func TestModInv_Comprehensive(t *testing.T) {
-
 	t.Run("Prime modulus", func(t *testing.T) {
-
 		// Test with prime modulus 13
 		p := big.NewInt(13)
-		m := newModulusOddPrime(p)
+		m := newModulus(p)
 
 		testCases := []struct {
 			name        string
@@ -686,7 +645,6 @@ func TestModInv_Comprehensive(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-
 				a := newNatFromBig(big.NewInt(tc.input))
 				var inv numct.Nat
 				ok := m.ModInv(&inv, a)
@@ -716,11 +674,9 @@ func TestModInv_Comprehensive(t *testing.T) {
 	})
 
 	t.Run("Composite odd modulus", func(t *testing.T) {
-
 		// Test with composite modulus 15 = 3 * 5
 		n := big.NewInt(15)
-		m, ok := numct.NewModulus(newNatFromBig(n))
-		require.Equal(t, ct.True, ok, "Failed to create modulus")
+		m := newModulus(n)
 
 		testCases := []struct {
 			name       string
@@ -742,7 +698,6 @@ func TestModInv_Comprehensive(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-
 				a := newNatFromBig(big.NewInt(tc.input))
 				var inv numct.Nat
 				ok := m.ModInv(&inv, a)
@@ -764,77 +719,6 @@ func TestModInv_Comprehensive(t *testing.T) {
 	})
 }
 
-// Benchmark different ModInv implementations
-func BenchmarkModInv_Comparison(b *testing.B) {
-	// Generate a large prime for testing
-	p, _ := crand.Prime(crand.Reader, 2048)
-
-	// Create different modulus types
-	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
-
-	// ModulusOddPrime (uses Fermat's Little Theorem via ModExp)
-	mPrime, ok := numct.NewModulusOddPrime(pNat)
-	if ok != ct.True {
-		b.Fatal("Failed to create ModulusOddPrime")
-	}
-
-	// ModulusOddPrimeBasic (uses saferith.ModInverse)
-	mBasic := (*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(pNat)))
-
-	// Test value (make sure it's coprime to p)
-	testVal := big.NewInt(12345)
-	x := newNatFromBig(testVal)
-	var out numct.Nat
-
-	b.Run("ModulusOddPrime_FermatLittleTheorem", func(b *testing.B) {
-		b.ResetTimer()
-		for range b.N {
-			mPrime.ModInv(&out, x)
-		}
-	})
-
-	b.Run("ModulusOddPrimeBasic_Saferith", func(b *testing.B) {
-		b.ResetTimer()
-		for range b.N {
-			mBasic.ModInv(&out, x)
-		}
-	})
-
-	// Test with composite odd modulus
-	// Use a large RSA-like composite: product of two large primes
-	p1, _ := crand.Prime(crand.Reader, 1024)
-	p2, _ := crand.Prime(crand.Reader, 1024)
-	composite := new(big.Int).Mul(p1, p2)
-	compositeNat := (*numct.Nat)(new(saferith.Nat).SetBig(composite, composite.BitLen()))
-
-	// This should create a ModulusOdd (uses BoringSSL)
-	mComposite, ok := numct.NewModulus(compositeNat)
-	if ok != ct.True {
-		b.Fatal("Failed to create composite modulus")
-	}
-
-	// ModulusBasic for comparison
-	mCompositeBasic := &numct.ModulusBasic{
-		ModulusOddBasic: numct.ModulusOddBasic{
-			ModulusOddPrimeBasic: *(*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(compositeNat))),
-		},
-	}
-
-	b.Run("ModulusOdd_BoringSSL", func(b *testing.B) {
-		b.ResetTimer()
-		for range b.N {
-			mComposite.ModInv(&out, x)
-		}
-	})
-
-	b.Run("ModulusBasic_Saferith", func(b *testing.B) {
-		b.ResetTimer()
-		for range b.N {
-			mCompositeBasic.ModInv(&out, x)
-		}
-	})
-}
-
 // Benchmark ModInv with different bit sizes
 func BenchmarkModInv_BitSizes(b *testing.B) {
 	bitSizes := []int{256, 512, 1024, 2048, 3072}
@@ -845,9 +729,9 @@ func BenchmarkModInv_BitSizes(b *testing.B) {
 			p, _ := crand.Prime(crand.Reader, bits)
 			pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
 
-			m, ok := numct.NewModulusOddPrime(pNat)
+			m, ok := numct.NewModulus(pNat)
 			if ok != ct.True {
-				b.Fatal("Failed to create ModulusOddPrime")
+				b.Fatal("Failed to create Modulus")
 			}
 
 			// Test value
@@ -860,388 +744,5 @@ func BenchmarkModInv_BitSizes(b *testing.B) {
 				m.ModInv(&out, x)
 			}
 		})
-	}
-}
-
-// BenchmarkModInv_RSA_Paillier compares ModInv performance for RSA/Paillier sizes
-func BenchmarkModInv_RSA_Paillier(b *testing.B) {
-	// Common RSA/Paillier modulus sizes
-	bitSizes := []int{
-		1024, // RSA-1024
-		2048, // RSA-2048, Paillier-1024 (n^2)
-		3072, // RSA-3072
-		4096, // RSA-4096, Paillier-2048 (n^2)
-	}
-
-	for _, bits := range bitSizes {
-		b.Run(fmt.Sprintf("Prime_%d_bits", bits), func(b *testing.B) {
-			// Generate a prime of specified bit size
-			p, _ := crand.Prime(crand.Reader, bits)
-			pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
-
-			// Create test value that's coprime to p
-			testVal, _ := crand.Prime(crand.Reader, bits/2)
-			x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
-			var out numct.Nat
-
-			b.Run("BoringSSL", func(b *testing.B) {
-				// ModulusOddPrime uses BoringSSL
-				m, ok := numct.NewModulusOddPrime(pNat)
-				if ok != ct.True {
-					b.Fatal("Failed to create ModulusOddPrime")
-				}
-
-				b.ResetTimer()
-				for range b.N {
-					m.ModInv(&out, x)
-				}
-			})
-
-			b.Run("Saferith", func(b *testing.B) {
-				// ModulusOddPrimeBasic uses saferith
-				m := (*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(pNat)))
-
-				b.ResetTimer()
-				for range b.N {
-					m.ModInv(&out, x)
-				}
-			})
-		})
-	}
-
-	// Test with composite (RSA-like) moduli
-	for _, bits := range bitSizes {
-		b.Run(fmt.Sprintf("Composite_%d_bits", bits), func(b *testing.B) {
-			// Generate two primes for RSA-like composite
-			p1, _ := crand.Prime(crand.Reader, bits/2)
-			p2, _ := crand.Prime(crand.Reader, bits/2)
-			n := new(big.Int).Mul(p1, p2)
-			nNat := (*numct.Nat)(new(saferith.Nat).SetBig(n, n.BitLen()))
-
-			// Create test value coprime to n
-			var testVal *big.Int
-			for {
-				testVal, _ = crand.Prime(crand.Reader, bits/3)
-				if new(big.Int).GCD(nil, nil, testVal, n).Cmp(big.NewInt(1)) == 0 {
-					break
-				}
-			}
-			x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
-			var out numct.Nat
-
-			b.Run("BoringSSL", func(b *testing.B) {
-				// ModulusOdd uses BoringSSL
-				m, ok := numct.NewModulusOdd(nNat)
-				if ok != ct.True {
-					b.Fatal("Failed to create ModulusOdd")
-				}
-
-				b.ResetTimer()
-				for range b.N {
-					m.ModInv(&out, x)
-				}
-			})
-
-			b.Run("Saferith", func(b *testing.B) {
-				// ModulusBasic uses saferith
-				m := &numct.ModulusBasic{
-					ModulusOddBasic: numct.ModulusOddBasic{
-						ModulusOddPrimeBasic: *(*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(nNat))),
-					},
-				}
-
-				b.ResetTimer()
-				for range b.N {
-					m.ModInv(&out, x)
-				}
-			})
-		})
-	}
-}
-
-// BenchmarkModInv_SaferithOnly compares Saferith performance at different sizes
-func BenchmarkModInv_SaferithOnly(b *testing.B) {
-	// Common RSA/Paillier modulus sizes
-	bitSizes := []int{
-		1024, // RSA-1024
-		2048, // RSA-2048
-		3072, // RSA-3072
-		4096, // RSA-4096
-	}
-
-	for _, bits := range bitSizes {
-		b.Run(fmt.Sprintf("Prime_%d_bits", bits), func(b *testing.B) {
-			// Generate a prime of specified bit size
-			p, _ := crand.Prime(crand.Reader, bits)
-			pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
-
-			// Create test value that's coprime to p
-			testVal, _ := crand.Prime(crand.Reader, bits/2)
-			x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
-			var out numct.Nat
-
-			// ModulusOddPrimeBasic uses saferith
-			m := (*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(pNat)))
-
-			b.ResetTimer()
-			for range b.N {
-				m.ModInv(&out, x)
-			}
-		})
-	}
-
-	// Test with composite (RSA-like) moduli
-	for _, bits := range bitSizes {
-		b.Run(fmt.Sprintf("Composite_%d_bits", bits), func(b *testing.B) {
-			// Generate two primes for RSA-like composite
-			p1, _ := crand.Prime(crand.Reader, bits/2)
-			p2, _ := crand.Prime(crand.Reader, bits/2)
-			n := new(big.Int).Mul(p1, p2)
-			nNat := (*numct.Nat)(new(saferith.Nat).SetBig(n, n.BitLen()))
-
-			// Create test value coprime to n
-			var testVal *big.Int
-			for {
-				testVal, _ = crand.Prime(crand.Reader, bits/3)
-				if new(big.Int).GCD(nil, nil, testVal, n).Cmp(big.NewInt(1)) == 0 {
-					break
-				}
-			}
-			x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
-			var out numct.Nat
-
-			// ModulusBasic uses saferith
-			m := &numct.ModulusBasic{
-				ModulusOddBasic: numct.ModulusOddBasic{
-					ModulusOddPrimeBasic: *(*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(nNat))),
-				},
-			}
-
-			b.ResetTimer()
-			for range b.N {
-				m.ModInv(&out, x)
-			}
-		})
-	}
-}
-
-// Separate focused benchmarks for ModInv
-
-func BenchmarkModInv_Prime_1024_BoringSSL(b *testing.B) {
-	p, _ := crand.Prime(crand.Reader, 1024)
-	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
-	m, _ := numct.NewModulusOddPrime(pNat)
-
-	testVal, _ := crand.Prime(crand.Reader, 512)
-	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
-	var out numct.Nat
-
-	b.ResetTimer()
-	for range b.N {
-		m.ModInv(&out, x)
-	}
-}
-
-func BenchmarkModInv_Prime_1024_Saferith(b *testing.B) {
-	p, _ := crand.Prime(crand.Reader, 1024)
-	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
-	m := (*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(pNat)))
-
-	testVal, _ := crand.Prime(crand.Reader, 512)
-	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
-	var out numct.Nat
-
-	b.ResetTimer()
-	for range b.N {
-		m.ModInv(&out, x)
-	}
-}
-
-func BenchmarkModInv_Prime_2048_BoringSSL(b *testing.B) {
-	p, _ := crand.Prime(crand.Reader, 2048)
-	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
-	m, _ := numct.NewModulusOddPrime(pNat)
-
-	testVal, _ := crand.Prime(crand.Reader, 1024)
-	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
-	var out numct.Nat
-
-	b.ResetTimer()
-	for range b.N {
-		m.ModInv(&out, x)
-	}
-}
-
-func BenchmarkModInv_Prime_2048_Saferith(b *testing.B) {
-	p, _ := crand.Prime(crand.Reader, 2048)
-	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
-	m := (*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(pNat)))
-
-	testVal, _ := crand.Prime(crand.Reader, 1024)
-	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
-	var out numct.Nat
-
-	b.ResetTimer()
-	for range b.N {
-		m.ModInv(&out, x)
-	}
-}
-
-func BenchmarkModInv_Prime_3072_BoringSSL(b *testing.B) {
-	p, _ := crand.Prime(crand.Reader, 3072)
-	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
-	m, _ := numct.NewModulusOddPrime(pNat)
-
-	testVal, _ := crand.Prime(crand.Reader, 1536)
-	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
-	var out numct.Nat
-
-	b.ResetTimer()
-	for range b.N {
-		m.ModInv(&out, x)
-	}
-}
-
-func BenchmarkModInv_Prime_3072_Saferith(b *testing.B) {
-	p, _ := crand.Prime(crand.Reader, 3072)
-	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
-	m := (*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(pNat)))
-
-	testVal, _ := crand.Prime(crand.Reader, 1536)
-	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
-	var out numct.Nat
-
-	b.ResetTimer()
-	for range b.N {
-		m.ModInv(&out, x)
-	}
-}
-
-func BenchmarkModInv_Composite_1024_BoringSSL(b *testing.B) {
-	p1, _ := crand.Prime(crand.Reader, 512)
-	p2, _ := crand.Prime(crand.Reader, 512)
-	n := new(big.Int).Mul(p1, p2)
-	nNat := (*numct.Nat)(new(saferith.Nat).SetBig(n, n.BitLen()))
-	m, _ := numct.NewModulusOdd(nNat)
-
-	// Find coprime value
-	var testVal *big.Int
-	for {
-		testVal, _ = crand.Prime(crand.Reader, 341)
-		if new(big.Int).GCD(nil, nil, testVal, n).Cmp(big.NewInt(1)) == 0 {
-			break
-		}
-	}
-	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
-	var out numct.Nat
-
-	b.ResetTimer()
-	for range b.N {
-		m.ModInv(&out, x)
-	}
-}
-
-func BenchmarkModInv_Composite_1024_Saferith(b *testing.B) {
-	p1, _ := crand.Prime(crand.Reader, 512)
-	p2, _ := crand.Prime(crand.Reader, 512)
-	n := new(big.Int).Mul(p1, p2)
-	nNat := (*numct.Nat)(new(saferith.Nat).SetBig(n, n.BitLen()))
-	m := &numct.ModulusBasic{
-		ModulusOddBasic: numct.ModulusOddBasic{
-			ModulusOddPrimeBasic: *(*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(nNat))),
-		},
-	}
-
-	// Find coprime value
-	var testVal *big.Int
-	for {
-		testVal, _ = crand.Prime(crand.Reader, 341)
-		if new(big.Int).GCD(nil, nil, testVal, n).Cmp(big.NewInt(1)) == 0 {
-			break
-		}
-	}
-	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
-	var out numct.Nat
-
-	b.ResetTimer()
-	for range b.N {
-		m.ModInv(&out, x)
-	}
-}
-
-func BenchmarkModInv_Composite_2048_BoringSSL(b *testing.B) {
-	p1, _ := crand.Prime(crand.Reader, 1024)
-	p2, _ := crand.Prime(crand.Reader, 1024)
-	n := new(big.Int).Mul(p1, p2)
-	nNat := (*numct.Nat)(new(saferith.Nat).SetBig(n, n.BitLen()))
-	m, _ := numct.NewModulusOdd(nNat)
-
-	// Find coprime value
-	var testVal *big.Int
-	for {
-		testVal, _ = crand.Prime(crand.Reader, 683)
-		if new(big.Int).GCD(nil, nil, testVal, n).Cmp(big.NewInt(1)) == 0 {
-			break
-		}
-	}
-	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
-	var out numct.Nat
-
-	b.ResetTimer()
-	for range b.N {
-		m.ModInv(&out, x)
-	}
-}
-
-func BenchmarkModInv_Composite_2048_Saferith(b *testing.B) {
-	p1, _ := crand.Prime(crand.Reader, 1024)
-	p2, _ := crand.Prime(crand.Reader, 1024)
-	n := new(big.Int).Mul(p1, p2)
-	nNat := (*numct.Nat)(new(saferith.Nat).SetBig(n, n.BitLen()))
-	m := &numct.ModulusBasic{
-		ModulusOddBasic: numct.ModulusOddBasic{
-			ModulusOddPrimeBasic: *(*numct.ModulusOddPrimeBasic)(saferith.ModulusFromNat((*saferith.Nat)(nNat))),
-		},
-	}
-
-	// Find coprime value
-	var testVal *big.Int
-	for {
-		testVal, _ = crand.Prime(crand.Reader, 683)
-		if new(big.Int).GCD(nil, nil, testVal, n).Cmp(big.NewInt(1)) == 0 {
-			break
-		}
-	}
-	x := (*numct.Nat)(new(saferith.Nat).SetBig(testVal, testVal.BitLen()))
-	var out numct.Nat
-
-	b.ResetTimer()
-	for range b.N {
-		m.ModInv(&out, x)
-	}
-}
-
-func TestModInv_CompositeOne(t *testing.T) {
-	// Test that 1 always has inverse 1 for any modulus
-	n := big.NewInt(15) // composite
-	nNat := (*numct.Nat)(new(saferith.Nat).SetBig(n, n.BitLen()))
-
-	m, ok := numct.NewModulusOdd(nNat)
-	require.Equal(t, ct.True, ok)
-
-	one := big.NewInt(1)
-	oneNat := (*numct.Nat)(new(saferith.Nat).SetBig(one, one.BitLen()))
-
-	var inv numct.Nat
-	invOk := m.ModInv(&inv, oneNat)
-
-	t.Logf("ModInv(1) mod 15: ok=%v", invOk)
-	require.Equal(t, ct.True, invOk, "1 should always have an inverse")
-
-	if invOk == ct.True {
-		// Verify the inverse is correct by multiplying
-		var product numct.Nat
-		m.ModMul(&product, oneNat, &inv)
-		require.True(t, product.Equal(oneNat) == ct.True, "1 * inv should equal 1")
 	}
 }

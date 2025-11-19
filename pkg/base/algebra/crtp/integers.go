@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
 type Cardinal interface {
@@ -29,15 +28,25 @@ type Cardinal interface {
 	BitLen() uint
 }
 
+type NumericStructure[E any] interface {
+	FromBytesBE([]byte) (E, error)
+}
+
+type Numeric interface {
+	BytesBE() []byte
+}
+
 type NPlusLike[E any] interface {
 	SemiRing[E]
 	UniqueFactorizationMonoid[E]
+	NumericStructure[E]
 	FromCardinal(Cardinal) (E, error)
 }
 
 type NatPlusLike[E any] interface {
 	SemiRingElement[E]
 	UniqueFactorizationMonoidElement[E]
+	Numeric
 
 	IsOdd() bool
 	IsEven() bool
@@ -59,18 +68,26 @@ type NatLike[E any] interface {
 
 type ZLike[E any] interface {
 	EuclideanDomain[E]
-	NLike[E]
+	FromCardinal(Cardinal) (E, error)
 }
 
 type IntLike[E any] interface {
 	EuclideanDomainElement[E]
 	ArithmeticNegand[E]
+
+	IsEven() bool
+	IsOdd() bool
+	IsPositive() bool
+	IsNegative() bool
+	IsZero() bool
+	Cardinal() Cardinal
 }
 
 type ZModLike[E any] interface {
 	Ring[E]
 	NLike[E]
 	base.HashableStructure[E]
+	FromBytesBEReduce([]byte) (E, error)
 }
 
 type UintLike[E any] interface {
@@ -87,8 +104,7 @@ type PrimeField[E any] interface {
 	// WideElementSize returns the **maximum** number of bytes used to map uniformly to an element.
 	WideElementSize() int
 	FiniteStructure[E]
-	// FromNat expects a *numct.Nat value (using any to avoid import cycle)
-	FromNat(*numct.Nat) (E, error)
+	NumericStructure[E]
 	FromUint64(uint64) E
 }
 

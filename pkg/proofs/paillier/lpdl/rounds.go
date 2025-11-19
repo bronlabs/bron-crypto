@@ -30,12 +30,12 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 
 	// 1.i. compute a (*) c (+) Enc(b, r) for random r
 	// acEnc, err := verifier.pk.CipherTextMul(verifier.c, new(saferith.Int).SetNat(verifier.state.a))
-	acEnc := verifier.c.ScalarExp(verifier.state.a.Nat())
+	acEnc := verifier.c.ScalarMul(verifier.state.a.Nat())
 	bEnc, _, err := verifier.paillierEncrypter.Encrypt(bAsPlaintext, verifier.pk, verifier.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot encrypt value")
 	}
-	cPrime := acEnc.Mul(bEnc)
+	cPrime := acEnc.HomAdd(bEnc)
 
 	// 1.ii. compute c'' = commit(a, b)
 	cDoublePrimeCommitment, cDoublePrimeWitness, err := verifier.commitmentScheme.Committer().Commit(slices.Concat(verifier.state.a.Bytes(), verifier.state.b.Bytes()), verifier.prng)
@@ -46,11 +46,11 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 
 	// 1.iii. compute Q' = aQ + bQ
 	// TODO: add SetNatCT to ScalarField etc.
-	aScalar, err := verifier.state.curve.ScalarField().FromNat(verifier.state.a.Value())
+	aScalar, err := verifier.state.curve.ScalarField().FromBytesBEReduce(verifier.state.a.BytesBE())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert a to scalar")
 	}
-	bScalar, err := verifier.state.curve.ScalarField().FromNat(verifier.state.b.Value())
+	bScalar, err := verifier.state.curve.ScalarField().FromBytesBEReduce(verifier.state.b.BytesBE())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert b to scalar")
 	}
@@ -88,7 +88,7 @@ func (prover *Prover[P, B, S]) Round2(r1out *Round1Output) (r2out *Round2Output,
 		return nil, errs.WrapFailed(err, "cannot decrypt cipher text")
 	}
 
-	alphaScalar, err := prover.state.curve.ScalarField().FromNat(prover.state.alpha.Normalise().Value())
+	alphaScalar, err := prover.state.curve.ScalarField().FromBytesBEReduce(prover.state.alpha.Normalise().BytesBE())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot convert alpha to scalar")
 	}

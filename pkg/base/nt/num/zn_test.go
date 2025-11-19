@@ -13,14 +13,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
-// Helper function for tests that need to ignore the error
-func mustFromUint64(u *num.Uint, err error) *num.Uint {
-	if err != nil {
-		panic(err)
-	}
-	return u
-}
-
 func TestZn_Creation(t *testing.T) {
 	t.Parallel()
 
@@ -1291,7 +1283,7 @@ func TestUint_EuclideanValuation(t *testing.T) {
 
 	// EuclideanValuation returns itself
 	result := a.EuclideanValuation()
-	require.Equal(t, a, result)
+	require.Equal(t, a.Abs().Uint64(), result.Uint64())
 }
 
 func TestUint_TryNeg(t *testing.T) {

@@ -13,25 +13,9 @@ var (
 	_ cbor.Unmarshaler = (*Nat)(nil)
 	_ cbor.Marshaler   = (*Int)(nil)
 	_ cbor.Unmarshaler = (*Int)(nil)
-	_ cbor.Marshaler   = (*ModulusBasic)(nil)
-	_ cbor.Unmarshaler = (*ModulusBasic)(nil)
+	_ cbor.Marshaler   = (*Modulus)(nil)
+	_ cbor.Unmarshaler = (*Modulus)(nil)
 )
-
-const (
-	ModulusOddPrimeTag      = 5001
-	ModulusOddPrimeBasicTag = 5002
-	ModulusOddTag           = 5003
-	ModulusOddBasicTag      = 5004
-	ModulusBasicTag         = 5005
-)
-
-func init() {
-	serde.Register[*ModulusOddPrime](ModulusOddPrimeTag)
-	serde.Register[*ModulusOddPrimeBasic](ModulusOddPrimeBasicTag)
-	serde.Register[*ModulusOdd](ModulusOddTag)
-	serde.Register[*ModulusOddBasic](ModulusOddBasicTag)
-	serde.Register[*ModulusBasic](ModulusBasicTag)
-}
 
 type natDTO struct {
 	NatBytes []byte `cbor:"natBytes"`
@@ -88,16 +72,16 @@ type modulusDTO struct {
 	N *Nat `cbor:"modulus"`
 }
 
-func (m *ModulusBasic) MarshalCBOR() ([]byte, error) {
+func (m *Modulus) MarshalCBOR() ([]byte, error) {
 	serial := &modulusDTO{N: m.Nat()}
-	data, err := serde.MarshalCBORTagged(serial, ModulusBasicTag)
+	data, err := serde.MarshalCBOR(serial)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "failed to marshal ModulusBasic")
 	}
 	return data, nil
 }
 
-func (m *ModulusBasic) UnmarshalCBOR(data []byte) error {
+func (m *Modulus) UnmarshalCBOR(data []byte) error {
 	serial, err := serde.UnmarshalCBOR[*modulusDTO](data)
 	if err != nil {
 		return err
@@ -108,7 +92,9 @@ func (m *ModulusBasic) UnmarshalCBOR(data []byte) error {
 	if serial.N.IsZero() == ct.True {
 		return errs.NewValue("modulus cannot be zero")
 	}
-	mod := newModulusBasic(serial.N)
-	m.Set(mod)
+	ok := m.SetNat(serial.N)
+	if ok == ct.False {
+		return errs.NewValue("invalid modulus")
+	}
 	return nil
 }
