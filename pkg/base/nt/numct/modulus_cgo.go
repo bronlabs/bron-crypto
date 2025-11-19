@@ -75,43 +75,88 @@ func (c *Modulus) ensureMont() {
 	c.once.Do(func() { c.cacheMont() })
 }
 
+func (m *Modulus) modExpOdd(out, base, exp *Nat) {
+	m.ensureMont()
+	m.Mod(out, base)
+
+	bBytes := out.Bytes()
+	eBytes := exp.Bytes()
+
+	bNum := bnPool.Get().(*boring.BigNum)
+	defer bnPool.Put(bNum)
+	if _, err := bNum.SetBytes(bBytes); err != nil {
+		panic(err)
+	}
+
+	eNum := bnPool.Get().(*boring.BigNum)
+	defer bnPool.Put(eNum)
+	if _, err := eNum.SetBytes(eBytes); err != nil {
+		panic(err)
+	}
+
+	ctx := bnCtxPool.Get().(*boring.BigNumCtx)
+	defer bnCtxPool.Put(ctx)
+
+	rNum := bnPool.Get().(*boring.BigNum)
+	defer bnPool.Put(rNum)
+	if _, err := rNum.Exp(bNum, eNum, m.mNum, m.mont, ctx); err != nil {
+		panic(err)
+	}
+
+	rBytes, err := rNum.Bytes()
+	if err != nil {
+		panic(err)
+	}
+	out.SetBytes(rBytes)
+}
+
 func (m *Modulus) ModExp(out, base, exp *Nat) {
 	if m.Nat().IsOdd() == ct.True {
-		m.ensureMont()
-		m.Mod(out, base)
-
-		bBytes := out.Bytes()
-		eBytes := exp.Bytes()
-
-		bNum := bnPool.Get().(*boring.BigNum)
-		defer bnPool.Put(bNum)
-		if _, err := bNum.SetBytes(bBytes); err != nil {
-			panic(err)
-		}
-
-		eNum := bnPool.Get().(*boring.BigNum)
-		defer bnPool.Put(eNum)
-		if _, err := eNum.SetBytes(eBytes); err != nil {
-			panic(err)
-		}
-
-		ctx := bnCtxPool.Get().(*boring.BigNumCtx)
-		defer bnCtxPool.Put(ctx)
-
-		rNum := bnPool.Get().(*boring.BigNum)
-		defer bnPool.Put(rNum)
-		if _, err := rNum.Exp(bNum, eNum, m.mNum, m.mont, ctx); err != nil {
-			panic(err)
-		}
-
-		rBytes, err := rNum.Bytes()
-		if err != nil {
-			panic(err)
-		}
-		out.SetBytes(rBytes)
+		m.modExpOdd(out, base, exp)
 	} else {
 		m.ModulusBasic.modExpEven(out, base, exp.Big())
 	}
+}
+
+func (m *Modulus) modMultiBaseExpOdd(out, bases []*Nat, exp *Nat) {
+	m.ensureMont()
+
+	eBytes := exp.Bytes()
+	eNum := bnPool.Get().(*boring.BigNum)
+	defer bnPool.Put(eNum)
+	if _, err := eNum.SetBytes(eBytes); err != nil {
+		panic(err)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(bases))
+	for i, bi := range bases {
+		go func(i int) {
+			defer wg.Done()
+
+			m.Mod(out[i], bi)
+			biBytes := out[i].Bytes()
+			biNum := bnPool.Get().(*boring.BigNum)
+			defer bnPool.Put(biNum)
+			if _, err := biNum.SetBytes(biBytes); err != nil {
+				panic(err)
+			}
+			ctx := bnCtxPool.Get().(*boring.BigNumCtx)
+			defer bnCtxPool.Put(ctx)
+
+			rNum := bnPool.Get().(*boring.BigNum)
+			defer bnPool.Put(rNum)
+			if _, err := rNum.Exp(biNum, eNum, m.mNum, m.mont, ctx); err != nil {
+				panic(err)
+			}
+			rBytes, err := rNum.Bytes()
+			if err != nil {
+				panic(err)
+			}
+			out[i].SetBytes(rBytes)
+		}(i)
+	}
+	wg.Wait()
 }
 
 func (m *Modulus) ModMultiBaseExp(out, bases []*Nat, exp *Nat) {
@@ -119,87 +164,69 @@ func (m *Modulus) ModMultiBaseExp(out, bases []*Nat, exp *Nat) {
 		panic("len(bases) != len(out)")
 	}
 	if m.Nat().IsOdd() == ct.True {
-		m.ensureMont()
-
-		eBytes := exp.Bytes()
-		eNum := bnPool.Get().(*boring.BigNum)
-		defer bnPool.Put(eNum)
-		if _, err := eNum.SetBytes(eBytes); err != nil {
-			panic(err)
-		}
-
-		var wg sync.WaitGroup
-		wg.Add(len(bases))
-		for i, bi := range bases {
-			go func(i int) {
-				defer wg.Done()
-
-				m.Mod(out[i], bi)
-				biBytes := out[i].Bytes()
-				biNum := bnPool.Get().(*boring.BigNum)
-				defer bnPool.Put(biNum)
-				if _, err := biNum.SetBytes(biBytes); err != nil {
-					panic(err)
-				}
-				ctx := bnCtxPool.Get().(*boring.BigNumCtx)
-				defer bnCtxPool.Put(ctx)
-
-				rNum := bnPool.Get().(*boring.BigNum)
-				defer bnPool.Put(rNum)
-				if _, err := rNum.Exp(biNum, eNum, m.mNum, m.mont, ctx); err != nil {
-					panic(err)
-				}
-				rBytes, err := rNum.Bytes()
-				if err != nil {
-					panic(err)
-				}
-				out[i].SetBytes(rBytes)
-			}(i)
-		}
-		wg.Wait()
+		m.modMultiBaseExpOdd(out, bases, exp)
 	} else {
 		m.ModulusBasic.ModMultiBaseExp(out, bases, exp)
 	}
 }
 
-func (m *Modulus) ModInv(out, a *Nat) ct.Bool {
-	// This should work only for groups whose almost all of its elements are units.
-	if m.Nat().IsOdd()&m.Nat().IsProbablyPrime() == ct.True {
-		m.ensureMont()
+func (m *Modulus) modInvOddPrime(out, a *Nat) ct.Bool {
+	m.ensureMont()
 
-		// Reduce a modulo m
-		var aReduced Nat
-		m.Mod(&aReduced, a)
+	// Reduce a modulo m
+	var aReduced Nat
+	m.Mod(&aReduced, a)
 
-		aNum := bnPool.Get().(*boring.BigNum)
-		defer bnPool.Put(aNum)
-		if _, err := aNum.SetBytes(aReduced.Bytes()); err != nil {
-			panic(err)
-		}
+	ok := aReduced.IsNonZero()
 
-		ctx := bnCtxPool.Get().(*boring.BigNumCtx)
-		defer bnCtxPool.Put(ctx)
-
-		invNum := bnPool.Get().(*boring.BigNum)
-		defer bnPool.Put(invNum)
-		_, noInverse, err := invNum.Inv(aNum, m.mont, ctx)
-		// If noInverse is set, this is expected (not an error condition)
-		if noInverse != 0 {
-			return ct.False
-		}
-		// Any other error is unexpected
-		if err != nil {
-			panic(err)
-		}
-		invBytes, err := invNum.Bytes()
-		if err != nil {
-			panic(err)
-		}
-		out.SetBytes(invBytes)
-		return ct.True
-	} else {
-		return m.ModulusBasic.ModInv(out, a)
+	aNum := bnPool.Get().(*boring.BigNum)
+	defer bnPool.Put(aNum)
+	if _, err := aNum.SetBytes(aReduced.Bytes()); err != nil {
+		panic(err)
 	}
+
+	ctx := bnCtxPool.Get().(*boring.BigNumCtx)
+	defer bnCtxPool.Put(ctx)
+
+	invNum := bnPool.Get().(*boring.BigNum)
+	defer bnPool.Put(invNum)
+	_, noInverse, err := invNum.Inv(aNum, m.mont, ctx)
+	// If noInverse is set, this is expected (not an error condition)
+	if noInverse != 0 {
+		return ct.False
+	}
+	// Any other error is unexpected
+	if err != nil {
+		panic(err)
+	}
+	invBytes, err := invNum.Bytes()
+	if err != nil {
+		panic(err)
+	}
+	var outCandidate Nat
+	outCandidate.SetBytes(invBytes)
+
+	var shouldBeOne Nat
+	m.ModMul(&shouldBeOne, &outCandidate, a)
+
+	ok &= shouldBeOne.IsOne()
+
+	out.CondAssign(ok, &outCandidate)
+	return ok
+}
+
+func (m *Modulus) ModInv(out, a *Nat) ct.Bool {
+	ok := a.IsNonZero()
+	if m.Nat().IsOdd() == ct.True {
+		ok &= m.modInvOddPrime(out, a)
+		// This should work only for groups whose almost all of its elements are units. This property of the modulus is not secret.
+		if ok == ct.False {
+			ok = m.ModulusBasic.modInvOdd(out, a)
+		}
+	} else {
+		ok = m.ModulusBasic.modInvEven(out, a)
+	}
+	return ok
 }
 
 func (m *Modulus) ModMul(out, x, y *Nat) {
