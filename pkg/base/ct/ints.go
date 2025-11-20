@@ -23,15 +23,15 @@ func Equal[I constraints.Integer](x, y I) Choice {
 
 // Greater returns 1 iff x > y, using the natural order of I.
 func Greater[I constraints.Integer](x, y I) Choice {
-	if isSigned[I]() {
-		return LessI64(int64(y), int64(x))
-	}
-	return LessU64(uint64(y), uint64(x))
+	return Less(y, x)
 }
 
 // Less returns 1 iff x < y.
 func Less[I constraints.Integer](x, y I) Choice {
-	return Greater(y, x)
+	if isSigned[I]() {
+		return LessI64(int64(x), int64(y))
+	}
+	return LessU64(uint64(x), uint64(y))
 }
 
 // LessOrEqual returns 1 iff x <= y.
@@ -43,7 +43,7 @@ func LessOrEqual[I constraints.Integer](x, y I) Choice {
 func GreaterOrEqual[I constraints.Integer](x, y I) Choice {
 	return Less(x, y) ^ 1
 }
-func CompareInteger[I constraints.Integer](x, y I) (gt, eq, lt Bool) {
+func CompareInt[I constraints.Integer](x, y I) (gt, eq, lt Bool) {
 	// Equal: 1 if x == y, else 0
 	eq = Equal(x, y)
 
