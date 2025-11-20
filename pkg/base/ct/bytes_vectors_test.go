@@ -7,8 +7,9 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 
 	_ "embed"
 )

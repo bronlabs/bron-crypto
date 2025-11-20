@@ -4,9 +4,10 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 func TestSliceEachEqual_Property(t *testing.T) {

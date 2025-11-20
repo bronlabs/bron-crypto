@@ -43,7 +43,7 @@ func GreaterOrEqual[I constraints.Integer](x, y I) Choice {
 	return Less(x, y) ^ 1
 }
 
-// CompareInt compares x and y and returns (gt, eq, lt) where each is 1 or 0
+// CompareInt compares x and y and returns (gt, eq, lt) where each is 1 or 0.
 func CompareInt[I constraints.Integer](x, y I) (gt, eq, lt Bool) {
 	// Equal: 1 if x == y, else 0
 	eq = Equal(x, y)
@@ -116,7 +116,7 @@ func Isqrt64(n uint64) uint64 {
 
 func isSigned[I constraints.Integer]() bool {
 	var zero I
-	switch reflect.TypeOf(zero).Kind() {
+	switch reflect.TypeOf(zero).Kind() { //nolint:exhaustive // we only care about integer kinds here
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return true
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:

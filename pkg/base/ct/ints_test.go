@@ -4,8 +4,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 // TestIsZero tests the IsZero function for various integer types

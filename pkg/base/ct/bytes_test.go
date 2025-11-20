@@ -3,8 +3,9 @@ package ct_test
 import (
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 // TestCompareBytes tests the BytesCompare function
