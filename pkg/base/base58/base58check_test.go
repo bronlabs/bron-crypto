@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/base58"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/stretchr/testify/require"
 )
 
@@ -50,7 +49,7 @@ func TestBase58Check(t *testing.T) {
 	// test the two decoding failure cases
 	t.Run("checksum error", func(t *testing.T) {
 		_, _, err := base58.CheckDecode("3MNQE1Y")
-		require.ErrorContains(t, err, string(errs.Verification))
+		require.ErrorIs(t, err, base58.ErrChecksumMismatch)
 	})
 
 	t.Run("string lengths below 5 mean the version byte and/or the checksum bytes are missing).", func(t *testing.T) {
@@ -58,7 +57,7 @@ func TestBase58Check(t *testing.T) {
 		for len := 0; len < 4; len++ {
 			// make a string of length `len`
 			_, _, err := base58.CheckDecode(testString)
-			require.ErrorContains(t, err, string(errs.Length))
+			require.ErrorIs(t, err, base58.ErrInvalidLength)
 		}
 	})
 }

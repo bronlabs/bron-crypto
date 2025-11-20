@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/internal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 var (
@@ -273,10 +274,8 @@ func (n *Nat) AndCap(x, y *Nat, cap int) {
 	maxLen := ct.Max(xLen, yLen)
 
 	// Pad both to the same length (for big-endian, pad on the left)
-	xPadded := make([]byte, maxLen)
-	yPadded := make([]byte, maxLen)
-	ct.PadLeft(xPadded, xBytes)
-	ct.PadLeft(yPadded, yBytes)
+	xPadded := sliceutils.PadToLeft(xBytes, maxLen-xLen)
+	yPadded := sliceutils.PadToLeft(yBytes, maxLen-yLen)
 
 	// Perform AND
 	result := make([]byte, maxLen)
@@ -304,13 +303,9 @@ func (n *Nat) OrCap(x, y *Nat, cap int) {
 	yLen := len(yBytes)
 	resultLen := ct.Max(xLen, yLen)
 
-	// Allocate padded buffers
-	xPadded := make([]byte, resultLen)
-	yPadded := make([]byte, resultLen)
-
 	// Use PadLeft for big-endian padding
-	ct.PadLeft(xPadded, xBytes)
-	ct.PadLeft(yPadded, yBytes)
+	xPadded := sliceutils.PadToLeft(xBytes, resultLen-xLen)
+	yPadded := sliceutils.PadToLeft(yBytes, resultLen-yLen)
 
 	result := make([]byte, resultLen)
 	ct.OrBytes(result, xPadded, yPadded)
@@ -336,13 +331,9 @@ func (n *Nat) XorCap(x, y *Nat, cap int) {
 	yLen := len(yBytes)
 	resultLen := ct.Max(xLen, yLen)
 
-	// Allocate padded buffers
-	xPadded := make([]byte, resultLen)
-	yPadded := make([]byte, resultLen)
-
 	// Use PadLeft for big-endian padding
-	ct.PadLeft(xPadded, xBytes)
-	ct.PadLeft(yPadded, yBytes)
+	xPadded := sliceutils.PadToLeft(xBytes, resultLen-xLen)
+	yPadded := sliceutils.PadToLeft(yBytes, resultLen-yLen)
 
 	result := make([]byte, resultLen)
 	ct.XorBytes(result, xPadded, yPadded)
@@ -372,8 +363,7 @@ func (n *Nat) NotCap(x *Nat, cap int) {
 	byteLen := (bitCap + 7) / 8
 
 	// Allocate and pad input
-	xPadded := make([]byte, byteLen)
-	ct.PadLeft(xPadded, xBytes)
+	xPadded := sliceutils.PadToLeft(xBytes, byteLen-len(xBytes))
 
 	// Apply NOT operation
 	result := make([]byte, byteLen)

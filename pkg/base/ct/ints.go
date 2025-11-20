@@ -6,8 +6,7 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-// TODO: Review Mateusz
-
+// IsZero returns 1 if x == 0 and 0 otherwise.
 func IsZero[I constraints.Integer](x I) Choice {
 	// Handle all integer sizes properly
 	xx := uint64(x)
@@ -16,22 +15,22 @@ func IsZero[I constraints.Integer](x I) Choice {
 	return Choice(((xx | -xx) >> 63) ^ 1)
 }
 
-// Equal returns 1 if x == y and 0 otherwise. Based on the subtle package.
+// Equal returns 1 if x == y and 0 otherwise.
 func Equal[I constraints.Integer](x, y I) Choice {
 	return IsZero(x ^ y)
 }
 
 // Greater returns 1 iff x > y, using the natural order of I.
 func Greater[I constraints.Integer](x, y I) Choice {
-	if isSigned[I]() {
-		return LessI64(int64(y), int64(x))
-	}
-	return LessU64(uint64(y), uint64(x))
+	return Less(y, x)
 }
 
 // Less returns 1 iff x < y.
 func Less[I constraints.Integer](x, y I) Choice {
-	return Greater(y, x)
+	if isSigned[I]() {
+		return LessI64(int64(x), int64(y))
+	}
+	return LessU64(uint64(x), uint64(y))
 }
 
 // LessOrEqual returns 1 iff x <= y.
@@ -43,7 +42,9 @@ func LessOrEqual[I constraints.Integer](x, y I) Choice {
 func GreaterOrEqual[I constraints.Integer](x, y I) Choice {
 	return Less(x, y) ^ 1
 }
-func CompareInteger[I constraints.Integer](x, y I) (gt, eq, lt Bool) {
+
+// CompareInt compares x and y and returns (gt, eq, lt) where each is 1 or 0.
+func CompareInt[I constraints.Integer](x, y I) (gt, eq, lt Bool) {
 	// Equal: 1 if x == y, else 0
 	eq = Equal(x, y)
 
@@ -63,7 +64,6 @@ func CSelectInt[I constraints.Integer](choice Choice, x0, x1 I) I {
 }
 
 // CMOVInt sets *dst = *src iff yes==1; otherwise leaves *dst unchanged.
-// Branch-free, alias-safe, works for signed or unsigned integers.
 func CMOVInt[I constraints.Integer](dst *I, yes Choice, src *I) {
 	// mask = 0 if yes==0, all-ones if yes==1
 	mask := I(-int64(yes & 1))
@@ -71,7 +71,6 @@ func CMOVInt[I constraints.Integer](dst *I, yes Choice, src *I) {
 }
 
 // CSwapInt swaps *x and *y iff yes==1; otherwise leaves them unchanged.
-// Branch-free, alias-safe.
 func CSwapInt[I constraints.Integer](x, y *I, yes Choice) {
 	mask := I(-int64(yes & 1))
 	d := (*x ^ *y) & mask
@@ -117,7 +116,7 @@ func Isqrt64(n uint64) uint64 {
 
 func isSigned[I constraints.Integer]() bool {
 	var zero I
-	switch reflect.TypeOf(zero).Kind() {
+	switch reflect.TypeOf(zero).Kind() { //nolint:exhaustive // we only care about integer kinds here
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return true
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -127,6 +126,7 @@ func isSigned[I constraints.Integer]() bool {
 	}
 }
 
+// LessU64 returns 1 iff x < y for uint64 values.
 func LessU64(x, y uint64) Choice {
 	// Use borrow: x < y iff x - y borrows (sets MSB)
 	// But we need to check for borrow, not just MSB of result
@@ -134,6 +134,7 @@ func LessU64(x, y uint64) Choice {
 	return Choice((x ^ ((x ^ y) | ((x - y) ^ y))) >> 63)
 }
 
+// LessI64 returns 1 iff x < y for int64 values.
 func LessI64(x, y int64) Choice {
 	// Convert to unsigned by flipping sign bit, then compare as unsigned
 	ux := uint64(x) ^ (1 << 63)

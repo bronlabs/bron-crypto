@@ -19,6 +19,7 @@ import (
 var testVectorsData string
 
 func TestVectors(t *testing.T) {
+	t.Parallel()
 	var vectors testVectors
 	err := json.Unmarshal([]byte(testVectorsData), &vectors)
 	require.NoError(t, err)
