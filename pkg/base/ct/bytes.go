@@ -46,12 +46,13 @@ func CompareBytes[T ~[]byte](x, y T) (lt, eq, gt Bool) {
 }
 
 // XorBytes computes the bitwise XOR of two byte slices and stores the result in dst.
-// Wraps subtle.XORBytes.
+// panics if dst is smaller than either x or y.
 func XorBytes[T ~[]byte](dst, x, y T) int {
 	return subtle.XORBytes(dst, x, y)
 }
 
 // AndBytes computes the bitwise AND of two byte slices and stores the result in dst.
+// panics if dst is smaller than either x or y.
 func AndBytes[T ~[]byte](dst, x, y T) int {
 	n := min(len(x), len(y))
 	if n == 0 {
@@ -67,6 +68,7 @@ func AndBytes[T ~[]byte](dst, x, y T) int {
 }
 
 // OrBytes computes the bitwise OR of two byte slices and stores the result in dst.
+// panics if dst is smaller than either x or y.
 func OrBytes[T ~[]byte](dst, x, y T) int {
 	n := min(len(x), len(y))
 	if n == 0 {
@@ -82,6 +84,7 @@ func OrBytes[T ~[]byte](dst, x, y T) int {
 }
 
 // NotBytes computes the bitwise NOT of a byte slice and stores the result in dst.
+// panics if dst is smaller than x.
 func NotBytes[T ~[]byte](dst, x T) int {
 	n := len(x)
 	if n == 0 {
