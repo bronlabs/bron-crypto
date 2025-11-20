@@ -6,11 +6,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/network/echo"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
-func RunAgreeOnRandom(router *network.Router, id sharing.ID, quorum network.Quorum, size int, tape transcripts.Transcript, prng io.Reader) ([]byte, error) {
+func RunAgreeOnRandom(rt *network.Router, id sharing.ID, quorum network.Quorum, size int, tape transcripts.Transcript, prng io.Reader) ([]byte, error) {
 	party, err := NewParticipant(id, quorum, size, tape, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create participant")
@@ -21,7 +22,7 @@ func RunAgreeOnRandom(router *network.Router, id sharing.ID, quorum network.Quor
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot run round 1")
 	}
-	r2In, err := network.ExchangeBroadcastSimple(router, "AgreeOnRandomRound1Broadcast", r1Out)
+	r2In, err := echo.ExchangeEchoBroadcastSimple(rt, "AgreeOnRandomRound1Broadcast", r1Out)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot exchange broadcast")
 	}
@@ -31,7 +32,7 @@ func RunAgreeOnRandom(router *network.Router, id sharing.ID, quorum network.Quor
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot run round 2")
 	}
-	r3In, err := network.ExchangeBroadcastSimple(router, "AgreeOnRandomRound2Broadcast", r2Out)
+	r3In, err := echo.ExchangeEchoBroadcastSimple(rt, "AgreeOnRandomRound2Broadcast", r2Out)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot exchange broadcast")
 	}

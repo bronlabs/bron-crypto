@@ -1,11 +1,11 @@
 package gennaro_test
 
 import (
+	"bytes"
 	crand "crypto/rand"
 	"fmt"
 	"io"
 	"maps"
-	"reflect"
 	"slices"
 	"strconv"
 	"sync"
@@ -115,8 +115,8 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 			dkgOutputsMutex := sync.Mutex{}
 
 			runner := func(sharingId sharing.ID) error {
-				router := network.NewRouter(coordinator.DeliveryFor(sharingId))
-				dkgOutput, err := gennaro.RunGennaroDKG(router, sessionId, group, sharingId, accessStructure, tapes[sharingId], prng)
+				rt := network.NewRouter(coordinator.DeliveryFor(sharingId))
+				dkgOutput, err := gennaro.RunGennaroDKG(rt, sessionId, group, sharingId, accessStructure, tapes[sharingId], prng)
 				if err != nil {
 					return err
 				}
@@ -133,23 +133,32 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 			err = errGroup.Wait()
 			require.NoError(t, err)
 
-			t.Run("public keys are consistent", func(t *testing.T) {
+			t.Run("public materials are consistent", func(t *testing.T) {
 				t.Parallel()
 
-				var commonPublicKey G
-				for _, output := range dkgOutputs {
-					pk := output.PublicKeyValue()
-					require.False(t, pk.IsOpIdentity())
+				var commonPublicMaterial *gennaro.DKGPublicOutput[G, S]
+				for id := range ids.Iter() {
+					publicMaterial := dkgOutputs[id].PublicMaterial()
+					require.NotNil(t, publicMaterial)
 
-					if reflect.ValueOf(commonPublicKey).IsNil() {
-						commonPublicKey = pk
+					if commonPublicMaterial == nil {
+						commonPublicMaterial = publicMaterial
 					} else {
-						require.True(t, commonPublicKey.Equal(pk))
+						require.True(t, commonPublicMaterial.AccessStructure().Equal(publicMaterial.AccessStructure()))
+						require.True(t, commonPublicMaterial.VerificationVector().Equal(publicMaterial.VerificationVector()))
+						require.True(t, commonPublicMaterial.PublicKeyValue().Equal(publicMaterial.PublicKeyValue()))
+						for id2 := range ids.Iter() {
+							l, ok := commonPublicMaterial.PartialPublicKeyValues().Get(id2)
+							require.True(t, ok)
+							r, ok := commonPublicMaterial.PartialPublicKeyValues().Get(id2)
+							require.True(t, ok)
+							require.True(t, l.Equal(r))
+						}
 					}
 				}
 			})
 
-			t.Run("secret keys are consistent", func(t *testing.T) {
+			t.Run("secret shares are consistent", func(t *testing.T) {
 				t.Parallel()
 
 				publicKey := dkgOutputs[ids.List()[0]].PublicKeyValue()
@@ -161,6 +170,23 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 					reconstructedSecretKey, err := dealer.Reconstruct(sharesSubset...)
 					require.NoError(t, err)
 					require.True(t, group.ScalarBaseOp(reconstructedSecretKey.Value()).Equal(publicKey))
+				}
+			})
+
+			t.Run("transcripts are consistent", func(t *testing.T) {
+				t.Parallel()
+
+				tapeSamples := [][]byte{}
+				for id := range ids.Iter() {
+					tape, ok := tapes[id]
+					require.True(t, ok)
+					tapeSample, err := tape.ExtractBytes("test", 32)
+					require.NoError(t, err)
+					tapeSamples = append(tapeSamples, tapeSample)
+				}
+
+				for s := 1; s < len(tapeSamples); s++ {
+					require.True(t, bytes.Equal(tapeSamples[s-1], tapeSamples[s]))
 				}
 			})
 		})

@@ -7,13 +7,14 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/network/echo"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
 func RunGennaroDKG[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](
-	router *network.Router,
+	rt *network.Router,
 	sessionId network.SID,
 	group algebra.PrimeGroup[G, S],
 	sharingId sharing.ID,
@@ -31,7 +32,7 @@ func RunGennaroDKG[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElemen
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot run round 1")
 	}
-	r2InB, err := network.ExchangeBroadcastSimple(router, "GennaroDKGRound1Broadcast", r1OutB)
+	r2InB, err := echo.ExchangeEchoBroadcastSimple(rt, "GennaroDKGRound1Broadcast", r1OutB)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot exchange broadcast")
 	}
@@ -41,11 +42,11 @@ func RunGennaroDKG[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElemen
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot run round 2")
 	}
-	r3InB, err := network.ExchangeBroadcastSimple(router, "GennaroDKGRound2Broadcast", r2OutB)
+	r3InB, err := echo.ExchangeEchoBroadcastSimple(rt, "GennaroDKGRound2Broadcast", r2OutB)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot exchange broadcast")
 	}
-	r3InU, err := network.ExchangeUnicastSimple(router, "GennaroDKGRound2Unicast", toNative(r2OutU))
+	r3InU, err := network.ExchangeUnicastSimple(rt, "GennaroDKGRound2Unicast", toNative(r2OutU))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot exchange unicast")
 	}

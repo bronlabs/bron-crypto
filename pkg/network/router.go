@@ -4,7 +4,6 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
@@ -27,7 +26,7 @@ func NewRouter(delivery Delivery) *Router {
 	}
 }
 
-func (r *Router) sendTo(correlationId string, messages map[sharing.ID][]byte) error {
+func (r *Router) SendTo(correlationId string, messages map[sharing.ID][]byte) error {
 	for id, payload := range messages {
 		message := routerMessage{
 			CorrelationId: correlationId,
@@ -45,7 +44,7 @@ func (r *Router) sendTo(correlationId string, messages map[sharing.ID][]byte) er
 	return nil
 }
 
-func (r *Router) receiveFrom(correlationId string, froms ...sharing.ID) (map[sharing.ID][]byte, error) {
+func (r *Router) ReceiveFrom(correlationId string, froms ...sharing.ID) (map[sharing.ID][]byte, error) {
 	received := make(map[sharing.ID][]byte)
 	var kept []routerMessage
 	for _, bufferedMsg := range r.receiveBuffer {
@@ -77,77 +76,12 @@ func (r *Router) receiveFrom(correlationId string, froms ...sharing.ID) (map[sha
 	return received, nil
 }
 
-// ExchangeUnicastSimple sends messages to all participants and receives the same messages back from them.
-func ExchangeUnicastSimple[U any](router *Router, correlationId string, messages map[sharing.ID]U) (map[sharing.ID]U, error) {
-	messagesSerialized := make(map[sharing.ID][]byte)
-	for _, id := range router.delivery.Quorum() {
-		if id == router.delivery.PartyId() {
-			continue
-		}
-		message, ok := messages[id]
-		if !ok {
-			return nil, errs.NewFailed("missing message")
-		}
-		messageSerialized, err := serde.MarshalCBOR(message)
-		if err != nil {
-			return nil, errs.WrapSerialisation(err, "failed to marshal message")
-		}
-		messagesSerialized[id] = messageSerialized
-
-	}
-	err := router.sendTo(correlationId, messagesSerialized)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to send messages")
-	}
-
-	coparties := slices.Collect(maps.Keys(messagesSerialized))
-	receivedMessagesSerialized, err := router.receiveFrom(correlationId, coparties...)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to exchange messages")
-	}
-	receivedMessages := make(map[sharing.ID]U)
-	for id, m := range receivedMessagesSerialized {
-		msg, err := serde.UnmarshalCBOR[U](m)
-		if err != nil {
-			return nil, errs.WrapSerialisation(err, "failed to unmarshal message")
-		}
-		receivedMessages[id] = msg
-	}
-	return receivedMessages, nil
+func (r *Router) PartyId() sharing.ID {
+	return r.delivery.PartyId()
 }
 
-// ExchangeBroadcastSimple sends a message to all participants and receives the same message back from them.
-func ExchangeBroadcastSimple[B any](router *Router, correlationId string, message B) (map[sharing.ID]B, error) {
-	messageSerialized, err := serde.MarshalCBOR(message)
-	if err != nil {
-		return nil, errs.NewFailed("failed to marshal message")
-	}
-	messagesSerialized := make(map[sharing.ID][]byte)
-	for _, id := range router.delivery.Quorum() {
-		if id == router.delivery.PartyId() {
-			continue
-		}
-		messagesSerialized[id] = messageSerialized
-	}
-	err = router.sendTo(correlationId, messagesSerialized)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to send messages")
-	}
-
-	coparties := slices.Collect(maps.Keys(messagesSerialized))
-	receivedMessagesSerialized, err := router.receiveFrom(correlationId, coparties...)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to receive messages")
-	}
-	receivedMessages := make(map[sharing.ID]B)
-	for id, m := range receivedMessagesSerialized {
-		msg, err := serde.UnmarshalCBOR[B](m)
-		if err != nil {
-			return nil, errs.WrapSerialisation(err, "failed to unmarshal message")
-		}
-		receivedMessages[id] = msg
-	}
-	return receivedMessages, nil
+func (r *Router) Quorum() []sharing.ID {
+	return r.delivery.Quorum()
 }
 
 // TODO: Implement ExchangeEchoBroadcastSimple etc.

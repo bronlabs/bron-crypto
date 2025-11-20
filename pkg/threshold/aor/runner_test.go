@@ -47,8 +47,8 @@ func testHappyPathRunner(t *testing.T) {
 			coordinator := testutils.NewMockCoordinator(ids...)
 
 			runner := func(id sharing.ID, quorum network.Quorum, tape transcripts.Transcript, prng io.Reader) error {
-				router := network.NewRouter(coordinator.DeliveryFor(id))
-				sample, err := aor.RunAgreeOnRandom(router, id, quorum, sampleLength, tape, prng)
+				rt := network.NewRouter(coordinator.DeliveryFor(id))
+				sample, err := aor.RunAgreeOnRandom(rt, id, quorum, sampleLength, tape, prng)
 				if err != nil {
 					return err
 				}
