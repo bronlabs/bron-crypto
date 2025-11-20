@@ -13,7 +13,7 @@ import (
 )
 
 func RunGennaroDKG[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](
-	router network.Router,
+	router *network.Router,
 	sessionId network.SID,
 	group algebra.PrimeGroup[G, S],
 	sharingId sharing.ID,

@@ -10,7 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
-func RunAgreeOnRandom(router network.Router, id sharing.ID, quorum network.Quorum, size int, tape transcripts.Transcript, prng io.Reader) ([]byte, error) {
+func RunAgreeOnRandom(router *network.Router, id sharing.ID, quorum network.Quorum, size int, tape transcripts.Transcript, prng io.Reader) ([]byte, error) {
 	party, err := NewParticipant(id, quorum, size, tape, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create participant")

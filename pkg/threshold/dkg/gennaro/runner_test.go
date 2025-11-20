@@ -115,7 +115,7 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 			dkgOutputsMutex := sync.Mutex{}
 
 			runner := func(sharingId sharing.ID) error {
-				router := coordinator.RouterFor(sharingId)
+				router := network.NewRouter(coordinator.DeliveryFor(sharingId))
 				dkgOutput, err := gennaro.RunGennaroDKG(router, sessionId, group, sharingId, accessStructure, tapes[sharingId], prng)
 				if err != nil {
 					return err
