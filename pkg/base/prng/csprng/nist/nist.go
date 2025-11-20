@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 )
 
 const (
@@ -200,7 +200,7 @@ dataGeneration:
 // automatically if the prng was initialised with an `entropySource`, raising an
 // error otherwise.
 func (prg *PrngNist) Read(buffer []byte) (n int, err error) {
-	numRequests := utils.CeilDiv(len(buffer), maxNumberOfBytesRequest)
+	numRequests := mathutils.CeilDiv(len(buffer), maxNumberOfBytesRequest)
 	for i := range numRequests {
 		end := min((i+1)*maxNumberOfBytesRequest, len(buffer))
 		requestBuffer := buffer[i*maxNumberOfBytesRequest : end]

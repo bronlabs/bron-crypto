@@ -8,7 +8,7 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 )
 
 type CtrDRBG struct {
@@ -92,7 +92,7 @@ func (ctrDrbg *CtrDRBG) Update(providedData []byte) (err error) {
 	}
 	// 1. temp = Nil
 	// +. Allocate space for temp
-	tempBlocks := utils.CeilDiv(ctrDrbg.SeedSize(), aes.BlockSize)
+	tempBlocks := mathutils.CeilDiv(ctrDrbg.SeedSize(), aes.BlockSize)
 	temp := make([]byte, tempBlocks*aes.BlockSize)
 	// 2. WHILE (len(temp) < seedLen) DO
 	for i := range tempBlocks {
@@ -183,7 +183,7 @@ func (ctrDrbg *CtrDRBG) Reseed(entropyInput, additionalInput []byte) (err error)
 func (ctrDrbg *CtrDRBG) Generate(outputBuffer, additionalInput []byte) (err error) {
 	// +. Get the requested_number_of_bits from the length of the output buffer.
 	requestedNumberOfBytes := len(outputBuffer)
-	requestedNumberOfBlocks := utils.CeilDiv(requestedNumberOfBytes, aes.BlockSize)
+	requestedNumberOfBlocks := mathutils.CeilDiv(requestedNumberOfBytes, aes.BlockSize)
 	// 1. IF (reseed_counter > reseed_interval), then return an indication that a
 	// reseed is required.
 	if ctrDrbg.reseedCounter > reseedInterval {
@@ -244,7 +244,7 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	n := uint32(noOfBytesToReturn)
 	// 5. Pad S with zeros, if necessary.
 	// WHILE (len (S) mod outlen) != 0, DO {S = S || 0x00}
-	sBlocks := utils.CeilDiv(int(4+4+l+1), aes.BlockSize)
+	sBlocks := mathutils.CeilDiv(int(4+4+l+1), aes.BlockSize)
 	s := make([]byte, sBlocks*aes.BlockSize) // Allocate l, n, inputString, 0x80 and zero pads of #5
 	// 4. Prepend the string length and the requested length of the output to the
 	//   input_string. S = L || N || input_string || 0x80.
@@ -254,7 +254,7 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	s[8+l] = 0x80
 	// 6. temp = Nil.
 	// +. Calculate `len(temp)` and initialise `temp` buffer deterministically.
-	tempBlocks := utils.CeilDiv(ctrDrbg.SeedSize(), aes.BlockSize)
+	tempBlocks := mathutils.CeilDiv(ctrDrbg.SeedSize(), aes.BlockSize)
 	temp := make([]byte, tempBlocks*aes.BlockSize) // Allocate space for key and iv.
 	// 7. i = 0 (uint32) --> In #9.
 	// 8. K = leftmost(0x00010203...1D1E1F, keylen).
@@ -286,7 +286,7 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	x = temp[ctrDrbg.keySize:ctrDrbg.SeedSize()]
 	// 12) temp = Nil.
 	// +. Calculate the output size and initialise `temp` buffer deterministically.
-	requestedBlocks := utils.CeilDiv(noOfBytesToReturn, aes.BlockSize)
+	requestedBlocks := mathutils.CeilDiv(noOfBytesToReturn, aes.BlockSize)
 	requestedBytes = make([]byte, requestedBlocks*aes.BlockSize)
 	// 13. WHILE (len(temp) < number_of_bits_to_return) DO
 	for i := range requestedBlocks {

@@ -1,7 +1,6 @@
 package nocopy
 
 import (
-	"sync"
 	"sync/atomic"
 	"unsafe"
 )
@@ -9,6 +8,7 @@ import (
 // CopyChecker holds back pointer to itself to detect object copying.
 type CopyChecker uintptr
 
+// Check panics if the object has been copied since the last call to Check.
 func (c *CopyChecker) Check() {
 	// Check if c has been copied in three steps:
 	// 1. The first comparison is the fast-path. If c has been initialised and not copied, this will return immediately. Otherwise, c is either not initialised, or has been copied.
@@ -30,8 +30,6 @@ func (c *CopyChecker) Check() {
 //
 // Note that it must not be embedded, due to the Lock and Unlock methods.
 type NoCopy struct{}
-
-var _ sync.Locker = (*NoCopy)(nil)
 
 // Lock is a no-op used by -copylocks checker from `go vet`.
 func (*NoCopy) Lock()   {}

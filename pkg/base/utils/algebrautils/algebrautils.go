@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 )
 
+// RandomNonIdentity samples a random element from the given finite monoid that is not the identity element.
 func RandomNonIdentity[M interface {
 	algebra.FiniteStructure[E]
 	algebra.Monoid[E]
@@ -32,6 +33,7 @@ func RandomNonIdentity[M interface {
 	return out, nil
 }
 
+// Fold applies the binary operation of the given operand type to all provided elements, returning the final result.
 func Fold[S algebra.Operand[S]](first S, rest ...S) S {
 	if len(rest) == 0 {
 		return first
@@ -41,6 +43,7 @@ func Fold[S algebra.Operand[S]](first S, rest ...S) S {
 	})
 }
 
+// Sum applies the addition operation of the given summand type to all provided elements, returning the final result.
 func Sum[S algebra.Summand[S]](first S, rest ...S) S {
 	if len(rest) == 0 {
 		return first
@@ -50,6 +53,7 @@ func Sum[S algebra.Summand[S]](first S, rest ...S) S {
 	})
 }
 
+// Prod applies the multiplication operation of the given multiplicand type to all provided elements, returning the final result.
 func Prod[M algebra.Multiplicand[M]](first M, rest ...M) M {
 	if len(rest) == 0 {
 		return first
@@ -59,6 +63,7 @@ func Prod[M algebra.Multiplicand[M]](first M, rest ...M) M {
 	})
 }
 
+// ScalarMul computes the scalar multiplication of the given base element by the given exponent using a fixed-window method.
 func ScalarMul[E algebra.MonoidElement[E]](base E, exponent *num.Nat) E {
 	monoid := algebra.StructureMustBeAs[algebra.Monoid[E]](base.Structure())
 

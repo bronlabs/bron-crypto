@@ -127,7 +127,11 @@ func (f *PrimeFieldTrait[FP, WP, W]) PartialCompare(x, y WP) base.PartialOrderin
 }
 
 func (f *PrimeFieldTrait[FP, WP, W]) Compare(x, y WP) base.Ordering {
-	return base.EvaluateConstantTimeComparison(fieldsImpl.SliceCmpLE(x.Fp().Limbs(), y.Fp().Limbs()))
+	out := base.ParseOrderingFromMasks(fieldsImpl.SliceCmpLE(x.Fp().Limbs(), y.Fp().Limbs()))
+	if out.IsIncomparable() {
+		panic("prime field elements cannot be incomparable")
+	}
+	return base.Ordering(out)
 }
 
 func (f *PrimeFieldTrait[FP, WP, W]) OpIdentity() WP {
@@ -227,7 +231,11 @@ func (fe *PrimeFieldElementTrait[FP, F, WP, W]) Equal(rhs WP) bool {
 }
 
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) IsLessThanOrEqual(rhs WP) bool {
-	return base.EvaluateConstantTimeComparison(fieldsImpl.SliceCmpLE(FP(&fe.V).Limbs(), rhs.Fp().Limbs())) == base.Ordering(base.LessThan)
+	out := base.ParseOrderingFromMasks(fieldsImpl.SliceCmpLE(FP(&fe.V).Limbs(), rhs.Fp().Limbs()))
+	if out == base.Incomparable {
+		panic("prime field elements cannot be incomparable")
+	}
+	return out.IsLessThan() || out.IsEqual()
 }
 
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) IsOdd() bool {

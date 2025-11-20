@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -57,7 +57,7 @@ func newParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
 	kappa := suite.group.ScalarStructure().ElementSize() * 8
 	xi := kappa + 2*base.StatisticalSecurityBits
-	rho := utils.CeilDiv(kappa, base.ComputationalSecurityBits)
+	rho := mathutils.CeilDiv(kappa, base.ComputationalSecurityBits)
 
 	return &participant[G, S]{
 		prng:      prng,

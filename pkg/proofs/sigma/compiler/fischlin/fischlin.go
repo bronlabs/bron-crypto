@@ -8,7 +8,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
@@ -61,7 +61,7 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 	// chapter 4 ("Optimal Parameters and Experimental Results").
 	rho := getRho(sigmaProtocol)
 	b1 := (base.ComputationalSecurityBits + rho - 1) / rho
-	b2 := uint64(utils.CeilLog2(int(sigmaProtocol.SpecialSoundness()) - 1))
+	b2 := uint64(mathutils.CeilLog2(int(sigmaProtocol.SpecialSoundness()) - 1))
 	b := b1 + b2
 	t := b + 5
 	if rho > 64 {

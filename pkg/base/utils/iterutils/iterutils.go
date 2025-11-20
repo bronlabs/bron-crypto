@@ -4,38 +4,60 @@ import (
 	"iter"
 )
 
+// Contains checks if the given value is present in the sequence.
 func Contains[In comparable](seq iter.Seq[In], v In) bool {
 	for v2 := range seq {
 		if v == v2 {
 			return true
 		}
 	}
-
 	return false
 }
 
+// Contains2 checks if the given key-value pair is present in the sequence.
+func Contains2[K comparable, V comparable](seq iter.Seq2[K, V], k K, v V) bool {
+	for k2, v2 := range seq {
+		if k == k2 && v == v2 {
+			return true
+		}
+	}
+	return false
+}
+
+// ConstainsFunc checks if the given value is present in the sequence using a custom equality function.
 func ContainsFunc[In any](seq iter.Seq[In], v In, f func(In, In) bool) bool {
 	for v2 := range seq {
 		if f(v, v2) {
 			return true
 		}
 	}
-
 	return false
 }
 
+func ContainsFunc2[K any, V any](seq iter.Seq2[K, V], k K, v V, f func(K, V, K, V) bool) bool {
+	for k2, v2 := range seq {
+		if f(k, v, k2, v2) {
+			return true
+		}
+	}
+	return false
+}
+
+// Empty returns an empty sequence of the given value type.
 func Empty[V any]() iter.Seq[V] {
 	return func(yield func(V) bool) {
 		// Do nothing, effectively yielding no values.
 	}
 }
 
+// Empty2 returns an empty sequence of key-value pairs of the given key and value types.
 func Empty2[K, V any]() iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
 		// Do nothing, effectively yielding no key-value pairs.
 	}
 }
 
+// Map applies the given function to each element of the input sequence and returns a new sequence of the results.
 func Map[In, Out any](seq iter.Seq[In], f func(In) Out) iter.Seq[Out] {
 	return func(yield func(Out) bool) {
 		for in := range seq {
@@ -46,18 +68,7 @@ func Map[In, Out any](seq iter.Seq[In], f func(In) Out) iter.Seq[Out] {
 	}
 }
 
-func MapOrError[In, Out any](seq iter.Seq[In], f func(In) (Out, error)) iter.Seq[Out] {
-	return func(yield func(Out) bool) {
-		for in := range seq {
-			if out, err := f(in); err == nil {
-				if !yield(out) {
-					return
-				}
-			}
-		}
-	}
-}
-
+// Map2 applies the given function to each key-value pair of the input sequence and returns a new sequence of the results.
 func Map2[KIn, KOut, VIn, VOut any](seq iter.Seq2[KIn, VIn], f func(KIn, VIn) (KOut, VOut)) iter.Seq2[KOut, VOut] {
 	return func(yield func(KOut, VOut) bool) {
 		for k, v := range seq {
@@ -68,6 +79,7 @@ func Map2[KIn, KOut, VIn, VOut any](seq iter.Seq2[KIn, VIn], f func(KIn, VIn) (K
 	}
 }
 
+// MapKeys2 applies the given function to each key of the input key-value pair sequence and returns a new sequence with transformed keys.
 func MapKeys2[KIn, KOut, V any](seq iter.Seq2[KIn, V], f func(KIn, V) KOut) iter.Seq2[KOut, V] {
 	return func(yield func(KOut, V) bool) {
 		for k, v := range seq {
@@ -78,6 +90,7 @@ func MapKeys2[KIn, KOut, V any](seq iter.Seq2[KIn, V], f func(KIn, V) KOut) iter
 	}
 }
 
+// MapValues2 applies the given function to each value of the input key-value pair sequence and returns a new sequence with transformed values.
 func MapValues2[K, VIn, VOut any](seq iter.Seq2[K, VIn], f func(K, VIn) VOut) iter.Seq2[K, VOut] {
 	return func(yield func(K, VOut) bool) {
 		for k, v := range seq {
@@ -88,6 +101,7 @@ func MapValues2[K, VIn, VOut any](seq iter.Seq2[K, VIn], f func(K, VIn) VOut) it
 	}
 }
 
+// Concat concatenates multiple sequences of the same value type into a single sequence.
 func Concat[V any](seqs ...iter.Seq[V]) iter.Seq[V] {
 	return func(yield func(V) bool) {
 		for _, seq := range seqs {
@@ -100,6 +114,7 @@ func Concat[V any](seqs ...iter.Seq[V]) iter.Seq[V] {
 	}
 }
 
+// Concat2 concatenates multiple sequences of key-value pairs into a single sequence.
 func Concat2[K, V any](seqs ...iter.Seq2[K, V]) iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
 		for _, seq := range seqs {
@@ -112,6 +127,7 @@ func Concat2[K, V any](seqs ...iter.Seq2[K, V]) iter.Seq2[K, V] {
 	}
 }
 
+// Flatten flattens a sequence of sequences into a single sequence by yielding all elements from each inner sequence.
 func Flatten[V any](seq iter.Seq[iter.Seq[V]]) iter.Seq[V] {
 	return func(yield func(V) bool) {
 		for s := range seq {
@@ -124,6 +140,7 @@ func Flatten[V any](seq iter.Seq[iter.Seq[V]]) iter.Seq[V] {
 	}
 }
 
+// Flatten2 flattens a sequence of key-value pair sequences into a single key-value pair sequence
 func Flatten2[K, V any](seq iter.Seq[iter.Seq2[K, V]]) iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
 		for s := range seq {
@@ -136,6 +153,7 @@ func Flatten2[K, V any](seq iter.Seq[iter.Seq2[K, V]]) iter.Seq2[K, V] {
 	}
 }
 
+// Any checks if any element in the sequence satisfies the given predicate function.
 func Any[V any](seq iter.Seq[V], f func(V) bool) bool {
 	for v := range seq {
 		if f(v) {
@@ -145,6 +163,7 @@ func Any[V any](seq iter.Seq[V], f func(V) bool) bool {
 	return false
 }
 
+// Any2 checks if any key-value pair in the sequence satisfies the given predicate function.
 func Any2[K, V any](seq iter.Seq2[K, V], f func(K, V) bool) bool {
 	for k, v := range seq {
 		if f(k, v) {
@@ -154,6 +173,7 @@ func Any2[K, V any](seq iter.Seq2[K, V], f func(K, V) bool) bool {
 	return false
 }
 
+// All checks if all elements in the sequence satisfy the given predicate function.
 func All[V any](seq iter.Seq[V], f func(V) bool) bool {
 	for v := range seq {
 		if !f(v) {
@@ -163,6 +183,7 @@ func All[V any](seq iter.Seq[V], f func(V) bool) bool {
 	return true
 }
 
+// All2 checks if all key-value pairs in the sequence satisfy the given predicate function.
 func All2[K, V any](seq iter.Seq2[K, V], f func(K, V) bool) bool {
 	for k, v := range seq {
 		if !f(k, v) {
@@ -172,6 +193,7 @@ func All2[K, V any](seq iter.Seq2[K, V], f func(K, V) bool) bool {
 	return true
 }
 
+// Equal checks if two sequences of the same value type are equal.
 func Equal[V comparable](x, y iter.Seq[V]) bool {
 	for z := range Zip(x, y) {
 		if z.Ok1 != z.Ok2 || z.V1 != z.V2 {
@@ -181,6 +203,7 @@ func Equal[V comparable](x, y iter.Seq[V]) bool {
 	return true
 }
 
+// Equal2 checks if two sequences of key-value pairs are equal.
 func Equal2[K, V comparable](x, y iter.Seq2[K, V]) bool {
 	for z := range Zip2(x, y) {
 		if z.Ok1 != z.Ok2 || z.K1 != z.K2 || z.V1 != z.V2 {
@@ -190,6 +213,7 @@ func Equal2[K, V comparable](x, y iter.Seq2[K, V]) bool {
 	return true
 }
 
+// EqualFunc checks if two sequences are equal using a custom equality function.
 func EqualFunc[V1, V2 any](x iter.Seq[V1], y iter.Seq[V2], f func(V1, V2) bool) bool {
 	for z := range Zip(x, y) {
 		if z.Ok1 != z.Ok2 || !f(z.V1, z.V2) {
@@ -199,6 +223,7 @@ func EqualFunc[V1, V2 any](x iter.Seq[V1], y iter.Seq[V2], f func(V1, V2) bool) 
 	return true
 }
 
+// EqualFunc2 checks if two sequences of key-value pairs are equal using a custom equality function.
 func EqualFunc2[K1, V1, K2, V2 any](x iter.Seq2[K1, V1], y iter.Seq2[K2, V2], f func(K1, V1, K2, V2) bool) bool {
 	for z := range Zip2(x, y) {
 		if z.Ok1 != z.Ok2 || !f(z.K1, z.V1, z.K2, z.V2) {
@@ -208,6 +233,7 @@ func EqualFunc2[K1, V1, K2, V2 any](x iter.Seq2[K1, V1], y iter.Seq2[K2, V2], f 
 	return true
 }
 
+// Filter filters the elements of the sequence based on the given predicate function.
 func Filter[V any](seq iter.Seq[V], f func(V) bool) iter.Seq[V] {
 	return func(yield func(V) bool) {
 		for v := range seq {
@@ -218,6 +244,7 @@ func Filter[V any](seq iter.Seq[V], f func(V) bool) iter.Seq[V] {
 	}
 }
 
+// Filter2 filters the key-value pairs of the sequence based on the given predicate function.
 func Filter2[K, V any](seq iter.Seq2[K, V], f func(K, V) bool) iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
 		for k, v := range seq {
@@ -228,6 +255,7 @@ func Filter2[K, V any](seq iter.Seq2[K, V], f func(K, V) bool) iter.Seq2[K, V] {
 	}
 }
 
+// Truncate limits the sequence to the first n elements.
 func Truncate[V any](seq iter.Seq[V], n int) iter.Seq[V] {
 	return func(yield func(V) bool) {
 		if n <= 0 {
@@ -244,6 +272,7 @@ func Truncate[V any](seq iter.Seq[V], n int) iter.Seq[V] {
 	}
 }
 
+// Truncate2 limits the sequence of key-value pairs to the first n elements.
 func Truncate2[K, V any](seq iter.Seq2[K, V], n int) iter.Seq2[K, V] {
 	return func(yield func(K, V) bool) {
 		if n <= 0 {
@@ -260,6 +289,7 @@ func Truncate2[K, V any](seq iter.Seq2[K, V], n int) iter.Seq2[K, V] {
 	}
 }
 
+// Reduce reduces the sequence to a single value by applying the given binary function.
 func Reduce[Accum, V any](seq iter.Seq[V], accum Accum, f func(Accum, V) Accum) Accum {
 	for v := range seq {
 		accum = f(accum, v)
@@ -267,6 +297,15 @@ func Reduce[Accum, V any](seq iter.Seq[V], accum Accum, f func(Accum, V) Accum) 
 	return accum
 }
 
+// Reduce2 reduces the sequence of key-value pairs to a single value by applying the given binary function.
+func Reduce2[Accum, K, V any](seq iter.Seq2[K, V], accum Accum, f func(Accum, K, V) Accum) Accum {
+	for k, v := range seq {
+		accum = f(accum, k, v)
+	}
+	return accum
+}
+
+// ReduceOrError reduces the sequence to a single value by applying the given binary function that can return an error.
 func ReduceOrError[Accum, V any](seq iter.Seq[V], accum Accum, f func(Accum, V) (Accum, error)) (Accum, error) {
 	var err error
 	for v := range seq {
@@ -278,7 +317,8 @@ func ReduceOrError[Accum, V any](seq iter.Seq[V], accum Accum, f func(Accum, V) 
 	return accum, nil
 }
 
-func Reduce2OrError[Accum, K, V any](seq iter.Seq2[K, V], accum Accum, f func(Accum, K, V) (Accum, error)) (Accum, error) {
+// ReduceOrError2 reduces the sequence of key-value pairs to a single value by applying the given binary function that can return an error.
+func ReduceOrError2[Accum, K, V any](seq iter.Seq2[K, V], accum Accum, f func(Accum, K, V) (Accum, error)) (Accum, error) {
 	var err error
 	for k, v := range seq {
 		accum, err = f(accum, k, v)
@@ -289,13 +329,7 @@ func Reduce2OrError[Accum, K, V any](seq iter.Seq2[K, V], accum Accum, f func(Ac
 	return accum, nil
 }
 
-func Reduce2[Accum, K, V any](seq iter.Seq2[K, V], accum Accum, f func(Accum, K, V) Accum) Accum {
-	for k, v := range seq {
-		accum = f(accum, k, v)
-	}
-	return accum
-}
-
+// ZipTruncate zips two sequences together, stopping when the shorter sequence is exhausted.
 func ZipTruncate[V1, V2 any](x iter.Seq[V1], y iter.Seq[V2]) iter.Seq2[V1, V2] {
 	return func(yield func(z1 V1, z2 V2) bool) {
 		next, stop := iter.Pull(y)
@@ -310,6 +344,7 @@ func ZipTruncate[V1, V2 any](x iter.Seq[V1], y iter.Seq[V2]) iter.Seq2[V1, V2] {
 	}
 }
 
+// Zipped represents a pair of values from two sequences, along with flags indicating their presence.
 type Zipped[V1, V2 any] struct {
 	V1  V1
 	Ok1 bool // whether V1 is present (if not, it will be false)
@@ -317,6 +352,7 @@ type Zipped[V1, V2 any] struct {
 	Ok2 bool // whether V2 is present (if not, it will be false)
 }
 
+// Zip zips two sequences together, yielding pairs of values along with presence flags.
 func Zip[V1, V2 any](x iter.Seq[V1], y iter.Seq[V2]) iter.Seq[Zipped[V1, V2]] {
 	return func(yield func(z Zipped[V1, V2]) bool) {
 		next, stop := iter.Pull(y)
@@ -338,6 +374,7 @@ func Zip[V1, V2 any](x iter.Seq[V1], y iter.Seq[V2]) iter.Seq[Zipped[V1, V2]] {
 	}
 }
 
+// Zipped2 represents a pair of key-value pairs from two sequences, along with flags indicating their presence.
 type Zipped2[K1, V1, K2, V2 any] struct {
 	K1  K1
 	V1  V1
@@ -347,6 +384,7 @@ type Zipped2[K1, V1, K2, V2 any] struct {
 	Ok2 bool // whether K2, V2 are present (if not, they will be false)
 }
 
+// Zip2 zips two sequences of key-value pairs together, yielding pairs of key-value pairs along with presence flags.
 func Zip2[K1, V1, K2, V2 any](x iter.Seq2[K1, V1], y iter.Seq2[K2, V2]) iter.Seq[Zipped2[K1, V1, K2, V2]] {
 	return func(yield func(z Zipped2[K1, V1, K2, V2]) bool) {
 		next, stop := iter.Pull2(y)

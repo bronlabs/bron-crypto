@@ -1,4 +1,4 @@
-package utils_test
+package mathutils_test
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 )
 
 func Test_CeilDiv(t *testing.T) {
@@ -17,7 +17,7 @@ func Test_CeilDiv(t *testing.T) {
 		for b := 1; b < 20; b++ {
 			// Calculate ceil(a/b) and compare with CeilDiv(a, b).
 			expected := int(math.Ceil(float64(a) / float64(b)))
-			actual := utils.CeilDiv(a, b)
+			actual := mathutils.CeilDiv(a, b)
 			if expected != actual {
 				t.Errorf("CeilDiv(%d, %d) = %d, expected %d", a, b, actual, expected)
 			}
@@ -50,7 +50,7 @@ func Test_FloorLog2(t *testing.T) {
 		expected := testCase.expected
 		t.Run(fmt.Sprintf("floor(log2(%d)) = %d", arg, expected), func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, expected, utils.FloorLog2(arg))
+			require.Equal(t, expected, mathutils.FloorLog2(arg))
 		})
 	}
 }
@@ -81,7 +81,7 @@ func Test_CeilLog2(t *testing.T) {
 		expected := testCase.expected
 		t.Run(fmt.Sprintf("ceil(log2(%d)) = %d", arg, expected), func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, expected, utils.CeilLog2(arg))
+			require.Equal(t, expected, mathutils.CeilLog2(arg))
 		})
 	}
 }

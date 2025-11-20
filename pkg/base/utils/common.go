@@ -1,39 +1,10 @@
 package utils
 
 import (
-	"math/bits"
 	"reflect"
 
 	"golang.org/x/exp/constraints"
-
-	"github.com/bronlabs/bron-crypto/pkg/base"
 )
-
-func ParseOrderingFromSign[T constraints.Signed](x T) base.PartialOrdering {
-	if x == 1 {
-		return base.GreaterThan
-	}
-	if x == 0 {
-		return base.Equal
-	}
-	if x == -1 {
-		return base.LessThan
-	}
-	return base.Incomparable
-}
-
-func ParseOrderingFromMasks[F constraints.Integer](gt, eq, lt F) base.PartialOrdering {
-	if gt != 0 {
-		return base.GreaterThan
-	}
-	if eq != 0 {
-		return base.Equal
-	}
-	if lt != 0 {
-		return base.LessThan
-	}
-	return base.Incomparable
-}
 
 // BoolTo casts a bool to any integer type.
 func BoolTo[T constraints.Integer](b bool) T {
@@ -43,22 +14,7 @@ func BoolTo[T constraints.Integer](b bool) T {
 	return 0
 }
 
-// CeilDiv returns `ceil(numerator/denominator) for integer inputs. Equivalently,
-// it returns `x`, the smallest integer that satisfies `(x*b) >= a`.
-func CeilDiv(numerator, denominator int) int {
-	return (numerator - 1 + denominator) / denominator
-}
-
-// FloorLog2 return floor(log2(x)).
-func FloorLog2(x int) int {
-	return 63 - bits.LeadingZeros64(uint64(x))
-}
-
-// CeilLog2 return ceil(log2(x)).
-func CeilLog2(x int) int {
-	return 64 - bits.LeadingZeros64(uint64(x)-1)
-}
-
+// IsNil returns true if the given value is nil.
 func IsNil[T any](v T) bool {
 	val := reflect.ValueOf(v)
 	kind := val.Kind()
@@ -74,6 +30,7 @@ func LeadingZeroBytes(b []byte) int {
 	return i
 }
 
+// ImplementsX checks if the given value v implements the interface X.
 func ImplementsX[X, T any](v T) (X, bool) {
 	// try value
 	if x, ok := any(v).(X); ok {
@@ -85,4 +42,17 @@ func ImplementsX[X, T any](v T) (X, bool) {
 		return x, true
 	}
 	return *new(X), false
+}
+
+// Binomial computes the binomial coefficient "n choose k".
+func Binomial(n, k int) int {
+	// (n,k) = (n, n-k)
+	if k > n/2 {
+		k = n - k
+	}
+	b := 1
+	for i := 1; i <= k; i++ {
+		b = (n - k + i) * b / i
+	}
+	return b
 }

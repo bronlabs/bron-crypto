@@ -6,10 +6,11 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/randutils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 )
 
-func MapErrFunc[SIn ~[]TIn, TIn, TOut any](in SIn, f func(TIn) (TOut, error)) (out []TOut, err error) {
+// MapOrError applies the function f to each element of the input slice in,
+func MapOrError[SIn ~[]TIn, TIn, TOut any](in SIn, f func(TIn) (TOut, error)) (out []TOut, err error) {
 	out = make([]TOut, len(in))
 	for i, in := range in {
 		out[i], err = f(in)
@@ -20,22 +21,29 @@ func MapErrFunc[SIn ~[]TIn, TIn, TOut any](in SIn, f func(TIn) (TOut, error)) (o
 	return out, nil
 }
 
+// MapCast applies the function f to each element of the input slice in,
+// casting the output slice to the desired type S.
 func MapCast[S ~[]TOut, TOut any, SIn ~[]TIn, TIn any](in SIn, f func(TIn) TOut) S {
 	return slices.Collect(iterutils.Map(slices.Values(in), f))
 }
 
+// Map applies the function f to each element of the input slice in,
+// returning a slice of the output type.
 func Map[TOut any, SIn ~[]TIn, TIn any](in SIn, f func(TIn) TOut) []TOut {
 	return MapCast[[]TOut](in, f)
 }
 
+// Filter returns a new slice containing only the elements of xs that satisfy the predicate.
 func Filter[S ~[]T, T any](xs S, predicate func(T) bool) S {
 	return slices.Collect(iterutils.Filter(slices.Values(xs), predicate))
 }
 
+// Reduce reduces the slice xs to a single value by applying the binary function f cumulatively.
 func Reduce[S ~[]T, T any](xs S, initial T, f func(T, T) T) T {
 	return iterutils.Reduce(slices.Values(xs), initial, f)
 }
 
+// Repeat creates a slice of length n, filled with the value x.
 func Repeat[S ~[]T, T any](x T, n int) S {
 	out := make(S, n)
 	for i := range n {
@@ -44,12 +52,14 @@ func Repeat[S ~[]T, T any](x T, n int) S {
 	return out
 }
 
+// Reversed returns a new slice that is the reverse of the input slice.
 func Reversed[S ~[]T, T any](xs S) S {
 	sx := slices.Clone(xs)
 	slices.Reverse(sx)
 	return sx
 }
 
+// Reverse reverses the input slice in place and returns it.
 func Reverse[S ~[]T, T any](xs S) S {
 	slices.Reverse(xs)
 	return xs
@@ -70,7 +80,7 @@ func Shuffle[S ~[]T, T any](xs S, prng io.Reader) (S, error) {
 	}
 
 	for i := uint64(len(xs)) - 1; i > 0; i-- {
-		j, err := randutils.RandomUint64Range(prng, i+1)
+		j, err := mathutils.RandomUint64Range(prng, i+1)
 		if err != nil {
 			return nil, errs.WrapRandomSample(err, "shuffle")
 		}
@@ -79,12 +89,14 @@ func Shuffle[S ~[]T, T any](xs S, prng io.Reader) (S, error) {
 	return xs, nil
 }
 
+// Shuffled returns a new slice that is a random permutation of the input slice.
 func Shuffled[S ~[]T, T any](xs S, prng io.Reader) (S, error) {
 	clone := make(S, len(xs))
 	copy(clone, xs)
 	return Shuffle(clone, prng)
 }
 
+// PadToLeft pads the input slice xs to the left with zero values to reach the desired padLength.
 func PadToLeft[S ~[]T, T any](xs S, padLength int) S {
 	if padLength < 0 {
 		return xs
@@ -94,6 +106,7 @@ func PadToLeft[S ~[]T, T any](xs S, padLength int) S {
 	return out
 }
 
+// PadToLeftWith pads the input slice xs to the left with the specified pad value to reach the desired padLength.
 func PadToLeftWith[S ~[]T, T any](xs S, padLength int, pad T) S {
 	out := PadToLeft(xs, padLength)
 	for i := range padLength {
@@ -102,6 +115,7 @@ func PadToLeftWith[S ~[]T, T any](xs S, padLength int, pad T) S {
 	return out
 }
 
+// PadToRight pads the input slice xs to the right with zero values to reach the desired padLength.
 func PadToRight[S ~[]T, T any](xs S, padLength int) S {
 	if padLength < 0 {
 		return xs
@@ -111,6 +125,7 @@ func PadToRight[S ~[]T, T any](xs S, padLength int) S {
 	return out
 }
 
+// PadToRightWith pads the input slice xs to the right with the specified pad value to reach the desired padLength.
 func PadToRightWith[S ~[]T, T any](xs S, padLength int, pad T) S {
 	out := PadToRight(xs, padLength)
 	for i := len(xs); i < len(out); i++ {
@@ -119,6 +134,7 @@ func PadToRightWith[S ~[]T, T any](xs S, padLength int, pad T) S {
 	return out
 }
 
+// Count returns the number of elements in xs that satisfy the predicate.
 func Count[S ~[]T, T any](xs S, predicate func(T) bool) int {
 	count := 0
 	for _, x := range xs {
@@ -129,6 +145,7 @@ func Count[S ~[]T, T any](xs S, predicate func(T) bool) int {
 	return count
 }
 
+// CountUnique returns the number of unique elements in xs.
 func CountUnique[S ~[]T, T comparable](xs S) int {
 	seen := make(map[T]struct{})
 	count := 0
@@ -141,20 +158,8 @@ func CountUnique[S ~[]T, T comparable](xs S) int {
 	return count
 }
 
-func CountUniqueFunc[S ~[]T, T any, K comparable](xs S, key func(T) K) int {
-	seen := make(map[K]struct{})
-	count := 0
-	for _, x := range xs {
-		k := key(x)
-		if _, exists := seen[k]; !exists {
-			seen[k] = struct{}{}
-			count++
-		}
-	}
-	return count
-}
-
-func CountUniqueEqualFunc[S ~[]T, T any](xs S, equal func(T, T) bool) int {
+// CountUniqueFunc returns the number of unique elements in xs using the provided equality function.
+func CountUniqueFunc[S ~[]T, T any](xs S, equal func(T, T) bool) int {
 	seen := make([]T, 0, len(xs))
 	count := 0
 	for _, x := range xs {
@@ -173,22 +178,27 @@ func CountUniqueEqualFunc[S ~[]T, T any](xs S, equal func(T, T) bool) int {
 	return count
 }
 
+// Any returns true if any element in xs satisfies the predicate.
 func Any[S ~[]T, T any](xs S, predicate func(T) bool) bool {
 	return Count(xs, predicate) > 0
 }
 
+// All returns true if all elements in xs satisfy the predicate.
 func All[S ~[]T, T any](xs S, predicate func(T) bool) bool {
 	return Count(xs, predicate) == len(xs)
 }
 
-func IsUnique[S ~[]T, T comparable](xs S) bool {
+// IsAllUnique returns true if all elements in xs are unique.
+func IsAllUnique[S ~[]T, T comparable](xs S) bool {
 	return CountUnique(xs) == len(xs)
 }
 
-func IsUniqueFunc[S ~[]T, T any, K comparable](xs S, key func(T) K) bool {
-	return CountUniqueFunc(xs, key) == len(xs)
+// IsAllUniqueFunc returns true if all elements in xs are unique using the provided equality function.
+func IsAllUniqueFunc[S ~[]T, T any](xs S, equal func(T, T) bool) bool {
+	return CountUniqueFunc(xs, equal) == len(xs)
 }
 
+// IsSubList returns true if all elements of sub are present in sup.
 func IsSubList[SB, SP ~[]T, T comparable](sub SB, sup SP) bool {
 	if len(sub) > len(sup) {
 		return false
@@ -208,6 +218,7 @@ func IsSubList[SB, SP ~[]T, T comparable](sub SB, sup SP) bool {
 	return true
 }
 
+// IsSubListFunc returns true if all elements of sub are present in sup using the provided equality function.
 func IsSubListFunc[SB, SP ~[]T, T any](sub SB, sup SP, equal func(T, T) bool) bool {
 	if len(sub) > len(sup) {
 		return false
@@ -227,7 +238,8 @@ func IsSubListFunc[SB, SP ~[]T, T any](sub SB, sup SP, equal func(T, T) bool) bo
 	return true
 }
 
-func ContainsEqualFunc[S ~[]T, T any](xs S, x T, equal func(T, T) bool) bool {
+// ContainsFunc returns true if xs contains the element x using the provided equality function.
+func ContainsFunc[S ~[]T, T any](xs S, x T, equal func(T, T) bool) bool {
 	for _, y := range xs {
 		if equal(x, y) {
 			return true
@@ -236,6 +248,7 @@ func ContainsEqualFunc[S ~[]T, T any](xs S, x T, equal func(T, T) bool) bool {
 	return false
 }
 
+// Fold reduces the slice rest to a single value by applying the binary function f cumulatively, starting with initial.
 func Fold[T, U any](f func(acc U, x T) U, initial U, rest ...T) U {
 	accumulator := func(acc U, x T) (U, error) { return f(acc, x), nil }
 	out, err := FoldOrError(accumulator, initial, rest...)
@@ -245,6 +258,7 @@ func Fold[T, U any](f func(acc U, x T) U, initial U, rest ...T) U {
 	return out
 }
 
+// FoldOrError reduces the slice rest to a single value by applying the binary function f cumulatively, starting with initial.
 func FoldOrError[T, U any](f func(acc U, x T) (U, error), initial U, rest ...T) (U, error) {
 	if len(rest) == 0 {
 		return initial, nil
@@ -260,6 +274,7 @@ func FoldOrError[T, U any](f func(acc U, x T) (U, error), initial U, rest ...T) 
 	return out, nil
 }
 
+// Fill fills the slice s with the value x.
 func Fill[T any](s []T, x T) {
 	for i := range s {
 		s[i] = x
