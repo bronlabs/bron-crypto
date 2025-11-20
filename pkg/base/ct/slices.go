@@ -50,7 +50,7 @@ func CSelectInts[S ~[]E, E constraints.Integer](choice Choice, x0, x1 S) S {
 }
 
 // CMOVInts does: dst[i] = src[i] iff yes==1; otherwise dst[i] unchanged.
-// Panics if lengths differ. Branch-free per element.
+// Panics if lengths differ.
 func CMOVInts[S ~[]I, I constraints.Integer](dst, src S, yes Choice) {
 	if len(dst) != len(src) {
 		panic("ct: slices have different lengths")
@@ -62,7 +62,7 @@ func CMOVInts[S ~[]I, I constraints.Integer](dst, src S, yes Choice) {
 }
 
 // CSwapInts swaps x[i] and y[i] iff yes==1; otherwise unchanged.
-// Panics if lengths differ. Branch-free per element.
+// Panics if lengths differ.
 func CSwapInts[S ~[]I, I constraints.Integer](x, y S, yes Choice) {
 	if len(x) != len(y) {
 		panic("ct: slices have different lengths")

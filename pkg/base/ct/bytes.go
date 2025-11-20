@@ -45,10 +45,13 @@ func CompareBytes[T ~[]byte](x, y T) (lt, eq, gt Bool) {
 	return lt, eq, gt
 }
 
+// XorBytes computes the bitwise XOR of two byte slices and stores the result in dst.
+// Wraps subtle.XORBytes.
 func XorBytes[T ~[]byte](dst, x, y T) int {
 	return subtle.XORBytes(dst, x, y)
 }
 
+// AndBytes computes the bitwise AND of two byte slices and stores the result in dst.
 func AndBytes[T ~[]byte](dst, x, y T) int {
 	n := min(len(x), len(y))
 	if n == 0 {
@@ -63,6 +66,7 @@ func AndBytes[T ~[]byte](dst, x, y T) int {
 	return n
 }
 
+// OrBytes computes the bitwise OR of two byte slices and stores the result in dst.
 func OrBytes[T ~[]byte](dst, x, y T) int {
 	n := min(len(x), len(y))
 	if n == 0 {
@@ -77,6 +81,7 @@ func OrBytes[T ~[]byte](dst, x, y T) int {
 	return n
 }
 
+// NotBytes computes the bitwise NOT of a byte slice and stores the result in dst.
 func NotBytes[T ~[]byte](dst, x T) int {
 	n := len(x)
 	if n == 0 {
@@ -89,35 +94,4 @@ func NotBytes[T ~[]byte](dst, x T) int {
 		dst[i] = ^x[i]
 	}
 	return n
-}
-
-// TODO: remove
-// PadLeft pads a byte slice with zeros on the left (for big-endian numbers) in constant time.
-// The destination slice must have the target length.
-// This is useful for big-endian integers where padding goes on the left.
-func PadLeft[T ~[]byte](dst, src T) {
-	dstLen := len(dst)
-	srcLen := len(src)
-
-	// Clear dst first
-	for i := range dst {
-		dst[i] = 0
-	}
-
-	// If src is empty or dst is empty, we're done
-	if srcLen == 0 || dstLen == 0 {
-		return
-	}
-
-	// Calculate how many bytes to copy
-	copyLen := Min(srcLen, dstLen)
-
-	// Calculate offsets
-	dstOffset := Max(0, dstLen-srcLen)
-	srcOffset := Max(0, srcLen-dstLen)
-
-	// Copy the bytes
-	for i := range copyLen {
-		dst[dstOffset+i] = src[srcOffset+i]
-	}
 }
