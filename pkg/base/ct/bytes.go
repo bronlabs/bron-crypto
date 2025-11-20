@@ -45,11 +45,11 @@ func CompareBytes[T ~[]byte](x, y T) (lt, eq, gt Bool) {
 	return lt, eq, gt
 }
 
-func XorBytes[T ~[]byte](dst, x, y T) Bool {
-	return Bool(subtle.XORBytes(dst, x, y))
+func XorBytes[T ~[]byte](dst, x, y T) int {
+	return subtle.XORBytes(dst, x, y)
 }
 
-func AndBytes[T ~[]byte](dst, x, y T) Bool {
+func AndBytes[T ~[]byte](dst, x, y T) int {
 	n := min(len(x), len(y))
 	if n == 0 {
 		return 0
@@ -60,10 +60,10 @@ func AndBytes[T ~[]byte](dst, x, y T) Bool {
 	for i := range n {
 		dst[i] = x[i] & y[i]
 	}
-	return Bool(n)
+	return n
 }
 
-func OrBytes[T ~[]byte](dst, x, y T) Bool {
+func OrBytes[T ~[]byte](dst, x, y T) int {
 	n := min(len(x), len(y))
 	if n == 0 {
 		return 0
@@ -74,10 +74,10 @@ func OrBytes[T ~[]byte](dst, x, y T) Bool {
 	for i := range n {
 		dst[i] = x[i] | y[i]
 	}
-	return Bool(n)
+	return n
 }
 
-func NotBytes[T ~[]byte](dst, x T) Bool {
+func NotBytes[T ~[]byte](dst, x T) int {
 	n := len(x)
 	if n == 0 {
 		return 0
@@ -88,7 +88,7 @@ func NotBytes[T ~[]byte](dst, x T) Bool {
 	for i := range n {
 		dst[i] = ^x[i]
 	}
-	return Bool(n)
+	return n
 }
 
 // TODO: remove

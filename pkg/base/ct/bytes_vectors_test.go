@@ -49,7 +49,7 @@ type testVectors struct {
 	Not []unaryOpVector  `json:"not"`
 }
 
-func testBinaryOp(t *testing.T, vectors []binaryOpVector, op func(dst, x, y []byte) ct.Bool) {
+func testBinaryOp(t *testing.T, vectors []binaryOpVector, op func(dst, x, y []byte) int) {
 	t.Helper()
 
 	t.Run(runtime.FuncForPC(reflect.ValueOf(op).Pointer()).Name(), func(t *testing.T) {
@@ -67,7 +67,7 @@ func testBinaryOp(t *testing.T, vectors []binaryOpVector, op func(dst, x, y []by
 	})
 }
 
-func testUnaryOp(t *testing.T, vectors []unaryOpVector, op func(dst, x []byte) ct.Bool) {
+func testUnaryOp(t *testing.T, vectors []unaryOpVector, op func(dst, x []byte) int) {
 	t.Helper()
 
 	t.Run(runtime.FuncForPC(reflect.ValueOf(op).Pointer()).Name(), func(t *testing.T) {
