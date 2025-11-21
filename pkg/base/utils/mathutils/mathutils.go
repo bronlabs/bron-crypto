@@ -5,7 +5,7 @@ import (
 	"io"
 	"math/bits"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
 
 // RandomUint64 samples a random uint64 from the provided PRNG.
@@ -13,7 +13,7 @@ func RandomUint64(prng io.Reader) (uint64, error) {
 	var data [8]byte
 	_, err := io.ReadFull(prng, data[:])
 	if err != nil {
-		return 0, errs.WrapRandomSample(err, "cannot sample n")
+		return 0, errs2.AttachStackTrace(err)
 	}
 
 	return binary.LittleEndian.Uint64(data[:]), nil
@@ -28,7 +28,7 @@ func RandomUint64Range(prng io.Reader, bound uint64) (uint64, error) {
 	for {
 		bits, err := RandomUint64(prng)
 		if err != nil {
-			return 0, errs.WrapRandomSample(err, "cannot sample n")
+			return 0, errs2.AttachStackTrace(err)
 		}
 		val := bits % bound
 		if (bits - val) >= (bound - 1) {

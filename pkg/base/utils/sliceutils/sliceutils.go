@@ -4,7 +4,7 @@ import (
 	"io"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 )
@@ -76,13 +76,13 @@ func Shuffle[S ~[]T, T any](xs S, prng io.Reader) (S, error) {
 		return xs, nil
 	}
 	if prng == nil {
-		return nil, errs.NewIsNil("prng cannot be nil")
+		return nil, ErrArgumentIsNil.WithMessage("prng")
 	}
 
 	for i := uint64(len(xs)) - 1; i > 0; i-- {
 		j, err := mathutils.RandomUint64Range(prng, i+1)
 		if err != nil {
-			return nil, errs.WrapRandomSample(err, "shuffle")
+			return nil, errs2.AttachStackTrace(err)
 		}
 		xs[j], xs[i] = xs[i], xs[j]
 	}
@@ -253,7 +253,7 @@ func Fold[T, U any](f func(acc U, x T) U, initial U, rest ...T) U {
 	accumulator := func(acc U, x T) (U, error) { return f(acc, x), nil }
 	out, err := FoldOrError(accumulator, initial, rest...)
 	if err != nil {
-		panic(errs.WrapFailed(err, "should not have had any errors"))
+		panic(errs2.AttachStackTrace(err))
 	}
 	return out
 }
@@ -265,10 +265,10 @@ func FoldOrError[T, U any](f func(acc U, x T) (U, error), initial U, rest ...T) 
 	}
 	out := initial
 	var err error
-	for i, x := range rest {
+	for _, x := range rest {
 		out, err = f(out, x)
 		if err != nil {
-			return *new(U), errs.WrapFailed(err, "could not fold at iteration %d", i)
+			return *new(U), errs2.AttachStackTrace(err)
 		}
 	}
 	return out, nil
@@ -280,3 +280,5 @@ func Fill[T any](s []T, x T) {
 		s[i] = x
 	}
 }
+
+var ErrArgumentIsNil = errs2.New("argument is nil")
