@@ -223,6 +223,15 @@ func TestIsSubListFunc(t *testing.T) {
 	require.False(t, sliceutils.IsSubListFunc([]int{1, 5}, []int{1, 2, 3, 4}, eq))
 }
 
+func TestIsSuperList(t *testing.T) {
+	t.Parallel()
+	require.True(t, sliceutils.IsSuperList([]int{1, 2, 3, 4}, []int{1, 2}))
+	require.False(t, sliceutils.IsSuperList([]int{1, 2, 3, 4}, []int{1, 5}))
+	require.True(t, sliceutils.IsSuperList([]int{1, 2, 3, 4, 5}, []int{1, 2, 3}))
+	require.False(t, sliceutils.IsSuperList([]int{1, 2, 3}, []int{1, 2, 3, 4, 5}))
+	require.True(t, sliceutils.IsSuperList([]int{1, 2, 3}, []int{1, 2, 3}))
+}
+
 func TestContainsFunc(t *testing.T) {
 	t.Parallel()
 	eq := func(a, b int) bool { return a == b }

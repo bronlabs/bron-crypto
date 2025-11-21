@@ -238,6 +238,17 @@ func IsSubListFunc[SB, SP ~[]T, T any](sub SB, sup SP, equal func(T, T) bool) bo
 	return true
 }
 
+// IsSuperList returns true if ss contains all elements of s.
+func IsSuperList[T comparable](ss, s []T) bool {
+	for _, si := range s {
+		if !slices.Contains(ss, si) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // ContainsFunc returns true if xs contains the element x using the provided equality function.
 func ContainsFunc[S ~[]T, T any](xs S, x T, equal func(T, T) bool) bool {
 	for _, y := range xs {
@@ -282,12 +293,3 @@ func Fill[T any](s []T, x T) {
 }
 
 var ErrArgumentIsNil = errs2.New("argument is nil")
-func IsSuperSet[T comparable](ss, s []T) bool {
-	for _, si := range s {
-		if !slices.Contains(ss, si) {
-			return false
-		}
-	}
-
-	return true
-}

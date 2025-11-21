@@ -60,7 +60,7 @@ func (r *Router) ReceiveFrom(correlationId string, froms ...sharing.ID) (map[sha
 	}
 	r.receiveBuffer = kept
 
-	for !sliceutils.IsSuperSet(slices.Collect(maps.Keys(received)), froms) {
+	for !sliceutils.IsSuperList(slices.Collect(maps.Keys(received)), froms) {
 		from, serializedMessage, err := r.delivery.Receive()
 		if err != nil {
 			return nil, errs.WrapFailed(err, "failed to receive message")
