@@ -17,9 +17,6 @@ func BoolTo[T constraints.Integer](b bool) T {
 // IsNil returns true if the given value is nil.
 func IsNil[T any](v T) bool {
 	val := reflect.ValueOf(v)
-	if !val.IsValid() {
-		return true
-	}
 	kind := val.Kind()
 	return (kind == reflect.Ptr || kind == reflect.Interface) && val.IsNil()
 }

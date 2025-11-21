@@ -1,40 +1,40 @@
-package utils
+package utils_test
 
 import (
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBoolTo(t *testing.T) {
 	t.Parallel()
 	// Test true converts to 1
-	require.Equal(t, 1, BoolTo[int](true))
+	require.Equal(t, 1, utils.BoolTo[int](true))
 
 	// Test false converts to 0
-	require.Equal(t, 0, BoolTo[int](false))
+	require.Equal(t, 0, utils.BoolTo[int](false))
 
 	// Test with different integer types
-	require.Equal(t, int64(1), BoolTo[int64](true))
-	require.Equal(t, uint8(0), BoolTo[uint8](false))
+	require.Equal(t, int64(1), utils.BoolTo[int64](true))
+	require.Equal(t, uint8(0), utils.BoolTo[uint8](false))
 }
 
 func TestIsNil(t *testing.T) {
 	t.Parallel()
 	// Test nil pointer
 	var nilPtr *int
-	require.True(t, IsNil(nilPtr))
+	require.True(t, utils.IsNil(nilPtr))
 
 	// Test non-nil pointer
 	x := 42
-	require.False(t, IsNil(&x))
-
+	require.False(t, utils.IsNil(&x))
 	// Test nil error interface
 	var nilErr error
-	require.True(t, IsNil(nilErr))
+	require.True(t, utils.IsNil(nilErr))
 
 	// Test regular value (not pointer or interface)
-	require.False(t, IsNil(42))
+	require.False(t, utils.IsNil(42))
 }
 
 func TestLeadingZeroBytes(t *testing.T) {
@@ -54,7 +54,7 @@ func TestLeadingZeroBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, LeadingZeroBytes(tt.input))
+			require.Equal(t, tt.want, utils.LeadingZeroBytes(tt.input))
 		})
 	}
 }
@@ -82,17 +82,17 @@ func TestImplementsX(t *testing.T) {
 	t.Parallel()
 	// Test value receiver implementation
 	ms := MyString("hello")
-	_, ok := ImplementsX[Stringer](ms)
+	_, ok := utils.ImplementsX[Stringer](ms)
 	require.True(t, ok)
 
 	// Test pointer receiver implementation
 	msp := MyStringPtr("world")
-	_, ok = ImplementsX[Stringer](msp)
+	_, ok = utils.ImplementsX[Stringer](msp)
 	require.True(t, ok)
 
 	// Test non-implementing type
 	mi := MyInt(42)
-	_, ok = ImplementsX[Stringer](mi)
+	_, ok = utils.ImplementsX[Stringer](mi)
 	require.False(t, ok)
 }
 
@@ -114,7 +114,7 @@ func TestBinomial(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			require.Equal(t, tt.want, Binomial(tt.n, tt.k))
+			require.Equal(t, tt.want, utils.Binomial(tt.n, tt.k))
 		})
 	}
 }

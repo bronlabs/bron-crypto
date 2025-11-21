@@ -3,8 +3,9 @@ package utils_test
 import (
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"pgregory.net/rapid"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 func TestBinomial_Property(t *testing.T) {
