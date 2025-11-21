@@ -3,8 +3,9 @@ package serde
 import (
 	"reflect"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/fxamacker/cbor/v2"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
 
 const (
@@ -42,7 +43,7 @@ func Register[T any](tag uint64) {
 	updateModes()
 }
 
-func init() {
+func init() { //nolint:gochecknoinits // necessary for setup
 	updateModes()
 }
 
@@ -52,7 +53,7 @@ func updateModes() {
 	if err != nil {
 		panic(err)
 	}
-	decOptions := cbor.DecOptions{
+	decOptions := cbor.DecOptions{ //nolint:exhaustruct // readability
 		DupMapKey:                cbor.DupMapKeyEnforcedAPF,
 		TimeTag:                  cbor.DecTagRequired,
 		MaxNestedLevels:          DefaultMaxNestedLevels,
