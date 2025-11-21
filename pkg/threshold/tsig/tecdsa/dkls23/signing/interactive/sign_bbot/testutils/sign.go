@@ -44,7 +44,7 @@ func RunDKLs23SignBBOT[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 		shard, ok := shards[id]
 		require.True(tb, ok)
 		tapesMap[id] = tape.Clone()
-		consignersMap[id], err = sign_bbot.NewCosigner(sessionId, quorum, ecdsaSuite, testutils.CBORRoundTrip(tb, shard), prng, tapesMap[id])
+		consignersMap[id], err = sign_bbot.NewCosigner(sessionId, quorum, ecdsaSuite, ntu.CBORRoundTrip(tb, shard), prng, tapesMap[id])
 		require.NoError(tb, err)
 	}
 	cosigners := slices.Collect(maps.Values(consignersMap))
@@ -57,7 +57,7 @@ func RunDKLs23SignBBOT[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 
 	}
 
-	r2bi, r2ui := testutils.MapO2I(tb, cosigners, r1bo, r1uo)
+	r2bi, r2ui := ntu.MapO2I(tb, cosigners, r1bo, r1uo)
 	r2bo := make(map[sharing.ID]*sign_bbot.Round2Broadcast[P, B, S])
 	r2uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign_bbot.Round2P2P[P, B, S]])
 	for _, cosigner := range cosigners {
@@ -65,7 +65,7 @@ func RunDKLs23SignBBOT[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 		require.NoError(tb, err)
 	}
 
-	r3bi, r3ui := testutils.MapO2I(tb, cosigners, r2bo, r2uo)
+	r3bi, r3ui := ntu.MapO2I(tb, cosigners, r2bo, r2uo)
 	r3bo := make(map[sharing.ID]*sign_bbot.Round3Broadcast[P, B, S])
 	r3uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign_bbot.Round3P2P[P, B, S]])
 	for _, cosigner := range cosigners {
@@ -73,7 +73,7 @@ func RunDKLs23SignBBOT[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 		require.NoError(tb, err)
 	}
 
-	r4bi, r4ui := testutils.MapO2I(tb, cosigners, r3bo, r3uo)
+	r4bi, r4ui := ntu.MapO2I(tb, cosigners, r3bo, r3uo)
 	partialSignatures := make(map[sharing.ID]*dkls23.PartialSignature[P, B, S])
 	for _, cosigner := range cosigners {
 		partialSignatures[cosigner.SharingID()], err = cosigner.Round4(r4bi[cosigner.SharingID()], r4ui[cosigner.SharingID()], message)

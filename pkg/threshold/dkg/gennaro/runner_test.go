@@ -4,11 +4,9 @@ import (
 	"bytes"
 	crand "crypto/rand"
 	"fmt"
-	"io"
 	"maps"
 	"slices"
 	"strconv"
-	"sync"
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -20,21 +18,19 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	tu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
+	stu "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/testutils"
+	ttu "github.com/bronlabs/bron-crypto/pkg/transcripts/testutils"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/sync/errgroup"
 )
 
 func TestHappyPath(t *testing.T) {
 	t.Parallel()
 
+	const iters = 16
 	testAccessStructures := []struct{ threshold, total int }{
 		{2, 2},
 		{2, 3},
@@ -49,95 +45,65 @@ func TestHappyPath(t *testing.T) {
 
 			t.Run("k256", func(t *testing.T) {
 				t.Parallel()
-				testHappyPathRunner(t, k256.NewCurve(), as.threshold, as.total)
+				testHappyPathRunner(t, iters, k256.NewCurve(), as.threshold, as.total)
 			})
 
 			t.Run("p256", func(t *testing.T) {
 				t.Parallel()
-				testHappyPathRunner(t, p256.NewCurve(), as.threshold, as.total)
+				testHappyPathRunner(t, iters, p256.NewCurve(), as.threshold, as.total)
 			})
 
 			t.Run("edwards25519", func(t *testing.T) {
 				t.Parallel()
-				testHappyPathRunner(t, edwards25519.NewPrimeSubGroup(), as.threshold, as.total)
+				testHappyPathRunner(t, iters, edwards25519.NewPrimeSubGroup(), as.threshold, as.total)
 			})
 
 			t.Run("curve25519", func(t *testing.T) {
 				t.Parallel()
-				testHappyPathRunner(t, curve25519.NewPrimeSubGroup(), as.threshold, as.total)
+				testHappyPathRunner(t, iters, curve25519.NewPrimeSubGroup(), as.threshold, as.total)
 			})
 
 			t.Run("pallas", func(t *testing.T) {
 				t.Parallel()
-				testHappyPathRunner(t, pasta.NewPallasCurve(), as.threshold, as.total)
+				testHappyPathRunner(t, iters, pasta.NewPallasCurve(), as.threshold, as.total)
 			})
 
 			t.Run("vesta", func(t *testing.T) {
 				t.Parallel()
-				testHappyPathRunner(t, pasta.NewVestaCurve(), as.threshold, as.total)
+				testHappyPathRunner(t, iters, pasta.NewVestaCurve(), as.threshold, as.total)
 			})
 
 			t.Run("BLS12381G1", func(t *testing.T) {
 				t.Parallel()
-				testHappyPathRunner(t, bls12381.NewG1(), as.threshold, as.total)
+				testHappyPathRunner(t, iters, bls12381.NewG1(), as.threshold, as.total)
 			})
 
 			t.Run("BLS12381G2", func(t *testing.T) {
 				t.Parallel()
-				testHappyPathRunner(t, bls12381.NewG2(), as.threshold, as.total)
+				testHappyPathRunner(t, iters, bls12381.NewG2(), as.threshold, as.total)
 			})
 		})
 	}
 }
 
-func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](t *testing.T, group algebra.PrimeGroup[G, S], threshold, total int) {
+func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](t *testing.T, iters int, group algebra.PrimeGroup[G, S], threshold, total int) {
 	t.Helper()
-	const reps = 16
 
-	for i := range reps {
+	for i := range iters {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			t.Parallel()
-
 			prng := crand.Reader
-			var sessionId network.SID
-			_, err := io.ReadFull(prng, sessionId[:])
-			require.NoError(t, err)
-
-			ids := sharing.NewOrdinalShareholderSet(uint(total))
-			accessStructure, err := shamir.NewAccessStructure(uint(threshold), ids)
-			require.NoError(t, err)
-			tapes := make(map[sharing.ID]transcripts.Transcript)
-			for id := range ids.Iter() {
-				tapes[id] = hagrid.NewTranscript("test")
-			}
-			coordinator := testutils.NewMockCoordinator(slices.Collect(ids.Iter())...)
-			dkgOutputs := make(map[sharing.ID]*gennaro.DKGOutput[G, S])
-			dkgOutputsMutex := sync.Mutex{}
-
-			runner := func(sharingId sharing.ID) error {
-				rt := network.NewRouter(coordinator.DeliveryFor(sharingId))
-				dkgOutput, err := gennaro.RunGennaroDKG(rt, sessionId, group, sharingId, accessStructure, tapes[sharingId], prng)
-				if err != nil {
-					return err
-				}
-				dkgOutputsMutex.Lock()
-				defer dkgOutputsMutex.Unlock()
-				dkgOutputs[sharingId] = dkgOutput
-				return nil
-			}
-
-			var errGroup errgroup.Group
-			for id := range ids.Iter() {
-				errGroup.Go(func() error { return runner(id) })
-			}
-			err = errGroup.Wait()
-			require.NoError(t, err)
+			sessionId := ntu.MakeRandomSessionId(t, prng)
+			quorum := ntu.MakeRandomQuorum(t, prng, total)
+			accessStructure := stu.MakeThresholdAccessStructure(t, threshold, quorum)
+			tapes := ttu.MakeRandomTapes(t, prng, quorum)
+			runners := tu.MakeGennaroDKGRunners(t, sessionId, accessStructure, group, tapes)
+			dkgOutputs := ntu.TestExecuteRunners(t, runners)
 
 			t.Run("public materials are consistent", func(t *testing.T) {
 				t.Parallel()
 
 				var commonPublicMaterial *gennaro.DKGPublicOutput[G, S]
-				for id := range ids.Iter() {
+				for id := range quorum.Iter() {
 					publicMaterial := dkgOutputs[id].PublicMaterial()
 					require.NotNil(t, publicMaterial)
 
@@ -147,7 +113,7 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 						require.True(t, commonPublicMaterial.AccessStructure().Equal(publicMaterial.AccessStructure()))
 						require.True(t, commonPublicMaterial.VerificationVector().Equal(publicMaterial.VerificationVector()))
 						require.True(t, commonPublicMaterial.PublicKeyValue().Equal(publicMaterial.PublicKeyValue()))
-						for id2 := range ids.Iter() {
+						for id2 := range quorum.Iter() {
 							l, ok := commonPublicMaterial.PartialPublicKeyValues().Get(id2)
 							require.True(t, ok)
 							r, ok := commonPublicMaterial.PartialPublicKeyValues().Get(id2)
@@ -161,15 +127,17 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 			t.Run("secret shares are consistent", func(t *testing.T) {
 				t.Parallel()
 
-				publicKey := dkgOutputs[ids.List()[0]].PublicKeyValue()
-				dealer, err := feldman.NewScheme(group.Generator(), uint(threshold), ids)
+				publicKeyValue := dkgOutputs[quorum.List()[0]].PublicKeyValue()
+				dealer, err := feldman.NewScheme(group.Generator(), uint(threshold), quorum)
 				require.NoError(t, err)
 
 				shares := slices.Collect(iterutils.Map(maps.Values(dkgOutputs), func(output *gennaro.DKGOutput[G, S]) *feldman.Share[S] { return output.Share() }))
 				for sharesSubset := range sliceutils.KCoveringCombinations(shares, uint(threshold)) {
 					reconstructedSecretKey, err := dealer.Reconstruct(sharesSubset...)
 					require.NoError(t, err)
-					require.True(t, group.ScalarBaseOp(reconstructedSecretKey.Value()).Equal(publicKey))
+					reconstructedPublicKeyValue := group.ScalarBaseOp(reconstructedSecretKey.Value())
+
+					require.True(t, reconstructedPublicKeyValue.Equal(publicKeyValue))
 				}
 			})
 
@@ -177,9 +145,8 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 				t.Parallel()
 
 				tapeSamples := [][]byte{}
-				for id := range ids.Iter() {
-					tape, ok := tapes[id]
-					require.True(t, ok)
+				for id := range quorum.Iter() {
+					tape := tapes[id]
 					tapeSample, err := tape.ExtractBytes("test", 32)
 					require.NoError(t, err)
 					tapeSamples = append(tapeSamples, tapeSample)

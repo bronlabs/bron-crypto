@@ -52,7 +52,6 @@ func (p *Participant[B]) Round2(r1 network.RoundMessages[*Round1P2P]) (network.O
 		r2.Put(id, &Round2P2P{
 			Echo: receivedMessages,
 		})
-
 	}
 
 	return r2.Freeze(), nil

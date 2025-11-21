@@ -44,7 +44,7 @@ func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElem
 		shard, ok := shards[id]
 		require.True(tb, ok)
 		tapesMap[id] = tape.Clone()
-		consignersMap[id], err = sign_softspoken.NewCosigner(sessionId, quorum, ecdsaSuite, testutils.CBORRoundTrip(tb, shard), prng, tapesMap[id])
+		consignersMap[id], err = sign_softspoken.NewCosigner(sessionId, quorum, ecdsaSuite, ntu.CBORRoundTrip(tb, shard), prng, tapesMap[id])
 		require.NoError(tb, err)
 	}
 	cosigners := slices.Collect(maps.Values(consignersMap))
@@ -56,7 +56,7 @@ func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElem
 		require.NoError(tb, err)
 	}
 
-	r2bi, r2ui := testutils.MapO2I(tb, cosigners, r1bo, r1uo)
+	r2bi, r2ui := ntu.MapO2I(tb, cosigners, r1bo, r1uo)
 	r2bo := make(map[sharing.ID]*sign_softspoken.Round2Broadcast[P, B, S])
 	r2uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign_softspoken.Round2P2P[P, B, S]])
 	for _, cosigner := range cosigners {
@@ -64,7 +64,7 @@ func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElem
 		require.NoError(tb, err)
 	}
 
-	r3bi, r3ui := testutils.MapO2I(tb, cosigners, r2bo, r2uo)
+	r3bi, r3ui := ntu.MapO2I(tb, cosigners, r2bo, r2uo)
 	partialSignatures := make(map[sharing.ID]*dkls23.PartialSignature[P, B, S])
 	for _, cosigner := range cosigners {
 		partialSignatures[cosigner.SharingID()], err = cosigner.Round3(r3bi[cosigner.SharingID()], r3ui[cosigner.SharingID()], message)

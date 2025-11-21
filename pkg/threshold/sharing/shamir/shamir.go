@@ -62,6 +62,9 @@ func NewAccessStructure(t uint, ps ds.Set[sharing.ID]) (*AccessStructure, error)
 	if ps == nil {
 		return nil, errs.NewIsNil("party set is nil")
 	}
+	if ps.Contains(0) {
+		return nil, errs.NewMembership("party set cannot contain 0")
+	}
 	if t < 2 {
 		return nil, errs.NewValue("threshold cannot be less than 2")
 	}

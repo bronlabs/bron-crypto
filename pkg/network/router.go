@@ -4,7 +4,9 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
@@ -22,22 +24,24 @@ type Router struct {
 
 func NewRouter(delivery Delivery) *Router {
 	return &Router{
-		delivery: delivery,
+		receiveBuffer: nil,
+		delivery:      delivery,
 	}
 }
 
 func (r *Router) SendTo(correlationId string, messages map[sharing.ID][]byte) error {
 	for id, payload := range messages {
+		//nolint:exhaustruct // From is optional
 		message := routerMessage{
 			CorrelationId: correlationId,
 			Payload:       payload,
 		}
 		serializedMessage, err := serde.MarshalCBOR(&message)
 		if err != nil {
-			return err
+			return errs.WrapSerialisation(err, "failed to marshal message")
 		}
 		if err := r.delivery.Send(id, serializedMessage); err != nil {
-			return err
+			return errs.WrapFailed(err, "failed to send message")
 		}
 	}
 
@@ -56,10 +60,10 @@ func (r *Router) ReceiveFrom(correlationId string, froms ...sharing.ID) (map[sha
 	}
 	r.receiveBuffer = kept
 
-	for !containsAll(slices.Collect(maps.Keys(received)), froms) {
+	for !sliceutils.IsSuperSet(slices.Collect(maps.Keys(received)), froms) {
 		from, serializedMessage, err := r.delivery.Receive()
 		if err != nil {
-			return nil, err
+			return nil, errs.WrapFailed(err, "failed to receive message")
 		}
 		message, err := serde.UnmarshalCBOR[routerMessage](serializedMessage)
 		if err != nil {
@@ -84,19 +88,8 @@ func (r *Router) Quorum() []sharing.ID {
 	return r.delivery.Quorum()
 }
 
-// TODO: Implement ExchangeEchoBroadcastSimple etc.
-
 type routerMessage struct {
 	From          sharing.ID `cbor:"from"`
 	CorrelationId string     `cbor:"correlationId"`
 	Payload       []byte     `cbor:"payload"`
-}
-
-func containsAll(s []sharing.ID, ei []sharing.ID) bool {
-	for _, e := range ei {
-		if !slices.Contains(s, e) {
-			return false
-		}
-	}
-	return true
 }

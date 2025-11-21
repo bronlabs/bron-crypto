@@ -81,7 +81,7 @@ func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	}
 
 	// Round 2: Broadcast openings and DLog proofs
-	r2bi := testutils.MapBroadcastO2I(tb, participantsList, r1bo)
+	r2bi := ntu.MapBroadcastO2I(tb, participantsList, r1bo)
 	r2bo := make(map[sharing.ID]*dkg.Round2Broadcast[P, B, S])
 	for _, party := range participantsList {
 		r2bo[party.SharingID()], err = party.Round2(r2bi[party.SharingID()])
@@ -89,7 +89,7 @@ func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	}
 
 	// Round 3: Broadcast Paillier keys and encrypted shares
-	r3bi := testutils.MapBroadcastO2I(tb, participantsList, r2bo)
+	r3bi := ntu.MapBroadcastO2I(tb, participantsList, r2bo)
 	r3bo := make(map[sharing.ID]*dkg.Round3Broadcast)
 	for _, party := range participantsList {
 		r3bo[party.SharingID()], err = party.Round3(r3bi[party.SharingID()])
@@ -97,7 +97,7 @@ func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	}
 
 	// Round 4: P2P for LP and LPDL proofs
-	r4bi := testutils.MapBroadcastO2I(tb, participantsList, r3bo)
+	r4bi := ntu.MapBroadcastO2I(tb, participantsList, r3bo)
 	r4uo := make(map[sharing.ID]network.OutgoingUnicasts[*dkg.Round4P2P])
 	for _, party := range participantsList {
 		r4uo[party.SharingID()], err = party.Round4(r4bi[party.SharingID()])
@@ -105,7 +105,7 @@ func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	}
 
 	// Round 5: P2P continuation
-	r5ui := testutils.MapUnicastO2I(tb, participantsList, r4uo)
+	r5ui := ntu.MapUnicastO2I(tb, participantsList, r4uo)
 	r5uo := make(map[sharing.ID]network.OutgoingUnicasts[*dkg.Round5P2P])
 	for _, party := range participantsList {
 		r5uo[party.SharingID()], err = party.Round5(r5ui[party.SharingID()])
@@ -113,7 +113,7 @@ func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	}
 
 	// Round 6: P2P continuation
-	r6ui := testutils.MapUnicastO2I(tb, participantsList, r5uo)
+	r6ui := ntu.MapUnicastO2I(tb, participantsList, r5uo)
 	r6uo := make(map[sharing.ID]network.OutgoingUnicasts[*dkg.Round6P2P])
 	for _, party := range participantsList {
 		r6uo[party.SharingID()], err = party.Round6(r6ui[party.SharingID()])
@@ -121,7 +121,7 @@ func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	}
 
 	// Round 7: P2P continuation
-	r7ui := testutils.MapUnicastO2I(tb, participantsList, r6uo)
+	r7ui := ntu.MapUnicastO2I(tb, participantsList, r6uo)
 	r7uo := make(map[sharing.ID]network.OutgoingUnicasts[*dkg.Round7P2P[P, B, S]])
 	for _, party := range participantsList {
 		r7uo[party.SharingID()], err = party.Round7(r7ui[party.SharingID()])
@@ -129,7 +129,7 @@ func RunLindell17DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	}
 
 	// Round 8: Final round - get shards
-	r8ui := testutils.MapUnicastO2I(tb, participantsList, r7uo)
+	r8ui := ntu.MapUnicastO2I(tb, participantsList, r7uo)
 	shards := make(map[sharing.ID]*lindell17.Shard[P, B, S])
 	for _, party := range participantsList {
 		shards[party.SharingID()], err = party.Round8(r8ui[party.SharingID()])
