@@ -21,6 +21,9 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	// step 1.1: sample a random message
 	p.state.r = make([]byte, p.size)
 	_, err := io.ReadFull(p.prng, p.state.r)
+	if err != nil {
+		return nil, errs.WrapRandomSample(err, "could not sample random message")
+	}
 
 	// step 1.2: commit your sample
 	p.state.rCommitments = make(map[sharing.ID]hash_comm.Commitment)

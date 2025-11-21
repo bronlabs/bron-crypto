@@ -255,7 +255,7 @@ func (p *Point) ScalarMul(actor *Scalar) *Point {
 }
 
 func (p *Point) IsTorsionFree() bool {
-	primeOrderBytes := scalarFieldOrder.Bytes()
+	primeOrderBytes := NewScalarField().Order().Bytes()
 	slices.Reverse(primeOrderBytes)
 	var e edwards25519Impl.Point
 	aimpl.ScalarMul(&e, &p.V, primeOrderBytes)

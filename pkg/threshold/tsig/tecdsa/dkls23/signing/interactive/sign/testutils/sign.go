@@ -44,7 +44,7 @@ func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElem
 		shard, ok := shards[id]
 		require.True(tb, ok)
 		tapesMap[id] = tape.Clone()
-		consignersMap[id], err = sign.NewCosigner(sessionId, quorum, ecdsaSuite, testutils.CBORRoundTrip(tb, shard), prng, tapesMap[id])
+		consignersMap[id], err = sign.NewCosigner(sessionId, quorum, ecdsaSuite, ntu.CBORRoundTrip(tb, shard), prng, tapesMap[id])
 		require.NoError(tb, err)
 	}
 	cosigners := slices.Collect(maps.Values(consignersMap))
@@ -55,13 +55,13 @@ func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElem
 		require.NoError(tb, err)
 	}
 
-	r2ui := testutils.MapUnicastO2I(tb, cosigners, r1uo)
+	r2ui := ntu.MapUnicastO2I(tb, cosigners, r1uo)
 	r2uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign.Round2P2P[P, B, S]])
 	for _, cosigner := range cosigners {
 		r2uo[cosigner.SharingID()], err = cosigner.Round2(r2ui[cosigner.SharingID()])
 	}
 
-	r3ui := testutils.MapUnicastO2I(tb, cosigners, r2uo)
+	r3ui := ntu.MapUnicastO2I(tb, cosigners, r2uo)
 	r3bo := make(map[sharing.ID]*sign.Round3Broadcast)
 	r3uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign.Round3P2P])
 	for _, cosigner := range cosigners {
@@ -69,7 +69,7 @@ func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElem
 		require.NoError(tb, err)
 	}
 
-	r4bi, r4ui := testutils.MapO2I(tb, cosigners, r3bo, r3uo)
+	r4bi, r4ui := ntu.MapO2I(tb, cosigners, r3bo, r3uo)
 	r4bo := make(map[sharing.ID]*sign.Round4Broadcast[P, B, S])
 	r4uo := make(map[sharing.ID]ds.Map[sharing.ID, *sign.Round4P2P[P, B, S]])
 	for _, cosigner := range cosigners {
@@ -77,7 +77,7 @@ func RunDKLs23SignSoftspokenOT[P curves.Point[P, B, S], B algebra.PrimeFieldElem
 		require.NoError(tb, err)
 	}
 
-	r5bi, r5ui := testutils.MapO2I(tb, cosigners, r4bo, r4uo)
+	r5bi, r5ui := ntu.MapO2I(tb, cosigners, r4bo, r4uo)
 	partialSignatures := make(map[sharing.ID]*dkls23.PartialSignature[P, B, S])
 	for _, cosigner := range cosigners {
 		partialSignatures[cosigner.SharingID()], err = cosigner.Round5(r5bi[cosigner.SharingID()], r5ui[cosigner.SharingID()], message)

@@ -1,15 +1,46 @@
-package testutils
+package ntu
 
 import (
+	"encoding/binary"
+	"io"
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
+	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/stretchr/testify/require"
 )
 
 type TestParticipant interface {
 	SharingID() sharing.ID
+}
+
+func MakeRandomQuorum(tb testing.TB, prng io.Reader, n int) network.Quorum {
+	tb.Helper()
+
+	quorum := hashset.NewComparable[sharing.ID]()
+	for quorum.Size() < n {
+		var id [2]byte
+		_, err := io.ReadFull(prng, id[:])
+		require.NoError(tb, err)
+		sharingId := binary.LittleEndian.Uint16(id[:])
+		if sharingId != 0 {
+			quorum.Add(sharing.ID(sharingId))
+		}
+	}
+
+	return quorum.Freeze()
+}
+
+func MakeRandomSessionId(tb testing.TB, prng io.Reader) network.SID {
+	tb.Helper()
+
+	var sid network.SID
+	_, err := io.ReadFull(prng, sid[:])
+	require.NoError(tb, err)
+
+	return sid
 }
 
 // MapO2I maps the outputs of all participants in a round of a protocol to the inputs of the next round

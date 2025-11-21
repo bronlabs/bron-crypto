@@ -1,8 +1,10 @@
 package testutils
 
 import (
+	crand "crypto/rand"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -10,7 +12,23 @@ import (
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"github.com/stretchr/testify/require"
 )
+
+func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, sessionId network.SID, accessStructure *shamir.AccessStructure, group algebra.PrimeGroup[G, S], tapes map[sharing.ID]transcripts.Transcript) map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]] {
+	tb.Helper()
+
+	runners := make(map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]])
+	for id := range accessStructure.Shareholders().Iter() {
+		runner, err := gennaro.NewGennaroDKGRunner(group, sessionId, id, accessStructure, tapes[id], crand.Reader)
+		require.NoError(tb, err)
+		runners[id] = runner
+	}
+
+	return runners
+}
 
 func DoGennaroRound1[
 	E gennaro.GroupElement[E, S], S gennaro.Scalar[S],

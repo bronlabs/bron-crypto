@@ -265,3 +265,13 @@ func Fill[T any](s []T, x T) {
 		s[i] = x
 	}
 }
+
+func IsSuperSet[T comparable](ss, s []T) bool {
+	for _, si := range s {
+		if !slices.Contains(ss, si) {
+			return false
+		}
+	}
+
+	return true
+}

@@ -14,5 +14,5 @@ type Round2Unicast[E GroupElement[E, S], S Scalar[S]] struct {
 }
 
 type Round2Broadcast[E GroupElement[E, S], S Scalar[S]] struct {
-	FeldmanVerificationVector feldman.VerificationVector[E, S]
+	FeldmanVerificationVector feldman.VerificationVector[E, S] `cbor:"verificationVector"`
 }

@@ -51,10 +51,10 @@ func Test_HappyPath(t *testing.T) {
 		a[i], err = k256.NewScalarField().Random(prng)
 		require.NoError(t, err)
 	}
-	r2, c, err := alice.Round2(testutils.CBORRoundTrip(t, r1), a)
+	r2, c, err := alice.Round2(ntu.CBORRoundTrip(t, r1), a)
 	require.NoError(t, err)
 
-	d, err := bob.Round3(testutils.CBORRoundTrip(t, r2))
+	d, err := bob.Round3(ntu.CBORRoundTrip(t, r2))
 	require.NoError(t, err)
 
 	t.Run("a_i * b = c_i + d_i", func(t *testing.T) {
