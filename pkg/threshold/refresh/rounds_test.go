@@ -77,7 +77,7 @@ func Test_HappyPath(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	r2bi, r2ui := testutils.MapO2I(t, participants, r1bo, r1uo)
+	r2bi, r2ui := ntu.MapO2I(t, participants, r1bo, r1uo)
 	shares := make(map[sharing.ID]*feldman.Share[*k256.Scalar])
 	verificationVectors := make(map[sharing.ID]feldman.VerificationVector[*k256.Point, *k256.Scalar])
 	for _, p := range participants {

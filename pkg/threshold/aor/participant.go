@@ -61,6 +61,7 @@ func NewParticipant(id sharing.ID, quorum network.Quorum, size int, tape transcr
 		tape:             tape,
 		commitmentScheme: commitmentScheme,
 		prng:             prng,
+		state:            State{}, //nolint:exhaustruct // initially empty state
 	}, nil
 }
 

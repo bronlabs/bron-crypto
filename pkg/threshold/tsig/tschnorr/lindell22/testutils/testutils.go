@@ -80,7 +80,7 @@ func CreateLindell22Cosigners[
 			GE, S, M,
 		](
 			signingSID,
-			testutils.CBORRoundTrip(t, shard),
+			ntu.CBORRoundTrip(t, shard),
 			quorum,
 			group,
 			niCompilerName,
