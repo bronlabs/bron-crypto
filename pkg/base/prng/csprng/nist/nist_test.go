@@ -52,7 +52,8 @@ func Test_AES256_ApiUsage(t *testing.T) {
 	err = prng.Reseed(entropyInputReseed, additionalInputReseed)
 	require.NoError(t, err)
 	// Generate #1
-	prng.Generate(outputBuffer, additionalInput1)
+	err = prng.Generate(outputBuffer, additionalInput1)
+	require.NoError(t, err)
 	// Generate #2
 	prng.Generate(outputBuffer, additionalInput2)
 	// Check the returned bits.
@@ -123,7 +124,7 @@ func Test_AES256_ReadnResetState(t *testing.T) {
 func Test_NistPrng(t *testing.T) {
 	t.Parallel()
 	for _, keySize := range []int{16, 32} {
-		prngGenerator := func(seed, salt []byte) (csprng.CSPRNG, error) {
+		prngGenerator := func(seed, salt []byte) (csprng.SeedableCSPRNG, error) {
 			return nist.NewNistPRNG(keySize, nil, seed, salt, nil)
 		}
 		csprng_testutils.PrngTester(t, 32, 32, prngGenerator)

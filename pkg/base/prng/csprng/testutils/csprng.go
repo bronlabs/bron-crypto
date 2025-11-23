@@ -52,7 +52,7 @@ func Sha256Sum(input string) []byte {
 	return res[:]
 }
 
-func PrngTester(t *testing.T, keyLength, seedLength int, prngGenerator func(seed, salt []byte) (csprng.CSPRNG, error)) {
+func PrngTester(t *testing.T, keyLength, seedLength int, prngGenerator func(seed, salt []byte) (csprng.SeedableCSPRNG, error)) {
 	t.Helper()
 
 	// hardcoded random 32B keys

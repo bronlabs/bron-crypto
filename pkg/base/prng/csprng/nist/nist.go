@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 )
@@ -49,16 +49,17 @@ func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, pers
 	// 1. IF (requested_security_strength > ... --> Skipped, security_strength = keyLen.
 	// 2. IF prediction_resistance_flag... --> Skipped, No prediction resistance.
 	// 3. IF (len(personalization_string) > max_personalization_string_length) --> error.
+	errors := []error{}
 	if uint64(len(personalization)) > maxLength {
-		return nil, errs.NewLength("personalization too large")
+		errors = append(errors, ErrInvalidArgument.WithMessage("personalisation too large").WithStackTrace())
 	}
 	// 4. Set security_strength = keyLen.
 	if (keySize != 16) && (keySize != 24) && (keySize != 32) {
-		return nil, errs.NewArgument("keySize must be one of {16 (AES128), 24 (AES192), 32 (AES256)}")
+		errors = append(errors, ErrInvalidKey.WithMessage("keySize must be one of {16 (AES128), 24 (AES192), 32 (AES256)}").WithStackTrace())
 	}
 	securityStrength := keySize
 	if securityStrength*8 < base.ComputationalSecurityBits {
-		return nil, errs.NewArgument("security strength (%d) below %d bits", securityStrength*8, base.ComputationalSecurityBits)
+		errors = append(errors, ErrInvalidKey.WithMessage("keySize too small for computational security of %d bits", base.ComputationalSecurityBits).WithStackTrace())
 	}
 	// 5. Nil step.
 	if entropySource != nil {
@@ -73,28 +74,32 @@ func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, pers
 	case entropyInputLen == 0: // Sample entropyInput if not provided
 		entropyInput = make([]byte, securityStrength)
 		if _, err := io.ReadFull(NistPrng.entropySource, entropyInput); err != nil {
-			return nil, errs.WrapRandomSample(err, "cannot sample entropyInput")
+			errors = append(errors, errs2.AttachStackTrace(err))
 		}
 	case entropyInputLen < securityStrength:
-		return nil, errs.NewLength("entropyInput too small")
+		errors = append(errors, ErrInvalidEntropy.WithMessage("entropyInput too small").WithStackTrace())
 	case uint64(entropyInputLen) > maxLength:
-		return nil, errs.NewLength("entropyInput too large")
+		errors = append(errors, ErrInvalidEntropy.WithMessage("entropyInput too large").WithStackTrace())
 	}
 	// 8. Obtain a nonce if not provided.
 	switch nonceLen := len(nonce); {
 	case nonceLen == 0: // Sample nonce if not provided
 		nonce = make([]byte, securityStrength/2)
 		if _, err = io.ReadFull(NistPrng.entropySource, nonce); err != nil {
-			return nil, errs.WrapRandomSample(err, "cannot sample nonce")
+			errors = append(errors, errs2.AttachStackTrace(err))
 		}
 	case nonceLen < securityStrength/2:
-		return nil, errs.NewLength("nonce too small")
+		errors = append(errors, ErrInvalidNonce.WithMessage("nonce too small").WithStackTrace())
+	}
+	// Join errors if any
+	if len(errors) > 0 {
+		return nil, errs2.Join(errors...)
 	}
 	// 9. initial_working_state = Instantiate_algorithm(entropy_input, nonce,
 	// personalization_string, security_strength).
 	NistPrng.ctrDrbg = NewCtrDRBG(keySize)
 	if err = NistPrng.ctrDrbg.Instantiate(entropyInput, nonce, personalization); err != nil {
-		return nil, errs.WrapFailed(err, "cannot instantiate the internal ctr prng")
+		return nil, errs2.AttachStackTrace(err)
 	}
 	return NistPrng, nil
 }
@@ -107,11 +112,12 @@ func NewNistPRNG(keySize int, entropySource io.Reader, entropyInput, nonce, pers
 //
 // The entropyInput length must be at least keySize Bytes .
 func (prg *PrngNist) Reseed(entropyInput, additionalInput []byte) (err error) {
+	errors := []error{}
 	// 1. Using state_handle, obtain the current internal state. --> implicit.
 	// 2. IF prediction_resistance_flag... --> Skipped, implicit.
 	// 3. IF len(additional_input) > max_additional_input_length: return EEROR_FLAG
 	if uint64(len(additionalInput)) > maxLength {
-		return errs.NewLength("additionalInput too large")
+		errors = append(errors, ErrInvalidArgument.WithMessage("additionalInput too large").WithStackTrace())
 	}
 	// 4&5. (status, entropy_input) = Get_entropy_input (security_strength, min_length,
 	// max_length, prediction_resistance_request).
@@ -120,20 +126,24 @@ func (prg *PrngNist) Reseed(entropyInput, additionalInput []byte) (err error) {
 	case entropyInputLen == 0: // Sample entropyInput if not provided
 		entropyInput = make([]byte, prg.SecurityStrength())
 		if prg.entropySource == nil {
-			return errs.NewArgument("cannot reseed without external entropy")
+			errors = append(errors, ErrInvalidEntropy.WithMessage("cannot reseed without external entropy").WithStackTrace())
 		}
 		if _, err := io.ReadFull(prg.entropySource, entropyInput); err != nil {
-			return errs.WrapRandomSample(err, "cannot sample entropyInput")
+			errors = append(errors, errs2.AttachStackTrace(err))
 		}
 	case entropyInputLen < prg.SecurityStrength():
-		return errs.NewLength("entropyInput too small")
+		errors = append(errors, ErrInvalidEntropy.WithMessage("entropyInput too small").WithStackTrace())
 	case uint64(entropyInputLen) > maxLength:
-		return errs.NewLength("entropyInput too large")
+		errors = append(errors, ErrInvalidEntropy.WithMessage("entropyInput too large").WithStackTrace())
+	}
+	// Join errors if any
+	if len(errors) > 0 {
+		return errs2.Join(errors...)
 	}
 	// 6. new_working_state = Reseed_algorithm(working_state, entropy_input,
 	// additional_input).
 	if err = prg.ctrDrbg.Reseed(entropyInput, additionalInput); err != nil {
-		return errs.WrapFailed(err, "cannot reseed the prng")
+		return errs2.AttachStackTrace(err)
 	}
 	return nil
 }
@@ -144,20 +154,24 @@ func (prg *PrngNist) Reseed(entropyInput, additionalInput []byte) (err error) {
 // If the PRNG needs reseeding, it will be carried out automatically if the prng
 // was initialised with an `entropySource`, raising an error otherwise.
 func (prg *PrngNist) Generate(buffer, additionalInput []byte) error {
+	errors := []error{}
 	if len(buffer) == 0 {
-		return errs.NewLength("buffer must be non-empty")
+		errors = append(errors, ErrInvalidArgument.WithMessage("buffer length must be > 0").WithStackTrace())
 	}
 	// 1. Using state_handle... --> implicit.
 	// 2. IF (requested_number_of_bits > max_number_of_bits_per_request):
 	// .	return (ERROR_FLAG, Nil).
 	if len(buffer) > maxNumberOfBytesRequest {
-		return errs.NewLength("too many bytes requested")
+		errors = append(errors, ErrInvalidArgument.WithMessage("too many bytes requested").WithStackTrace())
 	}
 	// 3. IF requested_security_strength > security_strength... --> implicit.
 	// 4. IF (length of the additional_input > max_additional_input_length):
 	// .	return (ERROR_FLAG, Nil).
 	if uint64(len(additionalInput)) > maxLength {
-		return errs.NewLength("additionalInput too large")
+		errors = append(errors, ErrInvalidArgument.WithMessage("additionalInput too large").WithStackTrace())
+	}
+	if len(errors) > 0 {
+		return errs2.Join(errors...)
 	}
 	// 5. If prediction_resistance_request is set... --> implicit.
 	// 6. Clear the reseed_required_flag.
@@ -166,14 +180,14 @@ dataGeneration:
 	// 8. (status, pseudorandom_bits, new_working_state) = Generate_algorithm(
 	// working_state, requested_number_of_bits, additional_input).
 	switch err := prg.ctrDrbg.Generate(buffer, additionalInput); {
-	case errs.IsRandomSample(err) && prg.entropySource != nil:
+	case err != nil && prg.entropySource != nil:
 		// 9. If status indicates that a reseed is required, then
 		// 9.1. Set the reseed_required_flag.
 		// 9.2. If the prediction_resistance_flag... --> implicit.
 		// 9.3. Go to step 7.
 		reseedRequired = true
 	case err != nil:
-		return errs.WrapRandomSample(err, "cannot generate random data")
+		return errs2.AttachStackTrace(err)
 	default: // no errors
 		reseedRequired = false
 	}
@@ -182,7 +196,7 @@ dataGeneration:
 		// 7.1. status = Reseed_function(state_handle, ..., additional_input).
 		if err := prg.Reseed(nil, additionalInput); err != nil {
 			// 7.2. IF (status != SUCCESS), then return (status, Nil).
-			return errs.WrapRandomSample(err, "cannot reseed")
+			return errs2.AttachStackTrace(err)
 		}
 		// 7.3 Using state_handle... --> implicit.
 		// 7.4. additional_input = Nil.
@@ -205,7 +219,7 @@ func (prg *PrngNist) Read(buffer []byte) (n int, err error) {
 		end := min((i+1)*maxNumberOfBytesRequest, len(buffer))
 		requestBuffer := buffer[i*maxNumberOfBytesRequest : end]
 		if err := prg.Generate(requestBuffer, nil); err != nil {
-			return n, errs.WrapRandomSample(err, "Could not generate random bits")
+			return n, errs2.AttachStackTrace(err)
 		}
 	}
 	return len(buffer), nil
@@ -219,31 +233,36 @@ func (prg *PrngNist) SecurityStrength() int {
 
 // Seed re-instantiates the PRNG with a new seed (`entropyInput`) and salt (`nonce`).
 func (prg *PrngNist) Seed(entropyInput, nonce []byte) (err error) {
+	errors := []error{}
 	// Check seed and nonce
 	switch entropyInputLen := len(entropyInput); {
 	case entropyInputLen < prg.SecurityStrength():
-		return errs.NewLength("entropyInput too small")
+		errors = append(errors, ErrInvalidEntropy.WithMessage("entropyInput too small").WithStackTrace())
 	case uint64(entropyInputLen) > maxLength:
-		return errs.NewLength("entropyInput too large")
+		errors = append(errors, ErrInvalidEntropy.WithMessage("entropyInput too large").WithStackTrace())
 	}
 	switch nonceLen := len(nonce); {
 	case nonceLen == 0: // Sample nonce if not provided
 		nonce = make([]byte, prg.SecurityStrength()/2)
 		if _, err = io.ReadFull(prg.entropySource, nonce); err != nil {
-			return errs.WrapRandomSample(err, "cannot sample nonce")
+			errors = append(errors, errs2.AttachStackTrace(err))
 		}
 	case nonceLen < prg.SecurityStrength()/2:
-		return errs.NewLength("nonce too small")
+		errors = append(errors, ErrInvalidNonce.WithMessage("nonce too small").WithStackTrace())
+	}
+	// Join errors if any
+	if len(errors) > 0 {
+		return errs2.Join(errors...)
 	}
 	// Re-instantiate
 	if err = prg.ctrDrbg.Instantiate(entropyInput, nonce, nil); err != nil {
-		return errs.WrapFailed(err, "cannot instantiate the internal ctr prng")
+		return errs2.AttachStackTrace(err)
 	}
 	return nil
 }
 
 // New returns a new NistPRNG with the provided seed and salt.
-func (prg *PrngNist) New(seed, salt []byte) (csprng.CSPRNG, error) {
+func (prg *PrngNist) New(seed, salt []byte) (csprng.SeedableCSPRNG, error) {
 	return NewNistPRNG(prg.SecurityStrength(), prg.entropySource, seed, salt, nil)
 }
 
