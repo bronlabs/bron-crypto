@@ -89,3 +89,24 @@ func TestCombinations(t *testing.T) {
 		})
 	}
 }
+
+func TestKCoveringCombinations(t *testing.T) {
+	t.Parallel()
+	// Test k=2 with input [0,1,2]
+	input := []uint{0, 1, 2}
+	expected := [][]uint{
+		{0, 1}, {0, 2}, {1, 2}, // k=2
+		{0, 1, 2}, // k=3
+	}
+	actual := slices.Collect(sliceutils.KCoveringCombinations(input, 2))
+	require.Equal(t, expected, actual)
+
+	// Test k=1 with input [0,1]
+	input = []uint{0, 1}
+	expected = [][]uint{
+		{0}, {1}, // k=1
+		{0, 1}, // k=2
+	}
+	actual = slices.Collect(sliceutils.KCoveringCombinations(input, 1))
+	require.Equal(t, expected, actual)
+}

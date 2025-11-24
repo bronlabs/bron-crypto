@@ -10,7 +10,6 @@ import (
 	acrtp "github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	saferith_utils "github.com/bronlabs/bron-crypto/pkg/base/utils/saferith"
 )
 
 type Cardinal = acrtp.Cardinal
@@ -235,7 +234,7 @@ func (c *cardinal) Sub(other Cardinal) Cardinal {
 		return infinite
 	}
 
-	if saferith_utils.NatIsLess(c.v, o.v) {
+	if _, _, lt := c.v.Cmp(o.v); lt == 1 {
 		return zero
 	}
 	out := new(saferith.Nat).Sub(c.v, o.v, -1)

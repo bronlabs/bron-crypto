@@ -23,7 +23,7 @@ func NewPrng(seed, salt []byte) (*Prng, error) {
 }
 
 // New returns a new ChachaPRNG with the provided seed and salt.
-func (*Prng) New(seed, salt []byte) (csprng.CSPRNG, error) {
+func (*Prng) New(seed, salt []byte) (csprng.SeedableCSPRNG, error) {
 	return NewPrng(seed, salt)
 }
 

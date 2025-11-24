@@ -391,7 +391,7 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signatur
 			return errs.NewSize("nonzero number of pops when scheme is basic")
 		}
 		// step 3.1.1.1
-		if !sliceutils.IsUniqueFunc(messages, hex.EncodeToString) {
+		if !sliceutils.IsAllUnique(sliceutils.Map(messages, hex.EncodeToString)) {
 			return errs.NewMembership("messages are not unique")
 		}
 	// case 3.3
@@ -427,7 +427,7 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signatur
 	//
 	// All public keys passed as arguments to this algorithm MUST have a corresponding proof of possession, and the result of evaluating PopVerify on each public key and its proof MUST be VALID. The caller is responsible for ensuring that this precondition is met. If it is violated, this scheme provides no security against aggregate signature forgery.
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-fastaggregateverify
-	canRunFastAggregateVerify := (sliceutils.CountUniqueFunc(messages, hex.EncodeToString) == 1) && v.rogueKeyAlg == POP
+	canRunFastAggregateVerify := (sliceutils.CountUnique(sliceutils.Map(messages, hex.EncodeToString)) == 1) && v.rogueKeyAlg == POP
 
 	if canRunFastAggregateVerify {
 		aggregatedPublicKey, err := AggregateAll[PK](publicKeys)

@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -42,7 +42,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 		return errs.NewArgument("invalid length")
 	}
 
-	b := fischlinProof.B - uint64(utils.CeilLog2(int(v.sigmaProtocol.SpecialSoundness())-1))
+	b := fischlinProof.B - uint64(mathutils.CeilLog2(int(v.sigmaProtocol.SpecialSoundness())-1))
 	if (fischlinProof.Rho * b) < base.ComputationalSecurityBits {
 		return errs.NewVerification("verification failed")
 	}

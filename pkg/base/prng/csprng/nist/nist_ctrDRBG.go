@@ -7,8 +7,8 @@ import (
 	"math/bits"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 )
 
 type CtrDRBG struct {
@@ -71,14 +71,14 @@ func (ctrDrbg *CtrDRBG) SetKey(key []byte) (err error) {
 		ctrDrbg.key = make([]byte, ctrDrbg.keySize)
 	case ctrDrbg.keySize:
 		if n := copy(ctrDrbg.key, key); n != ctrDrbg.keySize {
-			return errs.NewLength("key copy went wrong")
+			return ErrInvalidKey.WithMessage("key copy went wrong").WithStackTrace()
 		}
 	default:
-		return errs.NewLength("key has wrong length")
+		return ErrInvalidKey.WithMessage("key has wrong length").WithStackTrace()
 	}
 	ctrDrbg.aesBlockCipher, err = aes.NewCipher(ctrDrbg.key)
 	if err != nil {
-		return errs.WrapFailed(err, "failed to set aes cipher key")
+		return errs2.AttachStackTrace(err)
 	}
 	return nil
 }
@@ -88,11 +88,11 @@ func (ctrDrbg *CtrDRBG) SetKey(key []byte) (err error) {
 func (ctrDrbg *CtrDRBG) Update(providedData []byte) (err error) {
 	// +. Treat providedData==nil as SeedSize zeroed bytes.
 	if (len(providedData) != ctrDrbg.SeedSize()) && (len(providedData) != 0) {
-		return errs.NewLength("provided data has the wrong length (%d != %d)", len(providedData), ctrDrbg.SeedSize())
+		return ErrInvalidArgument.WithMessage("provided data has the wrong length (%d != %d)", len(providedData), ctrDrbg.SeedSize()).WithStackTrace()
 	}
 	// 1. temp = Nil
 	// +. Allocate space for temp
-	tempBlocks := utils.CeilDiv(ctrDrbg.SeedSize(), aes.BlockSize)
+	tempBlocks := mathutils.CeilDiv(ctrDrbg.SeedSize(), aes.BlockSize)
 	temp := make([]byte, tempBlocks*aes.BlockSize)
 	// 2. WHILE (len(temp) < seedLen) DO
 	for i := range tempBlocks {
@@ -116,7 +116,7 @@ func (ctrDrbg *CtrDRBG) Update(providedData []byte) (err error) {
 	}
 	// 5. Key = leftmost(temp, keylen).
 	if err = ctrDrbg.SetKey(temp[:ctrDrbg.keySize]); err != nil {
-		return errs.WrapFailed(err, "Could not set the block cipher key")
+		return errs2.AttachStackTrace(err)
 	}
 	// 6. V = rightmost (temp, blocklen).
 	vBytes := temp[ctrDrbg.keySize:]
@@ -139,18 +139,18 @@ func (ctrDrbg *CtrDRBG) Instantiate(entropyInput, nonce, personalizationString [
 	// 2. seed_material = df(seed_material, seedlen).
 	seedMaterial, err = ctrDrbg.BlockCipherDF(seedMaterial, ctrDrbg.SeedSize())
 	if err != nil {
-		return errs.WrapFailed(err, "Cannot derive seed material")
+		return errs2.AttachStackTrace(err)
 	}
 	// 3. Key = 0^keylen.
 	if err = ctrDrbg.SetKey(nil); err != nil {
-		return errs.WrapFailed(err, "Could not set the block cipher key")
+		return errs2.AttachStackTrace(err)
 	}
 	// 4. V = 0^blocklen.
 	ctrDrbg.vLo = 0
 	ctrDrbg.vHi = 0
 	// 5. (Key, V) = CTR_DRBG_Update(seed_material, Key, V).
 	if err = ctrDrbg.Update(seedMaterial); err != nil {
-		return errs.WrapFailed(err, "Could not update PRNG internal state")
+		return errs2.AttachStackTrace(err)
 	}
 	// 6. reseed_counter = 1.
 	ctrDrbg.reseedCounter = 1
@@ -167,11 +167,11 @@ func (ctrDrbg *CtrDRBG) Reseed(entropyInput, additionalInput []byte) (err error)
 	// 2. seed_material = Block_Cipher_df(seed_material, seedlen).
 	seedMaterial, err = ctrDrbg.BlockCipherDF(seedMaterial, ctrDrbg.SeedSize())
 	if err != nil {
-		return errs.WrapFailed(err, "Cannot reseed the prng")
+		return errs2.AttachStackTrace(err)
 	}
 	// 3. (Key, V) = CTR_DRBG_Update (seed_material, Key, V).
 	if err = ctrDrbg.Update(seedMaterial); err != nil {
-		return errs.WrapFailed(err, "Could not update PRNG internal state")
+		return errs2.AttachStackTrace(err)
 	}
 	// 4. reseed_counter = 1.
 	ctrDrbg.reseedCounter = 1
@@ -183,22 +183,22 @@ func (ctrDrbg *CtrDRBG) Reseed(entropyInput, additionalInput []byte) (err error)
 func (ctrDrbg *CtrDRBG) Generate(outputBuffer, additionalInput []byte) (err error) {
 	// +. Get the requested_number_of_bits from the length of the output buffer.
 	requestedNumberOfBytes := len(outputBuffer)
-	requestedNumberOfBlocks := utils.CeilDiv(requestedNumberOfBytes, aes.BlockSize)
+	requestedNumberOfBlocks := mathutils.CeilDiv(requestedNumberOfBytes, aes.BlockSize)
 	// 1. IF (reseed_counter > reseed_interval), then return an indication that a
 	// reseed is required.
 	if ctrDrbg.reseedCounter > reseedInterval {
-		return errs.NewMissing("PRNG must be reseeded before generating more bits.")
+		return ErrInvalidEntropy.WithMessage("PRNG must be reseeded before generating more bits.").WithStackTrace()
 	}
 	// 2. IF (additional_input != Nil), then
 	if len(additionalInput) > 0 {
 		// 2.1. additional_input = Block_Cipher_df(additional_input, seedlen).
 		additionalInput, err = ctrDrbg.BlockCipherDF(additionalInput, ctrDrbg.SeedSize())
 		if err != nil {
-			return errs.WrapFailed(err, "Could not apply the derivation function")
+			return errs2.AttachStackTrace(err)
 		}
 		// 2.2. (Key, V) = CTR_DRBG_Update(additional_input, Key, V).
 		if err = ctrDrbg.Update(additionalInput); err != nil {
-			return errs.WrapFailed(err, "Could not update PRNG internal state")
+			return errs2.AttachStackTrace(err)
 		}
 	} else { // ELSE additional_input = 0^seedlen. (Implicit, set to nil instead)
 		additionalInput = nil
@@ -222,7 +222,7 @@ func (ctrDrbg *CtrDRBG) Generate(outputBuffer, additionalInput []byte) (err erro
 	copy(outputBuffer, temp[:requestedNumberOfBytes])
 	// 6. (Key, V) = CTR_DRBG_Update(additional_input, Key, V).
 	if err = ctrDrbg.Update(additionalInput); err != nil {
-		return errs.WrapFailed(err, "Could not update PRNG internal state")
+		return errs2.AttachStackTrace(err)
 	}
 	// 7. reseed_counter = reseed_counter + 1.
 	ctrDrbg.reseedCounter++
@@ -236,7 +236,7 @@ func (ctrDrbg *CtrDRBG) Generate(outputBuffer, additionalInput []byte) (err erro
 func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int) (requestedBytes []byte, err error) {
 	// 1. IF (no_of_bits_to_return > max_number_of_bits): return ERROR_FLAG, Nil
 	if noOfBytesToReturn > maxNumberOfBytesDF {
-		return nil, errs.NewLength("no_of_bits_to_return > max_number_of_bits")
+		return nil, ErrInvalidArgument.WithMessage("no_of_bits_to_return > max_number_of_bits").WithStackTrace()
 	}
 	// 2. L = len(input_string)/8.
 	l := uint32(len(inputString))
@@ -244,7 +244,7 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	n := uint32(noOfBytesToReturn)
 	// 5. Pad S with zeros, if necessary.
 	// WHILE (len (S) mod outlen) != 0, DO {S = S || 0x00}
-	sBlocks := utils.CeilDiv(int(4+4+l+1), aes.BlockSize)
+	sBlocks := mathutils.CeilDiv(int(4+4+l+1), aes.BlockSize)
 	s := make([]byte, sBlocks*aes.BlockSize) // Allocate l, n, inputString, 0x80 and zero pads of #5
 	// 4. Prepend the string length and the requested length of the output to the
 	//   input_string. S = L || N || input_string || 0x80.
@@ -254,13 +254,13 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	s[8+l] = 0x80
 	// 6. temp = Nil.
 	// +. Calculate `len(temp)` and initialise `temp` buffer deterministically.
-	tempBlocks := utils.CeilDiv(ctrDrbg.SeedSize(), aes.BlockSize)
+	tempBlocks := mathutils.CeilDiv(ctrDrbg.SeedSize(), aes.BlockSize)
 	temp := make([]byte, tempBlocks*aes.BlockSize) // Allocate space for key and iv.
 	// 7. i = 0 (uint32) --> In #9.
 	// 8. K = leftmost(0x00010203...1D1E1F, keylen).
 	aesCipher, err := aes.NewCipher([]byte(ivKey)[:ctrDrbg.keySize])
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create aes cipher")
+		return nil, errs2.AttachStackTrace(err)
 	}
 	// 9. WHILE (len(temp) < keylen + outlen), DO
 	// +. Copy the `S` in the BCC input only once. It remains static.
@@ -279,14 +279,14 @@ func (ctrDrbg *CtrDRBG) BlockCipherDF(inputString []byte, noOfBytesToReturn int)
 	// 10. K = leftmost(temp, keylen).
 	aesCipher, err = aes.NewCipher(temp[:ctrDrbg.keySize])
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create aes cipher")
+		return nil, errs2.AttachStackTrace(err)
 	}
 	// 11. X = select (temp, keylen+1, keylen+outlen).
 	var x, xOut []byte
 	x = temp[ctrDrbg.keySize:ctrDrbg.SeedSize()]
 	// 12) temp = Nil.
 	// +. Calculate the output size and initialise `temp` buffer deterministically.
-	requestedBlocks := utils.CeilDiv(noOfBytesToReturn, aes.BlockSize)
+	requestedBlocks := mathutils.CeilDiv(noOfBytesToReturn, aes.BlockSize)
 	requestedBytes = make([]byte, requestedBlocks*aes.BlockSize)
 	// 13. WHILE (len(temp) < number_of_bits_to_return) DO
 	for i := range requestedBlocks {

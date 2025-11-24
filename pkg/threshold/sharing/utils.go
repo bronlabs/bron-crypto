@@ -41,7 +41,7 @@ func NewMinimalQualifiedAccessStructure(shareholders ds.Set[ID]) (*MinimalQualif
 }
 
 func CollectIDs[S Share[S]](shares ...S) ([]ID, error) {
-	ids, err := sliceutils.MapErrFunc(shares, func(s S) (ID, error) {
+	ids, err := sliceutils.MapOrError(shares, func(s S) (ID, error) {
 		if utils.IsNil(s) {
 			return 0, errs.NewIsNil("share cannot be nil")
 		}

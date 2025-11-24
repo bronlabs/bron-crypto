@@ -5,33 +5,39 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 )
 
+// RandomNonIdentity samples a random element from the given finite monoid that is not the identity element.
 func RandomNonIdentity[M interface {
 	algebra.FiniteStructure[E]
 	algebra.Monoid[E]
 }, E algebra.MonoidElement[E]](m M, prng io.Reader) (E, error) {
+	validationErrors := []error{}
 	if utils.IsNil(m) {
-		return *new(E), errs.NewIsNil("nil monoid")
+		validationErrors = append(validationErrors, ErrArgumentIsNil.WithMessage("monoid").WithStackTrace())
 	}
 	if prng == nil {
-		return *new(E), errs.NewIsNil("nil prng")
+		validationErrors = append(validationErrors, ErrArgumentIsNil.WithMessage("prng").WithStackTrace())
+	}
+	if len(validationErrors) > 0 {
+		return *new(E), errs2.Join(validationErrors...)
 	}
 	var err error
 	out := m.OpIdentity()
 	for out.IsOpIdentity() {
 		out, err = m.Random(prng)
 		if err != nil {
-			return *new(E), errs.WrapRandomSample(err, "failed to sample random element")
+			return *new(E), errs2.AttachStackTrace(err)
 		}
 	}
 	return out, nil
 }
 
+// Fold applies the binary operation of the given operand type to all provided elements, returning the final result.
 func Fold[S algebra.Operand[S]](first S, rest ...S) S {
 	if len(rest) == 0 {
 		return first
@@ -41,6 +47,7 @@ func Fold[S algebra.Operand[S]](first S, rest ...S) S {
 	})
 }
 
+// Sum applies the addition operation of the given summand type to all provided elements, returning the final result.
 func Sum[S algebra.Summand[S]](first S, rest ...S) S {
 	if len(rest) == 0 {
 		return first
@@ -50,6 +57,7 @@ func Sum[S algebra.Summand[S]](first S, rest ...S) S {
 	})
 }
 
+// Prod applies the multiplication operation of the given multiplicand type to all provided elements, returning the final result.
 func Prod[M algebra.Multiplicand[M]](first M, rest ...M) M {
 	if len(rest) == 0 {
 		return first
@@ -59,6 +67,7 @@ func Prod[M algebra.Multiplicand[M]](first M, rest ...M) M {
 	})
 }
 
+// ScalarMul computes the scalar multiplication of the given base element by the given exponent using a fixed-window method.
 func ScalarMul[E algebra.MonoidElement[E]](base E, exponent *num.Nat) E {
 	monoid := algebra.StructureMustBeAs[algebra.Monoid[E]](base.Structure())
 
@@ -90,3 +99,5 @@ func ScalarMul[E algebra.MonoidElement[E]](base E, exponent *num.Nat) E {
 
 	return res
 }
+
+var ErrArgumentIsNil = errs2.New("argument is nil")

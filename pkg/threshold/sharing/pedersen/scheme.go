@@ -145,7 +145,7 @@ func (s *Scheme[E, S]) DealRandom(prng io.Reader) (*DealerOutput[E, S], *Secret[
 }
 
 func (s *Scheme[E, S]) Reconstruct(shares ...*Share[S]) (*Secret[S], error) {
-	shamirShares, _ := sliceutils.MapErrFunc(shares, func(sh *Share[S]) (*shamir.Share[S], error) { return shamir.NewShare(sh.ID(), sh.secret.Value(), nil) })
+	shamirShares, _ := sliceutils.MapOrError(shares, func(sh *Share[S]) (*shamir.Share[S], error) { return shamir.NewShare(sh.ID(), sh.secret.Value(), nil) })
 	secret, err := s.shamirSSS.Reconstruct(shamirShares...)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not reconstruct secret from shares")

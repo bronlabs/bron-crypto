@@ -2,8 +2,10 @@ package prng
 
 import "io"
 
-type PRNG io.Reader
+// PRNG represents a pseudo-random number generator.
+type PRNG io.Reader // TODO: should this be incorporated?
 
+// SeedablePRNG represents a seedable pseudo-random number generator.
 type SeedablePRNG interface {
 	PRNG
 	// Reset the internal state of the PRNG.

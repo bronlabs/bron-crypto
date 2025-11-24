@@ -16,12 +16,12 @@ var (
 
 // Provide a thread-safe version for PRNGs.
 type ThreadSafePrng struct {
-	prng CSPRNG
+	prng SeedableCSPRNG
 	mu   sync.Mutex
 }
 
 // NewThreadSafePrng returns a thread-safe version of the provided PRNG.
-func NewThreadSafePrng(prng CSPRNG) (threadSafePrng CSPRNG) {
+func NewThreadSafePrng(prng SeedableCSPRNG) (threadSafePrng SeedableCSPRNG) {
 	return &ThreadSafePrng{
 		prng: prng,
 		mu:   sync.Mutex{},
@@ -75,7 +75,7 @@ func (tsp *ThreadSafePrng) Seed(seed, salt []byte) error {
 }
 
 // Generate a new PRNG with the provided seed and salt. Does not need locking, as only fixed values are used.
-func (tsp *ThreadSafePrng) New(seed, salt []byte) (CSPRNG, error) {
+func (tsp *ThreadSafePrng) New(seed, salt []byte) (SeedableCSPRNG, error) {
 	tsp.mu.Lock()
 	defer tsp.mu.Unlock()
 	prng, err := tsp.prng.New(seed, salt)

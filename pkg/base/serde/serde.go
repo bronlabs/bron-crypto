@@ -3,8 +3,9 @@ package serde
 import (
 	"reflect"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/fxamacker/cbor/v2"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
 
 const (
@@ -42,7 +43,7 @@ func Register[T any](tag uint64) {
 	updateModes()
 }
 
-func init() {
+func init() { //nolint:gochecknoinits // necessary for setup
 	updateModes()
 }
 
@@ -52,7 +53,7 @@ func updateModes() {
 	if err != nil {
 		panic(err)
 	}
-	decOptions := cbor.DecOptions{
+	decOptions := cbor.DecOptions{ //nolint:exhaustruct // readability
 		DupMapKey:                cbor.DupMapKeyEnforcedAPF,
 		TimeTag:                  cbor.DecTagRequired,
 		MaxNestedLevels:          DefaultMaxNestedLevels,
@@ -84,6 +85,7 @@ func updateModes() {
 	}
 }
 
+// MarshalCBOR serialises the given value to CBOR format.
 func MarshalCBOR[T any](t T) ([]byte, error) {
 	data, err := enc.Marshal(t)
 	if err != nil {
@@ -92,6 +94,7 @@ func MarshalCBOR[T any](t T) ([]byte, error) {
 	return data, nil
 }
 
+// MarshalCBORTagged serialises the given value to CBOR format with the specified tag.
 func MarshalCBORTagged[T any](t T, tag uint64) ([]byte, error) {
 	wrapped := cbor.Tag{
 		Number:  tag,
@@ -104,6 +107,7 @@ func MarshalCBORTagged[T any](t T, tag uint64) ([]byte, error) {
 	return data, nil
 }
 
+// UnmarshalCBOR deserialises the given CBOR data into the specified type.
 func UnmarshalCBOR[T any](data []byte) (T, error) {
 	var t T
 	err := dec.Unmarshal(data, &t)

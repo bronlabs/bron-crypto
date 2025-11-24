@@ -54,7 +54,7 @@ func ComputeRecoveryId[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 		recoveryId = 1
 	}
 
-	if base.PartialCompare(rx.Cardinal(), subGroupOrder).Is(base.Ordering(base.GreaterThan)) {
+	if base.PartialCompare(rx.Cardinal(), subGroupOrder).IsGreaterThan() {
 		recoveryId += 2
 	}
 

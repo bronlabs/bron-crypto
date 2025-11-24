@@ -2,8 +2,11 @@ package sliceutils
 
 import (
 	"iter"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
+// Combinations generates all k-combinations of the input slice s.
 func Combinations[S ~[]T, T any](s S, k uint) iter.Seq[S] {
 	if k > uint(len(s)) {
 		return func(yield func(S) bool) {
@@ -13,7 +16,7 @@ func Combinations[S ~[]T, T any](s S, k uint) iter.Seq[S] {
 
 	return func(yield func(S) bool) {
 		n := len(s)
-		combinations := binomial(n, int(k))
+		combinations := utils.Binomial(n, int(k))
 		data := make([]int, k)
 		for i := range data {
 			data[i] = i
@@ -33,6 +36,7 @@ func Combinations[S ~[]T, T any](s S, k uint) iter.Seq[S] {
 	}
 }
 
+// KCoveringCombinations generates all combinations of the input slice s with sizes from k to len(s).
 func KCoveringCombinations[S ~[]T, T any](s S, k uint) iter.Seq[S] {
 	return func(yield func(S) bool) {
 		for i := k; i <= uint(len(s)); i++ {
@@ -43,18 +47,6 @@ func KCoveringCombinations[S ~[]T, T any](s S, k uint) iter.Seq[S] {
 			}
 		}
 	}
-}
-
-func binomial(n, k int) int {
-	// (n,k) = (n, n-k)
-	if k > n/2 {
-		k = n - k
-	}
-	b := 1
-	for i := 1; i <= k; i++ {
-		b = (n - k + i) * b / i
-	}
-	return b
 }
 
 func nextCombination(s []int, n, k int) {
