@@ -43,8 +43,10 @@ RUN_IN_CLAUSE= $(if ${HOST_EXECUTION_MODE}, ${RUN_ON_HOST}, ${RUN_IN_DOCKER})
 
 all: deps build lint test
 
+pkg/base/constants.gen.go:
 pkg/base/errs/error_functions.gen.go:
 pkg/base/errs/known_errors.gen.go:
+pkg/base/nt/millerrabin.gen.go:
 	${RUN_IN_CLAUSE} '${GO} generate ./...'
 	${RUN_IN_CLAUSE} 'golangci-lint run --fix ./pkg/base/errs'
 
@@ -58,7 +60,7 @@ deps-go:
 	${RUN_IN_CLAUSE} '${GO} mod verify'
 	${RUN_IN_CLAUSE} '${GO} mod tidy -compat=1.24'
 
-codegen: pkg/base/errs/error_functions.gen.go pkg/base/errs/known_errors.gen.go
+codegen: pkg/base/constants.gen.go pkg/base/errs/error_functions.gen.go pkg/base/errs/known_errors.gen.go pkg/base/nt/millerrabin.gen.go
 
 build: codegen
 	${RUN_IN_CLAUSE} '${GO} build ./...'

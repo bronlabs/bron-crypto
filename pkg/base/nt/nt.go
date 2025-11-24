@@ -4,21 +4,45 @@ import (
 	crand "crypto/rand"
 	"crypto/rsa"
 	"io"
-	"math"
+	"maps"
 	"math/big"
+	"slices"
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/internal"
 )
 
 type LiftableToZ[I algebra.IntLike[I]] = internal.LiftableToZ[I]
-
 type PrimeSamplable[E algebra.UniqueFactorizationMonoidElement[E]] interface {
 	algebra.UniqueFactorizationMonoid[E]
 	FromBig(*big.Int) (E, error)
+}
+
+func MillerRabinChecks(bits uint) int {
+	if len(millerRabinIterations) == 0 {
+		panic("millerRabinIterations is not initialized")
+	}
+	sortedKeys := slices.Sorted(maps.Keys(millerRabinIterations))
+
+	// Case 1: bits smaller than the smallest table entry.
+	if bits < sortedKeys[0] {
+		return max(
+			base.StatisticalSecurityBits/4,
+			millerRabinIterations[sortedKeys[0]],
+		)
+	}
+
+	// Case 2: find the largest key <= bits and return its value.
+	for i := len(sortedKeys) - 1; i >= 0; i-- {
+		if bits >= sortedKeys[i] {
+			return millerRabinIterations[sortedKeys[i]]
+		}
+	}
+	panic("millerRabinIterations is not properly initialized")
 }
 
 func GenerateSafePrime[N algebra.UniqueFactorizationMonoidElement[N]](set PrimeSamplable[N], bits uint) (N, error) {
@@ -30,13 +54,8 @@ func GenerateSafePrime[N algebra.UniqueFactorizationMonoidElement[N]](set PrimeS
 	}
 	var p *big.Int
 	var err error
-	checks := int(math.Max(float64(bits)/16, 8))
+	checks := MillerRabinChecks(bits)
 	for {
-		// TODO: generate the number of checks via sage.
-
-		// rand.Prime throws an error if bits < 2
-		// -1 so the Sophie-Germain prime is 1023 bits
-		// and the Safe prime is 1024
 		p, err = crand.Prime(crand.Reader, int(bits)-1)
 		if err != nil {
 			return *new(N), errs.WrapFailed(err, "reading from crand")
@@ -56,7 +75,7 @@ func GenerateSafePrime[N algebra.UniqueFactorizationMonoidElement[N]](set PrimeS
 
 func GenerateSafePrimePair[N algebra.UniqueFactorizationMonoidElement[N]](set PrimeSamplable[N], bits uint) (p, q N, err error) {
 	g := errgroup.Group{}
-	for p.Equal(q) {
+	for {
 		g.Go(func() error {
 			p, err = GenerateSafePrime(set, bits)
 			if err != nil {
@@ -74,8 +93,10 @@ func GenerateSafePrimePair[N algebra.UniqueFactorizationMonoidElement[N]](set Pr
 		if err := g.Wait(); err != nil {
 			return *new(N), *new(N), errs.WrapFailed(err, "cannot generate same primes")
 		}
+		if !p.Equal(q) {
+			return p, q, nil
+		}
 	}
-	return p, q, nil
 }
 
 func GeneratePrimePair[N algebra.UniqueFactorizationMonoidElement[N]](set PrimeSamplable[N], bits uint, prng io.Reader) (p, q N, err error) {
