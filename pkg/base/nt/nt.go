@@ -75,7 +75,7 @@ func GenerateSafePrime[N algebra.UniqueFactorizationMonoidElement[N]](set PrimeS
 
 func GenerateSafePrimePair[N algebra.UniqueFactorizationMonoidElement[N]](set PrimeSamplable[N], bits uint) (p, q N, err error) {
 	g := errgroup.Group{}
-	for p.Equal(q) {
+	for {
 		g.Go(func() error {
 			p, err = GenerateSafePrime(set, bits)
 			if err != nil {
@@ -93,8 +93,10 @@ func GenerateSafePrimePair[N algebra.UniqueFactorizationMonoidElement[N]](set Pr
 		if err := g.Wait(); err != nil {
 			return *new(N), *new(N), errs.WrapFailed(err, "cannot generate same primes")
 		}
+		if !p.Equal(q) {
+			return p, q, nil
+		}
 	}
-	return p, q, nil
 }
 
 func GeneratePrimePair[N algebra.UniqueFactorizationMonoidElement[N]](set PrimeSamplable[N], bits uint, prng io.Reader) (p, q N, err error) {
