@@ -209,27 +209,27 @@ func TestIsAllUniqueFunc(t *testing.T) {
 	require.False(t, sliceutils.IsAllUniqueFunc([]int{1, 2, 2, 3}, func(a, b int) bool { return a == b }))
 }
 
-func TestIsSubList(t *testing.T) {
+func TestIsSubSet(t *testing.T) {
 	t.Parallel()
-	require.True(t, sliceutils.IsSubList([]int{1, 2}, []int{1, 2, 3, 4}))
-	require.False(t, sliceutils.IsSubList([]int{1, 5}, []int{1, 2, 3, 4}))
-	require.False(t, sliceutils.IsSubList([]int{1, 2, 3, 4, 5}, []int{1, 2, 3}))
+	require.True(t, sliceutils.IsSubSet([]int{1, 2}, []int{1, 2, 3, 4}))
+	require.False(t, sliceutils.IsSubSet([]int{1, 5}, []int{1, 2, 3, 4}))
+	require.False(t, sliceutils.IsSubSet([]int{1, 2, 3, 4, 5}, []int{1, 2, 3}))
 }
 
-func TestIsSubListFunc(t *testing.T) {
+func TestIsSubSetFunc(t *testing.T) {
 	t.Parallel()
 	eq := func(a, b int) bool { return a == b }
-	require.True(t, sliceutils.IsSubListFunc([]int{1, 2}, []int{1, 2, 3, 4}, eq))
-	require.False(t, sliceutils.IsSubListFunc([]int{1, 5}, []int{1, 2, 3, 4}, eq))
+	require.True(t, sliceutils.IsSubSetFunc([]int{1, 2}, []int{1, 2, 3, 4}, eq))
+	require.False(t, sliceutils.IsSubSetFunc([]int{1, 5}, []int{1, 2, 3, 4}, eq))
 }
 
-func TestIsSuperList(t *testing.T) {
+func TestIsSuperSet(t *testing.T) {
 	t.Parallel()
-	require.True(t, sliceutils.IsSuperList([]int{1, 2, 3, 4}, []int{1, 2}))
-	require.False(t, sliceutils.IsSuperList([]int{1, 2, 3, 4}, []int{1, 5}))
-	require.True(t, sliceutils.IsSuperList([]int{1, 2, 3, 4, 5}, []int{1, 2, 3}))
-	require.False(t, sliceutils.IsSuperList([]int{1, 2, 3}, []int{1, 2, 3, 4, 5}))
-	require.True(t, sliceutils.IsSuperList([]int{1, 2, 3}, []int{1, 2, 3}))
+	require.True(t, sliceutils.IsSuperSet([]int{1, 2, 3, 4}, []int{1, 2}))
+	require.False(t, sliceutils.IsSuperSet([]int{1, 2, 3, 4}, []int{1, 5}))
+	require.True(t, sliceutils.IsSuperSet([]int{1, 2, 3, 4, 5}, []int{1, 2, 3}))
+	require.False(t, sliceutils.IsSuperSet([]int{1, 2, 3}, []int{1, 2, 3, 4, 5}))
+	require.True(t, sliceutils.IsSuperSet([]int{1, 2, 3}, []int{1, 2, 3}))
 }
 
 func TestContainsFunc(t *testing.T) {

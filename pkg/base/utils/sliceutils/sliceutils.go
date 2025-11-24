@@ -198,8 +198,8 @@ func IsAllUniqueFunc[S ~[]T, T any](xs S, equal func(T, T) bool) bool {
 	return CountUniqueFunc(xs, equal) == len(xs)
 }
 
-// IsSubList returns true if all elements of sub are present in sup.
-func IsSubList[SB, SP ~[]T, T comparable](sub SB, sup SP) bool {
+// IsSubSet returns true if all elements of sub are present in sup.
+func IsSubSet[SB, SP ~[]T, T comparable](sub SB, sup SP) bool {
 	if len(sub) > len(sup) {
 		return false
 	}
@@ -218,8 +218,8 @@ func IsSubList[SB, SP ~[]T, T comparable](sub SB, sup SP) bool {
 	return true
 }
 
-// IsSubListFunc returns true if all elements of sub are present in sup using the provided equality function.
-func IsSubListFunc[SB, SP ~[]T, T any](sub SB, sup SP, equal func(T, T) bool) bool {
+// IsSubSetFunc returns true if all elements of sub are present in sup using the provided equality function.
+func IsSubSetFunc[SB, SP ~[]T, T any](sub SB, sup SP, equal func(T, T) bool) bool {
 	if len(sub) > len(sup) {
 		return false
 	}
@@ -238,8 +238,8 @@ func IsSubListFunc[SB, SP ~[]T, T any](sub SB, sup SP, equal func(T, T) bool) bo
 	return true
 }
 
-// IsSuperList returns true if ss contains all elements of s.
-func IsSuperList[T comparable](ss, s []T) bool {
+// IsSuperSet returns true if ss contains all elements of s.
+func IsSuperSet[T comparable](ss, s []T) bool {
 	for _, si := range s {
 		if !slices.Contains(ss, si) {
 			return false
