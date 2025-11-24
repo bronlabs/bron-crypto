@@ -95,6 +95,19 @@ func main() {
 	if err := tpl.Execute(f, d); err != nil {
 		fail("execute template: %v", err)
 	}
+
+	// Generate Miller-Rabin iterations using sage
+	fmt.Println("Computing Miller-Rabin iterations from FIPS 186-5...")
+	sageScriptPath := filepath.Join(wd, "nt", "fips1865c.sage")
+	iterations, err := computeMillerRabinIterations(sageScriptPath, statBits)
+	if err != nil {
+		fail("compute Miller-Rabin iterations: %v", err)
+	}
+
+	if err := generateMillerRabinCode(wd, iterations); err != nil {
+		fail("generate Miller-Rabin code: %v", err)
+	}
+	fmt.Println("Generated nt/millerrabin.gen.go")
 }
 
 // readConstants parses constants.go and extracts const values
