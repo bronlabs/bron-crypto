@@ -1,288 +1,304 @@
 package errs2
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"maps"
-	"slices"
+	"runtime"
+	"strconv"
 )
 
-type Tag string
-
-type TraceableError interface {
-	error
-	Unwrap() error
-	StackTrace() StackTrace
-}
-
-type TaggedError interface {
-	error
-	Tags() []Tag
-	TagValue(tag Tag) (string, bool)
-}
-
-type ContextualError interface {
-	error
-	Context() string
-}
+const (
+	errorHeader       = "ERROR: "
+	defaultIndent     = "  "
+	tagsPrefix        = "--- Tags: "
+	stackFramePrefix  = "--- Frame: "
+	sentinelSeparator = ": "
+)
 
 var (
 	Unwrap = errors.Unwrap
 	Is     = errors.Is
 	As     = errors.As
-	Join   = errors.Join
 )
 
-func New(format string, args ...any) *Error {
-	if format == "" {
-		return nil
-	}
-	return &Error{
-		v: fmt.Errorf(format, args...),
+type CryptoError interface {
+	error
+	fmt.Formatter
+
+	WithTag(string, any) CryptoError
+	WithMessage(format string, args ...any) CryptoError
+	WithStackFrame() CryptoError
+	Tags() map[string]any
+	StackFrame() *StackFrame
+}
+
+func New(format string, args ...any) CryptoError {
+	return &sentinelError{
+		message: fmt.Sprintf(format, args...),
 	}
 }
 
-func AttachStackTrace(err error) *Error {
-	if err == nil {
+func Join(errs ...error) CryptoError {
+	if len(errs) == 0 {
 		return nil
 	}
-	if er, ok := err.(*Error); ok {
-		return er.WithStackTrace()
-	}
-	return &Error{
-		v:     err,
-		stack: callers(),
-	}
-}
-
-func AttachMessage(err error, format string, args ...any) *Error {
-	if err == nil {
-		return nil
-	}
-	if er, ok := err.(*Error); ok {
-		return er.WithMessage(format, args...)
-	}
-	return &Error{
-		v:       err,
-		context: fmt.Sprintf(format, args...),
-	}
-}
-
-func AttachTag(err error, tag Tag, value string) *Error {
-	if err == nil {
-		return nil
-	}
-	if er, ok := err.(*Error); ok {
-		return er.WithTag(tag, value)
-	}
-	return &Error{
-		v: err,
-		t: map[Tag]string{
-			tag: value,
-		},
-	}
-}
-
-func HasTag(err error, tag Tag) (string, bool) {
-	for err != nil {
-		if te, ok := err.(TaggedError); ok {
-			if v, found := te.TagValue(tag); found {
-				return v, true
-			}
+	pc, _, _, _ := runtime.Caller(1)
+	var children []error
+	for _, e := range errs {
+		sentinelErr := &sentinelError{}
+		if errors.As(e, &sentinelErr) {
+			children = append(children, &errorImpl{
+				message:    sentinelErr.message,
+				wrapped:    []error{sentinelErr},
+				stackFrame: nil,
+				tags:       nil,
+			})
+		} else {
+			children = append(children, e)
 		}
-		err = Unwrap(err)
 	}
-	return "", false
-}
 
-func Must(err error) {
-	if err != nil {
-		panic(err)
+	return &errorImpl{
+		message:    "",
+		wrapped:    errs,
+		stackFrame: NewStackFrame(pc),
+		tags:       nil,
 	}
 }
 
-func Must1[T any](v T, err error) T {
-	if err != nil {
-		panic(err)
+func Wrap(err error) CryptoError {
+	pc, _, _, _ := runtime.Caller(1)
+
+	sentinelErr := &sentinelError{}
+	if errors.As(err, &sentinelErr) {
+		return &errorImpl{
+			message:    sentinelErr.message,
+			wrapped:    []error{sentinelErr},
+			stackFrame: NewStackFrame(pc),
+			tags:       nil,
+		}
+	} else {
+		return &errorImpl{
+			message:    "",
+			wrapped:    []error{err},
+			stackFrame: NewStackFrame(pc),
+			tags:       nil,
+		}
 	}
-	return v
 }
 
-func Must2[T1, T2 any](v1 T1, v2 T2, err error) (T1, T2) {
-	if err != nil {
-		panic(err)
+func HasTag(err error, tag string) (any, bool) {
+	var taggedErr hasTags
+	if errors.As(err, &taggedErr) {
+		v, ok := taggedErr.Tags()[tag]
+		return v, ok
 	}
-	return v1, v2
+
+	return nil, false
 }
 
-type Error struct {
-	v       error
-	stack   Stack
-	context string
-	t       map[Tag]string
+type sentinelError struct {
+	message string
 }
 
-func (e *Error) Error() string {
-	return e.v.Error()
-	// if e.context == "" {
-	// 	return e.v.Error()
-	// }
-	// return fmt.Sprintf("%s (%s)", e.v.Error(), e.context)
+func (e *sentinelError) WithTag(s string, a any) CryptoError {
+	pc, _, _, _ := runtime.Caller(1)
+	return &errorImpl{
+		message:    e.message,
+		wrapped:    []error{e},
+		stackFrame: NewStackFrame(pc),
+		tags:       map[string]any{s: a},
+	}
 }
 
-func (e *Error) Context() string {
-	return e.context
+func (e *sentinelError) WithMessage(format string, args ...any) CryptoError {
+	pc, _, _, _ := runtime.Caller(1)
+	return &errorImpl{
+		message:    e.message + sentinelSeparator + fmt.Sprintf(format, args...),
+		wrapped:    []error{e},
+		stackFrame: NewStackFrame(pc),
+		tags:       nil,
+	}
 }
 
-func (e *Error) Unwrap() error {
-	return e.v
+func (e *sentinelError) WithStackFrame() CryptoError {
+	pc, _, _, _ := runtime.Caller(0)
+	return &errorImpl{
+		message:    e.message,
+		wrapped:    []error{e},
+		stackFrame: NewStackFrame(pc),
+		tags:       nil,
+	}
 }
 
-func (e *Error) StackTrace() StackTrace {
-	return e.stack.StackTrace()
+func (e *sentinelError) Error() string {
+	return e.message
 }
 
-func (e *Error) Format(s fmt.State, verb rune) {
+func (e *sentinelError) Format(s fmt.State, verb rune) {
+	switch verb {
+	case 'v', 's', 'q':
+		_, _ = fmt.Fprintf(s, "%s%s\n", errorHeader, e.Error())
+	}
+}
+
+func (e *sentinelError) Tags() map[string]any {
+	return nil
+}
+
+func (e *sentinelError) StackFrame() *StackFrame {
+	return nil
+}
+
+type errorImpl struct {
+	message    string
+	wrapped    []error
+	stackFrame *StackFrame
+	tags       map[string]any
+}
+
+func (e *errorImpl) WithTag(s string, a any) CryptoError {
+	if e.tags == nil {
+		e.tags = map[string]any{s: a}
+	} else {
+		e.tags[s] = a
+	}
+	return e
+}
+
+func (e *errorImpl) WithMessage(format string, args ...any) CryptoError {
+	if e.message == "" {
+		e.message = fmt.Sprintf(format, args...)
+	} else {
+		e.message = e.message + sentinelSeparator + fmt.Sprintf(format, args...)
+	}
+	return e
+}
+
+func (e *errorImpl) WithStackFrame() CryptoError {
+	pc, _, _, _ := runtime.Caller(1)
+	e.stackFrame = NewStackFrame(pc)
+	return e
+}
+
+func (e *errorImpl) Error() string {
+	return e.message
+}
+
+func (e *errorImpl) Unwrap() []error {
+	return e.wrapped
+}
+
+func (e *errorImpl) StackFrame() *StackFrame {
+	return e.stackFrame
+}
+
+func (e *errorImpl) Tags() map[string]any {
+	return e.tags
+}
+
+func (e *errorImpl) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		if s.Flag('+') {
-			formatErrorChain(s, e)
-			return
+			buf := new(bytes.Buffer)
+			formatErrorChainDetailed(buf, errorHeader, "", e)
+			_, _ = s.Write(buf.Bytes())
+			break
 		}
 		fallthrough
 	case 's':
-		if _, err := io.WriteString(s, e.Error()); err != nil {
-			panic(err)
-		}
-
-		if len(e.context) > 0 {
-			if _, err := io.WriteString(s, " ("); err != nil {
-				panic(err)
-			}
-			if _, err := io.WriteString(s, e.context); err != nil {
-				panic(err)
-			}
-			if _, err := io.WriteString(s, ")"); err != nil {
-				panic(err)
-			}
-		}
-
-		// Inline tags, single line
-		if len(e.t) > 0 {
-			if _, err := io.WriteString(s, " ["); err != nil {
-				panic(err)
-			}
-			first := true
-			for k, v := range e.t {
-				if !first {
-					if _, err := io.WriteString(s, ", "); err != nil {
-						panic(err)
-					}
-				}
-				first = false
-				fmt.Fprintf(s, "%s=%s", k, v)
-			}
-			if _, err := io.WriteString(s, "]"); err != nil {
-				panic(err)
+		_, _ = io.WriteString(s, errorHeader+e.Error()+"\n")
+		if len(e.Tags()) > 0 {
+			tags, err := json.Marshal(e.Tags())
+			if err == nil {
+				_, _ = io.WriteString(s, tagsPrefix)
+				_, _ = io.WriteString(s, string(tags))
+				_, _ = io.WriteString(s, "\n")
 			}
 		}
 	case 'q':
-		fmt.Fprintf(s, "%q", e.Error())
+		_, _ = fmt.Fprintf(s, "%s%s\n", errorHeader, e.Error())
 	}
 }
 
-func (e *Error) WithStackTrace() *Error {
-	return &Error{
-		v:       e,
-		stack:   callers(),
-		context: e.context,
-		t:       maps.Clone(e.t),
+type hasTags interface {
+	error
+	Tags() map[string]any
+}
+
+type hasStackFrame interface {
+	error
+	StackFrame() *StackFrame
+}
+
+type wrapsError interface {
+	error
+	Unwrap() error
+}
+
+type wrapsMultipleErrors interface {
+	error
+	Unwrap() []error
+}
+
+func formatErrorChainDetailed(buffer *bytes.Buffer, header, indent string, err error) {
+	buffer.WriteString(indent)
+	buffer.WriteString(header)
+	buffer.WriteString(err.Error())
+	buffer.WriteString("\n")
+	var stackFrameErr hasStackFrame
+	if errors.As(err, &stackFrameErr) {
+		stackFrame := stackFrameErr.StackFrame()
+		buffer.WriteString(indent)
+		buffer.WriteString(stackFramePrefix)
+		buffer.WriteString(stackFrame.File + ":" + strconv.Itoa(stackFrame.LineNo))
+		buffer.WriteString("\n")
 	}
-}
-
-func (e *Error) WithMessage(format string, args ...any) *Error {
-	return &Error{
-		v:       e,
-		stack:   e.stack,
-		context: fmt.Sprintf(format, args...),
-		t:       maps.Clone(e.t),
-	}
-}
-
-func (e *Error) WithTag(tag Tag, value string) *Error {
-	out := &Error{
-		v:       e,
-		stack:   e.stack,
-		context: e.context,
-		t:       maps.Clone(e.t),
-	}
-	if out.t == nil {
-		out.t = make(map[Tag]string)
-	}
-	out.t[tag] = value
-	return out
-}
-
-func (e *Error) Tags() []Tag {
-	return slices.Collect(maps.Keys(e.t))
-}
-
-func (e *Error) TagValue(tag Tag) (string, bool) {
-	v, ok := e.t[tag]
-	return v, ok
-}
-
-func formatErrorChain(s fmt.State, err error) {
-	idx := 0
-	for err != nil {
-		if idx > 0 {
-			if _, _ = io.WriteString(s, "\n"); true {
-			}
+	var tagsErr hasTags
+	if errors.As(err, &tagsErr) {
+		tags := tagsErr.Tags()
+		tagsStr, err := json.Marshal(tags)
+		if err == nil {
+			buffer.WriteString(indent)
+			buffer.WriteString(tagsPrefix)
+			buffer.Write(tagsStr)
+			buffer.WriteString("\n")
 		}
+	}
 
-		// Header for this error in the chain
-		fmt.Fprintf(s, "err[%d]:\n %T: %s", idx, err, err.Error())
-
-		// Tags, if any
-		if te, ok := err.(TaggedError); ok {
-			tags := te.Tags()
-			if len(tags) > 0 {
-				if _, errw := io.WriteString(s, "\n\tTags:"); errw != nil {
-					panic(errw)
-				}
-				for _, tag := range tags {
-					if val, ok := te.TagValue(tag); ok {
-						fmt.Fprintf(s, " %s=%q", tag, val)
-					}
-				}
-			}
+	var children []error
+	var joined wrapsMultipleErrors
+	ok := errors.As(err, &joined)
+	if ok {
+		children = append(children, joined.Unwrap()...)
+	}
+	var wrapped wrapsError
+	ok = errors.As(err, &wrapped)
+	if ok {
+		children = append(children, wrapped.Unwrap())
+	}
+	filteredChildren := nonSentinelErrorsFilter(children)
+	if len(filteredChildren) > 0 {
+		buffer.WriteString(indent)
+		buffer.WriteString("Caused by:\n")
+		for i, child := range filteredChildren {
+			formatErrorChainDetailed(buffer, "["+strconv.Itoa(i)+"] ", indent+defaultIndent, child)
 		}
-
-		// Stack trace, if available
-		if wst, ok := err.(TraceableError); ok {
-			st := wst.StackTrace()
-			if len(st) > 0 {
-				if _, errw := io.WriteString(s, "\n\tStack:"); errw != nil {
-					panic(errw)
-				}
-				// StackTrace has its own %+v formatter; use that for detail
-				fmt.Fprintf(s, "%+v", st)
-			}
-		}
-
-		err = Unwrap(err)
-		idx++
 	}
 }
 
-func StackTraces(err error) CombinedStackTrace {
-	var traces []StackTrace
-	for err != nil {
-		if wst, ok := err.(TraceableError); ok {
-			traces = append(traces, wst.StackTrace())
+func nonSentinelErrorsFilter(errs []error) []error {
+	var filtered []error
+	for _, e := range errs {
+		sentinelError := &sentinelError{}
+		if errors.As(e, &sentinelError) {
+			filtered = append(filtered, e)
 		}
-		err = Unwrap(err)
 	}
-	return traces
+
+	return filtered
 }

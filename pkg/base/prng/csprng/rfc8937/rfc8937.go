@@ -26,16 +26,16 @@ type WrappedReader struct {
 
 func Wrap[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](prng io.Reader, signer *ecdsa.Signer[P, B, S], uniqueDeviceId []byte) (*WrappedReader, error) {
 	if !signer.IsDeterministic() {
-		return nil, ErrSignerDeterminism.WithStackTrace()
+		return nil, ErrSignerDeterminism.WithMessage("signer must be deterministic")
 	}
 
 	sig, err := signer.Sign(uniqueDeviceId)
 	if err != nil {
-		return nil, ErrUniqueDeviceIDSignature.WithStackTrace()
+		return nil, ErrUniqueDeviceIDSignature.WithMessage("could not sign unique device id")
 	}
 	salt, err := hashing.Hash(hashFunc, slices.Concat(sig.R().Bytes(), sig.S().Bytes()))
 	if err != nil {
-		return nil, ErrHashingUniqueDeviceID.WithStackTrace()
+		return nil, ErrHashingUniqueDeviceID.WithMessage("could not hash unique device id signature")
 	}
 
 	return &WrappedReader{
@@ -49,17 +49,17 @@ func (r *WrappedReader) Read(p []byte) (n int, err error) {
 	g := make([]byte, l)
 	_, err = io.ReadFull(r.wrapee, g)
 	if err != nil {
-		return n, ErrRandomSample.WithStackTrace()
+		return n, ErrRandomSample.WithMessage("could not read from wrapped reader")
 	}
 	key, err := hkdf.Extract(hashFunc, g, r.salt)
 	if err != nil {
-		return 0, ErrExtractKey.WithStackTrace()
+		return 0, ErrExtractKey.WithMessage("HKDF-Extract failed")
 	}
 
 	tag2 := r.counter.Add(1)
 	gPrime, err := hkdf.Expand(hashFunc, key, fmt.Sprintf("%d", tag2), len(p))
 	if err != nil {
-		return 0, ErrExpandKey.WithStackTrace()
+		return 0, ErrExpandKey.WithMessage("HKDF-Expand failed")
 	}
 	copy(p, gPrime)
 	return len(gPrime), nil
