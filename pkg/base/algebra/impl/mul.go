@@ -4,7 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-func ScalarMul[PP GroupElementPtr[PP, P], P any](out, pp *P, s []byte) {
+func ScalarMul[PP GroupElementPtrLowLevel[PP, P], P any](out, pp *P, s []byte) {
 	var precomputed [16]P
 
 	PP(&precomputed[0]).SetZero()
@@ -38,7 +38,7 @@ func ScalarMul[PP GroupElementPtr[PP, P], P any](out, pp *P, s []byte) {
 // MultiScalarMul computes the multi-exponentiation for the specified
 // points and scalars and stores the result in `out`.
 // Returns an error if the lengths of the arguments is not equal.
-func MultiScalarMul[PP GroupElementPtr[PP, P], P any](out *P, points []P, scalars [][]byte) (err error) {
+func MultiScalarMul[PP GroupElementPtrLowLevel[PP, P], P any](out *P, points []P, scalars [][]byte) (err error) {
 	const Upper = 256
 	const W = 4
 	const Windows = Upper / W // careful--use ceiling division in case this doesn't divide evenly

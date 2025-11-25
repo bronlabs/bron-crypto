@@ -145,11 +145,11 @@ func (nps *PositiveNaturalNumbers) Random(lowInclusive, highExclusive *NatPlus, 
 	if lowInclusive == nil {
 		lowInclusive = nps.Bottom()
 	}
-	v, err := numct.NatRandomRangeLH(prng, lowInclusive.v, highExclusive.v)
-	if err != nil {
+	var v numct.Nat
+	if err := v.Random(lowInclusive.v, highExclusive.v, prng); err != nil {
 		return nil, errs.WrapRandomSample(err, "failed to sample random NatPlus")
 	}
-	return &NatPlus{v: v}, nil
+	return &NatPlus{v: &v}, nil
 }
 
 func (nps *PositiveNaturalNumbers) Iter() iter.Seq[*NatPlus] {

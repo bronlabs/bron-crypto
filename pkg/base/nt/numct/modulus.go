@@ -1,6 +1,7 @@
 package numct
 
 import (
+	crand "crypto/rand"
 	"io"
 	"math/big"
 	"sync"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
 
 // ModulusBasic is a modulus implementation based on saferith.Modulus.
@@ -27,7 +29,11 @@ func (m *ModulusBasic) HashCode() base.HashCode {
 
 // Random returns a random Nat in [0, m).
 func (m *ModulusBasic) Random(prng io.Reader) (*Nat, error) {
-	return NatRandomRangeH(prng, m.Nat())
+	randBig, err := crand.Int(prng, m.Big())
+	if err != nil {
+		return nil, errs2.AttachStackTrace(err)
+	}
+	return NewNatFromBig(randBig, int(m.BitLen())), nil
 }
 
 // Big returns the big.Int representation of the modulus.

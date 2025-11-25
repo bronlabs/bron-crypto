@@ -1,12 +1,15 @@
 package numct
 
 import (
+	crand "crypto/rand"
+	"io"
 	"math/big"
 
 	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
 
 // IntOne returns a new Int set to 1.
@@ -662,4 +665,34 @@ func (i *Int) NotCap(x *Int, cap int) {
 
 	// Apply capacity semantics: truncate/announce to requested width
 	i.Resize(cap)
+}
+
+// Random sets i to a random integer in [lowInclusive, highExclusive).
+func (i *Int) Random(lowInclusive, highExclusive *Int, prng io.Reader) error {
+	errs := []error{}
+	if lowInclusive == nil {
+		errs = append(errs, ErrInvalidArgument.WithMessage("lowInclusive must not be nil"))
+	}
+	if highExclusive == nil {
+		errs = append(errs, ErrInvalidArgument.WithMessage("highExclusive must not be nil"))
+	}
+	if prng == nil {
+		errs = append(errs, ErrInvalidArgument.WithMessage("prng must not be nil"))
+	}
+	var intRange Int
+	intRange.Sub(highExclusive, lowInclusive)
+	if intRange.IsNegative() == ct.True || lowInclusive.Equal(highExclusive) == ct.True {
+		errs = append(errs, ErrInvalidArgument.WithMessage("max must be greater than zero"))
+	}
+	if len(errs) > 0 {
+		return errs2.Join(errs...)
+	}
+
+	randBig, err := crand.Int(prng, intRange.Big())
+	if err != nil {
+		return errs2.AttachStackTrace(err)
+	}
+	i.Add(lowInclusive, NewIntFromBig(randBig, randBig.BitLen()))
+	return nil
+
 }

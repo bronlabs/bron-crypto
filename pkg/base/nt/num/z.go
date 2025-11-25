@@ -190,14 +190,11 @@ func (*Integers) FromUintSymmetric(input *Uint) (*Int, error) {
 }
 
 func (*Integers) Random(lowInclusive, highExclusive *Int, prng io.Reader) (*Int, error) {
-	if prng == nil || lowInclusive == nil || highExclusive == nil {
-		return nil, errs.NewIsNil("prng is nil or lowInclusive is nil or highExclusive is nil")
-	}
-	v, err := numct.IntRandom(prng, lowInclusive.v, highExclusive.v)
-	if err != nil {
+	var v numct.Int
+	if err := v.Random(lowInclusive.v, highExclusive.v, prng); err != nil {
 		return nil, errs.WrapRandomSample(err, "failed to sample random Int")
 	}
-	return &Int{v: v}, nil
+	return &Int{v: &v}, nil
 }
 
 func (zs *Integers) Iter() iter.Seq[*Int] {

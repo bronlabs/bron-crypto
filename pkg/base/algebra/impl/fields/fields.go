@@ -3,9 +3,9 @@ package fields
 import "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 
 type (
-	FiniteFieldElement[E impl.FiniteFieldElement[E]]           = impl.FiniteFieldElement[E]
-	FiniteFieldElementPtr[E impl.FiniteFieldElement[E], T any] = impl.FiniteFieldElementPtr[E, T]
+	FiniteFieldElement[E impl.FiniteFieldElementLowLevel[E]]                 = impl.FiniteFieldElementLowLevel[E]
+	FiniteFieldElementPtr[E impl.FiniteFieldElementPtrLowLevel[E, T], T any] = impl.FiniteFieldElementPtrLowLevel[E, T]
 
-	PrimeFieldElement[E impl.PrimeFieldElement[E]]           = impl.PrimeFieldElement[E]
-	PrimeFieldElementPtr[E impl.PrimeFieldElement[E], T any] = impl.PrimeFieldElementPtr[E, T]
+	PrimeFieldElement[E impl.PrimeFieldElementLowLevel[E]]                 = impl.PrimeFieldElementLowLevel[E]
+	PrimeFieldElementPtr[E impl.PrimeFieldElementPtrLowLevel[E, T], T any] = impl.PrimeFieldElementPtrLowLevel[E, T]
 )

@@ -1,12 +1,15 @@
 package numct
 
 import (
+	crand "crypto/rand"
+	"io"
 	"math/big"
 
 	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
@@ -410,6 +413,36 @@ func (n *Nat) NotCap(x *Nat, cap int) {
 
 	(*saferith.Nat)(n).SetBytes(result)
 	n.Resize(cap)
+}
+
+// Random sets n to a random value in the range [lowInclusive, highExclusive).
+func (n *Nat) Random(lowInclusive, highExclusive *Nat, prng io.Reader) error {
+	errs := []error{}
+	if lowInclusive == nil {
+		errs = append(errs, ErrInvalidArgument.WithMessage("lowInclusive must not be nil"))
+	}
+	if highExclusive == nil {
+		errs = append(errs, ErrInvalidArgument.WithMessage("highExclusive must not be nil"))
+	}
+	if prng == nil {
+		errs = append(errs, ErrInvalidArgument.WithMessage("prng must not be nil"))
+	}
+	var maxVal Nat
+	maxVal.SubCap(highExclusive, lowInclusive, int(highExclusive.AnnouncedLen()))
+	if maxVal.IsZero() == ct.True {
+		errs = append(errs, ErrInvalidArgument.WithMessage("max must be greater than zero"))
+	}
+	if len(errs) > 0 {
+		return errs2.Join(errs...)
+	}
+
+	randBig, err := crand.Int(prng, maxVal.Big())
+	if err != nil {
+		return errs2.AttachStackTrace(err)
+	}
+
+	n.AddCap(lowInclusive, NewNatFromBig(randBig, int(highExclusive.AnnouncedLen())), int(highExclusive.AnnouncedLen()))
+	return nil
 }
 
 // DivModCap computes a / b and a % b, storing the results into outQuot and outRem.

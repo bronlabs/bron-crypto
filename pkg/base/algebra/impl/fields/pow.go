@@ -5,7 +5,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
-func Pow[FP impl.FiniteFieldElementPtr[FP, F], F any](result, base *F, exp []uint8) {
+func Pow[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any](result, base *F, exp []uint8) {
 	var tmp, res F
 	FP(&res).SetOne()
 

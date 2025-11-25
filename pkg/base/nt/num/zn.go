@@ -188,7 +188,7 @@ func (zn *ZMod) Top() *Uint {
 }
 
 func (zn *ZMod) Random(prng io.Reader) (*Uint, error) {
-	out, err := numct.NatRandomRangeH(prng, zn.n.m.Nat())
+	out, err := zn.n.m.Random(prng)
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "failed to sample random element in Zn")
 	}

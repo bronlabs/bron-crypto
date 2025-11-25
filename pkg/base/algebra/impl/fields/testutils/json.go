@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
 )
 
-type FiniteFieldElementJson[FP impl.FiniteFieldElementPtr[FP, F], F any] struct {
+type FiniteFieldElementJson[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any] struct {
 	V F
 }
 

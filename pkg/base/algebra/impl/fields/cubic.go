@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
-type CubicFieldExtensionArithmetic[BF impl.FiniteFieldElement[BF]] interface {
+type CubicFieldExtensionArithmetic[BF impl.FiniteFieldElementLowLevel[BF]] interface {
 	MulByCubicNonResidue(out BF, in BF)
 	RootOfUnity(out BF)
 	ProgenitorExponent() []uint8
@@ -17,7 +17,7 @@ type CubicFieldExtensionArithmetic[BF impl.FiniteFieldElement[BF]] interface {
 
 type CubicFieldExtensionImpl[BFP interface {
 	*BF
-	impl.FiniteFieldElement[BFP]
+	impl.FiniteFieldElementLowLevel[BFP]
 }, A CubicFieldExtensionArithmetic[BFP], BF any] struct {
 	U0 BF
 	U1 BF
