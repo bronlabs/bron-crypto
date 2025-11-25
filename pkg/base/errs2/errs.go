@@ -48,8 +48,8 @@ func Join(errs ...error) CryptoError {
 	pc, _, _, _ := runtime.Caller(1)
 	var children []error
 	for _, e := range errs {
-		sentinelErr := &sentinelError{}
-		if errors.As(e, &sentinelErr) {
+		//nolint:errorlint // internal error library
+		if sentinelErr, ok := e.(*sentinelError); ok {
 			children = append(children, &errorImpl{
 				message:    sentinelErr.message,
 				wrapped:    []error{sentinelErr},
@@ -72,8 +72,8 @@ func Join(errs ...error) CryptoError {
 func Wrap(err error) CryptoError {
 	pc, _, _, _ := runtime.Caller(1)
 
-	sentinelErr := &sentinelError{}
-	if errors.As(err, &sentinelErr) {
+	//nolint:errorlint // internal error library
+	if sentinelErr, ok := err.(*sentinelError); ok {
 		return &errorImpl{
 			message:    sentinelErr.message,
 			wrapped:    []error{sentinelErr},
@@ -91,8 +91,8 @@ func Wrap(err error) CryptoError {
 }
 
 func HasTag(err error, tag string) (any, bool) {
-	var taggedErr hasTags
-	if errors.As(err, &taggedErr) {
+	//nolint:errorlint // internal error library
+	if taggedErr, ok := err.(hasTags); ok {
 		v, ok := taggedErr.Tags()[tag]
 		return v, ok
 	}
@@ -250,16 +250,18 @@ func formatErrorChainDetailed(buffer *bytes.Buffer, header, indent string, err e
 	buffer.WriteString(header)
 	buffer.WriteString(err.Error())
 	buffer.WriteString("\n")
-	var stackFrameErr hasStackFrame
-	if errors.As(err, &stackFrameErr) {
+
+	//nolint:errorlint // internal error library
+	if stackFrameErr, ok := err.(hasStackFrame); ok && stackFrameErr.StackFrame() != nil {
 		stackFrame := stackFrameErr.StackFrame()
 		buffer.WriteString(indent)
 		buffer.WriteString(stackFramePrefix)
 		buffer.WriteString(stackFrame.File + ":" + strconv.Itoa(stackFrame.LineNo))
 		buffer.WriteString("\n")
 	}
-	var tagsErr hasTags
-	if errors.As(err, &tagsErr) {
+
+	//nolint:errorlint // internal error library
+	if tagsErr, ok := err.(hasTags); ok && len(tagsErr.Tags()) > 0 {
 		tags := tagsErr.Tags()
 		tagsStr, err := json.Marshal(tags)
 		if err == nil {
@@ -271,14 +273,12 @@ func formatErrorChainDetailed(buffer *bytes.Buffer, header, indent string, err e
 	}
 
 	var children []error
-	var joined wrapsMultipleErrors
-	ok := errors.As(err, &joined)
-	if ok {
+	//nolint:errorlint // internal error library
+	if joined, ok := err.(wrapsMultipleErrors); ok {
 		children = append(children, joined.Unwrap()...)
 	}
-	var wrapped wrapsError
-	ok = errors.As(err, &wrapped)
-	if ok {
+	//nolint:errorlint // internal error library
+	if wrapped, ok := err.(wrapsError); ok {
 		children = append(children, wrapped.Unwrap())
 	}
 	filteredChildren := nonSentinelErrorsFilter(children)
@@ -294,8 +294,8 @@ func formatErrorChainDetailed(buffer *bytes.Buffer, header, indent string, err e
 func nonSentinelErrorsFilter(errs []error) []error {
 	var filtered []error
 	for _, e := range errs {
-		sentinelError := &sentinelError{}
-		if errors.As(e, &sentinelError) {
+		//nolint:errorlint // internal error library
+		if _, ok := e.(*sentinelError); !ok {
 			filtered = append(filtered, e)
 		}
 	}
