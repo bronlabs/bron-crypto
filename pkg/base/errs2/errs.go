@@ -24,24 +24,24 @@ var (
 	As     = errors.As
 )
 
-type CryptoError interface {
+type Error interface {
 	error
 	fmt.Formatter
 
-	WithTag(string, any) CryptoError
-	WithMessage(format string, args ...any) CryptoError
-	WithStackFrame() CryptoError
+	WithTag(string, any) Error
+	WithMessage(format string, args ...any) Error
+	WithStackFrame() Error
 	Tags() map[string]any
 	StackFrame() *StackFrame
 }
 
-func New(format string, args ...any) CryptoError {
+func New(format string, args ...any) Error {
 	return &sentinelError{
 		message: fmt.Sprintf(format, args...),
 	}
 }
 
-func Join(errs ...error) CryptoError {
+func Join(errs ...error) Error {
 	if len(errs) == 0 {
 		return nil
 	}
@@ -69,7 +69,7 @@ func Join(errs ...error) CryptoError {
 	}
 }
 
-func Wrap(err error) CryptoError {
+func Wrap(err error) Error {
 	pc, _, _, _ := runtime.Caller(1)
 
 	//nolint:errorlint // internal error library
@@ -104,7 +104,7 @@ type sentinelError struct {
 	message string
 }
 
-func (e *sentinelError) WithTag(s string, a any) CryptoError {
+func (e *sentinelError) WithTag(s string, a any) Error {
 	pc, _, _, _ := runtime.Caller(1)
 	return &errorImpl{
 		message:    e.message,
@@ -114,7 +114,7 @@ func (e *sentinelError) WithTag(s string, a any) CryptoError {
 	}
 }
 
-func (e *sentinelError) WithMessage(format string, args ...any) CryptoError {
+func (e *sentinelError) WithMessage(format string, args ...any) Error {
 	pc, _, _, _ := runtime.Caller(1)
 	return &errorImpl{
 		message:    e.message + sentinelSeparator + fmt.Sprintf(format, args...),
@@ -124,7 +124,7 @@ func (e *sentinelError) WithMessage(format string, args ...any) CryptoError {
 	}
 }
 
-func (e *sentinelError) WithStackFrame() CryptoError {
+func (e *sentinelError) WithStackFrame() Error {
 	pc, _, _, _ := runtime.Caller(0)
 	return &errorImpl{
 		message:    e.message,
@@ -160,7 +160,7 @@ type errorImpl struct {
 	tags       map[string]any
 }
 
-func (e *errorImpl) WithTag(s string, a any) CryptoError {
+func (e *errorImpl) WithTag(s string, a any) Error {
 	if e.tags == nil {
 		e.tags = map[string]any{s: a}
 	} else {
@@ -169,7 +169,7 @@ func (e *errorImpl) WithTag(s string, a any) CryptoError {
 	return e
 }
 
-func (e *errorImpl) WithMessage(format string, args ...any) CryptoError {
+func (e *errorImpl) WithMessage(format string, args ...any) Error {
 	if e.message == "" {
 		e.message = fmt.Sprintf(format, args...)
 	} else {
@@ -178,7 +178,7 @@ func (e *errorImpl) WithMessage(format string, args ...any) CryptoError {
 	return e
 }
 
-func (e *errorImpl) WithStackFrame() CryptoError {
+func (e *errorImpl) WithStackFrame() Error {
 	pc, _, _, _ := runtime.Caller(1)
 	e.stackFrame = NewStackFrame(pc)
 	return e
