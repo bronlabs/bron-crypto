@@ -38,7 +38,7 @@ func (r *seededReader) Read(p []byte) (int, error) {
 // Seed resets the internal state of the PRNG with the provided seed and salt.
 func (r *seededReader) Seed(seed, salt []byte) error {
 	if err := r.validateSeedInputs(seed, salt); err != nil {
-		return errs2.AttachStackTrace(err)
+		return errs2.Wrap(err).WithMessage("invalid inputs")
 	}
 	seedUint64 := binary.LittleEndian.Uint64(seed)
 	saltUint64 := binary.LittleEndian.Uint64(salt)

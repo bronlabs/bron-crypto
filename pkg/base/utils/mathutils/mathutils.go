@@ -13,7 +13,7 @@ func RandomUint64(prng io.Reader) (uint64, error) {
 	var data [8]byte
 	_, err := io.ReadFull(prng, data[:])
 	if err != nil {
-		return 0, errs2.AttachStackTrace(err)
+		return 0, errs2.Wrap(err).WithMessage("failed to read random bytes")
 	}
 
 	return binary.LittleEndian.Uint64(data[:]), nil
@@ -28,7 +28,7 @@ func RandomUint64Range(prng io.Reader, bound uint64) (uint64, error) {
 	for {
 		bits, err := RandomUint64(prng)
 		if err != nil {
-			return 0, errs2.AttachStackTrace(err)
+			return 0, errs2.Wrap(err).WithMessage("failed to sample random uint64")
 		}
 		val := bits % bound
 		if (bits - val) >= (bound - 1) {
