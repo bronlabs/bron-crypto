@@ -8,8 +8,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
+// Vp computes the p-adic valuation of n with respect to p and precision k.
 // n must already be reduced mod p^k.
-func Vp(out *Nat, p Modulus, n *Nat, k int) int {
+func Vp(out *Nat, p *Modulus, n *Nat, k int) int {
 	temp := n.Clone()
 	var quo, rem Nat
 	m := 0
@@ -53,20 +54,6 @@ func NatRandomRangeH(prng io.Reader, highExclusive *Nat) (*Nat, error) {
 		return nil, errs.WrapFailed(err, "failed to get random")
 	}
 	return NewNatFromBig(randBig, int(highExclusive.AnnouncedLen())), nil
-}
-
-func NatRandomBits(prng io.Reader, bits uint) (*Nat, error) {
-	if prng == nil {
-		return nil, errs.NewIsNil("prng must not be nil")
-	}
-	randBytes := make([]byte, (bits+7)/8)
-	_, err := io.ReadFull(prng, randBytes)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to get random")
-	}
-	out := NewNatFromBytes(randBytes)
-	out.Resize(int(bits))
-	return out, nil
 }
 
 func IntRandom(prng io.Reader, lowInclusive, highExclusive *Int) (*Int, error) {

@@ -22,12 +22,12 @@ var bnPool = sync.Pool{
 	},
 }
 
-// **************** Modulus Odd Prime ********************
-
+// NewModulus creates a new Modulus from a Nat.
+// It returns ok = false if m is zero.
 func NewModulus(m *Nat) (*Modulus, ct.Bool) {
 	ok := m.IsNonZero()
 
-	defer func() {
+	defer func() { // saferith panics on zero modulus.
 		if r := recover(); r != nil {
 			ok &= ct.False
 		}
@@ -49,6 +49,7 @@ func NewModulus(m *Nat) (*Modulus, ct.Bool) {
 	}, ok
 }
 
+// Modulus is a modulus implementation based on BoringSSL's BigNum and saferith.Modulus.
 type Modulus struct {
 	*ModulusBasic
 	mSub2 *Nat
@@ -110,9 +111,27 @@ func (m *Modulus) modExpOdd(out, base, exp *Nat) {
 	out.SetBytes(rBytes)
 }
 
+// ModExp sets out = base^exp (mod m).
 func (m *Modulus) ModExp(out, base, exp *Nat) {
 	if m.Nat().IsOdd() == ct.True {
 		m.modExpOdd(out, base, exp)
+	} else {
+		m.ModulusBasic.modExpEven(out, base, exp.Big())
+	}
+}
+
+func (m *Modulus) modExpIOdd(out, base *Nat, exp *Int) {
+	var candidate Nat
+	m.modExpOdd(&candidate, base, exp.Absed())
+	var candidateInv Nat
+	ok := m.ModInv(&candidateInv, &candidate)
+	out.CondAssign(ok, &candidate)
+}
+
+// ModExpInt sets out = base^exp (mod m) where exp is an Int.
+func (m *Modulus) ModExpInt(out, base *Nat, exp *Int) {
+	if m.Nat().IsOdd() == ct.True {
+		m.modExpIOdd(out, base, exp)
 	} else {
 		m.ModulusBasic.modExpEven(out, base, exp.Big())
 	}
@@ -159,6 +178,7 @@ func (m *Modulus) modMultiBaseExpOdd(out, bases []*Nat, exp *Nat) {
 	wg.Wait()
 }
 
+// ModMultiBaseExp sets out[i] = bases[i]^exp (mod m) for all i.
 func (m *Modulus) ModMultiBaseExp(out, bases []*Nat, exp *Nat) {
 	if len(bases) != len(out) {
 		panic("len(bases) != len(out)")
@@ -215,6 +235,7 @@ func (m *Modulus) modInvOddPrime(out, a *Nat) ct.Bool {
 	return ok
 }
 
+// ModInv sets out = a^{-1} (mod m).
 func (m *Modulus) ModInv(out, a *Nat) ct.Bool {
 	ok := a.IsNonZero()
 	if m.Nat().IsOdd() == ct.True {
@@ -229,6 +250,7 @@ func (m *Modulus) ModInv(out, a *Nat) ct.Bool {
 	return ok
 }
 
+// ModMul sets out = (x * y) (mod m).
 func (m *Modulus) ModMul(out, x, y *Nat) {
 	xBytes, yBytes := x.Bytes(), y.Bytes()
 
@@ -260,6 +282,7 @@ func (m *Modulus) ModMul(out, x, y *Nat) {
 	out.SetBytes(outBytes)
 }
 
+// Set sets m = v.
 func (m *Modulus) Set(v *Modulus) {
 	m.ModulusBasic.Set(v.ModulusBasic)
 	m.mSub2 = v.mSub2
@@ -268,6 +291,7 @@ func (m *Modulus) Set(v *Modulus) {
 	m.once = v.once
 }
 
+// SetNat sets m = n where n is a Nat.
 func (m *Modulus) SetNat(n *Nat) ct.Bool {
 	mm, ok := NewModulus(n)
 	if mm != nil {
