@@ -97,7 +97,7 @@ func (n *Nat) AddCap(lhs, rhs *Nat, cap int) {
 }
 
 // Sub sets n = lhs - rhs modulo 2^cap.
-// if cap < 0, capacity will be max(lhs.AnnouncedLen(), rhs.AnnouncedLen()) + 1
+// if cap < 0, capacity will be max(lhs.AnnouncedLen(), rhs.AnnouncedLen())
 func (n *Nat) SubCap(lhs, rhs *Nat, cap int) {
 	(*saferith.Nat)(n).Sub((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), cap)
 }
