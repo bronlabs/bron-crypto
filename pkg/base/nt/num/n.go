@@ -471,10 +471,10 @@ func (n *Nat) ScalarMul(sc *Nat) *Nat {
 	return n.Mul(sc)
 }
 
-func (n *Nat) TrueLen() uint {
+func (n *Nat) TrueLen() int {
 	return n.v.TrueLen()
 }
 
-func (n *Nat) AnnouncedLen() uint {
+func (n *Nat) AnnouncedLen() int {
 	return n.v.AnnouncedLen()
 }

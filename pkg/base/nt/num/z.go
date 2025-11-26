@@ -191,7 +191,7 @@ func (*Integers) FromUintSymmetric(input *Uint) (*Int, error) {
 
 func (*Integers) Random(lowInclusive, highExclusive *Int, prng io.Reader) (*Int, error) {
 	var v numct.Int
-	if err := v.Random(lowInclusive.v, highExclusive.v, prng); err != nil {
+	if err := v.SetRandomRangeLH(lowInclusive.v, highExclusive.v, prng); err != nil {
 		return nil, errs.WrapRandomSample(err, "failed to sample random Int")
 	}
 	return &Int{v: &v}, nil
@@ -586,10 +586,10 @@ func (i *Int) Cardinal() cardinal.Cardinal {
 	return cardinal.NewFromSaferith((*saferith.Nat)(i.Abs().v))
 }
 
-func (i *Int) TrueLen() uint {
+func (i *Int) TrueLen() int {
 	return i.v.TrueLen()
 }
 
-func (i *Int) AnnouncedLen() uint {
+func (i *Int) AnnouncedLen() int {
 	return i.v.AnnouncedLen()
 }

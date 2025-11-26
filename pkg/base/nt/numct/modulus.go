@@ -315,8 +315,8 @@ func (m *ModulusBasic) IsUnit(x *Nat) ct.Bool {
 }
 
 // BitLen returns the bit length of the modulus.
-func (m *ModulusBasic) BitLen() uint {
-	return uint((*saferith.Modulus)(m).BitLen())
+func (m *ModulusBasic) BitLen() int {
+	return (*saferith.Modulus)(m).BitLen()
 }
 
 // Nat returns the Nat representation of the modulus.

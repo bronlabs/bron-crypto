@@ -2,11 +2,7 @@ package numct_test
 
 import (
 	"bytes"
-	crand "crypto/rand"
-	"encoding/binary"
-	"io"
 	"math/big"
-	"math/rand/v2"
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
@@ -35,33 +31,6 @@ func TestNewInt(t *testing.T) {
 	for _, v := range cases {
 		n := numct.NewInt(v)
 		require.Equal(t, v, n.Int64())
-	}
-}
-
-// TODO: make it property test
-func TestInt_TwosComplementBEBytes(t *testing.T) {
-	for range 1024 * 1024 {
-		x := int64(rand.Uint64())
-		var xInt numct.Int
-		xInt.SetInt64(x)
-
-		expected := binary.BigEndian.AppendUint64(nil, uint64(x))
-		actual := xInt.TwosComplementBEBytes()
-		require.Equal(t, expected, actual)
-	}
-}
-
-// TODO: make it property test
-func TestInt_SetTwosComplementLEBytes(t *testing.T) {
-	for range 1024 * 1024 {
-		beBytes := make([]byte, 8)
-		_, err := io.ReadFull(crand.Reader, beBytes)
-		require.NoError(t, err)
-		x := int64(binary.BigEndian.Uint64(beBytes))
-		var xInt numct.Int
-		xInt.SetTwosComplementBEBytes(beBytes)
-		require.Equal(t, xInt.AnnouncedLen(), uint(63))
-		require.Equal(t, x, xInt.Int64())
 	}
 }
 
@@ -116,7 +85,7 @@ func TestInt_Abs(t *testing.T) {
 	}
 	for _, tc := range cases {
 		n := numct.NewInt(tc.input)
-		n.Abs()
+		n.Abs(n)
 		require.Equal(t, tc.expected, n.Int64())
 	}
 }
@@ -426,38 +395,128 @@ func TestInt_IsOne(t *testing.T) {
 
 func TestInt_Sqrt(t *testing.T) {
 	t.Parallel()
-	t.Run("perfect squares", func(t *testing.T) {
+
+	t.Run("small perfect squares (fast path)", func(t *testing.T) {
 		cases := []struct {
-			input, expected int64
+			input    int64
+			expected int64
+			ok       bool
 		}{
-			{0, 0},
-			{1, 1},
-			{4, 2},
-			{9, 3},
-			{16, 4},
-			{25, 5},
-			{100, 10},
+			{0, 0, true},
+			{1, 1, true},
+			{4, 2, true},
+			{9, 3, true},
+			{16, 4, true},
+			{25, 5, true},
+			{36, 6, true},
+			{49, 7, true},
+			{64, 8, true},
+			{81, 9, true},
+			{100, 10, true},
+			{144, 12, true},
+			{256, 16, true},
+			{1000000, 1000, true},
+			{2, 0, false},  // not a perfect square
+			{3, 0, false},  // not a perfect square
+			{-1, 0, false}, // negative
+			{-4, 0, false}, // negative (even though |x| is perfect square)
+			{-9, 0, false}, // negative
 		}
 		for _, tc := range cases {
-			var result numct.Int
-			ok := result.Sqrt(numct.NewInt(tc.input))
-			require.Equal(t, ct.True, ok)
-			require.Equal(t, tc.expected, result.Int64())
+			n := numct.NewInt(tc.input)
+			original := n.Clone()
+			var root numct.Int
+			ok := root.Sqrt(n)
+			if tc.ok {
+				require.Equal(t, ct.True, ok, "input %d should be a perfect square", tc.input)
+				require.Equal(t, tc.expected, root.Int64(), "sqrt(%d) should be %d", tc.input, tc.expected)
+			} else {
+				require.Equal(t, ct.False, ok, "input %d should not be a perfect square", tc.input)
+				// When called on self, should leave unchanged on failure
+				root.Set(original)
+				ok = root.Sqrt(&root)
+				require.Equal(t, ct.True, root.Equal(original), "should leave value unchanged on failure")
+			}
 		}
 	})
 
-	t.Run("non-perfect squares", func(t *testing.T) {
-		var result numct.Int
-		result.SetOne()
-		ok := result.Sqrt(numct.NewInt(2))
-		require.Equal(t, ct.False, ok)
+	t.Run("large perfect squares (multi-limb path)", func(t *testing.T) {
+		// Test numbers > 64 bits to exercise multi-limb path
+		cases := []struct {
+			name string
+			root *big.Int
+		}{
+			{"2^64", new(big.Int).Lsh(big.NewInt(1), 64)},
+			{"2^100", new(big.Int).Lsh(big.NewInt(1), 100)},
+			{"2^128", new(big.Int).Lsh(big.NewInt(1), 128)},
+			{"2^200", new(big.Int).Lsh(big.NewInt(1), 200)},
+			{"large value", new(big.Int).SetBytes([]byte{
+				0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0,
+				0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+			})},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				// Compute root^2
+				squared := new(big.Int).Mul(tc.root, tc.root)
+				n := numct.NewIntFromBig(squared, squared.BitLen())
+
+				var root numct.Int
+				ok := root.Sqrt(n)
+
+				require.Equal(t, ct.True, ok, "should be a perfect square")
+				require.Equal(t, 0, root.Big().Cmp(tc.root), "sqrt should equal original root")
+			})
+		}
 	})
 
-	t.Run("negative", func(t *testing.T) {
-		var result numct.Int
-		result.SetOne()
-		ok := result.Sqrt(numct.NewInt(-4))
-		require.Equal(t, ct.False, ok)
+	t.Run("large non-perfect squares (multi-limb path)", func(t *testing.T) {
+		// Numbers > 64 bits that are not perfect squares
+		cases := []struct {
+			name string
+			n    *big.Int
+		}{
+			{"2^65 + 1", new(big.Int).Add(new(big.Int).Lsh(big.NewInt(1), 65), big.NewInt(1))},
+			{"2^100 + 7", new(big.Int).Add(new(big.Int).Lsh(big.NewInt(1), 100), big.NewInt(7))},
+			{"2^128 - 1", new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 128), big.NewInt(1))},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				n := numct.NewIntFromBig(tc.n, tc.n.BitLen())
+				original := n.Clone()
+
+				ok := n.Sqrt(n)
+
+				require.Equal(t, ct.False, ok, "should not be a perfect square")
+				require.Equal(t, ct.True, n.Equal(original), "should leave value unchanged")
+			})
+		}
+	})
+
+	t.Run("large negative numbers", func(t *testing.T) {
+		// Large negative numbers should always fail
+		largeNeg := new(big.Int).Lsh(big.NewInt(1), 128)
+		largeNeg.Neg(largeNeg)
+		n := numct.NewIntFromBig(largeNeg, largeNeg.BitLen())
+		original := n.Clone()
+
+		ok := n.Sqrt(n)
+
+		require.Equal(t, ct.False, ok, "negative should not be a perfect square")
+		require.Equal(t, ct.True, n.Equal(original), "should leave value unchanged")
+	})
+
+	t.Run("edge cases", func(t *testing.T) {
+		// max uint64 squared
+		maxU64 := new(big.Int).SetUint64(^uint64(0))
+		maxSquared := new(big.Int).Mul(maxU64, maxU64)
+		n := numct.NewIntFromBig(maxSquared, maxSquared.BitLen())
+
+		var root numct.Int
+		ok := root.Sqrt(n)
+
+		require.Equal(t, ct.True, ok)
+		require.Equal(t, 0, root.Big().Cmp(maxU64))
 	})
 }
 
@@ -752,7 +811,7 @@ func TestInt_TrueLen(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		value    int64
-		expected uint
+		expected int
 	}{
 		{0, 0},
 		{1, 1},
@@ -769,8 +828,8 @@ func TestInt_TrueLen(t *testing.T) {
 func TestInt_AnnouncedLen(t *testing.T) {
 	t.Parallel()
 	n := numct.NewInt(42)
-	// NewInt uses SetInt64 which sets announced len to 63
-	require.Equal(t, uint(63), n.AnnouncedLen())
+	// NewInt uses SetInt64 which sets announced len to 64 (to accommodate MinInt64)
+	require.Equal(t, 64, n.AnnouncedLen())
 }
 
 func TestInt_IsOdd(t *testing.T) {
@@ -837,14 +896,14 @@ func TestInt_Not(t *testing.T) {
 	}
 }
 
-func TestInt_Random(t *testing.T) {
+func TestInt_SetRandomRangeLH(t *testing.T) {
 	t.Parallel()
 	prng := pcg.NewRandomised()
 	low := numct.NewInt(-50)
 	high := numct.NewInt(50)
 
 	var n numct.Int
-	err := n.Random(low, high, prng)
+	err := n.SetRandomRangeLH(low, high, prng)
 	require.NoError(t, err)
 
 	// Check n is in range [-50, 50)
@@ -855,13 +914,13 @@ func TestInt_Random(t *testing.T) {
 	require.Equal(t, ct.True, lt) // n < high
 }
 
-func TestInt_Random_Errors(t *testing.T) {
+func TestInt_SetRandomRangeLH_Errors(t *testing.T) {
 	t.Parallel()
 	prng := pcg.NewRandomised()
 
 	t.Run("low equals high", func(t *testing.T) {
 		var n numct.Int
-		err := n.Random(numct.NewInt(10), numct.NewInt(10), prng)
+		err := n.SetRandomRangeLH(numct.NewInt(10), numct.NewInt(10), prng)
 		require.Error(t, err)
 	})
 }

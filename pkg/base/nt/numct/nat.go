@@ -198,13 +198,13 @@ func (n *Nat) String() string {
 }
 
 // TrueLen returns exact number of bits required to represent n. Note that it would leak required number of zero bits in n.
-func (n *Nat) TrueLen() uint {
-	return uint((*saferith.Nat)(n).TrueLen())
+func (n *Nat) TrueLen() int {
+	return ((*saferith.Nat)(n).TrueLen())
 }
 
 // AnnouncedLen returns the announced length in bits of n. Safe to be used publicly.
-func (n *Nat) AnnouncedLen() uint {
-	return uint((*saferith.Nat)(n).AnnouncedLen())
+func (n *Nat) AnnouncedLen() int {
+	return ((*saferith.Nat)(n).AnnouncedLen())
 }
 
 // Select sets n = x0 if choice == 0, n = x1 if choice == 1.
@@ -236,6 +236,91 @@ func (n *Nat) Resize(cap int) {
 		cap = int(n.AnnouncedLen())
 	}
 	(*saferith.Nat)(n).Resize(cap)
+}
+
+// Sqrt sets n = sqrt(x) if x is a perfect square, else leaves n unchanged.
+// Returns ok = 1 if n is a perfect square.
+func (n *Nat) Sqrt(x *Nat) (ok ct.Bool) {
+	// Constant-time (w.r.t. announced capacity) integer square root.
+	// Work on |x| and assign only if |x| is a perfect square.
+
+	capBits := int(x.AnnouncedLen())
+
+	var root saferith.Nat
+	var okRes ct.Bool
+
+	// ===== Single-limb fast path (<= 64 bits): 32 fixed rounds =====
+	if capBits <= 64 {
+		u0 := x.Uint64()
+		r64 := ct.Isqrt64(u0)
+		root.SetUint64(r64).Resize(capBits)
+
+		// Exactness check: r64^2 fits in uint64 because r64 <= 2^32.
+		sq := r64 * r64
+		okRes = ct.Bool(ct.Equal(sq, u0))
+	} else {
+		// ===== Multi-limb path: restoring (digit-by-digit) method. =====
+		// Runtime depends only on capBits (pairs), not on the value.
+		var r saferith.Nat // remainder
+		r.SetNat((*saferith.Nat)(x))
+		r.Resize(capBits)
+
+		var y saferith.Nat // accumulating root
+		y.SetUint64(0)
+		y.Resize(capBits)
+
+		pairs := (capBits + 1) / 2 // number of two-bit groups to process
+
+		// b := 1 << startEven, where startEven is the top even bit < capBits
+		var b saferith.Nat
+		b.SetUint64(1)
+		if pairs > 0 {
+			startEven := 2 * (pairs - 1)
+			b.Lsh(&b, uint(startEven), capBits)
+		} else {
+			b.Resize(capBits)
+		}
+
+		// Scratch (BoringSSL-style reuse).
+		var m saferith.Nat      // y + b
+		var yshr saferith.Nat   // y >> 1
+		var rMinus saferith.Nat // r - m
+		var yPlus saferith.Nat  // (y>>1) + b
+		var bshr saferith.Nat   // b >> 2
+
+		for range pairs {
+			m.Add(&y, &b, int(capBits))
+
+			yshr.Rsh(&y, 1, int(capBits))
+
+			rMinus.Sub(&r, &m, int(capBits))   // r - m
+			yPlus.Add(&yshr, &b, int(capBits)) // (y>>1) + b
+
+			gt, eq, _ := r.Cmp(&m)
+			ge := gt | eq
+
+			r.CondAssign(ge, &rMinus)
+			y = yshr
+			y.CondAssign(ge, &yPlus)
+
+			bshr.Rsh(&b, 2, int(capBits))
+			b = bshr
+		}
+
+		// ok iff remainder is zero.
+		var z saferith.Nat
+		z.Resize(capBits)
+		_, eqZero, _ := r.Cmp(&z)
+		okRes = ct.Bool(eqZero)
+
+		root.SetNat(&y)
+	}
+
+	ok = okRes
+
+	// Conditionally assign the root.
+	n.Select(ok, n, (*Nat)(&root))
+	return ok
 }
 
 // Lsh left shifts n by shift bits.
@@ -447,9 +532,9 @@ func (n *Nat) SetRandomRangeH(highExclusive *Nat, prng io.Reader) error {
 
 	var mask Nat
 	mask.Set(highExclusive)
-	for i := uint(1); i < highExclusive.AnnouncedLen(); i <<= 1 {
+	for i := 1; i < highExclusive.AnnouncedLen(); i <<= 1 {
 		var shifted Nat
-		shifted.Rsh(&mask, i)
+		shifted.Rsh(&mask, uint(i))
 		mask.Or(&mask, &shifted)
 	}
 

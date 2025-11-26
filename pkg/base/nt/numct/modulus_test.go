@@ -334,7 +334,7 @@ func TestModulus_Properties(t *testing.T) {
 
 	t.Run("BitLen", func(t *testing.T) {
 		// 97 in binary is 1100001, which is 7 bits
-		assert.Equal(t, uint(7), m.BitLen())
+		assert.Equal(t, 7, m.BitLen())
 	})
 
 	t.Run("Nat", func(t *testing.T) {

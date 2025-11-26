@@ -442,10 +442,10 @@ func (np *NatPlus) ModulusCT() *numct.Modulus {
 	return np.m
 }
 
-func (np *NatPlus) TrueLen() uint {
+func (np *NatPlus) TrueLen() int {
 	return np.v.TrueLen()
 }
 
-func (np *NatPlus) AnnouncedLen() uint {
+func (np *NatPlus) AnnouncedLen() int {
 	return np.v.AnnouncedLen()
 }

@@ -369,7 +369,7 @@ func TestNat_TrueLen(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		value    uint64
-		expected uint
+		expected int
 	}{
 		{0, 0},
 		{1, 1},
@@ -389,7 +389,7 @@ func TestNat_AnnouncedLen(t *testing.T) {
 	t.Parallel()
 	n := numct.NewNat(42)
 	// NewNat uses SetUint64 which sets announced len to 64
-	require.Equal(t, uint(64), n.AnnouncedLen())
+	require.Equal(t, 64, n.AnnouncedLen())
 }
 
 func TestNat_Select(t *testing.T) {
@@ -736,4 +736,108 @@ func TestNat_FillBytes_Padding(t *testing.T) {
 	result := n.FillBytes(buf)
 	expected := []byte{0, 0, 0, 0, 0, 0, 0, 1}
 	require.True(t, bytes.Equal(expected, result))
+}
+
+func TestNat_Sqrt(t *testing.T) {
+	t.Parallel()
+
+	t.Run("small perfect squares (fast path)", func(t *testing.T) {
+		cases := []struct {
+			input    uint64
+			expected uint64
+		}{
+			{0, 0},
+			{1, 1},
+			{4, 2},
+			{9, 3},
+			{16, 4},
+			{25, 5},
+			{36, 6},
+			{49, 7},
+			{64, 8},
+			{81, 9},
+			{100, 10},
+			{144, 12},
+			{256, 16},
+			{1000000, 1000},
+			{0xFFFFFFFF, 0}, // not a perfect square
+		}
+		for _, tc := range cases {
+			n := numct.NewNat(tc.input)
+			var root numct.Nat
+			ok := root.Sqrt(n)
+			if tc.expected == 0 && tc.input != 0 {
+				require.Equal(t, ct.False, ok, "input %d should not be a perfect square", tc.input)
+			} else {
+				require.Equal(t, ct.True, ok, "input %d should be a perfect square", tc.input)
+				require.Equal(t, tc.expected, root.Uint64(), "sqrt(%d) should be %d", tc.input, tc.expected)
+			}
+		}
+	})
+
+	t.Run("large perfect squares (multi-limb path)", func(t *testing.T) {
+		// Test numbers > 64 bits to exercise multi-limb path
+		cases := []struct {
+			name  string
+			root  *big.Int
+		}{
+			{"2^64", new(big.Int).Lsh(big.NewInt(1), 64)},
+			{"2^100", new(big.Int).Lsh(big.NewInt(1), 100)},
+			{"2^128", new(big.Int).Lsh(big.NewInt(1), 128)},
+			{"2^200", new(big.Int).Lsh(big.NewInt(1), 200)},
+			{"large prime-ish", new(big.Int).SetBytes([]byte{
+				0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0,
+				0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+			})},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				// Compute root^2
+				squared := new(big.Int).Mul(tc.root, tc.root)
+				n := numct.NewNatFromBig(squared, squared.BitLen())
+
+				var root numct.Nat
+				ok := root.Sqrt(n)
+
+				require.Equal(t, ct.True, ok, "should be a perfect square")
+				require.Equal(t, 0, root.Big().Cmp(tc.root), "sqrt should equal original root")
+			})
+		}
+	})
+
+	t.Run("large non-perfect squares (multi-limb path)", func(t *testing.T) {
+		// Numbers > 64 bits that are not perfect squares
+		cases := []struct {
+			name string
+			n    *big.Int
+		}{
+			{"2^65 + 1", new(big.Int).Add(new(big.Int).Lsh(big.NewInt(1), 65), big.NewInt(1))},
+			{"2^100 + 7", new(big.Int).Add(new(big.Int).Lsh(big.NewInt(1), 100), big.NewInt(7))},
+			{"2^128 - 1", new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 128), big.NewInt(1))},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				n := numct.NewNatFromBig(tc.n, tc.n.BitLen())
+				original := n.Clone()
+
+				ok := n.Sqrt(n)
+
+				require.Equal(t, ct.False, ok, "should not be a perfect square")
+				require.Equal(t, ct.True, n.Equal(original), "should leave value unchanged")
+			})
+		}
+	})
+
+	t.Run("edge cases", func(t *testing.T) {
+		// max uint64 squared
+		maxU64 := new(big.Int).SetUint64(^uint64(0))
+		maxSquared := new(big.Int).Mul(maxU64, maxU64)
+		n := numct.NewNatFromBig(maxSquared, maxSquared.BitLen())
+
+		var root numct.Nat
+		ok := root.Sqrt(n)
+
+		require.Equal(t, ct.True, ok)
+		require.Equal(t, 0, root.Big().Cmp(maxU64))
+	})
 }

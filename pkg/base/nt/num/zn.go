@@ -657,11 +657,11 @@ func (u *Uint) Big() *big.Int {
 	return u.v.Big()
 }
 
-func (u *Uint) TrueLen() uint {
+func (u *Uint) TrueLen() int {
 	return u.v.TrueLen()
 }
 
-func (u *Uint) AnnouncedLen() uint {
+func (u *Uint) AnnouncedLen() int {
 	return u.v.AnnouncedLen()
 }
 

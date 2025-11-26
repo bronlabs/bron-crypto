@@ -1,7 +1,6 @@
 package numct
 
 import (
-	crand "crypto/rand"
 	"crypto/subtle"
 	"io"
 	"math/big"
@@ -58,7 +57,8 @@ func NewIntFromBig(n *big.Int, cap int) *Int {
 type Int saferith.Int
 
 // Abs sets i = |i|.
-func (i *Int) Abs() {
+func (i *Int) Abs(x *Int) {
+	i.Set(x)
 	(*saferith.Int)(i).Neg(saferith.Choice(i.IsNegative()))
 }
 
@@ -209,95 +209,17 @@ func (i *Int) Sqrt(x *Int) (ok ct.Bool) {
 	// Constant-time (w.r.t. announced capacity) integer square root.
 	// Work on |x| and assign only if |x| is a perfect square.
 
+	var outNat Nat
+	ok = outNat.Sqrt(x.Absed())
+
 	// Negative numbers are never perfect squares in Z.
-	nonNeg := x.IsNegative().Not()
+	ok &= x.IsNegative().Not()
 
-	// Magnitude and (public) capacity.
-	a := x.Absed()
-	capBits := int(a.AnnouncedLen())
+	var out Int
+	out.SetNat(&outNat)
 
-	var rootNat saferith.Nat
-	var okRes ct.Bool
+	i.CondAssign(ok, &out)
 
-	// ===== Single-limb fast path (<= 64 bits): 32 fixed rounds, branchless. =====
-	if capBits <= 64 {
-		u0 := a.Uint64()
-		r64 := ct.Isqrt64(u0)
-		rootNat.SetUint64(r64).Resize(capBits)
-
-		// Exactness check: r64^2 fits in uint64 because r64 <= 2^32.
-		sq := r64 * r64
-		okRes = ct.Bool(ct.Equal(sq, u0))
-	} else {
-		// ===== Multi-limb path: restoring (digit-by-digit) method. =====
-		// Runtime depends only on capBits (pairs), not on the value.
-		var n saferith.Nat // remainder
-		n.SetNat((*saferith.Nat)(a))
-		n.Resize(capBits)
-
-		var y saferith.Nat // accumulating root
-		y.SetUint64(0)
-		y.Resize(capBits)
-
-		pairs := (capBits + 1) / 2 // number of two-bit groups to process
-
-		// b := 1 << startEven, where startEven is the top even bit < capBits
-		var b saferith.Nat
-		b.SetUint64(1)
-		if pairs > 0 {
-			startEven := 2 * (pairs - 1)
-			b.Lsh(&b, uint(startEven), capBits)
-		} else {
-			b.Resize(capBits)
-		}
-
-		// Scratch (BoringSSL-style reuse).
-		var m saferith.Nat      // y + b
-		var yshr saferith.Nat   // y >> 1
-		var nMinus saferith.Nat // n - m
-		var yPlus saferith.Nat  // (y>>1) + b
-		var bshr saferith.Nat   // b >> 2
-
-		for range pairs {
-			// m = y + b
-			m.Add(&y, &b, int(capBits))
-
-			// yshr = y >> 1 (computed unconditionally)
-			yshr.Rsh(&y, 1, int(capBits))
-
-			// Candidates (computed unconditionally)
-			nMinus.Sub(&n, &m, int(capBits))   // n - m
-			yPlus.Add(&yshr, &b, int(capBits)) // (y>>1) + b
-
-			// ge := (n >= m) in constant time.
-			gt, eq, _ := n.Cmp(&m)
-			ge := gt | eq
-
-			// Apply updates branchlessly.
-			n.CondAssign(ge, &nMinus)
-			y = yshr
-			y.CondAssign(ge, &yPlus)
-
-			// b >>= 2
-			bshr.Rsh(&b, 2, int(capBits))
-			b = bshr
-		}
-
-		// ok iff remainder is zero.
-		var z saferith.Nat
-		z.Resize(capBits)
-		_, eqZero, _ := n.Cmp(&z)
-		okRes = ct.Bool(eqZero)
-
-		rootNat.SetNat(&y)
-	}
-
-	ok = okRes & nonNeg
-
-	// Conditionally assign the root.
-	var root Int
-	(*saferith.Int)(&root).SetNat(&rootNat)
-	i.Select(ok, i, &root)
 	return ok
 }
 
@@ -330,6 +252,7 @@ func (i *Int) SetBytes(b []byte) (ok ct.Bool) {
 	return utils.BoolTo[ct.Bool](err == nil)
 }
 
+// SetTwosComplementBEBytes sets i from the two's-complement big-endian byte representation.
 func (i *Int) SetTwosComplementBEBytes(b []byte) {
 	sign := b[0] >> 7
 	notBytes := make([]byte, len(b))
@@ -338,8 +261,10 @@ func (i *Int) SetTwosComplementBEBytes(b []byte) {
 	subtle.ConstantTimeCopy(int(sign), natBytes, notBytes)
 	subtle.ConstantTimeCopy(int(sign^0b1), natBytes, b)
 	var nat saferith.Nat
-	nat.SetBytes(natBytes).Resize(len(b)*8 - 1)
-	nat.Add(&nat, new(saferith.Nat).SetUint64(uint64(sign)), -1).Resize(len(b)*8 - 1)
+	// Use len(b)*8 capacity to handle edge case where magnitude needs full width
+	// (e.g., min int64 = -2^63 has magnitude 2^63 which needs 64 bits)
+	nat.SetBytes(natBytes).Resize(len(b) * 8)
+	nat.Add(&nat, new(saferith.Nat).SetUint64(uint64(sign)), len(b)*8)
 	(*saferith.Int)(i).SetNat(&nat)
 	(*saferith.Int)(i).Neg(saferith.Choice(sign))
 }
@@ -504,17 +429,18 @@ func (i *Int) SetInt64(x int64) {
 
 	// sign bit = 1 iff x < 0, else 0
 	signBit := mask & 1
-	(*saferith.Int)(i).Neg(saferith.Choice(signBit)).Resize(63)
+	// Use 64 bits to accommodate MinInt64 which has magnitude 2^63
+	(*saferith.Int)(i).Neg(saferith.Choice(signBit)).Resize(64)
 }
 
 // TrueLen returns exact number of bits required to represent i. Note that it would leak required number of zero bits in i.
-func (i *Int) TrueLen() uint {
-	return uint((*saferith.Int)(i).TrueLen())
+func (i *Int) TrueLen() int {
+	return ((*saferith.Int)(i).TrueLen())
 }
 
 // AnnouncedLen returns the announced length in bits of i. Safe to be used publicly.
-func (i *Int) AnnouncedLen() uint {
-	return uint((*saferith.Int)(i).AnnouncedLen())
+func (i *Int) AnnouncedLen() int {
+	return ((*saferith.Int)(i).AnnouncedLen())
 }
 
 // IsOdd returns 1 if i is odd.
@@ -566,7 +492,7 @@ func (i *Int) AndCap(x, y *Int, cap int) {
 	zBytes := make([]byte, len(xBytes))
 	ct.AndBytes(zBytes, xBytes, yBytes)
 	i.SetTwosComplementBEBytes(zBytes)
-	i.Resize(cap)
+	// Don't resize - result may need more bits than inputs
 }
 
 // Or sets i = x | y.
@@ -592,7 +518,7 @@ func (i *Int) OrCap(x, y *Int, cap int) {
 	zBytes := make([]byte, len(xBytes))
 	ct.OrBytes(zBytes, xBytes, yBytes)
 	i.SetTwosComplementBEBytes(zBytes)
-	i.Resize(cap)
+	// Don't resize - result may need more bits than inputs
 }
 
 // Xor sets i = x ^ y.
@@ -618,7 +544,7 @@ func (i *Int) XorCap(x, y *Int, cap int) {
 	zBytes := make([]byte, len(xBytes))
 	ct.XorBytes(zBytes, xBytes, yBytes)
 	i.SetTwosComplementBEBytes(zBytes)
-	i.Resize(cap)
+	// Don't resize - result may need more bits than inputs
 }
 
 // Not sets i = ^x.
@@ -642,12 +568,13 @@ func (i *Int) NotCap(x *Int, cap int) {
 	zBytes := make([]byte, len(xBytes))
 	ct.NotBytes(zBytes, xBytes)
 	i.SetTwosComplementBEBytes(zBytes)
-	i.Resize(cap)
+	// Don't resize down - NOT may produce a value that needs more bits
+	// (e.g., NOT(2^63-1) = -2^63 needs 64 bits for magnitude)
 }
 
-// Random sets i to a random integer in [lowInclusive, highExclusive).
-func (i *Int) Random(lowInclusive, highExclusive *Int, prng io.Reader) error {
-	errs := []error{}
+// SetRandomRangeLH sets i to a random integer in [lowInclusive, highExclusive).
+func (i *Int) SetRandomRangeLH(lowInclusive, highExclusive *Int, prng io.Reader) error {
+	var errs []error
 	if lowInclusive == nil {
 		errs = append(errs, ErrInvalidArgument.WithMessage("lowInclusive must not be nil"))
 	}
@@ -657,24 +584,32 @@ func (i *Int) Random(lowInclusive, highExclusive *Int, prng io.Reader) error {
 	if prng == nil {
 		errs = append(errs, ErrInvalidArgument.WithMessage("prng must not be nil"))
 	}
-	var intRange Int
-	intRange.Sub(highExclusive, lowInclusive)
-	if intRange.IsNegative() == ct.True || lowInclusive.Equal(highExclusive) == ct.True {
-		errs = append(errs, ErrInvalidArgument.WithMessage("max must be greater than zero"))
+	if lt, _, _ := lowInclusive.Compare(highExclusive); lt == ct.False {
+		errs = append(errs, ErrInvalidArgument.WithMessage("highExclusive must be greater than lowInclusive"))
 	}
 	if len(errs) > 0 {
 		return errs2.Join(errs...)
 	}
 
-	randBig, err := crand.Int(prng, intRange.Big())
+	// Compute interval = highExclusive - lowInclusive (always positive since low < high)
+	var interval Int
+	interval.Sub(highExclusive, lowInclusive)
+
+	// Generate random value in [0, interval) using Nat's method
+	var r Nat
+	err := r.SetRandomRangeH(interval.Absed(), prng)
 	if err != nil {
 		return errs2.AttachStackTrace(err)
 	}
-	i.Add(lowInclusive, NewIntFromBig(randBig, randBig.BitLen()))
-	return nil
 
+	// Result = lowInclusive + r
+	var rInt Int
+	rInt.SetNat(&r)
+	i.Add(lowInclusive, &rInt)
+	return nil
 }
 
+// TwosComplementBEBytes returns the two's-complement big-endian byte representation of i.
 func (i *Int) TwosComplementBEBytes() []byte {
 	// keep extra bit for sign
 	capacityBits := i.AnnouncedLen() + 1

@@ -41,7 +41,7 @@ type modulusMutable[I, N any] interface {
 	ModExpInt(out, base N, exp I)
 
 	Random(io.Reader) (N, error)
-	BitLen() uint
+	BitLen() int
 	HashCode() base.HashCode
 	Big() *big.Int
 	Saferith() *saferith.Modulus
@@ -82,8 +82,8 @@ type natMutable[E aimpl.MonoidElementLowLevel[E], M any] interface {
 
 	Bit(i uint) byte
 
-	TrueLen() uint
-	AnnouncedLen() uint
+	TrueLen() int
+	AnnouncedLen() int
 	IsProbablyPrime() ct.Bool
 
 	Coprime(x E) ct.Bool
