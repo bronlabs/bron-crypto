@@ -610,7 +610,7 @@ func TestNat_Random(t *testing.T) {
 	high := numct.NewNat(100)
 
 	var n numct.Nat
-	err := n.Random(low, high, prng)
+	err := n.SetRandomRangeLH(low, high, prng)
 	require.NoError(t, err)
 
 	// Check n is in range [10, 100)
@@ -627,7 +627,7 @@ func TestNat_Random_Errors(t *testing.T) {
 
 	t.Run("low equals high", func(t *testing.T) {
 		var n numct.Nat
-		err := n.Random(numct.NewNat(10), numct.NewNat(10), prng)
+		err := n.SetRandomRangeLH(numct.NewNat(10), numct.NewNat(10), prng)
 		require.Error(t, err)
 	})
 }

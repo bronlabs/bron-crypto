@@ -139,7 +139,7 @@ func (ns *NaturalNumbers) Random(lowInclusive, highExclusive *Nat, prng io.Reade
 		lowInclusive = ns.Bottom()
 	}
 	var v numct.Nat
-	if err := v.Random(lowInclusive.v, highExclusive.v, prng); err != nil {
+	if err := v.SetRandomRangeLH(lowInclusive.v, highExclusive.v, prng); err != nil {
 		return nil, errs.WrapRandomSample(err, "failed to sample random Nat")
 	}
 	return &Nat{v: &v}, nil

@@ -1,7 +1,6 @@
 package numct
 
 import (
-	crand "crypto/rand"
 	"io"
 	"math/big"
 
@@ -394,8 +393,8 @@ func (n *Nat) NotCap(x *Nat, cap int) {
 	(*saferith.Nat)(n).SetBytes(zBytes).Resize(cap)
 }
 
-// Random sets n to a random value in the range [lowInclusive, highExclusive).
-func (n *Nat) Random(lowInclusive, highExclusive *Nat, prng io.Reader) error {
+// SetRandomRangeLH sets n to a random value in the range [lowInclusive, highExclusive).
+func (n *Nat) SetRandomRangeLH(lowInclusive, highExclusive *Nat, prng io.Reader) error {
 	var errs []error
 	if lowInclusive == nil {
 		errs = append(errs, ErrInvalidArgument.WithMessage("lowInclusive must not be nil"))
@@ -413,22 +412,39 @@ func (n *Nat) Random(lowInclusive, highExclusive *Nat, prng io.Reader) error {
 		return errs2.Join(errs...)
 	}
 
-	capacity := int(highExclusive.AnnouncedLen())
-	var maxVal Nat
-	maxVal.SubCap(highExclusive, lowInclusive, capacity)
-	randBig, err := crand.Int(prng, maxVal.Big())
+	var interval Nat
+	interval.SubCap(highExclusive, lowInclusive, int(highExclusive.AnnouncedLen()))
+	var r Nat
+	err := r.SetRandomRangeH(&interval, prng)
 	if err != nil {
 		return errs2.AttachStackTrace(err)
 	}
-	var randNat Nat
-	randNat.SetBytes(randBig.Bytes())
-	randNat.Resize(int(highExclusive.AnnouncedLen()))
 
-	n.AddCap(lowInclusive, NewNatFromBig(randBig, capacity), capacity)
+	var result Nat
+	result.AddCap(&r, lowInclusive, int(highExclusive.AnnouncedLen()))
+	n.Set(&result)
 	return nil
 }
 
+// SetRandomRangeH sets n to a random value in the range [0, highExclusive).
+// This simply uses rejection sampling to generate a random value in [0, highExclusive)
+// but masks out bits that are too high to be in the range so sampling rejection happens with
+// relatively low probability (~0.5).
 func (n *Nat) SetRandomRangeH(highExclusive *Nat, prng io.Reader) error {
+	var errs []error
+	if prng == nil {
+		errs = append(errs, ErrInvalidArgument.WithMessage("prng must not be nil"))
+	}
+	if highExclusive == nil {
+		errs = append(errs, ErrInvalidArgument.WithMessage("high bound must not be nil"))
+	}
+	if zero := highExclusive.IsZero(); zero != ct.False {
+		errs = append(errs, ErrInvalidArgument.WithMessage("high bound must be non-zero"))
+	}
+	if len(errs) > 0 {
+		return errs2.Join(errs...)
+	}
+
 	var mask Nat
 	mask.Set(highExclusive)
 	for i := uint(1); i < highExclusive.AnnouncedLen(); i <<= 1 {
