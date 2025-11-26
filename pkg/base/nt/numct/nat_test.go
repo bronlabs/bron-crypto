@@ -2,6 +2,7 @@ package numct_test
 
 import (
 	"bytes"
+	crand "crypto/rand"
 	"math/big"
 	"testing"
 
@@ -10,6 +11,21 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/stretchr/testify/require"
 )
+
+func TestNatSetRandomRangeH(t *testing.T) {
+	const bitLen = 2048
+	b := big.NewInt(1)
+	b.Lsh(b, bitLen)
+	b.Add(b, big.NewInt(1))
+	bound := numct.NewNatFromBig(b, 4096)
+
+	var r numct.Nat
+	err := r.SetRandomRangeH(bound, crand.Reader)
+	require.NoError(t, err)
+	lt, _, _ := r.Compare(bound)
+	require.True(t, lt != ct.False)
+	require.True(t, r.AnnouncedLen() == bound.AnnouncedLen())
+}
 
 func TestNatZero(t *testing.T) {
 	t.Parallel()
@@ -285,8 +301,8 @@ func TestNat_Byte(t *testing.T) {
 func TestNat_Compare(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		a, b           uint64
-		lt, eq, gt     ct.Bool
+		a, b       uint64
+		lt, eq, gt ct.Bool
 	}{
 		{5, 10, ct.True, ct.False, ct.False},
 		{10, 10, ct.False, ct.True, ct.False},

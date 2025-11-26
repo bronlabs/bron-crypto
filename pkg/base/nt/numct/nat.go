@@ -428,6 +428,37 @@ func (n *Nat) Random(lowInclusive, highExclusive *Nat, prng io.Reader) error {
 	return nil
 }
 
+func (n *Nat) SetRandomRangeH(highExclusive *Nat, prng io.Reader) error {
+	var mask Nat
+	mask.Set(highExclusive)
+	for i := uint(1); i < highExclusive.AnnouncedLen(); i <<= 1 {
+		var shifted Nat
+		shifted.Rsh(&mask, i)
+		mask.Or(&mask, &shifted)
+	}
+
+	var result Nat
+	for {
+		var dataNat Nat
+		data := make([]byte, (highExclusive.AnnouncedLen()+7)/8)
+		_, err := io.ReadFull(prng, data)
+		if err != nil {
+			return errs2.AttachStackTrace(err).WithMessage("failed to read random bytes")
+		}
+		dataNat.SetBytes(data)
+		dataNat.Resize(int(highExclusive.AnnouncedLen()))
+		result.And(&dataNat, &mask)
+
+		// this happens with probability ~0.5
+		if lt, _, _ := result.Compare(highExclusive); lt != ct.False {
+			break
+		}
+	}
+
+	n.Set(&result)
+	return nil
+}
+
 // DivModCap computes a / b and a % b, storing the results into outQuot and outRem.
 // The cap parameter sets the announced capacity (in bits) for the quotient.
 func DivModCap(outQuot, outRem, a *Nat, b *Modulus, cap int) (ok ct.Bool) {
