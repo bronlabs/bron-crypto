@@ -22,6 +22,20 @@ func IntGeneratorNonZero() *rapid.Generator[*numct.Int] {
 	})
 }
 
+func IntGeneratorPositive() *rapid.Generator[*numct.Int] {
+	return rapid.Custom(func(t *rapid.T) *numct.Int {
+		n := rapid.Int64Min(1).Draw(t, "n")
+		return numct.NewInt(n)
+	})
+}
+
+func IntGeneratorNegative() *rapid.Generator[*numct.Int] {
+	return rapid.Custom(func(t *rapid.T) *numct.Int {
+		n := rapid.Int64Max(-1).Draw(t, "n")
+		return numct.NewInt(n)
+	})
+}
+
 func TestGroupalProperties(t *testing.T) {
 	t.Parallel()
 	suite := aprop.NewLowLevelGroupalPropertySuite(t, IntGenerator(), IntGeneratorNonZero(), true)
