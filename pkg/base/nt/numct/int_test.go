@@ -2,9 +2,13 @@ package numct_test
 
 import (
 	"bytes"
+	crand "crypto/rand"
+	"encoding/binary"
 	"fmt"
+	"io"
 	"math"
 	"math/big"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/cronokirby/saferith"
@@ -34,6 +38,33 @@ func newIntFromBigInt(b *big.Int) *numct.Int {
 		i.Neg(i)
 	}
 	return i
+}
+
+// TODO: make it property test
+func TestInt_TwosComplementBEBytes(t *testing.T) {
+	for range 1024 * 1024 {
+		x := int64(rand.Uint64())
+		var xInt numct.Int
+		xInt.SetInt64(x)
+
+		expected := binary.BigEndian.AppendUint64(nil, uint64(x))
+		actual := xInt.TwosComplementBEBytes()
+		require.Equal(t, expected, actual)
+	}
+}
+
+// TODO: make it property test
+func TestInt_SetTwosComplementLEBytes(t *testing.T) {
+	for range 1024 * 1024 {
+		beBytes := make([]byte, 8)
+		_, err := io.ReadFull(crand.Reader, beBytes)
+		require.NoError(t, err)
+		x := int64(binary.BigEndian.Uint64(beBytes))
+		var xInt numct.Int
+		xInt.SetTwosComplementBEBytes(beBytes)
+		require.Equal(t, xInt.AnnouncedLen(), uint(63))
+		require.Equal(t, x, xInt.Int64())
+	}
 }
 
 func TestInt_BitwiseAnd(t *testing.T) {

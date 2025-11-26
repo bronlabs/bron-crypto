@@ -2,6 +2,7 @@ package numct
 
 import (
 	crand "crypto/rand"
+	"crypto/subtle"
 	"io"
 	"math/big"
 
@@ -67,7 +68,7 @@ func (i *Int) Absed() *Nat {
 
 // Set sets i = v.
 func (i *Int) Set(v *Int) {
-	*i = *v
+	(*saferith.Int)(i).SetInt((*saferith.Int)(v))
 }
 
 // SetNat sets i = v where v is a Nat.
@@ -315,13 +316,8 @@ func (i *Int) Bit(index uint) byte {
 //	b[0] = 0 if i >= 0, 1 if i < 0
 //	b[1:] = big-endian |i|
 func (i *Int) Bytes() []byte {
-	mag := i.Absed().Bytes() // []byte big-endian |i|
-	out := make([]byte, len(mag)+1)
-
-	// ct.Bool is 0 or 1, so we can cast directly.
-	out[0] = byte(i.IsNegative())
-	copy(out[1:], mag)
-	return out
+	data, _ := (*saferith.Int)(i).MarshalBinary()
+	return data
 }
 
 // SetBytes expects the sign-magnitude encoding produced by Bytes/BytesBE:
@@ -331,22 +327,26 @@ func (i *Int) Bytes() []byte {
 //
 // Returns ok = 0 only for obviously malformed input (empty slice).
 func (i *Int) SetBytes(b []byte) (ok ct.Bool) {
-	if len(b) == 0 {
-		i.SetZero()
+	err := (*saferith.Int)(i).UnmarshalBinary(b)
+	if err != nil {
 		return ct.False
 	}
 
-	// Use only the low bit as sign indicator; this avoids branches.
-	sign := ct.Bool(b[0] & 1)
-
-	// Set magnitude from remaining bytes.
-	(*saferith.Int)(i).SetBytes(b[1:])
-
-	// Avoid a -0 representation: only negate when sign=1 AND |i| != 0.
-	negChoice := sign & i.IsNonZero()
-	i.CondNeg(ct.Choice(negChoice))
-
 	return ct.True
+}
+
+func (i *Int) SetTwosComplementBEBytes(b []byte) {
+	sign := b[0] >> 7
+	notBytes := make([]byte, len(b))
+	ct.NotBytes(notBytes, b)
+	natBytes := make([]byte, len(b))
+	subtle.ConstantTimeCopy(int(sign), natBytes, notBytes)
+	subtle.ConstantTimeCopy(int(sign^0b1), natBytes, b)
+	var nat saferith.Nat
+	nat.SetBytes(natBytes).Resize(len(b)*8 - 1)
+	nat.Add(&nat, new(saferith.Nat).SetUint64(uint64(sign)), -1).Resize(len(b)*8 - 1)
+	(*saferith.Int)(i).SetNat(&nat)
+	(*saferith.Int)(i).Neg(saferith.Choice(sign))
 }
 
 // Increment sets i = i + 1.
@@ -366,11 +366,12 @@ func (i *Int) Lsh(x *Int, shift uint) {
 
 // LshCap sets i = x << shift with capacity cap.
 func (i *Int) LshCap(x *Int, shift uint, cap int) {
-	out := i.Absed()
-	out.LshCap(x.Absed(), shift, cap)
-	i.SetNat(out)
+	xAbs := (*saferith.Int)(x).Abs()
+	xSign := (*saferith.Int)(x).IsNegative()
+	xAbs.Lsh(xAbs, shift, cap)
+	(*saferith.Int)(i).SetNat(xAbs)
 	// Preserve sign
-	(*saferith.Int)(i).Neg(saferith.Choice(x.IsNegative()))
+	(*saferith.Int)(i).Neg(xSign)
 }
 
 // Rsh sets i = x >> shift.
@@ -380,18 +381,23 @@ func (i *Int) Rsh(x *Int, shift uint) {
 
 // RshCap sets i = x >> shift with capacity cap.
 func (i *Int) RshCap(x *Int, shift uint, cap int) {
-	out := i.Absed()
-	out.RshCap(x.Absed(), shift, cap)
-	i.SetNat(out)
+	xAbs := (*saferith.Int)(x).Abs()
+	xSign := (*saferith.Int)(x).IsNegative()
+	xAbs.Rsh(xAbs, shift, cap)
+	(*saferith.Int)(i).SetNat(xAbs)
 	// Preserve sign
-	(*saferith.Int)(i).Neg(saferith.Choice(x.IsNegative()))
+	(*saferith.Int)(i).Neg(xSign)
 }
 
 // Resize resizes i to have capacity cap.
 // When cap < 0, use the current announced length
 // When cap >= 0, use the provided cap
 func (i *Int) Resize(cap int) {
-	(*saferith.Int)(i).Resize(ct.CSelectInt(ct.GreaterOrEqual(cap, 0), int(i.AnnouncedLen()), cap))
+	if cap < 0 {
+		cap = int(i.AnnouncedLen())
+	}
+
+	(*saferith.Int)(i).Resize(cap)
 }
 
 // Coprime returns 1 if gcd(|i|, |rhs|) == 1.
@@ -407,19 +413,13 @@ func (i *Int) IsProbablyPrime() ct.Bool {
 // Select sets i = x0 if choice == 0, or i = x1 if choice == 1,
 // using only arithmetic on Int (no ct slice helpers).
 func (i *Int) Select(choice ct.Choice, x0, x1 *Int) {
-	// Normalize to 0 or 1.
-	c := NewIntFromUint64(uint64(choice & 1))
+	var abs saferith.Nat
+	abs.CondAssign(saferith.Choice(choice.Not()), (*saferith.Int)(x0).Abs())
+	abs.CondAssign(saferith.Choice(choice), (*saferith.Int)(x1).Abs())
+	sign := ct.CSelectInt(choice, (*saferith.Int)(x0).IsNegative(), (*saferith.Int)(x1).IsNegative())
 
-	// diff = x1 - x0
-	diff := new(Int)
-	diff.Sub(x1, x0)
-
-	// scaled = diff * c  (either 0 or diff, but computed in constant time)
-	scaled := new(Int)
-	scaled.Mul(diff, c)
-
-	// i = x0 + scaled  (so i = x0 if choice=0, x1 if choice=1)
-	i.Add(x0, scaled)
+	(*saferith.Int)(i).SetNat(&abs)
+	(*saferith.Int)(i).Neg(sign)
 }
 
 // CondAssign sets i = x iff choice == 1, otherwise leaves i unchanged.
@@ -509,7 +509,7 @@ func (i *Int) SetInt64(x int64) {
 
 	// sign bit = 1 iff x < 0, else 0
 	signBit := mask & 1
-	(*saferith.Int)(i).Neg(saferith.Choice(signBit))
+	(*saferith.Int)(i).Neg(saferith.Choice(signBit)).Resize(63)
 }
 
 // TrueLen returns exact number of bits required to represent i. Note that it would leak required number of zero bits in i.
@@ -556,60 +556,21 @@ func (i *Int) And(x, y *Int) {
 // AndCap sets i = x & y with capacity cap.
 // For signed integers, this operates on the two's-complement representation.
 func (i *Int) AndCap(x, y *Int, cap int) {
-	xNeg := x.IsNegative()
-	yNeg := y.IsNegative()
+	if cap < 0 {
+		cap = int(max(x.AnnouncedLen(), y.AnnouncedLen()))
+	}
 
-	xAbs := x.Absed()
-	yAbs := y.Absed()
+	var xClone, yClone Int
+	xClone.Set(x)
+	xClone.Resize(cap)
+	yClone.Set(y)
+	yClone.Resize(cap)
 
-	// Masks for sign patterns.
-	bothPos := (xNeg | yNeg).Not()
-	bothNeg := xNeg & yNeg
-	xNegYPos := xNeg & yNeg.Not()
-	xPosYNeg := xNeg.Not() & yNeg
-
-	// Case 1: both positive: |x| & |y|
-	casePP := new(Nat)
-	casePP.AndCap(xAbs, yAbs, cap)
-
-	// Precompute |x|-1, |y|-1 (only numerically needed when the corresponding
-	// operand is actually negative).
-	xMinus1 := new(Nat)
-	xMinus1.Set(xAbs)
-	xMinus1.Decrement()
-
-	yMinus1 := new(Nat)
-	yMinus1.Set(yAbs)
-	yMinus1.Decrement()
-
-	// Case 2: x < 0, y >= 0: y - (y & (|x|-1))
-	yAndXMinus1 := new(Nat)
-	yAndXMinus1.AndCap(yAbs, xMinus1, cap)
-	caseNP := new(Nat)
-	caseNP.SubCap(yAbs, yAndXMinus1, cap)
-
-	// Case 3: x >= 0, y < 0: x - (x & (|y|-1))
-	xAndYMinus1 := new(Nat)
-	xAndYMinus1.AndCap(xAbs, yMinus1, cap)
-	casePN := new(Nat)
-	casePN.SubCap(xAbs, xAndYMinus1, cap)
-
-	// Case 4: x < 0, y < 0: -((|x|-1) | (|y|-1) + 1)
-	caseNN := new(Nat)
-	caseNN.OrCap(xMinus1, yMinus1, cap)
-	caseNN.Increment()
-
-	// Select the appropriate magnitude.
-	resultMag := new(Nat)
-	resultMag.SetZero()
-	resultMag.CondAssign(bothPos, casePP)
-	resultMag.CondAssign(xNegYPos, caseNP)
-	resultMag.CondAssign(xPosYNeg, casePN)
-	resultMag.CondAssign(bothNeg, caseNN)
-
-	// Set sign: negative iff both operands were negative.
-	i.SetNat(resultMag)
-	i.CondNeg(bothNeg)
+	xBytes := xClone.TwosComplementBEBytes()
+	yBytes := yClone.TwosComplementBEBytes()
+	zBytes := make([]byte, len(xBytes))
+	ct.AndBytes(zBytes, xBytes, yBytes)
+	i.SetTwosComplementBEBytes(zBytes)
 	i.Resize(cap)
 }
 
@@ -621,13 +582,22 @@ func (i *Int) Or(x, y *Int) {
 
 // OrCap sets i = x | y with capacity cap.
 func (i *Int) OrCap(x, y *Int, cap int) {
-	// De Morgan: x | y = ~(~x & ~y)
-	var nx, ny, tmp Int
+	if cap < 0 {
+		cap = int(max(x.AnnouncedLen(), y.AnnouncedLen()))
+	}
 
-	nx.NotCap(x, cap)         // nx = ~x  (with cap bits)
-	ny.NotCap(y, cap)         // ny = ~y
-	tmp.AndCap(&nx, &ny, cap) // tmp = ~x & ~y
-	i.NotCap(&tmp, cap)       // i = ~(tmp) = ~(~x & ~y)
+	var xClone, yClone Int
+	xClone.Set(x)
+	xClone.Resize(cap)
+	yClone.Set(y)
+	yClone.Resize(cap)
+
+	xBytes := xClone.TwosComplementBEBytes()
+	yBytes := yClone.TwosComplementBEBytes()
+	zBytes := make([]byte, len(xBytes))
+	ct.OrBytes(zBytes, xBytes, yBytes)
+	i.SetTwosComplementBEBytes(zBytes)
+	i.Resize(cap)
 }
 
 // Xor sets i = x ^ y.
@@ -638,13 +608,22 @@ func (i *Int) Xor(x, y *Int) {
 
 // XorCap sets i = x ^ y with capacity cap.
 func (i *Int) XorCap(x, y *Int, cap int) {
-	// Bitwise identity: x ^ y = (x | y) & ~(x & y)
-	var orRes, andRes, notAnd Int
+	if cap < 0 {
+		cap = int(max(x.AnnouncedLen(), y.AnnouncedLen()))
+	}
 
-	orRes.OrCap(x, y, cap)      // orRes  = x | y
-	andRes.AndCap(x, y, cap)    // andRes = x & y
-	notAnd.NotCap(&andRes, cap) // notAnd = ~(x & y)
-	i.AndCap(&orRes, &notAnd, cap)
+	var xClone, yClone Int
+	xClone.Set(x)
+	xClone.Resize(cap)
+	yClone.Set(y)
+	yClone.Resize(cap)
+
+	xBytes := xClone.TwosComplementBEBytes()
+	yBytes := yClone.TwosComplementBEBytes()
+	zBytes := make([]byte, len(xBytes))
+	ct.XorBytes(zBytes, xBytes, yBytes)
+	i.SetTwosComplementBEBytes(zBytes)
+	i.Resize(cap)
 }
 
 // Not sets i = ^x.
@@ -656,14 +635,18 @@ func (i *Int) Not(x *Int) {
 // NotCap sets i = ^x with capacity cap.
 // For signed integers, this is equivalent to -(x+1) due to two's complement.
 func (i *Int) NotCap(x *Int, cap int) {
-	// Compute x + 1 at natural width
-	tmp := new(Int)
-	tmp.Add(x, IntOne()) // uses AddCap with cap = -1 internally
+	if cap < 0 {
+		cap = int(x.AnnouncedLen())
+	}
 
-	// Negate: tmp = -(x+1)
-	i.Neg(tmp)
+	var xClone Int
+	xClone.Set(x)
+	xClone.Resize(cap)
 
-	// Apply capacity semantics: truncate/announce to requested width
+	xBytes := xClone.TwosComplementBEBytes()
+	zBytes := make([]byte, len(xBytes))
+	ct.NotBytes(zBytes, xBytes)
+	i.SetTwosComplementBEBytes(zBytes)
 	i.Resize(cap)
 }
 
@@ -695,4 +678,25 @@ func (i *Int) Random(lowInclusive, highExclusive *Int, prng io.Reader) error {
 	i.Add(lowInclusive, NewIntFromBig(randBig, randBig.BitLen()))
 	return nil
 
+}
+
+func (i *Int) TwosComplementBEBytes() []byte {
+	// keep extra bit for sign
+	capacityBits := i.AnnouncedLen() + 1
+	capacityBytes := (capacityBits + 7) / 8
+
+	iSign := (*saferith.Int)(i).IsNegative()
+	iAbsBytes := make([]byte, capacityBytes)
+	iAbsNotBytes := make([]byte, capacityBytes)
+	(*saferith.Int)(i).Abs().FillBytes(iAbsBytes)
+	ct.NotBytes(iAbsNotBytes, iAbsBytes)
+
+	natBytes := make([]byte, capacityBytes)
+	subtle.ConstantTimeCopy(int(iSign^0b1), natBytes, iAbsBytes)
+	subtle.ConstantTimeCopy(int(iSign), natBytes, iAbsNotBytes)
+	var nat saferith.Nat
+	nat.SetBytes(natBytes)
+	nat.Add(&nat, new(saferith.Nat).SetUint64(uint64(iSign)).Resize(1), int(capacityBytes*8))
+	nat.FillBytes(natBytes)
+	return natBytes
 }
