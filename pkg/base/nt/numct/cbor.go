@@ -61,10 +61,9 @@ func (i *Int) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return err
 	}
+	// SetBytes handles sign-magnitude encoding (b[0] contains sign bit)
+	// so no need to separately handle IsNegative
 	i.SetBytes(dto.IntBytes)
-	if dto.IsNegative {
-		i.Neg(i)
-	}
 	return nil
 }
 

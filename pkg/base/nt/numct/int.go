@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 // IntOne returns a new Int set to 1.
@@ -139,9 +140,8 @@ func (i *Int) Div(numerator, denominator *Int) (ok ct.Bool) {
 		return ct.False
 	}
 	ok = i.DivCap(numerator, dm, -1)
-	// Adjust sign: result is negative if signs differ
-	shouldNegate := numerator.IsNegative() ^ denominator.IsNegative()
-	i.CondNeg(ct.Choice(shouldNegate))
+	// DivCap already applies numerator's sign, so only apply denominator's sign
+	i.CondNeg(denominator.IsNegative())
 	return ok
 }
 
@@ -316,8 +316,7 @@ func (i *Int) Bit(index uint) byte {
 //	b[0] = 0 if i >= 0, 1 if i < 0
 //	b[1:] = big-endian |i|
 func (i *Int) Bytes() []byte {
-	data, _ := (*saferith.Int)(i).MarshalBinary()
-	return data
+	return errs2.Must1((*saferith.Int)(i).MarshalBinary())
 }
 
 // SetBytes expects the sign-magnitude encoding produced by Bytes/BytesBE:
@@ -328,11 +327,7 @@ func (i *Int) Bytes() []byte {
 // Returns ok = 0 only for obviously malformed input (empty slice).
 func (i *Int) SetBytes(b []byte) (ok ct.Bool) {
 	err := (*saferith.Int)(i).UnmarshalBinary(b)
-	if err != nil {
-		return ct.False
-	}
-
-	return ct.True
+	return utils.BoolTo[ct.Bool](err == nil)
 }
 
 func (i *Int) SetTwosComplementBEBytes(b []byte) {
@@ -459,8 +454,8 @@ func (i *Int) Compare(rhs *Int) (lt, eq, gt ct.Bool) {
 	//
 	// ltSame = (bothNeg ? gtM : ltM)
 	// gtSame = (bothNeg ? ltM : gtM)
-	ltSame := ct.CSelectInt(bothNeg, gtM, ltM)
-	gtSame := ct.CSelectInt(bothNeg, ltM, gtM)
+	ltSame := ct.CSelectInt(bothNeg, ltM, gtM)
+	gtSame := ct.CSelectInt(bothNeg, gtM, ltM)
 
 	// Only use these when signs match.
 	ltSame &= sameSign

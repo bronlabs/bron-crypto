@@ -9,20 +9,17 @@ import (
 	"pgregory.net/rapid"
 )
 
-func NewLowLevelMonoidalPropertySuite[E impl.MonoidElementPtrLowLevel[E, T], T any](t *testing.T, g *rapid.Generator[E], gNonZero *rapid.Generator[E], isCommutative bool) *MonoidalLowLevel[E, T] {
+func NewLowLevelMonoidalPropertySuite[E impl.MonoidElementPtrLowLevel[E, T], T any](t *testing.T, g *rapid.Generator[E], isCommutative bool) *MonoidalLowLevel[E, T] {
 	t.Helper()
 	require.NotNil(t, g, "generator must not be nil")
-	require.NotNil(t, gNonZero, "non-zero generator must not be nil")
 	return &MonoidalLowLevel[E, T]{
 		g:             g,
-		gNonZero:      gNonZero,
 		isCommutative: isCommutative,
 	}
 }
 
 type MonoidalLowLevel[E impl.MonoidElementPtrLowLevel[E, T], T any] struct {
 	g             *rapid.Generator[E]
-	gNonZero      *rapid.Generator[E]
 	isCommutative bool
 }
 
@@ -45,7 +42,7 @@ func (p *MonoidalLowLevel[E, T]) CanSet(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
 		var a T
-		b := p.gNonZero.Draw(t, "b")
+		b := p.g.Draw(t, "b")
 		E(&a).Set(b)
 		require.Equal(t, ct.True, b.Equal(E(&a)))
 	})
@@ -124,13 +121,11 @@ func (p *MonoidalLowLevel[E, T]) ZeroIsNeutralElement(t *testing.T) {
 func (p *MonoidalLowLevel[E, T]) ZeroIsIdentifiable(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
-		var zero, nonZero T
+		var zero T
 		E(&zero).SetZero()
-		x := p.gNonZero.Draw(t, "x")
-		E(&nonZero).Set(x)
-
 		require.Equal(t, ct.True, E(&zero).IsZero())
-		require.Equal(t, ct.True, E(&nonZero).IsNonZero())
+		x := p.g.Draw(t, "x")
+		require.NotEqual(t, E(x).IsZero(), E(x).IsNonZero())
 	})
 }
 

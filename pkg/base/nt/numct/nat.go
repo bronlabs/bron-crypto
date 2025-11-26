@@ -61,7 +61,7 @@ type Nat saferith.Nat
 
 // Set sets n to the value of v.
 func (n *Nat) Set(v *Nat) {
-	*n = *v
+	(*saferith.Nat)(n).SetNat((*saferith.Nat)(v))
 }
 
 // SetZero sets n to zero.

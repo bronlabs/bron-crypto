@@ -12,11 +12,10 @@ import (
 func NewLowLevelGroupalPropertySuite[E impl.GroupElementPtrLowLevel[E, T], T any](
 	t *testing.T,
 	elementGen *rapid.Generator[E],
-	nonZeroElementGen *rapid.Generator[E],
 	isCommutative bool,
 ) *GroupalLowLevel[E, T] {
 	return &GroupalLowLevel[E, T]{
-		MonoidalLowLevel: *NewLowLevelMonoidalPropertySuite(t, elementGen, nonZeroElementGen, isCommutative),
+		MonoidalLowLevel: *NewLowLevelMonoidalPropertySuite(t, elementGen, isCommutative),
 	}
 }
 

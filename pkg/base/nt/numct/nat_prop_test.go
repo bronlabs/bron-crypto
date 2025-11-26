@@ -25,13 +25,43 @@ func NatGeneratorNonZero() *rapid.Generator[*numct.Nat] {
 	})
 }
 
-func TestMonoidalProperties(t *testing.T) {
+func TestNat_MonoidalProperties(t *testing.T) {
 	t.Parallel()
-	suite := aprop.NewLowLevelMonoidalPropertySuite(t, NatGenerator(), NatGeneratorNonZero(), true)
+	suite := aprop.NewLowLevelMonoidalPropertySuite(t, NatGenerator(), true)
 	suite.CheckAll(t)
 }
 
-func TestExactDiv_Property(t *testing.T) {
+func TestNat_Add_Property(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(t *rapid.T) {
+		var actual numct.Nat
+		a := NatGenerator().Draw(t, "a")
+		b := NatGenerator().Draw(t, "b")
+
+		actual.Add(a, b)
+
+		expected := (*numct.Nat)(new(saferith.Nat).Add((*saferith.Nat)(a), (*saferith.Nat)(b), -1))
+
+		require.Equal(t, ct.True, actual.Equal(expected))
+	})
+}
+
+func TestNat_Mul_Property(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(t *rapid.T) {
+		var actual numct.Nat
+		a := NatGenerator().Draw(t, "a")
+		b := NatGenerator().Draw(t, "b")
+
+		actual.Mul(a, b)
+
+		expected := (*numct.Nat)(new(saferith.Nat).Add((*saferith.Nat)(a), (*saferith.Nat)(b), -1))
+
+		require.Equal(t, ct.True, actual.Equal(expected))
+	})
+}
+
+func TestNat_ExactDiv_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
 		var out numct.Nat
@@ -48,7 +78,7 @@ func TestExactDiv_Property(t *testing.T) {
 	})
 }
 
-func TestIncrement_Property(t *testing.T) {
+func TestNat_Increment_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
 		var out numct.Nat
@@ -64,7 +94,7 @@ func TestIncrement_Property(t *testing.T) {
 	})
 }
 
-func TestDecrement_Property(t *testing.T) {
+func TestNat_Decrement_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
 		a := NatGeneratorNonZero().Draw(t, "a")
@@ -81,7 +111,7 @@ func TestDecrement_Property(t *testing.T) {
 	})
 }
 
-func TestSubCap_Property(t *testing.T) {
+func TestNat_SubCap_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
 		a := NatGenerator().Draw(t, "a")
@@ -99,7 +129,7 @@ func TestSubCap_Property(t *testing.T) {
 	})
 }
 
-func TestByte_Poperty(t *testing.T) {
+func TestNat_Byte_Poperty(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
 		a := NatGenerator().Draw(t, "a")
@@ -112,7 +142,7 @@ func TestByte_Poperty(t *testing.T) {
 	})
 }
 
-func TestBit_Property(t *testing.T) {
+func TestNat_Bit_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
 		a := NatGenerator().Draw(t, "a")
@@ -127,7 +157,7 @@ func TestBit_Property(t *testing.T) {
 	})
 }
 
-func TestCompare_Property(t *testing.T) {
+func TestNat_Compare_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
 		a := NatGenerator().Draw(t, "a")
@@ -143,7 +173,7 @@ func TestCompare_Property(t *testing.T) {
 	})
 }
 
-func TestIsOne_Property(t *testing.T) {
+func TestNat_IsOne_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
 		a := NatGenerator().Draw(t, "a")
@@ -154,7 +184,7 @@ func TestIsOne_Property(t *testing.T) {
 	})
 }
 
-func TestSelect_Property(t *testing.T) {
+func TestNat_Select_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
 		x0 := NatGenerator().Draw(t, "x0")
@@ -173,7 +203,7 @@ func TestSelect_Property(t *testing.T) {
 	})
 }
 
-func TestCondAssign_Property(t *testing.T) {
+func TestNat_CondAssign_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
 		a := NatGenerator().Draw(t, "a")
@@ -194,7 +224,7 @@ func TestCondAssign_Property(t *testing.T) {
 	})
 }
 
-func TestIsEven_Property(t *testing.T) {
+func TestNat_IsEven_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
 		a := NatGenerator().Draw(t, "a")
@@ -206,7 +236,7 @@ func TestIsEven_Property(t *testing.T) {
 	})
 }
 
-func TestIsOdd_Property(t *testing.T) {
+func TestNat_IsOdd_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
 		a := NatGenerator().Draw(t, "a")

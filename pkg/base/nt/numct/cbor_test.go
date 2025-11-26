@@ -113,10 +113,13 @@ func TestInt_CBOR_LargeValue(t *testing.T) {
 	t.Parallel()
 
 	// Test with a large positive value
+	// Sign-magnitude format: first byte is sign (0=positive), rest is magnitude
 	originalPos := numct.NewIntFromBytes([]byte{
+		0x00, // sign byte = 0 (positive)
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22,
 	})
+	require.Equal(t, ct.False, originalPos.IsNegative())
 
 	// Marshal to CBOR
 	dataPos, err := originalPos.MarshalCBOR()
@@ -134,6 +137,7 @@ func TestInt_CBOR_LargeValue(t *testing.T) {
 	// Test with a negative value
 	originalNeg := originalPos.Clone()
 	originalNeg.Neg(originalNeg)
+	require.Equal(t, ct.True, originalNeg.IsNegative())
 
 	// Marshal to CBOR
 	dataNeg, err := originalNeg.MarshalCBOR()
