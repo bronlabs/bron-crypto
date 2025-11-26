@@ -146,7 +146,7 @@ func (nps *PositiveNaturalNumbers) Random(lowInclusive, highExclusive *NatPlus, 
 		lowInclusive = nps.Bottom()
 	}
 	var v numct.Nat
-	if err := v.Random(lowInclusive.v, highExclusive.v, prng); err != nil {
+	if err := v.SetRandomRangeLH(lowInclusive.v, highExclusive.v, prng); err != nil {
 		return nil, errs.WrapRandomSample(err, "failed to sample random NatPlus")
 	}
 	return &NatPlus{v: &v}, nil

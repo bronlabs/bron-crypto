@@ -2,6 +2,7 @@ package numct_test
 
 import (
 	"bytes"
+	crand "crypto/rand"
 	"math/big"
 	"testing"
 
@@ -10,6 +11,21 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/stretchr/testify/require"
 )
+
+func TestNatSetRandomRangeH(t *testing.T) {
+	const bitLen = 2048
+	b := big.NewInt(1)
+	b.Lsh(b, bitLen)
+	b.Add(b, big.NewInt(1))
+	bound := numct.NewNatFromBig(b, 4096)
+
+	var r numct.Nat
+	err := r.SetRandomRangeH(bound, crand.Reader)
+	require.NoError(t, err)
+	lt, _, _ := r.Compare(bound)
+	require.True(t, lt != ct.False)
+	require.True(t, r.AnnouncedLen() == bound.AnnouncedLen())
+}
 
 func TestNatZero(t *testing.T) {
 	t.Parallel()
@@ -285,8 +301,8 @@ func TestNat_Byte(t *testing.T) {
 func TestNat_Compare(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		a, b           uint64
-		lt, eq, gt     ct.Bool
+		a, b       uint64
+		lt, eq, gt ct.Bool
 	}{
 		{5, 10, ct.True, ct.False, ct.False},
 		{10, 10, ct.False, ct.True, ct.False},
@@ -594,7 +610,7 @@ func TestNat_Random(t *testing.T) {
 	high := numct.NewNat(100)
 
 	var n numct.Nat
-	err := n.Random(low, high, prng)
+	err := n.SetRandomRangeLH(low, high, prng)
 	require.NoError(t, err)
 
 	// Check n is in range [10, 100)
@@ -611,7 +627,7 @@ func TestNat_Random_Errors(t *testing.T) {
 
 	t.Run("low equals high", func(t *testing.T) {
 		var n numct.Nat
-		err := n.Random(numct.NewNat(10), numct.NewNat(10), prng)
+		err := n.SetRandomRangeLH(numct.NewNat(10), numct.NewNat(10), prng)
 		require.Error(t, err)
 	})
 }

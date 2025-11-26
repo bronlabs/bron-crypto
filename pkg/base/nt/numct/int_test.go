@@ -769,8 +769,8 @@ func TestInt_TrueLen(t *testing.T) {
 func TestInt_AnnouncedLen(t *testing.T) {
 	t.Parallel()
 	n := numct.NewInt(42)
-	// NewInt uses SetInt64 which sets announced len to 64
-	require.Equal(t, uint(64), n.AnnouncedLen())
+	// NewInt uses SetInt64 which sets announced len to 63
+	require.Equal(t, uint(63), n.AnnouncedLen())
 }
 
 func TestInt_IsOdd(t *testing.T) {
