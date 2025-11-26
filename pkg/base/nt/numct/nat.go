@@ -11,7 +11,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 // NatZero returns a new Nat representing zero.
@@ -134,7 +133,7 @@ func (n *Nat) ExactDiv(numerator *Nat, denominator *Modulus) (ok ct.Bool) {
 	ok = DivModCap(&q, &r, numerator, denominator, -1)
 	isExact := r.IsZero()
 	// Only update n if division was exact
-	n.CondAssign(ct.Choice(ok&isExact), &q)
+	n.CondAssign(ok&isExact, &q)
 	return ok & isExact
 }
 
@@ -234,7 +233,10 @@ func (n *Nat) IsEven() ct.Bool {
 // When cap < 0, use the current announced length
 // When cap >= 0, use the provided cap
 func (n *Nat) Resize(cap int) {
-	(*saferith.Nat)(n).Resize(ct.CSelectInt(ct.GreaterOrEqual(cap, 0), int(n.AnnouncedLen()), cap))
+	if cap < 0 {
+		cap = int(n.AnnouncedLen())
+	}
+	(*saferith.Nat)(n).Resize(cap)
 }
 
 // Lsh left shifts n by shift bits.
@@ -312,27 +314,19 @@ func (n *Nat) And(x, y *Nat) {
 
 // AndCap sets n = x & y with capacity cap.
 func (n *Nat) AndCap(x, y *Nat, cap int) {
-	// Get byte representations
-	xBytes := x.Bytes()
-	yBytes := y.Bytes()
+	if cap < 0 {
+		cap = int(max(x.AnnouncedLen(), y.AnnouncedLen()))
+	}
+	capBytes := (cap + 7) / 8
 
-	// For AND, the result length is at most the minimum of the two lengths
-	// Use the maximum to ensure we don't lose data with internal representation
-	xLen := len(xBytes)
-	yLen := len(yBytes)
-	maxLen := ct.Max(xLen, yLen)
+	xBytes := make([]byte, capBytes)
+	yBytes := make([]byte, capBytes)
+	zBytes := make([]byte, capBytes)
+	(*saferith.Nat)(x).FillBytes(xBytes)
+	(*saferith.Nat)(y).FillBytes(yBytes)
+	ct.AndBytes(zBytes, xBytes, yBytes)
 
-	// Pad both to the same length (for big-endian, pad on the left)
-	xPadded := sliceutils.PadToLeft(xBytes, maxLen-xLen)
-	yPadded := sliceutils.PadToLeft(yBytes, maxLen-yLen)
-
-	// Perform AND
-	result := make([]byte, maxLen)
-	ct.AndBytes(result, xPadded, yPadded)
-
-	// Set the result
-	(*saferith.Nat)(n).SetBytes(result)
-	n.Resize(cap)
+	(*saferith.Nat)(n).SetBytes(zBytes).Resize(cap)
 }
 
 // Or sets n = x | y.
@@ -342,23 +336,19 @@ func (n *Nat) Or(x, y *Nat) {
 
 // OrCap sets n = x | y with capacity cap.
 func (n *Nat) OrCap(x, y *Nat, cap int) {
-	xBytes := x.Bytes()
-	yBytes := y.Bytes()
+	if cap < 0 {
+		cap = int(max(x.AnnouncedLen(), y.AnnouncedLen()))
+	}
+	capBytes := (cap + 7) / 8
 
-	// Use constant-time max for result length (OR uses longer length)
-	xLen := len(xBytes)
-	yLen := len(yBytes)
-	resultLen := ct.Max(xLen, yLen)
+	xBytes := make([]byte, capBytes)
+	yBytes := make([]byte, capBytes)
+	zBytes := make([]byte, capBytes)
+	(*saferith.Nat)(x).FillBytes(xBytes)
+	(*saferith.Nat)(y).FillBytes(yBytes)
+	ct.OrBytes(zBytes, xBytes, yBytes)
 
-	// Use PadLeft for big-endian padding
-	xPadded := sliceutils.PadToLeft(xBytes, resultLen-xLen)
-	yPadded := sliceutils.PadToLeft(yBytes, resultLen-yLen)
-
-	result := make([]byte, resultLen)
-	ct.OrBytes(result, xPadded, yPadded)
-
-	(*saferith.Nat)(n).SetBytes(result)
-	n.Resize(cap)
+	(*saferith.Nat)(n).SetBytes(zBytes).Resize(cap)
 }
 
 // Xor sets n = x ^ y.
@@ -368,23 +358,19 @@ func (n *Nat) Xor(x, y *Nat) {
 
 // XorCap sets n = x ^ y with capacity cap.
 func (n *Nat) XorCap(x, y *Nat, cap int) {
-	xBytes := x.Bytes()
-	yBytes := y.Bytes()
+	if cap < 0 {
+		cap = int(max(x.AnnouncedLen(), y.AnnouncedLen()))
+	}
+	capBytes := (cap + 7) / 8
 
-	// Use constant-time max for result length (XOR uses longer length)
-	xLen := len(xBytes)
-	yLen := len(yBytes)
-	resultLen := ct.Max(xLen, yLen)
+	xBytes := make([]byte, capBytes)
+	yBytes := make([]byte, capBytes)
+	zBytes := make([]byte, capBytes)
+	(*saferith.Nat)(x).FillBytes(xBytes)
+	(*saferith.Nat)(y).FillBytes(yBytes)
+	ct.XorBytes(zBytes, xBytes, yBytes)
 
-	// Use PadLeft for big-endian padding
-	xPadded := sliceutils.PadToLeft(xBytes, resultLen-xLen)
-	yPadded := sliceutils.PadToLeft(yBytes, resultLen-yLen)
-
-	result := make([]byte, resultLen)
-	ct.XorBytes(result, xPadded, yPadded)
-
-	(*saferith.Nat)(n).SetBytes(result)
-	n.Resize(cap)
+	(*saferith.Nat)(n).SetBytes(zBytes).Resize(cap)
 }
 
 // Not sets n = ^x.
@@ -395,29 +381,22 @@ func (n *Nat) Not(x *Nat) {
 // NotCap sets n = ^x with capacity cap.
 // For compatibility with big.Int.Not, use the announced capacity of x.
 func (n *Nat) NotCap(x *Nat, cap int) {
-	xBytes := x.Bytes()
+	if cap < 0 {
+		cap = int(x.AnnouncedLen())
+	}
+	capBytes := (cap + 7) / 8
 
-	// Determine the bit capacity to use
-	// When cap < 0, use x's announced capacity
-	bitCap := ct.CSelectInt(ct.GreaterOrEqual(cap, 0), int(x.AnnouncedLen()), cap)
+	xBytes := make([]byte, capBytes)
+	zBytes := make([]byte, capBytes)
+	(*saferith.Nat)(x).FillBytes(xBytes)
+	ct.NotBytes(zBytes, xBytes)
 
-	// Calculate byte length from bit capacity
-	byteLen := (bitCap + 7) / 8
-
-	// Allocate and pad input
-	xPadded := sliceutils.PadToLeft(xBytes, byteLen-len(xBytes))
-
-	// Apply NOT operation
-	result := make([]byte, byteLen)
-	ct.NotBytes(result, xPadded)
-
-	(*saferith.Nat)(n).SetBytes(result)
-	n.Resize(cap)
+	(*saferith.Nat)(n).SetBytes(zBytes).Resize(cap)
 }
 
 // Random sets n to a random value in the range [lowInclusive, highExclusive).
 func (n *Nat) Random(lowInclusive, highExclusive *Nat, prng io.Reader) error {
-	errs := []error{}
+	var errs []error
 	if lowInclusive == nil {
 		errs = append(errs, ErrInvalidArgument.WithMessage("lowInclusive must not be nil"))
 	}
@@ -427,21 +406,25 @@ func (n *Nat) Random(lowInclusive, highExclusive *Nat, prng io.Reader) error {
 	if prng == nil {
 		errs = append(errs, ErrInvalidArgument.WithMessage("prng must not be nil"))
 	}
-	var maxVal Nat
-	maxVal.SubCap(highExclusive, lowInclusive, int(highExclusive.AnnouncedLen()))
-	if maxVal.IsZero() == ct.True {
-		errs = append(errs, ErrInvalidArgument.WithMessage("max must be greater than zero"))
+	if lt, _, _ := lowInclusive.Compare(highExclusive); lt == ct.False {
+		errs = append(errs, ErrInvalidArgument.WithMessage("max must be greater than low"))
 	}
 	if len(errs) > 0 {
 		return errs2.Join(errs...)
 	}
 
+	capacity := int(highExclusive.AnnouncedLen())
+	var maxVal Nat
+	maxVal.SubCap(highExclusive, lowInclusive, capacity)
 	randBig, err := crand.Int(prng, maxVal.Big())
 	if err != nil {
 		return errs2.AttachStackTrace(err)
 	}
+	var randNat Nat
+	randNat.SetBytes(randBig.Bytes())
+	randNat.Resize(int(highExclusive.AnnouncedLen()))
 
-	n.AddCap(lowInclusive, NewNatFromBig(randBig, int(highExclusive.AnnouncedLen())), int(highExclusive.AnnouncedLen()))
+	n.AddCap(lowInclusive, NewNatFromBig(randBig, capacity), capacity)
 	return nil
 }
 
