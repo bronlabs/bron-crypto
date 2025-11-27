@@ -189,11 +189,14 @@ func TestInt_CBOR_LargeValue(t *testing.T) {
 	t.Parallel()
 
 	// Test with a large positive value
+	// Format: [sign_byte=0x00 (positive), value_bytes...]
 	originalPos, err := num.Z().FromBytes([]byte{
+		0x00, // positive sign
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22,
 	})
 	require.NoError(t, err)
+	require.False(t, originalPos.IsNegative())
 
 	// Marshal to CBOR
 	dataPos, err := originalPos.MarshalCBOR()
@@ -207,14 +210,17 @@ func TestInt_CBOR_LargeValue(t *testing.T) {
 	// Compare values
 	require.Equal(t, originalPos.Bytes(), recoveredPos.Bytes())
 	require.Equal(t, originalPos.String(), recoveredPos.String())
+	require.False(t, recoveredPos.IsNegative())
 
 	// Test with a negative value
+	// Format: [sign_byte=0x01 (negative), value_bytes...]
 	originalNeg, err := num.Z().FromBytes([]byte{
+		0x01, // negative sign
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22,
 	})
 	require.NoError(t, err)
-	originalNeg = originalNeg.Neg()
+	require.True(t, originalNeg.IsNegative())
 
 	// Marshal to CBOR
 	dataNeg, err := originalNeg.MarshalCBOR()
