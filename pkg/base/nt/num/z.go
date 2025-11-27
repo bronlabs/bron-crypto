@@ -377,7 +377,7 @@ func (i *Int) IsInRange(modulus *NatPlus) bool {
 
 func (i *Int) Mod(modulus *NatPlus) *Uint {
 	out := new(numct.Nat)
-	modulus.ModulusCT().ModInt(out, i.v)
+	modulus.ModulusCT().ModI(out, i.v)
 	return &Uint{v: out, m: modulus.ModulusCT()}
 }
 

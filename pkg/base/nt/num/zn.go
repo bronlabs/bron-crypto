@@ -402,7 +402,7 @@ func (u *Uint) ExpI(exponent *Int) *Uint {
 		panic(errs.NewIsNil("argument is nil"))
 	}
 	v := new(numct.Nat)
-	u.m.ModExpInt(v, u.v, exponent.v)
+	u.m.ModExpI(v, u.v, exponent.v)
 	return &Uint{v: v, m: u.m}
 }
 
@@ -413,7 +413,7 @@ func (u *Uint) ExpIBounded(exponent *Int, bits uint) *Uint {
 	v := exponent.v.Clone()
 	v.Resize(int(bits))
 	var vNat numct.Nat
-	u.m.ModExpInt(&vNat, u.v, exponent.v)
+	u.m.ModExpI(&vNat, u.v, exponent.v)
 	return &Uint{v: &vNat, m: u.m}
 
 }

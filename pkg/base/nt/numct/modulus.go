@@ -56,8 +56,8 @@ func (m *ModulusBasic) Mod(out, x *Nat) {
 	(*saferith.Nat)(out).Mod((*saferith.Nat)(x), (*saferith.Modulus)(m))
 }
 
-// ModInt sets out = x (mod m) where x is an Int.
-func (m *ModulusBasic) ModInt(out *Nat, x *Int) {
+// ModI sets out = x (mod m) where x is an Int.
+func (m *ModulusBasic) ModI(out *Nat, x *Int) {
 	result := (*saferith.Int)(x).Mod((*saferith.Modulus)(m))
 	*out = *(*Nat)(result)
 }
@@ -262,8 +262,8 @@ func (m *ModulusBasic) modExpIOdd(out, base *Nat, exp *Int) {
 	)
 }
 
-// ModExpInt sets out = base^exp (mod m) where exp is an Int.
-func (m *ModulusBasic) ModExpInt(out, base *Nat, exp *Int) {
+// ModExpI sets out = base^exp (mod m) where exp is an Int.
+func (m *ModulusBasic) ModExpI(out, base *Nat, exp *Int) {
 	if m.Nat().IsOdd() == ct.True {
 		m.modExpIOdd(out, base, exp)
 	} else {

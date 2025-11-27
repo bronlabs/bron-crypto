@@ -128,8 +128,8 @@ func (m *Modulus) modExpIOdd(out, base *Nat, exp *Int) {
 	out.CondAssign(ok, &candidate)
 }
 
-// ModExpInt sets out = base^exp (mod m) where exp is an Int.
-func (m *Modulus) ModExpInt(out, base *Nat, exp *Int) {
+// ModExpI sets out = base^exp (mod m) where exp is an Int.
+func (m *Modulus) ModExpI(out, base *Nat, exp *Int) {
 	if m.Nat().IsOdd() == ct.True {
 		m.modExpIOdd(out, base, exp)
 	} else {

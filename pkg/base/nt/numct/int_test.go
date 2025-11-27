@@ -435,6 +435,7 @@ func TestInt_Sqrt(t *testing.T) {
 				// When called on self, should leave unchanged on failure
 				root.Set(original)
 				ok = root.Sqrt(&root)
+				require.Equal(t, ct.False, ok, "input %d should not be a perfect square", tc.input)
 				require.Equal(t, ct.True, root.Equal(original), "should leave value unchanged on failure")
 			}
 		}

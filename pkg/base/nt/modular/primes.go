@@ -113,7 +113,7 @@ func (m *OddPrimeFactors) ModExp(out, base, exp *numct.Nat) {
 	out.Set(m.Params.Recombine(&mp, &mq))
 }
 
-func (m *OddPrimeFactors) ModExpInt(out, base *numct.Nat, exp *numct.Int) {
+func (m *OddPrimeFactors) ModExpI(out, base *numct.Nat, exp *numct.Int) {
 	var out2 numct.Nat
 	m.ModExp(out, base, exp.Absed())
 	m.ModInv(&out2, out)

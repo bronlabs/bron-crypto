@@ -166,7 +166,7 @@ func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupUnknownOrderElement) (*Pai
 
 func (pg *PaillierGroup[X]) Phi(x *numct.Int) (*PaillierGroupElement[X], error) {
 	var shiftedPlaintext numct.Nat
-	pg.N().ModulusCT().ModInt(&shiftedPlaintext, x)
+	pg.N().ModulusCT().ModI(&shiftedPlaintext, x)
 	var out numct.Nat
 	pg.ModulusCT().ModMul(&out, &shiftedPlaintext, pg.N().Value())
 	out.Increment()

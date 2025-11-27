@@ -13,7 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
-// TODO: change ModInt -> ModI
+// TODO: change ModI -> ModI
 type modulusMutable[I, N any] interface {
 	Nat() N
 	SetNat(N) ct.Bool
@@ -23,7 +23,7 @@ type modulusMutable[I, N any] interface {
 	IsUnit(x N) ct.Bool
 
 	Mod(out, x N)
-	ModInt(out N, x I)
+	ModI(out N, x I)
 	ModSymmetric(out I, x N)
 
 	Quo(out, x N) // out = floor(x / m)  (Euclidean integer division)
@@ -38,7 +38,7 @@ type modulusMutable[I, N any] interface {
 
 	ModExp(out, base, exp N)
 	ModMultiBaseExp(out []N, bases []N, exp N)
-	ModExpInt(out, base N, exp I)
+	ModExpI(out, base N, exp I)
 
 	Random(io.Reader) (N, error)
 	BitLen() int

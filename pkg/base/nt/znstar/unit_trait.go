@@ -103,7 +103,7 @@ func (u *UnitTrait[A, W, WT]) ExpBounded(exponent *num.Nat, bits uint) W {
 
 func (u *UnitTrait[A, W, WT]) ExpI(exponent *num.Int) W {
 	var outCt numct.Nat
-	u.arith.ModExpInt(&outCt, u.v.Value(), exponent.Value())
+	u.arith.ModExpI(&outCt, u.v.Value(), exponent.Value())
 	v, err := num.NewUintGivenModulus(&outCt, u.ModulusCT())
 	if err != nil {
 		panic(err)
@@ -117,7 +117,7 @@ func (u *UnitTrait[A, W, WT]) ExpIBounded(exponent *num.Int, bits uint) W {
 	ex := exponent.Value().Clone()
 	ex.Resize(int(bits))
 	var outCt numct.Nat
-	u.arith.ModExpInt(&outCt, u.v.Value(), ex)
+	u.arith.ModExpI(&outCt, u.v.Value(), ex)
 	v, err := num.NewUintGivenModulus(&outCt, u.ModulusCT())
 	if err != nil {
 		panic(err)
