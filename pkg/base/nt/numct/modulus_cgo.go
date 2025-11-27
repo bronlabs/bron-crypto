@@ -123,9 +123,13 @@ func (m *Modulus) ModExp(out, base, exp *Nat) {
 func (m *Modulus) modExpIOdd(out, base *Nat, exp *Int) {
 	var candidate Nat
 	m.modExpOdd(&candidate, base, exp.Absed())
+
+	isNeg := exp.IsNegative()
+
 	var candidateInv Nat
-	ok := m.ModInv(&candidateInv, &candidate)
-	out.CondAssign(ok, &candidate)
+	m.ModInv(&candidateInv, &candidate)
+
+	out.Select(ct.Choice(isNeg), &candidate, &candidateInv)
 }
 
 // ModExpI sets out = base^exp (mod m) where exp is an Int.
@@ -198,6 +202,10 @@ func (m *Modulus) modInvOddPrime(out, a *Nat) ct.Bool {
 	m.Mod(&aReduced, a)
 
 	ok := aReduced.IsNonZero()
+
+	if ok == ct.False { // boringssl panics on zero input
+		return ok
+	}
 
 	aNum := bnPool.Get().(*boring.BigNum)
 	defer bnPool.Put(aNum)
@@ -285,7 +293,7 @@ func (m *Modulus) ModMul(out, x, y *Nat) {
 // Set sets m = v.
 func (m *Modulus) Set(v *Modulus) {
 	m.ModulusBasic.Set(v.ModulusBasic)
-	m.mSub2 = v.mSub2
+	m.mSub2 = v.mSub2.Clone()
 	m.mNum = v.mNum
 	m.mont = v.mont
 	m.once = v.once
