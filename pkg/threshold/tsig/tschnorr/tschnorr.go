@@ -1,8 +1,6 @@
 package tschnorr
 
 import (
-	"sync"
-
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
@@ -60,18 +58,10 @@ func (ps *PartialSignature[E, S]) Bytes() []byte {
 
 type PublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
 	tsig.BasePublicMaterial[E, S]
-	pk     *schnorrlike.PublicKey[E, S]
-	pkOnce sync.Once
+	pk *schnorrlike.PublicKey[E, S]
 }
 
 func (pm *PublicMaterial[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
-	pm.pkOnce.Do(func() {
-		var err error
-		pm.pk, err = schnorrlike.NewPublicKey(pm.BasePublicMaterial.PublicKey())
-		if err != nil {
-			panic(err)
-		}
-	})
 	return pm.pk
 }
 
@@ -80,8 +70,7 @@ E algebra.PrimeGroupElement[E, S],
 S algebra.PrimeFieldElement[S],
 ] struct {
 	tsig.BaseShard[E, S]
-	pk     *schnorrlike.PublicKey[E, S]
-	pkOnce sync.Once
+	pk *schnorrlike.PublicKey[E, S]
 }
 
 func (sh *Shard[E, S]) PublicKeyMaterial() *PublicMaterial[E, S] {
@@ -92,13 +81,6 @@ func (sh *Shard[E, S]) PublicKeyMaterial() *PublicMaterial[E, S] {
 }
 
 func (sh *Shard[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
-	sh.pkOnce.Do(func() {
-		var err error
-		sh.pk, err = schnorrlike.NewPublicKey(sh.BaseShard.PublicKey())
-		if err != nil {
-			panic(err)
-		}
-	})
 	return sh.pk
 }
 
@@ -134,5 +116,6 @@ func NewShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]]
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create public key from verification vector")
 	}
+
 	return &Shard[E, S]{BaseShard: *bs, pk: pk}, nil
 }

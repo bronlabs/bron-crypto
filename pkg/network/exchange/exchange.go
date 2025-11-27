@@ -4,6 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/echo"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
 func Exchange[B any, U any](rt *network.Router, correlationId string, broadcastMessageOut B, unicastMessagesOut network.RoundMessages[U]) (broadcastMessagesIn network.RoundMessages[B], unicastMessagesIn network.RoundMessages[U], err error) {
@@ -32,4 +33,12 @@ func ExchangeUnicast[U any](rt *network.Router, correlationId string, unicastMes
 		return nil, errs.WrapFailed(err, "cannot exchange unicast")
 	}
 	return unicastMessagesIn, nil
+}
+
+func SendUnicast[U any](rt *network.Router, correlationId string, unicastMessageOut network.RoundMessages[U]) error {
+	return network.SendUnicast(rt, correlationId+":UNICAST", unicastMessageOut)
+}
+
+func ReceiveUnicast[U any](rt *network.Router, correlationId string, from ...sharing.ID) (unicastMessagesIn network.RoundMessages[U], err error) {
+	return network.ReceiveUnicast[U](rt, correlationId+":UNICAST", from...)
 }
