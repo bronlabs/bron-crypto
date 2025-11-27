@@ -6,10 +6,11 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNatSetRandomRangeH(t *testing.T) {
@@ -778,8 +779,8 @@ func TestNat_Sqrt(t *testing.T) {
 	t.Run("large perfect squares (multi-limb path)", func(t *testing.T) {
 		// Test numbers > 64 bits to exercise multi-limb path
 		cases := []struct {
-			name  string
-			root  *big.Int
+			name string
+			root *big.Int
 		}{
 			{"2^64", new(big.Int).Lsh(big.NewInt(1), 64)},
 			{"2^100", new(big.Int).Lsh(big.NewInt(1), 100)},

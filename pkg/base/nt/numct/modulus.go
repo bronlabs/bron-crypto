@@ -17,7 +17,7 @@ import (
 type ModulusBasic saferith.Modulus
 
 // NewModulus creates a new Modulus from a Nat.
-func NewModulusFromBytesBE(input []byte) (*Modulus, ct.Bool) {
+func NewModulusFromBytesBE(input []byte) (modulus *Modulus, ok ct.Bool) {
 	n := NewNatFromBytes(input)
 	return NewModulus(n)
 }
@@ -226,16 +226,16 @@ func (m *ModulusBasic) ModSqrt(out, x *Nat) ct.Bool {
 	}
 }
 
-func (m *ModulusBasic) modExpOdd(out, base, exp *Nat) {
+func (m *ModulusBasic) modExpOdd(out, b, exp *Nat) {
 	(*saferith.Nat)(out).Exp(
-		(*saferith.Nat)(base),
+		(*saferith.Nat)(b),
 		(*saferith.Nat)(exp),
 		(*saferith.Modulus)(m),
 	)
 }
 
-func (m *ModulusBasic) modExpEven(out, base *Nat, exp *big.Int) {
-	baseBig := (*saferith.Nat)(base).Big()
+func (m *ModulusBasic) modExpEven(out, b *Nat, exp *big.Int) {
+	baseBig := (*saferith.Nat)(b).Big()
 	modBig := (*saferith.Modulus)(m).Big()
 
 	result := new(big.Int).Exp(baseBig, exp, modBig)
@@ -244,37 +244,37 @@ func (m *ModulusBasic) modExpEven(out, base *Nat, exp *big.Int) {
 }
 
 // ModExp sets out = base^exp (mod m).
-func (m *ModulusBasic) ModExp(out, base, exp *Nat) {
+func (m *ModulusBasic) ModExp(out, b, exp *Nat) {
 	if m.Nat().IsOdd() == ct.True {
-		m.modExpOdd(out, base, exp)
+		m.modExpOdd(out, b, exp)
 	} else {
 		// For even moduli (like 2), we can't use Montgomery multiplication
 		// Use big.Int instead
-		m.modExpEven(out, base, exp.Big())
+		m.modExpEven(out, b, exp.Big())
 	}
 }
 
-func (m *ModulusBasic) modExpIOdd(out, base *Nat, exp *Int) {
+func (m *ModulusBasic) modExpIOdd(out, b *Nat, exp *Int) {
 	(*saferith.Nat)(out).ExpI(
-		(*saferith.Nat)(base),
+		(*saferith.Nat)(b),
 		(*saferith.Int)(exp),
 		(*saferith.Modulus)(m),
 	)
 }
 
 // ModExpI sets out = base^exp (mod m) where exp is an Int.
-func (m *ModulusBasic) ModExpI(out, base *Nat, exp *Int) {
+func (m *ModulusBasic) ModExpI(out, b *Nat, exp *Int) {
 	if m.Nat().IsOdd() == ct.True {
-		m.modExpIOdd(out, base, exp)
+		m.modExpIOdd(out, b, exp)
 	} else {
 		// For even moduli (like 2), we can't use Montgomery multiplication
 		// Use big.Int instead
-		m.modExpEven(out, base, exp.Big())
+		m.modExpEven(out, b, exp.Big())
 	}
 }
 
 // ModMultiBaseExp sets out[i] = bases[i]^exp (mod m) for all i.
-func (m *ModulusBasic) ModMultiBaseExp(out []*Nat, bases []*Nat, exp *Nat) {
+func (m *ModulusBasic) ModMultiBaseExp(out, bases []*Nat, exp *Nat) {
 	if len(bases) != len(out) {
 		panic("len(bases) != len(out)")
 	}

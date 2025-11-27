@@ -4,34 +4,17 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/stretchr/testify/require"
 )
 
-// modulusPair holds both the full Modulus (cgo optimized) and ModulusBasic (pure saferith).
+// modulusPair holds both the full Modulus (cgo optimised) and ModulusBasic (pure saferith).
 type modulusPair struct {
 	full  *numct.Modulus
 	basic *numct.ModulusBasic
-}
-
-// Helper to create both Modulus and ModulusBasic from a uint64.
-func newModulusPair(t *testing.T, v uint64) modulusPair {
-	t.Helper()
-	n := numct.NewNat(v)
-	m, ok := numct.NewModulus(n)
-	require.Equal(t, ct.True, ok)
-	return modulusPair{full: m, basic: m.ModulusBasic}
-}
-
-// Helper to create both Modulus and ModulusBasic from a big.Int.
-func newModulusPairFromBig(t *testing.T, v *big.Int) modulusPair {
-	t.Helper()
-	n := numct.NewNatFromBig(v, v.BitLen())
-	m, ok := numct.NewModulus(n)
-	require.Equal(t, ct.True, ok)
-	return modulusPair{full: m, basic: m.ModulusBasic}
 }
 
 func TestModulus_NewModulusFromBytesBE(t *testing.T) {
@@ -68,7 +51,7 @@ func TestModulus_Random(t *testing.T) {
 	p := newModulusPair(t, 100)
 	prng := pcg.NewRandomised()
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		r, err := p.basic.Random(prng)
 		require.NoError(t, err)
 		lt, _, _ := r.Compare(p.basic.Nat())

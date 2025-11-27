@@ -32,7 +32,7 @@ func NatThree() *Nat {
 	return (*Nat)(new(saferith.Nat).SetUint64(3).Resize(2))
 }
 
-// NewNat returns a new Nat initialized to the given uint64 value.
+// NewNat returns a new Nat initialised to the given uint64 value.
 func NewNat(value uint64) *Nat {
 	n := new(Nat)
 	n.SetUint64(value)
@@ -89,13 +89,13 @@ func (n *Nat) Add(lhs, rhs *Nat) {
 }
 
 // AddCap sets n = lhs + rhs modulo 2^cap with capacity cap.
-// if cap < 0, capacity will be max(lhs.AnnouncedLen(), rhs.AnnouncedLen()) + 1
+// if cap < 0, capacity will be max(lhs.AnnouncedLen(), rhs.AnnouncedLen()) + 1.
 func (n *Nat) AddCap(lhs, rhs *Nat, cap int) {
 	(*saferith.Nat)(n).Add((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), cap)
 }
 
 // Sub sets n = lhs - rhs modulo 2^cap.
-// if cap < 0, capacity will be max(lhs.AnnouncedLen(), rhs.AnnouncedLen())
+// if cap < 0, capacity will be max(lhs.AnnouncedLen(), rhs.AnnouncedLen()).
 func (n *Nat) SubCap(lhs, rhs *Nat, cap int) {
 	(*saferith.Nat)(n).Sub((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), cap)
 }
@@ -106,7 +106,7 @@ func (n *Nat) Mul(lhs, rhs *Nat) {
 }
 
 // MulCap sets n = lhs * rhs modulo 2^cap.
-// if cap < 0, capacity will be lhs.AnnouncedLen() + rhs.AnnouncedLen()
+// if cap < 0, capacity will be lhs.AnnouncedLen() + rhs.AnnouncedLen().
 func (n *Nat) MulCap(lhs, rhs *Nat, cap int) {
 	(*saferith.Nat)(n).Mul((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), cap)
 }
@@ -230,7 +230,7 @@ func (n *Nat) IsEven() ct.Bool {
 
 // Resize resizes n to have capacity cap.
 // When cap < 0, use the current announced length
-// When cap >= 0, use the provided cap
+// When cap >= 0, use the provided cap.
 func (n *Nat) Resize(cap int) {
 	if cap < 0 {
 		cap = int(n.AnnouncedLen())

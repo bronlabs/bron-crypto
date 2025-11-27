@@ -50,8 +50,8 @@ func NewIntFromBytes(b []byte) *Int {
 }
 
 // NewIntFromBig creates a new Int from a big.Int with the given capacity.
-func NewIntFromBig(n *big.Int, cap int) *Int {
-	return (*Int)(new(saferith.Int).SetBig(n, cap))
+func NewIntFromBig(n *big.Int, capacity int) *Int {
+	return (*Int)(new(saferith.Int).SetBig(n, capacity))
 }
 
 type Int saferith.Int
@@ -97,10 +97,10 @@ func (i *Int) Add(lhs, rhs *Int) {
 	i.AddCap(lhs, rhs, -1)
 }
 
-// AddCap sets i = lhs + rhs with capacity cap.
-// When cap < 0, it is set to max(lhs.AnnouncedLen(), rhs.AnnouncedLen()) + 1.
-func (i *Int) AddCap(lhs, rhs *Int, cap int) {
-	(*saferith.Int)(i).Add((*saferith.Int)(lhs), (*saferith.Int)(rhs), cap)
+// AddCap sets i = lhs + rhs with capacity capacity.
+// When capacity < 0, it is set to max(lhs.AnnouncedLen(), rhs.AnnouncedLen()) + 1.
+func (i *Int) AddCap(lhs, rhs *Int, capacity int) {
+	(*saferith.Int)(i).Add((*saferith.Int)(lhs), (*saferith.Int)(rhs), capacity)
 }
 
 // Neg sets i = -x.
@@ -113,12 +113,12 @@ func (i *Int) Sub(lhs, rhs *Int) {
 	i.SubCap(lhs, rhs, -1)
 }
 
-// SubCap sets i = lhs - rhs with capacity cap.
-// When cap < 0, it is set to max(lhs.AnnouncedLen(), rhs.AnnouncedLen()) + 1.
-func (i *Int) SubCap(lhs, rhs *Int, cap int) {
+// SubCap sets i = lhs - rhs with capacity capacity.
+// When capacity < 0, it is set to max(lhs.AnnouncedLen(), rhs.AnnouncedLen()) + 1.
+func (i *Int) SubCap(lhs, rhs *Int, capacity int) {
 	rhsNeg := rhs.Clone()
 	rhsNeg.Neg(rhs)
-	i.AddCap(lhs, rhsNeg, cap)
+	i.AddCap(lhs, rhsNeg, capacity)
 }
 
 // Mul sets i = lhs * rhs.
@@ -126,10 +126,10 @@ func (i *Int) Mul(lhs, rhs *Int) {
 	i.MulCap(lhs, rhs, -1)
 }
 
-// MulCap sets i = lhs * rhs with capacity cap.
-// When cap < 0, it is set to lhs.AnnouncedLen() + rhs.AnnouncedLen().
-func (i *Int) MulCap(lhs, rhs *Int, cap int) {
-	(*saferith.Int)(i).Mul((*saferith.Int)(lhs), (*saferith.Int)(rhs), cap)
+// MulCap sets i = lhs * rhs with capacity capacity.
+// When capacity < 0, it is set to lhs.AnnouncedLen() + rhs.AnnouncedLen().
+func (i *Int) MulCap(lhs, rhs *Int, capacity int) {
+	(*saferith.Int)(i).Mul((*saferith.Int)(lhs), (*saferith.Int)(rhs), capacity)
 }
 
 // Div sets i = numerator / denominator.
@@ -145,11 +145,11 @@ func (i *Int) Div(numerator, denominator *Int) (ok ct.Bool) {
 	return ok
 }
 
-// DivCap sets i = numerator / denominator with capacity cap.
+// DivCap sets i = numerator / denominator with capacity capacity.
 // Returns ok = false if denominator is zero.
-func (i *Int) DivCap(numerator *Int, denominator *Modulus, cap int) (ok ct.Bool) {
+func (i *Int) DivCap(numerator *Int, denominator *Modulus, capacity int) (ok ct.Bool) {
 	var outNat Nat
-	ok = outNat.DivCap(numerator.Absed(), denominator, cap)
+	ok = outNat.DivCap(numerator.Absed(), denominator, capacity)
 
 	i.SetNat(&outNat)
 	i.CondNeg(numerator.IsNegative())
@@ -284,11 +284,11 @@ func (i *Int) Lsh(x *Int, shift uint) {
 	i.LshCap(x, shift, -1)
 }
 
-// LshCap sets i = x << shift with capacity cap.
-func (i *Int) LshCap(x *Int, shift uint, cap int) {
+// LshCap sets i = x << shift with given capacity.
+func (i *Int) LshCap(x *Int, shift uint, capacity int) {
 	xAbs := (*saferith.Int)(x).Abs()
 	xSign := (*saferith.Int)(x).IsNegative()
-	xAbs.Lsh(xAbs, shift, cap)
+	xAbs.Lsh(xAbs, shift, capacity)
 	(*saferith.Int)(i).SetNat(xAbs)
 	// Preserve sign
 	(*saferith.Int)(i).Neg(xSign)
@@ -299,11 +299,11 @@ func (i *Int) Rsh(x *Int, shift uint) {
 	i.RshCap(x, shift, -1)
 }
 
-// RshCap sets i = x >> shift with capacity cap.
-func (i *Int) RshCap(x *Int, shift uint, cap int) {
+// RshCap sets i = x >> shift with given capacity.
+func (i *Int) RshCap(x *Int, shift uint, capacity int) {
 	xAbs := (*saferith.Int)(x).Abs()
 	xSign := (*saferith.Int)(x).IsNegative()
-	xAbs.Rsh(xAbs, shift, cap)
+	xAbs.Rsh(xAbs, shift, capacity)
 	(*saferith.Int)(i).SetNat(xAbs)
 	// Preserve sign
 	(*saferith.Int)(i).Neg(xSign)
@@ -311,7 +311,7 @@ func (i *Int) RshCap(x *Int, shift uint, cap int) {
 
 // Resize resizes i to have capacity cap.
 // When cap < 0, use the current announced length
-// When cap >= 0, use the provided cap
+// When cap >= 0, use the provided cap.
 func (i *Int) Resize(cap int) {
 	if cap < 0 {
 		cap = int(i.AnnouncedLen())
@@ -394,7 +394,7 @@ func (i *Int) Compare(rhs *Int) (lt, eq, gt ct.Bool) {
 	lt = ltSame | ltDiff
 	gt = gtSame | gtDiff
 	eq = eqSame
-	return
+	return lt, eq, gt
 }
 
 // Uint64 returns the absolute value of i as a uint64.
@@ -474,25 +474,24 @@ func (i *Int) And(x, y *Int) {
 	i.AndCap(x, y, -1)
 }
 
-// AndCap sets i = x & y with capacity cap.
+// AndCap sets i = x & y with capacity capacity.
 // For signed integers, this operates on the two's-complement representation.
-func (i *Int) AndCap(x, y *Int, cap int) {
-	if cap < 0 {
-		cap = int(max(x.AnnouncedLen(), y.AnnouncedLen()))
+func (i *Int) AndCap(x, y *Int, capacity int) {
+	if capacity < 0 {
+		capacity = int(max(x.AnnouncedLen(), y.AnnouncedLen()))
 	}
 
 	var xClone, yClone Int
 	xClone.Set(x)
-	xClone.Resize(cap)
+	xClone.Resize(capacity)
 	yClone.Set(y)
-	yClone.Resize(cap)
+	yClone.Resize(capacity)
 
 	xBytes := xClone.TwosComplementBEBytes()
 	yBytes := yClone.TwosComplementBEBytes()
 	zBytes := make([]byte, len(xBytes))
 	ct.AndBytes(zBytes, xBytes, yBytes)
 	i.SetTwosComplementBEBytes(zBytes)
-	// Don't resize - result may need more bits than inputs
 }
 
 // Or sets i = x | y.
@@ -501,24 +500,23 @@ func (i *Int) Or(x, y *Int) {
 	i.OrCap(x, y, -1)
 }
 
-// OrCap sets i = x | y with capacity cap.
-func (i *Int) OrCap(x, y *Int, cap int) {
-	if cap < 0 {
-		cap = int(max(x.AnnouncedLen(), y.AnnouncedLen()))
+// OrCap sets i = x | y with given capacity.
+func (i *Int) OrCap(x, y *Int, capacity int) {
+	if capacity < 0 {
+		capacity = max(x.AnnouncedLen(), y.AnnouncedLen())
 	}
 
 	var xClone, yClone Int
 	xClone.Set(x)
-	xClone.Resize(cap)
+	xClone.Resize(capacity)
 	yClone.Set(y)
-	yClone.Resize(cap)
+	yClone.Resize(capacity)
 
 	xBytes := xClone.TwosComplementBEBytes()
 	yBytes := yClone.TwosComplementBEBytes()
 	zBytes := make([]byte, len(xBytes))
 	ct.OrBytes(zBytes, xBytes, yBytes)
 	i.SetTwosComplementBEBytes(zBytes)
-	// Don't resize - result may need more bits than inputs
 }
 
 // Xor sets i = x ^ y.
@@ -527,17 +525,17 @@ func (i *Int) Xor(x, y *Int) {
 	i.XorCap(x, y, -1)
 }
 
-// XorCap sets i = x ^ y with capacity cap.
-func (i *Int) XorCap(x, y *Int, cap int) {
-	if cap < 0 {
-		cap = int(max(x.AnnouncedLen(), y.AnnouncedLen()))
+// XorCap sets i = x ^ y with given capacity.
+func (i *Int) XorCap(x, y *Int, capacity int) {
+	if capacity < 0 {
+		capacity = max(x.AnnouncedLen(), y.AnnouncedLen())
 	}
 
 	var xClone, yClone Int
 	xClone.Set(x)
-	xClone.Resize(cap)
+	xClone.Resize(capacity)
 	yClone.Set(y)
-	yClone.Resize(cap)
+	yClone.Resize(capacity)
 
 	xBytes := xClone.TwosComplementBEBytes()
 	yBytes := yClone.TwosComplementBEBytes()
@@ -553,16 +551,16 @@ func (i *Int) Not(x *Int) {
 	i.NotCap(x, -1)
 }
 
-// NotCap sets i = ^x with capacity cap.
+// NotCap sets i = ^x with given capacity.
 // For signed integers, this is equivalent to -(x+1) due to two's complement.
-func (i *Int) NotCap(x *Int, cap int) {
-	if cap < 0 {
-		cap = int(x.AnnouncedLen())
+func (i *Int) NotCap(x *Int, capacity int) {
+	if capacity < 0 {
+		capacity = x.AnnouncedLen()
 	}
 
 	var xClone Int
 	xClone.Set(x)
-	xClone.Resize(cap)
+	xClone.Resize(capacity)
 
 	xBytes := xClone.TwosComplementBEBytes()
 	zBytes := make([]byte, len(xBytes))

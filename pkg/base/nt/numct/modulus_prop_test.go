@@ -1,3 +1,5 @@
+//go:build !purego && !nobignum
+
 package numct_test
 
 import (

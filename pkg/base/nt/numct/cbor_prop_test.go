@@ -3,10 +3,11 @@ package numct_test
 import (
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
 func TestNat_CBOR_RoundTrip(t *testing.T) {

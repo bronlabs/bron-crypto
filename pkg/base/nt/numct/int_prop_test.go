@@ -4,13 +4,14 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/cronokirby/saferith"
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
 	aprop "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/properties"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/cronokirby/saferith"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 func IntGenerator() *rapid.Generator[*numct.Int] {
