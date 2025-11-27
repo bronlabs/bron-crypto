@@ -47,3 +47,24 @@ func ExchangeUnicastSimple[U any](rt *Router, correlationId string, messages Rou
 	}
 	return hashmap.NewImmutableComparableFromNativeLike(receivedMessages), nil
 }
+
+func ExchangeUnicastRing[U any](rt *Router, correlationId string, prevId, nextId sharing.ID, message U) (U, error) {
+	var nilU U
+	messageSerialized, err := serde.MarshalCBOR(message)
+	if err != nil {
+		return nilU, errs.WrapSerialisation(err, "failed to marshal message")
+	}
+	err = rt.SendTo(correlationId, map[sharing.ID][]byte{nextId: messageSerialized})
+	if err != nil {
+		return nilU, errs.WrapFailed(err, "failed to send message")
+	}
+	receivedMessageSerialized, err := rt.ReceiveFrom(correlationId, prevId)
+	if err != nil {
+		return nilU, errs.WrapFailed(err, "failed to exchange message")
+	}
+	receivedMessage, err := serde.UnmarshalCBOR[U](receivedMessageSerialized[prevId])
+	if err != nil {
+		return nilU, errs.WrapSerialisation(err, "failed to unmarshal message")
+	}
+	return receivedMessage, nil
+}
