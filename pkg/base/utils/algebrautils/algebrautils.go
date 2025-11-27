@@ -18,10 +18,10 @@ func RandomNonIdentity[M interface {
 }, E algebra.MonoidElement[E]](m M, prng io.Reader) (E, error) {
 	validationErrors := []error{}
 	if utils.IsNil(m) {
-		validationErrors = append(validationErrors, ErrArgumentIsNil.WithMessage("monoid").WithStackTrace())
+		validationErrors = append(validationErrors, ErrArgumentIsNil.WithMessage("monoid"))
 	}
 	if prng == nil {
-		validationErrors = append(validationErrors, ErrArgumentIsNil.WithMessage("prng").WithStackTrace())
+		validationErrors = append(validationErrors, ErrArgumentIsNil.WithMessage("prng"))
 	}
 	if len(validationErrors) > 0 {
 		return *new(E), errs2.Join(validationErrors...)
@@ -31,7 +31,7 @@ func RandomNonIdentity[M interface {
 	for out.IsOpIdentity() {
 		out, err = m.Random(prng)
 		if err != nil {
-			return *new(E), errs2.AttachStackTrace(err)
+			return *new(E), errs2.Wrap(err)
 		}
 	}
 	return out, nil

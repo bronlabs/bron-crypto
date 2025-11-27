@@ -82,7 +82,7 @@ func Shuffle[S ~[]T, T any](xs S, prng io.Reader) (S, error) {
 	for i := uint64(len(xs)) - 1; i > 0; i-- {
 		j, err := mathutils.RandomUint64Range(prng, i+1)
 		if err != nil {
-			return nil, errs2.AttachStackTrace(err)
+			return nil, errs2.Wrap(err).WithMessage("failed to sample random uint64 in range")
 		}
 		xs[j], xs[i] = xs[i], xs[j]
 	}
@@ -264,7 +264,7 @@ func Fold[T, U any](f func(acc U, x T) U, initial U, rest ...T) U {
 	accumulator := func(acc U, x T) (U, error) { return f(acc, x), nil }
 	out, err := FoldOrError(accumulator, initial, rest...)
 	if err != nil {
-		panic(errs2.AttachStackTrace(err))
+		panic(errs2.Wrap(err))
 	}
 	return out
 }
@@ -279,7 +279,7 @@ func FoldOrError[T, U any](f func(acc U, x T) (U, error), initial U, rest ...T) 
 	for _, x := range rest {
 		out, err = f(out, x)
 		if err != nil {
-			return *new(U), errs2.AttachStackTrace(err)
+			return *new(U), errs2.Wrap(err)
 		}
 	}
 	return out, nil

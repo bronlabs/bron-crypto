@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
 
 func TestSanity(t *testing.T) {
@@ -17,16 +18,16 @@ func TestSanity(t *testing.T) {
 
 	e2 := e1.WithMessage("additional context is %d", 42)
 	require.Error(t, e2)
-	require.Equal(t, "an error occurred (additional context is 42)", fmt.Sprintf("%s", e2))
+	require.Equal(t, "ERROR: an error occurred: additional context is 42\n", fmt.Sprintf("%s", e2))
 
-	tag := errs2.Tag("code")
+	tag := "code"
 	e3 := e2.WithTag(tag, "E123")
 	require.Error(t, e3)
-	require.Equal(t, "an error occurred (additional context is 42) [code=E123]", fmt.Sprintf("%s", e3))
+	require.Equal(t, "ERROR: an error occurred: additional context is 42\n--- Tags: {\"code\":\"E123\"}\n", fmt.Sprintf("%s", e3))
 
 	tags := e3.Tags()
 	require.Contains(t, tags, tag)
-	value, found := e3.TagValue(tag)
+	value, found := e3.Tags()[tag]
 	require.True(t, found)
 	require.Equal(t, "E123", value)
 
@@ -37,7 +38,7 @@ func TestSanity(t *testing.T) {
 	require.True(t, errs2.Is(e3, e1))
 	require.True(t, errs2.Is(e3, e2))
 
-	e4 := e3.WithStackTrace()
+	e4 := e3.WithStackFrame()
 	v4, exists4 := errs2.HasTag(e4, tag)
 	require.True(t, exists4)
 	require.Equal(t, "E123", v4)
