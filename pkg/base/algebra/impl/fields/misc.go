@@ -7,18 +7,18 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
-func IsNegative[FP impl.PrimeFieldElementPtr[FP, F], F any](v *F) (neg ct.Bool) {
+func IsNegative[FP impl.PrimeFieldElementPtrLowLevel[FP, F], F any](v *F) (neg ct.Bool) {
 	var vNeg F
 	FP(&vNeg).Neg(v)
 	_, _, gt := SliceCmpLE(FP(v).Limbs(), FP(&vNeg).Limbs())
 	return gt
 }
 
-func IsOdd[FP impl.PrimeFieldElementPtr[FP, F], F any](v *F) (odd ct.Bool) {
+func IsOdd[FP impl.PrimeFieldElementPtrLowLevel[FP, F], F any](v *F) (odd ct.Bool) {
 	return ct.Bool(FP(v).Bytes()[0] & 0b1)
 }
 
-func Degree[FP impl.FiniteFieldElementPtr[FP, F], F any]() uint64 {
+func Degree[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any]() uint64 {
 	return FP(nil).Degree()
 }
 

@@ -6,9 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
-// *** Magma.
-
-type magmaElement[E any] interface {
+type monoidElementLowLevel[E any] interface {
 	Set(v E)
 	ct.ConditionallySelectable[E]
 	ct.Equatable[E]
@@ -17,52 +15,49 @@ type magmaElement[E any] interface {
 
 	SetBytes([]byte) (ok ct.Bool)
 	Bytes() []byte
-}
-
-type MagmaElement[E magmaElement[E]] magmaElement[E]
-
-type MagmaElementPtr[E MagmaElement[E], T any] interface {
-	*T
-	MagmaElement[E]
-}
-
-// *** Monoid.
-
-type monoidElement[E any] interface {
-	magmaElement[E]
 	SetZero()
 	IsZero() ct.Bool
 	IsNonZero() ct.Bool
 }
 
-type MonoidElement[E monoidElement[E]] monoidElement[E]
+type MonoidElementLowLevel[E monoidElementLowLevel[E]] monoidElementLowLevel[E]
 
-type MonoidElementPtr[E MonoidElement[E], T any] interface {
+type MonoidElementPtrLowLevel[E MonoidElementLowLevel[E], T any] interface {
 	*T
-	MonoidElement[E]
+	MonoidElementLowLevel[E]
 }
 
-//TODO: remove above and embed below
-// TODO: rename to additive group
 // *** Group.
 
-type groupElement[E any] interface {
-	monoidElement[E]
+type groupElementLowLevel[E any] interface {
+	monoidElementLowLevel[E]
 	Sub(lhs, rhs E)
 	Neg(E)
 }
 
-type GroupElement[E groupElement[E]] groupElement[E]
+type GroupElementLowLevel[E groupElementLowLevel[E]] groupElementLowLevel[E]
 
-type GroupElementPtr[E GroupElement[E], T any] interface {
+type GroupElementPtrLowLevel[E GroupElementLowLevel[E], T any] interface {
 	*T
-	GroupElement[E]
+	GroupElementLowLevel[E]
+}
+
+type finiteGroupElementLowLevel[E any] interface {
+	groupElementLowLevel[E]
+	SetRandom(prng io.Reader) (ok ct.Bool)
+}
+
+type FiniteGroupElementLowLevel[E finiteGroupElementLowLevel[E]] finiteGroupElementLowLevel[E]
+
+type FiniteGroupElementPtrLowLevel[E FiniteGroupElementLowLevel[E], T any] interface {
+	*T
+	FiniteGroupElementLowLevel[E]
 }
 
 // *** Ring.
 
-type ringElement[E any] interface {
-	groupElement[E]
+type ringElementLowLevel[E any] interface {
+	groupElementLowLevel[E]
 	SetOne()
 	IsOne() ct.Bool
 	Mul(lhs, rhs E)
@@ -72,43 +67,43 @@ type ringElement[E any] interface {
 	Sqrt(E) (ok ct.Bool)
 }
 
-type RingElement[E ringElement[E]] ringElement[E]
+type RingElementLowLevel[E ringElementLowLevel[E]] ringElementLowLevel[E]
 
-type RingElementPtr[E RingElement[E], T any] interface {
+type RingElementPtrLowLevel[E RingElementLowLevel[E], T any] interface {
 	*T
-	RingElement[E]
+	RingElementLowLevel[E]
 }
 
 // *** Finite Field.
 
-type finiteFieldElement[E any] interface {
-	ringElement[E]
+type finiteFieldElementLowLevel[E any] interface {
+	ringElementLowLevel[E]
+	finiteGroupElementLowLevel[E]
 	SetUniformBytes(componentsData ...[]byte) (ok ct.Bool)
-	SetRandom(prng io.Reader) (ok ct.Bool)
 	ComponentsBytes() [][]byte
 	Degree() uint64
 }
 
-type FiniteFieldElement[E finiteFieldElement[E]] finiteFieldElement[E]
+type FiniteFieldElementLowLevel[E finiteFieldElementLowLevel[E]] finiteFieldElementLowLevel[E]
 
-type FiniteFieldElementPtr[E FiniteFieldElement[E], T any] interface {
+type FiniteFieldElementPtrLowLevel[E FiniteFieldElementLowLevel[E], T any] interface {
 	*T
-	FiniteFieldElement[E]
+	FiniteFieldElementLowLevel[E]
 }
 
 // *** Prime field.
 
-type primeFieldElement[E any] interface {
-	finiteFieldElement[E]
+type primeFieldElementLowLevel[E any] interface {
+	finiteFieldElementLowLevel[E]
 	SetUint64(u uint64)
 	SetLimbs(data []uint64) (ok ct.Bool)
 	SetBytesWide(data []byte) (ok ct.Bool)
 	Limbs() []uint64
 }
 
-type PrimeFieldElement[E primeFieldElement[E]] primeFieldElement[E]
+type PrimeFieldElementLowLevel[E primeFieldElementLowLevel[E]] primeFieldElementLowLevel[E]
 
-type PrimeFieldElementPtr[E PrimeFieldElement[E], T any] interface {
+type PrimeFieldElementPtrLowLevel[E PrimeFieldElementLowLevel[E], T any] interface {
 	*T
-	PrimeFieldElement[E]
+	PrimeFieldElementLowLevel[E]
 }

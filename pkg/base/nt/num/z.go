@@ -72,14 +72,12 @@ func (zs *Integers) FromBig(value *big.Int) (*Int, error) {
 		return nil, errs.NewIsNil("value must not be nil")
 	}
 	// Create Int from big.Int preserving sign
-	// We can't use Bytes() since that would create a circular dependency
-	// So we check sign and create from absolute value
 	sign := value.Sign()
 	if sign == 0 {
 		return zs.Zero(), nil
 	}
 	absValue := new(big.Int).Abs(value)
-	absInt := &Int{v: numct.NewIntFromBytes(absValue.Bytes())}
+	absInt := &Int{v: intFromRawBytes(absValue.Bytes())}
 	if sign < 0 {
 		return absInt.Neg(), nil
 	}
@@ -90,21 +88,31 @@ func (*Integers) FromNatPlus(value *NatPlus) (*Int, error) {
 	if value == nil {
 		return nil, errs.NewIsNil("value must not be nil")
 	}
-	return &Int{v: numct.NewIntFromBytes(value.Bytes())}, nil
+	return &Int{v: intFromRawBytes(value.Bytes())}, nil
 }
 
 func (*Integers) FromNat(value *Nat) (*Int, error) {
 	if value == nil {
 		return nil, errs.NewIsNil("value must not be nil")
 	}
-	return &Int{v: numct.NewIntFromBytes(value.Bytes())}, nil
+	return &Int{v: intFromRawBytes(value.Bytes())}, nil
 }
 
 func (*Integers) FromNatCT(value *numct.Nat) (*Int, error) {
 	if value == nil {
 		return nil, errs.NewIsNil("value must not be nil")
 	}
-	return &Int{v: numct.NewIntFromBytes(value.Bytes())}, nil
+	return &Int{v: intFromRawBytes(value.Bytes())}, nil
+}
+
+// intFromRawBytes creates a numct.Int from raw big-endian bytes (no sign prefix).
+// numct.NewIntFromBytes expects [sign_byte, value_bytes...] format,
+// so we prepend 0x00 (positive sign).
+func intFromRawBytes(rawBytes []byte) *numct.Int {
+	signPrefixed := make([]byte, len(rawBytes)+1)
+	signPrefixed[0] = 0x00 // positive sign
+	copy(signPrefixed[1:], rawBytes)
+	return numct.NewIntFromBytes(signPrefixed)
 }
 
 func (*Integers) FromIntCT(value *numct.Int) (*Int, error) {
@@ -131,34 +139,13 @@ func (*Integers) FromBytes(input []byte) (*Int, error) {
 		return nil, errs.NewIsNil("input must not be empty")
 	}
 
-	// Handle sign-magnitude encoding:
+	// Sign-magnitude encoding (matches saferith.Int.UnmarshalBinary):
 	// - [0x00] is zero
-	// - [0x00, bytes...] is positive
-	// - [0x01, bytes...] is negative
-
-	if len(input) == 1 && input[0] == 0x00 {
-		// Zero
-		return &Int{v: numct.NewIntFromUint64(0)}, nil
-	}
-
-	if len(input) == 1 {
-		// Single byte that's not 0x00 - treat as legacy unsigned encoding
-		return &Int{v: numct.NewIntFromBytes(input)}, nil
-	}
-
-	signByte := input[0]
-	absBytes := input[1:]
-
-	if signByte == 0x00 {
-		// Positive
-		return &Int{v: numct.NewIntFromBytes(absBytes)}, nil
-	} else if signByte == 0x01 {
-		// Negative
-		abs := &Int{v: numct.NewIntFromBytes(absBytes)}
-		return abs.Neg(), nil
-	}
-
-	// Legacy format: no sign byte, treat as unsigned
+	// - [0x00, bytes...] is positive (sign=0, value=bytes)
+	// - [0x01, bytes...] is negative (sign=1, value=bytes)
+	//
+	// numct.NewIntFromBytes passes directly to saferith.Int.UnmarshalBinary
+	// which expects this exact format.
 	return &Int{v: numct.NewIntFromBytes(input)}, nil
 }
 
@@ -166,7 +153,7 @@ func (*Integers) FromUint(input *Uint) (*Int, error) {
 	if input == nil {
 		return nil, errs.NewIsNil("input must not be nil")
 	}
-	return &Int{v: numct.NewIntFromBytes(input.Bytes())}, nil
+	return &Int{v: intFromRawBytes(input.Bytes())}, nil
 }
 
 func (*Integers) FromRat(input *Rat) (*Int, error) {
@@ -190,14 +177,11 @@ func (*Integers) FromUintSymmetric(input *Uint) (*Int, error) {
 }
 
 func (*Integers) Random(lowInclusive, highExclusive *Int, prng io.Reader) (*Int, error) {
-	if prng == nil || lowInclusive == nil || highExclusive == nil {
-		return nil, errs.NewIsNil("prng is nil or lowInclusive is nil or highExclusive is nil")
-	}
-	v, err := numct.IntRandom(prng, lowInclusive.v, highExclusive.v)
-	if err != nil {
+	var v numct.Int
+	if err := v.SetRandomRangeLH(lowInclusive.v, highExclusive.v, prng); err != nil {
 		return nil, errs.WrapRandomSample(err, "failed to sample random Int")
 	}
-	return &Int{v: v}, nil
+	return &Int{v: &v}, nil
 }
 
 func (zs *Integers) Iter() iter.Seq[*Int] {
@@ -380,7 +364,7 @@ func (i *Int) IsInRange(modulus *NatPlus) bool {
 
 func (i *Int) Mod(modulus *NatPlus) *Uint {
 	out := new(numct.Nat)
-	modulus.ModulusCT().ModInt(out, i.v)
+	modulus.ModulusCT().ModI(out, i.v)
 	return &Uint{v: out, m: modulus.ModulusCT()}
 }
 
@@ -589,10 +573,10 @@ func (i *Int) Cardinal() cardinal.Cardinal {
 	return cardinal.NewFromSaferith((*saferith.Nat)(i.Abs().v))
 }
 
-func (i *Int) TrueLen() uint {
+func (i *Int) TrueLen() int {
 	return i.v.TrueLen()
 }
 
-func (i *Int) AnnouncedLen() uint {
+func (i *Int) AnnouncedLen() int {
 	return i.v.AnnouncedLen()
 }

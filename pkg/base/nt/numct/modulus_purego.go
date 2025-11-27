@@ -8,9 +8,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
+// Modulus is a modulus implementation based on saferith.Modulus.
 type Modulus = ModulusBasic
 
-func NewModulus(m *Nat) (*Modulus, ct.Bool) {
-	ok := m.IsNonZero()
-	return (*ModulusBasic)(saferith.ModulusFromNat((*saferith.Nat)(m))), ok
+// NewModulus creates a new Modulus from a Nat.
+func NewModulus(m *Nat) (modulus *Modulus, ok ct.Bool) {
+	return (*ModulusBasic)(saferith.ModulusFromNat((*saferith.Nat)(m))), m.IsNonZero()
 }

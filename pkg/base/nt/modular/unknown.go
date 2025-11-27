@@ -34,8 +34,8 @@ func (u *SimpleModulus) ModExp(out, base, exp *numct.Nat) {
 	u.m.ModExp(out, base, exp)
 }
 
-func (u *SimpleModulus) ModExpInt(out, base *numct.Nat, exp *numct.Int) {
-	u.m.ModExpInt(out, base, exp)
+func (u *SimpleModulus) ModExpI(out, base *numct.Nat, exp *numct.Int) {
+	u.m.ModExpI(out, base, exp)
 }
 
 func (u *SimpleModulus) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp *numct.Nat) {

@@ -878,8 +878,8 @@ func TestIntegers_LengthMethods(t *testing.T) {
 	tests := []struct {
 		name         string
 		value        *num.Int
-		expectedLen  uint
-		announcedLen uint
+		expectedLen  int
+		announcedLen int
 	}{
 		{
 			name:         "Zero",

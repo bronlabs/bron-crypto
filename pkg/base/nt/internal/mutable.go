@@ -13,7 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
-// TODO: change ModInt -> ModI
+// TODO: change ModI -> ModI
 type modulusMutable[I, N any] interface {
 	Nat() N
 	SetNat(N) ct.Bool
@@ -23,7 +23,7 @@ type modulusMutable[I, N any] interface {
 	IsUnit(x N) ct.Bool
 
 	Mod(out, x N)
-	ModInt(out N, x I)
+	ModI(out N, x I)
 	ModSymmetric(out I, x N)
 
 	Quo(out, x N) // out = floor(x / m)  (Euclidean integer division)
@@ -38,10 +38,10 @@ type modulusMutable[I, N any] interface {
 
 	ModExp(out, base, exp N)
 	ModMultiBaseExp(out []N, bases []N, exp N)
-	ModExpInt(out, base N, exp I)
+	ModExpI(out, base N, exp I)
 
 	Random(io.Reader) (N, error)
-	BitLen() uint
+	BitLen() int
 	HashCode() base.HashCode
 	Big() *big.Int
 	Saferith() *saferith.Modulus
@@ -61,8 +61,8 @@ type ModulusMutablePtr[I IntMutable[I, MI], N NatMutable[N, MI], MI, MT any] int
 
 // TODO: add fill bytes
 // TODO: set bit
-type natMutable[E aimpl.MonoidElement[E], M any] interface {
-	aimpl.MonoidElement[E]
+type natMutable[E aimpl.MonoidElementLowLevel[E], M any] interface {
+	aimpl.MonoidElementLowLevel[E]
 	ct.Comparable[E]
 	base.Clonable[E]
 	IsOne() ct.Bool
@@ -82,8 +82,8 @@ type natMutable[E aimpl.MonoidElement[E], M any] interface {
 
 	Bit(i uint) byte
 
-	TrueLen() uint
-	AnnouncedLen() uint
+	TrueLen() int
+	AnnouncedLen() int
 	IsProbablyPrime() ct.Bool
 
 	Coprime(x E) ct.Bool
@@ -113,8 +113,8 @@ type NatMutablePtr[E NatMutable[E, M], M, T any] interface {
 	NatMutable[E, M]
 }
 
-type intMutable[E aimpl.RingElement[E], M any] interface {
-	aimpl.RingElement[E]
+type intMutable[E aimpl.RingElementLowLevel[E], M any] interface {
+	aimpl.RingElementLowLevel[E]
 	natMutable[E, M]
 	Int64() int64
 	SetInt64(x int64)

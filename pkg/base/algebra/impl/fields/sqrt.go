@@ -5,7 +5,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
-func TonelliShanks[FP impl.FiniteFieldElementPtr[FP, F], F any](out, x, ethRootOfUnity *F, e uint64, progenitorExp []uint8) (ok ct.Bool) {
+func TonelliShanks[FP impl.FiniteFieldElementPtrLowLevel[FP, F], F any](out, x, ethRootOfUnity *F, e uint64, progenitorExp []uint8) (ok ct.Bool) {
 	var y, s, t, z F
 
 	Pow[FP](&y, x, progenitorExp)

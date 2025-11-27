@@ -166,9 +166,9 @@ func (m *OddPrimeSquareFactors) ModExp(out, base, exp *numct.Nat) {
 	out.Set(m.CrtModN2.Recombine(&mp, &mq))
 }
 
-func (m *OddPrimeSquareFactors) ModExpInt(out, base *numct.Nat, exp *numct.Int) {
+func (m *OddPrimeSquareFactors) ModExpI(out, base *numct.Nat, exp *numct.Int) {
 	var out2 numct.Nat
-	m.ModExp(out, base, exp.AbsNat())
+	m.ModExp(out, base, exp.Absed())
 	m.ModInv(&out2, out)
 	out.CondAssign(exp.IsNegative(), &out2)
 }

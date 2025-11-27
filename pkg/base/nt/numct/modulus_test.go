@@ -1,748 +1,818 @@
 package numct_test
 
 import (
-	crand "crypto/rand"
-	"fmt"
 	"math/big"
 	"testing"
-	"time"
 
-	"github.com/cronokirby/saferith"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
-func newNatFromBig(b *big.Int) *numct.Nat {
-	return (*numct.Nat)(new(saferith.Nat).SetBig(b, b.BitLen()))
+// modulusPair holds both the full Modulus (cgo optimised) and ModulusBasic (pure saferith).
+type modulusPair struct {
+	full  *numct.Modulus
+	basic *numct.ModulusBasic
 }
 
-func newModulus(p *big.Int) *numct.Modulus {
-	pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
-	m, ok := numct.NewModulus(pNat)
-	if ok != ct.True {
-		panic("failed to create Modulus")
-	}
-	return m
-}
+func TestModulus_NewModulusFromBytesBE(t *testing.T) {
+	t.Parallel()
 
-func TestNewModulusFromNat(t *testing.T) {
-	t.Run("odd prime", func(t *testing.T) {
-		p := newNatFromBig(big.NewInt(7))
-		m, ok := numct.NewModulus(p)
-		assert.Equal(t, ct.True, ok, "Failed to create modulus")
-		assert.NotNil(t, m)
+	t.Run("valid modulus", func(t *testing.T) {
+		t.Parallel()
+		bytes := []byte{0x11} // 17
+		m, ok := numct.NewModulusFromBytesBE(bytes)
+		require.Equal(t, ct.True, ok)
+		require.Equal(t, "11", m.Big().Text(16))
 	})
 
-	t.Run("odd composite", func(t *testing.T) {
-		p := newNatFromBig(big.NewInt(15)) // 3*5, not prime
-		m, ok := numct.NewModulus(p)
-		assert.Equal(t, ct.True, ok, "Failed to create modulus")
-		assert.NotNil(t, m)
-	})
-
-	t.Run("even number", func(t *testing.T) {
-		p := newNatFromBig(big.NewInt(10))
-		m, ok := numct.NewModulus(p)
-		assert.Equal(t, ct.True, ok, "Failed to create modulus")
-		assert.NotNil(t, m)
-	})
-
-	t.Run("zero should fail", func(t *testing.T) {
-		p := newNatFromBig(big.NewInt(0))
-		_, ok := numct.NewModulus(p)
-		assert.Equal(t, ct.False, ok, "Should not create modulus for zero")
+	t.Run("zero modulus fails", func(t *testing.T) {
+		t.Parallel()
+		bytes := []byte{0x00}
+		_, ok := numct.NewModulusFromBytesBE(bytes)
+		require.Equal(t, ct.False, ok)
 	})
 }
 
-func TestModulus_BasicOperations(t *testing.T) {
-	m := newModulus(big.NewInt(7))
+func TestModulus_HashCode(t *testing.T) {
+	t.Parallel()
+	p1 := newModulusPair(t, 17)
+	p2 := newModulusPair(t, 17)
+	p3 := newModulusPair(t, 19)
 
-	t.Run("Mod", func(t *testing.T) {
-		tests := []struct {
-			name string
-			x    int64
-			want int64
-		}{
-			{"small positive", 3, 3},
-			{"equals modulus", 7, 0},
-			{"greater than modulus", 10, 3},
-			{"multiple of modulus", 14, 0},
-			{"large value", 100, 2},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				x := newNatFromBig(big.NewInt(tt.x))
-				out := newNatFromBig(big.NewInt(0))
-
-				m.Mod(out, x)
-				assert.Equal(t, uint64(tt.want), out.Uint64())
-			})
-		}
-	})
-
-	t.Run("Add", func(t *testing.T) {
-		tests := []struct {
-			name string
-			x, y int64
-			want int64
-		}{
-			{"simple add", 2, 3, 5},
-			{"add with wrap", 5, 4, 2}, // 9 mod 7 = 2
-			{"add to zero", 0, 6, 6},
-			{"add zeros", 0, 0, 0},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				x := newNatFromBig(big.NewInt(tt.x))
-				y := newNatFromBig(big.NewInt(tt.y))
-				out := newNatFromBig(big.NewInt(0))
-
-				m.ModAdd(out, x, y)
-				assert.Equal(t, uint64(tt.want), out.Uint64())
-			})
-		}
-	})
-
-	t.Run("Sub", func(t *testing.T) {
-		tests := []struct {
-			name string
-			x, y int64
-			want int64
-		}{
-			{"simple sub", 5, 2, 3},
-			{"sub with wrap", 2, 5, 4}, // 2-5 = -3 ≡ 4 mod 7
-			{"sub from zero", 0, 3, 4}, // 0-3 = -3 ≡ 4 mod 7
-			{"sub zeros", 0, 0, 0},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				x := newNatFromBig(big.NewInt(tt.x))
-				y := newNatFromBig(big.NewInt(tt.y))
-				out := newNatFromBig(big.NewInt(0))
-
-				m.ModSub(out, x, y)
-				assert.Equal(t, uint64(tt.want), out.Uint64())
-			})
-		}
-	})
-
-	t.Run("Mul", func(t *testing.T) {
-		tests := []struct {
-			name string
-			x, y int64
-			want int64
-		}{
-			{"simple mul", 2, 3, 6},
-			{"mul with wrap", 3, 4, 5}, // 12 mod 7 = 5
-			{"mul by zero", 5, 0, 0},
-			{"mul by one", 5, 1, 5},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				x := newNatFromBig(big.NewInt(tt.x))
-				y := newNatFromBig(big.NewInt(tt.y))
-				out := newNatFromBig(big.NewInt(0))
-
-				m.ModMul(out, x, y)
-				assert.Equal(t, uint64(tt.want), out.Uint64())
-			})
-		}
-	})
-
-	t.Run("Neg", func(t *testing.T) {
-		tests := []struct {
-			name string
-			x    int64
-			want int64
-		}{
-			{"neg positive", 3, 4},  // -3 ≡ 4 mod 7
-			{"neg zero", 0, 0},      // -0 = 0
-			{"neg one", 1, 6},       // -1 ≡ 6 mod 7
-			{"neg modulus-1", 6, 1}, // -6 ≡ 1 mod 7
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				x := newNatFromBig(big.NewInt(tt.x))
-				out := newNatFromBig(big.NewInt(0))
-
-				m.ModNeg(out, x)
-				assert.Equal(t, uint64(tt.want), out.Uint64())
-			})
-		}
-	})
+	require.Equal(t, p1.basic.HashCode(), p2.basic.HashCode())
+	require.NotEqual(t, p1.basic.HashCode(), p3.basic.HashCode())
 }
 
-func TestModulus_Inv(t *testing.T) {
-	m := newModulus(big.NewInt(7))
+func TestModulus_Random(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 100)
+	prng := pcg.NewRandomised()
 
-	tests := []struct {
-		name string
-		x    int64
-		want int64
-	}{
-		{"inv of 1", 1, 1}, // 1 * 1 = 1 mod 7
-		{"inv of 2", 2, 4}, // 2 * 4 = 8 ≡ 1 mod 7
-		{"inv of 3", 3, 5}, // 3 * 5 = 15 ≡ 1 mod 7
-		{"inv of 4", 4, 2}, // 4 * 2 = 8 ≡ 1 mod 7
-		{"inv of 5", 5, 3}, // 5 * 3 = 15 ≡ 1 mod 7
-		{"inv of 6", 6, 6}, // 6 * 6 = 36 ≡ 1 mod 7
-		{"inv of 0", 0, 0}, // Special case
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			x := newNatFromBig(big.NewInt(tt.x))
-			out := newNatFromBig(big.NewInt(0))
-
-			ok := m.ModInv(out, x)
-			if tt.x == 0 {
-				// 0 has no modular inverse
-				assert.Equal(t, ct.False, ok)
-			} else {
-				assert.Equal(t, ct.True, ok)
-				assert.Equal(t, uint64(tt.want), out.Uint64())
-
-				// Verify that x * inv(x) ≡ 1 mod 7
-				product := newNatFromBig(big.NewInt(0))
-				m.ModMul(product, x, out)
-				assert.Equal(t, uint64(1), product.Uint64(), "x * inv(x) should be 1 mod p")
-			}
-		})
+	for range 100 {
+		r, err := p.basic.Random(prng)
+		require.NoError(t, err)
+		lt, _, _ := r.Compare(p.basic.Nat())
+		require.Equal(t, ct.True, lt, "random value should be < modulus")
 	}
 }
 
-func TestModulus_Sqrt(t *testing.T) {
-	t.Run("prime modulus", func(t *testing.T) {
-		m := newModulus(big.NewInt(7))
+func TestModulus_Big(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 12345)
+	require.Equal(t, int64(12345), p.basic.Big().Int64())
+	require.Equal(t, int64(12345), p.full.Big().Int64())
+}
 
-		tests := []struct {
-			name     string
-			x        int64
-			wantOk   ct.Bool
-		}{
-			{"sqrt of 0", 0, ct.True},
-			{"sqrt of 1", 1, ct.True},
-			{"sqrt of 2", 2, ct.True},     // 3^2 = 9 ≡ 2 mod 7 or 4^2 = 16 ≡ 2 mod 7
-			{"sqrt of 4", 4, ct.True},     // 2^2 = 4
-			{"no sqrt of 3", 3, ct.False}, // 3 is not a quadratic residue mod 7
-			{"no sqrt of 5", 5, ct.False}, // 5 is not a quadratic residue mod 7
-			{"no sqrt of 6", 6, ct.False}, // 6 is not a quadratic residue mod 7
-		}
+func TestModulus_Saferith(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 12345)
+	require.NotNil(t, p.basic.Saferith())
+	require.Equal(t, int64(12345), p.basic.Saferith().Big().Int64())
+}
 
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				x := newNatFromBig(big.NewInt(tt.x))
-				out := newNatFromBig(big.NewInt(0))
+func TestModulus_Mod(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 7)
+	x := numct.NewNat(23)
 
-				ok := m.ModSqrt(out, x)
-				assert.Equal(t, tt.wantOk, ok)
+	var outBasic, outFull numct.Nat
+	p.basic.Mod(&outBasic, x)
+	p.full.Mod(&outFull, x)
 
-				if ok == ct.True {
-					// Verify that out^2 ≡ x mod 7
-					squared := newNatFromBig(big.NewInt(0))
-					m.ModMul(squared, out, out)
-					assert.Equal(t, uint64(tt.x), squared.Uint64(), "sqrt(x)^2 should equal x mod p")
-				}
-			})
-		}
+	require.Equal(t, int64(2), outBasic.Big().Int64()) // 23 mod 7 = 2
+	require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
+}
+
+func TestModulus_ModI(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 7)
+
+	t.Run("positive int", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewIntFromBig(big.NewInt(23), 64)
+		var outBasic, outFull numct.Nat
+		p.basic.ModI(&outBasic, x)
+		p.full.ModI(&outFull, x)
+
+		require.Equal(t, int64(2), outBasic.Big().Int64()) // 23 mod 7 = 2
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
 	})
 
-	t.Run("composite modulus", func(t *testing.T) {
-		m := newModulus(big.NewInt(10))
+	t.Run("negative int", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewIntFromBig(big.NewInt(-23), 64)
+		var outBasic, outFull numct.Nat
+		p.basic.ModI(&outBasic, x)
+		p.full.ModI(&outFull, x)
 
-		tests := []struct {
-			name     string
-			x        int64
-			wantRoot int64
-			wantOk   ct.Bool
-		}{
-			{"sqrt of 0", 0, 0, ct.True},
-			{"sqrt of 1", 1, 1, ct.True},
-			{"sqrt of 4", 4, 2, ct.True},
-			{"sqrt of 9", 9, 3, ct.True},
-			{"no sqrt of 2", 2, 0, ct.False},
-			{"no sqrt of 3", 3, 0, ct.False},
-			{"no sqrt of 5", 5, 0, ct.False},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				x := newNatFromBig(big.NewInt(tt.x))
-				out := newNatFromBig(big.NewInt(0))
-
-				ok := m.ModSqrt(out, x)
-				assert.Equal(t, tt.wantOk, ok)
-
-				if ok == ct.True {
-					assert.Equal(t, uint64(tt.wantRoot), out.Uint64())
-
-					// Verify that out^2 ≡ x mod 10
-					squared := newNatFromBig(big.NewInt(0))
-					m.ModMul(squared, out, out)
-					xMod := newNatFromBig(big.NewInt(0))
-					m.Mod(xMod, x)
-					assert.Equal(t, xMod.Uint64(), squared.Uint64(), "sqrt(x)^2 should equal x mod m")
-				}
-			})
-		}
+		require.Equal(t, int64(5), outBasic.Big().Int64()) // -23 mod 7 = 5
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
 	})
 }
 
-func TestModulus_Div(t *testing.T) {
-	m := newModulus(big.NewInt(7))
+func TestModulus_ModSymmetric(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 7) // range: [-3, 3]
 
-	tests := []struct {
-		name string
-		x, y int64
-		want int64
-	}{
-		{"div by 1", 6, 1, 6},    // 6/1 = 6
-		{"div by self", 5, 5, 1}, // 5/5 = 1
-		{"6 div by 2", 6, 2, 3},  // 6/2 = 3
-		{"1 div by 2", 1, 2, 4},  // 1/2 ≡ 1 * 4 = 4 mod 7 (since 2^-1 = 4)
-		{"3 div by 3", 3, 3, 1},  // 3/3 = 1
-	}
+	t.Run("small value stays positive", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(2)
+		var outBasic, outFull numct.Int
+		p.basic.ModSymmetric(&outBasic, x)
+		p.full.ModSymmetric(&outFull, x)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			x := newNatFromBig(big.NewInt(tt.x))
-			y := newNatFromBig(big.NewInt(tt.y))
-			out := newNatFromBig(big.NewInt(0))
-
-			m.ModDiv(out, x, y)
-			assert.Equal(t, uint64(tt.want), out.Uint64())
-
-			// Verify that out * y ≡ x mod 7
-			product := newNatFromBig(big.NewInt(0))
-			m.ModMul(product, out, y)
-			assert.Equal(t, uint64(tt.x), product.Uint64(), "div(x,y) * y should equal x mod p")
-		})
-	}
-}
-
-func TestModulus_Properties(t *testing.T) {
-	p := big.NewInt(97)
-	m := newModulus(p)
-
-	t.Run("BitLen", func(t *testing.T) {
-		// 97 in binary is 1100001, which is 7 bits
-		assert.Equal(t, uint(7), m.BitLen())
+		require.Equal(t, int64(2), outBasic.Big().Int64())
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
 	})
 
-	t.Run("Nat", func(t *testing.T) {
-		n := m.Nat()
-		assert.Equal(t, uint64(97), n.Uint64())
-	})
+	t.Run("value above m/2 becomes negative", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(5) // 5 > 3, so becomes 5 - 7 = -2
+		var outBasic, outFull numct.Int
+		p.basic.ModSymmetric(&outBasic, x)
+		p.full.ModSymmetric(&outFull, x)
 
-	t.Run("Bytes", func(t *testing.T) {
-		bytes := m.Bytes()
-		expected := p.Bytes()
-		assert.Equal(t, expected, bytes)
-	})
-
-	t.Run("String", func(t *testing.T) {
-		str := m.String()
-		assert.Contains(t, str, "61") // 97 in hex is 0x61
-	})
-
-	t.Run("InRange", func(t *testing.T) {
-		tests := []struct {
-			name string
-			x    int64
-			want ct.Bool
-		}{
-			{"zero", 0, ct.True},
-			{"small positive", 50, ct.True},
-			{"p-1", 96, ct.True},
-			{"equals p", 97, ct.False},
-			{"greater than p", 100, ct.False},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				x := newNatFromBig(big.NewInt(tt.x))
-				got := m.IsInRange(x)
-				assert.Equal(t, tt.want, got)
-			})
-		}
-	})
-
-	t.Run("IsUnit", func(t *testing.T) {
-		tests := []struct {
-			name string
-			x    int64
-			want ct.Bool
-		}{
-			{"1 is unit", 1, ct.True},
-			{"2 is unit", 2, ct.True},
-			{"96 is unit", 96, ct.True},
-			{"0 is not unit", 0, ct.False},
-			{"97 (p) is not unit", 97, ct.False}, // gcd(97, 97) = 97 ≠ 1
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				x := newNatFromBig(big.NewInt(tt.x))
-				got := m.IsUnit(x)
-				assert.Equal(t, tt.want, got)
-			})
-		}
+		require.Equal(t, int64(-2), outBasic.Big().Int64())
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
 	})
 }
 
-func TestModulus_Exp(t *testing.T) {
-	m := newModulus(big.NewInt(7))
+func TestModulus_Quo(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 7)
+	x := numct.NewNat(23)
 
-	tests := []struct {
-		name string
-		base int64
-		exp  int64
-		want int64
-	}{
-		{"2^0", 2, 0, 1},
-		{"2^1", 2, 1, 2},
-		{"2^2", 2, 2, 4},
-		{"2^3", 2, 3, 1}, // 8 mod 7 = 1
-		{"3^2", 3, 2, 2}, // 9 mod 7 = 2
-		{"3^3", 3, 3, 6}, // 27 mod 7 = 6
-		{"5^2", 5, 2, 4}, // 25 mod 7 = 4
-		{"0^5", 0, 5, 0},
-		{"1^100", 1, 100, 1},
-	}
+	var outBasic, outFull numct.Nat
+	p.basic.Quo(&outBasic, x)
+	p.full.Quo(&outFull, x)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			base := newNatFromBig(big.NewInt(tt.base))
-			exp := newNatFromBig(big.NewInt(tt.exp))
-			out := newNatFromBig(big.NewInt(0))
-
-			m.ModExp(out, base, exp)
-			assert.Equal(t, uint64(tt.want), out.Uint64())
-		})
-	}
+	require.Equal(t, int64(3), outBasic.Big().Int64()) // 23 / 7 = 3
+	require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
 }
 
-func TestModulus_EvenModulus(t *testing.T) {
-	// Test operations with even modulus
-	m := newModulus(big.NewInt(10))
+func TestModulus_ModAdd(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 7)
 
-	t.Run("ModExp", func(t *testing.T) {
-		base := newNatFromBig(big.NewInt(3))
-		exp := newNatFromBig(big.NewInt(4))
-		out := newNatFromBig(big.NewInt(0))
+	t.Run("no wrap", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(2)
+		y := numct.NewNat(3)
+		var outBasic, outFull numct.Nat
+		p.basic.ModAdd(&outBasic, x, y)
+		p.full.ModAdd(&outFull, x, y)
 
-		m.ModExp(out, base, exp)
-		// 3^4 = 81, 81 mod 10 = 1
-		assert.Equal(t, uint64(1), out.Uint64())
+		require.Equal(t, int64(5), outBasic.Big().Int64())
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
 	})
 
-	t.Run("ModInv", func(t *testing.T) {
-		// 3 is coprime to 10, should have an inverse
-		x := newNatFromBig(big.NewInt(3))
-		out := newNatFromBig(big.NewInt(0))
+	t.Run("with wrap", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(5)
+		y := numct.NewNat(4)
+		var outBasic, outFull numct.Nat
+		p.basic.ModAdd(&outBasic, x, y)
+		p.full.ModAdd(&outFull, x, y)
 
-		ok := m.ModInv(out, x)
-		assert.Equal(t, ct.True, ok)
-
-		// Verify 3 * inv ≡ 1 mod 10
-		// 3 * 7 = 21 ≡ 1 mod 10
-		product := newNatFromBig(big.NewInt(0))
-		m.ModMul(product, x, out)
-		assert.Equal(t, uint64(1), product.Uint64())
-	})
-
-	t.Run("ModDiv even modulus", func(t *testing.T) {
-		// Test division with even modulus using extended GCD
-		x := newNatFromBig(big.NewInt(6))
-		y := newNatFromBig(big.NewInt(3))
-		out := newNatFromBig(big.NewInt(0))
-
-		ok := m.ModDiv(out, x, y)
-		assert.Equal(t, ct.True, ok)
-
-		// Verify out * y ≡ x mod 10
-		product := newNatFromBig(big.NewInt(0))
-		m.ModMul(product, out, y)
-		xMod := newNatFromBig(big.NewInt(0))
-		m.Mod(xMod, x)
-		assert.Equal(t, xMod.Uint64(), product.Uint64())
+		require.Equal(t, int64(2), outBasic.Big().Int64()) // (5+4) mod 7 = 2
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
 	})
 }
 
-// TestModulusCachingPerformance tests Montgomery context caching benefits
-func TestModulusCachingPerformance(t *testing.T) {
-	testCases := []struct {
-		name      string
-		primeBits int
-		ops       int
-	}{
-		{"512-bit prime, 100 ops", 512, 100},
-		{"1024-bit prime, 100 ops", 1024, 100},
-		{"2048-bit prime, 50 ops", 2048, 50},
-	}
+func TestModulus_ModSub(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 7)
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Generate a prime
-			pBig, _ := crand.Prime(crand.Reader, tc.primeBits)
-			p := (*numct.Nat)(new(saferith.Nat).SetBig(pBig, tc.primeBits).Resize(tc.primeBits))
+	t.Run("no wrap", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(5)
+		y := numct.NewNat(3)
+		var outBasic, outFull numct.Nat
+		p.basic.ModSub(&outBasic, x, y)
+		p.full.ModSub(&outFull, x, y)
 
-			// Create Modulus with cached Montgomery context
-			pMod, ok := numct.NewModulus(p)
-			require.Equal(t, ct.True, ok)
-
-			// Generate test data
-			bases := make([]*numct.Nat, tc.ops)
-			exps := make([]*numct.Nat, tc.ops)
-			for i := range tc.ops {
-				base, _ := crand.Int(crand.Reader, pBig)
-				bases[i] = (*numct.Nat)(new(saferith.Nat).SetBig(base, tc.primeBits).Resize(tc.primeBits))
-
-				exp, _ := crand.Int(crand.Reader, pBig)
-				exps[i] = (*numct.Nat)(new(saferith.Nat).SetBig(exp, tc.primeBits).Resize(tc.primeBits))
-			}
-
-			result := (*numct.Nat)(new(saferith.Nat))
-
-			// Test ModExp with reusing modulus (cached Montgomery context)
-			start := time.Now()
-			for i := range tc.ops {
-				pMod.ModExp(result, bases[i], exps[i])
-			}
-			reuseTime := time.Since(start)
-
-			// Test with recreating the modulus each time (no cache benefit)
-			start = time.Now()
-			for i := range tc.ops {
-				newPMod, _ := numct.NewModulus(p)
-				newPMod.ModExp(result, bases[i], exps[i])
-			}
-			recreateTime := time.Since(start)
-
-			speedup := float64(recreateTime) / float64(reuseTime)
-
-			t.Logf("ModExp caching results for %s:", tc.name)
-			t.Logf("  Reusing modulus (cached):    %v", reuseTime)
-			t.Logf("  Recreating modulus each time: %v", recreateTime)
-			t.Logf("  Speedup from caching: %.2fx", speedup)
-		})
-	}
-}
-
-func BenchmarkModulusOperations(b *testing.B) {
-	p := big.NewInt(997) // Large prime
-	m := newModulus(p)
-
-	x := newNatFromBig(big.NewInt(123))
-	y := newNatFromBig(big.NewInt(456))
-	out := newNatFromBig(big.NewInt(0))
-
-	b.Run("Add", func(b *testing.B) {
-		for range b.N {
-			m.ModAdd(out, x, y)
-		}
+		require.Equal(t, int64(2), outBasic.Big().Int64())
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
 	})
 
-	b.Run("Mul", func(b *testing.B) {
-		for range b.N {
-			m.ModMul(out, x, y)
-		}
-	})
+	t.Run("with wrap", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(2)
+		y := numct.NewNat(5)
+		var outBasic, outFull numct.Nat
+		p.basic.ModSub(&outBasic, x, y)
+		p.full.ModSub(&outFull, x, y)
 
-	b.Run("Inv", func(b *testing.B) {
-		for range b.N {
-			m.ModInv(out, x)
-		}
-	})
-
-	b.Run("Sqrt", func(b *testing.B) {
-		// Use a quadratic residue
-		qr := newNatFromBig(big.NewInt(4))
-		for range b.N {
-			m.ModSqrt(out, qr)
-		}
-	})
-
-	b.Run("Exp", func(b *testing.B) {
-		exp := newNatFromBig(big.NewInt(100))
-		for range b.N {
-			m.ModExp(out, x, exp)
-		}
+		require.Equal(t, int64(4), outBasic.Big().Int64()) // (2-5) mod 7 = 4
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
 	})
 }
 
-func TestModSymmetric(t *testing.T) {
-	// Test with prime modulus 11
-	p := big.NewInt(11)
-	m := newModulus(p)
+func TestModulus_ModMul(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 7)
+	x := numct.NewNat(5)
+	y := numct.NewNat(4)
 
-	testCases := []struct {
-		name     string
-		input    int64
-		expected int64 // Expected value in symmetric range [-5, 5]
-	}{
-		{"Zero", 0, 0},
-		{"Small positive", 3, 3},
-		{"Small negative equivalent", 8, -3}, // 8 ≡ -3 (mod 11)
-		{"At boundary positive", 5, 5},
-		{"At boundary negative", 6, -5}, // 6 ≡ -5 (mod 11)
-		{"Large positive", 25, 3},       // 25 ≡ 3 (mod 11)
-		{"Modulus minus 1", 10, -1},     // 10 ≡ -1 (mod 11)
-	}
+	var outBasic, outFull numct.Nat
+	p.basic.ModMul(&outBasic, x, y)
+	p.full.ModMul(&outFull, x, y)
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			input := newNatFromBig(big.NewInt(tc.input))
-			var output numct.Int
-			m.ModSymmetric(&output, input)
-
-			// Convert output to big.Int for comparison
-			outputBig := new(big.Int)
-			if output.IsNegative() == ct.True {
-				// Get the absolute value
-				var abs numct.Int
-				abs.Neg(&output) // abs = -output (which makes it positive)
-				outputBig.SetBytes(abs.Bytes())
-				outputBig.Neg(outputBig) // Make it negative again
-			} else {
-				outputBig.SetBytes(output.Bytes())
-			}
-
-			assert.Equal(t, tc.expected, outputBig.Int64(),
-				"ModSymmetric(%d) = %d, expected %d", tc.input, outputBig.Int64(), tc.expected)
-		})
-	}
+	require.Equal(t, int64(6), outBasic.Big().Int64()) // (5*4) mod 7 = 6
+	require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
 }
 
-func TestModInv_Comprehensive(t *testing.T) {
-	t.Run("Prime modulus", func(t *testing.T) {
-		// Test with prime modulus 13
-		p := big.NewInt(13)
-		m := newModulus(p)
+func TestModulus_ModNeg(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 7)
 
-		testCases := []struct {
-			name        string
-			input       int64
-			hasInverse  bool
-			expectedInv int64
-		}{
-			{"Zero has no inverse", 0, false, 0},
-			{"One is self-inverse", 1, true, 1},
-			{"Two", 2, true, 7},          // 2 * 7 = 14 ≡ 1 (mod 13)
-			{"Three", 3, true, 9},        // 3 * 9 = 27 ≡ 1 (mod 13)
-			{"Four", 4, true, 10},        // 4 * 10 = 40 ≡ 1 (mod 13)
-			{"Twelve", 12, true, 12},     // 12 * 12 = 144 ≡ 1 (mod 13)
-			{"Large value", 27, true, 1}, // 27 ≡ 1 (mod 13), so inv is 1
-		}
+	t.Run("non-zero", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(3)
+		var outBasic, outFull numct.Nat
+		p.basic.ModNeg(&outBasic, x)
+		p.full.ModNeg(&outFull, x)
 
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				a := newNatFromBig(big.NewInt(tc.input))
-				var inv numct.Nat
-				ok := m.ModInv(&inv, a)
-
-				if tc.hasInverse {
-					assert.Equal(t, ct.True, ok, "Expected inverse to exist")
-
-					// Verify a * inv ≡ 1 (mod p)
-					var product numct.Nat
-					m.ModMul(&product, a, &inv)
-					one := newNatFromBig(big.NewInt(1))
-					assert.Equal(t, ct.True, product.Equal(one),
-						"Expected %d * inv ≡ 1 (mod %d)", tc.input, p)
-
-					// Check specific expected value if provided
-					if tc.expectedInv != 0 {
-						invBig := new(big.Int).SetBytes(inv.Bytes())
-						invBig.Mod(invBig, p)
-						assert.Equal(t, tc.expectedInv, invBig.Int64(),
-							"Expected inv(%d) = %d (mod %d)", tc.input, tc.expectedInv, p)
-					}
-				} else {
-					assert.Equal(t, ct.False, ok, "Expected no inverse for %d", tc.input)
-				}
-			})
-		}
+		require.Equal(t, int64(4), outBasic.Big().Int64()) // -3 mod 7 = 4
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
 	})
 
-	t.Run("Composite odd modulus", func(t *testing.T) {
-		// Test with composite modulus 15 = 3 * 5
-		n := big.NewInt(15)
-		m := newModulus(n)
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(0)
+		var outBasic, outFull numct.Nat
+		p.basic.ModNeg(&outBasic, x)
+		p.full.ModNeg(&outFull, x)
 
-		testCases := []struct {
-			name       string
-			input      int64
-			hasInverse bool
-		}{
-			{"Zero has no inverse", 0, false},
-			{"One is self-inverse", 1, true},
-			{"Two", 2, true},             // gcd(2, 15) = 1
-			{"Three (factor)", 3, false}, // gcd(3, 15) = 3
-			{"Four", 4, true},            // gcd(4, 15) = 1
-			{"Five (factor)", 5, false},  // gcd(5, 15) = 5
-			{"Six", 6, false},            // gcd(6, 15) = 3
-			{"Seven", 7, true},           // gcd(7, 15) = 1
-			{"Eight", 8, true},           // gcd(8, 15) = 1
-			{"Nine", 9, false},           // gcd(9, 15) = 3
-			{"Ten", 10, false},           // gcd(10, 15) = 5
-		}
-
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				a := newNatFromBig(big.NewInt(tc.input))
-				var inv numct.Nat
-				ok := m.ModInv(&inv, a)
-
-				if tc.hasInverse {
-					assert.Equal(t, ct.True, ok, "Expected inverse to exist for %d", tc.input)
-
-					// Verify a * inv ≡ 1 (mod n)
-					var product numct.Nat
-					m.ModMul(&product, a, &inv)
-					one := newNatFromBig(big.NewInt(1))
-					assert.Equal(t, ct.True, product.Equal(one),
-						"Expected %d * inv ≡ 1 (mod %d)", tc.input, n)
-				} else {
-					assert.Equal(t, ct.False, ok, "Expected no inverse for %d", tc.input)
-				}
-			})
-		}
+		require.Equal(t, int64(0), outBasic.Big().Int64())
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
 	})
 }
 
-// Benchmark ModInv with different bit sizes
-func BenchmarkModInv_BitSizes(b *testing.B) {
-	bitSizes := []int{256, 512, 1024, 2048, 3072}
+func TestModulus_ModInv_OddModulus(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 7) // prime, odd
 
-	for _, bits := range bitSizes {
-		b.Run(fmt.Sprintf("%d_bits", bits), func(b *testing.B) {
-			// Generate prime of specified bit size
-			p, _ := crand.Prime(crand.Reader, bits)
-			pNat := (*numct.Nat)(new(saferith.Nat).SetBig(p, p.BitLen()))
+	t.Run("invertible", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(3) // gcd(3,7) = 1
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModInv(&outBasic, x)
+		okFull := p.full.ModInv(&outFull, x)
 
-			m, ok := numct.NewModulus(pNat)
-			if ok != ct.True {
-				b.Fatal("Failed to create Modulus")
-			}
+		require.Equal(t, ct.True, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic result should match")
 
-			// Test value
-			testVal := big.NewInt(0).SetBytes([]byte("test value for inverse"))
-			x := newNatFromBig(testVal)
-			var out numct.Nat
+		// Verify: out * x ≡ 1 (mod 7)
+		var check numct.Nat
+		p.basic.ModMul(&check, &outBasic, x)
+		require.Equal(t, ct.True, check.IsOne())
+	})
 
-			b.ResetTimer()
-			for range b.N {
-				m.ModInv(&out, x)
-			}
-		})
-	}
+	t.Run("zero not invertible", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(0)
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModInv(&outBasic, x)
+		okFull := p.full.ModInv(&outFull, x)
+
+		require.Equal(t, ct.False, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+	})
+}
+
+func TestModulus_ModInv_EvenModulus(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 12) // even modulus
+
+	t.Run("invertible (coprime)", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(5) // gcd(5,12) = 1
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModInv(&outBasic, x)
+		okFull := p.full.ModInv(&outFull, x)
+
+		require.Equal(t, ct.True, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic result should match")
+
+		// Verify: out * x ≡ 1 (mod 12)
+		var check numct.Nat
+		p.basic.ModMul(&check, &outBasic, x)
+		require.Equal(t, ct.True, check.IsOne())
+	})
+
+	t.Run("not invertible (not coprime)", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(4) // gcd(4,12) = 4 ≠ 1
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModInv(&outBasic, x)
+		okFull := p.full.ModInv(&outFull, x)
+
+		require.Equal(t, ct.False, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+	})
+}
+
+func TestModulus_ModDiv_OddModulus(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 7) // prime, odd
+
+	t.Run("valid division", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(6)
+		y := numct.NewNat(3) // 6/3 = 2 (mod 7)
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModDiv(&outBasic, x, y)
+		okFull := p.full.ModDiv(&outFull, x, y)
+
+		require.Equal(t, ct.True, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic result should match")
+
+		// Verify: out * y ≡ x (mod 7)
+		var check numct.Nat
+		p.basic.ModMul(&check, &outBasic, y)
+		require.Equal(t, ct.True, check.Equal(x))
+	})
+
+	t.Run("division by zero fails", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(6)
+		y := numct.NewNat(0)
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModDiv(&outBasic, x, y)
+		okFull := p.full.ModDiv(&outFull, x, y)
+
+		require.Equal(t, ct.False, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+	})
+}
+
+func TestModulus_ModDiv_EvenModulus(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 12) // even modulus
+
+	t.Run("valid division with coprime divisor", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(10)
+		y := numct.NewNat(5) // gcd(5,12) = 1
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModDiv(&outBasic, x, y)
+		okFull := p.full.ModDiv(&outFull, x, y)
+
+		require.Equal(t, ct.True, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic result should match")
+
+		// Verify: out * y ≡ x (mod 12)
+		var check numct.Nat
+		p.basic.ModMul(&check, &outBasic, y)
+		require.Equal(t, ct.True, check.Equal(x))
+	})
+
+	t.Run("division with non-coprime but compatible", func(t *testing.T) {
+		t.Parallel()
+		// x = 6, y = 2, m = 12
+		// gcd(2,12) = 2, and 2 | 6, so solution exists
+		x := numct.NewNat(6)
+		y := numct.NewNat(2)
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModDiv(&outBasic, x, y)
+		okFull := p.full.ModDiv(&outFull, x, y)
+
+		require.Equal(t, ct.True, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic result should match")
+
+		// Verify: out * y ≡ x (mod 12)
+		var check numct.Nat
+		p.basic.ModMul(&check, &outBasic, y)
+		require.Equal(t, ct.True, check.Equal(x))
+	})
+
+	t.Run("division fails when gcd does not divide x", func(t *testing.T) {
+		t.Parallel()
+		// x = 5, y = 2, m = 12
+		// gcd(2,12) = 2, but 2 ∤ 5, so no solution
+		x := numct.NewNat(5)
+		y := numct.NewNat(2)
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModDiv(&outBasic, x, y)
+		okFull := p.full.ModDiv(&outFull, x, y)
+
+		require.Equal(t, ct.False, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+	})
+}
+
+func TestModulus_ModExp_OddModulus(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 7) // prime, odd
+
+	t.Run("basic exponentiation", func(t *testing.T) {
+		t.Parallel()
+		base := numct.NewNat(3)
+		exp := numct.NewNat(4)
+		var outBasic, outFull numct.Nat
+		p.basic.ModExp(&outBasic, base, exp)
+		p.full.ModExp(&outFull, base, exp)
+
+		// 3^4 = 81 = 11*7 + 4 = 4 (mod 7)
+		require.Equal(t, int64(4), outBasic.Big().Int64())
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
+	})
+
+	t.Run("exponent zero", func(t *testing.T) {
+		t.Parallel()
+		base := numct.NewNat(5)
+		exp := numct.NewNat(0)
+		var outBasic, outFull numct.Nat
+		p.basic.ModExp(&outBasic, base, exp)
+		p.full.ModExp(&outFull, base, exp)
+
+		require.Equal(t, ct.True, outBasic.IsOne())
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
+	})
+
+	t.Run("base zero", func(t *testing.T) {
+		t.Parallel()
+		base := numct.NewNat(0)
+		exp := numct.NewNat(5)
+		var outBasic, outFull numct.Nat
+		p.basic.ModExp(&outBasic, base, exp)
+		p.full.ModExp(&outFull, base, exp)
+
+		require.Equal(t, ct.True, outBasic.IsZero())
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
+	})
+
+	t.Run("Fermat's little theorem: a^(p-1) ≡ 1 (mod p)", func(t *testing.T) {
+		t.Parallel()
+		base := numct.NewNat(3)
+		exp := numct.NewNat(6) // p-1 = 6
+		var outBasic, outFull numct.Nat
+		p.basic.ModExp(&outBasic, base, exp)
+		p.full.ModExp(&outFull, base, exp)
+
+		require.Equal(t, ct.True, outBasic.IsOne())
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
+	})
+}
+
+func TestModulus_ModExp_EvenModulus(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 8) // even modulus (power of 2)
+
+	t.Run("basic exponentiation", func(t *testing.T) {
+		t.Parallel()
+		base := numct.NewNat(3)
+		exp := numct.NewNat(3)
+		var outBasic, outFull numct.Nat
+		p.basic.ModExp(&outBasic, base, exp)
+		p.full.ModExp(&outFull, base, exp)
+
+		// 3^3 = 27 = 3*8 + 3 = 3 (mod 8)
+		require.Equal(t, int64(3), outBasic.Big().Int64())
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
+	})
+
+	t.Run("exponent zero", func(t *testing.T) {
+		t.Parallel()
+		base := numct.NewNat(5)
+		exp := numct.NewNat(0)
+		var outBasic, outFull numct.Nat
+		p.basic.ModExp(&outBasic, base, exp)
+		p.full.ModExp(&outFull, base, exp)
+
+		require.Equal(t, ct.True, outBasic.IsOne())
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
+	})
+}
+
+func TestModulus_ModExpI_OddModulus(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 7) // prime
+
+	t.Run("positive exponent", func(t *testing.T) {
+		t.Parallel()
+		base := numct.NewNat(3)
+		exp := numct.NewIntFromBig(big.NewInt(4), 64)
+		var outBasic, outFull numct.Nat
+		p.basic.ModExpI(&outBasic, base, exp)
+		p.full.ModExpI(&outFull, base, exp)
+
+		require.Equal(t, int64(4), outBasic.Big().Int64()) // 3^4 mod 7 = 4
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
+	})
+
+	t.Run("negative exponent", func(t *testing.T) {
+		t.Parallel()
+		base := numct.NewNat(3)
+		exp := numct.NewIntFromBig(big.NewInt(-1), 64)
+		var outBasic, outFull numct.Nat
+		p.basic.ModExpI(&outBasic, base, exp)
+		p.full.ModExpI(&outFull, base, exp)
+
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
+
+		// 3^(-1) mod 7 = 5 (since 3*5 = 15 ≡ 1 mod 7)
+		var check numct.Nat
+		p.basic.ModMul(&check, &outBasic, base)
+		require.Equal(t, ct.True, check.IsOne())
+	})
+}
+
+func TestModulus_ModExpI_EvenModulus(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 8)
+
+	t.Run("positive exponent", func(t *testing.T) {
+		t.Parallel()
+		base := numct.NewNat(3)
+		exp := numct.NewIntFromBig(big.NewInt(3), 64)
+		var outBasic, outFull numct.Nat
+		p.basic.ModExpI(&outBasic, base, exp)
+		p.full.ModExpI(&outFull, base, exp)
+
+		require.Equal(t, int64(3), outBasic.Big().Int64()) // 3^3 mod 8 = 3
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match")
+	})
+}
+
+func TestModulus_ModMultiBaseExp(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 7)
+
+	bases := []*numct.Nat{numct.NewNat(2), numct.NewNat(3), numct.NewNat(5)}
+	outBasic := []*numct.Nat{new(numct.Nat), new(numct.Nat), new(numct.Nat)}
+	outFull := []*numct.Nat{new(numct.Nat), new(numct.Nat), new(numct.Nat)}
+	exp := numct.NewNat(3)
+
+	p.basic.ModMultiBaseExp(outBasic, bases, exp)
+	p.full.ModMultiBaseExp(outFull, bases, exp)
+
+	// Verify each: 2^3=8≡1, 3^3=27≡6, 5^3=125≡6 (mod 7)
+	require.Equal(t, int64(1), outBasic[0].Big().Int64())
+	require.Equal(t, int64(6), outBasic[1].Big().Int64())
+	require.Equal(t, int64(6), outBasic[2].Big().Int64())
+
+	require.Equal(t, ct.True, outBasic[0].Equal(outFull[0]), "Modulus and ModulusBasic should match for base 0")
+	require.Equal(t, ct.True, outBasic[1].Equal(outFull[1]), "Modulus and ModulusBasic should match for base 1")
+	require.Equal(t, ct.True, outBasic[2].Equal(outFull[2]), "Modulus and ModulusBasic should match for base 2")
+}
+
+func TestModulus_ModSqrt_PrimeModulus(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 7) // prime
+
+	t.Run("quadratic residue", func(t *testing.T) {
+		t.Parallel()
+		// 2 is a quadratic residue mod 7: 3^2 = 9 ≡ 2 (mod 7)
+		x := numct.NewNat(2)
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModSqrt(&outBasic, x)
+		okFull := p.full.ModSqrt(&outFull, x)
+
+		require.Equal(t, ct.True, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic result should match")
+
+		// Verify: out^2 ≡ x (mod 7)
+		var check numct.Nat
+		p.basic.ModMul(&check, &outBasic, &outBasic)
+		require.Equal(t, ct.True, check.Equal(x))
+	})
+
+	t.Run("non-quadratic residue", func(t *testing.T) {
+		t.Parallel()
+		// 3 is not a quadratic residue mod 7
+		x := numct.NewNat(3)
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModSqrt(&outBasic, x)
+		okFull := p.full.ModSqrt(&outFull, x)
+
+		require.Equal(t, ct.False, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+	})
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(0)
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModSqrt(&outBasic, x)
+		okFull := p.full.ModSqrt(&outFull, x)
+
+		require.Equal(t, ct.True, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+		require.Equal(t, ct.True, outBasic.IsZero())
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic result should match")
+	})
+
+	t.Run("one", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(1)
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModSqrt(&outBasic, x)
+		okFull := p.full.ModSqrt(&outFull, x)
+
+		require.Equal(t, ct.True, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+		require.Equal(t, ct.True, outBasic.IsOne())
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic result should match")
+	})
+}
+
+func TestModulus_ModSqrt_NonPrimeModulus(t *testing.T) {
+	t.Parallel()
+	// For non-prime modulus, modSqrtGeneric computes integer sqrt
+	p := newModulusPair(t, 100)
+
+	t.Run("perfect square", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(49) // 7^2 = 49
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModSqrt(&outBasic, x)
+		okFull := p.full.ModSqrt(&outFull, x)
+
+		require.Equal(t, ct.True, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+		require.Equal(t, int64(7), outBasic.Big().Int64())
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic result should match")
+	})
+
+	t.Run("non-perfect square", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNat(50)
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModSqrt(&outBasic, x)
+		okFull := p.full.ModSqrt(&outFull, x)
+
+		require.Equal(t, ct.False, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+	})
+}
+
+func TestModulus_IsInRange(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 10)
+
+	t.Run("in range", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, ct.True, p.basic.IsInRange(numct.NewNat(0)))
+		require.Equal(t, ct.True, p.basic.IsInRange(numct.NewNat(5)))
+		require.Equal(t, ct.True, p.basic.IsInRange(numct.NewNat(9)))
+	})
+
+	t.Run("out of range", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, ct.False, p.basic.IsInRange(numct.NewNat(10)))
+		require.Equal(t, ct.False, p.basic.IsInRange(numct.NewNat(100)))
+	})
+}
+
+func TestModulus_IsInRangeSymmetric(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 10) // symmetric range: [-5, 5] (inclusive)
+
+	t.Run("in range", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, ct.True, p.basic.IsInRangeSymmetric(numct.NewIntFromBig(big.NewInt(0), 64)))
+		require.Equal(t, ct.True, p.basic.IsInRangeSymmetric(numct.NewIntFromBig(big.NewInt(4), 64)))
+		require.Equal(t, ct.True, p.basic.IsInRangeSymmetric(numct.NewIntFromBig(big.NewInt(5), 64)))
+		require.Equal(t, ct.True, p.basic.IsInRangeSymmetric(numct.NewIntFromBig(big.NewInt(-5), 64)))
+	})
+
+	t.Run("out of range", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, ct.False, p.basic.IsInRangeSymmetric(numct.NewIntFromBig(big.NewInt(6), 64)))
+		require.Equal(t, ct.False, p.basic.IsInRangeSymmetric(numct.NewIntFromBig(big.NewInt(-6), 64)))
+	})
+}
+
+func TestModulus_IsUnit(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 12)
+
+	t.Run("units (coprime with 12)", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, ct.True, p.basic.IsUnit(numct.NewNat(1)))
+		require.Equal(t, ct.True, p.basic.IsUnit(numct.NewNat(5)))
+		require.Equal(t, ct.True, p.basic.IsUnit(numct.NewNat(7)))
+		require.Equal(t, ct.True, p.basic.IsUnit(numct.NewNat(11)))
+	})
+
+	t.Run("non-units (not coprime with 12)", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, ct.False, p.basic.IsUnit(numct.NewNat(0)))
+		require.Equal(t, ct.False, p.basic.IsUnit(numct.NewNat(2)))
+		require.Equal(t, ct.False, p.basic.IsUnit(numct.NewNat(3)))
+		require.Equal(t, ct.False, p.basic.IsUnit(numct.NewNat(6)))
+	})
+}
+
+func TestModulus_BitLen(t *testing.T) {
+	t.Parallel()
+	require.Equal(t, 4, newModulusPair(t, 15).basic.BitLen())  // 1111
+	require.Equal(t, 4, newModulusPair(t, 8).basic.BitLen())   // 1000
+	require.Equal(t, 8, newModulusPair(t, 255).basic.BitLen()) // 11111111
+}
+
+func TestModulus_Nat(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 42)
+	require.Equal(t, int64(42), p.basic.Nat().Big().Int64())
+}
+
+func TestModulus_Bytes(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 0x1234)
+	bytes := p.basic.Bytes()
+	require.Equal(t, []byte{0x12, 0x34}, bytes)
+}
+
+func TestModulus_BytesBE(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 0x1234)
+	bytes := p.basic.BytesBE()
+	require.Equal(t, []byte{0x12, 0x34}, bytes)
+}
+
+func TestModulus_String(t *testing.T) {
+	t.Parallel()
+	p := newModulusPair(t, 12345)
+	// String returns hex representation
+	require.Equal(t, "0x3039", p.basic.String())
+}
+
+// Large prime tests for realistic cryptographic scenarios
+func TestModulus_LargePrime(t *testing.T) {
+	t.Parallel()
+	// A 256-bit prime (secp256k1 field prime)
+	prime, _ := new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F", 16)
+	p := newModulusPairFromBig(t, prime)
+
+	t.Run("ModExp with large values", func(t *testing.T) {
+		t.Parallel()
+		base := numct.NewNatFromBig(big.NewInt(2), 256)
+		exp := numct.NewNatFromBig(big.NewInt(100), 256)
+		var outBasic, outFull numct.Nat
+		p.basic.ModExp(&outBasic, base, exp)
+		p.full.ModExp(&outFull, base, exp)
+
+		// 2^100 mod p - verify it completes and results match
+		require.Equal(t, ct.True, p.basic.IsInRange(&outBasic))
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match for large ModExp")
+	})
+
+	t.Run("ModInv with large values", func(t *testing.T) {
+		t.Parallel()
+		x := numct.NewNatFromBig(big.NewInt(12345), 256)
+		var outBasic, outFull numct.Nat
+		okBasic := p.basic.ModInv(&outBasic, x)
+		okFull := p.full.ModInv(&outFull, x)
+
+		require.Equal(t, ct.True, okBasic)
+		require.Equal(t, okBasic, okFull, "Modulus and ModulusBasic ok should match")
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic result should match for large ModInv")
+
+		// Verify inverse
+		var checkBasic, checkFull numct.Nat
+		p.basic.ModMul(&checkBasic, &outBasic, x)
+		p.full.ModMul(&checkFull, &outFull, x)
+		require.Equal(t, ct.True, checkBasic.IsOne())
+		require.Equal(t, ct.True, checkFull.IsOne())
+	})
+
+	t.Run("ModMul with large values", func(t *testing.T) {
+		t.Parallel()
+		a := numct.NewNatFromBig(big.NewInt(123456789), 256)
+		b := numct.NewNatFromBig(big.NewInt(987654321), 256)
+		var outBasic, outFull numct.Nat
+		p.basic.ModMul(&outBasic, a, b)
+		p.full.ModMul(&outFull, a, b)
+
+		require.Equal(t, ct.True, outBasic.Equal(&outFull), "Modulus and ModulusBasic should match for large ModMul")
+	})
+
+	t.Run("ModMul associativity", func(t *testing.T) {
+		t.Parallel()
+		a := numct.NewNatFromBig(big.NewInt(123), 256)
+		b := numct.NewNatFromBig(big.NewInt(456), 256)
+		c := numct.NewNatFromBig(big.NewInt(789), 256)
+
+		var ab, abc1 numct.Nat
+		p.basic.ModMul(&ab, a, b)
+		p.basic.ModMul(&abc1, &ab, c)
+
+		var bc, abc2 numct.Nat
+		p.basic.ModMul(&bc, b, c)
+		p.basic.ModMul(&abc2, a, &bc)
+
+		require.Equal(t, ct.True, abc1.Equal(&abc2))
+	})
 }

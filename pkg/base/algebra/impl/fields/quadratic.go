@@ -8,11 +8,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
-type QuadraticFieldExtensionArithmetic[BFP impl.FiniteFieldElement[BFP]] interface {
+type QuadraticFieldExtensionArithmetic[BFP impl.FiniteFieldElementLowLevel[BFP]] interface {
 	MulByQuadraticNonResidue(out BFP, in BFP)
 }
 
-type QuadraticFieldExtensionImpl[BFP impl.FiniteFieldElementPtr[BFP, BF], A QuadraticFieldExtensionArithmetic[BFP], BF any] struct {
+type QuadraticFieldExtensionImpl[BFP impl.FiniteFieldElementPtrLowLevel[BFP, BF], A QuadraticFieldExtensionArithmetic[BFP], BF any] struct {
 	U0 BF
 	U1 BF
 }

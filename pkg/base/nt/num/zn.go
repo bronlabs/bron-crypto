@@ -188,7 +188,7 @@ func (zn *ZMod) Top() *Uint {
 }
 
 func (zn *ZMod) Random(prng io.Reader) (*Uint, error) {
-	out, err := numct.NatRandomRangeH(prng, zn.n.m.Nat())
+	out, err := zn.n.m.Random(prng)
 	if err != nil {
 		return nil, errs.WrapRandomSample(err, "failed to sample random element in Zn")
 	}
@@ -402,7 +402,7 @@ func (u *Uint) ExpI(exponent *Int) *Uint {
 		panic(errs.NewIsNil("argument is nil"))
 	}
 	v := new(numct.Nat)
-	u.m.ModExpInt(v, u.v, exponent.v)
+	u.m.ModExpI(v, u.v, exponent.v)
 	return &Uint{v: v, m: u.m}
 }
 
@@ -413,7 +413,7 @@ func (u *Uint) ExpIBounded(exponent *Int, bits uint) *Uint {
 	v := exponent.v.Clone()
 	v.Resize(int(bits))
 	var vNat numct.Nat
-	u.m.ModExpInt(&vNat, u.v, exponent.v)
+	u.m.ModExpI(&vNat, u.v, exponent.v)
 	return &Uint{v: &vNat, m: u.m}
 
 }
@@ -657,11 +657,11 @@ func (u *Uint) Big() *big.Int {
 	return u.v.Big()
 }
 
-func (u *Uint) TrueLen() uint {
+func (u *Uint) TrueLen() int {
 	return u.v.TrueLen()
 }
 
-func (u *Uint) AnnouncedLen() uint {
+func (u *Uint) AnnouncedLen() int {
 	return u.v.AnnouncedLen()
 }
 

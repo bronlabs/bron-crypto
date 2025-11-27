@@ -1,8 +1,8 @@
 version: "2"
 run:
-  build-tags:
-    - nobignum
-    - purego
+  # build-tags:
+  #   - nobignum
+  #   - purego
   tests: true
 
 formatters:
@@ -306,7 +306,6 @@ linters:
         - weakCond
         - assignOp
         - boolExprSimplify
-        - builtinShadow
         - commentFormatting
         - commentedOutImport
         - defaultCaseOrder
@@ -603,6 +602,7 @@ linters:
           - wastedassign
           - exhaustruct
           - predeclared
+          - unconvert
       - path: utils.go
         linters:
           # TODO: enable this when round based stuff is here

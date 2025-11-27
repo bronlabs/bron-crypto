@@ -40,14 +40,12 @@ func (n *Nat) UnmarshalCBOR(data []byte) error {
 }
 
 type intDTO struct {
-	IntBytes   []byte `cbor:"intBytes"`
-	IsNegative bool   `cbor:"isNegative"`
+	IntBytes []byte `cbor:"intBytes"`
 }
 
 func (i *Int) MarshalCBOR() ([]byte, error) {
 	dto := &intDTO{
-		IntBytes:   i.Bytes(),
-		IsNegative: i.IsNegative() == ct.True,
+		IntBytes: i.Bytes(),
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
@@ -62,9 +60,6 @@ func (i *Int) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 	i.SetBytes(dto.IntBytes)
-	if dto.IsNegative {
-		i.Neg(i)
-	}
 	return nil
 }
 

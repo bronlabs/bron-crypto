@@ -6,9 +6,10 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNat_CBOR(t *testing.T) {
@@ -113,10 +114,13 @@ func TestInt_CBOR_LargeValue(t *testing.T) {
 	t.Parallel()
 
 	// Test with a large positive value
+	// Sign-magnitude format: first byte is sign (0=positive), rest is magnitude
 	originalPos := numct.NewIntFromBytes([]byte{
+		0x00, // sign byte = 0 (positive)
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22,
 	})
+	require.Equal(t, ct.False, originalPos.IsNegative())
 
 	// Marshal to CBOR
 	dataPos, err := originalPos.MarshalCBOR()
@@ -134,6 +138,7 @@ func TestInt_CBOR_LargeValue(t *testing.T) {
 	// Test with a negative value
 	originalNeg := originalPos.Clone()
 	originalNeg.Neg(originalNeg)
+	require.Equal(t, ct.True, originalNeg.IsNegative())
 
 	// Marshal to CBOR
 	dataNeg, err := originalNeg.MarshalCBOR()
@@ -218,7 +223,7 @@ func TestModulus_CBOR_EvenModulus(t *testing.T) {
 func TestModulus_CBOR_RoundTrip_Operations(t *testing.T) {
 	t.Parallel()
 
-	// Create a modulus and test operations after serialization
+	// Create a modulus and test operations after serialisation
 	n := numct.NewNat(97)
 	original, ok := numct.NewModulus(n)
 	require.True(t, ok == ct.True)
@@ -332,7 +337,7 @@ func TestModulus_CBOR_InvalidData(t *testing.T) {
 func TestNat_CBOR_Deterministic(t *testing.T) {
 	t.Parallel()
 
-	// Test that serialization is deterministic
+	// Test that serialisation is deterministic
 	n := numct.NewNat(42)
 
 	data1, err1 := n.MarshalCBOR()
@@ -342,13 +347,13 @@ func TestNat_CBOR_Deterministic(t *testing.T) {
 	require.NoError(t, err2)
 
 	// Should produce identical bytes
-	require.True(t, bytes.Equal(data1, data2), "CBOR serialization should be deterministic")
+	require.True(t, bytes.Equal(data1, data2), "CBOR serialisation should be deterministic")
 }
 
 func TestInt_CBOR_Deterministic(t *testing.T) {
 	t.Parallel()
 
-	// Test that serialization is deterministic
+	// Test that serialisation is deterministic
 	i := numct.NewInt(-42)
 
 	data1, err1 := i.MarshalCBOR()
@@ -358,13 +363,13 @@ func TestInt_CBOR_Deterministic(t *testing.T) {
 	require.NoError(t, err2)
 
 	// Should produce identical bytes
-	require.True(t, bytes.Equal(data1, data2), "CBOR serialization should be deterministic")
+	require.True(t, bytes.Equal(data1, data2), "CBOR serialisation should be deterministic")
 }
 
 func TestModulus_CBOR_Deterministic(t *testing.T) {
 	t.Parallel()
 
-	// Test that serialization is deterministic
+	// Test that serialisation is deterministic
 	n := numct.NewNat(97)
 	m, _ := numct.NewModulus(n)
 
@@ -375,60 +380,5 @@ func TestModulus_CBOR_Deterministic(t *testing.T) {
 	require.NoError(t, err2)
 
 	// Should produce identical bytes
-	require.True(t, bytes.Equal(data1, data2), "CBOR serialization should be deterministic")
-}
-
-func BenchmarkNat_CBOR(b *testing.B) {
-	n := numct.NewNat(1234567890)
-
-	b.Run("Marshal", func(b *testing.B) {
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_, err := n.MarshalCBOR()
-			if err != nil {
-				b.Fatal(err)
-			}
-		}
-	})
-
-	data, _ := n.MarshalCBOR()
-
-	b.Run("Unmarshal", func(b *testing.B) {
-		var recovered numct.Nat
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			err := recovered.UnmarshalCBOR(data)
-			if err != nil {
-				b.Fatal(err)
-			}
-		}
-	})
-}
-
-func BenchmarkModulus_CBOR(b *testing.B) {
-	n := numct.NewNat(65537)
-	m, _ := numct.NewModulus(n)
-
-	b.Run("Marshal", func(b *testing.B) {
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			_, err := m.MarshalCBOR()
-			if err != nil {
-				b.Fatal(err)
-			}
-		}
-	})
-
-	data, _ := m.MarshalCBOR()
-
-	b.Run("Unmarshal", func(b *testing.B) {
-		var recovered numct.Modulus
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			err := recovered.UnmarshalCBOR(data)
-			if err != nil {
-				b.Fatal(err)
-			}
-		}
-	})
+	require.True(t, bytes.Equal(data1, data2), "CBOR serialisation should be deterministic")
 }

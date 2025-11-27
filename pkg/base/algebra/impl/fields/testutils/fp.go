@@ -14,7 +14,7 @@ import (
 const TestFpModulus = 0x429d16a1
 
 var (
-	_ impl.PrimeFieldElement[*TestFp] = (*TestFp)(nil)
+	_ impl.PrimeFieldElementLowLevel[*TestFp] = (*TestFp)(nil)
 
 	TestFpE             = uint64(bits.TrailingZeros64(uint64(TestFpModulus) - 1))
 	TestFpProgenitorExp = binary.LittleEndian.AppendUint32(nil, TestFpModulus>>(TestFpE+1))
