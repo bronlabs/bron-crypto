@@ -5,9 +5,10 @@ package numct
 import (
 	"sync"
 
+	"github.com/cronokirby/saferith"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/cgo/boring"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/cronokirby/saferith"
 )
 
 var bnCtxPool = sync.Pool{
@@ -24,8 +25,8 @@ var bnPool = sync.Pool{
 
 // NewModulus creates a new Modulus from a Nat.
 // It returns ok = false if m is zero.
-func NewModulus(m *Nat) (*Modulus, ct.Bool) {
-	ok := m.IsNonZero()
+func NewModulus(m *Nat) (modulus *Modulus, ok ct.Bool) {
+	ok = m.IsNonZero()
 
 	defer func() { // saferith panics on zero modulus.
 		if r := recover(); r != nil {
@@ -41,7 +42,7 @@ func NewModulus(m *Nat) (*Modulus, ct.Bool) {
 
 	var mSub2 Nat
 	mSub2.SubCap(m, NewNat(2), -1)
-	return &Modulus{
+	return &Modulus{ //nolint:exhaustruct // mont is not precomputed here for performance.
 		ModulusBasic: (*ModulusBasic)(safeMod),
 		mSub2:        &mSub2,
 		mNum:         mNum,
@@ -52,6 +53,7 @@ func NewModulus(m *Nat) (*Modulus, ct.Bool) {
 // Modulus is a modulus implementation based on BoringSSL's BigNum and saferith.Modulus.
 type Modulus struct {
 	*ModulusBasic
+
 	mSub2 *Nat
 	mNum  *boring.BigNum
 	mont  *boring.BigNumMontCtx
@@ -60,7 +62,7 @@ type Modulus struct {
 
 func (c *Modulus) cacheMont() {
 	// use a temporary BN_CTX to build the mont ctx
-	tmp := bnCtxPool.Get().(*boring.BigNumCtx)
+	tmp, _ := bnCtxPool.Get().(*boring.BigNumCtx)
 	defer bnCtxPool.Put(tmp)
 	mont, err := boring.NewBigNumMontCtx(c.mNum, tmp)
 	if err != nil {
@@ -83,22 +85,22 @@ func (m *Modulus) modExpOdd(out, base, exp *Nat) {
 	bBytes := out.Bytes()
 	eBytes := exp.Bytes()
 
-	bNum := bnPool.Get().(*boring.BigNum)
+	bNum, _ := bnPool.Get().(*boring.BigNum)
 	defer bnPool.Put(bNum)
 	if _, err := bNum.SetBytes(bBytes); err != nil {
 		panic(err)
 	}
 
-	eNum := bnPool.Get().(*boring.BigNum)
+	eNum, _ := bnPool.Get().(*boring.BigNum)
 	defer bnPool.Put(eNum)
 	if _, err := eNum.SetBytes(eBytes); err != nil {
 		panic(err)
 	}
 
-	ctx := bnCtxPool.Get().(*boring.BigNumCtx)
+	ctx, _ := bnCtxPool.Get().(*boring.BigNumCtx)
 	defer bnCtxPool.Put(ctx)
 
-	rNum := bnPool.Get().(*boring.BigNum)
+	rNum, _ := bnPool.Get().(*boring.BigNum)
 	defer bnPool.Put(rNum)
 	if _, err := rNum.Exp(bNum, eNum, m.mNum, m.mont, ctx); err != nil {
 		panic(err)
@@ -129,7 +131,7 @@ func (m *Modulus) modExpIOdd(out, base *Nat, exp *Int) {
 	var candidateInv Nat
 	m.ModInv(&candidateInv, &candidate)
 
-	out.Select(ct.Choice(isNeg), &candidate, &candidateInv)
+	out.Select(isNeg, &candidate, &candidateInv)
 }
 
 // ModExpI sets out = base^exp (mod m) where exp is an Int.
@@ -145,7 +147,7 @@ func (m *Modulus) modMultiBaseExpOdd(out, bases []*Nat, exp *Nat) {
 	m.ensureMont()
 
 	eBytes := exp.Bytes()
-	eNum := bnPool.Get().(*boring.BigNum)
+	eNum, _ := bnPool.Get().(*boring.BigNum)
 	defer bnPool.Put(eNum)
 	if _, err := eNum.SetBytes(eBytes); err != nil {
 		panic(err)
@@ -159,15 +161,15 @@ func (m *Modulus) modMultiBaseExpOdd(out, bases []*Nat, exp *Nat) {
 
 			m.Mod(out[i], bi)
 			biBytes := out[i].Bytes()
-			biNum := bnPool.Get().(*boring.BigNum)
+			biNum, _ := bnPool.Get().(*boring.BigNum)
 			defer bnPool.Put(biNum)
 			if _, err := biNum.SetBytes(biBytes); err != nil {
 				panic(err)
 			}
-			ctx := bnCtxPool.Get().(*boring.BigNumCtx)
+			ctx, _ := bnCtxPool.Get().(*boring.BigNumCtx)
 			defer bnCtxPool.Put(ctx)
 
-			rNum := bnPool.Get().(*boring.BigNum)
+			rNum, _ := bnPool.Get().(*boring.BigNum)
 			defer bnPool.Put(rNum)
 			if _, err := rNum.Exp(biNum, eNum, m.mNum, m.mont, ctx); err != nil {
 				panic(err)
@@ -207,16 +209,16 @@ func (m *Modulus) modInvOddPrime(out, a *Nat) ct.Bool {
 		return ok
 	}
 
-	aNum := bnPool.Get().(*boring.BigNum)
+	aNum, _ := bnPool.Get().(*boring.BigNum)
 	defer bnPool.Put(aNum)
 	if _, err := aNum.SetBytes(aReduced.Bytes()); err != nil {
 		panic(err)
 	}
 
-	ctx := bnCtxPool.Get().(*boring.BigNumCtx)
+	ctx, _ := bnCtxPool.Get().(*boring.BigNumCtx)
 	defer bnCtxPool.Put(ctx)
 
-	invNum := bnPool.Get().(*boring.BigNum)
+	invNum, _ := bnPool.Get().(*boring.BigNum)
 	defer bnPool.Put(invNum)
 	_, noInverse, err := invNum.Inv(aNum, m.mont, ctx)
 	// If noInverse is set, this is expected (not an error condition)
@@ -262,22 +264,22 @@ func (m *Modulus) ModInv(out, a *Nat) ct.Bool {
 func (m *Modulus) ModMul(out, x, y *Nat) {
 	xBytes, yBytes := x.Bytes(), y.Bytes()
 
-	xNum := bnPool.Get().(*boring.BigNum)
+	xNum, _ := bnPool.Get().(*boring.BigNum)
 	defer bnPool.Put(xNum)
 	if _, err := xNum.SetBytes(xBytes); err != nil {
 		panic(err)
 	}
 
-	yNum := bnPool.Get().(*boring.BigNum)
+	yNum, _ := bnPool.Get().(*boring.BigNum)
 	defer bnPool.Put(yNum)
 	if _, err := yNum.SetBytes(yBytes); err != nil {
 		panic(err)
 	}
 
-	bnCtx := bnCtxPool.Get().(*boring.BigNumCtx)
+	bnCtx, _ := bnCtxPool.Get().(*boring.BigNumCtx)
 	defer bnCtxPool.Put(bnCtx)
 
-	outNum := bnPool.Get().(*boring.BigNum)
+	outNum, _ := bnPool.Get().(*boring.BigNum)
 	defer bnPool.Put(outNum)
 	if _, err := outNum.ModMul(xNum, yNum, m.mNum, bnCtx); err != nil {
 		panic(err)

@@ -6,11 +6,12 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
 // ModulusGenerator generates random odd moduli (primes are a subset of odd numbers).

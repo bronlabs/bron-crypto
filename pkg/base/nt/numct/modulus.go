@@ -31,9 +31,9 @@ func (m *ModulusBasic) HashCode() base.HashCode {
 func (m *ModulusBasic) Random(prng io.Reader) (*Nat, error) {
 	randBig, err := crand.Int(prng, m.Big())
 	if err != nil {
-		return nil, errs2.AttachStackTrace(err)
+		return nil, errs2.Wrap(err)
 	}
-	return NewNatFromBig(randBig, int(m.BitLen())), nil
+	return NewNatFromBig(randBig, m.BitLen()), nil
 }
 
 // Big returns the big.Int representation of the modulus.
@@ -72,7 +72,7 @@ func (m *ModulusBasic) Quo(out, x *Nat) {
 	(*saferith.Nat)(out).Div(
 		(*saferith.Nat)(x),
 		(*saferith.Modulus)(m),
-		int(m.BitLen()),
+		m.BitLen(),
 	)
 }
 

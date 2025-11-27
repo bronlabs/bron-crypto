@@ -309,15 +309,15 @@ func (i *Int) RshCap(x *Int, shift uint, capacity int) {
 	(*saferith.Int)(i).Neg(xSign)
 }
 
-// Resize resizes i to have capacity cap.
-// When cap < 0, use the current announced length
-// When cap >= 0, use the provided cap.
-func (i *Int) Resize(cap int) {
-	if cap < 0 {
-		cap = int(i.AnnouncedLen())
+// Resize resizes i to have the given capacity.
+// When capacity < 0, use the current announced length
+// When capacity >= 0, use the provided capacity.
+func (i *Int) Resize(capacity int) {
+	if capacity < 0 {
+		capacity = i.AnnouncedLen()
 	}
 
-	(*saferith.Int)(i).Resize(cap)
+	(*saferith.Int)(i).Resize(capacity)
 }
 
 // Coprime returns 1 if gcd(|i|, |rhs|) == 1.
@@ -478,7 +478,7 @@ func (i *Int) And(x, y *Int) {
 // For signed integers, this operates on the two's-complement representation.
 func (i *Int) AndCap(x, y *Int, capacity int) {
 	if capacity < 0 {
-		capacity = int(max(x.AnnouncedLen(), y.AnnouncedLen()))
+		capacity = max(x.AnnouncedLen(), y.AnnouncedLen())
 	}
 
 	var xClone, yClone Int
@@ -597,7 +597,7 @@ func (i *Int) SetRandomRangeLH(lowInclusive, highExclusive *Int, prng io.Reader)
 	var r Nat
 	err := r.SetRandomRangeH(interval.Absed(), prng)
 	if err != nil {
-		return errs2.AttachStackTrace(err)
+		return errs2.Wrap(err)
 	}
 
 	// Result = lowInclusive + r
@@ -624,7 +624,7 @@ func (i *Int) TwosComplementBEBytes() []byte {
 	subtle.ConstantTimeCopy(int(iSign), natBytes, iAbsNotBytes)
 	var nat saferith.Nat
 	nat.SetBytes(natBytes)
-	nat.Add(&nat, new(saferith.Nat).SetUint64(uint64(iSign)).Resize(1), int(capacityBytes*8))
+	nat.Add(&nat, new(saferith.Nat).SetUint64(uint64(iSign)).Resize(1), capacityBytes*8)
 	nat.FillBytes(natBytes)
 	return natBytes
 }

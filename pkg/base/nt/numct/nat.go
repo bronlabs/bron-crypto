@@ -50,8 +50,8 @@ func NewNatFromBytes(n []byte) *Nat {
 }
 
 // NewNatFromBig creates a Nat from a big.Int with the given capacity.
-func NewNatFromBig(n *big.Int, cap int) *Nat {
-	return (*Nat)(new(saferith.Nat).SetBig(n, int(cap)))
+func NewNatFromBig(n *big.Int, capacity int) *Nat {
+	return (*Nat)(new(saferith.Nat).SetBig(n, capacity))
 }
 
 // Nat is a wrapper around saferith.Nat providing additional methods and occasional improvements.
@@ -88,16 +88,16 @@ func (n *Nat) Add(lhs, rhs *Nat) {
 	n.AddCap(lhs, rhs, -1)
 }
 
-// AddCap sets n = lhs + rhs modulo 2^cap with capacity cap.
-// if cap < 0, capacity will be max(lhs.AnnouncedLen(), rhs.AnnouncedLen()) + 1.
-func (n *Nat) AddCap(lhs, rhs *Nat, cap int) {
-	(*saferith.Nat)(n).Add((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), cap)
+// AddCap sets n = lhs + rhs modulo 2^capacity with capacity capacity.
+// if capacity < 0, capacity will be max(lhs.AnnouncedLen(), rhs.AnnouncedLen()) + 1.
+func (n *Nat) AddCap(lhs, rhs *Nat, capacity int) {
+	(*saferith.Nat)(n).Add((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), capacity)
 }
 
-// Sub sets n = lhs - rhs modulo 2^cap.
-// if cap < 0, capacity will be max(lhs.AnnouncedLen(), rhs.AnnouncedLen()).
-func (n *Nat) SubCap(lhs, rhs *Nat, cap int) {
-	(*saferith.Nat)(n).Sub((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), cap)
+// Sub sets n = lhs - rhs modulo 2^capacity.
+// if capacity < 0, capacity will be max(lhs.AnnouncedLen(), rhs.AnnouncedLen()).
+func (n *Nat) SubCap(lhs, rhs *Nat, capacity int) {
+	(*saferith.Nat)(n).Sub((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), capacity)
 }
 
 // Mul sets n = lhs * rhs.
@@ -105,21 +105,21 @@ func (n *Nat) Mul(lhs, rhs *Nat) {
 	n.MulCap(lhs, rhs, -1)
 }
 
-// MulCap sets n = lhs * rhs modulo 2^cap.
-// if cap < 0, capacity will be lhs.AnnouncedLen() + rhs.AnnouncedLen().
-func (n *Nat) MulCap(lhs, rhs *Nat, cap int) {
-	(*saferith.Nat)(n).Mul((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), cap)
+// MulCap sets n = lhs * rhs modulo 2^capacity.
+// if capacity < 0, capacity will be lhs.AnnouncedLen() + rhs.AnnouncedLen().
+func (n *Nat) MulCap(lhs, rhs *Nat, capacity int) {
+	(*saferith.Nat)(n).Mul((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), capacity)
 }
 
-// DivCap sets n = numerator / denominator with capacity cap.
-// if cap < 0, capacity will be numerator.AnnouncedLen() - denominator.BitLen() + 2
+// DivCap sets n = numerator / denominator with capacity capacity.
+// if capacity < 0, capacity will be numerator.AnnouncedLen() - denominator.BitLen() + 2
 // It returns ok=true if the division was successful, ok=false otherwise (e.g., division by zero).
-func (n *Nat) DivCap(numerator *Nat, denominator *Modulus, cap int) (ok ct.Bool) {
+func (n *Nat) DivCap(numerator *Nat, denominator *Modulus, capacity int) (ok ct.Bool) {
 	ok = utils.BoolTo[ct.Bool](denominator != nil)
 	n.Set((*Nat)(new(saferith.Nat).Div(
 		(*saferith.Nat)(numerator),
 		denominator.Saferith(),
-		cap,
+		capacity,
 	)))
 	return ok
 }
@@ -228,14 +228,14 @@ func (n *Nat) IsEven() ct.Bool {
 	return n.IsOdd().Not()
 }
 
-// Resize resizes n to have capacity cap.
-// When cap < 0, use the current announced length
-// When cap >= 0, use the provided cap.
-func (n *Nat) Resize(cap int) {
-	if cap < 0 {
-		cap = int(n.AnnouncedLen())
+// Resize resizes n to have given capacity.
+// When capacity < 0, use the current announced length
+// When capacity >= 0, use the provided capacity.
+func (n *Nat) Resize(capacity int) {
+	if capacity < 0 {
+		capacity = n.AnnouncedLen()
 	}
-	(*saferith.Nat)(n).Resize(cap)
+	(*saferith.Nat)(n).Resize(capacity)
 }
 
 // Sqrt sets n = sqrt(x) if x is a perfect square, else leaves n unchanged.
@@ -244,7 +244,7 @@ func (n *Nat) Sqrt(x *Nat) (ok ct.Bool) {
 	// Constant-time (w.r.t. announced capacity) integer square root.
 	// Work on |x| and assign only if |x| is a perfect square.
 
-	capBits := int(x.AnnouncedLen())
+	capBits := (x.AnnouncedLen())
 
 	var root saferith.Nat
 	var okRes ct.Bool
@@ -257,7 +257,7 @@ func (n *Nat) Sqrt(x *Nat) (ok ct.Bool) {
 
 		// Exactness check: r64^2 fits in uint64 because r64 <= 2^32.
 		sq := r64 * r64
-		okRes = ct.Bool(ct.Equal(sq, u0))
+		okRes = ct.Equal(sq, u0)
 	} else {
 		// ===== Multi-limb path: restoring (digit-by-digit) method. =====
 		// Runtime depends only on capBits (pairs), not on the value.
@@ -289,12 +289,12 @@ func (n *Nat) Sqrt(x *Nat) (ok ct.Bool) {
 		var bshr saferith.Nat   // b >> 2
 
 		for range pairs {
-			m.Add(&y, &b, int(capBits))
+			m.Add(&y, &b, capBits)
 
-			yshr.Rsh(&y, 1, int(capBits))
+			yshr.Rsh(&y, 1, capBits)
 
-			rMinus.Sub(&r, &m, int(capBits))   // r - m
-			yPlus.Add(&yshr, &b, int(capBits)) // (y>>1) + b
+			rMinus.Sub(&r, &m, capBits)   // r - m
+			yPlus.Add(&yshr, &b, capBits) // (y>>1) + b
 
 			gt, eq, _ := r.Cmp(&m)
 			ge := gt | eq
@@ -303,7 +303,7 @@ func (n *Nat) Sqrt(x *Nat) (ok ct.Bool) {
 			y = yshr
 			y.CondAssign(ge, &yPlus)
 
-			bshr.Rsh(&b, 2, int(capBits))
+			bshr.Rsh(&b, 2, capBits)
 			b = bshr
 		}
 
@@ -333,10 +333,10 @@ func (n *Nat) IsProbablyPrime() ct.Bool {
 	return utils.BoolTo[ct.Bool]((*saferith.Nat)(n).Big().ProbablyPrime(0))
 }
 
-// LshCap left shifts n by shift bits with capacity cap.
-// if cap < 0, capacity will be x.AnnouncedLen() + shift.
-func (n *Nat) LshCap(x *Nat, shift uint, cap int) {
-	(*saferith.Nat)(n).Lsh((*saferith.Nat)(x), shift, cap)
+// LshCap left shifts n by shift bits with given capacity.
+// if capacity < 0, capacity will be x.AnnouncedLen() + shift.
+func (n *Nat) LshCap(x *Nat, shift uint, capacity int) {
+	(*saferith.Nat)(n).Lsh((*saferith.Nat)(x), shift, capacity)
 }
 
 // Rsh right shifts n by shift bits.
@@ -344,10 +344,10 @@ func (n *Nat) Rsh(x *Nat, shift uint) {
 	n.RshCap(x, shift, -1)
 }
 
-// RshCap right shifts n by shift bits with capacity cap.
-// if cap < 0, capacity will be x.AnnouncedLen() - shift.
-func (n *Nat) RshCap(x *Nat, shift uint, cap int) {
-	(*saferith.Nat)(n).Rsh((*saferith.Nat)(x), shift, cap)
+// RshCap right shifts n by shift bits with given capacity.
+// if capacity < 0, capacity will be x.AnnouncedLen() - shift.
+func (n *Nat) RshCap(x *Nat, shift uint, capacity int) {
+	(*saferith.Nat)(n).Rsh((*saferith.Nat)(x), shift, capacity)
 }
 
 // Uint64 returns the uint64 representation of n.
@@ -397,11 +397,11 @@ func (n *Nat) And(x, y *Nat) {
 }
 
 // AndCap sets n = x & y with capacity cap.
-func (n *Nat) AndCap(x, y *Nat, cap int) {
-	if cap < 0 {
-		cap = int(max(x.AnnouncedLen(), y.AnnouncedLen()))
+func (n *Nat) AndCap(x, y *Nat, capacity int) {
+	if capacity < 0 {
+		capacity = (max(x.AnnouncedLen(), y.AnnouncedLen()))
 	}
-	capBytes := (cap + 7) / 8
+	capBytes := (capacity + 7) / 8
 
 	xBytes := make([]byte, capBytes)
 	yBytes := make([]byte, capBytes)
@@ -410,7 +410,7 @@ func (n *Nat) AndCap(x, y *Nat, cap int) {
 	(*saferith.Nat)(y).FillBytes(yBytes)
 	ct.AndBytes(zBytes, xBytes, yBytes)
 
-	(*saferith.Nat)(n).SetBytes(zBytes).Resize(cap)
+	(*saferith.Nat)(n).SetBytes(zBytes).Resize(capacity)
 }
 
 // Or sets n = x | y.
@@ -419,11 +419,11 @@ func (n *Nat) Or(x, y *Nat) {
 }
 
 // OrCap sets n = x | y with capacity cap.
-func (n *Nat) OrCap(x, y *Nat, cap int) {
-	if cap < 0 {
-		cap = int(max(x.AnnouncedLen(), y.AnnouncedLen()))
+func (n *Nat) OrCap(x, y *Nat, capacity int) {
+	if capacity < 0 {
+		capacity = (max(x.AnnouncedLen(), y.AnnouncedLen()))
 	}
-	capBytes := (cap + 7) / 8
+	capBytes := (capacity + 7) / 8
 
 	xBytes := make([]byte, capBytes)
 	yBytes := make([]byte, capBytes)
@@ -432,7 +432,7 @@ func (n *Nat) OrCap(x, y *Nat, cap int) {
 	(*saferith.Nat)(y).FillBytes(yBytes)
 	ct.OrBytes(zBytes, xBytes, yBytes)
 
-	(*saferith.Nat)(n).SetBytes(zBytes).Resize(cap)
+	(*saferith.Nat)(n).SetBytes(zBytes).Resize(capacity)
 }
 
 // Xor sets n = x ^ y.
@@ -441,11 +441,11 @@ func (n *Nat) Xor(x, y *Nat) {
 }
 
 // XorCap sets n = x ^ y with capacity cap.
-func (n *Nat) XorCap(x, y *Nat, cap int) {
-	if cap < 0 {
-		cap = int(max(x.AnnouncedLen(), y.AnnouncedLen()))
+func (n *Nat) XorCap(x, y *Nat, capacity int) {
+	if capacity < 0 {
+		capacity = (max(x.AnnouncedLen(), y.AnnouncedLen()))
 	}
-	capBytes := (cap + 7) / 8
+	capBytes := (capacity + 7) / 8
 
 	xBytes := make([]byte, capBytes)
 	yBytes := make([]byte, capBytes)
@@ -454,28 +454,28 @@ func (n *Nat) XorCap(x, y *Nat, cap int) {
 	(*saferith.Nat)(y).FillBytes(yBytes)
 	ct.XorBytes(zBytes, xBytes, yBytes)
 
-	(*saferith.Nat)(n).SetBytes(zBytes).Resize(cap)
+	(*saferith.Nat)(n).SetBytes(zBytes).Resize(capacity)
 }
 
 // Not sets n = ^x.
 func (n *Nat) Not(x *Nat) {
-	n.NotCap(x, int(x.AnnouncedLen()))
+	n.NotCap(x, x.AnnouncedLen())
 }
 
 // NotCap sets n = ^x with capacity cap.
 // For compatibility with big.Int.Not, use the announced capacity of x.
-func (n *Nat) NotCap(x *Nat, cap int) {
-	if cap < 0 {
-		cap = int(x.AnnouncedLen())
+func (n *Nat) NotCap(x *Nat, capacity int) {
+	if capacity < 0 {
+		capacity = (x.AnnouncedLen())
 	}
-	capBytes := (cap + 7) / 8
+	capBytes := (capacity + 7) / 8
 
 	xBytes := make([]byte, capBytes)
 	zBytes := make([]byte, capBytes)
 	(*saferith.Nat)(x).FillBytes(xBytes)
 	ct.NotBytes(zBytes, xBytes)
 
-	(*saferith.Nat)(n).SetBytes(zBytes).Resize(cap)
+	(*saferith.Nat)(n).SetBytes(zBytes).Resize(capacity)
 }
 
 // SetRandomRangeLH sets n to a random value in the range [lowInclusive, highExclusive).
@@ -498,15 +498,15 @@ func (n *Nat) SetRandomRangeLH(lowInclusive, highExclusive *Nat, prng io.Reader)
 	}
 
 	var interval Nat
-	interval.SubCap(highExclusive, lowInclusive, int(highExclusive.AnnouncedLen()))
+	interval.SubCap(highExclusive, lowInclusive, (highExclusive.AnnouncedLen()))
 	var r Nat
 	err := r.SetRandomRangeH(&interval, prng)
 	if err != nil {
-		return errs2.AttachStackTrace(err)
+		return errs2.Wrap(err)
 	}
 
 	var result Nat
-	result.AddCap(&r, lowInclusive, int(highExclusive.AnnouncedLen()))
+	result.AddCap(&r, lowInclusive, (highExclusive.AnnouncedLen()))
 	n.Set(&result)
 	return nil
 }
@@ -544,10 +544,10 @@ func (n *Nat) SetRandomRangeH(highExclusive *Nat, prng io.Reader) error {
 		data := make([]byte, (highExclusive.AnnouncedLen()+7)/8)
 		_, err := io.ReadFull(prng, data)
 		if err != nil {
-			return errs2.AttachStackTrace(err).WithMessage("failed to read random bytes")
+			return errs2.Wrap(err).WithMessage("failed to read random bytes")
 		}
 		dataNat.SetBytes(data)
-		dataNat.Resize(int(highExclusive.AnnouncedLen()))
+		dataNat.Resize(highExclusive.AnnouncedLen())
 		result.And(&dataNat, &mask)
 
 		// this happens with probability ~0.5
@@ -561,9 +561,9 @@ func (n *Nat) SetRandomRangeH(highExclusive *Nat, prng io.Reader) error {
 }
 
 // DivModCap computes a / b and a % b, storing the results into outQuot and outRem.
-// The cap parameter sets the announced capacity (in bits) for the quotient.
-func DivModCap(outQuot, outRem, a *Nat, b *Modulus, cap int) (ok ct.Bool) {
-	ok = outQuot.DivCap(a, b, cap)
+// The capacity parameter sets the announced capacity (in bits) for the quotient.
+func DivModCap(outQuot, outRem, a *Nat, b *Modulus, capacity int) (ok ct.Bool) {
+	ok = outQuot.DivCap(a, b, capacity)
 	b.Mod(outRem, a)
 	return ok
 }

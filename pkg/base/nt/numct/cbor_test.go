@@ -6,9 +6,10 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNat_CBOR(t *testing.T) {
@@ -222,7 +223,7 @@ func TestModulus_CBOR_EvenModulus(t *testing.T) {
 func TestModulus_CBOR_RoundTrip_Operations(t *testing.T) {
 	t.Parallel()
 
-	// Create a modulus and test operations after serialization
+	// Create a modulus and test operations after serialisation
 	n := numct.NewNat(97)
 	original, ok := numct.NewModulus(n)
 	require.True(t, ok == ct.True)
@@ -336,7 +337,7 @@ func TestModulus_CBOR_InvalidData(t *testing.T) {
 func TestNat_CBOR_Deterministic(t *testing.T) {
 	t.Parallel()
 
-	// Test that serialization is deterministic
+	// Test that serialisation is deterministic
 	n := numct.NewNat(42)
 
 	data1, err1 := n.MarshalCBOR()
@@ -346,13 +347,13 @@ func TestNat_CBOR_Deterministic(t *testing.T) {
 	require.NoError(t, err2)
 
 	// Should produce identical bytes
-	require.True(t, bytes.Equal(data1, data2), "CBOR serialization should be deterministic")
+	require.True(t, bytes.Equal(data1, data2), "CBOR serialisation should be deterministic")
 }
 
 func TestInt_CBOR_Deterministic(t *testing.T) {
 	t.Parallel()
 
-	// Test that serialization is deterministic
+	// Test that serialisation is deterministic
 	i := numct.NewInt(-42)
 
 	data1, err1 := i.MarshalCBOR()
@@ -362,13 +363,13 @@ func TestInt_CBOR_Deterministic(t *testing.T) {
 	require.NoError(t, err2)
 
 	// Should produce identical bytes
-	require.True(t, bytes.Equal(data1, data2), "CBOR serialization should be deterministic")
+	require.True(t, bytes.Equal(data1, data2), "CBOR serialisation should be deterministic")
 }
 
 func TestModulus_CBOR_Deterministic(t *testing.T) {
 	t.Parallel()
 
-	// Test that serialization is deterministic
+	// Test that serialisation is deterministic
 	n := numct.NewNat(97)
 	m, _ := numct.NewModulus(n)
 
@@ -379,5 +380,5 @@ func TestModulus_CBOR_Deterministic(t *testing.T) {
 	require.NoError(t, err2)
 
 	// Should produce identical bytes
-	require.True(t, bytes.Equal(data1, data2), "CBOR serialization should be deterministic")
+	require.True(t, bytes.Equal(data1, data2), "CBOR serialisation should be deterministic")
 }
