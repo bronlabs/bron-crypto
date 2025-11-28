@@ -13,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
@@ -44,7 +45,7 @@ func NewZModFromModulus(m *numct.Modulus) (*ZMod, error) {
 	if m.Nat() == nil {
 		return nil, errs.NewIsNil("modulus Nat")
 	}
-	return &ZMod{n: NPlus().FromModulus(m)}, nil
+	return &ZMod{n: NPlus().FromModulusCT(m)}, nil
 }
 
 func NewUintGivenModulus(value *numct.Nat, m *numct.Modulus) (*Uint, error) {
@@ -298,18 +299,9 @@ func (u *Uint) isValid(x *Uint) (*Uint, error) {
 	return x, nil
 }
 
-func (u *Uint) ensureValid(x *Uint) *Uint {
-	// TODO: fix err package
-	x, err := u.isValid(x)
-	if err != nil {
-		panic(err)
-	}
-	return x
-}
-
 func (u *Uint) Group() *ZMod {
 	return &ZMod{
-		n: NPlus().FromModulus(u.m),
+		n: NPlus().FromModulusCT(u.m),
 	}
 }
 
@@ -346,7 +338,7 @@ func (u *Uint) IsPositive() bool {
 }
 
 func (u *Uint) Add(other *Uint) *Uint {
-	u.ensureValid(other)
+	errs2.Must1(u.isValid(other))
 	v := new(numct.Nat)
 	u.m.ModAdd(v, u.v, other.v)
 	return &Uint{v: v, m: u.m}
@@ -357,25 +349,25 @@ func (u *Uint) TrySub(other *Uint) (*Uint, error) {
 }
 
 func (u *Uint) Sub(other *Uint) *Uint {
-	u.ensureValid(other)
+	errs2.Must1(u.isValid(other))
 	v := new(numct.Nat)
 	u.m.ModSub(v, u.v, other.v)
 	return &Uint{v: v, m: u.m}
 }
 
 func (u *Uint) Mul(other *Uint) *Uint {
-	u.ensureValid(other)
+	errs2.Must1(u.isValid(other))
 	v := new(numct.Nat)
 	u.m.ModMul(v, u.v, other.v)
 	return &Uint{v: v, m: u.m}
 }
 
 func (u *Uint) Lsh(shift uint) *Uint {
-	return u.Lift().Lsh(shift).Mod(NPlus().FromModulus(u.m))
+	return u.Lift().Lsh(shift).Mod(NPlus().FromModulusCT(u.m))
 }
 
 func (u *Uint) Rsh(shift uint) *Uint {
-	return u.Lift().Rsh(shift).Mod(NPlus().FromModulus(u.m))
+	return u.Lift().Rsh(shift).Mod(NPlus().FromModulusCT(u.m))
 }
 
 func (u *Uint) Exp(exponent *Nat) *Uint {
@@ -423,7 +415,7 @@ func (u *Uint) IsUnit() bool {
 }
 
 func (u *Uint) Coprime(other *Uint) bool {
-	u.ensureValid(other)
+	errs2.Must1(u.isValid(other))
 	return u.v.Coprime(other.v) == ct.True
 }
 
@@ -432,7 +424,7 @@ func (u *Uint) IsProbablyPrime() bool {
 }
 
 func (u *Uint) EuclideanDiv(other *Uint) (quot, rem *Uint, err error) {
-	u.ensureValid(other)
+	errs2.Must1(u.isValid(other))
 	if !u.Group().IsSemiDomain() {
 		return nil, nil, errs.NewFailed("not a euclidean domain")
 	}
@@ -471,7 +463,7 @@ func (u *Uint) TryInv() (*Uint, error) {
 }
 
 func (u *Uint) TryDiv(other *Uint) (*Uint, error) {
-	u.ensureValid(other)
+	errs2.Must1(u.isValid(other))
 	v := new(numct.Nat)
 	if ok := u.m.ModDiv(v, u.v, other.v); ok == ct.False {
 		return nil, errs.NewFailed("division failed")
@@ -525,13 +517,13 @@ func (u *Uint) PartialCompare(other *Uint) base.PartialOrdering {
 }
 
 func (u *Uint) Compare(other *Uint) base.Ordering {
-	u.ensureValid(other)
+	errs2.Must1(u.isValid(other))
 	lt, eq, gt := u.v.Compare(other.v)
 	return base.Ordering(-1*int(lt) + 0*int(eq) + 1*int(gt))
 }
 
 func (u *Uint) IsLessThanOrEqual(other *Uint) bool {
-	u.ensureValid(other)
+	errs2.Must1(u.isValid(other))
 	lt, eq, _ := u.v.Compare(other.v)
 	return lt|eq == ct.True
 }

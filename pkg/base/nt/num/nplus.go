@@ -12,13 +12,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
 var (
-	_             algebra.NPlusLike[*NatPlus]   = (*PositiveNaturalNumbers)(nil)
-	_             algebra.NatPlusLike[*NatPlus] = (*NatPlus)(nil)
 	nplusInstance *PositiveNaturalNumbers
 	nplusOnce     sync.Once
 )
@@ -33,7 +32,7 @@ func NPlus() *PositiveNaturalNumbers {
 }
 
 func (*PositiveNaturalNumbers) Name() string {
-	return "N+"
+	return "N\\{0}"
 }
 
 func (*PositiveNaturalNumbers) Characteristic() cardinal.Cardinal {
@@ -68,7 +67,7 @@ func (nps *PositiveNaturalNumbers) FromBig(b *big.Int) (*NatPlus, error) {
 	return nps.FromBytes(b.Bytes())
 }
 
-func (nps *PositiveNaturalNumbers) FromModulus(m *numct.Modulus) *NatPlus {
+func (nps *PositiveNaturalNumbers) FromModulusCT(m *numct.Modulus) *NatPlus {
 	return &NatPlus{v: m.Nat(), m: m}
 }
 
@@ -187,7 +186,7 @@ func (nps *PositiveNaturalNumbers) IterRange(start, stop *NatPlus) iter.Seq[*Nat
 }
 
 func (nps *PositiveNaturalNumbers) ElementSize() int {
-	return 0
+	return -1
 }
 
 func (nps *PositiveNaturalNumbers) Bottom() *NatPlus {
@@ -209,20 +208,14 @@ func (*NatPlus) isValid(x *NatPlus) (*NatPlus, error) {
 	return x, nil
 }
 
-func (*NatPlus) ensureValid(x *NatPlus) *NatPlus {
-	// TODO: fix err package
-	x, err := x.isValid(x)
-	if err != nil {
-		panic(err)
-	}
-	return x
-}
-
 func (np *NatPlus) cacheMont(m *numct.Modulus) *NatPlus {
+	var ok ct.Bool
 	if np.m == nil {
-		m, ok := numct.NewModulus(np.v)
-		if ok == ct.False {
-			panic(errs.NewFailed("modulus is not valid"))
+		if m == nil {
+			m, ok = numct.NewModulus(np.v)
+			if ok == ct.False {
+				panic(errs.NewFailed("modulus is not valid"))
+			}
 		}
 		np.m = m
 	}
@@ -246,32 +239,32 @@ func (np *NatPlus) OtherOp(other *NatPlus) *NatPlus {
 }
 
 func (np *NatPlus) Add(other *NatPlus) *NatPlus {
-	np.ensureValid(other)
+	errs2.Must1(np.isValid(other))
 	v := new(numct.Nat)
 	v.Add(np.v, other.v)
-	return np.ensureValid(&NatPlus{v: v, m: np.m})
+	return errs2.Must1(np.isValid(&NatPlus{v: v, m: np.m}))
 }
 
 func (np *NatPlus) Mul(other *NatPlus) *NatPlus {
-	np.ensureValid(other)
+	errs2.Must1(np.isValid(other))
 	v := new(numct.Nat)
 	v.Mul(np.v, other.v)
 	out := &NatPlus{v: v, m: np.m}
-	return np.ensureValid(out)
+	return errs2.Must1(np.isValid(out))
 }
 
 func (np *NatPlus) Lsh(shift uint) *NatPlus {
 	v := new(numct.Nat)
 	v.Lsh(np.v, shift)
 	out := &NatPlus{v: v, m: np.m}
-	return np.ensureValid(out)
+	return errs2.Must1(np.isValid(out))
 }
 
 func (np *NatPlus) Rsh(shift uint) *NatPlus {
 	v := new(numct.Nat)
 	v.Rsh(np.v, shift)
 	out := &NatPlus{v: v, m: np.m}
-	return np.ensureValid(out)
+	return errs2.Must1(np.isValid(out))
 }
 
 func (np *NatPlus) Double() *NatPlus {
@@ -291,7 +284,7 @@ func (np *NatPlus) IsOpIdentity() bool {
 }
 
 func (np *NatPlus) Compare(other *NatPlus) base.Ordering {
-	np.ensureValid(other)
+	errs2.Must1(np.isValid(other))
 	lt, eq, gt := np.v.Compare(other.v)
 	return base.Ordering(-1*int(lt) + 0*int(eq) + 1*int(gt))
 }
@@ -336,18 +329,18 @@ func (np *NatPlus) TrySub(other *NatPlus) (*NatPlus, error) {
 }
 
 func (np *NatPlus) IsLessThanOrEqual(other *NatPlus) bool {
-	np.ensureValid(other)
+	errs2.Must1(np.isValid(other))
 	lt, eq, _ := np.v.Compare(other.v)
 	return lt|eq == ct.True
 }
 
 func (np *NatPlus) IsUnit(modulus *NatPlus) bool {
-	np.ensureValid(modulus)
+	errs2.Must1(np.isValid(modulus))
 	return np.v.Coprime(modulus.v) == ct.True
 }
 
 func (np *NatPlus) Equal(other *NatPlus) bool {
-	np.ensureValid(other)
+	errs2.Must1(np.isValid(other))
 	return np.v.Equal(other.v) == ct.True
 }
 
@@ -380,14 +373,7 @@ func (np *NatPlus) Increment() *NatPlus {
 }
 
 func (np *NatPlus) Bytes() []byte {
-	// Use Big().Bytes() to get compact representation without padding
-	bytes := np.v.Big().Bytes()
-	// big.Int.Bytes() returns empty slice for zero, but we want [0x0]
-	// However, NatPlus should never be zero
-	if len(bytes) == 0 {
-		panic("NatPlus should never be zero")
-	}
-	return bytes
+	return np.v.Bytes()
 }
 
 func (np *NatPlus) BytesBE() []byte {

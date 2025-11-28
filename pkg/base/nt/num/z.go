@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
@@ -289,15 +290,6 @@ func (*Int) isValid(x *Int) (*Int, error) {
 	return x, nil
 }
 
-func (*Int) ensureValid(x *Int) *Int {
-	// TODO: fix err package
-	x, err := x.isValid(x)
-	if err != nil {
-		panic(err)
-	}
-	return x
-}
-
 func (i *Int) Structure() algebra.Structure[*Int] {
 	return Z()
 }
@@ -319,7 +311,7 @@ func (i *Int) OtherOp(other *Int) *Int {
 }
 
 func (i *Int) Add(other *Int) *Int {
-	i.ensureValid(other)
+	errs2.Must1(i.isValid(other))
 	v := new(numct.Int)
 	v.Add(i.v, other.v)
 	return &Int{v: v}
@@ -330,14 +322,14 @@ func (i *Int) TrySub(other *Int) (*Int, error) {
 }
 
 func (i *Int) Sub(other *Int) *Int {
-	i.ensureValid(other)
+	errs2.Must1(i.isValid(other))
 	v := new(numct.Int)
 	v.Sub(i.v, other.v)
 	return &Int{v: v}
 }
 
 func (i *Int) Mul(other *Int) *Int {
-	i.ensureValid(other)
+	errs2.Must1(i.isValid(other))
 	v := new(numct.Int)
 	v.Mul(i.v, other.v)
 	return &Int{v: v}
@@ -373,7 +365,7 @@ func (i *Int) IsPositive() bool {
 }
 
 func (i *Int) Coprime(other *Int) bool {
-	i.ensureValid(other)
+	errs2.Must1(i.isValid(other))
 	return i.v.Coprime(other.v) == ct.True
 }
 
@@ -382,7 +374,7 @@ func (i *Int) IsProbablyPrime() bool {
 }
 
 func (i *Int) EuclideanDiv(other *Int) (quot, rem *Int, err error) {
-	i.ensureValid(other)
+	errs2.Must1(i.isValid(other))
 	vq, vr := new(numct.Int), new(numct.Int)
 	// Since DivModCap doesn't exist for Int, compute quotient and remainder separately
 	if ok := vq.Div(i.v, other.v); ok == ct.False {
@@ -458,19 +450,19 @@ func (i *Int) Square() *Int {
 }
 
 func (i *Int) Compare(other *Int) base.Ordering {
-	i.ensureValid(other)
+	errs2.Must1(i.isValid(other))
 	lt, eq, gt := i.v.Compare(other.v)
 	return base.Ordering(-1*int(lt) + 0*int(eq) + 1*int(gt))
 }
 
 func (i *Int) IsLessThanOrEqual(other *Int) bool {
-	i.ensureValid(other)
+	errs2.Must1(i.isValid(other))
 	lt, eq, _ := i.v.Compare(other.v)
 	return lt|eq == ct.True
 }
 
 func (i *Int) Equal(other *Int) bool {
-	i.ensureValid(other)
+	errs2.Must1(i.isValid(other))
 	return i.v.Equal(other.v) == ct.True
 }
 

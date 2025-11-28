@@ -12,17 +12,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
 var (
-	_ algebra.NLike[*Nat]   = (*NaturalNumbers)(nil)
-	_ algebra.NatLike[*Nat] = (*Nat)(nil)
-
-	_ algebra.SemiModule[*Nat, *Nat]        = (*NaturalNumbers)(nil)
-	_ algebra.SemiModuleElement[*Nat, *Nat] = (*Nat)(nil)
-
 	nOnce     sync.Once
 	nInstance *NaturalNumbers
 )
@@ -180,7 +175,7 @@ func (ns *NaturalNumbers) IterRange(start, stop *Nat) iter.Seq[*Nat] {
 }
 
 func (ns *NaturalNumbers) ElementSize() int {
-	return 0
+	return -1
 }
 
 func (ns *NaturalNumbers) MultiScalarOp(scs []*Nat, es []*Nat) (*Nat, error) {
@@ -213,15 +208,6 @@ func (*Nat) isValid(x *Nat) (*Nat, error) {
 	return x, nil
 }
 
-func (*Nat) ensureValid(x *Nat) *Nat {
-	// TODO: fix err package
-	x, err := x.isValid(x)
-	if err != nil {
-		panic(err)
-	}
-	return x
-}
-
 func (*Nat) Structure() algebra.Structure[*Nat] {
 	return N()
 }
@@ -239,14 +225,14 @@ func (n *Nat) OtherOp(other *Nat) *Nat {
 }
 
 func (n *Nat) Add(other *Nat) *Nat {
-	n.ensureValid(other)
+	errs2.Must1(n.isValid(other))
 	v := new(numct.Nat)
 	v.Add(n.v, other.v)
 	return &Nat{v: v}
 }
 
 func (n *Nat) Mul(other *Nat) *Nat {
-	n.ensureValid(other)
+	errs2.Must1(n.isValid(other))
 	v := new(numct.Nat)
 	v.Mul(n.v, other.v)
 	return &Nat{v: v}
@@ -350,7 +336,7 @@ func (n *Nat) IsOne() bool {
 }
 
 func (n *Nat) Coprime(other *Nat) bool {
-	n.ensureValid(other)
+	errs2.Must1(n.isValid(other))
 	return n.v.Coprime(other.v) == ct.True
 }
 
@@ -359,7 +345,7 @@ func (n *Nat) IsProbablyPrime() bool {
 }
 
 func (n *Nat) EuclideanDiv(other *Nat) (quot, rem *Nat, err error) {
-	n.ensureValid(other)
+	errs2.Must1(n.isValid(other))
 	vq, vr := new(numct.Nat), new(numct.Nat)
 	// Create modulus from divisor
 	divisorMod, modOk := numct.NewModulus(other.v)
@@ -381,13 +367,13 @@ func (n *Nat) Mod(modulus *NatPlus) *Uint {
 }
 
 func (n *Nat) Compare(other *Nat) base.Ordering {
-	n.ensureValid(other)
+	errs2.Must1(n.isValid(other))
 	lt, eq, gt := n.v.Compare(other.v)
 	return base.Ordering(-1*int(lt) + 0*int(eq) + 1*int(gt))
 }
 
 func (n *Nat) IsLessThanOrEqual(other *Nat) bool {
-	n.ensureValid(other)
+	errs2.Must1(n.isValid(other))
 	lt, eq, _ := n.v.Compare(other.v)
 	return lt|eq == ct.True
 }
@@ -397,7 +383,7 @@ func (n *Nat) Lift() *Int {
 }
 
 func (n *Nat) Equal(other *Nat) bool {
-	n.ensureValid(other)
+	errs2.Must1(n.isValid(other))
 	return n.v.Equal(other.v) == ct.True
 }
 
