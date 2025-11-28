@@ -17,7 +17,7 @@ func TestP256PointArithmetic_Double(t *testing.T) {
 	g.SetGenerator()
 	pt1.Double(&g)
 	pt2.Add(&g, &g)
-	aimpl.ScalarMul(&pt3, &g, []uint8{2})
+	aimpl.ScalarMulLowLevel(&pt3, &g, []uint8{2})
 
 	e1 := pt1.Equal(&pt2)
 	e2 := pt1.Equal(&pt3)

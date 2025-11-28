@@ -39,7 +39,6 @@ var (
 
 type Curve struct {
 	traits.PrimeCurveTrait[*k256Impl.Fp, *k256Impl.Point, *Point, Point]
-	traits.MSMTrait[*Scalar, *Point] // TODO: fix
 }
 
 func NewCurve() *Curve {
@@ -238,6 +237,25 @@ func (c *Curve) ToElliptic() elliptic.Curve {
 	return ellipticK256Instance
 }
 
+func (c *Curve) MultiScalarOp(scalars []*Scalar, points []*Point) (*Point, error) {
+	return c.MultiScalarMul(scalars, points)
+}
+
+func (c *Curve) MultiScalarMul(scalars []*Scalar, points []*Point) (*Point, error) {
+	if len(scalars) != len(points) {
+		return nil, errs.NewLength("mismatched lengths of scalars and points")
+	}
+	var result Point
+	scs := make([][]byte, len(scalars))
+	pts := make([]*k256Impl.Point, len(points))
+	for i := range points {
+		pts[i] = &points[i].V
+		scs[i] = scalars[i].Bytes()
+	}
+	aimpl.MultiScalarMulLowLevel(&result.V, pts, scs)
+	return &result, nil
+}
+
 type Point struct {
 	traits.PrimePointTrait[*k256Impl.Fp, *k256Impl.Point, k256Impl.Point, *Point, Point]
 }
@@ -356,7 +374,7 @@ func (p *Point) ScalarOp(sc *Scalar) *Point {
 
 func (p *Point) ScalarMul(actor *Scalar) *Point {
 	var result Point
-	aimpl.ScalarMul(&result.V, &p.V, actor.V.Bytes())
+	aimpl.ScalarMulLowLevel(&result.V, &p.V, actor.V.Bytes())
 	return &result
 }
 

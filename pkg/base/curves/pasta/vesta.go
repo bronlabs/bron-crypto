@@ -40,7 +40,6 @@ var (
 
 type VestaCurve struct {
 	traits.PrimeCurveTrait[*pastaImpl.Fq, *pastaImpl.VestaPoint, *VestaPoint, VestaPoint]
-	traits.MSMTrait[*VestaScalar, *VestaPoint]
 }
 
 func NewVestaCurve() *VestaCurve {
@@ -219,6 +218,25 @@ func (c *VestaCurve) ToElliptic() elliptic.Curve {
 	return ellipticVestaInstance
 }
 
+func (c *VestaCurve) MultiScalarOp(scalars []*VestaScalar, points []*VestaPoint) (*VestaPoint, error) {
+	return c.MultiScalarMul(scalars, points)
+}
+
+func (c *VestaCurve) MultiScalarMul(scalars []*VestaScalar, points []*VestaPoint) (*VestaPoint, error) {
+	if len(scalars) != len(points) {
+		return nil, errs.NewLength("mismatched lengths of scalars and points")
+	}
+	var result VestaPoint
+	scs := make([][]byte, len(scalars))
+	pts := make([]*pastaImpl.VestaPoint, len(points))
+	for i := range points {
+		pts[i] = &points[i].V
+		scs[i] = scalars[i].Bytes()
+	}
+	aimpl.MultiScalarMulLowLevel(&result.V, pts, scs)
+	return &result, nil
+}
+
 type VestaPoint struct {
 	traits.PrimePointTrait[*pastaImpl.Fq, *pastaImpl.VestaPoint, pastaImpl.VestaPoint, *VestaPoint, VestaPoint]
 }
@@ -313,7 +331,7 @@ func (p *VestaPoint) ScalarOp(sc *VestaScalar) *VestaPoint {
 
 func (p *VestaPoint) ScalarMul(actor *VestaScalar) *VestaPoint {
 	var result VestaPoint
-	aimpl.ScalarMul(&result.V, &p.V, actor.V.Bytes())
+	aimpl.ScalarMulLowLevel(&result.V, &p.V, actor.V.Bytes())
 	return &result
 }
 

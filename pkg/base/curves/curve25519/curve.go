@@ -40,7 +40,6 @@ func init() {
 
 type Curve struct {
 	traits.CurveTrait[*edwards25519Impl.Fp, *edwards25519Impl.Point, *Point, Point]
-	traits.MSMTrait[*Scalar, *Point]
 }
 
 func NewCurve() *Curve {
@@ -177,6 +176,25 @@ func (c *Curve) BaseField() algebra.FiniteField[*BaseFieldElement] {
 	return NewBaseField()
 }
 
+func (c *Curve) MultiScalarOp(scalars []*Scalar, points []*Point) (*Point, error) {
+	return c.MultiScalarMul(scalars, points)
+}
+
+func (c *Curve) MultiScalarMul(scalars []*Scalar, points []*Point) (*Point, error) {
+	if len(scalars) != len(points) {
+		return nil, errs.NewLength("mismatched lengths of scalars and points")
+	}
+	var result Point
+	scs := make([][]byte, len(scalars))
+	pts := make([]*edwards25519Impl.Point, len(points))
+	for i := range points {
+		pts[i] = &points[i].V
+		scs[i] = scalars[i].Bytes()
+	}
+	aimpl.MultiScalarMulLowLevel(&result.V, pts, scs)
+	return &result, nil
+}
+
 type Point struct {
 	traits.PointTrait[*edwards25519Impl.Fp, *edwards25519Impl.Point, edwards25519Impl.Point, *Point, Point]
 }
@@ -260,7 +278,7 @@ func (p *Point) ScalarOp(sc *Scalar) *Point {
 
 func (p *Point) ScalarMul(actor *Scalar) *Point {
 	var result Point
-	aimpl.ScalarMul(&result.V, &p.V, actor.V.Bytes())
+	aimpl.ScalarMulLowLevel(&result.V, &p.V, actor.V.Bytes())
 	return &result
 }
 
@@ -268,7 +286,7 @@ func (p *Point) IsTorsionFree() bool {
 	primeOrderBytes := NewScalarField().Order().Bytes()
 	slices.Reverse(primeOrderBytes)
 	var e edwards25519Impl.Point
-	aimpl.ScalarMul(&e, &p.V, primeOrderBytes)
+	aimpl.ScalarMulLowLevel(&e, &p.V, primeOrderBytes)
 	return e.IsZero() != ct.False
 }
 

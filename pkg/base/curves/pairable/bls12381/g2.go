@@ -37,7 +37,6 @@ var (
 
 type G2 struct {
 	traits.PrimeCurveTrait[*bls12381Impl.Fp2, *bls12381Impl.G2Point, *PointG2, PointG2]
-	traits.MSMTrait[*Scalar, *PointG2]
 }
 
 func NewG2() *G2 {
@@ -274,6 +273,25 @@ func (c *G2) ScalarBaseMul(sc *Scalar) *PointG2 {
 	return c.Generator().ScalarMul(sc)
 }
 
+func (c *G2) MultiScalarOp(scalars []*Scalar, points []*PointG2) (*PointG2, error) {
+	return c.MultiScalarMul(scalars, points)
+}
+
+func (c *G2) MultiScalarMul(scalars []*Scalar, points []*PointG2) (*PointG2, error) {
+	if len(scalars) != len(points) {
+		return nil, errs.NewLength("mismatched lengths of scalars and points")
+	}
+	var result PointG2
+	scs := make([][]byte, len(scalars))
+	pts := make([]*bls12381Impl.G2Point, len(points))
+	for i := range points {
+		pts[i] = &points[i].V
+		scs[i] = scalars[i].Bytes()
+	}
+	aimpl.MultiScalarMulLowLevel(&result.V, pts, scs)
+	return &result, nil
+}
+
 type PointG2 struct {
 	traits.PrimePointTrait[*bls12381Impl.Fp2, *bls12381Impl.G2Point, bls12381Impl.G2Point, *PointG2, PointG2]
 }
@@ -428,7 +446,7 @@ func (p *PointG2) ScalarOp(sc *Scalar) *PointG2 {
 
 func (p *PointG2) ScalarMul(actor *Scalar) *PointG2 {
 	var result PointG2
-	aimpl.ScalarMul(&result.V, &p.V, actor.V.Bytes())
+	aimpl.ScalarMulLowLevel(&result.V, &p.V, actor.V.Bytes())
 	return &result
 }
 
@@ -438,7 +456,7 @@ func (p *PointG2) IsTorsionFree() bool {
 	orderBytes := scalarFieldOrder.Bytes()
 	slices.Reverse(orderBytes)
 	var e bls12381Impl.G2Point
-	aimpl.ScalarMul(&e, &p.V, orderBytes)
+	aimpl.ScalarMulLowLevel(&e, &p.V, orderBytes)
 	return e.IsZero() == 1
 }
 

@@ -4,7 +4,6 @@ import (
 	"io"
 	"iter"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/points"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -70,32 +69,6 @@ func (c *PrimeCurveTrait[FP, P, W, WT]) Generator() W {
 	var gen WT
 	W(&gen).P().SetGenerator()
 	return &gen
-}
-
-type MSMTrait[FE algebra.FieldElement[FE], P algebra.AdditiveModuleElement[P, FE]] struct {
-}
-
-func (t *MSMTrait[FE, P]) MultiScalarOp(scs []FE, ps []P) (P, error) {
-	return t.MultiScalarMul(scs, ps)
-}
-
-func (*MSMTrait[FE, P]) MultiScalarMul(scs []FE, ps []P) (P, error) {
-	if len(scs) != len(ps) {
-		return *new(P), errs.NewLength("length of scalars and points must match")
-	}
-	if len(scs) == 0 {
-		return *new(P), errs.NewValue("cannot perform multi-scalar operation on empty slices")
-	}
-	M, ok := ps[0].Structure().(algebra.AdditiveModule[P, FE])
-	if !ok {
-		return *new(P), errs.NewType("points do not have a module structure")
-	}
-
-	result := M.Zero()
-	for i, p := range ps {
-		result = result.Op(p.ScalarMul(scs[i]))
-	}
-	return result, nil
 }
 
 type PointTrait[FP fields.FiniteFieldElement[FP], P points.PointPtr[FP, P, T], T any, W PointWrapperPtrConstraint[FP, P, WT], WT any] struct {

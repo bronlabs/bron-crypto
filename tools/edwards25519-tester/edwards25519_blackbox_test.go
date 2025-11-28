@@ -97,7 +97,7 @@ func Test_PointScalarBaseMul(t *testing.T) {
 		primitiveGenerator := new(edwards25519Impl.Point)
 		primitiveGenerator.SetGenerator()
 		primitivePointC := new(edwards25519Impl.Point)
-		aimpl.ScalarMul(primitivePointC, primitiveGenerator, primitivesScalar.Bytes())
+		aimpl.ScalarMulLowLevel(primitivePointC, primitiveGenerator, primitivesScalar.Bytes())
 		edwards25519Tester.RequirePointsEqual(t, filippoPointC, primitivePointC)
 	}
 }
@@ -114,7 +114,7 @@ func Test_PointScalarMul(t *testing.T) {
 
 		filippoPointC := new(filippo.Point).ScalarMult(filippoScalar, filippoPointA)
 		primitivePointC := new(edwards25519Impl.Point)
-		aimpl.ScalarMul(primitivePointC, primitivesPointA, primitivesScalar.Bytes())
+		aimpl.ScalarMulLowLevel(primitivePointC, primitivesPointA, primitivesScalar.Bytes())
 		edwards25519Tester.RequirePointsEqual(t, filippoPointC, primitivePointC)
 	}
 }
