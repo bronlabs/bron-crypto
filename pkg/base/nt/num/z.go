@@ -106,13 +106,8 @@ func (*Integers) FromNatCT(value *numct.Nat) (*Int, error) {
 	return &Int{v: intFromRawBytes(value.Bytes())}, nil
 }
 
-// intFromRawBytes creates a numct.Int from raw big-endian bytes (no sign prefix).
-// numct.NewIntFromBytes expects [sign_byte, value_bytes...] format,
-// so we prepend 0x00 (positive sign).
-func intFromRawBytes(rawBytes []byte) *numct.Int {
-	signPrefixed := make([]byte, len(rawBytes)+1)
-	signPrefixed[0] = 0x00 // positive sign
-	copy(signPrefixed[1:], rawBytes)
+// intFromRawBytes creates a numct.Int from raw big-endian bytes.
+func intFromRawBytes(signPrefixed []byte) *numct.Int {
 	return numct.NewIntFromBytes(signPrefixed)
 }
 
@@ -217,9 +212,6 @@ func (*Integers) IterRange(start, stop *Int) iter.Seq[*Int] {
 	var direction func(*Int) *Int
 	if stop == nil {
 		direction = func(i *Int) *Int { return i.Increment() }
-		if start.IsNegative() {
-			direction = func(i *Int) *Int { return i.Decrement() }
-		}
 		return func(yield func(*Int) bool) {
 			for {
 				if !yield(cursor) {
@@ -268,7 +260,7 @@ func (zs *Integers) MultiScalarMul(scs []*Int, es []*Int) (*Int, error) {
 }
 
 func (*Integers) ElementSize() int {
-	return 0 // Int does not have a fixed size
+	return -1
 }
 
 func (*Integers) ScalarStructure() algebra.Structure[*Int] {
@@ -413,18 +405,18 @@ func (i *Int) IsUnit(modulus *NatPlus) bool {
 
 func (i *Int) TryDiv(other *Int) (*Int, error) {
 	if _, err := i.isValid(other); err != nil {
-		return nil, errs.WrapFailed(err, "argument is not valid")
+		return nil, errs.WrapArgument(err, "argument is not valid")
 	}
-	// First check if division would be exact
-	quotient, remainder, err := i.EuclideanDiv(other)
-	if err != nil {
-		return nil, err
+	v := new(numct.Int)
+	divisorMod, modOk := numct.NewModulus(other.v.Absed())
+	if modOk != ct.True {
+		return nil, errs.NewFailed("failed to create modulus from divisor")
 	}
-	// Check if remainder is zero (exact division)
-	if !remainder.IsZero() {
+	if ok := v.ExactDiv(i.v, divisorMod); ok != ct.True {
 		return nil, errs.NewFailed("division is not exact")
 	}
-	return quotient, nil
+	out := &Int{v: v}
+	return i.isValid(out)
 }
 
 func (i *Int) TryInv() (*Int, error) {
@@ -515,30 +507,7 @@ func (i *Int) Rat() *Rat {
 }
 
 func (i *Int) Bytes() []byte {
-	// Sign-magnitude encoding:
-	// - For zero: [0x00]
-	// - For positive: [0x00, ...absolute value bytes...]
-	// - For negative: [0x01, ...absolute value bytes...]
-
-	if i.IsZero() {
-		return []byte{0x00}
-	}
-
-	absBytes := new(big.Int).Abs(i.v.Big()).Bytes()
-
-	if i.IsNegative() {
-		// Negative: prefix with 0x01
-		result := make([]byte, len(absBytes)+1)
-		result[0] = 0x01
-		copy(result[1:], absBytes)
-		return result
-	}
-
-	// Positive: prefix with 0x00
-	result := make([]byte, len(absBytes)+1)
-	result[0] = 0x00
-	copy(result[1:], absBytes)
-	return result
+	return i.v.Bytes()
 }
 
 func (n *Int) Bit(i uint) byte {

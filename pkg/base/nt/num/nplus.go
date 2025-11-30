@@ -22,8 +22,10 @@ var (
 	nplusOnce     sync.Once
 )
 
+// PositiveNaturalNumbers represents the set of positive natural numbers (N\{0}).
 type PositiveNaturalNumbers struct{}
 
+// NPlus returns the singleton instance of PositiveNaturalNumbers.
 func NPlus() *PositiveNaturalNumbers {
 	nplusOnce.Do(func() {
 		nplusInstance = &PositiveNaturalNumbers{}
@@ -31,22 +33,27 @@ func NPlus() *PositiveNaturalNumbers {
 	return nplusInstance
 }
 
+// Name returns the name of the structure: "N\{0}".
 func (*PositiveNaturalNumbers) Name() string {
 	return "N\\{0}"
 }
 
+// Characteristic returns the characteristic of PositiveNaturalNumbers, which is 0.
 func (*PositiveNaturalNumbers) Characteristic() cardinal.Cardinal {
 	return cardinal.Zero()
 }
 
+// Order returns the order of PositiveNaturalNumbers, which is infinite.
 func (*PositiveNaturalNumbers) Order() cardinal.Cardinal {
 	return cardinal.Infinite()
 }
 
+// One returns the multiplicative identity element of PositiveNaturalNumbers, which is 1.
 func (*PositiveNaturalNumbers) One() *NatPlus {
 	return &NatPlus{v: numct.NatOne()}
 }
 
+// FromCardinal creates a NatPlus from the given cardinal, returning an error if the cardinal is zero.
 func (*PositiveNaturalNumbers) FromCardinal(c algebra.Cardinal) (*NatPlus, error) {
 	if c == nil {
 		return nil, errs.NewValue("cardinal must not be nil")
@@ -57,6 +64,7 @@ func (*PositiveNaturalNumbers) FromCardinal(c algebra.Cardinal) (*NatPlus, error
 	return &NatPlus{v: numct.NewNatFromBytes(c.Bytes())}, nil
 }
 
+// FromBig creates a NatPlus from the given big.Int, returning an error if the integer is nil or not positive.
 func (nps *PositiveNaturalNumbers) FromBig(b *big.Int) (*NatPlus, error) {
 	if b == nil {
 		return nil, errs.NewValue("big.Int must not be nil")
@@ -67,10 +75,12 @@ func (nps *PositiveNaturalNumbers) FromBig(b *big.Int) (*NatPlus, error) {
 	return nps.FromBytes(b.Bytes())
 }
 
+// FromModulusCT creates a NatPlus from the given numct.Modulus.
 func (nps *PositiveNaturalNumbers) FromModulusCT(m *numct.Modulus) *NatPlus {
 	return &NatPlus{v: m.Nat(), m: m}
 }
 
+// FromRat creates a NatPlus from the given Rat, returning an error if the Rat is not a positive integer.
 func (nps *PositiveNaturalNumbers) FromRat(v *Rat) (*NatPlus, error) {
 	vInt, err := Z().FromRat(v)
 	if err != nil {
@@ -79,6 +89,7 @@ func (nps *PositiveNaturalNumbers) FromRat(v *Rat) (*NatPlus, error) {
 	return nps.FromInt(vInt)
 }
 
+// FromUint64 creates a NatPlus from the given uint64, returning an error if the value is zero.
 func (*PositiveNaturalNumbers) FromUint64(value uint64) (*NatPlus, error) {
 	if value == 0 {
 		return nil, errs.NewValue("value must be greater than 0")
@@ -86,6 +97,7 @@ func (*PositiveNaturalNumbers) FromUint64(value uint64) (*NatPlus, error) {
 	return &NatPlus{v: numct.NewNat(value)}, nil
 }
 
+// FromNat creates a NatPlus from the given Nat, returning an error if the Nat is nil or zero.
 func (*PositiveNaturalNumbers) FromNat(value *Nat) (*NatPlus, error) {
 	if value == nil {
 		return nil, errs.NewValue("value must not be nil")
@@ -96,6 +108,7 @@ func (*PositiveNaturalNumbers) FromNat(value *Nat) (*NatPlus, error) {
 	return &NatPlus{v: value.v.Clone()}, nil
 }
 
+// FromNatCT creates a NatPlus from the given numct.Nat, returning an error if the value is nil or zero.
 func (*PositiveNaturalNumbers) FromNatCT(value *numct.Nat) (*NatPlus, error) {
 	if value == nil {
 		return nil, errs.NewValue("value must not be nil")
@@ -106,6 +119,7 @@ func (*PositiveNaturalNumbers) FromNatCT(value *numct.Nat) (*NatPlus, error) {
 	return &NatPlus{v: value.Clone()}, nil
 }
 
+// FromInt creates a NatPlus from the given Int, returning an error if the Int is nil, zero, or negative.
 func (*PositiveNaturalNumbers) FromInt(value *Int) (*NatPlus, error) {
 	if value == nil {
 		return nil, errs.NewValue("value must not be nil")
@@ -119,46 +133,50 @@ func (*PositiveNaturalNumbers) FromInt(value *Int) (*NatPlus, error) {
 	return &NatPlus{v: value.Abs().v}, nil
 }
 
+// FromBytes creates a NatPlus from the given big-endian byte slice, returning an error if the input is empty or represents zero.
 func (*PositiveNaturalNumbers) FromBytes(input []byte) (*NatPlus, error) {
 	if len(input) == 0 || ct.SliceIsZero(input) == ct.True {
 		return nil, errs.NewValue("input must not be empty")
 	}
-	return &NatPlus{v: numct.NewNatFromBytes(input)}, nil
-}
-
-func (nps *PositiveNaturalNumbers) FromBytesBE(input []byte) (*NatPlus, error) {
-	out, err := nps.FromBytes(input)
-	if err != nil {
-		return nil, errs.WrapArgument(err, "failed to create NatPlus from bytes BE")
-	}
+	out := &NatPlus{v: numct.NewNatFromBytes(input)}
 	if out.v.IsZero() == ct.True {
 		return nil, errs.NewValue("input must represent a positive natural number")
 	}
 	return out, nil
 }
 
-func (nps *PositiveNaturalNumbers) Random(lowInclusive, highExclusive *NatPlus, prng io.Reader) (*NatPlus, error) {
-	if highExclusive == nil {
-		return nil, errs.NewIsNil("highExclusive must not be nil")
+// FromBytesBE creates a NatPlus from the given big-endian byte slice, returning an error if the input is empty or represents zero.
+func (nps *PositiveNaturalNumbers) FromBytesBE(input []byte) (*NatPlus, error) {
+	out, err := nps.FromBytes(input)
+	if err != nil {
+		return nil, errs.WrapArgument(err, "failed to create NatPlus from bytes BE")
 	}
+	return out, nil
+}
+
+// Random generates a random NatPlus in the range [lowInclusive, highExclusive), returning an error if highExclusive is nil.
+func (nps *PositiveNaturalNumbers) Random(lowInclusive, highExclusive *NatPlus, prng io.Reader) (*NatPlus, error) {
 	if lowInclusive == nil {
 		lowInclusive = nps.Bottom()
 	}
 	var v numct.Nat
-	if err := v.SetRandomRangeLH(lowInclusive.v, highExclusive.v, prng); err != nil {
+	if err := v.SetRandomRangeLH(lowInclusive.Value(), highExclusive.Value(), prng); err != nil {
 		return nil, errs.WrapRandomSample(err, "failed to sample random NatPlus")
 	}
 	return &NatPlus{v: &v}, nil
 }
 
+// Iter returns an iterator over all positive natural numbers, starting from 1.
 func (nps *PositiveNaturalNumbers) Iter() iter.Seq[*NatPlus] {
 	return nps.IterRange(nps.One(), nil)
 }
 
+// OpIdentity returns the multiplicative identity element of PositiveNaturalNumbers, which is 1.
 func (nps *PositiveNaturalNumbers) OpIdentity() *NatPlus {
 	return nps.One()
 }
 
+// IterRange returns an iterator over positive natural numbers in the range [start, stop).
 func (nps *PositiveNaturalNumbers) IterRange(start, stop *NatPlus) iter.Seq[*NatPlus] {
 	return func(yield func(*NatPlus) bool) {
 		if start == nil {
@@ -185,14 +203,17 @@ func (nps *PositiveNaturalNumbers) IterRange(start, stop *NatPlus) iter.Seq[*Nat
 	}
 }
 
+// ElementSize returns -1 indicating that NatPlus does not have a fixed element size.
 func (nps *PositiveNaturalNumbers) ElementSize() int {
 	return -1
 }
 
+// Bottom returns the smallest element of PositiveNaturalNumbers, which is 1.
 func (nps *PositiveNaturalNumbers) Bottom() *NatPlus {
 	return nps.One()
 }
 
+// NatPlus represents a positive natural number (N\{0}).
 type NatPlus struct {
 	v *numct.Nat
 	m *numct.Modulus
@@ -222,99 +243,114 @@ func (np *NatPlus) cacheMont(m *numct.Modulus) *NatPlus {
 	return np
 }
 
+// Structure returns the algebraic structure of NatPlus, which is PositiveNaturalNumbers.
 func (*NatPlus) Structure() algebra.Structure[*NatPlus] {
 	return NPlus()
 }
 
+// Value returns the underlying numct.Nat value of the NatPlus.
 func (np *NatPlus) Value() *numct.Nat {
+	if np == nil {
+		return nil
+	}
 	return np.v
 }
 
+// Op performs multiplication of two NatPlus elements.
 func (np *NatPlus) Op(other *NatPlus) *NatPlus {
 	return np.Mul(other)
 }
 
+// OtherOp performs addition of two NatPlus elements.
 func (np *NatPlus) OtherOp(other *NatPlus) *NatPlus {
 	return np.Add(other)
 }
 
+// Add performs addition of two NatPlus elements.
 func (np *NatPlus) Add(other *NatPlus) *NatPlus {
 	errs2.Must1(np.isValid(other))
 	v := new(numct.Nat)
 	v.Add(np.v, other.v)
-	return errs2.Must1(np.isValid(&NatPlus{v: v, m: np.m}))
+	return errs2.Must1(np.isValid(&NatPlus{v: v}))
 }
 
+// Mul performs multiplication of two NatPlus elements.
 func (np *NatPlus) Mul(other *NatPlus) *NatPlus {
 	errs2.Must1(np.isValid(other))
 	v := new(numct.Nat)
 	v.Mul(np.v, other.v)
-	out := &NatPlus{v: v, m: np.m}
+	out := &NatPlus{v: v}
 	return errs2.Must1(np.isValid(out))
 }
 
+// Lsh performs a left shift operation on the NatPlus.
 func (np *NatPlus) Lsh(shift uint) *NatPlus {
 	v := new(numct.Nat)
 	v.Lsh(np.v, shift)
-	out := &NatPlus{v: v, m: np.m}
+	out := &NatPlus{v: v}
 	return errs2.Must1(np.isValid(out))
 }
 
+// Rsh performs a right shift operation on the NatPlus.
 func (np *NatPlus) Rsh(shift uint) *NatPlus {
 	v := new(numct.Nat)
 	v.Rsh(np.v, shift)
-	out := &NatPlus{v: v, m: np.m}
+	out := &NatPlus{v: v}
 	return errs2.Must1(np.isValid(out))
 }
 
+// Double returns the result of multiplying the NatPlus by 2.
 func (np *NatPlus) Double() *NatPlus {
 	return np.Add(np)
 }
 
+// Square returns the result of squaring the NatPlus.
 func (np *NatPlus) Square() *NatPlus {
 	return np.Mul(np)
 }
 
+// IsOne checks if the NatPlus is equal to 1.
 func (np *NatPlus) IsOne() bool {
 	return np.v.IsOne() == ct.True
 }
 
+// IsOpIdentity checks if the NatPlus is the multiplicative identity (1).
 func (np *NatPlus) IsOpIdentity() bool {
 	return np.IsOne()
 }
 
+// Compare compares the NatPlus with another NatPlus, returning the ordering result.
 func (np *NatPlus) Compare(other *NatPlus) base.Ordering {
 	errs2.Must1(np.isValid(other))
 	lt, eq, gt := np.v.Compare(other.v)
 	return base.Ordering(-1*int(lt) + 0*int(eq) + 1*int(gt))
 }
 
+// TryInv attempts to compute the multiplicative inverse of the NatPlus, returning an error since it does not exist.
 func (np *NatPlus) TryInv() (*NatPlus, error) {
 	return nil, errs.NewValue("no multiplicative inverse for NatPlus")
 }
 
+// TryOpInv attempts to compute the multiplicative inverse of the NatPlus, returning an error since it does not exist.
 func (np *NatPlus) TryOpInv() (*NatPlus, error) {
 	return np.TryInv()
 }
 
+// TryDiv attempts to divide the NatPlus by another NatPlus, returning an error if the division is not exact.
 func (np *NatPlus) TryDiv(other *NatPlus) (*NatPlus, error) {
 	if _, err := np.isValid(other); err != nil {
 		return nil, errs.WrapArgument(err, "argument is not valid")
 	}
 	v := new(numct.Nat)
-	// Create modulus from divisor
-	divisorMod, modOk := numct.NewModulus(other.v)
-	if modOk != ct.True {
-		return nil, errs.NewFailed("failed to create modulus from divisor")
-	}
 	// Use ExactDiv to ensure only exact division succeeds
-	if ok := v.ExactDiv(np.v, divisorMod); ok != ct.True {
+	if ok := v.ExactDiv(np.v, other.ModulusCT()); ok != ct.True {
 		return nil, errs.NewFailed("division is not exact")
 	}
-	out := &NatPlus{v: v, m: np.m}
+	out := &NatPlus{v: v}
 	return np.isValid(out)
 }
 
+// TrySub attempts to subtract another NatPlus from the NatPlus, returning an error if the result is not a positive natural number.
 func (np *NatPlus) TrySub(other *NatPlus) (*NatPlus, error) {
 	if _, err := np.isValid(other); err != nil {
 		return nil, errs.WrapArgument(err, "argument is not valid")
@@ -324,82 +360,100 @@ func (np *NatPlus) TrySub(other *NatPlus) (*NatPlus, error) {
 	}
 	v := new(numct.Nat)
 	v.SubCap(np.v, other.v, -1)
-	out := &NatPlus{v: v, m: np.m}
+	out := &NatPlus{v: v}
 	return np.isValid(out)
 }
 
+// IsLessThanOrEqual checks if the NatPlus is less than or equal to another NatPlus.
 func (np *NatPlus) IsLessThanOrEqual(other *NatPlus) bool {
 	errs2.Must1(np.isValid(other))
 	lt, eq, _ := np.v.Compare(other.v)
 	return lt|eq == ct.True
 }
 
+// IsUnit checks if the NatPlus is a unit with respect to the given modulus.
 func (np *NatPlus) IsUnit(modulus *NatPlus) bool {
 	errs2.Must1(np.isValid(modulus))
 	return np.v.Coprime(modulus.v) == ct.True
 }
 
+// Equal checks if the NatPlus is equal to another NatPlus.
 func (np *NatPlus) Equal(other *NatPlus) bool {
 	errs2.Must1(np.isValid(other))
 	return np.v.Equal(other.v) == ct.True
 }
 
+// Mod computes the modulus of the NatPlus with respect to another NatPlus.
 func (np *NatPlus) Mod(modulus *NatPlus) *Uint {
 	return np.Lift().Mod(modulus)
 }
 
+// Lift converts the NatPlus to an Int.
 func (np *NatPlus) Lift() *Int {
 	return &Int{v: np.v.Lift()}
 }
 
+// Clone creates a copy of the NatPlus.
 func (np *NatPlus) Clone() *NatPlus {
 	return &NatPlus{v: np.v.Clone(), m: np.m}
 }
 
+// HashCode computes the hash code of the NatPlus.
 func (np *NatPlus) HashCode() base.HashCode {
 	return np.v.HashCode()
 }
 
+// Abs returns the absolute value of the NatPlus, which is itself.
 func (np *NatPlus) Abs() *NatPlus {
 	return np.Clone()
 }
 
+// String returns the string representation of the NatPlus.
 func (np *NatPlus) String() string {
 	return np.v.Big().String()
 }
 
+// Increment returns the NatPlus incremented by 1.
 func (np *NatPlus) Increment() *NatPlus {
 	return np.Add(NPlus().One())
 }
 
+// Bytes returns the big-endian byte representation of the NatPlus.
 func (np *NatPlus) Bytes() []byte {
 	return np.v.Bytes()
 }
 
+// BytesBE returns the big-endian byte representation of the NatPlus.
 func (np *NatPlus) BytesBE() []byte {
 	return np.Bytes()
 }
 
+// IsBottom checks if the NatPlus is the smallest element (1).
 func (np *NatPlus) IsBottom() bool {
 	return np.IsOne()
 }
 
+// Bit returns the value of the i-th bit of the NatPlus.
 func (np *NatPlus) Bit(i uint) byte {
 	return np.v.Bit(i)
 }
 
+// Byte returns the value of the i-th byte of the NatPlus.
 func (np *NatPlus) Byte(i uint) byte {
 	return np.v.Byte(i)
 }
 
+// IsEven checks if the NatPlus is even.
 func (np *NatPlus) IsEven() bool {
 	return np.v.IsEven() == ct.True
 }
 
+// IsOdd checks if the NatPlus is odd.
 func (np *NatPlus) IsOdd() bool {
 	return np.v.IsOdd() == ct.True
 }
 
+// Decrement returns the NatPlus decremented by 1, returning an error if the result would be less than 1.
 func (np *NatPlus) Decrement() (*NatPlus, error) {
 	if np.IsOne() {
 		return nil, errs.NewValue("cannot decrement NatPlus below 1")
@@ -407,31 +461,38 @@ func (np *NatPlus) Decrement() (*NatPlus, error) {
 	return np.TrySub(NPlus().One())
 }
 
+// Big returns the big.Int representation of the NatPlus.
 func (np *NatPlus) Big() *big.Int {
 	return np.v.Big()
 }
 
+// Cardinal returns the cardinal representation of the NatPlus.
 func (np *NatPlus) Cardinal() cardinal.Cardinal {
 	return cardinal.NewFromSaferith((*saferith.Nat)(np.v))
 }
 
+// Nat returns the Nat representation of the NatPlus.
 func (np *NatPlus) Nat() *Nat {
 	return &Nat{v: np.v.Clone()}
 }
 
+// IsProbablyPrime checks if the NatPlus is probably prime.
 func (np *NatPlus) IsProbablyPrime() bool {
 	return np.v.IsProbablyPrime() == ct.True
 }
 
+// ModulusCT returns the cached modulus or computes it if not cached.
 func (np *NatPlus) ModulusCT() *numct.Modulus {
 	np.cacheMont(nil)
 	return np.m
 }
 
+// TrueLen returns the true length of the NatPlus in bytes.
 func (np *NatPlus) TrueLen() int {
 	return np.v.TrueLen()
 }
 
+// AnnouncedLen returns the announced length of the NatPlus in bytes.
 func (np *NatPlus) AnnouncedLen() int {
 	return np.v.AnnouncedLen()
 }

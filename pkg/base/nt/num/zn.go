@@ -18,13 +18,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
-var (
-	_ algebra.ZModLike[*Uint]                = (*ZMod)(nil)
-	_ algebra.UintLike[*Uint]                = (*Uint)(nil)
-	_ algebra.SemiModule[*Uint, *Nat]        = (*ZMod)(nil)
-	_ algebra.SemiModuleElement[*Uint, *Nat] = (*Uint)(nil)
-)
-
 func NewZMod(modulus *NatPlus) (*ZMod, error) {
 	if modulus == nil {
 		return nil, errs.NewIsNil("modulus")
@@ -55,9 +48,9 @@ func NewUintGivenModulus(value *numct.Nat, m *numct.Modulus) (*Uint, error) {
 	if value == nil {
 		return nil, errs.NewIsNil("value")
 	}
-	// if m.IsInRange(value) == ct.False {
-	// 	return nil, errs.NewValue("value is out of range for modulus")
-	// }
+	if m.IsInRange(value) == ct.False {
+		return nil, errs.NewValue("value is out of range for modulus")
+	}
 	return &Uint{v: value.Clone(), m: m}, nil
 }
 
