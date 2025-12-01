@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
 func Test_BaseFieldElementCBORRoundTrip(t *testing.T) {
@@ -216,7 +217,7 @@ func BenchmarkMultiScalarMul(b *testing.B) {
 	curve := k256.NewCurve()
 	scalarField := k256.NewScalarField()
 
-	for _, n := range []int{10, 50, 100, 256, 512} {
+	for _, n := range []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20} {
 		points := make([]*k256.Point, n)
 		scalars := make([]*k256.Scalar, n)
 
@@ -230,6 +231,12 @@ func BenchmarkMultiScalarMul(b *testing.B) {
 		b.Run(fmt.Sprintf("MultiScalarMul/n=%d", n), func(b *testing.B) {
 			for range b.N {
 				_, _ = curve.MultiScalarMul(scalars, points)
+			}
+		})
+
+		b.Run(fmt.Sprintf("algebrautils/n=%d", n), func(b *testing.B) {
+			for range b.N {
+				_ = algebrautils.MultiScalarMul(scalars, points)
 			}
 		})
 

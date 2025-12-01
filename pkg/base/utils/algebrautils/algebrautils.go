@@ -121,6 +121,15 @@ func MultiScalarMul[E algebra.MonoidElement[E], S algebra.NatLike[S]](
 
 	monoid := algebra.StructureMustBeAs[algebra.Monoid[E]](points[0].Structure())
 
+	// Use naive method for small n.
+	if n <= 7 {
+		acc := monoid.OpIdentity()
+		for i := range n {
+			acc = acc.Op(ScalarMul(points[i], scalars[i]))
+		}
+		return acc
+	}
+
 	// Precompute scalar bytes and max bit length.
 	scalarBytes := make([][]byte, n)
 	maxBits := 0

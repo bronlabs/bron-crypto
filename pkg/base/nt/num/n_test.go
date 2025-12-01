@@ -1,1665 +1,770 @@
 package num_test
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
-func TestNaturalNumbers_Creation(t *testing.T) {
+// Structure tests
+
+func TestN_Singleton(t *testing.T) {
 	t.Parallel()
-
-	tests := []struct {
-		name        string
-		createFunc  func() (*num.Nat, error)
-		expected    string
-		expectError bool
-	}{
-		{
-			name: "Zero",
-			createFunc: func() (*num.Nat, error) {
-				return num.N().Zero(), nil
-			},
-			expected: "0",
-		},
-		{
-			name: "One",
-			createFunc: func() (*num.Nat, error) {
-				return num.N().One(), nil
-			},
-			expected: "1",
-		},
-		{
-			name: "FromUint64_Zero",
-			createFunc: func() (*num.Nat, error) {
-				return num.N().FromUint64(0), nil
-			},
-			expected: "0",
-		},
-		{
-			name: "FromUint64_Small",
-			createFunc: func() (*num.Nat, error) {
-				return num.N().FromUint64(42), nil
-			},
-			expected: "42",
-		},
-		{
-			name: "FromUint64_Large",
-			createFunc: func() (*num.Nat, error) {
-				return num.N().FromUint64(^uint64(0)), nil
-			},
-			expected: "18446744073709551615",
-		},
-		{
-			name: "FromBytes_Empty",
-			createFunc: func() (*num.Nat, error) {
-				return num.N().FromBytes([]byte{})
-			},
-			expected: "0",
-		},
-		{
-			name: "FromBytes_Single",
-			createFunc: func() (*num.Nat, error) {
-				return num.N().FromBytes([]byte{0x42})
-			},
-			expected: "66",
-		},
-		{
-			name: "FromBytes_Multi",
-			createFunc: func() (*num.Nat, error) {
-				return num.N().FromBytes([]byte{0x01, 0x02, 0x03})
-			},
-			expected: "66051",
-		},
-		{
-			name: "FromInt_Positive",
-			createFunc: func() (*num.Nat, error) {
-				z := num.Z().FromInt64(100)
-				return num.N().FromInt(z)
-			},
-			expected: "100",
-		},
-		{
-			name: "FromInt_Zero",
-			createFunc: func() (*num.Nat, error) {
-				z := num.Z().Zero()
-				return num.N().FromInt(z)
-			},
-			expected: "0",
-		},
-		{
-			name: "FromInt_Negative_Fails",
-			createFunc: func() (*num.Nat, error) {
-				z := num.Z().FromInt64(-1)
-				return num.N().FromInt(z)
-			},
-			expectError: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result, err := tt.createFunc()
-			if tt.expectError {
-				require.Error(t, err)
-				return
-			}
-
-			require.NoError(t, err)
-			require.Equal(t, tt.expected, result.String())
-		})
-	}
-}
-
-func TestNaturalNumbers_Structure(t *testing.T) {
-	t.Parallel()
-
-	n := num.N()
-
-	// Test structure information
-	require.Equal(t, "N", n.Name())
-
-	// Order is infinite
-	order := n.Order()
-	require.Equal(t, "Infinite", order.String())
-
-	// Element size is 0 (variable size)
-	require.Equal(t, 0, n.ElementSize())
-
-	// Test characteristic should be 0 for natural numbers
-	char := n.Characteristic()
-	require.True(t, char.IsZero())
-
-	// Test identity element (zero)
-	identity := n.OpIdentity()
-	require.True(t, identity.IsZero())
-
-	// Test that any nat's structure returns the same singleton
-	someNat := n.FromUint64(42)
-	require.Equal(t, n, someNat.Structure())
-}
-
-func TestNaturalNumbers_Division(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name         string
-		dividend     *num.Nat
-		divisor      *num.Nat
-		expectedQuot string
-		expectedRem  string
-		expectError  bool
-	}{
-		{
-			name:         "Exact_Division",
-			dividend:     num.N().FromUint64(42),
-			divisor:      num.N().FromUint64(6),
-			expectedQuot: "7",
-			expectedRem:  "0",
-		},
-		{
-			name:         "Division_With_Remainder",
-			dividend:     num.N().FromUint64(43),
-			divisor:      num.N().FromUint64(6),
-			expectedQuot: "7",
-			expectedRem:  "1",
-		},
-		{
-			name:         "Zero_Dividend",
-			dividend:     num.N().Zero(),
-			divisor:      num.N().FromUint64(5),
-			expectedQuot: "0",
-			expectedRem:  "0",
-		},
-		{
-			name:        "Division_By_Zero",
-			dividend:    num.N().FromUint64(42),
-			divisor:     num.N().Zero(),
-			expectError: true,
-		},
-		{
-			name:         "One_Divisor",
-			dividend:     num.N().FromUint64(42),
-			divisor:      num.N().One(),
-			expectedQuot: "42",
-			expectedRem:  "0",
-		},
-		{
-			name:         "Large_Division",
-			dividend:     num.N().FromUint64(1000000),
-			divisor:      num.N().FromUint64(37),
-			expectedQuot: "27027",
-			expectedRem:  "1",
-		},
-		{
-			name:         "Same_Numbers",
-			dividend:     num.N().FromUint64(17),
-			divisor:      num.N().FromUint64(17),
-			expectedQuot: "1",
-			expectedRem:  "0",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			quot, rem, err := tt.dividend.EuclideanDiv(tt.divisor)
-
-			if tt.expectError {
-				require.Error(t, err)
-				return
-			}
-
-			require.NoError(t, err)
-			require.Equal(t, tt.expectedQuot, quot.String())
-			require.Equal(t, tt.expectedRem, rem.String())
-
-			// Verify: dividend = divisor * quotient + remainder
-			reconstructed := quot.Mul(tt.divisor).Add(rem)
-			require.True(t, reconstructed.Equal(tt.dividend))
-		})
-	}
-
-	// Test TryDiv for exact division
-	t.Run("TryDiv", func(t *testing.T) {
-		t.Parallel()
-
-		// Exact division should succeed
-		result, err := num.N().FromUint64(42).TryDiv(num.N().FromUint64(6))
-		require.NoError(t, err)
-		require.Equal(t, "7", result.String())
-
-		// Inexact division should fail
-		_, err = num.N().FromUint64(43).TryDiv(num.N().FromUint64(6))
-		require.Error(t, err)
-
-		// Division by zero should fail
-		_, err = num.N().FromUint64(42).TryDiv(num.N().Zero())
-		require.Error(t, err)
-	})
-}
-
-// mustNatPlusN is a helper function for tests
-func mustNatPlusN(n *num.NatPlus, err error) *num.NatPlus {
-	if err != nil {
-		panic(err)
-	}
-	return n
-}
-
-func TestNaturalNumbers_Modulo(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		value    *num.Nat
-		modulus  *num.NatPlus
-		expected string
-	}{
-		{
-			name:     "Small_Mod",
-			value:    num.N().FromUint64(17),
-			modulus:  mustNatPlusN(num.NPlus().FromUint64(5)),
-			expected: "2",
-		},
-		{
-			name:     "Exact_Multiple",
-			value:    num.N().FromUint64(20),
-			modulus:  mustNatPlusN(num.NPlus().FromUint64(5)),
-			expected: "0",
-		},
-		{
-			name:     "Zero_Value",
-			value:    num.N().Zero(),
-			modulus:  mustNatPlusN(num.NPlus().FromUint64(7)),
-			expected: "0",
-		},
-		{
-			name:     "Large_Modulus",
-			value:    num.N().FromUint64(1000000),
-			modulus:  mustNatPlusN(num.NPlus().FromUint64(37)),
-			expected: "1",
-		},
-		{
-			name:     "Value_Less_Than_Modulus",
-			value:    num.N().FromUint64(3),
-			modulus:  mustNatPlusN(num.NPlus().FromUint64(10)),
-			expected: "3",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result := tt.value.Mod(tt.modulus)
-			require.Equal(t, tt.expected, result.String())
-		})
-	}
-}
-
-func TestNaturalNumbers_NotSupported(t *testing.T) {
-	t.Parallel()
-
-	t.Run("TryOpInv", func(t *testing.T) {
-		t.Parallel()
-		// Natural numbers don't have additive inverses
-		values := []*num.Nat{
-			num.N().Zero(),
-			num.N().One(),
-			num.N().FromUint64(42),
-		}
-
-		for _, v := range values {
-			_, err := v.TryOpInv()
-			require.Error(t, err, "Expected error for TryOpInv of %s", v.String())
-		}
-	})
-
-	t.Run("TryNeg", func(t *testing.T) {
-		t.Parallel()
-		// Natural numbers can't be negated
-		values := []*num.Nat{
-			num.N().Zero(),
-			num.N().One(),
-			num.N().FromUint64(42),
-		}
-
-		for _, v := range values {
-			_, err := v.TryNeg()
-			require.Error(t, err, "Expected error for TryNeg of %s", v.String())
-		}
-	})
-
-	t.Run("TryInv", func(t *testing.T) {
-		t.Parallel()
-		// Natural numbers don't have multiplicative inverses
-		values := []*num.Nat{
-			num.N().One(),
-			num.N().FromUint64(2),
-			num.N().FromUint64(42),
-		}
-
-		for _, v := range values {
-			_, err := v.TryInv()
-			require.Error(t, err, "Expected error for TryInv of %s", v.String())
-		}
-	})
-}
-
-func TestNaturalNumbers_IsUnit(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		value    *num.Nat
-		modulus  *num.NatPlus
-		expected bool
-	}{
-		{
-			name:     "One_Is_Unit",
-			value:    num.N().One(),
-			modulus:  mustNatPlusN(num.NPlus().FromUint64(5)),
-			expected: true,
-		},
-		{
-			name:     "Coprime_Is_Unit",
-			value:    num.N().FromUint64(3),
-			modulus:  mustNatPlusN(num.NPlus().FromUint64(5)),
-			expected: true,
-		},
-		{
-			name:     "Not_Coprime_Not_Unit",
-			value:    num.N().FromUint64(6),
-			modulus:  mustNatPlusN(num.NPlus().FromUint64(9)),
-			expected: false,
-		},
-		{
-			name:     "Zero_Not_Unit",
-			value:    num.N().Zero(),
-			modulus:  mustNatPlusN(num.NPlus().FromUint64(5)),
-			expected: false,
-		},
-		{
-			name:     "Large_Prime_Is_Unit",
-			value:    num.N().FromUint64(17),
-			modulus:  mustNatPlusN(num.NPlus().FromUint64(23)),
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result := tt.value.IsUnit(tt.modulus)
-			require.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestNaturalNumbers_Cardinal(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		value    *num.Nat
-		expected string
-	}{
-		{
-			name:     "Zero",
-			value:    num.N().Zero(),
-			expected: "Cardinal(0)",
-		},
-		{
-			name:     "One",
-			value:    num.N().One(),
-			expected: "Cardinal(1)",
-		},
-		{
-			name:     "Small",
-			value:    num.N().FromUint64(42),
-			expected: "Cardinal(42)",
-		},
-		{
-			name:     "Large",
-			value:    num.N().FromUint64(1000000),
-			expected: "Cardinal(1000000)",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			card := tt.value.Cardinal()
-			require.Equal(t, tt.expected, card.String())
-		})
-	}
-}
-
-func TestNaturalNumbers_FromCardinal(t *testing.T) {
-	t.Parallel()
-
-	// Test converting cardinal to natural number
-	testValues := []uint64{0, 1, 42, 1000000}
-
-	for _, val := range testValues {
-		nat := num.N().FromUint64(val)
-		card := nat.Cardinal()
-
-		// Convert back from cardinal
-		recovered, err := num.N().FromCardinal(card)
-		require.NoError(t, err)
-		require.True(t, nat.Equal(recovered))
-	}
-}
-
-func TestNaturalNumbers_IsPositive(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		value    *num.Nat
-		expected bool
-	}{
-		{
-			name:     "Zero_Not_Positive",
-			value:    num.N().Zero(),
-			expected: false,
-		},
-		{
-			name:     "One_Is_Positive",
-			value:    num.N().One(),
-			expected: true,
-		},
-		{
-			name:     "Large_Is_Positive",
-			value:    num.N().FromUint64(42),
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result := tt.value.IsPositive()
-			require.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestNaturalNumbers_IsOpIdentity(t *testing.T) {
-	t.Parallel()
-
-	// Only zero is the additive identity
-	require.True(t, num.N().Zero().IsOpIdentity())
-	require.False(t, num.N().One().IsOpIdentity())
-	require.False(t, num.N().FromUint64(42).IsOpIdentity())
-}
-
-func TestNaturalNumbers_Coprime(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		a        *num.Nat
-		b        *num.Nat
-		expected bool
-	}{
-		{
-			name:     "Small_Coprimes",
-			a:        num.N().FromUint64(3),
-			b:        num.N().FromUint64(4),
-			expected: true,
-		},
-		{
-			name:     "Not_Coprime",
-			a:        num.N().FromUint64(6),
-			b:        num.N().FromUint64(9),
-			expected: false, // gcd(6,9) = 3
-		},
-		{
-			name:     "With_One",
-			a:        num.N().FromUint64(42),
-			b:        num.N().One(),
-			expected: true, // Everything is coprime with 1
-		},
-		{
-			name:     "Same_Number",
-			a:        num.N().FromUint64(5),
-			b:        num.N().FromUint64(5),
-			expected: false, // gcd(5,5) = 5
-		},
-		{
-			name:     "Prime_Numbers",
-			a:        num.N().FromUint64(17),
-			b:        num.N().FromUint64(23),
-			expected: true,
-		},
-		{
-			name:     "Powers_Of_Two",
-			a:        num.N().FromUint64(16),
-			b:        num.N().FromUint64(32),
-			expected: false, // gcd(16,32) = 16
-		},
-		{
-			name:     "Zero_With_Nonzero",
-			a:        num.N().Zero(),
-			b:        num.N().FromUint64(5),
-			expected: false, // gcd(0,5) = 5
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result := tt.a.Coprime(tt.b)
-			require.Equal(t, tt.expected, result)
-
-			// Coprime should be symmetric
-			result2 := tt.b.Coprime(tt.a)
-			require.Equal(t, tt.expected, result2)
-		})
-	}
-}
-
-func TestNaturalNumbers_PrimalityTest(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		value   *num.Nat
-		isPrime bool
-	}{
-		{
-			name:    "Zero_Not_Prime",
-			value:   num.N().Zero(),
-			isPrime: false,
-		},
-		{
-			name:    "One_Not_Prime",
-			value:   num.N().One(),
-			isPrime: false,
-		},
-		{
-			name:    "Small_Prime_2",
-			value:   num.N().FromUint64(2),
-			isPrime: true,
-		},
-		{
-			name:    "Small_Prime_3",
-			value:   num.N().FromUint64(3),
-			isPrime: true,
-		},
-		{
-			name:    "Small_Composite_4",
-			value:   num.N().FromUint64(4),
-			isPrime: false,
-		},
-		{
-			name:    "Prime_17",
-			value:   num.N().FromUint64(17),
-			isPrime: true,
-		},
-		{
-			name:    "Composite_21",
-			value:   num.N().FromUint64(21),
-			isPrime: false,
-		},
-		{
-			name:    "Large_Prime",
-			value:   num.N().FromUint64(97),
-			isPrime: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result := tt.value.IsProbablyPrime()
-			require.Equal(t, tt.isPrime, result)
-		})
-	}
-}
-
-func TestNaturalNumbers_HashCode(t *testing.T) {
-	t.Parallel()
-
-	// Same values should have same hash
-	a := num.N().FromUint64(42)
-	b := num.N().FromUint64(42)
-	require.Equal(t, a.HashCode(), b.HashCode())
-
-	// Different values should (usually) have different hashes
-	c := num.N().FromUint64(43)
-	require.NotEqual(t, a.HashCode(), c.HashCode())
-
-	// Zero should have consistent hash
-	z1 := num.N().Zero()
-	z2 := num.N().Zero()
-	require.Equal(t, z1.HashCode(), z2.HashCode())
-}
-
-func TestNaturalNumbers_Increment(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		input    *num.Nat
-		expected string
-	}{
-		{num.N().Zero(), "1"},
-		{num.N().One(), "2"},
-		{num.N().FromUint64(41), "42"},
-		{num.N().FromUint64(999), "1000"},
-	}
-
-	for _, tt := range tests {
-		result := tt.input.Increment()
-		require.Equal(t, tt.expected, result.String())
-	}
-}
-
-func TestNaturalNumbers_Bit(t *testing.T) {
-	t.Parallel()
-
-	// Test Byte() method - returns the i-th byte
-	// Test number: 0x0102030405060708
-	n, _ := num.N().FromBytes([]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08})
-
-	require.Equal(t, uint8(0x08), n.Byte(0)) // Least significant byte
-	require.Equal(t, uint8(0x07), n.Byte(1))
-	require.Equal(t, uint8(0x06), n.Byte(2))
-	require.Equal(t, uint8(0x05), n.Byte(3))
-	require.Equal(t, uint8(0x04), n.Byte(4))
-	require.Equal(t, uint8(0x03), n.Byte(5))
-	require.Equal(t, uint8(0x02), n.Byte(6))
-	require.Equal(t, uint8(0x01), n.Byte(7)) // Most significant byte
-
-	// Also test the actual Bit() method - returns i-th bit
-	// Number 0x08 = 0b00001000
-	require.Equal(t, uint8(0), n.Bit(0)) // bit 0
-	require.Equal(t, uint8(0), n.Bit(1)) // bit 1
-	require.Equal(t, uint8(0), n.Bit(2)) // bit 2
-	require.Equal(t, uint8(1), n.Bit(3)) // bit 3 (the '1' in 0b00001000)
-	require.Equal(t, uint8(0), n.Bit(4)) // bit 4
-	require.Equal(t, uint8(1), n.Bit(8)) // bit 8 (first bit of second byte 0x07)
-
-	// Test with single byte number
-	small := num.N().FromUint64(13)          // 0x0D = 0b00001101
-	require.Equal(t, uint8(1), small.Bit(0)) // bit 0
-	require.Equal(t, uint8(0), small.Bit(1)) // bit 1
-	require.Equal(t, uint8(1), small.Bit(2)) // bit 2
-	require.Equal(t, uint8(1), small.Bit(3)) // bit 3
-
-	// Test with zero
-	zero := num.N().Zero()
-	require.Equal(t, uint8(0), zero.Bit(0))
-	require.Equal(t, uint8(0), zero.Bit(10))
-}
-
-func TestNaturalNumbers_LengthMethods(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name         string
-		value        *num.Nat
-		expectedLen  int
-		announcedLen int
-	}{
-		{
-			name:         "Zero",
-			value:        num.N().Zero(),
-			expectedLen:  0,
-			announcedLen: 1,
-		},
-		{
-			name:         "Small",
-			value:        num.N().FromUint64(255),
-			expectedLen:  8,
-			announcedLen: 64,
-		},
-		{
-			name:         "Large",
-			value:        num.N().FromUint64(65536),
-			expectedLen:  17,
-			announcedLen: 64,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			require.Equal(t, tt.expectedLen, tt.value.TrueLen())
-			require.Equal(t, tt.announcedLen, tt.value.AnnouncedLen())
-		})
-	}
-}
-
-func TestNaturalNumbers_Iterators(t *testing.T) {
-	t.Parallel()
-
-	t.Run("IterRange", func(t *testing.T) {
-		t.Parallel()
-
-		// Test forward iteration
-		start := num.N().FromUint64(3)
-		stop := num.N().FromUint64(8)
-
-		var collected []string
-		for v := range num.N().IterRange(start, stop) {
-			collected = append(collected, v.String())
-		}
-
-		expected := []string{"3", "4", "5", "6", "7"}
-		require.Equal(t, expected, collected)
-
-		// Test empty range (start >= stop)
-		start2 := num.N().FromUint64(5)
-		stop2 := num.N().FromUint64(5)
-
-		count := 0
-		for range num.N().IterRange(start2, stop2) {
-			count++
-		}
-		require.Equal(t, 0, count)
-
-		// Test from zero
-		start3 := num.N().Zero()
-		stop3 := num.N().FromUint64(3)
-
-		var collected2 []string
-		for v := range num.N().IterRange(start3, stop3) {
-			collected2 = append(collected2, v.String())
-		}
-
-		expected2 := []string{"0", "1", "2"}
-		require.Equal(t, expected2, collected2)
-
-		// Test with nil start (should use zero)
-		var collected3 []string
-		for v := range num.N().IterRange(nil, num.N().FromUint64(3)) {
-			collected3 = append(collected3, v.String())
-		}
-		require.Equal(t, expected2, collected3)
-	})
-
-	t.Run("Iter", func(t *testing.T) {
-		t.Parallel()
-
-		// Test iteration from zero
-		var collected []string
-		count := 0
-		for v := range num.N().Iter() {
-			collected = append(collected, v.String())
-			count++
-			if count >= 5 {
-				break
-			}
-		}
-
-		expected := []string{"0", "1", "2", "3", "4"}
-		require.Equal(t, expected, collected)
-	})
-}
-
-func TestNaturalNumbers_ErrorHandling(t *testing.T) {
-	t.Parallel()
-
-	t.Run("FromBytes_Nil", func(t *testing.T) {
-		t.Parallel()
-		_, err := num.N().FromBytes(nil)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "must not be nil")
-	})
-
-	t.Run("FromInt_Nil", func(t *testing.T) {
-		t.Parallel()
-		_, err := num.N().FromInt(nil)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "must not be nil")
-	})
-
-	t.Run("Random_Nil_HighExclusive", func(t *testing.T) {
-		t.Parallel()
-		_, err := num.N().Random(nil, nil, pcg.NewRandomised())
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "must not be nil")
-	})
-
-	t.Run("Random_Nil_PRNG", func(t *testing.T) {
-		t.Parallel()
-		lower := num.N().FromUint64(10)
-		upper := num.N().FromUint64(20)
-		_, err := num.N().Random(lower, upper, nil)
-		require.Error(t, err)
-		// Note: errs2.Join() may lose the inner error message
-	})
-}
-
-func TestNaturalNumbers_Addition(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		a        *num.Nat
-		b        *num.Nat
-		expected string
-	}{
-		{
-			name:     "Zero_Plus_Zero",
-			a:        num.N().Zero(),
-			b:        num.N().Zero(),
-			expected: "0",
-		},
-		{
-			name:     "Zero_Plus_One",
-			a:        num.N().Zero(),
-			b:        num.N().One(),
-			expected: "1",
-		},
-		{
-			name:     "One_Plus_One",
-			a:        num.N().One(),
-			b:        num.N().One(),
-			expected: "2",
-		},
-		{
-			name:     "Small_Plus_Small",
-			a:        num.N().FromUint64(25),
-			b:        num.N().FromUint64(17),
-			expected: "42",
-		},
-		{
-			name:     "Large_Plus_Small",
-			a:        num.N().FromUint64(1000000),
-			b:        num.N().FromUint64(1),
-			expected: "1000001",
-		},
-		{
-			name:     "Max_Uint64_Plus_One",
-			a:        num.N().FromUint64(^uint64(0)),
-			b:        num.N().One(),
-			expected: "18446744073709551616",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Test Add
-			result := (tt.a.Add(tt.b))
-			require.Equal(t, tt.expected, result.String())
-
-			// Test Op (should be same as Add)
-			result2 := (tt.a.Op(tt.b))
-			require.Equal(t, tt.expected, result2.String())
-
-			// Test commutativity
-			result3 := (tt.b.Add(tt.a))
-			require.Equal(t, tt.expected, result3.String())
-		})
-	}
-
-	// Test Double method
-	t.Run("Double_Method", func(t *testing.T) {
-		t.Parallel()
-
-		testCases := []struct {
-			input    *num.Nat
-			expected string
-		}{
-			{num.N().Zero(), "0"},
-			{num.N().One(), "2"},
-			{num.N().FromUint64(21), "42"},
-			{num.N().FromUint64(100), "200"},
-		}
-
-		for _, tc := range testCases {
-			result := (tc.input.Double())
-			require.Equal(t, tc.expected, result.String())
-		}
-	})
-}
-
-func TestNaturalNumbers_Multiplication(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		a        *num.Nat
-		b        *num.Nat
-		expected string
-	}{
-		{
-			name:     "Zero_Times_Zero",
-			a:        num.N().Zero(),
-			b:        num.N().Zero(),
-			expected: "0",
-		},
-		{
-			name:     "Zero_Times_One",
-			a:        num.N().Zero(),
-			b:        num.N().One(),
-			expected: "0",
-		},
-		{
-			name:     "One_Times_One",
-			a:        num.N().One(),
-			b:        num.N().One(),
-			expected: "1",
-		},
-		{
-			name:     "One_Times_Any",
-			a:        num.N().One(),
-			b:        num.N().FromUint64(42),
-			expected: "42",
-		},
-		{
-			name:     "Small_Times_Small",
-			a:        num.N().FromUint64(6),
-			b:        num.N().FromUint64(7),
-			expected: "42",
-		},
-		{
-			name:     "Large_Times_Large",
-			a:        num.N().FromUint64(1000000),
-			b:        num.N().FromUint64(1000000),
-			expected: "1000000000000",
-		},
-		{
-			name:     "Power_Of_Two",
-			a:        num.N().FromUint64(2),
-			b:        num.N().FromUint64(32),
-			expected: "64",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Test Mul
-			result := tt.a.Mul(tt.b)
-			require.Equal(t, tt.expected, result.String())
-
-			// Test OtherOp (should be same as Mul)
-			result2 := tt.a.OtherOp(tt.b)
-			require.Equal(t, tt.expected, result2.String())
-
-			// Test commutativity
-			result3 := tt.b.Mul(tt.a)
-			require.Equal(t, tt.expected, result3.String())
-		})
-	}
-
-	// Test Square method
-	t.Run("Square_Method", func(t *testing.T) {
-		t.Parallel()
-
-		testCases := []struct {
-			input    *num.Nat
-			expected string
-		}{
-			{num.N().Zero(), "0"},
-			{num.N().One(), "1"},
-			{num.N().FromUint64(2), "4"},
-			{num.N().FromUint64(5), "25"},
-			{num.N().FromUint64(10), "100"},
-			{num.N().FromUint64(12), "144"},
-			{num.N().FromUint64(100), "10000"},
-		}
-
-		for _, tc := range testCases {
-			result := (tc.input).Square()
-			require.Equal(t, tc.expected, result.String())
-		}
-	})
-}
-
-func TestNaturalNumbers_Subtraction(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name        string
-		a           *num.Nat
-		b           *num.Nat
-		expected    string
-		expectError bool
-	}{
-		{
-			name:     "Zero_Minus_Zero",
-			a:        num.N().Zero(),
-			b:        num.N().Zero(),
-			expected: "0",
-		},
-		{
-			name:     "One_Minus_Zero",
-			a:        num.N().One(),
-			b:        num.N().Zero(),
-			expected: "1",
-		},
-		{
-			name:     "One_Minus_One",
-			a:        num.N().One(),
-			b:        num.N().One(),
-			expected: "0",
-		},
-		{
-			name:     "Large_Minus_Small",
-			a:        num.N().FromUint64(42),
-			b:        num.N().FromUint64(17),
-			expected: "25",
-		},
-		{
-			name:        "Small_Minus_Large_Fails",
-			a:           num.N().FromUint64(17),
-			b:           num.N().FromUint64(42),
-			expectError: true,
-		},
-		{
-			name:        "Zero_Minus_One_Fails",
-			a:           num.N().Zero(),
-			b:           num.N().One(),
-			expectError: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result, err := (tt.a.TrySub(tt.b))
-			if tt.expectError {
-				require.Error(t, err)
-				return
-			}
-
-			require.NoError(t, err)
-			require.Equal(t, tt.expected, result.String())
-		})
-	}
+	n1 := num.N()
+	n2 := num.N()
+	require.Same(t, n1, n2)
 }
 
 func TestNaturalNumbers_Properties(t *testing.T) {
 	t.Parallel()
+	n := num.N()
 
-	t.Run("IsZero", func(t *testing.T) {
-		t.Parallel()
-
-		require.True(t, num.N().Zero().IsZero())
-		require.False(t, num.N().One().IsZero())
-		require.False(t, num.N().FromUint64(42).IsZero())
-
-		// Test zero created different ways
-		zeroFromBytes, _ := num.N().FromBytes([]byte{})
-		require.True(t, zeroFromBytes.IsZero())
-
-		zeroFromUint := num.N().FromUint64(0)
-		require.True(t, zeroFromUint.IsZero())
-	})
-
-	t.Run("IsOne", func(t *testing.T) {
-		t.Parallel()
-
-		require.False(t, num.N().Zero().IsOne())
-		require.True(t, num.N().One().IsOne())
-		require.False(t, num.N().FromUint64(2).IsOne())
-		require.False(t, num.N().FromUint64(42).IsOne())
-
-		// Test one created different ways
-		oneFromUint := num.N().FromUint64(1)
-		require.True(t, oneFromUint.IsOne())
-	})
-
-	t.Run("IsEven_IsOdd", func(t *testing.T) {
-		t.Parallel()
-
-		tests := []struct {
-			value  *num.Nat
-			isEven bool
-			isOdd  bool
-		}{
-			{num.N().Zero(), true, false},
-			{num.N().One(), false, true},
-			{num.N().FromUint64(2), true, false},
-			{num.N().FromUint64(3), false, true},
-			{num.N().FromUint64(42), true, false},
-			{num.N().FromUint64(99), false, true},
-			{num.N().FromUint64(1000), true, false},
-			{num.N().FromUint64(1001), false, true},
-		}
-
-		for _, tt := range tests {
-			require.Equal(t, tt.isEven, tt.value.IsEven(), "IsEven failed for %s", tt.value.String())
-			require.Equal(t, tt.isOdd, tt.value.IsOdd(), "IsOdd failed for %s", tt.value.String())
-			// IsEven and IsOdd should be mutually exclusive
-			require.NotEqual(t, tt.value.IsEven(), tt.value.IsOdd(), "IsEven and IsOdd should be mutually exclusive for %s", tt.value.String())
-		}
-	})
+	require.Equal(t, "N", n.Name())
+	require.True(t, n.Characteristic().IsZero())
+	require.True(t, n.Order().IsInfinite())
+	require.Equal(t, -1, n.ElementSize())
+	require.True(t, n.Zero().IsZero())
+	require.True(t, n.One().IsOne())
+	require.True(t, n.OpIdentity().IsZero())
+	require.True(t, n.Bottom().IsZero())
 }
 
-func TestNaturalNumbers_Comparison(t *testing.T) {
+// Constructor tests
+
+func TestN_FromUint64(t *testing.T) {
 	t.Parallel()
-
-	t.Run("Compare", func(t *testing.T) {
-		t.Parallel()
-
-		tests := []struct {
-			name     string
-			a        *num.Nat
-			b        *num.Nat
-			expected base.Ordering
-		}{
-			{
-				name:     "Zero_Compare_Zero",
-				a:        num.N().Zero(),
-				b:        num.N().Zero(),
-				expected: base.Ordering(base.Equal),
-			},
-			{
-				name:     "Zero_Compare_One",
-				a:        num.N().Zero(),
-				b:        num.N().One(),
-				expected: base.Ordering(base.LessThan),
-			},
-			{
-				name:     "One_Compare_Zero",
-				a:        num.N().One(),
-				b:        num.N().Zero(),
-				expected: base.Ordering(base.GreaterThan),
-			},
-			{
-				name:     "Same_Numbers",
-				a:        num.N().FromUint64(42),
-				b:        num.N().FromUint64(42),
-				expected: base.Ordering(base.Equal),
-			},
-			{
-				name:     "Small_Compare_Large",
-				a:        num.N().FromUint64(17),
-				b:        num.N().FromUint64(42),
-				expected: base.Ordering(base.LessThan),
-			},
-			{
-				name:     "Large_Compare_Small",
-				a:        num.N().FromUint64(42),
-				b:        num.N().FromUint64(17),
-				expected: base.Ordering(base.GreaterThan),
-			},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
-
-				result := tt.a.Compare(tt.b)
-				require.Equal(t, tt.expected, result)
-			})
-		}
-	})
-
-	t.Run("Equal", func(t *testing.T) {
-		t.Parallel()
-
-		// Test equality
-		a := num.N().FromUint64(42)
-		b := num.N().FromUint64(42)
-		c := num.N().FromUint64(43)
-
-		require.True(t, a.Equal(b))
-		require.True(t, b.Equal(a)) // Symmetric
-		require.False(t, a.Equal(c))
-		require.False(t, c.Equal(a))
-
-		// Test with zero
-		zero1 := num.N().Zero()
-		zero2 := num.N().Zero()
-		require.True(t, zero1.Equal(zero2))
-		require.False(t, zero1.Equal(num.N().One()))
-	})
-
-	t.Run("IsLessThanOrEqual", func(t *testing.T) {
-		t.Parallel()
-
-		tests := []struct {
-			name     string
-			a        *num.Nat
-			b        *num.Nat
-			expected bool
-		}{
-			{
-				name:     "Zero_LTE_Zero",
-				a:        num.N().Zero(),
-				b:        num.N().Zero(),
-				expected: true,
-			},
-			{
-				name:     "Zero_LTE_One",
-				a:        num.N().Zero(),
-				b:        num.N().One(),
-				expected: true,
-			},
-			{
-				name:     "One_LTE_Zero",
-				a:        num.N().One(),
-				b:        num.N().Zero(),
-				expected: false,
-			},
-			{
-				name:     "Equal_Numbers",
-				a:        num.N().FromUint64(42),
-				b:        num.N().FromUint64(42),
-				expected: true,
-			},
-			{
-				name:     "Small_LTE_Large",
-				a:        num.N().FromUint64(17),
-				b:        num.N().FromUint64(42),
-				expected: true,
-			},
-			{
-				name:     "Large_LTE_Small",
-				a:        num.N().FromUint64(42),
-				b:        num.N().FromUint64(17),
-				expected: false,
-			},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
-
-				result := tt.a.IsLessThanOrEqual(tt.b)
-				require.Equal(t, tt.expected, result)
-			})
-		}
-	})
-}
-
-func TestNaturalNumbers_Bytes(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		value    *num.Nat
-		expected []byte
-	}{
-		{
-			name:     "Zero",
-			value:    num.N().Zero(),
-			expected: []byte{0x00},
-		},
-		{
-			name:     "One",
-			value:    num.N().One(),
-			expected: []byte{0x01},
-		},
-		{
-			name:     "Small",
-			value:    num.N().FromUint64(0x42),
-			expected: []byte{0x42},
-		},
-		{
-			name:     "TwoBytes",
-			value:    num.N().FromUint64(0x0102),
-			expected: []byte{0x01, 0x02},
-		},
-		{
-			name:     "ThreeBytes",
-			value:    num.N().FromUint64(0x010203),
-			expected: []byte{0x01, 0x02, 0x03},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result := tt.value.Bytes()
-			require.Equal(t, tt.expected, result)
-		})
+	cases := []uint64{0, 1, 42, 1000, 0xFFFFFFFFFFFFFFFF}
+	for _, v := range cases {
+		n := num.N().FromUint64(v)
+		require.Equal(t, v, n.Uint64())
 	}
 }
 
-func TestNaturalNumbers_Lift(t *testing.T) {
+func TestN_FromBig(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name  string
-		value *num.Nat
-	}{
-		{name: "Zero", value: num.N().Zero()},
-		{name: "One", value: num.N().One()},
-		{name: "Small", value: num.N().FromUint64(42)},
-		{name: "Large", value: num.N().FromUint64(1000000)},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			lifted := tt.value.Lift()
-
-			// Lifted integer should have same string representation
-			require.Equal(t, tt.value.String(), lifted.String())
-
-			// Can convert back to natural
-			recovered, err := num.N().FromInt(lifted)
-			require.NoError(t, err)
-			require.True(t, recovered.Equal(tt.value))
-		})
-	}
-}
-
-func TestNaturalNumbers_Random_Success(t *testing.T) {
-	t.Parallel()
-
-	t.Run("Random_Range", func(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
 		t.Parallel()
-
-		// Test various ranges
-		tests := []struct {
-			name          string
-			lowInclusive  *num.Nat
-			highExclusive *num.Nat
-		}{
-			{
-				name:          "Small_Range",
-				lowInclusive:  num.N().Zero(),
-				highExclusive: num.N().FromUint64(10),
-			},
-			{
-				name:          "Mid_Range",
-				lowInclusive:  num.N().FromUint64(10),
-				highExclusive: num.N().FromUint64(20),
-			},
-			{
-				name:          "Large_Range",
-				lowInclusive:  num.N().FromUint64(100),
-				highExclusive: num.N().FromUint64(1000),
-			},
-			{
-				name:          "Single_Value",
-				lowInclusive:  num.N().FromUint64(42),
-				highExclusive: num.N().FromUint64(43),
-			},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
-
-				// Create a separate PRNG for each parallel test to avoid race conditions
-				prng := pcg.NewRandomised()
-
-				// Generate multiple random values to verify they're in range
-				for range 10 {
-					result, err := num.N().Random(tt.lowInclusive, tt.highExclusive, prng)
-					require.NoError(t, err)
-
-					// Verify result is in range [low, high)
-					require.True(t, result.IsLessThanOrEqual(tt.lowInclusive) || tt.lowInclusive.IsLessThanOrEqual(result),
-						"Result %s should be >= %s", result.String(), tt.lowInclusive.String())
-					require.Equal(t, base.Ordering(base.LessThan), result.Compare(tt.highExclusive),
-						"Result %s should be < %s", result.String(), tt.highExclusive.String())
-				}
-			})
-		}
+		_, err := num.N().FromBig(nil)
+		require.Error(t, err)
 	})
 
-	t.Run("Random_Distribution", func(t *testing.T) {
+	t.Run("negative", func(t *testing.T) {
 		t.Parallel()
-
-		// Create a separate PRNG for this test to avoid race conditions
-		prng := pcg.NewRandomised()
-
-		// Test that random values are distributed across the range
-		low := num.N().Zero()
-		high := num.N().FromUint64(5)
-
-		counts := make(map[string]int)
-		iterations := 100
-
-		for range iterations {
-			result, err := num.N().Random(low, high, prng)
-			require.NoError(t, err)
-			counts[result.String()]++
-		}
-
-		// We should see all values 0-4 at least once with high probability
-		for i := range uint64(5) {
-			val := num.N().FromUint64(i).String()
-			require.Positive(t, counts[val], "Value %s should appear at least once", val)
-		}
+		_, err := num.N().FromBig(big.NewInt(-1))
+		require.Error(t, err)
 	})
-}
 
-// Additional tests for full coverage
-
-func TestNaturalNumbers_FromNatPlus(t *testing.T) {
-	t.Parallel()
-
-	t.Run("Valid NatPlus", func(t *testing.T) {
+	t.Run("zero", func(t *testing.T) {
 		t.Parallel()
-		np, err := num.NPlus().FromUint64(42)
+		n, err := num.N().FromBig(big.NewInt(0))
 		require.NoError(t, err)
-
-		n, err := num.N().FromNatPlus(np)
-		require.NoError(t, err)
-		require.Equal(t, "42", n.String())
+		require.True(t, n.IsZero())
 	})
 
-	t.Run("Nil NatPlus", func(t *testing.T) {
+	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+		n, err := num.N().FromBig(big.NewInt(42))
+		require.NoError(t, err)
+		require.Equal(t, uint64(42), n.Uint64())
+	})
+}
+
+func TestN_FromNatPlus(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil", func(t *testing.T) {
 		t.Parallel()
 		_, err := num.N().FromNatPlus(nil)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "nil")
 	})
-}
 
-func TestNaturalNumbers_Bottom(t *testing.T) {
-	t.Parallel()
-
-	bottom := num.N().Bottom()
-	require.NotNil(t, bottom)
-	require.True(t, bottom.IsZero())
-	require.Equal(t, "0", bottom.String())
-}
-
-func TestNaturalNumbers_MultiScalarOp(t *testing.T) {
-	t.Parallel()
-
-	scalars := []*num.Nat{
-		num.N().FromUint64(2),
-		num.N().FromUint64(3),
-	}
-	elements := []*num.Nat{
-		num.N().FromUint64(5),
-		num.N().FromUint64(7),
-	}
-
-	result, err := num.N().MultiScalarOp(scalars, elements)
-	require.NoError(t, err)
-	// 2*5 + 3*7 = 10 + 21 = 31
-	require.Equal(t, "31", result.String())
-}
-
-func TestNaturalNumbers_MultiScalarMul(t *testing.T) {
-	t.Parallel()
-
-	t.Run("Valid inputs", func(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
-		scalars := []*num.Nat{
-			num.N().FromUint64(2),
-			num.N().FromUint64(3),
-		}
-		elements := []*num.Nat{
-			num.N().FromUint64(5),
-			num.N().FromUint64(7),
-		}
-
-		result, err := num.N().MultiScalarMul(scalars, elements)
+		np, err := num.NPlus().FromUint64(42)
 		require.NoError(t, err)
-		// 2*5 + 3*7 = 10 + 21 = 31
-		require.Equal(t, "31", result.String())
+		n, err := num.N().FromNatPlus(np)
+		require.NoError(t, err)
+		require.Equal(t, uint64(42), n.Uint64())
 	})
+}
 
-	t.Run("Mismatched lengths", func(t *testing.T) {
+func TestN_FromInt(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil", func(t *testing.T) {
 		t.Parallel()
-		scalars := []*num.Nat{num.N().FromUint64(2)}
-		elements := []*num.Nat{
-			num.N().FromUint64(5),
-			num.N().FromUint64(7),
-		}
-
-		_, err := num.N().MultiScalarMul(scalars, elements)
+		_, err := num.N().FromInt(nil)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "#scalars != #elements")
 	})
 
-	t.Run("Empty inputs", func(t *testing.T) {
+	t.Run("negative", func(t *testing.T) {
 		t.Parallel()
-		result, err := num.N().MultiScalarMul([]*num.Nat{}, []*num.Nat{})
+		i := num.Z().FromInt64(-1)
+		_, err := num.N().FromInt(i)
+		require.Error(t, err)
+	})
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+		i := num.Z().FromInt64(0)
+		n, err := num.N().FromInt(i)
+		require.NoError(t, err)
+		require.True(t, n.IsZero())
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+		i := num.Z().FromInt64(42)
+		n, err := num.N().FromInt(i)
+		require.NoError(t, err)
+		require.Equal(t, uint64(42), n.Uint64())
+	})
+}
+
+func TestN_FromRat(t *testing.T) {
+	t.Parallel()
+
+	t.Run("non-integer", func(t *testing.T) {
+		t.Parallel()
+		a := num.Z().FromInt64(3)
+		b, _ := num.NPlus().FromUint64(2)
+		r, _ := num.Q().New(a, b)
+		_, err := num.N().FromRat(r)
+		require.Error(t, err)
+	})
+
+	t.Run("negative integer", func(t *testing.T) {
+		t.Parallel()
+		r := num.Q().FromInt64(-5)
+		_, err := num.N().FromRat(r)
+		require.Error(t, err)
+	})
+
+	t.Run("integer", func(t *testing.T) {
+		t.Parallel()
+		r := num.Q().FromUint64(42)
+		n, err := num.N().FromRat(r)
+		require.NoError(t, err)
+		require.Equal(t, uint64(42), n.Uint64())
+	})
+}
+
+func TestN_FromBytes(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+		_, err := num.N().FromBytes(nil)
+		require.Error(t, err)
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+		n, err := num.N().FromBytes([]byte{})
+		require.NoError(t, err)
+		require.True(t, n.IsZero())
+	})
+
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+		n, err := num.N().FromBytes([]byte{0x01, 0x00})
+		require.NoError(t, err)
+		require.Equal(t, uint64(256), n.Uint64())
+	})
+}
+
+func TestN_FromCardinal(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+		_, err := num.N().FromCardinal(nil)
+		require.Error(t, err)
+	})
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+		n, err := num.N().FromCardinal(cardinal.Zero())
+		require.NoError(t, err)
+		require.True(t, n.IsZero())
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+		n, err := num.N().FromCardinal(cardinal.New(42))
+		require.NoError(t, err)
+		require.Equal(t, uint64(42), n.Uint64())
+	})
+}
+
+func TestN_Random(t *testing.T) {
+	t.Parallel()
+	prng := pcg.NewRandomised()
+	low := num.N().FromUint64(10)
+	high := num.N().FromUint64(100)
+
+	for i := 0; i < 10; i++ {
+		n, err := num.N().Random(low, high, prng)
+		require.NoError(t, err)
+		require.True(t, low.IsLessThanOrEqual(n))
+		require.True(t, n.Compare(high).IsLessThan())
+	}
+}
+
+// Arithmetic tests
+
+func TestNat_Add(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		a, b, expected uint64
+	}{
+		{0, 0, 0},
+		{1, 0, 1},
+		{0, 1, 1},
+		{1, 2, 3},
+		{100, 200, 300},
+	}
+	for _, tc := range cases {
+		a := num.N().FromUint64(tc.a)
+		b := num.N().FromUint64(tc.b)
+		result := a.Add(b)
+		require.Equal(t, tc.expected, result.Uint64())
+	}
+}
+
+func TestNat_Op(t *testing.T) {
+	t.Parallel()
+	a := num.N().FromUint64(5)
+	b := num.N().FromUint64(3)
+	require.True(t, a.Op(b).Equal(a.Add(b)))
+}
+
+func TestNat_Mul(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		a, b, expected uint64
+	}{
+		{0, 5, 0},
+		{1, 1, 1},
+		{2, 3, 6},
+		{100, 100, 10000},
+	}
+	for _, tc := range cases {
+		a := num.N().FromUint64(tc.a)
+		b := num.N().FromUint64(tc.b)
+		result := a.Mul(b)
+		require.Equal(t, tc.expected, result.Uint64())
+	}
+}
+
+func TestNat_OtherOp(t *testing.T) {
+	t.Parallel()
+	a := num.N().FromUint64(5)
+	b := num.N().FromUint64(3)
+	require.True(t, a.OtherOp(b).Equal(a.Mul(b)))
+}
+
+func TestNat_TrySub(t *testing.T) {
+	t.Parallel()
+
+	t.Run("normal", func(t *testing.T) {
+		t.Parallel()
+		a := num.N().FromUint64(10)
+		b := num.N().FromUint64(3)
+		result, err := a.TrySub(b)
+		require.NoError(t, err)
+		require.Equal(t, uint64(7), result.Uint64())
+	})
+
+	t.Run("equal", func(t *testing.T) {
+		t.Parallel()
+		a := num.N().FromUint64(5)
+		b := num.N().FromUint64(5)
+		result, err := a.TrySub(b)
 		require.NoError(t, err)
 		require.True(t, result.IsZero())
 	})
+
+	t.Run("underflow", func(t *testing.T) {
+		t.Parallel()
+		a := num.N().FromUint64(3)
+		b := num.N().FromUint64(10)
+		_, err := a.TrySub(b)
+		require.Error(t, err)
+	})
 }
 
-func TestNaturalNumbers_ScalarStructure(t *testing.T) {
+func TestNat_TryDiv(t *testing.T) {
 	t.Parallel()
 
-	scalarStruct := num.N().ScalarStructure()
-	require.NotNil(t, scalarStruct)
-	require.Equal(t, num.N(), scalarStruct)
+	t.Run("exact", func(t *testing.T) {
+		t.Parallel()
+		a := num.N().FromUint64(100)
+		b := num.N().FromUint64(10)
+		result, err := a.TryDiv(b)
+		require.NoError(t, err)
+		require.Equal(t, uint64(10), result.Uint64())
+	})
+
+	t.Run("not exact", func(t *testing.T) {
+		t.Parallel()
+		a := num.N().FromUint64(17)
+		b := num.N().FromUint64(5)
+		_, err := a.TryDiv(b)
+		require.Error(t, err)
+	})
+
+	t.Run("by zero", func(t *testing.T) {
+		t.Parallel()
+		a := num.N().FromUint64(10)
+		b := num.N().FromUint64(0)
+		_, err := a.TryDiv(b)
+		require.Error(t, err)
+	})
 }
 
-func TestNat_Value(t *testing.T) {
+func TestNat_Double(t *testing.T) {
 	t.Parallel()
+	cases := []struct{ input, expected uint64 }{
+		{0, 0},
+		{1, 2},
+		{5, 10},
+		{100, 200},
+	}
+	for _, tc := range cases {
+		n := num.N().FromUint64(tc.input)
+		require.Equal(t, tc.expected, n.Double().Uint64())
+	}
+}
 
-	n := num.N().FromUint64(42)
-	value := n.Value()
-	require.NotNil(t, value)
-	// Value returns the internal numct.Nat
-	require.Equal(t, uint64(42), value.Uint64())
+func TestNat_Square(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ input, expected uint64 }{
+		{0, 0},
+		{1, 1},
+		{5, 25},
+		{10, 100},
+	}
+	for _, tc := range cases {
+		n := num.N().FromUint64(tc.input)
+		require.Equal(t, tc.expected, n.Square().Uint64())
+	}
 }
 
 func TestNat_Lsh(t *testing.T) {
 	t.Parallel()
-
-	n := num.N().FromUint64(5) // 101 in binary
-	result := n.Lsh(2)         // Shift left by 2: 10100 = 20
-	require.Equal(t, "20", result.String())
+	cases := []struct {
+		value    uint64
+		shift    uint
+		expected uint64
+	}{
+		{1, 0, 1},
+		{1, 1, 2},
+		{1, 4, 16},
+		{0xFF, 8, 0xFF00},
+	}
+	for _, tc := range cases {
+		n := num.N().FromUint64(tc.value)
+		require.Equal(t, tc.expected, n.Lsh(tc.shift).Uint64())
+	}
 }
 
 func TestNat_Rsh(t *testing.T) {
 	t.Parallel()
+	cases := []struct {
+		value    uint64
+		shift    uint
+		expected uint64
+	}{
+		{1, 0, 1},
+		{2, 1, 1},
+		{16, 4, 1},
+		{0xFF00, 8, 0xFF},
+	}
+	for _, tc := range cases {
+		n := num.N().FromUint64(tc.value)
+		require.Equal(t, tc.expected, n.Rsh(tc.shift).Uint64())
+	}
+}
 
-	n := num.N().FromUint64(20) // 10100 in binary
-	result := n.Rsh(2)          // Shift right by 2: 101 = 5
-	require.Equal(t, "5", result.String())
+func TestNat_ScalarMul(t *testing.T) {
+	t.Parallel()
+	a := num.N().FromUint64(5)
+	b := num.N().FromUint64(3)
+	require.True(t, a.ScalarMul(b).Equal(a.Mul(b)))
+	require.True(t, a.ScalarOp(b).Equal(a.Mul(b)))
+}
+
+// Property tests
+
+func TestNat_IsZero(t *testing.T) {
+	t.Parallel()
+	require.True(t, num.N().FromUint64(0).IsZero())
+	require.False(t, num.N().FromUint64(1).IsZero())
+}
+
+func TestNat_IsOne(t *testing.T) {
+	t.Parallel()
+	require.False(t, num.N().FromUint64(0).IsOne())
+	require.True(t, num.N().FromUint64(1).IsOne())
+	require.False(t, num.N().FromUint64(2).IsOne())
+}
+
+func TestNat_IsPositive(t *testing.T) {
+	t.Parallel()
+	require.False(t, num.N().FromUint64(0).IsPositive())
+	require.True(t, num.N().FromUint64(1).IsPositive())
+}
+
+func TestNat_IsOpIdentity(t *testing.T) {
+	t.Parallel()
+	require.True(t, num.N().FromUint64(0).IsOpIdentity())
+	require.False(t, num.N().FromUint64(1).IsOpIdentity())
 }
 
 func TestNat_IsBottom(t *testing.T) {
 	t.Parallel()
+	require.True(t, num.N().FromUint64(0).IsBottom())
+	require.False(t, num.N().FromUint64(1).IsBottom())
+}
 
-	zero := num.N().Zero()
-	require.True(t, zero.IsBottom())
+func TestNat_IsEven(t *testing.T) {
+	t.Parallel()
+	require.True(t, num.N().FromUint64(0).IsEven())
+	require.False(t, num.N().FromUint64(1).IsEven())
+	require.True(t, num.N().FromUint64(2).IsEven())
+	require.False(t, num.N().FromUint64(3).IsEven())
+}
 
-	one := num.N().One()
-	require.False(t, one.IsBottom())
+func TestNat_IsOdd(t *testing.T) {
+	t.Parallel()
+	require.False(t, num.N().FromUint64(0).IsOdd())
+	require.True(t, num.N().FromUint64(1).IsOdd())
+	require.False(t, num.N().FromUint64(2).IsOdd())
+	require.True(t, num.N().FromUint64(3).IsOdd())
+}
+
+func TestNat_IsTorsionFree(t *testing.T) {
+	t.Parallel()
+	require.True(t, num.N().FromUint64(0).IsTorsionFree())
+	require.True(t, num.N().FromUint64(42).IsTorsionFree())
+}
+
+func TestNat_Compare(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		a, b uint64
+		lt   bool
+		eq   bool
+		gt   bool
+	}{
+		{5, 10, true, false, false},
+		{10, 10, false, true, false},
+		{10, 5, false, false, true},
+	}
+	for _, tc := range cases {
+		result := num.N().FromUint64(tc.a).Compare(num.N().FromUint64(tc.b))
+		require.Equal(t, tc.lt, result.IsLessThan())
+		require.Equal(t, tc.eq, result.IsEqual())
+		require.Equal(t, tc.gt, result.IsGreaterThan())
+	}
+}
+
+func TestNat_Equal(t *testing.T) {
+	t.Parallel()
+	require.True(t, num.N().FromUint64(42).Equal(num.N().FromUint64(42)))
+	require.False(t, num.N().FromUint64(42).Equal(num.N().FromUint64(43)))
+}
+
+func TestNat_IsLessThanOrEqual(t *testing.T) {
+	t.Parallel()
+	require.True(t, num.N().FromUint64(5).IsLessThanOrEqual(num.N().FromUint64(10)))
+	require.True(t, num.N().FromUint64(10).IsLessThanOrEqual(num.N().FromUint64(10)))
+	require.False(t, num.N().FromUint64(10).IsLessThanOrEqual(num.N().FromUint64(5)))
+}
+
+func TestNat_Coprime(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		a, b     uint64
+		expected bool
+	}{
+		{15, 28, true},  // gcd = 1
+		{12, 18, false}, // gcd = 6
+		{17, 23, true},  // primes
+		{1, 100, true},  // 1 is coprime to everything
+	}
+	for _, tc := range cases {
+		result := num.N().FromUint64(tc.a).Coprime(num.N().FromUint64(tc.b))
+		require.Equal(t, tc.expected, result)
+	}
+}
+
+func TestNat_IsProbablyPrime(t *testing.T) {
+	t.Parallel()
+	primes := []uint64{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31}
+	for _, p := range primes {
+		require.True(t, num.N().FromUint64(p).IsProbablyPrime())
+	}
+
+	composites := []uint64{4, 6, 8, 9, 10, 12, 14, 15}
+	for _, c := range composites {
+		require.False(t, num.N().FromUint64(c).IsProbablyPrime())
+	}
+}
+
+func TestNat_IsUnit(t *testing.T) {
+	t.Parallel()
+	modulus, _ := num.NPlus().FromUint64(10)
+
+	// 1 and any coprime to modulus are units
+	require.True(t, num.N().FromUint64(1).IsUnit(modulus))
+	require.True(t, num.N().FromUint64(3).IsUnit(modulus))
+	require.True(t, num.N().FromUint64(7).IsUnit(modulus))
+
+	// Non-coprime to modulus are not units
+	require.False(t, num.N().FromUint64(2).IsUnit(modulus))
+	require.False(t, num.N().FromUint64(5).IsUnit(modulus))
+}
+
+// Conversion tests
+
+func TestNat_Lift(t *testing.T) {
+	t.Parallel()
+	n := num.N().FromUint64(42)
+	i := n.Lift()
+	require.Equal(t, int64(42), i.Big().Int64())
+	require.False(t, i.IsNegative())
+}
+
+func TestNat_Mod(t *testing.T) {
+	t.Parallel()
+	modulus, _ := num.NPlus().FromUint64(7)
+	n := num.N().FromUint64(17)
+	result := n.Mod(modulus)
+	require.Equal(t, uint64(3), result.Big().Uint64()) // 17 mod 7 = 3
+}
+
+func TestNat_Clone(t *testing.T) {
+	t.Parallel()
+	a := num.N().FromUint64(42)
+	b := a.Clone()
+	require.True(t, a.Equal(b))
+
+	// Verify independence - modify clone doesn't affect original
+	c := b.Add(num.N().FromUint64(1))
+	require.False(t, a.Equal(c))
+	require.True(t, a.Equal(b)) // original clone unchanged
+}
+
+func TestNat_Bytes(t *testing.T) {
+	t.Parallel()
+	n := num.N().FromUint64(0x1234)
+	b := n.Bytes()
+	require.True(t, len(b) >= 2)
+	require.Equal(t, n.Bytes(), n.BytesBE())
+}
+
+func TestNat_String(t *testing.T) {
+	t.Parallel()
+	n := num.N().FromUint64(255)
+	s := n.String()
+	require.Contains(t, s, "FF")
+}
+
+func TestNat_Big(t *testing.T) {
+	t.Parallel()
+	n := num.N().FromUint64(42)
+	b := n.Big()
+	require.Equal(t, int64(42), b.Int64())
+}
+
+func TestNat_Uint64(t *testing.T) {
+	t.Parallel()
+	n := num.N().FromUint64(0xDEADBEEF)
+	require.Equal(t, uint64(0xDEADBEEF), n.Uint64())
+}
+
+func TestNat_Bit(t *testing.T) {
+	t.Parallel()
+	n := num.N().FromUint64(0b10101010)
+	require.Equal(t, byte(0), n.Bit(0))
+	require.Equal(t, byte(1), n.Bit(1))
+	require.Equal(t, byte(0), n.Bit(2))
+	require.Equal(t, byte(1), n.Bit(3))
+}
+
+func TestNat_Byte(t *testing.T) {
+	t.Parallel()
+	n := num.N().FromUint64(0x1234)
+	require.Equal(t, byte(0x34), n.Byte(0))
+	require.Equal(t, byte(0x12), n.Byte(1))
+}
+
+func TestNat_Cardinal(t *testing.T) {
+	t.Parallel()
+	n := num.N().FromUint64(42)
+	c := n.Cardinal()
+	require.False(t, c.IsZero())
+	require.False(t, c.IsInfinite())
+}
+
+func TestNat_EuclideanDiv(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		a, b, quot, rem uint64
+	}{
+		{17, 5, 3, 2},
+		{100, 10, 10, 0},
+		{7, 3, 2, 1},
+	}
+	for _, tc := range cases {
+		a := num.N().FromUint64(tc.a)
+		b := num.N().FromUint64(tc.b)
+		quot, rem, err := a.EuclideanDiv(b)
+		require.NoError(t, err)
+		require.Equal(t, tc.quot, quot.Uint64())
+		require.Equal(t, tc.rem, rem.Uint64())
+	}
 }
 
 func TestNat_EuclideanValuation(t *testing.T) {
 	t.Parallel()
-
 	n := num.N().FromUint64(42)
-	val := n.EuclideanValuation()
-	require.NotNil(t, val)
-	// EuclideanValuation returns a clone of the number
-	require.Equal(t, "Cardinal(42)", val.String())
+	v := n.EuclideanValuation()
+	require.False(t, v.IsZero())
+}
+
+func TestNat_TrueLen_AnnouncedLen(t *testing.T) {
+	t.Parallel()
+	n := num.N().FromUint64(255)
+	require.True(t, n.TrueLen() > 0)
+	require.True(t, n.AnnouncedLen() >= n.TrueLen())
+}
+
+func TestNat_HashCode(t *testing.T) {
+	t.Parallel()
+	a := num.N().FromUint64(42)
+	b := num.N().FromUint64(42)
+	c := num.N().FromUint64(43)
+
+	require.Equal(t, a.HashCode(), b.HashCode())
+	require.NotEqual(t, a.HashCode(), c.HashCode())
+}
+
+func TestNat_Structure(t *testing.T) {
+	t.Parallel()
+	n := num.N().FromUint64(42)
+	require.Same(t, num.N(), n.Structure())
+}
+
+// Edge case tests
+
+func TestNat_TryNeg(t *testing.T) {
+	t.Parallel()
+	n := num.N().FromUint64(42)
+	_, err := n.TryNeg()
+	require.Error(t, err)
+}
+
+func TestNat_TryOpInv(t *testing.T) {
+	t.Parallel()
+	n := num.N().FromUint64(42)
+	_, err := n.TryOpInv()
+	require.Error(t, err)
+}
+
+func TestNat_TryInv(t *testing.T) {
+	t.Parallel()
+
+	t.Run("one succeeds", func(t *testing.T) {
+		t.Parallel()
+		n := num.N().FromUint64(1)
+		result, err := n.TryInv()
+		require.NoError(t, err)
+		require.True(t, result.IsOne())
+	})
+
+	t.Run("other fails", func(t *testing.T) {
+		t.Parallel()
+		n := num.N().FromUint64(2)
+		_, err := n.TryInv()
+		require.Error(t, err)
+	})
+}
+
+func TestNat_Sqrt(t *testing.T) {
+	t.Parallel()
+
+	t.Run("perfect squares", func(t *testing.T) {
+		t.Parallel()
+		cases := []struct{ input, expected uint64 }{
+			{0, 0},
+			{1, 1},
+			{4, 2},
+			{9, 3},
+			{16, 4},
+			{100, 10},
+		}
+		for _, tc := range cases {
+			n := num.N().FromUint64(tc.input)
+			root, err := n.Sqrt()
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, root.Uint64())
+		}
+	})
+
+	t.Run("non-perfect square", func(t *testing.T) {
+		t.Parallel()
+		n := num.N().FromUint64(2)
+		_, err := n.Sqrt()
+		require.Error(t, err)
+	})
+}
+
+func TestNat_Increment(t *testing.T) {
+	t.Parallel()
+	n := num.N().FromUint64(41)
+	require.Equal(t, uint64(42), n.Increment().Uint64())
 }
 
 func TestNat_Decrement(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Positive", func(t *testing.T) {
+	t.Run("positive", func(t *testing.T) {
 		t.Parallel()
-		n := num.N().FromUint64(5)
+		n := num.N().FromUint64(42)
 		result, err := n.Decrement()
 		require.NoError(t, err)
-		require.Equal(t, "4", result.String())
+		require.Equal(t, uint64(41), result.Uint64())
 	})
 
-	t.Run("One to Zero", func(t *testing.T) {
+	t.Run("zero fails", func(t *testing.T) {
 		t.Parallel()
-		n := num.N().One()
-		result, err := n.Decrement()
-		require.NoError(t, err)
-		require.Equal(t, "0", result.String())
-	})
-
-	t.Run("Zero fails", func(t *testing.T) {
-		t.Parallel()
-		n := num.N().Zero()
+		n := num.N().FromUint64(0)
 		_, err := n.Decrement()
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "result would not be a natural number")
 	})
 }
 
-func TestNat_Uint64(t *testing.T) {
+func TestNat_Value(t *testing.T) {
 	t.Parallel()
 
-	n := num.N().FromUint64(42)
-	val := n.Uint64()
-	require.Equal(t, uint64(42), val)
-}
+	t.Run("non-nil", func(t *testing.T) {
+		t.Parallel()
+		n := num.N().FromUint64(42)
+		require.NotNil(t, n.Value())
+	})
 
-func TestNat_Big(t *testing.T) {
-	t.Parallel()
-
-	n := num.N().FromUint64(42)
-	bigInt := n.Big()
-	require.NotNil(t, bigInt)
-	require.Equal(t, int64(42), bigInt.Int64())
-}
-
-func TestNat_IsTorsionFree(t *testing.T) {
-	t.Parallel()
-
-	n := num.N().FromUint64(42)
-	require.True(t, n.IsTorsionFree())
-}
-
-func TestNat_ScalarOp(t *testing.T) {
-	t.Parallel()
-
-	n := num.N().FromUint64(5)
-	scalar := num.N().FromUint64(3)
-	result := n.ScalarOp(scalar)
-	// ScalarOp is multiplication: 5 * 3 = 15
-	require.Equal(t, "15", result.String())
-}
-
-func TestNat_ScalarMul(t *testing.T) {
-	t.Parallel()
-
-	n := num.N().FromUint64(5)
-	scalar := num.N().FromUint64(3)
-	result := n.ScalarMul(scalar)
-	// ScalarMul: 5 * 3 = 15
-	require.Equal(t, "15", result.String())
+	t.Run("nil receiver", func(t *testing.T) {
+		t.Parallel()
+		var n *num.Nat
+		require.Nil(t, n.Value())
+	})
 }

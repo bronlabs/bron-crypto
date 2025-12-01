@@ -2,7 +2,6 @@ package num
 
 import (
 	"io"
-	"iter"
 	"math/big"
 	"sync"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
@@ -71,7 +69,7 @@ func (ns *NaturalNumbers) FromUint64(value uint64) *Nat {
 // FromNatPlus creates a Nat from a NatPlus value, returning an error if the input is nil.
 func (ns *NaturalNumbers) FromNatPlus(value *NatPlus) (*Nat, error) {
 	if value == nil {
-		return nil, errs.NewValue("value must not be nil")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	return &Nat{v: value.v.Clone()}, nil
 }
@@ -79,10 +77,10 @@ func (ns *NaturalNumbers) FromNatPlus(value *NatPlus) (*Nat, error) {
 // FromBig creates a Nat from a big.Int value, returning an error if the input is nil or negative.
 func (ns *NaturalNumbers) FromBig(value *big.Int) (*Nat, error) {
 	if value == nil {
-		return nil, errs.NewValue("value must not be nil")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	if value.Sign() < 0 {
-		return nil, errs.NewValue("value must be greater than or equal to 0")
+		return nil, ErrOutOfRange.WithStackFrame()
 	}
 	if value.Sign() == 0 {
 		return ns.Zero(), nil
@@ -94,7 +92,7 @@ func (ns *NaturalNumbers) FromBig(value *big.Int) (*Nat, error) {
 func (ns *NaturalNumbers) FromRat(value *Rat) (*Nat, error) {
 	vInt, err := Z().FromRat(value)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not convert Rat to Int")
+		return nil, errs2.Wrap(err)
 	}
 	return ns.FromInt(vInt)
 }
@@ -102,7 +100,7 @@ func (ns *NaturalNumbers) FromRat(value *Rat) (*Nat, error) {
 // FromNatCT creates a Nat from a numct.Nat value, returning an error if the input is nil.
 func (ns *NaturalNumbers) FromNatCT(value *numct.Nat) (*Nat, error) {
 	if value == nil {
-		return nil, errs.NewValue("value must not be nil")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	return &Nat{v: value.Clone()}, nil
 }
@@ -110,10 +108,10 @@ func (ns *NaturalNumbers) FromNatCT(value *numct.Nat) (*Nat, error) {
 // FromInt creates a Nat from an Int value, returning an error if the input is nil or negative.
 func (ns *NaturalNumbers) FromInt(value *Int) (*Nat, error) {
 	if value == nil {
-		return nil, errs.NewValue("value must not be nil")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	if value.IsNegative() {
-		return nil, errs.NewValue("value must be greater than or equal to 0")
+		return nil, ErrOutOfRange.WithStackFrame()
 	}
 	if value.IsZero() {
 		return ns.Zero(), nil
@@ -124,7 +122,7 @@ func (ns *NaturalNumbers) FromInt(value *Int) (*Nat, error) {
 // FromBytes creates a Nat from a byte slice, returning an error if the input is nil.
 func (ns *NaturalNumbers) FromBytes(input []byte) (*Nat, error) {
 	if input == nil {
-		return nil, errs.NewValue("input must not be nil")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	return &Nat{v: numct.NewNatFromBytes(input)}, nil
 }
@@ -134,10 +132,13 @@ func (ns *NaturalNumbers) FromBytesBE(input []byte) (*Nat, error) {
 	return ns.FromBytes(input)
 }
 
-// FromCardinal creates a Nat from a cardinal.Cardinal value, returning an error if the input is nil.
+// FromCardinal creates a Nat from a cardinal.Cardinal value, returning an error if the input is nil or infinite.
 func (ns *NaturalNumbers) FromCardinal(value cardinal.Cardinal) (*Nat, error) {
 	if value == nil {
-		return nil, errs.NewValue("value must not be nil")
+		return nil, ErrIsNil.WithStackFrame()
+	}
+	if !value.IsFinite() {
+		return nil, ErrUndefined.WithStackFrame()
 	}
 	if value.IsZero() {
 		return ns.Zero(), nil
@@ -152,7 +153,7 @@ func (ns *NaturalNumbers) Random(lowInclusive, highExclusive *Nat, prng io.Reade
 	}
 	var v numct.Nat
 	if err := v.SetRandomRangeLH(lowInclusive.Value(), highExclusive.Value(), prng); err != nil {
-		return nil, errs.WrapRandomSample(err, "failed to sample random Nat")
+		return nil, errs2.Wrap(err)
 	}
 	return &Nat{v: &v}, nil
 }
@@ -162,58 +163,9 @@ func (ns *NaturalNumbers) Bottom() *Nat {
 	return ns.Zero()
 }
 
-// Iter returns an iterator over all natural numbers starting from 0.
-func (ns *NaturalNumbers) Iter() iter.Seq[*Nat] {
-	return ns.IterRange(ns.Zero(), nil)
-}
-
-// IterRange returns an iterator over natural numbers in the range [start, stop).
-func (ns *NaturalNumbers) IterRange(start, stop *Nat) iter.Seq[*Nat] {
-	return func(yield func(*Nat) bool) {
-		if start == nil {
-			start = ns.Zero()
-		}
-		cursor := start.Clone()
-		if stop == nil {
-			for {
-				if !yield(cursor) {
-					return
-				}
-				cursor = cursor.Increment()
-			}
-		}
-		if start.Compare(stop).Is(base.GreaterThan) {
-			return
-		}
-		for !cursor.Equal(stop) {
-			if !yield(cursor) {
-				return
-			}
-			cursor = cursor.Increment()
-		}
-	}
-}
-
 // ElementSize returns -1 indicating that elements of NaturalNumbers do not have a fixed size.
 func (ns *NaturalNumbers) ElementSize() int {
 	return -1
-}
-
-// MultiScalarOp computes the multi-scalar multiplication of the given scalars and elements.
-func (ns *NaturalNumbers) MultiScalarOp(scs []*Nat, es []*Nat) (*Nat, error) {
-	return ns.MultiScalarMul(scs, es)
-}
-
-// MultiScalarMul computes the multi-scalar multiplication of the given scalars and elements.
-func (ns *NaturalNumbers) MultiScalarMul(scs []*Nat, es []*Nat) (*Nat, error) {
-	if len(scs) != len(es) {
-		return nil, errs.NewValue("#scalars != #elements")
-	}
-	out := ns.Zero()
-	for i, s := range scs {
-		out = out.Add(es[i].Mul(s))
-	}
-	return out, nil
 }
 
 // ScalarStructure returns the regular semi-module structure of NaturalNumbers.
@@ -228,7 +180,7 @@ type Nat struct {
 
 func (*Nat) isValid(x *Nat) (*Nat, error) {
 	if x == nil {
-		return nil, errs.NewValue("argument is nil")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	return x, nil
 }
@@ -293,16 +245,16 @@ func (n *Nat) TryOpInv() (*Nat, error) {
 
 // TryNeg attempts to compute the negation of the Nat. It will always return an error since natural numbers do not have negation.
 func (n *Nat) TryNeg() (*Nat, error) {
-	return nil, errs.NewValue("negation not defined for natural numbers")
+	return nil, ErrUndefined.WithStackFrame()
 }
 
 // TrySub attempts to subtract another Nat from the current Nat. It returns an error if the result would not be a natural number.
 func (n *Nat) TrySub(other *Nat) (*Nat, error) {
 	if _, err := n.isValid(other); err != nil {
-		return nil, errs.WrapArgument(err, "argument is not valid")
+		return nil, errs2.Wrap(err)
 	}
 	if n.Compare(other).IsLessThan() {
-		return nil, errs.NewValue("result would not be a natural number")
+		return nil, ErrUndefined.WithStackFrame()
 	}
 	v := new(numct.Nat)
 	v.SubCap(n.v, other.v, -1)
@@ -314,7 +266,7 @@ func (n *Nat) TryInv() (*Nat, error) {
 	if n.IsOne() {
 		return n.Clone(), nil
 	}
-	return nil, errs.NewValue("multiplicative inverse not defined for natural numbers except 1")
+	return nil, ErrUndefined.WithStackFrame()
 }
 
 // IsUnit checks if the Nat is a unit modulo the given NatPlus modulus.
@@ -324,7 +276,7 @@ func (n *Nat) IsUnit(modulus *NatPlus) bool {
 	}
 	m, ok := numct.NewModulus(modulus.v)
 	if ok == ct.False {
-		panic(errs.NewFailed("modulus is not valid"))
+		panic(errs2.New("modulus is not valid"))
 	}
 	return m.IsUnit(n.v) == ct.True
 }
@@ -337,15 +289,15 @@ func (n *Nat) Cardinal() cardinal.Cardinal {
 // TryDiv attempts to divide the Nat by another Nat. It returns an error if the division is not exact.
 func (n *Nat) TryDiv(other *Nat) (*Nat, error) {
 	if _, err := n.isValid(other); err != nil {
-		return nil, errs.WrapArgument(err, "argument is not valid")
+		return nil, errs2.Wrap(err)
 	}
 	v := new(numct.Nat)
 	divisorMod, modOk := numct.NewModulus(other.v)
 	if modOk != ct.True {
-		return nil, errs.NewFailed("failed to create modulus from divisor")
+		return nil, errs2.New("failed to create modulus from divisor")
 	}
 	if ok := v.ExactDiv(n.v, divisorMod); ok != ct.True {
-		return nil, errs.NewFailed("division is not exact")
+		return nil, ErrInexactDivision.WithStackFrame()
 	}
 	out := &Nat{v: v}
 	return n.isValid(out)
@@ -404,10 +356,10 @@ func (n *Nat) EuclideanDiv(other *Nat) (quot, rem *Nat, err error) {
 	// Create modulus from divisor
 	divisorMod, modOk := numct.NewModulus(other.v)
 	if modOk != ct.True {
-		return nil, nil, errs.NewFailed("failed to create modulus from divisor")
+		return nil, nil, errs2.New("failed to create modulus from divisor")
 	}
 	if ok := numct.DivModCap(vq, vr, n.v, divisorMod, -1); ok == ct.False {
-		return nil, nil, errs.NewFailed("division failed")
+		return nil, nil, errs2.New("division failed")
 	}
 	return &Nat{v: vq}, &Nat{v: vr}, nil
 }
@@ -420,6 +372,16 @@ func (n *Nat) EuclideanValuation() cardinal.Cardinal {
 // Mod computes the Nat modulo the given NatPlus modulus.
 func (n *Nat) Mod(modulus *NatPlus) *Uint {
 	return n.Lift().Mod(modulus)
+}
+
+// Sqrt computes the square root of the Nat, returning an error if the square root is not defined.
+func (n *Nat) Sqrt() (*Nat, error) {
+	v := new(numct.Nat)
+	ok := v.Sqrt(n.v)
+	if ok == ct.False {
+		return nil, ErrUndefined.WithStackFrame()
+	}
+	return &Nat{v: v}, nil
 }
 
 // Compare compares the Nat with another Nat, returning an ordering result.
@@ -459,7 +421,7 @@ func (n *Nat) HashCode() base.HashCode {
 
 // String returns the string representation of the Nat.
 func (n *Nat) String() string {
-	return n.v.Big().String()
+	return n.v.String()
 }
 
 // Increment returns the Nat incremented by 1.

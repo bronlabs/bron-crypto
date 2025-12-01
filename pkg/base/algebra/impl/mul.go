@@ -57,6 +57,19 @@ func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
 		panic("MultiScalarMul: number of points and scalars must be equal")
 	}
 
+	// Use naive method for small n.
+	if n <= 7 {
+		var acc P
+		PP(&acc).SetZero()
+		for i := range n {
+			var term P
+			ScalarMulLowLevel[PP](&term, points[i], scalars[i])
+			PP(&acc).Add(&acc, &term)
+		}
+		PP(out).Set(&acc)
+		return
+	}
+
 	// Precompute scalar bytes and max bit length.
 	scalarBytes := make([][]byte, n)
 	maxBits := 0

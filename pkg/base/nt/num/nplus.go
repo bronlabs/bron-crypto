@@ -2,7 +2,6 @@ package num
 
 import (
 	"io"
-	"iter"
 	"math/big"
 	"sync"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
@@ -56,10 +54,10 @@ func (*PositiveNaturalNumbers) One() *NatPlus {
 // FromCardinal creates a NatPlus from the given cardinal, returning an error if the cardinal is zero.
 func (*PositiveNaturalNumbers) FromCardinal(c algebra.Cardinal) (*NatPlus, error) {
 	if c == nil {
-		return nil, errs.NewValue("cardinal must not be nil")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	if c.IsZero() {
-		return nil, errs.NewValue("cardinal must be greater than 0")
+		return nil, ErrOutOfRange.WithStackFrame()
 	}
 	return &NatPlus{v: numct.NewNatFromBytes(c.Bytes())}, nil
 }
@@ -67,10 +65,10 @@ func (*PositiveNaturalNumbers) FromCardinal(c algebra.Cardinal) (*NatPlus, error
 // FromBig creates a NatPlus from the given big.Int, returning an error if the integer is nil or not positive.
 func (nps *PositiveNaturalNumbers) FromBig(b *big.Int) (*NatPlus, error) {
 	if b == nil {
-		return nil, errs.NewValue("big.Int must not be nil")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	if b.Sign() <= 0 {
-		return nil, errs.NewValue("big.Int must be greater than 0")
+		return nil, ErrOutOfRange.WithStackFrame()
 	}
 	return nps.FromBytes(b.Bytes())
 }
@@ -84,7 +82,7 @@ func (nps *PositiveNaturalNumbers) FromModulusCT(m *numct.Modulus) *NatPlus {
 func (nps *PositiveNaturalNumbers) FromRat(v *Rat) (*NatPlus, error) {
 	vInt, err := Z().FromRat(v)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not convert Rat to Int")
+		return nil, errs2.Wrap(err)
 	}
 	return nps.FromInt(vInt)
 }
@@ -92,7 +90,7 @@ func (nps *PositiveNaturalNumbers) FromRat(v *Rat) (*NatPlus, error) {
 // FromUint64 creates a NatPlus from the given uint64, returning an error if the value is zero.
 func (*PositiveNaturalNumbers) FromUint64(value uint64) (*NatPlus, error) {
 	if value == 0 {
-		return nil, errs.NewValue("value must be greater than 0")
+		return nil, ErrOutOfRange.WithStackFrame()
 	}
 	return &NatPlus{v: numct.NewNat(value)}, nil
 }
@@ -100,10 +98,10 @@ func (*PositiveNaturalNumbers) FromUint64(value uint64) (*NatPlus, error) {
 // FromNat creates a NatPlus from the given Nat, returning an error if the Nat is nil or zero.
 func (*PositiveNaturalNumbers) FromNat(value *Nat) (*NatPlus, error) {
 	if value == nil {
-		return nil, errs.NewValue("value must not be nil")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	if value.IsZero() {
-		return nil, errs.NewValue("value must be greater than 0")
+		return nil, ErrOutOfRange.WithStackFrame()
 	}
 	return &NatPlus{v: value.v.Clone()}, nil
 }
@@ -111,10 +109,10 @@ func (*PositiveNaturalNumbers) FromNat(value *Nat) (*NatPlus, error) {
 // FromNatCT creates a NatPlus from the given numct.Nat, returning an error if the value is nil or zero.
 func (*PositiveNaturalNumbers) FromNatCT(value *numct.Nat) (*NatPlus, error) {
 	if value == nil {
-		return nil, errs.NewValue("value must not be nil")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	if value.IsZero() == ct.True {
-		return nil, errs.NewValue("value must be greater than 0")
+		return nil, ErrOutOfRange.WithStackFrame()
 	}
 	return &NatPlus{v: value.Clone()}, nil
 }
@@ -122,13 +120,13 @@ func (*PositiveNaturalNumbers) FromNatCT(value *numct.Nat) (*NatPlus, error) {
 // FromInt creates a NatPlus from the given Int, returning an error if the Int is nil, zero, or negative.
 func (*PositiveNaturalNumbers) FromInt(value *Int) (*NatPlus, error) {
 	if value == nil {
-		return nil, errs.NewValue("value must not be nil")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	if value.IsZero() {
-		return nil, errs.NewValue("value must be greater than 0")
+		return nil, ErrOutOfRange.WithStackFrame()
 	}
 	if value.IsNegative() {
-		return nil, errs.NewValue("value must be positive")
+		return nil, ErrOutOfRange.WithStackFrame()
 	}
 	return &NatPlus{v: value.Abs().v}, nil
 }
@@ -136,22 +134,18 @@ func (*PositiveNaturalNumbers) FromInt(value *Int) (*NatPlus, error) {
 // FromBytes creates a NatPlus from the given big-endian byte slice, returning an error if the input is empty or represents zero.
 func (*PositiveNaturalNumbers) FromBytes(input []byte) (*NatPlus, error) {
 	if len(input) == 0 || ct.SliceIsZero(input) == ct.True {
-		return nil, errs.NewValue("input must not be empty")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	out := &NatPlus{v: numct.NewNatFromBytes(input)}
 	if out.v.IsZero() == ct.True {
-		return nil, errs.NewValue("input must represent a positive natural number")
+		return nil, ErrOutOfRange.WithStackFrame()
 	}
 	return out, nil
 }
 
 // FromBytesBE creates a NatPlus from the given big-endian byte slice, returning an error if the input is empty or represents zero.
 func (nps *PositiveNaturalNumbers) FromBytesBE(input []byte) (*NatPlus, error) {
-	out, err := nps.FromBytes(input)
-	if err != nil {
-		return nil, errs.WrapArgument(err, "failed to create NatPlus from bytes BE")
-	}
-	return out, nil
+	return errs2.Maybe1(nps.FromBytes(input))
 }
 
 // Random generates a random NatPlus in the range [lowInclusive, highExclusive), returning an error if highExclusive is nil.
@@ -161,46 +155,14 @@ func (nps *PositiveNaturalNumbers) Random(lowInclusive, highExclusive *NatPlus, 
 	}
 	var v numct.Nat
 	if err := v.SetRandomRangeLH(lowInclusive.Value(), highExclusive.Value(), prng); err != nil {
-		return nil, errs.WrapRandomSample(err, "failed to sample random NatPlus")
+		return nil, errs2.Wrap(err)
 	}
 	return &NatPlus{v: &v}, nil
-}
-
-// Iter returns an iterator over all positive natural numbers, starting from 1.
-func (nps *PositiveNaturalNumbers) Iter() iter.Seq[*NatPlus] {
-	return nps.IterRange(nps.One(), nil)
 }
 
 // OpIdentity returns the multiplicative identity element of PositiveNaturalNumbers, which is 1.
 func (nps *PositiveNaturalNumbers) OpIdentity() *NatPlus {
 	return nps.One()
-}
-
-// IterRange returns an iterator over positive natural numbers in the range [start, stop).
-func (nps *PositiveNaturalNumbers) IterRange(start, stop *NatPlus) iter.Seq[*NatPlus] {
-	return func(yield func(*NatPlus) bool) {
-		if start == nil {
-			start = nps.One()
-		}
-		cursor := start.Clone()
-		if stop == nil {
-			for {
-				if !yield(cursor) {
-					return
-				}
-				cursor = cursor.Increment()
-			}
-		}
-		if start.Compare(stop).Is(base.GreaterThan) {
-			return
-		}
-		for !cursor.Equal(stop) {
-			if !yield(cursor) {
-				return
-			}
-			cursor = cursor.Increment()
-		}
-	}
 }
 
 // ElementSize returns -1 indicating that NatPlus does not have a fixed element size.
@@ -221,10 +183,10 @@ type NatPlus struct {
 
 func (*NatPlus) isValid(x *NatPlus) (*NatPlus, error) {
 	if x == nil {
-		return nil, errs.NewValue("argument is nil")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	if x.v.IsZero() == ct.True {
-		return nil, errs.NewValue("argument is not a positive natural number")
+		return nil, ErrOutOfRange.WithStackFrame()
 	}
 	return x, nil
 }
@@ -235,7 +197,7 @@ func (np *NatPlus) cacheMont(m *numct.Modulus) *NatPlus {
 		if m == nil {
 			m, ok = numct.NewModulus(np.v)
 			if ok == ct.False {
-				panic(errs.NewFailed("modulus is not valid"))
+				panic(errs2.New("modulus is not valid"))
 			}
 		}
 		np.m = m
@@ -328,7 +290,10 @@ func (np *NatPlus) Compare(other *NatPlus) base.Ordering {
 
 // TryInv attempts to compute the multiplicative inverse of the NatPlus, returning an error since it does not exist.
 func (np *NatPlus) TryInv() (*NatPlus, error) {
-	return nil, errs.NewValue("no multiplicative inverse for NatPlus")
+	if np.IsOne() {
+		return np.Clone(), nil
+	}
+	return nil, ErrUndefined.WithStackFrame().WithMessage("multiplicative inverse only defined for 1")
 }
 
 // TryOpInv attempts to compute the multiplicative inverse of the NatPlus, returning an error since it does not exist.
@@ -339,12 +304,12 @@ func (np *NatPlus) TryOpInv() (*NatPlus, error) {
 // TryDiv attempts to divide the NatPlus by another NatPlus, returning an error if the division is not exact.
 func (np *NatPlus) TryDiv(other *NatPlus) (*NatPlus, error) {
 	if _, err := np.isValid(other); err != nil {
-		return nil, errs.WrapArgument(err, "argument is not valid")
+		return nil, errs2.Wrap(err)
 	}
 	v := new(numct.Nat)
 	// Use ExactDiv to ensure only exact division succeeds
 	if ok := v.ExactDiv(np.v, other.ModulusCT()); ok != ct.True {
-		return nil, errs.NewFailed("division is not exact")
+		return nil, ErrInexactDivision.WithStackFrame()
 	}
 	out := &NatPlus{v: v}
 	return np.isValid(out)
@@ -353,10 +318,10 @@ func (np *NatPlus) TryDiv(other *NatPlus) (*NatPlus, error) {
 // TrySub attempts to subtract another NatPlus from the NatPlus, returning an error if the result is not a positive natural number.
 func (np *NatPlus) TrySub(other *NatPlus) (*NatPlus, error) {
 	if _, err := np.isValid(other); err != nil {
-		return nil, errs.WrapArgument(err, "argument is not valid")
+		return nil, errs2.Wrap(err)
 	}
 	if np.IsLessThanOrEqual(other) {
-		return nil, errs.NewValue("result would not be a positive natural number")
+		return nil, ErrOutOfRange.WithStackFrame().WithMessage("result of subtraction is not a positive natural number")
 	}
 	v := new(numct.Nat)
 	v.SubCap(np.v, other.v, -1)
@@ -410,7 +375,7 @@ func (np *NatPlus) Abs() *NatPlus {
 
 // String returns the string representation of the NatPlus.
 func (np *NatPlus) String() string {
-	return np.v.Big().String()
+	return np.v.String()
 }
 
 // Increment returns the NatPlus incremented by 1.
@@ -456,7 +421,7 @@ func (np *NatPlus) IsOdd() bool {
 // Decrement returns the NatPlus decremented by 1, returning an error if the result would be less than 1.
 func (np *NatPlus) Decrement() (*NatPlus, error) {
 	if np.IsOne() {
-		return nil, errs.NewValue("cannot decrement NatPlus below 1")
+		return nil, ErrOutOfRange.WithStackFrame().WithMessage("cannot decrement NatPlus below 1")
 	}
 	return np.TrySub(NPlus().One())
 }

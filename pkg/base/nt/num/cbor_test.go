@@ -66,7 +66,7 @@ func TestNatPlus_CBOR_EdgeCases(t *testing.T) {
 		// Actually, let's test by trying to create zero NatPlus directly
 		_, err = num.NPlus().FromUint64(0)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "must be greater than 0")
+		require.ErrorIs(t, err, num.ErrOutOfRange)
 	})
 
 	t.Run("empty_bytes", func(t *testing.T) {

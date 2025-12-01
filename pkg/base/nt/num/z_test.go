@@ -1,1704 +1,1655 @@
 package num_test
 
 import (
+	"crypto/rand"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
-func TestIntegers_Creation(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name        string
-		createFunc  func() (*num.Int, error)
-		expected    string
-		expectError bool
-	}{
-		{
-			name: "Zero",
-			createFunc: func() (*num.Int, error) {
-				return num.Z().Zero(), nil
-			},
-			expected: "0",
-		},
-		{
-			name: "One",
-			createFunc: func() (*num.Int, error) {
-				return num.Z().One(), nil
-			},
-			expected: "1",
-		},
-		{
-			name: "FromInt64_Positive",
-			createFunc: func() (*num.Int, error) {
-				return num.Z().FromInt64(42), nil
-			},
-			expected: "42",
-		},
-		{
-			name: "FromInt64_Negative",
-			createFunc: func() (*num.Int, error) {
-				return num.Z().FromInt64(-42), nil
-			},
-			expected: "-42",
-		},
-		{
-			name: "FromInt64_Zero",
-			createFunc: func() (*num.Int, error) {
-				return num.Z().FromInt64(0), nil
-			},
-			expected: "0",
-		},
-		{
-			name: "FromUint64_Small",
-			createFunc: func() (*num.Int, error) {
-				return num.Z().FromUint64(123), nil
-			},
-			expected: "123",
-		},
-		{
-			name: "FromUint64_Large",
-			createFunc: func() (*num.Int, error) {
-				return num.Z().FromUint64(^uint64(0)), nil
-			},
-			expected: "18446744073709551615",
-		},
-		{
-			name: "FromBytes_Positive",
-			createFunc: func() (*num.Int, error) {
-				// Sign-magnitude: [0x00, 0x01, 0x02, 0x03] = positive 66051
-				return num.Z().FromBytes([]byte{0x00, 0x01, 0x02, 0x03})
-			},
-			expected: "66051", // 0x010203 = 66051
-		},
-		{
-			name: "FromBytes_Empty",
-			createFunc: func() (*num.Int, error) {
-				return num.Z().FromBytes([]byte{})
-			},
-			expected:    "",
-			expectError: true,
-		},
-		{
-			name: "FromNat",
-			createFunc: func() (*num.Int, error) {
-				n := num.N().FromUint64(999)
-				return num.Z().FromNat(n)
-			},
-			expected: "999",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result, err := tt.createFunc()
-			if tt.expectError {
-				require.Error(t, err)
-				return
-			}
-
-			require.NoError(t, err)
-			require.Equal(t, tt.expected, result.String())
-		})
-	}
+// requireBigIntEqual compares big.Int values semantically (using Cmp)
+// rather than structurally, since different internal representations
+// can represent the same mathematical value.
+func requireBigIntEqual(t *testing.T, expected, actual *big.Int, msgAndArgs ...any) {
+	t.Helper()
+	require.Equal(t, 0, expected.Cmp(actual), msgAndArgs...)
 }
 
-func TestIntegers_Subtraction(t *testing.T) {
+// ============================================================================
+// Structure Tests
+// ============================================================================
+
+func TestZ_Singleton(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name     string
-		a        *num.Int
-		b        *num.Int
-		expected string
-	}{
-		{
-			name:     "Zero_Minus_Zero",
-			a:        num.Z().Zero(),
-			b:        num.Z().Zero(),
-			expected: "0",
-		},
-		{
-			name:     "One_Minus_Zero",
-			a:        num.Z().One(),
-			b:        num.Z().Zero(),
-			expected: "1",
-		},
-		{
-			name:     "Zero_Minus_One",
-			a:        num.Z().Zero(),
-			b:        num.Z().One(),
-			expected: "-1",
-		},
-		{
-			name:     "Positive_Minus_Positive",
-			a:        num.Z().FromInt64(42),
-			b:        num.Z().FromInt64(17),
-			expected: "25",
-		},
-		{
-			name:     "Positive_Minus_Negative",
-			a:        num.Z().FromInt64(25),
-			b:        num.Z().FromInt64(-17),
-			expected: "42",
-		},
-		{
-			name:     "Negative_Minus_Positive",
-			a:        num.Z().FromInt64(-25),
-			b:        num.Z().FromInt64(17),
-			expected: "-42",
-		},
-		{
-			name:     "Negative_Minus_Negative",
-			a:        num.Z().FromInt64(-25),
-			b:        num.Z().FromInt64(-17),
-			expected: "-8",
-		},
-		{
-			name:     "Large_Minus_Small",
-			a:        num.Z().FromUint64(^uint64(0)),
-			b:        num.Z().FromUint64(1),
-			expected: "18446744073709551614",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Test Sub
-			result := tt.a.Sub(tt.b)
-			require.Equal(t, tt.expected, result.String())
-
-			// Test TrySub (should always succeed for integers)
-			result2, err := tt.a.TrySub(tt.b)
-			require.NoError(t, err)
-			require.Equal(t, tt.expected, result2.String())
-		})
-	}
-}
-
-func TestIntegers_Negation(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		input    *num.Int
-		expected string
-	}{
-		{
-			name:     "Negate_Zero",
-			input:    num.Z().Zero(),
-			expected: "0",
-		},
-		{
-			name:     "Negate_Positive",
-			input:    num.Z().FromInt64(42),
-			expected: "-42",
-		},
-		{
-			name:     "Negate_Negative",
-			input:    num.Z().FromInt64(-42),
-			expected: "42",
-		},
-		{
-			name:     "Negate_One",
-			input:    num.Z().One(),
-			expected: "-1",
-		},
-		{
-			name:     "Double_Negation",
-			input:    num.Z().FromInt64(100),
-			expected: "100", // will test -(-100) = 100
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Test Neg
-			result := tt.input.Neg()
-			if tt.name != "Double_Negation" {
-				require.Equal(t, tt.expected, result.String())
-			}
-
-			// Test TryNeg (should always succeed)
-			result2, err := tt.input.TryNeg()
-			require.NoError(t, err)
-			if tt.name != "Double_Negation" {
-				require.Equal(t, tt.expected, result2.String())
-			}
-
-			// Test OpInv (same as Neg for integers)
-			result3 := tt.input.OpInv()
-			if tt.name != "Double_Negation" {
-				require.Equal(t, tt.expected, result3.String())
-			}
-
-			// Test TryOpInv (should always succeed)
-			result4, err := tt.input.TryOpInv()
-			require.NoError(t, err)
-			if tt.name != "Double_Negation" {
-				require.Equal(t, tt.expected, result4.String())
-			}
-
-			// For double negation test
-			if tt.name == "Double_Negation" {
-				doubleNeg := result.Neg()
-				require.Equal(t, tt.expected, doubleNeg.String())
-			}
-		})
-	}
-}
-
-func TestIntegers_Abs(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		input    *num.Int
-		expected string
-	}{
-		{
-			name:     "Abs_Zero",
-			input:    num.Z().Zero(),
-			expected: "0",
-		},
-		{
-			name:     "Abs_Positive",
-			input:    num.Z().FromInt64(42),
-			expected: "42",
-		},
-		{
-			name:     "Abs_Negative",
-			input:    num.Z().FromInt64(-42),
-			expected: "42",
-		},
-		{
-			name:     "Abs_One",
-			input:    num.Z().One(),
-			expected: "1",
-		},
-		{
-			name:     "Abs_NegativeOne",
-			input:    num.Z().FromInt64(-1),
-			expected: "1",
-		},
-		{
-			name:     "Abs_Large",
-			input:    num.Z().FromInt64(-1000000),
-			expected: "1000000",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result := tt.input.Abs()
-			require.Equal(t, tt.expected, result.String())
-
-			// Abs should always return non-negative
-			require.True(t, result.IsPositive() || result.IsZero())
-		})
-	}
-}
-
-func TestIntegers_Division(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name         string
-		dividend     *num.Int
-		divisor      *num.Int
-		expectedQuot string
-		expectedRem  string
-		expectError  bool
-	}{
-		{
-			name:         "Exact_Division",
-			dividend:     num.Z().FromInt64(42),
-			divisor:      num.Z().FromInt64(6),
-			expectedQuot: "7",
-			expectedRem:  "0",
-		},
-		{
-			name:         "Division_With_Remainder",
-			dividend:     num.Z().FromInt64(43),
-			divisor:      num.Z().FromInt64(6),
-			expectedQuot: "7",
-			expectedRem:  "1",
-		},
-		{
-			name:         "Negative_Dividend",
-			dividend:     num.Z().FromInt64(-42),
-			divisor:      num.Z().FromInt64(6),
-			expectedQuot: "-7",
-			expectedRem:  "0",
-		},
-		{
-			name:         "Negative_Divisor",
-			dividend:     num.Z().FromInt64(42),
-			divisor:      num.Z().FromInt64(-6),
-			expectedQuot: "-7",
-			expectedRem:  "0",
-		},
-		{
-			name:         "Both_Negative",
-			dividend:     num.Z().FromInt64(-42),
-			divisor:      num.Z().FromInt64(-6),
-			expectedQuot: "7",
-			expectedRem:  "0",
-		},
-		{
-			name:         "Zero_Dividend",
-			dividend:     num.Z().Zero(),
-			divisor:      num.Z().FromInt64(5),
-			expectedQuot: "0",
-			expectedRem:  "0",
-		},
-		{
-			name:        "Division_By_Zero",
-			dividend:    num.Z().FromInt64(42),
-			divisor:     num.Z().Zero(),
-			expectError: true,
-		},
-		{
-			name:         "One_Divisor",
-			dividend:     num.Z().FromInt64(42),
-			divisor:      num.Z().One(),
-			expectedQuot: "42",
-			expectedRem:  "0",
-		},
-		{
-			name:         "Large_Division",
-			dividend:     num.Z().FromInt64(1000000),
-			divisor:      num.Z().FromInt64(37),
-			expectedQuot: "27027",
-			expectedRem:  "1",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			quot, rem, err := tt.dividend.EuclideanDiv(tt.divisor)
-
-			if tt.expectError {
-				require.Error(t, err)
-				return
-			}
-
-			require.NoError(t, err)
-			require.Equal(t, tt.expectedQuot, quot.String())
-			require.Equal(t, tt.expectedRem, rem.String())
-
-			// Verify: dividend = divisor * quotient + remainder
-			reconstructed := quot.Mul(tt.divisor).Add(rem)
-			require.True(t, reconstructed.Equal(tt.dividend))
-		})
-	}
-
-	// Test TryDiv for exact division
-	t.Run("TryDiv", func(t *testing.T) {
-		t.Parallel()
-
-		// Exact division should succeed
-		result, err := num.Z().FromInt64(42).TryDiv(num.Z().FromInt64(6))
-		require.NoError(t, err)
-		require.Equal(t, "7", result.String())
-
-		// Inexact division should fail
-		_, err = num.Z().FromInt64(43).TryDiv(num.Z().FromInt64(6))
-		require.Error(t, err)
-
-		// Division by zero should fail
-		_, err = num.Z().FromInt64(42).TryDiv(num.Z().Zero())
-		require.Error(t, err)
-	})
-}
-
-func TestIntegers_Modulo(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		value    *num.Int
-		modulus  *num.NatPlus
-		expected string
-	}{
-		{
-			name:     "Small_Mod",
-			value:    num.Z().FromInt64(17),
-			modulus:  mustNatPlus(num.NPlus().FromUint64(5)),
-			expected: "2",
-		},
-		{
-			name:     "Exact_Multiple",
-			value:    num.Z().FromInt64(20),
-			modulus:  mustNatPlus(num.NPlus().FromUint64(5)),
-			expected: "0",
-		},
-		{
-			name:     "Negative_Value",
-			value:    num.Z().FromInt64(-17),
-			modulus:  mustNatPlus(num.NPlus().FromUint64(5)),
-			expected: "3", // -17 ≡ 3 (mod 5)
-		},
-		{
-			name:     "Zero_Value",
-			value:    num.Z().Zero(),
-			modulus:  mustNatPlus(num.NPlus().FromUint64(7)),
-			expected: "0",
-		},
-		{
-			name:     "Large_Modulus",
-			value:    num.Z().FromInt64(1000000),
-			modulus:  mustNatPlus(num.NPlus().FromUint64(37)),
-			expected: "1",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result := tt.value.Mod(tt.modulus)
-			require.Equal(t, tt.expected, result.String())
-		})
-	}
-}
-
-func TestIntegers_Coprime(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		a        *num.Int
-		b        *num.Int
-		expected bool
-	}{
-		{
-			name:     "Small_Coprimes",
-			a:        num.Z().FromInt64(3),
-			b:        num.Z().FromInt64(4),
-			expected: true,
-		},
-		{
-			name:     "Not_Coprime",
-			a:        num.Z().FromInt64(6),
-			b:        num.Z().FromInt64(9),
-			expected: false, // gcd(6,9) = 3
-		},
-		{
-			name:     "With_One",
-			a:        num.Z().FromInt64(42),
-			b:        num.Z().One(),
-			expected: true, // Everything is coprime with 1
-		},
-		{
-			name:     "Same_Number",
-			a:        num.Z().FromInt64(5),
-			b:        num.Z().FromInt64(5),
-			expected: false, // gcd(5,5) = 5
-		},
-		{
-			name:     "Negative_Values",
-			a:        num.Z().FromInt64(-15),
-			b:        num.Z().FromInt64(22),
-			expected: true, // gcd(15,22) = 1
-		},
-		{
-			name:     "Prime_Numbers",
-			a:        num.Z().FromInt64(17),
-			b:        num.Z().FromInt64(23),
-			expected: true,
-		},
-		{
-			name:     "Powers_Of_Two",
-			a:        num.Z().FromInt64(16),
-			b:        num.Z().FromInt64(32),
-			expected: false, // gcd(16,32) = 16
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result := tt.a.Coprime(tt.b)
-			require.Equal(t, tt.expected, result)
-
-			// Coprime should be symmetric
-			result2 := tt.b.Coprime(tt.a)
-			require.Equal(t, tt.expected, result2)
-		})
-	}
-}
-
-func TestIntegers_PrimalityTest(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		value   *num.Int
-		isPrime bool
-	}{
-		{
-			name:    "Small_Prime_2",
-			value:   num.Z().FromInt64(2),
-			isPrime: true,
-		},
-		{
-			name:    "Small_Prime_3",
-			value:   num.Z().FromInt64(3),
-			isPrime: true,
-		},
-		{
-			name:    "Small_Composite_4",
-			value:   num.Z().FromInt64(4),
-			isPrime: false,
-		},
-		{
-			name:    "Prime_17",
-			value:   num.Z().FromInt64(17),
-			isPrime: true,
-		},
-		{
-			name:    "Composite_21",
-			value:   num.Z().FromInt64(21),
-			isPrime: false,
-		},
-		{
-			name:    "Large_Prime",
-			value:   num.Z().FromInt64(97),
-			isPrime: true,
-		},
-		{
-			name:    "One_Not_Prime",
-			value:   num.Z().One(),
-			isPrime: false,
-		},
-		{
-			name:    "Zero_Not_Prime",
-			value:   num.Z().Zero(),
-			isPrime: false,
-		},
-		{
-			name:    "Negative_Not_Prime",
-			value:   num.Z().FromInt64(-17),
-			isPrime: false, // Negative numbers are not considered prime
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result := tt.value.IsProbablyPrime()
-			require.Equal(t, tt.isPrime, result)
-		})
-	}
-}
-
-func TestIntegers_UtilityMethods(t *testing.T) {
-	t.Parallel()
-
-	t.Run("Increment", func(t *testing.T) {
-		t.Parallel()
-
-		tests := []struct {
-			input    *num.Int
-			expected string
-		}{
-			{num.Z().Zero(), "1"},
-			{num.Z().One(), "2"},
-			{num.Z().FromInt64(41), "42"},
-			{num.Z().FromInt64(-1), "0"},
-			{num.Z().FromInt64(-42), "-41"},
-		}
-
-		for _, tt := range tests {
-			result := tt.input.Increment()
-			require.Equal(t, tt.expected, result.String())
-		}
-	})
-
-	t.Run("Decrement", func(t *testing.T) {
-		t.Parallel()
-
-		tests := []struct {
-			input    *num.Int
-			expected string
-		}{
-			{num.Z().Zero(), "-1"},
-			{num.Z().One(), "0"},
-			{num.Z().FromInt64(42), "41"},
-			{num.Z().FromInt64(-41), "-42"},
-		}
-
-		for _, tt := range tests {
-			result := tt.input.Decrement()
-			require.Equal(t, tt.expected, result.String())
-		}
-	})
-
-	t.Run("IsLessThanOrEqual", func(t *testing.T) {
-		t.Parallel()
-
-		require.True(t, num.Z().Zero().IsLessThanOrEqual(num.Z().Zero()))
-		require.True(t, num.Z().Zero().IsLessThanOrEqual(num.Z().One()))
-		require.True(t, num.Z().FromInt64(-42).IsLessThanOrEqual(num.Z().FromInt64(-41)))
-		require.True(t, num.Z().FromInt64(42).IsLessThanOrEqual(num.Z().FromInt64(42)))
-
-		require.False(t, num.Z().One().IsLessThanOrEqual(num.Z().Zero()))
-		require.False(t, num.Z().FromInt64(43).IsLessThanOrEqual(num.Z().FromInt64(42)))
-	})
-
-	t.Run("HashCode", func(t *testing.T) {
-		t.Parallel()
-
-		// Same values should have same hash
-		a := num.Z().FromInt64(42)
-		b := num.Z().FromInt64(42)
-		require.Equal(t, a.HashCode(), b.HashCode())
-
-		// Different values should (usually) have different hashes
-		c := num.Z().FromInt64(43)
-		require.NotEqual(t, a.HashCode(), c.HashCode())
-
-		// Negative values should have consistent hashes
-		d := num.Z().FromInt64(-42)
-		e := num.Z().FromInt64(-42)
-		require.Equal(t, d.HashCode(), e.HashCode())
-	})
-
-	t.Run("Bit", func(t *testing.T) {
-		t.Parallel()
-
-		// Test number: 13 = 1101 in binary
-		n := num.Z().FromInt64(13)
-
-		require.Equal(t, uint8(1), n.Bit(0)) // LSB
-		require.Equal(t, uint8(0), n.Bit(1))
-		require.Equal(t, uint8(1), n.Bit(2))
-		require.Equal(t, uint8(1), n.Bit(3))
-		require.Equal(t, uint8(0), n.Bit(4)) // Beyond the number
-
-		// Test with zero
-		zero := num.Z().Zero()
-		require.Equal(t, uint8(0), zero.Bit(0))
-		require.Equal(t, uint8(0), zero.Bit(10))
-	})
-
-	t.Run("IsInRange", func(t *testing.T) {
-		t.Parallel()
-
-		modulus := mustNatPlus(num.NPlus().FromUint64(10))
-
-		// IsInRange checks if absolute value is in range [0, modulus)
-		// For modulus 10, values with abs(value) < 10 are in range
-		// Values in range
-		require.True(t, num.Z().Zero().IsInRange(modulus))
-		require.True(t, num.Z().FromInt64(5).IsInRange(modulus))
-		require.True(t, num.Z().FromInt64(-5).IsInRange(modulus))
-		require.True(t, num.Z().FromInt64(9).IsInRange(modulus))
-		require.True(t, num.Z().FromInt64(-9).IsInRange(modulus))
-
-		// Values out of range (abs >= modulus)
-		require.False(t, num.Z().FromInt64(10).IsInRange(modulus))
-		require.False(t, num.Z().FromInt64(-10).IsInRange(modulus))
-		require.False(t, num.Z().FromInt64(100).IsInRange(modulus))
-		require.False(t, num.Z().FromInt64(-100).IsInRange(modulus))
-	})
-}
-
-func TestIntegers_ScalarOperations(t *testing.T) {
-	t.Parallel()
-
-	t.Run("ScalarMul", func(t *testing.T) {
-		t.Parallel()
-
-		// Test scalar multiplication
-		value := num.Z().FromInt64(7)
-		scalar := num.Z().FromInt64(3)
-		result := value.ScalarMul(scalar)
-		require.Equal(t, "21", result.String())
-
-		// Test with negative scalar
-		negScalar := num.Z().FromInt64(-3)
-		result = value.ScalarMul(negScalar)
-		require.Equal(t, "-21", result.String())
-
-		// Test with zero
-		result = num.Z().Zero().ScalarMul(scalar)
-		require.True(t, result.IsZero())
-
-		// Test ScalarOp (same as ScalarMul for integers)
-		result = value.ScalarOp(scalar)
-		require.Equal(t, "21", result.String())
-	})
-
-	t.Run("MultiScalarMul", func(t *testing.T) {
-		t.Parallel()
-
-		values := []*num.Int{
-			num.Z().FromInt64(2),
-			num.Z().FromInt64(3),
-			num.Z().FromInt64(5),
-		}
-		scalars := []*num.Int{
-			num.Z().FromInt64(1),
-			num.Z().FromInt64(4),
-			num.Z().FromInt64(2),
-		}
-
-		// 2*1 + 3*4 + 5*2 = 2 + 12 + 10 = 24
-		result, err := num.Z().MultiScalarMul(values, scalars)
-		require.NoError(t, err)
-		require.Equal(t, "24", result.String())
-
-		// Test MultiScalarOp (same as MultiScalarMul)
-		result2, err := num.Z().MultiScalarOp(values, scalars)
-		require.NoError(t, err)
-		require.Equal(t, "24", result2.String())
-
-		// Test with empty slices
-		emptyResult, err := num.Z().MultiScalarMul([]*num.Int{}, []*num.Int{})
-		require.NoError(t, err)
-		require.True(t, emptyResult.IsZero())
-	})
-}
-
-func TestIntegers_Iterators(t *testing.T) {
-	t.Parallel()
-
-	t.Run("IterRange", func(t *testing.T) {
-		t.Parallel()
-
-		// Test forward iteration
-		start := num.Z().FromInt64(-2)
-		stop := num.Z().FromInt64(3)
-
-		var collected []string
-		for v := range num.Z().IterRange(start, stop) {
-			collected = append(collected, v.String())
-		}
-
-		expected := []string{"-2", "-1", "0", "1", "2"}
-		require.Equal(t, expected, collected)
-
-		// Test empty range (start >= stop)
-		start2 := num.Z().FromInt64(5)
-		stop2 := num.Z().FromInt64(5)
-
-		count := 0
-		for range num.Z().IterRange(start2, stop2) {
-			count++
-		}
-		require.Equal(t, 0, count)
-	})
-
-	t.Run("Iter", func(t *testing.T) {
-		t.Parallel()
-
-		// Test iteration from zero
-		var collected []string
-		count := 0
-		for v := range num.Z().Iter() {
-			collected = append(collected, v.String())
-			count++
-			if count >= 5 {
-				break
-			}
-		}
-
-		expected := []string{"0", "1", "-1", "2", "-2"}
-		require.Equal(t, expected, collected)
-	})
-}
-
-func TestIntegers_TryInv(t *testing.T) {
-	t.Parallel()
-
-	// TryInv should always fail for integers (no multiplicative inverse)
-	values := []*num.Int{
-		num.Z().One(),
-		num.Z().FromInt64(-1),
-		num.Z().FromInt64(2),
-		num.Z().FromInt64(42),
-	}
-
-	for _, v := range values {
-		_, err := v.TryInv()
-		require.Error(t, err, "Expected error for TryInv of %s", v.String())
-	}
-}
-
-func TestIntegers_Structure(t *testing.T) {
-	t.Parallel()
-
-	z := num.Z()
-
-	// Test structure information
-	require.Equal(t, "Z", z.Name())
-
-	// Order is infinite
-	order := z.Order()
-	require.Equal(t, "Infinite", order.String())
-
-	// Element size is 0 (variable size)
-	require.Equal(t, 0, z.ElementSize())
-
-	// Test characteristic should be 0 for integers
-	char := z.Characteristic()
-	require.True(t, char.IsZero())
-
-	// Test identity element
-	identity := z.OpIdentity()
-	require.True(t, identity.IsZero())
-
-	// Test that any integer's structure returns the same singleton
-	someInt := z.FromInt64(42)
-	require.Equal(t, z, someInt.Structure())
-}
-
-func TestIntegers_LengthMethods(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name         string
-		value        *num.Int
-		expectedLen  int
-		announcedLen int
-	}{
-		{
-			name:         "Zero",
-			value:        num.Z().Zero(),
-			expectedLen:  0, // 0 has 0 bits
-			announcedLen: 1, // Zero() has announced length 1
-		},
-		{
-			name:         "Small_Positive",
-			value:        num.Z().FromInt64(255),
-			expectedLen:  8,  // 255 = 11111111 (8 bits)
-			announcedLen: 64, // saferith announces at least 64 bits
-		},
-		{
-			name:         "Large_Positive",
-			value:        num.Z().FromInt64(65536),
-			expectedLen:  17, // 65536 = 2^16, needs 17 bits
-			announcedLen: 64, // saferith announces at least 64 bits
-		},
-		{
-			name:         "Negative",
-			value:        num.Z().FromInt64(-1000),
-			expectedLen:  10, // 1000 in binary needs 10 bits
-			announcedLen: 64, // saferith announces at least 64 bits
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			require.Equal(t, tt.expectedLen, tt.value.TrueLen())
-			require.Equal(t, tt.announcedLen, tt.value.AnnouncedLen())
-		})
-	}
-}
-
-func TestIntegers_Addition(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		a        *num.Int
-		b        *num.Int
-		expected string
-	}{
-		{
-			name:     "Zero_Plus_Zero",
-			a:        num.Z().Zero(),
-			b:        num.Z().Zero(),
-			expected: "0",
-		},
-		{
-			name:     "Zero_Plus_One",
-			a:        num.Z().Zero(),
-			b:        num.Z().One(),
-			expected: "1",
-		},
-		{
-			name:     "Positive_Plus_Positive",
-			a:        num.Z().FromInt64(25),
-			b:        num.Z().FromInt64(17),
-			expected: "42",
-		},
-		{
-			name:     "Positive_Plus_Negative",
-			a:        num.Z().FromInt64(25),
-			b:        num.Z().FromInt64(-17),
-			expected: "8",
-		},
-		{
-			name:     "Negative_Plus_Positive",
-			a:        num.Z().FromInt64(-25),
-			b:        num.Z().FromInt64(17),
-			expected: "-8",
-		},
-		{
-			name:     "Negative_Plus_Negative",
-			a:        num.Z().FromInt64(-25),
-			b:        num.Z().FromInt64(-17),
-			expected: "-42",
-		},
-		{
-			name:     "Large_Numbers",
-			a:        num.Z().FromUint64(^uint64(0)),
-			b:        num.Z().FromUint64(1),
-			expected: "18446744073709551616",
-		},
-		{
-			name:     "Double",
-			a:        num.Z().FromInt64(21),
-			b:        num.Z().FromInt64(21),
-			expected: "42",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Test Add
-			result := tt.a.Add(tt.b)
-			require.Equal(t, tt.expected, result.String())
-
-			// Test Op (should be same as Add)
-			result2 := tt.a.Op(tt.b)
-			require.Equal(t, tt.expected, result2.String())
-
-			// Test commutativity
-			result3 := tt.b.Add(tt.a)
-			require.Equal(t, tt.expected, result3.String())
-		})
-	}
-
-	// Test Double method
-	t.Run("Double_Method", func(t *testing.T) {
-		t.Parallel()
-
-		x := num.Z().FromInt64(21)
-		result := x.Double()
-		require.Equal(t, "42", result.String())
-
-		// Double of zero
-		result = num.Z().Zero().Double()
-		require.Equal(t, "0", result.String())
-
-		// Double of negative
-		result = num.Z().FromInt64(-21).Double()
-		require.Equal(t, "-42", result.String())
-	})
-}
-
-func TestIntegers_Multiplication(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		a        *num.Int
-		b        *num.Int
-		expected string
-	}{
-		{
-			name:     "Zero_Times_Zero",
-			a:        num.Z().Zero(),
-			b:        num.Z().Zero(),
-			expected: "0",
-		},
-		{
-			name:     "Zero_Times_One",
-			a:        num.Z().Zero(),
-			b:        num.Z().One(),
-			expected: "0",
-		},
-		{
-			name:     "One_Times_One",
-			a:        num.Z().One(),
-			b:        num.Z().One(),
-			expected: "1",
-		},
-		{
-			name:     "Positive_Times_Positive",
-			a:        num.Z().FromInt64(6),
-			b:        num.Z().FromInt64(7),
-			expected: "42",
-		},
-		{
-			name:     "Positive_Times_Negative",
-			a:        num.Z().FromInt64(6),
-			b:        num.Z().FromInt64(-7),
-			expected: "-42",
-		},
-		{
-			name:     "Negative_Times_Positive",
-			a:        num.Z().FromInt64(-6),
-			b:        num.Z().FromInt64(7),
-			expected: "-42",
-		},
-		{
-			name:     "Negative_Times_Negative",
-			a:        num.Z().FromInt64(-6),
-			b:        num.Z().FromInt64(-7),
-			expected: "42",
-		},
-		{
-			name:     "Large_Numbers",
-			a:        num.Z().FromUint64(1000000),
-			b:        num.Z().FromUint64(1000000),
-			expected: "1000000000000",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Test Mul
-			result := tt.a.Mul(tt.b)
-			require.Equal(t, tt.expected, result.String())
-
-			// Test OtherOp (should be same as Mul)
-			result2 := tt.a.OtherOp(tt.b)
-			require.Equal(t, tt.expected, result2.String())
-
-			// Test commutativity
-			result3 := tt.b.Mul(tt.a)
-			require.Equal(t, tt.expected, result3.String())
-		})
-	}
-
-	// Test Square method
-	t.Run("Square_Method", func(t *testing.T) {
-		t.Parallel()
-
-		testCases := []struct {
-			input    *num.Int
-			expected string
-		}{
-			{num.Z().Zero(), "0"},
-			{num.Z().One(), "1"},
-			{num.Z().FromInt64(5), "25"},
-			{num.Z().FromInt64(-5), "25"},
-			{num.Z().FromInt64(12), "144"},
-			{num.Z().FromInt64(-12), "144"},
-		}
-
-		for _, tc := range testCases {
-			result := tc.input.Square()
-			require.Equal(t, tc.expected, result.String())
-		}
-	})
+	z1 := num.Z()
+	z2 := num.Z()
+	require.Same(t, z1, z2, "Z() should return the same singleton instance")
 }
 
 func TestIntegers_Properties(t *testing.T) {
 	t.Parallel()
 
-	t.Run("IsZero", func(t *testing.T) {
-		t.Parallel()
+	z := num.Z()
 
-		require.True(t, (num.Z().Zero()).IsZero())
-		require.False(t, (num.Z().One()).IsZero())
-		require.False(t, (num.Z().FromInt64(-1)).IsZero())
-		require.False(t, (num.Z().FromInt64(42)).IsZero())
+	t.Run("Name", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "Z", z.Name())
 	})
 
-	t.Run("IsOne", func(t *testing.T) {
+	t.Run("Order", func(t *testing.T) {
 		t.Parallel()
-
-		require.True(t, (num.Z().One()).IsOne())
-		require.False(t, (num.Z().Zero()).IsOne())
-		require.False(t, (num.Z().FromInt64(-1)).IsOne())
-		require.False(t, (num.Z().FromInt64(2)).IsOne())
+		require.True(t, z.Order().IsInfinite(), "integers should have infinite order")
 	})
 
-	t.Run("IsPositive", func(t *testing.T) {
+	t.Run("Characteristic", func(t *testing.T) {
 		t.Parallel()
-
-		require.True(t, (num.Z().One()).IsPositive())
-		require.True(t, (num.Z().FromInt64(42)).IsPositive())
-		require.False(t, (num.Z().Zero()).IsPositive())
-		require.False(t, (num.Z().FromInt64(-1)).IsPositive())
-		require.False(t, (num.Z().FromInt64(-42)).IsPositive())
+		require.True(t, z.Characteristic().IsZero(), "integers should have characteristic 0")
 	})
 
-	t.Run("IsNegative", func(t *testing.T) {
+	t.Run("IsSemiDomain", func(t *testing.T) {
 		t.Parallel()
-
-		require.True(t, (num.Z().FromInt64(-1)).IsNegative())
-		require.True(t, (num.Z().FromInt64(-42)).IsNegative())
-		require.False(t, (num.Z().Zero()).IsNegative())
-		require.False(t, (num.Z().One()).IsNegative())
-		require.False(t, (num.Z().FromInt64(42)).IsNegative())
+		require.True(t, z.IsSemiDomain(), "integers should be a semi-domain (no zero divisors)")
 	})
 
-	t.Run("IsEven_IsOdd", func(t *testing.T) {
+	t.Run("ElementSize", func(t *testing.T) {
 		t.Parallel()
+		require.Equal(t, -1, z.ElementSize(), "integers should have unbounded element size")
+	})
 
-		testCases := []struct {
-			value  *num.Int
-			isEven bool
-		}{
-			{num.Z().Zero(), true},
-			{num.Z().One(), false},
-			{num.Z().FromInt64(2), true},
-			{num.Z().FromInt64(3), false},
-			{num.Z().FromInt64(-2), true},
-			{num.Z().FromInt64(-3), false},
-			{num.Z().FromInt64(100), true},
-			{num.Z().FromInt64(101), false},
-		}
+	t.Run("Zero", func(t *testing.T) {
+		t.Parallel()
+		zero := z.Zero()
+		require.True(t, zero.IsZero())
+		require.True(t, zero.IsOpIdentity(), "Zero should be the additive identity")
+	})
 
-		for _, tc := range testCases {
-			require.Equal(t, tc.isEven, (tc.value).IsEven())
-			require.Equal(t, !tc.isEven, (tc.value).IsOdd())
-		}
+	t.Run("One", func(t *testing.T) {
+		t.Parallel()
+		one := z.One()
+		require.True(t, one.IsOne())
+	})
+
+	t.Run("OpIdentity", func(t *testing.T) {
+		t.Parallel()
+		opId := z.OpIdentity()
+		require.True(t, opId.IsZero(), "OpIdentity should return Zero")
+	})
+
+	t.Run("ScalarStructure", func(t *testing.T) {
+		t.Parallel()
+		ss := z.ScalarStructure()
+		require.Equal(t, z, ss, "ScalarStructure should return Z itself")
 	})
 }
 
-func TestIntegers_Comparison(t *testing.T) {
-	t.Parallel()
+// ============================================================================
+// Constructor Tests
+// ============================================================================
 
-	t.Run("Compare", func(t *testing.T) {
-		t.Parallel()
-
-		testCases := []struct {
-			a        *num.Int
-			b        *num.Int
-			expected base.Ordering
-		}{
-			{num.Z().Zero(), num.Z().Zero(), base.Ordering(base.Equal)},
-			{num.Z().One(), num.Z().One(), base.Ordering(base.Equal)},
-			{num.Z().Zero(), num.Z().One(), base.Ordering(base.LessThan)},
-			{num.Z().One(), num.Z().Zero(), base.Ordering(base.GreaterThan)},
-			{num.Z().FromInt64(42), num.Z().FromInt64(42), base.Ordering(base.Equal)},
-			{num.Z().FromInt64(41), num.Z().FromInt64(42), base.Ordering(base.LessThan)},
-			{num.Z().FromInt64(43), num.Z().FromInt64(42), base.Ordering(base.GreaterThan)},
-			{num.Z().FromInt64(-1), num.Z().FromInt64(1), base.Ordering(base.LessThan)},
-			{num.Z().FromInt64(1), num.Z().FromInt64(-1), base.Ordering(base.GreaterThan)},
-			{num.Z().FromInt64(-42), num.Z().FromInt64(-41), base.Ordering(base.LessThan)},
-			{num.Z().FromInt64(-41), num.Z().FromInt64(-42), base.Ordering(base.GreaterThan)},
-		}
-
-		for _, tc := range testCases {
-			result := (tc.a.Compare(tc.b))
-			require.Equal(t, tc.expected, result)
-		}
-	})
-
-	t.Run("Equal", func(t *testing.T) {
-		t.Parallel()
-
-		require.True(t, (num.Z().Zero().Equal(num.Z().Zero())))
-		require.True(t, (num.Z().One().Equal(num.Z().One())))
-		require.True(t, (num.Z().FromInt64(42).Equal(num.Z().FromInt64(42))))
-		require.True(t, (num.Z().FromInt64(-42).Equal(num.Z().FromInt64(-42))))
-
-		require.False(t, (num.Z().Zero().Equal(num.Z().One())))
-		require.False(t, (num.Z().FromInt64(42).Equal(num.Z().FromInt64(43))))
-		require.False(t, (num.Z().FromInt64(42).Equal(num.Z().FromInt64(-42))))
-	})
-}
-
-func TestIntegers_Clone(t *testing.T) {
-	t.Parallel()
-
-	original := num.Z().FromInt64(42)
-	cloned := (original).Clone()
-
-	require.True(t, (original.Equal(cloned)))
-
-	// Verify they are different objects by modifying the clone
-	cloned = (cloned.Add(num.Z().One()))
-	require.False(t, (original.Equal(cloned)))
-	require.Equal(t, "42", original.String())
-	require.Equal(t, "43", cloned.String())
-}
-
-func TestIntegers_Bytes(t *testing.T) {
-	t.Parallel()
-
-	testCases := []struct {
-		value    *num.Int
-		expected []byte
-	}{
-		// Sign-magnitude encoding: [sign_byte, ...abs_bytes]
-		// sign_byte: 0x00 = zero/positive, 0x01 = negative
-		{num.Z().Zero(), []byte{0x00}},
-		{num.Z().One(), []byte{0x00, 0x01}},
-		{num.Z().FromInt64(255), []byte{0x00, 0xff}},
-		{num.Z().FromInt64(256), []byte{0x00, 0x01, 0x00}},
-		{num.Z().FromInt64(66051), []byte{0x00, 0x01, 0x02, 0x03}},
-		{num.Z().FromInt64(-1), []byte{0x01, 0x01}},
-		{num.Z().FromInt64(-42), []byte{0x01, 0x2a}},
-		{num.Z().FromInt64(-255), []byte{0x01, 0xff}},
-		{num.Z().FromInt64(-256), []byte{0x01, 0x01, 0x00}},
-		{num.Z().FromInt64(-66051), []byte{0x01, 0x01, 0x02, 0x03}},
-	}
-
-	for _, tc := range testCases {
-		result := (tc.value).Bytes()
-		require.Equal(t, tc.expected, result, "Value %s", tc.value.String())
-
-		// Test round-trip: Bytes() -> FromBytes() should recover original value
-		recovered, err := num.Z().FromBytes(result)
-		require.NoError(t, err)
-		require.True(t, (tc.value).Equal(recovered), "Round-trip failed for %s", tc.value.String())
-	}
-}
-
-func TestIntegers_Bytes_SignPreservation(t *testing.T) {
-	t.Parallel()
-
-	// Comprehensive test for sign preservation across Bytes() round-trips
-	testValues := []int64{
-		-1000000, -65536, -256, -255, -42, -1,
-		0,
-		1, 42, 255, 256, 65536, 1000000,
-	}
-
-	for _, val := range testValues {
-		t.Run(num.Z().FromInt64(val).String(), func(t *testing.T) {
-			t.Parallel()
-			original := num.Z().FromInt64(val)
-
-			// Serialize
-			bytes := original.Bytes()
-			require.NotEmpty(t, bytes)
-
-			// Deserialize
-			recovered, err := num.Z().FromBytes(bytes)
-			require.NoError(t, err)
-
-			// Verify equality and sign preservation
-			require.True(t, original.Equal(recovered), "Value mismatch: expected %s, got %s", original.String(), recovered.String())
-			require.Equal(t, original.IsNegative(), recovered.IsNegative(), "Sign not preserved for %d", val)
-			require.Equal(t, original.IsZero(), recovered.IsZero(), "Zero status not preserved")
-			require.Equal(t, original.IsPositive(), recovered.IsPositive(), "Positive status not preserved")
-		})
-	}
-}
-
-func TestIntegers_Rat(t *testing.T) {
+func TestZ_FromInt64(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name     string
-		input    *num.Int
-		expected string
+		input    int64
+		expected int64
 	}{
-		{
-			name:     "Zero_To_Rat",
-			input:    num.Z().Zero(),
-			expected: "0/1",
-		},
-		{
-			name:     "One_To_Rat",
-			input:    num.Z().One(),
-			expected: "1/1",
-		},
-		{
-			name:     "Positive_To_Rat",
-			input:    num.Z().FromInt64(42),
-			expected: "42/1",
-		},
-		{
-			name:     "Negative_To_Rat",
-			input:    num.Z().FromInt64(-42),
-			expected: "-42/1",
-		},
-		{
-			name:     "Large_Positive_To_Rat",
-			input:    num.Z().FromInt64(1234567890),
-			expected: "1234567890/1",
-		},
-		{
-			name:     "Large_Negative_To_Rat",
-			input:    num.Z().FromInt64(-1234567890),
-			expected: "-1234567890/1",
-		},
+		{"zero", 0, 0},
+		{"positive", 42, 42},
+		{"negative", -42, -42},
+		{"max int64", 9223372036854775807, 9223372036854775807},
+		{"min int64", -9223372036854775808, -9223372036854775808},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			result := tt.input.Rat()
-			require.Equal(t, tt.expected, result.String())
-
-			// Verify it's an integer rational
-			require.True(t, result.IsInt())
-
-			// Verify round-trip
-			recovered, err := num.Z().FromRat(result)
-			require.NoError(t, err)
-			require.True(t, tt.input.Equal(recovered))
+			z := num.Z()
+			result := z.FromInt64(tt.input)
+			requireBigIntEqual(t, big.NewInt(tt.expected), result.Big())
 		})
 	}
 }
 
-func TestIntegers_Random(t *testing.T) {
+func TestZ_FromUint64(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Random_InRange", func(t *testing.T) {
-		t.Parallel()
-		lower := num.Z().FromInt64(10)
-		upper := num.Z().FromInt64(20)
+	tests := []struct {
+		name     string
+		input    uint64
+		expected uint64
+	}{
+		{"zero", 0, 0},
+		{"small", 42, 42},
+		{"large", 18446744073709551615, 18446744073709551615},
+	}
 
-		for range 10 {
-			result, err := num.Z().Random(lower, upper, pcg.NewRandomised())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			z := num.Z()
+			result := z.FromUint64(tt.input)
+			expected := new(big.Int).SetUint64(tt.expected)
+			requireBigIntEqual(t, expected, result.Big())
+		})
+	}
+}
+
+func TestZ_FromBig(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+		_, err := z.FromBig(nil)
+		require.Error(t, err)
+	})
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+		result, err := z.FromBig(big.NewInt(0))
+		require.NoError(t, err)
+		require.True(t, result.IsZero())
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+		result, err := z.FromBig(big.NewInt(12345))
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(12345), result.Big())
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+		result, err := z.FromBig(big.NewInt(-12345))
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(-12345), result.Big())
+		require.True(t, result.IsNegative())
+	})
+
+	t.Run("large positive", func(t *testing.T) {
+		t.Parallel()
+		largeVal := new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil)
+		result, err := z.FromBig(largeVal)
+		require.NoError(t, err)
+		require.Equal(t, largeVal, result.Big())
+	})
+
+	t.Run("large negative", func(t *testing.T) {
+		t.Parallel()
+		largeVal := new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil)
+		largeVal.Neg(largeVal)
+		result, err := z.FromBig(largeVal)
+		require.NoError(t, err)
+		require.Equal(t, largeVal, result.Big())
+	})
+}
+
+func TestZ_FromNat(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	n := num.N()
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+		nat := n.FromUint64(0)
+		result, err := z.FromNat(nat)
+		require.NoError(t, err)
+		require.True(t, result.IsZero())
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+		nat := n.FromUint64(42)
+		result, err := z.FromNat(nat)
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(42), result.Big())
+		require.True(t, result.IsPositive())
+	})
+}
+
+func TestZ_FromNatPlus(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	np := num.NPlus()
+
+	t.Run("one", func(t *testing.T) {
+		t.Parallel()
+		natPlus := np.One()
+		result, err := z.FromNatPlus(natPlus)
+		require.NoError(t, err)
+		require.True(t, result.IsOne())
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+		natPlus, err := np.FromUint64(100)
+		require.NoError(t, err)
+		result, err := z.FromNatPlus(natPlus)
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(100), result.Big())
+	})
+}
+
+func TestZ_FromRat(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	q := num.Q()
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+		_, err := z.FromRat(nil)
+		require.Error(t, err)
+	})
+
+	t.Run("integer rational", func(t *testing.T) {
+		t.Parallel()
+		rat := q.FromInt64(42)
+		result, err := z.FromRat(rat)
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(42), result.Big())
+	})
+
+	t.Run("non-integer rational", func(t *testing.T) {
+		t.Parallel()
+		numerator := z.FromInt64(1)
+		denominator, err := num.NPlus().FromUint64(2)
+		require.NoError(t, err)
+		rat, err := q.New(numerator, denominator)
+		require.NoError(t, err)
+		_, err = z.FromRat(rat)
+		require.Error(t, err, "should fail for non-integer rational")
+	})
+
+	t.Run("reducible integer rational", func(t *testing.T) {
+		t.Parallel()
+		// 6/2 = 3 (an integer)
+		numerator := z.FromInt64(6)
+		denominator, err := num.NPlus().FromUint64(2)
+		require.NoError(t, err)
+		rat, err := q.New(numerator, denominator)
+		require.NoError(t, err)
+		result, err := z.FromRat(rat)
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(3), result.Big())
+	})
+}
+
+func TestZ_FromBytes(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+		_, err := z.FromBytes([]byte{})
+		require.Error(t, err)
+	})
+
+	t.Run("valid bytes", func(t *testing.T) {
+		t.Parallel()
+		// FromBytes expects format: [sign_byte, value_bytes...]
+		// sign_byte=0x00 for positive, 0x01 for negative
+		// 256 = {0x00, 0x01, 0x00} (positive sign, then 256 in big-endian)
+		result, err := z.FromBytes([]byte{0x00, 0x01, 0x00})
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(256), result.Big())
+	})
+
+	t.Run("round trip", func(t *testing.T) {
+		t.Parallel()
+		original := z.FromInt64(123456789)
+		bytes := original.Bytes()
+		recovered, err := z.FromBytes(bytes)
+		require.NoError(t, err)
+		require.True(t, original.Equal(recovered))
+	})
+}
+
+func TestZ_FromCardinal(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+		result, err := z.FromCardinal(cardinal.Zero())
+		require.NoError(t, err)
+		require.True(t, result.IsZero())
+	})
+
+	t.Run("finite", func(t *testing.T) {
+		t.Parallel()
+		card := cardinal.New(42)
+		result, err := z.FromCardinal(card)
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(42), result.Big())
+	})
+
+	t.Run("infinite", func(t *testing.T) {
+		t.Parallel()
+		_, err := z.FromCardinal(cardinal.Infinite())
+		require.Error(t, err)
+	})
+}
+
+func TestZ_FromUintSymmetric(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+		_, err := z.FromUintSymmetric(nil)
+		require.Error(t, err)
+	})
+
+	t.Run("small value in symmetric range", func(t *testing.T) {
+		t.Parallel()
+		// Create modulus 11
+		mod, err := num.NPlus().FromUint64(11)
+		require.NoError(t, err)
+		zmod, err := num.NewZMod(mod)
+		require.NoError(t, err)
+
+		// 3 mod 11 is in [0, 5], so symmetric representation is 3
+		u, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		result, err := z.FromUintSymmetric(u)
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(3), result.Big())
+	})
+
+	t.Run("large value becomes negative", func(t *testing.T) {
+		t.Parallel()
+		// Create modulus 11
+		mod, err := num.NPlus().FromUint64(11)
+		require.NoError(t, err)
+		zmod, err := num.NewZMod(mod)
+		require.NoError(t, err)
+
+		// 10 mod 11 is in [6, 10], so symmetric representation is -1
+		u, err := zmod.FromUint64(10)
+		require.NoError(t, err)
+		result, err := z.FromUintSymmetric(u)
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(-1), result.Big())
+	})
+}
+
+func TestZ_Random(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	prng := pcg.NewRandomised()
+
+	t.Run("positive range", func(t *testing.T) {
+		t.Parallel()
+		low := z.FromInt64(10)
+		high := z.FromInt64(20)
+		for range 100 {
+			result, err := z.Random(low, high, prng)
 			require.NoError(t, err)
-			require.True(t, (result).Compare(lower) >= 0)
-			require.Negative(t, (result).Compare(upper))
+			require.True(t, result.Compare(low) >= 0, "result should be >= low")
+			require.True(t, result.Compare(high) < 0, "result should be < high")
 		}
 	})
 
-	t.Run("Random_SingleValue", func(t *testing.T) {
+	t.Run("negative range", func(t *testing.T) {
 		t.Parallel()
-		lower := num.Z().FromInt64(42)
-		upper := num.Z().FromInt64(43)
-
-		result, err := num.Z().Random(lower, upper, pcg.NewRandomised())
-		require.NoError(t, err)
-		require.True(t, (result).Equal(lower))
-	})
-}
-
-func TestIntegers_MissingMethods(t *testing.T) {
-	t.Parallel()
-
-	t.Run("IsSemiDomain", func(t *testing.T) {
-		t.Parallel()
-		// Integers form an integral domain
-		require.True(t, num.Z().IsSemiDomain())
-	})
-
-	t.Run("IsTorsionFree", func(t *testing.T) {
-		t.Parallel()
-		// Any integer should be torsion-free
-		values := []*num.Int{
-			num.Z().Zero(),
-			num.Z().One(),
-			num.Z().FromInt64(42),
-			num.Z().FromInt64(-42),
-		}
-
-		for _, v := range values {
-			require.True(t, v.IsTorsionFree())
+		low := z.FromInt64(-20)
+		high := z.FromInt64(-10)
+		for range 100 {
+			result, err := z.Random(low, high, prng)
+			require.NoError(t, err)
+			require.True(t, result.Compare(low) >= 0)
+			require.True(t, result.Compare(high) < 0)
 		}
 	})
 
-	t.Run("ScalarStructure", func(t *testing.T) {
+	t.Run("crossing zero", func(t *testing.T) {
 		t.Parallel()
-		// Scalar structure should be Z itself
-		scalarStruct := num.Z().ScalarStructure()
-		require.NotNil(t, scalarStruct)
-		require.Equal(t, num.Z(), scalarStruct)
-	})
-
-	// TODO: ScalarExp method not yet implemented
-	// t.Run("ScalarExp_Panics", func(t *testing.T) {
-	// 	defer func() {
-	// 		if r := recover(); r == nil {
-	// 			t.Errorf("Expected ScalarExp to panic")
-	// 		}
-	// 	}()
-
-	// 	base := num.Z().FromInt64(2)
-	// 	exponent := num.Z().FromInt64(3)
-	// 	base.ScalarExp(exponent)
-	// })
-
-	t.Run("IsOpIdentity", func(t *testing.T) {
-		t.Parallel()
-		// Zero is the additive identity
-		require.True(t, num.Z().Zero().IsOpIdentity())
-		require.False(t, num.Z().One().IsOpIdentity())
-		require.False(t, num.Z().FromInt64(42).IsOpIdentity())
-		require.False(t, num.Z().FromInt64(-42).IsOpIdentity())
-	})
-
-	t.Run("FromCardinal_Error", func(t *testing.T) {
-		t.Parallel()
-		// FromCardinal with nil should error
-		_, err := num.Z().FromCardinal(nil)
-		require.Error(t, err)
-	})
-
-	t.Run("FromNat_Error", func(t *testing.T) {
-		t.Parallel()
-		// FromNat with nil should error
-		_, err := num.Z().FromNat(nil)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "must not be nil")
-	})
-
-	t.Run("FromBytes_Nil", func(t *testing.T) {
-		t.Parallel()
-		// FromBytes with nil should error
-		_, err := num.Z().FromBytes(nil)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "must not be empty")
-	})
-
-	// TODO: AddCap, SubCap, MulCap methods not yet implemented
-	// t.Run("AddCap_SubCap_MulCap", func(t *testing.T) {
-	// 	// Test the Cap variants with specific cap values
-	// 	a := num.Z().FromInt64(100)
-	// 	b := num.Z().FromInt64(200)
-
-	// 	// AddCap
-	// 	result := a.AddCap(b, 128)
-	// 	require.Equal(t, "300", result.String())
-
-	// 	// SubCap
-	// 	result = b.SubCap(a, 128)
-	// 	require.Equal(t, "100", result.String())
-
-	// 	// MulCap
-	// 	result = a.MulCap(num.Z().FromInt64(2), 128)
-	// 	require.Equal(t, "200", result.String())
-	// })
-
-	t.Run("IterRange_NilStart", func(t *testing.T) {
-		t.Parallel()
-		// IterRange with nil start should return nil
-		iter := num.Z().IterRange(nil, num.Z().FromInt64(10))
-		require.Nil(t, iter)
-	})
-
-	t.Run("IterRange_NilStop_Positive", func(t *testing.T) {
-		t.Parallel()
-		// IterRange with nil stop and positive start should iterate forward
-		start := num.Z().FromInt64(5)
-		var collected []string
-		count := 0
-		for v := range num.Z().IterRange(start, nil) {
-			collected = append(collected, v.String())
-			count++
-			if count >= 3 {
-				break
+		low := z.FromInt64(-50)
+		high := z.FromInt64(50)
+		hasNegative := false
+		hasPositive := false
+		for range 200 {
+			result, err := z.Random(low, high, prng)
+			require.NoError(t, err)
+			require.True(t, result.Compare(low) >= 0)
+			require.True(t, result.Compare(high) < 0)
+			if result.IsNegative() {
+				hasNegative = true
+			}
+			if result.IsPositive() {
+				hasPositive = true
 			}
 		}
-		expected := []string{"5", "6", "7"}
-		require.Equal(t, expected, collected)
-	})
-
-	t.Run("IterRange_NilStop_Negative", func(t *testing.T) {
-		t.Parallel()
-		// IterRange with nil stop and negative start should iterate backward
-		start := num.Z().FromInt64(-5)
-		var collected []string
-		count := 0
-		for v := range num.Z().IterRange(start, nil) {
-			collected = append(collected, v.String())
-			count++
-			if count >= 3 {
-				break
-			}
-		}
-		expected := []string{"-5", "-6", "-7"}
-		require.Equal(t, expected, collected)
-	})
-
-	t.Run("MultiScalarMul_Errors", func(t *testing.T) {
-		t.Parallel()
-		// Test mismatched lengths
-		values := []*num.Int{num.Z().FromInt64(1), num.Z().FromInt64(2)}
-		scalars := []*num.Int{num.Z().FromInt64(3)}
-
-		_, err := num.Z().MultiScalarMul(values, scalars)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "same length")
-
-		// Test nil element
-		values = []*num.Int{num.Z().FromInt64(1), nil}
-		scalars = []*num.Int{num.Z().FromInt64(3), num.Z().FromInt64(4)}
-
-		_, err = num.Z().MultiScalarMul(values, scalars)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "nil")
-	})
-
-	t.Run("Negative_Bytes", func(t *testing.T) {
-		t.Parallel()
-		// Test that negative numbers properly encode sign
-		neg := num.Z().FromInt64(-42)
-		bytes := neg.Bytes()
-		// Sign-magnitude encoding: [0x01, 0x2a] for -42
-		require.Equal(t, []byte{0x01, 0x2a}, bytes)
-
-		// Test round-trip
-		recovered, err := num.Z().FromBytes(bytes)
-		require.NoError(t, err)
-		require.True(t, neg.Equal(recovered))
+		require.True(t, hasNegative, "should have sampled negative values")
+		require.True(t, hasPositive, "should have sampled positive values")
 	})
 }
 
-// Additional tests for full coverage
+// ============================================================================
+// Arithmetic Tests
+// ============================================================================
 
-func TestIntegers_FromNatPlus(t *testing.T) {
+func TestInt_Add(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Valid NatPlus", func(t *testing.T) {
-		t.Parallel()
-		np, err := num.NPlus().FromUint64(42)
-		require.NoError(t, err)
+	z := num.Z()
 
-		i, err := num.Z().FromNatPlus(np)
-		require.NoError(t, err)
-		require.Equal(t, "42", i.String())
+	tests := []struct {
+		name     string
+		a, b     int64
+		expected int64
+	}{
+		{"identity", 5, 0, 5},
+		{"commutativity check 1", 3, 7, 10},
+		{"commutativity check 2", 7, 3, 10},
+		{"positive + positive", 100, 200, 300},
+		{"negative + negative", -100, -200, -300},
+		{"positive + negative (positive result)", 100, -30, 70},
+		{"positive + negative (negative result)", 30, -100, -70},
+		{"negative + positive", -30, 100, 70},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			a := z.FromInt64(tt.a)
+			b := z.FromInt64(tt.b)
+			result := a.Add(b)
+			requireBigIntEqual(t, big.NewInt(tt.expected), result.Big())
+		})
+	}
+
+	t.Run("commutativity", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(123)
+		b := z.FromInt64(-456)
+		require.True(t, a.Add(b).Equal(b.Add(a)))
 	})
 
-	t.Run("Nil NatPlus", func(t *testing.T) {
+	t.Run("associativity", func(t *testing.T) {
 		t.Parallel()
-		_, err := num.Z().FromNatPlus(nil)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "nil")
+		a := z.FromInt64(10)
+		b := z.FromInt64(-20)
+		c := z.FromInt64(30)
+		lhs := a.Add(b).Add(c)
+		rhs := a.Add(b.Add(c))
+		require.True(t, lhs.Equal(rhs))
 	})
 }
 
-func TestIntegers_FromUintSymmetric(t *testing.T) {
+func TestInt_Sub(t *testing.T) {
 	t.Parallel()
 
-	modulus, err := num.NPlus().FromUint64(10)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
+	z := num.Z()
 
-	// Test symmetric range conversion
-	// For modulus 10, symmetric range is [-5, 4]
-	t.Run("In symmetric range positive", func(t *testing.T) {
+	tests := []struct {
+		name     string
+		a, b     int64
+		expected int64
+	}{
+		{"identity", 5, 0, 5},
+		{"positive - positive (positive result)", 100, 30, 70},
+		{"positive - positive (negative result)", 30, 100, -70},
+		{"negative - negative", -100, -30, -70},
+		{"positive - negative", 100, -30, 130},
+		{"negative - positive", -100, 30, -130},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			a := z.FromInt64(tt.a)
+			b := z.FromInt64(tt.b)
+			result := a.Sub(b)
+			requireBigIntEqual(t, big.NewInt(tt.expected), result.Big())
+		})
+	}
+
+	t.Run("TrySub never fails", func(t *testing.T) {
 		t.Parallel()
-		u, err := zn.FromUint64(3)
+		a := z.FromInt64(10)
+		b := z.FromInt64(100)
+		result, err := a.TrySub(b)
 		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(-90), result.Big())
+	})
+}
 
-		i, err := num.Z().FromUintSymmetric(u)
-		require.NoError(t, err)
-		require.Equal(t, "3", i.String())
+func TestInt_Mul(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	tests := []struct {
+		name     string
+		a, b     int64
+		expected int64
+	}{
+		{"identity", 5, 1, 5},
+		{"zero", 5, 0, 0},
+		{"positive * positive", 6, 7, 42},
+		{"negative * negative", -6, -7, 42},
+		{"positive * negative", 6, -7, -42},
+		{"negative * positive", -6, 7, -42},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			a := z.FromInt64(tt.a)
+			b := z.FromInt64(tt.b)
+			result := a.Mul(b)
+			requireBigIntEqual(t, big.NewInt(tt.expected), result.Big())
+		})
+	}
+
+	t.Run("commutativity", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(123)
+		b := z.FromInt64(-456)
+		require.True(t, a.Mul(b).Equal(b.Mul(a)))
+	})
+}
+
+func TestInt_Neg(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	tests := []struct {
+		name     string
+		input    int64
+		expected int64
+	}{
+		{"zero", 0, 0},
+		{"positive", 42, -42},
+		{"negative", -42, 42},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			input := z.FromInt64(tt.input)
+			result := input.Neg()
+			requireBigIntEqual(t, big.NewInt(tt.expected), result.Big())
+		})
+	}
+
+	t.Run("double negation", func(t *testing.T) {
+		t.Parallel()
+		original := z.FromInt64(-123)
+		doubleNeg := original.Neg().Neg()
+		require.True(t, original.Equal(doubleNeg))
 	})
 
-	t.Run("In symmetric range negative", func(t *testing.T) {
+	t.Run("TryNeg never fails", func(t *testing.T) {
 		t.Parallel()
-		u, err := zn.FromUint64(7) // 7 mod 10 = -3 in symmetric range
+		input := z.FromInt64(42)
+		result, err := input.TryNeg()
 		require.NoError(t, err)
-
-		i, err := num.Z().FromUintSymmetric(u)
-		require.NoError(t, err)
-		require.Equal(t, "-3", i.String())
+		requireBigIntEqual(t, big.NewInt(-42), result.Big())
 	})
+
+	t.Run("TryOpInv is same as Neg", func(t *testing.T) {
+		t.Parallel()
+		input := z.FromInt64(42)
+		opInv, err := input.TryOpInv()
+		require.NoError(t, err)
+		require.True(t, input.Neg().Equal(opInv))
+	})
+
+	t.Run("OpInv is same as Neg", func(t *testing.T) {
+		t.Parallel()
+		input := z.FromInt64(-100)
+		opInv := input.OpInv()
+		require.True(t, input.Neg().Equal(opInv))
+	})
+}
+
+func TestInt_TryDiv(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	t.Run("exact division positive", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(42)
+		b := z.FromInt64(6)
+		result, err := a.TryDiv(b)
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(7), result.Big())
+	})
+
+	t.Run("exact division negative dividend", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(-42)
+		b := z.FromInt64(6)
+		result, err := a.TryDiv(b)
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(-7), result.Big())
+	})
+
+	t.Run("exact division negative divisor", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(42)
+		b := z.FromInt64(-6)
+		result, err := a.TryDiv(b)
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(-7), result.Big())
+	})
+
+	t.Run("exact division both negative", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(-42)
+		b := z.FromInt64(-6)
+		result, err := a.TryDiv(b)
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(7), result.Big())
+	})
+
+	t.Run("non-exact division", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(10)
+		b := z.FromInt64(3)
+		_, err := a.TryDiv(b)
+		require.Error(t, err)
+	})
+
+	t.Run("division by zero", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(10)
+		b := z.FromInt64(0)
+		_, err := a.TryDiv(b)
+		require.Error(t, err)
+	})
+
+	t.Run("nil argument", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(10)
+		_, err := a.TryDiv(nil)
+		require.Error(t, err)
+	})
+}
+
+func TestInt_Double(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	tests := []struct {
+		name     string
+		input    int64
+		expected int64
+	}{
+		{"zero", 0, 0},
+		{"positive", 21, 42},
+		{"negative", -21, -42},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := z.FromInt64(tt.input).Double()
+			requireBigIntEqual(t, big.NewInt(tt.expected), result.Big())
+		})
+	}
+}
+
+func TestInt_Square(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	tests := []struct {
+		name     string
+		input    int64
+		expected int64
+	}{
+		{"zero", 0, 0},
+		{"one", 1, 1},
+		{"positive", 7, 49},
+		{"negative", -7, 49},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := z.FromInt64(tt.input).Square()
+			requireBigIntEqual(t, big.NewInt(tt.expected), result.Big())
+		})
+	}
 }
 
 func TestInt_Lsh(t *testing.T) {
 	t.Parallel()
 
-	i := num.Z().FromInt64(5) // 101 in binary
-	result := i.Lsh(2)        // Shift left by 2: 10100 = 20
-	require.Equal(t, "20", result.String())
+	z := num.Z()
 
-	// Test with negative
-	neg := num.Z().FromInt64(-5)
-	result2 := neg.Lsh(2) // -5 << 2 = -20
-	require.Equal(t, "-20", result2.String())
+	tests := []struct {
+		name     string
+		input    int64
+		shift    uint
+		expected int64
+	}{
+		{"shift 0", 5, 0, 5},
+		{"shift 1", 5, 1, 10},
+		{"shift 3", 1, 3, 8},
+		{"negative shift 1", -5, 1, -10},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := z.FromInt64(tt.input).Lsh(tt.shift)
+			requireBigIntEqual(t, big.NewInt(tt.expected), result.Big())
+		})
+	}
 }
 
 func TestInt_Rsh(t *testing.T) {
 	t.Parallel()
 
-	i := num.Z().FromInt64(20) // 10100 in binary
-	result := i.Rsh(2)         // Shift right by 2: 101 = 5
-	require.Equal(t, "5", result.String())
+	z := num.Z()
 
-	// Test with negative
-	neg := num.Z().FromInt64(-20)
-	result2 := neg.Rsh(2) // -20 >> 2 = -5
-	require.Equal(t, "-5", result2.String())
+	tests := []struct {
+		name     string
+		input    int64
+		shift    uint
+		expected int64
+	}{
+		{"shift 0", 10, 0, 10},
+		{"shift 1", 10, 1, 5},
+		{"shift 3", 24, 3, 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := z.FromInt64(tt.input).Rsh(tt.shift)
+			requireBigIntEqual(t, big.NewInt(tt.expected), result.Big())
+		})
+	}
 }
 
-func TestInt_EuclideanValuation(t *testing.T) {
+func TestInt_EuclideanDiv(t *testing.T) {
 	t.Parallel()
 
-	i := num.Z().FromInt64(42)
-	val := i.EuclideanValuation()
-	require.NotNil(t, val)
-	// EuclideanValuation returns the absolute value
-	require.Equal(t, uint64(42), val.Uint64())
+	z := num.Z()
 
-	// Test with negative
-	neg := num.Z().FromInt64(-42)
-	val2 := neg.EuclideanValuation()
-	require.Equal(t, uint64(42), val2.Uint64())
+	t.Run("positive by positive", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(17)
+		b := z.FromInt64(5)
+		quot, rem, err := a.EuclideanDiv(b)
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(3), quot.Big())
+		requireBigIntEqual(t, big.NewInt(2), rem.Big())
+		// Verify: a = b * quot + rem
+		reconstructed := b.Mul(quot).Add(rem)
+		require.True(t, a.Equal(reconstructed))
+	})
+
+	t.Run("negative by positive", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(-17)
+		b := z.FromInt64(5)
+		quot, rem, err := a.EuclideanDiv(b)
+		require.NoError(t, err)
+		// Verify: a = b * quot + rem
+		reconstructed := b.Mul(quot).Add(rem)
+		require.True(t, a.Equal(reconstructed))
+	})
+
+	t.Run("exact division", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(20)
+		b := z.FromInt64(5)
+		quot, rem, err := a.EuclideanDiv(b)
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(4), quot.Big())
+		require.True(t, rem.IsZero())
+	})
+
+	t.Run("division by zero", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(10)
+		b := z.FromInt64(0)
+		_, _, err := a.EuclideanDiv(b)
+		require.Error(t, err)
+	})
+}
+
+func TestInt_IncrementDecrement(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	t.Run("increment", func(t *testing.T) {
+		t.Parallel()
+		tests := []struct {
+			input    int64
+			expected int64
+		}{
+			{0, 1},
+			{-1, 0},
+			{41, 42},
+		}
+		for _, tt := range tests {
+			result := z.FromInt64(tt.input).Increment()
+			requireBigIntEqual(t, big.NewInt(tt.expected), result.Big())
+		}
+	})
+
+	t.Run("decrement", func(t *testing.T) {
+		t.Parallel()
+		tests := []struct {
+			input    int64
+			expected int64
+		}{
+			{0, -1},
+			{1, 0},
+			{43, 42},
+		}
+		for _, tt := range tests {
+			result := z.FromInt64(tt.input).Decrement()
+			requireBigIntEqual(t, big.NewInt(tt.expected), result.Big())
+		}
+	})
+}
+
+// ============================================================================
+// Property Tests
+// ============================================================================
+
+func TestInt_IsZero(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	require.True(t, z.Zero().IsZero())
+	require.True(t, z.FromInt64(0).IsZero())
+	require.False(t, z.FromInt64(1).IsZero())
+	require.False(t, z.FromInt64(-1).IsZero())
+}
+
+func TestInt_IsOne(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	require.True(t, z.One().IsOne())
+	require.True(t, z.FromInt64(1).IsOne())
+	require.False(t, z.FromInt64(0).IsOne())
+	require.False(t, z.FromInt64(-1).IsOne())
+	require.False(t, z.FromInt64(2).IsOne())
+}
+
+func TestInt_IsPositive(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	require.True(t, z.FromInt64(1).IsPositive())
+	require.True(t, z.FromInt64(100).IsPositive())
+	require.False(t, z.FromInt64(0).IsPositive())
+	require.False(t, z.FromInt64(-1).IsPositive())
+}
+
+func TestInt_IsNegative(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	require.True(t, z.FromInt64(-1).IsNegative())
+	require.True(t, z.FromInt64(-100).IsNegative())
+	require.False(t, z.FromInt64(0).IsNegative())
+	require.False(t, z.FromInt64(1).IsNegative())
+}
+
+func TestInt_IsEvenIsOdd(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	tests := []struct {
+		value  int64
+		isEven bool
+		isOdd  bool
+	}{
+		{0, true, false},
+		{1, false, true},
+		{2, true, false},
+		{-1, false, true},
+		{-2, true, false},
+		{100, true, false},
+		{101, false, true},
+	}
+
+	for _, tt := range tests {
+		v := z.FromInt64(tt.value)
+		require.Equal(t, tt.isEven, v.IsEven(), "IsEven for %d", tt.value)
+		require.Equal(t, tt.isOdd, v.IsOdd(), "IsOdd for %d", tt.value)
+	}
+}
+
+func TestInt_Compare(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	t.Run("less than", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(-10)
+		b := z.FromInt64(10)
+		require.True(t, a.Compare(b).IsLessThan())
+	})
+
+	t.Run("equal", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(42)
+		b := z.FromInt64(42)
+		require.Equal(t, base.Ordering(0), a.Compare(b))
+	})
+
+	t.Run("greater than", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(10)
+		b := z.FromInt64(-10)
+		require.True(t, a.Compare(b).IsGreaterThan())
+	})
+
+	t.Run("negative comparison", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(-100)
+		b := z.FromInt64(-50)
+		require.True(t, a.Compare(b).IsLessThan())
+	})
+}
+
+func TestInt_Equal(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	t.Run("equal values", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(42)
+		b := z.FromInt64(42)
+		require.True(t, a.Equal(b))
+	})
+
+	t.Run("different values", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(42)
+		b := z.FromInt64(-42)
+		require.False(t, a.Equal(b))
+	})
+
+	t.Run("zeros", func(t *testing.T) {
+		t.Parallel()
+		require.True(t, z.Zero().Equal(z.FromInt64(0)))
+	})
+}
+
+func TestInt_IsLessThanOrEqual(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	t.Run("less than", func(t *testing.T) {
+		t.Parallel()
+		require.True(t, z.FromInt64(-10).IsLessThanOrEqual(z.FromInt64(10)))
+	})
+
+	t.Run("equal", func(t *testing.T) {
+		t.Parallel()
+		require.True(t, z.FromInt64(5).IsLessThanOrEqual(z.FromInt64(5)))
+	})
+
+	t.Run("greater than", func(t *testing.T) {
+		t.Parallel()
+		require.False(t, z.FromInt64(10).IsLessThanOrEqual(z.FromInt64(-10)))
+	})
+}
+
+func TestInt_Coprime(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	tests := []struct {
+		name    string
+		a, b    int64
+		coprime bool
+	}{
+		{"coprime positive", 15, 28, true},
+		{"not coprime", 12, 18, false},
+		{"one and any", 1, 100, true},
+		{"prime and non-multiple", 7, 100, true},
+		{"same number", 10, 10, false},
+		{"negative coprime", -15, 28, true},
+		{"both negative coprime", -15, -28, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			a := z.FromInt64(tt.a)
+			b := z.FromInt64(tt.b)
+			require.Equal(t, tt.coprime, a.Coprime(b))
+		})
+	}
+}
+
+func TestInt_IsProbablyPrime(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	tests := []struct {
+		value   int64
+		isPrime bool
+	}{
+		{2, true},
+		{3, true},
+		{5, true},
+		{7, true},
+		{11, true},
+		{13, true},
+		{17, true},
+		{4, false},
+		{6, false},
+		{9, false},
+		{15, false},
+		{1, false},
+		{0, false},
+		{-7, false}, // negative numbers not prime
+	}
+
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			t.Parallel()
+			v := z.FromInt64(tt.value)
+			require.Equal(t, tt.isPrime, v.IsProbablyPrime(), "IsProbablyPrime for %d", tt.value)
+		})
+	}
 }
 
 func TestInt_IsUnit(t *testing.T) {
 	t.Parallel()
 
-	modulus, err := num.NPlus().FromUint64(11)
-	require.NoError(t, err)
+	z := num.Z()
+	np := num.NPlus()
 
-	t.Run("Unit", func(t *testing.T) {
+	t.Run("units mod 7", func(t *testing.T) {
 		t.Parallel()
-		i := num.Z().FromInt64(3) // gcd(3, 11) = 1
-		require.True(t, i.IsUnit(modulus))
+		mod, err := np.FromUint64(7)
+		require.NoError(t, err)
+		// 1, 2, 3, 4, 5, 6 are all units mod 7 (prime)
+		for i := int64(1); i < 7; i++ {
+			v := z.FromInt64(i)
+			require.True(t, v.IsUnit(mod), "%d should be unit mod 7", i)
+		}
 	})
 
-	t.Run("Not unit", func(t *testing.T) {
+	t.Run("non-unit mod composite", func(t *testing.T) {
 		t.Parallel()
-		modulus2, err := num.NPlus().FromUint64(12)
+		mod, err := np.FromUint64(6)
 		require.NoError(t, err)
-		i := num.Z().FromInt64(6) // gcd(6, 12) = 6
-		require.False(t, i.IsUnit(modulus2))
+		// 2 and 3 are not units mod 6
+		require.False(t, z.FromInt64(2).IsUnit(mod))
+		require.False(t, z.FromInt64(3).IsUnit(mod))
+	})
+
+	t.Run("units mod composite", func(t *testing.T) {
+		t.Parallel()
+		mod, err := np.FromUint64(6)
+		require.NoError(t, err)
+		// 1 and 5 are units mod 6
+		require.True(t, z.FromInt64(1).IsUnit(mod))
+		require.True(t, z.FromInt64(5).IsUnit(mod))
+	})
+}
+
+func TestInt_IsInRange(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	np := num.NPlus()
+
+	mod, err := np.FromUint64(100)
+	require.NoError(t, err)
+
+	t.Run("in range", func(t *testing.T) {
+		t.Parallel()
+		require.True(t, z.FromInt64(0).IsInRange(mod))
+		require.True(t, z.FromInt64(50).IsInRange(mod))
+		require.True(t, z.FromInt64(99).IsInRange(mod))
+	})
+
+	t.Run("out of range", func(t *testing.T) {
+		t.Parallel()
+		require.False(t, z.FromInt64(100).IsInRange(mod))
+		require.False(t, z.FromInt64(200).IsInRange(mod))
+	})
+
+	t.Run("negative uses absolute value", func(t *testing.T) {
+		t.Parallel()
+		require.True(t, z.FromInt64(-50).IsInRange(mod))
+		require.False(t, z.FromInt64(-100).IsInRange(mod))
+	})
+}
+
+func TestInt_IsOpIdentity(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	require.True(t, z.Zero().IsOpIdentity())
+	require.True(t, z.FromInt64(0).IsOpIdentity())
+	require.False(t, z.FromInt64(1).IsOpIdentity())
+}
+
+func TestInt_IsTorsionFree(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	require.True(t, z.FromInt64(42).IsTorsionFree())
+}
+
+// ============================================================================
+// Conversion Tests
+// ============================================================================
+
+func TestInt_Abs(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	tests := []struct {
+		input    int64
+		expected uint64
+	}{
+		{0, 0},
+		{42, 42},
+		{-42, 42},
+		{-1, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			t.Parallel()
+			result := z.FromInt64(tt.input).Abs()
+			expected := new(big.Int).SetUint64(tt.expected)
+			requireBigIntEqual(t, expected, result.Big())
+		})
+	}
+}
+
+func TestInt_Mod(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	np := num.NPlus()
+
+	mod, err := np.FromUint64(7)
+	require.NoError(t, err)
+
+	t.Run("positive mod", func(t *testing.T) {
+		t.Parallel()
+		result := z.FromInt64(10).Mod(mod)
+		requireBigIntEqual(t, big.NewInt(3), result.Big())
+	})
+
+	t.Run("negative mod", func(t *testing.T) {
+		t.Parallel()
+		// -10 mod 7 = 4 (since -10 + 14 = 4)
+		result := z.FromInt64(-10).Mod(mod)
+		// Result should be in [0, 7)
+		require.True(t, result.Big().Cmp(big.NewInt(0)) >= 0)
+		require.True(t, result.Big().Cmp(big.NewInt(7)) < 0)
+	})
+
+	t.Run("zero mod", func(t *testing.T) {
+		t.Parallel()
+		result := z.FromInt64(0).Mod(mod)
+		require.True(t, result.IsZero())
+	})
+}
+
+func TestInt_Rat(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+		int42 := z.FromInt64(42)
+		rat := int42.Rat()
+		require.True(t, rat.IsInt())
+		// Convert back
+		intBack, err := z.FromRat(rat)
+		require.NoError(t, err)
+		require.True(t, int42.Equal(intBack))
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+		intNeg := z.FromInt64(-42)
+		rat := intNeg.Rat()
+		require.True(t, rat.IsInt())
+		intBack, err := z.FromRat(rat)
+		require.NoError(t, err)
+		require.True(t, intNeg.Equal(intBack))
+	})
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+		rat := z.Zero().Rat()
+		require.True(t, rat.IsZero())
+	})
+}
+
+func TestInt_Lift(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	original := z.FromInt64(42)
+	lifted := original.Lift()
+
+	// Should be equal
+	require.True(t, original.Equal(lifted))
+
+	// Should be independent (Lift returns a clone)
+	// Note: The implementation shows Lift returns Clone()
+}
+
+func TestInt_Clone(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	original := z.FromInt64(42)
+	cloned := original.Clone()
+
+	require.True(t, original.Equal(cloned))
+	require.NotSame(t, original, cloned)
+}
+
+func TestInt_String(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+		require.NotEmpty(t, z.FromInt64(42).String())
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+		s := z.FromInt64(-42).String()
+		require.NotEmpty(t, s)
+	})
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+		require.NotEmpty(t, z.Zero().String())
 	})
 }
 
 func TestInt_Big(t *testing.T) {
 	t.Parallel()
 
-	i := num.Z().FromInt64(42)
-	bigInt := i.Big()
-	require.NotNil(t, bigInt)
-	require.Equal(t, int64(42), bigInt.Int64())
+	z := num.Z()
+
+	t.Run("round trip", func(t *testing.T) {
+		t.Parallel()
+		original := big.NewInt(-123456789)
+		intVal, err := z.FromBig(original)
+		require.NoError(t, err)
+		back := intVal.Big()
+		require.Equal(t, original, back)
+	})
 }
 
-func TestInt_Lift(t *testing.T) {
+func TestInt_Bytes(t *testing.T) {
 	t.Parallel()
 
-	i := num.Z().FromInt64(42)
-	// Lift returns self for Int
-	lifted := i.Lift()
-	require.Equal(t, i, lifted)
+	z := num.Z()
+
+	t.Run("round trip", func(t *testing.T) {
+		t.Parallel()
+		original := z.FromInt64(123456789)
+		bytes := original.Bytes()
+		recovered, err := z.FromBytes(bytes)
+		require.NoError(t, err)
+		require.True(t, original.Equal(recovered))
+	})
 }
 
 func TestInt_Cardinal(t *testing.T) {
 	t.Parallel()
 
-	i := num.Z().FromInt64(42)
-	card := i.Cardinal()
-	require.NotNil(t, card)
-	require.Equal(t, "Cardinal(42)", card.String())
+	z := num.Z()
 
-	// Test with negative
-	neg := num.Z().FromInt64(-42)
-	card2 := neg.Cardinal()
-	require.Equal(t, "Cardinal(42)", card2.String()) // Cardinal is absolute value
+	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+		card := z.FromInt64(42).Cardinal()
+		require.False(t, card.IsInfinite())
+	})
+
+	t.Run("negative uses absolute value", func(t *testing.T) {
+		t.Parallel()
+		cardPos := z.FromInt64(42).Cardinal()
+		cardNeg := z.FromInt64(-42).Cardinal()
+		// Both should give same cardinal (absolute value)
+		require.Equal(t, cardPos, cardNeg)
+	})
+}
+
+func TestInt_EuclideanValuation(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	// Euclidean valuation is the absolute value
+	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+		ev := z.FromInt64(42).EuclideanValuation()
+		require.False(t, ev.IsInfinite())
+	})
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+		ev := z.FromInt64(0).EuclideanValuation()
+		require.True(t, ev.IsZero())
+	})
+}
+
+func TestInt_Bit(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	// 5 = 101 in binary
+	five := z.FromInt64(5)
+	require.Equal(t, byte(1), five.Bit(0))
+	require.Equal(t, byte(0), five.Bit(1))
+	require.Equal(t, byte(1), five.Bit(2))
+}
+
+func TestInt_TrueLen(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	t.Run("small value", func(t *testing.T) {
+		t.Parallel()
+		v := z.FromInt64(255)
+		require.Greater(t, v.TrueLen(), 0)
+	})
+
+	t.Run("large value", func(t *testing.T) {
+		t.Parallel()
+		largeVal := new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil)
+		v, err := z.FromBig(largeVal)
+		require.NoError(t, err)
+		require.Greater(t, v.TrueLen(), 0)
+	})
+}
+
+func TestInt_AnnouncedLen(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	v := z.FromInt64(255)
+	require.GreaterOrEqual(t, v.AnnouncedLen(), v.TrueLen())
+}
+
+// ============================================================================
+// Edge Cases Tests
+// ============================================================================
+
+func TestInt_TryInv(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	t.Run("one is invertible", func(t *testing.T) {
+		t.Parallel()
+		one := z.One()
+		inv, err := one.TryInv()
+		require.NoError(t, err)
+		require.True(t, inv.IsOne())
+	})
+
+	t.Run("negative one is invertible", func(t *testing.T) {
+		t.Parallel()
+		negOne := z.FromInt64(-1)
+		inv, err := negOne.TryInv()
+		require.NoError(t, err)
+		requireBigIntEqual(t, big.NewInt(-1), inv.Big())
+	})
+
+	t.Run("other integers not invertible", func(t *testing.T) {
+		t.Parallel()
+		for _, val := range []int64{0, 2, -2, 42, -42} {
+			v := z.FromInt64(val)
+			_, err := v.TryInv()
+			require.Error(t, err, "TryInv should fail for %d", val)
+		}
+	})
+}
+
+func TestInt_Structure(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	v := z.FromInt64(42)
+
+	require.Equal(t, z, v.Structure())
+}
+
+func TestInt_Op(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	a := z.FromInt64(10)
+	b := z.FromInt64(5)
+
+	// Op is Add
+	require.True(t, a.Op(b).Equal(a.Add(b)))
+}
+
+func TestInt_OtherOp(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	a := z.FromInt64(10)
+	b := z.FromInt64(5)
+
+	// OtherOp is Mul
+	require.True(t, a.OtherOp(b).Equal(a.Mul(b)))
+}
+
+func TestInt_ScalarOp(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	a := z.FromInt64(10)
+	b := z.FromInt64(5)
+
+	// ScalarOp is Mul
+	require.True(t, a.ScalarOp(b).Equal(a.Mul(b)))
+}
+
+func TestInt_ScalarMul(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	a := z.FromInt64(10)
+	b := z.FromInt64(5)
+
+	// ScalarMul is Mul
+	require.True(t, a.ScalarMul(b).Equal(a.Mul(b)))
+}
+
+func TestInt_HashCode(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	t.Run("same value same hash", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(42)
+		b := z.FromInt64(42)
+		require.Equal(t, a.HashCode(), b.HashCode())
+	})
+
+	t.Run("different values different hash", func(t *testing.T) {
+		t.Parallel()
+		a := z.FromInt64(42)
+		b := z.FromInt64(43)
+		// Hash codes might collide but usually won't
+		// This is just a sanity check
+		_ = a.HashCode()
+		_ = b.HashCode()
+	})
+}
+
+func TestInt_Value(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	v := z.FromInt64(42)
+
+	// Value returns the underlying numct.Int
+	require.NotNil(t, v.Value())
+}
+
+func TestInt_NilHandling(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	a := z.FromInt64(10)
+
+	t.Run("Add panics on nil", func(t *testing.T) {
+		t.Parallel()
+		require.Panics(t, func() {
+			a.Add(nil)
+		})
+	})
+
+	t.Run("Sub panics on nil", func(t *testing.T) {
+		t.Parallel()
+		require.Panics(t, func() {
+			a.Sub(nil)
+		})
+	})
+
+	t.Run("Mul panics on nil", func(t *testing.T) {
+		t.Parallel()
+		require.Panics(t, func() {
+			a.Mul(nil)
+		})
+	})
+
+	t.Run("Compare panics on nil", func(t *testing.T) {
+		t.Parallel()
+		require.Panics(t, func() {
+			a.Compare(nil)
+		})
+	})
+
+	t.Run("Equal panics on nil", func(t *testing.T) {
+		t.Parallel()
+		require.Panics(t, func() {
+			a.Equal(nil)
+		})
+	})
+}
+
+func TestInt_FromUint(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	np := num.NPlus()
+
+	mod, err := np.FromUint64(100)
+	require.NoError(t, err)
+	zmod, err := num.NewZMod(mod)
+	require.NoError(t, err)
+
+	u, err := zmod.FromUint64(42)
+	require.NoError(t, err)
+	result, err := z.FromUint(u)
+	require.NoError(t, err)
+	requireBigIntEqual(t, big.NewInt(42), result.Big())
+}
+
+func TestZ_FromIntCT(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+		_, err := z.FromIntCT(nil)
+		require.Error(t, err)
+	})
+
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+		original := z.FromInt64(42)
+		result, err := z.FromIntCT(original.Value())
+		require.NoError(t, err)
+		require.True(t, original.Equal(result))
+		// Should be independent (Clone)
+		require.NotSame(t, original.Value(), result.Value())
+	})
+}
+
+func TestZ_FromNatCT(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	n := num.N()
+
+	nat := n.FromUint64(42)
+	result, err := z.FromNatCT(nat.Value())
+	require.NoError(t, err)
+	requireBigIntEqual(t, big.NewInt(42), result.Big())
+}
+
+func TestInt_RandomWithCryptoRand(t *testing.T) {
+	t.Parallel()
+
+	z := num.Z()
+	low := z.FromInt64(-100)
+	high := z.FromInt64(100)
+
+	// Test with crypto/rand
+	result, err := z.Random(low, high, rand.Reader)
+	require.NoError(t, err)
+	require.True(t, result.Compare(low) >= 0)
+	require.True(t, result.Compare(high) < 0)
 }

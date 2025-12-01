@@ -4,7 +4,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
@@ -33,7 +33,7 @@ func (n *NatPlus) MarshalCBOR() ([]byte, error) {
 	dto := &natPlusDTO{NatPlus: n.v}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal NatPlus")
+		return nil, errs2.Wrap(err)
 	}
 	return data, nil
 }
@@ -44,7 +44,7 @@ func (n *NatPlus) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 	if dto.NatPlus.IsZero() == ct.True {
-		return errs.NewValue("NatPlus must be greater than 0")
+		return ErrOutOfRange.WithStackFrame().WithMessage("NatPlus must be greater than 0")
 	}
 	n.v = dto.NatPlus
 	return nil
@@ -58,7 +58,7 @@ func (n *Nat) MarshalCBOR() ([]byte, error) {
 	dto := &natDTO{Nat: n.v}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal Nat")
+		return nil, errs2.Wrap(err)
 	}
 	return data, nil
 }
@@ -80,7 +80,7 @@ func (i *Int) MarshalCBOR() ([]byte, error) {
 	dto := &intDTO{Int: i.v}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal Int")
+		return nil, errs2.Wrap(err)
 	}
 	return data, nil
 }
@@ -106,7 +106,7 @@ func (u *Uint) MarshalCBOR() ([]byte, error) {
 	}
 	out, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal Uint")
+		return nil, errs2.Wrap(err)
 	}
 	return out, nil
 }
@@ -117,15 +117,15 @@ func (u *Uint) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 	if dto.Modulus == nil {
-		return errs.NewIsNil("modulus bytes")
+		return ErrIsNil.WithStackFrame().WithMessage("modulus bytes")
 	}
 	if dto.Value == nil {
-		return errs.NewIsNil("value")
+		return ErrIsNil.WithStackFrame().WithMessage("value")
 	}
 
 	// Deserialize the modulus interface directly - tags handle type preservation
 	if lt, _, _ := dto.Value.Compare(dto.Modulus.Nat()); lt == ct.False {
-		return errs.NewValue("value must be in [0, modulus)")
+		return ErrOutOfRange.WithStackFrame().WithMessage("value must be in [0, modulus)")
 	}
 	u.v = dto.Value
 	u.m = dto.Modulus
@@ -144,7 +144,7 @@ func (r *Rat) MarshalCBOR() ([]byte, error) {
 	}
 	out, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal Rat")
+		return nil, errs2.Wrap(err)
 	}
 	return out, nil
 }
@@ -152,13 +152,13 @@ func (r *Rat) MarshalCBOR() ([]byte, error) {
 func (r *Rat) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*ratDTO](data)
 	if err != nil {
-		return errs.WrapSerialisation(err, "couldn't unmarshal input to Rat")
+		return errs2.Wrap(err)
 	}
 	if dto.A == nil {
-		return errs.NewIsNil("numerator")
+		return ErrIsNil.WithStackFrame().WithMessage("numerator")
 	}
 	if dto.B == nil {
-		return errs.NewIsNil("denominator")
+		return ErrIsNil.WithStackFrame().WithMessage("denominator")
 	}
 	r.a = dto.A
 	r.b = dto.B
@@ -173,7 +173,7 @@ func (z *ZMod) MarshalCBOR() ([]byte, error) {
 	dto := &zmodDTO{Modulus: z.n}
 	out, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal ZMod")
+		return nil, errs2.Wrap(err)
 	}
 	return out, nil
 }
@@ -184,7 +184,7 @@ func (z *ZMod) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 	if dto.Modulus == nil {
-		return errs.NewIsNil("modulus")
+		return ErrIsNil.WithStackFrame().WithMessage("modulus")
 	}
 	z.n = dto.Modulus
 	return nil

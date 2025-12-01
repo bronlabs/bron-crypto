@@ -11,6 +11,11 @@ var (
 	_ algebra.SemiModule[*Nat, *Nat]        = (*NaturalNumbers)(nil)
 	_ algebra.SemiModuleElement[*Nat, *Nat] = (*Nat)(nil)
 
+	_ algebra.ZLike[*Int]               = (*Integers)(nil)
+	_ algebra.IntLike[*Int]             = (*Int)(nil)
+	_ algebra.Module[*Int, *Int]        = (*Integers)(nil)
+	_ algebra.ModuleElement[*Int, *Int] = (*Int)(nil)
+
 	_ algebra.ZModLike[*Uint]                = (*ZMod)(nil)
 	_ algebra.UintLike[*Uint]                = (*Uint)(nil)
 	_ algebra.SemiModule[*Uint, *Nat]        = (*ZMod)(nil)

@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
@@ -104,11 +105,7 @@ func coreAggregateSign[
 		}
 	}
 	scs := sliceutils.Repeat[[]S](privateKey, len(messages))
-
-	sig, err := signatureSubGroup.MultiScalarMul(scs, Hms)
-	if err != nil {
-		return *new(Sig), errs.WrapFailed(err, "could not compute multi-scalar multiplication")
-	}
+	sig := algebrautils.MultiScalarMul(scs, Hms)
 	return sig, nil
 }
 

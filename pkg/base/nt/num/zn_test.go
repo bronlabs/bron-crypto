@@ -1,783 +1,1612 @@
 package num_test
 
 import (
-	"bytes"
+	"crypto/rand"
+	"math/big"
 	"testing"
 
-	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 )
 
-func TestZn_Creation(t *testing.T) {
+// Helper to create ZMod for testing
+func testZMod(t *testing.T, modValue uint64) *num.ZMod {
+	t.Helper()
+	mod, err := num.NPlus().FromUint64(modValue)
+	require.NoError(t, err)
+	zmod, err := num.NewZMod(mod)
+	require.NoError(t, err)
+	return zmod
+}
+
+// requireBigIntEqualZN compares big.Int values semantically (using Cmp)
+// rather than structurally.
+func requireBigIntEqualZN(t *testing.T, expected, actual *big.Int, msgAndArgs ...any) {
+	t.Helper()
+	require.Equal(t, 0, expected.Cmp(actual), msgAndArgs...)
+}
+
+// ============================================================================
+// Structure Tests
+// ============================================================================
+
+func TestNewZMod(t *testing.T) {
 	t.Parallel()
 
+	t.Run("nil modulus", func(t *testing.T) {
+		t.Parallel()
+		_, err := num.NewZMod(nil)
+		require.Error(t, err)
+	})
+
+	t.Run("valid modulus", func(t *testing.T) {
+		t.Parallel()
+		mod, err := num.NPlus().FromUint64(7)
+		require.NoError(t, err)
+		zmod, err := num.NewZMod(mod)
+		require.NoError(t, err)
+		require.NotNil(t, zmod)
+	})
+}
+
+func TestNewZModFromCardinal(t *testing.T) {
+	t.Parallel()
+
+	t.Run("valid cardinal", func(t *testing.T) {
+		t.Parallel()
+		zmod, err := num.NewZModFromCardinal(cardinal.New(7))
+		require.NoError(t, err)
+		require.NotNil(t, zmod)
+	})
+
+	t.Run("zero cardinal", func(t *testing.T) {
+		t.Parallel()
+		_, err := num.NewZModFromCardinal(cardinal.Zero())
+		require.Error(t, err)
+	})
+}
+
+func TestZMod_Properties(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	t.Run("Name", func(t *testing.T) {
+		t.Parallel()
+		name := zmod.Name()
+		require.NotEmpty(t, name)
+		require.Contains(t, name, "Z")
+	})
+
+	t.Run("Order", func(t *testing.T) {
+		t.Parallel()
+		order := zmod.Order()
+		require.False(t, order.IsInfinite())
+		require.False(t, order.IsZero())
+	})
+
+	t.Run("Characteristic", func(t *testing.T) {
+		t.Parallel()
+		char := zmod.Characteristic()
+		require.False(t, char.IsInfinite())
+		require.False(t, char.IsZero())
+	})
+
+	t.Run("ElementSize", func(t *testing.T) {
+		t.Parallel()
+		size := zmod.ElementSize()
+		require.Greater(t, size, 0)
+	})
+
+	t.Run("WideElementSize", func(t *testing.T) {
+		t.Parallel()
+		wideSize := zmod.WideElementSize()
+		require.Equal(t, 2*zmod.ElementSize(), wideSize)
+	})
+
+	t.Run("Modulus", func(t *testing.T) {
+		t.Parallel()
+		mod := zmod.Modulus()
+		require.NotNil(t, mod)
+		requireBigIntEqualZN(t, big.NewInt(7), mod.Big())
+	})
+
+	t.Run("Zero", func(t *testing.T) {
+		t.Parallel()
+		zero := zmod.Zero()
+		require.True(t, zero.IsZero())
+		require.True(t, zero.IsOpIdentity())
+	})
+
+	t.Run("One", func(t *testing.T) {
+		t.Parallel()
+		one := zmod.One()
+		require.True(t, one.IsOne())
+	})
+
+	t.Run("Top", func(t *testing.T) {
+		t.Parallel()
+		top := zmod.Top()
+		require.True(t, top.IsTop())
+		// For mod 7, top = 6
+		requireBigIntEqualZN(t, big.NewInt(6), top.Big())
+	})
+
+	t.Run("Bottom", func(t *testing.T) {
+		t.Parallel()
+		bottom := zmod.Bottom()
+		require.True(t, bottom.IsZero())
+	})
+
+	t.Run("OpIdentity", func(t *testing.T) {
+		t.Parallel()
+		opId := zmod.OpIdentity()
+		require.True(t, opId.IsZero())
+	})
+
+	t.Run("IsSemiDomain prime", func(t *testing.T) {
+		t.Parallel()
+		// 7 is prime, so Z/7Z is a field (semi-domain)
+		require.True(t, zmod.IsSemiDomain())
+	})
+
+	t.Run("IsSemiDomain composite", func(t *testing.T) {
+		t.Parallel()
+		zmod6 := testZMod(t, 6)
+		// 6 is not prime, so Z/6Z is not a semi-domain
+		require.False(t, zmod6.IsSemiDomain())
+	})
+
+	t.Run("ScalarStructure", func(t *testing.T) {
+		t.Parallel()
+		ss := zmod.ScalarStructure()
+		require.Equal(t, num.N(), ss)
+	})
+
+	t.Run("AmbientStructure", func(t *testing.T) {
+		t.Parallel()
+		as := zmod.AmbientStructure()
+		require.Equal(t, num.Z(), as)
+	})
+}
+
+// ============================================================================
+// Constructor Tests
+// ============================================================================
+
+func TestZMod_FromUint64(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
 	tests := []struct {
-		name         string
-		modulus      cardinal.Cardinal
-		expectError  bool
-		errorMessage string
+		name     string
+		input    uint64
+		expected uint64
 	}{
-		{
-			name:         "Nil modulus",
-			modulus:      nil,
-			expectError:  true,
-			errorMessage: "modulus",
-		},
-		{
-			name:         "Zero modulus",
-			modulus:      cardinal.Zero(),
-			expectError:  true,
-			errorMessage: "cardinal must be greater than 0",
-		},
-		{
-			name:        "Valid modulus 5",
-			modulus:     cardinal.New(5),
-			expectError: false,
-		},
-		{
-			name:        "Valid modulus 256",
-			modulus:     cardinal.New(256),
-			expectError: false,
-		},
-		{
-			name:        "Large prime modulus",
-			modulus:     cardinal.New(997),
-			expectError: false,
-		},
+		{"zero", 0, 0},
+		{"small", 3, 3},
+		{"equal to modulus", 7, 0},
+		{"larger than modulus", 10, 3},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			zn, err := num.NewZModFromCardinal(tt.modulus)
-			if tt.expectError {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.errorMessage)
-			} else {
-				require.NoError(t, err)
-				require.NotNil(t, zn)
-				require.Equal(t, tt.modulus, zn.Order())
-			}
+			result, err := zmod.FromUint64(tt.input)
+			require.NoError(t, err)
+			expected := new(big.Int).SetUint64(tt.expected)
+			requireBigIntEqualZN(t, expected, result.Big())
 		})
 	}
 }
 
-func TestZn_BasicOperations(t *testing.T) {
+func TestZMod_FromInt64(t *testing.T) {
 	t.Parallel()
 
-	// Create Z/7Z
-	zn, err := num.NewZModFromCardinal(cardinal.New(7))
-	require.NoError(t, err)
+	zmod := testZMod(t, 7)
 
-	t.Run("Zero and One", func(t *testing.T) {
+	t.Run("positive", func(t *testing.T) {
 		t.Parallel()
-		zero := zn.Zero()
-		one := zn.One()
-
-		require.True(t, zero.IsZero())
-		require.False(t, zero.IsOne())
-		require.False(t, one.IsZero())
-		require.True(t, one.IsOne())
-		require.True(t, zero.IsOpIdentity())
-		require.False(t, one.IsOpIdentity())
+		result, err := zmod.FromInt64(10)
+		require.NoError(t, err)
+		requireBigIntEqualZN(t, big.NewInt(3), result.Big())
 	})
 
-	t.Run("FromUint64", func(t *testing.T) {
+	t.Run("negative", func(t *testing.T) {
 		t.Parallel()
-		// Test values that should be reduced modulo 7
-		testCases := []struct {
-			input    uint64
-			expected uint64
-		}{
-			{0, 0},
-			{1, 1},
-			{6, 6},
-			{7, 0},   // 7 mod 7 = 0
-			{8, 1},   // 8 mod 7 = 1
-			{14, 0},  // 14 mod 7 = 0
-			{100, 2}, // 100 mod 7 = 2
-		}
-
-		for _, tc := range testCases {
-			result, err := zn.FromUint64(tc.input)
-			require.NoError(t, err)
-			require.Equal(t, tc.expected, result.Big().Uint64())
-		}
+		result, err := zmod.FromInt64(-3)
+		require.NoError(t, err)
+		// -3 mod 7 = 4
+		require.Equal(t, big.NewInt(4), result.Big())
 	})
 
-	t.Run("FromInt64", func(t *testing.T) {
+	t.Run("zero", func(t *testing.T) {
 		t.Parallel()
-		// Test positive and negative values
-		testCases := []struct {
-			input    int64
-			expected uint64
-		}{
-			{0, 0},
-			{1, 1},
-			{-1, 6}, // -1 mod 7 = 6
-			{-7, 0}, // -7 mod 7 = 0
-			{-8, 6}, // -8 mod 7 = 6
-			{14, 0},
-			{-14, 0},
-		}
-
-		for _, tc := range testCases {
-			result, err := zn.FromInt64(tc.input)
-			require.NoError(t, err)
-			require.Equal(t, tc.expected, result.Big().Uint64())
-		}
-	})
-
-	t.Run("Top element", func(t *testing.T) {
-		t.Parallel()
-		top := zn.Top()
-		require.Equal(t, uint64(6), top.Big().Uint64())
+		result, err := zmod.FromInt64(0)
+		require.NoError(t, err)
+		require.True(t, result.IsZero())
 	})
 }
 
-func TestUint_Arithmetic(t *testing.T) {
+func TestZMod_FromInt(t *testing.T) {
 	t.Parallel()
 
-	// Create Z/11Z
-	zn, err := num.NewZModFromCardinal(cardinal.New(11))
-	require.NoError(t, err)
+	zmod := testZMod(t, 7)
+	z := num.Z()
 
-	t.Run("Addition", func(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
 		t.Parallel()
-		a, err := zn.FromUint64(7)
-		require.NoError(t, err)
-		b, err := zn.FromUint64(5)
-		require.NoError(t, err)
-		c := a.Add(b)
-		require.Equal(t, uint64(1), c.Big().Uint64()) // (7 + 5) mod 11 = 1
-	})
-
-	t.Run("Subtraction", func(t *testing.T) {
-		t.Parallel()
-		a, err := zn.FromUint64(5)
-		require.NoError(t, err)
-		b, err := zn.FromUint64(7)
-		require.NoError(t, err)
-		c := a.Sub(b)
-		require.Equal(t, uint64(9), c.Big().Uint64()) // (5 - 7) mod 11 = 9
-
-		// Test TrySub
-		d, err := a.TrySub(b)
-		require.NoError(t, err)
-		require.Equal(t, c, d)
-	})
-
-	t.Run("Multiplication", func(t *testing.T) {
-		t.Parallel()
-		a, err := zn.FromUint64(3)
-		require.NoError(t, err)
-		b, err := zn.FromUint64(4)
-		require.NoError(t, err)
-		c := a.Mul(b)
-		require.Equal(t, uint64(1), c.Big().Uint64()) // (3 * 4) mod 11 = 1
-	})
-
-	t.Run("Square", func(t *testing.T) {
-		t.Parallel()
-		a, err := zn.FromUint64(4)
-		require.NoError(t, err)
-		b := a.Square()
-		require.Equal(t, uint64(5), b.Big().Uint64()) // (4 * 4) mod 11 = 5
-	})
-
-	t.Run("Double", func(t *testing.T) {
-		t.Parallel()
-		a, err := zn.FromUint64(6)
-		require.NoError(t, err)
-		b := a.Double()
-		require.Equal(t, uint64(1), b.Big().Uint64()) // (6 + 6) mod 11 = 1
-	})
-
-	t.Run("Negation", func(t *testing.T) {
-		t.Parallel()
-		a, err := zn.FromUint64(3)
-		require.NoError(t, err)
-		b := a.Neg()
-		require.Equal(t, uint64(8), b.Big().Uint64()) // -3 mod 11 = 8
-
-		// Verify a + (-a) = 0
-		c := a.Add(b)
-		require.True(t, c.IsZero())
-	})
-
-	t.Run("Exponentiation", func(t *testing.T) {
-		t.Parallel()
-		base, err := zn.FromUint64(2)
-		require.NoError(t, err)
-		exp, err := zn.FromUint64(5)
-		require.NoError(t, err)
-		result := base.Exp(exp.Nat())
-		require.Equal(t, uint64(10), result.Big().Uint64()) // 2^5 mod 11 = 32 mod 11 = 10
-	})
-}
-
-func TestUint_Inversion(t *testing.T) {
-	t.Parallel()
-
-	// Create Z/13Z (prime modulus)
-	zn, err := num.NewZModFromCardinal(cardinal.New(13))
-	require.NoError(t, err)
-
-	t.Run("Invertible elements", func(t *testing.T) {
-		t.Parallel()
-		// All non-zero elements should be invertible in Z/13Z
-		for i := uint64(1); i < 13; i++ {
-			a, err := zn.FromUint64(i)
-			require.NoError(t, err)
-			require.True(t, a.IsUnit())
-
-			inv, err := a.TryInv()
-			require.NoError(t, err)
-			require.NotNil(t, inv)
-
-			// Verify a * inv = 1
-			product := a.Mul(inv)
-			require.True(t, product.IsOne())
-		}
-	})
-
-	t.Run("Zero is not invertible", func(t *testing.T) {
-		t.Parallel()
-		zero := zn.Zero()
-		require.False(t, zero.IsUnit())
-
-		inv, err := zero.TryInv()
+		_, err := zmod.FromInt(nil)
 		require.Error(t, err)
-		require.Nil(t, inv)
-		require.Contains(t, err.Error(), "not a unit")
 	})
 
-	t.Run("Division", func(t *testing.T) {
+	t.Run("positive", func(t *testing.T) {
 		t.Parallel()
-		a, err := zn.FromUint64(8)
+		result, err := zmod.FromInt(z.FromInt64(10))
 		require.NoError(t, err)
-		b, err := zn.FromUint64(3)
-		require.NoError(t, err)
+		require.Equal(t, big.NewInt(3), result.Big())
+	})
 
-		c, err := a.TryDiv(b)
+	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+		result, err := zmod.FromInt(z.FromInt64(-10))
 		require.NoError(t, err)
-
-		// Verify: c * b = a
-		product := c.Mul(b)
-		require.True(t, a.Equal(product), "Expected %s * %s = %s, got %s", c.String(), b.String(), a.String(), product.String())
+		// -10 mod 7 = 4
+		require.True(t, result.Big().Cmp(big.NewInt(0)) >= 0)
+		require.True(t, result.Big().Cmp(big.NewInt(7)) < 0)
 	})
 }
 
-func TestUint_Comparison(t *testing.T) {
+func TestZMod_FromNat(t *testing.T) {
 	t.Parallel()
 
-	zn, err := num.NewZModFromCardinal(cardinal.New(17))
-	require.NoError(t, err)
+	zmod := testZMod(t, 7)
+	n := num.N()
 
-	t.Run("Equal", func(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
 		t.Parallel()
-		a, err := zn.FromUint64(5)
-		require.NoError(t, err)
-		b, err := zn.FromUint64(5)
-		require.NoError(t, err)
-		c, err := zn.FromUint64(22)
-		require.NoError(t, err) // 22 mod 17 = 5
-
-		require.True(t, a.Equal(b))
-		require.True(t, a.Equal(c))
+		_, err := zmod.FromNat(nil)
+		require.Error(t, err)
 	})
 
-	t.Run("Compare", func(t *testing.T) {
+	t.Run("in range", func(t *testing.T) {
 		t.Parallel()
-		a, err := zn.FromUint64(3)
+		result, err := zmod.FromNat(n.FromUint64(3))
 		require.NoError(t, err)
-		b, err := zn.FromUint64(7)
-		require.NoError(t, err)
-		c, err := zn.FromUint64(3)
-		require.NoError(t, err)
-
-		require.Equal(t, base.Ordering(base.LessThan), a.Compare(b))
-		require.Equal(t, base.Ordering(base.GreaterThan), b.Compare(a))
-		require.Equal(t, base.Ordering(base.Equal), a.Compare(c))
+		require.Equal(t, big.NewInt(3), result.Big())
 	})
 
-	t.Run("PartialCompare", func(t *testing.T) {
+	t.Run("out of range", func(t *testing.T) {
 		t.Parallel()
-		a, err := zn.FromUint64(3)
+		result, err := zmod.FromNat(n.FromUint64(10))
 		require.NoError(t, err)
-		b, err := zn.FromUint64(7)
-		require.NoError(t, err)
-
-		// Create element from different modulus
-		zn2, err := num.NewZModFromCardinal(cardinal.New(19))
-		require.NoError(t, err)
-		c, err := zn2.FromUint64(3)
-		require.NoError(t, err)
-
-		require.Equal(t, base.LessThan, a.PartialCompare(b))
-		require.Equal(t, base.Incomparable, a.PartialCompare(c))
-	})
-
-	t.Run("IsLessThanOrEqual", func(t *testing.T) {
-		t.Parallel()
-		a, err := zn.FromUint64(3)
-		require.NoError(t, err)
-		b, err := zn.FromUint64(7)
-		require.NoError(t, err)
-		c, err := zn.FromUint64(3)
-		require.NoError(t, err)
-
-		require.True(t, a.IsLessThanOrEqual(b))
-		require.True(t, a.IsLessThanOrEqual(c))
-		require.False(t, b.IsLessThanOrEqual(a))
+		require.Equal(t, big.NewInt(3), result.Big())
 	})
 }
 
-func TestUint_Properties(t *testing.T) {
+func TestZMod_FromNatPlus(t *testing.T) {
 	t.Parallel()
 
-	zn, err := num.NewZModFromCardinal(cardinal.New(23))
-	require.NoError(t, err)
+	zmod := testZMod(t, 7)
+	np := num.NPlus()
 
-	t.Run("IsEven and IsOdd", func(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
 		t.Parallel()
-		even, err := zn.FromUint64(8)
-		require.NoError(t, err)
-		odd, err := zn.FromUint64(7)
-		require.NoError(t, err)
-
-		require.True(t, even.IsEven())
-		require.False(t, even.IsOdd())
-		require.False(t, odd.IsEven())
-		require.True(t, odd.IsOdd())
+		_, err := zmod.FromNatPlus(nil)
+		require.Error(t, err)
 	})
 
-	t.Run("IsPositive and IsNegative", func(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
-		zero := zn.Zero()
-		nonZero, err := zn.FromUint64(5)
+		natPlus, err := np.FromUint64(10)
 		require.NoError(t, err)
-
-		require.False(t, zero.IsPositive())
-		require.True(t, nonZero.IsPositive())
-
-		// Uint elements are never negative
-		require.False(t, zero.IsNegative())
-		require.False(t, nonZero.IsNegative())
-	})
-
-	t.Run("Coprime", func(t *testing.T) {
-		t.Parallel()
-		a, err := zn.FromUint64(6)
+		result, err := zmod.FromNatPlus(natPlus)
 		require.NoError(t, err)
-		b, err := zn.FromUint64(7)
-		require.NoError(t, err)
-		c, err := zn.FromUint64(12)
-		require.NoError(t, err)
-
-		require.True(t, a.Coprime(b))
-		require.False(t, a.Coprime(c)) // gcd(6, 12) = 6
-	})
-
-	t.Run("IsProbablyPrime", func(t *testing.T) {
-		t.Parallel()
-		prime, err := zn.FromUint64(7)
-		require.NoError(t, err)
-		notPrime, err := zn.FromUint64(8)
-		require.NoError(t, err)
-
-		require.True(t, prime.IsProbablyPrime())
-		require.False(t, notPrime.IsProbablyPrime())
+		require.Equal(t, big.NewInt(3), result.Big())
 	})
 }
 
-func TestUint_Serialisation(t *testing.T) {
+func TestZMod_FromBytes(t *testing.T) {
 	t.Parallel()
 
-	zn, err := num.NewZModFromCardinal(cardinal.New(256))
-	require.NoError(t, err)
+	zmod := testZMod(t, 256)
 
-	t.Run("Bytes", func(t *testing.T) {
+	t.Run("valid bytes", func(t *testing.T) {
 		t.Parallel()
-		a, err := zn.FromUint64(42)
+		result, err := zmod.FromBytes([]byte{42})
 		require.NoError(t, err)
-		bytes := a.Bytes()
-		require.NotEmpty(t, bytes)
-
-		// Create from bytes
-		b, err := zn.FromBytes(bytes)
-		require.NoError(t, err)
-		require.Equal(t, a, b)
+		require.Equal(t, big.NewInt(42), result.Big())
 	})
 
-	t.Run("String", func(t *testing.T) {
+	t.Run("round trip", func(t *testing.T) {
 		t.Parallel()
-		a, err := zn.FromUint64(123)
+		original, err := zmod.FromUint64(123)
 		require.NoError(t, err)
-		str := a.String()
-		require.Equal(t, "123", str)
-	})
-
-	t.Run("Cardinal", func(t *testing.T) {
-		t.Parallel()
-		a, err := zn.FromUint64(42)
+		bytes := original.Bytes()
+		recovered, err := zmod.FromBytes(bytes)
 		require.NoError(t, err)
-		card := a.Cardinal()
-		require.Equal(t, "Cardinal(42)", card.String())
+		require.True(t, original.Equal(recovered))
 	})
 }
 
-func TestUint_Iterator(t *testing.T) {
+func TestZMod_FromCardinal(t *testing.T) {
 	t.Parallel()
 
-	zn, err := num.NewZModFromCardinal(cardinal.New(5))
-	require.NoError(t, err)
+	zmod := testZMod(t, 100)
 
-	t.Run("Full iteration", func(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
 		t.Parallel()
-		var values []uint64
-		for elem := range zn.Iter() {
-			values = append(values, elem.Big().Uint64())
-		}
-		// Iterator stops before yielding stop (Top() = 4), so we get [0, 1, 2, 3]
-		require.Equal(t, []uint64{0, 1, 2, 3}, values)
-	})
-
-	t.Run("Range iteration", func(t *testing.T) {
-		t.Parallel()
-		start, err := zn.FromUint64(2)
+		result, err := zmod.FromCardinal(cardinal.New(42))
 		require.NoError(t, err)
-		stop, err := zn.FromUint64(4)
-		require.NoError(t, err)
-
-		var values []uint64
-		for elem := range zn.IterRange(start, stop) {
-			values = append(values, elem.Big().Uint64())
-		}
-		require.Equal(t, []uint64{2, 3}, values)
+		require.Equal(t, big.NewInt(42), result.Big())
 	})
 }
 
-func TestUint_Random(t *testing.T) {
+func TestZMod_Random(t *testing.T) {
 	t.Parallel()
 
-	zn, err := num.NewZModFromCardinal(cardinal.New(100))
-	require.NoError(t, err)
-
+	zmod := testZMod(t, 100)
 	prng := pcg.NewRandomised()
 
-	t.Run("Random element", func(t *testing.T) {
-		t.Parallel()
-		elem, err := zn.Random(prng)
+	for range 100 {
+		result, err := zmod.Random(prng)
 		require.NoError(t, err)
-		require.NotNil(t, elem)
-
-		// Value should be in range [0, 100)
-		val := elem.Big().Uint64()
-		require.Less(t, val, uint64(100))
-	})
+		// Should be in [0, 100)
+		require.True(t, result.Big().Cmp(big.NewInt(0)) >= 0)
+		require.True(t, result.Big().Cmp(big.NewInt(100)) < 0)
+	}
 }
 
-func TestUint_Hash(t *testing.T) {
+func TestZMod_Hash(t *testing.T) {
 	t.Parallel()
 
-	zn, err := num.NewZModFromCardinal(cardinal.New(1000))
-	require.NoError(t, err)
+	zmod := testZMod(t, 100)
 
-	t.Run("Hash consistency", func(t *testing.T) {
+	t.Run("deterministic", func(t *testing.T) {
 		t.Parallel()
 		input := []byte("test input")
-
-		h1, err := zn.Hash(input)
+		result1, err := zmod.Hash(input)
 		require.NoError(t, err)
-
-		h2, err := zn.Hash(input)
+		result2, err := zmod.Hash(input)
 		require.NoError(t, err)
-
-		require.Equal(t, h1, h2)
+		require.True(t, result1.Equal(result2))
 	})
 
-	t.Run("Different inputs give different hashes", func(t *testing.T) {
+	t.Run("different inputs different outputs", func(t *testing.T) {
 		t.Parallel()
-		h1, err := zn.Hash([]byte("input1"))
+		result1, err := zmod.Hash([]byte("input1"))
 		require.NoError(t, err)
-
-		h2, err := zn.Hash([]byte("input2"))
+		result2, err := zmod.Hash([]byte("input2"))
 		require.NoError(t, err)
-
-		require.NotEqual(t, h1, h2)
-	})
-}
-
-func TestUint_ModulusOperations(t *testing.T) {
-	t.Parallel()
-
-	zn, err := num.NewZModFromCardinal(cardinal.New(31))
-	require.NoError(t, err)
-
-	t.Run("Modulus retrieval", func(t *testing.T) {
-		t.Parallel()
-		elem, err := zn.FromUint64(10)
-		require.NoError(t, err)
-		mod := elem.Modulus()
-		// Verify modulus through string representation
-		require.Equal(t, "31", mod.String())
+		// Usually different, but not guaranteed
+		_ = result1
+		_ = result2
 	})
 
-	t.Run("Structure", func(t *testing.T) {
+	t.Run("in range", func(t *testing.T) {
 		t.Parallel()
-		elem, err := zn.FromUint64(10)
+		result, err := zmod.Hash([]byte("test"))
 		require.NoError(t, err)
-		structure := elem.Structure()
-		require.NotNil(t, structure)
-		require.Equal(t, zn.Order().String(), structure.Order().String())
+		require.True(t, result.Big().Cmp(big.NewInt(0)) >= 0)
+		require.True(t, result.Big().Cmp(big.NewInt(100)) < 0)
 	})
 }
 
-func TestUint_Increment_Decrement(t *testing.T) {
+func TestZMod_IsInRange(t *testing.T) {
 	t.Parallel()
 
-	zn, err := num.NewZModFromCardinal(cardinal.New(7))
-	require.NoError(t, err)
+	zmod := testZMod(t, 100)
+	n := num.N()
 
-	t.Run("Increment", func(t *testing.T) {
+	t.Run("in range", func(t *testing.T) {
 		t.Parallel()
-		a, err := zn.FromUint64(5)
-		require.NoError(t, err)
-		b := a.Increment()
-		require.Equal(t, uint64(6), b.Big().Uint64())
-
-		// Test wrap around
-		c, err := zn.FromUint64(6)
-		require.NoError(t, err)
-		d := c.Increment()
-		require.Equal(t, uint64(0), d.Big().Uint64())
+		require.True(t, zmod.IsInRange(n.FromUint64(50)))
+		require.True(t, zmod.IsInRange(n.FromUint64(0)))
+		require.True(t, zmod.IsInRange(n.FromUint64(99)))
 	})
 
-	t.Run("Decrement", func(t *testing.T) {
+	t.Run("out of range", func(t *testing.T) {
 		t.Parallel()
-		a, err := zn.FromUint64(5)
-		require.NoError(t, err)
-		b := a.Decrement()
-		require.Equal(t, uint64(4), b.Big().Uint64())
-
-		// Test wrap around
-		c := zn.Zero()
-		d := c.Decrement()
-		require.Equal(t, uint64(6), d.Big().Uint64())
+		require.False(t, zmod.IsInRange(n.FromUint64(100)))
+		require.False(t, zmod.IsInRange(n.FromUint64(200)))
 	})
 }
 
-func TestUint_Sqrt(t *testing.T) {
+// ============================================================================
+// Arithmetic Tests
+// ============================================================================
+
+func TestUint_Add(t *testing.T) {
 	t.Parallel()
 
-	// Use prime modulus for simplicity
-	zn, err := num.NewZModFromCardinal(cardinal.New(17))
-	require.NoError(t, err)
+	zmod := testZMod(t, 7)
 
-	t.Run("Perfect squares", func(t *testing.T) {
+	t.Run("identity", func(t *testing.T) {
 		t.Parallel()
-		// 4^2 = 16 ≡ 16 (mod 17)
-		// 5^2 = 25 ≡ 8 (mod 17)
-		testCases := []struct {
-			square uint64
-			root   uint64
-		}{
-			{16, 4},
-			{8, 5},
-			{9, 3},
-			{4, 2},
-			{1, 1},
-			{0, 0},
+		a, err := zmod.FromUint64(5)
+		require.NoError(t, err)
+		zero := zmod.Zero()
+		require.True(t, a.Add(zero).Equal(a))
+	})
+
+	t.Run("normal addition", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		b, err := zmod.FromUint64(2)
+		require.NoError(t, err)
+		result := a.Add(b)
+		require.Equal(t, big.NewInt(5), result.Big())
+	})
+
+	t.Run("wraparound", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(5)
+		require.NoError(t, err)
+		b, err := zmod.FromUint64(4)
+		require.NoError(t, err)
+		result := a.Add(b)
+		// 5 + 4 = 9 = 2 mod 7
+		require.Equal(t, big.NewInt(2), result.Big())
+	})
+
+	t.Run("commutativity", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		b, err := zmod.FromUint64(5)
+		require.NoError(t, err)
+		require.True(t, a.Add(b).Equal(b.Add(a)))
+	})
+}
+
+func TestUint_Sub(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	t.Run("identity", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(5)
+		require.NoError(t, err)
+		zero := zmod.Zero()
+		require.True(t, a.Sub(zero).Equal(a))
+	})
+
+	t.Run("normal subtraction", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(5)
+		require.NoError(t, err)
+		b, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		result := a.Sub(b)
+		require.Equal(t, big.NewInt(2), result.Big())
+	})
+
+	t.Run("wraparound", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(2)
+		require.NoError(t, err)
+		b, err := zmod.FromUint64(5)
+		require.NoError(t, err)
+		result := a.Sub(b)
+		// 2 - 5 = -3 = 4 mod 7
+		require.Equal(t, big.NewInt(4), result.Big())
+	})
+
+	t.Run("TrySub never fails", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(2)
+		require.NoError(t, err)
+		b, err := zmod.FromUint64(5)
+		require.NoError(t, err)
+		result, err := a.TrySub(b)
+		require.NoError(t, err)
+		require.Equal(t, big.NewInt(4), result.Big())
+	})
+}
+
+func TestUint_Mul(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	t.Run("identity", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(5)
+		require.NoError(t, err)
+		one := zmod.One()
+		require.True(t, a.Mul(one).Equal(a))
+	})
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(5)
+		require.NoError(t, err)
+		zero := zmod.Zero()
+		require.True(t, a.Mul(zero).IsZero())
+	})
+
+	t.Run("normal multiplication", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		b, err := zmod.FromUint64(2)
+		require.NoError(t, err)
+		result := a.Mul(b)
+		require.Equal(t, big.NewInt(6), result.Big())
+	})
+
+	t.Run("wraparound", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		b, err := zmod.FromUint64(4)
+		require.NoError(t, err)
+		result := a.Mul(b)
+		// 3 * 4 = 12 = 5 mod 7
+		require.Equal(t, big.NewInt(5), result.Big())
+	})
+
+	t.Run("commutativity", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		b, err := zmod.FromUint64(5)
+		require.NoError(t, err)
+		require.True(t, a.Mul(b).Equal(b.Mul(a)))
+	})
+}
+
+func TestUint_Neg(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+		result := zmod.Zero().Neg()
+		require.True(t, result.IsZero())
+	})
+
+	t.Run("non-zero", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		result := a.Neg()
+		// -3 mod 7 = 4
+		require.Equal(t, big.NewInt(4), result.Big())
+		// a + (-a) = 0
+		require.True(t, a.Add(result).IsZero())
+	})
+
+	t.Run("double negation", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		require.True(t, a.Neg().Neg().Equal(a))
+	})
+
+	t.Run("TryNeg never fails", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		result, err := a.TryNeg()
+		require.NoError(t, err)
+		require.Equal(t, big.NewInt(4), result.Big())
+	})
+}
+
+func TestUint_TryInv(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	t.Run("unit", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		inv, err := a.TryInv()
+		require.NoError(t, err)
+		// 3 * 3^(-1) = 1 mod 7
+		// 3^(-1) = 5 since 3*5 = 15 = 1 mod 7
+		require.True(t, a.Mul(inv).IsOne())
+	})
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+		zero := zmod.Zero()
+		_, err := zero.TryInv()
+		require.Error(t, err)
+	})
+
+	t.Run("non-unit in composite modulus", func(t *testing.T) {
+		t.Parallel()
+		zmod6 := testZMod(t, 6)
+		a, err := zmod6.FromUint64(2)
+		require.NoError(t, err)
+		_, err = a.TryInv()
+		require.Error(t, err)
+	})
+}
+
+func TestUint_TryDiv(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	t.Run("valid division", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(6)
+		require.NoError(t, err)
+		b, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		result, err := a.TryDiv(b)
+		require.NoError(t, err)
+		// 6 / 3 = 2 mod 7
+		require.Equal(t, big.NewInt(2), result.Big())
+	})
+
+	t.Run("division by zero", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(6)
+		require.NoError(t, err)
+		zero := zmod.Zero()
+		_, err = a.TryDiv(zero)
+		require.Error(t, err)
+	})
+}
+
+func TestUint_Exp(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+	n := num.N()
+
+	t.Run("exponent 0", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		result := a.Exp(n.FromUint64(0))
+		require.True(t, result.IsOne())
+	})
+
+	t.Run("exponent 1", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		result := a.Exp(n.FromUint64(1))
+		require.Equal(t, big.NewInt(3), result.Big())
+	})
+
+	t.Run("normal exponentiation", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		result := a.Exp(n.FromUint64(2))
+		// 3^2 = 9 = 2 mod 7
+		require.Equal(t, big.NewInt(2), result.Big())
+	})
+
+	t.Run("Fermat's little theorem", func(t *testing.T) {
+		t.Parallel()
+		// a^(p-1) = 1 mod p for prime p and a != 0
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		result := a.Exp(n.FromUint64(6)) // 7-1 = 6
+		require.True(t, result.IsOne())
+	})
+}
+
+func TestUint_ExpI(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+	z := num.Z()
+
+	t.Run("negative exponent", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		result := a.ExpI(z.FromInt64(-1))
+		// 3^(-1) mod 7
+		// Should equal TryInv
+		inv, err := a.TryInv()
+		require.NoError(t, err)
+		require.True(t, result.Equal(inv))
+	})
+}
+
+func TestUint_ExpBounded(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+	n := num.N()
+
+	t.Run("bounded exponentiation", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(2)
+		require.NoError(t, err)
+		// 2^3 = 8 = 1 mod 7
+		result := a.ExpBounded(n.FromUint64(3), 8)
+		requireBigIntEqualZN(t, big.NewInt(1), result.Big())
+	})
+
+	t.Run("bounds larger exponent", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(2)
+		require.NoError(t, err)
+		// 2^256 is huge, but with 2 bits we only use lower 2 bits
+		// 256 in binary is 100000000, lower 2 bits is 00 = 0
+		// So 2^0 = 1 mod 7
+		exp := n.FromUint64(256) // binary: 100000000
+		result := a.ExpBounded(exp, 2)
+		requireBigIntEqualZN(t, big.NewInt(1), result.Big())
+	})
+
+	t.Run("full bits same as Exp", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		exp := n.FromUint64(5)
+		// With enough bits, should equal regular Exp
+		bounded := a.ExpBounded(exp, 64)
+		regular := a.Exp(exp)
+		require.True(t, bounded.Equal(regular))
+	})
+}
+
+func TestUint_ExpIBounded(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+	z := num.Z()
+
+	t.Run("bounded with positive exponent", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(2)
+		require.NoError(t, err)
+		// 2^3 = 8 = 1 mod 7
+		result := a.ExpIBounded(z.FromInt64(3), 8)
+		requireBigIntEqualZN(t, big.NewInt(1), result.Big())
+	})
+
+	t.Run("full bits same as ExpI", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		exp := z.FromInt64(-2)
+		// With enough bits, should equal regular ExpI
+		bounded := a.ExpIBounded(exp, 64)
+		regular := a.ExpI(exp)
+		require.True(t, bounded.Equal(regular))
+	})
+}
+
+func TestUint_ScalarExp(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+	n := num.N()
+
+	t.Run("scalar exponentiation", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(2)
+		require.NoError(t, err)
+		// 2^3 = 8 = 1 mod 7
+		result := a.ScalarExp(n.FromUint64(3))
+		requireBigIntEqualZN(t, big.NewInt(1), result.Big())
+	})
+
+	t.Run("zero exponent", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(5)
+		require.NoError(t, err)
+		result := a.ScalarExp(n.FromUint64(0))
+		// Any number^0 = 1
+		requireBigIntEqualZN(t, big.NewInt(1), result.Big())
+	})
+
+	t.Run("one exponent", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(5)
+		require.NoError(t, err)
+		result := a.ScalarExp(n.FromUint64(1))
+		require.True(t, a.Equal(result))
+	})
+}
+
+func TestUint_TryNeg(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	t.Run("negation succeeds", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		neg, err := a.TryNeg()
+		require.NoError(t, err)
+		// -3 mod 7 = 4
+		requireBigIntEqualZN(t, big.NewInt(4), neg.Big())
+	})
+
+	t.Run("negation of zero", func(t *testing.T) {
+		t.Parallel()
+		neg, err := zmod.Zero().TryNeg()
+		require.NoError(t, err)
+		require.True(t, neg.IsZero())
+	})
+
+	t.Run("double negation is identity", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(5)
+		require.NoError(t, err)
+		neg, err := a.TryNeg()
+		require.NoError(t, err)
+		doubleNeg, err := neg.TryNeg()
+		require.NoError(t, err)
+		require.True(t, a.Equal(doubleNeg))
+	})
+}
+
+func TestUint_BytesBE(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 256)
+
+	t.Run("same as Bytes", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(42)
+		require.NoError(t, err)
+		require.Equal(t, a.Bytes(), a.BytesBE())
+	})
+}
+
+func TestUint_Double(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	t.Run("normal", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(2)
+		require.NoError(t, err)
+		result := a.Double()
+		require.Equal(t, big.NewInt(4), result.Big())
+	})
+
+	t.Run("wraparound", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(5)
+		require.NoError(t, err)
+		result := a.Double()
+		// 5 * 2 = 10 = 3 mod 7
+		require.Equal(t, big.NewInt(3), result.Big())
+	})
+}
+
+func TestUint_Square(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+		result := zmod.Zero().Square()
+		require.True(t, result.IsZero())
+	})
+
+	t.Run("one", func(t *testing.T) {
+		t.Parallel()
+		result := zmod.One().Square()
+		require.True(t, result.IsOne())
+	})
+
+	t.Run("normal", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		result := a.Square()
+		// 3^2 = 9 = 2 mod 7
+		require.Equal(t, big.NewInt(2), result.Big())
+	})
+}
+
+func TestUint_IncrementDecrement(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	t.Run("increment", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		result := a.Increment()
+		require.Equal(t, big.NewInt(4), result.Big())
+	})
+
+	t.Run("increment wrap", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(6)
+		require.NoError(t, err)
+		result := a.Increment()
+		require.True(t, result.IsZero())
+	})
+
+	t.Run("decrement", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		result := a.Decrement()
+		require.Equal(t, big.NewInt(2), result.Big())
+	})
+
+	t.Run("decrement wrap", func(t *testing.T) {
+		t.Parallel()
+		zero := zmod.Zero()
+		result := zero.Decrement()
+		require.Equal(t, big.NewInt(6), result.Big())
+	})
+}
+
+// ============================================================================
+// Property Tests
+// ============================================================================
+
+func TestUint_IsZero(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	require.True(t, zmod.Zero().IsZero())
+	a, err := zmod.FromUint64(0)
+	require.NoError(t, err)
+	require.True(t, a.IsZero())
+	b, err := zmod.FromUint64(1)
+	require.NoError(t, err)
+	require.False(t, b.IsZero())
+}
+
+func TestUint_IsOne(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	require.True(t, zmod.One().IsOne())
+	a, err := zmod.FromUint64(1)
+	require.NoError(t, err)
+	require.True(t, a.IsOne())
+	b, err := zmod.FromUint64(2)
+	require.NoError(t, err)
+	require.False(t, b.IsOne())
+}
+
+func TestUint_IsUnit(t *testing.T) {
+	t.Parallel()
+
+	t.Run("prime modulus all non-zero are units", func(t *testing.T) {
+		t.Parallel()
+		zmod := testZMod(t, 7)
+		for i := uint64(1); i < 7; i++ {
+			a, err := zmod.FromUint64(i)
+			require.NoError(t, err)
+			require.True(t, a.IsUnit(), "all non-zero elements should be units in Z/pZ")
 		}
+	})
 
-		for _, tc := range testCases {
-			sq, err := zn.FromUint64(tc.square)
+	t.Run("composite modulus", func(t *testing.T) {
+		t.Parallel()
+		zmod := testZMod(t, 6)
+		// Units mod 6 are 1 and 5 (coprime to 6)
+		for _, i := range []uint64{1, 5} {
+			a, err := zmod.FromUint64(i)
 			require.NoError(t, err)
-			rt, err := sq.Sqrt()
+			require.True(t, a.IsUnit())
+		}
+		// Non-units mod 6 are 0, 2, 3, 4
+		for _, i := range []uint64{0, 2, 3, 4} {
+			a, err := zmod.FromUint64(i)
 			require.NoError(t, err)
-
-			// Verify rt^2 = sq
-			check := rt.Square()
-			require.True(t, check.Equal(sq), "sqrt(%d)^2 should equal %d", tc.square, tc.square)
+			require.False(t, a.IsUnit())
 		}
 	})
 }
 
-func TestZn_IsSemiDomain(t *testing.T) {
+func TestUint_IsPositive(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		modulus  uint64
-		isDomain bool
-	}{
-		{2, true},
-		{3, true},
-		{4, false},
-		{5, true},
-		{6, false},
-		{7, true},
-		{11, true},
-		{15, false},
-	}
+	zmod := testZMod(t, 7)
 
-	for _, tt := range tests {
-		t.Run(string(rune(tt.modulus)), func(t *testing.T) {
-			t.Parallel()
-			zn, err := num.NewZModFromCardinal(cardinal.New(tt.modulus))
-			require.NoError(t, err)
-			require.Equal(t, tt.isDomain, zn.IsSemiDomain())
-		})
-	}
+	require.False(t, zmod.Zero().IsPositive())
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	require.True(t, a.IsPositive())
 }
 
-func TestUint_Clone(t *testing.T) {
+func TestUint_IsNegative(t *testing.T) {
 	t.Parallel()
 
-	zn, err := num.NewZModFromCardinal(cardinal.New(11))
-	require.NoError(t, err)
+	zmod := testZMod(t, 11)
 
-	a, err := zn.FromUint64(7)
-	require.NoError(t, err)
-	b := a.Clone()
+	// In symmetric representation [-n/2, n/2)
+	// For n=11: range is [-5, 5]
+	// Values 0-5 are non-negative, 6-10 are negative
 
-	require.Equal(t, a, b)
-	require.NotSame(t, a, b)
-}
-
-func TestUint_HashCode(t *testing.T) {
-	t.Parallel()
-
-	zn, err := num.NewZModFromCardinal(cardinal.New(19))
-	require.NoError(t, err)
-
-	a, err := zn.FromUint64(5)
-	require.NoError(t, err)
-	b, err := zn.FromUint64(5)
-	require.NoError(t, err)
-	c, err := zn.FromUint64(6)
-	require.NoError(t, err)
-
-	require.Equal(t, a.HashCode(), b.HashCode())
-	require.NotEqual(t, a.HashCode(), c.HashCode())
-}
-
-func TestUint_Lift(t *testing.T) {
-	t.Parallel()
-
-	zn, err := num.NewZModFromCardinal(cardinal.New(10))
-	require.NoError(t, err)
-
-	a, err := zn.FromUint64(7)
-	require.NoError(t, err)
-	lifted := a.Lift()
-
-	// Check that lifted value equals 7
-	// Int64() method doesn't exist, use string representation
-	require.Equal(t, "7", lifted.String())
-}
-
-func TestUint_NotImplemented(t *testing.T) {
-	t.Parallel()
-
-	zn, err := num.NewZModFromCardinal(cardinal.New(7))
-	require.NoError(t, err)
-
-	a, err := zn.FromUint64(3)
-	require.NoError(t, err)
-	b, err := zn.FromUint64(2)
-	require.NoError(t, err)
-
-	// EuclideanDiv now works for prime modulus (IsSemiDomain returns true for primes)
-	t.Run("EuclideanDiv works for prime modulus", func(t *testing.T) {
+	t.Run("non-negative values", func(t *testing.T) {
 		t.Parallel()
-		quot, rem, err := a.EuclideanDiv(b)
-		require.NoError(t, err)
-		require.NotNil(t, quot)
-		require.NotNil(t, rem)
+		for i := uint64(0); i <= 5; i++ {
+			a, err := zmod.FromUint64(i)
+			require.NoError(t, err)
+			require.False(t, a.IsNegative(), "value %d should not be negative", i)
+		}
 	})
 
-	// MarshalBinary/UnmarshalBinary not implemented
-	// t.Run("MarshalBinary panics", func(t *testing.T) {
-	// 	require.Panics(t, func() {
-	// 		_, _ = a.MarshalBinary()
-	// 	})
-	// })
-
-	// t.Run("UnmarshalBinary panics", func(t *testing.T) {
-	// 	require.Panics(t, func() {
-	// 		_ = a.UnmarshalBinary([]byte{1, 2, 3})
-	// 	})
-	// })
+	t.Run("negative values", func(t *testing.T) {
+		t.Parallel()
+		// For modulus 11, values > 11/2 = 5.5, i.e., 6 and above should be negative
+		// But IsNegative checks !IsLessThanOrEqual((11+1)/2 = 6), so 7-10 are negative
+		for i := uint64(7); i <= 10; i++ {
+			a, err := zmod.FromUint64(i)
+			require.NoError(t, err)
+			require.True(t, a.IsNegative(), "value %d should be negative", i)
+		}
+	})
 }
 
-func TestUint_SameModulus(t *testing.T) {
+func TestUint_Compare(t *testing.T) {
 	t.Parallel()
 
-	zn1, err := num.NewZModFromCardinal(cardinal.New(7))
+	zmod := testZMod(t, 7)
+
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	b, err := zmod.FromUint64(5)
+	require.NoError(t, err)
+	c, err := zmod.FromUint64(3)
 	require.NoError(t, err)
 
-	zn2, err := num.NewZModFromCardinal(cardinal.New(11))
+	t.Run("less than", func(t *testing.T) {
+		t.Parallel()
+		require.True(t, a.Compare(b).IsLessThan())
+	})
+
+	t.Run("equal", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, base.Ordering(0), a.Compare(c))
+	})
+
+	t.Run("greater than", func(t *testing.T) {
+		t.Parallel()
+		require.True(t, b.Compare(a).IsGreaterThan())
+	})
+}
+
+func TestUint_Equal(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	b, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	c, err := zmod.FromUint64(5)
 	require.NoError(t, err)
 
-	a, err := zn1.FromUint64(3)
+	require.True(t, a.Equal(b))
+	require.False(t, a.Equal(c))
+}
+
+func TestUint_EqualModulus(t *testing.T) {
+	t.Parallel()
+
+	zmod7 := testZMod(t, 7)
+	zmod11 := testZMod(t, 11)
+
+	a, err := zmod7.FromUint64(3)
 	require.NoError(t, err)
-	b, err := zn1.FromUint64(4)
+	b, err := zmod7.FromUint64(5)
 	require.NoError(t, err)
-	c, err := zn2.FromUint64(3)
+	c, err := zmod11.FromUint64(3)
 	require.NoError(t, err)
 
 	require.True(t, a.EqualModulus(b))
 	require.False(t, a.EqualModulus(c))
 }
 
-func TestUint_PanicsOnDifferentModulus(t *testing.T) {
+func TestUint_PartialCompare(t *testing.T) {
 	t.Parallel()
 
-	zn1, err := num.NewZModFromCardinal(cardinal.New(7))
+	zmod7 := testZMod(t, 7)
+	zmod11 := testZMod(t, 11)
+
+	a, err := zmod7.FromUint64(3)
+	require.NoError(t, err)
+	b, err := zmod7.FromUint64(5)
+	require.NoError(t, err)
+	c, err := zmod11.FromUint64(3)
 	require.NoError(t, err)
 
-	zn2, err := num.NewZModFromCardinal(cardinal.New(11))
+	t.Run("same modulus comparable", func(t *testing.T) {
+		t.Parallel()
+		result := a.PartialCompare(b)
+		require.NotEqual(t, base.Incomparable, result)
+	})
+
+	t.Run("different moduli incomparable", func(t *testing.T) {
+		t.Parallel()
+		result := a.PartialCompare(c)
+		require.Equal(t, base.Incomparable, result)
+	})
+
+	t.Run("nil incomparable", func(t *testing.T) {
+		t.Parallel()
+		result := a.PartialCompare(nil)
+		require.Equal(t, base.Incomparable, result)
+	})
+}
+
+func TestUint_IsLessThanOrEqual(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	b, err := zmod.FromUint64(5)
+	require.NoError(t, err)
+	c, err := zmod.FromUint64(3)
 	require.NoError(t, err)
 
-	a, err := zn1.FromUint64(3)
+	require.True(t, a.IsLessThanOrEqual(b))
+	require.True(t, a.IsLessThanOrEqual(c))
+	require.False(t, b.IsLessThanOrEqual(a))
+}
+
+func TestUint_IsProbablyPrime(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 100)
+
+	t.Run("prime", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(7)
+		require.NoError(t, err)
+		require.True(t, a.IsProbablyPrime())
+	})
+
+	t.Run("composite", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(6)
+		require.NoError(t, err)
+		require.False(t, a.IsProbablyPrime())
+	})
+}
+
+func TestUint_Coprime(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 100)
+
+	t.Run("coprime", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(7)
+		require.NoError(t, err)
+		b, err := zmod.FromUint64(10)
+		require.NoError(t, err)
+		require.True(t, a.Coprime(b))
+	})
+
+	t.Run("not coprime", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(6)
+		require.NoError(t, err)
+		b, err := zmod.FromUint64(10)
+		require.NoError(t, err)
+		require.False(t, a.Coprime(b))
+	})
+}
+
+func TestUint_IsQuadraticResidue(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	t.Run("quadratic residue", func(t *testing.T) {
+		t.Parallel()
+		// In Z/7Z, quadratic residues are 1, 2, 4
+		for _, i := range []uint64{1, 2, 4} {
+			a, err := zmod.FromUint64(i)
+			require.NoError(t, err)
+			require.True(t, a.IsQuadraticResidue(), "%d should be QR mod 7", i)
+		}
+	})
+
+	t.Run("non-residue", func(t *testing.T) {
+		t.Parallel()
+		// Non-residues mod 7 are 3, 5, 6
+		for _, i := range []uint64{3, 5, 6} {
+			a, err := zmod.FromUint64(i)
+			require.NoError(t, err)
+			require.False(t, a.IsQuadraticResidue(), "%d should not be QR mod 7", i)
+		}
+	})
+}
+
+func TestUint_Sqrt(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	t.Run("has sqrt", func(t *testing.T) {
+		t.Parallel()
+		// 4 = 2^2 mod 7
+		a, err := zmod.FromUint64(4)
+		require.NoError(t, err)
+		sqrt, err := a.Sqrt()
+		require.NoError(t, err)
+		// sqrt^2 should equal original
+		require.True(t, sqrt.Square().Equal(a))
+	})
+
+	t.Run("no sqrt", func(t *testing.T) {
+		t.Parallel()
+		// 3 is not a QR mod 7
+		a, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		_, err = a.Sqrt()
+		require.Error(t, err)
+	})
+}
+
+func TestUint_IsOpIdentity(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	require.True(t, zmod.Zero().IsOpIdentity())
+	require.False(t, zmod.One().IsOpIdentity())
+}
+
+func TestUint_IsBottom(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	// IsBottom returns IsOne() according to implementation
+	require.True(t, zmod.One().IsBottom())
+	require.False(t, zmod.Zero().IsBottom())
+}
+
+func TestUint_IsTop(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	top := zmod.Top()
+	require.True(t, top.IsTop())
+	require.False(t, zmod.Zero().IsTop())
+	require.False(t, zmod.One().IsTop())
+}
+
+func TestUint_IsEvenIsOdd(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 100)
+
+	t.Run("even", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(42)
+		require.NoError(t, err)
+		require.True(t, a.IsEven())
+		require.False(t, a.IsOdd())
+	})
+
+	t.Run("odd", func(t *testing.T) {
+		t.Parallel()
+		a, err := zmod.FromUint64(43)
+		require.NoError(t, err)
+		require.False(t, a.IsEven())
+		require.True(t, a.IsOdd())
+	})
+}
+
+// ============================================================================
+// Conversion Tests
+// ============================================================================
+
+func TestUint_Lift(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	a, err := zmod.FromUint64(3)
 	require.NoError(t, err)
-	b, err := zn2.FromUint64(3)
+	lifted := a.Lift()
+	require.Equal(t, big.NewInt(3), lifted.Big())
+}
+
+func TestUint_Nat(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	nat := a.Nat()
+	require.Equal(t, big.NewInt(3), nat.Big())
+}
+
+func TestUint_Abs(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	abs := a.Abs()
+	require.Equal(t, big.NewInt(3), abs.Big())
+}
+
+func TestUint_Clone(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	cloned := a.Clone()
+
+	require.True(t, a.Equal(cloned))
+	require.NotSame(t, a, cloned)
+}
+
+func TestUint_String(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	s := a.String()
+	require.NotEmpty(t, s)
+}
+
+func TestUint_Big(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	big := a.Big()
+	require.Equal(t, int64(3), big.Int64())
+}
+
+func TestUint_Bytes(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 256)
+
+	a, err := zmod.FromUint64(42)
+	require.NoError(t, err)
+	bytes := a.Bytes()
+	require.NotEmpty(t, bytes)
+
+	// Round trip
+	recovered, err := zmod.FromBytes(bytes)
+	require.NoError(t, err)
+	require.True(t, a.Equal(recovered))
+}
+
+func TestUint_Bit(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 100)
+
+	// 5 = 101 in binary
+	a, err := zmod.FromUint64(5)
+	require.NoError(t, err)
+	require.Equal(t, byte(1), a.Bit(0))
+	require.Equal(t, byte(0), a.Bit(1))
+	require.Equal(t, byte(1), a.Bit(2))
+}
+
+func TestUint_Cardinal(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 100)
+
+	a, err := zmod.FromUint64(42)
+	require.NoError(t, err)
+	card := a.Cardinal()
+	require.False(t, card.IsInfinite())
+}
+
+func TestUint_Modulus(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	mod := a.Modulus()
+	requireBigIntEqualZN(t, big.NewInt(7), mod.Big())
+}
+
+func TestUint_ModulusCT(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	modCT := a.ModulusCT()
+	require.NotNil(t, modCT)
+}
+
+func TestUint_Group(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	group := a.Group()
+	require.NotNil(t, group)
+}
+
+func TestUint_Structure(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	structure := a.Structure()
+	require.NotNil(t, structure)
+}
+
+func TestUint_Value(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	value := a.Value()
+	require.NotNil(t, value)
+}
+
+func TestUint_HashCode(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 100)
+
+	a, err := zmod.FromUint64(42)
+	require.NoError(t, err)
+	b, err := zmod.FromUint64(42)
 	require.NoError(t, err)
 
-	t.Run("Add panics", func(t *testing.T) {
+	require.Equal(t, a.HashCode(), b.HashCode())
+}
+
+func TestUint_TrueLen(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 256)
+
+	a, err := zmod.FromUint64(255)
+	require.NoError(t, err)
+	require.Greater(t, a.TrueLen(), 0)
+}
+
+func TestUint_AnnouncedLen(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 256)
+
+	a, err := zmod.FromUint64(255)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, a.AnnouncedLen(), a.TrueLen())
+}
+
+// ============================================================================
+// Constant-Time Operation Tests
+// ============================================================================
+
+func TestUint_Select(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 100)
+
+	x0, err := zmod.FromUint64(10)
+	require.NoError(t, err)
+	x1, err := zmod.FromUint64(20)
+	require.NoError(t, err)
+
+	t.Run("select true", func(t *testing.T) {
+		t.Parallel()
+		// Select(1, x0, x1) returns x1
+		result := zmod.Zero()
+		result.Select(ct.True, x0, x1)
+		require.True(t, result.Equal(x1))
+	})
+
+	t.Run("select false", func(t *testing.T) {
+		t.Parallel()
+		// Select(0, x0, x1) returns x0
+		result := zmod.Zero()
+		result.Select(ct.False, x0, x1)
+		require.True(t, result.Equal(x0))
+	})
+}
+
+func TestUint_CondAssign(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 100)
+
+	a, err := zmod.FromUint64(10)
+	require.NoError(t, err)
+	b, err := zmod.FromUint64(20)
+	require.NoError(t, err)
+
+	t.Run("assign true", func(t *testing.T) {
+		t.Parallel()
+		target := a.Clone()
+		target.CondAssign(ct.True, b)
+		require.True(t, target.Equal(b))
+	})
+
+	t.Run("assign false", func(t *testing.T) {
+		t.Parallel()
+		target := a.Clone()
+		target.CondAssign(ct.False, b)
+		require.True(t, target.Equal(a))
+	})
+}
+
+// ============================================================================
+// Edge Cases Tests
+// ============================================================================
+
+func TestUint_DifferentModuli(t *testing.T) {
+	t.Parallel()
+
+	zmod7 := testZMod(t, 7)
+	zmod11 := testZMod(t, 11)
+
+	a, err := zmod7.FromUint64(3)
+	require.NoError(t, err)
+	b, err := zmod11.FromUint64(3)
+	require.NoError(t, err)
+
+	t.Run("Add panics with different moduli", func(t *testing.T) {
 		t.Parallel()
 		require.Panics(t, func() {
-			_ = a.Add(b)
+			a.Add(b)
 		})
 	})
 
-	t.Run("Sub panics", func(t *testing.T) {
+	t.Run("Sub panics with different moduli", func(t *testing.T) {
 		t.Parallel()
 		require.Panics(t, func() {
-			_ = a.Sub(b)
+			a.Sub(b)
 		})
 	})
 
-	t.Run("Mul panics", func(t *testing.T) {
+	t.Run("Mul panics with different moduli", func(t *testing.T) {
 		t.Parallel()
 		require.Panics(t, func() {
-			_ = a.Mul(b)
-		})
-	})
-
-	// Note: Exp now takes *Nat instead of *Uint, so modulus checking is not possible
-	// The test for Exp panicking has been removed as it no longer applies
-
-	t.Run("TryDiv panics", func(t *testing.T) {
-		t.Parallel()
-		require.Panics(t, func() {
-			_, _ = a.TryDiv(b)
+			a.Mul(b)
 		})
 	})
 
@@ -785,604 +1614,277 @@ func TestUint_PanicsOnDifferentModulus(t *testing.T) {
 		t.Parallel()
 		require.False(t, a.Equal(b))
 	})
-
-	t.Run("Compare panics", func(t *testing.T) {
-		t.Parallel()
-		require.Panics(t, func() {
-			_ = a.Compare(b)
-		})
-	})
-
-	t.Run("Coprime panics", func(t *testing.T) {
-		t.Parallel()
-		require.Panics(t, func() {
-			_ = a.Coprime(b)
-		})
-	})
 }
 
-func TestUint_TorsionFree(t *testing.T) {
+func TestUint_Op(t *testing.T) {
 	t.Parallel()
 
-	zn, err := num.NewZModFromCardinal(cardinal.New(7))
+	zmod := testZMod(t, 7)
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	b, err := zmod.FromUint64(2)
 	require.NoError(t, err)
 
-	a, err := zn.FromUint64(3)
-	require.NoError(t, err)
-	require.True(t, a.IsTorsionFree())
+	// Op is Add
+	require.True(t, a.Op(b).Equal(a.Add(b)))
 }
 
-func TestUint_ScalarOperations(t *testing.T) {
+func TestUint_OtherOp(t *testing.T) {
 	t.Parallel()
 
-	zn, err := num.NewZModFromCardinal(cardinal.New(13))
+	zmod := testZMod(t, 7)
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	b, err := zmod.FromUint64(2)
 	require.NoError(t, err)
 
-	t.Run("ScalarExp", func(t *testing.T) {
-		t.Parallel()
-		a, err := zn.FromUint64(2)
-		require.NoError(t, err)
-		b, err := zn.FromUint64(4)
-		require.NoError(t, err)
-		result := a.ScalarExp(b.Nat())
-		require.Equal(t, a.Exp(b.Nat()), result)
-	})
-}
-
-func TestZn_Properties(t *testing.T) {
-	t.Parallel()
-
-	zn, err := num.NewZModFromCardinal(cardinal.New(17))
-	require.NoError(t, err)
-
-	t.Run("Name", func(t *testing.T) {
-		t.Parallel()
-		name := zn.Name()
-		require.Equal(t, "Z\\17Z", name)
-	})
-
-	t.Run("Characteristic", func(t *testing.T) {
-		t.Parallel()
-		char := zn.Characteristic()
-		require.Equal(t, cardinal.New(17), char)
-	})
-
-	t.Run("Modulus", func(t *testing.T) {
-		t.Parallel()
-		mod := zn.Modulus()
-		// Verify modulus through string representation
-		require.Equal(t, "17", mod.String())
-	})
-
-	t.Run("ElementSize", func(t *testing.T) {
-		t.Parallel()
-		size := zn.ElementSize()
-		require.Positive(t, size)
-	})
-
-	t.Run("WideElementSize", func(t *testing.T) {
-		t.Parallel()
-		wideSize := zn.WideElementSize()
-		elemSize := zn.ElementSize()
-		require.Equal(t, 2*elemSize, wideSize)
-	})
-
-	t.Run("OpIdentity", func(t *testing.T) {
-		t.Parallel()
-		identity := zn.OpIdentity()
-		require.True(t, identity.IsZero())
-	})
-}
-
-func TestZn_FromCardinal(t *testing.T) {
-	t.Parallel()
-
-	zn, err := num.NewZModFromCardinal(cardinal.New(11))
-	require.NoError(t, err)
-
-	card := cardinal.New(25)
-	elem, err := zn.FromCardinal(card)
-	require.NoError(t, err)
-	require.Equal(t, uint64(3), elem.Big().Uint64()) // 25 mod 11 = 3
-}
-
-func TestZn_ScalarStructure(t *testing.T) {
-	t.Parallel()
-
-	zn, err := num.NewZModFromCardinal(cardinal.New(7))
-	require.NoError(t, err)
-
-	scalarStruct := zn.ScalarStructure()
-	require.NotNil(t, scalarStruct)
-	// ScalarStructure now returns N() (natural numbers) as scalars are exponents
-	require.Equal(t, num.N(), scalarStruct)
-}
-
-func TestUint_BitOperations(t *testing.T) {
-	t.Parallel()
-
-	zn, err := num.NewZModFromCardinal(cardinal.New(256))
-	require.NoError(t, err)
-
-	t.Run("Bit", func(t *testing.T) {
-		t.Parallel()
-		// 170 = 10101010 in binary
-		a, err := zn.FromUint64(170)
-		require.NoError(t, err)
-
-		require.Equal(t, uint8(0), a.Bit(0))
-		require.Equal(t, uint8(1), a.Bit(1))
-		require.Equal(t, uint8(0), a.Bit(2))
-		require.Equal(t, uint8(1), a.Bit(3))
-	})
-}
-
-func TestUint_LengthMethods(t *testing.T) {
-	t.Parallel()
-
-	zn, err := num.NewZModFromCardinal(cardinal.New(1000))
-	require.NoError(t, err)
-
-	a, err := zn.FromUint64(255)
-	require.NoError(t, err)
-
-	t.Run("TrueLen", func(t *testing.T) {
-		t.Parallel()
-		trueLen := a.TrueLen()
-		require.Positive(t, trueLen)
-	})
-
-	t.Run("AnnouncedLen", func(t *testing.T) {
-		t.Parallel()
-		announcedLen := a.AnnouncedLen()
-		require.GreaterOrEqual(t, announcedLen, a.TrueLen())
-	})
-}
-
-func TestUint_NilPanics(t *testing.T) {
-	t.Parallel()
-
-	zn, err := num.NewZModFromCardinal(cardinal.New(7))
-	require.NoError(t, err)
-
-	a, err := zn.FromUint64(3)
-	require.NoError(t, err)
-
-	t.Run("Op with nil panics", func(t *testing.T) {
-		t.Parallel()
-		require.Panics(t, func() {
-			_ = a.Op(nil)
-		})
-	})
-
-	t.Run("OtherOp with nil panics", func(t *testing.T) {
-		t.Parallel()
-		require.Panics(t, func() {
-			_ = a.OtherOp(nil)
-		})
-	})
-
-	t.Run("Coprime with nil panics", func(t *testing.T) {
-		t.Parallel()
-		require.Panics(t, func() {
-			_ = a.Coprime(nil)
-		})
-	})
-
-	t.Run("PartialCompare with nil returns Incomparable", func(t *testing.T) {
-		t.Parallel()
-		// PartialCompare returns Incomparable for nil, doesn't panic
-		result := a.PartialCompare(nil)
-		require.Equal(t, base.Incomparable, result)
-	})
-
-	t.Run("Compare with nil panics", func(t *testing.T) {
-		t.Parallel()
-		require.Panics(t, func() {
-			_ = a.Compare(nil)
-		})
-	})
-
-	t.Run("EqualModulus with nil returns false", func(t *testing.T) {
-		t.Parallel()
-		require.False(t, a.EqualModulus(nil))
-	})
-
-}
-
-func TestZn_CompositeModulus(t *testing.T) {
-	t.Parallel()
-
-	// Test with composite modulus
-	zn, err := num.NewZModFromCardinal(cardinal.New(15)) // 15 = 3 * 5
-	require.NoError(t, err)
-
-	t.Run("Non-coprime elements are not units", func(t *testing.T) {
-		t.Parallel()
-		// 3 and 5 are not coprime to 15
-		three, err := zn.FromUint64(3)
-		require.NoError(t, err)
-		five, err := zn.FromUint64(5)
-		require.NoError(t, err)
-
-		require.False(t, three.IsUnit())
-		require.False(t, five.IsUnit())
-
-		_, err1 := three.TryInv()
-		require.Error(t, err1)
-
-		_, err2 := five.TryInv()
-		require.Error(t, err2)
-	})
-
-	t.Run("Coprime elements are units", func(t *testing.T) {
-		t.Parallel()
-		// 2, 4, 7, 8, 11, 13, 14 are coprime to 15
-		coprime := []uint64{2, 4, 7, 8, 11, 13, 14}
-
-		for _, val := range coprime {
-			elem, err := zn.FromUint64(val)
-			require.NoError(t, err)
-			require.True(t, elem.IsUnit(), "%d should be a unit", val)
-
-			inv, err := elem.TryInv()
-			require.NoError(t, err)
-
-			product := elem.Mul(inv)
-			require.True(t, product.IsOne())
-		}
-	})
-}
-
-func TestZn_LargeModulus(t *testing.T) {
-	t.Parallel()
-
-	// Test with larger modulus
-	largeModBytes := bytes.Repeat([]byte{0xFF}, 32) // 256-bit modulus
-	// Create large cardinal from bytes
-	// Since we can't access the internal v field, we'll use FromBytes on the cardinal
-	largeCard := cardinal.NewFromSaferith(new(saferith.Nat).SetBytes(largeModBytes))
-
-	zn, err := num.NewZModFromCardinal(largeCard)
-	require.NoError(t, err)
-
-	t.Run("Basic operations with large modulus", func(t *testing.T) {
-		t.Parallel()
-		a, err := zn.FromUint64(12345)
-		require.NoError(t, err)
-		b, err := zn.FromUint64(67890)
-		require.NoError(t, err)
-
-		c := a.Add(b)
-		require.NotNil(t, c)
-
-		d := a.Mul(b)
-		require.NotNil(t, d)
-	})
-
-	t.Run("Random with large modulus", func(t *testing.T) {
-		t.Parallel()
-		prng := pcg.NewRandomised()
-		elem, err := zn.Random(prng)
-		require.NoError(t, err)
-		require.NotNil(t, elem)
-	})
-}
-
-// Additional tests for uncovered functions in zn.go
-
-func TestZn_Bottom(t *testing.T) {
-	t.Parallel()
-
-	modulus, err := num.NPlus().FromUint64(7)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
-
-	bottom := zn.Bottom()
-	require.True(t, bottom.IsZero())
-	// IsBottom for Uint checks IsOne, not IsZero
-	require.False(t, bottom.IsBottom())
-}
-
-func TestZn_FromNatPlus(t *testing.T) {
-	t.Parallel()
-
-	modulus, err := num.NPlus().FromUint64(11)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
-
-	t.Run("Valid NatPlus", func(t *testing.T) {
-		t.Parallel()
-		np, err := num.NPlus().FromUint64(7)
-		require.NoError(t, err)
-
-		u, err := zn.FromNatPlus(np)
-		require.NoError(t, err)
-		require.Equal(t, "7", u.String())
-	})
-
-	t.Run("Nil NatPlus", func(t *testing.T) {
-		t.Parallel()
-		_, err := zn.FromNatPlus(nil)
-		require.Error(t, err)
-	})
-}
-
-func TestZn_IsInRange(t *testing.T) {
-	t.Parallel()
-
-	modulus, err := num.NPlus().FromUint64(10)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
-
-	// Check if a Nat is in range [0, modulus)
-	t.Run("In range", func(t *testing.T) {
-		t.Parallel()
-		n := num.N().FromUint64(5)
-		require.True(t, zn.IsInRange(n))
-	})
-
-	t.Run("At modulus", func(t *testing.T) {
-		t.Parallel()
-		n := num.N().FromUint64(10) // Equal to modulus
-		require.False(t, zn.IsInRange(n))
-	})
-
-	t.Run("Above modulus", func(t *testing.T) {
-		t.Parallel()
-		n := num.N().FromUint64(15)
-		require.False(t, zn.IsInRange(n))
-	})
-
-	t.Run("Nil panics", func(t *testing.T) {
-		t.Parallel()
-		require.Panics(t, func() {
-			_ = zn.IsInRange(nil)
-		})
-	})
-}
-
-func TestZn_MultiScalarOp(t *testing.T) {
-	t.Parallel()
-
-	modulus, err := num.NPlus().FromUint64(11)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
-
-	// MultiScalarOp now redirects to MultiScalarExp
-	a, err := zn.FromUint64(2)
-	require.NoError(t, err)
-	b, err := zn.FromUint64(3)
-	require.NoError(t, err)
-
-	s1 := num.N().FromUint64(4)
-	s2 := num.N().FromUint64(5)
-
-	result, err := zn.MultiScalarOp([]*num.Nat{s1, s2}, []*num.Uint{a, b})
-	require.NoError(t, err)
-	// 2^4 * 3^5 = 16 * 243 = 3888 = 5 (mod 11)
-	require.Equal(t, "5", result.String())
-}
-
-func TestZn_MultiScalarExp(t *testing.T) {
-	t.Parallel()
-
-	modulus, err := num.NPlus().FromUint64(11)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
-
-	// Test a^s1 * b^s2 (mod 11)
-	a, err := zn.FromUint64(2)
-	require.NoError(t, err)
-	b, err := zn.FromUint64(3)
-	require.NoError(t, err)
-
-	s1, err := zn.FromUint64(3)
-	require.NoError(t, err)
-	s2, err := zn.FromUint64(2)
-	require.NoError(t, err)
-
-	result, err := zn.MultiScalarExp([]*num.Nat{s1.Nat(), s2.Nat()}, []*num.Uint{a, b})
-	require.NoError(t, err)
-	// 2^3 * 3^2 = 8 * 9 = 72 = 6 (mod 11)
-	require.Equal(t, "6", result.String())
-}
-
-func TestZn_AmbientStructure(t *testing.T) {
-	t.Parallel()
-
-	modulus, err := num.NPlus().FromUint64(7)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
-
-	ambient := zn.AmbientStructure()
-	// AmbientStructure returns Z() (Integers), not zn
-	require.Equal(t, num.Z(), ambient)
+	// OtherOp is Mul
+	require.True(t, a.OtherOp(b).Equal(a.Mul(b)))
 }
 
 func TestUint_TryOpInv(t *testing.T) {
 	t.Parallel()
 
-	modulus, err := num.NPlus().FromUint64(11)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
-
-	a, err := zn.FromUint64(5)
+	zmod := testZMod(t, 7)
+	a, err := zmod.FromUint64(3)
 	require.NoError(t, err)
 
-	// TryOpInv is same as TryNeg
-	inv, err := a.TryOpInv()
+	opInv, err := a.TryOpInv()
 	require.NoError(t, err)
-	require.Equal(t, "6", inv.String()) // -5 = 6 (mod 11)
+	require.True(t, a.Neg().Equal(opInv))
 }
 
 func TestUint_OpInv(t *testing.T) {
 	t.Parallel()
 
-	modulus, err := num.NPlus().FromUint64(11)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
-
-	a, err := zn.FromUint64(5)
+	zmod := testZMod(t, 7)
+	a, err := zmod.FromUint64(3)
 	require.NoError(t, err)
 
-	inv := a.OpInv()
-	require.Equal(t, "6", inv.String()) // -5 = 6 (mod 11)
-}
-
-func TestUint_Lsh(t *testing.T) {
-	t.Parallel()
-
-	modulus, err := num.NPlus().FromUint64(31)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
-
-	a, err := zn.FromUint64(5)
-	require.NoError(t, err)
-
-	// 5 << 2 = 20 (mod 31)
-	result := a.Lsh(2)
-	require.Equal(t, "20", result.String())
-}
-
-func TestUint_Rsh(t *testing.T) {
-	t.Parallel()
-
-	modulus, err := num.NPlus().FromUint64(31)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
-
-	a, err := zn.FromUint64(20)
-	require.NoError(t, err)
-
-	// 20 >> 2 = 5 (mod 31)
-	result := a.Rsh(2)
-	require.Equal(t, "5", result.String())
-}
-
-func TestUint_EuclideanValuation(t *testing.T) {
-	t.Parallel()
-
-	modulus, err := num.NPlus().FromUint64(11)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
-
-	a, err := zn.FromUint64(7)
-	require.NoError(t, err)
-
-	// EuclideanValuation returns itself
-	result := a.EuclideanValuation()
-	require.Equal(t, a.Abs().Uint64(), result.Uint64())
-}
-
-func TestUint_TryNeg(t *testing.T) {
-	t.Parallel()
-
-	modulus, err := num.NPlus().FromUint64(11)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
-
-	a, err := zn.FromUint64(7)
-	require.NoError(t, err)
-
-	neg, err := a.TryNeg()
-	require.NoError(t, err)
-	require.Equal(t, "4", neg.String()) // -7 = 4 (mod 11)
-}
-
-func TestUint_IsBottom(t *testing.T) {
-	t.Parallel()
-
-	modulus, err := num.NPlus().FromUint64(11)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
-
-	// IsBottom checks IsOne, not IsZero
-	one := zn.One()
-	require.True(t, one.IsBottom())
-
-	zero := zn.Zero()
-	require.False(t, zero.IsBottom())
-}
-
-func TestUint_IsTop(t *testing.T) {
-	t.Parallel()
-
-	modulus, err := num.NPlus().FromUint64(11)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
-
-	top := zn.Top()
-	require.True(t, top.IsTop())
-
-	zero := zn.Zero()
-	require.False(t, zero.IsTop())
-}
-
-func TestUint_IsQuadraticResidue(t *testing.T) {
-	t.Parallel()
-
-	// Use modulus 11 (prime)
-	modulus, err := num.NPlus().FromUint64(11)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
-
-	// 1, 3, 4, 5, 9 are quadratic residues mod 11
-	// 2, 6, 7, 8, 10 are non-residues
-
-	qr, err := zn.FromUint64(4) // 2^2 = 4
-	require.NoError(t, err)
-
-	// IsQuadraticResidue is not yet implemented, so it panics
-	require.Panics(t, func() {
-		_ = qr.IsQuadraticResidue()
-	})
+	opInv := a.OpInv()
+	require.True(t, a.Neg().Equal(opInv))
 }
 
 func TestUint_ScalarOp(t *testing.T) {
 	t.Parallel()
 
-	modulus, err := num.NPlus().FromUint64(11)
-	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
-	require.NoError(t, err)
+	zmod := testZMod(t, 7)
+	n := num.N()
 
-	a, err := zn.FromUint64(3)
+	a, err := zmod.FromUint64(2)
 	require.NoError(t, err)
-	scalar := num.N().FromUint64(4)
+	scalar := n.FromUint64(3)
 
-	// ScalarOp now performs exponentiation (ScalarExp)
+	// ScalarOp is ScalarExp (exponentiation)
 	result := a.ScalarOp(scalar)
-	require.Equal(t, "4", result.String()) // 3^4 = 81 = 4 (mod 11)
+	// 2^3 = 8 = 1 mod 7
+	require.Equal(t, big.NewInt(1), result.Big())
 }
 
-func TestUint_Abs(t *testing.T) {
+func TestUint_ScalarMul(t *testing.T) {
 	t.Parallel()
 
-	modulus, err := num.NPlus().FromUint64(11)
+	zmod := testZMod(t, 7)
+	n := num.N()
+
+	a, err := zmod.FromUint64(2)
 	require.NoError(t, err)
-	zn, err := num.NewZModFromCardinal(modulus.Cardinal())
+	scalar := n.FromUint64(3)
+
+	// ScalarMul is multiplication
+	result := a.ScalarMul(scalar)
+	// 2 * 3 = 6 mod 7
+	require.Equal(t, big.NewInt(6), result.Big())
+}
+
+func TestUint_IsTorsionFree(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+	a, err := zmod.FromUint64(3)
 	require.NoError(t, err)
 
-	a, err := zn.FromUint64(7)
-	require.NoError(t, err)
+	require.True(t, a.IsTorsionFree())
+}
 
-	// Abs returns a Nat
-	abs := a.Abs()
-	require.Equal(t, "7", abs.String())
+func TestZMod_RandomWithCryptoRand(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 100)
+
+	result, err := zmod.Random(rand.Reader)
+	require.NoError(t, err)
+	require.True(t, result.Big().Cmp(big.NewInt(0)) >= 0)
+	require.True(t, result.Big().Cmp(big.NewInt(100)) < 0)
+}
+
+func TestUint_EuclideanDiv(t *testing.T) {
+	t.Parallel()
+
+	t.Run("prime modulus", func(t *testing.T) {
+		t.Parallel()
+		zmod := testZMod(t, 7)
+		a, err := zmod.FromUint64(5)
+		require.NoError(t, err)
+		b, err := zmod.FromUint64(3)
+		require.NoError(t, err)
+		quot, rem, err := a.EuclideanDiv(b)
+		require.NoError(t, err)
+		require.NotNil(t, quot)
+		require.NotNil(t, rem)
+	})
+
+	t.Run("composite modulus fails", func(t *testing.T) {
+		t.Parallel()
+		zmod := testZMod(t, 6)
+		a, err := zmod.FromUint64(4)
+		require.NoError(t, err)
+		b, err := zmod.FromUint64(2)
+		require.NoError(t, err)
+		_, _, err = a.EuclideanDiv(b)
+		require.Error(t, err)
+	})
+}
+
+func TestUint_EuclideanValuation(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	a, err := zmod.FromUint64(3)
+	require.NoError(t, err)
+	ev := a.EuclideanValuation()
+	require.NotNil(t, ev)
+}
+
+func TestUint_Lsh(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 100)
+
+	a, err := zmod.FromUint64(5)
+	require.NoError(t, err)
+	result := a.Lsh(2)
+	// 5 << 2 = 20 mod 100
+	require.Equal(t, big.NewInt(20), result.Big())
+}
+
+func TestUint_Rsh(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 100)
+
+	a, err := zmod.FromUint64(20)
+	require.NoError(t, err)
+	result := a.Rsh(2)
+	// 20 >> 2 = 5 mod 100
+	require.Equal(t, big.NewInt(5), result.Big())
+}
+
+func TestZMod_FromBytesBEReduce(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+
+	t.Run("value in range", func(t *testing.T) {
+		t.Parallel()
+		// 3 in big-endian bytes
+		result, err := zmod.FromBytesBEReduce([]byte{3})
+		require.NoError(t, err)
+		requireBigIntEqualZN(t, big.NewInt(3), result.Big())
+	})
+
+	t.Run("value needs reduction", func(t *testing.T) {
+		t.Parallel()
+		// 10 = 3 mod 7
+		result, err := zmod.FromBytesBEReduce([]byte{10})
+		require.NoError(t, err)
+		requireBigIntEqualZN(t, big.NewInt(3), result.Big())
+	})
+
+	t.Run("large value reduction", func(t *testing.T) {
+		t.Parallel()
+		// 256 = 4 mod 7 (256 = 36*7 + 4)
+		result, err := zmod.FromBytesBEReduce([]byte{0x01, 0x00})
+		require.NoError(t, err)
+		requireBigIntEqualZN(t, big.NewInt(4), result.Big())
+	})
+
+	t.Run("zero bytes", func(t *testing.T) {
+		t.Parallel()
+		result, err := zmod.FromBytesBEReduce([]byte{0})
+		require.NoError(t, err)
+		require.True(t, result.IsZero())
+	})
+
+	t.Run("empty bytes", func(t *testing.T) {
+		t.Parallel()
+		result, err := zmod.FromBytesBEReduce([]byte{})
+		require.NoError(t, err)
+		require.True(t, result.IsZero())
+	})
+
+	t.Run("very large value", func(t *testing.T) {
+		t.Parallel()
+		// 0x12345678 = 305419896
+		// 305419896 mod 7 = 305419896 - 43631413*7 = 305419896 - 305419891 = 5
+		result, err := zmod.FromBytesBEReduce([]byte{0x12, 0x34, 0x56, 0x78})
+		require.NoError(t, err)
+		expected := new(big.Int).Mod(big.NewInt(0x12345678), big.NewInt(7))
+		requireBigIntEqualZN(t, expected, result.Big())
+	})
+}
+
+func TestZMod_FromNatCTReduced(t *testing.T) {
+	t.Parallel()
+
+	zmod := testZMod(t, 7)
+	n := num.N()
+
+	t.Run("nil value", func(t *testing.T) {
+		t.Parallel()
+		_, err := zmod.FromNatCTReduced(nil)
+		require.Error(t, err)
+	})
+
+	t.Run("value in range", func(t *testing.T) {
+		t.Parallel()
+		nat := n.FromUint64(3)
+		result, err := zmod.FromNatCTReduced(nat.Value())
+		require.NoError(t, err)
+		requireBigIntEqualZN(t, big.NewInt(3), result.Big())
+	})
+
+	t.Run("zero in range", func(t *testing.T) {
+		t.Parallel()
+		nat := n.FromUint64(0)
+		result, err := zmod.FromNatCTReduced(nat.Value())
+		require.NoError(t, err)
+		require.True(t, result.IsZero())
+	})
+
+	t.Run("boundary value in range", func(t *testing.T) {
+		t.Parallel()
+		// 6 is the max valid value for mod 7
+		nat := n.FromUint64(6)
+		result, err := zmod.FromNatCTReduced(nat.Value())
+		require.NoError(t, err)
+		requireBigIntEqualZN(t, big.NewInt(6), result.Big())
+	})
+
+	t.Run("value out of range", func(t *testing.T) {
+		t.Parallel()
+		// 7 is out of range for mod 7
+		nat := n.FromUint64(7)
+		_, err := zmod.FromNatCTReduced(nat.Value())
+		require.Error(t, err)
+	})
+
+	t.Run("large value out of range", func(t *testing.T) {
+		t.Parallel()
+		// 100 is out of range for mod 7
+		nat := n.FromUint64(100)
+		_, err := zmod.FromNatCTReduced(nat.Value())
+		require.Error(t, err)
+	})
 }

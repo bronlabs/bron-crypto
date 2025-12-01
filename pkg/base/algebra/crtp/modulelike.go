@@ -23,7 +23,6 @@ type MultiplicativelyActable[E, S any] interface {
 type SemiModule[SME, S any] interface {
 	Monoid[SME]
 	ScalarStructure() Structure[S]
-	MultiScalarOp(scalars []S, elements []SME) (SME, error)
 }
 
 type SemiModuleElement[SME, S any] interface {
@@ -35,7 +34,6 @@ type SemiModuleElement[SME, S any] interface {
 type AdditiveSemiModule[SME, S any] interface {
 	SemiModule[SME, S]
 	AdditiveMonoid[SME]
-	MultiScalarMul(scalars []S, elements []SME) (SME, error)
 }
 
 type AdditiveSemiModuleElement[SME, S any] interface {
@@ -47,7 +45,6 @@ type AdditiveSemiModuleElement[SME, S any] interface {
 type MultiplicativeSemiModule[SME, S any] interface {
 	SemiModule[SME, S]
 	MultiplicativeMonoid[SME]
-	MultiScalarExp(scalars []S, elements []SME) (SME, error)
 }
 type MultiplicativeSemiModuleElement[SME, S any] interface {
 	SemiModuleElement[SME, S]
