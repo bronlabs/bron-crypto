@@ -71,7 +71,7 @@ func (p *Participant[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast
 		choices := make([]byte, (softspoken.Kappa+7)/8)
 		_, err = io.ReadFull(p.prng, choices)
 		if err != nil {
-			return nil, nil, errs.WrapRandomSample(err, "cannot sample choices")
+			return nil, errs.WrapRandomSample(err, "cannot sample choices")
 		}
 		u.OtR2, seed, err = p.baseOTReceivers[id].Round2(otR1u, choices)
 		if err != nil {
