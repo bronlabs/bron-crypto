@@ -362,6 +362,13 @@ func (i *Int) IsInRange(modulus *NatPlus) bool {
 	return modulus.ModulusCT().IsInRange(i.Abs().v) == ct.True
 }
 
+func (i *Int) IsInRangeSymmetric(modulus *NatPlus) bool {
+	if modulus == nil {
+		panic("argument is nil")
+	}
+	return modulus.ModulusCT().IsInRangeSymmetric(i.v) == ct.True
+}
+
 func (i *Int) Mod(modulus *NatPlus) *Uint {
 	out := new(numct.Nat)
 	modulus.ModulusCT().ModI(out, i.v)

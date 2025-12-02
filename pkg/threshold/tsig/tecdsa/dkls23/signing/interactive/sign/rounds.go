@@ -7,6 +7,7 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -145,7 +146,7 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 		otTape := globalOtTape.Clone()
 		otTape.AppendBytes(otRandomizerSender, binary.LittleEndian.AppendUint64(nil, uint64(id)))
 		otTape.AppendBytes(otRandomizerReceiver, binary.LittleEndian.AppendUint64(nil, uint64(c.sharingId)))
-		otKey, err := otTape.ExtractBytes(otRandomizerKey, 32)
+		otKey, err := otTape.ExtractBytes(otRandomizerKey, base.CollisionResistanceBytesCeil)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot extract OT randomizer key")
 		}
@@ -259,10 +260,10 @@ func (c *Cosigner[P, B, S]) Round5(r4b network.RoundMessages[*Round4Broadcast[P,
 			return nil, errs.WrapFailed(err, "cannot run Bob mul round3")
 		}
 		if !c.state.bigR[id].ScalarMul(c.state.chi[id]).Sub(message.p2p.GammaU).Equal(c.suite.Curve().ScalarBaseMul(d[0])) {
-			return nil, errs.NewFailed("consistency check failed")
+			return nil, errs.NewIdentifiableAbort(id, "consistency check failed")
 		}
 		if !message.broadcast.Pk.ScalarMul(c.state.chi[id]).Sub(message.p2p.GammaV).Equal(c.suite.Curve().ScalarBaseMul(d[1])) {
-			return nil, errs.NewFailed("consistency check failed")
+			return nil, errs.NewIdentifiableAbort(id, "consistency check failed")
 		}
 		c.state.pk[id] = message.broadcast.Pk
 

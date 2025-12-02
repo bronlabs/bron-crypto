@@ -37,7 +37,11 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		return nthroot.NewStatement(x.Value())
 	}))...)
 	verifier.state.y = sigand.ComposeWitnesses(slices.Collect(iterutils.Map(slices.Values(nonces), func(y *paillier.Nonce) *nthroot.Witness[*modular.SimpleModulus] {
-		return nthroot.NewWitness(y.Value())
+		embeddedNonce, err := verifier.paillierPublicKey.Group().EmbedRSA(y.Value())
+		if err != nil {
+			panic(err)
+		}
+		return nthroot.NewWitness(embeddedNonce)
 	}))...)
 	verifier.state.rootsProver, err = sigma.NewProver(verifier.SessionId[:], rootTranscript.Clone(), verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
 	if err != nil {

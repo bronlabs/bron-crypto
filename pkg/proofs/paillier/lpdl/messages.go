@@ -8,7 +8,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-	hashcommitments "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	paillierrange "github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
 )
@@ -16,7 +15,7 @@ import (
 type Round1Output struct {
 	RangeVerifierOutput    hash_comm.Commitment
 	CPrime                 *paillier.Ciphertext
-	CDoublePrimeCommitment hashcommitments.Commitment
+	CDoublePrimeCommitment hash_comm.Commitment
 }
 
 func (r1out *Round1Output) Validate() error {
@@ -32,7 +31,7 @@ func (r1out *Round1Output) Validate() error {
 
 type Round2Output struct {
 	RangeProverOutput *paillierrange.Commitment
-	CHat              hashcommitments.Commitment
+	CHat              hash_comm.Commitment
 }
 
 func (r2out *Round2Output) Validate() error {
@@ -51,7 +50,7 @@ type Round3Output struct {
 	RangeVerifierWitness hash_comm.Witness
 	A                    *num.Uint
 	B                    *num.Uint
-	CDoublePrimeWitness  hashcommitments.Witness
+	CDoublePrimeWitness  hash_comm.Witness
 }
 
 func (r3out *Round3Output) Validate() error {
@@ -77,7 +76,7 @@ func (r3out *Round3Output) Validate() error {
 type Round4Output[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	RangeProverOutput *paillierrange.Response
 	BigQHat           P
-	BigQHatWitness    hashcommitments.Witness
+	BigQHatWitness    hash_comm.Witness
 }
 
 func (r4out *Round4Output[P, B, S]) Validate() error {

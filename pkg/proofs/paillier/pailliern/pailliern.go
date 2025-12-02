@@ -11,12 +11,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
 const (
 	appTranscriptLabel       = "BRON_CRYPTO_NIZK_PAILLIER_N"
 	sessionIdTranscriptLabel = "BRON_CRYPTO_NIZK_PAILLIER_N_SESSION_ID"
+	nTranscriptLabel         = "BRON_CRYPTO_NIZK_PAILLIER_N_N"
 
 	// Alpha ɑ.
 	Alpha = 6370
@@ -41,17 +41,15 @@ type Prover struct {
 }
 
 func NewProver(sessionId network.SID, enc encryption.SelfEncrypter[*paillier.PrivateKey, *paillier.Plaintext, *paillier.Ciphertext, *paillier.Nonce], tape transcripts.Transcript) (prover *Prover, err error) {
-	if len(sessionId) == 0 {
-		return nil, errs.NewIsNil("sessionId")
-	}
 	if enc == nil {
 		return nil, errs.NewIsNil("encrypter")
 	}
 	if tape == nil {
-		tape = hagrid.NewTranscript(appTranscriptLabel)
+		return nil, errs.NewIsNil("transcript")
 	}
 	dst := fmt.Sprintf("%s-%d", sessionIdTranscriptLabel, sessionId)
 	tape.AppendDomainSeparator(dst)
+	tape.AppendBytes(nTranscriptLabel, enc.PrivateKey().PublicKey().Modulus().BytesBE())
 
 	return &Prover{
 		sid:  sessionId,
@@ -87,9 +85,6 @@ func (p *Prover) Prove() (proof *Proof, statement *paillier.PublicKey, err error
 }
 
 func Verify(sessionId network.SID, tape transcripts.Transcript, statement *paillier.PublicKey, proof *Proof) error {
-	if len(sessionId) == 0 {
-		return errs.NewIsNil("sessionId")
-	}
 	if statement == nil {
 		return errs.NewIsNil("statement")
 	}
@@ -97,10 +92,11 @@ func Verify(sessionId network.SID, tape transcripts.Transcript, statement *paill
 		return errs.NewIsNil("proof")
 	}
 	if tape == nil {
-		tape = hagrid.NewTranscript(appTranscriptLabel)
+		return errs.NewIsNil("transcript")
 	}
 	dst := fmt.Sprintf("%s-%d", sessionIdTranscriptLabel, sessionId)
 	tape.AppendDomainSeparator(dst)
+	tape.AppendBytes(nTranscriptLabel, statement.Modulus().BytesBE())
 
 	rhos, err := extractRhos(tape, statement.N())
 	if err != nil {

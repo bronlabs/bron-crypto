@@ -1483,7 +1483,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 		t.Skip("Skipping due to Lift() method implementation issue")
 
 		// Test the Lift() method on Share
-		_, exists := shares.Shares().Get(sharing.ID(0))
+		_, exists := shares.Shares().Get(sharing.ID(1))
 		require.True(t, exists)
 
 		// Use the Lift() method

@@ -58,7 +58,11 @@ func (e *Encrypter) Encrypt(plaintext *Plaintext, receiver *PublicKey, prng io.R
 }
 
 func (e *Encrypter) EncryptWithNonce(plaintext *Plaintext, receiver *PublicKey, nonce *Nonce) (*Ciphertext, error) {
-	rn, err := receiver.group.NthResidue(nonce.Value())
+	embeddedNonce, err := receiver.group.EmbedRSA(nonce.Value())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to embed nonce in the paillier group")
+	}
+	rn, err := receiver.group.NthResidue(embeddedNonce)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to lift nonce to n-th residues")
 	}
@@ -129,7 +133,11 @@ func (se *SelfEncrypter) SelfEncrypt(plaintext *Plaintext, prng io.Reader) (*Cip
 }
 
 func (se *SelfEncrypter) SelfEncryptWithNonce(plaintext *Plaintext, nonce *Nonce) (*Ciphertext, error) {
-	rn, err := se.sk.group.NthResidue(nonce.Value())
+	embeddedNonce, err := se.pk.group.EmbedRSA(nonce.Value())
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to embed nonce in the paillier group")
+	}
+	rn, err := se.sk.group.NthResidue(embeddedNonce)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to lift nonce to n-th residues")
 	}

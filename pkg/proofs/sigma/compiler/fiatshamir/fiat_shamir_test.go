@@ -1,180 +1,108 @@
 package fiatshamir_test
 
-// import (
-// 	"bytes"
-// 	crand "crypto/rand"
-// 	"testing"
+import (
+	crand "crypto/rand"
+	"io"
+	"testing"
 
-// 	"github.com/bronlabs/bron-crypto/pkg/transcripts/simple"
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
+	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
+	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
+	"github.com/stretchr/testify/require"
+)
 
-// 	"github.com/stretchr/testify/require"
+const iters = 128
 
-// 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-// 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
-// 	fiatShamir "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
-// )
+func TestSchnorrFiatShamir(t *testing.T) {
+	t.Parallel()
 
-// //func Test_HappyPathWithBatchSchnorr(t *testing.T) {
-// //	t.Parallel()
-// //
-// //	for i, c := range supportedCurve {
-// //		i := i
-// //		curve := c
-// //		t.Run(curve.Name(), func(t *testing.T) {
-// //			t.Parallel()
-// //
-// //			n := 16
-// //			prng := crand.Reader
-// //			sessionId := []byte("TestSessionId" + strconv.Itoa(i))
-// //
-// //			schnorrProtocol, err := batch_schnorr.NewSigmaProtocol(uint(n), curve.Generator(), prng)
-// //			require.NoError(t, err)
-// //
-// //			nizk, err := fiatShamir.NewCompiler(schnorrProtocol)
-// //			require.NoError(t, err)
-// //
-// //			proverTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
-// //			prover, err := nizk.NewProver(sessionId, proverTranscript)
-// //			require.NoError(t, err)
-// //			require.NotNil(t, prover)
-// //
-// //			verifierTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
-// //			verifier, err := nizk.NewVerifier(sessionId, verifierTranscript)
-// //			require.NoError(t, err)
-// //			require.NotNil(t, verifier)
-// //
-// //			witness := make([]curves.Scalar, n)
-// //			statement := make([]curves.Point, n)
-// //			for j := 0; j < n; j++ {
-// //				witness[j], err = curve.ScalarField().Random(prng)
-// //				require.NoError(t, err)
-// //				statement[j] = curve.ScalarBaseMult(witness[j])
-// //			}
-// //
-// //			proof, err := prover.Prove(statement, witness)
-// //			require.NoError(t, err)
-// //
-// //			err = verifier.Verify(statement, proof)
-// //			require.NoError(t, err)
-// //
-// //			proverBytes, err := proverTranscript.ExtractBytes("Bytes"+strconv.Itoa(i), 32)
-// //			require.NoError(t, err)
-// //			verifierBytes, err := verifierTranscript.ExtractBytes("Bytes"+strconv.Itoa(i), 32)
-// //			require.NoError(t, err)
-// //
-// //			require.True(t, bytes.Equal(proverBytes, verifierBytes))
-// //		})
-// //	}
-// //}
+	t.Run("k256", func(t *testing.T) {
+		for range iters {
+			testSchnorrFiatShamir(t, k256.NewCurve())
+		}
+	})
+	t.Run("p256", func(t *testing.T) {
+		for range iters {
+			testSchnorrFiatShamir(t, p256.NewCurve())
+		}
+	})
+	t.Run("edwards25519", func(t *testing.T) {
+		for range iters {
+			testSchnorrFiatShamir(t, edwards25519.NewPrimeSubGroup())
+		}
+	})
+	t.Run("curve25519", func(t *testing.T) {
+		for range iters {
+			testSchnorrFiatShamir(t, curve25519.NewPrimeSubGroup())
+		}
+	})
+	t.Run("pallas", func(t *testing.T) {
+		for range iters {
+			testSchnorrFiatShamir(t, pasta.NewPallasCurve())
+		}
+	})
+	t.Run("vesta", func(t *testing.T) {
+		for range iters {
+			testSchnorrFiatShamir(t, pasta.NewVestaCurve())
+		}
+	})
+	t.Run("BLS12-381 G1", func(t *testing.T) {
+		for range iters {
+			testSchnorrFiatShamir(t, bls12381.NewG1())
+		}
+	})
+	t.Run("BLS12-381 G2", func(t *testing.T) {
+		for range iters {
+			testSchnorrFiatShamir(t, bls12381.NewG2())
+		}
+	})
+}
 
-// func Test_HappyPathWithSchnorr(t *testing.T) {
-// 	t.Parallel()
+func testSchnorrFiatShamir[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](t *testing.T, group algebra.PrimeGroup[G, S]) {
+	t.Helper()
 
-// 	t.Run("k256", func(t *testing.T) {
-// 		t.Parallel()
-// 		curve := k256.NewCurve()
-// 		testHappyPathWithSchnorr(t, curve)
-// 	})
-// }
+	prng := crand.Reader
+	var sid network.SID
+	_, err := io.ReadFull(prng, sid[:])
+	g := group.Generator()
+	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
+	witnessValue, err := field.Random(prng)
+	require.NoError(t, err)
+	statementValue := g.ScalarOp(witnessValue)
 
-// //func Test_HappyPathWithChaumPedersen(t *testing.T) {
-// //	t.Parallel()
-// //
-// //	for i, c := range supportedCurve {
-// //		i := i
-// //		curve := c
-// //		t.Run(curve.Name(), func(t *testing.T) {
-// //			t.Parallel()
-// //
-// //			prng := crand.Reader
-// //			sessionId := []byte("TestSessionId" + strconv.Itoa(i))
-// //
-// //			g1, err := curve.Random(prng)
-// //			require.NoError(t, err)
-// //			g2, err := curve.Random(prng)
-// //			require.NoError(t, err)
-// //
-// //			schnorrProtocol, err := chaum.NewSigmaProtocol(g1, g2, prng)
-// //			require.NoError(t, err)
-// //
-// //			nizk, err := fiatShamir.NewCompiler(schnorrProtocol)
-// //			require.NoError(t, err)
-// //
-// //			proverTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
-// //			prover, err := nizk.NewProver(sessionId, proverTranscript)
-// //			require.NoError(t, err)
-// //			require.NotNil(t, prover)
-// //
-// //			verifierTranscript := hagrid.NewTranscript("Test"+strconv.Itoa(i), nil)
-// //			verifier, err := nizk.NewVerifier(sessionId, verifierTranscript)
-// //			require.NoError(t, err)
-// //			require.NotNil(t, verifier)
-// //
-// //			witness, err := curve.ScalarField().Random(prng)
-// //			require.NoError(t, err)
-// //			statement := &chaum.Statement{
-// //				X1: g1.ScalarMul(witness),
-// //				X2: g2.ScalarMul(witness),
-// //			}
-// //
-// //			proof, err := prover.Prove(statement, witness)
-// //			require.NoError(t, err)
-// //
-// //			err = verifier.Verify(statement, proof)
-// //			require.NoError(t, err)
-// //
-// //			proverBytes, err := proverTranscript.ExtractBytes("Bytes"+strconv.Itoa(i), 32)
-// //			require.NoError(t, err)
-// //			verifierBytes, err := verifierTranscript.ExtractBytes("Bytes"+strconv.Itoa(i), 32)
-// //			require.NoError(t, err)
-// //
-// //			require.True(t, bytes.Equal(proverBytes, verifierBytes))
-// //		})
-// //	}
-// //}
+	scheme, err := schnorr.NewProtocol(g, prng)
+	require.NoError(t, err)
+	witness := schnorr.NewWitness(witnessValue)
+	statement := schnorr.NewStatement(statementValue)
 
-// func testHappyPathWithSchnorr[P curves.Point[P, F, S], F algebra.FiniteFieldElement[F], S algebra.PrimeFieldElement[S]](t *testing.T, curve curves.Curve[P, F, S]) {
-// 	t.Helper()
+	niScheme, err := fiatshamir.NewCompiler(scheme)
+	require.NoError(t, err)
+	proverTranscript := hagrid.NewTranscript("test")
+	verifierTranscript := proverTranscript.Clone()
 
-// 	prng := crand.Reader
-// 	sessionId := []byte("TestSessionId" + curve.Name())
+	prover, err := niScheme.NewProver(sid, proverTranscript)
+	require.NoError(t, err)
+	proof, err := prover.Prove(statement, witness)
+	require.NoError(t, err)
 
-// 	schnorrProtocol, err := schnorr.NewSigmaProtocol(curve.Generator(), prng)
-// 	require.NoError(t, err)
+	verifier, err := niScheme.NewVerifier(sid, verifierTranscript)
+	require.NoError(t, err)
+	err = verifier.Verify(statement, proof)
+	require.NoError(t, err)
 
-// 	nizk, err := fiatShamir.NewCompiler(schnorrProtocol)
-// 	require.NoError(t, err)
+	proverTapeData, err := proverTranscript.ExtractBytes("test", base.CollisionResistanceBytesCeil)
+	require.NoError(t, err)
+	verifierTapeData, err := verifierTranscript.ExtractBytes("test", base.CollisionResistanceBytesCeil)
+	require.NoError(t, err)
 
-// 	proverTranscript := simple.NewTranscript("Test" + curve.Name())
-// 	prover, err := nizk.NewProver(sessionId, proverTranscript)
-// 	require.NoError(t, err)
-// 	require.NotNil(t, prover)
-
-// 	verifierTranscript := simple.NewTranscript("Test" + curve.Name())
-// 	verifier, err := nizk.NewVerifier(sessionId, verifierTranscript)
-// 	require.NoError(t, err)
-// 	require.NotNil(t, verifier)
-
-// 	w, err := curves.GetScalarField(curve).Random(prng)
-// 	require.NoError(t, err)
-// 	x := curve.Generator().ScalarMul(w)
-
-// 	witness := schnorr.NewWitness(w)
-// 	statement := schnorr.NewStatement(x)
-
-// 	proof, err := prover.Prove(statement, witness)
-// 	require.NoError(t, err)
-
-// 	err = verifier.Verify(statement, proof)
-// 	require.NoError(t, err)
-
-// 	proverBytes, err := proverTranscript.ExtractBytes("Bytes"+curve.Name(), 32)
-// 	require.NoError(t, err)
-// 	verifierBytes, err := verifierTranscript.ExtractBytes("Bytes"+curve.Name(), 32)
-// 	require.NoError(t, err)
-
-// 	require.True(t, bytes.Equal(proverBytes, verifierBytes))
-
-// }
+	require.Equal(t, proverTapeData, verifierTapeData)
+}

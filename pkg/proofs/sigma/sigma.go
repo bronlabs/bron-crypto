@@ -20,7 +20,7 @@ type (
 	Statement  base.BytesLike
 	Witness    base.BytesLike
 	Commitment base.BytesLike
-	State      base.BytesLike
+	State      any
 	Response   base.BytesLike
 
 	// ChallengeBytes

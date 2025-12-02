@@ -19,7 +19,7 @@ var (
 	_ sigma.Witness                                                        = (*Witness)(nil)
 	_ sigma.Statement                                                      = (*Statement)(nil)
 	_ sigma.Commitment                                                     = (*Commitment)(nil)
-	_ sigma.Statement                                                      = (*State)(nil)
+	_ sigma.State                                                          = (*State)(nil)
 	_ sigma.Response                                                       = (*Response)(nil)
 	_ sigma.Protocol[*Statement, *Witness, *Commitment, *State, *Response] = (*Protocol)(nil)
 )
@@ -53,11 +53,14 @@ type Statement struct {
 }
 
 func (s *Statement) Bytes() []byte {
-	var buf bytes.Buffer
-	buf.Write(s.Pk.Group().Modulus().Bytes())
-	buf.Write(s.C.Value().Bytes())
-	buf.Write(s.L.Bytes())
-	return buf.Bytes()
+	pkBytes := s.Pk.Group().Modulus().Bytes()
+	cBytes := s.C.Value().Bytes()
+	lBytes := s.L.Bytes()
+	return slices.Concat(
+		binary.LittleEndian.AppendUint64(nil, uint64(len(pkBytes))), pkBytes,
+		binary.LittleEndian.AppendUint64(nil, uint64(len(cBytes))), cBytes,
+		binary.LittleEndian.AppendUint64(nil, uint64(len(lBytes))), lBytes,
+	)
 }
 
 func NewStatement(pk *paillier.PublicKey, c *paillier.Ciphertext, l *numct.Nat) *Statement {
@@ -74,22 +77,29 @@ type Commitment struct {
 }
 
 func (c *Commitment) Bytes() []byte {
-	var buf bytes.Buffer
-	for _, ci := range c.C1 {
-		if ci.Value() == nil {
-			buf.Write([]byte{0})
-		} else {
-			buf.Write(ci.Value().Bytes())
+	var a []byte
+
+	a = binary.LittleEndian.AppendUint64(a, uint64(len(c.C1)))
+	for _, c1 := range c.C1 {
+		var c1Bytes []byte
+		if c1 != nil && c1.Value() != nil {
+			c1Bytes = c1.Value().Bytes()
 		}
+		a = binary.LittleEndian.AppendUint64(a, uint64(len(c1Bytes)))
+		a = append(a, c1Bytes...)
 	}
-	for _, ci := range c.C2 {
-		if ci.Value() == nil {
-			buf.Write([]byte{0})
-		} else {
-			buf.Write(ci.Value().Bytes())
+
+	a = binary.LittleEndian.AppendUint64(a, uint64(len(c.C2)))
+	for _, c2 := range c.C2 {
+		var c2Bytes []byte
+		if c2 != nil && c2.Value() != nil {
+			c2Bytes = c2.Value().Bytes()
 		}
+		a = binary.LittleEndian.AppendUint64(nil, uint64(len(c2Bytes)))
+		a = append(a, c2Bytes...)
 	}
-	return buf.Bytes()
+
+	return a
 }
 
 type State struct {
@@ -97,23 +107,6 @@ type State struct {
 	R1 []*paillier.Nonce
 	W2 []*paillier.Plaintext
 	R2 []*paillier.Nonce
-}
-
-func (s *State) Bytes() []byte {
-	var buf bytes.Buffer
-	for _, wi := range s.W1 {
-		buf.Write(wi.Value().Bytes())
-	}
-	for _, ri := range s.R1 {
-		buf.Write(ri.Value().Bytes())
-	}
-	for _, wi := range s.W2 {
-		buf.Write(wi.Value().Bytes())
-	}
-	for _, ri := range s.R2 {
-		buf.Write(ri.Value().Bytes())
-	}
-	return buf.Bytes()
 }
 
 type Response struct {
@@ -127,55 +120,74 @@ type Response struct {
 }
 
 func (r *Response) Bytes() []byte {
-	var buf bytes.Buffer
-	for _, wi := range r.W1 {
-		if wi.Value() == nil {
-			buf.Write([]byte{0})
-		} else {
-			buf.Write(wi.Value().Bytes())
+	var a []byte
+
+	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.W1)))
+	for _, w1 := range r.W1 {
+		var w1Bytes []byte
+		if w1 != nil && w1.Value() != nil {
+			w1Bytes = w1.Value().Bytes()
 		}
+		a = binary.LittleEndian.AppendUint64(a, uint64(len(w1Bytes)))
+		a = append(a, w1Bytes...)
 	}
-	for _, ri := range r.R1 {
-		if ri.Value() == nil {
-			buf.Write([]byte{0})
-		} else {
-			buf.Write(ri.Value().Bytes())
+
+	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.R1)))
+	for _, r1 := range r.R1 {
+		var r1Bytes []byte
+		if r1 != nil && r1.Value() != nil {
+			r1Bytes = r1.Value().Bytes()
 		}
+		a = binary.LittleEndian.AppendUint64(a, uint64(len(r1Bytes)))
+		a = append(a, r1Bytes...)
 	}
-	for _, wi := range r.W2 {
-		if wi.Value() == nil {
-			buf.Write([]byte{0})
-		} else {
-			buf.Write(wi.Value().Bytes())
+
+	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.W2)))
+	for _, w2 := range r.W2 {
+		var w2Bytes []byte
+		if w2 != nil && w2.Value() != nil {
+			w2Bytes = w2.Value().Bytes()
 		}
+		a = binary.LittleEndian.AppendUint64(a, uint64(len(w2Bytes)))
+		a = append(a, w2Bytes...)
 	}
-	for _, ri := range r.R2 {
-		if ri.Value() == nil {
-			buf.Write([]byte{0})
-		} else {
-			buf.Write(ri.Value().Bytes())
+
+	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.R2)))
+	for _, r2 := range r.R2 {
+		var r2Bytes []byte
+		if r2 != nil && r2.Value() != nil {
+			r2Bytes = r2.Value().Bytes()
 		}
+		a = binary.LittleEndian.AppendUint64(nil, uint64(len(r2Bytes)))
+		a = append(a, r2Bytes...)
 	}
-	for _, wi := range r.Wj {
-		if wi.Value() == nil {
-			buf.Write([]byte{0})
-		} else {
-			buf.Write(wi.Value().Bytes())
+
+	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.Wj)))
+	for _, wj := range r.Wj {
+		var wjBytes []byte
+		if wj != nil && wj.Value() != nil {
+			wjBytes = wj.Value().Bytes()
 		}
+		a = binary.LittleEndian.AppendUint64(a, uint64(len(wjBytes)))
+		a = append(a, wjBytes...)
 	}
-	for _, ri := range r.Rj {
-		if ri.Value() == nil {
-			buf.Write([]byte{0})
-		} else {
-			buf.Write(ri.Value().Bytes())
+
+	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.Rj)))
+	for _, rj := range r.Rj {
+		var rjBytes []byte
+		if rj != nil && rj.Value() != nil {
+			rjBytes = rj.Value().Bytes()
 		}
+		a = binary.LittleEndian.AppendUint64(a, uint64(len(rjBytes)))
+		a = append(a, rjBytes...)
 	}
-	for _, ji := range r.J {
-		jib := make([]byte, 8)
-		binary.BigEndian.PutUint64(jib, uint64(ji))
-		buf.Write(jib)
+
+	a = binary.LittleEndian.AppendUint64(a, uint64(len(r.J)))
+	for _, j := range r.J {
+		a = binary.LittleEndian.AppendUint64(a, uint64(j))
 	}
-	return buf.Bytes()
+
+	return a
 }
 
 type Protocol struct {
@@ -253,6 +265,10 @@ func (p *Protocol) ComputeProverCommitment(statement *Statement, witness *Witnes
 }
 
 func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness, _ *Commitment, state *State, challenge sigma.ChallengeBytes) (*Response, error) {
+	if len(state.W1) != int(p.t) || len(state.R1) != int(p.t) || len(state.W2) != int(p.t) || len(state.R2) != int(p.t) {
+		return nil, errs.NewValidation("invalid state")
+	}
+
 	ps := statement.Pk.PlaintextSpace()
 	lowBound, err := ps.FromNat(statement.L)
 	if err != nil {
@@ -310,6 +326,13 @@ func (p *Protocol) ComputeProverResponse(statement *Statement, witness *Witness,
 }
 
 func (p *Protocol) Verify(statement *Statement, commitment *Commitment, challenge sigma.ChallengeBytes, response *Response) error {
+	if len(commitment.C1) != int(p.t) || len(commitment.C2) != int(p.t) {
+		return errs.NewValidation("invalid commitment")
+	}
+	if len(response.W1) != int(p.t) || len(response.R1) != int(p.t) || len(response.W2) != int(p.t) || len(response.R2) != int(p.t) || len(response.Wj) != int(p.t) || len(response.Rj) != int(p.t) || len(response.J) != int(p.t) {
+		return errs.NewValidation("invalid response")
+	}
+
 	ps := statement.Pk.PlaintextSpace()
 	lowBound, err := ps.FromNat(statement.L)
 	if err != nil {
@@ -525,73 +548,9 @@ func (p *Protocol) GetChallengeBytesLength() int {
 	return int((p.t + 7) / 8)
 }
 
-func (*Protocol) SerializeStatement(statement *Statement) []byte {
-	return slices.Concat(
-		statement.Pk.N().Big().Bytes(), []byte(":"),
-		statement.C.ValueCT().Big().Bytes(), []byte(":"),
-		statement.L.Big().Bytes(),
-	)
-}
-
-func (p *Protocol) SerializeCommitment(commitment *Commitment) []byte {
-	var a []byte
-	for i := range p.t {
-		a = append(a, commitment.C1[i].ValueCT().Big().Bytes()...)
-		a = append(a, []byte(":")...)
-		a = append(a, commitment.C2[i].ValueCT().Big().Bytes()...)
-		a = append(a, []byte("|")...)
-	}
-
-	return a
-}
-
-func (p *Protocol) SerializeResponse(response *Response) []byte {
-	var a []byte
-
-	for i := range p.t {
-		a = append(a, response.W1[i].ValueCT().Big().Bytes()...)
-		a = append(a, []byte(":")...)
-		a = append(a, response.R1[i].ValueCT().Big().Bytes()...)
-		a = append(a, []byte(":")...)
-		a = append(a, response.W2[i].ValueCT().Big().Bytes()...)
-		a = append(a, []byte(":")...)
-		a = append(a, response.R2[i].ValueCT().Big().Bytes()...)
-		a = append(a, []byte(":")...)
-		a = append(a, response.Wj[i].ValueCT().Big().Bytes()...)
-		a = append(a, []byte(":")...)
-		a = append(a, response.Rj[i].ValueCT().Big().Bytes()...)
-		a = append(a, []byte("|")...)
-	}
-
-	return a
-}
-
 func (p *Protocol) SoundnessError() uint {
 	return p.t
 }
-
-// func isLess(highExclusive, v *paillier.PlainText) bool {
-//	_, _, l := v.Cmp(highExclusive)
-//	return l != 0
-// }.
-
-// func isLess(lhs, rhs *saferith.Int) bool {
-// 	// this is ridiculous that Int doesn't have any methods to compare
-// 	gtAbs, _, ltAbs := lhs.Abs().Cmp(rhs.Abs())
-// 	lNeg := lhs.IsNegative() != 0
-// 	rNeg := rhs.IsNegative() != 0
-
-// 	switch {
-// 	case lNeg && rNeg:
-// 		return gtAbs != 0
-// 	case !lNeg && !rNeg:
-// 		return ltAbs != 0
-// 	case lNeg:
-// 		return true
-// 	default:
-// 		return false
-// 	}
-// }.
 
 func isInRange(lowInclusive, highExclusive, v *paillier.Plaintext) bool {
 	return lowInclusive.IsLessThanOrEqual(v) && v.IsLessThanOrEqual(highExclusive) && !highExclusive.Equal(v)

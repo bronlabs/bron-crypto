@@ -27,7 +27,7 @@ import (
 )
 
 func setup[
-E gennaro.GroupElement[E, S], S gennaro.Scalar[S],
+	E gennaro.GroupElement[E, S], S gennaro.Scalar[S],
 ](
 	t *testing.T, threshold, total uint, group gennaro.Group[E, S], sid network.SID, tape ts.Transcript, prng io.Reader,
 ) (
@@ -263,8 +263,8 @@ func TestDKGPublicKeyFields(t *testing.T) {
 
 		// Verify consistency: participant i's partial public key for j should be the same
 		// across all participants
-		for i := sharing.ID(0); i < sharing.ID(total); i++ {
-			for j := sharing.ID(0); j < sharing.ID(total); j++ {
+		for i := sharing.ID(1); i <= sharing.ID(total); i++ {
+			for j := sharing.ID(1); j <= sharing.ID(total); j++ {
 				var referencePPK *k256.Point
 				for holderID, holderPartialPKs := range allPartialPKs {
 					ppk := holderPartialPKs[j]
@@ -1317,7 +1317,7 @@ func TestConcurrentDKGSessions(t *testing.T) {
 
 // setupBench is a helper for benchmarks
 func setupBench[
-E gennaro.GroupElement[E, S], S gennaro.Scalar[S],
+	E gennaro.GroupElement[E, S], S gennaro.Scalar[S],
 ](
 	b *testing.B, threshold, total uint, group gennaro.Group[E, S], sid network.SID, tape ts.Transcript, prng io.Reader,
 ) (
