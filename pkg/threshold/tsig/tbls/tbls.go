@@ -14,9 +14,9 @@ import (
 )
 
 type PublicMaterial[
-PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
-SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
-E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	publicKey         *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]
 	accessStructure   *feldman.AccessStructure
@@ -83,9 +83,9 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) HashCode() base.HashCode {
 }
 
 type Shard[
-PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
-SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
-E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
+	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	PublicMaterial[PK, PKFE, SG, SGFE, E, S]
 	share *feldman.Share[S]
@@ -136,9 +136,9 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) AsBLSPrivateKey() (*bls.PrivateKey[PK,
 }
 
 func NewShortKeyShard[
-P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
-P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
-E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
+	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](
 
 	share *feldman.Share[S],
@@ -188,9 +188,9 @@ E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 }
 
 func NewLongKeyShard[
-P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
-P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
-E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
+	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
+	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
+	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](
 	share *feldman.Share[S],
 	publicKey *bls.PublicKey[P2, FE2, P1, FE1, E, S],
