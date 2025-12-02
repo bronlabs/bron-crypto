@@ -259,10 +259,10 @@ func (c *Cosigner[P, B, S]) Round5(r4b network.RoundMessages[*Round4Broadcast[P,
 			return nil, errs.WrapFailed(err, "cannot run Bob mul round3")
 		}
 		if !c.state.bigR[id].ScalarMul(c.state.chi[id]).Sub(message.p2p.GammaU).Equal(c.suite.Curve().ScalarBaseMul(d[0])) {
-			return nil, errs.NewFailed("consistency check failed")
+			return nil, errs.NewIdentifiableAbort(id, "consistency check failed")
 		}
 		if !message.broadcast.Pk.ScalarMul(c.state.chi[id]).Sub(message.p2p.GammaV).Equal(c.suite.Curve().ScalarBaseMul(d[1])) {
-			return nil, errs.NewFailed("consistency check failed")
+			return nil, errs.NewIdentifiableAbort(id, "consistency check failed")
 		}
 		c.state.pk[id] = message.broadcast.Pk
 

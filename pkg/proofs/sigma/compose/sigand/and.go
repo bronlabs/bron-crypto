@@ -47,13 +47,6 @@ var _ sigma.Commitment = (Commitment[sigma.Commitment])(nil)
 
 type State[S sigma.State] []S
 
-func (s State[S]) Bytes() []byte {
-	return sliceutils.Fold(func(acc []byte, x S) []byte { return slices.Concat(acc, x.Bytes()) },
-		binary.BigEndian.AppendUint64(nil, uint64(len(s))),
-		s...,
-	)
-}
-
 var _ sigma.State = (State[sigma.State])(nil)
 
 type Response[Z sigma.Response] []Z
@@ -68,11 +61,11 @@ func (r Response[Z]) Bytes() []byte {
 var _ sigma.Response = (Response[sigma.Response])(nil)
 
 func ComposeStatements[X sigma.Statement](statements ...X) Statement[X] {
-	return Statement[X](statements)
+	return statements
 }
 
 func ComposeWitnesses[W sigma.Witness](witnesses ...W) Witness[W] {
-	return Witness[W](witnesses)
+	return witnesses
 }
 
 type protocol[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] []sigma.Protocol[X, W, A, S, Z]

@@ -13,7 +13,6 @@ func (verifier *Verifier[P, B, S]) Round1() (r1out *Round1Output, err error) {
 		return nil, errs.NewRound("%d != 1", verifier.round)
 	}
 
-	// 1. choose random a, b (both from Z/qZ since they're used as curve scalars)
 	verifier.state.a, err = verifier.state.zModQ.Random(verifier.prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot generate random integer")

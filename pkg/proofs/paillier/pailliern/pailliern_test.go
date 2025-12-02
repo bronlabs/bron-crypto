@@ -27,7 +27,7 @@ func Test_pIsCorrect(t *testing.T) {
 	for i := uint64(2); i < pailliern.Alpha; i++ {
 		if isPrime(i) {
 			// TODO: either remove capacity or fix the type of announced len
-			pCheck.MulCap(pCheck, numct.NewNat(i), int(pailliern.P.AnnouncedLen()))
+			pCheck.MulCap(pCheck, numct.NewNat(i), pailliern.P.AnnouncedLen())
 		}
 	}
 

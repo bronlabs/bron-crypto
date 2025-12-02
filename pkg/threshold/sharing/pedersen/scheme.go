@@ -170,6 +170,9 @@ func (s *Scheme[E, S]) Verify(share *Share[S], vector VerificationVector[E, S]) 
 	if vector == nil {
 		return errs.NewIsNil("verification vector is nil")
 	}
+	if uint(vector.Degree()+1) != s.AccessStructure().Threshold() {
+		return errs.NewVerification("verification vector degree does not match threshold")
+	}
 	commitment, err := pedcom.NewCommitment(vector.Eval(s.shamirSSS.SharingIDToLagrangeNode(share.ID())))
 	if err != nil {
 		return errs.WrapSerialisation(err, "could not create commitment from recomputed value")

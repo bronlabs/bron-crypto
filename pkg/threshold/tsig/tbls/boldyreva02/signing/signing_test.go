@@ -437,7 +437,7 @@ func TestCosignerCreationErrors(t *testing.T) {
 		t.Parallel()
 		// Create a quorum that doesn't meet the threshold
 		invalidQuorum := hashset.NewComparable[sharing.ID]()
-		invalidQuorum.Add(sharing.ID(0)) // Only 1 member, but threshold is 2
+		invalidQuorum.Add(sharing.ID(1)) // Only 1 member, but threshold is 2
 		_, err := signing.NewShortKeyCosigner(sid, curveFamily, shard, invalidQuorum.Freeze(), bls.Basic, tape)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "not authorized")
@@ -617,7 +617,7 @@ func TestAggregationErrors(t *testing.T) {
 			partialSigsMap.Put(id, psig)
 		}
 		// Add fake participant ID that doesn't exist
-		partialSigsMap.Put(sharing.ID(99), partialSigs[sharing.ID(0)])
+		partialSigsMap.Put(sharing.ID(99), partialSigs[sharing.ID(1)])
 
 		_, err = aggregator.Aggregate(partialSigsMap.Freeze(), message)
 		require.Error(t, err)

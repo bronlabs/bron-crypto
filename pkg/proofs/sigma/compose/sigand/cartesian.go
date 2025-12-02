@@ -46,10 +46,6 @@ type StateCartesian[S0, S1 sigma.State] struct {
 	S1 S1
 }
 
-func (s *StateCartesian[S0, S1]) Bytes() []byte {
-	return slices.Concat(s.S0.Bytes(), s.S1.Bytes())
-}
-
 var _ sigma.State = (*StateCartesian[sigma.State, sigma.State])(nil)
 
 type ResponseCartesian[Z0, Z1 sigma.Response] struct {

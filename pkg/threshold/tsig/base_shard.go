@@ -54,14 +54,23 @@ func (spm *BasePublicMaterial[E, S]) Equal(other *BasePublicMaterial[E, S]) bool
 	if spm == nil || other == nil {
 		return spm == other
 	}
+	if !spm.accessStructure.Equal(other.accessStructure) {
+		return false
+	}
+	if !spm.fv.Equal(other.fv) {
+		return false
+	}
+	if spm.partialPublicKeys.Size() != other.partialPublicKeys.Size() {
+		return false
+	}
 	for id, pk := range spm.partialPublicKeys.Iter() {
 		otherPk, exists := other.partialPublicKeys.Get(id)
 		if !exists || !pk.Equal(otherPk) {
 			return false
 		}
 	}
-	return spm.accessStructure.Equal(other.accessStructure) &&
-		spm.fv.Equal(other.fv)
+
+	return true
 }
 
 func (spm *BasePublicMaterial[E, S]) HashCode() base.HashCode {

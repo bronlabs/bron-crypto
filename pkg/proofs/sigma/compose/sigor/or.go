@@ -3,7 +3,6 @@ package sigor
 import (
 	"bytes"
 	"crypto/subtle"
-	"encoding/binary"
 	"fmt"
 	"io"
 	"slices"
@@ -52,10 +51,6 @@ type State[S0, S1 sigma.State, Z0, Z1 sigma.Response] struct {
 	E  []byte
 	Z0 Z0
 	Z1 Z1
-}
-
-func (s *State[S0, S1, Z0, Z1]) Bytes() []byte {
-	return slices.Concat(binary.BigEndian.AppendUint64(nil, uint64(s.B)), s.S0.Bytes(), s.S1.Bytes(), s.E, s.Z0.Bytes(), s.Z1.Bytes())
 }
 
 var _ sigma.State = (*State[sigma.State, sigma.State, sigma.Response, sigma.Response])(nil)
