@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"io"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
@@ -30,7 +31,7 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 func (p *prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
 	p.transcript.AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, p.rho))
 	p.transcript.AppendBytes(statementLabel, statement.Bytes())
-	commonHKey, err := p.transcript.ExtractBytes(commitmentLabel, 32)
+	commonHKey, err := p.transcript.ExtractBytes(commitmentLabel, base.CollisionResistanceBytesCeil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot extract h")
 	}

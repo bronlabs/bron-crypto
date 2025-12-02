@@ -5,7 +5,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
@@ -38,17 +37,33 @@ func (a *AuxiliaryInfo) EncryptedShares() ds.Map[sharing.ID, *paillier.Ciphertex
 }
 
 func (a *AuxiliaryInfo) Equal(rhs *AuxiliaryInfo) bool {
+	if a == nil || rhs == nil {
+		return a == rhs
+	}
 	if !a.paillierPrivateKey.Equal(rhs.paillierPrivateKey) {
 		return false
 	}
+	if a.paillierPublicKeys.Size() != rhs.paillierPublicKeys.Size() {
+		return false
+	}
+	if a.encryptedShares.Size() != rhs.encryptedShares.Size() {
+		return false
+	}
 
-	lpk := hashset.NewHashable(a.paillierPublicKeys.Values()...)
-	rpk := hashset.NewHashable(rhs.paillierPublicKeys.Values()...)
+	for id, pkl := range a.paillierPublicKeys.Iter() {
+		pkr, ok := rhs.paillierPublicKeys.Get(id)
+		if !ok || !pkl.Equal(pkr) {
+			return false
+		}
+	}
+	for id, skl := range a.encryptedShares.Iter() {
+		skr, ok := rhs.encryptedShares.Get(id)
+		if !ok || !skl.Equal(skr) {
+			return false
+		}
+	}
 
-	lc := hashset.NewHashable(a.encryptedShares.Values()...)
-	rc := hashset.NewHashable(rhs.encryptedShares.Values()...)
-
-	return lpk.Equal(rpk) && lc.Equal(rc)
+	return true
 }
 
 func (a *AuxiliaryInfo) MarshalCBOR() ([]byte, error) {
