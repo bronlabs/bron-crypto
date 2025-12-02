@@ -52,11 +52,6 @@ func (p *Participant[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot run round 2 of PRZS setup party")
 	}
-	choices := make([]byte, (softspoken.Kappa+7)/8)
-	_, err = io.ReadFull(p.prng, choices)
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "cannot sample choices")
-	}
 
 	p.state.receiverSeeds = hashmap.NewComparable[sharing.ID, *vsot.ReceiverOutput]()
 	r2u := hashmap.NewComparable[sharing.ID, *Round2P2P[P, B, S]]()
@@ -72,6 +67,11 @@ func (p *Participant[P, B, S]) Round2(r1b network.RoundMessages[*Round1Broadcast
 		otR1u, ok := otR1.Get(id)
 		if !ok {
 			return nil, errs.NewFailed("cannot run round 2 of VSOT setup party")
+		}
+		choices := make([]byte, (softspoken.Kappa+7)/8)
+		_, err = io.ReadFull(p.prng, choices)
+		if err != nil {
+			return nil, errs.WrapRandomSample(err, "cannot sample choices")
 		}
 		u.OtR2, seed, err = p.baseOTReceivers[id].Round2(otR1u, choices)
 		if err != nil {

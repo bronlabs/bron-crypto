@@ -20,6 +20,7 @@ const (
 
 	transcriptLabel = "BRON_CRYPTO_NIZK_FISCHLIN-"
 
+	commonHLabel    = "commonHLabel-"
 	rhoLabel        = "rhoLabel-"
 	statementLabel  = "statementLabel-"
 	commitmentLabel = "commitmentLabel-"

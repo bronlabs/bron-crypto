@@ -45,7 +45,7 @@ func (m *PolynomialModule[ME, S]) FromBytes(bytes []byte) (*ModuleValuedPolynomi
 	if len(bytes) == 0 {
 		return m.OpIdentity(), nil
 	}
-	if len(bytes)&coeffSize != 0 {
+	if (len(bytes) % coeffSize) != 0 {
 		return nil, errs.NewLength("bytes length must be a multiple of coefficient module element size")
 	}
 
@@ -237,6 +237,15 @@ func (p *ModuleValuedPolynomial[ME, S]) Eval(at S) ME {
 		out = out.ScalarOp(at).Op(p.coeffs[i])
 	}
 	return out
+}
+
+func (p *ModuleValuedPolynomial[ME, S]) Degree() int {
+	for i := len(p.coeffs) - 1; i >= 0; i-- {
+		if !p.coeffs[i].IsOpIdentity() {
+			return i
+		}
+	}
+	return -1
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) Coefficients() []ME {

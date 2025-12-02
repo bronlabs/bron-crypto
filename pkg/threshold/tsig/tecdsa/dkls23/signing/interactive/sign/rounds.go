@@ -47,24 +47,33 @@ func (c *Cosigner[P, B, S]) Round2(r1u network.RoundMessages[*Round1P2P[P, B, S]
 		otR1.Put(id, m.OtR1)
 	}
 
-	choices := make([]byte, (softspoken.Kappa+7)/8)
-	_, err = io.ReadFull(c.prng, choices)
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "cannot sample choices")
-	}
-
+	globalOtTape := c.tape.Clone()
+	globalOtTape.AppendDomainSeparator(otRandomizerLabel)
 	r2u := hashmap.NewComparable[sharing.ID, *Round2P2P[P, B, S]]()
 	for id, u := range outgoingP2PMessages(c, r2u) {
 		otR1u, ok := otR1.Get(id)
 		if !ok {
 			return nil, errs.NewFailed("cannot run round 2 of VSOT setup party")
 		}
+		choices := make([]byte, (softspoken.Kappa+7)/8)
+		_, err = io.ReadFull(c.prng, choices)
+		if err != nil {
+			return nil, errs.WrapRandomSample(err, "cannot sample choices")
+		}
 		var seed *ecbbot.ReceiverOutput[S]
 		u.OtR2, seed, err = c.baseOtReceivers[id].Round2(otR1u, choices)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot run round 2 of VSOT party")
 		}
-		c.state.baseOtReceiverOutputs[id], err = seed.ToBitsOutput(baseOtMessageLength)
+
+		otTape := globalOtTape.Clone()
+		otTape.AppendBytes(otRandomizerSender, binary.LittleEndian.AppendUint64(nil, uint64(c.sharingId)))
+		otTape.AppendBytes(otRandomizerReceiver, binary.LittleEndian.AppendUint64(nil, uint64(id)))
+		otKey, err := otTape.ExtractBytes(otRandomizerKey, 32)
+		if err != nil {
+			return nil, errs.WrapFailed(err, "cannot extract OT randomizer key")
+		}
+		c.state.baseOtReceiverOutputs[id], err = seed.ToBitsOutput(baseOtMessageLength, otKey)
 		if err != nil {
 			return nil, errs.WrapFailed(err, "cannot convert seed to bits output")
 		}
@@ -84,6 +93,8 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 	for id, m := range incomingP2PMessages {
 		otR2.Put(id, m.OtR2)
 	}
+	globalOtTape := c.tape.Clone()
+	globalOtTape.AppendDomainSeparator(otRandomizerLabel)
 
 	var ck [hash_comm.KeySize]byte
 	ckBytes, err := c.tape.ExtractBytes(ckLabel, uint(len(ck)))
@@ -130,7 +141,15 @@ func (c *Cosigner[P, B, S]) Round3(r2u network.RoundMessages[*Round2P2P[P, B, S]
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot run round 3 of VSOT party")
 		}
-		c.state.baseOtSenderOutputs[id], err = seed.ToBitsOutput(baseOtMessageLength)
+
+		otTape := globalOtTape.Clone()
+		otTape.AppendBytes(otRandomizerSender, binary.LittleEndian.AppendUint64(nil, uint64(id)))
+		otTape.AppendBytes(otRandomizerReceiver, binary.LittleEndian.AppendUint64(nil, uint64(c.sharingId)))
+		otKey, err := otTape.ExtractBytes(otRandomizerKey, 32)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "cannot extract OT randomizer key")
+		}
+		c.state.baseOtSenderOutputs[id], err = seed.ToBitsOutput(baseOtMessageLength, otKey)
 		if err != nil {
 			return nil, nil, errs.WrapFailed(err, "cannot convert seed to bits output")
 		}

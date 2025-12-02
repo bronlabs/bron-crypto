@@ -1,14 +1,18 @@
 package softspoken
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
+	"golang.org/x/crypto/blake2b"
 )
 
 const (
@@ -82,4 +86,28 @@ func NewReceiver(sessionId network.SID, senderSeeds *vsot.SenderOutput, suite *S
 	}
 
 	return r, nil
+}
+
+func (p *participant) hash(j, l int, data ...[]byte) ([]byte, error) {
+	preimage := slices.Concat(p.sessionId[:], binary.LittleEndian.AppendUint64(nil, uint64(j)), binary.LittleEndian.AppendUint64(nil, uint64(l)))
+	for _, d := range data {
+		preimage = slices.Concat(preimage, d)
+	}
+	return hashing.Hash(p.suite.hashFunc, preimage)
+}
+
+func (p *participant) expand(outputLen, idx int, message []byte, choice int) ([]byte, error) {
+	xof, err := blake2b.NewXOF(blake2b.OutputLengthUnknown, p.sessionId[:])
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot create blake2b XOF")
+	}
+	_, err = xof.Write(slices.Concat(binary.LittleEndian.AppendUint64(nil, uint64(idx)), binary.LittleEndian.AppendUint64(nil, uint64(choice)), message))
+	if err != nil {
+		return nil, errs.WrapFailed(err, "cannot write to blake2b XOF")
+	}
+	digest := make([]byte, outputLen)
+	if _, err = io.ReadFull(xof, digest); err != nil {
+		return nil, errs.WrapFailed(err, "cannot read digest")
+	}
+	return digest, nil
 }

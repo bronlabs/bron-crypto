@@ -18,8 +18,8 @@ func NewSignature[S algebra.PrimeFieldElement[S]](r, s S, v *int) (*Signature[S]
 	if r.IsZero() || s.IsZero() {
 		return nil, errs.NewFailed("r/s cannot be zero")
 	}
-	if v != nil && (*v != 0 && *v != 1) {
-		return nil, errs.NewFailed("v must be 0 or 1")
+	if v != nil && (*v < 0 || *v > 3) {
+		return nil, errs.NewFailed("v must be 0/1/2/3")
 	}
 
 	sig := &Signature[S]{

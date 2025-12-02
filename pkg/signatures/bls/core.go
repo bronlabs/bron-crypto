@@ -10,6 +10,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
+	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
@@ -36,16 +37,14 @@ func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S a
 	}
 	// step 2.3.1
 	for d.IsZero() {
-		ikm = append(ikm, 0)
 		// step 2.3.2
-		kdf := hkdf.New(hashing.HashFuncTypeErase(RandomOracleHashFunction), ikm, salt, []byte{0, 48}) // TODO: make sure this is correct
-		okm := make([]byte, sf.WideElementSize())
+		kdf := hkdf.New(hashing.HashFuncTypeErase(RandomOracleHashFunction), slices.Concat(ikm, []byte{0}), salt, []byte{0, bls12381Impl.FpBytes}) // TODO: make sure this is correct
 		// Leaves key_info parameter as the default empty string
 		// step 2.3.3
-		if _, err := io.ReadFull(kdf, okm[:48]); err != nil {
+		okm := make([]byte, bls12381Impl.FpBytes)
+		if _, err := io.ReadFull(kdf, okm[:]); err != nil {
 			return *new(S), *new(K), errs.WrapRandomSample(err, "could not read from KDF")
 		}
-		copy(okm[:48], sliceutils.Reversed(okm[:48]))
 
 		// step 2.3.4
 		d, err = sf.FromWideBytes(okm)
