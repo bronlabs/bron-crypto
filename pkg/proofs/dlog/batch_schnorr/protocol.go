@@ -24,27 +24,27 @@ var (
 )
 
 type Statement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	g  G
-	xs []G
+	Gen G   `cbor:"gen"`
+	Xs  []G `cbor:"xs"`
 }
 
 func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](g G, xs ...G) *Statement[G, S] {
 	return &Statement[G, S]{
-		g:  g,
-		xs: xs,
+		Gen: g,
+		Xs:  xs,
 	}
 }
 
 func (x *Statement[G, S]) Bytes() []byte {
 	var d []byte
 
-	gBytes := x.g.Bytes()
+	gBytes := x.Gen.Bytes()
 	d = binary.LittleEndian.AppendUint64(d, uint64(len(gBytes)))
 	d = append(d, gBytes...)
 
-	t := len(x.xs)
+	t := len(x.Xs)
 	d = binary.LittleEndian.AppendUint64(d, uint64(t))
-	for _, xi := range x.xs {
+	for _, xi := range x.Xs {
 		xBytes := xi.Bytes()
 		d = binary.LittleEndian.AppendUint64(d, uint64(len(xBytes)))
 		d = append(d, xi.Bytes()...)
@@ -54,21 +54,21 @@ func (x *Statement[G, S]) Bytes() []byte {
 }
 
 type Witness[S algebra.PrimeFieldElement[S]] struct {
-	ws []S
+	Ws []S `cbor:"ws"`
 }
 
 func NewWitness[S algebra.PrimeFieldElement[S]](ws ...S) *Witness[S] {
 	return &Witness[S]{
-		ws: ws,
+		Ws: ws,
 	}
 }
 
 func (w *Witness[S]) Bytes() []byte {
 	var d []byte
 
-	t := len(w.ws)
+	t := len(w.Ws)
 	d = binary.LittleEndian.AppendUint64(d, uint64(t))
-	for _, wi := range w.ws {
+	for _, wi := range w.Ws {
 		wBytes := wi.Bytes()
 		d = binary.LittleEndian.AppendUint64(d, uint64(len(wBytes)))
 		d = append(d, wi.Bytes()...)
@@ -78,13 +78,13 @@ func (w *Witness[S]) Bytes() []byte {
 }
 
 type Commitment[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
-	a G
+	A G `cbor:"a"`
 }
 
 func (a *Commitment[G, S]) Bytes() []byte {
 	var d []byte
 
-	aBytes := a.a.Bytes()
+	aBytes := a.A.Bytes()
 	d = binary.LittleEndian.AppendUint64(d, uint64(len(aBytes)))
 	d = append(d, aBytes...)
 
@@ -92,17 +92,17 @@ func (a *Commitment[G, S]) Bytes() []byte {
 }
 
 type State[S algebra.PrimeFieldElement[S]] struct {
-	s S
+	S S `cbor:"s"`
 }
 
 type Response[S algebra.PrimeFieldElement[S]] struct {
-	z S
+	Z S `cbor:"z"`
 }
 
 func (z *Response[S]) Bytes() []byte {
 	var d []byte
 
-	zBytes := z.z.Bytes()
+	zBytes := z.Z.Bytes()
 	d = binary.LittleEndian.AppendUint64(d, uint64(len(zBytes)))
 	d = append(d, zBytes...)
 
@@ -157,13 +157,13 @@ func (p *Protocol[G, S]) ComputeProverCommitment(statement *Statement[G, S], _ *
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot generate random scalar")
 	}
-	a := statement.g.ScalarOp(s)
+	a := statement.Gen.ScalarOp(s)
 
 	commitment := &Commitment[G, S]{
-		a: a,
+		A: a,
 	}
 	state := &State[S]{
-		s: s,
+		S: s,
 	}
 	return commitment, state, nil
 }
@@ -175,7 +175,7 @@ func (p *Protocol[G, S]) ComputeProverResponse(_ *Statement[G, S], witness *Witn
 	if witness == nil {
 		return nil, ErrInvalidArgument.WithMessage("witness is nil")
 	}
-	if len(witness.ws) != p.k {
+	if len(witness.Ws) != p.k {
 		return nil, ErrInvalidArgument.WithMessage("invalid number of witnesses")
 	}
 	if len(challenge) != p.challengeLength {
@@ -186,7 +186,7 @@ func (p *Protocol[G, S]) ComputeProverResponse(_ *Statement[G, S], witness *Witn
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create polynomial ring")
 	}
-	coefficients := append([]S{state.s}, witness.ws...)
+	coefficients := append([]S{state.S}, witness.Ws...)
 	poly := polyRing.New(coefficients)
 
 	e, err := p.scalarField.FromWideBytes(challenge)
@@ -196,7 +196,7 @@ func (p *Protocol[G, S]) ComputeProverResponse(_ *Statement[G, S], witness *Witn
 
 	z := poly.Eval(e)
 	response := &Response[S]{
-		z: z,
+		Z: z,
 	}
 	return response, nil
 }
@@ -211,7 +211,7 @@ func (p *Protocol[G, S]) Verify(statement *Statement[G, S], commitment *Commitme
 	if response == nil {
 		return ErrInvalidArgument.WithMessage("response is nil")
 	}
-	if len(statement.xs) != p.k {
+	if len(statement.Xs) != p.k {
 		return ErrVerificationFailed.WithMessage("invalid number of statements")
 	}
 	if len(challenge) != p.challengeLength {
@@ -219,7 +219,7 @@ func (p *Protocol[G, S]) Verify(statement *Statement[G, S], commitment *Commitme
 	}
 
 	polyModule := polynomials.NewPolynomialModule(p.group)
-	coefficients := append([]G{commitment.a}, statement.xs...)
+	coefficients := append([]G{commitment.A}, statement.Xs...)
 	poly := polyModule.New(coefficients...)
 
 	e, err := p.scalarField.FromWideBytes(challenge)
@@ -228,7 +228,7 @@ func (p *Protocol[G, S]) Verify(statement *Statement[G, S], commitment *Commitme
 	}
 
 	rCheck := poly.Eval(e)
-	if !rCheck.Equal(statement.g.ScalarOp(response.z)) {
+	if !rCheck.Equal(statement.Gen.ScalarOp(response.Z)) {
 		return ErrVerificationFailed.WithMessage("invalid proof")
 	}
 
@@ -247,15 +247,15 @@ func (p *Protocol[G, S]) RunSimulator(statement *Statement[G, S], challenge sigm
 	}
 
 	polyModule := polynomials.NewPolynomialModule(p.group)
-	coefficients := append([]G{p.group.OpIdentity()}, statement.xs...)
+	coefficients := append([]G{p.group.OpIdentity()}, statement.Xs...)
 	poly := polyModule.New(coefficients...)
-	a := statement.g.ScalarOp(z).Op(poly.Eval(e).OpInv())
+	a := statement.Gen.ScalarOp(z).Op(poly.Eval(e).OpInv())
 
 	commitment := &Commitment[G, S]{
-		a: a,
+		A: a,
 	}
 	response := &Response[S]{
-		z: z,
+		Z: z,
 	}
 	return commitment, response, nil
 }
@@ -279,15 +279,15 @@ func (p *Protocol[G, S]) ValidateStatement(statement *Statement[G, S], witness *
 	if witness == nil {
 		return ErrInvalidArgument.WithMessage("witness is nil")
 	}
-	if len(statement.xs) != p.k {
+	if len(statement.Xs) != p.k {
 		return ErrValidationFailed.WithMessage("invalid number of statements")
 	}
-	if len(witness.ws) != p.k {
+	if len(witness.Ws) != p.k {
 		return ErrValidationFailed.WithMessage("invalid number of witnesses")
 	}
 
 	for i := range p.k {
-		if !statement.g.ScalarOp(witness.ws[i]).Equal(statement.xs[i]) {
+		if !statement.Gen.ScalarOp(witness.Ws[i]).Equal(statement.Xs[i]) {
 			return ErrValidationFailed.WithMessage("invalid statement")
 		}
 	}

@@ -3,8 +3,11 @@ package gennaro
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/batch_schnorr"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 )
@@ -54,9 +57,31 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "failed to lift pedersen dealer function to exponent")
 	}
+
+	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.AccessStructure().Threshold()), p.state.key.Group(), p.prng)
+	if err != nil {
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot create batch schnorr protocol")
+	}
+	niBatchSchnorr, err := compiler.Compile(p.niCompilerName, batchSchnorrProtocol, p.prng)
+	if err != nil {
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot compile protocol to non interactive")
+	}
+	prover, err := niBatchSchnorr.NewProver(p.sid, p.tape.Clone())
+	if err != nil {
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot create batch schnorr prover")
+	}
+
+	witness := batch_schnorr.NewWitness(p.state.pedersenDealerFunc.G.Coefficients()...)
+	statement := batch_schnorr.NewStatement(p.state.key.G(), p.state.localFeldmanVerificationVector.Coefficients()...)
+	proof, err := prover.Prove(statement, witness)
+	if err != nil {
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot prove batch schnorr statement")
+	}
+
 	p.round++
 	return &Round2Broadcast[E, S]{
 		FeldmanVerificationVector: p.state.localFeldmanVerificationVector,
+		Proof:                     proof,
 	}, r2uo.Freeze(), nil
 }
 
@@ -64,13 +89,33 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 	if p.round != 3 {
 		return nil, errs.NewRound("expected round 3, got %d", p.round)
 	}
+
+	batchSchnorrProtocol, err := batch_schnorr.NewProtocol(int(p.AccessStructure().Threshold()), p.state.key.Group(), p.prng)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("cannot create batch schnorr protocol")
+	}
+	niBatchSchnorr, err := compiler.Compile(p.niCompilerName, batchSchnorrProtocol, p.prng)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("cannot compile protocol to non interactive")
+	}
+
 	summedShareValue := p.state.localShare.Value()
 	summedFeldmanVerificationVector := p.state.localFeldmanVerificationVector
 	for pid := range p.ac.Shareholders().Iter() {
 		if pid == p.id {
 			continue // skip myself
 		}
+
 		inB, _ := r3bi.Get(pid)
+		verifier, err := niBatchSchnorr.NewVerifier(p.sid, p.tape.Clone())
+		if err != nil {
+			return nil, errs2.Wrap(err).WithMessage("cannot create batch schnorr prover")
+		}
+		statement := batch_schnorr.NewStatement[E, S](p.state.key.G(), inB.FeldmanVerificationVector.Coefficients()...)
+		err = verifier.Verify(statement, inB.Proof)
+		if err != nil {
+			return nil, errs.WrapIdentifiableAbort(err, pid, "failed to verify feldman verification vector")
+		}
 		p.state.receivedFeldmanVerificationVectors.Put(pid, inB.FeldmanVerificationVector)
 
 		inU, _ := r3ui.Get(pid)

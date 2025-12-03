@@ -10,6 +10,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
@@ -87,7 +88,7 @@ func runTestWithBIP340(t *testing.T, threshold, total uint) {
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 		require.NoError(t, err)
 		parties = append(parties, p)
 	}
@@ -205,7 +206,7 @@ func runTestWithVanillaSchnorr(t *testing.T, threshold, total uint) {
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 		require.NoError(t, err)
 		parties = append(parties, p)
 	}
@@ -340,7 +341,7 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 		require.NoError(t, err)
 		parties = append(parties, p)
 	}
@@ -457,7 +458,7 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 		require.NoError(t, err)
 		parties = append(parties, p)
 	}
@@ -615,7 +616,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 		require.NoError(t, err)
 		parties = append(parties, p)
 	}
@@ -822,7 +823,7 @@ func testDifferentQuorumsWithScheme(t *testing.T, threshold, total uint, quorumI
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 		require.NoError(t, err)
 		parties = append(parties, p)
 	}
@@ -988,7 +989,7 @@ func testEdgeCasesWithScheme(t *testing.T, message []byte, createScheme func(io.
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 		require.NoError(t, err)
 		parties = append(parties, p)
 	}
@@ -1113,7 +1114,7 @@ func TestLindell22DeterministicSigning(t *testing.T) {
 
 			parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
 			for id := range shareholders.Iter() {
-				p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+				p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 				require.NoError(t, err)
 				parties = append(parties, p)
 			}
@@ -1219,7 +1220,7 @@ func TestLindell22IdentifiableAbortRounds(t *testing.T) {
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 		require.NoError(t, err)
 		parties = append(parties, p)
 	}
@@ -1319,7 +1320,7 @@ func BenchmarkLindell22Signing(b *testing.B) {
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 		if err != nil {
 			b.Fatal(err)
 		}

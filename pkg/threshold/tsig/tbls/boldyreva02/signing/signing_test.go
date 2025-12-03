@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
@@ -50,6 +51,7 @@ func TestBoldyrevaDKGAndSign(t *testing.T) {
 			group,
 			id,
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -183,7 +185,7 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 		group := bls12381.NewG1()
 		parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()
 		for id := range shareholders.Iter() {
-			p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+			p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 			require.NoError(t, err)
 			parties.Put(id, p)
 		}
@@ -229,7 +231,7 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 		group := bls12381.NewG2()
 		parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG2, *bls12381.Scalar]]()
 		for id := range shareholders.Iter() {
-			p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+			p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 			require.NoError(t, err)
 			parties.Put(id, p)
 		}
@@ -301,6 +303,7 @@ func TestPartialSignatureVerification(t *testing.T) {
 			group,
 			id,
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -392,7 +395,7 @@ func TestCosignerCreationErrors(t *testing.T) {
 	require.NoError(t, err)
 	parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 		require.NoError(t, err)
 		parties.Put(id, p)
 	}
@@ -461,7 +464,7 @@ func TestProducePartialSignatureErrors(t *testing.T) {
 
 	parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 		require.NoError(t, err)
 		parties.Put(id, p)
 	}
@@ -516,7 +519,7 @@ func TestAggregatorCreationErrors(t *testing.T) {
 
 	parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 		require.NoError(t, err)
 		parties.Put(id, p)
 	}
@@ -564,7 +567,7 @@ func TestAggregationErrors(t *testing.T) {
 
 	parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 		require.NoError(t, err)
 		parties.Put(id, p)
 	}
@@ -657,7 +660,7 @@ func TestDifferentQuorumConfigurations(t *testing.T) {
 
 			parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()
 			for id := range shareholders.Iter() {
-				p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+				p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 				require.NoError(t, err)
 				parties.Put(id, p)
 			}
@@ -718,7 +721,7 @@ func TestCosignerGetters(t *testing.T) {
 
 	parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()
 	for id := range shareholders.Iter() {
-		p, err := gennaro.NewParticipant(sid, group, id, ac, tape.Clone(), prng)
+		p, err := gennaro.NewParticipant(sid, group, id, ac, fiatshamir.Name, tape.Clone(), prng)
 		require.NoError(t, err)
 		parties.Put(id, p)
 	}
