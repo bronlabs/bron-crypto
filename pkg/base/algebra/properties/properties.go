@@ -1,4 +1,4 @@
-package rapidext
+package properties
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -6,11 +6,11 @@ import (
 	"pgregory.net/rapid"
 )
 
-func UniformDomainElement[V any](domain algebra.FiniteStructure[V]) *rapid.Generator[V] {
+func FiniteStructureElement[V any](structure algebra.FiniteStructure[V]) *rapid.Generator[V] {
 	genFunc := func(t *rapid.T) V {
-		entropyLen := domain.ElementSize()
+		entropyLen := structure.ElementSize()
 		entropyData := rapid.SliceOfN(rapid.Byte(), 0, entropyLen).Draw(t, "preimage")
-		return errs2.Must1(domain.Hash(entropyData))
+		return errs2.Must1(structure.Hash(entropyData))
 	}
 	return rapid.Custom(genFunc)
 }

@@ -163,10 +163,6 @@ func (p *PrimeSubGroupPoint) Structure() algebra.Structure[*PrimeSubGroupPoint] 
 	return NewPrimeSubGroup()
 }
 
-func (p PrimeSubGroupPoint) Coordinates() algebra.Coordinates[*BaseFieldElement] {
-	return p.AsPoint().Coordinates()
-}
-
 func (p *PrimeSubGroupPoint) ToCompressed() []byte {
 	return p.AsPoint().ToCompressed()
 }

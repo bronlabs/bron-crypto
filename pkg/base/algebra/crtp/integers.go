@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 )
 
+// TODO: convert to struct
 type Cardinal interface {
 	base.Comparable[Cardinal]
 	base.Clonable[Cardinal]
@@ -29,10 +30,12 @@ type Cardinal interface {
 }
 
 type NumericStructure[E any] interface {
+	Structure[E]
 	FromBytesBE([]byte) (E, error)
 }
 
-type Numeric interface {
+type Numeric[E any] interface {
+	Element[E]
 	BytesBE() []byte
 }
 
@@ -46,10 +49,11 @@ type NPlusLike[E any] interface {
 type NatPlusLike[E any] interface {
 	SemiRingElement[E]
 	UniqueFactorizationMonoidElement[E]
-	Numeric
+	Numeric[E]
 
 	IsOdd() bool
 	IsEven() bool
+	Cardinal() Cardinal
 }
 
 type NLike[E any] interface {
@@ -63,7 +67,6 @@ type NatLike[E any] interface {
 
 	IsPositive() bool
 	IsZero() bool
-	Cardinal() Cardinal
 }
 
 type ZLike[E any] interface {
@@ -73,7 +76,6 @@ type ZLike[E any] interface {
 
 type IntLike[E any] interface {
 	EuclideanDomainElement[E]
-	ArithmeticNegand[E]
 
 	IsEven() bool
 	IsOdd() bool
@@ -86,7 +88,7 @@ type IntLike[E any] interface {
 type ZModLike[E any] interface {
 	Ring[E]
 	NLike[E]
-	base.HashableStructure[E]
+	FiniteStructure[E]
 	FromBytesBEReduce([]byte) (E, error)
 }
 
@@ -103,8 +105,6 @@ type PrimeField[E any] interface {
 	FromWideBytes([]byte) (E, error)
 	// WideElementSize returns the **maximum** number of bytes used to map uniformly to an element.
 	WideElementSize() int
-	FiniteStructure[E]
-	NumericStructure[E]
 	FromUint64(uint64) E
 }
 

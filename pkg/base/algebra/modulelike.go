@@ -32,9 +32,6 @@ type (
 
 	MultiplicativeModule[ME crtp.MultiplicativeModuleElement[ME, S], S crtp.RingElement[S]]        crtp.MultiplicativeModule[ME, S]
 	MultiplicativeModuleElement[ME crtp.MultiplicativeModuleElement[ME, S], S crtp.RingElement[S]] crtp.MultiplicativeModuleElement[ME, S]
-
-	ZLikeModule[E crtp.ModuleElement[E, S], S crtp.IntLike[S]]        = crtp.ZLikeModule[E, S]
-	ZLikeModuleElement[E crtp.ModuleElement[E, S], S crtp.IntLike[S]] = crtp.ZLikeModuleElement[E, S]
 )
 
 type (

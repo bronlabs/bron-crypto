@@ -251,16 +251,6 @@ func (p *VestaPoint) Structure() algebra.Structure[*VestaPoint] {
 	return NewVestaCurve()
 }
 
-func (p *VestaPoint) Coordinates() algebra.Coordinates[*VestaBaseFieldElement] {
-	var x, y VestaBaseFieldElement
-	p.V.ToAffine(&x.V, &y.V)
-
-	return algebra.NewCoordinates(
-		algebra.AffineCoordinateSystem,
-		&x, &y,
-	)
-}
-
 func (p *VestaPoint) ToCompressed() []byte {
 	// Use ZCash encoding where infinity is all zeros and the top bit represents the sign of y
 	// and the remainder represent the x-coordinate

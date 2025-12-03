@@ -366,16 +366,6 @@ func (p *PointG1) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-func (p PointG1) Coordinates() algebra.Coordinates[*BaseFieldElementG1] {
-	var x, y BaseFieldElementG1
-	p.V.ToAffine(&x.V, &y.V)
-
-	return algebra.NewCoordinates(
-		algebra.AffineCoordinateSystem,
-		&x, &y,
-	)
-}
-
 func (p *PointG1) ToCompressed() []byte {
 	var x, y bls12381Impl.Fp
 	x.SetZero()

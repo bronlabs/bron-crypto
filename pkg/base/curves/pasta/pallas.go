@@ -255,16 +255,6 @@ func (p *PallasPoint) Structure() algebra.Structure[*PallasPoint] {
 	return NewPallasCurve()
 }
 
-func (p *PallasPoint) Coordinates() algebra.Coordinates[*PallasBaseFieldElement] {
-	var x, y PallasBaseFieldElement
-	p.V.ToAffine(&x.V, &y.V)
-
-	return algebra.NewCoordinates(
-		algebra.AffineCoordinateSystem,
-		&x, &y,
-	)
-}
-
 func (p *PallasPoint) ToCompressed() []byte {
 	// Use ZCash encoding where infinity is all zeros and the top bit represents the sign of y
 	// and the remainder represent the x-coordinate

@@ -251,10 +251,6 @@ func (p *Point) Structure() algebra.Structure[*Point] {
 	return NewCurve()
 }
 
-func (p *Point) Coordinates() algebra.Coordinates[*BaseFieldElement] {
-	panic("not supported")
-}
-
 func (p *Point) ToUncompressed() []byte {
 	if p.IsOpIdentity() {
 		return make([]byte, 64)

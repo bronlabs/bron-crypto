@@ -1,7 +1,5 @@
 package crtp
 
-import "github.com/bronlabs/bron-crypto/pkg/base"
-
 // ******************** Magma.
 
 type Magma[E any] Structure[E]
@@ -54,8 +52,6 @@ type Monoid[ME any] interface {
 type MonoidElement[ME any] interface {
 	SemiGroupElement[ME]
 	IsOpIdentity() bool
-
-	TryOpInv() (ME, error)
 }
 
 type AdditiveMonoid[ME any] interface {
@@ -138,7 +134,6 @@ type MultiplicativeGroupElement[E any] interface {
 	Inversand[E]
 }
 
-// TODO: add to abelian group
 type CyclicGroup[E any] interface {
 	Group[E]
 	CyclicMonoid[E]
@@ -154,33 +149,14 @@ type FiniteGroup[GE any] interface {
 	FiniteStructure[GE]
 }
 
-// ************** Extra Monoids.
-
-// TODO: Move IsTorsion free to points
-type AbelianMonoid[E, S any] SemiModule[E, S]
-
-type AbelianMonoidElement[E, S any] SemiModuleElement[E, S]
-
 // **************** Extra Groups.
 
-// TODO: move MultiScalar stuff out of the interface
-type AbelianGroup[E, S any] interface {
-	ZLikeModule[E, S]
-	AbelianMonoid[E, S]
-}
+type AbelianGroup[E, S any] Module[E, S]
 
-type AbelianGroupElement[E, S any] interface {
-	ZLikeModuleElement[E, S]
-	AbelianMonoidElement[E, S]
-}
-
-type PrimaryDecomposableAbelianGroup[E, S any] interface {
-	AbelianGroup[E, S]
-}
+type AbelianGroupElement[E, S any] ModuleElement[E, S]
 
 type PrimeGroup[E, S any] interface {
 	FiniteGroup[E]
-	base.HashableStructure[E]
 	AbelianGroup[E, S]
 	VectorSpace[E, S]
 	CyclicSemiGroup[E]

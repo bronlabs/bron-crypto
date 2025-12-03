@@ -431,6 +431,10 @@ func (np *NatPlus) Big() *big.Int {
 	return np.v.Big()
 }
 
+func (np *NatPlus) Uint64() uint64 {
+	return np.v.Uint64()
+}
+
 // Cardinal returns the cardinal representation of the NatPlus.
 func (np *NatPlus) Cardinal() cardinal.Cardinal {
 	return cardinal.NewFromSaferith((*saferith.Nat)(np.v))

@@ -68,7 +68,7 @@ func Prod[M algebra.Multiplicand[M]](first M, rest ...M) M {
 }
 
 // ScalarMul computes the scalar multiplication of the given base element by the given exponent using a fixed-window method.
-func ScalarMul[E algebra.MonoidElement[E], S algebra.NatLike[S]](base E, exponent S) E {
+func ScalarMul[E algebra.MonoidElement[E], S algebra.Numeric[S]](base E, exponent S) E {
 	monoid := algebra.StructureMustBeAs[algebra.Monoid[E]](base.Structure())
 
 	precomputed := make([]E, 16)
@@ -80,7 +80,7 @@ func ScalarMul[E algebra.MonoidElement[E], S algebra.NatLike[S]](base E, exponen
 	}
 
 	res := monoid.OpIdentity()
-	exponentBigEndianBytes := exponent.Bytes()
+	exponentBigEndianBytes := exponent.BytesBE()
 	for _, si := range exponentBigEndianBytes {
 		res = res.Op(res)
 		res = res.Op(res)
@@ -107,7 +107,7 @@ func ScalarMul[E algebra.MonoidElement[E], S algebra.NatLike[S]](base E, exponen
 // using a fixed window size w.
 //
 // It assumes S.Bytes() is big-endian. Bits are extracted in LSB-first order.
-func MultiScalarMul[E algebra.MonoidElement[E], S algebra.NatLike[S]](
+func MultiScalarMul[E algebra.MonoidElement[E], S algebra.Numeric[S]](
 	scalars []S,
 	points []E,
 ) E {
@@ -134,7 +134,7 @@ func MultiScalarMul[E algebra.MonoidElement[E], S algebra.NatLike[S]](
 	scalarBytes := make([][]byte, n)
 	maxBits := 0
 	for i, s := range scalars {
-		b := s.Bytes()
+		b := s.BytesBE()
 		scalarBytes[i] = b
 		if bits := len(b) * 8; bits > maxBits {
 			maxBits = bits

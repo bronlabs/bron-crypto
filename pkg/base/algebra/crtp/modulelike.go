@@ -88,14 +88,11 @@ type MultiplicativeModuleElement[ME, S any] interface {
 	MultiplicativeSemiModuleElement[ME, S]
 }
 
-type ZLikeModule[E, R any] Module[E, R]
-type ZLikeModuleElement[E, R any] ModuleElement[E, R]
-
 // ****************** Vector Space.
 
-type VectorSpace[V, S any] Module[V, S]
+type VectorSpace[V, S any] AdditiveModule[V, S]
 
-type Vector[V, S any] ModuleElement[V, S]
+type Vector[V, S any] AdditiveModuleElement[V, S]
 
 // ****************** Algebra.
 

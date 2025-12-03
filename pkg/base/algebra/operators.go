@@ -120,7 +120,6 @@ type MultiplicativelyHomomorphicLike[T HomomorphicLike[T, TV], TV Multiplicative
 	crtp.Multiplicand[T]
 }
 
-// TODO: remove all below
 func Operator[E Operand[E]](a, b E) E {
 	return a.Op(b)
 }
@@ -310,4 +309,16 @@ func Compare[E base.WithInternalCompareMethod[E]](lhs, rhs E) base.Ordering {
 
 func PartialCompare[E base.WithInternalPartialCompareMethod[E]](lhs, rhs E) base.PartialOrdering {
 	return lhs.PartialCompare(rhs)
+}
+
+func ScalarOp[E Actable[E, S], S Element[S]](sc S, a E) E {
+	return a.ScalarOp(sc)
+}
+
+func ScalarMultiply[E AdditivelyActable[E, S], S Element[S]](sc S, a E) E {
+	return a.ScalarMul(sc)
+}
+
+func ScalarExponentiate[E MultiplicativelyActable[E, S], S Element[S]](sc S, a E) E {
+	return a.ScalarExp(sc)
 }
