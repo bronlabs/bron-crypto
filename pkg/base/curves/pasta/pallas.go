@@ -231,7 +231,7 @@ func (c *PallasCurve) MultiScalarMul(scalars []*PallasScalar, points []*PallasPo
 	pts := make([]*pastaImpl.PallasPoint, len(points))
 	for i := range points {
 		pts[i] = &points[i].V
-		scs[i] = scalars[i].Bytes()
+		scs[i] = scalars[i].V.Bytes()
 	}
 	aimpl.MultiScalarMulLowLevel(&result.V, pts, scs)
 	return &result, nil

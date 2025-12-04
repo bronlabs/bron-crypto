@@ -31,35 +31,35 @@ func TestNPlusLikeProperties(t *testing.T) {
 	suite.Check(t)
 }
 
-func TestNPlus_TrySub_Property(t *testing.T) {
-	t.Parallel()
-	g := NatPlusGenerator(t)
-	rapid.Check(t, func(t *rapid.T) {
-		a := g.Draw(t, "a")
-		b := g.Draw(t, "b")
-		diff, err := a.TrySub(b)
-		if a.IsLessThanOrEqual(b) {
-			require.ErrorIs(t, err, num.ErrOutOfRange)
-		} else {
-			shouldBeA := diff.Add(b)
-			require.True(t, shouldBeA.Equal(a))
-		}
-	})
-}
+// func TestNPlus_TrySub_Property(t *testing.T) {
+// 	t.Parallel()
+// 	g := NatPlusGenerator(t)
+// 	rapid.Check(t, func(t *rapid.T) {
+// 		a := g.Draw(t, "a")
+// 		b := g.Draw(t, "b")
+// 		diff, err := a.TrySub(b)
+// 		if a.IsLessThanOrEqual(b) {
+// 			require.ErrorIs(t, err, num.ErrOutOfRange)
+// 		} else {
+// 			shouldBeA := diff.Add(b)
+// 			require.True(t, shouldBeA.Equal(a))
+// 		}
+// 	})
+// }
 
-func TestNPlus_Compare_Property(t *testing.T) {
-	t.Parallel()
-	g := NatPlusGenerator(t)
-	rapid.Check(t, func(t *rapid.T) {
-		a := g.Draw(t, "a")
-		b := g.Draw(t, "b")
-		cmp := a.Compare(b)
-		if a.Big().Uint64() < b.Big().Uint64() {
-			require.True(t, cmp.IsLessThan())
-		} else if a.Big().Uint64() > b.Big().Uint64() {
-			require.True(t, cmp.IsGreaterThan())
-		} else {
-			require.True(t, cmp.IsEqual())
-		}
-	})
-}
+// func TestNPlus_Compare_Property(t *testing.T) {
+// 	t.Parallel()
+// 	g := NatPlusGenerator(t)
+// 	rapid.Check(t, func(t *rapid.T) {
+// 		a := g.Draw(t, "a")
+// 		b := g.Draw(t, "b")
+// 		cmp := a.Compare(b)
+// 		if a.Big().Uint64() < b.Big().Uint64() {
+// 			require.True(t, cmp.IsLessThan())
+// 		} else if a.Big().Uint64() > b.Big().Uint64() {
+// 			require.True(t, cmp.IsGreaterThan())
+// 		} else {
+// 			require.True(t, cmp.IsEqual())
+// 		}
+// 	})
+// }

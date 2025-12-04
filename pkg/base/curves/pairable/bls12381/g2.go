@@ -286,7 +286,7 @@ func (c *G2) MultiScalarMul(scalars []*Scalar, points []*PointG2) (*PointG2, err
 	pts := make([]*bls12381Impl.G2Point, len(points))
 	for i := range points {
 		pts[i] = &points[i].V
-		scs[i] = scalars[i].Bytes()
+		scs[i] = scalars[i].V.Bytes()
 	}
 	aimpl.MultiScalarMulLowLevel(&result.V, pts, scs)
 	return &result, nil

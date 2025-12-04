@@ -43,7 +43,7 @@ func ScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](out, pp *P, s [
 //
 // using a fixed window size w.
 //
-// It assumes S.Bytes() is big-endian. Bits are extracted in LSB-first order.
+// It assumes S.Bytes() is little-endian (LSB at index 0).
 func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
 	out *P,
 	points []*P,
@@ -102,6 +102,7 @@ func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
 	numWindows := (maxBits + w - 1) / w // ceil(maxBits / w)
 
 	// Helper: get window of w bits starting at bit position `start` (LSB = bit 0).
+	// Assumes little-endian byte order (LSB at index 0).
 	getWindow := func(b []byte, start int) uint {
 		if len(b) == 0 {
 			return 0
@@ -109,12 +110,10 @@ func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
 		var acc uint = 0
 		for k := 0; k < w; k++ {
 			bitIndex := start + k
-			byteCount := len(b)
-			byteIndexFromLSB := bitIndex / 8
-			if byteIndexFromLSB >= byteCount {
+			byteIndex := bitIndex / 8
+			if byteIndex >= len(b) {
 				break
 			}
-			byteIndex := byteCount - 1 - byteIndexFromLSB
 			shift := uint(bitIndex % 8)
 			bit := (b[byteIndex] >> shift) & 1
 			acc |= uint(bit) << uint(k)

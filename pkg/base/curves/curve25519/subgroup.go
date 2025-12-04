@@ -142,7 +142,7 @@ func (c *PrimeSubGroup) MultiScalarMul(scalars []*Scalar, points []*PrimeSubGrou
 	pts := make([]*edwards25519Impl.Point, len(points))
 	for i := range points {
 		pts[i] = &points[i].V
-		scs[i] = scalars[i].Bytes()
+		scs[i] = scalars[i].V.Bytes()
 	}
 	aimpl.MultiScalarMulLowLevel(&result.V, pts, scs)
 	return &result, nil

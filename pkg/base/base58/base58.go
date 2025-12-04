@@ -78,7 +78,7 @@ func Decode(s Base58) []byte {
 		j = j.Mul(radix58)
 	}
 
-	tmpval := answer.Bytes()
+	tmpval := answer.Big().Bytes()
 
 	var leadingZerosCount int
 	for leadingZerosCount = 0; leadingZerosCount < len(s) && s[leadingZerosCount] == alphabetIdx0; leadingZerosCount++ {

@@ -231,7 +231,7 @@ func (c *VestaCurve) MultiScalarMul(scalars []*VestaScalar, points []*VestaPoint
 	pts := make([]*pastaImpl.VestaPoint, len(points))
 	for i := range points {
 		pts[i] = &points[i].V
-		scs[i] = scalars[i].Bytes()
+		scs[i] = scalars[i].V.Bytes()
 	}
 	aimpl.MultiScalarMulLowLevel(&result.V, pts, scs)
 	return &result, nil
