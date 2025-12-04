@@ -322,3 +322,7 @@ func ScalarMultiply[E AdditivelyActable[E, S], S Element[S]](sc S, a E) E {
 func ScalarExponentiate[E MultiplicativelyActable[E, S], S Element[S]](sc S, a E) E {
 	return a.ScalarExp(sc)
 }
+
+func Equal[E base.Equatable[E]](a, b E) bool {
+	return a.Equal(b)
+}

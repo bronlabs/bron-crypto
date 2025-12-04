@@ -18,9 +18,22 @@ func NatPlusGenerator(t *testing.T) *rapid.Generator[*num.NatPlus] {
 	})
 }
 
+func NatGenerator(t *testing.T) *rapid.Generator[*num.Nat] {
+	return rapid.Custom(func(t *rapid.T) *num.Nat {
+		n := rapid.Uint64().Draw(t, "n")
+		return num.N().FromUint64(n)
+	})
+}
+
 func TestNPlusLikeProperties(t *testing.T) {
 	t.Parallel()
 	suite := properties.NewNPlusLikePropertySuite(t, num.NPlus(), NatPlusGenerator(t))
+	suite.CheckAll(t)
+}
+
+func TestNLikeProperties(t *testing.T) {
+	t.Parallel()
+	suite := properties.NewNLikePropertySuite(t, num.N(), NatGenerator(t))
 	suite.CheckAll(t)
 }
 

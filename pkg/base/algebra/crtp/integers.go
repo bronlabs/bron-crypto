@@ -30,26 +30,24 @@ type Cardinal interface {
 }
 
 type NumericStructure[E any] interface {
-	Structure[E]
+	HemiRing[E]
 	FromBytesBE([]byte) (E, error)
 }
 
 type Numeric[E any] interface {
-	Element[E]
+	HemiRingElement[E]
 	BytesBE() []byte
 }
 
 type NPlusLike[E any] interface {
-	SemiRing[E]
-	UniqueFactorizationMonoid[E]
 	NumericStructure[E]
+	UniqueFactorizationMonoid[E]
 	FromCardinal(Cardinal) (E, error)
 }
 
 type NatPlusLike[E any] interface {
-	SemiRingElement[E]
-	UniqueFactorizationMonoidElement[E]
 	Numeric[E]
+	UniqueFactorizationMonoidElement[E]
 
 	IsOdd() bool
 	IsEven() bool
@@ -69,10 +67,7 @@ type NatLike[E any] interface {
 	IsZero() bool
 }
 
-type ZLike[E any] interface {
-	EuclideanDomain[E]
-	FromCardinal(Cardinal) (E, error)
-}
+type ZLike[E any] EuclideanDomain[E]
 
 type IntLike[E any] interface {
 	EuclideanDomainElement[E]
@@ -82,7 +77,6 @@ type IntLike[E any] interface {
 	IsPositive() bool
 	IsNegative() bool
 	IsZero() bool
-	Cardinal() Cardinal
 }
 
 type ZModLike[E any] interface {
@@ -95,7 +89,6 @@ type ZModLike[E any] interface {
 type UintLike[E any] interface {
 	RingElement[E]
 	NatLike[E]
-	ArithmeticNegand[E]
 }
 
 type PrimeField[E any] interface {
@@ -105,7 +98,7 @@ type PrimeField[E any] interface {
 	FromWideBytes([]byte) (E, error)
 	// WideElementSize returns the **maximum** number of bytes used to map uniformly to an element.
 	WideElementSize() int
-	FromUint64(uint64) E
+	FromUint64(uint64) E // TODO: should we add error to this?
 }
 
 type PrimeFieldElement[E any] interface {

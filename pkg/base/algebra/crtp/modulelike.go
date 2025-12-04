@@ -90,9 +90,9 @@ type MultiplicativeModuleElement[ME, S any] interface {
 
 // ****************** Vector Space.
 
-type VectorSpace[V, S any] AdditiveModule[V, S]
+type VectorSpace[V, S any] Module[V, S]
 
-type Vector[V, S any] AdditiveModuleElement[V, S]
+type Vector[V, S any] ModuleElement[V, S]
 
 // ****************** Algebra.
 
