@@ -1,4 +1,4 @@
-package properties5
+package properties
 
 import "github.com/bronlabs/bron-crypto/pkg/base/algebra"
 
