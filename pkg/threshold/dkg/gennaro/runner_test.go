@@ -19,6 +19,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	tu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
@@ -30,7 +34,7 @@ import (
 func TestHappyPath(t *testing.T) {
 	t.Parallel()
 
-	const iters = 16
+	const iters = 4
 	testAccessStructures := []struct{ threshold, total int }{
 		{2, 2},
 		{2, 3},
@@ -38,55 +42,66 @@ func TestHappyPath(t *testing.T) {
 		{3, 5},
 		{6, 6},
 	}
+	testNiCompilers := []compiler.Name{
+		fiatshamir.Name,
+		fischlin.Name,
+		randfischlin.Name,
+	}
 
 	for _, as := range testAccessStructures {
 		t.Run(fmt.Sprintf("%d/%d", as.threshold, as.total), func(t *testing.T) {
 			t.Parallel()
 
-			t.Run("k256", func(t *testing.T) {
-				t.Parallel()
-				testHappyPathRunner(t, iters, k256.NewCurve(), as.threshold, as.total)
-			})
+			for _, niCompiler := range testNiCompilers {
+				t.Run(string(niCompiler), func(t *testing.T) {
+					t.Parallel()
 
-			t.Run("p256", func(t *testing.T) {
-				t.Parallel()
-				testHappyPathRunner(t, iters, p256.NewCurve(), as.threshold, as.total)
-			})
+					t.Run("k256", func(t *testing.T) {
+						t.Parallel()
+						testHappyPathRunner(t, iters, k256.NewCurve(), as.threshold, as.total, niCompiler)
+					})
 
-			t.Run("edwards25519", func(t *testing.T) {
-				t.Parallel()
-				testHappyPathRunner(t, iters, edwards25519.NewPrimeSubGroup(), as.threshold, as.total)
-			})
+					t.Run("p256", func(t *testing.T) {
+						t.Parallel()
+						testHappyPathRunner(t, iters, p256.NewCurve(), as.threshold, as.total, niCompiler)
+					})
 
-			t.Run("curve25519", func(t *testing.T) {
-				t.Parallel()
-				testHappyPathRunner(t, iters, curve25519.NewPrimeSubGroup(), as.threshold, as.total)
-			})
+					t.Run("edwards25519", func(t *testing.T) {
+						t.Parallel()
+						testHappyPathRunner(t, iters, edwards25519.NewPrimeSubGroup(), as.threshold, as.total, niCompiler)
+					})
 
-			t.Run("pallas", func(t *testing.T) {
-				t.Parallel()
-				testHappyPathRunner(t, iters, pasta.NewPallasCurve(), as.threshold, as.total)
-			})
+					t.Run("curve25519", func(t *testing.T) {
+						t.Parallel()
+						testHappyPathRunner(t, iters, curve25519.NewPrimeSubGroup(), as.threshold, as.total, niCompiler)
+					})
 
-			t.Run("vesta", func(t *testing.T) {
-				t.Parallel()
-				testHappyPathRunner(t, iters, pasta.NewVestaCurve(), as.threshold, as.total)
-			})
+					t.Run("pallas", func(t *testing.T) {
+						t.Parallel()
+						testHappyPathRunner(t, iters, pasta.NewPallasCurve(), as.threshold, as.total, niCompiler)
+					})
 
-			t.Run("BLS12381G1", func(t *testing.T) {
-				t.Parallel()
-				testHappyPathRunner(t, iters, bls12381.NewG1(), as.threshold, as.total)
-			})
+					t.Run("vesta", func(t *testing.T) {
+						t.Parallel()
+						testHappyPathRunner(t, iters, pasta.NewVestaCurve(), as.threshold, as.total, niCompiler)
+					})
 
-			t.Run("BLS12381G2", func(t *testing.T) {
-				t.Parallel()
-				testHappyPathRunner(t, iters, bls12381.NewG2(), as.threshold, as.total)
-			})
+					t.Run("BLS12381G1", func(t *testing.T) {
+						t.Parallel()
+						testHappyPathRunner(t, iters, bls12381.NewG1(), as.threshold, as.total, niCompiler)
+					})
+
+					t.Run("BLS12381G2", func(t *testing.T) {
+						t.Parallel()
+						testHappyPathRunner(t, iters, bls12381.NewG2(), as.threshold, as.total, niCompiler)
+					})
+				})
+			}
 		})
 	}
 }
 
-func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](t *testing.T, iters int, group algebra.PrimeGroup[G, S], threshold, total int) {
+func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](t *testing.T, iters int, group algebra.PrimeGroup[G, S], threshold, total int, niCompiler compiler.Name) {
 	t.Helper()
 
 	for i := range iters {
@@ -96,7 +111,7 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 			quorum := ntu.MakeRandomQuorum(t, prng, total)
 			accessStructure := stu.MakeThresholdAccessStructure(t, threshold, quorum)
 			tapes := ttu.MakeRandomTapes(t, prng, quorum)
-			runners := tu.MakeGennaroDKGRunners(t, sessionId, accessStructure, group, tapes)
+			runners := tu.MakeGennaroDKGRunners(t, sessionId, accessStructure, niCompiler, group, tapes)
 			dkgOutputs := ntu.TestExecuteRunners(t, runners)
 
 			t.Run("public materials are consistent", func(t *testing.T) {

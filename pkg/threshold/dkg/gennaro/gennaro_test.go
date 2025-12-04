@@ -7,6 +7,7 @@ import (
 	"io"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
@@ -56,6 +57,7 @@ func setup[
 			group,
 			id,
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -412,6 +414,7 @@ func TestDKGWithBLS12381(t *testing.T) {
 			group,
 			id,
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -551,6 +554,7 @@ func TestDKGParticipantValidation(t *testing.T) {
 			group,
 			sharing.ID(10), // Not in shareholders (1-5)
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -571,6 +575,7 @@ func TestDKGParticipantValidation(t *testing.T) {
 				group,
 				id,
 				ac,
+				fiatshamir.Name,
 				tape.Clone(),
 				prng,
 			)
@@ -649,6 +654,7 @@ func TestParticipantCreation(t *testing.T) {
 			curve,
 			sharing.ID(1),
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -668,6 +674,7 @@ func TestParticipantCreation(t *testing.T) {
 			nil,
 			sharing.ID(1),
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -686,6 +693,7 @@ func TestParticipantCreation(t *testing.T) {
 			curve,
 			sharing.ID(1),
 			ac,
+			fiatshamir.Name,
 			nil,
 			prng,
 		)
@@ -704,6 +712,7 @@ func TestParticipantCreation(t *testing.T) {
 			curve,
 			sharing.ID(1),
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			nil,
 		)
@@ -718,6 +727,7 @@ func TestParticipantCreation(t *testing.T) {
 			curve,
 			sharing.ID(1),
 			nil,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -736,6 +746,7 @@ func TestParticipantCreation(t *testing.T) {
 			curve,
 			sharing.ID(10), // ID not in shareholders
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -1062,6 +1073,7 @@ func TestDifferentCurves(t *testing.T) {
 				group,
 				id,
 				ac,
+				fiatshamir.Name,
 				tape.Clone(),
 				prng,
 			)
@@ -1224,6 +1236,7 @@ func TestErrorPropagation(t *testing.T) {
 			group,
 			sharing.ID(1),
 			ac,
+			fiatshamir.Name,
 			tape,
 			limitedReader,
 		)
@@ -1346,6 +1359,7 @@ func setupBench[
 			group,
 			id,
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)

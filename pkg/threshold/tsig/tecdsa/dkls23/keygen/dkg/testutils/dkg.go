@@ -15,6 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	gennaroTU "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
@@ -43,7 +44,7 @@ func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 	gennaroDkgParticipants := make([]*gennaro.Participant[P, S], accessStructure.Shareholders().Size())
 	for i, id := range ids {
 		tapesMap[id] = tape.Clone()
-		gennaroDkgParticipants[i], err = gennaro.NewParticipant(sessionId, curve, id, accessStructure, tapesMap[id], prng)
+		gennaroDkgParticipants[i], err = gennaro.NewParticipant(sessionId, curve, id, accessStructure, fiatshamir.Name, tapesMap[id], prng)
 		require.NoError(tb, err)
 	}
 	dkgOutputs, err := gennaroTU.DoGennaroDKG(tb, gennaroDkgParticipants)

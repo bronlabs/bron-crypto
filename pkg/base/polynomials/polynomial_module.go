@@ -22,6 +22,10 @@ type PolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]]
 	module algebra.Module[ME, S]
 }
 
+func NewPolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]](module algebra.Module[ME, S]) *PolynomialModule[ME, S] {
+	return &PolynomialModule[ME, S]{module: module}
+}
+
 func (m *PolynomialModule[ME, S]) New(coeffs ...ME) *ModuleValuedPolynomial[ME, S] {
 	if len(coeffs) < 1 {
 		return m.OpIdentity()

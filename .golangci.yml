@@ -1,8 +1,8 @@
 version: "2"
 run:
-   build-tags:
-     - nobignum
-     - purego
+  build-tags:
+    - nobignum
+    - purego
   tests: true
 
 formatters:

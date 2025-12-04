@@ -128,6 +128,10 @@ type Polynomial[RE algebra.RingElement[RE]] struct {
 	coeffs []RE
 }
 
+func (p *Polynomial[RE]) Coefficients() []RE {
+	return p.coeffs
+}
+
 func (p *Polynomial[RE]) Eval(at RE) RE {
 	ring := algebra.StructureMustBeAs[FiniteRing[RE]](at.Structure())
 	// although we always require a polynomial to have at least one coefficient (even if it's zero), we do not panic here

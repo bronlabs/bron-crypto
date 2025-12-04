@@ -1,6 +1,7 @@
 package gennaro
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	pedersenVSS "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/pedersen"
 )
@@ -15,4 +16,5 @@ type Round2Unicast[E GroupElement[E, S], S Scalar[S]] struct {
 
 type Round2Broadcast[E GroupElement[E, S], S Scalar[S]] struct {
 	FeldmanVerificationVector feldman.VerificationVector[E, S] `cbor:"verificationVector"`
+	Proof                     compiler.NIZKPoKProof            `cbor:"proof"`
 }
