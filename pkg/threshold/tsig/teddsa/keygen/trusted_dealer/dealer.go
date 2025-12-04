@@ -32,8 +32,8 @@ func DealRandom(shareholders ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing
 	var seedSubShares [3][32]byte
 	_ = errs2.Must1(io.ReadFull(prng, seedSubShares[0][:]))
 	_ = errs2.Must1(io.ReadFull(prng, seedSubShares[1][:]))
-	subtle.XORBytes(seedSubShares[0][:], seedSubShares[1][:], seedSubShares[2][:])
-	subtle.XORBytes(seedSubShares[0][:], seedSubShares[0][:], seed[:])
+	subtle.XORBytes(seedSubShares[2][:], seedSubShares[0][:], seedSubShares[1][:])
+	subtle.XORBytes(seedSubShares[2][:], seedSubShares[2][:], seed[:])
 
 	skBytes := sha512.Sum512(seed[:])
 	sk, err := edwards25519.NewScalarField().FromClampedBytes(skBytes[:32])

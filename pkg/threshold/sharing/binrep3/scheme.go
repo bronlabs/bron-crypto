@@ -14,7 +14,7 @@ import (
 )
 
 // TODO: This does not implement the sharing interface (yet?), as there's currently
-// TODO: no way to represent direct product GF(2) x GF(2) x ... x GF(2)
+// TODO: no way to represent batched shares.
 
 type Scheme struct {
 	accessStructure *shamir.AccessStructure
