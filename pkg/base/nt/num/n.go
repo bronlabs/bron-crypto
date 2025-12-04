@@ -281,6 +281,13 @@ func (n *Nat) IsUnit(modulus *NatPlus) bool {
 	return m.IsUnit(n.v) == ct.True
 }
 
+// GCD computes the greatest common divisor (GCD) of the Nat and another Nat.
+func (n *Nat) GCD(other *Nat) *Nat {
+	var out numct.Nat
+	out.GCD(n.v, other.v)
+	return &Nat{v: &out}
+}
+
 // Cardinal returns the cardinal representation of the Nat.
 func (n *Nat) Cardinal() cardinal.Cardinal {
 	return cardinal.NewFromSaferith((*saferith.Nat)(n.v))

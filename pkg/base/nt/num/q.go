@@ -461,8 +461,9 @@ func (r *Rat) Canonical() *Rat {
 	if r.IsZero() {
 		return &Rat{a: Z().Zero(), b: NPlus().One()}
 	}
-	// gcd(a, b) via Euclidean algorithm
-	a := r.a.Lift()
+	// gcd(|a|, b) via Euclidean algorithm
+	// Use absolute value to ensure GCD is always positive
+	a := r.a.Abs().Lift()
 	b := r.b.Lift()
 	for !b.IsZero() {
 		_, rem, err := a.EuclideanDiv(b)
@@ -485,7 +486,10 @@ func (r *Rat) Canonical() *Rat {
 	if err != nil || !r2.IsZero() {
 		return &Rat{a: r.a.Clone(), b: r.b.Clone()}
 	}
-	den2, _ := NPlus().FromInt(den)
+	den2, err := NPlus().FromInt(den)
+	if err != nil {
+		panic(errs2.Wrap(err))
+	}
 	return &Rat{a: num, b: den2}
 }
 

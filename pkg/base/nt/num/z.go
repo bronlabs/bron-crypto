@@ -152,7 +152,7 @@ func (*Integers) FromRat(input *Rat) (*Int, error) {
 		return nil, ErrIsNil.WithStackFrame()
 	}
 	canonical := input.Canonical()
-	if !canonical.b.IsOne() {
+	if !canonical.IsInt() {
 		return nil, ErrUndefined.WithStackFrame()
 	}
 	return canonical.a.Clone(), nil

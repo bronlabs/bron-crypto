@@ -512,3 +512,44 @@ func TestInt_TwosComplementBEBytes_Roundtrip_Property(t *testing.T) {
 		require.Equal(t, x, roundtrip.Int64())
 	})
 }
+
+func TestInt_GCD_Property(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(t *rapid.T) {
+		a := IntGeneratorNonZero().Draw(t, "a")
+		b := IntGeneratorNonZero().Draw(t, "b")
+
+		var gcd numct.Int
+		gcd.GCD(a, b)
+
+		require.Equal(t, ct.False, gcd.IsNegative())
+
+		gcdm, ok := numct.NewModulus(gcd.Absed())
+		require.Equal(t, ct.True, ok)
+
+		// Property: gcd divides both a and b
+		var adiv, bdiv numct.Int
+		okA := adiv.ExactDiv(a, gcdm)
+		okB := bdiv.ExactDiv(b, gcdm)
+
+		require.Equal(t, ct.True, okA)
+		require.Equal(t, ct.True, okB)
+	})
+}
+
+func TestInt_GCDIsCompatibleWithBigInt_Property(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(t *rapid.T) {
+		a := IntGeneratorNonZero().Draw(t, "a")
+		b := IntGeneratorNonZero().Draw(t, "b")
+
+		var gcd numct.Int
+		gcd.GCD(a, b)
+
+		bigA := a.Big()
+		bigB := b.Big()
+		bigGCD := new(big.Int).GCD(nil, nil, bigA, bigB)
+
+		require.Equal(t, 0, gcd.Big().Cmp(bigGCD))
+	})
+}

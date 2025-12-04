@@ -389,3 +389,43 @@ func TestNat_Sqrt_NonPerfectSquare_Property(t *testing.T) {
 		require.Equal(t, ct.True, nonSquare.Equal(original))
 	})
 }
+
+func TestNat_GCD_Property(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(t *rapid.T) {
+		a := NatGeneratorNonZero().Draw(t, "a")
+		b := NatGeneratorNonZero().Draw(t, "b")
+
+		var gcd numct.Nat
+		gcd.GCD(a, b)
+
+		gcdm, ok := numct.NewModulus(&gcd)
+		require.Equal(t, ct.True, ok)
+
+		// Property: gcd divides both a and b
+		var adiv, bdiv numct.Nat
+		okA := adiv.ExactDiv(a, gcdm)
+		okB := bdiv.ExactDiv(b, gcdm)
+
+		require.Equal(t, ct.True, okA)
+		require.Equal(t, ct.True, okB)
+	})
+}
+
+func TestNat_GCDIsCompatibleWithBigInt_Property(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(t *rapid.T) {
+		a := NatGeneratorNonZero().Draw(t, "a")
+		b := NatGeneratorNonZero().Draw(t, "b")
+
+		var gcd numct.Nat
+		gcd.GCD(a, b)
+
+		bigA := a.Big()
+		bigB := b.Big()
+		expectedBigGCD := new(big.Int).GCD(nil, nil, bigA, bigB)
+		expectedGCD := numct.NewNatFromBig(expectedBigGCD, expectedBigGCD.BitLen())
+
+		require.Equal(t, ct.True, gcd.Equal(expectedGCD))
+	})
+}
