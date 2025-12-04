@@ -161,6 +161,7 @@ func (nps *PositiveNaturalNumbers) Random(lowInclusive, highExclusive *NatPlus, 
 }
 
 // OpIdentity returns the multiplicative identity element of PositiveNaturalNumbers, which is 1.
+// Note that this OpIdentity isn't standard, as it considers (N\{0}, *, +) to be a hemi ring, NOT the usual (N\{0}, +, *).
 func (nps *PositiveNaturalNumbers) OpIdentity() *NatPlus {
 	return nps.One()
 }
@@ -220,12 +221,12 @@ func (np *NatPlus) Value() *numct.Nat {
 
 // Op performs multiplication of two NatPlus elements.
 func (np *NatPlus) Op(other *NatPlus) *NatPlus {
-	return np.Mul(other)
+	return np.Add(other)
 }
 
 // OtherOp performs addition of two NatPlus elements.
 func (np *NatPlus) OtherOp(other *NatPlus) *NatPlus {
-	return np.Add(other)
+	return np.Mul(other)
 }
 
 // Add performs addition of two NatPlus elements.

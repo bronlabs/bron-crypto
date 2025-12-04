@@ -10,19 +10,22 @@ import (
 	"pgregory.net/rapid"
 )
 
-func Check(t *testing.T, axioms ...Axiom) {
+func check(t *testing.T, axioms ...Axiom) {
 	t.Helper()
 	for _, a := range axioms {
-		t.Run(a.Name, a.CheckFunc)
+		t.Run(a.Name, func(t *testing.T) {
+			t.Parallel()
+			a.CheckFunc(t)
+		})
 	}
 }
 
 func Union[S algebra.Structure[E], E algebra.Element[E]](t *testing.T, models ...*Model[S, E]) *Model[S, E] {
 	t.Helper()
 	require.Greater(t, len(models), 0)
-	require.EqualValues(t, models[0].Value.Name(), sliceutils.Map(models, func(m *Model[S, E]) string {
-		return m.Value.Name()
-	}))
+	for _, m := range models {
+		require.EqualValues(t, models[0].Value.Name(), m.Value.Name())
+	}
 	return &Model[S, E]{
 		Carrier: models[0].Carrier,
 		Theory: slices.Concat(
@@ -135,12 +138,22 @@ type Model[S algebra.Structure[E], E algebra.Element[E]] struct {
 	Theory []Axiom
 }
 
+func (m *Model[S, E]) Check(t *testing.T) {
+	t.Helper()
+	check(t, m.Theory...)
+}
+
 type TwoSortedModel[
 	S1 algebra.Structure[E1], S2 algebra.Structure[E2],
 	E1 algebra.Element[E1], E2 algebra.Element[E2],
 ] struct {
 	*Carrier2[S1, S2, E1, E2]
 	Theory []Axiom
+}
+
+func (m *TwoSortedModel[S1, S2, E1, E2]) Check(t *testing.T) {
+	t.Helper()
+	check(t, m.Theory...)
 }
 
 // ************************* Group-like.
@@ -353,6 +366,7 @@ func HemiRing[S algebra.HemiRing[E], E algebra.HemiRingElement[E]](
 	multiplicativeSemiGroup := MultiplicativeSemiGroup(t, structure, g)
 	out := Union(t, additiveSemiGroup, multiplicativeSemiGroup)
 	out.Theory = append(out.Theory,
+		HemiRingIsStandardProperty(t, out.Carrier),
 		DistributivityOfMulOverAddProperty(t, out.Carrier),
 	)
 	return out

@@ -125,7 +125,7 @@ func (e *sentinelError) WithMessage(format string, args ...any) Error {
 }
 
 func (e *sentinelError) WithStackFrame() Error {
-	pc, _, _, _ := runtime.Caller(0)
+	pc, _, _, _ := runtime.Caller(1)
 	return &errorImpl{
 		message:    e.message,
 		wrapped:    []error{e},

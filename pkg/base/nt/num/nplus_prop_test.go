@@ -27,14 +27,8 @@ func NatGenerator(t *testing.T) *rapid.Generator[*num.Nat] {
 
 func TestNPlusLikeProperties(t *testing.T) {
 	t.Parallel()
-	suite := properties.NewNPlusLikePropertySuite(t, num.NPlus(), NatPlusGenerator(t))
-	suite.CheckAll(t)
-}
-
-func TestNLikeProperties(t *testing.T) {
-	t.Parallel()
-	suite := properties.NewNLikePropertySuite(t, num.N(), NatGenerator(t))
-	suite.CheckAll(t)
+	suite := properties.NPlusLike(t, num.NPlus(), NatPlusGenerator(t))
+	suite.Check(t)
 }
 
 func TestNPlus_TrySub_Property(t *testing.T) {

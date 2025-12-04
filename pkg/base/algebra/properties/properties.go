@@ -449,6 +449,31 @@ func CanDiv[S algebra.MultiplicativeGroup[E], E algebra.MultiplicativeGroupEleme
 	}
 }
 
+func HemiRingIsStandardProperty[S algebra.HemiRing[E], E algebra.HemiRingElement[E]](
+	t *testing.T, c *Carrier[S, E],
+) Axiom {
+	t.Helper()
+	return Axiom{
+		Name: "HemiRingIsStandard",
+		CheckFunc: func(t *testing.T) {
+			rapid.Check(t, func(rt *rapid.T) {
+				a := c.Dist.Draw(rt, "a")
+				b := c.Dist.Draw(rt, "b")
+
+				aOpB := a.Op(b)
+				aAddB := a.Add(b)
+
+				require.True(t, aOpB.Equal(aAddB), "hemi-ring is standard failed: a.Op(b) != a.Add(b)")
+
+				aOtherOpB := a.OtherOp(b)
+				aMulB := a.Mul(b)
+
+				require.True(t, aOtherOpB.Equal(aMulB), "hemi-ring is standard failed: a.OtherOp(b) != a.Mul(b)")
+			})
+		},
+	}
+}
+
 func DistributivityOfMulOverAddProperty[S algebra.HemiRing[E], E algebra.HemiRingElement[E]](
 	t *testing.T, c *Carrier[S, E],
 ) Axiom {
