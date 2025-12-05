@@ -311,7 +311,7 @@ func initRangeProtocol[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B],
 	}
 	qNat := numct.NewNatFromBytes(q.Bytes())
 	qThird = numct.NewNat(0)
-	qThird.DivModCap(qNat, three, int(q.BitLen()))
+	qThird.DivDivisorAsModulusCap(qNat, three, int(q.BitLen()))
 
 	rangeProtocol, err = paillierrange.NewPaillierRange(base.ComputationalSecurityBits, prng)
 	if err != nil {

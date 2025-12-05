@@ -363,7 +363,7 @@ func (i *Int) TryDiv(other *Int) (*Int, error) {
 	if modOk != ct.True {
 		return nil, errs2.New("failed to create modulus from divisor")
 	}
-	if ok := v.ExactDivMod(i.v, divisorMod); ok != ct.True {
+	if ok := v.ExactDivDivisorAsModulus(i.v, divisorMod); ok != ct.True {
 		return nil, ErrInexactDivision.WithStackFrame()
 	}
 	// ExactDivMod only considers the sign of the dividend, not the divisor.

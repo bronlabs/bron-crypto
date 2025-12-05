@@ -73,7 +73,7 @@ func TestNat_ExactDiv_Property(t *testing.T) {
 		bMod, ok := numct.NewModulus(b)
 		require.Equal(t, ct.True, ok)
 
-		ok = out.ExactDivMod(a, bMod)
+		ok = out.ExactDivDivisorAsModulus(a, bMod)
 		var bq numct.Nat
 		bq.Mul(b, &out)
 
@@ -423,8 +423,8 @@ func TestNat_GCD_Property(t *testing.T) {
 
 		// Property: gcd divides both a and b
 		var adiv, bdiv numct.Nat
-		okA := adiv.ExactDivMod(a, gcdm)
-		okB := bdiv.ExactDivMod(b, gcdm)
+		okA := adiv.ExactDivDivisorAsModulus(a, gcdm)
+		okB := bdiv.ExactDivDivisorAsModulus(b, gcdm)
 
 		require.Equal(t, ct.True, okA)
 		require.Equal(t, ct.True, okB)

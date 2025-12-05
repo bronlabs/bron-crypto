@@ -529,8 +529,8 @@ func TestInt_GCD_Property(t *testing.T) {
 
 		// Property: gcd divides both a and b
 		var adiv, bdiv numct.Int
-		okA := adiv.ExactDivMod(a, gcdm)
-		okB := bdiv.ExactDivMod(b, gcdm)
+		okA := adiv.ExactDivDivisorAsModulus(a, gcdm)
+		okB := bdiv.ExactDivDivisorAsModulus(b, gcdm)
 
 		require.Equal(t, ct.True, okA)
 		require.Equal(t, ct.True, okB)

@@ -112,10 +112,10 @@ func (n *Nat) MulCap(lhs, rhs *Nat, capacity int) {
 	(*saferith.Nat)(n).Mul((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), capacity)
 }
 
-// DivModCap sets n = numerator / denominator with capacity capacity.
+// DivDivisorAsModulusCap sets n = numerator / denominator with capacity capacity.
 // if capacity < 0, capacity will be numerator.AnnouncedLen() - denominator.BitLen() + 2
 // It returns ok=true if the division was successful, ok=false otherwise (e.g., division by zero).
-func (n *Nat) DivModCap(numerator *Nat, denominator *Modulus, capacity int) (ok ct.Bool) {
+func (n *Nat) DivDivisorAsModulusCap(numerator *Nat, denominator *Modulus, capacity int) (ok ct.Bool) {
 	ok = utils.BoolTo[ct.Bool](denominator != nil)
 	n.Set((*Nat)(new(saferith.Nat).Div(
 		(*saferith.Nat)(numerator),
@@ -125,12 +125,12 @@ func (n *Nat) DivModCap(numerator *Nat, denominator *Modulus, capacity int) (ok 
 	return ok
 }
 
-// ExactDivMod sets n = numerator / denominator if the division is exact (no remainder).
+// ExactDivDivisorAsModulus sets n = numerator / denominator if the division is exact (no remainder).
 // It returns ok=true if the division was exact, ok=false otherwise.
 // If the division is not exact, n is not modified.
-func (n *Nat) ExactDivMod(numerator *Nat, denominator *Modulus) (ok ct.Bool) {
+func (n *Nat) ExactDivDivisorAsModulus(numerator *Nat, denominator *Modulus) (ok ct.Bool) {
 	var q, r Nat
-	ok = DivModCap(&q, &r, numerator, denominator, -1)
+	ok = QuoRemDivDivisorAsModulusCap(&q, &r, numerator, denominator, -1)
 	isExact := r.IsZero()
 	// Only update n if division was exact
 	n.CondAssign(ok&isExact, &q)
@@ -575,10 +575,10 @@ func (n *Nat) SetRandomRangeH(highExclusive *Nat, prng io.Reader) error {
 	return nil
 }
 
-// DivModCap computes a / b and a % b, storing the results into outQuot and outRem.
+// QuoRemDivDivisorAsModulusCap computes a / b and a % b, storing the results into outQuot and outRem.
 // The capacity parameter sets the announced capacity (in bits) for the quotient.
-func DivModCap(outQuot, outRem, a *Nat, b *Modulus, capacity int) (ok ct.Bool) {
-	ok = outQuot.DivModCap(a, b, capacity)
+func QuoRemDivDivisorAsModulusCap(outQuot, outRem, a *Nat, b *Modulus, capacity int) (ok ct.Bool) {
+	ok = outQuot.DivDivisorAsModulusCap(a, b, capacity)
 	b.Mod(outRem, a)
 	return ok
 }
