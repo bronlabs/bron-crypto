@@ -154,3 +154,14 @@ func TestNPlus_Byte_Property(t *testing.T) {
 		require.Equal(t, expectedByte, b, "byte(%d) of %s should be %d", byteIndex, n.String(), expectedByte)
 	})
 }
+
+func TestNPlus_IncrementDecrement_Property(t *testing.T) {
+	t.Parallel()
+	g := NatPlusGenerator(t)
+	rapid.Check(t, func(t *rapid.T) {
+		n := g.Draw(t, "n")
+		shouldBeN, err := n.Increment().Decrement()
+		require.NoError(t, err)
+		require.True(t, shouldBeN.Equal(n), "n=%s, inc(dec(n))=%s", n.String(), shouldBeN.String())
+	})
+}

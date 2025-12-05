@@ -777,22 +777,22 @@ func TestNat_GCD(t *testing.T) {
 		cases := []struct {
 			a, b, expected uint64
 		}{
-			{0, 0, 0},        // gcd(0, 0) = 0 by convention
-			{0, 5, 5},        // gcd(0, n) = n
-			{5, 0, 5},        // gcd(n, 0) = n
-			{1, 1, 1},        // gcd(1, 1) = 1
-			{1, 100, 1},      // gcd(1, n) = 1
-			{100, 1, 1},      // gcd(n, 1) = 1
-			{12, 18, 6},      // gcd(12, 18) = 6
-			{18, 12, 6},      // commutativity
-			{48, 18, 6},      // gcd(48, 18) = 6
-			{17, 23, 1},      // coprime primes
-			{100, 100, 100},  // gcd(n, n) = n
-			{24, 36, 12},     // gcd(24, 36) = 12
-			{54, 24, 6},      // gcd(54, 24) = 6
-			{105, 35, 35},    // gcd(105, 35) = 35
-			{252, 105, 21},   // gcd(252, 105) = 21
-			{1071, 462, 21},  // classic example from Euclidean algorithm
+			{0, 0, 0},       // gcd(0, 0) = 0 by convention
+			{0, 5, 5},       // gcd(0, n) = n
+			{5, 0, 5},       // gcd(n, 0) = n
+			{1, 1, 1},       // gcd(1, 1) = 1
+			{1, 100, 1},     // gcd(1, n) = 1
+			{100, 1, 1},     // gcd(n, 1) = 1
+			{12, 18, 6},     // gcd(12, 18) = 6
+			{18, 12, 6},     // commutativity
+			{48, 18, 6},     // gcd(48, 18) = 6
+			{17, 23, 1},     // coprime primes
+			{100, 100, 100}, // gcd(n, n) = n
+			{24, 36, 12},    // gcd(24, 36) = 12
+			{54, 24, 6},     // gcd(54, 24) = 6
+			{105, 35, 35},   // gcd(105, 35) = 35
+			{252, 105, 21},  // gcd(252, 105) = 21
+			{1071, 462, 21}, // classic example from Euclidean algorithm
 		}
 		for _, tc := range cases {
 			a := num.N().FromUint64(tc.a)
@@ -924,8 +924,8 @@ func TestNat_GCD(t *testing.T) {
 		ka := k.Mul(a)
 		kb := k.Mul(b)
 
-		left := ka.GCD(kb)              // gcd(60, 90) = 30
-		right := k.Mul(a.GCD(b))        // 5 * gcd(12, 18) = 5 * 6 = 30
+		left := ka.GCD(kb)       // gcd(60, 90) = 30
+		right := k.Mul(a.GCD(b)) // 5 * gcd(12, 18) = 5 * 6 = 30
 		require.True(t, left.Equal(right), "gcd(ka, kb) should equal k*gcd(a, b)")
 		require.Equal(t, uint64(30), left.Uint64())
 	})
