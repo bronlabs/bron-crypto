@@ -254,12 +254,18 @@ func (np *NatPlus) Lsh(shift uint) *NatPlus {
 	return errs2.Must1(np.isValid(out))
 }
 
-// Rsh performs a right shift operation on the NatPlus.
-func (np *NatPlus) Rsh(shift uint) *NatPlus {
+// TryRsh attempts to right shift the NatPlus, returning an error if the result would be zero.
+func (np *NatPlus) TryRsh(shift uint) (*NatPlus, error) {
 	v := new(numct.Nat)
 	v.Rsh(np.v, shift)
 	out := &NatPlus{v: v}
-	return errs2.Must1(np.isValid(out))
+	return np.isValid(out)
+}
+
+// Rsh performs a right shift operation on the NatPlus.
+// Panics if the result would be zero.
+func (np *NatPlus) Rsh(shift uint) *NatPlus {
+	return errs2.Must1(np.TryRsh(shift))
 }
 
 // Double returns the result of multiplying the NatPlus by 2.

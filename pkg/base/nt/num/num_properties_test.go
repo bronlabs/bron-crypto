@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
@@ -99,9 +100,17 @@ func FromRatRoundTrip_Property[E interface {
 			return
 		}
 		require.NoError(t, err)
+		require.EqualValues(t, n.Canonical().Numerator().Big().Bytes(), elem.Big().Bytes())
+	})
+}
 
-		quot, err := n.Numerator().TryDiv(n.Denominator().Lift())
-		require.NoError(t, err)
-		require.EqualValues(t, quot.Big().Bytes(), elem.Big().Bytes())
+func HashCodeEqualityCorrespondence_Property[E base.Hashable[E]](t *testing.T, g *rapid.Generator[E]) {
+	t.Helper()
+	rapid.Check(t, func(t *rapid.T) {
+		a := g.Draw(t, "a")
+		b := g.Draw(t, "b")
+		if a.Equal(b) {
+			require.Equal(t, a.HashCode(), b.HashCode())
+		}
 	})
 }

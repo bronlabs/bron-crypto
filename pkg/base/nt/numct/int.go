@@ -316,6 +316,7 @@ func (i *Int) Rsh(x *Int, shift uint) {
 }
 
 // RshCap sets i = x >> shift with given capacity.
+// if capacity < 0, capacity will be x.AnnouncedLen() - shift.
 func (i *Int) RshCap(x *Int, shift uint, capacity int) {
 	xAbs := (*saferith.Int)(x).Abs()
 	xSign := (*saferith.Int)(x).IsNegative()
