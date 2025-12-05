@@ -1414,7 +1414,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 
 	t.Run("reconstruct from threshold shares", func(t *testing.T) {
 		t.Parallel()
-		// Select threshold shares (IDs 0, 1, 2)
+		// Select threshold shares (IDs 1, 2, 3)
 		selectedIDs := []sharing.ID{1, 2, 3}
 		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, threshold)
 
@@ -1440,7 +1440,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 
 	t.Run("different threshold sets yield same result", func(t *testing.T) {
 		t.Parallel()
-		// First set: IDs 0, 1, 2
+		// First set: IDs 1, 2, 3
 		set1IDs := []sharing.ID{1, 2, 3}
 		liftedSet1 := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0, threshold)
 
@@ -1483,7 +1483,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 		t.Skip("Skipping due to Lift() method implementation issue")
 
 		// Test the Lift() method on Share
-		_, exists := shares.Shares().Get(sharing.ID(0))
+		_, exists := shares.Shares().Get(sharing.ID(1))
 		require.True(t, exists)
 
 		// Use the Lift() method

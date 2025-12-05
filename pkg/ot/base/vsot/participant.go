@@ -1,6 +1,7 @@
 package vsot
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -26,8 +27,8 @@ type participant[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 	prng      io.Reader
 }
 
-func (p *participant[P, B, S]) hash(b, a P, data []byte) ([]byte, error) {
-	digest, err := hashing.HashPrefixedLength(p.suite.HashFunc(), p.sessionId[:], b.ToCompressed(), a.ToCompressed(), data)
+func (p *participant[P, B, S]) hash(idx int, b, a P, data []byte) ([]byte, error) {
+	digest, err := hashing.HashPrefixedLength(p.suite.HashFunc(), binary.LittleEndian.AppendUint64(nil, uint64(idx)), p.sessionId[:], b.ToCompressed(), a.ToCompressed(), data)
 	if err != nil {
 		return nil, errs.WrapHashing(err, "cannot compute hash")
 	}

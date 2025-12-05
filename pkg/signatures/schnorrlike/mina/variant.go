@@ -174,7 +174,7 @@ func (v *Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 
 func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*Scalar]) (*additive.Share[*Scalar], error) {
 	// no changes needed
-	return nil, nil
+	return share, nil
 }
 
 func (v *Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupElement, localNonce *Scalar) (*GroupElement, *Scalar, error) {

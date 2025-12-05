@@ -9,8 +9,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 )
 
-func NewNonceSpace(n2, n *num.NatPlus) (*NonceSpace, error) {
-	g, err := znstar.NewPaillierGroupOfUnknownOrder(n2, n)
+func NewNonceSpace(n *num.NatPlus) (*NonceSpace, error) {
+	g, err := znstar.NewRSAGroupOfUnknownOrder(n)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create unit group for nonce space")
 	}
@@ -18,7 +18,7 @@ func NewNonceSpace(n2, n *num.NatPlus) (*NonceSpace, error) {
 }
 
 type NonceSpace struct {
-	g *znstar.PaillierGroupUnknownOrder
+	g *znstar.RSAGroupUnknownOrder
 }
 
 func (ns *NonceSpace) N() *num.NatPlus {
@@ -26,11 +26,15 @@ func (ns *NonceSpace) N() *num.NatPlus {
 }
 
 func (ns *NonceSpace) Sample(prng io.Reader) (*Nonce, error) {
-	u, err := ns.g.Random(prng)
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "failed to sample from nonce space")
+	for {
+		u, err := ns.g.Random(prng)
+		if err != nil {
+			return nil, errs.WrapRandomSample(err, "failed to sample from nonce space")
+		}
+		if u.Value().IsUnit() {
+			return &Nonce{u: u}, nil
+		}
 	}
-	return &Nonce{u: u}, nil
 }
 
 func (ns *NonceSpace) New(x *numct.Nat) (*Nonce, error) {
@@ -50,10 +54,10 @@ func (ns *NonceSpace) Contains(n *Nonce) bool {
 }
 
 type Nonce struct {
-	u *znstar.PaillierGroupUnknownOrderElement
+	u *znstar.RSAGroupUnknownOrderElement
 }
 
-func (n *Nonce) Value() *znstar.PaillierGroupUnknownOrderElement {
+func (n *Nonce) Value() *znstar.RSAGroupUnknownOrderElement {
 	return n.u
 }
 

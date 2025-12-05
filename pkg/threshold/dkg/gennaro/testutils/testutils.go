@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
@@ -17,12 +18,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, sessionId network.SID, accessStructure *shamir.AccessStructure, group algebra.PrimeGroup[G, S], tapes map[sharing.ID]transcripts.Transcript) map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]] {
+func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, sessionId network.SID, accessStructure *shamir.AccessStructure, niCompiler compiler.Name, group algebra.PrimeGroup[G, S], tapes map[sharing.ID]transcripts.Transcript) map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]] {
 	tb.Helper()
 
 	runners := make(map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]])
 	for id := range accessStructure.Shareholders().Iter() {
-		runner, err := gennaro.NewGennaroDKGRunner(group, sessionId, id, accessStructure, tapes[id], crand.Reader)
+		runner, err := gennaro.NewGennaroDKGRunner(group, sessionId, id, accessStructure, niCompiler, tapes[id], crand.Reader)
 		require.NoError(tb, err)
 		runners[id] = runner
 	}

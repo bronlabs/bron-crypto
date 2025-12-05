@@ -37,21 +37,32 @@ func (a *AuxiliaryInfo) EncryptedShares() ds.Map[sharing.ID, *paillier.Ciphertex
 }
 
 func (a *AuxiliaryInfo) Equal(rhs *AuxiliaryInfo) bool {
+	if a == nil || rhs == nil {
+		return a == rhs
+	}
 	if !a.paillierPrivateKey.Equal(rhs.paillierPrivateKey) {
 		return false
 	}
-	for id, pki := range a.paillierPublicKeys.Iter() {
+	if a.paillierPublicKeys.Size() != rhs.paillierPublicKeys.Size() {
+		return false
+	}
+	if a.encryptedShares.Size() != rhs.encryptedShares.Size() {
+		return false
+	}
+
+	for id, pkl := range a.paillierPublicKeys.Iter() {
 		pkr, ok := rhs.paillierPublicKeys.Get(id)
-		if !ok || !pki.Equal(pkr) {
+		if !ok || !pkl.Equal(pkr) {
 			return false
 		}
 	}
-	for id, ci := range a.encryptedShares.Iter() {
-		cr, ok := rhs.encryptedShares.Get(id)
-		if !ok || !ci.Equal(cr) {
+	for id, skl := range a.encryptedShares.Iter() {
+		skr, ok := rhs.encryptedShares.Get(id)
+		if !ok || !skl.Equal(skr) {
 			return false
 		}
 	}
+
 	return true
 }
 

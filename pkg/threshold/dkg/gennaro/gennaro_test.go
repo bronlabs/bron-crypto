@@ -7,6 +7,7 @@ import (
 	"io"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
@@ -40,7 +41,7 @@ func setup[
 	require.NoError(t, err)
 	require.NotNil(t, group)
 	if ct.SliceIsZero(sid[:]) == 1 {
-		sid = network.SID(sha3.Sum256([]byte("test-sid")))
+		sid = sha3.Sum256([]byte("test-sid"))
 	}
 	if tape == nil {
 		tape = hagrid.NewTranscript("test")
@@ -56,6 +57,7 @@ func setup[
 			group,
 			id,
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -77,26 +79,26 @@ func Test_Sanity(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int(total), outputs.Size())
 
-	for i, outi := range outputs.Iter() {
-		pi, ok := parties.Get(i)
-		require.True(t, ok, "participant %d not found in parties map", i)
+	for _, outi := range outputs.Iter() {
+		pi, ok := parties.Get(outi.Share().ID())
+		require.True(t, ok)
 		require.NotNil(t, pi.AccessStructure())
-		require.Equal(t, ac.Threshold(), pi.AccessStructure().Threshold(), "participant %d has incorrect threshold", i)
+		require.Equal(t, ac.Threshold(), pi.AccessStructure().Threshold())
 		require.True(t, pi.AccessStructure().Shareholders().Equal(ac.Shareholders()))
-		for j, outj := range outputs.Iter() {
-			if i == j {
+		for _, outj := range outputs.Iter() {
+			if outi.Share().ID() == outj.Share().ID() {
 				continue
 			}
-			pj, ok := parties.Get(j)
-			require.True(t, ok, "participant %d not found in parties map", j)
-			require.NotEqual(t, pi.SharingID(), pj.SharingID(), "participant %d and %d have the same ID", i, j)
-			require.False(t, outi.Share().Equal(outj.Share()), "participant %d and %d have the same Pedersen share", i, j)
+			pj, ok := parties.Get(outj.Share().ID())
+			require.True(t, ok)
+			require.NotEqual(t, pi.SharingID(), pj.SharingID())
+			require.False(t, outi.Share().Equal(outj.Share()))
 		}
 	}
 
-	shares := make([]*feldman.Share[*k256.Scalar], total)
-	for i, outi := range outputs.Iter() {
-		shares[i-1] = outi.Share()
+	shares := []*feldman.Share[*k256.Scalar]{}
+	for _, outi := range outputs.Iter() {
+		shares = append(shares, outi.Share())
 	}
 	vv := outputs.Values()[0].VerificationVector()
 
@@ -263,8 +265,8 @@ func TestDKGPublicKeyFields(t *testing.T) {
 
 		// Verify consistency: participant i's partial public key for j should be the same
 		// across all participants
-		for i := sharing.ID(0); i < sharing.ID(total); i++ {
-			for j := sharing.ID(0); j < sharing.ID(total); j++ {
+		for i := sharing.ID(1); i <= sharing.ID(total); i++ {
+			for j := sharing.ID(1); j <= sharing.ID(total); j++ {
 				var referencePPK *k256.Point
 				for holderID, holderPartialPKs := range allPartialPKs {
 					ppk := holderPartialPKs[j]
@@ -412,6 +414,7 @@ func TestDKGWithBLS12381(t *testing.T) {
 			group,
 			id,
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -551,6 +554,7 @@ func TestDKGParticipantValidation(t *testing.T) {
 			group,
 			sharing.ID(10), // Not in shareholders (1-5)
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -571,6 +575,7 @@ func TestDKGParticipantValidation(t *testing.T) {
 				group,
 				id,
 				ac,
+				fiatshamir.Name,
 				tape.Clone(),
 				prng,
 			)
@@ -649,6 +654,7 @@ func TestParticipantCreation(t *testing.T) {
 			curve,
 			sharing.ID(1),
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -668,6 +674,7 @@ func TestParticipantCreation(t *testing.T) {
 			nil,
 			sharing.ID(1),
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -686,6 +693,7 @@ func TestParticipantCreation(t *testing.T) {
 			curve,
 			sharing.ID(1),
 			ac,
+			fiatshamir.Name,
 			nil,
 			prng,
 		)
@@ -704,6 +712,7 @@ func TestParticipantCreation(t *testing.T) {
 			curve,
 			sharing.ID(1),
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			nil,
 		)
@@ -718,6 +727,7 @@ func TestParticipantCreation(t *testing.T) {
 			curve,
 			sharing.ID(1),
 			nil,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -736,6 +746,7 @@ func TestParticipantCreation(t *testing.T) {
 			curve,
 			sharing.ID(10), // ID not in shareholders
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)
@@ -1062,6 +1073,7 @@ func TestDifferentCurves(t *testing.T) {
 				group,
 				id,
 				ac,
+				fiatshamir.Name,
 				tape.Clone(),
 				prng,
 			)
@@ -1224,6 +1236,7 @@ func TestErrorPropagation(t *testing.T) {
 			group,
 			sharing.ID(1),
 			ac,
+			fiatshamir.Name,
 			tape,
 			limitedReader,
 		)
@@ -1346,6 +1359,7 @@ func setupBench[
 			group,
 			id,
 			ac,
+			fiatshamir.Name,
 			tape.Clone(),
 			prng,
 		)

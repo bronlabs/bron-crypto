@@ -13,7 +13,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
-	hashcommitments "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lp"
@@ -48,9 +47,9 @@ type State[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.P
 type VerifierState[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	State[P, B, S]
 
-	cDoublePrimeWitness hashcommitments.Witness
+	cDoublePrimeWitness hash_comm.Witness
 	bigQPrime           P
-	cHat                hashcommitments.Commitment
+	cHat                hash_comm.Commitment
 }
 
 type Verifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -68,8 +67,8 @@ type ProverState[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 
 	alpha                  *paillier.Plaintext
 	bigQHat                P
-	bigQHatWitness         hashcommitments.Witness
-	cDoublePrimeCommitment hashcommitments.Commitment
+	bigQHatWitness         hash_comm.Witness
+	cDoublePrimeCommitment hash_comm.Commitment
 }
 
 type Prover[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
@@ -174,9 +173,6 @@ func validateVerifierInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElemen
 	}
 	if utils.IsNil(bigQ) {
 		return errs.NewIsNil("bigQ is nil")
-	}
-	if v := xEncrypted.ValueCT(); v.IsZero()&v.Equal(numct.NatOne()) == ct.True {
-		return errs.NewArgument("xEncrypted is invalid: %s", v.String())
 	}
 	if prng == nil {
 		return errs.NewIsNil("prng is nil")

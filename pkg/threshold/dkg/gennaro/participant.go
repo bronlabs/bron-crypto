@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/pedersen"
@@ -47,13 +48,14 @@ const (
 )
 
 type Participant[E GroupElement[E, S], S Scalar[S]] struct {
-	sid   network.SID
-	ac    *shamir.AccessStructure
-	id    sharing.ID
-	tape  ts.Transcript
-	prng  io.Reader
-	state *State[E, S]
-	round network.Round
+	sid            network.SID
+	ac             *shamir.AccessStructure
+	id             sharing.ID
+	niCompilerName compiler.Name
+	tape           ts.Transcript
+	prng           io.Reader
+	state          *State[E, S]
+	round          network.Round
 }
 
 func (p *Participant[E, S]) SharingID() sharing.ID {
@@ -84,6 +86,7 @@ func NewParticipant[E GroupElement[E, S], S Scalar[S]](
 	group Group[E, S],
 	myID sharing.ID,
 	ac *shamir.AccessStructure,
+	niCompilerName compiler.Name,
 	tape ts.Transcript,
 	prng io.Reader,
 ) (*Participant[E, S], error) {
@@ -122,11 +125,12 @@ func NewParticipant[E GroupElement[E, S], S Scalar[S]](
 		return nil, errs.WrapFailed(err, "failed to create feldman VSS scheme")
 	}
 	return &Participant[E, S]{
-		sid:  sid,
-		tape: tape,
-		prng: prng,
-		id:   myID,
-		ac:   ac,
+		sid:            sid,
+		tape:           tape,
+		prng:           prng,
+		id:             myID,
+		ac:             ac,
+		niCompilerName: niCompilerName,
 		//nolint:exhaustruct // initially partially empty state
 		state: &State[E, S]{
 			key:                                 key,

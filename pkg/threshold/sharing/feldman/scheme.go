@@ -117,6 +117,9 @@ func (d *Scheme[E, FE]) Verify(share *Share[FE], reference VerificationVector[E,
 	if reference == nil {
 		return errs.NewIsNil("verification vector is nil")
 	}
+	if reference.Degree()+1 != int(d.shamirSSS.AccessStructure().Threshold()) {
+		return errs.NewVerification("verification vector degree %d does not match expected degree %d", reference.Degree(), d.shamirSSS.AccessStructure().Threshold()-1)
+	}
 	x := d.shamirSSS.SharingIDToLagrangeNode(share.ID())
 	yInExponent := reference.Eval(x)
 	shareInExponent := d.basePoint.ScalarOp(share.Value())

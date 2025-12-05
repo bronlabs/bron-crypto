@@ -1,6 +1,8 @@
 package ecbbot
 
 import (
+	"encoding/binary"
+
 	"golang.org/x/crypto/blake2b"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
@@ -64,11 +66,11 @@ func NewReceiverOutput[S algebra.PrimeFieldElement[S]](xi, l int) *ReceiverOutpu
 	}
 }
 
-func (r *ReceiverOutput[S]) ToBitsOutput(b int) (*vsot.ReceiverOutput, error) {
-	if b < 16 {
-		return nil, errs.NewValidation("invalid hash size")
+func (r *ReceiverOutput[S]) ToBitsOutput(byteLen int, key []byte) (*vsot.ReceiverOutput, error) {
+	if byteLen < 16 || len(key) < 16 {
+		return nil, errs.NewValidation("invalid hash or key size")
 	}
-	h, err := blake2b.New(b, nil)
+	h, err := blake2b.New(byteLen, key)
 	if err != nil {
 		return nil, errs.NewFailed("failed to create hasher")
 	}
@@ -83,6 +85,8 @@ func (r *ReceiverOutput[S]) ToBitsOutput(b int) (*vsot.ReceiverOutput, error) {
 		out.Messages[xi] = make([][]byte, len(r.Messages[xi]))
 		for l, m := range r.Messages[xi] {
 			h.Reset()
+			h.Write(binary.LittleEndian.AppendUint64(nil, uint64(xi)))
+			h.Write(binary.LittleEndian.AppendUint64(nil, uint64(l)))
 			h.Write(m.Bytes())
 			out.Messages[xi][l] = h.Sum(nil)
 		}
@@ -108,11 +112,11 @@ func NewSenderOutput[S algebra.PrimeFieldElement[S]](xi, l int) *SenderOutput[S]
 	}
 }
 
-func (s *SenderOutput[S]) ToBitsOutput(b int) (*vsot.SenderOutput, error) {
-	if b < 16 {
-		return nil, errs.NewValidation("invalid hash size")
+func (s *SenderOutput[S]) ToBitsOutput(byteLen int, key []byte) (*vsot.SenderOutput, error) {
+	if byteLen < 16 || len(key) < 16 {
+		return nil, errs.NewValidation("invalid hash or key size")
 	}
-	h, err := blake2b.New(b, nil)
+	h, err := blake2b.New(byteLen, key)
 	if err != nil {
 		return nil, errs.NewFailed("failed to create hasher")
 	}
@@ -127,9 +131,13 @@ func (s *SenderOutput[S]) ToBitsOutput(b int) (*vsot.SenderOutput, error) {
 		out.Messages[xi][1] = make([][]byte, len(s.Messages[xi][1]))
 		for l := range s.Messages[xi][0] {
 			h.Reset()
+			h.Write(binary.LittleEndian.AppendUint64(nil, uint64(xi)))
+			h.Write(binary.LittleEndian.AppendUint64(nil, uint64(l)))
 			h.Write(s.Messages[xi][0][l].Bytes())
 			out.Messages[xi][0][l] = h.Sum(nil)
 			h.Reset()
+			h.Write(binary.LittleEndian.AppendUint64(nil, uint64(xi)))
+			h.Write(binary.LittleEndian.AppendUint64(nil, uint64(l)))
 			h.Write(s.Messages[xi][1][l].Bytes())
 			out.Messages[xi][1][l] = h.Sum(nil)
 		}

@@ -49,6 +49,10 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 
 	v.transcript.AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, fischlinProof.Rho))
 	v.transcript.AppendBytes(statementLabel, statement.Bytes())
+	commonHKey, err := v.transcript.ExtractBytes(commitmentLabel, 32)
+	if err != nil {
+		return errs.WrapFailed(err, "cannot extract h")
+	}
 
 	commitmentSerialized := make([][]byte, 0)
 	for i := uint64(0); i < fischlinProof.Rho; i++ {
@@ -63,7 +67,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	}
 
 	// 3. common-h ← H(x, m, sid)
-	commonH, err := hashing.Hash(randomOracle, statement.Bytes(), a, v.sessionId[:])
+	commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, v.sessionId[:])
 	if err != nil {
 		return errs.WrapHashing(err, "cannot serialise statement")
 	}
@@ -82,6 +86,10 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 
 		// 4.a. Halt and output 'reject' if VerifyProof(x, m_i, e_i, z_i) == 0
 		eBytes := make([]byte, v.sigmaProtocol.GetChallengeBytesLength())
+		if (len(eBytes) - len(fischlinProof.E[i])) < 0 {
+			return errs.NewVerification("invalid challenge")
+		}
+
 		copy(eBytes[len(eBytes)-len(fischlinProof.E[i]):], fischlinProof.E[i])
 		err = v.sigmaProtocol.Verify(statement, fischlinProof.A[i], eBytes, fischlinProof.Z[i])
 		if err != nil {

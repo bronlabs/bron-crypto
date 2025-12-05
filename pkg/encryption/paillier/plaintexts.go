@@ -128,7 +128,7 @@ func (cp *Plaintext) isValid(x *Plaintext) {
 	if !cp.n.Equal(x.n) {
 		panic("cannot operate on centred plaintexts with different moduli")
 	}
-	if !x.v.IsInRange(cp.n) {
+	if !x.v.IsInRangeSymmetric(cp.n) {
 		panic("cannot operate on centred plaintexts with values out of range")
 	}
 }
