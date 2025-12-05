@@ -2,7 +2,9 @@
 
 package numct
 
-import "github.com/bronlabs/bron-crypto/pkg/base/ct"
+import (
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+)
 
 // GCD sets n = gcd(x, y) using a constant-time (w.r.t. announced capacity)
 // binary GCD (Stein) algorithm. The result is always non-negative and
@@ -81,9 +83,7 @@ func (n *Nat) GCD(x, y *Nat) {
 		v.CondAssign(doEvenEven|doOddEven, &tmpVShift)
 
 		// Update the 2-adic gcd factor; doEvenEven is 1 exactly when we halved both.
-		if doEvenEven != 0 {
-			shift++
-		}
+		shift = ct.CSelectInt(doEvenEven, shift, shift+1)
 
 		// ----- Odd / odd case -----
 		// When u and v are odd, Stein uses:
