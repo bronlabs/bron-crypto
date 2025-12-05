@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_GCD(t *testing.T) {
+func Test_EuclideanDiv(t *testing.T) {
 	t.Parallel()
 
-	const iters = 128
+	const iters = 1024
 	const bits = 4096
 	prng := crand.Reader
 
@@ -27,9 +27,11 @@ func Test_GCD(t *testing.T) {
 
 		x := new(saferith.Nat).SetBytes(xBytes[:])
 		y := new(saferith.Nat).SetBytes(yBytes[:])
-		actualZ := internal.GCD(new(saferith.Nat), x, y).Big()
-		expectedZ := new(big.Int).GCD(nil, nil, x.Big(), y.Big())
+		actualQ, actualR := internal.EuclideanDiv(new(saferith.Nat), new(saferith.Nat), x, y)
+		expectedQ := new(big.Int).Div(x.Big(), y.Big())
+		expectedR := new(big.Int).Mod(x.Big(), y.Big())
 
-		require.True(t, expectedZ.Cmp(actualZ) == 0)
+		require.True(t, actualQ.Big().Cmp(expectedQ) == 0)
+		require.True(t, actualR.Big().Cmp(expectedR) == 0)
 	}
 }

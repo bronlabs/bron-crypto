@@ -14,5 +14,5 @@ func LCM(out, a, b *Nat) {
 	gcd.GCD(a, b)
 	ab.Mul(a, b)
 	denom, _ := NewModulus(&gcd)
-	out.DivCap(&ab, denom, -1)
+	out.DivDivisorAsModulusCap(&ab, denom, -1)
 }

@@ -439,7 +439,7 @@ func (u *Uint) EuclideanDiv(other *Uint) (quot, rem *Uint, err error) {
 	if modOk != ct.True {
 		return nil, nil, errs2.New("failed to create modulus from divisor")
 	}
-	if ok := numct.DivModCap(vq, vr, u.v, divisorMod, -1); ok == ct.False {
+	if ok := numct.QuoRemDivDivisorAsModulusCap(vq, vr, u.v, divisorMod, -1); ok == ct.False {
 		return nil, nil, errs2.New("division failed")
 	}
 	u.m.Mod(vq, vq)

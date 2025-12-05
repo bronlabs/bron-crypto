@@ -52,7 +52,7 @@ func NewParamsMulti(factors ...*numct.Modulus) (*ParamsMulti, ct.Bool) {
 	divCap := int(modulus.BitLen())
 	for i := range k {
 		// M_i = N / p_i
-		allOk &= Mi.DivCap(prod, factors[i], divCap)
+		allOk &= Mi.DivDivisorAsModulusCap(prod, factors[i], divCap)
 		params.Products[i] = Mi.Clone()
 
 		// inv_i = (M_i mod p_i)^{-1} mod p_i  (ok iff gcd(M_i, p_i)=1)
@@ -135,7 +135,7 @@ func (params *ParamsMulti) RecombineParallel(residues ...*numct.Nat) (*numct.Nat
 	return result, eqLen
 }
 
-// Recombine reconstructs x (mod N) from residues[i] = x mod p_i using Garner's algorithm.
+// RecombineSerial reconstructs x (mod N) from residues[i] = x mod p_i using Garner's algorithm.
 func (params *ParamsMulti) RecombineSerial(residues ...*numct.Nat) (*numct.Nat, ct.Bool) {
 	eqLen := ct.Equal(len(residues), params.NumFactors)
 	if eqLen == ct.False {
@@ -179,7 +179,7 @@ func (params *ParamsMulti) Recombine(residues ...*numct.Nat) (*numct.Nat, ct.Boo
 	return params.RecombineParallel(residues...)
 }
 
-// DecomposeMultiSerial decomposes m into residues mod each prime.
+// DecomposeSerial decomposes m into residues mod each prime.
 // Constant-time with respect to values (not the number of primes).
 func (params *ParamsMulti) DecomposeSerial(m *numct.Modulus) []*numct.Nat {
 	residues := make([]*numct.Nat, params.NumFactors)
@@ -194,7 +194,7 @@ func (params *ParamsMulti) DecomposeSerial(m *numct.Modulus) []*numct.Nat {
 	return residues
 }
 
-// DecomposeMultiParallel decomposes m into residues mod each prime in parallel.
+// DecomposeParallel decomposes m into residues mod each prime in parallel.
 // Constant-time with respect to values (not the number of primes).
 func (params *ParamsMulti) DecomposeParallel(m *numct.Modulus) []*numct.Nat {
 	residues := make([]*numct.Nat, params.NumFactors)

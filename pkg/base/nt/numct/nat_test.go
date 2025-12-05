@@ -208,7 +208,7 @@ func TestNat_DivCap(t *testing.T) {
 		num := numct.NewNat(100)
 		denom, ok := numct.NewModulus(numct.NewNat(10))
 		require.Equal(t, ct.True, ok)
-		ok = result.DivCap(num, denom, -1)
+		ok = result.DivDivisorAsModulusCap(num, denom, -1)
 		require.Equal(t, ct.True, ok)
 		require.Equal(t, uint64(10), result.Uint64())
 	})
@@ -218,7 +218,7 @@ func TestNat_DivCap(t *testing.T) {
 		num := numct.NewNat(17)
 		denom, ok := numct.NewModulus(numct.NewNat(5))
 		require.Equal(t, ct.True, ok)
-		ok = result.DivCap(num, denom, -1)
+		ok = result.DivDivisorAsModulusCap(num, denom, -1)
 		require.Equal(t, ct.True, ok)
 		require.Equal(t, uint64(3), result.Uint64())
 	})
@@ -231,7 +231,7 @@ func TestNat_ExactDiv(t *testing.T) {
 		num := numct.NewNat(100)
 		denom, ok := numct.NewModulus(numct.NewNat(10))
 		require.Equal(t, ct.True, ok)
-		ok = result.ExactDiv(num, denom)
+		ok = result.ExactDivDivisorAsModulus(num, denom)
 		require.Equal(t, ct.True, ok)
 		require.Equal(t, uint64(10), result.Uint64())
 	})
@@ -242,7 +242,7 @@ func TestNat_ExactDiv(t *testing.T) {
 		num := numct.NewNat(17)
 		denom, ok := numct.NewModulus(numct.NewNat(5))
 		require.Equal(t, ct.True, ok)
-		ok = result.ExactDiv(num, denom)
+		ok = result.ExactDivDivisorAsModulus(num, denom)
 		require.Equal(t, ct.False, ok)
 		require.Equal(t, uint64(1), result.Uint64()) // Should remain unchanged
 	})
@@ -647,7 +647,7 @@ func TestDivModCap(t *testing.T) {
 		var q, r numct.Nat
 		denom, ok := numct.NewModulus(numct.NewNat(tc.b))
 		require.Equal(t, ct.True, ok)
-		ok = numct.DivModCap(&q, &r, numct.NewNat(tc.a), denom, -1)
+		ok = numct.QuoRemDivDivisorAsModulusCap(&q, &r, numct.NewNat(tc.a), denom, -1)
 		require.Equal(t, ct.True, ok)
 		require.Equal(t, tc.quotient, q.Uint64())
 		require.Equal(t, tc.rem, r.Uint64())
@@ -746,22 +746,22 @@ func TestNat_GCD(t *testing.T) {
 		cases := []struct {
 			a, b, expected uint64
 		}{
-			{0, 0, 0},        // gcd(0, 0) = 0 by convention
-			{0, 5, 5},        // gcd(0, n) = n
-			{5, 0, 5},        // gcd(n, 0) = n
-			{1, 1, 1},        // gcd(1, 1) = 1
-			{1, 100, 1},      // gcd(1, n) = 1
-			{100, 1, 1},      // gcd(n, 1) = 1
-			{12, 18, 6},      // gcd(12, 18) = 6
-			{18, 12, 6},      // commutativity
-			{48, 18, 6},      // gcd(48, 18) = 6
-			{17, 23, 1},      // coprime primes
-			{100, 100, 100},  // gcd(n, n) = n
-			{24, 36, 12},     // gcd(24, 36) = 12
-			{54, 24, 6},      // gcd(54, 24) = 6
-			{105, 35, 35},    // gcd(105, 35) = 35
-			{252, 105, 21},   // gcd(252, 105) = 21
-			{1071, 462, 21},  // classic example from Euclidean algorithm
+			{0, 0, 0},       // gcd(0, 0) = 0 by convention
+			{0, 5, 5},       // gcd(0, n) = n
+			{5, 0, 5},       // gcd(n, 0) = n
+			{1, 1, 1},       // gcd(1, 1) = 1
+			{1, 100, 1},     // gcd(1, n) = 1
+			{100, 1, 1},     // gcd(n, 1) = 1
+			{12, 18, 6},     // gcd(12, 18) = 6
+			{18, 12, 6},     // commutativity
+			{48, 18, 6},     // gcd(48, 18) = 6
+			{17, 23, 1},     // coprime primes
+			{100, 100, 100}, // gcd(n, n) = n
+			{24, 36, 12},    // gcd(24, 36) = 12
+			{54, 24, 6},     // gcd(54, 24) = 6
+			{105, 35, 35},   // gcd(105, 35) = 35
+			{252, 105, 21},  // gcd(252, 105) = 21
+			{1071, 462, 21}, // classic example from Euclidean algorithm
 		}
 		for _, tc := range cases {
 			var result numct.Nat
@@ -845,9 +845,9 @@ func TestNat_GCD(t *testing.T) {
 		cases := []struct {
 			a, b uint64
 		}{
-			{15, 28}, // coprime
-			{12, 18}, // not coprime
-			{17, 23}, // coprime (primes)
+			{15, 28},  // coprime
+			{12, 18},  // not coprime
+			{17, 23},  // coprime (primes)
 			{100, 25}, // not coprime
 		}
 		for _, tc := range cases {
