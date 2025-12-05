@@ -303,7 +303,7 @@ func (n *Nat) TryDiv(other *Nat) (*Nat, error) {
 	if modOk != ct.True {
 		return nil, errs2.New("failed to create modulus from divisor")
 	}
-	if ok := v.ExactDiv(n.v, divisorMod); ok != ct.True {
+	if ok := v.ExactDivDivisorAsModulus(n.v, divisorMod); ok != ct.True {
 		return nil, ErrInexactDivision.WithStackFrame()
 	}
 	out := &Nat{v: v}
@@ -365,7 +365,7 @@ func (n *Nat) EuclideanDiv(other *Nat) (quot, rem *Nat, err error) {
 	if modOk != ct.True {
 		return nil, nil, errs2.New("failed to create modulus from divisor")
 	}
-	if ok := numct.DivModCap(vq, vr, n.v, divisorMod, -1); ok == ct.False {
+	if ok := numct.QuoRemDivDivisorAsModulusCap(vq, vr, n.v, divisorMod, -1); ok == ct.False {
 		return nil, nil, errs2.New("division failed")
 	}
 	return &Nat{v: vq}, &Nat{v: vr}, nil

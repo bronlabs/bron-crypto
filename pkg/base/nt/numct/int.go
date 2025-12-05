@@ -139,28 +139,28 @@ func (i *Int) Div(numerator, denominator *Int) (ok ct.Bool) {
 	if ok == ct.False {
 		return ct.False
 	}
-	ok = i.DivCap(numerator, dm, -1)
-	// DivCap already applies numerator's sign, so only apply denominator's sign
+	ok = i.DivDivisorAsModulusCap(numerator, dm, -1)
+	// DivModCap already applies numerator's sign, so only apply denominator's sign
 	i.CondNeg(denominator.IsNegative())
 	return ok
 }
 
-// DivCap sets i = numerator / denominator with capacity capacity.
-// Returns ok = false if denominator is zero.
-func (i *Int) DivCap(numerator *Int, denominator *Modulus, capacity int) (ok ct.Bool) {
+// DivDivisorAsModulusCap sets i = numerator / denominator with capacity capacity.
+// Returns ok = false if the denominator is zero.
+func (i *Int) DivDivisorAsModulusCap(numerator *Int, denominator *Modulus, capacity int) (ok ct.Bool) {
 	var outNat Nat
-	ok = outNat.DivCap(numerator.Absed(), denominator, capacity)
+	ok = outNat.DivDivisorAsModulusCap(numerator.Absed(), denominator, capacity)
 
 	i.SetNat(&outNat)
 	i.CondNeg(numerator.IsNegative())
 	return ok
 }
 
-// ExactDiv sets i = lhs / rhs assuming exact division (no remainder).
-// Returns ok = false if division is not exact.
-func (i *Int) ExactDiv(lhs *Int, rhs *Modulus) (ok ct.Bool) {
+// ExactDivDivisorAsModulus sets i = lhs / rhs assuming exact division (no remainder).
+// Returns ok = false if the division is not exact.
+func (i *Int) ExactDivDivisorAsModulus(lhs *Int, rhs *Modulus) (ok ct.Bool) {
 	var outNat Nat
-	ok = outNat.ExactDiv(lhs.Absed(), rhs)
+	ok = outNat.ExactDivDivisorAsModulus(lhs.Absed(), rhs)
 	i.SetNat(&outNat)
 	i.CondNeg(lhs.IsNegative())
 	return ok

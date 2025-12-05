@@ -4,7 +4,7 @@ import "github.com/cronokirby/saferith"
 
 // GCD sets n = gcd(x, y) using a constant-time (w.r.t. announced capacity) binary GCD (Stein) algorithm.
 // The result is always non-negative and gcd(0, 0) = 0.
-func GCD(x, y *saferith.Nat) *saferith.Nat {
+func GCD(g, x, y *saferith.Nat) *saferith.Nat {
 	capacity := max(x.AnnouncedLen(), y.AnnouncedLen())
 
 	var u, v, shift saferith.Nat
@@ -38,5 +38,5 @@ func GCD(x, y *saferith.Nat) *saferith.Nat {
 		v.CondAssign(uOdd&vOdd, &t)
 	}
 
-	return new(saferith.Nat).Mul(&v, &shift, capacity)
+	return g.Mul(&v, &shift, capacity)
 }

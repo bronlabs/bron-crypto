@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Benchmark_GCD(b *testing.B) {
+func Benchmark_EuclideanDiv(b *testing.B) {
 	const bits = 4096
 	prng := crand.Reader
 
@@ -23,9 +23,9 @@ func Benchmark_GCD(b *testing.B) {
 	x := new(saferith.Nat).SetBig(xBig, bits)
 	y := new(saferith.Nat).SetBig(yBig, bits)
 
-	var g saferith.Nat
+	var q, r saferith.Nat
 	b.ResetTimer()
 	for range b.N {
-		_ = internal.GCD(&g, x, y)
+		_, _ = internal.EuclideanDiv(&q, &r, x, y)
 	}
 }

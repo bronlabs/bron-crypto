@@ -314,8 +314,8 @@ func (np *NatPlus) TryDiv(other *NatPlus) (*NatPlus, error) {
 		return nil, errs2.Wrap(err)
 	}
 	v := new(numct.Nat)
-	// Use ExactDiv to ensure only exact division succeeds
-	if ok := v.ExactDiv(np.v, other.ModulusCT()); ok != ct.True {
+	// Use ExactDivMod to ensure only the exact division succeeds
+	if ok := v.ExactDivDivisorAsModulus(np.v, other.ModulusCT()); ok != ct.True {
 		return nil, ErrInexactDivision.WithStackFrame()
 	}
 	out := &NatPlus{v: v}

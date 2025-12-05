@@ -14,6 +14,5 @@ func (n *Nat) GCD(x, y *Nat) {
 		panic("numct.Nat.GCD: nil input")
 	}
 
-	g := internal.GCD((*saferith.Nat)(x), (*saferith.Nat)(y))
-	((*saferith.Nat)(n)).SetNat(g)
+	internal.GCD((*saferith.Nat)(n), (*saferith.Nat)(x), (*saferith.Nat)(y))
 }
