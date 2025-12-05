@@ -153,23 +153,21 @@ func CyclicProperty[S algebra.CyclicSemiGroup[E], E algebra.CyclicSemiGroupEleme
 }
 
 func IdentityProperty[S algebra.Monoid[E], E algebra.MonoidElement[E]](
-	t *testing.T, c *Carrier[S, E], op *BinaryOperator[E],
+	t *testing.T, c *Carrier[S, E], op *BinaryOperator[E], identity *Constant[E],
 ) Axiom {
 	t.Helper()
 	return Axiom{
-		Name: op.Name + "_Identity",
+		Name: identity.Name,
 		CheckFunc: func(t *testing.T) {
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 
-				require.True(t, c.Value.OpIdentity().IsOpIdentity(), "identity element is not marked as identity")
-
 				// Left identity: identity op a = a
-				left := op.Func(c.Value.OpIdentity(), a)
+				left := op.Func(identity.Value(), a)
 				require.True(t, left.Equal(a), "left identity failed: identity op a != a")
 
 				// Right identity: a op identity = a
-				right := op.Func(a, c.Value.OpIdentity())
+				right := op.Func(a, identity.Value())
 				require.True(t, right.Equal(a), "right identity failed: a op identity != a")
 			})
 		},
@@ -355,23 +353,22 @@ func CanTryInv[S algebra.MultiplicativeMonoid[E], E algebra.MultiplicativeMonoid
 
 func GroupInverseProperty[S algebra.Group[E], E algebra.GroupElement[E]](
 	t *testing.T, c *Carrier[S, E], op *BinaryOperator[E],
+	identity *Constant[E], inv *UnaryOperator[E],
 ) Axiom {
 	t.Helper()
 	return Axiom{
-		Name: op.Name + "_Inverse",
+		Name: inv.Name,
 		CheckFunc: func(t *testing.T) {
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
-				id := c.Value.OpIdentity()
-				invA := a.OpInv()
+				invA := inv.Func(a)
 
 				// Right inverse: a op inv(a) = identity
 				right := op.Func(a, invA)
-				require.True(t, right.Equal(id), "right inverse failed: a op inv(a) != identity")
-
+				require.True(t, right.Equal(identity.Value()), "right inverse failed: a op inv(a) != identity")
 				// Left inverse: inv(a) op a = identity
 				left := op.Func(invA, a)
-				require.True(t, left.Equal(id), "left inverse failed: inv(a) op a != identity")
+				require.True(t, left.Equal(identity.Value()), "left inverse failed: inv(a) op a != identity")
 			})
 		},
 	}

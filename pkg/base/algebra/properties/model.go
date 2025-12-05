@@ -192,10 +192,7 @@ func AdditiveSemiGroup[S algebra.AdditiveSemiGroup[E], E algebra.AdditiveSemiGro
 	t *testing.T, structure S, g *rapid.Generator[E],
 ) *Model[S, E] {
 	t.Helper()
-	semiGroup := SemiGroup(t, structure, g, &BinaryOperator[E]{
-		Name: "Addition",
-		Func: algebra.Addition[E],
-	})
+	semiGroup := SemiGroup(t, structure, g, Addition[E]())
 	return &Model[S, E]{
 		Carrier: semiGroup.Carrier,
 		Theory: append(semiGroup.Theory,
@@ -221,10 +218,7 @@ func MultiplicativeSemiGroup[S algebra.MultiplicativeSemiGroup[E], E algebra.Mul
 	t *testing.T, structure S, g *rapid.Generator[E],
 ) *Model[S, E] {
 	t.Helper()
-	semiGroup := SemiGroup(t, structure, g, &BinaryOperator[E]{
-		Name: "Multiplication",
-		Func: algebra.Multiplication[E],
-	})
+	semiGroup := SemiGroup(t, structure, g, Multiplication[E]())
 	return &Model[S, E]{
 		Carrier: semiGroup.Carrier,
 		Theory: append(semiGroup.Theory,
@@ -234,14 +228,14 @@ func MultiplicativeSemiGroup[S algebra.MultiplicativeSemiGroup[E], E algebra.Mul
 }
 
 func Monoid[S algebra.Monoid[E], E algebra.MonoidElement[E]](
-	t *testing.T, structure S, g *rapid.Generator[E], op *BinaryOperator[E],
+	t *testing.T, structure S, g *rapid.Generator[E], op *BinaryOperator[E], identity *Constant[E],
 ) *Model[S, E] {
 	t.Helper()
 	semiGroup := SemiGroup(t, structure, g, op)
 	return &Model[S, E]{
 		Carrier: semiGroup.Carrier,
 		Theory: append(semiGroup.Theory,
-			IdentityProperty(t, semiGroup.Carrier, op),
+			IdentityProperty(t, semiGroup.Carrier, op, identity),
 			CanDistinguishIdentityElement(t, semiGroup.Carrier),
 		),
 	}
@@ -251,10 +245,7 @@ func AdditiveMonoid[S algebra.AdditiveMonoid[E], E algebra.AdditiveMonoidElement
 	t *testing.T, structure S, g *rapid.Generator[E],
 ) *Model[S, E] {
 	t.Helper()
-	monoid := Monoid(t, structure, g, &BinaryOperator[E]{
-		Name: "Addition",
-		Func: algebra.Addition[E],
-	})
+	monoid := Monoid(t, structure, g, Addition[E](), AdditiveIdentity(structure))
 	additiveSemiGroup := AdditiveSemiGroup(t, structure, g)
 	out := Union(t, monoid, additiveSemiGroup)
 	out.Theory = append(monoid.Theory,
@@ -269,10 +260,7 @@ func MultiplicativeMonoid[S algebra.MultiplicativeMonoid[E], E algebra.Multiplic
 	t *testing.T, structure S, g *rapid.Generator[E],
 ) *Model[S, E] {
 	t.Helper()
-	monoid := Monoid(t, structure, g, &BinaryOperator[E]{
-		Name: "Multiplication",
-		Func: algebra.Multiplication[E],
-	})
+	monoid := Monoid(t, structure, g, Multiplication[E](), MultiplicativeIdentity(structure))
 	multiplicativeSemiGroup := MultiplicativeSemiGroup(t, structure, g)
 	out := Union(t, monoid, multiplicativeSemiGroup)
 	out.Theory = append(monoid.Theory,
@@ -284,23 +272,24 @@ func MultiplicativeMonoid[S algebra.MultiplicativeMonoid[E], E algebra.Multiplic
 }
 
 func CyclicMonoid[S algebra.CyclicMonoid[E], E algebra.CyclicMonoidElement[E]](
-	t *testing.T, structure S, g *rapid.Generator[E], op *BinaryOperator[E],
+	t *testing.T, structure S, g *rapid.Generator[E], op *BinaryOperator[E], identity *Constant[E],
 ) *Model[S, E] {
 	t.Helper()
-	monoid := Monoid(t, structure, g, op)
+	monoid := Monoid(t, structure, g, op, identity)
 	cyclicSemiGroup := CyclicSemiGroup(t, structure, g, op)
 	return Union(t, monoid, cyclicSemiGroup)
 }
 
 func Group[S algebra.Group[E], E algebra.GroupElement[E]](
 	t *testing.T, structure S, g *rapid.Generator[E], op *BinaryOperator[E],
+	identity *Constant[E], inv *UnaryOperator[E],
 ) *Model[S, E] {
 	t.Helper()
-	monoid := Monoid(t, structure, g, op)
+	monoid := Monoid(t, structure, g, op, identity)
 	return &Model[S, E]{
 		Carrier: monoid.Carrier,
 		Theory: append(monoid.Theory,
-			GroupInverseProperty(t, monoid.Carrier, op),
+			GroupInverseProperty(t, monoid.Carrier, op, identity, inv),
 		),
 	}
 }
@@ -309,10 +298,7 @@ func AdditiveGroup[S algebra.AdditiveGroup[E], E algebra.AdditiveGroupElement[E]
 	t *testing.T, structure S, g *rapid.Generator[E],
 ) *Model[S, E] {
 	t.Helper()
-	group := Group(t, structure, g, &BinaryOperator[E]{
-		Name: "Addition",
-		Func: algebra.Addition[E],
-	})
+	group := Group(t, structure, g, Addition[E](), AdditiveIdentity(structure), Negation[E]())
 	additiveMonoid := AdditiveMonoid(t, structure, g)
 	out := Union(t, group, additiveMonoid)
 	out.Theory = append(group.Theory,
@@ -326,10 +312,7 @@ func MultiplicativeGroup[S algebra.MultiplicativeGroup[E], E algebra.Multiplicat
 	t *testing.T, structure S, g *rapid.Generator[E],
 ) *Model[S, E] {
 	t.Helper()
-	group := Group(t, structure, g, &BinaryOperator[E]{
-		Name: "Multiplication",
-		Func: algebra.Multiplication[E],
-	})
+	group := Group(t, structure, g, Multiplication[E](), MultiplicativeIdentity(structure), Inversion[E]())
 	multiplicativeMonoid := MultiplicativeMonoid(t, structure, g)
 	out := Union(t, group, multiplicativeMonoid)
 	out.Theory = append(group.Theory,
@@ -341,10 +324,11 @@ func MultiplicativeGroup[S algebra.MultiplicativeGroup[E], E algebra.Multiplicat
 
 func CyclicGroup[S algebra.CyclicGroup[E], E algebra.CyclicGroupElement[E]](
 	t *testing.T, structure S, g *rapid.Generator[E], op *BinaryOperator[E],
+	identity *Constant[E], inv *UnaryOperator[E],
 ) *Model[S, E] {
 	t.Helper()
-	group := Group(t, structure, g, op)
-	cyclicMonoid := CyclicMonoid(t, structure, g, op)
+	group := Group(t, structure, g, op, identity, inv)
+	cyclicMonoid := CyclicMonoid(t, structure, g, op, identity)
 	return Union(t, group, cyclicMonoid)
 }
 
@@ -444,14 +428,8 @@ func Field[S algebra.Field[E], E algebra.FieldElement[E]](
 	out := EuclideanDomain(t, structure, g)
 	out.Theory = append(out.Theory,
 		EveryNonZeroElementHasMultiplicativeInverseProperty(t, out.Carrier),
-		CommutativityProperty(t, out.Carrier, &BinaryOperator[E]{
-			Name: "Addition",
-			Func: algebra.Addition[E],
-		}),
-		CommutativityProperty(t, out.Carrier, &BinaryOperator[E]{
-			Name: "Multiplication",
-			Func: algebra.Multiplication[E],
-		}),
+		CommutativityProperty(t, out.Carrier, Addition[E]()),
+		CommutativityProperty(t, out.Carrier, Multiplication[E]()),
 	)
 	return out
 }
@@ -476,22 +454,17 @@ func FiniteField[S algebra.FiniteField[E], E algebra.FiniteFieldElement[E]](
 
 func SemiModule[S algebra.SemiModule[E, RE], R algebra.SemiRing[RE], E algebra.SemiModuleElement[E, RE], RE algebra.SemiRingElement[RE]](
 	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
-	op *BinaryOperator[E], scalarOp *Action[RE, E],
+	op *BinaryOperator[E], identity *Constant[E],
+	scalarOp *Action[RE, E],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
-	monoid := Monoid(t, structure, g, op)
+	monoid := Monoid(t, structure, g, op, identity)
 	baseSemiRing := SemiRing(t, base, gb)
 	out := PairWithAction(t, monoid, baseSemiRing, scalarOp)
 	out.Theory = append(out.Theory,
 		CommutativityProperty(t, out.Carrier2.First, op),
-		CommutativityProperty(t, out.Carrier2.Second, &BinaryOperator[RE]{
-			Name: "Addition",
-			Func: algebra.Addition[RE],
-		}),
-		CommutativityProperty(t, out.Carrier2.Second, &BinaryOperator[RE]{
-			Name: "Multiplication",
-			Func: algebra.Multiplication[RE],
-		}),
+		CommutativityProperty(t, out.Carrier2.Second, Addition[RE]()),
+		CommutativityProperty(t, out.Carrier2.Second, Multiplication[RE]()),
 		LeftDistributivityOfActionOverSemiModuleOperationProperty(t, out.Carrier2),
 		RightDistributivityOfSemiModuleOperationOverBaseSemiRingAdditionProperty(t, out.Carrier2),
 		AssociativityOfScalarsWRTRingMultiplicationProperty(t, out.Carrier2),
@@ -503,14 +476,7 @@ func AdditiveSemiModule[S algebra.AdditiveSemiModule[E, RE], R algebra.SemiRing[
 	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
-	scMul := &Action[RE, E]{
-		Name: "ScalarMultiplication",
-		Func: algebra.ScalarMultiply[E, RE],
-	}
-	semiModule := SemiModule(t, structure, base, g, gb, &BinaryOperator[E]{
-		Name: "Addition",
-		Func: algebra.Addition[E],
-	}, scMul)
+	semiModule := SemiModule(t, structure, base, g, gb, Addition[E](), AdditiveIdentity(structure), ScalarMultiplication[E]())
 	additiveMonoid := AdditiveMonoid(t, structure, g)
 	out := UnionAlongFirst(t, semiModule, additiveMonoid)
 	out.Theory = append(out.Theory,
@@ -523,14 +489,7 @@ func MultiplicativeSemiModule[S algebra.MultiplicativeSemiModule[E, RE], R algeb
 	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
-	scExp := &Action[RE, E]{
-		Name: "ScalarExponentiation",
-		Func: algebra.ScalarExponentiate[E, RE],
-	}
-	semiModule := SemiModule(t, structure, base, g, gb, &BinaryOperator[E]{
-		Name: "Multiplication",
-		Func: algebra.Multiplication[E],
-	}, scExp)
+	semiModule := SemiModule(t, structure, base, g, gb, Multiplication[E](), MultiplicativeIdentity(structure), ScalarExponentiation[E]())
 	multiplicativeMonoid := MultiplicativeMonoid(t, structure, g)
 	out := UnionAlongFirst(t, semiModule, multiplicativeMonoid)
 	out.Theory = append(out.Theory,
@@ -541,11 +500,12 @@ func MultiplicativeSemiModule[S algebra.MultiplicativeSemiModule[E, RE], R algeb
 
 func Module[S algebra.Module[E, RE], R algebra.Ring[RE], E algebra.ModuleElement[E, RE], RE algebra.RingElement[RE]](
 	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
-	op *BinaryOperator[E], scalarOp *Action[RE, E],
+	op *BinaryOperator[E], identity *Constant[E], inv *UnaryOperator[E],
+	scalarOp *Action[RE, E],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
-	semiModule := SemiModule(t, structure, base, g, gb, op, scalarOp)
-	group := Group(t, structure, g, op)
+	semiModule := SemiModule(t, structure, base, g, gb, op, identity, scalarOp)
+	group := Group(t, structure, g, op, identity, inv)
 	out := UnionAlongFirst(t, semiModule, group)
 	out.Theory = append(out.Theory,
 		BaseRingIdentityActsAsModuleIdentityProperty(t, out.Carrier2),
@@ -557,14 +517,7 @@ func AdditiveModule[S algebra.AdditiveModule[E, RE], R algebra.Ring[RE], E algeb
 	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
-	scMul := &Action[RE, E]{
-		Name: "ScalarMultiplication",
-		Func: algebra.ScalarMultiply[E, RE],
-	}
-	module := Module(t, structure, base, g, gb, &BinaryOperator[E]{
-		Name: "Addition",
-		Func: algebra.Addition[E],
-	}, scMul)
+	module := Module(t, structure, base, g, gb, Addition[E](), AdditiveIdentity(structure), Negation[E](), ScalarMultiplication[E]())
 	additiveSemiModule := AdditiveSemiModule(t, structure, base, g, gb)
 	additiveGroup := AdditiveGroup(t, structure, g)
 	out := UnionAlongFirst(t, Union2(t, module, additiveSemiModule), additiveGroup)
@@ -578,14 +531,7 @@ func MultiplicativeModule[S algebra.MultiplicativeModule[E, RE], R algebra.Ring[
 	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
-	scExp := &Action[RE, E]{
-		Name: "ScalarExponentiation",
-		Func: algebra.ScalarExponentiate[E, RE],
-	}
-	module := Module(t, structure, base, g, gb, &BinaryOperator[E]{
-		Name: "Multiplication",
-		Func: algebra.Multiplication[E],
-	}, scExp)
+	module := Module(t, structure, base, g, gb, Multiplication[E](), MultiplicativeIdentity(structure), Inversion[E](), ScalarExponentiation[E]())
 	multiplicativeSemiModule := MultiplicativeSemiModule(t, structure, base, g, gb)
 	multiplicativeGroup := MultiplicativeGroup(t, structure, g)
 	out := UnionAlongFirst(t, Union2(t, module, multiplicativeSemiModule), multiplicativeGroup)
@@ -600,10 +546,11 @@ func VectorSpace[
 	E algebra.Vector[E, FE], FE algebra.FieldElement[FE],
 ](
 	t *testing.T, structure S, base F, g *rapid.Generator[E], gb *rapid.Generator[FE],
-	op *BinaryOperator[E], scalarOp *Action[FE, E],
+	op *BinaryOperator[E], identity *Constant[E], inv *UnaryOperator[E],
+	scalarOp *Action[FE, E],
 ) *TwoSortedModel[S, F, E, FE] {
 	t.Helper()
-	module := Module(t, structure, base, g, gb, op, scalarOp)
+	module := Module(t, structure, base, g, gb, op, identity, inv, scalarOp)
 	field := Field(t, base, gb)
 	return UnionAlongSecond(t, module, field)
 }
@@ -695,10 +642,11 @@ func AbelianGroup[S algebra.AbelianGroup[E, RE], R interface {
 	algebra.Numeric[RE]
 }](
 	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
-	op *BinaryOperator[E], scalarOp *Action[RE, E],
+	op *BinaryOperator[E], identity *Constant[E], inv *UnaryOperator[E],
+	scalarOp *Action[RE, E],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
-	module := Module(t, structure, base, g, gb, op, scalarOp)
+	module := Module(t, structure, base, g, gb, op, identity, inv, scalarOp)
 	ns := NumericStructure(t, base, gb)
 	return UnionAlongSecond(t, module, ns)
 }
@@ -709,10 +657,11 @@ func PrimeGroup[
 ](
 	t *testing.T, structure S, base F, g *rapid.Generator[E], gb *rapid.Generator[FE],
 	op *BinaryOperator[E], scalarOp *Action[FE, E],
+	identity *Constant[E], inv *UnaryOperator[E],
 ) *TwoSortedModel[S, F, E, FE] {
 	t.Helper()
-	abelianGroup := AbelianGroup(t, structure, base, g, gb, op, scalarOp)
-	vectorSpace := VectorSpace(t, structure, base, g, gb, op, scalarOp)
+	abelianGroup := AbelianGroup(t, structure, base, g, gb, op, identity, inv, scalarOp)
+	vectorSpace := VectorSpace(t, structure, base, g, gb, op, identity, inv, scalarOp)
 	cyclicSemiGroup := CyclicSemiGroup(t, structure, g, op)
 	primeField := PrimeField(t, base, gb)
 	out := UnionAlongSecond(
@@ -738,13 +687,7 @@ func AdditivePrimeGroup[
 	t *testing.T, structure S, base F, g *rapid.Generator[E], gb *rapid.Generator[FE],
 ) *TwoSortedModel[S, F, E, FE] {
 	t.Helper()
-	out := PrimeGroup(t, structure, base, g, gb, &BinaryOperator[E]{
-		Name: "Addition",
-		Func: algebra.Addition[E],
-	}, &Action[FE, E]{
-		Name: "ScalarMultiplication",
-		Func: algebra.ScalarMultiply[E, FE],
-	})
+	out := PrimeGroup(t, structure, base, g, gb, Addition[E](), ScalarMultiplication[E](), AdditiveIdentity(structure), Negation[E]())
 	out.Theory = append(out.Theory,
 		CanScalarBaseMul(t, out.Carrier2),
 	)
