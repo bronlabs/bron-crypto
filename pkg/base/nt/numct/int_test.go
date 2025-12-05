@@ -297,7 +297,7 @@ func TestInt_ExactDiv(t *testing.T) {
 		var result numct.Int
 		denom, ok := numct.NewModulus(numct.NewNat(10))
 		require.Equal(t, ct.True, ok)
-		ok = result.ExactDiv(numct.NewInt(-100), denom)
+		ok = result.ExactDivMod(numct.NewInt(-100), denom)
 		require.Equal(t, ct.True, ok)
 		require.Equal(t, int64(-10), result.Int64())
 	})
@@ -307,7 +307,7 @@ func TestInt_ExactDiv(t *testing.T) {
 		result.SetOne()
 		denom, ok := numct.NewModulus(numct.NewNat(5))
 		require.Equal(t, ct.True, ok)
-		ok = result.ExactDiv(numct.NewInt(17), denom)
+		ok = result.ExactDivMod(numct.NewInt(17), denom)
 		require.Equal(t, ct.False, ok)
 	})
 }
@@ -973,7 +973,7 @@ func TestInt_DivCap(t *testing.T) {
 	denom, ok := numct.NewModulus(numct.NewNat(10))
 	require.Equal(t, ct.True, ok)
 
-	ok = result.DivCap(num, denom, -1)
+	ok = result.DivModCap(num, denom, -1)
 	require.Equal(t, ct.True, ok)
 	require.Equal(t, int64(-10), result.Int64())
 }

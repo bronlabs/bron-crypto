@@ -73,11 +73,30 @@ func TestNat_ExactDiv_Property(t *testing.T) {
 		bMod, ok := numct.NewModulus(b)
 		require.Equal(t, ct.True, ok)
 
-		ok = out.ExactDiv(a, bMod)
+		ok = out.ExactDivMod(a, bMod)
 		var bq numct.Nat
 		bq.Mul(b, &out)
 
 		require.Equal(t, ok, bq.Equal(a))
+	})
+}
+
+func TestNat_EuclideanDiv_Property(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(t *rapid.T) {
+		var q, r numct.Nat
+		a := NatGenerator().Draw(t, "a")
+		d := NatGeneratorNonZero().Draw(t, "d")
+
+		ok := q.EuclideanDiv(&r, a, d)
+		var dqr numct.Nat
+		dqr.Mul(d, &q)
+		dqr.Add(&dqr, &r)
+
+		require.Equal(t, ok, ct.True)
+		require.Equal(t, dqr.Equal(a), ct.True)
+		lt, _, _ := r.Compare(d)
+		require.Equal(t, lt, ct.True)
 	})
 }
 
@@ -404,8 +423,8 @@ func TestNat_GCD_Property(t *testing.T) {
 
 		// Property: gcd divides both a and b
 		var adiv, bdiv numct.Nat
-		okA := adiv.ExactDiv(a, gcdm)
-		okB := bdiv.ExactDiv(b, gcdm)
+		okA := adiv.ExactDivMod(a, gcdm)
+		okB := bdiv.ExactDivMod(b, gcdm)
 
 		require.Equal(t, ct.True, okA)
 		require.Equal(t, ct.True, okB)

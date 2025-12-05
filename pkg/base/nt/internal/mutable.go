@@ -74,8 +74,8 @@ type natMutable[E aimpl.MonoidElementLowLevel[E], M any] interface {
 	Mul(lhs, rhs E)
 	MulCap(lhs, rhs E, cap int)
 
-	DivCap(numerator E, denominator M, cap int) (ok ct.Bool)
-	ExactDiv(numerator E, denominator M) (ok ct.Bool)
+	DivModCap(numerator E, denominator M, cap int) (ok ct.Bool)
+	ExactDivMod(numerator E, denominator M) (ok ct.Bool)
 
 	Increment()
 	Decrement()

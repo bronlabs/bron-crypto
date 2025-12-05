@@ -303,7 +303,7 @@ func (n *Nat) TryDiv(other *Nat) (*Nat, error) {
 	if modOk != ct.True {
 		return nil, errs2.New("failed to create modulus from divisor")
 	}
-	if ok := v.ExactDiv(n.v, divisorMod); ok != ct.True {
+	if ok := v.ExactDivMod(n.v, divisorMod); ok != ct.True {
 		return nil, ErrInexactDivision.WithStackFrame()
 	}
 	out := &Nat{v: v}

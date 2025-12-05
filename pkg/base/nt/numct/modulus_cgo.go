@@ -25,6 +25,7 @@ var bnPool = sync.Pool{
 
 // NewModulus creates a new Modulus from a Nat.
 // It returns ok = false if m is zero.
+// Remarks: it leaks the true length of m.
 func NewModulus(m *Nat) (modulus *Modulus, ok ct.Bool) {
 	ok = m.IsNonZero()
 

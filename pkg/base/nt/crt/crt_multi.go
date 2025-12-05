@@ -52,7 +52,7 @@ func NewParamsMulti(factors ...*numct.Modulus) (*ParamsMulti, ct.Bool) {
 	divCap := int(modulus.BitLen())
 	for i := range k {
 		// M_i = N / p_i
-		allOk &= Mi.DivCap(prod, factors[i], divCap)
+		allOk &= Mi.DivModCap(prod, factors[i], divCap)
 		params.Products[i] = Mi.Clone()
 
 		// inv_i = (M_i mod p_i)^{-1} mod p_i  (ok iff gcd(M_i, p_i)=1)
