@@ -63,7 +63,7 @@ func Join(errs ...error) Error {
 
 	return &errorImpl{
 		message:    "",
-		wrapped:    errs,
+		wrapped:    children,
 		stackFrame: NewStackFrame(pc),
 		tags:       nil,
 	}
@@ -125,7 +125,7 @@ func (e *sentinelError) WithMessage(format string, args ...any) Error {
 }
 
 func (e *sentinelError) WithStackFrame() Error {
-	pc, _, _, _ := runtime.Caller(0)
+	pc, _, _, _ := runtime.Caller(1)
 	return &errorImpl{
 		message:    e.message,
 		wrapped:    []error{e},
@@ -216,7 +216,7 @@ func (e *errorImpl) Format(s fmt.State, verb rune) {
 			tags, err := json.Marshal(e.Tags())
 			if err == nil {
 				_, _ = io.WriteString(s, tagsPrefix)
-				_, _ = io.WriteString(s, string(tags))
+				_, _ = io.Writer.Write(s, tags)
 				_, _ = io.WriteString(s, "\n")
 			}
 		}

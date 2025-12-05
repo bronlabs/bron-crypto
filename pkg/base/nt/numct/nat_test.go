@@ -739,6 +739,143 @@ func TestNat_FillBytes_Padding(t *testing.T) {
 	require.True(t, bytes.Equal(expected, result))
 }
 
+func TestNat_GCD(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic cases", func(t *testing.T) {
+		cases := []struct {
+			a, b, expected uint64
+		}{
+			{0, 0, 0},        // gcd(0, 0) = 0 by convention
+			{0, 5, 5},        // gcd(0, n) = n
+			{5, 0, 5},        // gcd(n, 0) = n
+			{1, 1, 1},        // gcd(1, 1) = 1
+			{1, 100, 1},      // gcd(1, n) = 1
+			{100, 1, 1},      // gcd(n, 1) = 1
+			{12, 18, 6},      // gcd(12, 18) = 6
+			{18, 12, 6},      // commutativity
+			{48, 18, 6},      // gcd(48, 18) = 6
+			{17, 23, 1},      // coprime primes
+			{100, 100, 100},  // gcd(n, n) = n
+			{24, 36, 12},     // gcd(24, 36) = 12
+			{54, 24, 6},      // gcd(54, 24) = 6
+			{105, 35, 35},    // gcd(105, 35) = 35
+			{252, 105, 21},   // gcd(252, 105) = 21
+			{1071, 462, 21},  // classic example from Euclidean algorithm
+		}
+		for _, tc := range cases {
+			var result numct.Nat
+			result.GCD(numct.NewNat(tc.a), numct.NewNat(tc.b))
+			require.Equal(t, tc.expected, result.Uint64(), "gcd(%d, %d)", tc.a, tc.b)
+		}
+	})
+
+	t.Run("powers of two", func(t *testing.T) {
+		cases := []struct {
+			a, b, expected uint64
+		}{
+			{2, 4, 2},
+			{4, 8, 4},
+			{8, 16, 8},
+			{16, 32, 16},
+			{4, 6, 2},  // 4 = 2^2, 6 = 2*3
+			{8, 12, 4}, // 8 = 2^3, 12 = 2^2*3
+		}
+		for _, tc := range cases {
+			var result numct.Nat
+			result.GCD(numct.NewNat(tc.a), numct.NewNat(tc.b))
+			require.Equal(t, tc.expected, result.Uint64(), "gcd(%d, %d)", tc.a, tc.b)
+		}
+	})
+
+	t.Run("large numbers", func(t *testing.T) {
+		// gcd(2^32, 2^32) = 2^32
+		a := numct.NewNat(1 << 32)
+		b := numct.NewNat(1 << 32)
+		var result numct.Nat
+		result.GCD(a, b)
+		require.Equal(t, uint64(1<<32), result.Uint64())
+
+		// gcd(2^32, 2^16) = 2^16
+		a = numct.NewNat(1 << 32)
+		b = numct.NewNat(1 << 16)
+		result.GCD(a, b)
+		require.Equal(t, uint64(1<<16), result.Uint64())
+	})
+
+	t.Run("large coprime numbers", func(t *testing.T) {
+		// Two large coprime numbers
+		a := numct.NewNat(1000000007) // large prime
+		b := numct.NewNat(1000000009) // another large prime
+		var result numct.Nat
+		result.GCD(a, b)
+		require.Equal(t, uint64(1), result.Uint64())
+	})
+
+	t.Run("multi-limb numbers", func(t *testing.T) {
+		// Test with numbers larger than 64 bits
+		// gcd(2^100, 2^50) = 2^50
+		a := new(big.Int).Lsh(big.NewInt(1), 100)
+		b := new(big.Int).Lsh(big.NewInt(1), 50)
+		expected := new(big.Int).Lsh(big.NewInt(1), 50)
+
+		aNat := numct.NewNatFromBig(a, a.BitLen())
+		bNat := numct.NewNatFromBig(b, b.BitLen())
+
+		var result numct.Nat
+		result.GCD(aNat, bNat)
+		require.Equal(t, 0, result.Big().Cmp(expected), "gcd(2^100, 2^50) should be 2^50")
+	})
+
+	t.Run("commutativity", func(t *testing.T) {
+		cases := []struct{ a, b uint64 }{
+			{12, 18},
+			{100, 35},
+			{1071, 462},
+		}
+		for _, tc := range cases {
+			var result1, result2 numct.Nat
+			result1.GCD(numct.NewNat(tc.a), numct.NewNat(tc.b))
+			result2.GCD(numct.NewNat(tc.b), numct.NewNat(tc.a))
+			require.Equal(t, result1.Uint64(), result2.Uint64(), "gcd should be commutative for (%d, %d)", tc.a, tc.b)
+		}
+	})
+
+	t.Run("consistency with Coprime", func(t *testing.T) {
+		cases := []struct {
+			a, b uint64
+		}{
+			{15, 28}, // coprime
+			{12, 18}, // not coprime
+			{17, 23}, // coprime (primes)
+			{100, 25}, // not coprime
+		}
+		for _, tc := range cases {
+			aNat := numct.NewNat(tc.a)
+			bNat := numct.NewNat(tc.b)
+			var gcd numct.Nat
+			gcd.GCD(aNat, bNat)
+
+			isCoprime := aNat.Coprime(bNat)
+			gcdIsOne := gcd.IsOne()
+			require.Equal(t, isCoprime, gcdIsOne, "Coprime(%d, %d) should match gcd == 1", tc.a, tc.b)
+		}
+	})
+
+	t.Run("nil input panics", func(t *testing.T) {
+		var result numct.Nat
+		require.Panics(t, func() {
+			result.GCD(nil, numct.NewNat(5))
+		})
+		require.Panics(t, func() {
+			result.GCD(numct.NewNat(5), nil)
+		})
+		require.Panics(t, func() {
+			result.GCD(nil, nil)
+		})
+	})
+}
+
 func TestNat_Sqrt(t *testing.T) {
 	t.Parallel()
 

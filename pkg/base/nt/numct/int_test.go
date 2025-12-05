@@ -991,3 +991,155 @@ func TestInt_FillBytes_Equivalence(t *testing.T) {
 	mag := numct.NewNat(42).Bytes()
 	require.True(t, bytes.Equal(b[1:], mag))
 }
+
+func TestInt_GCD(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic cases with positive numbers", func(t *testing.T) {
+		cases := []struct {
+			a, b, expected int64
+		}{
+			{0, 0, 0},       // gcd(0, 0) = 0 by convention
+			{0, 5, 5},       // gcd(0, n) = |n|
+			{5, 0, 5},       // gcd(n, 0) = |n|
+			{1, 1, 1},       // gcd(1, 1) = 1
+			{1, 100, 1},     // gcd(1, n) = 1
+			{100, 1, 1},     // gcd(n, 1) = 1
+			{12, 18, 6},     // gcd(12, 18) = 6
+			{18, 12, 6},     // commutativity
+			{48, 18, 6},     // gcd(48, 18) = 6
+			{17, 23, 1},     // coprime primes
+			{100, 100, 100}, // gcd(n, n) = n
+			{24, 36, 12},    // gcd(24, 36) = 12
+			{54, 24, 6},     // gcd(54, 24) = 6
+			{1071, 462, 21}, // classic example
+		}
+		for _, tc := range cases {
+			var result numct.Int
+			result.GCD(numct.NewInt(tc.a), numct.NewInt(tc.b))
+			require.Equal(t, tc.expected, result.Int64(), "gcd(%d, %d)", tc.a, tc.b)
+			// GCD should always be non-negative
+			require.Equal(t, ct.False, result.IsNegative(), "gcd should be non-negative for gcd(%d, %d)", tc.a, tc.b)
+		}
+	})
+
+	t.Run("negative inputs", func(t *testing.T) {
+		// GCD in Z is defined on absolute values, result is always non-negative
+		cases := []struct {
+			a, b, expected int64
+		}{
+			{-12, 18, 6},      // gcd(-12, 18) = 6
+			{12, -18, 6},      // gcd(12, -18) = 6
+			{-12, -18, 6},     // gcd(-12, -18) = 6
+			{-0, 5, 5},        // gcd(-0, 5) = 5 (note: -0 = 0 in integers)
+			{-5, 0, 5},        // gcd(-5, 0) = 5
+			{-1, -1, 1},       // gcd(-1, -1) = 1
+			{-17, -23, 1},     // coprime negative primes
+			{-100, -100, 100}, // gcd(-n, -n) = |n|
+		}
+		for _, tc := range cases {
+			var result numct.Int
+			result.GCD(numct.NewInt(tc.a), numct.NewInt(tc.b))
+			require.Equal(t, tc.expected, result.Int64(), "gcd(%d, %d)", tc.a, tc.b)
+			// GCD should always be non-negative
+			require.Equal(t, ct.False, result.IsNegative(), "gcd should be non-negative for gcd(%d, %d)", tc.a, tc.b)
+		}
+	})
+
+	t.Run("mixed signs", func(t *testing.T) {
+		cases := []struct {
+			a, b int64
+		}{
+			{12, 18},
+			{-12, 18},
+			{12, -18},
+			{-12, -18},
+		}
+		// All should give the same result
+		var expected numct.Int
+		expected.GCD(numct.NewInt(12), numct.NewInt(18))
+
+		for _, tc := range cases {
+			var result numct.Int
+			result.GCD(numct.NewInt(tc.a), numct.NewInt(tc.b))
+			require.Equal(t, ct.True, result.Equal(&expected), "gcd(%d, %d) should equal gcd(12, 18)", tc.a, tc.b)
+		}
+	})
+
+	t.Run("commutativity", func(t *testing.T) {
+		cases := []struct{ a, b int64 }{
+			{12, 18},
+			{-12, 18},
+			{100, -35},
+			{-1071, -462},
+		}
+		for _, tc := range cases {
+			var result1, result2 numct.Int
+			result1.GCD(numct.NewInt(tc.a), numct.NewInt(tc.b))
+			result2.GCD(numct.NewInt(tc.b), numct.NewInt(tc.a))
+			require.Equal(t, ct.True, result1.Equal(&result2), "gcd should be commutative for (%d, %d)", tc.a, tc.b)
+		}
+	})
+
+	t.Run("consistency with Coprime", func(t *testing.T) {
+		cases := []struct {
+			a, b int64
+		}{
+			{15, 28},   // coprime
+			{-15, 28},  // coprime (signs don't matter)
+			{12, 18},   // not coprime
+			{-12, -18}, // not coprime
+			{17, 23},   // coprime (primes)
+		}
+		for _, tc := range cases {
+			aInt := numct.NewInt(tc.a)
+			bInt := numct.NewInt(tc.b)
+			var gcd numct.Int
+			gcd.GCD(aInt, bInt)
+
+			isCoprime := aInt.Coprime(bInt)
+			gcdIsOne := gcd.IsOne()
+			require.Equal(t, isCoprime, gcdIsOne, "Coprime(%d, %d) should match gcd == 1", tc.a, tc.b)
+		}
+	})
+
+	t.Run("large numbers", func(t *testing.T) {
+		// Test with numbers at the edge of int64 range
+		a := numct.NewInt(1000000007)  // large prime
+		b := numct.NewInt(-1000000009) // another large prime (negative)
+		var result numct.Int
+		result.GCD(a, b)
+		require.Equal(t, int64(1), result.Int64())
+		require.Equal(t, ct.False, result.IsNegative())
+	})
+
+	t.Run("multi-limb numbers", func(t *testing.T) {
+		// Test with numbers larger than 64 bits
+		// gcd(2^100, -2^50) = 2^50
+		a := new(big.Int).Lsh(big.NewInt(1), 100)
+		b := new(big.Int).Lsh(big.NewInt(1), 50)
+		b.Neg(b) // make it negative
+		expected := new(big.Int).Lsh(big.NewInt(1), 50)
+
+		aInt := numct.NewIntFromBig(a, a.BitLen())
+		bInt := numct.NewIntFromBig(b, b.BitLen()+1) // +1 for sign
+
+		var result numct.Int
+		result.GCD(aInt, bInt)
+		require.Equal(t, 0, result.Big().Cmp(expected), "gcd(2^100, -2^50) should be 2^50")
+		require.Equal(t, ct.False, result.IsNegative(), "gcd should be non-negative")
+	})
+
+	t.Run("nil input panics", func(t *testing.T) {
+		var result numct.Int
+		require.Panics(t, func() {
+			result.GCD(nil, numct.NewInt(5))
+		})
+		require.Panics(t, func() {
+			result.GCD(numct.NewInt(5), nil)
+		})
+		require.Panics(t, func() {
+			result.GCD(nil, nil)
+		})
+	})
+}

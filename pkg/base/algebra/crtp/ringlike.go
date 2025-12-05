@@ -99,7 +99,6 @@ type EuclideanDomainElement[RE any] interface {
 
 // ******************** Fields.
 
-// TODO: add finite field back
 type Field[FE any] interface {
 	EuclideanDomain[FE]
 	ExtensionDegree() uint

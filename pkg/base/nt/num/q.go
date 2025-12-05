@@ -7,18 +7,16 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
-	"github.com/cronokirby/saferith"
 )
-
-var _ algebra.Field[*Rat] = (*Rationals)(nil)
 
 var (
 	qOnce     sync.Once
 	qInstance *Rationals
 )
 
+// Q returns the singleton instance of the Rationals structure.
 func Q() *Rationals {
 	qOnce.Do(func() {
 		qInstance = &Rationals{}
@@ -26,31 +24,38 @@ func Q() *Rationals {
 	return qInstance
 }
 
+// Rationals represents the field of rational numbers Q.
 type Rationals struct{}
 
+// Name returns the name of the structure.
 func (q *Rationals) Name() string {
 	return "Q"
 }
 
+// Characteristic returns the characteristic of the field Q, which is 0.
 func (q *Rationals) Characteristic() algebra.Cardinal {
 	return cardinal.New(0)
 }
 
+// Order returns the order of the field Q, which is infinite.
 func (q *Rationals) Order() algebra.Cardinal {
 	return cardinal.Infinite()
 }
 
+// ElementSize returns -1 to indicate that elements of Q do not have a fixed size.
 func (q *Rationals) ElementSize() int {
 	return -1
 }
 
+// ExtensionDegree returns the extension degree of Q over itself, which is 1.
 func (q *Rationals) ExtensionDegree() uint {
 	return 1
 }
 
+// New creates a new Rat element with the given numerator and denominator.
 func (q *Rationals) New(a *Int, b *NatPlus) (*Rat, error) {
 	if a == nil || b == nil {
-		return nil, errs.NewIsNil("cannot create Rat with nil numerator or denominator")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	return &Rat{
 		a: a,
@@ -58,14 +63,16 @@ func (q *Rationals) New(a *Int, b *NatPlus) (*Rat, error) {
 	}, nil
 }
 
+// FromBytes deserializes a Rat element from the given byte slice.
 func (q *Rationals) FromBytes(data []byte) (*Rat, error) {
 	var r Rat
 	if err := r.UnmarshalCBOR(data); err != nil {
-		return nil, errs.WrapSerialisation(err, "couldn't unmarshal Rat from bytes")
+		return nil, errs2.Wrap(err)
 	}
 	return &r, nil
 }
 
+// FromUint64 creates a Rat element from a uint64 value.
 func (q *Rationals) FromUint64(n uint64) *Rat {
 	return &Rat{
 		a: Z().FromUint64(n),
@@ -73,6 +80,7 @@ func (q *Rationals) FromUint64(n uint64) *Rat {
 	}
 }
 
+// FromInt64 creates a Rat element from an int64 value.
 func (q *Rationals) FromInt64(n int64) *Rat {
 	return &Rat{
 		a: Z().FromInt64(n),
@@ -80,9 +88,10 @@ func (q *Rationals) FromInt64(n int64) *Rat {
 	}
 }
 
+// FromNatPlus creates a Rat element from a NatPlus value.
 func (q *Rationals) FromNatPlus(n *NatPlus) (*Rat, error) {
 	if n == nil {
-		return nil, errs.NewIsNil("cannot convert nil NatPlus to Rat")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	return &Rat{
 		a: n.Lift(),
@@ -90,9 +99,10 @@ func (q *Rationals) FromNatPlus(n *NatPlus) (*Rat, error) {
 	}, nil
 }
 
+// FromNat creates a Rat element from a Nat value.
 func (q *Rationals) FromNat(n *Nat) (*Rat, error) {
 	if n == nil {
-		return nil, errs.NewIsNil("cannot convert nil Nat to Rat")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	return &Rat{
 		a: n.Lift(),
@@ -100,9 +110,10 @@ func (q *Rationals) FromNat(n *Nat) (*Rat, error) {
 	}, nil
 }
 
+// FromInt creates a Rat element from an Int value.
 func (q *Rationals) FromInt(n *Int) (*Rat, error) {
 	if n == nil {
-		return nil, errs.NewIsNil("cannot convert nil Int to Rat")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	return &Rat{
 		a: n.Clone(),
@@ -110,9 +121,10 @@ func (q *Rationals) FromInt(n *Int) (*Rat, error) {
 	}, nil
 }
 
+// FromUint creates a Rat element from a Uint value.
 func (q *Rationals) FromUint(n *Uint) (*Rat, error) {
 	if n == nil {
-		return nil, errs.NewIsNil("cannot convert nil Uint to Rat")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	return &Rat{
 		a: n.Lift(),
@@ -120,13 +132,14 @@ func (q *Rationals) FromUint(n *Uint) (*Rat, error) {
 	}, nil
 }
 
+// FromBig creates a Rat element from a big.Int value.
 func (q *Rationals) FromBig(n *big.Int) (*Rat, error) {
 	if n == nil {
-		return nil, errs.NewIsNil("cannot convert nil big.Int to Rat")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	a, err := Z().FromBig(n)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't convert big.Int to Int")
+		return nil, errs2.Wrap(err)
 	}
 	return &Rat{
 		a: a,
@@ -134,17 +147,18 @@ func (q *Rationals) FromBig(n *big.Int) (*Rat, error) {
 	}, nil
 }
 
+// FromBigRat creates a Rat element from a big.Rat value.
 func (q *Rationals) FromBigRat(n *big.Rat) (*Rat, error) {
 	if n == nil {
-		return nil, errs.NewIsNil("cannot convert nil big.Rat to Rat")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	a, err := Z().FromBig(n.Num())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't convert big.Rat numerator to Int")
+		return nil, errs2.Wrap(err)
 	}
 	b, err := NPlus().FromBig(n.Denom())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't convert big.Rat denominator to NatPlus")
+		return nil, errs2.Wrap(err)
 	}
 	return &Rat{
 		a: a,
@@ -152,16 +166,17 @@ func (q *Rationals) FromBigRat(n *big.Rat) (*Rat, error) {
 	}, nil
 }
 
+// Random samples a random Rat element in the interval [lowInclusive, highExclusive)
 func (q *Rationals) Random(lowInclusive, highExclusive *Rat, prng io.Reader) (*Rat, error) {
 	if prng == nil || lowInclusive == nil || highExclusive == nil {
-		return nil, errs.NewIsNil("prng is nil or lowInclusive is nil or highExclusive is nil")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 	// Validate interval [lowInclusive, highExclusive)
 	if !lowInclusive.IsLessThanOrEqual(highExclusive) {
-		return nil, errs.NewValue("lowInclusive is greater than highExclusive")
+		return nil, ErrOutOfRange.WithStackFrame().WithMessage("lowInclusive is greater than highExclusive")
 	}
 	if lowInclusive.Equal(highExclusive) {
-		return nil, errs.NewValue("interval is empty")
+		return nil, errs2.New("interval is empty")
 	}
 
 	// Sample on the lattice with common denominator D = b1*b2.
@@ -172,48 +187,52 @@ func (q *Rationals) Random(lowInclusive, highExclusive *Rat, prng io.Reader) (*R
 
 	n, err := Z().Random(lowN, highN, prng)
 	if err != nil {
-		return nil, errs.WrapRandomSample(err, "failed to sample random numerator for Rat")
+		return nil, errs2.Wrap(err)
 	}
 
 	return (&Rat{a: n, b: D}).Canonical(), nil
 }
 
+// RandomInt samples a random integer Rat element in the interval [lowInclusive, highExclusive)
 func (q *Rationals) RandomInt(lowInclusive, highExclusive *Rat, prng io.Reader) (*Int, error) {
 	if prng == nil || lowInclusive == nil || highExclusive == nil {
-		return nil, errs.NewIsNil("prng is nil or lowInclusive is nil or highExclusive is nil")
+		return nil, ErrIsNil.WithStackFrame()
 	}
 
 	// Validate [lowInclusive, highExclusive)
 	if !lowInclusive.IsLessThanOrEqual(highExclusive) {
-		return nil, errs.NewValue("lowInclusive is greater than highExclusive")
+		return nil, ErrOutOfRange.WithStackFrame().WithMessage("lowInclusive is greater than highExclusive")
 	}
 
 	// ceil(a/b) with b > 0
 	lowInt, err := lowInclusive.Ceil()
 	if err != nil {
-		return nil, err
+		return nil, errs2.Wrap(err)
 	}
 	highInt, err := highExclusive.Floor()
 	if err != nil {
-		return nil, err
+		return nil, errs2.Wrap(err)
 	}
 
 	// No integers if ceil(low) >= ceil(high)
 	if lowInt.Compare(highInt) >= 0 {
-		return nil, errs.NewValue("interval contains no integers")
+		return nil, errs2.New("interval contains no integers")
 	}
 
 	return Z().Random(lowInt, highInt, prng)
 }
 
+// IsSemiDomain indicates that Q is a semi-domain.
 func (q *Rationals) IsSemiDomain() bool {
 	return true
 }
 
+// OpIdentity returns the additive identity element of Q.
 func (q *Rationals) OpIdentity() *Rat {
 	return q.One()
 }
 
+// Zero returns the zero element of Q.
 func (q *Rationals) Zero() *Rat {
 	return &Rat{
 		a: Z().Zero(),
@@ -221,6 +240,7 @@ func (q *Rationals) Zero() *Rat {
 	}
 }
 
+// One returns the multiplicative identity element of Q.
 func (q *Rationals) One() *Rat {
 	return &Rat{
 		a: Z().One(),
@@ -228,23 +248,27 @@ func (q *Rationals) One() *Rat {
 	}
 }
 
+// Rat represents an element of the field of rational numbers Q.
 type Rat struct {
 	a *Int
 	b *NatPlus
 }
 
+// Numerator returns the numerator of the Rat element.
 func (r *Rat) Numerator() *Int {
 	return r.a
 }
 
+// Denominator returns the denominator of the Rat element.
 func (r *Rat) Denominator() *NatPlus {
 	return r.b
 }
 
+// Ceil returns the smallest integer greater than or equal to the Rat element.
 func (r *Rat) Ceil() (*Int, error) {
 	quot, rem, err := r.a.EuclideanDiv(r.b.Lift())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't compute division for ceil")
+		return nil, errs2.Wrap(err)
 	}
 	if rem.IsZero() || r.a.IsNegative() {
 		return quot, nil
@@ -252,10 +276,11 @@ func (r *Rat) Ceil() (*Int, error) {
 	return quot.Increment(), nil
 }
 
+// Floor returns the largest integer less than or equal to the Rat element.
 func (r *Rat) Floor() (*Int, error) {
 	quot, rem, err := r.a.EuclideanDiv(r.b.Lift())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't compute division for floor")
+		return nil, errs2.Wrap(err)
 	}
 	if rem.IsZero() || r.a.IsPositive() {
 		return quot, nil
@@ -263,14 +288,17 @@ func (r *Rat) Floor() (*Int, error) {
 	return quot.Decrement(), nil
 }
 
+// Structure returns the algebraic structure to which the Rat element belongs.
 func (r *Rat) Structure() algebra.Structure[*Rat] {
 	return Q()
 }
 
+// Op performs addition of two Rat elements.
 func (r *Rat) Op(rhs *Rat) *Rat {
 	return r.Add(rhs)
 }
 
+// Add performs addition of two Rat elements.
 func (r *Rat) Add(rhs *Rat) *Rat {
 	return &Rat{
 		a: r.a.Mul(rhs.b.Lift()).Add(rhs.a.Mul(r.b.Lift())),
@@ -278,14 +306,17 @@ func (r *Rat) Add(rhs *Rat) *Rat {
 	}
 }
 
+// Double returns the result of adding the Rat element to itself.
 func (r *Rat) Double() *Rat {
 	return r.Add(r)
 }
 
+// TrySub performs subtraction of two Rat elements.
 func (r *Rat) TrySub(rhs *Rat) (*Rat, error) {
 	return r.Sub(rhs), nil
 }
 
+// Sub performs subtraction of two Rat elements.
 func (r *Rat) Sub(rhs *Rat) *Rat {
 	return &Rat{
 		a: r.a.Mul(rhs.b.Lift()).Sub(rhs.a.Mul(r.b.Lift())),
@@ -293,10 +324,12 @@ func (r *Rat) Sub(rhs *Rat) *Rat {
 	}
 }
 
+// OtherOp performs multiplication of two Rat elements.
 func (r *Rat) OtherOp(rhs *Rat) *Rat {
 	return r.Mul(rhs)
 }
 
+// Mul performs multiplication of two Rat elements.
 func (r *Rat) Mul(rhs *Rat) *Rat {
 	return &Rat{
 		a: r.a.Mul(rhs.a),
@@ -304,26 +337,32 @@ func (r *Rat) Mul(rhs *Rat) *Rat {
 	}
 }
 
+// Square returns the square of the Rat element.
 func (r *Rat) Square() *Rat {
 	return r.Mul(r)
 }
 
+// EuclideanDiv performs Euclidean division of two Rat elements.
 func (r *Rat) EuclideanDiv(rhs *Rat) (quo *Rat, rem *Rat, err error) {
 	quo, err = r.TryDiv(rhs)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "division by zero")
+		return nil, nil, errs2.Wrap(err)
 	}
 	return quo, Q().Zero(), nil
 }
 
+// EuclideanValuation returns the Euclidean valuation of the Rat element.
 func (r *Rat) EuclideanValuation() cardinal.Cardinal {
-	n := r.Canonical().a.Abs()
-	return cardinal.NewFromSaferith((*saferith.Nat)(n.Value()))
+	if r.IsZero() {
+		return cardinal.Zero()
+	}
+	return cardinal.New(1)
 }
 
+// TryDiv performs division of two Rat elements.
 func (r *Rat) TryDiv(rhs *Rat) (*Rat, error) {
 	if rhs.IsZero() {
-		return nil, errs.NewValue("division by zero")
+		return nil, errs2.New("division by zero")
 	}
 	numerator := r.a.Mul(rhs.b.Lift())
 	// Handle sign: if rhs.a is negative, negate the numerator
@@ -334,7 +373,7 @@ func (r *Rat) TryDiv(rhs *Rat) (*Rat, error) {
 	}
 	rhsANP, err := NPlus().FromInt(absRhsA)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't convert abs(rhs.a) to NatPlus")
+		return nil, errs2.Wrap(err)
 	}
 	return &Rat{
 		a: numerator,
@@ -342,18 +381,22 @@ func (r *Rat) TryDiv(rhs *Rat) (*Rat, error) {
 	}, nil
 }
 
+// TryOpInv returns the additive inverse of the Rat element.
 func (r *Rat) TryOpInv() (*Rat, error) {
 	return r.TryNeg()
 }
 
+// OpInv returns the additive inverse of the Rat element.
 func (r *Rat) OpInv() *Rat {
 	return r.Neg()
 }
 
+// TryNeg returns the additive inverse of the Rat element.
 func (r *Rat) TryNeg() (*Rat, error) {
 	return r.Neg(), nil
 }
 
+// Neg returns the additive inverse of the Rat element.
 func (r *Rat) Neg() *Rat {
 	return &Rat{
 		a: r.a.Neg(),
@@ -361,9 +404,10 @@ func (r *Rat) Neg() *Rat {
 	}
 }
 
+// TryInv returns the multiplicative inverse of the Rat element.
 func (r *Rat) TryInv() (*Rat, error) {
 	if r.IsZero() {
-		return nil, errs.NewValue("inversion of zero")
+		return nil, errs2.New("inversion of zero")
 	}
 	// Swap numerator and denominator: a/b becomes b/a
 	// Handle sign: if a is negative, result should have negative numerator
@@ -375,7 +419,7 @@ func (r *Rat) TryInv() (*Rat, error) {
 	}
 	bAsNP, err := NPlus().FromInt(absA)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't convert abs(a) to NatPlus for inversion")
+		return nil, errs2.Wrap(err)
 	}
 	numerator := r.b.Lift()
 	if sign {
@@ -387,6 +431,7 @@ func (r *Rat) TryInv() (*Rat, error) {
 	}, nil
 }
 
+// Inv returns the multiplicative inverse of the Rat element.
 func (r *Rat) Inv() *Rat {
 	out, err := r.TryInv()
 	if err != nil {
@@ -395,30 +440,35 @@ func (r *Rat) Inv() *Rat {
 	return out
 }
 
+// IsOpIdentity checks if the Rat element is the additive identity (zero).
 func (r *Rat) IsOpIdentity() bool {
 	return r.a.IsZero()
 }
 
+// IsZero checks if the Rat element is zero.
 func (r *Rat) IsZero() bool {
 	return r.a.IsZero()
 }
 
+// IsOne checks if the Rat element is one.
 func (r *Rat) IsOne() bool {
 	return r.a.Equal(r.b.Lift())
 }
 
+// Canonical returns the canonical form of the Rat element.
 func (r *Rat) Canonical() *Rat {
 	// Normalize 0 to 0/1
 	if r.IsZero() {
 		return &Rat{a: Z().Zero(), b: NPlus().One()}
 	}
-	// gcd(a, b) via Euclidean algorithm
-	a := r.a.Lift()
+	// gcd(|a|, b) via Euclidean algorithm
+	// Use absolute value to ensure GCD is always positive
+	a := r.a.Abs().Lift()
 	b := r.b.Lift()
 	for !b.IsZero() {
 		_, rem, err := a.EuclideanDiv(b)
 		if err != nil {
-			panic(errs.WrapFailed(err, "could not compute gcd for canonical fraction"))
+			panic(errs2.Wrap(err))
 		}
 		a, b = b, rem
 	}
@@ -436,19 +486,25 @@ func (r *Rat) Canonical() *Rat {
 	if err != nil || !r2.IsZero() {
 		return &Rat{a: r.a.Clone(), b: r.b.Clone()}
 	}
-	den2, _ := NPlus().FromInt(den)
+	den2, err := NPlus().FromInt(den)
+	if err != nil {
+		panic(errs2.Wrap(err))
+	}
 	return &Rat{a: num, b: den2}
 }
 
+// IsInt checks if the Rat element is an integer.
 func (r *Rat) IsInt() bool {
 	return r.Canonical().Denominator().IsOne()
 }
 
+// IsProbablyPrime checks if the Rat element is probably prime.
 func (r *Rat) IsProbablyPrime() bool {
 	canonical := r.Canonical()
 	return canonical.Denominator().IsOne() && canonical.Numerator().IsProbablyPrime()
 }
 
+// Clone creates a deep copy of the Rat element.
 func (r *Rat) Clone() *Rat {
 	return &Rat{
 		a: r.a.Clone(),
@@ -456,36 +512,43 @@ func (r *Rat) Clone() *Rat {
 	}
 }
 
+// IsLessThanOrEqual checks if the Rat element is less than another Rat element.
 func (r *Rat) IsLessThanOrEqual(rhs *Rat) bool {
 	left := r.a.Mul(rhs.b.Lift())
 	right := rhs.a.Mul(r.b.Lift())
 	return left.IsLessThanOrEqual(right)
 }
 
+// IsNegative checks if the Rat element is negative.
 func (r *Rat) IsNegative() bool {
 	return r.a.IsNegative()
 }
 
+// IsPositive checks if the Rat element is positive.
 func (r *Rat) IsPositive() bool {
 	return !r.IsNegative() && !r.IsZero()
 }
 
+// Equal checks if the Rat element is equal to another Rat element.
 func (r *Rat) Equal(rhs *Rat) bool {
 	return r.a.Mul(rhs.b.Lift()).Equal(r.b.Lift().Mul(rhs.a))
 }
 
+// Bytes serializes the Rat element to a byte slice.
 func (r *Rat) Bytes() []byte {
 	out, err := r.MarshalCBOR()
 	if err != nil {
-		panic(errs.WrapSerialisation(err, "couldn't marshal cbor"))
+		panic(errs2.Wrap(err))
 	}
 	return out
 }
 
+// HashCode computes the hash code of the Rat element.
 func (r *Rat) HashCode() base.HashCode {
 	return r.a.HashCode().Combine(r.b.HashCode())
 }
 
+// String returns the string representation of the Rat element.
 func (r *Rat) String() string {
 	return r.a.String() + "/" + r.b.String()
 }

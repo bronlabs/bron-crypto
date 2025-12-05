@@ -257,7 +257,7 @@ func clearCofactorBls12381G2(out, in *G2Point) {
 	var t1, t2, t3, q G2Point
 
 	// 1.  t1 = c1 * P
-	aimpl.ScalarMul(&t1, in, binary.LittleEndian.AppendUint64(nil, X))
+	aimpl.ScalarMulLowLevel(&t1, in, binary.LittleEndian.AppendUint64(nil, X))
 	t1.Neg(&t1)
 
 	// 2.  t2 = psi(P)
@@ -276,7 +276,7 @@ func clearCofactorBls12381G2(out, in *G2Point) {
 	t2.Add(&t1, &t2)
 
 	// 7.  t2 = c1 * t2
-	aimpl.ScalarMul(&t2, &t2, binary.LittleEndian.AppendUint64(nil, X))
+	aimpl.ScalarMulLowLevel(&t2, &t2, binary.LittleEndian.AppendUint64(nil, X))
 	t2.Neg(&t2)
 
 	// 8.  t3 = t3 + t2

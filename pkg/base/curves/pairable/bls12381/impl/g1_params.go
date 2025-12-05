@@ -138,7 +138,7 @@ func (g1CurveParams) ClearCofactor(xOut, yOut, zOut, xIn, yIn, zIn *Fp) {
 	in.Z.Set(zIn)
 
 	var out G1Point
-	aimpl.ScalarMul(&out, &in, binary.LittleEndian.AppendUint64(nil, X+1))
+	aimpl.ScalarMulLowLevel(&out, &in, binary.LittleEndian.AppendUint64(nil, X+1))
 	xOut.Set(&out.X)
 	yOut.Set(&out.Y)
 	zOut.Set(&out.Z)

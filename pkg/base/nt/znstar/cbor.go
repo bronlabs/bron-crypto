@@ -102,8 +102,8 @@ func (pg *PaillierGroup[X]) MarshalCBOR() ([]byte, error) {
 	case *modular.OddPrimeSquareFactors:
 		tag = PaillierGroupKnownOrderTag
 		dto := &paillierGroupKnownOrderDTO{
-			P: num.NPlus().FromModulus(any(pg.arith).(*modular.OddPrimeSquareFactors).P.Factor),
-			Q: num.NPlus().FromModulus(any(pg.arith).(*modular.OddPrimeSquareFactors).Q.Factor),
+			P: num.NPlus().FromModulusCT(any(pg.arith).(*modular.OddPrimeSquareFactors).P.Factor),
+			Q: num.NPlus().FromModulusCT(any(pg.arith).(*modular.OddPrimeSquareFactors).Q.Factor),
 		}
 		return serde.MarshalCBORTagged(dto, tag)
 	case *modular.SimpleModulus:
@@ -179,7 +179,7 @@ func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		}
 		u.v = dto.V
 		u.arith = any(dto.Arithmetic).(X)
-		u.n = num.NPlus().FromModulus(dto.Arithmetic.CrtModN.Modulus())
+		u.n = num.NPlus().FromModulusCT(dto.Arithmetic.CrtModN.Modulus())
 		return nil
 	case *modular.SimpleModulus:
 		dto, err := serde.UnmarshalCBOR[paillierGroupUnknownOrderElementDTO](data)
@@ -195,7 +195,7 @@ func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		if dtoKnown, err := serde.UnmarshalCBOR[paillierGroupKnownOrderElementDTO](data); err == nil {
 			u.v = dtoKnown.V
 			u.arith = any(dtoKnown.Arithmetic).(X)
-			u.n = num.NPlus().FromModulus(dtoKnown.Arithmetic.CrtModN.Modulus())
+			u.n = num.NPlus().FromModulusCT(dtoKnown.Arithmetic.CrtModN.Modulus())
 			return nil
 		}
 		dto, err := serde.UnmarshalCBOR[paillierGroupUnknownOrderElementDTO](data)
@@ -216,8 +216,8 @@ func (rg *RSAGroup[X]) MarshalCBOR() ([]byte, error) {
 	case *modular.OddPrimeFactors:
 		tag = RSAGroupKnownOrderTag
 		dto := &rsaGroupKnownOrderDTO{
-			P: num.NPlus().FromModulus(any(rg.arith).(*modular.OddPrimeFactors).Params.P),
-			Q: num.NPlus().FromModulus(any(rg.arith).(*modular.OddPrimeFactors).Params.Q),
+			P: num.NPlus().FromModulusCT(any(rg.arith).(*modular.OddPrimeFactors).Params.P),
+			Q: num.NPlus().FromModulusCT(any(rg.arith).(*modular.OddPrimeFactors).Params.Q),
 		}
 		return serde.MarshalCBORTagged(dto, tag)
 	case *modular.SimpleModulus:

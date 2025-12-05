@@ -178,6 +178,22 @@ func (i *Int) Inv(x *Int) (ok ct.Bool) {
 	return ok
 }
 
+// GCD sets i = gcd(a, b) in Z, always non-negative.
+// It is implemented via the constant-time Nat.GCD on |a| and |b|.
+func (i *Int) GCD(a, b *Int) {
+	if a == nil || b == nil {
+		panic("numct.Int.GCD: nil input")
+	}
+
+	// Work with absolute values; gcd in Z is always taken as non-negative.
+	an := a.Absed()
+	bn := b.Absed()
+
+	var g Nat
+	g.GCD(an, bn)
+	i.SetNat(&g)
+}
+
 // Double sets i = 2 * x.
 func (i *Int) Double(x *Int) {
 	i.Add(x, x)

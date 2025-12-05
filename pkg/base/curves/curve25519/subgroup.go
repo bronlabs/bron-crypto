@@ -35,7 +35,6 @@ func NewPrimeSubGroup() *PrimeSubGroup {
 
 type PrimeSubGroup struct {
 	traits.PrimeCurveTrait[*edwards25519Impl.Fp, *edwards25519Impl.Point, *PrimeSubGroupPoint, PrimeSubGroupPoint]
-	traits.MSMTrait[*Scalar, *PrimeSubGroupPoint]
 }
 
 func (c *PrimeSubGroup) Name() string {
@@ -130,6 +129,25 @@ func (c *PrimeSubGroup) ScalarBaseMul(sc *Scalar) *PrimeSubGroupPoint {
 	return c.Generator().ScalarMul(sc)
 }
 
+func (c *PrimeSubGroup) MultiScalarOp(scalars []*Scalar, points []*PrimeSubGroupPoint) (*PrimeSubGroupPoint, error) {
+	return c.MultiScalarMul(scalars, points)
+}
+
+func (c *PrimeSubGroup) MultiScalarMul(scalars []*Scalar, points []*PrimeSubGroupPoint) (*PrimeSubGroupPoint, error) {
+	if len(scalars) != len(points) {
+		return nil, errs.NewLength("mismatched lengths of scalars and points")
+	}
+	var result PrimeSubGroupPoint
+	scs := make([][]byte, len(scalars))
+	pts := make([]*edwards25519Impl.Point, len(points))
+	for i := range points {
+		pts[i] = &points[i].V
+		scs[i] = scalars[i].V.Bytes()
+	}
+	aimpl.MultiScalarMulLowLevel(&result.V, pts, scs)
+	return &result, nil
+}
+
 type PrimeSubGroupPoint struct {
 	traits.PrimePointTrait[*edwards25519Impl.Fp, *edwards25519Impl.Point, edwards25519Impl.Point, *PrimeSubGroupPoint, PrimeSubGroupPoint]
 }
@@ -140,10 +158,6 @@ func (p *PrimeSubGroupPoint) HashCode() base.HashCode {
 
 func (p *PrimeSubGroupPoint) Structure() algebra.Structure[*PrimeSubGroupPoint] {
 	return NewPrimeSubGroup()
-}
-
-func (p PrimeSubGroupPoint) Coordinates() algebra.Coordinates[*BaseFieldElement] {
-	return p.AsPoint().Coordinates()
 }
 
 func (p *PrimeSubGroupPoint) ToCompressed() []byte {
@@ -168,7 +182,7 @@ func (p *PrimeSubGroupPoint) ScalarOp(sc *Scalar) *PrimeSubGroupPoint {
 
 func (p *PrimeSubGroupPoint) ScalarMul(actor *Scalar) *PrimeSubGroupPoint {
 	var result PrimeSubGroupPoint
-	aimpl.ScalarMul(&result.V, &p.V, actor.V.Bytes())
+	aimpl.ScalarMulLowLevel(&result.V, &p.V, actor.V.Bytes())
 	return &result
 }
 

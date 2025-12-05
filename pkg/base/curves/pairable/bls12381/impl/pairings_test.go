@@ -100,9 +100,9 @@ func TestMultiPairing(t *testing.T) {
 		require.NoError(t, err)
 
 		if i&1 == 0 {
-			impl.ScalarMul(g1s[i], g1s[i], sc[i])
+			impl.ScalarMulLowLevel(g1s[i], g1s[i], sc[i])
 		} else {
-			impl.ScalarMul(g2s[i], g2s[i], sc[i])
+			impl.ScalarMulLowLevel(g2s[i], g2s[i], sc[i])
 		}
 		e1.AddPair(g1s[i], g2s[i])
 		e2.AddPair(g1s[i], g2s[i])

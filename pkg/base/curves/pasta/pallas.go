@@ -40,7 +40,6 @@ var (
 
 type PallasCurve struct {
 	traits.PrimeCurveTrait[*pastaImpl.Fp, *pastaImpl.PallasPoint, *PallasPoint, PallasPoint]
-	traits.MSMTrait[*PallasScalar, *PallasPoint]
 }
 
 func NewPallasCurve() *PallasCurve {
@@ -219,6 +218,25 @@ func (c *PallasCurve) ToElliptic() elliptic.Curve {
 	return ellipticPallasInstance
 }
 
+func (c *PallasCurve) MultiScalarOp(scalars []*PallasScalar, points []*PallasPoint) (*PallasPoint, error) {
+	return c.MultiScalarMul(scalars, points)
+}
+
+func (c *PallasCurve) MultiScalarMul(scalars []*PallasScalar, points []*PallasPoint) (*PallasPoint, error) {
+	if len(scalars) != len(points) {
+		return nil, errs.NewLength("mismatched lengths of scalars and points")
+	}
+	var result PallasPoint
+	scs := make([][]byte, len(scalars))
+	pts := make([]*pastaImpl.PallasPoint, len(points))
+	for i := range points {
+		pts[i] = &points[i].V
+		scs[i] = scalars[i].V.Bytes()
+	}
+	aimpl.MultiScalarMulLowLevel(&result.V, pts, scs)
+	return &result, nil
+}
+
 type PallasPoint struct {
 	traits.PrimePointTrait[*pastaImpl.Fp, *pastaImpl.PallasPoint, pastaImpl.PallasPoint, *PallasPoint, PallasPoint]
 }
@@ -235,16 +253,6 @@ func (p *PallasPoint) Bytes() []byte {
 
 func (p *PallasPoint) Structure() algebra.Structure[*PallasPoint] {
 	return NewPallasCurve()
-}
-
-func (p *PallasPoint) Coordinates() algebra.Coordinates[*PallasBaseFieldElement] {
-	var x, y PallasBaseFieldElement
-	p.V.ToAffine(&x.V, &y.V)
-
-	return algebra.NewCoordinates(
-		algebra.AffineCoordinateSystem,
-		&x, &y,
-	)
 }
 
 func (p *PallasPoint) ToCompressed() []byte {
@@ -313,7 +321,7 @@ func (p *PallasPoint) ScalarOp(sc *PallasScalar) *PallasPoint {
 
 func (p *PallasPoint) ScalarMul(actor *PallasScalar) *PallasPoint {
 	var result PallasPoint
-	aimpl.ScalarMul(&result.V, &p.V, actor.V.Bytes())
+	aimpl.ScalarMulLowLevel(&result.V, &p.V, actor.V.Bytes())
 	return &result
 }
 

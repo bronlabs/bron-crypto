@@ -13,5 +13,8 @@ type Modulus = ModulusBasic
 
 // NewModulus creates a new Modulus from a Nat.
 func NewModulus(m *Nat) (modulus *Modulus, ok ct.Bool) {
-	return (*ModulusBasic)(saferith.ModulusFromNat((*saferith.Nat)(m))), m.IsNonZero()
+	if m.IsZero() == ct.True { // saferith.ModulusFromNat panics on zero modulus
+		return nil, ct.False
+	}
+	return (*ModulusBasic)(saferith.ModulusFromNat((*saferith.Nat)(m))), ct.True
 }

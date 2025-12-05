@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 )
 
+// TODO: convert to struct
 type Cardinal interface {
 	base.Comparable[Cardinal]
 	base.Clonable[Cardinal]
@@ -29,27 +30,28 @@ type Cardinal interface {
 }
 
 type NumericStructure[E any] interface {
+	HemiRing[E]
 	FromBytesBE([]byte) (E, error)
 }
 
-type Numeric interface {
+type Numeric[E any] interface {
+	HemiRingElement[E]
 	BytesBE() []byte
 }
 
 type NPlusLike[E any] interface {
-	SemiRing[E]
-	UniqueFactorizationMonoid[E]
 	NumericStructure[E]
+	UniqueFactorizationMonoid[E]
 	FromCardinal(Cardinal) (E, error)
 }
 
 type NatPlusLike[E any] interface {
-	SemiRingElement[E]
+	Numeric[E]
 	UniqueFactorizationMonoidElement[E]
-	Numeric
 
 	IsOdd() bool
 	IsEven() bool
+	Cardinal() Cardinal
 }
 
 type NLike[E any] interface {
@@ -63,37 +65,30 @@ type NatLike[E any] interface {
 
 	IsPositive() bool
 	IsZero() bool
-	Cardinal() Cardinal
 }
 
-type ZLike[E any] interface {
-	EuclideanDomain[E]
-	FromCardinal(Cardinal) (E, error)
-}
+type ZLike[E any] EuclideanDomain[E]
 
 type IntLike[E any] interface {
 	EuclideanDomainElement[E]
-	ArithmeticNegand[E]
 
 	IsEven() bool
 	IsOdd() bool
 	IsPositive() bool
 	IsNegative() bool
 	IsZero() bool
-	Cardinal() Cardinal
 }
 
 type ZModLike[E any] interface {
 	Ring[E]
 	NLike[E]
-	base.HashableStructure[E]
+	FiniteStructure[E]
 	FromBytesBEReduce([]byte) (E, error)
 }
 
 type UintLike[E any] interface {
 	RingElement[E]
 	NatLike[E]
-	ArithmeticNegand[E]
 }
 
 type PrimeField[E any] interface {
@@ -103,9 +98,7 @@ type PrimeField[E any] interface {
 	FromWideBytes([]byte) (E, error)
 	// WideElementSize returns the **maximum** number of bytes used to map uniformly to an element.
 	WideElementSize() int
-	FiniteStructure[E]
-	NumericStructure[E]
-	FromUint64(uint64) E
+	FromUint64(uint64) E // TODO: should we add error to this?
 }
 
 type PrimeFieldElement[E any] interface {

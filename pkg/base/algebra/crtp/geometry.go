@@ -4,39 +4,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 )
 
-type (
-	CoordinateSystem string
-	PairingAlgorithm string
-)
-
-const (
-	AffineCoordinateSystem              CoordinateSystem = "Affine"
-	ExtendedHomogeneousCoordinateSystem CoordinateSystem = "ExtendedHomogeneous"
-	ProjectiveCoordinateSystem          CoordinateSystem = "Projective"
-	JacobianCoordinateSystem            CoordinateSystem = "Jacobian"
-)
-
-func NewCoordinates[C any](t CoordinateSystem, v ...C) Coordinates[C] {
-	return Coordinates[C]{v: v, t: t}
-}
-
-// TODO: remove
-type Coordinates[C any] struct {
-	v []C
-	t CoordinateSystem
-}
-
-func (c Coordinates[C]) Value() []C {
-	return c.v
-}
-
-func (c Coordinates[C]) Type() CoordinateSystem {
-	return c.t
-}
+type PairingAlgorithm string
 
 type Variety[E, C any] interface {
 	Structure[E]
 
+	FromUncompressed(b []byte) (E, error)
 	FromCompressed(b []byte) (E, error)
 	BaseStructure() Structure[C]
 }
@@ -44,7 +17,6 @@ type Variety[E, C any] interface {
 type RationalPoint[E, C any] interface {
 	Element[E]
 
-	Coordinates() Coordinates[C]
 	ToCompressed() []byte
 	ToUncompressed() []byte
 }
@@ -65,63 +37,23 @@ type AffineCurve[P, C any] interface {
 }
 type AffinePoint[P, C any] interface {
 	AlgebraicPoint[P, C]
-	AffineX() C
-	AffineY() C
-}
-
-type ExtendedHomogeneousCurve[P, C any] interface {
-	AlgebraicCurve[P, C]
-	FromExtendedHomogeneous(x, y, z, t C) (P, error)
-}
-
-type ExtendedHomogeneousPoint[P, C any] interface {
-	AlgebraicPoint[P, C]
-	ExtendedX() C
-	ExtendedY() C
-	ExtendedZ() C
-	ExtendedT() C
-}
-
-type ProjectiveCurve[P, C any] interface {
-	AlgebraicCurve[P, C]
-	FromProjective(x, y, z C) (P, error)
-}
-
-type ProjectivePoint[P, C any] interface {
-	AlgebraicPoint[P, C]
-	ProjectiveX() C
-	ProjectiveY() C
-	ProjectiveZ() C
-}
-
-type JacobianCurve[P, C any] interface {
-	AlgebraicCurve[P, C]
-	FromJacobian(x, y, z C) (P, error)
-}
-
-type JacobianPoint[P, C any] interface {
-	AlgebraicPoint[P, C]
-	JacobianX() C
-	JacobianY() C
-	JacobianZ() C
+	AffineX() (C, error)
+	AffineY() (C, error)
 }
 
 type EllipticCurve[P, FE, S any] interface {
-	AlgebraicCurve[P, FE]
+	AffineCurve[P, FE]
 	AbelianGroup[P, S]
 	AdditiveModule[P, S]
 	Cofactor() Cardinal
-	FromAffine(x, y FE) (P, error)
 }
 
 type EllipticCurvePoint[P, FE, S any] interface {
-	AlgebraicPoint[P, FE]
+	AffinePoint[P, FE]
 	AbelianGroupElement[P, S]
 	AdditiveModuleElement[P, S]
 	IsTorsionFree() bool
 	ClearCofactor() P
-	AffineX() (FE, error)
-	AffineY() (FE, error)
 }
 
 type PairingFriendlyCurve[P1, FE1, P2, E, S, DS any] interface {
