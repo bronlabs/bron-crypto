@@ -437,6 +437,20 @@ func TestZ_Random(t *testing.T) {
 		require.True(t, hasNegative, "should have sampled negative values")
 		require.True(t, hasPositive, "should have sampled positive values")
 	})
+
+	t.Run("single value range", func(t *testing.T) {
+		t.Parallel()
+		low := z.FromInt64(50)
+		high := z.FromInt64(51)
+		for range 200 {
+			result, err := z.Random(low, high, prng)
+			require.NoError(t, err)
+			require.True(t, result.Compare(low) >= 0)
+			require.True(t, result.Compare(high) < 0)
+			require.True(t, result.Equal(low), "only possible value is 50")
+		}
+	})
+
 }
 
 // ============================================================================

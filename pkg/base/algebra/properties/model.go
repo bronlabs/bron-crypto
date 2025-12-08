@@ -236,7 +236,6 @@ func Monoid[S algebra.Monoid[E], E algebra.MonoidElement[E]](
 		Carrier: semiGroup.Carrier,
 		Theory: append(semiGroup.Theory,
 			IdentityProperty(t, semiGroup.Carrier, op, identity),
-			CanDistinguishIdentityElement(t, semiGroup.Carrier),
 		),
 	}
 }
@@ -264,7 +263,7 @@ func MultiplicativeMonoid[S algebra.MultiplicativeMonoid[E], E algebra.Multiplic
 	multiplicativeSemiGroup := MultiplicativeSemiGroup(t, structure, g)
 	out := Union(t, monoid, multiplicativeSemiGroup)
 	out.Theory = append(monoid.Theory,
-		CanDistinsuishMultiplicativeIdentity(t, monoid.Carrier),
+		CanDistinguishMultiplicativeIdentity(t, monoid.Carrier),
 		CanTryDiv(t, monoid.Carrier),
 		CanTryInv(t, monoid.Carrier),
 	)

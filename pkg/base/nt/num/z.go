@@ -171,7 +171,7 @@ func (*Integers) FromUintSymmetric(input *Uint) (*Int, error) {
 // Random generates a random integer in the range [lowInclusive, highExclusive).
 func (*Integers) Random(lowInclusive, highExclusive *Int, prng io.Reader) (*Int, error) {
 	var v numct.Int
-	if err := v.SetRandomRangeLH(lowInclusive.v, highExclusive.v, prng); err != nil {
+	if err := v.SetRandomRangeLH(lowInclusive.Value(), highExclusive.Value(), prng); err != nil {
 		return nil, errs2.Wrap(err)
 	}
 	return &Int{v: &v}, nil

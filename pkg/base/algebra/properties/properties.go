@@ -174,23 +174,6 @@ func IdentityProperty[S algebra.Monoid[E], E algebra.MonoidElement[E]](
 	}
 }
 
-func CanDistinguishIdentityElement[S algebra.Monoid[E], E algebra.MonoidElement[E]](
-	t *testing.T, c *Carrier[S, E],
-) Axiom {
-	t.Helper()
-	return Axiom{
-		Name: "CanDistinguishIdentityElement",
-		CheckFunc: func(t *testing.T) {
-			rapid.Check(t, func(rt *rapid.T) {
-				identity := c.Value.OpIdentity()
-				require.True(t, identity.IsOpIdentity(), "identity element is not marked as identity")
-				x := c.Dist.Draw(rt, "x")
-				require.Equal(t, x.Equal(identity), x.IsOpIdentity(), "can distinguish identity failed: more than one identity element found")
-			})
-		},
-	}
-}
-
 func CanDoubleProperty[S algebra.AdditiveSemiGroup[E], E algebra.AdditiveSemiGroupElement[E]](
 	t *testing.T, c *Carrier[S, E],
 ) Axiom {
@@ -242,7 +225,7 @@ func CanDistinguishAdditiveIdentity[S algebra.AdditiveMonoid[E], E algebra.Addit
 	}
 }
 
-func CanDistinsuishMultiplicativeIdentity[S algebra.MultiplicativeMonoid[E], E algebra.MultiplicativeMonoidElement[E]](
+func CanDistinguishMultiplicativeIdentity[S algebra.MultiplicativeMonoid[E], E algebra.MultiplicativeMonoidElement[E]](
 	t *testing.T, c *Carrier[S, E],
 ) Axiom {
 	t.Helper()

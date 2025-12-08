@@ -95,7 +95,7 @@ func (q *Rationals) FromNatPlus(n *NatPlus) (*Rat, error) {
 	}
 	return &Rat{
 		a: n.Lift(),
-		b: n.Clone(),
+		b: NPlus().One(),
 	}, nil
 }
 
@@ -132,7 +132,7 @@ func (q *Rationals) FromUint(n *Uint) (*Rat, error) {
 	}, nil
 }
 
-// FromBig creates a Rat element from a big.Int value.
+// FromBig creates a *Rat element from a *big.Int value.
 func (q *Rationals) FromBig(n *big.Int) (*Rat, error) {
 	if n == nil {
 		return nil, ErrIsNil.WithStackFrame()
@@ -147,7 +147,7 @@ func (q *Rationals) FromBig(n *big.Int) (*Rat, error) {
 	}, nil
 }
 
-// FromBigRat creates a Rat element from a big.Rat value.
+// FromBigRat creates a *Rat element from a *big.Rat value.
 func (q *Rationals) FromBigRat(n *big.Rat) (*Rat, error) {
 	if n == nil {
 		return nil, ErrIsNil.WithStackFrame()
@@ -166,7 +166,7 @@ func (q *Rationals) FromBigRat(n *big.Rat) (*Rat, error) {
 	}, nil
 }
 
-// Random samples a random Rat element in the interval [lowInclusive, highExclusive)
+// Random samples a random *Rat element in the interval [lowInclusive, highExclusive)
 func (q *Rationals) Random(lowInclusive, highExclusive *Rat, prng io.Reader) (*Rat, error) {
 	if prng == nil || lowInclusive == nil || highExclusive == nil {
 		return nil, ErrIsNil.WithStackFrame()
@@ -193,7 +193,12 @@ func (q *Rationals) Random(lowInclusive, highExclusive *Rat, prng io.Reader) (*R
 	return (&Rat{a: n, b: D}).Canonical(), nil
 }
 
-// RandomInt samples a random integer Rat element in the interval [lowInclusive, highExclusive)
+// RandomInt samples a random integer *Int element in the interval [lowInclusive, highExclusive).
+//
+// The valid integers are those n satisfying lowInclusive <= n < highExclusive, which is
+// equivalent to the half-open integer interval [ceil(lowInclusive), ceil(highExclusive)).
+//
+// Returns ErrOutOfRange if the interval contains no integers.
 func (q *Rationals) RandomInt(lowInclusive, highExclusive *Rat, prng io.Reader) (*Int, error) {
 	if prng == nil || lowInclusive == nil || highExclusive == nil {
 		return nil, ErrIsNil.WithStackFrame()
@@ -204,22 +209,31 @@ func (q *Rationals) RandomInt(lowInclusive, highExclusive *Rat, prng io.Reader) 
 		return nil, ErrOutOfRange.WithStackFrame().WithMessage("lowInclusive is greater than highExclusive")
 	}
 
-	// ceil(a/b) with b > 0
+	// Integers n with lowInclusive <= n < highExclusive are exactly those in
+	// the half-open interval [ceil(lowInclusive), ceil(highExclusive)).
 	lowInt, err := lowInclusive.Ceil()
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
-	highInt, err := highExclusive.Floor()
+	highIntExclusive, err := highExclusive.Ceil()
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
 
-	// No integers if ceil(low) >= ceil(high)
-	if lowInt.Compare(highInt) >= 0 {
-		return nil, errs2.New("interval contains no integers")
+	// If ceil(low) >= ceil(high), there is no integer n with low <= n < high.
+	if !lowInt.Compare(highIntExclusive).IsLessThan() {
+		return nil, ErrOutOfRange.WithStackFrame().WithMessage("no integers in the specified interval")
 	}
 
-	return Z().Random(lowInt, highInt, prng)
+	// Z().Random samples from [lowInt, highIntExclusive), matching the integer
+	// points in [lowInclusive, highExclusive).
+	result, err := Z().Random(lowInt, highIntExclusive, prng)
+	if err != nil {
+		// Wrap any error from Z().Random as ErrOutOfRange for consistent error handling.
+		// This can happen if highIntExclusive is zero (Z().Random requires non-zero high bound).
+		return nil, ErrOutOfRange.WithStackFrame().WithMessage("failed to sample integer in interval: %v", err)
+	}
+	return result, nil
 }
 
 // IsSemiDomain indicates that Q is a semi-domain.
@@ -431,15 +445,6 @@ func (r *Rat) TryInv() (*Rat, error) {
 	}, nil
 }
 
-// Inv returns the multiplicative inverse of the Rat element.
-func (r *Rat) Inv() *Rat {
-	out, err := r.TryInv()
-	if err != nil {
-		panic(err)
-	}
-	return out
-}
-
 // IsOpIdentity checks if the Rat element is the additive identity (zero).
 func (r *Rat) IsOpIdentity() bool {
 	return r.a.IsZero()
@@ -457,32 +462,22 @@ func (r *Rat) IsOne() bool {
 
 // Canonical returns the canonical form of the Rat element.
 func (r *Rat) Canonical() *Rat {
-	// Normalize 0 to 0/1
 	if r.IsZero() {
 		return &Rat{a: Z().Zero(), b: NPlus().One()}
 	}
-	// gcd(|a|, b) via Euclidean algorithm
-	// Use absolute value to ensure GCD is always positive
-	a := r.a.Abs().Lift()
-	b := r.b.Lift()
-	for !b.IsZero() {
-		_, rem, err := a.EuclideanDiv(b)
-		if err != nil {
-			panic(errs2.Wrap(err))
-		}
-		a, b = b, rem
+	if r.Denominator().IsOne() {
+		return &Rat{a: r.a.Clone(), b: NPlus().One()}
 	}
-	gcd := a
-	// Already reduced?
-	if gcd.IsOne() {
+	gcd := r.a.Abs().GCD(r.b.Nat())
+	if gcd.IsOne() { // Already canonical
 		return &Rat{a: r.a.Clone(), b: r.b.Clone()}
 	}
 	// Divide numerator and denominator by gcd
-	num, r1, err := r.a.EuclideanDiv(gcd)
+	num, r1, err := r.a.EuclideanDiv(gcd.Lift())
 	if err != nil || !r1.IsZero() {
 		return &Rat{a: r.a.Clone(), b: r.b.Clone()}
 	}
-	den, r2, err := r.b.Lift().EuclideanDiv(gcd)
+	den, r2, err := r.b.Lift().EuclideanDiv(gcd.Lift())
 	if err != nil || !r2.IsZero() {
 		return &Rat{a: r.a.Clone(), b: r.b.Clone()}
 	}
@@ -541,6 +536,12 @@ func (r *Rat) Bytes() []byte {
 		panic(errs2.Wrap(err))
 	}
 	return out
+}
+
+func (r *Rat) Big() *big.Rat {
+	num := r.a.Big()
+	den := r.b.Big()
+	return big.NewRat(0, 1).SetFrac(num, den)
 }
 
 // HashCode computes the hash code of the Rat element.
