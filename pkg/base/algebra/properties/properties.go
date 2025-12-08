@@ -815,7 +815,7 @@ func ZModFromBytesBEReduceRoundTripProperty[S algebra.ZModLike[E], E algebra.Uin
 		CheckFunc: func(t *testing.T) {
 			rapid.Check(t, func(rt *rapid.T) {
 				modulus := c.Value.Characteristic()
-				extraCardinal := cardinal.New(rapid.Uint64Max(modulus.Uint64()).Draw(rt, "extra"))
+				extraCardinal := cardinal.New(rapid.Uint64Range(0, modulus.Uint64()-1).Draw(rt, "extra"))
 				extra, err := c.Value.FromBytes(extraCardinal.Bytes())
 				require.NoError(t, err)
 

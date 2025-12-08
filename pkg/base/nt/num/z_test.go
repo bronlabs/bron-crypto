@@ -364,8 +364,7 @@ func TestZ_FromUintSymmetric(t *testing.T) {
 		require.NoError(t, err)
 
 		// 3 mod 11 is in [0, 5], so symmetric representation is 3
-		u, err := zmod.FromUint64(3)
-		require.NoError(t, err)
+		u := zmod.FromUint64(3)
 		result, err := z.FromUintSymmetric(u)
 		require.NoError(t, err)
 		requireBigIntEqual(t, big.NewInt(3), result.Big())
@@ -380,8 +379,7 @@ func TestZ_FromUintSymmetric(t *testing.T) {
 		require.NoError(t, err)
 
 		// 10 mod 11 is in [6, 10], so symmetric representation is -1
-		u, err := zmod.FromUint64(10)
-		require.NoError(t, err)
+		u := zmod.FromUint64(10)
 		result, err := z.FromUintSymmetric(u)
 		require.NoError(t, err)
 		requireBigIntEqual(t, big.NewInt(-1), result.Big())
@@ -1649,8 +1647,7 @@ func TestInt_FromUint(t *testing.T) {
 	zmod, err := num.NewZMod(mod)
 	require.NoError(t, err)
 
-	u, err := zmod.FromUint64(42)
-	require.NoError(t, err)
+	u := zmod.FromUint64(42)
 	result, err := z.FromUint(u)
 	require.NoError(t, err)
 	requireBigIntEqual(t, big.NewInt(42), result.Big())
