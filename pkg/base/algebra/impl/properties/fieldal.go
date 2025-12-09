@@ -65,6 +65,22 @@ func (s *FiniteFieldalLowLevel[FPtr, F]) MultiplicationHasNonZeroInverse(t *test
 	})
 }
 
+func (s *FiniteFieldalLowLevel[RPtr, R]) CanDivideByNonZero(t *testing.T) {
+	rapid.Check(t, func(t *rapid.T) {
+		var a, b R
+		aPtr := s.g.Draw(t, "a")
+		bPtr := s.gNonZero.Draw(t, "b")
+		RPtr(&a).Set(aPtr)
+		RPtr(&b).Set(bPtr)
+
+		var l R
+		ok := RPtr(&l).Div(&a, &b)
+		require.True(t, ok != 0)
+		RPtr(&l).Mul(&l, &b)
+		require.True(t, RPtr(&l).Equal(&a) != 0)
+	})
+}
+
 func (s *FiniteFieldalLowLevel[FPtr, F]) CanSerialiseToComponents(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
@@ -86,6 +102,7 @@ func (s *FiniteFieldalLowLevel[FPtr, F]) CheckAll(t *testing.T) {
 	s.RingalLowLevel.CheckAll(t)
 	t.Run("multiplication is commutative", s.MultiplicationIsCommutative)
 	t.Run("multiplication has non-zero inverse", s.MultiplicationHasNonZeroInverse)
+	t.Run("can divide by non-zero", s.CanDivideByNonZero)
 	t.Run("can serialise to components", s.CanSerialiseToComponents)
 }
 
