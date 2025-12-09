@@ -7,6 +7,7 @@ import (
 	"pgregory.net/rapid"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 type RingalLowLevel[RPtr impl.RingElementPtrLowLevel[RPtr, R], R any] struct {
@@ -38,7 +39,7 @@ func (s *RingalLowLevel[RPtr, R]) MultiplicationIsAssociate(t *testing.T) {
 		RPtr(&l).Mul(&l, &c)
 		RPtr(&r).Mul(&b, &c)
 		RPtr(&r).Mul(&a, &r)
-		require.True(t, RPtr(&l).Equal(RPtr(&r)) != 0)
+		require.Equal(t, ct.True, RPtr(&l).Equal(RPtr(&r)))
 	})
 }
 
@@ -53,9 +54,11 @@ func (s *RingalLowLevel[RPtr, R]) MultiplicationHasIdentity(t *testing.T) {
 		var l, r R
 		RPtr(&l).Mul(&a, &one)
 		RPtr(&r).Mul(&one, &a)
-		require.True(t, RPtr(&one).IsOne() != 0)
-		require.True(t, RPtr(&l).Equal(&a) != 0)
-		require.True(t, RPtr(&r).Equal(&a) != 0)
+		require.Equal(t, ct.True, RPtr(&one).IsOne())
+		require.Equal(t, ct.True, RPtr(&one).IsNonZero())
+		require.Equal(t, ct.False, RPtr(&one).IsZero())
+		require.Equal(t, ct.True, RPtr(&l).Equal(&a))
+		require.Equal(t, ct.True, RPtr(&r).Equal(&a))
 	})
 }
 
@@ -76,7 +79,7 @@ func (s *RingalLowLevel[RPtr, R]) MultiplicationIsLeftDistributive(t *testing.T)
 		RPtr(&z).Mul(&a, &c)
 		RPtr(&r).Mul(&a, &b)
 		RPtr(&r).Add(&r, &z)
-		require.True(t, RPtr(&l).Equal(&r) != 0)
+		require.Equal(t, ct.True, RPtr(&l).Equal(&r))
 	})
 }
 
@@ -97,7 +100,7 @@ func (s *RingalLowLevel[RPtr, R]) MultiplicationIsRightDistributive(t *testing.T
 		RPtr(&z).Mul(&b, &a)
 		RPtr(&r).Mul(&c, &a)
 		RPtr(&r).Add(&z, &r)
-		require.True(t, RPtr(&l).Equal(&r) != 0)
+		require.Equal(t, ct.True, RPtr(&l).Equal(&r))
 	})
 }
 
@@ -110,7 +113,7 @@ func (s *RingalLowLevel[RPtr, R]) CanSquare(t *testing.T) {
 		var l, r R
 		RPtr(&l).Square(&a)
 		RPtr(&r).Mul(&a, &a)
-		require.True(t, RPtr(&l).Equal(&r) != 0)
+		require.Equal(t, ct.True, RPtr(&l).Equal(&r))
 	})
 }
 
@@ -122,12 +125,12 @@ func (s *RingalLowLevel[RPtr, R]) MaybeHaveMultiplicativeInverse(t *testing.T) {
 
 		var l, r, one R
 		ok := RPtr(&l).Inv(&a)
-		if ok != 0 {
+		if ok == ct.True {
 			RPtr(&one).SetOne()
 			RPtr(&r).Mul(&l, &a)
 			RPtr(&l).Mul(&a, &l)
-			require.True(t, RPtr(&l).Equal(&one) != 0)
-			require.True(t, RPtr(&r).Equal(&one) != 0)
+			require.Equal(t, ct.True, RPtr(&l).Equal(&one))
+			require.Equal(t, ct.True, RPtr(&r).Equal(&one))
 		}
 	})
 }
@@ -142,11 +145,11 @@ func (s *RingalLowLevel[RPtr, R]) MaybeCanDivide(t *testing.T) {
 
 		var l, r R
 		ok := RPtr(&l).Div(&a, &b)
-		if ok != 0 {
+		if ok == ct.True {
 			RPtr(&r).Mul(&l, &b)
 			RPtr(&l).Mul(&b, &l)
-			require.True(t, RPtr(&l).Equal(&a) != 0)
-			require.True(t, RPtr(&r).Equal(&a) != 0)
+			require.Equal(t, ct.True, RPtr(&l).Equal(&a))
+			require.Equal(t, ct.True, RPtr(&r).Equal(&a))
 		}
 	})
 }
@@ -159,9 +162,9 @@ func (s *RingalLowLevel[RPtr, R]) MaybeHaveSquareRoot(t *testing.T) {
 
 		var r R
 		ok := RPtr(&r).Sqrt(&a)
-		if ok != 0 {
+		if ok == ct.True {
 			RPtr(&r).Mul(&r, &r)
-			require.True(t, RPtr(&r).Equal(&a) != 0)
+			require.Equal(t, ct.True, RPtr(&r).Equal(&a))
 		}
 	})
 }

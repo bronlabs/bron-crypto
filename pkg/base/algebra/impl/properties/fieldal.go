@@ -9,6 +9,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 type FiniteFieldalLowLevel[FPtr impl.FiniteFieldElementPtrLowLevel[FPtr, F], F any] struct {
@@ -21,12 +22,8 @@ func NewLowLevelFiniteFieldalPropertySuite[FPtr impl.FiniteFieldElementPtrLowLev
 	t.Helper()
 
 	r := NewLowLevelRingalPropertySuite(t, elementGen)
-	gNonZero := rapid.Custom(func(t *rapid.T) FPtr {
-		v := r.g.Draw(t, "v")
-		for v.IsZero() != 0 {
-			v = r.g.Draw(t, "v")
-		}
-		return v
+	gNonZero := elementGen.Filter(func(f FPtr) bool {
+		return f.IsNonZero() == ct.True
 	})
 	return &FiniteFieldalLowLevel[FPtr, F]{
 		RingalLowLevel: *r,
@@ -46,7 +43,7 @@ func (s *FiniteFieldalLowLevel[FPtr, F]) MultiplicationIsCommutative(t *testing.
 		var l, r F
 		FPtr(&l).Mul(&a, &b)
 		FPtr(&r).Mul(&b, &a)
-		require.True(t, FPtr(&l).Equal(&r) != 0)
+		require.Equal(t, ct.True, FPtr(&l).Equal(&r))
 	})
 }
 
@@ -59,9 +56,9 @@ func (s *FiniteFieldalLowLevel[FPtr, F]) MultiplicationHasNonZeroInverse(t *test
 
 		var l F
 		ok := FPtr(&l).Inv(&a)
-		require.True(t, ok != 0)
+		require.Equal(t, ct.True, ok)
 		FPtr(&l).Mul(&l, &a)
-		require.True(t, FPtr(&l).IsOne() != 0)
+		require.Equal(t, ct.True, FPtr(&l).IsOne())
 	})
 }
 
@@ -75,9 +72,9 @@ func (s *FiniteFieldalLowLevel[RPtr, R]) CanDivideByNonZero(t *testing.T) {
 
 		var l R
 		ok := RPtr(&l).Div(&a, &b)
-		require.True(t, ok != 0)
+		require.Equal(t, ct.True, ok)
 		RPtr(&l).Mul(&l, &b)
-		require.True(t, RPtr(&l).Equal(&a) != 0)
+		require.Equal(t, ct.True, RPtr(&l).Equal(&a))
 	})
 }
 
@@ -91,8 +88,8 @@ func (s *FiniteFieldalLowLevel[FPtr, F]) CanSerialiseToComponents(t *testing.T) 
 		var l F
 		data := FPtr(&a).ComponentsBytes()
 		ok := FPtr(&l).SetUniformBytes(data...)
-		require.True(t, ok != 0)
-		require.True(t, FPtr(&l).Equal(&a) != 0)
+		require.Equal(t, ct.True, ok)
+		require.Equal(t, ct.True, FPtr(&l).Equal(&a))
 	})
 }
 
@@ -133,8 +130,8 @@ func (s *PrimeFieldalLowLevel[FPtr, F]) CanSerialiseToLimbs(t *testing.T) {
 		var l F
 		limbs := FPtr(&a).Limbs()
 		ok := FPtr(&l).SetLimbs(limbs)
-		require.True(t, ok != 0)
-		require.True(t, FPtr(&l).Equal(&a) != 0)
+		require.Equal(t, ct.True, ok)
+		require.Equal(t, ct.True, FPtr(&l).Equal(&a))
 	})
 }
 
@@ -150,7 +147,7 @@ func (s *PrimeFieldalLowLevel[FPtr, F]) CanSetWideBytes(t *testing.T) {
 		data1 := s.gComputationalBytes.Draw(t, "data")
 		data := slices.Concat(data0, data1)
 		ok := FPtr(&l).SetBytesWide(data)
-		require.True(t, ok != 0)
+		require.Equal(t, ct.True, ok)
 	})
 }
 
