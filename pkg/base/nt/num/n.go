@@ -298,16 +298,15 @@ func (n *Nat) TryDiv(other *Nat) (*Nat, error) {
 	if _, err := n.isValid(other); err != nil {
 		return nil, errs2.Wrap(err)
 	}
-	v := new(numct.Nat)
+	var v numct.Nat
 	divisorMod, modOk := numct.NewModulus(other.v)
 	if modOk != ct.True {
 		return nil, errs2.New("failed to create modulus from divisor")
 	}
-	if ok := v.ExactDivDivisorAsModulus(n.v, divisorMod); ok != ct.True {
+	if ok := v.ExactDivDivisorAsModulus(n.v, divisorMod); ok == ct.False {
 		return nil, ErrInexactDivision.WithStackFrame()
 	}
-	out := &Nat{v: v}
-	return n.isValid(out)
+	return &Nat{v: &v}, nil
 }
 
 // Double returns the Nat doubled.
@@ -359,16 +358,11 @@ func (n *Nat) IsProbablyPrime() bool {
 // EuclideanDiv performs Euclidean division of the Nat by another Nat, returning the quotient and remainder.
 func (n *Nat) EuclideanDiv(other *Nat) (quot, rem *Nat, err error) {
 	errs2.Must1(n.isValid(other))
-	vq, vr := new(numct.Nat), new(numct.Nat)
-	// Create modulus from divisor
-	divisorMod, modOk := numct.NewModulus(other.v)
-	if modOk != ct.True {
-		return nil, nil, errs2.New("failed to create modulus from divisor")
-	}
-	if ok := numct.QuoRemDivDivisorAsModulusCap(vq, vr, n.v, divisorMod, -1); ok == ct.False {
+	var vq, vr numct.Nat
+	if ok := vq.EuclideanDiv(&vr, n.v, other.v); ok == ct.False {
 		return nil, nil, errs2.New("division failed")
 	}
-	return &Nat{v: vq}, &Nat{v: vr}, nil
+	return &Nat{v: &vq}, &Nat{v: &vr}, nil
 }
 
 // EuclideanValuation computes the Euclidean valuation of the Nat.

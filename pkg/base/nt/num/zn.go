@@ -97,8 +97,8 @@ func (zn *ZMod) Bottom() *Uint {
 }
 
 // FromUint64 creates a Uint element from a uint64 value.
-func (zn *ZMod) FromUint64(value uint64) (*Uint, error) {
-	return zn.FromNat(N().FromUint64(value))
+func (zn *ZMod) FromUint64(value uint64) *Uint {
+	return errs2.Must1(zn.FromNat(N().FromUint64(value)))
 }
 
 // FromInt64 creates a Uint element from an int64 value.
@@ -107,6 +107,7 @@ func (zn *ZMod) FromInt64(value int64) (*Uint, error) {
 }
 
 // FromInt creates a Uint element from an Int value.
+// It will reduce the Int modulo the modulus of the ZMod.
 func (zn *ZMod) FromInt(v *Int) (*Uint, error) {
 	if v == nil {
 		return nil, ErrIsNil.WithStackFrame()
@@ -115,6 +116,7 @@ func (zn *ZMod) FromInt(v *Int) (*Uint, error) {
 }
 
 // FromRat creates a Uint element from a Rat value.
+// It will reduce the Rat modulo the modulus of the ZMod.
 func (zn *ZMod) FromRat(v *Rat) (*Uint, error) {
 	vInt, err := Z().FromRat(v)
 	if err != nil {
@@ -124,6 +126,7 @@ func (zn *ZMod) FromRat(v *Rat) (*Uint, error) {
 }
 
 // FromBytes creates a Uint element from a byte slice.
+// It will NOT reduce the value modulo the modulus, and will return an error if the value is out of range.
 func (zn *ZMod) FromBytes(input []byte) (*Uint, error) {
 	v, err := N().FromBytes(input)
 	if err != nil {
@@ -133,11 +136,13 @@ func (zn *ZMod) FromBytes(input []byte) (*Uint, error) {
 }
 
 // FromBytesBE creates a Uint element from a big-endian byte slice.
+// It will NOT reduce the value modulo the modulus, and will return an error if the value is out of range.
 func (zn *ZMod) FromBytesBE(input []byte) (*Uint, error) {
 	return zn.FromBytes(input)
 }
 
 // FromBytesBEReduce creates a Uint element from a big-endian byte slice, reducing it modulo the modulus.
+// It will reduce the value modulo the modulus of the ZMod.
 func (zn *ZMod) FromBytesBEReduce(input []byte) (*Uint, error) {
 	v, err := N().FromBytes(input)
 	if err != nil {
@@ -147,6 +152,7 @@ func (zn *ZMod) FromBytesBEReduce(input []byte) (*Uint, error) {
 }
 
 // FromNat creates a Uint element from a Nat value.
+// It will reduce the value modulo the modulus of the ZMod.
 func (zn *ZMod) FromNat(v *Nat) (*Uint, error) {
 	if v == nil {
 		return nil, ErrIsNil.WithStackFrame()
@@ -155,6 +161,7 @@ func (zn *ZMod) FromNat(v *Nat) (*Uint, error) {
 }
 
 // FromNatCT creates a Uint element from a numct.Nat value.
+// It will reduce the value modulo the modulus.
 func (zn *ZMod) FromNatCT(v *numct.Nat) (*Uint, error) {
 	if v == nil {
 		return nil, ErrIsNil.WithStackFrame()
@@ -163,6 +170,7 @@ func (zn *ZMod) FromNatCT(v *numct.Nat) (*Uint, error) {
 }
 
 // FromNatCTReduced creates a Uint element from a reduced numct.Nat value.
+// It will NOT reduce the value modulo the modulus, and will return an error if the value is out of range.
 func (zn *ZMod) FromNatCTReduced(reducedV *numct.Nat) (*Uint, error) {
 	if reducedV == nil {
 		return nil, ErrIsNil.WithStackFrame()
@@ -174,6 +182,7 @@ func (zn *ZMod) FromNatCTReduced(reducedV *numct.Nat) (*Uint, error) {
 }
 
 // FromNatPlus creates a Uint element from a NatPlus value.
+// It will reduce the value modulo the modulus of the ZMod.
 func (zn *ZMod) FromNatPlus(v *NatPlus) (*Uint, error) {
 	if v == nil {
 		return nil, ErrIsNil.WithStackFrame()
@@ -182,8 +191,22 @@ func (zn *ZMod) FromNatPlus(v *NatPlus) (*Uint, error) {
 }
 
 // FromCardinal creates a Uint element from a cardinal.
+// It will NOT reduce the value modulo the modulus, and will return an error if the value is out of range.
 func (zn *ZMod) FromCardinal(v cardinal.Cardinal) (*Uint, error) {
 	return zn.FromBytes(v.Bytes())
+}
+
+// FromBig creates a Uint element from a big.Int value.
+// It will reduce the value modulo the modulus of the ZMod.
+func (zn *ZMod) FromBig(v *big.Int) (*Uint, error) {
+	if v == nil {
+		return nil, ErrIsNil.WithStackFrame()
+	}
+	z, err := Z().FromBig(v)
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	return zn.FromInt(z)
 }
 
 // OpIdentity returns the additive identity element of the group.
@@ -358,11 +381,13 @@ func (u *Uint) Mul(other *Uint) *Uint {
 }
 
 // Lsh performs left shift on the Uint element.
+// Lsh is equivalent to multiplying by 2^shift mod modulus.
 func (u *Uint) Lsh(shift uint) *Uint {
 	return u.Lift().Lsh(shift).Mod(NPlus().FromModulusCT(u.m))
 }
 
 // Rsh performs right shift on the Uint element.
+// Rsh is equivalent to floor division by 2^shift, then mod modulus.
 func (u *Uint) Rsh(shift uint) *Uint {
 	return u.Lift().Rsh(shift).Mod(NPlus().FromModulusCT(u.m))
 }

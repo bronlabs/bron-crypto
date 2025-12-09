@@ -261,8 +261,7 @@ func TestUint_CBOR(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			// Create original Uint
-			original, err := zmod.FromUint64(tt.value)
-			require.NoError(t, err)
+			original := zmod.FromUint64(tt.value)
 
 			// Marshal to CBOR
 			data, err := original.MarshalCBOR()
@@ -294,8 +293,7 @@ func TestUint_CBOR_InvalidValue(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a valid Uint
-	validUint, err := zmod.FromUint64(5)
-	require.NoError(t, err)
+	validUint := zmod.FromUint64(5)
 
 	// Marshal it
 	data, err := validUint.MarshalCBOR()
@@ -306,8 +304,7 @@ func TestUint_CBOR_InvalidValue(t *testing.T) {
 	// Test that values >= modulus are rejected at creation
 	// Since 15 > 10, this will be reduced to 15 % 10 = 5
 	// So let's test that the value is properly reduced
-	largeValue, err := zmod.FromUint64(15)
-	require.NoError(t, err)                                // This should succeed with reduction
+	largeValue := zmod.FromUint64(15)
 	require.Equal(t, uint64(5), largeValue.Big().Uint64()) // 15 % 10 = 5
 }
 
@@ -350,15 +347,11 @@ func TestZMod_CBOR(t *testing.T) {
 
 			// Test that operations work correctly after deserialization
 			// Create some elements and test arithmetic
-			a, err := original.FromUint64(2)
-			require.NoError(t, err)
-			b, err := original.FromUint64(3)
-			require.NoError(t, err)
+			a := original.FromUint64(2)
+			b := original.FromUint64(3)
 
-			aRecov, err := recovered.FromUint64(2)
-			require.NoError(t, err)
-			bRecov, err := recovered.FromUint64(3)
-			require.NoError(t, err)
+			aRecov := recovered.FromUint64(2)
+			bRecov := recovered.FromUint64(3)
 
 			// Test addition
 			sumOrig := a.Add(b)
@@ -433,8 +426,7 @@ func TestUint_CBOR_Deterministic(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test that serialisation is deterministic
-	u, err := zmod.FromUint64(42)
-	require.NoError(t, err)
+	u := zmod.FromUint64(42)
 
 	data1, err1 := u.MarshalCBOR()
 	require.NoError(t, err1)

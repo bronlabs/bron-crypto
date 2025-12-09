@@ -254,12 +254,18 @@ func (np *NatPlus) Lsh(shift uint) *NatPlus {
 	return errs2.Must1(np.isValid(out))
 }
 
-// Rsh performs a right shift operation on the NatPlus.
-func (np *NatPlus) Rsh(shift uint) *NatPlus {
+// TryRsh attempts to right shift the NatPlus, returning an error if the result would be zero.
+func (np *NatPlus) TryRsh(shift uint) (*NatPlus, error) {
 	v := new(numct.Nat)
 	v.Rsh(np.v, shift)
 	out := &NatPlus{v: v}
-	return errs2.Must1(np.isValid(out))
+	return np.isValid(out)
+}
+
+// Rsh performs a right shift operation on the NatPlus.
+// Panics if the result would be zero.
+func (np *NatPlus) Rsh(shift uint) *NatPlus {
+	return errs2.Must1(np.TryRsh(shift))
 }
 
 // Double returns the result of multiplying the NatPlus by 2.
@@ -307,13 +313,15 @@ func (np *NatPlus) TryDiv(other *NatPlus) (*NatPlus, error) {
 	if _, err := np.isValid(other); err != nil {
 		return nil, errs2.Wrap(err)
 	}
-	v := new(numct.Nat)
-	// Use ExactDivMod to ensure only the exact division succeeds
-	if ok := v.ExactDivDivisorAsModulus(np.v, other.ModulusCT()); ok != ct.True {
+	var v numct.Nat
+	divisorMod, modOk := numct.NewModulus(other.v)
+	if modOk != ct.True {
+		return nil, errs2.New("failed to create modulus from divisor")
+	}
+	if ok := v.ExactDivDivisorAsModulus(np.v, divisorMod); ok == ct.False {
 		return nil, ErrInexactDivision.WithStackFrame()
 	}
-	out := &NatPlus{v: v}
-	return np.isValid(out)
+	return &NatPlus{v: &v}, nil
 }
 
 // TrySub attempts to subtract another NatPlus from the NatPlus, returning an error if the result is not a positive natural number.
