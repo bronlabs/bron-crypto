@@ -69,7 +69,7 @@ func (p *Plaintext) UnmarshalCBOR(data []byte) error {
 
 // Nonce serialisation - reuse znstar.Unit CBOR.
 type nonceDTO struct {
-	U *znstar.RSAGroupUnknownOrderElement `cbor:"u"`
+	U *znstar.RSAGroupElementUnknownOrder `cbor:"u"`
 }
 
 func (n *Nonce) MarshalCBOR() ([]byte, error) {
@@ -94,7 +94,7 @@ func (n *Nonce) UnmarshalCBOR(data []byte) error {
 
 // Ciphertext serialisation - reuse znstar.Unit CBOR.
 type ciphertextDTO struct {
-	U *znstar.PaillierGroupUnknownOrderElement `cbor:"u"`
+	U *znstar.PaillierGroupElementUnknownOrder `cbor:"u"`
 }
 
 func (c *Ciphertext) MarshalCBOR() ([]byte, error) {

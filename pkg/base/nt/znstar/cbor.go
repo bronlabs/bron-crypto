@@ -11,26 +11,26 @@ var (
 	_ cbor.Marshaler   = (*RSAGroupKnownOrder)(nil)
 	_ cbor.Unmarshaler = (*RSAGroupKnownOrder)(nil)
 
-	_ cbor.Marshaler   = (*RSAGroupKnownOrderElement)(nil)
-	_ cbor.Unmarshaler = (*RSAGroupKnownOrderElement)(nil)
+	_ cbor.Marshaler   = (*RSAGroupElementKnownOrder)(nil)
+	_ cbor.Unmarshaler = (*RSAGroupElementKnownOrder)(nil)
 
 	_ cbor.Marshaler   = (*RSAGroupUnknownOrder)(nil)
 	_ cbor.Unmarshaler = (*RSAGroupUnknownOrder)(nil)
 
-	_ cbor.Marshaler   = (*RSAGroupUnknownOrderElement)(nil)
-	_ cbor.Unmarshaler = (*RSAGroupUnknownOrderElement)(nil)
+	_ cbor.Marshaler   = (*RSAGroupElementUnknownOrder)(nil)
+	_ cbor.Unmarshaler = (*RSAGroupElementUnknownOrder)(nil)
 
 	_ cbor.Marshaler   = (*PaillierGroupKnownOrder)(nil)
 	_ cbor.Unmarshaler = (*PaillierGroupKnownOrder)(nil)
 
-	_ cbor.Marshaler   = (*PaillierGroupKnownOrderElement)(nil)
-	_ cbor.Unmarshaler = (*PaillierGroupKnownOrderElement)(nil)
+	_ cbor.Marshaler   = (*PaillierGroupElementKnownOrder)(nil)
+	_ cbor.Unmarshaler = (*PaillierGroupElementKnownOrder)(nil)
 
 	_ cbor.Marshaler   = (*PaillierGroupUnknownOrder)(nil)
 	_ cbor.Unmarshaler = (*PaillierGroupUnknownOrder)(nil)
 
-	_ cbor.Marshaler   = (*PaillierGroupUnknownOrderElement)(nil)
-	_ cbor.Unmarshaler = (*PaillierGroupUnknownOrderElement)(nil)
+	_ cbor.Marshaler   = (*PaillierGroupElementUnknownOrder)(nil)
+	_ cbor.Unmarshaler = (*PaillierGroupElementUnknownOrder)(nil)
 )
 
 const (
@@ -46,13 +46,13 @@ const (
 
 func init() {
 	serde.Register[*RSAGroupKnownOrder](RSAGroupKnownOrderTag)
-	serde.Register[*RSAGroupKnownOrderElement](RSAGroupKnownOrderElementTag)
+	serde.Register[*RSAGroupElementKnownOrder](RSAGroupKnownOrderElementTag)
 	serde.Register[*RSAGroupUnknownOrder](RSAGroupUnknownOrderTag)
-	serde.Register[*RSAGroupUnknownOrderElement](RSAGroupUnknownOrderElementTag)
+	serde.Register[*RSAGroupElementUnknownOrder](RSAGroupUnknownOrderElementTag)
 	serde.Register[*PaillierGroupKnownOrder](PaillierGroupKnownOrderTag)
-	serde.Register[*PaillierGroupKnownOrderElement](PaillierGroupKnownOrderElementTag)
+	serde.Register[*PaillierGroupElementKnownOrder](PaillierGroupKnownOrderElementTag)
 	serde.Register[*PaillierGroupUnknownOrder](PaillierGroupUnknownOrderTag)
-	serde.Register[*PaillierGroupUnknownOrderElement](PaillierGroupUnknownOrderElementTag)
+	serde.Register[*PaillierGroupElementUnknownOrder](PaillierGroupUnknownOrderElementTag)
 }
 
 type rsaGroupKnownOrderDTO struct {
@@ -177,34 +177,64 @@ func (u *PaillierGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return err
 		}
-		u.v = dto.V
-		u.arith = any(dto.Arithmetic).(X)
-		u.n = num.NPlus().FromModulusCT(dto.Arithmetic.CrtModN.Modulus())
+		p := num.NPlus().FromModulusCT(dto.Arithmetic.P.Factor)
+		q := num.NPlus().FromModulusCT(dto.Arithmetic.Q.Factor)
+		g, err := NewPaillierGroup(p, q)
+		if err != nil {
+			return err
+		}
+		elem, err := g.FromUint(dto.V)
+		if err != nil {
+			return err
+		}
+		*u = *any(elem).(*PaillierGroupElement[X])
 		return nil
 	case *modular.SimpleModulus:
 		dto, err := serde.UnmarshalCBOR[paillierGroupUnknownOrderElementDTO](data)
 		if err != nil {
 			return err
 		}
-		u.v = dto.V
-		u.arith = any(dto.Arithmetic).(X)
-		u.n = dto.N
+		n2 := dto.N.Square()
+		g, err := NewPaillierGroupOfUnknownOrder(n2, dto.N)
+		if err != nil {
+			return err
+		}
+		elem, err := g.FromUint(dto.V)
+		if err != nil {
+			return err
+		}
+		*u = *any(elem).(*PaillierGroupElement[X])
 		return nil
 	default:
 		// For initial unmarshal when arith is zero value, try both
 		if dtoKnown, err := serde.UnmarshalCBOR[paillierGroupKnownOrderElementDTO](data); err == nil {
-			u.v = dtoKnown.V
-			u.arith = any(dtoKnown.Arithmetic).(X)
-			u.n = num.NPlus().FromModulusCT(dtoKnown.Arithmetic.CrtModN.Modulus())
+			p := num.NPlus().FromModulusCT(dtoKnown.Arithmetic.P.Factor)
+			q := num.NPlus().FromModulusCT(dtoKnown.Arithmetic.Q.Factor)
+			g, err := NewPaillierGroup(p, q)
+			if err != nil {
+				return err
+			}
+			elem, err := g.FromUint(dtoKnown.V)
+			if err != nil {
+				return err
+			}
+			*u = *any(elem).(*PaillierGroupElement[X])
 			return nil
 		}
 		dto, err := serde.UnmarshalCBOR[paillierGroupUnknownOrderElementDTO](data)
 		if err != nil {
 			return err
 		}
-		u.v = dto.V
-		u.arith = any(dto.Arithmetic).(X)
-		u.n = dto.N
+		n2 := dto.N.Square()
+		g, err := NewPaillierGroupOfUnknownOrder(n2, dto.N)
+		if err != nil {
+			return err
+		}
+		elem, err := g.FromUint(dto.V)
+		if err != nil {
+			return err
+		}
+		*u = *any(elem).(*PaillierGroupElement[X])
 		return nil
 	}
 }
@@ -290,30 +320,62 @@ func (u *RSAGroupElement[X]) UnmarshalCBOR(data []byte) error {
 		if err != nil {
 			return err
 		}
-		u.v = dto.V
-		u.arith = any(dto.Arithmetic).(X)
+		p := num.NPlus().FromModulusCT(dto.Arithmetic.Params.P)
+		q := num.NPlus().FromModulusCT(dto.Arithmetic.Params.Q)
+		g, err := NewRSAGroup(p, q)
+		if err != nil {
+			return err
+		}
+		elem, err := g.FromUint(dto.V)
+		if err != nil {
+			return err
+		}
+		*u = *any(elem).(*RSAGroupElement[X])
 		return nil
 	case *modular.SimpleModulus:
 		dto, err := serde.UnmarshalCBOR[rsaGroupUnknownOrderElementDTO](data)
 		if err != nil {
 			return err
 		}
-		u.v = dto.V
-		u.arith = any(dto.Arithmetic).(X)
+		g, err := NewRSAGroupOfUnknownOrder(dto.V.Modulus())
+		if err != nil {
+			return err
+		}
+		elem, err := g.FromUint(dto.V)
+		if err != nil {
+			return err
+		}
+		*u = *any(elem).(*RSAGroupElement[X])
 		return nil
 	default:
 		// For initial unmarshal when arith is zero value, try both
 		if dtoKnown, err := serde.UnmarshalCBOR[rsaGroupKnownOrderElementDTO](data); err == nil {
-			u.v = dtoKnown.V
-			u.arith = any(dtoKnown.Arithmetic).(X)
+			p := num.NPlus().FromModulusCT(dtoKnown.Arithmetic.Params.P)
+			q := num.NPlus().FromModulusCT(dtoKnown.Arithmetic.Params.Q)
+			g, err := NewRSAGroup(p, q)
+			if err != nil {
+				return err
+			}
+			elem, err := g.FromUint(dtoKnown.V)
+			if err != nil {
+				return err
+			}
+			*u = *any(elem).(*RSAGroupElement[X])
 			return nil
 		}
 		dto, err := serde.UnmarshalCBOR[rsaGroupUnknownOrderElementDTO](data)
 		if err != nil {
 			return err
 		}
-		u.v = dto.V
-		u.arith = any(dto.Arithmetic).(X)
+		g, err := NewRSAGroupOfUnknownOrder(dto.V.Modulus())
+		if err != nil {
+			return err
+		}
+		elem, err := g.FromUint(dto.V)
+		if err != nil {
+			return err
+		}
+		*u = *any(elem).(*RSAGroupElement[X])
 		return nil
 	}
 }

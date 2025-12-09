@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
+// SamplePaillierGroup generates a Paillier group with random primes of the given bit length.
 func SamplePaillierGroup(factorBits uint, prng io.Reader) (*PaillierGroupKnownOrder, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng")
@@ -23,6 +24,7 @@ func SamplePaillierGroup(factorBits uint, prng io.Reader) (*PaillierGroupKnownOr
 	return NewPaillierGroup(p, q)
 }
 
+// NewPaillierGroup creates a Paillier group with known order from the given primes p and q.
 func NewPaillierGroup(p, q *num.NatPlus) (*PaillierGroupKnownOrder, error) {
 	if p == nil || q == nil {
 		return nil, errs.NewValue("p and q must not be nil")
@@ -36,6 +38,9 @@ func NewPaillierGroup(p, q *num.NatPlus) (*PaillierGroupKnownOrder, error) {
 	if !q.IsProbablyPrime() {
 		return nil, errs.NewValue("q must be prime")
 	}
+	if p.AnnouncedLen() < 1024 {
+		return nil, errs.NewValue("p and q must be at least 1024 bits each")
+	}
 	n := p.Mul(q)
 	zMod, err := num.NewZMod(n.Square())
 	if err != nil {
@@ -46,7 +51,7 @@ func NewPaillierGroup(p, q *num.NatPlus) (*PaillierGroupKnownOrder, error) {
 		return nil, errs.NewValue("failed to create OddPrimeFactors")
 	}
 	return &PaillierGroupKnownOrder{
-		DenseUnitGroupTrait: DenseUnitGroupTrait[*modular.OddPrimeSquareFactors, *PaillierGroupElement[*modular.OddPrimeSquareFactors], PaillierGroupElement[*modular.OddPrimeSquareFactors]]{
+		UnitGroupTrait: UnitGroupTrait[*modular.OddPrimeSquareFactors, *PaillierGroupElement[*modular.OddPrimeSquareFactors], PaillierGroupElement[*modular.OddPrimeSquareFactors]]{
 			zMod:  zMod,
 			arith: exp,
 			n:     n,
@@ -54,6 +59,7 @@ func NewPaillierGroup(p, q *num.NatPlus) (*PaillierGroupKnownOrder, error) {
 	}, nil
 }
 
+// NewPaillierGroupOfUnknownOrder creates a Paillier group with unknown order from the given modulus n^2 and n.
 func NewPaillierGroupOfUnknownOrder(n2, n *num.NatPlus) (*PaillierGroupUnknownOrder, error) {
 	if n2.AnnouncedLen() < 4096 {
 		return nil, errs.NewValue("modulus must be at least 4096 bits")
@@ -71,7 +77,7 @@ func NewPaillierGroupOfUnknownOrder(n2, n *num.NatPlus) (*PaillierGroupUnknownOr
 	}
 
 	return &PaillierGroupUnknownOrder{
-		DenseUnitGroupTrait: DenseUnitGroupTrait[*modular.SimpleModulus, *PaillierGroupElement[*modular.SimpleModulus], PaillierGroupElement[*modular.SimpleModulus]]{
+		UnitGroupTrait: UnitGroupTrait[*modular.SimpleModulus, *PaillierGroupElement[*modular.SimpleModulus], PaillierGroupElement[*modular.SimpleModulus]]{
 			zMod:  zMod,
 			arith: arith,
 			n:     n,
@@ -79,40 +85,52 @@ func NewPaillierGroupOfUnknownOrder(n2, n *num.NatPlus) (*PaillierGroupUnknownOr
 	}, nil
 }
 
+// ArithmeticPaillier defines the supported arithmetic types for Paillier groups.
 type ArithmeticPaillier interface {
 	*modular.SimpleModulus | *modular.OddPrimeSquareFactors
 	modular.Arithmetic
 }
 
 type (
-	PaillierGroupKnownOrder   = PaillierGroup[*modular.OddPrimeSquareFactors]
+	// PaillierGroupKnownOrder defines a Paillier group with known order.
+	PaillierGroupKnownOrder = PaillierGroup[*modular.OddPrimeSquareFactors]
+	// PaillierGroupUnknownOrder defines a Paillier group with unknown order.
 	PaillierGroupUnknownOrder = PaillierGroup[*modular.SimpleModulus]
 
-	PaillierGroupKnownOrderElement   = PaillierGroupElement[*modular.OddPrimeSquareFactors]
-	PaillierGroupUnknownOrderElement = PaillierGroupElement[*modular.SimpleModulus]
+	// PaillierGroupElementKnownOrder defines a Paillier group element with known order.
+	PaillierGroupElementKnownOrder = PaillierGroupElement[*modular.OddPrimeSquareFactors]
+	// PaillierGroupElementUnknownOrder defines a Paillier group element with unknown order.
+	PaillierGroupElementUnknownOrder = PaillierGroupElement[*modular.SimpleModulus]
 )
 
+// PaillierGroup defines a Paillier group structure.
+// X is the arithmetic type used for the group and determines whether the group has known or unknown order.
 type PaillierGroup[X ArithmeticPaillier] struct {
-	DenseUnitGroupTrait[X, *PaillierGroupElement[X], PaillierGroupElement[X]]
+	UnitGroupTrait[X, *PaillierGroupElement[X], PaillierGroupElement[X]]
 }
 
+// AmbientStructure returns the ambient structure of the Paillier group ie. Z\\{n^2}Z.
 func (g *PaillierGroup[X]) AmbientStructure() algebra.Structure[*num.Uint] {
 	return g.zMod
 }
 
+// ScalarStructure returns the scalar structure of the induced Paillier semi module ie. N.
 func (g *PaillierGroup[X]) ScalarStructure() algebra.Structure[*num.Nat] {
 	return num.N()
 }
 
+// Equal checks if two Paillier groups are equal.
 func (g *PaillierGroup[X]) Equal(other *PaillierGroup[X]) bool {
 	return g.zMod.Modulus().Equal(other.zMod.Modulus())
 }
 
+// N returns the Paillier modulus n.
 func (g *PaillierGroup[X]) N() *num.NatPlus {
 	return g.n
 }
 
-func (g *PaillierGroup[X]) EmbedRSA(u *RSAGroupUnknownOrderElement) (*PaillierGroupElement[X], error) {
+// EmbedRSA embeds an RSA unit into the Paillier group as a Paillier unit.
+func (g *PaillierGroup[X]) EmbedRSA(u *RSAGroupElementUnknownOrder) (*PaillierGroupElement[X], error) {
 	if u == nil {
 		return nil, errs.NewIsNil("u")
 	}
@@ -132,7 +150,8 @@ func (g *PaillierGroup[X]) EmbedRSA(u *RSAGroupUnknownOrderElement) (*PaillierGr
 	}, nil
 }
 
-func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupUnknownOrderElement) (*PaillierGroupElement[X], error) {
+// NthResidue computes the n-th residue of a Paillier group element of unknown order.
+func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupElementUnknownOrder) (*PaillierGroupElement[X], error) {
 	if u == nil {
 		return nil, errs.NewValue("argument must not be nil")
 	}
@@ -164,22 +183,27 @@ func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupUnknownOrderElement) (*Pai
 	}, nil
 }
 
-func (pg *PaillierGroup[X]) Phi(x *numct.Int) (*PaillierGroupElement[X], error) {
+// Representative computes the representative of a plaintext in the Paillier group.
+func (pg *PaillierGroup[X]) Representative(plaintext *numct.Int) (*PaillierGroupElement[X], error) {
+	if pg.N().ModulusCT().IsInRangeSymmetric(plaintext) == ct.False {
+		return nil, errs.NewValue("plaintext is out of range: |plaintext| >= n/2")
+	}
 	var shiftedPlaintext numct.Nat
-	pg.N().ModulusCT().ModI(&shiftedPlaintext, x)
+	pg.N().ModulusCT().ModI(&shiftedPlaintext, plaintext)
 	var out numct.Nat
 	pg.ModulusCT().ModMul(&out, &shiftedPlaintext, pg.N().Value())
 	out.Increment()
 	return pg.FromNatCT(&out)
 }
 
+// ForgetOrder returns a Paillier group with unknown order.
 func (pg *PaillierGroup[X]) ForgetOrder() *PaillierGroupUnknownOrder {
 	arith, ok := modular.NewSimple(pg.zMod.Modulus().ModulusCT())
 	if ok == ct.False {
 		panic(errs.NewFailed("failed to create SimpleModulus"))
 	}
 	return &PaillierGroupUnknownOrder{
-		DenseUnitGroupTrait: DenseUnitGroupTrait[*modular.SimpleModulus, *PaillierGroupElement[*modular.SimpleModulus], PaillierGroupElement[*modular.SimpleModulus]]{
+		UnitGroupTrait: UnitGroupTrait[*modular.SimpleModulus, *PaillierGroupElement[*modular.SimpleModulus], PaillierGroupElement[*modular.SimpleModulus]]{
 			zMod:  pg.zMod,
 			arith: arith,
 			n:     pg.n,
@@ -187,10 +211,13 @@ func (pg *PaillierGroup[X]) ForgetOrder() *PaillierGroupUnknownOrder {
 	}
 }
 
+// PaillierGroupElement defines a Paillier group element.
+// X is the arithmetic type used for the group element and determines whether the group has known or unknown order.
 type PaillierGroupElement[X ArithmeticPaillier] struct {
 	UnitTrait[X, *PaillierGroupElement[X], PaillierGroupElement[X]]
 }
 
+// Clone creates a copy of the Paillier group element.
 func (u *PaillierGroupElement[X]) Clone() *PaillierGroupElement[X] {
 	return &PaillierGroupElement[X]{
 		UnitTrait: UnitTrait[X, *PaillierGroupElement[X], PaillierGroupElement[X]]{
@@ -201,9 +228,10 @@ func (u *PaillierGroupElement[X]) Clone() *PaillierGroupElement[X] {
 	}
 }
 
+// Structure returns the Paillier group structure of the element.
 func (u *PaillierGroupElement[X]) Structure() algebra.Structure[*PaillierGroupElement[X]] {
 	return &PaillierGroup[X]{
-		DenseUnitGroupTrait: DenseUnitGroupTrait[X, *PaillierGroupElement[X], PaillierGroupElement[X]]{
+		UnitGroupTrait: UnitGroupTrait[X, *PaillierGroupElement[X], PaillierGroupElement[X]]{
 			zMod:  u.v.Group(),
 			arith: u.arith,
 			n:     u.n,
@@ -211,15 +239,16 @@ func (u *PaillierGroupElement[X]) Structure() algebra.Structure[*PaillierGroupEl
 	}
 }
 
-func (u *PaillierGroupElement[X]) LearnOrder(g *PaillierGroupKnownOrder) (*PaillierGroupKnownOrderElement, error) {
+// LearnOrder converts a Paillier group element of unknown order to one with known order.
+func (u *PaillierGroupElement[X]) LearnOrder(g *PaillierGroupKnownOrder) (*PaillierGroupElementKnownOrder, error) {
 	if g == nil {
 		return nil, errs.NewIsNil("g")
 	}
 	if !u.n.Equal(g.n) {
 		return nil, errs.NewValue("unit is not in the correct Paillier group")
 	}
-	return &PaillierGroupKnownOrderElement{
-		UnitTrait: UnitTrait[*modular.OddPrimeSquareFactors, *PaillierGroupKnownOrderElement, PaillierGroupKnownOrderElement]{
+	return &PaillierGroupElementKnownOrder{
+		UnitTrait: UnitTrait[*modular.OddPrimeSquareFactors, *PaillierGroupElementKnownOrder, PaillierGroupElementKnownOrder]{
 			v:     u.v.Clone(),
 			arith: g.arith,
 			n:     g.n,
@@ -227,13 +256,14 @@ func (u *PaillierGroupElement[X]) LearnOrder(g *PaillierGroupKnownOrder) (*Paill
 	}, nil
 }
 
-func (u *PaillierGroupElement[X]) ForgetOrder() *PaillierGroupUnknownOrderElement {
+// ForgetOrder converts a Paillier group element with known order to one with unknown order.
+func (u *PaillierGroupElement[X]) ForgetOrder() *PaillierGroupElementUnknownOrder {
 	arith, ok := modular.NewSimple(u.v.Group().Modulus().ModulusCT())
 	if ok == ct.False {
 		panic(errs.NewFailed("failed to create SimpleModulus"))
 	}
-	return &PaillierGroupUnknownOrderElement{
-		UnitTrait: UnitTrait[*modular.SimpleModulus, *PaillierGroupUnknownOrderElement, PaillierGroupUnknownOrderElement]{
+	return &PaillierGroupElementUnknownOrder{
+		UnitTrait: UnitTrait[*modular.SimpleModulus, *PaillierGroupElementUnknownOrder, PaillierGroupElementUnknownOrder]{
 			v:     u.v.Clone(),
 			arith: arith,
 			n:     u.n,

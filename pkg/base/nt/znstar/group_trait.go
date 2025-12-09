@@ -5,11 +5,14 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"golang.org/x/crypto/blake2b"
 )
 
 type unitWrapper[A modular.Arithmetic] interface {
@@ -25,65 +28,93 @@ type unitWrapperPtrConstraint[A modular.Arithmetic, WT any] interface {
 	unitWrapper[A]
 }
 
-type DenseUnitGroupTrait[A modular.Arithmetic, W unitWrapperPtrConstraint[A, WT], WT any] struct {
+type UnitGroupTrait[A modular.Arithmetic, W unitWrapperPtrConstraint[A, WT], WT any] struct {
 	zMod  *num.ZMod
 	arith A
 	n     *num.NatPlus
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) Name() string {
+func (g *UnitGroupTrait[A, W, WT]) Name() string {
 	return fmt.Sprintf("U(Z/%sZ)*", g.Modulus().String())
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) Order() cardinal.Cardinal {
+func (g *UnitGroupTrait[A, W, WT]) Order() cardinal.Cardinal {
 	return g.arith.MultiplicativeOrder()
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) OpIdentity() W {
+func (g *UnitGroupTrait[A, W, WT]) OpIdentity() W {
 	return g.One()
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) One() W {
+func (g *UnitGroupTrait[A, W, WT]) One() W {
 	var u WT
 	W(&u).set(g.zMod.One(), g.arith, g.n)
 	return W(&u)
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) Random(prng io.Reader) (W, error) {
-	r, err := g.zMod.Random(prng)
-	if err != nil {
-		return nil, err
+func (g *UnitGroupTrait[A, W, WT]) Random(prng io.Reader) (W, error) {
+	for {
+		r, err := g.zMod.Random(prng)
+		if err != nil {
+			return nil, errs2.Wrap(err)
+		}
+		var u WT
+		W(&u).set(r, g.arith, g.n)
+		if W(&u).Value().Lift().Coprime(g.Modulus().Lift()) {
+			return W(&u), nil
+		}
 	}
-	var u WT
-	W(&u).set(r, g.arith, g.n)
-	return W(&u), nil
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) Hash(input []byte) (W, error) {
-	panic("not implemented")
+func (g *UnitGroupTrait[A, W, WT]) Hash(input []byte) (W, error) {
+	xof, err := blake2b.NewXOF(uint32(g.WideElementSize()), nil)
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	if _, err := xof.Write(input); err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	digest := make([]byte, g.WideElementSize())
+	var x, v numct.Nat
+	for {
+		if _, err = io.ReadFull(xof, digest); err != nil {
+			return nil, errs2.Wrap(err)
+		}
+		if ok := x.SetBytes(digest); ok == ct.False {
+			return nil, errs2.New("failed to interpret hash digest as Nat")
+		}
+		// Perform modular reduction using the modulus from n
+		g.zMod.Modulus().ModulusCT().Mod(&v, &x)
+
+		if g.zMod.Modulus().ModulusCT().Nat().Coprime(&v) == ct.True {
+			uv, err := num.NewUintGivenModulus(&v, g.zMod.Modulus().ModulusCT())
+			if err != nil {
+				return nil, errs2.Wrap(err)
+			}
+			var zn WT
+			W(&zn).set(uv, g.arith, g.n)
+			return W(&zn), nil
+		}
+	}
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) Modulus() *num.NatPlus {
+func (g *UnitGroupTrait[A, W, WT]) Modulus() *num.NatPlus {
 	return g.zMod.Modulus()
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) ModulusCT() *numct.Modulus {
+func (g *UnitGroupTrait[A, W, WT]) ModulusCT() *numct.Modulus {
 	return g.zMod.Modulus().ModulusCT()
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) ElementSize() int {
+func (g *UnitGroupTrait[A, W, WT]) ElementSize() int {
 	return g.zMod.ElementSize()
 }
 
-func (dus *DenseUnitGroupTrait[A, W, WT]) MultiScalarOp(scs []*num.Nat, ps []W) (W, error) {
-	panic("implement me")
+func (g *UnitGroupTrait[A, W, WT]) WideElementSize() int {
+	return g.zMod.WideElementSize()
 }
 
-func (dus *DenseUnitGroupTrait[A, W, WT]) MultiScalarExp(scs []*num.Nat, ps []W) (W, error) {
-	panic("implement me")
-}
-
-func (g *DenseUnitGroupTrait[A, W, WT]) FromNatCT(input *numct.Nat) (W, error) {
+func (g *UnitGroupTrait[A, W, WT]) FromNatCT(input *numct.Nat) (W, error) {
 	if input == nil {
 		return nil, errs.NewValue("input must not be nil")
 	}
@@ -93,10 +124,13 @@ func (g *DenseUnitGroupTrait[A, W, WT]) FromNatCT(input *numct.Nat) (W, error) {
 	}
 	var out WT
 	W(&out).set(elem, g.arith, g.n)
+	if !W(&out).Value().Lift().Coprime(g.Modulus().Lift()) {
+		return nil, errs.NewValue("input is not a unit")
+	}
 	return W(&out), nil
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) FromUint(input *num.Uint) (W, error) {
+func (g *UnitGroupTrait[A, W, WT]) FromUint(input *num.Uint) (W, error) {
 	if input == nil {
 		return nil, errs.NewValue("input must not be nil")
 	}
@@ -105,10 +139,13 @@ func (g *DenseUnitGroupTrait[A, W, WT]) FromUint(input *num.Uint) (W, error) {
 	}
 	var out WT
 	W(&out).set(input.Clone(), g.arith, g.n)
+	if !W(&out).Value().Lift().Coprime(g.Modulus().Lift()) {
+		return nil, errs.NewValue("input is not a unit")
+	}
 	return W(&out), nil
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) FromBytes(input []byte) (W, error) {
+func (g *UnitGroupTrait[A, W, WT]) FromBytes(input []byte) (W, error) {
 	if len(input) == 0 {
 		return nil, errs.NewValue("input must not be empty")
 	}
@@ -118,104 +155,43 @@ func (g *DenseUnitGroupTrait[A, W, WT]) FromBytes(input []byte) (W, error) {
 	}
 	var out WT
 	W(&out).set(v, g.arith, g.n)
+	if !W(&out).Value().Lift().Coprime(g.Modulus().Lift()) {
+		return nil, errs.NewValue("input is not a unit")
+	}
 	return W(&out), nil
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) FromCardinal(input cardinal.Cardinal) (W, error) {
+func (g *UnitGroupTrait[A, W, WT]) FromCardinal(input cardinal.Cardinal) (W, error) {
 	elem, err := g.zMod.FromCardinal(input)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create element from cardinal")
 	}
 	var out WT
 	W(&out).set(elem, g.arith, g.n)
+	if !W(&out).Value().Lift().Coprime(g.Modulus().Lift()) {
+		return nil, errs.NewValue("input is not a unit")
+	}
 	return W(&out), nil
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) FromUint64(input uint64) (W, error) {
+func (g *UnitGroupTrait[A, W, WT]) FromUint64(input uint64) (W, error) {
 	elem, err := g.zMod.FromCardinal(cardinal.New(input))
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create element from uint64")
 	}
 	var out WT
 	W(&out).set(elem, g.arith, g.n)
+	if !W(&out).Value().Lift().Coprime(g.Modulus().Lift()) {
+		return nil, errs.NewValue("input is not a unit")
+	}
+
 	return W(&out), nil
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) AmbientGroup() *num.ZMod {
+func (g *UnitGroupTrait[A, W, WT]) AmbientGroup() *num.ZMod {
 	return g.zMod
 }
 
-func (g *DenseUnitGroupTrait[A, W, WT]) Arithmetic() modular.Arithmetic {
+func (g *UnitGroupTrait[A, W, WT]) Arithmetic() modular.Arithmetic {
 	return g.arith
-}
-
-type UnitGroupTrait[A modular.Arithmetic, W unitWrapperPtrConstraint[A, WT], WT any] struct {
-	DenseUnitGroupTrait[A, W, WT]
-}
-
-func (g *UnitGroupTrait[A, W, WT]) Random(prng io.Reader) (W, error) {
-	for {
-		u, err := g.DenseUnitGroupTrait.Random(prng)
-		if err != nil {
-			return nil, errs.WrapRandomSample(err, "could not sample random unit")
-		}
-		if u.Value().Lift().Coprime(g.Modulus().Lift()) {
-			return u, nil
-		}
-	}
-}
-
-func (g *UnitGroupTrait[A, W, WT]) FromNatCT(input *numct.Nat) (W, error) {
-	out, err := g.DenseUnitGroupTrait.FromNatCT(input)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't convert from natct")
-	}
-	if !out.Value().Lift().Coprime(g.Modulus().Lift()) {
-		return nil, errs.NewValue("input is not a unit")
-	}
-	return out, nil
-}
-
-func (g *UnitGroupTrait[A, W, WT]) FromUint(input *num.Uint) (W, error) {
-	out, err := g.DenseUnitGroupTrait.FromUint(input)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't convert from uint")
-	}
-	if !out.Value().Lift().Coprime(g.Modulus().Lift()) {
-		return nil, errs.NewValue("input is not a unit")
-	}
-	return out, nil
-}
-
-func (g *UnitGroupTrait[A, W, WT]) FromBytes(input []byte) (W, error) {
-	out, err := g.DenseUnitGroupTrait.FromBytes(input)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't convert from bytes")
-	}
-	if !out.Value().Lift().Coprime(g.Modulus().Lift()) {
-		return nil, errs.NewValue("input is not a unit")
-	}
-	return out, nil
-}
-
-func (g *UnitGroupTrait[A, W, WT]) FromCardinal(input cardinal.Cardinal) (W, error) {
-	out, err := g.DenseUnitGroupTrait.FromCardinal(input)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't convert from cardinal")
-	}
-	if !out.Value().Lift().Coprime(g.Modulus().Lift()) {
-		return nil, errs.NewValue("input is not a unit")
-	}
-	return out, nil
-}
-
-func (g *UnitGroupTrait[A, W, WT]) FromUint64(input uint64) (W, error) {
-	out, err := g.DenseUnitGroupTrait.FromUint64(input)
-	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't convert from uint64")
-	}
-	if !out.Value().Lift().Coprime(g.Modulus().Lift()) {
-		return nil, errs.NewValue("input is not a unit")
-	}
-	return out, nil
 }

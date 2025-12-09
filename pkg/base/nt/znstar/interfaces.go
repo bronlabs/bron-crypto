@@ -43,17 +43,3 @@ type unit[U any] interface {
 }
 
 type Unit[U unit[U]] unit[U]
-
-var (
-	_ UnitGroup[*RSAGroupKnownOrderElement] = (*RSAGroupKnownOrder)(nil)
-	_ Unit[*RSAGroupKnownOrderElement]      = (*RSAGroupKnownOrderElement)(nil)
-
-	_ UnitGroup[*PaillierGroupKnownOrderElement] = (*PaillierGroupKnownOrder)(nil)
-	_ Unit[*PaillierGroupKnownOrderElement]      = (*PaillierGroupKnownOrderElement)(nil)
-
-	_ UnitGroup[*RSAGroupUnknownOrderElement] = (*RSAGroupUnknownOrder)(nil)
-	_ Unit[*RSAGroupUnknownOrderElement]      = (*RSAGroupUnknownOrderElement)(nil)
-
-	_ UnitGroup[*PaillierGroupUnknownOrderElement] = (*PaillierGroupUnknownOrder)(nil)
-	_ Unit[*PaillierGroupUnknownOrderElement]      = (*PaillierGroupUnknownOrderElement)(nil)
-)
