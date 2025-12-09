@@ -357,8 +357,21 @@ func (i *Int) IsUnit(modulus *NatPlus) bool {
 	return m.IsUnit(i.Mod(modulus).v) == ct.True
 }
 
-// TryDiv performs exact division of the integer by another integer.
 func (i *Int) TryDiv(other *Int) (*Int, error) {
+	if _, err := i.isValid(other); err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	var v numct.Int
+	if ok := v.Div(i.v, other.v); ok == ct.False {
+		return nil, ErrInexactDivision.WithStackFrame()
+	}
+	out := &Int{v: &v}
+	return out, nil
+}
+
+// TryDivVarTime performs exact division of the integer by another integer.
+// It is not constant-time due to having to generate montgomery parameters for the divisor.
+func (i *Int) TryDivVarTime(other *Int) (*Int, error) {
 	if _, err := i.isValid(other); err != nil {
 		return nil, errs2.Wrap(err)
 	}
@@ -376,7 +389,7 @@ func (i *Int) TryDiv(other *Int) (*Int, error) {
 		v.Neg(v)
 	}
 	out := &Int{v: v}
-	return i.isValid(out)
+	return out, nil
 }
 
 // TryInv attempts to compute the multiplicative inverse of the integer.

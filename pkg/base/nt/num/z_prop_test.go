@@ -95,7 +95,7 @@ func TestZ_TryDiv_Property(t *testing.T) {
 		m := num.Z().FromInt64(multiplier)
 
 		dividend := d.Mul(m)
-		result, err := dividend.TryDiv(d)
+		result, err := dividend.TryDivVarTime(d)
 		require.NoError(t, err)
 		require.True(t, m.Equal(result), "expected %v, got %v", m.Big(), result.Big())
 	})
@@ -106,7 +106,7 @@ func TestZ_TryDiv_DivisionByZero_Property(t *testing.T) {
 	rapid.Check(t, func(rt *rapid.T) {
 		n := IntGenerator(t).Draw(rt, "n")
 		zero := num.Z().FromInt64(0)
-		_, err := n.TryDiv(zero)
+		_, err := n.TryDivVarTime(zero)
 		require.Error(t, err)
 	})
 }
@@ -121,7 +121,7 @@ func TestZ_TryDiv_InexactDivision_Property(t *testing.T) {
 		d := num.Z().FromInt64(dividend*divisor + remainder)
 		div := num.Z().FromInt64(divisor)
 
-		_, err := d.TryDiv(div)
+		_, err := d.TryDivVarTime(div)
 		require.Error(t, err)
 	})
 }
