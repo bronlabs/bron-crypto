@@ -3,10 +3,11 @@ package properties
 import (
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 func NewLowLevelMonoidalPropertySuite[E impl.MonoidElementPtrLowLevel[E, T], T any](t *testing.T, g *rapid.Generator[E], isCommutative bool) *MonoidalLowLevel[E, T] {
@@ -125,7 +126,7 @@ func (p *MonoidalLowLevel[E, T]) ZeroIsIdentifiable(t *testing.T) {
 		E(&zero).SetZero()
 		require.Equal(t, ct.True, E(&zero).IsZero())
 		x := p.g.Draw(t, "x")
-		require.NotEqual(t, E(x).IsZero(), E(x).IsNonZero())
+		require.NotEqual(t, x.IsZero(), x.IsNonZero())
 	})
 }
 
@@ -175,6 +176,6 @@ func (p *MonoidalLowLevel[E, T]) CanEquate(t *testing.T) {
 		E(&c).Set(y)
 
 		require.Equal(t, ct.True, E(&a).Equal(E(&b)))
-		require.Equal(t, E(x).Equal(E(y)), E(&a).Equal(E(&c)))
+		require.Equal(t, x.Equal(y), E(&a).Equal(E(&c)))
 	})
 }

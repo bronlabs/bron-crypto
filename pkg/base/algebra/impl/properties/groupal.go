@@ -3,10 +3,11 @@ package properties
 import (
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/impl"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
 func NewLowLevelGroupalPropertySuite[E impl.GroupElementPtrLowLevel[E, T], T any](
@@ -14,6 +15,8 @@ func NewLowLevelGroupalPropertySuite[E impl.GroupElementPtrLowLevel[E, T], T any
 	elementGen *rapid.Generator[E],
 	isCommutative bool,
 ) *GroupalLowLevel[E, T] {
+	t.Helper()
+
 	return &GroupalLowLevel[E, T]{
 		MonoidalLowLevel: *NewLowLevelMonoidalPropertySuite(t, elementGen, isCommutative),
 	}
