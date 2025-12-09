@@ -50,12 +50,12 @@ func Test_HappyPathInteractive(t *testing.T) {
 func Test_InvalidRootInteractive(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
-	pBig, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, 1024)
 	require.NoError(t, err)
-	pNatCt := numct.NewNatFromBig(pBig, 128)
-	qBig, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, 1024)
+	qBig, err := crand.Prime(prng, 1024)
 	require.NoError(t, err)
-	qNatCt := numct.NewNatFromBig(qBig, 128)
+	qNatCt := numct.NewNatFromBig(qBig, 1024)
 
 	xNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
@@ -92,12 +92,12 @@ func Test_HappyPathNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	appLabel := "NthRoot"
 	prng := crand.Reader
-	pBig, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, 1024)
 	require.NoError(t, err)
-	pNatCt := numct.NewNatFromBig(pBig, 128)
-	qBig, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, 1024)
+	qBig, err := crand.Prime(prng, 1024)
 	require.NoError(t, err)
-	gNatCt := numct.NewNatFromBig(qBig, 128)
+	gNatCt := numct.NewNatFromBig(qBig, 1024)
 
 	xNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
@@ -147,12 +147,12 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	appLabel := "NthRoot"
 	prng := crand.Reader
-	pBig, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, 1024)
 	require.NoError(t, err)
-	pNatCt := numct.NewNatFromBig(pBig, 128)
-	qBig, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, 1024)
+	qBig, err := crand.Prime(prng, 1024)
 	require.NoError(t, err)
-	qNatCt := numct.NewNatFromBig(qBig, 128)
+	qNatCt := numct.NewNatFromBig(qBig, 1024)
 
 	xNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
@@ -234,12 +234,12 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 func Test_Simulator(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
-	pBig, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, 1024)
 	require.NoError(t, err)
-	pNatCt := numct.NewNatFromBig(pBig, 128)
-	qBig, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, 1024)
+	qBig, err := crand.Prime(prng, 1024)
 	require.NoError(t, err)
-	qNatCt := numct.NewNatFromBig(qBig, 128)
+	qNatCt := numct.NewNatFromBig(qBig, 1024)
 
 	xNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
@@ -276,12 +276,12 @@ func Test_Simulator(t *testing.T) {
 func Test_Extractor(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
-	pBig, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, 1024)
 	require.NoError(t, err)
-	pNatCt := numct.NewNatFromBig(pBig, 128)
-	qBig, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, 1024)
+	qBig, err := crand.Prime(prng, 1024)
 	require.NoError(t, err)
-	qNatCt := numct.NewNatFromBig(qBig, 128)
+	qNatCt := numct.NewNatFromBig(qBig, 1024)
 
 	pNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
