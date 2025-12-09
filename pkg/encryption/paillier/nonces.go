@@ -54,10 +54,10 @@ func (ns *NonceSpace) Contains(n *Nonce) bool {
 }
 
 type Nonce struct {
-	u *znstar.RSAGroupUnknownOrderElement
+	u *znstar.RSAGroupElementUnknownOrder
 }
 
-func (n *Nonce) Value() *znstar.RSAGroupUnknownOrderElement {
+func (n *Nonce) Value() *znstar.RSAGroupElementUnknownOrder {
 	return n.u
 }
 

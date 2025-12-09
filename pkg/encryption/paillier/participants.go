@@ -66,7 +66,7 @@ func (e *Encrypter) EncryptWithNonce(plaintext *Plaintext, receiver *PublicKey, 
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to lift nonce to n-th residues")
 	}
-	gm, err := receiver.group.Phi(plaintext.ValueCT())
+	gm, err := receiver.group.Representative(plaintext.ValueCT())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to compute Phi of plaintext")
 	}
@@ -141,7 +141,7 @@ func (se *SelfEncrypter) SelfEncryptWithNonce(plaintext *Plaintext, nonce *Nonce
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to lift nonce to n-th residues")
 	}
-	gm, err := se.sk.group.Phi(plaintext.ValueCT())
+	gm, err := se.sk.group.Representative(plaintext.ValueCT())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to compute Phi of plaintext")
 	}

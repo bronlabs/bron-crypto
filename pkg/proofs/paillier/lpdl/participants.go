@@ -105,7 +105,7 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 	// Create Phi(q/3) for homomorphic division
 	var qThirdInt numct.Int
 	qThirdInt.SetNat(qThirdNat)
-	qThirdUnit, err := publicKey.Group().Phi(&qThirdInt)
+	qThirdUnit, err := publicKey.Group().Representative(&qThirdInt)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot compute Phi(q/3)")
 	}

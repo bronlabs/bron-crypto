@@ -9,6 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
 // ========== RSA Group Tests ==========
@@ -286,7 +287,7 @@ func TestPaillierGroup_Phi(t *testing.T) {
 
 	// Test Phi function
 	x := num.Z().FromInt64(42)
-	result, err := group.Phi(x.Value())
+	result, err := group.Representative(x.Value())
 	require.NoError(t, err)
 	require.NotNil(t, result)
 }
@@ -397,7 +398,7 @@ func TestRSAGroupElement_CBOR_KnownOrder(t *testing.T) {
 	require.NotEmpty(t, data)
 
 	// Unmarshal
-	var recovered znstar.RSAGroupKnownOrderElement
+	var recovered znstar.RSAGroupElementKnownOrder
 	err = recovered.UnmarshalCBOR(data)
 	require.NoError(t, err)
 
@@ -424,7 +425,7 @@ func TestRSAGroupElement_CBOR_UnknownOrder(t *testing.T) {
 	require.NotEmpty(t, data)
 
 	// Unmarshal
-	var recovered znstar.RSAGroupUnknownOrderElement
+	var recovered znstar.RSAGroupElementUnknownOrder
 	err = recovered.UnmarshalCBOR(data)
 	require.NoError(t, err)
 
@@ -501,7 +502,7 @@ func TestPaillierGroupElement_CBOR_KnownOrder(t *testing.T) {
 	require.NotEmpty(t, data)
 
 	// Unmarshal
-	var recovered znstar.PaillierGroupKnownOrderElement
+	var recovered znstar.PaillierGroupElementKnownOrder
 	err = recovered.UnmarshalCBOR(data)
 	require.NoError(t, err)
 
@@ -529,7 +530,7 @@ func TestPaillierGroupElement_CBOR_UnknownOrder(t *testing.T) {
 	require.NotEmpty(t, data)
 
 	// Unmarshal
-	var recovered znstar.PaillierGroupUnknownOrderElement
+	var recovered znstar.PaillierGroupElementUnknownOrder
 	err = recovered.UnmarshalCBOR(data)
 	require.NoError(t, err)
 
@@ -573,14 +574,20 @@ func TestPaillierGroup_Operations_AfterCBOR(t *testing.T) {
 func TestRSAElement_MultiplicationWithDifferentGroups_ShouldPanic(t *testing.T) {
 	t.Parallel()
 
-	p1, q1, _ := nt.GeneratePrimePair(num.NPlus(), 512, rand.Reader)
-	p2, q2, _ := nt.GeneratePrimePair(num.NPlus(), 512, rand.Reader)
+	p1, q1, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	require.NoError(t, err)
+	p2, q2, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	require.NoError(t, err)
 
-	group1, _ := znstar.NewRSAGroup(p1, q1)
-	group2, _ := znstar.NewRSAGroup(p2, q2)
+	group1, err := znstar.NewRSAGroup(p1, q1)
+	require.NoError(t, err)
+	group2, err := znstar.NewRSAGroup(p2, q2)
+	require.NoError(t, err)
 
-	u1, _ := group1.Random(rand.Reader)
-	u2, _ := group2.Random(rand.Reader)
+	u1, err := group1.Random(rand.Reader)
+	require.NoError(t, err)
+	u2, err := group2.Random(rand.Reader)
+	require.NoError(t, err)
 
 	// Multiplying elements from different groups should panic
 	require.Panics(t, func() {
@@ -649,13 +656,161 @@ func TestPaillierGroup_InvalidNSquared_ShouldFail(t *testing.T) {
 func TestRSAGroup_CompositeFactors_ShouldFail(t *testing.T) {
 	t.Parallel()
 
-	// Use composite numbers instead of primes
-	composite1, _ := num.NPlus().FromUint64(15) // 3 × 5
-	composite2, _ := num.NPlus().FromUint64(21) // 3 × 7
+	// Generate valid primes and create composites from them
+	// We need 1024-bit composites to pass the size check, then fail on primality
+	p1, q1, err := nt.GeneratePrimePair(num.NPlus(), 512, rand.Reader)
+	require.NoError(t, err)
+	p2, q2, err := nt.GeneratePrimePair(num.NPlus(), 512, rand.Reader)
+	require.NoError(t, err)
 
-	_, err := znstar.NewRSAGroup(composite1, composite2)
+	// Create 1024-bit composite numbers (products of two 512-bit primes)
+	composite1 := p1.Mul(q1)
+	composite2 := p2.Mul(q2)
+
+	_, err = znstar.NewRSAGroup(composite1, composite2)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "prime")
+}
+
+// ========== Adversarial Tests: Non-Coprime Elements ==========
+
+func TestRSAGroup_FromUint_NonCoprime_ShouldFail(t *testing.T) {
+	t.Parallel()
+
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	require.NoError(t, err)
+
+	group, err := znstar.NewRSAGroup(p, q)
+	require.NoError(t, err)
+
+	// Create a Uint that equals p (a factor of the modulus, hence not coprime)
+	zmod, err := num.NewZMod(group.Modulus())
+	require.NoError(t, err)
+	nonCoprime, err := zmod.FromNat(p.Nat())
+	require.NoError(t, err)
+
+	// Attempting to create a unit from a non-coprime value should fail
+	_, err = group.FromUint(nonCoprime)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "not a unit")
+}
+
+func TestRSAGroup_CBOR_NonCoprimeElement_ShouldFail(t *testing.T) {
+	t.Parallel()
+
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	require.NoError(t, err)
+
+	group, err := znstar.NewRSAGroup(p, q)
+	require.NoError(t, err)
+
+	// Get a valid element to extract its arithmetic
+	validElem, err := group.Random(rand.Reader)
+	require.NoError(t, err)
+
+	// Serialize the valid element
+	validData, err := validElem.MarshalCBOR()
+	require.NoError(t, err)
+
+	// Create a non-coprime Uint (value = p, which divides the modulus)
+	zmod, err := num.NewZMod(group.Modulus())
+	require.NoError(t, err)
+	nonCoprime, err := zmod.FromNat(p.Nat())
+	require.NoError(t, err)
+
+	// Craft a malicious DTO with the non-coprime value but valid arithmetic
+	maliciousDTO := struct {
+		V          *num.Uint `cbor:"v"`
+		Arithmetic any       `cbor:"arithmetic"`
+	}{
+		V:          nonCoprime,
+		Arithmetic: validElem.Arithmetic(),
+	}
+
+	// Serialize the malicious payload with the correct tag
+	maliciousData, err := serde.MarshalCBORTagged(maliciousDTO, znstar.RSAGroupKnownOrderElementTag)
+	require.NoError(t, err)
+
+	// Attempt to deserialize - this should fail due to coprimality check
+	var recovered znstar.RSAGroupElementKnownOrder
+	err = recovered.UnmarshalCBOR(maliciousData)
+	require.Error(t, err, "deserializing a non-coprime element should fail")
+
+	// Also verify the valid data still works
+	var validRecovered znstar.RSAGroupElementKnownOrder
+	err = validRecovered.UnmarshalCBOR(validData)
+	require.NoError(t, err)
+	require.True(t, validElem.Equal(&validRecovered))
+}
+
+func TestPaillierGroup_FromUint_NonCoprime_ShouldFail(t *testing.T) {
+	t.Parallel()
+
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	require.NoError(t, err)
+
+	group, err := znstar.NewPaillierGroup(p, q)
+	require.NoError(t, err)
+
+	// For Paillier, the modulus is n² where n = p*q
+	// A non-coprime value would be p (or any multiple of p or q)
+	zmod, err := num.NewZMod(group.Modulus())
+	require.NoError(t, err)
+	nonCoprime, err := zmod.FromNat(p.Nat())
+	require.NoError(t, err)
+
+	// Attempting to create a unit from a non-coprime value should fail
+	_, err = group.FromUint(nonCoprime)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "not a unit")
+}
+
+func TestPaillierGroup_CBOR_NonCoprimeElement_ShouldFail(t *testing.T) {
+	t.Parallel()
+
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	require.NoError(t, err)
+
+	group, err := znstar.NewPaillierGroup(p, q)
+	require.NoError(t, err)
+
+	// Get a valid element to extract its arithmetic
+	validElem, err := group.Random(rand.Reader)
+	require.NoError(t, err)
+
+	// Serialize the valid element
+	validData, err := validElem.MarshalCBOR()
+	require.NoError(t, err)
+
+	// Create a non-coprime Uint (value = p, which shares a factor with n²)
+	zmod, err := num.NewZMod(group.Modulus())
+	require.NoError(t, err)
+	nonCoprime, err := zmod.FromNat(p.Nat())
+	require.NoError(t, err)
+
+	// Craft a malicious DTO with the non-coprime value but valid arithmetic
+	maliciousDTO := struct {
+		V          *num.Uint `cbor:"v"`
+		Arithmetic any       `cbor:"arithmetic"`
+	}{
+		V:          nonCoprime,
+		Arithmetic: validElem.Arithmetic(),
+	}
+
+	// Serialize the malicious payload with the correct tag
+	maliciousData, err := serde.MarshalCBORTagged(maliciousDTO, znstar.PaillierGroupKnownOrderElementTag)
+	require.NoError(t, err)
+
+	// Attempt to deserialize - this should fail due to coprimality check
+	var recovered znstar.PaillierGroupElementKnownOrder
+	err = recovered.UnmarshalCBOR(maliciousData)
+	require.Error(t, err, "deserializing a non-coprime element should fail")
+
+	// Also verify the valid data still works
+	var validRecovered znstar.PaillierGroupElementKnownOrder
+	err = validRecovered.UnmarshalCBOR(validData)
+	require.NoError(t, err)
+	require.True(t, validElem.Equal(&validRecovered))
 }
 
 // BenchmarkPaillierGroup_NthResidue_KnownOrder benchmarks NthResidue with known order group.
@@ -682,7 +837,7 @@ func BenchmarkPaillierGroup_NthResidue_KnownOrder(b *testing.B) {
 	}
 
 	// Pre-generate random nonces to lift
-	nonces := make([]*znstar.PaillierGroupUnknownOrderElement, b.N)
+	nonces := make([]*znstar.PaillierGroupElementUnknownOrder, b.N)
 	for i := 0; i < b.N; i++ {
 		nonces[i], err = paillierUnknown.Random(rand.Reader)
 		if err != nil {
@@ -717,7 +872,7 @@ func BenchmarkPaillierGroup_NthResidue_UnknownOrder(b *testing.B) {
 	}
 
 	// Pre-generate random nonces to lift
-	nonces := make([]*znstar.PaillierGroupUnknownOrderElement, b.N)
+	nonces := make([]*znstar.PaillierGroupElementUnknownOrder, b.N)
 	for i := 0; i < b.N; i++ {
 		nonces[i], err = paillierUnknown.Random(rand.Reader)
 		if err != nil {
@@ -836,7 +991,7 @@ func BenchmarkPaillierGroup_Phi(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := group.Phi(x.Value())
+		_, err := group.Representative(x.Value())
 		if err != nil {
 			b.Fatal(err)
 		}

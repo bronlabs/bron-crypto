@@ -50,7 +50,7 @@ func (cts *CiphertextSpace) New(x *numct.Nat) (*Ciphertext, error) {
 	return &Ciphertext{u: u}, nil
 }
 
-func NewCiphertextFromUnit(u *znstar.PaillierGroupUnknownOrderElement) *Ciphertext {
+func NewCiphertextFromUnit(u *znstar.PaillierGroupElementUnknownOrder) *Ciphertext {
 	return &Ciphertext{u: u}
 }
 
@@ -59,10 +59,10 @@ func (cts *CiphertextSpace) Contains(ct *Ciphertext) bool {
 }
 
 type Ciphertext struct {
-	u *znstar.PaillierGroupUnknownOrderElement
+	u *znstar.PaillierGroupElementUnknownOrder
 }
 
-func (ct *Ciphertext) Value() *znstar.PaillierGroupUnknownOrderElement {
+func (ct *Ciphertext) Value() *znstar.PaillierGroupElementUnknownOrder {
 	return ct.u
 }
 
