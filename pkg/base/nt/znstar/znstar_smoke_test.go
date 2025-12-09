@@ -1,6 +1,10 @@
 package znstar_test
 
-import "github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
+import (
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
+)
 
 var (
 	_ znstar.UnitGroup[*znstar.RSAGroupElementKnownOrder] = (*znstar.RSAGroupKnownOrder)(nil)
@@ -13,4 +17,7 @@ var (
 
 	_ znstar.UnitGroup[*znstar.PaillierGroupElementUnknownOrder] = (*znstar.PaillierGroupUnknownOrder)(nil)
 	_ znstar.Unit[*znstar.PaillierGroupElementUnknownOrder]      = (*znstar.PaillierGroupElementUnknownOrder)(nil)
+
+	_ algebra.AbelianGroup[*znstar.PaillierGroupElementUnknownOrder, *num.Int] = (*znstar.PaillierGroupUnknownOrder)(nil)
+	_ algebra.AbelianGroup[*znstar.RSAGroupElementUnknownOrder, *num.Int]      = (*znstar.RSAGroupUnknownOrder)(nil)
 )

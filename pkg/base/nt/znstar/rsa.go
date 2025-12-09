@@ -1,12 +1,27 @@
 package znstar
 
 import (
+	"io"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 )
+
+// SampleRSAGroup generates an RSA group with random primes of the given bit length.
+func SampleRSAGroup(factorBits uint, prng io.Reader) (*RSAGroupKnownOrder, error) {
+	if prng == nil {
+		return nil, errs.NewIsNil("prng")
+	}
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), factorBits, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "failed to generate prime pair")
+	}
+	return NewRSAGroup(p, q)
+}
 
 // SampleRSAGroup generates an RSA group with random primes of the given bit length.
 func NewRSAGroup(p, q *num.NatPlus) (*RSAGroupKnownOrder, error) {
@@ -86,19 +101,9 @@ type RSAGroup[X ArithmeticRSA] struct {
 	UnitGroupTrait[X, *RSAGroupElement[X], RSAGroupElement[X]]
 }
 
-// AmbientStructure returns the ambient structure of the RSA group ie. Z\\{n}Z.
-func (g *RSAGroup[X]) AmbientStructure() algebra.Structure[*num.Uint] {
-	return g.zMod
-}
-
-// ScalarStructure returns the scalar structure of the RSA's induced semi module ie. N.
-func (g *RSAGroup[X]) ScalarStructure() algebra.Structure[*num.Nat] {
-	return num.N()
-}
-
 // Equal checks if two RSA groups are equal.
 func (g *RSAGroup[X]) Equal(other *RSAGroup[X]) bool {
-	return g.zMod.Modulus().Equal(other.zMod.Modulus()) && g.Order().Equal(other.Order())
+	return g.zMod.Modulus().Equal(other.zMod.Modulus()) && g.Order().IsUnknown() == other.Order().IsUnknown()
 }
 
 // ForgetOrder converts an RSA group with known order to one with unknown order.

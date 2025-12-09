@@ -507,6 +507,11 @@ func (i *Int) Bytes() []byte {
 	return i.v.Bytes()
 }
 
+// BytesBE returns the big-endian byte representation of the integer.
+func (i *Int) BytesBE() []byte {
+	return i.Bytes()
+}
+
 // Bit returns the value of the i-th bit of the integer.
 func (n *Int) Bit(i uint) byte {
 	return (n.v.Bit(i))

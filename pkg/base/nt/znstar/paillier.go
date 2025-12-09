@@ -109,19 +109,9 @@ type PaillierGroup[X ArithmeticPaillier] struct {
 	UnitGroupTrait[X, *PaillierGroupElement[X], PaillierGroupElement[X]]
 }
 
-// AmbientStructure returns the ambient structure of the Paillier group ie. Z\\{n^2}Z.
-func (g *PaillierGroup[X]) AmbientStructure() algebra.Structure[*num.Uint] {
-	return g.zMod
-}
-
-// ScalarStructure returns the scalar structure of the induced Paillier semi module ie. N.
-func (g *PaillierGroup[X]) ScalarStructure() algebra.Structure[*num.Nat] {
-	return num.N()
-}
-
 // Equal checks if two Paillier groups are equal.
 func (g *PaillierGroup[X]) Equal(other *PaillierGroup[X]) bool {
-	return g.zMod.Modulus().Equal(other.zMod.Modulus())
+	return g.zMod.Modulus().Equal(other.zMod.Modulus()) && g.Order().IsUnknown() == other.Order().IsUnknown()
 }
 
 // N returns the Paillier modulus n.
@@ -183,7 +173,7 @@ func (g *PaillierGroup[X]) NthResidue(u *PaillierGroupElementUnknownOrder) (*Pai
 	}, nil
 }
 
-// Representative computes the representative of a plaintext in the Paillier group.
+// Representative computes the representative of a plaintext in the Paillier group. It is equivalent to computing (1 + m*n) mod n^2.
 func (pg *PaillierGroup[X]) Representative(plaintext *numct.Int) (*PaillierGroupElement[X], error) {
 	if pg.N().ModulusCT().IsInRangeSymmetric(plaintext) == ct.False {
 		return nil, errs.NewValue("plaintext is out of range: |plaintext| >= n/2")

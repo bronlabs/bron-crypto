@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
@@ -190,6 +191,14 @@ func (g *UnitGroupTrait[A, W, WT]) FromUint64(input uint64) (W, error) {
 
 func (g *UnitGroupTrait[A, W, WT]) AmbientGroup() *num.ZMod {
 	return g.zMod
+}
+
+func (g *UnitGroupTrait[A, W, WT]) AmbientStructure() algebra.Structure[*num.Uint] {
+	return g.zMod
+}
+
+func (g *UnitGroupTrait[A, W, WT]) ScalarStructure() algebra.Structure[*num.Int] {
+	return num.Z()
 }
 
 func (g *UnitGroupTrait[A, W, WT]) Arithmetic() modular.Arithmetic {

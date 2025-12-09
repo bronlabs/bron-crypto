@@ -12,6 +12,7 @@ import (
 )
 
 func UintGeneratorGivenModulus(t *testing.T, modulus *num.NatPlus) *rapid.Generator[*num.Uint] {
+	t.Helper()
 	return rapid.Custom(func(rt *rapid.T) *num.Uint {
 		zMod, err := num.NewZMod(modulus)
 		require.NoError(t, err)
@@ -22,6 +23,7 @@ func UintGeneratorGivenModulus(t *testing.T, modulus *num.NatPlus) *rapid.Genera
 }
 
 func UintGenerator(t *testing.T) (generator *rapid.Generator[*num.Uint], modulus *num.NatPlus) {
+	t.Helper()
 	lo, err := num.NPlus().FromUint64(1)
 	require.NoError(t, err)
 	hi, err := num.NPlus().FromUint64(1 << 16)

@@ -12,8 +12,9 @@ import (
 )
 
 type unitGroup[U any] interface {
+	algebra.FiniteStructure[U]
 	crtp.MultiplicativeGroup[U]
-	crtp.MultiplicativeSemiModule[U, *num.Nat]
+	crtp.MultiplicativeModule[U, *num.Int]
 	crtp.Quotient[U, *num.NatPlus, *num.Uint]
 
 	ModulusCT() *numct.Modulus
@@ -31,7 +32,7 @@ type KnowledgeOfOrder[A modular.Arithmetic, G UnitGroup[U], U Unit[U]] interface
 
 type unit[U any] interface {
 	crtp.MultiplicativeGroupElement[U]
-	crtp.MultiplicativeSemiModuleElement[U, *num.Nat]
+	crtp.MultiplicativeModuleElement[U, *num.Int]
 	crtp.Residue[U, *num.NatPlus]
 
 	IsUnknownOrder() bool
