@@ -2,6 +2,7 @@ package znstar_test
 
 import (
 	"crypto/rand"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -355,30 +356,32 @@ func TestRSAGroup_CBOR_KnownOrder(t *testing.T) {
 	require.True(t, original.Order().Equal(recovered.Order()))
 }
 
-//func TestRSAGroup_CBOR_UnknownOrder(t *testing.T) {
-//	t.Parallel()
-//
-//	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
-//	require.NoError(t, err)
-//	n := p.Mul(q)
-//
-//	original, err := znstar.NewRSAGroupOfUnknownOrder(n)
-//	require.NoError(t, err)
-//
-//	// Marshal
-//	data, err := original.MarshalCBOR()
-//	require.NoError(t, err)
-//	require.NotEmpty(t, data)
-//
-//	// Unmarshal
-//	var recovered znstar.RSAGroupUnknownOrder
-//	err = recovered.UnmarshalCBOR(data)
-//	require.NoError(t, err)
-//
-//	// Verify equality
-//	require.True(t, recovered)
-//	require.True(t, original.Modulus().Equal(recovered.Modulus()))
-//}
+func TestRSAGroup_CBOR_UnknownOrder(t *testing.T) {
+	t.Parallel()
+
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	require.NoError(t, err)
+	n := p.Mul(q)
+
+	original, err := znstar.NewRSAGroupOfUnknownOrder(n)
+	require.NoError(t, err)
+
+	// Marshal
+	data, err := original.MarshalCBOR()
+	require.NoError(t, err)
+	require.NotEmpty(t, data)
+
+	// Unmarshal
+	var recovered znstar.RSAGroupUnknownOrder
+	err = recovered.UnmarshalCBOR(data)
+	require.NoError(t, err)
+
+	// Verify equality - for unknown order groups, we can only compare modulus
+	// since unknown cardinals are never equal to each other by design
+	require.True(t, original.Modulus().Equal(recovered.Modulus()))
+	require.True(t, original.Order().IsUnknown())
+	require.True(t, recovered.Order().IsUnknown())
+}
 
 func TestRSAGroupElement_CBOR_KnownOrder(t *testing.T) {
 	t.Parallel()
@@ -458,31 +461,31 @@ func TestPaillierGroup_CBOR_KnownOrder(t *testing.T) {
 	require.True(t, original.Order().Equal(recovered.Order()))
 }
 
-//func TestPaillierGroup_CBOR_UnknownOrder(t *testing.T) {
-//	t.Parallel()
-//
-//	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
-//	require.NoError(t, err)
-//	n := p.Mul(q)
-//	n2 := n.Square()
-//
-//	original, err := znstar.NewPaillierGroupOfUnknownOrder(n2, n)
-//	require.NoError(t, err)
-//
-//	// Marshal
-//	data, err := original.MarshalCBOR()
-//	require.NoError(t, err)
-//	require.NotEmpty(t, data)
-//
-//	// Unmarshal
-//	var recovered znstar.PaillierGroupUnknownOrder
-//	err = recovered.UnmarshalCBOR(data)
-//	require.NoError(t, err)
-//
-//	// Verify equality
-//	require.True(t, original.Equal(&recovered))
-//	require.True(t, original.N().Equal(recovered.N()))
-//}
+func TestPaillierGroup_CBOR_UnknownOrder(t *testing.T) {
+	t.Parallel()
+
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	require.NoError(t, err)
+	n := p.Mul(q)
+	n2 := n.Square()
+
+	original, err := znstar.NewPaillierGroupOfUnknownOrder(n2, n)
+	require.NoError(t, err)
+
+	// Marshal
+	data, err := original.MarshalCBOR()
+	require.NoError(t, err)
+	require.NotEmpty(t, data)
+
+	// Unmarshal
+	var recovered znstar.PaillierGroupUnknownOrder
+	err = recovered.UnmarshalCBOR(data)
+	require.NoError(t, err)
+
+	// Verify equality
+	require.True(t, original.Equal(&recovered))
+	require.True(t, original.N().Equal(recovered.N()))
+}
 
 func TestPaillierGroupElement_CBOR_KnownOrder(t *testing.T) {
 	t.Parallel()
@@ -670,6 +673,203 @@ func TestRSAGroup_CompositeFactors_ShouldFail(t *testing.T) {
 	_, err = znstar.NewRSAGroup(composite1, composite2)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "prime")
+}
+
+// ========== Hash Tests ==========
+
+func TestRSAGroup_Hash_Coprimality(t *testing.T) {
+	t.Parallel()
+
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	require.NoError(t, err)
+
+	group, err := znstar.NewRSAGroup(p, q)
+	require.NoError(t, err)
+
+	// Hash multiple different inputs and verify all outputs are coprime with modulus
+	inputs := [][]byte{
+		[]byte("test input 1"),
+		[]byte("test input 2"),
+		[]byte(""),
+		[]byte("a longer test input with more bytes to hash"),
+		make([]byte, 1000), // 1000 zero bytes
+	}
+
+	for i, input := range inputs {
+		elem, err := group.Hash(input)
+		require.NoError(t, err, "Hash failed for input %d", i)
+		require.NotNil(t, elem)
+
+		// Verify the element is coprime with the modulus
+		require.True(t, elem.Value().Lift().Coprime(group.Modulus().Lift()),
+			"Hash output %d is not coprime with modulus", i)
+
+		// Verify the element is in the correct group
+		require.True(t, group.Modulus().Equal(elem.Modulus()),
+			"Hash output %d has wrong modulus", i)
+	}
+}
+
+func TestRSAGroup_Hash_CollisionResistance(t *testing.T) {
+	t.Parallel()
+
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	require.NoError(t, err)
+
+	group, err := znstar.NewRSAGroup(p, q)
+	require.NoError(t, err)
+
+	// Generate many hashes and check for collisions
+	numHashes := 100
+	hashes := make(map[string][]byte)
+
+	for i := 0; i < numHashes; i++ {
+		input := []byte(fmt.Sprintf("input_%d", i))
+		elem, err := group.Hash(input)
+		require.NoError(t, err)
+
+		hashStr := elem.Value().String()
+		if existingInput, exists := hashes[hashStr]; exists {
+			t.Fatalf("Collision detected: inputs %q and %q produced same hash", existingInput, input)
+		}
+		hashes[hashStr] = input
+	}
+
+	// Verify determinism: same input should produce same output
+	input := []byte("determinism test")
+	elem1, err := group.Hash(input)
+	require.NoError(t, err)
+	elem2, err := group.Hash(input)
+	require.NoError(t, err)
+	require.True(t, elem1.Equal(elem2), "Hash is not deterministic")
+
+	// Verify different inputs produce different outputs
+	input1 := []byte("input A")
+	input2 := []byte("input B")
+	hash1, err := group.Hash(input1)
+	require.NoError(t, err)
+	hash2, err := group.Hash(input2)
+	require.NoError(t, err)
+	require.False(t, hash1.Equal(hash2), "Different inputs produced same hash")
+}
+
+func TestRSAGroup_Hash_UnknownOrder(t *testing.T) {
+	t.Parallel()
+
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	require.NoError(t, err)
+	n := p.Mul(q)
+
+	group, err := znstar.NewRSAGroupOfUnknownOrder(n)
+	require.NoError(t, err)
+
+	// Test that Hash works with unknown order groups too
+	input := []byte("test for unknown order group")
+	elem, err := group.Hash(input)
+	require.NoError(t, err)
+	require.NotNil(t, elem)
+
+	// Verify coprimality
+	require.True(t, elem.Value().Lift().Coprime(group.Modulus().Lift()),
+		"Hash output is not coprime with modulus")
+}
+
+func TestPaillierGroup_Hash_Coprimality(t *testing.T) {
+	t.Parallel()
+
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	require.NoError(t, err)
+
+	group, err := znstar.NewPaillierGroup(p, q)
+	require.NoError(t, err)
+
+	// Hash multiple different inputs and verify all outputs are coprime with modulus (n²)
+	inputs := [][]byte{
+		[]byte("test input 1"),
+		[]byte("test input 2"),
+		[]byte(""),
+		[]byte("a longer test input with more bytes to hash"),
+		make([]byte, 1000), // 1000 zero bytes
+	}
+
+	for i, input := range inputs {
+		elem, err := group.Hash(input)
+		require.NoError(t, err, "Hash failed for input %d", i)
+		require.NotNil(t, elem)
+
+		// Verify the element is coprime with the modulus (n²)
+		require.True(t, elem.Value().Lift().Coprime(group.Modulus().Lift()),
+			"Hash output %d is not coprime with modulus n²", i)
+
+		// Verify the element is in the correct group
+		require.True(t, group.Modulus().Equal(elem.Modulus()),
+			"Hash output %d has wrong modulus", i)
+	}
+}
+
+func TestPaillierGroup_Hash_CollisionResistance(t *testing.T) {
+	t.Parallel()
+
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	require.NoError(t, err)
+
+	group, err := znstar.NewPaillierGroup(p, q)
+	require.NoError(t, err)
+
+	// Generate many hashes and check for collisions
+	numHashes := 100
+	hashes := make(map[string][]byte)
+
+	for i := 0; i < numHashes; i++ {
+		input := []byte(fmt.Sprintf("paillier_input_%d", i))
+		elem, err := group.Hash(input)
+		require.NoError(t, err)
+
+		hashStr := elem.Value().String()
+		if existingInput, exists := hashes[hashStr]; exists {
+			t.Fatalf("Collision detected: inputs %q and %q produced same hash", existingInput, input)
+		}
+		hashes[hashStr] = input
+	}
+
+	// Verify determinism: same input should produce same output
+	input := []byte("paillier determinism test")
+	elem1, err := group.Hash(input)
+	require.NoError(t, err)
+	elem2, err := group.Hash(input)
+	require.NoError(t, err)
+	require.True(t, elem1.Equal(elem2), "Hash is not deterministic")
+
+	// Verify different inputs produce different outputs
+	input1 := []byte("paillier input A")
+	input2 := []byte("paillier input B")
+	hash1, err := group.Hash(input1)
+	require.NoError(t, err)
+	hash2, err := group.Hash(input2)
+	require.NoError(t, err)
+	require.False(t, hash1.Equal(hash2), "Different inputs produced same hash")
+}
+
+func TestPaillierGroup_Hash_UnknownOrder(t *testing.T) {
+	t.Parallel()
+
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)
+	require.NoError(t, err)
+	n := p.Mul(q)
+	n2 := n.Square()
+
+	group, err := znstar.NewPaillierGroupOfUnknownOrder(n2, n)
+	require.NoError(t, err)
+
+	// Test that Hash works with unknown order groups too
+	input := []byte("test for unknown order paillier group")
+	elem, err := group.Hash(input)
+	require.NoError(t, err)
+	require.NotNil(t, elem)
+
+	// Verify coprimality with n²
+	require.True(t, elem.Value().Lift().Coprime(group.Modulus().Lift()),
+		"Hash output is not coprime with modulus n²")
 }
 
 // ========== Adversarial Tests: Non-Coprime Elements ==========

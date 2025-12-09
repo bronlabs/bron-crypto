@@ -5,12 +5,14 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"golang.org/x/crypto/blake2b"
 )
 
 type unitWrapper[A modular.Arithmetic] interface {
@@ -65,28 +67,35 @@ func (g *UnitGroupTrait[A, W, WT]) Random(prng io.Reader) (W, error) {
 }
 
 func (g *UnitGroupTrait[A, W, WT]) Hash(input []byte) (W, error) {
-	// xof, err := blake2b.NewXOF(uint32(g.WideElementSize()), nil)
-	// if err != nil {
-	// 	return nil, errs2.Wrap(err)
-	// }
-	// if _, err := xof.Write(input); err != nil {
-	// 	return nil, errs2.Wrap(err)
-	// }
-	// digest := make([]byte, g.WideElementSize())
-	// var x, v numct.Nat
-	// for {
-	// 	if _, err = io.ReadFull(xof, digest); err != nil {
-	// 		return nil, errs2.Wrap(err)
-	// 	}
-	// 	if ok := x.SetBytes(digest); ok == ct.False {
-	// 		return nil, errs2.New("failed to interpret hash digest as Nat")
-	// 	}
-	// 	v := new(numct.Nat)
-	// 	// Perform modular reduction using the modulus from n
-	// 	g.zMod.ModulusCT().Mod(v, x)
-	// 	return &Uint{v: v, m: zn.n.m}, nil
-	// }
-	panic("not implemented")
+	xof, err := blake2b.NewXOF(uint32(g.WideElementSize()), nil)
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	if _, err := xof.Write(input); err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	digest := make([]byte, g.WideElementSize())
+	var x, v numct.Nat
+	for {
+		if _, err = io.ReadFull(xof, digest); err != nil {
+			return nil, errs2.Wrap(err)
+		}
+		if ok := x.SetBytes(digest); ok == ct.False {
+			return nil, errs2.New("failed to interpret hash digest as Nat")
+		}
+		// Perform modular reduction using the modulus from n
+		g.zMod.Modulus().ModulusCT().Mod(&v, &x)
+
+		if g.zMod.Modulus().ModulusCT().Nat().Coprime(&v) == ct.True {
+			uv, err := num.NewUintGivenModulus(&v, g.zMod.Modulus().ModulusCT())
+			if err != nil {
+				return nil, errs2.Wrap(err)
+			}
+			var zn WT
+			W(&zn).set(uv, g.arith, g.n)
+			return W(&zn), nil
+		}
+	}
 }
 
 func (g *UnitGroupTrait[A, W, WT]) Modulus() *num.NatPlus {
