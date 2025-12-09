@@ -4,7 +4,7 @@ Package `num` provides arbitrary-precision arithmetic for cryptographic applicat
 
 ## Overview
 
-This package provides immutable, strongly-typed number representations that implement standard algebraic interfaces. Unlike `numct`, operations in `num` are not constant-time—use `numct` directly when timing side-channels must be avoided.
+This package provides immutable, strongly-typed number representations that implement standard algebraic interfaces. Unlike `numct`, operations in `num` are not constant-time; Use `numct` directly when timing side-channels must be avoided.
 
 ## Key Types
 
