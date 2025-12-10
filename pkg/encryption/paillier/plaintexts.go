@@ -91,7 +91,7 @@ func (pts *PlaintextSpace) FromInt(x *numct.Int) (*Plaintext, error) {
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create centred plaintext from int")
 	}
-	if !y.IsInRange(pts.N()) {
+	if !y.IsInRangeSymmetric(pts.N()) {
 		return nil, errs.NewFailed("int is out of range for plaintext space")
 	}
 	return &Plaintext{
