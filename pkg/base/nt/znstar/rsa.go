@@ -28,10 +28,11 @@ func NewRSAGroup(p, q *num.NatPlus) (*RSAGroupKnownOrder, error) {
 	if p == nil || q == nil {
 		return nil, errs.NewValue("p and q must not be nil")
 	}
-	if p.AnnouncedLen() != q.AnnouncedLen() {
+	if p.TrueLen() != q.TrueLen() {
 		return nil, errs.NewValue("p and q must have the same length")
 	}
-	if p.AnnouncedLen() < 1024 {
+	n := p.Mul(q)
+	if n.TrueLen() < 2047 {
 		return nil, errs.NewValue("p and q must be at least 1024 bits each")
 	}
 	if !p.IsProbablyPrime() {
@@ -40,7 +41,7 @@ func NewRSAGroup(p, q *num.NatPlus) (*RSAGroupKnownOrder, error) {
 	if !q.IsProbablyPrime() {
 		return nil, errs.NewValue("q must be prime")
 	}
-	zMod, err := num.NewZMod(p.Mul(q))
+	zMod, err := num.NewZMod(n)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create ZMod")
 	}
@@ -58,7 +59,7 @@ func NewRSAGroup(p, q *num.NatPlus) (*RSAGroupKnownOrder, error) {
 
 // NewRSAGroupOfUnknownOrder creates an RSA group with unknown order from the given modulus m.
 func NewRSAGroupOfUnknownOrder(m *num.NatPlus) (*RSAGroupUnknownOrder, error) {
-	if m.AnnouncedLen() < 2048 {
+	if m.TrueLen() < 2047 {
 		return nil, errs.NewValue("modulus must be at least 2048 bits")
 	}
 	zMod, err := num.NewZMod(m)

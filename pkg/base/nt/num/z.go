@@ -272,7 +272,7 @@ func (i *Int) Rsh(shift uint) *Int {
 	return &Int{v: v}
 }
 
-// IsInRange checks if the integer is within the range defined by the modulus.
+// IsInRange checks if the integer is within the range defined by the modulus i.e., 0 <= x < m
 func (i *Int) IsInRange(modulus *NatPlus) bool {
 	if modulus == nil {
 		panic("argument is nil")
@@ -283,7 +283,7 @@ func (i *Int) IsInRange(modulus *NatPlus) bool {
 	return modulus.ModulusCT().IsInRange(i.Abs().v) == ct.True
 }
 
-// IsInRangeSymmetric checks if the integer is within the symmetric range defined by the modulus ie. |x| <= m/2.
+// IsInRangeSymmetric checks if the integer is within the symmetric range defined by the modulus i.e., -m/2 <= x < m/2
 func (i *Int) IsInRangeSymmetric(modulus *NatPlus) bool {
 	if modulus == nil {
 		panic("argument is nil")
@@ -508,18 +508,18 @@ func (i *Int) Bytes() []byte {
 }
 
 // Bit returns the value of the i-th bit of the integer.
-func (n *Int) Bit(i uint) byte {
-	return (n.v.Bit(i))
+func (i *Int) Bit(b uint) byte {
+	return i.v.Bit(b)
 }
 
 // IsEven checks if the integer is even.
-func (n *Int) IsEven() bool {
-	return n.v.IsEven() == ct.True
+func (i *Int) IsEven() bool {
+	return i.v.IsEven() == ct.True
 }
 
 // IsOdd checks if the integer is odd.
-func (n *Int) IsOdd() bool {
-	return n.v.IsOdd() == ct.True
+func (i *Int) IsOdd() bool {
+	return i.v.IsOdd() == ct.True
 }
 
 // Big converts the integer to a big.Int.

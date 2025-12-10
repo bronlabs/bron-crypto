@@ -677,13 +677,13 @@ func TestModulus_IsInRange(t *testing.T) {
 
 func TestModulus_IsInRangeSymmetric(t *testing.T) {
 	t.Parallel()
-	p := newModulusPair(t, 10) // symmetric range: [-5, 5] (inclusive)
+	p := newModulusPair(t, 10) // symmetric range: [-5, 5) (exclusive)
 
 	t.Run("in range", func(t *testing.T) {
 		t.Parallel()
 		require.Equal(t, ct.True, p.basic.IsInRangeSymmetric(numct.NewIntFromBig(big.NewInt(0), 64)))
 		require.Equal(t, ct.True, p.basic.IsInRangeSymmetric(numct.NewIntFromBig(big.NewInt(4), 64)))
-		require.Equal(t, ct.True, p.basic.IsInRangeSymmetric(numct.NewIntFromBig(big.NewInt(5), 64)))
+		require.Equal(t, ct.False, p.basic.IsInRangeSymmetric(numct.NewIntFromBig(big.NewInt(5), 64)))
 		require.Equal(t, ct.True, p.basic.IsInRangeSymmetric(numct.NewIntFromBig(big.NewInt(-5), 64)))
 	})
 

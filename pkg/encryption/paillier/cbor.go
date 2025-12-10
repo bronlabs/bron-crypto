@@ -45,10 +45,10 @@ type plaintextDTO struct {
 	N *num.NatPlus `cbor:"n"`
 }
 
-func (p *Plaintext) MarshalCBOR() ([]byte, error) {
+func (cp *Plaintext) MarshalCBOR() ([]byte, error) {
 	dto := &plaintextDTO{
-		V: p.v,
-		N: p.n,
+		V: cp.v,
+		N: cp.n,
 	}
 	data, err := serde.MarshalCBORTagged(dto, PlaintextTag)
 	if err != nil {
@@ -57,13 +57,13 @@ func (p *Plaintext) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
-func (p *Plaintext) UnmarshalCBOR(data []byte) error {
+func (cp *Plaintext) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[plaintextDTO](data)
 	if err != nil {
 		return err
 	}
-	p.v = dto.V
-	p.n = dto.N
+	cp.v = dto.V
+	cp.n = dto.N
 	return nil
 }
 
@@ -97,9 +97,9 @@ type ciphertextDTO struct {
 	U *znstar.PaillierGroupElementUnknownOrder `cbor:"u"`
 }
 
-func (c *Ciphertext) MarshalCBOR() ([]byte, error) {
+func (ct *Ciphertext) MarshalCBOR() ([]byte, error) {
 	dto := &ciphertextDTO{
-		U: c.u,
+		U: ct.u,
 	}
 	data, err := serde.MarshalCBORTagged(dto, CiphertextTag)
 	if err != nil {
@@ -108,12 +108,12 @@ func (c *Ciphertext) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
-func (c *Ciphertext) UnmarshalCBOR(data []byte) error {
+func (ct *Ciphertext) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[ciphertextDTO](data)
 	if err != nil {
 		return err
 	}
-	c.u = dto.U
+	ct.u = dto.U
 	return nil
 }
 

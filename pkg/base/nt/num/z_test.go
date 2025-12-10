@@ -1174,7 +1174,7 @@ func TestInt_IsInRangeSymmetric(t *testing.T) {
 	z := num.Z()
 	np := num.NPlus()
 
-	// For modulus 100, symmetric range is -50 <= x <= 50
+	// For modulus 100, the symmetric range is -50 <= x < 50
 	mod100, err := np.FromUint64(100)
 	require.NoError(t, err)
 
@@ -1182,7 +1182,7 @@ func TestInt_IsInRangeSymmetric(t *testing.T) {
 		t.Parallel()
 		require.True(t, z.FromInt64(0).IsInRangeSymmetric(mod100))
 		require.True(t, z.FromInt64(49).IsInRangeSymmetric(mod100))
-		require.True(t, z.FromInt64(50).IsInRangeSymmetric(mod100))
+		require.False(t, z.FromInt64(50).IsInRangeSymmetric(mod100))
 		require.True(t, z.FromInt64(-50).IsInRangeSymmetric(mod100))
 		require.True(t, z.FromInt64(-1).IsInRangeSymmetric(mod100))
 	})
