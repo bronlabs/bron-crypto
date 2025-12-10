@@ -304,7 +304,7 @@ func (m *ModulusBasic) IsInRange(x *Nat) ct.Bool {
 	return ct.Bool(lt)
 }
 
-// IsInRangeSymmetric returns true if -m/2 <= x <= m/2.
+// IsInRangeSymmetric returns true if -m/2 <= x < m/2.
 func (m *ModulusBasic) IsInRangeSymmetric(x *Int) ct.Bool {
 	mod := (*Nat)(((*saferith.Modulus)(m)).Nat()).Lift()
 	var x2, modNeg Int
