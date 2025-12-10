@@ -58,16 +58,9 @@ type (
 
 type (
 	// Ab ~= Mod_Z, however due to type system constraints we cannot express this directly without breaking some things (e.g. ZMod would have to be considered as a euclidean domain)
-	// so we use the more general Numeric here.
-	// The reason we also have to bound S to be a RingElement as well, is due to having to satisfy properties of a module.
-	AbelianGroup[E crtp.AbelianGroupElement[E, S], S interface {
-		crtp.Numeric[S]
-		crtp.RingElement[S]
-	}] = crtp.AbelianGroup[E, S]
-	AbelianGroupElement[E crtp.AbelianGroupElement[E, S], S interface {
-		crtp.Numeric[S]
-		crtp.RingElement[S]
-	}] = crtp.AbelianGroupElement[E, S]
+	// So we leave it under-constrained as a RingElement, just to satisfy properties of a module.
+	AbelianGroup[E crtp.AbelianGroupElement[E, S], S crtp.RingElement[S]]        = crtp.AbelianGroup[E, S]
+	AbelianGroupElement[E crtp.AbelianGroupElement[E, S], S crtp.RingElement[S]] = crtp.AbelianGroupElement[E, S]
 
 	PrimeGroup[E crtp.PrimeGroupElement[E, S], S crtp.PrimeFieldElement[S]]        = crtp.PrimeGroup[E, S]
 	PrimeGroupElement[E crtp.PrimeGroupElement[E, S], S crtp.PrimeFieldElement[S]] = crtp.PrimeGroupElement[E, S]

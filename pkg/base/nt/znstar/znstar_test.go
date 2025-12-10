@@ -277,7 +277,7 @@ func TestPaillierGroup_NthResidue(t *testing.T) {
 	require.NotNil(t, lifted)
 }
 
-func TestPaillierGroup_Phi(t *testing.T) {
+func TestPaillierGroup_Representative(t *testing.T) {
 	t.Parallel()
 
 	p, q, err := nt.GeneratePrimePair(num.NPlus(), 1024, rand.Reader)

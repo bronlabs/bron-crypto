@@ -197,12 +197,12 @@ func (u *UnitTrait[A, W, WT]) IsTorsionFree() bool {
 	return true
 }
 
-func (u *UnitTrait[A, W, WT]) ScalarOp(scalar *num.Nat) W {
-	return u.Exp(scalar)
+func (u *UnitTrait[A, W, WT]) ScalarOp(scalar *num.Int) W {
+	return u.ExpI(scalar)
 }
 
-func (u *UnitTrait[A, W, WT]) ScalarExp(scalar *num.Nat) W {
-	return u.Exp(scalar)
+func (u *UnitTrait[A, W, WT]) ScalarExp(scalar *num.Int) W {
+	return u.ExpI(scalar)
 }
 
 func (u *UnitTrait[A, W, WT]) Cardinal() cardinal.Cardinal {
