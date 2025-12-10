@@ -6,6 +6,7 @@ import (
 	"io"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
@@ -19,13 +20,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const primeLen = 1024
+
 func Test_HappyPathInteractive(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
-	pBig, err := crand.Prime(prng, 1024)
+	pBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
 	pNatCt := numct.NewNatFromBig(pBig, pBig.BitLen())
-	qBig, err := crand.Prime(prng, 1024)
+	qBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
 	gNatCt := numct.NewNatFromBig(qBig, qBig.BitLen())
 
@@ -50,12 +53,12 @@ func Test_HappyPathInteractive(t *testing.T) {
 func Test_InvalidRootInteractive(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
-	pBig, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
-	pNatCt := numct.NewNatFromBig(pBig, 128)
-	qBig, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, primeLen)
+	qBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
-	qNatCt := numct.NewNatFromBig(qBig, 128)
+	qNatCt := numct.NewNatFromBig(qBig, primeLen)
 
 	xNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
@@ -67,13 +70,13 @@ func Test_InvalidRootInteractive(t *testing.T) {
 
 	y1Big, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	y1NatCt := numct.NewNatFromBig(y1Big, 256)
+	y1NatCt := numct.NewNatFromBig(y1Big, primeLen*2)
 	var x1NatCt numct.Nat
 	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x1NatCt, y1NatCt)
 
 	y2Big, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	y2NatCt := numct.NewNatFromBig(y2Big, 256)
+	y2NatCt := numct.NewNatFromBig(y2Big, primeLen*2)
 	var x2NatCt numct.Nat
 	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x2NatCt, y2NatCt)
 
@@ -92,12 +95,12 @@ func Test_HappyPathNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	appLabel := "NthRoot"
 	prng := crand.Reader
-	pBig, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
-	pNatCt := numct.NewNatFromBig(pBig, 128)
-	qBig, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, primeLen)
+	qBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
-	gNatCt := numct.NewNatFromBig(qBig, 128)
+	gNatCt := numct.NewNatFromBig(qBig, primeLen)
 
 	xNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
@@ -112,7 +115,7 @@ func Test_HappyPathNonInteractive(t *testing.T) {
 
 	yBig, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	yNatCt := numct.NewNatFromBig(yBig, 256)
+	yNatCt := numct.NewNatFromBig(yBig, primeLen*2)
 	var xNatCt numct.Nat
 	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&xNatCt, yNatCt)
 
@@ -147,12 +150,12 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	appLabel := "NthRoot"
 	prng := crand.Reader
-	pBig, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
-	pNatCt := numct.NewNatFromBig(pBig, 128)
-	qBig, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, primeLen)
+	qBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
-	qNatCt := numct.NewNatFromBig(qBig, 128)
+	qNatCt := numct.NewNatFromBig(qBig, primeLen)
 
 	xNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
@@ -167,13 +170,13 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 
 	y1Big, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	y1NatCt := numct.NewNatFromBig(y1Big, 256)
+	y1NatCt := numct.NewNatFromBig(y1Big, primeLen*2)
 	var x1NatCt numct.Nat
 	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x1NatCt, y1NatCt)
 
 	y2Big, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	y2NatCt := numct.NewNatFromBig(y2Big, 256)
+	y2NatCt := numct.NewNatFromBig(y2Big, primeLen*2)
 	var x2NatCt numct.Nat
 	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&x2NatCt, y2NatCt)
 
@@ -234,12 +237,12 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 func Test_Simulator(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
-	pBig, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
-	pNatCt := numct.NewNatFromBig(pBig, 128)
-	qBig, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, primeLen)
+	qBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
-	qNatCt := numct.NewNatFromBig(qBig, 128)
+	qNatCt := numct.NewNatFromBig(qBig, primeLen)
 
 	xNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
@@ -251,7 +254,7 @@ func Test_Simulator(t *testing.T) {
 
 	yBig, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	yNatCt := numct.NewNatFromBig(yBig, 256)
+	yNatCt := numct.NewNatFromBig(yBig, primeLen*2)
 	var xNatCt numct.Nat
 	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&xNatCt, yNatCt)
 
@@ -276,12 +279,12 @@ func Test_Simulator(t *testing.T) {
 func Test_Extractor(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
-	pBig, err := crand.Prime(prng, 128)
+	pBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
-	pNatCt := numct.NewNatFromBig(pBig, 128)
-	qBig, err := crand.Prime(prng, 128)
+	pNatCt := numct.NewNatFromBig(pBig, primeLen)
+	qBig, err := crand.Prime(prng, primeLen)
 	require.NoError(t, err)
-	qNatCt := numct.NewNatFromBig(qBig, 128)
+	qNatCt := numct.NewNatFromBig(qBig, primeLen)
 
 	pNatPlus, err := num.NPlus().FromNatCT(pNatCt)
 	require.NoError(t, err)
@@ -293,7 +296,7 @@ func Test_Extractor(t *testing.T) {
 
 	yBig, err := crand.Int(prng, g.N().Big())
 	require.NoError(t, err)
-	yNatCt := numct.NewNatFromBig(yBig, 256)
+	yNatCt := numct.NewNatFromBig(yBig, primeLen*2)
 	var xNatCt numct.Nat
 	g.Arithmetic().(*modular.OddPrimeSquareFactors).ExpToN(&xNatCt, yNatCt)
 
@@ -374,11 +377,11 @@ func doInteractiveProof[A znstar.ArithmeticPaillier](xNatCt, yNatCt *numct.Nat, 
 	}
 
 	label := "gimme, gimme"
-	proverBytes, err := proverTranscript.ExtractBytes(label, 128)
+	proverBytes, err := proverTranscript.ExtractBytes(label, base.CollisionResistanceBytesCeil)
 	if err != nil {
 		return err
 	}
-	verifierBytes, err := verifierTranscript.ExtractBytes(label, 128)
+	verifierBytes, err := verifierTranscript.ExtractBytes(label, base.CollisionResistanceBytesCeil)
 	if err != nil {
 		return err
 	}

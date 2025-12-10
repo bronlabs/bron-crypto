@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
@@ -120,7 +121,7 @@ func Test_CheatingProverBelowRange(t *testing.T) {
 			R:  r,
 		}
 
-		// this must fail as witness is out of bound
+		// this must fail as the witness is out of bound
 		err = protocol.ValidateStatement(statement, witness)
 		require.Error(t, err)
 
@@ -444,112 +445,66 @@ func Test_NonInteractiveFiatShamir(t *testing.T) {
 	require.Equal(t, proverBytes, verifierBytes)
 }
 
-// func Test_NonInteractiveFischlin(t *testing.T) {
-// 	t.Parallel()
+func Test_NonInteractiveFischlin(t *testing.T) {
+	t.Parallel()
 
-// 	prng := crand.Reader
-// 	pk, sk, err := paillier.KeyGen(primeLen, prng)
-// 	require.NoError(t, err)
+	prng := crand.Reader
+	scheme := paillier.NewScheme()
+	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(primeLen))
+	require.NoError(t, err)
+	sk, pk, err := keyGenerator.Generate(prng)
+	require.NoError(t, err)
 
-// 	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
-// 	l := new(saferith.Nat).SetBig(lBig, lBig.BitLen())
-// 	protocol, err := paillierrange.NewPaillierRange(128, prng)
-// 	require.NoError(t, err)
+	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
+	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
+	// TODO: 80 < 128 error
+	protocol, err := paillierrange.NewPaillierRange(base.ComputationalSecurityBits, prng)
+	require.NoError(t, err)
 
-// 	xBig, err := crand.Int(prng, lBig)
-// 	require.NoError(t, err)
-// 	x := new(saferith.Int).SetBig(xBig, xBig.BitLen())
-// 	c, r, err := pk.Encrypt(x, prng)
-// 	require.NoError(t, err)
+	enc, err := scheme.Encrypter()
+	require.NoError(t, err)
 
-// 	statement := &paillierrange.Statement{
-// 		Pk: pk,
-// 		C:  c,
-// 		L:  l,
-// 	}
-// 	witness := &paillierrange.Witness{
-// 		Sk: sk,
-// 		X:  x,
-// 		R:  r,
-// 	}
+	xBig, err := crand.Int(prng, lBig)
+	require.NoError(t, err)
+	x, err := sk.PublicKey().PlaintextSpace().FromInt(numct.NewIntFromSaferith(new(saferith.Int).SetBig(xBig, xBig.BitLen())))
+	require.NoError(t, err)
+	c, r, err := enc.Encrypt(x, pk, prng)
+	require.NoError(t, err)
 
-// 	compiler, err := fischlin.NewCompiler(protocol, 16, prng)
-// 	require.NoError(t, err)
+	statement := &paillierrange.Statement{
+		Pk: pk,
+		C:  c,
+		L:  l,
+	}
+	witness := &paillierrange.Witness{
+		Sk: sk,
+		X:  x,
+		R:  r,
+	}
 
-// 	sessionId := []byte("test sessionId")
-// 	proverTranscript := hagrid.NewTranscript("test", prng)
-// 	verifierTranscript := hagrid.NewTranscript("test", prng)
+	compiler, err := fischlin.NewCompiler(protocol, prng)
+	require.NoError(t, err)
 
-// 	niProver, err := compiler.NewProver(sessionId, proverTranscript)
-// 	require.NoError(t, err)
+	sessionId, err := network.NewSID([]byte("test sessionId"))
+	require.NoError(t, err)
+	proverTranscript := hagrid.NewTranscript("test")
+	verifierTranscript := hagrid.NewTranscript("test")
 
-// 	niVerifier, err := compiler.NewVerifier(sessionId, verifierTranscript)
-// 	require.NoError(t, err)
+	niProver, err := compiler.NewProver(sessionId, proverTranscript)
+	require.NoError(t, err)
 
-// 	proof, err := niProver.Prove(statement, witness)
-// 	require.NoError(t, err)
+	niVerifier, err := compiler.NewVerifier(sessionId, verifierTranscript)
+	require.NoError(t, err)
 
-// 	err = niVerifier.Verify(statement, proof)
-// 	require.NoError(t, err)
+	proof, err := niProver.Prove(statement, witness)
+	require.NoError(t, err)
 
-// 	proverBytes, err := proverTranscript.ExtractBytes("sigma", 32)
-// 	require.NoError(t, err)
-// 	verifierBytes, err := verifierTranscript.ExtractBytes("sigma", 32)
-// 	require.NoError(t, err)
-// 	require.Equal(t, proverBytes, verifierBytes)
-// }
+	err = niVerifier.Verify(statement, proof)
+	require.NoError(t, err)
 
-// func Test_NonInteractiveRandomisedFischlin(t *testing.T) {
-// 	t.Parallel()
-
-// 	prng := crand.Reader
-// 	pk, sk, err := paillier.KeyGen(primeLen, prng)
-// 	require.NoError(t, err)
-
-// 	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
-// 	l := new(saferith.Nat).SetBig(lBig, lBig.BitLen())
-// 	protocol, err := paillierrange.NewPaillierRange(base.ComputationalSecurity, prng)
-// 	require.NoError(t, err)
-
-// 	xBig, err := crand.Int(prng, lBig)
-// 	require.NoError(t, err)
-// 	x := new(saferith.Int).SetBig(xBig, xBig.BitLen())
-// 	c, r, err := pk.Encrypt(x, prng)
-// 	require.NoError(t, err)
-
-// 	statement := &paillierrange.Statement{
-// 		Pk: pk,
-// 		C:  c,
-// 		L:  l,
-// 	}
-// 	witness := &paillierrange.Witness{
-// 		Sk: sk,
-// 		X:  x,
-// 		R:  r,
-// 	}
-
-// 	compiler, err := randfischlin.NewCompiler(protocol, prng)
-// 	require.NoError(t, err)
-
-// 	sessionId := []byte("test sessionId")
-// 	proverTranscript := hagrid.NewTranscript("test", prng)
-// 	verifierTranscript := hagrid.NewTranscript("test", prng)
-
-// 	niProver, err := compiler.NewProver(sessionId, proverTranscript)
-// 	require.NoError(t, err)
-
-// 	niVerifier, err := compiler.NewVerifier(sessionId, verifierTranscript)
-// 	require.NoError(t, err)
-
-// 	proof, err := niProver.Prove(statement, witness)
-// 	require.NoError(t, err)
-
-// 	err = niVerifier.Verify(statement, proof)
-// 	require.NoError(t, err)
-
-// 	proverBytes, err := proverTranscript.ExtractBytes("sigma", 32)
-// 	require.NoError(t, err)
-// 	verifierBytes, err := verifierTranscript.ExtractBytes("sigma", 32)
-// 	require.NoError(t, err)
-// 	require.Equal(t, proverBytes, verifierBytes)
-// }
+	proverBytes, err := proverTranscript.ExtractBytes("sigma", base.CollisionResistanceBytesCeil)
+	require.NoError(t, err)
+	verifierBytes, err := verifierTranscript.ExtractBytes("sigma", base.CollisionResistanceBytesCeil)
+	require.NoError(t, err)
+	require.Equal(t, proverBytes, verifierBytes)
+}

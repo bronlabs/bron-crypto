@@ -29,8 +29,12 @@ func NewPaillierGroup(p, q *num.NatPlus) (*PaillierGroupKnownOrder, error) {
 	if p == nil || q == nil {
 		return nil, errs.NewValue("p and q must not be nil")
 	}
-	if p.AnnouncedLen() != q.AnnouncedLen() {
+	if p.TrueLen() != q.TrueLen() {
 		return nil, errs.NewValue("p and q must have the same length")
+	}
+	n := p.Mul(q)
+	if n.TrueLen() < 2047 {
+		return nil, errs.NewValue("p and q must be at least 1024 bits each")
 	}
 	if !p.IsProbablyPrime() {
 		return nil, errs.NewValue("p must be prime")
@@ -38,10 +42,7 @@ func NewPaillierGroup(p, q *num.NatPlus) (*PaillierGroupKnownOrder, error) {
 	if !q.IsProbablyPrime() {
 		return nil, errs.NewValue("q must be prime")
 	}
-	if p.AnnouncedLen() < 1024 {
-		return nil, errs.NewValue("p and q must be at least 1024 bits each")
-	}
-	n := p.Mul(q)
+
 	zMod, err := num.NewZMod(n.Square())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create ZMod")
@@ -61,7 +62,7 @@ func NewPaillierGroup(p, q *num.NatPlus) (*PaillierGroupKnownOrder, error) {
 
 // NewPaillierGroupOfUnknownOrder creates a Paillier group with unknown order from the given modulus n^2 and n.
 func NewPaillierGroupOfUnknownOrder(n2, n *num.NatPlus) (*PaillierGroupUnknownOrder, error) {
-	if n2.AnnouncedLen() < 4096 {
+	if n.TrueLen() < 2047 {
 		return nil, errs.NewValue("modulus must be at least 4096 bits")
 	}
 	if !n.Mul(n).Equal(n2) {
