@@ -17,7 +17,6 @@ type Cardinal interface {
 
 	Summand[Cardinal]
 	Multiplicand[Cardinal]
-	// Minuend[Cardinal]
 
 	Uint64() uint64
 	Big() *big.Int
