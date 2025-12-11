@@ -24,7 +24,7 @@ func (i infinite) IsLessThanOrEqual(other Cardinal) bool {
 
 // Clone returns a copy of the infinite cardinal.
 func (i infinite) Clone() Cardinal {
-	return Infinite()
+	return i
 }
 
 // HashCode returns the hash code of the infinite cardinal.
@@ -41,12 +41,12 @@ func (i infinite) Equal(other Cardinal) bool {
 
 // Bytes panics as Bytes is not defined for Infinite cardinal.
 func (i infinite) Bytes() []byte {
-	panic("Bytes() not implemented for Infinite cardinal")
+	panic("Bytes() not supported for Infinite cardinal")
 }
 
 // BytesBE panics as BytesBE is not defined for Infinite cardinal.
 func (i infinite) BytesBE() []byte {
-	panic("BytesBE() not implemented for Infinite cardinal")
+	panic("BytesBE() not supported for Infinite cardinal")
 }
 
 // String returns the string representation of the infinite cardinal.
@@ -56,22 +56,22 @@ func (i infinite) String() string {
 
 // Add returns Infinite cardinal when adding with any other cardinal.
 func (i infinite) Add(other Cardinal) Cardinal {
-	return infinite{}
+	return i
 }
 
 // Mul returns Infinite cardinal when multiplying with any other cardinal.
 func (i infinite) Mul(other Cardinal) Cardinal {
-	return Infinite()
+	return i
 }
 
 // Big panics as Big is not defined for Infinite cardinal.
 func (i infinite) Big() *big.Int {
-	panic("Big() not implemented for Infinite cardinal")
+	panic("Big() not supported for Infinite cardinal")
 }
 
 // Uint64 panics as Uint64 is not defined for Infinite cardinal.
 func (i infinite) Uint64() uint64 {
-	panic("Uint64() not implemented for Infinite cardinal")
+	panic("Uint64() not supported for Infinite cardinal")
 }
 
 // IsZero always returns false for Infinite cardinal.
@@ -91,10 +91,10 @@ func (i infinite) IsUnknown() bool {
 
 // IsProbablyPrime panics as IsProbablyPrime is not defined for Infinite cardinal.
 func (i infinite) IsProbablyPrime() bool {
-	panic("IsProbablyPrime() not implemented for Infinite cardinal")
+	panic("IsProbablyPrime() not supported for Infinite cardinal")
 }
 
 // BitLen panics as BitLen is not defined for Infinite cardinal.
 func (i infinite) BitLen() int {
-	panic("BitLen() not implemented for Infinite cardinal")
+	panic("BitLen() not supported for Infinite cardinal")
 }

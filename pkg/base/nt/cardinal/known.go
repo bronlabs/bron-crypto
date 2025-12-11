@@ -2,6 +2,7 @@ package cardinal
 
 import (
 	"math/big"
+	"math/bits"
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -12,11 +13,9 @@ import (
 
 // New creates a new Known cardinal from a uint64 value.
 func New(n uint64) Cardinal {
-	if n == 0 {
-		return Known([]byte{})
-	}
 	var nat numct.Nat
 	nat.SetUint64(n)
+	nat.Resize(bits.Len64(n))
 	return Known(nat.BytesBE())
 }
 

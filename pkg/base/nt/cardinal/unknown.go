@@ -22,7 +22,7 @@ func (u unknown) IsLessThanOrEqual(other Cardinal) bool {
 
 // Clone returns a new instance of Unknown cardinal.
 func (u unknown) Clone() Cardinal {
-	return Unknown()
+	return u
 }
 
 // HashCode returns a hash code for Unknown cardinal.
@@ -37,12 +37,12 @@ func (u unknown) Equal(other Cardinal) bool {
 
 // Bytes panics as Bytes is not defined for Unknown cardinal.
 func (u unknown) Bytes() []byte {
-	panic("Bytes() not implemented for Unknown cardinal")
+	panic("Bytes() not supported for Unknown cardinal")
 }
 
 // BytesBE panics as BytesBE is not defined for Unknown cardinal.
 func (u unknown) BytesBE() []byte {
-	panic("BytesBE() not implemented for Unknown cardinal")
+	panic("BytesBE() not supported for Unknown cardinal")
 }
 
 // String returns a string representation of Unknown cardinal.
@@ -52,22 +52,22 @@ func (u unknown) String() string {
 
 // Add returns Unknown cardinal when adding to any other cardinal.
 func (u unknown) Add(other Cardinal) Cardinal {
-	return Unknown()
+	return u
 }
 
 // Mul returns Unknown cardinal when multiplying with any other cardinal.
 func (u unknown) Mul(other Cardinal) Cardinal {
-	return Unknown()
+	return u
 }
 
 // Big panics as Big is not defined for Unknown cardinal.
 func (u unknown) Big() *big.Int {
-	panic("Big() not implemented for Unknown cardinal")
+	panic("Big() not supported for Unknown cardinal")
 }
 
 // Uint64 panics as Uint64 is not defined for Unknown cardinal.
 func (u unknown) Uint64() uint64 {
-	panic("Uint64() not implemented for Unknown cardinal")
+	panic("Uint64() not supported for Unknown cardinal")
 }
 
 // IsZero always returns false for Unknown cardinal.
@@ -87,10 +87,10 @@ func (u unknown) IsUnknown() bool {
 
 // IsProbablyPrime panics as IsProbablyPrime is not defined for Unknown cardinal.
 func (u unknown) IsProbablyPrime() bool {
-	panic("IsProbablyPrime() not implemented for Unknown cardinal")
+	panic("IsProbablyPrime() not supported for Unknown cardinal")
 }
 
 // BitLen panics as BitLen is not defined for Unknown cardinal.
 func (u unknown) BitLen() int {
-	panic("BitLen() not implemented for Unknown cardinal")
+	panic("BitLen() not supported for Unknown cardinal")
 }
