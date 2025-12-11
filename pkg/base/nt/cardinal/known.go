@@ -13,7 +13,7 @@ import (
 // New creates a new Known cardinal from a uint64 value.
 func New(n uint64) Cardinal {
 	if n == 0 {
-		return Known([]byte{0})
+		return Known([]byte{})
 	}
 	var nat numct.Nat
 	nat.SetUint64(n)
@@ -23,22 +23,22 @@ func New(n uint64) Cardinal {
 // NewFromBig creates a new Cardinal from a big.Int value.
 func NewFromBig(n *big.Int) Cardinal {
 	if n == nil {
-		return Unknown{}
+		return Unknown()
 	}
 	if n.Sign() < 0 {
-		return Unknown{}
+		return Unknown()
 	}
 	return Known(numct.NewNatFromBig(n, n.BitLen()).BytesBE())
 }
 
 // NewFromNumeric creates a new Cardinal from a Numeric value.
-func NewFromNumeric[E acrtp.Numeric[E]](num E) Cardinal {
+func NewFromNumeric(num acrtp.Numeric) Cardinal {
 	return Known(num.BytesBE())
 }
 
 // Zero returns the zero cardinal.
 func Zero() Cardinal {
-	return Known([]byte{0})
+	return Known([]byte{})
 }
 
 // Known represents a cardinal number with a known value.

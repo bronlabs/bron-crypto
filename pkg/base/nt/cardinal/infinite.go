@@ -1,100 +1,100 @@
 package cardinal
 
 import (
-	"math"
 	"math/big"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 )
 
-// IsInfinite returns true if the cardinal is infinite.
-func IsInfinite(c Cardinal) bool {
-	return !c.IsUnknown() && !c.IsFinite()
+var i Cardinal = infinite{}
+
+func Infinite() Cardinal {
+	return i
 }
 
-// Infinite represents an infinite cardinal number.
-type Infinite struct{}
+// infinite represents an infinite cardinal number.
+type infinite struct{}
 
 // IsLessThanOrEqual checks if the infinite cardinal is less than or equal to another cardinal.
 // It will be equal only to another Infinite cardinal.
-func (i Infinite) IsLessThanOrEqual(other Cardinal) bool {
-	_, otherIsInfinite := other.(Infinite)
+func (i infinite) IsLessThanOrEqual(other Cardinal) bool {
+	_, otherIsInfinite := other.(infinite)
 	return otherIsInfinite
 }
 
 // Clone returns a copy of the infinite cardinal.
-func (i Infinite) Clone() Cardinal {
-	return Infinite{}
+func (i infinite) Clone() Cardinal {
+	return Infinite()
 }
 
 // HashCode returns the hash code of the infinite cardinal.
-func (i Infinite) HashCode() base.HashCode {
+func (i infinite) HashCode() base.HashCode {
 	return base.DeriveHashCode([]byte("InfiniteCardinal"))
 }
 
 // Equal checks if the infinite cardinal is equal to another cardinal.
 // It will be equal only to another Infinite cardinal.
-func (i Infinite) Equal(other Cardinal) bool {
-	_, otherIsInfinite := other.(Infinite)
+func (i infinite) Equal(other Cardinal) bool {
+	_, otherIsInfinite := other.(infinite)
 	return otherIsInfinite
 }
 
-// Bytes returns nil for the infinite cardinal.
-func (i Infinite) Bytes() []byte {
-	return nil
+// Bytes panics as Bytes is not defined for Infinite cardinal.
+func (i infinite) Bytes() []byte {
+	panic("Bytes() not implemented for Infinite cardinal")
 }
 
-// BytesBE returns nil for the infinite cardinal.
-func (i Infinite) BytesBE() []byte {
-	return nil
+// BytesBE panics as BytesBE is not defined for Infinite cardinal.
+func (i infinite) BytesBE() []byte {
+	panic("BytesBE() not implemented for Infinite cardinal")
 }
 
 // String returns the string representation of the infinite cardinal.
-func (i Infinite) String() string {
+func (i infinite) String() string {
 	return "InfiniteCardinal"
 }
 
 // Add returns Infinite cardinal when adding with any other cardinal.
-func (i Infinite) Add(other Cardinal) Cardinal {
-	return Infinite{}
+func (i infinite) Add(other Cardinal) Cardinal {
+	return infinite{}
 }
 
 // Mul returns Infinite cardinal when multiplying with any other cardinal.
-func (i Infinite) Mul(other Cardinal) Cardinal {
-	return Infinite{}
+func (i infinite) Mul(other Cardinal) Cardinal {
+	return Infinite()
 }
 
-// Big returns nil for Infinite cardinal.
-func (i Infinite) Big() *big.Int {
-	return nil
+// Big panics as Big is not defined for Infinite cardinal.
+func (i infinite) Big() *big.Int {
+	panic("Big() not implemented for Infinite cardinal")
 }
 
-// Uint64 returns MaxUint64 for Infinite cardinal.
-func (i Infinite) Uint64() uint64 {
-	return math.MaxUint64
+// Uint64 panics as Uint64 is not defined for Infinite cardinal.
+func (i infinite) Uint64() uint64 {
+	panic("Uint64() not implemented for Infinite cardinal")
 }
 
 // IsZero always returns false for Infinite cardinal.
-func (i Infinite) IsZero() bool {
+func (i infinite) IsZero() bool {
 	return false
 }
 
 // IsFinite always returns false for Infinite cardinal.
-func (i Infinite) IsFinite() bool {
+func (i infinite) IsFinite() bool {
 	return false
 }
 
 // IsUnknown always returns false for Infinite cardinal.
-func (i Infinite) IsUnknown() bool {
+func (i infinite) IsUnknown() bool {
 	return false
 }
 
-// IsProbablyPrime always returns false for Infinite cardinal.
-func (i Infinite) IsProbablyPrime() bool {
-	return false
+// IsProbablyPrime panics as IsProbablyPrime is not defined for Infinite cardinal.
+func (i infinite) IsProbablyPrime() bool {
+	panic("IsProbablyPrime() not implemented for Infinite cardinal")
 }
 
-// BitLen returns 0 for Infinite cardinal.
-func (i Infinite) BitLen() int {
-	return 0
+// BitLen panics as BitLen is not defined for Infinite cardinal.
+func (i infinite) BitLen() int {
+	panic("BitLen() not implemented for Infinite cardinal")
 }

@@ -43,7 +43,7 @@ func TestRationals_Properties(t *testing.T) {
 
 	t.Run("Order", func(t *testing.T) {
 		t.Parallel()
-		require.True(t, cardinal.IsInfinite(q.Order()), "rationals should have infinite order")
+		require.True(t, !q.Order().IsFinite(), "rationals should have infinite order")
 	})
 
 	t.Run("Characteristic", func(t *testing.T) {

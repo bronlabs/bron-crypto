@@ -569,7 +569,7 @@ func VectorSpace[
 }
 
 func NumericStructure[S algebra.NumericStructure[E], E interface {
-	algebra.Numeric[E]
+	algebra.Numeric
 	base.Equatable[E]
 }](
 	t *testing.T, structure S, g *rapid.Generator[E],
@@ -650,21 +650,13 @@ func PrimeField[S algebra.PrimeField[E], E algebra.PrimeFieldElement[E]](
 	return out
 }
 
-func AbelianGroup[S algebra.AbelianGroup[E, RE], R interface {
-	algebra.Ring[RE]
-	algebra.NumericStructure[RE]
-}, E algebra.AbelianGroupElement[E, RE], RE interface {
-	algebra.RingElement[RE]
-	algebra.Numeric[RE]
-}](
+func AbelianGroup[S algebra.AbelianGroup[E, RE], R algebra.Ring[RE], E algebra.AbelianGroupElement[E, RE], RE algebra.RingElement[RE]](
 	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
 	op *BinaryOperator[E], identity *Constant[E], inv *UnaryOperator[E],
 	scalarOp *Action[RE, E],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
-	module := Module(t, structure, base, g, gb, op, identity, inv, scalarOp)
-	ns := NumericStructure(t, base, gb)
-	return UnionAlongSecond(t, module, ns)
+	return Module(t, structure, base, g, gb, op, identity, inv, scalarOp)
 }
 
 func PrimeGroup[

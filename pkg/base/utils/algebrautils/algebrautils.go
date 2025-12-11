@@ -68,7 +68,7 @@ func Prod[M algebra.Multiplicand[M]](first M, rest ...M) M {
 }
 
 // ScalarMul computes the scalar multiplication of the given base element by the given exponent using a fixed-window method.
-func ScalarMul[E algebra.MonoidElement[E], S algebra.Numeric[S]](base E, exponent S) E {
+func ScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](base E, exponent S) E {
 	monoid := algebra.StructureMustBeAs[algebra.Monoid[E]](base.Structure())
 
 	precomputed := make([]E, 16)
@@ -107,7 +107,7 @@ func ScalarMul[E algebra.MonoidElement[E], S algebra.Numeric[S]](base E, exponen
 // using a fixed window size w.
 //
 // It assumes S.Bytes() is big-endian. Bits are extracted in LSB-first order.
-func MultiScalarMul[E algebra.MonoidElement[E], S algebra.Numeric[S]](
+func MultiScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](
 	scalars []S,
 	points []E,
 ) E {

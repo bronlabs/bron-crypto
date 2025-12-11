@@ -41,7 +41,7 @@ func (*NaturalNumbers) Characteristic() cardinal.Cardinal {
 
 // Order returns the order of the NaturalNumbers structure, which is infinite.
 func (*NaturalNumbers) Order() cardinal.Cardinal {
-	return cardinal.Infinite{}
+	return cardinal.Infinite()
 }
 
 // Zero returns the additive identity element of the NaturalNumbers structure.

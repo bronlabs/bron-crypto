@@ -5,9 +5,9 @@ import (
 )
 
 type (
-	Cardinal                       = crtp.Cardinal
-	NumericStructure[E Numeric[E]] = crtp.NumericStructure[E]
-	Numeric[E any]                 = crtp.Numeric[E]
+	Cardinal                    = crtp.Cardinal
+	NumericStructure[E Numeric] = crtp.NumericStructure[E]
+	Numeric                     = crtp.Numeric
 
 	NPlusLike[E NatPlusLike[E]]        crtp.NPlusLike[E]
 	NatPlusLike[E crtp.NatPlusLike[E]] crtp.NatPlusLike[E]

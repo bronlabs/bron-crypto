@@ -37,7 +37,7 @@ func (*Integers) Name() string {
 
 // Order returns the (infinite) order of the integers.
 func (*Integers) Order() cardinal.Cardinal {
-	return cardinal.Infinite{}
+	return cardinal.Infinite()
 }
 
 // Characteristic returns the characteristic of the integers, which is 0.

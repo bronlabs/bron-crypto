@@ -19,7 +19,7 @@ type SimpleModulus struct {
 }
 
 func (u *SimpleModulus) MultiplicativeOrder() algebra.Cardinal {
-	return cardinal.Unknown{}
+	return cardinal.Unknown()
 }
 
 func (u *SimpleModulus) Modulus() *numct.Modulus {

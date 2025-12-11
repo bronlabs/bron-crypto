@@ -41,7 +41,7 @@ func (*PositiveNaturalNumbers) Characteristic() cardinal.Cardinal {
 
 // Order returns the order of PositiveNaturalNumbers, which is infinite.
 func (*PositiveNaturalNumbers) Order() cardinal.Cardinal {
-	return cardinal.Infinite{}
+	return cardinal.Infinite()
 }
 
 // One returns the multiplicative identity element of PositiveNaturalNumbers, which is 1.

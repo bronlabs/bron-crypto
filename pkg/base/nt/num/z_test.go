@@ -45,7 +45,7 @@ func TestIntegers_Properties(t *testing.T) {
 
 	t.Run("Order", func(t *testing.T) {
 		t.Parallel()
-		require.True(t, cardinal.IsInfinite(z.Order()), "integers should have infinite order")
+		require.True(t, !z.Order().IsFinite(), "integers should have infinite order")
 	})
 
 	t.Run("Characteristic", func(t *testing.T) {
@@ -339,7 +339,7 @@ func TestZ_FromCardinal(t *testing.T) {
 
 	t.Run("infinite", func(t *testing.T) {
 		t.Parallel()
-		_, err := z.FromCardinal(cardinal.Infinite{})
+		_, err := z.FromCardinal(cardinal.Infinite())
 		require.Error(t, err)
 	})
 }
@@ -1415,7 +1415,7 @@ func TestInt_Cardinal(t *testing.T) {
 	t.Run("positive", func(t *testing.T) {
 		t.Parallel()
 		card := z.FromInt64(42).Cardinal()
-		require.False(t, cardinal.IsInfinite(card))
+		require.False(t, !card.IsFinite())
 	})
 
 	t.Run("negative uses absolute value", func(t *testing.T) {
@@ -1436,7 +1436,7 @@ func TestInt_EuclideanValuation(t *testing.T) {
 	t.Run("positive", func(t *testing.T) {
 		t.Parallel()
 		ev := z.FromInt64(42).EuclideanValuation()
-		require.False(t, cardinal.IsInfinite(ev))
+		require.False(t, !ev.IsFinite())
 	})
 
 	t.Run("zero", func(t *testing.T) {
