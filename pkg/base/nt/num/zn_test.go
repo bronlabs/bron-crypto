@@ -86,14 +86,14 @@ func TestZMod_Properties(t *testing.T) {
 	t.Run("Order", func(t *testing.T) {
 		t.Parallel()
 		order := zmod.Order()
-		require.False(t, order.IsInfinite())
+		require.False(t, !order.IsFinite())
 		require.False(t, order.IsZero())
 	})
 
 	t.Run("Characteristic", func(t *testing.T) {
 		t.Parallel()
 		char := zmod.Characteristic()
-		require.False(t, char.IsInfinite())
+		require.False(t, !char.IsFinite())
 		require.False(t, char.IsZero())
 	})
 
@@ -1327,7 +1327,7 @@ func TestUint_Cardinal(t *testing.T) {
 
 	a := zmod.FromUint64(42)
 	card := a.Cardinal()
-	require.False(t, card.IsInfinite())
+	require.False(t, !card.IsFinite())
 }
 
 func TestUint_Modulus(t *testing.T) {

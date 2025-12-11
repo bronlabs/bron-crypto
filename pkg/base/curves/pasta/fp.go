@@ -74,7 +74,7 @@ func (f *FpField) Characteristic() cardinal.Cardinal {
 }
 
 func (*FpField) Order() cardinal.Cardinal {
-	return cardinal.NewFromNatCT(fpFieldOrder.Nat())
+	return cardinal.NewFromNumeric(fpFieldOrder)
 }
 
 func (*FpField) Hash(input []byte) (*FpFieldElement, error) {

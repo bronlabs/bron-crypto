@@ -54,11 +54,11 @@ func (f *BaseField) Name() string {
 }
 
 func (f *BaseField) Order() cardinal.Cardinal {
-	return cardinal.NewFromNatCT(baseFieldOrder.Nat())
+	return cardinal.NewFromNumeric(baseFieldOrder.Nat())
 }
 
 func (f *BaseField) Characteristic() cardinal.Cardinal {
-	return cardinal.NewFromNatCT(baseFieldOrder.Nat())
+	return cardinal.NewFromNumeric(baseFieldOrder.Nat())
 }
 
 func (f *BaseField) Hash(bytes []byte) (*BaseFieldElement, error) {

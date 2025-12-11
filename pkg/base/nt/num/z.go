@@ -332,7 +332,7 @@ func (i *Int) EuclideanDiv(other *Int) (quot, rem *Int, err error) {
 
 // EuclideanValuation returns the Euclidean valuation of the integer.
 func (i *Int) EuclideanValuation() algebra.Cardinal {
-	return cardinal.NewFromSaferith((*saferith.Nat)(i.Abs().Value()))
+	return cardinal.NewFromNumeric(i.Abs())
 }
 
 // Abs returns the absolute value of the integer.
@@ -534,7 +534,7 @@ func (i *Int) Lift() *Int {
 
 // Cardinal returns the cardinality of the absolute value of the integer.
 func (i *Int) Cardinal() cardinal.Cardinal {
-	return cardinal.NewFromSaferith((*saferith.Nat)(i.Abs().v))
+	return cardinal.NewFromNumeric(i.Abs())
 }
 
 // TrueLen returns the true length of the integer in bytes.

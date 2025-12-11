@@ -13,20 +13,19 @@ type Cardinal interface {
 	base.Clonable[Cardinal]
 	base.Hashable[Cardinal]
 	base.BytesLike
+	Numeric
 	fmt.Stringer
 
 	Summand[Cardinal]
 	Multiplicand[Cardinal]
-	Minuend[Cardinal]
 
 	Uint64() uint64
 	Big() *big.Int
 	IsZero() bool
 	IsFinite() bool
-	IsInfinite() bool
 	IsUnknown() bool
 	IsProbablyPrime() bool
-	BitLen() uint
+	BitLen() int
 }
 
 type NumericStructure[E any] interface {
@@ -34,8 +33,7 @@ type NumericStructure[E any] interface {
 	FromBytesBE([]byte) (E, error)
 }
 
-type Numeric[E any] interface {
-	HemiRingElement[E]
+type Numeric interface {
 	BytesBE() []byte
 }
 
@@ -46,7 +44,7 @@ type NPlusLike[E any] interface {
 }
 
 type NatPlusLike[E any] interface {
-	Numeric[E]
+	Numeric
 	UniqueFactorizationMonoidElement[E]
 
 	IsOdd() bool

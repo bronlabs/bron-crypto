@@ -5,8 +5,6 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/cronokirby/saferith"
-
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
@@ -446,7 +444,7 @@ func (np *NatPlus) Uint64() uint64 {
 
 // Cardinal returns the cardinal representation of the NatPlus.
 func (np *NatPlus) Cardinal() cardinal.Cardinal {
-	return cardinal.NewFromSaferith((*saferith.Nat)(np.v))
+	return cardinal.NewFromNumeric(np.v)
 }
 
 // Nat returns the Nat representation of the NatPlus.

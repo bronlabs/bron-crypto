@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/stretchr/testify/require"
@@ -133,7 +134,7 @@ func PairWithAction[
 	}
 }
 
-type Model[S algebra.Structure[E], E algebra.Element[E]] struct {
+type Model[S, E any] struct {
 	*Carrier[S, E]
 	Theory []Axiom
 }
@@ -157,6 +158,19 @@ func (m *TwoSortedModel[S1, S2, E1, E2]) Check(t *testing.T) {
 }
 
 // ************************* Group-like.
+
+func Set[S, E any](
+	t *testing.T, structure S, g *rapid.Generator[E],
+) *Model[S, E] {
+	t.Helper()
+	st := &Carrier[S, E]{
+		Value: structure,
+		Dist:  g,
+	}
+	return &Model[S, E]{
+		Carrier: st,
+	}
+}
 
 func Magma[S algebra.Magma[E], E algebra.MagmaElement[E]](
 	t *testing.T, structure S, g *rapid.Generator[E], op *BinaryOperator[E],
@@ -554,11 +568,14 @@ func VectorSpace[
 	return UnionAlongSecond(t, module, field)
 }
 
-func NumericStructure[S algebra.NumericStructure[E], E algebra.Numeric[E]](
+func NumericStructure[S algebra.NumericStructure[E], E interface {
+	algebra.Numeric
+	base.Equatable[E]
+}](
 	t *testing.T, structure S, g *rapid.Generator[E],
 ) *Model[S, E] {
 	t.Helper()
-	out := HemiRing(t, structure, g)
+	out := Set(t, structure, g)
 	out.Theory = append(out.Theory,
 		NumericStructureFromBytesBERoundTripProperty(t, out.Carrier),
 	)
@@ -633,21 +650,13 @@ func PrimeField[S algebra.PrimeField[E], E algebra.PrimeFieldElement[E]](
 	return out
 }
 
-func AbelianGroup[S algebra.AbelianGroup[E, RE], R interface {
-	algebra.Ring[RE]
-	algebra.NumericStructure[RE]
-}, E algebra.AbelianGroupElement[E, RE], RE interface {
-	algebra.RingElement[RE]
-	algebra.Numeric[RE]
-}](
+func AbelianGroup[S algebra.AbelianGroup[E, RE], R algebra.Ring[RE], E algebra.AbelianGroupElement[E, RE], RE algebra.RingElement[RE]](
 	t *testing.T, structure S, base R, g *rapid.Generator[E], gb *rapid.Generator[RE],
 	op *BinaryOperator[E], identity *Constant[E], inv *UnaryOperator[E],
 	scalarOp *Action[RE, E],
 ) *TwoSortedModel[S, R, E, RE] {
 	t.Helper()
-	module := Module(t, structure, base, g, gb, op, identity, inv, scalarOp)
-	ns := NumericStructure(t, base, gb)
-	return UnionAlongSecond(t, module, ns)
+	return Module(t, structure, base, g, gb, op, identity, inv, scalarOp)
 }
 
 func PrimeGroup[

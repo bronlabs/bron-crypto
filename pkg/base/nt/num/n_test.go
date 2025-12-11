@@ -26,7 +26,7 @@ func TestNaturalNumbers_Properties(t *testing.T) {
 
 	require.Equal(t, "N", n.Name())
 	require.True(t, n.Characteristic().IsZero())
-	require.True(t, n.Order().IsInfinite())
+	require.True(t, !n.Order().IsFinite())
 	require.Equal(t, -1, n.ElementSize())
 	require.True(t, n.Zero().IsZero())
 	require.True(t, n.One().IsOne())
@@ -612,7 +612,7 @@ func TestNat_Cardinal(t *testing.T) {
 	n := num.N().FromUint64(42)
 	c := n.Cardinal()
 	require.False(t, c.IsZero())
-	require.False(t, c.IsInfinite())
+	require.False(t, !c.IsFinite())
 }
 
 func TestNat_EuclideanDiv(t *testing.T) {

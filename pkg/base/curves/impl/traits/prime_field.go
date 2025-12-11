@@ -6,12 +6,11 @@ import (
 	"iter"
 	"math/big"
 
-	"github.com/cronokirby/saferith"
-
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
@@ -280,8 +279,9 @@ func (fe *PrimeFieldElementTrait[FP, F, WP, W]) ComponentsBytes() [][]byte {
 
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) Cardinal() cardinal.Cardinal {
 	data := sliceutils.Reverse(FP(&fe.V).Bytes())
-	nat := new(saferith.Nat).SetBytes(data)
-	return cardinal.NewFromSaferith(nat)
+	var nat numct.Nat
+	nat.SetBytes(data)
+	return cardinal.NewFromNumeric(&nat)
 }
 
 func (fe *PrimeFieldElementTrait[FP, F, WP, W]) Op(e WP) WP {
