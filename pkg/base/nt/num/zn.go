@@ -5,7 +5,6 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/cronokirby/saferith"
 	"golang.org/x/crypto/blake2b"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -477,7 +476,7 @@ func (u *Uint) EuclideanValuation() algebra.Cardinal {
 	if !u.Group().IsSemiDomain() {
 		panic(errs2.New("not a euclidean domain"))
 	}
-	return cardinal.NewFromSaferith((*saferith.Nat)(u.v))
+	return cardinal.NewFromNumeric(u.v)
 }
 
 // TryNeg returns the additive inverse of the Uint element.
@@ -632,7 +631,7 @@ func (u *Uint) ScalarExp(other *Nat) *Uint {
 
 // Cardinal returns the cardinality of the Uint element.
 func (u *Uint) Cardinal() cardinal.Cardinal {
-	return cardinal.NewFromSaferith((*saferith.Nat)(u.v))
+	return cardinal.NewFromNumeric(u.v)
 }
 
 // Clone creates a copy of the Uint element.

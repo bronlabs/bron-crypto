@@ -684,7 +684,10 @@ func BaseRingIdentityActsAsModuleIdentityProperty[S algebra.Module[E, RE], R alg
 	}
 }
 
-func NumericStructureFromBytesBERoundTripProperty[S algebra.NumericStructure[E], E algebra.Numeric[E]](
+func NumericStructureFromBytesBERoundTripProperty[S algebra.NumericStructure[E], E interface {
+	algebra.Numeric[E]
+	base.Equatable[E]
+}](
 	t *testing.T, c *Carrier[S, E],
 ) Axiom {
 	t.Helper()

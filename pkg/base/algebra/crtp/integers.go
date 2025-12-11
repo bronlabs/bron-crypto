@@ -17,16 +17,15 @@ type Cardinal interface {
 
 	Summand[Cardinal]
 	Multiplicand[Cardinal]
-	Minuend[Cardinal]
+	// Minuend[Cardinal]
 
 	Uint64() uint64
 	Big() *big.Int
 	IsZero() bool
 	IsFinite() bool
-	IsInfinite() bool
 	IsUnknown() bool
 	IsProbablyPrime() bool
-	BitLen() uint
+	BitLen() int
 }
 
 type NumericStructure[E any] interface {
@@ -35,7 +34,7 @@ type NumericStructure[E any] interface {
 }
 
 type Numeric[E any] interface {
-	HemiRingElement[E]
+	// HemiRingElement[E]
 	BytesBE() []byte
 }
 

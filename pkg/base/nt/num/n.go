@@ -5,8 +5,6 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/cronokirby/saferith"
-
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
@@ -43,7 +41,7 @@ func (*NaturalNumbers) Characteristic() cardinal.Cardinal {
 
 // Order returns the order of the NaturalNumbers structure, which is infinite.
 func (*NaturalNumbers) Order() cardinal.Cardinal {
-	return cardinal.Infinite()
+	return cardinal.Infinite{}
 }
 
 // Zero returns the additive identity element of the NaturalNumbers structure.
@@ -290,7 +288,7 @@ func (n *Nat) GCD(other *Nat) *Nat {
 
 // Cardinal returns the cardinal representation of the Nat.
 func (n *Nat) Cardinal() cardinal.Cardinal {
-	return cardinal.NewFromSaferith((*saferith.Nat)(n.v))
+	return cardinal.NewFromNumeric(n.v)
 }
 
 // TryDiv attempts to divide the Nat by another Nat. It returns an error if the division is not exact.
@@ -367,7 +365,7 @@ func (n *Nat) EuclideanDiv(other *Nat) (quot, rem *Nat, err error) {
 
 // EuclideanValuation computes the Euclidean valuation of the Nat.
 func (n *Nat) EuclideanValuation() cardinal.Cardinal {
-	return cardinal.NewFromSaferith(((*saferith.Nat)(n.Value())))
+	return cardinal.NewFromNumeric(n.v)
 }
 
 // Mod computes the Nat modulo the given NatPlus modulus.

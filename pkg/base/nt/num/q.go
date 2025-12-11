@@ -39,7 +39,7 @@ func (q *Rationals) Characteristic() algebra.Cardinal {
 
 // Order returns the order of the field Q, which is infinite.
 func (q *Rationals) Order() algebra.Cardinal {
-	return cardinal.Infinite()
+	return cardinal.Infinite{}
 }
 
 // ElementSize returns -1 to indicate that elements of Q do not have a fixed size.

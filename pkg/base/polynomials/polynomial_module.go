@@ -41,7 +41,7 @@ func (m *PolynomialModule[ME, S]) Name() string {
 }
 
 func (m *PolynomialModule[ME, S]) Order() algebra.Cardinal {
-	return cardinal.Infinite()
+	return cardinal.Infinite{}
 }
 
 func (m *PolynomialModule[ME, S]) FromBytes(bytes []byte) (*ModuleValuedPolynomial[ME, S], error) {

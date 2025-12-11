@@ -5,7 +5,7 @@ import (
 	"pgregory.net/rapid"
 )
 
-type Carrier[S algebra.Structure[E], E algebra.Element[E]] struct {
+type Carrier[S, E any] struct {
 	Value S
 	Dist  *rapid.Generator[E]
 }

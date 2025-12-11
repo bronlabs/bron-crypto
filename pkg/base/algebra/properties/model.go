@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/stretchr/testify/require"
@@ -133,7 +134,7 @@ func PairWithAction[
 	}
 }
 
-type Model[S algebra.Structure[E], E algebra.Element[E]] struct {
+type Model[S, E any] struct {
 	*Carrier[S, E]
 	Theory []Axiom
 }
@@ -157,6 +158,19 @@ func (m *TwoSortedModel[S1, S2, E1, E2]) Check(t *testing.T) {
 }
 
 // ************************* Group-like.
+
+func Set[S, E any](
+	t *testing.T, structure S, g *rapid.Generator[E],
+) *Model[S, E] {
+	t.Helper()
+	st := &Carrier[S, E]{
+		Value: structure,
+		Dist:  g,
+	}
+	return &Model[S, E]{
+		Carrier: st,
+	}
+}
 
 func Magma[S algebra.Magma[E], E algebra.MagmaElement[E]](
 	t *testing.T, structure S, g *rapid.Generator[E], op *BinaryOperator[E],
@@ -554,11 +568,14 @@ func VectorSpace[
 	return UnionAlongSecond(t, module, field)
 }
 
-func NumericStructure[S algebra.NumericStructure[E], E algebra.Numeric[E]](
+func NumericStructure[S algebra.NumericStructure[E], E interface {
+	algebra.Numeric[E]
+	base.Equatable[E]
+}](
 	t *testing.T, structure S, g *rapid.Generator[E],
 ) *Model[S, E] {
 	t.Helper()
-	out := HemiRing(t, structure, g)
+	out := Set(t, structure, g)
 	out.Theory = append(out.Theory,
 		NumericStructureFromBytesBERoundTripProperty(t, out.Carrier),
 	)

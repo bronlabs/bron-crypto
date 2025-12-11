@@ -74,7 +74,7 @@ func (f *FqField) Characteristic() cardinal.Cardinal {
 }
 
 func (*FqField) Order() cardinal.Cardinal {
-	return cardinal.NewFromNatCT(fqFieldOrder.Nat())
+	return cardinal.NewFromNumeric(fqFieldOrder)
 }
 
 func (*FqField) Hash(input []byte) (*FqFieldElement, error) {

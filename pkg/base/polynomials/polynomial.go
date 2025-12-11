@@ -63,7 +63,7 @@ func (r *PolynomialRing[RE]) Name() string {
 }
 
 func (r *PolynomialRing[RE]) Order() algebra.Cardinal {
-	return cardinal.Infinite()
+	return cardinal.Infinite{}
 }
 
 func (r *PolynomialRing[RE]) FromBytes(inBytes []byte) (*Polynomial[RE], error) {

@@ -52,11 +52,11 @@ func (f *ScalarField) Name() string {
 }
 
 func (f *ScalarField) Order() cardinal.Cardinal {
-	return cardinal.NewFromNatCT(scalarFieldOrder.Nat())
+	return cardinal.NewFromNumeric(scalarFieldOrder.Nat())
 }
 
 func (f *ScalarField) Characteristic() cardinal.Cardinal {
-	return cardinal.NewFromNatCT(scalarFieldOrder.Nat())
+	return cardinal.NewFromNumeric(scalarFieldOrder.Nat())
 }
 
 func (f *ScalarField) FromBytesBEReduce(input []byte) (*Scalar, error) {
