@@ -75,7 +75,7 @@ func (k Known) Equal(other Cardinal) bool {
 	if !ok {
 		return false
 	}
-	return ct.SliceEqual(k, otherKnown) == ct.True
+	return k.Nat().Equal(otherKnown.Nat()) == ct.True
 }
 
 // Bytes returns the byte representation of the known cardinal.

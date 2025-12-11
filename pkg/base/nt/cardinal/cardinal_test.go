@@ -92,6 +92,14 @@ func TestKnown_Comparison(t *testing.T) {
 		require.False(t, a.Equal(b))
 	})
 
+	t.Run("equal with different byte representations", func(t *testing.T) {
+		// Cardinals with the same numeric value should be equal
+		// regardless of byte representation (e.g., leading zeros)
+		a := cardinal.Known([]byte{0, 1}) // 1 with leading zero
+		b := cardinal.Known([]byte{1})    // 1 without leading zero
+		require.True(t, a.Equal(b))
+	})
+
 	t.Run("less than or equal - less", func(t *testing.T) {
 		a := cardinal.New(10)
 		b := cardinal.New(20)
