@@ -64,10 +64,15 @@ func (prm *Params) Recombine(mp, mq *numct.Nat) *numct.Nat {
 // Extended returns an extended ParamsExtended structure
 func (prm *Params) Extended() (*ParamsExtended, ct.Bool) {
 	qModulus, ok := numct.NewModulus(prm.QNat)
+	var mNat numct.Nat
+	mNat.Mul(prm.P.Nat(), prm.QNat)
+	mModulus, okT := numct.NewModulus(&mNat)
+	ok &= okT
 	return &ParamsExtended{
 		Params: *prm,
 		PNat:   prm.P.Nat(),
 		Q:      qModulus,
+		M:      mModulus,
 	}, ok
 }
 
