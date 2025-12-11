@@ -46,5 +46,4 @@ The comparison methods follow specific rules based on the nature of each cardina
 
 - `IsFinite()`: True for Known and Unknown, false for Infinite.
 - `IsUnknown()`: True only for Unknown.
-- `IsInfinite(c)`: Helper function, true only for Infinite.
 - `IsZero()`: True only for Known with value zero.
