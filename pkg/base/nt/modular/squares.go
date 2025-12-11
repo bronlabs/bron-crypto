@@ -10,6 +10,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
+// NewOddPrimeSquare constructs an OddPrimeSquare modular arithmetic
+// instance from the given odd prime factor p.
+// Returns ct.False if the input is invalid (not an odd prime).
 func NewOddPrimeSquare(oddPrimeFactor *numct.Nat) (*OddPrimeSquare, ct.Bool) {
 	allOk := oddPrimeFactor.IsProbablyPrime() & oddPrimeFactor.IsOdd()
 
@@ -44,21 +47,28 @@ func NewOddPrimeSquare(oddPrimeFactor *numct.Nat) (*OddPrimeSquare, ct.Bool) {
 	}, allOk
 }
 
+// OddPrimeSquare implements modular arithmetic modulo p^2,
+// where p is an odd prime.
 type OddPrimeSquare struct {
-	Factor     *numct.Modulus
-	Squared    *numct.Modulus
-	PhiFactor  *numct.Modulus
-	PhiSquared *numct.Modulus
+	Factor     *numct.Modulus // p
+	Squared    *numct.Modulus // p^2
+	PhiFactor  *numct.Modulus // φ(p) = p - 1
+	PhiSquared *numct.Modulus // φ(p^2) = p * (p - 1)
 }
 
+// ModExp computes out = (base ^ exp) mod p^2.
 func (m *OddPrimeSquare) Modulus() *numct.Modulus {
 	return m.Squared
 }
 
+// ModExp computes out = (base ^ exp) mod p^2.
 func (m *OddPrimeSquare) MultiplicativeOrder() algebra.Cardinal {
-	return cardinal.NewFromBig(m.PhiSquared.Big())
+	return cardinal.NewFromNumeric(m.PhiSquared)
 }
 
+// NewOddPrimeSquareFactors constructs an OddPrimeSquareFactors modular arithmetic
+// instance from the given odd prime factors p and q.
+// Returns ct.False if the inputs are invalid (not distinct).
 func NewOddPrimeSquareFactors(firstPrime, secondPrime *numct.Nat) (*OddPrimeSquareFactors, ct.Bool) {
 	allOk := firstPrime.Equal(secondPrime).Not()
 
@@ -122,50 +132,56 @@ func NewOddPrimeSquareFactors(firstPrime, secondPrime *numct.Nat) (*OddPrimeSqua
 	}, allOk
 }
 
+// OddPrimeSquareFactors implements modular arithmetic modulo n^2 = (p * q)^2,
+// where p and q are distinct odd primes.
 type OddPrimeSquareFactors struct {
-	CrtModN  *OddPrimeFactors
-	CrtModN2 *crt.ParamsExtended
-	P        *OddPrimeSquare
-	Q        *OddPrimeSquare
-	N2       *numct.Modulus
-	NExpP2   *numct.Nat // Ep2 = p * (N mod (p-1))
-	NExpQ2   *numct.Nat // Eq2 = q * (N mod (q-1))
-	PhiN2    *numct.Modulus
+	CrtModN  *OddPrimeFactors    // CRT parameters for p and q
+	CrtModN2 *crt.ParamsExtended // CRT parameters for p^2 and q^2
+	P        *OddPrimeSquare     // parameters for p
+	Q        *OddPrimeSquare     // parameters for q
+	N2       *numct.Modulus      // n^2 = (p * q)^2
+	NExpP2   *numct.Nat          // Ep2 = p * (N mod (p-1))
+	NExpQ2   *numct.Nat          // Eq2 = q * (N mod (q-1))
+	PhiN2    *numct.Modulus      // φ(n^2) = φ(p^2)*φ(q^2)
 }
 
+// Modulus returns the modulus n^2 = (p * q)^2.
 func (m *OddPrimeSquareFactors) Modulus() *numct.Modulus {
 	return m.N2
 }
 
+// MultiplicativeOrder returns the multiplicative order φ(n^2) = φ(p^2)*φ(q^2).
 func (m *OddPrimeSquareFactors) MultiplicativeOrder() algebra.Cardinal {
-	return cardinal.NewFromBig(m.PhiN2.Big())
+	return cardinal.NewFromNumeric(m.PhiN2)
 }
 
+// ModExp computes out = (base ^ exp) mod n^2.
 func (m *OddPrimeSquareFactors) ModExp(out, base, exp *numct.Nat) {
-	// Compute base^ep mod p and base^eq mod q in parallel.
 	var mp, mq numct.Nat
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
 		var ep numct.Nat
-		m.P.PhiFactor.Mod(&ep, exp)
+		m.P.PhiSquared.Mod(&ep, exp)
+		// Use reduced exponent when base is coprime (Euler applies),
+		// full exponent otherwise.
 		ep.Select(base.Coprime(m.P.Factor.Nat()), exp, &ep)
 		(m.CrtModN2.P).ModExp(&mp, base, &ep)
 	}()
 	go func() {
 		defer wg.Done()
 		var eq numct.Nat
-		m.Q.PhiFactor.Mod(&eq, exp)
+		m.Q.PhiSquared.Mod(&eq, exp)
 		eq.Select(base.Coprime(m.Q.Factor.Nat()), exp, &eq)
 		m.CrtModN2.Q.ModExp(&mq, base, &eq)
 	}()
 	wg.Wait()
 
-	// CRT recombine into modulo n = p*q.
 	out.Set(m.CrtModN2.Recombine(&mp, &mq))
 }
 
+// ModExpI computes out = (base ^ exp) mod n^2, where exp is a signed integer.
 func (m *OddPrimeSquareFactors) ModExpI(out, base *numct.Nat, exp *numct.Int) {
 	var out2 numct.Nat
 	m.ModExp(out, base, exp.Absed())
@@ -173,6 +189,7 @@ func (m *OddPrimeSquareFactors) ModExpI(out, base *numct.Nat, exp *numct.Int) {
 	out.CondAssign(exp.IsNegative(), &out2)
 }
 
+// MultiBaseExp computes out[i] = (bases[i] ^ exp) mod n^2 for all i.
 func (m *OddPrimeSquareFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp *numct.Nat) {
 	if len(out) != len(bases) {
 		panic("out and bases must have the same length")
@@ -180,27 +197,26 @@ func (m *OddPrimeSquareFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Na
 	k := len(bases)
 
 	var ep, eq numct.Nat
-	m.P.PhiFactor.Mod(&ep, exp)
-	m.Q.PhiFactor.Mod(&eq, exp)
+	m.P.PhiSquared.Mod(&ep, exp)
+	m.Q.PhiSquared.Mod(&eq, exp)
 
 	var wg sync.WaitGroup
 	wg.Add(k)
 	for i := range k {
 		go func(i int) {
 			defer wg.Done()
+			bi := bases[i]
 			var mp, mq numct.Nat
 			var wgInner sync.WaitGroup
 			wgInner.Add(2)
 			go func(i int) {
 				defer wgInner.Done()
-				bi := bases[i]
 				var epi numct.Nat
 				epi.Select(bi.Coprime(m.P.Factor.Nat()), exp, &ep)
 				m.CrtModN2.P.ModExp(&mp, bi, &epi)
 			}(i)
 			go func(i int) {
 				defer wgInner.Done()
-				bi := bases[i]
 				var eqi numct.Nat
 				eqi.Select(bi.Coprime(m.Q.Factor.Nat()), exp, &eq)
 				m.CrtModN2.Q.ModExp(&mq, bi, &eqi)
@@ -212,18 +228,22 @@ func (m *OddPrimeSquareFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Na
 	wg.Wait()
 }
 
+// ModMul computes out = (a * b) mod n^2.
 func (m *OddPrimeSquareFactors) ModMul(out, a, b *numct.Nat) {
 	m.N2.ModMul(out, a, b)
 }
 
+// ModDiv computes out = (a / b) mod n^2.
 func (m *OddPrimeSquareFactors) ModDiv(out, a, b *numct.Nat) ct.Bool {
 	return m.N2.ModDiv(out, a, b)
 }
 
+// ModInv computes out = (a^{-1}) mod n^2.
 func (m *OddPrimeSquareFactors) ModInv(out, a *numct.Nat) ct.Bool {
 	return m.N2.ModInv(out, a)
 }
 
+// ExpToN computes out = (a ^ N) mod n^2 using direct CRT mod-exp.
 func (m *OddPrimeSquareFactors) ExpToN(out, a *numct.Nat) {
 	// Direct CRT: y_p = a^{Ep2} mod p^2, y_q = a^{Eq2} mod q^2
 	var yp, yq numct.Nat
@@ -243,122 +263,3 @@ func (m *OddPrimeSquareFactors) ExpToN(out, a *numct.Nat) {
 	// One-multiply CRT using precomputed (q^2)^{-1} mod p^2 inside m.CrtModN2
 	out.Set(m.CrtModN2.Recombine(&yp, &yq))
 }
-
-// func NewOddPrimeSquareFactorsMulti(ps ...*numct.Nat) (*OddPrimeSquareFactorsMulti, ct.Bool) {
-// 	factorCount := uint(len(ps))
-// 	allOk := ct.Greater(factorCount, 2)
-
-// 	factors := make([]*OddPrimeSquare, factorCount)
-// 	p1s := make([]*numct.ModulusOddPrime, factorCount)
-// 	p2s := make([]*numct.ModulusOdd, factorCount)
-// 	for i, pi := range ps {
-// 		factor, ok := NewOddPrimeSquare(pi)
-// 		allOk &= ok
-// 		factors[i] = factor
-// 		p1s[i] = factor.Factor
-// 		p2s[i] = factor.Squared
-// 	}
-
-// 	crtModP, ok := crt.NewParamsMulti(p1s...)
-// 	allOk &= ok
-
-// 	crtModP2, ok := crt.NewParamsMulti(p2s...)
-// 	allOk &= ok
-
-// 	// E_i = N mod (p_i - 1)
-// 	nModPhis := make([]*numct.Nat, factorCount)
-// 	for i, f := range factors {
-// 		var ei numct.Nat
-// 		f.PhiFactor.Mod(&ei, crtModP.Modulus.Nat()) // phiP is modulus p_i-1
-// 		nModPhis[i] = &ei
-// 	}
-
-// 	return &OddPrimeSquareFactorsMulti{
-// 		CrtModP:  crtModP,
-// 		CrtModP2: crtModP2,
-// 		Factors:  factors,
-// 		NModPhis: nModPhis,
-// 	}, ok
-// }.
-
-// type OddPrimeSquareFactorsMulti struct {
-// 	CrtModP  *crt.ParamsMulti[*numct.ModulusOddPrime]
-// 	CrtModP2 *crt.ParamsMulti[*numct.ModulusOdd]
-// 	Factors  []*OddPrimeSquare
-// 	NModPhis []*numct.Nat
-// }.
-
-// func (m *OddPrimeSquareFactorsMulti) Modulus() numct.Modulus {
-// 	return m.CrtModP2.Modulus
-// }.
-
-// func (m *OddPrimeSquareFactorsMulti) Exp(out, base, exp *numct.Nat) ct.Bool {
-// 	residues := make([]*numct.Nat, m.CrtModP.NumFactors)
-// 	oks := make([]ct.Bool, m.CrtModP.NumFactors)
-// 	var wg sync.WaitGroup
-// 	wg.Add(m.CrtModP.NumFactors)
-// 	for i := range m.CrtModP.NumFactors {
-// 		go func(i int) {
-// 			defer wg.Done()
-// 			var ri numct.Nat
-// 			oks[i] = m.Factors[i].Exp(&ri, base, exp)
-// 			residues[i] = &ri
-// 		}(i)
-// 	}
-// 	wg.Wait()
-// 	res, ok := m.CrtModP2.Recombine(residues...)
-// 	out.Set(res)
-// 	for _, oki := range oks {
-// 		ok &= oki
-// 	}
-// 	return ok
-// }.
-
-// // ExpToN computes a^N mod N^2 using one mod-p^2 exponent per prime.
-// // If a ≡ 0 mod p_i for any factor, the residue is 0 for that i and ok becomes ct.False.
-// // All per-prime steps run in parallel; no calls into Decompose/Exp.
-// func (m *OddPrimeSquareFactorsMulti) ExpToN(out, a *numct.Nat) ct.Bool {
-// 	k := m.CrtModP2.NumFactors
-// 	residues := make([]*numct.Nat, k)
-// 	unitOK := make([]ct.Bool, k)
-
-// 	var wg sync.WaitGroup
-// 	wg.Add(k)
-// 	for i := range k {
-// 		go func(i int) {
-// 			defer wg.Done()
-// 			fi := m.Factors[i]
-
-// 			// a0 = a mod p_i
-// 			var a0 numct.Nat
-// 			fi.Factor.Mod(&a0, a)
-// 			isZero := a0.IsZero() // ct.Bool
-
-// 			// b = a0^(E_i) mod p_i  (E_i precomputed)
-// 			var b numct.Nat
-// 			ei := m.NModPhis[i]
-// 			fi.Factor.ModExp(&b, &a0, ei)
-
-// 			// riUnit = b^p_i mod p_i^2  (Teichmüller lift ω(b))
-// 			var riUnit, ri, z numct.Nat
-// 			fi.Squared.ModExp(&riUnit, &b, fi.FactorNat)
-// 			z.SetZero()
-
-// 			// ri = isZero ? 0 : riUnit  (Select(cond, onFalse, onTrue))
-// 			ri.Select(isZero, &z, &riUnit)
-// 			residues[i] = &ri
-
-// 			unitOK[i] = isZero.Not()
-// 		}(i)
-// 	}
-// 	wg.Wait()
-
-// 	r, crtOK := m.CrtModP2.Recombine(residues...)
-// 	out.Set(r)
-
-// 	ok := crtOK
-// 	for i := range k {
-// 		ok &= unitOK[i]
-// 	}
-// 	return ok
-// }.

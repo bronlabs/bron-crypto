@@ -10,34 +10,44 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
+// NewSimple constructs a SimpleModulus modular arithmetic instance
+// from the given modulus m.
+// Returns ct.False if the input is invalid (nil).
 func NewSimple(m *numct.Modulus) (*SimpleModulus, ct.Bool) {
 	return &SimpleModulus{m: m}, utils.BoolTo[ct.Bool](m != nil)
 }
 
+// SimpleModulus implements modular arithmetic modulo a single modulus m.
 type SimpleModulus struct {
-	m *numct.Modulus
+	m *numct.Modulus // The modulus
 }
 
+// MultiplicativeOrder returns an unknown cardinal for SimpleModulus.
 func (u *SimpleModulus) MultiplicativeOrder() algebra.Cardinal {
 	return cardinal.Unknown()
 }
 
+// Modulus returns the modulus m.
 func (u *SimpleModulus) Modulus() *numct.Modulus {
 	return u.m
 }
 
+// ModMul computes out = (a * b) mod m.
 func (u *SimpleModulus) ModMul(out, a, b *numct.Nat) {
 	u.m.ModMul(out, a, b)
 }
 
+// ModExp computes out = (base ^ exp) mod m.
 func (u *SimpleModulus) ModExp(out, base, exp *numct.Nat) {
 	u.m.ModExp(out, base, exp)
 }
 
+// ModExpI computes out = (base ^ exp) mod m, where exp is a signed integer.
 func (u *SimpleModulus) ModExpI(out, base *numct.Nat, exp *numct.Int) {
 	u.m.ModExpI(out, base, exp)
 }
 
+// MultiBaseExp computes out[i] = (bases[i] ^ exp) mod m for all i.
 func (u *SimpleModulus) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp *numct.Nat) {
 	if len(out) != len(bases) {
 		panic("out and bases must have the same length")
@@ -56,14 +66,19 @@ func (u *SimpleModulus) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp *
 	wg.Wait()
 }
 
+// ModInv computes out = (a^{-1}) mod m.
 func (u *SimpleModulus) ModInv(out, a *numct.Nat) ct.Bool {
 	return u.m.ModInv(out, a)
 }
 
+// ModDiv computes out = (a / b) mod m.
 func (u *SimpleModulus) ModDiv(out, a, b *numct.Nat) ct.Bool {
 	return u.m.ModDiv(out, a, b)
 }
 
+// Lift constructs a SimpleModulus modular arithmetic instance
+// by lifting the modulus m to m^2.
+// Returns ct.False if the lift operation fails.
 func (u *SimpleModulus) Lift() (*SimpleModulus, ct.Bool) {
 	m := u.m.Nat()
 	var m2 numct.Nat
