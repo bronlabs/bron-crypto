@@ -2,32 +2,32 @@ package properties
 
 import "github.com/bronlabs/bron-crypto/pkg/base/algebra"
 
-type Action[SC algebra.Element[SC], E algebra.Element[E]] struct {
+type Action[SC, E Element] struct {
 	Name string
 	Func func(SC, E) E
 }
 
-type Constant[E algebra.Element[E]] struct {
+type Constant[E Element] struct {
 	Name  string
 	Value func() E
 }
 
-type UnaryOperator[E algebra.Element[E]] struct {
+type UnaryOperator[E Element] struct {
 	Name string
 	Func func(E) E
 }
 
-type BinaryOperator[E algebra.Element[E]] struct {
+type BinaryOperator[E Element] struct {
 	Name string
 	Func func(E, E) E
 }
 
-type Predicate[E algebra.Element[E]] struct {
+type Predicate[E Element] struct {
 	Name string
 	Func func(E) bool
 }
 
-type Relation[E algebra.Element[E]] struct {
+type Relation[E Element] struct {
 	Name string
 	Func func(E, E) bool
 }
