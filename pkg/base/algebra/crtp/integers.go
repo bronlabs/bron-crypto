@@ -29,7 +29,6 @@ type Cardinal interface {
 }
 
 type NumericStructure[E any] interface {
-	// HemiRing[E]
 	FromBytesBE([]byte) (E, error)
 }
 

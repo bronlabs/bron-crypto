@@ -158,7 +158,6 @@ type PolynomialRing[P, S any] interface {
 	RandomPolynomialWithConstantTerm(degree int, constantTerm S, prng io.Reader) (P, error)
 }
 
-// TODO: remove IsProbablyPrime from UniqueFactorizationMonoid
 type Polynomial[P, S any] interface {
 	UnivariatePolynomialLike[P, S, S]
 	AlgebraElement[P, S]
