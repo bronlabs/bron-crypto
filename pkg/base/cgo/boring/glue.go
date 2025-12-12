@@ -27,10 +27,14 @@ func (bn *BigNum) Jacobi(b *BigNum, bnCtx *BigNumCtx) (int, error) {
 	b.copyChecker.Check()
 	bnCtx.copyChecker.Check()
 
+	lockOSThread()
 	ret := C.BN_jacobi(&bn.nativeBigNum, &b.nativeBigNum, bnCtx.nativeBnCtx)
 	if ret == -2 {
-		return 0, lastError()
+		err := lastError()
+		unlockOSThread()
+		return 0, err
 	}
+	unlockOSThread()
 
 	runtime.KeepAlive(bn)
 	runtime.KeepAlive(b)
@@ -38,10 +42,16 @@ func (bn *BigNum) Jacobi(b *BigNum, bnCtx *BigNumCtx) (int, error) {
 	return int(ret), nil
 }
 
+// lastError retrieves the most recent error from BoringSSL's thread-local error queue.
+// IMPORTANT: This must be called on the same OS thread as the CGO call that failed.
+// Use lockOSThread/unlockOSThread around CGO calls that may fail to ensure thread affinity.
 func lastError() error {
 	errno := C.ERR_get_error()
 	if errno == 0 {
-		panic("ERR_get_error")
+		// No error on this thread's queue - this can happen if the goroutine
+		// migrated to a different OS thread between the CGO call and this call.
+		// Return a generic error instead of panicking.
+		return errors.New("boringssl: operation failed (error queue empty)")
 	}
 
 	var errBytes [128]byte
@@ -55,4 +65,17 @@ func lastError() error {
 	err := errors.New(errString) //nolint:goerr113 // dynamic error from native
 
 	return err //nolint:wrapcheck // false positive
+}
+
+// lockOSThread pins the current goroutine to its OS thread.
+// This MUST be called before any CGO operation that may fail and require error retrieval.
+// Call unlockOSThread when done with the CGO operation and error handling.
+func lockOSThread() {
+	runtime.LockOSThread()
+}
+
+// unlockOSThread unpins the current goroutine from its OS thread.
+// This should be called after CGO operations and error handling are complete.
+func unlockOSThread() {
+	runtime.UnlockOSThread()
 }

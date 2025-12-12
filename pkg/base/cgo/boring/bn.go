@@ -63,10 +63,14 @@ func NewBigNum() *BigNum {
 func (bn *BigNum) GenPrime(bits int, safe ct.Bool) (*BigNum, error) {
 	bn.copyChecker.Check()
 
+	lockOSThread()
 	ret := C.BN_generate_prime_ex(&bn.nativeBigNum, (C.int)(bits), (C.int)(safe), nil, nil, nil)
 	if ret != 1 {
-		return nil, lastError()
+		err := lastError()
+		unlockOSThread()
+		return nil, err
 	}
+	unlockOSThread()
 
 	return bn, nil
 }
@@ -80,10 +84,14 @@ func (bn *BigNum) Gcd(a, b *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
 	b.copyChecker.Check()
 	bnCtx.copyChecker.Check()
 
+	lockOSThread()
 	ret := C.BN_gcd(&bn.nativeBigNum, &a.nativeBigNum, &b.nativeBigNum, bnCtx.nativeBnCtx)
 	if ret != 1 {
-		return nil, lastError()
+		err := lastError()
+		unlockOSThread()
+		return nil, err
 	}
+	unlockOSThread()
 
 	runtime.KeepAlive(a)
 	runtime.KeepAlive(b)
@@ -97,10 +105,14 @@ func (bn *BigNum) Lcm(a, b *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
 	b.copyChecker.Check()
 	bnCtx.copyChecker.Check()
 
+	lockOSThread()
 	ret := C.bn_lcm_consttime(&bn.nativeBigNum, &a.nativeBigNum, &b.nativeBigNum, bnCtx.nativeBnCtx)
 	if ret != 1 {
-		return nil, lastError()
+		err := lastError()
+		unlockOSThread()
+		return nil, err
 	}
+	unlockOSThread()
 
 	runtime.KeepAlive(a)
 	runtime.KeepAlive(b)
@@ -125,11 +137,16 @@ func (bn *BigNum) Inv(a *BigNum, montCtx *BigNumMontCtx, bnCtx *BigNumCtx) (*Big
 	montCtx.copyChecker.Check()
 	bnCtx.copyChecker.Check()
 
+	// Lock OS thread to ensure error queue is on the same thread as the CGO call
+	lockOSThread()
 	var noInv C.int
 	ret := C.BN_mod_inverse_blinded(&bn.nativeBigNum, &noInv, &a.nativeBigNum, montCtx.nativeBnMontCtx, bnCtx.nativeBnCtx)
 	if ret != 1 {
-		return nil, int32(noInv), lastError()
+		err := lastError()
+		unlockOSThread()
+		return nil, int32(noInv), err
 	}
+	unlockOSThread()
 
 	runtime.KeepAlive(a)
 	runtime.KeepAlive(montCtx)
@@ -144,10 +161,14 @@ func (bn *BigNum) Bytes() ([]byte, error) {
 	announcedLen := ((C.BN_BITS2 * bn.nativeBigNum.width) + 7) / 8
 	buffer := make([]byte, announcedLen)
 	if announcedLen > 0 {
+		lockOSThread()
 		ret := C.BN_bn2bin_padded((*C.uint8_t)(&buffer[0]), (C.size_t)(announcedLen), &bn.nativeBigNum)
 		if ret != 1 {
-			return nil, lastError()
+			err := lastError()
+			unlockOSThread()
+			return nil, err
 		}
+		unlockOSThread()
 	}
 
 	runtime.KeepAlive(bn)
@@ -164,10 +185,14 @@ func (bn *BigNum) Exp(a, p, m *BigNum, montCtx *BigNumMontCtx, bnCtx *BigNumCtx)
 	montCtx.copyChecker.Check()
 	bnCtx.copyChecker.Check()
 
+	lockOSThread()
 	ret := C.BN_mod_exp_mont_consttime(&bn.nativeBigNum, &a.nativeBigNum, &p.nativeBigNum, &m.nativeBigNum, bnCtx.nativeBnCtx, montCtx.nativeBnMontCtx)
 	if ret != 1 {
-		return nil, lastError()
+		err := lastError()
+		unlockOSThread()
+		return nil, err
 	}
+	unlockOSThread()
 
 	runtime.KeepAlive(a)
 	runtime.KeepAlive(p)
@@ -185,10 +210,14 @@ func (bn *BigNum) ModMul(l, r, m *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
 	m.copyChecker.Check()
 	bnCtx.copyChecker.Check()
 
+	lockOSThread()
 	ret := C.BN_mod_mul(&bn.nativeBigNum, &l.nativeBigNum, &r.nativeBigNum, &m.nativeBigNum, bnCtx.nativeBnCtx)
 	if ret != 1 {
-		return nil, lastError()
+		err := lastError()
+		unlockOSThread()
+		return nil, err
 	}
+	unlockOSThread()
 
 	runtime.KeepAlive(l)
 	runtime.KeepAlive(r)
@@ -205,10 +234,14 @@ func (bn *BigNum) ModSub(l, r, m *BigNum) (*BigNum, error) {
 	r.copyChecker.Check()
 	m.copyChecker.Check()
 
+	lockOSThread()
 	ret := C.BN_mod_sub_quick(&bn.nativeBigNum, &l.nativeBigNum, &r.nativeBigNum, &m.nativeBigNum)
 	if ret != 1 {
-		return nil, lastError()
+		err := lastError()
+		unlockOSThread()
+		return nil, err
 	}
+	unlockOSThread()
 
 	runtime.KeepAlive(l)
 	runtime.KeepAlive(r)
@@ -224,10 +257,14 @@ func (bn *BigNum) ModAdd(l, r, m *BigNum) (*BigNum, error) {
 	r.copyChecker.Check()
 	m.copyChecker.Check()
 
+	lockOSThread()
 	ret := C.BN_mod_add_quick(&bn.nativeBigNum, &l.nativeBigNum, &r.nativeBigNum, &m.nativeBigNum)
 	if ret != 1 {
-		return nil, lastError()
+		err := lastError()
+		unlockOSThread()
+		return nil, err
 	}
+	unlockOSThread()
 
 	runtime.KeepAlive(l)
 	runtime.KeepAlive(r)
@@ -242,10 +279,14 @@ func (bn *BigNum) Mod(x, m *BigNum, bnCtx *BigNumCtx) (*BigNum, error) {
 	m.copyChecker.Check()
 	bnCtx.copyChecker.Check()
 
+	lockOSThread()
 	r := C.BN_nnmod(&bn.nativeBigNum, &x.nativeBigNum, &m.nativeBigNum, bnCtx.nativeBnCtx)
 	if r != 1 {
-		return nil, lastError()
+		err := lastError()
+		unlockOSThread()
+		return nil, err
 	}
+	unlockOSThread()
 
 	runtime.KeepAlive(x)
 	runtime.KeepAlive(m)
@@ -264,11 +305,15 @@ func (bn *BigNum) SetBytes(data []byte) (*BigNum, error) {
 		return bn, nil
 	}
 
+	lockOSThread()
 	rawData := (*C.uint8_t)(unsafe.Pointer(&data[0]))
 	r := C.BN_bin2bn(rawData, C.size_t(len(data)), &bn.nativeBigNum)
 	if r == nil {
-		return nil, lastError()
+		err := lastError()
+		unlockOSThread()
+		return nil, err
 	}
+	unlockOSThread()
 
 	runtime.KeepAlive(data)
 	return bn, nil

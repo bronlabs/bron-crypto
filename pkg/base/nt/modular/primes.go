@@ -10,6 +10,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
+// NewOddPrimeFactors constructs an OddPrimeFactors modular arithmetic
+// instance from the given odd prime factors p and q.
+// Returns ct.False if the inputs are invalid (not odd primes or equal).
 func NewOddPrimeFactors(p, q *numct.Nat) (*OddPrimeFactors, ct.Bool) {
 	allOk := p.Equal(q).Not() & p.IsProbablyPrime() & q.IsProbablyPrime() & p.IsOdd() & q.IsOdd()
 
@@ -48,24 +51,28 @@ func NewOddPrimeFactors(p, q *numct.Nat) (*OddPrimeFactors, ct.Bool) {
 	}, allOk
 }
 
+// OddPrimeFactors implements modular arithmetic modulo n = p * q,
+// where p and q are distinct odd primes.
 type OddPrimeFactors struct {
-	Params *crt.ParamsExtended
-	N      *numct.Modulus
-	PhiP   *numct.Modulus
-	PhiQ   *numct.Modulus
-	Phi    *numct.Modulus
+	Params *crt.ParamsExtended // CRT parameters for p and q
+	N      *numct.Modulus      // n = p * q
+	PhiP   *numct.Modulus      // φ(p) = p - 1
+	PhiQ   *numct.Modulus      // φ(q) = q - 1
+	Phi    *numct.Modulus      // φ(n) = (p - 1)*(q - 1)
 }
 
+// Modulus returns the modulus n = p * q.
 func (m *OddPrimeFactors) Modulus() *numct.Modulus {
 	return m.N
 }
 
+// MultiplicativeOrder returns the multiplicative order φ(n) = (p-1)*(q-1).
 func (m *OddPrimeFactors) MultiplicativeOrder() algebra.Cardinal {
-	return cardinal.NewFromBig(m.Phi.Big())
+	return cardinal.NewFromNumeric(m.Phi)
 }
 
+// ModMul computes out = (a * b) mod n.
 func (m *OddPrimeFactors) ModMul(out, a, b *numct.Nat) {
-	// Compute (a*b) mod p and (a*b) mod q in parallel, then CRT-recombine.
 	var ap, aq, bp, bq numct.Nat
 	var mp, mq numct.Nat
 
@@ -86,33 +93,34 @@ func (m *OddPrimeFactors) ModMul(out, a, b *numct.Nat) {
 	}()
 	wg.Wait()
 
-	// CRT recombine residues into modulo n = p*q
 	out.Set(m.Params.Recombine(&mp, &mq))
 }
 
+// ModExp computes out = (base ^ exp) mod n.
 func (m *OddPrimeFactors) ModExp(out, base, exp *numct.Nat) {
-	// Compute base^ep mod p and base^eq mod q in parallel.
 	var ep, eq, mp, mq numct.Nat
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
 		m.PhiP.Mod(&ep, exp)
-		ep.Select(base.Coprime(m.Params.PNat), &ep, exp)
+		// Use reduced exponent when base is coprime (Fermat applies),
+		// full exponent otherwise.
+		ep.Select(base.Coprime(m.Params.PNat), exp, &ep)
 		(m.Params.P).ModExp(&mp, base, &ep)
 	}()
 	go func() {
 		defer wg.Done()
 		m.PhiQ.Mod(&eq, exp)
-		eq.Select(base.Coprime(m.Params.QNat), &eq, exp)
+		eq.Select(base.Coprime(m.Params.QNat), exp, &eq)
 		m.Params.Q.ModExp(&mq, base, &eq)
 	}()
 	wg.Wait()
 
-	// CRT recombine into modulo n = p*q.
 	out.Set(m.Params.Recombine(&mp, &mq))
 }
 
+// ModExpI computes out = (base ^ exp) mod n, where exp is a signed integer.
 func (m *OddPrimeFactors) ModExpI(out, base *numct.Nat, exp *numct.Int) {
 	var out2 numct.Nat
 	m.ModExp(out, base, exp.Absed())
@@ -120,16 +128,21 @@ func (m *OddPrimeFactors) ModExpI(out, base *numct.Nat, exp *numct.Int) {
 	out.CondAssign(exp.IsNegative(), &out2)
 }
 
+// ModDiv computes out = (a / b) mod n.
 func (m *OddPrimeFactors) ModDiv(out, a, b *numct.Nat) ct.Bool {
 	return m.N.ModDiv(out, a, b)
 }
 
-// TODO: change the loop
+// MultiBaseExp computes out[i] = (bases[i] ^ exp) mod n for all i.
 func (m *OddPrimeFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp *numct.Nat) {
 	if len(out) != len(bases) {
 		panic("out and bases must have the same length")
 	}
 	k := len(bases)
+
+	var ep, eq numct.Nat
+	m.PhiP.Mod(&ep, exp)
+	m.PhiQ.Mod(&eq, exp)
 
 	var wg sync.WaitGroup
 	wg.Add(k)
@@ -142,16 +155,14 @@ func (m *OddPrimeFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp
 			wgInner.Add(2)
 			go func() {
 				defer wgInner.Done()
-				var ep, epi numct.Nat
-				m.PhiP.Mod(&ep, exp)
-				epi.Select(bi.Coprime(m.Params.PNat), &ep, exp)
+				var epi numct.Nat
+				epi.Select(bi.Coprime(m.Params.PNat), exp, &ep)
 				m.Params.P.ModExp(&mp, bi, &epi)
 			}()
 			go func() {
 				defer wgInner.Done()
-				var eq, eqi numct.Nat
-				m.PhiQ.Mod(&eq, exp)
-				eqi.Select(bi.Coprime(m.Params.QNat), &eq, exp)
+				var eqi numct.Nat
+				eqi.Select(bi.Coprime(m.Params.QNat), exp, &eq)
 				m.Params.Q.ModExp(&mq, bi, &eqi)
 			}()
 			wgInner.Wait()
@@ -161,6 +172,7 @@ func (m *OddPrimeFactors) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp
 	wg.Wait()
 }
 
+// ModInv computes out = (a^{-1}) mod n.
 func (m *OddPrimeFactors) ModInv(out, a *numct.Nat) ct.Bool {
 	var ap, aq numct.Nat
 	var ip, iq numct.Nat
@@ -181,11 +193,13 @@ func (m *OddPrimeFactors) ModInv(out, a *numct.Nat) ct.Bool {
 	wg.Wait()
 
 	ok := okP & okQ
-	// CRT recombine inverse residues to get a^{-1} mod n
 	out.Set(m.Params.Recombine(&ip, &iq))
 	return ok
 }
 
+// Lift constructs an OddPrimeSquareFactors modular arithmetic instance
+// by lifting the modulus n = p * q to n^2 = p^2 * q^2.
+// Returns ct.False if the lift operation fails.
 func (m *OddPrimeFactors) Lift() (*OddPrimeSquareFactors, ct.Bool) {
 	// TODO: optimize
 	out, ok := NewOddPrimeSquareFactors(
@@ -194,109 +208,3 @@ func (m *OddPrimeFactors) Lift() (*OddPrimeSquareFactors, ct.Bool) {
 	)
 	return out, ok
 }
-
-// func NewOddPrimeFactorsMulti(ps ...*numct.Nat) (*OddPrimeFactorsMulti, ct.Bool) {
-// 	k := len(ps)
-// 	params, allOk := crt.PrecomputeMulti[*numct.ModulusOddPrime](ps...)
-
-// 	phis := make([]numct.Modulus, k)
-// 	for i := range k {
-// 		// must be odd prime
-// 		allOk &= ps[i].IsProbablyPrime() & ps[i].IsOdd()
-
-// 		// compute phi(p_i) = p_i - 1
-// 		phiiNat := ps[i].Clone()
-// 		phiiNat.Decrement()
-
-// 		for j := i + 1; j < k; j++ {
-// 			// allOk &= ps[i].Coprime(ps[j])
-// 			allOk &= ps[j].Equal(ps[i]).Not()
-// 		}
-
-// 		phii, ok := numct.NewModulus(phiiNat)
-// 		allOk &= ok
-// 		phis[i] = phii
-// 	}
-// 	return &OddPrimeFactorsMulti{
-// 		params: params,
-// 		phis:   phis,
-// 	}, allOk
-// }.
-
-// type OddPrimeFactorsMulti struct {
-// 	params *crt.ParamsMulti[*numct.ModulusOddPrime]
-// 	phis   []numct.Modulus
-// }.
-
-// func (m *OddPrimeFactorsMulti) Modulus() numct.Modulus {
-// 	return m.params.Modulus
-// }.
-
-// func (m *OddPrimeFactorsMulti) ModExp(out, base, exp *numct.Nat) {
-// 	eps := make([]*numct.Nat, m.params.NumFactors)
-// 	for i := range m.params.NumFactors {
-// 		m.phis[i].Mod(eps[i], exp)
-// 		eps[i].Select(base.Coprime(m.params.Factors[i].Nat()), exp, eps[i])
-// 	}
-// 	mps := make([]*numct.Nat, m.params.NumFactors)
-// 	var wg sync.WaitGroup
-// 	wg.Add(m.params.NumFactors)
-// 	for i := range m.params.NumFactors {
-// 		go func(i int) {
-// 			defer wg.Done()
-// 			m.params.Factors[i].ModExp(mps[i], base, eps[i])
-// 		}(i)
-// 	}
-// 	wg.Wait()
-// 	res, _ := m.params.Recombine(mps...)
-// 	out.Set(res)
-// }.
-
-// func (m *OddPrimeFactorsMulti) MultiBaseExp(out []*numct.Nat, bases []*numct.Nat, exp *numct.Nat) {
-// 	if len(out) != len(bases) {
-// 		panic("out and bases must have the same length")
-// 	}
-// 	k := len(bases)
-// 	eps := make([]*numct.Nat, k)
-// 	for i := range k {
-// 		m.phis[i].Mod(eps[i], exp)
-// 	}
-// 	var wg sync.WaitGroup
-// 	wg.Add(k)
-// 	for i := range k {
-// 		go func(i int) {
-// 			defer wg.Done()
-// 			bi := bases[i]
-// 			mps := make([]*numct.Nat, m.params.NumFactors)
-// 			var wgInner sync.WaitGroup
-// 			wgInner.Add(m.params.NumFactors)
-// 			for j := range m.params.NumFactors {
-// 				go func(j int) {
-// 					defer wgInner.Done()
-// 					eps[j].Select(bi.Coprime(m.params.Factors[j].Nat()), exp, eps[j])
-// 					m.params.Factors[j].ModExp(mps[j], bi, eps[j])
-// 				}(j)
-// 			}
-// 			wgInner.Wait()
-// 			res, _ := m.params.Recombine(mps...)
-// 			out[i].Set(res)
-// 		}(i)
-// 	}
-// 	wg.Wait()
-// }.
-
-// func (m *OddPrimeFactorsMulti) ModInv(out, a *numct.Nat) ct.Bool {
-// 	mps := make([]*numct.Nat, m.params.NumFactors)
-// 	var wg sync.WaitGroup
-// 	wg.Add(m.params.NumFactors)
-// 	for i := range m.params.NumFactors {
-// 		go func(i int) {
-// 			defer wg.Done()
-// 			m.params.Factors[i].ModInv(mps[i], a)
-// 		}(i)
-// 	}
-// 	wg.Wait()
-// 	res, ok := m.params.Recombine(mps...)
-// 	out.Set(res)
-// 	return ok
-// }.

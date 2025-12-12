@@ -23,10 +23,15 @@ func NewBigNumMontCtx(m *BigNum, bigNumCtx *BigNumCtx) (*BigNumMontCtx, error) {
 	m.copyChecker.Check()
 	bigNumCtx.copyChecker.Check()
 
+	lockOSThread()
 	nativeCtx := C.BN_MONT_CTX_new_consttime(&m.nativeBigNum, bigNumCtx.nativeBnCtx)
 	if nativeCtx == nil {
-		return nil, lastError()
+		err := lastError()
+		unlockOSThread()
+		return nil, err
 	}
+	unlockOSThread()
+
 	ctx := &BigNumMontCtx{
 		nativeBnMontCtx: nativeCtx,
 	}

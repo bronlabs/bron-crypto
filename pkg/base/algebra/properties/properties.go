@@ -561,7 +561,7 @@ func LeftDistributivityOfActionOverSemiModuleOperationProperty[S algebra.SemiMod
 ) Axiom {
 	t.Helper()
 	return Axiom{
-		Name: "ScalarOp_DistributesOver_Op",
+		Name: c.Action.Name + "_DistributesOver_Op",
 		CheckFunc: func(t *testing.T) {
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.First.Dist.Draw(rt, "a")
@@ -584,7 +584,7 @@ func RightDistributivityOfSemiModuleOperationOverBaseSemiRingAdditionProperty[S 
 ) Axiom {
 	t.Helper()
 	return Axiom{
-		Name: "Op_DistributesOver_ScalarOp",
+		Name: "Op_DistributesOver_" + c.Action.Name,
 		CheckFunc: func(t *testing.T) {
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.First.Dist.Draw(rt, "a")
@@ -607,7 +607,7 @@ func AssociativityOfScalarsWRTRingMultiplicationProperty[S algebra.SemiModule[E,
 ) Axiom {
 	t.Helper()
 	return Axiom{
-		Name: "ScalarOp_Associativity_WRT_Ring_Multiplication",
+		Name: c.Action.Name + "_Associativity_WRT_Ring_Multiplication",
 		CheckFunc: func(t *testing.T) {
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.First.Dist.Draw(rt, "a")

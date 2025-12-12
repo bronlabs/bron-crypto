@@ -61,21 +61,29 @@ func (prm *Params) Recombine(mp, mq *numct.Nat) *numct.Nat {
 	return m
 }
 
+// Extended returns an extended ParamsExtended structure
 func (prm *Params) Extended() (*ParamsExtended, ct.Bool) {
 	qModulus, ok := numct.NewModulus(prm.QNat)
+	var mNat numct.Nat
+	mNat.Mul(prm.P.Nat(), prm.QNat)
+	mModulus, okT := numct.NewModulus(&mNat)
+	ok &= okT
 	return &ParamsExtended{
 		Params: *prm,
 		PNat:   prm.P.Nat(),
 		Q:      qModulus,
+		M:      mModulus,
 	}, ok
 }
 
+// PrecomputePairExtended is a one-shot variant that precomputes extended CRT parameters.
 func PrecomputePairExtended(p, q *numct.Nat) (*ParamsExtended, ct.Bool) {
 	prm, ok1 := Precompute(p, q)
 	prmx, ok2 := prm.Extended()
 	return prmx, ok1 & ok2
 }
 
+// NewParamsExtended constructs extended CRT parameters from given moduli p and q.
 func NewParamsExtended(p, q *numct.Modulus) (*ParamsExtended, ct.Bool) {
 	qNat := q.Nat()
 	pNat := p.Nat()
@@ -109,6 +117,8 @@ func NewParamsExtended(p, q *numct.Modulus) (*ParamsExtended, ct.Bool) {
 	}, ok
 }
 
+// ParamsExtended holds reusable data for CRT recombination mod N = p*q,
+// along with extended functionality such as modulus decomposition.
 type ParamsExtended struct {
 	Params
 
@@ -117,10 +127,12 @@ type ParamsExtended struct {
 	M    *numct.Modulus
 }
 
+// Modulus returns the modulus N = p * q.
 func (prmx *ParamsExtended) Modulus() *numct.Modulus {
 	return prmx.M
 }
 
+// Decompose returns (m mod p, m mod q).
 func (prmx *ParamsExtended) Decompose(m *numct.Modulus) (mp, mq *numct.Nat) {
 	if m.BitLen() <= 4096 {
 		return prmx.DecomposeSerial(m)
@@ -128,7 +140,7 @@ func (prmx *ParamsExtended) Decompose(m *numct.Modulus) (mp, mq *numct.Nat) {
 	return prmx.DecomposeParallel(m)
 }
 
-// DecomposeParallel returns (m mod p, m mod q).
+// DecomposeParallel returns (m mod p, m mod q), computed in parallel.
 func (prmx *ParamsExtended) DecomposeParallel(m *numct.Modulus) (mp, mq *numct.Nat) {
 	mpt := new(numct.Nat)
 	mqt := new(numct.Nat)
@@ -148,6 +160,7 @@ func (prmx *ParamsExtended) DecomposeParallel(m *numct.Modulus) (mp, mq *numct.N
 	return mpt, mqt
 }
 
+// DecomposeSerial returns (m mod p, m mod q), computed serially.
 func (prmx *ParamsExtended) DecomposeSerial(m *numct.Modulus) (mp, mq *numct.Nat) {
 	mpt := new(numct.Nat)
 	mqt := new(numct.Nat)

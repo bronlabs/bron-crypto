@@ -23,6 +23,7 @@ type ParamsMulti struct {
 	GarnerCoeffs [][]*numct.Nat
 }
 
+// NewParamsMulti constructs multi-factor CRT parameters from given moduli.
 func NewParamsMulti(factors ...*numct.Modulus) (*ParamsMulti, ct.Bool) {
 	k := len(factors)
 	allOk := ct.GreaterOrEqual(k, 2)
@@ -162,7 +163,7 @@ func (params *ParamsMulti) RecombineSerial(residues ...*numct.Nat) (*numct.Nat, 
 
 		// x = x + c_i * pProd
 		var term numct.Nat
-		capMul = int(term.AnnouncedLen() + pProd.AnnouncedLen())
+		capMul = int(ci.AnnouncedLen() + pProd.AnnouncedLen())
 		term.MulCap(&ci, pProd, capMul)
 		capAdd := int(result.AnnouncedLen() + term.AnnouncedLen())
 		result.AddCap(result, &term, capAdd)
@@ -172,6 +173,9 @@ func (params *ParamsMulti) RecombineSerial(residues ...*numct.Nat) (*numct.Nat, 
 	return result, eqLen
 }
 
+// Recombine reconstructs x (mod N) from residues[i] = x mod p_i.
+// Recombine chooses between serial and parallel based on size.
+// The choice is deterministic based on modulus size and prime count.
 func (params *ParamsMulti) Recombine(residues ...*numct.Nat) (*numct.Nat, ct.Bool) {
 	if params.NumFactors <= 4 {
 		return params.RecombineSerial(residues...)
@@ -206,7 +210,9 @@ func (params *ParamsMulti) DecomposeParallel(m *numct.Modulus) []*numct.Nat {
 	for i := range params.NumFactors {
 		go func(idx int) {
 			defer wg.Done()
-			params.Factors[idx].Mod(residues[idx], m.Nat())
+			var residue numct.Nat
+			params.Factors[idx].Mod(&residue, m.Nat())
+			residues[idx] = &residue
 		}(i)
 	}
 
