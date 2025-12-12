@@ -113,8 +113,8 @@ func (r *PolynomialRing[RE]) Zero() *Polynomial[RE] {
 	}
 }
 
-func (r *PolynomialRing[RE]) IsSemiDomain() bool {
-	return r.ring.IsSemiDomain()
+func (r *PolynomialRing[RE]) IsDomain() bool {
+	return r.ring.IsDomain()
 }
 
 func NewPolynomialRing[RE algebra.RingElement[RE]](ring FiniteRing[RE]) (*PolynomialRing[RE], error) {

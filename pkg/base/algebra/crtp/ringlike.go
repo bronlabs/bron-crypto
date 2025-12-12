@@ -73,7 +73,7 @@ type RngElement[RE any] interface {
 type Ring[RE any] interface {
 	Rig[RE]
 	Rng[RE]
-	IsSemiDomain() bool
+	IsDomain() bool
 }
 
 type RingElement[RE any] interface {
