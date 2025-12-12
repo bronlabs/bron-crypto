@@ -82,10 +82,10 @@ func (o *OddPrimeFactors) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-func (s *OddPrimeSquareFactors) MarshalCBOR() ([]byte, error) {
+func (m *OddPrimeSquareFactors) MarshalCBOR() ([]byte, error) {
 	dto := &pairDTO{
-		P: s.P.Factor.Nat(),
-		Q: s.Q.Factor.Nat(),
+		P: m.P.Factor.Nat(),
+		Q: m.Q.Factor.Nat(),
 	}
 	data, err := serde.MarshalCBORTagged(dto, OddPrimeSquareFactorsTag)
 	if err != nil {
@@ -94,7 +94,7 @@ func (s *OddPrimeSquareFactors) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
-func (s *OddPrimeSquareFactors) UnmarshalCBOR(data []byte) error {
+func (m *OddPrimeSquareFactors) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[pairDTO](data)
 	if err != nil {
 		return err
@@ -103,6 +103,6 @@ func (s *OddPrimeSquareFactors) UnmarshalCBOR(data []byte) error {
 	if ok == ct.False {
 		return errs.NewValue("failed to create OddPrimeSquareFactors")
 	}
-	*s = *out
+	*m = *out
 	return nil
 }

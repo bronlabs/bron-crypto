@@ -91,25 +91,6 @@ func TestInt_Abs(t *testing.T) {
 	}
 }
 
-func TestInt_Absed(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		input    int64
-		expected uint64
-	}{
-		{0, 0},
-		{1, 1},
-		{-1, 1},
-		{42, 42},
-		{-42, 42},
-	}
-	for _, tc := range cases {
-		n := numct.NewInt(tc.input)
-		abs := n.Absed()
-		require.Equal(t, tc.expected, abs.Uint64())
-	}
-}
-
 func TestInt_Set(t *testing.T) {
 	t.Parallel()
 	a := numct.NewInt(-42)
@@ -255,60 +236,105 @@ func TestInt_MulCap(t *testing.T) {
 
 func TestInt_Div(t *testing.T) {
 	t.Parallel()
+
 	t.Run("positive/positive", func(t *testing.T) {
-		var result numct.Int
-		ok := result.Div(numct.NewInt(100), numct.NewInt(10))
+		n := int64(97)
+		d := int64(21)
+		expectedQ := n / d
+		expectedR := n % d
+		var q, r numct.Int
+		ok := q.Div(&r, numct.NewInt(n), numct.NewInt(d))
 		require.Equal(t, ct.True, ok)
-		require.Equal(t, int64(10), result.Int64())
+		require.Equal(t, expectedQ, q.Int64())
+		require.Equal(t, expectedR, r.Int64())
 	})
 
 	t.Run("negative/positive", func(t *testing.T) {
-		var result numct.Int
-		ok := result.Div(numct.NewInt(-100), numct.NewInt(10))
+		n := int64(-97)
+		d := int64(21)
+		expectedQ := n / d
+		expectedR := n % d
+		var q, r numct.Int
+		ok := q.Div(&r, numct.NewInt(n), numct.NewInt(d))
 		require.Equal(t, ct.True, ok)
-		require.Equal(t, int64(-10), result.Int64())
+		require.Equal(t, expectedQ, q.Int64())
+		require.Equal(t, expectedR, r.Int64())
 	})
 
 	t.Run("positive/negative", func(t *testing.T) {
-		var result numct.Int
-		ok := result.Div(numct.NewInt(100), numct.NewInt(-10))
+		n := int64(97)
+		d := int64(-21)
+		expectedQ := n / d
+		expectedR := n % d
+		var q, r numct.Int
+		ok := q.Div(&r, numct.NewInt(n), numct.NewInt(d))
 		require.Equal(t, ct.True, ok)
-		require.Equal(t, int64(-10), result.Int64())
+		require.Equal(t, expectedQ, q.Int64())
+		require.Equal(t, expectedR, r.Int64())
 	})
 
 	t.Run("negative/negative", func(t *testing.T) {
-		var result numct.Int
-		ok := result.Div(numct.NewInt(-100), numct.NewInt(-10))
+		n := int64(-97)
+		d := int64(-21)
+		expectedQ := n / d
+		expectedR := n % d
+		var q, r numct.Int
+		ok := q.Div(&r, numct.NewInt(n), numct.NewInt(d))
 		require.Equal(t, ct.True, ok)
-		require.Equal(t, int64(10), result.Int64())
-	})
-
-	t.Run("integer division", func(t *testing.T) {
-		var result numct.Int
-		ok := result.Div(numct.NewInt(17), numct.NewInt(5))
-		require.Equal(t, ct.True, ok)
-		require.Equal(t, int64(3), result.Int64())
+		require.Equal(t, expectedQ, q.Int64())
+		require.Equal(t, expectedR, r.Int64())
 	})
 }
 
-func TestInt_ExactDiv(t *testing.T) {
+func TestInt_DivVarTime(t *testing.T) {
 	t.Parallel()
-	t.Run("exact", func(t *testing.T) {
-		var result numct.Int
-		denom, ok := numct.NewModulus(numct.NewNat(10))
+
+	t.Run("positive/positive", func(t *testing.T) {
+		n := int64(97)
+		d := int64(21)
+		expectedQ := n / d
+		expectedR := n % d
+		var q, r numct.Int
+		ok := q.DivVarTime(&r, numct.NewInt(n), numct.NewInt(d))
 		require.Equal(t, ct.True, ok)
-		ok = result.ExactDivDivisorAsModulus(numct.NewInt(-100), denom)
-		require.Equal(t, ct.True, ok)
-		require.Equal(t, int64(-10), result.Int64())
+		require.Equal(t, expectedQ, q.Int64())
+		require.Equal(t, expectedR, r.Int64())
 	})
 
-	t.Run("not exact", func(t *testing.T) {
-		var result numct.Int
-		result.SetOne()
-		denom, ok := numct.NewModulus(numct.NewNat(5))
+	t.Run("negative/positive", func(t *testing.T) {
+		n := int64(-97)
+		d := int64(21)
+		expectedQ := n / d
+		expectedR := n % d
+		var q, r numct.Int
+		ok := q.DivVarTime(&r, numct.NewInt(n), numct.NewInt(d))
 		require.Equal(t, ct.True, ok)
-		ok = result.ExactDivDivisorAsModulus(numct.NewInt(17), denom)
-		require.Equal(t, ct.False, ok)
+		require.Equal(t, expectedQ, q.Int64())
+		require.Equal(t, expectedR, r.Int64())
+	})
+
+	t.Run("positive/negative", func(t *testing.T) {
+		n := int64(97)
+		d := int64(-21)
+		expectedQ := n / d
+		expectedR := n % d
+		var q, r numct.Int
+		ok := q.DivVarTime(&r, numct.NewInt(n), numct.NewInt(d))
+		require.Equal(t, ct.True, ok)
+		require.Equal(t, expectedQ, q.Int64())
+		require.Equal(t, expectedR, r.Int64())
+	})
+
+	t.Run("negative/negative", func(t *testing.T) {
+		n := int64(-97)
+		d := int64(-21)
+		expectedQ := n / d
+		expectedR := n % d
+		var q, r numct.Int
+		ok := q.DivVarTime(&r, numct.NewInt(n), numct.NewInt(d))
+		require.Equal(t, ct.True, ok)
+		require.Equal(t, expectedQ, q.Int64())
+		require.Equal(t, expectedR, r.Int64())
 	})
 }
 
@@ -538,15 +564,6 @@ func TestInt_Square(t *testing.T) {
 		result.Square(numct.NewInt(tc.input))
 		require.Equal(t, tc.expected, result.Int64())
 	}
-}
-
-func TestInt_Bit(t *testing.T) {
-	t.Parallel()
-	n := numct.NewInt(0b10101010) // 170
-	require.Equal(t, byte(0), n.Bit(0))
-	require.Equal(t, byte(1), n.Bit(1))
-	require.Equal(t, byte(0), n.Bit(2))
-	require.Equal(t, byte(1), n.Bit(3))
 }
 
 func TestInt_Bytes(t *testing.T) {
@@ -964,18 +981,6 @@ func TestInt_Bytes_RoundTrip(t *testing.T) {
 		require.Equal(t, ct.True, ok)
 		require.Equal(t, v, decoded.Int64())
 	}
-}
-
-func TestInt_DivCap(t *testing.T) {
-	t.Parallel()
-	var result numct.Int
-	num := numct.NewInt(-100)
-	denom, ok := numct.NewModulus(numct.NewNat(10))
-	require.Equal(t, ct.True, ok)
-
-	ok = result.DivDivisorAsModulusCap(num, denom, -1)
-	require.Equal(t, ct.True, ok)
-	require.Equal(t, int64(-10), result.Int64())
 }
 
 func TestInt_FillBytes_Equivalence(t *testing.T) {

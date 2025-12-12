@@ -112,43 +112,69 @@ func (n *Nat) MulCap(lhs, rhs *Nat, capacity int) {
 	(*saferith.Nat)(n).Mul((*saferith.Nat)(lhs), (*saferith.Nat)(rhs), capacity)
 }
 
-// DivDivisorAsModulusCap sets n = numerator / denominator with capacity capacity.
-// if capacity < 0, capacity will be numerator.AnnouncedLen() - denominator.BitLen() + 2
+// EuclideanDivVarTime sets n to quotient of numerator / denominator.
+// If r is not nil, it will be set it to the remainder.
 // It returns ok=true if the division was successful, ok=false otherwise (e.g., division by zero).
-func (n *Nat) DivDivisorAsModulusCap(numerator *Nat, denominator *Modulus, capacity int) (ok ct.Bool) {
-	ok = utils.BoolTo[ct.Bool](denominator != nil)
-	n.Set((*Nat)(new(saferith.Nat).Div(
-		(*saferith.Nat)(numerator),
-		denominator.Saferith(),
-		capacity,
-	)))
-	return ok
+// The number of bits of the quotient will be
+// min(numerator.AnnouncedLen(), numerator.AnnouncedLen() - denominator.TrueLen() + 2) and
+// the number of bits of the remainder will be denominator.TrueLen().
+func (n *Nat) EuclideanDivVarTime(remainder, numerator, denominator *Nat) ct.Bool {
+	if denominator.IsZero() != ct.False {
+		return ct.False
+	}
+
+	nn := (*saferith.Nat)(numerator)
+	dd := saferith.ModulusFromNat((*saferith.Nat)(denominator))
+
+	var qq saferith.Nat
+	qq.Div(nn, dd, -1)
+	((*saferith.Nat)(n)).SetNat(&qq)
+	((*saferith.Nat)(n)).Resize(min(numerator.AnnouncedLen(), numerator.AnnouncedLen()-dd.BitLen()+2))
+	if remainder != nil {
+		var rr saferith.Nat
+		rr.Mul((*saferith.Nat)(denominator), &qq, -1)
+		rr.Sub(nn, &rr, -1)
+		rr.Resize(dd.BitLen())
+		((*saferith.Nat)(remainder)).SetNat(&rr)
+	}
+
+	return ct.True
 }
 
-// ExactDivDivisorAsModulus sets n = numerator / denominator if the division is exact (no remainder).
-// It returns ok=true if the division was exact, ok=false otherwise.
-// If the division is not exact, n is not modified.
-func (n *Nat) ExactDivDivisorAsModulus(numerator *Nat, denominator *Modulus) (ok ct.Bool) {
-	var q, r Nat
-	ok = QuoRemDivDivisorAsModulusCap(&q, &r, numerator, denominator, -1)
-	isExact := r.IsZero()
-	// Only update n if division was exact
-	n.CondAssign(ok&isExact, &q)
-	return ok & isExact
-}
-
-// EuclideanDiv sets n = to quotient of numerator / denominator.
+// EuclideanDiv sets n to quotient of numerator / denominator.
 // If r is not nil, it will be set it to the remainder.
 // It returns ok=1 if the division was successful, ok=0 otherwise (i.e., division by zero).
+// The number of bits of the quotient will be numerator.AnnouncedLen() and
+// the number of bits of the remainder will be denominator.AnnouncedLen().
 func (n *Nat) EuclideanDiv(r, numerator, denominator *Nat) ct.Bool {
 	var qq, rr saferith.Nat
 	internal.EuclideanDiv(&qq, &rr, (*saferith.Nat)(numerator), (*saferith.Nat)(denominator))
-	ok := saferith.Choice(denominator.IsNonZero())
+	ok := ((*saferith.Nat)(denominator)).EqZero() ^ 0b1
 	((*saferith.Nat)(n)).CondAssign(ok, &qq)
 	if r != nil {
-		((*saferith.Nat)(r)).SetNat(&rr)
+		((*saferith.Nat)(r)).CondAssign(ok, &rr)
 	}
+
 	return ct.Bool(ok)
+}
+
+// DivVarTime sets n = numerator / denominator.
+// If r is not nil, it will be set it to the remainder.
+// It returns ok=true if the division was successful, ok=false otherwise (e.g., division by zero).
+// The number of bits of the quotient will be
+// min(numerator.AnnouncedLen(), numerator.AnnouncedLen() - denominator.TrueLen() + 2) and
+// the number of bits of the remainder will be denominator.TrueLen().
+func (n *Nat) DivVarTime(remainder, numerator, denominator *Nat) ct.Bool {
+	return n.EuclideanDivVarTime(remainder, numerator, denominator)
+}
+
+// Div sets n = numerator / denominator.
+// If r is not nil, it will be set it to the remainder.
+// It returns ok=1 if the division was successful, ok=0 otherwise (i.e., division by zero).
+// The number of bits of the quotient will be numerator.AnnouncedLen() and
+// the number of bits of the remainder will be denominator.AnnouncedLen().
+func (n *Nat) Div(remainder, numerator, denominator *Nat) ct.Bool {
+	return n.EuclideanDiv(remainder, numerator, denominator)
 }
 
 // Double sets n = x + x.
@@ -493,6 +519,12 @@ func (n *Nat) NotCap(x *Nat, capacity int) {
 	(*saferith.Nat)(n).SetBytes(zBytes).Resize(capacity)
 }
 
+// Abs sets n to |i|.
+func (n *Nat) Abs(i *Int) {
+	abs := (*saferith.Int)(i).Abs()
+	((*saferith.Nat)(n)).SetNat(abs)
+}
+
 // SetRandomRangeLH sets n to a random value in the range [lowInclusive, highExclusive).
 func (n *Nat) SetRandomRangeLH(lowInclusive, highExclusive *Nat, prng io.Reader) error {
 	var errs []error
@@ -573,12 +605,4 @@ func (n *Nat) SetRandomRangeH(highExclusive *Nat, prng io.Reader) error {
 
 	n.Set(&result)
 	return nil
-}
-
-// QuoRemDivDivisorAsModulusCap computes a / b and a % b, storing the results into outQuot and outRem.
-// The capacity parameter sets the announced capacity (in bits) for the quotient.
-func QuoRemDivDivisorAsModulusCap(outQuot, outRem, a *Nat, b *Modulus, capacity int) (ok ct.Bool) {
-	ok = outQuot.DivDivisorAsModulusCap(a, b, capacity)
-	b.Mod(outRem, a)
-	return ok
 }

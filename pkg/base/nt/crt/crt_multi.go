@@ -50,10 +50,9 @@ func NewParamsMulti(factors ...*numct.Modulus) (*ParamsMulti, ct.Bool) {
 
 	// For each i: M_i = N / p_i; inv_i = (M_i)^{-1} mod p_i; Lift_i = M_i * inv_i mod N
 	var Mi, MiModPi, inv, lift numct.Nat
-	divCap := int(modulus.BitLen())
 	for i := range k {
 		// M_i = N / p_i
-		allOk &= Mi.DivDivisorAsModulusCap(prod, factors[i], divCap)
+		allOk &= Mi.Div(nil, prod, factors[i].Nat())
 		params.Products[i] = Mi.Clone()
 
 		// inv_i = (M_i mod p_i)^{-1} mod p_i  (ok iff gcd(M_i, p_i)=1)

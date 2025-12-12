@@ -122,8 +122,9 @@ func (m *OddPrimeFactors) ModExp(out, base, exp *numct.Nat) {
 
 // ModExpI computes out = (base ^ exp) mod n, where exp is a signed integer.
 func (m *OddPrimeFactors) ModExpI(out, base *numct.Nat, exp *numct.Int) {
-	var out2 numct.Nat
-	m.ModExp(out, base, exp.Absed())
+	var expAbs, out2 numct.Nat
+	expAbs.Abs(exp)
+	m.ModExp(out, base, &expAbs)
 	m.ModInv(&out2, out)
 	out.CondAssign(exp.IsNegative(), &out2)
 }
