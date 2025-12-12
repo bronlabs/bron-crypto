@@ -95,7 +95,7 @@ func TestZ_TryDiv_Property(t *testing.T) {
 		m := num.Z().FromInt64(multiplier)
 
 		dividend := d.Mul(m)
-		result, err := dividend.TryDivVarTime(d)
+		result, err := dividend.TryDiv(d)
 		require.NoError(t, err)
 		require.True(t, m.Equal(result), "expected %v, got %v", m.Big(), result.Big())
 	})
@@ -106,12 +106,53 @@ func TestZ_TryDiv_DivisionByZero_Property(t *testing.T) {
 	rapid.Check(t, func(rt *rapid.T) {
 		n := IntGenerator(t).Draw(rt, "n")
 		zero := num.Z().FromInt64(0)
-		_, err := n.TryDivVarTime(zero)
+		_, err := n.TryDiv(zero)
 		require.Error(t, err)
 	})
 }
 
 func TestZ_TryDiv_InexactDivision_Property(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		dividend := rapid.Int64Range(-1000, 1000).Draw(rt, "dividend")
+		divisor := rapid.Int64Range(2, 1000).Draw(rt, "divisor")
+		remainder := rapid.Int64Range(1, divisor-1).Draw(rt, "remainder")
+
+		d := num.Z().FromInt64(dividend*divisor + remainder)
+		div := num.Z().FromInt64(divisor)
+
+		_, err := d.TryDiv(div)
+		require.Error(t, err)
+	})
+}
+
+func TestZ_TryDivVarTime_Property(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		divisor := rapid.Int64Range(-1000, 1000).Filter(func(n int64) bool { return n != 0 }).Draw(rt, "divisor")
+		multiplier := rapid.Int64Range(-1000, 1000).Draw(rt, "multiplier")
+
+		d := num.Z().FromInt64(divisor)
+		m := num.Z().FromInt64(multiplier)
+
+		dividend := d.Mul(m)
+		result, err := dividend.TryDivVarTime(d)
+		require.NoError(t, err)
+		require.True(t, m.Equal(result), "expected %v, got %v", m.Big(), result.Big())
+	})
+}
+
+func TestZ_TryDivVarTime_DivisionByZero_Property(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(rt *rapid.T) {
+		n := IntGenerator(t).Draw(rt, "n")
+		zero := num.Z().FromInt64(0)
+		_, err := n.TryDivVarTime(zero)
+		require.Error(t, err)
+	})
+}
+
+func TestZ_TryDivVarTime_InexactDivision_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(rt *rapid.T) {
 		dividend := rapid.Int64Range(-1000, 1000).Draw(rt, "dividend")
@@ -155,4 +196,51 @@ func TestZ_TryInv_OneAndMinusOne_Property(t *testing.T) {
 	invMinusOne, err := minusOne.TryInv()
 	require.NoError(t, err)
 	require.True(t, minusOne.Mul(invMinusOne).Equal(one))
+}
+
+func TestZ_EuclideanDiv_Property(t *testing.T) {
+	t.Parallel()
+
+	rapid.Check(t, func(rt *rapid.T) {
+		n := rapid.Int64().Draw(rt, "n")
+		d := rapid.Int64().Draw(rt, "d")
+
+		q, r, err := num.Z().FromInt64(n).EuclideanDiv(num.Z().FromInt64(d))
+		if err != nil {
+			require.True(t, d == 0)
+		} else {
+			require.Equal(t, q.Big().Int64()*d+r.Big().Int64(), n)
+		}
+	})
+}
+
+func TestZ_EuclideanDivVarTime_Property(t *testing.T) {
+	t.Parallel()
+
+	rapid.Check(t, func(rt *rapid.T) {
+		n := rapid.Int64().Draw(rt, "n")
+		d := rapid.Int64().Draw(rt, "d")
+
+		q, r, err := num.Z().FromInt64(n).EuclideanDivVarTime(num.Z().FromInt64(d))
+		if err != nil {
+			require.True(t, d == 0)
+		} else {
+			require.Equal(t, q.Big().Int64()*d+r.Big().Int64(), n)
+		}
+	})
+}
+
+func TestZ_DivRound_Property(t *testing.T) {
+	t.Parallel()
+
+	rapid.Check(t, func(rt *rapid.T) {
+		n := rapid.Int64().Draw(rt, "n")
+		d := rapid.Int64().Draw(rt, "n")
+		q, err := num.Z().FromInt64(n).DivRound(num.Z().FromInt64(d))
+		if err != nil {
+			require.True(t, d == 0)
+		} else {
+			require.Equal(t, q.Big().Int64(), n/d)
+		}
+	})
 }

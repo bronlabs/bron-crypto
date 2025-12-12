@@ -311,15 +311,16 @@ func (np *NatPlus) TryDiv(other *NatPlus) (*NatPlus, error) {
 	if _, err := np.isValid(other); err != nil {
 		return nil, errs2.Wrap(err)
 	}
-	var v numct.Nat
-	divisorMod, modOk := numct.NewModulus(other.v)
-	if modOk != ct.True {
-		return nil, errs2.New("failed to create modulus from divisor")
+
+	var q, r numct.Nat
+	if ok := q.Div(&r, np.v, other.v); ok == ct.False {
+		return nil, ErrDivisionByZero.WithStackFrame()
 	}
-	if ok := v.ExactDivDivisorAsModulus(np.v, divisorMod); ok == ct.False {
+	if r.IsNonZero() != ct.False {
 		return nil, ErrInexactDivision.WithStackFrame()
 	}
-	return &NatPlus{v: &v}, nil
+
+	return &NatPlus{v: &q}, nil
 }
 
 // TrySub attempts to subtract another NatPlus from the NatPlus, returning an error if the result is not a positive natural number.

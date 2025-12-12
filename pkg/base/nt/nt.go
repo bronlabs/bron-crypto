@@ -13,10 +13,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/internal"
 )
 
-type LiftableToZ[I algebra.IntLike[I]] = internal.LiftableToZ[I]
 type PrimeSamplable[E algebra.UniqueFactorizationMonoidElement[E]] interface {
 	algebra.UniqueFactorizationMonoid[E]
 	FromBig(*big.Int) (E, error)

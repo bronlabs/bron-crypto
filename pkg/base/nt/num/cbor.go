@@ -29,8 +29,8 @@ type natPlusDTO struct {
 	NatPlus *numct.Nat `cbor:"natPlus"`
 }
 
-func (n *NatPlus) MarshalCBOR() ([]byte, error) {
-	dto := &natPlusDTO{NatPlus: n.v}
+func (np *NatPlus) MarshalCBOR() ([]byte, error) {
+	dto := &natPlusDTO{NatPlus: np.v}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
 		return nil, errs2.Wrap(err)
@@ -38,7 +38,7 @@ func (n *NatPlus) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
-func (n *NatPlus) UnmarshalCBOR(data []byte) error {
+func (np *NatPlus) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*natPlusDTO](data)
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (n *NatPlus) UnmarshalCBOR(data []byte) error {
 	if dto.NatPlus.IsZero() == ct.True {
 		return ErrOutOfRange.WithStackFrame().WithMessage("NatPlus must be greater than 0")
 	}
-	n.v = dto.NatPlus
+	np.v = dto.NatPlus
 	return nil
 }
 

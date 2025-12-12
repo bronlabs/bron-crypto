@@ -305,13 +305,10 @@ func initRangeProtocol[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B],
 		return nil, nil, nil, nil, errs.WrapFailed(err, "cannot create ZMod from q^2")
 	}
 
-	three, ok := numct.NewModulus(numct.NewNat(3))
-	if ok == ct.False {
-		panic("cannot create modulus 3")
-	}
+	three := numct.NewNat(3)
 	qNat := numct.NewNatFromBytes(q.Bytes())
 	qThird = numct.NewNat(0)
-	qThird.DivDivisorAsModulusCap(qNat, three, q.BitLen())
+	qThird.EuclideanDivVarTime(nil, qNat, three)
 
 	rangeProtocol, err = paillierrange.NewPaillierRange(base.ComputationalSecurityBits, prng)
 	if err != nil {

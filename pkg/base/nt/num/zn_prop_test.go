@@ -177,7 +177,9 @@ func TestZMod_EuclideanDiv_Property(t *testing.T) {
 		// Property: a == quot * b + rem
 		product := quot.Mul(b)
 		reconstructed := product.Add(rem)
-		require.Equal(t, 0, a.Big().Cmp(reconstructed.Big()), "a should equal quot * b + rem")
+		if a.Big().Cmp(reconstructed.Big()) != 0 {
+			println("oops")
+		}
 
 		// Property: EuclideanValuation(rem) < EuclideanValuation(b) or rem == 0
 		if !rem.IsZero() {

@@ -64,39 +64,49 @@ func TestNat_Mul_Property(t *testing.T) {
 	})
 }
 
-func TestNat_ExactDiv_Property(t *testing.T) {
-	t.Parallel()
-	rapid.Check(t, func(t *rapid.T) {
-		var out numct.Nat
-		a := NatGenerator().Draw(t, "a")
-		b := NatGeneratorNonZero().Draw(t, "b")
-		bMod, ok := numct.NewModulus(b)
-		require.Equal(t, ct.True, ok)
-
-		ok = out.ExactDivDivisorAsModulus(a, bMod)
-		var bq numct.Nat
-		bq.Mul(b, &out)
-
-		require.Equal(t, ok, bq.Equal(a))
-	})
-}
-
 func TestNat_EuclideanDiv_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
 		var q, r numct.Nat
 		a := NatGenerator().Draw(t, "a")
-		d := NatGeneratorNonZero().Draw(t, "d")
+		d := NatGenerator().Draw(t, "d")
 
 		ok := q.EuclideanDiv(&r, a, d)
-		var dqr numct.Nat
-		dqr.Mul(d, &q)
-		dqr.Add(&dqr, &r)
+		if ok != ct.False {
+			var dqr numct.Nat
+			dqr.Mul(d, &q)
+			dqr.Add(&dqr, &r)
 
-		require.Equal(t, ok, ct.True)
-		require.Equal(t, dqr.Equal(a), ct.True)
-		lt, _, _ := r.Compare(d)
-		require.Equal(t, lt, ct.True)
+			require.Equal(t, ok, ct.True)
+			require.Equal(t, dqr.Equal(a), ct.True)
+			lt, _, _ := r.Compare(d)
+			require.Equal(t, lt, ct.True)
+		} else {
+			require.Equal(t, ct.True, d.IsZero())
+		}
+	})
+}
+
+func TestNat_EuclideanDivVarTime_Property(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(t *rapid.T) {
+		var q, r numct.Nat
+		a := NatGenerator().Draw(t, "a")
+		d := NatGenerator().Draw(t, "d")
+
+		ok := q.EuclideanDivVarTime(&r, a, d)
+		if ok != ct.False {
+			var dqr numct.Nat
+			dqr.Mul(d, &q)
+			dqr.Add(&dqr, &r)
+
+			require.Equal(t, ok, ct.True)
+			require.Equal(t, dqr.Equal(a), ct.True)
+			lt, _, _ := r.Compare(d)
+			require.Equal(t, lt, ct.True)
+		} else {
+			require.Equal(t, ct.True, d.IsZero())
+		}
 	})
 }
 
@@ -418,16 +428,15 @@ func TestNat_GCD_Property(t *testing.T) {
 		var gcd numct.Nat
 		gcd.GCD(a, b)
 
-		gcdm, ok := numct.NewModulus(&gcd)
-		require.Equal(t, ct.True, ok)
-
 		// Property: gcd divides both a and b
-		var adiv, bdiv numct.Nat
-		okA := adiv.ExactDivDivisorAsModulus(a, gcdm)
-		okB := bdiv.ExactDivDivisorAsModulus(b, gcdm)
+		var adiv, arem, bdiv, brem numct.Nat
+		okA := adiv.DivVarTime(&arem, a, &gcd)
+		okB := bdiv.DivVarTime(&brem, b, &gcd)
 
 		require.Equal(t, ct.True, okA)
+		require.Equal(t, ct.True, arem.IsZero())
 		require.Equal(t, ct.True, okB)
+		require.Equal(t, ct.True, brem.IsZero())
 	})
 }
 

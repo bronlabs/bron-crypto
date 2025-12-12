@@ -457,18 +457,14 @@ func (u *Uint) EuclideanDiv(other *Uint) (quot, rem *Uint, err error) {
 	if !u.Group().IsSemiDomain() {
 		return nil, nil, errs2.New("not a euclidean domain")
 	}
-	vq, vr := new(numct.Nat), new(numct.Nat)
-	// Create modulus from divisor
-	divisorMod, modOk := numct.NewModulus(other.v)
-	if modOk != ct.True {
-		return nil, nil, errs2.New("failed to create modulus from divisor")
-	}
-	if ok := numct.QuoRemDivDivisorAsModulusCap(vq, vr, u.v, divisorMod, -1); ok == ct.False {
+
+	var q, r numct.Nat
+	if ok := q.EuclideanDiv(&r, u.v, other.v); ok == ct.False {
 		return nil, nil, errs2.New("division failed")
 	}
-	u.m.Mod(vq, vq)
-	u.m.Mod(vr, vr)
-	return &Uint{v: vq, m: u.m}, &Uint{v: vr, m: u.m}, nil
+	u.m.Mod(&q, &q)
+	u.m.Mod(&r, &r)
+	return &Uint{v: &q, m: u.m}, &Uint{v: &r, m: u.m}, nil
 }
 
 // EuclideanValuation returns the Euclidean valuation of the Uint element.

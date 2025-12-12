@@ -61,22 +61,22 @@ type Modulus struct {
 	once  *sync.Once
 }
 
-func (c *Modulus) cacheMont() {
+func (m *Modulus) cacheMont() {
 	// use a temporary BN_CTX to build the mont ctx
 	tmp, _ := bnCtxPool.Get().(*boring.BigNumCtx)
 	defer bnCtxPool.Put(tmp)
-	mont, err := boring.NewBigNumMontCtx(c.mNum, tmp)
+	mont, err := boring.NewBigNumMontCtx(m.mNum, tmp)
 	if err != nil {
 		panic(err)
 	}
-	c.mont = mont
+	m.mont = mont
 }
 
-func (c *Modulus) ensureMont() {
-	if c.mont != nil {
+func (m *Modulus) ensureMont() {
+	if m.mont != nil {
 		return
 	}
-	c.once.Do(func() { c.cacheMont() })
+	m.once.Do(func() { m.cacheMont() })
 }
 
 func (m *Modulus) modExpOdd(out, base, exp *Nat) {
@@ -124,8 +124,9 @@ func (m *Modulus) ModExp(out, base, exp *Nat) {
 }
 
 func (m *Modulus) modExpIOdd(out, base *Nat, exp *Int) {
-	var candidate Nat
-	m.modExpOdd(&candidate, base, exp.Absed())
+	var expAbs, candidate Nat
+	expAbs.Abs(exp)
+	m.modExpOdd(&candidate, base, &expAbs)
 
 	isNeg := exp.IsNegative()
 
