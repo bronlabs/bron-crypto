@@ -29,7 +29,7 @@ type Cardinal interface {
 }
 
 type NumericStructure[E any] interface {
-	HemiRing[E]
+	// HemiRing[E]
 	FromBytesBE([]byte) (E, error)
 }
 
@@ -38,14 +38,15 @@ type Numeric interface {
 }
 
 type NPlusLike[E any] interface {
+	HemiRing[E]
 	NumericStructure[E]
-	UniqueFactorizationMonoid[E]
 	FromCardinal(Cardinal) (E, error)
 }
 
 type NatPlusLike[E any] interface {
+	HemiRingElement[E]
 	Numeric
-	UniqueFactorizationMonoidElement[E]
+	IsProbablyPrime() bool
 
 	IsOdd() bool
 	IsEven() bool
@@ -69,6 +70,7 @@ type ZLike[E any] EuclideanDomain[E]
 
 type IntLike[E any] interface {
 	EuclideanDomainElement[E]
+	IsProbablyPrime() bool
 
 	IsEven() bool
 	IsOdd() bool

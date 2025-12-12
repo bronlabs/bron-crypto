@@ -48,14 +48,10 @@ type RigElement[RE any] interface {
 
 // ******************** SemiDomain.
 
-type EuclideanSemiDomain[RE any] interface {
-	Rig[RE]
-	UniqueFactorizationMonoid[RE]
-}
+type EuclideanSemiDomain[RE any] Rig[RE]
 
 type EuclideanSemiDomainElement[RE any] interface {
 	RigElement[RE]
-	UniqueFactorizationMonoidElement[RE]
 	EuclideanDiv(rhs RE) (quot, rem RE, err error)
 	EuclideanValuation() Cardinal
 }

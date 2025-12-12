@@ -84,13 +84,6 @@ type MultiplicativeMonoidElement[ME any] interface {
 	MaybeDividend[ME]
 }
 
-type UniqueFactorizationMonoid[ME any] Monoid[ME]
-
-type UniqueFactorizationMonoidElement[ME any] interface {
-	MonoidElement[ME]
-	IsProbablyPrime() bool
-}
-
 type CyclicMonoid[ME any] interface {
 	Monoid[ME]
 	CyclicSemiGroup[ME]

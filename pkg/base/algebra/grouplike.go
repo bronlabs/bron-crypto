@@ -33,9 +33,6 @@ type (
 	MultiplicativeMonoid[ME crtp.MultiplicativeMonoidElement[ME]]        = crtp.MultiplicativeMonoid[ME]
 	MultiplicativeMonoidElement[ME crtp.MultiplicativeMonoidElement[ME]] = crtp.MultiplicativeMonoidElement[ME]
 
-	UniqueFactorizationMonoid[ME crtp.UniqueFactorizationMonoidElement[ME]]        = crtp.UniqueFactorizationMonoid[ME]
-	UniqueFactorizationMonoidElement[ME crtp.UniqueFactorizationMonoidElement[ME]] = crtp.UniqueFactorizationMonoidElement[ME]
-
 	CyclicMonoid[ME crtp.CyclicMonoidElement[ME]]        = crtp.CyclicMonoid[ME]
 	CyclicMonoidElement[ME crtp.CyclicMonoidElement[ME]] = crtp.CyclicMonoidElement[ME]
 
