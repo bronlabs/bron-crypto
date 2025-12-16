@@ -6,6 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
+// Participant drives the echo broadcast protocol for a single party.
 type Participant[B any] struct {
 	sharingId sharing.ID
 	quorum    network.Quorum
@@ -31,10 +32,12 @@ func NewParticipant[B any](id sharing.ID, quorum network.Quorum) (*Participant[B
 	return p, nil
 }
 
+// SharingID returns the participant's identifier.
 func (p *Participant[B]) SharingID() sharing.ID {
 	return p.sharingId
 }
 
+// Quorum returns the participant quorum.
 func (p *Participant[B]) Quorum() network.Quorum {
 	return p.quorum
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
+// Round1 broadcasts the sender's message to all other parties.
 func (p *Participant[B]) Round1(message B) (network.OutgoingUnicasts[*Round1P2P], error) {
 	serializedMessage, err := serde.MarshalCBOR(message)
 	if err != nil {
@@ -30,6 +31,7 @@ func (p *Participant[B]) Round1(message B) (network.OutgoingUnicasts[*Round1P2P]
 	return r1.Freeze(), nil
 }
 
+// Round2 echoes every received payload back to all parties.
 func (p *Participant[B]) Round2(r1 network.RoundMessages[*Round1P2P]) (network.OutgoingUnicasts[*Round2P2P], error) {
 	receivedMessages := make(map[sharing.ID][]byte)
 	for id := range p.quorum.Iter() {
@@ -57,6 +59,7 @@ func (p *Participant[B]) Round2(r1 network.RoundMessages[*Round1P2P]) (network.O
 	return r2.Freeze(), nil
 }
 
+// Round3 validates echo consistency and outputs the agreed messages.
 func (p *Participant[B]) Round3(r2 network.RoundMessages[*Round2P2P]) (network.RoundMessages[B], error) {
 	received := make(map[sharing.ID][]byte)
 	for id := range p.quorum.Iter() {

@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// TestExecuteRunners concurrently executes the given runners with mock deliveries and collects their outputs.
 func TestExecuteRunners[O any](tb testing.TB, runners map[sharing.ID]network.Runner[O]) map[sharing.ID]O {
 	tb.Helper()
 

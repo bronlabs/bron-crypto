@@ -12,10 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestParticipant is the minimal interface needed to route messages in helpers.
 type TestParticipant interface {
 	SharingID() sharing.ID
 }
 
+// MakeRandomQuorum samples a random quorum of distinct non-zero sharing IDs.
 func MakeRandomQuorum(tb testing.TB, prng io.Reader, n int) network.Quorum {
 	tb.Helper()
 
@@ -33,6 +35,7 @@ func MakeRandomQuorum(tb testing.TB, prng io.Reader, n int) network.Quorum {
 	return quorum.Freeze()
 }
 
+// MakeRandomSessionId reads 32 random bytes into an SID.
 func MakeRandomSessionId(tb testing.TB, prng io.Reader) network.SID {
 	tb.Helper()
 

@@ -8,6 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
+// ExchangeEchoBroadcastSimple runs an echo broadcast: send, echo, and verify consistent payloads for all parties.
 func ExchangeEchoBroadcastSimple[B any](rt *network.Router, correlationId string, message B) (network.RoundMessages[B], error) {
 	r, err := NewEchoBroadcastRunner(rt.PartyId(), hashset.NewComparable(rt.Quorum()...).Freeze(), correlationId, message)
 	if err != nil {

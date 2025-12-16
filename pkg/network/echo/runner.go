@@ -12,6 +12,7 @@ type echoBroadcastRunner[B any] struct {
 	message       B
 }
 
+// NewEchoBroadcastRunner constructs an echo broadcast runner for the given party and quorum.
 func NewEchoBroadcastRunner[B any](sharingId sharing.ID, quorum network.Quorum, correlationId string, message B) (network.Runner[network.RoundMessages[B]], error) {
 	party, err := NewParticipant[B](sharingId, quorum)
 	if err != nil {
@@ -26,6 +27,7 @@ func NewEchoBroadcastRunner[B any](sharingId sharing.ID, quorum network.Quorum, 
 	return r, nil
 }
 
+// Run executes the three-round echo broadcast protocol over the provided router.
 func (r *echoBroadcastRunner[B]) Run(rt *network.Router) (network.RoundMessages[B], error) {
 	// r1
 	r1Out, err := r.party.Round1(r.message)

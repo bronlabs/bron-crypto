@@ -10,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
+// Delivery abstracts a transport layer used by the router.
 type Delivery interface {
 	PartyId() sharing.ID
 	Quorum() []sharing.ID
@@ -17,11 +18,13 @@ type Delivery interface {
 	Receive() (from sharing.ID, message []byte, err error)
 }
 
+// Router orchestrates correlation-aware sending and receiving over a Delivery.
 type Router struct {
 	receiveBuffer []routerMessage
 	delivery      Delivery
 }
 
+// NewRouter wraps a Delivery with buffering and correlation-aware routing.
 func NewRouter(delivery Delivery) *Router {
 	return &Router{
 		receiveBuffer: nil,
@@ -29,6 +32,7 @@ func NewRouter(delivery Delivery) *Router {
 	}
 }
 
+// SendTo serialises and sends messages to the given recipients under a correlation identifier.
 func (r *Router) SendTo(correlationId string, messages map[sharing.ID][]byte) error {
 	for id, payload := range messages {
 		//nolint:exhaustruct // From is optional
@@ -48,6 +52,8 @@ func (r *Router) SendTo(correlationId string, messages map[sharing.ID][]byte) er
 	return nil
 }
 
+// ReceiveFrom collects messages matching the correlation identifier from the specified senders,
+// buffering unrelated messages for later retrieval.
 func (r *Router) ReceiveFrom(correlationId string, froms ...sharing.ID) (map[sharing.ID][]byte, error) {
 	received := make(map[sharing.ID][]byte)
 	var kept []routerMessage
@@ -80,10 +86,12 @@ func (r *Router) ReceiveFrom(correlationId string, froms ...sharing.ID) (map[sha
 	return received, nil
 }
 
+// PartyId returns the router's local party identifier.
 func (r *Router) PartyId() sharing.ID {
 	return r.delivery.PartyId()
 }
 
+// Quorum returns the identifiers of all parties in the session.
 func (r *Router) Quorum() []sharing.ID {
 	return r.delivery.Quorum()
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// CBORRoundTrip serialises and deserialises a value, asserting round-trip fidelity.
 func CBORRoundTrip[T any](tb testing.TB, v T) T {
 	tb.Helper()
 
