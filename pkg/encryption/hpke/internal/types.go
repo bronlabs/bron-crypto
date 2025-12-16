@@ -13,7 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
 )
 
@@ -31,7 +31,7 @@ type (
 func (sk *PrivateKey[S]) Bytes() []byte {
 	out, err := dhc.SerialiseExtendedPrivateKey(&sk.ExtendedPrivateKey)
 	if err != nil {
-		panic(errs.WrapFailed(err, "this should not happen"))
+		panic(errs2.Wrap(err))
 	}
 	return out
 }
@@ -39,7 +39,7 @@ func (sk *PrivateKey[S]) Bytes() []byte {
 func (pk *PublicKey[P, B, S]) Bytes() []byte {
 	out, err := dhc.SerialisePublicKey(&pk.PublicKey)
 	if err != nil {
-		panic(errs.WrapFailed(err, "this should not happen"))
+		panic(errs2.Wrap(err))
 	}
 	return out
 }
@@ -58,11 +58,11 @@ func (pk *PublicKey[P, B, S]) Equal(other *PublicKey[P, B, S]) bool {
 func NewPrivateKey[S algebra.PrimeFieldElement[S]](sf algebra.PrimeField[S], ikm []byte) (*PrivateKey[S], error) {
 	seed, err := dhc.NewPrivateKey(ikm)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create private key")
+		return nil, errs2.Wrap(err)
 	}
 	sk, err := dhc.ExtendPrivateKey(seed, sf)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not extend private key")
+		return nil, errs2.Wrap(err)
 	}
 	return &PrivateKey[S]{ExtendedPrivateKey: *sk}, nil
 }
@@ -70,7 +70,7 @@ func NewPrivateKey[S algebra.PrimeFieldElement[S]](sf algebra.PrimeField[S], ikm
 func NewPublicKey[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](v P) (*PublicKey[P, B, S], error) {
 	out, err := dhc.NewPublicKey(v)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create public key")
+		return nil, errs2.Wrap(err)
 	}
 	return &PublicKey[P, B, S]{PublicKey: *out}, nil
 }
@@ -93,13 +93,13 @@ const (
 
 func NewCipherSuite(kem KEMID, kdf KDFID, aead AEADID) (*CipherSuite, error) {
 	if kem == DHKEM_RESERVED {
-		return nil, errs.NewArgument("invalid KEM ID")
+		return nil, ErrNotSupported.WithMessage("invalid KEM ID").WithStackFrame()
 	}
 	if kdf == KDF_HKDF_RESERVED {
-		return nil, errs.NewArgument("invalid KDF ID")
+		return nil, ErrNotSupported.WithMessage("invalid KDF ID").WithStackFrame()
 	}
 	if aead == AEAD_RESERVED {
-		return nil, errs.NewArgument("invalid AEAD ID")
+		return nil, ErrNotSupported.WithMessage("invalid AEAD ID").WithStackFrame()
 	}
 	return &CipherSuite{
 		kem:  kem,
@@ -182,7 +182,7 @@ func (c *context) computeNonce() ([]byte, error) {
 	// https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2-6
 	subtle.XORBytes(newNonce[Nn-8:], c.baseNonce[Nn-8:], buf) // length of sequence (uint64) is smaller than Nn. So we treat as zero-padded.
 	if c.nonces.Contains(newNonce) {
-		return nil, errs.NewMembership("computed nonce is used before")
+		return nil, ErrInvalidNonce.WithMessage("nonce reuse detected").WithStackFrame()
 	}
 	c.nonces.Add(newNonce)
 	return newNonce, nil
@@ -193,7 +193,7 @@ func (c *context) incrementSeq() error {
 	// Implementations MAY use a sequence number that is shorter than the nonce length (padding on the left with zero), but MUST raise an error if the sequence number overflows.
 	// The default check of the rfc ((1<<(8*Nn))-1) is larger than uint64, so no point in copying the rfc.
 	if c.sequence == math.MaxUint64 {
-		return errs.NewFailed("sequence number will overflow")
+		return ErrInvalidNonce.WithMessage("sequence number will overflow").WithStackFrame()
 	}
 	c.sequence++
 	return nil
@@ -204,7 +204,7 @@ func (c *context) incrementSeq() error {
 func (c *context) export(exporterContext []byte, L int) ([]byte, error) {
 	kdf := kdfs[c.suite.kdf]
 	if L > 255*kdf.Nh() {
-		return nil, errs.NewValue("L is out of range")
+		return nil, ErrInvalidArgument.WithMessage("L is out of range").WithStackFrame()
 	}
 	return kdf.labeledExpand(c.suite.ID(), c.exporterSecret, []byte("sec"), exporterContext, L), nil
 }
@@ -218,7 +218,7 @@ func (c *context) export(exporterContext []byte, L int) ([]byte, error) {
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-creating-the-encryption-con
 func keySchedule(role ContextRole, cipherSuite *CipherSuite, mode ModeID, sharedSecret, info, psk, pskId []byte) (*context, *KeyScheduleContext, error) {
 	if err := verifyPSKInputs(mode, psk, pskId); err != nil {
-		return nil, nil, errs.WrapArgument(err, "psk arguments are invalid")
+		return nil, nil, errs2.Wrap(err)
 	}
 
 	var err error
@@ -251,7 +251,7 @@ func keySchedule(role ContextRole, cipherSuite *CipherSuite, mode ModeID, shared
 
 		ctx.aead, err = aead.New(ctx.key)
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "could not create aead cipher")
+			return nil, nil, errs2.Wrap(err)
 		}
 	}
 
@@ -263,13 +263,13 @@ func verifyPSKInputs(mode ModeID, psk, pskId []byte) error {
 	gotPsk := psk != nil
 	gotPskId := pskId != nil
 	if gotPsk != gotPskId {
-		return errs.NewArgument("either psk and pskId should both be nil, or none should be nil")
+		return ErrInvalidArgument.WithMessage("either psk and pskId should both be nil, or none should be nil").WithStackFrame()
 	}
 	if gotPsk && (mode == Base || mode == Auth) {
-		return errs.NewArgument("psk argument provided when not needed")
+		return ErrInvalidArgument.WithMessage("psk argument provided when not needed").WithStackFrame()
 	}
 	if !gotPsk && (mode == PSk || mode == AuthPSk) {
-		return errs.NewArgument("mssing required psk input")
+		return ErrInvalidArgument.WithMessage("missing required psk input").WithStackFrame()
 	}
 	return nil
 }
@@ -281,17 +281,17 @@ type SenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S a
 
 func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](mode ModeID, suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], info, psk, pskId []byte, prng io.Reader) (*SenderContext[P, B, S], error) {
 	if suite == nil {
-		return nil, errs.NewIsNil("ciphersuite is nil")
+		return nil, ErrInvalidArgument.WithMessage("ciphersuite is nil").WithStackFrame()
 	}
 
 	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](receiverPublicKey.Value().Structure())
 	kdf, err := NewKDF(suite.kdf)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create KDF scheme")
+		return nil, errs2.Wrap(err)
 	}
 	kem, err := NewDHKEM(curve, kdf)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create DHKEM scheme")
+		return nil, errs2.Wrap(err)
 	}
 	var sharedSecret []byte
 	var ephemeralPublicKey *PublicKey[P, B, S]
@@ -299,18 +299,18 @@ func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], 
 		sharedSecret, ephemeralPublicKey, err = kem.AuthEncap(receiverPublicKey, senderPrivateKey, prng)
 	} else {
 		if senderPrivateKey != nil {
-			return nil, errs.NewFailed("sender private key unsupported")
+			return nil, ErrNotSupported.WithMessage("sender private key unsupported").WithStackFrame()
 		}
 
 		sharedSecret, ephemeralPublicKey, err = kem.Encap(receiverPublicKey, prng)
 	}
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not finish kem.Encap")
+		return nil, errs2.Wrap(err)
 	}
 
 	ctx, _, err := keySchedule(SenderRole, suite, mode, sharedSecret, info, psk, pskId)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "key scheduling failed")
+		return nil, errs2.Wrap(err)
 	}
 
 	return &SenderContext[P, B, S]{
@@ -322,12 +322,12 @@ func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], 
 func (s *SenderContext[P, B, S]) Seal(plaintext, additionalData []byte) (ciphertext []byte, err error) {
 	nonce, err := s.ctx.computeNonce()
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not compute nonce")
+		return nil, errs2.Wrap(err)
 	}
 
 	ciphertext = s.ctx.aead.Seal(nil, nonce, plaintext, additionalData)
 	if err := s.ctx.incrementSeq(); err != nil {
-		return nil, errs.WrapFailed(err, "increment sequence failed")
+		return nil, errs2.Wrap(err)
 	}
 
 	return ciphertext, nil
@@ -346,17 +346,17 @@ type ReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S
 
 func NewReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](mode ModeID, suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey, senderPublicKey *PublicKey[P, B, S], info, psk, pskId []byte) (*ReceiverContext[P, B, S], error) {
 	if suite == nil {
-		return nil, errs.NewIsNil("ciphersuite is nil")
+		return nil, ErrInvalidArgument.WithMessage("ciphersuite is nil").WithStackFrame()
 	}
 
 	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](ephemeralPublicKey.Value().Structure())
 	kdf, err := NewKDF(suite.kdf)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create KDF scheme")
+		return nil, errs2.Wrap(err)
 	}
 	kem, err := NewDHKEM(curve, kdf)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create DHKEM scheme")
+		return nil, errs2.Wrap(err)
 	}
 
 	var sharedSecret []byte
@@ -364,18 +364,18 @@ func NewReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B]
 		sharedSecret, err = kem.AuthDecap(receiverPrivatekey, senderPublicKey, ephemeralPublicKey)
 	} else {
 		if senderPublicKey != nil {
-			return nil, errs.NewFailed("sender public key unsupported")
+			return nil, ErrNotSupported.WithMessage("sender public key unsupported").WithStackFrame()
 		}
 
 		sharedSecret, err = kem.Decap(receiverPrivatekey, ephemeralPublicKey)
 	}
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not finish decapsulate")
+		return nil, errs2.Wrap(err)
 	}
 
 	ctx, _, err := keySchedule(ReceiverRole, suite, mode, sharedSecret, info, psk, pskId)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "key scheduling failed")
+		return nil, errs2.Wrap(err)
 	}
 
 	return &ReceiverContext[P, B, S]{
@@ -387,16 +387,16 @@ func NewReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B]
 func (r *ReceiverContext[P, B, S]) Open(ciphertext, additionalData []byte) (plaintext []byte, err error) {
 	nonce, err := r.ctx.computeNonce()
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not compute nonce")
+		return nil, errs2.Wrap(err)
 	}
 
 	plaintext, err = r.ctx.aead.Open(nil, nonce, ciphertext, additionalData)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not open ciphertext")
+		return nil, errs2.Wrap(err)
 	}
 
 	if err := r.ctx.incrementSeq(); err != nil {
-		return nil, errs.WrapFailed(err, "increment sequence failed")
+		return nil, errs2.Wrap(err)
 	}
 
 	return plaintext, nil

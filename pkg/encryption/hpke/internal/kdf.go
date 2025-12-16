@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
@@ -40,7 +40,7 @@ type KDFScheme struct {
 func NewKDF(id KDFID) (*KDFScheme, error) {
 	kdf, exists := kdfs[id]
 	if !exists {
-		return nil, errs.NewType("KDF with ID %d is not supported", id)
+		return nil, ErrNotSupported.WithMessage("KDF with ID %d is not supported", id).WithStackFrame()
 	}
 
 	return kdf, nil
@@ -68,7 +68,7 @@ func (s *KDFScheme) ID() KDFID {
 	case crypto.SHA512:
 		return KDF_HKDF_SHA512
 	default:
-		panic(errs.NewType("hash %s is not supported", s.hash.String()))
+		panic(ErrNotSupported.WithMessage("hash %s is not supported", s.hash.String()).WithStackFrame())
 	}
 }
 
@@ -76,7 +76,7 @@ func (s *KDFScheme) ID() KDFID {
 func (s *KDFScheme) Hash(messages ...[]byte) ([]byte, error) {
 	digest, err := hashing.Hash(s.hash.New, messages...)
 	if err != nil {
-		return nil, errs.WrapHashing(err, "could not hash via %s", s.hash.String())
+		return nil, errs2.Wrap(err)
 	}
 
 	return digest, nil

@@ -3,7 +3,7 @@ package internal
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
 )
@@ -22,7 +22,7 @@ func (sk *PrivateKey[S]) MarshalCBOR() ([]byte, error) {
 func (sk *PrivateKey[S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[privateKeyDTO[S]](data)
 	if err != nil {
-		return errs.WrapSerialisation(err, "could not serialise private key")
+		return errs2.Wrap(err)
 	}
 	sk.ExtendedPrivateKey = dto.SK
 	return nil
@@ -42,7 +42,7 @@ func (pk *PublicKey[P, B, S]) MarshalCBOR() ([]byte, error) {
 func (pk *PublicKey[P, B, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[publicKeyDTO[P, B, S]](data)
 	if err != nil {
-		return errs.WrapSerialisation(err, "could not serialise public key")
+		return errs2.Wrap(err)
 	}
 	pk.PublicKey = dto.PK
 	return nil
@@ -66,25 +66,25 @@ func (cs *CipherSuite) MarshalCBOR() ([]byte, error) {
 func (cs *CipherSuite) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[cipherSuiteDTO](data)
 	if err != nil {
-		return errs.WrapSerialisation(err, "could not serialise cipher suite")
+		return errs2.Wrap(err)
 	}
 	if dto.KDF == KDF_HKDF_RESERVED {
-		return errs.NewValidation("invalid cipher suite: reserved KDF")
+		return ErrNotSupported.WithMessage("invalid cipher suite: reserved KDF").WithStackFrame()
 	}
 	if dto.KDF != KDF_HKDF_SHA256 && dto.KDF != KDF_HKDF_SHA512 {
-		return errs.NewValidation("invalid cipher suite: unknown KDF")
+		return ErrNotSupported.WithMessage("invalid cipher suite: unknown KDF").WithStackFrame()
 	}
 	if dto.KEM == DHKEM_RESERVED {
-		return errs.NewValidation("invalid cipher suite: reserved KEM")
+		return ErrNotSupported.WithMessage("invalid cipher suite: reserved KEM").WithStackFrame()
 	}
 	if dto.KEM != DHKEM_P256_HKDF_SHA256 && dto.KEM != DHKEM_X25519_HKDF_SHA256 {
-		return errs.NewValidation("invalid cipher suite: unknown KEM")
+		return ErrNotSupported.WithMessage("invalid cipher suite: unknown KEM").WithStackFrame()
 	}
 	if dto.AEAD == AEAD_RESERVED {
-		return errs.NewValidation("invalid cipher suite: reserved AEAD")
+		return ErrNotSupported.WithMessage("invalid cipher suite: reserved AEAD").WithStackFrame()
 	}
 	if dto.AEAD != AEAD_AES_128_GCM && dto.AEAD != AEAD_AES_256_GCM && dto.AEAD != AEAD_CHACHA_20_POLY_1305 && dto.AEAD != AEAD_EXPORT_ONLY {
-		return errs.NewValidation("invalid cipher suite: unknown AEAD")
+		return ErrNotSupported.WithMessage("invalid cipher suite: unknown AEAD").WithStackFrame()
 	}
 	cs.kdf = dto.KDF
 	cs.kem = dto.KEM

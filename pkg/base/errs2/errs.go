@@ -69,8 +69,8 @@ func Join(errs ...error) Error {
 	}
 }
 
-func Wrap(err error) Error {
-	pc, _, _, _ := runtime.Caller(1)
+func wrap(err error, i int) Error {
+	pc, _, _, _ := runtime.Caller(1 + i)
 
 	//nolint:errorlint // internal error library
 	if sentinelErr, ok := err.(*sentinelError); ok {
@@ -88,6 +88,10 @@ func Wrap(err error) Error {
 			tags:       nil,
 		}
 	}
+}
+
+func Wrap(err error) Error {
+	return wrap(err, 0)
 }
 
 func HasTag(err error, tag string) (any, bool) {

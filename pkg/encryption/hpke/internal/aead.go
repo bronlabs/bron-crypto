@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/crypto/chacha20poly1305"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
 
 type AEADID uint16
@@ -48,7 +48,7 @@ var (
 func NewAEAD(id AEADID) (*AEADScheme, error) {
 	aead, exists := aeads[id]
 	if !exists {
-		return nil, errs.NewType("AEAD with ID %d is not supported", id)
+		return nil, ErrNotSupported.WithMessage("AEAD with ID %d is not supported", id).WithStackFrame()
 	}
 	return aead, nil
 }
@@ -81,18 +81,18 @@ func NewAEADChaCha20Poly1305Scheme() *AEADScheme {
 // New accepts a key and returns the corresponding AEAD cipher to the type of the scheme, which can then Seal or Open.
 func (s *AEADScheme) New(key []byte) (cipher.AEAD, error) {
 	if len(key) != s.Nk() {
-		return nil, errs.NewLength("key length is %d whereas it should be %d", len(key), s.Nk())
+		return nil, ErrInvalidLength.WithMessage("key length is %d whereas it should be %d", len(key), s.Nk()).WithStackFrame()
 	}
 
 	if s.isAES() {
 		block, err := aes.NewCipher(key)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not construct block cipher")
+			return nil, errs2.Wrap(err)
 		}
 
 		gcm, err := cipher.NewGCM(block)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not construct gcm block cipher")
+			return nil, errs2.Wrap(err)
 		}
 
 		return gcm, nil
@@ -100,7 +100,7 @@ func (s *AEADScheme) New(key []byte) (cipher.AEAD, error) {
 
 	chacha, err := chacha20poly1305.New(key)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not construct chacha cipher")
+		return nil, errs2.Wrap(err)
 	}
 
 	return chacha, nil
