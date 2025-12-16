@@ -5,6 +5,7 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
@@ -60,11 +61,6 @@ type Int saferith.Int
 func (i *Int) Abs(x *Int) {
 	i.Set(x)
 	(*saferith.Int)(i).Neg(saferith.Choice(i.IsNegative()))
-}
-
-// Absed returns a Nat representing |i|.
-func (i *Int) Absed() *Nat {
-	return (*Nat)((*saferith.Int)(i).Abs())
 }
 
 // Set sets i = v.
@@ -132,43 +128,188 @@ func (i *Int) MulCap(lhs, rhs *Int, capacity int) {
 	(*saferith.Int)(i).Mul((*saferith.Int)(lhs), (*saferith.Int)(rhs), capacity)
 }
 
-// Div sets i = numerator / denominator.
-// Returns ok = false if denominator is zero.
-func (i *Int) Div(numerator, denominator *Int) (ok ct.Bool) {
-	dm, ok := NewModulus(denominator.Absed())
+// EuclideanDiv sets n to quotient of numerator / denominator.
+// If r is not nil, it will be set it to the remainder.
+// It returns ok=1 if the division was successful, ok=0 otherwise (i.e., division by zero).
+// The number of bits of the quotient will be numerator.AnnouncedLen() and
+// the number of bits of the remainder will be denominator.AnnouncedLen().
+func (i *Int) EuclideanDiv(remainder *Nat, numerator, denominator *Int) (ok ct.Bool) {
+	var qq, rr, n, d Nat
+	n.Abs(numerator)
+	d.Abs(denominator)
+	ok = qq.EuclideanDiv(&rr, &n, &d)
+	sa := numerator.IsNegative()
+	sb := denominator.IsNegative()
+	z := rr.IsZero()
+
+	var rOut, notR Int
+	notR.Set(denominator)
+	notR.CondNeg(notR.IsNegative())
+	notR.Sub(&notR, rr.Lift())
+	rOut.CondAssign(sa.Not(), rr.Lift())
+	rOut.CondAssign(sa&z, IntZero())
+	rOut.CondAssign(sa&(z^1), &notR)
+
+	var qn, qn1, qa, qan, qOut Int
+	qn.Neg(qq.Lift())
+	qn1.Sub(&qn, IntOne())
+	qa.CondAssign(sa.Not(), qq.Lift())
+	qa.CondAssign(sa&z, &qn)
+	qa.CondAssign(sa&z.Not(), &qn1)
+	qan.Neg(&qa)
+	qOut.CondAssign(sb, &qan)
+	qOut.CondAssign(sb.Not(), &qa)
+	qOut.Resize(numerator.AnnouncedLen())
+	i.CondAssign(ok, &qOut)
+
+	if remainder != nil {
+		var rOutAbs Nat
+		rOutAbs.Abs(&rOut)
+		rOutAbs.Resize(denominator.AnnouncedLen())
+		remainder.CondAssign(ok, &rOutAbs)
+	}
+
+	return ok
+}
+
+// EuclideanDivVarTime sets n to quotient of numerator / denominator.
+// If r is not nil, it will be set it to the remainder.
+// It returns ok=1 if the division was successful, ok=0 otherwise (i.e., division by zero).
+// The number of bits of the quotient will be
+// min(numerator.AnnouncedLen(), numerator.AnnouncedLen() - denominator.TrueLen() + 2) and
+// the number of bits of the remainder will be denominator.AnnouncedLen().
+func (i *Int) EuclideanDivVarTime(remainder *Nat, numerator, denominator *Int) (ok ct.Bool) {
+	var qq, rr, n, d Nat
+	n.Abs(numerator)
+	d.Abs(denominator)
+	ok = qq.EuclideanDivVarTime(&rr, &n, &d)
 	if ok == ct.False {
 		return ct.False
 	}
-	ok = i.DivDivisorAsModulusCap(numerator, dm, -1)
-	// DivModCap already applies numerator's sign, so only apply denominator's sign
-	i.CondNeg(denominator.IsNegative())
+
+	sa := numerator.IsNegative()
+	sb := denominator.IsNegative()
+	z := rr.IsZero()
+
+	var qa Int
+	if sa == ct.False {
+		qa.Set(qq.Lift())
+	} else if (sa & z) != ct.False {
+		var qn Int
+		qn.Neg(qq.Lift())
+		qa.Set(&qn)
+	} else {
+		var qn, qn1 Int
+		qn.Neg(qq.Lift())
+		qn1.Sub(&qn, IntOne())
+		qa.Set(&qn1)
+	}
+
+	var qOut Int
+	if sb == ct.False {
+		qOut.Set(&qa)
+	} else {
+		var qan Int
+		qan.Neg(&qa)
+		qOut.Set(&qan)
+	}
+	i.Set(&qOut)
+	i.Resize(min(numerator.AnnouncedLen(), numerator.AnnouncedLen()-denominator.TrueLen()+2))
+
+	if remainder != nil {
+		var rOut Int
+		if sa == ct.False {
+			rOut.Set(rr.Lift())
+		} else if (sa & z) != ct.False {
+			rOut.Set(IntZero())
+		} else {
+			var notR Int
+			notR.SetNat(&d)
+			notR.Sub(&notR, rr.Lift())
+			rOut.Set(&notR)
+		}
+		remainder.Abs(&rOut)
+		remainder.Resize(denominator.TrueLen())
+	}
+
+	return ct.True
+}
+
+// Div sets n = numerator / denominator.
+// If r is not nil, it will be set it to the remainder.
+// It returns ok=1 if the division was successful, ok=0 otherwise (i.e., division by zero).
+// The number of bits of the quotient will be numerator.AnnouncedLen() and
+// the number of bits of the remainder will be denominator.AnnouncedLen().
+func (i *Int) Div(remainder, numerator, denominator *Int) ct.Bool {
+	ok := denominator.IsNonZero()
+	ns := ((*saferith.Int)(numerator)).IsNegative()
+	ds := ((*saferith.Int)(denominator)).IsNegative()
+	qs := ns ^ ds
+	rs := ns
+
+	var q, r saferith.Nat
+	nAbs := ((*saferith.Int)(numerator)).Abs()
+	dAbs := ((*saferith.Int)(denominator)).Abs()
+	_, _ = internal.EuclideanDiv(&q, &r, nAbs, dAbs)
+	var qInt saferith.Int
+	qInt.SetNat(&q)
+	qInt.Neg(qs)
+	qInt.Resize(numerator.AnnouncedLen())
+	i.CondAssign(ok, (*Int)(&qInt))
+
+	if remainder != nil {
+		var rInt saferith.Int
+		rInt.SetNat(&r)
+		rInt.Neg(rs)
+		rInt.Resize(denominator.AnnouncedLen())
+		remainder.CondAssign(ok, (*Int)(&rInt))
+	}
+
 	return ok
 }
 
-// DivDivisorAsModulusCap sets i = numerator / denominator with capacity capacity.
-// Returns ok = false if the denominator is zero.
-func (i *Int) DivDivisorAsModulusCap(numerator *Int, denominator *Modulus, capacity int) (ok ct.Bool) {
-	var outNat Nat
-	ok = outNat.DivDivisorAsModulusCap(numerator.Absed(), denominator, capacity)
+// DivVarTime sets n to quotient of numerator / denominator.
+// If r is not nil, it will be set it to the remainder.
+// It returns ok=1 if the division was successful, ok=0 otherwise (i.e., division by zero).
+// The number of bits of the quotient will be
+// min(numerator.AnnouncedLen(), numerator.AnnouncedLen() - denominator.TrueLen() + 2) and
+// the number of bits of the remainder will be denominator.AnnouncedLen().
+func (i *Int) DivVarTime(remainder, numerator, denominator *Int) (ok ct.Bool) {
+	if denominator.IsNonZero() == ct.False {
+		return ct.False
+	}
 
-	i.SetNat(&outNat)
-	i.CondNeg(numerator.IsNegative())
-	return ok
-}
+	ns := ((*saferith.Int)(numerator)).IsNegative()
+	ds := ((*saferith.Int)(denominator)).IsNegative()
+	qs := ns ^ ds
+	rs := ns
 
-// ExactDivDivisorAsModulus sets i = lhs / rhs assuming exact division (no remainder).
-// Returns ok = false if the division is not exact.
-func (i *Int) ExactDivDivisorAsModulus(lhs *Int, rhs *Modulus) (ok ct.Bool) {
-	var outNat Nat
-	ok = outNat.ExactDivDivisorAsModulus(lhs.Absed(), rhs)
-	i.SetNat(&outNat)
-	i.CondNeg(lhs.IsNegative())
-	return ok
+	var q, r saferith.Nat
+	nAbs := ((*saferith.Int)(numerator)).Abs()
+	dAbs := ((*saferith.Int)(denominator)).Abs()
+	_ = ((*Nat)(&q)).EuclideanDivVarTime((*Nat)(&r), (*Nat)(nAbs), (*Nat)(dAbs))
+	var qInt saferith.Int
+	qInt.SetNat(&q)
+	qInt.Neg(qs)
+	qInt.Resize(min(numerator.AnnouncedLen(), numerator.AnnouncedLen()-denominator.TrueLen()+2))
+	i.Set((*Int)(&qInt))
+
+	if remainder != nil {
+		var rInt saferith.Int
+		rInt.SetNat(&r)
+		rInt.Neg(rs)
+		rInt.Resize(denominator.TrueLen())
+		remainder.Set((*Int)(&rInt))
+	}
+
+	return ct.True
 }
 
 // IsUnit returns true if i is a unit (i.e., ±1).
 func (i *Int) IsUnit() ct.Bool {
-	return i.Absed().IsOne()
+	var n Nat
+	n.Abs(i)
+	return n.IsOne()
 }
 
 // Inv sets i = x^{-1}. It returns ok = false if x is not a unit.
@@ -186,11 +327,12 @@ func (i *Int) GCD(a, b *Int) {
 	}
 
 	// Work with absolute values; gcd in Z is always taken as non-negative.
-	an := a.Absed()
-	bn := b.Absed()
+	var an, bn Nat
+	an.Abs(a)
+	bn.Abs(b)
 
 	var g Nat
-	g.GCD(an, bn)
+	g.GCD(&an, &bn)
 	i.SetNat(&g)
 }
 
@@ -206,7 +348,9 @@ func (i *Int) IsNegative() ct.Bool {
 
 // IsZero returns 1 if i == 0.
 func (i *Int) IsZero() ct.Bool {
-	return i.Absed().IsZero()
+	var n Nat
+	n.Abs(i)
+	return n.IsZero()
 }
 
 // IsNonZero returns 1 if i != 0.
@@ -225,8 +369,9 @@ func (i *Int) Sqrt(x *Int) (ok ct.Bool) {
 	// Constant-time (w.r.t. announced capacity) integer square root.
 	// Work on |x| and assign only if |x| is a perfect square.
 
-	var outNat Nat
-	ok = outNat.Sqrt(x.Absed())
+	var inNat, outNat Nat
+	inNat.Abs(x)
+	ok = outNat.Sqrt(&inNat)
 
 	// Negative numbers are never perfect squares in Z.
 	ok &= x.IsNegative().Not()
@@ -244,10 +389,10 @@ func (i *Int) Square(x *Int) {
 	i.Mul(x, x)
 }
 
-// Bit returns the value of the bit at the given index.
-func (i *Int) Bit(index uint) byte {
-	return i.Absed().Bit(index)
-}
+//// Bit returns the value of the bit at the given index.
+//func (i *Int) Bit(index uint) byte {
+//	return i.Absed().Bit(index)
+//}
 
 // Bytes returns a sign-magnitude encoding:
 //
@@ -339,12 +484,17 @@ func (i *Int) Resize(capacity int) {
 
 // Coprime returns 1 if gcd(|i|, |rhs|) == 1.
 func (i *Int) Coprime(rhs *Int) ct.Bool {
-	return i.Absed().Coprime(rhs.Absed())
+	var iNat, rhsNat Nat
+	iNat.Abs(i)
+	rhsNat.Abs(rhs)
+	return iNat.Coprime(&rhsNat)
 }
 
 // IsProbablyPrime returns 1 if i is probably prime and non-negative.
 func (i *Int) IsProbablyPrime() ct.Bool {
-	return i.Absed().IsProbablyPrime() & i.IsNegative().Not()
+	var iNat Nat
+	iNat.Abs(i)
+	return iNat.IsProbablyPrime() & i.IsNegative().Not()
 }
 
 // Select sets i = x0 if choice == 0, or i = x1 if choice == 1,
@@ -381,7 +531,10 @@ func (i *Int) Compare(rhs *Int) (lt, eq, gt ct.Bool) {
 	bNeg := rhs.IsNegative()
 
 	// Magnitude comparison on |i|, |rhs|.
-	ltM, eqM, gtM := i.Absed().Compare(rhs.Absed())
+	var iAbs, rhsAbs Nat
+	iAbs.Abs(i)
+	rhsAbs.Abs(rhs)
+	ltM, eqM, gtM := iAbs.Compare(&rhsAbs)
 
 	// sameSign = 1 iff signs are equal, diffSign = 1 iff they differ.
 	sameSign := (aNeg ^ bNeg).Not()
@@ -416,7 +569,9 @@ func (i *Int) Compare(rhs *Int) (lt, eq, gt ct.Bool) {
 
 // Uint64 returns the absolute value of i as a uint64.
 func (i *Int) Uint64() uint64 {
-	return i.Absed().Uint64()
+	var iAbs Nat
+	iAbs.Abs(i)
+	return iAbs.Uint64()
 }
 
 // SetUint64 sets i = x.
@@ -426,8 +581,10 @@ func (i *Int) SetUint64(x uint64) {
 
 // Int64 returns the int64 value of i.
 func (i *Int) Int64() int64 {
-	abs := int64(i.Absed().Uint64())
-	return ct.CSelectInt(i.IsNegative(), abs, abs*-1)
+	var iAbs Nat
+	iAbs.Abs(i)
+	abs := int64(iAbs.Uint64())
+	return ct.CSelectInt(i.IsNegative(), abs, -abs)
 }
 
 // SetInt64 sets i = x.
@@ -450,19 +607,21 @@ func (i *Int) SetInt64(x int64) {
 	(*saferith.Int)(i).Neg(saferith.Choice(signBit)).Resize(64)
 }
 
-// TrueLen returns exact number of bits required to represent i. Note that it would leak required number of zero bits in i.
+// TrueLen returns the exact number of bits required to represent i.
 func (i *Int) TrueLen() int {
-	return ((*saferith.Int)(i).TrueLen())
+	return (*saferith.Int)(i).TrueLen()
 }
 
 // AnnouncedLen returns the announced length in bits of i. Safe to be used publicly.
 func (i *Int) AnnouncedLen() int {
-	return ((*saferith.Int)(i).AnnouncedLen())
+	return (*saferith.Int)(i).AnnouncedLen()
 }
 
 // IsOdd returns 1 if i is odd.
 func (i *Int) IsOdd() ct.Bool {
-	return i.Absed().IsOdd()
+	var iAbs Nat
+	iAbs.Abs(i)
+	return iAbs.IsOdd()
 }
 
 // IsEven returns 1 if i is even.
@@ -517,7 +676,7 @@ func (i *Int) Or(x, y *Int) {
 	i.OrCap(x, y, -1)
 }
 
-// OrCap sets i = x | y with given capacity.
+// OrCap sets i = x | y with a given capacity.
 func (i *Int) OrCap(x, y *Int, capacity int) {
 	if capacity < 0 {
 		capacity = max(x.AnnouncedLen(), y.AnnouncedLen())
@@ -542,7 +701,7 @@ func (i *Int) Xor(x, y *Int) {
 	i.XorCap(x, y, -1)
 }
 
-// XorCap sets i = x ^ y with given capacity.
+// XorCap sets i = x ^ y with the given capacity.
 func (i *Int) XorCap(x, y *Int, capacity int) {
 	if capacity < 0 {
 		capacity = max(x.AnnouncedLen(), y.AnnouncedLen())
@@ -568,7 +727,7 @@ func (i *Int) Not(x *Int) {
 	i.NotCap(x, -1)
 }
 
-// NotCap sets i = ^x with given capacity.
+// NotCap sets i = ^x with a given capacity.
 // For signed integers, this is equivalent to -(x+1) due to two's complement.
 func (i *Int) NotCap(x *Int, capacity int) {
 	if capacity < 0 {
@@ -611,8 +770,9 @@ func (i *Int) SetRandomRangeLH(lowInclusive, highExclusive *Int, prng io.Reader)
 	interval.Sub(highExclusive, lowInclusive)
 
 	// Generate random value in [0, interval) using Nat's method
-	var r Nat
-	err := r.SetRandomRangeH(interval.Absed(), prng)
+	var intervalAbs, r Nat
+	intervalAbs.Abs(&interval)
+	err := r.SetRandomRangeH(&intervalAbs, prng)
 	if err != nil {
 		return errs2.Wrap(err)
 	}

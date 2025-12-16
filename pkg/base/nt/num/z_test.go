@@ -1446,18 +1446,6 @@ func TestInt_EuclideanValuation(t *testing.T) {
 	})
 }
 
-func TestInt_Bit(t *testing.T) {
-	t.Parallel()
-
-	z := num.Z()
-
-	// 5 = 101 in binary
-	five := z.FromInt64(5)
-	require.Equal(t, byte(1), five.Bit(0))
-	require.Equal(t, byte(0), five.Bit(1))
-	require.Equal(t, byte(1), five.Bit(2))
-}
-
 func TestInt_TrueLen(t *testing.T) {
 	t.Parallel()
 

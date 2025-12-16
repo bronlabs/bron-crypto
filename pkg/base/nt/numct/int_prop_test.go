@@ -104,8 +104,9 @@ func TestInt_Abs_Property(t *testing.T) {
 		}
 
 		require.Equal(t, ct.True, actual.Equal(&expected))
-
-		require.Equal(t, ct.True, actual.Equal(x.Absed().Lift()))
+		var xAbs numct.Nat
+		xAbs.Abs(x)
+		require.Equal(t, ct.True, actual.Equal(xAbs.Lift()))
 	})
 }
 
@@ -191,20 +192,6 @@ func TestInt_Decrement_Property(t *testing.T) {
 		out.Decrement()
 
 		require.Equal(t, ct.True, out.Equal(&expected))
-	})
-}
-
-func TestInt_Bit_Property(t *testing.T) {
-	t.Parallel()
-	rapid.Check(t, func(t *rapid.T) {
-		a := IntGeneratorPositive().Draw(t, "a")
-		i := rapid.IntRange(0, (a.AnnouncedLen()*8)-1).Draw(t, "i")
-
-		// Property: Bit(i) matches the corresponding bit in |a|
-		expected := a.Absed().Bit(uint(i))
-		actual := a.Bit(uint(i))
-
-		require.Equal(t, expected, actual)
 	})
 }
 
@@ -521,17 +508,16 @@ func TestInt_GCD_Property(t *testing.T) {
 
 		var gcd numct.Int
 		gcd.GCD(a, b)
-
 		require.Equal(t, ct.False, gcd.IsNegative())
 
-		gcdm, ok := numct.NewModulus(gcd.Absed())
-		require.Equal(t, ct.True, ok)
-
 		// Property: gcd divides both a and b
+		var arem, brem numct.Nat
 		var adiv, bdiv numct.Int
-		okA := adiv.ExactDivDivisorAsModulus(a, gcdm)
-		okB := bdiv.ExactDivDivisorAsModulus(b, gcdm)
+		okA := adiv.EuclideanDiv(&arem, a, &gcd)
+		okB := bdiv.EuclideanDiv(&brem, b, &gcd)
 
+		require.Equal(t, ct.True, arem.IsZero())
+		require.Equal(t, ct.True, brem.IsZero())
 		require.Equal(t, ct.True, okA)
 		require.Equal(t, ct.True, okB)
 	})
@@ -551,5 +537,74 @@ func TestInt_GCDIsCompatibleWithBigInt_Property(t *testing.T) {
 		bigGCD := new(big.Int).GCD(nil, nil, bigA, bigB)
 
 		require.Equal(t, 0, gcd.Big().Cmp(bigGCD))
+	})
+}
+
+func TestInt_Div_Property(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(t *rapid.T) {
+		n := rapid.Int64().Draw(t, "a")
+		d := rapid.Int64().Draw(t, "b")
+
+		var q, r numct.Int
+		ok := q.Div(&r, numct.NewInt(n), numct.NewInt(d))
+
+		if ok != ct.False {
+			qExp := n / d
+			rExp := n % d
+
+			require.Equal(t, ct.True, q.Equal(numct.NewInt(qExp)))
+			require.Equal(t, ct.True, r.Equal(numct.NewInt(rExp)))
+		} else {
+			require.Equal(t, int64(0), d)
+		}
+	})
+}
+
+func TestInt_DivVarTime_Property(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(t *rapid.T) {
+		n := rapid.Int64().Draw(t, "a")
+		d := rapid.Int64().Draw(t, "b")
+
+		var q, r numct.Int
+		ok := q.DivVarTime(&r, numct.NewInt(n), numct.NewInt(d))
+
+		if ok != ct.False {
+			qExp := n / d
+			rExp := n % d
+
+			require.Equal(t, ct.True, q.Equal(numct.NewInt(qExp)))
+			require.Equal(t, ct.True, r.Equal(numct.NewInt(rExp)))
+		} else {
+			require.Equal(t, int64(0), d)
+		}
+	})
+}
+
+func TestInt_EuclideanDiv_Property(t *testing.T) {
+	t.Parallel()
+	rapid.Check(t, func(t *rapid.T) {
+		n := rapid.Int64().Draw(t, "a")
+		d := rapid.Int64().Draw(t, "b")
+
+		var q numct.Int
+		var r numct.Nat
+		ok := q.EuclideanDiv(&r, numct.NewInt(n), numct.NewInt(d))
+
+		if ok != ct.False {
+			var rInt, c numct.Int
+			rInt.SetNat(&r)
+			c.Mul(&q, numct.NewInt(d))
+			c.Add(&c, &rInt)
+			require.Equal(t, ct.True, c.Equal(numct.NewInt(n)))
+
+			var dAbs numct.Nat
+			dAbs.Abs(numct.NewInt(d))
+			lt, _, _ := r.Compare(&dAbs)
+			require.Equal(t, ct.True, lt)
+		} else {
+			require.Equal(t, int64(0), d)
+		}
 	})
 }

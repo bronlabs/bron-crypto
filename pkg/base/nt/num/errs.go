@@ -8,4 +8,5 @@ var (
 	ErrOutOfRange      = errs2.New("value is out of range")
 	ErrUnequalModuli   = errs2.New("moduli are unequal")
 	ErrIsNil           = errs2.New("value must not be nil")
+	ErrDivisionByZero  = errs2.New("division by zero")
 )

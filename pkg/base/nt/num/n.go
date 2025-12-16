@@ -291,20 +291,72 @@ func (n *Nat) Cardinal() cardinal.Cardinal {
 	return cardinal.NewFromNumeric(n.v)
 }
 
-// TryDiv attempts to divide the Nat by another Nat. It returns an error if the division is not exact.
+// TryDiv attempts to divide the Nat by another Nat.
+// It returns an error if the division is not exact.
 func (n *Nat) TryDiv(other *Nat) (*Nat, error) {
 	if _, err := n.isValid(other); err != nil {
 		return nil, errs2.Wrap(err)
 	}
-	var v numct.Nat
-	divisorMod, modOk := numct.NewModulus(other.v)
-	if modOk != ct.True {
-		return nil, errs2.New("failed to create modulus from divisor")
+
+	var q, r numct.Nat
+	if ok := q.Div(&r, n.v, other.v); ok == ct.False {
+		return nil, ErrDivisionByZero.WithStackFrame()
 	}
-	if ok := v.ExactDivDivisorAsModulus(n.v, divisorMod); ok == ct.False {
+	if z := r.IsZero(); z == ct.False {
 		return nil, ErrInexactDivision.WithStackFrame()
 	}
-	return &Nat{v: &v}, nil
+
+	return &Nat{v: &q}, nil
+}
+
+// TryDivVarTime attempts to divide the Nat by another Nat.
+// It returns an error if the division is not exact.
+// It is not constant-time due to having to generate montgomery parameters for the divisor (i.e., leaks divisor).
+func (n *Nat) TryDivVarTime(other *Nat) (*Nat, error) {
+	if _, err := n.isValid(other); err != nil {
+		return nil, errs2.Wrap(err)
+	}
+
+	var q, r numct.Nat
+	if ok := q.Div(&r, n.v, other.v); ok == ct.False {
+		return nil, ErrDivisionByZero.WithStackFrame()
+	}
+	if z := r.IsZero(); z == ct.False {
+		return nil, ErrInexactDivision.WithStackFrame()
+	}
+
+	return &Nat{v: &q}, nil
+}
+
+// DivRound divides the Nat by another Nat returning quotient rounded towards zero.
+// It returns an error if the division is not exact.
+func (n *Nat) DivRound(other *Nat) (*Nat, error) {
+	if _, err := n.isValid(other); err != nil {
+		return nil, errs2.Wrap(err)
+	}
+
+	var q numct.Nat
+	if ok := q.Div(nil, n.v, other.v); ok == ct.False {
+		return nil, ErrDivisionByZero.WithStackFrame()
+	}
+
+	return &Nat{v: &q}, nil
+}
+
+// DivRoundVarTime divides the Nat by another Nat returning quotient rounded towards zero.
+// It returns an error if the division is not exact.
+// It is not constant-time due to having to generate montgomery parameters for the divisor (i.e., leaks divisor).
+func (n *Nat) DivRoundVarTime(other *Nat) (*Nat, error) {
+	if _, err := n.isValid(other); err != nil {
+		return nil, errs2.Wrap(err)
+	}
+
+	var q numct.Nat
+	if ok := q.Div(nil, n.v, other.v); ok == ct.False {
+		return nil, ErrDivisionByZero.WithStackFrame()
+	}
+
+	return &Nat{v: &q}, nil
 }
 
 // Double returns the Nat doubled.
@@ -358,6 +410,18 @@ func (n *Nat) EuclideanDiv(other *Nat) (quot, rem *Nat, err error) {
 	errs2.Must1(n.isValid(other))
 	var vq, vr numct.Nat
 	if ok := vq.EuclideanDiv(&vr, n.v, other.v); ok == ct.False {
+		return nil, nil, errs2.New("division failed")
+	}
+	return &Nat{v: &vq}, &Nat{v: &vr}, nil
+}
+
+// EuclideanDivVarTime performs Euclidean division of the Nat by another Nat, returning the quotient and remainder.
+// It is not constant-time due to having to generate montgomery parameters for the divisor (i.e., leaks divisor).
+func (n *Nat) EuclideanDivVarTime(other *Nat) (quot, rem *Nat, err error) {
+	errs2.Must1(n.isValid(other))
+
+	var vq, vr numct.Nat
+	if ok := vq.EuclideanDivVarTime(&vr, n.v, other.v); ok == ct.False {
 		return nil, nil, errs2.New("division failed")
 	}
 	return &Nat{v: &vq}, &Nat{v: &vr}, nil

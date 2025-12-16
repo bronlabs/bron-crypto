@@ -317,17 +317,34 @@ func (i *Int) IsProbablyPrime() bool {
 // EuclideanDiv performs Euclidean division of the integer by another integer.
 func (i *Int) EuclideanDiv(other *Int) (quot, rem *Int, err error) {
 	errs2.Must1(i.isValid(other))
-	vq, vr := new(numct.Int), new(numct.Int)
-	// Since DivModCap doesn't exist for Int, compute quotient and remainder separately
-	if ok := vq.Div(i.v, other.v); ok == ct.False {
-		return nil, nil, ErrInexactDivision.WithStackFrame()
+
+	var q numct.Int
+	var r numct.Nat
+	if ok := q.EuclideanDiv(&r, i.v, other.v); ok == ct.False {
+		return nil, nil, ErrDivisionByZero.WithStackFrame()
 	}
 
-	// Compute remainder: rem = i - other * quot
-	temp := new(numct.Int)
-	temp.Mul(other.v, vq)
-	vr.Sub(i.v, temp)
-	return &Int{v: vq}, &Int{v: vr}, nil
+	quot = &Int{v: &q}
+	rem = &Int{v: new(numct.Int)}
+	rem.v.SetNat(&r)
+	return quot, rem, nil
+}
+
+// EuclideanDivVarTime performs Euclidean division of the integer by another integer.
+// It is not constant-time due to having to generate montgomery parameters for the divisor (i.e., leaks divisor).
+func (i *Int) EuclideanDivVarTime(other *Int) (quot, rem *Int, err error) {
+	errs2.Must1(i.isValid(other))
+
+	var q numct.Int
+	var r numct.Nat
+	if ok := q.EuclideanDivVarTime(&r, i.v, other.v); ok == ct.False {
+		return nil, nil, ErrDivisionByZero.WithStackFrame()
+	}
+
+	quot = &Int{v: &q}
+	rem = &Int{v: new(numct.Int)}
+	rem.v.SetNat(&r)
+	return quot, rem, nil
 }
 
 // EuclideanValuation returns the Euclidean valuation of the integer.
@@ -357,39 +374,68 @@ func (i *Int) IsUnit(modulus *NatPlus) bool {
 	return m.IsUnit(i.Mod(modulus).v) == ct.True
 }
 
+// TryDiv performs the exact division of the integer by another integer.
 func (i *Int) TryDiv(other *Int) (*Int, error) {
 	if _, err := i.isValid(other); err != nil {
 		return nil, errs2.Wrap(err)
 	}
-	var v numct.Int
-	if ok := v.Div(i.v, other.v); ok == ct.False {
+
+	var q, r numct.Int
+	if ok := q.Div(&r, i.v, other.v); ok == ct.False {
+		return nil, ErrDivisionByZero.WithStackFrame()
+	}
+	if r.IsNonZero() != ct.False {
 		return nil, ErrInexactDivision.WithStackFrame()
 	}
-	out := &Int{v: &v}
-	return out, nil
+
+	return &Int{v: &q}, nil
 }
 
-// TryDivVarTime performs exact division of the integer by another integer.
-// It is not constant-time due to having to generate montgomery parameters for the divisor.
+// TryDivVarTime performs the exact division of the integer by another integer.
+// It is not constant-time due to having to generate montgomery parameters for the divisor (i.e., leaks divisor).
 func (i *Int) TryDivVarTime(other *Int) (*Int, error) {
 	if _, err := i.isValid(other); err != nil {
 		return nil, errs2.Wrap(err)
 	}
-	v := new(numct.Int)
-	divisorMod, modOk := numct.NewModulus(other.v.Absed())
-	if modOk != ct.True {
-		return nil, errs2.New("failed to create modulus from divisor")
+
+	var q, r numct.Int
+	if ok := q.DivVarTime(&r, i.v, other.v); ok != ct.True {
+		return nil, ErrDivisionByZero.WithStackFrame()
 	}
-	if ok := v.ExactDivDivisorAsModulus(i.v, divisorMod); ok != ct.True {
+	if r.IsNonZero() != ct.False {
 		return nil, ErrInexactDivision.WithStackFrame()
 	}
-	// ExactDivMod only considers the sign of the dividend, not the divisor.
-	// We need to negate if the divisor is negative (XOR the signs).
-	if other.IsNegative() {
-		v.Neg(v)
+
+	return &Int{v: &q}, nil
+}
+
+// DivRound performs the division of the integer by another integer returning the quotient rounded towards zero.
+func (i *Int) DivRound(other *Int) (*Int, error) {
+	if _, err := i.isValid(other); err != nil {
+		return nil, errs2.Wrap(err)
 	}
-	out := &Int{v: v}
-	return out, nil
+
+	var q numct.Int
+	if ok := q.Div(nil, i.v, other.v); ok == ct.False {
+		return nil, ErrDivisionByZero.WithStackFrame()
+	}
+
+	return &Int{v: &q}, nil
+}
+
+// DivRoundVarTime performs the division of the integer by another integer returning the quotient rounded towards zero.
+// It is not constant-time due to having to generate montgomery parameters for the divisor (i.e., leaks divisor).
+func (i *Int) DivRoundVarTime(other *Int) (*Int, error) {
+	if _, err := i.isValid(other); err != nil {
+		return nil, errs2.Wrap(err)
+	}
+
+	var q numct.Int
+	if ok := q.DivVarTime(nil, i.v, other.v); ok != ct.True {
+		return nil, ErrDivisionByZero.WithStackFrame()
+	}
+
+	return &Int{v: &q}, nil
 }
 
 // TryInv attempts to compute the multiplicative inverse of the integer.
@@ -505,11 +551,6 @@ func (i *Int) Rat() *Rat {
 // Bytes returns the byte representation of the integer.
 func (i *Int) Bytes() []byte {
 	return i.v.Bytes()
-}
-
-// Bit returns the value of the i-th bit of the integer.
-func (i *Int) Bit(b uint) byte {
-	return i.v.Bit(b)
 }
 
 // IsEven checks if the integer is even.

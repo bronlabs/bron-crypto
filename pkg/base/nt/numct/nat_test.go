@@ -201,53 +201,6 @@ func TestNat_MulCap(t *testing.T) {
 	require.Equal(t, uint64(0), result.Uint64())
 }
 
-func TestNat_DivCap(t *testing.T) {
-	t.Parallel()
-	t.Run("exact division", func(t *testing.T) {
-		var result numct.Nat
-		num := numct.NewNat(100)
-		denom, ok := numct.NewModulus(numct.NewNat(10))
-		require.Equal(t, ct.True, ok)
-		ok = result.DivDivisorAsModulusCap(num, denom, -1)
-		require.Equal(t, ct.True, ok)
-		require.Equal(t, uint64(10), result.Uint64())
-	})
-
-	t.Run("integer division", func(t *testing.T) {
-		var result numct.Nat
-		num := numct.NewNat(17)
-		denom, ok := numct.NewModulus(numct.NewNat(5))
-		require.Equal(t, ct.True, ok)
-		ok = result.DivDivisorAsModulusCap(num, denom, -1)
-		require.Equal(t, ct.True, ok)
-		require.Equal(t, uint64(3), result.Uint64())
-	})
-}
-
-func TestNat_ExactDiv(t *testing.T) {
-	t.Parallel()
-	t.Run("exact", func(t *testing.T) {
-		var result numct.Nat
-		num := numct.NewNat(100)
-		denom, ok := numct.NewModulus(numct.NewNat(10))
-		require.Equal(t, ct.True, ok)
-		ok = result.ExactDivDivisorAsModulus(num, denom)
-		require.Equal(t, ct.True, ok)
-		require.Equal(t, uint64(10), result.Uint64())
-	})
-
-	t.Run("not exact", func(t *testing.T) {
-		var result numct.Nat
-		result.SetOne() // Set initial value to verify it's not modified
-		num := numct.NewNat(17)
-		denom, ok := numct.NewModulus(numct.NewNat(5))
-		require.Equal(t, ct.True, ok)
-		ok = result.ExactDivDivisorAsModulus(num, denom)
-		require.Equal(t, ct.False, ok)
-		require.Equal(t, uint64(1), result.Uint64()) // Should remain unchanged
-	})
-}
-
 func TestNat_Double(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -631,27 +584,6 @@ func TestNat_Random_Errors(t *testing.T) {
 		err := n.SetRandomRangeLH(numct.NewNat(10), numct.NewNat(10), prng)
 		require.Error(t, err)
 	})
-}
-
-func TestDivModCap(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		a, b          uint64
-		quotient, rem uint64
-	}{
-		{17, 5, 3, 2},
-		{100, 10, 10, 0},
-		{7, 3, 2, 1},
-	}
-	for _, tc := range cases {
-		var q, r numct.Nat
-		denom, ok := numct.NewModulus(numct.NewNat(tc.b))
-		require.Equal(t, ct.True, ok)
-		ok = numct.QuoRemDivDivisorAsModulusCap(&q, &r, numct.NewNat(tc.a), denom, -1)
-		require.Equal(t, ct.True, ok)
-		require.Equal(t, tc.quotient, q.Uint64())
-		require.Equal(t, tc.rem, r.Uint64())
-	}
 }
 
 func TestNat_HashCode(t *testing.T) {

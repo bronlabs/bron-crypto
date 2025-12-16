@@ -284,7 +284,7 @@ func (r *Rat) Ceil() (*Int, error) {
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
-	if rem.IsZero() || r.a.IsNegative() {
+	if rem.IsZero() {
 		return quot, nil
 	}
 	return quot.Increment(), nil
@@ -292,14 +292,11 @@ func (r *Rat) Ceil() (*Int, error) {
 
 // Floor returns the largest integer less than or equal to the Rat element.
 func (r *Rat) Floor() (*Int, error) {
-	quot, rem, err := r.a.EuclideanDiv(r.b.Lift())
+	quot, _, err := r.a.EuclideanDiv(r.b.Lift())
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
-	if rem.IsZero() || r.a.IsPositive() {
-		return quot, nil
-	}
-	return quot.Decrement(), nil
+	return quot, nil
 }
 
 // Structure returns the algebraic structure to which the Rat element belongs.
