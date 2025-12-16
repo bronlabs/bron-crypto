@@ -1,23 +1,32 @@
+// Package paillier implements the Paillier cryptosystem, an additive homomorphic
+// public-key encryption scheme. It supports homomorphic addition of ciphertexts
+// and scalar multiplication of ciphertexts by plaintexts.
 package paillier
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 )
 
+// Name is the identifier for the Paillier encryption scheme.
 const Name encryption.Name = "paillier"
 
+// NewScheme returns a new Paillier encryption scheme instance.
 func NewScheme() *Scheme {
 	return &Scheme{}
 }
 
+// Scheme represents the Paillier encryption scheme and provides factory methods
+// for creating key generators, encrypters, and decrypters.
 type Scheme struct{}
 
+// Name returns the identifier for the Paillier encryption scheme.
 func (s *Scheme) Name() encryption.Name {
 	return Name
 }
 
+// Keygen creates a new key generator with the given options.
 func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	kg := &KeyGenerator{
 		// TODO: correspond to constants in base package
@@ -25,56 +34,53 @@ func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	}
 	for _, opt := range opts {
 		if err := opt(kg); err != nil {
-			return nil, errs.WrapFailed(err, "failed to apply key generator option")
+			return nil, errs2.Wrap(err)
 		}
 	}
 	return kg, nil
 }
 
+// Encrypter creates a new encrypter with the given options.
 func (s *Scheme) Encrypter(opts ...EncrypterOption) (*Encrypter, error) {
 	e := &Encrypter{}
 	for _, opt := range opts {
 		if err := opt(e); err != nil {
-			return nil, errs.WrapFailed(err, "failed to apply encrypter option")
+			return nil, errs2.Wrap(err)
 		}
 	}
 	return e, nil
 }
 
+// SelfEncrypter creates a new self-encrypter for the given private key.
+// A self-encrypter encrypts messages to the owner of the private key,
+// using CRT optimizations for faster encryption.
 func (s *Scheme) SelfEncrypter(sk *PrivateKey, opts ...SelfEncrypterOption) (*SelfEncrypter, error) {
 	if sk == nil {
-		return nil, errs.NewIsNil("sk")
+		return nil, ErrInvalidArgument.WithStackFrame()
 	}
 	se := &SelfEncrypter{sk: sk, pk: sk.PublicKey()}
 	se.pk.cacheSpaces()
 	for _, opt := range opts {
 		if err := opt(se); err != nil {
-			return nil, errs.WrapFailed(err, "failed to apply self-encrypter option")
+			return nil, errs2.Wrap(err)
 		}
 	}
 	return se, nil
 }
 
+// Decrypter creates a new decrypter for the given private key.
 func (s *Scheme) Decrypter(sk *PrivateKey, opts ...DecrypterOption) (*Decrypter, error) {
 	if sk == nil {
-		return nil, errs.NewIsNil("sk")
+		return nil, ErrInvalidArgument.WithStackFrame()
 	}
 	d := &Decrypter{sk: sk}
 	for _, opt := range opts {
 		if err := opt(d); err != nil {
-			return nil, errs.WrapFailed(err, "failed to apply decrypter option")
+			return nil, errs2.Wrap(err)
 		}
 	}
 	return d, nil
 }
-
-// func Phi(receiver *PublicKey, plaintext *Plaintext) *znstar.Unit {
-// 	out, err := receiver.group.Phi(plaintext.ValueCT())
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	return out
-// }
 
 func lp(sk *PrivateKey, x *numct.Nat) {
 	sk.Arithmetic().P.Squared.ModSub(x, x, numct.NatOne())
@@ -85,3 +91,8 @@ func lq(sk *PrivateKey, x *numct.Nat) {
 	sk.Arithmetic().Q.Squared.ModSub(x, x, numct.NatOne())
 	sk.Arithmetic().Q.Factor.Quo(x, x)
 }
+
+var (
+	ErrInvalidArgument = errs2.New("invalid argument")
+	ErrInvalidRange    = errs2.New("invalid range")
+)
