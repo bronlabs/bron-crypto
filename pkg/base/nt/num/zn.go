@@ -272,8 +272,8 @@ func (zn *ZMod) IsInRange(v *Nat) bool {
 	return zn.n.m.IsInRange(v.v) == ct.True
 }
 
-// IsSemiDomain checks if the group is a semi-domain (i.e., if the modulus is probably prime).
-func (zn *ZMod) IsSemiDomain() bool {
+// IsDomain checks if the group is a domain (i.e., if the modulus is probably prime).
+func (zn *ZMod) IsDomain() bool {
 	return zn.Modulus().Lift().IsProbablyPrime()
 }
 
@@ -454,7 +454,7 @@ func (u *Uint) IsProbablyPrime() bool {
 // EuclideanDiv performs Euclidean division of the Uint element by another Uint element.
 func (u *Uint) EuclideanDiv(other *Uint) (quot, rem *Uint, err error) {
 	errs2.Must1(u.isValid(other))
-	if !u.Group().IsSemiDomain() {
+	if !u.Group().IsDomain() {
 		return nil, nil, errs2.New("not a euclidean domain")
 	}
 
@@ -469,7 +469,7 @@ func (u *Uint) EuclideanDiv(other *Uint) (quot, rem *Uint, err error) {
 
 // EuclideanValuation returns the Euclidean valuation of the Uint element.
 func (u *Uint) EuclideanValuation() algebra.Cardinal {
-	if !u.Group().IsSemiDomain() {
+	if !u.Group().IsDomain() {
 		panic(errs2.New("not a euclidean domain"))
 	}
 	return cardinal.NewFromNumeric(u.v)

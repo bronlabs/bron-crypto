@@ -236,8 +236,8 @@ func (q *Rationals) RandomInt(lowInclusive, highExclusive *Rat, prng io.Reader) 
 	return result, nil
 }
 
-// IsSemiDomain indicates that Q is a semi-domain.
-func (q *Rationals) IsSemiDomain() bool {
+// IsDomain indicates that Q is a domain.
+func (q *Rationals) IsDomain() bool {
 	return true
 }
 

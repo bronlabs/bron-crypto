@@ -53,7 +53,7 @@ func (f *BaseFieldG2) Name() string {
 	return BaseFieldNameG2
 }
 
-func (f *BaseFieldG2) IsSemiDomain() bool {
+func (f *BaseFieldG2) IsDomain() bool {
 	return true
 }
 

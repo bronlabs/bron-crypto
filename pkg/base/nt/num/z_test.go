@@ -53,9 +53,9 @@ func TestIntegers_Properties(t *testing.T) {
 		require.True(t, z.Characteristic().IsZero(), "integers should have characteristic 0")
 	})
 
-	t.Run("IsSemiDomain", func(t *testing.T) {
+	t.Run("IsDomain", func(t *testing.T) {
 		t.Parallel()
-		require.True(t, z.IsSemiDomain(), "integers should be a semi-domain (no zero divisors)")
+		require.True(t, z.IsDomain(), "integers should be a domain (no zero divisors)")
 	})
 
 	t.Run("ElementSize", func(t *testing.T) {

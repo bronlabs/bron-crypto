@@ -149,17 +149,17 @@ func TestZMod_Properties(t *testing.T) {
 		require.True(t, opId.IsZero())
 	})
 
-	t.Run("IsSemiDomain prime", func(t *testing.T) {
+	t.Run("IsDomain prime", func(t *testing.T) {
 		t.Parallel()
-		// 7 is prime, so Z/7Z is a field (semi-domain)
-		require.True(t, zmod.IsSemiDomain())
+		// 7 is prime, so Z/7Z is a field (domain)
+		require.True(t, zmod.IsDomain())
 	})
 
-	t.Run("IsSemiDomain composite", func(t *testing.T) {
+	t.Run("IsDomain composite", func(t *testing.T) {
 		t.Parallel()
 		zmod6 := testZMod(t, 6)
-		// 6 is not prime, so Z/6Z is not a semi-domain
-		require.False(t, zmod6.IsSemiDomain())
+		// 6 is not prime, so Z/6Z is not a domain
+		require.False(t, zmod6.IsDomain())
 	})
 
 	t.Run("ScalarStructure", func(t *testing.T) {

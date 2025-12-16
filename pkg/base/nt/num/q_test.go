@@ -51,9 +51,9 @@ func TestRationals_Properties(t *testing.T) {
 		require.True(t, q.Characteristic().IsZero(), "rationals should have characteristic 0")
 	})
 
-	t.Run("IsSemiDomain", func(t *testing.T) {
+	t.Run("IsDomain", func(t *testing.T) {
 		t.Parallel()
-		require.True(t, q.IsSemiDomain(), "rationals should be a semi-domain")
+		require.True(t, q.IsDomain(), "rationals should be a domain")
 	})
 
 	t.Run("ElementSize", func(t *testing.T) {

@@ -155,7 +155,7 @@ func TestZMod_Rsh_Property(t *testing.T) {
 
 func TestZMod_EuclideanDiv_Property(t *testing.T) {
 	t.Parallel()
-	// Use a prime modulus so EuclideanDiv works (requires IsSemiDomain)
+	// Use a prime modulus so EuclideanDiv works (requires IsDomain)
 	primeModulus, err := num.NPlus().FromUint64(65537) // Fermat prime F4
 	require.NoError(t, err)
 	g := UintGeneratorGivenModulus(t, primeModulus)

@@ -60,8 +60,8 @@ func (*Integers) One() *Int {
 	return &Int{v: numct.IntOne()}
 }
 
-// IsSemiDomain returns true, indicating that the integers form a semi-domain (no zero divisors).
-func (*Integers) IsSemiDomain() bool {
+// IsDomain returns true, indicating that the integers form a domain (no zero divisors).
+func (*Integers) IsDomain() bool {
 	return true
 }
 

@@ -420,7 +420,10 @@ func VectorSpace[
 	return UnionAlongSecond(t, module, field)
 }
 
-func NumericStructure[S algebra.NumericStructure[E], E interface {
+func NumericStructure[S interface {
+	Structure
+	algebra.NumericStructure[E]
+}, E interface {
 	algebra.Numeric
 	base.Equatable[E]
 }](

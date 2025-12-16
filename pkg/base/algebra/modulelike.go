@@ -58,16 +58,20 @@ type (
 	] = crtp.PolynomialLike[P, S, C]
 
 	UnivariatePolynomialLikeStructure[
-		P crtp.UnivariatePolynomialLike[P, S, C],
+		P crtp.UnivariatePolynomialLike[P, S, C, SS, CS],
 		S crtp.RingElement[S],
 		C crtp.GroupElement[C],
+		SS crtp.Structure[SS],
+		CS crtp.Structure[CS],
 	] = crtp.UnivariatePolynomialLikeStructure[P, S, C]
 
 	UnivariatePolynomialLike[
-		P crtp.UnivariatePolynomialLike[P, S, C],
+		P crtp.UnivariatePolynomialLike[P, S, C, SS, CS],
 		S crtp.RingElement[S],
 		C crtp.GroupElement[C],
-	] = crtp.UnivariatePolynomialLike[P, S, C]
+		SS crtp.Structure[SS],
+		CS crtp.Structure[CS],
+	] = crtp.UnivariatePolynomialLike[P, S, C, SS, CS]
 
 	PolynomialModule[
 		MP crtp.ModuleValuedPolynomial[MP, P, C, S],

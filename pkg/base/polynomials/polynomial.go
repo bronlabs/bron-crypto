@@ -15,6 +15,9 @@ func _[RE algebra.RingElement[RE]]() {
 	var (
 		_ algebra.Ring[*Polynomial[RE]]        = (*PolynomialRing[RE])(nil)
 		_ algebra.RingElement[*Polynomial[RE]] = (*Polynomial[RE])(nil)
+
+		// _ algebra.PolynomialRing[*Polynomial[RE], RE] = (*PolynomialRing[RE])(nil)
+		// _ algebra.Polynomial[*Polynomial[RE], RE]     = (*Polynomial[RE])(nil)
 	)
 }
 
@@ -113,8 +116,8 @@ func (r *PolynomialRing[RE]) Zero() *Polynomial[RE] {
 	}
 }
 
-func (r *PolynomialRing[RE]) IsSemiDomain() bool {
-	return r.ring.IsSemiDomain()
+func (r *PolynomialRing[RE]) IsDomain() bool {
+	return r.ring.IsDomain()
 }
 
 func NewPolynomialRing[RE algebra.RingElement[RE]](ring FiniteRing[RE]) (*PolynomialRing[RE], error) {

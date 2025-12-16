@@ -15,8 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-type PrimeSamplable[E algebra.UniqueFactorizationMonoidElement[E]] interface {
-	algebra.UniqueFactorizationMonoid[E]
+type PrimeSamplable[E algebra.NatPlusLike[E]] interface {
 	FromBig(*big.Int) (E, error)
 }
 
@@ -43,7 +42,7 @@ func MillerRabinChecks(bits uint) int {
 	panic("millerRabinIterations is not properly initialized")
 }
 
-func GenerateSafePrime[N algebra.UniqueFactorizationMonoidElement[N]](set PrimeSamplable[N], bits uint) (N, error) {
+func GenerateSafePrime[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uint) (N, error) {
 	if bits < 3 {
 		return *new(N), errs.NewFailed("safe prime size must be at least 3-bits")
 	}
@@ -71,7 +70,7 @@ func GenerateSafePrime[N algebra.UniqueFactorizationMonoidElement[N]](set PrimeS
 	return n, nil
 }
 
-func GenerateSafePrimePair[N algebra.UniqueFactorizationMonoidElement[N]](set PrimeSamplable[N], bits uint) (p, q N, err error) {
+func GenerateSafePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uint) (p, q N, err error) {
 	g := errgroup.Group{}
 	for {
 		g.Go(func() error {
@@ -97,7 +96,7 @@ func GenerateSafePrimePair[N algebra.UniqueFactorizationMonoidElement[N]](set Pr
 	}
 }
 
-func GeneratePrimePair[N algebra.UniqueFactorizationMonoidElement[N]](set PrimeSamplable[N], bits uint, prng io.Reader) (p, q N, err error) {
+func GeneratePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uint, prng io.Reader) (p, q N, err error) {
 	if set == nil {
 		return *new(N), *new(N), errs.NewFailed("nil structure")
 	}

@@ -25,7 +25,7 @@ type PrimeFieldElementWrapperPtrConstraint[FP fieldsImpl.PrimeFieldElement[FP], 
 
 type PrimeFieldTrait[FP fieldsImpl.PrimeFieldElement[FP], WP PrimeFieldElementWrapperPtrConstraint[FP, W], W any] struct{}
 
-func (f *PrimeFieldTrait[FP, WP, W]) IsSemiDomain() bool {
+func (f *PrimeFieldTrait[FP, WP, W]) IsDomain() bool {
 	return true
 }
 

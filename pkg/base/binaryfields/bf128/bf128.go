@@ -102,7 +102,7 @@ func (f *Field) Zero() *FieldElement {
 	return &FieldElement{0, 0}
 }
 
-func (f *Field) IsSemiDomain() bool {
+func (f *Field) IsDomain() bool {
 	return true
 }
 
