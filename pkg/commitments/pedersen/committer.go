@@ -7,10 +7,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
+// Committer produces Pedersen commitments using the provided key.
 type Committer[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
 	key *Key[E, S]
 }
 
+// Commit samples fresh randomness and commits to a message, returning the commitment and witness.
 func (c *Committer[E, S]) Commit(message *Message[S], prng io.Reader) (*Commitment[E, S], *Witness[S], error) {
 	if prng == nil {
 		return nil, nil, errs.NewArgument("prng cannot be nil")
@@ -33,6 +35,7 @@ func (c *Committer[E, S]) Commit(message *Message[S], prng io.Reader) (*Commitme
 	return com, witness, nil
 }
 
+// CommitWithWitness commits to a message using caller-supplied witness randomness.
 func (c *Committer[E, S]) CommitWithWitness(message *Message[S], witness *Witness[S]) (*Commitment[E, S], error) {
 	if message == nil {
 		return nil, errs.NewIsNil("message cannot be nil")

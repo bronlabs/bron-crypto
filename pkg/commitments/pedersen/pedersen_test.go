@@ -390,11 +390,10 @@ func TestHomomorphicProperties(t *testing.T) {
 
 		// Multiply message and witness by scalar
 		mScaled := pedersen.NewMessage(field.FromUint64(30)) // 10 * 3
-		wScaled := &pedersen.Witness[*k256.Scalar]{}         // Can't directly multiply witness by scalar due to internal field
 		// We need to compute w * 3
 		wValue := w.Value()
 		wScaledValue := wValue.Mul(scalar.Value())
-		wScaled, err = pedersen.NewWitness(wScaledValue)
+		wScaled, err := pedersen.NewWitness(wScaledValue)
 		require.NoError(t, err)
 
 		// Verify that scalar * C(m) = C(scalar * m) with witness scalar * w
