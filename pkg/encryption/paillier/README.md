@@ -117,7 +117,7 @@ ctNew, nonce, _ := ct.ReRandomise(pk, rand.Reader)
 
 ### Self-Encryption (CRT Optimization)
 
-When encrypting to your own key, use `SelfEncrypter` for ~4x speedup via CRT:
+When encrypting to your own key, use `SelfEncrypter` for ~3x speedup via CRT:
 
 ```go
 se, _ := scheme.SelfEncrypter(sk)
