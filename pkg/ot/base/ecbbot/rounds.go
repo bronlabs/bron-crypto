@@ -15,6 +15,7 @@ const (
 	TagLength            = 16
 )
 
+// Round1 runs the sender's first round: sample a, send key agreement message.
 func (s *Sender[G, S]) Round1() (r1out *Round1P2P[G, S], err error) {
 	// Validation
 	if s.round != 1 {
@@ -43,6 +44,7 @@ func (s *Sender[G, S]) Round1() (r1out *Round1P2P[G, S], err error) {
 	return r1out, nil
 }
 
+// Round2 completes key agreement per choice bit, programs POPF, and returns receiver output.
 func (r *Receiver[G, S]) Round2(r1out *Round1P2P[G, S], choices []byte) (r2out *Round2P2P[G, S], receiverOut *ReceiverOutput[S], err error) {
 	// Validation
 	if r.round != 2 {
@@ -96,6 +98,7 @@ func (r *Receiver[G, S]) Round2(r1out *Round1P2P[G, S], choices []byte) (r2out *
 	return r2out, receiverOut, nil
 }
 
+// Round3 evaluates the programmed POPF and derives sender outputs for both branches.
 func (s *Sender[G, S]) Round3(r2out *Round2P2P[G, S]) (senderOut *SenderOutput[S], err error) {
 	// Validation
 	if s.round != 3 {

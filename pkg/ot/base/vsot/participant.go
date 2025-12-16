@@ -35,6 +35,7 @@ func (p *participant[P, B, S]) hash(idx int, b, a P, data []byte) ([]byte, error
 	return digest, nil
 }
 
+// Sender drives the VSOT sender state machine.
 type Sender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	participant[P, B, S]
 
@@ -49,6 +50,7 @@ type senderState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.P
 	rho0DigestDigest [][]byte
 }
 
+// NewSender creates a VSOT sender bound to the session, suite, transcript, and randomness source.
 func NewSender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Sender[P, B, S], error) {
 	if suite == nil || tape == nil || prng == nil {
 		return nil, errs.NewValidation("invalid args")
@@ -68,6 +70,7 @@ func NewSender[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Pri
 	return s, nil
 }
 
+// Receiver drives the VSOT receiver state machine.
 type Receiver[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	participant[P, B, S]
 
@@ -84,6 +87,7 @@ type receiverState[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra
 	xi             [][]byte
 }
 
+// NewReceiver creates a VSOT receiver bound to the session, suite, transcript, and randomness source.
 func NewReceiver[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Receiver[P, B, S], error) {
 	if suite == nil || tape == nil || prng == nil {
 		return nil, errs.NewValidation("invalid args")

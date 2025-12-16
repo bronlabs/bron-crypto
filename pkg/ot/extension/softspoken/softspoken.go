@@ -9,6 +9,7 @@ import (
 )
 
 const (
+	// Kappa is the computational security parameter and number of seed OTs.
 	Kappa = base.ComputationalSecurityBits
 	// Sigma should really be StatisticalSecurity but since we need (Xi * L) to be a multiple of Sigma,
 	// we can just use base.ComputationalSecurity which is bigger anyway.
@@ -22,6 +23,7 @@ type Suite struct {
 	hashFunc func() hash.Hash
 }
 
+// NewSuite configures SoftSpokenOT for batch size xi, block length l, and hash function.
 func NewSuite(xi, l int, hashFunc func() hash.Hash) (*Suite, error) {
 	defaultSuite, err := ot.NewDefaultSuite(xi, l)
 	if err != nil {
@@ -38,10 +40,12 @@ func NewSuite(xi, l int, hashFunc func() hash.Hash) (*Suite, error) {
 	return s, nil
 }
 
+// SenderOutput holds the sender's SoftSpoken outputs.
 type SenderOutput struct {
 	ot.SenderOutput[[]byte]
 }
 
+// InferredMessageBytesLen infers the message byte length, returning 0 on inconsistency.
 func (so *SenderOutput) InferredMessageBytesLen() int {
 	if len(so.Messages) == 0 {
 		return 0
@@ -69,6 +73,7 @@ type ReceiverOutput struct {
 	ot.ReceiverOutput[[]byte]
 }
 
+// InferredMessageBytesLen infers the message byte length, returning 0 on inconsistency.
 func (ro *ReceiverOutput) InferredMessageBytesLen() int {
 	if len(ro.Messages) == 0 {
 		return 0

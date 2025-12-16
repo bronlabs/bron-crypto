@@ -9,10 +9,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
+// SenderOutput carries the sender's ROT outputs for VSOT.
 type SenderOutput struct {
 	ot.SenderOutput[[]byte] `cbor:"output"`
 }
 
+// InferredMessageBytesLen infers the byte length of messages, returning 0 on inconsistency.
 func (so *SenderOutput) InferredMessageBytesLen() int {
 	if len(so.Messages) == 0 {
 		return 0
@@ -40,6 +42,7 @@ type ReceiverOutput struct {
 	ot.ReceiverOutput[[]byte] `cbor:"output"`
 }
 
+// InferredMessageBytesLen infers the byte length of messages, returning 0 on inconsistency.
 func (ro *ReceiverOutput) InferredMessageBytesLen() int {
 	if len(ro.Messages) == 0 {
 		return 0
@@ -66,6 +69,7 @@ type Suite[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFi
 	hashFunc func() hash.Hash
 }
 
+// NewSuite configures VSOT over the given curve with batch size xi and block length l.
 func NewSuite[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](xi, l int, curve curves.Curve[P, B, S], hashFunc func() hash.Hash) (*Suite[P, B, S], error) {
 	if hashFunc == nil {
 		return nil, errs.NewValidation("invalid hash func")
@@ -92,14 +96,17 @@ func NewSuite[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.Prim
 	return s, nil
 }
 
+// Curve returns the curve used by the suite.
 func (s *Suite[P, B, S]) Curve() curves.Curve[P, B, S] {
 	return s.curve
 }
 
+// Field returns the prime field used for scalars.
 func (s *Suite[P, B, S]) Field() algebra.PrimeField[S] {
 	return s.field
 }
 
+// HashFunc returns the hash function used in the protocol.
 func (s *Suite[P, B, S]) HashFunc() func() hash.Hash {
 	return s.hashFunc
 }

@@ -86,6 +86,7 @@ func (pb PackedBits) Repeat(nRepetitions int) PackedBits {
 	return vOut
 }
 
+// BitLen returns the number of bits represented by the packed slice.
 func (pb PackedBits) BitLen() int {
 	return len(pb) * 8
 }
@@ -132,6 +133,7 @@ func TransposePackedBits(inputMatrix [][]byte) ([][]byte, error) {
 	return transposedMatrix, nil
 }
 
+// Parse converts a binary string into PackedBits.
 func Parse(v string) (PackedBits, error) {
 	if v == "" {
 		return nil, errs.NewArgument("Input string cannot be empty")

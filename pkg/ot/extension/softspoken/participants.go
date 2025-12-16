@@ -30,18 +30,21 @@ type participant struct {
 	prng      io.Reader
 }
 
+// Sender drives the SoftSpoken sender state machine.
 type Sender struct {
 	participant
 
 	receiverSeeds *vsot.ReceiverOutput
 }
 
+// Receiver drives the SoftSpoken receiver state machine.
 type Receiver struct {
 	participant
 
 	senderSeeds *vsot.SenderOutput
 }
 
+// NewSender constructs a SoftSpoken sender with VSOT seed outputs.
 func NewSender(sessionId network.SID, receiverSeeds *vsot.ReceiverOutput, suite *Suite, tape transcripts.Transcript, prng io.Reader) (*Sender, error) {
 	if receiverSeeds == nil || prng == nil {
 		return nil, errs.NewValidation("invalid args")
@@ -65,6 +68,7 @@ func NewSender(sessionId network.SID, receiverSeeds *vsot.ReceiverOutput, suite 
 	return s, nil
 }
 
+// NewReceiver constructs a SoftSpoken receiver with VSOT seed outputs.
 func NewReceiver(sessionId network.SID, senderSeeds *vsot.SenderOutput, suite *Suite, tape transcripts.Transcript, prng io.Reader) (*Receiver, error) {
 	if senderSeeds == nil || prng == nil {
 		return nil, errs.NewValidation("invalid args")
@@ -96,6 +100,7 @@ func (p *participant) hash(j, l int, data ...[]byte) ([]byte, error) {
 	return hashing.Hash(p.suite.hashFunc, preimage)
 }
 
+// expand derives pseudorandom output from a seed message and choice bit.
 func (p *participant) expand(outputLen, idx int, message []byte, choice int) ([]byte, error) {
 	xof, err := blake2b.NewXOF(blake2b.OutputLengthUnknown, p.sessionId[:])
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
+// Round1 expands receiver seeds, applies choice mask x, and returns masked values and output.
 func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 	if r.round != 1 {
 		return nil, nil, errs.NewRound("Running round %d but participant expected round %d", 1, r.round)
@@ -103,6 +104,7 @@ func (r *Receiver) Round1(x []byte) (*Round1P2P, *ReceiverOutput, error) {
 }
 
 // Round2 uses the PRG to extend the baseOT results and verifies their consistency.
+// Round2 derives sender outputs from seeds and receiver challenge, then checks consistency.
 func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 	// Validation
 	if s.round != 2 {

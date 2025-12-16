@@ -11,6 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 )
 
+// Round1 samples sender secret b, computes B = bG, proves knowledge of b, and sends (B, proof).
 func (s *Sender[P, B, S]) Round1() (*Round1P2P[P, B, S], error) {
 	var err error
 	if s.round != 1 {
@@ -57,6 +58,7 @@ func (s *Sender[P, B, S]) Round1() (*Round1P2P[P, B, S], error) {
 	return r1, nil
 }
 
+// Round2 verifies the sender's proof, encodes receiver choices, and computes A values and receiver seeds.
 func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Round2P2P[P, B, S], *ReceiverOutput, error) {
 	if r.round != 2 {
 		return nil, nil, errs.NewValidation("invalid round")
@@ -129,6 +131,7 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 	return r2, receiverOutput, nil
 }
 
+// Round3 derives sender seeds rho0/rho1 and commits to them with digests and XOR masks.
 func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P, *SenderOutput, error) {
 	var err error
 	if s.round != 3 {
@@ -197,6 +200,7 @@ func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P, *SenderOut
 	return r3, senderOutput, nil
 }
 
+// Round4 unblinds the masked digest corresponding to each receiver choice and returns rhoPrime values.
 func (r *Receiver[P, B, S]) Round4(r3 *Round3P2P) (*Round4P2P, error) {
 	var err error
 	if r.round != 4 {
@@ -236,6 +240,7 @@ func (r *Receiver[P, B, S]) Round4(r3 *Round3P2P) (*Round4P2P, error) {
 	return r4, nil
 }
 
+// Round5 checks rhoPrime against sender commitments and returns digest openings.
 func (s *Sender[P, B, S]) Round5(r4 *Round4P2P) (*Round5P2P, error) {
 	if s.round != 5 {
 		return nil, errs.NewValidation("invalid round")
@@ -265,6 +270,7 @@ func (s *Sender[P, B, S]) Round5(r4 *Round4P2P) (*Round5P2P, error) {
 	return r5, nil
 }
 
+// Round6 verifies the sender's openings against the receiver's choice and internal hashes.
 func (r *Receiver[P, B, S]) Round6(r5 *Round5P2P) error {
 	if r.round != 6 {
 		return errs.NewValidation("invalid round")
