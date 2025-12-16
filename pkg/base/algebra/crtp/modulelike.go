@@ -108,10 +108,7 @@ type AlgebraElement[AE, S any] interface {
 
 // ******************* Polynomials.
 
-type PolynomialLikeStructure[P, S, C any] interface {
-	Module[P, S]
-	CoefficientStructure() Structure[C]
-}
+type PolynomialLikeStructure[P, S, C any] Module[P, S]
 
 type PolynomialLike[P, S, C any] interface {
 	ModuleElement[P, S]
@@ -121,10 +118,6 @@ type PolynomialLike[P, S, C any] interface {
 	IsMonic() bool
 	Derivative() P
 	Degree() int
-	// TODO: this one as well
-	ScalarStructure() Structure[S]
-	// TODO: remove this from here and move it to PolynomialRing and ModuleValuedPolynomial and change type
-	CoefficientStructure() Structure[C]
 }
 
 type UnivariatePolynomialLikeStructure[P, S, C any] interface {
@@ -132,11 +125,14 @@ type UnivariatePolynomialLikeStructure[P, S, C any] interface {
 	New(...C) (P, error)
 }
 
-type UnivariatePolynomialLike[P, S, C any] interface {
+type UnivariatePolynomialLike[P, S, C, SS, CS any] interface {
 	PolynomialLike[P, S, C]
 	Coefficients() []C
 	LeadingCoefficient() C
 	Eval(S) C
+
+	ScalarStructure() SS
+	CoefficientStructure() CS
 }
 
 type PolynomialModule[MP, P, C, S any] interface {
@@ -145,7 +141,7 @@ type PolynomialModule[MP, P, C, S any] interface {
 }
 
 type ModuleValuedPolynomial[MP, P, C, S any] interface {
-	UnivariatePolynomialLike[MP, S, C]
+	UnivariatePolynomialLike[MP, S, C, Ring[S], Module[C, S]]
 	PolynomialOp(P) MP
 }
 
@@ -159,7 +155,7 @@ type PolynomialRing[P, S any] interface {
 }
 
 type Polynomial[P, S any] interface {
-	UnivariatePolynomialLike[P, S, S]
+	UnivariatePolynomialLike[P, S, S, Ring[S], Ring[S]]
 	AlgebraElement[P, S]
 	AdditiveModuleElement[P, S]
 	EuclideanDomainElement[P]
@@ -168,6 +164,7 @@ type Polynomial[P, S any] interface {
 type MultivariatePolynomialRing[PP, P, S any] interface {
 	PolynomialLikeStructure[PP, S, S]
 	TensorProduct[PP, P, S]
+	CoefficientStructure() Structure[S]
 }
 
 type MultivariatePolynomial[PP, P, S any] interface {

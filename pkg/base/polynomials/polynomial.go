@@ -15,6 +15,9 @@ func _[RE algebra.RingElement[RE]]() {
 	var (
 		_ algebra.Ring[*Polynomial[RE]]        = (*PolynomialRing[RE])(nil)
 		_ algebra.RingElement[*Polynomial[RE]] = (*Polynomial[RE])(nil)
+
+		// _ algebra.PolynomialRing[*Polynomial[RE], RE] = (*PolynomialRing[RE])(nil)
+		// _ algebra.Polynomial[*Polynomial[RE], RE]     = (*Polynomial[RE])(nil)
 	)
 }
 
