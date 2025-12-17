@@ -268,6 +268,23 @@ func (s *Scheme[P, B, S]) CipherSuite() *CipherSuite {
 	return s.cipherSuite
 }
 
+// Keygen creates a key generator for this HPKE scheme.
+// The key generator produces key pairs compatible with the scheme's KEM algorithm.
+// Key generation follows RFC 9180 Section 4, using DeriveKeyPair with random IKM.
+//
+// See: https://www.rfc-editor.org/rfc/rfc9180.html#section-4
+func (s *Scheme[P, B, S]) Keygen(opts ...KeyGeneratorOption[P, B, S]) (*KeyGenerator[P, B, S], error) {
+	kg := &KeyGenerator[P, B, S]{
+		dhkem: s.dhkem,
+	}
+	for _, opt := range opts {
+		if err := opt(kg); err != nil {
+			return nil, errs2.Wrap(err)
+		}
+	}
+	return kg, nil
+}
+
 // Encrypter creates an HPKE encrypter that can seal messages to a recipient's public key.
 // The encrypter establishes a fresh sender context for each encryption, unless caching
 // is enabled via EncryptingWhileCachingRecentContextualInfo.

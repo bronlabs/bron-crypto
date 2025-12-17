@@ -36,6 +36,13 @@ func (sk *PrivateKey[S]) Bytes() []byte {
 	return out
 }
 
+func (sk *PrivateKey[S]) Equal(other *PrivateKey[S]) bool {
+	if sk == nil || other == nil {
+		return sk == other
+	}
+	return sk.ExtendedPrivateKey.Equal(&other.ExtendedPrivateKey)
+}
+
 func (pk *PublicKey[P, B, S]) Bytes() []byte {
 	out, err := dhc.SerialisePublicKey(&pk.PublicKey)
 	if err != nil {

@@ -43,7 +43,15 @@ HPKE supports four modes with different authentication properties:
 
 ## Usage
 
-### Creating a Cipher Suite and Scheme
+This package provides two APIs:
+
+1. **High-Level API** (`Scheme.Encrypter`/`Scheme.Decrypter`): Simpler interface for common use cases. Good for single-message encryption where you don't need fine-grained control over contexts.
+
+2. **RFC 9180 API** (`SetupBaseS`/`SetupBaseR`, etc.): Direct implementation of the RFC specification. Provides access to sender/receiver contexts for multi-message encryption, secret export, and full control over the HPKE flow.
+
+### Setup
+
+Both APIs require a cipher suite and scheme:
 
 ```go
 import (
@@ -64,20 +72,105 @@ curve := p256.NewCurve()
 scheme, _ := hpke.NewScheme(curve, suite)
 ```
 
+### Key Generation
+
+Generate key pairs using the scheme's key generator:
+
+```go
+kg, _ := scheme.Keygen()
+
+// Generate random key pair
+sk, pk, _ := kg.Generate(rand.Reader)
+
+// Or derive deterministically from seed (at least 32 bytes)
+seed := make([]byte, 32)
+rand.Read(seed)
+sk, pk, _ := kg.GenerateWithSeed(seed)
+```
+
+---
+
+## High-Level API
+
+The high-level API provides `Encrypter` and `Decrypter` types that handle context management internally. Use this when you need simple encrypt/decrypt operations.
+
 ### Base Mode (No Authentication)
 
 ```go
-// Sender: encrypt to receiver's public key
+// Create encrypter
+encrypter, _ := scheme.Encrypter()
+
+// Encrypt
+ciphertext, capsule, _ := encrypter.Encrypt(plaintext, receiverPk, rand.Reader)
+
+// Create decrypter
+decrypter, _ := scheme.Decrypter(receiverSk,
+    hpke.DecryptingWithCapsule(capsule),
+)
+
+// Decrypt
+plaintext, _ := decrypter.Decrypt(ciphertext)
+```
+
+### Auth Mode (Asymmetric Key Authentication)
+
+```go
+// Create encrypter with sender authentication
+encrypter, _ := scheme.Encrypter(
+    hpke.EncryptingWithAuthentication(senderSk),
+)
+
+ciphertext, capsule, _ := encrypter.Encrypt(plaintext, receiverPk, rand.Reader)
+
+// Create decrypter that verifies sender
+decrypter, _ := scheme.Decrypter(receiverSk,
+    hpke.DecryptingWithCapsule(capsule),
+    hpke.DecryptingWithAuthentication(senderPk),
+)
+
+plaintext, _ := decrypter.Decrypt(ciphertext)
+```
+
+### With Application Info
+
+Bind application-specific context to the encryption:
+
+```go
+info := []byte("my-application-context")
+
+encrypter, _ := scheme.Encrypter(
+    hpke.EncryptingWithApplicationInfo(info),
+)
+
+decrypter, _ := scheme.Decrypter(receiverSk,
+    hpke.DecryptingWithCapsule(capsule),
+    hpke.DecryptingWithApplicationInfo(info), // Must match sender
+)
+```
+
+---
+
+## RFC 9180 API
+
+The RFC API provides direct access to sender and receiver contexts as defined in the specification. Use this when you need:
+- Multi-message encryption with a single context
+- Secret export functionality
+- Fine-grained control over the HPKE flow
+
+### Base Mode
+
+```go
+// Sender: establish context and encrypt
 senderCtx, _ := hpke.SetupBaseS(suite, receiverPk, info, rand.Reader)
 ciphertext, _ := senderCtx.Seal(plaintext, aad)
 capsule := senderCtx.Capsule // Send capsule + ciphertext to receiver
 
-// Receiver: decrypt using private key and capsule
+// Receiver: establish context and decrypt
 receiverCtx, _ := hpke.SetupBaseR(suite, receiverSk, capsule, info)
 plaintext, _ := receiverCtx.Open(ciphertext, aad)
 ```
 
-### PSK Mode (Pre-Shared Key Authentication)
+### PSK Mode
 
 ```go
 psk := make([]byte, 32) // At least 32 bytes of entropy
@@ -93,19 +186,19 @@ receiverCtx, _ := hpke.SetupPSKR(suite, receiverSk, capsule, psk, pskId, info)
 plaintext, _ := receiverCtx.Open(ciphertext, aad)
 ```
 
-### Auth Mode (Asymmetric Key Authentication)
+### Auth Mode
 
 ```go
 // Sender uses their private key for authentication
 senderCtx, _ := hpke.SetupAuthS(suite, receiverPk, senderSk, info, rand.Reader)
 ciphertext, _ := senderCtx.Seal(plaintext, aad)
 
-// Receiver verifies sender's identity using sender's public key
+// Receiver verifies sender's identity
 receiverCtx, _ := hpke.SetupAuthR(suite, receiverSk, capsule, senderPk, info)
 plaintext, _ := receiverCtx.Open(ciphertext, aad)
 ```
 
-### AuthPSK Mode (Combined Authentication)
+### AuthPSK Mode
 
 ```go
 // Sender: authenticated with both private key and PSK
@@ -149,30 +242,9 @@ receiverSecret, _ := receiverCtx.Export(exporterContext, length)
 // senderSecret == receiverSecret
 ```
 
-### High-Level Encrypter/Decrypter API
+---
 
-For simpler use cases:
-
-```go
-// Create encrypter with options
-encrypter, _ := scheme.Encrypter(
-    hpke.EncryptingWithApplicationInfo(info),
-    hpke.EncryptingWithAuthentication(senderSk), // For Auth mode
-)
-
-ciphertext, capsule, _ := encrypter.Encrypt(plaintext, receiverPk, rand.Reader)
-
-// Create decrypter
-decrypter, _ := scheme.Decrypter(receiverSk,
-    hpke.DecryptingWithCapsule(capsule),
-    hpke.DecryptingWithApplicationInfo(info),
-    hpke.DecryptingWithAuthentication(senderPk), // For Auth mode
-)
-
-plaintext, _ := decrypter.Decrypt(ciphertext)
-```
-
-### Using X25519 Instead of P-256
+## Using X25519 Instead of P-256
 
 ```go
 import "github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
@@ -192,13 +264,13 @@ scheme, _ := hpke.NewScheme(curve, suite)
 |------|----------|
 | `hpke.go` | `Scheme` type, type aliases, constants |
 | `rfc.go` | RFC 9180 Setup functions (`SetupBaseS`, `SetupBaseR`, etc.) |
-| `participants.go` | `Encrypter`, `Decrypter` and configuration options |
+| `participants.go` | `KeyGenerator`, `Encrypter`, `Decrypter` and configuration options |
 | `kem.go` | `KEM`, `DEM` for direct KEM operations |
 
 ## Security Notes
 
-- **PSK entropy**: Pre-shared keys MUST have at least 32 bytes of entropy
-- **Info binding**: The `info` parameter is cryptographically bound to the derived keys; mismatched `info` causes decryption failure
-- **Sequence ordering**: Messages must be decrypted in the same order they were encrypted
-- **Nonce uniqueness**: Each context maintains a sequence number to ensure unique nonces; never reuse a context after sequence overflow
-- **AAD handling**: Associated data is authenticated but not encrypted; provide identical AAD during decryption
+- **PSK entropy**: Pre-shared keys MUST have at least 32 bytes of entropy.
+- **Info binding**: The `info` parameter is cryptographically bound to the derived keys; mismatched `info` causes decryption failure.
+- **Sequence ordering**: Messages must be decrypted in the same order they were encrypted.
+- **Nonce uniqueness**: Each context maintains a sequence number to ensure unique nonces; never reuse a context after sequence overflow - if that ever happens.
+- **AAD handling**: Associated data is authenticated but not encrypted; provide identical AAD during decryption.

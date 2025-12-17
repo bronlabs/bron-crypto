@@ -8,7 +8,54 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
+	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke/internal"
 )
+
+// KeyGeneratorOption is a functional option for configuring the HPKE key generator.
+// Currently no options are defined as HPKE key generation is fully determined by the
+// cipher suite's KEM algorithm.
+type KeyGeneratorOption[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] = encryption.KeyGeneratorOption[*KeyGenerator[P, B, S], *PrivateKey[S], *PublicKey[P, B, S]]
+
+// KeyGenerator generates HPKE key pairs for the configured cipher suite.
+// Key generation follows the DeriveKeyPair algorithm defined in RFC 9180 Section 4,
+// which uses the KEM's KDF to derive keys from random input keying material (IKM).
+//
+// See: https://www.rfc-editor.org/rfc/rfc9180.html#section-4
+type KeyGenerator[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
+	dhkem *internal.DHKEMScheme[P, B, S]
+}
+
+// Generate creates a new HPKE key pair using randomness from prng.
+// The private key is derived using the KEM's DeriveKeyPair algorithm with random IKM.
+// The public key is the corresponding curve point pk = sk * G.
+//
+// See: https://www.rfc-editor.org/rfc/rfc9180.html#section-4
+func (kg *KeyGenerator[P, B, S]) Generate(prng io.Reader) (*PrivateKey[S], *PublicKey[P, B, S], error) {
+	if prng == nil {
+		return nil, nil, ErrInvalidArgument.WithStackFrame().WithMessage("prng is nil")
+	}
+	sk, pk, err := kg.dhkem.GenerateKeyPair(prng)
+	if err != nil {
+		return nil, nil, errs2.Wrap(err)
+	}
+	return sk, pk, nil
+}
+
+// GenerateWithSeed creates a new HPKE key pair deterministically from seed material.
+// The seed (IKM) SHOULD have at least Nsk bytes of entropy for the KEM algorithm.
+// This implements the DeriveKeyPair algorithm from RFC 9180 Section 4.
+//
+// See: https://www.rfc-editor.org/rfc/rfc9180.html#name-derivekeypair
+func (kg *KeyGenerator[P, B, S]) GenerateWithSeed(ikm []byte) (*PrivateKey[S], *PublicKey[P, B, S], error) {
+	if ikm == nil {
+		return nil, nil, ErrInvalidArgument.WithStackFrame().WithMessage("ikm is nil")
+	}
+	sk, pk, err := kg.dhkem.DeriveKeyPair(ikm)
+	if err != nil {
+		return nil, nil, errs2.Wrap(err)
+	}
+	return sk, pk, nil
+}
 
 // EncryptingWhileCachingRecentContextualInfo returns an option that enables caching
 // of the sender context after encryption. This allows the Export method to be called

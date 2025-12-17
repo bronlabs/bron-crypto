@@ -63,7 +63,7 @@ type HybridScheme[
 ] interface {
 	Scheme[SK, PK, M, C, U, KG, ENC, DEC]
 	KEM(...KEMOption[KM, PK, U]) (KM, error)
-	DEM(...DEMOption[DM, U]) (DM, error)
+	DEM(SK, ...DEMOption[DM, U]) (DM, error)
 }
 
 type AEADBasedHybridScheme[
