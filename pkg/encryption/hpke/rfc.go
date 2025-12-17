@@ -36,7 +36,11 @@ import (
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.1
 func SetupBaseS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
-	return errs2.Maybe1(internal.NewSenderContext(Base, suite, receiverPublicKey, nil, info, nil, nil, prng))
+	out, err := internal.NewSenderContext(Base, suite, receiverPublicKey, nil, info, nil, nil, prng)
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	return out, nil
 }
 
 // SetupBaseR establishes a decryption context for Base mode (mode_base = 0x00).
@@ -50,7 +54,11 @@ func SetupBaseS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alge
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.1
 func SetupBaseR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], info []byte) (*ReceiverContext[P, B, S], error) {
-	return errs2.Maybe1(internal.NewReceiverContext(Base, suite, receiverPrivatekey, ephemeralPublicKey, nil, info, nil, nil))
+	out, err := internal.NewReceiverContext(Base, suite, receiverPrivatekey, ephemeralPublicKey, nil, info, nil, nil)
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	return out, nil
 }
 
 // SetupPSKS establishes an encryption context for PSK mode (mode_psk = 0x01).
@@ -69,7 +77,11 @@ func SetupBaseR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alge
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.2
 func SetupPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], psk, pskId, info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
-	return errs2.Maybe1(internal.NewSenderContext(PSk, suite, receiverPublicKey, nil, info, psk, pskId, prng))
+	out, err := internal.NewSenderContext(PSk, suite, receiverPublicKey, nil, info, psk, pskId, prng)
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	return out, nil
 }
 
 // SealPSK encrypts a plaintext using a PSK-mode sender context.
@@ -77,7 +89,11 @@ func SetupPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2
 func SealPSK[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](ctx *SenderContext[P, B, S], additionalData, plaintext []byte) (ciphertext []byte, err error) {
-	return errs2.Maybe1(ctx.Seal(plaintext, additionalData))
+	out, err := ctx.Seal(plaintext, additionalData)
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	return out, nil
 }
 
 // SetupPSKR establishes a decryption context for PSK mode (mode_psk = 0x01).
@@ -93,7 +109,11 @@ func SealPSK[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.2
 func SetupPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], psk, pskId, info []byte) (*ReceiverContext[P, B, S], error) {
-	return errs2.Maybe1(internal.NewReceiverContext(PSk, suite, receiverPrivatekey, ephemeralPublicKey, nil, info, psk, pskId))
+	out, err := internal.NewReceiverContext(PSk, suite, receiverPrivatekey, ephemeralPublicKey, nil, info, psk, pskId)
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	return out, nil
 }
 
 // SetupAuthS establishes an encryption context for Auth mode (mode_auth = 0x02).
@@ -113,7 +133,11 @@ func SetupPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.3
 func SetupAuthS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
-	return errs2.Maybe1(internal.NewSenderContext(Auth, suite, receiverPublicKey, senderPrivateKey, info, nil, nil, prng))
+	out, err := internal.NewSenderContext(Auth, suite, receiverPublicKey, senderPrivateKey, info, nil, nil, prng)
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	return out, nil
 }
 
 // SetupAuthR establishes a decryption context for Auth mode (mode_auth = 0x02).
@@ -131,8 +155,12 @@ func SetupAuthS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alge
 //   - info: Application-supplied information (must match sender's)
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.3
-func SetupAuthR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], senderPublicKey *PublicKey[P, B, S], info []byte) (*ReceiverContext[P, B, S], error) {
-	return errs2.Maybe1(internal.NewReceiverContext(Auth, suite, receiverPrivatekey, ephemeralPublicKey, senderPublicKey, info, nil, nil))
+func SetupAuthR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey, senderPublicKey *PublicKey[P, B, S], info []byte) (*ReceiverContext[P, B, S], error) {
+	out, err := internal.NewReceiverContext(Auth, suite, receiverPrivatekey, ephemeralPublicKey, senderPublicKey, info, nil, nil)
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	return out, nil
 }
 
 // SetupAuthPSKS establishes an encryption context for AuthPSK mode (mode_auth_psk = 0x03).
@@ -153,7 +181,11 @@ func SetupAuthR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alge
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4
 func SetupAuthPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], psk, pskId, info []byte, prng io.Reader) (sender *SenderContext[P, B, S], err error) {
-	return errs2.Maybe1(internal.NewSenderContext(AuthPSk, suite, receiverPublicKey, senderPrivateKey, info, psk, pskId, prng))
+	out, err := internal.NewSenderContext(AuthPSk, suite, receiverPublicKey, senderPrivateKey, info, psk, pskId, prng)
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	return out, nil
 }
 
 // SetupAuthPSKR establishes a decryption context for AuthPSK mode (mode_auth_psk = 0x03).
@@ -172,6 +204,10 @@ func SetupAuthPSKS[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S a
 //   - info: Application-supplied information (must match sender's)
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-5.1.4
-func SetupAuthPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey *PublicKey[P, B, S], senderPublicKey *PublicKey[P, B, S], psk, pskId, info []byte) (*ReceiverContext[P, B, S], error) {
-	return errs2.Maybe1(internal.NewReceiverContext(AuthPSk, suite, receiverPrivatekey, ephemeralPublicKey, senderPublicKey, info, psk, pskId))
+func SetupAuthPSKR[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey, senderPublicKey *PublicKey[P, B, S], psk, pskId, info []byte) (*ReceiverContext[P, B, S], error) {
+	out, err := internal.NewReceiverContext(AuthPSk, suite, receiverPrivatekey, ephemeralPublicKey, senderPublicKey, info, psk, pskId)
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	return out, nil
 }

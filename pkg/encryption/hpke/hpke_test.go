@@ -4,6 +4,8 @@ import (
 	crand "crypto/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
@@ -11,7 +13,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke/internal"
-	"github.com/stretchr/testify/require"
 )
 
 // Helper to generate key pairs
@@ -32,11 +33,12 @@ func TestHPKE_BaseMode_Roundtrip(t *testing.T) {
 
 	testCases := []struct {
 		name        string
-		setupScheme func(t *testing.T) (interface{}, *hpke.CipherSuite)
+		setupScheme func(t *testing.T) (any, *hpke.CipherSuite)
 	}{
 		{
 			name: "P256_AES128GCM_SHA256",
-			setupScheme: func(t *testing.T) (interface{}, *hpke.CipherSuite) {
+			setupScheme: func(t *testing.T) (any, *hpke.CipherSuite) {
+				t.Helper()
 				curve := p256.NewCurve()
 				suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
 				require.NoError(t, err)
@@ -47,7 +49,8 @@ func TestHPKE_BaseMode_Roundtrip(t *testing.T) {
 		},
 		{
 			name: "X25519_ChaCha20Poly1305_SHA256",
-			setupScheme: func(t *testing.T) (interface{}, *hpke.CipherSuite) {
+			setupScheme: func(t *testing.T) (any, *hpke.CipherSuite) {
+				t.Helper()
 				curve := curve25519.NewPrimeSubGroup()
 				suite, err := hpke.NewCipherSuite(hpke.DHKEM_X25519_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_CHACHA_20_POLY_1305)
 				require.NoError(t, err)

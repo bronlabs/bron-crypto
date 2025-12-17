@@ -65,7 +65,7 @@ func (pts *PlaintextSpace) Sample(lowInclusive, highExclusive *Plaintext, prng i
 			n: pts.N(),
 		}, nil
 	}
-	return nil, ErrInvalidRange.WithStackFrame().WithMessage("must either be closed or open interval sampling")
+	return nil, ErrInvalidRange.WithMessage("must either be closed or open interval sampling")
 }
 
 // Contains returns true if the plaintext belongs to this plaintext space.
@@ -108,7 +108,7 @@ func (pts *PlaintextSpace) FromInt(x *numct.Int) (*Plaintext, error) {
 		return nil, errs2.Wrap(err)
 	}
 	if !y.IsInRangeSymmetric(pts.N()) {
-		return nil, ErrInvalidRange.WithStackFrame().WithMessage("int is out of range for plaintext space")
+		return nil, ErrInvalidRange.WithMessage("int is out of range for plaintext space")
 	}
 	return &Plaintext{
 		v: y,

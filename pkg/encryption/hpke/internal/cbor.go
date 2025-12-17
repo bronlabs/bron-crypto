@@ -69,22 +69,22 @@ func (cs *CipherSuite) UnmarshalCBOR(data []byte) error {
 		return errs2.Wrap(err)
 	}
 	if dto.KDF == KDF_HKDF_RESERVED {
-		return ErrNotSupported.WithMessage("invalid cipher suite: reserved KDF").WithStackFrame()
+		return ErrNotSupported.WithMessage("invalid cipher suite: reserved KDF")
 	}
 	if dto.KDF != KDF_HKDF_SHA256 && dto.KDF != KDF_HKDF_SHA512 {
-		return ErrNotSupported.WithMessage("invalid cipher suite: unknown KDF").WithStackFrame()
+		return ErrNotSupported.WithMessage("invalid cipher suite: unknown KDF")
 	}
 	if dto.KEM == DHKEM_RESERVED {
-		return ErrNotSupported.WithMessage("invalid cipher suite: reserved KEM").WithStackFrame()
+		return ErrNotSupported.WithMessage("invalid cipher suite: reserved KEM")
 	}
 	if dto.KEM != DHKEM_P256_HKDF_SHA256 && dto.KEM != DHKEM_X25519_HKDF_SHA256 {
-		return ErrNotSupported.WithMessage("invalid cipher suite: unknown KEM").WithStackFrame()
+		return ErrNotSupported.WithMessage("invalid cipher suite: unknown KEM")
 	}
 	if dto.AEAD == AEAD_RESERVED {
-		return ErrNotSupported.WithMessage("invalid cipher suite: reserved AEAD").WithStackFrame()
+		return ErrNotSupported.WithMessage("invalid cipher suite: reserved AEAD")
 	}
 	if dto.AEAD != AEAD_AES_128_GCM && dto.AEAD != AEAD_AES_256_GCM && dto.AEAD != AEAD_CHACHA_20_POLY_1305 && dto.AEAD != AEAD_EXPORT_ONLY {
-		return ErrNotSupported.WithMessage("invalid cipher suite: unknown AEAD").WithStackFrame()
+		return ErrNotSupported.WithMessage("invalid cipher suite: unknown AEAD")
 	}
 	cs.kdf = dto.KDF
 	cs.kem = dto.KEM

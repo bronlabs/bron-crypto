@@ -48,7 +48,7 @@ var (
 func NewAEAD(id AEADID) (*AEADScheme, error) {
 	aead, exists := aeads[id]
 	if !exists {
-		return nil, ErrNotSupported.WithMessage("AEAD with ID %d is not supported", id).WithStackFrame()
+		return nil, ErrNotSupported.WithMessage("AEAD with ID %d is not supported", id)
 	}
 	return aead, nil
 }
@@ -81,7 +81,7 @@ func NewAEADChaCha20Poly1305Scheme() *AEADScheme {
 // New accepts a key and returns the corresponding AEAD cipher to the type of the scheme, which can then Seal or Open.
 func (s *AEADScheme) New(key []byte) (cipher.AEAD, error) {
 	if len(key) != s.Nk() {
-		return nil, ErrInvalidLength.WithMessage("key length is %d whereas it should be %d", len(key), s.Nk()).WithStackFrame()
+		return nil, ErrInvalidLength.WithMessage("key length is %d whereas it should be %d", len(key), s.Nk())
 	}
 
 	if s.isAES() {

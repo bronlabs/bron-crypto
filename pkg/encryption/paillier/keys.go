@@ -16,7 +16,7 @@ func NewPrivateKey(group *znstar.PaillierGroupKnownOrder) (*PrivateKey, error) {
 		return nil, ErrInvalidArgument.WithStackFrame()
 	}
 
-	sk := &PrivateKey{
+	sk := &PrivateKey{ //nolint:exhaustruct // other fields initialised later
 		group: group,
 		hp:    numct.NewNat(0),
 		hq:    numct.NewNat(0),
@@ -43,7 +43,7 @@ func (sk *PrivateKey) precompute() {
 		sk.Arithmetic().P.Factor.ModNeg(sk.hp, sk.hp)
 		sk.Arithmetic().Q.Factor.ModInv(sk.hq, sk.Arithmetic().P.Factor.Nat())
 		sk.Arithmetic().Q.Factor.ModNeg(sk.hq, sk.hq)
-		sk.pk = &PublicKey{group: sk.group.ForgetOrder()}
+		sk.pk = &PublicKey{group: sk.group.ForgetOrder()} //nolint:exhaustruct // other fields initialised later
 	})
 }
 
@@ -54,7 +54,11 @@ func (sk *PrivateKey) Group() *znstar.PaillierGroupKnownOrder {
 
 // Arithmetic returns the modular arithmetic instance for efficient computations mod n².
 func (sk *PrivateKey) Arithmetic() *modular.OddPrimeSquareFactors {
-	return sk.group.Arithmetic().(*modular.OddPrimeSquareFactors)
+	out, ok := sk.group.Arithmetic().(*modular.OddPrimeSquareFactors)
+	if !ok {
+		panic("expected modular.OddPrimeSquareFactors")
+	}
+	return out
 }
 
 // PublicKey derives and returns the corresponding public key.
@@ -77,7 +81,7 @@ func NewPublicKey(group *znstar.PaillierGroupUnknownOrder) (*PublicKey, error) {
 	if group == nil {
 		return nil, ErrInvalidArgument.WithStackFrame()
 	}
-	return &PublicKey{
+	return &PublicKey{ //nolint:exhaustruct // other fields initialised later
 		group: group,
 	}, nil
 }
@@ -123,7 +127,7 @@ func (pk *PublicKey) N2() *numct.Modulus {
 
 // Clone returns a shallow copy of the public key.
 func (pk *PublicKey) Clone() *PublicKey {
-	return &PublicKey{
+	return &PublicKey{ //nolint:exhaustruct // other fields initialised later
 		group: pk.group,
 	}
 }

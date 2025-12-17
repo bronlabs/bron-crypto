@@ -30,11 +30,11 @@ type KeyGenerator[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S al
 // The public key is the corresponding curve point pk = sk * G.
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-4
-func (kg *KeyGenerator[P, B, S]) Generate(prng io.Reader) (*PrivateKey[S], *PublicKey[P, B, S], error) {
+func (kg *KeyGenerator[P, B, S]) Generate(prng io.Reader) (sk *PrivateKey[S], pk *PublicKey[P, B, S], err error) {
 	if prng == nil {
 		return nil, nil, ErrInvalidArgument.WithStackFrame().WithMessage("prng is nil")
 	}
-	sk, pk, err := kg.dhkem.GenerateKeyPair(prng)
+	sk, pk, err = kg.dhkem.GenerateKeyPair(prng)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err)
 	}
@@ -46,11 +46,11 @@ func (kg *KeyGenerator[P, B, S]) Generate(prng io.Reader) (*PrivateKey[S], *Publ
 // This implements the DeriveKeyPair algorithm from RFC 9180 Section 4.
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#name-derivekeypair
-func (kg *KeyGenerator[P, B, S]) GenerateWithSeed(ikm []byte) (*PrivateKey[S], *PublicKey[P, B, S], error) {
+func (kg *KeyGenerator[P, B, S]) GenerateWithSeed(ikm []byte) (sk *PrivateKey[S], pk *PublicKey[P, B, S], err error) {
 	if ikm == nil {
 		return nil, nil, ErrInvalidArgument.WithStackFrame().WithMessage("ikm is nil")
 	}
-	sk, pk, err := kg.dhkem.DeriveKeyPair(ikm)
+	sk, pk, err = kg.dhkem.DeriveKeyPair(ikm)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err)
 	}
@@ -233,11 +233,15 @@ func (e *Encrypter[P, B, S]) Export(context []byte, length uint) (*encryption.Sy
 	if !e.shouldCacheCtx || e.cachedCtx == nil {
 		return nil, errs2.New("cannot export key without cached context")
 	}
-	out, err := e.cachedCtx.Export(context, int(length))
+	k, err := e.cachedCtx.Export(context, int(length))
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
-	return encryption.NewSymmetricKey(out)
+	out, err := encryption.NewSymmetricKey(k)
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	return out, nil
 }
 
 // DecryptingWithApplicationInfo returns an option that sets the application-specific
@@ -357,7 +361,7 @@ func (d *Decrypter[P, B, S]) Open(ciphertext Ciphertext, aad []byte) (Message, e
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
-	return Message(pt), nil
+	return pt, nil
 }
 
 // Export derives a secret from the decryption context using the HPKE secret export
@@ -371,9 +375,13 @@ func (d *Decrypter[P, B, S]) Export(context []byte, length uint) (*encryption.Sy
 	if length == 0 {
 		return nil, ErrInvalidLength.WithStackFrame()
 	}
-	out, err := d.ctx.Export(context, int(length))
+	k, err := d.ctx.Export(context, int(length))
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
-	return encryption.NewSymmetricKey(out)
+	out, err := encryption.NewSymmetricKey(k)
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	return out, nil
 }

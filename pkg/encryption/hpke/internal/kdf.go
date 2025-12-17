@@ -40,7 +40,7 @@ type KDFScheme struct {
 func NewKDF(id KDFID) (*KDFScheme, error) {
 	kdf, exists := kdfs[id]
 	if !exists {
-		return nil, ErrNotSupported.WithMessage("KDF with ID %d is not supported", id).WithStackFrame()
+		return nil, ErrNotSupported.WithMessage("KDF with ID %d is not supported", id)
 	}
 
 	return kdf, nil
@@ -68,7 +68,7 @@ func (s *KDFScheme) ID() KDFID {
 	case crypto.SHA512:
 		return KDF_HKDF_SHA512
 	default:
-		panic(ErrNotSupported.WithMessage("hash %s is not supported", s.hash.String()).WithStackFrame())
+		panic(ErrNotSupported.WithMessage("hash %s is not supported", s.hash.String()))
 	}
 }
 

@@ -22,17 +22,17 @@ type ciphertextTestContext struct {
 	ps     *paillier.PlaintextSpace
 }
 
-func newCiphertextTestContext(t testing.TB) *ciphertextTestContext {
-	t.Helper()
+func newCiphertextTestContext(tb testing.TB) *ciphertextTestContext {
+	tb.Helper()
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	sk, pk, err := kg.Generate(crand.Reader)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	enc, err := scheme.Encrypter()
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	dec, err := scheme.Decrypter(sk)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return &ciphertextTestContext{
 		scheme: scheme,
 		sk:     sk,
@@ -43,8 +43,8 @@ func newCiphertextTestContext(t testing.TB) *ciphertextTestContext {
 	}
 }
 
-func (tc *ciphertextTestContext) plaintextFromInt64(t testing.TB, val int64) *paillier.Plaintext {
-	t.Helper()
+func (tc *ciphertextTestContext) plaintextFromInt64(tb testing.TB, val int64) *paillier.Plaintext {
+	tb.Helper()
 	var n numct.Int
 	if val >= 0 {
 		n.SetNat(numct.NewNat(uint64(val)))
@@ -53,21 +53,21 @@ func (tc *ciphertextTestContext) plaintextFromInt64(t testing.TB, val int64) *pa
 		n.Neg(&n)
 	}
 	pt, err := tc.ps.FromInt(&n)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return pt
 }
 
-func (tc *ciphertextTestContext) encrypt(t testing.TB, pt *paillier.Plaintext) *paillier.Ciphertext {
-	t.Helper()
+func (tc *ciphertextTestContext) encrypt(tb testing.TB, pt *paillier.Plaintext) *paillier.Ciphertext {
+	tb.Helper()
 	ct, _, err := tc.enc.Encrypt(pt, tc.pk, crand.Reader)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return ct
 }
 
-func (tc *ciphertextTestContext) decrypt(t testing.TB, ct *paillier.Ciphertext) *paillier.Plaintext {
-	t.Helper()
+func (tc *ciphertextTestContext) decrypt(tb testing.TB, ct *paillier.Ciphertext) *paillier.Plaintext {
+	tb.Helper()
 	pt, err := tc.dec.Decrypt(ct)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return pt
 }
 

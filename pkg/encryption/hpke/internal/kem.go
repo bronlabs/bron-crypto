@@ -46,13 +46,13 @@ var (
 
 func NewDHKEM[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](curve curves.Curve[P, B, S], kdf *KDFScheme) (*DHKEMScheme[P, B, S], error) {
 	if curve == nil {
-		return nil, ErrInvalidArgument.WithMessage("curve is nil").WithStackFrame()
+		return nil, ErrInvalidArgument.WithMessage("curve is nil")
 	}
 	if curve.Name() != p256.NewCurve().Name() && curve.Name() != curve25519.NewPrimeSubGroup().Name() {
-		return nil, ErrNotSupported.WithMessage("unsupported curve: %s", curve.Name()).WithStackFrame()
+		return nil, ErrNotSupported.WithMessage("unsupported curve: %s", curve.Name())
 	}
 	if kdf == nil {
-		return nil, ErrInvalidArgument.WithMessage("kdf is nil").WithStackFrame()
+		return nil, ErrInvalidArgument.WithMessage("kdf is nil")
 	}
 	return &DHKEMScheme[P, B, S]{
 		curve: curve,
@@ -95,7 +95,7 @@ func NewX25519HKDFSha256KEM() *DHKEMScheme[*curve25519.PrimeSubGroupPoint, *curv
 // https://www.rfc-editor.org/rfc/rfc9180.html#section-4-2.1.2.1
 func (s *DHKEMScheme[P, B, S]) GenerateKeyPair(prng io.Reader) (*PrivateKey[S], *PublicKey[P, B, S], error) {
 	if prng == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("prng is nil").WithStackFrame()
+		return nil, nil, ErrInvalidArgument.WithMessage("prng is nil")
 	}
 
 	ikm, err := s.produceIKM(prng)
@@ -115,7 +115,7 @@ func (s *DHKEMScheme[P, B, S]) GenerateKeyPair(prng io.Reader) (*PrivateKey[S], 
 // https://www.rfc-editor.org/rfc/rfc9180.html#name-derivekeypair
 func (s *DHKEMScheme[P, B, S]) DeriveKeyPair(ikm []byte) (*PrivateKey[S], *PublicKey[P, B, S], error) {
 	if len(ikm) < s.NSk() {
-		return nil, nil, ErrInvalidLength.WithMessage("ikm length(=%d) < Nsk(=%d)", len(ikm), s.NSk()).WithStackFrame()
+		return nil, nil, ErrInvalidLength.WithMessage("ikm length(=%d) < Nsk(=%d)", len(ikm), s.NSk())
 	}
 	var skBytes []byte
 	var skv S
@@ -144,7 +144,7 @@ func (s *DHKEMScheme[P, B, S]) DeriveKeyPair(ikm []byte) (*PrivateKey[S], *Publi
 			return nil, nil, errs2.Wrap(err)
 		}
 	default:
-		return nil, nil, ErrNotSupported.WithMessage("curve %s not supported", s.curve.Name()).WithStackFrame()
+		return nil, nil, ErrNotSupported.WithMessage("curve %s not supported", s.curve.Name())
 	}
 	sk, err := NewPrivateKey(s.curve.ScalarField(), skBytes)
 	if err != nil {
@@ -161,7 +161,7 @@ func (s *DHKEMScheme[P, B, S]) DeriveKeyPair(ikm []byte) (*PrivateKey[S], *Publi
 // https://www.rfc-editor.org/rfc/rfc9180.html#section-4-2.1.2.5
 func (s *DHKEMScheme[P, B, S]) Encap(receiverPublicKey *PublicKey[P, B, S], prng io.Reader) (sharedSecret []byte, ephemeralPublicKey *PublicKey[P, B, S], err error) {
 	if prng == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("prng is nil").WithStackFrame()
+		return nil, nil, ErrInvalidArgument.WithMessage("prng is nil")
 	}
 
 	ikmE, err := s.produceIKM(prng)
@@ -180,10 +180,10 @@ func (s *DHKEMScheme[P, B, S]) EncapWithIKM(receiverPublicKey *PublicKey[P, B, S
 		return nil, nil, errs2.Wrap(err)
 	}
 	if receiverPublicKey.Value().IsOpIdentity() {
-		return nil, nil, ErrInvalidPublicKey.WithMessage("receiver public key is identity").WithStackFrame()
+		return nil, nil, ErrInvalidPublicKey.WithMessage("receiver public key is identity")
 	}
 	if !receiverPublicKey.Value().IsTorsionFree() {
-		return nil, nil, ErrInvalidPublicKey.WithMessage("Public Key not in the prime subgroup").WithStackFrame()
+		return nil, nil, ErrInvalidPublicKey.WithMessage("Public Key not in the prime subgroup")
 	}
 
 	ephemeralPrivateKey, ephemeralPublicKey, err := s.DeriveKeyPair(ikmE)
@@ -217,10 +217,10 @@ func (s *DHKEMScheme[P, B, S]) Decap(receiverPrivateKey *PrivateKey[S], ephemera
 		return nil, errs2.Wrap(err)
 	}
 	if ephemeralPublicKey.Value().IsOpIdentity() {
-		return nil, ErrInvalidPublicKey.WithMessage("ephemeral public key is identity").WithStackFrame()
+		return nil, ErrInvalidPublicKey.WithMessage("ephemeral public key is identity")
 	}
 	if !ephemeralPublicKey.Value().IsTorsionFree() {
-		return nil, ErrInvalidPublicKey.WithMessage("Public Key not in the prime subgroup").WithStackFrame()
+		return nil, ErrInvalidPublicKey.WithMessage("Public Key not in the prime subgroup")
 	}
 
 	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](ephemeralPublicKey.Value().Structure())
@@ -253,7 +253,7 @@ func (s *DHKEMScheme[P, B, S]) Decap(receiverPrivateKey *PrivateKey[S], ephemera
 // https://www.rfc-editor.org/rfc/rfc9180.html#section-4-2.1.2.7
 func (s *DHKEMScheme[P, B, S]) AuthEncap(receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], prng io.Reader) (sharedSecret []byte, ephemeralPublicKey *PublicKey[P, B, S], err error) {
 	if prng == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("prng is nil").WithStackFrame()
+		return nil, nil, ErrInvalidArgument.WithMessage("prng is nil")
 	}
 
 	ikmE, err := s.produceIKM(prng)
@@ -271,13 +271,13 @@ func (s *DHKEMScheme[P, B, S]) AuthEncap(receiverPublicKey *PublicKey[P, B, S], 
 
 func (s *DHKEMScheme[P, B, S]) AuthEncapWithIKM(receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], ikmE []byte) (sharedSecret []byte, ephemeralPublicKey *PublicKey[P, B, S], err error) {
 	if receiverPublicKey == nil || senderPrivateKey == nil || ikmE == nil {
-		return nil, nil, ErrInvalidArgument.WithMessage("arguments can't be nil").WithStackFrame()
+		return nil, nil, ErrInvalidArgument.WithMessage("arguments can't be nil")
 	}
 	if receiverPublicKey.Value().IsOpIdentity() {
-		return nil, nil, ErrInvalidPublicKey.WithMessage("receiver public key is identity").WithStackFrame()
+		return nil, nil, ErrInvalidPublicKey.WithMessage("receiver public key is identity")
 	}
 	if !receiverPublicKey.Value().IsTorsionFree() {
-		return nil, nil, ErrInvalidPublicKey.WithMessage("Public Key not in the prime subgroup").WithStackFrame()
+		return nil, nil, ErrInvalidPublicKey.WithMessage("Public Key not in the prime subgroup")
 	}
 
 	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](receiverPublicKey.Value().Structure())
@@ -328,13 +328,13 @@ func (s *DHKEMScheme[P, B, S]) AuthEncapWithIKM(receiverPublicKey *PublicKey[P, 
 // https://www.rfc-editor.org/rfc/rfc9180.html#section-4-2.1.2.8
 func (s *DHKEMScheme[P, B, S]) AuthDecap(receiverPrivateKey *PrivateKey[S], senderPublicKey, ephemeralPublicKey *PublicKey[P, B, S]) (sharedSecret []byte, err error) {
 	if receiverPrivateKey == nil || senderPublicKey == nil || ephemeralPublicKey == nil {
-		return nil, ErrInvalidArgument.WithMessage("arguments can't be nil").WithStackFrame()
+		return nil, ErrInvalidArgument.WithMessage("arguments can't be nil")
 	}
 	if !senderPublicKey.Value().IsTorsionFree() {
-		return nil, ErrInvalidPublicKey.WithMessage("Public Key not in the prime subgroup").WithStackFrame()
+		return nil, ErrInvalidPublicKey.WithMessage("Public Key not in the prime subgroup")
 	}
 	if !ephemeralPublicKey.Value().IsTorsionFree() {
-		return nil, ErrInvalidPublicKey.WithMessage("Public Key not in the prime subgroup").WithStackFrame()
+		return nil, ErrInvalidPublicKey.WithMessage("Public Key not in the prime subgroup")
 	}
 
 	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](ephemeralPublicKey.Value().Structure())

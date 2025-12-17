@@ -18,21 +18,21 @@ type plaintextTestContext struct {
 	ps *paillier.PlaintextSpace
 }
 
-func newPlaintextTestContext(t testing.TB) *plaintextTestContext {
-	t.Helper()
+func newPlaintextTestContext(tb testing.TB) *plaintextTestContext {
+	tb.Helper()
 	scheme := paillier.NewScheme()
 	kg, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	_, pk, err := kg.Generate(crand.Reader)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return &plaintextTestContext{
 		pk: pk,
 		ps: pk.PlaintextSpace(),
 	}
 }
 
-func (tc *plaintextTestContext) fromInt64(t testing.TB, val int64) *paillier.Plaintext {
-	t.Helper()
+func (tc *plaintextTestContext) fromInt64(tb testing.TB, val int64) *paillier.Plaintext {
+	tb.Helper()
 	var n numct.Int
 	if val >= 0 {
 		n.SetNat(numct.NewNat(uint64(val)))
@@ -41,7 +41,7 @@ func (tc *plaintextTestContext) fromInt64(t testing.TB, val int64) *paillier.Pla
 		n.Neg(&n)
 	}
 	pt, err := tc.ps.FromInt(&n)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	return pt
 }
 

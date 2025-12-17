@@ -100,13 +100,13 @@ const (
 
 func NewCipherSuite(kem KEMID, kdf KDFID, aead AEADID) (*CipherSuite, error) {
 	if kem == DHKEM_RESERVED {
-		return nil, ErrNotSupported.WithMessage("invalid KEM ID").WithStackFrame()
+		return nil, ErrNotSupported.WithMessage("invalid KEM ID")
 	}
 	if kdf == KDF_HKDF_RESERVED {
-		return nil, ErrNotSupported.WithMessage("invalid KDF ID").WithStackFrame()
+		return nil, ErrNotSupported.WithMessage("invalid KDF ID")
 	}
 	if aead == AEAD_RESERVED {
-		return nil, ErrNotSupported.WithMessage("invalid AEAD ID").WithStackFrame()
+		return nil, ErrNotSupported.WithMessage("invalid AEAD ID")
 	}
 	return &CipherSuite{
 		kem:  kem,
@@ -189,7 +189,7 @@ func (c *context) computeNonce() ([]byte, error) {
 	// https://www.rfc-editor.org/rfc/rfc9180.html#section-5.2-6
 	subtle.XORBytes(newNonce[Nn-8:], c.baseNonce[Nn-8:], buf) // length of sequence (uint64) is smaller than Nn. So we treat as zero-padded.
 	if c.nonces.Contains(newNonce) {
-		return nil, ErrInvalidNonce.WithMessage("nonce reuse detected").WithStackFrame()
+		return nil, ErrInvalidNonce.WithMessage("nonce reuse detected")
 	}
 	c.nonces.Add(newNonce)
 	return newNonce, nil
@@ -200,7 +200,7 @@ func (c *context) incrementSeq() error {
 	// Implementations MAY use a sequence number that is shorter than the nonce length (padding on the left with zero), but MUST raise an error if the sequence number overflows.
 	// The default check of the rfc ((1<<(8*Nn))-1) is larger than uint64, so no point in copying the rfc.
 	if c.sequence == math.MaxUint64 {
-		return ErrInvalidNonce.WithMessage("sequence number will overflow").WithStackFrame()
+		return ErrInvalidNonce.WithMessage("sequence number will overflow")
 	}
 	c.sequence++
 	return nil
@@ -211,7 +211,7 @@ func (c *context) incrementSeq() error {
 func (c *context) export(exporterContext []byte, L int) ([]byte, error) {
 	kdf := kdfs[c.suite.kdf]
 	if L > 255*kdf.Nh() {
-		return nil, ErrInvalidArgument.WithMessage("L is out of range").WithStackFrame()
+		return nil, ErrInvalidArgument.WithMessage("L is out of range")
 	}
 	return kdf.labeledExpand(c.suite.ID(), c.exporterSecret, []byte("sec"), exporterContext, L), nil
 }
@@ -270,13 +270,13 @@ func verifyPSKInputs(mode ModeID, psk, pskId []byte) error {
 	gotPsk := psk != nil
 	gotPskId := pskId != nil
 	if gotPsk != gotPskId {
-		return ErrInvalidArgument.WithMessage("either psk and pskId should both be nil, or none should be nil").WithStackFrame()
+		return ErrInvalidArgument.WithMessage("either psk and pskId should both be nil, or none should be nil")
 	}
 	if gotPsk && (mode == Base || mode == Auth) {
-		return ErrInvalidArgument.WithMessage("psk argument provided when not needed").WithStackFrame()
+		return ErrInvalidArgument.WithMessage("psk argument provided when not needed")
 	}
 	if !gotPsk && (mode == PSk || mode == AuthPSk) {
-		return ErrInvalidArgument.WithMessage("missing required psk input").WithStackFrame()
+		return ErrInvalidArgument.WithMessage("missing required psk input")
 	}
 	return nil
 }
@@ -288,7 +288,7 @@ type SenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S a
 
 func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](mode ModeID, suite *CipherSuite, receiverPublicKey *PublicKey[P, B, S], senderPrivateKey *PrivateKey[S], info, psk, pskId []byte, prng io.Reader) (*SenderContext[P, B, S], error) {
 	if suite == nil {
-		return nil, ErrInvalidArgument.WithMessage("ciphersuite is nil").WithStackFrame()
+		return nil, ErrInvalidArgument.WithMessage("ciphersuite is nil")
 	}
 
 	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](receiverPublicKey.Value().Structure())
@@ -306,7 +306,7 @@ func NewSenderContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], 
 		sharedSecret, ephemeralPublicKey, err = kem.AuthEncap(receiverPublicKey, senderPrivateKey, prng)
 	} else {
 		if senderPrivateKey != nil {
-			return nil, ErrNotSupported.WithMessage("sender private key unsupported").WithStackFrame()
+			return nil, ErrNotSupported.WithMessage("sender private key unsupported")
 		}
 
 		sharedSecret, ephemeralPublicKey, err = kem.Encap(receiverPublicKey, prng)
@@ -353,7 +353,7 @@ type ReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S
 
 func NewReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](mode ModeID, suite *CipherSuite, receiverPrivatekey *PrivateKey[S], ephemeralPublicKey, senderPublicKey *PublicKey[P, B, S], info, psk, pskId []byte) (*ReceiverContext[P, B, S], error) {
 	if suite == nil {
-		return nil, ErrInvalidArgument.WithMessage("ciphersuite is nil").WithStackFrame()
+		return nil, ErrInvalidArgument.WithMessage("ciphersuite is nil")
 	}
 
 	curve := algebra.StructureMustBeAs[curves.Curve[P, B, S]](ephemeralPublicKey.Value().Structure())
@@ -371,7 +371,7 @@ func NewReceiverContext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B]
 		sharedSecret, err = kem.AuthDecap(receiverPrivatekey, senderPublicKey, ephemeralPublicKey)
 	} else {
 		if senderPublicKey != nil {
-			return nil, ErrNotSupported.WithMessage("sender public key unsupported").WithStackFrame()
+			return nil, ErrNotSupported.WithMessage("sender public key unsupported")
 		}
 
 		sharedSecret, err = kem.Decap(receiverPrivatekey, ephemeralPublicKey)

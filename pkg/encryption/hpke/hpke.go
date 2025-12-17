@@ -108,7 +108,7 @@ const (
 	// The sender is authenticated via both mechanisms, providing defence in depth.
 	AuthPSk ModeID = internal.AuthPSk
 
-	// AEAD Algorithm Identifiers (RFC 9180 Section 7.3, Table 3)
+	// AEAD Algorithm Identifiers (RFC 9180 Section 7.3, Table 3).
 
 	// AEAD_RESERVED (0x0000) is reserved and MUST NOT be used.
 	AEAD_RESERVED AEADID = internal.AEAD_RESERVED
@@ -126,7 +126,7 @@ const (
 	// only the Export interface is available. This is useful for key derivation scenarios.
 	AEAD_EXPORT_ONLY AEADID = internal.AEAD_EXPORT_ONLY
 
-	// KDF Algorithm Identifiers (RFC 9180 Section 7.2, Table 2)
+	// KDF Algorithm Identifiers (RFC 9180 Section 7.2, Table 2).
 
 	// KDF_HKDF_RESERVED (0x0000) is reserved and MUST NOT be used.
 	KDF_HKDF_RESERVED KDFID = internal.KDF_HKDF_RESERVED
@@ -137,7 +137,7 @@ const (
 	// KDF_HKDF_SHA512 (0x0003) specifies HKDF-SHA512 with Nh=64.
 	KDF_HKDF_SHA512 KDFID = internal.KDF_HKDF_SHA512
 
-	// KEM Algorithm Identifiers (RFC 9180 Section 7.1, Table 2)
+	// KEM Algorithm Identifiers (RFC 9180 Section 7.1, Table 2).
 
 	// DHKEM_RESERVED (0x0000) is reserved and MUST NOT be used.
 	DHKEM_RESERVED KEMID = internal.DHKEM_RESERVED
@@ -260,7 +260,11 @@ func (s *Scheme[P, B, S]) AEAD(key *encryption.SymmetricKey) (cipher.AEAD, error
 	if key == nil {
 		return nil, ErrInvalidArgument.WithStackFrame()
 	}
-	return s.aead.New(key.Bytes())
+	out, err := s.aead.New(key.Bytes())
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	return out, nil
 }
 
 // CipherSuite returns the cipher suite used by this scheme.
@@ -298,7 +302,7 @@ func (s *Scheme[P, B, S]) Keygen(opts ...KeyGeneratorOption[P, B, S]) (*KeyGener
 //
 // See: https://www.rfc-editor.org/rfc/rfc9180.html#section-6
 func (s *Scheme[P, B, S]) Encrypter(opts ...encryption.EncrypterOption[*Encrypter[P, B, S], *PublicKey[P, B, S], Message, Ciphertext, *Capsule[P, B, S]]) (*Encrypter[P, B, S], error) {
-	encrypter := &Encrypter[P, B, S]{
+	encrypter := &Encrypter[P, B, S]{ //nolint:exhaustruct // set later and/or by options.
 		suite: s.cipherSuite,
 	}
 	for _, opt := range opts {
@@ -327,7 +331,7 @@ func (s *Scheme[P, B, S]) Decrypter(receiverPrivateKey *PrivateKey[S], opts ...e
 	if receiverPrivateKey == nil {
 		return nil, ErrInvalidArgument.WithStackFrame()
 	}
-	decrypter := &Decrypter[P, B, S]{
+	decrypter := &Decrypter[P, B, S]{ //nolint:exhaustruct // set later and/or by options.
 		suite:      s.cipherSuite,
 		privateKey: receiverPrivateKey,
 	}
@@ -337,7 +341,7 @@ func (s *Scheme[P, B, S]) Decrypter(receiverPrivateKey *PrivateKey[S], opts ...e
 		}
 	}
 	if decrypter.ephemeralPublicKey == nil {
-		return nil, errs2.New("capsule (ephemeral public key) must be provided").WithStackFrame()
+		return nil, errs2.New("capsule (ephemeral public key) must be provided")
 	}
 	var ctx *ReceiverContext[P, B, S]
 	var err error
@@ -351,7 +355,7 @@ func (s *Scheme[P, B, S]) Decrypter(receiverPrivateKey *PrivateKey[S], opts ...e
 	case AuthPSk:
 		ctx, err = SetupAuthPSKR(s.cipherSuite, receiverPrivateKey, decrypter.ephemeralPublicKey, decrypter.senderPublicKey, decrypter.psk.Bytes(), decrypter.pskId, decrypter.info)
 	default:
-		return nil, ErrNotSupported.WithStackFrame().WithMessage("HPKE mode")
+		return nil, ErrNotSupported.WithMessage("HPKE mode")
 	}
 	if err != nil {
 		return nil, errs2.Wrap(err)

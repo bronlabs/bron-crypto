@@ -7,8 +7,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke"
 )
 
-var ()
-
 func _[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]]() {
 	var (
 		_ encryption.AEADBasedHybridScheme[
