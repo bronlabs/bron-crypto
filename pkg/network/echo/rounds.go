@@ -4,7 +4,7 @@ import (
 	"bytes"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -14,7 +14,7 @@ import (
 func (p *Participant[B]) Round1(message B) (network.OutgoingUnicasts[*Round1P2P], error) {
 	serializedMessage, err := serde.MarshalCBOR(message)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal message")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal message")
 	}
 
 	r1 := hashmap.NewComparable[sharing.ID, *Round1P2P]()
@@ -40,7 +40,7 @@ func (p *Participant[B]) Round2(r1 network.RoundMessages[*Round1P2P]) (network.O
 		}
 		m, ok := r1.Get(id)
 		if !ok {
-			return nil, errs.NewFailed("missing message")
+			return nil, ErrFailed.WithMessage("missing message")
 		}
 		receivedMessages[id] = m.Payload
 		p.state.messages[id] = m.Payload
@@ -74,11 +74,11 @@ func (p *Participant[B]) Round3(r2 network.RoundMessages[*Round2P2P]) (network.R
 			}
 			echo, ok := r2.Get(echoId)
 			if !ok {
-				return nil, errs.NewFailed("missing message")
+				return nil, ErrFailed.WithMessage("missing message")
 			}
 			echoMessage := echo.Echo[id]
 			if bytes.Compare(message, echoMessage) != 0 {
-				return nil, errs.NewFailed("mismatched echo")
+				return nil, ErrFailed.WithMessage("mismatched echo")
 			}
 		}
 		received[id] = message
@@ -91,7 +91,7 @@ func (p *Participant[B]) Round3(r2 network.RoundMessages[*Round2P2P]) (network.R
 		}
 		message, err := serde.UnmarshalCBOR[B](received[id])
 		if err != nil {
-			return nil, errs.WrapSerialisation(err, "failed to unmarshal message")
+			return nil, errs2.Wrap(err).WithMessage("failed to unmarshal message")
 		}
 		r3.Put(id, message)
 	}

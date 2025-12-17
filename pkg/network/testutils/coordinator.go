@@ -4,7 +4,7 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
@@ -72,7 +72,7 @@ func (d *mockDelivery) Send(sharingId sharing.ID, payload []byte) error {
 	copy(payloadClone, payload)
 	sendChan, ok := d.sendChannels[sharingId]
 	if !ok {
-		return errs.NewFailed("no channel for recipient")
+		return errs2.Wrap(network.ErrFailed).WithMessage("no channel for recipient")
 	}
 
 	sendChan <- deliveryMessage{

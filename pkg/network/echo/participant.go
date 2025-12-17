@@ -1,7 +1,6 @@
 package echo
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
@@ -19,7 +18,7 @@ type state struct {
 
 func NewParticipant[B any](id sharing.ID, quorum network.Quorum) (*Participant[B], error) {
 	if quorum == nil || !quorum.Contains(id) {
-		return nil, errs.NewMembership("sharingId not in quorum")
+		return nil, ErrInvalidArgument.WithMessage("sharingId not in quorum")
 	}
 
 	p := &Participant[B]{

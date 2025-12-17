@@ -4,7 +4,7 @@ import (
 	"crypto/sha3"
 	"hash"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
@@ -17,10 +17,10 @@ type SID [32]byte
 func NewSID(xs ...[]byte) (SID, error) {
 	digest, err := hashing.Hash(sidHasher, xs...)
 	if len(digest) != 32 {
-		return SID{}, errs.NewHashing("digest length is not 32 bytes")
+		return SID{}, ErrInvalidArgument.WithMessage("digest length is not 32 bytes")
 	}
 	if err != nil {
-		return SID{}, errs.WrapHashing(err, "failed to create session ID")
+		return SID{}, errs2.Wrap(err).WithMessage("failed to create session ID")
 	}
 	var sid SID
 	copy(sid[:], digest)

@@ -4,7 +4,7 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -42,10 +42,10 @@ func (r *Router) SendTo(correlationId string, messages map[sharing.ID][]byte) er
 		}
 		serializedMessage, err := serde.MarshalCBOR(&message)
 		if err != nil {
-			return errs.WrapSerialisation(err, "failed to marshal message")
+			return errs2.Wrap(err).WithMessage("failed to marshal message")
 		}
 		if err := r.delivery.Send(id, serializedMessage); err != nil {
-			return errs.WrapFailed(err, "failed to send message")
+			return errs2.Wrap(err).WithMessage("failed to send message")
 		}
 	}
 
@@ -69,11 +69,11 @@ func (r *Router) ReceiveFrom(correlationId string, froms ...sharing.ID) (map[sha
 	for !sliceutils.IsSuperSet(slices.Collect(maps.Keys(received)), froms) {
 		from, serializedMessage, err := r.delivery.Receive()
 		if err != nil {
-			return nil, errs.WrapFailed(err, "failed to receive message")
+			return nil, errs2.Wrap(err).WithMessage("failed to receive message")
 		}
 		message, err := serde.UnmarshalCBOR[routerMessage](serializedMessage)
 		if err != nil {
-			return nil, err
+			return nil, errs2.Wrap(err).WithMessage("failed to decode message")
 		}
 
 		if message.CorrelationId == correlationId {
