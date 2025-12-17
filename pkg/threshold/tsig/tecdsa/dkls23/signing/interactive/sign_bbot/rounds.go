@@ -187,10 +187,10 @@ func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast
 		c.state.pk[id] = message.broadcast.Pk
 
 		if !c.state.bigR[id].ScalarMul(c.state.chi[id]).Sub(message.p2p.GammaU).Equal(c.suite.Curve().ScalarBaseMul(d[0])) {
-			return nil, errs.NewFailed("consistency check failed")
+			return nil, errs.NewIdentifiableAbort(id, "consistency check failed")
 		}
 		if !message.broadcast.Pk.ScalarMul(c.state.chi[id]).Sub(message.p2p.GammaV).Equal(c.suite.Curve().ScalarBaseMul(d[1])) {
-			return nil, errs.NewFailed("consistency check failed")
+			return nil, errs.NewIdentifiableAbort(id, "consistency check failed")
 		}
 
 		psi = psi.Add(message.p2p.Psi)
@@ -201,7 +201,7 @@ func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast
 	bigR := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.state.bigR))...)
 	pk := sliceutils.Fold(func(x, y P) P { return x.Add(y) }, c.suite.Curve().OpIdentity(), slices.Collect(maps.Values(c.state.pk))...)
 	if !pk.Equal(c.shard.PublicKey().Value()) {
-		return nil, errs.NewFailed("consistency check failed")
+		return nil, errs.NewTotalAbort(nil, "consistency check failed")
 	}
 
 	u := c.state.r.Mul(c.state.phi.Add(psi)).Add(cudu)
