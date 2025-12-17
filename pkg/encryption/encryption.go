@@ -46,7 +46,6 @@ type (
 		EncryptWithNonce(plaintext M, receiver PK, nonce N) (ciphertext C, err error)
 	}
 
-	// TODO: maybe remove
 	SelfEncrypter[SK PrivateKey[SK], M Plaintext, C Ciphertext, X any] interface {
 		PrivateKey() SK
 		SelfEncrypt(plaintext M, prng io.Reader) (ciphertext C, nonceOrCapsuleEtc X, err error)
@@ -101,8 +100,8 @@ type ShiftTypeCiphertext[
 ] interface {
 	HomomorphicCiphertext[C, CV, S]
 	ReRandomisableCiphertext[C, N, PK]
-	ReRandomiseWithNonce(PK, N) (C, N, error)
-	algebra.Shiftable[C, M]
+	ReRandomiseWithNonce(PK, N) (C, error)
+	Shift(PK, M) (C, error)
 }
 
 type HomomorphicPlaintext[M Plaintext, MV algebra.SemiGroupElement[MV]] interface {

@@ -3,7 +3,7 @@ package paillier
 import (
 	"github.com/fxamacker/cbor/v2"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
@@ -23,47 +23,33 @@ var (
 	_ cbor.Unmarshaler = (*PrivateKey)(nil)
 )
 
-const (
-	PlaintextTag  = 6001
-	NonceTag      = 6002
-	CiphertextTag = 6003
-	PublicKeyTag  = 6004
-	PrivateKeyTag = 6005
-)
-
-func init() {
-	serde.Register[*Plaintext](PlaintextTag)
-	serde.Register[*Nonce](NonceTag)
-	serde.Register[*Ciphertext](CiphertextTag)
-	serde.Register[*PublicKey](PublicKeyTag)
-	serde.Register[*PrivateKey](PrivateKeyTag)
-}
-
 // Plaintext serialisation - reuse num.Int and num.NatPlus CBOR.
 type plaintextDTO struct {
 	V *num.Int     `cbor:"v"`
 	N *num.NatPlus `cbor:"n"`
 }
 
-func (cp *Plaintext) MarshalCBOR() ([]byte, error) {
+// MarshalCBOR serialises the plaintext to CBOR format.
+func (pt *Plaintext) MarshalCBOR() ([]byte, error) {
 	dto := &plaintextDTO{
-		V: cp.v,
-		N: cp.n,
+		V: pt.v,
+		N: pt.n,
 	}
-	data, err := serde.MarshalCBORTagged(dto, PlaintextTag)
+	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal Plaintext")
+		return nil, errs2.Wrap(err)
 	}
 	return data, nil
 }
 
-func (cp *Plaintext) UnmarshalCBOR(data []byte) error {
+// UnmarshalCBOR deserializes the plaintext from CBOR format.
+func (pt *Plaintext) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[plaintextDTO](data)
 	if err != nil {
 		return err
 	}
-	cp.v = dto.V
-	cp.n = dto.N
+	pt.v = dto.V
+	pt.n = dto.N
 	return nil
 }
 
@@ -72,17 +58,19 @@ type nonceDTO struct {
 	U *znstar.RSAGroupElementUnknownOrder `cbor:"u"`
 }
 
+// MarshalCBOR serialises the nonce to CBOR format.
 func (n *Nonce) MarshalCBOR() ([]byte, error) {
 	dto := &nonceDTO{
 		U: n.u,
 	}
-	data, err := serde.MarshalCBORTagged(dto, NonceTag)
+	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal Nonce")
+		return nil, errs2.Wrap(err)
 	}
 	return data, nil
 }
 
+// UnmarshalCBOR deserializes the nonce from CBOR format.
 func (n *Nonce) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[nonceDTO](data)
 	if err != nil {
@@ -97,17 +85,19 @@ type ciphertextDTO struct {
 	U *znstar.PaillierGroupElementUnknownOrder `cbor:"u"`
 }
 
+// MarshalCBOR serialises the ciphertext to CBOR format.
 func (ct *Ciphertext) MarshalCBOR() ([]byte, error) {
 	dto := &ciphertextDTO{
 		U: ct.u,
 	}
-	data, err := serde.MarshalCBORTagged(dto, CiphertextTag)
+	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal Ciphertext")
+		return nil, errs2.Wrap(err)
 	}
 	return data, nil
 }
 
+// UnmarshalCBOR deserializes the ciphertext from CBOR format.
 func (ct *Ciphertext) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[ciphertextDTO](data)
 	if err != nil {
@@ -122,17 +112,19 @@ type publicKeyDTO struct {
 	Group *znstar.PaillierGroupUnknownOrder `cbor:"group"`
 }
 
+// MarshalCBOR serialises the public key to CBOR format.
 func (pk *PublicKey) MarshalCBOR() ([]byte, error) {
 	dto := &publicKeyDTO{
 		Group: pk.group,
 	}
-	data, err := serde.MarshalCBORTagged(dto, PublicKeyTag)
+	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal PublicKey")
+		return nil, errs2.Wrap(err)
 	}
 	return data, nil
 }
 
+// UnmarshalCBOR deserializes the public key from CBOR format.
 func (pk *PublicKey) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[publicKeyDTO](data)
 	if err != nil {
@@ -148,17 +140,19 @@ type privateKeyDTO struct {
 	Group *znstar.PaillierGroupKnownOrder `cbor:"group"`
 }
 
+// MarshalCBOR serialises the private key to CBOR format.
 func (sk *PrivateKey) MarshalCBOR() ([]byte, error) {
 	dto := &privateKeyDTO{
 		Group: sk.group,
 	}
-	data, err := serde.MarshalCBORTagged(dto, PrivateKeyTag)
+	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal PrivateKey")
+		return nil, errs2.Wrap(err)
 	}
 	return data, nil
 }
 
+// UnmarshalCBOR deserializes the private key from CBOR format.
 func (sk *PrivateKey) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[privateKeyDTO](data)
 	if err != nil {

@@ -31,7 +31,7 @@ func TestCombinations_Property(t *testing.T) {
 func TestKCoveringCombinations_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
-		s := rapid.SliceOfDistinct(rapid.IntMax(5), func(i int) int { return i }).Draw(t, "s")
+		s := rapid.SliceOfNDistinct(rapid.IntMax(12), 0, 12, func(i int) int { return i }).Draw(t, "s")
 		k := rapid.UintRange(0, uint(len(s))).Draw(t, "k")
 
 		count := 0

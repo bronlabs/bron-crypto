@@ -143,7 +143,11 @@ func (*PositiveNaturalNumbers) FromBytes(input []byte) (*NatPlus, error) {
 
 // FromBytesBE creates a NatPlus from the given big-endian byte slice, returning an error if the input is empty or represents zero.
 func (nps *PositiveNaturalNumbers) FromBytesBE(input []byte) (*NatPlus, error) {
-	return errs2.Maybe1(nps.FromBytes(input))
+	out, err := nps.FromBytes(input)
+	if err != nil {
+		return nil, errs2.Wrap(err)
+	}
+	return out, nil
 }
 
 // Random generates a random NatPlus in the range [lowInclusive, highExclusive), returning an error if highExclusive is nil.

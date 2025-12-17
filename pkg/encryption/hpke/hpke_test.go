@@ -4,6 +4,8 @@ import (
 	crand "crypto/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
@@ -11,7 +13,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/hpke/internal"
-	"github.com/stretchr/testify/require"
 )
 
 // Helper to generate key pairs
@@ -32,11 +33,12 @@ func TestHPKE_BaseMode_Roundtrip(t *testing.T) {
 
 	testCases := []struct {
 		name        string
-		setupScheme func(t *testing.T) (interface{}, *hpke.CipherSuite)
+		setupScheme func(t *testing.T) (any, *hpke.CipherSuite)
 	}{
 		{
 			name: "P256_AES128GCM_SHA256",
-			setupScheme: func(t *testing.T) (interface{}, *hpke.CipherSuite) {
+			setupScheme: func(t *testing.T) (any, *hpke.CipherSuite) {
+				t.Helper()
 				curve := p256.NewCurve()
 				suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
 				require.NoError(t, err)
@@ -47,7 +49,8 @@ func TestHPKE_BaseMode_Roundtrip(t *testing.T) {
 		},
 		{
 			name: "X25519_ChaCha20Poly1305_SHA256",
-			setupScheme: func(t *testing.T) (interface{}, *hpke.CipherSuite) {
+			setupScheme: func(t *testing.T) (any, *hpke.CipherSuite) {
+				t.Helper()
 				curve := curve25519.NewPrimeSubGroup()
 				suite, err := hpke.NewCipherSuite(hpke.DHKEM_X25519_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_CHACHA_20_POLY_1305)
 				require.NoError(t, err)
@@ -415,4 +418,108 @@ func TestHPKE_SymmetricKey(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, key)
 	require.Equal(t, keyBytes, key.Bytes())
+}
+
+// TestHPKE_Keygen tests the key generator
+func TestHPKE_Keygen(t *testing.T) {
+	t.Parallel()
+
+	t.Run("P256", func(t *testing.T) {
+		t.Parallel()
+
+		curve := p256.NewCurve()
+		suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
+		require.NoError(t, err)
+
+		scheme, err := hpke.NewScheme(curve, suite)
+		require.NoError(t, err)
+
+		kg, err := scheme.Keygen()
+		require.NoError(t, err)
+		require.NotNil(t, kg)
+
+		sk, pk, err := kg.Generate(crand.Reader)
+		require.NoError(t, err)
+		require.NotNil(t, sk)
+		require.NotNil(t, pk)
+
+		// Use generated keys for encryption/decryption roundtrip
+		plaintext := []byte("Hello from keygen test!")
+		info := []byte("test info")
+
+		senderCtx, err := hpke.SetupBaseS(suite, pk, info, crand.Reader)
+		require.NoError(t, err)
+		ciphertext, err := senderCtx.Seal(plaintext, nil)
+		require.NoError(t, err)
+
+		receiverCtx, err := hpke.SetupBaseR(suite, sk, senderCtx.Capsule, info)
+		require.NoError(t, err)
+		decrypted, err := receiverCtx.Open(ciphertext, nil)
+		require.NoError(t, err)
+		require.Equal(t, plaintext, decrypted)
+	})
+
+	t.Run("X25519", func(t *testing.T) {
+		t.Parallel()
+
+		curve := curve25519.NewPrimeSubGroup()
+		suite, err := hpke.NewCipherSuite(hpke.DHKEM_X25519_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_CHACHA_20_POLY_1305)
+		require.NoError(t, err)
+
+		scheme, err := hpke.NewScheme(curve, suite)
+		require.NoError(t, err)
+
+		kg, err := scheme.Keygen()
+		require.NoError(t, err)
+		require.NotNil(t, kg)
+
+		sk, pk, err := kg.Generate(crand.Reader)
+		require.NoError(t, err)
+		require.NotNil(t, sk)
+		require.NotNil(t, pk)
+
+		// Use generated keys for encryption/decryption roundtrip
+		plaintext := []byte("Hello from X25519 keygen test!")
+		info := []byte("test info")
+
+		senderCtx, err := hpke.SetupBaseS(suite, pk, info, crand.Reader)
+		require.NoError(t, err)
+		ciphertext, err := senderCtx.Seal(plaintext, nil)
+		require.NoError(t, err)
+
+		receiverCtx, err := hpke.SetupBaseR(suite, sk, senderCtx.Capsule, info)
+		require.NoError(t, err)
+		decrypted, err := receiverCtx.Open(ciphertext, nil)
+		require.NoError(t, err)
+		require.Equal(t, plaintext, decrypted)
+	})
+
+	t.Run("GenerateWithSeed", func(t *testing.T) {
+		t.Parallel()
+
+		curve := p256.NewCurve()
+		suite, err := hpke.NewCipherSuite(hpke.DHKEM_P256_HKDF_SHA256, hpke.KDF_HKDF_SHA256, hpke.AEAD_AES_128_GCM)
+		require.NoError(t, err)
+
+		scheme, err := hpke.NewScheme(curve, suite)
+		require.NoError(t, err)
+
+		kg, err := scheme.Keygen()
+		require.NoError(t, err)
+
+		// Generate deterministic keys from seed
+		seed := make([]byte, 32)
+		_, err = crand.Read(seed)
+		require.NoError(t, err)
+
+		sk1, pk1, err := kg.GenerateWithSeed(seed)
+		require.NoError(t, err)
+
+		// Same seed should produce same keys
+		sk2, pk2, err := kg.GenerateWithSeed(seed)
+		require.NoError(t, err)
+
+		require.Equal(t, sk1.Bytes(), sk2.Bytes())
+		require.Equal(t, pk1.Bytes(), pk2.Bytes())
+	})
 }

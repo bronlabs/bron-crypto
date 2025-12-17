@@ -12,7 +12,7 @@ import (
 func TestShuffled_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
-		input := rapid.SliceOf(rapid.Int()).Draw(t, "input")
+		input := rapid.SliceOfN(rapid.Int(), 0, 100).Draw(t, "input")
 
 		result, err := sliceutils.Shuffled(input, pcg.NewRandomised())
 		require.NoError(t, err)
