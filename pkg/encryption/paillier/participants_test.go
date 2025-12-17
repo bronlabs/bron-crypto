@@ -359,7 +359,7 @@ func TestDecrypter_RoundTrip_RandomPlaintexts(t *testing.T) {
 
 	ps := pk.PlaintextSpace()
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		pt, err := ps.Sample(nil, nil, crand.Reader)
 		require.NoError(t, err)
 

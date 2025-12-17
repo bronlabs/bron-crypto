@@ -82,7 +82,7 @@ func TestPlaintextSpace_Sample_WithBounds(t *testing.T) {
 	low := tc.fromInt64(t, 10)
 	high := tc.fromInt64(t, 100)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		pt, err := tc.ps.Sample(low, high, crand.Reader)
 		require.NoError(t, err)
 		require.True(t, low.IsLessThanOrEqual(pt), "sampled value should be >= low")

@@ -448,7 +448,7 @@ func TestCiphertext_ReRandomise_PreservesPlaintext(t *testing.T) {
 	require.NotNil(t, nonce)
 
 	// Ciphertexts should be different
-	require.False(t, ct.Equal(ctRand), "re-randomized ciphertext should be different")
+	require.False(t, ct.Equal(ctRand), "re-randomised ciphertext should be different")
 
 	// But decrypt to the same value
 	dec1 := tc.decrypt(t, ct)
@@ -467,7 +467,7 @@ func TestCiphertext_ReRandomiseWithNonce_Deterministic(t *testing.T) {
 	nonce, err := tc.pk.NonceSpace().Sample(crand.Reader)
 	require.NoError(t, err)
 
-	// Re-randomize twice with same nonce
+	// Re-randomise twice with same nonce
 	ct1, err := ct.ReRandomiseWithNonce(tc.pk, nonce)
 	require.NoError(t, err)
 	ct2, err := ct.ReRandomiseWithNonce(tc.pk, nonce)

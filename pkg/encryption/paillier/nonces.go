@@ -20,7 +20,7 @@ func NewNonceSpace(n *num.NatPlus) (*NonceSpace, error) {
 }
 
 // NonceSpace represents the space of Paillier nonces (Z/nZ)*.
-// Nonces are used to randomize ciphertexts for semantic security.
+// Nonces are used to randomise ciphertexts for semantic security.
 type NonceSpace struct {
 	g *znstar.RSAGroupUnknownOrder
 }

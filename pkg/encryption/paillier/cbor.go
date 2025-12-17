@@ -46,7 +46,7 @@ type plaintextDTO struct {
 	N *num.NatPlus `cbor:"n"`
 }
 
-// MarshalCBOR serializes the plaintext to CBOR format.
+// MarshalCBOR serialises the plaintext to CBOR format.
 func (pt *Plaintext) MarshalCBOR() ([]byte, error) {
 	dto := &plaintextDTO{
 		V: pt.v,
@@ -75,7 +75,7 @@ type nonceDTO struct {
 	U *znstar.RSAGroupElementUnknownOrder `cbor:"u"`
 }
 
-// MarshalCBOR serializes the nonce to CBOR format.
+// MarshalCBOR serialises the nonce to CBOR format.
 func (n *Nonce) MarshalCBOR() ([]byte, error) {
 	dto := &nonceDTO{
 		U: n.u,
@@ -102,7 +102,7 @@ type ciphertextDTO struct {
 	U *znstar.PaillierGroupElementUnknownOrder `cbor:"u"`
 }
 
-// MarshalCBOR serializes the ciphertext to CBOR format.
+// MarshalCBOR serialises the ciphertext to CBOR format.
 func (ct *Ciphertext) MarshalCBOR() ([]byte, error) {
 	dto := &ciphertextDTO{
 		U: ct.u,
@@ -129,7 +129,7 @@ type publicKeyDTO struct {
 	Group *znstar.PaillierGroupUnknownOrder `cbor:"group"`
 }
 
-// MarshalCBOR serializes the public key to CBOR format.
+// MarshalCBOR serialises the public key to CBOR format.
 func (pk *PublicKey) MarshalCBOR() ([]byte, error) {
 	dto := &publicKeyDTO{
 		Group: pk.group,
@@ -157,7 +157,7 @@ type privateKeyDTO struct {
 	Group *znstar.PaillierGroupKnownOrder `cbor:"group"`
 }
 
-// MarshalCBOR serializes the private key to CBOR format.
+// MarshalCBOR serialises the private key to CBOR format.
 func (sk *PrivateKey) MarshalCBOR() ([]byte, error) {
 	dto := &privateKeyDTO{
 		Group: sk.group,

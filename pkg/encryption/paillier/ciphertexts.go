@@ -141,7 +141,7 @@ func (ct *Ciphertext) ScalarMulBounded(scalar *num.Nat, bits uint) *Ciphertext {
 	return ct.ScalarOpBounded(scalar, bits)
 }
 
-// ReRandomise re-randomizes a ciphertext by multiplying it with a fresh encryption of zero.
+// ReRandomise re-randomises a ciphertext by multiplying it with a fresh encryption of zero.
 // This produces a new ciphertext that decrypts to the same plaintext but is unlinkable
 // to the original. Returns the new ciphertext and the nonce used.
 func (ct *Ciphertext) ReRandomise(pk *PublicKey, prng io.Reader) (*Ciphertext, *Nonce, error) {
@@ -156,7 +156,7 @@ func (ct *Ciphertext) ReRandomise(pk *PublicKey, prng io.Reader) (*Ciphertext, *
 	return ciphertext, nonce, nil
 }
 
-// ReRandomiseWithNonce re-randomizes a ciphertext using a provided nonce.
+// ReRandomiseWithNonce re-randomises a ciphertext using a provided nonce.
 // The result is c' = c * r^n mod n², which decrypts to the same plaintext as c.
 func (ct *Ciphertext) ReRandomiseWithNonce(pk *PublicKey, nonce *Nonce) (*Ciphertext, error) {
 	g := pk.CiphertextSpace().g
