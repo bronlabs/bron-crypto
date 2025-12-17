@@ -23,23 +23,6 @@ var (
 	_ cbor.Unmarshaler = (*PrivateKey)(nil)
 )
 
-// CBOR tags for Paillier types.
-const (
-	PlaintextTag  = 6001 // CBOR tag for Plaintext
-	NonceTag      = 6002 // CBOR tag for Nonce
-	CiphertextTag = 6003 // CBOR tag for Ciphertext
-	PublicKeyTag  = 6004 // CBOR tag for PublicKey
-	PrivateKeyTag = 6005 // CBOR tag for PrivateKey
-)
-
-func init() {
-	serde.Register[*Plaintext](PlaintextTag)
-	serde.Register[*Nonce](NonceTag)
-	serde.Register[*Ciphertext](CiphertextTag)
-	serde.Register[*PublicKey](PublicKeyTag)
-	serde.Register[*PrivateKey](PrivateKeyTag)
-}
-
 // Plaintext serialisation - reuse num.Int and num.NatPlus CBOR.
 type plaintextDTO struct {
 	V *num.Int     `cbor:"v"`
@@ -52,7 +35,7 @@ func (pt *Plaintext) MarshalCBOR() ([]byte, error) {
 		V: pt.v,
 		N: pt.n,
 	}
-	data, err := serde.MarshalCBORTagged(dto, PlaintextTag)
+	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
@@ -80,7 +63,7 @@ func (n *Nonce) MarshalCBOR() ([]byte, error) {
 	dto := &nonceDTO{
 		U: n.u,
 	}
-	data, err := serde.MarshalCBORTagged(dto, NonceTag)
+	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
@@ -107,7 +90,7 @@ func (ct *Ciphertext) MarshalCBOR() ([]byte, error) {
 	dto := &ciphertextDTO{
 		U: ct.u,
 	}
-	data, err := serde.MarshalCBORTagged(dto, CiphertextTag)
+	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
@@ -134,7 +117,7 @@ func (pk *PublicKey) MarshalCBOR() ([]byte, error) {
 	dto := &publicKeyDTO{
 		Group: pk.group,
 	}
-	data, err := serde.MarshalCBORTagged(dto, PublicKeyTag)
+	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
@@ -162,7 +145,7 @@ func (sk *PrivateKey) MarshalCBOR() ([]byte, error) {
 	dto := &privateKeyDTO{
 		Group: sk.group,
 	}
-	data, err := serde.MarshalCBORTagged(dto, PrivateKeyTag)
+	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
 		return nil, errs2.Wrap(err)
 	}
