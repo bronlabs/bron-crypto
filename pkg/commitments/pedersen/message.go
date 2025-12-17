@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
@@ -92,11 +92,11 @@ func (m *Message[S]) Bytes() []byte {
 func (m *Message[S]) MarshalBinary() ([]byte, error) {
 	scalarMarshaler, ok := any(m.v).(encoding.BinaryMarshaler)
 	if !ok {
-		return nil, errs.NewType("cannot marshal underlying scalar message")
+		return nil, ErrSerialisation.WithMessage("cannot marshal underlying scalar message")
 	}
 	data, err := scalarMarshaler.MarshalBinary()
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal scalar message to binary")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal scalar message to binary")
 	}
 	return data, nil
 }
@@ -108,7 +108,7 @@ func (m *Message[S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal Pedersen message")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal Pedersen message")
 	}
 	return data, nil
 }
@@ -117,7 +117,7 @@ func (m *Message[S]) MarshalCBOR() ([]byte, error) {
 func (m *Message[S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*messageDTO[S]](data)
 	if err != nil {
-		return err
+		return errs2.Wrap(err).WithMessage("failed to unmarshal Pedersen message")
 	}
 
 	m2 := NewMessage(dto.V)

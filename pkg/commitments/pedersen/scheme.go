@@ -2,7 +2,6 @@ package pedersen
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 )
 
@@ -14,7 +13,7 @@ type Scheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] s
 // NewScheme validates and constructs a Pedersen commitment scheme from the provided key.
 func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](key *Key[E, S]) (*Scheme[E, S], error) {
 	if key == nil {
-		return nil, errs.NewIsNil("key cannot be nil")
+		return nil, ErrInvalidArgument.WithMessage("key cannot be nil")
 	}
 
 	s := &Scheme[E, S]{

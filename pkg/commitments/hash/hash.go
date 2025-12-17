@@ -1,13 +1,14 @@
 package hash_comm
 
 import (
+	"fmt"
 	"hash"
 	"io"
 
 	"golang.org/x/crypto/blake2b"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -28,7 +29,7 @@ const (
 	DigestSize = 32
 
 	// Name identifies the hash-based commitment scheme.
-	Name commitments.Name = "Hash"
+	Name commitments.Name = "KMACBasedCommitmentScheme"
 )
 
 type (
@@ -43,7 +44,7 @@ type (
 )
 
 // Bytes returns the raw commitment digest bytes.
-func (c *Commitment) Bytes() []byte {
+func (c Commitment) Bytes() []byte {
 	return c[:]
 }
 
@@ -55,7 +56,7 @@ func (w Witness) Bytes() []byte {
 func (k Key) hmacInit() hash.Hash {
 	hmac, err := HmacFunc(k[:])
 	if err != nil {
-		panic(errs.WrapFailed(err, "cannot create HMAC hash function"))
+		panic(errs2.Wrap(err).WithMessage("cannot create HMAC hash function"))
 	}
 	return hmac
 }
@@ -63,19 +64,19 @@ func (k Key) hmacInit() hash.Hash {
 // NewKeyFromCRSBytes derives a commitment key from the SID, domain separation tag and CRS transcripts.
 func NewKeyFromCRSBytes(sid network.SID, dst string, crs ...[]byte) (Key, error) {
 	if ct.SliceIsZero(sid[:]) == 1 {
-		return Key{}, errs.NewArgument("SID cannot be zero")
+		return Key{}, ErrInvalidArgument.WithMessage("SID cannot be zero")
 	}
 	if dst == "" {
-		return Key{}, errs.NewArgument("dst cannot be empty")
+		return Key{}, ErrInvalidArgument.WithMessage("dst cannot be empty")
 	}
 	hasher, err := blake2b.New256(sid[:])
 	if err != nil {
-		return Key{}, errs.WrapFailed(err, "cannot create hash")
+		return Key{}, errs2.Wrap(err).WithMessage("cannot create hash")
 	}
 	h := func() hash.Hash { return hasher }
 	out, err := hashing.HashPrefixedLength(h, append(crs, []byte(dst))...)
 	if err != nil {
-		return Key{}, errs.WrapFailed(err, "cannot hash CRS")
+		return Key{}, errs2.Wrap(err).WithMessage("cannot hash CRS")
 	}
 	var key Key
 	copy(key[:], out)
@@ -85,7 +86,7 @@ func NewKeyFromCRSBytes(sid network.SID, dst string, crs ...[]byte) (Key, error)
 // NewScheme constructs the hash-based commitment scheme with the provided key.
 func NewScheme(key Key) (*Scheme, error) {
 	if ct.SliceIsZero(key[:]) == 1 {
-		return nil, errs.NewArgument("key cannot be zero")
+		return nil, ErrInvalidArgument.WithMessage("key cannot be zero")
 	}
 	return &Scheme{key: key}, nil
 }
@@ -132,7 +133,7 @@ func (c *Committer) CommitWithWitness(message Message, witness Witness) (commitm
 	out := c.hmac.Sum(nil)
 	c.hmac.Reset()
 	if len(out) != DigestSize {
-		return commitment, errs.NewHashing("invalid commitment length, expected %d bytes, got %d", DigestSize, len(out))
+		return commitment, ErrFailed.WithMessage(fmt.Sprintf("invalid commitment length, expected %d bytes, got %d", DigestSize, len(out)))
 	}
 	copy(commitment[:], out)
 	return commitment, nil
@@ -141,12 +142,12 @@ func (c *Committer) CommitWithWitness(message Message, witness Witness) (commitm
 // Commit samples fresh witness randomness and computes a commitment to the message.
 func (c *Committer) Commit(message Message, prng io.Reader) (commitment Commitment, witness Witness, err error) {
 	if _, err = io.ReadFull(prng, witness[:]); err != nil {
-		return commitment, witness, errs.WrapRandomSample(err, "cannot sample witness")
+		return commitment, witness, errs2.Wrap(err).WithMessage("cannot sample witness")
 	}
 
 	commitment, err = c.CommitWithWitness(message, witness)
 	if err != nil {
-		return Commitment{}, Witness{}, errs.WrapFailed(err, "cannot compute commitment")
+		return Commitment{}, Witness{}, errs2.Wrap(err).WithMessage("cannot compute commitment")
 	}
 
 	return commitment, witness, nil
