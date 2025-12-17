@@ -74,6 +74,14 @@ func (n *Nonce) Value() *znstar.RSAGroupElementUnknownOrder {
 	return n.u
 }
 
+// Equal returns true if two nonces are equal.
+func (n *Nonce) Equal(other *Nonce) bool {
+	if n == nil || other == nil {
+		return n == other
+	}
+	return n.Value().Equal(other.Value())
+}
+
 // ValueCT returns the nonce value as a constant-time natural number.
 func (n *Nonce) ValueCT() *numct.Nat {
 	return n.Value().Value().Value()

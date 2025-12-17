@@ -100,7 +100,7 @@ type ShiftTypeCiphertext[
 ] interface {
 	HomomorphicCiphertext[C, CV, S]
 	ReRandomisableCiphertext[C, N, PK]
-	ReRandomiseWithNonce(PK, N) (C, N, error)
+	ReRandomiseWithNonce(PK, N) (C, error)
 	Shift(PK, M) (C, error)
 }
 
