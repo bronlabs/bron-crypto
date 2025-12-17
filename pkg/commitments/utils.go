@@ -17,6 +17,7 @@ type GenericVerifier[T Committer[W, M, C], W Witness, M Message, C Commitment] s
 	commitmentsAreEqual func(c1, c2 C) bool
 }
 
+// Verify verifies correctness of the commitment.
 func (v *GenericVerifier[T, W, M, C]) Verify(commitment C, message M, witness W) error {
 	recomputed, err := v.committer.CommitWithWitness(message, witness)
 	if err != nil {
