@@ -1,7 +1,6 @@
 package hash_comm
 
 import (
-	"fmt"
 	"hash"
 	"io"
 
@@ -133,7 +132,7 @@ func (c *Committer) CommitWithWitness(message Message, witness Witness) (commitm
 	out := c.hmac.Sum(nil)
 	c.hmac.Reset()
 	if len(out) != DigestSize {
-		return commitment, ErrFailed.WithMessage(fmt.Sprintf("invalid commitment length, expected %d bytes, got %d", DigestSize, len(out)))
+		return commitment, ErrFailed.WithMessage("invalid commitment length, expected %d bytes, got %d", DigestSize, len(out))
 	}
 	copy(commitment[:], out)
 	return commitment, nil

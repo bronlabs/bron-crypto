@@ -1,8 +1,6 @@
 package pedersen
 
 import (
-	"encoding"
-
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
@@ -86,19 +84,6 @@ func (m *Message[S]) HashCode() base.HashCode {
 // Bytes serialises the message to bytes using the scalar encoding.
 func (m *Message[S]) Bytes() []byte {
 	return m.v.Bytes()
-}
-
-// MarshalBinary serialises the message using the scalar's binary marshaler when available.
-func (m *Message[S]) MarshalBinary() ([]byte, error) {
-	scalarMarshaler, ok := any(m.v).(encoding.BinaryMarshaler)
-	if !ok {
-		return nil, ErrSerialisation.WithMessage("cannot marshal underlying scalar message")
-	}
-	data, err := scalarMarshaler.MarshalBinary()
-	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("failed to marshal scalar message to binary")
-	}
-	return data, nil
 }
 
 // MarshalCBOR encodes the message into CBOR format.
