@@ -31,7 +31,7 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 func (p *prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
 	p.transcript.AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, p.rho))
 	p.transcript.AppendBytes(statementLabel, statement.Bytes())
-	commonHKey, err := p.transcript.ExtractBytes(commitmentLabel, base.CollisionResistanceBytesCeil)
+	commonHKey, err := p.transcript.ExtractBytes(commonHLabel, base.CollisionResistanceBytesCeil)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot extract h")
 	}
