@@ -146,7 +146,7 @@ func (s *Sender) Round2(r1 *Round1P2P) (senderOutput *SenderOutput, err error) {
 	// step 2.4: Verify the challenge response (ẋ, ṫ_i) using the challenge (χ)
 	err = s.verifyChallenge(challengeFiatShamir, &r1.ChallengeResponse, extCorrelations)
 	if err != nil {
-		return nil, ot.ErrVerification.WithMessage("bad consistency check for SoftSpoken COTe")
+		return nil, errs2.ErrAbort.WithMessage("bad consistency check for SoftSpoken COTe")
 	}
 
 	s.tape.AppendBytes(challengeResponseXLabel, r1.ChallengeResponse.X[:])
@@ -296,7 +296,7 @@ func (s *Sender) verifyChallenge(
 		isCorrect = isCorrect && qiExpected.Equal(qi)
 	}
 	if !isCorrect {
-		return ot.ErrVerification.WithMessage("expected q != q in SoftspokenOT, consistency check failed")
+		return errs2.ErrAbort.WithMessage("expected q != q in SoftspokenOT, consistency check failed")
 	}
 	return nil
 }

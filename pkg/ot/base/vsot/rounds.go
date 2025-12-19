@@ -257,7 +257,7 @@ func (s *Sender[P, B, S]) Round5(r4 *Round4P2P) (*Round5P2P, error) {
 			}
 
 			if subtle.ConstantTimeCompare(r4.RhoPrime[idx], s.state.rho0DigestDigest[idx]) != 1 {
-				return nil, ot.ErrVerification.WithMessage("verification failed")
+				return nil, errs2.ErrAbort.WithMessage("verification failed")
 			}
 		}
 	}
@@ -291,11 +291,11 @@ func (r *Receiver[P, B, S]) Round6(r5 *Round5P2P) error {
 			switch r.state.omegaRaw[idx] {
 			case 0:
 				if subtle.ConstantTimeCompare(rho0Digest, r.state.rhoOmegaDigest[idx]) != 1 {
-					return ot.ErrVerification.WithMessage("verification failed")
+					return errs2.ErrAbort.WithMessage("verification failed")
 				}
 			case 1:
 				if subtle.ConstantTimeCompare(rho1Digest, r.state.rhoOmegaDigest[idx]) != 1 {
-					return ot.ErrVerification.WithMessage("verification failed")
+					return errs2.ErrAbort.WithMessage("verification failed")
 				}
 			default:
 				panic("invalid internal state - this should never happen")
@@ -312,7 +312,7 @@ func (r *Receiver[P, B, S]) Round6(r5 *Round5P2P) error {
 			xi := make([]byte, len(rho0DigestDigest))
 			subtle.XORBytes(xi, rho0DigestDigest, rho1DigestDigest)
 			if subtle.ConstantTimeCompare(xi, r.state.xi[idx]) != 1 {
-				return ot.ErrVerification.WithMessage("verification failed")
+				return errs2.ErrAbort.WithMessage("verification failed")
 			}
 		}
 	}
