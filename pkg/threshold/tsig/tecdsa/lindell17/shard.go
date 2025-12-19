@@ -5,7 +5,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -96,13 +96,13 @@ func (a *AuxiliaryInfo) UnmarshalCBOR(data []byte) error {
 
 func NewAuxiliaryInfo(paillierPrivateKey *paillier.PrivateKey, paillierPublicKeys ds.Map[sharing.ID, *paillier.PublicKey], encryptedShares ds.Map[sharing.ID, *paillier.Ciphertext]) (*AuxiliaryInfo, error) {
 	if paillierPrivateKey == nil {
-		return nil, errs.NewIsNil("paillier private key is nil")
+		return nil, ErrInvalidArgument.WithMessage("paillier private key is nil")
 	}
 	if paillierPublicKeys == nil {
-		return nil, errs.NewIsNil("paillier public keys map is nil")
+		return nil, ErrInvalidArgument.WithMessage("paillier public keys map is nil")
 	}
 	if encryptedShares == nil {
-		return nil, errs.NewIsNil("encrypted shares map is nil")
+		return nil, ErrInvalidArgument.WithMessage("encrypted shares map is nil")
 	}
 	return &AuxiliaryInfo{
 		paillierPrivateKey: paillierPrivateKey,
@@ -118,7 +118,7 @@ type Shard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 
 func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](baseShard *tecdsa.Shard[P, B, S], auxInfo *AuxiliaryInfo) (*Shard[P, B, S], error) {
 	if baseShard == nil || auxInfo == nil {
-		return nil, errs.NewIsNil("cannot create Shard with nil fields")
+		return nil, ErrInvalidArgument.WithMessage("cannot create Shard with nil fields")
 	}
 	return &Shard[P, B, S]{
 		Shard:         baseShard,
@@ -145,7 +145,7 @@ func (s *Shard[P, B, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal dkls23 Shard")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal lindell17 shard")
 	}
 	return data, nil
 }

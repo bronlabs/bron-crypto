@@ -14,6 +14,7 @@ type Round1Broadcast struct {
 	BigQCommitment hash_comm.Commitment
 }
 
+// Round2Broadcast opens commitments to Q' and Q” with corresponding proofs.
 type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	BigQOpening          hash_comm.Witness
 	BigQPrime            P
@@ -22,6 +23,7 @@ type Round2Broadcast[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	BigQDoublePrimeProof compiler.NIZKPoKProof
 }
 
+// Round3Broadcast shares Paillier public key and encryptions of split shares.
 type Round3Broadcast struct {
 	CKeyPrime         *paillier.Ciphertext
 	CKeyDoublePrime   *paillier.Ciphertext

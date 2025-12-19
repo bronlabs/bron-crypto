@@ -5,20 +5,21 @@ import (
 	"slices"
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
 const Threshold = 2
 
+// PartialSignature holds the Paillier ciphertext used to finish ECDSA signing.
 type PartialSignature struct {
 	C3 *paillier.Ciphertext
 }
 
+// NewPartialSignature wraps a Paillier ciphertext into a partial signature.
 func NewPartialSignature(c3 *paillier.Ciphertext) (*PartialSignature, error) {
 	if c3 == nil {
-		return nil, errs.NewIsNil("invalid ciphertext")
+		return nil, ErrInvalidArgument.WithMessage("ciphertext is nil")
 	}
 	return &PartialSignature{C3: c3}, nil
 }

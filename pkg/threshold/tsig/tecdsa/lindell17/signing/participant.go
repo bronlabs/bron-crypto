@@ -6,7 +6,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
@@ -21,6 +21,7 @@ const (
 	transcriptLabel = "BRON_CRYPTO_LINDELL17_SIGN-"
 )
 
+// Cosigner encapsulates shared signing state for primary/secondary roles.
 type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	round uint
 	// Base participant
@@ -36,6 +37,7 @@ type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 	niDlogScheme     compiler.NonInteractiveProtocol[*schnorrpok.Statement[P, S], *schnorrpok.Witness[S]]
 }
 
+// PrimaryCosignerState holds primary-specific secrets.
 type PrimaryCosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	k1           S
 	bigR1Opening hash_comm.Witness
@@ -44,6 +46,7 @@ type PrimaryCosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B
 	bigR1        P
 }
 
+// PrimaryCosigner drives rounds as the primary signer.
 type PrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	Cosigner[P, B, S]
 
@@ -51,12 +54,14 @@ type PrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S 
 	state              *PrimaryCosignerState[P, B, S]
 }
 
+// SecondaryCosignerState holds secondary-specific secrets.
 type SecondaryCosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	bigR1Commitment hash_comm.Commitment
 	k2              S
 	bigR2           P
 }
 
+// SecondaryCosigner drives rounds as the secondary signer.
 type SecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	Cosigner[P, B, S]
 
@@ -64,6 +69,7 @@ type SecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], 
 	state            *SecondaryCosignerState[P, B, S]
 }
 
+// SharingID returns the cosigner's identifier.
 func (cosigner *Cosigner[P, B, S]) SharingID() sharing.ID {
 	return cosigner.shard.Share().ID()
 }
@@ -71,7 +77,7 @@ func (cosigner *Cosigner[P, B, S]) SharingID() sharing.ID {
 func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *ecdsa.Suite[P, B, S], hisSharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader, roundNo uint) (cosigner *Cosigner[P, B, S], err error) {
 	err = validateInputs(suite, hisSharingID, myShard, niCompiler, tape, prng)
 	if err != nil {
-		return nil, errs.WrapArgument(err, "invalid input arguments")
+		return nil, errs2.Wrap(err).WithMessage("invalid input arguments")
 	}
 
 	dst := fmt.Sprintf("%s_%s_%s_%s", transcriptLabel, sessionId, niCompiler, suite.Curve().Name())
@@ -79,20 +85,20 @@ func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 
 	ck, err := hash_comm.NewKeyFromCRSBytes(sessionId, dst, myShard.PublicKey().Value().ToCompressed())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create commitment key from CRS")
+		return nil, errs2.Wrap(err).WithMessage("could not create commitment key from CRS")
 	}
 	commitmentScheme, err := hash_comm.NewScheme(ck)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create commitment scheme")
+		return nil, errs2.Wrap(err).WithMessage("could not create commitment scheme")
 	}
 	schnorrProtocol, err := schnorrpok.NewProtocol(suite.Curve().Generator(), prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create schnorr protocol")
+		return nil, errs2.Wrap(err).WithMessage("failed to create schnorr protocol")
 	}
 
 	niDlogScheme, err := compiler.Compile(niCompiler, schnorrProtocol, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to compile niDlogProver")
+		return nil, errs2.Wrap(err).WithMessage("failed to compile niDlogProver")
 	}
 
 	return &Cosigner[P, B, S]{
@@ -110,7 +116,7 @@ func newCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 func NewPrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *ecdsa.Suite[P, B, S], secondarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader) (primaryCosigner *PrimaryCosigner[P, B, S], err error) {
 	cosigner, err := newCosigner(sessionId, suite, secondarySharingID, myShard, niCompiler, tape, prng, 1)
 	if err != nil {
-		return nil, errs.WrapValidation(err, "could not construct primary cosigner")
+		return nil, errs2.Wrap(err).WithMessage("could not construct primary cosigner")
 	}
 	primaryCosigner = &PrimaryCosigner[P, B, S]{
 		Cosigner:           *cosigner,
@@ -123,7 +129,7 @@ func NewPrimaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B],
 func NewSecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *ecdsa.Suite[P, B, S], primarySharingID sharing.ID, myShard *lindell17.Shard[P, B, S], niCompiler compiler.Name, tape transcripts.Transcript, prng io.Reader) (secondaryCosigner *SecondaryCosigner[P, B, S], err error) {
 	cosigner, err := newCosigner(sessionId, suite, primarySharingID, myShard, niCompiler, tape, prng, 2)
 	if err != nil {
-		return nil, errs.WrapValidation(err, "could not construct secondary cosigner")
+		return nil, errs2.Wrap(err).WithMessage("could not construct secondary cosigner")
 	}
 	secondaryCosigner = &SecondaryCosigner[P, B, S]{
 		Cosigner:         *cosigner,
@@ -135,29 +141,29 @@ func NewSecondaryCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B
 
 func validateInputs[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *ecdsa.Suite[P, B, S], other sharing.ID, myShard *lindell17.Shard[P, B, S], nic compiler.Name, tape transcripts.Transcript, prng io.Reader) error {
 	if suite == nil {
-		return errs.NewIsNil("suite is nil")
+		return ErrInvalidArgument.WithMessage("suite is nil")
 	}
 	if tape == nil {
-		return errs.NewIsNil("tape is nil")
+		return ErrInvalidArgument.WithMessage("tape is nil")
 	}
 	if prng == nil {
-		return errs.NewIsNil("prng is nil")
+		return ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	if myShard == nil {
-		return errs.NewArgument("myShard is nil")
+		return ErrInvalidArgument.WithMessage("myShard is nil")
 	}
 
 	if suite.IsDeterministic() {
-		return errs.NewArgument("suite cannot be deterministic for MPC signing")
+		return ErrInvalidArgument.WithMessage("suite cannot be deterministic for MPC signing")
 	}
 	if other == myShard.Share().ID() {
-		return errs.NewArgument("other sharing ID %d is equal to my sharing ID", other)
+		return ErrInvalidArgument.WithMessage("other sharing ID %d is equal to my sharing ID", other)
 	}
 	if !myShard.AccessStructure().Shareholders().Contains(other) || !myShard.AccessStructure().Shareholders().Contains(myShard.Share().ID()) {
-		return errs.NewArgument("sharing ID %d not in my shard access structure", other)
+		return ErrInvalidArgument.WithMessage("sharing ID %d not in my shard access structure", other)
 	}
 	if !compiler.IsSupported(nic) {
-		return errs.NewArgument("unsupported NI compiler: %s", nic)
+		return ErrInvalidArgument.WithMessage("unsupported NI compiler: %s", nic)
 	}
 
 	return nil
