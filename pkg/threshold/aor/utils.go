@@ -4,14 +4,13 @@ import (
 	"iter"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
 func validateIncomingBroadcastMessages[MB network.Message](p *Participant, rIn network.Round, uIn network.RoundMessages[MB]) (iter.Seq2[sharing.ID, MB], error) {
 	if rIn != p.round {
-		return nil, errs.NewFailed("invalid round")
+		return nil, ErrRound.WithMessage("invalid round")
 	}
 
 	incomingParties := uIn.Keys()
@@ -20,7 +19,7 @@ func validateIncomingBroadcastMessages[MB network.Message](p *Participant, rIn n
 			continue
 		}
 		if !slices.Contains(incomingParties, id) {
-			return nil, errs.NewFailed("missing broadcast message from %d", id)
+			return nil, ErrFailed.WithMessage("missing broadcast message from %d", id)
 		}
 	}
 

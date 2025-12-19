@@ -5,20 +5,21 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 )
 
+// Round1 deals a zero-sharing and distributes shares and verification vectors.
 func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUnicasts[*Round1P2P[G, S]], error) {
 	if p.round != 1 {
-		return nil, nil, errs.NewRound("expected round 1")
+		return nil, nil, ErrRound.WithMessage("expected round 1")
 	}
 
 	dealerOut, err := p.scheme.Deal(feldman.NewSecret(p.field.Zero()), p.prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not deal shares")
+		return nil, nil, errs2.Wrap(err).WithMessage("could not deal shares")
 	}
 	p.state.verificationVectors = make(map[sharing.ID]feldman.VerificationVector[G, S])
 	p.state.verificationVectors[p.sharingId] = dealerOut.VerificationMaterial()
@@ -26,7 +27,7 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 	var ok bool
 	p.state.share, ok = dealerOut.Shares().Get(p.sharingId)
 	if !ok {
-		return nil, nil, errs.NewFailed("missing share")
+		return nil, nil, ErrFailed.WithMessage("missing share")
 	}
 
 	r1b := &Round1Broadcast[G, S]{
@@ -39,7 +40,7 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 		}
 		share, ok := dealerOut.Shares().Get(id)
 		if !ok {
-			return nil, nil, errs.NewFailed("missing share")
+			return nil, nil, ErrFailed.WithMessage("missing share")
 		}
 		r1u.Put(id, &Round1P2P[G, S]{
 			ZeroShare: share,
@@ -50,9 +51,10 @@ func (p *Participant[G, S]) Round1() (*Round1Broadcast[G, S], network.OutgoingUn
 	return r1b, r1u.Freeze(), nil
 }
 
+// Round2 verifies all zero-shares and aggregates them into a single zero-share and verification vector.
 func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S]], r1u network.RoundMessages[*Round1P2P[G, S]]) (*feldman.Share[S], feldman.VerificationVector[G, S], error) {
 	if p.round != 2 {
-		return nil, nil, errs.NewRound("expected round 2")
+		return nil, nil, ErrRound.WithMessage("expected round 2")
 	}
 
 	share := p.state.share
@@ -63,15 +65,15 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 		}
 		b, ok := r1b.Get(id)
 		if !ok {
-			return nil, nil, errs.NewFailed("missing message")
+			return nil, nil, ErrFailed.WithMessage("missing message")
 		}
 		u, ok := r1u.Get(id)
 		if !ok {
-			return nil, nil, errs.NewFailed("missing message")
+			return nil, nil, ErrFailed.WithMessage("missing message")
 		}
 
 		if !b.VerificationVector.Coefficients()[0].Equal(p.group.OpIdentity()) || p.scheme.Verify(u.ZeroShare, b.VerificationVector) != nil {
-			return nil, nil, errs.NewIdentifiableAbort(id, "invalid share")
+			return nil, nil, errs2.ErrAbort.WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("invalid share")
 		}
 		share = share.Add(u.ZeroShare)
 		verificationVector = verificationVector.Op(b.VerificationVector)

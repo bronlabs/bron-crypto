@@ -9,4 +9,5 @@ const (
 	SeedLength = 32
 )
 
+// Seeds maps party identifiers to PRZS seed material.
 type Seeds ds.Map[sharing.ID, [SeedLength]byte]
