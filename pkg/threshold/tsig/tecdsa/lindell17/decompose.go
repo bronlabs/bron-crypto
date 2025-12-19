@@ -8,7 +8,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 )
 
-// DecomposeTwoThirds splits a scalar into x' and x” in [q/6, 2q/3) such that x + x' + x' + x' + x” = x.
+// DecomposeTwoThirds splits a scalar into x' and x” in [q/3, 2q/3) such that 3*x' + x” = x.
 func DecomposeTwoThirds[S algebra.PrimeFieldElement[S]](scalar S, prng io.Reader) (xPrime, xDoublePrime S, err error) {
 	var nilS S
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](scalar.Structure())
