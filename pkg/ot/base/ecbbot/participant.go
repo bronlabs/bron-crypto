@@ -6,8 +6,9 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
@@ -40,13 +41,13 @@ type Receiver[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 // NewSender constructs a Random OT sender.
 func NewSender[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[G, S], tape transcripts.Transcript, prng io.Reader) (*Sender[G, S], error) {
 	if suite == nil || tape == nil || prng == nil {
-		return nil, errs.NewValidation("invalid args")
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
 
 	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
 	ka, err := NewTaggedKeyAgreement(suite.Group())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create tagged key agreement")
+		return nil, errs2.Wrap(err).WithMessage("cannot create tagged key agreement")
 	}
 
 	s := &Sender[G, S]{
@@ -65,13 +66,13 @@ func NewSender[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]
 // NewReceiver constructs a Random OT receiver.
 func NewReceiver[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sessionId network.SID, suite *Suite[G, S], tape transcripts.Transcript, prng io.Reader) (*Receiver[G, S], error) {
 	if suite == nil || tape == nil || prng == nil {
-		return nil, errs.NewValidation("invalid args")
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
 
 	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
 	ka, err := NewTaggedKeyAgreement(suite.Group())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create tagged key agreement")
+		return nil, errs2.Wrap(err).WithMessage("cannot create tagged key agreement")
 	}
 
 	r := &Receiver[G, S]{

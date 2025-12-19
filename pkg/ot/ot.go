@@ -1,7 +1,5 @@
 package ot
 
-import "github.com/bronlabs/bron-crypto/pkg/base/errs"
-
 // Suite captures batch and block sizes for an OT instantiation.
 type Suite interface {
 	Xi() int
@@ -17,7 +15,7 @@ type DefaultSuite struct {
 // NewDefaultSuite constructs a suite with the given batch size xi and message block length l.
 func NewDefaultSuite(xi, l int) (*DefaultSuite, error) {
 	if xi <= 0 || l <= 0 {
-		return nil, errs.NewValidation("invalid args")
+		return nil, ErrInvalidArgument.WithMessage("invalid args")
 	}
 	return &DefaultSuite{xi, l}, nil
 }

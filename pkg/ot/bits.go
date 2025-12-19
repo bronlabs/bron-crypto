@@ -2,8 +2,6 @@ package ot
 
 import (
 	"fmt"
-
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 // PackedBits is a byte vector of little-endian packed bits.
@@ -20,7 +18,7 @@ func Pack(unpackedBits []uint8) (PackedBits, error) {
 		vOut[i/8] |= (bit & 0b1) << (i % 8)
 	}
 	if isNonBinary&0xFE != 0x00 {
-		return nil, errs.NewArgument("Input vector contains non-binary elements")
+		return nil, ErrInvalidArgument.WithMessage("input vector contains non-binary elements")
 	}
 
 	return vOut, nil
@@ -98,12 +96,12 @@ func TransposePackedBits(inputMatrix [][]byte) ([][]byte, error) {
 	// Read input sizes and allocate output
 	nRowsInput := len(inputMatrix)
 	if nRowsInput%8 != 0 || nRowsInput == 0 {
-		return nil, errs.NewArgument("input matrix must have a number of rows divisible by 8")
+		return nil, ErrInvalidArgument.WithMessage("input matrix must have a number of rows divisible by 8")
 	}
 	// check if array is a matrix
 	for i := range nRowsInput {
 		if len(inputMatrix[i]) != len(inputMatrix[0]) {
-			return nil, errs.NewArgument("input matrix must be a 2D matrix")
+			return nil, ErrInvalidArgument.WithMessage("input matrix must be a 2D matrix")
 		}
 	}
 
@@ -136,7 +134,7 @@ func TransposePackedBits(inputMatrix [][]byte) ([][]byte, error) {
 // Parse converts a binary string into PackedBits.
 func Parse(v string) (PackedBits, error) {
 	if v == "" {
-		return nil, errs.NewArgument("Input string cannot be empty")
+		return nil, ErrInvalidArgument.WithMessage("input string cannot be empty")
 	}
 
 	byteLen := (len(v) + 7) / 8
@@ -144,7 +142,7 @@ func Parse(v string) (PackedBits, error) {
 
 	for i, char := range v {
 		if char != '0' && char != '1' {
-			return nil, errs.NewArgument("Invalid character in the input")
+			return nil, ErrInvalidArgument.WithMessage("invalid character in the input")
 		}
 		byteIndex := i / 8
 		bitPos := uint(i % 8)

@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
@@ -72,19 +72,19 @@ type Suite[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFi
 // NewSuite configures VSOT over the given curve with batch size xi and block length l.
 func NewSuite[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](xi, l int, curve curves.Curve[P, B, S], hashFunc func() hash.Hash) (*Suite[P, B, S], error) {
 	if hashFunc == nil {
-		return nil, errs.NewValidation("invalid hash func")
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid hash func")
 	}
 	if (xi % 8) != 0 {
-		return nil, errs.NewValidation("invalid xi")
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid xi")
 	}
 	field, ok := curve.ScalarStructure().(algebra.PrimeField[S])
 	if !ok {
-		return nil, errs.NewFailed("invalid curve scalar structure")
+		return nil, ot.ErrFailed.WithMessage("invalid curve scalar structure")
 	}
 
 	defaultSuite, err := ot.NewDefaultSuite(xi, l)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create default suite")
+		return nil, errs2.Wrap(err).WithMessage("failed to create default suite")
 	}
 	s := &Suite[P, B, S]{
 		DefaultSuite: *defaultSuite,

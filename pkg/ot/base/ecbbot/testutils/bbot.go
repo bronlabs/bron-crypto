@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/ecbbot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -17,39 +17,39 @@ import (
 func RunBBOT[GE algebra.PrimeGroupElement[GE, SE], SE algebra.PrimeFieldElement[SE]](xi, l int, group algebra.PrimeGroup[GE, SE], sessionId network.SID, tape transcripts.Transcript, prng io.Reader) (*ecbbot.SenderOutput[SE], *ecbbot.ReceiverOutput[SE], error) {
 	suite, err := ecbbot.NewSuite(xi, l, group)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "constructing OT suite in run BatchedBaseOT")
+		return nil, nil, errs2.Wrap(err).WithMessage("constructing OT suite in run BatchedBaseOT")
 	}
 
 	sender, err := ecbbot.NewSender(sessionId, suite, tape.Clone(), prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "constructing OT sender in run BatchedBaseOT")
+		return nil, nil, errs2.Wrap(err).WithMessage("constructing OT sender in run BatchedBaseOT")
 	}
 	receiver, err := ecbbot.NewReceiver(sessionId, suite, tape.Clone(), prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "constructing OT receiver in run BatchedBaseOT")
+		return nil, nil, errs2.Wrap(err).WithMessage("constructing OT receiver in run BatchedBaseOT")
 	}
 
 	// Run the protocol
 	// R1
 	r1Out, err := sender.Round1()
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "sender round 1 in run BatchedBaseOT")
+		return nil, nil, errs2.Wrap(err).WithMessage("sender round 1 in run BatchedBaseOT")
 	}
 
 	// R2
 	receiverInput := make([]byte, xi/8)
 	if _, err := io.ReadFull(prng, receiverInput); err != nil {
-		return nil, nil, errs.WrapFailed(err, "reading receiver input")
+		return nil, nil, errs2.Wrap(err).WithMessage("reading receiver input")
 	}
 	r2Out, receiverOutput, err := receiver.Round2(r1Out, receiverInput)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "receiver round 2 in run BatchedBaseOT")
+		return nil, nil, errs2.Wrap(err).WithMessage("receiver round 2 in run BatchedBaseOT")
 	}
 
 	// R3
 	senderOutput, err := sender.Round3(r2Out)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "sender round 3 in run BatchedBaseOT")
+		return nil, nil, errs2.Wrap(err).WithMessage("sender round 3 in run BatchedBaseOT")
 	}
 	return senderOutput, receiverOutput, nil
 }
