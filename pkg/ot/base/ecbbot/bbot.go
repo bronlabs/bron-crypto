@@ -6,7 +6,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 )
@@ -22,18 +22,18 @@ type Suite[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] st
 // NewSuite creates an EC BBOT suite for batch size xi and block length l.
 func NewSuite[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](xi, l int, group algebra.PrimeGroup[G, S]) (*Suite[G, S], error) {
 	if group == nil {
-		return nil, errs.NewValidation("invalid group")
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid group")
 	}
 	field, ok := group.ScalarStructure().(algebra.PrimeField[S])
 	if !ok {
-		return nil, errs.NewFailed("invalid group scalar structure")
+		return nil, ot.ErrFailed.WithMessage("invalid group scalar structure")
 	}
 	if (xi % 8) != 0 {
-		return nil, errs.NewValidation("invalid xi")
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid xi")
 	}
 	defaultSuite, err := ot.NewDefaultSuite(xi, l)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create default suite")
+		return nil, errs2.Wrap(err).WithMessage("failed to create default suite")
 	}
 
 	s := &Suite[G, S]{
@@ -75,11 +75,11 @@ func NewReceiverOutput[S algebra.PrimeFieldElement[S]](xi, l int) *ReceiverOutpu
 // ToBitsOutput hashes scalar outputs into byte strings usable by VSOT/extension.
 func (r *ReceiverOutput[S]) ToBitsOutput(byteLen int, key []byte) (*vsot.ReceiverOutput, error) {
 	if byteLen < 16 || len(key) < 16 {
-		return nil, errs.NewValidation("invalid hash or key size")
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid hash or key size")
 	}
 	h, err := blake2b.New(byteLen, key)
 	if err != nil {
-		return nil, errs.NewFailed("failed to create hasher")
+		return nil, ot.ErrFailed.WithMessage("failed to create hasher")
 	}
 
 	out := &vsot.ReceiverOutput{
@@ -102,6 +102,7 @@ func (r *ReceiverOutput[S]) ToBitsOutput(byteLen int, key []byte) (*vsot.Receive
 	return out, nil
 }
 
+// SenderOutput holds scalar branch outputs for the sender side.
 type SenderOutput[S algebra.PrimeFieldElement[S]] struct {
 	ot.SenderOutput[S]
 }
@@ -123,11 +124,11 @@ func NewSenderOutput[S algebra.PrimeFieldElement[S]](xi, l int) *SenderOutput[S]
 // ToBitsOutput hashes scalar outputs into byte strings usable by VSOT/extension.
 func (s *SenderOutput[S]) ToBitsOutput(byteLen int, key []byte) (*vsot.SenderOutput, error) {
 	if byteLen < 16 || len(key) < 16 {
-		return nil, errs.NewValidation("invalid hash or key size")
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid hash or key size")
 	}
 	h, err := blake2b.New(byteLen, key)
 	if err != nil {
-		return nil, errs.NewFailed("failed to create hasher")
+		return nil, ot.ErrFailed.WithMessage("failed to create hasher")
 	}
 
 	out := &vsot.SenderOutput{

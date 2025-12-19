@@ -26,7 +26,7 @@ type (
 	GroupElement[E algebra.PrimeGroupElement[E, S], S Scalar[S]] = algebra.PrimeGroupElement[E, S]
 
 	DKGOutput[
-	E GroupElement[E, S], S Scalar[S],
+		E GroupElement[E, S], S Scalar[S],
 	] struct {
 		DKGPublicOutput[E, S]
 
@@ -34,7 +34,7 @@ type (
 	}
 
 	DKGPublicOutput[
-	E GroupElement[E, S], S Scalar[S],
+		E GroupElement[E, S], S Scalar[S],
 	] struct {
 		publicKeyValue         E
 		partialPublicKeyValues ds.Map[sharing.ID, E]

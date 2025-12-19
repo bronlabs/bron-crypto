@@ -1,7 +1,7 @@
 package softspoken
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
 // Challenge is the verifier's random challenge for the consistency check (χ_i ∈ [M=η/σ][σ] bits).
@@ -13,6 +13,7 @@ type ChallengeResponse struct {
 	T [Kappa][SigmaBytes]byte `cbor:"t"`
 }
 
+// Round1P2P carries masked payloads and the Fiat-Shamir challenge response.
 type Round1P2P struct {
 	U                 [Kappa][]byte     `cbor:"u"`                 // [κ][η']bits
 	ChallengeResponse ChallengeResponse `cbor:"challengeResponse"` // [σ] + [κ][σ]bits
@@ -24,7 +25,7 @@ func (r1 *Round1P2P) Validate(xi, l int) error {
 	etaPrimeBytes := eta/8 + SigmaBytes // η'= η + σ
 	for i := range Kappa {
 		if len(r1.U[i]) != etaPrimeBytes {
-			return errs.NewLength("U[%d] length is %d, should be η'=%d", i, len(r1.U[i]), etaPrimeBytes)
+			return ot.ErrInvalidArgument.WithMessage("U[%d] length is %d, should be η'=%d", i, len(r1.U[i]), etaPrimeBytes)
 		}
 	}
 	return nil

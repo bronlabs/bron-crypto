@@ -4,7 +4,7 @@ import (
 	"hash"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 )
 
@@ -27,13 +27,13 @@ type Suite struct {
 func NewSuite(xi, l int, hashFunc func() hash.Hash) (*Suite, error) {
 	defaultSuite, err := ot.NewDefaultSuite(xi, l)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create default OT suite")
+		return nil, errs2.Wrap(err).WithMessage("failed to create default OT suite")
 	}
 	if (xi % 8) != 0 {
-		return nil, errs.NewValidation("invalid xi")
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid xi")
 	}
 	if ((xi * l) % Sigma) != 0 {
-		return nil, errs.NewValidation("invalid xi or l; (xi * l) must be multiple of %d for consistency check", Sigma)
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid xi or l; (xi * l) must be multiple of %d for consistency check", Sigma)
 	}
 
 	s := &Suite{*defaultSuite, hashFunc}

@@ -7,9 +7,10 @@ import (
 	"io"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
+	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"golang.org/x/crypto/blake2b"
@@ -47,10 +48,10 @@ type Receiver struct {
 // NewSender constructs a SoftSpoken sender with VSOT seed outputs.
 func NewSender(sessionId network.SID, receiverSeeds *vsot.ReceiverOutput, suite *Suite, tape transcripts.Transcript, prng io.Reader) (*Sender, error) {
 	if receiverSeeds == nil || prng == nil {
-		return nil, errs.NewValidation("invalid args")
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
 	if receiverSeeds.InferredXi() != Kappa || receiverSeeds.InferredL() != 1 {
-		return nil, errs.NewValidation("invalid receiver seeds")
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid receiver seeds")
 	}
 
 	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
@@ -71,10 +72,10 @@ func NewSender(sessionId network.SID, receiverSeeds *vsot.ReceiverOutput, suite 
 // NewReceiver constructs a SoftSpoken receiver with VSOT seed outputs.
 func NewReceiver(sessionId network.SID, senderSeeds *vsot.SenderOutput, suite *Suite, tape transcripts.Transcript, prng io.Reader) (*Receiver, error) {
 	if senderSeeds == nil || prng == nil {
-		return nil, errs.NewValidation("invalid args")
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid args")
 	}
 	if senderSeeds.InferredXi() != Kappa || senderSeeds.InferredL() != 1 {
-		return nil, errs.NewValidation("invalid sender seeds")
+		return nil, ot.ErrInvalidArgument.WithMessage("invalid sender seeds")
 	}
 
 	tape.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
@@ -104,15 +105,15 @@ func (p *participant) hash(j, l int, data ...[]byte) ([]byte, error) {
 func (p *participant) expand(outputLen, idx int, message []byte, choice int) ([]byte, error) {
 	xof, err := blake2b.NewXOF(blake2b.OutputLengthUnknown, p.sessionId[:])
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create blake2b XOF")
+		return nil, errs2.Wrap(err).WithMessage("cannot create blake2b XOF")
 	}
 	_, err = xof.Write(slices.Concat(binary.LittleEndian.AppendUint64(nil, uint64(idx)), binary.LittleEndian.AppendUint64(nil, uint64(choice)), message))
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot write to blake2b XOF")
+		return nil, errs2.Wrap(err).WithMessage("cannot write to blake2b XOF")
 	}
 	digest := make([]byte, outputLen)
 	if _, err = io.ReadFull(xof, digest); err != nil {
-		return nil, errs.WrapFailed(err, "cannot read digest")
+		return nil, errs2.Wrap(err).WithMessage("cannot read digest")
 	}
 	return digest, nil
 }
