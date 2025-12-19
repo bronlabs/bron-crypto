@@ -1,6 +1,8 @@
 package gennaro
 
 import (
+	"encoding/binary"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
@@ -66,7 +68,9 @@ func (p *Participant[E, S]) Round2(r2bin network.RoundMessages[*Round1Broadcast[
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot compile protocol to non interactive")
 	}
-	prover, err := niBatchSchnorr.NewProver(p.sid, p.tape.Clone())
+	proverTape := p.tape.Clone()
+	proverTape.AppendBytes(proverIdLabel, binary.LittleEndian.AppendUint64(nil, uint64(p.id)))
+	prover, err := niBatchSchnorr.NewProver(p.sid, proverTape)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot create batch schnorr prover")
 	}
@@ -107,7 +111,9 @@ func (p *Participant[E, S]) Round3(r3bi network.RoundMessages[*Round2Broadcast[E
 		}
 
 		inB, _ := r3bi.Get(pid)
-		verifier, err := niBatchSchnorr.NewVerifier(p.sid, p.tape.Clone())
+		verifierTape := p.tape.Clone()
+		verifierTape.AppendBytes(proverIdLabel, binary.LittleEndian.AppendUint64(nil, uint64(pid)))
+		verifier, err := niBatchSchnorr.NewVerifier(p.sid, verifierTape)
 		if err != nil {
 			return nil, errs2.Wrap(err).WithMessage("cannot create batch schnorr prover")
 		}

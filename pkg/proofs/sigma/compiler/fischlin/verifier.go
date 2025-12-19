@@ -49,7 +49,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 
 	v.transcript.AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, fischlinProof.Rho))
 	v.transcript.AppendBytes(statementLabel, statement.Bytes())
-	commonHKey, err := v.transcript.ExtractBytes(commitmentLabel, 32)
+	commonHKey, err := v.transcript.ExtractBytes(commonHLabel, 32)
 	if err != nil {
 		return errs.WrapFailed(err, "cannot extract h")
 	}

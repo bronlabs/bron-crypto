@@ -45,6 +45,7 @@ type (
 
 const (
 	transcriptLabel = "BRON_CRYPTO_DKG_GENNARO-"
+	proverIdLabel   = "BRON_CRYPTO_DKG_GENNARO_PROVER_ID-"
 )
 
 type Participant[E GroupElement[E, S], S Scalar[S]] struct {
