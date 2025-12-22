@@ -8,7 +8,6 @@ import (
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
@@ -91,14 +90,14 @@ func doProof(k int, pk *paillier.PublicKey, sk *paillier.PrivateKey) (err error)
 	label := "gimme, gimme"
 	proverBytes, err := proverTranscript.ExtractBytes(label, 128)
 	if err != nil {
-		return errs.NewFailed("failed to extract bytes from prover transcript")
+		return lp.ErrFailed.WithMessage("failed to extract bytes from prover transcript")
 	}
 	verifierBytes, err := verifierTranscript.ExtractBytes(label, 128)
 	if err != nil {
-		return errs.NewFailed("failed to extract bytes from prover transcript")
+		return lp.ErrFailed.WithMessage("failed to extract bytes from prover transcript")
 	}
 	if !bytes.Equal(proverBytes, verifierBytes) {
-		return errs.NewFailed("transcript record different data")
+		return lp.ErrFailed.WithMessage("transcript record different data")
 	}
 
 	return nil

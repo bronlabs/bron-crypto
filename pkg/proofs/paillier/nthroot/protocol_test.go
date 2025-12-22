@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
@@ -82,11 +81,11 @@ func Test_InvalidRootInteractive(t *testing.T) {
 
 	err = doInteractiveProof(&x1NatCt, y2NatCt, g, prng)
 	require.Error(t, err)
-	require.True(t, errs.IsVerification(err))
+	require.ErrorIs(t, err, nthroot.ErrVerificationFailed)
 
 	err = doInteractiveProof(&x2NatCt, y1NatCt, g, prng)
 	require.Error(t, err)
-	require.True(t, errs.IsVerification(err))
+	require.ErrorIs(t, err, nthroot.ErrVerificationFailed)
 }
 
 func Test_HappyPathNonInteractive(t *testing.T) {
@@ -206,7 +205,7 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	err = verifier.Verify(statement1, proof1)
 	require.Error(t, err)
-	require.True(t, errs.IsVerification(err))
+	require.ErrorIs(t, err, nthroot.ErrVerificationFailed)
 
 	statement1 = nthroot.NewStatement(x1)
 	witness1 := nthroot.NewWitness(w1)
@@ -215,7 +214,7 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	err = verifier.Verify(statement2, proof2)
 	require.Error(t, err)
-	require.True(t, errs.IsVerification(err))
+	require.ErrorIs(t, err, nthroot.ErrVerificationFailed)
 
 	statement2 = nthroot.NewStatement(x2)
 	witness2 = nthroot.NewWitness(y2)
@@ -223,7 +222,7 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	err = verifier.Verify(statement1, proof3)
 	require.Error(t, err)
-	require.True(t, errs.IsVerification(err))
+	require.ErrorIs(t, err, nthroot.ErrVerificationFailed)
 
 	statement2 = nthroot.NewStatement(x2)
 	witness1 = nthroot.NewWitness(w1)
@@ -231,7 +230,7 @@ func Test_InvalidRootNonInteractive(t *testing.T) {
 	require.NoError(t, err)
 	err = verifier.Verify(statement2, proof4)
 	require.Error(t, err)
-	require.True(t, errs.IsVerification(err))
+	require.ErrorIs(t, err, nthroot.ErrVerificationFailed)
 }
 
 func Test_Simulator(t *testing.T) {
@@ -386,7 +385,7 @@ func doInteractiveProof[A znstar.ArithmeticPaillier](xNatCt, yNatCt *numct.Nat, 
 		return err
 	}
 	if !bytes.Equal(proverBytes, verifierBytes) {
-		return errs.NewFailed("transcript record different data")
+		return nthroot.ErrFailed.WithMessage("transcript record different data")
 	}
 
 	return nil

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
@@ -19,10 +19,11 @@ import (
 const (
 	appTranscriptLabel       = "BRON_CRYPTO_PAILLIER_LP-"
 	sessionIdTranscriptLabel = "BRON_CRYPTO_PAILLIER_LP_SESSION_ID"
-	// TODO: Should we bump it to 3072 to comply with NIST recommendations?
+	// PaillierBitSizeN is the minimum modulus bit size for this protocol.
 	PaillierBitSizeN = 2048
 )
 
+// Participant holds a common state for the LP protocol participants.
 type Participant[A znstar.ArithmeticPaillier] struct {
 	// Base participant
 	multiNthRootsProtocol sigma.Protocol[sigand.Statement[*nthroot.Statement[A]], sigand.Witness[*nthroot.Witness[A]], sigand.Commitment[*nthroot.Commitment[A]], sigand.State[*nthroot.State[A]], sigand.Response[*nthroot.Response[A]]]
@@ -34,10 +35,12 @@ type Participant[A znstar.ArithmeticPaillier] struct {
 	k int // security parameter - cheating prover can succeed with probability < 2^(-k)
 }
 
+// SoundnessError returns the protocol soundness parameter.
 func (p *Participant[A]) SoundnessError() int {
 	return p.k
 }
 
+// VerifierState tracks the verifier's internal state across rounds.
 type VerifierState struct {
 	rootsProver *sigma.Prover[
 		sigand.Statement[*nthroot.Statement[*modular.SimpleModulus]],
@@ -50,6 +53,7 @@ type VerifierState struct {
 	y sigand.Witness[*nthroot.Witness[*modular.SimpleModulus]]
 }
 
+// Verifier runs the LP verifier role.
 type Verifier struct {
 	Participant[*modular.SimpleModulus]
 
@@ -58,6 +62,7 @@ type Verifier struct {
 	state             *VerifierState
 }
 
+// ProverState tracks the prover's internal state across rounds.
 type ProverState struct {
 	rootsVerifier *sigma.Verifier[
 		sigand.Statement[*nthroot.Statement[*modular.OddPrimeSquareFactors]],
@@ -69,6 +74,7 @@ type ProverState struct {
 	x sigand.Statement[*nthroot.Statement[*modular.OddPrimeSquareFactors]]
 }
 
+// Prover runs the LP prover role.
 type Prover struct {
 	Participant[*modular.OddPrimeSquareFactors]
 
@@ -76,9 +82,10 @@ type Prover struct {
 	state             *ProverState
 }
 
+// NewVerifier constructs a verifier instance for the LP protocol.
 func NewVerifier(sessionId network.SID, k int, pk *paillier.PublicKey, tape transcripts.Transcript, prng io.Reader) (verifier *Verifier, err error) {
-	if err := validateVerifierInputs(sessionId, k, pk, prng); err != nil {
-		return nil, errs.WrapArgument(err, "invalid input arguments")
+	if err := validateVerifierInputs(k, pk, prng); err != nil {
+		return nil, errs2.Wrap(err).WithMessage("invalid input arguments")
 	}
 
 	if tape == nil {
@@ -89,15 +96,15 @@ func NewVerifier(sessionId network.SID, k int, pk *paillier.PublicKey, tape tran
 
 	nthRootsSigmaProtocol, err := nthroot.NewProtocol(pk.Group(), prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create Nth root protocol")
+		return nil, errs2.Wrap(err).WithMessage("cannot create Nth root protocol")
 	}
 	multiNthRootsProtocol, err := sigand.Compose(nthRootsSigmaProtocol, uint(k))
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create multi Nth root protocol")
+		return nil, errs2.Wrap(err).WithMessage("cannot create multi Nth root protocol")
 	}
 	enc, err := paillier.NewScheme().Encrypter()
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create paillier encrypter")
+		return nil, errs2.Wrap(err).WithMessage("cannot create paillier encrypter")
 	}
 
 	return &Verifier{
@@ -115,28 +122,23 @@ func NewVerifier(sessionId network.SID, k int, pk *paillier.PublicKey, tape tran
 	}, nil
 }
 
-func validateVerifierInputs(sessionId network.SID, k int, pk *paillier.PublicKey, prng io.Reader) error {
-	if len(sessionId) == 0 {
-		return errs.NewIsNil("invalid session id: %s", sessionId)
-	}
+func validateVerifierInputs(k int, pk *paillier.PublicKey, prng io.Reader) error {
 	if pk == nil {
-		return errs.NewIsNil("invalid paillier public key")
+		return ErrInvalidArgument.WithMessage("paillier public key is nil")
 	}
-	// if pk.N().BitLen() < PaillierBitSize {
-	// 	return errs.NewSize("invalid paillier public key: modulus is too small")
-	// }
 	if k < 1 {
-		return errs.NewValue("invalid k: %d", k)
+		return ErrInvalidArgument.WithMessage("invalid k: %d (must be positive)", k)
 	}
 	if prng == nil {
-		return errs.NewIsNil("prng is nil")
+		return ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	return nil
 }
 
+// NewProver constructs a prover instance for the LP protocol.
 func NewProver(sessionId network.SID, k int, sk *paillier.PrivateKey, tape transcripts.Transcript, prng io.Reader) (prover *Prover, err error) {
-	if err := validateProverInputs(sessionId, k, sk, prng); err != nil {
-		return nil, errs.WrapArgument(err, "invalid input arguments")
+	if err := validateProverInputs(k, sk, prng); err != nil {
+		return nil, errs2.Wrap(err).WithMessage("invalid input arguments")
 	}
 
 	if tape == nil {
@@ -147,11 +149,11 @@ func NewProver(sessionId network.SID, k int, sk *paillier.PrivateKey, tape trans
 
 	nthRootsSigmaProtocol, err := nthroot.NewProtocol(sk.Group(), prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create Nth root protocol")
+		return nil, errs2.Wrap(err).WithMessage("cannot create Nth root protocol")
 	}
 	multiNthRootsProtocol, err := sigand.Compose(nthRootsSigmaProtocol, uint(k))
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create multi Nth root protocol")
+		return nil, errs2.Wrap(err).WithMessage("cannot create multi Nth root protocol")
 	}
 
 	return &Prover{
@@ -168,18 +170,15 @@ func NewProver(sessionId network.SID, k int, sk *paillier.PrivateKey, tape trans
 	}, nil
 }
 
-func validateProverInputs(sessionId network.SID, k int, sk *paillier.PrivateKey, prng io.Reader) error {
-	if len(sessionId) == 0 {
-		return errs.NewIsNil("invalid session id: %s", sessionId)
-	}
+func validateProverInputs(k int, sk *paillier.PrivateKey, prng io.Reader) error {
 	if sk == nil {
-		return errs.NewIsNil("invalid paillier secret key")
+		return ErrInvalidArgument.WithMessage("paillier secret key is nil")
 	}
 	if k < 1 {
-		return errs.NewValue("invalid k: %d", k)
+		return ErrInvalidArgument.WithMessage("invalid k: %d (must be positive)", k)
 	}
 	if prng == nil {
-		return errs.NewIsNil("prng is nil")
+		return ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	return nil
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -153,7 +153,7 @@ func randomIntInRange(qBig *big.Int, prng io.Reader) (*numct.Nat, error) {
 	l := new(saferith.Nat).Div(q, saferith.ModulusFromUint64(3), 2048)
 	xInt, err := crand.Int(prng, l.Big())
 	if err != nil {
-		return nil, errs.WrapRandomSample(err, "cannot sample integer")
+		return nil, errs2.Wrap(err).WithMessage("cannot sample integer")
 	}
 	x := new(saferith.Nat).SetBig(xInt, 2048)
 	return (*numct.Nat)(new(saferith.Nat).Add(l, x, 2048)), nil
@@ -209,7 +209,7 @@ func doProof[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra
 		return err
 	}
 	if !bytes.Equal(proverBytes, verifierBytes) {
-		return errs.NewFailed("transcript record different data")
+		return lpdl.ErrFailed.WithMessage("transcript record different data")
 	}
 
 	return nil
