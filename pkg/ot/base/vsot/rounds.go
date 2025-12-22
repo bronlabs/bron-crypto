@@ -63,8 +63,8 @@ func (r *Receiver[P, B, S]) Round2(r1 *Round1P2P[P, B, S], choices []byte) (*Rou
 	if r.round != 2 {
 		return nil, nil, ot.ErrRound.WithMessage("invalid round")
 	}
-	if r1.Validate() != nil {
-		return nil, nil, ot.ErrInvalidArgument.WithMessage("invalid message")
+	if err := r1.Validate(); err != nil {
+		return nil, nil, errs2.Wrap(err).WithMessage("invalid message")
 	}
 	if len(choices)*8 != r.suite.Xi() {
 		return nil, nil, ot.ErrInvalidArgument.WithMessage("invalid choices length")
@@ -137,8 +137,8 @@ func (s *Sender[P, B, S]) Round3(r2 *Round2P2P[P, B, S]) (*Round3P2P, *SenderOut
 	if s.round != 3 {
 		return nil, nil, ot.ErrRound.WithMessage("invalid round")
 	}
-	if r2.Validate(s.suite.Xi(), s.suite.L()) != nil {
-		return nil, nil, ot.ErrInvalidArgument.WithMessage("invalid message")
+	if err := r2.Validate(s.suite.Xi(), s.suite.L()); err != nil {
+		return nil, nil, errs2.Wrap(err).WithMessage("invalid message")
 	}
 
 	rho0 := make([][]byte, s.suite.Xi()*s.suite.L())
@@ -206,8 +206,8 @@ func (r *Receiver[P, B, S]) Round4(r3 *Round3P2P) (*Round4P2P, error) {
 	if r.round != 4 {
 		return nil, ot.ErrRound.WithMessage("invalid round")
 	}
-	if r3.Validate(r.suite.Xi(), r.suite.L(), r.suite.hashFunc().Size()) != nil {
-		return nil, ot.ErrInvalidArgument.WithMessage("invalid message")
+	if err := r3.Validate(r.suite.Xi(), r.suite.L(), r.suite.hashFunc().Size()); err != nil {
+		return nil, errs2.Wrap(err).WithMessage("invalid message")
 	}
 
 	r.state.xi = r3.Xi
@@ -245,8 +245,8 @@ func (s *Sender[P, B, S]) Round5(r4 *Round4P2P) (*Round5P2P, error) {
 	if s.round != 5 {
 		return nil, ot.ErrRound.WithMessage("invalid round")
 	}
-	if r4.Validate(s.suite.Xi(), s.suite.L(), s.suite.hashFunc().Size()) != nil {
-		return nil, ot.ErrInvalidArgument.WithMessage("invalid message")
+	if err := r4.Validate(s.suite.Xi(), s.suite.L(), s.suite.hashFunc().Size()); err != nil {
+		return nil, errs2.Wrap(err).WithMessage("invalid message")
 	}
 
 	for i := range s.suite.Xi() {
@@ -275,8 +275,8 @@ func (r *Receiver[P, B, S]) Round6(r5 *Round5P2P) error {
 	if r.round != 6 {
 		return ot.ErrRound.WithMessage("invalid round")
 	}
-	if r5.Validate(r.suite.Xi(), r.suite.L(), r.suite.hashFunc().Size()) != nil {
-		return ot.ErrInvalidArgument.WithMessage("invalid message")
+	if err := r5.Validate(r.suite.Xi(), r.suite.L(), r.suite.hashFunc().Size()); err != nil {
+		return errs2.Wrap(err).WithMessage("invalid message")
 	}
 
 	for i := range r.suite.Xi() {

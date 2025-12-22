@@ -564,8 +564,8 @@ func TestInt_Div_Property(t *testing.T) {
 func TestInt_DivVarTime_Property(t *testing.T) {
 	t.Parallel()
 	rapid.Check(t, func(t *rapid.T) {
-		n := rapid.Int64().Draw(t, "a")
-		d := rapid.Int64().Draw(t, "b")
+		n := int64(rapid.Int32().Draw(t, "a"))
+		d := int64(rapid.Int32().Draw(t, "b"))
 
 		var q, r numct.Int
 		ok := q.DivVarTime(&r, numct.NewInt(n), numct.NewInt(d))

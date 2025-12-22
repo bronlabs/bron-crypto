@@ -220,17 +220,17 @@ func (r *Receiver) computeResponse(xPrime []byte, extOptions *[2][Kappa][]byte, 
 	// ẋ = x_{mσ:(m+1)σ} + Σ{k=1}^{m} χ_k • x_{(k-1)σ:kσ}
 	x, err := bf128.NewField().FromBytes(xPrime[etaBytes : etaBytes+SigmaBytes])
 	if err != nil {
-		return ot.ErrFailed.WithMessage("cannot create field element")
+		return errs2.Wrap(err).WithMessage("cannot create field element")
 	}
 	chi := make([]*bf128.FieldElement, m)
 	for k := range m {
 		xHatK, err := bf128.NewField().FromBytes(xPrime[k*SigmaBytes : (k+1)*SigmaBytes])
 		if err != nil {
-			return ot.ErrFailed.WithMessage("cannot create field element")
+			return errs2.Wrap(err).WithMessage("cannot create field element")
 		}
 		chi[k], err = bf128.NewField().FromBytes(challenge[k][:])
 		if err != nil {
-			return ot.ErrFailed.WithMessage("cannot create field element")
+			return errs2.Wrap(err).WithMessage("cannot create field element")
 		}
 		x = x.Add(xHatK.Mul(chi[k]))
 	}
@@ -239,13 +239,13 @@ func (r *Receiver) computeResponse(xPrime []byte, extOptions *[2][Kappa][]byte, 
 	for i := range Kappa {
 		t, err := bf128.NewField().FromBytes(extOptions[0][i][etaBytes : etaBytes+SigmaBytes])
 		if err != nil {
-			return ot.ErrFailed.WithMessage("cannot create field element")
+			return errs2.Wrap(err).WithMessage("cannot create field element")
 		}
 		copy(challengeResponse.T[i][:], extOptions[0][i][etaBytes:etaBytes+SigmaBytes])
 		for k := range m {
 			tHatK, err := bf128.NewField().FromBytes(extOptions[0][i][k*SigmaBytes : (k+1)*SigmaBytes])
 			if err != nil {
-				return ot.ErrFailed.WithMessage("cannot create field element")
+				return errs2.Wrap(err).WithMessage("cannot create field element")
 			}
 			t = t.Add(tHatK.Mul(chi[k]))
 		}
@@ -269,16 +269,16 @@ func (s *Sender) verifyChallenge(
 		// q̇^i = q^i_hat_{m+1} + Σ{k=1}^{m} χ_k • q^i_hat_k
 		qi, err := bf128.NewField().FromBytes(extCorrelations[i][etaBytes : etaBytes+SigmaBytes])
 		if err != nil {
-			return ot.ErrFailed.WithMessage("cannot create field element")
+			return errs2.Wrap(err).WithMessage("cannot create field element")
 		}
 		for k := range m {
 			qiHatK, err := bf128.NewField().FromBytes(extCorrelations[i][k*SigmaBytes : (k+1)*SigmaBytes])
 			if err != nil {
-				return ot.ErrFailed.WithMessage("cannot create field element")
+				return errs2.Wrap(err).WithMessage("cannot create field element")
 			}
 			chiK, err := bf128.NewField().FromBytes(challenge[k][:])
 			if err != nil {
-				return ot.ErrFailed.WithMessage("cannot create field element")
+				return errs2.Wrap(err).WithMessage("cannot create field element")
 			}
 			qi = qi.Add(qiHatK.Mul(chiK))
 		}

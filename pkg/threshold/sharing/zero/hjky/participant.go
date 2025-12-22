@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
@@ -18,6 +18,7 @@ const (
 	coefficientLabel = "BRON_CRYPTO_HJKY_COEFFICIENT-"
 )
 
+// Participant executes the HJKY zero-sharing protocol.
 type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	sessionId       network.SID
 	sharingId       sharing.ID
@@ -36,15 +37,16 @@ type State[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] st
 	share               *feldman.Share[S]
 }
 
+// NewParticipant creates a zero-sharing participant bound to the given session and access structure.
 func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sid network.SID, id sharing.ID, as sharing.ThresholdAccessStructure, g algebra.PrimeGroup[G, S], tape transcripts.Transcript, prng io.Reader) (*Participant[G, S], error) {
 	if tape == nil || prng == nil || !as.Shareholders().Contains(id) {
-		return nil, errs.NewValidation("invalid arguments")
+		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
 	}
 
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](g.ScalarStructure())
 	scheme, err := feldman.NewScheme(g.Generator(), as.Threshold(), as.Shareholders())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create feldman scheme")
+		return nil, errs2.Wrap(err).WithMessage("could not create feldman scheme")
 	}
 	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sid[:])))
 
@@ -61,6 +63,7 @@ func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldEleme
 	}, nil
 }
 
+// SharingID returns the identifier for this participant within the access structure.
 func (p *Participant[G, S]) SharingID() sharing.ID {
 	return p.sharingId
 }

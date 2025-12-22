@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -18,6 +18,7 @@ const (
 	commitmentLabel    = "BRON_CRYPTO_AOR_COMMITMENT-"
 )
 
+// Participant runs the Agree-on-Random protocol for a single party.
 type Participant struct {
 	id               sharing.ID
 	size             int
@@ -35,22 +36,23 @@ type State struct {
 	rCommitments map[sharing.ID]hash_comm.Commitment
 }
 
+// NewParticipant initialises an AOR participant with transcript binding and randomness.
 func NewParticipant(id sharing.ID, quorum network.Quorum, size int, tape transcripts.Transcript, prng io.Reader) (*Participant, error) {
 	if size <= 0 || tape == nil || prng == nil || quorum == nil || !quorum.Contains(id) {
-		return nil, errs.NewValidation("invalid arguments")
+		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
 	}
 
 	tape.AppendDomainSeparator(transcriptLabel)
 	tape.AppendBytes(sizeLabel, binary.LittleEndian.AppendUint64(nil, uint64(size)))
 	keyBytes, err := tape.ExtractBytes(commitmentKeyLabel, hash_comm.KeySize)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot extract commitment key")
+		return nil, errs2.Wrap(err).WithMessage("cannot extract commitment key")
 	}
 	var key hash_comm.Key
 	copy(key[:], keyBytes)
 	commitmentScheme, err := hash_comm.NewScheme(key)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create commitment scheme")
+		return nil, errs2.Wrap(err).WithMessage("cannot create commitment scheme")
 	}
 
 	return &Participant{

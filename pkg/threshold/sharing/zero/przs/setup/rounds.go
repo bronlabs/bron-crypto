@@ -6,13 +6,14 @@ import (
 
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 )
 
+// Round1 samples pairwise seed contributions and commits to them.
 func (p *Participant) Round1() (*Round1Broadcast, error) {
 	seedContributions := hashmap.NewComparable[sharing.ID, [przs.SeedLength]byte]()
 	commitments := hashmap.NewComparable[sharing.ID, hash_comm.Commitment]()
@@ -24,12 +25,12 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 
 		var seedContribution [przs.SeedLength]byte
 		if _, err := io.ReadFull(p.prng, seedContribution[:]); err != nil {
-			return nil, errs.WrapRandomSample(err, "cannot sample seed contribution")
+			return nil, errs2.Wrap(err).WithMessage("cannot sample seed contribution")
 		}
 
 		seedContributionCommitment, seedContributionWitness, err := p.state.commitmentScheme.Committer().Commit(seedContribution[:], p.prng)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot commit seed contribution")
+			return nil, errs2.Wrap(err).WithMessage("cannot commit seed contribution")
 		}
 
 		seedContributions.Put(sharingId, seedContribution)
@@ -45,6 +46,7 @@ func (p *Participant) Round1() (*Round1Broadcast, error) {
 	return r1bo, nil
 }
 
+// Round2 opens committed seed contributions to each counterparty.
 func (p *Participant) Round2(r1bo network.RoundMessages[*Round1Broadcast]) (network.RoundMessages[*Round2P2P], error) {
 	for sharingId := range p.quorum.Iter() {
 		if sharingId == p.mySharingId {
@@ -53,7 +55,7 @@ func (p *Participant) Round2(r1bo network.RoundMessages[*Round1Broadcast]) (netw
 
 		msg, ok := r1bo.Get(sharingId)
 		if !ok {
-			return nil, errs.NewMissing("missing message from %d", sharingId)
+			return nil, ErrFailed.WithMessage("missing message from %d", sharingId)
 		}
 		p.state.commitments.Put(sharingId, hashmap.NewImmutableComparableFromNativeLike(msg.Commitments))
 	}
@@ -66,12 +68,12 @@ func (p *Participant) Round2(r1bo network.RoundMessages[*Round1Broadcast]) (netw
 
 		seedContribution, ok := p.state.seedContributions.Get(sharingId)
 		if !ok {
-			return nil, errs.NewMissing("missing seed contribution to %d", sharingId)
+			return nil, ErrFailed.WithMessage("missing seed contribution to %d", sharingId)
 		}
 
 		witness, ok := p.state.witnesses.Get(sharingId)
 		if !ok {
-			return nil, errs.NewMissing("missing seed witness to %d", sharingId)
+			return nil, ErrFailed.WithMessage("missing seed witness to %d", sharingId)
 		}
 
 		r2uo.Put(sharingId, &Round2P2P{
@@ -83,6 +85,7 @@ func (p *Participant) Round2(r1bo network.RoundMessages[*Round1Broadcast]) (netw
 	return r2uo.Freeze(), nil
 }
 
+// Round3 verifies peers' openings and derives pairwise seeds.
 func (p *Participant) Round3(r2uo network.RoundMessages[*Round2P2P]) (przs.Seeds, error) {
 	commonSeeds := hashmap.NewComparable[sharing.ID, [przs.SeedLength]byte]()
 	for sharingId := range p.quorum.Iter() {
@@ -92,24 +95,24 @@ func (p *Participant) Round3(r2uo network.RoundMessages[*Round2P2P]) (przs.Seeds
 
 		msg, ok := r2uo.Get(sharingId)
 		if !ok {
-			return nil, errs.NewMissing("missing message from %d", sharingId)
+			return nil, ErrFailed.WithMessage("missing message from %d", sharingId)
 		}
 		theirSeedContribution := msg.SeedContribution
 		theirWitness := msg.Witness
 		theirCommitments, ok := p.state.commitments.Get(sharingId)
 		if !ok {
-			return nil, errs.NewMissing("missing commitments from %d", sharingId)
+			return nil, ErrFailed.WithMessage("missing commitments from %d", sharingId)
 		}
 		theirCommitment, ok := theirCommitments.Get(p.mySharingId)
 		if !ok {
-			return nil, errs.NewMissing("missing commitment for %d", sharingId)
+			return nil, ErrFailed.WithMessage("missing commitment for %d", sharingId)
 		}
 		if p.state.commitmentScheme.Verifier().Verify(theirCommitment, theirSeedContribution[:], theirWitness) != nil {
-			return nil, errs.NewIdentifiableAbort(sharingId, "invalid seed contribution")
+			return nil, errs2.ErrAbort.WithTag(errs2.IdentifiableAbortPartyId, sharingId).WithMessage("invalid seed contribution")
 		}
 		mySeedContribution, ok := p.state.seedContributions.Get(sharingId)
 		if !ok {
-			return nil, errs.NewMissing("missing seed for %d", sharingId)
+			return nil, ErrFailed.WithMessage("missing seed for %d", sharingId)
 		}
 		var seed [przs.SeedLength]byte
 		subtle.XORBytes(seed[:], theirSeedContribution[:], mySeedContribution[:])
