@@ -4,7 +4,7 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
@@ -15,22 +15,23 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compose/sigand"
 )
 
+// Round1 executes the verifier's first round.
 func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	if verifier.Round != 1 {
-		return nil, errs.NewRound("%d != 1", verifier.Round)
+		return nil, ErrRound.WithMessage("%d != 1", verifier.Round)
 	}
 
 	rootTranscript := verifier.Transcript.Clone()
 
 	zero, err := verifier.paillierPublicKey.PlaintextSpace().FromNat(numct.NatZero())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create plaintext zero")
+		return nil, errs2.Wrap(err).WithMessage("cannot create plaintext zero")
 	}
 	// V picks x = y^N mod N^2 which is the Paillier encryption of zero (N being the Paillier public-key)
 	zeros := sliceutils.Repeat[[]*paillier.Plaintext](zero, verifier.k)
 	ciphertexts, nonces, err := verifier.enc.EncryptMany(zeros, verifier.paillierPublicKey, verifier.Prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "encryption failed")
+		return nil, errs2.Wrap(err).WithMessage("encryption failed")
 	}
 
 	verifier.state.x = sigand.ComposeStatements(slices.Collect(iterutils.Map(slices.Values(ciphertexts), func(x *paillier.Ciphertext) *nthroot.Statement[*modular.SimpleModulus] {
@@ -45,12 +46,12 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	}))...)
 	verifier.state.rootsProver, err = sigma.NewProver(verifier.SessionId[:], rootTranscript.Clone(), verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create sigma protocol prover")
+		return nil, errs2.Wrap(err).WithMessage("cannot create sigma protocol prover")
 	}
 
 	nthRootProverRound1Output, err := verifier.state.rootsProver.Round1()
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot run round 1 of Nth root prover")
+		return nil, errs2.Wrap(err).WithMessage("cannot run round 1 of Nth root prover")
 	}
 
 	verifier.Round += 2
@@ -60,12 +61,13 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 	}, nil
 }
 
+// Round2 executes the prover's second round.
 func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err error) {
 	if prover.Round != 2 {
-		return nil, errs.NewRound("%d != 2", prover.Round)
+		return nil, ErrRound.WithMessage("%d != 2", prover.Round)
 	}
 	if err := input.Validate(prover.k); err != nil {
-		return nil, errs.WrapValidation(err, "invalid round 2 input")
+		return nil, errs2.Wrap(err).WithMessage("invalid round 2 input")
 	}
 
 	// prover.state.x = input.X
@@ -73,25 +75,25 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 	for i, x := range input.X {
 		prover.state.x[i], err = nthRootStatementLearnOrder(x, prover.paillierSecretKey.Group())
 		if err != nil {
-			return nil, errs.WrapFailed(err, "failed to create statement with known order")
+			return nil, errs2.Wrap(err).WithMessage("failed to create statement with known order")
 		}
 	}
 	rootTranscript := prover.Transcript.Clone()
 	prover.state.rootsVerifier, err = sigma.NewVerifier(prover.SessionId[:], rootTranscript.Clone(), prover.multiNthRootsProtocol, prover.state.x, prover.Prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create Nth root verifier")
+		return nil, errs2.Wrap(err).WithMessage("cannot create Nth root verifier")
 	}
 
 	commitments := make([]*nthroot.Commitment[*modular.OddPrimeSquareFactors], prover.k)
 	for i, a := range input.NthRootsProverOutput {
 		commitments[i], err = nthRootCommitmentLearnOrder(a, prover.paillierSecretKey.Group())
 		if err != nil {
-			return nil, errs.WrapFailed(err, "failed to create commitment with known order")
+			return nil, errs2.Wrap(err).WithMessage("failed to create commitment with known order")
 		}
 	}
 	nthRootVerifierRound2Output, err := prover.state.rootsVerifier.Round2(commitments)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot run round 2 of Nth root verifier")
+		return nil, errs2.Wrap(err).WithMessage("cannot run round 2 of Nth root verifier")
 	}
 
 	prover.Round += 2
@@ -100,13 +102,14 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 	}, nil
 }
 
+// Round3 executes the verifier's third round.
 func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err error) {
 	if verifier.Round != 3 {
-		return nil, errs.NewRound("%d != 3", verifier.Round)
+		return nil, ErrRound.WithMessage("%d != 3", verifier.Round)
 	}
 	nthRootProverRound3Output, err := verifier.state.rootsProver.Round3(input.NthRootsVerifierOutput)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot run round 3 of Nth root prover")
+		return nil, errs2.Wrap(err).WithMessage("cannot run round 3 of Nth root prover")
 	}
 
 	verifier.Round += 2
@@ -115,20 +118,21 @@ func (verifier *Verifier) Round3(input *Round2Output) (output *Round3Output, err
 	}, nil
 }
 
+// Round4 executes the prover's fourth round.
 func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err error) {
 	if prover.Round != 4 {
-		return nil, errs.NewRound("%d != 4", prover.Round)
+		return nil, ErrRound.WithMessage("%d != 4", prover.Round)
 	}
 	// round 4 of proving the knowledge of y
 	responses := make([]*nthroot.Response[*modular.OddPrimeSquareFactors], prover.k)
 	for i, z := range input.NthRootsProverOutput {
 		responses[i], err = nthRootResponseLearnOrder(z, prover.paillierSecretKey.Group())
 		if err != nil {
-			return nil, errs.WrapFailed(err, "failed to create response with known order")
+			return nil, errs2.Wrap(err).WithMessage("failed to create response with known order")
 		}
 	}
 	if err := prover.state.rootsVerifier.Verify(responses); err != nil {
-		return nil, errs.WrapVerification(err, "cannot verify knowledge of Nth root from Verifier")
+		return nil, errs2.Wrap(err).WithMessage("cannot verify knowledge of Nth root from Verifier")
 	}
 
 	// P calculates a y', the Nth root of x
@@ -155,13 +159,14 @@ func (prover *Prover) Round4(input *Round3Output) (output *Round4Output, err err
 	}, nil
 }
 
+// Round5 executes the verifier's final round.
 func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 	// Validation
 	if verifier.Round != 5 {
-		return errs.NewRound("%d != 5", verifier.Round)
+		return ErrRound.WithMessage("%d != 5", verifier.Round)
 	}
 	if err := input.Validate(verifier.k); err != nil {
-		return errs.WrapValidation(err, "invalid round 5 input")
+		return errs2.Wrap(err).WithMessage("invalid round 5 input")
 	}
 
 	ok := ct.True
@@ -172,7 +177,7 @@ func (verifier *Verifier) Round5(input *Round4Output) (err error) {
 		ok &= input.YPrime[i].Equal(&yModN)
 	}
 	if ok == ct.False {
-		return errs.NewVerification("failed to verify Paillier public key")
+		return ErrVerificationFailed.WithMessage("failed to verify Paillier public key")
 	}
 
 	// V accepts if every y_i == y'_i
