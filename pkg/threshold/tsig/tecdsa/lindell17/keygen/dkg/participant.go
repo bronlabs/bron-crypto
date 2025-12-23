@@ -7,7 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -26,6 +26,7 @@ const (
 	transcriptLabel = "BRON_CRYPTO_LINDELL17_DKG-"
 )
 
+// Participant runs the Lindell17 DKG protocol.
 type Participant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	round uint
 	// Base participant
@@ -41,6 +42,7 @@ type Participant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	state       *State[P, B, S]
 }
 
+// State holds internal DKG state across rounds.
 type State[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	myXPrime          S
 	myXDoublePrime    S
@@ -70,6 +72,7 @@ type State[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	lpdlDoublePrimeVerifiers map[sharing.ID]*lpdl.Verifier[P, B, S]
 }
 
+// NewParticipant constructs a DKG participant.
 func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](
 	sid network.SID,
 	shard *tecdsa.Shard[P, B, S],
@@ -79,16 +82,16 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 	tape transcripts.Transcript,
 ) (*Participant[P, B, S], error) {
 	if prng == nil {
-		return nil, errs.NewIsNil("prng must not be nil")
+		return nil, ErrInvalidArgument.WithMessage("prng must not be nil")
 	}
 	if tape == nil {
-		return nil, errs.NewIsNil("tape must not be nil")
+		return nil, ErrInvalidArgument.WithMessage("tape must not be nil")
 	}
 	if shard == nil {
-		return nil, errs.NewIsNil("shard must not be nil")
+		return nil, ErrInvalidArgument.WithMessage("shard must not be nil")
 	}
 	if !compiler.IsSupported(nic) {
-		return nil, errs.NewArgument("unsupported NIC: %s", nic)
+		return nil, ErrInvalidArgument.WithMessage("unsupported NIC: %s", nic)
 	}
 
 	dst := fmt.Sprintf("%s_%s_%s_%s", transcriptLabel, sid, nic, curve.Name())
@@ -100,23 +103,25 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 			sid, dst, binary.BigEndian.AppendUint64(nil, uint64(id)),
 		)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not create commitment key from CRS")
+			return nil, errs2.Wrap(err).WithMessage("could not create commitment key from CRS")
 		}
 		scheme, err := hash_comm.NewScheme(ck)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not create commitment scheme")
+			return nil, errs2.Wrap(err).WithMessage("could not create commitment scheme")
 		}
 		commitmentSchemes[id] = scheme
 	}
 
 	schnorrProtocol, err := schnorrpok.NewProtocol(curve.Generator(), prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create schnorr protocol")
+		return nil, errs2.Wrap(err).WithMessage("failed to create schnorr protocol")
 	}
 	niDlogScheme, err := compiler.Compile(nic, schnorrProtocol, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to compile niDlogProver")
+		return nil, errs2.Wrap(err).WithMessage("failed to compile niDlogProver")
 	}
+
+	//nolint:exhaustruct // partially initialised
 	return &Participant[P, B, S]{
 		round:       1,
 		prng:        prng,
@@ -126,6 +131,7 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 		tape:        tape,
 		shard:       shard,
 		quorumBytes: lindell17.QuorumBytes(shard.AccessStructure().Shareholders()),
+		//nolint:exhaustruct // partially initialised
 		state: &State[P, B, S]{
 			paillierScheme:    paillier.NewScheme(),
 			commitmentSchemes: commitmentSchemes,
