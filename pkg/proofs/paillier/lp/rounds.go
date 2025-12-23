@@ -44,7 +44,7 @@ func (verifier *Verifier) Round1() (output *Round1Output, err error) {
 		}
 		return nthroot.NewWitness(embeddedNonce)
 	}))...)
-	verifier.state.rootsProver, err = sigma.NewProver(verifier.SessionId[:], rootTranscript.Clone(), verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
+	verifier.state.rootsProver, err = sigma.NewProver(verifier.SessionId, rootTranscript.Clone(), verifier.multiNthRootsProtocol, verifier.state.x, verifier.state.y)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create sigma protocol prover")
 	}
@@ -79,7 +79,7 @@ func (prover *Prover) Round2(input *Round1Output) (output *Round2Output, err err
 		}
 	}
 	rootTranscript := prover.Transcript.Clone()
-	prover.state.rootsVerifier, err = sigma.NewVerifier(prover.SessionId[:], rootTranscript.Clone(), prover.multiNthRootsProtocol, prover.state.x, prover.Prng)
+	prover.state.rootsVerifier, err = sigma.NewVerifier(prover.SessionId, rootTranscript.Clone(), prover.multiNthRootsProtocol, prover.state.x, prover.Prng)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create Nth root verifier")
 	}
