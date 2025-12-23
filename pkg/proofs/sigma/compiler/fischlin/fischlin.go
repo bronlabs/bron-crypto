@@ -20,7 +20,6 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -74,7 +73,7 @@ type simplifiedFischlin[X sigma.Statement, W sigma.Witness, A sigma.Statement, S
 // The prng is used for randomness during proof generation.
 func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NonInteractiveProtocol[X, W], error) {
 	if sigmaProtocol == nil || prng == nil {
-		return nil, errs.NewIsNil("sigmaProtocol or prng")
+		return nil, ErrNil.WithMessage("sigmaProtocol or prng")
 	}
 
 	rho := getRho(sigmaProtocol)
@@ -86,7 +85,7 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 		t = b + 6
 	}
 	if rho < 2 || b < 2 || t >= 64 {
-		return nil, errs.NewArgument("invalid rho")
+		return nil, ErrInvalid.WithMessage("invalid rho")
 	}
 
 	return &simplifiedFischlin[X, W, A, S, Z]{
@@ -102,7 +101,7 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 // The sessionId and transcript are used for domain separation.
 func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
 	if transcript == nil {
-		return nil, errs.NewIsNil("transcript")
+		return nil, ErrNil.WithMessage("transcript")
 	}
 
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, c.sigmaProtocol.Name(), hex.EncodeToString(sessionId[:]))
@@ -123,7 +122,7 @@ func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(sessionId network.SID, tra
 // The sessionId and transcript must match those used by the prover.
 func (c *simplifiedFischlin[X, W, A, S, Z]) NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
 	if transcript == nil {
-		return nil, errs.NewIsNil("transcript")
+		return nil, ErrNil.WithMessage("transcript")
 	}
 
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, c.sigmaProtocol.Name(), hex.EncodeToString(sessionId[:]))

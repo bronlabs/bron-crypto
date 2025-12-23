@@ -16,7 +16,6 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	compiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/internal"
@@ -76,11 +75,11 @@ type rf[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z 
 // for randomness during proof generation.
 func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NonInteractiveProtocol[X, W], error) {
 	if sigmaProtocol == nil || prng == nil {
-		return nil, errs.NewIsNil("sigmaProtocol or prng")
+		return nil, ErrNil.WithMessage("sigmaProtocol or prng")
 	}
 
 	if s := sigmaProtocol.SoundnessError(); s < base.ComputationalSecurityBits {
-		return nil, errs.NewArgument("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
+		return nil, ErrInvalid.WithMessage("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
 			s, base.ComputationalSecurityBits)
 	}
 
@@ -94,7 +93,7 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 // The sessionId and transcript are used for domain separation.
 func (c *rf[X, W, A, S, Z]) NewProver(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
 	if transcript == nil {
-		return nil, errs.NewIsNil("transcript")
+		return nil, ErrNil.WithMessage("transcript")
 	}
 
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, c.sigmaProtocol.Name(), hex.EncodeToString(sessionId[:]))
@@ -112,7 +111,7 @@ func (c *rf[X, W, A, S, Z]) NewProver(sessionId network.SID, transcript transcri
 // The sessionId and transcript must match those used by the prover.
 func (c *rf[X, W, A, S, Z]) NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
 	if transcript == nil {
-		return nil, errs.NewIsNil("transcript")
+		return nil, ErrNil.WithMessage("transcript")
 	}
 
 	dst := fmt.Sprintf("%s-%s-%s", transcriptLabel, c.sigmaProtocol.Name(), hex.EncodeToString(sessionId[:]))

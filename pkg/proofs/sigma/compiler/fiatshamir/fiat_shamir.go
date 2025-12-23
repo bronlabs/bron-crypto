@@ -13,7 +13,7 @@ import (
 	"fmt"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -51,7 +51,7 @@ func (p *Proof[A, Z]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal Fiat-Shamir proof")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal Fiat-Shamir proof")
 	}
 	return data, nil
 }
@@ -78,10 +78,10 @@ func NewCompiler[
 	X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response,
 ](sigmaProtocol sigma.Protocol[X, W, A, S, Z]) (compiler.NonInteractiveProtocol[X, W], error) {
 	if sigmaProtocol == nil {
-		return nil, errs.NewIsNil("sigmaProtocol")
+		return nil, ErrNil.WithMessage("sigmaProtocol")
 	}
 	if s := sigmaProtocol.SoundnessError(); s < base.ComputationalSecurityBits {
-		return nil, errs.NewArgument("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
+		return nil, ErrInvalid.WithMessage("sigmaProtocol soundness (%d) is too low (<%d) for a non-interactive proof",
 			s, base.ComputationalSecurityBits)
 	}
 	return &fs[X, W, A, S, Z]{

@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/mathutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
@@ -30,32 +30,32 @@ type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // each sigma protocol transcript is valid.
 func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) error {
 	if proofBytes == nil {
-		return errs.NewIsNil("proof")
+		return ErrNil.WithMessage("proof")
 	}
 
 	fischlinProof, err := serde.UnmarshalCBOR[*Proof[A, Z]](proofBytes)
 	if err != nil {
-		return errs.WrapSerialisation(err, "cannot deserialize proof")
+		return errs2.Wrap(err).WithMessage("cannot deserialize proof")
 	}
 
 	// 2. If m, e, and z do not each have ρ elements, then output 'reject'
 	if uint64(len(fischlinProof.A)) != fischlinProof.Rho || uint64(len(fischlinProof.E)) != fischlinProof.Rho || uint64(len(fischlinProof.Z)) != fischlinProof.Rho {
-		return errs.NewArgument("invalid length")
+		return ErrInvalid.WithMessage("invalid length")
 	}
 	if fischlinProof.Rho < 2 || fischlinProof.B < 2 {
-		return errs.NewArgument("invalid length")
+		return ErrInvalid.WithMessage("invalid length")
 	}
 
 	b := fischlinProof.B - uint64(mathutils.CeilLog2(int(v.sigmaProtocol.SpecialSoundness())-1))
 	if (fischlinProof.Rho * b) < base.ComputationalSecurityBits {
-		return errs.NewVerification("verification failed")
+		return ErrVerification.WithMessage("insufficient soundness")
 	}
 
 	v.transcript.AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, fischlinProof.Rho))
 	v.transcript.AppendBytes(statementLabel, statement.Bytes())
 	commonHKey, err := v.transcript.ExtractBytes(commonHLabel, 32)
 	if err != nil {
-		return errs.WrapFailed(err, "cannot extract h")
+		return errs2.Wrap(err).WithMessage("cannot extract h")
 	}
 
 	commitmentSerialized := make([][]byte, 0)
@@ -73,31 +73,31 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 	// 3. common-h ← H(x, m, sid)
 	commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, v.sessionId[:])
 	if err != nil {
-		return errs.WrapHashing(err, "cannot serialise statement")
+		return errs2.Wrap(err).WithMessage("cannot serialise statement")
 	}
 
 	// 4. For i ∈ {1, ..., ρ}
 	for i := uint64(0); i < fischlinProof.Rho; i++ {
 		digest, err := v.hash(fischlinProof.B, commonH, i, fischlinProof.E[i], fischlinProof.Z[i])
 		if err != nil {
-			return errs.WrapHashing(err, "cannot compute digest")
+			return errs2.Wrap(err).WithMessage("cannot compute digest")
 		}
 
 		// 4.b. Halt and output 'reject' if Hb(common-h, i, e_i, z_i) != 0
 		if !isAllZeros(digest) {
-			return errs.NewVerification("invalid challenge")
+			return ErrVerification.WithMessage("invalid challenge")
 		}
 
 		// 4.a. Halt and output 'reject' if VerifyProof(x, m_i, e_i, z_i) == 0
 		eBytes := make([]byte, v.sigmaProtocol.GetChallengeBytesLength())
 		if (len(eBytes) - len(fischlinProof.E[i])) < 0 {
-			return errs.NewVerification("invalid challenge")
+			return ErrVerification.WithMessage("invalid challenge")
 		}
 
 		copy(eBytes[len(eBytes)-len(fischlinProof.E[i]):], fischlinProof.E[i])
 		err = v.sigmaProtocol.Verify(statement, fischlinProof.A[i], eBytes, fischlinProof.Z[i])
 		if err != nil {
-			return errs.WrapVerification(err, "verification failed")
+			return errs2.Wrap(err).WithMessage("verification failed")
 		}
 	}
 
@@ -116,7 +116,7 @@ func (v *verifier[X, W, A, S, Z]) hash(b uint64, commonH []byte, i uint64, chall
 	bMask := byte((1 << (b % 8)) - 1)
 	h, err := hashing.Hash(randomOracle, commonH, binary.LittleEndian.AppendUint64(make([]byte, 8), i), challenge, response.Bytes())
 	if err != nil {
-		return nil, errs.WrapRandomSample(err, "cannot hash challenge")
+		return nil, errs2.Wrap(err).WithMessage("cannot hash challenge")
 	}
 	h[bBytes-1] &= bMask
 	return h[:bBytes], nil

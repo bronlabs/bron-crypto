@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -29,22 +29,22 @@ type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 // sigma protocol transcript is valid.
 func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) (err error) {
 	if proofBytes == nil {
-		return errs.NewIsNil("proof")
+		return ErrNil.WithMessage("proof")
 	}
 
 	rfProof, err := serde.UnmarshalCBOR[*Proof[A, Z]](proofBytes)
 	if err != nil {
-		return errs.WrapSerialisation(err, "input proof")
+		return errs2.Wrap(err).WithMessage("input proof")
 	}
 
 	if len(rfProof.A) != R || len(rfProof.E) != R || len(rfProof.Z) != R {
-		return errs.NewArgument("invalid length")
+		return ErrInvalid.WithMessage("invalid length")
 	}
 
 	v.transcript.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(v.sessionId[:])))
 	crs, err := v.transcript.ExtractBytes(crsLabel, 32)
 	if err != nil {
-		return errs.WrapFailed(err, "cannot extract crs")
+		return errs2.Wrap(err).WithMessage("cannot extract crs")
 	}
 	v.transcript.AppendBytes(statementLabel, statement.Bytes())
 
@@ -65,14 +65,14 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoK
 	for i := 0; i < R; i++ {
 		digest, err := hash(crs, a, binary.LittleEndian.AppendUint64(nil, uint64(i)), rfProof.E[i], rfProof.Z[i].Bytes())
 		if err != nil {
-			return errs.WrapHashing(err, "cannot hash")
+			return errs2.Wrap(err).WithMessage("cannot hash")
 		}
 		if !isAllZeros(digest) {
-			return errs.NewVerification("invalid challenge")
+			return ErrVerification.WithMessage("invalid challenge")
 		}
 		err = v.sigmaProtocol.Verify(statement, rfProof.A[i], rfProof.E[i], rfProof.Z[i])
 		if err != nil {
-			return errs.WrapVerification(err, "verification failed")
+			return errs2.Wrap(err).WithMessage("verification failed")
 		}
 	}
 
