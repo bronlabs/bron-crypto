@@ -13,6 +13,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
+// Verifier is the verifier in the zero-knowledge compiled protocol.
+// It participates in rounds 1, 3, and 5 (verification) of the 5-round protocol.
 type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	participant[X, W, A, S, Z]
 
@@ -21,6 +23,10 @@ type Verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.St
 	prng           io.Reader
 }
 
+// NewVerifier creates a new verifier for the zero-knowledge compiled protocol.
+// The sigma protocol must have soundness error at least 2^(-80) (statistical security).
+// The prng is used to sample the random challenge. The verifier will execute
+// rounds 1, 3, and 5 of the protocol.
 func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](sessionId network.SID, tape transcripts.Transcript, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, prng io.Reader) (*Verifier[X, W, A, S, Z], error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewArgument("sessionId is empty")
@@ -40,6 +46,8 @@ func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma
 	}
 	dst := fmt.Sprintf("%s-%s-%x", transcriptLabel, sigmaProtocol.Name(), sessionId)
 	tape.AppendDomainSeparator(dst)
+
+	tape.AppendBytes(statementLabel, statement.Bytes())
 
 	ck, err := hash_comm.NewKeyFromCRSBytes(sessionId, dst)
 	if err != nil {
@@ -64,6 +72,8 @@ func NewVerifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma
 	}, nil
 }
 
+// Round1 generates a random challenge, commits to it, and returns the commitment.
+// This is the first round of the 5-round protocol.
 func (v *Verifier[X, W, A, S, Z]) Round1() (hash_comm.Commitment, error) {
 	if v.round != 1 {
 		return *new(hash_comm.Commitment), errs.NewRound("r != 1 (%d)", v.round)
@@ -86,6 +96,8 @@ func (v *Verifier[X, W, A, S, Z]) Round1() (hash_comm.Commitment, error) {
 	return eCommitment, nil
 }
 
+// Round3 receives the prover's commitment and opens the challenge commitment.
+// Returns the challenge message and witness for the prover to verify.
 func (v *Verifier[X, W, A, S, Z]) Round3(commitment A) (hash_comm.Message, hash_comm.Witness, error) {
 	if v.round != 3 {
 		return *new(hash_comm.Message), *new(hash_comm.Witness), errs.NewRound("r != 3 (%d)", v.round)
@@ -99,6 +111,8 @@ func (v *Verifier[X, W, A, S, Z]) Round3(commitment A) (hash_comm.Message, hash_
 	return v.challengeBytes, v.eWitness, nil
 }
 
+// Verify checks the prover's response against the sigma protocol.
+// Returns nil if verification succeeds, or an error if it fails.
 func (v *Verifier[X, W, A, S, Z]) Verify(response Z) error {
 	if v.round != 5 {
 		return errs.NewRound("r != 5 (%d)", v.round)

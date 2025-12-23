@@ -8,11 +8,15 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
+// verifier implements the NIVerifier interface for Fiat-Shamir proofs.
 type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	transcript    transcripts.Transcript
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 }
 
+// Verify checks that a Fiat-Shamir proof is valid for the given statement.
+// It deserializes the proof, recomputes the challenge from the transcript,
+// and verifies the sigma protocol relation.
 func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) error {
 	if len(proofBytes) == 0 {
 		return errs.NewIsNil("proof")

@@ -1,3 +1,16 @@
+// Package fischlin implements the Fischlin transform for compiling interactive
+// sigma protocols into non-interactive zero-knowledge proofs with UC security.
+//
+// Fischlin's transform provides universally composable (UC) security, which is
+// stronger than the standard Fiat-Shamir transform. It achieves this by requiring
+// the prover to find challenge/response pairs that hash to zero.
+//
+// The parameters rho (number of repetitions), b (hash output bits), and t (search
+// bound) are computed based on the sigma protocol's special soundness property to
+// achieve a target soundness error of 2^(-128).
+//
+// Reference: "Optimising and Implementing Fischlin's Transform for UC-Secure
+// Zero-Knowledge" by Chen & Lindell.
 package fischlin
 
 import (
@@ -16,6 +29,7 @@ import (
 )
 
 const (
+	// Name is the identifier for the Fischlin compiler.
 	Name compiler.Name = "Fischlin"
 
 	transcriptLabel = "BRON_CRYPTO_NIZK_FISCHLIN-"
@@ -32,6 +46,10 @@ var (
 	randomOracle = sha3.New256
 )
 
+// Proof represents a Fischlin non-interactive proof containing rho parallel
+// executions of the sigma protocol. Each execution includes a commitment (A),
+// challenge (E), and response (Z). The Rho and B parameters are included
+// for verification.
 type Proof[A sigma.Commitment, Z sigma.Response] struct {
 	Rho uint64   `cbor:"rho"`
 	B   uint64   `cbor:"b"`
@@ -52,14 +70,13 @@ type simplifiedFischlin[X sigma.Statement, W sigma.Witness, A sigma.Statement, S
 	prng          io.Reader
 }
 
+// NewCompiler creates a new Fischlin compiler for the given sigma protocol.
+// The prng is used for randomness during proof generation.
 func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response](sigmaProtocol sigma.Protocol[X, W, A, S, Z], prng io.Reader) (compiler.NonInteractiveProtocol[X, W], error) {
 	if sigmaProtocol == nil || prng == nil {
 		return nil, errs.NewIsNil("sigmaProtocol or prng")
 	}
 
-	// For rho, b, t parameters a target soundness error is 2^(-128). For more information how they should be chosen, refer to
-	// "Optimising and Implementing Fischlin's Transform for UC-Secure Zero-Knowledge" by Chen & Lindell,
-	// chapter 4 ("Optimal Parameters and Experimental Results").
 	rho := getRho(sigmaProtocol)
 	b1 := (base.ComputationalSecurityBits + rho - 1) / rho
 	b2 := uint64(mathutils.CeilLog2(int(sigmaProtocol.SpecialSoundness()) - 1))
@@ -81,6 +98,8 @@ func NewCompiler[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.
 	}, nil
 }
 
+// NewProver creates a new non-interactive prover for generating Fischlin proofs.
+// The sessionId and transcript are used for domain separation.
 func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIProver[X, W], error) {
 	if transcript == nil {
 		return nil, errs.NewIsNil("transcript")
@@ -100,6 +119,8 @@ func (c *simplifiedFischlin[X, W, A, S, Z]) NewProver(sessionId network.SID, tra
 	}, nil
 }
 
+// NewVerifier creates a new non-interactive verifier for checking Fischlin proofs.
+// The sessionId and transcript must match those used by the prover.
 func (c *simplifiedFischlin[X, W, A, S, Z]) NewVerifier(sessionId network.SID, transcript transcripts.Transcript) (compiler.NIVerifier[X], error) {
 	if transcript == nil {
 		return nil, errs.NewIsNil("transcript")
@@ -115,10 +136,12 @@ func (c *simplifiedFischlin[X, W, A, S, Z]) NewVerifier(sessionId network.SID, t
 	}, nil
 }
 
+// Name returns the compiler name ("Fischlin").
 func (*simplifiedFischlin[_, _, _, _, _]) Name() compiler.Name {
 	return Name
 }
 
+// SigmaProtocolName returns the name of the underlying sigma protocol.
 func (c *simplifiedFischlin[_, _, _, _, _]) SigmaProtocolName() sigma.Name {
 	return c.sigmaProtocol.Name()
 }

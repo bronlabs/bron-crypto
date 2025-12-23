@@ -18,6 +18,7 @@ var _ compiler.NIProver[sigma.Statement, sigma.Witness] = (*prover[
 	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.State, sigma.Response,
 ])(nil)
 
+// prover implements the NIProver interface for Fischlin proofs.
 type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
 	sessionId     network.SID
 	transcript    transcripts.Transcript
@@ -28,6 +29,9 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 	t             uint64
 }
 
+// Prove generates a non-interactive Fischlin proof for the given statement and witness.
+// It runs rho parallel executions of the sigma protocol, searching for challenge/response
+// pairs that hash to zero. Returns the serialized proof containing all rho transcripts.
 func (p *prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
 	p.transcript.AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, p.rho))
 	p.transcript.AppendBytes(statementLabel, statement.Bytes())

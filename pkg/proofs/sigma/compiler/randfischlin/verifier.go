@@ -17,12 +17,16 @@ var _ compiler.NIVerifier[sigma.Statement] = (*verifier[
 	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.State, sigma.Response,
 ])(nil)
 
+// verifier implements the NIVerifier interface for randomised Fischlin proofs.
 type verifier[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	sessionId     network.SID
 	transcript    transcripts.Transcript
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 }
 
+// Verify checks that a randomised Fischlin proof is valid for the given statement.
+// It verifies that all R challenge/response pairs hash to zero and that each
+// sigma protocol transcript is valid.
 func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoKProof) (err error) {
 	if proofBytes == nil {
 		return errs.NewIsNil("proof")

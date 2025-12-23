@@ -8,11 +8,15 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
+// prover implements the NIProver interface for Fiat-Shamir proofs.
 type prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	transcript    transcripts.Transcript
 	sigmaProtocol sigma.Protocol[X, W, A, S, Z]
 }
 
+// Prove generates a non-interactive proof for the given statement and witness.
+// It computes the sigma protocol commitment, derives the challenge from the transcript
+// hash, computes the response, and returns the serialized proof.
 func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
 	p.transcript.AppendBytes(statementLabel, statement.Bytes())
 

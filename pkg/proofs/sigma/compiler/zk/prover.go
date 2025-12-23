@@ -12,6 +12,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
+// Prover is the prover in the zero-knowledge compiled protocol.
+// It participates in rounds 2 and 4 of the 5-round protocol.
 type Prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
 	participant[X, W, A, S, Z]
 
@@ -20,6 +22,9 @@ type Prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Stat
 	state               S
 }
 
+// NewProver creates a new prover for the zero-knowledge compiled protocol.
+// The sigma protocol must have soundness error at least 2^(-80) (statistical security).
+// The prover will execute rounds 2 and 4 of the protocol.
 func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](sessionId network.SID, tape transcripts.Transcript, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
 	if len(sessionId) == 0 {
 		return nil, errs.NewArgument("sessionId is empty")
@@ -38,6 +43,8 @@ func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.S
 	}
 	dst := fmt.Sprintf("%s-%s-%x", transcriptLabel, sigmaProtocol.Name(), sessionId)
 	tape.AppendDomainSeparator(dst)
+
+	tape.AppendBytes(statementLabel, statement.Bytes())
 
 	ck, err := hash_comm.NewKeyFromCRSBytes(sessionId, dst)
 	if err != nil {
@@ -62,6 +69,8 @@ func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.S
 	}, nil
 }
 
+// Round2 processes the verifier's challenge commitment and returns the prover's
+// sigma protocol commitment. This is the first prover round in the 5-round protocol.
 func (p *Prover[X, W, A, S, Z]) Round2(eCommitment hash_comm.Commitment) (A, error) {
 	var zero A
 	if p.round != 2 {
@@ -84,6 +93,8 @@ func (p *Prover[X, W, A, S, Z]) Round2(eCommitment hash_comm.Commitment) (A, err
 	return commitment, nil
 }
 
+// Round4 verifies the verifier's challenge commitment opening and computes the
+// prover's response. Returns the sigma protocol response (z).
 func (p *Prover[X, W, A, S, Z]) Round4(challenge hash_comm.Message, witness hash_comm.Witness) (Z, error) {
 	var zero Z
 	p.tape.AppendBytes(challengeLabel, challenge)

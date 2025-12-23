@@ -18,6 +18,7 @@ var _ compiler.NIProver[sigma.Statement, sigma.Witness] = (*prover[
 	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.State, sigma.Response,
 ])(nil)
 
+// prover implements the NIProver interface for randomised Fischlin proofs.
 type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
 	sessionId     network.SID
 	transcript    transcripts.Transcript
@@ -25,6 +26,9 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 	prng          io.Reader
 }
 
+// Prove generates a non-interactive randomised Fischlin proof for the given statement
+// and witness. It runs R parallel executions, randomly sampling challenges until
+// finding ones that hash to zero. Returns the serialized proof containing all R transcripts.
 func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compiler.NIZKPoKProof, err error) {
 	p.transcript.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(p.sessionId[:])))
 	crs, err := p.transcript.ExtractBytes(crsLabel, 32)
@@ -53,7 +57,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compile
 	zI := make([]Z, R)
 
 	// step 3. for each i [r]
-	for i := 0; i < R; i++ {
+	for i := range R {
 		// step 3.a set e to empty
 		eSet := make([][]byte, 0)
 		for {
@@ -86,7 +90,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compile
 	}
 
 	commitmentSerialized := make([]byte, 0)
-	for i := 0; i < R; i++ {
+	for i := range R {
 		commitmentSerialized = append(commitmentSerialized, aI[i].Bytes()...)
 	}
 	p.transcript.AppendBytes(commitmentLabel, commitmentSerialized)
