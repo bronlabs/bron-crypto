@@ -4,7 +4,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
@@ -12,39 +11,44 @@ import (
 	paillierrange "github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
 )
 
+// Round1Output carries the verifier's first-round data.
 type Round1Output struct {
 	RangeVerifierOutput    hash_comm.Commitment
 	CPrime                 *paillier.Ciphertext
 	CDoublePrimeCommitment hash_comm.Commitment
 }
 
+// Validate checks the Round1Output shape.
 func (r1out *Round1Output) Validate() error {
 	if r1out == nil {
-		return errs.NewIsNil("round 1 output")
+		return ErrInvalidArgument.WithMessage("round 1 output is nil")
 	}
 	if r1out.CPrime == nil {
-		return errs.NewIsNil("CPrime")
+		return ErrInvalidArgument.WithMessage("CPrime is nil")
 	}
 
 	return nil
 }
 
+// Round2Output carries the prover's second-round data.
 type Round2Output struct {
 	RangeProverOutput *paillierrange.Commitment
 	CHat              hash_comm.Commitment
 }
 
+// Validate checks the Round2Output shape.
 func (r2out *Round2Output) Validate() error {
 	if r2out == nil {
-		return errs.NewIsNil("round 2 output")
+		return ErrInvalidArgument.WithMessage("round 2 output is nil")
 	}
 	if r2out.RangeProverOutput == nil {
-		return errs.NewIsNil("range prover output")
+		return ErrInvalidArgument.WithMessage("range prover output is nil")
 	}
 
 	return nil
 }
 
+// Round3Output carries the verifier's third-round data.
 type Round3Output struct {
 	RangeVerifierMessage hash_comm.Message
 	RangeVerifierWitness hash_comm.Witness
@@ -53,44 +57,47 @@ type Round3Output struct {
 	CDoublePrimeWitness  hash_comm.Witness
 }
 
+// Validate checks the Round3Output shape.
 func (r3out *Round3Output) Validate() error {
 	if r3out == nil {
-		return errs.NewIsNil("round 3 output")
+		return ErrInvalidArgument.WithMessage("round 3 output is nil")
 	}
 	if r3out.RangeVerifierMessage == nil {
-		return errs.NewIsNil("range verifier message")
+		return ErrInvalidArgument.WithMessage("range verifier message")
 	}
 	if ct.SliceIsZero(r3out.RangeVerifierWitness[:]) == ct.True {
-		return errs.NewIsNil("range verifier witness")
+		return ErrInvalidArgument.WithMessage("range verifier witness is empty")
 	}
 	if r3out.A == nil {
-		return errs.NewIsNil("A")
+		return ErrInvalidArgument.WithMessage("A is nil")
 	}
 	if r3out.B == nil {
-		return errs.NewIsNil("B")
+		return ErrInvalidArgument.WithMessage("B is nil")
 	}
 
 	return nil
 }
 
+// Round4Output carries the prover's final response.
 type Round4Output[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	RangeProverOutput *paillierrange.Response
 	BigQHat           P
 	BigQHatWitness    hash_comm.Witness
 }
 
+// Validate checks the Round4Output shape.
 func (r4out *Round4Output[P, B, S]) Validate() error {
 	if r4out == nil {
-		return errs.NewIsNil("round 4 output")
+		return ErrInvalidArgument.WithMessage("round 4 output is nil")
 	}
 	if r4out.RangeProverOutput == nil {
-		return errs.NewIsNil("range prover output")
+		return ErrInvalidArgument.WithMessage("range prover output is nil")
 	}
 	if utils.IsNil(r4out.BigQHat) {
-		return errs.NewIsNil("BigQHat")
+		return ErrInvalidArgument.WithMessage("BigQHat is nil")
 	}
 	if r4out.BigQHat.IsOpIdentity() {
-		return errs.NewArgument("BigQHat is identity")
+		return ErrInvalidArgument.WithMessage("BigQHat is identity")
 	}
 
 	return nil
