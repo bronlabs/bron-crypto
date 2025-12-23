@@ -5,13 +5,14 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 )
 
+// AuxiliaryInfo holds Paillier keys and encrypted shares for Lindell17.
 type AuxiliaryInfo struct {
 	paillierPrivateKey *paillier.PrivateKey
 	paillierPublicKeys ds.Map[sharing.ID, *paillier.PublicKey]
@@ -24,18 +25,22 @@ type auxiliaryInfoDTO struct {
 	EncryptedShares    map[sharing.ID]*paillier.Ciphertext `cbor:"encryptedShares"`
 }
 
+// PaillierPrivateKey returns the stored Paillier private key.
 func (a *AuxiliaryInfo) PaillierPrivateKey() *paillier.PrivateKey {
 	return a.paillierPrivateKey
 }
 
+// PaillierPublicKeys returns the map of Paillier public keys.
 func (a *AuxiliaryInfo) PaillierPublicKeys() ds.Map[sharing.ID, *paillier.PublicKey] {
 	return a.paillierPublicKeys
 }
 
+// EncryptedShares returns the encrypted shares map.
 func (a *AuxiliaryInfo) EncryptedShares() ds.Map[sharing.ID, *paillier.Ciphertext] {
 	return a.encryptedShares
 }
 
+// Equal compares two AuxiliaryInfo values.
 func (a *AuxiliaryInfo) Equal(rhs *AuxiliaryInfo) bool {
 	if a == nil || rhs == nil {
 		return a == rhs
@@ -66,6 +71,7 @@ func (a *AuxiliaryInfo) Equal(rhs *AuxiliaryInfo) bool {
 	return true
 }
 
+// MarshalCBOR encodes AuxiliaryInfo in CBOR.
 func (a *AuxiliaryInfo) MarshalCBOR() ([]byte, error) {
 	paillierPublicKeys := make(map[sharing.ID]*paillier.PublicKey)
 	for id, pk := range a.paillierPublicKeys.Iter() {
@@ -80,9 +86,14 @@ func (a *AuxiliaryInfo) MarshalCBOR() ([]byte, error) {
 		PaillierPublicKeys: paillierPublicKeys,
 		EncryptedShares:    encryptedShares,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal dkls23 auxiliary info")
+	}
+	return data, nil
 }
 
+// UnmarshalCBOR decodes AuxiliaryInfo from CBOR.
 func (a *AuxiliaryInfo) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*auxiliaryInfoDTO](data)
 	if err != nil {
@@ -94,15 +105,16 @@ func (a *AuxiliaryInfo) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
+// NewAuxiliaryInfo constructs an AuxiliaryInfo instance.
 func NewAuxiliaryInfo(paillierPrivateKey *paillier.PrivateKey, paillierPublicKeys ds.Map[sharing.ID, *paillier.PublicKey], encryptedShares ds.Map[sharing.ID, *paillier.Ciphertext]) (*AuxiliaryInfo, error) {
 	if paillierPrivateKey == nil {
-		return nil, errs.NewIsNil("paillier private key is nil")
+		return nil, ErrInvalidArgument.WithMessage("paillier private key is nil")
 	}
 	if paillierPublicKeys == nil {
-		return nil, errs.NewIsNil("paillier public keys map is nil")
+		return nil, ErrInvalidArgument.WithMessage("paillier public keys map is nil")
 	}
 	if encryptedShares == nil {
-		return nil, errs.NewIsNil("encrypted shares map is nil")
+		return nil, ErrInvalidArgument.WithMessage("encrypted shares map is nil")
 	}
 	return &AuxiliaryInfo{
 		paillierPrivateKey: paillierPrivateKey,
@@ -111,14 +123,16 @@ func NewAuxiliaryInfo(paillierPrivateKey *paillier.PrivateKey, paillierPublicKey
 	}, nil
 }
 
+// Shard wraps a base tECDSA shard with Lindell17 auxiliary info.
 type Shard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	*tecdsa.Shard[P, B, S]
 	AuxiliaryInfo
 }
 
+// NewShard constructs a Lindell17 shard from a base shard and auxiliary info.
 func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](baseShard *tecdsa.Shard[P, B, S], auxInfo *AuxiliaryInfo) (*Shard[P, B, S], error) {
 	if baseShard == nil || auxInfo == nil {
-		return nil, errs.NewIsNil("cannot create Shard with nil fields")
+		return nil, ErrInvalidArgument.WithMessage("cannot create Shard with nil fields")
 	}
 	return &Shard[P, B, S]{
 		Shard:         baseShard,
@@ -126,6 +140,7 @@ func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 	}, nil
 }
 
+// Equal compares two shards for equality.
 func (s *Shard[P, B, S]) Equal(rhs *Shard[P, B, S]) bool {
 	if s == nil || rhs == nil {
 		return s == rhs
@@ -138,6 +153,7 @@ type shardDTO[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 	Aux   AuxiliaryInfo          `cbor:"auxiliaryInfo"`
 }
 
+// MarshalCBOR encodes the shard in CBOR.
 func (s *Shard[P, B, S]) MarshalCBOR() ([]byte, error) {
 	dto := &shardDTO[P, B, S]{
 		Shard: s.Shard,
@@ -145,11 +161,12 @@ func (s *Shard[P, B, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal dkls23 Shard")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal dkls23 Shard")
 	}
 	return data, nil
 }
 
+// UnmarshalCBOR decodes the shard from CBOR.
 func (s *Shard[P, B, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*shardDTO[P, B, S]](data)
 	if err != nil {
