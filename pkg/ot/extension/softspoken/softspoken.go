@@ -15,7 +15,7 @@ const (
 	// Sigma is the statistical security parameter.
 	// Note: We apply the Fiat-Shamir transform using RO, and the
 	// protocol retains UC security. This reduces the protocol to a single round
-	// from receiver to sender (after the initial setup). Note that because the adversary
+	// from receiver to sender (after the initial setup). Because the adversary
 	// can attempt to find a convenient challenge by brute force under this optimization,
 	// each occurrence of the statistical parameter (s in the notation of Keller
 	// et al.) in the original protocol must be replaced by the computational security parameter.
