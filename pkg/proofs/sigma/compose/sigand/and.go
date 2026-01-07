@@ -79,7 +79,6 @@ func Compose[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Sta
 	if count == 0 {
 		return nil, errs.NewArgument("count must be positive")
 	}
-	// NOTE: slices.Repeat doesn't work
 	return sliceutils.Repeat[protocol[X, W, A, S, Z]](p, int(count)), nil
 }
 

@@ -5,7 +5,7 @@ Interactive 5-round protocol that compiles sigma protocols into zero-knowledge p
 ## Protocol Rounds
 
 | Round | Party | Action |
-|-------|-------|--------|
+| ------- | ------- | -------- |
 | 1 | Verifier | Commit to random challenge |
 | 2 | Prover | Send sigma commitment |
 | 3 | Verifier | Open challenge commitment |

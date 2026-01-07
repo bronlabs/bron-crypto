@@ -5,7 +5,7 @@ Compilers that transform interactive sigma protocols into non-interactive zero-k
 ## Supported Compilers
 
 | Compiler | Security | Use Case |
-|----------|----------|----------|
+| ---------- | ---------- | ---------- |
 | `fiatshamir` | Sequential | Simple, efficient proofs |
 | `fischlin` | UC-secure | Composable protocols |
 | `randfischlin` | UC-secure | OR composition support |
