@@ -8,7 +8,6 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -88,10 +87,10 @@ func Compose[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Sta
 	p sigma.Protocol[X, W, A, S, Z], count uint, prng io.Reader,
 ) (sigma.Protocol[Statement[X], Witness[W], Commitment[A], *State[S, Z], *Response[Z]], error) {
 	if p == nil || prng == nil {
-		return nil, errs.NewArgument("p or prng is nil")
+		return nil, ErrIsNil.WithMessage("p or prng is nil")
 	}
 	if count < 2 {
-		return nil, errs.NewArgument("count must be positive and greater than 2")
+		return nil, ErrInvalidArgument.WithMessage("count must be positive and greater than 2")
 	}
 	return &protocol[X, W, A, S, Z]{
 		sigmas: sliceutils.Repeat[[]sigma.Protocol[X, W, A, S, Z]](p, int(count)),
@@ -105,10 +104,10 @@ func (p *protocol[X, W, A, S, Z]) SoundnessError() uint {
 
 func (p *protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X], witness Witness[W]) (Commitment[A], *State[S, Z], error) {
 	if len(statement) != len(p.sigmas) {
-		return nil, nil, errs.NewArgument("invalid statement length")
+		return nil, nil, ErrInvalidLength.WithMessage("invalid statement length")
 	}
 	if len(witness) != len(p.sigmas) {
-		return nil, nil, errs.NewArgument("invalid witness length")
+		return nil, nil, ErrInvalidLength.WithMessage("invalid witness length")
 	}
 
 	a := make(Commitment[A], len(p.sigmas))
@@ -135,7 +134,7 @@ func (p *protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X]
 				var err error
 				a[i], s.S[i], err = sigmai.ComputeProverCommitment(statement[i], witness[i])
 				if err != nil {
-					return errs.WrapFailed(err, "failed to compute commitment for valid statement")
+					return errs2.Wrap(err)
 				}
 				return nil
 			})
@@ -144,7 +143,7 @@ func (p *protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X]
 				var err error
 				a[i], s.Z[i], err = sigmai.RunSimulator(statement[i], s.E[:sigmai.GetChallengeBytesLength()])
 				if err != nil {
-					return errs.WrapFailed(err, "failed to run simulator for invalid statement")
+					return errs2.Wrap(err)
 				}
 				return nil
 			})
@@ -187,7 +186,7 @@ func (p *protocol[X, W, A, S, Z]) ComputeProverResponse(statement Statement[X], 
 			subtle.XORBytes(z.E[i], state.E, challenge)
 			z.Z[i], err = sigmai.ComputeProverResponse(statement[i], witness[i], commitment[i], state.S[i], z.E[i][:sigmai.GetChallengeBytesLength()])
 			if err != nil {
-				return nil, errs.WrapFailed(err, "failed to compute response for valid statement")
+				return nil, errs2.Wrap(err)
 			}
 		} else {
 			z.E[i] = state.E
@@ -332,5 +331,6 @@ var (
 	ErrIsNil               = errs2.New("is nil")
 	ErrNotExactlyOneOutOfN = errs2.New("not exactly one statement out of n is valid")
 	ErrInvalidLength       = errs2.New("invalid length")
+	ErrInvalidArgument     = errs2.New("invalid argument")
 	ErrVerification        = errs2.New("verification failed")
 )
