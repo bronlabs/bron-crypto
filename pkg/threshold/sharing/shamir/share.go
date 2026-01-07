@@ -72,6 +72,9 @@ func (s *Share[FE]) Op(other *Share[FE]) *Share[FE] {
 }
 
 func (s *Share[FE]) Add(other *Share[FE]) *Share[FE] {
+	if s.id != other.id {
+		panic("cannot add shares with different IDs")
+	}
 	return &Share[FE]{
 		id: s.id,
 		v:  s.v.Add(other.v),
