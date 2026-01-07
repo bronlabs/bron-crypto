@@ -420,7 +420,7 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signatur
 			messages[i] = augmentedMessage
 		}
 	default:
-		return errs.NewType("rogue key prevention scheme %d is not supported", v.variant)
+		return errs.NewType("rogue key prevention scheme %d is not supported", v.rogueKeyAlg)
 	}
 
 	// FastAggregateVerify is a verification algorithm for the aggregate of multiple signatures on the same message. This function is faster than AggregateVerify.

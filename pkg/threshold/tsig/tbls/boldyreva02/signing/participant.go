@@ -193,7 +193,7 @@ func (c *Cosigner[PK, PKFE, SG, SGFE, E, S]) ProducePartialSignature(message []b
 			return nil, errs.WrapFailed(err, "failed to sign POP message")
 		}
 	default:
-		return nil, errs.NewType("unsupported rogue key prevention algorithm: %d", c.scheme.RogueKeyPreventionAlgorithm())
+		return nil, errs.NewType("unsupported rogue key prevention algorithm: %d", c.targetRogueKeyAlg)
 	}
 	signer, err := c.scheme.Signer(c.shareAsPrivateKey, bls.SignWithCustomDST[PK](c.targetDst))
 	if err != nil {
