@@ -329,7 +329,8 @@ func Test_Extractor(t *testing.T) {
 }
 
 func doInteractiveProof[A znstar.ArithmeticPaillier](xNatCt, yNatCt *numct.Nat, g *znstar.PaillierGroup[A], prng io.Reader) (err error) {
-	sessionId := []byte("nthRootsSession")
+	var sessionId network.SID
+	copy(sessionId[:], "nthRootSession")
 	appLabel := "NthRoot"
 	protocol, err := nthroot.NewProtocol(g, prng)
 	if err != nil {

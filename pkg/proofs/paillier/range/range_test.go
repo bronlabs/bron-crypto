@@ -289,7 +289,8 @@ func Test_Interactive(t *testing.T) {
 			R:  r,
 		}
 
-		sessionId := []byte("test sessionId")
+		var sessionId network.SID
+		copy(sessionId[:], "test sessionId")
 		proverTranscript := hagrid.NewTranscript("test")
 		verifierTranscript := hagrid.NewTranscript("test")
 
