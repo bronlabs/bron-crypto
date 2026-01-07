@@ -2,6 +2,7 @@ package sigma
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
@@ -14,23 +15,27 @@ const (
 	responseLabel   = "responseLabel-"
 )
 
-// TODO: change to transcript writable
 type (
-	Name       string
-	Statement  base.BytesLike
-	Witness    base.BytesLike
+	// Name identifies a sigma protocol.
+	Name string
+	// Statement is the public statement type.
+	Statement base.BytesLike
+	// Witness is the witness type.
+	Witness base.BytesLike
+	// Commitment is the commitment type.
 	Commitment base.BytesLike
-	State      any
-	Response   base.BytesLike
+	// State is the prover's internal state type.
+	State any
+	// Response is the response type.
+	Response base.BytesLike
 
-	// ChallengeBytes
-	// Sigma protocols are defined on an arbitrary [enumerable] challenge space.
-	// Our implementation choice is to enforce working with a binary encoding of a challenge.
-	// This is to make OR-composition easier. Internally, each implementation for the sigma protocol interface
-	// will deserialize ChallengeBytes into their own suitable challenge type.
+	// ChallengeBytes is the binary encoding of the challenge space.
+	// Sigma protocols are defined on an arbitrary challenge space; we standardise on a byte encoding
+	// to ease OR-composition and transcript handling.
 	ChallengeBytes []byte
 )
 
+// Protocol defines the sigma protocol interface.
 type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interface {
 	Name() Name
 	ComputeProverCommitment(statement X, witness W) (A, S, error)
@@ -54,7 +59,7 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 	SpecialSoundness() uint
 
 	// TODO: implement for other protocols and uncomment
-	//Extract(statement X, commitment A, challenges []ChallengeBytes, responses []Z) (W, error)
+	// Extract(statement X, commitment A, challenges []ChallengeBytes, responses []Z) (W, error)
 
 	// SoundnessError returns the statistical soundness error `s` of the protocol,
 	// i.e., the probability that a cheating prover can succeed is ≤ 2^(-s).
@@ -67,7 +72,7 @@ type Protocol[X Statement, W Witness, A Commitment, S State, Z Response] interfa
 }
 
 type participant[X Statement, W Witness, A Commitment, S State, Z Response] struct {
-	sessionId  []byte
+	sessionId  network.SID
 	transcript transcripts.Transcript
 
 	sigmaProtocol  Protocol[X, W, A, S, Z]
