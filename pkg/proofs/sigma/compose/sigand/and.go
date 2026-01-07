@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
@@ -74,20 +74,20 @@ func Compose[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Sta
 	p sigma.Protocol[X, W, A, S, Z], count uint,
 ) (sigma.Protocol[Statement[X], Witness[W], Commitment[A], State[S], Response[Z]], error) {
 	if p == nil {
-		return nil, errs.NewArgument("protocol is nil")
+		return nil, ErrIsNil.WithMessage("protocol is nil")
 	}
 	if count == 0 {
-		return nil, errs.NewArgument("count must be positive")
+		return nil, ErrInvalidArgument.WithMessage("count must be positive")
 	}
 	return sliceutils.Repeat[protocol[X, W, A, S, Z]](p, int(count)), nil
 }
 
 func (p protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X], witness Witness[W]) (Commitment[A], State[S], error) {
 	if len(statement) != len(p) {
-		return nil, nil, errs.NewSize("invalid number of statements")
+		return nil, nil, ErrInvalidLength.WithMessage("invalid number of statements")
 	}
 	if len(witness) != len(p) {
-		return nil, nil, errs.NewSize("invalid number of witnesses")
+		return nil, nil, ErrInvalidLength.WithMessage("invalid number of witnesses")
 	}
 	a := make(Commitment[A], len(p))
 	s := make(State[S], len(p))
@@ -97,29 +97,29 @@ func (p protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X],
 			var err error
 			a[i], s[i], err = sigmai.ComputeProverCommitment(statement[i], witness[i])
 			if err != nil {
-				return errs.WrapFailed(err, "failed to compute prover commitment")
+				return errs2.Wrap(err).WithMessage("failed to compute prover commitment")
 			}
 			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot compute commitments")
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot compute commitments")
 	}
 	return a, s, nil
 }
 
 func (p protocol[X, W, A, S, Z]) ComputeProverResponse(statement Statement[X], witness Witness[W], commitment Commitment[A], state State[S], challengeBytes sigma.ChallengeBytes) (Response[Z], error) {
 	if len(statement) != len(p) {
-		return nil, errs.NewSize("invalid number of statements")
+		return nil, ErrInvalidLength.WithMessage("invalid number of statements")
 	}
 	if len(witness) != len(p) {
-		return nil, errs.NewSize("invalid number of witnesses")
+		return nil, ErrInvalidLength.WithMessage("invalid number of witnesses")
 	}
 	if len(commitment) != len(p) {
-		return nil, errs.NewSize("invalid number of commitments")
+		return nil, ErrInvalidLength.WithMessage("invalid number of commitments")
 	}
 	if len(state) != len(p) {
-		return nil, errs.NewSize("invalid number of states")
+		return nil, ErrInvalidLength.WithMessage("invalid number of states")
 	}
 	z := make(Response[Z], len(p))
 	var eg errgroup.Group
@@ -128,26 +128,26 @@ func (p protocol[X, W, A, S, Z]) ComputeProverResponse(statement Statement[X], w
 			var err error
 			z[i], err = sigmai.ComputeProverResponse(statement[i], witness[i], commitment[i], state[i], challengeBytes)
 			if err != nil {
-				return errs.WrapFailed(err, "failed to compute prover response")
+				return errs2.Wrap(err).WithMessage("failed to compute prover response")
 			}
 			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return nil, errs.WrapFailed(err, "cannot compute responses")
+		return nil, errs2.Wrap(err).WithMessage("cannot compute responses")
 	}
 	return z, nil
 }
 
 func (p protocol[X, W, A, S, Z]) Verify(statement Statement[X], commitment Commitment[A], challengeBytes sigma.ChallengeBytes, response Response[Z]) error {
 	if len(statement) != len(p) {
-		return errs.NewSize("invalid number of statements")
+		return ErrInvalidLength.WithMessage("invalid number of statements")
 	}
 	if len(commitment) != len(p) {
-		return errs.NewSize("invalid number of commitments")
+		return ErrInvalidLength.WithMessage("invalid number of commitments")
 	}
 	if len(response) != len(p) {
-		return errs.NewSize("invalid number of responses")
+		return ErrInvalidLength.WithMessage("invalid number of responses")
 	}
 	var eg errgroup.Group
 	for i, sigmai := range p {
@@ -156,14 +156,14 @@ func (p protocol[X, W, A, S, Z]) Verify(statement Statement[X], commitment Commi
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return errs.WrapVerification(err, "verification failed")
+		return errs2.Wrap(err).WithMessage("verification failed")
 	}
 	return nil
 }
 
 func (p protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challengeBytes sigma.ChallengeBytes) (Commitment[A], Response[Z], error) {
 	if len(statement) != len(p) {
-		return nil, nil, errs.NewSize("invalid number of statements")
+		return nil, nil, ErrInvalidLength.WithMessage("invalid number of statements")
 	}
 	a := make(Commitment[A], len(p))
 	s := make(Response[Z], len(p))
@@ -173,13 +173,13 @@ func (p protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challengeB
 			var err error
 			a[i], s[i], err = sigmai.RunSimulator(statement[i], challengeBytes)
 			if err != nil {
-				return errs.WrapFailed(err, "failed to run simulator")
+				return errs2.Wrap(err).WithMessage("failed to run simulator")
 			}
 			return nil
 		})
 	}
 	if err := eg.Wait(); err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot run simulator")
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot run simulator")
 	}
 	return a, s, nil
 }
@@ -198,14 +198,14 @@ func (p protocol[X, W, A, S, Z]) SoundnessError() uint {
 
 func (p protocol[X, W, A, S, Z]) ValidateStatement(statement Statement[X], witness Witness[W]) error {
 	if len(statement) != len(p) {
-		return errs.NewSize("invalid number of statements")
+		return ErrInvalidLength.WithMessage("invalid number of statements")
 	}
 	if len(witness) != len(p) {
-		return errs.NewSize("invalid number of witnesses")
+		return ErrInvalidLength.WithMessage("invalid number of witnesses")
 	}
 	for i := range p {
 		if err := p[i].ValidateStatement(statement[i], witness[i]); err != nil {
-			return errs.WrapArgument(err, "invalid statement/witness at index %d", i)
+			return errs2.Wrap(err).WithMessage("invalid statement/witness at index %d", i)
 		}
 	}
 	return nil
@@ -214,3 +214,9 @@ func (p protocol[X, W, A, S, Z]) ValidateStatement(statement Statement[X], witne
 func (p protocol[X, W, A, S, Z]) Name() sigma.Name {
 	return sigma.Name(fmt.Sprintf("(%s)^%d", p[0].Name(), len(p)))
 }
+
+var (
+	ErrIsNil           = errs2.New("is nil")
+	ErrInvalidArgument = errs2.New("invalid argument")
+	ErrInvalidLength   = errs2.New("invalid length")
+)

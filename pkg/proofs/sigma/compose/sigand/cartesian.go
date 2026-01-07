@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
@@ -95,10 +95,10 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 	s := new(StateCartesian[S0, S1])
 
 	if a.A0, s.S0, err = p.sigma0.ComputeProverCommitment(statement.X0, witness.W0); err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot compute commitment")
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot compute commitment")
 	}
 	if a.A1, s.S1, err = p.sigma1.ComputeProverCommitment(statement.X1, witness.W1); err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot compute commitment")
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot compute commitment")
 	}
 
 	return a, s, nil
@@ -109,10 +109,10 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 	z := new(ResponseCartesian[Z0, Z1])
 
 	if z.Z0, err = p.sigma0.ComputeProverResponse(statement.X0, witness.W0, commitment.A0, state.S0, challengeBytes[:p.sigma0.GetChallengeBytesLength()]); err != nil {
-		return nil, errs.WrapFailed(err, "cannot compute response")
+		return nil, errs2.Wrap(err).WithMessage("cannot compute response")
 	}
 	if z.Z1, err = p.sigma1.ComputeProverResponse(statement.X1, witness.W1, commitment.A1, state.S1, challengeBytes[:p.sigma1.GetChallengeBytesLength()]); err != nil {
-		return nil, errs.WrapFailed(err, "cannot compute response")
+		return nil, errs2.Wrap(err).WithMessage("cannot compute response")
 	}
 
 	return z, nil
@@ -120,10 +120,10 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProve
 
 func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *StatementCartesian[X0, X1], commitment *CommitmentCartesian[A0, A1], challengeBytes sigma.ChallengeBytes, response *ResponseCartesian[Z0, Z1]) error {
 	if err := p.sigma0.Verify(statement.X0, commitment.A0, challengeBytes[:p.sigma0.GetChallengeBytesLength()], response.Z0); err != nil {
-		return errs.WrapVerification(err, "verification failed")
+		return errs2.Wrap(err).WithMessage("verification failed")
 	}
 	if err := p.sigma1.Verify(statement.X1, commitment.A1, challengeBytes[:p.sigma1.GetChallengeBytesLength()], response.Z1); err != nil {
-		return errs.WrapVerification(err, "verification failed")
+		return errs2.Wrap(err).WithMessage("verification failed")
 	}
 
 	return nil
@@ -135,10 +135,10 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator
 	z := new(ResponseCartesian[Z0, Z1])
 
 	if a.A0, z.Z0, err = p.sigma0.RunSimulator(statement.X0, challengeBytes[:p.sigma0.GetChallengeBytesLength()]); err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot run simulator")
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot run simulator")
 	}
 	if a.A1, z.Z1, err = p.sigma1.RunSimulator(statement.X1, challengeBytes[:p.sigma1.GetChallengeBytesLength()]); err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot run simulator")
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot run simulator")
 	}
 
 	return a, z, nil
@@ -158,10 +158,10 @@ func (p protocolCartesian[_, _, _, _, _, _, _, _, _, _]) SoundnessError() uint {
 
 func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStatement(statement *StatementCartesian[X0, X1], witness *WitnessCartesian[W0, W1]) error {
 	if err := p.sigma0.ValidateStatement(statement.X0, witness.W0); err != nil {
-		return errs.WrapValidation(err, "invalid statement")
+		return errs2.Wrap(err).WithMessage("invalid statement")
 	}
 	if err := p.sigma1.ValidateStatement(statement.X1, witness.W1); err != nil {
-		return errs.WrapValidation(err, "invalid statement")
+		return errs2.Wrap(err).WithMessage("invalid statement")
 	}
 
 	return nil
