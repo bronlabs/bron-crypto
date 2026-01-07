@@ -14,9 +14,13 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 )
 
+// Share is a Feldman VSS share, which is identical to a Shamir share.
+// The share value is f(i) where f is the dealing polynomial and i is the shareholder ID.
 type Share[FE algebra.PrimeFieldElement[FE]] = shamir.Share[FE]
 
-func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, v FE, ac *AccessStructure) (*Share[FE], error) {
+// NewShare creates a new Feldman share with the given ID and value.
+// If an access structure is provided, validates that the ID is a valid shareholder.
+func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, v FE, ac *sharing.ThresholdAccessStructure) (*Share[FE], error) {
 	s, err := shamir.NewShare(id, v, ac)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create Feldman share")
@@ -24,6 +28,9 @@ func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, v FE, ac *AccessS
 	return s, nil
 }
 
+// LiftedShare represents a share lifted to the exponent: g^{f(i)} where f(i) is
+// the underlying Shamir share value. This is used when shares need to be verified
+// or combined in the group rather than the field.
 type LiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
 	id sharing.ID
 	v  E
@@ -34,6 +41,7 @@ type liftedShareDTO[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEle
 	V  E          `cbor:"value"`
 }
 
+// NewLiftedShare creates a new lifted share with the given ID and group element value.
 func NewLiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](id sharing.ID, v E) (*LiftedShare[E, FE], error) {
 	if utils.IsNil(v) {
 		return nil, errs.NewIsNil("value is nil")
@@ -45,14 +53,20 @@ func NewLiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEle
 	}, nil
 }
 
+// ID returns the shareholder identifier for this lifted share.
 func (s *LiftedShare[E, FE]) ID() sharing.ID {
 	return s.id
 }
 
+// Value returns the group element value g^{f(i)} of this lifted share.
 func (s *LiftedShare[E, FE]) Value() E {
 	return s.v
 }
 
+// ToAdditive converts this lifted share to an additive share by exponentiating
+// with the appropriate Lagrange coefficient. For shareholder i in qualified set S,
+// the result is g^{λ_i · f(i)} where λ_i is the Lagrange coefficient.
+// The resulting additive shares can be multiplied together to reconstruct g^s.
 func (s *LiftedShare[E, FE]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error) {
 	if qualifiedSet == nil {
 		return nil, errs.NewIsNil("qualified set is nil")
@@ -103,8 +117,14 @@ func (s *LiftedShare[E, FE]) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
+// SharesInExponent is a collection of lifted shares that can be used to
+// reconstruct the secret in the exponent (i.e., g^s) without revealing s.
 type SharesInExponent[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] []*LiftedShare[E, FE]
 
+// ReconstructAsAdditive reconstructs g^s from a set of lifted shares using
+// Lagrange interpolation in the exponent. Each share g^{f(i)} is raised to
+// its Lagrange coefficient λ_i, and the results are multiplied together:
+// g^s = ∏_i (g^{f(i)})^{λ_i} = g^{∑_i λ_i·f(i)} = g^{f(0)} = g^s.
 func (s SharesInExponent[E, FE]) ReconstructAsAdditive() (E, error) {
 	if len(s) == 0 {
 		return *new(E), errs.NewArgument("no shares provided for reconstruction")

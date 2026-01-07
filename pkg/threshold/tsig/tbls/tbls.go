@@ -19,7 +19,7 @@ type PublicMaterial[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	publicKey         *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]
-	accessStructure   *feldman.AccessStructure
+	accessStructure   *sharing.ThresholdAccessStructure
 	fv                *feldman.VerificationVector[PK, S]
 	partialPublicKeys ds.Map[sharing.ID, *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]]
 }
@@ -31,7 +31,7 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) PublicKey() *bls.PublicKey[
 	return spm.publicKey
 }
 
-func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) AccessStructure() *feldman.AccessStructure {
+func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) AccessStructure() *sharing.ThresholdAccessStructure {
 	if spm == nil {
 		return nil
 	}
@@ -144,7 +144,7 @@ func NewShortKeyShard[
 	share *feldman.Share[S],
 	publicKey *bls.PublicKey[P1, FE1, P2, FE2, E, S],
 	vector feldman.VerificationVector[P1, S],
-	accessStructure *feldman.AccessStructure,
+	accessStructure *sharing.ThresholdAccessStructure,
 ) (*Shard[P1, FE1, P2, FE2, E, S], error) {
 	if share == nil {
 		return nil, errs.NewIsNil("share")
@@ -195,7 +195,7 @@ func NewLongKeyShard[
 	share *feldman.Share[S],
 	publicKey *bls.PublicKey[P2, FE2, P1, FE1, E, S],
 	vector feldman.VerificationVector[P2, S],
-	accessStructure *feldman.AccessStructure,
+	accessStructure *sharing.ThresholdAccessStructure,
 ) (*Shard[P2, FE2, P1, FE1, E, S], error) {
 	if share == nil {
 		return nil, errs.NewIsNil("share")

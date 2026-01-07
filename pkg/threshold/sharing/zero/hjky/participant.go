@@ -22,7 +22,7 @@ const (
 type Participant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	sessionId       network.SID
 	sharingId       sharing.ID
-	accessStructure sharing.ThresholdAccessStructure
+	accessStructure *sharing.ThresholdAccessStructure
 	group           algebra.PrimeGroup[G, S]
 	field           algebra.PrimeField[S]
 	scheme          *feldman.Scheme[G, S]
@@ -38,7 +38,7 @@ type State[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] st
 }
 
 // NewParticipant creates a zero-sharing participant bound to the given session and access structure.
-func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sid network.SID, id sharing.ID, as sharing.ThresholdAccessStructure, g algebra.PrimeGroup[G, S], tape transcripts.Transcript, prng io.Reader) (*Participant[G, S], error) {
+func NewParticipant[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](sid network.SID, id sharing.ID, as *sharing.ThresholdAccessStructure, g algebra.PrimeGroup[G, S], tape transcripts.Transcript, prng io.Reader) (*Participant[G, S], error) {
 	if tape == nil || prng == nil || !as.Shareholders().Contains(id) {
 		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
 	}

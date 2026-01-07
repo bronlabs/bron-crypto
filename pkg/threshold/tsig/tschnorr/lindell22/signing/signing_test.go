@@ -24,7 +24,6 @@ import (
 	vanilla "github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr/lindell22/signing"
@@ -83,7 +82,7 @@ func runTestWithBIP340(t *testing.T, threshold, total uint) {
 
 	// Setup DKG participants
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := shamir.NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
@@ -201,7 +200,7 @@ func runTestWithVanillaSchnorr(t *testing.T, threshold, total uint) {
 
 	// Setup DKG participants
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := shamir.NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
@@ -336,7 +335,7 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 
 	// Setup DKG
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := shamir.NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
@@ -453,7 +452,7 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 
 	// Setup DKG
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := shamir.NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
@@ -611,7 +610,7 @@ func testConcurrentSigningWithScheme(t *testing.T, createScheme func(io.Reader) 
 
 	// Setup DKG
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := shamir.NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
@@ -818,7 +817,7 @@ func testDifferentQuorumsWithScheme(t *testing.T, threshold, total uint, quorumI
 
 	// Setup DKG
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := shamir.NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
@@ -984,7 +983,7 @@ func testEdgeCasesWithScheme(t *testing.T, message []byte, createScheme func(io.
 
 	// Setup DKG
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := shamir.NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
@@ -1109,7 +1108,7 @@ func TestLindell22DeterministicSigning(t *testing.T) {
 		// Setup DKG (run twice with same inputs)
 		runDKGAndSign := func(scheme *bip340.Scheme, prng io.Reader) *schnorrlike.Signature[*k256.Point, *k256.Scalar] {
 			shareholders := sharing.NewOrdinalShareholderSet(total)
-			ac, err := shamir.NewAccessStructure(threshold, shareholders)
+			ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 			require.NoError(t, err)
 
 			parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
@@ -1215,7 +1214,7 @@ func TestLindell22IdentifiableAbortRounds(t *testing.T) {
 
 	// Setup DKG
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := shamir.NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
 	parties := make([]*gennaro.Participant[*k256.Point, *k256.Scalar], 0, total)
@@ -1313,7 +1312,7 @@ func BenchmarkLindell22Signing(b *testing.B) {
 
 	// Setup DKG
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := shamir.NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	if err != nil {
 		b.Fatal(err)
 	}

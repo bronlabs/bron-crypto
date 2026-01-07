@@ -1379,7 +1379,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 
 	// Create shareholders and access structure
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	_, err := shamir.NewAccessStructure(threshold, shareholders)
+	_, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
 	// Create Feldman scheme
@@ -1562,7 +1562,7 @@ func TestLiftedShareCorrectnessWithManualCalculation(t *testing.T) {
 	threshold := uint(2)
 	total := uint(3)
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	_, err := shamir.NewAccessStructure(threshold, shareholders)
+	_, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
 	// Create Feldman scheme
