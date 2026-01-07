@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
 // Commitment represents a Pedersen commitment value held in the prime order group.
@@ -66,7 +67,10 @@ func (c *Commitment[E, S]) ReRandomiseWith(key *Key[E, S], r *Witness[S]) (*Comm
 	if c == nil {
 		return nil, ErrInvalidArgument.WithMessage("commitment cannot be nil")
 	}
-	newCom := &Commitment[E, S]{v: c.v.Op(key.h.ScalarOp(r.v))}
+	newCom, err := NewCommitment(c.v.Op(key.h.ScalarOp(r.v)))
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("cannot re-randomise commitment")
+	}
 	return newCom, nil
 }
 
@@ -81,11 +85,14 @@ func (c *Commitment[E, S]) ReRandomise(key *Key[E, S], prng io.Reader) (*Commitm
 
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, S]](key.h.Structure())
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
-	wv, err := field.Random(prng)
+	wv, err := algebrautils.RandomNonIdentity(field, prng)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot generate random witness")
 	}
-	witness := &Witness[S]{v: wv}
+	witness, err := NewWitness(wv)
+	if err != nil {
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot create witness")
+	}
 	commitment, err := c.ReRandomiseWith(key, witness)
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot re-randomise commitment with witness")
