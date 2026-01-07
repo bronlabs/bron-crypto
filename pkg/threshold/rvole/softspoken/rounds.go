@@ -65,13 +65,13 @@ func (alice *Alice[P, B, S]) Round2(r1 *Round1P2P, a []S) (*Round2P2P[S], []S, e
 		for l, message := range messages[0] {
 			alice.alpha[xi][0][l], err = alice.suite.field.Hash(message)
 			if err != nil {
-				return nil, nil, errs.WrapFailed(err, "cannot hash to curve message")
+				return nil, nil, errs.WrapFailed(err, "cannot hash to field message")
 			}
 		}
 		for l, message := range messages[1] {
 			alice.alpha[xi][1][l], err = alice.suite.field.Hash(message)
 			if err != nil {
-				return nil, nil, errs.WrapFailed(err, "cannot hash to curve message")
+				return nil, nil, errs.WrapFailed(err, "cannot hash to field message")
 			}
 		}
 	}
