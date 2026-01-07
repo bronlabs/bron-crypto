@@ -428,7 +428,6 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signatur
 	// All public keys passed as arguments to this algorithm MUST have a corresponding proof of possession, and the result of evaluating PopVerify on each public key and its proof MUST be VALID. The caller is responsible for ensuring that this precondition is met. If it is violated, this scheme provides no security against aggregate signature forgery.
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-fastaggregateverify
 	canRunFastAggregateVerify := (sliceutils.CountUnique(sliceutils.Map(messages, hex.EncodeToString)) == 1) && v.rogueKeyAlg == POP
-
 	if canRunFastAggregateVerify {
 		aggregatedPublicKey, err := AggregateAll[PK](publicKeys)
 		if err != nil {
@@ -437,14 +436,16 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signatur
 		if err := coreVerify(aggregatedPublicKey.Value(), messages[0], signature.Value(), v.dst, v.signatureSubGroup); err != nil {
 			return errs.WrapVerification(err, "could not verify fast aggregate signature")
 		}
+		return nil
+	} else {
+		unwrappedPublicKeys := slices.Collect(iterutils.Map(slices.Values(publicKeys), func(pk *PublicKey[PK, PKFE, SG, SGFE, E, S]) PK {
+			return pk.Value()
+		}))
+		if err := coreAggregateVerify(unwrappedPublicKeys, messages, signature.Value(), v.dst, v.signatureSubGroup); err != nil {
+			return errs.WrapVerification(err, "could not verify aggregate signature")
+		}
+		return nil
 	}
-	unwrappedPublicKeys := slices.Collect(iterutils.Map(slices.Values(publicKeys), func(pk *PublicKey[PK, PKFE, SG, SGFE, E, S]) PK {
-		return pk.Value()
-	}))
-	if err := coreAggregateVerify(unwrappedPublicKeys, messages, signature.Value(), v.dst, v.signatureSubGroup); err != nil {
-		return errs.WrapVerification(err, "could not verify aggregate signature")
-	}
-	return nil
 }
 
 func _[
