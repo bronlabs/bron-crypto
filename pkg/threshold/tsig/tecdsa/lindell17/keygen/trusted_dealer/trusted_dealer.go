@@ -10,7 +10,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lp"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
@@ -19,7 +18,7 @@ import (
 )
 
 // DealRandom creates Lindell17 shards using a trusted dealer.
-func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *lindell17.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
+func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], shareholder ds.Set[sharing.ID], primeBitLen uint, prng io.Reader) (ds.Map[sharing.ID, *lindell17.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
 	if curve == nil || shareholder == nil || shareholder.Size() == 0 || prng == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("invalid input to trusted dealer")
 	}
@@ -43,7 +42,7 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 	paillierPublicKeys := make(map[sharing.ID]*paillier.PublicKey)
 	shareCiphertexts := make(map[sharing.ID]*paillier.Ciphertext)
 
-	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(lp.PaillierBitSizeN))
+	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(primeBitLen))
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot create paillier key generator")
 	}

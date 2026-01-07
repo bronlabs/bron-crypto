@@ -82,7 +82,7 @@ func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 		shareholders = append(shareholders, i)
 	}
 
-	shards, publicKey, err := trusted_dealer.DealRandom(suite.Curve(), hashset.NewComparable[sharing.ID](shareholders...).Freeze(), prng)
+	shards, publicKey, err := trusted_dealer.DealRandom(suite.Curve(), hashset.NewComparable(shareholders...).Freeze(), 1024, prng)
 	require.NoError(t, err)
 
 	for subShareHolders := range sliceutils.KCoveringCombinations(shareholders, 2) {
