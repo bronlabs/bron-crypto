@@ -74,7 +74,7 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 
 	// 4. For i ∈ {1, ..., ρ}
 	for i := uint64(0); i < fischlinProof.Rho; i++ {
-		digest, err := v.hash(fischlinProof.B, commonH, i, fischlinProof.E[i], fischlinProof.Z[i])
+		digest, err := hash(fischlinProof.B, commonH, i, fischlinProof.E[i], fischlinProof.Z[i].Bytes())
 		if err != nil {
 			return errs.WrapHashing(err, "cannot compute digest")
 		}
@@ -105,15 +105,4 @@ func (v *verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPo
 
 	// 5. Output 'accept'
 	return nil
-}
-
-func (v *verifier[X, W, A, S, Z]) hash(b uint64, commonH []byte, i uint64, challenge sigma.ChallengeBytes, response Z) ([]byte, error) {
-	bBytes := b/8 + 1
-	bMask := byte((1 << (b % 8)) - 1)
-	h, err := hashing.Hash(randomOracle, commonH, binary.LittleEndian.AppendUint64(make([]byte, 8), i), challenge, response.Bytes())
-	if err != nil {
-		return nil, errs.WrapRandomSample(err, "cannot hash challenge")
-	}
-	h[bBytes-1] &= bMask
-	return h[:bBytes], nil
 }
