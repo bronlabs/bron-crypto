@@ -400,7 +400,7 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 // The verifier must be initialized with a PRNG using VerifyWithPRNG option.
 // The random coefficients a2...au prevent an attacker from constructing signatures
 // that pass batch verification but fail individual verification.
-func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey, messages []Message, prng io.Reader) error {
+func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey, messages []Message) error {
 	if v.prng == nil {
 		return ErrInvalidArgument.WithMessage("batch verification requires a prng. Initialise the verifier with the prng option")
 	}
@@ -420,7 +420,7 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 	a := make([]*k256.Scalar, len(signatures))
 	a[0] = sf.One()
 	for i := 1; i < len(signatures); i++ {
-		a[i], err = algebrautils.RandomNonIdentity(sf, prng)
+		a[i], err = algebrautils.RandomNonIdentity(sf, v.prng)
 		if err != nil {
 			return errs2.Wrap(err).WithMessage("cannot generate random scalar for i=%d", i)
 		}

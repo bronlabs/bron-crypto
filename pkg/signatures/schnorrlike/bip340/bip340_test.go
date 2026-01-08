@@ -360,7 +360,7 @@ func Test_HappyPathBatchVerify(t *testing.T) {
 			[][]byte{
 				message1,
 				message2,
-			}, crand.Reader,
+			},
 		)
 		require.NoError(t, err)
 	})
