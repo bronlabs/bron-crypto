@@ -4,7 +4,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
@@ -25,7 +25,7 @@ func NewShortKeyScheme[
 ](curveFamily curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S], rogueKeyAlg RogueKeyPreventionAlgorithm) (*Scheme[P1, FE1, P2, FE2, E, S], error) {
 	cipherSuite, err := newScheme(curveFamily, rogueKeyAlg)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create cipher suite")
+		return nil, errs2.Wrap(err).WithMessage("failed to create cipher suite")
 	}
 	keySubGroup := curveFamily.SourceSubGroup()
 	signatureSubGroup := curveFamily.TwistedSubGroup()
@@ -55,7 +55,7 @@ func NewLongKeyScheme[
 ](curveFamily curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S], rogueKeyAlg RogueKeyPreventionAlgorithm) (*Scheme[P2, FE2, P1, FE1, E, S], error) {
 	cipherSuite, err := newScheme(curveFamily, rogueKeyAlg)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create cipher suite")
+		return nil, errs2.Wrap(err).WithMessage("failed to create cipher suite")
 	}
 	keySubGroup := curveFamily.TwistedSubGroup()
 	signatureSubGroup := curveFamily.SourceSubGroup()
@@ -74,17 +74,17 @@ func newScheme[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](curveFamily curves.PairingFriendlyFamily[P1, FE1, P2, FE2, E, S], rogueKeyAlg RogueKeyPreventionAlgorithm) (*CipherSuite, error) {
 	if curveFamily == nil {
-		return nil, errs.NewIsNil("curveFamily")
+		return nil, ErrInvalidArgument.WithMessage("curveFamily is nil")
 	}
 	var cipherSuite *CipherSuite
 	switch curveFamily.Name() {
 	case bls12381.FamilyName:
 		cipherSuite = BLS12381CipherSuite()
 	default:
-		return nil, errs.NewType("no ciphersuite for curve family %s", curveFamily.Name())
+		return nil, ErrNotSupported.WithMessage("no ciphersuite for curve family %s", curveFamily.Name())
 	}
 	if !RogueKeyPreventionAlgorithmIsSupported(rogueKeyAlg) {
-		return nil, errs.NewType("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
+		return nil, ErrNotSupported.WithMessage("rogue key prevention algorithm %d is not supported", rogueKeyAlg)
 	}
 	return cipherSuite, nil
 }
@@ -161,7 +161,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Keygen(opts ...KeyGeneratorOption[PK,
 	}
 	for _, opt := range opts {
 		if err := opt(kg); err != nil {
-			return nil, errs.WrapFailed(err, "key generator option failed")
+			return nil, errs2.Wrap(err).WithMessage("key generator option failed")
 		}
 	}
 	return kg, nil
@@ -173,7 +173,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Keygen(opts ...KeyGeneratorOption[PK,
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.6
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Signer(privateKey *PrivateKey[PK, PKFE, SG, SGFE, E, S], opts ...SignerOption[PK, PKFE, SG, SGFE, E, S]) (*Signer[PK, PKFE, SG, SGFE, E, S], error) {
 	if privateKey == nil {
-		return nil, errs.NewIsNil("privateKey")
+		return nil, ErrInvalidArgument.WithMessage("privateKey is nil")
 	}
 	out := &Signer[PK, PKFE, SG, SGFE, E, S]{
 		privateKey:        privateKey,
@@ -184,7 +184,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Signer(privateKey *PrivateKey[PK, PKF
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs.WrapFailed(err, "verifier option failed")
+			return nil, errs2.Wrap(err).WithMessage("signer option failed")
 		}
 	}
 	return out, nil
@@ -203,7 +203,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Verifier(opts ...VerifierOption[PK, P
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs.WrapFailed(err, "verifier option failed")
+			return nil, errs2.Wrap(err).WithMessage("verifier option failed")
 		}
 	}
 	return out, nil
@@ -216,7 +216,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Verifier(opts ...VerifierOption[PK, P
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.8
 func (*Scheme[PK, PKFE, SG, SGFE, E, S]) AggregateSignatures(sigs ...*Signature[SG, SGFE, PK, PKFE, E, S]) (*Signature[SG, SGFE, PK, PKFE, E, S], error) {
 	if sigs == nil {
-		return nil, errs.NewIsNil("signature")
+		return nil, ErrInvalidArgument.WithMessage("signature is nil")
 	}
 	return AggregateAll[PK](sigs)
 }

@@ -20,7 +20,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
@@ -113,7 +113,7 @@ func (c *CipherSuite) GetDst(alg RogueKeyPreventionAlgorithm, variant Variant) (
 		}
 		return (c.DstSignaturePopInSourceGroup), nil
 	default:
-		return "", errs.NewType("algorithm type %v not implemented", alg)
+		return "", ErrNotSupported.WithMessage("algorithm type %v not implemented", alg)
 	}
 }
 
@@ -180,10 +180,10 @@ func NewPublicKey[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](v PK) (*PublicKey[PK, PKFE, Sig, SigFE, E, S], error) {
 	if v.IsOpIdentity() {
-		return nil, errs.NewFailed("cannot create public key from identity point")
+		return nil, ErrInvalidArgument.WithMessage("cannot create public key from identity point")
 	}
 	if !v.IsTorsionFree() {
-		return nil, errs.NewFailed("cannot create public key from torsion point")
+		return nil, ErrInvalidArgument.WithMessage("cannot create public key from torsion point")
 	}
 	return &PublicKey[PK, PKFE, Sig, SigFE, E, S]{
 		PublicKeyTrait: signatures.PublicKeyTrait[PK, S]{V: v},
@@ -199,7 +199,7 @@ func NewPublicKeyFromBytes[
 ](subGroup curves.PairingFriendlyCurve[PK, PKFE, Sig, SigFE, E, S], input []byte) (*PublicKey[PK, PKFE, Sig, SigFE, E, S], error) {
 	v, err := subGroup.FromBytes(input)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create public key from bytes")
+		return nil, errs2.Wrap(err).WithMessage("could not create public key from bytes")
 	}
 	return NewPublicKey(v)
 }
@@ -224,7 +224,7 @@ type PublicKey[
 func (pk *PublicKey[P1, F1, P2, F2, E, S]) Group() curves.PairingFriendlyCurve[P1, F1, P2, F2, E, S] {
 	group, ok := pk.V.Structure().(curves.PairingFriendlyCurve[P1, F1, P2, F2, E, S])
 	if !ok {
-		panic(errs.NewType("public key value does not implement curves.Curve interface"))
+		panic(ErrNotSupported.WithMessage("public key value does not implement curves.Curve interface"))
 	}
 	return group
 }
@@ -271,13 +271,13 @@ func (pk *PublicKey[P1, F1, P2, F2, E, S]) IsShort() bool {
 // Returns an error if other is nil, the identity element, or not in the correct subgroup.
 func (pk *PublicKey[P1, F1, P2, F2, E, S]) TryAdd(other *PublicKey[P1, F1, P2, F2, E, S]) (*PublicKey[P1, F1, P2, F2, E, S], error) {
 	if other == nil {
-		return nil, errs.NewIsNil("cannot add nil public key")
+		return nil, ErrInvalidArgument.WithMessage("cannot add nil public key")
 	}
 	if other.Value().IsOpIdentity() {
-		return nil, errs.NewFailed("cannot add identity public key")
+		return nil, ErrInvalidArgument.WithMessage("cannot add identity public key")
 	}
 	if !other.Value().IsTorsionFree() {
-		return nil, errs.NewFailed("cannot add public key with torsion point")
+		return nil, ErrInvalidArgument.WithMessage("cannot add public key with torsion point")
 	}
 	return &PublicKey[P1, F1, P2, F2, E, S]{
 		PublicKeyTrait: signatures.PublicKeyTrait[P1, S]{V: pk.Value().Add(other.Value())},
@@ -295,7 +295,7 @@ func NewPrivateKey[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](subGroup curves.PairingFriendlyCurve[PK, PKFE, Sig, SigFE, E, S], v S) (*PrivateKey[PK, PKFE, Sig, SigFE, E, S], error) {
 	if v.IsOpIdentity() {
-		return nil, errs.NewFailed("cannot create private key from identity scalar")
+		return nil, ErrInvalidArgument.WithMessage("cannot create private key from identity scalar")
 	}
 	publicKeyValue := subGroup.ScalarBaseMul(v)
 	return &PrivateKey[PK, PKFE, Sig, SigFE, E, S]{
@@ -318,7 +318,7 @@ func NewPrivateKeyFromBytes[
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](subGroup.ScalarStructure())
 	v, err := sf.FromBytes(input)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create private key from bytes")
+		return nil, errs2.Wrap(err).WithMessage("could not create private key from bytes")
 	}
 	return NewPrivateKey(subGroup, v)
 }
@@ -348,7 +348,7 @@ func (sk *PrivateKey[PK, PKFE, Sig, SigFE, E, S]) Name() signatures.Name {
 func (sk *PrivateKey[PK, PKFE, Sig, SigFE, E, S]) Group() curves.Curve[PK, PKFE, S] {
 	group, ok := sk.V.Structure().(curves.Curve[PK, PKFE, S])
 	if !ok {
-		panic(errs.NewType("private key value does not implement curves.Curve interface"))
+		panic(ErrNotSupported.WithMessage("private key value does not implement curves.Curve interface"))
 	}
 	return group
 }
@@ -395,10 +395,10 @@ func NewSignature[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](v Sig, pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) (*Signature[Sig, SigFE, PK, PKFE, E, S], error) {
 	if v.IsOpIdentity() {
-		return nil, errs.NewFailed("cannot create signature from identity point")
+		return nil, ErrInvalidArgument.WithMessage("cannot create signature from identity point")
 	}
 	if !v.IsTorsionFree() {
-		return nil, errs.NewFailed("cannot create signature from torsion point")
+		return nil, ErrInvalidArgument.WithMessage("cannot create signature from torsion point")
 	}
 	return &Signature[Sig, SigFE, PK, PKFE, E, S]{
 		v:   v,
@@ -414,11 +414,11 @@ func NewSignatureFromBytes[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](subGroup curves.PairingFriendlyCurve[Sig, SigFE, PK, PKFE, E, S], input []byte, pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) (*Signature[Sig, SigFE, PK, PKFE, E, S], error) {
 	if subGroup == nil {
-		return nil, errs.NewIsNil("subgroup cannot be nil")
+		return nil, ErrInvalidArgument.WithMessage("subgroup cannot be nil")
 	}
 	v, err := subGroup.FromBytes(input)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create signature from bytes")
+		return nil, errs2.Wrap(err).WithMessage("could not create signature from bytes")
 	}
 	return NewSignature(v, pop)
 }
@@ -473,13 +473,13 @@ func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) Pop() *ProofOfPossession[Sig, 
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.8
 func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) TryAdd(other *Signature[Sig, SigFE, PK, PKFE, E, S]) (*Signature[Sig, SigFE, PK, PKFE, E, S], error) {
 	if other == nil {
-		return nil, errs.NewIsNil("cannot add nil signature with proof of possession")
+		return nil, ErrInvalidArgument.WithMessage("cannot add nil signature with proof of possession")
 	}
 	if other.v.IsOpIdentity() {
-		return nil, errs.NewFailed("cannot add identity signature")
+		return nil, ErrInvalidArgument.WithMessage("cannot add identity signature")
 	}
 	if !other.v.IsTorsionFree() {
-		return nil, errs.NewFailed("cannot add signature with torsion point")
+		return nil, ErrInvalidArgument.WithMessage("cannot add signature with torsion point")
 	}
 	out := &Signature[Sig, SigFE, PK, PKFE, E, S]{v: sig.v.Add(other.v)}
 	if sig.pop == nil && other.pop == nil {
@@ -487,7 +487,7 @@ func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) TryAdd(other *Signature[Sig, S
 	}
 	popAgg, err := sig.pop.TryAdd(other.pop)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not add proofs of possession in signature with proof of possession")
+		return nil, errs2.Wrap(err).WithMessage("could not add proofs of possession in signature with proof of possession")
 	}
 	out.pop = popAgg
 	return out, nil
@@ -525,14 +525,14 @@ func NewProofOfPossession[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](v Sig) (*ProofOfPossession[Sig, SigFE, PK, PKFE, E, S], error) {
 	if v.IsOpIdentity() {
-		return nil, errs.NewFailed("cannot create proof of possession from identity signature")
+		return nil, ErrInvalidArgument.WithMessage("cannot create proof of possession from identity signature")
 	}
 	if !v.IsTorsionFree() {
-		return nil, errs.NewFailed("cannot create proof of possession from signature with torsion point")
+		return nil, ErrInvalidArgument.WithMessage("cannot create proof of possession from signature with torsion point")
 	}
 	sig, err := NewSignature(v, nil)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create proof of possession from signature")
+		return nil, errs2.Wrap(err).WithMessage("could not create proof of possession from signature")
 	}
 	return &ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]{
 		Signature: *sig,
@@ -547,15 +547,15 @@ func NewProofOfPossessionFromBytes[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ](subGroup curves.PairingFriendlyCurve[Sig, SigFE, PK, PKFE, E, S], input []byte) (*ProofOfPossession[Sig, SigFE, PK, PKFE, E, S], error) {
 	if subGroup == nil {
-		return nil, errs.NewIsNil("subgroup cannot be nil")
+		return nil, ErrInvalidArgument.WithMessage("subgroup cannot be nil")
 	}
 	v, err := subGroup.FromBytes(input)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create proof of possession from bytes")
+		return nil, errs2.Wrap(err).WithMessage("could not create proof of possession from bytes")
 	}
 	pop, err := NewProofOfPossession(v)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create proof of possession from signature")
+		return nil, errs2.Wrap(err).WithMessage("could not create proof of possession from signature")
 	}
 	return pop, nil
 }
@@ -612,11 +612,11 @@ func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) Clone() *ProofOfPosses
 // Used when aggregating signatures that each have attached proofs.
 func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) TryAdd(other *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) (*ProofOfPossession[Sig, SigFE, PK, PKFE, E, S], error) {
 	if other == nil {
-		return nil, errs.NewIsNil("cannot add nil proof of possession")
+		return nil, ErrInvalidArgument.WithMessage("cannot add nil proof of possession")
 	}
 	v, err := pop.Signature.TryAdd(&other.Signature)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not add signatures in proof of possession")
+		return nil, errs2.Wrap(err).WithMessage("could not add signatures in proof of possession")
 	}
 	return &ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]{
 		Signature: *v,
@@ -645,7 +645,7 @@ func AggregateAll[
 	},
 ](xs Xs) (X, error) {
 	if len(xs) == 0 {
-		return *new(X), errs.NewFailed("cannot aggregate empty slice of elements")
+		return *new(X), ErrInvalidArgument.WithMessage("cannot aggregate empty slice of elements")
 	}
 	result, err := iterutils.ReduceOrError(
 		slices.Values(xs[1:]),
@@ -653,12 +653,12 @@ func AggregateAll[
 		func(acc X, pk X) (X, error) {
 			aggregated, err := acc.TryAdd(pk)
 			if err != nil {
-				return *new(X), errs.WrapFailed(err, "could not aggregate public keys")
+				return *new(X), errs2.Wrap(err).WithMessage("could not aggregate public keys")
 			}
 			return aggregated, nil
 		})
 	if err != nil {
-		return *new(X), errs.WrapFailed(err, "failed to aggregate BLS elements")
+		return *new(X), errs2.Wrap(err).WithMessage("failed to aggregate BLS elements")
 	}
 	return result, nil
 }

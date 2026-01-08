@@ -12,6 +12,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
@@ -31,14 +32,14 @@ const HKDFKeyGenSalt = "BLS-SIG-KEYGEN-SALT-"
 func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S algebra.PrimeFieldElement[S]](group curves.Curve[K, FK, S], ikm []byte) (S, K, error) {
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 	if len(ikm) < sf.ElementSize() {
-		return *new(S), *new(K), errs.NewLength("ikm is too short, must be at least %d bytes", sf.ElementSize())
+		return *new(S), *new(K), ErrInvalidArgument.WithMessage("ikm is too short, must be at least %d bytes", sf.ElementSize())
 	}
 	d := sf.Zero()
 	// We assume h models a random oracle, so we don't parametrize salt.
 	// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#choosesalt
 	salt, err := hashing.Hash(RandomOracleHashFunction, []byte(HKDFKeyGenSalt))
 	if err != nil {
-		return *new(S), *new(K), errs.WrapHashing(err, "could not produce salt")
+		return *new(S), *new(K), errs2.Wrap(err)
 	}
 	// step 2.3.1
 	for d.IsZero() {
@@ -48,17 +49,17 @@ func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S a
 		// step 2.3.3
 		okm := make([]byte, bls12381Impl.FpBytes)
 		if _, err := io.ReadFull(kdf, okm[:]); err != nil {
-			return *new(S), *new(K), errs.WrapRandomSample(err, "could not read from KDF")
+			return *new(S), *new(K), errs2.Wrap(err)
 		}
 
 		// step 2.3.4
 		d, err = sf.FromWideBytes(okm)
 		if err != nil {
-			return *new(S), *new(K), errs.WrapSerialisation(err, "could not convert to scalar")
+			return *new(S), *new(K), errs2.Wrap(err)
 		}
 		salt, err = hashing.Hash(RandomOracleHashFunction, salt)
 		if err != nil {
-			return *new(S), *new(K), errs.WrapHashing(err, "could not rehash salt")
+			return *new(S), *new(K), errs2.Wrap(err)
 		}
 	}
 	// 2.4: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-sktopk
@@ -72,20 +73,20 @@ func coreSign[
 	Sig curves.Point[Sig, SigFE, S], SigFE algebra.FieldElement[SigFE], S algebra.PrimeFieldElement[S],
 ](signatureSubGroup curves.Curve[Sig, SigFE, S], privateKey S, message []byte, dst string) (Sig, error) {
 	if signatureSubGroup == nil || message == nil || dst == "" {
-		return *new(Sig), errs.NewArgument("signature subgroup, private key, message or dst cannot be nil or zero")
+		return *new(Sig), ErrInvalidArgument.WithMessage("signature subgroup, private key, message or dst cannot be nil or zero")
 	}
 	if privateKey.IsZero() {
-		return *new(Sig), errs.NewValidation("private key is zero")
+		return *new(Sig), ErrInvalidSubGroup.WithMessage("private key is zero")
 	}
 	// step 2.6.1
 	Hm, err := signatureSubGroup.HashWithDst(dst, message)
 	if err != nil {
-		return *new(Sig), errs.WrapHashing(err, "could not hash message")
+		return *new(Sig), errs2.Wrap(err)
 	}
 	// step 2.6.2
 	result := Hm.ScalarMul(privateKey)
 	if !result.IsTorsionFree() {
-		return *new(Sig), errs.NewCurve("point is not on correct subgroup")
+		return *new(Sig), ErrInvalidSubGroup.WithMessage("point is not on correct subgroup")
 	}
 	return result, nil
 }
@@ -94,17 +95,17 @@ func coreAggregateSign[
 	Sig curves.Point[Sig, SigFE, S], SigFE algebra.FieldElement[SigFE], S algebra.PrimeFieldElement[S],
 ](signatureSubGroup curves.Curve[Sig, SigFE, S], privateKey S, messages [][]byte, dst string) (Sig, error) {
 	if signatureSubGroup == nil || dst == "" {
-		return *new(Sig), errs.NewArgument("signature subgroup or dst cannot be nil or zero")
+		return *new(Sig), ErrInvalidArgument.WithMessage("signature subgroup or dst cannot be nil or zero")
 	}
 	if privateKey.IsZero() {
-		return *new(Sig), errs.NewValidation("private key is zero")
+		return *new(Sig), ErrInvalidSubGroup.WithMessage("private key is zero")
 	}
 	var err error
 	Hms := make([]Sig, len(messages))
 	for i, message := range messages {
 		Hms[i], err = signatureSubGroup.HashWithDst(dst, message)
 		if err != nil {
-			return *new(Sig), errs.WrapHashing(err, "could not hash message at index %d", i)
+			return *new(Sig), errs2.Wrap(err)
 		}
 	}
 	scs := sliceutils.Repeat[[]S](privateKey, len(messages))
@@ -116,10 +117,10 @@ func coreBatchSign[
 	Sig curves.Point[Sig, SigFE, S], SigFE algebra.FieldElement[SigFE], S algebra.PrimeFieldElement[S],
 ](signatureSubGroup curves.Curve[Sig, SigFE, S], privateKey S, messages [][]byte, dst string) ([]Sig, error) {
 	if signatureSubGroup == nil || dst == "" {
-		return nil, errs.NewArgument("signature subgroup or dst cannot be nil or zero")
+		return nil, ErrInvalidArgument.WithMessage("signature subgroup or dst cannot be nil or zero")
 	}
 	if privateKey.IsZero() {
-		return nil, errs.NewValidation("private key is zero")
+		return nil, ErrInvalidSubGroup.WithMessage("private key is zero")
 	}
 	batch := make([]Sig, len(messages))
 	var err error
@@ -134,7 +135,7 @@ func coreBatchSign[
 		})
 	}
 	if err := errGroup.Wait(); err != nil {
-		return nil, errs.WrapFailed(err, "could not sign")
+		return nil, errs2.Wrap(err)
 	}
 	return batch, nil
 }
@@ -148,22 +149,22 @@ func coreVerify[
 ](publicKey PK, message []byte, signature Sig, dst string, signatureSubGroup curves.PairingFriendlyCurve[Sig, SigFE, PK, PKFE, ET, S]) error {
 	// step 2.7.2
 	if message == nil || signatureSubGroup == nil || dst == "" {
-		return errs.NewArgument("signature or message or public key or signature subgroup or pairing or dst cannot be nil or zero")
+		return ErrInvalidArgument.WithMessage("signature or message or public key or signature subgroup or pairing or dst cannot be nil or zero")
 	}
 	// step 2.7.3
 	if signature.IsOpIdentity() {
-		return errs.NewValidation("signature is identity")
+		return ErrInvalidSubGroup.WithMessage("signature is identity")
 	}
 	if !signature.IsTorsionFree() {
-		return errs.NewValidation("signature is not torsion free")
+		return ErrInvalidSubGroup.WithMessage("signature is not torsion free")
 	}
 
 	// step 2.7.4
 	if publicKey.IsOpIdentity() {
-		return errs.NewValidation("public key is identity")
+		return ErrInvalidSubGroup.WithMessage("public key is identity")
 	}
 	if !publicKey.IsTorsionFree() {
-		return errs.NewValidation("public key is not torsion free")
+		return ErrInvalidSubGroup.WithMessage("public key is not torsion free")
 	}
 
 	// e(pk, H(m)) == e(g1, s)  OR if signature in G1  e(H(m), pk) == e(s, g2)
@@ -175,7 +176,7 @@ func coreVerify[
 	// step 2.7.6
 	Hm, err := signatureSubGroup.HashWithDst(dst, message)
 	if err != nil {
-		return errs.WrapHashing(err, "could not hash message")
+		return errs2.Wrap(err)
 	}
 
 	out, err := signatureSubGroup.MultiPair(
@@ -183,10 +184,10 @@ func coreVerify[
 		[]PK{publicKey.Neg(), signatureSubGroup.DualStructure().Generator()},
 	)
 	if err != nil {
-		return errs.WrapFailed(err, "could not compute multipairing")
+		return errs2.Wrap(err)
 	}
 	if !out.IsOpIdentity() {
-		return errs.NewVerification("incorrect multipairing result")
+		return ErrVerificationFailed.WithMessage("incorrect multipairing result")
 	}
 	return nil
 }
@@ -199,21 +200,21 @@ func coreAggregateVerify[
 	ET algebra.MultiplicativeGroupElement[ET], S algebra.PrimeFieldElement[S],
 ](publicKeys []PK, messages [][]byte, aggregatedSignature Sig, dst string, signatureSubGroup curves.PairingFriendlyCurve[Sig, SigFE, PK, PKFE, ET, S]) error {
 	if len(publicKeys) == 0 {
-		return errs.NewValidation("at least one public key is required")
+		return ErrInvalidArgument.WithMessage("at least one public key is required")
 	}
 	if len(publicKeys) != len(messages) {
-		return errs.NewValidation("the number of public keys does not match the number of messages: %v != %v", len(publicKeys), len(messages))
+		return ErrInvalidArgument.WithMessage("the number of public keys does not match the number of messages: %v != %v", len(publicKeys), len(messages))
 	}
 	if dst == "" || signatureSubGroup == nil {
-		return errs.NewArgument("dst or signature subgroup cannot be nil or zero")
+		return ErrInvalidArgument.WithMessage("dst or signature subgroup cannot be nil or zero")
 	}
 
 	// step 2.9.3
 	if aggregatedSignature.IsOpIdentity() {
-		return errs.NewValidation("signature is identity")
+		return ErrInvalidSubGroup.WithMessage("signature is identity")
 	}
 	if !aggregatedSignature.IsTorsionFree() {
-		return errs.NewValidation("signature is not torsion free")
+		return ErrInvalidSubGroup.WithMessage("signature is not torsion free")
 	}
 
 	// e(pk_1, H(m_1))*...*e(pk_N, H(m_N)) == e(g1, s) OR if signature in G1 e(H(m_1), pk_1)*...*e(H(m_N), pk_N) == e(s, g2)
@@ -227,19 +228,19 @@ func coreAggregateVerify[
 	for i, pk := range publicKeys {
 		message := messages[i]
 		if message == nil {
-			return errs.NewIsNil("nil message is not allowed at index %d", i)
+			return ErrInvalidArgument.WithMessage("nil message is not allowed at index %d", i)
 		}
 		keySubGroupInputs[i] = pk
 		signatureSubGroupInputs[i], err = signatureSubGroup.HashWithDst(dst, message)
 		if err != nil {
-			return errs.WrapHashing(err, "could not hash message %d", i)
+			return errs2.Wrap(err).WithMessage("could not hash message %d", i)
 		}
 		// step 2.9.6
 		if pk.IsOpIdentity() {
-			return errs.NewIsIdentity("invalid public key")
+			return ErrInvalidSubGroup.WithMessage("invalid public key")
 		}
 		if !pk.IsTorsionFree() {
-			return errs.NewValidation("public key is not torsion free")
+			return ErrInvalidSubGroup.WithMessage("public key is not torsion free")
 		}
 	}
 	keySubGroupInputs[len(publicKeys)] = signatureSubGroup.DualStructure().Generator()
@@ -247,10 +248,10 @@ func coreAggregateVerify[
 
 	out, err := signatureSubGroup.MultiPair(signatureSubGroupInputs, keySubGroupInputs)
 	if err != nil {
-		return errs.WrapFailed(err, "could not compute multipairing")
+		return errs2.Wrap(err).WithMessage("could not compute multipairing")
 	}
 	if !out.IsOpIdentity() {
-		return errs.NewVerification("incorrect multipairing result")
+		return ErrVerificationFailed.WithMessage("incorrect multipairing result")
 	}
 	return nil
 }
@@ -265,7 +266,7 @@ func popProve[
 	message := publicKey.Bytes()
 	pop, err := coreSign(signatureSubGroup, privateKey, message, dst)
 	if err != nil {
-		return *new(Sig), errs.WrapFailed(err, "could not produce pop")
+		return *new(Sig), errs2.Wrap(err).WithMessage("could not produce pop")
 	}
 	return pop, nil
 }
@@ -278,10 +279,10 @@ func popVerify[
 	ET algebra.MultiplicativeGroupElement[ET], S algebra.PrimeFieldElement[S],
 ](publicKey PK, pop Sig, signatureSubGroup curves.PairingFriendlyCurve[Sig, SigFE, PK, PKFE, ET, S], popDst string) error {
 	if publicKey.IsOpIdentity() {
-		return errs.NewIsIdentity("public key is identity")
+		return ErrInvalidSubGroup.WithMessage("public key is identity")
 	}
 	if !publicKey.IsTorsionFree() {
-		return errs.NewValidation("Public Key not in the prime subgroup")
+		return ErrInvalidSubGroup.WithMessage("Public Key not in the prime subgroup")
 	}
 	message := publicKey.Bytes()
 	return coreVerify(publicKey, message, pop, popDst, signatureSubGroup)
@@ -298,10 +299,10 @@ func AugmentMessage[
 	PK curves.Point[PK, PKFE, S], PKFE algebra.FieldElement[PKFE], S algebra.PrimeFieldElement[S],
 ](message []byte, publicKey PK) ([]byte, error) {
 	if publicKey.IsOpIdentity() {
-		return nil, errs.NewIsIdentity("public key is identity")
+		return nil, ErrInvalidSubGroup.WithMessage("public key is identity")
 	}
 	if !publicKey.IsTorsionFree() {
-		return nil, errs.NewValidation("Public Key not in the prime subgroup")
+		return nil, ErrInvalidSubGroup.WithMessage("Public Key not in the prime subgroup")
 	}
 	return slices.Concat(publicKey.Bytes(), message), nil
 }
