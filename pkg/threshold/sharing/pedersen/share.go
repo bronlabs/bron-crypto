@@ -13,6 +13,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 )
 
+// Share represents a Pedersen VSS share consisting of a secret component f(i)
+// and a blinding component r(i), where f and r are the dealing polynomials.
 type Share[S algebra.PrimeFieldElement[S]] struct {
 	id       sharing.ID
 	secret   *pedcom.Message[S]
@@ -25,7 +27,9 @@ type shareDTO[S algebra.PrimeFieldElement[S]] struct {
 	Blinding *pedcom.Witness[S] `cbor:"blinding"`
 }
 
-func NewShare[S algebra.PrimeFieldElement[S]](id sharing.ID, secret *pedcom.Message[S], blinding *pedcom.Witness[S], ac *AccessStructure) (*Share[S], error) {
+// NewShare creates a new Pedersen share with the given ID, secret, and blinding value.
+// If an access structure is provided, validates that the ID is a valid shareholder.
+func NewShare[S algebra.PrimeFieldElement[S]](id sharing.ID, secret *pedcom.Message[S], blinding *pedcom.Witness[S], ac *sharing.ThresholdAccessStructure) (*Share[S], error) {
 	if secret == nil {
 		return nil, errs.NewIsNil("secret cannot be nil")
 	}
@@ -42,14 +46,17 @@ func NewShare[S algebra.PrimeFieldElement[S]](id sharing.ID, secret *pedcom.Mess
 	}, nil
 }
 
+// ID returns the shareholder identifier for this share.
 func (s *Share[S]) ID() sharing.ID {
 	return s.id
 }
 
+// Value returns the secret component f(i) of this share.
 func (s *Share[S]) Value() S {
 	return s.secret.Value()
 }
 
+// Blinding returns the blinding component r(i) of this share.
 func (s *Share[S]) Blinding() *pedcom.Witness[S] {
 	if s == nil {
 		return nil
@@ -57,6 +64,7 @@ func (s *Share[S]) Blinding() *pedcom.Witness[S] {
 	return s.blinding
 }
 
+// Secret returns the secret component as a Pedersen message.
 func (s *Share[S]) Secret() *pedcom.Message[S] {
 	if s == nil {
 		return nil
@@ -64,6 +72,7 @@ func (s *Share[S]) Secret() *pedcom.Message[S] {
 	return s.secret
 }
 
+// Op is an alias for Add, implementing the group element interface.
 func (s *Share[S]) Op(other *Share[S]) *Share[S] {
 	if s.id != other.id {
 		panic("cannot add shares with different IDs")
@@ -75,10 +84,14 @@ func (s *Share[S]) Op(other *Share[S]) *Share[S] {
 	}
 }
 
+// Add returns a new share that is the component-wise sum of two shares.
+// Both the secret and blinding components are added separately.
 func (s *Share[S]) Add(other *Share[S]) *Share[S] {
 	return s.Op(other)
 }
 
+// ScalarOp is an alias for ScalarMul.
+// Panics if scalar is zero since Pedersen requires non-zero blinding factors.
 func (s *Share[S]) ScalarOp(scalar S) *Share[S] {
 	// Special case: multiplying by zero is not supported in Pedersen VSS
 	// because it would require a zero blinding factor, which is not allowed
@@ -98,14 +111,17 @@ func (s *Share[S]) ScalarOp(scalar S) *Share[S] {
 	}
 }
 
+// ScalarMul returns a new share with both components multiplied by a scalar.
 func (s *Share[S]) ScalarMul(scalar S) *Share[S] {
 	return s.ScalarOp(scalar)
 }
 
+// HashCode returns a hash code for this share, for use in hash-based collections.
 func (s *Share[S]) HashCode() base.HashCode {
 	return s.secret.HashCode() ^ s.blinding.HashCode()
 }
 
+// Equal returns true if two shares have the same secret and blinding components.
 func (s *Share[S]) Equal(other *Share[S]) bool {
 	if s == nil || other == nil {
 		return s == other
@@ -113,6 +129,7 @@ func (s *Share[S]) Equal(other *Share[S]) bool {
 	return s.id == other.id && s.secret.Equal(other.secret) && s.blinding.Equal(other.blinding)
 }
 
+// Bytes returns the canonical byte representation of this share.
 func (s *Share[S]) Bytes() []byte {
 	return slices.Concat(
 		s.secret.Value().Bytes(),
@@ -120,6 +137,10 @@ func (s *Share[S]) Bytes() []byte {
 	)
 }
 
+// ToAdditive converts this Pedersen share to an additive share by multiplying
+// the secret component by the appropriate Lagrange coefficient. The blinding
+// component is discarded. The resulting additive shares can be summed to
+// reconstruct the secret.
 func (s *Share[S]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAccessStructure) (*additive.Share[S], error) {
 	ss, err := shamir.NewShare(s.id, s.secret.Value(), nil)
 	if err != nil {

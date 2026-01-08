@@ -14,11 +14,18 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 )
 
+// Scheme implements Feldman's verifiable secret sharing.
 type Scheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]] struct {
 	basePoint E
 	shamirSSS *shamir.Scheme[FE]
 }
 
+// NewScheme creates a new Feldman VSS scheme.
+//
+// Parameters:
+//   - basePoint: Generator g of the group used for verification commitments
+//   - threshold: Minimum shares required for reconstruction (must be ≥ 2)
+//   - shareholders: Set of shareholder IDs
 func NewScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](basePoint E, threshold uint, shareholders ds.Set[sharing.ID]) (*Scheme[E, FE], error) {
 	if utils.IsNil(basePoint) {
 		return nil, errs.NewIsNil("base point is nil")
@@ -36,14 +43,17 @@ func NewScheme[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 	}, nil
 }
 
+// Name returns the canonical name of this scheme.
 func (*Scheme[E, FE]) Name() sharing.Name {
 	return Name
 }
 
-func (d *Scheme[E, FE]) AccessStructure() *AccessStructure {
+// AccessStructure returns the threshold access structure.
+func (d *Scheme[E, FE]) AccessStructure() *sharing.ThresholdAccessStructure {
 	return d.shamirSSS.AccessStructure()
 }
 
+// DealRandom generates shares for a randomly sampled secret.
 func (d *Scheme[E, FE]) DealRandom(prng io.Reader) (*DealerOutput[E, FE], *Secret[FE], error) {
 	out, secret, _, err := d.DealRandomAndRevealDealerFunc(prng)
 	if err != nil {
@@ -52,6 +62,8 @@ func (d *Scheme[E, FE]) DealRandom(prng io.Reader) (*DealerOutput[E, FE], *Secre
 	return out, secret, nil
 }
 
+// DealRandomAndRevealDealerFunc generates shares for a random secret and returns
+// the dealing polynomial.
 func (d *Scheme[E, FE]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[E, FE], *Secret[FE], DealerFunc[FE], error) {
 	if prng == nil {
 		return nil, nil, nil, errs.NewIsNil("prng is nil")
@@ -68,6 +80,7 @@ func (d *Scheme[E, FE]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOu
 	return out, secret, poly, nil
 }
 
+// Deal creates shares for the given secret along with a verification vector.
 func (d *Scheme[E, FE]) Deal(secret *Secret[FE], prng io.Reader) (*DealerOutput[E, FE], error) {
 	out, _, err := d.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
@@ -76,6 +89,8 @@ func (d *Scheme[E, FE]) Deal(secret *Secret[FE], prng io.Reader) (*DealerOutput[
 	return out, nil
 }
 
+// DealAndRevealDealerFunc creates shares and returns the dealing polynomial.
+// The verification vector is computed as g^{f(x)} where f is the polynomial.
 func (d *Scheme[E, FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader) (*DealerOutput[E, FE], DealerFunc[FE], error) {
 	shamirShares, poly, err := d.shamirSSS.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
@@ -92,6 +107,7 @@ func (d *Scheme[E, FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Read
 	}, poly, nil
 }
 
+// Reconstruct recovers the secret from a set of shares using Lagrange interpolation.
 func (d *Scheme[E, FE]) Reconstruct(shares ...*Share[FE]) (*Secret[FE], error) {
 	secret, err := d.shamirSSS.Reconstruct(shares...)
 	if err != nil {
@@ -100,6 +116,8 @@ func (d *Scheme[E, FE]) Reconstruct(shares ...*Share[FE]) (*Secret[FE], error) {
 	return secret, nil
 }
 
+// ReconstructAndVerify recovers the secret and verifies each share against
+// the verification vector before reconstruction.
 func (d *Scheme[E, FE]) ReconstructAndVerify(reference VerificationVector[E, FE], shares ...*Share[FE]) (*Secret[FE], error) {
 	reconstructed, err := d.Reconstruct(shares...)
 	if err != nil {
@@ -113,6 +131,8 @@ func (d *Scheme[E, FE]) ReconstructAndVerify(reference VerificationVector[E, FE]
 	return reconstructed, nil
 }
 
+// Verify checks that a share is consistent with the verification vector.
+// Returns nil if g^{share} equals the evaluation of the verification vector at the share's ID.
 func (d *Scheme[E, FE]) Verify(share *Share[FE], reference VerificationVector[E, FE]) error {
 	if reference == nil {
 		return errs.NewIsNil("verification vector is nil")

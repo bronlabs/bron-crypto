@@ -26,7 +26,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	dkgTestutils "github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/keygen/dkg/testutils"
 	signTestutils "github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/signing/interactive/sign/testutils"
 )
@@ -69,13 +68,13 @@ var testHashFuncs = []func() hash.Hash{
 	sha512.New,
 }
 
-var testAccessStructures = []*shamir.AccessStructure{
+var testAccessStructures = []*sharing.ThresholdAccessStructure{
 	makeAccessStructure(2, 2),
 	makeAccessStructure(2, 3),
 	makeAccessStructure(3, 5),
 }
 
-func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, curve ecdsa.Curve[P, B, S], hashFunc func() hash.Hash, accessStructure *shamir.AccessStructure) {
+func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, curve ecdsa.Curve[P, B, S], hashFunc func() hash.Hash, accessStructure *sharing.ThresholdAccessStructure) {
 	t.Helper()
 
 	shards := dkgTestutils.RunDKLs23DKG(t, curve, accessStructure)
@@ -111,12 +110,12 @@ func stringifyShareholders(sharingIds []sharing.ID) string {
 	return s
 }
 
-func makeAccessStructure(threshold, total uint) *shamir.AccessStructure {
+func makeAccessStructure(threshold, total uint) *sharing.ThresholdAccessStructure {
 	shareholders := hashset.NewComparable[sharing.ID]()
 	for i := uint(1); i <= total; i++ {
 		shareholders.Add(sharing.ID(i))
 	}
-	accessStructure, err := shamir.NewAccessStructure(threshold, shareholders.Freeze())
+	accessStructure, err := sharing.NewThresholdAccessStructure(threshold, shareholders.Freeze())
 	if err != nil {
 		panic(err)
 	}

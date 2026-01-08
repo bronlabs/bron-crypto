@@ -12,11 +12,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/refresh"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
@@ -28,7 +27,7 @@ func Test_HappyPath(t *testing.T) {
 	prng := crand.Reader
 	ids := []sharing.ID{1, 2, 3}
 	sharingIds := hashset.NewComparable(ids...).Freeze()
-	as, err := shamir.NewAccessStructure(2, sharingIds)
+	as, err := sharing.NewThresholdAccessStructure(2, sharingIds)
 	require.NoError(t, err)
 	curve := k256.NewCurve()
 	scheme, err := feldman.NewScheme(curve.Generator(), 2, sharingIds)

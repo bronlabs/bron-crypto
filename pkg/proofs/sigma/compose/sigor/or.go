@@ -1,280 +1,417 @@
+// Package sigor implements OR composition of sigma protocols.
+//
+// OR composition allows a prover to demonstrate knowledge of a witness for at least one
+// of n statements, without revealing which statement they know the witness for.
+// This provides witness indistinguishability - the verifier cannot determine which
+// branch the prover actually knows.
+//
+// The composition uses the XOR technique: challenges for all branches XOR together
+// to equal the verifier's challenge. The prover runs the real protocol for the branch
+// they know, and simulates the other branches using the simulator.
 package sigor
 
 import (
-	"bytes"
 	"crypto/subtle"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
+	"golang.org/x/sync/errgroup"
 )
 
-type Statement[X0, X1 sigma.Statement] struct {
-	X0 X0
-	X1 X1
+// Statement represents an OR-composed statement consisting of n sub-statements.
+// The prover claims to know a witness for at least one of these statements.
+type Statement[X sigma.Statement] []X
+
+// Bytes returns the canonical byte representation of the composed statement.
+func (s Statement[X]) Bytes() []byte {
+	return sliceutils.Fold(func(acc []byte, x X) []byte { return slices.Concat(acc, x.Bytes()) },
+		binary.BigEndian.AppendUint64(nil, uint64(len(s))),
+		s...,
+	)
 }
 
-func (s *Statement[X0, X1]) Bytes() []byte {
-	return slices.Concat(s.X0.Bytes(), s.X1.Bytes())
+var _ sigma.Statement = (Statement[sigma.Statement])(nil)
+
+// Witness represents an OR-composed witness.
+type Witness[W sigma.Witness] struct {
+	v W
 }
 
-var _ sigma.Statement = (*Statement[sigma.Statement, sigma.Statement])(nil)
-
-type Witness[W0, W1 sigma.Witness] struct {
-	W0 W0
-	W1 W1
+// Bytes returns the canonical byte representation of the composed witness.
+func (w Witness[W]) Bytes() []byte {
+	return w.v.Bytes()
 }
 
-func (w *Witness[W0, W1]) Bytes() []byte {
-	return slices.Concat(w.W0.Bytes(), w.W1.Bytes())
+func NewWitness[W sigma.Witness](witness W) Witness[W] {
+	return Witness[W]{witness}
 }
 
-var _ sigma.Witness = (*Witness[sigma.Witness, sigma.Witness])(nil)
+var _ sigma.Witness = (*Witness[sigma.Witness])(nil)
 
-type Commitment[A0, A1 sigma.Commitment] struct {
-	A0 A0
-	A1 A1
+// Commitment represents an OR-composed commitment consisting of n sub-commitments,
+// one for each branch of the OR composition.
+type Commitment[A sigma.Commitment] []A
+
+// Bytes returns the canonical byte representation of the composed commitment.
+func (c Commitment[A]) Bytes() []byte {
+	return sliceutils.Fold(func(acc []byte, x A) []byte { return slices.Concat(acc, x.Bytes()) },
+		binary.BigEndian.AppendUint64(nil, uint64(len(c))),
+		c...,
+	)
 }
 
-func (c *Commitment[A0, A1]) Bytes() []byte {
-	return slices.Concat(c.A0.Bytes(), c.A1.Bytes())
+var _ sigma.Commitment = (Commitment[sigma.Commitment])(nil)
+
+// State holds the prover's internal state between commitment and response phases.
+// It stores information needed to compute the final response, including which branch
+// is the "true" branch and the simulated responses for false branches.
+type State[S sigma.State, Z sigma.Response] struct {
+	// B is the index of the branch for which the prover knows a valid witness.
+	B uint
+	// S contains the prover states for each branch. Only S[B] is meaningful;
+	// other entries are zero values since those branches are simulated.
+	S []S
+	// E contains the random challenges used for simulating false branches.
+	// E[i] is the challenge used for branch i when i != B. E[B] is unused.
+	E [][]byte
+	// Z contains the simulated responses for false branches.
+	// Z[i] is the simulated response for branch i when i != B. Z[B] is unused.
+	Z []Z
 }
 
-var _ sigma.Commitment = (*Commitment[sigma.Commitment, sigma.Commitment])(nil)
+var _ sigma.State = (*State[sigma.State, sigma.Response])(nil)
 
-type State[S0, S1 sigma.State, Z0, Z1 sigma.Response] struct {
-	B  uint
-	S0 S0
-	S1 S1
-	E  []byte
-	Z0 Z0
-	Z1 Z1
+// Response represents the prover's response in the OR composition.
+// It contains challenges and responses for all branches, satisfying the XOR constraint.
+type Response[Z sigma.Response] struct {
+	// E contains the challenges for each branch. These satisfy the constraint:
+	// E[0] XOR E[1] XOR ... XOR E[n-1] = verifier's challenge.
+	E [][]byte
+	// Z contains the responses for each branch. For the true branch, this is
+	// computed honestly; for false branches, these are simulated responses.
+	Z []Z
 }
 
-var _ sigma.State = (*State[sigma.State, sigma.State, sigma.Response, sigma.Response])(nil)
-
-type Response[Z0, Z1 sigma.Response] struct {
-	E0 []byte
-	E1 []byte
-	Z0 Z0
-	Z1 Z1
+// Bytes returns the canonical byte representation of the response.
+func (r Response[Z]) Bytes() []byte {
+	return sliceutils.Fold(func(acc []byte, x Z) []byte { return slices.Concat(acc, x.Bytes()) },
+		binary.BigEndian.AppendUint64(nil, uint64(len(r.Z))),
+		r.Z...,
+	)
 }
 
-func (r *Response[Z0, Z1]) Bytes() []byte {
-	return slices.Concat(r.E0, r.E1, r.Z0.Bytes(), r.Z1.Bytes())
+var _ sigma.Response = (*Response[sigma.Response])(nil)
+
+// ComposeStatements creates an OR-composed statement from individual statements.
+func ComposeStatements[X sigma.Statement](statements ...X) Statement[X] {
+	return statements
 }
 
-var _ sigma.Response = (*Response[sigma.Response, sigma.Response])(nil)
+type protocol[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response] struct {
+	sigma sigma.Protocol[X, W, A, S, Z]
+	count int
+	prng  io.Reader
+}
 
-func StatementOr[X0, X1 sigma.Statement](statement0 X0, statement1 X1) *Statement[X0, X1] {
-	return &Statement[X0, X1]{
-		X0: statement0,
-		X1: statement1,
+// Compose creates an n-way OR composition of sigma protocols.
+//
+// The resulting protocol proves knowledge of a witness for at least one of n statements,
+// without revealing which one. This is achieved using the XOR technique where challenges
+// for all branches XOR to equal the verifier's challenge.
+//
+// Parameters:
+//   - p: The base sigma protocol to compose (used for all n branches)
+//   - count: Number of branches (must be >= 2)
+//   - prng: Cryptographically secure random number generator
+//
+// Returns an error if p is nil, prng is nil, or count < 2.
+func Compose[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](
+	p sigma.Protocol[X, W, A, S, Z], count uint, prng io.Reader,
+) (sigma.Protocol[Statement[X], Witness[W], Commitment[A], *State[S, Z], *Response[Z]], error) {
+	if p == nil || prng == nil {
+		return nil, ErrIsNil.WithMessage("p or prng is nil")
 	}
-}
-
-func WitnessOr[W0, W1 sigma.Witness](witness0 W0, witness1 W1) *Witness[W0, W1] {
-	return &Witness[W0, W1]{
-		W0: witness0,
-		W1: witness1,
+	if count < 2 {
+		return nil, ErrInvalidArgument.WithMessage("count must be positive and greater than 2")
 	}
+	return &protocol[X, W, A, S, Z]{
+		sigma: p,
+		count: int(count),
+		prng:  prng,
+	}, nil
 }
 
-type protocol[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigma.Commitment, S0, S1 sigma.State, Z0, Z1 sigma.Response] struct {
-	sigma0               sigma.Protocol[X0, W0, A0, S0, Z0]
-	sigma1               sigma.Protocol[X1, W1, A1, S1, Z1]
-	challengeBytesLength int
-	prng                 io.Reader
+// SoundnessError returns the soundness error of the composed protocol,
+// which equals the soundness error of the underlying protocol.
+func (p *protocol[X, W, A, S, Z]) SoundnessError() uint {
+	return p.sigma.SoundnessError()
 }
 
-func SigmaOr[X0, X1 sigma.Statement, W0, W1 sigma.Witness, A0, A1 sigma.Commitment, S0, S1 sigma.State, Z0, Z1 sigma.Response](sigma0 sigma.Protocol[X0, W0, A0, S0, Z0], sigma1 sigma.Protocol[X1, W1, A1, S1, Z1], prng io.Reader) sigma.Protocol[*Statement[X0, X1], *Witness[W0, W1], *Commitment[A0, A1], *State[S0, S1, Z0, Z1], *Response[Z0, Z1]] {
-	challengeBytesLength := max(sigma0.GetChallengeBytesLength(), sigma1.GetChallengeBytesLength())
-
-	return &protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]{
-		sigma0:               sigma0,
-		sigma1:               sigma1,
-		challengeBytesLength: challengeBytesLength,
-		prng:                 prng,
+// ComputeProverCommitment generates the prover's first message in the OR composition.
+//
+// For the branch with a valid witness (the "true" branch), this computes a real
+// commitment using the underlying protocol. For all other branches, it samples
+// random challenges and runs the simulator to generate fake commitments and responses.
+func (p *protocol[X, W, A, S, Z]) ComputeProverCommitment(statement Statement[X], witness Witness[W]) (Commitment[A], *State[S, Z], error) {
+	if len(statement) != p.count {
+		return nil, nil, ErrInvalidLength.WithMessage("invalid statement length")
 	}
-}
+	a := make(Commitment[A], p.count)
+	s := &State[S, Z]{
+		S: make([]S, p.count),
+		E: make([][]byte, p.count),
+		Z: make([]Z, p.count),
+	}
 
-func (p protocol[_, _, _, _, _, _, _, _, _, _]) SoundnessError() uint {
-	return min(p.sigma0.SoundnessError(), p.sigma1.SoundnessError())
-}
-
-func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverCommitment(statement *Statement[X0, X1], witness *Witness[W0, W1]) (*Commitment[A0, A1], *State[S0, S1, Z0, Z1], error) {
 	var err error
-
-	if statement == nil || witness == nil {
-		return nil, nil, errs.NewIsNil("statement/commitment is nil")
+	s.B, err = p.getB(statement, witness)
+	if err != nil {
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot determine valid statement index")
 	}
 
-	a := new(Commitment[A0, A1])
-	s := new(State[S0, S1, Z0, Z1])
-	if invalid := p.sigma0.ValidateStatement(statement.X0, witness.W0); invalid == nil {
-		s.B = 0
+	// Sample random challenges for all false branches
+	var eg errgroup.Group
+	for i := range p.count {
+		if i == int(s.B) {
+			// True branch: compute real commitment
+			eg.Go(func() error {
+				var err error
+				a[i], s.S[i], err = p.sigma.ComputeProverCommitment(statement[i], witness.v)
+				if err != nil {
+					return errs2.Wrap(err)
+				}
+				return nil
+			})
+		} else {
+			// False branch: sample random challenge and run simulator
+			eg.Go(func() error {
+				s.E[i] = make([]byte, p.GetChallengeBytesLength())
+				_, err := io.ReadFull(p.prng, s.E[i])
+				if err != nil {
+					return errs2.Wrap(err)
+				}
+				var simErr error
+				a[i], s.Z[i], simErr = p.sigma.RunSimulator(statement[i], s.E[i])
+				if simErr != nil {
+					return errs2.Wrap(simErr)
+				}
+				return nil
+			})
+		}
+	}
 
-		a.A0, s.S0, err = p.sigma0.ComputeProverCommitment(statement.X0, witness.W0)
-		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "cannot compute commitment")
-		}
-
-		s.E = make([]byte, p.challengeBytesLength)
-		_, err = io.ReadFull(p.prng, s.E)
-		if err != nil {
-			return nil, nil, errs.WrapRandomSample(err, "cannot generate challenge")
-		}
-
-		a.A1, s.Z1, err = p.sigma1.RunSimulator(statement.X1, s.E[:p.sigma1.GetChallengeBytesLength()])
-		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "cannot run simulator")
-		}
-	} else {
-		s.B = 1
-
-		a.A1, s.S1, err = p.sigma1.ComputeProverCommitment(statement.X1, witness.W1)
-		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "cannot compute commitment")
-		}
-
-		s.E = make([]byte, p.challengeBytesLength)
-		_, err = io.ReadFull(p.prng, s.E)
-		if err != nil {
-			return nil, nil, errs.WrapRandomSample(err, "cannot sample challenge")
-		}
-		a.A0, s.Z0, err = p.sigma0.RunSimulator(statement.X0, s.E[:p.sigma0.GetChallengeBytesLength()])
-		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "cannot run simulator")
-		}
+	if err := eg.Wait(); err != nil {
+		return nil, nil, errs2.Wrap(err)
 	}
 
 	return a, s, nil
 }
 
-func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ComputeProverResponse(statement *Statement[X0, X1], witness *Witness[W0, W1], commitment *Commitment[A0, A1], state *State[S0, S1, Z0, Z1], challengeBytes sigma.ChallengeBytes) (*Response[Z0, Z1], error) {
-	if statement == nil || witness == nil || commitment == nil || state == nil {
-		return nil, errs.NewIsNil("statement/witness/commitment/statement is nil")
+// ComputeProverResponse generates the prover's response to the verifier's challenge.
+//
+// The challenge for the true branch is computed so that all challenges XOR to the
+// verifier's challenge: e_B = challenge XOR e_0 XOR ... XOR e_{n-1} (excluding e_B).
+// The response for the true branch is then computed using the real protocol.
+func (p *protocol[X, W, A, S, Z]) ComputeProverResponse(statement Statement[X], witness Witness[W], commitment Commitment[A], state *State[S, Z], challenge sigma.ChallengeBytes) (*Response[Z], error) {
+	if len(statement) != p.count {
+		return nil, ErrInvalidLength.WithMessage("invalid statement length")
 	}
-	if len(challengeBytes) != p.challengeBytesLength {
-		return nil, errs.NewLength("invalid challenge bytes length")
+	if len(commitment) != p.count {
+		return nil, ErrInvalidLength.WithMessage("invalid commitment length")
+	}
+	if len(state.S) != p.count || len(state.Z) != p.count || len(state.E) != p.count {
+		return nil, ErrInvalidLength.WithMessage("invalid state length")
+	}
+	if len(challenge) != p.GetChallengeBytesLength() {
+		return nil, ErrInvalidLength.WithMessage("invalid challenge length")
 	}
 
-	e := make([]byte, p.challengeBytesLength)
-	_, err := io.ReadFull(p.prng, e)
+	z := &Response[Z]{
+		E: make([][]byte, p.count),
+		Z: make([]Z, p.count),
+	}
+
+	// Compute the challenge for the true branch so that XOR of all challenges equals verifier's challenge:
+	// e_B = challenge XOR e_0 XOR e_1 XOR ... XOR e_{n-1} (excluding e_B)
+	z.E[state.B] = make([]byte, p.GetChallengeBytesLength())
+	copy(z.E[state.B], challenge)
+	for i := range p.count {
+		if i != int(state.B) {
+			z.E[i] = state.E[i]
+			z.Z[i] = state.Z[i]
+			subtle.XORBytes(z.E[state.B], z.E[state.B], state.E[i])
+		}
+	}
+
+	// Compute response for the true branch
+	var err error
+	z.Z[state.B], err = p.sigma.ComputeProverResponse(
+		statement[state.B], witness.v, commitment[state.B], state.S[state.B],
+		z.E[state.B],
+	)
 	if err != nil {
-		return nil, errs.WrapRandomSample(err, "cannot generate challenge")
-	}
-
-	z := new(Response[Z0, Z1])
-	switch state.B {
-	case 0:
-		z.E0 = make([]byte, p.challengeBytesLength)
-		subtle.XORBytes(z.E0, state.E, challengeBytes)
-		z.Z0, err = p.sigma0.ComputeProverResponse(statement.X0, witness.W0, commitment.A0, state.S0, z.E0[:p.sigma0.GetChallengeBytesLength()])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot compute response")
-		}
-
-		z.E1 = state.E
-		z.Z1 = state.Z1
-
-	case 1:
-		z.E1 = make([]byte, p.challengeBytesLength)
-		subtle.XORBytes(z.E1, state.E, challengeBytes)
-		z.Z1, err = p.sigma1.ComputeProverResponse(statement.X1, witness.W1, commitment.A1, state.S1, z.E1[:p.sigma1.GetChallengeBytesLength()])
-		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot compute response")
-		}
-
-		z.E0 = state.E
-		z.Z0 = state.Z0
-
-	default:
-		return nil, errs.NewArgument("invalid state")
+		return nil, errs2.Wrap(err)
 	}
 
 	return z, nil
 }
 
-func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Verify(statement *Statement[X0, X1], commitment *Commitment[A0, A1], challengeBytes sigma.ChallengeBytes, response *Response[Z0, Z1]) error {
-	if statement == nil || commitment == nil || response == nil {
-		return errs.NewIsNil("statement/commitment/response is nil")
+// Verify checks that the OR proof is valid.
+//
+// Verification ensures: (1) the XOR of all branch challenges equals the verifier's
+// challenge, and (2) each branch's transcript is accepting under the underlying protocol.
+func (p *protocol[X, W, A, S, Z]) Verify(statement Statement[X], commitment Commitment[A], challenge sigma.ChallengeBytes, response *Response[Z]) error {
+	if len(statement) != p.count {
+		return ErrInvalidLength.WithMessage("invalid statement length")
 	}
-	if len(challengeBytes) != p.challengeBytesLength {
-		return errs.NewLength("invalid challenge bytes length")
+	if len(commitment) != p.count {
+		return ErrInvalidLength.WithMessage("invalid commitment length")
+	}
+	if len(response.Z) != p.count {
+		return ErrInvalidLength.WithMessage("invalid response length")
+	}
+	if len(challenge) != p.GetChallengeBytesLength() {
+		return ErrInvalidLength.WithMessage("invalid challenge length")
+	}
+	xoredChallenges := make([]byte, p.GetChallengeBytesLength())
+	subtle.XORBytes(xoredChallenges, response.E[0], response.E[1])
+	sliceutils.Reduce(
+		response.E[2:],
+		xoredChallenges,
+		func(acc []byte, e []byte) []byte {
+			subtle.XORBytes(acc, acc, e)
+			return acc
+		},
+	)
+	if ct.SliceEqual(challenge, xoredChallenges) == ct.False {
+		return ErrVerification.WithMessage("verification failed")
 	}
 
-	e0XorE1 := make([]byte, p.challengeBytesLength)
-	subtle.XORBytes(e0XorE1, response.E0, response.E1)
-	if !bytes.Equal(challengeBytes, e0XorE1) {
-		return errs.NewVerification("verification failed")
+	var eg errgroup.Group
+	for i := range p.count {
+		eg.Go(func() error {
+			return p.sigma.Verify(statement[i], commitment[i], response.E[i], response.Z[i])
+		})
 	}
-
-	// check that conversation (a_0, e_0, z_0) are accepting in Protocol on input x_0
-	if err := p.sigma0.Verify(statement.X0, commitment.A0, response.E0[:p.sigma0.GetChallengeBytesLength()], response.Z0); err != nil {
-		return errs.NewVerification("verification failed")
+	if err := eg.Wait(); err != nil {
+		return errs2.Wrap(err).WithMessage("verification failed")
 	}
-
-	// check that conversation (a_1, e_1, z_1) are accepting in Protocol on input x_1
-	if err := p.sigma1.Verify(statement.X1, commitment.A1, response.E1[:p.sigma1.GetChallengeBytesLength()], response.Z1); err != nil {
-		return errs.NewVerification("verification failed")
-	}
-
 	return nil
 }
 
-func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) RunSimulator(statement *Statement[X0, X1], challengeBytes sigma.ChallengeBytes) (*Commitment[A0, A1], *Response[Z0, Z1], error) {
-	if statement == nil {
-		return nil, nil, errs.NewIsNil("statement")
+// RunSimulator produces a simulated transcript for the OR composition.
+//
+// This generates random challenges for all but the last branch, then computes
+// the last challenge so that all challenges XOR to the given challenge.
+// Each branch's transcript is then simulated using the underlying protocol's simulator.
+func (p *protocol[X, W, A, S, Z]) RunSimulator(statement Statement[X], challenge sigma.ChallengeBytes) (Commitment[A], *Response[Z], error) {
+	if len(statement) != p.count {
+		return nil, nil, ErrInvalidLength.WithMessage("invalid statement length")
 	}
-	if len(challengeBytes) != p.challengeBytesLength {
-		return nil, nil, errs.NewLength("challengeBytes")
-	}
-
-	a := new(Commitment[A0, A1])
-	z := new(Response[Z0, Z1])
-
-	z.E0 = make([]byte, p.challengeBytesLength)
-	_, err := io.ReadFull(p.prng, z.E0)
-	if err != nil {
-		return nil, nil, errs.WrapRandomSample(err, "prng failed")
-	}
-	z.E1 = make([]byte, p.challengeBytesLength)
-	subtle.XORBytes(z.E1, challengeBytes, z.E0)
-
-	a.A0, z.Z0, err = p.sigma0.RunSimulator(statement.X0, z.E0)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot run simulator")
-	}
-	a.A1, z.Z1, err = p.sigma1.RunSimulator(statement.X1, z.E1)
-	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot run simulator")
+	if len(challenge) != p.GetChallengeBytesLength() {
+		return nil, nil, ErrInvalidLength.WithMessage("invalid challenge length")
 	}
 
+	a := make(Commitment[A], p.count)
+	z := &Response[Z]{
+		E: make([][]byte, p.count),
+		Z: make([]Z, p.count),
+	}
+
+	var eg errgroup.Group
+	for i := range p.count - 1 {
+		eg.Go(func() error {
+			z.E[i] = make([]byte, p.GetChallengeBytesLength())
+			_, err := io.ReadFull(p.prng, z.E[i])
+			return err
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot sample challenges")
+	}
+	// Compute last challenge so that XOR of all challenges equals the verifier's challenge:
+	// e_{n-1} = challenge XOR e_0 XOR e_1 XOR ... XOR e_{n-2}
+	z.E[p.count-1] = make([]byte, p.GetChallengeBytesLength())
+	subtle.XORBytes(z.E[p.count-1], challenge, z.E[0])
+	for i := 1; i < p.count-1; i++ {
+		subtle.XORBytes(z.E[p.count-1], z.E[p.count-1], z.E[i])
+	}
+
+	var eg2 errgroup.Group
+	for i := range p.count {
+		eg2.Go(func() error {
+			var err error
+			a[i], z.Z[i], err = p.sigma.RunSimulator(statement[i], z.E[i])
+			if err != nil {
+				return errs2.Wrap(err).WithMessage("cannot run simulator")
+			}
+			return nil
+		})
+	}
+	if err := eg2.Wait(); err != nil {
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot compute responses")
+	}
 	return a, z, nil
 }
 
-func (p *protocol[_, _, _, _, _, _, _, _, _, _]) SpecialSoundness() uint {
-	return max(p.sigma0.SpecialSoundness(), p.sigma1.SpecialSoundness())
+// SpecialSoundness returns the special soundness parameter of the composed protocol.
+func (p *protocol[X, W, A, S, Z]) SpecialSoundness() uint {
+	return p.sigma.SpecialSoundness()
 }
 
-func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) GetChallengeBytesLength() int {
-	return p.challengeBytesLength
+// GetChallengeBytesLength returns the challenge length in bytes for the composed protocol.
+func (p *protocol[X, W, A, S, Z]) GetChallengeBytesLength() int {
+	return p.sigma.GetChallengeBytesLength()
 }
 
-func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStatement(statement *Statement[X0, X1], witness *Witness[W0, W1]) error {
-	err0 := p.sigma0.ValidateStatement(statement.X0, witness.W0)
-	err1 := p.sigma1.ValidateStatement(statement.X1, witness.W1)
-
-	if err0 != nil && err1 != nil {
-		return errs.NewFailed("invalid statement")
+// ValidateStatement checks that at least one statement/witness pair is valid.
+// For OR composition, only one valid pair is required (unlike AND composition).
+func (p *protocol[X, W, A, S, Z]) ValidateStatement(statement Statement[X], witness Witness[W]) error {
+	if len(statement) != p.count {
+		return ErrInvalidLength.WithMessage("invalid statement length")
 	}
-
-	return nil
+	// For OR composition, at least one statement/witness pair must be valid
+	for i := range p.count {
+		if invalid := p.sigma.ValidateStatement(statement[i], witness.v); invalid == nil {
+			return nil // Found a valid pair
+		}
+	}
+	return ErrNotAtLeastOneOutOfN.WithMessage("no valid statement/witness pair found")
 }
 
-func (p *protocol[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) Name() sigma.Name {
-	return sigma.Name(fmt.Sprintf("(%s)_OR_(%s)", p.sigma0.Name(), p.sigma1.Name()))
+// getB finds the index of the branch with a valid statement/witness pair.
+// Returns an error if no valid pair is found.
+func (p *protocol[X, W, A, S, Z]) getB(statement Statement[X], witness Witness[W]) (uint, error) {
+	B := uint(p.count) // invalid value
+	for i := range p.count {
+		if invalid := p.sigma.ValidateStatement(statement[i], witness.v); invalid == nil {
+			B = uint(i)
+		}
+	}
+	return B, nil
 }
+
+// Name returns a human-readable name for the composed protocol.
+func (p *protocol[X, W, A, S, Z]) Name() sigma.Name {
+	return sigma.Name(fmt.Sprintf("SigmaOR(%s)^%d", p.sigma.Name(), p.count))
+}
+
+// Sentinel errors for the sigor package.
+var (
+	// ErrIsNil is returned when a required argument is nil.
+	ErrIsNil = errs2.New("is nil")
+	// ErrNotAtLeastOneOutOfN is returned when no valid statement/witness pair is found.
+	ErrNotAtLeastOneOutOfN = errs2.New("not at least one statement out of n is valid")
+	// ErrInvalidLength is returned when input slices have incorrect lengths.
+	ErrInvalidLength = errs2.New("invalid length")
+	// ErrInvalidArgument is returned when an argument has an invalid value.
+	ErrInvalidArgument = errs2.New("invalid argument")
+	// ErrVerification is returned when proof verification fails.
+	ErrVerification = errs2.New("verification failed")
+)

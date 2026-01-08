@@ -8,6 +8,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
+// NewOrdinalShareholderSet creates a set of shareholder IDs {1, 2, ..., count}.
+// This is a convenience function for creating standard shareholder sets where
+// IDs are sequential integers starting from 1.
 func NewOrdinalShareholderSet(count uint) ds.Set[ID] {
 	out := hashset.NewComparable[ID]()
 	for i := range count {
@@ -16,30 +19,8 @@ func NewOrdinalShareholderSet(count uint) ds.Set[ID] {
 	return out.Freeze()
 }
 
-type MinimalQualifiedAccessStructure struct {
-	ps ds.Set[ID]
-}
-
-func (a *MinimalQualifiedAccessStructure) Shareholders() ds.Set[ID] {
-	return a.ps
-}
-func (a *MinimalQualifiedAccessStructure) IsAuthorized(ids ...ID) bool {
-	return a.ps.Size() == len(ids) && a.ps.Equal(hashset.NewComparable(ids...).Freeze())
-}
-
-// TODO: this function does not make sense
-func NewMinimalQualifiedAccessStructure(shareholders ds.Set[ID]) (*MinimalQualifiedAccessStructure, error) {
-	if shareholders == nil {
-		return nil, errs.NewIsNil("ids cannot be nil")
-	}
-	if shareholders.Size() < 2 {
-		return nil, errs.NewValue("ids must have at least 2 shareholders")
-	}
-	return &MinimalQualifiedAccessStructure{
-		ps: shareholders,
-	}, nil
-}
-
+// CollectIDs extracts the shareholder IDs from a slice of shares.
+// Returns an error if any share is nil.
 func CollectIDs[S Share[S]](shares ...S) ([]ID, error) {
 	ids, err := sliceutils.MapOrError(shares, func(s S) (ID, error) {
 		if utils.IsNil(s) {

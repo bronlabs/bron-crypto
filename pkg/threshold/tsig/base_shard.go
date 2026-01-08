@@ -14,18 +14,18 @@ import (
 )
 
 type BasePublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
-	accessStructure   *feldman.AccessStructure
+	accessStructure   *sharing.ThresholdAccessStructure
 	fv                feldman.VerificationVector[E, S]
 	partialPublicKeys ds.Map[sharing.ID, *schnorrlike.PublicKey[E, S]]
 }
 
 type basePublicMaterialDTO[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
-	AccessStructure   *feldman.AccessStructure                    `cbor:"accessStructure"`
+	AccessStructure   *sharing.ThresholdAccessStructure           `cbor:"accessStructure"`
 	FV                feldman.VerificationVector[E, S]            `cbor:"verificationVector"`
 	PartialPublicKeys map[sharing.ID]*schnorrlike.PublicKey[E, S] `cbor:"partialPublicKeys"`
 }
 
-func (spm *BasePublicMaterial[E, S]) AccessStructure() *feldman.AccessStructure {
+func (spm *BasePublicMaterial[E, S]) AccessStructure() *sharing.ThresholdAccessStructure {
 	if spm == nil {
 		return nil
 	}
@@ -176,7 +176,7 @@ func (sh *BaseShard[E, S]) UnmarshalCBOR(data []byte) error {
 func NewBaseShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	share *feldman.Share[S],
 	fv feldman.VerificationVector[E, S],
-	accessStructure *feldman.AccessStructure,
+	accessStructure *sharing.ThresholdAccessStructure,
 ) (*BaseShard[E, S], error) {
 	if share == nil || fv == nil || accessStructure == nil {
 		return nil, errs.NewIsNil("nil input parameters")

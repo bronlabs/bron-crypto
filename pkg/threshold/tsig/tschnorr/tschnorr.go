@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig"
@@ -19,13 +20,13 @@ type MPCFriendlyVariant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFiel
 }
 
 type MPCFriendlyScheme[
-VR MPCFriendlyVariant[GE, S, M],
-GE algebra.PrimeGroupElement[GE, S],
-S algebra.PrimeFieldElement[S],
-M schnorrlike.Message,
-KG signatures.KeyGenerator[*schnorrlike.PrivateKey[GE, S], *schnorrlike.PublicKey[GE, S]],
-SG schnorrlike.Signer[VR, GE, S, M],
-VF schnorrlike.Verifier[VR, GE, S, M],
+	VR MPCFriendlyVariant[GE, S, M],
+	GE algebra.PrimeGroupElement[GE, S],
+	S algebra.PrimeFieldElement[S],
+	M schnorrlike.Message,
+	KG signatures.KeyGenerator[*schnorrlike.PrivateKey[GE, S], *schnorrlike.PublicKey[GE, S]],
+	SG schnorrlike.Signer[VR, GE, S, M],
+	VF schnorrlike.Verifier[VR, GE, S, M],
 ] interface {
 	schnorrlike.Scheme[VR, GE, S, M, KG, SG, VF]
 	PartialSignatureVerifier(
@@ -35,8 +36,8 @@ VF schnorrlike.Verifier[VR, GE, S, M],
 }
 
 type PartialSignature[
-GE algebra.PrimeGroupElement[GE, S],
-S algebra.PrimeFieldElement[S],
+	GE algebra.PrimeGroupElement[GE, S],
+	S algebra.PrimeFieldElement[S],
 ] struct {
 	Sig schnorrlike.Signature[GE, S]
 }
@@ -76,8 +77,8 @@ func (pm *PublicMaterial[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
 }
 
 type Shard[
-E algebra.PrimeGroupElement[E, S],
-S algebra.PrimeFieldElement[S],
+	E algebra.PrimeGroupElement[E, S],
+	S algebra.PrimeFieldElement[S],
 ] struct {
 	tsig.BaseShard[E, S]
 	pk     *schnorrlike.PublicKey[E, S]
@@ -102,7 +103,7 @@ func (sh *Shard[E, S]) PublicKey() *schnorrlike.PublicKey[E, S] {
 	return sh.pk
 }
 
-func (sh *Shard[E, S]) Equal(other tsig.Shard[*schnorrlike.PublicKey[E, S], *feldman.Share[S], *feldman.AccessStructure]) bool {
+func (sh *Shard[E, S]) Equal(other tsig.Shard[*schnorrlike.PublicKey[E, S], *feldman.Share[S], *sharing.ThresholdAccessStructure]) bool {
 	o, ok := other.(*Shard[E, S])
 	return ok && sh.BaseShard.Equal(&o.BaseShard)
 }
@@ -121,7 +122,7 @@ func (sh *Shard[E, S]) AsSchnorrPrivateKey() (*schnorrlike.PrivateKey[E, S], err
 func NewShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	share *feldman.Share[S],
 	fv feldman.VerificationVector[E, S],
-	accessStructure *feldman.AccessStructure,
+	accessStructure *sharing.ThresholdAccessStructure,
 ) (*Shard[E, S], error) {
 	if share == nil || fv == nil || accessStructure == nil {
 		return nil, errs.NewIsNil("nil input parameters")

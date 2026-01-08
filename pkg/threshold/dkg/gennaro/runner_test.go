@@ -25,8 +25,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	tu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
-	stu "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/testutils"
 	ttu "github.com/bronlabs/bron-crypto/pkg/transcripts/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -109,7 +109,9 @@ func testHappyPathRunner[G algebra.PrimeGroupElement[G, S], S algebra.PrimeField
 			prng := crand.Reader
 			sessionId := ntu.MakeRandomSessionId(t, prng)
 			quorum := ntu.MakeRandomQuorum(t, prng, total)
-			accessStructure := stu.MakeThresholdAccessStructure(t, threshold, quorum)
+			accessStructure, err := sharing.NewThresholdAccessStructure(uint(threshold), quorum)
+			require.NoError(t, err)
+
 			tapes := ttu.MakeRandomTapes(t, prng, quorum)
 			runners := tu.MakeGennaroDKGRunners(t, sessionId, accessStructure, niCompiler, group, tapes)
 			dkgOutputs := ntu.TestExecuteRunners(t, runners)

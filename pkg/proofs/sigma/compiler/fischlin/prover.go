@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -18,6 +18,7 @@ var _ compiler.NIProver[sigma.Statement, sigma.Witness] = (*prover[
 	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.State, sigma.Response,
 ])(nil)
 
+// prover implements the NIProver interface for Fischlin proofs.
 type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
 	sessionId     network.SID
 	transcript    transcripts.Transcript
@@ -28,12 +29,15 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 	t             uint64
 }
 
+// Prove generates a non-interactive Fischlin proof for the given statement and witness.
+// It runs rho parallel executions of the sigma protocol, searching for challenge/response
+// pairs that hash to zero. Returns the serialized proof containing all rho transcripts.
 func (p *prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
 	p.transcript.AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, p.rho))
 	p.transcript.AppendBytes(statementLabel, statement.Bytes())
 	commonHKey, err := p.transcript.ExtractBytes(commonHLabel, base.CollisionResistanceBytesCeil)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot extract h")
+		return nil, errs2.Wrap(err).WithMessage("cannot extract h")
 	}
 
 	a := make([]byte, 0)
@@ -51,7 +55,7 @@ redo:
 			// 1.a. compute (m_i, σ_i) ← ProverFirstMessage(x, w) independently for each i
 			aI[i], stateI[i], err = p.sigmaProtocol.ComputeProverCommitment(statement, witness)
 			if err != nil {
-				return nil, errs.WrapFailed(err, "cannot generate commitment")
+				return nil, errs2.Wrap(err).WithMessage("cannot generate commitment")
 			}
 
 			a = append(a, aI[i].Bytes()...)
@@ -61,7 +65,7 @@ redo:
 		// (This is a full hash, with output length 2*κc)
 		commonH, err := hashing.Hash(randomOracle, commonHKey, statement.Bytes(), a, p.sessionId[:])
 		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot generate commitment")
+			return nil, errs2.Wrap(err).WithMessage("cannot generate commitment")
 		}
 
 		// 4. For i = 1, ..., ρ:
@@ -71,13 +75,13 @@ redo:
 				// 4.a.i. z_i ← ProverSecondMessage(x, w, σ_i, e_i)
 				eI[i], zI[i], err = p.challengeBytesAndResponse(j, statement, witness, aI[i], stateI[i])
 				if err != nil {
-					return nil, errs.WrapFailed(err, "cannot compute proof")
+					return nil, errs2.Wrap(err).WithMessage("cannot compute proof")
 				}
 
 				// 4.a.ii. h_i ← H(common-h, i, e_i, z_i), where H is the first b bits of output of hash
 				hI, err := hash(p.b, commonH, i, eI[i], zI[i].Bytes())
 				if err != nil {
-					return nil, errs.WrapFailed(err, "cannot compute proof")
+					return nil, errs2.Wrap(err).WithMessage("cannot compute proof")
 				}
 
 				// 4.a.iii. If hi == 0, break
@@ -118,7 +122,7 @@ redo:
 	}
 	proofBytes, err := serde.MarshalCBOR(proof)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "cannot serialise proof")
+		return nil, errs2.Wrap(err).WithMessage("cannot serialise proof")
 	}
 
 	// 8. Output π
@@ -132,7 +136,7 @@ func (p *prover[X, W, A, S, Z]) challengeBytesAndResponse(t uint64, statement X,
 	copy(eBytes[len(eBytes)-len(e):], e)
 	z, err := p.sigmaProtocol.ComputeProverResponse(statement, witness, commitment, state, eBytes)
 	if err != nil {
-		return nil, z, errs.WrapFailed(err, "cannot compute z_i")
+		return nil, z, errs2.Wrap(err).WithMessage("cannot compute z_i")
 	}
 
 	eLen := int((p.t + 7) / 8)

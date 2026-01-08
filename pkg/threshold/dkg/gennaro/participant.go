@@ -14,7 +14,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/pedersen"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
@@ -42,7 +41,7 @@ type (
 		publicKeyValue         E
 		partialPublicKeyValues ds.Map[sharing.ID, E]
 		fv                     feldman.VerificationVector[E, S]
-		accessStructure        *shamir.AccessStructure
+		accessStructure        *sharing.ThresholdAccessStructure
 	}
 )
 
@@ -55,7 +54,7 @@ const (
 // Participant orchestrates the Gennaro DKG protocol for one party.
 type Participant[E GroupElement[E, S], S Scalar[S]] struct {
 	sid            network.SID
-	ac             *shamir.AccessStructure
+	ac             *sharing.ThresholdAccessStructure
 	id             sharing.ID
 	niCompilerName compiler.Name
 	tape           ts.Transcript
@@ -70,7 +69,7 @@ func (p *Participant[E, S]) SharingID() sharing.ID {
 }
 
 // AccessStructure returns the access structure enforced by the DKG.
-func (p *Participant[E, S]) AccessStructure() *shamir.AccessStructure {
+func (p *Participant[E, S]) AccessStructure() *sharing.ThresholdAccessStructure {
 	return p.ac
 }
 
@@ -94,7 +93,7 @@ func NewParticipant[E GroupElement[E, S], S Scalar[S]](
 	sid network.SID,
 	group Group[E, S],
 	myID sharing.ID,
-	ac *shamir.AccessStructure,
+	ac *sharing.ThresholdAccessStructure,
 	niCompilerName compiler.Name,
 	tape ts.Transcript,
 	prng io.Reader,
@@ -156,7 +155,7 @@ func NewParticipant[E GroupElement[E, S], S Scalar[S]](
 func NewDKGOutput[E GroupElement[E, S], S Scalar[S]](
 	share *feldman.Share[S],
 	vector feldman.VerificationVector[E, S],
-	accessStructure *shamir.AccessStructure,
+	accessStructure *sharing.ThresholdAccessStructure,
 ) (*DKGOutput[E, S], error) {
 	if share == nil {
 		return nil, ErrInvalidArgument.WithMessage("share is nil")
@@ -222,7 +221,7 @@ func (o *DKGPublicOutput[E, S]) PartialPublicKeyValues() ds.Map[sharing.ID, E] {
 }
 
 // AccessStructure returns the access structure associated with the DKG output.
-func (o *DKGPublicOutput[E, S]) AccessStructure() *shamir.AccessStructure {
+func (o *DKGPublicOutput[E, S]) AccessStructure() *sharing.ThresholdAccessStructure {
 	if o == nil {
 		return nil
 	}
