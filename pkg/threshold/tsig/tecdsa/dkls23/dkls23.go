@@ -16,7 +16,7 @@ type PartialSignature[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S
 }
 
 func NewPartialSignature[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](r P, u, w S) (*PartialSignature[P, B, S], error) {
-	if r.IsZero() || u.IsZero() {
+	if r.IsOpIdentity() || u.IsZero() {
 		return nil, errs.NewFailed("invalid arguments")
 	}
 
@@ -34,14 +34,16 @@ func Aggregate[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 	u := suite.ScalarField().Zero()
 	r := suite.Curve().OpIdentity()
 
-	// step 4.1: R <- Σ R_i   &    rx <- R_x
-	for _, partialSignature := range partialSignatures {
+	r = partialSignatures[0].r
+	for i, partialSignature := range partialSignatures {
 		w = w.Add(partialSignature.w)
 		u = u.Add(partialSignature.u)
-		r = r.Add(partialSignature.r)
+
+		if !partialSignature.r.Equal(r) {
+			return nil, errs.NewFailed("partial signature mismatch between indices 0 and %d", i)
+		}
 	}
 
-	// step 4.2: s <- (Σ w_i) / (Σ u_i)
 	uInv, err := u.TryInv()
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot compute w/u")
@@ -57,20 +59,17 @@ func Aggregate[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 		return nil, errs.WrapFailed(err, "cannot convert to scalar")
 	}
 
-	// step 4.3: v <- (R_y mod 2) + 2(R_x > q)
 	v, err := ecdsa.ComputeRecoveryId(r)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not compute recovery id")
 	}
 
-	// steps 4.4-4.6: s = min(s, -s mod q);    v = v + 2 · (s > -s mod q)
 	signature, err := ecdsa.NewSignature(rx, s, &v)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create signature")
 	}
 	signature.Normalise()
 
-	// step 4.7
 	scheme, err := ecdsa.NewScheme(suite, crand.Reader)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create scheme")
