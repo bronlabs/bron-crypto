@@ -6,7 +6,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
@@ -26,10 +25,10 @@ type publicKeyDTO[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 // The point must be a valid, non-zero point on a supported ECDSA curve.
 func NewPublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](pk P) (*PublicKey[P, B, S], error) {
 	if pk.IsZero() {
-		return nil, errs.NewFailed("public key is zero")
+		return nil, ErrFailed.WithMessage("public key is zero")
 	}
 	if _, err := algebra.StructureAs[Curve[P, B, S]](pk.Structure()); err != nil {
-		return nil, errs.WrapFailed(err, "curve structure is not supported")
+		return nil, errs2.Wrap(err).WithMessage("curve structure is not supported")
 	}
 
 	key := &PublicKey[P, B, S]{
@@ -91,7 +90,7 @@ func (pk *PublicKey[P, B, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal ECDSA PublicKey")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal ECDSA PublicKey")
 	}
 	return data, nil
 }

@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
 
 // PrivateKey represents an ECDSA private key as a scalar value d in [1, n-1],
@@ -23,17 +23,17 @@ type PrivateKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 // The constructor validates that sk * G equals the provided public key to ensure consistency.
 func NewPrivateKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sk S, pk *PublicKey[P, B, S]) (*PrivateKey[P, B, S], error) {
 	if pk == nil {
-		return nil, errs.NewIsNil("public key")
+		return nil, ErrInvalidArgument.WithMessage("public key is nil")
 	}
 	if sk.IsZero() {
-		return nil, errs.NewFailed("secret key is zero")
+		return nil, ErrFailed.WithMessage("secret key is zero")
 	}
 	curve, err := algebra.StructureAs[Curve[P, B, S]](pk.Value().Structure())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "curve structure is not supported")
+		return nil, errs2.Wrap(err).WithMessage("curve structure is not supported")
 	}
 	if !curve.ScalarBaseMul(sk).Equal(pk.Value()) {
-		return nil, errs.NewFailed("private key doesn't match public key")
+		return nil, ErrFailed.WithMessage("private key doesn't match public key")
 	}
 
 	key := &PrivateKey[P, B, S]{

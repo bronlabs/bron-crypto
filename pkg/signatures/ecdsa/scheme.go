@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
@@ -24,7 +24,7 @@ type Scheme[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.P
 // as the nonce is derived from the private key and message.
 func NewScheme[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S], prng io.Reader) (*Scheme[P, B, S], error) {
 	if suite == nil || (!suite.IsDeterministic() && prng == nil) {
-		return nil, errs.NewIsNil("suite or prng")
+		return nil, ErrInvalidArgument.WithMessage("suite or prng is nil")
 	}
 
 	s := &Scheme[P, B, S]{
@@ -48,7 +48,7 @@ func (s *Scheme[P, B, S]) Keygen(_ ...signatures.KeyGeneratorOption[*KeyGenerato
 func (s *Scheme[P, B, S]) Signer(sk *PrivateKey[P, B, S], _ ...signatures.SignerOption[*Signer[P, B, S], []byte, *Signature[S]]) (*Signer[P, B, S], error) {
 	sg, err := NewSigner(s.suite, sk, s.prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "signer creation failed")
+		return nil, errs2.Wrap(err).WithMessage("signer creation failed")
 	}
 	return sg, nil
 }
@@ -57,7 +57,7 @@ func (s *Scheme[P, B, S]) Signer(sk *PrivateKey[P, B, S], _ ...signatures.Signer
 func (s *Scheme[P, B, S]) Verifier(_ ...signatures.VerifierOption[*Verifier[P, B, S], *PublicKey[P, B, S], []byte, *Signature[S]]) (*Verifier[P, B, S], error) {
 	vr, err := NewVerifier(s.suite)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "verifier creation failed")
+		return nil, errs2.Wrap(err).WithMessage("verifier creation failed")
 	}
 	return vr, nil
 }

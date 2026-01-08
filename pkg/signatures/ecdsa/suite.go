@@ -6,7 +6,6 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
@@ -31,7 +30,7 @@ type Suite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 //   - secp256k1 with SHA-256 (Bitcoin/Ethereum)
 func NewSuite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], H hash.Hash](curve Curve[P, B, S], hashFunc func() H) (*Suite[P, B, S], error) {
 	if hashFunc == nil {
-		return nil, errs.NewIsNil("hash function")
+		return nil, ErrInvalidArgument.WithMessage("hash function is nil")
 	}
 	scalarField := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
 	baseField := algebra.StructureMustBeAs[algebra.PrimeField[B]](curve.BaseStructure())
@@ -58,7 +57,7 @@ func NewSuite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 // Reference: RFC 6979 - Deterministic Usage of DSA and ECDSA
 func NewDeterministicSuite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve Curve[P, B, S], h crypto.Hash) (*Suite[P, B, S], error) {
 	if !h.Available() {
-		return nil, errs.NewFailed("hash function not available")
+		return nil, ErrFailed.WithMessage("hash function not available")
 	}
 	scalarField := algebra.StructureMustBeAs[algebra.PrimeField[S]](curve.ScalarStructure())
 	baseField := algebra.StructureMustBeAs[algebra.PrimeField[B]](curve.BaseStructure())

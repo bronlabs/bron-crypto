@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
@@ -20,7 +20,7 @@ type Verifier[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 // The suite defines the curve and hash function used for verification.
 func NewVerifier[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S]) (*Verifier[P, B, S], error) {
 	if suite == nil {
-		return nil, errs.NewIsNil("suite")
+		return nil, ErrInvalidArgument.WithMessage("suite is nil")
 	}
 
 	v := &Verifier[P, B, S]{
@@ -44,29 +44,29 @@ func NewVerifier[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 // Returns nil if the signature is valid, or an error describing the failure.
 func (v *Verifier[P, B, S]) Verify(s *Signature[S], pk *PublicKey[P, B, S], m []byte) error {
 	if s == nil || pk == nil {
-		return errs.NewArgument("signature & public key cannot be nil")
+		return ErrInvalidArgument.WithMessage("signature & public key cannot be nil")
 	}
 
 	if s.v != nil {
 		recoveredPublicKey, err := RecoverPublicKey(v.suite, s, m)
 		if err != nil {
-			return errs.WrapFailed(err, "cannot recover public key")
+			return errs2.Wrap(err).WithMessage("cannot recover public key")
 		}
 		if !recoveredPublicKey.Equal(pk) {
-			return errs.NewVerification("recovered public key does not match")
+			return ErrVerificationFailed.WithMessage("recovered public key does not match")
 		}
 	}
 
 	digest, err := hashing.Hash(v.suite.hashFunc, m)
 	if err != nil {
-		return errs.WrapFailed(err, "cannot hash message")
+		return errs2.Wrap(err).WithMessage("cannot hash message")
 	}
 
 	nativePk := pk.ToElliptic()
 	nativeR, nativeS := s.ToElliptic()
 	ok := nativeEcdsa.Verify(nativePk, digest, nativeR, nativeS)
 	if !ok {
-		return errs.NewVerification("invalid signature")
+		return ErrVerificationFailed.WithMessage("invalid signature")
 	}
 	return nil
 }
