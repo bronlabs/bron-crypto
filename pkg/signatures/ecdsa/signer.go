@@ -12,12 +12,17 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
+// Signer produces ECDSA signatures using a private key.
+// It supports both randomized signing (with a PRNG) and deterministic signing (RFC 6979).
 type Signer[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	suite *Suite[P, B, S]
 	sk    *PrivateKey[P, B, S]
 	prng  io.Reader
 }
 
+// NewSigner creates a signer with the given suite, private key, and random source.
+// For randomized suites, prng must be a cryptographically secure random source.
+// For deterministic suites (RFC 6979), prng can be nil.
 func NewSigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S], sk *PrivateKey[P, B, S], prng io.Reader) (*Signer[P, B, S], error) {
 	if suite == nil || (prng == nil && !suite.IsDeterministic()) || sk == nil {
 		return nil, errs.NewIsNil("suite or prng pr secret key is nil")
@@ -31,6 +36,16 @@ func NewSigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebr
 	return s, nil
 }
 
+// Sign creates an ECDSA signature on the given message.
+//
+// The signing process:
+//  1. Hash the message using the suite's hash function
+//  2. Generate ephemeral key k (random or deterministic per RFC 6979)
+//  3. Compute R = k*G and set r = R.x mod n
+//  4. Compute s = k^(-1) * (hash + r*d) mod n
+//  5. Compute recovery ID v for public key recovery
+//
+// The returned signature includes r, s, and the recovery ID v.
 func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 	digest, err := hashing.Hash(s.suite.hashFunc, message)
 	if err != nil {
@@ -88,6 +103,7 @@ func (s *Signer[P, B, S]) Sign(message []byte) (*Signature[S], error) {
 	return nil, errs.NewVerification("cannot compute recovery id")
 }
 
+// IsDeterministic returns true if this signer uses RFC 6979 deterministic nonce generation.
 func (s *Signer[P, B, S]) IsDeterministic() bool {
 	return s.suite.IsDeterministic()
 }

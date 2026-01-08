@@ -11,6 +11,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
+// PublicKey represents an ECDSA public key as a point on an elliptic curve.
+// The public key Q is computed as Q = d * G, where d is the private key scalar
+// and G is the curve's generator point.
 type PublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	pk P
 }
@@ -19,6 +22,8 @@ type publicKeyDTO[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 	PK P `cbor:"publicKey"`
 }
 
+// NewPublicKey creates a PublicKey from an elliptic curve point.
+// The point must be a valid, non-zero point on a supported ECDSA curve.
 func NewPublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](pk P) (*PublicKey[P, B, S], error) {
 	if pk.IsZero() {
 		return nil, errs.NewFailed("public key is zero")
@@ -33,10 +38,12 @@ func NewPublicKey[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 	return key, nil
 }
 
+// Value returns the underlying elliptic curve point.
 func (pk *PublicKey[P, B, S]) Value() P {
 	return pk.pk
 }
 
+// Clone returns a deep copy of the public key.
 func (pk *PublicKey[P, B, S]) Clone() *PublicKey[P, B, S] {
 	if pk == nil {
 		return nil
@@ -48,6 +55,7 @@ func (pk *PublicKey[P, B, S]) Clone() *PublicKey[P, B, S] {
 	return clone
 }
 
+// Equal returns true if both public keys represent the same curve point.
 func (pk *PublicKey[P, B, S]) Equal(rhs *PublicKey[P, B, S]) bool {
 	if pk == nil || rhs == nil {
 		return pk == rhs
@@ -56,10 +64,13 @@ func (pk *PublicKey[P, B, S]) Equal(rhs *PublicKey[P, B, S]) bool {
 	return pk.pk.Equal(rhs.pk)
 }
 
+// HashCode returns a hash of the public key for use in hash-based data structures.
 func (pk *PublicKey[P, B, S]) HashCode() base.HashCode {
 	return pk.pk.HashCode()
 }
 
+// ToElliptic converts the public key to Go's standard library ecdsa.PublicKey format.
+// This enables interoperability with Go's crypto/ecdsa package.
 func (pk *PublicKey[P, B, S]) ToElliptic() *nativeEcdsa.PublicKey {
 	curve := algebra.StructureMustBeAs[Curve[P, B, S]](pk.pk.Structure())
 	nativeCurve := curve.ToElliptic()
@@ -73,6 +84,7 @@ func (pk *PublicKey[P, B, S]) ToElliptic() *nativeEcdsa.PublicKey {
 	return nativePublicKey
 }
 
+// MarshalCBOR serializes the public key to CBOR format.
 func (pk *PublicKey[P, B, S]) MarshalCBOR() ([]byte, error) {
 	dto := &publicKeyDTO[P, B, S]{
 		PK: pk.pk,
@@ -84,6 +96,7 @@ func (pk *PublicKey[P, B, S]) MarshalCBOR() ([]byte, error) {
 	return data, nil
 }
 
+// UnmarshalCBOR deserializes a public key from CBOR format.
 func (pk *PublicKey[P, B, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*publicKeyDTO[P, B, S]](data)
 	if err != nil {
