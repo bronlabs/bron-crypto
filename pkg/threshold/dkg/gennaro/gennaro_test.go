@@ -22,7 +22,6 @@ import (
 	tu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
@@ -32,12 +31,12 @@ func setup[
 ](
 	t *testing.T, threshold, total uint, group gennaro.Group[E, S], sid network.SID, tape ts.Transcript, prng io.Reader,
 ) (
-	ac *shamir.AccessStructure,
+	ac *sharing.ThresholdAccessStructure,
 	parties ds.MutableMap[sharing.ID, *gennaro.Participant[E, S]],
 ) {
 	t.Helper()
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := shamir.NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 	require.NotNil(t, group)
 	if ct.SliceIsZero(sid[:]) == 1 {
@@ -404,7 +403,7 @@ func TestDKGWithBLS12381(t *testing.T) {
 
 	// Setup participants
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := shamir.NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
 	parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()
@@ -545,7 +544,7 @@ func TestDKGParticipantValidation(t *testing.T) {
 
 	t.Run("participant not in access structure", func(t *testing.T) {
 		shareholders := sharing.NewOrdinalShareholderSet(5)
-		ac, err := shamir.NewAccessStructure(3, shareholders)
+		ac, err := sharing.NewThresholdAccessStructure(3, shareholders)
 		require.NoError(t, err)
 
 		// Try to create participant with ID not in shareholders
@@ -565,7 +564,7 @@ func TestDKGParticipantValidation(t *testing.T) {
 	t.Run("minimum participants", func(t *testing.T) {
 		// Test with minimum viable configuration (2-of-2)
 		shareholders := sharing.NewOrdinalShareholderSet(2)
-		ac, err := shamir.NewAccessStructure(2, shareholders)
+		ac, err := sharing.NewThresholdAccessStructure(2, shareholders)
 		require.NoError(t, err)
 
 		parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*k256.Point, *k256.Scalar]]()
@@ -646,7 +645,7 @@ func TestParticipantCreation(t *testing.T) {
 
 	t.Run("valid participant creation", func(t *testing.T) {
 		shareholders := sharing.NewOrdinalShareholderSet(5)
-		ac, err := shamir.NewAccessStructure(3, shareholders)
+		ac, err := sharing.NewThresholdAccessStructure(3, shareholders)
 		require.NoError(t, err)
 
 		p, err := gennaro.NewParticipant(
@@ -666,7 +665,7 @@ func TestParticipantCreation(t *testing.T) {
 
 	t.Run("nil group", func(t *testing.T) {
 		shareholders := sharing.NewOrdinalShareholderSet(5)
-		ac, err := shamir.NewAccessStructure(3, shareholders)
+		ac, err := sharing.NewThresholdAccessStructure(3, shareholders)
 		require.NoError(t, err)
 
 		p, err := gennaro.NewParticipant[*k256.Point](
@@ -685,7 +684,7 @@ func TestParticipantCreation(t *testing.T) {
 
 	t.Run("nil tape", func(t *testing.T) {
 		shareholders := sharing.NewOrdinalShareholderSet(5)
-		ac, err := shamir.NewAccessStructure(3, shareholders)
+		ac, err := sharing.NewThresholdAccessStructure(3, shareholders)
 		require.NoError(t, err)
 
 		p, err := gennaro.NewParticipant(
@@ -704,7 +703,7 @@ func TestParticipantCreation(t *testing.T) {
 
 	t.Run("nil prng", func(t *testing.T) {
 		shareholders := sharing.NewOrdinalShareholderSet(5)
-		ac, err := shamir.NewAccessStructure(3, shareholders)
+		ac, err := sharing.NewThresholdAccessStructure(3, shareholders)
 		require.NoError(t, err)
 
 		p, err := gennaro.NewParticipant(
@@ -738,7 +737,7 @@ func TestParticipantCreation(t *testing.T) {
 
 	t.Run("invalid participant ID not in shareholders", func(t *testing.T) {
 		shareholders := sharing.NewOrdinalShareholderSet(5)
-		ac, err := shamir.NewAccessStructure(3, shareholders)
+		ac, err := sharing.NewThresholdAccessStructure(3, shareholders)
 		require.NoError(t, err)
 
 		p, err := gennaro.NewParticipant(
@@ -1063,7 +1062,7 @@ func TestDifferentCurves(t *testing.T) {
 
 		// Setup participants for BLS12-381
 		shareholders := sharing.NewOrdinalShareholderSet(total)
-		ac, err := shamir.NewAccessStructure(threshold, shareholders)
+		ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 		require.NoError(t, err)
 
 		parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()
@@ -1227,7 +1226,7 @@ func TestErrorPropagation(t *testing.T) {
 		}
 
 		shareholders := sharing.NewOrdinalShareholderSet(total)
-		ac, err := shamir.NewAccessStructure(threshold, shareholders)
+		ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 		require.NoError(t, err)
 
 		// Create participant with limited randomness
@@ -1334,12 +1333,12 @@ func setupBench[
 ](
 	b *testing.B, threshold, total uint, group gennaro.Group[E, S], sid network.SID, tape ts.Transcript, prng io.Reader,
 ) (
-	ac *shamir.AccessStructure,
+	ac *sharing.ThresholdAccessStructure,
 	parties ds.MutableMap[sharing.ID, *gennaro.Participant[E, S]],
 ) {
 	b.Helper()
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := shamir.NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(b, err)
 	require.NotNil(b, group)
 	if ct.SliceIsZero(sid[:]) == 1 {

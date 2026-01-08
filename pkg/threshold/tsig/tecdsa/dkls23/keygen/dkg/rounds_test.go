@@ -6,7 +6,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23/keygen/dkg/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -22,7 +21,7 @@ func Test_HappyPath(t *testing.T) {
 	for i := 1; i <= TOTAL; i++ {
 		shareholders.Add(sharing.ID(i))
 	}
-	accessStructure, err := shamir.NewAccessStructure(THRESHOLD, shareholders.Freeze())
+	accessStructure, err := sharing.NewThresholdAccessStructure(THRESHOLD, shareholders.Freeze())
 	require.NoError(t, err)
 
 	// everything is checked inside testutils

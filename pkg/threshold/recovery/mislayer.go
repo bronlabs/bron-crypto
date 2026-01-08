@@ -17,7 +17,7 @@ type Mislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 }
 
 // NewMislayer constructs a mislayer helper used to validate and interpolate recovered shares.
-func NewMislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](id sharing.ID, quorum network.Quorum, as sharing.ThresholdAccessStructure, group algebra.PrimeGroup[G, S]) (*Mislayer[G, S], error) {
+func NewMislayer[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](id sharing.ID, quorum network.Quorum, as *sharing.ThresholdAccessStructure, group algebra.PrimeGroup[G, S]) (*Mislayer[G, S], error) {
 	if quorum == nil || as == nil || group == nil || !quorum.Contains(id) || !quorum.IsSubSet(as.Shareholders()) {
 		return nil, ErrInvalidArgument.WithMessage("invalid arguments")
 	}

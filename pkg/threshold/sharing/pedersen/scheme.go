@@ -16,6 +16,12 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 )
 
+// NewScheme creates a new Pedersen VSS scheme.
+//
+// Parameters:
+//   - key: Pedersen commitment key containing generators g and h
+//   - threshold: Minimum shares required for reconstruction (must be ≥ 2)
+//   - shareholders: Set of shareholder IDs who will receive shares
 func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](key *pedcom.Key[E, S], threshold uint, shareholders ds.Set[sharing.ID]) (*Scheme[E, S], error) {
 	pedcomScheme, err := pedcom.NewScheme(key)
 	if err != nil {
@@ -33,17 +39,20 @@ func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 	}, nil
 }
 
+// Scheme implements Pedersen's verifiable secret sharing with information-theoretic hiding.
 type Scheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
 	key              *pedcom.Key[E, S]
 	commitmentScheme commitments.Scheme[*pedcom.Key[E, S], *pedcom.Witness[S], *pedcom.Message[S], *pedcom.Commitment[E, S], *pedcom.Committer[E, S], *pedcom.Verifier[E, S]]
 	shamirSSS        *shamir.Scheme[S]
 }
 
+// Name returns the canonical name of this scheme.
 func (s *Scheme[E, S]) Name() sharing.Name {
 	return Name
 }
 
-func (s *Scheme[E, S]) AccessStructure() *AccessStructure {
+// AccessStructure returns the threshold access structure.
+func (s *Scheme[E, S]) AccessStructure() *sharing.ThresholdAccessStructure {
 	return s.shamirSSS.AccessStructure()
 }
 
@@ -69,6 +78,9 @@ func (s *Scheme[E, S]) dealAllNonZeroShares(secret *Secret[S], prng io.Reader) (
 	return shamirShares, secret, secretPoly, nil
 }
 
+// DealAndRevealDealerFunc creates shares for the given secret and returns the dealing
+// polynomials. Uses two polynomials: f(x) for the secret and r(x) for blinding.
+// The verification vector contains Pedersen commitments g^{a_j}·h^{b_j}.
 func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader) (*DealerOutput[E, S], *DealerFunc[S], error) {
 	if secret == nil {
 		return nil, nil, errs.NewIsNil("secret is nil")
@@ -109,6 +121,7 @@ func (s *Scheme[E, S]) DealAndRevealDealerFunc(secret *Secret[S], prng io.Reader
 	}, dealerFunc, nil
 }
 
+// Deal creates shares for the given secret along with a verification vector.
 func (s *Scheme[E, S]) Deal(secret *Secret[S], prng io.Reader) (*DealerOutput[E, S], error) {
 	shares, _, err := s.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
@@ -117,6 +130,8 @@ func (s *Scheme[E, S]) Deal(secret *Secret[S], prng io.Reader) (*DealerOutput[E,
 	return shares, nil
 }
 
+// DealRandomAndRevealDealerFunc generates shares for a random secret and returns
+// the dealing polynomials.
 func (s *Scheme[E, S]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[E, S], *Secret[S], *DealerFunc[S], error) {
 	if prng == nil {
 		return nil, nil, nil, errs.NewIsNil("prng is nil")
@@ -133,6 +148,7 @@ func (s *Scheme[E, S]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOut
 	return shares, secret, poly, nil
 }
 
+// DealRandom generates shares for a randomly sampled secret.
 func (s *Scheme[E, S]) DealRandom(prng io.Reader) (*DealerOutput[E, S], *Secret[S], error) {
 	if prng == nil {
 		return nil, nil, errs.NewIsNil("prng is nil")
@@ -144,6 +160,8 @@ func (s *Scheme[E, S]) DealRandom(prng io.Reader) (*DealerOutput[E, S], *Secret[
 	return shares, secret, nil
 }
 
+// Reconstruct recovers the secret from a set of shares using Lagrange interpolation.
+// Only the secret component f(i) of each share is used; blinding factors are discarded.
 func (s *Scheme[E, S]) Reconstruct(shares ...*Share[S]) (*Secret[S], error) {
 	shamirShares, _ := sliceutils.MapOrError(shares, func(sh *Share[S]) (*shamir.Share[S], error) { return shamir.NewShare(sh.ID(), sh.secret.Value(), nil) })
 	secret, err := s.shamirSSS.Reconstruct(shamirShares...)
@@ -153,6 +171,8 @@ func (s *Scheme[E, S]) Reconstruct(shares ...*Share[S]) (*Secret[S], error) {
 	return secret, nil
 }
 
+// ReconstructAndVerify recovers the secret and verifies each share against
+// the verification vector before reconstruction.
 func (s *Scheme[E, S]) ReconstructAndVerify(vector VerificationVector[E, S], shares ...*Share[S]) (*Secret[S], error) {
 	reconstructed, err := s.Reconstruct(shares...)
 	if err != nil {
@@ -166,6 +186,8 @@ func (s *Scheme[E, S]) ReconstructAndVerify(vector VerificationVector[E, S], sha
 	return reconstructed, nil
 }
 
+// Verify checks that a share (s_i, t_i) is consistent with the verification vector.
+// Returns nil if g^{s_i}·h^{t_i} equals the evaluation of the verification vector at the share's ID.
 func (s *Scheme[E, S]) Verify(share *Share[S], vector VerificationVector[E, S]) error {
 	if vector == nil {
 		return errs.NewIsNil("verification vector is nil")

@@ -13,12 +13,21 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
+// Scheme implements Shamir's (t,n) threshold secret sharing over a prime field.
 type Scheme[FE algebra.PrimeFieldElement[FE]] struct {
 	f        algebra.PrimeField[FE]
 	polyRing *polynomials.PolynomialRing[FE]
-	ac       *AccessStructure
+	ac       *sharing.ThresholdAccessStructure
 }
 
+// NewScheme creates a new Shamir secret sharing scheme.
+//
+// Parameters:
+//   - f: The prime field over which sharing is performed
+//   - threshold: Minimum number of shares required for reconstruction (must be ≥ 2)
+//   - shareholders: Set of shareholder IDs who will receive shares
+//
+// The threshold must not exceed the number of shareholders.
 func NewScheme[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeField[FE], threshold uint, shareholders ds.Set[sharing.ID]) (*Scheme[FE], error) {
 	if f == nil {
 		return nil, errs.NewIsNil("invalid field")
@@ -32,7 +41,7 @@ func NewScheme[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeField[FE], thres
 	if threshold > uint(shareholders.Size()) {
 		return nil, errs.NewValue("threshold cannot be greater than total number of shareholders")
 	}
-	ac, err := NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not create access structure")
 	}
@@ -48,22 +57,29 @@ func NewScheme[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeField[FE], thres
 	}, nil
 }
 
+// Name returns the canonical name of this scheme.
 func (d *Scheme[FE]) Name() sharing.Name {
 	return Name
 }
 
+// SharingIDToLagrangeNode converts a shareholder ID to its field element representation.
 func (d *Scheme[FE]) SharingIDToLagrangeNode(id sharing.ID) FE {
 	return SharingIDToLagrangeNode(d.f, id)
 }
 
-func (d *Scheme[FE]) AccessStructure() *AccessStructure {
+// AccessStructure returns the threshold access structure for this scheme.
+func (d *Scheme[FE]) AccessStructure() *sharing.ThresholdAccessStructure {
 	return d.ac
 }
 
+// PolynomialRing returns the polynomial ring used for share generation.
 func (d *Scheme[FE]) PolynomialRing() *polynomials.PolynomialRing[FE] {
 	return d.polyRing
 }
 
+// DealRandomAndRevealDealerFunc generates shares for a random secret and returns
+// the dealing polynomial. This is useful for protocols that need the polynomial
+// for verification or further computation.
 func (d *Scheme[FE]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutput[FE], *Secret[FE], DealerFunc[FE], error) {
 	if prng == nil {
 		return nil, nil, nil, errs.NewIsNil("prng is nil")
@@ -80,6 +96,7 @@ func (d *Scheme[FE]) DealRandomAndRevealDealerFunc(prng io.Reader) (*DealerOutpu
 	return shares, secret, dealerFunc, nil
 }
 
+// DealRandom generates shares for a randomly sampled secret.
 func (d *Scheme[FE]) DealRandom(prng io.Reader) (*DealerOutput[FE], *Secret[FE], error) {
 	shares, secret, _, err := d.DealRandomAndRevealDealerFunc(prng)
 	if err != nil {
@@ -88,6 +105,8 @@ func (d *Scheme[FE]) DealRandom(prng io.Reader) (*DealerOutput[FE], *Secret[FE],
 	return shares, secret, nil
 }
 
+// DealAndRevealDealerFunc creates shares for the given secret and returns the
+// dealing polynomial f(x) where f(0) = secret.
 func (d *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader) (*DealerOutput[FE], DealerFunc[FE], error) {
 	if secret == nil {
 		return nil, nil, errs.NewIsNil("secret is nil")
@@ -95,12 +114,12 @@ func (d *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader)
 	if prng == nil {
 		return nil, nil, errs.NewIsNil("prng is nil")
 	}
-	poly, err := d.polyRing.NewRandomWithConstantTerm(int(d.ac.t-1), secret.v, prng)
+	poly, err := d.polyRing.NewRandomWithConstantTerm(int(d.ac.Threshold()-1), secret.v, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not generate random polynomial")
 	}
 	shares := hashmap.NewComparable[sharing.ID, *Share[FE]]()
-	for id := range d.ac.ps.Iter() {
+	for id := range d.ac.Shareholders().Iter() {
 		node := d.SharingIDToLagrangeNode(id)
 		shares.Put(id, &Share[FE]{
 			id: id,
@@ -110,6 +129,7 @@ func (d *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader)
 	return &DealerOutput[FE]{shares: shares.Freeze()}, poly, nil
 }
 
+// Deal creates shares for the given secret.
 func (d *Scheme[FE]) Deal(secret *Secret[FE], prng io.Reader) (*DealerOutput[FE], error) {
 	out, _, err := d.DealAndRevealDealerFunc(secret, prng)
 	if err != nil {
@@ -118,6 +138,9 @@ func (d *Scheme[FE]) Deal(secret *Secret[FE], prng io.Reader) (*DealerOutput[FE]
 	return out, nil
 }
 
+// Reconstruct recovers the secret from a set of shares using Lagrange interpolation.
+// At least threshold shares must be provided, and all shares must belong to authorized
+// shareholders in the access structure.
 func (d *Scheme[FE]) Reconstruct(shares ...*Share[FE]) (*Secret[FE], error) {
 	sharesSet := hashset.NewHashable(shares...)
 	ids, err := sharing.CollectIDs(sharesSet.List()...)
@@ -140,6 +163,7 @@ func (d *Scheme[FE]) Reconstruct(shares ...*Share[FE]) (*Secret[FE], error) {
 	return &Secret[FE]{reconstructed}, nil
 }
 
+// Field returns the prime field over which this scheme operates.
 func (d *Scheme[FE]) Field() algebra.PrimeField[FE] {
 	return d.f
 }

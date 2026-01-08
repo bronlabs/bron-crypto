@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/recovery"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
@@ -29,7 +29,7 @@ func Test_HappyPath(t *testing.T) {
 	}
 	shareholders := hashset.NewComparable(shareholdersList[:]...).Freeze()
 	group := k256.NewCurve()
-	as, err := feldman.NewAccessStructure(THRESHOLD, hashset.NewComparable(shareholdersList[:]...).Freeze())
+	as, err := sharing.NewThresholdAccessStructure(THRESHOLD, hashset.NewComparable(shareholdersList[:]...).Freeze())
 	require.NoError(t, err)
 	scheme, err := feldman.NewScheme(group.Generator(), THRESHOLD, shareholders)
 	require.NoError(t, err)

@@ -15,7 +15,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/hjky"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
@@ -24,7 +23,7 @@ import (
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 
-	as, err := shamir.NewAccessStructure(2, hashset.NewComparable[sharing.ID](1, 2, 3).Freeze())
+	as, err := sharing.NewThresholdAccessStructure(2, hashset.NewComparable[sharing.ID](1, 2, 3).Freeze())
 	require.NoError(t, err)
 	prng := crand.Reader
 	var sessionId network.SID

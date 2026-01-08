@@ -13,12 +13,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/stretchr/testify/require"
 )
 
-func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, sessionId network.SID, accessStructure *shamir.AccessStructure, niCompiler compiler.Name, group algebra.PrimeGroup[G, S], tapes map[sharing.ID]transcripts.Transcript) map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]] {
+func MakeGennaroDKGRunners[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](tb testing.TB, sessionId network.SID, accessStructure *sharing.ThresholdAccessStructure, niCompiler compiler.Name, group algebra.PrimeGroup[G, S], tapes map[sharing.ID]transcripts.Transcript) map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]] {
 	tb.Helper()
 
 	runners := make(map[sharing.ID]network.Runner[*gennaro.DKGOutput[G, S]])

@@ -17,7 +17,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tbls/boldyreva02"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tbls/boldyreva02/signing"
 	tu "github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tbls/boldyreva02/testutils"
@@ -41,7 +40,7 @@ func TestBoldyrevaDKGAndSign(t *testing.T) {
 
 	// Setup DKG participants
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := shamir.NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
 	parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()
@@ -178,7 +177,7 @@ func testThresholdSigningWithAlgorithm(t *testing.T, shortKey bool, rogueKeyAlg 
 
 	// Setup DKG participants
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := shamir.NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
 	if shortKey {
@@ -293,7 +292,7 @@ func TestPartialSignatureVerification(t *testing.T) {
 
 	// Setup DKG participants
 	shareholders := sharing.NewOrdinalShareholderSet(total)
-	ac, err := shamir.NewAccessStructure(threshold, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(threshold, shareholders)
 	require.NoError(t, err)
 
 	parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG2, *bls12381.Scalar]]()
@@ -391,7 +390,7 @@ func TestCosignerCreationErrors(t *testing.T) {
 	// Create a valid shard for testing
 	group := bls12381.NewG1()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
-	ac, err := shamir.NewAccessStructure(2, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
 	parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()
 	for id := range shareholders.Iter() {
@@ -459,7 +458,7 @@ func TestProducePartialSignatureErrors(t *testing.T) {
 
 	group := bls12381.NewG1()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
-	ac, err := shamir.NewAccessStructure(2, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
 
 	parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()
@@ -514,7 +513,7 @@ func TestAggregatorCreationErrors(t *testing.T) {
 	// Create valid public material
 	group := bls12381.NewG1()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
-	ac, err := shamir.NewAccessStructure(2, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
 
 	parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()
@@ -562,7 +561,7 @@ func TestAggregationErrors(t *testing.T) {
 
 	group := bls12381.NewG1()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
-	ac, err := shamir.NewAccessStructure(2, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
 
 	parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()
@@ -655,7 +654,7 @@ func TestDifferentQuorumConfigurations(t *testing.T) {
 			// Setup DKG
 			group := bls12381.NewG1()
 			shareholders := sharing.NewOrdinalShareholderSet(tc.total)
-			ac, err := shamir.NewAccessStructure(tc.threshold, shareholders)
+			ac, err := sharing.NewThresholdAccessStructure(tc.threshold, shareholders)
 			require.NoError(t, err)
 
 			parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()
@@ -716,7 +715,7 @@ func TestCosignerGetters(t *testing.T) {
 
 	group := bls12381.NewG1()
 	shareholders := sharing.NewOrdinalShareholderSet(3)
-	ac, err := shamir.NewAccessStructure(2, shareholders)
+	ac, err := sharing.NewThresholdAccessStructure(2, shareholders)
 	require.NoError(t, err)
 
 	parties := hashmap.NewComparable[sharing.ID, *gennaro.Participant[*bls12381.PointG1, *bls12381.Scalar]]()

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -18,6 +18,7 @@ var _ compiler.NIProver[sigma.Statement, sigma.Witness] = (*prover[
 	sigma.Statement, sigma.Witness, sigma.Commitment, sigma.State, sigma.Response,
 ])(nil)
 
+// prover implements the NIProver interface for randomised Fischlin proofs.
 type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State, Z sigma.Response] struct {
 	sessionId     network.SID
 	transcript    transcripts.Transcript
@@ -25,11 +26,14 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 	prng          io.Reader
 }
 
+// Prove generates a non-interactive randomised Fischlin proof for the given statement
+// and witness. It runs R parallel executions, randomly sampling challenges until
+// finding ones that hash to zero. Returns the serialized proof containing all R transcripts.
 func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compiler.NIZKPoKProof, err error) {
 	p.transcript.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(p.sessionId[:])))
 	crs, err := p.transcript.ExtractBytes(crsLabel, 32)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot extract crs")
+		return nil, errs2.Wrap(err).WithMessage("cannot extract crs")
 	}
 	p.transcript.AppendBytes(statementLabel, statement.Bytes())
 
@@ -42,7 +46,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compile
 		var err error
 		aI[i], stateI[i], err = p.sigmaProtocol.ComputeProverCommitment(statement, witness)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "cannot generate commitment")
+			return nil, errs2.Wrap(err).WithMessage("cannot generate commitment")
 		}
 
 		// step 2. set a = (a_i) for i in [r]
@@ -53,7 +57,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compile
 	zI := make([]Z, R)
 
 	// step 3. for each i [r]
-	for i := 0; i < R; i++ {
+	for i := range R {
 		// step 3.a set e to empty
 		eSet := make([][]byte, 0)
 		for {
@@ -62,17 +66,17 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compile
 			// step 3.b sample e_i...
 			e, err := sample(eSet, p.sigmaProtocol.GetChallengeBytesLength(), p.prng)
 			if err != nil {
-				return nil, errs.WrapRandomSample(err, "cannot sample challenge bytes")
+				return nil, errs2.Wrap(err).WithMessage("cannot sample challenge bytes")
 			}
 
 			// ...and compute z_i = SigmaP_z(state_i, e_i)
 			z, err := p.sigmaProtocol.ComputeProverResponse(statement, witness, aI[i], stateI[i], e)
 			if err != nil {
-				return nil, errs.WrapFailed(err, "cannot generate response")
+				return nil, errs2.Wrap(err).WithMessage("cannot generate response")
 			}
 			digest, err := hash(crs, a, binary.LittleEndian.AppendUint64(nil, uint64(i)), e, z.Bytes())
 			if err != nil {
-				return nil, errs.WrapHashing(err, "cannot compute digest")
+				return nil, errs2.Wrap(err).WithMessage("cannot compute digest")
 			}
 
 			// step 3.c if hash(a, i, e_i, z_i) != 0 append e_i to e and repeat step 3.b
@@ -86,7 +90,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compile
 	}
 
 	commitmentSerialized := make([]byte, 0)
-	for i := 0; i < R; i++ {
+	for i := range R {
 		commitmentSerialized = append(commitmentSerialized, aI[i].Bytes()...)
 	}
 	p.transcript.AppendBytes(commitmentLabel, commitmentSerialized)
@@ -100,7 +104,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compile
 	}
 	proofBytes, err = serde.MarshalCBOR(proof)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "cannot serialise proof")
+		return nil, errs2.Wrap(err).WithMessage("cannot serialise proof")
 	}
 
 	return proofBytes, nil
