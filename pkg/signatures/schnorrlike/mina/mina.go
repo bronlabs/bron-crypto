@@ -1,3 +1,35 @@
+// Package mina implements Schnorr signatures for the Mina Protocol.
+//
+// Mina uses a Schnorr signature scheme over the Pallas curve (part of the Pasta
+// curve cycle) with the Poseidon hash function for challenge computation.
+// This signature scheme is used for transaction signing in the Mina blockchain.
+//
+// # Key Differences from Standard Schnorr
+//
+//   - Curve: Pallas (part of Pasta cycle, ~255-bit prime field)
+//   - Hash: Poseidon algebraic hash over the base field
+//   - Message format: ROInput (structured field elements and bits)
+//   - Byte order: Little-endian for field elements
+//   - Nonce derivation: Deterministic using Blake2b (legacy mode)
+//   - R encoding: Only x-coordinate with implicit even y
+//
+// # Signature Format
+//
+// A Mina signature is 64 bytes: (R.x || s) in little-endian, where:
+//   - R.x: 32-byte x-coordinate of the nonce commitment
+//   - s: 32-byte response scalar
+//
+// The y-coordinate of R is always even (parity 0), enforced during signing.
+//
+// # Network IDs
+//
+// Mina uses network-specific prefixes for domain separation:
+//   - MainNet: "MinaSignatureMainnet"
+//   - TestNet: "CodaSignature*******"
+//
+// References:
+//   - Mina Protocol: https://minaprotocol.com
+//   - o1js implementation: https://github.com/o1-labs/o1js
 package mina
 
 import (
@@ -13,15 +45,23 @@ import (
 )
 
 type (
-	Group        = pasta.PallasCurve
+	// Group is the Pallas elliptic curve used by Mina.
+	Group = pasta.PallasCurve
+	// GroupElement is a point on the Pallas curve.
 	GroupElement = pasta.PallasPoint
-	ScalarField  = pasta.PallasScalarField
-	Scalar       = pasta.PallasScalar
+	// ScalarField is the field of integers modulo the Pallas group order.
+	ScalarField = pasta.PallasScalarField
+	// Scalar is an element of the scalar field.
+	Scalar = pasta.PallasScalar
 
-	Message    = ROInput
-	PublicKey  = schnorrlike.PublicKey[*GroupElement, *Scalar]
+	// Message is an ROInput containing structured field elements and bits.
+	Message = ROInput
+	// PublicKey is a Mina public key (Pallas curve point).
+	PublicKey = schnorrlike.PublicKey[*GroupElement, *Scalar]
+	// PrivateKey is a Mina private key (scalar).
 	PrivateKey = schnorrlike.PrivateKey[*GroupElement, *Scalar]
-	Signature  = schnorrlike.Signature[*GroupElement, *Scalar]
+	// Signature is a Mina signature (R.x || s, 64 bytes little-endian).
+	Signature = schnorrlike.Signature[*GroupElement, *Scalar]
 )
 
 var (
@@ -29,14 +69,18 @@ var (
 	group    = pasta.NewPallasCurve()
 	sf       = pasta.NewPallasScalarField()
 
-	SignatureSize  = group.ElementSize() + sf.ElementSize()
-	PublicKeySize  = group.ElementSize()
+	// SignatureSize is the size of a serialized Mina signature (64 bytes).
+	SignatureSize = group.ElementSize() + sf.ElementSize()
+	// PublicKeySize is the size of a serialized Mina public key (32 bytes).
+	PublicKeySize = group.ElementSize()
+	// PrivateKeySize is the size of a Mina private key (32 bytes).
 	PrivateKeySize = sf.ElementSize()
 
 	_ schnorrlike.Scheme[*Variant, *GroupElement, *Scalar, *Message, *KeyGenerator, *Signer, *Verifier]         = (*Scheme)(nil)
 	_ tschnorr.MPCFriendlyScheme[*Variant, *GroupElement, *Scalar, *Message, *KeyGenerator, *Signer, *Verifier] = (*Scheme)(nil)
 )
 
+// NewPublicKey creates a Mina public key from a Pallas curve point.
 func NewPublicKey(point *GroupElement) (*PublicKey, error) {
 	pk, err := schnorrlike.NewPublicKey(point)
 	if err != nil {
@@ -45,6 +89,8 @@ func NewPublicKey(point *GroupElement) (*PublicKey, error) {
 	return pk, nil
 }
 
+// NewPrivateKey creates a Mina private key from a scalar.
+// The scalar must be non-zero. The corresponding public key P = x·G is computed.
 func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 	if scalar == nil {
 		return nil, errs.NewIsNil("scalar is nil")
@@ -64,6 +110,9 @@ func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 	return sk, nil
 }
 
+// NewScheme creates a Mina signature scheme with deterministic nonce derivation.
+// The nonce is derived from the private key, public key, and network ID using
+// Blake2b, following the legacy Mina/o1js implementation.
 func NewScheme(nid NetworkId, privateKey *PrivateKey) (*Scheme, error) {
 	vr, err := NewDeterministicVariant(nid, privateKey)
 	if err != nil {
@@ -74,6 +123,9 @@ func NewScheme(nid NetworkId, privateKey *PrivateKey) (*Scheme, error) {
 	}, nil
 }
 
+// NewRandomisedScheme creates a Mina signature scheme with random nonce generation.
+// This is typically used for MPC/threshold signing where nonces are generated
+// collaboratively rather than deterministically.
 func NewRandomisedScheme(nid NetworkId, prng io.Reader) (*Scheme, error) {
 	vr, err := NewRandomisedVariant(nid, prng)
 	if err != nil {
@@ -84,18 +136,23 @@ func NewRandomisedScheme(nid NetworkId, prng io.Reader) (*Scheme, error) {
 	}, nil
 }
 
+// Scheme implements the Mina Schnorr signature scheme.
+// It supports both deterministic and randomized nonce generation modes.
 type Scheme struct {
 	vr *Variant
 }
 
+// Name returns the signature scheme identifier ("SchnorrLike").
 func (*Scheme) Name() signatures.Name {
 	return schnorrlike.Name
 }
 
+// Variant returns the Mina variant configuration for this scheme.
 func (s *Scheme) Variant() *Variant {
 	return s.vr
 }
 
+// Keygen creates a key generator for Mina key pairs.
 func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	kg := &KeyGenerator{
 		schnorrlike.KeyGeneratorTrait[*GroupElement, *Scalar]{
@@ -111,6 +168,7 @@ func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	return kg, nil
 }
 
+// Signer creates a signer for producing Mina signatures.
 func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, error) {
 	if privateKey == nil {
 		return nil, errs.NewIsNil("private key is nil")
@@ -134,6 +192,7 @@ func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, 
 	return signer, nil
 }
 
+// Verifier creates a verifier for validating Mina signatures.
 func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
 	verifier := &Verifier{
 		VerifierTrait: schnorrlike.VerifierTrait[*Variant, *GroupElement, *Scalar, *Message]{
@@ -149,6 +208,7 @@ func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
 	return verifier, nil
 }
 
+// PartialSignatureVerifier creates a verifier for threshold/partial signatures.
 func (s *Scheme) PartialSignatureVerifier(publicKey *PublicKey, opts ...signatures.VerifierOption[*Verifier, *PublicKey, *Message, *Signature]) (schnorrlike.Verifier[*Variant, *GroupElement, *Scalar, *Message], error) {
 	if publicKey == nil {
 		return nil, errs.NewIsNil("public key is nil")
@@ -161,20 +221,26 @@ func (s *Scheme) PartialSignatureVerifier(publicKey *PublicKey, opts ...signatur
 	return verifier, nil
 }
 
+// KeyGeneratorOption configures key generation behavior.
 type KeyGeneratorOption = signatures.KeyGeneratorOption[*KeyGenerator, *PrivateKey, *PublicKey]
 
+// KeyGenerator creates Mina key pairs on the Pallas curve.
 type KeyGenerator struct {
 	schnorrlike.KeyGeneratorTrait[*GroupElement, *Scalar]
 }
 
+// SignerOption configures signing behavior.
 type SignerOption = signatures.SignerOption[*Signer, *Message, *Signature]
 
+// Signer produces Mina signatures.
 type Signer struct {
 	schnorrlike.SignerTrait[*Variant, *GroupElement, *Scalar, *Message]
 }
 
+// VerifierOption configures verification behavior.
 type VerifierOption = signatures.VerifierOption[*Verifier, *PublicKey, *Message, *Signature]
 
+// VerifyWithPRNG configures the verifier with a PRNG (for future batch verification).
 func VerifyWithPRNG(prng io.Reader) VerifierOption {
 	return func(v *Verifier) error {
 		if prng == nil {
@@ -185,12 +251,16 @@ func VerifyWithPRNG(prng io.Reader) VerifierOption {
 	}
 }
 
+// Verifier validates Mina signatures.
 type Verifier struct {
 	schnorrlike.VerifierTrait[*Variant, *GroupElement, *Scalar, *Message]
 
-	prng io.Reader
+	prng io.Reader // PRNG for future batch verification support
 }
 
+// SerializeSignature encodes a Mina signature to 64 bytes in little-endian format.
+// The format is (R.x || s) where both components are in little-endian byte order.
+// This matches the Mina/o1js serialization convention.
 func SerializeSignature(signature *Signature) ([]byte, error) {
 	if signature == nil {
 		return nil, errs.NewIsNil("signature is nil")
@@ -222,6 +292,9 @@ func SerializeSignature(signature *Signature) ([]byte, error) {
 	return out, nil
 }
 
+// DeserializeSignature parses a Mina signature from 64 bytes in little-endian format.
+// The R point is reconstructed from its x-coordinate with even y-coordinate (parity 0).
+// The challenge E is not stored and will be recomputed during verification.
 func DeserializeSignature(input []byte) (*Signature, error) {
 	if len(input) != SignatureSize {
 		return nil, errs.NewLength("invalid signature size. got :%d, need :%d", len(input), SignatureSize)

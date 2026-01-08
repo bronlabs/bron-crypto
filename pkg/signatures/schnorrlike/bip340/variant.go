@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
 )
 
+// VariantType identifies this as the BIP-340 Schnorr variant.
 const VariantType schnorrlike.VariantType = "bip340"
 
 var (
@@ -21,20 +22,37 @@ var (
 	_ tschnorr.MPCFriendlyVariant[*GroupElement, *Scalar, Message] = (*Variant)(nil)
 )
 
+// Variant implements BIP-340 specific signing behavior.
+// It handles the deterministic nonce derivation, even-y constraints,
+// and tagged hashing required by BIP-340.
 type Variant struct {
-	sk         *PrivateKey
-	Aux        [AuxSizeBytes]byte
-	msg        Message
-	adjustedSk *Scalar // Stores the adjusted private key d (negated if P.y is odd)
+	sk         *PrivateKey        // Private key for deterministic nonce derivation
+	Aux        [AuxSizeBytes]byte // Auxiliary randomness for nonce derivation
+	msg        Message            // Message being signed (needed for nonce computation)
+	adjustedSk *Scalar            // Private key d adjusted for P.y parity (negated if P.y is odd)
 }
 
+// Type returns the variant identifier "bip340".
 func (*Variant) Type() schnorrlike.VariantType {
 	return VariantType
 }
+
+// HashFunc returns the BIP-340 tagged hash function for challenge computation.
+// Uses SHA-256 with the tag "BIP0340/challenge" for domain separation.
 func (*Variant) HashFunc() func() hash.Hash {
 	return bip340.NewBip340HashChallenge
 }
 
+// ComputeNonceCommitment implements BIP-340 deterministic nonce derivation.
+//
+// The nonce k is derived as:
+//  1. t = d XOR H_aux(aux) where d is the (possibly negated) private key
+//  2. rand = H_nonce(t || P || m)
+//  3. k' = rand mod n
+//  4. If R.y is odd, k = n - k' (to ensure R has even y)
+//
+// This deterministic derivation prevents nonce reuse vulnerabilities while
+// the auxiliary randomness provides side-channel protection.
 func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	if v.sk == nil || v.msg == nil {
 		return nil, nil, errs.NewIsNil("need both private key and message")
@@ -103,6 +121,11 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	return bigR, k, nil
 }
 
+// ComputeChallenge computes the BIP-340 challenge using tagged hashing.
+// e = H_challenge(R.x || P || m) mod n
+//
+// The challenge hash uses SHA-256 with the tag "BIP0340/challenge".
+// R and P are encoded as 32-byte x-coordinates (x-only encoding).
 func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement, message Message) (*Scalar, error) {
 	// 11. Let e = int(hashBIP0340/challenge(bytes(R) || bytes(P) || m)) mod n.
 	roinput := slices.Concat(
@@ -118,6 +141,8 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 	return e, nil
 }
 
+// ComputeResponse computes the BIP-340 signature response: s = k + e·d mod n.
+// Uses the adjusted private key d (negated if P.y was odd during nonce commitment).
 func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
 	if privateKeyValue == nil || nonce == nil || challenge == nil {
 		return nil, errs.NewIsNil("arguments")
@@ -136,10 +161,12 @@ func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*S
 	return s, nil
 }
 
+// SerializeSignature encodes the signature to 64 bytes: (R.x || s).
 func (*Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 	return SerializeSignature(signature)
 }
 
+// Clone creates a deep copy of the variant.
 func (v *Variant) Clone() *Variant {
 	out := &Variant{
 		Aux: v.Aux,
@@ -154,9 +181,19 @@ func (v *Variant) Clone() *Variant {
 }
 
 // ============ MPC Methods ============.
+//
+// These methods support threshold/MPC Schnorr signing with BIP-340.
+// BIP-340 requires R and P to have even y-coordinates, which requires
+// special handling in distributed signing protocols.
 
 var _ tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, Message] = (*Variant)(nil)
 
+// CorrectAdditiveSecretShareParity adjusts a secret share for BIP-340's even-y requirement.
+//
+// In threshold signing, each party holds a share of the private key x.
+// If the aggregate public key P = x·G has odd y, BIP-340 requires using -x instead.
+// This method negates the share if P.y is odd, ensuring all parties use
+// consistent (negated) shares when P.y is odd.
 func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*k256.Scalar]) (*additive.Share[*k256.Scalar], error) {
 	if publicKey == nil || share == nil {
 		return nil, errs.NewIsNil("public key or secret share is nil")
@@ -174,6 +211,12 @@ func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *
 	return out, nil
 }
 
+// CorrectPartialNonceParity adjusts a partial nonce for BIP-340's even-y requirement.
+//
+// In threshold signing, the aggregate nonce commitment R must have even y.
+// After all parties contribute their nonce commitments and the aggregate R is known,
+// if R.y is odd, each party must negate their partial nonce k_i.
+// This ensures the aggregate response s = Σk_i + e·Σx_i uses the correct nonces.
 func (v *Variant) CorrectPartialNonceParity(nonceCommitment *k256.Point, k *k256.Scalar) (*k256.Point, *k256.Scalar, error) {
 	if nonceCommitment == nil || k == nil {
 		return nil, nil, errs.NewIsNil("nonce commitment or k is nil")

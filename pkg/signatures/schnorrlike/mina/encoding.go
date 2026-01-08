@@ -5,13 +5,23 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
-// https://github.com/MinaProtocol/mina/blob/develop/src/lib/base58_check/version_bytes.ml
+// Base58Check version prefixes for Mina key and signature encoding.
+// These prefixes ensure type safety and prevent accidental misuse of encoded data.
+//
+// Reference: https://github.com/MinaProtocol/mina/blob/develop/src/lib/base58_check/version_bytes.ml
 const (
-	PrivateKeyBase58VersionPrefix                  base58.VersionPrefix = 0x5A
+	// PrivateKeyBase58VersionPrefix (0x5A) identifies Base58-encoded private keys.
+	PrivateKeyBase58VersionPrefix base58.VersionPrefix = 0x5A
+	// NonZeroCurvePointCompressedBase58VersionPrefix (0xCB) identifies Base58-encoded public keys.
 	NonZeroCurvePointCompressedBase58VersionPrefix base58.VersionPrefix = 0xCB
-	SignatureBase58VersionPrefix                   base58.VersionPrefix = 0x9A
+	// SignatureBase58VersionPrefix (0x9A) identifies Base58-encoded signatures.
+	SignatureBase58VersionPrefix base58.VersionPrefix = 0x9A
 )
 
+// EncodePublicKey encodes a Mina public key to Base58Check format.
+// The encoding uses version prefix 0xCB with additional bytes [0x01, 0x01],
+// followed by the x-coordinate in little-endian and a y-parity byte.
+// Format: Base58Check(0xCB || 0x01 || 0x01 || x_LE[32] || y_parity[1])
 func EncodePublicKey(publicKey *PublicKey) (base58.Base58, error) {
 	if publicKey == nil {
 		return "", errs.NewIsNil("public key is nil")
@@ -50,6 +60,9 @@ func EncodePublicKey(publicKey *PublicKey) (base58.Base58, error) {
 	return base58.CheckEncode(payload, NonZeroCurvePointCompressedBase58VersionPrefix), nil
 }
 
+// DecodePublicKey decodes a Mina public key from Base58Check format.
+// Validates the version prefix (0xCB) and additional bytes [0x01, 0x01],
+// then reconstructs the curve point from x-coordinate and y-parity.
 func DecodePublicKey(s base58.Base58) (*PublicKey, error) {
 	data, v, err := base58.CheckDecode(s)
 	if err != nil {
@@ -95,6 +108,10 @@ func DecodePublicKey(s base58.Base58) (*PublicKey, error) {
 	return publicKey, nil
 }
 
+// EncodePrivateKey encodes a Mina private key to Base58Check format.
+// The encoding uses version prefix 0x5A with additional byte 0x01,
+// followed by the scalar value in little-endian.
+// Format: Base58Check(0x5A || 0x01 || scalar_LE[32])
 func EncodePrivateKey(privateKey *PrivateKey) (base58.Base58, error) {
 	if privateKey == nil {
 		return "", errs.NewIsNil("private key is nil")
@@ -116,6 +133,9 @@ func EncodePrivateKey(privateKey *PrivateKey) (base58.Base58, error) {
 	return base58.CheckEncode(payload, PrivateKeyBase58VersionPrefix), nil
 }
 
+// DecodePrivateKey decodes a Mina private key from Base58Check format.
+// Validates the version prefix (0x5A) and additional byte 0x01,
+// then parses the scalar value from little-endian bytes.
 func DecodePrivateKey(s base58.Base58) (*PrivateKey, error) {
 	data, v, err := base58.CheckDecode(s)
 	if err != nil {
@@ -153,6 +173,9 @@ func DecodePrivateKey(s base58.Base58) (*PrivateKey, error) {
 	return privateKey, nil
 }
 
+// EncodeSignature encodes a Mina signature to Base58Check format.
+// The signature is first serialized to 64 bytes (R.x || s in little-endian),
+// then encoded with version prefix 0x9A.
 func EncodeSignature(signature *Signature) (base58.Base58, error) {
 	if signature == nil {
 		return "", errs.NewIsNil("signature is nil")
@@ -164,6 +187,9 @@ func EncodeSignature(signature *Signature) (base58.Base58, error) {
 	return base58.CheckEncode(data, SignatureBase58VersionPrefix), nil
 }
 
+// DecodeSignature decodes a Mina signature from Base58Check format.
+// Validates the version prefix (0x9A) and deserializes the 64-byte payload
+// to reconstruct the signature (R point with even y, response scalar s).
 func DecodeSignature(s base58.Base58) (*Signature, error) {
 	data, v, err := base58.CheckDecode(s)
 	if err != nil {

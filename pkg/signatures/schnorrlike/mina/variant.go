@@ -13,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tschnorr"
 )
 
+// VariantType identifies this as the Mina Schnorr variant.
 const VariantType schnorrlike.VariantType = "mina"
 
 var (
@@ -20,6 +21,9 @@ var (
 	_ tschnorr.MPCFriendlyVariant[*GroupElement, *Scalar, *Message] = (*Variant)(nil)
 )
 
+// NewDeterministicVariant creates a Mina variant with deterministic nonce derivation.
+// The nonce is derived from the private key, public key, and network ID using Blake2b,
+// following the legacy Mina/o1js implementation.
 func NewDeterministicVariant(nid NetworkId, privateKey *PrivateKey) (*Variant, error) {
 	if privateKey == nil {
 		return nil, errs.NewIsNil("private key is nil")
@@ -30,6 +34,8 @@ func NewDeterministicVariant(nid NetworkId, privateKey *PrivateKey) (*Variant, e
 	}, nil
 }
 
+// NewRandomisedVariant creates a Mina variant with random nonce generation.
+// This is used for MPC/threshold signing where nonces are collaboratively generated.
 func NewRandomisedVariant(nid NetworkId, prng io.Reader) (*Variant, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng is nil")
@@ -40,25 +46,38 @@ func NewRandomisedVariant(nid NetworkId, prng io.Reader) (*Variant, error) {
 	}, nil
 }
 
+// Variant implements Mina-specific signing behavior.
+// It handles deterministic or random nonce generation, Poseidon-based challenge
+// computation, and the even-y constraint on the nonce commitment.
 type Variant struct {
-	nid  NetworkId
-	sk   *PrivateKey
-	prng io.Reader
+	nid  NetworkId   // Network ID for domain separation (MainNet, TestNet, or custom)
+	sk   *PrivateKey // Private key for deterministic nonce derivation (nil for random)
+	prng io.Reader   // PRNG for random nonce generation (nil for deterministic)
 }
 
+// Type returns the variant identifier "mina".
 func (*Variant) Type() schnorrlike.VariantType {
 	return VariantType
 }
 
+// HashFunc returns the Poseidon hash function constructor for challenge computation.
 func (*Variant) HashFunc() func() hash.Hash {
 	return hashFunc
 }
 
+// IsDeterministic returns true if this variant uses deterministic nonce derivation.
 func (v *Variant) IsDeterministic() bool {
 	return v.sk != nil
 }
 
-// https://github.com/o1-labs/o1js/blob/fdc94dd8d3735d01c232d7d7af49763e044b738b/src/mina-signer/src/signature.ts#L249
+// deriveNonceLegacy computes a deterministic nonce using the legacy Mina/o1js algorithm.
+// The nonce is derived as:
+//  1. Pack (pk.x, pk.y, scalar, networkId) into ROInput
+//  2. Convert packed fields to little-endian bytes
+//  3. Hash with Blake2b-256
+//  4. Clear top 2 bits (to ensure result < field modulus)
+//
+// Reference: https://github.com/o1-labs/o1js/blob/fdc94dd8d3735d01c232d7d7af49763e044b738b/src/mina-signer/src/signature.ts#L249
 func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
 	pkx, err := v.sk.PublicKey().V.AffineX()
 	if err != nil {
@@ -105,6 +124,9 @@ func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
 	return k, nil
 }
 
+// ComputeNonceCommitment generates the nonce k and commitment R = k·G.
+// Uses deterministic derivation if a private key was provided, otherwise uses PRNG.
+// The nonce is adjusted to ensure R has an even y-coordinate.
 func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	var k *Scalar
 	var err error
@@ -132,7 +154,11 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	return R, k, nil
 }
 
-// https://github.com/o1-labs/o1js/blob/885b50e60ead596cdcd8dc944df55fd3a4467a0a/src/mina-signer/src/signature.ts#L242
+// ComputeChallenge computes the Mina Fiat-Shamir challenge using Poseidon hashing.
+// The challenge is: e = Poseidon(prefix || message || pk.x || pk.y || R.x)
+// where prefix is the network-specific signature prefix.
+//
+// Reference: https://github.com/o1-labs/o1js/blob/885b50e60ead596cdcd8dc944df55fd3a4467a0a/src/mina-signer/src/signature.ts#L242
 func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement, message *Message) (*Scalar, error) {
 	if nonceCommitment == nil || publicKeyValue == nil || message == nil {
 		return nil, errs.NewIsNil("nonceCommitment, publicKeyValue and message must not be nil")
@@ -159,6 +185,7 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 	return e, nil
 }
 
+// ComputeResponse computes the Mina signature response: s = k + e·x mod n.
 func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
 	if privateKeyValue == nil || nonce == nil || challenge == nil {
 		return nil, errs.NewIsNil("privateKeyValue, nonce and challenge must not be nil")
@@ -166,17 +193,26 @@ func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*S
 	return nonce.Add(challenge.Mul(privateKeyValue)), nil
 }
 
+// SerializeSignature encodes the signature to 64 bytes in Mina's little-endian format.
 func (v *Variant) SerializeSignature(signature *Signature) ([]byte, error) {
 	return SerializeSignature(signature)
 }
 
 // ============ MPC Methods ============.
+//
+// These methods support threshold/MPC Schnorr signing with Mina.
+// Mina requires R to have an even y-coordinate, similar to BIP-340.
 
+// CorrectAdditiveSecretShareParity is a no-op for Mina since no parity correction
+// is needed for secret shares (only for nonce commitments).
 func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*Scalar]) (*additive.Share[*Scalar], error) {
 	// no changes needed
 	return share, nil
 }
 
+// CorrectPartialNonceParity adjusts a partial nonce for Mina's even-y requirement.
+// If the aggregate nonce commitment R has odd y, each party must negate their
+// partial nonce k_i to ensure the final signature is valid.
 func (v *Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupElement, localNonce *Scalar) (*GroupElement, *Scalar, error) {
 	if aggregatedNonceCommitments == nil || localNonce == nil {
 		return nil, nil, errs.NewIsNil("nonce commitment or k is nil")

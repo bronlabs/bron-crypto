@@ -1,3 +1,34 @@
+// Package bip340 implements BIP-340 Schnorr signatures for Bitcoin.
+//
+// BIP-340 defines a Schnorr signature scheme over the secp256k1 curve with
+// specific design choices optimized for Bitcoin:
+//
+// # Key Features
+//
+//   - X-only public keys: Only the x-coordinate is used (32 bytes vs 33 compressed)
+//   - Even y-coordinate constraint: R and P are implicitly lifted to have even y
+//   - Tagged hashing: Domain-separated SHA-256 for aux, nonce, and challenge
+//   - Deterministic nonce: k derived from private key, message, and auxiliary randomness
+//
+// # Signature Format
+//
+// A BIP-340 signature is 64 bytes: (R.x || s) where:
+//   - R.x: 32-byte x-coordinate of the nonce commitment
+//   - s: 32-byte response scalar
+//
+// # Security Properties
+//
+// The auxiliary randomness input protects against:
+//   - Differential fault attacks
+//   - Differential power analysis
+//   - Nonce reuse with same message but different auxiliary data
+//
+// # Batch Verification
+//
+// BIP-340 supports efficient batch verification using random linear combinations,
+// providing significant speedups when verifying multiple signatures.
+//
+// Reference: https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
 package bip340
 
 import (
@@ -14,18 +45,28 @@ import (
 )
 
 type (
-	Group        = k256.Curve
+	// Group is the secp256k1 elliptic curve used by BIP-340.
+	Group = k256.Curve
+	// GroupElement is a point on the secp256k1 curve.
 	GroupElement = k256.Point
-	ScalarField  = k256.ScalarField
-	Scalar       = k256.Scalar
+	// ScalarField is the field of integers modulo the secp256k1 group order.
+	ScalarField = k256.ScalarField
+	// Scalar is an element of the scalar field.
+	Scalar = k256.Scalar
 
-	Message    = []byte
-	PublicKey  = schnorrlike.PublicKey[*GroupElement, *Scalar]
+	// Message is a byte slice to be signed.
+	Message = []byte
+	// PublicKey is a BIP-340 public key (x-only, 32 bytes when serialized).
+	PublicKey = schnorrlike.PublicKey[*GroupElement, *Scalar]
+	// PrivateKey is a BIP-340 private key (32-byte scalar).
 	PrivateKey = schnorrlike.PrivateKey[*GroupElement, *Scalar]
-	Signature  = schnorrlike.Signature[*GroupElement, *Scalar]
+	// Signature is a BIP-340 signature (R.x || s, 64 bytes).
+	Signature = schnorrlike.Signature[*GroupElement, *Scalar]
 )
 
 const (
+	// AuxSizeBytes is the size of auxiliary randomness for nonce generation (32 bytes).
+	// The aux data is XORed with the private key before hashing to derive the nonce.
 	AuxSizeBytes int = 32
 )
 
@@ -40,6 +81,8 @@ var (
 	_ tschnorr.MPCFriendlyVariant[*GroupElement, *Scalar, Message]                                             = (*Variant)(nil)
 )
 
+// NewPublicKey creates a BIP-340 public key from a secp256k1 curve point.
+// The point is validated to be non-identity and in the prime-order subgroup.
 func NewPublicKey(point *GroupElement) (*PublicKey, error) {
 	pk, err := schnorrlike.NewPublicKey(point)
 	if err != nil {
@@ -48,6 +91,8 @@ func NewPublicKey(point *GroupElement) (*PublicKey, error) {
 	return pk, nil
 }
 
+// NewPrivateKey creates a BIP-340 private key from a scalar.
+// The scalar must be non-zero. The corresponding public key P = x·G is computed.
 func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 	if scalar == nil {
 		return nil, errs.NewIsNil("scalar is nil")
@@ -67,12 +112,18 @@ func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 	return sk, nil
 }
 
+// NewSchemeWithAux creates a BIP-340 scheme with explicit auxiliary randomness.
+// The aux data is used in nonce derivation: k = H(d XOR H(aux) || P || m).
+// Use this when you need deterministic signatures with known aux data.
 func NewSchemeWithAux(aux [AuxSizeBytes]byte) *Scheme {
 	return &Scheme{
 		aux: aux,
 	}
 }
 
+// NewScheme creates a BIP-340 scheme with random auxiliary data.
+// The aux data is sampled from prng and used for nonce derivation.
+// This provides protection against side-channel attacks.
 func NewScheme(prng io.Reader) (*Scheme, error) {
 	if prng == nil {
 		return nil, errs.NewArgument("prng is nil")
@@ -88,20 +139,25 @@ func NewScheme(prng io.Reader) (*Scheme, error) {
 	}, nil
 }
 
+// Scheme implements the BIP-340 Schnorr signature scheme.
+// It provides key generation, signing, and verification following BIP-340.
 type Scheme struct {
-	aux [AuxSizeBytes]byte
+	aux [AuxSizeBytes]byte // Auxiliary randomness for nonce derivation
 }
 
+// Name returns the signature scheme identifier ("SchnorrLike").
 func (s Scheme) Name() signatures.Name {
 	return schnorrlike.Name
 }
 
+// Variant returns the BIP-340 variant configuration for this scheme.
 func (s *Scheme) Variant() *Variant {
 	return &Variant{
 		Aux: s.aux,
 	}
 }
 
+// Keygen creates a key generator for BIP-340 key pairs.
 func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	out := &KeyGenerator{
 		KeyGeneratorTrait: schnorrlike.KeyGeneratorTrait[*GroupElement, *Scalar]{
@@ -117,6 +173,8 @@ func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	return out, nil
 }
 
+// Signer creates a signer for producing BIP-340 signatures.
+// The signer uses deterministic nonce derivation per BIP-340.
 func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, error) {
 	if privateKey == nil {
 		return nil, errs.NewArgument("private key is nil")
@@ -142,6 +200,7 @@ func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, 
 	return out, nil
 }
 
+// Verifier creates a verifier for validating BIP-340 signatures.
 func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
 	out := &Verifier{
 		variant: s.Variant(),
@@ -154,6 +213,9 @@ func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
 	return out, nil
 }
 
+// PartialSignatureVerifier creates a verifier for threshold/partial signatures.
+// In MPC signing, each party produces a partial signature that must be verified
+// against their individual public key share rather than the aggregate public key.
 func (s *Scheme) PartialSignatureVerifier(
 	publicKey *PublicKey,
 	opts ...signatures.VerifierOption[*Verifier, *PublicKey, Message, *Signature],
@@ -169,6 +231,9 @@ func (s *Scheme) PartialSignatureVerifier(
 	return verifier, nil
 }
 
+// NewSignatureFromBytes deserializes a BIP-340 signature from 64 bytes.
+// The format is (R.x || s) where R.x is the 32-byte x-coordinate
+// and s is the 32-byte response scalar.
 func NewSignatureFromBytes(input []byte) (*Signature, error) {
 	if len(input) != 64 {
 		return nil, errs.NewSerialisation("invalid length")
@@ -188,18 +253,25 @@ func NewSignatureFromBytes(input []byte) (*Signature, error) {
 	}, nil
 }
 
+// KeyGeneratorOption configures key generation behavior.
 type KeyGeneratorOption = signatures.KeyGeneratorOption[*KeyGenerator, *PrivateKey, *PublicKey]
 
+// KeyGenerator creates BIP-340 key pairs.
 type KeyGenerator struct {
 	schnorrlike.KeyGeneratorTrait[*GroupElement, *Scalar]
 }
 
+// SignerOption configures signing behavior.
 type SignerOption = signatures.SignerOption[*Signer, Message, *Signature]
 
+// Signer produces BIP-340 signatures using deterministic nonce derivation.
 type Signer struct {
 	sg schnorrlike.SignerTrait[*Variant, *GroupElement, *Scalar, Message]
 }
 
+// Sign creates a BIP-340 signature on the message.
+// The nonce is derived deterministically from the private key, message,
+// and auxiliary randomness per BIP-340 specification.
 func (s *Signer) Sign(message Message) (*Signature, error) {
 	// ComputeNonceCommitment requires a message
 	s.sg.V.msg = message
@@ -210,12 +282,16 @@ func (s *Signer) Sign(message Message) (*Signature, error) {
 	return sig, nil
 }
 
+// Variant returns the BIP-340 variant used by this signer.
 func (s *Signer) Variant() *Variant {
 	return s.sg.V
 }
 
+// VerifierOption configures verification behavior.
 type VerifierOption = signatures.VerifierOption[*Verifier, *PublicKey, Message, *Signature]
 
+// VerifyWithPRNG configures the verifier with a PRNG for batch verification.
+// The PRNG is used to generate random coefficients for the batch equation.
 func VerifyWithPRNG(prng io.Reader) VerifierOption {
 	return func(v *Verifier) error {
 		if prng == nil {
@@ -226,16 +302,27 @@ func VerifyWithPRNG(prng io.Reader) VerifierOption {
 	}
 }
 
+// Verifier validates BIP-340 signatures.
 type Verifier struct {
-	variant            *Variant
-	prng               io.Reader
-	challengePublicKey *PublicKey
+	variant            *Variant   // BIP-340 variant configuration
+	prng               io.Reader  // PRNG for batch verification
+	challengePublicKey *PublicKey // Override for partial signature verification
 }
 
+// Variant returns the BIP-340 variant used by this verifier.
 func (v *Verifier) Variant() *Variant {
 	return v.variant
 }
 
+// Verify checks that a BIP-340 signature is valid for a message under a public key.
+//
+// The verification follows BIP-340 Section 4.2:
+//  1. P = lift_x(pk) - lift public key to have even y
+//  2. e = H(R.x || P || m) mod n - compute challenge
+//  3. R' = s·G - e·P - compute expected nonce commitment
+//  4. Verify R'.x = r and R' has even y
+//
+// Returns nil if valid, otherwise returns an error describing the failure.
 func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Message) error {
 	if publicKey == nil || publicKey.Value() == nil {
 		return errs.NewArgument("curve not supported")
@@ -303,6 +390,16 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 	return nil
 }
 
+// BatchVerify efficiently verifies multiple BIP-340 signatures using random linear combinations.
+//
+// The batch equation is: (s1 + a2·s2 + ... + au·su)·G = R1 + a2·R2 + ... + au·Ru + e1·P1 + (a2·e2)·P2 + ... + (au·eu)·Pu
+//
+// This is more efficient than individual verification when verifying many signatures,
+// as it requires only one multi-scalar multiplication instead of u separate ones.
+//
+// The verifier must be initialized with a PRNG using VerifyWithPRNG option.
+// The random coefficients a2...au prevent an attacker from constructing signatures
+// that pass batch verification but fail individual verification.
 func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey, messages []Message, prng io.Reader) error {
 	if v.prng == nil {
 		return errs.NewIsNil("batch verification requires a prng. Initialise the verifier with the prng option")
@@ -371,6 +468,9 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 	return nil
 }
 
+// LiftX converts a point to have an even y-coordinate per BIP-340.
+// If p.y is odd, returns -p (which has even y). Otherwise returns p unchanged.
+// This is used to convert x-only public keys and R values to full curve points.
 func LiftX(p *k256.Point) *k256.Point {
 	if p.IsZero() {
 		return p
@@ -386,6 +486,8 @@ func LiftX(p *k256.Point) *k256.Point {
 	return p
 }
 
+// SerializeSignature encodes a BIP-340 signature to 64 bytes: (R.x || s).
+// The R point is encoded as its 32-byte x-coordinate (x-only encoding).
 func SerializeSignature(signature *Signature) ([]byte, error) {
 	if signature == nil || signature.R == nil || signature.S == nil {
 		return nil, errs.NewArgument("signature is nil")
@@ -393,6 +495,8 @@ func SerializeSignature(signature *Signature) ([]byte, error) {
 	return slices.Concat(signature.R.ToCompressed()[1:], signature.S.Bytes()), nil
 }
 
+// NewPublicKeyFromBytes deserializes a BIP-340 public key from 32 bytes (x-only).
+// The y-coordinate is implicitly even per the BIP-340 lift_x operation.
 func NewPublicKeyFromBytes(input []byte) (*PublicKey, error) {
 	p, err := decodePoint(input)
 	if err != nil {
@@ -405,6 +509,8 @@ func NewPublicKeyFromBytes(input []byte) (*PublicKey, error) {
 	return pk, nil
 }
 
+// SerializePublicKey encodes a BIP-340 public key to 32 bytes (x-only).
+// Only the x-coordinate is serialized; y is implicitly even.
 func SerializePublicKey(publicKey *PublicKey) ([]byte, error) {
 	if publicKey == nil {
 		return nil, errs.NewArgument("public key is nil")
@@ -412,10 +518,13 @@ func SerializePublicKey(publicKey *PublicKey) ([]byte, error) {
 	return publicKey.Value().ToCompressed()[1:], nil
 }
 
+// encodePoint serializes a point to 32 bytes (x-coordinate only).
 func encodePoint(p *k256.Point) []byte {
 	return p.ToCompressed()[1:]
 }
 
+// decodePoint deserializes a 32-byte x-coordinate to a curve point.
+// The point is reconstructed with even y-coordinate (0x02 prefix).
 func decodePoint(data []byte) (*k256.Point, error) {
 	curve := k256.NewCurve()
 	p, err := curve.FromCompressed(slices.Concat([]byte{0x02}, data))

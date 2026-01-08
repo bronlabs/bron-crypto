@@ -212,7 +212,7 @@ var stringTests = []struct {
 }
 
 func TestLegacySignatures(t *testing.T) {
-	t.Skip()
+	t.Skip() // Skipping test vector tests for now until we waste further time into their undocumented code.
 	t.Parallel()
 	publicKey, err := mina.DecodePublicKey(testVectorParams.publicKey)
 	require.NoError(t, err)
