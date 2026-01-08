@@ -237,6 +237,19 @@ type Signer struct {
 	schnorrlike.SignerTrait[*Variant, *GroupElement, *Scalar, *Message]
 }
 
+// Sign creates a Mina signature on the given message.
+// The message is set on the variant before signing to enable deterministic
+// nonce derivation that includes the message content.
+func (s *Signer) Sign(message *Message) (*Signature, error) {
+	// Set message on variant for deterministic nonce derivation
+	s.V.msg = message
+	sig, err := s.SignerTrait.Sign(message)
+	if err != nil {
+		return nil, err
+	}
+	return sig, nil
+}
+
 // VerifierOption configures verification behavior.
 type VerifierOption = signatures.VerifierOption[*Verifier, *PublicKey, *Message, *Signature]
 

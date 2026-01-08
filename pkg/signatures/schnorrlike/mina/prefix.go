@@ -149,16 +149,6 @@ func bytesToBits(bytes []byte) []bool {
 	return bits
 }
 
-// networkIdToBits converts a big.Int network ID to a bit slice in LSB-first order.
-// The output has exactly bitLength bits, padding with zeros if necessary.
-func networkIdToBits(id *big.Int, bitLength int) []bool {
-	bits := make([]bool, bitLength)
-	for i := 0; i < bitLength; i++ {
-		bits[i] = id.Bit(i) == 1
-	}
-	return bits
-}
-
 // reversedBytes returns a new byte slice with elements in reversed order.
 // Used to convert between big-endian and little-endian byte representations.
 func reversedBytes(b []byte) []byte {

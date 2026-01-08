@@ -121,18 +121,23 @@ func (r *ROInput) PackToFields() []*pasta.PallasBaseFieldElement {
 	return fields
 }
 
-// BitsLength returns the number of bits currently stored
-func (r *ROInput) BitsLength() int {
-	if r.bits == nil {
-		return 0
+// Fields returns a copy of the field elements stored in the ROInput.
+func (r *ROInput) Fields() []*pasta.PallasBaseFieldElement {
+	result := make([]*pasta.PallasBaseFieldElement, len(r.fields))
+	for i, f := range r.fields {
+		result[i] = f.Clone()
 	}
-	return r.bits.Length()
+	return result
 }
 
-// BitsBytes returns the raw bytes of the bit vector
-func (r *ROInput) BitsBytes() []byte {
+// Bits returns all bits as a boolean slice.
+func (r *ROInput) Bits() []bool {
 	if r.bits == nil {
 		return nil
 	}
-	return r.bits.Bytes()
+	result := make([]bool, r.bits.Length())
+	for i := range r.bits.Length() {
+		result[i] = r.bits.Element(i) == 1
+	}
+	return result
 }

@@ -6,6 +6,7 @@ import (
 
 	"golang.org/x/crypto/blake2b"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
@@ -53,6 +54,7 @@ type Variant struct {
 	nid  NetworkId   // Network ID for domain separation (MainNet, TestNet, or custom)
 	sk   *PrivateKey // Private key for deterministic nonce derivation (nil for random)
 	prng io.Reader   // PRNG for random nonce generation (nil for deterministic)
+	msg  *Message    // Message being signed (needed for deterministic nonce derivation)
 }
 
 // Type returns the variant identifier "mina".
@@ -70,15 +72,52 @@ func (v *Variant) IsDeterministic() bool {
 	return v.sk != nil
 }
 
+// fieldTo255Bits converts a field element to 255 bits in LSB-first order.
+// This matches o1js's Field.toBits() which returns 255 bits.
+//
+// IMPORTANT: o1js uses little-endian byte order for field elements,
+// so we need to reverse the byte order from our big-endian representation.
+func fieldTo255Bits(field *pasta.PallasBaseFieldElement) []bool {
+	bytesLE := reversedBytes(field.Bytes()) // Convert big-endian to little-endian
+	bits := make([]bool, 255)
+	// o1js bytesToBits: extracts LSB-first per byte, starting from bytes[0]
+	for i := range 255 {
+		byteIdx := i / 8
+		bitIdx := i % 8
+		bits[i] = (bytesLE[byteIdx]>>bitIdx)&1 == 1
+	}
+	return bits
+}
+
+// bitsToBytes converts a slice of bits to bytes using LSB-first ordering per byte.
+// This matches o1js's bitsToBytes function.
+func bitsToBytes(bits []bool) []byte {
+	numBytes := (len(bits) + 7) / 8
+	bytes := make([]byte, numBytes)
+	for i, bit := range bits {
+		if bit {
+			byteIdx := i / 8
+			bitIdx := i % 8
+			bytes[byteIdx] |= 1 << bitIdx
+		}
+	}
+	return bytes
+}
+
 // deriveNonceLegacy computes a deterministic nonce using the legacy Mina/o1js algorithm.
 // The nonce is derived as:
-//  1. Pack (pk.x, pk.y, scalar, networkId) into ROInput
-//  2. Convert packed fields to little-endian bytes
-//  3. Hash with Blake2b-256
-//  4. Clear top 2 bits (to ensure result < field modulus)
+//  1. Build HashInputLegacy with message fields + [pk.x, pk.y], and bits + scalarBits + idBits
+//  2. Convert to bits using inputToBitsLegacy: fields→255 bits each, then raw bits
+//  3. Convert bits to bytes (LSB-first per byte)
+//  4. Hash with Blake2b-256
+//  5. Clear top 2 bits of last byte (to ensure result < field modulus)
 //
 // Reference: https://github.com/o1-labs/o1js/blob/fdc94dd8d3735d01c232d7d7af49763e044b738b/src/mina-signer/src/signature.ts#L249
 func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
+	if v.msg == nil {
+		return nil, errs.NewIsNil("message is nil for deterministic nonce derivation")
+	}
+
 	pkx, err := v.sk.PublicKey().V.AffineX()
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "failed to get public key X coordinate")
@@ -88,40 +127,78 @@ func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
 		return nil, errs.WrapSerialisation(err, "failed to get public key Y coordinate")
 	}
 
-	// Get scalar and network ID in LE format
-	scalarBytesLE := reversedBytes(v.sk.Value().Bytes())
-	scalarBits := bytesToBits(scalarBytesLE)
+	// Convert private key to bits using Scalar.toBits()
+	// In o1js: let scalarBits = Scalar.toBits(privateKey)
+	scalarBits := scalarTo255Bits(v.sk.Value())
 
-	id, bitLength := getNetworkIdHashInput(v.nid)
-	idBits := networkIdToBits(id, bitLength)
-
-	// Use ROInput to properly structure the data
-	input := new(ROInput).Init()
-	input.AddFields(pkx, pky)
-	input.AddBits(scalarBits...)
-	input.AddBits(idBits...)
-
-	// Pack to fields
-	packed := input.PackToFields()
-
-	// Convert packed fields to LE bytes for blake2b
-	var allBytes []byte
-	for _, field := range packed {
-		fieldBytesLE := reversedBytes(field.Bytes())
-		allBytes = append(allBytes, fieldBytesLE...)
+	// Get network ID as bits
+	// In o1js: let idBits = bytesToBits([Number(id)])
+	// For mainnet id=1, testnet id=0, converted to 8 bits LSB-first
+	id, _ := getNetworkIdHashInput(v.nid)
+	idByte := byte(id.Uint64())
+	idBits := make([]bool, 8)
+	for i := range 8 {
+		idBits[i] = (idByte>>i)&1 == 1
 	}
 
-	digest := blake2b.Sum256(allBytes)
+	// Get message fields and bits separately
+	// o1js: let input = HashInputLegacy.append(message, { fields: [x, y], bits: [...scalarBits, ...idBits] })
+	msgFields := v.msg.Fields()
+	msgBits := v.msg.Bits()
 
-	// Blake2b digest as BE (interpret as-is)
-	// Drop top two bits
-	digest[0] &= 0x3f
+	// Build all bits using inputToBitsLegacy logic:
+	// fields.flatMap(f => f.toBits()) ++ bits
+	var allBits []bool
 
-	k, err := sf.FromBytes(digest[:])
+	// 1. Convert message fields to 255 bits each
+	for _, field := range msgFields {
+		allBits = append(allBits, fieldTo255Bits(field)...)
+	}
+
+	// 2. Convert additional fields [pk.x, pk.y] to 255 bits each
+	allBits = append(allBits, fieldTo255Bits(pkx)...)
+	allBits = append(allBits, fieldTo255Bits(pky)...)
+
+	// 3. Append raw message bits
+	allBits = append(allBits, msgBits...)
+
+	// 4. Append scalar bits (private key)
+	allBits = append(allBits, scalarBits...)
+
+	// 5. Append network ID bits
+	allBits = append(allBits, idBits...)
+
+	// Convert bits to bytes (LSB-first per byte)
+	// This matches: bitsToBytes(inputBits)
+	inputBytes := bitsToBytes(allBits)
+
+	digest := blake2b.Sum256(inputBytes)
+
+	// Drop top two bits of last byte
+	// Reference: bytes[bytes.length - 1] &= 0x3f in o1js
+	digest[len(digest)-1] &= 0x3f
+
+	// Scalar.fromBytes interprets bytes as little-endian in o1js
+	// Our sf.FromBytes expects big-endian, so we need to reverse
+	digestBE := reversedBytes(digest[:])
+	k, err := sf.FromBytes(digestBE)
 	if err != nil {
 		return nil, errs.WrapSerialisation(err, "failed to create scalar from bytes")
 	}
 	return k, nil
+}
+
+// scalarTo255Bits converts a scalar to 255 bits in LSB-first order.
+// This matches o1js's Scalar.toBits() which returns 255 bits.
+func scalarTo255Bits(scalar *Scalar) []bool {
+	bytesLE := reversedBytes(scalar.Bytes()) // Convert big-endian to little-endian
+	bits := make([]bool, 255)
+	for i := range 255 {
+		byteIdx := i / 8
+		bitIdx := i % 8
+		bits[i] = (bytesLE[byteIdx]>>bitIdx)&1 == 1
+	}
+	return bits
 }
 
 // ComputeNonceCommitment generates the nonce k and commitment R = k·G.
