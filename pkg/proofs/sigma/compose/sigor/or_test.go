@@ -122,26 +122,24 @@ func testOrHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algeb
 	sf, ok := curve.ScalarStructure().(algebra.PrimeField[S])
 	require.True(tb, ok)
 
-	// Create statements and witnesses
-	// Only index 0 has a valid witness, others have random (invalid) witnesses
+	// Create statements and witness
+	// Only index 0 has a valid witness
 	statements := make(sigor.Statement[*schnorr.Statement[P, S]], count)
-	witnesses := make(sigor.Witness[*schnorr.Witness[S]], count)
+	var witness sigor.Witness[*schnorr.Witness[S]]
 
 	for i := uint(0); i < count; i++ {
-		w, err := sf.Random(crand.Reader)
-		require.NoError(tb, err)
-
 		if i == 0 {
 			// Valid witness: x = g^w
+			w, err := sf.Random(crand.Reader)
+			require.NoError(tb, err)
 			x := base.ScalarMul(w)
 			statements[i] = schnorr.NewStatement(x)
-			witnesses[i] = schnorr.NewWitness(w)
+			witness = sigor.NewWitness(schnorr.NewWitness(w))
 		} else {
-			// Invalid witness: random x not equal to g^w
+			// Invalid statement: random x with no known witness
 			x, err := curve.Random(crand.Reader)
 			require.NoError(tb, err)
 			statements[i] = schnorr.NewStatement(x)
-			witnesses[i] = schnorr.NewWitness(w) // wrong witness
 		}
 	}
 
@@ -150,11 +148,11 @@ func testOrHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algeb
 	require.NoError(tb, err)
 
 	// Validate that exactly one statement is valid
-	err = orProtocol.ValidateStatement(statements, witnesses)
+	err = orProtocol.ValidateStatement(statements, witness)
 	require.NoError(tb, err)
 
 	// Round 1: Prover commitment
-	commitment, state, err := orProtocol.ComputeProverCommitment(statements, witnesses)
+	commitment, state, err := orProtocol.ComputeProverCommitment(statements, witness)
 	require.NoError(tb, err)
 
 	// Round 2: Verifier challenge
@@ -163,7 +161,7 @@ func testOrHappyPath[P curves.Point[P, F, S], F algebra.FieldElement[F], S algeb
 	require.NoError(tb, err)
 
 	// Round 3: Prover response
-	response, err := orProtocol.ComputeProverResponse(statements, witnesses, commitment, state, challenge)
+	response, err := orProtocol.ComputeProverResponse(statements, witness, commitment, state, challenge)
 	require.NoError(tb, err)
 
 	// Verify
@@ -226,21 +224,19 @@ func testOrXORConstraint[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 
 	// Create statements with one valid witness
 	statements := make(sigor.Statement[*schnorr.Statement[P, S]], count)
-	witnesses := make(sigor.Witness[*schnorr.Witness[S]], count)
+	var witness sigor.Witness[*schnorr.Witness[S]]
 
 	for i := uint(0); i < count; i++ {
-		w, err := sf.Random(crand.Reader)
-		require.NoError(tb, err)
-
 		if i == 0 {
+			w, err := sf.Random(crand.Reader)
+			require.NoError(tb, err)
 			x := base.ScalarMul(w)
 			statements[i] = schnorr.NewStatement(x)
-			witnesses[i] = schnorr.NewWitness(w)
+			witness = sigor.NewWitness(schnorr.NewWitness(w))
 		} else {
 			x, err := curve.Random(crand.Reader)
 			require.NoError(tb, err)
 			statements[i] = schnorr.NewStatement(x)
-			witnesses[i] = schnorr.NewWitness(w)
 		}
 	}
 
@@ -249,14 +245,14 @@ func testOrXORConstraint[P curves.Point[P, F, S], F algebra.FieldElement[F], S a
 	require.NoError(tb, err)
 
 	// Run protocol
-	commitment, state, err := orProtocol.ComputeProverCommitment(statements, witnesses)
+	commitment, state, err := orProtocol.ComputeProverCommitment(statements, witness)
 	require.NoError(tb, err)
 
 	challenge := make([]byte, orProtocol.GetChallengeBytesLength())
 	_, err = io.ReadFull(crand.Reader, challenge)
 	require.NoError(tb, err)
 
-	response, err := orProtocol.ComputeProverResponse(statements, witnesses, commitment, state, challenge)
+	response, err := orProtocol.ComputeProverResponse(statements, witness, commitment, state, challenge)
 	require.NoError(tb, err)
 
 	// Verify XOR constraint: e_0 XOR e_1 XOR ... XOR e_n = challenge

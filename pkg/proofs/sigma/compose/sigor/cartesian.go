@@ -322,7 +322,7 @@ func (p *protocolCartesian[X0, X1, W0, W1, A0, A1, S0, S1, Z0, Z1]) ValidateStat
 	err1 := p.sigma1.ValidateStatement(statement.X1, witness.W1)
 
 	if err0 != nil && err1 != nil {
-		return ErrNotExactlyOneOutOfN.WithStackFrame()
+		return ErrNotAtLeastOneOutOfN.WithStackFrame()
 	}
 
 	return nil
