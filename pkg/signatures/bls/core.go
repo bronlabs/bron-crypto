@@ -17,11 +17,15 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 )
 
-// TODO: redo
+// RandomOracleHashFunction is the hash function used for key derivation.
+// SHA3-256 is used as it models a random oracle for salt generation.
 var RandomOracleHashFunction = sha3.New256
 
-// The salt used with generating secret keys
-// See section 2.3 from https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-keygen
+// HKDFKeyGenSalt is the initial salt value for key generation using HKDF.
+// Per the spec, if the initial hash produces a zero scalar, the salt is re-hashed
+// and the process repeated until a valid non-zero key is derived.
+//
+// See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.3
 const HKDFKeyGenSalt = "BLS-SIG-KEYGEN-SALT-"
 
 func generateWithSeed[K curves.Point[K, FK, S], FK algebra.FieldElement[FK], S algebra.PrimeFieldElement[S]](group curves.Curve[K, FK, S], ikm []byte) (S, K, error) {
@@ -283,8 +287,13 @@ func popVerify[
 	return coreVerify(publicKey, message, pop, popDst, signatureSubGroup)
 }
 
-// See section 3.2.1 from
-// https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-sign
+// AugmentMessage prepends the serialized public key to the message for the Message Augmentation
+// signature scheme. This creates a unique message per signer, preventing rogue key attacks
+// without requiring additional proofs or message distinctness checks.
+//
+// The augmented message is: pk || msg
+//
+// See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-3.2.1
 func AugmentMessage[
 	PK curves.Point[PK, PKFE, S], PKFE algebra.FieldElement[PKFE], S algebra.PrimeFieldElement[S],
 ](message []byte, publicKey PK) ([]byte, error) {

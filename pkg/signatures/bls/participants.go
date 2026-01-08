@@ -13,6 +13,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
+// KeyGeneratorOption is a functional option for configuring a KeyGenerator.
 type KeyGeneratorOption[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -23,6 +24,11 @@ type KeyGeneratorOption[
 	*PublicKey[PK, PKFE, SG, SGFE, E, S],
 ]
 
+// GenerateWithSeed returns a KeyGeneratorOption that uses the provided seed for
+// deterministic key generation instead of random sampling.
+//
+// The seed must be at least as long as the scalar field element size (32 bytes for BLS12-381).
+// Using the same seed will always produce the same key pair.
 func GenerateWithSeed[PK curves.PairingFriendlyPoint[PK, FE, Sig, SigFE, E, S], FE algebra.FieldElement[FE],
 	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, FE, E, S], SigFE algebra.FieldElement[SigFE],
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
@@ -33,6 +39,10 @@ func GenerateWithSeed[PK curves.PairingFriendlyPoint[PK, FE, Sig, SigFE, E, S], 
 	}
 }
 
+// KeyGenerator generates BLS key pairs using the KeyGen algorithm from the specification.
+// Key generation uses HKDF with SHA3-256 to derive secret keys from input keying material.
+//
+// See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.3
 type KeyGenerator[
 	PK curves.PairingFriendlyPoint[PK, FE, Sig, SigFE, E, S], FE algebra.FieldElement[FE],
 	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, FE, E, S], SigFE algebra.FieldElement[SigFE],
@@ -42,6 +52,16 @@ type KeyGenerator[
 	seed  []byte
 }
 
+// GenerateWithSeed derives a BLS key pair from the provided input keying material (IKM).
+// The IKM must be at least 32 bytes and should contain high-entropy random data.
+//
+// This implements the KeyGen algorithm:
+//  1. Hash the salt to get initial HKDF salt
+//  2. Use HKDF-Extract and HKDF-Expand to derive key material
+//  3. Convert to scalar, re-hash salt if result is zero
+//  4. Compute public key as sk * G
+//
+// See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.3
 func (kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) GenerateWithSeed(ikm []byte) (*PrivateKey[PK, FE, Sig, SigFE, E, S], *PublicKey[PK, FE, Sig, SigFE, E, S], error) {
 	skv, _, err := generateWithSeed(kg.group, ikm)
 	if err != nil {
@@ -54,6 +74,10 @@ func (kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) GenerateWithSeed(ikm []byte) (
 	return sk, sk.PublicKey(), nil
 }
 
+// Generate creates a new BLS key pair using random bytes from the provided reader.
+// If a seed was previously set via GenerateWithSeed option, that seed is used instead.
+//
+// The prng should be a cryptographically secure random source (e.g., crypto/rand.Reader).
 func (kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) Generate(prng io.Reader) (*PrivateKey[PK, FE, Sig, SigFE, E, S], *PublicKey[PK, FE, Sig, SigFE, E, S], error) {
 	if kg.seed == nil {
 		sf := algebra.StructureMustBeAs[algebra.PrimeField[S]](kg.group.ScalarStructure())
@@ -65,6 +89,7 @@ func (kg *KeyGenerator[PK, FE, Sig, SigFE, E, S]) Generate(prng io.Reader) (*Pri
 	return kg.GenerateWithSeed(kg.seed)
 }
 
+// SignerOption is a functional option for configuring a Signer.
 type SignerOption[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -75,6 +100,10 @@ type SignerOption[
 	*Signature[SG, SGFE, PK, PKFE, E, S],
 ]
 
+// SignWithCustomDST returns a SignerOption that overrides the default domain separation tag
+// for hash-to-curve operations. This allows interoperability with systems using non-standard DSTs.
+//
+// Warning: Using non-standard DSTs may break compatibility with other BLS implementations.
 func SignWithCustomDST[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -89,6 +118,13 @@ func SignWithCustomDST[
 	}
 }
 
+// Signer produces BLS signatures using the CoreSign algorithm. The signing behavior
+// depends on the configured rogue key prevention algorithm:
+//   - Basic: signs the message directly
+//   - MessageAugmentation: signs pk || message
+//   - POP: signs message and attaches a proof of possession
+//
+// See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.6
 type Signer[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -103,6 +139,13 @@ type Signer[
 	dst string
 }
 
+// Sign creates a BLS signature on the given message.
+// The signature is computed as: sig = sk * H(msg) where H is hash-to-curve.
+//
+// For MessageAugmentation scheme, the public key is prepended to the message.
+// For POP scheme, a proof of possession is attached to the signature.
+//
+// See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.6
 func (s *Signer[PK, PKFE, SG, SGFE, E, S]) Sign(message []byte) (*Signature[SG, SGFE, PK, PKFE, E, S], error) {
 	if len(message) == 0 {
 		return nil, errs.NewIsNil("message cannot be nil")
@@ -148,6 +191,10 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) Sign(message []byte) (*Signature[SG, 
 	return out, nil
 }
 
+// AggregateSign creates a single aggregate signature over multiple messages using the same key.
+// This is more efficient than signing each message individually and then aggregating.
+//
+// The resulting signature can be verified against the signer's public key and all messages.
 func (s *Signer[PK, PKFE, SG, SGFE, E, S]) AggregateSign(messages ...Message) (*Signature[SG, SGFE, PK, PKFE, E, S], error) {
 	if len(messages) == 0 {
 		return nil, errs.NewIsNil("need at least one message to batch sign")
@@ -192,6 +239,11 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) AggregateSign(messages ...Message) (*
 	return out, nil
 }
 
+// BatchSign creates individual signatures for each message in parallel.
+// Returns a slice of signatures, one per message, in the same order as the input.
+//
+// This is useful when you need separate signatures that can be independently verified
+// or selectively aggregated later.
 func (s *Signer[PK, PKFE, SG, SGFE, E, S]) BatchSign(messages ...Message) ([]*Signature[SG, SGFE, PK, PKFE, E, S], error) {
 	if len(messages) == 0 {
 		return nil, errs.NewIsNil("need at least one message to batch sign")
@@ -245,6 +297,7 @@ func (s *Signer[PK, PKFE, SG, SGFE, E, S]) BatchSign(messages ...Message) ([]*Si
 	return batch, nil
 }
 
+// VerifierOption is a functional option for configuring a Verifier.
 type VerifierOption[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -256,6 +309,10 @@ type VerifierOption[
 	*Signature[SG, SGFE, PK, PKFE, E, S],
 ]
 
+// VerifyWithCustomDST returns a VerifierOption that overrides the default domain separation tag.
+// The DST must match the one used during signing for verification to succeed.
+//
+// Warning: Using non-standard DSTs may break compatibility with other BLS implementations.
 func VerifyWithCustomDST[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -270,6 +327,11 @@ func VerifyWithCustomDST[
 	}
 }
 
+// VerifyWithProofsOfPossession returns a VerifierOption that provides pre-validated proofs
+// of possession for aggregate signature verification. This is required for AggregateVerify
+// when using the POP rogue key prevention scheme.
+//
+// The number of proofs must match the number of public keys in the verification.
 func VerifyWithProofsOfPossession[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -286,6 +348,15 @@ func VerifyWithProofsOfPossession[
 	}
 }
 
+// Verifier validates BLS signatures using the CoreVerify algorithm.
+// Verification uses the pairing equation to check: e(pk, H(m)) = e(G, sig)
+//
+// The verification behavior depends on the rogue key prevention algorithm:
+//   - Basic: verifies signature directly
+//   - MessageAugmentation: reconstructs pk || message before verification
+//   - POP: verifies attached proof of possession before signature verification
+//
+// See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.7
 type Verifier[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -300,10 +371,15 @@ type Verifier[
 	dst  string
 }
 
-// Verify implements the verification algorithm for all 3 schemes
-// Basic: identical to core sign.
-// Verify: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-verify
-// POP: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-proof-of-possession
+// Verify validates a BLS signature against a public key and message.
+//
+// The verification uses an optimized pairing check: e(pk^-1, H(m)) * e(G, sig) = 1
+// which reduces the number of Miller loop iterations.
+//
+// Security: Validates that both the public key and signature are valid non-identity
+// points in their respective prime-order subgroups before performing verification.
+//
+// See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.7
 func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) Verify(signature *Signature[SG, SGFE, PK, PKFE, E, S], publicKey *PublicKey[PK, PKFE, SG, SGFE, E, S], message Message) error {
 	if len(message) == 0 {
 		return errs.NewIsNil("message cannot be nil")
@@ -357,6 +433,17 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) Verify(signature *Signature[SG, SGF
 	return nil
 }
 
+// AggregateVerify validates an aggregate signature against multiple public keys and messages.
+// The verification behavior depends on the rogue key prevention algorithm:
+//
+//   - Basic: requires all messages to be distinct to prevent rogue key attacks
+//   - MessageAugmentation: augments each message with its corresponding public key
+//   - POP: requires valid proofs of possession for each public key (via VerifyWithProofsOfPossession)
+//
+// When all messages are identical and using the POP scheme, the optimized FastAggregateVerify
+// algorithm is used, which aggregates public keys before verification.
+//
+// See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.9
 func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signature[SG, SGFE, PK, PKFE, E, S], publicKeys []*PublicKey[PK, PKFE, SG, SGFE, E, S], messages []Message) error {
 	if len(publicKeys) != len(messages) {
 		return errs.NewSize("#public keys != #messages")
@@ -445,33 +532,4 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) AggregateVerify(signature *Signatur
 		return errs.WrapVerification(err, "could not verify aggregate signature")
 	}
 	return nil
-}
-
-func _[
-	PK curves.PairingFriendlyPoint[PK, PKFE, Sig, SigFE, E, S], PKFE algebra.FieldElement[PKFE],
-	Sig curves.PairingFriendlyPoint[Sig, SigFE, PK, PKFE, E, S], SigFE algebra.FieldElement[SigFE],
-	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
-]() {
-	var (
-		_ signatures.KeyGenerator[*PrivateKey[PK, PKFE, Sig, SigFE, E, S], *PublicKey[PK, PKFE, Sig, SigFE, E, S]] = (*KeyGenerator[PK, PKFE, Sig, SigFE, E, S])(nil)
-		_ signatures.KeyGenerator[*PrivateKey[Sig, SigFE, PK, PKFE, E, S], *PublicKey[Sig, SigFE, PK, PKFE, E, S]] = (*KeyGenerator[Sig, SigFE, PK, PKFE, E, S])(nil)
-
-		_ signatures.BatchSigner[Message, *Signature[Sig, SigFE, PK, PKFE, E, S]] = (*Signer[PK, PKFE, Sig, SigFE, E, S])(nil)
-		_ signatures.BatchSigner[Message, *Signature[PK, PKFE, Sig, SigFE, E, S]] = (*Signer[Sig, SigFE, PK, PKFE, E, S])(nil)
-
-		_ signatures.AggregateSigner[Message, *Signature[Sig, SigFE, PK, PKFE, E, S], *Signature[Sig, SigFE, PK, PKFE, E, S]] = (*Signer[PK, PKFE, Sig, SigFE, E, S])(nil)
-		_ signatures.AggregateSigner[Message, *Signature[PK, PKFE, Sig, SigFE, E, S], *Signature[PK, PKFE, Sig, SigFE, E, S]] = (*Signer[Sig, SigFE, PK, PKFE, E, S])(nil)
-
-		_ signatures.Verifier[*PublicKey[PK, PKFE, Sig, SigFE, E, S], Message, *Signature[Sig, SigFE, PK, PKFE, E, S]] = (*Verifier[PK, PKFE, Sig, SigFE, E, S])(nil)
-		_ signatures.Verifier[*PublicKey[Sig, SigFE, PK, PKFE, E, S], Message, *Signature[PK, PKFE, Sig, SigFE, E, S]] = (*Verifier[Sig, SigFE, PK, PKFE, E, S])(nil)
-
-		_ signatures.AggregateVerifier[*PublicKey[PK, PKFE, Sig, SigFE, E, S], Message, *Signature[Sig, SigFE, PK, PKFE, E, S], *Signature[Sig, SigFE, PK, PKFE, E, S]] = (*Verifier[PK, PKFE, Sig, SigFE, E, S])(nil)
-		_ signatures.AggregateVerifier[*PublicKey[Sig, SigFE, PK, PKFE, E, S], Message, *Signature[PK, PKFE, Sig, SigFE, E, S], *Signature[PK, PKFE, Sig, SigFE, E, S]] = (*Verifier[Sig, SigFE, PK, PKFE, E, S])(nil)
-
-		// _ signatures.BatchVerifier[*PublicKey[PK, PKFE, Sig, SigFE, E, S], Message, *Signature[Sig, SigFE, PK, PKFE, E, S]] = (*Verifier[PK, PKFE, Sig, SigFE, E, S])(nil)
-		// _ signatures.BatchVerifier[*PublicKey[Sig, SigFE, PK, PKFE, E, S], Message, *Signature[PK, PKFE, Sig, SigFE, E, S]] = (*Verifier[Sig, SigFE, PK, PKFE, E, S])(nil)
-
-		// _ signatures.BatchAggregateVerifier[*PublicKey[PK, PKFE, Sig, SigFE, E, S], Message, *Signature[Sig, SigFE, PK, PKFE, E, S], *Signature[Sig, SigFE, PK, PKFE, E, S]] = (*Verifier[PK, PKFE, Sig, SigFE, E, S])(nil)
-		// _ signatures.BatchAggregateVerifier[*PublicKey[Sig, SigFE, PK, PKFE, E, S], Message, *Signature[PK, PKFE, Sig, SigFE, E, S], *Signature[PK, PKFE, Sig, SigFE, E, S]] = (*Verifier[Sig, SigFE, PK, PKFE, E, S])(nil)
-	)
 }

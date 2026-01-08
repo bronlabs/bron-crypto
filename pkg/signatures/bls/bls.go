@@ -8,6 +8,16 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 )
 
+// NewShortKeyScheme creates a BLS signature scheme with minimal public key size.
+// Public keys reside in G1 (48 bytes compressed) and signatures in G2 (96 bytes compressed).
+//
+// This variant is preferred when public keys are transmitted or stored more frequently than
+// signatures, as the smaller key size reduces bandwidth and storage costs.
+//
+// The rogueKeyAlg parameter specifies the rogue key attack prevention mechanism:
+//   - Basic: requires distinct messages in aggregate signatures
+//   - MessageAugmentation: prepends public key to messages before signing
+//   - POP: requires proof of possession for each public key
 func NewShortKeyScheme[
 	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
@@ -28,6 +38,16 @@ func NewShortKeyScheme[
 	}, nil
 }
 
+// NewLongKeyScheme creates a BLS signature scheme with minimal signature size.
+// Public keys reside in G2 (96 bytes compressed) and signatures in G1 (48 bytes compressed).
+//
+// This variant is preferred when signatures are transmitted or stored more frequently than
+// public keys, as the smaller signature size reduces bandwidth and storage costs.
+//
+// The rogueKeyAlg parameter specifies the rogue key attack prevention mechanism:
+//   - Basic: requires distinct messages in aggregate signatures
+//   - MessageAugmentation: prepends public key to messages before signing
+//   - POP: requires proof of possession for each public key
 func NewLongKeyScheme[
 	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
@@ -69,6 +89,11 @@ func newScheme[
 	return cipherSuite, nil
 }
 
+// Scheme represents a configured BLS signature scheme instance with a specific curve family,
+// key/signature variant, and rogue key prevention algorithm.
+//
+// The Scheme provides factory methods for creating key generators, signers, and verifiers,
+// as well as signature aggregation functionality.
 type Scheme[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -82,18 +107,25 @@ type Scheme[
 	signatureSubGroup curves.PairingFriendlyCurve[SG, SGFE, PK, PKFE, E, S]
 }
 
+// Name returns the signature scheme identifier ("BLS").
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Name() signatures.Name {
 	return Name
 }
 
+// Variant returns whether this scheme uses minimal public key size (ShortKey)
+// or minimal signature size (LongKey).
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Variant() Variant {
 	return s.variant
 }
 
+// RogueKeyPreventionAlgorithm returns the rogue key attack prevention mechanism
+// configured for this scheme (Basic, MessageAugmentation, or POP).
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) RogueKeyPreventionAlgorithm() RogueKeyPreventionAlgorithm {
 	return s.rogueKeyAlg
 }
 
+// CipherSuite returns the cryptographic parameters including domain separation tags
+// for hash-to-curve operations.
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) CipherSuite() *CipherSuite {
 	if s == nil {
 		return nil
@@ -101,6 +133,8 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) CipherSuite() *CipherSuite {
 	return s.cipherSuite
 }
 
+// KeySubGroup returns the elliptic curve subgroup used for public keys.
+// For ShortKey: G1. For LongKey: G2.
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) KeySubGroup() curves.PairingFriendlyCurve[PK, PKFE, SG, SGFE, E, S] {
 	if s == nil {
 		return nil
@@ -108,6 +142,8 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) KeySubGroup() curves.PairingFriendlyC
 	return s.keySubGroup
 }
 
+// SignatureSubGroup returns the elliptic curve subgroup used for signatures.
+// For ShortKey: G2. For LongKey: G1.
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) SignatureSubGroup() curves.PairingFriendlyCurve[SG, SGFE, PK, PKFE, E, S] {
 	if s == nil {
 		return nil
@@ -115,6 +151,10 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) SignatureSubGroup() curves.PairingFri
 	return s.signatureSubGroup
 }
 
+// Keygen creates a key generator for producing BLS key pairs.
+// Options can be used to provide deterministic seed material.
+//
+// See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.3
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Keygen(opts ...KeyGeneratorOption[PK, PKFE, SG, SGFE, E, S]) (*KeyGenerator[PK, PKFE, SG, SGFE, E, S], error) {
 	kg := &KeyGenerator[PK, PKFE, SG, SGFE, E, S]{
 		group: s.keySubGroup,
@@ -127,6 +167,10 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Keygen(opts ...KeyGeneratorOption[PK,
 	return kg, nil
 }
 
+// Signer creates a signer for producing BLS signatures with the given private key.
+// Options can be used to customize the domain separation tag.
+//
+// See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.6
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Signer(privateKey *PrivateKey[PK, PKFE, SG, SGFE, E, S], opts ...SignerOption[PK, PKFE, SG, SGFE, E, S]) (*Signer[PK, PKFE, SG, SGFE, E, S], error) {
 	if privateKey == nil {
 		return nil, errs.NewIsNil("privateKey")
@@ -146,6 +190,10 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Signer(privateKey *PrivateKey[PK, PKF
 	return out, nil
 }
 
+// Verifier creates a verifier for validating BLS signatures.
+// Options can be used to customize the domain separation tag or provide proofs of possession.
+//
+// See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.7
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Verifier(opts ...VerifierOption[PK, PKFE, SG, SGFE, E, S]) (*Verifier[PK, PKFE, SG, SGFE, E, S], error) {
 	out := &Verifier[PK, PKFE, SG, SGFE, E, S]{
 		cipherSuite:       s.cipherSuite,
@@ -161,43 +209,14 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Verifier(opts ...VerifierOption[PK, P
 	return out, nil
 }
 
+// AggregateSignatures combines multiple BLS signatures into a single aggregate signature
+// via elliptic curve point addition. The resulting signature can be verified against
+// the corresponding aggregate public key or set of public keys.
+//
+// See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.8
 func (*Scheme[PK, PKFE, SG, SGFE, E, S]) AggregateSignatures(sigs ...*Signature[SG, SGFE, PK, PKFE, E, S]) (*Signature[SG, SGFE, PK, PKFE, E, S], error) {
 	if sigs == nil {
 		return nil, errs.NewIsNil("signature")
 	}
 	return AggregateAll[PK](sigs)
-}
-
-func _[
-	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
-	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
-	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
-]() {
-	var (
-		_ signatures.Scheme[
-			*PrivateKey[P1, FE1, P2, FE2, E, S], *PublicKey[P1, FE1, P2, FE2, E, S],
-			[]byte, *Signature[P2, FE2, P1, FE1, E, S],
-			*KeyGenerator[P1, FE1, P2, FE2, E, S], *Signer[P1, FE1, P2, FE2, E, S], *Verifier[P1, FE1, P2, FE2, E, S],
-		] = (*Scheme[P1, FE1, P2, FE2, E, S])(nil)
-
-		_ signatures.Scheme[
-			*PrivateKey[P2, FE2, P1, FE1, E, S], *PublicKey[P2, FE2, P1, FE1, E, S],
-			[]byte, *Signature[P1, FE1, P2, FE2, E, S],
-			*KeyGenerator[P2, FE2, P1, FE1, E, S], *Signer[P2, FE2, P1, FE1, E, S], *Verifier[P2, FE2, P1, FE1, E, S],
-		] = (*Scheme[P2, FE2, P1, FE1, E, S])(nil)
-
-		_ signatures.AggregatableScheme[
-			*PrivateKey[P1, FE1, P2, FE2, E, S], *PublicKey[P1, FE1, P2, FE2, E, S],
-			[]byte, *Signature[P2, FE2, P1, FE1, E, S],
-			*KeyGenerator[P1, FE1, P2, FE2, E, S], *Signer[P1, FE1, P2, FE2, E, S], *Verifier[P1, FE1, P2, FE2, E, S],
-			*Signature[P2, FE2, P1, FE1, E, S],
-		] = (*Scheme[P1, FE1, P2, FE2, E, S])(nil)
-
-		_ signatures.AggregatableScheme[
-			*PrivateKey[P2, FE2, P1, FE1, E, S], *PublicKey[P2, FE2, P1, FE1, E, S],
-			[]byte, *Signature[P1, FE1, P2, FE2, E, S],
-			*KeyGenerator[P2, FE2, P1, FE1, E, S], *Signer[P2, FE2, P1, FE1, E, S], *Verifier[P2, FE2, P1, FE1, E, S],
-			*Signature[P1, FE1, P2, FE2, E, S],
-		] = (*Scheme[P2, FE2, P1, FE1, E, S])(nil)
-	)
 }
