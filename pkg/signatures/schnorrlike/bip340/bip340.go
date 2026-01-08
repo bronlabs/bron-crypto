@@ -36,7 +36,7 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
@@ -86,7 +86,7 @@ var (
 func NewPublicKey(point *GroupElement) (*PublicKey, error) {
 	pk, err := schnorrlike.NewPublicKey(point)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create BIP340 public key")
+		return nil, errs2.Wrap(err).WithMessage("failed to create BIP340 public key")
 	}
 	return pk, nil
 }
@@ -95,19 +95,19 @@ func NewPublicKey(point *GroupElement) (*PublicKey, error) {
 // The scalar must be non-zero. The corresponding public key P = x·G is computed.
 func NewPrivateKey(scalar *Scalar) (*PrivateKey, error) {
 	if scalar == nil {
-		return nil, errs.NewIsNil("scalar is nil")
+		return nil, ErrInvalidArgument.WithMessage("scalar is nil")
 	}
 	if scalar.IsZero() {
-		return nil, errs.NewValidation("scalar is zero")
+		return nil, ErrInvalidArgument.WithMessage("scalar is zero")
 	}
 	pkv := k256.NewCurve().ScalarBaseMul(scalar)
 	pk, err := schnorrlike.NewPublicKey(pkv)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create public key")
+		return nil, errs2.Wrap(err).WithMessage("cannot create public key")
 	}
 	sk, err := schnorrlike.NewPrivateKey(scalar, pk)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create BIP340 private key")
+		return nil, errs2.Wrap(err).WithMessage("failed to create BIP340 private key")
 	}
 	return sk, nil
 }
@@ -126,13 +126,13 @@ func NewSchemeWithAux(aux [AuxSizeBytes]byte) *Scheme {
 // This provides protection against side-channel attacks.
 func NewScheme(prng io.Reader) (*Scheme, error) {
 	if prng == nil {
-		return nil, errs.NewArgument("prng is nil")
+		return nil, ErrInvalidArgument.WithMessage("prng is nil")
 	}
 
 	aux := [AuxSizeBytes]byte{}
 	_, err := io.ReadFull(prng, aux[:])
 	if err != nil {
-		return nil, errs.WrapRandomSample(err, "cannot generate nonce")
+		return nil, errs2.Wrap(err).WithMessage("cannot generate nonce")
 	}
 	return &Scheme{
 		aux: aux,
@@ -167,7 +167,7 @@ func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs.WrapFailed(err, "key generator option failed")
+			return nil, errs2.Wrap(err).WithMessage("key generator option failed")
 		}
 	}
 	return out, nil
@@ -177,7 +177,7 @@ func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 // The signer uses deterministic nonce derivation per BIP-340.
 func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, error) {
 	if privateKey == nil {
-		return nil, errs.NewArgument("private key is nil")
+		return nil, ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	variant := &Variant{
 		Aux: s.aux,
@@ -194,7 +194,7 @@ func (s *Scheme) Signer(privateKey *PrivateKey, opts ...SignerOption) (*Signer, 
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs.WrapFailed(err, "signer option failed")
+			return nil, errs2.Wrap(err).WithMessage("signer option failed")
 		}
 	}
 	return out, nil
@@ -207,7 +207,7 @@ func (s *Scheme) Verifier(opts ...VerifierOption) (*Verifier, error) {
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs.WrapFailed(err, "verifier option failed")
+			return nil, errs2.Wrap(err).WithMessage("verifier option failed")
 		}
 	}
 	return out, nil
@@ -221,11 +221,11 @@ func (s *Scheme) PartialSignatureVerifier(
 	opts ...signatures.VerifierOption[*Verifier, *PublicKey, Message, *Signature],
 ) (schnorrlike.Verifier[*Variant, *GroupElement, *Scalar, Message], error) {
 	if publicKey == nil || publicKey.Value() == nil {
-		return nil, errs.NewArgument("public key is nil or invalid")
+		return nil, ErrInvalidArgument.WithMessage("public key is nil or invalid")
 	}
 	verifier, err := s.Verifier(opts...)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "verifier creation failed")
+		return nil, errs2.Wrap(err).WithMessage("verifier creation failed")
 	}
 	verifier.challengePublicKey = publicKey
 	return verifier, nil
@@ -236,16 +236,16 @@ func (s *Scheme) PartialSignatureVerifier(
 // and s is the 32-byte response scalar.
 func NewSignatureFromBytes(input []byte) (*Signature, error) {
 	if len(input) != 64 {
-		return nil, errs.NewSerialisation("invalid length")
+		return nil, ErrSerialization.WithMessage("invalid length")
 	}
 
 	r, err := decodePoint(input[:32])
 	if err != nil {
-		return nil, errs.NewSerialisation("invalid signature")
+		return nil, errs2.Wrap(err)
 	}
 	s, err := k256.NewScalarField().FromBytes(input[32:])
 	if err != nil {
-		return nil, errs.NewSerialisation("invalid signature")
+		return nil, errs2.Wrap(err).WithMessage("invalid signature")
 	}
 	return &Signature{
 		R: r,
@@ -277,7 +277,7 @@ func (s *Signer) Sign(message Message) (*Signature, error) {
 	s.sg.V.msg = message
 	sig, err := s.sg.Sign(message)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to sign message")
+		return nil, errs2.Wrap(err).WithMessage("failed to sign message")
 	}
 	return sig, nil
 }
@@ -295,7 +295,7 @@ type VerifierOption = signatures.VerifierOption[*Verifier, *PublicKey, Message, 
 func VerifyWithPRNG(prng io.Reader) VerifierOption {
 	return func(v *Verifier) error {
 		if prng == nil {
-			return errs.NewArgument("prng is nil")
+			return ErrInvalidArgument.WithMessage("prng is nil")
 		}
 		v.prng = prng
 		return nil
@@ -325,16 +325,16 @@ func (v *Verifier) Variant() *Variant {
 // Returns nil if valid, otherwise returns an error describing the failure.
 func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Message) error {
 	if publicKey == nil || publicKey.Value() == nil {
-		return errs.NewArgument("curve not supported")
+		return ErrInvalidArgument.WithMessage("curve not supported")
 	}
 	if signature == nil || signature.R == nil || signature.S == nil || signature.R.IsZero() || signature.S.IsZero() {
-		return errs.NewVerification("some signature elements are nil/zero")
+		return ErrVerificationFailed.WithMessage("some signature elements are nil/zero")
 	}
 	if publicKey.Value().IsOpIdentity() {
-		return errs.NewVerification("public key is identity")
+		return ErrVerificationFailed.WithMessage("public key is identity")
 	}
 	if !publicKey.Value().IsTorsionFree() {
-		return errs.NewValidation("Public Key not in the prime subgroup")
+		return ErrInvalidArgument.WithMessage("Public Key not in the prime subgroup")
 	}
 
 	challengePublicKeyValue := LiftX(publicKey.Value())
@@ -351,11 +351,11 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 	// 4. Let e = int(hashBIP0340/challenge(bytes(r) || bytes(P) || m)) mod n.
 	e, err := v.variant.ComputeChallenge(signature.R, challengePublicKeyValue, message)
 	if err != nil {
-		return errs.WrapFailed(err, "cannot create challenge scalar")
+		return errs2.Wrap(err).WithMessage("cannot create challenge scalar")
 	}
 
 	if signature.E != nil && !signature.E.Equal(e) {
-		return errs.NewFailed("incompatible signature")
+		return ErrFailed.WithMessage("incompatible signature")
 	}
 
 	// 5. Let R = s⋅G - e⋅P.
@@ -363,29 +363,29 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 
 	// 6. Fail if is_infinite(R).
 	if bigR.IsZero() {
-		return errs.NewVerification("signature is invalid")
+		return ErrVerificationFailed.WithMessage("signature is invalid")
 	}
 
 	// 7. Fail if not has_even_y(R).
 	ry, err := bigR.AffineY()
 	if err != nil {
-		return errs.WrapFailed(err, "cannot compute y coordinate")
+		return errs2.Wrap(err).WithMessage("cannot compute y coordinate")
 	}
 	if ry.IsOdd() {
-		return errs.NewVerification("signature is invalid")
+		return ErrVerificationFailed.WithMessage("signature is invalid")
 	}
 
 	// 8. Fail if x(R) ≠ r.
 	sigRx, err := signature.R.AffineX()
 	if err != nil {
-		return errs.WrapFailed(err, "cannot compute x coordinate")
+		return errs2.Wrap(err).WithMessage("cannot compute x coordinate")
 	}
 	rx, err := bigR.AffineX()
 	if err != nil {
-		return errs.WrapFailed(err, "cannot compute x coordinate")
+		return errs2.Wrap(err).WithMessage("cannot compute x coordinate")
 	}
 	if !sigRx.Equal(rx) {
-		return errs.NewVerification("signature is invalid")
+		return ErrVerificationFailed.WithMessage("signature is invalid")
 	}
 	return nil
 }
@@ -402,16 +402,16 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 // that pass batch verification but fail individual verification.
 func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey, messages []Message, prng io.Reader) error {
 	if v.prng == nil {
-		return errs.NewIsNil("batch verification requires a prng. Initialise the verifier with the prng option")
+		return ErrInvalidArgument.WithMessage("batch verification requires a prng. Initialise the verifier with the prng option")
 	}
 	if len(publicKeys) != len(signatures) || len(signatures) != len(messages) || len(signatures) == 0 {
-		return errs.NewArgument("length of publickeys, messages and signatures must be equal and greater than zero")
+		return ErrInvalidArgument.WithMessage("length of publickeys, messages and signatures must be equal and greater than zero")
 	}
 	if sliceutils.Any(publicKeys, func(pk *PublicKey) bool {
 		return pk == nil || pk.Value() == nil || pk.Value().IsOpIdentity() || pk.Value().IsOpIdentity()
 	}) {
 
-		return errs.NewArgument("some public keys are nil or identity")
+		return ErrInvalidArgument.WithMessage("some public keys are nil or identity")
 	}
 	curve := k256.NewCurve()
 	sf := k256.NewScalarField()
@@ -422,7 +422,7 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 	for i := 1; i < len(signatures); i++ {
 		a[i], err = algebrautils.RandomNonIdentity(sf, prng)
 		if err != nil {
-			return errs.WrapRandomSample(err, "cannot generate random scalar for i=%d", i)
+			return errs2.Wrap(err).WithMessage("cannot generate random scalar for i=%d", i)
 		}
 	}
 
@@ -440,7 +440,7 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 		// 5. Let ei = int(hashBIP0340/challenge(bytes(r_i) || bytes(P_i) || mi)) mod n.
 		e, err := v.variant.ComputeChallenge(sig.R, publicKeys[i].V, messages[i])
 		if err != nil {
-			return errs.WrapFailed(err, "invalid signature")
+			return errs2.Wrap(err).WithMessage("invalid signature")
 		}
 
 		// 6. Let Ri = lift_x(ri); fail if lift_x(ri) fails.
@@ -453,15 +453,15 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 	// 7. Fail if (s1 + a2s2 + ... + ausu)⋅G ≠ R1 + a2⋅R2 + ... + au⋅Ru + e1⋅P1 + (a2e2)⋅P2 + ... + (aueu)⋅Pu.
 	rightA, err := curve.MultiScalarMul(a, bigR)
 	if err != nil {
-		return errs.WrapFailed(err, "failed to multiply scalars and points")
+		return errs2.Wrap(err).WithMessage("failed to multiply scalars and points")
 	}
 	rightB, err := curve.MultiScalarMul(ae, bigP)
 	if err != nil {
-		return errs.WrapFailed(err, "failed to multiply scalars and points")
+		return errs2.Wrap(err).WithMessage("failed to multiply scalars and points")
 	}
 	right := rightA.Add(rightB)
 	if !curve.Generator().ScalarMul(left).Equal(right) {
-		return errs.NewVerification("signature is invalid")
+		return ErrVerificationFailed.WithMessage("signature is invalid")
 	}
 
 	// Return success iff no failure occurred before reaching this point.
@@ -490,7 +490,7 @@ func LiftX(p *k256.Point) *k256.Point {
 // The R point is encoded as its 32-byte x-coordinate (x-only encoding).
 func SerializeSignature(signature *Signature) ([]byte, error) {
 	if signature == nil || signature.R == nil || signature.S == nil {
-		return nil, errs.NewArgument("signature is nil")
+		return nil, ErrInvalidArgument.WithMessage("signature is nil")
 	}
 	return slices.Concat(signature.R.ToCompressed()[1:], signature.S.Bytes()), nil
 }
@@ -500,11 +500,11 @@ func SerializeSignature(signature *Signature) ([]byte, error) {
 func NewPublicKeyFromBytes(input []byte) (*PublicKey, error) {
 	p, err := decodePoint(input)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot decode point")
+		return nil, errs2.Wrap(err).WithMessage("cannot decode point")
 	}
 	pk, err := NewPublicKey(p)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create public key")
+		return nil, errs2.Wrap(err).WithMessage("cannot create public key")
 	}
 	return pk, nil
 }
@@ -513,7 +513,7 @@ func NewPublicKeyFromBytes(input []byte) (*PublicKey, error) {
 // Only the x-coordinate is serialized; y is implicitly even.
 func SerializePublicKey(publicKey *PublicKey) ([]byte, error) {
 	if publicKey == nil {
-		return nil, errs.NewArgument("public key is nil")
+		return nil, ErrInvalidArgument.WithMessage("public key is nil")
 	}
 	return publicKey.Value().ToCompressed()[1:], nil
 }
@@ -529,7 +529,7 @@ func decodePoint(data []byte) (*k256.Point, error) {
 	curve := k256.NewCurve()
 	p, err := curve.FromCompressed(slices.Concat([]byte{0x02}, data))
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot decode point")
+		return nil, errs2.Wrap(err).WithMessage("cannot decode point")
 	}
 
 	return p, nil

@@ -30,7 +30,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
@@ -56,7 +56,7 @@ const VariantType schnorrlike.VariantType = "Schnorr"
 func NewPublicKey[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]](point GE) (*PublicKey[GE, S], error) {
 	pk, err := schnorrlike.NewPublicKey(point)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create Schnorr public key")
+		return nil, errs2.Wrap(err).WithMessage("failed to create Schnorr public key")
 	}
 	return pk, nil
 }
@@ -65,7 +65,7 @@ func NewPublicKey[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldEleme
 func NewPrivateKey[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]](scalar S, pk *PublicKey[GE, S]) (*PrivateKey[GE, S], error) {
 	sk, err := schnorrlike.NewPrivateKey(scalar, pk)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create Schnorr private key")
+		return nil, errs2.Wrap(err).WithMessage("failed to create Schnorr private key")
 	}
 	return sk, nil
 }
@@ -88,17 +88,17 @@ func NewScheme[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[
 	prng io.Reader,
 ) (*Scheme[GE, S], error) {
 	if group == nil {
-		return nil, errs.NewIsNil("group")
+		return nil, ErrInvalidArgument.WithMessage("group is nil")
 	}
 	if f == nil {
-		return nil, errs.NewIsNil("hash function")
+		return nil, ErrInvalidArgument.WithMessage("hash function is nil")
 	}
 	if prng == nil {
-		return nil, errs.NewIsNil("prng")
+		return nil, ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	sf, ok := group.ScalarStructure().(algebra.PrimeField[S])
 	if !ok {
-		return nil, errs.NewType("group")
+		return nil, ErrInvalidArgument.WithMessage("group type assertion failed")
 	}
 	return &Scheme[GE, S]{
 		vr: &Variant[GE, S]{
@@ -139,7 +139,7 @@ func (s *Scheme[GE, S]) Keygen(opts ...KeyGeneratorOption[GE, S]) (*KeyGenerator
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs.WrapFailed(err, "key generator option failed")
+			return nil, errs2.Wrap(err).WithMessage("key generator option failed")
 		}
 	}
 	return out, nil
@@ -148,11 +148,11 @@ func (s *Scheme[GE, S]) Keygen(opts ...KeyGeneratorOption[GE, S]) (*KeyGenerator
 // Signer creates a signer for producing Schnorr signatures.
 func (s *Scheme[GE, S]) Signer(privateKey *PrivateKey[GE, S], opts ...SignerOption[GE, S]) (*Signer[GE, S], error) {
 	if privateKey == nil {
-		return nil, errs.NewArgument("private key is nil")
+		return nil, ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	verifier, err := s.Verifier()
 	if err != nil {
-		return nil, errs.WrapFailed(err, "verifier creation failed")
+		return nil, errs2.Wrap(err).WithMessage("verifier creation failed")
 	}
 	out := &Signer[GE, S]{
 		schnorrlike.SignerTrait[*Variant[GE, S], GE, S, Message]{
@@ -163,7 +163,7 @@ func (s *Scheme[GE, S]) Signer(privateKey *PrivateKey[GE, S], opts ...SignerOpti
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs.WrapFailed(err, "signer option failed")
+			return nil, errs2.Wrap(err).WithMessage("signer option failed")
 		}
 	}
 	return out, nil
@@ -179,7 +179,7 @@ func (s *Scheme[GE, S]) Verifier(opts ...VerifierOption[GE, S]) (*Verifier[GE, S
 	}
 	for _, opt := range opts {
 		if err := opt(out); err != nil {
-			return nil, errs.WrapFailed(err, "verifier option failed")
+			return nil, errs2.Wrap(err).WithMessage("verifier option failed")
 		}
 	}
 	return out, nil
@@ -191,11 +191,11 @@ func (s *Scheme[GE, S]) PartialSignatureVerifier(
 	opts ...signatures.VerifierOption[*Verifier[GE, S], *PublicKey[GE, S], Message, *Signature[GE, S]],
 ) (schnorrlike.Verifier[*Variant[GE, S], GE, S, Message], error) {
 	if publicKey == nil {
-		return nil, errs.NewArgument("public key is nil or invalid")
+		return nil, ErrInvalidArgument.WithMessage("public key is nil or invalid")
 	}
 	verifier, err := s.Verifier(opts...)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "verifier creation failed")
+		return nil, errs2.Wrap(err).WithMessage("verifier creation failed")
 	}
 	verifier.ChallengePublicKey = publicKey
 	return verifier, nil
@@ -220,7 +220,7 @@ type Signer[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]]
 // Variant returns the Schnorr variant used by this signer.
 func (sg *Signer[GE, S]) Variant() *Variant[GE, S] {
 	if sg == nil {
-		panic(errs.NewIsNil("signer"))
+		panic(ErrInvalidArgument.WithMessage("signer is nil"))
 	}
 	return sg.V
 }
@@ -236,7 +236,7 @@ type Verifier[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S
 // Variant returns the Schnorr variant used by this verifier.
 func (v *Verifier[GE, S]) Variant() *Variant[GE, S] {
 	if v == nil {
-		panic(errs.NewIsNil("verifier"))
+		panic(ErrInvalidArgument.WithMessage("verifier is nil"))
 	}
 	return v.V
 }
@@ -270,11 +270,11 @@ func (v *Variant[GE, S]) HashFunc() func() hash.Hash {
 // If shouldNegateNonce was configured, applies parity correction to k.
 func (v *Variant[GE, S]) ComputeNonceCommitment() (GE, S, error) {
 	if v == nil {
-		return *new(GE), *new(S), errs.NewIsNil("variant")
+		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("variant is nil")
 	}
 	ge, s, err := schnorrlike.ComputeGenericNonceCommitment(v.g, v.prng, v.shouldNegateNonce)
 	if err != nil {
-		return *new(GE), *new(S), errs.WrapFailed(err, "failed to compute nonce commitment")
+		return *new(GE), *new(S), errs2.Wrap(err).WithMessage("failed to compute nonce commitment")
 	}
 	return ge, s, nil
 }
@@ -283,20 +283,20 @@ func (v *Variant[GE, S]) ComputeNonceCommitment() (GE, S, error) {
 // Uses the configured hash function and byte ordering.
 func (v *Variant[GE, S]) ComputeChallenge(nonceCommitment GE, publicKeyValue GE, message Message) (S, error) {
 	if v == nil {
-		return *new(S), errs.NewIsNil("variant")
+		return *new(S), ErrInvalidArgument.WithMessage("variant is nil")
 	}
 	if utils.IsNil(nonceCommitment) {
-		return *new(S), errs.NewIsNil("nonce commitment")
+		return *new(S), ErrInvalidArgument.WithMessage("nonce commitment is nil")
 	}
 	if utils.IsNil(publicKeyValue) {
-		return *new(S), errs.NewIsNil("public key value")
+		return *new(S), ErrInvalidArgument.WithMessage("public key value is nil")
 	}
 	if utils.IsNil(message) {
-		return *new(S), errs.NewIsNil("message")
+		return *new(S), ErrInvalidArgument.WithMessage("message is nil")
 	}
 	challenge, err := schnorrlike.MakeGenericChallenge(v.sf, v.h, v.challengeElementsAreLittleEndian, nonceCommitment.Bytes(), publicKeyValue.Bytes(), message)
 	if err != nil {
-		return *new(S), errs.WrapFailed(err, "failed to compute Schnorr challenge")
+		return *new(S), errs2.Wrap(err).WithMessage("failed to compute Schnorr challenge")
 	}
 	return challenge, nil
 }
@@ -305,20 +305,20 @@ func (v *Variant[GE, S]) ComputeChallenge(nonceCommitment GE, publicKeyValue GE,
 // The sign depends on the responseOperatorIsNegative configuration.
 func (v *Variant[GE, S]) ComputeResponse(privateKeyValue, nonce, challenge S) (S, error) {
 	if v == nil {
-		return *new(S), errs.NewIsNil("variant")
+		return *new(S), ErrInvalidArgument.WithMessage("variant is nil")
 	}
 	if utils.IsNil(privateKeyValue) {
-		return *new(S), errs.NewIsNil("private key value")
+		return *new(S), ErrInvalidArgument.WithMessage("private key value is nil")
 	}
 	if utils.IsNil(nonce) {
-		return *new(S), errs.NewIsNil("nonce")
+		return *new(S), ErrInvalidArgument.WithMessage("nonce is nil")
 	}
 	if utils.IsNil(challenge) {
-		return *new(S), errs.NewIsNil("challenge")
+		return *new(S), ErrInvalidArgument.WithMessage("challenge is nil")
 	}
 	response, err := schnorrlike.ComputeGenericResponse(privateKeyValue, nonce, challenge, v.responseOperatorIsNegative)
 	if err != nil {
-		return *new(S), errs.WrapFailed(err, "failed to compute Schnorr response")
+		return *new(S), errs2.Wrap(err).WithMessage("failed to compute Schnorr response")
 	}
 	return response, nil
 }
@@ -326,16 +326,16 @@ func (v *Variant[GE, S]) ComputeResponse(privateKeyValue, nonce, challenge S) (S
 // SerializeSignature encodes the signature as (R || s) in native byte format.
 func (v *Variant[GE, S]) SerializeSignature(signature *Signature[GE, S]) ([]byte, error) {
 	if v == nil {
-		return nil, errs.NewIsNil("variant")
+		return nil, ErrInvalidArgument.WithMessage("variant is nil")
 	}
 	if signature == nil {
-		return nil, errs.NewIsNil("signature")
+		return nil, ErrInvalidArgument.WithMessage("signature is nil")
 	}
 	if utils.IsNil(signature.R) {
-		return nil, errs.NewIsNil("signature.R")
+		return nil, ErrInvalidArgument.WithMessage("signature.R is nil")
 	}
 	if utils.IsNil(signature.S) {
-		return nil, errs.NewIsNil("signature.S")
+		return nil, ErrInvalidArgument.WithMessage("signature.S is nil")
 	}
 	// Vanilla Schnorr signature format: (R, s)
 	// Note: E (challenge) can be recomputed during verification
@@ -352,15 +352,15 @@ func (*Variant[GE, S]) NonceIsFunctionOfMessage() bool {
 // Returns the nonce and its commitment unchanged.
 func (*Variant[GE, S]) CorrectPartialNonceParity(aggregatedNonceCommitment GE, nonce S) (GE, S, error) {
 	if utils.IsNil(aggregatedNonceCommitment) {
-		return *new(GE), *new(S), errs.NewIsNil("aggregated nonce commitment")
+		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("aggregated nonce commitment is nil")
 	}
 	if utils.IsNil(nonce) {
-		return *new(GE), *new(S), errs.NewIsNil("nonce")
+		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("nonce is nil")
 	}
 	// No change in MPC context
 	group, ok := aggregatedNonceCommitment.Structure().(algebra.PrimeGroup[GE, S])
 	if !ok {
-		return *new(GE), *new(S), errs.NewType("aggregated nonce commitment")
+		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("aggregated nonce commitment type assertion failed")
 	}
 	R := group.ScalarBaseOp(nonce)
 	return R, nonce, nil
@@ -370,7 +370,7 @@ func (*Variant[GE, S]) CorrectPartialNonceParity(aggregatedNonceCommitment GE, n
 // Returns a clone of the share unchanged.
 func (*Variant[GE, S]) CorrectAdditiveSecretShareParity(publicKey *schnorrlike.PublicKey[GE, S], share *additive.Share[S]) (*additive.Share[S], error) {
 	if publicKey == nil || share == nil {
-		return nil, errs.NewIsNil("public key or secret share is nil")
+		return nil, ErrInvalidArgument.WithMessage("public key or secret share is nil")
 	}
 	// No change in MPC context
 	return share.Clone(), nil

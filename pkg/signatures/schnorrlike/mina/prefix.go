@@ -6,7 +6,7 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/poseidon"
 )
 
@@ -42,7 +42,7 @@ type Prefix []byte
 func (p Prefix) ToBaseFieldElement() (*pasta.PallasBaseFieldElement, error) {
 	fieldSize := pasta.NewPallasBaseField().ElementSize() // TODO: ensure this is correct size
 	if len(p) > fieldSize {
-		return nil, errs.NewLength("prefix too long")
+		return nil, ErrSerialization.WithMessage("prefix too long")
 	}
 
 	var feBytes [32]byte
@@ -50,7 +50,7 @@ func (p Prefix) ToBaseFieldElement() (*pasta.PallasBaseFieldElement, error) {
 	slices.Reverse(feBytes[:])
 	out, err := pasta.NewPallasBaseField().FromBytes(feBytes[:])
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "set bytes failed")
+		return nil, errs2.Wrap(err).WithMessage("set bytes failed")
 	}
 	return out, nil
 }
@@ -171,7 +171,7 @@ func hashWithPrefix(prefix Prefix, inputs ...*pasta.PallasBaseFieldElement) (*Sc
 	// salt
 	pfe, err := prefix.ToBaseFieldElement()
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "could not convert prefix to base field element")
+		return nil, errs2.Wrap(err).WithMessage("could not convert prefix to base field element")
 	}
 	h.Update(pfe)
 
@@ -181,7 +181,7 @@ func hashWithPrefix(prefix Prefix, inputs ...*pasta.PallasBaseFieldElement) (*Sc
 	digest := h.Digest()
 	s, err := sf.FromBytes(digest.Bytes())
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "cannot deserialize scalar")
+		return nil, errs2.Wrap(err).WithMessage("cannot deserialize scalar")
 	}
 
 	return s, nil

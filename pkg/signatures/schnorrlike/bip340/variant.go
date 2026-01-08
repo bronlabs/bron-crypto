@@ -6,7 +6,7 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/hashing/bip340"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
@@ -55,7 +55,7 @@ func (*Variant) HashFunc() func() hash.Hash {
 // the auxiliary randomness provides side-channel protection.
 func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	if v.sk == nil || v.msg == nil {
-		return nil, nil, errs.NewIsNil("need both private key and message")
+		return nil, nil, ErrInvalidArgument.WithMessage("need both private key and message")
 	}
 	g := k256.NewCurve().Generator()
 	f := k256.NewScalarField()
@@ -63,7 +63,7 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	dPrime := v.sk.Value()
 	// 2. Fail if d' = 0 or d' ≥ n
 	if dPrime.IsZero() {
-		return nil, nil, errs.NewFailed("d' is invalid")
+		return nil, nil, ErrFailed.WithMessage("d' is invalid")
 	}
 	// 3. Let P = d'⋅G
 	bigP := g.ScalarMul(v.sk.Value())
@@ -71,7 +71,7 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	d := dPrime
 	py, err := bigP.AffineY()
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot compute y")
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot compute y")
 	}
 	if py.IsOdd() {
 		d = dPrime.Neg()
@@ -81,29 +81,29 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	// 5. Let t be the byte-wise xor of bytes(d) and hashBIP0340/aux(a).
 	auxDigest, err := hashing.Hash(bip340.NewBip340HashAux, v.Aux[:])
 	if err != nil {
-		return nil, nil, errs.WrapHashing(err, "hash failed")
+		return nil, nil, errs2.Wrap(err).WithMessage("hash failed")
 	}
 	t := make([]byte, len(auxDigest))
 	if n := subtle.XORBytes(t, d.Bytes(), auxDigest); n != len(d.Bytes()) {
-		return nil, nil, errs.NewFailed("invalid scalar bytes length")
+		return nil, nil, ErrFailed.WithMessage("invalid scalar bytes length")
 	}
 	// 6. Let rand = hashBIP0340/nonce(t || bytes(P) || m).
 	rand, err := hashing.Hash(
 		bip340.NewBip340HashNonce, t, encodePoint(bigP), v.msg,
 	)
 	if err != nil {
-		return nil, nil, errs.WrapHashing(err, "hash failed")
+		return nil, nil, errs2.Wrap(err).WithMessage("hash failed")
 	}
 
 	// 7. Let k' = int(rand) mod n.
 	kPrime, err := f.FromWideBytes(rand)
 	if err != nil {
-		return nil, nil, errs.NewFailed("cannot set k'")
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot set k'")
 	}
 
 	// 8. Fail if k' = 0
 	if kPrime.IsZero() {
-		return nil, nil, errs.NewFailed("k' is invalid")
+		return nil, nil, ErrFailed.WithMessage("k' is invalid")
 	}
 
 	// 9. Let R = k'⋅G.
@@ -112,7 +112,7 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 	k := kPrime
 	ry, err := bigR.AffineY()
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot compute y")
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot compute y")
 	}
 	if ry.IsOdd() {
 		k = kPrime.Neg()
@@ -136,7 +136,7 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 
 	e, err := schnorrlike.MakeGenericChallenge(k256.NewScalarField(), v.HashFunc(), false, roinput)
 	if err != nil {
-		return nil, errs.WrapHashing(err, "hash failed")
+		return nil, errs2.Wrap(err).WithMessage("hash failed")
 	}
 	return e, nil
 }
@@ -145,7 +145,7 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 // Uses the adjusted private key d (negated if P.y was odd during nonce commitment).
 func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
 	if privateKeyValue == nil || nonce == nil || challenge == nil {
-		return nil, errs.NewIsNil("arguments")
+		return nil, ErrInvalidArgument.WithMessage("arguments are nil")
 	}
 	// Use the adjusted private key if available (from ComputeNonceCommitment)
 	// This ensures we use d (not d') when P.y is odd
@@ -155,7 +155,7 @@ func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*S
 	}
 	s, err := schnorrlike.ComputeGenericResponse(adjustedPrivateKey, nonce, challenge, false)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to compute BIP340 response")
+		return nil, errs2.Wrap(err).WithMessage("failed to compute BIP340 response")
 	}
 	// 12. Let sig = (R, (k + ed) mod n)).
 	return s, nil
@@ -196,12 +196,12 @@ var _ tschnorr.MPCFriendlyVariant[*k256.Point, *k256.Scalar, Message] = (*Varian
 // consistent (negated) shares when P.y is odd.
 func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *additive.Share[*k256.Scalar]) (*additive.Share[*k256.Scalar], error) {
 	if publicKey == nil || share == nil {
-		return nil, errs.NewIsNil("public key or secret share is nil")
+		return nil, ErrInvalidArgument.WithMessage("public key or secret share is nil")
 	}
 	out := share.Clone()
 	pky, err := publicKey.Value().AffineY()
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot compute y")
+		return nil, errs2.Wrap(err).WithMessage("cannot compute y")
 	}
 	if pky.IsOdd() {
 		// If the public key is odd, we need to negate the additive share
@@ -219,12 +219,12 @@ func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *
 // This ensures the aggregate response s = Σk_i + e·Σx_i uses the correct nonces.
 func (v *Variant) CorrectPartialNonceParity(nonceCommitment *k256.Point, k *k256.Scalar) (*k256.Point, *k256.Scalar, error) {
 	if nonceCommitment == nil || k == nil {
-		return nil, nil, errs.NewIsNil("nonce commitment or k is nil")
+		return nil, nil, ErrInvalidArgument.WithMessage("nonce commitment or k is nil")
 	}
 	correctedK := k.Clone()
 	y, err := nonceCommitment.AffineY()
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot compute y")
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot compute y")
 	}
 	if y.IsOdd() {
 		// If the nonce commitment is odd, we need to negate k to ensure that the parity is correct.

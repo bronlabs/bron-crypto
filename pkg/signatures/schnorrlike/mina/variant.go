@@ -7,7 +7,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
@@ -27,7 +27,7 @@ var (
 // following the legacy Mina/o1js implementation.
 func NewDeterministicVariant(nid NetworkId, privateKey *PrivateKey) (*Variant, error) {
 	if privateKey == nil {
-		return nil, errs.NewIsNil("private key is nil")
+		return nil, ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	return &Variant{
 		nid: nid,
@@ -39,7 +39,7 @@ func NewDeterministicVariant(nid NetworkId, privateKey *PrivateKey) (*Variant, e
 // This is used for MPC/threshold signing where nonces are collaboratively generated.
 func NewRandomisedVariant(nid NetworkId, prng io.Reader) (*Variant, error) {
 	if prng == nil {
-		return nil, errs.NewIsNil("prng is nil")
+		return nil, ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	return &Variant{
 		nid:  nid,
@@ -115,16 +115,16 @@ func bitsToBytes(bits []bool) []byte {
 // Reference: https://github.com/o1-labs/o1js/blob/fdc94dd8d3735d01c232d7d7af49763e044b738b/src/mina-signer/src/signature.ts#L249
 func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
 	if v.msg == nil {
-		return nil, errs.NewIsNil("message is nil for deterministic nonce derivation")
+		return nil, ErrInvalidArgument.WithMessage("message is nil for deterministic nonce derivation")
 	}
 
 	pkx, err := v.sk.PublicKey().V.AffineX()
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to get public key X coordinate")
+		return nil, errs2.Wrap(err).WithMessage("failed to get public key X coordinate")
 	}
 	pky, err := v.sk.PublicKey().V.AffineY()
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to get public key Y coordinate")
+		return nil, errs2.Wrap(err).WithMessage("failed to get public key Y coordinate")
 	}
 
 	// Convert private key to bits using Scalar.toBits()
@@ -183,7 +183,7 @@ func (v *Variant) deriveNonceLegacy() (*Scalar, error) {
 	digestBE := reversedBytes(digest[:])
 	k, err := sf.FromBytes(digestBE)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to create scalar from bytes")
+		return nil, errs2.Wrap(err).WithMessage("failed to create scalar from bytes")
 	}
 	return k, nil
 }
@@ -213,14 +213,14 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 		k, err = algebrautils.RandomNonIdentity(sf, v.prng)
 	}
 	if err != nil {
-		return nil, nil, errs.WrapSerialisation(err, "failed to create scalar from bytes")
+		return nil, nil, errs2.Wrap(err).WithMessage("failed to create scalar from bytes")
 	}
 	R := group.ScalarBaseMul(k)
 
 	// Ensure R has an even y-coordinate (same as BIP340)
 	ry, err := R.AffineY()
 	if err != nil {
-		return nil, nil, errs.WrapSerialisation(err, "cannot get y coordinate")
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot get y coordinate")
 	}
 	if ry.IsOdd() {
 		// Negate k to flip the y-coordinate parity
@@ -238,26 +238,26 @@ func (v *Variant) ComputeNonceCommitment() (*GroupElement, *Scalar, error) {
 // Reference: https://github.com/o1-labs/o1js/blob/885b50e60ead596cdcd8dc944df55fd3a4467a0a/src/mina-signer/src/signature.ts#L242
 func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement, message *Message) (*Scalar, error) {
 	if nonceCommitment == nil || publicKeyValue == nil || message == nil {
-		return nil, errs.NewIsNil("nonceCommitment, publicKeyValue and message must not be nil")
+		return nil, ErrInvalidArgument.WithMessage("nonceCommitment, publicKeyValue and message must not be nil")
 	}
 	input := message.Clone()
 	pkx, err := publicKeyValue.AffineX()
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "cannot get x")
+		return nil, errs2.Wrap(err).WithMessage("cannot get x")
 	}
 	pky, err := publicKeyValue.AffineY()
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "cannot get y")
+		return nil, errs2.Wrap(err).WithMessage("cannot get y")
 	}
 	ncx, err := nonceCommitment.AffineX()
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "cannot get x")
+		return nil, errs2.Wrap(err).WithMessage("cannot get x")
 	}
 	input.AddFields(pkx, pky, ncx)
 	prefix := SignaturePrefix(v.nid)
 	e, err := hashWithPrefix(prefix, input.PackToFields()...)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to compute challenge")
+		return nil, errs2.Wrap(err).WithMessage("failed to compute challenge")
 	}
 	return e, nil
 }
@@ -265,7 +265,7 @@ func (v *Variant) ComputeChallenge(nonceCommitment, publicKeyValue *GroupElement
 // ComputeResponse computes the Mina signature response: s = k + e·x mod n.
 func (v *Variant) ComputeResponse(privateKeyValue, nonce, challenge *Scalar) (*Scalar, error) {
 	if privateKeyValue == nil || nonce == nil || challenge == nil {
-		return nil, errs.NewIsNil("privateKeyValue, nonce and challenge must not be nil")
+		return nil, ErrInvalidArgument.WithMessage("privateKeyValue, nonce and challenge must not be nil")
 	}
 	return nonce.Add(challenge.Mul(privateKeyValue)), nil
 }
@@ -292,12 +292,12 @@ func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *
 // partial nonce k_i to ensure the final signature is valid.
 func (v *Variant) CorrectPartialNonceParity(aggregatedNonceCommitments *GroupElement, localNonce *Scalar) (*GroupElement, *Scalar, error) {
 	if aggregatedNonceCommitments == nil || localNonce == nil {
-		return nil, nil, errs.NewIsNil("nonce commitment or k is nil")
+		return nil, nil, ErrInvalidArgument.WithMessage("nonce commitment or k is nil")
 	}
 	correctedK := localNonce.Clone()
 	ancy, err := aggregatedNonceCommitments.AffineY()
 	if err != nil {
-		return nil, nil, errs.WrapSerialisation(err, "cannot get y")
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot get y")
 	}
 	if ancy.IsOdd() {
 		// If the nonce commitment is odd, we need to negate k to ensure that the parity is correct.

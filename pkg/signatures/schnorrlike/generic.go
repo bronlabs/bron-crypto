@@ -5,7 +5,7 @@ import (
 	"io"
 	"slices"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
@@ -23,15 +23,15 @@ func ComputeGenericNonceCommitment[GE GroupElement[GE, S], S Scalar[S]](
 	group Group[GE, S], prng io.Reader, shouldNegateNonce func(nonceCommitment GE) bool,
 ) (GE, S, error) {
 	if prng == nil {
-		return *new(GE), *new(S), errs.NewIsNil("prng")
+		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("prng is nil")
 	}
 	sf, ok := group.ScalarStructure().(ScalarField[S])
 	if !ok {
-		return *new(GE), *new(S), errs.NewType("group")
+		return *new(GE), *new(S), ErrInvalidArgument.WithMessage("group type assertion failed")
 	}
 	k, err := algebrautils.RandomNonIdentity(sf, prng)
 	if err != nil {
-		return *new(GE), *new(S), errs.WrapRandomSample(err, "scalar")
+		return *new(GE), *new(S), errs2.Wrap(err).WithMessage("scalar")
 	}
 	if shouldNegateNonce != nil && shouldNegateNonce(group.ScalarBaseOp(k)) {
 		k = k.Neg()
@@ -53,13 +53,13 @@ func ComputeGenericNonceCommitment[GE GroupElement[GE, S], S Scalar[S]](
 //   - responseOperatorIsNegative: if true, subtracts e·x instead of adding
 func ComputeGenericResponse[S Scalar[S]](privateKeyValue, nonce, challenge S, responseOperatorIsNegative bool) (S, error) {
 	if utils.IsNil(privateKeyValue) {
-		return *new(S), errs.NewIsNil("private key")
+		return *new(S), ErrInvalidArgument.WithMessage("private key is nil")
 	}
 	if utils.IsNil(nonce) {
-		return *new(S), errs.NewIsNil("nonce")
+		return *new(S), ErrInvalidArgument.WithMessage("nonce is nil")
 	}
 	if utils.IsNil(challenge) {
-		return *new(S), errs.NewIsNil("challenge")
+		return *new(S), ErrInvalidArgument.WithMessage("challenge is nil")
 	}
 	operand := challenge.Mul(privateKeyValue)
 	if responseOperatorIsNegative {
@@ -79,23 +79,23 @@ func ComputeGenericResponse[S Scalar[S]](privateKeyValue, nonce, challenge S, re
 // The hash output is reduced modulo n using FromWideBytes to avoid bias.
 func MakeGenericChallenge[S Scalar[S]](scalarField ScalarField[S], hashFunc func() hash.Hash, challengeElementsAreLittleEndian bool, xs ...[]byte) (S, error) {
 	if scalarField == nil {
-		return *new(S), errs.NewIsNil("scalar field")
+		return *new(S), ErrInvalidArgument.WithMessage("scalar field is nil")
 	}
 	for _, x := range xs {
 		if x == nil {
-			return *new(S), errs.NewIsNil("an input is nil")
+			return *new(S), ErrInvalidArgument.WithMessage("an input is nil")
 		}
 	}
 	digest, err := hashing.Hash(hashFunc, xs...)
 	if err != nil {
-		return *new(S), errs.WrapHashing(err, "could not compute fiat shamir hash")
+		return *new(S), errs2.Wrap(err).WithMessage("could not compute fiat shamir hash")
 	}
 	if challengeElementsAreLittleEndian {
 		slices.Reverse(digest)
 	}
 	challenge, err := scalarField.FromWideBytes(digest)
 	if err != nil {
-		return *new(S), errs.WrapSerialisation(err, "could not compute fiat shamir challenge")
+		return *new(S), errs2.Wrap(err).WithMessage("could not compute fiat shamir challenge")
 	}
 	return challenge, nil
 }
