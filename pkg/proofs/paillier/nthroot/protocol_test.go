@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const primeLen = 1024
+var primeLen = znstar.PaillierKeyLen / 2
 
 func Test_HappyPathInteractive(t *testing.T) {
 	t.Parallel()

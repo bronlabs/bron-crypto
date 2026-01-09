@@ -19,7 +19,10 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
-const transcriptDLogSLabel = "Lindell2017SignDLogS-"
+const (
+	transcriptDLogSLabel = "Lindell2017SignDLogS-"
+	proverLabel          = "Lindell2017SignProver-"
+)
 
 // Round1 executes the primary cosigner's first round.
 func (pc *PrimaryCosigner[P, B, S]) Round1() (r1out *Round1OutputP2P, err error) {
@@ -239,7 +242,7 @@ func dlogProve[
 	receiverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(otherSharingId))
 	quorumBytes := slices.Concat(proverIDBytes, receiverIDBytes)
 	c.tape.AppendBytes(transcriptDLogSLabel, quorumBytes)
-	c.tape.AppendBytes("prover", proverIDBytes)
+	c.tape.AppendBytes(proverLabel, proverIDBytes)
 	prover, err := c.niDlogScheme.NewProver(c.sid, c.tape)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create dlog prover")
@@ -264,7 +267,7 @@ func dlogVerify[
 	receiverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(mySharingId))
 	quorumBytes := slices.Concat(proverIDBytes, receiverIDBytes)
 	tape.AppendBytes(transcriptDLogSLabel, quorumBytes)
-	tape.AppendBytes("prover", proverIDBytes)
+	tape.AppendBytes(proverLabel, proverIDBytes)
 	statement := &schnorrpok.Statement[P, S]{
 		X: theirBigR,
 	}

@@ -12,7 +12,7 @@ import (
 
 func RSAUnitGenerator(t *testing.T) (*rapid.Generator[*znstar.RSAGroupElementUnknownOrder], *znstar.RSAGroupUnknownOrder) {
 	t.Helper()
-	group := errs2.Must1(znstar.SampleRSAGroup(1024, pcg.NewRandomised()))
+	group := errs2.Must1(znstar.SampleRSAGroup(znstar.RSAKeyLen, pcg.NewRandomised()))
 	return UnitGenerator(t, group.ForgetOrder()), group.ForgetOrder()
 }
 

@@ -224,7 +224,7 @@ func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast
 	}
 	w := m.Mul(c.state.phi).Add(rx.Mul(v))
 
-	partialSignature, err = dkls23.NewPartialSignature(c.state.bigR[c.shard.Share().ID()], u, w)
+	partialSignature, err = dkls23.NewPartialSignature(bigR, u, w)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "cannot create partial signature")
 	}

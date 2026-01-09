@@ -74,6 +74,9 @@ func (s *Share[S]) Secret() *pedcom.Message[S] {
 
 // Op is an alias for Add, implementing the group element interface.
 func (s *Share[S]) Op(other *Share[S]) *Share[S] {
+	if s.id != other.id {
+		panic("cannot add shares with different IDs")
+	}
 	return &Share[S]{
 		id:       s.id,
 		secret:   s.secret.Op(other.secret),
@@ -123,7 +126,7 @@ func (s *Share[S]) Equal(other *Share[S]) bool {
 	if s == nil || other == nil {
 		return s == other
 	}
-	return s.secret.Equal(other.secret) && s.blinding.Equal(other.blinding)
+	return s.id == other.id && s.secret.Equal(other.secret) && s.blinding.Equal(other.blinding)
 }
 
 // Bytes returns the canonical byte representation of this share.

@@ -13,8 +13,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
-// CalcC3 calculates Enc_pk(ρq + k2^(-1)(m' + r * (cKey * λ1 + share * λ2))).
-func CalcC3[S algebra.PrimeFieldElement[S]](lambda1, k2, mPrime, r, additiveShare S, curveOrder algebra.Cardinal, pk *paillier.PublicKey, cKey *paillier.Ciphertext, prng io.Reader) (c3 *paillier.Ciphertext, err error) {
+// CalcC3 calculates Enc_pk(ρq + k2^(-1)(m' + r * (cKey * λ + share * λ))).
+func CalcC3[S algebra.PrimeFieldElement[S]](lambda, k2, mPrime, r, additiveShare S, curveOrder algebra.Cardinal, pk *paillier.PublicKey, cKey *paillier.Ciphertext, prng io.Reader) (c3 *paillier.Ciphertext, err error) {
 	k2Inv, err := k2.TryInv()
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot get k2 inverse")
@@ -59,8 +59,8 @@ func CalcC3[S algebra.PrimeFieldElement[S]](lambda1, k2, mPrime, r, additiveShar
 		return nil, errs2.Wrap(err).WithMessage("cannot encrypt c1")
 	}
 
-	// c2 = Enc(k2^(-1) * r * (cKey * λ1 + share * λ2))
-	c2LeftExponent, err := num.N().FromBytes(k2Inv.Mul(r).Mul(lambda1).Bytes())
+	// c2 = Enc(k2^(-1) * r * (cKey * λ + share * λ))
+	c2LeftExponent, err := num.N().FromBytes(k2Inv.Mul(r).Mul(lambda).Bytes())
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot convert c2 left exponent to Nat")
 	}
@@ -76,7 +76,7 @@ func CalcC3[S algebra.PrimeFieldElement[S]](lambda1, k2, mPrime, r, additiveShar
 	}
 	c2 := c2Left.HomAdd(c2Right)
 
-	// c3 = c1 + c2 = Enc(ρq + k2^(-1)(m' + r * (y1 * λ1 + y2 * λ2)))
+	// c3 = c1 + c2 = Enc(ρq + k2^(-1)(m' + r * (y1 * λ + y2 * λ)))
 	c3 = c1.HomAdd(c2)
 
 	return c3, nil

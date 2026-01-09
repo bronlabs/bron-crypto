@@ -6,11 +6,15 @@ package paillier
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/znstar"
 	"github.com/bronlabs/bron-crypto/pkg/encryption"
 )
 
 // Name is the identifier for the Paillier encryption scheme.
-const Name encryption.Name = "paillier"
+const (
+	Name   encryption.Name = "paillier"
+	KeyLen                 = znstar.PaillierKeyLen
+)
 
 // NewScheme returns a new Paillier encryption scheme instance.
 func NewScheme() *Scheme {
@@ -29,8 +33,7 @@ func (s *Scheme) Name() encryption.Name {
 // Keygen creates a new key generator with the given options.
 func (s *Scheme) Keygen(opts ...KeyGeneratorOption) (*KeyGenerator, error) {
 	kg := &KeyGenerator{
-		// TODO: correspond to constants in base package
-		bits: 2048,
+		bits: KeyLen,
 	}
 	for _, opt := range opts {
 		if err := opt(kg); err != nil {

@@ -3,6 +3,7 @@ package znstar
 import (
 	"io"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -11,12 +12,14 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 )
 
-// SampleRSAGroup generates an RSA group with random primes of the given bit length.
-func SampleRSAGroup(factorBits uint, prng io.Reader) (*RSAGroupKnownOrder, error) {
+const RSAKeyLen = base.IFCKeyLength
+
+// SampleRSAGroup generates an RSA group with keyLen of the given bit length.
+func SampleRSAGroup(keyLen uint, prng io.Reader) (*RSAGroupKnownOrder, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng")
 	}
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), factorBits, prng)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), keyLen/2, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to generate prime pair")
 	}
@@ -31,9 +34,8 @@ func NewRSAGroup(p, q *num.NatPlus) (*RSAGroupKnownOrder, error) {
 	if p.TrueLen() != q.TrueLen() {
 		return nil, errs.NewValue("p and q must have the same length")
 	}
-	n := p.Mul(q)
-	if n.TrueLen() < 2047 {
-		return nil, errs.NewValue("p and q must be at least 1024 bits each")
+	if p.TrueLen() < RSAKeyLen/2 {
+		return nil, errs.NewValue("p and q must be at least %d bits each", RSAKeyLen/2)
 	}
 	if !p.IsProbablyPrime() {
 		return nil, errs.NewValue("p must be prime")
@@ -41,6 +43,7 @@ func NewRSAGroup(p, q *num.NatPlus) (*RSAGroupKnownOrder, error) {
 	if !q.IsProbablyPrime() {
 		return nil, errs.NewValue("q must be prime")
 	}
+	n := p.Mul(q)
 	zMod, err := num.NewZMod(n)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create ZMod")
@@ -59,8 +62,8 @@ func NewRSAGroup(p, q *num.NatPlus) (*RSAGroupKnownOrder, error) {
 
 // NewRSAGroupOfUnknownOrder creates an RSA group with unknown order from the given modulus m.
 func NewRSAGroupOfUnknownOrder(m *num.NatPlus) (*RSAGroupUnknownOrder, error) {
-	if m.TrueLen() < 2047 {
-		return nil, errs.NewValue("modulus must be at least 2048 bits")
+	if m.TrueLen() < RSAKeyLen {
+		return nil, errs.NewValue("modulus must be at least %d bits", RSAKeyLen)
 	}
 	zMod, err := num.NewZMod(m)
 	if err != nil {

@@ -14,7 +14,6 @@ import (
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lp"
 	paillierrange "github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
 	zkcompiler "github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/zk"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
@@ -168,7 +167,7 @@ func validateVerifierInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElemen
 	if publicKey == nil {
 		return ErrInvalidArgument.WithMessage("public key is nil")
 	}
-	if publicKey.N().BitLen() < lp.PaillierBitSizeN {
+	if publicKey.N().BitLen() < paillier.KeyLen {
 		return ErrInvalidArgument.WithMessage("invalid paillier public key: modulus is too small")
 	}
 	if xEncrypted == nil {
@@ -268,10 +267,13 @@ func NewProver[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algeb
 }
 
 func validateProverInputs[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, curve curves.Curve[P, B, S], secretKey *paillier.PrivateKey, x S, r *paillier.Nonce, prng io.Reader) error {
+	if len(sessionId) == 0 {
+		return ErrInvalidArgument.WithMessage("sessionId is empty")
+	}
 	if secretKey == nil {
 		return ErrInvalidArgument.WithMessage("secret key is nil")
 	}
-	if secretKey.Group().N().AnnouncedLen() < lp.PaillierBitSizeN {
+	if secretKey.Group().N().AnnouncedLen() < base.IFCKeyLength {
 		return ErrInvalidArgument.WithMessage("invalid paillier public key: modulus is too small")
 	}
 	if curve == nil {

@@ -20,10 +20,10 @@ import (
 func Test_HappyPath(t *testing.T) {
 	t.Parallel()
 	prng := crand.Reader
-	pInt, err := crand.Prime(prng, 1024)
+	pInt, err := crand.Prime(prng, znstar.PaillierKeyLen/2)
 	require.NoError(t, err)
 	pNat := numct.NewNatFromSaferith(new(saferith.Nat).SetBig(pInt, pInt.BitLen()))
-	qInt, err := crand.Prime(prng, 1024)
+	qInt, err := crand.Prime(prng, znstar.PaillierKeyLen/2)
 	require.NoError(t, err)
 	qNat := numct.NewNatFromSaferith(new(saferith.Nat).SetBig(qInt, qInt.BitLen()))
 
