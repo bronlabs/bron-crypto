@@ -7,10 +7,12 @@ import (
 	"slices"
 )
 
+// Xmd implements expand_message_xmd from RFC 9380.
 type Xmd struct {
 	HashFunc func() hash.Hash
 }
 
+// ExpandMessage expands msg to lenInBytes using XMD and dst.
 func (e *Xmd) ExpandMessage(dst, msg []byte, lenInBytes uint) []byte {
 	h := e.HashFunc()
 	sInBytes := h.BlockSize()

@@ -40,6 +40,8 @@ var (
 )
 
 type vestaCurveParams struct{}
+
+// VestaCurveHasherParams defines hash-to-curve parameters.
 type VestaCurveHasherParams struct{}
 type vestaCurveMapperParams struct{}
 type vestaCurveMapper = sswu.ZeroPointMapper[*Fq, vestaCurveMapperParams, Fq]
@@ -72,22 +74,26 @@ func init() {
 	vestaSswuIsogenyYDen[3].SetOne()
 }
 
+// ClearCofactor clears the cofactor of the input point.
 func (vestaCurveParams) ClearCofactor(xOut, yOut, zOut, xIn, yIn, zIn *Fq) {
 	xOut.Set(xIn)
 	yOut.Set(yIn)
 	zOut.Set(zIn)
 }
 
+// SetGenerator sets generator coordinates.
 func (vestaCurveParams) SetGenerator(xOut, yOut, zOut *Fq) {
 	xOut.SetOne()
 	yOut.Set(&vestaCurveGy)
 	zOut.SetOne()
 }
 
+// AddA adds the curve A parameter to in.
 func (vestaCurveParams) AddA(out, in *Fq) {
 	out.Set(in)
 }
 
+// AddB adds the curve B parameter to in.
 func (vestaCurveParams) AddB(out, in *Fq) {
 	out.Add(in, &vestaCurveB)
 }
@@ -107,46 +113,57 @@ func (vestaCurveParams) MulBy3B(out *Fq, in *Fq) {
 	out.Sub(&in16, in)
 }
 
+// L returns the hash-to-field length in bytes.
 func (VestaCurveHasherParams) L() uint64 {
 	return 64
 }
 
+// MessageExpander returns the RFC 9380 message expander.
 func (VestaCurveHasherParams) MessageExpander() h2c.MessageExpander {
 	return vestaCurveMessageExpander
 }
 
+// MulByA multiplies by the curve A parameter.
 func (vestaCurveMapperParams) MulByA(out, in *Fq) {
 	out.Mul(in, &vestaSswuIsogenyA)
 }
 
+// MulByB multiplies by the curve B parameter.
 func (vestaCurveMapperParams) MulByB(out, in *Fq) {
 	out.Mul(in, &vestaSswuIsogenyB)
 }
 
+// SetZ sets the SSWU Z parameter.
 func (vestaCurveMapperParams) SetZ(out *Fq) {
 	out.Set(&vestaSswuZ)
 }
 
+// SqrtRatio computes sqrt(u/v) with curve-specific parameters.
 func (vestaCurveMapperParams) SqrtRatio(y, u, v *Fq) (ok ct.Bool) {
 	return sswu.SqrtRatio(y, vestaSqrtRatioC1, vestaSqrtRatioC3[:], vestaSqrtRatioC4, vestaSqrtRatioC5, &vestaSqrtRatioC6, &vestaSqrtRatioC7, u, v)
 }
 
+// Sgn0 returns the sign bit per RFC 9380.
 func (vestaCurveMapperParams) Sgn0(v *Fq) ct.Bool {
 	return ct.Bool(uint64(v.Bytes()[0] & 0b1))
 }
 
+// XNum returns isogeny x numerator coefficients.
 func (vestaCurveMapperParams) XNum() []Fq {
 	return vestaSswuIsogenyXNum[:]
 }
 
+// XDen returns isogeny x denominator coefficients.
 func (vestaCurveMapperParams) XDen() []Fq {
 	return vestaSswuIsogenyXDen[:]
 }
 
+// YNum returns isogeny y numerator coefficients.
 func (vestaCurveMapperParams) YNum() []Fq {
 	return vestaSswuIsogenyYNum[:]
 }
 
+// YDen returns isogeny y denominator coefficients.
 func (vestaCurveMapperParams) YDen() []Fq {
 	return vestaSswuIsogenyYDen[:]
 }

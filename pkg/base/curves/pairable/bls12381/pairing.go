@@ -3,7 +3,6 @@ package bls12381
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
 var (
@@ -14,6 +13,7 @@ const (
 	OptimalAteAlgorithm curves.PairingAlgorithm = "OptimalAte"
 )
 
+// NewOptimalAtePPE returns the optimal ate pairing engine.
 func NewOptimalAtePPE() curves.PPE[*PointG1, *BaseFieldElementG1, *PointG2, *BaseFieldElementG2, *GtElement, *Scalar] {
 	p := &OptimalAtePPE{
 		engine: bls12381Impl.Engine{},
@@ -21,52 +21,61 @@ func NewOptimalAtePPE() curves.PPE[*PointG1, *BaseFieldElementG1, *PointG2, *Bas
 	return p
 }
 
+// OptimalAtePPE implements the optimal ate pairing engine.
 type OptimalAtePPE struct {
 	engine bls12381Impl.Engine
 }
 
+// Add sets the receiver to lhs + rhs.
 func (p *OptimalAtePPE) Add(g1 *PointG1, g2 *PointG2) error {
 	if g1 == nil || g2 == nil || g1.IsZero() || g2.IsZero() {
-		return errs.NewFailed("g1 or g2 cannot be nil/identity")
+		return curves.ErrFailed.WithMessage("g1 or g2 cannot be nil/identity")
 	}
 	p.engine.AddPair(&g1.V, &g2.V)
 	return nil
 }
 
+// AddAndInvG1 adds a pair with G1 inverted.
 func (p *OptimalAtePPE) AddAndInvG1(g1 *PointG1, g2 *PointG2) error {
 	if g1 == nil || g2 == nil || g1.IsZero() || g2.IsZero() {
-		return errs.NewFailed("g1 or g2 cannot be nil/identity")
+		return curves.ErrFailed.WithMessage("g1 or g2 cannot be nil/identity")
 	}
 	p.engine.AddPairInvG1(&g1.V, &g2.V)
 	return nil
 }
 
+// AddAndInvG2 adds a pair with G2 inverted.
 func (p *OptimalAtePPE) AddAndInvG2(g1 *PointG1, g2 *PointG2) error {
 	if g1 == nil || g2 == nil || g1.IsZero() || g2.IsZero() {
-		return errs.NewFailed("g1 or g2 cannot be nil/identity")
+		return curves.ErrFailed.WithMessage("g1 or g2 cannot be nil/identity")
 	}
 	p.engine.AddPairInvG2(&g1.V, &g2.V)
 	return nil
 }
 
+// Result returns the accumulated pairing result.
 func (p *OptimalAtePPE) Result() *GtElement {
 	var result GtElement
 	result.V.Set(p.engine.Result())
 	return &result
 }
 
+// Check verifies the accumulated pairing.
 func (p *OptimalAtePPE) Check() bool {
 	return p.engine.Check()
 }
 
+// Reset clears the pairing engine state.
 func (p *OptimalAtePPE) Reset() {
 	p.engine.Reset()
 }
 
+// Name returns the name of the structure.
 func (p *OptimalAtePPE) Name() curves.PairingAlgorithm {
 	return OptimalAteAlgorithm
 }
 
+// Equal reports whether the receiver equals v.
 func (p *OptimalAtePPE) Equal(other curves.PPE[*PointG1, *BaseFieldElementG1, *PointG2, *BaseFieldElementG2, *GtElement, *Scalar]) bool {
 	if other == nil {
 		return false
@@ -78,6 +87,7 @@ func (p *OptimalAtePPE) Equal(other curves.PPE[*PointG1, *BaseFieldElementG1, *P
 	return p.Name() != o.Name()
 }
 
+// Type returns the pairing type.
 func (p *OptimalAtePPE) Type() curves.PairingType {
 	return curves.TypeIII
 }
@@ -111,7 +121,7 @@ func (p *OptimalAtePPE) Type() curves.PairingType {
 // func (p *Pairing) MultiPair(g1 []*PointG1, g2 []*PointG2) (*GtElement, error) {
 // 	defer p.core.Reset()
 // 	if len(g1) != len(g2) {
-// 		return nil, errs.NewFailed("g1 and g2 must have the same length")
+// 		return nil, curves.ErrFailed.WithMessage("g1 and g2 must have the same length")
 // 	}
 
 // 	for i := range g1 {

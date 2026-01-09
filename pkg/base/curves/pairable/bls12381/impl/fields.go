@@ -13,18 +13,25 @@ var (
 	_ fieldsImpl.QuadraticFieldExtensionArithmetic[*Fp6] = fp12Params{}
 )
 
+// Fp2 represents a quadratic extension field element.
 type Fp2 = fieldsImpl.QuadraticFieldExtensionImpl[*Fp, fp2Params, Fp]
+
+// Fp6 represents a sextic extension field element.
 type Fp6 = fieldsImpl.CubicFieldExtensionImpl[*Fp2, fp6Params, Fp2]
+
+// Fp12 represents a 12-degree extension field element.
 type Fp12 = fieldsImpl.QuadraticFieldExtensionImpl[*Fp6, fp12Params, Fp6]
 
 type fp2Params struct{}
 type fp6Params struct{}
 type fp12Params struct{}
 
+// MulByQuadraticNonResidue multiplies by the quadratic non-residue.
 func (fp2Params) MulByQuadraticNonResidue(out, in *Fp) {
 	out.Neg(in)
 }
 
+// MulByCubicNonResidue multiplies by the cubic non-residue.
 func (fp6Params) MulByCubicNonResidue(out, in *Fp2) {
 	var params fp2Params
 	var c Fp2
@@ -36,20 +43,24 @@ func (fp6Params) MulByCubicNonResidue(out, in *Fp2) {
 	out.Set(&c)
 }
 
+// RootOfUnity returns the field root of unity.
 func (fp6Params) RootOfUnity(out *Fp2) {
 	//TODO implement me
 	panic("implement me")
 }
 
+// ProgenitorExponent returns the progenitor exponent.
 func (fp6Params) ProgenitorExponent() []uint8 {
 	//TODO implement me
 	panic("implement me")
 }
 
+// E returns the exponent parameter for square roots.
 func (fp6Params) E() uint64 {
 	return 6
 }
 
+// MulByQuadraticNonResidue multiplies by the quadratic non-residue.
 func (fp12Params) MulByQuadraticNonResidue(out, in *Fp6) {
 	var params fp6Params
 	var c Fp6

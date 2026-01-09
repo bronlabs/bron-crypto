@@ -40,12 +40,16 @@ var (
 )
 
 type pallasCurveParams struct{}
+
+// PallasCurveHasherParams defines hash-to-curve parameters.
 type PallasCurveHasherParams struct{}
 
+// L returns the hash-to-field length in bytes.
 func (PallasCurveHasherParams) L() uint64 {
 	return 64
 }
 
+// MessageExpander returns the RFC 9380 message expander.
 func (PallasCurveHasherParams) MessageExpander() h2c.MessageExpander {
 	return pallasMessageExpander
 }
@@ -81,12 +85,14 @@ func init() {
 	pallasSswuIsogenyYDen[3].SetOne()
 }
 
+// ClearCofactor clears the cofactor of the input point.
 func (pallasCurveParams) ClearCofactor(xOut, yOut, zOut, xIn, yIn, zIn *Fp) {
 	xOut.Set(xIn)
 	yOut.Set(yIn)
 	zOut.Set(zIn)
 }
 
+// SetGenerator sets generator coordinates.
 func (pallasCurveParams) SetGenerator(xOut, yOut, zOut *Fp) {
 	// this is for MINA, zcash is using different generator
 	xOut.SetOne()
@@ -94,10 +100,12 @@ func (pallasCurveParams) SetGenerator(xOut, yOut, zOut *Fp) {
 	zOut.SetOne()
 }
 
+// AddA adds the curve A parameter to in.
 func (pallasCurveParams) AddA(out, in *Fp) {
 	out.Set(in)
 }
 
+// AddB adds the curve B parameter to in.
 func (pallasCurveParams) AddB(out, in *Fp) {
 	out.Add(in, &pallasCurveB)
 }
@@ -117,38 +125,47 @@ func (pallasCurveParams) MulBy3B(out *Fp, in *Fp) {
 	out.Sub(&in16, in)
 }
 
+// MulByA multiplies by the curve A parameter.
 func (pallasCurveMapperParams) MulByA(out, in *Fp) {
 	out.Mul(in, &pallasSswuIsogenyA)
 }
 
+// MulByB multiplies by the curve B parameter.
 func (pallasCurveMapperParams) MulByB(out, in *Fp) {
 	out.Mul(in, &pallasSswuIsogenyB)
 }
 
+// SetZ sets the SSWU Z parameter.
 func (pallasCurveMapperParams) SetZ(out *Fp) {
 	out.Set(&pallasSswuZ)
 }
 
+// SqrtRatio computes sqrt(u/v) with curve-specific parameters.
 func (pallasCurveMapperParams) SqrtRatio(y, u, v *Fp) (ok ct.Bool) {
 	return sswu.SqrtRatio(y, pallasSqrtRatioC1, pallasSqrtRatioC3[:], pallasSqrtRatioC4, pallasSqrtRatioC5, &pallasSqrtRatioC6, &pallasSqrtRatioC7, u, v)
 }
 
+// Sgn0 returns the sign bit per RFC 9380.
 func (pallasCurveMapperParams) Sgn0(v *Fp) ct.Bool {
 	return ct.Bool(uint64(v.Bytes()[0] & 0b1))
 }
 
+// XNum returns isogeny x numerator coefficients.
 func (pallasCurveMapperParams) XNum() []Fp {
 	return pallasSswuIsogenyXNum[:]
 }
 
+// XDen returns isogeny x denominator coefficients.
 func (pallasCurveMapperParams) XDen() []Fp {
 	return pallasSswuIsogenyXDen[:]
 }
 
+// YNum returns isogeny y numerator coefficients.
 func (pallasCurveMapperParams) YNum() []Fp {
 	return pallasSswuIsogenyYNum[:]
 }
 
+// YDen returns isogeny y denominator coefficients.
 func (pallasCurveMapperParams) YDen() []Fp {
 	return pallasSswuIsogenyYDen[:]
 }

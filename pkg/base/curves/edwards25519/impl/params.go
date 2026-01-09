@@ -34,10 +34,12 @@ func init() {
 
 type curveParams struct{}
 
+// CurveHasherParams defines hash-to-curve parameters.
 type CurveHasherParams struct{}
 
 type curveMapper = elligator2.Edwards25519PointMapper[*Fp, Fp]
 
+// SetGenerator sets generator coordinates.
 func (curveParams) SetGenerator(xOut, yOut, tOut, zOut *Fp) {
 	xOut.Set(&curveGx)
 	yOut.Set(&curveGy)
@@ -45,6 +47,7 @@ func (curveParams) SetGenerator(xOut, yOut, tOut, zOut *Fp) {
 	zOut.SetOne()
 }
 
+// ClearCofactor clears the cofactor of the input point.
 func (curveParams) ClearCofactor(xOut, yOut, tOut, zOut, xIn, yIn, tIn, zIn *Fp) {
 	var out Point
 	out.X.Set(xIn)
@@ -61,26 +64,32 @@ func (curveParams) ClearCofactor(xOut, yOut, tOut, zOut, xIn, yIn, tIn, zIn *Fp)
 	zOut.Set(&out.Z)
 }
 
+// SetA sets the curve A parameter.
 func (curveParams) SetA(out *Fp) {
 	out.Set(&curveA)
 }
 
+// MulByA multiplies by the curve A parameter.
 func (curveParams) MulByA(out, in *Fp) {
 	out.Neg(in)
 }
 
+// MulByD multiplies by the curve D parameter.
 func (curveParams) MulByD(out, in *Fp) {
 	out.Mul(in, &curveD)
 }
 
+// MulBy2D multiplies by 2*D.
 func (curveParams) MulBy2D(out, in *Fp) {
 	out.Mul(in, &curveD2)
 }
 
+// L returns the hash-to-field length in bytes.
 func (CurveHasherParams) L() uint64 {
 	return 48
 }
 
+// MessageExpander returns the RFC 9380 message expander.
 func (CurveHasherParams) MessageExpander() h2c.MessageExpander {
 	return curveMessageExpander
 }

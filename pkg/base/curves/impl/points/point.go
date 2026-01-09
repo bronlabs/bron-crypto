@@ -16,9 +16,12 @@ type ellipticPoint[FP impl.FiniteFieldElementLowLevel[FP], PP impl.FiniteGroupEl
 	ToAffine(x, y FP) (ok ct.Bool)
 }
 
+// Point describes an elliptic curve point with encoding and hashing helpers.
 type Point[FP impl.FiniteFieldElementLowLevel[FP], PP ellipticPoint[FP, PP]] interface {
 	ellipticPoint[FP, PP]
 }
+
+// PointPtr is a pointer constraint for elliptic curve points.
 type PointPtr[FP impl.FiniteFieldElementLowLevel[FP], PP ellipticPoint[FP, PP], P any] interface {
 	*P
 	ellipticPoint[FP, PP]

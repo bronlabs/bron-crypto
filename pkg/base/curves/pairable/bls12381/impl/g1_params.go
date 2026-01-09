@@ -106,18 +106,22 @@ func init() {
 
 type g1CurveParams struct{}
 
+// G1CurveHasherParams defines hash-to-curve parameters.
 type G1CurveHasherParams struct{}
 type g1CurveMapperParams struct{}
 type g1CurveMapper = sswu.ZeroPointMapper[*Fp, g1CurveMapperParams, Fp]
 
+// AddA adds the curve A parameter to in.
 func (g1CurveParams) AddA(out, in *Fp) {
 	out.Set(in)
 }
 
+// AddB adds the curve B parameter to in.
 func (g1CurveParams) AddB(out, in *Fp) {
 	out.Add(in, &g1CurveB)
 }
 
+// MulByA multiplies by the curve A parameter.
 func (g1CurveParams) MulByA(out, _ *Fp) {
 	out.SetZero()
 }
@@ -131,6 +135,7 @@ func (g1CurveParams) MulBy3B(out, in *Fp) {
 	out.Add(&b8, &b4) // b12
 }
 
+// ClearCofactor clears the cofactor of the input point.
 func (g1CurveParams) ClearCofactor(xOut, yOut, zOut, xIn, yIn, zIn *Fp) {
 	var in G1Point
 	in.X.Set(xIn)
@@ -144,60 +149,74 @@ func (g1CurveParams) ClearCofactor(xOut, yOut, zOut, xIn, yIn, zIn *Fp) {
 	zOut.Set(&out.Z)
 }
 
+// SetGenerator sets generator coordinates.
 func (g1CurveParams) SetGenerator(xOut, yOut, zOut *Fp) {
 	xOut.Set(&g1CurveGx)
 	yOut.Set(&g1CurveGy)
 	zOut.SetOne()
 }
 
+// M returns the field extension degree.
 func (G1CurveHasherParams) M() uint64 {
 	return 1
 }
 
+// L returns the hash-to-field length in bytes.
 func (G1CurveHasherParams) L() uint64 {
 	return 64
 }
 
+// MessageExpander returns the RFC 9380 message expander.
 func (G1CurveHasherParams) MessageExpander() h2c.MessageExpander {
 	return g1CurveMessageExpander
 }
 
+// Suite returns the hash-to-curve suite string.
 func (G1CurveHasherParams) Suite() []byte {
 	return []byte("BLS12381G1_XMD:SHA-256_SSWU_RO_")
 }
 
+// MulByA multiplies by the curve A parameter.
 func (g1CurveMapperParams) MulByA(out, in *Fp) {
 	out.Mul(in, &g1SswuIsogenyA)
 }
 
+// MulByB multiplies by the curve B parameter.
 func (g1CurveMapperParams) MulByB(out, in *Fp) {
 	out.Mul(in, &g1SswuIsogenyB)
 }
 
+// SetZ sets the SSWU Z parameter.
 func (g1CurveMapperParams) SetZ(out *Fp) {
 	out.Set(&g1SswuZ)
 }
 
+// SqrtRatio computes sqrt(u/v) with curve-specific parameters.
 func (g1CurveMapperParams) SqrtRatio(out, u, v *Fp) (ok ct.Bool) {
 	return sswu.SqrtRatio3Mod4(out, g1SqrtRatioC1[:], &g1SqrtRationC2, u, v)
 }
 
+// Sgn0 returns the sign bit per RFC 9380.
 func (g1CurveMapperParams) Sgn0(v *Fp) ct.Bool {
 	return ct.Bool(uint64(v.Bytes()[0] & 0b1))
 }
 
+// XNum returns isogeny x numerator coefficients.
 func (g1CurveMapperParams) XNum() []Fp {
 	return g1SswuIsogenyXNum[:]
 }
 
+// XDen returns isogeny x denominator coefficients.
 func (g1CurveMapperParams) XDen() []Fp {
 	return g1SswuIsogenyXDen[:]
 }
 
+// YNum returns isogeny y numerator coefficients.
 func (g1CurveMapperParams) YNum() []Fp {
 	return g1SswuIsogenyYNum[:]
 }
 
+// YDen returns isogeny y denominator coefficients.
 func (g1CurveMapperParams) YDen() []Fp {
 	return g1SswuIsogenyYDen[:]
 }

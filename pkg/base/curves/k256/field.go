@@ -6,16 +6,17 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 const (
+	// BaseFieldName is the base field name.
 	BaseFieldName = "secp256k1Fp"
 )
 
@@ -30,31 +31,38 @@ var (
 	baseFieldOrder    *numct.Modulus
 )
 
+// BaseField represents the curve base field.
 type BaseField struct {
 	traits.PrimeFieldTrait[*k256Impl.Fp, *BaseFieldElement, BaseFieldElement]
 }
 
+// NewBaseField returns the base field instance.
 func NewBaseField() *BaseField {
 	baseFieldInitOnce.Do(func() {
 		baseFieldOrder, _ = numct.NewModulusFromBytesBE(sliceutils.Reversed(k256Impl.FpModulus[:]))
+		//nolint:exhaustruct // no need for a trait
 		baseFieldInstance = &BaseField{}
 	})
 
 	return baseFieldInstance
 }
 
+// Name returns the name of the structure.
 func (f *BaseField) Name() string {
 	return BaseFieldName
 }
 
+// Order returns the group or field order.
 func (f *BaseField) Order() cardinal.Cardinal {
 	return cardinal.NewFromNumeric(baseFieldOrder.Nat())
 }
 
+// Characteristic returns the field characteristic.
 func (f *BaseField) Characteristic() cardinal.Cardinal {
 	return cardinal.NewFromNumeric(baseFieldOrder.Nat())
 }
 
+// Hash maps input bytes to an element or point.
 func (f *BaseField) Hash(bytes []byte) (*BaseFieldElement, error) {
 	var e [1]k256Impl.Fp
 	h2c.HashToField(e[:], k256Impl.CurveHasherParams{}, base.Hash2CurveAppTag+Hash2CurveSuite, bytes)
@@ -64,18 +72,22 @@ func (f *BaseField) Hash(bytes []byte) (*BaseFieldElement, error) {
 	return &s, nil
 }
 
+// ElementSize returns the element size in bytes.
 func (f *BaseField) ElementSize() int {
 	return k256Impl.FpBytes
 }
 
+// WideElementSize returns the wide element size in bytes.
 func (f *BaseField) WideElementSize() int {
 	return k256Impl.FpWideBytes
 }
 
+// BitLen returns the field modulus bit length.
 func (f *BaseField) BitLen() int {
 	return k256Impl.FpBits
 }
 
+// FromBytesBEReduce reduces a big-endian integer into the field.
 func (f *BaseField) FromBytesBEReduce(input []byte) (*BaseFieldElement, error) {
 	var v numct.Nat
 	var nNat numct.Nat
@@ -85,21 +97,25 @@ func (f *BaseField) FromBytesBEReduce(input []byte) (*BaseFieldElement, error) {
 	return f.FromBytesBE(vBytes)
 }
 
+// BaseFieldElement represents an element of the base field.
 type BaseFieldElement struct {
 	traits.PrimeFieldElementTrait[*k256Impl.Fp, k256Impl.Fp, *BaseFieldElement, BaseFieldElement]
 }
 
+// Structure returns the algebraic structure for the receiver.
 func (fe *BaseFieldElement) Structure() algebra.Structure[*BaseFieldElement] {
 	return NewBaseField()
 }
 
+// MarshalBinary implements encoding.BinaryMarshaler.
 func (fe *BaseFieldElement) MarshalBinary() (data []byte, err error) {
 	return fe.V.Bytes(), nil
 }
 
+// UnmarshalBinary implements encoding.BinaryUnmarshaler.
 func (fe *BaseFieldElement) UnmarshalBinary(data []byte) error {
 	if ok := fe.V.SetBytes(data); ok == 0 {
-		return errs.NewSerialisation("failed to unmarshal field element")
+		return curves.ErrSerialisation.WithMessage("failed to unmarshal field element")
 	}
 
 	return nil

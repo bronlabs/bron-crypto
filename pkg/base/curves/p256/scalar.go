@@ -8,16 +8,17 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	p256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/p256/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
 const (
+	// ScalarFieldName is the scalar field name.
 	ScalarFieldName = "P256Fq"
 )
 
@@ -42,30 +43,37 @@ func scalarFieldInit() {
 	if ok == ct.False {
 		panic("failed to create scalar field modulus")
 	}
+	//nolint:exhaustruct // no need for a trait
 	scalarFieldInstance = &ScalarField{}
 }
 
+// ScalarField represents the scalar field.
 type ScalarField struct {
 	traits.PrimeFieldTrait[*p256Impl.Fq, *Scalar, Scalar]
 }
 
+// NewScalarField returns the scalar field instance.
 func NewScalarField() *ScalarField {
 	scalarFieldInitOnce.Do(scalarFieldInit)
 	return scalarFieldInstance
 }
 
+// Name returns the name of the structure.
 func (f *ScalarField) Name() string {
 	return ScalarFieldName
 }
 
+// Order returns the group or field order.
 func (f *ScalarField) Order() cardinal.Cardinal {
 	return cardinal.NewFromNumeric(scalarFieldOrder.Nat())
 }
 
+// Characteristic returns the field characteristic.
 func (f *ScalarField) Characteristic() cardinal.Cardinal {
 	return cardinal.NewFromNumeric(scalarFieldOrder.Nat())
 }
 
+// Hash maps input bytes to an element or point.
 func (f *ScalarField) Hash(bytes []byte) (*Scalar, error) {
 	var e [1]p256Impl.Fq
 	h2c.HashToField(e[:], p256Impl.CurveHasherParams{}, base.Hash2CurveAppTag+Hash2CurveScalarSuite, bytes)
@@ -75,6 +83,7 @@ func (f *ScalarField) Hash(bytes []byte) (*Scalar, error) {
 	return &s, nil
 }
 
+// FromBytesBEReduce reduces a big-endian integer into the field.
 func (f *ScalarField) FromBytesBEReduce(input []byte) (*Scalar, error) {
 	var v numct.Nat
 	var nNat numct.Nat
@@ -84,33 +93,40 @@ func (f *ScalarField) FromBytesBEReduce(input []byte) (*Scalar, error) {
 	return f.FromBytesBE(vBytes)
 }
 
+// ElementSize returns the element size in bytes.
 func (f *ScalarField) ElementSize() int {
 	return k256Impl.FqBytes
 }
 
+// WideElementSize returns the wide element size in bytes.
 func (f *ScalarField) WideElementSize() int {
 	return k256Impl.FqWideBytes
 }
 
+// BitLen returns the field modulus bit length.
 func (f *ScalarField) BitLen() int {
 	return p256Impl.FqBits
 }
 
+// Scalar represents a scalar field element.
 type Scalar struct {
 	traits.PrimeFieldElementTrait[*p256Impl.Fq, p256Impl.Fq, *Scalar, Scalar]
 }
 
+// Structure returns the algebraic structure for the receiver.
 func (fe *Scalar) Structure() algebra.Structure[*Scalar] {
 	return NewScalarField()
 }
 
+// MarshalBinary implements encoding.BinaryMarshaler.
 func (fe *Scalar) MarshalBinary() (data []byte, err error) {
 	return fe.V.Bytes(), nil
 }
 
+// UnmarshalBinary implements encoding.BinaryUnmarshaler.
 func (fe *Scalar) UnmarshalBinary(data []byte) error {
 	if ok := fe.V.SetBytes(data); ok == 0 {
-		return errs.NewSerialisation("failed to unmarshal field element")
+		return curves.ErrSerialisation.WithMessage("failed to unmarshal field element")
 	}
 
 	return nil
