@@ -6,10 +6,10 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/impl/traits"
 	pastaImpl "github.com/bronlabs/bron-crypto/pkg/base/curves/pasta/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -21,6 +21,7 @@ type (
 )
 
 const (
+	// FpFieldName is the field name.
 	FpFieldName = "PastaFp"
 )
 
@@ -37,9 +38,11 @@ var (
 
 func fpFieldInit() {
 	fpFieldOrder, _ = numct.NewModulusFromBytesBE(sliceutils.Reversed(pastaImpl.FpModulus[:]))
+	//nolint:exhaustruct // no need for trait
 	fpFieldInstance = &FpField{}
 }
 
+// FpField represents a field instance.
 type FpField struct {
 	traits.PrimeFieldTrait[*pastaImpl.Fp, *FpFieldElement, FpFieldElement]
 }
@@ -49,34 +52,42 @@ func newFpField() *FpField {
 	return fpFieldInstance
 }
 
+// NewPallasBaseField returns the Pallas base field.
 func NewPallasBaseField() *FpField {
 	return newFpField()
 }
 
+// NewVestaScalarField returns the Vesta scalar field.
 func NewVestaScalarField() *FpField {
 	return newFpField()
 }
 
+// Name returns the name of the structure.
 func (*FpField) Name() string {
 	return FpFieldName
 }
 
+// ElementSize returns the element size in bytes.
 func (*FpField) ElementSize() int {
 	return pastaImpl.FpBytes
 }
 
+// WideElementSize returns the wide element size in bytes.
 func (*FpField) WideElementSize() int {
 	return pastaImpl.FpWideBytes
 }
 
+// Characteristic returns the field characteristic.
 func (f *FpField) Characteristic() cardinal.Cardinal {
 	return f.Order()
 }
 
+// Order returns the group or field order.
 func (*FpField) Order() cardinal.Cardinal {
 	return cardinal.NewFromNumeric(fpFieldOrder)
 }
 
+// Hash maps input bytes to an element or point.
 func (*FpField) Hash(input []byte) (*FpFieldElement, error) {
 	var e [1]pastaImpl.Fp
 	h2c.HashToField(e[:], pastaImpl.PallasCurveHasherParams{}, base.Hash2CurveAppTag+PallasHash2CurveSuite, input)
@@ -86,10 +97,12 @@ func (*FpField) Hash(input []byte) (*FpFieldElement, error) {
 	return &s, nil
 }
 
+// BitLen returns the field modulus bit length.
 func (*FpField) BitLen() int {
 	return pastaImpl.FpBits
 }
 
+// FromBytesBEReduce reduces a big-endian integer into the field.
 func (f *FpField) FromBytesBEReduce(input []byte) (*FpFieldElement, error) {
 	var v numct.Nat
 	var nNat numct.Nat
@@ -99,21 +112,25 @@ func (f *FpField) FromBytesBEReduce(input []byte) (*FpFieldElement, error) {
 	return f.FromBytesBE(vBytes)
 }
 
+// FpFieldElement represents a field element.
 type FpFieldElement struct {
 	traits.PrimeFieldElementTrait[*pastaImpl.Fp, pastaImpl.Fp, *FpFieldElement, FpFieldElement]
 }
 
+// Structure returns the algebraic structure for the receiver.
 func (s *FpFieldElement) Structure() algebra.Structure[*FpFieldElement] {
 	return newFpField()
 }
 
+// MarshalBinary implements encoding.BinaryMarshaler.
 func (s *FpFieldElement) MarshalBinary() ([]byte, error) {
 	return s.V.Bytes(), nil
 }
 
+// UnmarshalBinary implements encoding.BinaryUnmarshaler.
 func (s *FpFieldElement) UnmarshalBinary(data []byte) error {
 	if ok := s.V.SetBytes(data); ok == 0 {
-		return errs.NewSerialisation("cannot unmarshal scalar")
+		return curves.ErrSerialisation.WithMessage("cannot unmarshal scalar")
 	}
 
 	return nil

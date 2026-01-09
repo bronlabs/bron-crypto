@@ -74,7 +74,10 @@ type (
 
 // TODO: remove
 const (
-	TypeI   = algebra.TypeI
-	TypeII  = algebra.TypeII
+	// TypeI is a symmetric pairing type.
+	TypeI = algebra.TypeI
+	// TypeII is an asymmetric pairing type with homomorphism.
+	TypeII = algebra.TypeII
+	// TypeIII is an asymmetric pairing type without homomorphism.
 	TypeIII = algebra.TypeIII
 )

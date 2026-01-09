@@ -10,6 +10,7 @@ import (
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 )
 
+// ShortWeierstrassCurveParams exposes curve constants and helpers for Weierstrass arithmetic.
 type ShortWeierstrassCurveParams[FP fieldsImpl.FiniteFieldElement[FP]] interface {
 	// SetGenerator sets generator coordinates.
 	SetGenerator(xOut, yOut, zOut FP)
@@ -30,12 +31,14 @@ type ShortWeierstrassCurveParams[FP fieldsImpl.FiniteFieldElement[FP]] interface
 	MulBy3B(out FP, in FP)
 }
 
+// ShortWeierstrassPointImpl implements Jacobian coordinates for short Weierstrass curves.
 type ShortWeierstrassPointImpl[FP fieldsImpl.FiniteFieldElementPtr[FP, F], C ShortWeierstrassCurveParams[FP], H h2c.HasherParams, M h2c.PointMapper[FP], F any] struct {
 	X F
 	Y F
 	Z F
 }
 
+// Encode hashes a message to a curve point with one hash-to-field element.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Encode(dstPrefix string, message []byte) {
 	var curveParams C
 	var hasherParams H
@@ -53,6 +56,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Encode(dstPrefix string, mes
 	curveParams.ClearCofactor(&p.X, &p.Y, &p.Z, &q.X, &q.Y, &q.Z)
 }
 
+// Hash hashes a message to a curve point with two hash-to-field elements.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Hash(dst string, message []byte) {
 	var curveParams C
 	var hasherParams H
@@ -75,24 +79,28 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Hash(dst string, message []b
 	curveParams.ClearCofactor(&p.X, &p.Y, &p.Z, &q.X, &q.Y, &q.Z)
 }
 
+// Set sets p to v.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Set(v *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
 	FP(&p.X).Set(&v.X)
 	FP(&p.Y).Set(&v.Y)
 	FP(&p.Z).Set(&v.Z)
 }
 
+// SetZero sets p to the identity point.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetZero() {
 	FP(&p.X).SetZero()
 	FP(&p.Y).SetOne()
 	FP(&p.Z).SetZero()
 }
 
+// SetGenerator sets p to the curve generator.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetGenerator() {
 	var params C
 
 	params.SetGenerator(&p.X, &p.Y, &p.Z)
 }
 
+// SetRandom maps random field elements to a curve point and clears the cofactor.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetRandom(prng io.Reader) (ok ct.Bool) {
 	var curveParams C
 	var mapper M
@@ -118,6 +126,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetRandom(prng io.Reader) (o
 	return ok
 }
 
+// SetAffine sets p from affine coordinates if they satisfy the curve equation.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetAffine(x, y FP) (ok ct.Bool) {
 	var params C
 	var one, eql, eqr F
@@ -143,6 +152,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) setFractions(xn, xd, yn, yd 
 	FP(&p.Z).Mul(xd, yd)
 }
 
+// SetFromAffineX sets p from an affine x-coordinate, choosing a square root for y.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetFromAffineX(x FP) (ok ct.Bool) {
 	var params C
 	var one, yy, y F
@@ -160,12 +170,14 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetFromAffineX(x FP) (ok ct.
 	return ok
 }
 
+// Select conditionally assigns z or nz into p based on choice.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Select(choice ct.Choice, z, nz *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
 	FP(&p.X).Select(choice, &z.X, &nz.X)
 	FP(&p.Y).Select(choice, &z.Y, &nz.Y)
 	FP(&p.Z).Select(choice, &z.Z, &nz.Z)
 }
 
+// ClearCofactor clears the curve cofactor on input.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) ClearCofactor(in *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
 	var params C
 
@@ -174,6 +186,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) ClearCofactor(in *ShortWeier
 
 // Add computes p = lhs + rhs
 // Source: 2015 Renes–Costello–Batina "Complete addition formulas for prime order elliptic curves", Appendix A.1.
+// Add sets the receiver to lhs + rhs.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Add(lhs, rhs *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
 	var arith C
 	var t0f, t1f, t2f, t3f, t4f, t5f F
@@ -241,6 +254,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Add(lhs, rhs *ShortWeierstra
 	FP(&p.Z).Set(z3)
 }
 
+// Sub sets p = lhs - rhs.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Sub(lhs, rhs *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
 	var rhsNeg ShortWeierstrassPointImpl[FP, C, H, M, F]
 	rhsNeg.Neg(rhs)
@@ -250,6 +264,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Sub(lhs, rhs *ShortWeierstra
 // Double computes p = v + v
 // Source: 2015 Renes–Costello–Batina "Complete addition formulas for prime order elliptic curves", Appendix A.1.
 // The Bernstein–Lange doubling might be slightly faster, but these are highly unified.
+// Double sets the receiver to 2*x.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Double(v *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
 	var arith C
 	var t0f, t1f, t2f, t3f F
@@ -303,20 +318,24 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Double(v *ShortWeierstrassPo
 	p.Z = *z3
 }
 
+// Neg sets p to the negation of v.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Neg(v *ShortWeierstrassPointImpl[FP, C, H, M, F]) {
 	FP(&p.X).Set(&v.X)
 	FP(&p.Y).Neg(&v.Y)
 	FP(&p.Z).Set(&v.Z)
 }
 
+// IsZero reports whether p is the identity point.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) IsZero() ct.Bool {
 	return FP(&p.Z).IsZero()
 }
 
+// IsNonZero reports whether p is not the identity point.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) IsNonZero() ct.Bool {
 	return FP(&p.Z).IsNonZero()
 }
 
+// Equal reports whether p and rhs represent the same point.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Equal(rhs *ShortWeierstrassPointImpl[FP, C, H, M, F]) ct.Bool {
 	var x1z2f, y1z2f, x2z1f, y2z1f F
 	x1z2 := FP(&x1z2f)
@@ -339,6 +358,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Equal(rhs *ShortWeierstrassP
 	return x1z2.Equal(x2z1) & y1z2.Equal(y2z1)
 }
 
+// ToAffine converts p to affine coordinates if possible.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) ToAffine(xOut, yOut FP) (ok ct.Bool) {
 	var x, y, zInv F
 	zInvPtr := FP(&zInv)
@@ -352,6 +372,7 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) ToAffine(xOut, yOut FP) (ok 
 	return ok
 }
 
+// String formats the point in projective coordinates.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) String() string {
 	var one, x, y, z F
 	FP(&one).SetOne()
@@ -364,10 +385,12 @@ func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) String() string {
 	return fmt.Sprintf("(%s : %s : %s)", FP(&x), FP(&y), FP(&z))
 }
 
+// Bytes returns the concatenated byte encoding of projective coordinates.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) Bytes() []byte {
 	return slices.Concat(FP(&p.X).Bytes(), FP(&p.Y).Bytes(), FP(&p.Z).Bytes())
 }
 
+// SetBytes decodes projective coordinates from input.
 func (p *ShortWeierstrassPointImpl[FP, C, H, M, F]) SetBytes(input []byte) (ok ct.Bool) {
 	coordinateLen := len(input) / 3
 	x := input[:coordinateLen]

@@ -1,9 +1,10 @@
 package curve25519
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/fxamacker/cbor/v2"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
 var (
@@ -18,11 +19,13 @@ type pointDTO struct {
 	AffineUnompressedBytes []byte `cbor:"compressedBytes"`
 }
 
+// MarshalCBOR implements cbor.Marshaler.
 func (p *Point) MarshalCBOR() ([]byte, error) {
 	dto := &pointDTO{AffineUnompressedBytes: p.ToUncompressed()}
 	return serde.MarshalCBOR(dto)
 }
 
+// UnmarshalCBOR implements cbor.Unmarshaler.
 func (p *Point) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*pointDTO](data)
 	if err != nil {
@@ -31,17 +34,19 @@ func (p *Point) UnmarshalCBOR(data []byte) error {
 
 	pp, err := NewCurve().FromUncompressed(dto.AffineUnompressedBytes)
 	if err != nil {
-		return errs.WrapSerialisation(err, "cannot deserialize point")
+		return errs2.Wrap(err).WithMessage("cannot deserialize point")
 	}
 	p.V.Set(&pp.V)
 	return nil
 }
 
+// MarshalCBOR implements cbor.Marshaler.
 func (p *PrimeSubGroupPoint) MarshalCBOR() ([]byte, error) {
 	dto := &pointDTO{AffineUnompressedBytes: p.ToUncompressed()}
 	return serde.MarshalCBOR(dto)
 }
 
+// UnmarshalCBOR implements cbor.Unmarshaler.
 func (p *PrimeSubGroupPoint) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*pointDTO](data)
 	if err != nil {
@@ -50,7 +55,7 @@ func (p *PrimeSubGroupPoint) UnmarshalCBOR(data []byte) error {
 
 	pp, err := NewPrimeSubGroup().FromUncompressed(dto.AffineUnompressedBytes)
 	if err != nil {
-		return errs.WrapSerialisation(err, "cannot deserialize point")
+		return errs2.Wrap(err).WithMessage("cannot deserialize point")
 	}
 	p.V.Set(&pp.V)
 	return nil

@@ -5,11 +5,13 @@ import (
 	"slices"
 )
 
+// Xof implements expand_message_xof from RFC 9380.
 type Xof struct {
 	XofHash hash.XOF
 	K       uint
 }
 
+// ExpandMessage expands msg to lenInBytes using XOF and dst.
 func (e *Xof) ExpandMessage(dst, msg []byte, lenInBytes uint) []byte {
 	h := e.XofHash
 

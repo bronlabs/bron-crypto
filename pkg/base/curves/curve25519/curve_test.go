@@ -8,8 +8,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 )
 
 func Test_BaseScalarMul(t *testing.T) {
@@ -27,7 +28,9 @@ func Test_BaseScalarMul(t *testing.T) {
 		require.NoError(t, err)
 
 		actualPx, err := actualPoint.AffineX()
+		require.NoError(t, err)
 		expectedPx, err := expectedPoint.AffineX()
+		require.NoError(t, err)
 		require.True(t, actualPx.Equal(expectedPx))
 	}
 }
@@ -127,6 +130,8 @@ func Test_HashToCurveRFC9380(t *testing.T) {
 }
 
 func genKeyPair(tb testing.TB, prng io.Reader) (alice, bob *ecdh.PrivateKey) {
+	tb.Helper()
+
 	alice, err := ecdh.X25519().GenerateKey(prng)
 	require.NoError(tb, err)
 	bob, err = ecdh.X25519().GenerateKey(prng)
@@ -135,6 +140,8 @@ func genKeyPair(tb testing.TB, prng io.Reader) (alice, bob *ecdh.PrivateKey) {
 }
 
 func doGoDH(tb testing.TB, alice, bob *ecdh.PrivateKey) (sharedKey []byte) {
+	tb.Helper()
+
 	aliceShared, err := alice.ECDH(bob.PublicKey())
 	require.NoError(tb, err)
 	bobShared, err := bob.ECDH(alice.PublicKey())
@@ -146,6 +153,8 @@ func doGoDH(tb testing.TB, alice, bob *ecdh.PrivateKey) (sharedKey []byte) {
 
 // TODO: change to dhc package Diffie-Hellman when ready
 func doBronDH(tb testing.TB, alice, bob *ecdh.PrivateKey) (sharedKey []byte) {
+	tb.Helper()
+
 	aliceSk, err := curve25519.NewScalarField().FromClampedBytes(alice.Bytes())
 	require.NoError(tb, err)
 	alicePk := curve25519.NewCurve().PrimeSubGroupGenerator().ScalarMul(aliceSk)

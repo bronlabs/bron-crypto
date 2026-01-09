@@ -12,15 +12,21 @@ import (
 )
 
 const (
-	FpE         = 2
-	FpBits      = 255
-	FpBytes     = 32
+	// FpE is the exponent parameter for square roots.
+	FpE = 2
+	// FpBits is the field modulus bit length.
+	FpBits = 255
+	// FpBytes is the size of an Fp element in bytes.
+	FpBytes = 32
+	// FpWideBytes is the size of a wide Fp element in bytes.
 	FpWideBytes = 64
 )
 
 var (
-	FpModulus       = [...]uint8{0xed, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f}
-	FpRootOfUnity   Fp
+	// FpModulus is the field modulus in little-endian bytes.
+	FpModulus     = [...]uint8{0xed, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f}
+	FpRootOfUnity Fp
+	// FpProgenitorExp is the exponent for the progenitor element.
 	FpProgenitorExp = [...]uint8{0xfd, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x0f}
 )
 
@@ -31,54 +37,67 @@ func init() {
 
 var _ fieldsImpl.PrimeFieldElement[*Fp] = (*Fp)(nil)
 
+// Fp represents a prime field element.
 type Fp struct {
 	v fiatFpTightFieldElement
 }
 
+// Set sets the receiver to v.
 func (f *Fp) Set(v *Fp) {
 	f.v = v.v
 }
 
+// SetZero sets the receiver to zero.
 func (f *Fp) SetZero() {
 	f.v = fiatFpTightFieldElement{}
 }
 
+// SetOne sets the receiver to one.
 func (f *Fp) SetOne() {
 	f.v = fiatFpTightFieldElement{1}
 }
 
+// SetUint64 sets the receiver from v.
 func (f *Fp) SetUint64(u uint64) {
 	f.v = fiatFpTightFieldElement{u & ((1 << 51) - 1), u >> 51}
 }
 
+// Select conditionally assigns z or nz into the receiver.
 func (f *Fp) Select(choice ct.Choice, z, nz *Fp) {
 	fiatFpSelectznz((*[5]uint64)(&f.v), fiatFpUint1(choice), (*[5]uint64)(&z.v), (*[5]uint64)(&nz.v))
 }
 
+// Add sets the receiver to lhs + rhs.
 func (f *Fp) Add(lhs, rhs *Fp) {
 	fiatFpCarryAdd(&f.v, &lhs.v, &rhs.v)
 }
 
+// Double sets the receiver to 2*x.
 func (f *Fp) Double(x *Fp) {
 	fiatFpCarryAdd(&f.v, &x.v, &x.v)
 }
 
+// Sub sets the receiver to lhs - rhs.
 func (f *Fp) Sub(lhs, rhs *Fp) {
 	fiatFpCarrySub(&f.v, &lhs.v, &rhs.v)
 }
 
+// Neg sets the receiver to -v.
 func (f *Fp) Neg(v *Fp) {
 	fiatFpCarryOpp(&f.v, &v.v)
 }
 
+// Mul sets the receiver to lhs * rhs.
 func (f *Fp) Mul(lhs, rhs *Fp) {
 	fiatFpCarryMul(&f.v, (*fiatFpLooseFieldElement)(&lhs.v), (*fiatFpLooseFieldElement)(&rhs.v))
 }
 
+// Square sets the receiver to v^2.
 func (f *Fp) Square(v *Fp) {
 	fiatFpCarrySquare(&f.v, (*fiatFpLooseFieldElement)(&v.v))
 }
 
+// Inv sets the receiver to the inverse of a, if it exists.
 func (f *Fp) Inv(a *Fp) (ok ct.Bool) {
 	var _10, _11, _1100, _1111, _11110000, _11111111, x10, x20, x30, x60, x120, x240, x250, out Fp
 
@@ -152,6 +171,7 @@ func (f *Fp) Inv(a *Fp) (ok ct.Bool) {
 	return ok
 }
 
+// Div sets the receiver to lhs / rhs, if rhs is nonzero.
 func (f *Fp) Div(lhs, rhs *Fp) (ok ct.Bool) {
 	var rhsInv Fp
 	ok = rhsInv.Inv(rhs)
@@ -162,32 +182,38 @@ func (f *Fp) Div(lhs, rhs *Fp) (ok ct.Bool) {
 	return ok
 }
 
+// Sqrt sets the receiver to sqrt(x) if it exists.
 func (f *Fp) Sqrt(v *Fp) (ok ct.Bool) {
 	return fieldsImpl.TonelliShanks(f, v, &FpRootOfUnity, FpE, FpProgenitorExp[:])
 }
 
+// Equal reports whether the receiver equals v.
 func (f *Fp) Equal(rhs *Fp) ct.Bool {
 	var diff Fp
 	diff.Sub(f, rhs)
 	return diff.IsZero()
 }
 
+// IsNonZero reports whether the receiver is nonzero.
 func (f *Fp) IsNonZero() ct.Bool {
 	var data [FpBytes]byte
 	fiatFpToBytes(&data, &f.v)
 	return anyNonZero(&data)
 }
 
+// IsZero reports whether the receiver is zero.
 func (f *Fp) IsZero() ct.Bool {
 	return f.IsNonZero() ^ 1
 }
 
+// IsOne reports whether the receiver is one.
 func (f *Fp) IsOne() ct.Bool {
 	var one Fp
 	one.SetOne()
 	return f.Equal(&one)
 }
 
+// SetUniformBytes sets the receiver from uniform bytes.
 func (f *Fp) SetUniformBytes(componentsData ...[]byte) (ok ct.Bool) {
 	if len(componentsData) != 1 {
 		return 0
@@ -196,6 +222,7 @@ func (f *Fp) SetUniformBytes(componentsData ...[]byte) (ok ct.Bool) {
 	return f.SetBytesWide(componentsData[0])
 }
 
+// SetRandom sets the receiver from a random source.
 func (f *Fp) SetRandom(prng io.Reader) (ok ct.Bool) {
 	var data [FpWideBytes]byte
 	_, err := io.ReadFull(prng, data[:])
@@ -206,14 +233,17 @@ func (f *Fp) SetRandom(prng io.Reader) (ok ct.Bool) {
 	return f.SetBytesWide(data[:])
 }
 
+// ComponentsBytes returns component byte slices.
 func (f *Fp) ComponentsBytes() [][]byte {
 	return [][]byte{f.Bytes()}
 }
 
+// Degree returns the extension degree.
 func (*Fp) Degree() uint64 {
 	return 1
 }
 
+// SetLimbs sets the receiver from limbs.
 func (f *Fp) SetLimbs(data []uint64) (ok ct.Bool) {
 	if len(data) != 4 {
 		return 0
@@ -228,6 +258,7 @@ func (f *Fp) SetLimbs(data []uint64) (ok ct.Bool) {
 	return f.SetBytes(byteData[:])
 }
 
+// SetBytes sets the receiver from bytes.
 func (f *Fp) SetBytes(data []byte) (ok ct.Bool) {
 	if len(data) != int(FpBytes) || (data[FpBytes-1]&0x80 != 0) {
 		return 0
@@ -237,8 +268,9 @@ func (f *Fp) SetBytes(data []byte) (ok ct.Bool) {
 	return 1
 }
 
+// SetBytesWide sets the receiver from wide bytes.
 func (f *Fp) SetBytesWide(data []byte) (ok ct.Bool) {
-	if len(data) > int(FpWideBytes) {
+	if len(data) > FpWideBytes {
 		return 0
 	}
 
@@ -269,12 +301,14 @@ func (f *Fp) SetBytesWide(data []byte) (ok ct.Bool) {
 	return ok
 }
 
+// Bytes returns the canonical byte encoding.
 func (f *Fp) Bytes() []byte {
 	var data [FpBytes]byte
 	fiatFpToBytes(&data, &f.v)
 	return data[:]
 }
 
+// Limbs returns the little-endian limb representation.
 func (f *Fp) Limbs() []uint64 {
 	var limbs [4]uint64
 	data := f.Bytes()
@@ -285,6 +319,7 @@ func (f *Fp) Limbs() []uint64 {
 	return limbs[:]
 }
 
+// MustSetHex sets the receiver from a hex string, panicking on failure.
 func (f *Fp) MustSetHex(data string) {
 	dataBytes, err := hex.DecodeString(data)
 	if err != nil {
@@ -298,6 +333,7 @@ func (f *Fp) MustSetHex(data string) {
 	}
 }
 
+// String returns the string form of the receiver.
 func (f *Fp) String() string {
 	fBytes := f.Bytes()
 	slices.Reverse(fBytes)
@@ -305,6 +341,7 @@ func (f *Fp) String() string {
 	return fBi.String()
 }
 
+// GoString returns the Go-syntax representation of the receiver.
 func (f *Fp) GoString() string {
 	fBytes := f.Bytes()
 	slices.Reverse(fBytes)

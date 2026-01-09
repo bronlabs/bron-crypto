@@ -36,6 +36,8 @@ var (
 )
 
 type curveParams struct{}
+
+// CurveHasherParams defines hash-to-curve parameters.
 type CurveHasherParams struct{}
 type curveMapperParams struct{}
 type curveMapper = sswu.ZeroPointMapper[*Fp, curveMapperParams, Fp]
@@ -69,12 +71,14 @@ func init() {
 	sswuIsogenyYDen[3].SetOne()
 }
 
+// SetGenerator sets generator coordinates.
 func (curveParams) SetGenerator(xOut, yOut, zOut *Fp) {
 	xOut.Set(&curveGx)
 	yOut.Set(&curveGy)
 	zOut.SetOne()
 }
 
+// ClearCofactor clears the cofactor of the input point.
 func (curveParams) ClearCofactor(xOut, yOut, zOut, xIn, yIn, zIn *Fp) {
 	xOut.Set(xIn)
 	yOut.Set(yIn)
@@ -91,54 +95,67 @@ func (curveParams) MulBy3B(out *Fp, in *Fp) {
 	out.Mul(in, &curveB3)
 }
 
+// AddA adds the curve A parameter to in.
 func (curveParams) AddA(out *Fp, in *Fp) {
 	out.Set(in)
 }
 
+// AddB adds the curve B parameter to in.
 func (curveParams) AddB(out *Fp, in *Fp) {
 	out.Add(in, &curveB)
 }
 
+// L returns the hash-to-field length in bytes.
 func (CurveHasherParams) L() uint64 {
 	return 48
 }
 
+// MessageExpander returns the RFC 9380 message expander.
 func (CurveHasherParams) MessageExpander() h2c.MessageExpander {
 	return curveMessageExpander
 }
 
+// MulByA multiplies by the curve A parameter.
 func (curveMapperParams) MulByA(out, in *Fp) {
 	out.Mul(in, &sswuIsogenyA)
 }
 
+// MulByB multiplies by the curve B parameter.
 func (curveMapperParams) MulByB(out, in *Fp) {
 	out.Mul(in, &sswuIsogenyB)
 }
 
+// SetZ sets the SSWU Z parameter.
 func (curveMapperParams) SetZ(out *Fp) {
 	out.Set(&sswuZ)
 }
 
+// SqrtRatio computes sqrt(u/v) with curve-specific parameters.
 func (curveMapperParams) SqrtRatio(y, u, v *Fp) (ok ct.Bool) {
 	return sswu.SqrtRatio3Mod4(y, sqrtRatioC1[:], &sqrtRatioC2, u, v)
 }
 
+// Sgn0 returns the sign bit per RFC 9380.
 func (curveMapperParams) Sgn0(v *Fp) ct.Bool {
 	return ct.Bool(uint64(v.Bytes()[0] & 0b1))
 }
 
+// XNum returns isogeny x numerator coefficients.
 func (curveMapperParams) XNum() []Fp {
 	return sswuIsogenyXNum[:]
 }
 
+// XDen returns isogeny x denominator coefficients.
 func (curveMapperParams) XDen() []Fp {
 	return sswuIsogenyXDen[:]
 }
 
+// YNum returns isogeny y numerator coefficients.
 func (curveMapperParams) YNum() []Fp {
 	return sswuIsogenyYNum[:]
 }
 
+// YDen returns isogeny y denominator coefficients.
 func (curveMapperParams) YDen() []Fp {
 	return sswuIsogenyYDen[:]
 }
