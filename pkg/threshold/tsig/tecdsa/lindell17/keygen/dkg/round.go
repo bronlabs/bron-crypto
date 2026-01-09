@@ -11,7 +11,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
-	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lp"
@@ -155,7 +154,7 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 	}
 
 	// 3.iii. generate a Paillier key pair
-	keyGenerator, err := p.state.paillierScheme.Keygen(paillier.WithEachPrimeBitLen(lp.PaillierBitSizeN / 2))
+	keyGenerator, err := p.state.paillierScheme.Keygen()
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot generate Paillier key generator")
 	}

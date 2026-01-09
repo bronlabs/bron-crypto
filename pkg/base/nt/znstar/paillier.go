@@ -3,6 +3,7 @@ package znstar
 import (
 	"io"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
@@ -12,12 +13,14 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 )
 
-// SamplePaillierGroup generates a Paillier group with random primes of the given bit length.
-func SamplePaillierGroup(factorBits uint, prng io.Reader) (*PaillierGroupKnownOrder, error) {
+const PaillierKeyLen = base.IFCKeyLength
+
+// SamplePaillierGroup generates a Paillier group with modulus of given bitlen.
+func SamplePaillierGroup(keyLen uint, prng io.Reader) (*PaillierGroupKnownOrder, error) {
 	if prng == nil {
 		return nil, errs.NewIsNil("prng")
 	}
-	p, q, err := nt.GeneratePrimePair(num.NPlus(), factorBits, prng)
+	p, q, err := nt.GeneratePrimePair(num.NPlus(), keyLen/2, prng)
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to generate prime pair")
 	}
@@ -32,9 +35,8 @@ func NewPaillierGroup(p, q *num.NatPlus) (*PaillierGroupKnownOrder, error) {
 	if p.TrueLen() != q.TrueLen() {
 		return nil, errs.NewValue("p and q must have the same length")
 	}
-	n := p.Mul(q)
-	if n.TrueLen() < 2047 {
-		return nil, errs.NewValue("p and q must be at least 1024 bits each")
+	if p.TrueLen() < PaillierKeyLen/2 {
+		return nil, errs.NewValue("p and q must be at least %d bits each", PaillierKeyLen/2)
 	}
 	if !p.IsProbablyPrime() {
 		return nil, errs.NewValue("p must be prime")
@@ -42,7 +44,7 @@ func NewPaillierGroup(p, q *num.NatPlus) (*PaillierGroupKnownOrder, error) {
 	if !q.IsProbablyPrime() {
 		return nil, errs.NewValue("q must be prime")
 	}
-
+	n := p.Mul(q)
 	zMod, err := num.NewZMod(n.Square())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "failed to create ZMod")
@@ -62,8 +64,8 @@ func NewPaillierGroup(p, q *num.NatPlus) (*PaillierGroupKnownOrder, error) {
 
 // NewPaillierGroupOfUnknownOrder creates a Paillier group with unknown order from the given modulus n^2 and n.
 func NewPaillierGroupOfUnknownOrder(n2, n *num.NatPlus) (*PaillierGroupUnknownOrder, error) {
-	if n.TrueLen() < 2047 {
-		return nil, errs.NewValue("modulus must be at least 4096 bits")
+	if n.TrueLen() < PaillierKeyLen-1 {
+		return nil, errs.NewValue("modulus n must be at least %d bits", PaillierKeyLen-1)
 	}
 	if !n.Mul(n).Equal(n2) {
 		return nil, errs.NewValue("n isn't sqrt of n")

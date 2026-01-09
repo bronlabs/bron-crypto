@@ -18,7 +18,7 @@ import (
 )
 
 // DealRandom creates Lindell17 shards using a trusted dealer.
-func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], shareholder ds.Set[sharing.ID], primeBitLen uint, prng io.Reader) (ds.Map[sharing.ID, *lindell17.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
+func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], shareholder ds.Set[sharing.ID], keyLen uint, prng io.Reader) (ds.Map[sharing.ID, *lindell17.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
 	if curve == nil || shareholder == nil || shareholder.Size() == 0 || prng == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("invalid input to trusted dealer")
 	}
@@ -42,7 +42,7 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 	paillierPublicKeys := make(map[sharing.ID]*paillier.PublicKey)
 	shareCiphertexts := make(map[sharing.ID]*paillier.Ciphertext)
 
-	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(primeBitLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(keyLen))
 	if err != nil {
 		return nil, nil, errs2.Wrap(err).WithMessage("cannot create paillier key generator")
 	}

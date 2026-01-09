@@ -47,7 +47,7 @@ func TestCiphertext_HomAdd_Commutativity_Property(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
@@ -83,7 +83,7 @@ func TestCiphertext_HomAdd_Associativity_Property(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
@@ -124,7 +124,7 @@ func TestCiphertext_HomAdd_Identity_Property(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
@@ -157,7 +157,7 @@ func TestCiphertext_HomSub_Inverse_Property(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
@@ -190,7 +190,7 @@ func TestCiphertext_ScalarMul_Zero_Property(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
@@ -222,7 +222,7 @@ func TestCiphertext_ScalarMul_One_Property(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
@@ -254,7 +254,7 @@ func TestCiphertext_ScalarMul_Distributive_Property(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
@@ -300,7 +300,7 @@ func TestEncryptDecrypt_RoundTrip_Property(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
@@ -328,7 +328,7 @@ func TestSelfEncryptDecrypt_RoundTrip_Property(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, _, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
@@ -358,7 +358,7 @@ func TestCiphertext_ReRandomise_PreservesPlaintext_Property(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
@@ -393,7 +393,7 @@ func TestCiphertext_HomAdd_MatchesPlaintextAdd_Property(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
@@ -429,7 +429,7 @@ func TestCiphertext_HomSub_MatchesPlaintextSub_Property(t *testing.T) {
 	t.Parallel()
 
 	scheme := paillier.NewScheme()
-	kg, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	kg, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := kg.Generate(pcg.NewRandomised())
 	require.NoError(t, err)
