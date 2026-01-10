@@ -5,7 +5,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
@@ -13,6 +13,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 )
 
+// BasePublicMaterial contains the public information for threshold signature verification,
+// including the access structure, verification vector, and partial public keys for each party.
 type BasePublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
 	accessStructure   *sharing.ThresholdAccessStructure
 	fv                feldman.VerificationVector[E, S]
@@ -25,6 +27,7 @@ type basePublicMaterialDTO[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFie
 	PartialPublicKeys map[sharing.ID]*schnorrlike.PublicKey[E, S] `cbor:"partialPublicKeys"`
 }
 
+// AccessStructure returns the threshold access structure defining authorized quorums.
 func (spm *BasePublicMaterial[E, S]) AccessStructure() *sharing.ThresholdAccessStructure {
 	if spm == nil {
 		return nil
@@ -32,10 +35,12 @@ func (spm *BasePublicMaterial[E, S]) AccessStructure() *sharing.ThresholdAccessS
 	return spm.accessStructure
 }
 
+// PublicKey returns the threshold public key (first coefficient of the verification vector).
 func (spm *BasePublicMaterial[E, S]) PublicKey() E {
 	return spm.fv.Coefficients()[0]
 }
 
+// PartialPublicKeys returns the map of party IDs to their partial public keys.
 func (spm *BasePublicMaterial[E, S]) PartialPublicKeys() ds.Map[sharing.ID, *schnorrlike.PublicKey[E, S]] {
 	if spm == nil {
 		return nil
@@ -43,6 +48,7 @@ func (spm *BasePublicMaterial[E, S]) PartialPublicKeys() ds.Map[sharing.ID, *sch
 	return spm.partialPublicKeys
 }
 
+// VerificationVector returns the Feldman verification vector for the shared secret.
 func (spm *BasePublicMaterial[E, S]) VerificationVector() feldman.VerificationVector[E, S] {
 	if spm == nil {
 		return nil
@@ -50,6 +56,7 @@ func (spm *BasePublicMaterial[E, S]) VerificationVector() feldman.VerificationVe
 	return spm.fv
 }
 
+// Equal returns true if this public material equals another.
 func (spm *BasePublicMaterial[E, S]) Equal(other *BasePublicMaterial[E, S]) bool {
 	if spm == nil || other == nil {
 		return spm == other
@@ -73,10 +80,12 @@ func (spm *BasePublicMaterial[E, S]) Equal(other *BasePublicMaterial[E, S]) bool
 	return true
 }
 
+// HashCode returns a hash code for this public material.
 func (spm *BasePublicMaterial[E, S]) HashCode() base.HashCode {
 	return spm.fv.HashCode()
 }
 
+// MarshalCBOR serializes the public material to CBOR format.
 func (spm *BasePublicMaterial[E, S]) MarshalCBOR() ([]byte, error) {
 	ppk := make(map[sharing.ID]*schnorrlike.PublicKey[E, S])
 	for k, v := range spm.partialPublicKeys.Iter() {
@@ -90,11 +99,12 @@ func (spm *BasePublicMaterial[E, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal tSchnorr BasePublicMaterial")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal tSchnorr BasePublicMaterial")
 	}
 	return data, nil
 }
 
+// UnmarshalCBOR deserializes the public material from CBOR format.
 func (spm *BasePublicMaterial[E, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*basePublicMaterialDTO[E, S]](data)
 	if err != nil {
@@ -111,6 +121,7 @@ func (spm *BasePublicMaterial[E, S]) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
+// BaseShard contains a party's secret share and the associated public material for threshold signing.
 type BaseShard[
 	E algebra.PrimeGroupElement[E, S],
 	S algebra.PrimeFieldElement[S],
@@ -125,6 +136,7 @@ type baseShardDTO[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement
 	PM    BasePublicMaterial[E, S] `cbor:"publicMaterial"`
 }
 
+// Share returns the party's Feldman secret share.
 func (sh *BaseShard[E, S]) Share() *feldman.Share[S] {
 	if sh == nil {
 		return nil
@@ -132,6 +144,7 @@ func (sh *BaseShard[E, S]) Share() *feldman.Share[S] {
 	return sh.share
 }
 
+// Equal returns true if this shard equals another.
 func (sh *BaseShard[E, S]) Equal(other *BaseShard[E, S]) bool {
 	if sh == nil || other == nil {
 		return sh == other
@@ -140,6 +153,7 @@ func (sh *BaseShard[E, S]) Equal(other *BaseShard[E, S]) bool {
 		sh.BasePublicMaterial.Equal(&other.BasePublicMaterial)
 }
 
+// HashCode returns a hash code for this shard.
 func (sh *BaseShard[E, S]) HashCode() base.HashCode {
 	if sh == nil {
 		return base.HashCode(0)
@@ -147,6 +161,7 @@ func (sh *BaseShard[E, S]) HashCode() base.HashCode {
 	return sh.BasePublicMaterial.HashCode()
 }
 
+// MarshalCBOR serializes the shard to CBOR format.
 func (sh *BaseShard[E, S]) MarshalCBOR() ([]byte, error) {
 	dto := &baseShardDTO[E, S]{
 		Share: sh.share,
@@ -154,11 +169,12 @@ func (sh *BaseShard[E, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal tSchnorr BaseShard")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal tSchnorr BaseShard")
 	}
 	return data, nil
 }
 
+// UnmarshalCBOR deserializes the shard from CBOR format.
 func (sh *BaseShard[E, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*baseShardDTO[E, S]](data)
 	if err != nil {
@@ -173,27 +189,29 @@ func (sh *BaseShard[E, S]) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
+// NewBaseShard creates a new base shard from a Feldman share, verification vector, and access structure.
+// It computes the partial public keys for all parties in the access structure.
 func NewBaseShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]](
 	share *feldman.Share[S],
 	fv feldman.VerificationVector[E, S],
 	accessStructure *sharing.ThresholdAccessStructure,
 ) (*BaseShard[E, S], error) {
 	if share == nil || fv == nil || accessStructure == nil {
-		return nil, errs.NewIsNil("nil input parameters")
+		return nil, ErrInvalidArgument.WithMessage("nil input parameters")
 	}
 	sf, ok := share.Value().Structure().(algebra.PrimeField[S])
 	if !ok {
-		return nil, errs.NewType("share value structure is not a prime field")
+		return nil, ErrInvalidArgument.WithMessage("share value structure is not a prime field")
 	}
 	partialPublicKeyValues, err := gennaro.ComputePartialPublicKey(sf, share, fv, accessStructure)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to compute partial public keys from share")
+		return nil, errs2.Wrap(err).WithMessage("failed to compute partial public keys from share")
 	}
 	partialPublicKeys := hashmap.NewComparable[sharing.ID, *schnorrlike.PublicKey[E, S]]()
 	for id, value := range partialPublicKeyValues.Iter() {
 		pk, err := schnorrlike.NewPublicKey(value)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "failed to create public key for party %d", id)
+			return nil, errs2.Wrap(err).WithMessage("failed to create public key for party %d", id)
 		}
 		partialPublicKeys.Put(id, pk)
 	}
@@ -207,3 +225,8 @@ func NewBaseShard[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement
 		},
 	}, nil
 }
+
+var (
+	// ErrInvalidArgument is returned when a function receives an invalid argument.
+	ErrInvalidArgument = errs2.New("invalid argument")
+)
