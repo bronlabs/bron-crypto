@@ -5,37 +5,39 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
 
+// Round1 executes protocol round 1.
 func (alice *Alice[G, S]) Round1() (r1Out *Round1P2P[G, S], err error) {
 	if alice.round != 1 {
-		return nil, errs.NewValidation("invalid round")
+		return nil, ErrValidation.WithMessage("invalid round")
 	}
 
 	r1Out, err = alice.sender.Round1()
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to call OT round 1")
+		return nil, errs2.Wrap(err).WithMessage("failed to call OT round 1")
 	}
 
 	alice.round += 2
 	return r1Out, nil
 }
 
+// Round2 executes protocol round 2.
 func (bob *Bob[G, S]) Round2(r1Out *Round1P2P[G, S]) (r2Out *Round2P2P[G, S], b S, err error) {
 	var nilSE S
 	if bob.round != 2 {
-		return nil, nilSE, errs.NewValidation("invalid round")
+		return nil, nilSE, ErrValidation.WithMessage("invalid round")
 	}
 
 	beta := make([]byte, bob.xi/8)
 	if _, err := io.ReadFull(bob.prng, beta); err != nil {
-		return nil, nilSE, errs.WrapRandomSample(err, "cannot sample choices")
+		return nil, nilSE, errs2.Wrap(err).WithMessage("cannot sample choices")
 	}
 
 	r2Out, receiverOutput, err := bob.receiver.Round2(r1Out, beta)
 	if err != nil {
-		return nil, nilSE, errs.WrapFailed(err, "cannot run round 2 of receiver")
+		return nil, nilSE, errs2.Wrap(err).WithMessage("cannot run round 2 of receiver")
 	}
 	bob.beta = receiverOutput.Choices
 	bob.gamma = receiverOutput.Messages
@@ -54,14 +56,15 @@ func (bob *Bob[G, S]) Round2(r1Out *Round1P2P[G, S]) (r2Out *Round2P2P[G, S], b 
 	return r2Out, b, nil
 }
 
+// Round3 executes protocol round 3.
 func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2P[S], c []S, err error) {
 	if alice.round != 3 {
-		return nil, nil, errs.NewValidation("invalid round")
+		return nil, nil, ErrValidation.WithMessage("invalid round")
 	}
 
 	senderOutput, err := alice.sender.Round3(r2Out)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot send round 3 of receiver")
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot send round 3 of receiver")
 	}
 	alice.alpha = senderOutput.Messages
 
@@ -77,7 +80,7 @@ func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2
 	for i := range alice.rho {
 		aHat[i], err = alice.suite.field.Random(alice.prng)
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "cannot get random scalar")
+			return nil, nil, errs2.Wrap(err).WithMessage("cannot get random scalar")
 		}
 	}
 
@@ -94,7 +97,7 @@ func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2
 
 	theta, err := alice.roTheta(aTilde)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot get theta")
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot get theta")
 	}
 
 	eta := make([]S, alice.rho)
@@ -118,7 +121,7 @@ func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2
 
 	mu, err := alice.roMu(muBold)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "cannot get mu")
+		return nil, nil, errs2.Wrap(err).WithMessage("cannot get mu")
 	}
 
 	r3Out = &Round3P2P[S]{
@@ -130,17 +133,18 @@ func (alice *Alice[G, S]) Round3(r2Out *Round2P2P[G, S], a []S) (r3Out *Round3P2
 	return r3Out, c, nil
 }
 
+// Round4 executes protocol round 4.
 func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[S]) (d []S, err error) {
 	if bob.round != 4 {
-		return nil, errs.NewValidation("invalid round")
+		return nil, ErrValidation.WithMessage("invalid round")
 	}
 	// if err := r3Out.Validate(bob.Protocol); err != nil {
-	//	return nil, errs.WrapFailed(err, "invalid message")
+	//	return nil, errs2.Wrap(err).WithMessage("invalid message")
 	//}
 
 	theta, err := bob.roTheta(r3Out.ATilde)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot get theta")
+		return nil, errs2.Wrap(err).WithMessage("cannot get theta")
 	}
 
 	dDot := make([][]S, bob.xi)
@@ -187,10 +191,10 @@ func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[S]) (d []S, err error) {
 
 	mu, err := bob.roMu(muPrimeBold)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot get mu")
+		return nil, errs2.Wrap(err).WithMessage("cannot get mu")
 	}
 	if !bytes.Equal(r3Out.Mu, mu) {
-		return nil, errs.NewTotalAbort("alice", "consistency check failed")
+		return nil, errs2.ErrAbort.WithTag(errs2.IdentifiableAbortPartyId, "alice").WithMessage("consistency check failed")
 	}
 
 	d = make([]S, bob.suite.l)
@@ -218,11 +222,11 @@ func (p *participant[G, S]) roTheta(aTilde [][]S) (theta [][]S, err error) {
 		for j := range theta[i] {
 			thetaBytes, err := p.tape.ExtractBytes(thetaLabel, uint(p.suite.field.WideElementSize()))
 			if err != nil {
-				return nil, errs.WrapFailed(err, "cannot extract theta")
+				return nil, errs2.Wrap(err).WithMessage("cannot extract theta")
 			}
 			theta[i][j], err = p.suite.field.FromWideBytes(thetaBytes)
 			if err != nil {
-				return nil, errs.WrapFailed(err, "cannot set theta")
+				return nil, errs2.Wrap(err).WithMessage("cannot set theta")
 			}
 		}
 	}
@@ -238,7 +242,7 @@ func (p *participant[G, S]) roMu(muBold [][]S) (mu []byte, err error) {
 	}
 	mu, err = p.tape.ExtractBytes(muLabel, uint(base.CollisionResistanceBytesCeil))
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot extract mu")
+		return nil, errs2.Wrap(err).WithMessage("cannot extract mu")
 	}
 	return mu, nil
 }

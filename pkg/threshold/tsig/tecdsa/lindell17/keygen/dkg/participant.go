@@ -153,6 +153,7 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 	}, nil
 }
 
+// SharingID returns the participant sharing identifier.
 func (p *Participant[P, B, S]) SharingID() sharing.ID {
 	return p.shard.Share().ID()
 }

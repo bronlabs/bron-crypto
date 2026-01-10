@@ -129,6 +129,8 @@ func RunDKLs23DKG[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alg
 				return s.Share()
 			})
 			recoveredSk, err := feldmanScheme.Reconstruct(sharesSubset...)
+			require.NoError(tb, err)
+
 			recoveredPk := curve.ScalarBaseMul(recoveredSk.Value())
 			require.True(tb, recoveredPk.Equal(publicKeys[0]))
 		}
