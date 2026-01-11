@@ -3,7 +3,7 @@ package recovery
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
@@ -122,7 +122,7 @@ func (m *Mislayer[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G, S]
 		ys = append(ys, u.BlindedShare.Value())
 	}
 
-	shareValue, err := interpolation.InterpolateAt(xs, ys, m.field.FromUint64(uint64(m.sharingId)))
+	shareValue, err := lagrange.InterpolateAt(xs, ys, m.field.FromUint64(uint64(m.sharingId)))
 	if err != nil {
 		return nil, nil, errs2.ErrAbort.WithMessage("cannot interpolate")
 	}

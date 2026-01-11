@@ -9,7 +9,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
-	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation"
+	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation/lagrange"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
 
@@ -156,7 +156,7 @@ func (d *Scheme[FE]) Reconstruct(shares ...*Share[FE]) (*Secret[FE], error) {
 		nodes[i] = d.SharingIDToLagrangeNode(share.ID())
 		values[i] = share.Value()
 	}
-	reconstructed, err := interpolation.InterpolateAt(nodes, values, d.f.Zero())
+	reconstructed, err := lagrange.InterpolateAt(nodes, values, d.f.Zero())
 	if err != nil {
 		return nil, errs.WrapFailed(err, "could not interpolate polynomial")
 	}

@@ -113,7 +113,6 @@ type PolynomialLikeStructure[P, S, C any] Module[P, S]
 type PolynomialLike[P, S, C any] interface {
 	ModuleElement[P, S]
 	ConstantTerm() C
-	IsHomogeneous() bool
 	IsConstant() bool
 	IsMonic() bool
 	Derivative() P
