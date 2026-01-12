@@ -97,11 +97,61 @@ func Wrap(err error) Error {
 func HasTag(err error, tag string) (any, bool) {
 	//nolint:errorlint // internal error library
 	if taggedErr, ok := err.(hasTags); ok {
-		v, ok := taggedErr.Tags()[tag]
-		return v, ok
+		if v, ok := taggedErr.Tags()[tag]; ok {
+			return v, ok
+		}
+	}
+
+	// Recurse into wrapped errors (similar to errors.Is/errors.As behavior)
+	//nolint:errorlint // internal error library
+	if wrapped, ok := err.(wrapsMultipleErrors); ok {
+		for _, child := range wrapped.Unwrap() {
+			if v, ok := HasTag(child, tag); ok {
+				return v, ok
+			}
+		}
+	}
+	//nolint:errorlint // internal error library
+	if wrapped, ok := err.(wrapsError); ok {
+		if v, ok := HasTag(wrapped.Unwrap(), tag); ok {
+			return v, ok
+		}
 	}
 
 	return nil, false
+}
+
+// HasTagAll returns all values for a given tag across the entire error chain.
+// This is useful when multiple wrapped errors may have the same tag with different values.
+func HasTagAll(err error, tag string) []any {
+	var results []any
+	hasTagAllRecursive(err, tag, &results)
+	return results
+}
+
+func hasTagAllRecursive(err error, tag string, results *[]any) {
+	if err == nil {
+		return
+	}
+
+	//nolint:errorlint // internal error library
+	if taggedErr, ok := err.(hasTags); ok {
+		if v, ok := taggedErr.Tags()[tag]; ok {
+			*results = append(*results, v)
+		}
+	}
+
+	// Recurse into wrapped errors
+	//nolint:errorlint // internal error library
+	if wrapped, ok := err.(wrapsMultipleErrors); ok {
+		for _, child := range wrapped.Unwrap() {
+			hasTagAllRecursive(child, tag, results)
+		}
+	}
+	//nolint:errorlint // internal error library
+	if wrapped, ok := err.(wrapsError); ok {
+		hasTagAllRecursive(wrapped.Unwrap(), tag, results)
+	}
 }
 
 type sentinelError struct {
