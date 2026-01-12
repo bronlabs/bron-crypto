@@ -186,7 +186,10 @@ func (c *Cosigner[P, B, S]) Round4(r3bOut network.RoundMessages[*Round3Broadcast
 	for id, message := range incomingMessages {
 		d, err := c.state.bobMul[id].Round4(message.p2p.MulR3)
 		if err != nil {
-			return nil, errs2.Wrap(err).WithMessage("cannot run bob mul round4")
+			if errs2.Is(err, errs2.ErrAbort) {
+				return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("cannot run Bob mul round4")
+			}
+			return nil, errs2.Wrap(err).WithMessage("cannot run Bob mul round4")
 		}
 		c.state.pk[id] = message.broadcast.Pk
 

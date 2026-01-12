@@ -262,6 +262,9 @@ func (c *Cosigner[P, B, S]) Round5(r4b network.RoundMessages[*Round4Broadcast[P,
 
 		d, err := c.bobMul[id].Round3(message.p2p.MulR2)
 		if err != nil {
+			if errs2.Is(err, errs2.ErrAbort) {
+				return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("cannot run Bob mul round3")
+			}
 			return nil, errs2.Wrap(err).WithMessage("cannot run Bob mul round3")
 		}
 		if !c.state.bigR[id].ScalarMul(c.state.chi[id]).Sub(message.p2p.GammaU).Equal(c.suite.Curve().ScalarBaseMul(d[0])) {
