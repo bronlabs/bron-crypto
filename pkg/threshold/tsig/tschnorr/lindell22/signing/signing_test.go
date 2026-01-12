@@ -6,7 +6,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha3"
 	"io"
-	"strings"
+	"slices"
 	"sync"
 	"testing"
 
@@ -16,6 +16,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
@@ -430,9 +431,9 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 	require.Error(t, err)
 
 	// Check that the aggregator detected the bad signature
-	require.True(t,
-		strings.Contains(err.Error(), "[ABORT]") || strings.Contains(err.Error(), "[FAILED]"),
-		"aggregator should detect bad signature, got error: %v", err)
+	culprit, ok := errs2.HasTag(err, errs2.IdentifiableAbortPartyId)
+	require.True(t, ok)
+	require.Equal(t, corruptedID, culprit.(sharing.ID))
 	t.Logf("✅ Aggregator correctly detected and rejected corrupted signature with BIP340")
 }
 
@@ -516,19 +517,19 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 	require.NoError(t, err)
 
 	// Corrupt one signature
-	corruptedID := sharing.ID(1)
+	corruptedID1 := sharing.ID(1)
+	corruptedID2 := sharing.ID(2)
+	corruptedIDs := []sharing.ID{corruptedID1, corruptedID2}
 	sf := k256.NewScalarField()
 
 	// Get the signature for the corrupted ID and replace it
-	validPsig, ok := partialSigs.Get(corruptedID)
-	require.True(t, ok)
-
-	corruptedPsig := ltu.CreateCorruptedPartialSignature(t, validPsig, sf)
-
 	// Create a new map with the corrupted signature
 	corruptedSigsMap := hashmap.NewComparable[sharing.ID, *lindell22.PartialSignature[*k256.Point, *k256.Scalar]]()
 	for id := range quorum.Iter() {
-		if id == corruptedID {
+		if slices.Contains(corruptedIDs, id) {
+			validPsig, ok := partialSigs.Get(id)
+			require.True(t, ok)
+			corruptedPsig := ltu.CreateCorruptedPartialSignature(t, validPsig, sf)
 			corruptedSigsMap.Put(id, corruptedPsig)
 		} else {
 			psig, _ := partialSigs.Get(id)
@@ -547,9 +548,10 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 	require.Error(t, err)
 
 	// Check that the aggregator detected the bad signature
-	require.True(t,
-		strings.Contains(err.Error(), "[ABORT]") || strings.Contains(err.Error(), "[FAILED]"),
-		"aggregator should detect bad signature, got error: %v", err)
+	culprits := errs2.HasTagAll(err, errs2.IdentifiableAbortPartyId)
+	require.Len(t, culprits, 2)
+	require.Contains(t, culprits, corruptedID1)
+	require.Contains(t, culprits, corruptedID2)
 	t.Logf("✅ Aggregator correctly detected and rejected corrupted signature with Vanilla Schnorr")
 }
 
@@ -1284,11 +1286,10 @@ func TestLindell22IdentifiableAbortRounds(t *testing.T) {
 
 		// Round 3 should detect the bad proof
 		_, err = ltu.DoLindell22Round3(cosigners, r3bi, message)
-		require.Error(t, err)
-		require.True(t,
-			bytes.Contains([]byte(err.Error()), []byte("[ABORT]")) ||
-				bytes.Contains([]byte(err.Error()), []byte("[VERIFICATION_ERROR]")),
-			"expected abort or verification error, got: %v", err)
+		culprit, ok := errs2.HasTag(err, errs2.IdentifiableAbortPartyId)
+		require.True(t, ok)
+		require.Equal(t, corruptedID, culprit.(sharing.ID))
+
 		t.Logf("✅ Successfully detected bad DLog proof in Round 3")
 	})
 }

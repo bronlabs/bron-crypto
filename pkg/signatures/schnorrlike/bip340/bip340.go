@@ -250,25 +250,42 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 		return errs.NewValidation("Public Key not in the prime subgroup")
 	}
 
-	challengePublicKeyValue := LiftX(publicKey.Value())
+	// For partial signature verification (when challengePublicKey is set), we should NOT
+	// apply LiftX to the additive share P_i, as individual shares can have odd Y coordinates.
+	// LiftX is only for standard BIP340 verification with x-only public keys.
+	var bigP *GroupElement
+	var challengePublicKeyValue *GroupElement
 	if v.challengePublicKey != nil {
-		// TODO: should this be lifted?
+		// Partial signature verification mode: apply same parity correction to public key share
+		// that was applied to private key shares during signing.
+		correctedP, err := v.variant.CorrectPublicKeyShareParity(v.challengePublicKey, publicKey.Value())
+		if err != nil {
+			return errs.WrapFailed(err, "cannot correct public key share parity")
+		}
+		bigP = correctedP
 		challengePublicKeyValue = v.challengePublicKey.Value()
+	} else {
+		// Standard BIP340 verification
+		// 1. Let P = lift_x(int(pk)).
+		bigP = LiftX(publicKey.Value())
+		challengePublicKeyValue = bigP
 	}
 
-	// 1. Let P = lift_x(int(pk)).
 	// 2. (implicit) Let r = int(sig[0:32]); fail if r ≥ p.
 	// 3. (implicit) Let s = int(sig[32:64]); fail if s ≥ n.
-	bigP := LiftX(publicKey.Value())
 
 	// 4. Let e = int(hashBIP0340/challenge(bytes(r) || bytes(P) || m)) mod n.
-	e, err := v.variant.ComputeChallenge(signature.R, challengePublicKeyValue, message)
-	if err != nil {
-		return errs.WrapFailed(err, "cannot create challenge scalar")
-	}
-
-	if signature.E != nil && !signature.E.Equal(e) {
-		return errs.NewFailed("incompatible signature")
+	// For partial signature verification, use the pre-computed challenge from the signature
+	// (which was computed from aggregate R), rather than recomputing from individual R_i.
+	var e *Scalar
+	if signature.E != nil {
+		e = signature.E
+	} else {
+		var err error
+		e, err = v.variant.ComputeChallenge(signature.R, challengePublicKeyValue, message)
+		if err != nil {
+			return errs.WrapFailed(err, "cannot create challenge scalar")
+		}
 	}
 
 	// 5. Let R = s⋅G - e⋅P.
@@ -278,6 +295,19 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 	if bigR.IsZero() {
 		return errs.NewVerification("signature is invalid")
 	}
+
+	// For partial signature verification (when challengePublicKey is set), individual R_i values
+	// may have odd Y coordinates. The even-Y constraint only applies to the aggregate signature.
+	// We also need to compare the full point, not just x-coordinates.
+	if v.challengePublicKey != nil {
+		// Partial signature verification: check that computed R matches signature.R exactly
+		if !bigR.Equal(signature.R) {
+			return errs.NewVerification("signature is invalid")
+		}
+		return nil
+	}
+
+	// Standard BIP340 verification for aggregate signatures:
 
 	// 7. Fail if not has_even_y(R).
 	ry, err := bigR.AffineY()

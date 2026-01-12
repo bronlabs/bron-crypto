@@ -285,19 +285,25 @@ func (v *VerifierTrait[VR, GE, S, M]) Verify(sigma *Signature[GE, S], publicKey 
 	if publicKey.Value().IsOpIdentity() {
 		return errs.NewIsNil("publicKey is identity")
 	}
-	challengeR := sigma.R
-	challengePublicKey := publicKey
-	if v.ChallengePublicKey != nil {
-		challengePublicKey = v.ChallengePublicKey
-	}
-	e, err := v.V.ComputeChallenge(challengeR, challengePublicKey.V, message)
-	if err != nil {
-		return errs.WrapFailed(err, "e")
-	}
-	// If sigma.E is provided, verify it matches the computed challenge
-	// (Mina signatures don't store E, so this may be nil)
-	if !utils.IsNil(sigma.E) && !sigma.E.Equal(e) {
-		return errs.NewFailed("e")
+	// For partial signature verification (when ChallengePublicKey is set), use the pre-computed
+	// challenge from sigma.E (which was computed from aggregate R), rather than recomputing
+	// from individual R_i. For normal verification, always recompute e from the message to
+	// ensure tampered messages are rejected.
+	var e S
+	if v.ChallengePublicKey != nil && !utils.IsNil(sigma.E) {
+		// Partial signature verification mode: use stored challenge
+		e = sigma.E
+	} else {
+		// Normal verification: compute challenge from signature and message
+		challengePublicKey := publicKey
+		if v.ChallengePublicKey != nil {
+			challengePublicKey = v.ChallengePublicKey
+		}
+		var err error
+		e, err = v.V.ComputeChallenge(sigma.R, challengePublicKey.V, message)
+		if err != nil {
+			return errs.WrapFailed(err, "e")
+		}
 	}
 	generator := publicKey.Group().Generator()
 	rhsOperand := publicKey.Value().ScalarOp(e)
