@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
@@ -19,15 +19,16 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa/dkls23"
 )
 
+// DealRandom deals random shares from a trusted dealer.
 func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](curve ecdsa.Curve[P, B, S], threshold uint, shareholder ds.Set[sharing.ID], prng io.Reader) (ds.Map[sharing.ID, *dkls23.Shard[P, B, S]], *ecdsa.PublicKey[P, B, S], error) {
 	feldmanDealer, err := feldman.NewScheme(curve.Generator(), threshold, shareholder)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not create shamir scheme")
+		return nil, nil, errs2.Wrap(err).WithMessage("could not create shamir scheme")
 	}
 
 	feldmanOutput, secret, err := feldmanDealer.DealRandom(prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not deal shares")
+		return nil, nil, errs2.Wrap(err).WithMessage("could not deal shares")
 	}
 	public := curve.ScalarBaseMul(secret.Value())
 
@@ -43,7 +44,7 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 			}
 			var seed [przs.SeedLength]byte
 			if _, err = io.ReadFull(prng, seed[:]); err != nil {
-				return nil, nil, errs.WrapRandomSample(err, "cannot sample seed")
+				return nil, nil, errs2.Wrap(err).WithMessage("cannot sample seed")
 			}
 			zeroSeeds[me].Put(they, seed)
 			zeroSeeds[they].Put(me, seed)
@@ -65,7 +66,7 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 
 			choices := make([]byte, softspoken.Kappa/8)
 			if _, err := io.ReadFull(prng, choices); err != nil {
-				return nil, nil, errs.WrapRandomSample(err, "cannot sample choices")
+				return nil, nil, errs2.Wrap(err).WithMessage("cannot sample choices")
 			}
 			sender := &vsot.SenderOutput{
 				SenderOutput: ot.SenderOutput[[]byte]{
@@ -81,11 +82,11 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 			for kappa := range softspoken.Kappa {
 				m0 := make([]byte, 32)
 				if _, err := io.ReadFull(prng, m0); err != nil {
-					return nil, nil, errs.WrapRandomSample(err, "cannot sample m0")
+					return nil, nil, errs2.Wrap(err).WithMessage("cannot sample m0")
 				}
 				m1 := make([]byte, 32)
 				if _, err := io.ReadFull(prng, m1); err != nil {
-					return nil, nil, errs.WrapFailed(err, "cannot sample m1")
+					return nil, nil, errs2.Wrap(err).WithMessage("cannot sample m1")
 				}
 				c := (choices[kappa/8] >> (kappa % 8)) & 0b1
 				sender.Messages[kappa][0] = [][]byte{m0}
@@ -100,21 +101,21 @@ func DealRandom[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algeb
 
 	publicKey, err := ecdsa.NewPublicKey(public)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "invalid public key")
+		return nil, nil, errs2.Wrap(err).WithMessage("invalid public key")
 	}
 	result := hashmap.NewComparable[sharing.ID, *dkls23.Shard[P, B, S]]()
 	for id, feldmanShare := range feldmanOutput.Shares().Iter() {
 		baseShard, err := tecdsa.NewShard(feldmanShare, feldmanOutput.VerificationMaterial(), feldmanDealer.AccessStructure())
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "cannot create tECDSA DKLSS23 shard")
+			return nil, nil, errs2.Wrap(err).WithMessage("cannot create tECDSA DKLSS23 shard")
 		}
 		auxInfo, err := dkls23.NewAuxiliaryInfo(zeroSeeds[id].Freeze(), senderSeeds[id].Freeze(), receiverSeeds[id].Freeze())
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "cannot create auxiliary info")
+			return nil, nil, errs2.Wrap(err).WithMessage("cannot create auxiliary info")
 		}
 		shard, err := dkls23.NewShard(baseShard, auxInfo)
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "cannot create tECDSA DKLSS23 shard")
+			return nil, nil, errs2.Wrap(err).WithMessage("cannot create tECDSA DKLSS23 shard")
 		}
 		result.Put(id, shard)
 	}

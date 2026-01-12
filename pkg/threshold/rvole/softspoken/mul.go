@@ -5,9 +5,9 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 )
 
+// Suite bundles protocol parameters and primitives.
 type Suite[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	l        int
 	curve    curves.Curve[P, B, S]
@@ -15,13 +15,14 @@ type Suite[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFi
 	hashFunc func() hash.Hash
 }
 
+// NewSuite returns a new protocol suite.
 func NewSuite[P curves.Point[P, B, S], B algebra.FieldElement[B], S algebra.PrimeFieldElement[S]](l int, curve curves.Curve[P, B, S], hashFunc func() hash.Hash) (*Suite[P, B, S], error) {
 	if curve == nil || hashFunc == nil || l <= 0 {
-		return nil, errs.NewValidation("invalid arguments")
+		return nil, ErrValidation.WithMessage("invalid arguments")
 	}
 	field, ok := curve.ScalarStructure().(algebra.PrimeField[S])
 	if !ok {
-		return nil, errs.NewType("invalid curve scalar structure")
+		return nil, ErrFailed.WithMessage("invalid curve scalar structure")
 	}
 
 	s := &Suite[P, B, S]{
