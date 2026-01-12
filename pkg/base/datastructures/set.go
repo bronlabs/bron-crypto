@@ -3,8 +3,6 @@ package datastructures
 import (
 	"encoding/json"
 	"iter"
-
-	"github.com/bronlabs/bron-crypto/pkg/base"
 )
 
 type AbstractSet[E, C any] interface {
@@ -32,8 +30,8 @@ type immutableSet[E, T any] interface {
 	IterSubSets() iter.Seq[T]
 	List() []E
 
-	base.Clonable[T]
-	base.Equatable[T]
+	Clonable[T]
+	Equatable[T]
 	json.Marshaler
 }
 

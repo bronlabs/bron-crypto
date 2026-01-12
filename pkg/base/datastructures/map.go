@@ -3,8 +3,6 @@ package datastructures
 import (
 	"encoding/json"
 	"iter"
-
-	"github.com/bronlabs/bron-crypto/pkg/base"
 )
 
 type MapEntry[K any, V any] struct {
@@ -31,7 +29,7 @@ type immutableMap[K, V, T any] interface {
 	Keys() []K
 	Values() []V
 	Enumerate() iter.Seq2[int, MapEntry[K, V]]
-	base.Clonable[T]
+	Clonable[T]
 	json.Marshaler
 }
 
@@ -53,7 +51,6 @@ type mapThreadSafetyMixin[K, V, T any] interface {
 type MutableMap[K, V any] interface {
 	mutableMap[K, V, MutableMap[K, V]]
 	Freeze() Map[K, V]
-	// ThreadSafe() ConcurrentMap[K, V]
 }
 
 type Map[K, V any] interface {

@@ -11,9 +11,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
-type HashableEntry[K base.Hashable[K], V any] ds.MapEntry[K, V]
+type HashableEntry[K ds.Hashable[K], V any] ds.MapEntry[K, V]
 
-type HashableMapping[K base.Hashable[K], V any] map[base.HashCode][]*HashableEntry[K, V]
+type HashableMapping[K ds.Hashable[K], V any] map[base.HashCode][]*HashableEntry[K, V]
 
 func (m HashableMapping[K, V]) TryPut(key K, newValue V) (replaced bool, oldValue V) {
 	hashCode := key.HashCode()
@@ -72,7 +72,7 @@ func (m HashableMapping[K, V]) TryRemove(key K) (removed bool, removedValue V) {
 	return true, removedValue
 }
 
-type HashMapTrait[K base.Hashable[K], V, T any] struct {
+type HashMapTrait[K ds.Hashable[K], V, T any] struct {
 	inner HashableMapping[K, V]
 }
 
@@ -188,7 +188,7 @@ func (m HashMapTrait[K, V, _]) Enumerate() iter.Seq2[int, ds.MapEntry[K, V]] {
 	}
 }
 
-func NewImmutableHashable[K base.Hashable[K], V any]() ds.Map[K, V] {
+func NewImmutableHashable[K ds.Hashable[K], V any]() ds.Map[K, V] {
 	return &ImmutableHashableHashMap[K, V]{
 		HashMapTrait[K, V, ds.Map[K, V]]{
 			inner: make(HashableMapping[K, V]),
@@ -196,7 +196,7 @@ func NewImmutableHashable[K base.Hashable[K], V any]() ds.Map[K, V] {
 	}
 }
 
-func CollectToImmutableHashable[K base.Hashable[K], V any](xs []K, ys []V) (ds.Map[K, V], error) {
+func CollectToImmutableHashable[K ds.Hashable[K], V any](xs []K, ys []V) (ds.Map[K, V], error) {
 	m, err := CollectToHashable(xs, ys)
 	if err != nil {
 		return nil, err
@@ -204,7 +204,7 @@ func CollectToImmutableHashable[K base.Hashable[K], V any](xs []K, ys []V) (ds.M
 	return m.Freeze(), nil
 }
 
-type ImmutableHashableHashMap[K base.Hashable[K], V any] struct {
+type ImmutableHashableHashMap[K ds.Hashable[K], V any] struct {
 	HashMapTrait[K, V, ds.Map[K, V]]
 }
 
@@ -283,7 +283,7 @@ func (m *ImmutableHashableHashMap[K, V]) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func NewHashable[K base.Hashable[K], V any]() ds.MutableMap[K, V] {
+func NewHashable[K ds.Hashable[K], V any]() ds.MutableMap[K, V] {
 	return &MutableHashableHashMap[K, V]{
 		HashMapTrait[K, V, ds.MutableMap[K, V]]{
 			inner: make(HashableMapping[K, V]),
@@ -291,7 +291,7 @@ func NewHashable[K base.Hashable[K], V any]() ds.MutableMap[K, V] {
 	}
 }
 
-func CollectToHashable[K base.Hashable[K], V any](xs []K, ys []V) (ds.MutableMap[K, V], error) {
+func CollectToHashable[K ds.Hashable[K], V any](xs []K, ys []V) (ds.MutableMap[K, V], error) {
 	if len(xs) != len(ys) {
 		return nil, errs.NewArgument("xs and ys must have the same length")
 	}
@@ -302,7 +302,7 @@ func CollectToHashable[K base.Hashable[K], V any](xs []K, ys []V) (ds.MutableMap
 	return m, nil
 }
 
-type MutableHashableHashMap[K base.Hashable[K], V any] struct {
+type MutableHashableHashMap[K ds.Hashable[K], V any] struct {
 	HashMapTrait[K, V, ds.MutableMap[K, V]]
 }
 

@@ -11,7 +11,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
-func NewHashable[E base.Hashable[E]](xs ...E) ds.MutableSet[E] {
+func NewHashable[E ds.Hashable[E]](xs ...E) ds.MutableSet[E] {
 	s := &MutableHashable[E]{v: hashmap.NewHashable[E, struct{}]()}
 	for _, x := range xs {
 		s.v.Put(x, struct{}{})
@@ -19,7 +19,7 @@ func NewHashable[E base.Hashable[E]](xs ...E) ds.MutableSet[E] {
 	return s
 }
 
-type MutableHashable[E base.Hashable[E]] struct {
+type MutableHashable[E ds.Hashable[E]] struct {
 	v ds.MutableMap[E, struct{}]
 }
 
@@ -194,8 +194,8 @@ func (s *MutableHashable[E]) HashCode() base.HashCode {
 		return l[0].HashCode()
 	}
 	return sliceutils.Reduce(
-		sliceutils.Map(l[1:], func(e E) base.HashCode { return e.HashCode() }),
+		sliceutils.Map(l[1:], func(e E) ds.HashCode { return e.HashCode() }),
 		l[0].HashCode(),
-		func(a, b base.HashCode) base.HashCode { return a ^ b }, // must be commutative
+		func(a, b ds.HashCode) ds.HashCode { return a ^ b }, // must be commutative
 	)
 }

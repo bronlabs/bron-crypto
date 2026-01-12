@@ -3,8 +3,6 @@ package datastructures
 import (
 	"encoding/json"
 	"iter"
-
-	"github.com/bronlabs/bron-crypto/pkg/base"
 )
 
 type AbstractMatrix[T, C any] interface {
@@ -27,7 +25,7 @@ type immutableTable[E, T any] interface {
 	IterColumns() iter.Seq[iter.Seq[E]]
 	IterColumns2() iter.Seq2[int, iter.Seq[E]]
 
-	base.Clonable[T]
+	Clonable[T]
 	json.Marshaler
 }
 
