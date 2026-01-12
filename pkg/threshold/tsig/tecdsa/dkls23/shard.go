@@ -7,7 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -15,6 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/tsig/tecdsa"
 )
 
+// AuxiliaryInfo holds auxiliary key material.
 type AuxiliaryInfo struct {
 	zeroSeeds       przs.Seeds
 	otSenderSeeds   ds.Map[sharing.ID, *vsot.SenderOutput]
@@ -27,18 +28,22 @@ type auxiliaryInfoDTO struct {
 	OTReceiverSeeds map[sharing.ID]*vsot.ReceiverOutput  `cbor:"otReceiverSeeds"`
 }
 
+// ZeroSeeds returns the zero-setup seeds.
 func (a *AuxiliaryInfo) ZeroSeeds() przs.Seeds {
 	return a.zeroSeeds
 }
 
+// OTSenderSeeds returns the OT sender seeds.
 func (a *AuxiliaryInfo) OTSenderSeeds() ds.Map[sharing.ID, *vsot.SenderOutput] {
 	return a.otSenderSeeds
 }
 
+// OTReceiverSeeds returns the OT receiver seeds.
 func (a *AuxiliaryInfo) OTReceiverSeeds() ds.Map[sharing.ID, *vsot.ReceiverOutput] {
 	return a.otReceiverSeeds
 }
 
+// Equal reports whether the value equals other.
 func (a *AuxiliaryInfo) Equal(rhs *AuxiliaryInfo) bool {
 	if a.zeroSeeds.Size() != rhs.zeroSeeds.Size() {
 		return false
@@ -80,6 +85,7 @@ func (a *AuxiliaryInfo) Equal(rhs *AuxiliaryInfo) bool {
 	return true
 }
 
+// MarshalCBOR implements cbor.Marshaler.
 func (a *AuxiliaryInfo) MarshalCBOR() ([]byte, error) {
 	zeroSeeds := make(map[sharing.ID][przs.SeedLength]byte)
 	for id, seed := range a.zeroSeeds.Iter() {
@@ -98,9 +104,14 @@ func (a *AuxiliaryInfo) MarshalCBOR() ([]byte, error) {
 		OTSenderSeeds:   otSenderSeeds,
 		OTReceiverSeeds: otReceiverSeeds,
 	}
-	return serde.MarshalCBOR(dto)
+	data, err := serde.MarshalCBOR(dto)
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal dkls23 auxiliary info")
+	}
+	return data, nil
 }
 
+// UnmarshalCBOR implements cbor.Unmarshaler.
 func (a *AuxiliaryInfo) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*auxiliaryInfoDTO](data)
 	if err != nil {
@@ -112,9 +123,10 @@ func (a *AuxiliaryInfo) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
+// NewAuxiliaryInfo returns a new auxiliary info instance.
 func NewAuxiliaryInfo(zeroSeeds przs.Seeds, otSenderSeeds ds.Map[sharing.ID, *vsot.SenderOutput], otReceiverSeeds ds.Map[sharing.ID, *vsot.ReceiverOutput]) (*AuxiliaryInfo, error) {
 	if zeroSeeds == nil || otSenderSeeds == nil || otReceiverSeeds == nil {
-		return nil, errs.NewIsNil("cannot create AuxiliaryInfo with nil fields")
+		return nil, ErrNil.WithMessage("cannot create AuxiliaryInfo with nil fields")
 	}
 	return &AuxiliaryInfo{
 		zeroSeeds:       zeroSeeds,
@@ -123,14 +135,16 @@ func NewAuxiliaryInfo(zeroSeeds przs.Seeds, otSenderSeeds ds.Map[sharing.ID, *vs
 	}, nil
 }
 
+// Shard holds a tECDSA key share.
 type Shard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	*tecdsa.Shard[P, B, S]
 	AuxiliaryInfo
 }
 
+// NewShard returns a new shard.
 func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](baseShard *tecdsa.Shard[P, B, S], auxInfo *AuxiliaryInfo) (*Shard[P, B, S], error) {
 	if baseShard == nil || auxInfo == nil {
-		return nil, errs.NewIsNil("cannot create Shard with nil fields")
+		return nil, ErrNil.WithMessage("cannot create Shard with nil fields")
 	}
 	return &Shard[P, B, S]{
 		Shard:         baseShard,
@@ -138,6 +152,7 @@ func NewShard[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 	}, nil
 }
 
+// Equal reports whether the value equals other.
 func (s *Shard[P, B, S]) Equal(rhs *Shard[P, B, S]) bool {
 	if s == nil || rhs == nil {
 		return s == rhs
@@ -150,6 +165,7 @@ type shardDTO[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 	Aux   AuxiliaryInfo          `cbor:"auxiliaryInfo"`
 }
 
+// MarshalCBOR implements cbor.Marshaler.
 func (s *Shard[P, B, S]) MarshalCBOR() ([]byte, error) {
 	dto := &shardDTO[P, B, S]{
 		Shard: s.Shard,
@@ -157,11 +173,12 @@ func (s *Shard[P, B, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal dkls23 Shard")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal dkls23 Shard")
 	}
 	return data, nil
 }
 
+// UnmarshalCBOR implements cbor.Unmarshaler.
 func (s *Shard[P, B, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[*shardDTO[P, B, S]](data)
 	if err != nil {

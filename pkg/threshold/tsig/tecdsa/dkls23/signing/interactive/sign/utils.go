@@ -6,7 +6,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
@@ -18,7 +17,7 @@ type message[B network.Message, U network.Message] struct {
 
 func validateIncomingMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MB network.Message, MU network.Message](c *Cosigner[P, B, S], rIn network.Round, bIn network.RoundMessages[MB], uIn network.RoundMessages[MU]) (iter.Seq2[sharing.ID, message[MB, MU]], error) {
 	if rIn != c.state.round {
-		return nil, errs.NewFailed("invalid round")
+		return nil, ErrFailed.WithMessage("invalid round")
 	}
 
 	return func(yield func(p sharing.ID, m message[MB, MU]) bool) {
@@ -44,7 +43,7 @@ func validateIncomingMessages[P curves.Point[P, B, S], B algebra.PrimeFieldEleme
 
 func validateIncomingP2PMessages[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S], MU network.Message](c *Cosigner[P, B, S], rIn network.Round, uIn network.RoundMessages[MU]) (iter.Seq2[sharing.ID, MU], error) {
 	if rIn != c.state.round {
-		return nil, errs.NewFailed("invalid round")
+		return nil, ErrFailed.WithMessage("invalid round")
 	}
 
 	return func(yield func(p sharing.ID, m MU) bool) {

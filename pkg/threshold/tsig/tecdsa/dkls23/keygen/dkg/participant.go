@@ -9,12 +9,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/extension/softspoken"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs"
 	przsSetup "github.com/bronlabs/bron-crypto/pkg/threshold/sharing/zero/przs/setup"
@@ -27,6 +26,7 @@ const (
 	vsotLabel       = "BRON_CRYPTO_DKLS23_DKG_VSOT-"
 )
 
+// Participant represents a DKG participant.
 type Participant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	sessionId network.SID
 	baseShard *tecdsa.Shard[P, B, S]
@@ -43,25 +43,25 @@ type Participant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 type state[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	senderSeeds   ds.MutableMap[sharing.ID, *vsot.SenderOutput]
 	receiverSeeds ds.MutableMap[sharing.ID, *vsot.ReceiverOutput]
-	dkgOutput     *gennaro.DKGOutput[P, S]
 	zeroSeeds     przs.Seeds
 }
 
+// NewParticipant returns a new participant.
 func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, sharingId sharing.ID, baseShard *tecdsa.Shard[P, B, S], tape transcripts.Transcript, prng io.Reader) (*Participant[P, B, S], error) {
 	if baseShard == nil || tape == nil || prng == nil {
-		return nil, errs.NewIsNil("argument")
+		return nil, ErrNil.WithMessage("argument")
 	}
 	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, sessionId))
 
 	zeroSetup, err := przsSetup.NewParticipant(sessionId, sharingId, baseShard.AccessStructure().Shareholders(), tape, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "error creating zero setup for participant")
+		return nil, errs2.Wrap(err).WithMessage("error creating zero setup for participant")
 	}
 
 	curve := algebra.StructureMustBeAs[ecdsa.Curve[P, B, S]](baseShard.PublicKey().Value().Structure())
 	otSuite, err := vsot.NewSuite(softspoken.Kappa, 1, curve, sha256.New)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "error creating vsot suite for participant")
+		return nil, errs2.Wrap(err).WithMessage("error creating vsot suite for participant")
 	}
 	otSenders := make(map[sharing.ID]*vsot.Sender[P, B, S])
 	otReceivers := make(map[sharing.ID]*vsot.Receiver[P, B, S])
@@ -74,20 +74,21 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 		otTape.AppendBytes(vsotLabel, binary.LittleEndian.AppendUint64(nil, uint64(sharingId)), binary.LittleEndian.AppendUint64(nil, uint64(id)))
 		otSender, err := vsot.NewSender(sessionId, otSuite, otTape, prng)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "error creating vsot sender")
+			return nil, errs2.Wrap(err).WithMessage("error creating vsot sender")
 		}
 
 		otTape = tape.Clone()
 		otTape.AppendBytes(vsotLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(sharingId)))
 		otReceiver, err := vsot.NewReceiver(sessionId, otSuite, otTape, prng)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "error creating vsot receiver")
+			return nil, errs2.Wrap(err).WithMessage("error creating vsot receiver")
 		}
 
 		otSenders[id] = otSender
 		otReceivers[id] = otReceiver
 	}
 
+	//nolint:exhaustruct // lazy initialisation
 	p := &Participant[P, B, S]{
 		sessionId:       sessionId,
 		baseShard:       baseShard,
@@ -101,6 +102,7 @@ func NewParticipant[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S a
 	return p, nil
 }
 
+// SharingID returns the participant sharing identifier.
 func (p *Participant[P, B, S]) SharingID() sharing.ID {
 	return p.baseShard.Share().ID()
 }

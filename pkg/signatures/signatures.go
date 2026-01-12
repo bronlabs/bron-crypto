@@ -102,7 +102,7 @@ type (
 		Verifier(...VerifierOption[VF, PK, M, S]) (VF, error)
 	}
 	AggregatableScheme[
-		SK PrivateKey[SK], PK AggregatablePublicKey[PK], M Message, S Signature[S],
+		SK PrivateKey[SK], PK AggregatablePublicKey[PK], M Message, S IncrementallyAggregatableSignature[S],
 		KG KeyGenerator[SK, PK], SG Signer[M, S], VF AggregateVerifier[PK, M, S, AG], AG Signature[AG],
 	] interface {
 		Scheme[SK, PK, M, S, KG, SG, VF]
