@@ -356,8 +356,8 @@ func (kg *KeyGeneratorTrait[GE, S]) Generate(prng io.Reader) (*PrivateKey[GE, S]
 // It implements the standard Schnorr signing algorithm using variant-specific
 // nonce generation, challenge computation, and response calculation.
 type SignerTrait[VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Message] struct {
-	Sk       *PrivateKey[GE, S]                                         // The signing private key
-	V        VR                                                         // The Schnorr variant for algorithm customization
+	Sk       *PrivateKey[GE, S]                                           // The signing private key
+	V        VR                                                           // The Schnorr variant for algorithm customization
 	Verifier signatures.Verifier[*PublicKey[GE, S], M, *Signature[GE, S]] // Verifier for signature self-check
 }
 
@@ -404,9 +404,9 @@ func (sg *SignerTrait[VR, GE, S, M]) Variant() VR {
 // It implements signature verification using the standard Schnorr equation:
 // s·G = R + e·P (or s·G = R - e·P when ResponseOperatorIsNegative is true).
 type VerifierTrait[VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Message] struct {
-	V                          VR              // The Schnorr variant for challenge computation
+	V                          VR                // The Schnorr variant for challenge computation
 	ChallengePublicKey         *PublicKey[GE, S] // Optional override for partial signature verification
-	ResponseOperatorIsNegative bool            // If true, uses s·G = R - e·P instead of s·G = R + e·P
+	ResponseOperatorIsNegative bool              // If true, uses s·G = R - e·P instead of s·G = R + e·P
 }
 
 // Variant returns the Schnorr variant used by this verifier.
@@ -426,19 +426,25 @@ func (v *VerifierTrait[VR, GE, S, M]) Verify(sigma *Signature[GE, S], publicKey 
 	if publicKey.Value().IsOpIdentity() {
 		return ErrInvalidArgument.WithMessage("publicKey is identity")
 	}
-	challengeR := sigma.R
-	challengePublicKey := publicKey
-	if v.ChallengePublicKey != nil {
-		challengePublicKey = v.ChallengePublicKey
-	}
-	e, err := v.V.ComputeChallenge(challengeR, challengePublicKey.V, message)
-	if err != nil {
-		return errs2.Wrap(err).WithMessage("e")
-	}
-	// If sigma.E is provided, verify it matches the computed challenge
-	// (Mina signatures don't store E, so this may be nil)
-	if !utils.IsNil(sigma.E) && !sigma.E.Equal(e) {
-		return ErrFailed.WithMessage("e")
+	// For partial signature verification (when ChallengePublicKey is set), use the pre-computed
+	// challenge from sigma.E (which was computed from aggregate R), rather than recomputing
+	// from individual R_i. For normal verification, always recompute e from the message to
+	// ensure tampered messages are rejected.
+	var e S
+	if v.ChallengePublicKey != nil && !utils.IsNil(sigma.E) {
+		// Partial signature verification mode: use stored challenge
+		e = sigma.E
+	} else {
+		// Normal verification: compute challenge from signature and message
+		challengePublicKey := publicKey
+		if v.ChallengePublicKey != nil {
+			challengePublicKey = v.ChallengePublicKey
+		}
+		var err error
+		e, err = v.V.ComputeChallenge(sigma.R, challengePublicKey.V, message)
+		if err != nil {
+			return errs2.Wrap(err).WithMessage("e")
+		}
 	}
 	generator := publicKey.Group().Generator()
 	rhsOperand := publicKey.Value().ScalarOp(e)

@@ -211,6 +211,26 @@ func (v *Variant) CorrectAdditiveSecretShareParity(publicKey *PublicKey, share *
 	return out, nil
 }
 
+// CorrectPublicKeyShareParity applies the same parity correction to a public key share
+// that CorrectAdditiveSecretShareParity applies to private key shares. This is needed
+// for partial signature verification where the public key share must be corrected
+// based on the aggregate public key's Y coordinate parity.
+func (v *Variant) CorrectPublicKeyShareParity(aggregatePublicKey *PublicKey, share *k256.Point) (*k256.Point, error) {
+	if aggregatePublicKey == nil || share == nil {
+		return nil, ErrInvalidArgument.WithMessage("aggregate public key or share is nil")
+	}
+	pky, err := aggregatePublicKey.Value().AffineY()
+	if err != nil {
+		return nil, errs2.Wrap(err).WithMessage("cannot compute y")
+	}
+	if pky.IsOdd() {
+		// If the aggregate public key has odd Y, negate the share to match
+		// the correction applied to private key shares during signing.
+		return share.Neg(), nil
+	}
+	return share, nil
+}
+
 // CorrectPartialNonceParity adjusts a partial nonce for BIP-340's even-y requirement.
 //
 // In threshold signing, the aggregate nonce commitment R must have even y.

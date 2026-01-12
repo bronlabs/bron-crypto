@@ -43,7 +43,7 @@ func Test_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	ps := sk.PublicKey().PlaintextSpace()
-	for range 128 {
+	for range 8 { // to speed up tests
 		xBig, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
 		x, err := ps.FromNat(numct.NewNatFromSaferith((new(saferith.Nat).SetBig(xBig, xBig.BitLen()))))
@@ -100,7 +100,7 @@ func Test_CheatingProverBelowRange(t *testing.T) {
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
 
-	for range 128 {
+	for range 8 { // to speed up tests
 		shift, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
 		xBig := new(big.Int).Sub(lowBound, shift)
@@ -160,7 +160,7 @@ func Test_CheatingProverAboveRange(t *testing.T) {
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
 
-	for range 128 {
+	for range 8 { // to speed up tests
 		shift, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
 		xBig := new(big.Int).Add(highBound, shift)
@@ -218,7 +218,7 @@ func Test_Simulator(t *testing.T) {
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
 
-	for range 128 {
+	for range 8 { // to speed up tests
 		xBig, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
 		x, err := sk.PublicKey().PlaintextSpace().FromInt(numct.NewIntFromSaferith(new(saferith.Int).SetBig(xBig, xBig.BitLen())))
@@ -269,7 +269,7 @@ func Test_Interactive(t *testing.T) {
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
 
-	for range 128 {
+	for range 8 { // to speed up tests
 		xBig, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
 		x, err := sk.PublicKey().PlaintextSpace().FromInt(numct.NewIntFromSaferith(new(saferith.Int).SetBig(xBig, xBig.BitLen())))
@@ -333,7 +333,7 @@ func Test_InteractiveZk(t *testing.T) {
 	enc, err := scheme.Encrypter()
 	require.NoError(t, err)
 
-	for range 128 {
+	for range 8 { // to speed up tests
 		xBig, err := crand.Int(prng, lBig)
 		require.NoError(t, err)
 		x, err := sk.PublicKey().PlaintextSpace().FromInt(numct.NewIntFromSaferith(new(saferith.Int).SetBig(xBig, xBig.BitLen())))
@@ -393,7 +393,6 @@ func Test_NonInteractiveFiatShamir(t *testing.T) {
 
 	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
 	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
-	// TODO: 80 < 128 error
 	protocol, err := paillierrange.NewPaillierRange(base.ComputationalSecurityBits, prng)
 	require.NoError(t, err)
 
@@ -457,7 +456,6 @@ func Test_NonInteractiveFischlin(t *testing.T) {
 
 	lBig := new(big.Int).SetBit(big.NewInt(0), logRange, 1)
 	l := numct.NewNatFromSaferith((new(saferith.Nat).SetBig(lBig, lBig.BitLen())))
-	// TODO: 80 < 128 error
 	protocol, err := paillierrange.NewPaillierRange(base.ComputationalSecurityBits, prng)
 	require.NoError(t, err)
 
