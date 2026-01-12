@@ -137,7 +137,8 @@ type UnivariatePolynomialLike[P, S, C, SS, CS any] interface {
 
 type PolynomialModule[MP, P, C, S any] interface {
 	UnivariatePolynomialLikeStructure[MP, S, C]
-	MultiPolynomialOp([]P, []MP) (MP, error)
+	RandomModuleValuedPolynomial(degree int, prng io.Reader) (MP, error)
+	RandomModuleValuedPolynomialWithConstantTerm(degree int, constantTerm C, prng io.Reader) (MP, error)
 }
 
 type ModuleValuedPolynomial[MP, P, C, S any] interface {

@@ -47,6 +47,7 @@ func (gt *Gt) Bytes() []byte {
 
 // SetBytes attempts to convert a big-endian byte representation of
 // a scalar into a `Gt`, failing if the input is not canonical.
+// SetBytes sets the receiver from bytes.
 func (gt *Gt) SetBytes(input []byte) (ok ct.Bool) {
 	var t [FpBytes]byte
 	var valid [12]ct.Bool
@@ -87,6 +88,7 @@ func (gt *Gt) SetBytes(input []byte) (ok ct.Bool) {
 // of a Miller loop into an element of `Gt` with help of efficient squaring
 // operation in the so-called `cyclotomic subgroup` of `Fq6` so that
 // it can be compared with other elements of `Gt`.
+// FinalExponentiation performs the final exponentiation.
 func (gt *Gt) FinalExponentiation(a *Gt) {
 	var t0, t1, t2, t3, t4, t5, t6, t Fp12
 	Fp12FrobeniusAutomorphism(&t0, &a.Fp12)
@@ -134,11 +136,13 @@ func (gt *Gt) FinalExponentiation(a *Gt) {
 	gt.Select(wasInverted, &gt.Fp12, &t)
 }
 
+// Fp12FrobeniusAutomorphism applies the Frobenius automorphism in Fp12.
 func Fp12FrobeniusAutomorphism(f, arg *Fp12) *Fp12 {
 	var a, b, up1epm1div6 Fp6
 
 	// (u + 1)^((p - 1) / 6)
 	up1epm1div6.U0 = Fp2{
+		//nolint:exhaustruct // no need for _ mark
 		U0: Fp{
 			fiatFpMontgomeryDomainFieldElement: fiatFpMontgomeryDomainFieldElement{
 				0x07089552b319d465,
@@ -149,6 +153,7 @@ func Fp12FrobeniusAutomorphism(f, arg *Fp12) *Fp12 {
 				0x08f2220fb0fb66eb,
 			},
 		},
+		//nolint:exhaustruct // no need for _ mark
 		U1: Fp{
 			fiatFpMontgomeryDomainFieldElement: fiatFpMontgomeryDomainFieldElement{
 				0xb2f66aad4ce5d646,
@@ -175,7 +180,9 @@ func Fp12FrobeniusAutomorphism(f, arg *Fp12) *Fp12 {
 // Fp6FrobeniusAutomorphism raises this element to p.
 func Fp6FrobeniusAutomorphism(f, arg *Fp6) *Fp6 {
 	var a, b, c Fp2
+	//nolint:exhaustruct // no need for U0
 	pm1Div3 := Fp2{
+		//nolint:exhaustruct // no need for _
 		U1: Fp{
 			fiatFpMontgomeryDomainFieldElement: fiatFpMontgomeryDomainFieldElement{
 				0xcd03c9e48671f071,
@@ -187,7 +194,9 @@ func Fp6FrobeniusAutomorphism(f, arg *Fp6) *Fp6 {
 			},
 		},
 	}
+	//nolint:exhaustruct // no need for U1
 	p2m2Div3 := Fp2{
+		//nolint:exhaustruct // no need for _
 		U0: Fp{
 			fiatFpMontgomeryDomainFieldElement: fiatFpMontgomeryDomainFieldElement{
 				0x890dc9e4867545c3,
@@ -222,6 +231,7 @@ func Fp2FrobeniusAutomorphism(f, a *Fp2) {
 	Conjugate(f, a)
 }
 
+// CyclotomicExp raises f to the given exponent in the cyclotomic subgroup.
 func CyclotomicExp(f *Fp12, a *Fp12, exp uint64) {
 	var t Fp12
 	t.SetOne()
@@ -241,6 +251,7 @@ func CyclotomicExp(f *Fp12, a *Fp12, exp uint64) {
 	Conjugate(f, &t)
 }
 
+// CyclotomicSquare squares f in the cyclotomic subgroup.
 func CyclotomicSquare(f, a *Fp12) {
 	// Adaptation of Algorithm 5.5.4, Guide to Pairing-Based Cryptography
 	// Faster Squaring in the Cyclotomic Subgroup of Sixth Degree Extensions
@@ -291,6 +302,7 @@ func CyclotomicSquare(f, a *Fp12) {
 	f.U1.U2.Set(&z5)
 }
 
+// Conjugate negates the quadratic extension's U1 component.
 func Conjugate[BFP fieldsImpl.FiniteFieldElementPtr[BFP, BF], A fieldsImpl.QuadraticFieldExtensionArithmetic[BFP], BF any](f, arg *fieldsImpl.QuadraticFieldExtensionImpl[BFP, A, BF]) {
 	BFP(&f.U0).Set(&arg.U0)
 	BFP(&f.U1).Neg(&arg.U1)

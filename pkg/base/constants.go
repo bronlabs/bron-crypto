@@ -11,6 +11,11 @@ const (
 	// applicable mostly to soundness of interactive proofs.
 	StatisticalSecurityBits = 80
 
+	// IFCKeyLength is the key length (in bits) for integer factorization based cryptography
+	// (e.g. RSA) to achieve λ-bits of security.
+	// Values based on SP 800-57 Part 1 Rev. 5, Table 2.
+	IFCKeyLength = 3072
+
 	// CollisionResistance is the hash digest length to achieve λ-bits of
 	// collision resistance (birthday paradox).
 	CollisionResistance = 2 * ComputationalSecurityBits

@@ -46,8 +46,9 @@ type (
 )
 
 const (
-	transcriptLabel = "BRON_CRYPTO_DKG_GENNARO-"
-	proverIdLabel   = "BRON_CRYPTO_DKG_GENNARO_PROVER_ID-"
+	transcriptLabel              = "BRON_CRYPTO_DKG_GENNARO-"
+	proverIdLabel                = "BRON_CRYPTO_DKG_GENNARO_PROVER_ID-"
+	secondPedersenGeneratorLabel = "second generator of pedersen key"
 )
 
 // Participant orchestrates the Gennaro DKG protocol for one party.
@@ -115,7 +116,7 @@ func NewParticipant[E GroupElement[E, S], S Scalar[S]](
 	dst := fmt.Sprintf("%s-%d-%s", transcriptLabel, sid, group.Name())
 	tape.AppendDomainSeparator(dst)
 
-	h, err := ts.Extract(tape, "second generator of pedersen key", group)
+	h, err := ts.Extract(tape, secondPedersenGeneratorLabel, group)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("failed to extract second generator for pedersen key")
 	}

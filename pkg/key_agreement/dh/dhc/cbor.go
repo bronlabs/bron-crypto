@@ -4,7 +4,7 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
@@ -22,10 +22,10 @@ func (sk *PrivateKey) MarshalCBOR() ([]byte, error) {
 func (sk *PrivateKey) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[privateKeyDTO](data)
 	if err != nil {
-		return errs.WrapSerialisation(err, "could not serialise private key")
+		return errs2.Wrap(err).WithMessage("could not serialise private key")
 	}
 	if _, err := NewPrivateKey(dto.V); err != nil {
-		return errs.WrapValidation(err, "invalid private key")
+		return errs2.Wrap(err).WithMessage("invalid private key")
 	}
 	sk.v = slices.Clone(dto.V)
 	return nil
@@ -47,30 +47,30 @@ func (esk *ExtendedPrivateKey[S]) MarshalCBOR() ([]byte, error) {
 func (esk *ExtendedPrivateKey[S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[extendedPrivateKeyDTO[S]](data)
 	if err != nil {
-		return errs.WrapSerialisation(err, "could not serialise extended private key")
+		return errs2.Wrap(err).WithMessage("could not serialise extended private key")
 	}
 	dtoSk, err := NewPrivateKey(dto.V)
 	if err != nil {
-		return errs.WrapValidation(err, "invalid private key")
+		return errs2.Wrap(err).WithMessage("invalid private key")
 	}
 	dtoSf := algebra.StructureMustBeAs[algebra.PrimeField[S]](dto.S.Structure())
 	var ok bool
 	if isFromCurve25519(dtoSf.Name()) {
 		expected, err := ExtendPrivateKey(dtoSk, dtoSf)
 		if err != nil {
-			return errs.WrapValidation(err, "invalid extended private key")
+			return errs2.Wrap(err).WithMessage("invalid extended private key")
 		}
 		ok = expected.s.Equal(dto.S)
 	} else {
 		var s S
 		s, err = dtoSf.FromBytes(dto.V)
 		if err != nil {
-			return errs.WrapValidation(err, "invalid extended private key")
+			return errs2.Wrap(err).WithMessage("invalid extended private key")
 		}
 		ok = s.Equal(dto.S)
 	}
 	if !ok {
-		return errs.NewValidation("invalid extended private key scalar")
+		return ErrValidation.WithMessage("invalid extended private key scalar")
 	}
 	esk.PrivateKey.v = slices.Clone(dto.V)
 	esk.s = dto.S

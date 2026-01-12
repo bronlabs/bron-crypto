@@ -31,6 +31,8 @@ var (
 )
 
 type curveParams struct{}
+
+// CurveHasherParams defines hash-to-curve parameters.
 type CurveHasherParams struct{}
 type curveMapperParams struct{}
 type curveMapper = sswu.NonZeroPointMapper[*Fp, curveMapperParams, Fp]
@@ -48,22 +50,26 @@ func init() {
 	sswuZ.MustSetHex("ffffffff00000001000000000000000000000000fffffffffffffffffffffff5")
 }
 
+// ClearCofactor clears the cofactor of the input point.
 func (curveParams) ClearCofactor(xOut, yOut, zOut, xIn, yIn, zIn *Fp) {
 	xOut.Set(xIn)
 	yOut.Set(yIn)
 	zOut.Set(zIn)
 }
 
+// SetGenerator sets generator coordinates.
 func (curveParams) SetGenerator(xOut, yOut, zOut *Fp) {
 	xOut.Set(&curveGx)
 	yOut.Set(&curveGy)
 	zOut.SetOne()
 }
 
+// AddA adds the curve A parameter to in.
 func (curveParams) AddA(out, in *Fp) {
 	out.Add(in, &curveA)
 }
 
+// AddB adds the curve B parameter to in.
 func (curveParams) AddB(out, in *Fp) {
 	out.Add(in, &curveB)
 }
@@ -81,14 +87,17 @@ func (curveParams) MulBy3B(out *Fp, in *Fp) {
 	out.Mul(in, &curveB3)
 }
 
+// L returns the hash-to-field length in bytes.
 func (CurveHasherParams) L() uint64 {
 	return 48
 }
 
+// MessageExpander returns the RFC 9380 message expander.
 func (CurveHasherParams) MessageExpander() h2c.MessageExpander {
 	return curveMessageExpander
 }
 
+// MulByA multiplies by the curve A parameter.
 func (curveMapperParams) MulByA(out, in *Fp) {
 	var n1, n2 Fp
 	n1.Neg(in)        // -1
@@ -96,18 +105,22 @@ func (curveMapperParams) MulByA(out, in *Fp) {
 	out.Add(&n1, &n2) // -3
 }
 
+// MulByB multiplies by the curve B parameter.
 func (curveMapperParams) MulByB(out, in *Fp) {
 	out.Mul(in, &curveB)
 }
 
+// SetZ sets the SSWU Z parameter.
 func (curveMapperParams) SetZ(out *Fp) {
 	out.Set(&sswuZ)
 }
 
+// SqrtRatio computes sqrt(u/v) with curve-specific parameters.
 func (curveMapperParams) SqrtRatio(y, u, v *Fp) (ok ct.Bool) {
 	return sswu.SqrtRatio3Mod4(y, sqrtRatioC1[:], &sqrtRatioC2, u, v)
 }
 
+// Sgn0 returns the sign bit per RFC 9380.
 func (curveMapperParams) Sgn0(v *Fp) ct.Bool {
 	return ct.Bool(uint64(v.Bytes()[0] & 0b1))
 }

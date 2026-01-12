@@ -5,6 +5,7 @@ import (
 )
 
 const (
+	// BaseFieldName is the base field name.
 	BaseFieldName = edwards25519.BaseFieldName
 )
 
@@ -13,6 +14,7 @@ type (
 	BaseFieldElement = edwards25519.BaseFieldElement
 )
 
+// NewBaseField returns the base field instance.
 func NewBaseField() *BaseField {
 	return edwards25519.NewBaseField()
 }

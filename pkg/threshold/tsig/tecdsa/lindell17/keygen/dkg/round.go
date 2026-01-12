@@ -11,7 +11,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
-	"github.com/bronlabs/bron-crypto/pkg/encryption/paillier"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/paillier/lp"
@@ -22,7 +21,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
-const transcriptDLogSLabel = "Lindell2027DKGDLogS-"
+const (
+	transcriptDLogSLabel = "Lindell2017DKGDLogS-"
+	proverLabel          = "Lindell2017DKGProver-"
+	bigQTwinLabel        = "Lindell2017DKGBigQTwin-"
+)
 
 // Round1 executes the first DKG round.
 func (p *Participant[P, B, S]) Round1() (output *Round1Broadcast, err error) {
@@ -151,7 +154,7 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 	}
 
 	// 3.iii. generate a Paillier key pair
-	keyGenerator, err := p.state.paillierScheme.Keygen(paillier.WithEachPrimeBitLen(lp.PaillierBitSizeN / 2))
+	keyGenerator, err := p.state.paillierScheme.Keygen()
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot generate Paillier key generator")
 	}
@@ -450,8 +453,8 @@ func dlogProve[
 ](c *Participant[P, B, S], bigQ, bigQTwin P, x S, tape transcripts.Transcript) (compiler.NIZKPoKProof, error) {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(c.SharingID()))
 	tape.AppendBytes(transcriptDLogSLabel, c.quorumBytes...)
-	tape.AppendBytes("prover", proverIDBytes)
-	tape.AppendBytes("bigQTwin", bigQTwin.ToCompressed())
+	tape.AppendBytes(proverLabel, proverIDBytes)
+	tape.AppendBytes(bigQTwinLabel, bigQTwin.ToCompressed())
 	prover, err := c.state.niDlogScheme.NewProver(c.sid, tape)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("cannot create dlog prover")
@@ -474,8 +477,8 @@ func dlogVerify[
 ](c *Participant[P, B, S], proverID sharing.ID, proof compiler.NIZKPoKProof, bigQ, bigQTwin P, tape transcripts.Transcript) error {
 	proverIDBytes := binary.BigEndian.AppendUint64(nil, uint64(proverID))
 	tape.AppendBytes(transcriptDLogSLabel, c.quorumBytes...)
-	tape.AppendBytes("prover", proverIDBytes)
-	tape.AppendBytes("bigQTwin", bigQTwin.ToCompressed())
+	tape.AppendBytes(proverLabel, proverIDBytes)
+	tape.AppendBytes(bigQTwinLabel, bigQTwin.ToCompressed())
 	verifier, err := c.state.niDlogScheme.NewVerifier(c.sid, tape)
 	if err != nil {
 		return errs2.Wrap(err).WithMessage("cannot create dlog verifier")

@@ -9,12 +9,14 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	bls12381Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381/impl"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
 const (
+	// GtName is the target group name.
 	GtName = "BLS12381Fp12Mul"
 )
 
@@ -28,8 +30,10 @@ var (
 	gtInitOnce sync.Once
 )
 
+// Gt represents the BLS12-381 GT group.
 type Gt struct{}
 
+// NewGt returns the BLS12-381 GT group instance.
 func NewGt() *Gt {
 	gtInitOnce.Do(func() {
 		gtInstance = &Gt{}
@@ -37,147 +41,176 @@ func NewGt() *Gt {
 	return gtInstance
 }
 
+// Name returns the name of the structure.
 func (g *Gt) Name() string {
 	return GtName
 }
 
+// ElementSize returns the element size in bytes.
 func (g *Gt) ElementSize() int {
 	return 96
 }
 
+// Order returns the group or field order.
 func (g *Gt) Order() cardinal.Cardinal {
 	//TODO implement me
 	panic("implement me")
 }
 
+// Hash maps input bytes to an element or point.
 func (g *Gt) Hash(bytes []byte) (*GtElement, error) {
 	panic("Hashing not implemented for Gt")
 }
 
+// Random samples a random element.
 func (g *Gt) Random(prng io.Reader) (*GtElement, error) {
 	panic("Random sampling not implemented for Gt")
 }
 
+// Iter returns an iterator over elements.
 func (g *Gt) Iter() iter.Seq[*GtElement] {
 	panic("implement me")
 }
 
+// One returns the multiplicative identity.
 func (g *Gt) One() *GtElement {
 	var one GtElement
 	one.V.SetOne()
 	return &one
 }
 
+// OpIdentity returns the group identity.
 func (g *Gt) OpIdentity() *GtElement {
 	return g.One()
 }
 
+// FromBytes decodes an element from bytes.
 func (g *Gt) FromBytes(inBytes []byte) (*GtElement, error) {
 	if len(inBytes) != 96 {
-		return nil, errs.NewLength("input must be 96 bytes long")
+		return nil, curves.ErrInvalidLength.WithMessage("input must be 96 bytes long")
 	}
 
 	var element GtElement
 	if ok := element.V.SetUniformBytes(inBytes); ok == 0 {
-		return nil, errs.NewFailed("failed to set bytes")
+		return nil, curves.ErrFailed.WithMessage("failed to set bytes")
 	}
 
 	return &element, nil
 }
 
+// GtElement represents an element of the target group.
 type GtElement struct {
 	V bls12381Impl.Gt
 }
 
+// Clone returns a copy of the element.
 func (ge *GtElement) Clone() *GtElement {
 	var clone GtElement
 	clone.V.Set(&ge.V.Fp12)
 	return &clone
 }
 
+// Equal reports whether the receiver equals v.
 func (ge *GtElement) Equal(rhs *GtElement) bool {
 	return ge.V.Equal(&rhs.V.Fp12) == 1
 }
 
+// HashCode returns a hash code for the receiver.
 func (ge *GtElement) HashCode() base.HashCode {
 	h := fnv.New64a()
 	_, _ = h.Write(ge.V.Bytes())
 	return base.HashCode(h.Sum64())
 }
 
+// Bytes returns the canonical byte encoding.
 func (ge *GtElement) Bytes() []byte {
 	return ge.V.Bytes()
 }
 
+// Structure returns the algebraic structure for the receiver.
 func (ge *GtElement) Structure() algebra.Structure[*GtElement] {
 	return NewGt()
 }
 
+// Mul sets the receiver to lhs * rhs.
 func (ge *GtElement) Mul(e *GtElement) *GtElement {
 	var product GtElement
 	product.V.Mul(&ge.V.Fp12, &e.V.Fp12)
 	return &product
 }
 
+// Square sets the receiver to v^2.
 func (ge *GtElement) Square() *GtElement {
 	var square GtElement
 	square.V.Square(&ge.V.Fp12)
 	return &square
 }
 
+// IsOne reports whether the receiver is one.
 func (ge *GtElement) IsOne() bool {
 	return ge.V.IsOne() == 1
 }
 
+// Inv sets the receiver to the inverse of a, if it exists.
 func (ge *GtElement) Inv() *GtElement {
 	var inv GtElement
 	_ = inv.V.Inv(&ge.V.Fp12)
 	return &inv
 }
 
+// Div sets the receiver to lhs / rhs, if rhs is nonzero.
 func (ge *GtElement) Div(e *GtElement) *GtElement {
 	var quotient GtElement
 	_ = quotient.V.Div(&ge.V.Fp12, &e.V.Fp12)
 	return &quotient
 }
 
+// TryInv returns the multiplicative inverse.
 func (ge *GtElement) TryInv() (*GtElement, error) {
 	return ge.Inv(), nil
 }
 
+// TryDiv divides by the given element.
 func (ge *GtElement) TryDiv(e *GtElement) (*GtElement, error) {
 	return ge.Div(e), nil
 }
 
+// Op applies the group operation.
 func (ge *GtElement) Op(e *GtElement) *GtElement {
 	return ge.Mul(e)
 }
 
+// IsOpIdentity reports whether the element is the identity.
 func (ge *GtElement) IsOpIdentity() bool {
 	return ge.IsOne()
 }
 
+// TryOpInv returns the group inverse.
 func (ge *GtElement) TryOpInv() (*GtElement, error) {
 	return ge.OpInv(), nil
 }
 
+// OpInv returns the group inverse.
 func (ge *GtElement) OpInv() *GtElement {
 	return ge.Inv()
 }
 
+// String returns the string form of the receiver.
 func (ge *GtElement) String() string {
 	//TODO implement me
 	panic("implement me")
 }
 
+// MarshalBinary implements encoding.BinaryMarshaler.
 func (ge *GtElement) MarshalBinary() ([]byte, error) {
 	return ge.Bytes(), nil
 }
 
+// UnmarshalBinary implements encoding.BinaryUnmarshaler.
 func (ge *GtElement) UnmarshalBinary(data []byte) error {
 	pp, err := NewGt().FromBytes(data)
 	if err != nil {
-		return errs.WrapSerialisation(err, "cannot decode element")
+		return errs2.Wrap(err).WithMessage("cannot decode element")
 	}
 	ge.V.Set(&pp.V.Fp12)
 	return nil

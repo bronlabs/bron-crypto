@@ -15,9 +15,8 @@ import (
 // KeyGeneratorOption is a functional option for configuring the key generator.
 type KeyGeneratorOption = encryption.KeyGeneratorOption[*KeyGenerator, *PrivateKey, *PublicKey]
 
-// WithEachPrimeBitLen sets the bit length for each prime factor (p and q).
-// The resulting modulus n = p*q will have approximately 2*bits bits.
-func WithEachPrimeBitLen(bits uint) KeyGeneratorOption {
+// WithKeyLen sets the bit length of the modulus n for the generated Paillier key pair.
+func WithKeyLen(bits uint) KeyGeneratorOption {
 	return func(kg *KeyGenerator) error {
 		kg.bits = bits
 		return nil

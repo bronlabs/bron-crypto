@@ -6,11 +6,15 @@ import (
 	fieldsImpl "github.com/bronlabs/bron-crypto/pkg/base/algebra/impl/fields"
 )
 
+// HasherParams exposes parameters for hash-to-field expansion.
 type HasherParams interface {
+	// L returns the hash-to-field length in bytes.
 	L() uint64
+	// MessageExpander returns the RFC 9380 message expander.
 	MessageExpander() MessageExpander
 }
 
+// HashToField expands msg into field elements as specified by RFC 9380.
 func HashToField[FP fieldsImpl.FiniteFieldElementPtr[FP, F], F any](out []F, params HasherParams, dstStr string, msg []byte) {
 	m := fieldsImpl.Degree[FP]()
 	l := params.L()

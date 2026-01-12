@@ -8,6 +8,8 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 )
 
+// Parameters contains the configuration for a Poseidon hash instance including
+// round constants, MDS matrix, and other permutation parameters.
 type Parameters struct {
 	fullRounds, partialRounds, stateSize, rate, power int
 	hashInitialRoundConstant                          bool

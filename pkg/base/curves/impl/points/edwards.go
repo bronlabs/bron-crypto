@@ -10,6 +10,7 @@ import (
 	h2c "github.com/bronlabs/bron-crypto/pkg/base/curves/impl/rfc9380"
 )
 
+// TwistedEdwardsCurveParams exposes curve constants and helpers for Edwards arithmetic.
 type TwistedEdwardsCurveParams[FP fields.FiniteFieldElement[FP]] interface {
 	// SetGenerator sets generator coordinates.
 	SetGenerator(xOut, yOut, tOut, zOut FP)
@@ -17,12 +18,17 @@ type TwistedEdwardsCurveParams[FP fields.FiniteFieldElement[FP]] interface {
 	// ClearCofactor clears cofactor (must comply with RFC9380).
 	ClearCofactor(xOut, yOut, tOut, zOut, xIn, yIn, tIn, zIn FP)
 
+	// SetA sets the curve A parameter.
 	SetA(out FP)
+	// MulByA multiplies by the curve A parameter.
 	MulByA(out, in FP)
+	// MulByD multiplies by the curve D parameter.
 	MulByD(out, in FP)
+	// MulBy2D multiplies by 2*D.
 	MulBy2D(out, in FP)
 }
 
+// TwistedEdwardsPointImpl implements extended coordinates for Twisted Edwards curves.
 type TwistedEdwardsPointImpl[FP fields.FiniteFieldElementPtr[FP, F], C TwistedEdwardsCurveParams[FP], H h2c.HasherParams, M h2c.PointMapper[FP], F any] struct {
 	X F
 	Y F
@@ -30,6 +36,7 @@ type TwistedEdwardsPointImpl[FP fields.FiniteFieldElementPtr[FP, F], C TwistedEd
 	Z F
 }
 
+// Add sets p = lhs + rhs.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Add(lhs, rhs *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
 	var params C
 	var a, b, c, d, e, f, g, h, t0, t1, t2 F
@@ -66,6 +73,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Add(lhs, rhs *TwistedEdwardsPo
 	FP(&p.Z).Mul(&f, &g)
 }
 
+// Double sets p = 2*v.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Double(v *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
 	var params C
 	var a, b, c, d, e, f, g, h, t0, t1 F
@@ -100,6 +108,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Double(v *TwistedEdwardsPointI
 	FP(&p.Z).Mul(&f, &g)
 }
 
+// Encode hashes a message to a curve point with one hash-to-field element.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Encode(dstPrefix string, message []byte) {
 	var curveParams C
 	var hasherParams H
@@ -117,6 +126,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Encode(dstPrefix string, messa
 	curveParams.ClearCofactor(&p.X, &p.Y, &p.T, &p.Z, &q.X, &q.Y, &q.T, &q.Z)
 }
 
+// Hash hashes a message to a curve point with two hash-to-field elements.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Hash(dst string, message []byte) {
 	var curveParams C
 	var hasherParams H
@@ -139,6 +149,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Hash(dst string, message []byt
 	curveParams.ClearCofactor(&p.X, &p.Y, &p.T, &p.Z, &q.X, &q.Y, &q.T, &q.Z)
 }
 
+// Set sets p to v.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Set(v *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
 	FP(&p.X).Set(&v.X)
 	FP(&p.Y).Set(&v.Y)
@@ -146,6 +157,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Set(v *TwistedEdwardsPointImpl
 	FP(&p.T).Set(&v.T)
 }
 
+// SetRandom maps random field elements to a curve point and clears the cofactor.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetRandom(prng io.Reader) (ok ct.Bool) {
 	var curveParams C
 	var mapper M
@@ -171,6 +183,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetRandom(prng io.Reader) (ok 
 	return ok
 }
 
+// SetZero sets p to the identity point.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetZero() {
 	FP(&p.X).SetZero()
 	FP(&p.Y).SetOne()
@@ -178,12 +191,14 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetZero() {
 	FP(&p.T).SetZero()
 }
 
+// SetGenerator sets p to the curve generator.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetGenerator() {
 	var params C
 	params.SetGenerator(&p.X, &p.Y, &p.T, &p.Z)
 	FP(&p.Z).SetOne()
 }
 
+// SetAffine sets p from affine coordinates if they satisfy the curve equation.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetAffine(x, y FP) (ok ct.Bool) {
 	var params C
 	var out TwistedEdwardsPointImpl[FP, C, H, M, F]
@@ -207,6 +222,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetAffine(x, y FP) (ok ct.Bool
 	return ok
 }
 
+// SetFromAffineY sets p from an affine y-coordinate, choosing a square root for x.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetFromAffineY(y FP) (ok ct.Bool) {
 	var params C
 	var one, a, x, yy, num, den F
@@ -231,6 +247,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetFromAffineY(y FP) (ok ct.Bo
 	return ok
 }
 
+// Select conditionally assigns z or nz into p based on choice.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Select(choice ct.Choice, z, nz *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
 	FP(&p.X).Select(choice, &z.X, &nz.X)
 	FP(&p.Y).Select(choice, &z.Y, &nz.Y)
@@ -238,18 +255,21 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Select(choice ct.Choice, z, nz
 	FP(&p.T).Select(choice, &z.T, &nz.T)
 }
 
+// ClearCofactor clears the curve cofactor on input.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) ClearCofactor(in *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
 	var params C
 
 	params.ClearCofactor(&p.X, &p.Y, &p.T, &p.Z, &in.X, &in.Y, &in.T, &in.Z)
 }
 
+// Sub sets p = lhs - rhs.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Sub(lhs, rhs *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
 	var rhsNeg TwistedEdwardsPointImpl[FP, C, H, M, F]
 	rhsNeg.Neg(rhs)
 	p.Add(lhs, &rhsNeg)
 }
 
+// Neg sets p to the negation of v.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Neg(v *TwistedEdwardsPointImpl[FP, C, H, M, F]) {
 	FP(&p.X).Neg(&v.X)
 	FP(&p.Y).Set(&v.Y)
@@ -257,14 +277,17 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Neg(v *TwistedEdwardsPointImpl
 	FP(&p.T).Neg(&v.T)
 }
 
+// IsZero reports whether p is the identity point.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) IsZero() ct.Bool {
 	return FP(&p.X).IsZero() & (FP(&p.Y).Equal(&p.Z))
 }
 
+// IsNonZero reports whether p is not the identity point.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) IsNonZero() ct.Bool {
 	return FP(&p.X).IsNonZero()
 }
 
+// Equal reports whether p and v represent the same point.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Equal(v *TwistedEdwardsPointImpl[FP, C, H, M, F]) ct.Bool {
 	var x1z2, x2z1, y1z2, y2z1 F
 	FP(&x1z2).Mul(&p.X, &v.Z)
@@ -275,6 +298,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Equal(v *TwistedEdwardsPointIm
 	return FP(&x1z2).Equal(&x2z1) & FP(&y1z2).Equal(&y2z1)
 }
 
+// ToAffine converts p to affine coordinates if possible.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) ToAffine(x, y FP) (ok ct.Bool) {
 	var xx, yy, zInv F
 	zInvPtr := FP(&zInv)
@@ -288,10 +312,12 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) ToAffine(x, y FP) (ok ct.Bool)
 	return ok
 }
 
+// Bytes returns the concatenated byte encoding of extended coordinates.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) Bytes() []byte {
 	return slices.Concat(FP(&p.X).Bytes(), FP(&p.Y).Bytes(), FP(&p.Z).Bytes(), FP(&p.T).Bytes())
 }
 
+// SetBytes decodes extended coordinates from input.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetBytes(input []byte) (ok ct.Bool) {
 	coordinateLen := len(input) / 4
 	x := input[:coordinateLen]
@@ -312,6 +338,7 @@ func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) SetBytes(input []byte) (ok ct.
 	return ok
 }
 
+// String formats the point in projective coordinates.
 func (p *TwistedEdwardsPointImpl[FP, C, H, M, F]) String() string {
 	var one, x, y, z F
 	FP(&one).SetOne()

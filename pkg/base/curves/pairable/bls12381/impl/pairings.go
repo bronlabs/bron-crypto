@@ -9,6 +9,7 @@ import (
 
 const coefficientsG2 = 68
 
+// Engine implements the pairing engine state machine.
 type Engine struct {
 	pairs []pair
 }
@@ -27,6 +28,7 @@ type coefficients struct {
 	a, b, c Fp2
 }
 
+// Select conditionally assigns z or nz into the receiver.
 func (c *coefficients) Select(choice ct.Choice, arg0, arg1 *coefficients) *coefficients {
 	c.a.Select(choice, &arg0.a, &arg1.a)
 	c.b.Select(choice, &arg0.b, &arg1.b)
@@ -59,15 +61,18 @@ func (e *Engine) AddPairInvG2(g1 *G1Point, g2 *G2Point) *Engine {
 	return e.AddPair(g1, &p)
 }
 
+// Reset clears the pairing engine state.
 func (e *Engine) Reset() *Engine {
 	e.pairs = []pair{}
 	return e
 }
 
+// Check verifies the accumulated pairing.
 func (e *Engine) Check() bool {
 	return e.pairing().IsOne() == 1
 }
 
+// Result returns the accumulated pairing result.
 func (e *Engine) Result() *Fp12 {
 	return e.pairing()
 }
@@ -99,7 +104,7 @@ func (e *Engine) millerLoop(f *Fp12, coeffs []g2Prepared) {
 
 		// doubling
 		for j, terms := range coeffs {
-			identity := e.pairs[j].g1.IsZero() | ct.Bool(terms.identity)
+			identity := e.pairs[j].g1.IsZero() | terms.identity
 			newF.Set(f)
 			ell(newF, &terms.coefficients[cIdx], &e.pairs[j].g1)
 			f.Select(identity, newF, f)
@@ -109,7 +114,7 @@ func (e *Engine) millerLoop(f *Fp12, coeffs []g2Prepared) {
 		if x == 1 {
 			// adding
 			for j, terms := range coeffs {
-				identity := e.pairs[j].g1.IsZero() | ct.Bool(terms.identity)
+				identity := e.pairs[j].g1.IsZero() | terms.identity
 				newF.Set(f)
 				ell(newF, &terms.coefficients[cIdx], &e.pairs[j].g1)
 				f.Select(identity, newF, f)
@@ -119,7 +124,7 @@ func (e *Engine) millerLoop(f *Fp12, coeffs []g2Prepared) {
 		f.Square(f)
 	}
 	for j, terms := range coeffs {
-		identity := e.pairs[j].g1.IsZero() | ct.Bool(terms.identity)
+		identity := e.pairs[j].g1.IsZero() | terms.identity
 		newF.Set(f)
 		ell(newF, &terms.coefficients[cIdx], &e.pairs[j].g1)
 		f.Select(identity, newF, f)

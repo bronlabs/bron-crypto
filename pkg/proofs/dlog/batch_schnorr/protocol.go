@@ -13,21 +13,27 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 )
 
+// Name is the protocol identifier for batch Schnorr discrete log proof.
 const (
 	Name sigma.Name = "BATCH_SCHNORR" + dlog.Type
 )
 
 var (
-	ErrInvalidArgument    = errs2.New("invalid argument")
-	ErrValidationFailed   = errs2.New("validation failed")
+	// ErrInvalidArgument is returned when a function receives an invalid argument.
+	ErrInvalidArgument = errs2.New("invalid argument")
+	// ErrValidationFailed is returned when statement-witness validation fails.
+	ErrValidationFailed = errs2.New("validation failed")
+	// ErrVerificationFailed is returned when proof verification fails.
 	ErrVerificationFailed = errs2.New("verification failed")
 )
 
+// Statement contains the generator and public group elements X_i being proven.
 type Statement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	Gen G   `cbor:"gen"`
 	Xs  []G `cbor:"xs"`
 }
 
+// NewStatement creates a new statement from a generator and public group elements.
 func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](g G, xs ...G) *Statement[G, S] {
 	return &Statement[G, S]{
 		Gen: g,
@@ -35,6 +41,7 @@ func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement
 	}
 }
 
+// Bytes serializes the statement to a byte slice.
 func (x *Statement[G, S]) Bytes() []byte {
 	var d []byte
 
@@ -53,16 +60,19 @@ func (x *Statement[G, S]) Bytes() []byte {
 	return d
 }
 
+// Witness contains the secret scalars w_i such that X_i = g^w_i.
 type Witness[S algebra.PrimeFieldElement[S]] struct {
 	Ws []S `cbor:"ws"`
 }
 
+// NewWitness creates a new witness from secret scalars.
 func NewWitness[S algebra.PrimeFieldElement[S]](ws ...S) *Witness[S] {
 	return &Witness[S]{
 		Ws: ws,
 	}
 }
 
+// Bytes serializes the witness to a byte slice.
 func (w *Witness[S]) Bytes() []byte {
 	var d []byte
 
@@ -77,10 +87,12 @@ func (w *Witness[S]) Bytes() []byte {
 	return d
 }
 
+// Commitment is the first message sent by the prover.
 type Commitment[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	A G `cbor:"a"`
 }
 
+// Bytes serializes the commitment to a byte slice.
 func (a *Commitment[G, S]) Bytes() []byte {
 	var d []byte
 
@@ -91,14 +103,17 @@ func (a *Commitment[G, S]) Bytes() []byte {
 	return d
 }
 
+// State holds the prover's randomness during the protocol execution.
 type State[S algebra.PrimeFieldElement[S]] struct {
 	S S `cbor:"s"`
 }
 
+// Response is the prover's answer to the verifier's challenge.
 type Response[S algebra.PrimeFieldElement[S]] struct {
 	Z S `cbor:"z"`
 }
 
+// Bytes serializes the response to a byte slice.
 func (z *Response[S]) Bytes() []byte {
 	var d []byte
 
@@ -109,6 +124,8 @@ func (z *Response[S]) Bytes() []byte {
 	return d
 }
 
+// Protocol implements a batch Schnorr sigma protocol for proving knowledge of k discrete logarithms.
+// Given a generator g and public elements X_1,...,X_k, it proves knowledge of w_1,...,w_k such that X_i = g^w_i.
 type Protocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]] struct {
 	k               int
 	challengeLength int
@@ -118,6 +135,7 @@ type Protocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]]
 	prng            io.Reader
 }
 
+// NewProtocol creates a new batch Schnorr protocol for k discrete logarithms.
 func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](k int, group algebra.PrimeGroup[G, S], prng io.Reader) (*Protocol[G, S], error) {
 	if k < 2 {
 		return nil, ErrInvalidArgument.WithMessage("k must be >= 2")
@@ -144,10 +162,12 @@ func NewProtocol[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[
 	return p, nil
 }
 
+// Name returns the protocol identifier.
 func (p *Protocol[G, S]) Name() sigma.Name {
 	return Name
 }
 
+// ComputeProverCommitment generates the prover's first message and internal state.
 func (p *Protocol[G, S]) ComputeProverCommitment(statement *Statement[G, S], _ *Witness[S]) (*Commitment[G, S], *State[S], error) {
 	if statement == nil {
 		return nil, nil, ErrInvalidArgument.WithMessage("statement is nil")
@@ -168,6 +188,7 @@ func (p *Protocol[G, S]) ComputeProverCommitment(statement *Statement[G, S], _ *
 	return commitment, state, nil
 }
 
+// ComputeProverResponse computes the prover's response to the verifier's challenge.
 func (p *Protocol[G, S]) ComputeProverResponse(_ *Statement[G, S], witness *Witness[S], _ *Commitment[G, S], state *State[S], challenge sigma.ChallengeBytes) (*Response[S], error) {
 	if state == nil {
 		return nil, ErrInvalidArgument.WithMessage("state is nil")
@@ -201,6 +222,7 @@ func (p *Protocol[G, S]) ComputeProverResponse(_ *Statement[G, S], witness *Witn
 	return response, nil
 }
 
+// Verify checks if a proof transcript is valid for the given statement.
 func (p *Protocol[G, S]) Verify(statement *Statement[G, S], commitment *Commitment[G, S], challenge sigma.ChallengeBytes, response *Response[S]) error {
 	if commitment == nil {
 		return ErrInvalidArgument.WithMessage("commitment is nil")
@@ -235,6 +257,7 @@ func (p *Protocol[G, S]) Verify(statement *Statement[G, S], commitment *Commitme
 	return nil
 }
 
+// RunSimulator generates a simulated proof transcript for the given statement and challenge.
 func (p *Protocol[G, S]) RunSimulator(statement *Statement[G, S], challenge sigma.ChallengeBytes) (*Commitment[G, S], *Response[S], error) {
 	z, err := p.scalarField.Random(p.prng)
 	if err != nil {
@@ -260,18 +283,22 @@ func (p *Protocol[G, S]) RunSimulator(statement *Statement[G, S], challenge sigm
 	return commitment, response, nil
 }
 
+// SpecialSoundness returns the number of transcripts needed for knowledge extraction (k+1).
 func (p *Protocol[G, S]) SpecialSoundness() uint {
 	return uint(p.k + 1)
 }
 
+// SoundnessError returns the soundness error in bits.
 func (p *Protocol[G, S]) SoundnessError() uint {
 	return uint(p.soundnessError)
 }
 
+// GetChallengeBytesLength returns the required challenge length in bytes.
 func (p *Protocol[G, S]) GetChallengeBytesLength() int {
 	return p.challengeLength
 }
 
+// ValidateStatement checks that the statement and witness are consistent.
 func (p *Protocol[G, S]) ValidateStatement(statement *Statement[G, S], witness *Witness[S]) error {
 	if statement == nil {
 		return ErrInvalidArgument.WithMessage("statement is nil")

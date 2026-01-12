@@ -19,8 +19,6 @@ import (
 const (
 	appTranscriptLabel       = "BRON_CRYPTO_PAILLIER_LP-"
 	sessionIdTranscriptLabel = "BRON_CRYPTO_PAILLIER_LP_SESSION_ID"
-	// PaillierBitSizeN is the minimum modulus bit size for this protocol.
-	PaillierBitSizeN = 2048
 )
 
 // Participant holds a common state for the LP protocol participants.

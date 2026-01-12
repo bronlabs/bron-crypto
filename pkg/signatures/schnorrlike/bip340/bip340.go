@@ -408,7 +408,7 @@ func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey,
 		return ErrInvalidArgument.WithMessage("length of publickeys, messages and signatures must be equal and greater than zero")
 	}
 	if sliceutils.Any(publicKeys, func(pk *PublicKey) bool {
-		return pk == nil || pk.Value() == nil || pk.Value().IsOpIdentity() || pk.Value().IsOpIdentity()
+		return pk == nil || pk.Value() == nil || pk.Value().IsOpIdentity()
 	}) {
 
 		return ErrInvalidArgument.WithMessage("some public keys are nil or identity")

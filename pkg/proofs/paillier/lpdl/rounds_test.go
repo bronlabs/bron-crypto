@@ -70,7 +70,7 @@ func Test_FailVerificationOnFalseClaim(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keygen, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	keygen, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 
 	sk, pk, err := keygen.Generate(prng)
@@ -112,7 +112,7 @@ func Test_FailVerificationOnIncorrectDlog(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keygen, err := scheme.Keygen(paillier.WithEachPrimeBitLen(1024))
+	keygen, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 
 	sk, pk, err := keygen.Generate(prng)

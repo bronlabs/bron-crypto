@@ -7,6 +7,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 )
 
+// SqrtRatio computes sqrt(u/v) using constant-time steps from RFC 9380.
 func SqrtRatio[FP fieldsImpl.FiniteFieldElementPtr[FP, F], F any](yOut *F, c1 uint64, c3 []uint8, c4, c5 uint64, c6, c7, u, v *F) (ok ct.Bool) {
 	var one, tv1, tv2, tv3, tv4, tv5 F
 	FP(&one).SetOne()
@@ -69,6 +70,7 @@ func SqrtRatio[FP fieldsImpl.FiniteFieldElementPtr[FP, F], F any](yOut *F, c1 ui
 	return isQr
 }
 
+// SqrtRatio3Mod4 computes sqrt(u/v) for fields with p mod 4 == 3.
 func SqrtRatio3Mod4[FP fieldsImpl.FiniteFieldElementPtr[FP, F], F any](yOut *F, c1 []uint8, c2, u, v *F) (ok ct.Bool) {
 	var tv1, tv2, tv3, y1, y2 F
 

@@ -13,6 +13,8 @@ import (
 )
 
 func MakeRandomTapes(tb testing.TB, prng io.Reader, quorum network.Quorum) map[sharing.ID]transcripts.Transcript {
+	tb.Helper()
+
 	var label [32]byte
 	_, err := io.ReadFull(prng, label[:])
 	require.NoError(tb, err)

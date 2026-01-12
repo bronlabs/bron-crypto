@@ -101,18 +101,23 @@ func init() {
 }
 
 type g2CurveParams struct{}
+
+// G2CurveHasherParams defines hash-to-curve parameters.
 type G2CurveHasherParams struct{}
 type g2CurveMapperParams struct{}
 type g2CurveMapper = sswu.ZeroPointMapper[*Fp2, g2CurveMapperParams, Fp2]
 
+// AddA adds the curve A parameter to in.
 func (g2CurveParams) AddA(out, in *Fp2) {
 	out.Set(in)
 }
 
+// AddB adds the curve B parameter to in.
 func (g2CurveParams) AddB(out, in *Fp2) {
 	out.Add(in, &g2CurveB)
 }
 
+// MulByA multiplies by the curve A parameter.
 func (g2CurveParams) MulByA(out, _ *Fp2) {
 	out.SetZero()
 }
@@ -131,6 +136,7 @@ func (g2CurveParams) MulBy3B(out, in *Fp2) {
 	out.Add(&c4, &c8) // out = 3 * 4(u+1)
 }
 
+// ClearCofactor clears the cofactor of the input point.
 func (g2CurveParams) ClearCofactor(xOut, yOut, zOut, xIn, yIn, zIn *Fp2) {
 	var out, in G2Point
 	in.X.Set(xIn)
@@ -143,44 +149,54 @@ func (g2CurveParams) ClearCofactor(xOut, yOut, zOut, xIn, yIn, zIn *Fp2) {
 	zOut.Set(&out.Z)
 }
 
+// SetGenerator sets generator coordinates.
 func (g2CurveParams) SetGenerator(xOut, yOut, zOut *Fp2) {
 	xOut.Set(&g2CurveGx)
 	yOut.Set(&g2CurveGy)
 	zOut.SetOne()
 }
 
+// M returns the field extension degree.
 func (G2CurveHasherParams) M() uint64 {
 	return 2
 }
 
+// L returns the hash-to-field length in bytes.
 func (G2CurveHasherParams) L() uint64 {
 	return 64
 }
 
+// MessageExpander returns the RFC 9380 message expander.
 func (G2CurveHasherParams) MessageExpander() h2c.MessageExpander {
 	return g2CurveMessageExpander
 }
 
+// Suite returns the hash-to-curve suite string.
 func (G2CurveHasherParams) Suite() []byte {
 	return []byte("BLS12381G2_XMD:SHA-256_SSWU_RO_")
 }
 
+// MulByA multiplies by the curve A parameter.
 func (g2CurveMapperParams) MulByA(out, in *Fp2) {
 	out.Mul(in, &g2SswuIsogenyA)
 }
 
+// MulByB multiplies by the curve B parameter.
 func (g2CurveMapperParams) MulByB(out, in *Fp2) {
 	out.Mul(in, &g2SswuIsogenyB)
 }
 
+// SetZ sets the SSWU Z parameter.
 func (g2CurveMapperParams) SetZ(out *Fp2) {
 	out.Set(&g2SswuZ)
 }
 
+// SqrtRatio computes sqrt(u/v) with curve-specific parameters.
 func (g2CurveMapperParams) SqrtRatio(out, u, v *Fp2) (ok ct.Bool) {
 	return sswu.SqrtRatio(out, g2SqrtRatioC1, g2SqrtRatioC3[:], g2SqrtRatioC4, g2SqrtRatioC5, &g2SqrtRatioC6, &g2SqrtRatioC7, u, v)
 }
 
+// Sgn0 returns the sign bit per RFC 9380.
 func (g2CurveMapperParams) Sgn0(v *Fp2) ct.Bool {
 	// 1. sign_0 = x_0 mod 2
 	sign0 := ct.Bool(v.U0.Bytes()[0] & 0b1)
@@ -194,18 +210,22 @@ func (g2CurveMapperParams) Sgn0(v *Fp2) ct.Bool {
 	return s
 }
 
+// XNum returns isogeny x numerator coefficients.
 func (g2CurveMapperParams) XNum() []Fp2 {
 	return g2SswuIsogenyXNum[:]
 }
 
+// XDen returns isogeny x denominator coefficients.
 func (g2CurveMapperParams) XDen() []Fp2 {
 	return g2SswuIsogenyXDen[:]
 }
 
+// YNum returns isogeny y numerator coefficients.
 func (g2CurveMapperParams) YNum() []Fp2 {
 	return g2SswuIsogenyYNum[:]
 }
 
+// YDen returns isogeny y denominator coefficients.
 func (g2CurveMapperParams) YDen() []Fp2 {
 	return g2SswuIsogenyYDen[:]
 }

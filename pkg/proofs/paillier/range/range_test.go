@@ -22,7 +22,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
 
-const primeLen = 1024
 const logRange = 256
 
 func Test_HappyPath(t *testing.T) {
@@ -30,7 +29,7 @@ func Test_HappyPath(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(primeLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)
@@ -86,7 +85,7 @@ func Test_CheatingProverBelowRange(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(primeLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)
@@ -146,7 +145,7 @@ func Test_CheatingProverAboveRange(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(primeLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)
@@ -206,7 +205,7 @@ func Test_Simulator(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(primeLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)
@@ -257,7 +256,7 @@ func Test_Interactive(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(primeLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)
@@ -321,7 +320,7 @@ func Test_InteractiveZk(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(primeLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)
@@ -387,7 +386,7 @@ func Test_NonInteractiveFiatShamir(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(primeLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)
@@ -451,7 +450,7 @@ func Test_NonInteractiveFischlin(t *testing.T) {
 
 	prng := crand.Reader
 	scheme := paillier.NewScheme()
-	keyGenerator, err := scheme.Keygen(paillier.WithEachPrimeBitLen(primeLen))
+	keyGenerator, err := scheme.Keygen(paillier.WithKeyLen(paillier.KeyLen))
 	require.NoError(t, err)
 	sk, pk, err := keyGenerator.Generate(prng)
 	require.NoError(t, err)

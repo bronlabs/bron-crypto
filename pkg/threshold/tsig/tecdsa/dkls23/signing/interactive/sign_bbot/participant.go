@@ -9,7 +9,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
@@ -27,6 +27,7 @@ const (
 	ckLabel         = "BRON_CRYPTO_TECDSA_DKLS23_BBOT_CK-"
 )
 
+// Cosigner represents a signing participant.
 type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	suite     *ecdsa.Suite[P, B, S]
 	sessionId network.SID
@@ -37,6 +38,7 @@ type Cosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra
 	state     CosignerState[P, B, S]
 }
 
+// CosignerState tracks per-round signing state.
 type CosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	zeroSetup   *przsSetup.Participant
 	zeroSampler *przs.Sampler[S]
@@ -56,18 +58,21 @@ type CosignerState[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 	pk             map[sharing.ID]P
 }
 
+// NewCosigner returns a new cosigner.
 func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](sessionId network.SID, quorum network.Quorum, suite *ecdsa.Suite[P, B, S], shard *dkls23.Shard[P, B, S], prng io.Reader, tape transcripts.Transcript) (*Cosigner[P, B, S], error) {
 	if quorum == nil || suite == nil || shard == nil || prng == nil || tape == nil {
-		return nil, errs.NewIsNil("argument")
+		return nil, ErrNil.WithMessage("argument")
 	}
 	if suite.IsDeterministic() {
-		return nil, errs.NewValidation("suite must be non-deterministic")
+		return nil, ErrValidation.WithMessage("suite must be non-deterministic")
 	}
 	if !quorum.Contains(shard.Share().ID()) {
-		return nil, errs.NewValidation("sharing id not part of the quorum")
+		return nil, ErrValidation.WithMessage("sharing id not part of the quorum")
 	}
 
 	tape.AppendDomainSeparator(fmt.Sprintf("%s%s", transcriptLabel, hex.EncodeToString(sessionId[:])))
+
+	//nolint:exhaustruct // lazy initialisation
 	c := &Cosigner[P, B, S]{
 		shard:  shard,
 		quorum: quorum,
@@ -79,12 +84,12 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	var err error
 	c.state.zeroSetup, err = przsSetup.NewParticipant(sessionId, shard.Share().ID(), quorum, tape, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "couldn't initialise zero setup protocol")
+		return nil, errs2.Wrap(err).WithMessage("couldn't initialise zero setup protocol")
 	}
 
 	mulSuite, err := rvole_bbot.NewSuite(2, suite.Curve())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create mul suite")
+		return nil, errs2.Wrap(err).WithMessage("cannot create mul suite")
 	}
 	c.state.aliceMul = make(map[sharing.ID]*rvole_bbot.Alice[P, S])
 	c.state.bobMul = make(map[sharing.ID]*rvole_bbot.Bob[P, S])
@@ -93,14 +98,14 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 		aliceTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())), binary.LittleEndian.AppendUint64(nil, uint64(id)))
 		c.state.aliceMul[id], err = rvole_bbot.NewAlice(c.sessionId, mulSuite, prng, aliceTape)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "couldn't initialise alice")
+			return nil, errs2.Wrap(err).WithMessage("couldn't initialise alice")
 		}
 
 		bobTape := tape.Clone()
 		bobTape.AppendBytes(mulLabel, binary.LittleEndian.AppendUint64(nil, uint64(id)), binary.LittleEndian.AppendUint64(nil, uint64(c.shard.Share().ID())))
 		c.state.bobMul[id], err = rvole_bbot.NewBob(c.sessionId, mulSuite, prng, bobTape)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "couldn't initialise bob")
+			return nil, errs2.Wrap(err).WithMessage("couldn't initialise bob")
 		}
 	}
 
@@ -108,10 +113,12 @@ func NewCosigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S alge
 	return c, nil
 }
 
+// SharingID returns the participant sharing identifier.
 func (c *Cosigner[P, B, S]) SharingID() sharing.ID {
 	return c.shard.Share().ID()
 }
 
+// Quorum returns the protocol quorum.
 func (c *Cosigner[P, B, S]) Quorum() network.Quorum {
 	return c.quorum
 }

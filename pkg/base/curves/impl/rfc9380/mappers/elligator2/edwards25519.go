@@ -8,8 +8,10 @@ var (
 	edwards25519Elligator2C1Limbs = [...]uint64{0xcc6e04aaff457e06, 0xc5a1d3d14b7d1a82, 0xd27b08dc03fc4f7e, 0x0f26edf460a006bb}
 )
 
+// Edwards25519PointMapper maps field elements to Edwards25519 using Elligator 2.
 type Edwards25519PointMapper[FP fieldsImpl.PrimeFieldElementPtr[FP, F], F any] struct{}
 
+// Map maps u to a curve point represented by rational coordinates.
 func (Edwards25519PointMapper[FP, F]) Map(xn, xd, yn, yd, u FP) {
 	mapToCurveElligator2Edwards25519[FP](xn, xd, yn, yd, u)
 }

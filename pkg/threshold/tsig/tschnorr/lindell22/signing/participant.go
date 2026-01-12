@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	schnorrpok "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
@@ -16,10 +16,22 @@ import (
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 )
 
+var (
+	// ErrNilArgument is returned when a required argument is nil.
+	ErrNilArgument = errs2.New("nil argument")
+	// ErrInvalidRound is returned when an operation is attempted in the wrong round.
+	ErrInvalidRound = errs2.New("invalid round")
+	// ErrInvalidType is returned when a type assertion or check fails.
+	ErrInvalidType = errs2.New("invalid type")
+	// ErrInvalidMembership is returned when a party is not authorized for an operation.
+	ErrInvalidMembership = errs2.New("invalid membership")
+)
+
 const (
 	transcriptLabel = "BRON_CRYPTO_TSCHNORR_LINDELL22_SIGNING-"
 )
 
+// Cosigner is a participant in the Lindell22 threshold Schnorr signing protocol.
 type Cosigner[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message] struct {
 	sid     network.SID
 	shard   *lindell22.Shard[GE, S]
@@ -35,6 +47,7 @@ type Cosigner[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S
 	state        *State[GE, S]
 }
 
+// State holds the cosigner's internal state during the signing protocol.
 type State[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] struct {
 	quorumBytes               [][]byte
 	k                         S
@@ -42,9 +55,9 @@ type State[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] 
 	opening                   lindell22.Opening
 	theirBigRCommitments      map[sharing.ID]lindell22.Commitment
 	tapeFrozenBeforeDlogProof ts.Transcript
-	// phi                       algebra.Homomorphism[GE, S]
 }
 
+// SessionID returns the session identifier for this signing session.
 func (c *Cosigner[GE, S, M]) SessionID() network.SID {
 	if c == nil {
 		return network.SID([32]byte{})
@@ -52,6 +65,7 @@ func (c *Cosigner[GE, S, M]) SessionID() network.SID {
 	return c.sid
 }
 
+// SharingID returns the party's identifier in the secret sharing scheme.
 func (c *Cosigner[GE, S, M]) SharingID() sharing.ID {
 	if c == nil {
 		return *new(sharing.ID)
@@ -59,6 +73,7 @@ func (c *Cosigner[GE, S, M]) SharingID() sharing.ID {
 	return c.shard.Share().ID()
 }
 
+// Quorum returns the set of parties participating in this signing session.
 func (c *Cosigner[GE, S, M]) Quorum() network.Quorum {
 	if c == nil {
 		return nil
@@ -66,6 +81,7 @@ func (c *Cosigner[GE, S, M]) Quorum() network.Quorum {
 	return c.quorum
 }
 
+// Shard returns the party's secret key share.
 func (c *Cosigner[GE, S, M]) Shard() *lindell22.Shard[GE, S] {
 	if c == nil {
 		return nil
@@ -73,6 +89,7 @@ func (c *Cosigner[GE, S, M]) Shard() *lindell22.Shard[GE, S] {
 	return c.shard
 }
 
+// Variant returns the Schnorr variant being used for signing.
 func (c *Cosigner[GE, S, M]) Variant() tschnorr.MPCFriendlyVariant[GE, S, M] {
 	if c == nil {
 		return nil
@@ -80,34 +97,35 @@ func (c *Cosigner[GE, S, M]) Variant() tschnorr.MPCFriendlyVariant[GE, S, M] {
 	return c.variant
 }
 
+// ComputePartialSignature computes this party's contribution to the threshold signature.
 func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment GE, challenge S) (*lindell22.PartialSignature[GE, S], error) {
 	if c == nil {
-		return nil, errs.NewIsNil("cosigner cannot be nil")
+		return nil, ErrNilArgument.WithMessage("cosigner cannot be nil")
 	}
 	if c.round != 3 {
-		return nil, errs.NewRound("cosigner %d cannot compute partial signature in round %d, expected round 3", c.sid, c.round)
+		return nil, ErrInvalidRound.WithMessage("cosigner %d cannot compute partial signature in round %d, expected round 3", c.sid, c.round)
 	}
 	// step 3.7.1: compute additive share d_i'
 	mqac, err := sharing.NewMinimalQualifiedAccessStructure(c.quorum)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot create minimal qualified access structure for quorum %v", c.quorum)
+		return nil, errs2.Wrap(err).WithMessage("cannot create minimal qualified access structure for quorum %v", c.quorum)
 	}
 	ashare, err := c.shard.Share().ToAdditive(mqac)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot convert share %d to additive share", c.shard.Share().ID())
+		return nil, errs2.Wrap(err).WithMessage("cannot convert share %d to additive share", c.shard.Share().ID())
 	}
 	myAdditiveShare, err := c.variant.CorrectAdditiveSecretShareParity(c.shard.PublicKey(), ashare)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot convert share %d to additive share", c.shard.Share().ID())
+		return nil, errs2.Wrap(err).WithMessage("cannot correct share %d parity", c.shard.Share().ID())
 	}
 	// step 3.7.3 & 3.8: compute s'_i and set s_i <- s'_i + ζ_i
 	correctedR, correctedK, err := c.variant.CorrectPartialNonceParity(aggregatedNonceCommitment, c.state.k)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot correct nonce parity")
+		return nil, errs2.Wrap(err).WithMessage("cannot correct nonce parity")
 	}
 	s, err := c.variant.ComputeResponse(myAdditiveShare.Value(), correctedK, challenge)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot compute response")
+		return nil, errs2.Wrap(err).WithMessage("cannot compute response")
 	}
 	return &lindell22.PartialSignature[GE, S]{
 		Sig: schnorrlike.Signature[GE, S]{
@@ -118,6 +136,7 @@ func (c *Cosigner[GE, S, M]) ComputePartialSignature(aggregatedNonceCommitment G
 	}, nil
 }
 
+// NewCosigner creates a new cosigner for threshold Schnorr signing.
 func NewCosigner[
 	GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S], M schnorrlike.Message,
 ](
@@ -131,43 +150,42 @@ func NewCosigner[
 	tape ts.Transcript,
 ) (*Cosigner[GE, S, M], error) {
 	if shard == nil {
-		return nil, errs.NewIsNil("shard cannot be nil")
+		return nil, ErrNilArgument.WithMessage("shard cannot be nil")
 	}
 	if tape == nil {
-		return nil, errs.NewIsNil("transcript cannot be nil")
+		return nil, ErrNilArgument.WithMessage("transcript cannot be nil")
 	}
 	if group == nil {
-		return nil, errs.NewIsNil("group cannot be nil")
+		return nil, ErrNilArgument.WithMessage("group cannot be nil")
 	}
 	sf, ok := group.ScalarStructure().(algebra.PrimeField[S])
 	if !ok {
-		return nil, errs.NewType("group %s structure is not a prime field", group.Name())
+		return nil, ErrInvalidType.WithMessage("group %s structure is not a prime field", group.Name())
 	}
 	if quorum == nil {
-		return nil, errs.NewIsNil("quorum cannot be nil")
+		return nil, ErrNilArgument.WithMessage("quorum cannot be nil")
 	}
 	if !quorum.Contains(shard.Share().ID()) {
-		return nil, errs.NewMembership("quorum %s cannot contain participant %d", quorum, sid)
+		return nil, ErrInvalidMembership.WithMessage("quorum %s cannot contain participant %d", quorum, sid)
 	}
 	if !shard.AccessStructure().IsAuthorized(quorum.List()...) {
-		return nil, errs.NewMembership("shard %d access structure is not authorized for quorum %s", shard.Share().ID(), quorum)
+		return nil, ErrInvalidMembership.WithMessage("shard %d access structure is not authorized for quorum %s", shard.Share().ID(), quorum)
 	}
 	if prng == nil {
-		return nil, errs.NewIsNil("prng cannot be nil")
+		return nil, ErrNilArgument.WithMessage("prng cannot be nil")
 	}
 	if !group.Order().IsProbablyPrime() {
-		return nil, errs.NewType("group %s order is not prime", group.Name())
+		return nil, ErrInvalidType.WithMessage("group %s order is not prime", group.Name())
 	}
 	schnorrProtocol, err := schnorrpok.NewProtocol(group.Generator(), prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create schnorr protocol")
+		return nil, errs2.Wrap(err).WithMessage("failed to create schnorr protocol")
 	}
 	niDlogScheme, err := compiler.Compile(niCompilerName, schnorrProtocol, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to compile niDlogProver")
+		return nil, errs2.Wrap(err).WithMessage("failed to compile niDlogProver")
 	}
 
-	// phi := schnorrpok.Phi(group.Generator())
 	dst := fmt.Sprintf("%s-%d-%s", transcriptLabel, sid, group.Name())
 	tape.AppendDomainSeparator(dst)
 	quorumBytes := lindell22.QuorumBytes(quorum)
@@ -186,7 +204,6 @@ func NewCosigner[
 		state: &State[GE, S]{
 			quorumBytes:          quorumBytes,
 			theirBigRCommitments: make(map[sharing.ID]lindell22.Commitment, quorum.Size()-1),
-			// phi:                  phi,
 		},
 	}, nil
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
@@ -82,7 +83,7 @@ func testHappyPath[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S al
 		shareholders = append(shareholders, i)
 	}
 
-	shards, publicKey, err := trusted_dealer.DealRandom(suite.Curve(), hashset.NewComparable[sharing.ID](shareholders...).Freeze(), prng)
+	shards, publicKey, err := trusted_dealer.DealRandom(suite.Curve(), hashset.NewComparable(shareholders...).Freeze(), base.IFCKeyLength*2, prng)
 	require.NoError(t, err)
 
 	for subShareHolders := range sliceutils.KCoveringCombinations(shareholders, 2) {
