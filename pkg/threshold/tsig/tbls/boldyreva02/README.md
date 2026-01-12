@@ -17,3 +17,6 @@ Supports three algorithms to prevent rogue key attacks:
 
 - `keygen` - Shard creation from DKG output
 - `signing` - Threshold signing protocol with cosigners and aggregator
+
+## Reference
+- [B02]: [Threshold Signatures, Multisignatures and Blind Signatures Based on the Gap-Diffie-Hellman-Group Signature Scheme](https://link.springer.com/chapter/10.1007/3-540-36288-6_3)
