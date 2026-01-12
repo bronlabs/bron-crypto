@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/base58"
-	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/mina"
 	"github.com/stretchr/testify/require"
 )
@@ -34,18 +33,20 @@ type signature struct {
 
 // Payment test vectors
 var paymentTests = []struct {
-	amount  uint64
-	fee     uint64
-	nonce   uint32
-	memo    string
-	devnet  testVector
-	mainnet testVector
+	amount     uint64
+	fee        uint64
+	nonce      uint32
+	validUntil uint32
+	memo       string
+	devnet     testVector
+	mainnet    testVector
 }{
 	{
-		amount: 42,
-		fee:    3,
-		nonce:  200,
-		memo:   "this is a memo",
+		amount:     42,
+		fee:        3,
+		nonce:      200,
+		validUntil: 10000,
+		memo:       "this is a memo",
 		devnet: testVector{
 			signature: &signature{
 				field:  "3925887987173883783388058255268083382298769764463609405200521482763932632383",
@@ -60,10 +61,11 @@ var paymentTests = []struct {
 		},
 	},
 	{
-		amount: 2048,
-		fee:    15,
-		nonce:  212,
-		memo:   "this is not a pipe",
+		amount:     2048,
+		fee:        15,
+		nonce:      212,
+		validUntil: 305,
+		memo:       "this is not a pipe",
 		devnet: testVector{
 			signature: &signature{
 				field:  "11838925242791061185900891854974280922359055483441419242429642295065318643984",
@@ -78,10 +80,11 @@ var paymentTests = []struct {
 		},
 	},
 	{
-		amount: 109,
-		fee:    2001,
-		nonce:  3050,
-		memo:   "blessed be the geek",
+		amount:     109,
+		fee:        2001,
+		nonce:      3050,
+		validUntil: 9000,
+		memo:       "blessed be the geek",
 		devnet: testVector{
 			signature: &signature{
 				field:  "13570419670106759824217358880396743605262660069048455950202130815805728575057",
@@ -99,16 +102,18 @@ var paymentTests = []struct {
 
 // Delegation test vectors
 var delegationTests = []struct {
-	fee     uint64
-	nonce   uint32
-	memo    string
-	devnet  testVector
-	mainnet testVector
+	fee        uint64
+	nonce      uint32
+	validUntil uint32
+	memo       string
+	devnet     testVector
+	mainnet    testVector
 }{
 	{
-		fee:   3,
-		nonce: 10,
-		memo:  "more delegates, more fun",
+		fee:        3,
+		nonce:      10,
+		validUntil: 4000,
+		memo:       "more delegates, more fun",
 		devnet: testVector{
 			signature: &signature{
 				field:  "18603328765572408555868399359399411973012220541556204196884026585115374044583",
@@ -123,9 +128,10 @@ var delegationTests = []struct {
 		},
 	},
 	{
-		fee:   10,
-		nonce: 1000,
-		memo:  "enough stake to kill a vampire",
+		fee:        10,
+		nonce:      1000,
+		validUntil: 8192,
+		memo:       "enough stake to kill a vampire",
 		devnet: testVector{
 			signature: &signature{
 				field:  "1786373894608285187089973929748850875336413409295396991315429715474432640801",
@@ -140,9 +146,10 @@ var delegationTests = []struct {
 		},
 	},
 	{
-		fee:   8,
-		nonce: 1010,
-		memo:  "another memo",
+		fee:        8,
+		nonce:      1010,
+		validUntil: 100000,
+		memo:       "another memo",
 		devnet: testVector{
 			signature: &signature{
 				field:  "11710586766419351067338319607483640291676872446372400739329190129174446858072",
@@ -212,8 +219,8 @@ var stringTests = []struct {
 }
 
 func TestLegacySignatures(t *testing.T) {
-	t.Skip()
 	t.Parallel()
+
 	publicKey, err := mina.DecodePublicKey(testVectorParams.publicKey)
 	require.NoError(t, err)
 	privateKey, err := mina.DecodePrivateKey(testVectorParams.privateKey)
@@ -225,7 +232,8 @@ func TestLegacySignatures(t *testing.T) {
 	// Test payment signatures
 	for i, test := range paymentTests {
 		t.Run(fmt.Sprintf("payment_%d_devnet", i), func(t *testing.T) {
-			msg := createPaymentMessage(t, publicKey, receiver, test.amount, test.fee, test.nonce, test.memo)
+			msg, err := mina.NewPaymentMessage(publicKey, receiver, test.amount, test.fee, test.nonce, test.validUntil, test.memo)
+			require.NoError(t, err)
 			scheme, err := mina.NewScheme(mina.TestNet, privateKey)
 			require.NoError(t, err)
 
@@ -244,7 +252,8 @@ func TestLegacySignatures(t *testing.T) {
 		})
 
 		t.Run(fmt.Sprintf("payment_%d_mainnet", i), func(t *testing.T) {
-			msg := createPaymentMessage(t, publicKey, receiver, test.amount, test.fee, test.nonce, test.memo)
+			msg, err := mina.NewPaymentMessage(publicKey, receiver, test.amount, test.fee, test.nonce, test.validUntil, test.memo)
+			require.NoError(t, err)
 			scheme, err := mina.NewScheme(mina.MainNet, privateKey)
 			require.NoError(t, err)
 
@@ -266,8 +275,8 @@ func TestLegacySignatures(t *testing.T) {
 	// Test delegation signatures
 	for i, test := range delegationTests {
 		t.Run(fmt.Sprintf("delegation_%d_devnet", i), func(t *testing.T) {
-			t.Skip()
-			msg := createDelegationMessage(t, publicKey, newDelegate, test.fee, test.nonce, test.memo)
+			msg, err := mina.NewDelegationMessage(publicKey, newDelegate, test.fee, test.nonce, test.validUntil, test.memo)
+			require.NoError(t, err)
 			scheme, err := mina.NewScheme(mina.TestNet, privateKey)
 			require.NoError(t, err)
 
@@ -286,7 +295,8 @@ func TestLegacySignatures(t *testing.T) {
 		})
 
 		t.Run(fmt.Sprintf("delegation_%d_mainnet", i), func(t *testing.T) {
-			msg := createDelegationMessage(t, publicKey, newDelegate, test.fee, test.nonce, test.memo)
+			msg, err := mina.NewDelegationMessage(publicKey, newDelegate, test.fee, test.nonce, test.validUntil, test.memo)
+			require.NoError(t, err)
 			scheme, err := mina.NewScheme(mina.MainNet, privateKey)
 			require.NoError(t, err)
 
@@ -308,7 +318,6 @@ func TestLegacySignatures(t *testing.T) {
 	// Test string message signatures
 	for i, test := range stringTests {
 		t.Run(fmt.Sprintf("string_%d_devnet", i), func(t *testing.T) {
-			t.Skip()
 			msg := new(mina.ROInput).Init()
 			msg.AddString(test.message)
 
@@ -350,92 +359,6 @@ func TestLegacySignatures(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
-}
-
-// Helper functions to create payment and delegation messages
-func createPaymentMessage(t testing.TB, source, receiver *mina.PublicKey, amount, fee uint64, nonce uint32, memo string) *mina.ROInput {
-	t.Helper()
-	msg := new(mina.ROInput).Init()
-	baseField := pasta.NewPallasBaseField()
-
-	// Add payment fields in the correct order
-	zeroField := baseField.Zero()
-	msg.AddFields(zeroField) // tag (0 for payment)
-
-	// Add source public key coordinates
-	sourceX, err := source.V.AffineX()
-	require.NoError(t, err)
-	sourceY, err := source.V.AffineY()
-	require.NoError(t, err)
-	msg.AddFields(sourceX, sourceY)
-
-	// Add receiver public key coordinates
-	receiverX, err := receiver.V.AffineX()
-	require.NoError(t, err)
-	receiverY, err := receiver.V.AffineY()
-	require.NoError(t, err)
-	msg.AddFields(receiverX, receiverY)
-
-	// Add amount as field element
-	amountField := baseField.FromUint64(amount)
-	msg.AddFields(amountField)
-
-	// Add fee as field element
-	feeField := baseField.FromUint64(fee)
-	msg.AddFields(feeField)
-
-	// Add nonce as field element
-	nonceField := baseField.FromUint64(uint64(nonce))
-	msg.AddFields(nonceField)
-
-	// Add valid_until (None = 0)
-	msg.AddFields(zeroField)
-
-	// Add memo as string
-	msg.AddString(memo)
-
-	return msg
-}
-
-func createDelegationMessage(t testing.TB, source, newDelegate *mina.PublicKey, fee uint64, nonce uint32, memo string) *mina.ROInput {
-	t.Helper()
-	msg := new(mina.ROInput).Init()
-	baseField := pasta.NewPallasBaseField()
-
-	// Add delegation fields in the correct order
-	oneField := baseField.One()
-	msg.AddFields(oneField) // tag (1 for delegation)
-
-	// Add source public key coordinates
-	sourceX, err := source.V.AffineX()
-	require.NoError(t, err)
-	sourceY, err := source.V.AffineY()
-	require.NoError(t, err)
-	msg.AddFields(sourceX, sourceY)
-
-	// Add new delegate public key coordinates
-	newDelegateX, err := newDelegate.V.AffineX()
-	require.NoError(t, err)
-	newDelegateY, err := newDelegate.V.AffineY()
-	require.NoError(t, err)
-	msg.AddFields(newDelegateX, newDelegateY)
-
-	// Add fee as field element
-	feeField := baseField.FromUint64(fee)
-	msg.AddFields(feeField)
-
-	// Add nonce as field element
-	nonceField := baseField.FromUint64(uint64(nonce))
-	msg.AddFields(nonceField)
-
-	// Add valid_until (None = 0)
-	zeroField := baseField.Zero()
-	msg.AddFields(zeroField)
-
-	// Add memo as string
-	msg.AddString(memo)
-
-	return msg
 }
 
 func actualSignatureIsAsExpected(t testing.TB, actual *mina.Signature, expected *signature) {
