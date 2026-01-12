@@ -13,6 +13,11 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
 )
 
+// PublicMaterial contains the public cryptographic material for a threshold BLS signature scheme.
+// It holds the combined public key, the access structure defining the threshold parameters,
+// the Feldman verification vector, and the partial public keys for each party.
+// The type parameters support pairing-friendly curves where PK is the public key group
+// and SG is the signature group.
 type PublicMaterial[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -24,6 +29,8 @@ type PublicMaterial[
 	partialPublicKeys ds.Map[sharing.ID, *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]]
 }
 
+// PublicKey returns the combined BLS public key for the threshold scheme.
+// Returns nil if the receiver is nil.
 func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) PublicKey() *bls.PublicKey[PK, PKFE, SG, SGFE, E, S] {
 	if spm == nil {
 		return nil
@@ -31,6 +38,8 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) PublicKey() *bls.PublicKey[
 	return spm.publicKey
 }
 
+// AccessStructure returns the threshold access structure defining which subsets of parties
+// are authorized to produce valid signatures. Returns nil if the receiver is nil.
 func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) AccessStructure() *sharing.ThresholdAccessStructure {
 	if spm == nil {
 		return nil
@@ -38,6 +47,9 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) AccessStructure() *sharing.
 	return spm.accessStructure
 }
 
+// PartialPublicKeys returns the map of partial public keys indexed by party ID.
+// Each partial public key can be used to verify partial signatures from the corresponding party.
+// Returns nil if the receiver is nil.
 func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) PartialPublicKeys() ds.Map[sharing.ID, *bls.PublicKey[PK, PKFE, SG, SGFE, E, S]] {
 	if spm == nil {
 		return nil
@@ -45,6 +57,8 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) PartialPublicKeys() ds.Map[
 	return spm.partialPublicKeys
 }
 
+// VerificationVector returns the Feldman verification vector used to verify
+// that parties hold valid shares of the secret key. Returns nil if the receiver is nil.
 func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) VerificationVector() *feldman.VerificationVector[PK, S] {
 	if spm == nil {
 		return nil
@@ -52,6 +66,9 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) VerificationVector() *feldm
 	return spm.fv
 }
 
+// Equal returns true if two PublicMaterial instances are equal.
+// Two instances are equal if they have the same access structure, public key,
+// and identical partial public keys for all parties.
 func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) Equal(other *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) bool {
 	if spm == nil || other == nil {
 		return spm == other
@@ -75,6 +92,8 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) Equal(other *PublicMaterial
 	return true
 }
 
+// HashCode returns a hash code for the public material, derived from the public key.
+// Returns 0 if the receiver is nil.
 func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) HashCode() base.HashCode {
 	if spm == nil {
 		return 0
@@ -82,6 +101,9 @@ func (spm *PublicMaterial[PK, PKFE, SG, SGFE, E, S]) HashCode() base.HashCode {
 	return spm.publicKey.HashCode()
 }
 
+// Shard represents a party's secret share in a threshold BLS signature scheme.
+// It embeds PublicMaterial and additionally contains the party's private Feldman share,
+// which is used to produce partial signatures. Shards should be kept secret by their owners.
 type Shard[
 	PK curves.PairingFriendlyPoint[PK, PKFE, SG, SGFE, E, S], PKFE algebra.FieldElement[PKFE],
 	SG curves.PairingFriendlyPoint[SG, SGFE, PK, PKFE, E, S], SGFE algebra.FieldElement[SGFE],
@@ -91,6 +113,8 @@ type Shard[
 	share *feldman.Share[S]
 }
 
+// Share returns the party's Feldman share of the secret key.
+// This share is used to compute partial signatures. Returns nil if the receiver is nil.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) Share() *feldman.Share[S] {
 	if s == nil {
 		return nil
@@ -98,6 +122,8 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) Share() *feldman.Share[S] {
 	return s.share
 }
 
+// Equal returns true if two Shard instances are equal.
+// Two shards are equal if they have the same share and public material.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) Equal(other *Shard[PK, PKFE, SG, SGFE, E, S]) bool {
 	if s == nil && other == nil {
 		return s == other
@@ -106,6 +132,9 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) Equal(other *Shard[PK, PKFE, SG, SGFE,
 		s.PublicMaterial.Equal(&other.PublicMaterial))
 }
 
+// PublicKeyMaterial extracts and returns a copy of the public material from the shard.
+// The returned PublicMaterial can be safely shared with other parties.
+// Returns nil if the receiver is nil.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) PublicKeyMaterial() *PublicMaterial[PK, PKFE, SG, SGFE, E, S] {
 	if s == nil {
 		return nil
@@ -117,6 +146,8 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) PublicKeyMaterial() *PublicMaterial[PK
 	}
 }
 
+// HashCode returns a hash code for the shard, derived from both the share and public key.
+// Returns 0 if the receiver is nil.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) HashCode() base.HashCode {
 	if s == nil {
 		return 0
@@ -124,6 +155,9 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) HashCode() base.HashCode {
 	return s.share.HashCode() ^ s.publicKey.HashCode()
 }
 
+// AsBLSPrivateKey converts the shard to a BLS private key.
+// This is useful for signing operations where the shard holder can produce partial signatures.
+// Returns an error if the shard is nil or if the private key creation fails.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) AsBLSPrivateKey() (*bls.PrivateKey[PK, PKFE, SG, SGFE, E, S], error) {
 	if s == nil {
 		return nil, errs.NewIsNil("Shard is nil")
@@ -135,6 +169,18 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) AsBLSPrivateKey() (*bls.PrivateKey[PK,
 	return out, nil
 }
 
+// NewShortKeyShard creates a new Shard for the short key variant of BLS signatures.
+// In the short key variant, public keys are in G1 (shorter) and signatures are in G2 (longer).
+// This provides smaller public keys at the cost of larger signatures.
+//
+// Parameters:
+//   - share: The party's Feldman share of the secret key
+//   - publicKey: The combined BLS public key (must be a short key variant)
+//   - vector: The Feldman verification vector
+//   - accessStructure: The threshold access structure
+//
+// Returns an error if any parameter is nil, if the public key is not a short variant,
+// or if partial public key computation fails.
 func NewShortKeyShard[
 	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
@@ -187,6 +233,18 @@ func NewShortKeyShard[
 	}, nil
 }
 
+// NewLongKeyShard creates a new Shard for the long key variant of BLS signatures.
+// In the long key variant, public keys are in G2 (longer) and signatures are in G1 (shorter).
+// This provides smaller signatures at the cost of larger public keys.
+//
+// Parameters:
+//   - share: The party's Feldman share of the secret key
+//   - publicKey: The combined BLS public key (must be a long key variant)
+//   - vector: The Feldman verification vector
+//   - accessStructure: The threshold access structure
+//
+// Returns an error if any parameter is nil, if the public key is not a long variant,
+// or if partial public key computation fails.
 func NewLongKeyShard[
 	P1 curves.PairingFriendlyPoint[P1, FE1, P2, FE2, E, S], FE1 algebra.FieldElement[FE1],
 	P2 curves.PairingFriendlyPoint[P2, FE2, P1, FE1, E, S], FE2 algebra.FieldElement[FE2],
