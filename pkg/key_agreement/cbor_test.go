@@ -1,4 +1,4 @@
-package key_agreement
+package key_agreement_test
 
 import (
 	"crypto/rand"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
+	ka "github.com/bronlabs/bron-crypto/pkg/key_agreement"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,7 +17,7 @@ func TestPrivateKeyCBOR_P256(t *testing.T) {
 	sk, err := curve.ScalarField().Random(rand.Reader)
 	require.NoError(t, err)
 
-	originalKey, err := NewPrivateKey(sk, "ECSVDP-DHC")
+	originalKey, err := ka.NewPrivateKey(sk, "ECSVDP-DHC")
 	require.NoError(t, err)
 
 	// Marshal to CBOR
@@ -25,7 +26,7 @@ func TestPrivateKeyCBOR_P256(t *testing.T) {
 	require.NotEmpty(t, data)
 
 	// Unmarshal from CBOR
-	var restoredKey PrivateKey[*p256.Scalar]
+	var restoredKey ka.PrivateKey[*p256.Scalar]
 	err = restoredKey.UnmarshalCBOR(data)
 	require.NoError(t, err)
 
@@ -42,7 +43,7 @@ func TestPrivateKeyCBOR_X25519(t *testing.T) {
 	sk, err := curve.ScalarField().Random(rand.Reader)
 	require.NoError(t, err)
 
-	originalKey, err := NewPrivateKey(sk, "X25519")
+	originalKey, err := ka.NewPrivateKey(sk, "X25519")
 	require.NoError(t, err)
 
 	// Marshal to CBOR
@@ -51,7 +52,7 @@ func TestPrivateKeyCBOR_X25519(t *testing.T) {
 	require.NotEmpty(t, data)
 
 	// Unmarshal from CBOR
-	var restoredKey PrivateKey[*curve25519.Scalar]
+	var restoredKey ka.PrivateKey[*curve25519.Scalar]
 	err = restoredKey.UnmarshalCBOR(data)
 	require.NoError(t, err)
 
@@ -69,7 +70,7 @@ func TestPublicKeyCBOR_P256(t *testing.T) {
 	require.NoError(t, err)
 	pk := curve.ScalarBaseMul(sk)
 
-	originalKey, err := NewPublicKey(pk, "ECSVDP-DHC")
+	originalKey, err := ka.NewPublicKey(pk, "ECSVDP-DHC")
 	require.NoError(t, err)
 
 	// Marshal to CBOR
@@ -78,7 +79,7 @@ func TestPublicKeyCBOR_P256(t *testing.T) {
 	require.NotEmpty(t, data)
 
 	// Unmarshal from CBOR
-	var restoredKey PublicKey[*p256.Point, *p256.Scalar]
+	var restoredKey ka.PublicKey[*p256.Point, *p256.Scalar]
 	err = restoredKey.UnmarshalCBOR(data)
 	require.NoError(t, err)
 
@@ -96,7 +97,7 @@ func TestPublicKeyCBOR_X25519(t *testing.T) {
 	require.NoError(t, err)
 	pk := curve.ScalarBaseMul(sk)
 
-	originalKey, err := NewPublicKey(pk, "X25519")
+	originalKey, err := ka.NewPublicKey(pk, "X25519")
 	require.NoError(t, err)
 
 	// Marshal to CBOR
@@ -105,7 +106,7 @@ func TestPublicKeyCBOR_X25519(t *testing.T) {
 	require.NotEmpty(t, data)
 
 	// Unmarshal from CBOR
-	var restoredKey PublicKey[*curve25519.PrimeSubGroupPoint, *curve25519.Scalar]
+	var restoredKey ka.PublicKey[*curve25519.PrimeSubGroupPoint, *curve25519.Scalar]
 	err = restoredKey.UnmarshalCBOR(data)
 	require.NoError(t, err)
 
@@ -119,7 +120,7 @@ func TestSharedKeyCBOR(t *testing.T) {
 	tests := []struct {
 		name     string
 		keyBytes []byte
-		keyType  Type
+		keyType  ka.Type
 	}{
 		{
 			name:     "ECSVDP-DHC with 32 bytes",
@@ -135,7 +136,7 @@ func TestSharedKeyCBOR(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			originalKey, err := NewSharedKey(tt.keyBytes, tt.keyType)
+			originalKey, err := ka.NewSharedKey(tt.keyBytes, tt.keyType)
 			require.NoError(t, err)
 
 			// Marshal to CBOR
@@ -144,7 +145,7 @@ func TestSharedKeyCBOR(t *testing.T) {
 			require.NotEmpty(t, data)
 
 			// Unmarshal from CBOR
-			var restoredKey SharedKey
+			var restoredKey ka.SharedKey
 			err = restoredKey.UnmarshalCBOR(data)
 			require.NoError(t, err)
 
@@ -163,15 +164,15 @@ func TestPrivateKeyCBOR_InvalidInputs(t *testing.T) {
 		sk := curve.ScalarField().Zero()
 
 		// NewPrivateKey should fail
-		_, err := NewPrivateKey(sk, "ECSVDP-DHC")
+		_, err := ka.NewPrivateKey(sk, "ECSVDP-DHC")
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "invalid private key")
+		require.ErrorIs(t, err, ka.ErrInvalidKey)
 	})
 
 	t.Run("Invalid CBOR data", func(t *testing.T) {
 		invalidData := []byte{0xFF, 0xFF, 0xFF}
 
-		var restoredKey PrivateKey[*p256.Scalar]
+		var restoredKey ka.PrivateKey[*p256.Scalar]
 		err := restoredKey.UnmarshalCBOR(invalidData)
 		require.Error(t, err)
 	})
@@ -186,15 +187,15 @@ func TestPublicKeyCBOR_InvalidInputs(t *testing.T) {
 		pk := curve.ScalarBaseMul(sk)
 
 		// NewPublicKey should fail
-		_, err := NewPublicKey(pk, "ECSVDP-DHC")
+		_, err := ka.NewPublicKey(pk, "ECSVDP-DHC")
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "invalid public key")
+		require.ErrorIs(t, err, ka.ErrInvalidKey)
 	})
 
 	t.Run("Invalid CBOR data", func(t *testing.T) {
 		invalidData := []byte{0xFF, 0xFF, 0xFF}
 
-		var restoredKey PublicKey[*p256.Point, *p256.Scalar]
+		var restoredKey ka.PublicKey[*p256.Point, *p256.Scalar]
 		err := restoredKey.UnmarshalCBOR(invalidData)
 		require.Error(t, err)
 	})
@@ -205,15 +206,15 @@ func TestSharedKeyCBOR_InvalidInputs(t *testing.T) {
 		zeroBytes := make([]byte, 32)
 
 		// NewSharedKey should fail
-		_, err := NewSharedKey(zeroBytes, "ECSVDP-DHC")
+		_, err := ka.NewSharedKey(zeroBytes, "ECSVDP-DHC")
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "invalid shared key")
+		require.ErrorIs(t, err, ka.ErrInvalidKey)
 	})
 
 	t.Run("Invalid CBOR data", func(t *testing.T) {
 		invalidData := []byte{0xFF, 0xFF, 0xFF}
 
-		var restoredKey SharedKey
+		var restoredKey ka.SharedKey
 		err := restoredKey.UnmarshalCBOR(invalidData)
 		require.Error(t, err)
 	})
@@ -227,14 +228,14 @@ func TestPrivateKeyCBOR_RoundTrip(t *testing.T) {
 		sk, err := curve.ScalarField().Random(rand.Reader)
 		require.NoError(t, err)
 
-		originalKey, err := NewPrivateKey(sk, "ECSVDP-DHC")
+		originalKey, err := ka.NewPrivateKey(sk, "ECSVDP-DHC")
 		require.NoError(t, err)
 
 		// First round trip
 		data1, err := originalKey.MarshalCBOR()
 		require.NoError(t, err)
 
-		var restoredKey1 PrivateKey[*p256.Scalar]
+		var restoredKey1 ka.PrivateKey[*p256.Scalar]
 		err = restoredKey1.UnmarshalCBOR(data1)
 		require.NoError(t, err)
 
@@ -242,7 +243,7 @@ func TestPrivateKeyCBOR_RoundTrip(t *testing.T) {
 		data2, err := restoredKey1.MarshalCBOR()
 		require.NoError(t, err)
 
-		var restoredKey2 PrivateKey[*p256.Scalar]
+		var restoredKey2 ka.PrivateKey[*p256.Scalar]
 		err = restoredKey2.UnmarshalCBOR(data2)
 		require.NoError(t, err)
 
@@ -265,14 +266,14 @@ func TestPublicKeyCBOR_RoundTrip(t *testing.T) {
 		require.NoError(t, err)
 		pk := curve.ScalarBaseMul(sk)
 
-		originalKey, err := NewPublicKey(pk, "X25519")
+		originalKey, err := ka.NewPublicKey(pk, "X25519")
 		require.NoError(t, err)
 
 		// First round trip
 		data1, err := originalKey.MarshalCBOR()
 		require.NoError(t, err)
 
-		var restoredKey1 PublicKey[*curve25519.PrimeSubGroupPoint, *curve25519.Scalar]
+		var restoredKey1 ka.PublicKey[*curve25519.PrimeSubGroupPoint, *curve25519.Scalar]
 		err = restoredKey1.UnmarshalCBOR(data1)
 		require.NoError(t, err)
 
@@ -280,7 +281,7 @@ func TestPublicKeyCBOR_RoundTrip(t *testing.T) {
 		data2, err := restoredKey1.MarshalCBOR()
 		require.NoError(t, err)
 
-		var restoredKey2 PublicKey[*curve25519.PrimeSubGroupPoint, *curve25519.Scalar]
+		var restoredKey2 ka.PublicKey[*curve25519.PrimeSubGroupPoint, *curve25519.Scalar]
 		err = restoredKey2.UnmarshalCBOR(data2)
 		require.NoError(t, err)
 
@@ -301,14 +302,14 @@ func TestSharedKeyCBOR_RoundTrip(t *testing.T) {
 		_, err := rand.Read(keyBytes)
 		require.NoError(t, err)
 
-		originalKey, err := NewSharedKey(keyBytes, "X25519")
+		originalKey, err := ka.NewSharedKey(keyBytes, "X25519")
 		require.NoError(t, err)
 
 		// First round trip
 		data1, err := originalKey.MarshalCBOR()
 		require.NoError(t, err)
 
-		var restoredKey1 SharedKey
+		var restoredKey1 ka.SharedKey
 		err = restoredKey1.UnmarshalCBOR(data1)
 		require.NoError(t, err)
 
@@ -316,7 +317,7 @@ func TestSharedKeyCBOR_RoundTrip(t *testing.T) {
 		data2, err := restoredKey1.MarshalCBOR()
 		require.NoError(t, err)
 
-		var restoredKey2 SharedKey
+		var restoredKey2 ka.SharedKey
 		err = restoredKey2.UnmarshalCBOR(data2)
 		require.NoError(t, err)
 
