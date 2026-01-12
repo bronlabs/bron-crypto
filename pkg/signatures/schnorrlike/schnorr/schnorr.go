@@ -244,8 +244,8 @@ func (v *Verifier[GE, S]) Variant() *Variant[GE, S] {
 // Variant implements variant-specific behavior for vanilla Schnorr.
 // It stores all configurable parameters for the signature scheme.
 type Variant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] struct {
-	g                                algebra.PrimeGroup[GE, S]     // Elliptic curve group
-	sf                               algebra.PrimeField[S]         // Scalar field
+	g                                algebra.PrimeGroup[GE, S]     // underlying group
+	sf                               algebra.PrimeField[S]         // Scalar field of the underlying group
 	h                                func() hash.Hash              // Hash function for challenges
 	prng                             io.Reader                     // Random source for nonces
 	responseOperatorIsNegative       bool                          // Use s = k - ex instead of s = k + ex

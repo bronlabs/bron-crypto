@@ -26,12 +26,6 @@ func _[
 
 		_ signatures.AggregateVerifier[*bls.PublicKey[PK, PKFE, Sig, SigFE, E, S], bls.Message, *bls.Signature[Sig, SigFE, PK, PKFE, E, S], *bls.Signature[Sig, SigFE, PK, PKFE, E, S]] = (*bls.Verifier[PK, PKFE, Sig, SigFE, E, S])(nil)
 		_ signatures.AggregateVerifier[*bls.PublicKey[Sig, SigFE, PK, PKFE, E, S], bls.Message, *bls.Signature[PK, PKFE, Sig, SigFE, E, S], *bls.Signature[PK, PKFE, Sig, SigFE, E, S]] = (*bls.Verifier[Sig, SigFE, PK, PKFE, E, S])(nil)
-
-		// _ signatures.BatchVerifier[*bls.PublicKey[PK, PKFE, Sig, SigFE, E, S], bls.Message, *bls.Signature[Sig, SigFE, PK, PKFE, E, S]] = (*bls.Verifier[PK, PKFE, Sig, SigFE, E, S])(nil)
-		// _ signatures.BatchVerifier[*bls.PublicKey[Sig, SigFE, PK, PKFE, E, S], bls.Message, *bls.Signature[PK, PKFE, Sig, SigFE, E, S]] = (*bls.Verifier[Sig, SigFE, PK, PKFE, E, S])(nil)
-
-		// _ signatures.BatchAggregateVerifier[*bls.PublicKey[PK, PKFE, Sig, SigFE, E, S], bls.Message, *bls.Signature[Sig, SigFE, PK, PKFE, E, S], *bls.Signature[Sig, SigFE, PK, PKFE, E, S]] = (*bls.Verifier[PK, PKFE, Sig, SigFE, E, S])(nil)
-		// _ signatures.BatchAggregateVerifier[*bls.PublicKey[Sig, SigFE, PK, PKFE, E, S], bls.Message, *bls.Signature[PK, PKFE, Sig, SigFE, E, S], *bls.Signature[PK, PKFE, Sig, SigFE, E, S]] = (*bls.Verifier[Sig, SigFE, PK, PKFE, E, S])(nil)
 	)
 }
 

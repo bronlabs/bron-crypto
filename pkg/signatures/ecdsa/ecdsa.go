@@ -54,7 +54,7 @@ type Curve[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 //   - Bit 0: y-coordinate parity (0 = even, 1 = odd)
 //   - Bit 1: x-coordinate overflow (0 = r < n, 1 = r >= n where n is the subgroup order)
 //
-// Due to signature normalization (low-S form), v is typically 0 or 1 in practice.
+// Due to order of the base field being ~== order of the curve group, v is typically 0 or 1 in practice.
 //
 // References:
 //   - Bitcoin message signing: https://en.bitcoin.it/wiki/Message_signing

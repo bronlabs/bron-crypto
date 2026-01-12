@@ -98,7 +98,7 @@ func coreAggregateSign[
 		return *new(Sig), ErrInvalidArgument.WithMessage("signature subgroup or dst cannot be nil or zero")
 	}
 	if privateKey.IsZero() {
-		return *new(Sig), ErrInvalidSubGroup.WithMessage("private key is zero")
+		return *new(Sig), ErrInvalidArgument.WithMessage("private key is zero")
 	}
 	var err error
 	Hms := make([]Sig, len(messages))
@@ -120,7 +120,7 @@ func coreBatchSign[
 		return nil, ErrInvalidArgument.WithMessage("signature subgroup or dst cannot be nil or zero")
 	}
 	if privateKey.IsZero() {
-		return nil, ErrInvalidSubGroup.WithMessage("private key is zero")
+		return nil, ErrInvalidArgument.WithMessage("private key is zero")
 	}
 	batch := make([]Sig, len(messages))
 	var err error
@@ -153,7 +153,7 @@ func coreVerify[
 	}
 	// step 2.7.3
 	if signature.IsOpIdentity() {
-		return ErrInvalidSubGroup.WithMessage("signature is identity")
+		return ErrInvalidArgument.WithMessage("signature is identity")
 	}
 	if !signature.IsTorsionFree() {
 		return ErrInvalidSubGroup.WithMessage("signature is not torsion free")
@@ -161,7 +161,7 @@ func coreVerify[
 
 	// step 2.7.4
 	if publicKey.IsOpIdentity() {
-		return ErrInvalidSubGroup.WithMessage("public key is identity")
+		return ErrInvalidArgument.WithMessage("public key is identity")
 	}
 	if !publicKey.IsTorsionFree() {
 		return ErrInvalidSubGroup.WithMessage("public key is not torsion free")
@@ -211,7 +211,7 @@ func coreAggregateVerify[
 
 	// step 2.9.3
 	if aggregatedSignature.IsOpIdentity() {
-		return ErrInvalidSubGroup.WithMessage("signature is identity")
+		return ErrInvalidArgument.WithMessage("signature is identity")
 	}
 	if !aggregatedSignature.IsTorsionFree() {
 		return ErrInvalidSubGroup.WithMessage("signature is not torsion free")
@@ -237,7 +237,7 @@ func coreAggregateVerify[
 		}
 		// step 2.9.6
 		if pk.IsOpIdentity() {
-			return ErrInvalidSubGroup.WithMessage("invalid public key")
+			return ErrInvalidArgument.WithMessage("invalid public key")
 		}
 		if !pk.IsTorsionFree() {
 			return ErrInvalidSubGroup.WithMessage("public key is not torsion free")
@@ -279,7 +279,7 @@ func popVerify[
 	ET algebra.MultiplicativeGroupElement[ET], S algebra.PrimeFieldElement[S],
 ](publicKey PK, pop Sig, signatureSubGroup curves.PairingFriendlyCurve[Sig, SigFE, PK, PKFE, ET, S], popDst string) error {
 	if publicKey.IsOpIdentity() {
-		return ErrInvalidSubGroup.WithMessage("public key is identity")
+		return ErrInvalidArgument.WithMessage("public key is identity")
 	}
 	if !publicKey.IsTorsionFree() {
 		return ErrInvalidSubGroup.WithMessage("Public Key not in the prime subgroup")
@@ -299,7 +299,7 @@ func AugmentMessage[
 	PK curves.Point[PK, PKFE, S], PKFE algebra.FieldElement[PKFE], S algebra.PrimeFieldElement[S],
 ](message []byte, publicKey PK) ([]byte, error) {
 	if publicKey.IsOpIdentity() {
-		return nil, ErrInvalidSubGroup.WithMessage("public key is identity")
+		return nil, ErrInvalidArgument.WithMessage("public key is identity")
 	}
 	if !publicKey.IsTorsionFree() {
 		return nil, ErrInvalidSubGroup.WithMessage("Public Key not in the prime subgroup")
