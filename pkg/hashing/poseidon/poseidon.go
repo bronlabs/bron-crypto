@@ -4,18 +4,24 @@ import (
 	"hash"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
+
+// ErrInvalidDataLength is returned when the input data length is not a multiple of 32 bytes.
+var ErrInvalidDataLength = errs2.New("invalid data length")
 
 var (
 	_ hash.Hash = (*Poseidon)(nil)
 )
 
+// Poseidon implements the Poseidon hash function over the Pallas base field.
+// It provides a sponge-based construction suitable for zero-knowledge proof systems.
 type Poseidon struct {
 	state  *state
 	offset int
 }
 
+// NewKimchi creates a new Poseidon hasher with Kimchi parameters used by Mina Protocol.
 func NewKimchi() *Poseidon {
 	return &Poseidon{
 		state:  newInitialState(poseidonParamsKimchiFp),
@@ -23,6 +29,7 @@ func NewKimchi() *Poseidon {
 	}
 }
 
+// NewLegacy creates a new Poseidon hasher with legacy parameters.
 func NewLegacy() *Poseidon {
 	return &Poseidon{
 		state:  newInitialState(poseidonParamsLegacyFp),
@@ -30,14 +37,17 @@ func NewLegacy() *Poseidon {
 	}
 }
 
+// NewLegacyHash creates a new Poseidon hasher with legacy parameters that implements hash.Hash.
 func NewLegacyHash() hash.Hash {
 	return NewLegacy()
 }
 
+// Rate returns the rate of the sponge construction (number of field elements absorbed per permutation).
 func (p *Poseidon) Rate() int {
 	return p.state.parameters.rate
 }
 
+// Update absorbs field elements into the sponge state and applies the permutation.
 func (p *Poseidon) Update(xs ...*pasta.PallasBaseFieldElement) {
 	if len(xs) == 0 {
 		p.state.Permute()
@@ -56,19 +66,23 @@ func (p *Poseidon) Update(xs ...*pasta.PallasBaseFieldElement) {
 	}
 }
 
+// Hash resets the state, absorbs the input field elements, and returns the digest.
 func (p *Poseidon) Hash(xs ...*pasta.PallasBaseFieldElement) *pasta.PallasBaseFieldElement {
 	p.state = newInitialState(p.state.parameters)
 	p.Update(xs...)
 	return p.Digest()
 }
 
+// Digest returns the current hash output as the first element of the state.
 func (p *Poseidon) Digest() *pasta.PallasBaseFieldElement {
 	return p.state.v[0]
 }
 
+// Write implements io.Writer by converting bytes to field elements and hashing them.
+// The data length must be a multiple of 32 bytes.
 func (p *Poseidon) Write(data []byte) (n int, err error) {
 	if (len(data) % 32) != 0 {
-		return 0, errs.NewHashing("data length must be multiple of 32")
+		return 0, ErrInvalidDataLength.WithMessage("data length must be multiple of 32")
 	}
 
 	elems := []*pasta.PallasBaseFieldElement{}
@@ -76,7 +90,7 @@ func (p *Poseidon) Write(data []byte) (n int, err error) {
 		bytes := data[32*i : 32*(i+1)]
 		fe, err := pasta.NewPallasBaseField().FromBytes(bytes)
 		if err != nil {
-			return 0, errs.WrapHashing(err, "cannot create Pallas base field element")
+			return 0, errs2.Wrap(err).WithMessage("cannot create Pallas base field element")
 		}
 		elems = append(elems, fe)
 	}
@@ -84,6 +98,8 @@ func (p *Poseidon) Write(data []byte) (n int, err error) {
 	return len(data), nil
 }
 
+// Sum appends the current hash to b and returns the resulting slice.
+// It implements hash.Hash.
 func (p *Poseidon) Sum(data []byte) []byte {
 	_, err := p.Write(data)
 	if err != nil {
@@ -92,14 +108,17 @@ func (p *Poseidon) Sum(data []byte) []byte {
 	return p.Digest().Bytes()
 }
 
+// Reset resets the hasher to its initial state.
 func (p *Poseidon) Reset() {
 	p.state = newInitialState(p.state.parameters)
 }
 
+// Size returns the number of bytes in the hash output (32 bytes for a field element).
 func (*Poseidon) Size() int {
 	return 32
 }
 
+// BlockSize returns the hash's underlying block size in bytes.
 func (*Poseidon) BlockSize() int {
 	return 32
 }
