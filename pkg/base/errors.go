@@ -16,16 +16,6 @@ type IdentifiableAbortID interface {
 	constraints.Unsigned
 }
 
-// NewIdentifiableAbortError creates a new identifiable abort error for the given party ID.
-func NewIdentifiableAbortError[ID IdentifiableAbortID](partyID ID) errs2.Error {
-	return ErrAbort.WithTag(IdentifiableAbortPartyIDTag, partyID)
-}
-
-// WrapIdentifiableAbortError wraps an existing error as an identifiable abort error for the given party ID.
-func WrapIdentifiableAbortError[ID IdentifiableAbortID](err error, partyID ID) errs2.Error {
-	return errs2.Wrap(err).WithTag(IdentifiableAbortPartyIDTag, partyID)
-}
-
 // ShouldAbort checks if the given error indicates that an operation should be aborted.
 func ShouldAbort(err error) bool {
 	return errs2.Is(err, ErrAbort) || IsIdentifiableAbortError(err)
@@ -45,8 +35,6 @@ func GetMaliciousIdentities[ID IdentifiableAbortID](err error) []ID {
 		id, ok := culprit.(ID)
 		if ok {
 			ids[i] = id
-		} else {
-			panic("identified culprit could not be cast to the expected type")
 		}
 	}
 	return ids
