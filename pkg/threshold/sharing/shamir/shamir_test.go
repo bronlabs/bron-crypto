@@ -98,21 +98,21 @@ func dealCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *shamir.Sc
 			secret:        nil,
 			prng:          crand.Reader,
 			expectError:   true,
-			errorContains: "secret is nil",
+			errorContains: "could not deal shares",
 		},
 		{
 			name:          "nil prng",
 			secret:        fortyTwoSecret,
 			prng:          nil,
 			expectError:   true,
-			errorContains: "prng is nil",
+			errorContains: "could not deal shares",
 		},
 		{
 			name:          "both nil",
 			secret:        nil,
 			prng:          nil,
 			expectError:   true,
-			errorContains: "secret is nil",
+			errorContains: "could not deal shares",
 		},
 	}
 
@@ -217,7 +217,7 @@ func dealRandomCases[FE algebra.PrimeFieldElement[FE]](t *testing.T, scheme *sha
 			name:          "nil prng",
 			prng:          nil,
 			expectError:   true,
-			errorContains: "prng is nil",
+			errorContains: "could not deal random shares",
 			iterations:    1,
 		},
 		{

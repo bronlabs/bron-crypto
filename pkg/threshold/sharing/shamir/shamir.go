@@ -11,7 +11,7 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -39,7 +39,7 @@ func SharingIDToLagrangeNode[FE algebra.PrimeFieldElement[FE]](f algebra.PrimeFi
 // For shareholder i in set S, the coefficient λ_i = ∏_{j∈S,j≠i} j/(j-i).
 func LagrangeCoefficients[FE algebra.PrimeFieldElement[FE]](field algebra.PrimeField[FE], sharingIds ...sharing.ID) (ds.Map[sharing.ID, FE], error) {
 	if hashset.NewComparable(sharingIds...).Size() != len(sharingIds) {
-		return nil, errs.NewMembership("invalid sharing id hash set")
+		return nil, ErrMembership.WithMessage("invalid sharing id hash set")
 	}
 
 	sharingIdsScalar := make([]FE, len(sharingIds))
@@ -49,7 +49,7 @@ func LagrangeCoefficients[FE algebra.PrimeFieldElement[FE]](field algebra.PrimeF
 
 	basisPolynomials, err := interpolation.BasisAt(sharingIdsScalar, field.Zero())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not compute all basis polynomials at x=0")
+		return nil, errs2.Wrap(err).WithMessage("could not compute all basis polynomials at x=0")
 	}
 
 	result := hashmap.NewComparable[sharing.ID, FE]()

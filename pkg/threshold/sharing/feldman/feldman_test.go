@@ -113,21 +113,21 @@ func dealCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 			secret:        nil,
 			prng:          crand.Reader,
 			expectError:   true,
-			errorContains: "secret is nil",
+			errorContains: "could not deal shares",
 		},
 		{
 			name:          "nil prng",
 			secret:        fortyTwoSecret,
 			prng:          nil,
 			expectError:   true,
-			errorContains: "prng is nil",
+			errorContains: "could not deal shares",
 		},
 		{
 			name:          "both nil",
 			secret:        nil,
 			prng:          nil,
 			expectError:   true,
-			errorContains: "secret is nil",
+			errorContains: "could not deal shares",
 		},
 	}
 
@@ -197,7 +197,7 @@ func dealCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 					insufficientShares := shareSlice[:threshold-1]
 					_, err = scheme.Reconstruct(insufficientShares...)
 					require.Error(t, err)
-					require.Contains(t, err.Error(), "not authorized")
+					require.Contains(t, err.Error(), "could not reconstruct secret from shares")
 				}
 
 				// Verify each share
@@ -243,7 +243,7 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 			name:          "nil prng",
 			prng:          nil,
 			expectError:   true,
-			errorContains: "prng is nil",
+			errorContains: "could not deal random shares",
 			iterations:    1,
 		},
 		{

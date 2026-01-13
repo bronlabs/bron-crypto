@@ -65,17 +65,17 @@ func TestSchemeCreation(t *testing.T) {
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		_, err := pedersen.NewScheme(key, 0, shareholders)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "threshold cannot be less than 2")
+		require.Contains(t, err.Error(), "could not create shamir scheme")
 
 		// Threshold of 1
 		_, err = pedersen.NewScheme(key, 1, shareholders)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "threshold cannot be less than 2")
+		require.Contains(t, err.Error(), "could not create shamir scheme")
 
 		// Threshold greater than total
 		_, err = pedersen.NewScheme(key, 6, shareholders)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "threshold cannot be greater than total number of shareholders")
+		require.Contains(t, err.Error(), "could not create shamir scheme")
 	})
 
 	t.Run("invalid total", func(t *testing.T) {
@@ -84,13 +84,13 @@ func TestSchemeCreation(t *testing.T) {
 		shareholders := sharing.NewOrdinalShareholderSet(0)
 		_, err := pedersen.NewScheme(key, 2, shareholders)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "threshold cannot be greater than total number of shareholders")
+		require.Contains(t, err.Error(), "could not create shamir scheme")
 
 		// Total of 1
 		shareholders = sharing.NewOrdinalShareholderSet(1)
 		_, err = pedersen.NewScheme(key, 2, shareholders)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "threshold cannot be greater than total number of shareholders")
+		require.Contains(t, err.Error(), "could not create shamir scheme")
 	})
 
 	t.Run("nil key", func(t *testing.T) {
@@ -197,21 +197,21 @@ func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 			secret:        nil,
 			prng:          crand.Reader,
 			expectError:   true,
-			errorContains: "secret is nil",
+			errorContains: "could not deal shares",
 		},
 		{
 			name:          "nil prng",
 			secret:        fortyTwoSecret,
 			prng:          nil,
 			expectError:   true,
-			errorContains: "prng is nil",
+			errorContains: "could not deal shares",
 		},
 		{
 			name:          "both nil",
 			secret:        nil,
 			prng:          nil,
 			expectError:   true,
-			errorContains: "secret is nil",
+			errorContains: "could not deal shares",
 		},
 	}
 
@@ -279,7 +279,7 @@ func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 					insufficientShares := shareSlice[:threshold-1]
 					_, err = scheme.Reconstruct(insufficientShares...)
 					require.Error(t, err)
-					require.Contains(t, err.Error(), "not authorized")
+					require.Contains(t, err.Error(), "could not reconstruct secret from shares")
 				}
 
 				// Verify each share
@@ -1148,7 +1148,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 
 		additiveShare, err := share.ToAdditive(qualifiedSet)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "is not a valid shareholder")
+		require.Contains(t, err.Error(), "failed to convert Pedersen share to additive")
 		require.Nil(t, additiveShare)
 	})
 
@@ -1299,7 +1299,7 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 		secret := pedersen.NewSecret(field.FromUint64(42))
 		shares, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, nil)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "prng is nil")
+		require.Contains(t, err.Error(), "could not deal secret shares")
 		require.Nil(t, shares)
 		require.Nil(t, dealerFunc)
 	})

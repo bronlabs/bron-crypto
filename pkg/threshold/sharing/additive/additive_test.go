@@ -12,7 +12,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
@@ -347,7 +346,7 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 				return sharesWithNil
 			},
 			expectError:   true,
-			errorContains: "share cannot be nil",
+			errorContains: "could not collect IDs from shares",
 		},
 		{
 			name: "duplicate shares",
@@ -513,7 +512,7 @@ func shareValidationCases[E additive.GroupElement[E]](t *testing.T, scheme *addi
 			name: "nil share value check",
 			shareFunc: func(ac *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error) {
 				// This would test share validation but we can't create a nil share
-				return nil, errs.NewIsNil("share is nil")
+				return nil, additive.ErrIsNil.WithMessage("share is nil")
 			},
 			accessStruct:  scheme.AccessStructure(),
 			expectError:   true,
@@ -721,7 +720,7 @@ func TestNewScheme(t *testing.T) {
 		singleId.Add(sharing.ID(1))
 		scheme, err := additive.NewScheme(field, singleId.Freeze())
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "must have at least 2 shareholders")
+		require.Contains(t, err.Error(), "could not create access structure")
 		require.Nil(t, scheme)
 	})
 

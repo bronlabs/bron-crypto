@@ -3,7 +3,7 @@ package sharing
 import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
@@ -24,12 +24,12 @@ func NewOrdinalShareholderSet(count uint) ds.Set[ID] {
 func CollectIDs[S Share[S]](shares ...S) ([]ID, error) {
 	ids, err := sliceutils.MapOrError(shares, func(s S) (ID, error) {
 		if utils.IsNil(s) {
-			return 0, errs.NewIsNil("share cannot be nil")
+			return 0, ErrIsNil.WithMessage("share cannot be nil")
 		}
 		return s.ID(), nil
 	})
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to collect share IDs")
+		return nil, errs2.Wrap(err).WithMessage("failed to collect share IDs")
 	}
 	return ids, nil
 }

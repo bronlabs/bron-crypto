@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -31,13 +31,13 @@ type shareDTO[S algebra.PrimeFieldElement[S]] struct {
 // If an access structure is provided, validates that the ID is a valid shareholder.
 func NewShare[S algebra.PrimeFieldElement[S]](id sharing.ID, secret *pedcom.Message[S], blinding *pedcom.Witness[S], ac *sharing.ThresholdAccessStructure) (*Share[S], error) {
 	if secret == nil {
-		return nil, errs.NewIsNil("secret cannot be nil")
+		return nil, ErrIsNil.WithMessage("secret cannot be nil")
 	}
 	if blinding == nil {
-		return nil, errs.NewIsNil("blinding cannot be nil")
+		return nil, ErrIsNil.WithMessage("blinding cannot be nil")
 	}
 	if ac != nil && !ac.Shareholders().Contains(id) {
-		return nil, errs.NewMembership("share ID %d is not a valid shareholder", id)
+		return nil, ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
 	}
 	return &Share[S]{
 		id:       id,
@@ -96,12 +96,12 @@ func (s *Share[S]) ScalarOp(scalar S) *Share[S] {
 	// Special case: multiplying by zero is not supported in Pedersen VSS
 	// because it would require a zero blinding factor, which is not allowed
 	if scalar.IsZero() {
-		panic(errs.NewIsZero("cannot multiply Pedersen share by zero - zero blinding factors are not allowed"))
+		panic(ErrIsZero.WithMessage("cannot multiply Pedersen share by zero - zero blinding factors are not allowed"))
 	}
 
 	w2, err := pedcom.NewWitness(scalar)
 	if err != nil {
-		panic(errs.WrapFailed(err, "could not create witness from scalar"))
+		panic(ErrFailed.WithMessage("could not create witness from scalar: %v", err))
 	}
 	m2 := pedcom.NewMessage(scalar)
 	return &Share[S]{
@@ -144,11 +144,11 @@ func (s *Share[S]) Bytes() []byte {
 func (s *Share[S]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAccessStructure) (*additive.Share[S], error) {
 	ss, err := shamir.NewShare(s.id, s.secret.Value(), nil)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create shamir share from share")
+		return nil, errs2.Wrap(err).WithMessage("could not create shamir share from share")
 	}
 	additiveShare, err := ss.ToAdditive(qualifiedSet)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to convert Pedersen share to additive")
+		return nil, errs2.Wrap(err).WithMessage("failed to convert Pedersen share to additive")
 	}
 	return additiveShare, nil
 }
@@ -161,7 +161,7 @@ func (s *Share[S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal Pedersen Share")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal Pedersen Share")
 	}
 	return data, nil
 }
