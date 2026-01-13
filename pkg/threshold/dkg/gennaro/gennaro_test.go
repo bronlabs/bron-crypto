@@ -1028,7 +1028,7 @@ func TestDifferentThresholds(t *testing.T) {
 				insufficientShares := shares[:tc.threshold-1]
 				_, err = feldmanScheme.Reconstruct(insufficientShares...)
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "shares are not authorized")
+				require.Contains(t, err.Error(), "could not reconstruct secret from shares", err.Error())
 			}
 		})
 	}
