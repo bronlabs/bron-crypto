@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
@@ -17,11 +17,11 @@ const RSAKeyLen = base.IFCKeyLength
 // SampleRSAGroup generates an RSA group with keyLen of the given bit length.
 func SampleRSAGroup(keyLen uint, prng io.Reader) (*RSAGroupKnownOrder, error) {
 	if prng == nil {
-		return nil, errs.NewIsNil("prng")
+		return nil, ErrIsNil.WithMessage("prng")
 	}
 	p, q, err := nt.GeneratePrimePair(num.NPlus(), keyLen/2, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to generate prime pair")
+		return nil, errs2.Wrap(err).WithMessage("failed to generate prime pair")
 	}
 	return NewRSAGroup(p, q)
 }
@@ -29,28 +29,28 @@ func SampleRSAGroup(keyLen uint, prng io.Reader) (*RSAGroupKnownOrder, error) {
 // SampleRSAGroup generates an RSA group with random primes of the given bit length.
 func NewRSAGroup(p, q *num.NatPlus) (*RSAGroupKnownOrder, error) {
 	if p == nil || q == nil {
-		return nil, errs.NewValue("p and q must not be nil")
+		return nil, ErrValue.WithMessage("p and q must not be nil")
 	}
 	if p.TrueLen() != q.TrueLen() {
-		return nil, errs.NewValue("p and q must have the same length")
+		return nil, ErrValue.WithMessage("p and q must have the same length")
 	}
 	if p.TrueLen() < RSAKeyLen/2 {
-		return nil, errs.NewValue("p and q must be at least %d bits each", RSAKeyLen/2)
+		return nil, ErrValue.WithMessage("p and q must be at least %d bits each", RSAKeyLen/2)
 	}
 	if !p.IsProbablyPrime() {
-		return nil, errs.NewValue("p must be prime")
+		return nil, ErrValue.WithMessage("p must be prime")
 	}
 	if !q.IsProbablyPrime() {
-		return nil, errs.NewValue("q must be prime")
+		return nil, ErrValue.WithMessage("q must be prime")
 	}
 	n := p.Mul(q)
 	zMod, err := num.NewZMod(n)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create ZMod")
+		return nil, errs2.Wrap(err).WithMessage("failed to create ZMod")
 	}
 	arith, ok := modular.NewOddPrimeFactors(p.Value(), q.Value())
 	if ok == ct.False {
-		return nil, errs.NewValue("failed to create OddPrimeFactors")
+		return nil, ErrFailed.WithMessage("failed to create OddPrimeFactors")
 	}
 	return &RSAGroupKnownOrder{
 		UnitGroupTrait: UnitGroupTrait[*modular.OddPrimeFactors, *RSAGroupElement[*modular.OddPrimeFactors], RSAGroupElement[*modular.OddPrimeFactors]]{
@@ -63,15 +63,15 @@ func NewRSAGroup(p, q *num.NatPlus) (*RSAGroupKnownOrder, error) {
 // NewRSAGroupOfUnknownOrder creates an RSA group with unknown order from the given modulus m.
 func NewRSAGroupOfUnknownOrder(m *num.NatPlus) (*RSAGroupUnknownOrder, error) {
 	if m.TrueLen() < RSAKeyLen {
-		return nil, errs.NewValue("modulus must be at least %d bits", RSAKeyLen)
+		return nil, ErrValue.WithMessage("modulus must be at least %d bits", RSAKeyLen)
 	}
 	zMod, err := num.NewZMod(m)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create ZMod")
+		return nil, errs2.Wrap(err).WithMessage("failed to create ZMod")
 	}
 	arith, ok := modular.NewSimple(zMod.Modulus().ModulusCT())
 	if ok == ct.False {
-		return nil, errs.NewFailed("failed to create SimpleModulus")
+		return nil, ErrFailed.WithMessage("failed to create SimpleModulus")
 	}
 	return &RSAGroupUnknownOrder{
 		UnitGroupTrait: UnitGroupTrait[*modular.SimpleModulus, *RSAGroupElement[*modular.SimpleModulus], RSAGroupElement[*modular.SimpleModulus]]{
@@ -114,7 +114,7 @@ func (g *RSAGroup[X]) Equal(other *RSAGroup[X]) bool {
 func (g *RSAGroup[X]) ForgetOrder() *RSAGroupUnknownOrder {
 	arith, ok := modular.NewSimple(g.zMod.Modulus().ModulusCT())
 	if ok == ct.False {
-		panic(errs.NewFailed("failed to create SimpleModulus"))
+		panic(ErrFailed.WithMessage("failed to create SimpleModulus"))
 	}
 	return &RSAGroupUnknownOrder{
 		UnitGroupTrait: UnitGroupTrait[*modular.SimpleModulus, *RSAGroupElement[*modular.SimpleModulus], RSAGroupElement[*modular.SimpleModulus]]{
@@ -153,10 +153,10 @@ func (u *RSAGroupElement[X]) Structure() algebra.Structure[*RSAGroupElement[X]] 
 // LearnOrder converts an RSA group element of unknown order to one with known order.
 func (u *RSAGroupElement[X]) LearnOrder(g *RSAGroupKnownOrder) (*RSAGroupElementKnownOrder, error) {
 	if g == nil {
-		return nil, errs.NewIsNil("g")
+		return nil, ErrIsNil.WithMessage("g")
 	}
 	if !u.v.Group().Modulus().Equal(g.zMod.Modulus()) {
-		return nil, errs.NewValue("unit is not in the correct RSA group")
+		return nil, ErrValue.WithMessage("unit is not in the correct RSA group")
 	}
 	return &RSAGroupElementKnownOrder{
 		UnitTrait: UnitTrait[*modular.OddPrimeFactors, *RSAGroupElementKnownOrder, RSAGroupElementKnownOrder]{
@@ -170,7 +170,7 @@ func (u *RSAGroupElement[X]) LearnOrder(g *RSAGroupKnownOrder) (*RSAGroupElement
 func (u *RSAGroupElement[X]) ForgetOrder() *RSAGroupElementUnknownOrder {
 	arith, ok := modular.NewSimple(u.v.Group().Modulus().ModulusCT())
 	if ok == ct.False {
-		panic(errs.NewFailed("failed to create SimpleModulus"))
+		panic(ErrFailed.WithMessage("failed to create SimpleModulus"))
 	}
 	return &RSAGroupElementUnknownOrder{
 		UnitTrait: UnitTrait[*modular.SimpleModulus, *RSAGroupElementUnknownOrder, RSAGroupElementUnknownOrder]{
