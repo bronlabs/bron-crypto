@@ -12,13 +12,20 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
 
+var (
+	ErrInvalidSize = errs2.New("invalid size")
+	ErrIsNil       = errs2.New("is nil")
+)
+
+// PrimeSamplable is an interface for types that can sample prime numbers.
 type PrimeSamplable[E algebra.NatPlusLike[E]] interface {
 	FromBig(*big.Int) (E, error)
 }
 
+// MillerRabinChecks returns the number of Miller-Rabin iterations required for a given bit length.
 func MillerRabinChecks(bits uint) int {
 	if len(millerRabinIterations) == 0 {
 		panic("millerRabinIterations is not initialized")
@@ -42,12 +49,13 @@ func MillerRabinChecks(bits uint) int {
 	panic("millerRabinIterations is not properly initialized")
 }
 
+// GenerateSafePrime generates a safe prime of the specified bit length using the provided PrimeSamplable set.
 func GenerateSafePrime[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uint) (N, error) {
 	if bits < 3 {
-		return *new(N), errs.NewFailed("safe prime size must be at least 3-bits")
+		return *new(N), ErrInvalidSize.WithMessage("safe prime size must be at least 3-bits")
 	}
 	if set == nil {
-		return *new(N), errs.NewFailed("nil structure")
+		return *new(N), ErrIsNil.WithMessage("nil structure")
 	}
 	var p *big.Int
 	var err error
@@ -55,7 +63,7 @@ func GenerateSafePrime[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uin
 	for {
 		p, err = crand.Prime(crand.Reader, int(bits)-1)
 		if err != nil {
-			return *new(N), errs.WrapFailed(err, "reading from crand")
+			return *new(N), errs2.Wrap(err).WithMessage("reading from crand")
 		}
 		p.Add(p.Lsh(p, 1), big.NewInt(1))
 
@@ -65,11 +73,12 @@ func GenerateSafePrime[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uin
 	}
 	n, err := set.FromBig(p)
 	if err != nil {
-		return *new(N), errs.WrapFailed(err, "cannot convert prime to structure")
+		return *new(N), errs2.Wrap(err).WithMessage("cannot convert prime to structure")
 	}
 	return n, nil
 }
 
+// GenerateSafePrimePair generates two distinct safe primes of the specified bit length using the provided PrimeSamplable set.
 func GenerateSafePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uint) (p, q N, err error) {
 	g := errgroup.Group{}
 	for {
@@ -88,7 +97,7 @@ func GenerateSafePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits
 			return nil
 		})
 		if err := g.Wait(); err != nil {
-			return *new(N), *new(N), errs.WrapFailed(err, "cannot generate same primes")
+			return *new(N), *new(N), errs2.Wrap(err).WithMessage("cannot generate same primes")
 		}
 		if !p.Equal(q) {
 			return p, q, nil
@@ -96,28 +105,29 @@ func GenerateSafePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits
 	}
 }
 
+// GeneratePrimePair generates two distinct prime numbers of the specified bit length using the provided PrimeSamplable set.
 func GeneratePrimePair[N algebra.NatPlusLike[N]](set PrimeSamplable[N], bits uint, prng io.Reader) (p, q N, err error) {
 	if set == nil {
-		return *new(N), *new(N), errs.NewFailed("nil structure")
+		return *new(N), *new(N), ErrIsNil.WithMessage("nil structure")
 	}
 	rsaPrivateKey, err := rsa.GenerateKey(prng, int(2*bits))
 	if err != nil {
-		return *new(N), *new(N), errs.WrapFailed(err, "cannot generate keys pair")
+		return *new(N), *new(N), errs2.Wrap(err).WithMessage("cannot generate keys pair")
 	}
 
 	pBig := rsaPrivateKey.Primes[0]
 	qBig := rsaPrivateKey.Primes[1]
 	// double check
 	if pBig.BitLen() != int(bits) || qBig.BitLen() != int(bits) {
-		return *new(N), *new(N), errs.WrapFailed(err, "p,q have invalid length (%d, %d) - expected %d", pBig.BitLen(), qBig.BitLen(), bits)
+		return *new(N), *new(N), errs2.Wrap(err).WithMessage("p,q have invalid length (%d, %d) - expected %d", pBig.BitLen(), qBig.BitLen(), bits)
 	}
 	p, err = set.FromBig(pBig)
 	if err != nil {
-		return *new(N), *new(N), errs.WrapFailed(err, "cannot convert p to structure")
+		return *new(N), *new(N), errs2.Wrap(err).WithMessage("cannot convert p to structure")
 	}
 	q, err = set.FromBig(qBig)
 	if err != nil {
-		return *new(N), *new(N), errs.WrapFailed(err, "cannot convert q to structure")
+		return *new(N), *new(N), errs2.Wrap(err).WithMessage("cannot convert q to structure")
 	}
 	return p, q, nil
 }
