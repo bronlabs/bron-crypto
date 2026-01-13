@@ -1,229 +1,275 @@
 package hashset
 
-// import (
-// 	"iter"
-// 	"sync"
+import (
+	"iter"
+	"sync"
 
-// 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-// ).
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
+)
 
-// var _ ds.ConcurrentSet[any] = (*ConcurrentSet[any])(nil).
+// ConcurrentSet is a thread-safe wrapper around a MutableSet.
+// All operations are protected by a read-write mutex.
+type ConcurrentSet[E any] struct {
+	v  ds.MutableSet[E]
+	mu sync.RWMutex
+}
 
-// type ConcurrentSet[E any] struct {
-// 	v  ds.Set[E]
-// 	mu sync.RWMutex
-// }.
+// NewConcurrentSet creates a new thread-safe set wrapping the given mutable set.
+func NewConcurrentSet[E any](innerSet ds.MutableSet[E]) *ConcurrentSet[E] {
+	return &ConcurrentSet[E]{
+		v:  innerSet,
+		mu: sync.RWMutex{},
+	}
+}
 
-// func NewConcurrentSet[E any](innerSet ds.Set[E]) *ConcurrentSet[E] {
-// 	return &ConcurrentSet[E]{
-// 		v:  innerSet,
-// 		mu: sync.RWMutex{},
-// 	}
-// }.
+// Contains returns true if the element is in the set.
+func (s *ConcurrentSet[E]) Contains(e E) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.v.Contains(e)
+}
 
-// func (s *ConcurrentSet[E]) Contains(e E) bool {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.Contains(e)
-// }.
+// Add adds an element to the set.
+func (s *ConcurrentSet[E]) Add(e E) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.v.Add(e)
+}
 
-// func (s *ConcurrentSet[E]) Add(e E) {
-// 	s.mu.Lock()
-// 	defer s.mu.Unlock()
-// 	s.v.Add(e)
-// }.
+// AddAll adds multiple elements to the set.
+func (s *ConcurrentSet[E]) AddAll(es ...E) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.v.AddAll(es...)
+}
 
-// func (s *ConcurrentSet[E]) AddAll(es ...E) {
-// 	s.mu.Lock()
-// 	defer s.mu.Unlock()
-// 	s.v.AddAll(es...)
-// }.
+// Remove removes an element from the set.
+func (s *ConcurrentSet[E]) Remove(e E) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.v.Remove(e)
+}
 
-// func (s *ConcurrentSet[E]) Remove(e E) {
-// 	s.mu.Lock()
-// 	defer s.mu.Unlock()
-// 	s.v.Remove(e)
-// }.
+// RemoveAll removes multiple elements from the set.
+func (s *ConcurrentSet[E]) RemoveAll(es ...E) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.v.RemoveAll(es...)
+}
 
-// func (s *ConcurrentSet[E]) Clear() {
-// 	s.mu.Lock()
-// 	defer s.mu.Unlock()
-// 	s.v.Clear()
-// }.
+// Clear removes all elements from the set.
+func (s *ConcurrentSet[E]) Clear() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.v.Clear()
+}
 
-// func (s *ConcurrentSet[E]) Equal(other ds.Set[E]) bool {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.Equal(other)
-// }.
+// Equal returns true if both sets contain exactly the same elements.
+func (s *ConcurrentSet[E]) Equal(other ds.Set[E]) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.v.Equal(other.Unfreeze())
+}
 
-// func (s *ConcurrentSet[_]) Size() int {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.Size()
-// }.
+// Size returns the number of elements in the set.
+func (s *ConcurrentSet[_]) Size() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.v.Size()
+}
 
-// func (s *ConcurrentSet[_]) Cardinality() int {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.Cardinality()
-// }.
+// Cardinality returns the number of elements in the set.
+func (s *ConcurrentSet[_]) Cardinality() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.v.Cardinality()
+}
 
-// func (s *ConcurrentSet[_]) IsEmpty() bool {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.IsEmpty()
-// }.
+// IsEmpty returns true if the set contains no elements.
+func (s *ConcurrentSet[_]) IsEmpty() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.v.IsEmpty()
+}
 
-// func (s *ConcurrentSet[E]) Union(other ds.Set[E]) ds.Set[E] {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.Union(other)
-// }.
+// Union returns a new concurrent set containing all elements from both sets.
+func (s *ConcurrentSet[E]) Union(other ds.Set[E]) ds.ConcurrentSet[E] {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return NewConcurrentSet(s.v.Union(other.Unfreeze()))
+}
 
-// func (s *ConcurrentSet[E]) Intersection(other ds.Set[E]) ds.Set[E] {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.Intersection(other)
-// }.
+// Intersection returns a new concurrent set containing only elements present in both sets.
+func (s *ConcurrentSet[E]) Intersection(other ds.Set[E]) ds.ConcurrentSet[E] {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return NewConcurrentSet(s.v.Intersection(other.Unfreeze()))
+}
 
-// func (s *ConcurrentSet[E]) Difference(other ds.Set[E]) ds.Set[E] {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.Difference(other)
-// }.
+// Difference returns a new concurrent set containing elements in this set but not in the other.
+func (s *ConcurrentSet[E]) Difference(other ds.Set[E]) ds.ConcurrentSet[E] {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return NewConcurrentSet(s.v.Difference(other.Unfreeze()))
+}
 
-// func (s *ConcurrentSet[E]) SymmetricDifference(other ds.Set[E]) ds.Set[E] {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.SymmetricDifference(other)
-// }.
+// SymmetricDifference returns a new concurrent set containing elements in either set but not both.
+func (s *ConcurrentSet[E]) SymmetricDifference(other ds.Set[E]) ds.ConcurrentSet[E] {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return NewConcurrentSet(s.v.SymmetricDifference(other.Unfreeze()))
+}
 
-// func (s *ConcurrentSet[E]) SubSets() []ds.Set[E] {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.SubSets()
-// }.
+// SubSets returns all possible subsets of this set (power set).
+func (s *ConcurrentSet[E]) SubSets() []ds.Set[E] {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return sliceutils.Map(s.v.SubSets(), func(subset ds.MutableSet[E]) ds.Set[E] {
+		return subset.Freeze()
+	})
+}
 
-// func (s *ConcurrentSet[E]) IsSubSet(other ds.Set[E]) bool {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.IsSubSet(other)
-// }.
+// IsSubSet returns true if all elements of this set are in the other set.
+func (s *ConcurrentSet[E]) IsSubSet(other ds.Set[E]) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.v.IsSubSet(other.Unfreeze())
+}
 
-// func (s *ConcurrentSet[E]) IsProperSubSet(other ds.Set[E]) bool {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.IsProperSubSet(other)
-// }.
+// IsProperSubSet returns true if this is a subset of other and they are not equal.
+func (s *ConcurrentSet[E]) IsProperSubSet(other ds.Set[E]) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.v.IsProperSubSet(other.Unfreeze())
+}
 
-// func (s *ConcurrentSet[E]) IsSuperSet(other ds.Set[E]) bool {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.IsSuperSet(other)
-// }.
+// IsSuperSet returns true if all elements of the other set are in this set.
+func (s *ConcurrentSet[E]) IsSuperSet(other ds.Set[E]) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.v.IsSuperSet(other.Unfreeze())
+}
 
-// func (s *ConcurrentSet[E]) IsProperSuperSet(other ds.Set[E]) bool {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.IsProperSuperSet(other)
-// }.
+// IsProperSuperSet returns true if this is a superset of other and they are not equal.
+func (s *ConcurrentSet[E]) IsProperSuperSet(other ds.Set[E]) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.v.IsProperSuperSet(other.Unfreeze())
+}
 
-// func (s *ConcurrentSet[E]) IterSubSets() <-chan ds.Set[E] {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.IterSubSets()
-// }.
+// IterSubSets returns an iterator over all possible subsets of this set.
+func (s *ConcurrentSet[E]) IterSubSets() iter.Seq[ds.Set[E]] {
+	return func(yield func(ds.Set[E]) bool) {
+		s.mu.RLock()
+		defer s.mu.RUnlock()
+		for subset := range s.v.IterSubSets() {
+			if !yield(subset.Freeze()) {
+				return
+			}
+		}
+	}
+}
 
-// func (s *ConcurrentSet[E]) List() []E {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.List()
-// }.
+// List returns a slice of all elements in the set.
+func (s *ConcurrentSet[E]) List() []E {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.v.List()
+}
 
-// func (s *ConcurrentSet[E]) Clone() ds.ConcurrentSet[E] {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	clone, ok := s.v.Clone().(*ConcurrentSet[E])
-// 	if !ok {
-// 		return nil
-// 	}
-// 	return clone
-// }.
+// Clone returns a new concurrent set with a copy of the data.
+func (s *ConcurrentSet[E]) Clone() ds.ConcurrentSet[E] {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return NewConcurrentSet(s.v.Clone())
+}
 
-// func (s *ConcurrentSet[E]) Iter() iter.Seq[E] {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.Iter()
-// }.
+// Iter returns an iterator over all elements in the set.
+func (s *ConcurrentSet[E]) Iter() iter.Seq[E] {
+	return func(yield func(E) bool) {
+		s.mu.RLock()
+		defer s.mu.RUnlock()
+		for e := range s.v.Iter() {
+			if !yield(e) {
+				return
+			}
+		}
+	}
+}
 
-// func (s *ConcurrentSet[E]) Iter2() iter.Seq2[int, E] {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	return s.v.Iter2()
-// }.
+// Iter2 returns an iterator with index and element pairs.
+func (s *ConcurrentSet[E]) Iter2() iter.Seq2[int, E] {
+	return func(yield func(int, E) bool) {
+		s.mu.RLock()
+		defer s.mu.RUnlock()
+		for i, e := range s.v.Iter2() {
+			if !yield(i, e) {
+				return
+			}
+		}
+	}
+}
 
-// func (s *ConcurrentSet[E]) MarshalJSON() ([]byte, error) {
-// 	s.mu.RLock()
-// 	defer s.mu.RUnlock()
-// 	result, err := s.v.MarshalJSON()
-// 	if err != nil {
-// 		return nil, errs.WrapSerialisation(err, "could not marshal json")
-// 	}
-// 	return result, nil
-// }.
+// Compute atomically computes a new value based on the element's presence.
+// The remappingFunction receives the element and whether it exists, returning
+// the new value and whether to store it.
+func (s *ConcurrentSet[E]) Compute(e E, remappingFunction func(e E, exists bool) (E, bool)) E {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-// func (s *ConcurrentSet[E]) Compute(e E, remappingFunction func(e E, exists bool) (E, bool)) E {
-// 	s.mu.Lock()
-// 	defer s.mu.Unlock()
+	oldExist := s.v.Contains(e)
 
-// 	oldExist := s.v.Contains(e)
+	newValue, shouldStore := remappingFunction(e, oldExist)
 
-// 	newValue, shouldStore := remappingFunction(e, oldExist)
+	if shouldStore {
+		s.v.Add(newValue)
+	} else {
+		s.v.Remove(e)
+	}
+	return newValue
+}
 
-// 	if shouldStore {
-// 		s.v.Add(newValue)
-// 	} else {
-// 		s.v.Remove(e)
-// 	}
-// 	return newValue
-// }.
+// ComputeIfAbsent atomically computes a value only if the element is absent.
+// The mappingFunction returns the value to store and whether to store it.
+// If the element exists, returns the element without calling mappingFunction.
+func (s *ConcurrentSet[E]) ComputeIfAbsent(e E, mappingFunction func(e E) (E, bool)) E {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-// func (s *ConcurrentSet[E]) ComputeIfAbsent(e E, mappingFunction func(e E) (E, bool)) E {
-// 	s.mu.Lock()
-// 	defer s.mu.Unlock()
+	oldExist := s.v.Contains(e)
 
-// 	oldExist := s.v.Contains(e)
+	if oldExist {
+		return e
+	}
 
-// 	if oldExist {
-// 		return e
-// 	}
+	newValue, shouldStore := mappingFunction(e)
 
-// 	newValue, shouldStore := mappingFunction(e)
+	if shouldStore {
+		s.v.Add(newValue)
+	}
+	return newValue
+}
 
-// 	if shouldStore {
-// 		s.v.Add(newValue)
-// 	}
-// 	return newValue
-// }.
+// ComputeIfPresent atomically computes a new value only if the element is present.
+// The remappingFunction returns the new value and whether to keep it (false removes the element).
+// If the element is absent, returns the element without calling remappingFunction.
+func (s *ConcurrentSet[E]) ComputeIfPresent(e E, remappingFunction func(e E) (E, bool)) E {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-// func (s *ConcurrentSet[E]) ComputeIfPresent(e E, remappingFunction func(e E) (E, bool)) E {
-// 	s.mu.Lock()
-// 	defer s.mu.Unlock()
+	oldExist := s.v.Contains(e)
 
-// 	oldExist := s.v.Contains(e)
+	if !oldExist {
+		return e
+	}
 
-// 	if !oldExist {
-// 		return e
-// 	}
+	newValue, shouldStore := remappingFunction(e)
 
-// 	newValue, shouldStore := remappingFunction(e)
-
-// 	if shouldStore {
-// 		s.v.Add(newValue)
-// 	} else if !shouldStore {
-// 		s.v.Remove(e)
-// 	}
-// 	return newValue
-// }.
+	if shouldStore {
+		s.v.Add(newValue)
+	} else if !shouldStore {
+		s.v.Remove(e)
+	}
+	return newValue
+}

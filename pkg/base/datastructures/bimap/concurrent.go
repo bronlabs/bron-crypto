@@ -1,185 +1,199 @@
 package bimap
 
-// import (
-// 	"iter"
-// 	"sync"
+import (
+	"iter"
+	"sync"
 
-// 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
-// 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
-// ).
+	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
+)
 
-// var _ ds.ConcurrentBiMap[any, any] = (*ConcurrentBiMap[any, any])(nil).
+// ConcurrentBiMap is a thread-safe wrapper around a MutableBiMap.
+// All operations are protected by a read-write mutex.
+type ConcurrentBiMap[K any, V any] struct {
+	inner ds.MutableBiMap[K, V]
+	mu    sync.RWMutex
+}
 
-// type ConcurrentBiMap[K any, V any] struct {
-// 	internalMap ds.BiMap[K, V]
-// 	mu          sync.RWMutex
-// }.
+// NewConcurrentBiMap creates a new thread-safe bimap wrapping the given mutable bimap.
+func NewConcurrentBiMap[K any, V any](innerBiMap ds.MutableBiMap[K, V]) *ConcurrentBiMap[K, V] {
+	return &ConcurrentBiMap[K, V]{
+		inner: innerBiMap,
+		mu:    sync.RWMutex{},
+	}
+}
 
-// func NewConcurrentBiMap[K any, V any](innerBiMap ds.BiMap[K, V]) *ConcurrentBiMap[K, V] {
-// 	return &ConcurrentBiMap[K, V]{
-// 		internalMap: innerBiMap,
-// 		mu:          sync.RWMutex{},
-// 	}
-// }.
+// Reverse returns a thread-safe view of this bimap with keys and values swapped.
+func (m *ConcurrentBiMap[K, V]) Reverse() ds.ConcurrentBiMap[V, K] {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-// func (m *ConcurrentBiMap[K, V]) Reverse() ds.BiMap[V, K] {
-// 	m.mu.Lock()
-// 	defer m.mu.Unlock()
+	return NewConcurrentBiMap(m.inner.Reverse())
+}
 
-// 	return NewConcurrentBiMap(m.internalMap.Reverse())
-// }.
+// ContainsKey returns true if the key exists in the bimap.
+func (m *ConcurrentBiMap[K, V]) ContainsKey(key K) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.inner.ContainsKey(key)
+}
 
-// func (m *ConcurrentBiMap[K, V]) ContainsKey(key K) bool {
-// 	m.mu.RLock()
-// 	defer m.mu.RUnlock()
-// 	return m.internalMap.ContainsKey(key)
-// }.
+// Get returns the value associated with the key and whether it exists.
+func (m *ConcurrentBiMap[K, V]) Get(l K) (V, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.inner.Get(l)
+}
 
-// func (m *ConcurrentBiMap[K, V]) Get(l K) (V, bool) {
-// 	m.mu.RLock()
-// 	defer m.mu.RUnlock()
-// 	return m.internalMap.Get(l)
-// }.
+// Retain returns a new concurrent bimap containing only entries with the specified keys.
+func (m *ConcurrentBiMap[K, V]) Retain(keys ...K) ds.ConcurrentBiMap[K, V] {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return NewConcurrentBiMap(m.inner.Retain(keys...))
+}
 
-// func (m *ConcurrentBiMap[K, V]) Retain(keys ds.Set[K]) ds.Map[K, V] {
-// 	m.mu.Lock()
-// 	defer m.mu.Unlock()
-// 	return m.internalMap.Retain(keys)
-// }.
+// Filter returns a new concurrent bimap containing only entries where the predicate returns true.
+func (m *ConcurrentBiMap[K, V]) Filter(predicate func(key K) bool) ds.ConcurrentBiMap[K, V] {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return NewConcurrentBiMap(m.inner.Filter(predicate))
+}
 
-// func (m *ConcurrentBiMap[K, V]) Filter(predicate func(key K) bool) ds.Map[K, V] {
-// 	m.mu.Lock()
-// 	defer m.mu.Unlock()
-// 	return m.internalMap.Filter(predicate)
-// }.
+// Put adds or updates a key-value pair in the bimap.
+func (m *ConcurrentBiMap[K, V]) Put(l K, r V) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	_, _ = m.inner.TryPut(l, r)
+}
 
-// func (m *ConcurrentBiMap[K, V]) Put(l K, r V) {
-// 	m.mu.Lock()
-// 	defer m.mu.Unlock()
-// 	_, _ = m.internalMap.TryPut(l, r)
-// }.
+// TryPut adds or updates a key-value pair, returning whether a value was replaced and the old value.
+func (m *ConcurrentBiMap[K, V]) TryPut(l K, r V) (replaced bool, oldValue V) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.inner.TryPut(l, r)
+}
 
-// func (m *ConcurrentBiMap[K, V]) TryPut(l K, r V) (replaced bool, oldValue V) {
-// 	m.mu.Lock()
-// 	defer m.mu.Unlock()
-// 	return m.internalMap.TryPut(l, r)
-// }.
+// Clear removes all entries from the bimap.
+func (m *ConcurrentBiMap[_, _]) Clear() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.inner.Clear()
+}
 
-// func (m *ConcurrentBiMap[_, _]) Clear() {
-// 	m.mu.Lock()
-// 	defer m.mu.Unlock()
-// 	m.internalMap.Clear()
-// }.
+// Size returns the number of entries in the bimap.
+func (m *ConcurrentBiMap[_, _]) Size() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.inner.Size()
+}
 
-// func (m *ConcurrentBiMap[_, _]) Size() int {
-// 	m.mu.RLock()
-// 	defer m.mu.RUnlock()
-// 	return m.internalMap.Size()
-// }.
+// IsEmpty returns true if the bimap contains no entries.
+func (m *ConcurrentBiMap[_, _]) IsEmpty() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.inner.IsEmpty()
+}
 
-// func (m *ConcurrentBiMap[_, _]) IsEmpty() bool {
-// 	m.mu.RLock()
-// 	defer m.mu.RUnlock()
-// 	return m.internalMap.IsEmpty()
-// }.
+// Remove deletes the entry with the given key from the bimap.
+func (m *ConcurrentBiMap[K, V]) Remove(l K) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.inner.TryRemove(l)
+}
 
-// func (m *ConcurrentBiMap[K, V]) Remove(l K) {
-// 	m.mu.Lock()
-// 	defer m.mu.Unlock()
-// 	m.internalMap.TryRemove(l)
-// }.
+// TryRemove deletes the entry with the given key, returning whether it existed and its value.
+func (m *ConcurrentBiMap[K, V]) TryRemove(l K) (removed bool, r V) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.inner.TryRemove(l)
+}
 
-// func (m *ConcurrentBiMap[K, V]) TryRemove(l K) (removed bool, r V) {
-// 	m.mu.Lock()
-// 	defer m.mu.Unlock()
-// 	return m.internalMap.TryRemove(l)
-// }.
+// Keys returns a slice of all keys in the bimap.
+func (m *ConcurrentBiMap[K, _]) Keys() []K {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.inner.Keys()
+}
 
-// func (m *ConcurrentBiMap[K, _]) Keys() []K {
-// 	m.mu.RLock()
-// 	defer m.mu.RUnlock()
-// 	return m.internalMap.Keys()
-// }.
+// Values returns a slice of all values in the bimap.
+func (m *ConcurrentBiMap[_, V]) Values() []V {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.inner.Values()
+}
 
-// func (m *ConcurrentBiMap[_, V]) Values() []V {
-// 	m.mu.RLock()
-// 	defer m.mu.RUnlock()
-// 	return m.internalMap.Values()
-// }.
+// Iter returns an iterator over all key-value pairs.
+func (m *ConcurrentBiMap[K, V]) Iter() iter.Seq2[K, V] {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.inner.Iter()
+}
 
-// func (m *ConcurrentBiMap[K, V]) Iter() iter.Seq2[K, V] {
-// 	m.mu.RLock()
-// 	defer m.mu.RUnlock()
-// 	return m.internalMap.Iter()
-// }.
+// Clone returns a new concurrent bimap with a copy of the data.
+func (m *ConcurrentBiMap[K, V]) Clone() ds.ConcurrentBiMap[K, V] {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return NewConcurrentBiMap(m.inner.Clone())
+}
 
-// func (m *ConcurrentBiMap[K, V]) Clone() ds.Map[K, V] {
-// 	m.mu.RLock()
-// 	defer m.mu.RUnlock()
-// 	clone, _ := m.internalMap.Clone().(*ConcurrentBiMap[K, V])
-// 	return clone
-// }.
+// Compute atomically computes a new value based on the key's current mapping.
+// The remappingFunction receives the key, current value (if any), and existence flag,
+// returning the new value and whether to store it (false removes the key).
+func (m *ConcurrentBiMap[K, V]) Compute(key K, remappingFunction func(key K, oldVal V, exists bool) (V, bool)) V {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-// func (m *ConcurrentBiMap[K, V]) MarshalJSON() ([]byte, error) {
-// 	m.mu.RLock()
-// 	defer m.mu.RUnlock()
-// 	result, err := m.internalMap.MarshalJSON()
-// 	if err != nil {
-// 		return nil, errs.WrapSerialisation(err, "could not marshal json")
-// 	}
-// 	return result, nil
-// }.
+	oldValue, oldExist := m.inner.Get(key)
 
-// func (m *ConcurrentBiMap[K, V]) Compute(key K, remappingFunction func(key K, oldVal V, exists bool) (V, bool)) V {
-// 	m.mu.Lock()
-// 	defer m.mu.Unlock()
+	newValue, shouldStore := remappingFunction(key, oldValue, oldExist)
 
-// 	oldValue, oldExist := m.internalMap.Get(key)
+	if shouldStore {
+		m.inner.Put(key, newValue)
+	} else {
+		m.inner.Remove(key)
+	}
+	return newValue
+}
 
-// 	newValue, shouldStore := remappingFunction(key, oldValue, oldExist)
+// ComputeIfAbsent atomically computes a value only if the key is not present.
+// The mappingFunction returns the value to store and whether to store it.
+// If the key exists, returns the current value without calling mappingFunction.
+func (m *ConcurrentBiMap[K, V]) ComputeIfAbsent(key K, mappingFunction func(key K) (V, bool)) V {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-// 	if shouldStore {
-// 		m.internalMap.Put(key, newValue)
-// 	} else {
-// 		m.internalMap.Remove(key)
-// 	}
-// 	return newValue
-// }.
+	oldValue, oldExist := m.inner.Get(key)
 
-// func (m *ConcurrentBiMap[K, V]) ComputeIfAbsent(key K, mappingFunction func(key K) (V, bool)) V {
-// 	m.mu.Lock()
-// 	defer m.mu.Unlock()
+	if oldExist {
+		return oldValue
+	}
 
-// 	oldValue, oldExist := m.internalMap.Get(key)
+	newValue, shouldStore := mappingFunction(key)
 
-// 	if !oldExist {
-// 		return oldValue
-// 	}
+	if shouldStore {
+		m.inner.Put(key, newValue)
+	}
+	return newValue
+}
 
-// 	newValue, shouldStore := mappingFunction(key)
+// ComputeIfPresent atomically computes a new value only if the key is present.
+// The remappingFunction returns the new value and whether to keep it (false removes the key).
+// If the key is absent, returns the zero value without calling remappingFunction.
+func (m *ConcurrentBiMap[K, V]) ComputeIfPresent(key K, remappingFunction func(key K, oldVal V) (V, bool)) V {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-// 	if shouldStore {
-// 		m.internalMap.Put(key, newValue)
-// 	}
-// 	return newValue
-// }.
+	oldValue, oldExist := m.inner.Get(key)
 
-// func (m *ConcurrentBiMap[K, V]) ComputeIfPresent(key K, remappingFunction func(key K, oldVal V) (V, bool)) V {
-// 	m.mu.Lock()
-// 	defer m.mu.Unlock()
+	if !oldExist {
+		return oldValue
+	}
 
-// 	oldValue, oldExist := m.internalMap.Get(key)
+	newValue, shouldStore := remappingFunction(key, oldValue)
 
-// 	if oldExist {
-// 		return oldValue
-// 	}
-
-// 	newValue, shouldStore := remappingFunction(key, oldValue)
-
-// 	if shouldStore {
-// 		m.internalMap.Put(key, newValue)
-// 	} else {
-// 		m.internalMap.Remove(key)
-// 	}
-// 	return newValue
-// }.
+	if shouldStore {
+		m.inner.Put(key, newValue)
+	} else {
+		m.inner.Remove(key)
+	}
+	return newValue
+}
