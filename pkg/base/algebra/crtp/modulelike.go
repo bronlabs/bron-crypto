@@ -119,7 +119,6 @@ type PolynomialLike[P, S, C any] interface {
 	ModuleElement[P, S]
 	ConstantTerm() C
 	IsConstant() bool
-	IsMonic() bool
 	Derivative() P
 	Degree() int
 }
@@ -162,6 +161,7 @@ type Polynomial[P, S any] interface {
 	UnivariatePolynomialLike[P, S, S, Ring[S], Ring[S]]
 	AlgebraElement[P, S]
 	EuclideanDomainElement[P]
+	IsMonic() bool
 }
 
 type MultivariatePolynomialRing[PP, P, S any] interface {

@@ -172,7 +172,7 @@ func (p *ModuleValuedPolynomial[ME, S]) Structure() algebra.Structure[*ModuleVal
 		panic("internal error: empty coeffs")
 	}
 
-	module := algebra.StructureMustBeAs[algebra.Module[ME, S]](p.coeffs[0].Structure())
+	module := algebra.StructureMustBeAs[algebra.FiniteModule[ME, S]](p.coeffs[0].Structure())
 	return &PolynomialModule[ME, S]{
 		module: module,
 	}
@@ -195,10 +195,6 @@ func (p *ModuleValuedPolynomial[ME, S]) ConstantTerm() ME {
 
 func (p *ModuleValuedPolynomial[ME, S]) IsConstant() bool {
 	return p.Degree() <= 0
-}
-
-func (p *ModuleValuedPolynomial[ME, S]) IsMonic() bool {
-	return p.LeadingCoefficient().
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) LeadingCoefficient() ME {
