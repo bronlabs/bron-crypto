@@ -3,7 +3,7 @@ package base58
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -39,21 +39,21 @@ func init() {
 		digitNat[i] = num.N().FromUint64(uint64(i))
 	}
 	if alphabetIdx0 != Alphabet[0] {
-		panic(errs.NewArgument("alphabetIdx0 must be the first character of the alphabet"))
+		panic(errs2.New("alphabetIdx0 must be the first character of the alphabet"))
 	}
 }
 
 func Encode(data []byte) Base58 {
 	x, err := num.N().FromBytes(data)
 	if err != nil {
-		panic(errs.WrapSerialisation(err, "failed to convert bytes to Nat"))
+		panic(errs2.Wrap(err).WithMessage("failed to convert bytes to Nat"))
 	}
 	answer := make([]byte, 0, len(data)*136/100)
 	var rem *num.Nat
 	for x.Compare(zero).Is(base.GreaterThan) {
 		x, rem, err = x.EuclideanDiv(radix58)
 		if err != nil {
-			panic(errs.WrapSerialisation(err, "failed to perform division"))
+			panic(errs2.Wrap(err).WithMessage("failed to perform division"))
 		}
 		answer = append(answer, Alphabet[rem.Uint64()])
 	}

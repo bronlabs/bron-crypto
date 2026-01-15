@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/csprng/nist"
 )
@@ -123,7 +122,7 @@ func (nistTest *NistTestHelper) Sscanf(canBeEmpty bool, format string, a ...any)
 	fixedPartMatches := (format == "") || (line == format[:len(format)-2]) // -2 to remove the %d|%x
 	_, err := fmt.Sscanf(line, format, a...)
 	if err != nil && (!canBeEmpty || !fixedPartMatches) {
-		return errs.NewSerialisation("Error parsing line %d: %s", nistTest.LineNo, err)
+		return errs2.New("Error parsing line %d: %s", nistTest.LineNo, err)
 	}
 	return nil
 }

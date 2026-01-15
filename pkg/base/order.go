@@ -4,7 +4,7 @@ import (
 	"golang.org/x/exp/constraints"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
 
 type (
@@ -146,7 +146,7 @@ func Compare[E Comparable[E]](x, y E) Ordering {
 	if cmp, ok := any(x).(ct.Comparable[E]); ok {
 		out := ParseOrderingFromMasks(cmp.Compare(y))
 		if out == Incomparable {
-			panic(errs.NewValue("Incomparable"))
+			panic(ErrIsIncomparable)
 		}
 		return Ordering(out)
 	}
@@ -156,7 +156,7 @@ func Compare[E Comparable[E]](x, y E) Ordering {
 	}
 	out := PartialCompare(x, y)
 	if out == Incomparable {
-		panic(errs.NewValue("Incomparable"))
+		panic(ErrIsIncomparable)
 	}
 	return Ordering(out)
 }
@@ -174,3 +174,7 @@ func ParseOrderingFromMasks[F constraints.Integer](lt, eq, gt F) PartialOrdering
 	}
 	return Incomparable
 }
+
+var (
+	ErrIsIncomparable = errs2.New("elements are incomparable")
+)
