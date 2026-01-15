@@ -13,7 +13,7 @@ package compiler
 import (
 	"io"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
@@ -50,7 +50,7 @@ func Compile[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.Stat
 	case randfischlin.Name:
 		return randfischlin.NewCompiler(sigmaProtocol, prng)
 	default:
-		return nil, errs.NewArgument("unknown compiler name: %s", compilerName)
+		return nil, ErrUnsupportedType.WithMessage("unknown compiler name: %s", compilerName)
 	}
 }
 
@@ -63,3 +63,7 @@ func IsSupported(name Name) bool {
 		return false
 	}
 }
+
+var (
+	ErrUnsupportedType = errs2.New("unsupported type")
+)
