@@ -73,12 +73,12 @@ func dealCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 	total := uint(scheme.AccessStructure().Shareholders().Size())
 
 	tests := []struct {
-		name          string
-		secret        *feldman.Secret[FE]
-		prng          io.Reader
-		expectError   bool
-		errorContains string
-		verifyShares  bool
+		name         string
+		secret       *feldman.Secret[FE]
+		prng         io.Reader
+		expectError  bool
+		errorIs      error
+		verifyShares bool
 	}{
 		{
 			name:         "valid secret with constant 42",
@@ -109,25 +109,25 @@ func dealCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 			verifyShares: true,
 		},
 		{
-			name:          "nil secret",
-			secret:        nil,
-			prng:          crand.Reader,
-			expectError:   true,
-			errorContains: "could not deal shares",
+			name:        "nil secret",
+			secret:      nil,
+			prng:        crand.Reader,
+			expectError: true,
+			errorIs:     shamir.ErrIsNil,
 		},
 		{
-			name:          "nil prng",
-			secret:        fortyTwoSecret,
-			prng:          nil,
-			expectError:   true,
-			errorContains: "could not deal shares",
+			name:        "nil prng",
+			secret:      fortyTwoSecret,
+			prng:        nil,
+			expectError: true,
+			errorIs:     shamir.ErrIsNil,
 		},
 		{
-			name:          "both nil",
-			secret:        nil,
-			prng:          nil,
-			expectError:   true,
-			errorContains: "could not deal shares",
+			name:        "both nil",
+			secret:      nil,
+			prng:        nil,
+			expectError: true,
+			errorIs:     shamir.ErrIsNil,
 		},
 	}
 
@@ -138,8 +138,8 @@ func dealCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 
 			if tc.expectError {
 				require.Error(t, err)
-				if tc.errorContains != "" {
-					require.Contains(t, err.Error(), tc.errorContains)
+				if tc.errorIs != nil {
+					require.ErrorIs(t, err, tc.errorIs)
 				}
 				require.Nil(t, shares)
 				return
@@ -197,7 +197,7 @@ func dealCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[
 					insufficientShares := shareSlice[:threshold-1]
 					_, err = scheme.Reconstruct(insufficientShares...)
 					require.Error(t, err)
-					require.Contains(t, err.Error(), "could not reconstruct secret from shares")
+					require.ErrorIs(t, err, shamir.ErrFailed)
 				}
 
 				// Verify each share
@@ -221,7 +221,7 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 		name             string
 		prng             io.Reader
 		expectError      bool
-		errorContains    string
+		errorIs          error
 		verifyUniqueness bool
 		iterations       int
 	}{
@@ -240,11 +240,11 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 			iterations:       5,
 		},
 		{
-			name:          "nil prng",
-			prng:          nil,
-			expectError:   true,
-			errorContains: "could not deal random shares",
-			iterations:    1,
+			name:        "nil prng",
+			prng:        nil,
+			expectError: true,
+			errorIs:     feldman.ErrIsNil,
+			iterations:  1,
 		},
 		{
 			name:        "deterministic prng produces same secret",
@@ -256,7 +256,8 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 			name:        "short deterministic prng",
 			prng:        bytes.NewReader([]byte{1}),
 			expectError: true,
-			iterations:  1,
+			// Error comes from curves package (ErrRandomSample), not feldman
+			iterations: 1,
 		},
 	}
 
@@ -275,8 +276,8 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 
 				if tc.expectError {
 					require.Error(t, err)
-					if tc.errorContains != "" {
-						require.Contains(t, err.Error(), tc.errorContains)
+					if tc.errorIs != nil {
+						require.ErrorIs(t, err, tc.errorIs)
 					}
 					require.Nil(t, shares)
 					require.Nil(t, secret)
@@ -633,7 +634,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeField
 
 		err = scheme.Verify(tamperedShare, reference)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "verification")
+		require.ErrorIs(t, err, feldman.ErrVerification)
 	})
 
 	t.Run("ReconstructAndVerify fails with tampered share", func(t *testing.T) {
@@ -689,7 +690,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeField
 
 		err = scheme.Verify(mismatchedShare, reference)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "verification vector does not match")
+		require.ErrorIs(t, err, feldman.ErrVerification)
 	})
 }
 
@@ -1137,7 +1138,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEl
 
 		additiveShare, err := share.ToAdditive(qualifiedSet)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "is not a valid shareholder")
+		require.ErrorIs(t, err, shamir.ErrMembership)
 		require.Nil(t, additiveShare)
 	})
 
@@ -1281,7 +1282,7 @@ func TestToAdditiveEdgeCases(t *testing.T) {
 
 		_, err := sharing.NewMinimalQualifiedAccessStructure(singleId.Freeze())
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "must have at least 2 shareholders")
+		require.ErrorIs(t, err, sharing.ErrValue)
 	})
 
 	t.Run("share with modified value", func(t *testing.T) {
@@ -1520,7 +1521,7 @@ func TestLiftedShareAndReconstruction(t *testing.T) {
 		liftedShares := make(feldman.SharesInExponent[*k256.Point, *k256.Scalar], 0)
 		_, err := liftedShares.ReconstructAsAdditive()
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "no shares provided")
+		require.ErrorIs(t, err, feldman.ErrArgument)
 	})
 
 	t.Run("ToAdditive conversion", func(t *testing.T) {

@@ -14,6 +14,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pairable/bls12381"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/commitments"
 	pedcom "github.com/bronlabs/bron-crypto/pkg/commitments/pedersen"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/additive"
@@ -65,17 +66,17 @@ func TestSchemeCreation(t *testing.T) {
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		_, err := pedersen.NewScheme(key, 0, shareholders)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "could not create shamir scheme")
+		require.ErrorIs(t, err, shamir.ErrValue)
 
 		// Threshold of 1
 		_, err = pedersen.NewScheme(key, 1, shareholders)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "could not create shamir scheme")
+		require.ErrorIs(t, err, shamir.ErrValue)
 
 		// Threshold greater than total
 		_, err = pedersen.NewScheme(key, 6, shareholders)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "could not create shamir scheme")
+		require.ErrorIs(t, err, shamir.ErrValue)
 	})
 
 	t.Run("invalid total", func(t *testing.T) {
@@ -84,13 +85,13 @@ func TestSchemeCreation(t *testing.T) {
 		shareholders := sharing.NewOrdinalShareholderSet(0)
 		_, err := pedersen.NewScheme(key, 2, shareholders)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "could not create shamir scheme")
+		require.ErrorIs(t, err, shamir.ErrValue)
 
 		// Total of 1
 		shareholders = sharing.NewOrdinalShareholderSet(1)
 		_, err = pedersen.NewScheme(key, 2, shareholders)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "could not create shamir scheme")
+		require.ErrorIs(t, err, shamir.ErrValue)
 	})
 
 	t.Run("nil key", func(t *testing.T) {
@@ -98,7 +99,7 @@ func TestSchemeCreation(t *testing.T) {
 		shareholders := sharing.NewOrdinalShareholderSet(5)
 		_, err := pedersen.NewScheme[*k256.Point](nil, 2, shareholders)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "could not create pedersen scheme")
+		require.ErrorIs(t, err, pedcom.ErrInvalidArgument)
 	})
 }
 
@@ -157,12 +158,12 @@ func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 	total := uint(scheme.AccessStructure().Shareholders().Size())
 
 	tests := []struct {
-		name          string
-		secret        *pedersen.Secret[S]
-		prng          io.Reader
-		expectError   bool
-		errorContains string
-		verifyShares  bool
+		name         string
+		secret       *pedersen.Secret[S]
+		prng         io.Reader
+		expectError  bool
+		errorIs      error
+		verifyShares bool
 	}{
 		{
 			name:         "valid secret with constant 42",
@@ -193,25 +194,25 @@ func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 			verifyShares: true,
 		},
 		{
-			name:          "nil secret",
-			secret:        nil,
-			prng:          crand.Reader,
-			expectError:   true,
-			errorContains: "could not deal shares",
+			name:        "nil secret",
+			secret:      nil,
+			prng:        crand.Reader,
+			expectError: true,
+			errorIs:     pedersen.ErrIsNil,
 		},
 		{
-			name:          "nil prng",
-			secret:        fortyTwoSecret,
-			prng:          nil,
-			expectError:   true,
-			errorContains: "could not deal shares",
+			name:        "nil prng",
+			secret:      fortyTwoSecret,
+			prng:        nil,
+			expectError: true,
+			errorIs:     shamir.ErrIsNil,
 		},
 		{
-			name:          "both nil",
-			secret:        nil,
-			prng:          nil,
-			expectError:   true,
-			errorContains: "could not deal shares",
+			name:        "both nil",
+			secret:      nil,
+			prng:        nil,
+			expectError: true,
+			errorIs:     pedersen.ErrIsNil,
 		},
 	}
 
@@ -222,8 +223,8 @@ func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 
 			if tc.expectError {
 				require.Error(t, err)
-				if tc.errorContains != "" {
-					require.Contains(t, err.Error(), tc.errorContains)
+				if tc.errorIs != nil {
+					require.ErrorIs(t, err, tc.errorIs)
 				}
 				require.Nil(t, shares)
 				return
@@ -279,7 +280,7 @@ func dealCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 					insufficientShares := shareSlice[:threshold-1]
 					_, err = scheme.Reconstruct(insufficientShares...)
 					require.Error(t, err)
-					require.Contains(t, err.Error(), "could not reconstruct secret from shares")
+					require.ErrorIs(t, err, shamir.ErrFailed)
 				}
 
 				// Verify each share
@@ -303,7 +304,7 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 		name             string
 		prng             io.Reader
 		expectError      bool
-		errorContains    string
+		errorIs          error
 		verifyUniqueness bool
 		iterations       int
 	}{
@@ -322,11 +323,11 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 			iterations:       5,
 		},
 		{
-			name:          "nil prng",
-			prng:          nil,
-			expectError:   true,
-			errorContains: "prng is nil",
-			iterations:    1,
+			name:        "nil prng",
+			prng:        nil,
+			expectError: true,
+			errorIs:     pedersen.ErrIsNil,
+			iterations:  1,
 		},
 		{
 			name:        "deterministic prng produces same secret",
@@ -338,7 +339,8 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 			name:        "short deterministic prng",
 			prng:        bytes.NewReader([]byte{1}),
 			expectError: true,
-			iterations:  1,
+			// Error comes from curves package (ErrRandomSample), not pedersen
+			iterations: 1,
 		},
 	}
 
@@ -357,8 +359,8 @@ func dealRandomCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 
 				if tc.expectError {
 					require.Error(t, err)
-					if tc.errorContains != "" {
-						require.Contains(t, err.Error(), tc.errorContains)
+					if tc.errorIs != nil {
+						require.ErrorIs(t, err, tc.errorIs)
 					}
 					require.Nil(t, shares)
 					require.Nil(t, secret)
@@ -599,7 +601,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 
 		err = scheme.Verify(tamperedShare, reference)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "could not verify commitment")
+		require.ErrorIs(t, err, commitments.ErrVerificationFailed)
 	})
 
 	t.Run("tampered blinding factor fails verification", func(t *testing.T) {
@@ -623,7 +625,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 
 		err = scheme.Verify(tamperedShare, reference)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "could not verify commitment")
+		require.ErrorIs(t, err, commitments.ErrVerificationFailed)
 	})
 
 	t.Run("ReconstructAndVerify fails with tampered share", func(t *testing.T) {
@@ -672,7 +674,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 		share := shares.Shares().Values()[0]
 		err = scheme.Verify(share, differentReference)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "could not verify commitment")
+		require.ErrorIs(t, err, commitments.ErrVerificationFailed)
 	})
 
 	t.Run("nil verification vector", func(t *testing.T) {
@@ -692,7 +694,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 			scheme.AccessStructure(),
 		)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "blinding cannot be nil")
+		require.ErrorIs(t, err, pedersen.ErrIsNil)
 	})
 
 	t.Run("nil secret message", func(t *testing.T) {
@@ -705,7 +707,7 @@ func verificationCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldEl
 			scheme.AccessStructure(),
 		)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "secret cannot be nil")
+		require.ErrorIs(t, err, pedersen.ErrIsNil)
 	})
 }
 
@@ -1148,7 +1150,7 @@ func toAdditiveCases[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElem
 
 		additiveShare, err := share.ToAdditive(qualifiedSet)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed to convert Pedersen share to additive")
+		require.ErrorIs(t, err, shamir.ErrMembership)
 		require.Nil(t, additiveShare)
 	})
 
@@ -1299,7 +1301,7 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 		secret := pedersen.NewSecret(field.FromUint64(42))
 		shares, dealerFunc, err := scheme.DealAndRevealDealerFunc(secret, nil)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "could not deal secret shares")
+		require.ErrorIs(t, err, shamir.ErrIsNil)
 		require.Nil(t, shares)
 		require.Nil(t, dealerFunc)
 	})
@@ -1312,7 +1314,7 @@ func TestDealAndRevealDealerFunc(t *testing.T) {
 
 		shares, dealerFunc, err := scheme.DealAndRevealDealerFunc(nil, crand.Reader)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "secret is nil")
+		require.ErrorIs(t, err, pedersen.ErrIsNil)
 		require.Nil(t, shares)
 		require.Nil(t, dealerFunc)
 	})
@@ -1389,7 +1391,7 @@ func TestDealRandomAndRevealDealerFunc(t *testing.T) {
 
 		shares, secret, dealerFunc, err := scheme.DealRandomAndRevealDealerFunc(nil)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "prng is nil")
+		require.ErrorIs(t, err, pedersen.ErrIsNil)
 		require.Nil(t, shares)
 		require.Nil(t, secret)
 		require.Nil(t, dealerFunc)
@@ -1448,7 +1450,7 @@ func TestNewShare(t *testing.T) {
 			scheme.AccessStructure(),
 		)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "secret cannot be nil")
+		require.ErrorIs(t, err, pedersen.ErrIsNil)
 	})
 
 	t.Run("nil blinding witness", func(t *testing.T) {
@@ -1463,7 +1465,7 @@ func TestNewShare(t *testing.T) {
 			scheme.AccessStructure(),
 		)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "blinding cannot be nil")
+		require.ErrorIs(t, err, pedersen.ErrIsNil)
 	})
 
 	t.Run("invalid shareholder ID", func(t *testing.T) {
@@ -1483,7 +1485,7 @@ func TestNewShare(t *testing.T) {
 			scheme.AccessStructure(),
 		)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "is not a valid shareholder")
+		require.ErrorIs(t, err, pedersen.ErrMembership)
 	})
 
 	t.Run("nil access structure allowed", func(t *testing.T) {
@@ -1630,7 +1632,7 @@ func TestPedersenCommitmentProperties(t *testing.T) {
 		// Verification should fail
 		err = scheme.Verify(tamperedShare, reference)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "could not verify commitment")
+		require.ErrorIs(t, err, commitments.ErrVerificationFailed)
 	})
 
 	t.Run("homomorphic commitment property", func(t *testing.T) {

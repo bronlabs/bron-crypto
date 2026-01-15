@@ -56,12 +56,12 @@ func dealCases[E additive.GroupElement[E]](t *testing.T, scheme *additive.Scheme
 	total := uint(scheme.AccessStructure().Shareholders().Size())
 
 	tests := []struct {
-		name          string
-		secret        *additive.Secret[E]
-		prng          io.Reader
-		expectError   bool
-		errorContains string
-		verifyShares  bool
+		name         string
+		secret       *additive.Secret[E]
+		prng         io.Reader
+		expectError  bool
+		errorIs      error
+		verifyShares bool
 	}{
 		{
 			name:         "valid secret with constant 42",
@@ -92,25 +92,25 @@ func dealCases[E additive.GroupElement[E]](t *testing.T, scheme *additive.Scheme
 			verifyShares: true,
 		},
 		{
-			name:          "nil secret",
-			secret:        nil,
-			prng:          crand.Reader,
-			expectError:   true,
-			errorContains: "secret is nil",
+			name:        "nil secret",
+			secret:      nil,
+			prng:        crand.Reader,
+			expectError: true,
+			errorIs:     additive.ErrIsNil,
 		},
 		{
-			name:          "nil prng",
-			secret:        fortyTwoSecret,
-			prng:          nil,
-			expectError:   true,
-			errorContains: "prng is nil",
+			name:        "nil prng",
+			secret:      fortyTwoSecret,
+			prng:        nil,
+			expectError: true,
+			errorIs:     additive.ErrIsNil,
 		},
 		{
-			name:          "both nil",
-			secret:        nil,
-			prng:          nil,
-			expectError:   true,
-			errorContains: "prng is nil",
+			name:        "both nil",
+			secret:      nil,
+			prng:        nil,
+			expectError: true,
+			errorIs:     additive.ErrIsNil,
 		},
 		{
 			name:         "deterministic prng",
@@ -120,11 +120,11 @@ func dealCases[E additive.GroupElement[E]](t *testing.T, scheme *additive.Scheme
 			verifyShares: true,
 		},
 		{
-			name:          "short deterministic prng",
-			secret:        fortyTwoSecret,
-			prng:          bytes.NewReader([]byte{1}),
-			expectError:   true,
-			errorContains: "could not sample group element",
+			name:        "short deterministic prng",
+			secret:      fortyTwoSecret,
+			prng:        bytes.NewReader([]byte{1}),
+			expectError: true,
+			// Error comes from curves package (ErrRandomSample), not additive
 		},
 	}
 
@@ -134,8 +134,8 @@ func dealCases[E additive.GroupElement[E]](t *testing.T, scheme *additive.Scheme
 
 			if tc.expectError {
 				require.Error(t, err)
-				if tc.errorContains != "" {
-					require.Contains(t, err.Error(), tc.errorContains)
+				if tc.errorIs != nil {
+					require.ErrorIs(t, err, tc.errorIs)
 				}
 				require.Nil(t, shares)
 				return
@@ -178,7 +178,7 @@ func dealRandomCases[E additive.GroupElement[E]](t *testing.T, scheme *additive.
 		name             string
 		prng             io.Reader
 		expectError      bool
-		errorContains    string
+		errorIs          error
 		verifyUniqueness bool
 		iterations       int
 	}{
@@ -197,11 +197,11 @@ func dealRandomCases[E additive.GroupElement[E]](t *testing.T, scheme *additive.
 			iterations:       5,
 		},
 		{
-			name:          "nil prng",
-			prng:          nil,
-			expectError:   true,
-			errorContains: "prng is nil",
-			iterations:    1,
+			name:        "nil prng",
+			prng:        nil,
+			expectError: true,
+			errorIs:     additive.ErrIsNil,
+			iterations:  1,
 		},
 		{
 			name:        "deterministic prng produces same secret",
@@ -210,11 +210,11 @@ func dealRandomCases[E additive.GroupElement[E]](t *testing.T, scheme *additive.
 			iterations:  1,
 		},
 		{
-			name:          "short deterministic prng",
-			prng:          bytes.NewReader([]byte{1}),
-			expectError:   true,
-			errorContains: "could not sample group element",
-			iterations:    1,
+			name:        "short deterministic prng",
+			prng:        bytes.NewReader([]byte{1}),
+			expectError: true,
+			// Error comes from curves package (ErrRandomSample), not additive
+			iterations: 1,
 		},
 	}
 
@@ -232,8 +232,8 @@ func dealRandomCases[E additive.GroupElement[E]](t *testing.T, scheme *additive.
 
 				if tc.expectError {
 					require.Error(t, err)
-					if tc.errorContains != "" {
-						require.Contains(t, err.Error(), tc.errorContains)
+					if tc.errorIs != nil {
+						require.ErrorIs(t, err, tc.errorIs)
 					}
 					require.Nil(t, shares)
 					require.Nil(t, secret)
@@ -299,7 +299,7 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 		name           string
 		sharesProvider func() []*additive.Share[E]
 		expectError    bool
-		errorContains  string
+		errorIs        error
 		expectedSecret *additive.Secret[E]
 	}{
 		{
@@ -315,8 +315,8 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 			sharesProvider: func() []*additive.Share[E] {
 				return allShares[:total-1]
 			},
-			expectError:   true,
-			errorContains: "not authorized to reconstruct secret",
+			expectError: true,
+			errorIs:     additive.ErrFailed,
 		},
 		{
 			name: "missing multiple shares",
@@ -326,16 +326,16 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 				}
 				return allShares[:1]
 			},
-			expectError:   true,
-			errorContains: "not authorized to reconstruct secret",
+			expectError: true,
+			errorIs:     additive.ErrFailed,
 		},
 		{
 			name: "no shares",
 			sharesProvider: func() []*additive.Share[E] {
 				return []*additive.Share[E]{}
 			},
-			expectError:   true,
-			errorContains: "not authorized to reconstruct secret",
+			expectError: true,
+			errorIs:     additive.ErrFailed,
 		},
 		{
 			name: "nil share in list",
@@ -345,8 +345,8 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 				sharesWithNil[0] = nil
 				return sharesWithNil
 			},
-			expectError:   true,
-			errorContains: "could not collect IDs from shares",
+			expectError: true,
+			errorIs:     sharing.ErrIsNil,
 		},
 		{
 			name: "duplicate shares",
@@ -357,8 +357,8 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 				duplicated[total-1] = allShares[0]
 				return duplicated
 			},
-			expectError:   true,
-			errorContains: "not authorized to reconstruct secret",
+			expectError: true,
+			errorIs:     additive.ErrFailed,
 		},
 		{
 			name: "invalid share ID",
@@ -366,14 +366,14 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 				// Try to create an invalid share - this should fail
 				_, err := additive.NewShare(999, allShares[0].Value(), scheme.AccessStructure())
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "is not a valid shareholder")
+				require.ErrorIs(t, err, additive.ErrMembership)
 
 				// Since we can't create an invalid share (NewShare validates),
 				// we'll test with shares that don't form a complete set
 				return allShares[:1] // Only one share - not authorized
 			},
-			expectError:   true,
-			errorContains: "not authorized to reconstruct secret",
+			expectError: true,
+			errorIs:     additive.ErrFailed,
 		},
 	}
 
@@ -384,8 +384,8 @@ func reconstructCases[E additive.GroupElement[E]](t *testing.T, scheme *additive
 
 			if tc.expectError {
 				require.Error(t, err)
-				if tc.errorContains != "" {
-					require.Contains(t, err.Error(), tc.errorContains)
+				if tc.errorIs != nil {
+					require.ErrorIs(t, err, tc.errorIs)
 				}
 				require.Nil(t, reconstructed)
 				return
@@ -494,11 +494,11 @@ func shareValidationCases[E additive.GroupElement[E]](t *testing.T, scheme *addi
 	validShare, _ := shares.Shares().Get(1)
 
 	tests := []struct {
-		name          string
-		shareFunc     func(ac *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error)
-		accessStruct  *sharing.MinimalQualifiedAccessStructure
-		expectError   bool
-		errorContains string
+		name         string
+		shareFunc    func(ac *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error)
+		accessStruct *sharing.MinimalQualifiedAccessStructure
+		expectError  bool
+		errorIs      error
 	}{
 		{
 			name: "valid share",
@@ -514,18 +514,18 @@ func shareValidationCases[E additive.GroupElement[E]](t *testing.T, scheme *addi
 				// This would test share validation but we can't create a nil share
 				return nil, additive.ErrIsNil.WithMessage("share is nil")
 			},
-			accessStruct:  scheme.AccessStructure(),
-			expectError:   true,
-			errorContains: "share is nil",
+			accessStruct: scheme.AccessStructure(),
+			expectError:  true,
+			errorIs:      additive.ErrIsNil,
 		},
 		{
 			name: "invalid share ID",
 			shareFunc: func(ac *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error) {
 				return additive.NewShare(999, validShare.Value(), ac)
 			},
-			accessStruct:  scheme.AccessStructure(),
-			expectError:   true,
-			errorContains: "is not a valid shareholder",
+			accessStruct: scheme.AccessStructure(),
+			expectError:  true,
+			errorIs:      additive.ErrMembership,
 		},
 	}
 
@@ -534,8 +534,8 @@ func shareValidationCases[E additive.GroupElement[E]](t *testing.T, scheme *addi
 			share, err := tc.shareFunc(tc.accessStruct)
 			if tc.expectError {
 				require.Error(t, err)
-				if tc.errorContains != "" {
-					require.Contains(t, err.Error(), tc.errorContains)
+				if tc.errorIs != nil {
+					require.ErrorIs(t, err, tc.errorIs)
 				}
 				require.Nil(t, share)
 			} else {
@@ -703,7 +703,7 @@ func TestNewScheme(t *testing.T) {
 	t.Run("nil identities", func(t *testing.T) {
 		scheme, err := additive.NewScheme(field, nil)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "identities is nil")
+		require.ErrorIs(t, err, additive.ErrIsNil)
 		require.Nil(t, scheme)
 	})
 
@@ -711,7 +711,7 @@ func TestNewScheme(t *testing.T) {
 		identities := sharing.NewOrdinalShareholderSet(5)
 		scheme, err := additive.NewScheme[*k256.Scalar](nil, identities)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "group is nil")
+		require.ErrorIs(t, err, additive.ErrIsNil)
 		require.Nil(t, scheme)
 	})
 
@@ -720,7 +720,7 @@ func TestNewScheme(t *testing.T) {
 		singleId.Add(sharing.ID(1))
 		scheme, err := additive.NewScheme(field, singleId.Freeze())
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "could not create access structure")
+		require.ErrorIs(t, err, sharing.ErrValue)
 		require.Nil(t, scheme)
 	})
 
