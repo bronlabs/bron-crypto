@@ -19,10 +19,21 @@ const (
 )
 
 var (
-	Unwrap = errors.Unwrap
-	Is     = errors.Is
-	As     = errors.As
+	Is = errors.Is
+	As = errors.As
 )
+
+func Unwrap(err error) []error {
+	//nolint:errorlint // internal error handling
+	switch x := err.(type) {
+	case interface{ Unwrap() error }:
+		return []error{x.Unwrap()}
+	case interface{ Unwrap() []error }:
+		return x.Unwrap()
+	}
+
+	return nil
+}
 
 type Error interface {
 	error
@@ -102,7 +113,7 @@ func HasTag(err error, tag string) (any, bool) {
 		}
 	}
 
-	// Recurse into wrapped errors (similar to errors.Is/errors.As behavior)
+	// Recurse into wrapped errors (similar to errors.Is/errors.As behaviour)
 	//nolint:errorlint // internal error library
 	if wrapped, ok := err.(wrapsMultipleErrors); ok {
 		for _, child := range wrapped.Unwrap() {
@@ -270,7 +281,7 @@ func (e *errorImpl) Format(s fmt.State, verb rune) {
 			tags, err := json.Marshal(e.Tags())
 			if err == nil {
 				_, _ = io.WriteString(s, tagsPrefix)
-				_, _ = io.Writer.Write(s, tags)
+				_, _ = io.Writer.Write(s, tags) //nolint:gocritic // false positive
 				_, _ = io.WriteString(s, "\n")
 			}
 		}
