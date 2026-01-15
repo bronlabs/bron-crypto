@@ -27,10 +27,7 @@ func InterpolateAt[FE algebra.FiniteFieldElement[FE]](nodes, values []FE, at FE)
 }
 
 func InterpolateInExponentAt[C algebra.ModuleElement[C, S], S algebra.FiniteFieldElement[S]](
-	module interface {
-		algebra.Module[C, S]
-		algebra.FiniteStructure[C]
-	},
+	module algebra.FiniteModule[C, S],
 	nodes []S,
 	values []C,
 	at S,

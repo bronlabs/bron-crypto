@@ -32,6 +32,8 @@ type (
 
 	MultiplicativeModule[ME crtp.MultiplicativeModuleElement[ME, S], S crtp.RingElement[S]]        crtp.MultiplicativeModule[ME, S]
 	MultiplicativeModuleElement[ME crtp.MultiplicativeModuleElement[ME, S], S crtp.RingElement[S]] crtp.MultiplicativeModuleElement[ME, S]
+
+	FiniteModule[ME crtp.ModuleElement[ME, S], S crtp.RingElement[S]] = crtp.FiniteModule[ME, S]
 )
 
 type (

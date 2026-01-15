@@ -88,6 +88,11 @@ type MultiplicativeModuleElement[ME, S any] interface {
 	MultiplicativeSemiModuleElement[ME, S]
 }
 
+type FiniteModule[ME, S any] interface {
+	Module[ME, S]
+	FiniteStructure[ME]
+}
+
 // ****************** Vector Space.
 
 type VectorSpace[V, S any] Module[V, S]
@@ -148,7 +153,6 @@ type ModuleValuedPolynomial[MP, P, C, S any] interface {
 type PolynomialRing[P, S any] interface {
 	UnivariatePolynomialLikeStructure[P, S, S]
 	Algebra[P, S]
-	AdditiveModule[P, S]
 	EuclideanDomain[P]
 	RandomPolynomial(degree int, prng io.Reader) (P, error)
 	RandomPolynomialWithConstantTerm(degree int, constantTerm S, prng io.Reader) (P, error)
@@ -157,7 +161,6 @@ type PolynomialRing[P, S any] interface {
 type Polynomial[P, S any] interface {
 	UnivariatePolynomialLike[P, S, S, Ring[S], Ring[S]]
 	AlgebraElement[P, S]
-	AdditiveModuleElement[P, S]
 	EuclideanDomainElement[P]
 }
 

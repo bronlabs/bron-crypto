@@ -1,6 +1,7 @@
 package polynomials
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
 // interface compliance
@@ -32,10 +34,10 @@ func LiftPolynomial[ME algebra.ModuleElement[ME, RE], RE algebra.RingElement[RE]
 }
 
 type PolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]] struct {
-	module algebra.Module[ME, S]
+	module algebra.FiniteModule[ME, S]
 }
 
-func NewPolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]](module algebra.Module[ME, S]) *PolynomialModule[ME, S] {
+func NewPolynomialModule[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]](module algebra.FiniteModule[ME, S]) *PolynomialModule[ME, S] {
 	return &PolynomialModule[ME, S]{module: module}
 }
 
@@ -59,11 +61,48 @@ func (m *PolynomialModule[ME, S]) Name() string {
 }
 
 func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomial(degree int, prng io.Reader) (*ModuleValuedPolynomial[ME, S], error) {
-	panic("implement me")
+	if degree < 0 {
+		return nil, errs.NewFailed("degree cannot be negative")
+	}
+	finiteModule := algebra.StructureMustBeAs[algebra.FiniteModule[ME, S]](m.module)
+	constantTerm, err := finiteModule.Random(prng)
+	if err != nil {
+		return nil, errs.WrapRandomSample(err, "failed to sample random constant term")
+	}
+	poly, err := m.RandomModuleValuedPolynomialWithConstantTerm(degree, constantTerm, prng)
+	if err != nil {
+		return nil, errs.WrapFailed(err, "could not create random polynomial with constant term")
+	}
+	return poly, nil
 }
 
 func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomialWithConstantTerm(degree int, constantTerm ME, prng io.Reader) (*ModuleValuedPolynomial[ME, S], error) {
-	panic("implement me")
+	if degree < 0 {
+		return nil, errs.NewFailed("degree cannot be negative")
+	}
+
+	finiteModule := algebra.StructureMustBeAs[algebra.FiniteModule[ME, S]](m.module)
+	coeffs := make([]ME, degree+1)
+	coeffs[0] = constantTerm.Clone()
+	if degree == 0 {
+		return &ModuleValuedPolynomial[ME, S]{coeffs: coeffs}, nil
+	}
+	for i := 1; i < degree; i++ {
+		var err error
+		coeffs[i], err = finiteModule.Random(prng)
+		if err != nil {
+			return nil, errs.WrapRandomSample(err, "failed to sample random coefficient")
+		}
+	}
+	leading, err := algebrautils.RandomNonIdentity(finiteModule, prng)
+	if err != nil {
+		return nil, errs.WrapRandomSample(err, "failed to sample random leading coefficient")
+	}
+	coeffs[degree] = leading
+
+	return &ModuleValuedPolynomial[ME, S]{
+		coeffs: coeffs,
+	}, nil
 }
 
 func (m *PolynomialModule[ME, S]) Order() algebra.Cardinal {
@@ -139,12 +178,15 @@ func (p *ModuleValuedPolynomial[ME, S]) Structure() algebra.Structure[*ModuleVal
 	}
 }
 
-func (p *ModuleValuedPolynomial[ME, S]) CoefficientStructure() algebra.Module[ME, S] {
-	panic("implement me")
+func (p *ModuleValuedPolynomial[ME, S]) CoefficientStructure() algebra.FiniteModule[ME, S] {
+	if len(p.coeffs) == 0 {
+		panic("internal error: empty coeffs")
+	}
+	return algebra.StructureMustBeAs[algebra.FiniteModule[ME, S]](p.coeffs[0].Structure())
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) ScalarStructure() algebra.Ring[S] {
-	panic("implement me")
+	return p.CoefficientStructure().ScalarStructure()
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) ConstantTerm() ME {
@@ -152,23 +194,58 @@ func (p *ModuleValuedPolynomial[ME, S]) ConstantTerm() ME {
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) IsConstant() bool {
-	panic("implement me")
+	return p.Degree() <= 0
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) IsMonic() bool {
-	panic("implement me")
+	return p.LeadingCoefficient().
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) LeadingCoefficient() ME {
-	panic("implement me")
+	deg := p.Degree()
+	if deg < 0 {
+		return p.CoefficientStructure().OpIdentity()
+	}
+	return p.coeffs[deg]
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) PolynomialOp(poly *Polynomial[S]) *ModuleValuedPolynomial[ME, S] {
-	panic("implement me")
+	if len(p.coeffs) == 0 || len(poly.coeffs) == 0 {
+		return p.Clone()
+	}
+	module := p.CoefficientStructure()
+	coeffs := make([]ME, len(p.coeffs)+len(poly.coeffs)-1)
+	for i := range coeffs {
+		coeffs[i] = module.OpIdentity()
+	}
+	for i := range p.coeffs {
+		for j := range poly.coeffs {
+			coeffs[i+j] = coeffs[i+j].Op(p.coeffs[i].ScalarOp(poly.coeffs[j]))
+		}
+	}
+	return &ModuleValuedPolynomial[ME, S]{
+		coeffs: coeffs,
+	}
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) Derivative() *ModuleValuedPolynomial[ME, S] {
-	panic("implement me")
+	if len(p.coeffs) <= 1 {
+		return &ModuleValuedPolynomial[ME, S]{
+			coeffs: []ME{p.CoefficientStructure().OpIdentity()},
+		}
+	}
+	ring := p.ScalarStructure()
+	derivCoeffs := make([]ME, len(p.coeffs)-1)
+	for i := 1; i < len(p.coeffs); i++ {
+		rb, err := ring.FromBytes(binary.BigEndian.AppendUint64(nil, uint64(i)))
+		if err != nil {
+			panic("internal error: could not create ring element from uint64")
+		}
+		derivCoeffs[i-1] = p.coeffs[i].ScalarOp(rb)
+	}
+	return &ModuleValuedPolynomial[ME, S]{
+		coeffs: derivCoeffs,
+	}
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) Bytes() []byte {
