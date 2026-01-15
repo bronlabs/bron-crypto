@@ -58,9 +58,13 @@ func (m *PolynomialModule[ME, S]) Name() string {
 	return fmt.Sprintf("PolynomialModule[%s, %s]", m.module.Name(), m.module.ScalarStructure().Name())
 }
 
-func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomial(degree int, prng io.Reader) (*ModuleValuedPolynomial[ME, S], error)
+func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomial(degree int, prng io.Reader) (*ModuleValuedPolynomial[ME, S], error) {
+	panic("implement me")
+}
 
-func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomialWithConstantTerm(degree int, constantTerm ME, prng io.Reader) (*ModuleValuedPolynomial[ME, S], error)
+func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomialWithConstantTerm(degree int, constantTerm ME, prng io.Reader) (*ModuleValuedPolynomial[ME, S], error) {
+	panic("implement me")
+}
 
 func (m *PolynomialModule[ME, S]) Order() algebra.Cardinal {
 	return cardinal.Infinite()
@@ -135,23 +139,37 @@ func (p *ModuleValuedPolynomial[ME, S]) Structure() algebra.Structure[*ModuleVal
 	}
 }
 
-func (p *ModuleValuedPolynomial[ME, S]) CoefficientStructure() algebra.Module[ME, S]
+func (p *ModuleValuedPolynomial[ME, S]) CoefficientStructure() algebra.Module[ME, S] {
+	panic("implement me")
+}
 
-func (p *ModuleValuedPolynomial[ME, S]) ScalarStructure() algebra.Ring[S]
+func (p *ModuleValuedPolynomial[ME, S]) ScalarStructure() algebra.Ring[S] {
+	panic("implement me")
+}
 
 func (p *ModuleValuedPolynomial[ME, S]) ConstantTerm() ME {
 	return p.coeffs[0]
 }
 
-func (p *ModuleValuedPolynomial[ME, S]) IsConstant() bool
+func (p *ModuleValuedPolynomial[ME, S]) IsConstant() bool {
+	panic("implement me")
+}
 
-func (p *ModuleValuedPolynomial[ME, S]) IsMonic() bool
+func (p *ModuleValuedPolynomial[ME, S]) IsMonic() bool {
+	panic("implement me")
+}
 
-func (p *ModuleValuedPolynomial[ME, S]) LeadingCoefficient() ME
+func (p *ModuleValuedPolynomial[ME, S]) LeadingCoefficient() ME {
+	panic("implement me")
+}
 
-func (p *ModuleValuedPolynomial[ME, S]) PolynomialOp(poly *Polynomial[S]) *ModuleValuedPolynomial[ME, S]
+func (p *ModuleValuedPolynomial[ME, S]) PolynomialOp(poly *Polynomial[S]) *ModuleValuedPolynomial[ME, S] {
+	panic("implement me")
+}
 
-func (p *ModuleValuedPolynomial[ME, S]) Derivative() *ModuleValuedPolynomial[ME, S]
+func (p *ModuleValuedPolynomial[ME, S]) Derivative() *ModuleValuedPolynomial[ME, S] {
+	panic("implement me")
+}
 
 func (p *ModuleValuedPolynomial[ME, S]) Bytes() []byte {
 	var out []byte

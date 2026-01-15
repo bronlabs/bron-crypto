@@ -114,7 +114,7 @@ func (d *Scheme[FE]) DealAndRevealDealerFunc(secret *Secret[FE], prng io.Reader)
 	if prng == nil {
 		return nil, nil, errs.NewIsNil("prng is nil")
 	}
-	poly, err := d.polyRing.NewRandomWithConstantTerm(int(d.ac.Threshold()-1), secret.v, prng)
+	poly, err := d.polyRing.RandomPolynomialWithConstantTerm(int(d.ac.Threshold()-1), secret.v, prng)
 	if err != nil {
 		return nil, nil, errs.WrapFailed(err, "could not generate random polynomial")
 	}
