@@ -80,6 +80,10 @@ func (zn *ZMod) Modulus() *NatPlus {
 	return zn.n
 }
 
+func (zn *ZMod) ModulusCT() *numct.Modulus {
+	return zn.n.ModulusCT()
+}
+
 // ElementSize returns the size in bytes of an element.
 func (zn *ZMod) ElementSize() int {
 	return int(zn.n.AnnouncedLen())
