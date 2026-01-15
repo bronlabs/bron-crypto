@@ -3,7 +3,7 @@ package sharing
 import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
@@ -29,16 +29,16 @@ type thresholdAccessStructureDTO struct {
 // Returns an error if t < 2, t > |ps|, ps is nil, or ps contains 0.
 func NewThresholdAccessStructure(t uint, ps ds.Set[ID]) (*ThresholdAccessStructure, error) {
 	if ps == nil {
-		return nil, errs.NewIsNil("party set is nil")
+		return nil, ErrIsNil.WithMessage("party set is nil")
 	}
 	if ps.Contains(0) {
-		return nil, errs.NewMembership("party set cannot contain 0")
+		return nil, ErrMembership.WithMessage("party set cannot contain 0")
 	}
 	if t < 2 {
-		return nil, errs.NewValue("threshold cannot be less than 2")
+		return nil, ErrValue.WithMessage("threshold cannot be less than 2")
 	}
 	if t > uint(ps.Size()) {
-		return nil, errs.NewValue("total cannot be less than threshold")
+		return nil, ErrValue.WithMessage("total cannot be less than threshold")
 	}
 	return &ThresholdAccessStructure{
 		t:  t,
@@ -101,7 +101,7 @@ func (a *ThresholdAccessStructure) MarshalCBOR() ([]byte, error) {
 
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal AccessStructure")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal AccessStructure")
 	}
 	return data, nil
 }

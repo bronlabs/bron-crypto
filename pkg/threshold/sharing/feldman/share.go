@@ -5,7 +5,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/iterutils"
@@ -23,7 +23,7 @@ type Share[FE algebra.PrimeFieldElement[FE]] = shamir.Share[FE]
 func NewShare[FE algebra.PrimeFieldElement[FE]](id sharing.ID, v FE, ac *sharing.ThresholdAccessStructure) (*Share[FE], error) {
 	s, err := shamir.NewShare(id, v, ac)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create Feldman share")
+		return nil, errs2.Wrap(err).WithMessage("failed to create Feldman share")
 	}
 	return s, nil
 }
@@ -44,7 +44,7 @@ type liftedShareDTO[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldEle
 // NewLiftedShare creates a new lifted share with the given ID and group element value.
 func NewLiftedShare[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldElement[FE]](id sharing.ID, v E) (*LiftedShare[E, FE], error) {
 	if utils.IsNil(v) {
-		return nil, errs.NewIsNil("value is nil")
+		return nil, ErrIsNil.WithMessage("value is nil")
 	}
 
 	return &LiftedShare[E, FE]{
@@ -69,25 +69,25 @@ func (s *LiftedShare[E, FE]) Value() E {
 // The resulting additive shares can be multiplied together to reconstruct g^s.
 func (s *LiftedShare[E, FE]) ToAdditive(qualifiedSet *sharing.MinimalQualifiedAccessStructure) (*additive.Share[E], error) {
 	if qualifiedSet == nil {
-		return nil, errs.NewIsNil("qualified set is nil")
+		return nil, ErrIsNil.WithMessage("qualified set is nil")
 	}
 	if !qualifiedSet.Shareholders().Contains(s.id) {
-		return nil, errs.NewMembership("share ID %d is not a valid shareholder", s.id)
+		return nil, ErrMembership.WithMessage("share ID %d is not a valid shareholder", s.id)
 	}
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, FE]](s.v.Structure())
 	sf := algebra.StructureMustBeAs[algebra.PrimeField[FE]](group.ScalarStructure())
 	lambdas, err := shamir.LagrangeCoefficients(sf, qualifiedSet.Shareholders().List()...)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not compute Lagrange coefficients")
+		return nil, errs2.Wrap(err).WithMessage("could not compute Lagrange coefficients")
 	}
 	lambda_i, exists := lambdas.Get(s.id)
 	if !exists {
-		return nil, errs.NewMembership("share ID %d is not a valid shareholder", s.id)
+		return nil, ErrMembership.WithMessage("share ID %d is not a valid shareholder", s.id)
 	}
 	converted := s.v.ScalarOp(lambda_i)
 	additiveShare, err := additive.NewShare(s.id, converted, qualifiedSet)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to convert Feldman share to additive")
+		return nil, errs2.Wrap(err).WithMessage("failed to convert Feldman share to additive")
 	}
 	return additiveShare, nil
 }
@@ -99,7 +99,7 @@ func (s *LiftedShare[E, FE]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal Feldman LiftedShare")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal Feldman LiftedShare")
 	}
 	return data, nil
 }
@@ -127,7 +127,7 @@ type SharesInExponent[E algebra.PrimeGroupElement[E, FE], FE algebra.PrimeFieldE
 // g^s = ∏_i (g^{f(i)})^{λ_i} = g^{∑_i λ_i·f(i)} = g^{f(0)} = g^s.
 func (s SharesInExponent[E, FE]) ReconstructAsAdditive() (E, error) {
 	if len(s) == 0 {
-		return *new(E), errs.NewArgument("no shares provided for reconstruction")
+		return *new(E), ErrArgument.WithMessage("no shares provided for reconstruction")
 	}
 
 	group := algebra.StructureMustBeAs[algebra.PrimeGroup[E, FE]](s[0].v.Structure())
@@ -143,31 +143,31 @@ func (s SharesInExponent[E, FE]) ReconstructAsAdditive() (E, error) {
 		).Freeze(),
 	)
 	if err != nil {
-		return *new(E), errs.WrapFailed(err, "could not create qualified set from shares")
+		return *new(E), errs2.Wrap(err).WithMessage("could not create qualified set from shares")
 	}
 	lambdas, err := shamir.LagrangeCoefficients(sf, qualifiedSet.Shareholders().List()...)
 	if err != nil {
-		return *new(E), errs.WrapFailed(err, "could not compute Lagrange coefficients")
+		return *new(E), errs2.Wrap(err).WithMessage("could not compute Lagrange coefficients")
 	}
 	converted := make([]*additive.Share[E], 0, len(s))
 	for _, share := range s {
 		lambda_i, exists := lambdas.Get(share.ID())
 		if !exists {
-			return *new(E), errs.NewMembership("share ID %d is not a valid shareholder", share.ID())
+			return *new(E), ErrMembership.WithMessage("share ID %d is not a valid shareholder", share.ID())
 		}
 		si, err := additive.NewShare(share.ID(), share.v.ScalarOp(lambda_i), nil)
 		if err != nil {
-			return *new(E), errs.WrapFailed(err, "could not create additive share from share in exponent")
+			return *new(E), errs2.Wrap(err).WithMessage("could not create additive share from share in exponent")
 		}
 		converted = append(converted, si)
 	}
 	additiveScheme, err := additive.NewScheme(group, qualifiedSet.Shareholders())
 	if err != nil {
-		return *new(E), errs.WrapFailed(err, "could not create additive scheme")
+		return *new(E), errs2.Wrap(err).WithMessage("could not create additive scheme")
 	}
 	reconstructed, err := additiveScheme.Reconstruct(converted...)
 	if err != nil {
-		return *new(E), errs.WrapFailed(err, "could not reconstruct additive share")
+		return *new(E), errs2.Wrap(err).WithMessage("could not reconstruct additive share")
 	}
 	return reconstructed.Value(), nil
 }

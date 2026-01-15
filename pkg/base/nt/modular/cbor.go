@@ -4,7 +4,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
@@ -38,7 +38,7 @@ func (s *SimpleModulus) MarshalCBOR() ([]byte, error) {
 	dto := &simpleDTO{Modulus: s.m}
 	data, err := serde.MarshalCBORTagged(dto, SimpleModulusTag)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal SimpleModulus")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal SimpleModulus")
 	}
 	return data, nil
 }
@@ -64,7 +64,7 @@ func (o *OddPrimeFactors) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBORTagged(dto, OddPrimeFactorsTag)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal OddPrimeFactors")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal OddPrimeFactors")
 	}
 	return data, nil
 }
@@ -76,7 +76,7 @@ func (o *OddPrimeFactors) UnmarshalCBOR(data []byte) error {
 	}
 	out, ok := NewOddPrimeFactors(dto.P, dto.Q)
 	if ok == ct.False {
-		return errs.NewValue("failed to create OddPrimeFactors")
+		return ErrFailed.WithMessage("failed to create OddPrimeFactors")
 	}
 	*o = *out
 	return nil
@@ -89,7 +89,7 @@ func (m *OddPrimeSquareFactors) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBORTagged(dto, OddPrimeSquareFactorsTag)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal OddPrimeSquareFactors")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal OddPrimeSquareFactors")
 	}
 	return data, nil
 }
@@ -101,8 +101,12 @@ func (m *OddPrimeSquareFactors) UnmarshalCBOR(data []byte) error {
 	}
 	out, ok := NewOddPrimeSquareFactors(dto.P, dto.Q)
 	if ok == ct.False {
-		return errs.NewValue("failed to create OddPrimeSquareFactors")
+		return ErrFailed.WithMessage("failed to create OddPrimeSquareFactors")
 	}
 	*m = *out
 	return nil
 }
+
+var (
+	ErrFailed = errs2.New("failed")
+)

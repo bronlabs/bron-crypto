@@ -18,7 +18,7 @@ import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 )
@@ -40,14 +40,14 @@ const Name sharing.Name = "Additive Secret Sharing Scheme"
 //   - shareholders: Set of shareholder IDs who will receive shares (all required for reconstruction)
 func NewScheme[E GroupElement[E]](g Group[E], shareholders ds.Set[sharing.ID]) (*Scheme[E], error) {
 	if shareholders == nil {
-		return nil, errs.NewIsNil("identities is nil")
+		return nil, ErrIsNil.WithMessage("identities is nil")
 	}
 	if g == nil {
-		return nil, errs.NewIsNil("group is nil")
+		return nil, ErrIsNil.WithMessage("group is nil")
 	}
 	accessStructure, err := sharing.NewMinimalQualifiedAccessStructure(shareholders)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create access structure")
+		return nil, errs2.Wrap(err).WithMessage("could not create access structure")
 	}
 	return &Scheme[E]{
 		g:  g,
@@ -74,16 +74,16 @@ func (d *Scheme[E]) AccessStructure() *sharing.MinimalQualifiedAccessStructure {
 // DealRandom generates shares for a randomly sampled secret.
 func (d *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], *Secret[E], error) {
 	if prng == nil {
-		return nil, nil, errs.NewIsNil("prng is nil")
+		return nil, nil, ErrIsNil.WithMessage("prng is nil")
 	}
 	value, err := d.g.Random(prng)
 	if err != nil {
-		return nil, nil, errs.WrapRandomSample(err, "could not sample group element")
+		return nil, nil, errs2.Wrap(err).WithMessage("could not sample group element")
 	}
 	secret := NewSecret(value)
 	shares, err := d.Deal(secret, prng)
 	if err != nil {
-		return nil, nil, errs.WrapFailed(err, "could not create shares")
+		return nil, nil, errs2.Wrap(err).WithMessage("could not create shares")
 	}
 	return shares, secret, nil
 }
@@ -92,10 +92,10 @@ func (d *Scheme[E]) DealRandom(prng io.Reader) (*DealerOutput[E], *Secret[E], er
 // and the final share is computed to ensure s_1 + s_2 + ... + s_n = s.
 func (d *Scheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E], error) {
 	if prng == nil {
-		return nil, errs.NewIsNil("prng is nil")
+		return nil, ErrIsNil.WithMessage("prng is nil")
 	}
 	if secret == nil {
-		return nil, errs.NewIsNil("secret is nil")
+		return nil, ErrIsNil.WithMessage("secret is nil")
 	}
 	participantsList := d.ac.Shareholders().List()
 	shares := hashmap.NewComparable[sharing.ID, *Share[E]]()
@@ -104,7 +104,7 @@ func (d *Scheme[E]) Deal(secret *Secret[E], prng io.Reader) (*DealerOutput[E], e
 	for _, id := range participantsList[1:] {
 		v, err := d.g.Random(prng)
 		if err != nil {
-			return nil, errs.WrapRandomSample(err, "could not sample group element")
+			return nil, errs2.Wrap(err).WithMessage("could not sample group element")
 		}
 		partialSum = partialSum.Op(v)
 		shares.Put(id, &Share[E]{
@@ -128,7 +128,7 @@ func (d *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 	// First check for nil shares before creating hashset
 	ids, err := sharing.CollectIDs(shares...)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not collect IDs from shares")
+		return nil, errs2.Wrap(err).WithMessage("could not collect IDs from shares")
 	}
 
 	// Filter out nil shares
@@ -143,7 +143,7 @@ func (d *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 	sharesSet := hashset.NewHashable(validShares...).List()
 
 	if !d.ac.IsAuthorized(ids...) {
-		return nil, errs.NewFailed("not authorized to reconstruct secret with IDs %v", ids)
+		return nil, ErrFailed.WithMessage("not authorized to reconstruct secret with IDs %v", ids)
 	}
 	reconstructed := algebrautils.Sum(sharesSet[0], sharesSet[1:]...)
 	return &Secret[E]{v: reconstructed.v}, nil
@@ -153,7 +153,7 @@ func (d *Scheme[E]) Reconstruct(shares ...*Share[E]) (*Secret[E], error) {
 // If an access structure is provided, validates that the ID is a valid shareholder.
 func NewShare[E GroupElement[E]](id sharing.ID, v E, ac *sharing.MinimalQualifiedAccessStructure) (*Share[E], error) {
 	if ac != nil && !ac.Shareholders().Contains(id) {
-		return nil, errs.NewMembership("share ID %d is not a valid shareholder", id)
+		return nil, ErrMembership.WithMessage("share ID %d is not a valid shareholder", id)
 	}
 	return &Share[E]{
 		id: id,

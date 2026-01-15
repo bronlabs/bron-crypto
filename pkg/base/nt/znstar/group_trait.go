@@ -7,7 +7,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
@@ -82,13 +81,18 @@ func (g *UnitGroupTrait[A, W, WT]) Hash(input []byte) (W, error) {
 			return nil, errs2.Wrap(err)
 		}
 		if ok := x.SetBytes(digest); ok == ct.False {
-			return nil, errs2.New("failed to interpret hash digest as Nat")
+			return nil, ErrFailed.WithMessage("failed to interpret hash digest as Nat")
 		}
 		// Perform modular reduction using the modulus from n
-		g.zMod.Modulus().ModulusCT().Mod(&v, &x)
+		g.zMod.ModulusCT().Mod(&v, &x)
 
-		if g.zMod.Modulus().ModulusCT().Nat().Coprime(&v) == ct.True {
-			uv, err := num.NewUintGivenModulus(&v, g.zMod.Modulus().ModulusCT())
+		vNat, err := num.N().FromNatCT(&v)
+		if err != nil {
+			return nil, errs2.Wrap(err)
+		}
+
+		if g.zMod.Modulus().Nat().Coprime(vNat) {
+			uv, err := g.zMod.FromNat(vNat)
 			if err != nil {
 				return nil, errs2.Wrap(err)
 			}
@@ -117,47 +121,47 @@ func (g *UnitGroupTrait[A, W, WT]) WideElementSize() int {
 
 func (g *UnitGroupTrait[A, W, WT]) FromNatCT(input *numct.Nat) (W, error) {
 	if input == nil {
-		return nil, errs.NewValue("input must not be nil")
+		return nil, ErrIsNil.WithMessage("input must not be nil")
 	}
 	elem, err := g.zMod.FromNatCT(input)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create element from nat")
+		return nil, errs2.Wrap(err).WithMessage("failed to create element from nat")
 	}
 	var out WT
 	W(&out).set(elem, g.arith, g.n)
 	if !W(&out).Value().Lift().Coprime(g.Modulus().Lift()) {
-		return nil, errs.NewValue("input is not a unit")
+		return nil, ErrValue.WithMessage("input is not a unit")
 	}
 	return W(&out), nil
 }
 
 func (g *UnitGroupTrait[A, W, WT]) FromUint(input *num.Uint) (W, error) {
 	if input == nil {
-		return nil, errs.NewValue("input must not be nil")
+		return nil, ErrIsNil.WithMessage("input must not be nil")
 	}
 	if !g.Modulus().Equal(input.Modulus()) {
-		return nil, errs.NewValue("input is not in the same modulus")
+		return nil, ErrValue.WithMessage("input is not in the same modulus")
 	}
 	var out WT
 	W(&out).set(input.Clone(), g.arith, g.n)
 	if !W(&out).Value().Lift().Coprime(g.Modulus().Lift()) {
-		return nil, errs.NewValue("input is not a unit")
+		return nil, ErrValue.WithMessage("input is not a unit")
 	}
 	return W(&out), nil
 }
 
 func (g *UnitGroupTrait[A, W, WT]) FromBytes(input []byte) (W, error) {
 	if len(input) == 0 {
-		return nil, errs.NewValue("input must not be empty")
+		return nil, ErrIsNil.WithMessage("input must not be empty")
 	}
 	v, err := g.zMod.FromBytes(input)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create unit from bytes")
+		return nil, errs2.Wrap(err).WithMessage("failed to create unit from bytes")
 	}
 	var out WT
 	W(&out).set(v, g.arith, g.n)
 	if !W(&out).Value().Lift().Coprime(g.Modulus().Lift()) {
-		return nil, errs.NewValue("input is not a unit")
+		return nil, ErrValue.WithMessage("input is not a unit")
 	}
 	return W(&out), nil
 }
@@ -165,12 +169,12 @@ func (g *UnitGroupTrait[A, W, WT]) FromBytes(input []byte) (W, error) {
 func (g *UnitGroupTrait[A, W, WT]) FromCardinal(input cardinal.Cardinal) (W, error) {
 	elem, err := g.zMod.FromCardinal(input)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create element from cardinal")
+		return nil, errs2.Wrap(err).WithMessage("failed to create element from cardinal")
 	}
 	var out WT
 	W(&out).set(elem, g.arith, g.n)
 	if !W(&out).Value().Lift().Coprime(g.Modulus().Lift()) {
-		return nil, errs.NewValue("input is not a unit")
+		return nil, ErrValue.WithMessage("input is not a unit")
 	}
 	return W(&out), nil
 }
@@ -178,12 +182,12 @@ func (g *UnitGroupTrait[A, W, WT]) FromCardinal(input cardinal.Cardinal) (W, err
 func (g *UnitGroupTrait[A, W, WT]) FromUint64(input uint64) (W, error) {
 	elem, err := g.zMod.FromCardinal(cardinal.New(input))
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create element from uint64")
+		return nil, errs2.Wrap(err).WithMessage("failed to create element from uint64")
 	}
 	var out WT
 	W(&out).set(elem, g.arith, g.n)
 	if !W(&out).Value().Lift().Coprime(g.Modulus().Lift()) {
-		return nil, errs.NewValue("input is not a unit")
+		return nil, ErrValue.WithMessage("input is not a unit")
 	}
 
 	return W(&out), nil
