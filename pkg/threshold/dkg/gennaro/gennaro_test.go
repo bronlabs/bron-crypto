@@ -22,6 +22,7 @@ import (
 	tu "github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro/testutils"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/feldman"
+	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing/shamir"
 	ts "github.com/bronlabs/bron-crypto/pkg/transcripts"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )
@@ -558,7 +559,7 @@ func TestDKGParticipantValidation(t *testing.T) {
 			prng,
 		)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "not a shareholder")
+		require.ErrorIs(t, err, gennaro.ErrInvalidArgument)
 	})
 
 	t.Run("minimum participants", func(t *testing.T) {
@@ -678,7 +679,7 @@ func TestParticipantCreation(t *testing.T) {
 			prng,
 		)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "group")
+		require.ErrorIs(t, err, gennaro.ErrInvalidArgument)
 		require.Nil(t, p)
 	})
 
@@ -697,7 +698,7 @@ func TestParticipantCreation(t *testing.T) {
 			prng,
 		)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "tape")
+		require.ErrorIs(t, err, gennaro.ErrInvalidArgument)
 		require.Nil(t, p)
 	})
 
@@ -716,7 +717,7 @@ func TestParticipantCreation(t *testing.T) {
 			nil,
 		)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "prng")
+		require.ErrorIs(t, err, gennaro.ErrInvalidArgument)
 		require.Nil(t, p)
 	})
 
@@ -731,7 +732,7 @@ func TestParticipantCreation(t *testing.T) {
 			prng,
 		)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "access structure")
+		require.ErrorIs(t, err, gennaro.ErrInvalidArgument)
 		require.Nil(t, p)
 	})
 
@@ -750,7 +751,7 @@ func TestParticipantCreation(t *testing.T) {
 			prng,
 		)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "myID is not a shareholder")
+		require.ErrorIs(t, err, gennaro.ErrInvalidArgument)
 		require.Nil(t, p)
 	})
 
@@ -889,7 +890,7 @@ func TestRoundOutOfOrder(t *testing.T) {
 
 		_, _, err := participant.Round2(dummyR2Input)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "expected round 2, got 1")
+		require.ErrorIs(t, err, gennaro.ErrRound)
 	})
 
 	t.Run("cannot execute round 3 before completing previous rounds", func(t *testing.T) {
@@ -899,7 +900,7 @@ func TestRoundOutOfOrder(t *testing.T) {
 
 		_, err := participant.Round3(dummyR3Broadcast, dummyR3Unicast)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "expected round 3")
+		require.ErrorIs(t, err, gennaro.ErrRound)
 	})
 
 	t.Run("cannot re-execute round 1", func(t *testing.T) {
@@ -910,7 +911,7 @@ func TestRoundOutOfOrder(t *testing.T) {
 		// Try to execute round 1 again
 		_, err = participant.Round1()
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "expected round 1, got 2")
+		require.ErrorIs(t, err, gennaro.ErrRound)
 	})
 }
 
@@ -967,7 +968,7 @@ func TestMaliciousParticipants(t *testing.T) {
 			output, err := participant.Round3(r3broadcastInputs[participant.SharingID()], r3unicastInputs[participant.SharingID()])
 			if participant.SharingID() == victimID {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "failed to verify")
+				require.ErrorIs(t, err, gennaro.ErrFailed)
 				require.Nil(t, output)
 			} else if participant.SharingID() != maliciousParticipant.SharingID() {
 				// Other honest participants should succeed
@@ -1028,7 +1029,7 @@ func TestDifferentThresholds(t *testing.T) {
 				insufficientShares := shares[:tc.threshold-1]
 				_, err = feldmanScheme.Reconstruct(insufficientShares...)
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "shares are not authorized")
+				require.ErrorIs(t, err, shamir.ErrFailed)
 			}
 		})
 	}

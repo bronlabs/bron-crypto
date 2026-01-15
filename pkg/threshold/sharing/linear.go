@@ -3,7 +3,6 @@ package sharing
 import (
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
@@ -27,10 +26,10 @@ type minimalQualifiedAccessStructureDTO struct {
 // Returns an error if shareholders is nil or has fewer than 2 members.
 func NewMinimalQualifiedAccessStructure(shareholders ds.Set[ID]) (*MinimalQualifiedAccessStructure, error) {
 	if shareholders == nil {
-		return nil, errs.NewIsNil("ids cannot be nil")
+		return nil, ErrIsNil.WithMessage("ids cannot be nil")
 	}
 	if shareholders.Size() < 2 {
-		return nil, errs.NewValue("ids must have at least 2 shareholders")
+		return nil, ErrValue.WithMessage("ids must have at least 2 shareholders")
 	}
 	return &MinimalQualifiedAccessStructure{
 		ps: shareholders,

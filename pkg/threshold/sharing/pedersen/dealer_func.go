@@ -2,7 +2,7 @@ package pedersen
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 )
 
@@ -34,11 +34,11 @@ func (df *LiftedDealerFunc[G, S]) VerificationVector() VerificationVector[G, S] 
 func liftDealerFuncToExp[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S]](dealerFunc *DealerFunc[S], baseG, baseH G) (*LiftedDealerFunc[G, S], error) {
 	gg, err := polynomials.LiftPolynomial(dealerFunc.G, baseG)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot lift polynomial")
+		return nil, errs2.Wrap(err).WithMessage("cannot lift polynomial")
 	}
 	hh, err := polynomials.LiftPolynomial(dealerFunc.H, baseH)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "cannot lift polynomial")
+		return nil, errs2.Wrap(err).WithMessage("cannot lift polynomial")
 	}
 
 	return &LiftedDealerFunc[G, S]{
