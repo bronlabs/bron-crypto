@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
 
 type Capsule any
@@ -84,10 +84,10 @@ type AEADBasedHybridScheme[
 
 func NewSymmetricKey(v []byte) (*SymmetricKey, error) {
 	if len(v) == 0 {
-		return nil, errs.NewValue("symmetric key cannot be empty")
+		return nil, ErrInvalidKey.WithMessage("symmetric key cannot be empty")
 	}
 	if ct.SliceIsZero(v) == ct.True {
-		return nil, errs.NewValue("symmetric key cannot be all zero")
+		return nil, ErrInvalidKey.WithMessage("symmetric key cannot be all zero")
 	}
 	key := make([]byte, len(v))
 	copy(key, v)
@@ -114,3 +114,7 @@ func (k *SymmetricKey) Clone() *SymmetricKey {
 	copy(v, k.v)
 	return &SymmetricKey{v: v}
 }
+
+var (
+	ErrInvalidKey = errs2.New("invalid key")
+)
