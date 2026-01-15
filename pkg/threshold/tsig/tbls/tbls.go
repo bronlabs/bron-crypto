@@ -6,7 +6,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/bls"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/dkg/gennaro"
 	"github.com/bronlabs/bron-crypto/pkg/threshold/sharing"
@@ -160,11 +160,11 @@ func (s *Shard[PK, PKFE, SG, SGFE, E, S]) HashCode() base.HashCode {
 // Returns an error if the shard is nil or if the private key creation fails.
 func (s *Shard[PK, PKFE, SG, SGFE, E, S]) AsBLSPrivateKey() (*bls.PrivateKey[PK, PKFE, SG, SGFE, E, S], error) {
 	if s == nil {
-		return nil, errs.NewIsNil("Shard is nil")
+		return nil, ErrIsNil.WithMessage("Shard is nil")
 	}
 	out, err := bls.NewPrivateKey(s.publicKey.Group(), s.share.Value())
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to create BLS private key from shard")
+		return nil, errs2.Wrap(err).WithMessage("failed to create BLS private key from shard")
 	}
 	return out, nil
 }
@@ -193,33 +193,33 @@ func NewShortKeyShard[
 	accessStructure *sharing.ThresholdAccessStructure,
 ) (*Shard[P1, FE1, P2, FE2, E, S], error) {
 	if share == nil {
-		return nil, errs.NewIsNil("share")
+		return nil, ErrIsNil.WithMessage("share")
 	}
 	if publicKey == nil {
-		return nil, errs.NewIsNil("publicKey")
+		return nil, ErrIsNil.WithMessage("publicKey")
 	}
 	if accessStructure == nil {
-		return nil, errs.NewIsNil("accessStructure")
+		return nil, ErrIsNil.WithMessage("accessStructure")
 	}
 	if vector == nil {
-		return nil, errs.NewIsNil("verification vector")
+		return nil, ErrIsNil.WithMessage("verification vector")
 	}
 	if !publicKey.IsShort() {
-		return nil, errs.NewType("public key is not a short key variant")
+		return nil, ErrInvalidArgument.WithMessage("public key is not a short key variant")
 	}
 	sf, ok := share.Value().Structure().(algebra.PrimeField[S])
 	if !ok {
-		return nil, errs.NewType("share value structure is not a prime field")
+		return nil, ErrInvalidArgument.WithMessage("share value structure is not a prime field")
 	}
 	partialPublicKeyValues, err := gennaro.ComputePartialPublicKey(sf, share, vector, accessStructure)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to compute partial public keys from share")
+		return nil, errs2.Wrap(err).WithMessage("failed to compute partial public keys from share")
 	}
 	partialPublicKeys := hashmap.NewComparable[sharing.ID, *bls.PublicKey[P1, FE1, P2, FE2, E, S]]()
 	for id, value := range partialPublicKeyValues.Iter() {
 		pk, err := bls.NewPublicKey(value)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "failed to create public key for party %d", id)
+			return nil, errs2.Wrap(err).WithMessage("failed to create public key for party %d", id)
 		}
 		partialPublicKeys.Put(id, pk)
 	}
@@ -256,33 +256,33 @@ func NewLongKeyShard[
 	accessStructure *sharing.ThresholdAccessStructure,
 ) (*Shard[P2, FE2, P1, FE1, E, S], error) {
 	if share == nil {
-		return nil, errs.NewIsNil("share")
+		return nil, ErrIsNil.WithMessage("share")
 	}
 	if publicKey == nil {
-		return nil, errs.NewIsNil("publicKey")
+		return nil, ErrIsNil.WithMessage("publicKey")
 	}
 	if accessStructure == nil {
-		return nil, errs.NewIsNil("accessStructure")
+		return nil, ErrIsNil.WithMessage("accessStructure")
 	}
 	if vector == nil {
-		return nil, errs.NewIsNil("verification vector")
+		return nil, ErrIsNil.WithMessage("verification vector")
 	}
 	if publicKey.IsShort() {
-		return nil, errs.NewType("public key is not a long key variant")
+		return nil, ErrInvalidArgument.WithMessage("public key is not a long key variant")
 	}
 	sf, ok := share.Value().Structure().(algebra.PrimeField[S])
 	if !ok {
-		return nil, errs.NewType("share value structure is not a prime field")
+		return nil, ErrInvalidArgument.WithMessage("share value structure is not a prime field")
 	}
 	partialPublicKeyValues, err := gennaro.ComputePartialPublicKey(sf, share, vector, accessStructure)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to compute partial public keys from share")
+		return nil, errs2.Wrap(err).WithMessage("failed to compute partial public keys from share")
 	}
 	partialPublicKeys := hashmap.NewComparable[sharing.ID, *bls.PublicKey[P2, FE2, P1, FE1, E, S]]()
 	for id, value := range partialPublicKeyValues.Iter() {
 		pk, err := bls.NewPublicKey(value)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "failed to create public key for party %d", id)
+			return nil, errs2.Wrap(err).WithMessage("failed to create public key for party %d", id)
 		}
 		partialPublicKeys.Put(id, pk)
 	}
@@ -295,3 +295,8 @@ func NewLongKeyShard[
 		},
 	}, nil
 }
+
+var (
+	ErrIsNil           = errs2.New("is nil")
+	ErrInvalidArgument = errs2.New("invalid argument")
+)

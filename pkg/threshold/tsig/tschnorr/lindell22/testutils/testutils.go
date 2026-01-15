@@ -9,9 +9,9 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
-	"github.com/bronlabs/bron-crypto/pkg/network/testutils"
+	ntu "github.com/bronlabs/bron-crypto/pkg/network/testutils"
 	dlogschnorr "github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
@@ -38,13 +38,13 @@ func DoLindell22DKG[
 	// Run Gennaro DKG
 	dkgOutputs, err := gentu.DoGennaroDKG(t, participants)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "failed to run Gennaro DKG")
+		return nil, errs2.Wrap(err).WithMessage("failed to run Gennaro DKG")
 	}
 	shards = hashmap.NewComparable[sharing.ID, *lindell22.Shard[GE, S]]()
 	for id, output := range dkgOutputs.Iter() {
 		shard, err := keygen.NewShard(output)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "failed to create shard for participant %d", id)
+			return nil, errs2.Wrap(err).WithMessage("failed to create shard for participant %d", id)
 		}
 		shards.Put(id, shard)
 	}
@@ -107,7 +107,7 @@ func DoLindell22Round1[
 	for _, pi := range participants {
 		r1bo[pi.SharingID()], err = pi.Round1()
 		if err != nil {
-			return nil, errs.WrapFailed(err, "%d could not run lindell22 signing round 1", pi.SharingID())
+			return nil, errs2.Wrap(err).WithMessage("%d could not run lindell22 signing round 1", pi.SharingID())
 		}
 	}
 
@@ -126,7 +126,7 @@ func DoLindell22Round2[
 	for _, pi := range participants {
 		r2bo[pi.SharingID()], err = pi.Round2(r2bi[pi.SharingID()])
 		if err != nil {
-			return nil, errs.WrapFailed(err, "%d could not run lindell22 signing round 2", pi.SharingID())
+			return nil, errs2.Wrap(err).WithMessage("%d could not run lindell22 signing round 2", pi.SharingID())
 		}
 	}
 	return r2bo, nil
@@ -145,7 +145,7 @@ func DoLindell22Round3[
 	for _, pi := range participants {
 		v, err := pi.Round3(r3bi[pi.SharingID()], message)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "%d could not run Gennaro round 3", pi.SharingID())
+			return nil, errs2.Wrap(err).WithMessage("%d could not run Gennaro round 3", pi.SharingID())
 		}
 		psigs.Put(pi.SharingID(), v)
 	}
