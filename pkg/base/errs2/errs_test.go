@@ -59,3 +59,22 @@ func TestSanity(t *testing.T) {
 	// require.Fail(t, "%+v", e3)
 	// require.Fail(t, "%+v", e4)
 }
+
+var fooErr = errs2.New("FOO")
+
+func foo() error {
+	return fooErr.WithMessage("foo error")
+}
+
+func bar() error {
+	return errs2.Wrap(foo()).WithMessage("bar error")
+}
+
+func TestUnwrap(t *testing.T) {
+	err := bar()
+	require.ErrorIs(t, err, fooErr)
+
+	wrappedErr := errs2.Unwrap(err)
+	require.Len(t, wrappedErr, 1)
+	require.ErrorIs(t, wrappedErr[0], fooErr)
+}
