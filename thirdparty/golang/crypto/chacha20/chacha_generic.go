@@ -9,9 +9,9 @@ package chacha20
 import (
 	"crypto/cipher"
 	"encoding/binary"
+	"errors"
 	"math/bits"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/thirdparty/golang/crypto/internal/alias"
 )
 
@@ -79,7 +79,7 @@ func NewUnauthenticatedCipher(key, nonce []byte) (*Cipher, error) {
 
 func newUnauthenticatedCipher(c *Cipher, key, nonce []byte) (*Cipher, error) {
 	if len(key) != KeySize {
-		return nil, errs.NewSize("chacha20: wrong key size")
+		return nil, errors.New("chacha20: wrong key size")
 	}
 	if len(nonce) == NonceSizeX {
 		// XChaCha20 uses the ChaCha20 core to mix 16 bytes of the nonce into a
@@ -90,7 +90,7 @@ func newUnauthenticatedCipher(c *Cipher, key, nonce []byte) (*Cipher, error) {
 		copy(cNonce[4:12], nonce[16:24])
 		nonce = cNonce
 	} else if len(nonce) != NonceSize {
-		return nil, errs.NewSize("chacha20: wrong nonce size")
+		return nil, errors.New("chacha20: wrong nonce size")
 	}
 
 	key, nonce = key[:KeySize], nonce[:NonceSize] // bounds check elimination hint
@@ -351,10 +351,10 @@ func HChaCha20(key, nonce []byte) ([]byte, error) {
 
 func hChaCha20(out, key, nonce []byte) ([]byte, error) {
 	if len(key) != KeySize {
-		return nil, errs.NewSize("chacha20: wrong HChaCha20 key size")
+		return nil, errors.New("chacha20: wrong HChaCha20 key size")
 	}
 	if len(nonce) != 16 {
-		return nil, errs.NewSize("chacha20: wrong HChaCha20 nonce size")
+		return nil, errors.New("chacha20: wrong HChaCha20 nonce size")
 	}
 
 	x0, x1, x2, x3 := j0, j1, j2, j3
