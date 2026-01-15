@@ -396,7 +396,11 @@ func (p *Polynomial[RE]) EuclideanDiv(q *Polynomial[RE]) (quot *Polynomial[RE], 
 }
 
 func (p *Polynomial[RE]) EuclideanValuation() algebra.Cardinal {
-	panic("implement me")
+	deg := p.Degree()
+	if deg <= 0 {
+		return cardinal.New(0)
+	}
+	return cardinal.New(uint64(deg))
 }
 
 func (p *Polynomial[RE]) IsConstant() bool {
@@ -431,7 +435,14 @@ func (p *Polynomial[RE]) ScalarMul(s RE) *Polynomial[RE] {
 }
 
 func (p *Polynomial[RE]) IsTorsionFree() bool {
-	panic("implement me")
+	for i := range p.coeffs {
+		if torsionFree, ok := any(p.coeffs[i]).(interface{ IsTorsionFree() bool }); ok {
+			if !torsionFree.IsTorsionFree() {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func (p *Polynomial[RE]) ScalarStructure() algebra.Ring[RE] {
