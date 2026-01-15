@@ -145,7 +145,7 @@ type PolynomialModule[MP, P, C, S any] interface {
 }
 
 type ModuleValuedPolynomial[MP, P, C, S any] interface {
-	UnivariatePolynomialLike[MP, S, C, Ring[S], Module[C, S]]
+	UnivariatePolynomialLike[MP, S, C, Ring[S], FiniteModule[C, S]]
 	PolynomialOp(P) MP
 }
 

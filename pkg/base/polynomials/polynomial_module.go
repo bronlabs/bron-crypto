@@ -186,7 +186,7 @@ func (p *ModuleValuedPolynomial[ME, S]) CoefficientStructure() algebra.FiniteMod
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) ScalarStructure() algebra.Ring[S] {
-	return p.CoefficientStructure().ScalarStructure()
+	return algebra.StructureMustBeAs[algebra.Ring[S]](p.CoefficientStructure().ScalarStructure())
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) ConstantTerm() ME {
