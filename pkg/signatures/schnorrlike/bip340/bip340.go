@@ -36,7 +36,6 @@ import (
 	"slices"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
@@ -348,7 +347,7 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 		// that was applied to private key shares during signing.
 		correctedP, err := v.variant.CorrectPublicKeyShareParity(v.challengePublicKey, publicKey.Value())
 		if err != nil {
-			return errs.WrapFailed(err, "cannot correct public key share parity")
+			return errs2.Wrap(err).WithMessage("cannot correct public key share parity")
 		}
 		bigP = correctedP
 		challengePublicKeyValue = v.challengePublicKey.Value()
@@ -390,7 +389,7 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 	if v.challengePublicKey != nil {
 		// Partial signature verification: check that computed R matches signature.R exactly
 		if !bigR.Equal(signature.R) {
-			return errs.NewVerification("signature is invalid")
+			return ErrVerificationFailed.WithMessage("signature is invalid")
 		}
 		return nil
 	}
