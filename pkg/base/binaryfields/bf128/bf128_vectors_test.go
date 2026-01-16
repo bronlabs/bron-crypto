@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/binaryfields/bf128"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 
 	_ "embed"
 )
@@ -45,7 +45,7 @@ func (e *jsonBF128Element) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 	if len(beBytes) != 16 {
-		return errs.NewFailed("invalid")
+		return errs2.New("invalid")
 	}
 	el, err := bf128.NewField().FromBytes(beBytes)
 	if err != nil {
