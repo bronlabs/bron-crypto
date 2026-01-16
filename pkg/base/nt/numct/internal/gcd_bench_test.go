@@ -20,6 +20,7 @@ func Benchmark_GCD(b *testing.B) {
 	xBig, err := crand.Int(prng, boundBig)
 	require.NoError(b, err)
 	yBig, err := crand.Int(prng, boundBig)
+	require.NoError(b, err)
 
 	x := new(saferith.Nat).SetBig(xBig, bits)
 	y := new(saferith.Nat).SetBig(yBig, bits)

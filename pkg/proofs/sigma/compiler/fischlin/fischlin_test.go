@@ -67,6 +67,7 @@ func testSchnorrHappyPath[P curves.Point[P, B, S], B algebra.FieldElement[B], S 
 	prng := crand.Reader
 	var sessionId network.SID
 	_, err := io.ReadFull(prng, sessionId[:])
+	require.NoError(tb, err)
 
 	schnorrProtocol, err := schnorr.NewProtocol(curve.Generator(), prng)
 	require.NoError(tb, err)

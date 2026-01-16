@@ -24,7 +24,7 @@ func New(seed, salt uint64) prng.SeedablePRNG {
 
 // NewRandomised creates a new PCG PRNG with random seed and salt.
 func NewRandomised() prng.SeedablePRNG {
-	return &seededReader{v: mrand.NewPCG(mrand.Uint64(), mrand.Uint64())}
+	return &seededReader{v: mrand.NewPCG(mrand.Uint64(), mrand.Uint64())} //nolint:gosec // weak prng is intentional.
 }
 
 // Read fills the provided byte slice p with random bytes.

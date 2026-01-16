@@ -76,6 +76,7 @@ func testSchnorrFiatShamir[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFie
 	prng := crand.Reader
 	var sid network.SID
 	_, err := io.ReadFull(prng, sid[:])
+	require.NoError(t, err)
 	g := group.Generator()
 	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](group.ScalarStructure())
 	witnessValue, err := field.Random(prng)

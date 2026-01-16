@@ -29,7 +29,7 @@ var (
 	b58 [256]byte
 )
 
-func init() { //nolint:gochecknoinits // initializes base58 decoding table
+func init() { //nolint:gochecknoinits // initialises base58 decoding table
 	for i := range b58 {
 		b58[i] = 0xFF
 	}
