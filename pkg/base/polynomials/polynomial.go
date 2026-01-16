@@ -7,7 +7,9 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
@@ -206,7 +208,7 @@ func (p *Polynomial[RE]) Clone() *Polynomial[RE] {
 }
 
 func (p *Polynomial[RE]) Equal(rhs *Polynomial[RE]) bool {
-	for i := 0; i < min(len(p.coeffs), len(rhs.coeffs)); i++ {
+	for i := range min(len(p.coeffs), len(rhs.coeffs)) {
 		if !p.coeffs[i].Equal(rhs.coeffs[i]) {
 			return false
 		}
@@ -252,7 +254,7 @@ func (p *Polynomial[RE]) OtherOp(e *Polynomial[RE]) *Polynomial[RE] {
 
 func (p *Polynomial[RE]) Add(e *Polynomial[RE]) *Polynomial[RE] {
 	coeffs := make([]RE, max(len(p.coeffs), len(e.coeffs)))
-	for i := 0; i < min(len(p.coeffs), len(e.coeffs)); i++ {
+	for i := range min(len(p.coeffs), len(e.coeffs)) {
 		coeffs[i] = p.coeffs[i].Add(e.coeffs[i])
 	}
 	for i := len(p.coeffs); i < max(len(p.coeffs), len(e.coeffs)); i++ {
@@ -391,12 +393,88 @@ func (p *Polynomial[RE]) Derivative() *Polynomial[RE] {
 	}
 }
 
-func (p *Polynomial[RE]) EuclideanDiv(q *Polynomial[RE]) (quot *Polynomial[RE], rem *Polynomial[RE], err error) {
-	panic("implement me")
+func (p *Polynomial[RE]) EuclideanDiv(q *Polynomial[RE]) (quot, rem *Polynomial[RE], err error) {
+	coeffField, err := algebra.StructureAs[crtp.Field[RE]](p.coeffs[0].Structure())
+	if err != nil {
+		return nil, nil, errs2.Wrap(err).WithMessage("coefficients ring is not a field")
+	}
+	if q.IsZero() {
+		return nil, nil, errs.NewFailed("division by zero")
+	}
+	if p.IsZero() {
+		zero := coeffField.Zero()
+		return &Polynomial[RE]{coeffs: []RE{zero}}, &Polynomial[RE]{coeffs: []RE{zero.Clone()}}, nil
+	}
+
+	rem = p.Clone()
+	degQ := q.Degree()
+	degR := rem.Degree()
+	if degR < degQ {
+		return &Polynomial[RE]{coeffs: []RE{coeffField.Zero()}}, rem, nil
+	}
+
+	quotCoeffs := make([]RE, degR-degQ+1)
+	for i := range quotCoeffs {
+		quotCoeffs[i] = coeffField.Zero()
+	}
+
+	for degR >= degQ && degR >= 0 {
+		lcR := rem.coeffs[degR]
+		lcQ := q.coeffs[degQ]
+
+		fieldElemR, err := coeffField.FromBytes(lcR.Bytes())
+		if err != nil {
+			return nil, nil, errs2.Wrap(err).WithMessage("leading coefficient does not support field division")
+		}
+		fieldElemQ, err := coeffField.FromBytes(lcQ.Bytes())
+		if err != nil {
+			return nil, nil, errs2.Wrap(err).WithMessage("divisor leading coefficient does not support field division")
+		}
+
+		factor, err := fieldElemR.TryDiv(fieldElemQ)
+		if err != nil {
+			return nil, nil, errs.WrapFailed(err, "failed to divide leading coefficients")
+		}
+
+		shift := degR - degQ
+		quotCoeffs[shift] = quotCoeffs[shift].Add(factor)
+
+		for i := 0; i <= degQ; i++ {
+			term := q.coeffs[i].Mul(factor)
+			rem.coeffs[i+shift] = rem.coeffs[i+shift].Add(term.Neg())
+		}
+
+		for degR >= 0 && rem.coeffs[degR].IsZero() {
+			degR--
+		}
+	}
+
+	if degR < 0 {
+		rem = &Polynomial[RE]{coeffs: []RE{coeffField.Zero()}}
+	} else if degR+1 < len(rem.coeffs) {
+		rem = &Polynomial[RE]{coeffs: rem.coeffs[:degR+1]}
+	}
+
+	quot = &Polynomial[RE]{coeffs: quotCoeffs}
+	quotDeg := len(quot.coeffs) - 1
+	for quotDeg >= 0 && quot.coeffs[quotDeg].IsZero() {
+		quotDeg--
+	}
+	if quotDeg < 0 {
+		quot = &Polynomial[RE]{coeffs: []RE{coeffField.Zero()}}
+	} else if quotDeg+1 < len(quot.coeffs) {
+		quot = &Polynomial[RE]{coeffs: quot.coeffs[:quotDeg+1]}
+	}
+
+	return quot, rem, nil
 }
 
 func (p *Polynomial[RE]) EuclideanValuation() algebra.Cardinal {
-	panic("implement me")
+	deg := p.Degree()
+	if deg <= 0 {
+		return cardinal.New(0)
+	}
+	return cardinal.New(uint64(deg))
 }
 
 func (p *Polynomial[RE]) IsConstant() bool {
@@ -431,7 +509,7 @@ func (p *Polynomial[RE]) ScalarMul(s RE) *Polynomial[RE] {
 }
 
 func (p *Polynomial[RE]) IsTorsionFree() bool {
-	panic("implement me")
+	return false
 }
 
 func (p *Polynomial[RE]) ScalarStructure() algebra.Ring[RE] {

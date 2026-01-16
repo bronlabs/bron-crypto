@@ -311,6 +311,15 @@ func (el *FieldElement) Equal(rhs *FieldElement) bool {
 }
 
 func (el *FieldElement) shiftLeft(k int) *FieldElement {
+	if k <= 0 {
+		return el.Clone()
+	}
+	if k >= 128 {
+		return &FieldElement{0, 0}
+	}
+	if k >= 64 {
+		return &FieldElement{0, el[0] << (k - 64)}
+	}
 	return &FieldElement{el[0] << k, (el[1] << k) | (el[0] >> (64 - k))}
 }
 

@@ -88,6 +88,11 @@ type MultiplicativeModuleElement[ME, S any] interface {
 	MultiplicativeSemiModuleElement[ME, S]
 }
 
+type FiniteModule[ME, S any] interface {
+	Module[ME, S]
+	FiniteStructure[ME]
+}
+
 // ****************** Vector Space.
 
 type VectorSpace[V, S any] Module[V, S]
@@ -114,7 +119,6 @@ type PolynomialLike[P, S, C any] interface {
 	ModuleElement[P, S]
 	ConstantTerm() C
 	IsConstant() bool
-	IsMonic() bool
 	Derivative() P
 	Degree() int
 }
@@ -141,14 +145,13 @@ type PolynomialModule[MP, P, C, S any] interface {
 }
 
 type ModuleValuedPolynomial[MP, P, C, S any] interface {
-	UnivariatePolynomialLike[MP, S, C, Ring[S], Module[C, S]]
+	UnivariatePolynomialLike[MP, S, C, Ring[S], FiniteModule[C, S]]
 	PolynomialOp(P) MP
 }
 
 type PolynomialRing[P, S any] interface {
 	UnivariatePolynomialLikeStructure[P, S, S]
 	Algebra[P, S]
-	AdditiveModule[P, S]
 	EuclideanDomain[P]
 	RandomPolynomial(degree int, prng io.Reader) (P, error)
 	RandomPolynomialWithConstantTerm(degree int, constantTerm S, prng io.Reader) (P, error)
@@ -157,8 +160,8 @@ type PolynomialRing[P, S any] interface {
 type Polynomial[P, S any] interface {
 	UnivariatePolynomialLike[P, S, S, Ring[S], Ring[S]]
 	AlgebraElement[P, S]
-	AdditiveModuleElement[P, S]
 	EuclideanDomainElement[P]
+	IsMonic() bool
 }
 
 type MultivariatePolynomialRing[PP, P, S any] interface {
