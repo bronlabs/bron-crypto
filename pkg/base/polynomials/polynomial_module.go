@@ -21,10 +21,10 @@ func _[ME algebra.ModuleElement[ME, S], S algebra.RingElement[S]]() {
 	)
 }
 
-func LiftPolynomial[ME algebra.ModuleElement[ME, RE], RE algebra.RingElement[RE]](poly *Polynomial[RE], base algebra.ModuleElement[ME, RE]) (*ModuleValuedPolynomial[ME, RE], error) {
+func LiftPolynomial[ME algebra.ModuleElement[ME, RE], RE algebra.RingElement[RE]](poly *Polynomial[RE], baseElem algebra.ModuleElement[ME, RE]) (*ModuleValuedPolynomial[ME, RE], error) {
 	coeffs := make([]ME, len(poly.coeffs))
 	for i, c := range poly.coeffs {
-		coeffs[i] = base.ScalarOp(c)
+		coeffs[i] = baseElem.ScalarOp(c)
 	}
 
 	p := &ModuleValuedPolynomial[ME, RE]{
@@ -263,7 +263,7 @@ func (p *ModuleValuedPolynomial[ME, S]) Clone() *ModuleValuedPolynomial[ME, S] {
 }
 
 func (p *ModuleValuedPolynomial[ME, S]) Equal(rhs *ModuleValuedPolynomial[ME, S]) bool {
-	for i := 0; i < min(len(p.coeffs), len(rhs.coeffs)); i++ {
+	for i := range min(len(p.coeffs), len(rhs.coeffs)) {
 		if !p.coeffs[i].Equal(rhs.coeffs[i]) {
 			return false
 		}
@@ -301,7 +301,7 @@ func (p *ModuleValuedPolynomial[ME, S]) String() string {
 
 func (p *ModuleValuedPolynomial[ME, S]) Op(e *ModuleValuedPolynomial[ME, S]) *ModuleValuedPolynomial[ME, S] {
 	coeffs := make([]ME, max(len(p.coeffs), len(e.coeffs)))
-	for i := 0; i < min(len(p.coeffs), len(e.coeffs)); i++ {
+	for i := range min(len(p.coeffs), len(e.coeffs)) {
 		coeffs[i] = p.coeffs[i].Op(e.coeffs[i])
 	}
 	for i := len(p.coeffs); i < max(len(p.coeffs), len(e.coeffs)); i++ {
