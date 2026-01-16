@@ -10,9 +10,12 @@ func LCM(out, a, b *Nat) {
 		return
 	}
 	// LCM(a, b) = (a * b) / GCD(a, b)
-	var gcd, ab Nat
+	var gcd, ab, rem Nat
 	gcd.GCD(a, b)
 	ab.Mul(a, b)
 	denom, _ := NewModulus(&gcd)
-	out.EuclideanDivVarTime(&ab, denom, -1)
+	out.EuclideanDivVarTime(&rem, &ab, denom.Nat())
+	if rem.IsZero() == ct.False {
+		panic("LCM: remainder not zero")
+	}
 }
