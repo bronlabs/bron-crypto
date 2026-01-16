@@ -22,7 +22,7 @@ var (
 	_ tschnorr.MPCFriendlyVariant[*GroupElement, *Scalar, Message] = (*Variant)(nil)
 )
 
-// Variant implements BIP-340 specific signing behavior.
+// Variant implements BIP-340 specific signing behaviour.
 // It handles the deterministic nonce derivation, even-y constraints,
 // and tagged hashing required by BIP-340.
 type Variant struct {

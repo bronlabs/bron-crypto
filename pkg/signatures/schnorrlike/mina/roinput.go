@@ -30,7 +30,7 @@ type ROInput struct {
 	bits   *bitvec.BitVector               // Bits to be packed into field elements
 }
 
-// MarshalJSON serializes the ROInput to JSON as an array of hex-encoded field elements.
+// MarshalJSON serialises the ROInput to JSON as an array of hex-encoded field elements.
 func (r *ROInput) MarshalJSON() ([]byte, error) {
 	packed := r.PackToFields()
 	fields := make([]string, len(packed))
@@ -45,7 +45,7 @@ func (r *ROInput) MarshalJSON() ([]byte, error) {
 	return b, nil
 }
 
-// Init initializes an empty ROInput. Must be called before use.
+// Init initialises an empty ROInput. Must be called before use.
 func (r *ROInput) Init() *ROInput {
 	r.fields = make([]*pasta.PallasBaseFieldElement, 0)
 	r.bits = bitvec.NewBitVector(make([]byte, 0), 0)

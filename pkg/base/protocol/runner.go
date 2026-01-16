@@ -1,4 +1,3 @@
 package protocol
 
-type ProtocolRunner[O any] interface {
-}
+type ProtocolRunner[O any] any

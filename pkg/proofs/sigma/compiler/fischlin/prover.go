@@ -31,7 +31,7 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 
 // Prove generates a non-interactive Fischlin proof for the given statement and witness.
 // It runs rho parallel executions of the sigma protocol, searching for challenge/response
-// pairs that hash to zero. Returns the serialized proof containing all rho transcripts.
+// pairs that hash to zero. Returns the serialised proof containing all rho transcripts.
 func (p *prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
 	p.transcript.AppendBytes(rhoLabel, binary.LittleEndian.AppendUint64(nil, p.rho))
 	p.transcript.AppendBytes(statementLabel, statement.Bytes())
@@ -49,7 +49,7 @@ func (p *prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKP
 redo:
 	for {
 		// 1. For i = 1, ..., ρ:
-		for i := uint64(0); i < p.rho; i++ {
+		for i := range uint64(p.rho) {
 			var err error
 
 			// 1.a. compute (m_i, σ_i) ← ProverFirstMessage(x, w) independently for each i
@@ -69,9 +69,9 @@ redo:
 		}
 
 		// 4. For i = 1, ..., ρ:
-		for i := uint64(0); i < p.rho; i++ {
+		for i := range uint64(p.rho) {
 			// 4.a. For ei = 0, ..., 2^t − 1:
-			for j := uint64(0); j < (1 << p.t); j++ {
+			for j := range uint64() {
 				// 4.a.i. z_i ← ProverSecondMessage(x, w, σ_i, e_i)
 				eI[i], zI[i], err = p.challengeBytesAndResponse(j, statement, witness, aI[i], stateI[i])
 				if err != nil {
@@ -101,11 +101,11 @@ redo:
 	}
 
 	commitmentSerialized := make([][]byte, 0)
-	for i := uint64(0); i < p.rho; i++ {
+	for i := range uint64(p.rho) {
 		commitmentSerialized = append(commitmentSerialized, aI[i].Bytes())
 	}
 	responseSerialized := make([][]byte, 0)
-	for i := uint64(0); i < p.rho; i++ {
+	for i := range uint64(p.rho) {
 		responseSerialized = append(responseSerialized, zI[i].Bytes())
 	}
 	p.transcript.AppendBytes(commitmentLabel, commitmentSerialized...)

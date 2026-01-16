@@ -1,10 +1,11 @@
 package bimap_test
 
 import (
+	"pgregory.net/rapid"
+
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/bimap"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
-	"pgregory.net/rapid"
 )
 
 // Common generators for all bimap property tests
@@ -37,7 +38,7 @@ func MutableBiMapGenerator() *rapid.Generator[ds.MutableBiMap[string, int]] {
 		// Generate unique key-value pairs (bimap requires unique values too)
 		numEntries := rapid.IntRange(0, 20).Draw(t, "numEntries")
 		usedValues := make(map[int]bool)
-		for i := 0; i < numEntries; i++ {
+		for range numEntries {
 			key := KeyGenerator().Draw(t, "key")
 			value := ValueGenerator().Filter(func(v int) bool {
 				return !usedValues[v]
@@ -61,7 +62,7 @@ func NonEmptyMutableBiMapGenerator() *rapid.Generator[ds.MutableBiMap[string, in
 		}
 		numEntries := rapid.IntRange(1, 20).Draw(t, "numEntries")
 		usedValues := make(map[int]bool)
-		for i := 0; i < numEntries; i++ {
+		for range numEntries {
 			key := KeyGenerator().Draw(t, "key")
 			value := ValueGenerator().Filter(func(v int) bool {
 				return !usedValues[v]

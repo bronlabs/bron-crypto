@@ -28,7 +28,7 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Statement, S sigma.State
 
 // Prove generates a non-interactive randomised Fischlin proof for the given statement
 // and witness. It runs R parallel executions, randomly sampling challenges until
-// finding ones that hash to zero. Returns the serialized proof containing all R transcripts.
+// finding ones that hash to zero. Returns the serialised proof containing all R transcripts.
 func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compiler.NIZKPoKProof, err error) {
 	p.transcript.AppendDomainSeparator(fmt.Sprintf("%s-%s", transcriptLabel, hex.EncodeToString(p.sessionId[:])))
 	crs, err := p.transcript.ExtractBytes(crsLabel, 32)
@@ -42,7 +42,7 @@ func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (proofBytes compile
 	stateI := make([]S, R)
 
 	// step 1. for each i in [r] compute SigmaP_a(x, w)
-	for i := 0; i < R; i++ {
+	for i := range R {
 		var err error
 		aI[i], stateI[i], err = p.sigmaProtocol.ComputeProverCommitment(statement, witness)
 		if err != nil {

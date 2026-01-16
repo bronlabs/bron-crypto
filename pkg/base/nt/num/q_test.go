@@ -1,7 +1,7 @@
 package num_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"math/big"
 	"testing"
 
@@ -43,7 +43,7 @@ func TestRationals_Properties(t *testing.T) {
 
 	t.Run("Order", func(t *testing.T) {
 		t.Parallel()
-		require.True(t, !q.Order().IsFinite(), "rationals should have infinite order")
+		require.False(t, q.Order().IsFinite(), "rationals should have infinite order")
 	})
 
 	t.Run("Characteristic", func(t *testing.T) {
@@ -440,7 +440,7 @@ func TestQ_RandomInt(t *testing.T) {
 			require.NoError(t, err)
 			// Result should be integer in range
 			require.True(t, result.Compare(num.Z().FromInt64(0)) >= 0)
-			require.True(t, result.Compare(num.Z().FromInt64(10)) < 0)
+			require.Negative(t, result.Compare(num.Z().FromInt64(10)))
 		}
 	})
 
@@ -1332,7 +1332,7 @@ func TestRat_RandomWithCryptoRand(t *testing.T) {
 	high := q.FromInt64(100)
 
 	// Test with crypto/rand
-	result, err := q.Random(low, high, rand.Reader)
+	result, err := q.Random(low, high, crand.Reader)
 	require.NoError(t, err)
 	require.True(t, low.IsLessThanOrEqual(result))
 	require.True(t, result.IsLessThanOrEqual(high) && !result.Equal(high))

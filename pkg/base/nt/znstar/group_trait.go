@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 
+	"golang.org/x/crypto/blake2b"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
@@ -12,7 +14,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"golang.org/x/crypto/blake2b"
 )
 
 type unitWrapper[A modular.Arithmetic] interface {

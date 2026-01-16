@@ -189,7 +189,7 @@ func TestROInputFields(t *testing.T) {
 		fields2 := input.Fields()
 
 		// Should be equal but not the same slice
-		assert.Equal(t, len(fields1), len(fields2))
+		assert.Len(t, fields2, len(fields1))
 		assert.True(t, fields1[0].Equal(fields2[0]))
 	})
 }
@@ -343,10 +343,10 @@ func TestROInputIntegration(t *testing.T) {
 
 		// Verify the structure
 		assert.Len(t, input.Fields(), 1)
-		assert.True(t, len(input.Bits()) > 0)
+		assert.Positive(t, len(input.Bits()))
 
 		// Pack to fields for hashing
 		packed := input.PackToFields()
-		assert.True(t, len(packed) > 0)
+		assert.Positive(t, len(packed))
 	})
 }

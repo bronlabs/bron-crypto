@@ -3,8 +3,9 @@ package utils_test
 import (
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
 func TestBoolTo(t *testing.T) {

@@ -69,9 +69,9 @@ var (
 	group    = pasta.NewPallasCurve()
 	sf       = pasta.NewPallasScalarField()
 
-	// SignatureSize is the size of a serialized Mina signature (64 bytes).
+	// SignatureSize is the size of a serialised Mina signature (64 bytes).
 	SignatureSize = group.ElementSize() + sf.ElementSize()
-	// PublicKeySize is the size of a serialized Mina public key (32 bytes).
+	// PublicKeySize is the size of a serialised Mina public key (32 bytes).
 	PublicKeySize = group.ElementSize()
 	// PrivateKeySize is the size of a Mina private key (32 bytes).
 	PrivateKeySize = sf.ElementSize()
@@ -137,7 +137,7 @@ func NewRandomisedScheme(nid NetworkId, prng io.Reader) (*Scheme, error) {
 }
 
 // Scheme implements the Mina Schnorr signature scheme.
-// It supports both deterministic and randomized nonce generation modes.
+// It supports both deterministic and randomised nonce generation modes.
 type Scheme struct {
 	vr *Variant
 }
@@ -221,7 +221,7 @@ func (s *Scheme) PartialSignatureVerifier(publicKey *PublicKey, opts ...signatur
 	return verifier, nil
 }
 
-// KeyGeneratorOption configures key generation behavior.
+// KeyGeneratorOption configures key generation behaviour.
 type KeyGeneratorOption = signatures.KeyGeneratorOption[*KeyGenerator, *PrivateKey, *PublicKey]
 
 // KeyGenerator creates Mina key pairs on the Pallas curve.
@@ -229,7 +229,7 @@ type KeyGenerator struct {
 	schnorrlike.KeyGeneratorTrait[*GroupElement, *Scalar]
 }
 
-// SignerOption configures signing behavior.
+// SignerOption configures signing behaviour.
 type SignerOption = signatures.SignerOption[*Signer, *Message, *Signature]
 
 // Signer produces Mina signatures.
@@ -250,7 +250,7 @@ func (s *Signer) Sign(message *Message) (*Signature, error) {
 	return sig, nil
 }
 
-// VerifierOption configures verification behavior.
+// VerifierOption configures verification behaviour.
 type VerifierOption = signatures.VerifierOption[*Verifier, *PublicKey, *Message, *Signature]
 
 // VerifyWithPRNG configures the verifier with a PRNG (for future batch verification).
@@ -273,7 +273,7 @@ type Verifier struct {
 
 // SerializeSignature encodes a Mina signature to 64 bytes in little-endian format.
 // The format is (R.x || s) where both components are in little-endian byte order.
-// This matches the Mina/o1js serialization convention.
+// This matches the Mina/o1js serialisation convention.
 func SerializeSignature(signature *Signature) ([]byte, error) {
 	if signature == nil {
 		return nil, ErrInvalidArgument.WithMessage("signature is nil")

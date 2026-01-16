@@ -253,7 +253,6 @@ func (m *OddPrimeSquareFactors) ExpToN(out, a *numct.Nat) {
 	go func() {
 		defer wg.Done()
 		m.P.Squared.ModExp(&yp, a, m.NExpP2) //  Ep2 = p * (N mod (p-1))
-
 	}()
 	go func() {
 		defer wg.Done()

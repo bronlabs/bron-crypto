@@ -25,7 +25,7 @@ func TestUint64ToBits(t *testing.T) {
 	t.Run("zero", func(t *testing.T) {
 		bits := uint64ToBits(0)
 		assert.Len(t, bits, 64)
-		for i := 0; i < 64; i++ {
+		for i := range 64 {
 			assert.False(t, bits[i], "bit %d should be false for 0", i)
 		}
 	})
@@ -42,7 +42,7 @@ func TestUint64ToBits(t *testing.T) {
 	t.Run("max uint64", func(t *testing.T) {
 		bits := uint64ToBits(^uint64(0))
 		assert.Len(t, bits, 64)
-		for i := 0; i < 64; i++ {
+		for i := range 64 {
 			assert.True(t, bits[i], "bit %d should be true for max", i)
 		}
 	})
@@ -54,7 +54,7 @@ func TestUint64ToBits(t *testing.T) {
 		// Verify LSB-first encoding is correct
 		// Reconstruct the value
 		var result uint64
-		for i := 0; i < 64; i++ {
+		for i := range 64 {
 			if bits[i] {
 				result |= 1 << i
 			}
@@ -69,7 +69,7 @@ func TestUint32ToBits(t *testing.T) {
 	t.Run("zero", func(t *testing.T) {
 		bits := uint32ToBits(0)
 		assert.Len(t, bits, 32)
-		for i := 0; i < 32; i++ {
+		for i := range 32 {
 			assert.False(t, bits[i], "bit %d should be false for 0", i)
 		}
 	})
@@ -86,7 +86,7 @@ func TestUint32ToBits(t *testing.T) {
 	t.Run("max uint32", func(t *testing.T) {
 		bits := uint32ToBits(^uint32(0))
 		assert.Len(t, bits, 32)
-		for i := 0; i < 32; i++ {
+		for i := range 32 {
 			assert.True(t, bits[i], "bit %d should be true for max", i)
 		}
 	})
@@ -97,7 +97,7 @@ func TestUint32ToBits(t *testing.T) {
 		assert.Len(t, bits, 32)
 		// Reconstruct the value
 		var result uint32
-		for i := 0; i < 32; i++ {
+		for i := range 32 {
 			if bits[i] {
 				result |= 1 << i
 			}
@@ -140,7 +140,7 @@ func TestMemoToBits(t *testing.T) {
 		assert.Len(t, bits, 34*8)
 		// Second byte: length (32) = 0b00100000 LSB-first
 		var length byte
-		for i := 0; i < 8; i++ {
+		for i := range 8 {
 			if bits[8+i] {
 				length |= 1 << i
 			}
@@ -154,7 +154,7 @@ func TestMemoToBits(t *testing.T) {
 		assert.Len(t, bits, 34*8)
 		// Second byte: length (32)
 		var length byte
-		for i := 0; i < 8; i++ {
+		for i := range 8 {
 			if bits[8+i] {
 				length |= 1 << i
 			}

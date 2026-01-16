@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
-	"github.com/stretchr/testify/require"
 )
 
 func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, s *SetupInfo_Testing, kem *DHKEMScheme[P, B, S]) (*ReceiverContext[P, B, S], *SenderContext[P, B, S]) {
@@ -21,14 +22,14 @@ func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.P
 
 	ephemeralPrivateKey, ephemeralPublicKey, err := kem.DeriveKeyPair(s.IkmE)
 	require.NoError(t, err)
-	require.EqualValues(t, s.SkEm, ephemeralPrivateKey.Bytes(), "ephemeral private key mismatch")
-	require.EqualValues(t, s.PkEm, ephemeralPublicKey.Bytes(), "ephemeral public key mismatch")
+	require.Equal(t, s.SkEm, ephemeralPrivateKey.Bytes(), "ephemeral private key mismatch")
+	require.Equal(t, s.PkEm, ephemeralPublicKey.Bytes(), "ephemeral public key mismatch")
 
 	receiverPrivateKey, receiverPublicKey, err := kem.DeriveKeyPair(s.IkmR)
 	require.NoError(t, err)
 
-	require.EqualValues(t, s.SkRm, receiverPrivateKey.Bytes(), "receiver private key mismatch")
-	require.EqualValues(t, s.PkRm, receiverPublicKey.Bytes(), "receiver public key mismatch")
+	require.Equal(t, s.SkRm, receiverPrivateKey.Bytes(), "receiver private key mismatch")
+	require.Equal(t, s.PkRm, receiverPublicKey.Bytes(), "receiver public key mismatch")
 
 	var sharedSecret []byte
 	var senderPrivateKey *PrivateKey[S]
@@ -37,32 +38,32 @@ func setup[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.P
 		senderPrivateKey, senderPublicKey, err = kem.DeriveKeyPair(s.IkmS)
 		require.NoError(t, err)
 
-		require.EqualValues(t, s.SkSm, senderPrivateKey.Bytes(), "sender private key mismatch")
-		require.EqualValues(t, s.PkSm, senderPublicKey.Bytes(), "sender public key mismatch")
+		require.Equal(t, s.SkSm, senderPrivateKey.Bytes(), "sender private key mismatch")
+		require.Equal(t, s.PkSm, senderPublicKey.Bytes(), "sender public key mismatch")
 
 		sharedSecret, ephemeralPublicKey, err = kem.AuthEncapWithIKM(receiverPublicKey, senderPrivateKey, s.IkmE)
 		require.NoError(t, err)
 		sharedSecretDecap, err := kem.AuthDecap(receiverPrivateKey, senderPublicKey, ephemeralPublicKey)
 		require.NoError(t, err)
-		require.EqualValues(t, sharedSecret, sharedSecretDecap)
+		require.Equal(t, sharedSecret, sharedSecretDecap)
 
 	} else {
 		sharedSecret, ephemeralPublicKey, err = kem.EncapWithIKM(receiverPublicKey, s.IkmE)
 		require.NoError(t, err)
 		sharedSecretDecap, err := kem.Decap(receiverPrivateKey, ephemeralPublicKey)
 		require.NoError(t, err)
-		require.EqualValues(t, sharedSecret, sharedSecretDecap)
+		require.Equal(t, sharedSecret, sharedSecretDecap)
 	}
-	require.EqualValues(t, s.Enc, ephemeralPublicKey.Bytes(), "encapsulated public key mismatch")
-	require.EqualValues(t, s.SharedSecret, sharedSecret)
+	require.Equal(t, s.Enc, ephemeralPublicKey.Bytes(), "encapsulated public key mismatch")
+	require.Equal(t, s.SharedSecret, sharedSecret)
 
 	ctx, keyScheduleCtx, err := keySchedule(ReceiverRole, cipherSuite, s.Mode, sharedSecret, s.Info, s.PSk, s.PSkID)
 	require.NoError(t, err)
-	require.EqualValues(t, s.KeyScheduleContext, keyScheduleCtx.Marshal())
-	require.EqualValues(t, s.Secret, ctx.secret)
+	require.Equal(t, s.KeyScheduleContext, keyScheduleCtx.Marshal())
+	require.Equal(t, s.Secret, ctx.secret)
 	require.EqualValues(t, s.BaseNonce, ctx.baseNonce)
-	require.EqualValues(t, s.Key, ctx.key)
-	require.EqualValues(t, s.ExporterSecret, ctx.exporterSecret)
+	require.Equal(t, s.Key, ctx.key)
+	require.Equal(t, s.ExporterSecret, ctx.exporterSecret)
 
 	receiverContext := &ReceiverContext[P, B, S]{
 		ctx: ctx,
@@ -85,7 +86,7 @@ func openCiphertext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S 
 	require.False(t, receiver.ctx.nonces.Contains(tt.Nonce))
 	decrypted, err := receiver.Open(tt.Ct, tt.Aad)
 	require.NoError(t, err)
-	require.EqualValues(t, tt.Pt, decrypted)
+	require.Equal(t, tt.Pt, decrypted)
 	require.Equal(t, tt.Seq+1, receiver.ctx.sequence)
 	require.True(t, receiver.ctx.nonces.Contains(tt.Nonce))
 }
@@ -96,7 +97,7 @@ func sealPlaintext[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S a
 	require.False(t, sender.ctx.nonces.Contains(tt.Nonce))
 	ciphertext, err := sender.Seal(tt.Pt, tt.Aad)
 	require.NoError(t, err)
-	require.EqualValues(t, tt.Ct, ciphertext)
+	require.Equal(t, tt.Ct, ciphertext)
 	require.Equal(t, tt.Seq+1, sender.ctx.sequence)
 	require.True(t, sender.ctx.nonces.Contains(tt.Nonce))
 }
@@ -116,12 +117,12 @@ func runnerExport[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S al
 	receiver, sender := setup(t, suiteInfo.Setup, kem)
 	secret, err := receiver.Export(test.ExporterContext, test.L)
 	require.NoError(t, err)
-	require.EqualValues(t, test.ExportedValue, secret)
+	require.Equal(t, test.ExportedValue, secret)
 	if suiteInfo.Mode == Auth || suiteInfo.Mode == AuthPSk {
 		require.NotNil(t, sender)
 		secret, err := sender.Export(test.ExporterContext, test.L)
 		require.NoError(t, err)
-		require.EqualValues(t, test.ExportedValue, secret)
+		require.Equal(t, test.ExportedValue, secret)
 	}
 }
 

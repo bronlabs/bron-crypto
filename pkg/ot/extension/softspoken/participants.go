@@ -7,13 +7,14 @@ import (
 	"io"
 	"slices"
 
+	"golang.org/x/crypto/blake2b"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/hashing"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/ot"
 	"github.com/bronlabs/bron-crypto/pkg/ot/base/vsot"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts"
-	"golang.org/x/crypto/blake2b"
 )
 
 const (

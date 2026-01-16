@@ -1,7 +1,7 @@
 package num_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"math/big"
 	"testing"
 
@@ -86,21 +86,21 @@ func TestZMod_Properties(t *testing.T) {
 	t.Run("Order", func(t *testing.T) {
 		t.Parallel()
 		order := zmod.Order()
-		require.False(t, !order.IsFinite())
+		require.True(t, order.IsFinite())
 		require.False(t, order.IsZero())
 	})
 
 	t.Run("Characteristic", func(t *testing.T) {
 		t.Parallel()
 		char := zmod.Characteristic()
-		require.False(t, !char.IsFinite())
+		require.True(t, char.IsFinite())
 		require.False(t, char.IsZero())
 	})
 
 	t.Run("ElementSize", func(t *testing.T) {
 		t.Parallel()
 		size := zmod.ElementSize()
-		require.Greater(t, size, 0)
+		require.Positive(t, size)
 	})
 
 	t.Run("WideElementSize", func(t *testing.T) {
@@ -258,7 +258,7 @@ func TestZMod_FromInt(t *testing.T) {
 		require.NoError(t, err)
 		// -10 mod 7 = 4
 		require.True(t, result.Big().Cmp(big.NewInt(0)) >= 0)
-		require.True(t, result.Big().Cmp(big.NewInt(7)) < 0)
+		require.Negative(t, result.Big().Cmp(big.NewInt(7)))
 	})
 }
 
@@ -357,7 +357,7 @@ func TestZMod_Random(t *testing.T) {
 		require.NoError(t, err)
 		// Should be in [0, 100)
 		require.True(t, result.Big().Cmp(big.NewInt(0)) >= 0)
-		require.True(t, result.Big().Cmp(big.NewInt(100)) < 0)
+		require.Negative(t, result.Big().Cmp(big.NewInt(100)))
 	}
 }
 
@@ -392,7 +392,7 @@ func TestZMod_Hash(t *testing.T) {
 		result, err := zmod.Hash([]byte("test"))
 		require.NoError(t, err)
 		require.True(t, result.Big().Cmp(big.NewInt(0)) >= 0)
-		require.True(t, result.Big().Cmp(big.NewInt(100)) < 0)
+		require.Negative(t, result.Big().Cmp(big.NewInt(100)))
 	})
 }
 
@@ -979,7 +979,7 @@ func TestUint_IsNegative(t *testing.T) {
 
 	t.Run("non-negative values", func(t *testing.T) {
 		t.Parallel()
-		for i := uint64(0); i <= 5; i++ {
+		for i := range uint64(6) {
 			a := zmod.FromUint64(i)
 			require.False(t, a.IsNegative(), "value %d should not be negative", i)
 		}
@@ -1327,7 +1327,7 @@ func TestUint_Cardinal(t *testing.T) {
 
 	a := zmod.FromUint64(42)
 	card := a.Cardinal()
-	require.False(t, !card.IsFinite())
+	require.True(t, card.IsFinite())
 }
 
 func TestUint_Modulus(t *testing.T) {
@@ -1397,7 +1397,7 @@ func TestUint_TrueLen(t *testing.T) {
 	zmod := testZMod(t, 256)
 
 	a := zmod.FromUint64(255)
-	require.Greater(t, a.TrueLen(), 0)
+	require.Positive(t, a.TrueLen())
 }
 
 func TestUint_AnnouncedLen(t *testing.T) {
@@ -1588,10 +1588,10 @@ func TestZMod_RandomWithCryptoRand(t *testing.T) {
 
 	zmod := testZMod(t, 100)
 
-	result, err := zmod.Random(rand.Reader)
+	result, err := zmod.Random(crand.Reader)
 	require.NoError(t, err)
 	require.True(t, result.Big().Cmp(big.NewInt(0)) >= 0)
-	require.True(t, result.Big().Cmp(big.NewInt(100)) < 0)
+	require.Negative(t, result.Big().Cmp(big.NewInt(100)))
 }
 
 func TestUint_EuclideanDiv(t *testing.T) {

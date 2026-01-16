@@ -43,7 +43,7 @@ type proofDTO[A sigma.Commitment, Z sigma.Response] struct {
 	Z Z `cbor:"Z"`
 }
 
-// MarshalCBOR serializes the proof to CBOR format.
+// MarshalCBOR serialises the proof to CBOR format.
 func (p *Proof[A, Z]) MarshalCBOR() ([]byte, error) {
 	dto := &proofDTO[A, Z]{
 		A: p.a,

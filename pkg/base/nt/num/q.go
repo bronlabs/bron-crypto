@@ -166,7 +166,7 @@ func (q *Rationals) FromBigRat(n *big.Rat) (*Rat, error) {
 	}, nil
 }
 
-// Random samples a random *Rat element in the interval [lowInclusive, highExclusive)
+// Random samples a random *Rat element in the interval [lowInclusive, highExclusive).
 func (q *Rationals) Random(lowInclusive, highExclusive *Rat, prng io.Reader) (*Rat, error) {
 	if prng == nil || lowInclusive == nil || highExclusive == nil {
 		return nil, ErrIsNil.WithStackFrame()
@@ -526,7 +526,7 @@ func (r *Rat) Equal(rhs *Rat) bool {
 	return r.a.Mul(rhs.b.Lift()).Equal(r.b.Lift().Mul(rhs.a))
 }
 
-// Bytes serializes the Rat element to a byte slice.
+// Bytes serialises the Rat element to a byte slice.
 func (r *Rat) Bytes() []byte {
 	out, err := r.MarshalCBOR()
 	if err != nil {

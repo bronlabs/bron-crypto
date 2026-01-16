@@ -118,7 +118,7 @@ func SignWithCustomDST[
 	}
 }
 
-// Signer produces BLS signatures using the CoreSign algorithm. The signing behavior
+// Signer produces BLS signatures using the CoreSign algorithm. The signing behaviour
 // depends on the configured rogue key prevention algorithm:
 //   - Basic: signs the message directly
 //   - MessageAugmentation: signs pk || message
@@ -351,7 +351,7 @@ func VerifyWithProofsOfPossession[
 // Verifier validates BLS signatures using the CoreVerify algorithm.
 // Verification uses the pairing equation to check: e(pk, H(m)) = e(G, sig)
 //
-// The verification behavior depends on the rogue key prevention algorithm:
+// The verification behaviour depends on the rogue key prevention algorithm:
 //   - Basic: verifies signature directly
 //   - MessageAugmentation: reconstructs pk || message before verification
 //   - POP: verifies attached proof of possession before signature verification
@@ -373,7 +373,7 @@ type Verifier[
 
 // Verify validates a BLS signature against a public key and message.
 //
-// The verification uses an optimized pairing check: e(pk^-1, H(m)) * e(G, sig) = 1
+// The verification uses an optimised pairing check: e(pk^-1, H(m)) * e(G, sig) = 1
 // which reduces the number of Miller loop iterations.
 //
 // Security: Validates that both the public key and signature are valid non-identity
@@ -434,13 +434,13 @@ func (v *Verifier[PK, PKFE, SG, SGFE, E, S]) Verify(signature *Signature[SG, SGF
 }
 
 // AggregateVerify validates an aggregate signature against multiple public keys and messages.
-// The verification behavior depends on the rogue key prevention algorithm:
+// The verification behaviour depends on the rogue key prevention algorithm:
 //
 //   - Basic: requires all messages to be distinct to prevent rogue key attacks
 //   - MessageAugmentation: augments each message with its corresponding public key
 //   - POP: requires valid proofs of possession for each public key (via VerifyWithProofsOfPossession)
 //
-// When all messages are identical and using the POP scheme, the optimized FastAggregateVerify
+// When all messages are identical and using the POP scheme, the optimised FastAggregateVerify
 // algorithm is used, which aggregates public keys before verification.
 //
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.9

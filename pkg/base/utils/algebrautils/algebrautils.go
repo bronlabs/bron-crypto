@@ -167,7 +167,7 @@ func MultiScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](
 			return 0
 		}
 		var acc uint = 0
-		for k := 0; k < w; k++ {
+		for k := range w {
 			bitIndex := start + k
 			byteCount := len(b)
 			byteIndexFromLSB := bitIndex / 8
@@ -184,7 +184,7 @@ func MultiScalarMul[E algebra.MonoidElement[E], S algebra.Numeric](
 
 	acc := monoid.OpIdentity()
 	for wIdx := numWindows - 1; wIdx >= 0; wIdx-- {
-		for i := 0; i < w; i++ {
+		for range w {
 			acc = acc.Op(acc)
 		}
 		buckets := make([]E, windowSize)

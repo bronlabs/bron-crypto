@@ -5,9 +5,10 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"github.com/stretchr/testify/require"
 )
 
 func Benchmark_NatGCD(b *testing.B) {

@@ -41,7 +41,7 @@ func NewStatement[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement
 	}
 }
 
-// Bytes serializes the statement to a byte slice.
+// Bytes serialises the statement to a byte slice.
 func (x *Statement[G, S]) Bytes() []byte {
 	var d []byte
 
@@ -72,7 +72,7 @@ func NewWitness[S algebra.PrimeFieldElement[S]](ws ...S) *Witness[S] {
 	}
 }
 
-// Bytes serializes the witness to a byte slice.
+// Bytes serialises the witness to a byte slice.
 func (w *Witness[S]) Bytes() []byte {
 	var d []byte
 
@@ -92,7 +92,7 @@ type Commitment[G algebra.PrimeGroupElement[G, S], S algebra.PrimeFieldElement[S
 	A G `cbor:"a"`
 }
 
-// Bytes serializes the commitment to a byte slice.
+// Bytes serialises the commitment to a byte slice.
 func (a *Commitment[G, S]) Bytes() []byte {
 	var d []byte
 
@@ -113,7 +113,7 @@ type Response[S algebra.PrimeFieldElement[S]] struct {
 	Z S `cbor:"z"`
 }
 
-// Bytes serializes the response to a byte slice.
+// Bytes serialises the response to a byte slice.
 func (z *Response[S]) Bytes() []byte {
 	var d []byte
 

@@ -3,10 +3,11 @@ package num_test
 import (
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 )
 
 func NatGenerator(t *testing.T) *rapid.Generator[*num.Nat] {
@@ -60,7 +61,7 @@ func TestN_LshRshRoundTrip_Property(t *testing.T) {
 		shift := rapid.IntRange(0, 128).Draw(t, "shift")
 		lsh := n.Lsh(uint(shift))
 		rsh := lsh.Rsh(uint(shift))
-		require.EqualValues(t, n.Big().Bytes(), rsh.Big().Bytes())
+		require.Equal(t, n.Big().Bytes(), rsh.Big().Bytes())
 	})
 }
 

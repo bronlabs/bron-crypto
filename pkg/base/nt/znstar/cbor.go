@@ -1,10 +1,11 @@
 package znstar
 
 import (
+	"github.com/fxamacker/cbor/v2"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/modular"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
-	"github.com/fxamacker/cbor/v2"
 )
 
 var (
@@ -94,7 +95,7 @@ type paillierGroupUnknownOrderElementDTO struct {
 	N          *num.NatPlus           `cbor:"n"`
 }
 
-// ========== CBOR Serialization ==========
+// ========== CBOR Serialisation ==========
 
 func (pg *PaillierGroup[X]) MarshalCBOR() ([]byte, error) {
 	var tag uint64

@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
 
@@ -18,6 +17,7 @@ import (
 	paillierrange "github.com/bronlabs/bron-crypto/pkg/proofs/paillier/range"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
+	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/zk"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
 )

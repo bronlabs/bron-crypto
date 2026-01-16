@@ -3,11 +3,12 @@ package num_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 func NatPlusGenerator(t *testing.T) *rapid.Generator[*num.NatPlus] {
@@ -106,7 +107,7 @@ func TestNPlus_Lsh_Property(t *testing.T) {
 		lsh := n.Lsh(shift)
 		var expected numct.Nat
 		expected.Lsh(n.Value(), shift)
-		require.EqualValues(t, expected.Big().Bytes(), lsh.Big().Bytes())
+		require.Equal(t, expected.Big().Bytes(), lsh.Big().Bytes())
 	})
 }
 
@@ -124,7 +125,7 @@ func TestNPlus_Rsh_Property(t *testing.T) {
 			require.ErrorIs(t, err, num.ErrOutOfRange)
 		} else {
 			require.NoError(t, err)
-			require.EqualValues(t, expected.Big().Bytes(), rsh.Big().Bytes())
+			require.Equal(t, expected.Big().Bytes(), rsh.Big().Bytes())
 		}
 	})
 }

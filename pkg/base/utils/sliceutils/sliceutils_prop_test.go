@@ -3,10 +3,11 @@ package sliceutils_test
 import (
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 func TestShuffled_Property(t *testing.T) {

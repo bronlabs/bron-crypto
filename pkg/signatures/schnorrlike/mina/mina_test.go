@@ -1,24 +1,25 @@
 package mina_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/pasta"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/mina"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestEncodeDecodeRoundTrip(t *testing.T) {
 	// Generate a new key pair
-	scheme, err := mina.NewRandomisedScheme(mina.TestNet, rand.Reader)
+	scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
 	require.NoError(t, err)
 
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
 
-	privateKey, publicKey, err := kg.Generate(rand.Reader)
+	privateKey, publicKey, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
 
 	// Encode private key
@@ -54,13 +55,13 @@ func TestEncodeDecodeRoundTrip(t *testing.T) {
 // 6. Verification: s*G == R + e*PK
 func TestSchnorrSignatureLogic(t *testing.T) {
 	// Create a random scheme
-	scheme, err := mina.NewRandomisedScheme(mina.TestNet, rand.Reader)
+	scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
 	require.NoError(t, err)
 
 	// Generate a key pair
 	kg, err := scheme.Keygen()
 	require.NoError(t, err)
-	privateKey, publicKey, err := kg.Generate(rand.Reader)
+	privateKey, publicKey, err := kg.Generate(crand.Reader)
 	require.NoError(t, err)
 
 	// Create a simple message
@@ -142,13 +143,13 @@ func TestSchnorrDeterministicNonce(t *testing.T) {
 // TestSchnorrParityCorrection verifies R has even y-coordinate
 func TestSchnorrParityCorrection(t *testing.T) {
 	// Create multiple random schemes and verify R parity
-	for i := 0; i < 10; i++ {
-		scheme, err := mina.NewRandomisedScheme(mina.TestNet, rand.Reader)
+	for range 10 {
+		scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
 		require.NoError(t, err)
 
 		kg, err := scheme.Keygen()
 		require.NoError(t, err)
-		privateKey, publicKey, err := kg.Generate(rand.Reader)
+		privateKey, publicKey, err := kg.Generate(crand.Reader)
 		require.NoError(t, err)
 
 		signer, err := scheme.Signer(privateKey)

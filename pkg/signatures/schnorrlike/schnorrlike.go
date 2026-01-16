@@ -23,7 +23,7 @@
 //   - Mina: Schnorr on Pallas curve with Poseidon hashing
 //   - Vanilla: Configurable generic Schnorr implementation
 //
-// Each variant can customize nonce generation, challenge computation, and response
+// Each variant can customise nonce generation, challenge computation, and response
 // calculation while sharing common verification logic.
 //
 // # Threshold Signatures
@@ -92,7 +92,7 @@ type (
 
 	// Scheme is the complete Schnorr signature scheme combining key generation,
 	// signing, and verification. Different variants implement this interface
-	// to provide variant-specific behavior while maintaining a consistent API.
+	// to provide variant-specific behaviour while maintaining a consistent API.
 	Scheme[
 		VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Message,
 		KG KeyGenerator[GE, S], SG Signer[VR, GE, S, M], VF Verifier[VR, GE, S, M],
@@ -102,12 +102,12 @@ type (
 	}
 )
 
-// Variant defines variant-specific behavior for a Schnorr signature scheme.
-// Different variants (BIP-340, Mina, etc.) implement this interface to customize:
+// Variant defines variant-specific behaviour for a Schnorr signature scheme.
+// Different variants (BIP-340, Mina, etc.) implement this interface to customise:
 //   - Nonce generation (deterministic vs random, parity constraints)
 //   - Challenge computation (hash function, input ordering, domain separation)
 //   - Response calculation (s = k + ex vs s = k - ex)
-//   - Signature serialization format
+//   - Signature serialisation format
 type Variant[GE GroupElement[GE, S], S Scalar[S], M Message] interface {
 	// Type returns the variant identifier (e.g., "bip340", "mina").
 	Type() VariantType
@@ -161,7 +161,7 @@ type PublicKey[PKV GroupElement[PKV, S], S Scalar[S]] struct {
 	signatures.PublicKeyTrait[PKV, S]
 }
 
-// publicKeyDTO is the CBOR serialization format for public keys.
+// publicKeyDTO is the CBOR serialisation format for public keys.
 type publicKeyDTO[PKV GroupElement[PKV, S], S Scalar[S]] struct {
 	PK PKV `cbor:"publicKey"`
 }
@@ -182,7 +182,7 @@ func (pk *PublicKey[PKV, S]) Clone() *PublicKey[PKV, S] {
 	return &PublicKey[PKV, S]{PublicKeyTrait: *pk.PublicKeyTrait.Clone()}
 }
 
-// MarshalCBOR serializes the public key to CBOR format.
+// MarshalCBOR serialises the public key to CBOR format.
 func (pk *PublicKey[PKV, S]) MarshalCBOR() ([]byte, error) {
 	dto := &publicKeyDTO[PKV, S]{
 		PK: pk.V,
@@ -291,7 +291,7 @@ func NewSignature[GE GroupElement[GE, S], S Scalar[S]](e S, r GE, s S) (*Signatu
 //   - S: the response s = k + e·x (or k - e·x for some variants)
 //
 // Some variants (like Mina) don't store E explicitly as it can be recomputed.
-// The serialized format varies by variant (typically just R.x and S).
+// The serialised format varies by variant (typically just R.x and S).
 type Signature[GE GroupElement[GE, S], S Scalar[S]] struct {
 	E S
 	R GE
@@ -366,7 +366,7 @@ type SignerTrait[VR Variant[GE, S, M], GE GroupElement[GE, S], S Scalar[S], M Me
 //  1. Generate nonce k and commitment R = k·G (via variant)
 //  2. Compute challenge e = H(R || P || m) (via variant)
 //  3. Compute response s = k + e·x (via variant)
-//  4. Verify the signature before returning (defense in depth)
+//  4. Verify the signature before returning (defence in depth)
 //
 // The signature verification step protects against fault attacks that might
 // produce invalid signatures leaking information about the private key.
@@ -461,7 +461,7 @@ func (v *VerifierTrait[VR, GE, S, M]) Verify(sigma *Signature[GE, S], publicKey 
 
 // BatchVerify verifies multiple signatures in sequence.
 // This is a naive implementation that verifies each signature individually.
-// Some variants (like BIP-340) provide optimized batch verification.
+// Some variants (like BIP-340) provide optimised batch verification.
 func (v *VerifierTrait[VR, GE, S, M]) BatchVerify(signatures []*Signature[GE, S], publicKeys []*PublicKey[GE, S], messages []M) error {
 	if len(signatures) != len(publicKeys) || len(signatures) != len(messages) {
 		return ErrFailed.WithMessage("mismatched lengths")

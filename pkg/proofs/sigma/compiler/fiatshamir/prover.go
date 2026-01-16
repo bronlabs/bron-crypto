@@ -16,7 +16,7 @@ type prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Stat
 
 // Prove generates a non-interactive proof for the given statement and witness.
 // It computes the sigma protocol commitment, derives the challenge from the transcript
-// hash, computes the response, and returns the serialized proof.
+// hash, computes the response, and returns the serialised proof.
 func (p prover[X, W, A, S, Z]) Prove(statement X, witness W) (compiler.NIZKPoKProof, error) {
 	p.transcript.AppendBytes(statementLabel, statement.Bytes())
 

@@ -49,7 +49,7 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoK
 	v.transcript.AppendBytes(statementLabel, statement.Bytes())
 
 	commitmentSerialized := make([]byte, 0)
-	for i := 0; i < R; i++ {
+	for i := range R {
 		commitmentSerialized = append(commitmentSerialized, rfProof.A[i].Bytes()...)
 	}
 	v.transcript.AppendBytes(commitmentLabel, commitmentSerialized)
@@ -57,12 +57,12 @@ func (v verifier[X, W, A, S, Z]) Verify(statement X, proofBytes compiler.NIZKPoK
 
 	// step 1. parse (a_i, e_i, z_i) for i in [r] and set a = (a_i) for every i in [r]
 	a := make([]byte, 0)
-	for i := 0; i < R; i++ {
+	for i := range R {
 		a = append(a, rfProof.A[i].Bytes()...)
 	}
 
 	// step 2. for each i in [r] verify that hash(a, i, e_i, z_i) == 0 and SigmaV(x, (a_i, e_i, z_i)) is true, abort if not
-	for i := 0; i < R; i++ {
+	for i := range R {
 		digest, err := hash(crs, a, binary.LittleEndian.AppendUint64(nil, uint64(i)), rfProof.E[i], rfProof.Z[i].Bytes())
 		if err != nil {
 			return errs2.Wrap(err).WithMessage("cannot hash")

@@ -17,11 +17,12 @@ import (
 	"io"
 	"slices"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
-	"golang.org/x/sync/errgroup"
 )
 
 // Statement represents an OR-composed statement consisting of n sub-statements.

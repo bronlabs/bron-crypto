@@ -67,7 +67,7 @@ type DHKEMScheme[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S alg
 
 // ID returns KEM ID as per https://www.rfc-editor.org/rfc/rfc9180.html#name-key-encapsulation-mechanism
 func (s *DHKEMScheme[P, B, S]) ID() KEMID {
-	switch s.curve.Name() { //nolint:exhaustive // intentional, for readability.
+	switch s.curve.Name() {
 	case p256.NewCurve().Name():
 		return DHKEM_P256_HKDF_SHA256
 	case curve25519.NewPrimeSubGroup().Name():

@@ -3,10 +3,11 @@ package num_test
 import (
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 )
 
 func IntGenerator(t *testing.T) *rapid.Generator[*num.Int] {

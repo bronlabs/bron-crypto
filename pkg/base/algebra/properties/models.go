@@ -3,10 +3,11 @@ package properties
 import (
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base"
-	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
+
+	"github.com/bronlabs/bron-crypto/pkg/base"
+	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 )
 
 // ************************* Group-like.
@@ -288,7 +289,7 @@ func Field[S algebra.Field[E], E algebra.FieldElement[E]](
 	t *testing.T, structure S, g *rapid.Generator[E],
 ) *Model[S, E] {
 	t.Helper()
-	require.Greater(t, structure.ExtensionDegree(), uint(0))
+	require.Positive(t, structure.ExtensionDegree())
 	require.False(t, structure.Zero().Equal(structure.One())) // Requirement to rule out trivial rings.
 	out := EuclideanDomain(t, structure, g)
 	out.Theory = append(out.Theory,

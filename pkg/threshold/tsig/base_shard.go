@@ -85,7 +85,7 @@ func (spm *BasePublicMaterial[E, S]) HashCode() base.HashCode {
 	return spm.fv.HashCode()
 }
 
-// MarshalCBOR serializes the public material to CBOR format.
+// MarshalCBOR serialises the public material to CBOR format.
 func (spm *BasePublicMaterial[E, S]) MarshalCBOR() ([]byte, error) {
 	ppk := make(map[sharing.ID]*schnorrlike.PublicKey[E, S])
 	for k, v := range spm.partialPublicKeys.Iter() {
@@ -161,7 +161,7 @@ func (sh *BaseShard[E, S]) HashCode() base.HashCode {
 	return sh.BasePublicMaterial.HashCode()
 }
 
-// MarshalCBOR serializes the shard to CBOR format.
+// MarshalCBOR serialises the shard to CBOR format.
 func (sh *BaseShard[E, S]) MarshalCBOR() ([]byte, error) {
 	dto := &baseShardDTO[E, S]{
 		Share: sh.share,

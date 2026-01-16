@@ -43,7 +43,7 @@ const (
 	MessageAugmentation RogueKeyPreventionAlgorithm = 2
 
 	// POP (Proof of Possession) is a rogue key prevention algorithm where signers must
-	// provide a proof demonstrating knowledge of their secret key. This enables the optimized
+	// provide a proof demonstrating knowledge of their secret key. This enables the optimised
 	// FastAggregateVerify algorithm for verifying multiple signatures on identical messages.
 	// See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-3.3
 	POP RogueKeyPreventionAlgorithm = 3
@@ -252,7 +252,7 @@ func (pk *PublicKey[P1, F1, P2, F2, E, S]) HashCode() base.HashCode {
 	return pk.PublicKeyTrait.HashCode()
 }
 
-// Bytes returns the compressed serialization of the public key.
+// Bytes returns the compressed serialisation of the public key.
 // For ShortKey variant (G1): 48 bytes. For LongKey variant (G2): 96 bytes.
 func (pk *PublicKey[P1, F1, P2, F2, E, S]) Bytes() []byte {
 	if pk == nil {
@@ -446,7 +446,7 @@ func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) Value() Sig {
 	return sig.v
 }
 
-// Bytes returns the compressed serialization of the signature.
+// Bytes returns the compressed serialisation of the signature.
 // For ShortKey variant (sig in G2): 96 bytes. For LongKey variant (sig in G1): 48 bytes.
 func (sig *Signature[Sig, SigFE, PK, PKFE, E, S]) Bytes() []byte {
 	return sig.v.ToCompressed()
@@ -579,7 +579,7 @@ type ProofOfPossession[
 	Signature[Sig, SigFE, PK, PKFE, E, S]
 }
 
-// Bytes returns the compressed serialization of the proof of possession.
+// Bytes returns the compressed serialisation of the proof of possession.
 func (pop *ProofOfPossession[Sig, SigFE, PK, PKFE, E, S]) Bytes() []byte {
 	if pop == nil {
 		return nil

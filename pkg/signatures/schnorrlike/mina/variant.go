@@ -47,7 +47,7 @@ func NewRandomisedVariant(nid NetworkId, prng io.Reader) (*Variant, error) {
 	}, nil
 }
 
-// Variant implements Mina-specific signing behavior.
+// Variant implements Mina-specific signing behaviour.
 // It handles deterministic or random nonce generation, Poseidon-based challenge
 // computation, and the even-y constraint on the nonce commitment.
 type Variant struct {

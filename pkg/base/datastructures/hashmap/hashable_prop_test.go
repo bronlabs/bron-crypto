@@ -158,7 +158,7 @@ func TestMutableHashableHashMap_Keys_Property(t *testing.T) {
 
 		keys := m.Keys()
 
-		require.Equal(t, m.Size(), len(keys))
+		require.Len(t, keys, m.Size())
 		for _, k := range keys {
 			require.True(t, m.ContainsKey(k))
 		}
@@ -172,7 +172,7 @@ func TestMutableHashableHashMap_Values_Property(t *testing.T) {
 
 		values := m.Values()
 
-		require.Equal(t, m.Size(), len(values))
+		require.Len(t, values, m.Size())
 	})
 }
 
@@ -254,7 +254,7 @@ func TestMutableHashableHashMap_Enumerate_Property(t *testing.T) {
 			require.Equal(t, entry.Value, got)
 		}
 
-		require.Equal(t, m.Size(), len(indices))
+		require.Len(t, indices, m.Size())
 		slices.Sort(indices)
 		for i, idx := range indices {
 			require.Equal(t, i, idx)

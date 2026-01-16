@@ -4,9 +4,10 @@ import (
 	crand "crypto/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
-	"github.com/stretchr/testify/require"
 )
 
 // TestDHKEM_Encap_Decap_Roundtrip tests basic encapsulation/decapsulation
@@ -270,7 +271,7 @@ func TestContexts_SequenceNumber(t *testing.T) {
 	require.NoError(t, err)
 
 	// Encrypt and decrypt multiple messages, checking sequence numbers
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		msg := []byte("Message " + string(rune(i)))
 		ct, err := senderCtx.Seal(msg, nil)
 		require.NoError(t, err)
@@ -281,7 +282,7 @@ func TestContexts_SequenceNumber(t *testing.T) {
 	}
 }
 
-// TestKDF_LabeledExtract tests labeled extract function
+// TestKDF_LabeledExtract tests labelled extract function
 func TestKDF_LabeledExtract(t *testing.T) {
 	t.Parallel()
 
@@ -320,7 +321,7 @@ func TestKDF_LabeledExtract(t *testing.T) {
 	})
 }
 
-// TestKDF_LabeledExpand tests labeled expand function
+// TestKDF_LabeledExpand tests labelled expand function
 func TestKDF_LabeledExpand(t *testing.T) {
 	t.Parallel()
 

@@ -34,7 +34,7 @@ type (
 		share *feldman.Share[S]
 	}
 
-	// DKGPublicOutput collects the public artifacts from the Gennaro DKG execution.
+	// DKGPublicOutput collects the public artefacts from the Gennaro DKG execution.
 	DKGPublicOutput[
 		E GroupElement[E, S], S Scalar[S],
 	] struct {

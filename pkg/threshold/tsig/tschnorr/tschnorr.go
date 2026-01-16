@@ -55,7 +55,7 @@ func (ps *PartialSignature[GE, S]) AsSchnorrSignature() *schnorrlike.Signature[G
 	return &ps.Sig
 }
 
-// Bytes serializes the partial signature to a byte slice.
+// Bytes serialises the partial signature to a byte slice.
 func (ps *PartialSignature[E, S]) Bytes() []byte {
 	if ps == nil {
 		return nil
@@ -69,6 +69,7 @@ func (ps *PartialSignature[E, S]) Bytes() []byte {
 // PublicMaterial contains public information for threshold Schnorr signature verification.
 type PublicMaterial[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]] struct {
 	tsig.BasePublicMaterial[E, S]
+
 	pk     *schnorrlike.PublicKey[E, S]
 	pkOnce sync.Once
 }
@@ -91,6 +92,7 @@ type Shard[
 	S algebra.PrimeFieldElement[S],
 ] struct {
 	tsig.BaseShard[E, S]
+
 	pk     *schnorrlike.PublicKey[E, S]
 	pkOnce sync.Once
 }

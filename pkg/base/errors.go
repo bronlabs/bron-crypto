@@ -1,14 +1,15 @@
 package base
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"golang.org/x/exp/constraints"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 )
 
 // IdentifiableAbortPartyIDTag is the tag used to identify parties responsible for an identifiable abort.
 const IdentifiableAbortPartyIDTag = "identifiable_abort_party_id"
 
-// ErrAbort indicates that an operation was aborted due to malicious behavior.
+// ErrAbort indicates that an operation was aborted due to malicious behaviour.
 var ErrAbort = errs2.New("ABORT")
 
 // IdentifiableAbortID represents the type used for party identifiers in identifiable abort errors.

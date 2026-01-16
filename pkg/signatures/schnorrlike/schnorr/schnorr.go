@@ -201,7 +201,7 @@ func (s *Scheme[GE, S]) PartialSignatureVerifier(
 	return verifier, nil
 }
 
-// KeyGeneratorOption configures key generation behavior.
+// KeyGeneratorOption configures key generation behaviour.
 type KeyGeneratorOption[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] = signatures.KeyGeneratorOption[*KeyGenerator[GE, S], *PrivateKey[GE, S], *PublicKey[GE, S]]
 
 // KeyGenerator creates Schnorr key pairs for the configured curve.
@@ -209,7 +209,7 @@ type KeyGenerator[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldEleme
 	schnorrlike.KeyGeneratorTrait[GE, S]
 }
 
-// SignerOption configures signing behavior.
+// SignerOption configures signing behaviour.
 type SignerOption[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] = signatures.SignerOption[*Signer[GE, S], Message, *Signature[GE, S]]
 
 // Signer produces Schnorr signatures using random nonce generation.
@@ -225,7 +225,7 @@ func (sg *Signer[GE, S]) Variant() *Variant[GE, S] {
 	return sg.V
 }
 
-// VerifierOption configures verification behavior.
+// VerifierOption configures verification behaviour.
 type VerifierOption[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] = signatures.VerifierOption[*Verifier[GE, S], *PublicKey[GE, S], Message, *Signature[GE, S]]
 
 // Verifier validates Schnorr signatures.
@@ -241,7 +241,7 @@ func (v *Verifier[GE, S]) Variant() *Variant[GE, S] {
 	return v.V
 }
 
-// Variant implements variant-specific behavior for vanilla Schnorr.
+// Variant implements variant-specific behaviour for vanilla Schnorr.
 // It stores all configurable parameters for the signature scheme.
 type Variant[GE algebra.PrimeGroupElement[GE, S], S algebra.PrimeFieldElement[S]] struct {
 	g                                algebra.PrimeGroup[GE, S]     // underlying group

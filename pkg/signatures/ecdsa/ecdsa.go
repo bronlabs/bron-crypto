@@ -6,10 +6,10 @@
 // efficient for constrained environments.
 //
 // This implementation supports:
-//   - Standard randomized ECDSA (requires secure random source)
+//   - Standard randomised ECDSA (requires secure random source)
 //   - Deterministic ECDSA per RFC 6979 (no random source needed)
 //   - Public key recovery from signatures (Bitcoin-style recovery ID)
-//   - Signature normalization to low-S form (BIP-62 compatible)
+//   - Signature normalisation to low-S form (BIP-62 compatible)
 //
 // References:
 //   - FIPS 186-5: https://csrc.nist.gov/pubs/fips/186-5/final

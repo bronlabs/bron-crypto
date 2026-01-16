@@ -98,7 +98,6 @@ func (u *UnitTrait[A, W, WT]) ExpBounded(exponent *num.Nat, bits uint) W {
 	var out WT
 	W(&out).set(v, u.arith, u.n)
 	return W(&out)
-
 }
 
 func (u *UnitTrait[A, W, WT]) ExpI(exponent *num.Int) W {
@@ -125,7 +124,6 @@ func (u *UnitTrait[A, W, WT]) ExpIBounded(exponent *num.Int, bits uint) W {
 	var out WT
 	W(&out).set(v, u.arith, u.n)
 	return W(&out)
-
 }
 
 func (u *UnitTrait[A, W, WT]) Square() W {

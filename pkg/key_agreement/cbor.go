@@ -22,7 +22,7 @@ func (sk *PrivateKey[V]) MarshalCBOR() ([]byte, error) {
 func (sk *PrivateKey[V]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[privateKeyDTO[V]](data)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("couldn't serialize private key")
+		return errs2.Wrap(err).WithMessage("couldn't serialise private key")
 	}
 	if _, err := NewPrivateKey(dto.V, dto.T); err != nil {
 		return errs2.Wrap(err).WithMessage("invalid private key")
@@ -48,7 +48,7 @@ func (pk *PublicKey[V, S]) MarshalCBOR() ([]byte, error) {
 func (pk *PublicKey[V, S]) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[publicKeyDTO[V, S]](data)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("couldn't serialize public key")
+		return errs2.Wrap(err).WithMessage("couldn't serialise public key")
 	}
 	if _, err := NewPublicKey(dto.V, dto.T); err != nil {
 		return errs2.Wrap(err).WithMessage("invalid public key")
@@ -74,7 +74,7 @@ func (k *SharedKey) MarshalCBOR() ([]byte, error) {
 func (k *SharedKey) UnmarshalCBOR(data []byte) error {
 	dto, err := serde.UnmarshalCBOR[sharedKeyDTO](data)
 	if err != nil {
-		return errs2.Wrap(err).WithMessage("couldn't serialize shared key")
+		return errs2.Wrap(err).WithMessage("couldn't serialise shared key")
 	}
 	if _, err := NewSharedKey(dto.V, dto.T); err != nil {
 		return errs2.Wrap(err).WithMessage("invalid shared key")

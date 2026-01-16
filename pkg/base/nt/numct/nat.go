@@ -4,12 +4,12 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 

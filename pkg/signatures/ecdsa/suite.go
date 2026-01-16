@@ -10,7 +10,7 @@ import (
 )
 
 // Suite encapsulates the cryptographic parameters for an ECDSA instance.
-// It binds together the elliptic curve, hash function, and signing mode (randomized
+// It binds together the elliptic curve, hash function, and signing mode (randomised
 // or deterministic) to ensure consistent parameter usage across signing and verification.
 type Suite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	deterministic bool
@@ -21,7 +21,7 @@ type Suite[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.Pr
 	hashId        crypto.Hash
 }
 
-// NewSuite creates a new ECDSA suite for randomized signing.
+// NewSuite creates a new ECDSA suite for randomised signing.
 // The hash function is used to compute message digests before signing.
 //
 // Common configurations:
@@ -98,7 +98,7 @@ func (s *Suite[P, B, S]) HashFunc() func() hash.Hash {
 	return s.hashFunc
 }
 
-// HashId returns the crypto.Hash identifier for deterministic suites, or 0 for randomized suites.
+// HashId returns the crypto.Hash identifier for deterministic suites, or 0 for randomised suites.
 func (s *Suite[P, B, S]) HashId() crypto.Hash {
 	return s.hashId
 }

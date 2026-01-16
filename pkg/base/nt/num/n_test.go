@@ -26,7 +26,7 @@ func TestNaturalNumbers_Properties(t *testing.T) {
 
 	require.Equal(t, "N", n.Name())
 	require.True(t, n.Characteristic().IsZero())
-	require.True(t, !n.Order().IsFinite())
+	require.False(t, n.Order().IsFinite())
 	require.Equal(t, -1, n.ElementSize())
 	require.True(t, n.Zero().IsZero())
 	require.True(t, n.One().IsOne())
@@ -209,7 +209,7 @@ func TestN_Random(t *testing.T) {
 	low := num.N().FromUint64(10)
 	high := num.N().FromUint64(100)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		n, err := num.N().Random(low, high, prng)
 		require.NoError(t, err)
 		require.True(t, low.IsLessThanOrEqual(n))
@@ -612,7 +612,7 @@ func TestNat_Cardinal(t *testing.T) {
 	n := num.N().FromUint64(42)
 	c := n.Cardinal()
 	require.False(t, c.IsZero())
-	require.False(t, !c.IsFinite())
+	require.True(t, c.IsFinite())
 }
 
 func TestNat_EuclideanDiv(t *testing.T) {
@@ -644,7 +644,7 @@ func TestNat_EuclideanValuation(t *testing.T) {
 func TestNat_TrueLen_AnnouncedLen(t *testing.T) {
 	t.Parallel()
 	n := num.N().FromUint64(255)
-	require.True(t, n.TrueLen() > 0)
+	require.Positive(t, n.TrueLen())
 	require.True(t, n.AnnouncedLen() >= n.TrueLen())
 }
 

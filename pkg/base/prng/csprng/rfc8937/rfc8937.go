@@ -15,7 +15,7 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
 )
 
-// hashFunc implies L = 32 bytes
+// hashFunc implies L = 32 bytes.
 var hashFunc = sha3.New256
 
 type WrappedReader struct {

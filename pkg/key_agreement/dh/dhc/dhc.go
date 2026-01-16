@@ -24,6 +24,7 @@ type (
 	// ExtendedPrivateKey represents an extended private key with scalar value.
 	ExtendedPrivateKey[S algebra.PrimeFieldElement[S]] struct {
 		PrivateKey
+
 		s S
 	}
 	// PublicKey represents a public key in the DHC key agreement scheme.

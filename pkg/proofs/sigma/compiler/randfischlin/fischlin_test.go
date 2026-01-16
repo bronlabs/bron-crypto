@@ -6,6 +6,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/edwards25519"
@@ -17,7 +19,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_HappyPathSchnorr(t *testing.T) {

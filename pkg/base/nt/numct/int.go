@@ -5,12 +5,12 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 	"github.com/cronokirby/saferith"
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 )
 
@@ -390,9 +390,9 @@ func (i *Int) Square(x *Int) {
 }
 
 //// Bit returns the value of the bit at the given index.
-//func (i *Int) Bit(index uint) byte {
+// func (i *Int) Bit(index uint) byte {
 //	return i.Absed().Bit(index)
-//}
+//}.
 
 // Bytes returns a sign-magnitude encoding:
 //

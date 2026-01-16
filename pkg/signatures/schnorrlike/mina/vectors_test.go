@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/base58"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/mina"
-	"github.com/stretchr/testify/require"
 )
 
 // Test vectors from https://github.com/o1-labs/o1js/blob/main/src/mina-signer/src/test-vectors/legacySignatures.ts

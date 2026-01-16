@@ -4,13 +4,14 @@ import (
 	crand "crypto/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
-	"github.com/stretchr/testify/require"
 )
 
-// TestPrivateKey_CBOR tests CBOR marshaling and unmarshaling of PrivateKey
+// TestPrivateKey_CBOR tests CBOR marshalling and unmarshaling of PrivateKey
 func TestPrivateKey_CBOR(t *testing.T) {
 	t.Parallel()
 
@@ -75,7 +76,7 @@ func TestPrivateKey_CBOR_InvalidData(t *testing.T) {
 	}
 }
 
-// TestExtendedPrivateKey_CBOR_X25519 tests CBOR marshaling for X25519
+// TestExtendedPrivateKey_CBOR_X25519 tests CBOR marshalling for X25519
 func TestExtendedPrivateKey_CBOR_X25519(t *testing.T) {
 	t.Parallel()
 
@@ -107,7 +108,7 @@ func TestExtendedPrivateKey_CBOR_X25519(t *testing.T) {
 	require.Equal(t, extPk.Bytes(), extPk2.Bytes())
 }
 
-// TestExtendedPrivateKey_CBOR_P256 tests CBOR marshaling for P-256
+// TestExtendedPrivateKey_CBOR_P256 tests CBOR marshalling for P-256
 func TestExtendedPrivateKey_CBOR_P256(t *testing.T) {
 	t.Parallel()
 
@@ -146,7 +147,7 @@ func TestExtendedPrivateKey_CBOR_Roundtrip(t *testing.T) {
 	t.Run("X25519_MultipleRoundtrips", func(t *testing.T) {
 		sf := curve25519.NewScalarField()
 
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			scalar, err := sf.Random(crand.Reader)
 			require.NoError(t, err)
 
@@ -181,7 +182,7 @@ func TestExtendedPrivateKey_CBOR_Roundtrip(t *testing.T) {
 	t.Run("P256_MultipleRoundtrips", func(t *testing.T) {
 		curve := p256.NewCurve()
 
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			scalar, err := curve.ScalarField().Random(crand.Reader)
 			require.NoError(t, err)
 

@@ -272,7 +272,7 @@ func (i *Int) Rsh(shift uint) *Int {
 	return &Int{v: v}
 }
 
-// IsInRange checks if the integer is within the range defined by the modulus i.e., 0 <= x < m
+// IsInRange checks if the integer is within the range defined by the modulus i.e., 0 <= x < m.
 func (i *Int) IsInRange(modulus *NatPlus) bool {
 	if modulus == nil {
 		panic("argument is nil")
@@ -283,7 +283,7 @@ func (i *Int) IsInRange(modulus *NatPlus) bool {
 	return modulus.ModulusCT().IsInRange(i.Abs().v) == ct.True
 }
 
-// IsInRangeSymmetric checks if the integer is within the symmetric range defined by the modulus i.e., -m/2 <= x < m/2
+// IsInRangeSymmetric checks if the integer is within the symmetric range defined by the modulus i.e., -m/2 <= x < m/2.
 func (i *Int) IsInRangeSymmetric(modulus *NatPlus) bool {
 	if modulus == nil {
 		panic("argument is nil")

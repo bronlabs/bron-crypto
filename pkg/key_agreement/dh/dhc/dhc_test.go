@@ -4,6 +4,8 @@ import (
 	crand "crypto/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/ct"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves"
@@ -12,7 +14,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/key_agreement/dh/dhc"
-	"github.com/stretchr/testify/require"
 )
 
 // TestDHC_BasicRoundtrip tests basic DH key agreement roundtrip
@@ -74,7 +75,7 @@ func testRoundtrip[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S a
 	require.False(t, ct.SliceIsZero(bobShared.Bytes()) == ct.True)
 
 	// Shared secrets should match
-	require.EqualValues(t, aliceShared.Bytes(), bobShared.Bytes())
+	require.Equal(t, aliceShared.Bytes(), bobShared.Bytes())
 }
 
 func testRoundtripCurve25519[P curves.Point[P, B, S], B algebra.FiniteFieldElement[B], S algebra.PrimeFieldElement[S]](t *testing.T, c curves.Curve[P, B, S]) {
@@ -115,10 +116,10 @@ func testRoundtripCurve25519[P curves.Point[P, B, S], B algebra.FiniteFieldEleme
 	require.False(t, ct.SliceIsZero(bobShared.Bytes()) == ct.True)
 
 	// Shared secrets should match
-	require.EqualValues(t, aliceShared.Bytes(), bobShared.Bytes())
+	require.Equal(t, aliceShared.Bytes(), bobShared.Bytes())
 }
 
-// TestDHC_SerializationRoundtrip tests key serialization and deserialization
+// TestDHC_SerializationRoundtrip tests key serialisation and deserialization
 func TestDHC_SerializationRoundtrip(t *testing.T) {
 	t.Parallel()
 
@@ -137,7 +138,7 @@ func TestDHC_SerializationRoundtrip(t *testing.T) {
 		privKey, err := dhc.ExtendPrivateKey(privSeed, sf)
 		require.NoError(t, err)
 
-		// Serialize
+		// Serialise
 		privBytes, err := dhc.SerialiseExtendedPrivateKey(privKey)
 		require.NoError(t, err)
 		require.NotEmpty(t, privBytes)
@@ -147,11 +148,11 @@ func TestDHC_SerializationRoundtrip(t *testing.T) {
 		pubKey, err := dhc.NewPublicKey(pubPoint)
 		require.NoError(t, err)
 
-		// Serialize public key
+		// Serialise public key
 		pubBytes, err := dhc.SerialisePublicKey(pubKey)
 		require.NoError(t, err)
 		require.NotEmpty(t, pubBytes)
-		require.Equal(t, 32, len(pubBytes), "X25519 public key should be 32 bytes")
+		require.Len(t, pubBytes, 32, "X25519 public key should be 32 bytes")
 	})
 
 	t.Run("P256", func(t *testing.T) {
@@ -168,7 +169,7 @@ func TestDHC_SerializationRoundtrip(t *testing.T) {
 		privKey, err := dhc.ExtendPrivateKey(privSeed, curve.ScalarField())
 		require.NoError(t, err)
 
-		// Serialize
+		// Serialise
 		privBytes, err := dhc.SerialiseExtendedPrivateKey(privKey)
 		require.NoError(t, err)
 		require.NotEmpty(t, privBytes)
@@ -178,11 +179,11 @@ func TestDHC_SerializationRoundtrip(t *testing.T) {
 		pubKey, err := dhc.NewPublicKey(pubPoint)
 		require.NoError(t, err)
 
-		// Serialize public key
+		// Serialise public key
 		pubBytes, err := dhc.SerialisePublicKey(pubKey)
 		require.NoError(t, err)
 		require.NotEmpty(t, pubBytes)
-		require.Equal(t, 65, len(pubBytes), "P-256 uncompressed public key should be 65 bytes")
+		require.Len(t, pubBytes, 65, "P-256 uncompressed public key should be 65 bytes")
 	})
 }
 

@@ -159,7 +159,7 @@ func TestConcurrentMap_Keys_Property(t *testing.T) {
 
 		keys := m.Keys()
 
-		require.Equal(t, m.Size(), len(keys))
+		require.Len(t, keys, m.Size())
 		for _, k := range keys {
 			require.True(t, m.ContainsKey(k))
 		}
@@ -173,7 +173,7 @@ func TestConcurrentMap_Values_Property(t *testing.T) {
 
 		values := m.Values()
 
-		require.Equal(t, m.Size(), len(values))
+		require.Len(t, values, m.Size())
 	})
 }
 
@@ -228,7 +228,7 @@ func TestConcurrentMap_Iter_Property(t *testing.T) {
 			visited[k] = v
 		}
 
-		require.Equal(t, m.Size(), len(visited))
+		require.Len(t, visited, m.Size())
 		for k, v := range visited {
 			got, exists := m.Get(k)
 			require.True(t, exists)
@@ -249,7 +249,7 @@ func TestConcurrentMap_Enumerate_Property(t *testing.T) {
 			entries[entry.Key] = entry.Value
 		}
 
-		require.Equal(t, m.Size(), len(indices))
+		require.Len(t, indices, m.Size())
 		slices.Sort(indices)
 		for i, idx := range indices {
 			require.Equal(t, i, idx)
@@ -461,7 +461,7 @@ func TestConcurrentMap_ConcurrentGetPut_Property(t *testing.T) {
 		numOps := rapid.IntRange(10, 50).Draw(t, "numOps")
 
 		var wg sync.WaitGroup
-		for i := 0; i < numOps; i++ {
+		for i := range numOps {
 			wg.Add(2)
 			go func(v int) {
 				defer wg.Done()

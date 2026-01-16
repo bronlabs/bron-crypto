@@ -4,12 +4,13 @@ import (
 	crand "crypto/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
-	"github.com/stretchr/testify/require"
 )
 
-// TestPrivateKey_CBOR tests CBOR marshaling of private keys
+// TestPrivateKey_CBOR tests CBOR marshalling of private keys
 func TestPrivateKey_CBOR(t *testing.T) {
 	t.Parallel()
 
@@ -58,7 +59,7 @@ func TestPrivateKey_CBOR(t *testing.T) {
 	})
 }
 
-// TestPublicKey_CBOR tests CBOR marshaling of public keys
+// TestPublicKey_CBOR tests CBOR marshalling of public keys
 func TestPublicKey_CBOR(t *testing.T) {
 	t.Parallel()
 
@@ -107,7 +108,7 @@ func TestPublicKey_CBOR(t *testing.T) {
 	})
 }
 
-// TestCipherSuite_CBOR tests CBOR marshaling of cipher suites
+// TestCipherSuite_CBOR tests CBOR marshalling of cipher suites
 func TestCipherSuite_CBOR(t *testing.T) {
 	t.Parallel()
 
@@ -201,7 +202,7 @@ func TestCipherSuite_CBOR_InvalidData(t *testing.T) {
 			suite, err := NewCipherSuite(DHKEM_P256_HKDF_SHA256, KDF_HKDF_SHA256, AEAD_AES_128_GCM)
 			require.NoError(t, err)
 
-			// Modify before marshaling
+			// Modify before marshalling
 			tc.modify(suite)
 
 			// Marshal
@@ -227,7 +228,7 @@ func TestKeyPair_CBOR_Roundtrip(t *testing.T) {
 	t.Run("P256_MultipleRoundtrips", func(t *testing.T) {
 		kem := NewP256HKDFSha256KEM()
 
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			sk, pk, err := kem.GenerateKeyPair(crand.Reader)
 			require.NoError(t, err)
 
@@ -261,7 +262,7 @@ func TestKeyPair_CBOR_Roundtrip(t *testing.T) {
 	t.Run("X25519_MultipleRoundtrips", func(t *testing.T) {
 		kem := NewX25519HKDFSha256KEM()
 
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			sk, pk, err := kem.GenerateKeyPair(crand.Reader)
 			require.NoError(t, err)
 

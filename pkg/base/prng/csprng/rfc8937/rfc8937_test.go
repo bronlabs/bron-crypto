@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/ecdsa"
-	"github.com/stretchr/testify/require"
 )
 
 func TestUniqueOutputs(t *testing.T) {
@@ -37,7 +38,7 @@ func TestUniqueOutputs(t *testing.T) {
 				require.NoError(t, err)
 
 				seen := map[string]bool{}
-				for trial := 0; trial < boundedTrialCount; trial++ {
+				for range boundedTrialCount {
 					output := make([]byte, boundedN)
 					readN, err := wr.Read(output)
 					require.NoError(t, err)

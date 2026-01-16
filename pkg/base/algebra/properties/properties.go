@@ -3,12 +3,13 @@ package properties
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 type Axiom struct {
@@ -545,7 +546,7 @@ func FieldExtensionComponentBytesRoundTripProperty[S algebra.FieldExtension[E], 
 			rapid.Check(t, func(rt *rapid.T) {
 				a := c.Dist.Draw(rt, "a")
 				b := a.ComponentsBytes()
-				require.Greater(t, len(b), 0, "Field extension component bytes round-trip failed: ComponentsBytes returned empty byte slice")
+				require.NotEmpty(t, b, "Field extension component bytes round-trip failed: ComponentsBytes returned empty byte slice")
 
 				aReconstructed, err := c.Value.FromComponentsBytes(b)
 				require.NoError(t, err, "ElementFromComponentBytes returned error")
@@ -702,9 +703,9 @@ func NumericStructureFromBytesBERoundTripProperty[S interface {
 
 				serialised := value.BytesBE()
 				deserialised, err := c.Value.FromBytesBE(serialised)
-				require.NoError(t, err, "numeric serialization round trip failed: FromBytesBE returned error")
+				require.NoError(t, err, "numeric serialisation round trip failed: FromBytesBE returned error")
 
-				require.True(t, value.Equal(deserialised), "numeric serialization round trip failed: value != Deserialize(Serialize(value))")
+				require.True(t, value.Equal(deserialised), "numeric serialisation round trip failed: value != Deserialize(Serialise(value))")
 			})
 		},
 	}
@@ -829,7 +830,7 @@ func FromWideBytesRoundTripProperty[S algebra.PrimeField[E], E algebra.PrimeFiel
 				original := c.Dist.Draw(rt, "original")
 
 				serialised := original.Bytes()
-				require.Equal(t, c.Value.ElementSize(), len(serialised), "FromWideBytes round trip failed: Bytes() returned byte slice of incorrect length")
+				require.Len(t, serialised, c.Value.ElementSize(), "FromWideBytes round trip failed: Bytes() returned byte slice of incorrect length")
 				reconstructed, err := c.Value.FromWideBytes(serialised)
 				require.NoError(t, err, "FromWideBytes returned error")
 				require.True(t, original.Equal(reconstructed), "FromWideBytes round trip failed: original != FromWideBytes(WideBytes(original))")

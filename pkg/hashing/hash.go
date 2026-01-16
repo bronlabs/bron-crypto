@@ -43,7 +43,7 @@ func HashPrefixedLength[H hash.Hash](hashFunc func() H, xs ...[]byte) ([]byte, e
 }
 
 // HashChain computes an iterated hash where each input is hashed together with the previous output.
-// It starts with a zero-initialized buffer and iteratively computes H(previous || input) for each input.
+// It starts with a zero-initialised buffer and iteratively computes H(previous || input) for each input.
 func HashChain[H hash.Hash](hashFunc func() H, xs ...[]byte) ([]byte, error) {
 	h := hashFunc()
 	var err error

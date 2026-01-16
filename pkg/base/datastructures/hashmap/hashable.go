@@ -41,6 +41,7 @@ func (m HashableMapping[K, V]) TryPut(key K, newValue V) (replaced bool, oldValu
 	})
 	return false, *new(V)
 }
+
 // TryRemove deletes the entry with the given key, returning whether it existed and its value.
 func (m HashableMapping[K, V]) TryRemove(key K) (removed bool, removedValue V) {
 	var nilValue V

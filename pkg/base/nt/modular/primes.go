@@ -202,7 +202,7 @@ func (m *OddPrimeFactors) ModInv(out, a *numct.Nat) ct.Bool {
 // by lifting the modulus n = p * q to n^2 = p^2 * q^2.
 // Returns ct.False if the lift operation fails.
 func (m *OddPrimeFactors) Lift() (*OddPrimeSquareFactors, ct.Bool) {
-	// TODO: optimize
+	// TODO: optimise
 	out, ok := NewOddPrimeSquareFactors(
 		m.Params.PNat,
 		m.Params.QNat,

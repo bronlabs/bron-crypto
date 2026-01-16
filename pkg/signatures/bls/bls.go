@@ -168,7 +168,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Keygen(opts ...KeyGeneratorOption[PK,
 }
 
 // Signer creates a signer for producing BLS signatures with the given private key.
-// Options can be used to customize the domain separation tag.
+// Options can be used to customise the domain separation tag.
 //
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.6
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Signer(privateKey *PrivateKey[PK, PKFE, SG, SGFE, E, S], opts ...SignerOption[PK, PKFE, SG, SGFE, E, S]) (*Signer[PK, PKFE, SG, SGFE, E, S], error) {
@@ -191,7 +191,7 @@ func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Signer(privateKey *PrivateKey[PK, PKF
 }
 
 // Verifier creates a verifier for validating BLS signatures.
-// Options can be used to customize the domain separation tag or provide proofs of possession.
+// Options can be used to customise the domain separation tag or provide proofs of possession.
 //
 // See: https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-06.html#section-2.7
 func (s *Scheme[PK, PKFE, SG, SGFE, E, S]) Verifier(opts ...VerifierOption[PK, PKFE, SG, SGFE, E, S]) (*Verifier[PK, PKFE, SG, SGFE, E, S], error) {

@@ -3,10 +3,11 @@ package sliceutils_test
 import (
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/utils"
-	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 )
 
 func TestCombinations_Property(t *testing.T) {
@@ -17,7 +18,7 @@ func TestCombinations_Property(t *testing.T) {
 
 		count := 0
 		for c := range sliceutils.Combinations(s, k) {
-			require.Equal(t, int(k), len(c), "Combination length should be equal to k")
+			require.Len(t, c, int(k), "Combination length should be equal to k")
 			for _, ct := range c {
 				require.Contains(t, s, ct, "Combination element should be in the original slice")
 			}

@@ -1,20 +1,21 @@
 package key_agreement_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/curve25519"
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/p256"
 	ka "github.com/bronlabs/bron-crypto/pkg/key_agreement"
-	"github.com/stretchr/testify/require"
 )
 
 func TestPrivateKeyCBOR_P256(t *testing.T) {
 	curve := p256.NewCurve()
 
 	// Generate a random private key
-	sk, err := curve.ScalarField().Random(rand.Reader)
+	sk, err := curve.ScalarField().Random(crand.Reader)
 	require.NoError(t, err)
 
 	originalKey, err := ka.NewPrivateKey(sk, "ECSVDP-DHC")
@@ -40,7 +41,7 @@ func TestPrivateKeyCBOR_X25519(t *testing.T) {
 	curve := curve25519.NewPrimeSubGroup()
 
 	// Generate a random private key
-	sk, err := curve.ScalarField().Random(rand.Reader)
+	sk, err := curve.ScalarField().Random(crand.Reader)
 	require.NoError(t, err)
 
 	originalKey, err := ka.NewPrivateKey(sk, "X25519")
@@ -66,7 +67,7 @@ func TestPublicKeyCBOR_P256(t *testing.T) {
 	curve := p256.NewCurve()
 
 	// Generate a key pair
-	sk, err := curve.ScalarField().Random(rand.Reader)
+	sk, err := curve.ScalarField().Random(crand.Reader)
 	require.NoError(t, err)
 	pk := curve.ScalarBaseMul(sk)
 
@@ -93,7 +94,7 @@ func TestPublicKeyCBOR_X25519(t *testing.T) {
 	curve := curve25519.NewPrimeSubGroup()
 
 	// Generate a key pair
-	sk, err := curve.ScalarField().Random(rand.Reader)
+	sk, err := curve.ScalarField().Random(crand.Reader)
 	require.NoError(t, err)
 	pk := curve.ScalarBaseMul(sk)
 
@@ -224,8 +225,8 @@ func TestPrivateKeyCBOR_RoundTrip(t *testing.T) {
 	// Test with multiple iterations to ensure consistency
 	curve := p256.NewCurve()
 
-	for i := 0; i < 10; i++ {
-		sk, err := curve.ScalarField().Random(rand.Reader)
+	for range 10 {
+		sk, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 
 		originalKey, err := ka.NewPrivateKey(sk, "ECSVDP-DHC")
@@ -261,8 +262,8 @@ func TestPublicKeyCBOR_RoundTrip(t *testing.T) {
 	// Test with multiple iterations to ensure consistency
 	curve := curve25519.NewPrimeSubGroup()
 
-	for i := 0; i < 10; i++ {
-		sk, err := curve.ScalarField().Random(rand.Reader)
+	for range 10 {
+		sk, err := curve.ScalarField().Random(crand.Reader)
 		require.NoError(t, err)
 		pk := curve.ScalarBaseMul(sk)
 
@@ -297,9 +298,9 @@ func TestPublicKeyCBOR_RoundTrip(t *testing.T) {
 
 func TestSharedKeyCBOR_RoundTrip(t *testing.T) {
 	// Test with multiple iterations to ensure consistency
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		keyBytes := make([]byte, 32)
-		_, err := rand.Read(keyBytes)
+		_, err := crand.Read(keyBytes)
 		require.NoError(t, err)
 
 		originalKey, err := ka.NewSharedKey(keyBytes, "X25519")

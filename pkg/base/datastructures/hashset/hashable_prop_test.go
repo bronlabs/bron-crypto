@@ -392,7 +392,7 @@ func TestHashableSet_Iter_Property(t *testing.T) {
 			visited[e.Value] = true
 		}
 
-		require.Equal(t, s.Size(), len(visited))
+		require.Len(t, visited, s.Size())
 	})
 }
 
@@ -406,7 +406,7 @@ func TestHashableSet_Iter2_Property(t *testing.T) {
 			indices = append(indices, i)
 		}
 
-		require.Equal(t, s.Size(), len(indices))
+		require.Len(t, indices, s.Size())
 		slices.Sort(indices)
 		for i, idx := range indices {
 			require.Equal(t, i, idx)
@@ -421,7 +421,7 @@ func TestHashableSet_List_Property(t *testing.T) {
 
 		list := s.List()
 
-		require.Equal(t, s.Size(), len(list))
+		require.Len(t, list, s.Size())
 		for _, e := range list {
 			require.True(t, s.Contains(e))
 		}
@@ -439,7 +439,7 @@ func TestHashableSet_SubSets_Property(t *testing.T) {
 
 		// SubSets count is 2^n
 		expectedCount := 1 << s.Size()
-		require.Equal(t, expectedCount, len(subsets))
+		require.Len(t, subsets, expectedCount)
 
 		for _, subset := range subsets {
 			require.True(t, subset.IsSubSet(s))

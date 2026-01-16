@@ -380,7 +380,7 @@ func TestComparableSet_Iter_Property(t *testing.T) {
 			visited[e] = true
 		}
 
-		require.Equal(t, s.Size(), len(visited))
+		require.Len(t, visited, s.Size())
 		for e := range visited {
 			require.True(t, s.Contains(e))
 		}
@@ -399,7 +399,7 @@ func TestComparableSet_Iter2_Property(t *testing.T) {
 			elements[e] = true
 		}
 
-		require.Equal(t, s.Size(), len(indices))
+		require.Len(t, indices, s.Size())
 		slices.Sort(indices)
 		for i, idx := range indices {
 			require.Equal(t, i, idx)
@@ -414,7 +414,7 @@ func TestComparableSet_List_Property(t *testing.T) {
 
 		list := s.List()
 
-		require.Equal(t, s.Size(), len(list))
+		require.Len(t, list, s.Size())
 		for _, e := range list {
 			require.True(t, s.Contains(e))
 		}
@@ -432,7 +432,7 @@ func TestComparableSet_SubSets_Property(t *testing.T) {
 
 		// SubSets count is 2^n
 		expectedCount := 1 << s.Size()
-		require.Equal(t, expectedCount, len(subsets))
+		require.Len(t, subsets, expectedCount)
 
 		// Each subset should be a subset of s
 		for _, subset := range subsets {

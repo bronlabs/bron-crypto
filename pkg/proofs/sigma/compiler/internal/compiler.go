@@ -11,7 +11,7 @@ import (
 // Name is the identifier for a compiler implementation (e.g., "FiatShamir", "Fischlin").
 type Name string
 
-// NIZKPoKProof is a serialized non-interactive zero-knowledge proof of knowledge.
+// NIZKPoKProof is a serialised non-interactive zero-knowledge proof of knowledge.
 // The format depends on the compiler that generated it.
 type NIZKPoKProof []byte
 

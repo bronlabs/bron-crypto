@@ -222,7 +222,7 @@ func TestConcurrentBiMap_Keys_Property(t *testing.T) {
 
 		keys := m.Keys()
 
-		require.Equal(t, m.Size(), len(keys))
+		require.Len(t, keys, m.Size())
 	})
 }
 
@@ -233,7 +233,7 @@ func TestConcurrentBiMap_Values_Property(t *testing.T) {
 
 		values := m.Values()
 
-		require.Equal(t, m.Size(), len(values))
+		require.Len(t, values, m.Size())
 	})
 }
 
@@ -283,7 +283,7 @@ func TestConcurrentBiMap_Iter_Property(t *testing.T) {
 			visited[k] = v
 		}
 
-		require.Equal(t, m.Size(), len(visited))
+		require.Len(t, visited, m.Size())
 	})
 }
 
@@ -476,7 +476,7 @@ func TestConcurrentBiMap_ConcurrentPut_Property(t *testing.T) {
 		values := make([]int, numOps)
 		usedValues := make(map[int]bool)
 
-		for i := 0; i < numOps; i++ {
+		for i := range numOps {
 			keys[i] = KeyGenerator().Draw(t, "key")
 			values[i] = ValueGenerator().Filter(func(v int) bool {
 				return !usedValues[v]
@@ -485,7 +485,7 @@ func TestConcurrentBiMap_ConcurrentPut_Property(t *testing.T) {
 		}
 
 		var wg sync.WaitGroup
-		for i := 0; i < numOps; i++ {
+		for i := range numOps {
 			wg.Add(1)
 			go func(k string, v int) {
 				defer wg.Done()
@@ -511,7 +511,7 @@ func TestConcurrentBiMap_ConcurrentGetPut_Property(t *testing.T) {
 		numOps := rapid.IntRange(10, 50).Draw(t, "numOps")
 
 		var wg sync.WaitGroup
-		for i := 0; i < numOps; i++ {
+		for i := range numOps {
 			wg.Add(2)
 			go func(v int) {
 				defer wg.Done()

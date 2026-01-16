@@ -110,6 +110,7 @@ type Shard[
 	E algebra.MultiplicativeGroupElement[E], S algebra.PrimeFieldElement[S],
 ] struct {
 	PublicMaterial[PK, PKFE, SG, SGFE, E, S]
+
 	share *feldman.Share[S]
 }
 

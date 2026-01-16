@@ -129,7 +129,7 @@ func TestImmutableBiMap_Keys_Property(t *testing.T) {
 
 		keys := m.Keys()
 
-		require.Equal(t, m.Size(), len(keys))
+		require.Len(t, keys, m.Size())
 		for _, k := range keys {
 			require.True(t, m.ContainsKey(k))
 		}
@@ -143,7 +143,7 @@ func TestImmutableBiMap_Values_Property(t *testing.T) {
 
 		values := m.Values()
 
-		require.Equal(t, m.Size(), len(values))
+		require.Len(t, values, m.Size())
 		// Values should be unique in a bimap
 		uniqueValues := make(map[int]bool)
 		for _, v := range values {
@@ -203,7 +203,7 @@ func TestImmutableBiMap_Iter_Property(t *testing.T) {
 			visited[k] = v
 		}
 
-		require.Equal(t, m.Size(), len(visited))
+		require.Len(t, visited, m.Size())
 		for k, v := range visited {
 			got, exists := m.Get(k)
 			require.True(t, exists)

@@ -1,13 +1,14 @@
 package mina_test
 
 import (
-	"crypto/rand"
+	crand "crypto/rand"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/bronlabs/bron-crypto/pkg/base/base58"
 	"github.com/bronlabs/bron-crypto/pkg/signatures/schnorrlike/mina"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestEncodePublicKey(t *testing.T) {
@@ -29,7 +30,7 @@ func TestEncodePublicKey(t *testing.T) {
 		assert.NotEmpty(t, encoded)
 
 		// Should start with expected prefix
-		assert.True(t, len(encoded) > 0)
+		assert.Positive(t, len(encoded))
 	})
 }
 
@@ -60,12 +61,12 @@ func TestDecodePublicKey(t *testing.T) {
 
 	t.Run("round trip", func(t *testing.T) {
 		// Generate a new key pair
-		scheme, err := mina.NewRandomisedScheme(mina.TestNet, rand.Reader)
+		scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
 		require.NoError(t, err)
 
 		kg, err := scheme.Keygen()
 		require.NoError(t, err)
-		_, publicKey, err := kg.Generate(rand.Reader)
+		_, publicKey, err := kg.Generate(crand.Reader)
 		require.NoError(t, err)
 
 		// Encode
@@ -126,12 +127,12 @@ func TestDecodePrivateKey(t *testing.T) {
 
 	t.Run("round trip", func(t *testing.T) {
 		// Generate a new key pair
-		scheme, err := mina.NewRandomisedScheme(mina.TestNet, rand.Reader)
+		scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
 		require.NoError(t, err)
 
 		kg, err := scheme.Keygen()
 		require.NoError(t, err)
-		privateKey, _, err := kg.Generate(rand.Reader)
+		privateKey, _, err := kg.Generate(crand.Reader)
 		require.NoError(t, err)
 
 		// Encode
@@ -157,12 +158,12 @@ func TestEncodeSignature(t *testing.T) {
 	})
 
 	t.Run("valid signature", func(t *testing.T) {
-		scheme, err := mina.NewRandomisedScheme(mina.TestNet, rand.Reader)
+		scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
 		require.NoError(t, err)
 
 		kg, err := scheme.Keygen()
 		require.NoError(t, err)
-		privateKey, _, err := kg.Generate(rand.Reader)
+		privateKey, _, err := kg.Generate(crand.Reader)
 		require.NoError(t, err)
 
 		signer, err := scheme.Signer(privateKey)
@@ -197,12 +198,12 @@ func TestDecodeSignature(t *testing.T) {
 	})
 
 	t.Run("round trip", func(t *testing.T) {
-		scheme, err := mina.NewRandomisedScheme(mina.TestNet, rand.Reader)
+		scheme, err := mina.NewRandomisedScheme(mina.TestNet, crand.Reader)
 		require.NoError(t, err)
 
 		kg, err := scheme.Keygen()
 		require.NoError(t, err)
-		privateKey, publicKey, err := kg.Generate(rand.Reader)
+		privateKey, publicKey, err := kg.Generate(crand.Reader)
 		require.NoError(t, err)
 
 		signer, err := scheme.Signer(privateKey)

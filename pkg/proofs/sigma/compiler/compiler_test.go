@@ -5,6 +5,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/curves/k256"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/dlog/schnorr"
@@ -13,7 +15,6 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fischlin"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/randfischlin"
 	"github.com/bronlabs/bron-crypto/pkg/transcripts/hagrid"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCompile_UsagePattern(t *testing.T) {

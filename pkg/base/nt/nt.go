@@ -28,7 +28,7 @@ type PrimeSamplable[E algebra.NatPlusLike[E]] interface {
 // MillerRabinChecks returns the number of Miller-Rabin iterations required for a given bit length.
 func MillerRabinChecks(bits uint) int {
 	if len(millerRabinIterations) == 0 {
-		panic("millerRabinIterations is not initialized")
+		panic("millerRabinIterations is not initialised")
 	}
 	sortedKeys := slices.Sorted(maps.Keys(millerRabinIterations))
 
@@ -46,7 +46,7 @@ func MillerRabinChecks(bits uint) int {
 			return millerRabinIterations[sortedKeys[i]]
 		}
 	}
-	panic("millerRabinIterations is not properly initialized")
+	panic("millerRabinIterations is not properly initialised")
 }
 
 // GenerateSafePrime generates a safe prime of the specified bit length using the provided PrimeSamplable set.

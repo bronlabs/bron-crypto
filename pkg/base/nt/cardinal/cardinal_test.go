@@ -5,8 +5,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 )
 
 // Known Cardinal Tests
@@ -349,12 +350,12 @@ func TestInfinite_Arithmetic(t *testing.T) {
 
 	t.Run("add returns infinite", func(t *testing.T) {
 		result := inf.Add(cardinal.New(42))
-		require.True(t, !result.IsFinite())
+		require.False(t, result.IsFinite())
 	})
 
 	t.Run("mul returns infinite", func(t *testing.T) {
 		result := inf.Mul(cardinal.New(42))
-		require.True(t, !result.IsFinite())
+		require.False(t, result.IsFinite())
 	})
 }
 
@@ -363,7 +364,7 @@ func TestInfinite_Clone(t *testing.T) {
 
 	inf := cardinal.Infinite()
 	cloned := inf.Clone()
-	require.True(t, !cloned.IsFinite())
+	require.False(t, cloned.IsFinite())
 }
 
 // Cross-type comparison tests

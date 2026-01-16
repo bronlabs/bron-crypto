@@ -13,7 +13,7 @@ import (
 )
 
 // Signer produces ECDSA signatures using a private key.
-// It supports both randomized signing (with a PRNG) and deterministic signing (RFC 6979).
+// It supports both randomised signing (with a PRNG) and deterministic signing (RFC 6979).
 type Signer[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]] struct {
 	suite *Suite[P, B, S]
 	sk    *PrivateKey[P, B, S]
@@ -21,7 +21,7 @@ type Signer[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.P
 }
 
 // NewSigner creates a signer with the given suite, private key, and random source.
-// For randomized suites, prng must be a cryptographically secure random source.
+// For randomised suites, prng must be a cryptographically secure random source.
 // For deterministic suites (RFC 6979), prng can be nil.
 func NewSigner[P curves.Point[P, B, S], B algebra.PrimeFieldElement[B], S algebra.PrimeFieldElement[S]](suite *Suite[P, B, S], sk *PrivateKey[P, B, S], prng io.Reader) (*Signer[P, B, S], error) {
 	if suite == nil || (prng == nil && !suite.IsDeterministic()) || sk == nil {

@@ -1,7 +1,7 @@
 // Package bip340 implements BIP-340 Schnorr signatures for Bitcoin.
 //
 // BIP-340 defines a Schnorr signature scheme over the secp256k1 curve with
-// specific design choices optimized for Bitcoin:
+// specific design choices optimised for Bitcoin:
 //
 // # Key Features
 //
@@ -56,7 +56,7 @@ type (
 
 	// Message is a byte slice to be signed.
 	Message = []byte
-	// PublicKey is a BIP-340 public key (x-only, 32 bytes when serialized).
+	// PublicKey is a BIP-340 public key (x-only, 32 bytes when serialised).
 	PublicKey = schnorrlike.PublicKey[*GroupElement, *Scalar]
 	// PrivateKey is a BIP-340 private key (32-byte scalar).
 	PrivateKey = schnorrlike.PrivateKey[*GroupElement, *Scalar]
@@ -253,7 +253,7 @@ func NewSignatureFromBytes(input []byte) (*Signature, error) {
 	}, nil
 }
 
-// KeyGeneratorOption configures key generation behavior.
+// KeyGeneratorOption configures key generation behaviour.
 type KeyGeneratorOption = signatures.KeyGeneratorOption[*KeyGenerator, *PrivateKey, *PublicKey]
 
 // KeyGenerator creates BIP-340 key pairs.
@@ -261,7 +261,7 @@ type KeyGenerator struct {
 	schnorrlike.KeyGeneratorTrait[*GroupElement, *Scalar]
 }
 
-// SignerOption configures signing behavior.
+// SignerOption configures signing behaviour.
 type SignerOption = signatures.SignerOption[*Signer, Message, *Signature]
 
 // Signer produces BIP-340 signatures using deterministic nonce derivation.
@@ -287,7 +287,7 @@ func (s *Signer) Variant() *Variant {
 	return s.sg.V
 }
 
-// VerifierOption configures verification behavior.
+// VerifierOption configures verification behaviour.
 type VerifierOption = signatures.VerifierOption[*Verifier, *PublicKey, Message, *Signature]
 
 // VerifyWithPRNG configures the verifier with a PRNG for batch verification.
@@ -427,7 +427,7 @@ func (v *Verifier) Verify(signature *Signature, publicKey *PublicKey, message Me
 // This is more efficient than individual verification when verifying many signatures,
 // as it requires only one multi-scalar multiplication instead of u separate ones.
 //
-// The verifier must be initialized with a PRNG using VerifyWithPRNG option.
+// The verifier must be initialised with a PRNG using VerifyWithPRNG option.
 // The random coefficients a2...au prevent an attacker from constructing signatures
 // that pass batch verification but fail individual verification.
 func (v *Verifier) BatchVerify(signatures []*Signature, publicKeys []*PublicKey, messages []Message) error {
@@ -540,7 +540,7 @@ func NewPublicKeyFromBytes(input []byte) (*PublicKey, error) {
 }
 
 // SerializePublicKey encodes a BIP-340 public key to 32 bytes (x-only).
-// Only the x-coordinate is serialized; y is implicitly even.
+// Only the x-coordinate is serialised; y is implicitly even.
 func SerializePublicKey(publicKey *PublicKey) ([]byte, error) {
 	if publicKey == nil {
 		return nil, ErrInvalidArgument.WithMessage("public key is nil")
@@ -548,7 +548,7 @@ func SerializePublicKey(publicKey *PublicKey) ([]byte, error) {
 	return publicKey.Value().ToCompressed()[1:], nil
 }
 
-// encodePoint serializes a point to 32 bytes (x-coordinate only).
+// encodePoint serialises a point to 32 bytes (x-coordinate only).
 func encodePoint(p *k256.Point) []byte {
 	return p.ToCompressed()[1:]
 }

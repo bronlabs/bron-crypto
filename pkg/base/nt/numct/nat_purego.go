@@ -3,8 +3,9 @@
 package numct
 
 import (
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 	"github.com/cronokirby/saferith"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 )
 
 // GCD sets n = gcd(x, y) using a constant-time (w.r.t. announced capacity) binary GCD (Stein) algorithm.

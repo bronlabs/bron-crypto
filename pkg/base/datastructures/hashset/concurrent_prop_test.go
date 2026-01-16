@@ -300,7 +300,7 @@ func TestConcurrentSet_Iter_Property(t *testing.T) {
 			visited[e] = true
 		}
 
-		require.Equal(t, s.Size(), len(visited))
+		require.Len(t, visited, s.Size())
 		for e := range visited {
 			require.True(t, s.Contains(e))
 		}
@@ -317,7 +317,7 @@ func TestConcurrentSet_Iter2_Property(t *testing.T) {
 			indices = append(indices, i)
 		}
 
-		require.Equal(t, s.Size(), len(indices))
+		require.Len(t, indices, s.Size())
 		slices.Sort(indices)
 		for i, idx := range indices {
 			require.Equal(t, i, idx)
@@ -332,7 +332,7 @@ func TestConcurrentSet_List_Property(t *testing.T) {
 
 		list := s.List()
 
-		require.Equal(t, s.Size(), len(list))
+		require.Len(t, list, s.Size())
 		for _, e := range list {
 			require.True(t, s.Contains(e))
 		}
@@ -536,7 +536,7 @@ func TestConcurrentSet_ConcurrentAddContains_Property(t *testing.T) {
 		numOps := rapid.IntRange(10, 50).Draw(t, "numOps")
 
 		var wg sync.WaitGroup
-		for i := 0; i < numOps; i++ {
+		for range numOps {
 			wg.Add(2)
 			go func() {
 				defer wg.Done()

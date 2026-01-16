@@ -194,7 +194,7 @@ func TestBytesToBits(t *testing.T) {
 	t.Run("single byte zero", func(t *testing.T) {
 		bits := bytesToBits([]byte{0})
 		assert.Len(t, bits, 8)
-		for i := 0; i < 8; i++ {
+		for i := range 8 {
 			assert.False(t, bits[i])
 		}
 	})
@@ -202,7 +202,7 @@ func TestBytesToBits(t *testing.T) {
 	t.Run("single byte 0xFF", func(t *testing.T) {
 		bits := bytesToBits([]byte{0xFF})
 		assert.Len(t, bits, 8)
-		for i := 0; i < 8; i++ {
+		for i := range 8 {
 			assert.True(t, bits[i])
 		}
 	})

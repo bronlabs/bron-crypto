@@ -3,11 +3,12 @@ package num_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"pgregory.net/rapid"
+
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/properties"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/num"
 	"github.com/bronlabs/bron-crypto/pkg/base/prng/pcg"
-	"github.com/stretchr/testify/require"
-	"pgregory.net/rapid"
 )
 
 func RatGenerator(t *testing.T) *rapid.Generator[*num.Rat] {
@@ -42,7 +43,7 @@ func TestQ_FromBig_Property(t *testing.T) {
 		n := SmallNatPlusGenerator(t).Draw(rt, "n")
 		elem, err := num.Q().FromBig(n.Big())
 		require.NoError(t, err)
-		require.EqualValues(t, n.Big().Bytes(), elem.Canonical().Numerator().Big().Bytes())
+		require.Equal(t, n.Big().Bytes(), elem.Canonical().Numerator().Big().Bytes())
 	})
 }
 
@@ -52,7 +53,7 @@ func TestQ_FromNatPlus_Property(t *testing.T) {
 		n := SmallNatPlusGenerator(t).Draw(rt, "n")
 		elem, err := num.Q().FromNatPlus(n)
 		require.NoError(t, err)
-		require.EqualValues(t, n.Big().Bytes(), elem.Canonical().Numerator().Big().Bytes())
+		require.Equal(t, n.Big().Bytes(), elem.Canonical().Numerator().Big().Bytes())
 	})
 }
 
@@ -62,7 +63,7 @@ func TestQ_FromNat_Property(t *testing.T) {
 		n := NatGenerator(t).Draw(rt, "n")
 		elem, err := num.Q().FromNat(n)
 		require.NoError(t, err)
-		require.EqualValues(t, n.Big().Bytes(), elem.Canonical().Numerator().Big().Bytes())
+		require.Equal(t, n.Big().Bytes(), elem.Canonical().Numerator().Big().Bytes())
 	})
 }
 
@@ -72,7 +73,7 @@ func TestQ_FromInt_Property(t *testing.T) {
 		n := IntGenerator(t).Draw(rt, "n")
 		elem, err := num.Q().FromInt(n)
 		require.NoError(t, err)
-		require.EqualValues(t, n.Big().Bytes(), elem.Canonical().Numerator().Big().Bytes())
+		require.Equal(t, n.Big().Bytes(), elem.Canonical().Numerator().Big().Bytes())
 	})
 }
 
@@ -83,7 +84,7 @@ func TestQ_FromUint_Property(t *testing.T) {
 		n := g.Draw(rt, "n")
 		elem, err := num.Q().FromUint(n)
 		require.NoError(t, err)
-		require.EqualValues(t, n.Big().Bytes(), elem.Canonical().Numerator().Big().Bytes())
+		require.Equal(t, n.Big().Bytes(), elem.Canonical().Numerator().Big().Bytes())
 	})
 }
 
@@ -108,8 +109,8 @@ func TestQ_Canonical_Idempotent_Property(t *testing.T) {
 		c2 := c1.Canonical()
 		// Canonical should be idempotent: Canonical(Canonical(r)) == Canonical(r)
 		require.True(t, c1.Equal(c2), "Canonical should be idempotent")
-		require.Equal(t, c1.Numerator().Big().Cmp(c2.Numerator().Big()), 0)
-		require.Equal(t, c1.Denominator().Big().Cmp(c2.Denominator().Big()), 0)
+		require.Equal(t, 0, c1.Numerator().Big().Cmp(c2.Numerator().Big()))
+		require.Equal(t, 0, c1.Denominator().Big().Cmp(c2.Denominator().Big()))
 	})
 }
 

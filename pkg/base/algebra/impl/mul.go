@@ -108,7 +108,7 @@ func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
 			return 0
 		}
 		var acc uint = 0
-		for k := 0; k < w; k++ {
+		for k := range w {
 			bitIndex := start + k
 			byteIndex := bitIndex / 8
 			if byteIndex >= len(b) {
@@ -124,7 +124,7 @@ func MultiScalarMulLowLevel[PP GroupElementPtrLowLevel[PP, P], P any](
 	var acc P
 	PP(&acc).SetZero()
 	for wIdx := numWindows - 1; wIdx >= 0; wIdx-- {
-		for i := 0; i < w; i++ {
+		for range w {
 			PP(&acc).Add(&acc, &acc)
 		}
 		buckets := make([]PP, windowSize)

@@ -34,7 +34,7 @@ type State struct {
 	commitments       ds.MutableMap[sharing.ID, ds.Map[sharing.ID, hash_comm.Commitment]]
 }
 
-// NewParticipant initializes the seed setup for a given session.
+// NewParticipant initialises the seed setup for a given session.
 func NewParticipant(sessionId network.SID, mySharingId sharing.ID, quorum network.Quorum, tape ts.Transcript, prng io.Reader) (*Participant, error) {
 	// TODO: add validation
 	p := &Participant{

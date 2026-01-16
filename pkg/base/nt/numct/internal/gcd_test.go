@@ -6,9 +6,10 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 	"github.com/cronokirby/saferith"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bronlabs/bron-crypto/pkg/base/nt/numct/internal"
 )
 
 func Test_GCD(t *testing.T) {

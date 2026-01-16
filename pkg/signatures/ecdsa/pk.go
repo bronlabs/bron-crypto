@@ -83,7 +83,7 @@ func (pk *PublicKey[P, B, S]) ToElliptic() *nativeEcdsa.PublicKey {
 	return nativePublicKey
 }
 
-// MarshalCBOR serializes the public key to CBOR format.
+// MarshalCBOR serialises the public key to CBOR format.
 func (pk *PublicKey[P, B, S]) MarshalCBOR() ([]byte, error) {
 	dto := &publicKeyDTO[P, B, S]{
 		PK: pk.pk,
