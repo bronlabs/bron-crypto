@@ -71,7 +71,7 @@ redo:
 		// 4. For i = 1, ..., ρ:
 		for i := range uint64(p.rho) {
 			// 4.a. For ei = 0, ..., 2^t − 1:
-			for j := range uint64() {
+			for j := uint64(0); j < (1 << p.t); j++ { //nolint:intrange // false positive
 				// 4.a.i. z_i ← ProverSecondMessage(x, w, σ_i, e_i)
 				eI[i], zI[i], err = p.challengeBytesAndResponse(j, statement, witness, aI[i], stateI[i])
 				if err != nil {

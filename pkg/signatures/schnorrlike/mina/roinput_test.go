@@ -343,10 +343,10 @@ func TestROInputIntegration(t *testing.T) {
 
 		// Verify the structure
 		assert.Len(t, input.Fields(), 1)
-		assert.Positive(t, len(input.Bits()))
+		assert.NotEmpty(t, input.Bits())
 
 		// Pack to fields for hashing
 		packed := input.PackToFields()
-		assert.Positive(t, len(packed))
+		assert.NotEmpty(t, packed)
 	})
 }

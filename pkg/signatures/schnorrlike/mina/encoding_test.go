@@ -30,7 +30,7 @@ func TestEncodePublicKey(t *testing.T) {
 		assert.NotEmpty(t, encoded)
 
 		// Should start with expected prefix
-		assert.Positive(t, len(encoded))
+		assert.NotEmpty(t, encoded)
 	})
 }
 

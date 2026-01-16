@@ -95,7 +95,7 @@ type paillierGroupUnknownOrderElementDTO struct {
 	N          *num.NatPlus           `cbor:"n"`
 }
 
-// ========== CBOR Serialisation ==========
+// ========== CBOR Serialisation ==========.
 
 func (pg *PaillierGroup[X]) MarshalCBOR() ([]byte, error) {
 	var tag uint64

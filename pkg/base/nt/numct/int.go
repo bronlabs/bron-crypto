@@ -392,7 +392,7 @@ func (i *Int) Square(x *Int) {
 //// Bit returns the value of the bit at the given index.
 // func (i *Int) Bit(index uint) byte {
 //	return i.Absed().Bit(index)
-//}.
+// }.
 
 // Bytes returns a sign-magnitude encoding:
 //

@@ -567,7 +567,7 @@ func TestDifferentMessagesProduceDifferentNonces(t *testing.T) {
 	}
 
 	// All nonces should be different
-	for i := range len(nonces) {
+	for i := range nonces {
 		for j := i + 1; j < len(nonces); j++ {
 			// Note: nonces might be negated due to even y correction,
 			// so we check that neither k nor -k matches

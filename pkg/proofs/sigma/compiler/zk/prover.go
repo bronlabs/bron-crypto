@@ -1,11 +1,8 @@
 package zk
 
 import (
-	"fmt"
-
-	"github.com/bronlabs/bron-crypto/pkg/base"
-	k256Impl "github.com/bronlabs/bron-crypto/pkg/base/curves/k256/impl"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
+	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma"
@@ -26,46 +23,16 @@ type Prover[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.Stat
 // The sigma protocol must have soundness error at least 2^(-80) (statistical security).
 // The prover will execute rounds 2 and 4 of the protocol.
 func NewProver[X sigma.Statement, W sigma.Witness, A sigma.Commitment, S sigma.State, Z sigma.Response](sessionId network.SID, tape transcripts.Transcript, sigmaProtocol sigma.Protocol[X, W, A, S, Z], statement X, witness W) (*Prover[X, W, A, S, Z], error) {
-	if len(sessionId) == 0 {
-		return nil, ErrInvalid.WithMessage("sessionId is empty")
+	if utils.IsNil(witness) {
+		return nil, ErrNil.WithMessage("witness")
 	}
-	if sigmaProtocol == nil {
-		return nil, ErrNil.WithMessage("protocol, statement or witness")
-	}
-	if s := sigmaProtocol.SoundnessError(); s < base.StatisticalSecurityBits {
-		return nil, ErrInvalid.WithMessage("soundness of the interactive protocol (%d) is too low (below %d)", s, base.StatisticalSecurityBits)
-	}
-	if sigmaProtocol.GetChallengeBytesLength() > k256Impl.FqBytes {
-		return nil, ErrFailed.WithMessage("challengeBytes is too long for the compiler")
-	}
-	if tape == nil {
-		return nil, ErrNil.WithMessage("tape")
-	}
-	dst := fmt.Sprintf("%s-%s-%x", transcriptLabel, sigmaProtocol.Name(), sessionId)
-	tape.AppendDomainSeparator(dst)
-
-	tape.AppendBytes(statementLabel, statement.Bytes())
-
-	ck, err := hash_comm.NewKeyFromCRSBytes(sessionId, dst)
+	p, err := newParticipant(sessionId, tape, sigmaProtocol, statement)
 	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't create hash commitment key")
+		return nil, errs2.Wrap(err).WithMessage("cannot create participant")
 	}
-
-	comm, err := hash_comm.NewScheme(ck)
-	if err != nil {
-		return nil, errs2.Wrap(err).WithMessage("couldn't create commitment scheme")
-	}
-
 	return &Prover[X, W, A, S, Z]{
-		participant: participant[X, W, A, S, Z]{
-			sessionId: sessionId,
-			tape:      tape,
-			protocol:  sigmaProtocol,
-			statement: statement,
-			comm:      comm,
-			round:     2,
-		},
-		witness: witness,
+		participant: *p,
+		witness:     witness,
 	}, nil
 }
 
