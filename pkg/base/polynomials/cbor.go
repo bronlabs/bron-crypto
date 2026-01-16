@@ -2,7 +2,7 @@ package polynomials
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/serde"
 )
 
@@ -16,7 +16,7 @@ func (p *ModuleValuedPolynomial[ME, S]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal polynomial")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal polynomial")
 	}
 	return data, nil
 }
@@ -27,7 +27,7 @@ func (p *ModuleValuedPolynomial[ME, S]) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 	if len(dto.Coeffs) == 0 {
-		return errs.NewFailed("polynomial must have at least one coefficient")
+		return ErrSerialisationFailed.WithMessage("empty coefficients")
 	}
 	p.coeffs = dto.Coeffs
 	return nil
@@ -43,7 +43,7 @@ func (p *Polynomial[RE]) MarshalCBOR() ([]byte, error) {
 	}
 	data, err := serde.MarshalCBOR(dto)
 	if err != nil {
-		return nil, errs.WrapSerialisation(err, "failed to marshal polynomial")
+		return nil, errs2.Wrap(err).WithMessage("failed to marshal polynomial")
 	}
 	return data, nil
 }
@@ -54,7 +54,7 @@ func (p *Polynomial[RE]) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 	if len(dto.Coeffs) == 0 {
-		return errs.NewFailed("polynomial must have at least one coefficient")
+		return ErrSerialisationFailed.WithMessage("empty coefficients")
 	}
 	p.coeffs = dto.Coeffs
 	return nil

@@ -8,37 +8,31 @@ import (
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra/crtp"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
 )
 
-type FiniteRing[RE algebra.RingElement[RE]] interface {
-	algebra.Ring[RE]
-	algebra.FiniteStructure[RE]
-}
-
 type PolynomialRing[RE algebra.RingElement[RE]] struct {
-	ring FiniteRing[RE]
+	ring algebra.FiniteRing[RE]
 }
 
 func (r *PolynomialRing[RE]) RandomPolynomial(degree int, prng io.Reader) (*Polynomial[RE], error) {
 	constantTerm, err := r.ring.Random(prng)
 	if err != nil {
-		return nil, errs.WrapRandomSample(err, "failed to sample random constant term")
+		return nil, errs2.Wrap(err).WithMessage("failed to sample random constant term")
 	}
 	poly, err := r.RandomPolynomialWithConstantTerm(degree, constantTerm, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create random polynomial with constant term")
+		return nil, errs2.Wrap(err).WithMessage("could not create random polynomial with constant term")
 	}
 	return poly, nil
 }
 
 func (r *PolynomialRing[RE]) RandomPolynomialWithConstantTerm(degree int, constantTerm RE, prng io.Reader) (*Polynomial[RE], error) {
 	if degree < 0 {
-		return nil, errs.NewFailed("degree cannot be negative")
+		return nil, ErrValidation.WithMessage("degree is negative")
 	}
 
 	var err error
@@ -47,12 +41,12 @@ func (r *PolynomialRing[RE]) RandomPolynomialWithConstantTerm(degree int, consta
 	for i := 1; i < degree; i++ {
 		coeffs[i], err = r.ring.Random(prng)
 		if err != nil {
-			return nil, errs.WrapRandomSample(err, "failed to sample random coefficient")
+			return nil, errs2.Wrap(err).WithMessage("failed to sample random coefficient")
 		}
 	}
 	coeffs[degree], err = algebrautils.RandomNonIdentity(r.ring, prng)
 	if err != nil {
-		return nil, errs.WrapRandomSample(err, "failed to sample random leading coefficient")
+		return nil, errs2.Wrap(err).WithMessage("failed to sample random leading coefficient")
 	}
 	p := &Polynomial[RE]{
 		coeffs: coeffs,
@@ -66,7 +60,7 @@ func (r *PolynomialRing[RE]) New(coeffs ...RE) (*Polynomial[RE], error) {
 	}
 	for _, c := range coeffs {
 		if utils.IsNil(c) {
-			return nil, errs.NewIsNil("coefficient cannot be nil")
+			return nil, ErrValidation.WithStackFrame()
 		}
 	}
 
@@ -85,12 +79,12 @@ func (r *PolynomialRing[RE]) Order() algebra.Cardinal {
 
 func (r *PolynomialRing[RE]) FromBytes(inBytes []byte) (*Polynomial[RE], error) {
 	if len(inBytes) == 0 {
-		return nil, errs.NewSize("input bytes must not be empty")
+		return nil, ErrValidation.WithMessage("empty input")
 	}
 
 	coeffSize := r.ring.ElementSize()
 	if len(inBytes)%coeffSize != 0 {
-		return nil, errs.NewSize("input bytes length must be a multiple of element size")
+		return nil, ErrValidation.WithMessage("invalid input length")
 	}
 	numCoeffs := len(inBytes) / coeffSize
 	coeffs := make([]RE, numCoeffs)
@@ -100,12 +94,12 @@ func (r *PolynomialRing[RE]) FromBytes(inBytes []byte) (*Polynomial[RE], error) 
 		var err error
 		coeffs[i], err = r.ring.FromBytes(inBytes[start:end])
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not parse coefficient")
+			return nil, errs2.Wrap(err).WithMessage("could not parse coefficient")
 		}
 	}
 	poly, err := r.New(coeffs...)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create polynomial")
+		return nil, errs2.Wrap(err).WithMessage("could not create polynomial")
 	}
 	return poly, nil
 }
@@ -142,7 +136,7 @@ func (r *PolynomialRing[RE]) ScalarStructure() algebra.Structure[RE] {
 	return r.ring
 }
 
-func NewPolynomialRing[RE algebra.RingElement[RE]](ring FiniteRing[RE]) (*PolynomialRing[RE], error) {
+func NewPolynomialRing[RE algebra.RingElement[RE]](ring algebra.FiniteRing[RE]) (*PolynomialRing[RE], error) {
 	r := &PolynomialRing[RE]{
 		ring: ring,
 	}
@@ -165,7 +159,7 @@ func (p *Polynomial[RE]) CoefficientStructure() algebra.Ring[RE] {
 }
 
 func (p *Polynomial[RE]) Eval(at RE) RE {
-	ring := algebra.StructureMustBeAs[FiniteRing[RE]](at.Structure())
+	ring := algebra.StructureMustBeAs[algebra.FiniteRing[RE]](at.Structure())
 	// although we always require a polynomial to have at least one coefficient (even if it's zero), we do not panic here
 	if len(p.coeffs) == 0 {
 		return ring.Zero()
@@ -183,7 +177,7 @@ func (p *Polynomial[RE]) Structure() algebra.Structure[*Polynomial[RE]] {
 		panic("internal error: empty coeffs")
 	}
 
-	underlyingRing := algebra.StructureMustBeAs[FiniteRing[RE]](p.coeffs[0].Structure())
+	underlyingRing := algebra.StructureMustBeAs[algebra.FiniteRing[RE]](p.coeffs[0].Structure())
 	return &PolynomialRing[RE]{
 		ring: underlyingRing,
 	}
@@ -273,7 +267,7 @@ func (p *Polynomial[RE]) Double() *Polynomial[RE] {
 }
 
 func (p *Polynomial[RE]) Mul(e *Polynomial[RE]) *Polynomial[RE] {
-	ring := algebra.StructureMustBeAs[FiniteRing[RE]](p.coeffs[0].Structure())
+	ring := algebra.StructureMustBeAs[algebra.FiniteRing[RE]](p.coeffs[0].Structure())
 	coeffs := make([]RE, len(p.coeffs)+len(e.coeffs)-1)
 	for i := range coeffs {
 		coeffs[i] = ring.Zero()
@@ -314,11 +308,11 @@ func (p *Polynomial[RE]) IsOne() bool {
 }
 
 func (p *Polynomial[RE]) TryInv() (*Polynomial[RE], error) {
-	return nil, errs.NewFailed("not supported")
+	return nil, ErrOperationNotSupported.WithStackFrame()
 }
 
 func (p *Polynomial[RE]) TryDiv(e *Polynomial[RE]) (*Polynomial[RE], error) {
-	return nil, errs.NewFailed("not supported")
+	return nil, ErrOperationNotSupported.WithStackFrame()
 }
 
 func (p *Polynomial[RE]) IsZero() bool {
@@ -374,7 +368,7 @@ func (p *Polynomial[RE]) ConstantTerm() RE {
 }
 
 func (p *Polynomial[RE]) Derivative() *Polynomial[RE] {
-	ring := algebra.StructureMustBeAs[FiniteRing[RE]](p.coeffs[0].Structure())
+	ring := algebra.StructureMustBeAs[algebra.FiniteRing[RE]](p.coeffs[0].Structure())
 	if len(p.coeffs) <= 1 {
 		return &Polynomial[RE]{
 			coeffs: []RE{ring.Zero()},
@@ -399,7 +393,7 @@ func (p *Polynomial[RE]) EuclideanDiv(q *Polynomial[RE]) (quot, rem *Polynomial[
 		return nil, nil, errs2.Wrap(err).WithMessage("coefficients ring is not a field")
 	}
 	if q.IsZero() {
-		return nil, nil, errs.NewFailed("division by zero")
+		return nil, nil, ErrDivisionByZero.WithStackFrame()
 	}
 	if p.IsZero() {
 		zero := coeffField.Zero()
@@ -433,7 +427,7 @@ func (p *Polynomial[RE]) EuclideanDiv(q *Polynomial[RE]) (quot, rem *Polynomial[
 
 		factor, err := fieldElemR.TryDiv(fieldElemQ)
 		if err != nil {
-			return nil, nil, errs.WrapFailed(err, "failed to divide leading coefficients")
+			return nil, nil, errs2.Wrap(err).WithMessage("failed to divide leading coefficients")
 		}
 
 		shift := degR - degQ
@@ -509,7 +503,12 @@ func (p *Polynomial[RE]) ScalarMul(s RE) *Polynomial[RE] {
 }
 
 func (p *Polynomial[RE]) IsTorsionFree() bool {
-	return false
+	_, err := algebra.StructureAs[crtp.Field[RE]](p.coeffs[0].Structure())
+	if err != nil {
+		return false
+	}
+
+	return true
 }
 
 func (p *Polynomial[RE]) ScalarStructure() algebra.Ring[RE] {

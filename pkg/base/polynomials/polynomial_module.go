@@ -7,7 +7,7 @@ import (
 
 	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/nt/cardinal"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
@@ -47,7 +47,7 @@ func (m *PolynomialModule[ME, S]) New(coeffs ...ME) (*ModuleValuedPolynomial[ME,
 	}
 	for _, c := range coeffs {
 		if utils.IsNil(c) {
-			return nil, errs.NewIsNil("coefficient cannot be nil")
+			return nil, ErrValidation.WithStackFrame()
 		}
 	}
 
@@ -62,23 +62,23 @@ func (m *PolynomialModule[ME, S]) Name() string {
 
 func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomial(degree int, prng io.Reader) (*ModuleValuedPolynomial[ME, S], error) {
 	if degree < 0 {
-		return nil, errs.NewFailed("degree cannot be negative")
+		return nil, ErrValidation.WithMessage("negative degree")
 	}
 	finiteModule := algebra.StructureMustBeAs[algebra.FiniteModule[ME, S]](m.module)
 	constantTerm, err := finiteModule.Random(prng)
 	if err != nil {
-		return nil, errs.WrapRandomSample(err, "failed to sample random constant term")
+		return nil, errs2.Wrap(err).WithMessage("failed to sample random constant term")
 	}
 	poly, err := m.RandomModuleValuedPolynomialWithConstantTerm(degree, constantTerm, prng)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create random polynomial with constant term")
+		return nil, errs2.Wrap(err).WithMessage("could not create random polynomial with constant term")
 	}
 	return poly, nil
 }
 
 func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomialWithConstantTerm(degree int, constantTerm ME, prng io.Reader) (*ModuleValuedPolynomial[ME, S], error) {
 	if degree < 0 {
-		return nil, errs.NewFailed("degree cannot be negative")
+		return nil, ErrValidation.WithMessage("negative degree")
 	}
 
 	finiteModule := algebra.StructureMustBeAs[algebra.FiniteModule[ME, S]](m.module)
@@ -91,12 +91,12 @@ func (m *PolynomialModule[ME, S]) RandomModuleValuedPolynomialWithConstantTerm(d
 		var err error
 		coeffs[i], err = finiteModule.Random(prng)
 		if err != nil {
-			return nil, errs.WrapRandomSample(err, "failed to sample random coefficient")
+			return nil, errs2.Wrap(err).WithMessage("failed to sample random coefficient")
 		}
 	}
 	leading, err := algebrautils.RandomNonIdentity(finiteModule, prng)
 	if err != nil {
-		return nil, errs.WrapRandomSample(err, "failed to sample random leading coefficient")
+		return nil, errs2.Wrap(err).WithMessage("failed to sample random leading coefficient")
 	}
 	coeffs[degree] = leading
 
@@ -115,7 +115,7 @@ func (m *PolynomialModule[ME, S]) FromBytes(bytes []byte) (*ModuleValuedPolynomi
 		return m.OpIdentity(), nil
 	}
 	if (len(bytes) % coeffSize) != 0 {
-		return nil, errs.NewLength("bytes length must be a multiple of coefficient module element size")
+		return nil, ErrValidation.WithMessage("invalid input length")
 	}
 
 	numCoeffs := len(bytes) / coeffSize
@@ -125,13 +125,13 @@ func (m *PolynomialModule[ME, S]) FromBytes(bytes []byte) (*ModuleValuedPolynomi
 		end := start + coeffSize
 		c, err := m.module.FromBytes(bytes[start:end])
 		if err != nil {
-			return nil, errs.WrapSerialisation(err, "failed to deserialize coefficient")
+			return nil, errs2.Wrap(err).WithMessage("failed to deserialize coefficient")
 		}
 		coeffs[i] = c
 	}
 	poly, err := m.New(coeffs...)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create polynomial from deserialized coefficients")
+		return nil, errs2.Wrap(err).WithMessage("could not create polynomial from deserialized coefficients")
 	}
 	return poly, nil
 }
@@ -150,10 +150,10 @@ func (m *PolynomialModule[ME, S]) ScalarStructure() algebra.Structure[S] {
 
 func (m *PolynomialModule[ME, S]) MultiScalarOp(scalars []S, elements []*ModuleValuedPolynomial[ME, S]) (*ModuleValuedPolynomial[ME, S], error) {
 	if len(scalars) != len(elements) {
-		return nil, errs.NewSize("scalar and polynomial slices must have the same length")
+		return nil, ErrLengthMismatch.WithMessage("scalar and elements mismatch")
 	}
 	if len(scalars) == 0 {
-		return nil, errs.NewValue("cannot perform multi-scalar operation on empty slices")
+		return nil, ErrValidation.WithMessage("empty input")
 	}
 
 	out := m.OpIdentity()

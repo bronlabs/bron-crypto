@@ -1,5 +1,7 @@
 package crtp
 
+import "github.com/bronlabs/bron-crypto/pkg/base/algebra"
+
 // ******************** BiMagma.
 
 type DoubleMagma[E any] Magma[E]
@@ -79,6 +81,11 @@ type Ring[RE any] interface {
 type RingElement[RE any] interface {
 	RigElement[RE]
 	RngElement[RE]
+}
+
+type FiniteRing[RE any] interface {
+	Ring[RE]
+	FiniteStructure[RE]
 }
 
 // ******************** Domains.

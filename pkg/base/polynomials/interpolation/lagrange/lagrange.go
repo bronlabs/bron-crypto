@@ -2,7 +2,7 @@ package lagrange
 
 import (
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
-	"github.com/bronlabs/bron-crypto/pkg/base/errs"
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials"
 )
 
@@ -10,14 +10,14 @@ func InterpolateAt[FE algebra.FiniteFieldElement[FE]](nodes, values []FE, at FE)
 	var nilFE FE
 	field := algebra.StructureMustBeAs[algebra.FiniteField[FE]](at.Structure())
 	if len(nodes) != len(values) {
-		return nilFE, errs.NewSize("input length mismatch")
+		return nilFE, polynomials.ErrLengthMismatch.WithMessage("nodes and values")
 	}
 	if field == nil {
-		return nilFE, errs.NewIsNil("field cannot be nil")
+		return nilFE, polynomials.ErrValidation.WithMessage("field is nil")
 	}
 	basis, err := BasisAt(nodes, at)
 	if err != nil {
-		return *new(FE), errs.WrapFailed(err, "could not create basis set")
+		return *new(FE), errs2.Wrap(err).WithMessage("could not create basis set")
 	}
 	out := field.Zero()
 	for i, yi := range values {
@@ -33,15 +33,15 @@ func InterpolateInExponentAt[C algebra.ModuleElement[C, S], S algebra.FiniteFiel
 	at S,
 ) (C, error) {
 	if len(nodes) != len(values) {
-		return *new(C), errs.NewSize("input length mismatch")
+		return *new(C), polynomials.ErrLengthMismatch.WithStackFrame()
 	}
 	if module == nil {
-		return *new(C), errs.NewIsNil("module cannot be nil")
+		return *new(C), polynomials.ErrValidation.WithMessage("module is nil")
 	}
 
 	basisCoeffs, err := BasisAt(nodes, at)
 	if err != nil {
-		return *new(C), errs.WrapFailed(err, "could not compute basis at point")
+		return *new(C), errs2.Wrap(err).WithMessage("could not compute basis at point")
 	}
 
 	out := module.OpIdentity()
@@ -68,16 +68,16 @@ func BasisAt[FE algebra.FiniteFieldElement[FE]](xs []FE, at FE) (*polynomials.Po
 		}
 		terms[i], err = num.TryDiv(den)
 		if err != nil {
-			return nil, errs.WrapFailed(err, "could not divide numerator by denominator")
+			return nil, errs2.Wrap(err).WithMessage("could not divide numerator by denominator")
 		}
 	}
 	polyRing, err := polynomials.NewPolynomialRing(coeffField)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create polynomial ring")
+		return nil, errs2.Wrap(err).WithMessage("could not create polynomial ring")
 	}
 	poly, err := polyRing.New(terms...)
 	if err != nil {
-		return nil, errs.WrapFailed(err, "could not create polynomial")
+		return nil, errs2.Wrap(err).WithMessage("could not create polynomial")
 	}
 	return poly, nil
 }
