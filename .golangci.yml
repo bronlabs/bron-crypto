@@ -1,8 +1,8 @@
 version: "2"
 run:
-#  build-tags:
-#    - nobignum
-#    - purego
+  build-tags:
+   - nobignum
+   - purego
   tests: true
 
 formatters:
@@ -663,9 +663,10 @@ linters:
       - path: impl/
         linters:
           - dupl
-      - path: pkg/cgo
+      - path: pkg/base/cgo
         linters:
           - gocritic
+          - godot
       # Exclude some revive messages
       - linters:
           - revive
