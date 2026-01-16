@@ -44,11 +44,11 @@ func DeriveChildKeys[
 		return *new(SH), nil, ErrInvalidDerivation.WithStackFrame()
 	}
 	if publicKey.Value().Structure().Name() == k256.NewCurve().Name() {
-		shift, childChainCode, err := bip32(any(publicKey.Value()).(*k256.Point), chainCode, i)
+		shift, childChainCode, err := bip32(any(publicKey.Value()).(*k256.Point), chainCode, i) //nolint:errcheck // false positive
 		if err != nil {
 			return *new(SH), nil, errs2.Wrap(err).WithMessage("cannot derive child key")
 		}
-		return any(shift).(SH), childChainCode, nil
+		return any(shift).(SH), childChainCode, nil //nolint:errcheck // false positive
 	} else {
 		return bip32Like(publicKey, chainCode, i)
 	}

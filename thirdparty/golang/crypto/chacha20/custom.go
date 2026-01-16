@@ -3,8 +3,13 @@ package chacha20
 import (
 	"encoding/binary"
 
+	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/sliceutils"
 	"github.com/bronlabs/bron-crypto/thirdparty/golang/crypto/internal/alias"
+)
+
+var (
+	ErrInvalidSize = errs2.New("chacha20: invalid size")
 )
 
 type FastKeyErasureCipher struct {

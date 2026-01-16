@@ -27,7 +27,8 @@ func NewScheme[E algebra.PrimeGroupElement[E, S], S algebra.PrimeFieldElement[S]
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not create pedersen scheme")
 	}
-	field := key.G().Structure().(algebra.Module[E, S]).ScalarStructure().(algebra.PrimeField[S])
+	module := algebra.StructureMustBeAs[algebra.Module[E, S]](key.G().Structure())
+	field := algebra.StructureMustBeAs[algebra.PrimeField[S]](module.ScalarStructure())
 	shamirSSS, err := shamir.NewScheme(field, threshold, shareholders)
 	if err != nil {
 		return nil, errs2.Wrap(err).WithMessage("could not create shamir scheme")
