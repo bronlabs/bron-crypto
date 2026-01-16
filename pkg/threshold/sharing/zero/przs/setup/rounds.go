@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"io"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	ds "github.com/bronlabs/bron-crypto/pkg/base/datastructures"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
@@ -108,7 +109,7 @@ func (p *Participant) Round3(r2uo network.RoundMessages[*Round2P2P]) (przs.Seeds
 			return nil, ErrFailed.WithMessage("missing commitment for %d", sharingId)
 		}
 		if p.state.commitmentScheme.Verifier().Verify(theirCommitment, theirSeedContribution[:], theirWitness) != nil {
-			return nil, errs2.ErrAbort.WithTag(errs2.IdentifiableAbortPartyId, sharingId).WithMessage("invalid seed contribution")
+			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, sharingId).WithMessage("invalid seed contribution")
 		}
 		mySeedContribution, ok := p.state.seedContributions.Get(sharingId)
 		if !ok {

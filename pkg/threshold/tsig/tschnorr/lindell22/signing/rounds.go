@@ -3,6 +3,7 @@ package signing
 import (
 	"encoding/binary"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/utils/algebrautils"
@@ -98,13 +99,13 @@ func (c *Cosigner[E, S, M]) Round3(inb network.RoundMessages[*Round2Broadcast[E,
 		theirCommitment := c.state.theirBigRCommitments[pid]
 		// step 3.2: Open(sid || R_j || j || S)
 		if err := verifyBigRCommitment(c, pid, theirBigR.X, theirOpening, theirCommitment); err != nil {
-			return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, pid).WithMessage("cannot verify commitment for participant")
+			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("cannot verify commitment for participant")
 		}
 		// step 3.3: Run NIPoKDL.Verify(R_j, π^dl_j)
 		if err := dlogVerify(
 			c.state.tapeFrozenBeforeDlogProof.Clone(), c.niDlogScheme, pid, c.sid, received.BigRProof, theirBigR, c.state.quorumBytes,
 		); err != nil {
-			return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, pid).WithMessage("cannot verify dlog proof for participant")
+			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, pid).WithMessage("cannot verify dlog proof for participant")
 		}
 		// step 3.4: R <- Σ R_j
 		summedR = summedR.Op(theirBigR.X)

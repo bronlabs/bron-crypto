@@ -3,6 +3,7 @@ package signing
 import (
 	"slices"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/algebra"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashset"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
@@ -130,7 +131,7 @@ func (a *Aggregator[VR, GE, S, M]) Aggregate(
 			return nil, errs2.Wrap(err).WithMessage("failed to create public key for sender %d", sender)
 		}
 		if err := a.psigVerifier.Verify(&psig.Sig, senderAdditivePK, message); err != nil {
-			identityAborts = append(identityAborts, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, sender).WithMessage("failed to verify partial signature"))
+			identityAborts = append(identityAborts, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, sender).WithMessage("failed to verify partial signature"))
 		}
 	}
 	if len(identityAborts) != 0 {

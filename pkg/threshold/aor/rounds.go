@@ -6,6 +6,7 @@ import (
 	"io"
 	"slices"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	hash_comm "github.com/bronlabs/bron-crypto/pkg/commitments/hash"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -73,7 +74,7 @@ func (p *Participant) Round3(r2 network.RoundMessages[*Round2Broadcast]) ([]byte
 	r := p.state.r
 	for id, m := range incomingMessages {
 		if err := p.commitmentScheme.Verifier().Verify(p.state.rCommitments[id], m.Message, m.Witness); err != nil {
-			return nil, errs2.ErrAbort.WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("could not verify commitment")
+			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("could not verify commitment")
 		}
 		subtle.XORBytes(r, r, m.Message)
 	}

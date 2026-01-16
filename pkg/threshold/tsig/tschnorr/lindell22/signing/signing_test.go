@@ -10,6 +10,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/proofs/sigma/compiler/fiatshamir"
 	"github.com/stretchr/testify/require"
 
@@ -431,7 +432,7 @@ func testIdentifiableAbortWithBIP340(t *testing.T) {
 	require.Error(t, err)
 
 	// Check that the aggregator detected the bad signature
-	culprit, ok := errs2.HasTag(err, errs2.IdentifiableAbortPartyId)
+	culprit, ok := errs2.HasTag(err, base.IdentifiableAbortPartyIDTag)
 	require.True(t, ok)
 	require.Equal(t, corruptedID, culprit.(sharing.ID))
 	t.Logf("✅ Aggregator correctly detected and rejected corrupted signature with BIP340")
@@ -548,7 +549,7 @@ func testIdentifiableAbortWithVanillaSchnorr(t *testing.T) {
 	require.Error(t, err)
 
 	// Check that the aggregator detected the bad signature
-	culprits := errs2.HasTagAll(err, errs2.IdentifiableAbortPartyId)
+	culprits := errs2.HasTagAll(err, base.IdentifiableAbortPartyIDTag)
 	require.Len(t, culprits, 2)
 	require.Contains(t, culprits, corruptedID1)
 	require.Contains(t, culprits, corruptedID2)
@@ -1286,7 +1287,7 @@ func TestLindell22IdentifiableAbortRounds(t *testing.T) {
 
 		// Round 3 should detect the bad proof
 		_, err = ltu.DoLindell22Round3(cosigners, r3bi, message)
-		culprit, ok := errs2.HasTag(err, errs2.IdentifiableAbortPartyId)
+		culprit, ok := errs2.HasTag(err, base.IdentifiableAbortPartyIDTag)
 		require.True(t, ok)
 		require.Equal(t, corruptedID, culprit.(sharing.ID))
 

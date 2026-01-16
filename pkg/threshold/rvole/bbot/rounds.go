@@ -194,7 +194,7 @@ func (bob *Bob[G, S]) Round4(r3Out *Round3P2P[S]) (d []S, err error) {
 		return nil, errs2.Wrap(err).WithMessage("cannot get mu")
 	}
 	if !bytes.Equal(r3Out.Mu, mu) {
-		return nil, errs2.ErrAbort.WithMessage("consistency check failed")
+		return nil, base.ErrAbort.WithMessage("consistency check failed")
 	}
 
 	d = make([]S, bob.suite.l)

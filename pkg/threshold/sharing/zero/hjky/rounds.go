@@ -4,6 +4,7 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/network"
@@ -73,7 +74,7 @@ func (p *Participant[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G,
 		}
 
 		if !b.VerificationVector.Coefficients()[0].Equal(p.group.OpIdentity()) || p.scheme.Verify(u.ZeroShare, b.VerificationVector) != nil {
-			return nil, nil, errs2.ErrAbort.WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("invalid share")
+			return nil, nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid share")
 		}
 		share = share.Add(u.ZeroShare)
 		verificationVector = verificationVector.Op(b.VerificationVector)

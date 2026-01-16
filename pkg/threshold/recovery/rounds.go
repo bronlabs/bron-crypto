@@ -1,6 +1,7 @@
 package recovery
 
 import (
+	"github.com/bronlabs/bron-crypto/pkg/base"
 	"github.com/bronlabs/bron-crypto/pkg/base/datastructures/hashmap"
 	"github.com/bronlabs/bron-crypto/pkg/base/errs2"
 	"github.com/bronlabs/bron-crypto/pkg/base/polynomials/interpolation"
@@ -69,13 +70,13 @@ func (r *Recoverer[G, S]) Round2(r1b network.RoundMessages[*Round1Broadcast[G, S
 
 		verificationVector := b.BlindVerificationVector
 		if !verificationVector.Eval(r.field.FromUint64(uint64(r.mislayerId))).IsOpIdentity() {
-			return nil, nil, errs2.ErrAbort.WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("invalid share")
+			return nil, nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid share")
 		}
 
 		share := u.BlindShare
 		err := r.scheme.Verify(share, verificationVector)
 		if err != nil {
-			return nil, nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("cannot verify share")
+			return nil, nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot verify share")
 		}
 
 		blindedShare = blindedShare.Add(share)
@@ -110,7 +111,7 @@ func (m *Mislayer[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G, S]
 			verificationVector = b.VerificationVector
 		} else {
 			if !verificationVector.Equal(b.VerificationVector) {
-				return nil, nil, errs2.ErrAbort.WithMessage("mislayer verification vector does not match")
+				return nil, nil, base.ErrAbort.WithMessage("mislayer verification vector does not match")
 			}
 		}
 
@@ -124,7 +125,7 @@ func (m *Mislayer[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G, S]
 
 	shareValue, err := interpolation.InterpolateAt(xs, ys, m.field.FromUint64(uint64(m.sharingId)))
 	if err != nil {
-		return nil, nil, errs2.ErrAbort.WithMessage("cannot interpolate")
+		return nil, nil, base.ErrAbort.WithMessage("cannot interpolate")
 	}
 	share, err := feldman.NewShare(m.sharingId, shareValue, nil)
 	if err != nil {
@@ -132,7 +133,7 @@ func (m *Mislayer[G, S]) Round3(r2b network.RoundMessages[*Round2Broadcast[G, S]
 	}
 	err = m.scheme.Verify(share, verificationVector)
 	if err != nil {
-		return nil, nil, errs2.ErrAbort.WithMessage("cannot verify share")
+		return nil, nil, base.ErrAbort.WithMessage("cannot verify share")
 	}
 
 	return share, verificationVector, nil

@@ -129,15 +129,15 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 			slices.Concat(message.BigQPrime.ToCompressed(), message.BigQDoublePrime.ToCompressed()),
 			message.BigQOpening,
 		); err != nil {
-			return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("cannot open (Q', Q'') commitment")
+			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot open (Q', Q'') commitment")
 		}
 
 		dlogTranscript := p.tape.Clone()
 		if err := dlogVerify(p, id, message.BigQPrimeProof, message.BigQPrime, message.BigQDoublePrime, dlogTranscript); err != nil {
-			return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("cannot verify dlog proof of Q'")
+			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot verify dlog proof of Q'")
 		}
 		if err := dlogVerify(p, id, message.BigQDoublePrimeProof, message.BigQDoublePrime, message.BigQPrime, dlogTranscript); err != nil {
-			return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("cannot verify dlog proof of Q''")
+			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("cannot verify dlog proof of Q''")
 		}
 		p.state.theirBigQPrime[id] = message.BigQPrime
 		p.state.theirBigQDoublePrime[id] = message.BigQDoublePrime
@@ -149,7 +149,7 @@ func (p *Participant[P, B, S]) Round3(input network.RoundMessages[*Round2Broadca
 			return nil, ErrMissing.WithMessage("could not find participant partial publickey (sharing id=%d)", id)
 		}
 		if !theirBigQ.Equal(partialPublicKey.Value()) {
-			return nil, errs2.ErrAbort.WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("invalid Q' or Q''")
+			return nil, base.ErrAbort.WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("invalid Q' or Q''")
 		}
 	}
 
@@ -421,13 +421,13 @@ func (p *Participant[P, B, S]) Round8(input network.RoundMessages[*Round7P2P[P, 
 		}
 
 		if err := p.state.lpVerifiers[id].Round5(message.LpRound4Output); err != nil {
-			return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("failed to verify valid Paillier public-key")
+			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("failed to verify valid Paillier public-key")
 		}
 		if err := p.state.lpdlPrimeVerifiers[id].Round5(message.LpdlPrimeRound4Output); err != nil {
-			return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("failed to verify encrypted dlog")
+			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("failed to verify encrypted dlog")
 		}
 		if err := p.state.lpdlDoublePrimeVerifiers[id].Round5(message.LpdlDoublePrimeRound4Output); err != nil {
-			return nil, errs2.Wrap(err).WithTag(errs2.IdentifiableAbortPartyId, id).WithMessage("failed to verify encrypted dlog")
+			return nil, errs2.Wrap(err).WithTag(base.IdentifiableAbortPartyIDTag, id).WithMessage("failed to verify encrypted dlog")
 		}
 	}
 
