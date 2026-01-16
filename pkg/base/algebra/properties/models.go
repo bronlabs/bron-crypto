@@ -22,6 +22,7 @@ func Set[S Structure, E Element](
 	}
 	return &Model[S, E]{
 		Carrier: st,
+		Theory:  nil,
 	}
 }
 

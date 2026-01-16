@@ -52,7 +52,7 @@ func (u *UnitTrait[A, W, WT]) Op(other W) W {
 	return u.Mul(other)
 }
 
-func (u *UnitTrait[A, W, WT]) assertValidity(other W) {
+func (u *UnitTrait[A, W, WT]) mustBeValid(other W) {
 	if !u.EqualModulus(other) {
 		panic("cannot multiply units with different moduli")
 	}
@@ -62,7 +62,7 @@ func (u *UnitTrait[A, W, WT]) assertValidity(other W) {
 }
 
 func (u *UnitTrait[A, W, WT]) Mul(other W) W {
-	u.assertValidity(other)
+	u.mustBeValid(other)
 	var outCt numct.Nat
 	u.arith.ModMul(&outCt, u.v.Value(), other.Value().Value())
 	v, err := num.NewUintGivenModulus(&outCt, u.ModulusCT())
@@ -175,7 +175,7 @@ func (u *UnitTrait[A, W, WT]) TryDiv(other W) (W, error) {
 }
 
 func (u *UnitTrait[A, W, WT]) Div(other W) W {
-	u.assertValidity(other)
+	u.mustBeValid(other)
 	var outCt numct.Nat
 	u.arith.ModDiv(&outCt, u.v.Value(), other.Value().Value())
 	v, err := num.NewUintGivenModulus(&outCt, u.ModulusCT())

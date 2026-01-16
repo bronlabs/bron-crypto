@@ -127,6 +127,7 @@ func Pair[
 		Carrier2: &Carrier2[S1, S2, E1, E2]{
 			First:  first.Carrier,
 			Second: second.Carrier,
+			Action: nil,
 		},
 		Theory: slices.Concat(first.Theory, second.Theory),
 	}

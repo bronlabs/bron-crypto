@@ -46,7 +46,7 @@ func (*PositiveNaturalNumbers) Order() cardinal.Cardinal {
 
 // One returns the multiplicative identity element of PositiveNaturalNumbers, which is 1.
 func (*PositiveNaturalNumbers) One() *NatPlus {
-	return &NatPlus{v: numct.NatOne()}
+	return &NatPlus{v: numct.NatOne(), m: nil}
 }
 
 // FromCardinal creates a NatPlus from the given cardinal, returning an error if the cardinal is zero.
@@ -57,7 +57,7 @@ func (*PositiveNaturalNumbers) FromCardinal(c algebra.Cardinal) (*NatPlus, error
 	if c.IsZero() {
 		return nil, ErrOutOfRange.WithStackFrame()
 	}
-	return &NatPlus{v: numct.NewNatFromBytes(c.Bytes())}, nil
+	return &NatPlus{v: numct.NewNatFromBytes(c.Bytes()), m: nil}, nil
 }
 
 // FromBig creates a NatPlus from the given big.Int, returning an error if the integer is nil or not positive.
@@ -90,7 +90,7 @@ func (*PositiveNaturalNumbers) FromUint64(value uint64) (*NatPlus, error) {
 	if value == 0 {
 		return nil, ErrOutOfRange.WithStackFrame()
 	}
-	return &NatPlus{v: numct.NewNat(value)}, nil
+	return &NatPlus{v: numct.NewNat(value), m: nil}, nil
 }
 
 // FromNat creates a NatPlus from the given Nat, returning an error if the Nat is nil or zero.
@@ -101,7 +101,7 @@ func (*PositiveNaturalNumbers) FromNat(value *Nat) (*NatPlus, error) {
 	if value.IsZero() {
 		return nil, ErrOutOfRange.WithStackFrame()
 	}
-	return &NatPlus{v: value.v.Clone()}, nil
+	return &NatPlus{v: value.v.Clone(), m: nil}, nil
 }
 
 // FromNatCT creates a NatPlus from the given numct.Nat, returning an error if the value is nil or zero.
@@ -112,7 +112,7 @@ func (*PositiveNaturalNumbers) FromNatCT(value *numct.Nat) (*NatPlus, error) {
 	if value.IsZero() == ct.True {
 		return nil, ErrOutOfRange.WithStackFrame()
 	}
-	return &NatPlus{v: value.Clone()}, nil
+	return &NatPlus{v: value.Clone(), m: nil}, nil
 }
 
 // FromInt creates a NatPlus from the given Int, returning an error if the Int is nil, zero, or negative.
@@ -126,7 +126,7 @@ func (*PositiveNaturalNumbers) FromInt(value *Int) (*NatPlus, error) {
 	if value.IsNegative() {
 		return nil, ErrOutOfRange.WithStackFrame()
 	}
-	return &NatPlus{v: value.Abs().v}, nil
+	return &NatPlus{v: value.Abs().v, m: nil}, nil
 }
 
 // FromBytes creates a NatPlus from the given big-endian byte slice, returning an error if the input is empty or represents zero.
@@ -134,7 +134,7 @@ func (*PositiveNaturalNumbers) FromBytes(input []byte) (*NatPlus, error) {
 	if len(input) == 0 || ct.SliceIsZero(input) == ct.True {
 		return nil, ErrIsNil.WithStackFrame()
 	}
-	out := &NatPlus{v: numct.NewNatFromBytes(input)}
+	out := &NatPlus{v: numct.NewNatFromBytes(input), m: nil}
 	if out.v.IsZero() == ct.True {
 		return nil, ErrOutOfRange.WithStackFrame()
 	}
@@ -159,7 +159,7 @@ func (nps *PositiveNaturalNumbers) Random(lowInclusive, highExclusive *NatPlus, 
 	if err := v.SetRandomRangeLH(lowInclusive.Value(), highExclusive.Value(), prng); err != nil {
 		return nil, errs2.Wrap(err)
 	}
-	return &NatPlus{v: &v}, nil
+	return &NatPlus{v: &v, m: nil}, nil
 }
 
 // OpIdentity returns the multiplicative identity element of PositiveNaturalNumbers, which is 1.
@@ -236,7 +236,7 @@ func (np *NatPlus) Add(other *NatPlus) *NatPlus {
 	errs2.Must1(np.isValid(other))
 	v := new(numct.Nat)
 	v.Add(np.v, other.v)
-	return errs2.Must1(np.isValid(&NatPlus{v: v}))
+	return errs2.Must1(np.isValid(&NatPlus{v: v, m: nil}))
 }
 
 // Mul performs multiplication of two NatPlus elements.
@@ -244,7 +244,7 @@ func (np *NatPlus) Mul(other *NatPlus) *NatPlus {
 	errs2.Must1(np.isValid(other))
 	v := new(numct.Nat)
 	v.Mul(np.v, other.v)
-	out := &NatPlus{v: v}
+	out := &NatPlus{v: v, m: nil}
 	return errs2.Must1(np.isValid(out))
 }
 
@@ -252,7 +252,7 @@ func (np *NatPlus) Mul(other *NatPlus) *NatPlus {
 func (np *NatPlus) Lsh(shift uint) *NatPlus {
 	v := new(numct.Nat)
 	v.Lsh(np.v, shift)
-	out := &NatPlus{v: v}
+	out := &NatPlus{v: v, m: nil}
 	return errs2.Must1(np.isValid(out))
 }
 
@@ -260,7 +260,7 @@ func (np *NatPlus) Lsh(shift uint) *NatPlus {
 func (np *NatPlus) TryRsh(shift uint) (*NatPlus, error) {
 	v := new(numct.Nat)
 	v.Rsh(np.v, shift)
-	out := &NatPlus{v: v}
+	out := &NatPlus{v: v, m: nil}
 	return np.isValid(out)
 }
 
@@ -324,7 +324,7 @@ func (np *NatPlus) TryDiv(other *NatPlus) (*NatPlus, error) {
 		return nil, ErrInexactDivision.WithStackFrame()
 	}
 
-	return &NatPlus{v: &q}, nil
+	return &NatPlus{v: &q, m: nil}, nil
 }
 
 // TrySub attempts to subtract another NatPlus from the NatPlus, returning an error if the result is not a positive natural number.
@@ -337,7 +337,7 @@ func (np *NatPlus) TrySub(other *NatPlus) (*NatPlus, error) {
 	}
 	v := new(numct.Nat)
 	v.SubCap(np.v, other.v, -1)
-	out := &NatPlus{v: v}
+	out := &NatPlus{v: v, m: nil}
 	return np.isValid(out)
 }
 

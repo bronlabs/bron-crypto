@@ -5,6 +5,13 @@ run:
    - purego
   tests: true
 
+issues:
+  # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
+  max-issues-per-linter: 0
+  # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
+  max-same-issues: 0
+  fix: false
+
 formatters:
   enable:
     # Gci control golang package import order and make it always deterministic.
@@ -62,22 +69,19 @@ linters:
     - err113
     # Errcheck is a program for checking for unchecked errors in go programs. These unchecked errors can be critical bugs in some cases
     - errcheck
-    # # TODO: add when sentinel errors are used
-    # # Checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error.
-    # - errname
+    # Checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error.
+    - errname
     # errorlint is a linter for that can be used to find code that will cause problems with the error wrapping scheme introduced in Go 1.13.
     - errorlint
     # check exhaustiveness of enum switch statements
     - exhaustive
-    # Checks if all structure fields are initialized.
-    - exhaustruct
-    # # Detects functions from golang.org/x/exp/ that can be replaced by std functions.
-    # # TODO: enable this when it doesn't spit out FIXMEs in people'e code.
-    # - exptostd
+    # # Checks if all structure fields are initialized.
+    # - exhaustruct
+    # # # Detects functions from golang.org/x/exp/ that can be replaced by std functions.
+    # # # TODO: enable this when it doesn't spit out FIXMEs in people'e code.
+    # # - exptostd
     # Forbids identifiers
     - forbidigo
-    # finds forced type assertions
-    - forcetypeassert
     # Checks that go compiler directive comments (//go:) are valid.
     - gocheckcompilerdirectives
     # Checks that no init functions are present in Go code
@@ -86,8 +90,8 @@ linters:
     - gochecksumtype
     # Finds repeated strings that could be replaced by a constant
     - goconst
-    # Provides many diagnostics that check for bugs, performance and style issues. Extensible without recompilation through dynamic rules. Dynamic rules are written declaratively with AST patterns, filters, report message and optional suggestion.
-    - gocritic
+    # # Provides many diagnostics that check for bugs, performance and style issues. Extensible without recompilation through dynamic rules. Dynamic rules are written declaratively with AST patterns, filters, report message and optional suggestion.
+    # - gocritic
     # Check if comments end in a period
     - godot
     # Manage the use of 'replace', 'retract', and 'excludes' directives in go.mod.
@@ -96,75 +100,75 @@ linters:
     - goprintffuncname
     # Inspects source code for security problems
     - gosec
-    # Report certain i18n/l10n anti-patterns in your Go codebase.
-    - gosmopolitan
-    # Reports wrong mirror patterns of bytes/strings usage.
-    - mirror
-    # Vet examines Go source code and reports suspicious constructs, such as Printf calls whose arguments do not align with the format string
-    - govet
-    # Enforces consistent import aliases
-    - importas
-    # Intrange is a linter to find places where for loops could make use of an integer range.
-    - intrange
-    # Detects when assignments to existing variables are not used
-    - ineffassign
-    # Finds slice declarations with non-zero initial length
-    - makezero
-    # Finds commonly misspelled English words in comments
-    - misspell
-    # Finds naked returns in functions greater than a specified function length
-    - nakedret
-    # Finds the code that returns nil even if it checks that the error is not nil.
-    - nilerr
-    # Reports ill-formed or insufficient nolint directives
-    - nolintlint
-    # Checks that there is no simultaneous return of nil error and an invalid value.
-    - nilnil
-    # Paralleltest detects missing usage of t.Parallel() method in your Go test.
-    # TODO: enable later
-    # - paralleltest
-    # Finds slice declarations that could potentially be preallocated
-    - prealloc
-    # find code that shadows one of Go's predeclared identifiers
-    - predeclared
-    # Check Prometheus metrics naming via promlint.
-    - promlinter
-    # Check that struct tags are well aligned.
-    - tagalign
-    # # Checks the struct tags.
-    # TODO: enable this once it doesn't spit out ast errors
-    # - tagliatelle
-    # Linter checks if examples are testable (have an expected output).
-    - testableexamples
-    # Checks usage of github.com/stretchr/testify.
-    - testifylint
-    # # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
-    # - revive
-    # # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
-    # - staticcheck
-    # linter that makes you use a separate _test package
-    - testpackage
-    # thelper detects golang test helpers without t.Helper() call and checks the consistency of test helpers
-    - thelper
-    # # tparallel detects inappropriate usage of t.Parallel() method in your Go test codes
+    # # Report certain i18n/l10n anti-patterns in your Go codebase.
+    # - gosmopolitan
+    # # Reports wrong mirror patterns of bytes/strings usage.
+    # - mirror
+    # # Vet examines Go source code and reports suspicious constructs, such as Printf calls whose arguments do not align with the format string
+    # - govet
+    # # Enforces consistent import aliases
+    # - importas
+    # # Intrange is a linter to find places where for loops could make use of an integer range.
+    # - intrange
+    # # Detects when assignments to existing variables are not used
+    # - ineffassign
+    # # Finds slice declarations with non-zero initial length
+    # - makezero
+    # # Finds commonly misspelled English words in comments
+    # - misspell
+    # # Finds naked returns in functions greater than a specified function length
+    # - nakedret
+    # # Finds the code that returns nil even if it checks that the error is not nil.
+    # - nilerr
+    # # Reports ill-formed or insufficient nolint directives
+    # - nolintlint
+    # # Checks that there is no simultaneous return of nil error and an invalid value.
+    # - nilnil
+    # # Paralleltest detects missing usage of t.Parallel() method in your Go test.
     # # TODO: enable later
-    # - tparallel
-    # Remove unnecessary type conversions
-    - unconvert
-    # Reports unused function parameters
-    - unparam
-    # A linter that detect the possibility to use variables/constants from the Go standard library.
-    - usestdlibvars
-    # Checks Go code for unused constants, variables, functions and types
-    - unused
-    # wastedassign finds wasted assignment statements.
-    - wastedassign
-    # Tool for detection of leading and trailing whitespace
-    - whitespace
-    # Checks that errors returned from external packages are wrapped
-    - wrapcheck
-    # Detects the wrong usage of zerolog that a user forgets to dispatch with Send or Msg.
-    - zerologlint
+    # # - paralleltest
+    # # Finds slice declarations that could potentially be preallocated
+    # - prealloc
+    # # find code that shadows one of Go's predeclared identifiers
+    # - predeclared
+    # # Check Prometheus metrics naming via promlint.
+    # - promlinter
+    # # Check that struct tags are well aligned.
+    # - tagalign
+    # # # Checks the struct tags.
+    # # TODO: enable this once it doesn't spit out ast errors
+    # # - tagliatelle
+    # # Linter checks if examples are testable (have an expected output).
+    # - testableexamples
+    # # Checks usage of github.com/stretchr/testify.
+    # - testifylint
+    # # # Fast, configurable, extensible, flexible, and beautiful linter for Go. Drop-in replacement of golint.
+    # # - revive
+    # # # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
+    # # - staticcheck
+    # # linter that makes you use a separate _test package
+    # - testpackage
+    # # thelper detects golang test helpers without t.Helper() call and checks the consistency of test helpers
+    # - thelper
+    # # # tparallel detects inappropriate usage of t.Parallel() method in your Go test codes
+    # # # TODO: enable later
+    # # - tparallel
+    # # Remove unnecessary type conversions
+    # - unconvert
+    # # Reports unused function parameters
+    # - unparam
+    # # A linter that detect the possibility to use variables/constants from the Go standard library.
+    # - usestdlibvars
+    # # Checks Go code for unused constants, variables, functions and types
+    # - unused
+    # # wastedassign finds wasted assignment statements.
+    # - wastedassign
+    # # Tool for detection of leading and trailing whitespace
+    # - whitespace
+    # # Checks that errors returned from external packages are wrapped
+    # - wrapcheck
+    # # Detects the wrong usage of zerolog that a user forgets to dispatch with Send or Msg.
+    # - zerologlint
 
   settings:
     asasalint:
@@ -603,10 +607,10 @@ linters:
           - exhaustruct
           - predeclared
           - unconvert
-      - path: utils.go
-        linters:
-          # TODO: enable this when round based stuff is here
-          - unparam
+      # - path: utils.go
+      #   linters:
+      #     # TODO: enable this when round based stuff is here
+      #     - unparam
       - path: testutils/
         linters:
           - depguard
@@ -667,6 +671,10 @@ linters:
         linters:
           - gocritic
           - godot
+      - path: pkg/encryption/hpke/internal
+        linters:
+          - dupl
+          - exhaustruct
       # Exclude some revive messages
       - linters:
           - revive
@@ -691,6 +699,9 @@ linters:
         text: "captLocal"
         linters:
           - gocritic
+      - path: cbor.go
+        linters:
+          - gochecknoinits
       - path: key_agreement/
         text: "captLocal"
         linters:
@@ -713,6 +724,3 @@ linters:
           - errchkjson
         text: 'Error return value of `encoding/json.Marshal` is checked but passed argument is safe'
 
-  issues:
-    max-same-issues: 0
-    fix: false

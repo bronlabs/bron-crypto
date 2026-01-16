@@ -35,6 +35,7 @@ func NewParamsMulti(factors ...*numct.Modulus) (*ParamsMulti, ct.Bool) {
 		Lifts:        make([]*numct.Nat, k),
 		NumFactors:   k,
 		GarnerCoeffs: make([][]*numct.Nat, k),
+		Modulus:      nil,
 	}
 
 	// Set p_i as moduli and compute N = ∏ p_i
