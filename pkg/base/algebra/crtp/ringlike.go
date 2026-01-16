@@ -1,7 +1,5 @@
 package crtp
 
-import "github.com/bronlabs/bron-crypto/pkg/base/algebra"
-
 // ******************** BiMagma.
 
 type DoubleMagma[E any] Magma[E]
